@@ -52,9 +52,14 @@ from sr_od.application.currency_war.kernel.cw_events import (
     EncounterOption,
     EncounterPick,
 )
-from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
-from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    ChannelSig,
+    game_state_of,
+)
 from sr_od.application.currency_war.kernel.cw_strategy_session import StrategySession
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    StrategyState,
+)
 
 _FRAME = object()   # 稳定帧哨兵(screenshot 桩产物;读链桩只验传递不断言内容)
 
@@ -121,15 +126,14 @@ def _make_encounter(test_context, monkeypatch, *, in_screen: bool,
 
 
 def _make_megastar(test_context, monkeypatch, *, in_node: bool):
-    """盛会之星真类装配(同上;动作体 _do_action 调用计数挂 returned)。"""
+    """盛会之星真类装配(同上;动作体 _do_action 调用计数挂 returned)。
+    旗标宿主 = 策略器 StrategyState(经 session.strategy_state 通道)。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_megastar as ms,
     )
 
     session = _make_session()
-    match = SimpleNamespace(
-        session=session,
-        exec_state=SimpleNamespace(megastar_candidate_clicked=False))
+    match = SimpleNamespace(session=session)
     monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
     op = ms.CwScreenMegastar(test_context)
     monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
@@ -188,17 +192,19 @@ def test_megastar_dispatch_both_ways(test_context, monkeypatch) -> None:
     成功交还,带完成 settle 语义);不装端口 → 旧路径零段迹。"""
     # 装端口 + 离屏:observe 段早退 = 节点完成(旧 handle 首闸语义)
     install_dispatch_stub_ports(monkeypatch)
-    op, match, _session, calls = _make_megastar(
+    op, match, session, calls = _make_megastar(
         test_context, monkeypatch, in_node=False)
-    match.exec_state.megastar_candidate_clicked = True
+    session.strategy_state = StrategyState()
+    session.strategy_state.megastar_clicked = True
     rs = _run_node(test_context, op, op.handle)
     assert op._lifecycle_trace == ['observe'], (
         f'装端口须走五段新路径;离屏早退 = 后续段不执行(仅 observe 段迹):'
         f'{op._lifecycle_trace}')
     assert calls == [], '离屏早退 = 不发动作'
     assert '巨星节点完成' in (rs.status or ''), f'完成语义不变:{rs!r}'
-    assert match.exec_state.megastar_candidate_clicked is False, (
-        '选中标记复位副作用随 _in_node 复检保留(跨节点不保持)')
+    assert session.strategy_state.megastar_clicked is False, (
+        '选中标记复位副作用随 _in_node 复检保留(跨节点不保持;'
+        '宿主 = 策略器 StrategyState)')
     # 不装端口:旧路径零段迹 + 仍在屏内 = 一个动作 + retry
     from sr_od.application.currency_war import cw_game_ports as _ports_mod
     monkeypatch.setattr(_ports_mod, '_INSTALLED', (None, None))   # 卸载复位
@@ -208,6 +214,80 @@ def test_megastar_dispatch_both_ways(test_context, monkeypatch) -> None:
     assert op2._lifecycle_trace == [], f'旧路径不得写段迹:{op2._lifecycle_trace}'
     assert calls2 == [1] and not rs2.is_success, (
         '旧路径在屏内 = 一个动作 + retry(保形)')
+
+
+def test_megastar_redispatch_no_reclick_and_gate_reset(
+        test_context, monkeypatch) -> None:
+    """巨星防重入行为锁(旗标宿主 = 策略器 StrategyState,执行层经 kernel
+    ``strategy_state_of`` None-safe 通道读写;execstate-dissolution):
+    - 同节点二次派发(re-dispatch 重入,observe 门未 miss)→ 已点标记
+      在位,不再点候选(防 re-click toggle 反选 → 确认无候选卡死);
+    - observe 门 miss(离开巨星 overlay)→ 节点完成即复位,标记不跨节点
+      保持(巨星一局可多次触发);
+    - 状态对象缺席(裸 session,第三方策略面)→ 读退 False、写跳过,
+      执行层不冷建策略器状态(禁 impl ``state_of`` 装配语义)。
+    红 = 重入重点候选 / 门 miss 不复位 / 缺席态炸错或冷建。"""
+    import sr_od.application.currency_war.operations.cw_op.cw_action_registry as reg_mod
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_megastar as ms,
+    )
+
+    session = StrategySession()
+    st = StrategyState()
+    session.strategy_state = st
+    match = SimpleNamespace(
+        session=session,
+        strategy=SimpleNamespace(
+            decide_megastar=lambda opts, state, sess, cfg: SimpleNamespace(
+                idx=0, reason='stub')))
+    monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
+    op = ms.CwScreenMegastar(test_context)
+    monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
+    monkeypatch.setattr(op, 'round_by_find_area',
+                        lambda scr, s, a, **k: _Area(True))
+    clicks: list = []
+    monkeypatch.setattr(
+        test_context, 'controller',
+        SimpleNamespace(mouse_move=lambda p, **k: None,
+                        click=lambda p, **k: clicks.append(p)),
+        raising=False)
+    monkeypatch.setattr(ms, 'read_megastar_options',
+                        lambda ctx, scr: [SimpleNamespace(char_id='花火')])
+    monkeypatch.setattr(ms, 'area_center',
+                        lambda ctx, name, screen=None: SimpleNamespace(
+                            x=822, y=333))
+    monkeypatch.setattr(ms.time, 'sleep', lambda *_: None)
+
+    class _StubPickOp:
+        def execute(self, env) -> bool:
+            return True
+
+    monkeypatch.setattr(reg_mod, 'action_op_for', lambda act: _StubPickOp())
+    # ① 首派发:恰一次候选点击 + 发射即置位
+    op._do_action(_FRAME)
+    assert len(clicks) == 1, f'首派发恰一次候选点击:{clicks!r}'
+    assert st.megastar_clicked is True, '置位落策略器 StrategyState'
+    # ② 同节点二次派发:标记在位 → 不再点候选
+    op._do_action(_FRAME)
+    assert len(clicks) == 1, f'二次派发不重复点候选(防反选卡死):{clicks!r}'
+    # ③ observe 门 miss(离开巨星 overlay)→ 节点完成即复位
+    monkeypatch.setattr(op, 'round_by_find_area',
+                        lambda scr, s, a, **k: _Area(False))
+    assert op._in_node(_FRAME) is False, '门 miss = 节点完成'
+    assert st.megastar_clicked is False, '门 miss 复位(标记不跨节点保持)'
+    # ④ 状态对象缺席:读退 False、写跳过、不冷建(裸 session 可完整跑动作)
+    session2 = StrategySession()   # strategy_state 缺省 None
+    monkeypatch.setattr(test_context, 'cw_match',
+                        SimpleNamespace(session=session2,
+                                        strategy=match.strategy),
+                        raising=False)
+    op2 = ms.CwScreenMegastar(test_context)
+    monkeypatch.setattr(op2, 'last_screenshot', _FRAME, raising=False)
+    monkeypatch.setattr(op2, 'round_by_find_area',
+                        lambda scr, s, a, **k: _Area(True))
+    op2._do_action(_FRAME)
+    assert len(clicks) == 2, '缺席态读退 False → 照常点候选(无宿主防重入)'
+    assert session2.strategy_state is None, '缺席态写跳过,执行层不冷建'
 
 
 # (三审整删)原 test_event_screens_source_free_of_verify_segment
@@ -227,22 +307,22 @@ def test_megastar_dispatch_both_ways(test_context, monkeypatch) -> None:
 
 
 def test_encounter_refresh_semantics(test_context, monkeypatch) -> None:
-    """遭遇刷新语义(refresh 幸存三锁并一:发射计数/守卫旗标/刷后重读
+    """遭遇刷新语义(refresh 幸存三锁并一:发射计数/守卫计数闸/刷后重读
     重决策;单驱动生产旧路径——发射点 ``_emit_refresh_click`` 与刷后重
     决策住共享分支链,生产形态承重):
-    - 建议刷新 → 有次数未用 → 发射即置位(+1 带 refresh_click 证据),
-      卡面未变帧(原「验效失败」形态)仍 +1;防重入旗标(执行侧载体)
-      同步置位;验效双通道拆除后(用户裁定 2026-09-10 动作 op 禁验效):
-      点钮+固定等待→无条件重读→带 refresh_used=True 自然重决策(恰两次
-      决策);本访问交回不写 chosen(写时点 = 重入裁决,由
-      test_encounter_old_path_kept_without_ports 承重);
-    - 发射前置闸逐位:本局已用 / 无剩余次数 → 不发射不计数。
+    - 建议刷新 → 有次数未用 → 发射即容器计数 +1(带 refresh_click 证据),
+      卡面未变帧(原「验效失败」形态)仍 +1;验效双通道拆除后(用户裁定
+      2026-09-10 动作 op 禁验效):点钮+固定等待→无条件重读→带
+      refresh_used=True 自然重决策(恰两次决策);本访问交回不写 chosen
+      (写时点 = 重入裁决,由 test_encounter_old_path_kept_without_ports
+      承重);
+    - 发射前置闸逐位:容器计数在位(本局已用)/ 无剩余次数 → 不发射不计数。
     (并锁依据 = 三锁断言面同住一条刷新分支链:原
     emission_counts_and_reread_redecide_new_path(装端口驱动,段迹面随
     并存窗收口退役)/ emission_counts_on_old_path_too / guarded_by_
     session_flag_and_count。红 = 发射断流 / 前置闸失守 / 重决策丢失。)"""
     opts = [EncounterOption(idx=0, difficulty=1, rewards=['金币×2'])]
-    # ① 发射即置位 + 刷后重读重决策(重读 = 原卡面未变形态)
+    # ① 发射即计数 + 刷后重读重决策(重读 = 原卡面未变形态)
     op, match, session = _make_encounter(
         test_context, monkeypatch, in_screen=True, options=opts,
         pick=EncounterPick(idx=0, refresh=True, reason='stub'),
@@ -262,28 +342,53 @@ def test_encounter_refresh_semantics(test_context, monkeypatch) -> None:
         f'{gs.encounter_refresh_used.value}')
     assert gs.encounter_refresh_used.evidence == 'refresh_click', (
         f'发射证据逐位一致:{gs.encounter_refresh_used.evidence!r}')
-    assert exec_state_of(session)._encounter_refresh_used is True, (
-        '防重入旗标(执行侧载体)发射点同步置位')
     assert len(_decide_calls) == 2 and _decide_calls[1][1] is True, (
         f'刷后无条件重读+自然重决策(恰两次决策,重决策带 refresh_used=True):'
         f'{_decide_calls!r}')
-    # ② 本局已用 → 不发射不计数
+    # ② 本局已用(容器计数在位)→ 不发射不计数
     op2, _m2, s2 = _make_encounter(
         test_context, monkeypatch, in_screen=True, options=opts,
         pick=EncounterPick(idx=0, refresh=True, reason='stub'))
-    exec_state_of(s2)._encounter_refresh_used = True
+    _gs2 = game_state_of(s2)
+    _gs2.write_logic(_gs2.encounter_refresh_used, 1,
+                     produced_by='CwScreenEncounter',
+                     sig=ChannelSig(family='logic_action',
+                                    actor='CwScreenEncounter',
+                                    mode='compute'))
     _run_node(test_context, op2, op2.handle)
-    assert game_state_of(s2).encounter_refresh_used.value is None, (
-        '本局已用 → 不发射不计数')
-    # ③ 无剩余次数 → 不发射不计数、不置防重入旗标
+    assert _gs2.encounter_refresh_used.value == 1, (
+        '本局已用(容器计数 >0)→ 不发射不计数')
+    # ③ 无剩余次数 → 不发射不计数
     op3, _m3, s3 = _make_encounter(
         test_context, monkeypatch, in_screen=True, options=opts,
         pick=EncounterPick(idx=0, refresh=True, reason='stub'), cnt=None)
     _run_node(test_context, op3, op3.handle)
     assert game_state_of(s3).encounter_refresh_used.value is None, (
         '无次数 → 不发射不计数')
-    assert exec_state_of(s3)._encounter_refresh_used is False, (
-        '未发射不置防重入旗标')
+
+
+def test_encounter_refresh_counts_once_no_double(
+        test_context, monkeypatch) -> None:
+    """encounter 单次刷新恰 +1 无双计(容器 encounter_refresh_used 为唯一
+    「已用」账,ExecState 侧标已退役——execstate-dissolution):
+    - 一次刷新流程 → 容器计数恰 1(发射链若存在第二容器写点即 ≥2,
+      双计即计数毒化);
+    - 真实发射后的重入(re-dispatch 再建议刷新)→ 容器计数闸拦,
+      不再发射,计数不变。
+    红 = 单次刷新双计 / 重入重复发射。"""
+    opts = [EncounterOption(idx=0, difficulty=1, rewards=['金币×2'])]
+    op, _match, session = _make_encounter(
+        test_context, monkeypatch, in_screen=True, options=opts,
+        pick=EncounterPick(idx=0, refresh=True, reason='stub'),
+        refresh_opts=opts)
+    _run_node(test_context, op, op.handle)
+    gs = game_state_of(session)
+    assert gs.encounter_refresh_used.value == 1, (
+        f'单次刷新恰 +1(无双计):{gs.encounter_refresh_used.value!r}')
+    # 重入:同一 op 再跑一轮节点(确认重入裁决放行后仍建议刷新)
+    _run_node(test_context, op, op.handle)
+    assert gs.encounter_refresh_used.value == 1, (
+        f'已用重入不再发射(容器计数闸):{gs.encounter_refresh_used.value!r}')
 
 
 def test_encounter_chosen_inline_not_registry_collected(

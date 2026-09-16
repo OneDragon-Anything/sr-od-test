@@ -32,9 +32,9 @@ test_cw_obs_arch_event_screens.py 断言集模板;生产端口恒 None 直连旧
 
 - **注册表零登记锁**(§6.4 收编面本批零行):八屏源无 register_outcome_
   hook / fire_emit_hooks 接线——§6.4 表登记件全不涉事件选卡屏;supply_
-  refresh_used GameState 字段位 = 先申报禁静默(cw_game_state.py 字段行
-  自注),执行侧防重入旗标 _supply_refresh_used 留守 _do_action,不入注册
-  表。红 = 未经申报面擅立登记件(EMIT_TRIGGERED_DECLARED 同款纪律)。
+  refresh_used live 写端 = ``_do_action`` 刷新分支单点直写容器(渠道②
+  logic_action,发射即记不等验效;注册表缺席 = 本点唯一,无双计面)。
+  红 = 未经申报面擅立登记件(EMIT_TRIGGERED_DECLARED 同款纪律)。
 - **共享动作体锁**:七选卡屏 post-gate 体纯移入 ``_handle_overlay``(两路径
   共用零转录,先例 = 盛会之星 ``_do_action``);supply 选定记录面
   (chosen_supply 确认即写)住 ``_do_action`` 真选分支(行为锁正本 =
@@ -138,6 +138,58 @@ def test_supply_chosen_written_on_confirm_pick(test_context, monkeypatch) -> Non
 # (原 test_supply_no_outcome_registry_item 删:负向注册表取证断言——
 #  「不得私设登记件」红时答不出哪个运行行为坏了,架构申报纪律归 review
 #  与代码规范;supply 行为面由同文件 chosen 暂存/重入弃陈旧两锁承重。)
+
+
+def test_supply_refresh_emission_counts_container(
+        test_context, monkeypatch) -> None:
+    """supply live 刷新写端锁(execstate-dissolution:执行侧旗标退役,live
+    写端接容器 ``supply_refresh_used`` 计数——渠道② 单点,发射即记不等
+    验效,含锚读缺零点击路径):
+    - 刷新发射 → 容器计数恰 +1(evidence=refresh_click;无双计面——
+      本点 = 唯一容器写点);
+    - 计数在位(>0 = 已用)重入 → 不再发射不计数。
+    OCR 读链/锚读/机械派发桩化,只锁记录面与闸面。"""
+    from sr_od.application.currency_war.operations.cw_op import (
+        cw_action_registry,
+    )
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_supply_node as sn,
+    )
+
+    session = StrategySession()
+    match = SimpleNamespace(
+        session=session,
+        strategy=SimpleNamespace(
+            decide_supply=lambda opts, state, sess, cfg, refresh_used:
+                SimpleNamespace(idx=0, refresh=True, reason='test')))
+    monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
+    op = sn.CwScreenSupplyNode(test_context)
+    monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
+    monkeypatch.setattr(op, '_read_refresh_anchor', lambda screen: None)
+    opt = SimpleNamespace(char='希儿', equip='星币收集器', has_diamond=True)
+    monkeypatch.setattr(sn, 'read_supply_options',
+                        lambda ctx, screen: [(opt,
+                                              SimpleNamespace(x=900, y=550))])
+    monkeypatch.setattr(sn, 'CurrencyWarConfig', lambda idx: SimpleNamespace())
+
+    class _StubPickOp:
+        def execute(self, env) -> bool:
+            return True
+
+    monkeypatch.setattr(cw_action_registry, 'action_op_for',
+                        lambda act: _StubPickOp())
+    # ① 刷新发射(锚读缺零点击路径)→ 容器 +1
+    op._do_action(_FRAME)
+    gs = game_state_of(session)
+    assert gs.supply_refresh_used.value == 1, (
+        f'刷新发射即计数恰 +1(发射即记不等验效):'
+        f'{gs.supply_refresh_used.value!r}')
+    assert gs.supply_refresh_used.evidence == 'refresh_click', (
+        f'发射证据逐位一致:{gs.supply_refresh_used.evidence!r}')
+    # ② 计数在位重入 → 不再发射不计数
+    op._do_action(_FRAME)
+    assert gs.supply_refresh_used.value == 1, (
+        f'已用重入不发射(容器计数闸):{gs.supply_refresh_used.value!r}')
 
 
 # ==================== 七选卡屏(收口整删)====================

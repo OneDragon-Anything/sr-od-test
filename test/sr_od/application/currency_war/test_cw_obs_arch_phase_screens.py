@@ -75,11 +75,11 @@ from one_dragon.base.operation.operation_round_result import (
     OperationRoundResultEnum,
 )
 from sr_od.application.currency_war.kernel import cw_state_journal as journal_mod
-from sr_od.application.currency_war.kernel.cw_exec_state import (
-    ExecState,
-    exec_state_of,
+from sr_od.application.currency_war.kernel.cw_exec_state import ExecState
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    ChannelSig,
+    game_state_of,
 )
-from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
 from sr_od.application.currency_war.kernel.cw_investments import (
     normalize_invest_name,
 )
@@ -446,8 +446,6 @@ def test_strategy_refresh_emission_semantics(test_context, monkeypatch,
         f'卡面未变帧仍 +1(随点击置位不等验效,B5-④):{gs.strategy_refresh_used.value!r}')
     assert gs.strategy_refresh_used.evidence == 'refresh_click@slot0', (
         f'发射证据逐位一致:{gs.strategy_refresh_used.evidence!r}')
-    assert exec_state_of(session)._invest_refresh_used_slots == {0}, (
-        '防重入旗标(执行侧载体)发射点同步置位')
     # 改写依据:逐卡刷新 = 终结动作(用户裁定 2026-09-14,照投资环境
     # 投资环境屏形态,见 cw_screen_invest_strategy._decide_and_act 注释)——
     # 点钮后本访问即交回(pending + round_retry),「刷后不重读不比对不
@@ -461,6 +459,40 @@ def test_strategy_refresh_emission_semantics(test_context, monkeypatch,
     refresh_clicks = [c for c in clicks if c.y == _CNT_Y]
     assert [(c.x, c.y) for c in refresh_clicks] == [(477 + _DX, _CNT_Y)], (
         f'刷新点击恰一次(槽 0 文本锚定):{refresh_clicks!r}')
+
+
+def test_strategy_refresh_gate2_reads_container_count(
+        test_context, monkeypatch) -> None:
+    """闸 2 读源锁(防重入账 = 容器 ``strategy_refresh_used`` 逐卡计数,
+    旧执行侧 visit 级槽集已随 ExecState 退役——execstate-dissolution):
+    - 容器计数在位(键 = normalize_invest_name 规范卡名,闸 1 计数现读
+      仍在)→ 闸 2 拦截:零刷新点击、拦截轮不发射不计数(无双计);
+    - 点击面仅剩选卡/确认两击 = 闸后流程照常走到选卡(闸拦 ≠ 流程断)。
+    红 = 闸 2 仍读已退役槽集 / 容器计数不拦 / 拦截轮误发射。"""
+    names = ['赌神·银', '恢复生机', '气氛组']
+    book = _FrameBook([object()])
+    book.options[id(book.frames[0])] = _opts_of(names)
+    book.counts[id(book.frames[0])] = [(1, 477, _CNT_Y), (1, 975, _CNT_Y),
+                                       (1, 1474, _CNT_Y)]
+    picks = [SimpleNamespace(option_idx=0, refresh=True, refresh_slots=(0,),
+                             reason='stub+refresh')]
+    op, _match, session, clicks, _dc = _make_strategy(
+        test_context, monkeypatch, book, picks)
+    _k = normalize_invest_name(names[0])
+    _gs = game_state_of(session)
+    _gs.write_logic(_gs.strategy_refresh_used, {_k: 1},
+                    produced_by='CwScreenInvestStrategy',
+                    sig=ChannelSig(family='logic_action',
+                                   actor='CwScreenInvestStrategy',
+                                   mode='compute'))
+    _run_node(test_context, op, op.handle)
+    refresh_clicks = [c for c in clicks if c.y == _CNT_Y]
+    assert refresh_clicks == [], (
+        f'容器计数在位 → 闸 2 拦截,零刷新点击:{clicks!r}')
+    assert len(clicks) == 2, (
+        f'闸拦 ≠ 流程断:选卡 + 确认照常两击:{clicks!r}')
+    assert _gs.strategy_refresh_used.value == {_k: 1}, (
+        f'拦截轮不发射不计数(无双计):{_gs.strategy_refresh_used.value!r}')
 
 
 @pytest.fixture()
