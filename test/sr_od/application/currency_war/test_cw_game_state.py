@@ -44,9 +44,9 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     bench_free_slots,
     bench_is_full,
     bench_slots_to_legacy,
-    game_state_of,
     consume_defect_sink,
     deployed_rows_from_obs,
+    game_state_of,
     grant_effect_node_refresh_balance,
     project_effect_capacity,
     set_defect_sink,
@@ -995,34 +995,6 @@ def test_synthesis_shop_empty_keeps_payload_in_recognition_domain() -> None:
             if s.kind == 'content'] == ['花火'], \
         '沿用上一开店牌面(失读窗语义,同观察漏斗「空牌面不写」口径)'
     assert gs.shop.evidence != 'left_screen', '识别域空表非结构离屏'
-
-
-# ============================================================ §8.7 件 3
-# Snapshot 消费切换:mandate_v1 内部改读 GameState 视图
-
-
-def _gs_with_node(sess) -> None:
-    gs = game_state_of(sess)
-    gs.observe(gs.node, NodeKey(plane=2, round_num=5, kind='battle'), sig=_sig())
-
-
-def test_snapshot_assembly_falls_back_to_game_state_view() -> None:
-    """件 3:snapshot_from_obs 的 session 回退锚改读 GameState 视图——
-    obs.state 缺席帧,plane/round 取记录值(与旧 last_state 直读在常态帧
-    逐位一致;失读帧取 carried 沿用值 = 记录模型申报面)。"""
-    from sr_od.application.currency_war.decision_assembly import snapshot_from_obs
-
-    sess = StrategySession()
-    _gs_with_node(sess)
-    obs = SimpleNamespace(
-        state=None, state_gold_trusted=False, bench_chars=[], deployed_chars=[],
-        spheres=[], boxes=[], tomes=[], deploy_vacancy=0, free_bench_slots=None,
-        front_occupied=set(), back_occupied=set(), front_size=4,
-        shop_open=False, box_overlay_open=False, event_overlay=None,
-    )
-    snap = snapshot_from_obs(obs, sess)
-    assert (snap.plane, snap.round_num) == (2, 5), \
-        '回退锚 = GameState 记录值(非 last_state 原帧)'
 
 
 # ============================================================ §8.7 批次四

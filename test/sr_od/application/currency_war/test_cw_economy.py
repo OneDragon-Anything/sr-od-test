@@ -731,11 +731,11 @@ def test_pair_materialization_and_drought_reset() -> None:
 
 
 def test_injection_consistency_single_registry_source() -> None:
-    """注入一致性锁(W636 A):prep_brain._budget 装配的 BudgetView 与
-    显式注入的接缝值逐字段一致——禁「部分字段落 DEFAULT」的双源混用
-    (P6 契约)。cap 归一(ADR-0516 三源归一 + ADR-0598 随批扩展):
-    schedule ② 前置息线与预算面守息线分量(reserve_cap floor/
-    BudgetView.interest_floor/refresh_ev_budget 溢余面)都随 session
+    """注入一致性锁(W636 A):披露函数现算写入的披露字段与显式注入的
+    接缝值逐字段一致——禁「部分字段落 DEFAULT」的双源混用(P6 契约)。
+    cap 归一(ADR-0516 三源归一 + ADR-0598 随批扩展):
+    schedule ② 前置息线与预算面守息线分量(reserve_cap 守息线/
+    refresh_ev_budget 溢余面)都随 session
     resolved 链(session.active_strategies 注入面,registry 可达值域
     = 买断制 0/开源节流 9/利息上调 10)移动,registry.interest_cap
     注入不再移动任何息线。锁语义重推(锁存在性纪律,ADR-0598):旧锁
@@ -763,23 +763,33 @@ def test_injection_consistency_single_registry_source() -> None:
         cw4_box(st2), sess)
     assert refresh_ev_budget(cw4_box(st2), sess, _REG) == 0
     assert refresh_ev_budget(cw4_box(st2), sess_ov) > 0
-    # BudgetView 装配单源:传入 reg2 的 BudgetView == 逐字段显式注入值
-    # (_budget 读 session 容器单例,局内事实先经合成口喂入 = 生产同路)
+    # 披露面装配单源(W636 A 载体 = 披露函数):注入 reg2 披露后,披露
+    # 字段 == 逐字段显式注入值(现算与披露写入合一 =
+    # economy_cycle.disclose_budget;局内事实先经合成口喂入 = 生产同路)
     from test.sr_od.application.currency_war._cw_helpers import cw4_feed
+
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        game_state_of,
+        gold_of,
+    )
     cw4_feed(sess_ov, st2)
     from sr_od.application.currency_war.strategies.impl.mandate_v1.economy_cycle import (
-        _budget,
+        disclose_budget,
         obligation,
     )
-    bv = _budget(st2, sess_ov, reg2)
-    assert bv.interest_floor == 0   # resolved 链(买断制)压过 registry 旋钮
-    assert bv.reserve_cap == reserve_cap(cw4_box(st2), sess_ov)
-    assert bv.obligation == obligation(cw4_box(st2), sess_ov, reg2)
-    assert bv.schedule == schedule_upgrade(cw4_box(st2), sess_ov, reg2)
-    assert bv.ev_auth == refresh_ev_budget(cw4_box(st2), sess_ov, reg2)
+    disclose_budget(game_state_of(sess_ov), sess_ov, reg2)
+    st_ov = state_of(sess_ov)
+    assert st_ov.v3_reserve_cap == reserve_cap(cw4_box(st2), sess_ov)
+    assert st_ov.v3_reserve_overflow == max(
+        0, gold_of(game_state_of(sess_ov)) - st_ov.v3_reserve_cap)
+    assert st_ov.v3_release_budget == obligation(cw4_box(st2), sess_ov, reg2)
+    assert st_ov.v3_disclosure_key == (st2.plane, st2.round_num)
+    # registry 旋钮(非注册表可达值 cap=4)对披露预算面逐位惰性:非买断
+    # session 同帧披露,储备线 = 默认息线链(旋钮不动预算面)
     cw4_feed(sess, st2)
-    bv_base = _budget(st2, sess, reg2)
-    assert bv_base.interest_floor == 50   # registry cap=4 不再移动预算面息线
+    disclose_budget(game_state_of(sess), sess, reg2)
+    st_base = state_of(sess)
+    assert st_base.v3_reserve_cap == reserve_cap(cw4_box(st2), sess)
 
 
 # (原 test_tracking_view_isolated_from_session_writers 随修正裁定

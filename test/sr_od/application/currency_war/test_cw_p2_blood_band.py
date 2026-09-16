@@ -245,7 +245,7 @@ class TestLockGenObservationKeys:
         st = _mk_frame(40, 10)
         sess = SimpleNamespace(cw4_counters={}, v3_intention=IntentionState())
         cw4_feed(sess, st)
-        out = entry.emit(_obs(st), SimpleNamespace(), sess, None)
+        out = entry.emit(_obs(st), sess, None)
         assert state_of(sess).cw4_counters.get('terminal_targetless_idle') == 1
         assert not any(isinstance(e.action, mandate.LevelUp) for e in out), (
             '观测零行为:形态⑥帧发射序列不变(无动作 ⇒ 出战路径)')
@@ -253,14 +253,14 @@ class TestLockGenObservationKeys:
         st_z = _mk_frame(80, 10)
         sess_z = SimpleNamespace(cw4_counters={}, v3_intention=IntentionState())
         cw4_feed(sess_z, st_z)
-        entry.emit(_obs(st_z), SimpleNamespace(), sess_z, None)
+        entry.emit(_obs(st_z), sess_z, None)
         assert 'terminal_targetless_idle' not in state_of(sess_z).cw4_counters
         # 负对照:非濒死帧(hp=60)不计(键只辖濒死带形态,与既有
         # advisor 计数面零交集)
         st_h = _mk_frame(40, 60)
         sess_h = SimpleNamespace(cw4_counters={}, v3_intention=IntentionState())
         cw4_feed(sess_h, st_h)
-        entry.emit(_obs(st_h), SimpleNamespace(), sess_h, None)
+        entry.emit(_obs(st_h), sess_h, None)
         assert 'terminal_targetless_idle' not in state_of(sess_h).cw4_counters
 
     def _case_lock_open_rate(self, monkeypatch):

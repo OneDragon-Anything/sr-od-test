@@ -3,17 +3,15 @@
 依据 = 蓝图 v-final.1 §7 批 2 行 + §4.3-R1/R5 + W622 预验尸 P1-P9 +
 W620 BATCH2_APPENDIX 三危险供给点(D1/D2/D3):
 
-1. D1:hoard 可信位——投影失败帧 ``hoard_readable=False``,消费域走保守域,
-   变异探针(投影抛错)下买侧行为 ≠ 空集放行;正常帧对照腿并入探针锁;
-2. D2:committed 缺供给帧 = 保守侧 False——本文件不再持测;保守侧直锁
+1. D2:committed 缺供给帧 = 保守侧 False——本文件不再持测;保守侧直锁
    = test_cw_session_separation::test_none_state_criterion_faces_
    return_defaults(``committed_authority(None, bare) is False``);原并入目标
    test_cw_w620_migration_b1 本体已随统一迁移批(commit b94e9cfb)删除,指针收口重锚;
-3. D3:息线单一源 = ``registry.interest_floor()`` 派生(interest_cap×10),
+2. D3:息线单一源 = ``registry.interest_floor()`` 派生(interest_cap×10),
    全仓属性读点 = 0(grep 锁)+ ALL IN override 通道;
-4. P6 注入分歧探针:registry 注入臂与缺省臂必须出现受控分歧(注入链
+3. P6 注入分歧探针:registry 注入臂与缺省臂必须出现受控分歧(注入链
    可达证);
-5. 哨兵锁:局23 型帧(100 金+备战空+息线姿态)在现行 mandate_v1 商店线
+4. 哨兵锁:局23 型帧(100 金+备战空+息线姿态)在现行 mandate_v1 商店线
    决策面(``decide_shop_action``)。2026-09-08 覆盖对账后收敛为两面:
    2★ 压库件无退金背书 ⇒ 端到端零支出;金位不破息线(金位全决策面端到端,
    扫面收窄 = {0,49,50,51,100},息线两侧边界 + 两端,2026-09-17 审计判决;
@@ -28,7 +26,7 @@ W620 BATCH2_APPENDIX 三危险供给点(D1/D2/D3):
    shop_r1_no_chaseable_member==1 面无本帧族独立覆盖锁,现役近邻 =
    test_cw_no_target_three_arms::test_must_spend_zone_no_refresh_burn
    (必花域空店帧同键断言,p2plus 无目标帧族,非局23 帧型);
-6. committed 权威判定直锁(权威序三支 + 缺供给保守 False;原逐帧对拍锁
+5. committed 权威判定直锁(权威序三支 + 缺供给保守 False;原逐帧对拍锁
    的对拍半边随退役旧判定式删除,现役语义腿重锚为直锁)。锁面三案 =
    保守真帧一支(P1 未锁线)+ ist 定型两支(locked/p1_pair);plane≥2
    位面序支与 None 退化输入案经审计判决简化(None 案直锁 =
@@ -36,7 +34,8 @@ W620 BATCH2_APPENDIX 三危险供给点(D1/D2/D3):
 
 退役面(审计判决删除):P7 drive_intention 键守卫幂等锁(drive_intention
 生产调用点已清零)、P4 ist 跨局零残留锁(每局新建 StrategySession
-构造性保证,非行为锁面)。
+构造性保证,非行为锁面)、D1 hoard 可信位锁(hoard 投影消费域随方向
+投影视图层退役删除,消费侧保守域语义无载体)。
 """
 from __future__ import annotations
 
@@ -67,14 +66,6 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     ShopCard,
 )
 from sr_od.application.currency_war.strategies.impl.cw_strategy import StrategySession
-from sr_od.application.currency_war.strategies.impl.mandate_v1.assembly import (
-    assemble,
-    hoard_consumer_domain,
-)
-from sr_od.application.currency_war.strategies.impl.mandate_v1.contracts import (
-    Snapshot,
-    SubstateClassification,
-)
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
 )
@@ -86,15 +77,6 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicate
 )
 
 
-def _snapshot(plane: int = 1, round_num: int = 2) -> Snapshot:
-    return Snapshot(
-        classification=SubstateClassification(
-            name='prep_shop', evidence=('test',), confident=True),
-        plane=plane, round_num=round_num, level=3, gold=40, gold_trusted=True,
-        free_bench_slots=3, deploy_vacancy=1, shop_open=False,
-    )
-
-
 def _state(plane: int = 1, round_num: int = 2, gold: int = 40) -> CwSimFrame:
     st = CwSimFrame()
     st.plane = plane
@@ -102,39 +84,6 @@ def _state(plane: int = 1, round_num: int = 2, gold: int = 40) -> CwSimFrame:
     st.gold = gold
     st.level = 3
     return st
-
-
-# ----------------------------------------------------- D1 hoard 可信位
-
-def test_d1_mutation_probe_projection_failure_conservative_domain(monkeypatch):
-    """变异探针(D1 验收判据):hoard_target_set 抛错 → 消费域 = 保守域。
-
-    静默退空集 = 锁线局囤货方向消失一帧、买侧按无方向放行——本锁钉住
-    「投影失败」与「真无目标」表示分离(hoard_readable 位)。
-    正常帧对照腿:ist 未锁 → hoard = ⑤兜底域(fallback),readable 恒
-    True(含 fallback 非空域与真空集)——「空集双义」分离的对照半。
-    """
-    import sr_od.application.currency_war.kernel.cw_intention as cw_intention_mod
-
-    sess = StrategySession()
-    state_of(sess).v3_intention = IntentionState()
-
-    # 正常帧对照:readable 恒真,hoard 为 frozenset 域
-    turn_ok = assemble(_snapshot(), sess)
-    assert turn_ok.direction.hoard_readable is True
-    assert isinstance(turn_ok.direction.hoard, frozenset)
-
-    def _boom(_state, _ist):
-        raise RuntimeError('注入:投影失败')
-
-    monkeypatch.setattr(cw_intention_mod, 'hoard_target_set', _boom)
-    turn = assemble(_snapshot(), sess)
-    d = turn.direction
-    assert d.hoard_readable is False          # 失败帧显式暴露
-    full = frozenset({'任意件A', '任意件B'})
-    assert hoard_consumer_domain(d, full) == full     # 保守域,非空集放行
-    ok = replace(d, hoard_readable=True)
-    assert hoard_consumer_domain(ok, full) == ok.hoard  # 正常帧走目标集
 
 
 # ----------------------------------------------------- D2 缺供给保守侧

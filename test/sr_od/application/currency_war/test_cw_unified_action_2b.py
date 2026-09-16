@@ -134,7 +134,7 @@ def test_levelup_emission_carries_cost_and_auth_basis():
     assert a.cost == xp_click_cost(gs_cost_view)   # 现算单一源(含回退支)
     assert a.auth_basis in ('arm1', 'arm0', 'pop', 'must_spend')
     # route_tag 透传面 = Emitted.reason(动作对象 route_tag 由桥伴在
-    # decide_from_turn 装载,发射位直跑不经桥 → reason 承载)
+    # decide_prep_frame 装载,发射位直跑不经桥 → reason 承载)
     assert lv[0].reason.startswith('m3_levelup_batch:')
 
 

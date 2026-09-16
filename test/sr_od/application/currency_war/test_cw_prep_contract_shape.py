@@ -14,10 +14,9 @@
 - 消费端守卫:非 ``None`` 非 ``CwAction`` 的非法返回 → 决策循环 F3 fail
   (守卫断言语义:策略器 bug 响亮暴露,禁静默跳过)。
 
-零真实副作用:①②经两条缝桩(装配缝 ``_assemble_turn`` = 注册桥壳注入
-位;决策核发射缝 = 模块级 ``decide_from_turn``)离线直调,不读屏;③走
-op 生命周期决策循环(harness run_node,fast_sleep 包裹),桩策略返回
-非法形状在执行前即被守卫拒绝,零点击零落盘。
+零真实副作用:①②经决策核发射缝桩(模块级 ``decide_prep_frame``)离线
+直调,不读屏;③走 op 生命周期决策循环(harness run_node,fast_sleep
+包裹),桩策略返回非法形状在执行前即被守卫拒绝,零点击零落盘。
 """
 from __future__ import annotations
 
@@ -51,12 +50,11 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
 def _prep_strategy(monkeypatch: pytest.MonkeyPatch,
                    emission: list[CwAction]) -> tuple[
         cw_bridge.MandateV1Strategy, StrategySession]:
-    """mandate_v1 具现(真实类)+ 两条决策缝桩,离线直调备战契约入口。
+    """mandate_v1 具现(真实类)+ 决策核发射缝桩,离线直调备战契约入口。
 
-    - ``_assemble_turn`` 实例桩 = 装配缝(注册桥壳 MandateV1Live 注入位,
-      直调路径按缺省语义本就未注入);``decide_from_turn`` 模块桩 = 决策核
-      发射缝——本锁辖「边界把发射序列映射成单动作/None」的形状,核内
-      三遍编排/帧稳定截断不在锁面;
+    - ``decide_prep_frame`` 模块桩 = 决策核发射缝——本锁辖「边界把发射
+      序列映射成单动作/None」的形状,核内三遍编排/帧稳定截断不在锁面;
+      预算披露(决策入口前置发射位之后)走真实现,零屏零外部面;
     - 黑板帧 = 真实 ``PrepObservation``(过「观察帧缺失即抛错」门);
     - ``session.prep_frame_class`` 缺省 'none' → 入口内务(帧代次消费)
       空转,方向刷新不触发,测试零全局残留。
@@ -64,11 +62,9 @@ def _prep_strategy(monkeypatch: pytest.MonkeyPatch,
     strategy = cw_bridge.MandateV1Strategy()
     session = StrategySession()
     session.prep_obs_frame = PrepObservation(free_bench_slots=9)
-    monkeypatch.setattr(strategy, '_assemble_turn',
-                        lambda obs, session: SimpleNamespace())
     monkeypatch.setattr(
-        cw_bridge, 'decide_from_turn',
-        lambda obs, turn, session, config, registry=None: list(emission))
+        cw_bridge, 'decide_prep_frame',
+        lambda obs, session, config, registry=None: list(emission))
     return strategy, session
 
 
