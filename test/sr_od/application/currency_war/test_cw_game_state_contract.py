@@ -178,13 +178,13 @@ def test_same_value_rewrite_flags_and_consumes_version(journal_sink) -> None:
 
 def test_obs_event_consumes_version_without_state_change(journal_sink) -> None:
     """观察事件行(行型 2):同流占版本、零 Field 变更;事件词表封闭
-    (arbitrate|miss|popup),集外炸错。"""
+    (arbitrate|miss|popup|chain_diff),集外炸错。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         OBS_EVENT_EVENTS,
         set_run_id_provider,
         set_state_journal_sink,
     )
-    assert OBS_EVENT_EVENTS == ('arbitrate', 'miss', 'popup')
+    assert OBS_EVENT_EVENTS == ('arbitrate', 'miss', 'popup', 'chain_diff')
     bs = _bs()
     bs.observe(bs.gold, 3, sig=_sig())
     v = bs.current_version()
