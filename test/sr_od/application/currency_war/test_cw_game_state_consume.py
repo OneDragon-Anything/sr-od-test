@@ -460,45 +460,10 @@ def test_chosen_record_face_true_pick_only(case_id: str) -> None:
         f'{case_id}: fallback 不写'
 
 
-def test_supply_chosen_written_from_stash_after_exit_only() -> None:
-    """补给节点 chosen_supply 记录面行为锁(§3.4.5;列数动态 → 值=选定列
-    三元组原文,不做列数假定):①真选暂存 → 出口验真方法写
-    (角色,装备,有钻石)且写后取走暂存;②暂存空(兜底点卡/刷新轮)不写;
-    ③pop 取走即清(重入轮入口先弃,防陈旧选跨轮/跨节点误写);无 match
-    安全空转。
-    (三审拆半:原 getsource 字符串在场扫描腿删,接线时点面归
-    review 与代码规范。)"""
-    from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_supply_node,
-    )
-    from sr_od.application.currency_war.strategies.impl.cw_strategy import (
-        StrategySession,
-    )
-
-    sess = StrategySession()
-    op = _op_with_session(cw_screen_supply_node.CwScreenSupplyNode, sess)
-    exec_state_of(sess)._pending_chosen_supply = ('希儿', '星币收集器', True)
-    op._record_chosen_supply()
-    gs = game_state_of(sess)
-    assert gs.chosen_supply.value == ('希儿', '星币收集器', True), '值=选定列三元组原名'
-    assert gs.chosen_supply.source == 'logic', '单次逻辑写入(source=logic)'
-    assert exec_state_of(sess)._pending_chosen_supply is None, \
-        '写后取走暂存(不跨节点残留)'
-    sess2 = StrategySession()
-    op2 = _op_with_session(cw_screen_supply_node.CwScreenSupplyNode, sess2)
-    op2._record_chosen_supply()
-    assert game_state_of(sess2).chosen_supply.value is None, \
-        '暂存空(兜底/刷新轮)不写'
-    # pop 取走即清(重入轮防陈旧语义)
-    exec_state_of(sess)._pending_chosen_supply = ('符玄', '旧选定', False)
-    assert op._pop_pending_chosen_supply() == ('符玄', '旧选定', False)
-    assert exec_state_of(sess)._pending_chosen_supply is None
-    # 无 match(测试/离线无会话)→ pop/写均安全空转不炸
-    op3 = _op_with_session(cw_screen_supply_node.CwScreenSupplyNode, None)
-    op3.ctx = SimpleNamespace(cw_match=None)
-    assert op3._pop_pending_chosen_supply() is None
-    op3._record_chosen_supply()
+# (test_supply_chosen_written_from_stash_after_exit_only 删:补给选定
+#  中转暂存随 execstate-dissolution 载体拆除,stash 写法语义消亡;
+#  「确认即写 chosen_supply」行为锁迁 test_cw_obs_arch_event_screens_
+#  step3.py 驱动真选分支承重。)
 
 
 # (test_expert_chosen_written_on_card_pick_only /

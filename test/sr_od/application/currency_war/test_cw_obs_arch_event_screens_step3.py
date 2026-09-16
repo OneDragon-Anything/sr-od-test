@@ -36,57 +36,29 @@ test_cw_obs_arch_event_screens.py 断言集模板;生产端口恒 None 直连旧
   自注),执行侧防重入旗标 _supply_refresh_used 留守 _do_action,不入注册
   表。红 = 未经申报面擅立登记件(EMIT_TRIGGERED_DECLARED 同款纪律)。
 - **共享动作体锁**:七选卡屏 post-gate 体纯移入 ``_handle_overlay``(两路径
-  共用零转录,先例 = 盛会之星 ``_do_action``);supply 暂存生命周期
-  (chosen 完成落账/取走清/重入弃陈旧)住 handle 出口/入口共享段。
+  共用零转录,先例 = 盛会之星 ``_do_action``);supply 选定记录面
+  (chosen_supply 确认即写)住 ``_do_action`` 真选分支(行为锁正本 =
+  test_cw_game_state_consume 的确认即写锁)。
 - **chosen_* 豁免留守锁**(§2.2/§6.5-6):chosen_* 写端仍内联于共享体
-  (出口验真通过分支),不入 on_outcome 注册表收编面。
+  (不收编入 on_outcome 注册表);supply 已改确认即写时点
+  (execstate-dissolution:中转暂存随 ExecState 载体拆除),余屏维持
+  出口验真通过分支写。
 - **验证段废除源面锁**(用户裁定 2026-09-10,同
   test_cw_obs_arch_event_screens.py 同名锁):八屏源无「六段」表述、无
   'verify' 段迹字面。
 
-驱动方式 = 真类实例(构造走 __init__,适配器位在位)+ 画面门/动作体桩化
-(``_do_action`` 方法级桩;生产端口缺省 None = 直连旧路径,行为锁单驱动
+驱动方式 = 真类实例(构造走 __init__,适配器位在位)+ 依赖桩化
+(OCR 读链/机械派发半;生产端口缺省 None = 直连旧路径,行为锁单驱动
 生产形态)。
 """
 from __future__ import annotations
 
 from types import SimpleNamespace
 
-from test.sr_od.application.currency_war._cw_helpers import (
-    Area as _Area,
-)
-from test.sr_od.application.currency_war._cw_helpers import (
-    run_node as _run_node,
-)
-
-from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
 from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
 from sr_od.application.currency_war.kernel.cw_strategy_session import StrategySession
 
 _FRAME = object()   # 稳定帧哨兵(screenshot 桩产物;共享体桩只验传递不断言内容)
-
-
-def _make_supply(test_context, monkeypatch, *, in_node: bool):
-    """补给屏真类装配(生产构造走 __init__;共享动作体 ``_do_action`` 桩)。
-
-    桩面 = 节点完成门(round_by_find_area → _in_node)+ ``_do_action`` 计数;
-    会话 = 真 StrategySession(chosen/暂存面走真实 GameState 语义)。
-    返回 (op, match, session, calls)。
-    """
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_supply_node as sn,
-    )
-
-    session = StrategySession()
-    match = SimpleNamespace(session=session)
-    monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
-    op = sn.CwScreenSupplyNode(test_context)
-    monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
-    monkeypatch.setattr(op, 'round_by_find_area',
-                        lambda scr, s, a, **k: _Area(in_node))
-    calls: list[int] = []
-    monkeypatch.setattr(op, '_do_action', lambda scr: calls.append(1))
-    return op, match, session, calls
 
 
 # ==================== 迁移结构锁(§9.1 并存期)====================
@@ -97,42 +69,70 @@ def _make_supply(test_context, monkeypatch, *, in_node: bool):
 # 红时答不出哪个运行行为坏了;结构面归 review 与代码规范。
 
 
-def test_supply_chosen_staging_lifecycle(test_context, monkeypatch) -> None:
-    """补给 chosen 暂存生命周期(supply 两条幸存锁并一:完成落账+取走清
-    +重入弃陈旧;单驱动生产旧路径,暂存生命周期住 handle 出口/入口共享
-    段,装端口段迹面随并存窗收口退役):
-    - 完成落账:已离开节点画面 = 节点完成早退 → chosen_supply 自选定
-      暂存写入 + 暂存取走即清(不跨节点残留),节点完成零动作;
-    - 重入弃陈旧:在屏轮开始先 pop 取走暂存再做动作(防跨轮/跨节点
-      误写),本轮动作照发。
-    (并锁 = 原 test_supply_exit_writes_chosen_on_lifecycle_path /
-    test_supply_reentry_discards_stale_pending_both_paths。红 = 幻影
-    chosen / 陈旧暂存跨节点误写。)"""
-    # ① 完成落账 + 取走清
-    op, _match, session, calls = _make_supply(
-        test_context, monkeypatch, in_node=False)
-    exec_state_of(session)._pending_chosen_supply = ('希儿', '星币收集器',
-                                                     True)
-    rs = _run_node(test_context, op, op.handle)
-    assert rs.is_success and '节点完成' in (rs.status or ''), (
-        f'完成语义不变:{rs!r}')
-    assert calls == [], '节点完成 = 不再发动作'
-    assert op._lifecycle_trace == [], (
-        f'生产路径零段迹:{op._lifecycle_trace}')
+def test_supply_chosen_written_on_confirm_pick(test_context, monkeypatch) -> None:
+    """补给 chosen_supply 确认即写行为锁(execstate-dissolution:选定中转
+    暂存随 ExecState 载体拆除,写端自「出口验真后
+    写」时点移到选定确认时点;口径分叉申报 = supply 直写,chosen_tome
+    维持出口验真后写家族口径——差异理由 = supply 的中转暂存正是被拆除的
+    ExecState 载体,直写是载体消亡后的唯一形态):
+    - 真选(有选项 + 决策选列):确认分支单次逻辑写入 (角色,装备,有钻石)
+      三元组,source=logic,机械派发半照发(记录面不拦截动作);
+    - 刷新轮不写 = 真选守卫(兜底点卡/刷新路径与真选分支互斥)。
+    OCR 读链/配置/机械派发半桩化,只锁记录面。
+    (原 test_supply_chosen_staging_lifecycle 暂存生命周期锁随载体删除
+    同批退役;consuming 侧 stash 写法锁
+    test_supply_chosen_written_from_stash_after_exit_only 同批删除,
+    断言语义由本锁承重。)"""
+    from sr_od.application.currency_war.operations.cw_op import (
+        cw_action_registry,
+    )
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_supply_node as sn,
+    )
+
+    # ① 真选:确认即写
+    session = StrategySession()
+    match = SimpleNamespace(
+        session=session,
+        strategy=SimpleNamespace(decide_supply=lambda opts, state, sess, cfg,
+                                 refresh_used: SimpleNamespace(
+                                     idx=0, refresh=False, reason='test')))
+    monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
+    op = sn.CwScreenSupplyNode(test_context)
+    monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
+    opt = SimpleNamespace(char='希儿', equip='星币收集器', has_diamond=True)
+    monkeypatch.setattr(sn, 'read_supply_options',
+                        lambda ctx, screen: [(opt, SimpleNamespace(x=900, y=550))])
+    monkeypatch.setattr(sn, 'CurrencyWarConfig', lambda idx: SimpleNamespace())
+    dispatched: list = []
+
+    class _StubPickOp:
+        def execute(self, env) -> bool:
+            dispatched.append(env)
+            return True
+
+    monkeypatch.setattr(cw_action_registry, 'action_op_for',
+                        lambda act: _StubPickOp())
+    op._do_action(_FRAME)
     gs = game_state_of(session)
     assert gs.chosen_supply.value == ('希儿', '星币收集器', True), (
-        f'chosen_supply 自暂存写入:{gs.chosen_supply.value!r}')
-    assert exec_state_of(session)._pending_chosen_supply is None, (
-        '写后取走暂存(不跨节点残留)')
-    # ② 重入弃陈旧
-    op2, _m2, session2, calls2 = _make_supply(
-        test_context, monkeypatch, in_node=True)
-    exec_state_of(session2)._pending_chosen_supply = ('符玄', '旧选定', False)
-    rs2 = _run_node(test_context, op2, op2.handle)
-    assert exec_state_of(session2)._pending_chosen_supply is None, (
-        '重入轮入口弃陈旧暂存')
-    assert calls2 == [1] and not rs2.is_success, (
-        '弃陈旧后本轮动作照发(在屏 = 一动作 + retry,保形)')
+        f'确认即写:容器持选定三元组,实得 {gs.chosen_supply.value!r}')
+    assert gs.chosen_supply.source == 'logic', '单次逻辑写入(source=logic)'
+    assert len(dispatched) == 1, '机械派发半照发(记录面不拦截动作链)'
+    # ② 刷新轮不写(真选守卫;锚读缺零点击在册语义)
+    session2 = StrategySession()
+    match2 = SimpleNamespace(
+        session=session2,
+        strategy=SimpleNamespace(decide_supply=lambda opts, state, sess, cfg,
+                                 refresh_used: SimpleNamespace(
+                                     idx=0, refresh=True, reason='test')))
+    monkeypatch.setattr(test_context, 'cw_match', match2, raising=False)
+    op2 = sn.CwScreenSupplyNode(test_context)
+    monkeypatch.setattr(op2, 'last_screenshot', _FRAME, raising=False)
+    monkeypatch.setattr(op2, '_read_refresh_anchor', lambda screen: None)
+    op2._do_action(_FRAME)
+    assert game_state_of(session2).chosen_supply.value is None, \
+        '刷新轮不写 = 真选守卫'
 
 
 # (原 test_supply_no_outcome_registry_item 删:负向注册表取证断言——
