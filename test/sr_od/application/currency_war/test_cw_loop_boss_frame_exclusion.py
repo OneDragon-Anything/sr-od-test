@@ -2,17 +2,17 @@
 
 病理(第五局 1-9 实锤):boss 简报帧与位面过渡共享交互文案「点击空白处
 继续」,但两屏位置不同(boss y≈770 波段 / 位面过渡 y≈930 波段)。boss 帧
-标题「强敌来袭」被 OCR 误读(「强敌米」)击穿阶段一身份后,0q 兜底的全帧
-裸文本判定被 boss 帧的共享文案命中 → 误派 CwScreenPlaneTransition 空
-fail 循环(「提示未出现」fail 每 2s 无限循环)。
+标题「强敌来袭」被 OCR 误读(「强敌米」)击穿阶段一身份后,旧全帧裸文本
+兜底被 boss 帧的共享文案命中 → 误派 CwScreenPlaneTransition 空 fail 循环
+(「提示未出现」fail 每 2s 无限循环)。
 
-修与锁(三件事):
+修与锁(两件事;0p/0q 兜底已于 2026-09-16 随裁定退役——未建档实证的
+故障形态不作兜底理由,身份 miss 的真实帧走未知兜底停机留证):
 1. 阶段一位面过渡身份帧含 boss 判别片段(判别单一源消费)→ 接管派发
-   BOSS 简报,不派位面过渡——位面节点锚可读 + 标题误读帧的纵深;
-2. 0q 兜底入口按位面过渡**本屏 rect** 判定共享文案:boss 帧(本屏提示区
-   miss ∧ 判别片段 miss 的劣化形态)零派发,落未知兜底 retry(停机面归
-   UNKNOWN_STOP_THRESHOLD,不再空转误派);
-3. 0q 兜底正控:位面过渡本屏提示区命中(真过渡帧)→ 派发位面过渡。
+   BOSS 简报,不派位面过渡——位面节点锚可读 + 标题误读帧的排他;
+2. boss 帧(位面锚 miss ∧ 判别片段 miss 的劣化形态)→ 全 loop 零派发,
+   落未知兜底 retry(终端 = UNKNOWN_STOP_THRESHOLD 停机留证,证据入库
+   后再议加固——不为无法追溯的形态预建兜底)。
 
 驱动 = CwLoop 裸实例(``__new__`` 跳过 telemetry run 铸造/分配器构造
 ——测试零真实副作用)+ 全桩面(身份识别单点/OCR 读链/画面原语/决策帧
@@ -65,7 +65,11 @@ class _StubTransition(_StubScreenOp):
 
 def _make_loop(test_context, monkeypatch, *, match_name, ocr_texts,
                transition_prompt_hit):
-    """CwLoop 裸装配 + 全桩面(见模块头)。返回 (op, [cw-op] 行序列)。"""
+    """CwLoop 裸装配 + 全桩面(见模块头)。返回 (op, [cw-op] 行序列)。
+
+    ``transition_prompt_hit`` = 位面过渡提示区桩命中(阶段一位面过渡身份
+    miss 场景下,该区已无独立兜底分支消费——保留桩位防回归复活静默消费)。
+    """
     op = CwLoop.__new__(CwLoop)
     op.ctx = test_context
     op._iter = 3                # 3+1=4:跳过 iter1 预检/焦点检查/首读分支
@@ -112,25 +116,14 @@ def test_stage1_transition_identity_boss_frame_takeover(test_context,
     assert rs.result == OperationRoundResultEnum.WAIT   # 替身成功 → 默认映射
 
 
-def test_0q_backstop_rejects_boss_frame_without_tokens(test_context,
-                                                       monkeypatch) -> None:
-    """锁2 0q 位置判定:boss 帧判别片段也 miss 的劣化形态(旧全帧裸文本
-    正是此路径击穿)→ 本屏提示区 miss → 零派发,落未知兜底 retry。"""
+def test_boss_frame_without_anchors_falls_to_unknown_fallback(
+        test_context, monkeypatch) -> None:
+    """锁2 劣化形态终端:boss 帧位面锚 miss ∧ 判别片段 miss(全帧只剩
+    共享文案)→ 零派发,落未知兜底 retry(终端 = 停机留证,不为未建档
+    形态预建兜底)。"""
     op, calls = _make_loop(
         test_context, monkeypatch, match_name=None,
         ocr_texts=['点击空白处继续'], transition_prompt_hit=False)
     rs = _run_node(test_context, op, op.loop)
     assert calls == [], f'boss 帧零派发(不误派位面过渡/BOSS):{calls}'
     assert rs.result == OperationRoundResultEnum.RETRY   # 未知兜底(streak 1)
-
-
-def test_0q_backstop_dispatches_on_own_prompt_rect(test_context,
-                                                   monkeypatch) -> None:
-    """锁3 0q 正控:真过渡帧(本屏提示区命中 ∧ 无 boss 片段)→ 兜底
-    派发位面过渡(误读兜底语义保持,不因位置判定收紧而丢失)。"""
-    op, calls = _make_loop(
-        test_context, monkeypatch, match_name=None,
-        ocr_texts=['点击空白处继续'], transition_prompt_hit=True)
-    rs = _run_node(test_context, op, op.loop)
-    assert calls == [('位面过渡', 'ok')], f'兜底应派发位面过渡:{calls}'
-    assert rs.result == OperationRoundResultEnum.WAIT   # 替身成功 → 默认映射
