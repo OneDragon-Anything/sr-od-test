@@ -41,7 +41,7 @@ test_cw_obs_arch_event_screens.py 断言集模板;生产端口恒 None 直连旧
   test_cw_game_state_consume 的确认即写锁)。
 - **chosen_* 豁免留守锁**(§2.2/§6.5-6):chosen_* 写端仍内联于共享体
   (不收编入 on_outcome 注册表);supply 已改确认即写时点
-  (execstate-dissolution:中转暂存随 ExecState 载体拆除),余屏维持
+  (选定中转暂存宿主已随执行层状态类目退役),余屏维持
   出口验真通过分支写。
 - **验证段废除源面锁**(用户裁定 2026-09-10,同
   test_cw_obs_arch_event_screens.py 同名锁):八屏源无「六段」表述、无
@@ -70,17 +70,16 @@ _FRAME = object()   # 稳定帧哨兵(screenshot 桩产物;共享体桩只验传
 
 
 def test_supply_chosen_written_on_confirm_pick(test_context, monkeypatch) -> None:
-    """补给 chosen_supply 确认即写行为锁(execstate-dissolution:选定中转
-    暂存随 ExecState 载体拆除,写端自「出口验真后
-    写」时点移到选定确认时点;口径分叉申报 = supply 直写,chosen_tome
-    维持出口验真后写家族口径——差异理由 = supply 的中转暂存正是被拆除的
-    ExecState 载体,直写是载体消亡后的唯一形态):
+    """补给 chosen_supply 确认即写行为锁(选定中转暂存宿主已随执行层状态
+    类目退役,写端 = 选定确认时点;口径分叉申报 = supply 直写,chosen_tome
+    维持出口验真后写家族口径——差异理由 = supply 的中转暂存载体已消亡,
+    直写是载体消亡后的唯一形态):
     - 真选(有选项 + 决策选列):确认分支单次逻辑写入 (角色,装备,有钻石)
       三元组,source=logic,机械派发半照发(记录面不拦截动作);
     - 刷新轮不写 = 真选守卫(兜底点卡/刷新路径与真选分支互斥)。
     OCR 读链/配置/机械派发半桩化,只锁记录面。
-    (原 test_supply_chosen_staging_lifecycle 暂存生命周期锁随载体删除
-    同批退役;consuming 侧 stash 写法锁
+    (原 test_supply_chosen_staging_lifecycle 暂存生命周期锁随暂存载体退役;
+    consuming 侧 stash 写法锁
     test_supply_chosen_written_from_stash_after_exit_only 同批删除,
     断言语义由本锁承重。)"""
     from sr_od.application.currency_war.operations.cw_op import (
@@ -142,7 +141,7 @@ def test_supply_chosen_written_on_confirm_pick(test_context, monkeypatch) -> Non
 
 def test_supply_refresh_emission_counts_container(
         test_context, monkeypatch) -> None:
-    """supply live 刷新写端锁(execstate-dissolution:执行侧旗标退役,live
+    """supply live 刷新写端锁(执行侧旗标已随执行层状态类目退役,live
     写端接容器 ``supply_refresh_used`` 计数——渠道② 单点,发射即记不等
     验效,含锚读缺零点击路径):
     - 刷新发射 → 容器计数恰 +1(evidence=refresh_click;无双计面——

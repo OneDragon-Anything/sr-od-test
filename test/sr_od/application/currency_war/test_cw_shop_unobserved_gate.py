@@ -8,7 +8,7 @@
 (flow.decide_shop_action,判定单一源 = kernel tracked_unobserved)返回恒
 可用终结 CloseShop → 编排壳收店 → 外循环重判落回备战节点锚定 → 再进店,
 店内零原地重建。mandate_v1._tracking_view(tracking 优先 + snapshot 静默
-回退)已随三次修正删除——策略禁读 ExecState 簿记,消费口只有 game state
+回退)已随三次修正删除——策略禁读执行侧簿记,消费口只有 game state
 (空账混同根因由此类型/架构层封死)。原读屏重建出口/单向
 阀门与恢复路由锁随守卫退役同批移除;守卫本体 guard_expected_vs_
 tracked 亦退役:对账唯一合法时点 = 观察边界 kernel cw_reconcile,规则

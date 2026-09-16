@@ -219,7 +219,7 @@ def test_megastar_dispatch_both_ways(test_context, monkeypatch) -> None:
 def test_megastar_redispatch_no_reclick_and_gate_reset(
         test_context, monkeypatch) -> None:
     """巨星防重入行为锁(旗标宿主 = 策略器 StrategyState,执行层经 kernel
-    ``strategy_state_of`` None-safe 通道读写;execstate-dissolution):
+    ``strategy_state_of`` None-safe 通道读写):
     - 同节点二次派发(re-dispatch 重入,observe 门未 miss)→ 已点标记
       在位,不再点候选(防 re-click toggle 反选 → 确认无候选卡死);
     - observe 门 miss(离开巨星 overlay)→ 节点完成即复位,标记不跨节点
@@ -370,7 +370,7 @@ def test_encounter_refresh_semantics(test_context, monkeypatch) -> None:
 def test_encounter_refresh_counts_once_no_double(
         test_context, monkeypatch) -> None:
     """encounter 单次刷新恰 +1 无双计(容器 encounter_refresh_used 为唯一
-    「已用」账,ExecState 侧标已退役——execstate-dissolution):
+    「已用」账,执行层不再设侧标):
     - 一次刷新流程 → 容器计数恰 1(发射链若存在第二容器写点即 ≥2,
       双计即计数毒化);
     - 真实发射后的重入(re-dispatch 再建议刷新)→ 容器计数闸拦,

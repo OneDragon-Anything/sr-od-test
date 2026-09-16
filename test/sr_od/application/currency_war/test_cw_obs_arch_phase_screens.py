@@ -463,7 +463,7 @@ def test_strategy_refresh_emission_semantics(test_context, monkeypatch,
 def test_strategy_refresh_gate2_reads_container_count(
         test_context, monkeypatch) -> None:
     """闸 2 读源锁(防重入账 = 容器 ``strategy_refresh_used`` 逐卡计数,
-    旧执行侧 visit 级槽集已随 ExecState 退役——execstate-dissolution):
+    旧执行侧 visit 级槽集已退役):
     - 容器计数在位(键 = normalize_invest_name 规范卡名,闸 1 计数现读
       仍在)→ 闸 2 拦截:零刷新点击、拦截轮不发射不计数(无双计);
     - 点击面仅剩选卡/确认两击 = 闸后流程照常走到选卡(闸拦 ≠ 流程断)。

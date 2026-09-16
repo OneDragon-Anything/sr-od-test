@@ -461,7 +461,7 @@ def test_chosen_record_face_true_pick_only(case_id: str) -> None:
 
 
 # (test_supply_chosen_written_from_stash_after_exit_only 删:补给选定
-#  中转暂存随 execstate-dissolution 载体拆除,stash 写法语义消亡;
+#  中转暂存宿主已随执行层状态类目退役,stash 写法语义消亡;
 #  「确认即写 chosen_supply」行为锁迁 test_cw_obs_arch_event_screens_
 #  step3.py 驱动真选分支承重。)
 
