@@ -35,7 +35,6 @@ from types import SimpleNamespace
 
 from sr_od.application.currency_war.kernel.cw_exec_state import (
     BenchChar,
-    exec_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
@@ -201,7 +200,9 @@ def _reconcile(session, bench, deployed) -> bool:
 # ===== 锁4 接管置位(cw_loop 恢复检测确认点)=====
 
 def test_takeover_marks_tracked_unobserved():
-    """接管检测确认点 → 容器观察态 False(显式失效事件写点)。"""
+    """接管检测确认点 → 容器观察态 False(显式失效事件写点);恢复局旗标
+    落容器 match_facts 域 Field(观察汇聚漏斗读同一容器字段作弹窗腿输入,
+    载体解散迭代迁入)。"""
     session = StrategySession()
     assert not tracked_unobserved(session)
     _stub_self = SimpleNamespace(ctx=SimpleNamespace(cw_match=SimpleNamespace(
@@ -209,7 +210,7 @@ def test_takeover_marks_tracked_unobserved():
 
     CwLoop._mark_session_resumed(_stub_self)
 
-    assert exec_state_of(session).cw_resumed_match is True
+    assert game_state_of(session).resumed_match.value is True
     assert tracked_unobserved(session)
     assert game_state_of(session).tracked_account_observed.value is False
 
