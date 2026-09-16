@@ -17,9 +17,9 @@ LIMIT`` → round_fail 显式停交上层。
    不提前触发;
 4. 异键 ok 同闭窗:粘滞 op 的 fail 序列被**其他** op 的 ok 打断 → 该 op
    计数一并清零(跨情节残留不毒化新情节);
-5. 专用守卫先于通用网:on_result 在 fail 时返回自身轮次结果(0q/prep
-   streak 守卫形态)→ 恒返回 hook 的结果,且 hook 早退路径不进通用网
-   计数(结构性不抢占);
+5. hook 早退先于通用网:on_result 在 fail 时返回自身轮次结果 → 恒返回
+   hook 的结果,且 hook 早退路径不进通用网计数(结构性不抢占;原
+   0q/prep streak 专用守卫已退役并入本网,机制契约保留);
 6. on_fail_retry 分支同辖:fail 达上限转 round_fail(不再消耗 400 节点
    重试池),上限内维持既有 round_retry 语义。
 """
@@ -156,21 +156,21 @@ def test_other_op_ok_closes_window(monkeypatch):
 
 
 def test_dedicated_hook_shadows_cap(monkeypatch):
-    """锁5 专用守卫先于通用网:hook 返回自身轮次 → 恒 hook 结果且不计数。"""
+    """锁5 hook 早退先于通用网:hook 返回自身轮次 → 恒 hook 结果且不计数。"""
     _spy_cw_op(monkeypatch)
     host = _Host(CwLoop.OP_FAIL_REDISPATCH_LIMIT)
     op = _ScriptedOp([False] * 20)
 
     def _guard(ok: bool, _res) -> object:
         if not ok:
-            return host.round_fail(status='专用守卫形态(0q/prep streak)')
+            return host.round_fail(status='hook 早退形态(短路通用网)')
         return None
 
     for _ in range(CwLoop.OP_FAIL_REDISPATCH_LIMIT + 3):
         result = CwLoop._dispatch_screen_op(
             host, op, journal_name='备战', frame_tag=None, wait=1,
             on_result=_guard)
-        assert result.status == '专用守卫形态(0q/prep streak)'
+        assert result.status == 'hook 早退形态(短路通用网)'
     assert getattr(host, '_op_fail_streak_n', 0) == 0   # hook 早退路径零计数
 
 
