@@ -297,6 +297,40 @@ def test_selldeployed_logic_state_clears_slot_and_recounts_board():
                             produced_by='T', sig=_SIG)
 
 
+def test_prep_sell_gold_booked_exactly_once_across_seam_and_projection():
+    """备战卖出金账全链恰一次入账(统一观察对账迭代 2026-09-16 归因批
+    出口①修模锁):live 执行链对同一 SellBench 先后跑执行缝
+    (apply_op_effect)与容器投影(apply_prep_action_logic),历史形态两腿
+    各记一次 +refund → 逻辑金系统性虚高,下帧实读倒挂(journal 实证
+    −2,2026-09-15 run_20260915_070645)。修后容器唯一写点 = 投影腿,
+    执行缝对 SellBench 零入账(tracked 主账在场亦不记)。"""
+    from sr_od.application.currency_war.kernel.cw_economy import (
+        bench_char_cost,
+        sell_refund,
+    )
+    from sr_od.application.currency_war.kernel.cw_exec_state import (
+        apply_op_effect,
+    )
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        bench_view_of_slots,
+    )
+    session = SimpleNamespace()
+    bs = board_state_of(session)
+    bc = BenchChar(slot=1, char_id='甲', star=1)
+    slots = [None] * 9
+    slots[0] = bc
+    bs.observe(bs.gold, 10, evidence='t', sig=_SIG_OBS)
+    bs.observe(bs.bench, bench_view_of_slots(slots), evidence='t',
+               sig=_SIG_OBS)
+    bs.tracked_books.bench = [bc]   # 旧执行缝腿的数据源(腿复返即红)
+    refund = sell_refund(1, bench_char_cost(bc))
+    action = SellBench(bench_idx=0)
+    apply_op_effect(session, action)   # 执行缝:修后零入账
+    apply_prep_action_logic(bs, action, produced_by='T', sig=_SIG)
+    assert bs.gold.value == 10 + refund, \
+        f'卖出回金恰一次 +{refund}(双腿双记 = 台账 −N 倒挂病灶)'
+
+
 # ===== 零比对出生锁(判据 6)=====
 
 def test_wear_equip_single_mechanical_drag_no_diff_verification(monkeypatch):

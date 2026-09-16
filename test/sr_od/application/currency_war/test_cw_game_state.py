@@ -67,6 +67,9 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     STRATEGY_EFFECTS,
 )
 from sr_od.application.currency_war.kernel.cw_mismatch_policy import (
+    EXEMPT_ANY as _EXEMPT_ANY,
+)
+from sr_od.application.currency_war.kernel.cw_mismatch_policy import (
     ExemptEntry as _ExemptEntry,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
@@ -277,13 +280,20 @@ def test_observe_mismatch_three_way_routing(
       (sim:engine 现役 / sim:synthesized 本迭代并列)→ 不落行不调钩子;
     - 豁免腿:精确键(画面×字段×写端前缀)命中 → exempt_mismatch 行
       (同形状换 kind),无告警面消费、钩子不被调;写端前缀不中 → 真失配
-      照落(同字段他写端不被吞)。"""
+      照落(同字段他写端不被吞);
+    - 处置序腿(验收 minor3):sim 证据 + 豁免条目同时命中 → 豁免先行
+      落 exempt 行(处置序 = 豁免→sim→真失配,禁 sim 检查提前翻转语义);
+      真失配腿 [cw!] 告警面被调、豁免腿不被调(验收 minor2)。"""
+    from sr_od.application.currency_war.kernel import cw_game_state as _gs_mod
     from sr_od.application.currency_war.kernel import (
         cw_mismatch_policy as _policy,
     )
 
     fired: list[dict] = []
     monkeypatch.setattr(_policy, '_ANDON_HOOK', fired.append)
+    warns: list[tuple] = []
+    monkeypatch.setattr(_gs_mod.log, 'warning',
+                        lambda *a, **k: warns.append(a))
 
     def _run_observe(bs: GameState, sig: _ChannelSig, read: int,
                      observed_evidence: str | None = None) -> list[dict]:
@@ -311,15 +321,20 @@ def test_observe_mismatch_three_way_routing(
     assert fired and fired[0] == rows[0], '钩子收到与落盘同构的缺陷行'
     assert rows[0]['logic_evidence'] == 'free_refresh@p1-r4'
     assert bs.gold.source == 'observation', '观察赢覆盖照常'
+    assert any('观察覆盖 logic 失配' in str(w) for w in warns), \
+        '真失配带 [cw!] 告警面'
 
     # —— sim 前缀两值:不落行不调钩子(抑制语义,生产台账分流)——
     bs2 = GameState(schema_version=BS_SCHEMA_VERSION)
     bs2.write_logic(bs2.gold, 17, produced_by='TestSigWriter', sig=_lsig())
     for prefix in ('sim:synthesized@p1-r2', 'sim:engine:income'):
         fired.clear()
+        warns.clear()
         rows_sim = _run_observe(bs2, _sig(), 19, observed_evidence=prefix)
         assert rows_sim == [], f'{prefix} 抑制:不落生产台账'
         assert fired == [], f'{prefix} 抑制:安灯不触发'
+        assert not any('观察覆盖 logic 失配' in str(w) for w in warns), \
+            f'{prefix} 抑制:无告警'
 
     # —— 豁免腿:精确键命中 → exempt 行(钩子不被调);前缀不中 → 真失配 ——
     monkeypatch.setattr(_policy, 'EXEMPT_REGISTRY', {
@@ -339,8 +354,33 @@ def test_observe_mismatch_three_way_routing(
         and rows_exempt[0]['logic_evidence'] == 'free_refresh@p1-r4', \
         'exempt 行与真失配行同构(仅 kind 不同)'
     assert fired == [], '豁免命中:无告警无停机(钩子不被调)'
+    assert not any('观察覆盖 logic 失配' in str(w) for w in warns), \
+        '豁免命中:无 [cw!] 告警(验收 minor2)'
     assert bs3.gold.source == 'observation', '豁免腿覆盖照常(观察赢)'
 
+    # —— 处置序腿(验收 minor3):sim 证据 + 豁免条目同击 → 豁免先行 ——
+    monkeypatch.setattr(_policy, 'EXEMPT_REGISTRY', {
+        ('货币战争-备战', 'gold'): (_ExemptEntry(
+            screen='货币战争-备战', field='gold',
+            logic_evidence=_EXEMPT_ANY, reason='测试条目'),),
+    })
+    bs5 = GameState(schema_version=BS_SCHEMA_VERSION)
+    bs5.write_logic(bs5.gold, 17, produced_by='TestSigWriter',
+                    evidence='proj_sell_refund@p1-r1', sig=_lsig())
+    fired.clear()
+    rows_order = _run_observe(bs5, _sig_screen, 19,
+                              observed_evidence='sim:synthesized@p1-r1')
+    assert len(rows_order) == 1 \
+        and rows_order[0]['kind'] == 'exempt_mismatch', \
+        '豁免先于 sim 抑制(design §2.3 处置序;sim 检查提前即翻转为静默)'
+    assert fired == []
+
+    # —— 前缀不中反腿:恢复精确条目注册表,他写端 → 真失配照落 ——
+    monkeypatch.setattr(_policy, 'EXEMPT_REGISTRY', {
+        ('货币战争-备战', 'gold'): (_ExemptEntry(
+            screen='货币战争-备战', field='gold',
+            logic_evidence='free_refresh@', reason='测试条目'),),
+    })
     bs4 = GameState(schema_version=BS_SCHEMA_VERSION)
     bs4.write_logic(bs4.gold, 17, produced_by='TestSigWriter',
                     evidence='post_buy@p1-r4', sig=_lsig())
