@@ -75,7 +75,6 @@ from one_dragon.base.operation.operation_round_result import (
     OperationRoundResultEnum,
 )
 from sr_od.application.currency_war.kernel import cw_state_journal as journal_mod
-from sr_od.application.currency_war.kernel.cw_exec_state import ExecState
 from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     game_state_of,
@@ -698,17 +697,16 @@ def _make_bwait(test_context, monkeypatch: pytest.MonkeyPatch,
                         SimpleNamespace(
                             get_ocr_result_list=lambda **kw: []),
                         raising=False)
-    es = ExecState()
     monkeypatch.setattr(
         test_context, 'cw_match',
-        SimpleNamespace(exec_state=es, session=StrategySession()),
+        SimpleNamespace(session=StrategySession()),
         raising=False)
     monkeypatch.setattr(time, 'sleep', lambda *_: None)
     # op 框架首节点「检测游戏窗口」的假环境承接(execute() 驱动专用;
     # cw_harness._stub_window_check 同式:窗口检查直通成功)。
     monkeypatch.setattr(op, 'check_game_window',
                         lambda: op.round_success('窗口桩(假环境无窗口)'))
-    return op, es
+    return op
 
 
 # (原 test_battle_wait_execute_terminal_exit_new_path「B2-③ 主门经
@@ -725,7 +723,7 @@ def test_battle_wait_normal_exits(test_context, monkeypatch) -> None:
     (分诊:defer 复位腿摘除——defer_count 载体已在 src 退役
     (全仓零消费点),生产端无复位语义可锁。)"""
     # [完成白名单出口]
-    op, _es = _make_bwait(
+    op = _make_bwait(
         test_context, monkeypatch,
         frozenset({('货币战争-备战', '备战标识-购买经验')}))
     rs = op.wait()
@@ -734,7 +732,7 @@ def test_battle_wait_normal_exits(test_context, monkeypatch) -> None:
         f'生产路径零段迹:{op._lifecycle_trace}')
     # [结算分支逐位]
     order: list[str] = []
-    op, _es = _make_bwait(
+    op = _make_bwait(
         test_context, monkeypatch,
         frozenset({('货币战争-结算', '按钮-继续挑战')}))
 
@@ -774,7 +772,7 @@ def test_battle_wait_fallback_exits(test_context, monkeypatch,
     miss → 计数。"""
     # [长按]
     clicks: list = []
-    op, _es = _make_bwait(
+    op = _make_bwait(
         test_context, monkeypatch,
         frozenset({('货币战争-结算', '按钮-继续挑战')}))
     monkeypatch.setattr(
@@ -796,7 +794,7 @@ def test_battle_wait_fallback_exits(test_context, monkeypatch,
         cw_screen_battle_wait as bwo,
     )
     monkeypatch.setattr(bwo, 'get_project_root', lambda: tmp_path)
-    op, _es = _make_bwait(test_context, monkeypatch, frozenset())
+    op = _make_bwait(test_context, monkeypatch, frozenset())
     res = None
     for _ in range(bwo.CwScreenBattleWait.UNKNOWN_BAIL_N):
         res = op.wait()

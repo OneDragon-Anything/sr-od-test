@@ -2,8 +2,7 @@
 
 被测模块：``kernel/cw_game_state.py``（容器+写入口+映射+终局）、
 ``kernel/cw_vocab.py``（动作词表与局内模拟 ``simulate``）、
-``kernel/cw_strategy_session.py``（会话载体）、``kernel/cw_exec_state.py``
-（执行状态延迟绑定）。
+``kernel/cw_strategy_session.py``（会话载体）。
 
 合同面（全部从源码推导，§节号 = 源码 docstring 引用的设计条款）：
 - §1 写入口六通道：observe / carry / write_prior / leave_screen /
@@ -13,23 +12,21 @@
 - §3 快照：full_state_snapshot 值域/来源注记/同态同形；
 - §4 画面上下文 → 节点派生（四腿代表行 + 去重 + 冲突留证）；
 - §5 合成口与新旧映射（sim 合成、ShopCard 往返、bench/deployed 槽表）；
-- §6 终局与结算（write_match_final 幂等、词汇封闭）；
-- §8 会话与执行状态（StrategySession 镜像字段、ExecState 延迟绑定）。
+- §6 终局与结算（write_match_final 幂等、词汇封闭）。
 
 退役面（审计判决删除）：§7 动作模拟两锁（test_simulate_buy_card_moves_
 shop_to_bench / test_simulate_level_up_costs_and_levels,连 _mk_state
 助手）——锁的 ``cw_vocab.simulate`` 全仓零生产消费（S9/S10 后动作链
 全走 apply_*_logic 直锁,商店动作状态面 = test_cw_transfer_golden 与
 test_cw_shop_projection_logic 的活函数锁),src 指针对账零命中。
+§8 执行状态延迟绑定锁（test_exec_state_lazy_binding）随 ExecState
+载体退役删除——载体类与访问口整体消失（局内事实宿主 = GameState
+容器）,无可锁语义。
 """
 from __future__ import annotations
 
 import pytest
 
-from sr_od.application.currency_war.kernel.cw_exec_state import (
-    bind_exec_state,
-    exec_state_of,
-)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
     GameState,
@@ -43,9 +40,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig as Sig,
-)
-from sr_od.application.currency_war.kernel.cw_strategy_session import (
-    StrategySession,
 )
 
 register_sig_actors('TestSigWriter')
@@ -369,16 +363,8 @@ def test_write_match_final_idempotent() -> None:
 #  test_cw_transfer_golden / test_cw_shop_projection_logic 直锁。)
 
 
-# ============================================================ §8 会话与执行状态
-
-def test_exec_state_lazy_binding() -> None:
-    """执行状态延迟绑定:未绑定时 exec_state_of 产临时态;
-    bind 后同 session 恒取同一实例(跨 op 共享执行账)。"""
-    sess = StrategySession()
-    st = exec_state_of(sess)
-    assert st is not None
-    bound = bind_exec_state(sess, st)
-    assert exec_state_of(sess) is bound
+# (§8 执行状态延迟绑定锁已删——ExecState 载体连同访问口整体退役,
+#  局内事实宿主 = GameState 容器,无可锁语义。)
 
 
 # ============================================================ fixtures
