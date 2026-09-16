@@ -233,7 +233,7 @@ def _run_buy_waves_unobserved_host(monkeypatch, tmp_path, counters, *,
         CurrencyWarMatch,
     )
     from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
-        assembly as assembly_mod,
+        economy_cycle as economy_cycle_mod,
     )
     from sr_od.application.currency_war.telemetry import recorder as rec_mod
     from sr_od.application.currency_war.telemetry import state as tel_state
@@ -296,7 +296,7 @@ def _run_buy_waves_unobserved_host(monkeypatch, tmp_path, counters, *,
     monkeypatch.setattr(buy_mod, 'CurrencyWarConfig',
                         lambda idx: SimpleNamespace(strategy_id='mandate_v1',
                                                     ev_arm=''))
-    monkeypatch.setattr(assembly_mod, 'disclose_budget_at_shop_frame',
+    monkeypatch.setattr(economy_cycle_mod, 'disclose_budget_at_shop_frame',
                         lambda *a, **k: None)
 
     result = buy_mod.run_buy_waves(_Op(), match)

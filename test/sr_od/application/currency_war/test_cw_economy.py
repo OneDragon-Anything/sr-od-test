@@ -767,10 +767,8 @@ def test_injection_consistency_single_registry_source() -> None:
     # (_budget 读 session 容器单例,局内事实先经合成口喂入 = 生产同路)
     from test.sr_od.application.currency_war._cw_helpers import cw4_feed
     cw4_feed(sess_ov, st2)
-    from sr_od.application.currency_war.strategies.impl.mandate_v1.assembly import (
-        _budget,
-    )
     from sr_od.application.currency_war.strategies.impl.mandate_v1.economy_cycle import (
+        _budget,
         obligation,
     )
     bv = _budget(st2, sess_ov, reg2)

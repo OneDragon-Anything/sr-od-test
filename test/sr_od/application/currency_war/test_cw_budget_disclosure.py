@@ -54,11 +54,13 @@ from sr_od.application.currency_war.operations.cw_screen.cw_screen_buy_cards imp
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.assembly import (
     assemble,
-    disclose_budget_at_shop_frame,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.contracts import (
     Snapshot,
     SubstateClassification,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.economy_cycle import (
+    disclose_budget_at_shop_frame,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
@@ -110,7 +112,7 @@ def _run_buy_waves_offline_host(monkeypatch: pytest.MonkeyPatch,
         StrategySession,
     )
     from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
-        assembly as assembly_mod,
+        economy_cycle as economy_cycle_mod,
     )
     from sr_od.application.currency_war.telemetry import recorder as rec_mod
     from sr_od.application.currency_war.telemetry import state as tel_state
@@ -159,7 +161,7 @@ def _run_buy_waves_offline_host(monkeypatch: pytest.MonkeyPatch,
     # (种子段读链工厂替身已移除:原店内读屏重建出口退役,
     #  未观察态改走「策略关店→备战 heavy 观察」链;本宿主观察态缺省可信,
     #  CloseShop 替身策略照常走正常关店收工。)
-    monkeypatch.setattr(assembly_mod, 'disclose_budget_at_shop_frame',
+    monkeypatch.setattr(economy_cycle_mod, 'disclose_budget_at_shop_frame',
                         disclose_impl)
     warned: list = []
     monkeypatch.setattr(buy_mod.log, 'warning',
