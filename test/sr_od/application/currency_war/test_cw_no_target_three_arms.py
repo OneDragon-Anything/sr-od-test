@@ -20,7 +20,7 @@ from test.sr_od.application.currency_war._cw_helpers import (
     cw4_box as _kbridge,
 )
 from test.sr_od.application.currency_war._cw_helpers import (
-    cw4_bs,
+    cw4_gs,
     cw4_feed,
 )
 
@@ -100,7 +100,7 @@ def _bc(name: str, star: int = 1, slot: int = 1) -> BenchChar:
 
 
 def _decide(st: CwSimFrame, sess: StrategySession):
-    return shop.decide_shop_action(cw4_bs(st, sess), sess, _cfg())
+    return shop.decide_shop_action(cw4_gs(st, sess), sess, _cfg())
 
 
 def _ct(sess: StrategySession) -> dict:

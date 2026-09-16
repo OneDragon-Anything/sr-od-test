@@ -19,7 +19,7 @@ from sr_od.application.currency_war.data.cw_synthesis import (
 )
 from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
 from sr_od.application.currency_war.kernel.cw_game_state import (
-    BS_SCHEMA_VERSION,
+    GAME_STATE_SCHEMA_VERSION,
     ChannelSig,
     GameState,
     bench_view_of_slots,
@@ -58,25 +58,25 @@ register_sig_actors('TestSigWriter')
 _SIG = ChannelSig(family='obs', actor='TestSigWriter')
 
 
-def _bs() -> GameState:
-    return GameState(schema_version=BS_SCHEMA_VERSION)
+def _gs() -> GameState:
+    return GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
 
 
-def _bs_with_bench_unit(char_id: str, equips: list[str] | None = None,
+def _gs_with_bench_unit(char_id: str, equips: list[str] | None = None,
                         slot: int = 1) -> GameState:
     """容器 + 备战席单角色(0 基槽表下标 = slot−1;BenchChar 形状经
     bench_view_of_slots 转容器视图,r1 S1 同构)。"""
-    bs = _bs()
+    gs = _gs()
     slots: list[BenchChar | None] = [None] * 9
     slots[slot - 1] = BenchChar(slot=slot, char_id=char_id, faction='散',
                                 star=1, equips=list(equips or []))
-    bs.observe(bs.bench, bench_view_of_slots(slots), sig=_SIG)
-    return bs
+    gs.observe(gs.bench, bench_view_of_slots(slots), sig=_SIG)
+    return gs
 
 
-def _worn_of(bs: GameState, char_id: str) -> list[str]:
+def _worn_of(gs: GameState, char_id: str) -> list[str]:
     """读角色 worn 表(测试断言辅助;bench 视图单角色场景)。"""
-    for s in bs.bench.value.slots:
+    for s in gs.bench.value.slots:
         if (s is not None and s.kind == 'unit' and s.unit is not None
                 and s.unit.char_id == char_id):
             return list(s.unit.equips)
@@ -179,24 +179,24 @@ def test_wear_equip_triggers_wear_synthesis() -> None:
     worn 内两件立即合成进阶件;owned 扣减。"""
     a, b, advance = _advance_pair()
     assert synthesize_target(a, b) == advance
-    bs = _bs_with_bench_unit('淘金客', equips=[a])
-    bs.observe(bs.equips, [b], sig=_SIG)
+    gs = _gs_with_bench_unit('淘金客', equips=[a])
+    gs.observe(gs.equips, [b], sig=_SIG)
     action = WearEquip(item_name=b, char_name='淘金客', row='front', slot=1)
-    assert apply_wear_equip(bs, action)
-    assert _worn_of(bs, '淘金客') == [advance], \
+    assert apply_wear_equip(gs, action)
+    assert _worn_of(gs, '淘金客') == [advance], \
         f'穿着即合成:{a}+{b} → {advance}'
-    assert bs.equips.value == [], '库存件已穿上'
+    assert gs.equips.value == [], '库存件已穿上'
 
 
 def test_wear_equip_rejects_unknown_item_or_char() -> None:
     """拒绝形态:owned 无该件 / 目标角色不在册 → False(动作未生效)。"""
     a, _b, _adv = _advance_pair()
     assert not apply_wear_equip(
-        _bs_with_bench_unit('淘金客'),
+        _gs_with_bench_unit('淘金客'),
         WearEquip(item_name=a, char_name='淘金客', row='front', slot=1)), \
         'owned 空库拒'
     assert not apply_wear_equip(
-        _bs_with_bench_unit('淘金客'),
+        _gs_with_bench_unit('淘金客'),
         WearEquip(item_name=a, char_name='不存在的角色',
                   row='front', slot=1)), '角色不在册拒'
 
@@ -207,26 +207,26 @@ def test_wrench_returns_equips_and_consumes() -> None:
     坐标系 = cw_vocab 通用声明:row/slot = 板面物理排(扳手射程 =
     上阵单位;穿戴域读点 = front_row/back_row 容器域)。"""
     a, _b, _adv = _advance_pair()
-    bs = _bs()
+    gs = _gs()
     from sr_od.application.currency_war.kernel.cw_game_state import Unit
-    bs.observe(bs.front_row, [Unit(char_id='淘金客', star=1, equips=[a])],
+    gs.observe(gs.front_row, [Unit(char_id='淘金客', star=1, equips=[a])],
                sig=_SIG)
-    bs.observe(bs.equips, ['拆装扳手'], sig=_SIG)
-    assert apply_wrench(bs, WrenchUse(row='front', slot=1))
-    assert bs.equips.value == [a], '穿戴回区'
-    assert bs.front_row.value[0].equips == [], 'worn 已清空'
+    gs.observe(gs.equips, ['拆装扳手'], sig=_SIG)
+    assert apply_wrench(gs, WrenchUse(row='front', slot=1))
+    assert gs.equips.value == [a], '穿戴回区'
+    assert gs.front_row.value[0].equips == [], 'worn 已清空'
 
 
 def test_precision_wrench_no_consumption() -> None:
     """精密扳手:同取下但库存不递减(无限次用);坐标系同扳手。"""
     a, _b, _adv = _advance_pair()
-    bs = _bs()
+    gs = _gs()
     from sr_od.application.currency_war.kernel.cw_game_state import Unit
-    bs.observe(bs.front_row, [Unit(char_id='淘金客', star=1, equips=[a])],
+    gs.observe(gs.front_row, [Unit(char_id='淘金客', star=1, equips=[a])],
                sig=_SIG)
-    bs.observe(bs.equips, ['精密拆装扳手'], sig=_SIG)
-    assert apply_precision_wrench(bs, PrecisionWrenchUse(row='front', slot=1))
-    assert bs.equips.value == ['精密拆装扳手', a]
+    gs.observe(gs.equips, ['精密拆装扳手'], sig=_SIG)
+    assert apply_precision_wrench(gs, PrecisionWrenchUse(row='front', slot=1))
+    assert gs.equips.value == ['精密拆装扳手', a]
 
 
 def test_furnace_same_category_reroll() -> None:
@@ -239,12 +239,12 @@ def test_furnace_same_category_reroll() -> None:
     new_name = furnace_reroll(random.Random(3), src)
     assert new_name != src
     assert get_equip(new_name).category == '简易'
-    bs = _bs()
-    bs.observe(bs.equips, [src], sig=_SIG)
-    out = apply_furnace_equip_mode(bs, src, rng=random.Random(4))
+    gs = _gs()
+    gs.observe(gs.equips, [src], sig=_SIG)
+    out = apply_furnace_equip_mode(gs, src, rng=random.Random(4))
     assert out == new_name
-    assert bs.equips.value == [new_name]
-    assert apply_furnace_equip_mode(bs, '不存在的装备',
+    assert gs.equips.value == [new_name]
+    assert apply_furnace_equip_mode(gs, '不存在的装备',
                                     rng=random.Random(5)) is None
 
 

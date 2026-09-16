@@ -16,7 +16,7 @@ from sr_od.application.currency_war.data.cw_shop_odds import (
 )
 from sr_od.application.currency_war.kernel.cw_economy import REFRESH_COST_BASE
 from sr_od.application.currency_war.kernel.cw_game_state import (
-    BS_SCHEMA_VERSION,
+    GAME_STATE_SCHEMA_VERSION,
     ChannelSig,
     GameState,
     Unit,
@@ -45,8 +45,8 @@ def _lsig() -> ChannelSig:
                       mode='compute')
 
 
-def _fresh_bs() -> GameState:
-    return GameState(schema_version=BS_SCHEMA_VERSION)
+def _fresh_gs() -> GameState:
+    return GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
 
 
 # ============================================================ M06 固定池与派生
@@ -69,20 +69,20 @@ def test_fixed_pool_copies_truth_and_expert_append() -> None:
 def test_held_derived_from_bench_and_deployed_stars() -> None:
     """held = Σ 3^(star−1)(容器 bench/deployed 派生;合成不销毁口径:
     2★ 计 3 张);剩余 = 固定 − held 不变量。"""
-    bs = _fresh_bs()
+    gs = _fresh_gs()
     n1 = chars_by_cost(1)[0].name
     n2 = chars_by_cost(2)[0].name
     from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
     sig = ChannelSig(family='obs', actor='TestSigWriter')
-    bs.observe(bs.bench, bench_view_of_slots([
+    gs.observe(gs.bench, bench_view_of_slots([
         BenchChar(slot=1, char_id=n1, star=1),
         BenchChar(slot=2, char_id=n1, star=1),
     ]), sig=sig)
-    bs.observe(bs.front_row, [Unit(char_id=n2, star=2)], sig=sig)
-    held = held_copies(bs)
+    gs.observe(gs.front_row, [Unit(char_id=n2, star=2)], sig=sig)
+    held = held_copies(gs)
     assert held[n1] == 2, '两只 1★ = 2 副本'
     assert held[n2] == 3, '2★ = 3 副本(3^(2−1))'
-    remaining = remaining_pool(bs)
+    remaining = remaining_pool(gs)
     assert remaining[n1] == POOL_COPIES_PER_CARD[1] - 2
     assert remaining[n2] == POOL_COPIES_PER_CARD[2] - 3
 
@@ -90,17 +90,17 @@ def test_held_derived_from_bench_and_deployed_stars() -> None:
 def test_drawable_names_nine_copy_clearance() -> None:
     """≥9 清空 = 发牌过滤(U11):held ≥9 的牌不再进店,即便 1/2 费
     27 副本下剩余仍 >0(两条件不可互替)。"""
-    bs = _fresh_bs()
+    gs = _fresh_gs()
     n1 = chars_by_cost(1)[0].name
     from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
-    bs.observe(bs.bench, bench_view_of_slots([
+    gs.observe(gs.bench, bench_view_of_slots([
         BenchChar(slot=1, char_id=n1, star=3),   # 3★ = 9 副本
     ]), sig=ChannelSig(family='obs', actor='TestSigWriter'))
-    assert held_copies(bs)[n1] == 9
-    assert remaining_pool(bs)[n1] == POOL_COPIES_PER_CARD[1] - 9, \
+    assert held_copies(gs)[n1] == 9
+    assert remaining_pool(gs)[n1] == POOL_COPIES_PER_CARD[1] - 9, \
         '27 副本卡 9 持有后剩余仍为正'
-    assert n1 not in drawable_names(bs, 1), '≥9 清空:不再进店'
-    other = [n for n in drawable_names(bs, 1) if n != n1]
+    assert n1 not in drawable_names(gs, 1), '≥9 清空:不再进店'
+    other = [n for n in drawable_names(gs, 1) if n != n1]
     assert other, '同档其余牌照常可进店'
 
 
@@ -109,10 +109,10 @@ def test_drawable_names_nine_copy_clearance() -> None:
 def test_deal_shop_level1_pure_cost1_payload() -> None:
     """Lv1 概率表纯 1 费 → 5 槽全 1 费注册表名;概率条随载荷落容器
     (§3.3.2 契约);槽号 1 基连号。"""
-    bs = _fresh_bs()
-    deal_shop(bs, stream_rng(3, 'M05/deal/1/1'), level=1,
+    gs = _fresh_gs()
+    deal_shop(gs, stream_rng(3, 'M05/deal/1/1'), level=1,
               tag='shop:deal:p1r1')
-    payload = bs.shop.value
+    payload = gs.shop.value
     assert payload is not None and len(payload.cards) == 5
     assert payload.refresh_probs == {1: 1.0}
     for i, slot in enumerate(payload.cards):
@@ -120,16 +120,16 @@ def test_deal_shop_level1_pure_cost1_payload() -> None:
         assert slot.card.cost == 1 and slot.card.star == 1
         assert slot.card.name in CHARACTERS
         assert slot.card.slot == i + 1
-    assert bs.shop.evidence is not None \
-        and 'sim:engine:' in bs.shop.evidence
+    assert gs.shop.evidence is not None \
+        and 'sim:engine:' in gs.shop.evidence
 
 
 def test_deal_shop_level9_domain_and_registered_names() -> None:
     """Lv9 混档发牌:出场费用档 ⊆ 表内正概率档,名集全部注册表在册
     (M06 抽名约束;直出 2/3 星 = 0,U12)。"""
-    bs = _fresh_bs()
-    deal_shop(bs, stream_rng(4, 'M05/deal/1/9'), level=9)
-    payload = bs.shop.value
+    gs = _fresh_gs()
+    deal_shop(gs, stream_rng(4, 'M05/deal/1/9'), level=9)
+    payload = gs.shop.value
     legal_costs = {c for c, p in REFRESH_PROB[9].items() if p > 0}
     for slot in payload.cards:
         if slot.card is not None:
@@ -140,11 +140,11 @@ def test_deal_shop_level9_domain_and_registered_names() -> None:
 
 def test_refresh_cost_free_balance_first() -> None:
     """免费刷额度先行 → 0;额度耗尽/未写 → 基价 2 恒定(M05 定谳)。"""
-    bs = _fresh_bs()
-    assert refresh_cost_for(bs) == REFRESH_COST_BASE
-    bs.write_logic(bs.free_refresh_balance, 1, produced_by='effect',
+    gs = _fresh_gs()
+    assert refresh_cost_for(gs) == REFRESH_COST_BASE
+    gs.write_logic(gs.free_refresh_balance, 1, produced_by='effect',
                    sig=_lsig())
-    assert refresh_cost_for(bs) == 0, '免费额度在场先行'
+    assert refresh_cost_for(gs) == 0, '免费额度在场先行'
 
 
 def test_effective_deal_probs_rotation_toggle() -> None:

@@ -10,7 +10,7 @@ from __future__ import annotations
 import random
 
 from sr_od.application.currency_war.kernel.cw_game_state import (
-    BS_SCHEMA_VERSION,
+    GAME_STATE_SCHEMA_VERSION,
     ChannelSig,
     GameState,
     NodeKey,
@@ -41,11 +41,11 @@ from sr_od.application.currency_war.sim.cw_sim_overlay import (
 register_sig_actors('TestSigWriter')
 
 
-def _bs(node_kind: str = 'reward') -> GameState:
-    bs = GameState(schema_version=BS_SCHEMA_VERSION)
+def _gs(node_kind: str = 'reward') -> GameState:
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     sig = ChannelSig(family='obs', actor='TestSigWriter')
-    bs.observe(bs.node, NodeKey(plane=1, round_num=7, kind=node_kind), sig=sig)
-    return bs
+    gs.observe(gs.node, NodeKey(plane=1, round_num=7, kind=node_kind), sig=sig)
+    return gs
 
 
 # ============================================================ M16 遭遇
@@ -63,10 +63,10 @@ def test_encounter_options_structure_and_tier_bonus_truth() -> None:
 def test_encounter_pick_writes_chosen() -> None:
     """选档入账:chosen_encounter = (难度档 1 基, 奖励文本)——引擎把
     加成表对应档进 M19 难度账。"""
-    bs = _bs()
-    tier, reward_text = apply_encounter_pick(bs, 2)
+    gs = _gs()
+    tier, reward_text = apply_encounter_pick(gs, 2)
     assert tier == 3
-    assert bs.chosen_encounter.value == (3, reward_text)
+    assert gs.chosen_encounter.value == (3, reward_text)
     assert reward_text
 
 
@@ -75,12 +75,12 @@ def test_encounter_pick_writes_chosen() -> None:
 def test_piggy_env_replacement_single_source() -> None:
     """扑满替换守卫:经济过热族环境 + reward 节点 → True;其它环境/
     其它节点型恒 False(单一源 = PIGGY_ENV_NAMES × active_env)。"""
-    bs = _bs('reward')
-    bs.observe(bs.active_env, '经济过热', sig=ChannelSig(family='obs', actor='TestSigWriter'))
-    assert is_piggy_node(bs)
-    bs.observe(bs.active_env, '轮岗', sig=ChannelSig(family='obs', actor='TestSigWriter'))
-    assert not is_piggy_node(bs)
-    assert not is_piggy_node(_bs('battle')), '非奖励节点恒 False'
+    gs = _gs('reward')
+    gs.observe(gs.active_env, '经济过热', sig=ChannelSig(family='obs', actor='TestSigWriter'))
+    assert is_piggy_node(gs)
+    gs.observe(gs.active_env, '轮岗', sig=ChannelSig(family='obs', actor='TestSigWriter'))
+    assert not is_piggy_node(gs)
+    assert not is_piggy_node(_gs('battle')), '非奖励节点恒 False'
 
 
 def test_reward_ball_panel_u23_anchor() -> None:
@@ -95,25 +95,25 @@ def test_reward_ball_panel_u23_anchor() -> None:
 
 def test_ball_pick_gold_and_equip_settlement() -> None:
     """点球即时入账:金球直加金账;蓝球直入装备栏。"""
-    bs = _bs()
+    gs = _gs()
     sig = ChannelSig(family='obs', actor='TestSigWriter')
-    bs.observe(bs.gold, 10, sig=sig)
-    kind, amount = apply_ball_pick(bs, 0, rng=random.Random(1))  # 0 = 金球
+    gs.observe(gs.gold, 10, sig=sig)
+    kind, amount = apply_ball_pick(gs, 0, rng=random.Random(1))  # 0 = 金球
     assert (kind, amount) == ('gold', 30)
-    assert bs.gold.value == 40
-    equip_count_before = len(bs.equips.value or [])
-    kind, amount = apply_ball_pick(bs, 1, rng=random.Random(2))  # 1 = 蓝球
+    assert gs.gold.value == 40
+    equip_count_before = len(gs.equips.value or [])
+    kind, amount = apply_ball_pick(gs, 1, rng=random.Random(2))  # 1 = 蓝球
     assert (kind, amount) == ('equip', 1)
-    assert len(bs.equips.value) == equip_count_before + 1
+    assert len(gs.equips.value) == equip_count_before + 1
 
 
 def test_box_pick_four_choices_into_equips() -> None:
     """补给箱 4 选 1 装备:候选 = 4(U23);开箱入装备栏。"""
     assert len(box_options()) == BOX_CANDIDATES == 4
-    bs = _bs()
+    gs = _gs()
     pick = box_options()[0]
-    apply_box_pick(bs, pick)
-    assert bs.equips.value == [pick]
+    apply_box_pick(gs, pick)
+    assert gs.equips.value == [pick]
 
 
 # ============================================================ M18 补给
@@ -134,13 +134,13 @@ def test_supply_options_three_distinct_one_diamond() -> None:
 
 def test_supply_pick_writes_equip_returns_diamond() -> None:
     """选卡入账:装备入装备栏;带钻选项返回 True(引擎宝钻计数消费)。"""
-    bs = _bs()
+    gs = _gs()
     opts = supply_options(random.Random(7))
     diamond = next(o for o in opts if o.has_diamond)
     plain = next(o for o in opts if not o.has_diamond)
-    assert apply_supply_pick(bs, plain) is False
-    assert apply_supply_pick(bs, diamond) is True
-    assert set(bs.equips.value) >= {plain.equip, diamond.equip}
+    assert apply_supply_pick(gs, plain) is False
+    assert apply_supply_pick(gs, diamond) is True
+    assert set(gs.equips.value) >= {plain.equip, diamond.equip}
 
 
 # ============================================================ M22 overlay
@@ -179,13 +179,13 @@ def test_overlay_options_placeholders_distinct() -> None:
 def test_disclosed_pick_chosen_field_mapping() -> None:
     """占位效果应用:在册 chosen 位按族映射写入;无位族(fate/aha)
     不写容器词表外字段。"""
-    bs = _bs()
-    apply_disclosed_pick(bs, 'megastar', '角色A')
-    assert bs.chosen_megastar.value == '角色A'
-    apply_disclosed_pick(bs, 'partner', '角色B')
-    assert bs.chosen_partner.value == '角色B'
-    apply_disclosed_pick(bs, 'hack', '选项X')
-    assert bs.chosen_hack.value == '选项X'
-    apply_disclosed_pick(bs, 'fate', '选项Y')  # 不炸、不写
-    apply_disclosed_pick(bs, 'aha', '选项Z')
-    assert bs.chosen_fortune.value is None
+    gs = _gs()
+    apply_disclosed_pick(gs, 'megastar', '角色A')
+    assert gs.chosen_megastar.value == '角色A'
+    apply_disclosed_pick(gs, 'partner', '角色B')
+    assert gs.chosen_partner.value == '角色B'
+    apply_disclosed_pick(gs, 'hack', '选项X')
+    assert gs.chosen_hack.value == '选项X'
+    apply_disclosed_pick(gs, 'fate', '选项Y')  # 不炸、不写
+    apply_disclosed_pick(gs, 'aha', '选项Z')
+    assert gs.chosen_fortune.value is None

@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 from sr_od.application.currency_war.kernel.cw_game_state import (
-    BS_SCHEMA_VERSION,
+    GAME_STATE_SCHEMA_VERSION,
     ChannelSig,
     GameState,
     register_sig_actors,
@@ -28,11 +28,11 @@ register_sig_actors('TestSigWriter')
 _OBS_SIG = ChannelSig(family='obs', actor='TestSigWriter')
 
 
-def _bs(hp: int | None = None) -> GameState:
-    bs = GameState(schema_version=BS_SCHEMA_VERSION)
+def _gs(hp: int | None = None) -> GameState:
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if hp is not None:
-        bs.observe(bs.hp, hp, sig=_OBS_SIG)
-    return bs
+        gs.observe(gs.hp, hp, sig=_OBS_SIG)
+    return gs
 
 
 def test_battle_face_domain_over_seeds() -> None:
@@ -78,11 +78,11 @@ class BattleLike:
 
 def test_hp_outcome_loss_and_win_paths() -> None:
     """M14:胜不扣血;败扣 hp(总扣血直扣,分项不拆)。"""
-    bs = _bs(82)
-    floor_now, dead = apply_hp_outcome(bs, BattleLike(won=True, hp_delta=0))
+    gs = _gs(82)
+    floor_now, dead = apply_hp_outcome(gs, BattleLike(won=True, hp_delta=0))
     assert floor_now is False and dead is False
-    assert int(bs.hp.value or 0) == 82, '胜利不掉血(多局确认口径)'
-    bs2 = _bs(82)
+    assert int(gs.hp.value or 0) == 82, '胜利不掉血(多局确认口径)'
+    bs2 = _gs(82)
     loss_hp = 30
     floor_now, dead = apply_hp_outcome(bs2, BattleLike(won=False,
                                                        hp_delta=-loss_hp))
@@ -92,16 +92,16 @@ def test_hp_outcome_loss_and_win_paths() -> None:
 
 def test_hp_floor_guarantee_once_then_game_over() -> None:
     """M14:首次归零保底剩 1(容器保底位翻真);再次归零 → 局终。"""
-    bs = _bs(40)
+    gs = _gs(40)
     first = BattleLike(won=False, hp_delta=-40)
-    floor_now, dead = apply_hp_outcome(bs, first)
+    floor_now, dead = apply_hp_outcome(gs, first)
     assert (floor_now, dead) == (True, False)
-    assert int(bs.hp.value or 0) == 1
-    assert bs.hp_floor_triggered.value is True, '保底事件位翻真(已消费)'
+    assert int(gs.hp.value or 0) == 1
+    assert gs.hp_floor_triggered.value is True, '保底事件位翻真(已消费)'
     second = BattleLike(won=False, hp_delta=-23)
-    floor_now2, dead2 = apply_hp_outcome(bs, second)
+    floor_now2, dead2 = apply_hp_outcome(gs, second)
     assert (floor_now2, dead2) == (False, True), '再次归零 = 整局结束'
-    assert int(bs.hp.value or 0) == 0
+    assert int(gs.hp.value or 0) == 0
 
 
 def test_win_prob_constant_is_ruling_value() -> None:

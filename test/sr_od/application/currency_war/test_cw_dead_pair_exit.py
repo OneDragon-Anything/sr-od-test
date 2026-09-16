@@ -33,7 +33,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     NodeKey,
     Unit,
     bench_view_of_slots,
-    board_state_of,
+    game_state_of,
     register_sig_actors,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
@@ -94,17 +94,17 @@ def _prep_frame(*, pair_ledger_round: int | None,
     ``pair_ledger_round`` 非 None 时预登记获取账(同位面)。垫件 2★ 出
     燃料资格 ⇒ 对成员是唯一 1★ 候选,卖出对象确定。"""
     sess = StrategySession()
-    bs = board_state_of(sess)
-    bs.write_logic(bs.node, NodeKey(plane=1, round_num=_ROUND, kind='prep'),
+    gs = game_state_of(sess)
+    gs.write_logic(gs.node, NodeKey(plane=1, round_num=_ROUND, kind='prep'),
                    produced_by='cw-t253-test', sig=_SIG)
-    bs.write_logic(bs.gold, gold, produced_by='cw-t253-test', sig=_SIG)
+    gs.write_logic(gs.gold, gold, produced_by='cw-t253-test', sig=_SIG)
     units = [BenchChar(slot=1, char_id=pair, star=1),
              BenchChar(slot=2, char_id=pair, star=1)]
     units += [BenchChar(slot=i, char_id=_FILLER, star=2)
               for i in range(3, 10)]
-    bs.write_logic(bs.bench, bench_view_of_slots(units),
+    gs.write_logic(gs.bench, bench_view_of_slots(units),
                    produced_by='cw-t253-test', sig=_SIG)
-    bs.write_logic(bs.front_row, [Unit(slot=1, char_id='刃', star=1)],
+    gs.write_logic(gs.front_row, [Unit(slot=1, char_id='刃', star=1)],
                    produced_by='cw-t253-test', sig=_SIG)
     if pair_ledger_round is not None:
         assert sell_gate.register_acquisition(
@@ -115,7 +115,7 @@ def _prep_frame(*, pair_ledger_round: int | None,
                             position_pref='front')],
         deploy_cap=7, node_type='battle', stop_flag=False,
         k_members=k_members, round_num=_ROUND)
-    return sess, bs, frame
+    return sess, gs, frame
 
 
 def _sell_actions(out: list) -> list:
@@ -133,8 +133,8 @@ class TestLock1DeadlockDominance:
         锁 2.1.3:B 弱支配 A(帧内持有收益 0 成本 V_slot>0);卖出腿 =
         m4_fuel_sell,释放/卖出两键显影,腾出席位不再耗竭。释放集单点
         函数直读:对成员入集(判据 (a)(b)(c) 合取正例),kept 面零计数。"""
-        sess, bs, frame = _prep_frame(pair_ledger_round=2)
-        out = run_mandate(frame, sess, state=bs)
+        sess, gs, frame = _prep_frame(pair_ledger_round=2)
+        out = run_mandate(frame, sess, state=gs)
         sells = _sell_actions(out)
         assert len(sells) == 1 and sells[0].action.bench_idx == 0, \
             f'释放对成员未被腾席臂卖出: {out!r}'
@@ -162,8 +162,8 @@ class TestLock2AgeLowerBound:
         新购对(获取账登记轮 == 当前轮,age 0)被燃料臂立即触达 → 守卫
         照常拒、零卖出(原案不复活;新购 ⇒ 当轮窗/获取账合取保持)。"""
         # 账龄 1 < N
-        sess, bs, frame = _prep_frame(pair_ledger_round=4)
-        out = run_mandate(frame, sess, state=bs)
+        sess, gs, frame = _prep_frame(pair_ledger_round=4)
+        out = run_mandate(frame, sess, state=gs)
         assert not _sell_actions(out)
         ct = state_of(sess).cw4_counters
         # N2 拆分:真窗内保留走 kept_young(非 kept_no_entry)
@@ -191,8 +191,8 @@ class TestLock3IdentityAuthority:
         在下游装配排除 → 零卖出(序列断言:旁路在子谓词内先行,装配 A
         照旧收口)。腾席面空集 → 诚实停摆计数。"""
         tname = _transition_pair_name()
-        sess, bs, frame = _prep_frame(pair=tname, pair_ledger_round=2)
-        out = run_mandate(frame, sess, state=bs)
+        sess, gs, frame = _prep_frame(pair=tname, pair_ledger_round=2)
+        out = run_mandate(frame, sess, state=gs)
         assert not _sell_actions(out)
         ct = state_of(sess).cw4_counters
         assert ct.get('dead_pair_exit_released') == 1
@@ -239,7 +239,7 @@ class TestLock5LedgerLifecycleDecoupling:
         sess = StrategySession()
         assert sell_gate.register_acquisition(
             sess, _PAIR, plane=1, round_num=_ROUND, star=1)
-        bs2 = board_state_of(sess)
+        bs2 = game_state_of(sess)
         bs2.write_logic(bs2.node, NodeKey(plane=2, round_num=_ROUND + 1,
                                           kind='prep'),
                         produced_by='cw-t253-test', sig=_SIG)
@@ -273,25 +273,25 @@ class TestWriteEnd:
         g_star = saturation_line(cap_resolved_of_session(
             StrategySession(rng=random.Random('cw-t253'))))
         sess = StrategySession(rng=random.Random('cw-t253'))
-        bs = board_state_of(sess)
-        bs.write_logic(bs.node, NodeKey(plane=1, round_num=3, kind='prep'),
+        gs = game_state_of(sess)
+        gs.write_logic(gs.node, NodeKey(plane=1, round_num=3, kind='prep'),
                        produced_by='cw-t253-test', sig=_SIG)
-        bs.write_logic(bs.level, 3, produced_by='cw-t253-test', sig=_SIG)
-        bs.write_logic(bs.xp, (0, XP_TO_NEXT_LEVEL[3]),
+        gs.write_logic(gs.level, 3, produced_by='cw-t253-test', sig=_SIG)
+        gs.write_logic(gs.xp, (0, XP_TO_NEXT_LEVEL[3]),
                        produced_by='cw-t253-test', sig=_SIG)
-        bs.write_logic(bs.gold, g_star + 10,
+        gs.write_logic(gs.gold, g_star + 10,
                        produced_by='cw-t253-test', sig=_SIG)
-        bs.observe(bs.hp, 60, evidence='cw-t253-test', sig=_OBS_SIG)
+        gs.observe(gs.hp, 60, evidence='cw-t253-test', sig=_OBS_SIG)
         slots = [BenchSlot(kind='unit',
                            unit=Unit(char_id=_FILLER, star=1, slot=i + 1))
                  for i in range(5)]
-        bs.write_logic(bs.bench, BenchView(slots=slots, capacity=9),
+        gs.write_logic(gs.bench, BenchView(slots=slots, capacity=9),
                        produced_by='cw-t253-test', sig=_SIG)
         cards = [ShopSlot(kind='content',
                           card=ShopCard(name=_FUELS[2], faction='', cost=3,
                                         star=1, slot=1))]
         cards += [ShopSlot(kind='empty')] * 4
-        bs.write_logic(bs.shop, ShopPayload(cards=cards, refresh_probs={}),
+        gs.write_logic(gs.shop, ShopPayload(cards=cards, refresh_probs={}),
                        produced_by='cw-t253-test', sig=_SIG)
         state_of(sess).target_comp = COMP_LIBRARY[0]
         action = MandateV1Live().decide_shop_action(
@@ -329,8 +329,8 @@ class TestCriterionUnits:
         论证辖域外)。"""
         # N4:bench 侧 2★ 链腿
         sess = StrategySession()
-        bs = board_state_of(sess)
-        bs.write_logic(bs.node, NodeKey(plane=1, round_num=_ROUND,
+        gs = game_state_of(sess)
+        gs.write_logic(gs.node, NodeKey(plane=1, round_num=_ROUND,
                                         kind='prep'),
                        produced_by='cw-t253-test', sig=_SIG)
         bench = [BenchChar(slot=1, char_id=_PAIR, star=1),
@@ -347,8 +347,8 @@ class TestCriterionUnits:
         # (b):线内名对 → kept_k
         member = sorted(_LINE)[0]
         sess_k = StrategySession()
-        bs_k = board_state_of(sess_k)
-        bs_k.write_logic(bs_k.node, NodeKey(plane=1, round_num=_ROUND,
+        gs_k = game_state_of(sess_k)
+        gs_k.write_logic(gs_k.node, NodeKey(plane=1, round_num=_ROUND,
                                             kind='prep'),
                          produced_by='cw-t253-test', sig=_SIG)
         bench_k = [BenchChar(slot=1, char_id=member, star=1),
@@ -372,14 +372,14 @@ class TestCriterionUnits:
             sell_refund,
         )
         sess = StrategySession()
-        bs = board_state_of(sess)
-        bs.write_logic(bs.node, NodeKey(plane=1, round_num=_ROUND,
+        gs = game_state_of(sess)
+        gs.write_logic(gs.node, NodeKey(plane=1, round_num=_ROUND,
                                         kind='prep'),
                        produced_by='cw-t253-test', sig=_SIG)
         bench = [BenchChar(slot=1, char_id=_PAIR, star=1),
                  BenchChar(slot=2, char_id=_PAIR, star=1)]
         # 凑息守卫读容器上阵域(非形参):front_row 必写,免空板止损守卫
-        bs.write_logic(bs.front_row, [Unit(slot=1, char_id='刃', star=1)],
+        gs.write_logic(gs.front_row, [Unit(slot=1, char_id='刃', star=1)],
                        produced_by='cw-t253-test', sig=_SIG)
         deployed = [BenchChar(slot=1, char_id='刃', star=1,
                               position_pref='front')]
@@ -390,14 +390,14 @@ class TestCriterionUnits:
         refund = sell_refund(1, bench_char_cost(bench[0]))
         gold = saturation_line(7) - refund - 1
         slots, _key = crit_sell.sell_for_interest(
-            gold, bench, 7, (), bs, merge_guard_release=release)
+            gold, bench, 7, (), gs, merge_guard_release=release)
         sold_names = {next((b.char_id or '' for b in bench
                             if b.slot == s), '') for s in slots}
         assert sold_names == {_PAIR}
         # 燃料通道旁路对照(原零漂移锁旁路半迁并)
-        sess_f, bs_f, frame_f = _prep_frame(pair_ledger_round=2)
+        sess_f, gs_f, frame_f = _prep_frame(pair_ledger_round=2)
         ct_release: dict = {}
-        base_kwargs = {'k_members': frame_f.k_members, 'state': bs_f,
+        base_kwargs = {'k_members': frame_f.k_members, 'state': gs_f,
                        'exclude_names': frozenset()}
         cands = mandate.fuel_sell_candidates(
             frame_f.bench, counters=ct_release, dedup_names=set(),
@@ -415,14 +415,14 @@ class TestCriterionUnits:
             provisional,
         )
         sess = StrategySession()
-        bs = board_state_of(sess)
-        bs.write_logic(bs.node, NodeKey(plane=1, round_num=_ROUND,
+        gs = game_state_of(sess)
+        gs.write_logic(gs.node, NodeKey(plane=1, round_num=_ROUND,
                                         kind='prep'),
                        produced_by='cw-t253-test', sig=_SIG)
         bench = [BenchChar(slot=1, char_id=_PAIR, star=1),
                  BenchChar(slot=2, char_id=_PAIR, star=1)]
         # 塌缩守卫读容器上阵域(非形参):front_row 必写,免空板止损守卫
-        bs.write_logic(bs.front_row, [Unit(slot=1, char_id='刃', star=1)],
+        gs.write_logic(gs.front_row, [Unit(slot=1, char_id='刃', star=1)],
                        produced_by='cw-t253-test', sig=_SIG)
         deployed = [BenchChar(slot=1, char_id='刃', star=1,
                               position_pref='front')]
@@ -436,11 +436,11 @@ class TestCriterionUnits:
             1.0, injected_form=True))
         try:
             slots, _key = crit_sell.line_switch_sell(
-                (_PAIR,), (), bench, deployed, bs, k_switched=True,
+                (_PAIR,), (), bench, deployed, gs, k_switched=True,
                 merge_guard_release=release)
             assert slots == [1, 2]
             slots_guarded, _key2 = crit_sell.line_switch_sell(
-                (_PAIR,), (), bench, deployed, bs, k_switched=True)
+                (_PAIR,), (), bench, deployed, gs, k_switched=True)
             assert slots_guarded == []
         finally:
             provisional.reset('U_X')

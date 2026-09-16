@@ -276,7 +276,7 @@ def test_freeze_card_decrement_via_report_path(monkeypatch):
     递减 remaining_uses(上报时递减);常规出战零递减;未登记(登记面
     缺位)零动作不炸。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
-        board_state_of,
+        game_state_of,
     )
     from sr_od.application.currency_war.kernel.cw_investments import (
         STRATEGY_EFFECTS,
@@ -284,16 +284,16 @@ def test_freeze_card_decrement_via_report_path(monkeypatch):
     _patch_area_center(monkeypatch)
     # 跳过型:登记免战牌 → 经包络执行 → 递减 2→1
     sess = SimpleNamespace()
-    bs = board_state_of(sess)
-    bs.effects.register_strategy(STRATEGY_EFFECTS['免战牌'], acquired_t=None)
+    gs = game_state_of(sess)
+    gs.effects.register_strategy(STRATEGY_EFFECTS['免战牌'], acquired_t=None)
     ex = _make_executor(_RecordingController(), _make_stub_op({_HIT_SKIP}),
                         cw_match=SimpleNamespace(session=sess))
     with fast_sleep():
         ex.execute(StartBattle())
-    assert bs.effects.first(STRATEGY_EFFECTS['免战牌'].id).remaining_uses == 1
+    assert gs.effects.first(STRATEGY_EFFECTS['免战牌'].id).remaining_uses == 1
     # 常规出战(非跳过):零递减
     sess2 = SimpleNamespace()
-    bs2 = board_state_of(sess2)
+    bs2 = game_state_of(sess2)
     bs2.effects.register_strategy(STRATEGY_EFFECTS['免战牌'], acquired_t=None)
     ex2 = _make_executor(_RecordingController(), _make_stub_op({_HIT_BTN}),
                          cw_match=SimpleNamespace(session=sess2))

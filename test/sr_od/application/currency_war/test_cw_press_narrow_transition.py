@@ -34,7 +34,7 @@ from test.sr_od.application.currency_war._cw_helpers import (
     cw4_box as _bridge,
 )
 from test.sr_od.application.currency_war._cw_helpers import (
-    cw4_bs,
+    cw4_gs,
 )
 from test.sr_od.application.currency_war.test_cw_leak_ladder import (
     _bc as _lad_bc,
@@ -110,7 +110,7 @@ def _d_frame_st(gold: int, cards: list[ShopCard]) -> CwSimFrame:
 
 
 def _decide(st: CwSimFrame, sess) -> object:
-    return shop.decide_shop_action(cw4_bs(st, sess), sess, SimpleNamespace(ev_arm='full'))
+    return shop.decide_shop_action(cw4_gs(st, sess), sess, SimpleNamespace(ev_arm='full'))
 
 
 # ===== F1:dominance 位收窄开火锁 =====

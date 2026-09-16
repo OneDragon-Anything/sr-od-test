@@ -43,7 +43,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     ShopPayload,
     ShopSlot,
     Unit,
-    board_state_of,
+    game_state_of,
     register_sig_actors,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import BuyCard
@@ -92,26 +92,26 @@ def _single_card_session(node_kind: str, gold: int,
     板空边界:卖臂被 empty_board_sell_blocked 守卫独立兜住,本文件
     断言域(买因/计数键)不消费卖面。"""
     sess = StrategySession(rng=random.Random('cw-t243'))
-    bs = board_state_of(sess)
-    bs.write_logic(bs.node, NodeKey(plane=1, round_num=3, kind=node_kind),
+    gs = game_state_of(sess)
+    gs.write_logic(gs.node, NodeKey(plane=1, round_num=3, kind=node_kind),
                    produced_by='cw-t243-test', sig=_LOGIC_SIG)
-    bs.write_logic(bs.level, _LEVEL, produced_by='cw-t243-test',
+    gs.write_logic(gs.level, _LEVEL, produced_by='cw-t243-test',
                    sig=_LOGIC_SIG)
-    bs.write_logic(bs.xp, (0, XP_TO_NEXT_LEVEL[_LEVEL]),
+    gs.write_logic(gs.xp, (0, XP_TO_NEXT_LEVEL[_LEVEL]),
                    produced_by='cw-t243-test', sig=_LOGIC_SIG)
-    bs.write_logic(bs.gold, gold, produced_by='cw-t243-test',
+    gs.write_logic(gs.gold, gold, produced_by='cw-t243-test',
                    sig=_LOGIC_SIG)
-    bs.observe(bs.hp, 60, evidence='cw-t243-test', sig=_OBS_SIG)
+    gs.observe(gs.hp, 60, evidence='cw-t243-test', sig=_OBS_SIG)
     slots = [BenchSlot(kind='unit',
                        unit=Unit(char_id=n, star=1, slot=i + 1))
              for i, n in enumerate(bench_names)]
-    bs.write_logic(bs.bench, BenchView(slots=slots, capacity=9),
+    gs.write_logic(gs.bench, BenchView(slots=slots, capacity=9),
                    produced_by='cw-t243-test', sig=_LOGIC_SIG)
     cards = [ShopSlot(kind='content',
                       card=ShopCard(name=card_name, faction='', cost=3,
                                     star=1, slot=1))]
     cards += [ShopSlot(kind='empty')] * 4
-    bs.write_logic(bs.shop, ShopPayload(cards=cards, refresh_probs={}),
+    gs.write_logic(gs.shop, ShopPayload(cards=cards, refresh_probs={}),
                    produced_by='cw-t243-test', sig=_LOGIC_SIG)
     state_of(sess).target_comp = COMP_LIBRARY[0]
     return MandateV1Live(), sess, SimpleNamespace(ev_arm='full')

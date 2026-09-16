@@ -39,7 +39,7 @@ def _load_stats_module():
     raise AssertionError('自 __file__ 向上找不到 cw_batch_stats.py(仓库根?)')
 
 
-_bs = _load_stats_module()
+_gs = _load_stats_module()
 
 
 def _game(rows: list[dict]) -> dict:
@@ -68,28 +68,28 @@ class TestCompDoneP1Proxy:
         [档案行] 结构性 None = 无数据;代理不可达(不把无数据虚构读成
         行为),不入分母。"""
         # [代理活跃]
-        ok = _bs.game_metrics(_game(
+        ok = _gs.game_metrics(_game(
             [_row(p1_pair=('仙舟', '列车同行'), form_ok=True)]))
-        ng = _bs.game_metrics(_game([_row(p1_pair=('仙舟',), form_ok=False)]))
+        ng = _gs.game_metrics(_game([_row(p1_pair=('仙舟',), form_ok=False)]))
         assert ok['comp_done'] == 1
         assert ok['comp_proxy'] is True
         assert ng['comp_done'] == 0
         assert ng['comp_proxy'] is True
         # [零漂移]
-        unl = _bs.game_metrics(_game(
+        unl = _gs.game_metrics(_game(
             [_row(locked_comp='', p1_pair=(), form_ok=True)]))
         assert unl['comp_done'] == 0
         assert unl['comp_proxy'] is False
-        lk0 = _bs.game_metrics(_game(
+        lk0 = _gs.game_metrics(_game(
             [_row(locked_comp='不息之途', p1_pair=(), form_ok=False)]))
-        lk1 = _bs.game_metrics(_game(
+        lk1 = _gs.game_metrics(_game(
             [_row(locked_comp='不息之途', p1_pair=(), form_ok=True)]))
         assert lk0['comp_done'] == 0
         assert lk0['comp_proxy'] is False
         assert lk1['comp_done'] == 1
         assert lk1['comp_proxy'] is False
         # [档案行]
-        ar = _bs.game_metrics(_game(
+        ar = _gs.game_metrics(_game(
             [_row(locked_comp=None, p1_pair=None, form_ok=True)]))
         assert ar['comp_done'] is None
         assert ar['comp_proxy'] is False
@@ -102,7 +102,7 @@ class TestCompDoneP1Proxy:
                                 'p1_pair': ['仙舟', '列车同行']}}
         (tmp_path / 'decisions.jsonl').write_text(
             json.dumps(dec, ensure_ascii=False) + '\n', encoding='utf-8')
-        games = _bs._sim_rows(tmp_path)
-        m = _bs.game_metrics(games['r1'])
+        games = _gs._sim_rows(tmp_path)
+        m = _gs.game_metrics(games['r1'])
         assert m['comp_done'] == 1
         assert m['comp_proxy'] is True

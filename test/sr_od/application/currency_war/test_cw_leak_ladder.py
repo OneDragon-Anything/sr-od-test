@@ -174,7 +174,7 @@ class TestL7AllInCategoryFilter:
 
     def _allin_state(self, hp: int, *, readable: bool = True) -> CwSimFrame:
         """CwSimFrame 帧(mandate_v1 闸入口仍持 CwSimFrame,闸内经一次性装箱;
-        位面/节点语义同 _allin_bs)。"""
+        位面/节点语义同 _allin_gs)。"""
         st = CwSimFrame(gold=30, level=5, round_num=7, node_type='boss',
                        hp=hp)
         st.plane = 2
@@ -182,28 +182,28 @@ class TestL7AllInCategoryFilter:
         st.hp_trusted = False
         return st
 
-    def _allin_bs(self, hp: int | None, *, source: str = 'observation'
+    def _allin_gs(self, hp: int | None, *, source: str = 'observation'
                   ) -> 'GameState':
         """P21 域判据容器帧(波 2 起门输入 = GameState):P2r7 boss 帧,
         来源三态 = 旧两位语义的容器形态(observation=真读/prior=不可信)。"""
         from sr_od.application.currency_war.kernel.cw_game_state import (
-            BS_SCHEMA_VERSION,
+            GAME_STATE_SCHEMA_VERSION,
             ChannelSig,
             GameState,
             NodeKey,
         )
         sig = ChannelSig(family='obs', actor='cw_observation', mode='read')
-        bs = GameState(schema_version=BS_SCHEMA_VERSION)
+        gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
         if hp is not None:
             if source == 'observation':
-                bs.observe(bs.hp, hp, sig=sig)
+                gs.observe(gs.hp, hp, sig=sig)
             elif source == 'prior':
-                bs.write_prior(bs.hp, hp, evidence='prior:adr-0559', sig=sig)
+                gs.write_prior(gs.hp, hp, evidence='prior:adr-0559', sig=sig)
             else:
                 raise ValueError(f'未知 source {source!r}')
-        bs.observe(bs.node, NodeKey(plane=2, round_num=7, kind='boss'),
+        gs.observe(gs.node, NodeKey(plane=2, round_num=7, kind='boss'),
                    sig=sig)
-        return bs
+        return gs
 
     def _allin_session(self) -> SimpleNamespace:
         s = SimpleNamespace()
@@ -219,14 +219,14 @@ class TestL7AllInCategoryFilter:
             all_in_xp_domain_hit,
         )
         sess = self._allin_session()
-        assert all_in_xp_domain_hit(self._allin_bs(10), sess,
+        assert all_in_xp_domain_hit(self._allin_gs(10), sess,
                                     DEFAULT_REGISTRY) is True
-        assert all_in_xp_domain_hit(self._allin_bs(100), sess,
+        assert all_in_xp_domain_hit(self._allin_gs(100), sess,
                                     DEFAULT_REGISTRY) is False
         # 不可信帧(prior 支,旧两位皆 False 的容器形态)不过滤
-        assert all_in_xp_domain_hit(self._allin_bs(10, source='prior'),
+        assert all_in_xp_domain_hit(self._allin_gs(10, source='prior'),
                                     sess, DEFAULT_REGISTRY) is False
-        no_hp = self._allin_bs(None)
+        no_hp = self._allin_gs(None)
         assert all_in_xp_domain_hit(no_hp, sess,
                                     DEFAULT_REGISTRY) is False
 

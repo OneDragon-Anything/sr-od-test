@@ -40,7 +40,7 @@ from sr_od.application.currency_war.kernel.cw_exec_state import (
 from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     ShopPayload,
-    board_state_of,
+    game_state_of,
     tracked_unobserved,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
@@ -65,16 +65,16 @@ def _spy_defects(monkeypatch) -> list[tuple]:
 
 
 def _write_shop_payload(session) -> None:
-    """容器在屏空牌面(策略门在屏前置 bs.shop.value 非空的满足面)。"""
-    bs = board_state_of(session)
-    bs.write_logic(bs.shop, ShopPayload(cards=[], refresh_probs={}),
+    """容器在屏空牌面(策略门在屏前置 gs.shop.value 非空的满足面)。"""
+    gs = game_state_of(session)
+    gs.write_logic(gs.shop, ShopPayload(cards=[], refresh_probs={}),
                    produced_by='test', sig=_SIG)
 
 
 def _mark_unobserved(session) -> None:
     """容器观察态字段写 False(生产同形 = 接管检测写点)。"""
-    bs = board_state_of(session)
-    bs.write_logic(bs.tracked_account_observed, False,
+    gs = game_state_of(session)
+    gs.write_logic(gs.tracked_account_observed, False,
                    produced_by='test', evidence='takeover_invalidation',
                    sig=_SIG)
 
@@ -92,7 +92,7 @@ def _mandate_strategy(monkeypatch):
     monkeypatch.setattr(strategy, '_consume_shop_direction_frame',
                         lambda session: None)
     monkeypatch.setattr(strategy, 'write_shop_mirrors',
-                        lambda bs, session: None)
+                        lambda gs, session: None)
     return strategy
 
 
@@ -127,14 +127,14 @@ def test_default_and_anchored_states_pass_gate_to_core(monkeypatch):
     )
     _sentinel = SimpleNamespace(marker='core-consulted')
 
-    def _core(bs, sess, config, registry=None):
+    def _core(gs, sess, config, registry=None):
         return _sentinel
 
     monkeypatch.setattr(mandate_shop, 'decide_shop_action', _core)
 
     # 缺省(字段从未写)= 缺省可信 → 门放行。
     s_default = StrategySession()
-    assert board_state_of(s_default).tracked_account_observed.value is None
+    assert game_state_of(s_default).tracked_account_observed.value is None
     assert not tracked_unobserved(s_default)
     _write_shop_payload(s_default)
     act = _mandate_strategy(monkeypatch).decide_shop_action(
@@ -143,8 +143,8 @@ def test_default_and_anchored_states_pass_gate_to_core(monkeypatch):
 
     # 已锚定(True)→ 门放行。
     s_anchored = StrategySession()
-    _bs = board_state_of(s_anchored)
-    _bs.write_logic(_bs.tracked_account_observed, True,
+    _gs = game_state_of(s_anchored)
+    _gs.write_logic(_gs.tracked_account_observed, True,
                     produced_by='test', sig=_SIG)
     assert not tracked_unobserved(s_anchored)
     _write_shop_payload(s_anchored)
@@ -165,9 +165,9 @@ def test_reconcile_bench_writeback_marks_observed():
 
     assert ok is True
     assert not tracked_unobserved(session)
-    assert board_state_of(session).tracked_account_observed.value is True
+    assert game_state_of(session).tracked_account_observed.value is True
     assert [(b.char_id, b.star) for b in
-            board_state_of(session).tracked_books.bench if b is not None] \
+            game_state_of(session).tracked_books.bench if b is not None] \
         == [('花火', 1)]
 
 
@@ -180,11 +180,11 @@ def test_reconcile_failed_anchor_keeps_unobserved():
     _mark_unobserved(s1)
     assert _reconcile(s1, None, []) is True
     assert tracked_unobserved(s1)
-    assert board_state_of(s1).tracked_account_observed.value is False
+    assert game_state_of(s1).tracked_account_observed.value is False
     # 双空读守卫(双空读 + 前值非空 = 疑过渡帧保旧):返 False 不置位。
     s2 = StrategySession()
     _mark_unobserved(s2)
-    board_state_of(s2).tracked_books.bench = [
+    game_state_of(s2).tracked_books.bench = [
         BenchChar(slot=1, char_id='花火', star=1)]
     assert _reconcile(s2, [], []) is False
     assert tracked_unobserved(s2)
@@ -211,7 +211,7 @@ def test_takeover_marks_tracked_unobserved():
 
     assert exec_state_of(session).cw_resumed_match is True
     assert tracked_unobserved(session)
-    assert board_state_of(session).tracked_account_observed.value is False
+    assert game_state_of(session).tracked_account_observed.value is False
 
 
 # ===== 锁5/锁6/锁7 访问级流锁(run_buy_waves CloseShop 出口)=====

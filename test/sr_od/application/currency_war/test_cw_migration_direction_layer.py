@@ -46,7 +46,7 @@ from types import SimpleNamespace
 import pytest
 from test.sr_od.application.currency_war._cw_helpers import (
     cw4_box,
-    cw4_bs,
+    cw4_gs,
 )
 
 from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
@@ -249,7 +249,7 @@ def test_ju23_star2_stock_card_has_no_refund_backing_no_spend():
     """
     cfg = SimpleNamespace(ev_arm='full')
     sess = _ju23_session()
-    act = decide_shop_action(cw4_bs(_ju23_frame(
+    act = decide_shop_action(cw4_gs(_ju23_frame(
         100, [_sc('花火', star=2)]), sess), sess, cfg)
     assert not isinstance(act, (BuyCard, RefreshShop))
     # 收缩后帧终态 = 收工关店(零支出语义不变)
@@ -285,7 +285,7 @@ def test_ju23_full_surface_gold_never_breaks_interest_line():
         st = _ju23_frame(gold0, [_sc('局23杂件')])
         sess = _ju23_session()
         for _ in range(15):
-            act = decide_shop_action(cw4_bs(st, sess), sess, cfg)
+            act = decide_shop_action(cw4_gs(st, sess), sess, cfg)
             if isinstance(act, BuyCard):
                 cost = act.card.cost if act.card.cost else 3
                 if gold0 <= 50:
@@ -308,19 +308,19 @@ def test_ju23_full_surface_gold_never_breaks_interest_line():
 
 # ------------------------------------------- committed 权威判定直锁
 
-def _bs_state(plane: int, round_num: int):
+def _gs_state(plane: int, round_num: int):
     """容器单例构造(真值语义 = 节点 plane/round)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         ChannelSig,
         GameState,
         NodeKey,
     )
-    bs = GameState(schema_version=1)
-    bs.observe(bs.node, NodeKey(plane=plane, round_num=round_num,
+    gs = GameState(schema_version=1)
+    gs.observe(gs.node, NodeKey(plane=plane, round_num=round_num,
                                 kind='普通战斗'),
                sig=ChannelSig(family='obs', actor='cw_observation',
                               mode='read'))
-    return bs
+    return gs
 
 
 @pytest.mark.parametrize('case', [
@@ -337,7 +337,7 @@ def test_committed_authority_semantics(case: str):
     (locked/p1_pair);plane≥2 位面序支与 None 退化输入案经审计判决
     简化(None 案直锁 = test_cw_session_separation)。"""
     if case == 'p1_unarmed_conservative':
-        assert committed_authority(_bs_state(1, 3), StrategySession()) is False
+        assert committed_authority(_gs_state(1, 3), StrategySession()) is False
         return
     sess = StrategySession()
     if case == 'locked_committed':
@@ -345,4 +345,4 @@ def test_committed_authority_semantics(case: str):
                                                      locked_comp='万敌燃血')
     else:   # p1_pair_committed
         state_of(sess).v3_intention = IntentionState(p1_pair=('万敌燃血',))
-    assert committed_authority(_bs_state(1, 8), sess) is True
+    assert committed_authority(_gs_state(1, 8), sess) is True

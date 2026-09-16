@@ -33,7 +33,7 @@ from sr_od.application.currency_war.kernel.cw_exec_state import (
     bench_slots_healthy,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_of,
+    game_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_reconcile import (
     reconcile_tracking,
@@ -84,7 +84,7 @@ def _mk_executor(session):
 
 def _tracked_sig(session) -> list:
     return [(b.char_id, b.star) for b in
-            (board_state_of(session).tracked_books.bench or [])
+            (game_state_of(session).tracked_books.bench or [])
             if b is not None]
 
 
@@ -102,7 +102,7 @@ def test_star_flicker_hold_then_confirm_and_oscillation_never_confirms(
     ——低读间夹恢复帧清计数 → 抖动形态零采新(本局病灶形态)。"""
     _spy_conflicts(monkeypatch)
     session = StrategySession()
-    board_state_of(session).tracked_books.bench = bench_from_compact(
+    game_state_of(session).tracked_books.bench = bench_from_compact(
         [_bc(1, '不死途', 2)])
 
     for _ in range(2):   # 抖动 episode 实测长度 = 2 帧:必须全程保旧
@@ -115,7 +115,7 @@ def test_star_flicker_hold_then_confirm_and_oscillation_never_confirms(
     assert _tracked_sig(session) == [('不死途', 1)]
     assert session.star_pending_regression == {}   # 确认后计数收口
     # 振荡断路:恢复帧夹层清计数,零采新
-    board_state_of(session).tracked_books.bench = bench_from_compact(
+    game_state_of(session).tracked_books.bench = bench_from_compact(
         [_bc(1, '不死途', 2)])
     for star in (1, 1, 2, 1, 1):   # 2 帧抖动 episode ×2,中间恢复
         read = [_bc(1, '不死途', star)]
@@ -128,7 +128,7 @@ def test_star_slot_anchored_hold_spares_true_low_copy(monkeypatch):
     """同名多星三副本:保旧只抬锚槽读低副本,真实 1★/2★ 副本不被误抬。"""
     _spy_conflicts(monkeypatch)
     session = StrategySession()
-    board_state_of(session).tracked_books.bench = bench_from_compact(
+    game_state_of(session).tracked_books.bench = bench_from_compact(
         [_bc(4, '不死途', 1), _bc(6, '不死途', 2), _bc(7, '不死途', 3)])
 
     # 3★@槽7 读成 1★(星读抖动),1★@槽4/2★@槽6 为真实读
@@ -145,7 +145,7 @@ def test_star_anchor_missing_copy_gets_reinjected(monkeypatch):
     """锚槽副本整缺(SIFT 漏检):注入锚副本防锚静默洗掉。"""
     _spy_conflicts(monkeypatch)
     session = StrategySession()
-    board_state_of(session).tracked_books.bench = bench_from_compact(
+    game_state_of(session).tracked_books.bench = bench_from_compact(
         [_bc(7, '不死途', 3), _bc(4, '不死途', 1)])
 
     # 槽7 锚副本漏检,读链只剩真实 1★;名最高读星 1 < 锚 3
@@ -154,7 +154,7 @@ def test_star_anchor_missing_copy_gets_reinjected(monkeypatch):
 
     sig = sorted(_tracked_sig(session))
     assert sig == [('不死途', 1), ('不死途', 3)]   # 锚 3★ 跨帧存续
-    injected = [b for b in board_state_of(session).tracked_books.bench
+    injected = [b for b in game_state_of(session).tracked_books.bench
                 if b is not None and b.slot == 7]
     assert injected and injected[0].star == 3
 
@@ -163,7 +163,7 @@ def test_star_upgrade_read_raises_anchor_silently(monkeypatch):
     """升星读(merge 后)高于锚 = 常态采信,不进回退路径。"""
     rows = _spy_conflicts(monkeypatch)
     session = StrategySession()
-    board_state_of(session).tracked_books.bench = bench_from_compact(
+    game_state_of(session).tracked_books.bench = bench_from_compact(
         [_bc(1, '不死途', 2)])
 
     reconcile_tracking(session, [_bc(1, '不死途', 3)], [], source='test')
@@ -180,13 +180,13 @@ def test_removal_keeps_layout_sell_and_move_legs():
     deployed 正常落槽。"""
     # sell 腿:卖槽2(下标 1)
     session = StrategySession()
-    board_state_of(session).tracked_books.bench = bench_from_compact(
+    game_state_of(session).tracked_books.bench = bench_from_compact(
         [_bc(1, '花火', 1), _bc(2, '刃', 1), _bc(3, '椒丘', 1)])
     ex = _mk_executor(session)
 
     ex._track_remove_bench(1)
 
-    tracked = board_state_of(session).tracked_books.bench
+    tracked = game_state_of(session).tracked_books.bench
     assert len(tracked) == BENCH_CAPACITY   # pad 态保持
     assert tracked[1] is None
     assert tracked[0] is not None and (tracked[0].char_id, tracked[0].slot) \
@@ -195,17 +195,17 @@ def test_removal_keeps_layout_sell_and_move_legs():
         == ('椒丘', 3)   # 不移位:槽3 件仍在槽3(旧紧凑重排会把它挪到槽2)
     # move 腿:花火 bench槽1 → 前排槽1
     session_m = StrategySession()
-    board_state_of(session_m).tracked_books.bench = bench_from_compact(
+    game_state_of(session_m).tracked_books.bench = bench_from_compact(
         [_bc(1, '花火', 1), _bc(2, '刃', 1)])
-    board_state_of(session_m).tracked_books.deployed = []
+    game_state_of(session_m).tracked_books.deployed = []
     ex_m = _mk_executor(session_m)
 
     ex_m._track_move_deployed(0, 'front', 1)
 
-    tracked_m = board_state_of(session_m).tracked_books.bench
+    tracked_m = game_state_of(session_m).tracked_books.bench
     assert tracked_m[0] is None and tracked_m[1].char_id == '刃' \
         and tracked_m[1].slot == 2   # 刃 不移位
-    deployed = [b for b in board_state_of(session_m).tracked_books.deployed
+    deployed = [b for b in game_state_of(session_m).tracked_books.deployed
                 if b is not None]
     assert [(b.char_id, b.position_pref) for b in deployed] == [('花火', 'front')]
 
@@ -217,7 +217,7 @@ def test_tracked_write_guard_defect_and_healthy_silence(monkeypatch):
     # 反帧:既有污染形态(信息位重复;模拟旧紧凑重排+买入追加累积产物)
     rows = _spy_defects(monkeypatch)
     session = StrategySession()
-    board_state_of(session).tracked_books.bench = [
+    game_state_of(session).tracked_books.bench = [
         _bc(1, '花火', 1), _bc(2, '刃', 1), _bc(2, '椒丘', 1)]
     ex = _mk_executor(session)
 
@@ -228,12 +228,12 @@ def test_tracked_write_guard_defect_and_healthy_silence(monkeypatch):
     assert (surface, kind) == ('bench', defects.DEFECT_KIND_BENCH_SLOT_UNHEALTHY)
     assert observed == "slots=['1', '2', '2']"
     assert reader == 'tracked_write_guard'
-    tracked = board_state_of(session).tracked_books.bench
+    tracked = game_state_of(session).tracked_books.bench
     assert tracked[0] is None   # 摘除未被拒(拒绝会让已卖件滞留 tracked)
     # 正帧:健康账摘除
     rows_h = _spy_defects(monkeypatch)
     session_h = StrategySession()
-    board_state_of(session_h).tracked_books.bench = bench_from_compact(
+    game_state_of(session_h).tracked_books.bench = bench_from_compact(
         [_bc(1, '花火', 1), _bc(2, '刃', 1)])
     ex_h = _mk_executor(session_h)
 
@@ -245,7 +245,7 @@ def test_reconcile_bench_gate_rejects_duplicate_slots(monkeypatch):
     """对账仲裁门(共享谓词):读链槽号重复 → bench 侧拒绝写回保旧。"""
     rows = _spy_conflicts(monkeypatch)
     session = StrategySession()
-    board_state_of(session).tracked_books.bench = bench_from_compact(
+    game_state_of(session).tracked_books.bench = bench_from_compact(
         [_bc(1, '花火', 1)])
 
     read = [_bc(2, '甲', 1), _bc(2, '乙', 1)]   # 重复槽号(无守卫读链)

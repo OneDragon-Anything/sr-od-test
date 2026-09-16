@@ -240,32 +240,32 @@ def cw4_feed(session, frame):
         ChannelSig,
         NodeKey,
         ShopPayload,
-        board_state_of,
+        game_state_of,
         synthesize_from_game_state,
     )
-    _bs = board_state_of(session)
-    synthesize_from_game_state(_bs, frame)
+    _gs = game_state_of(session)
+    synthesize_from_game_state(_gs, frame)
     _sig = ChannelSig(family='obs', actor='synthesize_from_game_state',
                       mode='synthesized')
-    if _bs.node.value is None:
-        _bs.observe(_bs.node,
+    if _gs.node.value is None:
+        _gs.observe(_gs.node,
                     NodeKey(plane=int(getattr(frame, 'plane', 1) or 1),
                             round_num=int(getattr(frame, 'round_num', 1)
                                           or 1),
                             kind=''),
                     evidence='kind_inherited', sig=_sig)
-    if _bs.shop.value is None:
-        _bs.observe(_bs.shop, ShopPayload(
+    if _gs.shop.value is None:
+        _gs.observe(_gs.shop, ShopPayload(
             cards=[],
             refresh_probs={int(k): float(v) for k, v in
                            (getattr(frame, 'refresh_probs', None)
                             or {}).items()}),
             sig=ChannelSig(family='obs', actor='synthesize_from_game_state',
                            mode='synthesized'))
-    return _bs
+    return _gs
 
 
-def cw4_bs(frame, session):
+def cw4_gs(frame, session):
     """帧 → 容器并返回容器(cw4_feed 的取值形态;decide_shop_action
     首参直喂迁移用)。"""
     return cw4_feed(session, frame)
@@ -297,7 +297,7 @@ def cw4_box(frame, session=None):
     ``board_state_bridge`` 逐位同构,消费方式 = 别名导入(调用点零改动,
     见模块头)。
 
-    - 载体 = 容器读口 ``board_state_of(session)``:session=None(缺省)
+    - 载体 = 容器读口 ``game_state_of(session)``:session=None(缺省)
       = 一次性空白容器(读口 None 分支契约:不缓存不挂载);传 session
       时装入该 session 单例(适合「装箱面与生产读口面须同容器」的用例,
       注意多次装箱同 session 为累加写,与一次性桥语义有差);
@@ -314,32 +314,32 @@ def cw4_box(frame, session=None):
         SIM_SYNTHESIZED,
         ChannelSig,
         NodeKey,
-        board_state_of,
+        game_state_of,
         synthesize_from_game_state,
     )
     from sr_od.application.currency_war.kernel.cw_vocab import (
         CwSimFrame as _FrameDefaults,
     )
-    bs = board_state_of(session)
+    gs = game_state_of(session)
     _sig = ChannelSig(family='obs', actor='synthesize_from_game_state',
                       mode='synthesized')
     st_view: object = (_DuckFrame(frame, _FrameDefaults())
                        if not isinstance(frame, _FrameDefaults) else frame)
-    synthesize_from_game_state(bs, st_view)
-    if bs.node.value is None:
-        bs.observe(bs.node,
+    synthesize_from_game_state(gs, st_view)
+    if gs.node.value is None:
+        gs.observe(gs.node,
                    NodeKey(plane=int(getattr(frame, 'plane', 1) or 1),
                            round_num=int(getattr(frame, 'round_num', 1)
                                          or 1),
                            kind=''),
                    evidence=SIM_SYNTHESIZED, sig=_sig)
     if getattr(frame, 'level_up_cost', None) is not None:
-        bs.observe(bs.level_up_cost, int(frame.level_up_cost),
+        gs.observe(gs.level_up_cost, int(frame.level_up_cost),
                    evidence=SIM_SYNTHESIZED, sig=_sig)
     if getattr(frame, 'shop_refresh_cost', None) is not None:
-        bs.observe(bs.shop_refresh_cost, int(frame.shop_refresh_cost),
+        gs.observe(gs.shop_refresh_cost, int(frame.shop_refresh_cost),
                    evidence=SIM_SYNTHESIZED, sig=_sig)
     if getattr(frame, 'selected_difficulty', None):
-        bs.observe(bs.selected_difficulty, str(frame.selected_difficulty),
+        gs.observe(gs.selected_difficulty, str(frame.selected_difficulty),
                    evidence=SIM_SYNTHESIZED, sig=_sig)
-    return bs
+    return gs

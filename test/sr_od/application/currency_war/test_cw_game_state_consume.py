@@ -19,11 +19,11 @@ from types import SimpleNamespace
 import pytest
 
 from sr_od.application.currency_war.kernel.cw_game_state import (
-    BS_SCHEMA_VERSION,
+    GAME_STATE_SCHEMA_VERSION,
     GameState,
     apply_settlement_cover,
     board_next_tier_of,
-    board_state_of,
+    game_state_of,
     consume_defect_sink,
     record_refresh_execution,
     set_defect_sink,
@@ -84,15 +84,15 @@ def test_refresh_execution_paid_and_free_frame_gates() -> None:
     = 免费帧不进付费累计(长线利好触发计数载体禁混入免费刷),消耗免费
     余额 + total 照计;③免费余额下限 0(计数器单调域,禁负值漂移);
     ④evidence 落轮键 refresh_exec@<frame>(归因留证面,付费/免费帧同)。"""
-    bs = GameState(schema_version=BS_SCHEMA_VERSION)
-    record_refresh_execution(bs, free=False, frame='p1-r3')
-    assert bs.paid_refresh_count.value == 1
-    assert bs.total_refresh_count.value == 1
-    assert bs.free_refresh_balance.value is None, '付费帧不动免费余额'
-    assert bs.paid_refresh_count.evidence == 'refresh_exec@p1-r3'
-    assert bs.total_refresh_count.evidence == 'refresh_exec@p1-r3'
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    record_refresh_execution(gs, free=False, frame='p1-r3')
+    assert gs.paid_refresh_count.value == 1
+    assert gs.total_refresh_count.value == 1
+    assert gs.free_refresh_balance.value is None, '付费帧不动免费余额'
+    assert gs.paid_refresh_count.evidence == 'refresh_exec@p1-r3'
+    assert gs.total_refresh_count.evidence == 'refresh_exec@p1-r3'
     # ②/③ 免费帧闸换新容器:「不写付费计数」的语义承载于字段从未写过
-    bs2 = GameState(schema_version=BS_SCHEMA_VERSION)
+    bs2 = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     bs2.write_logic(bs2.free_refresh_balance, 1, produced_by='effect',
                     sig=_lsig())
     record_refresh_execution(bs2, free=True, frame='p2-r1')
@@ -134,29 +134,29 @@ def test_settlement_cover_writes_truth_group() -> None:
     ③hp 失读(结算页 OCR miss)不写(不可信帧不写,§2.2 写入闸),不清
     既有正式值;④progress_delta 带符号真值落 settlement 结构(胜局正/
     败局负;battle_wait 调用点传参为接线半,本锁辖函数半)。"""
-    bs = GameState(schema_version=BS_SCHEMA_VERSION)
-    apply_settlement_cover(bs, hp_after=76, streak_after=4,
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    apply_settlement_cover(gs, hp_after=76, streak_after=4,
                            killed=True, gold=23, level=6, xp=(3, 10))
-    assert bs.hp.value == 76 and bs.hp.source == 'observation'
-    assert bs.streak.value == 4, '带方向真值(正=连胜)'
-    assert bs.gold.value == 23 and bs.level.value == 6
-    assert bs.xp.value == (3, 10)
-    s = bs.settlement.value
+    assert gs.hp.value == 76 and gs.hp.source == 'observation'
+    assert gs.streak.value == 4, '带方向真值(正=连胜)'
+    assert gs.gold.value == 23 and gs.level.value == 6
+    assert gs.xp.value == (3, 10)
+    s = gs.settlement.value
     assert s is not None and s.hp_after == 76 and s.killed is True
     # ② 败局页
-    bs2 = GameState(schema_version=BS_SCHEMA_VERSION)
+    bs2 = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     apply_settlement_cover(bs2, hp_after=41, streak_after=-2, killed=False)
     assert bs2.hp.value == 41 and bs2.streak.value == -2
     assert bs2.gold.value is None and bs2.level.value is None
     assert bs2.xp.value is None
     assert bs2.settlement.value.gold is None
     # ③ hp 失读不写
-    bs3 = GameState(schema_version=BS_SCHEMA_VERSION)
+    bs3 = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     bs3.observe(bs3.hp, 80, sig=_sig())
     apply_settlement_cover(bs3, hp_after=None, streak_after=None)
     assert bs3.hp.value == 80 and bs3.hp.source == 'observation'
     # ④ progress_delta 带符号
-    bs4 = GameState(schema_version=BS_SCHEMA_VERSION)
+    bs4 = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     apply_settlement_cover(bs4, hp_after=76, streak_after=4, killed=True,
                            progress_delta=2, gold=23)
     assert bs4.settlement.value is not None \
@@ -234,21 +234,21 @@ def test_merge_projection_direct_write_and_observe_wins() -> None:
     proj_view = bench_view_of_slots(proj_bench)
     real_view = bench_view_of_slots([BenchChar(slot=1, char_id='花火', star=2)])
     # 一致路径:逻辑直写 → 字段立即可读;同值实读覆盖 = 静默
-    bs = GameState(schema_version=BS_SCHEMA_VERSION)
-    bs.write_logic(bs.bench, proj_view, produced_by='BuyCard', sig=_lsig())
-    assert bs.bench.value is proj_view and bs.bench.source == 'logic', \
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    gs.write_logic(gs.bench, proj_view, produced_by='BuyCard', sig=_lsig())
+    assert gs.bench.value is proj_view and gs.bench.source == 'logic', \
         '投影直写:策略器立即可读(ADR-0651)'
     rows: list[dict] = []
     set_defect_sink(rows.append)
     try:
-        bs.observe(bs.bench, real_view, sig=_sig())
+        gs.observe(gs.bench, real_view, sig=_sig())
     finally:
         set_defect_sink(None)
         consume_defect_sink()
     assert rows == [], '投影与实读一致 = 零缺陷行'
-    assert bs.bench.source == 'observation', '实读后来源翻 observation(正常)'
+    assert gs.bench.source == 'observation', '实读后来源翻 observation(正常)'
     # 失配路径:观察赢覆盖真值 + 缺陷留证(失配 = 推算 bug,修推算代码)
-    bs2 = GameState(schema_version=BS_SCHEMA_VERSION)
+    bs2 = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     bs2.observe(bs2.bench, real_view, sig=_sig())
     bs2.write_logic(bs2.bench, bench_view_of_slots(
         [BenchChar(slot=1, char_id='花火', star=1)] + [None] * 8),
@@ -335,7 +335,7 @@ def test_bench_view_from_obs_empty_is_miss_not_full() -> None:
 
 # (三审整删)原 test_prep_bench_obs_miss_guard_and_tome_choice_wiring
 # 「接线存在性烟雾」(getsource 字符串在场四断言:bench_view_from_obs 接线/
-# _bs_obs.carry/特效窗门/chosen_tome 写端)——源码扫描形态(README 禁止
+# _gs_obs.carry/特效窗门/chosen_tome 写端)——源码扫描形态(README 禁止
 # 清单,判据「红时哪个运行行为坏了」答不出)。守卫函数行为半由
 # test_bench_view_from_obs_empty_is_miss_not_full 辖;特效窗门行为半由
 # test_merge_effect_window_gate_default_off_and_injectable 辖;op 装配面
@@ -448,7 +448,7 @@ def test_chosen_record_face_true_pick_only(case_id: str) -> None:
     sess = StrategySession()
     op = _op_with_session(row['op_cls'], sess)
     row['pick'](op)
-    fld = getattr(board_state_of(sess), row['field'])
+    fld = getattr(game_state_of(sess), row['field'])
     assert fld.value == row['expected'], f'{case_id}: 真选值 = 原名口径'
     assert fld.source == 'logic', f'{case_id}: 单次逻辑写入(source=logic)'
     # fallback 帧(全新会话):逐个不写
@@ -456,7 +456,7 @@ def test_chosen_record_face_true_pick_only(case_id: str) -> None:
     op2 = _op_with_session(row['op_cls'], sess2)
     for fallback in row['fallbacks']:
         fallback(op2)
-    assert getattr(board_state_of(sess2), row['field']).value is None, \
+    assert getattr(game_state_of(sess2), row['field']).value is None, \
         f'{case_id}: fallback 不写'
 
 
@@ -480,15 +480,15 @@ def test_supply_chosen_written_from_stash_after_exit_only() -> None:
     op = _op_with_session(cw_screen_supply_node.CwScreenSupplyNode, sess)
     exec_state_of(sess)._pending_chosen_supply = ('希儿', '星币收集器', True)
     op._record_chosen_supply()
-    bs = board_state_of(sess)
-    assert bs.chosen_supply.value == ('希儿', '星币收集器', True), '值=选定列三元组原名'
-    assert bs.chosen_supply.source == 'logic', '单次逻辑写入(source=logic)'
+    gs = game_state_of(sess)
+    assert gs.chosen_supply.value == ('希儿', '星币收集器', True), '值=选定列三元组原名'
+    assert gs.chosen_supply.source == 'logic', '单次逻辑写入(source=logic)'
     assert exec_state_of(sess)._pending_chosen_supply is None, \
         '写后取走暂存(不跨节点残留)'
     sess2 = StrategySession()
     op2 = _op_with_session(cw_screen_supply_node.CwScreenSupplyNode, sess2)
     op2._record_chosen_supply()
-    assert board_state_of(sess2).chosen_supply.value is None, \
+    assert game_state_of(sess2).chosen_supply.value is None, \
         '暂存空(兜底/刷新轮)不写'
     # pop 取走即清(重入轮防陈旧语义)
     exec_state_of(sess)._pending_chosen_supply = ('符玄', '旧选定', False)

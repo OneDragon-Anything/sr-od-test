@@ -6,7 +6,7 @@
    经 conftest ``_isolate_state_journal`` 重定向 = tmp,证明测试零真实账面
    写入);已装配 → 现役实例原样保留(兜底口不顶掉测试/生产自管装配)。
 2. 正主单例建立路径接线(用户裁定 2026-09-15:遥测装配 = game state
-   职责;精化令:触发只钉 board_state_of 局容器建立点,GameState 构造器零
+   职责;精化令:触发只钉 game_state_of 局容器建立点,GameState 构造器零
    装配逻辑;原「run 领取单点接线」锁随分层纠正重定向至此):建立注入
    ``run_id_provider`` 即装配——行为等价锚 = 未初始化容器首写前装配已发生;
    边界 = 草稿容器直构/一次性空载体/缺省建立(sim/测试口径)与 run 领取层
@@ -18,16 +18,16 @@
 背景实证:2026-09-14 18:56 起 8 连局零 state 行零档案(op 直跑 CwLoop 未经
 app 装配段,sink 缺席行按「诚实缺失」静默不落;深检 run_20260915_054718.md
 §0)。修法正本 = kernel ``ensure_journal_assembly`` docstring +
-``cw_game_state.board_state_of`` 建立路径注释。
+``cw_game_state.game_state_of`` 建立路径注释。
 """
 from pathlib import Path
 
 import pytest
 
 from sr_od.application.currency_war.kernel.cw_game_state import (
-    BS_SCHEMA_VERSION,
+    GAME_STATE_SCHEMA_VERSION,
     GameState,
-    board_state_of,
+    game_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_state_journal import (
     ensure_journal_assembly,
@@ -72,14 +72,14 @@ def test_ensure_assembly_installs_at_default_root_when_absent(
     assert state_journal_instance() is mine
 
 
-def test_board_state_establish_wires_assembly() -> None:
-    """正主单例建立路径接线:board_state_of 局容器建立注入 run_id_provider
+def test_game_state_establish_wires_assembly() -> None:
+    """正主单例建立路径接线:game_state_of 局容器建立注入 run_id_provider
     即装配(重定向原「run 领取单点接线」锁;精化令 2026-09-15:触发
     只钉该建立点,GameState 构造器零装配逻辑;行为等价 = 未初始化容器首写
     前装配已发生)。"""
     reset_state_telemetry()
     assert state_journal_instance() is None
-    board_state_of(object(), run_id_provider=current_run_id)
+    game_state_of(object(), run_id_provider=current_run_id)
     assert state_journal_instance() is not None
 
 
@@ -90,9 +90,9 @@ def test_draft_birth_and_run_claim_do_not_wire_assembly(
     装配;run 领取层 ``ensure_run_started`` 只铸 run,不辖装配。"""
     reset_state_telemetry()
     assert state_journal_instance() is None
-    GameState(schema_version=BS_SCHEMA_VERSION)   # 草稿容器直构:结构性不触发
-    board_state_of(None)   # 一次性空载体(局外):不装配
-    board_state_of(object())   # 缺省 provider=None 单例建立:不装配
+    GameState(schema_version=GAME_STATE_SCHEMA_VERSION)   # 草稿容器直构:结构性不触发
+    game_state_of(None)   # 一次性空载体(局外):不装配
+    game_state_of(object())   # 缺省 provider=None 单例建立:不装配
     assert state_journal_instance() is None
     ensure_run_started(match=object(), difficulty='A8')
     assert current_run_id() != ''   # run 领取职责不变(ADR-0588 三分支)

@@ -210,13 +210,13 @@ def _bcd_host(monkeypatch, bench_slots, counters):
         mandate as _mandate_mod,
     )
 
-    bs = _NS(node=_NS(value=None), back_layout=_NS(value=None),
+    gs = _NS(node=_NS(value=None), back_layout=_NS(value=None),
              deploy_cap=_NS(value=None), gold=_NS(value=10),
              level=_NS(value=5), front_row=_NS(value=None),
              back_row=_NS(value=None))
     session = StrategySession()
     session.strategy_state = _NS(cw4_counters=counters)
-    monkeypatch.setattr(_gs_mod, 'board_state_of', lambda s: bs)
+    monkeypatch.setattr(_gs_mod, 'game_state_of', lambda s: gs)
     monkeypatch.setattr(_gs_mod, 'bench_slots_of', lambda b: bench_slots)
     monkeypatch.setattr(_mandate_mod, '_deploy_plan_inputs',
                         lambda *a, **k: {})

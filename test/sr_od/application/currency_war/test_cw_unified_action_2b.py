@@ -42,7 +42,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     Unit,
     bench_view_of_slots,
-    board_state_of,
+    game_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwSimFrame,
@@ -105,7 +105,7 @@ def test_prep_f3_rejects_unknown_and_admits_registered():
 
 def test_levelup_emission_carries_cost_and_auth_basis():
     """发射面装载(LevelUp 粒度定案③口径,持久索引见模块头):cost = kernel
-    xp_click_cost 现算(bs.level_up_cost 缺读时函数内回退
+    xp_click_cost 现算(gs.level_up_cost 缺读时函数内回退
     XP_CLICK_COST_FALLBACK 折扣支,发射位零本地回退分支);auth_basis =
     发射臂放行名分键(arm1/arm0/pop/must_spend 封闭集);route_tag 沿
     Emitted.reason 透传(m3_levelup_batch:<tag>)。"""
@@ -128,10 +128,10 @@ def test_levelup_emission_carries_cost_and_auth_basis():
     out = mandate.run_mandate(frame, sess, state=cw4_box(st))
     lv = [e for e in out if isinstance(e.action, LevelUp)]
     assert lv, '构帧须命中 M3 升级臂(与 no_target 三臂锁 4 同形)'
-    bs_cost_view = cw4_box(CwSimFrame(gold=80, level=4, hp=30, plane=2,
+    gs_cost_view = cw4_box(CwSimFrame(gold=80, level=4, hp=30, plane=2,
                                       round_num=2, level_up_cost=4))
     a = lv[0].action
-    assert a.cost == xp_click_cost(bs_cost_view)   # 现算单一源(含回退支)
+    assert a.cost == xp_click_cost(gs_cost_view)   # 现算单一源(含回退支)
     assert a.auth_basis in ('arm1', 'arm0', 'pop', 'must_spend')
     # route_tag 透传面 = Emitted.reason(动作对象 route_tag 由桥伴在
     # decide_from_turn 装载,发射位直跑不经桥 → reason 承载)
@@ -144,26 +144,26 @@ def test_emission_resolves_container_index_fail_closed():
     """发射面容器下标解析(换算归属裁定,持久索引见模块头):bench
     域按槽位信息位与容器槽位表读口对位取枚举下标;deployed 域按
     (排, 槽号) 二元组对位;失配 = None(fail-closed 跳过,禁猜位)。"""
-    bs = board_state_of(None)
+    gs = game_state_of(None)
     # 槽位表构造 = 位置映射(bench_view_of_slots:槽 i = 列表下标 i,信息位
     # 槽号 = i+1 由视图重建)——槽 4 的件放列表下标 3。
-    bs.write_logic(bs.bench, bench_view_of_slots(
+    gs.write_logic(gs.bench, bench_view_of_slots(
         [None, None, None, BenchChar(slot=4, char_id='甲', star=1)]),
         produced_by='T', sig=_SIG)
-    bs.write_logic(bs.front_row, [Unit(slot=2, char_id='刃', star=1)],
+    gs.write_logic(gs.front_row, [Unit(slot=2, char_id='刃', star=1)],
                    produced_by='T', sig=_SIG)
-    assert mandate._bench_container_idx_by_slot(bs, 4) == 3   # 槽4 → 下标3
+    assert mandate._bench_container_idx_by_slot(gs, 4) == 3   # 槽4 → 下标3
     assert mandate._bench_container_idx(
-        bs, BenchChar(slot=4, char_id='甲', star=1)) == 3
-    assert mandate._bench_container_idx_by_slot(bs, 9) is None   # 空槽失配
-    assert mandate._bench_container_idx_by_slot(bs, 0) is None   # 非法值
+        gs, BenchChar(slot=4, char_id='甲', star=1)) == 3
+    assert mandate._bench_container_idx_by_slot(gs, 9) is None   # 空槽失配
+    assert mandate._bench_container_idx_by_slot(gs, 0) is None   # 非法值
     assert mandate._deployed_container_idx(
-        bs, BenchChar(slot=2, char_id='刃', star=1, position_pref='front')) \
+        gs, BenchChar(slot=2, char_id='刃', star=1, position_pref='front')) \
         == 1   # front slot2 → 下标1
     # fail-closed = (排, 槽号) 键失配(对位键不含身份:两视图同帧同源,
     # 身份随槽位键而来);后排槽位缺席 → None。
     assert mandate._deployed_container_idx(
-        bs, BenchChar(slot=3, char_id='不在场', star=1,
+        gs, BenchChar(slot=3, char_id='不在场', star=1,
                       position_pref='back')) is None
     # 执行坐标边换算函数(kernel 单一源)互逆且边界正确(原互逆锁迁并):
     # 下标 0-9 → (排, 槽号) → 下标恒等;跨界值域锁定(front 1-4 / back 1-6)。

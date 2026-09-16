@@ -11,11 +11,11 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.kernel.cw_game_state import (
-    BS_SCHEMA_VERSION,
+    GAME_STATE_SCHEMA_VERSION,
     ChannelSig,
     NodeKey,
     TokenCell,
-    board_state_of,
+    game_state_of,
     register_sig_actors,
 )
 from sr_od.application.currency_war.obs.cw_node_reader import NodeSlot
@@ -49,11 +49,11 @@ def test_transition_opening_writes_baseline_and_snapshot():
     """开局过渡屏(镜像与 hist 双缺)→ 基线 transition_row + 现行链离场
     快照,行位面 = 1。"""
     session = SimpleNamespace()
-    bs = board_state_of(session)
-    assert bs.node.value is None and bs.node_hist_ord is None
+    gs = game_state_of(session)
+    assert gs.node.value is None and gs.node_hist_ord is None
     _write_transition_node_chain(session, _p1_slots())
-    baseline = bs.node_path_baseline.value
-    snapshot = bs.node_path.value
+    baseline = gs.node_path_baseline.value
+    snapshot = gs.node_path.value
     assert baseline is not None and baseline.plane == 1, '开局写 P1 入口基线'
     assert snapshot is not None and snapshot.plane == 1, '离场快照同行同位面'
     assert baseline.seq[0].token == 'reward' and baseline.seq[0].channel == 'hu'
@@ -65,34 +65,34 @@ def test_transition_non_opening_writes_snapshot_only():
     """非开局(镜像 P2 在位):只写离场快照(行位面 = 镜像 plane),基线
     不动。"""
     session = SimpleNamespace()
-    bs = board_state_of(session)
-    bs.observe(bs.node, NodeKey(plane=2, round_num=1, kind='prep'),
+    gs = game_state_of(session)
+    gs.observe(gs.node, NodeKey(plane=2, round_num=1, kind='prep'),
                evidence='t', sig=_SIG)
     _write_transition_node_chain(session, _p1_slots())
-    assert bs.node_path.value is not None \
-        and bs.node_path.value.plane == 2, '离场快照 = 镜像位面(刚离开)'
-    assert bs.node_path_baseline.value is None, \
+    assert gs.node_path.value is not None \
+        and gs.node_path.value.plane == 2, '离场快照 = 镜像位面(刚离开)'
+    assert gs.node_path_baseline.value is None, \
         'P2/P3 基线不来自过渡屏(首帧回填承接,链正本 §3)'
 
 
 def test_transition_mirror_missing_non_opening_skips():
     """非开局且镜像缺(hist 在):行归属不可知 → 跳写(禁猜)。"""
     session = SimpleNamespace()
-    bs = board_state_of(session)
-    bs.node_hist_ord = 10   # 非开局信号在,镜像缺
+    gs = game_state_of(session)
+    gs.node_hist_ord = 10   # 非开局信号在,镜像缺
     _write_transition_node_chain(session, _p1_slots())
-    assert bs.node_path.value is None, '镜像缺跳写(诚实缺位)'
-    assert bs.node_path_baseline.value is None
+    assert gs.node_path.value is None, '镜像缺跳写(诚实缺位)'
+    assert gs.node_path_baseline.value is None
 
 
 def test_transition_boss_sift_miss_and_none_cells():
     """boss SIFT miss → none 禁回落 Hu;无类型格 → none。"""
     session = SimpleNamespace()
-    bs = board_state_of(session)
+    gs = game_state_of(session)
     slots = _p1_slots(boss_hit=False)
     slots[2] = _slot(2, 'upcoming', 'encounter', 3.5)   # 超阈未辨
     _write_transition_node_chain(session, slots)
-    chain = bs.node_path.value
+    chain = gs.node_path.value
     assert chain.seq[8] == TokenCell(None, 'none'), 'SIFT miss 禁回落 Hu'
     assert chain.seq[2] == TokenCell(None, 'none'), '超阈未辨诚实缺位'
 
@@ -100,8 +100,8 @@ def test_transition_boss_sift_miss_and_none_cells():
 def test_transition_no_slots_or_no_session_noop():
     """slots 空 / session 缺 → 零写不炸。"""
     session = SimpleNamespace()
-    bs = board_state_of(session)
+    gs = game_state_of(session)
     _write_transition_node_chain(session, None)
     _write_transition_node_chain(None, _p1_slots())
-    assert bs.node_path.value is None and bs.node_path_baseline.value is None
-    assert BS_SCHEMA_VERSION >= 1
+    assert gs.node_path.value is None and gs.node_path_baseline.value is None
+    assert GAME_STATE_SCHEMA_VERSION >= 1

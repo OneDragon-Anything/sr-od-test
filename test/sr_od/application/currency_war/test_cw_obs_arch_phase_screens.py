@@ -79,7 +79,7 @@ from sr_od.application.currency_war.kernel.cw_exec_state import (
     ExecState,
     exec_state_of,
 )
-from sr_od.application.currency_war.kernel.cw_game_state import board_state_of
+from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
 from sr_od.application.currency_war.kernel.cw_investments import (
     normalize_invest_name,
 )
@@ -249,7 +249,7 @@ def _make_env(test_context, monkeypatch: pytest.MonkeyPatch, *,
         if events is not None:
             events.append(('card_click', (pt.x, pt.y)))
             events.append(('active_env_at_click',
-                           board_state_of(session).active_env.value))
+                           game_state_of(session).active_env.value))
 
     monkeypatch.setattr(iem, 'safe_click', _click)
     monkeypatch.setattr(iem, 'emit_overlay_confirm', lambda op_, **k: _RETRY_RS)
@@ -283,7 +283,7 @@ def test_invest_env_active_env_written_at_pick_time(test_context,
     rs = _run_node(test_context, op, op.handle)
     assert ('active_env_at_click', '彩虹时代') in events, (
         f'active_env 须写在点卡前(选卡时点语义):{events!r}')
-    assert board_state_of(session).active_env.value == '彩虹时代', (
+    assert game_state_of(session).active_env.value == '彩虹时代', (
         '值 = 决策选中名(produced_by 面 = CwScreenInvestEnv,见豁免留守锁'
         '源形态断言)')
     assert op._confirm_pending is True, (
@@ -394,7 +394,7 @@ def test_invest_strategy_active_strategies_appended_at_reentry_exit(
             f'install={install}:裁决出口 success 交回:{rs!r}')
         assert session.active_strategies == ['白银投资'], (
             f'install={install}:append 值 = 待裁决选卡名')
-        assert board_state_of(session).active_strategies.value == ['白银投资'], (
+        assert game_state_of(session).active_strategies.value == ['白银投资'], (
             f'install={install}:GameState 写端同点(list 本体)')
         assert op._lifecycle_trace == [], (
             f'install={install}:裁决在分流前共享段,本轮不经生命周期(零段迹)')
@@ -440,12 +440,12 @@ def test_strategy_refresh_emission_semantics(test_context, monkeypatch,
     op, _match, session, clicks, decide_calls = _make_strategy(
         test_context, monkeypatch, book, picks)
     _run_node(test_context, op, op.handle)
-    bs = board_state_of(session)
+    gs = game_state_of(session)
     _k = normalize_invest_name(names[0])
-    assert bs.strategy_refresh_used.value == {_k: 1}, (
-        f'卡面未变帧仍 +1(随点击置位不等验效,B5-④):{bs.strategy_refresh_used.value!r}')
-    assert bs.strategy_refresh_used.evidence == 'refresh_click@slot0', (
-        f'发射证据逐位一致:{bs.strategy_refresh_used.evidence!r}')
+    assert gs.strategy_refresh_used.value == {_k: 1}, (
+        f'卡面未变帧仍 +1(随点击置位不等验效,B5-④):{gs.strategy_refresh_used.value!r}')
+    assert gs.strategy_refresh_used.evidence == 'refresh_click@slot0', (
+        f'发射证据逐位一致:{gs.strategy_refresh_used.evidence!r}')
     assert exec_state_of(session)._invest_refresh_used_slots == {0}, (
         '防重入旗标(执行侧载体)发射点同步置位')
     # 改写依据:逐卡刷新 = 终结动作(用户裁定 2026-09-14,照投资环境
@@ -516,7 +516,7 @@ def _make_briefing(test_context, monkeypatch: pytest.MonkeyPatch, *,
                         lambda ctx, scr: (calls.__setitem__(
                             'boss_read', calls['boss_read'] + 1)
                             or list(bosses or [])))
-    monkeypatch.setattr(bm, 'clean_boss_names_by_lcs', lambda bs: bs)
+    monkeypatch.setattr(bm, 'clean_boss_names_by_lcs', lambda gs: gs)
     monkeypatch.setattr(bm, 'read_briefing_enemy_difficulty',
                         lambda ctx, scr: (calls.__setitem__(
                             'diff_read', calls['diff_read'] + 1) or difficulty))

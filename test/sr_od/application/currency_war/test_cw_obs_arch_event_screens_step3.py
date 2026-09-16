@@ -60,7 +60,7 @@ from test.sr_od.application.currency_war._cw_helpers import (
 )
 
 from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
-from sr_od.application.currency_war.kernel.cw_game_state import board_state_of
+from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
 from sr_od.application.currency_war.kernel.cw_strategy_session import StrategySession
 
 _FRAME = object()   # 稳定帧哨兵(screenshot 桩产物;共享体桩只验传递不断言内容)
@@ -119,9 +119,9 @@ def test_supply_chosen_staging_lifecycle(test_context, monkeypatch) -> None:
     assert calls == [], '节点完成 = 不再发动作'
     assert op._lifecycle_trace == [], (
         f'生产路径零段迹:{op._lifecycle_trace}')
-    bs = board_state_of(session)
-    assert bs.chosen_supply.value == ('希儿', '星币收集器', True), (
-        f'chosen_supply 自暂存写入:{bs.chosen_supply.value!r}')
+    gs = game_state_of(session)
+    assert gs.chosen_supply.value == ('希儿', '星币收集器', True), (
+        f'chosen_supply 自暂存写入:{gs.chosen_supply.value!r}')
     assert exec_state_of(session)._pending_chosen_supply is None, (
         '写后取走暂存(不跨节点残留)')
     # ② 重入弃陈旧

@@ -8,7 +8,7 @@ chain_diff = 数学单一源(实机与 sim 共用);maybe_emit_chain_diff = 触�
 from __future__ import annotations
 
 from sr_od.application.currency_war.kernel.cw_game_state import (
-    BS_SCHEMA_VERSION,
+    GAME_STATE_SCHEMA_VERSION,
     ChannelSig,
     GameState,
     NodeChain,
@@ -63,20 +63,20 @@ def test_chain_diff_no_diff_empty():
 
 def test_maybe_emit_two_frame_gate_and_snapshot_exempt():
     """两帧门:首见候选不落行,连续两帧一致才落;离场快照单帧即落。"""
-    bs = GameState(schema_version=BS_SCHEMA_VERSION)
-    bs.observe(bs.node_path_baseline, _chain('battle', 'battle'),
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    gs.observe(gs.node_path_baseline, _chain('battle', 'battle'),
                evidence='t', sig=_SIG)
     emitted: list[dict] = []
-    bs.note_obs_event = (  # 实例级捕获(链正本 §5:发射走 note_obs_event)
+    gs.note_obs_event = (  # 实例级捕获(链正本 §5:发射走 note_obs_event)
         lambda event, field, payload, verdict=None, sig=None:
         emitted.append(payload))
 
     cur = _chain('battle', 'reward')   # 槽 1 改写
-    bs.observe(bs.node_path, cur, evidence='t', sig=_SIG)
-    assert maybe_emit_chain_diff(bs, snapshot=False,
+    gs.observe(gs.node_path, cur, evidence='t', sig=_SIG)
+    assert maybe_emit_chain_diff(gs, snapshot=False,
                                  in_mutation_window=False,
                                  sig=_SIG) is False, '首见候选不落行'
-    assert maybe_emit_chain_diff(bs, snapshot=False,
+    assert maybe_emit_chain_diff(gs, snapshot=False,
                                  in_mutation_window=False,
                                  sig=_SIG) is True, '连续两帧一致 → 落行'
     assert len(emitted) == 1 and emitted[0]['rewrites'] == [1]
@@ -84,8 +84,8 @@ def test_maybe_emit_two_frame_gate_and_snapshot_exempt():
 
     # 离场快照豁免两帧门(单帧即终审)
     cur2 = _chain('reward', 'reward')
-    bs.observe(bs.node_path, cur2, evidence='t', sig=_SIG)
-    assert maybe_emit_chain_diff(bs, snapshot=True,
+    gs.observe(gs.node_path, cur2, evidence='t', sig=_SIG)
+    assert maybe_emit_chain_diff(gs, snapshot=True,
                                  in_mutation_window=False,
                                  sig=_SIG) is True
     assert len(emitted) == 2 and emitted[1]['snapshot'] is True
@@ -93,29 +93,29 @@ def test_maybe_emit_two_frame_gate_and_snapshot_exempt():
 
 def test_maybe_emit_window_and_no_diff_and_no_baseline():
     """变异窗豁免清候选;无差异清候选不落行;基线缺 → False。"""
-    bs = GameState(schema_version=BS_SCHEMA_VERSION)
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     emitted: list[dict] = []
-    bs.note_obs_event = (
+    gs.note_obs_event = (
         lambda event, field, payload, verdict=None, sig=None:
         emitted.append(payload))
     # 基线缺
-    bs.observe(bs.node_path, _chain('battle'), evidence='t', sig=_SIG)
-    assert maybe_emit_chain_diff(bs, snapshot=False,
+    gs.observe(gs.node_path, _chain('battle'), evidence='t', sig=_SIG)
+    assert maybe_emit_chain_diff(gs, snapshot=False,
                                  in_mutation_window=False,
                                  sig=_SIG) is False
     # 无差异
-    bs.observe(bs.node_path_baseline, _chain('battle'), evidence='t',
+    gs.observe(gs.node_path_baseline, _chain('battle'), evidence='t',
                sig=_SIG)
-    assert maybe_emit_chain_diff(bs, snapshot=False,
+    assert maybe_emit_chain_diff(gs, snapshot=False,
                                  in_mutation_window=False,
                                  sig=_SIG) is False
     # 变异窗:候选被清
-    bs.observe(bs.node_path_baseline, _chain('battle', 'battle'),
+    gs.observe(gs.node_path_baseline, _chain('battle', 'battle'),
                evidence='t', sig=_SIG)
-    bs.observe(bs.node_path, _chain('battle', 'reward'), evidence='t',
+    gs.observe(gs.node_path, _chain('battle', 'reward'), evidence='t',
                sig=_SIG)
-    assert maybe_emit_chain_diff(bs, snapshot=False,
+    assert maybe_emit_chain_diff(gs, snapshot=False,
                                  in_mutation_window=True,
                                  sig=_SIG) is False
-    assert bs.node_path_diff_pending is None, '窗内豁免清候选'
+    assert gs.node_path_diff_pending is None, '窗内豁免清候选'
     assert emitted == []

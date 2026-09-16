@@ -36,7 +36,7 @@ from sr_od.application.currency_war.kernel.cw_exec_state import (
     BenchChar,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
-    BS_SCHEMA_VERSION,
+    GAME_STATE_SCHEMA_VERSION,
     BenchSlot,
     BenchView,
     ChannelSig,
@@ -71,45 +71,45 @@ def _unit(char_id: str, slot: int, *, equips: list[str] | None = None) -> Unit:
     return Unit(char_id=char_id, star=1, equips=list(equips or []), slot=slot)
 
 
-def _bs_with(*, bench: list[Unit], front: list[Unit], gold: int = 10,
+def _gs_with(*, bench: list[Unit], front: list[Unit], gold: int = 10,
              equips: list[str] | None = None,
              board: dict[str, int] | None = None) -> GameState:
     """初态本地构造(替代冻结快照 restore):共用底稿 + 案给定域,全部经
     观察写入口(生产同路,渠道门在测)。"""
-    bs = GameState(schema_version=BS_SCHEMA_VERSION)
-    bs.observe(bs.node, NodeKey(plane=1, round_num=3, kind='battle'),
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    gs.observe(gs.node, NodeKey(plane=1, round_num=3, kind='battle'),
                sig=_SIG_OBS)
     slots = [BenchSlot(kind='empty')] * 9
     for i, u in enumerate(bench):
         if u is not None:
             slots[i] = BenchSlot(kind='unit', unit=u)
-    bs.observe(bs.bench, BenchView(slots=slots, capacity=9), sig=_SIG_OBS)
-    bs.observe(bs.front_row, list(front), sig=_SIG_OBS)
-    bs.observe(bs.back_row, [], sig=_SIG_OBS)
+    gs.observe(gs.bench, BenchView(slots=slots, capacity=9), sig=_SIG_OBS)
+    gs.observe(gs.front_row, list(front), sig=_SIG_OBS)
+    gs.observe(gs.back_row, [], sig=_SIG_OBS)
     if board is not None:
-        bs.observe(bs.board, dict(board), sig=_SIG_OBS)
-    bs.observe(bs.back_layout, 6, sig=_SIG_OBS)
-    bs.observe(bs.gold, gold, sig=_SIG_OBS)
-    bs.observe(bs.level, 5, sig=_SIG_OBS)
-    bs.observe(bs.xp, (4, 20), sig=_SIG_OBS)
-    bs.observe(bs.hp, 80, sig=_SIG_OBS)
-    bs.observe(bs.shop, ShopPayload(cards=[ShopSlot(kind='empty')] * 5,
+        gs.observe(gs.board, dict(board), sig=_SIG_OBS)
+    gs.observe(gs.back_layout, 6, sig=_SIG_OBS)
+    gs.observe(gs.gold, gold, sig=_SIG_OBS)
+    gs.observe(gs.level, 5, sig=_SIG_OBS)
+    gs.observe(gs.xp, (4, 20), sig=_SIG_OBS)
+    gs.observe(gs.hp, 80, sig=_SIG_OBS)
+    gs.observe(gs.shop, ShopPayload(cards=[ShopSlot(kind='empty')] * 5,
                                     refresh_probs={}), sig=_SIG_OBS)
     if equips is not None:
-        bs.observe(bs.equips, list(equips), sig=_SIG_OBS)
-    return bs
+        gs.observe(gs.equips, list(equips), sig=_SIG_OBS)
+    return gs
 
 
-def _bench_units(bs: GameState) -> list[tuple[int, str]]:
+def _bench_units(gs: GameState) -> list[tuple[int, str]]:
     """bench 视图 → (槽下标, char_id) 紧缩断言面。"""
-    view = bs.bench.value
+    view = gs.bench.value
     assert view is not None
     return [(i, s.unit.char_id) for i, s in enumerate(view.slots)
             if s.kind == 'unit' and s.unit is not None]
 
 
-def _row_pairs(bs, field) -> list[tuple[str, int]]:
-    v = getattr(bs, field).value
+def _row_pairs(gs, field) -> list[tuple[str, int]]:
+    v = getattr(gs, field).value
     return [(u.char_id, u.slot) for u in (v or [])]
 
 
@@ -188,8 +188,8 @@ def test_cw_transfer_golden(case_name: str, make_action, init_kw: dict,
     diff 的每条腿改写为显式期望):出参契约(applied/reason/income)+
     gold/bench/rows/board/equips 域写回 + 未辖域(hp/level/xp/shop/
     back_layout)零写。"""
-    bs = _bs_with(**init_kw)
-    out = apply_shop_action_logic(bs, make_action(), executed=None,
+    gs = _gs_with(**init_kw)
+    out = apply_shop_action_logic(gs, make_action(), executed=None,
                                   produced_by='MandateV1Strategy',
                                   sig=_SIG_LOGIC)
     # —— 出参契约(LogicOutcome;拒绝 = applied=False + reason 零写)——
@@ -199,18 +199,18 @@ def test_cw_transfer_golden(case_name: str, make_action, init_kw: dict,
     if income is not None:
         assert out.income == income, f'{case_name}: income(注册表现算)'
     # —— 域写回 ——
-    assert bs.gold.value == gold, f'{case_name}: gold'
-    assert _bench_units(bs) == bench_expect, f'{case_name}: bench'
+    assert gs.gold.value == gold, f'{case_name}: gold'
+    assert _bench_units(gs) == bench_expect, f'{case_name}: bench'
     if front_expect is not None:
-        assert _row_pairs(bs, 'front_row') == front_expect, \
+        assert _row_pairs(gs, 'front_row') == front_expect, \
             f'{case_name}: front_row'
     if board_expect is not None:
-        assert bs.board.value == board_expect, f'{case_name}: board'
+        assert gs.board.value == board_expect, f'{case_name}: board'
     if equips_expect is not None:
-        assert bs.equips.value == equips_expect, \
+        assert gs.equips.value == equips_expect, \
             f'{case_name}: equips(回收进 owned 池尾)'
     # —— 未辖域零写(域封闭腿;初态常量即期望)——
-    assert bs.hp.value == 80 and bs.level.value == 5 \
-        and bs.xp.value == (4, 20), f'{case_name}: hp/level/xp 零写'
-    assert bs.back_layout.value == 6, f'{case_name}: back_layout 零写'
-    assert bs.shop.value == _EMPTY_SHOP, f'{case_name}: shop 零写'
+    assert gs.hp.value == 80 and gs.level.value == 5 \
+        and gs.xp.value == (4, 20), f'{case_name}: hp/level/xp 零写'
+    assert gs.back_layout.value == 6, f'{case_name}: back_layout 零写'
+    assert gs.shop.value == _EMPTY_SHOP, f'{case_name}: shop 零写'

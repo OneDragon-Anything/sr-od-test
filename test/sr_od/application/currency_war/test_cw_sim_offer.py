@@ -11,7 +11,7 @@ from __future__ import annotations
 import random
 
 from sr_od.application.currency_war.kernel.cw_game_state import (
-    BS_SCHEMA_VERSION,
+    GAME_STATE_SCHEMA_VERSION,
     GameState,
     register_sig_actors,
 )
@@ -36,8 +36,8 @@ from sr_od.application.currency_war.sim.cw_sim_offer import (
 register_sig_actors('TestSigWriter')
 
 
-def _bs() -> GameState:
-    return GameState(schema_version=BS_SCHEMA_VERSION)
+def _gs() -> GameState:
+    return GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
 
 
 # ============================================================ 固定日程(U07①)
@@ -140,23 +140,23 @@ def test_env_offer_shape_and_registry_membership() -> None:
 def test_env_and_strategy_pick_write_container() -> None:
     """选卡入账:环境写 active_env 定局;策略 append active_strategies
     且同名不重复入列(实机 handler 去重语义对齐)。"""
-    bs = _bs()
-    apply_env_pick(bs, '轮岗')
-    assert bs.active_env.value == '轮岗'
-    apply_strategy_pick(bs, '淘金客')
-    apply_strategy_pick(bs, '躺平')
-    apply_strategy_pick(bs, '淘金客')
-    assert bs.active_strategies.value == ['淘金客', '躺平']
+    gs = _gs()
+    apply_env_pick(gs, '轮岗')
+    assert gs.active_env.value == '轮岗'
+    apply_strategy_pick(gs, '淘金客')
+    apply_strategy_pick(gs, '躺平')
+    apply_strategy_pick(gs, '淘金客')
+    assert gs.active_strategies.value == ['淘金客', '躺平']
 
 
 def test_inject_choices_bypasses_sampling() -> None:
     """注入核(§2.4.1 保留面):显式点名直写容器,供定向测试固定
     环境/持卡;重复策略名去重兜底。"""
-    bs = _bs()
-    inject_choices(bs, env_name='联席决策',
+    gs = _gs()
+    inject_choices(gs, env_name='联席决策',
                    strategy_names=('本金充裕', '伟大征服', '本金充裕'))
-    assert bs.active_env.value == '联席决策'
-    assert bs.active_strategies.value == ['本金充裕', '伟大征服']
+    assert gs.active_env.value == '联席决策'
+    assert gs.active_strategies.value == ['本金充裕', '伟大征服']
 
 
 # ============================================================ 披露判据

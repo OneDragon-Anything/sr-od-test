@@ -49,7 +49,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     ShopPayload,
     ShopSlot,
     Unit,
-    board_state_of,
+    game_state_of,
     register_sig_actors,
 )
 from sr_od.application.currency_war.strategies.impl.cw_strategy import (
@@ -97,22 +97,22 @@ def _frame_session(*, bench_units: list[str], deployed_units: list[str],
     units 非空 = 板空帧语义独立(本锁断言域不辖)。"""
     comp = COMP_LIBRARY[0]
     sess = StrategySession(rng=random.Random('cw-t271'))
-    bs = board_state_of(sess)
-    bs.write_logic(bs.node, NodeKey(plane=1, round_num=3, kind=node_kind),
+    gs = game_state_of(sess)
+    gs.write_logic(gs.node, NodeKey(plane=1, round_num=3, kind=node_kind),
                    produced_by='cw-t271-test', sig=_LOGIC_SIG)
-    bs.write_logic(bs.level, _LEVEL, produced_by='cw-t271-test',
+    gs.write_logic(gs.level, _LEVEL, produced_by='cw-t271-test',
                    sig=_LOGIC_SIG)
-    bs.write_logic(bs.xp, (0, XP_TO_NEXT_LEVEL[_LEVEL]),
+    gs.write_logic(gs.xp, (0, XP_TO_NEXT_LEVEL[_LEVEL]),
                    produced_by='cw-t271-test', sig=_LOGIC_SIG)
-    bs.write_logic(bs.gold, gold, produced_by='cw-t271-test',
+    gs.write_logic(gs.gold, gold, produced_by='cw-t271-test',
                    sig=_LOGIC_SIG)
-    bs.observe(bs.hp, hp, evidence='cw-t271-test', sig=_OBS_SIG)
+    gs.observe(gs.hp, hp, evidence='cw-t271-test', sig=_OBS_SIG)
     slots = [BenchSlot(kind='unit',
                        unit=Unit(char_id=n, star=1, slot=i + 1))
              for i, n in enumerate(bench_units)]
-    bs.write_logic(bs.bench, BenchView(slots=slots, capacity=9),
+    gs.write_logic(gs.bench, BenchView(slots=slots, capacity=9),
                    produced_by='cw-t271-test', sig=_LOGIC_SIG)
-    bs.write_logic(bs.front_row,
+    gs.write_logic(gs.front_row,
                    [Unit(char_id=n, star=1, slot=i + 1)
                     for i, n in enumerate(deployed_units)],
                    produced_by='cw-t271-test', sig=_LOGIC_SIG)
@@ -121,7 +121,7 @@ def _frame_session(*, bench_units: list[str], deployed_units: list[str],
                                     star=1, slot=i + 1))
              for i, (n, c) in enumerate(card_names)]
     cards += [ShopSlot(kind='empty')] * (5 - len(cards))
-    bs.write_logic(bs.shop, ShopPayload(cards=cards, refresh_probs={}),
+    gs.write_logic(gs.shop, ShopPayload(cards=cards, refresh_probs={}),
                    produced_by='cw-t271-test', sig=_LOGIC_SIG)
     state_of(sess).target_comp = comp
     return MandateV1Live(), sess, SimpleNamespace(ev_arm='full')
@@ -243,15 +243,15 @@ def test_vacate_chain_reopen_keeps_shop_face_and_buys():
     strategy, sess, config = _frame_m4_missing_vacate()
     act1 = strategy.decide_shop_action(sess, config)
     assert type(act1).__name__ == 'CloseShop'
-    bs = board_state_of(sess)
+    gs = game_state_of(sess)
     # 备战期腾席:bench 移除一件燃料(逻辑态直写,同容器转移函数通道);
     # 店面 payload 与 gold/缺员语境全不动 = 「节点内重开」的决策级建模。
-    fuels = [b for b in bs.bench.value.slots
+    fuels = [b for b in gs.bench.value.slots
              if b is not None and b.unit is not None
              and (b.unit.char_id or '') != _MEMBER]
     kept = fuels[0]
-    rest = [s for s in bs.bench.value.slots if s is not kept]
-    bs.write_logic(bs.bench, BenchView(slots=rest, capacity=9),
+    rest = [s for s in gs.bench.value.slots if s is not kept]
+    gs.write_logic(gs.bench, BenchView(slots=rest, capacity=9),
                    produced_by='cw-t271-test', sig=_LOGIC_SIG)
     act2 = strategy.decide_shop_action(sess, config)
     assert type(act2).__name__ == 'BuyCard', (

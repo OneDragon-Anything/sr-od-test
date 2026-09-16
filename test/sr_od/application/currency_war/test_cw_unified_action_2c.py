@@ -18,7 +18,7 @@ from sr_od.application.currency_war.kernel import cw_prep_actions as kpa
 from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     apply_prep_action_logic,
-    board_state_of,
+    game_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CW_ACTION_TYPES,
@@ -120,9 +120,9 @@ def test_open_bookcard_logic_state_frees_slot():
     # 其余视觉域字段不动(Point 无结构等价,按坐标元组比对)
     assert [(t[0], t[1].x, t[1].y) for t in out.tomes] == [(3, 1, 1)]
     # 容器零写:kernel 写口对本动作直接返回(视觉域推进,落点 = 备战观察帧)
-    bs = board_state_of(None)
-    apply_prep_action_logic(bs, OpenBookcard(), produced_by='T', sig=_SIG)
-    assert bs.write_seq == 0
+    gs = game_state_of(None)
+    apply_prep_action_logic(gs, OpenBookcard(), produced_by='T', sig=_SIG)
+    assert gs.write_seq == 0
 
 
 # ===== 链拆接线锁(判据:预清场改产 OpenBookcard 经执行器 + 交回)=====

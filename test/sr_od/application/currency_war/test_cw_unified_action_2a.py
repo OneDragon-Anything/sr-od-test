@@ -32,7 +32,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     Unit,
     apply_prep_action_logic,
     bench_slots_of,
-    board_state_of,
+    game_state_of,
     deployed_slots_of,
 )
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
@@ -200,21 +200,21 @@ def test_levelup_logic_state_advances_xp_level_and_gold():
     """R6 定案④逻辑态半(批2b 翻转):xp/level 跨门槛推进(推进算子
     单一源 = xp_apply_clicks,单击步长)+ 金腿 action.cost 直写(唯一
     写点,执行缝金差退役防双记)。gold 未观察 = 域级跳写(值留观察)。"""
-    bs = board_state_of(None)
-    bs.observe(bs.level, 3, evidence='t', sig=_SIG_OBS)
-    bs.observe(bs.xp, (10, 12), evidence='t', sig=_SIG_OBS)
-    bs.observe(bs.gold, 100, evidence='t', sig=_SIG_OBS)
-    apply_prep_action_logic(bs, LevelUp(cost=4), produced_by='T', sig=_SIG)
+    gs = game_state_of(None)
+    gs.observe(gs.level, 3, evidence='t', sig=_SIG_OBS)
+    gs.observe(gs.xp, (10, 12), evidence='t', sig=_SIG_OBS)
+    gs.observe(gs.gold, 100, evidence='t', sig=_SIG_OBS)
+    apply_prep_action_logic(gs, LevelUp(cost=4), produced_by='T', sig=_SIG)
     exp_level, exp_cur = xp_apply_clicks(3, 10, 1)
-    assert bs.level.value == exp_level
-    assert bs.xp.value[0] == exp_cur
-    assert bs.gold.value == 96   # 金腿直写:-action.cost
+    assert gs.level.value == exp_level
+    assert gs.xp.value[0] == exp_cur
+    assert gs.gold.value == 96   # 金腿直写:-action.cost
     # 缺读跳写:level/xp 未观察帧零写不炸
-    bs2 = board_state_of(None)
+    bs2 = game_state_of(None)
     apply_prep_action_logic(bs2, LevelUp(cost=4), produced_by='T', sig=_SIG)
     assert bs2.level.value is None and bs2.xp.value is None
     # gold 未观察 = 域级跳写(xp/level 照推进)
-    bs3 = board_state_of(None)
+    bs3 = game_state_of(None)
     bs3.observe(bs3.level, 3, evidence='t', sig=_SIG_OBS)
     bs3.observe(bs3.xp, (10, 12), evidence='t', sig=_SIG_OBS)
     apply_prep_action_logic(bs3, LevelUp(cost=4), produced_by='T', sig=_SIG)
@@ -249,51 +249,51 @@ def test_deploymove_logic_state_moves_unit_and_increments_board():
     """DeployMove 容器逻辑态(§3.1 落码):bench 摘槽 + deployed 落槽;
     陈旧提案(源槽空/目标被占)= 零写。(docstring 收窄:board 羁绊增量
     面本测未断言,不虚报。)"""
-    bs = board_state_of(None)
+    gs = game_state_of(None)
     bc = BenchChar(slot=3, char_id='甲', star=1)
     slots = [None] * 9
     slots[2] = bc
     from sr_od.application.currency_war.kernel.cw_game_state import (
         bench_view_of_slots,
     )
-    bs.observe(bs.bench, bench_view_of_slots(slots), evidence='t', sig=_SIG_OBS)
-    bs.observe(bs.board, {'欢愉': 1}, evidence='t', sig=_SIG_OBS)
-    apply_prep_action_logic(bs, DeployMove(bench_idx=2, to_row='front',
+    gs.observe(gs.bench, bench_view_of_slots(slots), evidence='t', sig=_SIG_OBS)
+    gs.observe(gs.board, {'欢愉': 1}, evidence='t', sig=_SIG_OBS)
+    apply_prep_action_logic(gs, DeployMove(bench_idx=2, to_row='front',
                                            faction=''),
                             produced_by='T', sig=_SIG)
-    bench_after = bench_slots_of(bs)
+    bench_after = bench_slots_of(gs)
     assert bench_after[2] is None
-    dep = deployed_slots_of(bs)
+    dep = deployed_slots_of(gs)
     # 落位 = 首空(deployed_place 单一源,与 simulate 同式):前排 1 号
     assert dep[0] is not None and dep[0].char_id == '甲'
     # 陈旧提案:两排全满 → deployed_place 无位 = 零写(源槽不摘)
-    bs.observe(bs.bench, bench_view_of_slots(list(slots)), evidence='t', sig=_SIG_OBS)
-    bs.observe(bs.front_row, [Unit(char_id=f'乙{i}', star=1, equips=[],
+    gs.observe(gs.bench, bench_view_of_slots(list(slots)), evidence='t', sig=_SIG_OBS)
+    gs.observe(gs.front_row, [Unit(char_id=f'乙{i}', star=1, equips=[],
                                    slot=i + 1) for i in range(4)],
                evidence='t', sig=_SIG_OBS)
-    bs.observe(bs.back_row, [Unit(char_id=f'丙{i}', star=1, equips=[],
+    gs.observe(gs.back_row, [Unit(char_id=f'丙{i}', star=1, equips=[],
                                   slot=i + 1) for i in range(6)],
                evidence='t', sig=_SIG_OBS)
-    apply_prep_action_logic(bs, DeployMove(bench_idx=2, to_row='front',
+    apply_prep_action_logic(gs, DeployMove(bench_idx=2, to_row='front',
                                            faction=''),
                             produced_by='T', sig=_SIG)
-    assert bench_slots_of(bs)[2].char_id == '甲'   # 源槽未摘(整笔零写)
+    assert bench_slots_of(gs)[2].char_id == '甲'   # 源槽未摘(整笔零写)
 
 
 def test_selldeployed_logic_state_clears_slot_and_recounts_board():
     """SellDeployed 容器逻辑态(§3.2 落码):deployed 摘槽;金域零写口径
     = gold 未观察时跳写(回金公式单一源 = sell_refund)。(docstring 收窄:
     board 重算面本测未断言,不虚报。)"""
-    bs = board_state_of(None)
-    bs.observe(bs.front_row, [Unit(char_id='甲', star=2, equips=[],
+    gs = game_state_of(None)
+    gs.observe(gs.front_row, [Unit(char_id='甲', star=2, equips=[],
                                    slot=1)], evidence='t', sig=_SIG_OBS)
-    apply_prep_action_logic(bs, SellDeployed(deployed_idx=0),
+    apply_prep_action_logic(gs, SellDeployed(deployed_idx=0),
                             produced_by='T', sig=_SIG)
-    dep = deployed_slots_of(bs)
+    dep = deployed_slots_of(gs)
     assert dep[0] is None
-    assert bs.gold.value is None   # gold 未观察 = 域级跳写
+    assert gs.gold.value is None   # gold 未观察 = 域级跳写
     # 槽空(陈旧提案)= 零写不炸
-    apply_prep_action_logic(bs, SellDeployed(deployed_idx=0),
+    apply_prep_action_logic(gs, SellDeployed(deployed_idx=0),
                             produced_by='T', sig=_SIG)
 
 
@@ -315,19 +315,19 @@ def test_prep_sell_gold_booked_exactly_once_across_seam_and_projection():
         bench_view_of_slots,
     )
     session = SimpleNamespace()
-    bs = board_state_of(session)
+    gs = game_state_of(session)
     bc = BenchChar(slot=1, char_id='甲', star=1)
     slots = [None] * 9
     slots[0] = bc
-    bs.observe(bs.gold, 10, evidence='t', sig=_SIG_OBS)
-    bs.observe(bs.bench, bench_view_of_slots(slots), evidence='t',
+    gs.observe(gs.gold, 10, evidence='t', sig=_SIG_OBS)
+    gs.observe(gs.bench, bench_view_of_slots(slots), evidence='t',
                sig=_SIG_OBS)
-    bs.tracked_books.bench = [bc]   # 旧执行缝腿的数据源(腿复返即红)
+    gs.tracked_books.bench = [bc]   # 旧执行缝腿的数据源(腿复返即红)
     refund = sell_refund(1, bench_char_cost(bc))
     action = SellBench(bench_idx=0)
     apply_op_effect(session, action)   # 执行缝:修后零入账
-    apply_prep_action_logic(bs, action, produced_by='T', sig=_SIG)
-    assert bs.gold.value == 10 + refund, \
+    apply_prep_action_logic(gs, action, produced_by='T', sig=_SIG)
+    assert gs.gold.value == 10 + refund, \
         f'卖出回金恰一次 +{refund}(双腿双记 = 台账 −N 倒挂病灶)'
 
 
@@ -383,7 +383,7 @@ def test_pick_box_decision_fail_closed():
     assert bp.CwScreenBoxPick.SCREEN_NAME == '货币战争-备战-武装箱选择'
     op = bp.CwScreenBoxPick.__new__(bp.CwScreenBoxPick)
     strategy = SimpleNamespace(
-        decide_box_card=lambda names, bs, session, config: 9)
+        decide_box_card=lambda names, gs, session, config: 9)
     op.ctx = SimpleNamespace(cw_match=SimpleNamespace(
         strategy=strategy, session=SimpleNamespace(), config=None))
     with pytest.raises(ValueError):

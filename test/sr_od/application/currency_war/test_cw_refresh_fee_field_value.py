@@ -18,7 +18,7 @@ from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war.kernel.cw_economy import REFRESH_COST_BASE
 from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
-    board_state_of,
+    game_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
@@ -65,7 +65,7 @@ def test_refresh_fee_unobserved_field_falls_back_to_base(monkeypatch):
     """事故本形:刷价 Field 未观察(None)→ 记基价,不再 TypeError。"""
     monkeypatch.setattr('time.sleep', lambda _s: None)   # 点击后固定等待
     session = StrategySession()
-    state = board_state_of(session)   # 新容器:shop_refresh_cost 未观察
+    state = game_state_of(session)   # 新容器:shop_refresh_cost 未观察
     ledger = ShopVisitLedger()
 
     assert RefreshShopOp(RefreshShop()).execute(_env(state, ledger)) is True
@@ -79,7 +79,7 @@ def test_refresh_fee_observed_value_is_used(monkeypatch):
     """刷价 Field 现值在场 → 记现值(读现值意图不因修法丢失)。"""
     monkeypatch.setattr('time.sleep', lambda _s: None)   # 点击后固定等待
     session = StrategySession()
-    state = board_state_of(session)
+    state = game_state_of(session)
     state.observe(state.shop_refresh_cost, 3,
                   sig=ChannelSig(family='obs', actor='cw_observation'))
     ledger = ShopVisitLedger()

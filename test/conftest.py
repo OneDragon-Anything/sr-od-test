@@ -668,7 +668,7 @@ def _isolate_window_run_mutex(
 # --------------------------------------------------------------------------- #
 # 背景:CW state 流水的生产兜底装配挂在局容器单例建立点(用户裁定
 # 2026-09-15:遥测装配 = game state 职责,精化令:触发只钉 kernel
-# cw_game_state board_state_of 建立路径 → kernel ensure_journal_assembly,
+# cw_game_state game_state_of 建立路径 → kernel ensure_journal_assembly,
 # 「未装配即按生产缺省根补装」;生产注入漏斗 = establish_new_match 容器
 # 建立点)。
 # op 流程测试驱动到容器建立/首建就会过这个点——不重定向

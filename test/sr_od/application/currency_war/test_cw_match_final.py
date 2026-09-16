@@ -31,10 +31,10 @@ import json
 
 import pytest
 
-from sr_od.application.currency_war.kernel import cw_game_state as bs_mod
+from sr_od.application.currency_war.kernel import cw_game_state as gs_mod
 from sr_od.application.currency_war.kernel import cw_state_journal as journal_mod
 from sr_od.application.currency_war.kernel.cw_game_state import (
-    BS_SCHEMA_VERSION,
+    GAME_STATE_SCHEMA_VERSION,
     MATCH_FINAL_FIELD,
     GameState,
     _derive_node_observed,
@@ -108,7 +108,7 @@ def _final_rows() -> list[dict]:
 
 
 # (原 test_match_final_domain_registered 删:单行「域键在场」断言,经核
-#  判读/档案消费面无人读 bs_schema['match_final'] 键——write 系测试红时
+#  判读/档案消费面无人读 gs_schema['match_final'] 键——write 系测试红时
 #  同故障,子集断言不留。)
 # (收口整删)原 test_match_final_closed_vocab「终局类型词表封闭集」:
 # 集外炸错腿并入下方原子行锁(常量字面断言不留);原
@@ -127,14 +127,14 @@ def test_write_match_final_one_atomic_row(journal, run_id,
     终局类型词表封闭(集外显式炸错,禁自由串);版本戳取模块级常量填充
     (monkeypatch 常量即见即锁,常量与取值单一源 telemetry/version_stamp
     的等值对拍面随退役锁申报)。红 = 拆行/签名漂移/集外放行/戳断供。"""
-    monkeypatch.setattr(bs_mod, '_CODE_COMMIT', 't244commit')
-    monkeypatch.setattr(bs_mod, '_REGISTRY_FINGERPRINT', 't244finger')
-    bs = GameState(schema_version=BS_SCHEMA_VERSION)
+    monkeypatch.setattr(gs_mod, '_CODE_COMMIT', 't244commit')
+    monkeypatch.setattr(gs_mod, '_REGISTRY_FINGERPRINT', 't244finger')
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     # 集外终局类型 = 显式炸错(封闭词表)
     with pytest.raises(ValueError):
-        write_match_final(bs, final_type='completed')
-    bs.write_logic(bs.hp, 48, produced_by='test', sig=_lsig())
-    assert write_match_final(bs, final_type='loss', plane=2, round_num=6,
+        write_match_final(gs, final_type='completed')
+    gs.write_logic(gs.hp, 48, produced_by='test', sig=_lsig())
+    assert write_match_final(gs, final_type='loss', plane=2, round_num=6,
                              level=7, hp=48, gold=53, streak=-1,
                              node_kind='boss', duration_s=1234.5) is True
     rows = _final_rows()
@@ -161,20 +161,20 @@ def test_write_match_final_one_atomic_row(journal, run_id,
 def test_write_match_final_segment_idempotent(journal, run_id) -> None:
     """段内幂等(G12 终局防重写前查重收编):本段已有终局行 → 第二次调用
     no-op 返 False,不产第二行。"""
-    bs = GameState(schema_version=BS_SCHEMA_VERSION)
-    assert write_match_final(bs, final_type='win', plane=3, round_num=9) is True
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    assert write_match_final(gs, final_type='win', plane=3, round_num=9) is True
     n_before = len(_rows())
-    assert write_match_final(bs, final_type='loss', plane=3, round_num=9) is False
+    assert write_match_final(gs, final_type='loss', plane=3, round_num=9) is False
     assert len(_rows()) == n_before, '幂等跳过零新行'
-    assert bs.match_final.value.final_type == 'win', '首行不被覆盖'
+    assert gs.match_final.value.final_type == 'win', '首行不被覆盖'
 
 
 def test_abnormal_backfill_note_recovered_version_allocated(journal, run_id) -> None:
     """异常终局补写(G8):backfilled=True → 版本 id 照常分配 + 行载荷
     backfilled 位 + 行注记缺省 recovered 显影(判读可辨真伪)。"""
-    bs = GameState(schema_version=BS_SCHEMA_VERSION)
-    v_before = bs.write_seq
-    assert write_match_final(bs, final_type='abnormal', plane=1, round_num=3,
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    v_before = gs.write_seq
+    assert write_match_final(gs, final_type='abnormal', plane=1, round_num=3,
                              backfilled=True) is True
     row = _final_rows()[0]
     assert row['v'] == v_before + 1, '补写行版本 id 照常分配'
@@ -189,20 +189,20 @@ def test_match_final_listener_fires_on_row_only(journal, run_id) -> None:
     流转。未武装/局外两态的触发真值 = 下一把锁。"""
     fired: list[dict] = []
     set_match_final_listener(fired.append)
-    bs = GameState(schema_version=BS_SCHEMA_VERSION)
-    assert write_match_final(bs, final_type='win', plane=3, round_num=9) is True
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    assert write_match_final(gs, final_type='win', plane=3, round_num=9) is True
     assert len(fired) == 1
     assert fired[0]['run_id'] == run_id
     assert fired[0]['final_type'] == 'win'
     assert fired[0]['version'] == _final_rows()[0]['v']
-    assert write_match_final(bs, final_type='loss') is False
+    assert write_match_final(gs, final_type='loss') is False
     assert len(fired) == 1, '幂等跳过不触发'
 
     def _boom(info: dict) -> None:
         raise RuntimeError('listener boom')
 
     set_match_final_listener(_boom)
-    bs2 = GameState(schema_version=BS_SCHEMA_VERSION)
+    bs2 = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     assert write_match_final(bs2, final_type='loss') is True, \
         '监听异常不毒化终局流转'
 
@@ -215,8 +215,8 @@ def test_match_final_listener_fires_unarmed_and_offmatch(tmp_path) -> None:
     set_match_final_listener(fired.append)
     # 态①未武装:sink 缺席 → 版本照耗、Field 照写、零落盘,事件照发
     reset_state_telemetry()
-    bs = GameState(schema_version=BS_SCHEMA_VERSION)
-    assert write_match_final(bs, final_type='win') is True
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    assert write_match_final(gs, final_type='win') is True
     assert len(fired) == 1
     assert fired[0]['run_id'] == ''
     assert fired[0]['final_type'] == 'win'
@@ -224,7 +224,7 @@ def test_match_final_listener_fires_unarmed_and_offmatch(tmp_path) -> None:
     j = install_state_telemetry(tmp_path / 'state' / 'journal.jsonl',
                                 run_id_provider=lambda: '')
     try:
-        bs2 = GameState(schema_version=BS_SCHEMA_VERSION)
+        bs2 = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
         assert write_match_final(bs2, final_type='loss') is True
         assert len(fired) == 2
         assert fired[1]['run_id'] == ''
@@ -247,12 +247,12 @@ def test_match_final_listener_fires_unarmed_and_offmatch(tmp_path) -> None:
 def test_g10_retrograde_obs_event_evidence(journal, run_id) -> None:
     """G10 倒退留证:候选 < hist → 零状态变更(字段不动)+ obs_event 留证
     (event=arbitrate,actor 保留触发规则归因,占版本)。"""
-    bs = GameState(schema_version=BS_SCHEMA_VERSION)
-    _derive_node_observed(bs, 5, trigger_screen='货币战争-备战', seq=1)
-    assert bs.node_ord.value == 5
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    _derive_node_observed(gs, 5, trigger_screen='货币战争-备战', seq=1)
+    assert gs.node_ord.value == 5
     n_before = len(_rows())
-    _derive_node_observed(bs, 4, trigger_screen='货币战争-备战', seq=2)
-    assert bs.node_ord.value == 5, '倒退免疫:字段不动(R3 规则三)'
+    _derive_node_observed(gs, 4, trigger_screen='货币战争-备战', seq=2)
+    assert gs.node_ord.value == 5, '倒退免疫:字段不动(R3 规则三)'
     evs = [r for r in _rows()[n_before:] if r['row'] == 'obs_event']
     assert len(evs) == 1, '倒退丢弃 obs_event 留证(占版本零状态变更)'
     ev = evs[0]
@@ -393,11 +393,11 @@ def test_match_final_payload_carries_cw4_aggregate(journal, run_id) -> None:
     写口浅拷贝(传入容器后写不串账)。None = 无策略载体诚实缺省;聚合键
     进 journal 局终行 after 载荷,行行自足可读(判读直接读行,零重放;
     原 cw4_aggregate_in_journal_row 行可见性腿并入)。"""
-    bs = GameState(schema_version=BS_SCHEMA_VERSION)
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     counters = {'shop_churn_pair_buy': 3, 'launch_frame_idle_gold': 120}
-    assert write_match_final(bs, final_type='loss',
+    assert write_match_final(gs, final_type='loss',
                              cw4_counters=counters) is True
-    payload = bs.match_final.value
+    payload = gs.match_final.value
     assert payload.cw4_counters == counters, '聚合随局终行落账'
     assert payload.cw4_counters is not counters, '载荷持快照副本非容器引用'
     counters['shop_churn_pair_buy'] = 99
@@ -409,7 +409,7 @@ def test_match_final_payload_carries_cw4_aggregate(journal, run_id) -> None:
         'shop_churn_pair_buy': 3, 'launch_frame_idle_gold': 120}, (
         '聚合进 journal 局终行(局终级全键聚合可见性载体,行行自足)')
     # None 形态(无 session/历史段补写无源)
-    bs2 = GameState(schema_version=BS_SCHEMA_VERSION)
+    bs2 = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     assert write_match_final(bs2, final_type='abnormal',
                              backfilled=True) is True
     assert bs2.match_final.value.cw4_counters is None, (

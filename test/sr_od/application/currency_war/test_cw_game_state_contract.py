@@ -31,7 +31,7 @@ from sr_od.application.currency_war.kernel.cw_exec_state import (
     exec_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
-    BS_SCHEMA_VERSION,
+    GAME_STATE_SCHEMA_VERSION,
     GameState,
     bench_free_slots,
     bench_is_full,
@@ -63,8 +63,8 @@ def _hsig() -> Sig:
     return Sig(family='logic_hook', actor='TestSigWriter', mode='compute')
 
 
-def _bs() -> GameState:
-    return GameState(schema_version=BS_SCHEMA_VERSION)
+def _gs() -> GameState:
+    return GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
 
 
 # ============================================================ §1 写入口六通道
@@ -72,32 +72,32 @@ def _bs() -> GameState:
 def test_observe_writes_and_overrides() -> None:
     """观察通道:亲眼看 → source=observation,覆盖旧值;value=None 拒绝
     (§2.2 失读不是观察值,禁清正式值);渠道面校验 = 观察 口 只收 obs 族。"""
-    bs = _bs()
-    bs.observe(bs.gold, 37, sig=_sig())
-    assert bs.gold.value == 37 and bs.gold.source == 'observation'
-    bs.observe(bs.gold, 40, sig=_sig())
-    assert bs.gold.value == 40
+    gs = _gs()
+    gs.observe(gs.gold, 37, sig=_sig())
+    assert gs.gold.value == 37 and gs.gold.source == 'observation'
+    gs.observe(gs.gold, 40, sig=_sig())
+    assert gs.gold.value == 40
     with pytest.raises(ValueError, match='observe 不接受 None'):
-        bs.observe(bs.gold, None, sig=_sig())
+        gs.observe(gs.gold, None, sig=_sig())
     with pytest.raises(ValueError, match="不属本写入口合法族"):
-        bs.observe(bs.gold, 1, sig=_lsig())
+        gs.observe(gs.gold, 1, sig=_lsig())
 
 
 def test_carry_carries_good_value_and_skips_never_read() -> None:
     """失读处置①(§2.2):沿用上次好值,evidence=carried:<帧>;
     从未读字段(机制性 None)→ no-op 不占版本不换来源(不造假历史)。"""
-    bs = _bs()
-    bs.observe(bs.gold, 30, sig=_sig())
-    v_before = bs.current_version()
-    bs.carry(bs.gold, frame='p1-r2', sig=_sig())
-    assert bs.gold.source == 'carried'
-    assert bs.gold.evidence == 'carried:p1-r2'
-    assert bs.gold.value == 30
-    assert bs.current_version() == v_before + 1
-    hp_version = bs.current_version()
-    bs.carry(bs.hp, frame='p1-r2', sig=_sig())
-    assert bs.hp.source == 'observation' and bs.hp.value is None
-    assert bs.current_version() == hp_version, '从未读 carry 不占版本'
+    gs = _gs()
+    gs.observe(gs.gold, 30, sig=_sig())
+    v_before = gs.current_version()
+    gs.carry(gs.gold, frame='p1-r2', sig=_sig())
+    assert gs.gold.source == 'carried'
+    assert gs.gold.evidence == 'carried:p1-r2'
+    assert gs.gold.value == 30
+    assert gs.current_version() == v_before + 1
+    hp_version = gs.current_version()
+    gs.carry(gs.hp, frame='p1-r2', sig=_sig())
+    assert gs.hp.source == 'observation' and gs.hp.value is None
+    assert gs.current_version() == hp_version, '从未读 carry 不占版本'
 
 
 # ============================================================ §1 写入口六通道
@@ -108,9 +108,9 @@ def test_carry_carries_good_value_and_skips_never_read() -> None:
 def test_cross_instance_field_reference_rejected() -> None:
     """身份匹配(§8.4):target 须是本单例字段现引用,跨单例引用 = 写丢
     事故形态,显式炸错禁静默。"""
-    bs_a, bs_b = _bs(), _bs()
+    gs_a, gs_b = _gs(), _gs()
     with pytest.raises(KeyError):
-        bs_a.observe(bs_b.gold, 1, sig=_sig())
+        gs_a.observe(gs_b.gold, 1, sig=_sig())
 
 
 # ============================================================ §2 版本与状态流水
@@ -118,21 +118,21 @@ def test_cross_instance_field_reference_rejected() -> None:
 def test_versions_monotonic_reads_do_not_consume() -> None:
     """版本语义(§3.2.2):写占版本;读(current_version)不占;
     carry 未读字段不占(no-op)。"""
-    bs = _bs()
-    assert bs.current_version() == 0
-    bs.observe(bs.gold, 1, sig=_sig())
-    v1 = bs.current_version()
+    gs = _gs()
+    assert gs.current_version() == 0
+    gs.observe(gs.gold, 1, sig=_sig())
+    v1 = gs.current_version()
     assert v1 == 1
-    assert bs.current_version() == v1, '读不占版本'
-    bs.observe(bs.gold, 2, sig=_sig())
-    assert bs.current_version() == v1 + 1
+    assert gs.current_version() == v1, '读不占版本'
+    gs.observe(gs.gold, 2, sig=_sig())
+    assert gs.current_version() == v1 + 1
 
 
 def test_journal_rows_self_contained_and_run_gated(journal_sink) -> None:
     """状态流水行(§3.2.3):写入行带 v/ts/run_id/field/after/自足 state 快照/
     sig;run_id 空 = 局外写入,拒写行(诚实缺失,不写假行)。"""
-    bs = _bs()
-    bs.observe(bs.gold, 5, sig=_sig())
+    gs = _gs()
+    gs.observe(gs.gold, 5, sig=_sig())
     rows = journal_sink
     assert rows == [], '无 run_id(局外)不落行'
     run_sink: list[dict] = []
@@ -143,7 +143,7 @@ def test_journal_rows_self_contained_and_run_gated(journal_sink) -> None:
     set_state_journal_sink(run_sink.append)
     set_run_id_provider(lambda: 'run_probe')
     try:
-        bs.observe(bs.hp, 70, sig=_sig())
+        gs.observe(gs.hp, 70, sig=_sig())
     finally:
         set_state_journal_sink(None)
         set_run_id_provider(None)
@@ -162,17 +162,17 @@ def test_same_value_rewrite_flags_and_consumes_version(journal_sink) -> None:
         set_run_id_provider,
         set_state_journal_sink,
     )
-    bs = _bs()
-    bs.observe(bs.gold, 9, sig=_sig())
+    gs = _gs()
+    gs.observe(gs.gold, 9, sig=_sig())
     run_sink: list[dict] = []
     set_state_journal_sink(run_sink.append)
     set_run_id_provider(lambda: 'run_probe')
     try:
-        bs.observe(bs.gold, 9, sig=_sig())
+        gs.observe(gs.gold, 9, sig=_sig())
     finally:
         set_state_journal_sink(None)
         set_run_id_provider(None)
-    assert bs.current_version() == 2
+    assert gs.current_version() == 2
     assert run_sink[-1]['same_value'] is True
 
 
@@ -185,23 +185,23 @@ def test_obs_event_consumes_version_without_state_change(journal_sink) -> None:
         set_state_journal_sink,
     )
     assert OBS_EVENT_EVENTS == ('arbitrate', 'miss', 'popup', 'chain_diff')
-    bs = _bs()
-    bs.observe(bs.gold, 3, sig=_sig())
-    v = bs.current_version()
+    gs = _gs()
+    gs.observe(gs.gold, 3, sig=_sig())
+    v = gs.current_version()
     run_sink: list[dict] = []
     set_state_journal_sink(run_sink.append)
     set_run_id_provider(lambda: 'run_probe')
     try:
-        bs.note_obs_event('arbitrate', 'hp', {'old': 1, 'new': 2},
+        gs.note_obs_event('arbitrate', 'hp', {'old': 1, 'new': 2},
                           verdict='冲突', sig=_sig())
     finally:
         set_state_journal_sink(None)
         set_run_id_provider(None)
-    assert bs.current_version() == v + 1, 'obs_event 占版本'
-    assert bs.gold.value == 3, '零状态变更'
+    assert gs.current_version() == v + 1, 'obs_event 占版本'
+    assert gs.gold.value == 3, '零状态变更'
     assert run_sink[-1]['row'] == 'obs_event'
     with pytest.raises(ValueError, match='集外'):
-        bs.note_obs_event('bogus', 'hp', None, sig=_sig())
+        gs.note_obs_event('bogus', 'hp', None, sig=_sig())
 
 
 # ============================================================ §3 快照
@@ -209,14 +209,14 @@ def test_obs_event_consumes_version_without_state_change(journal_sink) -> None:
 def test_full_state_snapshot_shape() -> None:
     """自足快照(§3.2.3):values 只收非 None;prov 记非默认来源
     (source≠observation 或 evidence 非 None);同态同形 = 同内容快照逐键一致。"""
-    bs = _bs()
-    bs.observe(bs.gold, 30, sig=_sig())
-    bs.write_logic(bs.hp, 70, produced_by='p', sig=_lsig())
-    snap = bs.full_state_snapshot()
+    gs = _gs()
+    gs.observe(gs.gold, 30, sig=_sig())
+    gs.write_logic(gs.hp, 70, produced_by='p', sig=_lsig())
+    snap = gs.full_state_snapshot()
     assert snap['values']['gold'] == 30 and snap['values']['hp'] == 70
     assert 'hp' in snap['prov'] and snap['prov']['hp']['source'] == 'logic'
     assert 'gold' not in snap['prov'], 'observation 无 evidence 不进 prov'
-    bs2 = _bs()
+    bs2 = _gs()
     bs2.observe(bs2.gold, 30, sig=_sig())
     bs2.write_logic(bs2.hp, 70, produced_by='p', sig=_lsig())
     assert bs2.full_state_snapshot() == snap, '同态同形'
@@ -230,12 +230,12 @@ def test_screen_context_prep_leg_writes_authoritative_node() -> None:
     from sr_od.application.currency_war.kernel.cw_game_state import (
         SCREEN_PREP_FRAME,
     )
-    bs = _bs()
-    bs.observe_screen_context(SCREEN_PREP_FRAME, phase_round=(1, 1),
+    gs = _gs()
+    gs.observe_screen_context(SCREEN_PREP_FRAME, phase_round=(1, 1),
                               sig=_sig())
-    assert bs.node_ord.value == 1, '备战腿落序键(逻辑层)'
-    assert bs.node.value is None, '类型未定型,组合键不写'
-    other = _bs()
+    assert gs.node_ord.value == 1, '备战腿落序键(逻辑层)'
+    assert gs.node.value is None, '类型未定型,组合键不写'
+    other = _gs()
     other.observe_screen_context('货币战争-战斗等待', phase_round=(1, 1),
                                  sig=_sig())
     assert other.node.value is None, '非备战画面不触发备战腿'
@@ -247,13 +247,13 @@ def test_screen_context_same_frame_revisit_does_not_readvance() -> None:
     from sr_od.application.currency_war.kernel.cw_game_state import (
         SCREEN_PREP_FRAME,
     )
-    bs = _bs()
-    bs.observe_screen_context(SCREEN_PREP_FRAME, phase_round=(1, 2),
+    gs = _gs()
+    gs.observe_screen_context(SCREEN_PREP_FRAME, phase_round=(1, 2),
                               sig=_sig())
-    first = bs.node.value
-    bs.observe_screen_context(SCREEN_PREP_FRAME, phase_round=(1, 2),
+    first = gs.node.value
+    gs.observe_screen_context(SCREEN_PREP_FRAME, phase_round=(1, 2),
                               sig=_sig())
-    assert bs.node.value == first, '同帧重采不再推进'
+    assert gs.node.value == first, '同帧重采不再推进'
 
 
 def test_screen_context_popup_leg_infers_and_types() -> None:
@@ -262,15 +262,15 @@ def test_screen_context_popup_leg_infers_and_types() -> None:
     from sr_od.application.currency_war.kernel.cw_game_state import (
         SCREEN_PREP_FRAME,
     )
-    bs = _bs()
-    bs.observe_screen_context(SCREEN_PREP_FRAME, phase_round=(1, 2),
+    gs = _gs()
+    gs.observe_screen_context(SCREEN_PREP_FRAME, phase_round=(1, 2),
                               sig=_sig())
-    prep_node = bs.node.value
-    bs.observe_screen_context('货币战争-战斗等待', sig=_sig())
-    bs.observe_screen_context('货币战争-补给', sig=_sig())
-    assert bs.node.value is not None
-    assert bs.node.value.kind == 'supply'
-    assert bs.node.value != prep_node
+    prep_node = gs.node.value
+    gs.observe_screen_context('货币战争-战斗等待', sig=_sig())
+    gs.observe_screen_context('货币战争-补给', sig=_sig())
+    assert gs.node.value is not None
+    assert gs.node.value.kind == 'supply'
+    assert gs.node.value != prep_node
 
 
 def test_screen_context_boss_brief_leg_advances_and_types() -> None:
@@ -280,13 +280,13 @@ def test_screen_context_boss_brief_leg_advances_and_types() -> None:
         SCREEN_BOSS_BRIEFING,
         SCREEN_PREP_FRAME,
     )
-    bs = _bs()
-    bs.observe_screen_context(SCREEN_PREP_FRAME, phase_round=(2, 1),
+    gs = _gs()
+    gs.observe_screen_context(SCREEN_PREP_FRAME, phase_round=(2, 1),
                               sig=_sig())
-    before = bs.node_ord.value
-    bs.observe_screen_context(SCREEN_BOSS_BRIEFING, sig=_sig())
-    assert bs.node_ord.value == before + 1, '当前节点+1(禁写死 round=9)'
-    assert bs.node.value is not None and bs.node.value.kind == 'boss', '类型随简报证据同批落账'
+    before = gs.node_ord.value
+    gs.observe_screen_context(SCREEN_BOSS_BRIEFING, sig=_sig())
+    assert gs.node_ord.value == before + 1, '当前节点+1(禁写死 round=9)'
+    assert gs.node.value is not None and gs.node.value.kind == 'boss', '类型随简报证据同批落账'
 
 
 def test_plane_transition_leg_advances_plane() -> None:
@@ -296,11 +296,11 @@ def test_plane_transition_leg_advances_plane() -> None:
         SCREEN_PLANE_TRANSITION,
         SCREEN_PREP_FRAME,
     )
-    bs = _bs()
-    bs.observe_screen_context(SCREEN_PREP_FRAME, phase_round=(1, 5),
+    gs = _gs()
+    gs.observe_screen_context(SCREEN_PREP_FRAME, phase_round=(1, 5),
                               sig=_sig())
-    bs.observe_screen_context(SCREEN_PLANE_TRANSITION, sig=_sig())
-    assert bs.node_ord.value == node_ordinal_of(2, 1), '逻辑节点 = (plane+1, 1)'
+    gs.observe_screen_context(SCREEN_PLANE_TRANSITION, sig=_sig())
+    assert gs.node_ord.value == node_ordinal_of(2, 1), '逻辑节点 = (plane+1, 1)'
 
 
 # ============================================================ §5 合成口与映射
@@ -316,9 +316,9 @@ def test_node_ordinal_and_tier_helpers() -> None:
             node_ordinal_of(2, 1)) == (1, 9, 10)
     assert board_next_tier_of({'仙舟': 2, '联盟': 1}) == {'仙舟': 3}
     assert slot_occupies('bench') and slot_occupies('deployed')
-    bs = _bs()
-    assert bench_free_slots(bs) is None, 'bench 未读 = 诚实缺位(非 0)'
-    assert bench_is_full(bs) is None
+    gs = _gs()
+    assert bench_free_slots(gs) is None, 'bench 未读 = 诚实缺位(非 0)'
+    assert bench_is_full(gs) is None
 
 
 # ============================================================ §6 终局与结算
@@ -326,9 +326,9 @@ def test_node_ordinal_and_tier_helpers() -> None:
 def test_write_match_final_idempotent() -> None:
     """终局行(G12 写前查重):首写 True,同段二写 no-op 返 False
     (终局防重)。"""
-    bs = _bs()
-    assert write_match_final(bs, final_type='loss', plane=1) is True
-    assert write_match_final(bs, final_type='loss', plane=1) is False
+    gs = _gs()
+    assert write_match_final(gs, final_type='loss', plane=1) is True
+    assert write_match_final(gs, final_type='loss', plane=1) is False
 
 
 # (结算覆盖合同锁正本 = test_cw_game_state_consume.py 三件
@@ -392,8 +392,8 @@ def test_channel_family_closed_set() -> None:
         register_sig_actors,
     )
     register_sig_actors('TestActorR1')
-    bs = _bs()
+    gs = _gs()
     with pytest.raises(ValueError):
-        bs.observe(bs.gold, 20, sig=Sig(family='obs', actor='NeverRegistered'))
-    bs.observe(bs.gold, 20, sig=Sig(family='obs', actor='TestActorR1'))
-    assert bs.gold.value == 20
+        gs.observe(gs.gold, 20, sig=Sig(family='obs', actor='NeverRegistered'))
+    gs.observe(gs.gold, 20, sig=Sig(family='obs', actor='TestActorR1'))
+    assert gs.gold.value == 20

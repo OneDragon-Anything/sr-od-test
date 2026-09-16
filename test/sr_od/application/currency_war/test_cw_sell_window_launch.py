@@ -33,7 +33,7 @@ import pytest
 from test.sr_od.application.currency_war._cw_helpers import (
     cw4_box as _bridge,
 )
-from test.sr_od.application.currency_war._cw_helpers import cw4_bs
+from test.sr_od.application.currency_war._cw_helpers import cw4_gs
 
 from sr_od.application.currency_war.kernel.cw_card_identity import (
     TIER_TRANSITION,
@@ -344,7 +344,7 @@ class TestW1SameVisitBan:
         sess = _sess()
         sell_gate.register_launch(sess, _FUEL, cause='press', round_num=3)
         act = decide_shop_action(
-            cw4_bs(_state(1, [_bc(_FUEL, slot=1)]), sess),
+            cw4_gs(_state(1, [_bc(_FUEL, slot=1)]), sess),
             sess, SimpleNamespace(ev_arm='full'))
         assert not isinstance(act, SellBench), \
             'W1:press 登记活跃件被同轮筹资卖出 = 同 visit 卖回未闭死'

@@ -97,10 +97,10 @@ def test_reset_writes_opening_truth_and_enters_p1r1() -> None:
     assert frame.phase is CwSimPhase.PREP
     assert (frame.node.plane, frame.node.round_num) == (1, 1)
     assert frame.node.kind == 'reward'
-    assert frame.bs.hp.value == 82, 'A8/108 无词缀实证档'
-    assert frame.bs.gold.value == 7, '开局 3 + P1r1 收入(3 基础+0 息+1 连胜档)'
-    assert frame.bs.level.value == 3
-    assert len(frame.bs.plane_bosses.value) == 3
+    assert frame.gs.hp.value == 82, 'A8/108 无词缀实证档'
+    assert frame.gs.gold.value == 7, '开局 3 + P1r1 收入(3 基础+0 息+1 连胜档)'
+    assert frame.gs.level.value == 3
+    assert len(frame.gs.plane_bosses.value) == 3
 
 
 def test_reset_env_present_opens_env_screen() -> None:
@@ -113,7 +113,7 @@ def test_reset_env_present_opens_env_screen() -> None:
     assert len(frame.options) == 3
     ret = eng.step(PickEvent(option_idx=0))
     assert ret.observation.phase is CwSimPhase.PREP
-    assert ret.observation.bs.active_env.value == frame.options[0]
+    assert ret.observation.gs.active_env.value == frame.options[0]
 
 
 def test_reset_rejects_non_standard_mode_u27() -> None:
@@ -130,13 +130,13 @@ def test_prep_actions_via_single_transfer_function() -> None:
     """PREP:动作经 kernel 单一转移函数(买牌金账);engine 不自判拒绝。"""
     eng = CwSimEngine()
     frame = eng.reset(7, _CFG)
-    gold_before = frame.bs.gold.value
-    shop_cards = [s.card for s in frame.bs.shop.value.cards
+    gold_before = frame.gs.gold.value
+    shop_cards = [s.card for s in frame.gs.shop.value.cards
                   if s.kind == 'content']
     cheap = min(shop_cards, key=lambda c: c.cost)
     ret = eng.step(BuyCard(card=cheap))
     assert ret.outcome is not None and ret.outcome.applied
-    assert ret.observation.bs.gold.value == gold_before - cheap.cost
+    assert ret.observation.gs.gold.value == gold_before - cheap.cost
 
 
 def test_shop_lock_disclosure_present() -> None:
@@ -155,7 +155,7 @@ def test_open_box_leads_to_box_pick() -> None:
     assert len(ret.observation.box_options) == 4
     ret2 = eng.step(PickEvent(option_idx=0))
     assert ret2.observation.phase is CwSimPhase.PREP
-    assert len(ret2.observation.bs.equips.value) == 1
+    assert len(ret2.observation.gs.equips.value) == 1
 
 
 # ================================================== M10 四路接线(r3)
@@ -183,19 +183,19 @@ def test_prep_wear_equip_routes_to_sim_leg() -> None:
     该件 = 腿拒回声(applied=False)。"""
     a, b, advance = _advance_pair()
     eng = CwSimEngine()
-    bs = eng.reset(7, _CFG).bs
+    gs = eng.reset(7, _CFG).gs
     slots: list[BenchChar | None] = [None] * 9
     slots[0] = BenchChar(slot=1, char_id='淘金客', faction='散', star=1,
                          equips=[a])
-    bs.observe(bs.bench, bench_view_of_slots(slots), sig=_SIG)
-    bs.observe(bs.equips, [b], sig=_SIG)
+    gs.observe(gs.bench, bench_view_of_slots(slots), sig=_SIG)
+    gs.observe(gs.equips, [b], sig=_SIG)
     ret = eng.step(WearEquip(item_name=b, char_name='淘金客',
                              row='front', slot=1))
     assert ret.outcome is not None and ret.outcome.applied, '腿生效(旧=零写拒)'
-    worn = [list(s.unit.equips) for s in bs.bench.value.slots
+    worn = [list(s.unit.equips) for s in gs.bench.value.slots
             if s is not None and s.kind == 'unit' and s.unit is not None]
     assert worn == [[advance]], f'穿着即合成:{a}+{b} → {advance}'
-    assert bs.equips.value == [], '库存件已穿上'
+    assert gs.equips.value == [], '库存件已穿上'
     ret_rej = eng.step(WearEquip(item_name='不在库的装备', char_name='淘金客',
                                  row='front', slot=1))
     assert not ret_rej.outcome.applied and ret_rej.outcome.reason
@@ -205,17 +205,17 @@ def test_prep_wrench_routes_unequip_and_consume() -> None:
     """M10 接线:扳手 = 取下回区 + 工具消耗;精密扳手 = 同取下不消耗。"""
     a, _b, _adv = _advance_pair()
     eng = CwSimEngine()
-    bs = eng.reset(7, _CFG).bs
-    bs.observe(bs.front_row,
+    gs = eng.reset(7, _CFG).gs
+    gs.observe(gs.front_row,
                [Unit(char_id='淘金客', star=1, equips=[a])], sig=_SIG)
-    bs.observe(bs.equips, ['拆装扳手', '精密拆装扳手'], sig=_SIG)
+    gs.observe(gs.equips, ['拆装扳手', '精密拆装扳手'], sig=_SIG)
     ret = eng.step(WrenchUse(row='front', slot=1))
     assert ret.outcome is not None and ret.outcome.applied
-    assert bs.front_row.value[0].equips == [], '穿戴回区'
-    assert bs.equips.value == ['精密拆装扳手', a], '扳手消耗 + 装备入库'
+    assert gs.front_row.value[0].equips == [], '穿戴回区'
+    assert gs.equips.value == ['精密拆装扳手', a], '扳手消耗 + 装备入库'
     ret2 = eng.step(PrecisionWrenchUse(row='front', slot=1))
     assert ret2.outcome is not None and ret2.outcome.applied
-    assert '精密拆装扳手' in bs.equips.value, '精密扳手不消耗'
+    assert '精密拆装扳手' in gs.equips.value, '精密扳手不消耗'
 
 
 def test_prep_furnace_routes_by_target_kind() -> None:
@@ -225,17 +225,17 @@ def test_prep_furnace_routes_by_target_kind() -> None:
                     if e.category == '简易')
     src = simple[0]
     eng = CwSimEngine()
-    bs = eng.reset(7, _CFG).bs
-    bs.observe(bs.equips, [src], sig=_SIG)
+    gs = eng.reset(7, _CFG).gs
+    gs.observe(gs.equips, [src], sig=_SIG)
     ret = eng.step(FurnaceUse(target_kind='equip', item_name=src))
     assert ret.outcome is not None and ret.outcome.applied
-    new_name = bs.equips.value[0]
+    new_name = gs.equips.value[0]
     assert new_name != src and get_equip(new_name).category == '简易', \
         '同类型(同 category)重掷'
     ret2 = eng.step(FurnaceUse(target_kind='char', row='front', slot=1))
     assert ret2.outcome is not None and not ret2.outcome.applied, \
         '拖角色模式未建模显式拒'
-    assert bs.equips.value == [new_name], '拒 = 零写'
+    assert gs.equips.value == [new_name], '拒 = 零写'
     assert FURNACE_CHAR_MODE_PENDING in ret2.observation.disclosures
 
 
@@ -245,23 +245,23 @@ def test_planner_trigger_fires_on_deployed_merge() -> None:
     也必触发(旧「仅扫备战席 star≥2」近似在此漏触发);银狼身份单一源
     = SILVER_WOLF_ID。overlay 呈现于下一结算收尾(M22 队列序)。"""
     eng = CwSimEngine()
-    bs = eng.reset(7, _CFG).bs
+    gs = eng.reset(7, _CFG).gs
     slots: list[BenchChar | None] = [None] * 9
     slots[0] = BenchChar(slot=1, char_id=SILVER_WOLF_ID, faction='?',
                          star=1)
-    bs.observe(bs.bench, bench_view_of_slots(slots), sig=_SIG)
-    bs.observe(bs.front_row, [Unit(char_id=SILVER_WOLF_ID, star=1)],
+    gs.observe(gs.bench, bench_view_of_slots(slots), sig=_SIG)
+    gs.observe(gs.front_row, [Unit(char_id=SILVER_WOLF_ID, star=1)],
                sig=_SIG)
     card = ShopCard(name=SILVER_WOLF_ID, cost=3, star=1)
-    bs.observe(bs.shop, ShopPayload(
+    gs.observe(gs.shop, ShopPayload(
         cards=[ShopSlot(kind='content', card=card)]), sig=_SIG)
     ret = eng.step(BuyCard(card=card))
     assert ret.outcome is not None and ret.outcome.applied
-    assert bs.front_row.value[0].star == 2, '合成产物落场上同名位(M07)'
+    assert gs.front_row.value[0].star == 2, '合成产物落场上同名位(M07)'
     assert all(not (s is not None and s.kind == 'unit'
                     and s.unit is not None
                     and s.unit.char_id == SILVER_WOLF_ID)
-               for s in bs.bench.value.slots), '备战席已无银狼(旧判据必漏)'
+               for s in gs.bench.value.slots), '备战席已无银狼(旧判据必漏)'
     frame = ret.observation
     for _ in range(64):
         if frame.phase is CwSimPhase.EVENT_OVERLAY:
@@ -308,7 +308,7 @@ def test_supply_node_picks_equipment() -> None:
     assert ret.observation.phase is CwSimPhase.SUPPLY_PICK
     assert len(ret.observation.supply_options) == 3
     ret2 = eng.step(PickEvent(option_idx=0))
-    assert ret2.observation.bs.equips.value, '选中装备入账'
+    assert ret2.observation.gs.equips.value, '选中装备入账'
 
 
 def test_invest_offer_fires_at_p1r3_u07() -> None:
@@ -327,7 +327,7 @@ def test_invest_offer_fires_at_p1r3_u07() -> None:
     assert seen_offer, 'P1r3 前应呈现策略 offer'
     ret = eng.step(PickEvent(option_idx=0))
     assert ret.observation.phase is CwSimPhase.PREP
-    assert len(ret.observation.bs.active_strategies.value) == 1
+    assert len(ret.observation.gs.active_strategies.value) == 1
 
 
 def test_encounter_pick_then_settle() -> None:

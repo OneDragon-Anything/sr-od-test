@@ -36,7 +36,7 @@ from sr_od.application.currency_war.kernel.cw_economy import (
     reserve_cap as kernel_reserve_cap,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
-    board_state_of,
+    game_state_of,
     gold_of,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
@@ -184,8 +184,8 @@ class TestBudgetDisclosureWriteRead:
         st = state_of(sess)
         # 独立重算:同输入投影确定 ⇒ 与 _budget 内部同值(非转抄 turn);
         # 重算输入 = 同一容器实例(键戳/轮轴的单一来源)。
-        state = board_state_of(sess)
-        expected_cap = kernel_reserve_cap(board_state_of(sess), sess)
+        state = game_state_of(sess)
+        expected_cap = kernel_reserve_cap(game_state_of(sess), sess)
         assert st.v3_reserve_cap == turn.budget.reserve_cap
         assert st.v3_reserve_cap == expected_cap
         assert st.v3_reserve_overflow == max(

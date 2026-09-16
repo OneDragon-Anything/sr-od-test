@@ -53,7 +53,7 @@ from sr_od.application.currency_war.kernel.cw_events import (
     EncounterPick,
 )
 from sr_od.application.currency_war.kernel.cw_exec_state import exec_state_of
-from sr_od.application.currency_war.kernel.cw_game_state import board_state_of
+from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
 from sr_od.application.currency_war.kernel.cw_strategy_session import StrategySession
 
 _FRAME = object()   # 稳定帧哨兵(screenshot 桩产物;读链桩只验传递不断言内容)
@@ -115,7 +115,7 @@ def _make_encounter(test_context, monkeypatch, *, in_screen: bool,
     monkeypatch.setattr(pick_mod, 'emit_overlay_confirm',
                         lambda o, **k: _confirm_rs)
     # (record_event_choice 替身桩已随删除波 1 移除——exogenous 写入端退役,
-    #  encounter 模块不再引用 telemetry;(bs_view 桩同批移除——模块本体
+    #  encounter 模块不再引用 telemetry;(gs_view 桩同批移除——模块本体
     #  随波 5b 双删,桩对象不存在。))
     return op, match, session
 
@@ -166,7 +166,7 @@ def test_encounter_old_path_kept_without_ports(
     assert rs.is_success, f'旧路径确认链轮次结果照回(保形):{rs!r}'
     assert op._confirm_pending is not None, (
         '确认已发 → pending 置位(chosen 归重入裁决承载)')
-    assert board_state_of(session).chosen_encounter.value is None, (
+    assert game_state_of(session).chosen_encounter.value is None, (
         'chosen 单调用内不写(写时机 = 重入裁决,时点后移)')
 
 
@@ -256,12 +256,12 @@ def test_encounter_refresh_semantics(test_context, monkeypatch) -> None:
 
     match.strategy.decide_encounter = _counting
     _run_node(test_context, op, op.handle)
-    bs = board_state_of(session)
-    assert bs.encounter_refresh_used.value == 1, (
+    gs = game_state_of(session)
+    assert gs.encounter_refresh_used.value == 1, (
         f'卡面未变帧仍 +1(随点击置位不等验效,§6.5-4):'
-        f'{bs.encounter_refresh_used.value}')
-    assert bs.encounter_refresh_used.evidence == 'refresh_click', (
-        f'发射证据逐位一致:{bs.encounter_refresh_used.evidence!r}')
+        f'{gs.encounter_refresh_used.value}')
+    assert gs.encounter_refresh_used.evidence == 'refresh_click', (
+        f'发射证据逐位一致:{gs.encounter_refresh_used.evidence!r}')
     assert exec_state_of(session)._encounter_refresh_used is True, (
         '防重入旗标(执行侧载体)发射点同步置位')
     assert len(_decide_calls) == 2 and _decide_calls[1][1] is True, (
@@ -273,14 +273,14 @@ def test_encounter_refresh_semantics(test_context, monkeypatch) -> None:
         pick=EncounterPick(idx=0, refresh=True, reason='stub'))
     exec_state_of(s2)._encounter_refresh_used = True
     _run_node(test_context, op2, op2.handle)
-    assert board_state_of(s2).encounter_refresh_used.value is None, (
+    assert game_state_of(s2).encounter_refresh_used.value is None, (
         '本局已用 → 不发射不计数')
     # ③ 无剩余次数 → 不发射不计数、不置防重入旗标
     op3, _m3, s3 = _make_encounter(
         test_context, monkeypatch, in_screen=True, options=opts,
         pick=EncounterPick(idx=0, refresh=True, reason='stub'), cnt=None)
     _run_node(test_context, op3, op3.handle)
-    assert board_state_of(s3).encounter_refresh_used.value is None, (
+    assert game_state_of(s3).encounter_refresh_used.value is None, (
         '无次数 → 不发射不计数')
     assert exec_state_of(s3)._encounter_refresh_used is False, (
         '未发射不置防重入旗标')
@@ -300,7 +300,7 @@ def test_encounter_chosen_inline_not_registry_collected(
         test_context, monkeypatch, in_screen=True, options=opts,
         pick=EncounterPick(idx=1, reason='stub'), confirm_success=False)
     rs = _run_node(test_context, op, op.handle)
-    assert not rs.is_success and board_state_of(
+    assert not rs.is_success and game_state_of(
         session).chosen_encounter.value is None, '验关失败 → chosen 不写'
     # (三审拆半:原尾部 getsource「chosen_* 不入注册表收编面」
     # 字面不在场断言删,豁免面纪律归 review 与代码规范。)

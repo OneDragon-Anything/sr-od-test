@@ -38,7 +38,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     ShopCard,
     ShopPayload,
     ShopSlot,
-    board_state_of,
+    game_state_of,
     register_sig_actors,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
@@ -313,15 +313,15 @@ class _FakeShopRow:
 def _shop_state_with_gold_and_cards() -> tuple:
     """容器店面逻辑态(刷前现读输入;金 50 + 具名牌 1 张)。"""
     session = StrategySession()
-    bs = board_state_of(session)
-    bs.write_logic(bs.gold, 50, produced_by='cw-t216-test', sig=_LOGIC_SIG)
+    gs = game_state_of(session)
+    gs.write_logic(gs.gold, 50, produced_by='cw-t216-test', sig=_LOGIC_SIG)
     slots = [ShopSlot(kind='content',
                       card=ShopCard(name='旧卡A', faction='', cost=1,
                                     star=1, slot=1))]
     slots += [ShopSlot(kind='empty')] * 4
-    bs.write_logic(bs.shop, ShopPayload(cards=slots, refresh_probs={}),
+    gs.write_logic(gs.shop, ShopPayload(cards=slots, refresh_probs={}),
                    produced_by='cw-t216-test', sig=_LOGIC_SIG)
-    return session, board_state_of(session)
+    return session, game_state_of(session)
 
 
 def test_refresh_shop_op_persists_evidence_without_comparison(monkeypatch):

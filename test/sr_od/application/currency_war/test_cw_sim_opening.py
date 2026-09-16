@@ -12,7 +12,7 @@ import dataclasses
 import pytest
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.kernel.cw_game_state import board_state_of
+from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
@@ -137,20 +137,20 @@ def test_apply_opening_writes_container_opening_state() -> None:
     """开局态写入容器(obs 渠道;u07u28 §③:金 3/等级 3/cap 3;
     M06 首个写端 = 开局备战席先于商店发牌)。"""
     sess = StrategySession()
-    bs = board_state_of(sess)
-    apply_opening(bs, _cfg(enemy_affixes=('开局不利',)),
+    gs = game_state_of(sess)
+    apply_opening(gs, _cfg(enemy_affixes=('开局不利',)),
                   stream_rng(11, 'M01/opening_hand'))
-    assert bs.hp.value == 62 and bs.hp.source == 'observation'
-    assert bs.gold.value == OPENING_GOLD and bs.level.value == OPENING_LEVEL
-    assert bs.deploy_cap.value == OPENING_DEPLOY_CAP
-    assert bs.xp.value == (0, 4), '等级 3 门槛表首档 = 4(cw_economy XP 表)'
-    assert bs.streak.value == 0
-    assert bs.selected_difficulty.value == 'A8'
-    assert bs.enemy_affixes.value == ['开局不利']
-    assert bs.hp.evidence is not None \
-        and bs.hp.evidence.startswith('sim:engine:'), \
+    assert gs.hp.value == 62 and gs.hp.source == 'observation'
+    assert gs.gold.value == OPENING_GOLD and gs.level.value == OPENING_LEVEL
+    assert gs.deploy_cap.value == OPENING_DEPLOY_CAP
+    assert gs.xp.value == (0, 4), '等级 3 门槛表首档 = 4(cw_economy XP 表)'
+    assert gs.streak.value == 0
+    assert gs.selected_difficulty.value == 'A8'
+    assert gs.enemy_affixes.value == ['开局不利']
+    assert gs.hp.evidence is not None \
+        and gs.hp.evidence.startswith('sim:engine:'), \
         '引擎直写 evidence 带 sim:engine 前缀(失配抑制登记面契约)'
-    units = [s.unit for s in bs.bench.value.slots if s.unit is not None]
+    units = [s.unit for s in gs.bench.value.slots if s.unit is not None]
     assert len(units) == 4 and all(u.star == 1 for u in units), \
         '开局备战席 = 4 张全 1★(M06 派生池不变量首个写端)'
-    assert bs.heartbeat() > 0, '开局写入推进容器心跳'
+    assert gs.heartbeat() > 0, '开局写入推进容器心跳'

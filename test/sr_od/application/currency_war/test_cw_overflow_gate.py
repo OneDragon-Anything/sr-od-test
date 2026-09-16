@@ -25,7 +25,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     apply_prep_action_logic,
     bench_slots_of,
     bench_view_of_slots,
-    board_state_of,
+    game_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
@@ -64,13 +64,13 @@ def _state():
     守卫读容器上阵域非 frame)。bench 槽表照实观察(生产 heavy 帧恒产出;
     批2b 换算收口后溢出发射位按容器槽位表解析下标,黑板视图与容器同帧
     同源是解析前提)。"""
-    bs = board_state_of(None)
-    bs.write_logic(bs.bench, bench_view_of_slots(
+    gs = game_state_of(None)
+    gs.write_logic(gs.bench, bench_view_of_slots(
         [BenchChar(slot=1, char_id='椒丘', star=1)]),
         produced_by='test', sig=_SIG)
-    bs.write_logic(bs.front_row, [Unit(slot=1, char_id='刃', star=1)],
+    gs.write_logic(gs.front_row, [Unit(slot=1, char_id='刃', star=1)],
                    produced_by='test', sig=_SIG)
-    return bs
+    return gs
 
 
 def test_overflow_gate_narrows_to_single_sell():
@@ -98,53 +98,53 @@ def test_overflow_gate_releases_when_cleared():
 
 def test_sellbench_overflow_logic_state_absorbs_card():
     """溢出态 SellBench 逻辑态:摘卖件 + 溢出卡入自由槽 + 旗标/身份消亡。"""
-    bs = board_state_of(None)
-    bs.write_logic(bs.bench, bench_view_of_slots(
+    gs = game_state_of(None)
+    gs.write_logic(gs.bench, bench_view_of_slots(
         [BenchChar(slot=1, char_id='花火', star=1),
          BenchChar(slot=2, char_id='刃', star=1)]),
         produced_by='test', sig=_SIG)
-    bs.write_logic(bs.gold, 10, produced_by='test', sig=_SIG)
-    bs.write_logic(bs.overflow_warning, True, produced_by='test', sig=_SIG)
-    bs.write_logic(bs.overflow_card, '不死途', produced_by='test', sig=_SIG)
+    gs.write_logic(gs.gold, 10, produced_by='test', sig=_SIG)
+    gs.write_logic(gs.overflow_warning, True, produced_by='test', sig=_SIG)
+    gs.write_logic(gs.overflow_card, '不死途', produced_by='test', sig=_SIG)
 
-    apply_prep_action_logic(bs, SellBench(bench_idx=0), produced_by='test',
+    apply_prep_action_logic(gs, SellBench(bench_idx=0), produced_by='test',
                             sig=_SIG)
 
-    slots = bench_slots_of(bs)
+    slots = bench_slots_of(gs)
     assert slots[0] is not None and slots[0].char_id == '不死途'
     assert slots[1].char_id == '刃'
     # 退款 = sell_refund(1★, 2费) = cost 全额 = 2(10 → 12)
-    assert bs.gold.value == 12
-    assert bs.overflow_card.value == ''
-    assert bs.overflow_warning.value is False
+    assert gs.gold.value == 12
+    assert gs.overflow_card.value == ''
+    assert gs.overflow_warning.value is False
 
 
 def test_sellbench_overflow_missing_identity_skips_absorb():
     """身份缺读(''):容器跳过入位(槽留空等观察覆盖),卖出/退款本体照常;
     tracked 主账对称零写(容器/tracked 两侧一测,原 sync 文件腿并入)。"""
     session = StrategySession()
-    bs = board_state_of(session)
-    bs.write_logic(bs.bench, bench_view_of_slots(
+    gs = game_state_of(session)
+    gs.write_logic(gs.bench, bench_view_of_slots(
         [BenchChar(slot=1, char_id='花火', star=1),
          BenchChar(slot=2, char_id='刃', star=1)]),
         produced_by='test', sig=_SIG)
-    bs.write_logic(bs.gold, 10, produced_by='test', sig=_SIG)
-    bs.write_logic(bs.overflow_warning, True, produced_by='test', sig=_SIG)
-    bs.write_logic(bs.overflow_card, '', produced_by='test', sig=_SIG)
-    bs.tracked_books.bench = bench_from_compact([
+    gs.write_logic(gs.gold, 10, produced_by='test', sig=_SIG)
+    gs.write_logic(gs.overflow_warning, True, produced_by='test', sig=_SIG)
+    gs.write_logic(gs.overflow_card, '', produced_by='test', sig=_SIG)
+    gs.tracked_books.bench = bench_from_compact([
         BenchChar(slot=1, char_id='花火', star=1),
         BenchChar(slot=2, char_id='刃', star=1)])
 
-    apply_prep_action_logic(bs, SellBench(bench_idx=0), produced_by='test',
+    apply_prep_action_logic(gs, SellBench(bench_idx=0), produced_by='test',
                             sig=_SIG, session=session)
 
-    slots = bench_slots_of(bs)
+    slots = bench_slots_of(gs)
     assert slots[0] is None
-    assert bs.gold.value == 12
-    assert bs.overflow_warning.value is True    # 未消费(未入位),留观察覆盖
-    assert bs.overflow_card.value == ''
+    assert gs.gold.value == 12
+    assert gs.overflow_warning.value is True    # 未消费(未入位),留观察覆盖
+    assert gs.overflow_card.value == ''
     # tracked 对称零写(身份缺读不吸收,两侧同测)
-    after = board_state_of(session).tracked_books.bench
+    after = game_state_of(session).tracked_books.bench
     assert [(b.char_id, b.star) for b in after if b is not None] == [
         ('花火', 1), ('刃', 1)]
 
@@ -154,16 +154,16 @@ def test_sellbench_overflow_missing_identity_skips_absorb():
 
 def _seed(session, tracked, *, ov_id: str = '不死途'):
     """容器 bench=[花火@1, 刃@2] + 溢出态写入 + tracked 初始账。"""
-    bs = board_state_of(session)
-    bs.write_logic(bs.bench, bench_view_of_slots(
+    gs = game_state_of(session)
+    gs.write_logic(gs.bench, bench_view_of_slots(
         [BenchChar(slot=1, char_id='花火', star=1),
          BenchChar(slot=2, char_id='刃', star=1)]),
         produced_by='test', sig=_SIG)
-    bs.write_logic(bs.gold, 10, produced_by='test', sig=_SIG)
-    bs.write_logic(bs.overflow_warning, True, produced_by='test', sig=_SIG)
-    bs.write_logic(bs.overflow_card, ov_id, produced_by='test', sig=_SIG)
-    board_state_of(session).tracked_books.bench = tracked
-    return bs
+    gs.write_logic(gs.gold, 10, produced_by='test', sig=_SIG)
+    gs.write_logic(gs.overflow_warning, True, produced_by='test', sig=_SIG)
+    gs.write_logic(gs.overflow_card, ov_id, produced_by='test', sig=_SIG)
+    game_state_of(session).tracked_books.bench = tracked
+    return gs
 
 
 def test_overflow_absorb_syncs_tracked():
@@ -177,20 +177,20 @@ def test_overflow_absorb_syncs_tracked():
     AssertionError」表述随批退役改写:分叉检出现归观察边界 reconcile
     纠漂,本锁锁的吸收行为本体不变。)"""
     session = StrategySession()
-    bs = _seed(session, bench_from_compact([
+    gs = _seed(session, bench_from_compact([
         BenchChar(slot=1, char_id='花火', star=1),
         BenchChar(slot=2, char_id='刃', star=1)]))
 
-    apply_prep_action_logic(bs, SellBench(bench_idx=0), produced_by='test',
+    apply_prep_action_logic(gs, SellBench(bench_idx=0), produced_by='test',
                             sig=_SIG, session=session)
 
-    tracked = board_state_of(session).tracked_books.bench
+    tracked = game_state_of(session).tracked_books.bench
     assert [(b.char_id, b.star) for b in tracked if b is not None] == [
         ('不死途', 1), ('刃', 1)]
     assert tracked[0] is not None and tracked[0].slot == 1   # 被卖槽回占
     # 吸收锁(事故本形):容器腿与 tracked 腿同槽同身份。
     assert [(b.char_id, b.star) for b in
-            bench_slots_of(bs) if b is not None] == [
+            bench_slots_of(gs) if b is not None] == [
         ('不死途', 1), ('刃', 1)]
 
 
@@ -201,12 +201,12 @@ def test_overflow_absorb_after_executor_removal_compact_shape():
     唯一且恒传 session,无消费者形态不留测试;「身份缺读对称跳过」腿
     并入上方缺读锁,两侧一测。)"""
     session = StrategySession()
-    bs = _seed(session, [BenchChar(slot=2, char_id='刃', star=1)])  # 花火已被摘
+    gs = _seed(session, [BenchChar(slot=2, char_id='刃', star=1)])  # 花火已被摘
 
-    apply_prep_action_logic(bs, SellBench(bench_idx=0), produced_by='test',
+    apply_prep_action_logic(gs, SellBench(bench_idx=0), produced_by='test',
                             sig=_SIG, session=session)
 
-    tracked = board_state_of(session).tracked_books.bench
+    tracked = game_state_of(session).tracked_books.bench
     assert [(b.char_id, b.star) for b in tracked if b is not None] == [
         ('不死途', 1), ('刃', 1)]
     assert tracked[1] is not None and tracked[1].char_id == '刃'   # 刃 仍在槽 2
