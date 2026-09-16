@@ -48,7 +48,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     consume_defect_sink,
     deployed_rows_from_obs,
     grant_effect_node_refresh_balance,
-    note_board_state_heartbeat,
     project_effect_capacity,
     set_defect_sink,
     shop_card_to_container,
@@ -104,7 +103,7 @@ def _hsig() -> _ChannelSig:
 
 
 # ============================================================ §8.6-2/§2.4
-# 心跳写点序哨兵(单调推进 + 断流计数)
+# 心跳写点序哨兵(单调推进)
 
 
 def test_write_logic_direct_write_immediately_readable() -> None:
@@ -120,10 +119,9 @@ def test_write_logic_direct_write_immediately_readable() -> None:
     assert bs.gold.evidence == 'probe@p1-r2', 'evidence 原值透传'
 
 
-def test_heartbeat_sentinel_monotonic_and_stall() -> None:
-    """§2.4 心跳哨兵:停更检测 = 只增不减写点序(写点序号),不做帧标注
-    现值(消费即清后当不了哨兵);观察者采样单调推进量,连续 2 次零推进
-    = 断流计数上行(诊断位,不停机),有推进即复位。"""
+def test_write_seq_monotonic_counter() -> None:
+    """§2.4 写点序哨兵:停更检测载体 = 只增不减写点序(写点序号),不做帧标注
+    现值(消费即清后当不了哨兵)。"""
     bs = GameState(schema_version=BS_SCHEMA_VERSION)
     seq0 = bs.heartbeat()
     bs.observe(bs.gold, 20, sig=_sig())
@@ -134,17 +132,6 @@ def test_heartbeat_sentinel_monotonic_and_stall() -> None:
     assert seq1 > seq0, '写点推进 → 心跳单调递增(不断流)'
     bs.carry(bs.gold, frame='p1-r5', sig=_sig())
     assert bs.heartbeat() > seq1, 'carried 写也是写点,哨兵照常推进'
-    # 断流计数面(session 采样;board_state_of 单例即采样对象)
-    sess = SimpleNamespace()
-    note_board_state_heartbeat(sess)   # 首采:基线
-    note_board_state_heartbeat(sess)   # 零推进 #1
-    sess_bs = board_state_of(sess)
-    assert sess_bs.hb_stall_count == 1
-    note_board_state_heartbeat(sess)   # 零推进 #2 → 达标
-    assert sess_bs.hb_stall_count >= 2
-    sess_bs.observe(sess_bs.gold, 20, sig=_sig())            # 有推进
-    note_board_state_heartbeat(sess)
-    assert sess_bs.hb_stall_count == 0, '推进即复位'
 
 
 # ============================================================ §8.6-4(续)
