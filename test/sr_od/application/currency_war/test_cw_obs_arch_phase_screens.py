@@ -221,8 +221,10 @@ def _make_env(test_context, monkeypatch: pytest.MonkeyPatch, *,
               events: list | None = None):
     """投资环境真类装配(生产构造走 __init__ = 适配器位/注册表在位)。
 
-    桩面 = 画面门/截屏/候选读/策略器/确认链/计数读/台账写点;``safe_click``
-    记录点击并快照点击时点 ``active_env`` 现值(选卡时点写对拍载体)。"""
+    桩面 = 画面门/截屏/候选读/策略器/确认链/计数读;``safe_click``
+    记录点击并快照点击时点 ``active_env`` 现值(选卡时点写对拍载体)。
+    (台账写点②桩面已随该方法退役删除——链观察落地批:环境改型由返回
+    备战后的入口观察链读承接,op 层零自读。)"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_invest_env as iem,
     )
@@ -240,7 +242,6 @@ def _make_env(test_context, monkeypatch: pytest.MonkeyPatch, *,
     monkeypatch.setattr(op, 'screenshot', lambda: _FRAME)
     monkeypatch.setattr(op, '_read_options',
                         lambda screen: list(opts or []))
-    monkeypatch.setattr(op, '_refresh_node_ledger', lambda: None)
     monkeypatch.setattr(iem, 'read_invest_refresh_counts',
                         lambda ctx, scr, kind: [])
 
