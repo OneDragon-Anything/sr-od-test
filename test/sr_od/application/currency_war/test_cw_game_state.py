@@ -66,6 +66,9 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 from sr_od.application.currency_war.kernel.cw_investments import (
     STRATEGY_EFFECTS,
 )
+from sr_od.application.currency_war.kernel.cw_mismatch_policy import (
+    ExemptEntry as _ExemptEntry,
+)
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
@@ -245,6 +248,11 @@ def test_observe_over_logic_mismatch_defect_row_and_sink_drain() -> None:
     assert len(rows) == 1
     assert rows[0]['field'] == 'gold'
     assert rows[0]['expected'] == 17 and rows[0]['actual'] == 19
+    assert rows[0]['ts'], '行补 ts(journal 行同款秒级时刻)'
+    assert rows[0]['screen'] is None and rows[0]['actor'] == 'TestSigWriter', \
+        '行携带观察侧 sig(screen 缺省 None / actor)'
+    assert rows[0]['group_id'] is None and rows[0]['logic_evidence'] is None, \
+        '行携带观察侧组 id 与逻辑侧写端注记(本腿均无)'
     assert bs.gold.source == 'observation', '观察赢:来源改回 observation'
     assert drained == rows, 'consume 取走行(装配点消费面)'
     assert consume_defect_sink() == [], '消费后复位,防跨局残留'
@@ -259,6 +267,89 @@ def test_observe_over_logic_mismatch_defect_row_and_sink_drain() -> None:
         set_defect_sink(None)
         consume_defect_sink()
     assert rows_ok == [], '一致 = 静默核实,零缺陷行'
+
+
+def test_observe_mismatch_three_way_routing(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """失配三分流并一锁(迭代 2026-09-16-unified-obs-reconcile,design §2.3):
+
+    - 真失配腿:缺陷行落盘后安灯钩子同步被调(行同构);sim 前缀两值
+      (sim:engine 现役 / sim:synthesized 本迭代并列)→ 不落行不调钩子;
+    - 豁免腿:精确键(画面×字段×写端前缀)命中 → exempt_mismatch 行
+      (同形状换 kind),无告警面消费、钩子不被调;写端前缀不中 → 真失配
+      照落(同字段他写端不被吞)。"""
+    from sr_od.application.currency_war.kernel import (
+        cw_mismatch_policy as _policy,
+    )
+
+    fired: list[dict] = []
+    monkeypatch.setattr(_policy, '_ANDON_HOOK', fired.append)
+
+    def _run_observe(bs: GameState, sig: _ChannelSig, read: int,
+                     observed_evidence: str | None = None) -> list[dict]:
+        rows_: list[dict] = []
+        set_defect_sink(rows_.append)
+        try:
+            if observed_evidence is None:
+                bs.observe(bs.gold, read, sig=sig)
+            else:
+                bs.observe(bs.gold, read, evidence=observed_evidence, sig=sig)
+        finally:
+            set_defect_sink(None)
+            consume_defect_sink()
+        return rows_
+
+    # —— 真失配腿:行落盘 + 钩子被调(行同构)+ 覆盖照常 ——
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
+    bs.write_logic(bs.gold, 17, produced_by='TestSigWriter',
+                   evidence='free_refresh@p1-r4', sig=_lsig())
+    _sig_screen = _ChannelSig(family='obs', actor='TestSigWriter',
+                              screen='货币战争-备战', mode='read',
+                              group_id='act:T@1')
+    rows = _run_observe(bs, _sig_screen, 19)
+    assert len(rows) == 1 and rows[0]['kind'] == 'observe_vs_logic_mismatch'
+    assert fired and fired[0] == rows[0], '钩子收到与落盘同构的缺陷行'
+    assert rows[0]['logic_evidence'] == 'free_refresh@p1-r4'
+    assert bs.gold.source == 'observation', '观察赢覆盖照常'
+
+    # —— sim 前缀两值:不落行不调钩子(抑制语义,生产台账分流)——
+    bs2 = GameState(schema_version=BS_SCHEMA_VERSION)
+    bs2.write_logic(bs2.gold, 17, produced_by='TestSigWriter', sig=_lsig())
+    for prefix in ('sim:synthesized@p1-r2', 'sim:engine:income'):
+        fired.clear()
+        rows_sim = _run_observe(bs2, _sig(), 19, observed_evidence=prefix)
+        assert rows_sim == [], f'{prefix} 抑制:不落生产台账'
+        assert fired == [], f'{prefix} 抑制:安灯不触发'
+
+    # —— 豁免腿:精确键命中 → exempt 行(钩子不被调);前缀不中 → 真失配 ——
+    monkeypatch.setattr(_policy, 'EXEMPT_REGISTRY', {
+        ('货币战争-备战', 'gold'): (_ExemptEntry(
+            screen='货币战争-备战', field='gold',
+            logic_evidence='free_refresh@', reason='测试豁免'),),
+    })
+    bs3 = GameState(schema_version=BS_SCHEMA_VERSION)
+    bs3.write_logic(bs3.gold, 17, produced_by='TestSigWriter',
+                    evidence='free_refresh@p1-r4', sig=_lsig())
+    fired.clear()
+    rows_exempt = _run_observe(bs3, _sig_screen, 19)
+    assert len(rows_exempt) == 1 \
+        and rows_exempt[0]['kind'] == 'exempt_mismatch', \
+        '豁免命中落 exempt 行(豁免 ≠ 消失,可审计)'
+    assert rows_exempt[0]['ts'] and rows_exempt[0]['screen'] == '货币战争-备战' \
+        and rows_exempt[0]['logic_evidence'] == 'free_refresh@p1-r4', \
+        'exempt 行与真失配行同构(仅 kind 不同)'
+    assert fired == [], '豁免命中:无告警无停机(钩子不被调)'
+    assert bs3.gold.source == 'observation', '豁免腿覆盖照常(观察赢)'
+
+    bs4 = GameState(schema_version=BS_SCHEMA_VERSION)
+    bs4.write_logic(bs4.gold, 17, produced_by='TestSigWriter',
+                    evidence='post_buy@p1-r4', sig=_lsig())
+    fired.clear()
+    rows_true = _run_observe(bs4, _sig_screen, 19)
+    assert len(rows_true) == 1 \
+        and rows_true[0]['kind'] == 'observe_vs_logic_mismatch', \
+        '同字段他写端不中豁免 → 真失配照落(前缀维度防吞真失败)'
+    assert len(fired) == 1, '真失配钩子照触发'
 
 
 # ============================================================ 单例宿主与心跳观察者
@@ -552,6 +643,65 @@ def test_observation_feed_battle_frame_kind_inherits(
     obs.read_game_state(_feed_ctx(sess), None, phase='prep_clean')
     assert bs.node.value.kind == 'battle'
     assert bs.node.evidence is None, '真读帧无继承标记'
+
+
+def test_observation_feed_carries_screen_name_and_precise_exempt(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """漏斗画面名贯通锁(迭代 2026-09-16-unified-obs-reconcile):主喂入口
+    read_game_state(screen_name=...) 观察侧 sig 带画面名 → 金字段失配行
+    screen 在场(非 None),精确豁免键 (画面, gold, 写端前缀) 可命中。
+    screen_name 缺省 None 形态 = 现状测试不变(sig.screen=None 仅通配可豁免)。"""
+    from sr_od.application.currency_war.kernel import (
+        cw_mismatch_policy as _policy,
+    )
+    from sr_od.application.currency_war.obs import cw_observation
+
+    _patch_clean_readers(monkeypatch)   # 金真读桩 = 20
+
+    def _sess_with_logic_gold() -> tuple[SimpleNamespace, object]:
+        sess_ = SimpleNamespace(last_streak=0, active_strategies=[])
+        bs_ = board_state_of(sess_)
+        bs_.write_logic(bs_.gold, 17, produced_by='TestSigWriter',
+                        evidence='free_refresh@p1-r4', sig=_lsig())
+        return sess_, bs_
+
+    rows: list[dict] = []
+    set_defect_sink(rows.append)
+    try:
+        sess, _bs = _sess_with_logic_gold()
+        cw_observation.read_game_state(_feed_ctx(sess), None,
+                                       phase='prep_clean',
+                                       screen_name='货币战争-备战')
+    finally:
+        set_defect_sink(None)
+        consume_defect_sink()
+    gold_rows = [r for r in rows if r['field'] == 'gold']
+    assert len(gold_rows) == 1, '逻辑金 17 vs 真读 20 = 恰一失配行'
+    assert gold_rows[0]['screen'] == '货币战争-备战', \
+        '漏斗观察侧 sig.screen 贯通到失配行(精确键前提)'
+    assert gold_rows[0]['actor'] == 'cw_observation'
+    assert gold_rows[0]['logic_evidence'] == 'free_refresh@p1-r4'
+
+    # 精确豁免键命中:同画面同字段同写端前缀 → exempt 行
+    monkeypatch.setattr(_policy, 'EXEMPT_REGISTRY', {
+        ('货币战争-备战', 'gold'): (_ExemptEntry(
+            screen='货币战争-备战', field='gold',
+            logic_evidence='free_refresh@', reason='测试豁免'),),
+    })
+    rows2: list[dict] = []
+    set_defect_sink(rows2.append)
+    try:
+        sess2, _bs2 = _sess_with_logic_gold()
+        cw_observation.read_game_state(_feed_ctx(sess2), None,
+                                       phase='prep_clean',
+                                       screen_name='货币战争-备战')
+    finally:
+        set_defect_sink(None)
+        consume_defect_sink()
+    gold_rows2 = [r for r in rows2 if r['field'] == 'gold']
+    assert len(gold_rows2) == 1 \
+        and gold_rows2[0]['kind'] == 'exempt_mismatch', \
+        '豁免注册表按画面键命中漏斗失配(键坐标系 = 观察侧 sig.screen)'
 
 
 # (test_consume_defect_sink_drains 已并入上方

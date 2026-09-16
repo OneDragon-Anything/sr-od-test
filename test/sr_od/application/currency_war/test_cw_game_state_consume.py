@@ -262,6 +262,7 @@ def test_merge_projection_direct_write_and_observe_wins() -> None:
         consume_defect_sink()
     assert len(rows2) == 1, '失配留证(kind=observe_vs_logic_mismatch)'
     assert rows2[0]['kind'] == 'observe_vs_logic_mismatch'
+    assert rows2[0]['ts'], '缺陷行补 ts(迭代 2026-09-16-unified-obs-reconcile 新行形状)'
     assert bs2.bench.value == real_view \
         and bs2.bench.source == 'observation', \
         '观察赢:实读覆盖逻辑值(推算 bug 不挂账,留证修码)'
