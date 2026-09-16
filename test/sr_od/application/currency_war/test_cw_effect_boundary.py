@@ -174,3 +174,30 @@ def test_segment_swallows_exceptions(monkeypatch) -> None:
     bs = _mk_bs()
     monkeypatch.setattr(type(bs.effects), 'advance_node', _boom)
     tick_effect_boundary(bs, prep_frame=True)   # 不上抛即判据
+
+
+def test_pipeline_0q_then_prep_settles_derived_key() -> None:
+    """landing 3.2 接线判据(F1 错窗防护 + F7 恰一次):0q 过渡帧派生推进
+    (2,1) 不结算(递延),备战帧结算键 = 派生序反解(2-1) 非镜像旧键 (1-9);
+    备战腿同序派生经账本去重,无二次推进/发放。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        SCREEN_PLANE_TRANSITION,
+        SCREEN_PREP_FRAME,
+    )
+    bs = GameState(schema_version=BS_SCHEMA_VERSION)
+    bs.observe(bs.gold, 40, sig=_sig())
+    bs.observe(bs.streak, 2, sig=_sig())
+    bs.observe(bs.node, NodeKey(plane=1, round_num=9, kind='boss'), sig=_sig())
+    apply_settlement_cover(bs, hp_after=70, streak_after=2, killed=True, gold=40)
+    # 0q 过渡帧:phase_round = 离场位面读数(1,9),位面过渡腿派生推进 (2,1);
+    # 效果段 prep_frame=False → 只推进不结算
+    bs.observe_screen_context(SCREEN_PLANE_TRANSITION, phase_round=(1, 9), sig=_sig())
+    assert bs.gold.value == 40, '过渡帧不结算(F1 错窗防护)'
+    assert bs.boundary_settled_ord is None, '递延水位不动'
+    # 备战帧:镜像随帧刷新(模拟漏斗序)+ 备战腿派生同序 → 恰一次结算
+    bs.observe(bs.node, NodeKey(plane=2, round_num=1, kind='battle'), sig=_sig())
+    bs.observe_screen_context(SCREEN_PREP_FRAME, phase_round=(2, 1),
+                              top_raw='备战阶段 2-1', sig=_sig())
+    expected = round_start_income(2, 1, 'battle', 40, 2)
+    assert bs.gold.value == 40 + expected.total, '派生键结算(非镜像旧键 1-9)'
+    assert bs.boundary_settled_ord == 10, '恰一次(同序派生去重)'
