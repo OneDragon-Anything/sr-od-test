@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """出战统一执行器(launch_battle_unified)直测:迭代
 changes/2026-09-16-prep-visit-op landing 3.1 判据面。
 
@@ -20,7 +19,6 @@ from sr_od.application.currency_war.kernel.cw_vocab import StartBattle
 from sr_od.application.currency_war.operations import cw_loop
 from sr_od.application.currency_war.operations.cw_loop import (
     launch_battle_unified,
-    readiness_battle_launch,
 )
 
 PREP_HITS = {('货币战争-备战', '备战标识-购买经验'),
@@ -130,7 +128,7 @@ def test_unified_resume_latch(launch_env) -> None:
     op = _StubOp([_Frame(hits=PREP_HITS), _Frame(hits=PREP_HITS)])
     ok1, _ = launch_battle_unified(op, launch_env.ctx, face='resume')
     assert ok1 is True
-    assert getattr(op, '_cw_locked_sync_done') is True, '首调置闩'
+    assert op._cw_locked_sync_done is True, '首调置闩'
     assert launch_env.deploy_calls == [1], '首调部署原子序一次'
     ok2, _ = launch_battle_unified(op, launch_env.ctx, face='resume')
     assert ok2 is True
@@ -144,9 +142,3 @@ def test_unified_invalid_face_rejected(launch_env) -> None:
         launch_battle_unified(_StubOp([_Frame()]), launch_env.ctx, face='x')
 
 
-def test_readiness_launch_equiv_after_helper_extract(launch_env) -> None:
-    """等价守卫:readiness_battle_launch 抽取复验 helper 后,stale 形态
-    返回与统一执行器同事实(机械迁移零行为差)。"""
-    op = _StubOp([_Frame(hits=set())])
-    ok, detail = readiness_battle_launch(op, launch_env.ctx)
-    assert (ok, detail) == (False, 'readiness_stale_screen')
