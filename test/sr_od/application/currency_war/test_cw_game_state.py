@@ -758,20 +758,21 @@ def test_observation_feed_carries_screen_name_and_precise_exempt(
 
 
 # ============================================================ §5.1 载体归一
-# session.effect_inventory → GameState.effects 单例
+# 效果账本单实例 = GameState.effects;session 无独立字段(兼容读口已撤)
 
 
 def test_level_up_and_battle_end_hooks_write_unified_ledger() -> None:
-    """升级标记(prep_actions 既有)与结算(§5.1 挂点清单第六挂点)两挂点
-    经载体归一后写 GameState 正本:session.effect_inventory 事件与
-    bs.effects 事件计数同源(经属性写透)。"""
+    """升级标记(prep_actions)与结算(battle_wait)两挂点直写 GameState
+    正本:board_state_of(sess).effects 落单一实例,session 上无旁路字段。"""
     sess = StrategySession()
-    sess.effect_inventory.on_level_up()
+    board_state_of(sess).effects.on_level_up()
     assert board_state_of(sess).effects.event_count('_event_level_up') == 1, \
-        '归一后写点落在单一实例(经属性写透)'
-    sess.effect_inventory.on_battle_end()
+        '挂点写点落在单一实例'
+    board_state_of(sess).effects.on_battle_end()
     assert board_state_of(sess).effects.event_count('_event_battle_end') == 1, \
-        '归一后写点落在单一实例(经属性写透)'
+        '挂点写点落在单一实例'
+    assert not hasattr(sess, 'effect_inventory'), \
+        'session 兼容读口已撤,禁残留旁路字段'
 
 
 # ============================================================ §5.1 挂点机制
