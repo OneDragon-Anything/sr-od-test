@@ -15,8 +15,8 @@
 锁依据 = ExecBooks.deploy_miss_pending 字段注释(单动作窗/清除点/
 安灯零改动)+ consume_deploy_miss_mark docstring(命中/陈旧闩两形态 +
 miss 连续计数语义)+ DeployMoveOp.execute 拖后验证置位端语义 +
-DEPLOY_MISS_REDISPATCH_LIMIT 注(部署 miss 刹车,三审应修补丁②:
-连续同键 miss 触顶 round_fail 交上层/单次假阳不满/成功与陈旧闩清零)。
+DEPLOY_MISS_REDISPATCH_LIMIT 注(部署 miss 刹车,出处=改动三审
+2026-09-18:连续同键 miss 触顶 round_fail 交上层/单次假阳不满/成功与陈旧闩清零)。
 改锁先重推语义:本锁钉的是「闩窗跳写、无闩照写、陈旧闩不吞、闩不做
 失配吸收、miss 连续计数触顶停」五向,禁为保绿机械跟绿。
 """
@@ -345,7 +345,8 @@ def test_region_changed_px_threshold_and_failsafe():
 
 
 # ============================================================ 部署 miss 刹车
-# (三审应修补丁②:miss 申报闩只防失真投影,重发无预算——拖拽被系统性
+# (出处=改动三审 2026-09-18「部署 miss 刹车」:miss 申报闩只防失真投影,
+#  重发无预算——拖拽被系统性
 #  吞时「黑板仍见单位 → 策略重发 → miss」无限循环且不进外环 op-fail 计数
 #  网(op 恒返回成功),旧态仅系统哨兵兜底。修 = 消费点同键连续计数,触
 #  DEPLOY_MISS_REDISPATCH_LIMIT 由决策循环 round_fail 交上层。)

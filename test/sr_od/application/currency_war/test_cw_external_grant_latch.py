@@ -1,4 +1,5 @@
-"""外部授予置闩幂等化 + 闩窗口上界回归锁(三审应修补丁①/存疑③收口)。
+"""外部授予置闩幂等化 + 闩窗口上界回归锁(出处=改动三审 2026-09-18
+「置闩幂等化」「闩窗口上界」收口)。
 
 病理:置闩挂点原形 ``+=`` 累加且先于确认点击——确认点击落空(overlay
 未关)时 op 机械交回、下一轮重入重走决策再选同卡,同卡二次累加使
@@ -12,10 +13,11 @@ pending 虚高,放宽 ``_absorb_external_grant`` 的「差额 ≤ 待吸收数�
 静默吞真 bug。
 
 锁依据 = ExecBooks.external_grant_latched_cards / external_grant_equal_
-obs 字段注释 + latch_external_grants docstring(幂等契约)+ GameState.
-_tick_external_grant_window docstring(计数粒度/销闩联动)。改锁先重
-推语义:本锁钉的是「同卡重入不叠加/未申报卡零动作/达限销闩留证/
-吸收复位计数」,禁为保绿机械跟绿。
+obs 字段注释 + latch_external_grants docstring(幂等契约 + 「一局至多
+一次授予」前提防线)+ GameState._tick_external_grant_window docstring
+(计数粒度/销闩联动)。改锁先重推语义:本锁钉的是「同卡重入不叠加/
+未申报卡零动作/达限销闩留证/吸收复位计数/第二卡置闩前提防线」,禁为
+保绿机械跟绿。
 """
 from __future__ import annotations
 
@@ -71,26 +73,33 @@ def _seed_gs() -> tuple[object, object]:
 
 def test_latch_same_card_reentry_no_double_count():
     """重入不叠加主锁:同卡第二次置闩 = (0, 0),pending 保持一次定额
-    (确认点击落空重入形态不再放宽吸收闸);不同卡各自累加不受影响。"""
+    (确认点击落空重入形态不再放宽吸收闸);不同卡各自累加不受影响。
+    定额期望从申报表现算(``_policy`` 两表现算,卡文改版 → 表更新 →
+    期望自动跟随,行为与表偏离才红)。"""
     session, gs = _seed_gs()
+    bench_n = _policy.EXTERNAL_BENCH_GRANTS['武装支援']
+    equip_n = _policy.EXTERNAL_EQUIP_GRANTS['武装支援']
 
     n1 = latch_external_grants(gs, '武装支援', actor='T')
 
-    assert n1 == (2, 1), '武装支援 = bench+2/equips+1(申报表定额)'
-    assert gs.exec_books.external_bench_grant_pending == 2
-    assert gs.exec_books.external_equip_grant_pending == 1
+    assert n1 == (bench_n, equip_n), '武装支援定额 = 申报表现算'
+    assert gs.exec_books.external_bench_grant_pending == bench_n
+    assert gs.exec_books.external_equip_grant_pending == equip_n
 
     n2 = latch_external_grants(gs, '武装支援', actor='T')
 
     assert n2 == (0, 0), '同卡重入 = 零置入'
-    assert gs.exec_books.external_bench_grant_pending == 2, \
-        '重入不叠加(bench 保持定额,不累加成 4)'
-    assert gs.exec_books.external_equip_grant_pending == 1
+    assert gs.exec_books.external_bench_grant_pending == bench_n, \
+        '重入不叠加(bench 保持定额,不累加翻倍)'
+    assert gs.exec_books.external_equip_grant_pending == equip_n
 
+    jin_bench_n = _policy.EXTERNAL_BENCH_GRANTS['人才引进']
     n3 = latch_external_grants(gs, '人才引进', actor='T')
 
-    assert n3 == (1, 0), '不同卡各自累加不受幂等登记影响'
-    assert gs.exec_books.external_bench_grant_pending == 3
+    assert n3 == (jin_bench_n,
+                  _policy.EXTERNAL_EQUIP_GRANTS.get('人才引进', 0)), \
+        '不同卡各自累加不受幂等登记影响'
+    assert gs.exec_books.external_bench_grant_pending == bench_n + jin_bench_n
 
 
 def test_latch_unregistered_card_is_noop():
@@ -103,6 +112,35 @@ def test_latch_unregistered_card_is_noop():
     assert gs.exec_books.external_bench_grant_pending == 0
     assert gs.exec_books.external_equip_grant_pending == 0
     assert not gs.exec_books.external_grant_latched_cards, '零动作不登记'
+
+
+def test_latch_second_card_trips_single_grant_premise_guard(monkeypatch):
+    """「一局至多一次授予」前提防线锁:第二张带授予卡置闩时落
+    ``external_grant_multi_card`` 台账行 + 告警(窗口销联动清零不区分
+    来源卡,前提破除必须响亮,禁静默误销后置卡 pending);置闩行为本身
+    不阻断,两卡 pending 照常并存累加。同卡重入不触发(幂等早退在前)。"""
+    fired: list[dict] = []
+    monkeypatch.setattr(_policy, '_ANDON_HOOK', fired.append)
+    session, gs = _seed_gs()
+    latch_external_grants(gs, '武装支援', actor='T')
+
+    rows: list[dict] = []
+    set_defect_sink(rows.append)
+    try:
+        latch_external_grants(gs, '人才引进', actor='T')
+    finally:
+        set_defect_sink(None)
+        consume_defect_sink()
+
+    assert [r['kind'] for r in rows] == ['external_grant_multi_card'], \
+        '第二卡置闩落前提防线台账行'
+    assert '人才引进' in rows[0]['actual'], '行携带后置卡身份'
+    assert '武装支援' in rows[0]['actual'], '行携带先置卡身份'
+    assert fired == [], '前提防线非真失配,安灯零触发'
+    assert gs.exec_books.external_bench_grant_pending == (
+        _policy.EXTERNAL_BENCH_GRANTS['武装支援']
+        + _policy.EXTERNAL_BENCH_GRANTS['人才引进']), \
+        '前提防线不阻断置闩,两卡 bench 定额并存累加'
 
 
 # ============================================================ 窗口上界:等值观察达限销闩

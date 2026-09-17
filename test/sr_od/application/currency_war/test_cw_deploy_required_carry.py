@@ -20,7 +20,10 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.kernel.cw_comps import get_comp
+from sr_od.application.currency_war.kernel.cw_comps import (
+    COMP_LIBRARY,
+    get_comp,
+)
 from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     SwapPlanContext,
     required_swap_arm_pending,
@@ -95,7 +98,7 @@ def _ctx(*, board: list[str], bench: list[str], cap: int,
     required 缺省按「bench 有希儿 ∧ 板上无」派生,可显式覆写)。"""
     return SwapPlanContext(
         target_factions=frozenset({'持续伤害', '量子同频', '贝洛伯格'}),
-        target_cores=frozenset({c for c in (*board, *bench)}),
+        target_cores=frozenset((*board, *bench)),
         fw_carry=frozenset(),
         locked_factions=frozenset(),
         protect_names=frozenset(),
@@ -199,3 +202,25 @@ def test_swap_arm_never_opens_protect_extension() -> None:
     ctx.cap = 5
     ctx.board_full = True
     assert swap_sell_exclusion_reason('万敌', ctx) == 'target_keep'
+
+
+# ============================================================ 换入臂前提:现役单 required 成员
+
+def test_swap_arm_premise_single_required_member() -> None:
+    """换入臂前提锁(现役单 required 成员):假想面板把 required_names
+    全体按「已换入」计(``select_swap_plan`` 检验处),而臂一次只卖一个
+    victim、换入一个必需件——该计法仅当 required 成员数 ≤1 时无白卖面
+    (≥2 成员且多个不在板时检验通过 ≠ 实际成型,卖一换一仍缺腿)。
+    ``required_deployed`` 字段契约允许多成员(``cw_comps.Comp``),
+    生产来源全量 = 静态注册表 ``COMP_LIBRARY`` 逐 comp + pair 物化
+    ``pair_target_comp``,本锁逐一断言单成员前提;任一来源出现多成员
+    形态 → 本锁红 = 提示先重审假想面板计法(改按「换入后仍缺数」折算)
+    再上多成员 comp,禁为保绿直接放行。
+    """
+    multi = [c.name for c in COMP_LIBRARY
+             if len(c.required_deployed) > 1]
+    assert not multi, \
+        f'多 required 成员 comp 已注册,换入臂假想面板计法前提破: {multi}'
+    pair = _pair_comp()
+    assert pair is not None and len(pair.required_deployed) <= 1, \
+        'pair 物化 required 多成员形态激活,同上重审假想面板计法'
