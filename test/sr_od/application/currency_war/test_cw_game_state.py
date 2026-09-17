@@ -752,7 +752,7 @@ def test_observation_feed_carries_screen_name_and_precise_exempt(
 # 策略器状态归位(原独立批次文件按主题文件纪律归并入本文件;断言体零语义
 # 改动)。锁面 = §8.7 批次三现存件:§5.1 effect_inventory 挂点机制(登记/
 # 节点 tick 与 advance/计数 bump/到期尾款返回面)+ §3.2.19 跳过递减/
-# §8.7 Snapshot 消费切换(mandate_v1 内部改读)/§5.1 账本载体归一(挂点
+# §5.1 账本载体归一(挂点
 # 写点落在 GameState.effects 单例)。断言全部按设计语义写,与上方批次一/
 # 消费批锁面不重复。
 
