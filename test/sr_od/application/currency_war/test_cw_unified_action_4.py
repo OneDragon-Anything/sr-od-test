@@ -50,6 +50,9 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     LevelUpShop,
     PickBoxCard,
     PickEncounter,
+    PickEquip,
+    PickExpertInvite,
+    PickFortune,
     PickInvest,
     PickMegastar,
     PickPartner,
@@ -102,14 +105,16 @@ _LOGIC_SIG = ChannelSig(family='logic_action', actor='cw-t216-test',
 
 # 终态契约动作类型的注册豁免集(终态契约 landing §3.5 锁规格:白名单
 # 成员要么有注册行、要么在豁免集——无 op 行例外申报):
-# - PickInvest/PickStarTome/PickWishTrial/PickBoxCard(handler 自管消费链,
-#   投资双相/星典/祈愿/武装箱确认链不经注册表);
+# - PickInvest/PickStarTome/PickWishTrial/PickBoxCard + 契约扩员三口
+#   PickFortune/PickExpertInvite/PickEquip(普查迁移批 2;handler 自管
+#   消费链,确认链/直点不经注册表,同豁免类);
 # - 三刷新动作(handler 自管点击链;attack4 M6 裁定 (a):与
 #   RefreshInvestCards 同型豁免);
 # - HoldFrame(分支拦截型,等待帧非动作)= 永久豁免,无 op 行。
 # (Pick 五子类已随终态切换批换键名入表,不在豁免集——锁全覆盖。)
 _TERMINAL_CONTRACT_REGISTRY_EXEMPT = (
     PickInvest, PickStarTome, PickWishTrial, PickBoxCard,
+    PickFortune, PickExpertInvite, PickEquip,
     RefreshNodeOptions, RefreshSupply, RefreshInvestCards, HoldFrame,
 )
 
