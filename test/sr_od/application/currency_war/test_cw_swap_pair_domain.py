@@ -7,7 +7,9 @@
   产物;装配单一源 = ``assemble_swap_plan_inputs``)——配方对锁帧
   fenced 离线件经资格族(守恒门/star 守卫/素材守卫)可卖,此前恒
   ``fenced_arm_closed``,板满帧无合法 victim(探针实证:pair 局
-  plan_empty 全帧);未对锁帧语义照旧。玩法口径 = user_playstyle [20]
+  plan_empty 全帧);未对锁帧语义照旧。伴随收紧面(显式申报):对锁
+  帧 off-target 非围栏板件由基座臂自由卖收窄为资格族(1★ 限卖等)。
+  玩法口径 = user_playstyle [20]
   (配方驱动板面)/[13](凑齐优先)。
 - **配方完成件让位通道**:双轨对锁期 fp<1 ∧ 板满 ∧ bench 存在
   「入板即成型」件(``_completion_swap_ins``,✗→✓ 严格优,折法单一源 =
@@ -116,7 +118,7 @@ def test_completion_member_yields_target_seat() -> None:
     黑天鹅入板 → DOT2 → fp=1.0(完成件)。花火/娜塔莎离场(量2 或贝2 有
     另一腿承住)+黑天鹅入板 → 判据满 → 让位;卡芙卡离场 → DOT 归零破腿
     → 照旧保。旧语义下必需件臂只辖 required(希儿在板 = 臂关),完成件
-    压席无解形态(sim 实证主桶)。victim 序 = 让渡序(贡献并列 0
+    压席无解形态(sim 实证主桶)。victim 序 = 让渡序(贡献并列 1
     → 扫描序,花火在前);卖后板面 = DOT2∧贝2∧希儿在板,成型。
     """
     ctx = _ctx(board=[_KAFKA, _XIER, _HUAHUO, _NATASHA],
