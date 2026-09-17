@@ -116,8 +116,7 @@ def test_prep_consumer_rejects_illegal_return_f3_fail(
     class _IllegalPrepStrategy:
         """桩策略:备战决策返回非法形状(字符串;非 None 非 CwAction)。"""
 
-        def decide_prep_screen(self, session: StrategySession,
-                               config: object) -> str:
+        def decide_prep_screen(self) -> str:
             return '备战动作'
 
     match = CurrencyWarMatch(_IllegalPrepStrategy(), StrategySession())
