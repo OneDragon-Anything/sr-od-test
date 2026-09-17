@@ -101,9 +101,13 @@ def test_route_clear_actor_registered_and_clear_uses_action_type_guard():
     assert PickEncounter(idx=0).idx == 0 and PickSupply(idx=1).idx == 1
 
 
-def test_terminal_contract_schema_and_match_shape():
+def test_terminal_contract_schema_and_match_shape(monkeypatch):
     """schema 断言(landing §3.1 判据:8 新域键 + encounter/supply bump +
     node_screen_refresh 域 +1)+ Match 前置字段断言(additive 形态)。"""
+    from sr_od.application.currency_war.kernel import cw_strategy_session
+    # 本测试零策略语义:中性化状态附着(全量下他测注册的工厂会摸 None.session)
+    monkeypatch.setattr(cw_strategy_session, 'ensure_strategy_state_attached',
+                        lambda session: None)
     from sr_od.application.currency_war.kernel.cw_game_state import (
         DEFAULT_GS_SCHEMA,
     )
