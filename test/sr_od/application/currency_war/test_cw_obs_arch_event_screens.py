@@ -86,8 +86,7 @@ def _make_encounter(test_context, monkeypatch, *, in_screen: bool,
     )
 
     session = _make_session()
-    strategy = SimpleNamespace(decide_encounter=lambda opts, st, sess, cfg,
-                               refresh_used=False: pick)
+    strategy = SimpleNamespace(decide_encounter=lambda opts: pick)
     match = SimpleNamespace(strategy=strategy, session=session)
     # 终态契约 §B(T-4):match 桩挂载容器(gs 持有引用直用)。
     from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
@@ -243,7 +242,7 @@ def test_megastar_redispatch_no_reclick_and_gate_reset(
     match = SimpleNamespace(
         session=session,
         strategy=SimpleNamespace(
-            decide_megastar=lambda opts, state, sess, cfg: SimpleNamespace(
+            decide_megastar=lambda opts: SimpleNamespace(
                 idx=0, reason='stub')))
     from sr_od.application.currency_war.kernel.cw_game_state import game_state_of as _gso_match
     match.gs = _gso_match(match.session)
@@ -337,9 +336,9 @@ def test_encounter_refresh_semantics(test_context, monkeypatch) -> None:
     _decide_calls: list[tuple[list, bool]] = []
     _orig_decide = match.strategy.decide_encounter
 
-    def _counting(opts_, st, sess, cfg, refresh_used=False):
-        _decide_calls.append((list(opts_), refresh_used))
-        return _orig_decide(opts_, st, sess, cfg, refresh_used=refresh_used)
+    def _counting(opts_):
+        _decide_calls.append((list(opts_), None))
+        return _orig_decide(opts_)
 
     match.strategy.decide_encounter = _counting
     _run_node(test_context, op, op.handle)
@@ -349,9 +348,11 @@ def test_encounter_refresh_semantics(test_context, monkeypatch) -> None:
         f'{gs.encounter_refresh_used.value}')
     assert gs.encounter_refresh_used.evidence == 'refresh_click', (
         f'发射证据逐位一致:{gs.encounter_refresh_used.evidence!r}')
-    assert len(_decide_calls) == 2 and _decide_calls[1][1] is True, (
-        f'刷后无条件重读+自然重决策(恰两次决策,重决策带 refresh_used=True):'
+    assert len(_decide_calls) == 2, (
+        f'刷后无条件重读+自然重决策(恰两次决策):'
         f'{_decide_calls!r}')
+    # (终态契约 §2.2:refresh_used 布尔位退役——刷新建议 = RefreshNodeOptions
+    #  动作,已用证据 = 容器计数,上方断言承载。)
     # ② 本局已用(容器计数在位)→ 不发射不计数
     op2, _m2, s2 = _make_encounter(
         test_context, monkeypatch, in_screen=True, options=opts,

@@ -383,7 +383,7 @@ def test_pick_box_decision_fail_closed():
     assert bp.CwScreenBoxPick.SCREEN_NAME == '货币战争-备战-武装箱选择'
     op = bp.CwScreenBoxPick.__new__(bp.CwScreenBoxPick)
     strategy = SimpleNamespace(
-        decide_box_card=lambda names, gs, session, config: 9)
+        decide_box_card=lambda names: SimpleNamespace(idx=9))
     # 终态契约 §B(T-4):桩挂载 gs(决策输入 = 容器持有引用)。
     from sr_od.application.currency_war.kernel.cw_game_state import (
         game_state_of as _gso_2a,

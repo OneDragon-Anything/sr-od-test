@@ -93,8 +93,7 @@ def test_supply_chosen_written_on_confirm_pick(test_context, monkeypatch) -> Non
     session = StrategySession()
     match = SimpleNamespace(
         session=session,
-        strategy=SimpleNamespace(decide_supply=lambda opts, state, sess, cfg,
-                                 refresh_used: SimpleNamespace(
+        strategy=SimpleNamespace(decide_supply=lambda opts: SimpleNamespace(
                                      idx=0, refresh=False, reason='test')))
     from sr_od.application.currency_war.kernel.cw_game_state import game_state_of as _gso_match
     match.gs = _gso_match(match.session)
@@ -124,8 +123,7 @@ def test_supply_chosen_written_on_confirm_pick(test_context, monkeypatch) -> Non
     session2 = StrategySession()
     match2 = SimpleNamespace(
         session=session2,
-        strategy=SimpleNamespace(decide_supply=lambda opts, state, sess, cfg,
-                                 refresh_used: SimpleNamespace(
+        strategy=SimpleNamespace(decide_supply=lambda opts: SimpleNamespace(
                                      idx=0, refresh=True, reason='test')))
     from sr_od.application.currency_war.kernel.cw_game_state import game_state_of as _gso_match2
     match2.gs = _gso_match2(match2.session)
@@ -163,7 +161,7 @@ def test_supply_refresh_emission_counts_container(
     match = SimpleNamespace(
         session=session,
         strategy=SimpleNamespace(
-            decide_supply=lambda opts, state, sess, cfg, refresh_used:
+            decide_supply=lambda opts:
                 SimpleNamespace(idx=0, refresh=True, reason='test')))
     from sr_od.application.currency_war.kernel.cw_game_state import game_state_of as _gso_match
     match.gs = _gso_match(match.session)
