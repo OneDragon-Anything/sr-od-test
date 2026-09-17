@@ -26,7 +26,7 @@ import pytest
 
 from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war.kernel.cw_events import (
-    PICK_ACTION_TYPES,
+    EVENT_PICK_TYPES,
     EncounterPick,
     MegastarPick,
     PartnerPick,
@@ -123,7 +123,7 @@ def test_registry_covers_unified_vocab_and_pick_types():
     终态契约扩展(landing §3.1):白名单新成员要么有注册行、要么在
     豁免集;豁免成员反向断言确无注册行(防误注册,误挂 op = 确认链
     字段错位暗雷)。"""
-    for cls in CW_ACTION_TYPES + PICK_ACTION_TYPES:
+    for cls in CW_ACTION_TYPES + EVENT_PICK_TYPES:
         if cls in _TERMINAL_CONTRACT_REGISTRY_EXEMPT:
             with pytest.raises(AssertionError):
                 action_op_class_for_type(cls)
