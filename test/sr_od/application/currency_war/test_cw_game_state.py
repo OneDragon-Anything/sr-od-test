@@ -37,6 +37,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
     BenchSlot,
     BenchView,
+    ChannelSig,
     GameState,
     NodeKey,
     Unit,
@@ -1017,7 +1018,9 @@ def test_synthesis_shop_empty_keeps_payload_in_recognition_domain() -> None:
 
 #: §2.1 五镜像字段(批次二 feed 中继点;恢复局新 session 停在空默认的面)。
 _MIRROR_FIELDS = ('active_strategies', 'active_env', 'plane_bosses',
-                  'enemy_affixes', 'selected_difficulty')
+                  'enemy_affixes')
+# (selected_difficulty 已随终态契约 §B 退出中继镜像:写入端 = 入口链漏斗
+#  直写 gs.write_logic,证据注记不同。)
 
 
 # ============================================================ §2.1 relay 空值闸
@@ -1117,7 +1120,11 @@ def test_restore_session_empty_refused_then_late_truth_lands(
     sess.active_env = '昼之半神概念股'
     sess.briefing_bosses = ['首领甲', None, None]
     sess.briefing_affixes = ['正当防卫']
-    sess.selected_difficulty = 'A8'
+    # (selected_difficulty 已随终态契约 §B 改入口链直写 gs,不经中继——
+    #  该字段断言随写入端迁移归入口链测试。)
+    gs.write_logic(gs.selected_difficulty, 'A8', produced_by='test',
+                   sig=ChannelSig(family='logic_action', actor='CwLoop',
+                                  screen='', mode='compute'))
     cw_observation.read_game_state(ctx, None, phase='prep_clean')
 
     assert gs.active_strategies.value == ['白银投资']
