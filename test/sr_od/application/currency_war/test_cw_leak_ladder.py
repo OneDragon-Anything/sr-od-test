@@ -208,7 +208,8 @@ class TestL7AllInCategoryFilter:
     def _allin_session(self) -> SimpleNamespace:
         s = SimpleNamespace()
         s.node_type_current = 'boss'
-        s.plane_node_table = [object()] * 7   # P2 真长 7(语料实证)
+        from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
+        game_state_of(s).node_books.plane_node_table = [object()] * 7   # P2 真长 7(语料实证;§A′)
         return s
 
     def test_l7_domain_predicate_p21(self):

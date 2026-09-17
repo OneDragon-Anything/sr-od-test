@@ -266,7 +266,8 @@ class TestR2InterestFloor:
         st = _state(gold, level=6)
         st.bench = bench
         sess = _session(comp)
-        sess.plane_lengths_seen = [9, 5, 7]
+        from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
+        game_state_of(sess).node_books.plane_lengths_seen = [9, 5, 7]   # 终态契约 §A′
         return comp, st, sess
 
     def test_cap_resolved_parameterizes_floor(self):

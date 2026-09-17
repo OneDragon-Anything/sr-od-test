@@ -207,7 +207,10 @@ class TestLockGenObservationKeys:
                   'boss-deadzone')
 
     def _sess(self) -> SimpleNamespace:
-        return SimpleNamespace(cw4_counters={}, plane_node_table=[1] * 7)
+        from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
+        _s = SimpleNamespace(cw4_counters={})
+        game_state_of(_s).node_books.plane_node_table = [1] * 7   # 终态契约 §A′
+        return _s
 
     def _flow(self):
         from sr_od.application.currency_war.strategies.impl.flow import (

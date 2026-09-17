@@ -111,7 +111,8 @@ def cw4_session(comp=None, *, plane_lengths=None,
     if line_state:
         state_of(s).cw4_line_state = proof.LineState()
     if plane_lengths is not None:
-        s.plane_lengths_seen = list(plane_lengths)
+        from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
+        game_state_of(s).node_books.plane_lengths_seen = list(plane_lengths)   # 终态契约 §A′
     return s
 
 
