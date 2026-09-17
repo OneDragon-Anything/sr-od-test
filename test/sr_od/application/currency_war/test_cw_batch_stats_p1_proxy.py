@@ -1,9 +1,12 @@
-"""CW 批统计 ④ 终局阵容完成率的 p1_pair 代理键锁面。
+"""CW 批统计 ④ 终局阵容完成率的 p1_pair 代理键锁面 + 凑齐判定轮末
+快照现算锁面。
 
 出处 = skills/sr-od-currency-war-dev/scripts/cw_batch_stats.py ``game_metrics``
 ④ 分支(模块 docstring「P1 配方对代理键」节,口径单一源);语义依据 =
 ADR-0357(P1 配方锁局 locked_comp 恒空)+ kernel/cw_intention.p1_pair
-字段契约(配方锁活跃 ⟺ p1_pair 非空,P2+ 恒空)。
+字段契约(配方锁活跃 ⟺ p1_pair 非空,P2+ 恒空)。凑齐判定口径单一源 =
+kernel/cw_launch_admission.readiness_form_ok_from_snapshot(轮末快照
+现算,镜像回退;动机 = 2026-09-15 批 4/300 镜像时点低估实证)。
 
 锁的语义(现状):skill 脚本对真实对局档案的 p1_pair 代理——P1 配方
 锁局的档案行 locked_comp 结构性为空,④ 靠同行 p1_pair 非空识别「配方
@@ -106,3 +109,55 @@ class TestCompDoneP1Proxy:
         m = _gs.game_metrics(games['r1'])
         assert m['comp_done'] == 1
         assert m['comp_proxy'] is True
+
+    def test_game_metrics_prefers_round_end_snapshot_over_stale_mirror(self):
+        """凑齐判定口径 = 行内 state 轮末快照现算优先,镜像回退(口径
+        单一源 = 模块 docstring ②节;kernel 判据单一源 =
+        cw_launch_admission.readiness_form_ok_from_snapshot)。动机 =
+        2026-09-15 批 4/300 低估实证:决策行 form_ok 是策略器镜像写端
+        商店帧时点读数,轮内升级补位达标局恒 False——轮末快照现算
+        翻正;反向快照未物化压制镜像 True。锁两件事:
+        1. 轮末快照可算时覆盖镜像(④/② 同源走 _row_form_ok);
+        2. 快照缺输入的行回退镜像读数(旧行/档案行零漂移,既有矩阵
+           测试即回退腿)。"""
+        pair = ('仙舟', '列车同行')
+        snap = _materialized_snapshot(pair)
+        # 翻正腿:镜像 False(stale),轮末板面已物化 → 判真
+        row_ok = _row(p1_pair=pair, form_ok=False)
+        row_ok['state_board_factions'] = snap['board_factions']
+        row_ok['state_deployed'] = snap['deployed']
+        m_ok = _gs.game_metrics(_game([row_ok]))
+        assert m_ok['exit_form_ok'] is True
+        assert m_ok['comp_done'] == 1
+        assert m_ok['comp_proxy'] is True
+        # 压制腿:镜像 True(stale),轮末板面未物化 → 判假
+        row_ng = _row(p1_pair=pair, form_ok=True)
+        row_ng['state_board_factions'] = {}
+        row_ng['state_deployed'] = []
+        m_ng = _gs.game_metrics(_game([row_ng]))
+        assert m_ng['exit_form_ok'] is False
+        assert m_ng['comp_done'] == 0
+
+    def test_game_metrics_falls_back_to_mirror_without_snapshot(self):
+        """回退腿显式锁:行缺轮末快照两键(旧批/档案形状)→ 判定 =
+        form_ok 镜像读数,与既有口径逐位等价(禁静默改历史读数)。"""
+        pair = ('仙舟', '列车同行')
+        m = _gs.game_metrics(_game(
+            [_row(p1_pair=pair, form_ok=True)]))
+        assert m['exit_form_ok'] is True
+        assert m['comp_done'] == 1
+
+
+def _materialized_snapshot(pair: tuple) -> dict:
+    """按注册表档位现造「已物化」轮末快照(档位消费 kernel 单一源,
+    测试不手写 tier 值——registry 演进测试自动跟随)。"""
+    from sr_od.application.currency_war.kernel.cw_intention import (
+        pair_target_comp,
+    )
+    comp = pair_target_comp(tuple(pair))
+    board = {f: t for f, t in comp.form_tiers.items() if t > 0}
+    for f, t in getattr(comp, 'or_legs', None) or []:
+        board[f] = max(board.get(f, 0), t)
+    deployed = [{'char_id': n}
+                for n in getattr(comp, 'required_deployed', None) or ()]
+    return {'board_factions': board, 'deployed': deployed}
