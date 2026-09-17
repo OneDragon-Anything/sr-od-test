@@ -1,11 +1,14 @@
-"""观察层对账仲裁批:star 回退采新(终态契约 §A)+ tracked 槽号守卫。
+"""观察层对账仲裁批:星级抖动门(槽位锚定+两帧一致)+ tracked 槽号守卫。
 
-锁 1 语义变更(用户裁定 2026-09-17 + 2026-09-16):star 回退防抖/帧态门
-(ADR-0420)/银狼升费豁免退役——回退即采新,失败可见;留证停机钩子与
-star_regression 采样登记已随「星回退处置归观察对账」裁定整删(2026-09-16),
-本文件只锁采新行为本身;实机失准走识别优化批。
+锁 1 语义变更(T-35 识别优化批,取代终态契约 §A「回退即采新」临时语义):
+run_20260915_054718 §5/§8 候选2 实锤「回退即采新」让同名多星单元的单帧
+星读抖动直进 tracked 主账(3★ 合成线整局被污染,episode ×3 全部「连续
+2 帧」形态恰好吃掉旧 N=2 确认门)。现行口径 = 槽位锚定 + 两帧一致才采新:
+单帧差保旧写账 + 抖动台账行(surface='star');升/降同门、银狼升费形态无
+豁免(门按锚判定与名无关);合成特效窗内星读不可信(冻结,不计两帧);
+锚上身份变换(换人/落新单元)星级随身份直采。
 
-锁 2(tracked 槽号守卫)不受本契约影响,原样保留:
+锁 2(tracked 槽号守卫)不受本批影响,原样保留:
 - 实机缺陷台账 bench_slot_unhealthy 四局(slots=[2,2,3]/[…9,9],
   reseed 健康门 L0/L1 显影);摘除腿按下标置 None(pad 态契约不破坏)+
   写点健康显影 + reconcile 写回门过共享健康谓词(bench_slots_healthy
@@ -18,6 +21,7 @@ from types import SimpleNamespace
 import numpy as np
 
 import sr_od.application.currency_war.kernel.cw_observe as cw_observe
+import sr_od.application.currency_war.kernel.cw_reconcile as cw_reconcile
 from sr_od.application.currency_war import prep_actions as pa
 from sr_od.application.currency_war.kernel.cw_exec_state import (
     BENCH_CAPACITY,
@@ -82,47 +86,150 @@ def _tracked_sig(session) -> list:
             if b is not None]
 
 
+def _deployed_sig(session) -> list:
+    return [(b.char_id, b.position_pref, b.star) for b in
+            (game_state_of(session).tracked_books.deployed or [])
+            if b is not None]
+
+
 def _bc(slot: int, name: str, star: int) -> BenchChar:
     return BenchChar(slot=slot, char_id=name, star=star)
 
 
-# ===== 锁 1:star 回退采新(终态契约 §A:防抖/帧态门/银狼豁免/停机钩子均退役)=====
+# ===== 锁 1:星级抖动门(槽位锚定 + 两帧一致才采新)=====
 
 
-def test_star_downgrade_adopts_new_immediately(monkeypatch):
-    """回退即采新(防抖退役):2★ 读成 1★ → tracked 直采 1★(失败可见,
-    合成动画窗误读直进板面账)。"""
+def test_star_single_frame_jitter_held(monkeypatch):
+    """单帧抖动不写账:3★@槽1 单帧读 1★ → tracked 保 3★ + surface='star'
+    抖动台账行;下帧读回与账一致 → 候选作废,无新增台账行(常态无噪声)。"""
+    rows = _spy_conflicts(monkeypatch)
     session = StrategySession()
     game_state_of(session).tracked_books.bench = bench_from_compact(
-        [_bc(1, '不死途', 2)])
+        [_bc(1, '不死途', 3)])
+
     reconcile_tracking(session, [_bc(1, '不死途', 1)], [], source='test')
-    assert _tracked_sig(session) == [('不死途', 1)]
+
+    assert _tracked_sig(session) == [('不死途', 3)]   # 单帧抖动保旧
+    star_rows = [r for r in rows if r[0] == 'star']
+    assert len(star_rows) == 1 and '保旧' in star_rows[0][3]
+
+    reconcile_tracking(session, [_bc(1, '不死途', 3)], [], source='test')
+
+    assert _tracked_sig(session) == [('不死途', 3)]
+    assert len([r for r in rows if r[0] == 'star']) == 1   # 读账一致零噪声
 
 
-def test_star_downgrade_silver_wolf_no_longer_exempt(monkeypatch):
-    """银狼升费豁免退役:银狼 2★→1★ 同样采新。"""
+def test_star_change_needs_two_frame_consistency(monkeypatch):
+    """两帧一致才采新(升/降同门):3★→1★ 连续两帧才落账;1★→2★ 升星
+    读数同样须两帧(合成后实读延迟一帧,防单帧抖动毒化 3★ 合成判断)。"""
+    _spy_conflicts(monkeypatch)
+    session = StrategySession()
+    game_state_of(session).tracked_books.bench = bench_from_compact(
+        [_bc(1, '不死途', 3)])
+
+    reconcile_tracking(session, [_bc(1, '不死途', 1)], [], source='test')
+    assert _tracked_sig(session) == [('不死途', 3)]   # 首帧差:保旧
+    reconcile_tracking(session, [_bc(1, '不死途', 1)], [], source='test')
+    assert _tracked_sig(session) == [('不死途', 1)]   # 次帧同值:采新
+
+    reconcile_tracking(session, [_bc(1, '不死途', 2)], [], source='test')
+    assert _tracked_sig(session) == [('不死途', 1)]   # 升星首帧:保旧
+    reconcile_tracking(session, [_bc(1, '不死途', 2)], [], source='test')
+    assert _tracked_sig(session) == [('不死途', 2)]   # 升星次帧:采新
+
+
+def test_same_name_multi_star_slot_anchored_no_cross_star(monkeypatch):
+    """同名多星并存槽位锚定:单槽抖动不串邻槽;真换位(整表重排)两帧
+    按新槽位落账且全程不串星;换人(锚上身份变)星级随身份直采不辖门。"""
+    _spy_conflicts(monkeypatch)
+    session = StrategySession()
+    game_state_of(session).tracked_books.bench = bench_from_compact(
+        [_bc(4, '不死途', 1), _bc(6, '不死途', 2), _bc(7, '不死途', 3)])
+    # 帧1:槽7 单帧读 1★(抖动),槽4/6 照读 → 逐槽保旧,邻槽不串
+    reconcile_tracking(session, [_bc(4, '不死途', 1), _bc(6, '不死途', 2),
+                                 _bc(7, '不死途', 1)], [], source='test')
+    assert _tracked_sig(session) == [('不死途', 1), ('不死途', 2),
+                                     ('不死途', 3)]
+    # 帧2:槽7 同抖动复现(两帧一致采新 1★);槽4 升 2★ 单帧读保旧
+    reconcile_tracking(session, [_bc(4, '不死途', 2), _bc(6, '不死途', 2),
+                                 _bc(7, '不死途', 1)], [], source='test')
+    assert _tracked_sig(session) == [('不死途', 1), ('不死途', 2),
+                                     ('不死途', 1)]
+    # 换位:槽4↔槽7 星级互换(1★/3★ 两帧一致后落新槽位,槽6 不串)
+    reconcile_tracking(session, [_bc(4, '不死途', 3), _bc(6, '不死途', 2),
+                                 _bc(7, '不死途', 1)], [], source='test')
+    assert _tracked_sig(session) == [('不死途', 1), ('不死途', 2),
+                                     ('不死途', 1)]   # 换位首帧:保旧
+    reconcile_tracking(session, [_bc(4, '不死途', 3), _bc(6, '不死途', 2),
+                                 _bc(7, '不死途', 1)], [], source='test')
+    assert _tracked_sig(session) == [('不死途', 3), ('不死途', 2),
+                                     ('不死途', 1)]   # 次帧:新槽位落账
+    # 换人:槽6 落新单元(异名)→ 直采,不受门前槽6 候选态影响
+    reconcile_tracking(session, [_bc(4, '不死途', 3), _bc(6, '花火', 1),
+                                 _bc(7, '不死途', 1)], [], source='test')
+    assert _tracked_sig(session) == [('不死途', 3), ('花火', 1),
+                                     ('不死途', 1)]
+
+
+def test_star_gate_name_agnostic_silver_wolf(monkeypatch):
+    """门按锚判定与名无关(银狼升费形态无豁免):单帧保旧,两帧采新。"""
+    _spy_conflicts(monkeypatch)
     session = StrategySession()
     game_state_of(session).tracked_books.bench = bench_from_compact(
         [_bc(1, '银狼', 2)])
+
+    reconcile_tracking(session, [_bc(1, '银狼', 1)], [], source='test')
+    assert _tracked_sig(session) == [('银狼', 2)]
     reconcile_tracking(session, [_bc(1, '银狼', 1)], [], source='test')
     assert _tracked_sig(session) == [('银狼', 1)]
 
 
-def test_star_upgrade_still_silent_and_multi_copy_adopted(monkeypatch):
-    """升星/新角色正常采新;同名多副本各按现读采新(旧锚定抬回退役)。"""
+def test_deployed_slot_anchor_two_frame(monkeypatch):
+    """deployed 侧锚 = 槽位表下标→(排, 排内槽号)(ADR-0392):后排槽3
+    单帧 3★→1★ 保旧,两帧一致采新。(种子直构 pad 态槽位表——
+    deployed_from_compact 按首空槽落位,不保 slot 信息位。)"""
+    _spy_conflicts(monkeypatch)
+    session = StrategySession()
+    _dep: list = [None] * 10
+    _dep[6] = BenchChar(slot=3, char_id='不死途', star=3,
+                        position_pref='back')   # 下标 6 = 后排槽 3
+    game_state_of(session).tracked_books.deployed = _dep
+
+    def _read_back3(star: int) -> list[BenchChar]:
+        return [BenchChar(slot=3, char_id='不死途', star=star,
+                          position_pref='back')]
+
+    reconcile_tracking(session, [], _read_back3(1), source='test')
+    assert _deployed_sig(session) == [('不死途', 'back', 3)]   # 首帧:保旧
+    reconcile_tracking(session, [], _read_back3(1), source='test')
+    assert _deployed_sig(session) == [('不死途', 'back', 1)]   # 次帧:采新
+
+
+def test_merge_effect_window_freezes_confirmation(monkeypatch):
+    """合成特效窗冻结(帧态维,与两帧时间维正交):窗内星差保旧且不登记
+    候选(动画帧不计两帧)——窗后干净帧须再连续两帧才采新。"""
+    _spy_conflicts(monkeypatch)
+    monkeypatch.setattr(cw_reconcile, '_IS_MERGE_EFFECT_FRAME',
+                        lambda screen: True)
     session = StrategySession()
     game_state_of(session).tracked_books.bench = bench_from_compact(
-        [_bc(4, '不死途', 1), _bc(6, '不死途', 2), _bc(7, '不死途', 3)])
-    # 3★@槽7 读成 1★(读抖):直采,无锚定抬回
-    reconcile_tracking(session, [_bc(4, '不死途', 1), _bc(6, '不死途', 2),
-                                 _bc(7, '不死途', 1)], [], source='test')
-    assert _tracked_sig(session) == [('不死途', 1), ('不死途', 2),
-                                     ('不死途', 1)]
-    # 升星对照:1★→2★ 正常写回
-    reconcile_tracking(session, [_bc(4, '不死途', 2), _bc(6, '不死途', 2),
-                                 _bc(7, '不死途', 1)], [], source='test')
-    assert _tracked_sig(session) == [('不死途', 2), ('不死途', 2),
-                                     ('不死途', 1)]
+        [_bc(1, '不死途', 3)])
+    _scr = np.zeros((4, 4), dtype='uint8')   # 非 None 帧才进特效窗判别
+
+    reconcile_tracking(session, [_bc(1, '不死途', 1)], [], screen=_scr,
+                       source='test')
+    reconcile_tracking(session, [_bc(1, '不死途', 1)], [], screen=_scr,
+                       source='test')
+    assert _tracked_sig(session) == [('不死途', 3)]   # 窗内两帧不确认
+
+    monkeypatch.setattr(cw_reconcile, '_IS_MERGE_EFFECT_FRAME',
+                        lambda screen: False)
+    reconcile_tracking(session, [_bc(1, '不死途', 1)], [], screen=_scr,
+                       source='test')
+    assert _tracked_sig(session) == [('不死途', 3)]   # 干净帧1:候选登记
+    reconcile_tracking(session, [_bc(1, '不死途', 1)], [], screen=_scr,
+                       source='test')
+    assert _tracked_sig(session) == [('不死途', 1)]   # 干净帧2:采新
 
 
 # ===== 锁 2:tracked 槽号守卫(写点置 None + 显影 + 仲裁门)=====
