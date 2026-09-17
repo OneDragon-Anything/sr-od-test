@@ -1,22 +1,26 @@
-"""deploy 判据必需件语义锁(T-17 修复批;行为出处 = 判据必要条件支配论证)。
+"""deploy 判据必需件语义锁(行为出处 = 判据必要条件支配论证)。
 
 被锁行为(语义出处,非实现巧合):
 - **必需件首桶序**(``select_deployments`` ``required_names``):目标
-  comp 的 ``required_deployed`` 成员(现役唯一实例 = 希儿系 pair 的
-  ``pair_target_comp`` required=(希儿,);判据合取支 = 希儿在板)在 cap
-  竞争(空位 < 候选数)时先于其他 target 成员上板——缺它该体系永远无法
-  成型,普通成员可替换而必需件不可,[31]②「目标件最高优先」的必需件
-  特化。实证 = sim n1000 s91700 基线 s91746/s92124 双失败局(希儿全程
-  bench,席位被普通成员按旧序占走)。
+  comp 的 ``required_deployed`` 成员(现役两实例 = 希儿系 pair 的
+  ``pair_target_comp`` 与静态套「希儿量子」(P2+ 锁线路径),单一源 =
+  ``SEELE_CARRY_CHAR``;判据合取支 = 希儿在板)在 cap 竞争(空位 < 候选
+  数)时先于其他 target 成员上板——缺它该体系永远无法成型,普通成员
+  可替换而必需件不可,[31]②「目标件最高优先」的必需件特化。实证 =
+  sim n1000 s91700 基线两失败局(希儿全程 bench,席位被普通成员按旧序
+  占走;种子号引用沿判读惯例)。
 - **板满换入臂**(``required_swap_arm_pending`` ×
   ``swap_sell_exclusion_reason`` × select_swap_plan 卖后上序):
-  板满 ∧ 必需件滞留 bench 时,离场不破判据(AND 腿全保持 ∧ OR 腿
-  至少一条保持)的 target 板件让位可卖,换入必需件;破腿件照旧
-  target_keep;必需件已在板 = 臂关。证据 = 20260915 sim 找问题报告
-  问题 2(s77408 dep 9/9 bench 8/8 含希儿,整轮无 swap-in)。
+  板满 ∧ 必需件滞留 bench 时,假想面板(victim 离场 ∧ 必需件按已换入
+  计)下成型判据仍满的 target 板件让位可卖,换入必需件;破判据件照旧
+  target_keep;必需件已在板 = 臂关。成型折法单一源 = ``form_progress``
+  (含 OR 组承接同键档规则——静态套 form_tiers 全被 OR 承接的形态由此
+  正确,禁消费位自写 AND/OR 内联)。证据 = 2026-09-15 sim 找问题批
+  (s77408 dep 9/9 bench 8/8 含希儿,整轮无 swap-in 形态)。
 """
 from __future__ import annotations
 
+from sr_od.application.currency_war.kernel.cw_comps import get_comp
 from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     SwapPlanContext,
     required_swap_arm_pending,
@@ -31,11 +35,12 @@ from sr_od.application.currency_war.kernel.cw_intention import (
 
 # 真实注册表角色(锁语义不锁巧合;registry 真值):
 # 桑博 = 贝+持续伤害 / 娜塔莎 = 贝 / 花火 = 量子 / 卡芙卡 = 持续伤害 /
-# 希儿 = 贝+量(required carry)。
+# 缇宝 = 量子 / 希儿 = 贝+量(required carry)。
 _SANGBO = '桑博'
 _NATASHA = '娜塔莎'
 _HUAHUO = '花火'
 _KAFKA = '卡芙卡'
+_TIBAO = '缇宝'
 _XIER = '希儿'
 
 
@@ -52,6 +57,12 @@ _PAIR = ('持续伤害', '希儿系')
 
 def _pair_comp():
     return pair_target_comp(_PAIR)
+
+
+def _static_comp():
+    """静态套「希儿量子」(P2+ 锁线路径;form_tiers 全被 OR 承接的
+    ADR-0621 形态——换入臂折法单一源的本形态验证面)。"""
+    return get_comp('希儿量子')
 
 
 # ============================================================ V1 首桶序
@@ -76,10 +87,12 @@ def test_required_carry_seats_first_under_cap_competition() -> None:
     assert [bench[i].char_id for i in up_old] == [_SANGBO]
 
 
-# ============================================================ V2 换入臂
+# ============================================================ 换入臂
 
-def _ctx(*, board: list[str], bench: list[str], cap: int) -> SwapPlanContext:
-    """直构 SwapPlanContext(1★ 单元格;target 键 = pair 真值)。"""
+def _ctx(*, board: list[str], bench: list[str], cap: int,
+         comp=None, required=frozenset()) -> SwapPlanContext:
+    """直构 SwapPlanContext(1★ 单元格;target 键 = pair 真值;
+    required 缺省按「bench 有希儿 ∧ 板上无」派生,可显式覆写)。"""
     return SwapPlanContext(
         target_factions=frozenset({'持续伤害', '量子同频', '贝洛伯格'}),
         target_cores=frozenset({c for c in (*board, *bench)}),
@@ -101,28 +114,47 @@ def _ctx(*, board: list[str], bench: list[str], cap: int) -> SwapPlanContext:
         locked=False,
         board_full=len(board) >= cap,
         recipe_floor_lock_exempt=False,
-        target_comp=_pair_comp(),
+        target_comp=comp if comp is not None else _pair_comp(),
         evolution_swap_armed=False,
         transition_domain=False,
-        required_names=frozenset({_XIER})
-        if _XIER in bench and _XIER not in board else frozenset(),
+        required_names=frozenset(required)
+        if required else (
+            frozenset({_XIER})
+            if _XIER in bench and _XIER not in board else frozenset()),
     )
 
 
 def test_swap_arm_sellable_only_when_completion_holds() -> None:
-    """换入臂资格分野:离场保判据的可卖;破腿的照旧 target_keep。
+    """换入臂资格分野:假想面板(离场+必需件按已换入计)下判据满的可卖;
+    破判据的照旧 target_keep。
 
     板 = 桑博(贝+DOT)+卡芙卡(DOT)+娜塔莎(贝)+花火(量),pair
-    判据 = DOT2 ∧ (量2∨贝2) ∧ 希儿在板:花火离场 → DOT2 ✓∧贝2 ✓ =
-    判据保持 → 让位可卖(1★ 单元格资格族余守卫全过);桑博离场 →
-    DOT1 = AND 破;娜塔莎离场 → 贝1∧量1 = OR 全破——均 target_keep。
+    判据 = DOT2 ∧ (量2∨贝2) ∧ 希儿在板:花火/娜塔莎离场 → DOT2 ✓ 且
+    (量2:花火+希儿 / 贝2)判据满 → 让位可卖(1★ 单元格资格族余守卫全
+    过);桑博离场 → DOT1 = AND 破;卡芙卡离场 → DOT1 同破——均
+    target_keep。
     """
     ctx = _ctx(board=[_SANGBO, _KAFKA, _NATASHA, _HUAHUO],
                bench=[_XIER], cap=4)
     assert required_swap_arm_pending(ctx)
     assert swap_sell_exclusion_reason(_HUAHUO, ctx) == ''
+    assert swap_sell_exclusion_reason(_NATASHA, ctx) == ''
     assert swap_sell_exclusion_reason(_SANGBO, ctx) == 'target_keep'
-    assert swap_sell_exclusion_reason(_NATASHA, ctx) == 'target_keep'
+    assert swap_sell_exclusion_reason(_KAFKA, ctx) == 'target_keep'
+
+
+def test_swap_arm_holds_via_or_leg_on_static_comp() -> None:
+    """静态套「希儿量子」(OR 承接形态):量4+贝2 板卖一量件判据仍满。
+
+    判据 = 希儿在板 ∧ 量2∨贝2(form_tiers 全被 OR 承接,AND 账为空):
+    花火离场 → 量3 ≥2 OR 腿仍在 → 可卖。若按裸 AND 量4 计账会误判破腿
+    (臂过度关闭)——本锁钉住折法单一源(form_progress)的承接规则。
+    """
+    comp = _static_comp()
+    ctx = _ctx(board=[_HUAHUO, _TIBAO, _NATASHA, _SANGBO],
+               bench=[_XIER], cap=4, comp=comp)
+    assert required_swap_arm_pending(ctx)
+    assert swap_sell_exclusion_reason(_HUAHUO, ctx) == ''
 
 
 def test_swap_arm_closed_when_carry_already_on_board() -> None:
@@ -133,16 +165,37 @@ def test_swap_arm_closed_when_carry_already_on_board() -> None:
 
 
 def test_swap_plan_seats_required_carry_after_sell() -> None:
-    """卖后上序正形:卖冗余件后空位落必需件(计划 = sell 花火,up 希儿)。
+    """卖后上序正形:卖冗余件后空位落必需件(sell = 扫描序首个可让位件,
+    up = 希儿)。
 
-    席位竞争面:bench 序普通 target 成员在前时,必需件仍须先落
-    (V1 首桶序 × V2 卖后上序的组合语义;旧序会把席位给普通成员 =
-    白卖形态)。
+    席位竞争面:bench 序普通 target 成员(缇宝,不在板,无同名去重拦截)
+    在前时,必需件仍须先落——旧序会把席位给缇宝 = 卖冗余件白卖形态,
+    本锁行使「首桶序 × 卖后上序」的组合语义。victim 序 = 板槽位扫描序
+    (域外键),首个资格通过者 = 娜塔莎(桑博/卡芙卡破 DOT 腿被拒)。
     """
     ctx = _ctx(board=[_SANGBO, _KAFKA, _NATASHA, _HUAHUO],
-               bench=[_NATASHA, _XIER], cap=4)
+               bench=[_TIBAO, _XIER], cap=4)
     plan = select_swap_plan(ctx)
     assert plan.nonempty
-    assert plan.sell_names == [_HUAHUO]
+    assert plan.sell_names == [_NATASHA]
     up_names = {ctx.bench[i].char_id for i in plan.up_bench}
     assert up_names == {_XIER}
+
+
+def test_swap_arm_never_opens_protect_extension() -> None:
+    """保护域扩展集(shared ∪ 替班,protect_names − target_cores)不因
+    换入臂解除(P41② + 替班=不卖字段契约):armed 帧照旧 target_keep。
+
+    构造:target_cores 不含该件(保护域扩展 = 板上「万敌」占位形态),
+    腿保持与否无关紧要——护栏先于臂判定。
+    """
+    comp = _pair_comp()
+    ctx = _ctx(board=[_SANGBO, _KAFKA, _NATASHA, _HUAHUO],
+               bench=[_XIER], cap=4, comp=comp)
+    ctx.protect_names = frozenset({'万敌'})
+    ctx.deployed = list(ctx.deployed) + [BenchChar(slot=5, char_id='万敌',
+                                                   star=1,
+                                                   position_pref='back')]
+    ctx.cap = 5
+    ctx.board_full = True
+    assert swap_sell_exclusion_reason('万敌', ctx) == 'target_keep'
