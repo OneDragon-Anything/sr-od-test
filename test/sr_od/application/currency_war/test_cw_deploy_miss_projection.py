@@ -13,25 +13,32 @@
 ``consume_deploy_miss_mark`` 单一源),重试 = 决策循环自然重派。
 
 锁依据 = ExecBooks.deploy_miss_pending 字段注释(单动作窗/清除点/
-安灯零改动)+ consume_deploy_miss_mark docstring(命中/陈旧闩两形态)+
-DeployMoveOp.execute 拖后验证置位端语义。改锁先重推语义:本锁钉的是
-「闩窗跳写、无闩照写、陈旧闩不吞、闩不做失配吸收」四向,禁为保绿
-机械跟绿。
+安灯零改动)+ consume_deploy_miss_mark docstring(命中/陈旧闩两形态 +
+miss 连续计数语义)+ DeployMoveOp.execute 拖后验证置位端语义 +
+DEPLOY_MISS_REDISPATCH_LIMIT 注(部署 miss 刹车,三审应修补丁②:
+连续同键 miss 触顶 round_fail 交上层/单次假阳不满/成功与陈旧闩清零)。
+改锁先重推语义:本锁钉的是「闩窗跳写、无闩照写、陈旧闩不吞、闩不做
+失配吸收、miss 连续计数触顶停」五向,禁为保绿机械跟绿。
 """
 from __future__ import annotations
 
 import numpy as np
 
 from one_dragon.base.geometry.point import Point
+from one_dragon.base.operation.operation import (
+    OperationRoundResultEnum,
+)
 from sr_od.application.currency_war.kernel import cw_mismatch_policy as _policy
 from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
 from sr_od.application.currency_war.kernel.cw_game_state import (
+    DEPLOY_MISS_REDISPATCH_LIMIT,
     ChannelSig,
     DeployMissMark,
     bench_slots_of,
     bench_view_of_slots,
     consume_defect_sink,
     consume_deploy_miss_mark,
+    deploy_miss_brake_status,
     deployed_slots_of,
     game_state_of,
     register_sig_actors,
@@ -40,7 +47,10 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
     PrepObservation,
 )
-from sr_od.application.currency_war.kernel.cw_vocab import DeployMove
+from sr_od.application.currency_war.kernel.cw_vocab import (
+    DeployMove,
+    SellBench,
+)
 from sr_od.application.currency_war.operations.cw_op.cw_deploy_move_action import (
     DEPLOY_LAND_DIFF_THRESHOLD,
     DeployMoveOp,
@@ -332,3 +342,109 @@ def test_region_changed_px_threshold_and_failsafe():
     assert _region_changed_px(frame, below, Point(300, 400)) is False
     assert _region_changed_px(frame[:, :, :2], frame, Point(300, 400)) is True, \
         '形状不一致保守放行'
+
+
+# ============================================================ 部署 miss 刹车
+# (三审应修补丁②:miss 申报闩只防失真投影,重发无预算——拖拽被系统性
+#  吞时「黑板仍见单位 → 策略重发 → miss」无限循环且不进外环 op-fail 计数
+#  网(op 恒返回成功),旧态仅系统哨兵兜底。修 = 消费点同键连续计数,触
+#  DEPLOY_MISS_REDISPATCH_LIMIT 由决策循环 round_fail 交上层。)
+
+
+def _miss_once(gs, action) -> None:
+    """一次完整 miss 事件(置位端申报闩 + 消费点计数;成对出现)。"""
+    gs.exec_books.deploy_miss_pending = DeployMissMark(
+        bench_idx=action.bench_idx, to_row=action.to_row, char_id='甲')
+    assert consume_deploy_miss_mark(gs, action, sig=_SIG) is True
+
+
+def test_deploy_miss_streak_reaches_limit_brakes():
+    """连续 miss 触顶锁:同单位同目标槽连续 miss 计数同键累加,达
+    ``DEPLOY_MISS_REDISPATCH_LIMIT`` → 判定非空(status 携「超上限」可
+    判读);限内恒 None。"""
+    session, gs = _mk_gs_with_bench_unit()
+    for i in range(1, DEPLOY_MISS_REDISPATCH_LIMIT):
+        _miss_once(gs, _ACTION)
+        assert gs.exec_books.deploy_miss_streak_n == i
+        assert deploy_miss_brake_status(gs) is None, \
+            f'第 {i} 次 miss 未达限不触顶'
+    _miss_once(gs, _ACTION)
+    assert gs.exec_books.deploy_miss_streak_n == DEPLOY_MISS_REDISPATCH_LIMIT
+    status = deploy_miss_brake_status(gs)
+    assert status is not None and '超上限' in status, '触顶给出可判读状态'
+
+
+def test_single_miss_never_brakes_and_success_resets():
+    """单次假阳不触顶 + 正常重试成功清零锁:像素判据偶发假阳(单次
+    miss)计数 1 后,成功部署(闩不在 = 消费返回 False)计数归零;再
+    miss 从 1 重新起算,单次假阳永不满。"""
+    session, gs = _mk_gs_with_bench_unit()
+    _miss_once(gs, _ACTION)
+    assert gs.exec_books.deploy_miss_streak_n == 1
+    assert deploy_miss_brake_status(gs) is None, '单次假阳不触顶'
+
+    # 正常重试成功:拖拽落地无申报闩 → 消费 False + 计数归零
+    assert consume_deploy_miss_mark(gs, _ACTION, sig=_SIG) is False
+    assert gs.exec_books.deploy_miss_streak_n == 0
+    assert gs.exec_books.deploy_miss_streak_key is None
+    assert deploy_miss_brake_status(gs) is None
+
+    # 清零后再 miss = 新情节从 1 起算
+    _miss_once(gs, _ACTION)
+    assert gs.exec_books.deploy_miss_streak_n == 1
+    assert deploy_miss_brake_status(gs) is None
+
+
+def test_miss_streak_new_key_restarts_at_one():
+    """异键 miss = 粘滞对象已换,新情节从 1 起算(不继承旧键计数;
+    语义先例 = 外环 fail 网异键归一)。"""
+    session, gs = _mk_gs_with_bench_unit()
+    _miss_once(gs, _ACTION)
+    _miss_once(gs, _ACTION)
+    assert gs.exec_books.deploy_miss_streak_n == 2
+
+    _act_b = DeployMove(bench_idx=2, to_row='back', faction='')
+    _miss_once(gs, _act_b)
+
+    assert gs.exec_books.deploy_miss_streak_key == (2, 'back')
+    assert gs.exec_books.deploy_miss_streak_n == 1, '异键从 1 起算'
+    assert deploy_miss_brake_status(gs) is None
+
+
+def test_stale_mark_resets_streak():
+    """陈旧闩(动作不匹配)= 情节已换,计数归零——旧键 miss 不毒化新
+    情节(与外环 fail 网「跨情节必有 ok 穿插」同向的键级等价)。"""
+    session, gs = _mk_gs_with_bench_unit()
+    _miss_once(gs, _ACTION)
+    _miss_once(gs, _ACTION)
+    assert gs.exec_books.deploy_miss_streak_n == 2
+
+    gs.exec_books.deploy_miss_pending = DeployMissMark(
+        bench_idx=5, to_row='back', char_id='乙')   # 另一动作的陈旧闩
+    assert consume_deploy_miss_mark(gs, _ACTION, sig=_SIG) is False
+
+    assert gs.exec_books.deploy_miss_streak_n == 0, '陈旧闩弃用即归零'
+    assert gs.exec_books.deploy_miss_streak_key is None
+    assert deploy_miss_brake_status(gs) is None
+
+
+def test_brake_round_fails_at_limit():
+    """决策循环刹车接线锁:触顶 → ``_deploy_miss_brake_round`` 返回 FAIL
+    轮(status 携「超上限」交上层);未触顶 / 非 DeployMove = None 零
+    动作(零行为回归面)。"""
+    session, gs = _mk_gs_with_bench_unit()
+    stub = _mk_stub(session)
+    gs.exec_books.deploy_miss_streak_key = (1, 'front')
+    gs.exec_books.deploy_miss_streak_n = DEPLOY_MISS_REDISPATCH_LIMIT
+
+    res = CwScreenPrep._deploy_miss_brake_round(stub, session, _ACTION)
+
+    assert res is not None and res.result == OperationRoundResultEnum.FAIL, \
+        '触顶 = round_fail 交上层'
+    assert '超上限' in (res.status or '')
+
+    gs.exec_books.deploy_miss_streak_n = DEPLOY_MISS_REDISPATCH_LIMIT - 1
+    assert CwScreenPrep._deploy_miss_brake_round(
+        stub, session, _ACTION) is None, '限内零动作'
+    assert CwScreenPrep._deploy_miss_brake_round(
+        stub, session, SellBench(bench_idx=0)) is None, '非 DeployMove 零动作'
