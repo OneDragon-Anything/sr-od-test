@@ -599,14 +599,25 @@ def test_briefing_session_write_semantics_three_fields(test_context,
     session2b.briefing_bosses = ['上一局残留']
     _run_node(test_context, op2b, op2b.handle)
     assert session2b.briefing_bosses is None, 'boss 读空 → 清 None(防假真值)'
-    # ③ 难度仅 None 写
+    # ③ 难度仅 None 写(终态契约 §B:播种随写端迁容器)
     session3 = StrategySession()
-    session3.enemy_difficulty = 3
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        ChannelSig as _cs3,
+    )
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        game_state_of as _gso3,
+    )
+    _gso3(session3).write_logic(
+        _gso3(session3).enemy_difficulty, 3,
+        produced_by='test',
+        sig=_cs3(family='logic_action', actor='CwLoop',
+                 screen='', mode='compute'))
     op3, session3, calls3 = _make_briefing(test_context, monkeypatch,
                                            mark_hit=True, difficulty=5,
                                            session=session3)
     _run_node(test_context, op3, op3.handle)
-    assert calls3['diff_read'] == 0 and session3.enemy_difficulty == 3, (
+    assert calls3['diff_read'] == 0 and _gso3(
+        session3).enemy_difficulty.value == 3, (
         '难度已有值 → 不读不写(仅缺省写)')
 
 
