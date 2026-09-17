@@ -10,6 +10,8 @@ PREP 分派接线 + U24 披露三键并表 + M21 planner 触发正典
 """
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 
 from sr_od.application.currency_war.data.cw_equipment_data import (
@@ -237,6 +239,49 @@ def test_prep_furnace_routes_by_target_kind() -> None:
         '拖角色模式未建模显式拒'
     assert gs.equips.value == [new_name], '拒 = 零写'
     assert FURNACE_CHAR_MODE_PENDING in ret2.observation.disclosures
+
+
+# ================================================ 板面观察基座(T-44)
+
+def test_step_refreshes_board_truth_from_rows() -> None:
+    """步末板面真值观察(观察基座契约):kernel board 改派生视图后,
+    派生挂钩在基座未读(board=None)时跳过——sim 引擎每步末以容器行
+    全量重算真值观察 board,策略器 fp 等消费面才能读到非空读数
+    (回归锚:findiss 批 998 局 board 恒空 → form_ok 全 0)。"""
+    eng = CwSimEngine()
+    frame = eng.reset(7, _CFG)
+    assert frame.gs.board.value is None, 'reset 无行写,板面未读'
+    frame.gs.observe(frame.gs.front_row,
+                     [Unit(char_id='阿格莱雅', star=1)], sig=_SIG)
+    ret = eng.step(StartBattle())
+    assert ret.observation.gs.board.value == {'昼之半神': 1, '能量': 1}
+    from sr_od.application.currency_war.kernel.cw_comps import form_progress
+    comp = SimpleNamespace(form_tiers={'昼之半神': 2, '能量': 1},
+                           or_legs=None, required_deployed=())
+    fp = form_progress(comp, ret.observation.gs)
+    assert 0.0 < fp < 1.0, f'成型度恢复非零读数(fp={fp})'
+
+
+def test_board_covers_obs_channel_row_write_drift() -> None:
+    """obs 通道行写漂移覆盖:装备腿(WearEquip)经 observe 写行,不经
+    kernel write_logic 的 board 派生挂钩——星徽羁绊贡献靠步末真值观察
+    覆盖(实机等值语义 = 面板观察覆盖派生漂移;缺此口 sim 板面将永久
+    缺计装备贡献)。"""
+    eng = CwSimEngine()
+    frame = eng.reset(7, _CFG)
+    gs = frame.gs
+    gs.observe(gs.front_row, [Unit(char_id='阿格莱雅', star=1)], sig=_SIG)
+    gs.observe(gs.equips, ['贝洛伯格星徽'], sig=_SIG)
+    ret = eng.step(StartBattle())
+    while ret.observation is not None \
+            and ret.observation.phase is CwSimPhase.REWARD_BALL:
+        ret = eng.step(PickEvent(option_idx=0))
+    assert gs.board.value == {'昼之半神': 1, '能量': 1}
+    ret2 = eng.step(WearEquip(item_name='贝洛伯格星徽',
+                              char_name='阿格莱雅', row='front', slot=1))
+    assert ret2.outcome is not None and ret2.outcome.applied
+    assert gs.board.value == {'昼之半神': 1, '能量': 1, '贝洛伯格': 1}, \
+        '星徽羁绊贡献入板(obs 通道行写后步末覆盖)'
 
 
 def test_planner_trigger_fires_on_deployed_merge() -> None:
