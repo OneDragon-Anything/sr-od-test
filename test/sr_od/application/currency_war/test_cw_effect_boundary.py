@@ -150,9 +150,12 @@ def test_gold_none_watermark_retries() -> None:
     tick_effect_boundary(gs, prep_frame=True)
     assert gs.boundary_settled_ord is None, '金未读水位必不动'
     gs.observe(gs.gold, 25, sig=_sig())
-    assert gs.exec_books.boundary_gold_pending is False, '真值变化观察消费闩'
+    assert gs.exec_books.boundary_gold_mode is not None, \
+        '真值变化观察吸收但不关 unknown 窗(店开帧收口)'
+    assert gs.exec_books.boundary_gold_truth_seen is True, \
+        '真值变化观察置公式禁发标记(双计防第二重闸)'
     tick_effect_boundary(gs, prep_frame=True)
-    assert gs.boundary_settled_ord is None, '闩已消费,公式结算禁发'
+    assert gs.boundary_settled_ord is None, '窗内已有真值观察,公式结算禁发'
     assert gs.gold.value == 25, '真值已在逻辑,禁公式叠算'
 
 
