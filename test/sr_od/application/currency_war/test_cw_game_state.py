@@ -1130,8 +1130,17 @@ def test_restore_session_empty_refused_then_late_truth_lands(
         produced_by='test',
         sig=ChannelSig(family='logic_action', actor='CwLoop',
                        screen='', mode='compute'))
-    sess.briefing_bosses = ['首领甲', None, None]
-    sess.briefing_affixes = ['正当防卫']
+    # briefing 双字段播种随终态契约 §B 迁容器(write_logic 直写)
+    _gso_t(sess).write_logic(
+        _gso_t(sess).plane_bosses, ['首领甲', None, None],
+        produced_by='test',
+        sig=ChannelSig(family='logic_action', actor='CwLoop',
+                       screen='', mode='compute'))
+    _gso_t(sess).write_logic(
+        _gso_t(sess).enemy_affixes, ['正当防卫'],
+        produced_by='test',
+        sig=ChannelSig(family='logic_action', actor='CwLoop',
+                       screen='', mode='compute'))
     # (selected_difficulty 已随终态契约 §B 改入口链直写 gs,不经中继——
     #  该字段断言随写入端迁移归入口链测试。)
     gs.write_logic(gs.selected_difficulty, 'A8', produced_by='test',
@@ -1147,11 +1156,8 @@ def test_restore_session_empty_refused_then_late_truth_lands(
     for name in _MIRROR_FIELDS:
         fld = getattr(gs, name)
         assert fld.source == 'logic', f'中继形态 logic(§2.1):{name}'
-        if name in ('active_strategies', 'active_env'):
-            # 终态契约 §B:双字段直写容器(无中继注记),write_logic 直连
-            assert fld.evidence is None, f'直写形态(无 session_carrier):{name}'
-        else:
-            assert fld.evidence == 'session_carrier', f'中继注记:{name}'
+        # 终态契约 §B:镜像四字段全改写端直写(无中继注记)
+        assert fld.evidence is None, f'直写形态(无 session_carrier):{name}'
 
 
 # ==================== 容器视图转换/合成口/ShopCard 映射(自 w5_passthrough 归并) ====================

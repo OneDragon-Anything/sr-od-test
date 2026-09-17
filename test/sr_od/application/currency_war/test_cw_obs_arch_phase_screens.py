@@ -570,35 +570,50 @@ def _make_briefing(test_context, monkeypatch: pytest.MonkeyPatch, *,
 def test_briefing_session_write_semantics_three_fields(test_context,
                                                        monkeypatch) -> None:
     """写入流对拍(主门 (b)):简报三字段三种写语义逐字——①词缀幂等守卫
-    辖「读+采」(session 非空 → 跳过读与点采);②boss 恒覆写(不做已存
+    辖「读+采」(容器非空 → 跳过读与点采);②boss 恒覆写(不做已存
     跳过,防跨局残留;读空 → 清 None);③敌人难度仅 None 时写。单驱动
     生产路径(写端住分流前共享段,install 参数化腿已随并存窗收口砍除)。
-    红 = 守卫辖面漂移(如幂等只辖读不辖采)或覆写语义丢失。"""
+    红 = 守卫辖面漂移(如幂等只辖读不辖采)或覆写语义丢失。
+    终态契约 §B:三字段单一源 = 容器,播种随写端迁 gs(write_logic)。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        ChannelSig as _cs_t,
+    )
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        game_state_of as _gso_t,
+    )
+
+    def _seed(session, field, value):
+        _gso_t(session).write_logic(
+            getattr(_gso_t(session), field), value,
+            produced_by='test',
+            sig=_cs_t(family='logic_action', actor='CwLoop',
+                      screen='', mode='compute'))
+
     # ① 词缀幂等守卫辖「读+采」
     session = StrategySession()
-    session.briefing_affixes = ['已有词缀']
+    _seed(session, 'enemy_affixes', ['已有词缀'])
     op, session, calls = _make_briefing(test_context, monkeypatch,
                                         mark_hit=True, affixes=['新词缀'],
                                         bosses=['碎星王虫'], session=session)
     _run_node(test_context, op, op.handle)
     assert calls['affix_read'] == 0 and calls['affix_collect'] == 0, (
-        f'session 已有词缀 → 跳过读与点采(幂等辖「读+采」):{calls!r}')
-    assert session.briefing_affixes == ['已有词缀'], '幂等轮不覆写词缀'
-    assert session.briefing_bosses == ['碎星王虫'], 'boss 幂等豁免(恒覆写)照写'
+        f'容器已有词缀 → 跳过读与点采(幂等辖「读+采」):{calls!r}')
+    assert _gso_t(session).enemy_affixes.value == ['已有词缀'], '幂等轮不覆写词缀'
+    assert _gso_t(session).plane_bosses.value == ['碎星王虫'], 'boss 幂等豁免(恒覆写)照写'
     # ② boss 恒覆写:残留 → 本局真值;读空 → 清 None
     session2 = StrategySession()
-    session2.briefing_bosses = ['上一局残留']
+    _seed(session2, 'plane_bosses', ['上一局残留'])
     op2, session2, _c2 = _make_briefing(test_context, monkeypatch,
                                         mark_hit=True, bosses=['碎星王虫'],
                                         session=session2)
     _run_node(test_context, op2, op2.handle)
-    assert session2.briefing_bosses == ['碎星王虫'], 'boss 恒覆写防跨局残留'
+    assert _gso_t(session2).plane_bosses.value == ['碎星王虫'], 'boss 恒覆写防跨局残留'
     op2b, session2b, _c2b = _make_briefing(test_context, monkeypatch,
                                            mark_hit=True, bosses=[],
                                            session=StrategySession())
-    session2b.briefing_bosses = ['上一局残留']
+    _seed(session2b, 'plane_bosses', ['上一局残留'])
     _run_node(test_context, op2b, op2b.handle)
-    assert session2b.briefing_bosses is None, 'boss 读空 → 清 None(防假真值)'
+    assert _gso_t(session2b).plane_bosses.value is None, 'boss 读空 → 清 None(防假真值)'
     # ③ 难度仅 None 写(终态契约 §B:播种随写端迁容器)
     session3 = StrategySession()
     from sr_od.application.currency_war.kernel.cw_game_state import (
