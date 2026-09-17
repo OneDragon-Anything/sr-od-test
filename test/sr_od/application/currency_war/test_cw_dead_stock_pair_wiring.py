@@ -117,7 +117,9 @@ def _single_card_session(node_kind: str, gold: int,
     from sr_od.application.currency_war.kernel.cw_game_state import (
         game_state_of as _gso,
     )
-    return MandateV1Live(_gso(sess), SimpleNamespace(strategy_seed=None)), sess, SimpleNamespace(ev_arm='full')   # 终态契约:构造注入
+    live = MandateV1Live(_gso(sess), SimpleNamespace(strategy_seed=None))   # 终态契约:构造注入
+    live.state = state_of(sess)   # 状态同源接线:会话播种对象(零参口)
+    return live, sess, SimpleNamespace(ev_arm='full')
 
 
 class TestDominanceArmWiring:
@@ -133,7 +135,7 @@ class TestDominanceArmWiring:
         fuels = _fuel_names(2)
         strategy, sess, config = _single_card_session(
             'prep', _DOM_GOLD, fuels, fuels[0])
-        action = strategy.decide_shop_action(sess, config)
+        action = strategy.decide_shop_action()
         counters = state_of(sess).cw4_counters
         assert counters.get('dominance_dead_stock_pair_blocked') == 1
         assert not (isinstance(action, BuyCard)
@@ -142,7 +144,7 @@ class TestDominanceArmWiring:
         fuels0 = _fuel_names(3)
         strategy0, sess0, config0 = _single_card_session(
             'prep', _DOM_GOLD, fuels0[1:], fuels0[0])
-        action0 = strategy0.decide_shop_action(sess0, config0)
+        action0 = strategy0.decide_shop_action()
         counters0 = state_of(sess0).cw4_counters
         assert isinstance(action0, BuyCard)
         assert action0.reason == 'dominance_buy'
@@ -158,7 +160,7 @@ class TestDominanceArmWiring:
         fuels = _fuel_names(8)
         strategy, sess, config = _single_card_session(
             'prep', _DOM_GOLD, fuels, fuels[0])
-        action = strategy.decide_shop_action(sess, config)
+        action = strategy.decide_shop_action()
         counters = state_of(sess).cw4_counters
         assert counters.get('dominance_band_wait') == 1
         assert not (isinstance(action, BuyCard)
@@ -178,7 +180,7 @@ class TestPressArmWiring:
         fuels = _fuel_names(2)
         strategy, sess, config = _single_card_session(
             'reward', _PRESS_GOLD, fuels, fuels[0])
-        action = strategy.decide_shop_action(sess, config)
+        action = strategy.decide_shop_action()
         counters = state_of(sess).cw4_counters
         assert counters.get('press_dead_stock_pair_blocked') == 1
         # 金带外(gold < g*)band 否决键零计数:否则键只辖溢余带帧
@@ -189,7 +191,7 @@ class TestPressArmWiring:
         fuels0 = _fuel_names(3)
         strategy0, sess0, config0 = _single_card_session(
             'reward', _PRESS_GOLD, fuels0[1:], fuels0[0])
-        action0 = strategy0.decide_shop_action(sess0, config0)
+        action0 = strategy0.decide_shop_action()
         counters0 = state_of(sess0).cw4_counters
         assert isinstance(action0, BuyCard)
         assert action0.reason == 'dead_gold_press_buy'

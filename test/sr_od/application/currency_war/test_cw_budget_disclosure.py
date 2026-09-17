@@ -120,7 +120,7 @@ def _run_buy_waves_offline_host(monkeypatch: pytest.MonkeyPatch,
     class _CloseShopStrategy:
         """替身决策源:首动作即 CloseShop 终结(段顶接线段后立即收工)。"""
 
-        def decide_shop_action(self, session, config) -> CloseShop:
+        def decide_shop_action(self) -> CloseShop:
             return CloseShop()
 
     match = CurrencyWarMatch(_CloseShopStrategy(), StrategySession())
@@ -383,8 +383,7 @@ def test_armed_shortcircuit_frame_writes_no_disclosure(
     from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
     action = MandateV1Strategy(
         game_state_of(sess),
-        SimpleNamespace(strategy_seed=None)).decide_prep_screen(
-        sess, SimpleNamespace())   # 终态契约:构造注入
+        SimpleNamespace(strategy_seed=None)).decide_prep_screen()   # 终态契约:构造注入
     assert isinstance(action, CwAction), 'armed 帧应短路产出发射意图动作'
     st = state_of(sess)
     assert st.v3_disclosure_key is None, 'armed 短路帧不得盖披露键戳'

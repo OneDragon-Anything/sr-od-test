@@ -26,7 +26,6 @@ import pytest
 
 from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war.kernel.cw_events import (
-    EVENT_PICK_TYPES,
     EncounterPick,
     MegastarPick,
     PartnerPick,
@@ -101,29 +100,31 @@ _LOGIC_SIG = ChannelSig(family='logic_action', actor='cw-t216-test',
 
 # ===== 1. 注册完备锁(判据:词表全类型覆盖,遍历运行时元组,零源码读取)=====
 
-# 终态契约新增动作类型的注册豁免集(策略器终态契约 landing §3.1 锁规格:
-# 白名单成员要么有注册行、要么在豁免集——无 op 行例外申报):
-# - PickEncounter/PickSupply/PickMegastar/PickPartner/PickPlanner 五子类
-#   待终态切换批换键名入表,入表后移出本集(锁恢复全覆盖);
-# - PickInvest/PickStarTome/PickWishTrial/PickBoxCard(handler 自管消费
-#   链)+ 三刷新动作 + HoldFrame(分支拦截型)= 永久豁免,无 op 行。
+# 终态契约动作类型的注册豁免集(终态契约 landing §3.5 锁规格:白名单
+# 成员要么有注册行、要么在豁免集——无 op 行例外申报):
+# - PickInvest/PickStarTome/PickWishTrial/PickBoxCard(handler 自管消费链,
+#   投资双相/星典/祈愿/武装箱确认链不经注册表);
+# - 三刷新动作(handler 自管点击链;attack4 M6 裁定 (a):与
+#   RefreshInvestCards 同型豁免);
+# - HoldFrame(分支拦截型,等待帧非动作)= 永久豁免,无 op 行。
+# (Pick 五子类已随终态切换批换键名入表,不在豁免集——锁全覆盖。)
 _TERMINAL_CONTRACT_REGISTRY_EXEMPT = (
-    PickEncounter, PickSupply, PickInvest, PickMegastar, PickPartner,
-    PickPlanner, PickStarTome, PickWishTrial, PickBoxCard,
+    PickInvest, PickStarTome, PickWishTrial, PickBoxCard,
     RefreshNodeOptions, RefreshSupply, RefreshInvestCards, HoldFrame,
 )
 
 
 def test_registry_covers_unified_vocab_and_pick_types():
-    """注册完备锁(批4 主判据):统一词表 CW_ACTION_TYPES + cw_events
-    pick 族 PICK_ACTION_TYPES 两运行时元组逐类断言注册表**类级**解析可
-    命中(不构造业务动作实例,不读源码)——未注册 = 锁红;退役 = 删类,
-    元组中不存在即天然不可复活(R1)。
+    """注册完备锁(批4 主判据;终态契约 §2.2 收敛单表):统一词表
+    CW_ACTION_TYPES 单表逐类断言注册表**类级**解析可命中(不构造业务
+    动作实例,不读源码)——未注册 = 锁红;退役 = 删类,元组中不存在即
+    天然不可复活(R1)。kernel EVENT_PICK_TYPES = 纯函数返回载体,策略
+    产出词表化后不再进注册表面(§2.2)。
 
-    终态契约扩展(landing §3.1):白名单新成员要么有注册行、要么在
+    终态契约扩展(landing §3.5):白名单新成员要么有注册行、要么在
     豁免集;豁免成员反向断言确无注册行(防误注册,误挂 op = 确认链
     字段错位暗雷)。"""
-    for cls in CW_ACTION_TYPES + EVENT_PICK_TYPES:
+    for cls in CW_ACTION_TYPES:
         if cls in _TERMINAL_CONTRACT_REGISTRY_EXEMPT:
             with pytest.raises(AssertionError):
                 action_op_class_for_type(cls)
@@ -136,14 +137,15 @@ def test_registry_covers_unified_vocab_and_pick_types():
 
 
 def test_pick_rows_resolve_class_and_instance_consistently():
-    """pick 五行收编面:类级解析与实例级工厂解析同 op 类(行序 is-a
-    语义一致;实例级仅本锁构造,注册完备锁本体不构造)。"""
+    """pick 五行收编面(终态契约 §2.2 换键名:策略器产出 = 词表子类型):
+    类级解析与实例级工厂解析同 op 类(行序 is-a 语义一致;实例级仅本锁
+    构造,注册完备锁本体不构造)。"""
     rows = [
-        (EncounterPick, EncounterPickOp),
-        (SupplyPick, SupplyPickOp),
-        (MegastarPick, MegastarPickOp),
-        (PartnerPick, PartnerPickOp),
-        (PlannerPick, PlannerPickOp),
+        (PickEncounter, EncounterPickOp),
+        (PickSupply, SupplyPickOp),
+        (PickMegastar, MegastarPickOp),
+        (PickPartner, PartnerPickOp),
+        (PickPlanner, PlannerPickOp),
     ]
     for cls, expected in rows:
         assert action_op_class_for_type(cls) is expected, cls.__name__

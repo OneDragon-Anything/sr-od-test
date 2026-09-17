@@ -32,8 +32,8 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     Unit,
     apply_prep_action_logic,
     bench_slots_of,
-    game_state_of,
     deployed_slots_of,
+    game_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
     select_sphere_clicks,
@@ -383,8 +383,9 @@ def test_pick_box_decision_fail_closed():
     assert bp.CwScreenBoxPick.SCREEN_NAME == '货币战争-备战-武装箱选择'
     op = bp.CwScreenBoxPick.__new__(bp.CwScreenBoxPick)
     strategy = SimpleNamespace(
-        decide_box_card=lambda names: SimpleNamespace(idx=9))
-    # 终态契约 §B(T-4):桩挂载 gs(决策输入 = 容器持有引用)。
+        decide_box_card=lambda: SimpleNamespace(idx=9))
+    # 终态契约 §2.7(零参 + 写槽):桩挂载 gs(决策输入 = 容器持有引用;
+    # handler 先写 gs.box_card_names 槽再零参调 decide)。
     from sr_od.application.currency_war.kernel.cw_game_state import (
         game_state_of as _gso_2a,
     )

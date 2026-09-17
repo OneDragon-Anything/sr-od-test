@@ -294,8 +294,9 @@ class TestWriteEnd:
         gs.write_logic(gs.shop, ShopPayload(cards=cards, refresh_probs={}),
                        produced_by='cw-t253-test', sig=_SIG)
         state_of(sess).target_comp = COMP_LIBRARY[0]
-        action = MandateV1Live(gs, SimpleNamespace(strategy_seed=None)).decide_shop_action(
-            sess, SimpleNamespace(ev_arm='full'))   # 终态契约:构造注入
+        _live = MandateV1Live(gs, SimpleNamespace(strategy_seed=None))   # 终态契约:构造注入
+        _live.state = state_of(sess)   # 状态同源接线:会话播种对象(零参口)
+        action = _live.decide_shop_action()
         assert isinstance(action, BuyCard), f'帧未发射买入: {action!r}'
         ledger = getattr(state_of(sess), sell_gate.ACQUISITION_LEDGER_ATTR)
         assert ledger.get(action.card.name) == (1, 3), \

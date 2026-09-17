@@ -50,13 +50,16 @@ from test.sr_od.application.currency_war._cw_helpers import (
 
 from sr_od.application.currency_war.kernel.cw_events import (
     EncounterOption,
-    EncounterPick,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     game_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import StrategySession
+from sr_od.application.currency_war.kernel.cw_vocab import (
+    PickEncounter,
+    RefreshNodeOptions,
+)
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     StrategyState,
 )
@@ -70,7 +73,7 @@ def _make_session() -> StrategySession:
 
 def _make_encounter(test_context, monkeypatch, *, in_screen: bool,
                     options: list[EncounterOption],
-                    pick: EncounterPick,
+                    pick: object,
                     cnt: tuple | None = (1, (771, 899)),
                     confirm_success: bool = True,
                     refresh_opts: list[EncounterOption] | None = None):
@@ -86,7 +89,7 @@ def _make_encounter(test_context, monkeypatch, *, in_screen: bool,
     )
 
     session = _make_session()
-    strategy = SimpleNamespace(decide_encounter=lambda opts: pick)
+    strategy = SimpleNamespace(decide_encounter=lambda: pick)
     match = SimpleNamespace(strategy=strategy, session=session)
     # 终态契约 §B(T-4):match 桩挂载容器(gs 持有引用直用)。
     from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
@@ -136,7 +139,9 @@ def _make_megastar(test_context, monkeypatch, *, in_node: bool):
 
     session = _make_session()
     match = SimpleNamespace(session=session)
-    from sr_od.application.currency_war.kernel.cw_game_state import game_state_of as _gso_match
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        game_state_of as _gso_match,
+    )
     match.gs = _gso_match(match.session)
     monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
     op = ms.CwScreenMegastar(test_context)
@@ -168,7 +173,7 @@ def test_encounter_old_path_kept_without_ports(
     opts = [EncounterOption(idx=0, difficulty=1, rewards=['金币×2'])]
     op, _match, session = _make_encounter(
         test_context, monkeypatch, in_screen=True, options=opts,
-        pick=EncounterPick(idx=0, reason='stub'))
+        pick=PickEncounter(idx=0, reason='stub'))
     rs = _run_node(test_context, op, op.handle)
     assert op._lifecycle_trace == [], f'旧路径不得写段迹:{op._lifecycle_trace}'
     assert rs.is_success, f'旧路径确认链轮次结果照回(保形):{rs!r}'
@@ -184,7 +189,7 @@ def test_encounter_observe_gate_fails_off_screen(
     install_dispatch_stub_ports(monkeypatch)
     op, _match, _session = _make_encounter(
         test_context, monkeypatch, in_screen=False, options=[],
-        pick=EncounterPick(idx=0, reason='stub'))
+        pick=PickEncounter(idx=0, reason='stub'))
     rs = _run_node(test_context, op, op.handle)
     assert op._lifecycle_trace[0] == 'observe'
     assert not rs.is_success and '非遭遇节点屏' in (rs.status or ''), (
@@ -242,9 +247,11 @@ def test_megastar_redispatch_no_reclick_and_gate_reset(
     match = SimpleNamespace(
         session=session,
         strategy=SimpleNamespace(
-            decide_megastar=lambda opts: SimpleNamespace(
+            decide_megastar=lambda: SimpleNamespace(
                 idx=0, reason='stub')))
-    from sr_od.application.currency_war.kernel.cw_game_state import game_state_of as _gso_match
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        game_state_of as _gso_match,
+    )
     match.gs = _gso_match(match.session)
     monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
     op = ms.CwScreenMegastar(test_context)
@@ -331,14 +338,14 @@ def test_encounter_refresh_semantics(test_context, monkeypatch) -> None:
     # ① 发射即计数 + 刷后重读重决策(重读 = 原卡面未变形态)
     op, match, session = _make_encounter(
         test_context, monkeypatch, in_screen=True, options=opts,
-        pick=EncounterPick(idx=0, refresh=True, reason='stub'),
+        pick=RefreshNodeOptions(reason='stub'),
         refresh_opts=opts)
     _decide_calls: list[tuple[list, bool]] = []
     _orig_decide = match.strategy.decide_encounter
 
-    def _counting(opts_):
-        _decide_calls.append((list(opts_), None))
-        return _orig_decide(opts_)
+    def _counting():
+        _decide_calls.append((list(opts), None))
+        return _orig_decide()
 
     match.strategy.decide_encounter = _counting
     _run_node(test_context, op, op.handle)
@@ -356,7 +363,7 @@ def test_encounter_refresh_semantics(test_context, monkeypatch) -> None:
     # ② 本局已用(容器计数在位)→ 不发射不计数
     op2, _m2, s2 = _make_encounter(
         test_context, monkeypatch, in_screen=True, options=opts,
-        pick=EncounterPick(idx=0, refresh=True, reason='stub'))
+        pick=RefreshNodeOptions(reason='stub'))
     _gs2 = game_state_of(s2)
     _gs2.write_logic(_gs2.encounter_refresh_used, 1,
                      produced_by='CwScreenEncounter',
@@ -369,7 +376,7 @@ def test_encounter_refresh_semantics(test_context, monkeypatch) -> None:
     # ③ 无剩余次数 → 不发射不计数
     op3, _m3, s3 = _make_encounter(
         test_context, monkeypatch, in_screen=True, options=opts,
-        pick=EncounterPick(idx=0, refresh=True, reason='stub'), cnt=None)
+        pick=RefreshNodeOptions(reason='stub'), cnt=None)
     _run_node(test_context, op3, op3.handle)
     assert game_state_of(s3).encounter_refresh_used.value is None, (
         '无次数 → 不发射不计数')
@@ -387,7 +394,7 @@ def test_encounter_refresh_counts_once_no_double(
     opts = [EncounterOption(idx=0, difficulty=1, rewards=['金币×2'])]
     op, _match, session = _make_encounter(
         test_context, monkeypatch, in_screen=True, options=opts,
-        pick=EncounterPick(idx=0, refresh=True, reason='stub'),
+        pick=RefreshNodeOptions(reason='stub'),
         refresh_opts=opts)
     _run_node(test_context, op, op.handle)
     gs = game_state_of(session)
@@ -411,7 +418,7 @@ def test_encounter_chosen_inline_not_registry_collected(
     install_dispatch_stub_ports(monkeypatch)
     op, _match, session = _make_encounter(
         test_context, monkeypatch, in_screen=True, options=opts,
-        pick=EncounterPick(idx=1, reason='stub'), confirm_success=False)
+        pick=PickEncounter(idx=1, reason='stub'), confirm_success=False)
     rs = _run_node(test_context, op, op.handle)
     assert not rs.is_success and game_state_of(
         session).chosen_encounter.value is None, '验关失败 → chosen 不写'

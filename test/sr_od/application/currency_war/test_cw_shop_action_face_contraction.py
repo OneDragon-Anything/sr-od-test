@@ -127,7 +127,9 @@ def _frame_session(*, bench_units: list[str], deployed_units: list[str],
     from sr_od.application.currency_war.kernel.cw_game_state import (
         game_state_of as _gso,
     )
-    return MandateV1Live(_gso(sess), SimpleNamespace(strategy_seed=None)), sess, SimpleNamespace(ev_arm='full')   # 终态契约:构造注入
+    live = MandateV1Live(_gso(sess), SimpleNamespace(strategy_seed=None))   # 终态契约:构造注入
+    live.state = state_of(sess)   # 状态同源接线:会话播种对象(零参口决策读 self.state)
+    return live, sess, SimpleNamespace(ev_arm='full')
 
 
 # ---- 原六处卖射位的席位/缺金形态帧(发射面退役,形态保留供收缩锁)----
@@ -207,7 +209,7 @@ def test_shop_forms_stay_in_contracted_action_face(case: str):
     买牌/刷新/关店闭集,恒不发射 SellBench/LevelUpShop——任一处卖射/
     升级射复活(策略面回退)即响亮红。"""
     strategy, sess, config = _FORM_FRAMES[case]()
-    action = strategy.decide_shop_action(sess, config)
+    action = strategy.decide_shop_action()
     name = type(action).__name__
     assert name in _SHOP_ACTION_FACE, (
         f'{case} 首动作 {name} 越出商店期动作面闭集 '
@@ -222,7 +224,7 @@ def test_bench_full_close_hands_back_with_defer_state():
     原筹资专锁):缺员+金不足 = CloseShop 交回备战筹资
     (funding_close_defer 分键),零卖射。"""
     strategy, sess, config = _frame_m4_missing_vacate()
-    action = strategy.decide_shop_action(sess, config)
+    action = strategy.decide_shop_action()
     assert type(action).__name__ == 'CloseShop'
     st = state_of(sess)
     assert st.cw4_shop_wanted_pending is not None, \
@@ -231,7 +233,7 @@ def test_bench_full_close_hands_back_with_defer_state():
     assert ct.get('bench_full_buy_abandon', 0) == 1
     # 筹资形态计数腿(并入):同形关店交回,分键计数归属正确
     strategy_f, sess_f, config_f = _frame_funding_support_sell()
-    action_f = strategy_f.decide_shop_action(sess_f, config_f)
+    action_f = strategy_f.decide_shop_action()
     assert type(action_f).__name__ == 'CloseShop'
     assert state_of(sess_f).cw4_counters.get('funding_close_defer', 0) == 1, (
         '筹资形态关店交回,分键 = funding_close_defer(零卖射)')
@@ -244,7 +246,7 @@ def test_vacate_chain_reopen_keeps_shop_face_and_buys():
     → 重开重判,原缺员件在店且被买入。牌面若被重开刷新(跨节点语义
     误用到节点内),缺员件不在店,本锁红。"""
     strategy, sess, config = _frame_m4_missing_vacate()
-    act1 = strategy.decide_shop_action(sess, config)
+    act1 = strategy.decide_shop_action()
     assert type(act1).__name__ == 'CloseShop'
     gs = game_state_of(sess)
     # 备战期腾席:bench 移除一件燃料(逻辑态直写,同容器转移函数通道);
@@ -256,7 +258,7 @@ def test_vacate_chain_reopen_keeps_shop_face_and_buys():
     rest = [s for s in gs.bench.value.slots if s is not kept]
     gs.write_logic(gs.bench, BenchView(slots=rest, capacity=9),
                    produced_by='cw-t271-test', sig=_LOGIC_SIG)
-    act2 = strategy.decide_shop_action(sess, config)
+    act2 = strategy.decide_shop_action()
     assert type(act2).__name__ == 'BuyCard', (
         f'重开后未恢复买入(得 {type(act2).__name__})= 牌面持久被破坏'
         '或腾位链断')

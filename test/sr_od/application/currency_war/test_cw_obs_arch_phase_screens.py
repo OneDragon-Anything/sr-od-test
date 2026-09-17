@@ -83,6 +83,10 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     normalize_invest_name,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import StrategySession
+from sr_od.application.currency_war.kernel.cw_vocab import (
+    PickInvest,
+    RefreshInvestCards,
+)
 
 _FRAME = object()   # 稳定帧哨兵(screenshot 桩产物;读链桩只验传递不断言内容)
 
@@ -162,8 +166,7 @@ def test_reentry_arbitration_flag_gate_combination(test_context,
     book = _FrameBook([object()])
     book.options[id(book.frames[0])] = _opts_of(['赌神·银', '恢复生机',
                                                  '气氛组'])
-    picks = [SimpleNamespace(option_idx=1, refresh=False, refresh_slots=(),
-                             reason='stub')]
+    picks = [PickInvest(idx=1, reason='stub')]
     op_st, _m3, session_st, clicks_st, _dc = _make_strategy(
         test_context, monkeypatch, book, picks)
     op_st._confirm_pending = '白银投资'
@@ -235,8 +238,7 @@ def _make_env(test_context, monkeypatch: pytest.MonkeyPatch, *,
 
     session = StrategySession()
     strategy = SimpleNamespace(
-        decide_invest=lambda kind, names, st, sess, cfg: SimpleNamespace(
-            option_idx=pick_idx, reason='stub'))
+        decide_invest_env=lambda: PickInvest(idx=pick_idx, reason='stub'))
     match = SimpleNamespace(strategy=strategy, session=session)
     from sr_od.application.currency_war.kernel.cw_game_state import game_state_of as _gso_match
     match.gs = _gso_match(match.session)
@@ -331,12 +333,12 @@ def _make_strategy(test_context, monkeypatch: pytest.MonkeyPatch,
     session = StrategySession()
     decide_calls: list[list[str]] = []
 
-    def _decide(kind, names, st, sess, cfg):
-        decide_calls.append(list(names))
-        return picks.pop(0) if picks else SimpleNamespace(
-            option_idx=0, reason='stub-exhausted')
+    def _decide():
+        decide_calls.append(['stub'])   # 零参口后候选自容器槽(handler 写槽)
+        return picks.pop(0) if picks else PickInvest(
+            idx=0, reason='stub-exhausted')
 
-    match = SimpleNamespace(strategy=SimpleNamespace(decide_invest=_decide),
+    match = SimpleNamespace(strategy=SimpleNamespace(decide_invest_strategy=_decide),
                             session=session)
     from sr_od.application.currency_war.kernel.cw_game_state import game_state_of as _gso_match
     match.gs = _gso_match(match.session)
@@ -441,9 +443,8 @@ def test_strategy_refresh_emission_semantics(test_context, monkeypatch,
     book.counts[id(book.frames[0])] = [(1, 477, _CNT_Y), (1, 975, _CNT_Y),
                                        (1, 1474, _CNT_Y)]
     picks = [
-        SimpleNamespace(option_idx=0, refresh=True, refresh_slots=(0,),
-                        reason='stub+refresh'),
-        SimpleNamespace(option_idx=0, reason='re-decide'),
+        RefreshInvestCards(slots=(0,), reason='stub+refresh'),
+        PickInvest(idx=0, reason='re-decide'),
     ]
     op, _match, session, clicks, decide_calls = _make_strategy(
         test_context, monkeypatch, book, picks)
@@ -482,8 +483,7 @@ def test_strategy_refresh_gate2_reads_container_count(
     book.options[id(book.frames[0])] = _opts_of(names)
     book.counts[id(book.frames[0])] = [(1, 477, _CNT_Y), (1, 975, _CNT_Y),
                                        (1, 1474, _CNT_Y)]
-    picks = [SimpleNamespace(option_idx=0, refresh=True, refresh_slots=(0,),
-                             reason='stub+refresh')]
+    picks = [RefreshInvestCards(slots=(0,), reason='stub+refresh')]
     op, _match, session, clicks, _dc = _make_strategy(
         test_context, monkeypatch, book, picks)
     _k = normalize_invest_name(names[0])

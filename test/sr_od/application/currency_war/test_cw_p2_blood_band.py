@@ -275,50 +275,61 @@ class TestLockGenObservationKeys:
         生产驱动面触发):分母 = 锁开事件总数,分子 = λ 低血带帧锁开
         (带判定 = 血带结构锚单一源,统一设计稿 §5-F4);率由读端按两键
         比值派生,禁写进计数(只记不判)。非低血带帧只进分母;分母只辖
-        锁开事件——保持锁帧零重复计数(率读数不被保持帧稀释)。"""
+        锁开事件——保持锁帧零重复计数(率读数不被保持帧稀释)。
+        (终态契约 §2.5 impl 桶:_refresh_direction 状态宿主 = 显式
+        _ms 形参。)"""
         monkeypatch.setattr(ci, 'detect_signals', lambda s: [])
         monkeypatch.setattr(ci, 'line_completion_feasibility',
                             lambda *a, **k: 0.5)   # 移交候选可行 → 帧即锁
         strategy = self._flow()
         sess_lo = self._sess()
-        strategy._refresh_direction(_bsb(_st2(hp=10, gold=0)), sess_lo)
-        ct_lo = state_of(sess_lo).cw4_counters
+        ms_lo = state_of(sess_lo)
+        ms_lo.cw4_counters = {}
+        strategy._refresh_direction(_bsb(_st2(hp=10, gold=0)), ms_lo)
+        ct_lo = ms_lo.cw4_counters
         assert ct_lo.get('lock_gen_feasibility_obs_lock_open_total') == 1
         assert ct_lo.get('lock_gen_feasibility_obs_lock_open_lowband') == 1
         sess_hi = self._sess()
-        strategy._refresh_direction(_bsb(_st2(hp=40, gold=0)), sess_hi)
-        ct_hi = state_of(sess_hi).cw4_counters
+        ms_hi = state_of(sess_hi)
+        ms_hi.cw4_counters = {}
+        strategy._refresh_direction(_bsb(_st2(hp=40, gold=0)), ms_hi)
+        ct_hi = ms_hi.cw4_counters
         assert ct_hi.get('lock_gen_feasibility_obs_lock_open_total') == 1
         assert 'lock_gen_feasibility_obs_lock_open_lowband' not in ct_hi
         # 保持锁帧(帧2同 session,已锁不转移)不分母重复计
         strategy._refresh_direction(
-            _bsb(_st2(hp=40, gold=0, round_num=2)), sess_hi)
+            _bsb(_st2(hp=40, gold=0, round_num=2)), ms_hi)
         assert ct_hi.get('lock_gen_feasibility_obs_lock_open_total') == 1, (
             '帧2保持锁非锁开事件,分母不重复计')
 
     def _case_boss_deadzone(self, monkeypatch):
         """死区面计数(R1 存疑-1 兑付:boss 窗濒死帧恒闭死区不留白):
         boss 节点 ∧ 濒死带域内帧按授权域分列(_p1/_p2);域外帧不入键。
-        直调 helper(帧级观测,不依赖锁开)。"""
+        直调 helper(帧级观测,不依赖锁开;终态契约 §2.5:计数宿主 =
+        显式 _ms 形参)。"""
         from sr_od.application.currency_war.strategies.impl.flow import (
             bump_lock_gen_feasibility_obs,
         )
         sess = self._sess()
+        ms = state_of(sess)
+        ms.cw4_counters = {}
         # node 单一源 = gs(终态契约 §A′):'boss' 经帧喂入 gs.node,不再挂 session
-        bump_lock_gen_feasibility_obs(sess, _bsb(_st2(hp=10, gold=0,
-                                                      node_type='boss')),
+        bump_lock_gen_feasibility_obs(ms, _bsb(_st2(hp=10, gold=0,
+                                                    node_type='boss')),
                                       IntentionState(), 'lock:旧事件')
-        assert state_of(sess).cw4_counters.get(
+        assert ms.cw4_counters.get(
             'lock_gen_feasibility_obs_boss_neardeath_p2') == 1
         assert 'lock_gen_feasibility_obs_lock_open_total' \
-            not in state_of(sess).cw4_counters, '无锁开转移 ⇒ 分母不计'
+            not in ms.cw4_counters, '无锁开转移 ⇒ 分母不计'
         # 域外对照(hp=40):零计数
         sess2 = self._sess()
-        bump_lock_gen_feasibility_obs(sess2, _bsb(_st2(hp=40, gold=0,
-                                                       node_type='boss')),
+        ms2 = state_of(sess2)
+        ms2.cw4_counters = {}
+        bump_lock_gen_feasibility_obs(ms2, _bsb(_st2(hp=40, gold=0,
+                                                     node_type='boss')),
                                       IntentionState(), 'lock:旧事件')
         assert 'lock_gen_feasibility_obs_boss_neardeath_p2' \
-            not in state_of(sess2).cw4_counters
+            not in ms2.cw4_counters
 
 
 _OBS_KEY_CASES = {

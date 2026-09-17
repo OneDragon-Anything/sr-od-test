@@ -57,6 +57,10 @@ from types import SimpleNamespace
 
 from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
 from sr_od.application.currency_war.kernel.cw_strategy_session import StrategySession
+from sr_od.application.currency_war.kernel.cw_vocab import (
+    PickSupply,
+    RefreshSupply,
+)
 
 _FRAME = object()   # 稳定帧哨兵(screenshot 桩产物;共享体桩只验传递不断言内容)
 
@@ -93,9 +97,10 @@ def test_supply_chosen_written_on_confirm_pick(test_context, monkeypatch) -> Non
     session = StrategySession()
     match = SimpleNamespace(
         session=session,
-        strategy=SimpleNamespace(decide_supply=lambda opts: SimpleNamespace(
-                                     idx=0, refresh=False, reason='test')))
-    from sr_od.application.currency_war.kernel.cw_game_state import game_state_of as _gso_match
+        strategy=SimpleNamespace(decide_supply=lambda: PickSupply(idx=0, reason='test')))
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        game_state_of as _gso_match,
+    )
     match.gs = _gso_match(match.session)
     monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
     op = sn.CwScreenSupplyNode(test_context)
@@ -103,7 +108,6 @@ def test_supply_chosen_written_on_confirm_pick(test_context, monkeypatch) -> Non
     opt = SimpleNamespace(char='希儿', equip='星币收集器', has_diamond=True)
     monkeypatch.setattr(sn, 'read_supply_options',
                         lambda ctx, screen: [(opt, SimpleNamespace(x=900, y=550))])
-    monkeypatch.setattr(sn, 'CurrencyWarConfig', lambda idx: SimpleNamespace())
     dispatched: list = []
 
     class _StubPickOp:
@@ -123,9 +127,10 @@ def test_supply_chosen_written_on_confirm_pick(test_context, monkeypatch) -> Non
     session2 = StrategySession()
     match2 = SimpleNamespace(
         session=session2,
-        strategy=SimpleNamespace(decide_supply=lambda opts: SimpleNamespace(
-                                     idx=0, refresh=True, reason='test')))
-    from sr_od.application.currency_war.kernel.cw_game_state import game_state_of as _gso_match2
+        strategy=SimpleNamespace(decide_supply=lambda: RefreshSupply(reason='test')))
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        game_state_of as _gso_match2,
+    )
     match2.gs = _gso_match2(match2.session)
     monkeypatch.setattr(test_context, 'cw_match', match2, raising=False)
     op2 = sn.CwScreenSupplyNode(test_context)
@@ -161,9 +166,10 @@ def test_supply_refresh_emission_counts_container(
     match = SimpleNamespace(
         session=session,
         strategy=SimpleNamespace(
-            decide_supply=lambda opts:
-                SimpleNamespace(idx=0, refresh=True, reason='test')))
-    from sr_od.application.currency_war.kernel.cw_game_state import game_state_of as _gso_match
+            decide_supply=lambda: RefreshSupply(reason='test')))
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        game_state_of as _gso_match,
+    )
     match.gs = _gso_match(match.session)
     monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
     op = sn.CwScreenSupplyNode(test_context)
@@ -173,7 +179,6 @@ def test_supply_refresh_emission_counts_container(
     monkeypatch.setattr(sn, 'read_supply_options',
                         lambda ctx, screen: [(opt,
                                               SimpleNamespace(x=900, y=550))])
-    monkeypatch.setattr(sn, 'CurrencyWarConfig', lambda idx: SimpleNamespace())
 
     class _StubPickOp:
         def execute(self, env) -> bool:

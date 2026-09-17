@@ -40,6 +40,14 @@ def _sig():
     return ChannelSig(family='obs', actor='TestSigWriter', mode='read')
 
 
+def _launch_host(session):
+    """gs 宿主(终态管线形态):strategy_state 同源接线后返回容器——
+    前置发射位已改收容器,_launch_front_check(gs)。"""
+    gs = game_state_of(session)
+    gs.strategy_state = state_of(session)
+    return gs
+
+
 def _mk_session(monkeypatch, *, decision: dict, zone: bool) -> SimpleNamespace:
     """桩 session:容器单例(金 50)+ 判定核/溢出段判定脚本化。"""
     session = SimpleNamespace(last_streak=0, active_strategies=[])
@@ -66,7 +74,7 @@ def test_front_armed_green_emits_start_battle(monkeypatch) -> None:
     monkeypatch.setattr(cw_economy, 'in_launch_spend_zone',
                         lambda gold, session_: zone_calls.append(gold) or False)
     session = _mk_session_base()
-    action = _launch_front_check(session)
+    action = _launch_front_check(_launch_host(session))
     assert isinstance(action, StartBattle)
     assert zone_calls == [50], '帧级金判定直调 kernel(值源 = 容器金现读)'
     assert state_of(session).cw4_launch_spend_visited is False
@@ -82,7 +90,7 @@ def _mk_session_base() -> SimpleNamespace:
 def test_front_zone_first_visit_emits_restricted_open_shop(monkeypatch) -> None:
     """armed ∧ 溢出段命中(首访)→ 受限访问意图 + 段旗置位。"""
     session = _mk_session(monkeypatch, decision=_GREEN, zone=True)
-    action = _launch_front_check(session)
+    action = _launch_front_check(_launch_host(session))
     assert isinstance(action, OpenShop)
     assert action.restricted_spend is True, '受限标记在手(预算闸归执行机器)'
     assert state_of(session).cw4_launch_spend_visited is True, '段旗置位'
@@ -94,7 +102,7 @@ def test_front_zone_second_visit_emits_start_battle(monkeypatch) -> None:
     session = _mk_session(monkeypatch, decision=_GREEN, zone=True)
     state = state_of(session)
     state.cw4_launch_spend_visited = True   # 段内已访
-    action = _launch_front_check(session)
+    action = _launch_front_check(_launch_host(session))
     assert isinstance(action, StartBattle)
     assert state.cw4_launch_spend_visited is True
 
@@ -105,7 +113,7 @@ def test_front_disarm_resets_flag(monkeypatch) -> None:
     session = _mk_session(monkeypatch, decision=_DISARM, zone=False)
     state = state_of(session)
     state.cw4_launch_spend_visited = True   # 上一武装段遗留
-    assert _launch_front_check(session) is None
+    assert _launch_front_check(_launch_host(session)) is None
     assert state.cw4_launch_spend_visited is False, '失武装复位'
 
 
@@ -113,7 +121,7 @@ def test_front_quality_defer_holds(monkeypatch) -> None:
     """质量推迟帧:armed 但推迟 → None 不发射 + defer 分键(防死锁语义
     kernel 单一源,键单一源 = cw_launch_admission 常量)。"""
     session = _mk_session(monkeypatch, decision=_DEFER, zone=False)
-    assert _launch_front_check(session) is None
+    assert _launch_front_check(_launch_host(session)) is None
     counters = state_of(session).cw4_counters
     assert counters.get('launch_quality_defer_frames') == 1
 
@@ -122,7 +130,7 @@ def test_front_quality_eval_error_still_launches(monkeypatch) -> None:
     """评估异常帧:fail-open 照常发射 + eval 分键(残量禁静默,ADR-0570
     分界;与「配方不完备」常态帧单义区分)。"""
     session = _mk_session(monkeypatch, decision=_EVAL_ERR, zone=False)
-    assert isinstance(_launch_front_check(session), StartBattle)
+    assert isinstance(_launch_front_check(_launch_host(session)), StartBattle)
     counters = state_of(session).cw4_counters
     assert counters.get('launch_quality_eval_error') == 1
 
@@ -131,4 +139,4 @@ def test_front_non_armed_chain_untouched(monkeypatch) -> None:
     """非 armed 帧返回 None = 原三遍编排接管(决定函数对非 armed 帧
     零触碰,行为与迁移前逐项一致)。"""
     session = _mk_session(monkeypatch, decision=_DISARM, zone=False)
-    assert _launch_front_check(session) is None
+    assert _launch_front_check(_launch_host(session)) is None

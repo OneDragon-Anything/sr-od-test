@@ -80,18 +80,19 @@ def _mark_unobserved(session) -> None:
 
 # ===== 锁1/锁2 策略门单元(flow.decide_shop_action)=====
 
-def _mandate_strategy(monkeypatch):
+def _mandate_strategy(monkeypatch, session):
     """生产策略实例(mandate_v1.bridge;decide_shop_action 不被覆写,
-    走 flow.py 门)。"""
+    走 flow.py 门)。gs = 测试 session 容器单例(终态零参口:决策输入
+    一律 self.gs 自取)。"""
     from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
         MandateV1Strategy,
     )
     strategy = MandateV1Strategy(
-        game_state_of(StrategySession()),
+        game_state_of(session),
         SimpleNamespace(strategy_seed=None))   # 终态契约:构造注入
     # 门后内务(方向帧消费/镜像遥测)与本锁无关,桩成 no-op 保单测面窄。
     monkeypatch.setattr(strategy, '_consume_shop_direction_frame',
-                        lambda session: None)
+                        lambda: None)
     monkeypatch.setattr(strategy, 'write_shop_mirrors',
                         lambda gs, session: None)
     return strategy
@@ -114,8 +115,7 @@ def test_unobserved_gate_returns_close_shop_without_consulting_core(
     _mark_unobserved(session)
     assert tracked_unobserved(session)
 
-    act = _mandate_strategy(monkeypatch).decide_shop_action(
-        session, SimpleNamespace())
+    act = _mandate_strategy(monkeypatch, session).decide_shop_action()
 
     assert isinstance(act, CloseShop)
 
@@ -138,8 +138,7 @@ def test_default_and_anchored_states_pass_gate_to_core(monkeypatch):
     assert game_state_of(s_default).tracked_account_observed.value is None
     assert not tracked_unobserved(s_default)
     _write_shop_payload(s_default)
-    act = _mandate_strategy(monkeypatch).decide_shop_action(
-        s_default, SimpleNamespace())
+    act = _mandate_strategy(monkeypatch, s_default).decide_shop_action()
     assert act is _sentinel
 
     # 已锚定(True)→ 门放行。
@@ -149,8 +148,7 @@ def test_default_and_anchored_states_pass_gate_to_core(monkeypatch):
                     produced_by='test', sig=_SIG)
     assert not tracked_unobserved(s_anchored)
     _write_shop_payload(s_anchored)
-    act = _mandate_strategy(monkeypatch).decide_shop_action(
-        s_anchored, SimpleNamespace())
+    act = _mandate_strategy(monkeypatch, s_anchored).decide_shop_action()
     assert act is _sentinel
 
 
@@ -252,18 +250,22 @@ def _run_buy_waves_unobserved_host(monkeypatch, tmp_path, counters, *,
         from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
             MandateV1Strategy,
         )
+        _m_session = StrategySession()
         strategy = MandateV1Strategy(
-        game_state_of(StrategySession()),
+        game_state_of(_m_session),
         SimpleNamespace(strategy_seed=None))   # 终态契约:构造注入   # 真实门:未观察 → CloseShop
     else:
         class _IdleStrategy:
             """观察态正常关店替身:门放行后的决策核返回 CloseShop。"""
 
-            def decide_shop_action(self, session, config):
+            def decide_shop_action(self):
                 return CloseShop()
         strategy = _IdleStrategy()
 
     match = CurrencyWarMatch(strategy, StrategySession())
+    # 容器单例归一:策略 gs = match.session 容器(终态零参口决策读 self.gs
+    # ——牌面/观察态写在 match.session 的同一容器上)。
+    strategy.gs = game_state_of(match.session)
     match.session.strategy_state = SimpleNamespace(
         cw4_counters=counters, cw4_segment_serial=0)
     if unobserved:
