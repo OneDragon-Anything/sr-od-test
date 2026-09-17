@@ -304,9 +304,9 @@ def test_streak_miss_semantics_parse_and_observation_half() -> None:
 
     sess = StrategySession()
     sess.last_streak = 4
-    _write_settlement_observation(sess, _obs(None), None)
+    _write_settlement_observation(sess, _obs(None))
     assert sess.last_streak == 4, '失读跳过:禁假复位'
-    _write_settlement_observation(sess, _obs(-2), None)
+    _write_settlement_observation(sess, _obs(-2))
     assert sess.last_streak == -2, '真值照写'
 
 
