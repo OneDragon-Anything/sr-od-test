@@ -46,9 +46,22 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CW_ACTION_TYPES,
+    HoldFrame,
     LevelUp,
     LevelUpShop,
+    PickBoxCard,
+    PickEncounter,
+    PickInvest,
+    PickMegastar,
+    PickPartner,
+    PickPlanner,
+    PickStarTome,
+    PickSupply,
+    PickWishTrial,
+    RefreshInvestCards,
+    RefreshNodeOptions,
     RefreshShop,
+    RefreshSupply,
 )
 from sr_od.application.currency_war.obs.cw_shop_refresh_obs import (
     refresh_board_changed_of,
@@ -88,15 +101,38 @@ _LOGIC_SIG = ChannelSig(family='logic_action', actor='cw-t216-test',
 
 # ===== 1. 注册完备锁(判据:词表全类型覆盖,遍历运行时元组,零源码读取)=====
 
+# 终态契约新增动作类型的注册豁免集(策略器终态契约 landing §3.1 锁规格:
+# 白名单成员要么有注册行、要么在豁免集——无 op 行例外申报):
+# - PickEncounter/PickSupply/PickMegastar/PickPartner/PickPlanner 五子类
+#   待终态切换批换键名入表,入表后移出本集(锁恢复全覆盖);
+# - PickInvest/PickStarTome/PickWishTrial/PickBoxCard(handler 自管消费
+#   链)+ 三刷新动作 + HoldFrame(分支拦截型)= 永久豁免,无 op 行。
+_TERMINAL_CONTRACT_REGISTRY_EXEMPT = (
+    PickEncounter, PickSupply, PickInvest, PickMegastar, PickPartner,
+    PickPlanner, PickStarTome, PickWishTrial, PickBoxCard,
+    RefreshNodeOptions, RefreshSupply, RefreshInvestCards, HoldFrame,
+)
+
+
 def test_registry_covers_unified_vocab_and_pick_types():
     """注册完备锁(批4 主判据):统一词表 CW_ACTION_TYPES + cw_events
     pick 族 PICK_ACTION_TYPES 两运行时元组逐类断言注册表**类级**解析可
     命中(不构造业务动作实例,不读源码)——未注册 = 锁红;退役 = 删类,
-    元组中不存在即天然不可复活(R1)。"""
+    元组中不存在即天然不可复活(R1)。
+
+    终态契约扩展(landing §3.1):白名单新成员要么有注册行、要么在
+    豁免集;豁免成员反向断言确无注册行(防误注册,误挂 op = 确认链
+    字段错位暗雷)。"""
     for cls in CW_ACTION_TYPES + PICK_ACTION_TYPES:
+        if cls in _TERMINAL_CONTRACT_REGISTRY_EXEMPT:
+            with pytest.raises(AssertionError):
+                action_op_class_for_type(cls)
+            continue
         op_cls = action_op_class_for_type(cls)
         assert isinstance(op_cls, type) and issubclass(op_cls, ActionOp), \
             f'{cls.__name__} 解析产物非 ActionOp 子类: {op_cls}'
+    for cls in _TERMINAL_CONTRACT_REGISTRY_EXEMPT:
+        assert cls in CW_ACTION_TYPES, cls.__name__
 
 
 def test_pick_rows_resolve_class_and_instance_consistently():
