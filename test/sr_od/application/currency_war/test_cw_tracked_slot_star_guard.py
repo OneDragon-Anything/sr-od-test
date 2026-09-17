@@ -1,10 +1,9 @@
 """观察层对账仲裁批:star 回退采新(终态契约 §A)+ tracked 槽号守卫。
 
-锁 1 语义变更(用户裁定 2026-09-17):star 回退防抖/帧态门(ADR-0420)/
-银狼升费豁免退役——回退即采新,失败可见;留证钩子改绑回退事件本身
-(旧星 ≥2 登记 star_regression,消费面 _star_stop_hook 不变);实机失准
-走识别优化批(设计 §1.3 行为变化登记)。历史防抖动机(合成动画窗误读)
-见 git 历史本文件前身。
+锁 1 语义变更(用户裁定 2026-09-17 + 2026-09-16):star 回退防抖/帧态门
+(ADR-0420)/银狼升费豁免退役——回退即采新,失败可见;留证停机钩子与
+star_regression 采样登记已随「星回退处置归观察对账」裁定整删(2026-09-16),
+本文件只锁采新行为本身;实机失准走识别优化批。
 
 锁 2(tracked 槽号守卫)不受本契约影响,原样保留:
 - 实机缺陷台账 bench_slot_unhealthy 四局(slots=[2,2,3]/[…9,9],
@@ -87,37 +86,30 @@ def _bc(slot: int, name: str, star: int) -> BenchChar:
     return BenchChar(slot=slot, char_id=name, star=star)
 
 
-# ===== 锁 1:star 回退采新 + 留证改绑(终态契约 §A:防抖/帧态门/银狼豁免退役)=====
+# ===== 锁 1:star 回退采新(终态契约 §A:防抖/帧态门/银狼豁免/停机钩子均退役)=====
 
 
-def test_star_regression_adopts_new_immediately(monkeypatch):
+def test_star_downgrade_adopts_new_immediately(monkeypatch):
     """回退即采新(防抖退役):2★ 读成 1★ → tracked 直采 1★(失败可见,
-    合成动画窗误读直进板面账);留证钩子改绑回退事件本身——旧星 ≥2 即
-    登记 star_regression +1。"""
-    rows = _spy_conflicts(monkeypatch)
+    合成动画窗误读直进板面账)。"""
     session = StrategySession()
     game_state_of(session).tracked_books.bench = bench_from_compact(
         [_bc(1, '不死途', 2)])
     reconcile_tracking(session, [_bc(1, '不死途', 1)], [], source='test')
     assert _tracked_sig(session) == [('不死途', 1)]
-    assert game_state_of(session).exec_books.star_regression.get('不死途') == 1
-    assert any(r[0] == 'star' and '退役' in r[3] for r in rows), rows
 
 
-def test_star_regression_silver_wolf_no_longer_exempt(monkeypatch):
-    """银狼升费豁免退役:银狼 2★→1★ 同样采新 + 登记(不再跳过)。"""
+def test_star_downgrade_silver_wolf_no_longer_exempt(monkeypatch):
+    """银狼升费豁免退役:银狼 2★→1★ 同样采新。"""
     session = StrategySession()
     game_state_of(session).tracked_books.bench = bench_from_compact(
         [_bc(1, '银狼', 2)])
     reconcile_tracking(session, [_bc(1, '银狼', 1)], [], source='test')
     assert _tracked_sig(session) == [('银狼', 1)]
-    assert game_state_of(session).exec_books.star_regression.get('银狼') == 1
 
 
 def test_star_upgrade_still_silent_and_multi_copy_adopted(monkeypatch):
-    """升星/新角色零 star 留证(留证只辖回退);同名多副本各按现读采新
-    (旧锚定抬回退役)。"""
-    rows = _spy_conflicts(monkeypatch)
+    """升星/新角色正常采新;同名多副本各按现读采新(旧锚定抬回退役)。"""
     session = StrategySession()
     game_state_of(session).tracked_books.bench = bench_from_compact(
         [_bc(4, '不死途', 1), _bc(6, '不死途', 2), _bc(7, '不死途', 3)])
@@ -126,11 +118,11 @@ def test_star_upgrade_still_silent_and_multi_copy_adopted(monkeypatch):
                                  _bc(7, '不死途', 1)], [], source='test')
     assert _tracked_sig(session) == [('不死途', 1), ('不死途', 2),
                                      ('不死途', 1)]
-    assert game_state_of(session).exec_books.star_regression.get('不死途') == 1
-    # 升星对照:1★→2★ 零 star 留证
+    # 升星对照:1★→2★ 正常写回
     reconcile_tracking(session, [_bc(4, '不死途', 2), _bc(6, '不死途', 2),
                                  _bc(7, '不死途', 1)], [], source='test')
-    assert not any(r[0] == 'star' and '升星' in r[3] for r in rows)
+    assert _tracked_sig(session) == [('不死途', 2), ('不死途', 2),
+                                     ('不死途', 1)]
 
 
 # ===== 锁 2:tracked 槽号守卫(写点置 None + 显影 + 仲裁门)=====
