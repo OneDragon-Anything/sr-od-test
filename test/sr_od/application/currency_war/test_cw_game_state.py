@@ -568,6 +568,9 @@ def test_observation_feed_wiring_and_hp_loss_semantics(
     assert gs.board.value == {'列车同行': 2}
 
     # —— hp 三分支腿(独立 session;同帧驱动,换 reconcile 读数)——
+    # 终态契约 §A:session 暖启动真值(last_hp_real)不再抑制先验——
+    # prior = 难度表值(source='prior',fail-closed 非真读),对任何未读
+    # 容器诚实落账;「禁猜」语义由 trusted 位承载(prior ⇒ False)。
     from sr_od.application.currency_war.kernel import cw_reconcile
 
     sess2 = SimpleNamespace(last_streak=0, active_strategies=[],
@@ -578,8 +581,8 @@ def test_observation_feed_wiring_and_hp_loss_semantics(
     cw_observation.read_game_state(_feed_ctx(sess2), None,
                                    phase='prep_clean')
     bs2 = game_state_of(sess2)
-    assert bs2.hp.value is None, \
-        '② GameState 从未读过 → 处置②保持 None(session 暖启动值不入,禁猜)'
+    assert bs2.hp.value == 80 and bs2.hp.source == 'prior', \
+        '② 读不到 → 难度表先验 prior 落账(fail-closed,非真读;终态契约 §A)'
 
     # 真值帧到达 → observation 转正
     monkeypatch.setattr(cw_reconcile, 'reconcile_hp',
@@ -588,12 +591,14 @@ def test_observation_feed_wiring_and_hp_loss_semantics(
     cw_observation.read_game_state(_feed_ctx(sess2), None, phase='prep_clean')
     assert bs2.hp.value == 76 and bs2.hp.source == 'observation'
 
-    # 再失读 → 处置①carried 沿用上次好值(禁清成 None)
+    # 再失读(读不到,先验已在前帧落账)→ 处置①carried 沿用上次好值
+    #(禁清成 None;终态契约 §A:(值,False) 拒信态已随守卫退役——miss 恒
+    # (先验或 None, False),沿用走 gs.carry)
     monkeypatch.setattr(cw_reconcile, 'reconcile_hp',
                         lambda sess_, opt, screen, source='', node_t=None:
-                        (76, False), raising=False)
+                        (None, False), raising=False)
     cw_observation.read_game_state(_feed_ctx(sess2), None, phase='prep_clean')
-    assert bs2.hp.value == 76, '硬边界:正式值永不清成 None'
+    assert bs2.hp.value == 76, '硬边界:正式值永不清成 None(沿用上一真值 76)'
     assert bs2.hp.source == 'carried'
     assert (bs2.hp.evidence or '').startswith('carried:')
 
