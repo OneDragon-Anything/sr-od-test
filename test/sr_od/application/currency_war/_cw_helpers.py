@@ -36,8 +36,6 @@ dict,字段面即消费语义,参数化合一会把单侧夹具语义编码进�
 """
 from __future__ import annotations
 
-from types import SimpleNamespace
-
 from test.harness.fixture_controller import (
     enter_running_state,
     fast_sleep,
@@ -151,7 +149,9 @@ def cw4_decide(state: CwSimFrame, session, cfg=None):
         game_state_of(session),
         _cfg,
         registry=DEFAULT_REGISTRY)   # 终态契约:构造注入
-    from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of as _state_of
+    from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+        state_of as _state_of,
+    )
     strat.state = _state_of(session)   # 状态归一:策略器状态 = 会话播种对象(config 同源)
 
     cw4_feed(session, state)
