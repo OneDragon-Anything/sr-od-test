@@ -136,15 +136,24 @@ def test_non_prep_frame_defers_gold() -> None:
 
 def test_gold_none_watermark_retries() -> None:
     """金未读形态:静默跳过且水位必不动(settle 对金未读返回 written=False
-    ∧ total=0,与「无欠账」同形,不预判则误落水位 → 永久漏结);金可读后
-    重试落水位。"""
+    ∧ total=0,与「无欠账」同形,不预判则误落水位 → 永久漏结)。
+
+    2026-09-18 边界金补结批锁语义重推:金观察到达且带真值变化 =
+    待补结闩消费(实读真值随覆盖照常入逻辑,补结由观察了结),其后公式
+    结算禁再发生(真值 + 公式值双计防护,同族判据 =
+    test_cw_boundary_gold_backfill.test_observation_consumes_latch_formula_
+    must_not_double_add);公式重试腿 = 金读 carried 无观察到达形态,
+    锁在 test_cw_boundary_gold_backfill.test_formula_settlement_normal_
+    path_unaffected——本测试后半由「金可读后重试落水位」改锁「观察消费
+    闩后公式禁发」。"""
     gs = _mk_gs(gold=None)
     tick_effect_boundary(gs, prep_frame=True)
     assert gs.boundary_settled_ord is None, '金未读水位必不动'
     gs.observe(gs.gold, 25, sig=_sig())
+    assert gs.exec_books.boundary_gold_pending is False, '真值变化观察消费闩'
     tick_effect_boundary(gs, prep_frame=True)
-    assert gs.boundary_settled_ord == 12, '重试成功后落水位'
-    assert gs.gold.value > 25
+    assert gs.boundary_settled_ord is None, '闩已消费,公式结算禁发'
+    assert gs.gold.value == 25, '真值已在逻辑,禁公式叠算'
 
 
 def test_none_guards_silent() -> None:
