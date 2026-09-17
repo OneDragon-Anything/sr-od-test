@@ -251,8 +251,10 @@ def test_supply_pick_op_clicks_target_confirms_and_registers_arrival(
     assert [(p.x, p.y) for p, _t in ctrl.clicks] == [(500, 400)]
     assert confirm_calls == [('货币战争-补给', '按钮-确认',
                               {'success_wait': 1.5})]
-    # 到账登记(写边;equip 未读到 = 不登记,此处正锁)
-    assert session.last_owned_equips == ['星币收集器']
+    # 到账登记(写边;equip 未读到 = 不登记,此处正锁)。
+    # 终态契约 §B:单一源 = gs.equips(容器直写)。
+    from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
+    assert game_state_of(session).equips.value == ['星币收集器']
 
 
 def test_megastar_pick_op_clicks_confirm_once(no_pick_sleep):
