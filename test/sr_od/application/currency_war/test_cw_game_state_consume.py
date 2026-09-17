@@ -296,18 +296,9 @@ def test_streak_miss_semantics_parse_and_observation_half() -> None:
     assert parse_streak(['挑战结束', '数据统计']) is None, '失读非 0'
     assert parse_streak(['连胜×0']) == 0, '真 0 保留'
     assert parse_streak(['连败×2']) == -2
-    # 消费腿
-
-    def _obs(streak):
-        return RoundOutcome(round_num=2, plane=1, node_type='普通战斗',
-                            comp_tag='t', streak=streak)
-
-    sess = StrategySession()
-    sess.last_streak = 4
-    _write_settlement_observation(sess, _obs(None))
-    assert sess.last_streak == 4, '失读跳过:禁假复位'
-    _write_settlement_observation(sess, _obs(-2))
-    assert sess.last_streak == -2, '真值照写'
+    # (消费腿已随终态契约 §B 迁容器:结算带符号真值由 apply_settlement_cover
+    #  直写 gs.streak,session.last_streak 退役——失读跳过语义由覆盖写端
+    #  None 守卫承载,见 fields.md §3.2.12/§3.5.1。)
 
 
 # ============================================================ 批次二返工批修复锁(P2-1/P3-x)
