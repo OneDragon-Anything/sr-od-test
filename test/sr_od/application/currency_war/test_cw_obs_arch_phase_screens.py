@@ -174,7 +174,12 @@ def test_reentry_arbitration_flag_gate_combination(test_context,
         f'裁决不触发,选卡+确认重发恰两击:{clicks_st!r}')
     assert op_st._confirm_pending == '恢复生机', (
         f'旗标经确认体重置:{clicks_st!r}')
-    assert session_st.active_strategies == [], (
+    # 终态契约 §B:session.active_strategies 退役——门命中轮零 append 改由
+    # 容器侧断言(持卡单一源 = gs.active_strategies)。
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        game_state_of as _gso_arch,
+    )
+    assert (_gso_arch(session_st).active_strategies.value or []) == [], (
         '门命中轮裁决不触发,零 append(出口面归重入锁)')
     # (原 test_invest_strategy_dispatch_new_path 并入本腿:段迹形态断言
     #  随迁;其「恰一次决策」断言属无 pending 的新决策路径,与本腿 pending
@@ -391,16 +396,14 @@ def test_invest_strategy_active_strategies_appended_at_reentry_exit(
         rs = _run_node(test_context, op, op.handle)
         assert rs.is_success and '已确认(重入观察裁决)' in (rs.status or ''), (
             f'install={install}:裁决出口 success 交回:{rs!r}')
-        assert session.active_strategies == ['白银投资'], (
-            f'install={install}:append 值 = 待裁决选卡名')
         assert game_state_of(session).active_strategies.value == ['白银投资'], (
-            f'install={install}:GameState 写端同点(list 本体)')
+            f'install={install}:append 值 = 待裁决选卡名(终态契约 §B:容器单源)')
         assert op._lifecycle_trace == [], (
             f'install={install}:裁决在分流前共享段,本轮不经生命周期(零段迹)')
         # 去重:同卡二次确认不重复入列
         op._confirm_pending = '白银投资'
         _run_node(test_context, op, op.handle)
-        assert session.active_strategies == ['白银投资'], (
+        assert game_state_of(session).active_strategies.value == ['白银投资'], (
             f'install={install}:去重防重复入列')
 
 

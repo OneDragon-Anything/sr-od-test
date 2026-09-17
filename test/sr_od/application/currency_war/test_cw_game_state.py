@@ -1116,8 +1116,20 @@ def test_restore_session_empty_refused_then_late_truth_lands(
         assert fld.value is None, f'恢复局空默认禁中继落记录:{name}'
 
     # 真值后到(恢复局:简报/事件屏/难度确认屏写端补齐会话侧事实)
-    sess.active_strategies = ['白银投资']
-    sess.active_env = '昼之半神概念股'
+    # active 双字段播种随终态契约 §B 迁容器(write_logic 直写;中继读已切容器源)
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        game_state_of as _gso_t,
+    )
+    _gso_t(sess).write_logic(
+        _gso_t(sess).active_strategies, ['白银投资'],
+        produced_by='test',
+        sig=ChannelSig(family='logic_action', actor='CwLoop',
+                       screen='', mode='compute'))
+    _gso_t(sess).write_logic(
+        _gso_t(sess).active_env, '昼之半神概念股',
+        produced_by='test',
+        sig=ChannelSig(family='logic_action', actor='CwLoop',
+                       screen='', mode='compute'))
     sess.briefing_bosses = ['首领甲', None, None]
     sess.briefing_affixes = ['正当防卫']
     # (selected_difficulty 已随终态契约 §B 改入口链直写 gs,不经中继——
@@ -1135,7 +1147,11 @@ def test_restore_session_empty_refused_then_late_truth_lands(
     for name in _MIRROR_FIELDS:
         fld = getattr(gs, name)
         assert fld.source == 'logic', f'中继形态 logic(§2.1):{name}'
-        assert fld.evidence == 'session_carrier', f'中继注记:{name}'
+        if name in ('active_strategies', 'active_env'):
+            # 终态契约 §B:双字段直写容器(无中继注记),write_logic 直连
+            assert fld.evidence is None, f'直写形态(无 session_carrier):{name}'
+        else:
+            assert fld.evidence == 'session_carrier', f'中继注记:{name}'
 
 
 # ==================== 容器视图转换/合成口/ShopCard 映射(自 w5_passthrough 归并) ====================

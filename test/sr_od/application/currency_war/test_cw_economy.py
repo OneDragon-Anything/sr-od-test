@@ -275,7 +275,7 @@ class TestR2InterestFloor:
         息线 floor「拍常数」禁案的判别锁)。
         (金钱类收缩:floor 门过下界/贴线拒刷两行按裁决不搬,git 可复活。)"""
         comp, st, sess = self._frame(80)
-        sess.active_strategies = ['利息上调']   # ADR-0598 注入面迁移
+        _seed_actives(sess, ['利息上调'])   # ADR-0598 注入面迁移(容器单源)
         acts = _decide(st, sess)
         assert not [a for a in acts if isinstance(a, RefreshShop)]
 
@@ -284,11 +284,24 @@ class TestR2InterestFloor:
 # (金钱类收缩:T6 阈值边界逐点红证按裁决不搬,git 可复活。)
 
 
-def _blood_session(active: list[str] | None = None, **state_kw) -> SimpleNamespace:
-    """血闸消费面依赖桩:active_strategies(其余无关;金账读容器)。"""
-    return SimpleNamespace(
-        active_strategies=list(active or ['奋斗协议']),
+def _seed_actives(sess, names: list[str]) -> None:
+    """持卡播种(终态契约 §B:单一源 = 容器,write_logic 直写)。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        ChannelSig,
+        game_state_of,
     )
+    game_state_of(sess).write_logic(
+        game_state_of(sess).active_strategies, list(names),
+        produced_by='test',
+        sig=ChannelSig(family='logic_action', actor='CwLoop',
+                       screen='', mode='compute'))
+
+
+def _blood_session(active: list[str] | None = None, **state_kw) -> SimpleNamespace:
+    """血闸消费面依赖桩(容器单源播种;其余无关)。"""
+    s = SimpleNamespace()
+    _seed_actives(s, list(active or ['奋斗协议']))
+    return s
 
 
 def _blood_gs(hp: int | None, *, source: str = 'observation',
@@ -750,7 +763,7 @@ def test_injection_consistency_single_registry_source() -> None:
     assert not schedule_upgrade(cw4_box(st1), sess, _REG)
     assert not schedule_upgrade(cw4_box(st1), sess, reg2)   # registry 旋钮不动 resolved 链
     sess_ov = _ba_locked_4cost_sess()
-    sess_ov.active_strategies = ['买断制']   # 注册表可达覆写 cap=0 → 息线 0
+    _seed_actives(sess_ov, ['买断制'])   # 注册表可达覆写 cap=0 → 息线 0
     assert schedule_upgrade(cw4_box(st1), sess_ov)    # gold 45 ≥ 息线 0 → ② 前置过
     assert refresh_ev_budget(cw4_box(st1), sess, reg2) == \
         refresh_ev_budget(cw4_box(st1), sess, _REG)   # registry 旋钮对预算逐位惰性(ADR-0598 归一)

@@ -53,10 +53,18 @@ _CAP_CARD_BY_VALUE: dict[int, str] = {
 
 
 def _sess_with(*names: str) -> StrategySession:
-    """session 桩:active_strategies 注入面(session 级字段=两写点公共
-    权威——实机 handler 确认后 append / sim 注入臂 append+镜像)。"""
+    """session 桩:active_strategies 注入面(终态契约 §B:单一源 = 容器,
+    持卡经 write_logic 直写 gs——两写点公共权威)。"""
     s = StrategySession()
-    s.active_strategies = list(names)
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        ChannelSig,
+        game_state_of,
+    )
+    game_state_of(s).write_logic(
+        game_state_of(s).active_strategies, list(names),
+        produced_by='test',
+        sig=ChannelSig(family='logic_action', actor='CwLoop',
+                       screen='', mode='compute'))
     return s
 
 
