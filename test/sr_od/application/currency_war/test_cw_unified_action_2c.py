@@ -251,3 +251,56 @@ def test_expert_invite_entry_select_only(test_context, monkeypatch):
                         lambda s, sc, a, **k: Area(False))
     rs = run_node(test_context, op, op.choose)
     assert not rs.is_success and '弹窗未现' in (rs.status or '')
+
+
+# ===== CwScreenExpertInvite 决策链异常降级(三姊妹 handler catch→fallback
+# ===== 姿态对齐;兜底 = kernel 直调同无 match else 分支,现金为王语义)=====
+
+def test_expert_invite_decision_chain_error_falls_cash(test_context,
+                                                       monkeypatch):
+    """局内决策链(write_logic → decide_expert_invite)任一环抛异常 → 异常
+    不出 op,落「现金为王」兜底(kernel 直调同无 match else 分支),round
+    照常机械交回(与 fortune/equip 两姊妹 handler 的 catch→fallback 防御
+    姿态对齐;补丁前该链异常直接冒出 op 中断本轮)。本例输入:卡羁绊有读数
+    但与板面无同线 → 兜底 kernel 判据 ③ 落现金为王。红 = 异常逃逸 /
+    落点漂移 / 缺坐标 fail 交回。"""
+    from test.harness.fixture_controller import fast_sleep
+
+    from sr_od.application.currency_war.kernel import cw_obs_core
+    from sr_od.application.currency_war.kernel.cw_strategy_session import (
+        StrategySession,
+    )
+    from sr_od.application.currency_war.obs import cw_observation
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_expert_invite as mod,
+    )
+
+    def _boom():
+        raise RuntimeError('决策链注入异常(测试)')
+
+    session = StrategySession()
+    match = SimpleNamespace(
+        session=session,
+        strategy=SimpleNamespace(decide_expert_invite=_boom))
+    match.gs = game_state_of(match.session)
+    monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
+    op = mod.CwScreenExpertInvite(test_context)
+    # 卡羁绊读数在位但与板面({'仙舟': 2})无同线 → 兜底 kernel 判据落 -1
+    monkeypatch.setattr(mod, '_resolve_card_bonds',
+                        lambda ctx, screen, a: '能量' if a == '卡-1' else None)
+    monkeypatch.setattr(cw_observation, 'read_board',
+                        lambda ctx, screen: {'仙舟': 2})
+    _pts = {'卡-1': Point(300, 400), mod.CASH_AREA: Point(500, 900)}
+    monkeypatch.setattr(cw_obs_core, 'area_center',
+                        lambda ctx, name, screen: _pts.get(name))
+    clicks: list[Point] = []
+    monkeypatch.setattr(
+        test_context, 'controller',
+        SimpleNamespace(mouse_move=lambda p: None,
+                        click=lambda p: clicks.append(p)), raising=False)
+    with fast_sleep(op):   # 选卡动画等待/轮间等待桩(零真实等待)
+        rs = op._handle_overlay(object())
+    assert not rs.is_success and '点击已发' in (rs.status or ''), (
+        f'异常被吸收,round 照常机械交回:{rs!r}')
+    assert [(p.x, p.y) for p in clicks] == [(500, 900)], (
+        f'兜底应落「现金为王」area:{[(p.x, p.y) for p in clicks]}')
