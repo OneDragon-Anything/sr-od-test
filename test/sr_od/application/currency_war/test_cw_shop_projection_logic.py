@@ -34,8 +34,8 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     apply_shop_merge_leg,
     bench_slots_of,
     bench_slots_to_legacy,
-    game_state_of,
     deployed_slots_of,
+    game_state_of,
     shop_cards_to_legacy,
     shop_payload_content_cards,
     synthesize_from_game_state,
@@ -229,8 +229,9 @@ class TestM1DirectLock:
         assert gs.xp.value is None, 'xp: 卖腿零写(未读域保持合成初值 None)'
 
     def test_levelup_clicks_and_level_cross(self):
-        """升级:击数×单击价扣金 + xp 推进(含升档结转;level 域不投影);
-        满级腿(并入):lv10 购买无效,零金零经验零写。"""
+        """升级:击数×单击价扣金 + xp/level 推进(跨档结转 + level 跨档
+        直写,与 prep 腿同款;域集扩申报 = SHOP_PROJECTION_DOMAINS 登记
+        面);满级腿(并入):lv10 购买无效,零金零经验零写。"""
         st = _state(gold=30, shop=[], level=3, xp=(2, 6))
         gs = _gs_of(st)
         _project_with_merge_leg(
@@ -243,7 +244,9 @@ class TestM1DirectLock:
         # 数值与初值 (2, 6) 巧合相同(跨档结转非零写,升级腿实写 xp 域)。
         assert gs.xp.value == (2, 6), \
             'xp: 期望单击 +4 跨档结转 (2, lv4 门槛 6)'
-        assert gs.level.value == st.level   # level 域不在投影域集
+        assert gs.level.value == 4, \
+            'level: 跨档直写 3→4(xp_apply_clicks 单一源;等级滞留会让' \
+            '下一击按旧级重算 = 花金零等级推进)'
         # 满级腿(并入,原 test_levelup_full_cap_noop):零金零经验零写
         st_cap = _state(gold=30, shop=[], level=10, xp=(0, 4))
         gs_cap = _gs_of(st_cap)
@@ -255,7 +258,54 @@ class TestM1DirectLock:
             'shop payload: 期望空(离屏零写透传)'
         assert _bench_slots(gs_cap) == [], 'bench: 满级零写(保持全空)'
         assert gs_cap.xp.value == (0, 4), 'xp: 满级零经验(购买无效)'
-        assert gs_cap.level.value == 10, 'level 域不投影(满级不动)'
+        assert gs_cap.level.value == 10, '满级拒付(applied=False)零写'
+
+    def test_levelup_multi_level_jump_unlocks_seat_cap(self):
+        """跨级连跳:多击连跳两级(溢出结转在 xp_apply_clicks 算子内)+
+        level 直写到位;席位 cap 联动 = ``max_units_of`` 经读口自动跟随
+        (level 为 cap 解锁地板,deploy_cap 未读时 base 取 level;部署环
+        消费位零改动,写端修复即解锁)。"""
+        from sr_od.application.currency_war.kernel.cw_game_state import (
+            max_units_of,
+        )
+        st = _state(gold=30, shop=[], level=5, xp=(18, 20))
+        gs = _gs_of(st)
+        assert max_units_of(gs) == 5, '前置:cap 地板 = 滞留级 5'
+        _project_with_merge_leg(
+            gs, LevelUpShop(cost=4), ShopActionExecuted(levelup_clicks=2))
+        # 18+8=26 ≥ lv5 门槛 20 → 升 lv6 余 6;6 < lv6 门槛 40 → 停。
+        assert gs.level.value == 6, 'level: 连跳直写 5→6(跨级不滞留)'
+        assert gs.xp.value == (6, 40), 'xp: 溢出结转 (6, lv6 门槛 40)'
+        assert max_units_of(gs) == 6, \
+            '席位 cap 随 level 解锁 5→6(联动验证)'
+        assert gs.gold.value == 22, 'gold: 30 −单击价 4×2 击 = 22'
+
+    def test_levelup_boundary_and_unread_pair_skip(self):
+        """门槛边界:未达门槛零跨档(level 不写,xp 照推进);域级跳写对:
+        level 未读帧推进对整体跳写(禁缺省 1 参与推进计算),gold 域
+        独立照写。"""
+        st = _state(gold=30, shop=[], level=5, xp=(15, 20))
+        gs = _gs_of(st)
+        _project_with_merge_leg(
+            gs, LevelUpShop(cost=4), ShopActionExecuted(levelup_clicks=1))
+        assert gs.level.value == 5, 'level: 15+4=19 < 门槛 20 零跨档不写'
+        assert gs.xp.value == (19, 20), 'xp: 推进到位 (19, 20)'
+        # 域级跳写对:level 未读(level_readable=False 合成跳写)+ xp 已读
+        st_nolv = _state(gold=30, shop=[], xp=(15, 20))
+        st_nolv.level_readable = False
+        gs2 = _gs_of(st_nolv)
+        assert gs2.level.value is None and gs2.xp.value == (15, 20)
+        seq0 = gs2.write_seq
+        apply_shop_action_logic(
+            gs2, LevelUpShop(cost=4),
+            executed=ShopActionExecuted(levelup_clicks=1),
+            produced_by='LevelUpShop', sig=_SIG)
+        assert gs2.level.value is None, 'level 未读保持未读'
+        assert gs2.xp.value == (15, 20) and gs2.xp.source == 'observation', \
+            'level 未读 → 推进对整体跳写(禁缺省 1 参与推进计算;' \
+            'xp 值留观察原值,source 不翻 logic)'
+        assert gs2.gold.value == 26, 'gold 域独立于推进对照写'
+        assert gs2.write_seq > seq0, '跳写对 ≠ 整动作零写(gold 仍落)'
 
     def test_refresh_paid_deducts_gold(self):
         """付费刷新:gold −刷新费;payload 不写(刷后牌面等续段重观察)。"""
