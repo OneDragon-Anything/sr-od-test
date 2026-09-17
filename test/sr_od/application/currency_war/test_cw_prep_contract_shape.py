@@ -64,7 +64,7 @@ def _prep_strategy(monkeypatch: pytest.MonkeyPatch,
     strategy = cw_bridge.MandateV1Strategy(
         game_state_of(session),
         SimpleNamespace(strategy_seed=None))   # 终态契约:构造注入
-    session.prep_obs_frame = PrepObservation(free_bench_slots=9)
+    game_state_of(session).prep_obs = PrepObservation(free_bench_slots=9)   # 终态契约 §2.6
     monkeypatch.setattr(
         cw_bridge, 'decide_prep_frame',
         lambda obs, session, config, registry=None: list(emission))

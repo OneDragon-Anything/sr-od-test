@@ -371,7 +371,8 @@ def test_armed_shortcircuit_frame_writes_no_disclosure(
     from sr_od.application.currency_war.kernel.cw_prep_actions import (
         PrepObservation,
     )
-    sess.prep_obs_frame = PrepObservation(free_bench_slots=9)
+    from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
+    game_state_of(sess).prep_obs = PrepObservation(free_bench_slots=9)   # 终态契约 §2.6
     monkeypatch.setattr(admit_mod, 'readiness_launch_decision',
                         lambda *a, **k: {'armed': True})
 
