@@ -18,6 +18,10 @@ reconcile 第 5 例收口批)。
   以观察为真值源——环境卡星徽佩戴者移除的幽灵计数/未知身份入行零
   贡献/徽标 OCR 坏读三类漂移落台账行采新不进安灯;吸收辖域只认
   ``proj_board_resync`` 派生写端,独立手写 board 照真失配停;
+- board 吸收行 × sim 证据 = 抑制面发射口兜底:observed_evidence 命中
+  sim 前缀的 ``board_derived_adopt`` 行不落生产缺陷台账
+  (buffer/sink 均不落,安灯不触发),吸收采新照常——吸收族不经
+  路由层,抑制检查在 ``_emit_defect`` 发射口;
 - 字段审计完备性:GameState 全部容器字段已在 ``PROJECTION_AUDIT``
   登记且无缺口态(「无写端无规则」恒空)。
 
@@ -258,6 +262,36 @@ def test_board_adopt_scoped_to_derived_writer_rogue_write_still_stops(
         '非派生写端的 board 失配照真失配(吸收辖域不扩大)'
     assert len(andon.rows) == 1, '越格写端失配照停'
     assert drained == rows
+
+
+def test_board_adopt_sim_evidence_suppressed_from_production_sink(
+        andon) -> None:
+    """board 吸收行 × sim 证据 = 抑制面发射口兜底:observed_evidence 命中
+    ``_MISMATCH_SUPPRESS_PREFIXES``(sim:engine)的 ``board_derived_adopt``
+    行不落生产缺陷台账(buffer/sink 均不落;sim 链自身对账差异归 sim
+    质量面)——吸收族不经 ``_route_logic_mismatch`` 路由层,抑制检查须
+    在 ``_emit_defect`` 发射口;吸收采新本身照常(观察赢,安灯不触发)。"""
+    gs = game_state_of(None)
+    gs.observe(gs.back_row, [_pepe(1)], sig=_SIG_OBS)
+    gs.observe(gs.board, {'减益': 1}, sig=_SIG_OBS)
+    gs.write_logic(gs.back_row, [_luanpo(1)], produced_by='T', sig=_SIG)
+    assert gs.board.source == 'logic'
+    rows: list[dict] = []
+    set_defect_sink(rows.append)
+    try:
+        # sim 步末板面真值观察形态(cw_sim_engine._refresh_board):
+        # 真值与派生失配,observed_evidence 带 sim:engine 前缀
+        gs.observe(gs.board, {'巡海游侠': 1, '击破': 1},
+                   evidence='sim:engine:board:p1r2', sig=_SIG_OBS)
+    finally:
+        set_defect_sink(None)
+        drained = consume_defect_sink()
+    assert gs.board.value == {'巡海游侠': 1, '击破': 1}, \
+        '吸收采新照常(派生量以观察为真值源)'
+    assert gs.board.source == 'observation'
+    assert rows == [] and drained == [], \
+        'sim 前缀行不落生产缺陷台账(sink/buffer 均不落)'
+    assert andon.rows == [], 'sim 前缀行不触发安灯'
 
 
 # ============================================================ 行纯重排吸收

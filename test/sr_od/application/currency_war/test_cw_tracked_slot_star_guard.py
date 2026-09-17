@@ -6,7 +6,9 @@ run_20260915_054718 §5/§8 候选2 实锤「回退即采新」让同名多星�
 2 帧」形态恰好吃掉旧 N=2 确认门)。现行口径 = 槽位锚定 + 两帧一致才采新:
 单帧差保旧写账 + 抖动台账行(surface='star');升/降同门、银狼升费形态无
 豁免(门按锚判定与名无关);合成特效窗内星读不可信(冻结,不计两帧);
-锚上身份变换(换人/落新单元)星级随身份直采。
+锚上身份变换(换人/落新单元)星级随身份直采。缺读帧打断两帧序列
+(缺读 = 证据中断):候选锚部分缺读/整帧双空读(守卫早退)即清除,
+同值复现须重新连续两帧。
 
 锁 2(tracked 槽号守卫)不受本批影响,原样保留:
 - 实机缺陷台账 bench_slot_unhealthy 四局(slots=[2,2,3]/[…9,9],
@@ -230,6 +232,42 @@ def test_merge_effect_window_freezes_confirmation(monkeypatch):
     reconcile_tracking(session, [_bc(1, '不死途', 1)], [], screen=_scr,
                        source='test')
     assert _tracked_sig(session) == [('不死途', 1)]   # 干净帧2:采新
+
+
+def test_missing_read_frame_breaks_confirmation(monkeypatch):
+    """缺读帧打断两帧序列(缺读 = 证据中断,两帧重计):3★ 单帧抖读 1★
+    候选登记后插入缺读帧再同值复现,不得单帧采新——候选跨缺读帧存活
+    会把「连续两帧一致」击穿成「隔帧也认」(4 帧序列运行时探针实证:
+    抖读 → 缺读 ×2 → 同值第 4 帧即采新)。两缺读形态并一:
+    部分缺读(读侧已取得但锚不在,经槽号健康门拒写回保旧)与双空读
+    (守卫早退绕过星级门,候选由守卫分支清除)。"""
+    _spy_conflicts(monkeypatch)
+    # 形态一:部分缺读(帧2 读侧不含槽1;脏槽号触发健康门拒写回,
+    # tracked 保 3★,门内缺读清除槽1 候选)
+    session = StrategySession()
+    game_state_of(session).tracked_books.bench = bench_from_compact(
+        [_bc(1, '不死途', 3)])
+    reconcile_tracking(session, [_bc(1, '不死途', 1)], [], source='test')
+    assert _tracked_sig(session) == [('不死途', 3)]   # 帧1:抖读保旧+候选登记
+    reconcile_tracking(session, [_bc(2, '甲', 1), _bc(2, '乙', 2)],
+                       [], source='test')
+    assert _tracked_sig(session) == [('不死途', 3)]   # 帧2:缺读+健康门拒写回
+    reconcile_tracking(session, [_bc(1, '不死途', 1)], [], source='test')
+    assert _tracked_sig(session) == [('不死途', 3)]   # 帧3:候选已清,重计保旧
+    reconcile_tracking(session, [_bc(1, '不死途', 1)], [], source='test')
+    assert _tracked_sig(session) == [('不死途', 1)]   # 帧4:连续次帧才采新
+    # 形态二:双空读守卫早退帧(探针原样序列)
+    session2 = StrategySession()
+    game_state_of(session2).tracked_books.bench = bench_from_compact(
+        [_bc(1, '不死途', 3)])
+    reconcile_tracking(session2, [_bc(1, '不死途', 1)], [], source='test')
+    assert _tracked_sig(session2) == [('不死途', 3)]   # 抖读保旧+候选登记
+    assert not reconcile_tracking(session2, [], [], source='test')   # 双空守卫
+    assert _tracked_sig(session2) == [('不死途', 3)]   # 守卫保旧 tracking
+    reconcile_tracking(session2, [_bc(1, '不死途', 1)], [], source='test')
+    assert _tracked_sig(session2) == [('不死途', 3)]   # 缺读后同值首帧:重计保旧
+    reconcile_tracking(session2, [_bc(1, '不死途', 1)], [], source='test')
+    assert _tracked_sig(session2) == [('不死途', 1)]   # 连续次帧:采新
 
 
 # ===== 锁 2:tracked 槽号守卫(写点置 None + 显影 + 仲裁门)=====
