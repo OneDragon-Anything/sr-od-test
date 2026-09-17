@@ -219,7 +219,8 @@ class TestLockGenObservationKeys:
             def decide_prep_screen(self, *a, **kw):
                 raise NotImplementedError
 
-        return _Flow()
+        from types import SimpleNamespace as _NS
+        return _Flow(object(), _NS(strategy_seed=None))   # 终态契约:构造注入
 
     @pytest.mark.parametrize('obs_case', _OBS_CASES)
     def test_observation_key_count_only(self, obs_case, monkeypatch):

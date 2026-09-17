@@ -379,7 +379,11 @@ def test_armed_shortcircuit_frame_writes_no_disclosure(
         raise AssertionError('armed 帧短路后不得到达三遍编排')
 
     monkeypatch.setattr(bridge_mod, 'decide_prep_frame', _no_reach)
-    action = MandateV1Strategy().decide_prep_screen(sess, SimpleNamespace())
+    from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
+    action = MandateV1Strategy(
+        game_state_of(sess),
+        SimpleNamespace(strategy_seed=None)).decide_prep_screen(
+        sess, SimpleNamespace())   # 终态契约:构造注入
     assert isinstance(action, CwAction), 'armed 帧应短路产出发射意图动作'
     st = state_of(sess)
     assert st.v3_disclosure_key is None, 'armed 短路帧不得盖披露键戳'

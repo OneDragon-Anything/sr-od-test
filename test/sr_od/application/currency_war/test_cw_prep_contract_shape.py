@@ -28,6 +28,7 @@ from test.sr_od.application.currency_war._cw_helpers import run_node
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
     PrepObservation,
 )
+from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
@@ -59,8 +60,10 @@ def _prep_strategy(monkeypatch: pytest.MonkeyPatch,
     - ``session.prep_frame_class`` 缺省 'none' → 入口内务(帧代次消费)
       空转,方向刷新不触发,测试零全局残留。
     """
-    strategy = cw_bridge.MandateV1Strategy()
     session = StrategySession()
+    strategy = cw_bridge.MandateV1Strategy(
+        game_state_of(session),
+        SimpleNamespace(strategy_seed=None))   # 终态契约:构造注入
     session.prep_obs_frame = PrepObservation(free_bench_slots=9)
     monkeypatch.setattr(
         cw_bridge, 'decide_prep_frame',

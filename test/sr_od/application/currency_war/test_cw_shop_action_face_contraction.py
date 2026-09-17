@@ -124,7 +124,10 @@ def _frame_session(*, bench_units: list[str], deployed_units: list[str],
     gs.write_logic(gs.shop, ShopPayload(cards=cards, refresh_probs={}),
                    produced_by='cw-t271-test', sig=_LOGIC_SIG)
     state_of(sess).target_comp = comp
-    return MandateV1Live(), sess, SimpleNamespace(ev_arm='full')
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        game_state_of as _gso,
+    )
+    return MandateV1Live(_gso(sess), SimpleNamespace(strategy_seed=None)), sess, SimpleNamespace(ev_arm='full')   # 终态契约:构造注入
 
 
 # ---- 原六处卖射位的席位/缺金形态帧(发射面退役,形态保留供收缩锁)----

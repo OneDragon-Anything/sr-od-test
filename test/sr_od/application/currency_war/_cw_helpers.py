@@ -36,6 +36,8 @@ dict,字段面即消费语义,参数化合一会把单侧夹具语义编码进�
 """
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 from test.harness.fixture_controller import (
     enter_running_state,
     fast_sleep,
@@ -139,10 +141,14 @@ def cw4_decide(state: CwSimFrame, session, cfg=None):
 
     W6 波 4 黑板容器化:喂入通道 = sim 合成口写容器(生产/离线同路;
     原黑板槽直写随槽退役消亡,设计件《商店黑板容器化方案》§2.4-3)。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
     from sr_od.application.currency_war.kernel.cw_registry import (
         DEFAULT_REGISTRY,
     )
-    strat = MandateV1Strategy(registry=DEFAULT_REGISTRY)
+    strat = MandateV1Strategy(
+        game_state_of(session),
+        SimpleNamespace(strategy_seed=None),
+        registry=DEFAULT_REGISTRY)   # 终态契约:构造注入
     cw4_feed(session, state)
     return strat.decide_shop_screen(session, cfg or DecideCfg())
 

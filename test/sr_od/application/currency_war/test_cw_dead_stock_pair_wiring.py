@@ -114,7 +114,10 @@ def _single_card_session(node_kind: str, gold: int,
     gs.write_logic(gs.shop, ShopPayload(cards=cards, refresh_probs={}),
                    produced_by='cw-t243-test', sig=_LOGIC_SIG)
     state_of(sess).target_comp = COMP_LIBRARY[0]
-    return MandateV1Live(), sess, SimpleNamespace(ev_arm='full')
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        game_state_of as _gso,
+    )
+    return MandateV1Live(_gso(sess), SimpleNamespace(strategy_seed=None)), sess, SimpleNamespace(ev_arm='full')   # 终态契约:构造注入
 
 
 class TestDominanceArmWiring:

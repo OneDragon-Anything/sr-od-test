@@ -86,7 +86,9 @@ def _mandate_strategy(monkeypatch):
     from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
         MandateV1Strategy,
     )
-    strategy = MandateV1Strategy()
+    strategy = MandateV1Strategy(
+        game_state_of(StrategySession()),
+        SimpleNamespace(strategy_seed=None))   # 终态契约:构造注入
     # 门后内务(方向帧消费/镜像遥测)与本锁无关,桩成 no-op 保单测面窄。
     monkeypatch.setattr(strategy, '_consume_shop_direction_frame',
                         lambda session: None)
@@ -250,7 +252,9 @@ def _run_buy_waves_unobserved_host(monkeypatch, tmp_path, counters, *,
         from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
             MandateV1Strategy,
         )
-        strategy = MandateV1Strategy()   # 真实门:未观察 → CloseShop
+        strategy = MandateV1Strategy(
+        game_state_of(StrategySession()),
+        SimpleNamespace(strategy_seed=None))   # 终态契约:构造注入   # 真实门:未观察 → CloseShop
     else:
         class _IdleStrategy:
             """观察态正常关店替身:门放行后的决策核返回 CloseShop。"""
