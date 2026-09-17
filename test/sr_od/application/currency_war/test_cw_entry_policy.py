@@ -1,6 +1,6 @@
 """cw_entry_policy 单元锁:难度确认屏「恒选最高」缺省判据两分支。
 
-锁面来源 = 策略内容普查 F-D-OPS-01 迁移(判据单一源居 kernel/cw_entry_policy,
+锁面依据 = 难度选择判据单一源设计(判据居 kernel/cw_entry_policy,
 入口链 cw_entry_start 只观察+机械点击;行为保持契约 = 同输入同动作)。"""
 from __future__ import annotations
 
