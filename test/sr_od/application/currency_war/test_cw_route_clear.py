@@ -108,13 +108,13 @@ def test_terminal_contract_schema_and_match_shape(monkeypatch):
     # 本测试零策略语义:中性化状态附着(全量下他测注册的工厂会摸 None.session)
     monkeypatch.setattr(cw_strategy_session, 'ensure_strategy_state_attached',
                         lambda session: None)
-    from sr_od.application.currency_war.kernel.cw_game_state import (
-        DEFAULT_GS_SCHEMA,
-    )
     from sr_od.application.currency_war.kernel.cw_events import (
         MegastarOption,
         PartnerOption,
         PlannerOption,
+    )
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        DEFAULT_GS_SCHEMA,
     )
     from sr_od.application.currency_war.strategies.impl.cw_strategy import (
         CurrencyWarMatch,
@@ -138,3 +138,37 @@ def test_terminal_contract_schema_and_match_shape(monkeypatch):
         assert getattr(gs, name).value is None, name
     # typed 选项可构造(cw_events 宿主,3.5 接线消费)
     assert MegastarOption(idx=0) and PartnerOption(idx=0) and PlannerOption(idx=0)
+
+
+def test_hp_direct_read_after_anchor_retirement():
+    """hp 直读对照(landing §3.2 判据:门简化为 gs.hp 直读,结算覆盖写端
+    在场场景)。终态契约 §A:锚退役后 decision_hp = gs.hp 直读——
+    ①结算覆盖写端写入 → 读口立即反映(「结算即写」时序保持);
+    ②锚字段不再影响读口(旧锚在场与否零差异 = 单一源成立);
+    ③可信位语义不变(observation/carried 可信,prior/logic fail-closed)。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import GameState
+    from sr_od.application.currency_war.kernel.cw_hp_policy import (
+        decision_hp,
+        hp_decision_trusted_of,
+    )
+    from sr_od.application.currency_war.kernel.cw_strategy_session import (
+        StrategySession,
+    )
+
+    sess = StrategySession()
+    sess.last_hp = 77          # 旧锚残留(已无写端,模拟迁移期残值)
+    sess.last_hp_t = 9
+    gs = GameState(schema_version=1)
+    _sig = ChannelSig(family='obs', actor='cw_observation',
+                      screen='货币战争-结算', mode='read')
+    # 结算覆盖写端(§3.5.1 语义:观察直写)→ 读口反映现值,旧锚零影响
+    gs.observe(gs.hp, 80, sig=_sig)
+    assert decision_hp(gs, sess) == 80
+    assert hp_decision_trusted_of(gs) is True
+    # carried 语义(失读沿用)= 可信位 True,读口同值
+    gs.carry(gs.hp, frame=1, sig=ChannelSig(family='obs', actor='cw_observation',
+                                            screen='货币战争-备战', mode='carried'))
+    assert decision_hp(gs, sess) == 80
+    assert hp_decision_trusted_of(gs) is True
+    # 锚字段在场不产生任何覆盖(旧门行为已退役:锚不再回写读口)
+    assert decision_hp(gs, sess) == 80
