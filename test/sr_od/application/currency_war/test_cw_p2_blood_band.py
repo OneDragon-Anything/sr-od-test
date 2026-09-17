@@ -58,7 +58,8 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import (
 
 
 def _st2(hp: int = 10, plane: int = 2, gold: int = 30,
-         round_num: int = 2, level: int = 7) -> CwSimFrame:
+         round_num: int = 2, level: int = 7,
+         node_type: str | None = None) -> CwSimFrame:
     """P2 濒死带构造帧(信任门真值位显式置位;hp 缺省 10 ⊂ ≤15 带)。
     经济读口已切容器:消费位经 ``_bsb`` 桥装取容器。"""
     st = CwSimFrame(gold=gold, level=level, round_num=round_num, hp=hp)
@@ -66,6 +67,8 @@ def _st2(hp: int = 10, plane: int = 2, gold: int = 30,
     st.hp_readable = True
     st.hp_trusted = False
     st.level_readable = True
+    if node_type is not None:
+        st.node_type = node_type   # 终态契约 §A′:node 单一源 = gs(帧喂入)
     return st
 
 
@@ -297,8 +300,9 @@ class TestLockGenObservationKeys:
             bump_lock_gen_feasibility_obs,
         )
         sess = self._sess()
-        sess.node_type_current = 'boss'
-        bump_lock_gen_feasibility_obs(sess, _bsb(_st2(hp=10, gold=0)),
+        # node 单一源 = gs(终态契约 §A′):'boss' 经帧喂入 gs.node,不再挂 session
+        bump_lock_gen_feasibility_obs(sess, _bsb(_st2(hp=10, gold=0,
+                                                      node_type='boss')),
                                       IntentionState(), 'lock:旧事件')
         assert state_of(sess).cw4_counters.get(
             'lock_gen_feasibility_obs_boss_neardeath_p2') == 1
@@ -306,8 +310,8 @@ class TestLockGenObservationKeys:
             not in state_of(sess).cw4_counters, '无锁开转移 ⇒ 分母不计'
         # 域外对照(hp=40):零计数
         sess2 = self._sess()
-        sess2.node_type_current = 'boss'
-        bump_lock_gen_feasibility_obs(sess2, _bsb(_st2(hp=40, gold=0)),
+        bump_lock_gen_feasibility_obs(sess2, _bsb(_st2(hp=40, gold=0,
+                                                       node_type='boss')),
                                       IntentionState(), 'lock:旧事件')
         assert 'lock_gen_feasibility_obs_boss_neardeath_p2' \
             not in state_of(sess2).cw4_counters
