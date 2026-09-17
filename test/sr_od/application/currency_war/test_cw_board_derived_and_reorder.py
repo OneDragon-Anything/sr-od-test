@@ -14,6 +14,10 @@ reconcile 第 5 例收口批)。
   建模的装备羁绊贡献(实机 5 例形态:环境卡星徽穿戴只在面板);
 - 纯重排吸收:同单位多重集排列差异 → ``deploy_slot_reorder`` 台账行
   采新(安灯面→纠漂面),缺员/多员/星级差/装备差照真失配停;
+- board 派生漂移观察覆盖采新(board_derived_adopt):board 为派生量,
+  以观察为真值源——环境卡星徽佩戴者移除的幽灵计数/未知身份入行零
+  贡献/徽标 OCR 坏读三类漂移落台账行采新不进安灯;吸收辖域只认
+  ``proj_board_resync`` 派生写端,独立手写 board 照真失配停;
 - 字段审计完备性:GameState 全部容器字段已在 ``PROJECTION_AUDIT``
   登记且无缺口态(「无写端无规则」恒空)。
 
@@ -166,6 +170,94 @@ def test_resync_skips_when_board_never_observed() -> None:
     gs.write_logic(gs.back_row, [_luanpo(1), _wandi(2)],
                    produced_by='T', sig=_SIG)
     assert gs.board.value is None, '板未读 → 跳过派生(不造假值)'
+
+
+# ============================================================ board 派生漂移观察覆盖采新
+
+
+def test_env_badge_wearer_removal_ghost_count_adopts(andon) -> None:
+    """board_derived_adopt 主锁·C1 形态(环境卡星徽佩戴者移除 → 幽灵
+    计数 → 观察覆盖采新):基座含容器行未建模的星徽贡献(只显于面板),
+    佩戴者移出 + 新单位入行的一次行写使派生 board 带着幽灵计数转 logic
+    源(增量口径对幽灵无从减除);下一帧面板实读(幽灵已随佩戴者离场)
+    与派生失配 → ``board_derived_adopt`` 台账行采新、安灯不触发。
+    修前此形态 = 真失配安灯停局(20260918-reconcile 第 5 例停局族在
+    行变更侧的复发径,docstring 曾自称「观察覆盖收敛」而接线缺失)。"""
+    gs = game_state_of(None)
+    gs.observe(gs.back_row, [_pepe(1)], sig=_SIG_OBS)
+    gs.observe(gs.board, {'减益': 1}, sig=_SIG_OBS)  # 星徽贡献只在面板
+    gs.write_logic(gs.back_row, [_luanpo(1)], produced_by='T', sig=_SIG)
+    assert gs.board.value == {'减益': 1, '巡海游侠': 1, '击破': 1}, \
+        '幽灵计数随派生写入保留(增量口径,基座贡献保留)'
+    assert gs.board.source == 'logic'
+    rows: list[dict] = []
+    set_defect_sink(rows.append)
+    try:
+        gs.observe(gs.board, {'巡海游侠': 1, '击破': 1}, sig=_SIG_OBS)
+    finally:
+        set_defect_sink(None)
+        drained = consume_defect_sink()
+    assert gs.board.value == {'巡海游侠': 1, '击破': 1}, \
+        '观察赢采新(幽灵计数消除,派生量以观察为真值源)'
+    assert gs.board.source == 'observation'
+    assert len(rows) == 1 and rows[0]['kind'] == 'board_derived_adopt', \
+        '台账行落证(无告警无停机族)'
+    assert rows[0]['field'] == 'board'
+    assert rows[0]['logic_evidence'] == 'proj_board_resync'
+    assert andon.rows == [], '派生漂移不触发安灯'
+    assert drained == rows
+
+
+def test_unknown_identity_row_entry_zero_contribution_adopts(andon) -> None:
+    """board_derived_adopt·C2 形态锁(未知身份入行):注册表外单位(狸狸,
+    角色注册表无此身份)入行,容器派生路径对其**零贡献**——Unit 不存
+    阵营(禁注册表双源),禁 faction 兜底(口径单一源 =
+    ``cw_bond_equips._recount_board``,faction 字段所在载体);同窗有标签
+    单位变更使派生 board 转 logic 源后,面板实读含未知身份的羁绊行 →
+    失配经 ``board_derived_adopt`` 采新,安灯不触发(修前 = 必然失配
+    停局)。"""
+    gs = game_state_of(None)
+    gs.observe(gs.back_row, [], sig=_SIG_OBS)
+    gs.observe(gs.board, {}, sig=_SIG_OBS)
+    gs.write_logic(gs.back_row, [_heita(1), _unit('狸狸', 2)],
+                   produced_by='T', sig=_SIG)
+    assert gs.board.value == {'银河学者': 1, '群攻': 1}, \
+        '未知身份零贡献(容器派生不回退 faction,注册表外不入账)'
+    rows: list[dict] = []
+    set_defect_sink(rows.append)
+    try:
+        # 面板实读:未知身份的羁绊行照显(观察层 OCR 兜底可读出)
+        gs.observe(gs.board, {'银河学者': 1, '群攻': 1, '仙舟': 1},
+                   sig=_SIG_OBS)
+    finally:
+        set_defect_sink(None)
+        drained = consume_defect_sink()
+    assert gs.board.value == {'银河学者': 1, '群攻': 1, '仙舟': 1}, \
+        '面板羁绊行经观察覆盖采新入账'
+    assert len(rows) == 1 and rows[0]['kind'] == 'board_derived_adopt'
+    assert andon.rows == [], '未知身份漂移不触发安灯'
+    assert drained == rows
+
+
+def test_board_adopt_scoped_to_derived_writer_rogue_write_still_stops(
+        andon) -> None:
+    """board_derived_adopt·辖域锁:吸收面只辖派生挂钩写端(evidence 前缀
+    ``proj_board_resync`` = 唯一合法 board 逻辑写端);独立手写 board
+    (越格契约违反,board 字段注「禁独立手写」)的失配照真失配安灯——
+    吸收面不得沦为 board 全面赦免,越格写端保留检出力。"""
+    gs = game_state_of(None)
+    gs.write_logic(gs.board, {'幽灵': 1}, produced_by='Rogue', sig=_SIG)
+    rows: list[dict] = []
+    set_defect_sink(rows.append)
+    try:
+        gs.observe(gs.board, {'实读': 1}, sig=_SIG_OBS)
+    finally:
+        set_defect_sink(None)
+        drained = consume_defect_sink()
+    assert rows and rows[-1]['kind'] == 'observe_vs_logic_mismatch', \
+        '非派生写端的 board 失配照真失配(吸收辖域不扩大)'
+    assert len(andon.rows) == 1, '越格写端失配照停'
+    assert drained == rows
 
 
 # ============================================================ 行纯重排吸收
