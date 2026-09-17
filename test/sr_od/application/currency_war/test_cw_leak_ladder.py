@@ -203,6 +203,8 @@ class TestL7AllInCategoryFilter:
                 raise ValueError(f'未知 source {source!r}')
         gs.observe(gs.node, NodeKey(plane=2, round_num=7, kind='boss'),
                    sig=sig)
+        # 终态契约 §A′:探针宿主 = 流经 gs 本体(P2 真长 7,语料实证)。
+        gs.node_books.plane_node_table = [object()] * 7
         return gs
 
     def _allin_session(self) -> SimpleNamespace:
