@@ -146,12 +146,16 @@ def cw4_decide(state: CwSimFrame, session, cfg=None):
     from sr_od.application.currency_war.kernel.cw_registry import (
         DEFAULT_REGISTRY,
     )
+    _cfg = cfg or DecideCfg()
     strat = MandateV1Strategy(
         game_state_of(session),
-        SimpleNamespace(strategy_seed=None),
+        _cfg,
         registry=DEFAULT_REGISTRY)   # 终态契约:构造注入
+    from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import state_of as _state_of
+    strat.state = _state_of(session)   # 状态归一:策略器状态 = 会话播种对象(config 同源)
+
     cw4_feed(session, state)
-    return strat.decide_shop_screen(session, cfg or DecideCfg())
+    return strat.decide_shop_screen(session, _cfg)
 
 
 def install_dispatch_stub_ports(monkeypatch) -> None:
