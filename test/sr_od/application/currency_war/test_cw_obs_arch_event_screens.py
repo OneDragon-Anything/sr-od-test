@@ -89,6 +89,9 @@ def _make_encounter(test_context, monkeypatch, *, in_screen: bool,
     strategy = SimpleNamespace(decide_encounter=lambda opts, st, sess, cfg,
                                refresh_used=False: pick)
     match = SimpleNamespace(strategy=strategy, session=session)
+    # 终态契约 §B(T-4):match 桩挂载容器(gs 持有引用直用)。
+    from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
+    match.gs = game_state_of(session)
     monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
     op = em.CwScreenEncounter(test_context)
     monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
