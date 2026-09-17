@@ -138,6 +138,46 @@ def test_levelup_emission_carries_cost_and_auth_basis():
     assert lv[0].reason.startswith('m3_levelup_batch:')
 
 
+def test_sellbench_emission_carries_channel_reason():
+    """SellBench 发射面通道记录装载:r9 争金归因证据层(决策行 form_ok
+    时序批 sibling 件;登记门单一源 = cw_vocab.SELL_BENCH_REASONS)。
+    溢出清位臂(overflow_warning 短路 return)SellBench.reason = 通道键
+    m4_fuel_sell;记录非指令,资格单一源(sell_gate 装配 A)零触碰。"""
+    from types import SimpleNamespace as _NS
+
+    from sr_od.application.currency_war.kernel.cw_intention import (
+        IntentionState,
+    )
+    deployed = [BenchChar(slot=i + 1, char_id=f'注册表外散件{i}', star=2)
+                for i in range(4)]
+    frame = mandate.MandateFrame(
+        gold=80, level=4,
+        bench=[BenchChar(slot=1, char_id='注册表外散件A', star=1)],
+        deployed=deployed, deploy_cap=4, node_type='battle',
+        stop_flag=False, k_members=(), round_num=2, overflow_warning=True)
+    st = CwSimFrame(gold=80, level=4, hp=30, plane=2, round_num=2)
+    st.level_readable = True
+    st.deploy_cap = 4
+    st.node_type = 'battle'
+    gs = game_state_of(None)
+    # 燃料资格面读容器(空板守卫读 deployed + bench 边际维),双容器预写
+    gs.write_logic(gs.bench, bench_view_of_slots(
+        [BenchChar(slot=1, char_id='注册表外散件A', star=1)]),
+        produced_by='T', sig=_SIG)
+    gs.write_logic(gs.front_row, [
+        BenchChar(slot=i + 1, char_id=f'注册表外散件{i}', star=2,
+                  position_pref='front') for i in range(4)],
+        produced_by='T', sig=_SIG)
+    sess = _NS(cw4_counters={}, target_comp=None,
+               v3_intention=IntentionState(), active_strategies=[])
+    out = mandate.run_mandate(frame, sess, state=gs)
+    sb = [e for e in out if isinstance(e.action, SellBench)]
+    assert sb, '构帧须命中溢出清位臂(1★ 线外燃料 + overflow_warning)'
+    assert sb[0].action.reason == 'm4_fuel_sell'
+    # route_tag 载体 = Emitted.reason(桥伴装载;通道键单一词汇)
+    assert sb[0].reason == 'm4_fuel_sell'
+
+
 # ===== 4. 换算收口锁 =====
 
 def test_emission_resolves_container_index_fail_closed():
