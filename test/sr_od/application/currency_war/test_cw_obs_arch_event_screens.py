@@ -137,6 +137,8 @@ def _make_megastar(test_context, monkeypatch, *, in_node: bool):
 
     session = _make_session()
     match = SimpleNamespace(session=session)
+    from sr_od.application.currency_war.kernel.cw_game_state import game_state_of as _gso_match
+    match.gs = _gso_match(match.session)
     monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
     op = ms.CwScreenMegastar(test_context)
     monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
@@ -243,6 +245,8 @@ def test_megastar_redispatch_no_reclick_and_gate_reset(
         strategy=SimpleNamespace(
             decide_megastar=lambda opts, state, sess, cfg: SimpleNamespace(
                 idx=0, reason='stub')))
+    from sr_od.application.currency_war.kernel.cw_game_state import game_state_of as _gso_match
+    match.gs = _gso_match(match.session)
     monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
     op = ms.CwScreenMegastar(test_context)
     monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)

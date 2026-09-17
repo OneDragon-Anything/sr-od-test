@@ -238,6 +238,8 @@ def _make_env(test_context, monkeypatch: pytest.MonkeyPatch, *,
         decide_invest=lambda kind, names, st, sess, cfg: SimpleNamespace(
             option_idx=pick_idx, reason='stub'))
     match = SimpleNamespace(strategy=strategy, session=session)
+    from sr_od.application.currency_war.kernel.cw_game_state import game_state_of as _gso_match
+    match.gs = _gso_match(match.session)
     monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
     op = iem.CwScreenInvestEnv(test_context)
     monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
@@ -336,6 +338,8 @@ def _make_strategy(test_context, monkeypatch: pytest.MonkeyPatch,
 
     match = SimpleNamespace(strategy=SimpleNamespace(decide_invest=_decide),
                             session=session)
+    from sr_od.application.currency_war.kernel.cw_game_state import game_state_of as _gso_match
+    match.gs = _gso_match(match.session)
     monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
     op = ism.CwScreenInvestStrategy(test_context)
     monkeypatch.setattr(op, '_ensure_entry_screen', lambda: entry_ok)
@@ -389,6 +393,8 @@ def test_invest_strategy_active_strategies_appended_at_reentry_exit(
             test_context)
         session = StrategySession()
         match = SimpleNamespace(strategy=SimpleNamespace(), session=session)
+        from sr_od.application.currency_war.kernel.cw_game_state import game_state_of as _gso_match
+        match.gs = _gso_match(match.session)
         monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
         monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
         monkeypatch.setattr(op, '_entry_anchor_hit', lambda screen: False)

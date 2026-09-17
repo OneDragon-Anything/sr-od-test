@@ -96,6 +96,8 @@ def test_supply_chosen_written_on_confirm_pick(test_context, monkeypatch) -> Non
         strategy=SimpleNamespace(decide_supply=lambda opts, state, sess, cfg,
                                  refresh_used: SimpleNamespace(
                                      idx=0, refresh=False, reason='test')))
+    from sr_od.application.currency_war.kernel.cw_game_state import game_state_of as _gso_match
+    match.gs = _gso_match(match.session)
     monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
     op = sn.CwScreenSupplyNode(test_context)
     monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
@@ -125,6 +127,8 @@ def test_supply_chosen_written_on_confirm_pick(test_context, monkeypatch) -> Non
         strategy=SimpleNamespace(decide_supply=lambda opts, state, sess, cfg,
                                  refresh_used: SimpleNamespace(
                                      idx=0, refresh=True, reason='test')))
+    from sr_od.application.currency_war.kernel.cw_game_state import game_state_of as _gso_match2
+    match2.gs = _gso_match2(match2.session)
     monkeypatch.setattr(test_context, 'cw_match', match2, raising=False)
     op2 = sn.CwScreenSupplyNode(test_context)
     monkeypatch.setattr(op2, 'last_screenshot', _FRAME, raising=False)
@@ -161,6 +165,8 @@ def test_supply_refresh_emission_counts_container(
         strategy=SimpleNamespace(
             decide_supply=lambda opts, state, sess, cfg, refresh_used:
                 SimpleNamespace(idx=0, refresh=True, reason='test')))
+    from sr_od.application.currency_war.kernel.cw_game_state import game_state_of as _gso_match
+    match.gs = _gso_match(match.session)
     monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
     op = sn.CwScreenSupplyNode(test_context)
     monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)

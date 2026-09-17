@@ -384,7 +384,13 @@ def test_pick_box_decision_fail_closed():
     op = bp.CwScreenBoxPick.__new__(bp.CwScreenBoxPick)
     strategy = SimpleNamespace(
         decide_box_card=lambda names, gs, session, config: 9)
+    # 终态契约 §B(T-4):桩挂载 gs(决策输入 = 容器持有引用)。
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        game_state_of as _gso_2a,
+    )
+    _sess_2a = SimpleNamespace()
     op.ctx = SimpleNamespace(cw_match=SimpleNamespace(
-        strategy=strategy, session=SimpleNamespace(), config=None))
+        strategy=strategy, session=_sess_2a, config=None,
+        gs=_gso_2a(_sess_2a)))
     with pytest.raises(ValueError):
         op._decide_card_index(['甲', '乙'])
