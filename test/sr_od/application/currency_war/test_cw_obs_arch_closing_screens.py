@@ -32,11 +32,11 @@ CwScreenWaitOneOne / 位面情报采集 CwScreenPlaneIntel(薄转录 + 双节点
 生产端口恒 None 直连旧路径,五段新路径 = 测试驱动形态——五 op 结构锁与
 逐屏装端口分流/段迹锁已随并存窗收口整删,行为锁单驱动生产路径):
 
-- **重入裁决×门组合行为锁**(总纲契约 6 行为面):「已发」旗标裁决
-  住分流**之前**两路径共享段(位面过渡/武装箱 = 裁决先行式:门命中 +
-  pending 在位 → 不误判完成、失败轮旗标不复活、落地轮裁决出口 success
-  零段迹;未达上限 = miss 分支内式:门命中 + pending 在位 → 裁决不触发、
-  确认重发,miss 已发 → 裁决 success)——两屏位序差异的行为观测点 =
+- **重入裁决×门组合行为锁**(总纲契约 6 行为面):「已发」旗标裁决位 =
+  位面过渡(五段形态)住分流**之前**共享段;武装箱(两 node 形态,迭代
+  2026-09-18-screen-op-flat-report)住决策动作 node 顶部,直驱 act 承重;
+  未达上限 = miss 分支内式:门命中 + pending 在位 → 裁决不触发、确认重发,
+  miss 已发 → 裁决 success——两屏位序差异的行为观测点 =
   门命中+旗标在位时旗标清否,由组合行为锁承重(收尾屏详设 §1-§3)。
 - **薄转录锁**(位面情报采集,总纲契约 2):决策循环消费
   ``_collect_cycle`` 单一共享体(禁第二套转录)+ 双节点图边(采集→关闭
@@ -159,12 +159,13 @@ def test_reentry_arbitration_flag_gate_combination(test_context,
     assert op_r._click_pending is False, '裁决出口清旗标'
     assert clicks_r == [] and op_r._lifecycle_trace == [], (
         f'裁决轮零动作零段迹:{clicks_r!r} {op_r._lifecycle_trace!r}')
-    # 武装箱:门命中 + pending 在位 → 重点一轮(不误判完成)
+    # 武装箱(两 node 形态,裁决住决策动作 node 顶部):门命中 + pending 在位
+    # → 重点一轮(不误判完成)
     close_pt = SimpleNamespace(x=1108, y=760)
     op_a, clicks_a = _make_armory(test_context, monkeypatch,
                                   mark_hit=True, close_pt=close_pt)
     op_a._click_pending = True
-    rs_a = _run_node(test_context, op_a, op_a.handle)
+    rs_a = _run_node(test_context, op_a, op_a.act)
     assert not rs_a.is_success and '点 × 已发' in (rs_a.status or ''), (
         f'标识在 = 点击未落地,重点非完成:{rs_a!r}')
     assert clicks_a == [close_pt] and op_a._click_pending is True, (
@@ -244,6 +245,45 @@ def _make_armory(test_context, monkeypatch: pytest.MonkeyPatch, *,
     clicks = _stub_controller(test_context, monkeypatch)
     monkeypatch.setattr(abm.time, 'sleep', lambda *_: None)
     return op, clicks
+
+
+def test_armory_box_two_node_observe_report_and_round_wait(
+        test_context, monkeypatch) -> None:
+    """武装箱两 node 形态锁(轻屏统一形态,迭代 2026-09-18-screen-op-flat-
+    report):观察 node = 标识门(miss = round_fail 交编排壳,obs 不装载)+
+    obs{on_screen} → 占位 report 接线(gs 缺席跳过不炸;本屏现役零容器
+    写点,接口为统一形态占位);决策动作 node = 点 × 关闭机械交回
+    round_wait(不烧节点重试预算)。红 = 门失效 / 接线断流 / 循环推进
+    回退为计预算 retry。"""
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_armory_box as abm,
+    )
+    # ① 门 miss → fail 早退,obs 不装载
+    op_off, _c0 = _make_armory(test_context, monkeypatch, mark_hit=False,
+                               close_pt=None)
+    rs_off = _run_node(test_context, op_off, op_off.observe)
+    assert not rs_off.is_success and '非武装箱弹窗' in (rs_off.status or ''), (
+        f'门 miss 文案沿用现役:{rs_off!r}')
+    assert op_off._obs is None, '门早退不装载 obs'
+    # ② 门 hit → obs 装载(on_screen)+ 占位 report 调用(gs 在场)
+    _reports: list = []
+    monkeypatch.setattr(abm, 'report_screen_armory_box_obs',
+                        lambda gs, obs: _reports.append(obs))
+    monkeypatch.setattr(
+        test_context, 'cw_match',
+        SimpleNamespace(session=SimpleNamespace(), gs=object()), raising=False)
+    op, _clicks = _make_armory(test_context, monkeypatch, mark_hit=True,
+                               close_pt=SimpleNamespace(x=1108, y=760))
+    rs = _run_node(test_context, op, op.observe)
+    assert rs.is_success, f'观察 success:{rs!r}'
+    assert op._obs is not None and op._obs.on_screen is True, 'obs 挂实例属性'
+    assert len(_reports) == 1 and _reports[0] is op._obs, (
+        f'占位 report 接线恰一次(统一形态调用):{_reports!r}')
+    # ③ 点 × 关闭 → round_wait 机械交回(落地裁决 = 下轮 act 顶部)
+    rs2 = _run_node(test_context, op, op.act)
+    assert rs2.result == OperationRoundResultEnum.WAIT, (
+        f'循环推进 = round_wait(不计节点重试预算):{rs2!r}')
+    assert op._click_pending is True, '点 × 已发 → pending 置位(重入裁决承载)'
 
 
 # ==================== 未达上限弹窗(收口整删)====================

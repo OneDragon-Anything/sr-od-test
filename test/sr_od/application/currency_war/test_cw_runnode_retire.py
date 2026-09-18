@@ -4,10 +4,9 @@ RunSupplyNode → CwScreenSupplyNode(cw_screen/cw_screen_supply_node.py)、
 RunMegastarNode → CwScreenMegastar 内联(委托壳废止)。本文件锁迁移前后的
 **行为断言一致**:①验证完成才 success(离开节点画面)(原 ADR-0264 关态
 基线预置断言随 gate 模块退役删除,见 test_supply_leaves_node_success 注);
-②仍在节点内 = 做一个动作 + 循环推进轮次(补给现役 = round_retry 计
-node_max_retry_times=8 预算,超限框架转 FAIL 交回;盛会之星两 node 形态
-(迭代 2026-09-18-screen-op-flat-report)= 决策动作 node round_wait 推进,
-不计节点重试预算)。
+②仍在节点内 = 做一个动作 + 循环推进轮次(两屏均两 node 形态,迭代
+2026-09-18-screen-op-flat-report:决策动作 node round_wait 推进,不计节点
+重试预算,无防御上限)。
 
 恢复分诊:原文件第③腿「源码零残留掩蔽扫描」(fixtures.masked_scan
 + test_runnode_zero_residue_in_src / test_runnode_scan_mutation_selfcheck)
@@ -60,24 +59,23 @@ def _make_op(cls, *, in_node: bool, do_action_calls: list):
 
 # ==================== 补给节点流转(行为等价①②) ====================
 
-def test_supply_node_flow_act_retry_then_success() -> None:
-    """补给流转两段(行为等价①②):仍在补给屏 → 做一个动作 +
-    round_retry(计 node_max_retry_times=8 预算,超限框架转 FAIL 交回
-    ——预算语义不变);锚 miss(离开节点画面)→ success(验证完成才
-    success,不再发动作)。(gate 清尾批:原「+关态稳定基线预置」断言随
-    gate 模块退役删除。)"""
+def test_supply_node_flow_act_wait_then_success() -> None:
+    """补给流转两段(行为等价①②,两 node 形态):仍在补给屏 → 决策动作
+    node 恰一个动作 + round_wait(不计节点重试预算,无防御上限);锚 miss
+    (离开节点画面)→ success(验证完成才 success,不再发动作)。
+    (gate 清尾批:原「+关态稳定基线预置」断言随 gate 模块退役删除。)"""
     from sr_od.application.currency_war.operations.cw_screen.cw_screen_supply_node import (
         CwScreenSupplyNode,
     )
     actions: list = []
     op = _make_op(CwScreenSupplyNode, in_node=True, do_action_calls=actions)
-    res = op.handle()
+    res = op.act()
     assert actions == [1]                      # 每轮恰好一个动作
-    assert getattr(res, '_retry', False) is True
+    assert getattr(res, '_wait', False) is True   # 循环推进 = round_wait
     actions2: list = []
     op2 = _make_op(CwScreenSupplyNode, in_node=False,
                    do_action_calls=actions2)
-    res2 = op2.handle()
+    res2 = op2.act()
     assert res2.success is True
     assert '节点完成' in res2.status
     assert actions2 == []                       # 离开节点 = 不再发动作
