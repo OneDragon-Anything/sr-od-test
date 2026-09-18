@@ -1,0 +1,70 @@
+"""奖励球容器化三锁(迭代 2026-09-18-prep-obs-retirement 阶段 3.4/T-4)。
+
+球决策输入换容器 spheres 域(SphereSight.points 载荷坐标;旧黑板
+``obs.spheres`` 读点清零)——锁:
+- 读口还原:``sphere_click_targets_of`` 把 SphereSight.points 还原为
+  ``(color, Point, r)`` 消费形态(select_sphere_clicks 契约);
+- ClickSpheres 容器逻辑态:载荷坐标精确摘除(kernel 写口分支,原黑板
+  腿逐位迁移);域未观察/载荷无交集 = 零写;
+- 签名换源:``_sphere_progress_sig`` 席/球计数分量来自容器派生。
+"""
+from test.sr_od.application.currency_war._cw_helpers import cw4_session
+
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    ChannelSig,
+    SphereSight,
+    apply_prep_action_logic,
+    game_state_of,
+)
+from sr_od.application.currency_war.kernel.cw_prep_actions import (
+    sphere_click_targets_of,
+)
+from sr_od.application.currency_war.kernel.cw_vocab import ClickSpheres
+
+_SIG = ChannelSig(family='obs', actor='synthesize_from_game_state',
+                  mode='synthesized')
+_LOGIC_SIG = ChannelSig(family='logic_action', actor='CwScreenPrep')
+
+
+def _write_spheres(session, points: tuple) -> None:
+    """按容器域形态写 spheres(观察写端同款 SphereSight 载荷)。"""
+    gs = game_state_of(session)
+    gs.observe(gs.spheres, SphereSight(
+        count=len(points),
+        colors=tuple(dict.fromkeys(p[0] for p in points)),
+        points=points), sig=_SIG)
+
+
+def test_sphere_click_targets_roundtrip():
+    """读口还原:(color,x,y,r) 平铺 → (color, Point, r) 形态逐项对应。"""
+    session = cw4_session()
+    gs = game_state_of(session)
+    _write_spheres(session, (('gold', 100, 200, 30), ('blue', 300, 400, 20)))
+    targets = sphere_click_targets_of(gs)
+    assert [(c, p.x, p.y, r) for c, p, r in targets] == \
+        [('gold', 100, 200, 30), ('blue', 300, 400, 20)]
+
+
+def test_click_spheres_container_precise_drop():
+    """容器逻辑态:ClickSpheres 载荷坐标精确摘除(未被点的球保留);
+    count/colors 随载荷同步重算。"""
+    session = cw4_session()
+    gs = game_state_of(session)
+    _write_spheres(session, (('gold', 100, 200, 30), ('blue', 300, 400, 20)))
+    apply_prep_action_logic(
+        gs, ClickSpheres(points=((300, 400),)),
+        produced_by='test', sig=_LOGIC_SIG)
+    view = gs.spheres.value
+    assert view.points == (('gold', 100, 200, 30),)
+    assert view.count == 1 and view.colors == ('gold',)
+
+
+def test_click_spheres_stale_payload_zero_write():
+    """陈旧提案守卫:载荷与容器现值无交集(球已被观察回补) → 零写。"""
+    session = cw4_session()
+    gs = game_state_of(session)
+    _write_spheres(session, (('gold', 100, 200, 30),))
+    apply_prep_action_logic(
+        gs, ClickSpheres(points=((999, 999),)),
+        produced_by='test', sig=_LOGIC_SIG)
+    assert gs.spheres.value.points == (('gold', 100, 200, 30),)
