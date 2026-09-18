@@ -23,6 +23,10 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+from sr_od.application.currency_war.kernel import cw_game_state as _gs_mod
+from sr_od.application.currency_war.kernel import (
+    cw_mismatch_policy as _policy,
+)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
     BenchSlot,
@@ -34,10 +38,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     game_state_of,
     register_sig_actors,
     set_defect_sink,
-)
-from sr_od.application.currency_war.kernel import cw_game_state as _gs_mod
-from sr_od.application.currency_war.kernel import (
-    cw_mismatch_policy as _policy,
 )
 
 register_sig_actors('TestGrantWriter')
@@ -115,6 +115,48 @@ def test_external_grant_superset_absorbed(monkeypatch) -> None:
     assert [r['kind'] for r in rows] == ['external_grant_absorbed'], \
         '落 external_grant_absorbed 台账行(无真失配行,可审计)'
     assert fired == [], '申报形状内:安灯不触发(不无脑停机)'
+
+
+# ===== 事故帧实录(2026-09-18 run_074040 失配行语义;未投影族第 10 例)=====
+
+#: 骇客专家:银狼确认后买牌前后的逻辑态 7 单位(对局日志 07:45:31 失配行)。
+_WOLF_LOGIC_UNITS: tuple[tuple[str, int], ...] = (
+    ('乱破', 1), ('卡芙卡', 1), ('大丽花', 1), ('藿藿', 1),
+    ('椒丘', 1), ('爻光', 1), ('灵砂', 1),
+)
+#: 实读 9 单位 = 逻辑 7 单位 + 授予的 2×银狼(槽 2/4,卡双腿各一)。
+_WOLF_READ_UNITS: tuple[tuple[str, int], ...] = (
+    ('乱破', 1), ('银狼', 1), ('大丽花', 1), ('银狼', 1), ('椒丘', 1),
+    ('卡芙卡', 1), ('藿藿', 1), ('爻光', 1), ('灵砂', 1),
+)
+
+
+def test_hacker_expert_silverwolf_bench_leg_absorbed(monkeypatch) -> None:
+    """第 10 例事故形态:骇客专家:银狼确认(置闩 bench 2)+ 实读恰多
+    2×银狼 → 精确吸收不停机。
+
+    病理:该卡仅装备腿在册(EXTERNAL_EQUIP_GRANTS=1),bench 双腿
+    (专家顾问银狼 + 加入商店银狼,实机证实均落备战席)未申报,安灯当
+    推算 bug 停局。锁:置闩定额 = 表值 (2,1);吸收落台账行、安灯零触发;
+    装备腿闩独立存续(同卡双腿分账)。"""
+    fired: list[dict] = []
+    monkeypatch.setattr(_policy, '_ANDON_HOOK', fired.append)
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    n_bench, n_equip = _gs_mod.latch_external_grants(
+        gs, '骇客专家:银狼', actor='TestGrantWriter')
+    assert (n_bench, n_equip) == (2, 1), '置闩定额 = 双表申报 (bench 2, equips 1)'
+    gs.write_logic(gs.bench, _bench_view(_WOLF_LOGIC_UNITS),
+                   produced_by='TestGrantWriter',
+                   evidence='proj_buy_place', sig=_logic_sig())
+
+    rows = _observe_capture(gs, _bench_view(_WOLF_READ_UNITS))
+
+    assert gs.bench.value == _bench_view(_WOLF_READ_UNITS), '观察赢覆盖照常'
+    assert gs.exec_books.external_bench_grant_pending == 0, 'bench 腿吸收清零'
+    assert gs.exec_books.external_equip_grant_pending == 1, '装备腿闩独立存续'
+    assert [r['kind'] for r in rows] == ['external_grant_absorbed'], \
+        '落 external_grant_absorbed 台账行(无真失配行)'
+    assert fired == [], '申报形状内:安灯不触发'
 
 
 def test_external_grant_without_declaration_still_stops(monkeypatch) -> None:
@@ -217,6 +259,18 @@ def test_external_bench_grants_match_official_text() -> None:
     assert '1个随机4费角色' in official['102502'].effect
     assert _policy.EXTERNAL_BENCH_GRANTS['武装支援'] == 2
     assert _policy.EXTERNAL_BENCH_GRANTS['武装支援+'] == 1
+
+    # 骇客专家:银狼(253401,未投影族第 10 例):两表双腿一致性——
+    # bench 双腿(专家顾问银狼 + 加入商店银狼,实机证实均落备战席)= 2,
+    # 装备腿(随机4费骇客改件)= 1;卡文数值为唯一源。
+    assert official['253401'].name == '骇客专家:银狼'
+    wolf_effect = official['253401'].effect
+    assert '专家顾问【银狼】' in wolf_effect
+    assert '加入商店' in wolf_effect
+    assert '1个随机4费骇客改件' in wolf_effect
+    assert _policy.EXTERNAL_BENCH_GRANTS['骇客专家:银狼'] == 2
+    assert _policy.EXTERNAL_EQUIP_GRANTS['骇客专家:银狼'] == 1
+    assert _policy.external_grant_totals('骇客专家:银狼') == (2, 1)
 
 
 # ============================================================ 姊妹锁:空账审计

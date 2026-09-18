@@ -9,14 +9,15 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.kernel.cw_game_state import (
-    GAME_STATE_SCHEMA_VERSION,
     DEFAULT_GS_SCHEMA,
+    GAME_STATE_SCHEMA_VERSION,
     ChannelSig,
     GameState,
     NodeChain,
+    NodeKey,
     TokenCell,
-    game_state_of,
     chain_node_type,
+    game_state_of,
     register_sig_actors,
 )
 
@@ -117,3 +118,84 @@ def test_derivation_non_shop_screen_no_chain_query():
     gs.node_hist_ord = 2
     gs.observe_screen_context('货币战争-备战', sig=_SIG)
     assert gs.node.value is None, '非商店画面零查链零写'
+
+
+_HOOK_SIG = ChannelSig(family='logic_hook', actor='TestChainWriter',
+                       mode='compute')
+
+
+def _seed_watermark(gs, ord_val: int) -> None:
+    """推进水位播种(备战腿等价形态:node_ord 逻辑层 + hist 双写)。"""
+    gs.write_logic(gs.node_ord, ord_val, produced_by='TestChainWriter',
+                   sig=_HOOK_SIG)
+    gs.node_hist_ord = ord_val
+
+
+def test_derivation_shop_panel_targets_observed_node_not_stale_hist():
+    """查链目标 = 生效序与观察镜像的最新者(20260918-reconcile 第 11 例
+    事故形态回归锁,run_20260918_074040)。
+
+    病理:镜像已被读链写到 r3(店开帧 votes 读,(1,3,reward),观察源),
+    推进水位仍 r2(备战帧未过,备战腿未计数);旧写法按 hist 反解查链
+    (1,2) 并把 logic 回写 (1,2,reward)——后续备战帧真读 (1,3,battle)
+    对 logic 旧键类型失配 → 统一观察对账安灯停局。修法:目标取
+    max(生效序, 镜像序) = r3,查链 (1,3) 直定 battle,失配不发生。"""
+    session = SimpleNamespace()
+    gs = game_state_of(session)
+    gs.observe(gs.node_path, NodeChain(plane=1, seq=[
+        TokenCell('reward', 'hu'), TokenCell('reward', 'hu', 0.1),
+        TokenCell('battle', 'hu', 0.7),
+    ]), evidence='t', sig=_SIG)
+    _seed_watermark(gs, 2)
+    gs.observe(gs.node, NodeKey(plane=1, round_num=3, kind='reward'),
+               evidence='votes', sig=_SIG)
+
+    gs.observe_screen_context('货币战争-备战-开商店', sig=_SIG)
+
+    assert (gs.node.value.plane, gs.node.value.round_num,
+            gs.node.value.kind) == (1, 3, 'battle'), \
+        '查链目标 = 镜像序 r3(不回写 r2),类型 = 链值 battle'
+
+
+def test_derivation_shop_panel_popup_advanced_hist_wins_over_stale_mirror():
+    """max 取向的推进优先腿:弹窗腿先推进(hist=3)而镜像仍滞留 r2 时,
+    查链目标 = hist(shop 弹在刚进入的节点上,与旧 hist 单源行为一致)。"""
+    session = SimpleNamespace()
+    gs = game_state_of(session)
+    gs.observe(gs.node_path, NodeChain(plane=1, seq=[
+        TokenCell('reward', 'hu'), TokenCell('supply', 'hu'),
+        TokenCell('battle', 'hu', 0.7),
+    ]), evidence='t', sig=_SIG)
+    _seed_watermark(gs, 3)
+    gs.observe(gs.node, NodeKey(plane=1, round_num=2, kind='reward'),
+               evidence='votes', sig=_SIG)
+
+    gs.observe_screen_context('货币战争-备战-开商店', sig=_SIG)
+
+    assert (gs.node.value.plane, gs.node.value.round_num,
+            gs.node.value.kind) == (1, 3, 'battle'), \
+        '镜像滞留时目标 = 推进水位 r3(推进腿已计数的新节点)'
+
+
+def test_derived_node_type_regression_write_dropped_with_event():
+    """类型直定倒退免疫锁(R3 规则三同簇):目标序 < 镜像序 → 丢弃留证
+    不写(镜像比派生目标鲜活,直定旧节点 = 把新节点回写旧键);镜像值
+    保持,arbitrate obs_event 在案。走弹窗直定屏路径(投资策略 ∈ 直定
+    映射,目标 = hist)。"""
+    session = SimpleNamespace()
+    gs = game_state_of(session)
+    gs.observe(gs.node, NodeKey(plane=1, round_num=3, kind='reward'),
+               evidence='votes', sig=_SIG)
+    _seed_watermark(gs, 2)
+    events = []
+    gs.note_obs_event = (  # 实例级捕获(obs_event 发射面)
+        lambda event, field, payload, verdict='', sig=None:
+        events.append((event, field, payload)))
+
+    gs.observe_screen_context('货币战争-投资策略', sig=_SIG)
+
+    assert (gs.node.value.plane, gs.node.value.round_num,
+            gs.node.value.kind) == (1, 3, 'reward'), \
+        '倒退直定丢弃:镜像 (1,3) 不被 (1,2,invest) 回写'
+    assert events and events[0][0] == 'arbitrate' and events[0][1] == 'node'
+    assert events[0][2]['target_ord'] == 2, '留证行携带被拒目标'

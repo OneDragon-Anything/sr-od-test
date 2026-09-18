@@ -275,3 +275,11 @@ def test_external_grant_tables_match_official_text() -> None:
     assert _policy.EXTERNAL_EQUIP_GRANTS['追击邀请'] == 1
     assert '获得【翡翠】和【砂金】' in official['公司契约'].effect
     assert _policy.EXTERNAL_BENCH_GRANTS['公司契约'] == 2
+
+    # 骇客专家:银狼(253401,未投影族第 10 例两表一致性):装备腿(随机
+    # 4费骇客改件)= 1;bench 双腿 = 2 归 bench 表(实机 run_074040 证实
+    # 顾问卡双腿均落备战席),totals 单一消费面 = (2, 1)。
+    assert '1个随机4费骇客改件' in official['骇客专家:银狼'].effect
+    assert _policy.EXTERNAL_EQUIP_GRANTS['骇客专家:银狼'] == 1
+    assert _policy.EXTERNAL_BENCH_GRANTS['骇客专家:银狼'] == 2
+    assert _policy.external_grant_totals('骇客专家:银狼') == (2, 1)
