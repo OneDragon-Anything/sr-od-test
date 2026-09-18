@@ -68,3 +68,12 @@ def test_click_spheres_stale_payload_zero_write():
         gs, ClickSpheres(points=((999, 999),)),
         produced_by='test', sig=_LOGIC_SIG)
     assert gs.spheres.value.points == (('gold', 100, 200, 30),)
+
+
+def test_sphere_empty_read_yields_no_targets():
+    """空读上报语义锁(reviewer r1 打回项1):count=0/points=() 空载荷
+    → 读口空列——空读照写语义兑现,防上一帧残留假球坐标喂进点击载荷。"""
+    session = cw4_session()
+    gs = game_state_of(session)
+    _write_spheres(session, ())
+    assert sphere_click_targets_of(gs) == []
