@@ -19,6 +19,13 @@ import pytest
 
 from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war.kernel import cw_prep_actions as kpa
+from sr_od.application.currency_war.kernel.cw_action_report import (
+    report_action_click_spheres_param,
+    report_action_deploy_move_param,
+    report_action_level_up_param,
+    report_action_sell_bench_param,
+    report_action_sell_deployed_param,
+)
 from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     assign_deploy_slots,
     empty_deploy_slots,
@@ -30,7 +37,6 @@ from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
 from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     Unit,
-    apply_prep_action_logic,
     bench_slots_of,
     deployed_slots_of,
     game_state_of,
@@ -86,8 +92,8 @@ def test_sphere_executor_is_mechanical_payload_clicks(monkeypatch):
     assert controller.drags == []   # 点球不拖拽
     assert screens == []            # 零读屏(挑选归决策侧 kernel)
     # 逻辑态:按载荷精确摘球(坐标匹配,非保守清空)——阶段 3.5 宿主 =
-    # apply_prep_action_logic 容器 spheres 精确摘除(原黑板投影断言随
-    # _project_prep_obs 退役)。
+    # report_action_click_spheres_param 容器 spheres 精确摘除(原黑板投影
+    # 断言随 _project_prep_obs 退役)。
     from sr_od.application.currency_war.kernel.cw_game_state import SphereSight
     from test.sr_od.application.currency_war._cw_helpers import cw4_session
     session = cw4_session()
@@ -97,26 +103,34 @@ def test_sphere_executor_is_mechanical_payload_clicks(monkeypatch):
         points=(('gold', 12, 34, 50), ('blue', 99, 99, 10))),
         sig=ChannelSig(family='obs', actor='synthesize_from_game_state',
                        mode='synthesized'))
-    apply_prep_action_logic(gs, CwActionClickSpheresParam(points=((12, 34),)),
-                            produced_by='T',
-                            sig=ChannelSig(family='logic_action',
-                                           actor='CwScreenPrep'))
+    report_action_click_spheres_param(
+        gs, CwActionClickSpheresParam(points=((12, 34),)),
+        sig=ChannelSig(family='logic_action', actor='CwScreenPrep'))
     assert [(p[1], p[2]) for p in gs.spheres.value.points] == [(99, 99)]
 
 
 # ===== R9 逻辑态全覆盖锁(判据 5)=====
 
 def test_vocab_actions_all_have_logic_state_projection():
-    """词表逻辑态覆盖锁(R9;阶段 3.5 重定向:投影宿主 = kernel 写口
-    ``apply_prep_action_logic``,原 _project_prep_obs 黑板投影随黑板退役)。
+    """词表逻辑态覆盖锁(R9;动作 op 重组后宿主 = 上报函数族
+    ``kernel/cw_action_report``,每动作恰一个具名函数——原聚合写口
+    ``apply_prep_action_logic`` 随批退役)。
 
-    覆盖面两集(登记面申报 = apply_prep_action_logic docstring):
-    - **写口分支集**(容器直写):CwActionSellBenchParam/CwActionSellDeployedParam/CwActionDeployMoveParam/
-      CwActionLevelUpParam/CwActionClickSpheresParam/CwActionOpenTomeParam/CwActionOpenBookcardParam——供数容器上逐动作
-      必产生容器写(write_seq 推进);
-    - **合法零写集**(正本申报「消费真值归观察」):CwActionOpenBoxParam(R7 终结化)/
-      CwActionWearEquipParam/工具原子七类——截断点独占发射帧,零窗口暴露;
-    词表外类型 = 合法零写(登记面申报,非静默丢行为)。"""
+    覆盖面两集(登记面申报 = 函数族 docstring:有容器写动作一动作
+    一文件,零写族集中 ``zero_writes``):
+    - **容器写集**:CwActionSellBenchParam/CwActionSellDeployedParam/
+      CwActionDeployMoveParam/CwActionLevelUpParam/CwActionClickSpheresParam/
+      CwActionOpenTomeParam/CwActionOpenBookcardParam/CwActionWearEquipParam
+      ——供数容器上逐动作必产生容器写(write_seq 推进);
+    - **合法零写集**(正本申报「消费真值归观察」):CwActionOpenBoxParam
+      (R7 终结化)/工具原子七类——容器零写。
+    裁决注记:CwActionWearEquipParam 原在零写集(聚合口形态),上报
+    函数族起穿戴 = 发出即记账 owned −1(在册才减,执行侧效果收编进
+    上报),按新事实移入容器写集。函数名机械推导(snake 规约同
+    test_cw_action_report_contract)。"""
+    import re
+
+    from sr_od.application.currency_war.kernel import cw_action_report as rpt
     from sr_od.application.currency_war.kernel.cw_game_state import (
         BenchSlot,
         BenchView,
@@ -135,6 +149,16 @@ def test_vocab_actions_all_have_logic_state_projection():
         CwActionWearEquipParam,
     )
     from test.sr_od.application.currency_war._cw_helpers import cw4_session
+
+    def _report(gs_, action):
+        """类名 → 上报函数机械推导(命名规约:去前后缀转 snake)。"""
+        core = type(action).__name__[len('CwAction'):]
+        if core.endswith('Param'):
+            core = core[:-len('Param')]
+        snake = re.sub(r'(?<!^)(?=[A-Z])', '_', core).lower()
+        fn = getattr(rpt, f'report_action_{snake}_param')
+        return fn(gs_, action, _logic)
+
     session = cw4_session()
     gs = game_state_of(session)
     _sig = ChannelSig(family='obs', actor='synthesize_from_game_state',
@@ -169,10 +193,11 @@ def test_vocab_actions_all_have_logic_state_projection():
         CwActionClickSpheresParam(points=((1, 2),)),
         CwActionOpenTomeParam(slot=None),
         CwActionOpenBookcardParam(slot=None),
+        CwActionWearEquipParam(item_name='轮滑鞋', char_name='丙',
+                               row='front', slot=1),
     ]
     zero: list = [
         CwActionOpenBoxParam(slot=None),
-        CwActionWearEquipParam(item_name='轮滑鞋', char_name='丙', row='front', slot=1),
         CwActionFurnaceUseParam(target_kind='equip', item_name='轮滑鞋'),
         CwActionPrivilegeCardUseParam(target_kind='equip', item_name='轮滑鞋'),
         CwActionWrenchUseParam(row='front', slot=1),
@@ -183,11 +208,11 @@ def test_vocab_actions_all_have_logic_state_projection():
     ]
     for action in written:
         before = _seq()
-        apply_prep_action_logic(gs, action, produced_by='T', sig=_logic)
+        _report(gs, action)
         assert _seq() > before, f'{type(action).__name__} 应产生容器写'
     for action in zero:
         before = _seq()
-        apply_prep_action_logic(gs, action, produced_by='T', sig=_logic)
+        _report(gs, action)
         assert _seq() == before, f'{type(action).__name__} 应合法零写'
     # 词表覆盖完备性:两集并集覆盖 CW_ACTION_TYPES 中非转场/非组合壳成员
     names = {c.__name__ for c in CW_ACTION_TYPES}
@@ -234,7 +259,7 @@ def _make_executor(controller: _RecordingController,
 def test_levelup_executes_single_click_per_frame():
     """R6 定案④执行器半:一次 execute = 恰一次单击(零授权零循环;
     升 N 击 = N 帧)。金腿批2b 翻转 = action.cost 逻辑态直写(唯一写点
-    apply_prep_action_logic CwActionLevelUpParam 分支),执行缝金差退役:执行点
+    report_action_level_up_param),执行缝金差退役:执行点
     gold_delta 恒 0(不进回执 extra 键、不经 _advance_gold)。"""
     controller = _RecordingController()
     ex = _make_executor(controller)
@@ -253,20 +278,20 @@ def test_levelup_logic_state_advances_xp_level_and_gold():
     gs.observe(gs.level, 3, evidence='t', sig=_SIG_OBS)
     gs.observe(gs.xp, (10, 12), evidence='t', sig=_SIG_OBS)
     gs.observe(gs.gold, 100, evidence='t', sig=_SIG_OBS)
-    apply_prep_action_logic(gs, CwActionLevelUpParam(cost=4), produced_by='T', sig=_SIG)
+    report_action_level_up_param(gs, CwActionLevelUpParam(cost=4), sig=_SIG)
     exp_level, exp_cur = xp_apply_clicks(3, 10, 1)
     assert gs.level.value == exp_level
     assert gs.xp.value[0] == exp_cur
     assert gs.gold.value == 96   # 金腿直写:-action.cost
     # 缺读跳写:level/xp 未观察帧零写不炸
     bs2 = game_state_of(None)
-    apply_prep_action_logic(bs2, CwActionLevelUpParam(cost=4), produced_by='T', sig=_SIG)
+    report_action_level_up_param(bs2, CwActionLevelUpParam(cost=4), sig=_SIG)
     assert bs2.level.value is None and bs2.xp.value is None
     # gold 未观察 = 域级跳写(xp/level 照推进)
     bs3 = game_state_of(None)
     bs3.observe(bs3.level, 3, evidence='t', sig=_SIG_OBS)
     bs3.observe(bs3.xp, (10, 12), evidence='t', sig=_SIG_OBS)
-    apply_prep_action_logic(bs3, CwActionLevelUpParam(cost=4), produced_by='T', sig=_SIG)
+    report_action_level_up_param(bs3, CwActionLevelUpParam(cost=4), sig=_SIG)
     assert bs3.gold.value is None
 
 
@@ -307,9 +332,10 @@ def test_deploymove_logic_state_moves_unit_and_increments_board():
     )
     gs.observe(gs.bench, bench_view_of_slots(slots), evidence='t', sig=_SIG_OBS)
     gs.observe(gs.board, {'欢愉': 1}, evidence='t', sig=_SIG_OBS)
-    apply_prep_action_logic(gs, CwActionDeployMoveParam(bench_idx=2, to_row='front',
-                                           faction=''),
-                            produced_by='T', sig=_SIG)
+    report_action_deploy_move_param(gs, CwActionDeployMoveParam(bench_idx=2,
+                                                   to_row='front',
+                                                   faction=''),
+                                    sig=_SIG)
     bench_after = bench_slots_of(gs)
     assert bench_after[2] is None
     dep = deployed_slots_of(gs)
@@ -323,9 +349,10 @@ def test_deploymove_logic_state_moves_unit_and_increments_board():
     gs.observe(gs.back_row, [Unit(char_id=f'丙{i}', star=1, equips=[],
                                   slot=i + 1) for i in range(6)],
                evidence='t', sig=_SIG_OBS)
-    apply_prep_action_logic(gs, CwActionDeployMoveParam(bench_idx=2, to_row='front',
-                                           faction=''),
-                            produced_by='T', sig=_SIG)
+    report_action_deploy_move_param(gs, CwActionDeployMoveParam(bench_idx=2,
+                                                   to_row='front',
+                                                   faction=''),
+                                    sig=_SIG)
     assert bench_slots_of(gs)[2].char_id == '甲'   # 源槽未摘(整笔零写)
 
 
@@ -336,29 +363,30 @@ def test_selldeployed_logic_state_clears_slot_and_recounts_board():
     gs = game_state_of(None)
     gs.observe(gs.front_row, [Unit(char_id='甲', star=2, equips=[],
                                    slot=1)], evidence='t', sig=_SIG_OBS)
-    apply_prep_action_logic(gs, CwActionSellDeployedParam(deployed_idx=0),
-                            produced_by='T', sig=_SIG)
+    report_action_sell_deployed_param(
+        gs, CwActionSellDeployedParam(deployed_idx=0), sig=_SIG)
     dep = deployed_slots_of(gs)
     assert dep[0] is None
     assert gs.gold.value is None   # gold 未观察 = 域级跳写
     # 槽空(陈旧提案)= 零写不炸
-    apply_prep_action_logic(gs, CwActionSellDeployedParam(deployed_idx=0),
-                            produced_by='T', sig=_SIG)
+    report_action_sell_deployed_param(
+        gs, CwActionSellDeployedParam(deployed_idx=0), sig=_SIG)
 
 
 def test_prep_sell_gold_booked_exactly_once_across_seam_and_projection():
     """备战卖出金账全链恰一次入账(统一观察对账迭代 2026-09-16 归因批
-    出口①修模锁):live 执行链对同一 CwActionSellBenchParam 先后跑执行缝
-    (apply_op_effect)与容器投影(apply_prep_action_logic),历史形态两腿
-    各记一次 +refund → 逻辑金系统性虚高,下帧实读倒挂(journal 实证
-    −2,2026-09-15 run_20260915_070645)。修后容器唯一写点 = 投影腿,
-    执行缝对 CwActionSellBenchParam 零入账(tracked 主账在场亦不记)。"""
+    出口①修模锁):历史形态 live 执行链对同一 CwActionSellBenchParam 先后
+    跑执行缝(旧 apply_op_effect)与容器投影,两腿各记一次 +refund →
+    逻辑金系统性虚高,下帧实读倒挂(journal 实证 −2,2026-09-15
+    run_20260915_070645)。修后容器唯一写点 = 卖出上报函数,确认口
+    (apply_confirm_effect,dict 确认族专用)对动作参数零入账
+    (复返即红:确认口若再收编动作分支即双腿双记)。"""
     from sr_od.application.currency_war.kernel.cw_economy import (
         bench_char_cost,
         sell_refund,
     )
     from sr_od.application.currency_war.kernel.cw_exec_state import (
-        apply_op_effect,
+        apply_confirm_effect,
     )
     from sr_od.application.currency_war.kernel.cw_game_state import (
         bench_view_of_slots,
@@ -374,8 +402,8 @@ def test_prep_sell_gold_booked_exactly_once_across_seam_and_projection():
     gs.tracked_books.bench = [bc]   # 旧执行缝腿的数据源(腿复返即红)
     refund = sell_refund(1, bench_char_cost(bc))
     action = CwActionSellBenchParam(bench_idx=0)
-    apply_op_effect(session, action)   # 执行缝:修后零入账
-    apply_prep_action_logic(gs, action, produced_by='T', sig=_SIG)
+    apply_confirm_effect(session, action)   # 确认口:动作参数零入账
+    report_action_sell_bench_param(gs, action, sig=_SIG)
     assert gs.gold.value == 10 + refund, \
         f'卖出回金恰一次 +{refund}(双腿双记 = 台账 −N 倒挂病灶)'
 

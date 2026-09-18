@@ -9,9 +9,10 @@
 点不可推算(实机样本 +4/+7/+6 无界,data 注册表无数值表),设计上无逻辑
 写端——豁免表按「写端前缀」申报表达不了「无写端外部收入」形状。
 
-修法 = 申报窗(ExecBooks.prep_sphere_income_pending,apply_op_effect
-CwActionClickSpheresParam 分支按载荷球数开窗)+ observe() 失配分支正向差精确吸收
-(prep_sphere_income_absorbed)+ 店开帧收口(照 bench 申报表族形态)。
+修法 = 申报窗(ExecBooks.prep_sphere_income_pending,点球上报
+report_action_click_spheres_param 按 session 在场的载荷球数开窗)+
+observe() 失配分支正向差精确吸收(prep_sphere_income_absorbed)
++ 店开帧收口(照 bench 申报表族形态)。
 
 锁依据 = ExecBooks.prep_sphere_income_pending 字段注释的吸收语义与红线
 (未申报/负差/店开帧后照停)+ GameState._absorb_prep_sphere_income
@@ -24,8 +25,9 @@ from types import SimpleNamespace
 from sr_od.application.currency_war.kernel import (
     cw_mismatch_policy as _policy,
 )
-from sr_od.application.currency_war.kernel.cw_exec_state import (
-    apply_op_effect,
+from sr_od.application.currency_war.kernel.cw_action_report import (
+    report_action_click_spheres_param,
+    report_action_deploy_move_param,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
@@ -167,20 +169,25 @@ def test_sphere_income_window_closes_at_shop_panel(monkeypatch) -> None:
 # ============================================================ 置位端(申报点)
 
 
-def test_apply_op_effect_clickspheres_opens_window() -> None:
-    """置位端:CwActionClickSpheresParam 执行发出按载荷球数开窗,多批累加;非点球
-    动作零影响。零推进语义不变(金账不写,只开窗)。"""
+def test_report_click_spheres_opens_window() -> None:
+    """置位端:点球上报(session 在场)按载荷球数开窗,多批累加;非点球
+    动作的上报函数不触窗。金账零写语义不变(只开窗,值留观察)。"""
     session = SimpleNamespace()
     gs = game_state_of(session)
     assert gs.exec_books.prep_sphere_income_pending == 0
 
-    apply_op_effect(session, CwActionClickSpheresParam(points=((100, 200), (300, 400))))
+    report_action_click_spheres_param(
+        gs, CwActionClickSpheresParam(points=((100, 200), (300, 400))),
+        sig=_logic_sig(), session=session)
     assert gs.exec_books.prep_sphere_income_pending == 2, '按载荷球数开窗'
 
-    apply_op_effect(session, CwActionClickSpheresParam(points=((500, 600),)))
+    report_action_click_spheres_param(
+        gs, CwActionClickSpheresParam(points=((500, 600),)),
+        sig=_logic_sig(), session=session)
     assert gs.exec_books.prep_sphere_income_pending == 3, '多批执行累加'
 
-    apply_op_effect(session, CwActionDeployMoveParam(bench_idx=0, to_row='front',
-                                        faction='公司'))
+    report_action_deploy_move_param(
+        gs, CwActionDeployMoveParam(bench_idx=0, to_row='front',
+                                    faction='公司'), sig=_logic_sig())
     assert gs.exec_books.prep_sphere_income_pending == 3, \
-        '非点球动作零影响'
+        '非点球动作的上报函数零触窗(窗单点住点球上报)'

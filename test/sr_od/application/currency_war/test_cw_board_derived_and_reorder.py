@@ -36,11 +36,13 @@ import dataclasses
 import pytest
 
 from sr_od.application.currency_war.kernel import cw_projection_audit as pa
+from sr_od.application.currency_war.kernel.cw_action_report import (
+    report_action_sell_deployed_param,
+)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     GameState,
     Unit,
-    apply_prep_action_logic,
     consume_defect_sink,
     game_state_of,
     set_defect_sink,
@@ -160,8 +162,8 @@ def test_selldeployed_updates_board_via_derived_resync() -> None:
     gs.observe(gs.front_row, [_luanpo(1)], sig=_SIG_OBS)
     gs.observe(gs.board, {'巡海游侠': 1, '击破': 1}, sig=_SIG_OBS)
     gs.observe(gs.gold, 10, sig=_SIG_OBS)
-    apply_prep_action_logic(gs, CwActionSellDeployedParam(deployed_idx=0),
-                            produced_by='T', sig=_SIG)
+    report_action_sell_deployed_param(gs, CwActionSellDeployedParam(deployed_idx=0),
+                                      sig=_SIG)
     assert gs.board.value == {}, '卖出 → 标签摘除(派生口单一)'
     assert gs.board.evidence == 'proj_board_resync'
 

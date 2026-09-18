@@ -2,8 +2,8 @@
 
 病理(run_20260918_063249 停局链):上轮买后 payload(空槽+残影)跨轮
 残留,下轮开店帧实读新波 5 卡 → observe 失配安灯停局。根因 = 买后
-logic 态的唯一清场写端在 apply_shop_action_logic 的 CwActionCloseShopParam 分支
-(``leave_screen``),但生产链 CwActionCloseShopParam 被「终结不入序列」约定截在
+logic 态的唯一清场写端在关店上报(report_action_close_shop_param 的
+``leave_screen`` 离屏写),但生产链 CwActionCloseShopParam 被「终结不入序列」约定截在
 决策驱动器外(decide_shop_screen 收尾 return,不进 apply),机械关店
 只点按钮不喂 kernel。修法 = 关店机械口(cw_op_close_shop.close_shop)
 两出口做 kernel 侧清场:点击已发出口 + 幂等已关出口(旧 miss 臂与
@@ -26,12 +26,14 @@ import pytest
 import sr_od.application.currency_war.kernel.cw_game_state as game_state_mod
 import sr_od.application.currency_war.operations.cw_op.cw_op_close_shop \
     as close_mod
+from sr_od.application.currency_war.kernel.cw_action_report import (
+    report_action_buy_card_param,
+)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     ShopActionExecuted,
     ShopPayload,
     ShopSlot,
-    apply_shop_action_logic,
     game_state_of,
     shop_payload_content_cards,
 )
@@ -105,10 +107,9 @@ def test_close_shop_click_clears_stale_buy_payload(monkeypatch):
     payload 置 None(evidence=left_screen 锁清场写端身份)。"""
     monkeypatch.setattr(close_mod.time, 'sleep', lambda s: None)
     session, gs = _session_with_shop(['希儿', '花火', '黑塔', '丹恒', '停云'])
-    apply_shop_action_logic(
-        gs, CwActionBuyCardParam(card=_card('希儿')),
-        executed=ShopActionExecuted(bought_count=1),
-        produced_by='CwActionBuyCardParam', sig=_LOGIC_SIG)
+    report_action_buy_card_param(
+        gs, CwActionBuyCardParam(card=_card('希儿')), _LOGIC_SIG,
+        executed=ShopActionExecuted(bought_count=1))
     assert gs.shop.value is not None, '前置:买后 payload 在屏(当轮事实)'
     assert len(shop_payload_content_cards(gs.shop.value)) == 4, \
         '前置:买走 1 张余 4 content(槽空置换语义)'
@@ -173,10 +174,9 @@ def test_buy_projection_regression_within_visit(monkeypatch):
     monkeypatch.setattr(close_mod.time, 'sleep', lambda s: None)
     session, gs = _session_with_shop(['希儿', '花火', '黑塔', '丹恒', '停云'])
 
-    apply_shop_action_logic(
-        gs, CwActionBuyCardParam(card=_card('希儿')),
-        executed=ShopActionExecuted(bought_count=1),
-        produced_by='CwActionBuyCardParam', sig=_LOGIC_SIG)
+    report_action_buy_card_param(
+        gs, CwActionBuyCardParam(card=_card('希儿')), _LOGIC_SIG,
+        executed=ShopActionExecuted(bought_count=1))
 
     assert gs.gold.value == 27, 'gold: 30 −单价 3 = 27(买投影照常)'
     assert gs.shop.value is not None, \

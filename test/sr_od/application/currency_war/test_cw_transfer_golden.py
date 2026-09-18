@@ -4,9 +4,9 @@
 历史与到期兑现：原为冻结 simulate 快照对照（13 案金样
 t185_golden_fixture.json）；2026-09-15 严格瘦身收缩 6 案暂留并注记
 「改活等价锁后删快照半」。前提已亡（``cw_vocab.simulate`` 零生产消费，
-动作链全走 apply_*_logic 直锁），到期兑现 = 初态本地构造（观察写入口，
+动作链全走上报函数族直锁），到期兑现 = 初态本地构造（观察写入口，
 替代 restore_state_snapshot 注入）+ 直驱活的
-``kernel.cw_game_state.apply_shop_action_logic``，冻结 JSON 与其加载代码
+``kernel.cw_action_report`` 上报函数，冻结 JSON 与其加载代码
 删除（fixture 视为不可再生的一次性捕获，生成器指针
 .debug/temp/t185_capture_golden2.py 不入 git；JSON 内 comptx 两案所属
 动作类已退役，为不可达死数据，随到期一并删）。
@@ -28,6 +28,11 @@ from __future__ import annotations
 
 import pytest
 
+from sr_od.application.currency_war.kernel.cw_action_report import (
+    report_action_sell_bench_param,
+    report_action_sell_deployed_param,
+    report_action_swap_deploy_param,
+)
 from sr_od.application.currency_war.kernel.cw_economy import (
     bench_char_cost,
     sell_refund,
@@ -45,7 +50,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     ShopPayload,
     ShopSlot,
     Unit,
-    apply_shop_action_logic,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionSellBenchParam,
@@ -173,6 +177,17 @@ _CASES = [
 ]
 
 
+def _report(gs: GameState, action) -> object:
+    """按动作类型直调对应上报函数(每动作一函数,零聚合分派)。"""
+    if isinstance(action, CwActionSellBenchParam):
+        return report_action_sell_bench_param(gs, action, sig=_SIG_LOGIC)
+    if isinstance(action, CwActionSellDeployedParam):
+        return report_action_sell_deployed_param(gs, action, sig=_SIG_LOGIC)
+    if isinstance(action, CwActionSwapDeployParam):
+        return report_action_swap_deploy_param(gs, action, sig=_SIG_LOGIC)
+    raise AssertionError(f'未覆盖的动作类型:{type(action).__name__}')
+
+
 @pytest.mark.parametrize(
     'case_name,make_action,init_kw,applied,reason,income,gold,'
     'bench_expect,front_expect,board_expect,equips_expect',
@@ -189,9 +204,7 @@ def test_cw_transfer_golden(case_name: str, make_action, init_kw: dict,
     gold/bench/rows/board/equips 域写回 + 未辖域(hp/level/xp/shop/
     back_layout)零写。"""
     gs = _gs_with(**init_kw)
-    out = apply_shop_action_logic(gs, make_action(), executed=None,
-                                  produced_by='MandateV1Strategy',
-                                  sig=_SIG_LOGIC)
+    out = _report(gs, make_action())
     # —— 出参契约(LogicOutcome;拒绝 = applied=False + reason 零写)——
     assert out.applied is applied, f'{case_name}: applied'
     if reason is not None:

@@ -15,6 +15,9 @@
 """
 from __future__ import annotations
 
+from sr_od.application.currency_war.kernel.cw_action_report import (
+    report_action_sell_bench_param,
+)
 from sr_od.application.currency_war.kernel.cw_exec_state import (
     BenchChar,
     bench_from_compact,
@@ -22,7 +25,6 @@ from sr_od.application.currency_war.kernel.cw_exec_state import (
 from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     Unit,
-    apply_prep_action_logic,
     bench_slots_of,
     bench_view_of_slots,
     game_state_of,
@@ -107,8 +109,8 @@ def test_sellbench_overflow_logic_state_absorbs_card():
     gs.write_logic(gs.overflow_warning, True, produced_by='test', sig=_SIG)
     gs.write_logic(gs.overflow_card, '不死途', produced_by='test', sig=_SIG)
 
-    apply_prep_action_logic(gs, CwActionSellBenchParam(bench_idx=0), produced_by='test',
-                            sig=_SIG)
+    report_action_sell_bench_param(gs, CwActionSellBenchParam(bench_idx=0),
+                                   sig=_SIG)
 
     slots = bench_slots_of(gs)
     assert slots[0] is not None and slots[0].char_id == '不死途'
@@ -135,8 +137,8 @@ def test_sellbench_overflow_missing_identity_skips_absorb():
         BenchChar(slot=1, char_id='花火', star=1),
         BenchChar(slot=2, char_id='刃', star=1)])
 
-    apply_prep_action_logic(gs, CwActionSellBenchParam(bench_idx=0), produced_by='test',
-                            sig=_SIG, session=session)
+    report_action_sell_bench_param(gs, CwActionSellBenchParam(bench_idx=0),
+                                   sig=_SIG, session=session)
 
     slots = bench_slots_of(gs)
     assert slots[0] is None
@@ -181,8 +183,8 @@ def test_overflow_absorb_syncs_tracked():
         BenchChar(slot=1, char_id='花火', star=1),
         BenchChar(slot=2, char_id='刃', star=1)]))
 
-    apply_prep_action_logic(gs, CwActionSellBenchParam(bench_idx=0), produced_by='test',
-                            sig=_SIG, session=session)
+    report_action_sell_bench_param(gs, CwActionSellBenchParam(bench_idx=0),
+                                   sig=_SIG, session=session)
 
     tracked = game_state_of(session).tracked_books.bench
     assert [(b.char_id, b.star) for b in tracked if b is not None] == [
@@ -203,8 +205,8 @@ def test_overflow_absorb_after_executor_removal_compact_shape():
     session = StrategySession()
     gs = _seed(session, [BenchChar(slot=2, char_id='刃', star=1)])  # 花火已被摘
 
-    apply_prep_action_logic(gs, CwActionSellBenchParam(bench_idx=0), produced_by='test',
-                            sig=_SIG, session=session)
+    report_action_sell_bench_param(gs, CwActionSellBenchParam(bench_idx=0),
+                                   sig=_SIG, session=session)
 
     tracked = game_state_of(session).tracked_books.bench
     assert [(b.char_id, b.star) for b in tracked if b is not None] == [
