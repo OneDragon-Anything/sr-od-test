@@ -21,17 +21,17 @@ CwScreenBriefing / BOSS 简报 CwScreenBossBriefing。
 - 简报/BOSS 简报:sim 腿 = 不适用——sim 无对应画面段(过渡相位,§3.2),
   等价判据主承重 = 实机在册行为锁 + 写入流对拍。
 
-锁的语义(测试纪律 7 自检;出处 = landing 阶段一判据 + 总纲契约 1-6;
-生产端口恒 None 直连旧路径,五段新路径 = 测试驱动形态——迁移结构锁/
-新路径行为锁已随并存窗收口整删,行为锁单驱动生产路径):
+锁的语义(测试纪律 7 自检;出处 = landing 阶段一判据;行为锁单驱动
+生产路径):
 
-- **重入裁决归属锁**(总纲契约 6,单一定谳;锁形 = 裁决×门组合行为锁
-  ``test_reentry_arbitration_flag_gate_combination``):投资两屏已迁移两
-  node 形态(迭代 2026-09-18-screen-op-flat-report),「已发」旗标裁决住
-  决策动作 node 顶部(直驱 act 承重);简报裁决住分流判据之前共享段;
-  战斗等待/BOSS 简报无裁决旗标,分流在出口判定之前。
+- **重入裁决归属锁**(单一定谳;锁形 = 裁决×门组合行为锁
+  ``test_reentry_arbitration_flag_gate_combination``):投资环境/投资策略/
+  简报已迁移两 node 形态(迭代 2026-09-18-screen-op-flat-report),
+  「已发」旗标裁决住决策动作 node 顶部(直驱 act 承重);BOSS 简报
+  (两 node 形态)无裁决旗标,横幅退场裁决 = 外循环重派后的下一次
+  入口门;战斗等待无裁决旗标。
   红 = 裁决被转录进观察 node。
-- **观察上报接线锁**(投资两屏,两 node 形态):观察 node 稳定帧一次读
+- **观察上报接线锁**(两 node 形态屏):观察 node 稳定帧一次读
   → report 经屏文件落容器(容器终值)+ obs 挂实例属性;投资策略入口锚
   复探窗(ADR-0529 有界自愈)语义逐位(复探窗内自愈、超窗 round_retry
   消耗观察 node 预算)。
@@ -39,18 +39,17 @@ CwScreenBriefing / BOSS 简报 CwScreenBossBriefing。
   现读 >0 → 点钮恰一次 → 终结交回 round_success(交回外循环重进 = 入口
   重建);刷新计数写端随画面 op 基类退役(记账归动作 op 会话承接),
   闸 2 容器计数读端原样。
-- **写入流对拍锁**(§9.1-F2 主门 (b)):``active_env`` 选卡时点写(值/
-  写时点 = 点卡前,决策面留守)、``active_strategies`` 重入裁决出口
-  append(值/时点)、简报三字段 session 写(词缀幂等辖「读+采」/boss 恒
-  覆写/难度仅 None 写)逐位;结算观察半直写(D-94 时序)经战斗等待在册
-  行为锁的轨迹断言承载。
+- **写入流对拍锁**:``active_env`` 选卡时点写(值/写时点 = 点卡前,
+  决策面留守)、``active_strategies`` 重入裁决出口 append(值/时点)、
+  简报三字段容器写(词缀幂等辖「读+采」/boss 恒覆写/难度仅 None 写)
+  逐位;结算观察半直写(D-94 时序)经战斗等待在册行为锁的轨迹断言承载。
 - **判别单一源消费面锁**:`is_boss_briefing_texts` 消费点集合迁移前后不变
   (cw_loop / cw_screen_battle_wait / cw_screen_boss_briefing;防转录顺手
   复制判别逻辑)。
 
 驱动方式 = 真类实例(构造走 __init__)+ 读链/点击链桩化,节点函数直驱
-(run_node 外壳);战斗等待/简报/BOSS 简报 = 生产缺省形态(端口显式复位
-None,行为锁主驱动)。
+(run_node 外壳);战斗等待 = 生产缺省形态(端口显式复位 None,行为锁
+主驱动)。
 """
 from __future__ import annotations
 
@@ -117,9 +116,9 @@ def _phase_mod(name: str):
 
 def test_reentry_arbitration_flag_gate_combination(test_context,
                                                    monkeypatch) -> None:
-    """重入裁决×门组合行为锁(总纲契约 6 的行为面;投资两屏已迁移两 node
-    形态(迭代 2026-09-18-screen-op-flat-report):裁决住决策动作 node 顶部,
-    直驱 act 承重;简报仍五段形态:裁决住分流判据之前两路径共享段):
+    """重入裁决×门组合行为锁(投资环境/投资策略/简报均为两 node 形态
+    (迭代 2026-09-18-screen-op-flat-report):「已发」旗标裁决住决策动作
+    node 顶部,直驱 act 承重;BOSS 简报/战斗等待无裁决旗标):
     - 投资环境(裁决先行式两态):落地轮(锚已退 = overlay 已关)+
       旗标在位 → 裁决出口 success + 零动作 + 旗标保持已消费态不复活;
       门命中轮(锚仍在 = 未落地)+ 旗标在位 → 裁决不误判完成,确认链
@@ -128,8 +127,9 @@ def test_reentry_arbitration_flag_gate_combination(test_context,
       append(append 归裁决出口,出口面由
       test_invest_strategy_active_strategies_appended_at_reentry_exit
       承重);
-    - 战斗等待/BOSS 简报无裁决旗标,其分流语义归本文件在册行为锁
-      (生产路径段迹承重;原双向段迹分流锁已随并存窗收口整删)。
+    - 简报(两 node 形态):落地轮(pending 在位 + 标识已退)→ 裁决
+      出口 success,读链不发生(裁决住 act 顶部,act 零读链);门命中轮
+      (标识仍在)→ 裁决不误判完成,「下一步」重发、旗标经置位体重置。
     红 = 裁决出口语义漂移(门命中误判完成 / 落地轮旗标复活 / 裁决移位)。"""
     # 投资环境·落地轮:pending 在位 + 锚已退 → 裁决出口 success,零动作
     op_land, _m, _s = _make_env(test_context, monkeypatch, in_screen=False)
@@ -175,21 +175,18 @@ def test_reentry_arbitration_flag_gate_combination(test_context,
     )
     assert (_gso_arch(session_st).active_strategies.value or []) == [], (
         '门命中轮裁决不触发,零 append(出口面归重入锁)')
-    # 简报·落地轮:pending 在位 + 标识已退 → 裁决出口 success,零段迹
-    # 且读链不发生(裁决在共享段,先于 observe 门与决策体)
+    # 简报·落地轮:pending 在位 + 标识已退 → 裁决出口 success,读链不发生
+    #(裁决住决策动作 node 顶部,act 零读链)
     op_b_land, session_b, calls_b = _make_briefing(
         test_context, monkeypatch, mark_hit=False)
     op_b_land._click_pending = True
-    rs_b = _run_node(test_context, op_b_land, op_b_land.handle)
+    rs_b = _run_node(test_context, op_b_land, op_b_land.act)
     assert rs_b.is_success and '已离开简报' in (rs_b.status or ''), (
         f'落地轮裁决出口 success 交回:{rs_b!r}')
     assert op_b_land._click_pending is False, (
         '裁决先行消费旗标,落地轮不残留')
-    assert op_b_land._lifecycle_trace == [], (
-        f'裁决在分流前共享段,本轮零段迹:'
-        f'{op_b_land._lifecycle_trace}')
     assert calls_b['affix_read'] == 0 and calls_b['boss_read'] == 0, (
-        f'裁决出口先行,读链不发生:{calls_b!r}')
+        f'裁决出口先行,读链不发生(act 零读链):{calls_b!r}')
     # 简报·门命中轮:pending 在位 + 标识仍在 → 「下一步」重发,旗标经
     # 置位体重置
     op_b_hit, _s_b2, _c_b2 = _make_briefing(test_context, monkeypatch,
@@ -197,13 +194,11 @@ def test_reentry_arbitration_flag_gate_combination(test_context,
                                                                      None)],
                                             bosses=['碎星王虫'], difficulty=5)
     op_b_hit._click_pending = True
-    rs_bh = _run_node(test_context, op_b_hit, op_b_hit.handle)
+    rs_bh = _run_node(test_context, op_b_hit, op_b_hit.act)
     assert not rs_bh.is_success and '重入观察裁决' in (rs_bh.status or ''), (
         f'标识在 = 点击未落地,重点非完成:{rs_bh!r}')
     assert op_b_hit._click_pending is True, (
         '旗标经「下一步」置位体重置')
-    assert op_b_hit._lifecycle_trace == [], (
-        f'门命中轮段迹:{op_b_hit._lifecycle_trace}')
 
 
 # ==================== 投资环境:写入流对拍 ====================
@@ -539,15 +534,19 @@ def _make_briefing(test_context, monkeypatch: pytest.MonkeyPatch, *,
                    mark_hit: bool = True, bosses: list | None = None,
                    affixes: list | None = None, difficulty: int | None = 5,
                    session: StrategySession | None = None):
-    """简报真类装配。桩面 = 画面门/「下一步」点击/三读链;读链桩按记录器
-    计数(幂等守卫辖「读+采」断言载体)。返回 (op, session, calls)。"""
+    """简报真类装配(两 node 形态)。桩面 = 画面门/「下一步」点击/三读链;
+    读链桩按记录器计数(幂等守卫辖「读+采」断言载体)。返回 (op, session, calls)。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_briefing as bm,
     )
 
     session = session or StrategySession()
-    monkeypatch.setattr(test_context, 'cw_match',
-                        SimpleNamespace(session=session), raising=False)
+    match = SimpleNamespace(session=session)
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        game_state_of as _gso_match,
+    )
+    match.gs = _gso_match(match.session)
+    monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
     op = bm.CwScreenBriefing(test_context)
     monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
     monkeypatch.setattr(op, 'round_by_find_area',
@@ -581,14 +580,51 @@ def _make_briefing(test_context, monkeypatch: pytest.MonkeyPatch, *,
 #  的幂等守卫腿承重。)
 
 
+def test_briefing_observe_gate_and_report(test_context, monkeypatch) -> None:
+    """简报观察 node 锁(两 node 形态):入口门 miss = round_fail 早退
+    (现役文案,obs 不装载零读链);门 hit → 三读数一次读 → report 落
+    容器(三字段容器终值)+ obs 挂实例属性;「下一步」点击不在观察轮
+    (归决策动作 node,点击桩零命中断言)。
+    红 = 门失效 / 接线断流 / 容器终值漂移 / 观察轮误点击。"""
+    # ① 门 miss → fail 早退,obs 不装载零读链
+    op_off, _s0, calls_off = _make_briefing(test_context, monkeypatch,
+                                            mark_hit=False,
+                                            affixes=[('火弱点', None)],
+                                            bosses=['碎星王虫'])
+    rs_off = _run_node(test_context, op_off, op_off.observe)
+    assert not rs_off.is_success and '非简报屏' in (rs_off.status or ''), (
+        f'门 miss 文案沿用现役:{rs_off!r}')
+    assert op_off._obs is None, '门早退不装载 obs'
+    assert calls_off['affix_read'] == 0 and calls_off['boss_read'] == 0, (
+        f'门早退零读链:{calls_off!r}')
+    # ② 门 hit → 三读数一次读 → report 落容器 + obs 挂实例属性
+    op, session, calls = _make_briefing(test_context, monkeypatch,
+                                        mark_hit=True,
+                                        affixes=[('火弱点', None)],
+                                        bosses=['碎星王虫'], difficulty=5)
+    rs = _run_node(test_context, op, op.observe)
+    assert rs.is_success, f'观察 success:{rs!r}'
+    _gs = game_state_of(session)
+    assert _gs.enemy_affixes.value == ['火弱点'], (
+        f'词缀经 report 落容器:{_gs.enemy_affixes.value!r}')
+    assert _gs.plane_bosses.value == ['碎星王虫'], (
+        f'boss 经 report 落容器:{_gs.plane_bosses.value!r}')
+    assert _gs.enemy_difficulty.value == 5, (
+        f'难度经 report 落容器:{_gs.enemy_difficulty.value!r}')
+    assert op._obs is not None and op._obs.enemy_affixes == ['火弱点'], (
+        'obs 挂实例属性')
+    assert calls['diff_read'] == 1, '难度容器缺省 → 读一次(仅缺省读)'
+
+
 def test_briefing_session_write_semantics_three_fields(test_context,
                                                        monkeypatch) -> None:
-    """写入流对拍(主门 (b)):简报三字段三种写语义逐字——①词缀幂等守卫
-    辖「读+采」(容器非空 → 跳过读与点采);②boss 恒覆写(不做已存
-    跳过,防跨局残留;读空 → 清 None);③敌人难度仅 None 时写。单驱动
-    生产路径(写端住分流前共享段,install 参数化腿已随并存窗收口砍除)。
-    红 = 守卫辖面漂移(如幂等只辖读不辖采)或覆写语义丢失。
-    终态契约 §B:三字段单一源 = 容器,播种随写端迁 gs(write_logic)。"""
+    """写入流对拍:简报三字段三种写语义逐字——①词缀幂等守卫辖「读+采」
+    (容器非空 → 跳过读与点采,观察侧读门);②boss 恒覆写(不做已存
+    跳过,防跨局残留;读空 → 清 None);③敌人难度仅 None 时写(容器
+    已有不读不写)。单驱动观察 node(读侧住观察 node,写闸住 report 屏
+    文件,report 函数级闸面由 test_cw_screen_report_ports 承重,本锁辖
+    op 侧读门接线)。
+    红 = 守卫辖面漂移(如幂等只辖读不辖采)或覆写语义丢失。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         ChannelSig as _cs_t,
     )
@@ -609,7 +645,7 @@ def test_briefing_session_write_semantics_three_fields(test_context,
     op, session, calls = _make_briefing(test_context, monkeypatch,
                                         mark_hit=True, affixes=['新词缀'],
                                         bosses=['碎星王虫'], session=session)
-    _run_node(test_context, op, op.handle)
+    _run_node(test_context, op, op.observe)
     assert calls['affix_read'] == 0 and calls['affix_collect'] == 0, (
         f'容器已有词缀 → 跳过读与点采(幂等辖「读+采」):{calls!r}')
     assert _gso_t(session).enemy_affixes.value == ['已有词缀'], '幂等轮不覆写词缀'
@@ -620,15 +656,15 @@ def test_briefing_session_write_semantics_three_fields(test_context,
     op2, session2, _c2 = _make_briefing(test_context, monkeypatch,
                                         mark_hit=True, bosses=['碎星王虫'],
                                         session=session2)
-    _run_node(test_context, op2, op2.handle)
+    _run_node(test_context, op2, op2.observe)
     assert _gso_t(session2).plane_bosses.value == ['碎星王虫'], 'boss 恒覆写防跨局残留'
     op2b, session2b, _c2b = _make_briefing(test_context, monkeypatch,
                                            mark_hit=True, bosses=[],
                                            session=StrategySession())
     _seed(session2b, 'plane_bosses', ['上一局残留'])
-    _run_node(test_context, op2b, op2b.handle)
+    _run_node(test_context, op2b, op2b.observe)
     assert _gso_t(session2b).plane_bosses.value is None, 'boss 读空 → 清 None(防假真值)'
-    # ③ 难度仅 None 写(终态契约 §B:播种随写端迁容器)
+    # ③ 难度仅 None 写(容器已有不读不写)
     session3 = StrategySession()
     from sr_od.application.currency_war.kernel.cw_game_state import (
         ChannelSig as _cs3,
@@ -644,7 +680,7 @@ def test_briefing_session_write_semantics_three_fields(test_context,
     op3, session3, calls3 = _make_briefing(test_context, monkeypatch,
                                            mark_hit=True, difficulty=5,
                                            session=session3)
-    _run_node(test_context, op3, op3.handle)
+    _run_node(test_context, op3, op3.observe)
     assert calls3['diff_read'] == 0 and _gso3(
         session3).enemy_difficulty.value == 3, (
         '难度已有值 → 不读不写(仅缺省写)')
@@ -655,8 +691,8 @@ def test_briefing_session_write_semantics_three_fields(test_context,
 
 def _make_boss(test_context, monkeypatch: pytest.MonkeyPatch, *,
                area_hit: bool, ocr_texts: list[str] | None = None):
-    """BOSS 简报真类装配。桩面 = 横幅 area 锚/片段判别 OCR/空白区 center/
-    点击记录器。返回 (op, clicks)。"""
+    """BOSS 简报真类装配(两 node 形态)。桩面 = 横幅 area 锚/片段判别 OCR/
+    空白区 center/点击记录器。返回 (op, clicks)。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_boss_briefing as bb,
     )
@@ -683,22 +719,56 @@ def _make_boss(test_context, monkeypatch: pytest.MonkeyPatch, *,
 # (原 test_boss_briefing_dispatch_both_ways「BOSS 简报分流双向」删:装两
 #  端口走五段新路径的分流/段迹面随并存窗收口整删;其跨路径幸存断言
 #  (横幅在 = 点空白 + success 交回 / 横幅已退 = 零动作早退)由下方误读
-#  接管锁的生产路径驱动同形承重。)
+#  接管锁与观察门锁同形承重。)
 
 
 def test_boss_briefing_misread_takeover(test_context, monkeypatch) -> None:
-    """误读帧(「强敌米」)生产路径仍接管:area 锚 miss + 片段判别命中 →
-    观察判横幅在 → 点空白路径(P4R3 锚加固语义,判别单一源消费同源)。
-    红 = 转录把片段判别兜底写丢。"""
-    _uninstall_ports(monkeypatch)
+    """误读帧(「强敌米」)两 node 形态仍接管:area 锚 miss + 片段判别命中 →
+    观察判横幅在(obs 装载)→ act 点空白路径(P4R3 锚加固语义,判别单一源
+    消费同源)。红 = 迁移把片段判别兜底写丢 / 点空白动作断流。"""
     op, clicks = _make_boss(test_context, monkeypatch, area_hit=False,
                             ocr_texts=['强敌米', '点击空白处继续',
                                        '云骑骁卫·彦卿'])
-    rs = _run_node(test_context, op, op.handle)
+    rs = _run_node(test_context, op, op.observe)
+    assert rs.is_success and op._obs is not None and op._obs.on_screen is True, (
+        f'误读帧观察判横幅在(obs 装载):{rs!r} {op._obs!r}')
+    rs2 = _run_node(test_context, op, op.act)
     assert clicks == ['blank'], '误读帧仍走「横幅命中 → 点空白」路径'
-    assert rs.is_success and '点空白已发' in (rs.status or '')
-    assert op._lifecycle_trace == [], (
-        f'生产路径零段迹:{op._lifecycle_trace}')
+    assert rs2.is_success and '点空白已发' in (rs2.status or '')
+
+
+def test_boss_briefing_observe_gate_and_placeholder_report(
+        test_context, monkeypatch) -> None:
+    """BOSS 简报观察 node 锁(两 node 形态):横幅已退(area 锚 miss +
+    片段判别 miss)→ 早退 success 交回外循环重判(零点击,obs 不装载);
+    横幅在 → obs 装载 + 占位 report 接线恰一次(match/gs 在场;本屏现役
+    零容器写点,接口为统一形态占位)。
+    红 = 门语义反转 / 接线断流。"""
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_boss_briefing as bb,
+    )
+    # ① 横幅已退 → success 交回,零点击
+    op_gone, clicks_gone = _make_boss(test_context, monkeypatch,
+                                      area_hit=False, ocr_texts=[])
+    rs_gone = _run_node(test_context, op_gone, op_gone.observe)
+    assert rs_gone.is_success and '推进完成' in (rs_gone.status or ''), (
+        f'横幅已退早退语义:{rs_gone!r}')
+    assert clicks_gone == [] and op_gone._obs is None, (
+        f'早退轮零动作零 obs:{clicks_gone!r} {op_gone._obs!r}')
+    # ② 横幅在 → obs 装载 + 占位 report 恰一次
+    op, _clicks = _make_boss(test_context, monkeypatch, area_hit=True,
+                             ocr_texts=[])
+    _reports: list = []
+    monkeypatch.setattr(bb, 'report_screen_boss_briefing_obs',
+                        lambda gs, obs: _reports.append(obs))
+    monkeypatch.setattr(test_context, 'cw_match',
+                        SimpleNamespace(session=SimpleNamespace(), gs=object()),
+                        raising=False)
+    rs = _run_node(test_context, op, op.observe)
+    assert rs.is_success, f'观察 success:{rs!r}'
+    assert op._obs is not None and op._obs.on_screen is True, 'obs 挂实例属性'
+    assert len(_reports) == 1 and _reports[0] is op._obs, (
+        f'占位 report 接线恰一次(统一形态调用):{_reports!r}')
 
 
 # (三审整删)原 test_boss_discrimination_single_source_consumers_
