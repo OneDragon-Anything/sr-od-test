@@ -69,7 +69,7 @@ def test_cap_roomy_stale_container_still_deploys():
     assert len(out) == 1
 
 
-def test_deploy_cap_full_counter_frame_dedup():
+def test_cap_full_counter_frame_dedup():
     """拒因台账锁:板满帧 → cw4_counters['deploy_cap_full'] 计数,同帧
     (plane, round) 去重;跨帧(round 推进)再计。"""
     session, gs = _full_board_session()
