@@ -334,8 +334,11 @@ def test_prep_sell_gold_booked_exactly_once_across_seam_and_projection():
 # ===== 零比对出生锁(判据 6)=====
 
 def test_wear_equip_single_mechanical_drag_no_diff_verification(monkeypatch):
-    """WearEquip 零比对出生(裁决 3):单次机械拖拽,拖后零验穿读屏
-    (原 avatar-slot CV-diff 判穿/补救链通道已删);落位真值归观察对账。
+    """WearEquip 单次机械拖拽,无补救链重试(裁决 3 修订形态,T-55):
+    拖后像素验证只采集申报事实(置申报闩 + emitted 门跳投影),不做
+    重试治理——单次拖拽零补救链的锁仍有效;拖后读帧 = 验证对照面
+    (原「零验穿读屏」断言已随申报闩族 T-22/T-44/T-55 语义修订退役,
+    未见 = 原 assert 恒真空洞)。落位真值归观察对账。
     (monkeypatch time.sleep = 拖后固定等待空等,真机等待节奏非本锁辖面。)"""
     monkeypatch.setattr('time.sleep', lambda _s: None)
     from sr_od.application.currency_war import prep_actions as pa
