@@ -186,3 +186,30 @@ def test_redeploy_gate_pair_period_reads_target_view() -> None:
     )
     assert not _redeploy_emission_allowed(session=None, state=state,
                                           ctx=off_ctx)
+
+
+def test_redeploy_gate_membership_unread_fails_closed() -> None:
+    """发射门 membership 缺读弃权:None = 缺读,不放行(fail-closed)。
+
+    契约边界 = None 缺读 ≠ 空集缺省,禁坠对锁期回退放宽(出处 =
+    ``_redeploy_emission_allowed`` None 分支注)。入面参照
+    test_redeploy_gate_pair_period_reads_target_view 的放行构造——若
+    None 分支被误删坠回空集缺省读法,本构造经 target 视读法会假放行,
+    锁响。
+    """
+    comp = pair_target_comp(_PAIR)
+    unread_ctx = SimpleNamespace(
+        membership=None,
+        bench=[SimpleNamespace(char_id=_HUAHUO),
+               SimpleNamespace(char_id='万敌')],
+        target_comp=comp,
+        target_factions=frozenset(comp.all_factions),
+        target_cores=frozenset(comp.core_chars),
+        fw_carry=frozenset(),
+    )
+    # 板面同放行构造口径:花火入板 → 量2 → 轴②严格上升(None 分支
+    # 被删时走空集读法会真放行,保证本锁判别力)。
+    state = SimpleNamespace(board=SimpleNamespace(value={
+        '持续伤害': 1, '量子同频': 1, '贝洛伯格': 1}))
+    assert not _redeploy_emission_allowed(session=None, state=state,
+                                          ctx=unread_ctx)
