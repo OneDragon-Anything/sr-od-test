@@ -272,10 +272,10 @@ def test_megastar_redispatch_no_reclick_and_gate_reset(
     monkeypatch.setattr(ms.time, 'sleep', lambda *_: None)
 
     class _StubPickOp:
-        def execute(self, env) -> bool:
+        def execute(self) -> bool:
             return True
 
-    monkeypatch.setattr(reg_mod, 'action_op_for', lambda act: _StubPickOp())
+    monkeypatch.setattr(reg_mod, 'action_op_for', lambda act, ctx, env: _StubPickOp())
     # ① 首派发:恰一次候选点击 + 发射即置位
     op._do_action(_FRAME)
     assert len(clicks) == 1, f'首派发恰一次候选点击:{clicks!r}'

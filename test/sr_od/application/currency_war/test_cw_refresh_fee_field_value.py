@@ -25,7 +25,7 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
 )
 from sr_od.application.currency_war.kernel.cw_vocab import CwActionRefreshShopParam
 from sr_od.application.currency_war.operations.cw_op.cw_refresh_shop_action import (
-    RefreshShopOp,
+    CwActionRefreshShopOp,
 )
 from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
     ShopExecEnv,
@@ -41,6 +41,9 @@ class _FakeController:
 class _FakeCtx:
     def __init__(self) -> None:
         self.controller = _FakeController()
+        self.cw_match = None
+        self.run_context = None
+        self.screen_loader = None
 
 
 class _FakeOp:
@@ -68,7 +71,9 @@ def test_refresh_fee_unobserved_field_falls_back_to_base(monkeypatch):
     state = game_state_of(session)   # 新容器:shop_refresh_cost 未观察
     ledger = ShopVisitLedger()
 
-    assert RefreshShopOp(CwActionRefreshShopParam()).execute(_env(state, ledger)) is True
+    _env_ = _env(state, ledger)
+    assert CwActionRefreshShopOp(_env_.op.ctx, CwActionRefreshShopParam(),
+                                 env=_env_).run().is_success
 
     assert ledger.spend_executed == REFRESH_COST_BASE
     assert ledger.total_refresh == 1
@@ -84,6 +89,8 @@ def test_refresh_fee_observed_value_is_used(monkeypatch):
                   sig=ChannelSig(family='obs', actor='cw_observation'))
     ledger = ShopVisitLedger()
 
-    assert RefreshShopOp(CwActionRefreshShopParam()).execute(_env(state, ledger)) is True
+    _env_ = _env(state, ledger)
+    assert CwActionRefreshShopOp(_env_.op.ctx, CwActionRefreshShopParam(),
+                                 env=_env_).run().is_success
 
     assert ledger.spend_executed == 3

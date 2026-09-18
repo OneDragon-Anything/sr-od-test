@@ -1,24 +1,19 @@
-"""轮内新鲜度账容器宿主同口 + 卖出落地行为锁。
+"""轮内新鲜度账容器宿主同口 + 商店访问账本死字段退役锁。
 
 锁两件设计约定(逐字段处置表 #18/#19;行为语义 = 处置行迁移契约):
 1. 轮内新鲜度账宿主 = 容器 Field ``GameState.round_fresh_buys``:
    ``record_fresh_buy`` 写 → ``fresh_buys_of``/``fresh_buys_sell_face``
    读**同一容器**(写读单口,sim/live 同口);相位失配 = 跨轮整体作废、
    读取零销账语义逐位保留;值形状 names = list(容器 JSON 序列化安全形)。
-2. 卖出落地路径在同轮已卖登记调用桩删除后零异常落地(拖拽桩 + tracked
-   随动 + 账本计数链完整);商店访问账本的四死基座字段(期望态残留,
-   全为写端无读端)不再在场——对象面运行时检查,非源码扫描。
+2. 商店访问账本的四死基座字段(期望态残留,全为写端无读端)不再在场
+   ——对象面运行时检查,非源码扫描。(原卖出落地锁随商店域 SellBenchOp
+   退役移除:动作 op 重组批③,备战域卖出由 CwActionSellBenchOp 承接。)
 """
-from types import SimpleNamespace
-
-from one_dragon.base.geometry.point import Point
-
 from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     fresh_buys_of,
     fresh_buys_sell_face,
     record_fresh_buy,
 )
-from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
 from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     GameState,
@@ -28,12 +23,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
-from sr_od.application.currency_war.kernel.cw_vocab import CwActionSellBenchParam
-from sr_od.application.currency_war.operations.cw_op.cw_sell_bench_action import (
-    SellBenchOp,
-)
 from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
-    ShopExecEnv,
     ShopVisitLedger,
 )
 
@@ -94,30 +84,6 @@ def test_fresh_buys_sell_face_failclosed_and_phase_gate() -> None:
     # 同相位重录后硬面恢复可见
     record_fresh_buy(session, gs, '丹恒')
     assert fresh_buys_sell_face(session) == frozenset({'丹恒'})
-
-
-def test_sell_bench_op_lands_without_round_sold_stub(monkeypatch) -> None:
-    """卖出落地零异常:同轮已卖登记桩删除后,机械执行链(拖拽→tracked
-    随动→账本计数)完整落地返回 True。"""
-    import sr_od.application.currency_war.prep_actions as prep_actions
-
-    monkeypatch.setattr(prep_actions, 'drag_bench_to_sell',
-                        lambda *a, **k: None)
-    session = StrategySession()
-    gs = game_state_of(session)
-    gs.tracked_books.bench = [BenchChar(slot=1, char_id='三月七', star=1)]
-    ledger = ShopVisitLedger()
-    env = ShopExecEnv(
-        op=SimpleNamespace(ctx=None),
-        match=SimpleNamespace(session=session),
-        config=None, click_pts=[],
-        level_btn=Point(0, 0), refresh_btn=Point(0, 0),
-        ledger=ledger, state=gs)
-    assert SellBenchOp(CwActionSellBenchParam(bench_idx=0, income=1)).execute(env) is True
-    assert ledger.total_sell == 1
-    assert ledger.total_sell_income == 1
-    # tracked 随动:卖出槽置 None 不紧缩(ADR-0316)
-    assert gs.tracked_books.bench[0] is None
 
 
 def test_buy_ledger_dead_base_fields_retired() -> None:

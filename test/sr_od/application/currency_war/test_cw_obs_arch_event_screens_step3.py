@@ -111,12 +111,12 @@ def test_supply_chosen_written_on_confirm_pick(test_context, monkeypatch) -> Non
     dispatched: list = []
 
     class _StubPickOp:
-        def execute(self, env) -> bool:
-            dispatched.append(env)
+        def execute(self) -> bool:
+            dispatched.append(True)
             return True
 
     monkeypatch.setattr(cw_action_registry, 'action_op_for',
-                        lambda act: _StubPickOp())
+                        lambda act, ctx, env: _StubPickOp())
     op._do_action(_FRAME)
     gs = game_state_of(session)
     assert gs.chosen_supply.value == ('希儿', '星币收集器', True), (
@@ -181,11 +181,11 @@ def test_supply_refresh_emission_counts_container(
                                               SimpleNamespace(x=900, y=550))])
 
     class _StubPickOp:
-        def execute(self, env) -> bool:
+        def execute(self) -> bool:
             return True
 
     monkeypatch.setattr(cw_action_registry, 'action_op_for',
-                        lambda act: _StubPickOp())
+                        lambda act, ctx, env: _StubPickOp())
     # ① 刷新发射(锚读缺零点击路径)→ 容器 +1
     op._do_action(_FRAME)
     gs = game_state_of(session)

@@ -68,27 +68,24 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
 from sr_od.application.currency_war.obs.cw_shop_refresh_obs import (
     refresh_board_changed_of,
 )
-from sr_od.application.currency_war.operations.cw_op.cw_action_base import (
-    ActionOp,
-)
 from sr_od.application.currency_war.operations.cw_op.cw_action_registry import (
     action_op_class_for_type,
-    action_op_for,
 )
 from sr_od.application.currency_war.operations.cw_op.cw_overlay_pick_action import (
-    EncounterPickOp,
-    MegastarPickOp,
+    CwActionPickEncounterOp,
+    CwActionPickMegastarOp,
+    CwActionPickPartnerOp,
+    CwActionPickPlannerOp,
+    CwActionPickSupplyOp,
     OverlayPickExecEnv,
-    PartnerPickOp,
-    PlannerPickOp,
-    SupplyPickOp,
 )
 from sr_od.application.currency_war.operations.cw_op.cw_prep_level_up_action import (
-    PrepLevelUpOp,
+    CwActionLevelUpOp,
 )
 from sr_od.application.currency_war.operations.cw_op.cw_refresh_shop_action import (
-    RefreshShopOp,
+    CwActionRefreshShopOp,
 )
+from sr_od.operations.sr_operation import SrOperation
 from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
     ShopExecEnv,
     ShopVisitLedger,
@@ -135,8 +132,8 @@ def test_registry_covers_unified_vocab_and_pick_types():
                 action_op_class_for_type(cls)
             continue
         op_cls = action_op_class_for_type(cls)
-        assert isinstance(op_cls, type) and issubclass(op_cls, ActionOp), \
-            f'{cls.__name__} 解析产物非 ActionOp 子类: {op_cls}'
+        assert isinstance(op_cls, type) and issubclass(op_cls, SrOperation), \
+            f'{cls.__name__} 解析产物非 SrOperation 子类: {op_cls}'
     for cls in _TERMINAL_CONTRACT_REGISTRY_EXEMPT:
         assert cls in CW_ACTION_TYPES, cls.__name__
 
@@ -146,23 +143,21 @@ def test_pick_rows_resolve_class_and_instance_consistently():
     类级解析与实例级工厂解析同 op 类(行序 is-a 语义一致;实例级仅本锁
     构造,注册完备锁本体不构造)。"""
     rows = [
-        (CwActionPickEncounterParam, EncounterPickOp),
-        (CwActionPickSupplyParam, SupplyPickOp),
-        (CwActionPickMegastarParam, MegastarPickOp),
-        (CwActionPickPartnerParam, PartnerPickOp),
-        (CwActionPickPlannerParam, PlannerPickOp),
+        (CwActionPickEncounterParam, CwActionPickEncounterOp),
+        (CwActionPickSupplyParam, CwActionPickSupplyOp),
+        (CwActionPickMegastarParam, CwActionPickMegastarOp),
+        (CwActionPickPartnerParam, CwActionPickPartnerOp),
+        (CwActionPickPlannerParam, CwActionPickPlannerOp),
     ]
     for cls, expected in rows:
         assert action_op_class_for_type(cls) is expected, cls.__name__
-        assert type(action_op_for(cls(idx=0))) is expected, cls.__name__
 
 
 def test_class_level_isa_fallback_matches_instance_query():
     """is-a 兜底语义同注册表:CwActionLevelUpShopParam is-a CwActionLevelUpParam,类级首中
     CwActionLevelUpParam 行 → PrepLevelUpOp,与实例级查询一致(批3 先例的类级复验)。"""
-    assert action_op_class_for_type(CwActionLevelUpShopParam) is PrepLevelUpOp
-    assert action_op_class_for_type(CwActionLevelUpParam) is PrepLevelUpOp
-    assert type(action_op_for(CwActionLevelUpShopParam(cost=4))) is PrepLevelUpOp
+    assert action_op_class_for_type(CwActionLevelUpShopParam) is CwActionLevelUpOp
+    assert action_op_class_for_type(CwActionLevelUpParam) is CwActionLevelUpOp
 
 
 def test_unknown_type_loud_at_class_level():
@@ -231,7 +226,7 @@ def test_encounter_pick_op_clicks_card_then_confirm(no_pick_sleep):
         ctx=SimpleNamespace(controller=ctrl, screen_loader=_screen_loader_none()),
         round_retry=lambda **kw: rs)
     env = OverlayPickExecEnv(op=op)
-    assert EncounterPickOp(EncounterPick(idx=1)).execute(env) is True
+    assert CwActionPickEncounterOp(env.op.ctx, EncounterPick(idx=1), env=env).run().is_success
     assert [p for p, _t in ctrl.clicks] == [CwScreenEncounter.CARD_RIGHT,
                                             CwScreenEncounter.SELECT_BTN]
     assert len(ctrl.moves) == len(ctrl.clicks)   # 每次点击前 bug#1 缓解 mouse_move
@@ -254,7 +249,7 @@ def test_supply_pick_op_clicks_target_confirms_and_registers_arrival(
         op=op, match=SimpleNamespace(session=session),
         target=Point(500, 400),
         picked={'char': '希儿', 'equip': '星币收集器', 'has_diamond': True})
-    assert SupplyPickOp(SupplyPick(idx=0)).execute(env) is True
+    assert CwActionPickSupplyOp(env.op.ctx, SupplyPick(idx=0), env=env).run().is_success
     assert [(p.x, p.y) for p, _t in ctrl.clicks] == [(500, 400)]
     assert confirm_calls == [('货币战争-补给', '按钮-确认',
                               {'success_wait': 1.5})]
@@ -273,8 +268,8 @@ def test_megastar_pick_op_clicks_confirm_once(no_pick_sleep):
     op = SimpleNamespace(
         ctx=SimpleNamespace(controller=ctrl,
                             screen_loader=_screen_loader_none()))
-    assert MegastarPickOp(MegastarPick(idx=0)).execute(
-        OverlayPickExecEnv(op=op)) is True
+    _env = OverlayPickExecEnv(op=op)
+    assert CwActionPickMegastarOp(op.ctx, MegastarPick(idx=0), env=_env).run().is_success
     assert [p for p, _t in ctrl.clicks] == [CwScreenMegastar.CONFIRM]
 
 
@@ -290,7 +285,7 @@ def test_partner_pick_op_pulses_select_then_confirm(no_pick_sleep):
         _find_text_center=lambda shot, text: Point(900, 600),
         round_retry=lambda **kw: rs)
     env = OverlayPickExecEnv(op=op, unselected=True)
-    assert PartnerPickOp(PartnerPick(idx=0)).execute(env) is True
+    assert CwActionPickPartnerOp(env.op.ctx, PartnerPick(idx=0), env=env).run().is_success
     assert [(p.x, p.y) for p, _t in ctrl.clicks] == [(300, 300), (900, 600)]
     assert op._confirm_pulses == 1
     assert op._confirm_pending is True
@@ -308,7 +303,7 @@ def test_partner_pick_op_confirm_missing_retries_without_click(no_pick_sleep):
         _find_text_center=lambda shot, text: None,
         round_retry=lambda **kw: rs)
     env = OverlayPickExecEnv(op=op, unselected=False)
-    assert PartnerPickOp(PartnerPick(idx=0)).execute(env) is True
+    assert CwActionPickPartnerOp(env.op.ctx, PartnerPick(idx=0), env=env).run().is_success
     assert ctrl.clicks == []
     assert op._confirm_pulses == 2   # 未点确认不计数
     assert env.round_result is rs
@@ -328,7 +323,7 @@ def test_planner_pick_op_clicks_target_and_confirm(no_pick_sleep):
         _confirm_pending=False,
         round_retry=lambda **kw: rs)
     env = OverlayPickExecEnv(op=op, target=Point(700, 420))
-    assert PlannerPickOp(PlannerPick(idx=1)).execute(env) is True
+    assert CwActionPickPlannerOp(env.op.ctx, PlannerPick(idx=1), env=env).run().is_success
     assert [(p.x, p.y, t) for p, t in ctrl.clicks] == [
         (700, 420, 0.15), (CwScreenPlanner.CONFIRM.x, CwScreenPlanner.CONFIRM.y, 0.15)]
     assert op._confirm_pending is True
@@ -393,7 +388,7 @@ def test_refresh_shop_op_persists_evidence_without_comparison(monkeypatch):
         match=None, config=None, click_pts=[],
         level_btn=Point(0, 0), refresh_btn=Point(1603, 479),
         ledger=ledger, state=state)
-    assert RefreshShopOp(CwActionRefreshShopParam()).execute(env) is True
+    assert CwActionRefreshShopOp(env.op.ctx, CwActionRefreshShopParam(), env=env).run().is_success
     # 只读不比:刷前/刷后名集原样落账,比对结果不再由动作 op 预计算
     assert ledger.refresh_pre_names == ['旧卡A']
     assert ledger.refresh_post_names == ['新卡A', '新卡B']

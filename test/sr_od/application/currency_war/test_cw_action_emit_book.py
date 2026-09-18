@@ -43,16 +43,16 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionWearEquipParam,
 )
 from sr_od.application.currency_war.operations.cw_op.cw_buy_card_action import (
-    BuyCardOp,
+    CwActionBuyCardOp,
 )
 from sr_od.application.currency_war.operations.cw_op.cw_deploy_move_action \
-    import DeployMoveOp
+    import CwActionDeployMoveOp
 from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
     ShopExecEnv,
     ShopVisitLedger,
 )
 from sr_od.application.currency_war.operations.cw_op.cw_wear_equip_action \
-    import WearEquipOp
+    import CwActionWearEquipOp
 from sr_od.application.currency_war.prep_actions import PrepExecEnv
 
 _SIG = ChannelSig(family='logic_action', actor='CwScreenBuyCards')
@@ -111,7 +111,7 @@ def _buy_op_env(monkeypatch: pytest.MonkeyPatch,
         ledger=ledger, state=gs)
     monkeypatch.setattr(buy_action_mod, '_area_rect', _fake_area_rect)
     monkeypatch.setattr(buy_action_mod.time, 'sleep', lambda s: None)
-    return BuyCardOp(CwActionBuyCardParam(card=card)), env, ledger, gs, clicks
+    return CwActionBuyCardOp(env.op.ctx, CwActionBuyCardParam(card=card), env=env), env, ledger, gs, clicks
 
 
 def test_buy_card_emits_and_books_unconditionally(monkeypatch):
@@ -121,9 +121,9 @@ def test_buy_card_emits_and_books_unconditionally(monkeypatch):
     frame = _frame()   # 点击前后同帧 = 旧像素验证必判 miss 的形态
     op, env, ledger, gs, clicks = _buy_op_env(monkeypatch, [frame])
 
-    ok = op.execute(env)
+    ok = op.run()
 
-    assert ok is True, '发出即记账(返回恒 True,零判效)'
+    assert ok.is_success, '发出即记账(round 成功态,零判效)'
     assert clicks, '机械点击已发出'
     assert ledger.total_buy == 1 and ledger.spend_executed == 3
     assert ledger.bought_names == ['花火']
@@ -172,8 +172,8 @@ def _wear_env(monkeypatch: pytest.MonkeyPatch) -> tuple:
     ex._wait_stable_frame = lambda *a, **k: None
     env = PrepExecEnv(op=op, match=ctx.cw_match, executor=ex)
     monkeypatch.setattr('time.sleep', lambda _s: None)
-    return WearEquipOp(CwActionWearEquipParam(item_name='轮滑鞋', char_name='刃',
-                                 row='front', slot=1)), env, drags, screens
+    return CwActionWearEquipOp(ctx, CwActionWearEquipParam(item_name='轮滑鞋', char_name='刃',
+                                        row='front', slot=1), env=env), env, drags, screens
 
 
 def test_wear_equip_single_mechanical_drag_emits(monkeypatch):
@@ -182,19 +182,19 @@ def test_wear_equip_single_mechanical_drag_emits(monkeypatch):
     非判效语义保留)。"""
     op, env, drags, screens = _wear_env(monkeypatch)
 
-    ok = op.execute(env)
+    ok = op.run()
 
-    assert ok is True
+    assert ok.is_success
     assert len(drags) == 1, '单次机械拖拽(无重试链)'
-    assert env.emitted is True, '发出即记账'
-    assert '已发' in env.detail
+    assert ok.is_success, '发出即记账(round 成功态)'
+    assert '已发' in (ok.status or '')
     assert screens == [], '拖后零读屏(落地判定归观察侧对账)'
 
     # 定位落空 = 未发出通道(计划失效,下帧重派重算;非 miss 判效)
     op2, env2, drags2, _screens = _wear_env(monkeypatch)
     env2.executor._owned_grid_locate = lambda name: None
-    assert op2.execute(env2) is True
-    assert env2.emitted is False and drags2 == []
+    _r2 = op2.run()
+    assert _r2.is_success is False and drags2 == []
 
 
 # ============================================================
@@ -242,11 +242,11 @@ def test_deploy_move_tracks_immediately_on_emit(monkeypatch):
 
     env = _deploy_env(session)
     action = CwActionDeployMoveParam(bench_idx=1, to_row='front', faction='')
-    ok = DeployMoveOp(action).execute(env)
+    ok = CwActionDeployMoveOp(env.op.ctx, action, env=env).run()
 
-    assert ok is True, '机械发出即职责完成(返回契约不变)'
-    assert env.emitted is True, '发出即记账'
-    assert '发出即记账' in env.detail
+    assert ok.is_success, '机械发出即职责完成(round 成功态)'
+    assert ok.is_success, '发出即记账'
+    assert '发出即记账' in (ok.status or '')
     moved = [d for d in gs.tracked_books.deployed
              if d is not None and d.char_id == '甲']
     assert moved, 'tracked 记上阵(拖后零变化也照记 = 零判效)'

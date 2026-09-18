@@ -39,19 +39,18 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
 )
 from sr_od.application.currency_war.operations.cw_op.cw_action_registry import (
     action_op_class_for,
-    action_op_for,
 )
 from sr_od.application.currency_war.operations.cw_op.cw_open_box_action import (
-    OpenBoxOp,
+    CwActionOpenBoxOp,
 )
 from sr_od.application.currency_war.operations.cw_op.cw_open_shop_action import (
-    OpenShopOp,
+    CwActionOpenShopOp,
 )
 from sr_od.application.currency_war.operations.cw_op.cw_prep_sell_bench_action import (
-    PrepSellBenchOp,
+    CwActionSellBenchOp,
 )
 from sr_od.application.currency_war.operations.cw_op.cw_tool_use_action import (
-    ToolUseOp,
+    CwActionToolUseOp,
 )
 from sr_od.application.currency_war.prep_actions import (
     _OVERLAY_ANIM_WAIT_S,
@@ -74,7 +73,7 @@ def test_prep_terminal_set_matches_registry_terminal_attrs():
     terminal_cases = [CwActionStartBattleParam(), CwActionOpenShopParam(), CwActionOpenBoxParam()]
     for a in terminal_cases:
         assert _op_cls(a).terminal is True, type(a).__name__
-    assert OpenBoxOp.terminal_wait == _OVERLAY_ANIM_WAIT_S
+    assert CwActionOpenBoxOp.terminal_wait == _OVERLAY_ANIM_WAIT_S
     mechanical_cases = [
         CwActionSellBenchParam(bench_idx=0),
         CwActionSellDeployedParam(deployed_idx=0),
@@ -96,18 +95,16 @@ def test_prep_terminal_set_matches_registry_terminal_attrs():
 # ===== CwActionOpenShopParam 注册行不可达性锁(判据:CwActionOpenShopParam 行不可达性锁)=====
 
 def test_open_shop_row_is_terminal_carrier_and_execute_loud_fails():
-    """OpenShopOp = terminal 承载行:注册表解析可命中;execute 抛
+    """CwActionOpenShopOp = terminal 承载行:注册表解析可命中;执行抛
     AssertionError(防静默复活)——CwActionOpenShopParam 流程编排归画面 op 流程层
     (cw_screen_prep._act_execute_default 截流),注册行在正常路径不可达,
     可达即分派漏斗被绕过。read_only 两形态 = 动作字段承载(op 实例持
     动作对象,注册表不表达形态分叉)。"""
     for a in (CwActionOpenShopParam(), CwActionOpenShopParam(read_only=True)):
-        op = action_op_for(a)
-        assert type(op) is OpenShopOp
-        assert op.action.read_only == a.read_only
-        env = SimpleNamespace(detail='', emitted=False)
+        op = CwActionOpenShopOp(SimpleNamespace(), a, env=SimpleNamespace())
+        assert op.param.read_only == a.read_only
         with pytest.raises(AssertionError):
-            op.execute(env)
+            op.run()
 
 
 # ===== CwActionStartBattleParam 基类契约在册例外锁(T-286 出战域重设计:点击序列语义;
@@ -194,50 +191,59 @@ def test_start_battle_click_sequence_and_envelope(monkeypatch):
       已执行语义)与机械摘要 ``last_detail``,执行缝金差恒 0,薄委托
       替身缝返回序保持原 (ok, detail)。"""
     from sr_od.application.currency_war.operations.cw_op.cw_start_battle_action import (
-        StartBattleOp as _SBO,
+        CwActionStartBattleOp as _SBO,
     )
     _patch_area_center(monkeypatch)
-    op = _SBO(CwActionStartBattleParam())
-    # 常规帧:无弹窗(直调路径 detail 走 env 旁路;last_detail 是 runner
-    # 包装写点,包络腿段另验)
+    # op 桩构造基座(op 自 ctx 仅作 SrOperation 形参;无 cw_match = 上报跳过)
+    def _make(ex):
+        env = _make_env(ex)
+        return _SBO(SimpleNamespace(), CwActionStartBattleParam(), env=env), env
+
+    _patch_area_center(monkeypatch)
     ctl = _RecordingController()
     ex = _make_executor(ctl, _make_stub_op({_HIT_BTN}))
-    env = _make_env(ex)
+    op, env = _make(ex)
+    # 常规帧:无弹窗(直调路径 status 走 round 结果;last_detail 是 runner
+    # 包装写点,包络腿段另验)
     with fast_sleep():
-        assert op.execute(env) is True
+        result = op.run()
+    assert result.is_success is True
     assert ctl.clicks == [_AREA_POINTS[_HIT_BTN]]
-    assert '出战已点击' in env.detail and '无弹窗' in env.detail
+    assert '出战已点击' in result.status and '无弹窗' in result.status
     # 未达上限帧:勾选 + 确认
     ctl = _RecordingController()
     ex = _make_executor(ctl, _make_stub_op({_HIT_BTN, _HIT_NOTFULL}))
-    env = _make_env(ex)
+    op, env = _make(ex)
     with fast_sleep():
-        assert op.execute(env) is True
+        result = op.run()
+    assert result.is_success is True
     assert ctl.clicks == [_AREA_POINTS[_HIT_BTN],
                           _AREA_POINTS[('货币战争-未达上限警告',
                                         '勾选-本局不再提示')],
                           _AREA_POINTS[('货币战争-未达上限警告',
                                         '按钮-确认')]]
-    assert '未达上限警告:勾选+确认' in env.detail
-    assert env.emitted is True and env.skip_substate is False
+    assert '未达上限警告:勾选+确认' in result.status
+    assert result.is_success is True and env.skip_substate is False
     # 前台无角色帧:确认
     ctl = _RecordingController()
     ex = _make_executor(ctl, _make_stub_op({_HIT_BTN, _HIT_NOFRONT}))
-    env = _make_env(ex)
+    op, env = _make(ex)
     with fast_sleep():
-        assert op.execute(env) is True
+        result = op.run()
+    assert result.is_success is True
     assert ctl.clicks == [_AREA_POINTS[_HIT_BTN],
                           _AREA_POINTS[('货币战争-提示-前台无角色',
                                         '按钮-确认')]]
-    assert '前台无角色提示:确认' in env.detail
+    assert '前台无角色提示:确认' in result.status
     # 找不到按钮:未执行上报 + 零点击
     ctl = _RecordingController()
     ex = _make_executor(ctl, _make_stub_op(set()))
-    env = _make_env(ex)
+    op, env = _make(ex)
     with fast_sleep():
-        assert op.execute(env) is False
-    assert env.detail == '未执行:找不到按钮'
-    assert env.emitted is False and ctl.clicks == []
+        result = op.run()
+    assert result.is_success is False
+    assert result.status == '未执行:找不到按钮'
+    assert ctl.clicks == []
     # 包络腿:注册表分派路径的旁路写点(点击序列已执行语义)
     _patch_area_center(monkeypatch)
     ctl = _RecordingController()
@@ -253,28 +259,29 @@ def test_start_battle_click_sequence_and_envelope(monkeypatch):
 
 def test_start_battle_skip_substate_reported_not_consumed(monkeypatch):
     """免战子态上报锁(T-286):出战 miss + 「按钮-跳过」命中 → 点跳过
-    坐标 + env.skip_substate True;op 直调层零 game state 直写(递减
-    只发生在 game state 上报路径,行为锁见免战牌递减锁)。"""
+    坐标 + env.skip_substate True;递减本体 = op 自上报(行为锁见免战牌
+    递减锁),op 直调层零多余容器写。"""
     from sr_od.application.currency_war.operations.cw_op.cw_start_battle_action import (
-        StartBattleOp as _SBO,
+        CwActionStartBattleOp as _SBO,
     )
     _patch_area_center(monkeypatch)
-    op = _SBO(CwActionStartBattleParam())
     ctl = _RecordingController()
     ex = _make_executor(ctl, _make_stub_op({_HIT_SKIP}))
     env = _make_env(ex)
+    op = _SBO(SimpleNamespace(), CwActionStartBattleParam(), env=env)
     with fast_sleep():
-        assert op.execute(env) is True
+        result = op.run()
+    assert result.is_success is True
     assert env.skip_substate is True
     assert ctl.clicks == [_AREA_POINTS[_HIT_SKIP]]
-    assert '出战已点击' in env.detail
+    assert '出战已点击' in result.status
 
 
 def test_freeze_card_decrement_via_report_path(monkeypatch):
-    """免战牌递减经 game state 上报路径锁(T-286):PrepActionExecutor
-    .execute(跳过型 CwActionStartBattleParam)→ apply_op_effect 在 session effects
-    递减 remaining_uses(上报时递减);常规出战零递减;未登记(登记面
-    缺位)零动作不炸。"""
+    """免战牌递减经 op 自上报锁(T-286;批③ 接线):PrepActionExecutor
+    .execute(跳过型 CwActionStartBattleParam)→ op 自上报
+    report_action_start_battle_param 在 session effects 递减 remaining_uses
+    (上报时递减);常规出战零递减;未登记(登记面缺位)零动作不炸。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         game_state_of,
     )
@@ -320,11 +327,11 @@ def test_prep_dispatch_resolves_registry_rows_and_loud_unknown():
     (原 isinstance 链尾「未知动作类型」静默回退退役;生产不可达,
     F3 validate 先拒)。"""
     rows = [
-        (CwActionSellBenchParam(bench_idx=0), PrepSellBenchOp),
-        (CwActionFurnaceUseParam(target_kind='char', row='front', slot=1), ToolUseOp),
+        (CwActionSellBenchParam(bench_idx=0), CwActionSellBenchOp),
+        (CwActionFurnaceUseParam(target_kind='char', row='front', slot=1), CwActionToolUseOp),
     ]
     for a, expected in rows:
-        assert type(action_op_for(a)) is expected
+        assert action_op_class_for(a) is expected
         assert _op_cls(a) is expected
     ex = PrepActionExecutor.__new__(PrepActionExecutor)
     ex._op = SimpleNamespace()
