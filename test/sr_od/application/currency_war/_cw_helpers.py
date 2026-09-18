@@ -3,8 +3,8 @@
 收纳此前散布在十余个测试文件、各持一份近同构副本的桩构造六件套
 (``_comp/_members/_session/_state/_card/_bc/_decide``,DEBTS.md D17)、
 备战单轮 op 装配(``_make_round_director``,DEBTS.md D22)与 obs_arch
-六文件的运行外壳三件(``run_node``/``uninstall_ports``/``Area``,
-夹具收敛——原为 6/4/4 份逐文件复制)。收敛建立在测试仓 README
+六文件的运行外壳两件(``run_node``/``Area``,
+夹具收敛——原为 6/4 份逐文件复制)。收敛建立在测试仓 README
 「跨文件的复制夹具是漂移源头」纪律之上(README 常驻摘要不编号,故不引
 条号);本模块文件名以下划线开头,pytest 不收集。
 
@@ -156,58 +156,6 @@ def cw4_decide(state: CwSimFrame, session, cfg=None):
 
     cw4_feed(session, state)
     return strat.decide_shop_screen(session, _cfg)
-
-
-def install_dispatch_stub_ports(monkeypatch) -> None:
-    """装配点分流桩端口(观察/动作两半)安装·单一源。
-
-    桩端口仅作 run() 装配点判据的在场标记(统一观察架构 §9.1 并存期);
-    方法被消费 = 桩面破缺(测试应桩化 _observe,端口不该被读)。
-    monkeypatch 装配,teardown 自动复位 = 卸载语义;setattr 直改模块槽
-    绕过 install_game_ports 的单装配守卫 = harness 用法(守卫语义由
-    test_cw_game_ports 自辖)。
-
-    消费方 = ``make_prep_round_director``(整体装配)与
-    ``test_cw_gate_hooks._make_director``(__new__ 裸装配,只共享本桩)。
-    """
-    from sr_od.application.currency_war import cw_game_ports as _ports_mod
-
-    class _DispatchOnlyObserver:
-        """装配点分流桩(观察半):仅作 run() 分流判据的在场端口;
-        方法被消费 = 桩面破缺(锁应桩化 _observe,端口不该被读)。"""
-
-        def screen_identity(self, ctx):
-            raise NotImplementedError('分流桩端口被消费(观察半)')
-
-        def observe_prep(self, ctx, phase):
-            raise NotImplementedError('分流桩端口被消费(观察半)')
-
-        def observe_shop_cards(self, ctx):
-            raise NotImplementedError('分流桩端口被消费(观察半)')
-
-        def overlay_options(self, ctx, kind):
-            raise NotImplementedError('分流桩端口被消费(观察半)')
-
-    class _DispatchOnlySink:
-        """装配点分流桩(动作半):同上,仅作分流判据。"""
-
-        def execute_action(self, ctx, action, env=None):
-            raise NotImplementedError('分流桩端口被消费(动作半)')
-
-    monkeypatch.setattr(_ports_mod, '_INSTALLED',
-                        (_DispatchOnlyObserver(), _DispatchOnlySink()))
-
-
-def uninstall_ports(monkeypatch) -> None:
-    """装配点分流桩端口卸载复位(生产缺省形态;旧路径代表驱动专用)。
-
-    与 :func:`install_dispatch_stub_ports` 成对的卸载半:``_INSTALLED``
-    复位 ``(None, None)`` = 装配点判据不成立,op 直连旧路径原序列。
-    直改模块槽绕过 install_game_ports 的单装配守卫 = harness 用法
-    (守卫语义由 test_cw_game_ports 自辖)。
-    """
-    from sr_od.application.currency_war import cw_game_ports as _ports_mod
-    monkeypatch.setattr(_ports_mod, '_INSTALLED', (None, None))
 
 
 def run_node(test_context, op, fn) -> object:

@@ -48,7 +48,7 @@ CwScreenBriefing / BOSS 简报 CwScreenBossBriefing。
   复制判别逻辑)。
 
 驱动方式 = 真类实例(构造走 __init__)+ 读链/点击链桩化,节点函数直驱
-(run_node 外壳);战斗等待 = 生产缺省形态(端口显式复位 None,行为锁
+(run_node 外壳);战斗等待 = 生产缺省形态(行为锁
 主驱动)。
 """
 from __future__ import annotations
@@ -62,9 +62,6 @@ from test.sr_od.application.currency_war._cw_helpers import (
 )
 from test.sr_od.application.currency_war._cw_helpers import (
     run_node as _run_node,
-)
-from test.sr_od.application.currency_war._cw_helpers import (
-    uninstall_ports as _uninstall_ports,
 )
 
 from one_dragon.base.operation.operation_round_result import (

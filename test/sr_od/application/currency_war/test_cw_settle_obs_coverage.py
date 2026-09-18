@@ -32,7 +32,6 @@ from test.sr_od.application.currency_war._cw_helpers import (
     run_node as _run_node,
 )
 
-from sr_od.application.currency_war import cw_game_ports as _ports_mod
 from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
 from sr_od.application.currency_war.kernel.cw_performance import RoundOutcome
 from sr_od.application.currency_war.kernel.cw_telemetry_exit import (
@@ -162,7 +161,6 @@ def test_battle_branch_exit_consumes_coverage_guard(
         test_context, monkeypatch) -> None:
     """锁3 收口接线:战斗分支 op 返回 back_to_loop → 守卫被消费,零观测窗
     落 L1 行;已观测窗(锚匹配)不落行。"""
-    monkeypatch.setattr(_ports_mod, '_INSTALLED', (None, None))
     calls: list[tuple[tuple, dict]] = []
     monkeypatch.setattr(_defects_mod, 'record_defect',
                         lambda *a, **k: calls.append((a, k)))
