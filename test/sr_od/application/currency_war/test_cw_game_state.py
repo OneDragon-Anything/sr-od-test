@@ -833,7 +833,8 @@ def test_node_tick_and_advance_dedup_guard_expiry() -> None:
 @pytest.mark.parametrize('case', ['burst-once-grant',
                                   'per-node-once-per-node'])
 def test_effect_refresh_balance_grant_forms(case: str) -> None:
-    """B1 账本→字段桥·免费刷余额授权两形态一锁(参数化并一):
+    """B1 账本·免费刷余额授权两形态一锁(参数化并一;2026-09-18 迁入
+    裁决后余额住效果账本,桥 = grant_free_refreshes 统一出口):
     - burst:登记时点把 payload.free_refresh_burst 一次性累加进余额
       (固定理财即时段=2 活载体);零额度 payload(免战牌)= no-op。
       「一次性」由调用点唯一性承载(登记挂点,接线锁辖),函数本体不加
@@ -845,26 +846,25 @@ def test_effect_refresh_balance_grant_forms(case: str) -> None:
     if case == 'burst-once-grant':
         apply_effect_burst_grant(gs, STRATEGY_EFFECTS['固定理财'],
                                  frame='p1-r2')
-        assert gs.free_refresh_balance.value == 2
-        assert gs.free_refresh_balance.evidence == 'effect_burst@p1-r2'
+        assert gs.effects.free_refresh_balance == 2
         apply_effect_burst_grant(gs, STRATEGY_EFFECTS['免战牌'])
-        assert gs.free_refresh_balance.value == 2, '零额度 = no-op'
+        assert gs.effects.free_refresh_balance == 2, '零额度 = no-op'
         return
     gs.effects.register_strategy(STRATEGY_EFFECTS['双手狸开键盘！'],
                                  acquired_t=5)
     adv, _ex = gs.effects.advance_node(6)
     if adv:
         grant_effect_node_refresh_balance(gs, frame='p1-r6')
-    assert gs.free_refresh_balance.value == 2
+    assert gs.effects.free_refresh_balance == 2
     # 同节点重复采样(挂点每备战环一次):去重位关闭累加
     adv2, _ex2 = gs.effects.advance_node(6)
     if adv2:
         grant_effect_node_refresh_balance(gs, frame='p1-r6')
-    assert gs.free_refresh_balance.value == 2, '同节点禁双计'
+    assert gs.effects.free_refresh_balance == 2, '同节点禁双计'
     adv3, _ex3 = gs.effects.advance_node(7)
     if adv3:
         grant_effect_node_refresh_balance(gs, frame='p1-r7')
-    assert gs.free_refresh_balance.value == 4, '下一节点再 +2'
+    assert gs.effects.free_refresh_balance == 4, '下一节点再 +2'
 
 
 def test_capacity_projection_activates_and_recovers() -> None:

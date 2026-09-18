@@ -139,11 +139,11 @@ def test_deal_shop_level9_domain_and_registered_names() -> None:
 
 
 def test_refresh_cost_free_balance_first() -> None:
-    """免费刷额度先行 → 0;额度耗尽/未写 → 基价 2 恒定(M05 定谳)。"""
+    """免费刷额度先行 → 0;额度耗尽/零 → 基价 2 恒定(M05 定谳;余额域 =
+    效果账本,2026-09-18 迁入裁决)。"""
     gs = _fresh_gs()
     assert refresh_cost_for(gs) == REFRESH_COST_BASE
-    gs.write_logic(gs.free_refresh_balance, 1, produced_by='effect',
-                   sig=_lsig())
+    gs.effects.grant_free_refreshes(1)
     assert refresh_cost_for(gs) == 0, '免费额度在场先行'
 
 

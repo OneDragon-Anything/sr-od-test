@@ -63,7 +63,7 @@ def test_none_guard_skips_whole_segment() -> None:
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.effects.register_strategy(STRATEGY_EFFECTS['双手狸开键盘！'], acquired_t=5)
     tick_effect_boundary(gs, prep_frame=True)
-    assert gs.free_refresh_balance.value is None, '未观察 = 不发放'
+    assert gs.effects.free_refresh_balance == 0, '未观察 = 不发放'
     assert gs.node_hist_ord is None
 
 
@@ -73,7 +73,7 @@ def test_prep_frame_advances_and_grants() -> None:
     gs.effects.register_strategy(STRATEGY_EFFECTS['双手狸开键盘！'], acquired_t=5)
     gs.node_hist_ord = 6
     tick_effect_boundary(gs, prep_frame=True)
-    assert gs.free_refresh_balance.value == 2, '每进节点 +2(双手狸活载体)'
+    assert gs.effects.free_refresh_balance == 2, '每进节点 +2(双手狸活载体)'
 
 
 def test_gold_settlement_key_matches() -> None:

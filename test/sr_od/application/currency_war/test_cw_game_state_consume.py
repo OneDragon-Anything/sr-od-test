@@ -18,9 +18,6 @@ from types import SimpleNamespace
 
 import pytest
 
-from sr_od.application.currency_war.kernel.cw_action_report.refresh_shop import (
-    record_refresh_execution,
-)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
     GameState,
@@ -78,33 +75,32 @@ def _hsig() -> _ChannelSig:
 #  test_observe_over_logic_mismatch_emits_defect_row;此处不重复。)
 
 # ============================================================ §3.3.6-8 刷新执行事实组
+# (2026-09-18 迁入裁决:计数组住效果账本 ActiveEffectInventory,写端 =
+#  刷新上报函数统一触发;效果账本直测 = test_cw_game_state 账本面,
+#  本锁保留计数语义面,载体换账本属性。)
 
 
 def test_refresh_execution_paid_and_free_frame_gates() -> None:
-    """§3.3.6-8 刷新执行主锁(四腿一锁):①付费刷新 = paid+1 ∧ total+1
-    (CwActionRefreshShopParam 执行回执,写入=仅逻辑;付费帧不动免费余额);②免费帧闸
-    = 免费帧不进付费累计(长线利好触发计数载体禁混入免费刷),消耗免费
-    余额 + total 照计;③免费余额下限 0(计数器单调域,禁负值漂移);
-    ④evidence 落轮键 refresh_exec@<frame>(归因留证面,付费/免费帧同)。"""
+    """§3.3.6-8 刷新执行主锁(三腿一锁):①付费刷新 = paid+1 ∧ total+1
+    (付费帧不动免费余额);②免费帧闸 = 免费帧不进付费累计(长线利好
+    触发计数载体禁混入免费刷),消耗免费余额 + total 照计;③免费余额
+    下限 0(计数器单调域,禁负值漂移)。载体 = 效果账本
+    ``gs.effects.record_refresh``(原 Field 版 record_refresh_execution
+    随迁入裁决退役;evidence 轮键面随 Field 通道退役)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
-    record_refresh_execution(gs, free=False, frame='p1-r3')
-    assert gs.paid_refresh_count.value == 1
-    assert gs.total_refresh_count.value == 1
-    assert gs.free_refresh_balance.value is None, '付费帧不动免费余额'
-    assert gs.paid_refresh_count.evidence == 'refresh_exec@p1-r3'
-    assert gs.total_refresh_count.evidence == 'refresh_exec@p1-r3'
-    # ②/③ 免费帧闸换新容器:「不写付费计数」的语义承载于字段从未写过
+    gs.effects.record_refresh(free=False)
+    assert gs.effects.refresh_paid == 1
+    assert gs.effects.refresh_total == 1
+    assert gs.effects.free_refresh_balance == 0, '付费帧不动免费余额'
+    # ②/③ 免费帧闸:效果发放预置余额后免费刷新消耗
     bs2 = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
-    bs2.write_logic(bs2.free_refresh_balance, 1, produced_by='effect',
-                    sig=_lsig())
-    record_refresh_execution(bs2, free=True, frame='p2-r1')
-    assert bs2.paid_refresh_count.value is None, '免费帧禁写付费计数'
-    assert bs2.free_refresh_balance.value == 0, '免费余额消耗,下限 0'
-    assert bs2.total_refresh_count.value == 1, '全量计数含免费'
-    assert bs2.total_refresh_count.evidence == 'refresh_exec@p2-r1', \
-        '免费帧 total 也带当次轮键'
-    record_refresh_execution(bs2, free=True, frame='p2-r2')
-    assert bs2.free_refresh_balance.value == 0, '免费余额下限 0(禁负值漂移)'
+    bs2.effects.grant_free_refreshes(1)
+    bs2.effects.record_refresh(free=True)
+    assert bs2.effects.refresh_paid == 0, '免费帧禁写付费计数'
+    assert bs2.effects.free_refresh_balance == 0, '免费余额消耗,下限 0'
+    assert bs2.effects.refresh_total == 1, '全量计数含免费'
+    bs2.effects.record_refresh(free=True)
+    assert bs2.effects.free_refresh_balance == 0, '免费余额下限 0(禁负值漂移)'
 
 
 # ============================================================ §3.2.6 派生单一源(ADR-0488)
