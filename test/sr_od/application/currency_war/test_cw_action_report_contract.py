@@ -1,15 +1,16 @@
-"""动作上报函数族命名规约完备锁(摊平批阶段②)。
+"""动作上报函数族命名规约完备锁(摊平批阶段②;拆分包版)。
 
 规约:词表类 ``CwActionXxxParam`` 恰有同名上报函数
-``report_action_<snake>_param``(kernel/cw_game_state);新增动作漏建
-上报函数 = 本锁红。声明面即命名规约本身,无分发表——分派只允许出现
-在实机 op 直调与 sim/回放引擎入口。
+``report_action_<snake>_param``(kernel/cw_action_report 包,每动作
+一文件;零写族落 zero_writes;包级 ``__getattr__`` 命名规约解析)。
+新增动作漏建上报函数/漏建文件 = 本锁红。声明面即命名规约本身,
+无分发表——分派只允许出现在实机 op 直调与 sim/回放引擎入口。
 """
 import re
 
 import pytest
 
-from sr_od.application.currency_war.kernel import cw_game_state as gsm
+from sr_od.application.currency_war.kernel import cw_action_report as rpt
 from sr_od.application.currency_war.kernel.cw_vocab import CW_ACTION_TYPES
 
 
@@ -25,7 +26,7 @@ def test_every_action_type_has_report_function():
     missing = []
     for t in CW_ACTION_TYPES:
         fn = f'report_action_{_snake(t.__name__)}_param'
-        if not callable(getattr(gsm, fn, None)):
+        if not callable(getattr(rpt, fn, None)):
             missing.append(f'{t.__name__} -> {fn}')
     assert not missing, f'漏建上报函数: {missing}'
 
@@ -45,7 +46,7 @@ def test_report_function_accepts_param_and_sig(t):
     gs = GameState(schema_version=1)
     sig = ChannelSig(family='logic_action', actor='cw-report-lock',
                      mode='compute')
-    fn = getattr(gsm, f'report_action_{_snake(t.__name__)}_param')
+    fn = getattr(rpt, f'report_action_{_snake(t.__name__)}_param')
     # 构造最小 param:必填字段给哑值(仅为了走函数入口;写路径按域锁覆盖)
     import dataclasses
     from sr_od.application.currency_war.kernel.cw_vocab import ShopCard

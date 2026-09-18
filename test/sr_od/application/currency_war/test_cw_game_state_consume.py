@@ -18,6 +18,9 @@ from types import SimpleNamespace
 
 import pytest
 
+from sr_od.application.currency_war.kernel.cw_action_report.refresh_shop import (
+    record_refresh_execution,
+)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
     GameState,
@@ -25,7 +28,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     board_next_tier_of,
     game_state_of,
     consume_defect_sink,
-    record_refresh_execution,
     set_defect_sink,
 )
 
