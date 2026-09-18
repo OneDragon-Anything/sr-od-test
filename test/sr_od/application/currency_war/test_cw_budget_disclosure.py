@@ -366,13 +366,9 @@ def test_armed_shortcircuit_frame_writes_no_disclosure(
 
     sess = StrategySession()
     cw4_feed(sess, _cur(1, 8, 53, node_type='prep'))
-    # 黑板帧 = 真实 PrepObservation(过「观察帧缺失即抛错」入口内务门;
-    # 决策核发射缝已桩 = 不可达,本帧内容不在锁面)。
-    from sr_od.application.currency_war.kernel.cw_prep_actions import (
-        PrepObservation,
-    )
-    from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
-    game_state_of(sess).prep_obs = PrepObservation(free_bench_slots=9)   # 终态契约 §2.6
+    # (黑板帧装配已随 gs.prep_obs 退役删除——阶段 3.5:决策输入 = 容器
+    #  直读,「观察帧缺失即抛错」入口内务门随黑板消亡;决策核发射缝已桩 =
+    #  不可达,本帧内容不在锁面。)
     monkeypatch.setattr(admit_mod, 'readiness_launch_decision',
                         lambda *a, **k: {'armed': True})
 

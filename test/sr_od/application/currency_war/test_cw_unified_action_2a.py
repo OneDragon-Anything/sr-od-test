@@ -85,51 +85,95 @@ def test_sphere_executor_is_mechanical_payload_clicks(monkeypatch):
     assert [(p.x, p.y) for p in controller.clicks] == [(12, 34), (56, 78)]
     assert controller.drags == []   # 点球不拖拽
     assert screens == []            # 零读屏(挑选归决策侧 kernel)
-    # 逻辑态:按载荷精确摘球(坐标匹配,非保守清空)
-    obs = kpa.PrepObservation(
-        spheres=[('gold', Point(12, 34), 50), ('blue', Point(99, 99), 10)])
-    out = CwScreenPrep._project_prep_obs(
-        SimpleNamespace(_session=lambda: None), ClickSpheres(
-            points=((12, 34),)), obs)
-    assert [(int(s[1].x), int(s[1].y)) for s in out.spheres] == [(99, 99)]
+    # 逻辑态:按载荷精确摘球(坐标匹配,非保守清空)——阶段 3.5 宿主 =
+    # apply_prep_action_logic 容器 spheres 精确摘除(原黑板投影断言随
+    # _project_prep_obs 退役)。
+    from sr_od.application.currency_war.kernel.cw_game_state import SphereSight
+    from test.sr_od.application.currency_war._cw_helpers import cw4_session
+    session = cw4_session()
+    gs = game_state_of(session)
+    gs.observe(gs.spheres, SphereSight(
+        count=2, colors=('gold', 'blue'),
+        points=(('gold', 12, 34, 50), ('blue', 99, 99, 10))),
+        sig=ChannelSig(family='obs', actor='synthesize_from_game_state',
+                       mode='synthesized'))
+    apply_prep_action_logic(gs, ClickSpheres(points=((12, 34),)),
+                            produced_by='T',
+                            sig=ChannelSig(family='logic_action',
+                                           actor='CwScreenPrep'))
+    assert [(p[1], p[2]) for p in gs.spheres.value.points] == [(99, 99)]
 
 
 # ===== R9 逻辑态全覆盖锁(判据 5)=====
 
 def test_vocab_actions_all_have_logic_state_projection():
-    """词表逐动作有逻辑态计算(R9):保守回退(None → 交回外循环)分支
-    已删——除转场类(§5 显式空)与终结化 OpenBox(R7)与组合壳死类(2b 删)
-    外,每个词表成员投影必产出观察帧;词表外类型 = AssertionError 响亮
-    暴露。"""
+    """词表逻辑态覆盖锁(R9;阶段 3.5 重定向:投影宿主 = kernel 写口
+    ``apply_prep_action_logic``,原 _project_prep_obs 黑板投影随黑板退役)。
+
+    覆盖面两集(登记面申报 = apply_prep_action_logic docstring):
+    - **写口分支集**(容器直写):SellBench/SellDeployed/DeployMove/
+      LevelUp/ClickSpheres/OpenTome/OpenBookcard——供数容器上逐动作
+      必产生容器写(write_seq 推进);
+    - **合法零写集**(正本申报「消费真值归观察」):OpenBox(R7 终结化)/
+      WearEquip/工具原子七类——截断点独占发射帧,零窗口暴露;
+    词表外类型 = 合法零写(登记面申报,非静默丢行为)。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        BenchSlot,
+        BenchView,
+        SphereSight,
+    )
     from sr_od.application.currency_war.kernel.cw_vocab import (
         FurnaceUse,
         LuckyTokenUse,
         OpenBookcard,
+        OpenBox,
         PerfectProjectorUse,
         PrecisionWrenchUse,
         PrivilegeCardUse,
         StaffProjectorUse,
         WrenchUse,
+        WearEquip,
     )
-    stub = CwScreenPrep.__new__(CwScreenPrep)   # 绕道构造(无框架状态)
-    stub._session = lambda: None
-    obs = kpa.PrepObservation(
-        bench_chars=[BenchChar(slot=3, char_id='刃', star=1)],
-        deployed_chars=[BenchChar(slot=1, char_id='刃', star=1,
-                                  position_pref='front')],
-        owned_equips=['轮滑鞋'], free_bench_slots=5,
-        front_occupied={1}, back_occupied=set())
-    cases: list = [
-        ClickSpheres(points=((1, 2),)),
-        OpenTome(),
-        OpenBookcard(),
-        SellBench(bench_idx=2),
-        DeployMove(bench_idx=2, to_row='front', faction=''),
+    from test.sr_od.application.currency_war._cw_helpers import cw4_session
+    session = cw4_session()
+    gs = game_state_of(session)
+    _sig = ChannelSig(family='obs', actor='synthesize_from_game_state',
+                      mode='synthesized')
+    _logic = ChannelSig(family='logic_action', actor='CwScreenPrep')
+    # 供数容器:bench(2 unit+1 tome+1 box)、front 1 人、gold/level/xp、球
+    _slots = [BenchSlot(kind='unit', unit=Unit(char_id='甲', star=1,
+                                               equips=[], slot=1)),
+              BenchSlot(kind='unit', unit=Unit(char_id='乙', star=1,
+                                               equips=[], slot=2)),
+              BenchSlot(kind='tome'),
+              BenchSlot(kind='supply_box')]
+    _slots += [BenchSlot(kind='empty') for _ in range(5)]
+    gs.observe(gs.bench, BenchView(slots=_slots, capacity=9), sig=_sig)
+    gs.observe(gs.front_row, [Unit(char_id='丙', star=1, equips=[],
+                                   slot=1)], sig=_sig)
+    gs.observe(gs.gold, 10, sig=_sig)
+    gs.observe(gs.level, 3, sig=_sig)
+    gs.observe(gs.xp, (0, 4), sig=_sig)
+    gs.observe(gs.spheres, SphereSight(
+        count=1, colors=('gold',), points=(('gold', 1, 2, 9),)), sig=_sig)
+    gs.observe(gs.equips, ['轮滑鞋'], sig=_sig)
+
+    def _seq() -> int:
+        return gs.write_seq
+
+    written: list = [
+        SellBench(bench_idx=0),
         SellDeployed(deployed_idx=0),
-        LevelUp(cost=4),
-        WearEquip(item_name='轮滑鞋', char_name='刃', row='front', slot=2),
+        DeployMove(bench_idx=1, to_row='front', faction=''),
+        LevelUp(cost=0),
+        ClickSpheres(points=((1, 2),)),
+        OpenTome(slot=None),
+        OpenBookcard(slot=None),
+    ]
+    zero: list = [
+        OpenBox(slot=None),
+        WearEquip(item_name='轮滑鞋', char_name='丙', row='front', slot=1),
         FurnaceUse(target_kind='equip', item_name='轮滑鞋'),
-        FurnaceUse(target_kind='char', row='front', slot=1),
         PrivilegeCardUse(target_kind='equip', item_name='轮滑鞋'),
         WrenchUse(row='front', slot=1),
         PrecisionWrenchUse(row='front', slot=1),
@@ -137,17 +181,22 @@ def test_vocab_actions_all_have_logic_state_projection():
         PerfectProjectorUse(row='front', slot=1),
         LuckyTokenUse(row='front', slot=1),
     ]
+    for action in written:
+        before = _seq()
+        apply_prep_action_logic(gs, action, produced_by='T', sig=_logic)
+        assert _seq() > before, f'{type(action).__name__} 应产生容器写'
+    for action in zero:
+        before = _seq()
+        apply_prep_action_logic(gs, action, produced_by='T', sig=_logic)
+        assert _seq() == before, f'{type(action).__name__} 应合法零写'
+    # 词表覆盖完备性:两集并集覆盖 CW_ACTION_TYPES 中非转场/非组合壳成员
     names = {c.__name__ for c in CW_ACTION_TYPES}
-    assert names >= {
-        'ClickSpheres', 'OpenTome', 'SellBench', 'DeployMove',
-        'SellDeployed', 'LevelUp', 'WearEquip'}   # R9 逐动作投影的锚定面
-    for action in cases:
-        out = CwScreenPrep._project_prep_obs(stub, action, obs)
-        assert out is not None, type(action).__name__
-        assert isinstance(out, kpa.PrepObservation)
-    # 词表外 = 分派漏斗被绕过,响亮暴露(禁静默)
-    with pytest.raises(AssertionError):
-        CwScreenPrep._project_prep_obs(stub, SimpleNamespace(), obs)
+    covered = ({type(a).__name__ for a in written}
+               | {type(a).__name__ for a in zero})
+    assert {'ClickSpheres', 'OpenTome', 'OpenBookcard', 'OpenBox',
+            'SellBench', 'DeployMove', 'SellDeployed', 'LevelUp',
+            'WearEquip'} <= covered
+    assert names >= covered   # 两集均为词表成员(不越词表)
 
 
 # ===== LevelUp 形态锁 2a 半(判据 2)=====

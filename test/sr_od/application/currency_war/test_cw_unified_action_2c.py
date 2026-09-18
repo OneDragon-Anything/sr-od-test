@@ -16,8 +16,13 @@ from types import SimpleNamespace
 from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war.kernel import cw_prep_actions as kpa
 from sr_od.application.currency_war.kernel.cw_game_state import (
+    BenchSlot,
+    BenchView,
     ChannelSig,
+    Unit,
     apply_prep_action_logic,
+    bench_free_slots,
+    deployed_slots_of,
     game_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
@@ -108,21 +113,31 @@ def test_open_bookcard_executor_mechanical(monkeypatch):
 # ===== 逻辑态摘件对账(判据:开卡后槽位表与实机一致)=====
 
 def test_open_bookcard_logic_state_frees_slot():
-    """开卡即腾席(R10 视觉域):书册卡无独立载荷列表字段(箱/典籍有
-    boxes/tomes,书册卡占席事实只在 free_bench_slots 现读口径)→ 摘件 =
-    腾席 +1(与 heavy 现读 slot_occupied 扫描同式);其余视觉域字段不动;
-    容器 GameState 零写(apply_prep_action_logic 集外动作型直接返回)。"""
-    stub = CwScreenPrep.__new__(CwScreenPrep)   # 绕道构造(无框架状态)
-    stub._session = lambda: None
-    obs = kpa.PrepObservation(free_bench_slots=5, tomes=[(3, Point(1, 1))])
-    out = CwScreenPrep._project_prep_obs(stub, OpenBookcard(), obs)
-    assert out.free_bench_slots == 6
-    # 其余视觉域字段不动(Point 无结构等价,按坐标元组比对)
-    assert [(t[0], t[1].x, t[1].y) for t in out.tomes] == [(3, 1, 1)]
-    # 容器零写:kernel 写口对本动作直接返回(视觉域推进,落点 = 备战观察帧)
-    gs = game_state_of(None)
-    apply_prep_action_logic(gs, OpenBookcard(), produced_by='T', sig=_SIG)
-    assert gs.write_seq == 0
+    """开卡即腾席(阶段 3.5 容器版;原黑板 free_bench_slots +1 语义随
+    _project_prep_obs 退役):书册卡槽(容器 kind='supply_box',读链 is_item_slot
+    并入口径)经 OpenBookcard 腾席 = 槽 kind → empty——bench_free_slots
+    派生 +1(容器读口单点),其余槽不动。"""
+    from test.sr_od.application.currency_war._cw_helpers import cw4_session
+
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        game_state_of,
+    )
+    session = cw4_session()
+    gs = game_state_of(session)
+    _sig = ChannelSig(family='obs', actor='synthesize_from_game_state',
+                      mode='synthesized')
+    _slots = [BenchSlot(kind='unit', unit=Unit(char_id='甲', star=1,
+                                               equips=[], slot=1)),
+              BenchSlot(kind='supply_box')]
+    _slots += [BenchSlot(kind='empty') for _ in range(7)]
+    gs.observe(gs.bench, BenchView(slots=_slots, capacity=9), sig=_sig)
+    before = bench_free_slots(gs)
+    assert before == 7
+    apply_prep_action_logic(gs, OpenBookcard(slot=2), produced_by='T',
+                            sig=ChannelSig(family='logic_action',
+                                           actor='CwScreenPrep'))
+    assert gs.bench.value.slots[1].kind == 'empty'
+    assert bench_free_slots(gs) == before + 1
 
 
 # ===== 链拆接线锁(判据:预清场改产 OpenBookcard 经执行器 + 交回)=====
@@ -179,52 +194,54 @@ def test_clear_prep_cards_emits_open_bookcard_and_signals_handback(monkeypatch):
 # ===== DeployMove 帧投影占用集(改动三审 代-1 应修行为锁)=====
 
 def test_deploymove_projection_records_resolved_row():
-    """DeployMove 帧投影占用集按 fallback 解析排(``_row``)记行:首选排满
-    落位 fallback 另一排 = 记实落排(原按 to_row 记 = 假前排占位/漏记
-    后排,帧内部署决策读歪);满板信息位 slot=0 与源槽无件均不入集(0 非
-    物理槽号,真值归下一入口 heavy 现读)。"""
+    """DeployMove 容器逻辑态首空落位 fallback 锁(阶段 3.5 宿主迁移版;
+    原黑板占用集 fallback 记行锁随 _project_prep_obs 退役,新锁断言容器
+    ``deployed_place`` 首空单一源的 fallback 语义:首选排满落位 fallback
+    另一排,记实落排)。"""
     from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
     from sr_od.application.currency_war.kernel.cw_vocab import DeployMove
+    from test.sr_od.application.currency_war._cw_helpers import cw4_session
 
-    stub = CwScreenPrep.__new__(CwScreenPrep)   # 绕道构造(无框架状态)
-    stub._session = lambda: None
-
-    def _obs(front, deployed):
-        return kpa.PrepObservation(
-            bench_chars=[BenchChar(slot=3, char_id='甲', star=1)],
-            deployed_chars=deployed, front_occupied=front,
-            back_occupied=set(), back_layout_slots=6, free_bench_slots=9)
-
-    # 前排满(deployed 视图)fallback 后排:记实落排 back,前排集不被污染
-    _front_full = [BenchChar(slot=i + 1, char_id=f'丙{i}', star=1,
-                             position_pref='front') for i in range(4)]
-    out = CwScreenPrep._project_prep_obs(
-        stub, DeployMove(bench_idx=2, to_row='front', faction=''),
-        _obs({1, 2, 3, 4}, _front_full))
-    assert out.back_occupied == {1} and out.front_occupied == {1, 2, 3, 4}
-    assert out.deployed_chars[-1].position_pref == 'back'
-    # 前排有空位:首选排照记(回归面)
-    out = CwScreenPrep._project_prep_obs(
-        stub, DeployMove(bench_idx=2, to_row='front', faction=''),
-        _obs({1}, [BenchChar(slot=1, char_id='乙', star=1,
-                             position_pref='front')]))
-    assert out.front_occupied == {1, 2} and out.back_occupied == set()
-    # 满板信息位 slot=0 不入集
-    _full = [BenchChar(slot=i + 1, char_id=f'甲{i}', star=1,
-                       position_pref='front') for i in range(4)] + \
-            [BenchChar(slot=i + 1, char_id=f'乙{i}', star=1,
-                       position_pref='back') for i in range(6)]
-    out = CwScreenPrep._project_prep_obs(
-        stub, DeployMove(bench_idx=2, to_row='front', faction=''),
-        _obs({1, 2, 3, 4}, _full))
-    assert out.front_occupied == {1, 2, 3, 4}
-    assert out.back_occupied == set() and 0 not in out.front_occupied
-    # 源槽无件(moved None)不入集
-    empty = kpa.PrepObservation(bench_chars=[], front_occupied={1},
-                                back_occupied=set(), back_layout_slots=6)
-    out = CwScreenPrep._project_prep_obs(
-        stub, DeployMove(bench_idx=2, to_row='front', faction=''), empty)
-    assert out.front_occupied == {1} and out.back_occupied == set()
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        game_state_of,
+    )
+    session = cw4_session()
+    gs = game_state_of(session)
+    _sig = ChannelSig(family='obs', actor='synthesize_from_game_state',
+                      mode='synthesized')
+    _logic = ChannelSig(family='logic_action', actor='CwScreenPrep')
+    _slots = [BenchSlot(kind='unit', unit=Unit(char_id='甲', star=1,
+                                               equips=[], slot=3))]
+    _slots += [BenchSlot(kind='empty') for _ in range(8)]
+    gs.observe(gs.bench, BenchView(slots=_slots, capacity=9), sig=_sig)
+    # 前排满(4 人)fallback 后排:实落后排(记实落排语义由 deployed_place
+    # 首空单一源承载)
+    gs.observe(gs.front_row, [Unit(char_id=f'丙{i}', star=1, equips=[],
+                                   slot=i + 1) for i in range(4)],
+               sig=_sig)
+    apply_prep_action_logic(gs, DeployMove(bench_idx=0, to_row='front',
+                                           faction=''),
+                            produced_by='T', sig=_logic)
+    dep = deployed_slots_of(gs)
+    assert dep[4] is not None and dep[4].char_id == '甲'   # 后排首槽
+    # 前排保持原 4 人(不被新增污染;fallback 实落排语义)
+    assert [d.char_id for d in dep[:4]] == ['丙0', '丙1', '丙2', '丙3']
+    # 前排有空位:首选排照落(回归面)
+    gs2 = game_state_of(cw4_session())
+    gs2.observe(gs2.bench, BenchView(slots=_slots, capacity=9), sig=_sig)
+    gs2.observe(gs2.front_row, [Unit(char_id='乙', star=1, equips=[],
+                                     slot=1)], sig=_sig)
+    apply_prep_action_logic(gs2, DeployMove(bench_idx=0, to_row='front',
+                                            faction=''),
+                            produced_by='T', sig=_logic)
+    dep2 = deployed_slots_of(gs2)
+    assert dep2[1] is not None and dep2[1].char_id == '甲'   # 首空 = 表 1 位(0 位是乙)
+    # 源槽无件(bench_idx 越界空槽)= 陈旧提案,本口零写
+    before = gs2.write_seq
+    apply_prep_action_logic(gs2, DeployMove(bench_idx=5, to_row='front',
+                                            faction=''),
+                            produced_by='T', sig=_logic)
+    assert gs2.write_seq == before
 
 
 # ===== CwScreenExpertInvite 收缩(判据:无开卡残留,入口=弹窗已开)=====

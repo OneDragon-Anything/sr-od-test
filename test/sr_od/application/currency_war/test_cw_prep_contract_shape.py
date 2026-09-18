@@ -3,8 +3,8 @@
 出处 = docs/develop/sr_od/application/currency_war/flow/README.md §2.2
 备战接口行(``decide_prep_screen`` 行)——终态契约 §2.2 单动作词表:
 返回**恰一个 CwAction** = 本帧要执行的那个;空发射帧 → ``HoldFrame``
-(本帧无动作可发,交回外循环重观察;``None`` 退役);观察帧缺失即抛错;
-非法形状由消费端 F3 守卫拒绝。
+(本帧无动作可发,交回外循环重观察;``None`` 退役);非法形状由消费端
+F3 守卫拒绝。
 
 三锁各辖一个契约点:
 
@@ -58,7 +58,6 @@ def _prep_strategy(monkeypatch: pytest.MonkeyPatch,
     - ``decide_prep_frame`` 模块桩 = 决策核发射缝——本锁辖「边界把发射
       序列映射成单动作/HoldFrame」的形状,核内三遍编排/帧稳定截断不在
       锁面;预算披露(决策入口前置发射位之后)走真实现,零屏零外部面;
-    - 黑板帧 = 真实 ``PrepObservation``(过「观察帧缺失即抛错」门);
     - ``gs.frame_class_prep`` 缺省 'none' → 入口内务(帧代次消费)
       空转,方向刷新不触发,测试零全局残留。
     """
@@ -66,10 +65,11 @@ def _prep_strategy(monkeypatch: pytest.MonkeyPatch,
     strategy = cw_bridge.MandateV1Strategy(
         game_state_of(session),
         SimpleNamespace(strategy_seed=None))   # 终态契约:构造注入
-    game_state_of(session).prep_obs = PrepObservation(free_bench_slots=9)   # 终态契约 §2.6
+    # (黑板帧装配已随 gs.prep_obs 退役删除——阶段 3.5:决策输入 = 容器
+    #  直读,「观察帧缺失即抛错」防线随黑板消亡,编排前提由画面 op 保证。)
     monkeypatch.setattr(
         cw_bridge, 'decide_prep_frame',
-        lambda obs, session, config, registry=None: list(emission))
+        lambda session_, config, registry=None: list(emission))
     return strategy, session
 
 
@@ -124,7 +124,9 @@ def test_prep_consumer_rejects_illegal_return_f3_fail(
     match = CurrencyWarMatch(_IllegalPrepStrategy(), StrategySession())
     monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
     op = CwScreenPrep(test_context)
-    rs = run_node(test_context, op, lambda: op.lifecycle_decision_cycle(
-        PrepObservation(free_bench_slots=9)))
+    # 阶段 3.5:黑板载体随 gs.prep_obs 退役(payload 形参 = 基类抽象签名
+    # 保持,本路径零消费)——决策入口零参直读容器。
+    rs = run_node(test_context, op,
+                  lambda: op.lifecycle_decision_cycle(None))
     assert not rs.is_success
     assert rs.status == '策略输出非 CwAction(F3)'

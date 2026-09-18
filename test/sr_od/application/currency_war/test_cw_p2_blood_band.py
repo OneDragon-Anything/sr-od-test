@@ -238,10 +238,9 @@ class TestLockGenObservationKeys:
                             lambda frame, session, **kw: [])
 
         def _obs(st: SimpleNamespace) -> SimpleNamespace:
-            return SimpleNamespace(
-                box_overlay_open=False, boxes=(), tomes=(), spheres=(),
-                event_overlay='', bench_chars=(), deployed_chars=(),
-                deploy_vacancy=0)
+            # 阶段 3.5:黑板只载控制信号域(boxes/tomes/spheres 消费已切
+            # 容器),emit 去 obs 形参——本桩随退役收缩为恒 None 占位。
+            return None
 
         def _mk_frame(gold: int, hp: int) -> CwSimFrame:
             # 容器化段 2:局内事实喂 session 容器(观察源契约),黑板帧
@@ -252,7 +251,7 @@ class TestLockGenObservationKeys:
         st = _mk_frame(40, 10)
         sess = SimpleNamespace(cw4_counters={}, v3_intention=IntentionState())
         cw4_feed(sess, st)
-        out = entry.emit(_obs(st), sess, None)
+        out = entry.emit(sess, None)
         assert state_of(sess).cw4_counters.get('terminal_targetless_idle') == 1
         assert not any(isinstance(e.action, mandate.LevelUp) for e in out), (
             '观测零行为:形态⑥帧发射序列不变(无动作 ⇒ 出战路径)')
@@ -260,14 +259,14 @@ class TestLockGenObservationKeys:
         st_z = _mk_frame(80, 10)
         sess_z = SimpleNamespace(cw4_counters={}, v3_intention=IntentionState())
         cw4_feed(sess_z, st_z)
-        entry.emit(_obs(st_z), sess_z, None)
+        entry.emit(sess_z, None)
         assert 'terminal_targetless_idle' not in state_of(sess_z).cw4_counters
         # 负对照:非濒死帧(hp=60)不计(键只辖濒死带形态,与既有
         # advisor 计数面零交集)
         st_h = _mk_frame(40, 60)
         sess_h = SimpleNamespace(cw4_counters={}, v3_intention=IntentionState())
         cw4_feed(sess_h, st_h)
-        entry.emit(_obs(st_h), sess_h, None)
+        entry.emit(sess_h, None)
         assert 'terminal_targetless_idle' not in state_of(sess_h).cw4_counters
 
     def _case_lock_open_rate(self, monkeypatch):
