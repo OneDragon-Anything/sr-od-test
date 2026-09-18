@@ -284,9 +284,9 @@ def test_finalize_empty_ledger_no_crash() -> None:
     """空账(全零 ledger)关店审计不崩(事故根因一回归锁)。
 
     病理:finalize_buy_phase 的消费块(_expected/冲突检查)曾被账本迁移
-    挪出 `if total_buy or ...` 守卫,零动作 visit(策略首帧 CloseShop,
+    挪出 `if total_buy or ...` 守卫,零动作 visit(策略首帧 CwActionCloseShopParam,
     实证 = 残局恢复局空店 [empty×5])守卫不执行 → _spend/_final_gold
-    UnboundLocalError → OpenShop 执行异常。修复语义 = 零账无动作账可
+    UnboundLocalError → CwActionOpenShopParam 执行异常。修复语义 = 零账无动作账可
     对拍,整段审计(读金+对拍)随守卫跳过(守卫 = 原意图,消费与读金
     同在守卫内)。锁依据 = finalize_buy_phase 守卫注释「空账早退语义」。"""
     from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (

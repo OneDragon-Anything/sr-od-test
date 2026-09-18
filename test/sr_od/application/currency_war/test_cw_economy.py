@@ -93,7 +93,7 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
     CwSimFrame,
-    RefreshShop,
+    CwActionRefreshShopParam,
     ShopCard,
 )
 from sr_od.application.currency_war.strategies.impl.cw_strategy import (
@@ -278,7 +278,7 @@ class TestR2InterestFloor:
         comp, st, sess = self._frame(80)
         _seed_actives(sess, ['利息上调'])   # ADR-0598 注入面迁移(容器单源)
         acts = _decide(st, sess)
-        assert not [a for a in acts if isinstance(a, RefreshShop)]
+        assert not [a for a in acts if isinstance(a, CwActionRefreshShopParam)]
 
 
 # ==================== budget 拒付单代表(归 fail-closed;自 test_cw_blood_xp_gate 并入) ====================
@@ -652,7 +652,7 @@ def test_schedule_predictive_even_when_fee_unaffordable() -> None:
 
 
 def test_schedule_gold_digger_retires_levelup(monkeypatch) -> None:
-    """淘金客姿态:升级通道退役(W621:LevelUp 退役是刷驱姿态主驱动;
+    """淘金客姿态:升级通道退役(W621:CwActionLevelUpParam 退役是刷驱姿态主驱动;
     谓词单一址=cw_investments.refresh_invest_active,授权链同址关闭)。"""
     st = _ba_state(gold=100, level=7)
     assert schedule_upgrade(cw4_box(st), _ba_locked_4cost_sess())   # 前置:常态帧排程成立

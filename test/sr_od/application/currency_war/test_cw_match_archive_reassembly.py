@@ -75,23 +75,23 @@ def _seed_legacy_dir(rd: Path) -> None:
     _write_jsonl(rd, 'decisions.jsonl', [
         _dec(_RA, '2026-09-08T10:00:00', 1, 1, hp=100, gold=10,
              deployed=[_dep('Saber', 1, 'front', 1), _dep('Archer', 1, 'front', 2)],
-             actions=[{'__type__': 'SellDeployed', 'deployed_idx': 0,
+             actions=[{'__type__': 'CwActionSellDeployedParam', 'deployed_idx': 0,
                        'income': 3}]),
         _dec(_RA, '2026-09-08T10:00:30', 1, 1, hp=100, gold=8,
              deployed=[_dep('Archer', 1, 'front', 2)],
-             actions=[{'__type__': 'StartBattle'}]),
+             actions=[{'__type__': 'CwActionStartBattleParam'}]),
         _dec(_RA, '2026-09-08T10:01:00', 1, 2, hp=80, gold=12,
              deployed=[_dep('Archer', 1, 'front', 2), _dep('Lancer', 1, 'back', 1)],
-             actions=[{'__type__': 'StartBattle'}], level=2),
+             actions=[{'__type__': 'CwActionStartBattleParam'}], level=2),
         _dec(_RB, '2026-09-08T12:00:00', 2, 3, hp=60, gold=20,
              deployed=[_dep('Archer', 1, 'front', 2), _dep('Miku', 2, 'back', 2)],
              actions=[], level=2),
         _dec(_RB, '2026-09-08T12:01:00', 2, 3, hp=60, gold=15,
              deployed=[_dep('Archer', 1, 'front', 2)],
-             actions=[{'__type__': 'StartBattle'}], level=2),
+             actions=[{'__type__': 'CwActionStartBattleParam'}], level=2),
         _dec(_RO, '2026-09-09T08:00:00', 1, 1, hp=100, gold=5,
              deployed=[_dep('Saber', 1, 'front', 1)],
-             actions=[{'__type__': 'StartBattle'}]),
+             actions=[{'__type__': 'CwActionStartBattleParam'}]),
     ])
     _write_jsonl(rd, 'outcomes.jsonl', [
         _outcome(_RA, '2026-09-08T10:00:45', 1, 1, 80),
@@ -149,7 +149,7 @@ def test_assemble_rebuilds_derived_columns_from_legacy_streams(tmp_path: Path):
         [(80, 'settlement', None), (60, 'settlement', -20),
          (10, 'settlement', -50)]
     assert rounds[0]['gold'] == 8 and rounds[0]['n_decision_frames'] == 2
-    assert rounds[0]['action_counts'] == {'StartBattle': 1, 'SellDeployed': 1}
+    assert rounds[0]['action_counts'] == {'CwActionStartBattleParam': 1, 'CwActionSellDeployedParam': 1}
     assert rounds[0]['shop_snapshots'] and rounds[0]['outcome']['hp_after'] == 80
     assert [r['terminal_closure'] for r in rounds] == \
         ['start_battle', 'start_battle', 'start_battle']

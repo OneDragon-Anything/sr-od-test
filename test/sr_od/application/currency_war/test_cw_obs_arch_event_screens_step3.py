@@ -58,8 +58,8 @@ from types import SimpleNamespace
 from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
 from sr_od.application.currency_war.kernel.cw_strategy_session import StrategySession
 from sr_od.application.currency_war.kernel.cw_vocab import (
-    PickSupply,
-    RefreshSupply,
+    CwActionPickSupplyParam,
+    CwActionRefreshSupplyParam,
 )
 
 _FRAME = object()   # 稳定帧哨兵(screenshot 桩产物;共享体桩只验传递不断言内容)
@@ -97,7 +97,7 @@ def test_supply_chosen_written_on_confirm_pick(test_context, monkeypatch) -> Non
     session = StrategySession()
     match = SimpleNamespace(
         session=session,
-        strategy=SimpleNamespace(decide_supply=lambda: PickSupply(idx=0, reason='test')))
+        strategy=SimpleNamespace(decide_supply=lambda: CwActionPickSupplyParam(idx=0, reason='test')))
     from sr_od.application.currency_war.kernel.cw_game_state import (
         game_state_of as _gso_match,
     )
@@ -127,7 +127,7 @@ def test_supply_chosen_written_on_confirm_pick(test_context, monkeypatch) -> Non
     session2 = StrategySession()
     match2 = SimpleNamespace(
         session=session2,
-        strategy=SimpleNamespace(decide_supply=lambda: RefreshSupply(reason='test')))
+        strategy=SimpleNamespace(decide_supply=lambda: CwActionRefreshSupplyParam(reason='test')))
     from sr_od.application.currency_war.kernel.cw_game_state import (
         game_state_of as _gso_match2,
     )
@@ -166,7 +166,7 @@ def test_supply_refresh_emission_counts_container(
     match = SimpleNamespace(
         session=session,
         strategy=SimpleNamespace(
-            decide_supply=lambda: RefreshSupply(reason='test')))
+            decide_supply=lambda: CwActionRefreshSupplyParam(reason='test')))
     from sr_od.application.currency_war.kernel.cw_game_state import (
         game_state_of as _gso_match,
     )

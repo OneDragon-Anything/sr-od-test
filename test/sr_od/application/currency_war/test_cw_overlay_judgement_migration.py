@@ -40,10 +40,9 @@ from sr_od.application.currency_war.kernel.cw_intention import IntentionState
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CW_ACTION_TYPES,
     PICK_ACTION_TYPES,
-    PickEquip,
-    PickExpertInvite,
-    PickFortune,
-    PickOption,
+    CwActionPickEquipParam,
+    CwActionPickExpertInviteParam,
+    CwActionPickFortuneParam,
 )
 
 register_sig_actors('cw-mig2-test')
@@ -122,11 +121,13 @@ def test_equip_overlay_generic_leg_and_defaults(monkeypatch):
 # ==================== 契约面:扩员 12→15 ====================
 
 def test_new_pick_types_in_both_registries():
-    """三新子类型入统一词表与选择族单表,且为 PickOption 子类。"""
-    for cls in (PickFortune, PickExpertInvite, PickEquip):
+    """三新子类型入统一词表与选择族单表,且逐类自持 idx/reason 字段
+    (词表摊平后无公共基类,选择族契约 = 逐类重声明)。"""
+    for cls in (CwActionPickFortuneParam, CwActionPickExpertInviteParam, CwActionPickEquipParam):
         assert cls in CW_ACTION_TYPES, cls.__name__
         assert cls in PICK_ACTION_TYPES, cls.__name__
-        assert issubclass(cls, PickOption), cls.__name__
+        assert 'idx' in cls.__dataclass_fields__, cls.__name__
+        assert 'reason' in cls.__dataclass_fields__, cls.__name__
 
 
 def test_abstract_entries_expanded_to_15():
@@ -159,12 +160,12 @@ def test_flow_entries_fail_loud_on_offscreen_slot():
 
 
 def test_flow_decide_fortune_reads_slot_returns_action():
-    """写槽 → decide_fortune:同输入同 kernel 结论,产物 = PickFortune。"""
+    """写槽 → decide_fortune:同输入同 kernel 结论,产物 = CwActionPickFortuneParam。"""
     gs = _fresh_gs()
     gs.write_logic(gs.fortune_opts, ['无关键词', '强度提高'],
                    produced_by='cw-mig2-test', sig=_SIG)
     pick = _live(gs).decide_fortune()
-    assert isinstance(pick, PickFortune)
+    assert isinstance(pick, CwActionPickFortuneParam)
     assert pick.idx == decide_fortune(['无关键词', '强度提高']) == 1
 
 
@@ -176,7 +177,7 @@ def test_flow_decide_expert_invite_cash_and_card_paths():
         ExpertInvitePayload(card_bonds=['仙舟', None], board={}),
         produced_by='cw-mig2-test', sig=_SIG)
     pick = _live(gs).decide_expert_invite()
-    assert isinstance(pick, PickExpertInvite)
+    assert isinstance(pick, CwActionPickExpertInviteParam)
     assert pick.idx == -1   # board 空 = 现金为王兜底
     gs.write_logic(
         gs.expert_invite,
@@ -203,5 +204,5 @@ def test_flow_decide_equip_pick_injects_locked_comp(monkeypatch):
     strategy.state.v3_intention = IntentionState()
     strategy.state.v3_intention.locked_comp = '目标线'
     pick = strategy.decide_equip_pick()
-    assert isinstance(pick, PickEquip)
+    assert isinstance(pick, CwActionPickEquipParam)
     assert pick.idx == 1   # key_fit 子串 +100 压过泛用腿

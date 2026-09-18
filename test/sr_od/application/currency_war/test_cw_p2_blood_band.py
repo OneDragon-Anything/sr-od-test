@@ -253,7 +253,7 @@ class TestLockGenObservationKeys:
         cw4_feed(sess, st)
         out = entry.emit(sess, None)
         assert state_of(sess).cw4_counters.get('terminal_targetless_idle') == 1
-        assert not any(isinstance(e.action, mandate.LevelUp) for e in out), (
+        assert not any(isinstance(e.action, mandate.CwActionLevelUpParam) for e in out), (
             '观测零行为:形态⑥帧发射序列不变(无动作 ⇒ 出战路径)')
         # 域外对照:同帧 g>g* ⇒ 不计
         st_z = _mk_frame(80, 10)

@@ -2,7 +2,7 @@
 
 出处 = docs/develop/sr_od/application/currency_war/changes/
 2026-09-14-unified-action-factory/landing.md §3.2a 判据七组锁(2a 半)+
-design.md §2.6(R2 组合壳溶解 / R4 ClickSpheres 改形 / R6 LevelUp 定案④ /
+design.md §2.6(R2 组合壳溶解 / R4 CwActionClickSpheresParam 改形 / R6 CwActionLevelUpParam 定案④ /
 R7 武装箱画面 op / R8 工具各立类 / R9 逻辑态全覆盖 / 裁决 3 零比对)。
 规则正本 = flow/action-logic-state.md(同批转录版)。
 
@@ -40,13 +40,13 @@ from sr_od.application.currency_war.kernel.cw_prep_actions import (
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CW_ACTION_TYPES,
-    ClickSpheres,
-    DeployMove,
-    LevelUp,
-    OpenTome,
-    SellBench,
-    SellDeployed,
-    WearEquip,
+    CwActionClickSpheresParam,
+    CwActionDeployMoveParam,
+    CwActionLevelUpParam,
+    CwActionOpenTomeParam,
+    CwActionSellBenchParam,
+    CwActionSellDeployedParam,
+    CwActionWearEquipParam,
 )
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
     CwScreenPrep,
@@ -57,7 +57,7 @@ _SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep')
 
 
 
-# ===== ClickSpheres 改形专锁(判据 3 前半)=====
+# ===== CwActionClickSpheresParam 改形专锁(判据 3 前半)=====
 
 def test_sphere_selection_kernel_orders_big_first_and_caps():
     """挑选 kernel 单一源:大球优先(r 降序稳定排序)+ 预算上界;载荷 =
@@ -81,7 +81,7 @@ def test_sphere_executor_is_mechanical_payload_clicks(monkeypatch):
     controller = _RecordingController()
     screens: list[int] = []
     ex = _make_executor(controller, screens)
-    ex.execute(ClickSpheres(points=((12, 34), (56, 78))))
+    ex.execute(CwActionClickSpheresParam(points=((12, 34), (56, 78))))
     assert [(p.x, p.y) for p in controller.clicks] == [(12, 34), (56, 78)]
     assert controller.drags == []   # 点球不拖拽
     assert screens == []            # 零读屏(挑选归决策侧 kernel)
@@ -97,7 +97,7 @@ def test_sphere_executor_is_mechanical_payload_clicks(monkeypatch):
         points=(('gold', 12, 34, 50), ('blue', 99, 99, 10))),
         sig=ChannelSig(family='obs', actor='synthesize_from_game_state',
                        mode='synthesized'))
-    apply_prep_action_logic(gs, ClickSpheres(points=((12, 34),)),
+    apply_prep_action_logic(gs, CwActionClickSpheresParam(points=((12, 34),)),
                             produced_by='T',
                             sig=ChannelSig(family='logic_action',
                                            actor='CwScreenPrep'))
@@ -111,11 +111,11 @@ def test_vocab_actions_all_have_logic_state_projection():
     ``apply_prep_action_logic``,原 _project_prep_obs 黑板投影随黑板退役)。
 
     覆盖面两集(登记面申报 = apply_prep_action_logic docstring):
-    - **写口分支集**(容器直写):SellBench/SellDeployed/DeployMove/
-      LevelUp/ClickSpheres/OpenTome/OpenBookcard——供数容器上逐动作
+    - **写口分支集**(容器直写):CwActionSellBenchParam/CwActionSellDeployedParam/CwActionDeployMoveParam/
+      CwActionLevelUpParam/CwActionClickSpheresParam/CwActionOpenTomeParam/CwActionOpenBookcardParam——供数容器上逐动作
       必产生容器写(write_seq 推进);
-    - **合法零写集**(正本申报「消费真值归观察」):OpenBox(R7 终结化)/
-      WearEquip/工具原子七类——截断点独占发射帧,零窗口暴露;
+    - **合法零写集**(正本申报「消费真值归观察」):CwActionOpenBoxParam(R7 终结化)/
+      CwActionWearEquipParam/工具原子七类——截断点独占发射帧,零窗口暴露;
     词表外类型 = 合法零写(登记面申报,非静默丢行为)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         BenchSlot,
@@ -123,16 +123,16 @@ def test_vocab_actions_all_have_logic_state_projection():
         SphereSight,
     )
     from sr_od.application.currency_war.kernel.cw_vocab import (
-        FurnaceUse,
-        LuckyTokenUse,
-        OpenBookcard,
-        OpenBox,
-        PerfectProjectorUse,
-        PrecisionWrenchUse,
-        PrivilegeCardUse,
-        StaffProjectorUse,
-        WrenchUse,
-        WearEquip,
+        CwActionFurnaceUseParam,
+        CwActionLuckyTokenUseParam,
+        CwActionOpenBookcardParam,
+        CwActionOpenBoxParam,
+        CwActionPerfectProjectorUseParam,
+        CwActionPrecisionWrenchUseParam,
+        CwActionPrivilegeCardUseParam,
+        CwActionStaffProjectorUseParam,
+        CwActionWrenchUseParam,
+        CwActionWearEquipParam,
     )
     from test.sr_od.application.currency_war._cw_helpers import cw4_session
     session = cw4_session()
@@ -162,24 +162,24 @@ def test_vocab_actions_all_have_logic_state_projection():
         return gs.write_seq
 
     written: list = [
-        SellBench(bench_idx=0),
-        SellDeployed(deployed_idx=0),
-        DeployMove(bench_idx=1, to_row='front', faction=''),
-        LevelUp(cost=0),
-        ClickSpheres(points=((1, 2),)),
-        OpenTome(slot=None),
-        OpenBookcard(slot=None),
+        CwActionSellBenchParam(bench_idx=0),
+        CwActionSellDeployedParam(deployed_idx=0),
+        CwActionDeployMoveParam(bench_idx=1, to_row='front', faction=''),
+        CwActionLevelUpParam(cost=0),
+        CwActionClickSpheresParam(points=((1, 2),)),
+        CwActionOpenTomeParam(slot=None),
+        CwActionOpenBookcardParam(slot=None),
     ]
     zero: list = [
-        OpenBox(slot=None),
-        WearEquip(item_name='轮滑鞋', char_name='丙', row='front', slot=1),
-        FurnaceUse(target_kind='equip', item_name='轮滑鞋'),
-        PrivilegeCardUse(target_kind='equip', item_name='轮滑鞋'),
-        WrenchUse(row='front', slot=1),
-        PrecisionWrenchUse(row='front', slot=1),
-        StaffProjectorUse(row='front', slot=1),
-        PerfectProjectorUse(row='front', slot=1),
-        LuckyTokenUse(row='front', slot=1),
+        CwActionOpenBoxParam(slot=None),
+        CwActionWearEquipParam(item_name='轮滑鞋', char_name='丙', row='front', slot=1),
+        CwActionFurnaceUseParam(target_kind='equip', item_name='轮滑鞋'),
+        CwActionPrivilegeCardUseParam(target_kind='equip', item_name='轮滑鞋'),
+        CwActionWrenchUseParam(row='front', slot=1),
+        CwActionPrecisionWrenchUseParam(row='front', slot=1),
+        CwActionStaffProjectorUseParam(row='front', slot=1),
+        CwActionPerfectProjectorUseParam(row='front', slot=1),
+        CwActionLuckyTokenUseParam(row='front', slot=1),
     ]
     for action in written:
         before = _seq()
@@ -193,13 +193,13 @@ def test_vocab_actions_all_have_logic_state_projection():
     names = {c.__name__ for c in CW_ACTION_TYPES}
     covered = ({type(a).__name__ for a in written}
                | {type(a).__name__ for a in zero})
-    assert {'ClickSpheres', 'OpenTome', 'OpenBookcard', 'OpenBox',
-            'SellBench', 'DeployMove', 'SellDeployed', 'LevelUp',
-            'WearEquip'} <= covered
+    assert {'CwActionClickSpheresParam', 'CwActionOpenTomeParam', 'CwActionOpenBookcardParam', 'CwActionOpenBoxParam',
+            'CwActionSellBenchParam', 'CwActionDeployMoveParam', 'CwActionSellDeployedParam', 'CwActionLevelUpParam',
+            'CwActionWearEquipParam'} <= covered
     assert names >= covered   # 两集均为词表成员(不越词表)
 
 
-# ===== LevelUp 形态锁 2a 半(判据 2)=====
+# ===== CwActionLevelUpParam 形态锁 2a 半(判据 2)=====
 
 class _RecordingController:
     def __init__(self) -> None:
@@ -234,14 +234,14 @@ def _make_executor(controller: _RecordingController,
 def test_levelup_executes_single_click_per_frame():
     """R6 定案④执行器半:一次 execute = 恰一次单击(零授权零循环;
     升 N 击 = N 帧)。金腿批2b 翻转 = action.cost 逻辑态直写(唯一写点
-    apply_prep_action_logic LevelUp 分支),执行缝金差退役:执行点
+    apply_prep_action_logic CwActionLevelUpParam 分支),执行缝金差退役:执行点
     gold_delta 恒 0(不进回执 extra 键、不经 _advance_gold)。"""
     controller = _RecordingController()
     ex = _make_executor(controller)
-    ex.execute(LevelUp(cost=4))
+    ex.execute(CwActionLevelUpParam(cost=4))
     assert len(controller.clicks) == 1
     assert ex.last_gold_delta == 0   # 执行缝金差退役(防双记)
-    ex.execute(LevelUp(cost=4))
+    ex.execute(CwActionLevelUpParam(cost=4))
     assert len(controller.clicks) == 2   # 第二帧再击
 
 
@@ -253,20 +253,20 @@ def test_levelup_logic_state_advances_xp_level_and_gold():
     gs.observe(gs.level, 3, evidence='t', sig=_SIG_OBS)
     gs.observe(gs.xp, (10, 12), evidence='t', sig=_SIG_OBS)
     gs.observe(gs.gold, 100, evidence='t', sig=_SIG_OBS)
-    apply_prep_action_logic(gs, LevelUp(cost=4), produced_by='T', sig=_SIG)
+    apply_prep_action_logic(gs, CwActionLevelUpParam(cost=4), produced_by='T', sig=_SIG)
     exp_level, exp_cur = xp_apply_clicks(3, 10, 1)
     assert gs.level.value == exp_level
     assert gs.xp.value[0] == exp_cur
     assert gs.gold.value == 96   # 金腿直写:-action.cost
     # 缺读跳写:level/xp 未观察帧零写不炸
     bs2 = game_state_of(None)
-    apply_prep_action_logic(bs2, LevelUp(cost=4), produced_by='T', sig=_SIG)
+    apply_prep_action_logic(bs2, CwActionLevelUpParam(cost=4), produced_by='T', sig=_SIG)
     assert bs2.level.value is None and bs2.xp.value is None
     # gold 未观察 = 域级跳写(xp/level 照推进)
     bs3 = game_state_of(None)
     bs3.observe(bs3.level, 3, evidence='t', sig=_SIG_OBS)
     bs3.observe(bs3.xp, (10, 12), evidence='t', sig=_SIG_OBS)
-    apply_prep_action_logic(bs3, LevelUp(cost=4), produced_by='T', sig=_SIG)
+    apply_prep_action_logic(bs3, CwActionLevelUpParam(cost=4), produced_by='T', sig=_SIG)
     assert bs3.gold.value is None
 
 
@@ -295,7 +295,7 @@ def test_deploy_slot_assignment_matches_kernel_plan():
 
 
 def test_deploymove_logic_state_moves_unit_and_increments_board():
-    """DeployMove 容器逻辑态(§3.1 落码):bench 摘槽 + deployed 落槽;
+    """CwActionDeployMoveParam 容器逻辑态(§3.1 落码):bench 摘槽 + deployed 落槽;
     陈旧提案(源槽空/目标被占)= 零写。(docstring 收窄:board 羁绊增量
     面本测未断言,不虚报。)"""
     gs = game_state_of(None)
@@ -307,7 +307,7 @@ def test_deploymove_logic_state_moves_unit_and_increments_board():
     )
     gs.observe(gs.bench, bench_view_of_slots(slots), evidence='t', sig=_SIG_OBS)
     gs.observe(gs.board, {'欢愉': 1}, evidence='t', sig=_SIG_OBS)
-    apply_prep_action_logic(gs, DeployMove(bench_idx=2, to_row='front',
+    apply_prep_action_logic(gs, CwActionDeployMoveParam(bench_idx=2, to_row='front',
                                            faction=''),
                             produced_by='T', sig=_SIG)
     bench_after = bench_slots_of(gs)
@@ -323,36 +323,36 @@ def test_deploymove_logic_state_moves_unit_and_increments_board():
     gs.observe(gs.back_row, [Unit(char_id=f'丙{i}', star=1, equips=[],
                                   slot=i + 1) for i in range(6)],
                evidence='t', sig=_SIG_OBS)
-    apply_prep_action_logic(gs, DeployMove(bench_idx=2, to_row='front',
+    apply_prep_action_logic(gs, CwActionDeployMoveParam(bench_idx=2, to_row='front',
                                            faction=''),
                             produced_by='T', sig=_SIG)
     assert bench_slots_of(gs)[2].char_id == '甲'   # 源槽未摘(整笔零写)
 
 
 def test_selldeployed_logic_state_clears_slot_and_recounts_board():
-    """SellDeployed 容器逻辑态(§3.2 落码):deployed 摘槽;金域零写口径
+    """CwActionSellDeployedParam 容器逻辑态(§3.2 落码):deployed 摘槽;金域零写口径
     = gold 未观察时跳写(回金公式单一源 = sell_refund)。(docstring 收窄:
     board 重算面本测未断言,不虚报。)"""
     gs = game_state_of(None)
     gs.observe(gs.front_row, [Unit(char_id='甲', star=2, equips=[],
                                    slot=1)], evidence='t', sig=_SIG_OBS)
-    apply_prep_action_logic(gs, SellDeployed(deployed_idx=0),
+    apply_prep_action_logic(gs, CwActionSellDeployedParam(deployed_idx=0),
                             produced_by='T', sig=_SIG)
     dep = deployed_slots_of(gs)
     assert dep[0] is None
     assert gs.gold.value is None   # gold 未观察 = 域级跳写
     # 槽空(陈旧提案)= 零写不炸
-    apply_prep_action_logic(gs, SellDeployed(deployed_idx=0),
+    apply_prep_action_logic(gs, CwActionSellDeployedParam(deployed_idx=0),
                             produced_by='T', sig=_SIG)
 
 
 def test_prep_sell_gold_booked_exactly_once_across_seam_and_projection():
     """备战卖出金账全链恰一次入账(统一观察对账迭代 2026-09-16 归因批
-    出口①修模锁):live 执行链对同一 SellBench 先后跑执行缝
+    出口①修模锁):live 执行链对同一 CwActionSellBenchParam 先后跑执行缝
     (apply_op_effect)与容器投影(apply_prep_action_logic),历史形态两腿
     各记一次 +refund → 逻辑金系统性虚高,下帧实读倒挂(journal 实证
     −2,2026-09-15 run_20260915_070645)。修后容器唯一写点 = 投影腿,
-    执行缝对 SellBench 零入账(tracked 主账在场亦不记)。"""
+    执行缝对 CwActionSellBenchParam 零入账(tracked 主账在场亦不记)。"""
     from sr_od.application.currency_war.kernel.cw_economy import (
         bench_char_cost,
         sell_refund,
@@ -373,7 +373,7 @@ def test_prep_sell_gold_booked_exactly_once_across_seam_and_projection():
                sig=_SIG_OBS)
     gs.tracked_books.bench = [bc]   # 旧执行缝腿的数据源(腿复返即红)
     refund = sell_refund(1, bench_char_cost(bc))
-    action = SellBench(bench_idx=0)
+    action = CwActionSellBenchParam(bench_idx=0)
     apply_op_effect(session, action)   # 执行缝:修后零入账
     apply_prep_action_logic(gs, action, produced_by='T', sig=_SIG)
     assert gs.gold.value == 10 + refund, \
@@ -383,7 +383,7 @@ def test_prep_sell_gold_booked_exactly_once_across_seam_and_projection():
 # ===== 零比对出生锁(判据 6)=====
 
 def test_wear_equip_single_mechanical_drag_no_diff_verification(monkeypatch):
-    """WearEquip 单次机械拖拽,无补救链重试(用户裁定:动作 op = 机械
+    """CwActionWearEquipParam 单次机械拖拽,无补救链重试(用户裁定:动作 op = 机械
     执行,判效/重试禁入动作层):发出即记账(emitted=True),拖后零
     落地判定,拖拽静默不生效由观察侧 reconcile 对账显影。
     (monkeypatch time.sleep = 拖后固定等待空等,真机等待节奏非本锁辖面。)"""
@@ -411,7 +411,7 @@ def test_wear_equip_single_mechanical_drag_no_diff_verification(monkeypatch):
     ex = _make_executor(controller, screens)
     ex._ctx.screen_loader = SimpleNamespace(
         get_screen=lambda name: _FakeScreenInfo())
-    ex.execute(WearEquip(item_name='轮滑鞋', char_name='刃',
+    ex.execute(CwActionWearEquipParam(item_name='轮滑鞋', char_name='刃',
                          row='front', slot=1))
     assert len(controller.drags) == 1   # 单次机械拖拽(无补救链重试)
 

@@ -59,10 +59,10 @@ from sr_od.application.currency_war.kernel.cw_registry import (
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
-    BuyCard,
-    CloseShop,
+    CwActionBuyCardParam,
+    CwActionCloseShopParam,
     CwSimFrame,
-    RefreshShop,
+    CwActionRefreshShopParam,
     ShopCard,
 )
 from sr_od.application.currency_war.strategies.impl.cw_strategy import StrategySession
@@ -174,8 +174,8 @@ def _ju23_session() -> StrategySession:
 
 
 # (test_ju23_stock_match_buys_and_empty_shop_close_discernible 已删
-#  2026-09-08 覆盖对账:店空必花域帧原 → LevelUpShop(m3_batch:must_spend)
-#  终结面随商店期升级决策面收缩退役,现役帧表达 = CloseShop 收工
+#  2026-09-08 覆盖对账:店空必花域帧原 → CwActionLevelUpShopParam(m3_batch:must_spend)
+#  终结面随商店期升级决策面收缩退役,现役帧表达 = CwActionCloseShopParam 收工
 #  (本文件 test_ju23_star2_stock_card_has_no_refund_backing_no_spend
 #  同构造域承载);shop_visit_idle_gold==1 = test_cw_shop_line::
 #  test_d_p2idle_idle_gold_counter,shop_r1_no_chaseable_member==1 无本帧族独立覆盖锁,现役近邻 =
@@ -193,16 +193,16 @@ def test_ju23_star2_stock_card_has_no_refund_backing_no_spend():
     2★ 件两条买面都不可发射,溢余滞留(不放行)而非带病买——
     锁「背书门在局23 帧端到端成立」,非单位锁复述。
     商店收缩适配:必花域末位 L3 升级消费随商店期升级决策面退役,
-    「全层无对象」的帧表达 = CloseShop 收工交回(原 LevelUpShop
+    「全层无对象」的帧表达 = CwActionCloseShopParam 收工交回(原 CwActionLevelUpShopParam
     (m3_batch:must_spend) 形态不保留)。
     """
     cfg = SimpleNamespace(ev_arm='full')
     sess = _ju23_session()
     act = decide_shop_action(cw4_gs(_ju23_frame(
         100, [_sc('花火', star=2)]), sess), sess, cfg)
-    assert not isinstance(act, (BuyCard, RefreshShop))
+    assert not isinstance(act, (CwActionBuyCardParam, CwActionRefreshShopParam))
     # 收缩后帧终态 = 收工关店(零支出语义不变)
-    assert isinstance(act, CloseShop)
+    assert isinstance(act, CwActionCloseShopParam)
 
 
 # (test_ju23_liquid_refund_shifts_s_reserve_down 已删 2026-09-08 覆盖对账:
@@ -219,8 +219,8 @@ def test_ju23_full_surface_gold_never_breaks_interest_line():
     """金位不破息线(端到端复合):0-100 金全决策面逐帧走真函数。
 
     每个起始金位完整走一次店内访问(动作后真值回写再判,ADR-0517
-    §8.1 口径):任一 BuyCard/RefreshShop 花后金 ≥ s_reserve(本帧形状
-    = 50);息线下(≤50)整访问零支出(无误清);每访问都以 CloseShop
+    §8.1 口径):任一 CwActionBuyCardParam/CwActionRefreshShopParam 花后金 ≥ s_reserve(本帧形状
+    = 50);息线下(≤50)整访问零支出(无误清);每访问都以 CwActionCloseShopParam
     收束且有界迭代(无死守环)。
     恒买腾席适配(ADR-0580):店卡改用真无关件(局23杂件,非④放行集/
     registry 核心)——原探针花火 ∈ TRANSITION_PACK carry,未锁双轨
@@ -235,17 +235,17 @@ def test_ju23_full_surface_gold_never_breaks_interest_line():
         sess = _ju23_session()
         for _ in range(15):
             act = decide_shop_action(cw4_gs(st, sess), sess, cfg)
-            if isinstance(act, BuyCard):
+            if isinstance(act, CwActionBuyCardParam):
                 cost = act.card.cost if act.card.cost else 3
                 if gold0 <= 50:
                     assert st.gold - cost >= 50, (gold0, st.gold, cost)
                 st.gold -= cost
                 st.shop = [c for c in st.shop if c is not act.card]
-            elif isinstance(act, RefreshShop):
+            elif isinstance(act, CwActionRefreshShopParam):
                 if gold0 <= 50:
                     assert st.gold - act.cost >= 50, (gold0, st.gold)
                 st.gold -= act.cost
-            elif isinstance(act, CloseShop):
+            elif isinstance(act, CwActionCloseShopParam):
                 break
             else:
                 raise AssertionError(f'局23 帧意外动作 {act!r} @ {gold0} 金')

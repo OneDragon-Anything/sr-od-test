@@ -57,8 +57,8 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import StrategySession
 from sr_od.application.currency_war.kernel.cw_vocab import (
-    PickEncounter,
-    RefreshNodeOptions,
+    CwActionPickEncounterParam,
+    CwActionRefreshNodeOptionsParam,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     StrategyState,
@@ -173,7 +173,7 @@ def test_encounter_old_path_kept_without_ports(
     opts = [EncounterOption(idx=0, difficulty=1, rewards=['金币×2'])]
     op, _match, session = _make_encounter(
         test_context, monkeypatch, in_screen=True, options=opts,
-        pick=PickEncounter(idx=0, reason='stub'))
+        pick=CwActionPickEncounterParam(idx=0, reason='stub'))
     rs = _run_node(test_context, op, op.handle)
     assert op._lifecycle_trace == [], f'旧路径不得写段迹:{op._lifecycle_trace}'
     assert rs.is_success, f'旧路径确认链轮次结果照回(保形):{rs!r}'
@@ -189,7 +189,7 @@ def test_encounter_observe_gate_fails_off_screen(
     install_dispatch_stub_ports(monkeypatch)
     op, _match, _session = _make_encounter(
         test_context, monkeypatch, in_screen=False, options=[],
-        pick=PickEncounter(idx=0, reason='stub'))
+        pick=CwActionPickEncounterParam(idx=0, reason='stub'))
     rs = _run_node(test_context, op, op.handle)
     assert op._lifecycle_trace[0] == 'observe'
     assert not rs.is_success and '非遭遇节点屏' in (rs.status or ''), (
@@ -338,7 +338,7 @@ def test_encounter_refresh_semantics(test_context, monkeypatch) -> None:
     # ① 发射即计数 + 刷后重读重决策(重读 = 原卡面未变形态)
     op, match, session = _make_encounter(
         test_context, monkeypatch, in_screen=True, options=opts,
-        pick=RefreshNodeOptions(reason='stub'),
+        pick=CwActionRefreshNodeOptionsParam(reason='stub'),
         refresh_opts=opts)
     _decide_calls: list[tuple[list, bool]] = []
     _orig_decide = match.strategy.decide_encounter
@@ -358,12 +358,12 @@ def test_encounter_refresh_semantics(test_context, monkeypatch) -> None:
     assert len(_decide_calls) == 2, (
         f'刷后无条件重读+自然重决策(恰两次决策):'
         f'{_decide_calls!r}')
-    # (终态契约 §2.2:refresh_used 布尔位退役——刷新建议 = RefreshNodeOptions
+    # (终态契约 §2.2:refresh_used 布尔位退役——刷新建议 = CwActionRefreshNodeOptionsParam
     #  动作,已用证据 = 容器计数,上方断言承载。)
     # ② 本局已用(容器计数在位)→ 不发射不计数
     op2, _m2, s2 = _make_encounter(
         test_context, monkeypatch, in_screen=True, options=opts,
-        pick=RefreshNodeOptions(reason='stub'))
+        pick=CwActionRefreshNodeOptionsParam(reason='stub'))
     _gs2 = game_state_of(s2)
     _gs2.write_logic(_gs2.encounter_refresh_used, 1,
                      produced_by='CwScreenEncounter',
@@ -376,7 +376,7 @@ def test_encounter_refresh_semantics(test_context, monkeypatch) -> None:
     # ③ 无剩余次数 → 不发射不计数
     op3, _m3, s3 = _make_encounter(
         test_context, monkeypatch, in_screen=True, options=opts,
-        pick=RefreshNodeOptions(reason='stub'), cnt=None)
+        pick=CwActionRefreshNodeOptionsParam(reason='stub'), cnt=None)
     _run_node(test_context, op3, op3.handle)
     assert game_state_of(s3).encounter_refresh_used.value is None, (
         '无次数 → 不发射不计数')
@@ -394,7 +394,7 @@ def test_encounter_refresh_counts_once_no_double(
     opts = [EncounterOption(idx=0, difficulty=1, rewards=['金币×2'])]
     op, _match, session = _make_encounter(
         test_context, monkeypatch, in_screen=True, options=opts,
-        pick=RefreshNodeOptions(reason='stub'),
+        pick=CwActionRefreshNodeOptionsParam(reason='stub'),
         refresh_opts=opts)
     _run_node(test_context, op, op.handle)
     gs = game_state_of(session)
@@ -418,7 +418,7 @@ def test_encounter_chosen_inline_not_registry_collected(
     install_dispatch_stub_ports(monkeypatch)
     op, _match, session = _make_encounter(
         test_context, monkeypatch, in_screen=True, options=opts,
-        pick=PickEncounter(idx=1, reason='stub'), confirm_success=False)
+        pick=CwActionPickEncounterParam(idx=1, reason='stub'), confirm_success=False)
     rs = _run_node(test_context, op, op.handle)
     assert not rs.is_success and game_state_of(
         session).chosen_encounter.value is None, '验关失败 → chosen 不写'

@@ -10,7 +10,7 @@
 写端——豁免表按「写端前缀」申报表达不了「无写端外部收入」形状。
 
 修法 = 申报窗(ExecBooks.prep_sphere_income_pending,apply_op_effect
-ClickSpheres 分支按载荷球数开窗)+ observe() 失配分支正向差精确吸收
+CwActionClickSpheresParam 分支按载荷球数开窗)+ observe() 失配分支正向差精确吸收
 (prep_sphere_income_absorbed)+ 店开帧收口(照 bench 申报表族形态)。
 
 锁依据 = ExecBooks.prep_sphere_income_pending 字段注释的吸收语义与红线
@@ -38,8 +38,8 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     set_defect_sink,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
-    ClickSpheres,
-    DeployMove,
+    CwActionClickSpheresParam,
+    CwActionDeployMoveParam,
 )
 
 register_sig_actors('TestSphereWriter')
@@ -168,19 +168,19 @@ def test_sphere_income_window_closes_at_shop_panel(monkeypatch) -> None:
 
 
 def test_apply_op_effect_clickspheres_opens_window() -> None:
-    """置位端:ClickSpheres 执行发出按载荷球数开窗,多批累加;非点球
+    """置位端:CwActionClickSpheresParam 执行发出按载荷球数开窗,多批累加;非点球
     动作零影响。零推进语义不变(金账不写,只开窗)。"""
     session = SimpleNamespace()
     gs = game_state_of(session)
     assert gs.exec_books.prep_sphere_income_pending == 0
 
-    apply_op_effect(session, ClickSpheres(points=((100, 200), (300, 400))))
+    apply_op_effect(session, CwActionClickSpheresParam(points=((100, 200), (300, 400))))
     assert gs.exec_books.prep_sphere_income_pending == 2, '按载荷球数开窗'
 
-    apply_op_effect(session, ClickSpheres(points=((500, 600),)))
+    apply_op_effect(session, CwActionClickSpheresParam(points=((500, 600),)))
     assert gs.exec_books.prep_sphere_income_pending == 3, '多批执行累加'
 
-    apply_op_effect(session, DeployMove(bench_idx=0, to_row='front',
+    apply_op_effect(session, CwActionDeployMoveParam(bench_idx=0, to_row='front',
                                         faction='公司'))
     assert gs.exec_books.prep_sphere_income_pending == 3, \
         '非点球动作零影响'

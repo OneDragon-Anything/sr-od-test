@@ -57,7 +57,7 @@ from test.sr_od.application.currency_war._cw_helpers import (
 
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwSimFrame,
-    RefreshShop,
+    CwActionRefreshShopParam,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
     refresh as refresh_criteria,
@@ -183,7 +183,7 @@ class TestR1CommitmentAccountTruthTable:
 class TestArchiveP1R8Frame:
     """p1r8 帧(gold=53,lv5,金过息线 50)= 本局「r8 该 D 未 D」的帧级
     事实。修复前:R1 账被污染为 inf → rkey=no_chaseable_member → 零动作;
-    污染修复后:真 account_over_budget → 必花域切分线 yield → RefreshShop
+    污染修复后:真 account_over_budget → 必花域切分线 yield → CwActionRefreshShopParam
     发射;刷新止损批期望账前件恢复后:同帧(r_remaining=14,非末轮)超账
     → 域内拦,零刷新发射。本文件主旨 = 拒因归真墓碑(污染签名不得
     复现)不变;行为断言随账前件恢复演进——旧语义(全域 yielded 放行,
@@ -210,13 +210,13 @@ class TestArchiveP1R8Frame:
         acts = _decide(st, sess)
         cnt = state_of(sess).cw4_counters
         assert 'shop_r1_no_chaseable_member' not in cnt
-        assert not [a for a in acts if isinstance(a, RefreshShop)], acts
+        assert not [a for a in acts if isinstance(a, CwActionRefreshShopParam)], acts
         assert cnt.get('must_spend_r1_account_fail', 0) >= 1
         assert state_of(sess).v3_release_reason == 'must_spend'
         # 区外对照帧(gold=40,息线下)
         st_out, sess_out = _p1r8_frame(gold=40)
         acts_out = _decide(st_out, sess_out)
-        assert not [a for a in acts_out if isinstance(a, RefreshShop)]
+        assert not [a for a in acts_out if isinstance(a, CwActionRefreshShopParam)]
         cnt_out = state_of(sess_out).cw4_counters
         assert cnt_out.get('shop_r1_account_over_budget', 0) >= 1
         assert 'shop_r1_no_chaseable_member' not in cnt_out
@@ -248,6 +248,6 @@ class TestHorizonClosedYield:
         acts = _decide(st, sess)
         cnt = state_of(sess).cw4_counters
         assert cnt.get('must_spend_r1_account_yielded', 0) >= 1
-        refreshes = [a for a in acts if isinstance(a, RefreshShop)]
+        refreshes = [a for a in acts if isinstance(a, CwActionRefreshShopParam)]
         assert refreshes, f'全局末轮帧应豁免放行,实际 {acts}'
         assert all(a.reason == 'must_spend_r1_yielded' for a in refreshes)

@@ -275,7 +275,7 @@ def test_missing_read_frame_breaks_confirmation(monkeypatch):
 
 def test_removal_keeps_layout_sell_and_move_legs():
     """摘除腿按下标置 None 两腿(并一):sell 腿 pad 态契约不破坏,存件
-    不移位、信息位不动;DeployMove 腿同治本,bench 置 None 不移位 +
+    不移位、信息位不动;CwActionDeployMoveParam 腿同治本,bench 置 None 不移位 +
     deployed 正常落槽。"""
     # sell 腿:卖槽2(下标 1)
     session = StrategySession()

@@ -41,11 +41,11 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     synthesize_from_game_state,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
-    BuyCard,
-    CloseShop,
-    LevelUpShop,
-    RefreshShop,
-    SellBench,
+    CwActionBuyCardParam,
+    CwActionCloseShopParam,
+    CwActionLevelUpShopParam,
+    CwActionRefreshShopParam,
+    CwActionSellBenchParam,
     bench_occupied,
 )
 
@@ -92,7 +92,7 @@ def _project_with_merge_leg(gs, action, executed):
                 if gs.shop.value is not None else [])
     apply_shop_action_logic(gs, action, executed=executed,
                             produced_by=type(action).__name__, sig=_SIG)
-    if isinstance(action, BuyCard):
+    if isinstance(action, CwActionBuyCardParam):
         apply_shop_merge_leg(gs, action, sig=_SIG, pre_bench=pre_bench,
                              pre_deployed=pre_dep, pre_shop=pre_shop)
 
@@ -113,9 +113,9 @@ class TestM5Registration:
         gs = _gs_of(_state(gold=30, shop=[_card('希儿')]))
         with pytest.raises(ValueError):
             apply_shop_action_logic(
-                gs, BuyCard(card=_card('希儿')),
+                gs, CwActionBuyCardParam(card=_card('希儿')),
                 executed=ShopActionExecuted(bought_count=1),
-                produced_by='BuyCard',
+                produced_by='CwActionBuyCardParam',
                 sig=ChannelSig(family='obs', actor='CwScreenBuyCards'))
 
 
@@ -129,7 +129,7 @@ class TestM1DirectLock:
         st = _state(gold=30, shop=[_card('希儿', cost=3)])
         gs = _gs_of(st)
         _project_with_merge_leg(
-            gs, BuyCard(card=_card('希儿', cost=3)),
+            gs, CwActionBuyCardParam(card=_card('希儿', cost=3)),
             ShopActionExecuted(bought_count=1))
         assert gs.gold.value == 27, 'gold: 期望 30 −单价 3×k1 = 27'
         assert _content_of(gs) == [], \
@@ -157,7 +157,7 @@ class TestM1DirectLock:
         )
         k = merge_buy_k('希儿', 1, st.bench, st.deployed, st.shop)
         _project_with_merge_leg(
-            gs, BuyCard(card=_card('希儿', cost=3)),
+            gs, CwActionBuyCardParam(card=_card('希儿', cost=3)),
             ShopActionExecuted(bought_count=k))
         assert k == 2
         assert gs.gold.value == 54, 'gold: 期望 60 −单价 3×k2 = 54'
@@ -179,14 +179,14 @@ class TestM1DirectLock:
              _state(gold=30, shop=[_card('希儿', cost=3)],
                     bench=[_bc('希儿', star=1, slot=1),
                            _bc('希儿', star=1, slot=2)]),
-             BuyCard(card=_card('希儿', cost=3)),
+             CwActionBuyCardParam(card=_card('希儿', cost=3)),
              [(0, '希儿', 2)]),
             ('满栏合成买(k=2)',
              _state(gold=60, shop=[_card('希儿', cost=3, x=0),
                                    _card('希儿', cost=3, x=1)],
                     bench=[_bc(f'c{i}', star=1, slot=i + 1)
                            for i in range(8)] + [_bc('希儿', star=1, slot=9)]),
-             BuyCard(card=_card('希儿', cost=3)),
+             CwActionBuyCardParam(card=_card('希儿', cost=3)),
              [(i, f'c{i}', 1) for i in range(8)] + [(8, '希儿', 2)]),
         ):
             gs = _gs_of(st)
@@ -219,7 +219,7 @@ class TestM1DirectLock:
         st = _state(gold=10, shop=[], bench=[_bc('希儿', star=1, slot=1)])
         gs = _gs_of(st)
         _project_with_merge_leg(
-            gs, SellBench(bench_idx=0, income=3),
+            gs, CwActionSellBenchParam(bench_idx=0, income=3),
             ShopActionExecuted())
         assert gs.gold.value == 13, \
             'gold: 期望 10 +退款 3(1★ 希儿 sell_refund 现算)'
@@ -235,7 +235,7 @@ class TestM1DirectLock:
         st = _state(gold=30, shop=[], level=3, xp=(2, 6))
         gs = _gs_of(st)
         _project_with_merge_leg(
-            gs, LevelUpShop(cost=4), ShopActionExecuted(levelup_clicks=1))
+            gs, CwActionLevelUpShopParam(cost=4), ShopActionExecuted(levelup_clicks=1))
         assert gs.gold.value == 26, 'gold: 期望 30 −单击价 4×1 击 = 26'
         assert _content_of(gs) == [], \
             'shop payload: 期望空(离屏零写透传)'
@@ -251,7 +251,7 @@ class TestM1DirectLock:
         st_cap = _state(gold=30, shop=[], level=10, xp=(0, 4))
         gs_cap = _gs_of(st_cap)
         _project_with_merge_leg(
-            gs_cap, LevelUpShop(cost=4),
+            gs_cap, CwActionLevelUpShopParam(cost=4),
             ShopActionExecuted(levelup_clicks=1))
         assert gs_cap.gold.value == 30, 'gold: 满级购买零金(购买无效)'
         assert _content_of(gs_cap) == [], \
@@ -272,7 +272,7 @@ class TestM1DirectLock:
         gs = _gs_of(st)
         assert max_units_of(gs) == 5, '前置:cap 地板 = 滞留级 5'
         _project_with_merge_leg(
-            gs, LevelUpShop(cost=4), ShopActionExecuted(levelup_clicks=2))
+            gs, CwActionLevelUpShopParam(cost=4), ShopActionExecuted(levelup_clicks=2))
         # 18+8=26 ≥ lv5 门槛 20 → 升 lv6 余 6;6 < lv6 门槛 40 → 停。
         assert gs.level.value == 6, 'level: 连跳直写 5→6(跨级不滞留)'
         assert gs.xp.value == (6, 40), 'xp: 溢出结转 (6, lv6 门槛 40)'
@@ -287,7 +287,7 @@ class TestM1DirectLock:
         st = _state(gold=30, shop=[], level=5, xp=(15, 20))
         gs = _gs_of(st)
         _project_with_merge_leg(
-            gs, LevelUpShop(cost=4), ShopActionExecuted(levelup_clicks=1))
+            gs, CwActionLevelUpShopParam(cost=4), ShopActionExecuted(levelup_clicks=1))
         assert gs.level.value == 5, 'level: 15+4=19 < 门槛 20 零跨档不写'
         assert gs.xp.value == (19, 20), 'xp: 推进到位 (19, 20)'
         # 域级跳写对:level 未读(level_readable=False 合成跳写)+ xp 已读
@@ -297,9 +297,9 @@ class TestM1DirectLock:
         assert gs2.level.value is None and gs2.xp.value == (15, 20)
         seq0 = gs2.write_seq
         apply_shop_action_logic(
-            gs2, LevelUpShop(cost=4),
+            gs2, CwActionLevelUpShopParam(cost=4),
             executed=ShopActionExecuted(levelup_clicks=1),
-            produced_by='LevelUpShop', sig=_SIG)
+            produced_by='CwActionLevelUpShopParam', sig=_SIG)
         assert gs2.level.value is None, 'level 未读保持未读'
         assert gs2.xp.value == (15, 20) and gs2.xp.source == 'observation', \
             'level 未读 → 推进对整体跳写(禁缺省 1 参与推进计算;' \
@@ -312,7 +312,7 @@ class TestM1DirectLock:
         st = _state(gold=30, shop=[_card('希儿')])
         gs = _gs_of(st)
         _project_with_merge_leg(
-            gs, RefreshShop(cost=2), ShopActionExecuted(refresh_paid=2))
+            gs, CwActionRefreshShopParam(cost=2), ShopActionExecuted(refresh_paid=2))
         assert gs.gold.value == 28, 'gold: 期望 30 −刷新费 2'
         assert _content_of(gs) == [(0, '希儿', 1, 3)], \
             'shop payload: 刷新不写牌面(期望原 5 槽保持:槽1 希儿)'
@@ -324,19 +324,19 @@ class TestM1DirectLock:
         """免费帧(paid=0):gold 不写(fields.md §3.3.4 免费帧不写语义)。"""
         st = _state(gold=30, shop=[_card('希儿')])
         gs = _gs_of(st)
-        apply_shop_action_logic(gs, RefreshShop(cost=2),
+        apply_shop_action_logic(gs, CwActionRefreshShopParam(cost=2),
                                 executed=ShopActionExecuted(refresh_paid=0),
-                                produced_by='RefreshShop', sig=_SIG)
+                                produced_by='CwActionRefreshShopParam', sig=_SIG)
         assert gs.gold.value == 30
 
     def test_close_shop_leaves_screen(self):
-        """CloseShop:结构离屏(shop payload → None,left_screen)。"""
+        """CwActionCloseShopParam:结构离屏(shop payload → None,left_screen)。"""
         st = _state(gold=30, shop=[_card('希儿')])
         gs = _gs_of(st)
         assert gs.shop.value is not None
-        apply_shop_action_logic(gs, CloseShop(),
+        apply_shop_action_logic(gs, CwActionCloseShopParam(),
                                 executed=ShopActionExecuted(),
-                                produced_by='CloseShop', sig=_SIG)
+                                produced_by='CwActionCloseShopParam', sig=_SIG)
         assert gs.shop.value is None
 
     def test_missing_receipt_selfcomputes_ideal_execution(self):
@@ -351,9 +351,9 @@ class TestM1DirectLock:
         )
         st = _state(gold=30, shop=[_card('希儿', cost=3)])
         gs = _gs_of(st)
-        apply_shop_action_logic(gs, BuyCard(card=_card('希儿', cost=3)),
+        apply_shop_action_logic(gs, CwActionBuyCardParam(card=_card('希儿', cost=3)),
                                 executed=ShopActionExecuted(),
-                                produced_by='BuyCard', sig=_SIG)
+                                produced_by='CwActionBuyCardParam', sig=_SIG)
         assert gs.gold.value == 27, '自算 k=1:gold −单价'
         assert len(shop_payload_content_cards(gs.shop.value)) == 0, \
             'payload 该张移除'
@@ -370,9 +370,9 @@ class TestM1DirectLock:
         gs.write_logic(gs.gold, None, produced_by='test',
                        sig=ChannelSig(family='logic_hook',
                                       actor='synthesize_from_game_state'))
-        apply_shop_action_logic(gs, BuyCard(card=_card('希儿', cost=3)),
+        apply_shop_action_logic(gs, CwActionBuyCardParam(card=_card('希儿', cost=3)),
                                 executed=ShopActionExecuted(bought_count=1),
-                                produced_by='BuyCard', sig=_SIG)
+                                produced_by='CwActionBuyCardParam', sig=_SIG)
         assert gs.gold.value is None
         # 改写依据:三态定长五槽(用户三态裁定 2026-09-13),买后 content
         # 紧缩计数 = 旧紧缩列表长度等价读法。
@@ -386,21 +386,21 @@ class TestM1DirectLock:
         st = _state(gold=30, shop=[])
         gs = _gs_of(st)
         seq0 = gs.write_seq
-        apply_shop_action_logic(gs, SellBench(bench_idx=0, income=3),
+        apply_shop_action_logic(gs, CwActionSellBenchParam(bench_idx=0, income=3),
                                 executed=ShopActionExecuted(),
-                                produced_by='SellBench', sig=_SIG)
+                                produced_by='CwActionSellBenchParam', sig=_SIG)
         assert gs.write_seq == seq0
-        # 集外动作型腿(并入):DeployMove 不在投影登记面 → 零写
+        # 集外动作型腿(并入):CwActionDeployMoveParam 不在投影登记面 → 零写
         from sr_od.application.currency_war.kernel.cw_vocab import (
-            DeployMove,
+            CwActionDeployMoveParam,
         )
         st_oos = _state(gold=30, shop=[], bench=[_bc('希儿', slot=1)])
         gs_oos = _gs_of(st_oos)
         seq0_oos = gs_oos.write_seq
         apply_shop_action_logic(
-            gs_oos, DeployMove(bench_idx=0, to_row='front', faction='?'),
+            gs_oos, CwActionDeployMoveParam(bench_idx=0, to_row='front', faction='?'),
             executed=ShopActionExecuted(),
-            produced_by='DeployMove', sig=_SIG)
+            produced_by='CwActionDeployMoveParam', sig=_SIG)
         assert gs_oos.write_seq == seq0_oos, '集外动作型零写(禁扩静默)'
 
     def test_buy_rejected_when_full_and_no_merge(self):
@@ -410,9 +410,9 @@ class TestM1DirectLock:
         st = _state(gold=30, shop=[_card('姬子', cost=3)], bench=bench)
         gs = _gs_of(st)
         seq0 = gs.write_seq
-        apply_shop_action_logic(gs, BuyCard(card=_card('姬子', cost=3)),
+        apply_shop_action_logic(gs, CwActionBuyCardParam(card=_card('姬子', cost=3)),
                                 executed=ShopActionExecuted(bought_count=1),
-                                produced_by='BuyCard', sig=_SIG)
+                                produced_by='CwActionBuyCardParam', sig=_SIG)
         assert gs.write_seq == seq0
         assert gs.gold.value == 30, 'gold: 拒买零写金不动(期望 30)'
 

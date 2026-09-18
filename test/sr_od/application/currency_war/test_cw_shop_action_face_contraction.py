@@ -1,17 +1,17 @@
 """CW 商店期动作面收缩锁(判例 = screens-actions-capability §5)。
 
-判例:商店期动作面 = **买牌/刷新/关店**——卖备战(SellBench)与买经验
-(LevelUp/LevelUpShop)收缩至备战期决策(策略归属 = strategy-docs
+判例:商店期动作面 = **买牌/刷新/关店**——卖备战(CwActionSellBenchParam)与买经验
+(CwActionLevelUpParam/CwActionLevelUpShopParam)收缩至备战期决策(策略归属 = strategy-docs
 22/23 号篇);腾位/筹资/凑息动机的「先卖后做」由跨段状态 substrate
 承载(``shop.decide_shop_action`` 尾声明),框架侧不做动机判断。
 
 本文件前身 = test_cw_sell_bench_m3_reach.py(六处店内卖
-决策点发射 SellBench 锁 + M3 发射位可达锁)——该发射面随收缩退役,
+决策点发射 CwActionSellBenchParam 锁 + M3 发射位可达锁)——该发射面随收缩退役,
 违例形态锁不保留,本文件改锁收缩后的目标形态:
 
 1. 商店域决策形态帧逐一参数化锁(原六处卖射位的席位/缺金形态全保):
-   首动作 ∈ {BuyCard, RefreshShop, CloseShop},恒不发射 SellBench/
-   LevelUpShop(任一处发射面复活即红);
+   首动作 ∈ {CwActionBuyCardParam, CwActionRefreshShopParam, CwActionCloseShopParam},恒不发射 CwActionSellBenchParam/
+   CwActionLevelUpShopParam(任一处发射面复活即红);
 2. 席满缺员帧 = 关店交回 + 义务残差状态在(bench_full_buy_abandon 计数
    + ``cw4_shop_wanted_pending`` 置位)——「交回+状态在」锁到框架
    边界;备战期消费臂(wanted_closure_emit)评估腾席/重开归策略侧;
@@ -200,32 +200,32 @@ _FORM_FRAMES = {
     'funding_hold_fallback': _frame_funding_hold_fallback,
 }
 
-_SHOP_ACTION_FACE = {'BuyCard', 'RefreshShop', 'CloseShop'}
+_SHOP_ACTION_FACE = {'CwActionBuyCardParam', 'CwActionRefreshShopParam', 'CwActionCloseShopParam'}
 
 
 @pytest.mark.parametrize('case', list(_FORM_FRAMES))
 def test_shop_forms_stay_in_contracted_action_face(case: str):
     """收缩锁(六形态逐一;参数化纪律沿袭):各形态帧首动作 ∈
-    买牌/刷新/关店闭集,恒不发射 SellBench/LevelUpShop——任一处卖射/
+    买牌/刷新/关店闭集,恒不发射 CwActionSellBenchParam/CwActionLevelUpShopParam——任一处卖射/
     升级射复活(策略面回退)即响亮红。"""
     strategy, sess, config = _FORM_FRAMES[case]()
     action = strategy.decide_shop_action()
     name = type(action).__name__
     assert name in _SHOP_ACTION_FACE, (
         f'{case} 首动作 {name} 越出商店期动作面闭集 '
-        f'{sorted(_SHOP_ACTION_FACE)}(SellBench/LevelUpShop 已收缩至'
+        f'{sorted(_SHOP_ACTION_FACE)}(CwActionSellBenchParam/CwActionLevelUpShopParam 已收缩至'
         '备战期,复活 = 商店收缩回退)')
 
 
 def test_bench_full_close_hands_back_with_defer_state():
-    """腾位形态流锁(交回+状态在):席满缺员帧 = CloseShop 交回 +
+    """腾位形态流锁(交回+状态在):席满缺员帧 = CwActionCloseShopParam 交回 +
     义务残差跨段状态置位(wanted_pending)——备战期消费臂评估腾席/
     重开归策略侧,框架只锁「交回发生且状态在」。筹资形态计数腿(并入,
-    原筹资专锁):缺员+金不足 = CloseShop 交回备战筹资
+    原筹资专锁):缺员+金不足 = CwActionCloseShopParam 交回备战筹资
     (funding_close_defer 分键),零卖射。"""
     strategy, sess, config = _frame_m4_missing_vacate()
     action = strategy.decide_shop_action()
-    assert type(action).__name__ == 'CloseShop'
+    assert type(action).__name__ == 'CwActionCloseShopParam'
     st = state_of(sess)
     assert st.cw4_shop_wanted_pending is not None, \
         '关店交回但 wanted 残差缺席 = 备战侧消费臂失去闭环输入'
@@ -234,7 +234,7 @@ def test_bench_full_close_hands_back_with_defer_state():
     # 筹资形态计数腿(并入):同形关店交回,分键计数归属正确
     strategy_f, sess_f, config_f = _frame_funding_support_sell()
     action_f = strategy_f.decide_shop_action()
-    assert type(action_f).__name__ == 'CloseShop'
+    assert type(action_f).__name__ == 'CwActionCloseShopParam'
     assert state_of(sess_f).cw4_counters.get('funding_close_defer', 0) == 1, (
         '筹资形态关店交回,分键 = funding_close_defer(零卖射)')
 
@@ -247,7 +247,7 @@ def test_vacate_chain_reopen_keeps_shop_face_and_buys():
     误用到节点内),缺员件不在店,本锁红。"""
     strategy, sess, config = _frame_m4_missing_vacate()
     act1 = strategy.decide_shop_action()
-    assert type(act1).__name__ == 'CloseShop'
+    assert type(act1).__name__ == 'CwActionCloseShopParam'
     gs = game_state_of(sess)
     # 备战期腾席:bench 移除一件燃料(逻辑态直写,同容器转移函数通道);
     # 店面 payload 与 gold/缺员语境全不动 = 「节点内重开」的决策级建模。
@@ -259,7 +259,7 @@ def test_vacate_chain_reopen_keeps_shop_face_and_buys():
     gs.write_logic(gs.bench, BenchView(slots=rest, capacity=9),
                    produced_by='cw-t271-test', sig=_LOGIC_SIG)
     act2 = strategy.decide_shop_action()
-    assert type(act2).__name__ == 'BuyCard', (
+    assert type(act2).__name__ == 'CwActionBuyCardParam', (
         f'重开后未恢复买入(得 {type(act2).__name__})= 牌面持久被破坏'
         '或腾位链断')
     assert act2.card.name == _MEMBER, (

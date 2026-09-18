@@ -49,7 +49,7 @@ from sr_od.application.currency_war.kernel.cw_mismatch_policy import (
     fire_reconcile_andon,
     set_reconcile_andon_hook,
 )
-from sr_od.application.currency_war.kernel.cw_vocab import SellDeployed
+from sr_od.application.currency_war.kernel.cw_vocab import CwActionSellDeployedParam
 
 _SIG = ChannelSig(family='logic_action', actor='CwScreenPrep')
 _SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep')
@@ -154,13 +154,13 @@ def test_pure_reorder_logic_write_yields_zero_board_delta() -> None:
 
 
 def test_selldeployed_updates_board_via_derived_resync() -> None:
-    """投影写端走同一派生口:SellDeployed 容器腿(旧 board 全量重算写端
+    """投影写端走同一派生口:CwActionSellDeployedParam 容器腿(旧 board 全量重算写端
     已退役)卖出场上单位后 board 经 resync 摘除其标签。"""
     gs = game_state_of(None)
     gs.observe(gs.front_row, [_luanpo(1)], sig=_SIG_OBS)
     gs.observe(gs.board, {'巡海游侠': 1, '击破': 1}, sig=_SIG_OBS)
     gs.observe(gs.gold, 10, sig=_SIG_OBS)
-    apply_prep_action_logic(gs, SellDeployed(deployed_idx=0),
+    apply_prep_action_logic(gs, CwActionSellDeployedParam(deployed_idx=0),
                             produced_by='T', sig=_SIG)
     assert gs.board.value == {}, '卖出 → 标签摘除(派生口单一)'
     assert gs.board.evidence == 'proj_board_resync'

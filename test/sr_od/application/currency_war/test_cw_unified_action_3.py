@@ -21,21 +21,21 @@ from test.harness.fixture_controller import fast_sleep
 
 from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war.kernel.cw_vocab import (
-    ClickSpheres,
-    DeployMove,
-    FurnaceUse,
-    LevelUp,
-    LevelUpShop,
-    LuckyTokenUse,
-    OpenBookcard,
-    OpenBox,
-    OpenShop,
-    OpenTome,
-    SellBench,
-    SellDeployed,
-    StartBattle,
-    WearEquip,
-    WrenchUse,
+    CwActionClickSpheresParam,
+    CwActionDeployMoveParam,
+    CwActionFurnaceUseParam,
+    CwActionLevelUpParam,
+    CwActionLevelUpShopParam,
+    CwActionLuckyTokenUseParam,
+    CwActionOpenBookcardParam,
+    CwActionOpenBoxParam,
+    CwActionOpenShopParam,
+    CwActionOpenTomeParam,
+    CwActionSellBenchParam,
+    CwActionSellDeployedParam,
+    CwActionStartBattleParam,
+    CwActionWearEquipParam,
+    CwActionWrenchUseParam,
 )
 from sr_od.application.currency_war.operations.cw_op.cw_action_registry import (
     action_op_class_for,
@@ -59,49 +59,49 @@ from sr_od.application.currency_war.prep_actions import (
 )
 
 # ===== 终结集与 terminal 等价锁(判据:终结集与 terminal 属性逐一等价;
-# ===== OpenBox terminal_wait 同源比对随行迁并)=====
+# ===== CwActionOpenBoxParam terminal_wait 同源比对随行迁并)=====
 
 def _op_cls(action):
     return action_op_class_for(action)
 
 
 def test_prep_terminal_set_matches_registry_terminal_attrs():
-    """备战环终结集 = {StartBattle, OpenShop, OpenBox}(R7 并入 OpenBox)
+    """备战环终结集 = {CwActionStartBattleParam, CwActionOpenShopParam, CwActionOpenBoxParam}(R7 并入 CwActionOpenBoxParam)
     ⟺ 注册表 op 类 terminal=True,逐一等价;备战机械动作全部非终结
-    (终结判定改读 op 类属性后,消费点两处共用本判据面)。OpenBox
+    (终结判定改读 op 类属性后,消费点两处共用本判据面)。CwActionOpenBoxParam
     terminal_wait 同源比对:op 类属性 = 批2a 落地交回等待常量对象
     (``_OVERLAY_ANIM_WAIT_S``,漂移即红,禁消费点私表)。"""
-    terminal_cases = [StartBattle(), OpenShop(), OpenBox()]
+    terminal_cases = [CwActionStartBattleParam(), CwActionOpenShopParam(), CwActionOpenBoxParam()]
     for a in terminal_cases:
         assert _op_cls(a).terminal is True, type(a).__name__
     assert OpenBoxOp.terminal_wait == _OVERLAY_ANIM_WAIT_S
     mechanical_cases = [
-        SellBench(bench_idx=0),
-        SellDeployed(deployed_idx=0),
-        DeployMove(bench_idx=0, to_row='front', faction=''),
-        WearEquip(item_name='轮滑鞋', char_name='刃', row='front', slot=1),
-        ClickSpheres(points=((1, 2),)),
-        OpenTome(),
-        OpenBookcard(),
-        LevelUp(cost=4),
-        LevelUpShop(cost=4),
-        FurnaceUse(target_kind='char', row='front', slot=1),
-        WrenchUse(row='front', slot=1),
-        LuckyTokenUse(row='front', slot=1),
+        CwActionSellBenchParam(bench_idx=0),
+        CwActionSellDeployedParam(deployed_idx=0),
+        CwActionDeployMoveParam(bench_idx=0, to_row='front', faction=''),
+        CwActionWearEquipParam(item_name='轮滑鞋', char_name='刃', row='front', slot=1),
+        CwActionClickSpheresParam(points=((1, 2),)),
+        CwActionOpenTomeParam(),
+        CwActionOpenBookcardParam(),
+        CwActionLevelUpParam(cost=4),
+        CwActionLevelUpShopParam(cost=4),
+        CwActionFurnaceUseParam(target_kind='char', row='front', slot=1),
+        CwActionWrenchUseParam(row='front', slot=1),
+        CwActionLuckyTokenUseParam(row='front', slot=1),
     ]
     for a in mechanical_cases:
         assert _op_cls(a).terminal is False, type(a).__name__
 
 
-# ===== OpenShop 注册行不可达性锁(判据:OpenShop 行不可达性锁)=====
+# ===== CwActionOpenShopParam 注册行不可达性锁(判据:CwActionOpenShopParam 行不可达性锁)=====
 
 def test_open_shop_row_is_terminal_carrier_and_execute_loud_fails():
     """OpenShopOp = terminal 承载行:注册表解析可命中;execute 抛
-    AssertionError(防静默复活)——OpenShop 流程编排归画面 op 流程层
+    AssertionError(防静默复活)——CwActionOpenShopParam 流程编排归画面 op 流程层
     (cw_screen_prep._act_execute_default 截流),注册行在正常路径不可达,
     可达即分派漏斗被绕过。read_only 两形态 = 动作字段承载(op 实例持
     动作对象,注册表不表达形态分叉)。"""
-    for a in (OpenShop(), OpenShop(read_only=True)):
+    for a in (CwActionOpenShopParam(), CwActionOpenShopParam(read_only=True)):
         op = action_op_for(a)
         assert type(op) is OpenShopOp
         assert op.action.read_only == a.read_only
@@ -110,7 +110,7 @@ def test_open_shop_row_is_terminal_carrier_and_execute_loud_fails():
             op.execute(env)
 
 
-# ===== StartBattle 基类契约在册例外锁(T-286 出战域重设计:点击序列语义;
+# ===== CwActionStartBattleParam 基类契约在册例外锁(T-286 出战域重设计:点击序列语义;
 # ===== 弹窗确认路径 + 免战子态上报 + 免战牌递减经 game state 上报路径)=====
 
 #: 识别命中表的键 = (画面名, area 名)(op 桩 round_by_find_area 的判定面)。
@@ -197,7 +197,7 @@ def test_start_battle_click_sequence_and_envelope(monkeypatch):
         StartBattleOp as _SBO,
     )
     _patch_area_center(monkeypatch)
-    op = _SBO(StartBattle())
+    op = _SBO(CwActionStartBattleParam())
     # 常规帧:无弹窗(直调路径 detail 走 env 旁路;last_detail 是 runner
     # 包装写点,包络腿段另验)
     ctl = _RecordingController()
@@ -243,7 +243,7 @@ def test_start_battle_click_sequence_and_envelope(monkeypatch):
     ctl = _RecordingController()
     ex = _make_executor(ctl, _make_stub_op({_HIT_BTN}))
     with fast_sleep():
-        ex.execute(StartBattle())
+        ex.execute(CwActionStartBattleParam())
     assert ex.last_launch_ok is True
     assert '出战已点击' in ex.last_detail
     assert ex.last_gold_delta == 0
@@ -259,7 +259,7 @@ def test_start_battle_skip_substate_reported_not_consumed(monkeypatch):
         StartBattleOp as _SBO,
     )
     _patch_area_center(monkeypatch)
-    op = _SBO(StartBattle())
+    op = _SBO(CwActionStartBattleParam())
     ctl = _RecordingController()
     ex = _make_executor(ctl, _make_stub_op({_HIT_SKIP}))
     env = _make_env(ex)
@@ -272,7 +272,7 @@ def test_start_battle_skip_substate_reported_not_consumed(monkeypatch):
 
 def test_freeze_card_decrement_via_report_path(monkeypatch):
     """免战牌递减经 game state 上报路径锁(T-286):PrepActionExecutor
-    .execute(跳过型 StartBattle)→ apply_op_effect 在 session effects
+    .execute(跳过型 CwActionStartBattleParam)→ apply_op_effect 在 session effects
     递减 remaining_uses(上报时递减);常规出战零递减;未登记(登记面
     缺位)零动作不炸。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
@@ -289,7 +289,7 @@ def test_freeze_card_decrement_via_report_path(monkeypatch):
     ex = _make_executor(_RecordingController(), _make_stub_op({_HIT_SKIP}),
                         cw_match=SimpleNamespace(session=sess))
     with fast_sleep():
-        ex.execute(StartBattle())
+        ex.execute(CwActionStartBattleParam())
     assert gs.effects.first(STRATEGY_EFFECTS['免战牌'].id).remaining_uses == 1
     # 常规出战(非跳过):零递减
     sess2 = SimpleNamespace()
@@ -298,7 +298,7 @@ def test_freeze_card_decrement_via_report_path(monkeypatch):
     ex2 = _make_executor(_RecordingController(), _make_stub_op({_HIT_BTN}),
                          cw_match=SimpleNamespace(session=sess2))
     with fast_sleep():
-        ex2.execute(StartBattle())
+        ex2.execute(CwActionStartBattleParam())
     assert bs2.effects.first(
         STRATEGY_EFFECTS['免战牌'].id).remaining_uses == 2
     # 未登记:零动作不炸(递减挂点与登记面解耦;execute 无返回契约,
@@ -307,7 +307,7 @@ def test_freeze_card_decrement_via_report_path(monkeypatch):
     ex3 = _make_executor(_RecordingController(), _make_stub_op({_HIT_SKIP}),
                          cw_match=SimpleNamespace(session=sess3))
     with fast_sleep():
-        ex3.execute(StartBattle())
+        ex3.execute(CwActionStartBattleParam())
     assert ex3.last_launch_ok is True
 
 
@@ -316,12 +316,12 @@ def test_freeze_card_decrement_via_report_path(monkeypatch):
 def test_prep_dispatch_resolves_registry_rows_and_loud_unknown():
     """备战分派单一注册表:词表类解析到批3 收编 op 类(代表行 = 基础
     卖件行 + 工具族并行行;分派查同一张注册表,逐类行对账由终结集锁与
-    OpenShop 锁分面承压);词表外类型 = 注册表 AssertionError 响亮暴露
+    CwActionOpenShopParam 锁分面承压);词表外类型 = 注册表 AssertionError 响亮暴露
     (原 isinstance 链尾「未知动作类型」静默回退退役;生产不可达,
     F3 validate 先拒)。"""
     rows = [
-        (SellBench(bench_idx=0), PrepSellBenchOp),
-        (FurnaceUse(target_kind='char', row='front', slot=1), ToolUseOp),
+        (CwActionSellBenchParam(bench_idx=0), PrepSellBenchOp),
+        (CwActionFurnaceUseParam(target_kind='char', row='front', slot=1), ToolUseOp),
     ]
     for a, expected in rows:
         assert type(action_op_for(a)) is expected

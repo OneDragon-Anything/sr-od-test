@@ -18,9 +18,9 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     register_sig_actors,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
-    BuyCard,
-    LevelUpShop,
-    RefreshShop,
+    CwActionBuyCardParam,
+    CwActionLevelUpShopParam,
+    CwActionRefreshShopParam,
 )
 from sr_od.application.currency_war.sim.cw_sim_actions import (
     NODE_XP_BY_TYPE,
@@ -57,7 +57,7 @@ def test_buy_card_routes_through_transfer_function() -> None:
     (M08 机制口径,旧引擎买牌累加 XP 废弃)。"""
     gs = _prep_gs(gold=20)
     from sr_od.application.currency_war.kernel.cw_game_state import ShopCard
-    action = BuyCard(card=ShopCard(name='花火', faction='盛会之星', cost=3,
+    action = CwActionBuyCardParam(card=ShopCard(name='花火', faction='盛会之星', cost=3,
                                    star=1, cost_source='roster', slot=1))
     outcome = apply_player_action(gs, action, node_tag='p1r2')
     assert outcome is not None and outcome.applied and outcome.bought_count == 1
@@ -73,13 +73,13 @@ def test_refresh_free_then_paid_bookkeeping() -> None:
     gs = _prep_gs(gold=10)
     gs.write_logic(gs.free_refresh_balance, 1, produced_by='effect',
                    sig=ChannelSig(family='logic_action', actor='TestSigWriter'))
-    outcome = apply_player_action(gs, RefreshShop(), node_tag='p1r2')
+    outcome = apply_player_action(gs, CwActionRefreshShopParam(), node_tag='p1r2')
     assert outcome is not None and outcome.applied
     assert gs.gold.value == 10, '免费帧零扣金'
     assert gs.paid_refresh_count.value is None, '免费帧禁进付费计数'
     assert gs.total_refresh_count.value == 1
     assert gs.free_refresh_balance.value == 0
-    outcome2 = apply_player_action(gs, RefreshShop(), node_tag='p1r2')
+    outcome2 = apply_player_action(gs, CwActionRefreshShopParam(), node_tag='p1r2')
     assert outcome2 is not None and outcome2.applied
     assert gs.gold.value == 8, '第二刷 = 基价 2'
     assert gs.paid_refresh_count.value == 1
@@ -89,7 +89,7 @@ def test_levelup_refuses_at_true_cap10() -> None:
     """§2.4.2 分歧反转:真值 cap=10,lv10 拒付(旧 sim lv9 冻结删除);
     转移函数满级门单一源。"""
     gs = _prep_gs(gold=100, level=10)
-    outcome = apply_player_action(gs, LevelUpShop(cost=4), node_tag='p1r2')
+    outcome = apply_player_action(gs, CwActionLevelUpShopParam(cost=4), node_tag='p1r2')
     assert outcome is not None and not outcome.applied
     assert outcome.reason == 'level_cap'
     assert gs.gold.value == 100, '拒付零写'
@@ -122,7 +122,7 @@ def test_deal_shop_after_refresh_refills_holes() -> None:
     """刷新重置整店 5 槽(买后留空洞被整店重发覆盖;定长 5 槽语义)。"""
     gs = _prep_gs(gold=50)
     from sr_od.application.currency_war.kernel.cw_game_state import ShopCard
-    apply_player_action(gs, BuyCard(card=ShopCard(
+    apply_player_action(gs, CwActionBuyCardParam(card=ShopCard(
         name='花火', faction='盛会之星', cost=3, star=1,
         cost_source='roster', slot=1)), node_tag='p1r2')
     assert gs.shop.value.cards[0].kind == 'empty', '买后留空不紧缩'

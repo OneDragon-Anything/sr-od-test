@@ -28,7 +28,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
-from sr_od.application.currency_war.kernel.cw_vocab import SellBench
+from sr_od.application.currency_war.kernel.cw_vocab import CwActionSellBenchParam
 from sr_od.application.currency_war.operations.cw_op.cw_sell_bench_action import (
     SellBenchOp,
 )
@@ -113,7 +113,7 @@ def test_sell_bench_op_lands_without_round_sold_stub(monkeypatch) -> None:
         config=None, click_pts=[],
         level_btn=Point(0, 0), refresh_btn=Point(0, 0),
         ledger=ledger, state=gs)
-    assert SellBenchOp(SellBench(bench_idx=0, income=1)).execute(env) is True
+    assert SellBenchOp(CwActionSellBenchParam(bench_idx=0, income=1)).execute(env) is True
     assert ledger.total_sell == 1
     assert ledger.total_sell_income == 1
     # tracked 随动:卖出槽置 None 不紧缩(ADR-0316)

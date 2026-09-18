@@ -27,7 +27,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CW_ACTION_TYPES,
-    OpenBookcard,
+    CwActionOpenBookcardParam,
 )
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
     CwScreenPrep,
@@ -36,19 +36,19 @@ from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
 _SIG = ChannelSig(family='logic_action', actor='CwScreenPrep')
 
 
-# ===== 词表行 + F3 注册行(判据:OpenBookcard 词表行 + 注册行在册)=====
+# ===== 词表行 + F3 注册行(判据:CwActionOpenBookcardParam 词表行 + 注册行在册)=====
 
 def test_open_bookcard_registered_and_validated():
-    """R10 归位:OpenBookcard 在统一词表白名单(漏登记先例 OpenTome:
+    """R10 归位:CwActionOpenBookcardParam 在统一词表白名单(漏登记先例 CwActionOpenTomeParam:
     漏登记时执行面 validate 拒「未知动作类型」,动作从未真正执行);F3
-    静态参数域与 OpenBox/OpenTome 同形(slot=None 或 1..备战栏槽位)。"""
-    assert OpenBookcard in CW_ACTION_TYPES
+    静态参数域与 CwActionOpenBoxParam/CwActionOpenTomeParam 同形(slot=None 或 1..备战栏槽位)。"""
+    assert CwActionOpenBookcardParam in CW_ACTION_TYPES
     from sr_od.application.currency_war import prep_actions as pa
     ex = pa.PrepActionExecutor.__new__(pa.PrepActionExecutor)
     ex._bench_pts = [Point(i * 10, i * 10) for i in range(9)]
-    assert ex.validate(OpenBookcard()) is None
-    assert ex.validate(OpenBookcard(slot=9)) is None
-    err = ex.validate(OpenBookcard(slot=10))
+    assert ex.validate(CwActionOpenBookcardParam()) is None
+    assert ex.validate(CwActionOpenBookcardParam(slot=9)) is None
+    err = ex.validate(CwActionOpenBookcardParam(slot=10))
     assert err is not None and '越界' in err
 
 
@@ -82,7 +82,7 @@ def _make_executor(controller: _RecordingController, screens: list | None):
 
 def test_open_bookcard_executor_mechanical(monkeypatch):
     """机械半:`find_bookcards` 识别 → 首张槽中心单击 → 固定动画等待;
-    slot 对位不中 / 识别空 = 未发出零点击(与 OpenBox/OpenTome 同形)。
+    slot 对位不中 / 识别空 = 未发出零点击(与 CwActionOpenBoxParam/CwActionOpenTomeParam 同形)。
     动画等待值家族单一源(_OVERLAY_ANIM_WAIT_S;判效交下一帧观察)。"""
     from sr_od.application.currency_war.obs import cw_identity_obs
     monkeypatch.setattr(cw_identity_obs, 'find_bookcards',
@@ -92,21 +92,21 @@ def test_open_bookcard_executor_mechanical(monkeypatch):
     monkeypatch.setattr(time, 'sleep', lambda s: None)   # 动画等待桩(零真实等待)
     controller = _RecordingController()
     ex = _make_executor(controller, [])
-    detail, emitted = ex._open_bookcard(OpenBookcard())
+    detail, emitted = ex._open_bookcard(CwActionOpenBookcardParam())
     assert emitted and '槽2' in detail
     assert [(p.x, p.y) for p in controller.clicks] == [(123, 456)]
     assert len(controller.moves) == 1   # bug#1 缓解口径:先移后点
     # slot 指定但实读无该槽 → 未发出零点击(对位语义同 _open_box)
     controller2 = _RecordingController()
     ex2 = _make_executor(controller2, [])
-    detail2, emitted2 = ex2._open_bookcard(OpenBookcard(slot=5))
+    detail2, emitted2 = ex2._open_bookcard(CwActionOpenBookcardParam(slot=5))
     assert not emitted2 and controller2.clicks == []
     # 识别空 → 未发出(交回外循环重观察重派)
     monkeypatch.setattr(cw_identity_obs, 'find_bookcards',
                         lambda screen, slots: [])
     controller3 = _RecordingController()
     ex3 = _make_executor(controller3, [])
-    detail3, emitted3 = ex3._open_bookcard(OpenBookcard())
+    detail3, emitted3 = ex3._open_bookcard(CwActionOpenBookcardParam())
     assert not emitted3 and controller3.clicks == []
 
 
@@ -115,7 +115,7 @@ def test_open_bookcard_executor_mechanical(monkeypatch):
 def test_open_bookcard_logic_state_frees_slot():
     """开卡即腾席(阶段 3.5 容器版;原黑板 free_bench_slots +1 语义随
     _project_prep_obs 退役):书册卡槽(容器 kind='supply_box',读链 is_item_slot
-    并入口径)经 OpenBookcard 腾席 = 槽 kind → empty——bench_free_slots
+    并入口径)经 CwActionOpenBookcardParam 腾席 = 槽 kind → empty——bench_free_slots
     派生 +1(容器读口单点),其余槽不动。"""
     from test.sr_od.application.currency_war._cw_helpers import cw4_session
 
@@ -133,18 +133,18 @@ def test_open_bookcard_logic_state_frees_slot():
     gs.observe(gs.bench, BenchView(slots=_slots, capacity=9), sig=_sig)
     before = bench_free_slots(gs)
     assert before == 7
-    apply_prep_action_logic(gs, OpenBookcard(slot=2), produced_by='T',
+    apply_prep_action_logic(gs, CwActionOpenBookcardParam(slot=2), produced_by='T',
                             sig=ChannelSig(family='logic_action',
                                            actor='CwScreenPrep'))
     assert gs.bench.value.slots[1].kind == 'empty'
     assert bench_free_slots(gs) == before + 1
 
 
-# ===== 链拆接线锁(判据:预清场改产 OpenBookcard 经执行器 + 交回)=====
+# ===== 链拆接线锁(判据:预清场改产 CwActionOpenBookcardParam 经执行器 + 交回)=====
 
 def test_clear_prep_cards_emits_open_bookcard_and_signals_handback(monkeypatch):
-    """链拆编排:`_clear_prep_cards` 书册卡腿改产词表动作 OpenBookcard 经
-    执行器发射(单一发射口,遥测动作行 OpenBookcard 在册)且返回 True
+    """链拆编排:`_clear_prep_cards` 书册卡腿改产词表动作 CwActionOpenBookcardParam 经
+    执行器发射(单一发射口,遥测动作行 CwActionOpenBookcardParam 在册)且返回 True
     (调用方必须立即交回——弹窗已弹,heavy 观察禁读弹窗帧);识别空 =
     False 照常续跑。原 journal 包装全链路径退役(现役 journal_wrapped_
     execute 消费面归零)。"""
@@ -182,7 +182,7 @@ def test_clear_prep_cards_emits_open_bookcard_and_signals_handback(monkeypatch):
 
     assert d._clear_prep_cards() is True
     assert len(executed) == 1
-    assert type(executed[0]) is OpenBookcard
+    assert type(executed[0]) is CwActionOpenBookcardParam
     assert executed[0].slot == 2
     # 识别空 → False(调用方续跑 heavy 观察,书册卡腿静默跳过)
     monkeypatch.setattr(cw_identity_obs, 'find_bookcards',
@@ -191,15 +191,15 @@ def test_clear_prep_cards_emits_open_bookcard_and_signals_handback(monkeypatch):
     assert len(executed) == 1
 
 
-# ===== DeployMove 帧投影占用集(改动三审 代-1 应修行为锁)=====
+# ===== CwActionDeployMoveParam 帧投影占用集(改动三审 代-1 应修行为锁)=====
 
 def test_deploymove_projection_records_resolved_row():
-    """DeployMove 容器逻辑态首空落位 fallback 锁(阶段 3.5 宿主迁移版;
+    """CwActionDeployMoveParam 容器逻辑态首空落位 fallback 锁(阶段 3.5 宿主迁移版;
     原黑板占用集 fallback 记行锁随 _project_prep_obs 退役,新锁断言容器
     ``deployed_place`` 首空单一源的 fallback 语义:首选排满落位 fallback
     另一排,记实落排)。"""
     from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
-    from sr_od.application.currency_war.kernel.cw_vocab import DeployMove
+    from sr_od.application.currency_war.kernel.cw_vocab import CwActionDeployMoveParam
     from test.sr_od.application.currency_war._cw_helpers import cw4_session
 
     from sr_od.application.currency_war.kernel.cw_game_state import (
@@ -219,7 +219,7 @@ def test_deploymove_projection_records_resolved_row():
     gs.observe(gs.front_row, [Unit(char_id=f'丙{i}', star=1, equips=[],
                                    slot=i + 1) for i in range(4)],
                sig=_sig)
-    apply_prep_action_logic(gs, DeployMove(bench_idx=0, to_row='front',
+    apply_prep_action_logic(gs, CwActionDeployMoveParam(bench_idx=0, to_row='front',
                                            faction=''),
                             produced_by='T', sig=_logic)
     dep = deployed_slots_of(gs)
@@ -231,14 +231,14 @@ def test_deploymove_projection_records_resolved_row():
     gs2.observe(gs2.bench, BenchView(slots=_slots, capacity=9), sig=_sig)
     gs2.observe(gs2.front_row, [Unit(char_id='乙', star=1, equips=[],
                                      slot=1)], sig=_sig)
-    apply_prep_action_logic(gs2, DeployMove(bench_idx=0, to_row='front',
+    apply_prep_action_logic(gs2, CwActionDeployMoveParam(bench_idx=0, to_row='front',
                                             faction=''),
                             produced_by='T', sig=_logic)
     dep2 = deployed_slots_of(gs2)
     assert dep2[1] is not None and dep2[1].char_id == '甲'   # 首空 = 表 1 位(0 位是乙)
     # 源槽无件(bench_idx 越界空槽)= 陈旧提案,本口零写
     before = gs2.write_seq
-    apply_prep_action_logic(gs2, DeployMove(bench_idx=5, to_row='front',
+    apply_prep_action_logic(gs2, CwActionDeployMoveParam(bench_idx=5, to_row='front',
                                             faction=''),
                             produced_by='T', sig=_logic)
     assert gs2.write_seq == before
@@ -249,7 +249,7 @@ def test_deploymove_projection_records_resolved_row():
 def test_expert_invite_entry_select_only(test_context, monkeypatch):
     """收缩为弹窗画面 op:open_card 节点拆退役(属性不在场);入口门 =
     弹窗已开单一形态——弹窗不在 = fail 交回外循环重识别(外循环按下一帧
-    画面重分发自愈;开卡缺位由备战词表 OpenBookcard 链承接)。选卡成功链
+    画面重分发自愈;开卡缺位由备战词表 CwActionOpenBookcardParam 链承接)。选卡成功链
     的行为面由 obs_arch step3 生命周期段迹锁承重,本锁不重复。"""
     from test.sr_od.application.currency_war._cw_helpers import (
         Area,

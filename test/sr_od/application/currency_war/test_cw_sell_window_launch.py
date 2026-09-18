@@ -48,9 +48,9 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
-    CloseShop,
+    CwActionCloseShopParam,
     CwSimFrame,
-    SellBench,
+    CwActionSellBenchParam,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
     entry,
@@ -338,7 +338,7 @@ class TestW1SameVisitBan:
     def _case_funding_e2e(self):
         """端到端:press 活跃件在 bench + 缺员 + gold<need ⇒ funding
         主路径与兜底豁免均不可达(fallback 池减法①语义:非持有名不入
-        静态持有集)⇒ CloseShop 收尾,零卖出发射。红证:同构帧按批 2
+        静态持有集)⇒ CwActionCloseShopParam 收尾,零卖出发射。红证:同构帧按批 2
         形态(仅身份段,无窗口段)装配 ⇒ 该件恰入 funding 卖出槽集
         (凑息同面)——本锁绿由窗口段承载,非谓词自带拒。"""
         sess = _sess()
@@ -346,9 +346,9 @@ class TestW1SameVisitBan:
         act = decide_shop_action(
             cw4_gs(_state(1, [_bc(_FUEL, slot=1)]), sess),
             sess, SimpleNamespace(ev_arm='full'))
-        assert not isinstance(act, SellBench), \
+        assert not isinstance(act, CwActionSellBenchParam), \
             'W1:press 登记活跃件被同轮筹资卖出 = 同 visit 卖回未闭死'
-        assert isinstance(act, CloseShop)
+        assert isinstance(act, CwActionCloseShopParam)
         # 红证:仅身份段装配下燃料件穿过身份段外谓词入卖出槽集
         bench = [_bc(_FUEL, slot=1)]
         excl = sell_gate.identity_exclusions(sess, ('目标件',))
@@ -371,7 +371,7 @@ class TestW1SameVisitBan:
                                    _bridge(_state(1, bench, round_num=2)),
                                    ('目标件',), k_switched=False,
                                    old_line_members=())
-        assert not [e for e in out if isinstance(e.action, SellBench)]
+        assert not [e for e in out if isinstance(e.action, CwActionSellBenchParam)]
 
     def _case_m4_candidates(self):
         """M4 通道同禁(P78 INV 通道无关):press 活跃件不入腾席候选;
@@ -426,7 +426,7 @@ class TestFundingFallbackEntryConsumer:
                                    _bridge(_state(1, bench, round_num=2)),
                                    ('目标件',), k_switched=False,
                                    old_line_members=())
-        sells = [e.action for e in out if isinstance(e.action, SellBench)]
+        sells = [e.action for e in out if isinstance(e.action, CwActionSellBenchParam)]
         assert [s.bench_idx for s in sells] == [0]
 
 

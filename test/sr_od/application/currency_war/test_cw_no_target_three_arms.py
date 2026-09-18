@@ -47,9 +47,9 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
-    BuyCard,
+    CwActionBuyCardParam,
     CwSimFrame,
-    RefreshShop,
+    CwActionRefreshShopParam,
     ShopCard,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import mandate, shop
@@ -206,7 +206,7 @@ class TestArmAStrongGate:
             state_of(sess).target_comp = get_comp('希儿量子')
             act = _decide(st, sess)
             assert not [a for a in ([act] if act else [])
-                        if isinstance(a, BuyCard)
+                        if isinstance(a, CwActionBuyCardParam)
                         and a.reason == 'hub_option_buy']
             assert 'hub_option_buy_hit' not in _ct(sess)
 
@@ -253,7 +253,7 @@ class TestHubEligibility:
         assert '银狼LV.999' not in hub_option_names(_kbridge(st_y), ist_y)
         sess = _session(ist_y)
         act = _decide(st_y, sess)
-        assert isinstance(act, BuyCard)
+        assert isinstance(act, CwActionBuyCardParam)
         assert act.reason == 'core_single_card_buy:unlocked'
         ct = _ct(sess)
         assert ct.get('core_unlocked_buy_hit') == 1
@@ -263,7 +263,7 @@ class TestHubEligibility:
         st_2 = _state(shop_cards=[_card('花火', cost=2, star=2)])
         sess_2 = _session(IntentionState())
         act_2 = _decide(st_2, sess_2)
-        assert not isinstance(act_2, BuyCard)
+        assert not isinstance(act_2, CwActionBuyCardParam)
         assert 'hub_option_candidate_seen' not in _ct(sess_2)
 
 
@@ -288,7 +288,7 @@ class TestHubEmission:
         st = _state(shop_cards=[_card('花火', cost=2)])
         sess = _session(IntentionState())
         act = _decide(st, sess)
-        assert isinstance(act, BuyCard) and act.reason == 'hub_option_buy'
+        assert isinstance(act, CwActionBuyCardParam) and act.reason == 'hub_option_buy'
         ct = _ct(sess)
         assert ct.get('hub_option_buy_hit') == 1
         assert ct.get('hub_option_candidate_seen') == 1
@@ -298,7 +298,7 @@ class TestHubEmission:
                       bench=[_bc('花火', slot=1)])
         sess_m = _session(IntentionState())
         act_m = _decide(st_m, sess_m)
-        assert not isinstance(act_m, BuyCard)
+        assert not isinstance(act_m, CwActionBuyCardParam)
         assert _ct(sess_m).get('hub_option_reject_merge_material') == 1
         # 非合并素材:副本在部署面(复核观察变体:核对面 = bench∪deployed
         # 全场域,same_star_count 单一源计数)
@@ -306,7 +306,7 @@ class TestHubEmission:
                       deployed=[_bc('花火', star=1, slot=1)])
         sess_d = _session(IntentionState())
         act_d = _decide(st_d, sess_d)
-        assert not isinstance(act_d, BuyCard)
+        assert not isinstance(act_d, CwActionBuyCardParam)
         assert _ct(sess_d).get('hub_option_reject_merge_material') == 1
         # 席位:bench 满
         st_s = _state(shop_cards=[_card('花火', cost=2)],
@@ -314,13 +314,13 @@ class TestHubEmission:
                              for i in range(BENCH_CAPACITY)])
         sess_s = _session(IntentionState())
         act_s = _decide(st_s, sess_s)
-        assert not isinstance(act_s, BuyCard)
+        assert not isinstance(act_s, CwActionBuyCardParam)
         assert _ct(sess_s).get('hub_option_reject_seats') == 1
         # 息:50 买 2 跨息档 ⇒ L>0 拒(C1 通道同口径金币构帧,P47 现算)
         st_i = _state(gold=50, shop_cards=[_card('花火', cost=2)])
         sess_i = _session(IntentionState())
         act_i = _decide(st_i, sess_i)
-        assert not isinstance(act_i, BuyCard)
+        assert not isinstance(act_i, CwActionBuyCardParam)
         assert _ct(sess_i).get('hub_option_reject_interest') == 1
         # 金:不足帧的拒因按规范门序(席→息→金)取首败项——帧输入
         #(r_remaining=17 的息轨迹)下 poor 帧 L>0 先真,unaffordable 被
@@ -330,7 +330,7 @@ class TestHubEmission:
         st_g = _state(gold=1, shop_cards=[_card('花火', cost=2)])
         sess_g = _session(IntentionState())
         act_g = _decide(st_g, sess_g)
-        assert not isinstance(act_g, BuyCard)
+        assert not isinstance(act_g, CwActionBuyCardParam)
         assert _ct(sess_g).get('hub_option_reject_interest') == 1
         assert _ct(sess_g).get('hub_option_reject_unaffordable') is None
         # —— 拒因键面:hub_option 显式,non_line 只辖线外件 ——
@@ -359,7 +359,7 @@ class TestHubEmission:
         assert not refund_full_star_ok(2, 2)   # 2★ 出口面(吞升后资格消失)
         sess = _session(IntentionState())
         act = _decide(st, sess)
-        assert not isinstance(act, BuyCard)
+        assert not isinstance(act, CwActionBuyCardParam)
         assert _ct(sess).get('hub_option_reject_merge_material') == 1
     def test_hub_hold_registration_positive_and_negative(self):
         """hold 登记资格域正负一锁(合并原 test_hub_hold_registration_and_
@@ -382,7 +382,7 @@ class TestHubEmission:
         st = _state(shop_cards=[_card('瓦尔特', cost=4)])
         sess = _session(IntentionState())
         act = _decide(st, sess)
-        assert isinstance(act, BuyCard) and act.reason == 'hub_option_buy'
+        assert isinstance(act, CwActionBuyCardParam) and act.reason == 'hub_option_buy'
         ct = _ct(sess)
         # 面①:登记资格域并入获取名集,病灶信号键零污染 + 簿落账
         assert 'launch_cause_mismatch' not in ct
@@ -449,7 +449,7 @@ class TestArbitration:
             else char_declaration_index(n))
         sess = _session(IntentionState())
         act = _decide(st, sess)
-        assert isinstance(act, BuyCard) and act.reason == 'hub_option_buy'
+        assert isinstance(act, CwActionBuyCardParam) and act.reason == 'hub_option_buy'
         assert act.card.name == '知更鸟'
         assert _ct(sess).get('hub_option_arbitration_yield') is None
         # 乱序注入店面两帧发射一致
@@ -461,7 +461,7 @@ class TestArbitration:
             sess_o = _session(IntentionState())
             acts.append(_decide(st_o, sess_o))
         names = [(a.card.name, a.reason)
-                 for a in acts if isinstance(a, BuyCard)]
+                 for a in acts if isinstance(a, CwActionBuyCardParam)]
         assert len(names) == 2 and names[0] == names[1]
 
     def test_layer3_decl_order_decides_both_directions(self, monkeypatch):
@@ -491,7 +491,7 @@ class TestArbitration:
             if n == '花火' else char_declaration_index(n))
         sess = _session(IntentionState())
         act = _decide(st, sess)
-        assert isinstance(act, BuyCard)
+        assert isinstance(act, CwActionBuyCardParam)
         assert act.reason == 'm2_line_member' and act.card.name == '银狼LV.999'
         assert _ct(sess).get('hub_option_arbitration_yield') >= 1
         # 撤销夹具(monkeypatch 只辖本锁,两腿同函数——夹具不撤会污染
@@ -503,7 +503,7 @@ class TestArbitration:
                                     comp_name='绯英欢愉')
         sess_n = _session(IntentionState())
         act_n = _decide(st_n, sess_n)
-        assert isinstance(act_n, BuyCard) and act_n.reason == 'hub_option_buy'
+        assert isinstance(act_n, CwActionBuyCardParam) and act_n.reason == 'hub_option_buy'
         assert act_n.card.name == '花火'
         assert _ct(sess_n).get('hub_option_arbitration_yield') is None
     def test_f1_unaffordable_piece_loses_preemption(self):
@@ -517,7 +517,7 @@ class TestArbitration:
                                    _card('瓦尔特', cost=99, x=1)])
         sess = _session(IntentionState())
         act = _decide(st, sess)
-        assert isinstance(act, BuyCard) and act.reason == 'hub_option_buy'
+        assert isinstance(act, CwActionBuyCardParam) and act.reason == 'hub_option_buy'
         assert act.card.name == '知更鸟'
         assert _ct(sess).get('hub_option_arbitration_yield') is None
     def test_coverage_order_veto_and_arm_a_corner(self):
@@ -541,7 +541,7 @@ class TestArbitration:
             < len(hub_covered_lines(_kbridge(st), ist, '花火'))
         sess = _session(ist)
         act = _decide(st, sess)
-        assert isinstance(act, BuyCard) and act.reason == 'hub_option_buy'
+        assert isinstance(act, CwActionBuyCardParam) and act.reason == 'hub_option_buy'
         assert act.card.name == '三月七'
         # —— 甲臂漏授角 ——
         st_c = _state(hp=15, level=5, round_num=9,
@@ -583,16 +583,16 @@ class TestArmCHoldDefault:
         - 必花域消解面(证明批 §4.3-4,必花域裁决②消解路径):p2plus 无
           目标帧落必花域时,R1 合格集 = 判据臂输出 = 空 ⇒ no_chaseable_
           member fail-closed ⇒ 烧费路径消失(P35 帧 14:18:21 形态不再
-          复发,零 RefreshShop);
+          复发,零 CwActionRefreshShopParam);
         - 升级不冻结面(锁 4 辖域切分腿,正本 §2.4/§5.2 锁 4):升级既有
           授权不受丙臂冻结——k_members 空帧 arm1 触发(板满∧bench 有候补)
-          照常发射 LevelUp(mandate.MandateFrame 备战面直构)。
+          照常发射 CwActionLevelUpParam(mandate.MandateFrame 备战面直构)。
         """
         # —— 默认守息面 ——
         st = _state(shop_cards=[_card('注册表外散件Z', cost=1)])
         sess = _session(IntentionState())
         act = _decide(st, sess)
-        assert not isinstance(act, BuyCard)
+        assert not isinstance(act, CwActionBuyCardParam)
         ct = _ct(sess)
         assert ct.get('shop_no_target_hold_default') == 1
         assert ct.get('shop_no_target_arm_a_dead_defer') == 1
@@ -602,13 +602,13 @@ class TestArmCHoldDefault:
         st_ms = _state(gold=80)
         sess_ms = _session(IntentionState())
         act_ms = _decide(st_ms, sess_ms)
-        assert not isinstance(act_ms, (BuyCard, RefreshShop))
+        assert not isinstance(act_ms, (CwActionBuyCardParam, CwActionRefreshShopParam))
         ct_ms = _ct(sess_ms)
         assert ct_ms.get('shop_r1_no_chaseable_member') == 1
         assert 'must_spend_r1_account_yielded' not in ct_ms
         # —— 升级不冻结面 ——
         from sr_od.application.currency_war.kernel.cw_vocab import (
-            LevelUp,
+            CwActionLevelUpParam,
         )
         deployed = [_bc(f'注册表外散件{i}', star=2, slot=i + 1)
                     for i in range(4)]
@@ -624,7 +624,7 @@ class TestArmCHoldDefault:
                                   v3_intention=IntentionState(),
                                   active_strategies=[])
         out = mandate.run_mandate(frame, sess_m3, state=_kbridge(st_m3))
-        assert [e for e in out if isinstance(e.action, LevelUp)], \
+        assert [e for e in out if isinstance(e.action, CwActionLevelUpParam)], \
             '丙臂守息不得冻结升级既有授权(发展优先不变量,01 §8-2)'
 
 
@@ -647,7 +647,7 @@ class TestKMembersDownstream:
         st.deployed = [_bc('板上件锚', slot=1)]   # 空板止损守卫前置
         sess = _session(IntentionState())
         act = _decide(st, sess)
-        assert isinstance(act, BuyCard) and act.reason == 'm2_line_member'
+        assert isinstance(act, CwActionBuyCardParam) and act.reason == 'm2_line_member'
         assert act.card.name == missing_piece
         assert state_of(sess).cw4_counters.get(
             'shop_no_target_arm_a_adopted') == 1

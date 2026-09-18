@@ -6,7 +6,7 @@
 不可消费;True=备战环 heavy 观察 reconcile 屏幕真值写回成功=已锚定)。
 接管(cw_loop 接管检测确认点)写 False;商店开遇未观察 → 策略门
 (flow.decide_shop_action,判定单一源 = kernel tracked_unobserved)返回恒
-可用终结 CloseShop → 编排壳收店 → 外循环重判落回备战节点锚定 → 再进店,
+可用终结 CwActionCloseShopParam → 编排壳收店 → 外循环重判落回备战节点锚定 → 再进店,
 店内零原地重建。mandate_v1._tracking_view(tracking 优先 + snapshot 静默
 回退)已随三次修正删除——策略禁读执行侧簿记,消费口只有 game state
 (空账混同根因由此类型/架构层封死)。原读屏重建出口/单向
@@ -15,7 +15,7 @@ tracked 亦退役:对账唯一合法时点 = 观察边界 kernel cw_reconcile,�
 文本 = flow/screen_op.md §2.3/§4。
 
 锁的七件事:
-1. 未观察门:容器观察态 False → decide_shop_action 返回 CloseShop,决策
+1. 未观察门:容器观察态 False → decide_shop_action 返回 CwActionCloseShopParam,决策
    核不可达(零咨询);
 2. 缺省可信/已观察放行:字段从未写(None,缺省)与已锚定(True)均放行
    决策核——空表/未写不能冒充未观察(空账混同反向锁);
@@ -45,7 +45,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
-from sr_od.application.currency_war.kernel.cw_vocab import CloseShop
+from sr_od.application.currency_war.kernel.cw_vocab import CwActionCloseShopParam
 from sr_od.application.currency_war.operations.cw_loop import CwLoop
 from sr_od.application.currency_war.telemetry import defects
 
@@ -100,7 +100,7 @@ def _mandate_strategy(monkeypatch, session):
 
 def test_unobserved_gate_returns_close_shop_without_consulting_core(
         monkeypatch):
-    """锁1 未观察门:观察态 False → 返回 CloseShop,决策核不可达。"""
+    """锁1 未观察门:观察态 False → 返回 CwActionCloseShopParam,决策核不可达。"""
     from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
         shop as mandate_shop,
     )
@@ -117,7 +117,7 @@ def test_unobserved_gate_returns_close_shop_without_consulting_core(
 
     act = _mandate_strategy(monkeypatch, session).decide_shop_action()
 
-    assert isinstance(act, CloseShop)
+    assert isinstance(act, CwActionCloseShopParam)
 
 
 def test_default_and_anchored_states_pass_gate_to_core(monkeypatch):
@@ -215,14 +215,14 @@ def test_takeover_marks_tracked_unobserved():
     assert game_state_of(session).tracked_account_observed.value is False
 
 
-# ===== 锁5/锁6/锁7 访问级流锁(run_buy_waves CloseShop 出口)=====
+# ===== 锁5/锁6/锁7 访问级流锁(run_buy_waves CwActionCloseShopParam 出口)=====
 
 def _run_buy_waves_unobserved_host(monkeypatch, tmp_path, counters, *,
                                    unobserved: bool):
     """未观察跳过流锁的离线宿主(替身面沿恢复路由锁宿主同式)。
 
     构造 = 容器在屏空牌面 + 观察态按参;策略 = 生产 MandateV1Strategy
-    (真实门路径:未观察 → CloseShop;观察态用例传 Idle 关店策略)。
+    (真实门路径:未观察 → CwActionCloseShopParam;观察态用例传 Idle 关店策略)。
     返回 (run_buy_waves 结果元组, session)。
     """
     import sr_od.application.currency_war.operations.cw_screen.cw_screen_buy_cards as buy_mod
@@ -253,13 +253,13 @@ def _run_buy_waves_unobserved_host(monkeypatch, tmp_path, counters, *,
         _m_session = StrategySession()
         strategy = MandateV1Strategy(
         game_state_of(_m_session),
-        SimpleNamespace(strategy_seed=None))   # 终态契约:构造注入   # 真实门:未观察 → CloseShop
+        SimpleNamespace(strategy_seed=None))   # 终态契约:构造注入   # 真实门:未观察 → CwActionCloseShopParam
     else:
         class _IdleStrategy:
-            """观察态正常关店替身:门放行后的决策核返回 CloseShop。"""
+            """观察态正常关店替身:门放行后的决策核返回 CwActionCloseShopParam。"""
 
             def decide_shop_action(self):
-                return CloseShop()
+                return CwActionCloseShopParam()
         strategy = _IdleStrategy()
 
     match = CurrencyWarMatch(strategy, StrategySession())

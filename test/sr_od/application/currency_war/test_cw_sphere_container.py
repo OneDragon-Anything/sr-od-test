@@ -4,7 +4,7 @@
 ``obs.spheres`` 读点清零)——锁:
 - 读口还原:``sphere_click_targets_of`` 把 SphereSight.points 还原为
   ``(color, Point, r)`` 消费形态(select_sphere_clicks 契约);
-- ClickSpheres 容器逻辑态:载荷坐标精确摘除(kernel 写口分支,原黑板
+- CwActionClickSpheresParam 容器逻辑态:载荷坐标精确摘除(kernel 写口分支,原黑板
   腿逐位迁移);域未观察/载荷无交集 = 零写;
 - 签名换源:``_sphere_progress_sig`` 席/球计数分量来自容器派生。
 """
@@ -19,7 +19,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
     sphere_click_targets_of,
 )
-from sr_od.application.currency_war.kernel.cw_vocab import ClickSpheres
+from sr_od.application.currency_war.kernel.cw_vocab import CwActionClickSpheresParam
 
 _SIG = ChannelSig(family='obs', actor='synthesize_from_game_state',
                   mode='synthesized')
@@ -46,13 +46,13 @@ def test_sphere_click_targets_roundtrip():
 
 
 def test_click_spheres_container_precise_drop():
-    """容器逻辑态:ClickSpheres 载荷坐标精确摘除(未被点的球保留);
+    """容器逻辑态:CwActionClickSpheresParam 载荷坐标精确摘除(未被点的球保留);
     count/colors 随载荷同步重算。"""
     session = cw4_session()
     gs = game_state_of(session)
     _write_spheres(session, (('gold', 100, 200, 30), ('blue', 300, 400, 20)))
     apply_prep_action_logic(
-        gs, ClickSpheres(points=((300, 400),)),
+        gs, CwActionClickSpheresParam(points=((300, 400),)),
         produced_by='test', sig=_LOGIC_SIG)
     view = gs.spheres.value
     assert view.points == (('gold', 100, 200, 30),)
@@ -65,7 +65,7 @@ def test_click_spheres_stale_payload_zero_write():
     gs = game_state_of(session)
     _write_spheres(session, (('gold', 100, 200, 30),))
     apply_prep_action_logic(
-        gs, ClickSpheres(points=((999, 999),)),
+        gs, CwActionClickSpheresParam(points=((999, 999),)),
         produced_by='test', sig=_LOGIC_SIG)
     assert gs.spheres.value.points == (('gold', 100, 200, 30),)
 

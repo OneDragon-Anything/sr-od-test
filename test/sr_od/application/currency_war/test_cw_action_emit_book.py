@@ -37,10 +37,10 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
-    BuyCard,
-    DeployMove,
+    CwActionBuyCardParam,
+    CwActionDeployMoveParam,
     ShopCard,
-    WearEquip,
+    CwActionWearEquipParam,
 )
 from sr_od.application.currency_war.operations.cw_op.cw_buy_card_action import (
     BuyCardOp,
@@ -111,7 +111,7 @@ def _buy_op_env(monkeypatch: pytest.MonkeyPatch,
         ledger=ledger, state=gs)
     monkeypatch.setattr(buy_action_mod, '_area_rect', _fake_area_rect)
     monkeypatch.setattr(buy_action_mod.time, 'sleep', lambda s: None)
-    return BuyCardOp(BuyCard(card=card)), env, ledger, gs, clicks
+    return BuyCardOp(CwActionBuyCardParam(card=card)), env, ledger, gs, clicks
 
 
 def test_buy_card_emits_and_books_unconditionally(monkeypatch):
@@ -172,7 +172,7 @@ def _wear_env(monkeypatch: pytest.MonkeyPatch) -> tuple:
     ex._wait_stable_frame = lambda *a, **k: None
     env = PrepExecEnv(op=op, match=ctx.cw_match, executor=ex)
     monkeypatch.setattr('time.sleep', lambda _s: None)
-    return WearEquipOp(WearEquip(item_name='轮滑鞋', char_name='刃',
+    return WearEquipOp(CwActionWearEquipParam(item_name='轮滑鞋', char_name='刃',
                                  row='front', slot=1)), env, drags, screens
 
 
@@ -241,7 +241,7 @@ def test_deploy_move_tracks_immediately_on_emit(monkeypatch):
     gs.tracked_books.bench = [None, BenchChar(slot=2, char_id='甲', star=1)]
 
     env = _deploy_env(session)
-    action = DeployMove(bench_idx=1, to_row='front', faction='')
+    action = CwActionDeployMoveParam(bench_idx=1, to_row='front', faction='')
     ok = DeployMoveOp(action).execute(env)
 
     assert ok is True, '机械发出即职责完成(返回契约不变)'

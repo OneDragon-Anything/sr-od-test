@@ -4,10 +4,10 @@
 §3.2.21;实机建档 = docs/game/screens/currency_war_prep.md 告警/溢出节。
 
 锁的三件事:
-1. 告警在场 → 决策强收窄为单动作 SellBench(禁发 StartBattle/开店,
+1. 告警在场 → 决策强收窄为单动作 CwActionSellBenchParam(禁发 CwActionStartBattleParam/开店,
    先卖腾位再出战——出战点击此刻被游戏忽略,launch_dead 三连实证);
 2. 告警消失 → 门释放(无强收窄卖出,常规决策接管);
-3. 溢出态 SellBench 逻辑态 = 摘卖件 + 溢出卡入自由槽 + 旗标/身份消亡;
+3. 溢出态 CwActionSellBenchParam 逻辑态 = 摘卖件 + 溢出卡入自由槽 + 旗标/身份消亡;
    身份缺读('')= 跳过入位(槽留空等观察),卖出本体不受阻;
 4. 溢出腿执行账吸收(原 test_cw_overflow_tracked_sync.py 全文件迁并,
    该文件已删):落地时刻容器 + tracked 两账一测 + 执行器摘除腿先行的
@@ -31,8 +31,8 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
-    SellBench,
-    StartBattle,
+    CwActionSellBenchParam,
+    CwActionStartBattleParam,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate import (
     MandateFrame,
@@ -74,14 +74,14 @@ def _state():
 
 
 def test_overflow_gate_narrows_to_single_sell():
-    """告警在场:决策强收窄 = 恰一个 SellBench,零 StartBattle(先卖再战)。"""
+    """告警在场:决策强收窄 = 恰一个 CwActionSellBenchParam,零 CwActionStartBattleParam(先卖再战)。"""
     session = StrategySession()
     out = run_mandate(_frame(overflow_warning=True), session,
                       state=_state())
     assert len(out) == 1
-    assert isinstance(out[0].action, SellBench)
+    assert isinstance(out[0].action, CwActionSellBenchParam)
     assert out[0].action.bench_idx == 0   # 唯一冗余位 = 椒丘槽(槽1 → 容器下标0)
-    assert not any(isinstance(e.action, StartBattle) for e in out)
+    assert not any(isinstance(e.action, CwActionStartBattleParam) for e in out)
     assert state_of(session).cw4_counters.get('overflow_clear_sell') == 1
 
 
@@ -93,11 +93,11 @@ def test_overflow_gate_releases_when_cleared():
     counters = state_of(session).cw4_counters
     assert not counters.get('overflow_clear_sell')
     assert not counters.get('overflow_no_fuel')
-    assert not any(isinstance(e.action, SellBench) for e in out)
+    assert not any(isinstance(e.action, CwActionSellBenchParam) for e in out)
 
 
 def test_sellbench_overflow_logic_state_absorbs_card():
-    """溢出态 SellBench 逻辑态:摘卖件 + 溢出卡入自由槽 + 旗标/身份消亡。"""
+    """溢出态 CwActionSellBenchParam 逻辑态:摘卖件 + 溢出卡入自由槽 + 旗标/身份消亡。"""
     gs = game_state_of(None)
     gs.write_logic(gs.bench, bench_view_of_slots(
         [BenchChar(slot=1, char_id='花火', star=1),
@@ -107,7 +107,7 @@ def test_sellbench_overflow_logic_state_absorbs_card():
     gs.write_logic(gs.overflow_warning, True, produced_by='test', sig=_SIG)
     gs.write_logic(gs.overflow_card, '不死途', produced_by='test', sig=_SIG)
 
-    apply_prep_action_logic(gs, SellBench(bench_idx=0), produced_by='test',
+    apply_prep_action_logic(gs, CwActionSellBenchParam(bench_idx=0), produced_by='test',
                             sig=_SIG)
 
     slots = bench_slots_of(gs)
@@ -135,7 +135,7 @@ def test_sellbench_overflow_missing_identity_skips_absorb():
         BenchChar(slot=1, char_id='花火', star=1),
         BenchChar(slot=2, char_id='刃', star=1)])
 
-    apply_prep_action_logic(gs, SellBench(bench_idx=0), produced_by='test',
+    apply_prep_action_logic(gs, CwActionSellBenchParam(bench_idx=0), produced_by='test',
                             sig=_SIG, session=session)
 
     slots = bench_slots_of(gs)
@@ -181,7 +181,7 @@ def test_overflow_absorb_syncs_tracked():
         BenchChar(slot=1, char_id='花火', star=1),
         BenchChar(slot=2, char_id='刃', star=1)]))
 
-    apply_prep_action_logic(gs, SellBench(bench_idx=0), produced_by='test',
+    apply_prep_action_logic(gs, CwActionSellBenchParam(bench_idx=0), produced_by='test',
                             sig=_SIG, session=session)
 
     tracked = game_state_of(session).tracked_books.bench
@@ -197,13 +197,13 @@ def test_overflow_absorb_syncs_tracked():
 def test_overflow_absorb_after_executor_removal_compact_shape():
     """生产时序:执行器摘除腿先行(tracked 紧缩缺卖件)→ 吸收按槽号
     重建槽位表,存件不丢、不串槽。
-    (分诊随迁:原「session 缺席零写」兼容腿删——生产 SellBench 调用点
+    (分诊随迁:原「session 缺席零写」兼容腿删——生产 CwActionSellBenchParam 调用点
     唯一且恒传 session,无消费者形态不留测试;「身份缺读对称跳过」腿
     并入上方缺读锁,两侧一测。)"""
     session = StrategySession()
     gs = _seed(session, [BenchChar(slot=2, char_id='刃', star=1)])  # 花火已被摘
 
-    apply_prep_action_logic(gs, SellBench(bench_idx=0), produced_by='test',
+    apply_prep_action_logic(gs, CwActionSellBenchParam(bench_idx=0), produced_by='test',
                             sig=_SIG, session=session)
 
     tracked = game_state_of(session).tracked_books.bench

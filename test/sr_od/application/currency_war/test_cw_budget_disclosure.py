@@ -48,10 +48,10 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
     strategy_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
-    BuyCard,
+    CwActionBuyCardParam,
     CwAction,
     CwSimFrame,
-    RefreshShop,
+    CwActionRefreshShopParam,
     ShopCard,
 )
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_buy_cards import (
@@ -88,14 +88,14 @@ def _run_buy_waves_offline_host(monkeypatch: pytest.MonkeyPatch,
         list, object, object]:
     """锁 F 行为腿共用离线宿主(零真实副作用)。替身面 = run_buy_waves
     段顶消费面(读屏/帧留证/种子读链/决策源/遥测单例全替身):决策源
-    首动作即 CloseShop 终结,循环只走入口观察组装段一次;入口读屏回执
+    首动作即 CwActionCloseShopParam 终结,循环只走入口观察组装段一次;入口读屏回执
     gold=10 非零(跳过 gold 救援重读支);种子段读链桩 = 分型的
     「屏幕席真空」合法态(生产 SIFT 读链离线不可用,空账重建出口按
     合法态零写零台账);帧留证不落盘。返回 (warned, rr, ledger);
     disclose_impl 替换店开帧披露写点(接线点为函数内 lazy import,每次
     调用取模块属性,monkeypatch 即生效)。"""
     import sr_od.application.currency_war.operations.cw_screen.cw_screen_buy_cards as buy_mod
-    from sr_od.application.currency_war.kernel.cw_vocab import CloseShop
+    from sr_od.application.currency_war.kernel.cw_vocab import CwActionCloseShopParam
     from sr_od.application.currency_war.obs.cw_observation import (
         GameStateReadReceipt,
     )
@@ -118,10 +118,10 @@ def _run_buy_waves_offline_host(monkeypatch: pytest.MonkeyPatch,
     monkeypatch.setattr(tel_state, '_defect_seen_run', '')
 
     class _CloseShopStrategy:
-        """替身决策源:首动作即 CloseShop 终结(段顶接线段后立即收工)。"""
+        """替身决策源:首动作即 CwActionCloseShopParam 终结(段顶接线段后立即收工)。"""
 
-        def decide_shop_action(self) -> CloseShop:
-            return CloseShop()
+        def decide_shop_action(self) -> CwActionCloseShopParam:
+            return CwActionCloseShopParam()
 
     match = CurrencyWarMatch(_CloseShopStrategy(), StrategySession())
 
@@ -152,7 +152,7 @@ def _run_buy_waves_offline_host(monkeypatch: pytest.MonkeyPatch,
                                                     ev_arm=''))
     # (种子段读链工厂替身已移除:原店内读屏重建出口退役,
     #  未观察态改走「策略关店→备战 heavy 观察」链;本宿主观察态缺省可信,
-    #  CloseShop 替身策略照常走正常关店收工。)
+    #  CwActionCloseShopParam 替身策略照常走正常关店收工。)
     monkeypatch.setattr(economy_cycle_mod, 'disclose_budget_at_shop_frame',
                         disclose_impl)
     warned: list = []
@@ -280,7 +280,7 @@ class TestRoundBoundaryReset:
         cw4_feed(sess, _cur(1, 8, 53, node_type='prep'))
         disclose_budget(game_state_of(sess), sess)
         st = state_of(sess)
-        accrue_release_spent(_StubMatch(sess), RefreshShop(cost=2), True)
+        accrue_release_spent(_StubMatch(sess), CwActionRefreshShopParam(cost=2), True)
         cw4_feed(sess, _cur(1, 8, 51, node_type='prep'))
         disclose_budget(game_state_of(sess), sess)   # 同轮重入(刷新后金位变化)
         assert st.v3_release_spent == 2
@@ -292,7 +292,7 @@ class TestRoundBoundaryReset:
 class TestReleaseSpentAccrual:
 
     def test_two_refreshes_accumulate_per_receipt(self):
-        """执行一次 RefreshShop(cost=2) ⇒ spent==2;同 visit 第二笔 ⇒ 4
+        """执行一次 CwActionRefreshShopParam(cost=2) ⇒ spent==2;同 visit 第二笔 ⇒ 4
         (执行回执位逐笔累计)。键戳轴 = session 容器(W6 波 4),披露前
         喂入使键戳成文。"""
         sess = StrategySession()
@@ -300,9 +300,9 @@ class TestReleaseSpentAccrual:
         disclose_budget(game_state_of(sess), sess)
         st = state_of(sess)
         m = _StubMatch(sess)
-        accrue_release_spent(m, RefreshShop(cost=2), True)
+        accrue_release_spent(m, CwActionRefreshShopParam(cost=2), True)
         assert st.v3_release_spent == 2
-        accrue_release_spent(m, RefreshShop(cost=2), True)
+        accrue_release_spent(m, CwActionRefreshShopParam(cost=2), True)
         assert st.v3_release_spent == 4
 
     def test_failed_execution_not_accrued(self):
@@ -311,7 +311,7 @@ class TestReleaseSpentAccrual:
         sess = StrategySession()
         disclose_budget(game_state_of(sess), sess)
         st = state_of(sess)
-        accrue_release_spent(_StubMatch(sess), RefreshShop(cost=2), False)
+        accrue_release_spent(_StubMatch(sess), CwActionRefreshShopParam(cost=2), False)
         assert st.v3_release_spent == 0
 
     def test_non_refresh_actions_not_accrued(self):
@@ -321,7 +321,7 @@ class TestReleaseSpentAccrual:
         disclose_budget(game_state_of(sess), sess)
         st = state_of(sess)
         m = _StubMatch(sess)
-        accrue_release_spent(m, BuyCard(card=ShopCard(x=1, name='x', cost=3),
+        accrue_release_spent(m, CwActionBuyCardParam(card=ShopCard(x=1, name='x', cost=3),
                                         reason='t'), True)
         assert st.v3_release_spent == 0
 
@@ -334,7 +334,7 @@ class TestReleaseSpentAccrual:
         disclose_budget(game_state_of(sess), sess)
         st = state_of(sess)
         cw4_feed(sess, _cur(1, 9, 53, node_type='prep'))
-        accrue_release_spent(_StubMatch(sess), RefreshShop(cost=2), True)
+        accrue_release_spent(_StubMatch(sess), CwActionRefreshShopParam(cost=2), True)
         assert st.v3_release_spent == 0
 
     def test_no_key_stamp_session_not_accrued(self):
@@ -344,7 +344,7 @@ class TestReleaseSpentAccrual:
         sess = StrategySession()
         st = state_of(sess)
         assert st.v3_disclosure_key is None
-        accrue_release_spent(_StubMatch(sess), RefreshShop(cost=2), True)
+        accrue_release_spent(_StubMatch(sess), CwActionRefreshShopParam(cost=2), True)
         assert st.v3_release_spent == 0
         assert strategy_state_of(sess) is st
 

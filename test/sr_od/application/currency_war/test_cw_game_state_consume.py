@@ -80,7 +80,7 @@ def _hsig() -> _ChannelSig:
 
 def test_refresh_execution_paid_and_free_frame_gates() -> None:
     """§3.3.6-8 刷新执行主锁(四腿一锁):①付费刷新 = paid+1 ∧ total+1
-    (RefreshShop 执行回执,写入=仅逻辑;付费帧不动免费余额);②免费帧闸
+    (CwActionRefreshShopParam 执行回执,写入=仅逻辑;付费帧不动免费余额);②免费帧闸
     = 免费帧不进付费累计(长线利好触发计数载体禁混入免费刷),消耗免费
     余额 + total 照计;③免费余额下限 0(计数器单调域,禁负值漂移);
     ④evidence 落轮键 refresh_exec@<frame>(归因留证面,付费/免费帧同)。"""
@@ -223,7 +223,7 @@ def test_bench_view_of_slots_positional_mapping() -> None:
 
 
 def test_merge_projection_direct_write_and_observe_wins() -> None:
-    """§3.2.18 修法 a 两态制形态(ADR-0651):BuyCard 合成升星投影经
+    """§3.2.18 修法 a 两态制形态(ADR-0651):CwActionBuyCardParam 合成升星投影经
     write_logic **直写 bench**(策略器立即可读);下一备战帧实读覆盖
     (观察赢)——一致静默,失配 = 投影 bug 缺陷留证后修推算代码。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
@@ -235,7 +235,7 @@ def test_merge_projection_direct_write_and_observe_wins() -> None:
     real_view = bench_view_of_slots([BenchChar(slot=1, char_id='花火', star=2)])
     # 一致路径:逻辑直写 → 字段立即可读;同值实读覆盖 = 静默
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
-    gs.write_logic(gs.bench, proj_view, produced_by='BuyCard', sig=_lsig())
+    gs.write_logic(gs.bench, proj_view, produced_by='CwActionBuyCardParam', sig=_lsig())
     assert gs.bench.value is proj_view and gs.bench.source == 'logic', \
         '投影直写:策略器立即可读(ADR-0651)'
     rows: list[dict] = []
@@ -252,7 +252,7 @@ def test_merge_projection_direct_write_and_observe_wins() -> None:
     bs2.observe(bs2.bench, real_view, sig=_sig())
     bs2.write_logic(bs2.bench, bench_view_of_slots(
         [BenchChar(slot=1, char_id='花火', star=1)] + [None] * 8),
-        produced_by='BuyCard', sig=_lsig())
+        produced_by='CwActionBuyCardParam', sig=_lsig())
     rows2: list[dict] = []
     set_defect_sink(rows2.append)
     try:

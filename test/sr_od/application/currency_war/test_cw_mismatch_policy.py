@@ -140,7 +140,7 @@ def test_shipped_registry_declares_prep_reward_gold_blind_spot() -> None:
     assert hit, '盲区条目在册(随登记常量,非测试注入)'
     entry = hit[0]
     assert entry.screen == PREP_SCREEN and entry.field == 'gold'
-    assert 'ClickSpheres' in entry.reason, 'reason 带声明盲区持久锚'
+    assert 'CwActionClickSpheresParam' in entry.reason, 'reason 带声明盲区持久锚'
     assert all(e.logic_evidence != EXEMPT_ANY
                for e in policy.EXEMPT_REGISTRY.get(('货币战争-备战', 'gold'),
                                                    ())), \

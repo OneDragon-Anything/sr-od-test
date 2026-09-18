@@ -189,7 +189,7 @@ def test_on_fail_retry_branch_capped_before_retry_pool(monkeypatch):
 
 # ===== 追加(三审代-2 升应修):出战链 {slot:下标} 对位防线 =====
 # 病理:容器槽位表存在重复/越界槽号时 `_cidx_of = {b.slot: i}` 字典推导
-# 静默保留后值 → DeployMove 对位同槽号另一条目、拖错人出场。修 = 判据
+# 静默保留后值 → CwActionDeployMoveParam 对位同槽号另一条目、拖错人出场。修 = 判据
 # 单一源 bench_slots_healthy(槽号健康不变量)前置门:不健康 →
 # 整份部署计划 fail-closed 不出 + cw4 分键显影。
 
@@ -243,7 +243,7 @@ def test_deploy_chain_unhealthy_slot_table_fails_closed(monkeypatch, bench_slots
     monkeypatch.setattr(_dl_mod, 'select_deployments_reasoned',
                         lambda **k: ([0], [], []))   # 计划段有选择,逼入门内
 
-    assert _battle_chain_deploy_moves(session) == []   # 零 DeployMove
+    assert _battle_chain_deploy_moves(session) == []   # 零 CwActionDeployMoveParam
     assert counters[_KEY_UNHEALTHY] == 1   # 显影分键(禁静默降级)
 
 

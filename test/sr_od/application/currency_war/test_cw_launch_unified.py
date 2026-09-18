@@ -15,7 +15,7 @@ from types import SimpleNamespace
 import pytest
 
 from sr_od.application.currency_war import prep_actions
-from sr_od.application.currency_war.kernel.cw_vocab import StartBattle
+from sr_od.application.currency_war.kernel.cw_vocab import CwActionStartBattleParam
 from sr_od.application.currency_war.operations import cw_loop
 from sr_od.application.currency_war.operations.cw_loop import (
     launch_battle_unified,
@@ -50,7 +50,7 @@ class _StubOp:
 
 
 class _StubExecutor:
-    """PrepActionExecutor 替身:记录执行序列,StartBattle 置发射事实。"""
+    """PrepActionExecutor 替身:记录执行序列,CwActionStartBattleParam 置发射事实。"""
 
     instances: list['_StubExecutor'] = []
 
@@ -62,7 +62,7 @@ class _StubExecutor:
 
     def execute(self, action) -> None:
         self.executed.append(action)
-        if isinstance(action, StartBattle):
+        if isinstance(action, CwActionStartBattleParam):
             self.last_launch_ok = True
             self.last_detail = 'stub 出战已点击'
 
@@ -89,7 +89,7 @@ def launch_env(monkeypatch):
 
 
 def test_unified_armed_green_and_fail_track_split(launch_env, monkeypatch) -> None:
-    """armed 全绿:复验→浮层→部署原子序→StartBattle;失败记账不入执行器
+    """armed 全绿:复验→浮层→部署原子序→CwActionStartBattleParam;失败记账不入执行器
     (readiness_launch_fail 归调用方,分轨判据)。"""
     monkeypatch.setattr(cw_loop, '_prep_anchors_hit',
                         lambda op, screen: PREP_HITS.issubset(screen.hits))
@@ -97,7 +97,7 @@ def test_unified_armed_green_and_fail_track_split(launch_env, monkeypatch) -> No
     ok, detail = launch_battle_unified(op, launch_env.ctx, face='armed')
     assert ok is True and '出战' in detail
     assert len(_StubExecutor.instances) == 1
-    assert any(isinstance(a, StartBattle)
+    assert any(isinstance(a, CwActionStartBattleParam)
                for a in _StubExecutor.instances[0].executed)
     assert 'readiness_launch_fail' not in launch_env.counters, '分轨:记账归调用方'
 
@@ -124,7 +124,7 @@ def test_unified_overlay_hold_rejects(launch_env) -> None:
 
 
 def test_unified_resume_latch(launch_env) -> None:
-    """resume 闩:首调部署原子序 + 置闩;次调跳过部署、StartBattle 照发。"""
+    """resume 闩:首调部署原子序 + 置闩;次调跳过部署、CwActionStartBattleParam 照发。"""
     op = _StubOp([_Frame(hits=PREP_HITS), _Frame(hits=PREP_HITS)])
     ok1, _ = launch_battle_unified(op, launch_env.ctx, face='resume')
     assert ok1 is True
@@ -133,7 +133,7 @@ def test_unified_resume_latch(launch_env) -> None:
     ok2, _ = launch_battle_unified(op, launch_env.ctx, face='resume')
     assert ok2 is True
     assert launch_env.deploy_calls == [1], '闩后部署原子序不再现算'
-    assert len(_StubExecutor.instances) == 2, '两调各一次 StartBattle 执行'
+    assert len(_StubExecutor.instances) == 2, '两调各一次 CwActionStartBattleParam 执行'
 
 
 def test_unified_invalid_face_rejected(launch_env) -> None:

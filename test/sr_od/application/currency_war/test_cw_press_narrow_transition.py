@@ -7,7 +7,7 @@
 - 落码 = shop.py 两 S_spec 发射位辖域前置(分键 press_narrowed_
   transition_domain / press_narrowed_transition_domain_hub)+
   mandate.swap_transition_narrow_frame(域谓词单一源 = kernel
-  ``_swap_transition_domain_of``)+ prep OpenShop 位对称观测
+  ``_swap_transition_domain_of``)+ prep CwActionOpenShopParam 位对称观测
   (press_narrowed_transition_domain_prep_seen,仅登记零行为);
 - mandate.dominance_buy_eligible docstring 辖域注(双引注:ADR-0616
   命题 4 + P88 调和引理)= 回滚合法依据封堵面。
@@ -75,7 +75,7 @@ from test.sr_od.application.currency_war.test_cw_no_target_three_arms import (
 
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
-    BuyCard,
+    CwActionBuyCardParam,
     CwSimFrame,
     ShopCard,
 )
@@ -143,7 +143,7 @@ class TestHubSentinel:
         sess = _hub_session(IntentionState())
         assert mandate.swap_transition_narrow_frame(_bridge(st), sess) is False
         act = _hub_decide(st, sess)
-        assert isinstance(act, BuyCard) and act.reason == 'hub_option_buy'
+        assert isinstance(act, CwActionBuyCardParam) and act.reason == 'hub_option_buy'
         ct = _hub_ct(sess)
         assert ct.get('hub_option_buy_hit') == 1
         assert _NARROW_HUB_KEY not in ct

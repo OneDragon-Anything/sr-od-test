@@ -119,7 +119,7 @@ def _prep_frame(*, pair_ledger_round: int | None,
 
 
 def _sell_actions(out: list) -> list:
-    return [e for e in out if type(e.action).__name__ == 'SellBench']
+    return [e for e in out if type(e.action).__name__ == 'CwActionSellBenchParam']
 
 
 # ===== 行为锁①:死锁帧支配语义(2.1.3;释放对成员腾席)=====
@@ -269,7 +269,7 @@ class TestWriteEnd:
             ShopPayload,
             ShopSlot,
         )
-        from sr_od.application.currency_war.kernel.cw_vocab import BuyCard
+        from sr_od.application.currency_war.kernel.cw_vocab import CwActionBuyCardParam
         g_star = saturation_line(cap_resolved_of_session(
             StrategySession(rng=random.Random('cw-t253'))))
         sess = StrategySession(rng=random.Random('cw-t253'))
@@ -297,7 +297,7 @@ class TestWriteEnd:
         _live = MandateV1Live(gs, SimpleNamespace(strategy_seed=None))   # 终态契约:构造注入
         _live.state = state_of(sess)   # 状态同源接线:会话播种对象(零参口)
         action = _live.decide_shop_action()
-        assert isinstance(action, BuyCard), f'帧未发射买入: {action!r}'
+        assert isinstance(action, CwActionBuyCardParam), f'帧未发射买入: {action!r}'
         ledger = getattr(state_of(sess), sell_gate.ACQUISITION_LEDGER_ATTR)
         assert ledger.get(action.card.name) == (1, 3), \
             f'买入后获取账缺登记: {ledger!r}'

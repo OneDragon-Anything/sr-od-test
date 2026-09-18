@@ -36,8 +36,8 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwAction,
     HoldFrame,
-    SellBench,
-    StartBattle,
+    CwActionSellBenchParam,
+    CwActionStartBattleParam,
 )
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
     CwScreenPrep,
@@ -82,8 +82,8 @@ def test_prep_contract_returns_single_action_first_of_emission(
     逐帧恰取一个动作」的边界映射——契约面返回列表整体(旧形状回潮)或
     取尾项都会在此红。
     """
-    first = StartBattle()
-    second = SellBench(bench_idx=3)
+    first = CwActionStartBattleParam()
+    second = CwActionSellBenchParam(bench_idx=3)
     strategy, session = _prep_strategy(monkeypatch, [first, second])
     result = strategy.decide_prep_screen()
     assert isinstance(result, CwAction)

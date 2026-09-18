@@ -2,7 +2,7 @@
 
 三账 = 容器 bench(写口回占)/执行账 tracked(kernel 直调已锁
 test_cw_overflow_tracked_sync.py)/调用点 session 透传线。原黑板帧镜像腿
-(`_project_prep_obs`)随黑板退役——镜像语义现由 kernel 写口 SellBench
+(`_project_prep_obs`)随黑板退役——镜像语义现由 kernel 写口 CwActionSellBenchParam
 溢出分支全量承载(入位卡回占 + tracked 吸收 + 旗标清,单点单一源):
 
 1. 溢出腿落地:入位卡回占卖出槽(容器 bench),席空数派生自然不 +1
@@ -28,7 +28,7 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
-    SellBench,
+    CwActionSellBenchParam,
 )
 
 _SIG = ChannelSig(family='logic_action', actor='CwScreenPrep')
@@ -65,7 +65,7 @@ def test_prep_mirror_backfills_card_and_keeps_free_count():
     session = StrategySession()
     gs = _seed(session)
 
-    apply_prep_action_logic(gs, SellBench(bench_idx=0), produced_by='T',
+    apply_prep_action_logic(gs, CwActionSellBenchParam(bench_idx=0), produced_by='T',
                             sig=_LOGIC_SIG, session=session)
 
     dep = bench_slots_of(gs)
@@ -87,7 +87,7 @@ def test_prep_mirror_needs_leg_landed_not_flag_alone():
         [None, BenchChar(slot=2, char_id='刃', star=1)]),
         produced_by='test', sig=_SIG)
 
-    apply_prep_action_logic(gs, SellBench(bench_idx=0), produced_by='T',
+    apply_prep_action_logic(gs, CwActionSellBenchParam(bench_idx=0), produced_by='T',
                             sig=_LOGIC_SIG)
 
     dep = bench_slots_of(gs)

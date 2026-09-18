@@ -1,4 +1,4 @@
-"""SellBench / SellDeployed / SwapDeploy v2 族 + LogicOutcome 出参契约直锁
+"""CwActionSellBenchParam / CwActionSellDeployedParam / CwActionSwapDeployParam v2 族 + LogicOutcome 出参契约直锁
 （全仓唯一锁面）。
 
 历史与到期兑现：原为冻结 simulate 快照对照（13 案金样
@@ -20,7 +20,7 @@ gold/bench/front_row/back_row/board/equips 域写回 + 未辖域零写）：
   reason=stale_proposal:… 零容器写（ADR-0317）；
 - selldeployed_apply / selldeployed_stale_reject：deployed 平移契约
   （槽表置空 → front/back rows 整表写）+ board 重算 + 退款/装备回收；
-- swapdeploy_apply / swapdeploy_idx_reject：**SwapDeploy 全仓唯一行为
+- swapdeploy_apply / swapdeploy_idx_reject：**CwActionSwapDeployParam 全仓唯一行为
   覆盖**——原槽对调（上场者继承下场者排 + 槽号重写为 deployed 槽号）、
   board 随 deployed 重算；越界拒 reason=idx_out_of_range:dN/bM 零写。
 """
@@ -48,9 +48,9 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     apply_shop_action_logic,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
-    SellBench,
-    SellDeployed,
-    SwapDeploy,
+    CwActionSellBenchParam,
+    CwActionSellDeployedParam,
+    CwActionSwapDeployParam,
 )
 
 _SIG_OBS = ChannelSig(family='obs', actor='cw_observation', mode='read')
@@ -122,7 +122,7 @@ _REFUND = _REFUND_1STAR
 _CASES = [
     pytest.param(
         'sellbench_apply_equips',
-        lambda: SellBench(bench_idx=0, expect='银枝', reason='test'),
+        lambda: CwActionSellBenchParam(bench_idx=0, expect='银枝', reason='test'),
         {'bench': [_unit('银枝', 1, equips=['以太钻头']),
                    _unit('爻光', 2)],
          'front': [], 'equips': ['光速螺旋桨·特权']},
@@ -131,14 +131,14 @@ _CASES = [
         id='sellbench-apply-equips'),
     pytest.param(
         'sellbench_stale_reject',
-        lambda: SellBench(bench_idx=0, expect='刃', reason='test'),
+        lambda: CwActionSellBenchParam(bench_idx=0, expect='刃', reason='test'),
         {'bench': [_unit('银枝', 1), _unit('爻光', 2)], 'front': []},
         False, 'stale_proposal:刃!=银枝', None, 10,
         [(0, '银枝'), (1, '爻光')], None, None, None,
         id='sellbench-stale-reject'),
     pytest.param(
         'selldeployed_apply',
-        lambda: SellDeployed(deployed_idx=0, expect='银枝', reason='test'),
+        lambda: CwActionSellDeployedParam(deployed_idx=0, expect='银枝', reason='test'),
         {'bench': [], 'front': [_unit('银枝', 1, equips=['以太钻头'])],
          'board': {'星间旅人': 1, '群攻': 1}},
         True, 'test', _REFUND, 10 + _REFUND,
@@ -146,7 +146,7 @@ _CASES = [
         id='selldeployed-apply'),
     pytest.param(
         'selldeployed_stale_reject',
-        lambda: SellDeployed(deployed_idx=0, expect='刃', reason='test'),
+        lambda: CwActionSellDeployedParam(deployed_idx=0, expect='刃', reason='test'),
         {'bench': [], 'front': [_unit('银枝', 1)],
          'board': {'星间旅人': 1, '群攻': 1}},
         False, 'stale_proposal:刃!=银枝', None, 10,
@@ -154,7 +154,7 @@ _CASES = [
         id='selldeployed-stale-reject'),
     pytest.param(
         'swapdeploy_apply',
-        lambda: SwapDeploy(deployed_idx=0, bench_idx=0, reason='test'),
+        lambda: CwActionSwapDeployParam(deployed_idx=0, bench_idx=0, reason='test'),
         {'bench': [_unit('爻光', 1), _unit('停云', 2)],
          'front': [_unit('银枝', 1)],
          'board': {'星间旅人': 1, '群攻': 1}},
@@ -164,7 +164,7 @@ _CASES = [
         id='swapdeploy-apply'),
     pytest.param(
         'swapdeploy_idx_reject',
-        lambda: SwapDeploy(deployed_idx=5, bench_idx=0, reason='test'),
+        lambda: CwActionSwapDeployParam(deployed_idx=5, bench_idx=0, reason='test'),
         {'bench': [_unit('爻光', 1)], 'front': [_unit('银枝', 1)],
          'board': {'星间旅人': 1, '群攻': 1}},
         False, 'idx_out_of_range:d5/b0', None, 10,

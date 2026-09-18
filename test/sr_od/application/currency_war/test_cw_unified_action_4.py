@@ -46,24 +46,24 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CW_ACTION_TYPES,
     HoldFrame,
-    LevelUp,
-    LevelUpShop,
-    PickBoxCard,
-    PickEncounter,
-    PickEquip,
-    PickExpertInvite,
-    PickFortune,
-    PickInvest,
-    PickMegastar,
-    PickPartner,
-    PickPlanner,
-    PickStarTome,
-    PickSupply,
-    PickWishTrial,
-    RefreshInvestCards,
-    RefreshNodeOptions,
-    RefreshShop,
-    RefreshSupply,
+    CwActionLevelUpParam,
+    CwActionLevelUpShopParam,
+    CwActionPickBoxCardParam,
+    CwActionPickEncounterParam,
+    CwActionPickEquipParam,
+    CwActionPickExpertInviteParam,
+    CwActionPickFortuneParam,
+    CwActionPickInvestParam,
+    CwActionPickMegastarParam,
+    CwActionPickPartnerParam,
+    CwActionPickPlannerParam,
+    CwActionPickStarTomeParam,
+    CwActionPickSupplyParam,
+    CwActionPickWishTrialParam,
+    CwActionRefreshInvestCardsParam,
+    CwActionRefreshNodeOptionsParam,
+    CwActionRefreshShopParam,
+    CwActionRefreshSupplyParam,
 )
 from sr_od.application.currency_war.obs.cw_shop_refresh_obs import (
     refresh_board_changed_of,
@@ -105,17 +105,17 @@ _LOGIC_SIG = ChannelSig(family='logic_action', actor='cw-t216-test',
 
 # 终态契约动作类型的注册豁免集(终态契约 landing §3.5 锁规格:白名单
 # 成员要么有注册行、要么在豁免集——无 op 行例外申报):
-# - PickInvest/PickStarTome/PickWishTrial/PickBoxCard + 契约扩员三口
-#   PickFortune/PickExpertInvite/PickEquip(普查迁移批 2;handler 自管
+# - CwActionPickInvestParam/CwActionPickStarTomeParam/CwActionPickWishTrialParam/CwActionPickBoxCardParam + 契约扩员三口
+#   CwActionPickFortuneParam/CwActionPickExpertInviteParam/CwActionPickEquipParam(普查迁移批 2;handler 自管
 #   消费链,确认链/直点不经注册表,同豁免类);
 # - 三刷新动作(handler 自管点击链;attack4 M6 裁定 (a):与
-#   RefreshInvestCards 同型豁免);
+#   CwActionRefreshInvestCardsParam 同型豁免);
 # - HoldFrame(分支拦截型,等待帧非动作)= 永久豁免,无 op 行。
 # (Pick 五子类已随终态切换批换键名入表,不在豁免集——锁全覆盖。)
 _TERMINAL_CONTRACT_REGISTRY_EXEMPT = (
-    PickInvest, PickStarTome, PickWishTrial, PickBoxCard,
-    PickFortune, PickExpertInvite, PickEquip,
-    RefreshNodeOptions, RefreshSupply, RefreshInvestCards, HoldFrame,
+    CwActionPickInvestParam, CwActionPickStarTomeParam, CwActionPickWishTrialParam, CwActionPickBoxCardParam,
+    CwActionPickFortuneParam, CwActionPickExpertInviteParam, CwActionPickEquipParam,
+    CwActionRefreshNodeOptionsParam, CwActionRefreshSupplyParam, CwActionRefreshInvestCardsParam, HoldFrame,
 )
 
 
@@ -146,11 +146,11 @@ def test_pick_rows_resolve_class_and_instance_consistently():
     类级解析与实例级工厂解析同 op 类(行序 is-a 语义一致;实例级仅本锁
     构造,注册完备锁本体不构造)。"""
     rows = [
-        (PickEncounter, EncounterPickOp),
-        (PickSupply, SupplyPickOp),
-        (PickMegastar, MegastarPickOp),
-        (PickPartner, PartnerPickOp),
-        (PickPlanner, PlannerPickOp),
+        (CwActionPickEncounterParam, EncounterPickOp),
+        (CwActionPickSupplyParam, SupplyPickOp),
+        (CwActionPickMegastarParam, MegastarPickOp),
+        (CwActionPickPartnerParam, PartnerPickOp),
+        (CwActionPickPlannerParam, PlannerPickOp),
     ]
     for cls, expected in rows:
         assert action_op_class_for_type(cls) is expected, cls.__name__
@@ -158,11 +158,11 @@ def test_pick_rows_resolve_class_and_instance_consistently():
 
 
 def test_class_level_isa_fallback_matches_instance_query():
-    """is-a 兜底语义同注册表:LevelUpShop is-a LevelUp,类级首中
-    LevelUp 行 → PrepLevelUpOp,与实例级查询一致(批3 先例的类级复验)。"""
-    assert action_op_class_for_type(LevelUpShop) is PrepLevelUpOp
-    assert action_op_class_for_type(LevelUp) is PrepLevelUpOp
-    assert type(action_op_for(LevelUpShop(cost=4))) is PrepLevelUpOp
+    """is-a 兜底语义同注册表:CwActionLevelUpShopParam is-a CwActionLevelUpParam,类级首中
+    CwActionLevelUpParam 行 → PrepLevelUpOp,与实例级查询一致(批3 先例的类级复验)。"""
+    assert action_op_class_for_type(CwActionLevelUpShopParam) is PrepLevelUpOp
+    assert action_op_class_for_type(CwActionLevelUpParam) is PrepLevelUpOp
+    assert type(action_op_for(CwActionLevelUpShopParam(cost=4))) is PrepLevelUpOp
 
 
 def test_unknown_type_loud_at_class_level():
@@ -393,7 +393,7 @@ def test_refresh_shop_op_persists_evidence_without_comparison(monkeypatch):
         match=None, config=None, click_pts=[],
         level_btn=Point(0, 0), refresh_btn=Point(1603, 479),
         ledger=ledger, state=state)
-    assert RefreshShopOp(RefreshShop()).execute(env) is True
+    assert RefreshShopOp(CwActionRefreshShopParam()).execute(env) is True
     # 只读不比:刷前/刷后名集原样落账,比对结果不再由动作 op 预计算
     assert ledger.refresh_pre_names == ['旧卡A']
     assert ledger.refresh_post_names == ['新卡A', '新卡B']

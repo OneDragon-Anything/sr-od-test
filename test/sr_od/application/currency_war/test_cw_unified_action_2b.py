@@ -5,7 +5,7 @@
 docs/develop/sr_od/application/currency_war/flow/action-logic-state.md;
 判据语义 = 备战动作统一词表(基类/元组/action_key 单一源)、席位域动作
 携容器槽位表下标(发射面吃下标,物理换算仅存观察写入边与执行坐标边)、
-LevelUp 携 cost(单击价现算装载)+auth_basis(授权记录分键)。
+CwActionLevelUpParam 携 cost(单击价现算装载)+auth_basis(授权记录分键)。
 
 锁面四组(全部运行时行为锁,源码扫描测试禁止,AGENTS.md §10.4):
 1. action_key 输出前后对照锁(逐类键面钉死:统一类 = 原族A 类原样,
@@ -15,7 +15,7 @@ LevelUp 携 cost(单击价现算装载)+auth_basis(授权记录分键)。
 2. 词表白名单行为锁(F3 白名单行为半:执行器拒词表外类型、在册动作
    合法域放行;白名单元组面对账已退役——删除面由该行为红兜底,不设
    退役符号墓碑断言);
-3. LevelUp 装载锁 2b 半(发射面 cost = kernel xp_click_cost 现算装载、
+3. CwActionLevelUpParam 装载锁 2b 半(发射面 cost = kernel xp_click_cost 现算装载、
    auth_basis = 发射臂放行名分键装载;逻辑态金腿 action.cost 直写与
    执行缝退役锁 = test_cw_unified_action_2a 翻转腿);
 4. 换算收口锁(发射面容器下标直取:fail-closed 解析 helper 三域真值 +
@@ -46,10 +46,10 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwSimFrame,
-    DeployMove,
-    LevelUp,
-    SellBench,
-    SellDeployed,
+    CwActionDeployMoveParam,
+    CwActionLevelUpParam,
+    CwActionSellBenchParam,
+    CwActionSellDeployedParam,
     action_key,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
@@ -69,21 +69,21 @@ def test_action_key_faces_pinned_per_class():
     - 容器下标字段(bench_idx/deployed_idx)构成键面(替换物理槽位字段)。
     (原「键串 = 归一前族A 形态逐字」腿降规格:逐字 repr 锁的是 Python
     repr 格式,过度规格,消费面只需键稳定性与粒度。)"""
-    # SellBench:行为参数分裂幂等键;route_tag(发射臂路由标签)不入键
-    assert action_key(SellBench(bench_idx=3)) != \
-        action_key(SellBench(bench_idx=0))
-    assert action_key(SellBench(bench_idx=0, route_tag='m4_fuel_sell')) == \
-        action_key(SellBench(bench_idx=0))
-    assert 'bench_idx' in action_key(SellBench(bench_idx=0))
-    # LevelUp:cost 与 auth_basis 入键(键粒度零漂移锚,禁静默改 metadata)
-    assert action_key(LevelUp(cost=4)) != action_key(LevelUp(cost=5))
-    assert action_key(LevelUp(cost=4, auth_basis='arm1')) != \
-        action_key(LevelUp(cost=4))
-    assert 'cost' in action_key(LevelUp(cost=4))
-    # DeployMove/SellDeployed:容器下标字段替换物理槽位字段,键形态同构
-    assert 'bench_idx' in action_key(DeployMove(bench_idx=1, to_row='front',
+    # CwActionSellBenchParam:行为参数分裂幂等键;route_tag(发射臂路由标签)不入键
+    assert action_key(CwActionSellBenchParam(bench_idx=3)) != \
+        action_key(CwActionSellBenchParam(bench_idx=0))
+    assert action_key(CwActionSellBenchParam(bench_idx=0, route_tag='m4_fuel_sell')) == \
+        action_key(CwActionSellBenchParam(bench_idx=0))
+    assert 'bench_idx' in action_key(CwActionSellBenchParam(bench_idx=0))
+    # CwActionLevelUpParam:cost 与 auth_basis 入键(键粒度零漂移锚,禁静默改 metadata)
+    assert action_key(CwActionLevelUpParam(cost=4)) != action_key(CwActionLevelUpParam(cost=5))
+    assert action_key(CwActionLevelUpParam(cost=4, auth_basis='arm1')) != \
+        action_key(CwActionLevelUpParam(cost=4))
+    assert 'cost' in action_key(CwActionLevelUpParam(cost=4))
+    # CwActionDeployMoveParam/CwActionSellDeployedParam:容器下标字段替换物理槽位字段,键形态同构
+    assert 'bench_idx' in action_key(CwActionDeployMoveParam(bench_idx=1, to_row='front',
                                                 faction=''))
-    assert 'deployed_idx' in action_key(SellDeployed(deployed_idx=0))
+    assert 'deployed_idx' in action_key(CwActionSellDeployedParam(deployed_idx=0))
 
 
 # ===== 2. 词表归一与删除锁(行为半)=====
@@ -98,13 +98,13 @@ def test_prep_f3_rejects_unknown_and_admits_registered():
     ex._front_pts = [Point(i * 10, i * 10) for i in range(4)]
     ex._back_pts = [Point(i * 10, i * 10) for i in range(6)]
     assert ex.validate(SimpleNamespace()) is not None   # 词表外 → 拒
-    assert ex.validate(SellBench(bench_idx=0)) is None   # 在册 → 合法
+    assert ex.validate(CwActionSellBenchParam(bench_idx=0)) is None   # 在册 → 合法
 
 
-# ===== 3. LevelUp 装载锁(2b 半:发射面)=====
+# ===== 3. CwActionLevelUpParam 装载锁(2b 半:发射面)=====
 
 def test_levelup_emission_carries_cost_and_auth_basis():
-    """发射面装载(LevelUp 粒度定案③口径,持久索引见模块头):cost = kernel
+    """发射面装载(CwActionLevelUpParam 粒度定案③口径,持久索引见模块头):cost = kernel
     xp_click_cost 现算(gs.level_up_cost 缺读时函数内回退
     XP_CLICK_COST_FALLBACK 折扣支,发射位零本地回退分支);auth_basis =
     发射臂放行名分键(arm1/arm0/pop/must_spend 封闭集);route_tag 沿
@@ -126,7 +126,7 @@ def test_levelup_emission_carries_cost_and_auth_basis():
                            v3_intention=IntentionState(),
                            active_strategies=[])
     out = mandate.run_mandate(frame, sess, state=cw4_box(st))
-    lv = [e for e in out if isinstance(e.action, LevelUp)]
+    lv = [e for e in out if isinstance(e.action, CwActionLevelUpParam)]
     assert lv, '构帧须命中 M3 升级臂(与 no_target 三臂锁 4 同形)'
     gs_cost_view = cw4_box(CwSimFrame(gold=80, level=4, hp=30, plane=2,
                                       round_num=2, level_up_cost=4))
@@ -139,9 +139,9 @@ def test_levelup_emission_carries_cost_and_auth_basis():
 
 
 def test_sellbench_emission_carries_channel_reason():
-    """SellBench 发射面通道记录装载:r9 争金归因证据层(决策行 form_ok
+    """CwActionSellBenchParam 发射面通道记录装载:r9 争金归因证据层(决策行 form_ok
     时序批 sibling 件;登记门单一源 = cw_vocab.SELL_BENCH_REASONS)。
-    溢出清位臂(overflow_warning 短路 return)SellBench.reason = 通道键
+    溢出清位臂(overflow_warning 短路 return)CwActionSellBenchParam.reason = 通道键
     m4_fuel_sell;记录非指令,资格单一源(sell_gate 装配 A)零触碰。"""
     from types import SimpleNamespace as _NS
 
@@ -171,7 +171,7 @@ def test_sellbench_emission_carries_channel_reason():
     sess = _NS(cw4_counters={}, target_comp=None,
                v3_intention=IntentionState(), active_strategies=[])
     out = mandate.run_mandate(frame, sess, state=gs)
-    sb = [e for e in out if isinstance(e.action, SellBench)]
+    sb = [e for e in out if isinstance(e.action, CwActionSellBenchParam)]
     assert sb, '构帧须命中溢出清位臂(1★ 线外燃料 + overflow_warning)'
     assert sb[0].action.reason == 'm4_fuel_sell'
     # route_tag 载体 = Emitted.reason(桥伴装载;通道键单一词汇)

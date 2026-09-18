@@ -26,9 +26,9 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     register_sig_actors,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
-    PrecisionWrenchUse,
-    WearEquip,
-    WrenchUse,
+    CwActionPrecisionWrenchUseParam,
+    CwActionWearEquipParam,
+    CwActionWrenchUseParam,
 )
 from sr_od.application.currency_war.sim.cw_sim_enemy import (
     BOSS_DEDUP_PENDING,
@@ -181,7 +181,7 @@ def test_wear_equip_triggers_wear_synthesis() -> None:
     assert synthesize_target(a, b) == advance
     gs = _gs_with_bench_unit('淘金客', equips=[a])
     gs.observe(gs.equips, [b], sig=_SIG)
-    action = WearEquip(item_name=b, char_name='淘金客', row='front', slot=1)
+    action = CwActionWearEquipParam(item_name=b, char_name='淘金客', row='front', slot=1)
     assert apply_wear_equip(gs, action)
     assert _worn_of(gs, '淘金客') == [advance], \
         f'穿着即合成:{a}+{b} → {advance}'
@@ -193,11 +193,11 @@ def test_wear_equip_rejects_unknown_item_or_char() -> None:
     a, _b, _adv = _advance_pair()
     assert not apply_wear_equip(
         _gs_with_bench_unit('淘金客'),
-        WearEquip(item_name=a, char_name='淘金客', row='front', slot=1)), \
+        CwActionWearEquipParam(item_name=a, char_name='淘金客', row='front', slot=1)), \
         'owned 空库拒'
     assert not apply_wear_equip(
         _gs_with_bench_unit('淘金客'),
-        WearEquip(item_name=a, char_name='不存在的角色',
+        CwActionWearEquipParam(item_name=a, char_name='不存在的角色',
                   row='front', slot=1)), '角色不在册拒'
 
 
@@ -212,7 +212,7 @@ def test_wrench_returns_equips_and_consumes() -> None:
     gs.observe(gs.front_row, [Unit(char_id='淘金客', star=1, equips=[a])],
                sig=_SIG)
     gs.observe(gs.equips, ['拆装扳手'], sig=_SIG)
-    assert apply_wrench(gs, WrenchUse(row='front', slot=1))
+    assert apply_wrench(gs, CwActionWrenchUseParam(row='front', slot=1))
     assert gs.equips.value == [a], '穿戴回区'
     assert gs.front_row.value[0].equips == [], 'worn 已清空'
 
@@ -225,7 +225,7 @@ def test_precision_wrench_no_consumption() -> None:
     gs.observe(gs.front_row, [Unit(char_id='淘金客', star=1, equips=[a])],
                sig=_SIG)
     gs.observe(gs.equips, ['精密拆装扳手'], sig=_SIG)
-    assert apply_precision_wrench(gs, PrecisionWrenchUse(row='front', slot=1))
+    assert apply_precision_wrench(gs, CwActionPrecisionWrenchUseParam(row='front', slot=1))
     assert gs.equips.value == ['精密拆装扳手', a]
 
 

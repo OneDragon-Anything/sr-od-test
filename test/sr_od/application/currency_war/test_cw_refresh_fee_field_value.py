@@ -23,7 +23,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
-from sr_od.application.currency_war.kernel.cw_vocab import RefreshShop
+from sr_od.application.currency_war.kernel.cw_vocab import CwActionRefreshShopParam
 from sr_od.application.currency_war.operations.cw_op.cw_refresh_shop_action import (
     RefreshShopOp,
 )
@@ -68,7 +68,7 @@ def test_refresh_fee_unobserved_field_falls_back_to_base(monkeypatch):
     state = game_state_of(session)   # 新容器:shop_refresh_cost 未观察
     ledger = ShopVisitLedger()
 
-    assert RefreshShopOp(RefreshShop()).execute(_env(state, ledger)) is True
+    assert RefreshShopOp(CwActionRefreshShopParam()).execute(_env(state, ledger)) is True
 
     assert ledger.spend_executed == REFRESH_COST_BASE
     assert ledger.total_refresh == 1
@@ -84,6 +84,6 @@ def test_refresh_fee_observed_value_is_used(monkeypatch):
                   sig=ChannelSig(family='obs', actor='cw_observation'))
     ledger = ShopVisitLedger()
 
-    assert RefreshShopOp(RefreshShop()).execute(_env(state, ledger)) is True
+    assert RefreshShopOp(CwActionRefreshShopParam()).execute(_env(state, ledger)) is True
 
     assert ledger.spend_executed == 3

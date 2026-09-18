@@ -52,7 +52,7 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
     CwSimFrame,
-    RefreshShop,
+    CwActionRefreshShopParam,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
     shop,
@@ -171,6 +171,6 @@ class TestP92AssemblyBehaviorDiff:
         旧代理与收窄判定在该帧同判,零行为差)。"""
         st, s, _w = _p92_frame(_item(slot=BENCH_CAPACITY))
         acts = _decide(st, s)
-        assert not [a for a in acts if isinstance(a, RefreshShop)], acts
+        assert not [a for a in acts if isinstance(a, CwActionRefreshShopParam)], acts
         cnt = state_of(s).cw4_counters
         assert cnt.get('p92_no_buy_refresh_blocked', 0) >= 1

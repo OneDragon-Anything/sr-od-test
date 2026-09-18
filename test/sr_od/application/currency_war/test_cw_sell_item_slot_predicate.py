@@ -6,7 +6,7 @@
 (``BenchChar.is_item_slot=True``,SIFT 不可读 ⇒ char_id=''、默认 1★)
 无物理门——空名不在排除集/线内、星级 1、无同名副本、注册表查无此名
 ⇒ bench_effect 谓词 False,门组全放行;凑息缺口帧/筹资帧占位件按
-未知名保守估 3 金计入止盈贪心 → 对不可卖对象发射 SellBench(实机 =
+未知名保守估 3 金计入止盈贪心 → 对不可卖对象发射 CwActionSellBenchParam(实机 =
 白耗动作,与 M4 燃料通道案发形同族;游戏真值 = 占位件无卖出
 交互且无金币现值,知识锚 = board_structure.md §备战栏)。生产当前由
 观察层掩蔽(identify_slots 不产占位件条目),sim 假环境经观察面直喂

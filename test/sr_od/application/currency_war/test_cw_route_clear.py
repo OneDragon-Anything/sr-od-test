@@ -24,8 +24,8 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     SupplyPayload,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
-    PickEncounter,
-    PickSupply,
+    CwActionPickEncounterParam,
+    CwActionPickSupplyParam,
 )
 from sr_od.application.currency_war.operations.cw_loop import CwLoop
 
@@ -98,7 +98,7 @@ def test_route_clear_actor_registered_and_clear_uses_action_type_guard():
                    sig=ChannelSig(family='logic_action', actor='CwLoop',
                                   screen='', mode='compute'))
     # 动作类型守卫冒烟:新词表选择子类型可构造(词表块健康性,与清点无耦合)
-    assert PickEncounter(idx=0).idx == 0 and PickSupply(idx=1).idx == 1
+    assert CwActionPickEncounterParam(idx=0).idx == 0 and CwActionPickSupplyParam(idx=1).idx == 1
 
 
 def test_terminal_contract_schema_and_match_shape(monkeypatch):
