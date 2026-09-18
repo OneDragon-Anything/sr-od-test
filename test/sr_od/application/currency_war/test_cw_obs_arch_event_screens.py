@@ -130,8 +130,10 @@ def _make_encounter(test_context, monkeypatch, *, in_screen: bool,
     return op, match, session
 
 
-def _make_megastar(test_context, monkeypatch, *, in_node: bool):
-    """盛会之星真类装配(同上;动作体 _do_action 调用计数挂 returned)。
+def _make_megastar(test_context, monkeypatch, *, in_node: bool,
+                   options: list | None = None):
+    """盛会之星真类装配(两 node 形态,迭代 2026-09-18-screen-op-flat-report):
+    门桩 + 候选读链桩(观察 node 读屏函数注入点)+ 动作体调用计数。
     旗标宿主 = 策略器 StrategyState(经 session.strategy_state 通道)。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_megastar as ms,
@@ -148,8 +150,10 @@ def _make_megastar(test_context, monkeypatch, *, in_node: bool):
     monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
     monkeypatch.setattr(op, 'round_by_find_area',
                         lambda scr, s, a, **k: _Area(in_node))
+    monkeypatch.setattr(ms, 'read_megastar_options',
+                        lambda ctx, scr: list(options or []))
     calls: list[int] = []
-    monkeypatch.setattr(op, '_do_action', lambda scr: calls.append(1))
+    monkeypatch.setattr(op, '_do_action', lambda: calls.append(1))
     return op, match, session, calls
 
 
@@ -196,46 +200,92 @@ def test_encounter_observe_gate_fails_off_screen(
         f'观察门早退语义不变:{rs!r}')
 
 
-def test_megastar_dispatch_both_ways(test_context, monkeypatch) -> None:
-    """盛会之星装配点分流双向:装端口 → 五段(离屏 = observe 段早退
-    成功交还,带完成 settle 语义);不装端口 → 旧路径零段迹。"""
-    # 装端口 + 离屏:observe 段早退 = 节点完成(旧 handle 首闸语义)
-    install_dispatch_stub_ports(monkeypatch)
-    op, match, session, calls = _make_megastar(
-        test_context, monkeypatch, in_node=False)
+def test_megastar_observe_gate_completes_off_overlay(
+        test_context, monkeypatch) -> None:
+    """盛会之星观察 node 完成门(两 node 形态):门 miss = overlay 消失 /
+    进了下一节点 → 节点完成,success 交还外层(完成 settle 承诺不变);
+    选中标记复位副作用随 ``_in_node`` 复检保留(跨节点不保持);门早退
+    不读候选不动作不写容器。红 = 完成门失效 / 复位丢失 / 早退后仍发动作。"""
+    op, _match, session, calls = _make_megastar(
+        test_context, monkeypatch, in_node=False, options=['哨兵'])
     session.strategy_state = StrategyState()
-    session.strategy_state.megastar_clicked = True
-    rs = _run_node(test_context, op, op.handle)
-    assert op._lifecycle_trace == ['observe'], (
-        f'装端口须走五段新路径;离屏早退 = 后续段不执行(仅 observe 段迹):'
-        f'{op._lifecycle_trace}')
-    assert calls == [], '离屏早退 = 不发动作'
-    assert '巨星节点完成' in (rs.status or ''), f'完成语义不变:{rs!r}'
+    session.strategy_state.megastar_clicked = True   # 预置跨节点残留态
+    rs = _run_node(test_context, op, op.observe)
+    assert rs.is_success and '巨星节点完成' in (rs.status or ''), (
+        f'完成语义不变:{rs!r}')
     assert session.strategy_state.megastar_clicked is False, (
         '选中标记复位副作用随 _in_node 复检保留(跨节点不保持;'
         '宿主 = 策略器 StrategyState)')
-    # 不装端口:旧路径零段迹 + 仍在屏内 = 一个动作 + retry
-    from sr_od.application.currency_war import cw_game_ports as _ports_mod
-    monkeypatch.setattr(_ports_mod, '_INSTALLED', (None, None))   # 卸载复位
-    op2, _match2, _s2, calls2 = _make_megastar(
-        test_context, monkeypatch, in_node=True)
-    rs2 = _run_node(test_context, op2, op2.handle)
-    assert op2._lifecycle_trace == [], f'旧路径不得写段迹:{op2._lifecycle_trace}'
-    assert calls2 == [1] and not rs2.is_success, (
-        '旧路径在屏内 = 一个动作 + retry(保形)')
+    assert calls == [], '离屏早退 = 不发动作'
+    assert game_state_of(session).megastar_opts.value is None, (
+        '门早退不进读链,容器零写')
+
+
+def test_megastar_observe_reports_and_act_acts(
+        test_context, monkeypatch) -> None:
+    """盛会之星在屏形态(两 node 形态):观察 node 读候选一次 → report 落
+    容器 ``megastar_opts``(容器终值)+ obs 挂实例属性 → 决策动作 node 恰
+    一个动作 + round_wait 推进循环(不计节点重试预算)。红 = report 断流 /
+    容器终值漂移 / 动作丢失 / 循环推进回退为计预算的 retry。"""
+    from one_dragon.base.operation.operation_round_result import (
+        OperationRoundResultEnum,
+    )
+    from sr_od.application.currency_war.kernel.cw_events import MegastarOption
+    op, _match, session, calls = _make_megastar(
+        test_context, monkeypatch, in_node=True,
+        options=[MegastarOption(idx=0, char_id='花火')])
+    session.strategy_state = StrategyState()   # 未选中 → 本访问将选择(读候选)
+    rs = _run_node(test_context, op, op.observe)
+    assert rs.is_success and game_state_of(session).megastar_opts.value == [
+        MegastarOption(idx=0, char_id='花火')], (
+        f'观察上报落容器(容器终值):{game_state_of(session).megastar_opts.value!r}')
+    assert op._obs is not None and len(op._obs.options) == 1, (
+        'obs 挂实例属性(跨 node 传递)')
+    rs2 = _run_node(test_context, op, op.act)
+    assert calls == [1], f'决策动作 node 恰一个动作:{calls!r}'
+    assert rs2.result == OperationRoundResultEnum.WAIT, (
+        f'循环推进 = round_wait(不计节点重试预算):{rs2!r}')
+
+
+def test_megastar_lazy_read_skipped_on_confirm_visit(
+        test_context, monkeypatch) -> None:
+    """巨星懒读保真(读时机保真,迁移不增加读屏):已选中(确认访问)→
+    观察 node **不读候选**(读链桩零调用)→ report 空候选不写(容器保持
+    前值);决策动作 node 照发确认(动作体被消费)。红 = 确认访问重读候选
+    (新增读屏)/ 容器被空值覆写。"""
+    from sr_od.application.currency_war.kernel.cw_events import MegastarOption
+    op, _match, session, calls = _make_megastar(
+        test_context, monkeypatch, in_node=True,
+        options=[MegastarOption(idx=0, char_id='花火')])
+    session.strategy_state = StrategyState()
+    session.strategy_state.megastar_clicked = True   # 已选中 = 确认访问
+    _read_calls: list[int] = []
+    import sr_od.application.currency_war.operations.cw_screen.cw_screen_megastar as ms
+    monkeypatch.setattr(
+        ms, 'read_megastar_options',
+        lambda ctx, scr: _read_calls.append(1) or [])
+    rs = _run_node(test_context, op, op.observe)
+    assert rs.is_success and _read_calls == [], (
+        f'确认访问不重读候选(懒读保真):{_read_calls!r}')
+    assert game_state_of(session).megastar_opts.value is None, (
+        '空候选不写(闸在 report 内),容器保持前值')
+    rs2 = _run_node(test_context, op, op.act)
+    assert calls == [1] and not rs2.is_success, '确认访问照发确认动作'
 
 
 def test_megastar_redispatch_no_reclick_and_gate_reset(
         test_context, monkeypatch) -> None:
     """巨星防重入行为锁(旗标宿主 = 策略器 StrategyState,执行层经 kernel
     ``strategy_state_of`` None-safe 通道读写):
-    - 同节点二次派发(re-dispatch 重入,observe 门未 miss)→ 已点标记
-      在位,不再点候选(防 re-click toggle 反选 → 确认无候选卡死);
-    - observe 门 miss(离开巨星 overlay)→ 节点完成即复位,标记不跨节点
-      保持(巨星一局可多次触发);
+    - 同节点二次派发(re-dispatch 重入,门未 miss)→ 已点标记在位,不再
+      点候选(防 re-click toggle 反选 → 确认无候选卡死);
+    - 门 miss(离开巨星 overlay)→ 节点完成即复位,标记不跨节点保持
+      (巨星一局可多次触发);
     - 状态对象缺席(裸 session,第三方策略面)→ 读退 False、写跳过,
-      执行层不冷建策略器状态(禁 impl ``state_of`` 装配语义)。
-    红 = 重入重点候选 / 门 miss 不复位 / 缺席态炸错或冷建。"""
+      执行层不冷建策略器状态(禁 impl ``state_of`` 装配语义);
+    - chosen_megastar = 选择点留守写端(动作事实边界,不进 report),
+      首派发选中时点落容器。
+    红 = 重入重点候选 / 门 miss 不复位 / 缺席态炸错或冷建 / chosen 断流。"""
     import sr_od.application.currency_war.operations.cw_op.cw_action_registry as reg_mod
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_megastar as ms,
@@ -276,14 +326,18 @@ def test_megastar_redispatch_no_reclick_and_gate_reset(
             return True
 
     monkeypatch.setattr(reg_mod, 'action_op_for', lambda act, ctx, env: _StubPickOp())
-    # ① 首派发:恰一次候选点击 + 发射即置位
-    op._do_action(_FRAME)
+    # 观察注入(观察 node 读屏函数注入点):驱动观察 node 装载 obs
+    assert op.observe().is_success, '在屏观察 success'
+    # ① 首派发:恰一次候选点击 + 发射即置位 + chosen 留守写端落容器
+    op._do_action()
     assert len(clicks) == 1, f'首派发恰一次候选点击:{clicks!r}'
     assert st.megastar_clicked is True, '置位落策略器 StrategyState'
+    assert match.gs.chosen_megastar.value == '花火', (
+        'chosen_megastar = 选择点留守写端(动作事实边界不进 report)')
     # ② 同节点二次派发:标记在位 → 不再点候选
-    op._do_action(_FRAME)
+    op._do_action()
     assert len(clicks) == 1, f'二次派发不重复点候选(防反选卡死):{clicks!r}'
-    # ③ observe 门 miss(离开巨星 overlay)→ 节点完成即复位
+    # ③ 门 miss(离开巨星 overlay)→ 节点完成即复位
     monkeypatch.setattr(op, 'round_by_find_area',
                         lambda scr, s, a, **k: _Area(False))
     assert op._in_node(_FRAME) is False, '门 miss = 节点完成'
@@ -292,13 +346,15 @@ def test_megastar_redispatch_no_reclick_and_gate_reset(
     session2 = StrategySession()   # strategy_state 缺省 None
     monkeypatch.setattr(test_context, 'cw_match',
                         SimpleNamespace(session=session2,
-                                        strategy=match.strategy),
+                                        strategy=match.strategy,
+                                        gs=_gso_match(session2)),
                         raising=False)
     op2 = ms.CwScreenMegastar(test_context)
     monkeypatch.setattr(op2, 'last_screenshot', _FRAME, raising=False)
     monkeypatch.setattr(op2, 'round_by_find_area',
                         lambda scr, s, a, **k: _Area(True))
-    op2._do_action(_FRAME)
+    assert op2.observe().is_success, '缺席态观察照常'
+    op2._do_action()
     assert len(clicks) == 2, '缺席态读退 False → 照常点候选(无宿主防重入)'
     assert session2.strategy_state is None, '缺席态写跳过,执行层不冷建'
 
@@ -310,8 +366,8 @@ def test_megastar_redispatch_no_reclick_and_gate_reset(
 # 既有双向行为锁(旧路径腿)承重。
 # (收口整删)原 test_megastar_in_node_lifecycle_single_action_retry
 # 「盛会之星五段在屏形态(迹到 act 为止)」删:装端口驱动的段迹面随并存
-# 窗收口退役;在屏单动作语义由 test_megastar_dispatch_both_ways 旧路径
-# 腿承重。
+# 窗收口退役;在屏单动作语义由盛会之星两 node 形态锁
+# (test_megastar_observe_reports_and_act_acts)承重。
 
 
 # (原 test_encounter_refresh_emission_wired_to_registry 删:注册表取证型

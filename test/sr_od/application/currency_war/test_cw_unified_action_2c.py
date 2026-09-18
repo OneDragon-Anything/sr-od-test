@@ -15,12 +15,15 @@ from types import SimpleNamespace
 
 from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war.kernel import cw_prep_actions as kpa
+from sr_od.application.currency_war.kernel.cw_action_report import (
+    report_action_deploy_move_param,
+    report_action_open_bookcard_param,
+)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     BenchSlot,
     BenchView,
     ChannelSig,
     Unit,
-    apply_prep_action_logic,
     bench_free_slots,
     deployed_slots_of,
     game_state_of,
@@ -133,9 +136,9 @@ def test_open_bookcard_logic_state_frees_slot():
     gs.observe(gs.bench, BenchView(slots=_slots, capacity=9), sig=_sig)
     before = bench_free_slots(gs)
     assert before == 7
-    apply_prep_action_logic(gs, CwActionOpenBookcardParam(slot=2), produced_by='T',
-                            sig=ChannelSig(family='logic_action',
-                                           actor='CwScreenPrep'))
+    report_action_open_bookcard_param(
+        gs, CwActionOpenBookcardParam(slot=2),
+        sig=ChannelSig(family='logic_action', actor='CwScreenPrep'))
     assert gs.bench.value.slots[1].kind == 'empty'
     assert bench_free_slots(gs) == before + 1
 
@@ -219,9 +222,10 @@ def test_deploymove_projection_records_resolved_row():
     gs.observe(gs.front_row, [Unit(char_id=f'丙{i}', star=1, equips=[],
                                    slot=i + 1) for i in range(4)],
                sig=_sig)
-    apply_prep_action_logic(gs, CwActionDeployMoveParam(bench_idx=0, to_row='front',
-                                           faction=''),
-                            produced_by='T', sig=_logic)
+    report_action_deploy_move_param(gs, CwActionDeployMoveParam(bench_idx=0,
+                                                   to_row='front',
+                                                   faction=''),
+                                    sig=_logic)
     dep = deployed_slots_of(gs)
     assert dep[4] is not None and dep[4].char_id == '甲'   # 后排首槽
     # 前排保持原 4 人(不被新增污染;fallback 实落排语义)
@@ -231,16 +235,18 @@ def test_deploymove_projection_records_resolved_row():
     gs2.observe(gs2.bench, BenchView(slots=_slots, capacity=9), sig=_sig)
     gs2.observe(gs2.front_row, [Unit(char_id='乙', star=1, equips=[],
                                      slot=1)], sig=_sig)
-    apply_prep_action_logic(gs2, CwActionDeployMoveParam(bench_idx=0, to_row='front',
-                                            faction=''),
-                            produced_by='T', sig=_logic)
+    report_action_deploy_move_param(gs2, CwActionDeployMoveParam(bench_idx=0,
+                                                    to_row='front',
+                                                    faction=''),
+                                    sig=_logic)
     dep2 = deployed_slots_of(gs2)
     assert dep2[1] is not None and dep2[1].char_id == '甲'   # 首空 = 表 1 位(0 位是乙)
     # 源槽无件(bench_idx 越界空槽)= 陈旧提案,本口零写
     before = gs2.write_seq
-    apply_prep_action_logic(gs2, CwActionDeployMoveParam(bench_idx=5, to_row='front',
-                                            faction=''),
-                            produced_by='T', sig=_logic)
+    report_action_deploy_move_param(gs2, CwActionDeployMoveParam(bench_idx=5,
+                                                    to_row='front',
+                                                    faction=''),
+                                    sig=_logic)
     assert gs2.write_seq == before
 
 
@@ -248,25 +254,25 @@ def test_deploymove_projection_records_resolved_row():
 
 def test_expert_invite_entry_select_only(test_context, monkeypatch):
     """收缩为弹窗画面 op:open_card 节点拆退役(属性不在场);入口门 =
-    弹窗已开单一形态——弹窗不在 = fail 交回外循环重识别(外循环按下一帧
-    画面重分发自愈;开卡缺位由备战词表 CwActionOpenBookcardParam 链承接)。选卡成功链
-    的行为面由 obs_arch step3 生命周期段迹锁承重,本锁不重复。"""
+    弹窗已开单一形态(两 node 形态观察 node 承载,迭代
+    2026-09-18-screen-op-flat-report)——弹窗不在 = fail 交回外循环重识别
+    (外循环按下一帧画面重分发自愈;开卡缺位由备战词表
+    CwActionOpenBookcardParam 链承接)。选卡成功链的行为面由决策链降级锁
+    承重,本锁不重复。"""
     from test.sr_od.application.currency_war._cw_helpers import (
         Area,
         run_node,
-        uninstall_ports,
     )
 
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_expert_invite as mod,
     )
-    uninstall_ports(monkeypatch)   # 生产缺省形态(旧路径直连)
     op = mod.CwScreenExpertInvite(test_context)
     monkeypatch.setattr(op, 'last_screenshot', object(), raising=False)
     monkeypatch.setattr(op, 'screenshot', lambda: object(), raising=False)
     monkeypatch.setattr(op, 'round_by_find_area',
                         lambda s, sc, a, **k: Area(False))
-    rs = run_node(test_context, op, op.choose)
+    rs = run_node(test_context, op, op.observe)
     assert not rs.is_success and '弹窗未现' in (rs.status or '')
 
 
@@ -275,13 +281,18 @@ def test_expert_invite_entry_select_only(test_context, monkeypatch):
 
 def test_expert_invite_decision_chain_error_falls_cash(test_context,
                                                        monkeypatch):
-    """局内决策链(write_logic → decide_expert_invite)任一环抛异常 → 异常
-    不出 op,落「现金为王」兜底(kernel 直调同无 match else 分支),round
-    照常机械交回(与 fortune/equip 两姊妹 handler 的 catch→fallback 防御
-    姿态对齐;补丁前该链异常直接冒出 op 中断本轮)。本例输入:卡羁绊有读数
-    但与板面无同线 → 兜底 kernel 判据 ③ 落现金为王。红 = 异常逃逸 /
-    落点漂移 / 缺坐标 fail 交回。"""
+    """局内决策链 decide_expert_invite 抛异常 → 异常不出 op,落「现金为王」
+    兜底(kernel 直调同无 match else 分支),round 照常机械交回(与
+    fortune/equip 两姊妹 handler 的 catch→fallback 防御姿态对齐;补丁前该
+    链异常直接冒出 op 中断本轮)。写槽(弹窗载体)已由观察 node report 落
+    容器(两 node 形态,迭代 2026-09-18-screen-op-flat-report):本锁经
+    读屏函数注入点驱动观察 node(卡羁绊/板面读链桩)装载 obs,再驱动
+    决策动作 node。本例输入:卡羁绊有读数但与板面无同线 → 兜底 kernel
+    判据 ③ 落现金为王。红 = 异常逃逸 / report 断流 / 落点漂移 / 缺坐标
+    fail 交回。"""
     from test.harness.fixture_controller import fast_sleep
+    from test.sr_od.application.currency_war._cw_helpers import Area
+    from test.sr_od.application.currency_war._cw_helpers import run_node
 
     from sr_od.application.currency_war.kernel import cw_obs_core
     from sr_od.application.currency_war.kernel.cw_strategy_session import (
@@ -307,6 +318,14 @@ def test_expert_invite_decision_chain_error_falls_cash(test_context,
                         lambda ctx, screen, a: '能量' if a == '卡-1' else None)
     monkeypatch.setattr(cw_observation, 'read_board',
                         lambda ctx, screen: {'仙舟': 2})
+    monkeypatch.setattr(op, 'last_screenshot', object(), raising=False)
+    monkeypatch.setattr(op, 'screenshot', lambda: object(), raising=False)
+    monkeypatch.setattr(op, 'round_by_find_area',
+                        lambda s, sc, a, **k: Area(True))
+    rs = run_node(test_context, op, op.observe)
+    assert rs.is_success, f'在门观察 success:{rs!r}'
+    assert match.gs.expert_invite.value is not None, (
+        '观察上报落容器(ExpertInvitePayload 经 report 写槽)')
     _pts = {'卡-1': Point(300, 400), mod.CASH_AREA: Point(500, 900)}
     monkeypatch.setattr(cw_obs_core, 'area_center',
                         lambda ctx, name, screen: _pts.get(name))
@@ -316,7 +335,7 @@ def test_expert_invite_decision_chain_error_falls_cash(test_context,
         SimpleNamespace(mouse_move=lambda p: None,
                         click=lambda p: clicks.append(p)), raising=False)
     with fast_sleep(op):   # 选卡动画等待/轮间等待桩(零真实等待)
-        rs = op._handle_overlay(object())
+        rs = op.act()
     assert not rs.is_success and '点击已发' in (rs.status or ''), (
         f'异常被吸收,round 照常机械交回:{rs!r}')
     assert [(p.x, p.y) for p in clicks] == [(500, 900)], (

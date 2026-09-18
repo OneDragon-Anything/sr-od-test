@@ -4,8 +4,10 @@ RunSupplyNode → CwScreenSupplyNode(cw_screen/cw_screen_supply_node.py)、
 RunMegastarNode → CwScreenMegastar 内联(委托壳废止)。本文件锁迁移前后的
 **行为断言一致**:①验证完成才 success(离开节点画面)(原 ADR-0264 关态
 基线预置断言随 gate 模块退役删除,见 test_supply_leaves_node_success 注);
-②仍在节点内 = 做动作 + round_retry(计 node_max_retry_times=8 预算,
-超限框架转 FAIL 交回——预算语义不变)。
+②仍在节点内 = 做一个动作 + 循环推进轮次(补给现役 = round_retry 计
+node_max_retry_times=8 预算,超限框架转 FAIL 交回;盛会之星两 node 形态
+(迭代 2026-09-18-screen-op-flat-report)= 决策动作 node round_wait 推进,
+不计节点重试预算)。
 
 恢复分诊:原文件第③腿「源码零残留掩蔽扫描」(fixtures.masked_scan
 + test_runnode_zero_residue_in_src / test_runnode_scan_mutation_selfcheck)
@@ -17,7 +19,10 @@ from types import SimpleNamespace
 
 
 def _make_op(cls, *, in_node: bool, do_action_calls: list):
-    """构画面 op 桩(bypass __init__):round_by_find_area 程序化回 in_node。"""
+    """构画面 op 桩(bypass __init__):round_by_find_area 程序化回 in_node。
+
+    ``_do_action`` 形参收窄为可选(补给现役体传 screen / 盛会之星两 node
+    形态动作体零参——桩只记调用,不绑签名)。"""
 
     class _FakeArea:
         def __init__(self, ok: bool): self.is_success = ok
@@ -31,7 +36,7 @@ def _make_op(cls, *, in_node: bool, do_action_calls: list):
         def round_by_find_area(self, scr, screen, area, **k):
             return _FakeArea(in_node)
 
-        def _do_action(self, screen):
+        def _do_action(self, screen=None):
             do_action_calls.append(1)
 
         def round_success(self, status='', wait: float = 0):
@@ -40,6 +45,10 @@ def _make_op(cls, *, in_node: bool, do_action_calls: list):
         def round_retry(self, status='', wait: float = 0):
             return SimpleNamespace(status=status, wait=wait, success=None,
                                    _retry=True)
+
+        def round_wait(self, status='', wait: float = 0):
+            return SimpleNamespace(status=status, wait=wait, success=None,
+                                   _wait=True)
 
         def round_fail(self, status=''):
             return SimpleNamespace(status=status, success=False)
@@ -76,10 +85,11 @@ def test_supply_node_flow_act_retry_then_success() -> None:
 
 # ==================== 巨星流转(行为等价①②) ====================
 
-def test_megastar_node_flow_act_retry_then_success() -> None:
-    """巨星流转两段:仍在 overlay → 一个动作 + round_retry;overlay
-    消失 → success(完成承诺 = 固定 1.0s,原委托壳语义;选中标记复位
-    副作用随迁)。"""
+def test_megastar_node_flow_act_wait_then_success() -> None:
+    """巨星流转两段(两 node 形态,迭代 2026-09-18-screen-op-flat-report):
+    仍在 overlay → 决策动作 node 恰一个动作 + round_wait(不计节点重试
+    预算;无防御上限);overlay 消失 → success(完成承诺 = 固定 settle
+    时长;选中标记复位副作用随 ``_in_node`` 复检迁)。"""
     from sr_od.application.currency_war.operations.cw_screen.cw_flow_const import (
         CW_OVERLAY_SETTLE_S,
     )
@@ -88,13 +98,13 @@ def test_megastar_node_flow_act_retry_then_success() -> None:
     )
     actions: list = []
     op = _make_op(CwScreenMegastar, in_node=True, do_action_calls=actions)
-    res = op.handle()
-    assert actions == [1]
-    assert getattr(res, '_retry', False) is True
+    res = op.act()
+    assert actions == [1]                      # 每轮恰好一个动作
+    assert getattr(res, '_wait', False) is True   # 循环推进 = round_wait
     actions2: list = []
     op2 = _make_op(CwScreenMegastar, in_node=False,
                    do_action_calls=actions2)
-    res2 = op2.handle()
+    res2 = op2.act()
     assert res2.success is True
     assert res2.wait == CW_OVERLAY_SETTLE_S
-    assert actions2 == []
+    assert actions2 == []                       # 离开节点 = 不再发动作
