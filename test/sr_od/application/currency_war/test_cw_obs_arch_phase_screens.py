@@ -785,14 +785,14 @@ def _make_bwait(test_context, monkeypatch: pytest.MonkeyPatch,
     """战斗等待真类装配(生产构造走 __init__;RunLoop 注入面 =
     SettlementState + config 桩同形)。桩面 = 画面门/OCR 原语/存图/光标/
     点击记录器;``ctx.ocr_service`` 桩恒空行(读图域不出单元)。
-    驱动 = 生产缺省形态(端口显式复位 None,直连旧路径)。"""
+    驱动 = 单路径(wait() 节点直驱;装配点分流随基类退役,本屏为
+    驻留状态机单 node 形态)。"""
     from sr_od.application.currency_war.currency_war_config import (
         CurrencyWarConfig,
     )
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_battle_wait as bwo,
     )
-    _uninstall_ports(monkeypatch)
     st = bwo.SettlementState(run_start_ts=time.monotonic(), is_new_match=True)
     op = bwo.CwScreenBattleWait(
         test_context, st,
@@ -828,11 +828,11 @@ def _make_bwait(test_context, monkeypatch: pytest.MonkeyPatch,
 
 
 def test_battle_wait_normal_exits(test_context, monkeypatch) -> None:
-    """正常出口两段并一(生产路径驱动,共享体断言不变)。
-    [完成白名单出口] B2-③ 出口门(生产那份):完成白名单锚命中 →
-    back_to_loop 交回循环分发(生产缺省形态,零段迹)。
+    """正常出口两段并一(单路径驱动,共享体断言不变)。
+    [完成白名单出口] B2-③ 出口门:完成白名单锚命中 →
+    back_to_loop 交回循环分发(装配点分流随基类退役,wait() 单路径直驱)。
     [结算分支逐位] D-94 读点(结算观察半直写)先于「继续挑战」点击
-    (时序红线);C-1 新帧计数;段迹零(生产缺省形态)。
+    (时序红线);C-1 新帧计数。
     (分诊:defer 复位腿摘除——defer_count 载体已在 src 退役
     (全仓零消费点),生产端无复位语义可锁。)"""
     # [完成白名单出口]
@@ -841,8 +841,6 @@ def test_battle_wait_normal_exits(test_context, monkeypatch) -> None:
         frozenset({('货币战争-备战', '备战标识-购买经验')}))
     rs = op.wait()
     assert rs.is_success and rs.status == 'back_to_loop'
-    assert op._lifecycle_trace == [], (
-        f'生产路径零段迹:{op._lifecycle_trace}')
     # [结算分支逐位]
     order: list[str] = []
     op = _make_bwait(
@@ -870,8 +868,6 @@ def test_battle_wait_normal_exits(test_context, monkeypatch) -> None:
     assert op._st.settle_stay == 1, '停留计数继续执行到 round_wait'
     assert not rs.is_success and rs.result == OperationRoundResultEnum.WAIT, (
         '驻留轮 round_wait(等待语义)')
-    assert op._lifecycle_trace == [], (
-        f'生产路径零段迹:{op._lifecycle_trace}')
 
 
 def test_battle_wait_fallback_exits(test_context, monkeypatch) -> None:

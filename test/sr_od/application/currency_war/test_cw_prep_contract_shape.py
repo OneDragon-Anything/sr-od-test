@@ -111,8 +111,9 @@ def test_prep_consumer_rejects_illegal_return_f3_fail(
     出处 = docs/develop/sr_od/application/currency_war/flow/README.md §2.2 备战接口行(返回恰一个动作;非法形状不进执行)。
     守卫断言
     语义 = 策略器 bug 响亮暴露:决策循环在执行前拒绝并以具名 fail
-    交回外循环,禁静默跳过。走 op 决策循环路径(lifecycle 孪生环与
-    主循环消费端同构,守卫逐字相同,单锁辖同一条契约)。
+    交回外循环,禁静默跳过。走 op 决策动作 node 路径(两 node 形态
+    (迭代 2026-09-18-screen-op-flat-report)的 ③-⑤ 单动作决策循环宿主,
+    守卫逐字同,单锁辖同一条契约)。
     """
 
     class _IllegalPrepStrategy:
@@ -124,9 +125,7 @@ def test_prep_consumer_rejects_illegal_return_f3_fail(
     match = CurrencyWarMatch(_IllegalPrepStrategy(), StrategySession())
     monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
     op = CwScreenPrep(test_context)
-    # 阶段 3.5:黑板载体随 gs.prep_obs 退役(payload 形参 = 基类抽象签名
-    # 保持,本路径零消费)——决策入口零参直读容器。
-    rs = run_node(test_context, op,
-                  lambda: op.lifecycle_decision_cycle(None))
+    # 阶段 3.5:黑板载体随 gs.prep_obs 退役——决策入口零参直读容器。
+    rs = run_node(test_context, op, op.act)
     assert not rs.is_success
     assert rs.status == '策略输出非 CwAction(F3)'

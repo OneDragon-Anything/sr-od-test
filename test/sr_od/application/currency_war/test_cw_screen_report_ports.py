@@ -70,9 +70,13 @@ _NO_REPORT = frozenset({
     'CwScreenAhaEquipPickObs', 'CwOpOpenShopObs', 'CwOpCloseShopObs',
 })
 
-#: 文档化占位 report(现役零观察容器写点,统一形态占位;design.md §2.3)。
+#: 文档化占位 report(现役零观察容器写点,统一形态占位)。
+#: (prep 已于重型屏迁移批升级为真实写面——可选域字段在场才写,见
+#:  _WRITE_CASES['prep'] 与 prep 专项锁;buy_cards 保持占位:唯一候选
+#:  写点 = 段头 gold 救援补写,属入口观察链内纠正补写,勘察结论申报
+#:  在 kernel 屏文件模块头,不收编交后续批裁决。)
 _PLACEHOLDERS = ('armory_box', 'boss_briefing', 'wait_one_one',
-                 'deploy_not_full', 'battle_wait', 'plane_intel', 'prep',
+                 'deploy_not_full', 'battle_wait', 'plane_intel',
                  'buy_cards')
 
 _TEST_SIG = ChannelSig(family='logic_action', actor='TestSigWriter',
@@ -247,6 +251,13 @@ def _case_plane_transition(m):
              'node_path_baseline': (chain, 'observation')})
 
 
+def _case_prep(m):
+    chain = NodeChain(plane=1, seq=[TokenCell('battle', 'hu', 0.1)])
+    return (m.CwScreenPrepObs(node_path_chain=chain),
+            {'node_path': (chain, 'observation'),
+             'node_path_baseline': (chain, 'observation')})
+
+
 #: 逐实体 report 接口的 obs 桩与期望容器终值(字段 → (期望值, 期望来源);
 #: 门语义不在此表,见空桩/分屏闸专项)。
 _WRITE_CASES = {
@@ -265,6 +276,7 @@ _WRITE_CASES = {
     'box_pick': _case_box_pick,
     'briefing': _case_briefing,
     'plane_transition': _case_plane_transition,
+    'prep': _case_prep,
 }
 
 
@@ -369,6 +381,75 @@ def test_plane_transition_chain_defenses():
     assert gs3.node_path_baseline.value == existing
 
 
+def test_prep_optional_domains_field_presence_and_takeover_cluster(
+        monkeypatch):
+    """备战可选域字段在场才写(重型屏迁移批升级后契约):
+    - 全 None obs(仅 prep 整包缺省)→ 零写(占位语义存续面);
+    - 接管补采簇(takeover_tries/done/plane_bosses/enemy_affixes)→
+      write_logic 逐字段落值,evidence 渠道③原值(takeover_collect_tries/
+      takeover_collect_done),bosses/affixes 无 evidence(原写点逐位);
+    - 渠道签名 = ResumeAttach logic_hook(bosses/affixes 行 screen='' 原值),
+      状态流水行断言。
+    """
+    register_sig_actors('TestSigWriter')
+    mod = _screen_module('prep')
+    # 全 None → 零写
+    gs = _blank_gs()
+    mod.report_screen_prep_obs(gs, mod.CwScreenPrepObs())
+    assert gs.write_seq == 0, '全 None 可选域 = 本轮无此面,零写'
+    # 接管补采簇:四域一次上报,字段在场才写
+    rows: list[dict] = []
+    monkeypatch.setattr(gs_mod, '_STATE_JOURNAL_SINK', rows.append)
+    monkeypatch.setattr(gs_mod, '_RUN_ID_PROVIDER', lambda: 'test-run')
+    gs2 = _blank_gs()
+    mod.report_screen_prep_obs(gs2, mod.CwScreenPrepObs(
+        takeover_tries=1, takeover_collect_done=True,
+        plane_bosses=['幻胧', None, None], enemy_affixes=['词缀甲']))
+    assert gs2.takeover_tries.value == 1 \
+        and gs2.takeover_tries.source == 'logic' \
+        and gs2.takeover_tries.evidence == 'takeover_collect_tries', \
+        '补采计数 = logic + evidence 原值'
+    assert gs2.takeover_collect_done.value is True \
+        and gs2.takeover_collect_done.evidence == 'takeover_collect_done', \
+        '完成闩 = logic + evidence 原值'
+    assert gs2.plane_bosses.value == ['幻胧', None, None] \
+        and gs2.plane_bosses.evidence is None, \
+        'boss 保位写 = 原写点无 evidence'
+    assert gs2.enemy_affixes.value == ['词缀甲'] \
+        and gs2.enemy_affixes.evidence is None, \
+        '词缀补采 = 原写点无 evidence'
+    got = {(r['field'],
+            r['sig']['family'], r['sig']['actor'],
+            r['sig']['screen'], r['sig']['mode'])
+           for r in rows if r['row'] == 'write'}
+    assert got == {
+        ('takeover_tries', 'logic_hook', 'ResumeAttach', None, 'compute'),
+        ('takeover_collect_done', 'logic_hook', 'ResumeAttach', None,
+         'compute'),
+        ('plane_bosses', 'logic_hook', 'ResumeAttach', '', 'compute'),
+        ('enemy_affixes', 'logic_hook', 'ResumeAttach', '', 'compute'),
+    }, f'接管簇渠道签名偏离原写点原值: {got}'
+
+
+def test_prep_chain_baseline_idempotent_gate():
+    """备战链域基线幂等门(与位面过渡链同款防线):现行链照写、基线已有
+    不覆写;sig 形参透传(原写点观察渠道链,actor 不受限缺省)。"""
+    register_sig_actors('TestChainSigWriter')
+    mod = _screen_module('prep')
+    chain = NodeChain(plane=1, seq=[TokenCell('battle', 'hu', 0.1)])
+    existing = NodeChain(plane=2, seq=[TokenCell(None, 'none')])
+    gs = _blank_gs()
+    gs.observe(gs.node_path_baseline, existing,
+               sig=ChannelSig(family='obs', actor='TestChainSigWriter',
+                              mode='read'))
+    mod.report_screen_prep_obs(
+        gs, mod.CwScreenPrepObs(node_path_chain=chain),
+        sig=ChannelSig(family='obs', actor='TestChainSigWriter',
+                       mode='read'))
+    assert gs.node_path.value == chain, '现行链照写'
+    assert gs.node_path_baseline.value == existing, '基线幂等门不覆写'
+
+
 def test_placeholder_report_is_documented_noop():
     """轻屏/重型屏占位:接口在场、零容器写(摄入面出现时落此处;
     占位不构造不校验 sig——无写即无渠道面)。"""
@@ -404,6 +485,7 @@ _DEFAULT_SIGS = {
     'briefing': ('logic_action', 'CwScreenBriefing', '', 'compute'),
     'plane_transition': ('obs', 'CwScreenPlaneTransition',
                          '货币战争-位面过渡', 'read'),
+    'prep': ('obs', 'CwScreenPrep', '货币战争-备战', 'read'),
 }
 
 
