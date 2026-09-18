@@ -796,15 +796,13 @@ def test_battle_wait_normal_exits(test_context, monkeypatch) -> None:
         f'生产路径零段迹:{op._lifecycle_trace}')
 
 
-def test_battle_wait_fallback_exits(test_context, monkeypatch,
-                                    tmp_path) -> None:
+def test_battle_wait_fallback_exits(test_context, monkeypatch) -> None:
     """兜底出口两段并一(生产路径驱动)。
     [长按] M39 停留第 3 轮(点击未生效)→ 长按 (960,898)
     press_time=0.5 兜底推进 + 停留计数归零(在册时序行为锁)。
     [未知 bail] 未知帧达 UNKNOWN_BAIL_N(10)→ round_fail 交主循环
-    兜底链 + flag 留证(get_project_root 重定向 tmp_path,留证不落
-    真实 .debug)。生产路径逐轮 = 观察门双 miss → 决策循环分支链
-    miss → 计数。"""
+    兜底链 + op 截图留证(flag 已退役,零真实 .debug 落盘)。
+    生产路径逐轮 = 观察门双 miss → 决策循环分支链 miss → 计数。"""
     # [长按]
     clicks: list = []
     op = _make_bwait(
@@ -828,11 +826,12 @@ def test_battle_wait_fallback_exits(test_context, monkeypatch,
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_battle_wait as bwo,
     )
-    monkeypatch.setattr(bwo, 'get_project_root', lambda: tmp_path)
     op = _make_bwait(test_context, monkeypatch, frozenset())
+    shots: list[str | None] = []
+    monkeypatch.setattr(op, 'save_screenshot',
+                        lambda prefix=None: shots.append(prefix))
     res = None
     for _ in range(bwo.CwScreenBattleWait.UNKNOWN_BAIL_N):
         res = op.wait()
     assert res is not None and res.result == OperationRoundResultEnum.FAIL
-    assert (tmp_path / '.debug' / 'temp' / 'currency_war'
-            / 'battle_wait_bail.flag').exists()
+    assert shots == ['battle_wait_bail'], 'bail 留证 = op 截图(flag 已退役)'
