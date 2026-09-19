@@ -18,7 +18,6 @@ import numpy as np
 import pytest
 
 from one_dragon.base.geometry.point import Point
-from sr_od.application.currency_war.kernel import cw_prep_actions as kpa
 from sr_od.application.currency_war.kernel.cw_action_report import (
     report_action_collect_ore_param,
     report_action_deploy_move_param,
@@ -53,9 +52,6 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionSellBenchParam,
     CwActionSellDeployedParam,
     CwActionWearEquipParam,
-)
-from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
-    CwScreenPrep,
 )
 
 _SIG = ChannelSig(family='logic_action', actor='CwScreenPrep')
@@ -94,8 +90,9 @@ def test_sphere_executor_is_mechanical_payload_clicks(monkeypatch):
     # 逻辑态:按载荷精确摘晶矿(坐标匹配,非保守清空)——阶段 3.5 宿主 =
     # report_action_collect_ore_param 容器 spheres 精确摘除(原黑板投影
     # 断言随 _project_prep_obs 退役)。
-    from sr_od.application.currency_war.kernel.cw_game_state import OreSight
     from test.sr_od.application.currency_war._cw_helpers import cw4_session
+
+    from sr_od.application.currency_war.kernel.cw_game_state import OreSight
     session = cw4_session()
     gs = game_state_of(session)
     gs.observe(gs.spheres, OreSight(
@@ -130,6 +127,8 @@ def test_vocab_actions_all_have_logic_state_projection():
     test_cw_action_report_contract)。"""
     import re
 
+    from test.sr_od.application.currency_war._cw_helpers import cw4_session
+
     from sr_od.application.currency_war.kernel import cw_action_report as rpt
     from sr_od.application.currency_war.kernel.cw_game_state import (
         BenchSlot,
@@ -144,11 +143,11 @@ def test_vocab_actions_all_have_logic_state_projection():
         CwActionPerfectProjectorUseParam,
         CwActionPrecisionWrenchUseParam,
         CwActionPrivilegeCardUseParam,
+        CwActionRevealTrialParam,
         CwActionStaffProjectorUseParam,
-        CwActionWrenchUseParam,
         CwActionWearEquipParam,
+        CwActionWrenchUseParam,
     )
-    from test.sr_od.application.currency_war._cw_helpers import cw4_session
 
     def _report(gs_, action):
         """类名 → 上报函数机械推导(命名规约:去前后缀转 snake)。"""
@@ -164,14 +163,15 @@ def test_vocab_actions_all_have_logic_state_projection():
     _sig = ChannelSig(family='obs', actor='synthesize_from_game_state',
                       mode='synthesized')
     _logic = ChannelSig(family='logic_action', actor='CwScreenPrep')
-    # 供数容器:bench(2 unit+1 tome+1 box)、front 1 人、gold/level/xp、晶矿
+    # 供数容器:bench(2 unit+1 tome+1 bookcard+1 box)、front 1 人、gold/level/xp、晶矿
     _slots = [BenchSlot(kind='unit', unit=Unit(char_id='甲', star=1,
                                                equips=[], slot=1)),
               BenchSlot(kind='unit', unit=Unit(char_id='乙', star=1,
                                                equips=[], slot=2)),
               BenchSlot(kind='tome'),
+              BenchSlot(kind='bookcard'),
               BenchSlot(kind='supply_box')]
-    _slots += [BenchSlot(kind='empty') for _ in range(5)]
+    _slots += [BenchSlot(kind='empty') for _ in range(4)]
     gs.observe(gs.bench, BenchView(slots=_slots, capacity=9), sig=_sig)
     gs.observe(gs.front_row, [Unit(char_id='丙', star=1, equips=[],
                                    slot=1)], sig=_sig)
@@ -198,6 +198,7 @@ def test_vocab_actions_all_have_logic_state_projection():
     ]
     zero: list = [
         CwActionOpenBoxParam(slot=None),
+        CwActionRevealTrialParam(slot=None),
         CwActionFurnaceUseParam(target_kind='equip', item_name='轮滑鞋'),
         CwActionPrivilegeCardUseParam(target_kind='equip', item_name='轮滑鞋'),
         CwActionWrenchUseParam(row='front', slot=1),
@@ -219,6 +220,7 @@ def test_vocab_actions_all_have_logic_state_projection():
     covered = ({type(a).__name__ for a in written}
                | {type(a).__name__ for a in zero})
     assert {'CwActionCollectOreParam', 'CwActionOpenTomeParam', 'CwActionOpenBookcardParam', 'CwActionOpenBoxParam',
+            'CwActionRevealTrialParam',
             'CwActionSellBenchParam', 'CwActionDeployMoveParam', 'CwActionSellDeployedParam', 'CwActionLevelUpParam',
             'CwActionWearEquipParam'} <= covered
     assert names >= covered   # 两集均为词表成员(不越词表)

@@ -1,8 +1,11 @@
-"""CW 统一动作工厂 批2c 锁面(书册卡开卡归位 R10)。
+"""CW 统一动作工厂 批2c 锁面(书册卡开卡归位 R10;卡片臂策略器化 2026-09-19)。
 
 出处 = docs/develop/sr_od/application/currency_war/changes/
 2026-09-14-unified-action-factory/landing.md §3.2c 判据 +
 design.md §2.6 R10 条款。规则正本 = flow/action-logic-state.md §3.7。
+2026-09-19 用户裁定:开卡时机归策略实现管——备战环入口清场段
+(``cw_screen_prep._clear_prep_cards``)撤销,发射位 = 策略器 entry ①
+prep 实体面卡片臂(容器 bench kind 触发);本文件接线锁随之换面。
 
 锁面全部为运行时行为锁(源码扫描测试禁止,AGENTS.md §10.4);
 kernel/执行器级用桩宿主,零真实 IO(harness 惯例同 test_cw_unified_action_2a)。
@@ -14,7 +17,6 @@ import time
 from types import SimpleNamespace
 
 from one_dragon.base.geometry.point import Point
-from sr_od.application.currency_war.kernel import cw_prep_actions as kpa
 from sr_od.application.currency_war.kernel.cw_action_report import (
     report_action_deploy_move_param,
     report_action_open_bookcard_param,
@@ -25,15 +27,14 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     Unit,
     bench_free_slots,
+    bench_slots_to_legacy,
     deployed_slots_of,
     game_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CW_ACTION_TYPES,
     CwActionOpenBookcardParam,
-)
-from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
-    CwScreenPrep,
+    CwActionRevealTrialParam,
 )
 
 _SIG = ChannelSig(family='logic_action', actor='CwScreenPrep')
@@ -44,14 +45,21 @@ _SIG = ChannelSig(family='logic_action', actor='CwScreenPrep')
 def test_open_bookcard_registered_and_validated():
     """R10 归位:CwActionOpenBookcardParam 在统一词表白名单(漏登记先例 CwActionOpenTomeParam:
     漏登记时执行面 validate 拒「未知动作类型」,动作从未真正执行);F3
-    静态参数域与 CwActionOpenBoxParam/CwActionOpenTomeParam 同形(slot=None 或 1..备战栏槽位)。"""
+    静态参数域与 CwActionOpenBoxParam/CwActionOpenTomeParam 同形(slot=None 或 1..备战栏槽位)。
+    同形扩员:CwActionRevealTrialParam(卡片臂策略器化批,用户裁定
+    2026-09-19)同签名同参数域。"""
     assert CwActionOpenBookcardParam in CW_ACTION_TYPES
+    assert CwActionRevealTrialParam in CW_ACTION_TYPES
     from sr_od.application.currency_war import prep_actions as pa
     ex = pa.PrepActionExecutor.__new__(pa.PrepActionExecutor)
     ex._bench_pts = [Point(i * 10, i * 10) for i in range(9)]
     assert ex.validate(CwActionOpenBookcardParam()) is None
     assert ex.validate(CwActionOpenBookcardParam(slot=9)) is None
     err = ex.validate(CwActionOpenBookcardParam(slot=10))
+    assert err is not None and '越界' in err
+    assert ex.validate(CwActionRevealTrialParam()) is None
+    assert ex.validate(CwActionRevealTrialParam(slot=9)) is None
+    err = ex.validate(CwActionRevealTrialParam(slot=10))
     assert err is not None and '越界' in err
 
 
@@ -113,13 +121,41 @@ def test_open_bookcard_executor_mechanical(monkeypatch):
     assert not emitted3 and controller3.clicks == []
 
 
+def test_reveal_trial_dispatch_mechanical(monkeypatch):
+    """机械半:CwActionRevealTrialOp 经注册表分派——find_trial_reveal_cards
+    识别 → 槽中心单击(先移后点,bug#1 缓解口径)→ 固定揭示动画等待;
+    slot 对位不中 / 识别空 = 未发出零点击。终结动作(terminal=True,用户
+    裁定 2026-09-19 发射位 = 策略器卡片臂);零写上报在册(揭示身份归
+    下一入口 heavy 观察收口)。"""
+    from sr_od.application.currency_war.obs import cw_identity_obs
+    monkeypatch.setattr(cw_identity_obs, 'find_trial_reveal_cards',
+                        lambda screen, slots: [(3, Point(77, 88))])
+    monkeypatch.setattr(cw_identity_obs, '_ctx_slots',
+                        lambda ctx, name, n: [])
+    monkeypatch.setattr(time, 'sleep', lambda s: None)   # 动画等待桩(零真实等待)
+    controller = _RecordingController()
+    ex = _make_executor(controller, [])
+    detail, emitted = ex._dispatch_action(CwActionRevealTrialParam())
+    assert emitted and '槽3' in detail
+    assert [(p.x, p.y) for p in controller.clicks] == [(77, 88)]
+    assert len(controller.moves) == 1   # bug#1 缓解口径:先移后点
+    # 识别空 → 未发出(终结动作 fail 交回外循环重观察)
+    monkeypatch.setattr(cw_identity_obs, 'find_trial_reveal_cards',
+                        lambda screen, slots: [])
+    controller2 = _RecordingController()
+    ex2 = _make_executor(controller2, [])
+    detail2, emitted2 = ex2._dispatch_action(CwActionRevealTrialParam())
+    assert not emitted2 and controller2.clicks == []
+
+
 # ===== 逻辑态摘件对账(判据:开卡后槽位表与实机一致)=====
 
 def test_open_bookcard_logic_state_frees_slot():
     """开卡即腾席(阶段 3.5 容器版;原黑板 free_bench_slots +1 语义随
-    _project_prep_obs 退役):书册卡槽(容器 kind='supply_box',读链 is_item_slot
-    并入口径)经 CwActionOpenBookcardParam 腾席 = 槽 kind → empty——bench_free_slots
-    派生 +1(容器读口单点),其余槽不动。"""
+    _project_prep_obs 退役):书册卡槽(容器 kind='bookcard',kind 细分批
+    起不再统一降级 supply_box)经 CwActionOpenBookcardParam 腾席 = 槽
+    kind → empty——bench_free_slots 派生 +1(容器读口单点),其余槽不动。
+    降级口径(slot kind='supply_box')= 类型不符拒零写(防跨物误腾)。"""
     from test.sr_od.application.currency_war._cw_helpers import cw4_session
 
     from sr_od.application.currency_war.kernel.cw_game_state import (
@@ -131,7 +167,7 @@ def test_open_bookcard_logic_state_frees_slot():
                       mode='synthesized')
     _slots = [BenchSlot(kind='unit', unit=Unit(char_id='甲', star=1,
                                                equips=[], slot=1)),
-              BenchSlot(kind='supply_box')]
+              BenchSlot(kind='bookcard')]
     _slots += [BenchSlot(kind='empty') for _ in range(7)]
     gs.observe(gs.bench, BenchView(slots=_slots, capacity=9), sig=_sig)
     before = bench_free_slots(gs)
@@ -141,57 +177,93 @@ def test_open_bookcard_logic_state_frees_slot():
         sig=ChannelSig(family='logic_action', actor='CwScreenPrep'))
     assert gs.bench.value.slots[1].kind == 'empty'
     assert bench_free_slots(gs) == before + 1
+    # 类型不符拒零写:supply_box 槽不是本动作的腾席对象(开箱 = OpenBox 辖)
+    before_seq = gs.write_seq
+    report_action_open_bookcard_param(
+        gs, CwActionOpenBookcardParam(slot=2),
+        sig=ChannelSig(family='logic_action', actor='CwScreenPrep'))
+    assert gs.write_seq == before_seq   # 槽已 empty,陈旧提案零写
 
 
-# ===== 链拆接线锁(判据:预清场改产 CwActionOpenBookcardParam 经执行器 + 交回)=====
+# ===== 卡片臂接线锁(判据:容器 bench kind → 策略器 entry ① 发射终结动作)=====
 
-def test_clear_prep_cards_emits_open_bookcard_and_signals_handback(monkeypatch):
-    """链拆编排:`_clear_prep_cards` 书册卡腿改产词表动作 CwActionOpenBookcardParam 经
-    执行器发射(单一发射口,遥测动作行 CwActionOpenBookcardParam 在册)且返回 True
-    (调用方必须立即交回——弹窗已弹,heavy 观察禁读弹窗帧);识别空 =
-    False 照常续跑。原 journal 包装全链路径退役(现役 journal_wrapped_
-    execute 消费面归零)。"""
-    from sr_od.application.currency_war.kernel import cw_obs_core
-    from sr_od.application.currency_war.obs import cw_identity_obs
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_prep as pd_mod,
+def _emit_with_bench(bench_slots: list[BenchSlot]):
+    """观测 bench 后调 entry.emit(臂① 早返回面;session = cw4 冷建)。"""
+    from test.sr_od.application.currency_war._cw_helpers import cw4_session
+
+    from sr_od.application.currency_war.strategies.impl.mandate_v1 import entry
+    session = cw4_session()
+    gs = game_state_of(session)
+    _slots = list(bench_slots)
+    _slots += [BenchSlot(kind='empty')] * (9 - len(_slots))
+    gs.observe(gs.bench, BenchView(slots=_slots, capacity=9),
+               sig=ChannelSig(family='obs', actor='CwScreenPrep',
+                              mode='read'))
+    return entry.emit(session, None)
+
+
+def test_entry_card_arms_emit_from_bench_kind():
+    """用户裁定 2026-09-19(开卡时机归策略器):容器 bench 槽位 kind
+    'trial_card'/'bookcard' → entry ① 卡片臂发射对应终结动作(物理槽号
+    = 下标 +1);序沿用旧清场序 trial 先于 bookcard、卡先于箱。"""
+    # bookcard 槽 → OpenBookcard(slot=下标+1)
+    out = _emit_with_bench([BenchSlot(kind='unit', unit=Unit(
+        char_id='甲', star=1, equips=[], slot=1)),
+        BenchSlot(kind='bookcard')])
+    assert len(out) == 1 and isinstance(out[0].action, CwActionOpenBookcardParam)
+    assert out[0].action.slot == 2
+    # trial_card 槽 → RevealTrial
+    out = _emit_with_bench([BenchSlot(kind='trial_card')])
+    assert len(out) == 1 and isinstance(out[0].action, CwActionRevealTrialParam)
+    assert out[0].action.slot == 1
+    # 优先序:trial 先于 bookcard(旧清场序:免费揭示先于选卡)
+    out = _emit_with_bench([BenchSlot(kind='trial_card'),
+                            BenchSlot(kind='bookcard')])
+    assert isinstance(out[0].action, CwActionRevealTrialParam)
+    # 优先序:卡先于箱(旧「入口清场先于观察」全局序)
+    out = _emit_with_bench([BenchSlot(kind='bookcard'),
+                            BenchSlot(kind='supply_box')])
+    assert isinstance(out[0].action, CwActionOpenBookcardParam)
+
+
+def test_entry_box_tome_arms_read_benchview_kind():
+    """回归锁:开箱/开典籍臂与卡片臂同读容器 BenchView.slots kind
+    (历史隐患申报:臂曾读 legacy ``bench_slots_of`` 元素 .kind——legacy
+    换算把占位件压成 is_item_slot 布尔,元素无 kind 属性,bench 非空即
+    AttributeError)。本锁钉死 box/tome 臂在真 kind 载荷上照常命中。"""
+    out = _emit_with_bench([BenchSlot(kind='supply_box')])
+    assert len(out) == 1
+    from sr_od.application.currency_war.kernel.cw_vocab import (
+        CwActionOpenBoxParam,
+        CwActionOpenTomeParam,
     )
-    monkeypatch.setattr(cw_identity_obs, 'find_trial_reveal_cards',
-                        lambda screen, slots: [])
-    monkeypatch.setattr(cw_identity_obs, 'find_bookcards',
-                        lambda screen, slots: [(2, Point(10, 20))])
-    monkeypatch.setattr(cw_identity_obs, '_ctx_slots',
-                        lambda ctx, name, n: [])
-    monkeypatch.setattr(cw_obs_core, 'is_prep_like_frame',
-                        lambda ctx, screen: True)
+    assert isinstance(out[0].action, CwActionOpenBoxParam)
+    assert out[0].action.slot == 1
+    slots = [BenchSlot(kind='empty')] * 9
+    slots[3] = BenchSlot(kind='tome')
+    out = _emit_with_bench(slots)
+    assert len(out) == 1 and isinstance(out[0].action, CwActionOpenTomeParam)
+    assert out[0].action.slot == 4
 
-    d = pd_mod.CwScreenPrep.__new__(pd_mod.CwScreenPrep)   # 绕道构造
-    d.ctx = SimpleNamespace(controller=SimpleNamespace(
-        mouse_move=lambda p: None, click=lambda p: None))
-    monkeypatch.setattr(d, 'screenshot', lambda: object())
 
-    executed: list = []
-
-    class _Ex:
-        def validate(self, action):
-            return None
-
-    d._executor = _Ex()
-
-    def _fake_act(action, obs=None):
-        executed.append(action)
-
-    d._act_execute = _fake_act
-
-    assert d._clear_prep_cards() is True
-    assert len(executed) == 1
-    assert type(executed[0]) is CwActionOpenBookcardParam
-    assert executed[0].slot == 2
-    # 识别空 → False(调用方续跑 heavy 观察,书册卡腿静默跳过)
-    monkeypatch.setattr(cw_identity_obs, 'find_bookcards',
-                        lambda screen, slots: [])
-    assert d._clear_prep_cards() is False
-    assert len(executed) == 1
+def test_bench_slot_card_kinds_roundtrip_as_item_placeholder():
+    """容器 kind 细分往返:bookcard/trial_card 槽经 legacy 换算 = 占位件
+    BenchChar(is_item_slot=True)——部署装配点识别线/占位恒拒防线消费同
+    旗标;占席语义不变(kind ≠ empty 占 1 槽,席空数派生同源)。"""
+    slots = [BenchSlot(kind='unit', unit=Unit(char_id='甲', star=1,
+                                              equips=[], slot=1)),
+             BenchSlot(kind='bookcard'), BenchSlot(kind='trial_card')]
+    slots += [BenchSlot(kind='empty')] * 6
+    view = BenchView(slots=slots, capacity=9)
+    legacy = bench_slots_to_legacy(view)
+    assert legacy[0] is not None and legacy[0].char_id == '甲'
+    assert legacy[1].is_item_slot and legacy[2].is_item_slot
+    # 占席语义:bookcard/trial_card 各占 1 槽,席空数派生同源(9−3=6)
+    from test.sr_od.application.currency_war._cw_helpers import cw4_session
+    _gs = game_state_of(cw4_session())
+    _sig = ChannelSig(family='obs', actor='CwScreenPrep', mode='read')
+    _gs.observe(_gs.bench, view, sig=_sig)
+    assert bench_free_slots(_gs) == 6
 
 
 # ===== CwActionDeployMoveParam 帧投影占用集(改动三审 代-1 应修行为锁)=====
@@ -201,13 +273,12 @@ def test_deploymove_projection_records_resolved_row():
     原黑板占用集 fallback 记行锁随 _project_prep_obs 退役,新锁断言容器
     ``deployed_place`` 首空单一源的 fallback 语义:首选排满落位 fallback
     另一排,记实落排)。"""
-    from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
-    from sr_od.application.currency_war.kernel.cw_vocab import CwActionDeployMoveParam
     from test.sr_od.application.currency_war._cw_helpers import cw4_session
 
     from sr_od.application.currency_war.kernel.cw_game_state import (
         game_state_of,
     )
+    from sr_od.application.currency_war.kernel.cw_vocab import CwActionDeployMoveParam
     session = cw4_session()
     gs = game_state_of(session)
     _sig = ChannelSig(family='obs', actor='synthesize_from_game_state',
@@ -291,8 +362,7 @@ def test_expert_invite_decision_chain_error_falls_cash(test_context,
     判据 ③ 落现金为王。红 = 异常逃逸 / report 断流 / 落点漂移 / 缺坐标
     fail 交回。"""
     from test.harness.fixture_controller import fast_sleep
-    from test.sr_od.application.currency_war._cw_helpers import Area
-    from test.sr_od.application.currency_war._cw_helpers import run_node
+    from test.sr_od.application.currency_war._cw_helpers import Area, run_node
 
     from sr_od.application.currency_war.kernel import cw_obs_core
     from sr_od.application.currency_war.kernel.cw_strategy_session import (
