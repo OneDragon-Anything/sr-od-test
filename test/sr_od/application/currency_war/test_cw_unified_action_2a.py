@@ -143,7 +143,6 @@ def test_vocab_actions_all_have_logic_state_projection():
         CwActionPerfectProjectorUseParam,
         CwActionPrecisionWrenchUseParam,
         CwActionPrivilegeCardUseParam,
-        CwActionRevealTrialParam,
         CwActionStaffProjectorUseParam,
         CwActionWearEquipParam,
         CwActionWrenchUseParam,
@@ -198,7 +197,6 @@ def test_vocab_actions_all_have_logic_state_projection():
     ]
     zero: list = [
         CwActionOpenBoxParam(slot=None),
-        CwActionRevealTrialParam(slot=None),
         CwActionFurnaceUseParam(target_kind='equip', item_name='轮滑鞋'),
         CwActionPrivilegeCardUseParam(target_kind='equip', item_name='轮滑鞋'),
         CwActionWrenchUseParam(row='front', slot=1),
@@ -220,7 +218,6 @@ def test_vocab_actions_all_have_logic_state_projection():
     covered = ({type(a).__name__ for a in written}
                | {type(a).__name__ for a in zero})
     assert {'CwActionCollectOreParam', 'CwActionOpenTomeParam', 'CwActionOpenBookcardParam', 'CwActionOpenBoxParam',
-            'CwActionRevealTrialParam',
             'CwActionSellBenchParam', 'CwActionDeployMoveParam', 'CwActionSellDeployedParam', 'CwActionLevelUpParam',
             'CwActionWearEquipParam'} <= covered
     assert names >= covered   # 两集均为词表成员(不越词表)

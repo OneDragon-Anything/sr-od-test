@@ -31,7 +31,6 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionOpenBoxParam,
     CwActionOpenShopParam,
     CwActionOpenTomeParam,
-    CwActionRevealTrialParam,
     CwActionSellBenchParam,
     CwActionSellDeployedParam,
     CwActionStartBattleParam,
@@ -67,19 +66,17 @@ def _op_cls(action):
 
 def test_prep_terminal_set_matches_registry_terminal_attrs():
     """备战环终结集 = {CwActionStartBattleParam, CwActionOpenShopParam,
-    CwActionOpenBoxParam, CwActionOpenBookcardParam, CwActionRevealTrialParam}
-    (R7 并入 CwActionOpenBoxParam;2026-09-19 用户裁定开卡时机归策略器,
-    OpenBookcard 终结化 + RevealTrial 新增——弹窗/揭示均引入新事实,交回
-    外循环重观察)⟺ 注册表 op 类 terminal=True,逐一等价;备战机械动作
-    全部非终结。terminal_wait 同源比对:OpenBoxOp = ``_OVERLAY_ANIM_WAIT_S``
-    (批2a 落地交回等待常量对象,漂移即红,禁消费点私表);OpenBookcardOp
-    同源(原画面 op 入口代交回等待同值)。"""
+    CwActionOpenBoxParam, CwActionOpenBookcardParam}(R7 并入 CwActionOpenBoxParam;
+    2026-09-19 用户裁定开卡时机归策略器,OpenBookcard 终结化——弹专家邀请函
+    = 新事实,交回外循环重观察)⟺ 注册表 op 类 terminal=True,逐一等价;
+    备战机械动作全部非终结。terminal_wait 同源比对:OpenBoxOp =
+    ``_OVERLAY_ANIM_WAIT_S``(批2a 落地交回等待常量对象,漂移即红,禁消费点
+    私表);OpenBookcardOp 同源(原画面 op 入口代交回等待同值)。"""
     terminal_cases = [
         CwActionStartBattleParam(),
         CwActionOpenShopParam(),
         CwActionOpenBoxParam(),
         CwActionOpenBookcardParam(),
-        CwActionRevealTrialParam(),
     ]
     for a in terminal_cases:
         assert _op_cls(a).terminal is True, type(a).__name__
@@ -87,11 +84,7 @@ def test_prep_terminal_set_matches_registry_terminal_attrs():
     from sr_od.application.currency_war.operations.cw_op.cw_open_bookcard_action import (
         CwActionOpenBookcardOp,
     )
-    from sr_od.application.currency_war.operations.cw_op.cw_reveal_trial_action import (
-        CwActionRevealTrialOp,
-    )
     assert CwActionOpenBookcardOp.terminal_wait == _OVERLAY_ANIM_WAIT_S
-    assert CwActionRevealTrialOp.terminal is True
     mechanical_cases = [
         CwActionSellBenchParam(bench_idx=0),
         CwActionSellDeployedParam(deployed_idx=0),
