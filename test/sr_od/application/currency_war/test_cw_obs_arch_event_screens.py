@@ -403,16 +403,18 @@ def test_megastar_lazy_read_skipped_on_confirm_visit(
 def test_megastar_redispatch_no_reclick_and_gate_reset(
         test_context, monkeypatch) -> None:
     """巨星防重入行为锁(旗标宿主 = 策略器 StrategyState,执行层经 kernel
-    ``strategy_state_of`` None-safe 通道读写):
-    - 同节点二次派发(re-dispatch 重入,门未 miss)→ 已点标记在位,不再
-      点候选(防 re-click toggle 反选 → 确认无候选卡死);
+    ``strategy_state_of`` None-safe 通道读写;picks-op-unify 批起选中半
+    迁入 ``CwActionPickMegastarOp``,本锁经派发 env.need_select 断言):
+    - 同节点二次派发(re-dispatch 重入,门未 miss)→ 已点标记在位,
+      再派发 need_select=False(不重触发选中,防 re-click toggle 反选 →
+      确认无候选卡死);
     - 门 miss(离开巨星 overlay)→ 节点完成即复位,标记不跨节点保持
       (巨星一局可多次触发);
     - 状态对象缺席(裸 session,第三方策略面)→ 读退 False、写跳过,
       执行层不冷建策略器状态(禁 impl ``state_of`` 装配语义);
     - chosen_megastar = 选择点留守写端(动作事实边界,不进 report),
       首派发选中时点落容器。
-    红 = 重入重点候选 / 门 miss 不复位 / 缺席态炸错或冷建 / chosen 断流。"""
+    红 = 重入再触发选中 / 门 miss 不复位 / 缺席态炸错或冷建 / chosen 断流。"""
     import sr_od.application.currency_war.operations.cw_op.cw_action_registry as reg_mod
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_megastar as ms,
@@ -435,35 +437,39 @@ def test_megastar_redispatch_no_reclick_and_gate_reset(
     monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
     monkeypatch.setattr(op, 'round_by_find_area',
                         lambda scr, s, a, **k: _Area(True))
-    clicks: list = []
-    monkeypatch.setattr(
-        test_context, 'controller',
-        SimpleNamespace(mouse_move=lambda p, **k: None,
-                        click=lambda p, **k: clicks.append(p)),
-        raising=False)
     monkeypatch.setattr(ms, 'read_megastar_options',
                         lambda ctx, scr: [SimpleNamespace(char_id='花火')])
     monkeypatch.setattr(ms, 'area_center',
                         lambda ctx, name, screen=None: SimpleNamespace(
                             x=822, y=333))
-    monkeypatch.setattr(ms.time, 'sleep', lambda *_: None)
+
+    # 派发桩:捕获每次派发的 need_select(选中半触发标志;选中点击的
+    # 机械行为锁 = test_cw_unified_action_4 巨星 op 锁,本锁只锁画面 op
+    # 的防重入语义)。
+    dispatches: list[bool] = []
 
     class _StubPickOp:
+        def __init__(self, env) -> None:
+            self.env = env
+
         def execute(self) -> bool:
+            dispatches.append(bool(getattr(self.env, 'need_select', False)))
             return True
 
-    monkeypatch.setattr(reg_mod, 'action_op_for', lambda act, ctx, env: _StubPickOp())
+    monkeypatch.setattr(reg_mod, 'action_op_for',
+                        lambda act, ctx, env: _StubPickOp(env))
     # 观察注入(观察 node 读屏函数注入点):驱动观察 node 装载 obs
     assert op.observe().is_success, '在屏观察 success'
-    # ① 首派发:恰一次候选点击 + 发射即置位 + chosen 留守写端落容器
+    # ① 首派发:触发选中(need_select=True)+ 发射即置位 + chosen 留守写端落容器
     op._do_action()
-    assert len(clicks) == 1, f'首派发恰一次候选点击:{clicks!r}'
+    assert dispatches == [True], f'首派发触发选中半:{dispatches!r}'
     assert st.megastar_clicked is True, '置位落策略器 StrategyState'
     assert match.gs.chosen_megastar.value == '花火', (
         'chosen_megastar = 选择点留守写端(动作事实边界不进 report)')
-    # ② 同节点二次派发:标记在位 → 不再点候选
+    # ② 同节点二次派发:标记在位 → 不再触发选中
     op._do_action()
-    assert len(clicks) == 1, f'二次派发不重复点候选(防反选卡死):{clicks!r}'
+    assert dispatches == [True, False], (
+        f'二次派发不重触发选中(防反选卡死):{dispatches!r}')
     # ③ 门 miss(离开巨星 overlay)→ 节点完成即复位
     monkeypatch.setattr(op, 'round_by_find_area',
                         lambda scr, s, a, **k: _Area(False))
@@ -482,5 +488,6 @@ def test_megastar_redispatch_no_reclick_and_gate_reset(
                         lambda scr, s, a, **k: _Area(True))
     assert op2.observe().is_success, '缺席态观察照常'
     op2._do_action()
-    assert len(clicks) == 2, '缺席态读退 False → 照常点候选(无宿主防重入)'
+    assert dispatches == [True, False, True], (
+        '缺席态读退 False → 照常触发选中(无宿主防重入)')
     assert session2.strategy_state is None, '缺席态写跳过,执行层不冷建'
