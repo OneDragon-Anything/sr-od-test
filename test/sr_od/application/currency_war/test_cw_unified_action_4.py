@@ -73,6 +73,7 @@ from sr_od.application.currency_war.operations.cw_op.cw_action_registry import (
 )
 from sr_od.application.currency_war.operations.cw_op.cw_overlay_pick_action import (
     CwActionPickEncounterOp,
+    CwActionPickInvestOp,
     CwActionPickMegastarOp,
     CwActionPickPartnerOp,
     CwActionPickPlannerOp,
@@ -102,15 +103,13 @@ _LOGIC_SIG = ChannelSig(family='logic_action', actor='cw-t216-test',
 
 # 终态契约动作类型的注册豁免集(终态契约 landing §3.5 锁规格:白名单
 # 成员要么有注册行、要么在豁免集——无 op 行例外申报):
-# - CwActionPickInvestParam/CwActionPickStarTomeParam/CwActionPickWishTrialParam/CwActionPickBoxCardParam + 契约扩员三口
-#   CwActionPickFortuneParam/CwActionPickExpertInviteParam/CwActionPickEquipParam(普查迁移批 2;handler 自管
-#   消费链,确认链/直点不经注册表,同豁免类);
 # - 三刷新动作(handler 自管点击链;attack4 M6 裁定 (a):与
 #   CwActionRefreshInvestCardsParam 同型豁免);
 # - HoldFrame(分支拦截型,等待帧非动作)= 永久豁免,无 op 行。
-# (Pick 五子类已随终态切换批换键名入表,不在豁免集——锁全覆盖。)
+# (pick 12 类已随 pick-op-unify 批全量收编入表/分批收编中:PickInvest
+#  随 T-2 入表,余者随批入表后自本集移除——锁全覆盖。)
 _TERMINAL_CONTRACT_REGISTRY_EXEMPT = (
-    CwActionPickInvestParam, CwActionPickStarTomeParam, CwActionPickWishTrialParam, CwActionPickBoxCardParam,
+    CwActionPickStarTomeParam, CwActionPickWishTrialParam, CwActionPickBoxCardParam,
     CwActionPickFortuneParam, CwActionPickExpertInviteParam, CwActionPickEquipParam,
     CwActionRefreshNodeOptionsParam, CwActionRefreshSupplyParam, CwActionRefreshInvestCardsParam, HoldFrame,
 )
@@ -139,7 +138,8 @@ def test_registry_covers_unified_vocab_and_pick_types():
 
 
 def test_pick_rows_resolve_class_and_instance_consistently():
-    """pick 五行收编面(终态契约 §2.2 换键名:策略器产出 = 词表子类型):
+    """pick 行收编面(终态契约 §2.2 换键名:策略器产出 = 词表子类型;
+    pick-op-unify 批起分批扩至全 12 类):
     类级解析与实例级工厂解析同 op 类(行序 is-a 语义一致;实例级仅本锁
     构造,注册完备锁本体不构造)。"""
     rows = [
@@ -148,6 +148,7 @@ def test_pick_rows_resolve_class_and_instance_consistently():
         (CwActionPickMegastarParam, CwActionPickMegastarOp),
         (CwActionPickPartnerParam, CwActionPickPartnerOp),
         (CwActionPickPlannerParam, CwActionPickPlannerOp),
+        (CwActionPickInvestParam, CwActionPickInvestOp),
     ]
     for cls, expected in rows:
         assert action_op_class_for_type(cls) is expected, cls.__name__
@@ -328,6 +329,34 @@ def test_planner_pick_op_clicks_target_and_confirm(no_pick_sleep):
         (700, 420, 0.15), (CwScreenPlanner.CONFIRM.x, CwScreenPlanner.CONFIRM.y, 0.15)]
     assert op._confirm_pending is True
     assert env.round_result is rs
+
+
+def test_invest_pick_op_clicks_target_confirms_and_self_reports(
+        no_pick_sleep, monkeypatch):
+    """投资确认链(pick-op-unify T-2,投资环境/策略两屏共用 op):
+    点选中位 → 确认;轮次结果旁路回传;自上报在机械链发出后调用
+    (零写函数被桩捕获 = 契约面接线锁;gs 供给桩 = 无局 None 时跳过)。"""
+    import sr_od.application.currency_war.operations.cw_op.cw_overlay_pick_action as pick_mod
+
+    rs = SimpleNamespace(sentinel='rs')
+    ctrl = _RecordingController()
+    op = SimpleNamespace(ctx=SimpleNamespace(controller=ctrl),
+                         round_retry=lambda **kw: rs)
+    env = OverlayPickExecEnv(op=op, idx=2, target=Point(900, 450),
+                             confirm=Point(1082, 982), entry_keyword='投资环境')
+    reported: list = []
+    monkeypatch.setattr(pick_mod, 'game_state_from_ctx',
+                        lambda ctx: SimpleNamespace(sentinel='gs'))
+    monkeypatch.setattr(pick_mod, 'report_action_pick_invest_param',
+                        lambda gs, param, sig: reported.append((gs, param, sig)))
+    assert CwActionPickInvestOp(env.op.ctx, CwActionPickInvestParam(idx=2),
+                                env=env).run().is_success
+    # 点击序 = 选中位 → 确认钮;每次点击前 bug#1 mouse_move 缓解。
+    assert [(p.x, p.y) for p, _t in ctrl.clicks] == [(900, 450), (1082, 982)]
+    assert len(ctrl.moves) == len(ctrl.clicks)
+    assert env.round_result is rs
+    # 自上报接线(机械链发出后恰一次;param 原样透传)。
+    assert len(reported) == 1 and reported[0][1].idx == 2
 
 
 # ===== 4. 比对收口锁(三面迁观察侧)=====

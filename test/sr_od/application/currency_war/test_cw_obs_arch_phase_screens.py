@@ -129,7 +129,7 @@ def test_reentry_arbitration_flag_gate_combination(test_context,
       (标识仍在)→ 裁决不误判完成,「下一步」重发、旗标经置位体重置。
     红 = 裁决出口语义漂移(门命中误判完成 / 落地轮旗标复活 / 裁决移位)。"""
     # 投资环境·落地轮:pending 在位 + 锚已退 → 裁决出口 success,零动作
-    op_land, _m, _s = _make_env(test_context, monkeypatch, in_screen=False)
+    op_land, _m, _s, _d = _make_env(test_context, monkeypatch, in_screen=False)
     op_land._confirm_pending = True
     rs_land = _run_node(test_context, op_land, op_land.act)
     assert rs_land.is_success and '重入观察裁决' in (rs_land.status or ''), (
@@ -138,8 +138,8 @@ def test_reentry_arbitration_flag_gate_combination(test_context,
         '裁决先行消费旗标,落地轮不残留待裁决旗标')
     # 投资环境·门命中轮:pending 在位 + 锚仍在 → 不误判完成,确认链重发
     events: list = []
-    op_hit, _m2, _s2 = _make_env(test_context, monkeypatch, in_screen=True,
-                                 opts=[('追击概念股', 460)], events=events)
+    op_hit, _m2, _s2, _d2 = _make_env(test_context, monkeypatch, in_screen=True,
+                                      opts=[('追击概念股', 460)], events=events)
     op_hit._confirm_pending = True
     rs_hit = _run_node(test_context, op_hit, op_hit.act)
     assert rs_hit.result == OperationRoundResultEnum.WAIT, (
@@ -154,15 +154,15 @@ def test_reentry_arbitration_flag_gate_combination(test_context,
     book.options[id(book.frames[0])] = _opts_of(['赌神·银', '恢复生机',
                                                  '气氛组'])
     picks = [CwActionPickInvestParam(idx=1, reason='stub')]
-    op_st, _m3, session_st, clicks_st, _dc = _make_strategy(
+    op_st, _m3, session_st, clicks_st, _dc, disp_st = _make_strategy(
         test_context, monkeypatch, book, picks)
     op_st._confirm_pending = '白银投资'
     _run_node(test_context, op_st, op_st.observe)
     rs_st = _run_node(test_context, op_st, op_st.act)
     assert rs_st.result == OperationRoundResultEnum.WAIT, (
         f'在屏轮确认链机械交回(round_wait):{rs_st!r}')
-    assert len(clicks_st) == 2, (
-        f'裁决不触发,选卡+确认重发恰两击:{clicks_st!r}')
+    assert len(disp_st) == 1, (
+        f'裁决不触发,选卡+确认链重发恰一次派发:{disp_st!r}')
     assert op_st._confirm_pending == '恢复生机', (
         f'旗标经确认体重置:{clicks_st!r}')
     # 终态契约 §B:session.active_strategies 退役——门命中轮零 append 改由
@@ -206,8 +206,11 @@ def _make_env(test_context, monkeypatch: pytest.MonkeyPatch, *,
               events: list | None = None):
     """投资环境真类装配(生产构造走 __init__ = 适配器位/注册表在位)。
 
-    桩面 = 画面门/截屏/候选读/策略器/确认链/计数读;``safe_click``
-    记录点击并快照点击时点 ``active_env`` 现值(选卡时点写对拍载体)。
+    桩面 = 画面门/截屏/候选读/策略器/计数读 + 派发动作 op 桩(pick-op-unify
+    批起选卡+确认机械链迁入 ``CwActionPickInvestOp``,本文件桩派发捕获
+    (param, env) 断言决策半产物与写端时序;机械链行为锁 =
+    test_cw_unified_action_4 投资 op 锁)。派发时点快照 ``active_env``
+    现值(选卡时点写对拍载体 = 写在点卡链派发前)。
     (台账写点②桩面已随该方法退役删除——链观察落地批:环境改型由返回
     备战后的入口观察链读承接,op 层零自读。)"""
     from sr_od.application.currency_war.operations.cw_screen import (
@@ -233,16 +236,27 @@ def _make_env(test_context, monkeypatch: pytest.MonkeyPatch, *,
     monkeypatch.setattr(iem, 'read_invest_refresh_counts',
                         lambda ctx, scr, kind: [])
 
-    def _click(op_, pt, **k):
-        if events is not None:
-            events.append(('card_click', (pt.x, pt.y)))
-            events.append(('active_env_at_click',
-                           game_state_of(session).active_env.value))
+    dispatches: list = []
 
-    monkeypatch.setattr(iem, 'safe_click', _click)
-    monkeypatch.setattr(iem, 'emit_overlay_confirm', lambda op_, **k: _RETRY_RS)
+    class _StubPickOp:
+        def __init__(self, param, env) -> None:
+            self.param = param
+            self.env = env
+
+        def execute(self) -> bool:
+            if events is not None:
+                events.append(('card_click',
+                               (self.env.target.x, self.env.target.y)))
+                events.append(('active_env_at_dispatch',
+                               game_state_of(session).active_env.value))
+            dispatches.append(self)
+            return True
+
+    import sr_od.application.currency_war.operations.cw_op.cw_action_registry as _reg
+    monkeypatch.setattr(_reg, 'action_op_for',
+                        lambda act, ctx, env: _StubPickOp(act, env))
     monkeypatch.setattr(iem.time, 'sleep', lambda *_: None)
-    return op, match, session
+    return op, match, session, dispatches
 
 
 # (原 test_invest_env_dispatch_and_gate「投资环境分流双向 + 段迹形态」删:
@@ -258,14 +272,14 @@ def test_invest_env_observe_gate_and_report(test_context,
     ``invest_env_opts``(容器终值)+ obs 挂实例属性。红 = 门失效 / 接线
     断流 / 容器终值漂移。"""
     opts = [('追击概念股', 460), ('彩虹时代', 960), ('头彩', 1460)]
-    op_off, _m0, _s0 = _make_env(test_context, monkeypatch, in_screen=False,
-                                 opts=opts)
+    op_off, _m0, _s0, _d0 = _make_env(test_context, monkeypatch, in_screen=False,
+                                      opts=opts)
     rs_off = _run_node(test_context, op_off, op_off.observe)
     assert not rs_off.is_success and '非投资环境屏' in (rs_off.status or ''), (
         f'门 miss 文案沿用现役:{rs_off!r}')
     assert op_off._obs is None, '门早退不装载 obs'
-    op, _m, session = _make_env(test_context, monkeypatch, in_screen=True,
-                                opts=opts)
+    op, _m, session, _disp = _make_env(test_context, monkeypatch, in_screen=True,
+                                       opts=opts)
     rs = _run_node(test_context, op, op.observe)
     assert rs.is_success, f'观察 success:{rs!r}'
     assert game_state_of(session).invest_env_opts.value == [
@@ -278,20 +292,25 @@ def test_invest_env_observe_gate_and_report(test_context,
 def test_invest_env_active_env_written_at_pick_time(test_context,
                                                     monkeypatch) -> None:
     """写入流对拍(§9.1-F2 主门 (b)):``active_env`` 选卡时点写——写时点 =
-    点卡**前**(点击时点快照已见新值)、值 = 决策选中名(决策面留守,ADR-0598
-    投资两屏各自实证语义);确认发出置 pending(落地归重入裁决)。
-    红 = 写时点后移(落选卡后)、值漂移或确认链置位断线。"""
+    点卡链派发**前**(派发时点快照已见新值,pick-op-unify 批起点卡链
+    迁入动作 op,对拍载体 = 派发时点快照)、值 = 决策选中名(决策面留守,
+    ADR-0598 投资两屏各自实证语义);确认发出置 pending(落地归重入裁决)。
+    红 = 写时点后移(落派发后)、值漂移或确认链置位断线。"""
     events: list = []
     opts = [('追击概念股', 460), ('彩虹时代', 960), ('头彩', 1460)]
-    op, _match, session = _make_env(test_context, monkeypatch, in_screen=True,
-                                    opts=opts, pick_idx=1, events=events)
+    op, _match, session, dispatches = _make_env(test_context, monkeypatch,
+                                                in_screen=True,
+                                                opts=opts, pick_idx=1,
+                                                events=events)
     _run_node(test_context, op, op.observe)
     rs = _run_node(test_context, op, op.act)
-    assert ('active_env_at_click', '彩虹时代') in events, (
-        f'active_env 须写在点卡前(选卡时点语义):{events!r}')
+    assert ('active_env_at_dispatch', '彩虹时代') in events, (
+        f'active_env 须写在点卡链派发前(选卡时点语义):{events!r}')
     assert game_state_of(session).active_env.value == '彩虹时代', (
         '值 = 决策选中名(produced_by 面 = CwScreenInvestEnv,见豁免留守锁'
         '源形态断言)')
+    assert len(dispatches) == 1 and dispatches[0].param.idx == 1, (
+        f'选卡+确认链恰一次派发,param 携真实 idx:{dispatches!r}')
     assert op._confirm_pending is True, (
         '确认已发 → pending 置位(重入裁决承载)')
     assert rs.result == OperationRoundResultEnum.WAIT, (
@@ -322,9 +341,11 @@ def _make_strategy(test_context, monkeypatch: pytest.MonkeyPatch,
                    entry_ok: bool = True, anchor_hit: bool = True):
     """投资策略真类装配(生产构造走 __init__ = 注册表在位)。
 
-    桩面 = 入口锚/截屏/候选读/计数读/点击/确认链;``_ensure_entry_screen``
+    桩面 = 入口锚/截屏/候选读/计数读/刷新点击 + 派发动作 op 桩
+    (pick-op-unify 批起选卡+确认机械链迁入 ``CwActionPickInvestOp``;
+    刷新臂 ``safe_click`` 留守画面 op,经桩记录)。``_ensure_entry_screen``
     方法级桩(复探窗语义归 ADR-0529 既有锁,本文件不辖)。返回
-    ``(op, match, session, clicks, decide_calls)``。"""
+    ``(op, match, session, clicks, decide_calls, dispatches)``。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_invest_strategy as ism,
     )
@@ -357,14 +378,23 @@ def _make_strategy(test_context, monkeypatch: pytest.MonkeyPatch,
     monkeypatch.setattr(ism, 'safe_click',
                         lambda op_, pt, **k: clicks.append(pt))
 
-    def _confirm_stub(op_, confirm_point, **k):
-        clicks.append(confirm_point)   # 确认点击经桩记录(test_cw_invest_refresh 同形)
-        return _RETRY_RS
+    dispatches: list = []
 
-    monkeypatch.setattr(ism, 'emit_overlay_confirm', _confirm_stub)
+    class _StubPickOp:
+        def __init__(self, param, env) -> None:
+            self.param = param
+            self.env = env
+
+        def execute(self) -> bool:
+            dispatches.append(self)
+            return True
+
+    import sr_od.application.currency_war.operations.cw_op.cw_action_registry as _reg
+    monkeypatch.setattr(_reg, 'action_op_for',
+                        lambda act, ctx, env: _StubPickOp(act, env))
     monkeypatch.setattr(ism.time, 'sleep', lambda *_: None)
     monkeypatch.setattr(op, '_interruptible_sleep', lambda s: None)
-    return op, match, session, clicks, decide_calls
+    return op, match, session, clicks, decide_calls, dispatches
 
 
 _OPT_XS = (460, 960, 1460)
@@ -430,7 +460,7 @@ def test_strategy_refresh_terminal_handback(test_context, monkeypatch) -> None:
     book.counts[id(book.frames[0])] = [(1, 477, _CNT_Y), (1, 975, _CNT_Y),
                                        (1, 1474, _CNT_Y)]
     picks = [CwActionRefreshInvestCardsParam(slots=(0,), reason='stub+refresh')]
-    op, _match, session, clicks, decide_calls = _make_strategy(
+    op, _match, session, clicks, decide_calls, _disp = _make_strategy(
         test_context, monkeypatch, book, picks)
     rs_obs = _run_node(test_context, op, op.observe)
     assert rs_obs.is_success, f'前置:观察 success:{rs_obs!r}'
@@ -461,7 +491,7 @@ def test_strategy_refresh_gate2_reads_container_count(
     book.counts[id(book.frames[0])] = [(1, 477, _CNT_Y), (1, 975, _CNT_Y),
                                        (1, 1474, _CNT_Y)]
     picks = [CwActionRefreshInvestCardsParam(slots=(0,), reason='stub+refresh')]
-    op, _match, session, clicks, _dc = _make_strategy(
+    op, _match, session, clicks, _dc, disp = _make_strategy(
         test_context, monkeypatch, book, picks)
     _k = normalize_invest_name(names[0])
     _gs = game_state_of(session)
@@ -475,8 +505,8 @@ def test_strategy_refresh_gate2_reads_container_count(
     refresh_clicks = [c for c in clicks if c.y == _CNT_Y]
     assert refresh_clicks == [], (
         f'容器计数在位 → 闸 2 拦截,零刷新点击:{clicks!r}')
-    assert len(clicks) == 2, (
-        f'闸拦 ≠ 流程断:选卡 + 确认照常两击:{clicks!r}')
+    assert len(disp) == 1, (
+        f'闸拦 ≠ 流程断:选卡+确认链照常一次派发:{disp!r}')
     assert rs.result == OperationRoundResultEnum.WAIT, (
         f'闸拦轮照常确认链机械交回(round_wait):{rs!r}')
     assert _gs.strategy_refresh_used.value == {_k: 1}, (
@@ -493,7 +523,7 @@ def test_invest_strategy_observe_reprobe_and_report(test_context,
     names = ['赌神·银', '恢复生机', '气氛组']
     # ① 超窗(entry_ok False)→ round_retry 现役文案,obs 不装载
     book_off = _FrameBook([])
-    op_off, _m0, _s0, _c0, _d0 = _make_strategy(
+    op_off, _m0, _s0, _c0, _d0, _disp0 = _make_strategy(
         test_context, monkeypatch, book_off, [], entry_ok=False)
     rs_off = _run_node(test_context, op_off, op_off.observe)
     assert not rs_off.is_success \
@@ -503,7 +533,7 @@ def test_invest_strategy_observe_reprobe_and_report(test_context,
     # ② 在窗 → report 落容器 + obs 装载
     book = _FrameBook([object()])
     book.options[id(book.frames[0])] = _opts_of(names)
-    op, _m, session, _clicks, _dc = _make_strategy(
+    op, _m, session, _clicks, _dc, _disp = _make_strategy(
         test_context, monkeypatch, book, [])
     rs = _run_node(test_context, op, op.observe)
     assert rs.is_success, f'观察 success:{rs!r}'
