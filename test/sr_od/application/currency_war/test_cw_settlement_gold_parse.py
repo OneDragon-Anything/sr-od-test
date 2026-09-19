@@ -9,11 +9,23 @@ parse_settlement_progress 的分离 token 先例);锚词缺失不猜(宁缺勿�
 
 锁依据 = parse_settlement_assets docstring 证据口径(「存量 <当前>」
 = 当前金币;金币总览=本节点获得量,两者不可混取)。
+
+定点读数(read_settle_gold_opt)= 真值入口主路径:当前版本结算布局
+无「存量」token(2026-09-18 结算帧亲读实证),战后金真值挂右上角货币
+计数;本文件锁其「不猜」契约(area 缺失/越界/异常 → None)与稳定门
+取末帧语义(纪律单一源 = cw_observation.read_gold_settled)。
 """
 from __future__ import annotations
 
+from types import SimpleNamespace
+
+import numpy as np
+from one_dragon.base.geometry.rectangle import Rect
+
+import sr_od.application.currency_war.obs.cw_settlement_obs as settle_mod
 from sr_od.application.currency_war.obs.cw_settlement_obs import (
     parse_settlement_assets,
+    read_settle_gold_opt,
 )
 
 
@@ -42,3 +54,52 @@ def test_missing_anchor_stays_none() -> None:
     assert parse_settlement_assets(
         ['挑战成功', '小队生命值71', '连胜×0'])['gold'] is None
     assert parse_settlement_assets([])['gold'] is None
+
+
+# ===== 定点读数 read_settle_gold_opt(真值入口主路径)=====
+
+def _stub_ctx(ocr_values: list, controller=None) -> SimpleNamespace:
+    """最小 ctx 桩:ocr_service 依次弹出 ocr_values;controller 缺省 None
+    (无稳定门,单帧读即全部能力——与生产离线/单测分支同形)。"""
+    calls = {'n': 0}
+
+    def _ocr(**k):
+        v = ocr_values[min(calls['n'], len(ocr_values) - 1)]
+        calls['n'] += 1
+        return [SimpleNamespace(data=v)]
+
+    return SimpleNamespace(ocr_service=SimpleNamespace(
+        get_ocr_result_list=_ocr), controller=controller)
+
+
+def test_settle_gold_reader_basics(monkeypatch) -> None:
+    """「不猜」契约四态:area 缺失 / OCR 越界 / 帧不可下标 → None;
+    正常读数 → int。"""
+    frame = np.zeros((40, 100, 3), dtype=np.uint8)
+    # area 缺失(screen_info 无该 area)→ None,连 OCR 都不碰。
+    monkeypatch.setattr(settle_mod, '_area_rect', lambda *a, **k: None)
+    assert read_settle_gold_opt(_stub_ctx(['11']), frame) is None
+    # area 在场 + 读数越界(>GOLD_MAX)→ None 不冒认。
+    monkeypatch.setattr(settle_mod, '_area_rect',
+                        lambda *a, **k: Rect(0, 0, 100, 40))
+    assert read_settle_gold_opt(_stub_ctx(['9999']), frame) is None
+    # 正常读数。
+    assert read_settle_gold_opt(_stub_ctx(['11']), frame) == 11
+    # 帧不可下标(观测面异常,如 battle_wait 测试的帧哨兵)→ None 不毒化。
+    monkeypatch.setattr(settle_mod, '_area_rect',
+                        lambda *a, **k: Rect(0, 0, 100, 40))
+    assert read_settle_gold_opt(_stub_ctx(['11']), object()) is None
+
+
+def test_settle_gold_reader_gate_takes_last(monkeypatch) -> None:
+    """稳定门:帧间不一致(计数器入账滚动中)取末帧 = 入账后真值;
+    帧间一致即采信(零额外成本)。"""
+    monkeypatch.setattr(settle_mod, 'SETTLE_GOLD_INTERVAL_S', 0)
+    monkeypatch.setattr(settle_mod, '_area_rect',
+                        lambda *a, **k: Rect(0, 0, 100, 40))
+    frame = np.zeros((40, 100, 3), dtype=np.uint8)
+    ctl = SimpleNamespace(screenshot=lambda: frame)
+    # 9 → 13 不一致:采末帧 13(165656 局实证形态:结算展示期仍在入账)。
+    assert read_settle_gold_opt(_stub_ctx(['9', '13'], ctl), frame) == 13
+    # 9 → 9 一致:即采信,不耗满补采。
+    assert read_settle_gold_opt(_stub_ctx(['9', '9'], ctl), frame) == 9
