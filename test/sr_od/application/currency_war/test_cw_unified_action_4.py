@@ -73,11 +73,13 @@ from sr_od.application.currency_war.operations.cw_op.cw_action_registry import (
 )
 from sr_od.application.currency_war.operations.cw_op.cw_overlay_pick_action import (
     CwActionPickEncounterOp,
+    CwActionPickFortuneOp,
     CwActionPickInvestOp,
     CwActionPickMegastarOp,
     CwActionPickPartnerOp,
     CwActionPickPlannerOp,
     CwActionPickSupplyOp,
+    CwActionPickWishTrialOp,
     OverlayPickExecEnv,
 )
 from sr_od.application.currency_war.operations.cw_op.cw_prep_level_up_action import (
@@ -107,10 +109,11 @@ _LOGIC_SIG = ChannelSig(family='logic_action', actor='cw-t216-test',
 #   CwActionRefreshInvestCardsParam 同型豁免);
 # - HoldFrame(分支拦截型,等待帧非动作)= 永久豁免,无 op 行。
 # (pick 12 类已随 pick-op-unify 批全量收编入表/分批收编中:PickInvest
-#  随 T-2 入表,余者随批入表后自本集移除——锁全覆盖。)
+#  随 T-2、PickFortune/PickWishTrial 随 T-3 入表,余者随批入表后自本集
+#  移除——锁全覆盖。)
 _TERMINAL_CONTRACT_REGISTRY_EXEMPT = (
-    CwActionPickStarTomeParam, CwActionPickWishTrialParam, CwActionPickBoxCardParam,
-    CwActionPickFortuneParam, CwActionPickExpertInviteParam, CwActionPickEquipParam,
+    CwActionPickStarTomeParam, CwActionPickBoxCardParam,
+    CwActionPickExpertInviteParam, CwActionPickEquipParam,
     CwActionRefreshNodeOptionsParam, CwActionRefreshSupplyParam, CwActionRefreshInvestCardsParam, HoldFrame,
 )
 
@@ -149,6 +152,8 @@ def test_pick_rows_resolve_class_and_instance_consistently():
         (CwActionPickPartnerParam, CwActionPickPartnerOp),
         (CwActionPickPlannerParam, CwActionPickPlannerOp),
         (CwActionPickInvestParam, CwActionPickInvestOp),
+        (CwActionPickFortuneParam, CwActionPickFortuneOp),
+        (CwActionPickWishTrialParam, CwActionPickWishTrialOp),
     ]
     for cls, expected in rows:
         assert action_op_class_for_type(cls) is expected, cls.__name__
@@ -357,6 +362,68 @@ def test_invest_pick_op_clicks_target_confirms_and_self_reports(
     assert env.round_result is rs
     # 自上报接线(机械链发出后恰一次;param 原样透传)。
     assert len(reported) == 1 and reported[0][1].idx == 2
+
+
+def test_fortune_pick_op_clicks_card_confirms_and_self_reports(
+        no_pick_sleep, monkeypatch):
+    """命运卜者确认链(pick-op-unify T-3):点卡 → 确认;轮次结果旁路
+    回传;自上报接线。确认钮 = 建档缺失臂兜底常量(screen_loader 桩)。"""
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_fortune import (
+        CwScreenFortune,
+    )
+    import sr_od.application.currency_war.operations.cw_op.cw_overlay_pick_action as pick_mod
+
+    rs = SimpleNamespace(sentinel='rs')
+    ctrl = _RecordingController()
+    op = SimpleNamespace(ctx=SimpleNamespace(controller=ctrl,
+                                             screen_loader=_screen_loader_none()),
+                         round_retry=lambda **kw: rs)
+    env = OverlayPickExecEnv(op=op, idx=1, target=Point(900, 480))
+    reported: list = []
+    monkeypatch.setattr(pick_mod, 'game_state_from_ctx',
+                        lambda ctx: SimpleNamespace(sentinel='gs'))
+    monkeypatch.setattr(pick_mod, 'report_action_pick_fortune_param',
+                        lambda gs, param, sig: reported.append(param))
+    assert CwActionPickFortuneOp(env.op.ctx, CwActionPickFortuneParam(idx=1),
+                                 env=env).run().is_success
+    assert [(p.x, p.y) for p, _t in ctrl.clicks] == [
+        (900, 480), (CwScreenFortune.CONFIRM.x, CwScreenFortune.CONFIRM.y)]
+    assert env.round_result is rs
+    assert len(reported) == 1 and reported[0].idx == 1
+
+
+def test_wish_trial_pick_op_clicks_card_area_confirms_and_self_reports(
+        no_pick_sleep, monkeypatch):
+    """祈愿试炼确认链(pick-op-unify T-3):点卡 → 「按钮-确认选择」area
+    确认;轮次结果旁路回传;自上报接线。"""
+    import sr_od.application.currency_war.operations.cw_op.cw_overlay_pick_action as pick_mod
+
+    rs = SimpleNamespace(sentinel='rs')
+    ctrl = _RecordingController()
+    confirm_calls: list[tuple] = []
+
+    def _confirm_stub(shot, s, a, **kw):
+        confirm_calls.append((s, a, kw))
+        return rs
+
+    op = SimpleNamespace(
+        ctx=SimpleNamespace(controller=ctrl),
+        screenshot=lambda: 'shot',
+        round_by_find_and_click_area=_confirm_stub,
+        round_retry=lambda **kw: rs)
+    env = OverlayPickExecEnv(op=op, idx=0, target=Point(960, 340))
+    reported: list = []
+    monkeypatch.setattr(pick_mod, 'game_state_from_ctx',
+                        lambda ctx: SimpleNamespace(sentinel='gs'))
+    monkeypatch.setattr(pick_mod, 'report_action_pick_wish_trial_param',
+                        lambda gs, param, sig: reported.append(param))
+    assert CwActionPickWishTrialOp(env.op.ctx, CwActionPickWishTrialParam(idx=0),
+                                   env=env).run().is_success
+    assert [(p.x, p.y) for p, _t in ctrl.clicks] == [(960, 340)]
+    assert confirm_calls == [('货币战争-祈愿试炼', '按钮-确认选择',
+                              {'success_wait': 1.5})]
+    assert env.round_result is rs
+    assert len(reported) == 1 and reported[0].idx == 0
 
 
 # ===== 4. 比对收口锁(三面迁观察侧)=====

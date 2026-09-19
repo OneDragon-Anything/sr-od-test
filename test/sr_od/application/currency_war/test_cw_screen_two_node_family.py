@@ -247,17 +247,24 @@ def test_wish_chosen_written_at_reentry_adjudication_only(
     op._obs = CwScreenWishTrialObs(on_screen=True,
                                    options=['累计刷新10次', ''],
                                    screen=_FRAME)   # obs 注入(观察 node 产物形态)
-    clicks: list = []
-    monkeypatch.setattr(
-        test_context, 'controller',
-        SimpleNamespace(mouse_move=lambda p, **k: None,
-                        click=lambda p, **k: clicks.append(p)),
-        raising=False)
-    monkeypatch.setattr(op, 'screenshot', lambda: _FRAME, raising=False)
-    monkeypatch.setattr(op, 'round_by_find_and_click_area',
-                        lambda s, sc, a, **k: _Area(True), raising=False)
-    monkeypatch.setattr(mod.time, 'sleep', lambda *_: None, raising=False)
-    # ① 未落地:标识仍在 → 不写 chosen,重走(决策 + 点卡机械交回)
+    # pick-op-unify:选卡+确认机械链迁入 CwActionPickWishTrialOp;本锁桩
+    # 派发捕获(param/env)断言决策半产物,机械链行为锁 =
+    # test_cw_unified_action_4 祈愿 op 锁。
+    dispatches: list = []
+
+    class _StubPickOp:
+        def __init__(self, param, env) -> None:
+            self.param = param
+            self.env = env
+
+        def execute(self) -> bool:
+            dispatches.append(self)
+            return True
+
+    import sr_od.application.currency_war.operations.cw_op.cw_action_registry as _reg
+    monkeypatch.setattr(_reg, 'action_op_for',
+                        lambda act, ctx, env: _StubPickOp(act, env))
+    # ① 未落地:标识仍在 → 不写 chosen,重走(决策 + 派发选卡确认链)
     monkeypatch.setattr(op, 'round_by_find_area',
                         lambda s, sc, a, **k: _Area(True), raising=False)
     op._confirm_pending = (['累计刷新10次', ''], 0)
@@ -266,10 +273,11 @@ def test_wish_chosen_written_at_reentry_adjudication_only(
         '标识仍在(未落地)→ chosen 不写')
     assert rs.result == OperationRoundResultEnum.WAIT, (
         f'未落地重走:round_wait 机械交回:{rs!r}')
-    assert [(p.x, p.y) for p in clicks] == [
-        (mod.CwScreenWishTrial.FIRST_CARD.x,
-         mod.CwScreenWishTrial.FIRST_CARD.y)], (
-        f'未落地重走:零参决策 idx=0 → 首卡:{clicks!r}')
+    assert len(dispatches) == 1, f'未落地重走:选卡确认链恰一次派发:{dispatches!r}'
+    assert dispatches[0].param.idx == 0, '零参决策 idx=0'
+    assert (dispatches[0].env.target.x, dispatches[0].env.target.y) == (
+        mod.CwScreenWishTrial.FIRST_CARD.x, mod.CwScreenWishTrial.FIRST_CARD.y), (
+        f'定位点 = 首卡:{dispatches[0].env.target!r}')
     assert op._confirm_pending == (['累计刷新10次', ''], 0), (
         '重走后待裁决快照重置(本轮选择)')
     # ② 落地:标识不在 → 此刻才写 chosen + success 交回
