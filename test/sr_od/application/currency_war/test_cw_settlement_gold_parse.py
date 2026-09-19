@@ -37,20 +37,11 @@ def test_same_token_form_regression() -> None:
         ['挑战成功', '存量 47', 'Lv.3'])['gold'] == 47
 
 
-def test_adjacent_token_form_fallback() -> None:
-    """分词形态兜底:「存量」锚词 token 与纯数字 token 被拆成相邻两 token
-    → 紧邻后随纯数字才取(锚词缺失/非纯数字不猜)。"""
-    assert parse_settlement_assets(
-        ['挑战成功', '存量', '52', 'Lv.3'])['gold'] == 52
-    assert parse_settlement_assets(
-        ['挑战成功', '存量：', '47', 'Lv.3'])['gold'] == 47
-    # 下一 token 非纯数字(金币总览数值等)→ 不取,宁缺勿造。
-    assert parse_settlement_assets(
-        ['挑战成功', '存量', '金币总览', 'Lv.3'])['gold'] is None
-
-
 def test_missing_anchor_stays_none() -> None:
-    """锚词缺失(面板不在场/OCR 整段漏)→ None,不冒认(负例回归)。"""
+    """锚词缺失(面板不在场/OCR 整段漏)→ None,不冒认(负例回归)。
+
+    当前版本结算布局无「存量」token(2026-09-18 结算帧亲读实证),本
+    负例即生产常态——真值入口主路径 = read_settle_gold_opt 定点读数。"""
     assert parse_settlement_assets(
         ['挑战成功', '小队生命值71', '连胜×0'])['gold'] is None
     assert parse_settlement_assets([])['gold'] is None
