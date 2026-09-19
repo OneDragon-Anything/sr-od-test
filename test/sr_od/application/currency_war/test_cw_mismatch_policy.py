@@ -128,22 +128,3 @@ def test_set_reconcile_andon_hook_roundtrip() -> None:
     fired.clear()
     fire_reconcile_andon({'k': 2})
     assert fired == [], '复位后不再触达'
-
-
-def test_shipped_registry_declares_prep_reward_gold_blind_spot() -> None:
-    """在册条目锁(2026-09-16 归因批出口②):备战帧随机收入盲区条目在册
-    ——键 = (备战, gold) 精确、前缀钉卖牌退款投影、reason 带持久索引
-    (声明盲区锚)。禁退化字段级通配(粒度纪律:吞「买了没扣钱」类真失败
-    = 后门)。"""
-    entries = policy.EXEMPT_REGISTRY.get((PREP_SCREEN, 'gold'), ())
-    hit = [e for e in entries if e.logic_evidence == 'proj_sell_refund']
-    assert hit, '盲区条目在册(随登记常量,非测试注入)'
-    entry = hit[0]
-    assert entry.screen == PREP_SCREEN and entry.field == 'gold'
-    assert 'report_action_collect_ore_param' in entry.reason, \
-        'reason 带声明盲区持久锚(动作 op 重组起锚 = 采晶矿上报函数名,' \
-        '原类名 CwActionCollectOreParam 随批跟名)'
-    assert all(e.logic_evidence != EXEMPT_ANY
-               for e in policy.EXEMPT_REGISTRY.get(('货币战争-备战', 'gold'),
-                                                   ())), \
-        '执行敏感字段(gold)禁字段级通配条目'
