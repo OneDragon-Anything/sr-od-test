@@ -1,8 +1,8 @@
-"""sim 重做 S7(M16 遭遇/M17 奖励球·扑满·箱/M18 补给/M22 overlay)回归锁。
+"""sim 重做 S7(M16 遭遇/M17 晶矿·扑满·箱/M18 补给/M22 overlay)回归锁。
 
 设计正本 = ``docs/develop/sr_od/application/currency_war/changes/
 2026-09-15-sim-redesign/design.md``;锁面 = U22 遭遇档位结构与加成
-真值/U23 球面板单例锚与入账语义/扑满替换单一源/U24 补给 3 选 1 基础件
+真值/U23 晶矿面板单例锚与入账语义/扑满替换单一源/U24 补给 3 选 1 基础件
 均匀 + 带钻占位/M22 overlay 队列框架与占位披露。
 """
 from __future__ import annotations
@@ -70,7 +70,7 @@ def test_encounter_pick_writes_chosen() -> None:
     assert reward_text
 
 
-# ============================================================ M17 奖励球/扑满/箱
+# ============================================================ M17 晶矿/扑满/箱
 
 def test_piggy_env_replacement_single_source() -> None:
     """扑满替换守卫:经济过热族环境 + reward 节点 → True;其它环境/
@@ -84,7 +84,7 @@ def test_piggy_env_replacement_single_source() -> None:
 
 
 def test_reward_ball_panel_u23_anchor() -> None:
-    """U23 单例锚:面板 = 1 大金球+5 蓝球+2 灰球(共 8 球;颜色结构 =
+    """U23 单例锚:面板 = 1 大金晶矿+5 蓝晶矿+2 灰晶矿(共 8 晶矿;颜色结构 =
     唯一有据面)。"""
     panel = reward_ball_panel()
     assert len(panel) == 8
@@ -94,15 +94,15 @@ def test_reward_ball_panel_u23_anchor() -> None:
 
 
 def test_ball_pick_gold_and_equip_settlement() -> None:
-    """点球即时入账:金球直加金账;蓝球直入装备栏。"""
+    """采晶矿即时入账:金晶矿直加金账;蓝晶矿直入装备栏。"""
     gs = _gs()
     sig = ChannelSig(family='obs', actor='TestSigWriter')
     gs.observe(gs.gold, 10, sig=sig)
-    kind, amount = apply_ball_pick(gs, 0, rng=random.Random(1))  # 0 = 金球
+    kind, amount = apply_ball_pick(gs, 0, rng=random.Random(1))  # 0 = 金晶矿
     assert (kind, amount) == ('gold', 30)
     assert gs.gold.value == 40
     equip_count_before = len(gs.equips.value or [])
-    kind, amount = apply_ball_pick(gs, 1, rng=random.Random(2))  # 1 = 蓝球
+    kind, amount = apply_ball_pick(gs, 1, rng=random.Random(2))  # 1 = 蓝晶矿
     assert (kind, amount) == ('equip', 1)
     assert len(gs.equips.value) == equip_count_before + 1
 

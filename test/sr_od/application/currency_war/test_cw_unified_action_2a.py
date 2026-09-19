@@ -2,7 +2,7 @@
 
 出处 = docs/develop/sr_od/application/currency_war/changes/
 2026-09-14-unified-action-factory/landing.md §3.2a 判据七组锁(2a 半)+
-design.md §2.6(R2 组合壳溶解 / R4 CwActionClickSpheresParam 改形 / R6 CwActionLevelUpParam 定案④ /
+design.md §2.6(R2 组合壳溶解 / R4 CwActionCollectOreParam 改形 / R6 CwActionLevelUpParam 定案④ /
 R7 武装箱画面 op / R8 工具各立类 / R9 逻辑态全覆盖 / 裁决 3 零比对)。
 规则正本 = flow/action-logic-state.md(同批转录版)。
 
@@ -20,7 +20,7 @@ import pytest
 from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war.kernel import cw_prep_actions as kpa
 from sr_od.application.currency_war.kernel.cw_action_report import (
-    report_action_click_spheres_param,
+    report_action_collect_ore_param,
     report_action_deploy_move_param,
     report_action_level_up_param,
     report_action_sell_bench_param,
@@ -42,11 +42,11 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     game_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
-    select_sphere_clicks,
+    select_ore_clicks,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CW_ACTION_TYPES,
-    CwActionClickSpheresParam,
+    CwActionCollectOreParam,
     CwActionDeployMoveParam,
     CwActionLevelUpParam,
     CwActionOpenTomeParam,
@@ -63,23 +63,23 @@ _SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep')
 
 
 
-# ===== CwActionClickSpheresParam 改形专锁(判据 3 前半)=====
+# ===== CwActionCollectOreParam 改形专锁(判据 3 前半)=====
 
 def test_sphere_selection_kernel_orders_big_first_and_caps():
-    """挑选 kernel 单一源:大球优先(r 降序稳定排序)+ 预算上界;载荷 =
+    """挑选 kernel 单一源:大晶矿优先(r 降序稳定排序)+ 预算上界;载荷 =
     有序 (x, y) 坐标列。"""
     spheres = [('blue', Point(30, 40), 20),
                ('gold', Point(10, 20), 50),
                ('blue', Point(70, 80), 35)]
-    pts = select_sphere_clicks(spheres, 2)
+    pts = select_ore_clicks(spheres, 2)
     assert pts == ((10, 20), (70, 80))
-    assert select_sphere_clicks(spheres, 99) == ((10, 20), (70, 80), (30, 40))
-    assert select_sphere_clicks([], 3) == ()
+    assert select_ore_clicks(spheres, 99) == ((10, 20), (70, 80), (30, 40))
+    assert select_ore_clicks([], 3) == ()
 
 
 def test_sphere_executor_is_mechanical_payload_clicks(monkeypatch):
-    """执行器机械半:逐载荷坐标点击,零读屏(读屏选球半随 R4 改形退役,
-    旧形态靠 op.screenshot 选球——零 screenshot 调用即机械化证明)。
+    """执行器机械半:逐载荷坐标点击,零读屏(读屏选晶矿半随 R4 改形退役,
+    旧形态靠 op.screenshot 选晶矿——零 screenshot 调用即机械化证明)。
     (monkeypatch time.sleep = 溢出/动画家族固定等待空等,真机等待节奏
     非本锁辖面。)"""
     monkeypatch.setattr('time.sleep', lambda _s: None)
@@ -87,24 +87,24 @@ def test_sphere_executor_is_mechanical_payload_clicks(monkeypatch):
     controller = _RecordingController()
     screens: list[int] = []
     ex = _make_executor(controller, screens)
-    ex.execute(CwActionClickSpheresParam(points=((12, 34), (56, 78))))
+    ex.execute(CwActionCollectOreParam(points=((12, 34), (56, 78))))
     assert [(p.x, p.y) for p in controller.clicks] == [(12, 34), (56, 78)]
-    assert controller.drags == []   # 点球不拖拽
+    assert controller.drags == []   # 采晶矿不拖拽
     assert screens == []            # 零读屏(挑选归决策侧 kernel)
-    # 逻辑态:按载荷精确摘球(坐标匹配,非保守清空)——阶段 3.5 宿主 =
-    # report_action_click_spheres_param 容器 spheres 精确摘除(原黑板投影
+    # 逻辑态:按载荷精确摘晶矿(坐标匹配,非保守清空)——阶段 3.5 宿主 =
+    # report_action_collect_ore_param 容器 spheres 精确摘除(原黑板投影
     # 断言随 _project_prep_obs 退役)。
-    from sr_od.application.currency_war.kernel.cw_game_state import SphereSight
+    from sr_od.application.currency_war.kernel.cw_game_state import OreSight
     from test.sr_od.application.currency_war._cw_helpers import cw4_session
     session = cw4_session()
     gs = game_state_of(session)
-    gs.observe(gs.spheres, SphereSight(
+    gs.observe(gs.spheres, OreSight(
         count=2, colors=('gold', 'blue'),
         points=(('gold', 12, 34, 50), ('blue', 99, 99, 10))),
-        sig=ChannelSig(family='obs', actor='synthesize_from_game_state',
+               sig=ChannelSig(family='obs', actor='synthesize_from_game_state',
                        mode='synthesized'))
-    report_action_click_spheres_param(
-        gs, CwActionClickSpheresParam(points=((12, 34),)),
+    report_action_collect_ore_param(
+        gs, CwActionCollectOreParam(points=((12, 34),)),
         sig=ChannelSig(family='logic_action', actor='CwScreenPrep'))
     assert [(p[1], p[2]) for p in gs.spheres.value.points] == [(99, 99)]
 
@@ -119,7 +119,7 @@ def test_vocab_actions_all_have_logic_state_projection():
     覆盖面两集(登记面申报 = 函数族 docstring:有容器写动作一动作
     一文件,零写族集中 ``zero_writes``):
     - **容器写集**:CwActionSellBenchParam/CwActionSellDeployedParam/
-      CwActionDeployMoveParam/CwActionLevelUpParam/CwActionClickSpheresParam/
+      CwActionDeployMoveParam/CwActionLevelUpParam/CwActionCollectOreParam/
       CwActionOpenTomeParam/CwActionOpenBookcardParam/CwActionWearEquipParam
       ——供数容器上逐动作必产生容器写(write_seq 推进);
     - **合法零写集**(正本申报「消费真值归观察」):CwActionOpenBoxParam
@@ -134,7 +134,7 @@ def test_vocab_actions_all_have_logic_state_projection():
     from sr_od.application.currency_war.kernel.cw_game_state import (
         BenchSlot,
         BenchView,
-        SphereSight,
+        OreSight,
     )
     from sr_od.application.currency_war.kernel.cw_vocab import (
         CwActionFurnaceUseParam,
@@ -164,7 +164,7 @@ def test_vocab_actions_all_have_logic_state_projection():
     _sig = ChannelSig(family='obs', actor='synthesize_from_game_state',
                       mode='synthesized')
     _logic = ChannelSig(family='logic_action', actor='CwScreenPrep')
-    # 供数容器:bench(2 unit+1 tome+1 box)、front 1 人、gold/level/xp、球
+    # 供数容器:bench(2 unit+1 tome+1 box)、front 1 人、gold/level/xp、晶矿
     _slots = [BenchSlot(kind='unit', unit=Unit(char_id='甲', star=1,
                                                equips=[], slot=1)),
               BenchSlot(kind='unit', unit=Unit(char_id='乙', star=1,
@@ -178,7 +178,7 @@ def test_vocab_actions_all_have_logic_state_projection():
     gs.observe(gs.gold, 10, sig=_sig)
     gs.observe(gs.level, 3, sig=_sig)
     gs.observe(gs.xp, (0, 4), sig=_sig)
-    gs.observe(gs.spheres, SphereSight(
+    gs.observe(gs.spheres, OreSight(
         count=1, colors=('gold',), points=(('gold', 1, 2, 9),)), sig=_sig)
     gs.observe(gs.equips, ['轮滑鞋'], sig=_sig)
 
@@ -190,7 +190,7 @@ def test_vocab_actions_all_have_logic_state_projection():
         CwActionSellDeployedParam(deployed_idx=0),
         CwActionDeployMoveParam(bench_idx=1, to_row='front', faction=''),
         CwActionLevelUpParam(cost=0),
-        CwActionClickSpheresParam(points=((1, 2),)),
+        CwActionCollectOreParam(points=((1, 2),)),
         CwActionOpenTomeParam(slot=None),
         CwActionOpenBookcardParam(slot=None),
         CwActionWearEquipParam(item_name='轮滑鞋', char_name='丙',
@@ -218,7 +218,7 @@ def test_vocab_actions_all_have_logic_state_projection():
     names = {c.__name__ for c in CW_ACTION_TYPES}
     covered = ({type(a).__name__ for a in written}
                | {type(a).__name__ for a in zero})
-    assert {'CwActionClickSpheresParam', 'CwActionOpenTomeParam', 'CwActionOpenBookcardParam', 'CwActionOpenBoxParam',
+    assert {'CwActionCollectOreParam', 'CwActionOpenTomeParam', 'CwActionOpenBookcardParam', 'CwActionOpenBoxParam',
             'CwActionSellBenchParam', 'CwActionDeployMoveParam', 'CwActionSellDeployedParam', 'CwActionLevelUpParam',
             'CwActionWearEquipParam'} <= covered
     assert names >= covered   # 两集均为词表成员(不越词表)

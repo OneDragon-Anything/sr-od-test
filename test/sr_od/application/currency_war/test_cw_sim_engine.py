@@ -3,7 +3,7 @@
 设计正本 = ``docs/develop/sr_od/application/currency_war/changes/
 2026-09-15-sim-redesign/design.md`` §2.5;锁面 = reset 开局真值与
 相位路由/环境屏门控/PREP 动作经单一转移函数/节点结算推进序(收入/
-商店/offer 日程/选卡族/补给/遭遇/奖励球)/局终三通道(P2 走完/
+商店/offer 日程/选卡族/补给/遭遇/晶矿)/局终三通道(P2 走完/
 p3_unobserved)/simulate_run 薄包装;r3 返工增锁 = M10 装备四路
 PREP 分派接线 + U24 披露三键并表 + M21 planner 触发正典
 (planner_overlay_due + 全域扫描 + SILVER_WOLF_ID)。
@@ -64,7 +64,7 @@ _CFG = RunConfig(selected_difficulty='A8', enemy_difficulty=108)
 
 def _auto(frame):
     """全相位自适应桩策略(「无动作 = 选终结动作」 mandate 语义的
-    测试桩形态;球面板 = 点第一个剩余球)。"""
+    测试桩形态;晶矿面板 = 点第一个剩余晶矿)。"""
     phase = frame.phase
     if phase is CwSimPhase.REWARD_BALL:
         return CwActionPickEventParam(option_idx=0)
@@ -321,7 +321,7 @@ def test_planner_trigger_fires_on_deployed_merge() -> None:
 # ============================================================ 结算推进
 
 def test_reward_win_leads_to_ball_phase_and_settlement() -> None:
-    """奖励节点胜 → REWARD_BALL(U23 单例锚 8 球)→ 逐球点完 →
+    """奖励节点胜 → REWARD_BALL(U23 单例锚 8 晶矿)→ 逐晶矿点完 →
     推进下一节点;败 → 直接推进。流键定 seed,双分支都锁。"""
     for seed in (7, 21):
         eng = CwSimEngine()
@@ -332,7 +332,7 @@ def test_reward_win_leads_to_ball_phase_and_settlement() -> None:
         if phase_after is CwSimPhase.REWARD_BALL:
             assert len(ret.observation.balls) == 8, 'U23 单例锚'
             ret2 = eng.step(CwActionPickEventParam(option_idx=0))
-            assert len(ret2.observation.balls) == 7, '逐球收缩'
+            assert len(ret2.observation.balls) == 7, '逐晶矿收缩'
         else:
             assert phase_after is CwSimPhase.PREP
             assert (node_after.plane, node_after.round_num) == (1, 2)

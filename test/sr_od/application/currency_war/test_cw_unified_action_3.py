@@ -21,7 +21,7 @@ from test.harness.fixture_controller import fast_sleep
 
 from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war.kernel.cw_vocab import (
-    CwActionClickSpheresParam,
+    CwActionCollectOreParam,
     CwActionDeployMoveParam,
     CwActionFurnaceUseParam,
     CwActionLevelUpParam,
@@ -79,7 +79,7 @@ def test_prep_terminal_set_matches_registry_terminal_attrs():
         CwActionSellDeployedParam(deployed_idx=0),
         CwActionDeployMoveParam(bench_idx=0, to_row='front', faction=''),
         CwActionWearEquipParam(item_name='轮滑鞋', char_name='刃', row='front', slot=1),
-        CwActionClickSpheresParam(points=((1, 2),)),
+        CwActionCollectOreParam(points=((1, 2),)),
         CwActionOpenTomeParam(),
         CwActionOpenBookcardParam(),
         CwActionLevelUpParam(cost=4),

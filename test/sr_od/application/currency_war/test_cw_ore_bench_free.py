@@ -1,11 +1,11 @@
-"""球谓词席自由槽容器锁(迭代 2026-09-18-prep-obs-retirement 阶段 3.3/T-3)。
+"""晶矿谓词席自由槽容器锁(迭代 2026-09-18-prep-obs-retirement 阶段 3.3/T-3)。
 
 ``_sphere_bench_free`` 改容器派生读口 ``bench_free_slots``(旧黑板
 ``free_bench_slots`` 独立记账退役)——锁:
 - free 由容器 bench 槽位表派生;
 - 宝箱/典籍占席经 ``slot_occupies`` 口径自动计入(slot_occupies 正本
   cw_game_state.py:1079-1082);
-- bench 未观察(None = 不确定)→ BENCH_CAPACITY 保守(宁多收球不误卖)。
+- bench 未观察(None = 不确定)→ BENCH_CAPACITY 保守(宁多收晶矿不误卖)。
 """
 from test.sr_od.application.currency_war._cw_helpers import cw4_session
 
@@ -20,7 +20,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     game_state_of,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.entry import (
-    _sphere_bench_free,
+    _ore_bench_free,
 )
 
 _SIG = ChannelSig(family='obs', actor='synthesize_from_game_state',
@@ -46,10 +46,10 @@ def test_free_counts_units_and_items():
     session = cw4_session()
     _write_bench(session, ['unit', 'unit', 'unit', 'supply_box', 'tome',
                            'empty', 'empty', 'empty', 'empty'])
-    assert _sphere_bench_free(game_state_of(session)) == 4
+    assert _ore_bench_free(game_state_of(session)) == 4
 
 
 def test_free_unobserved_conservative_capacity():
-    """bench 未观察(None = 不确定)→ BENCH_CAPACITY 保守(宁多收球)。"""
+    """bench 未观察(None = 不确定)→ BENCH_CAPACITY 保守(宁多收晶矿)。"""
     session = cw4_session()
-    assert _sphere_bench_free(game_state_of(session)) == BENCH_CAPACITY
+    assert _ore_bench_free(game_state_of(session)) == BENCH_CAPACITY
