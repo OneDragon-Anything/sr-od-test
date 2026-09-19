@@ -329,14 +329,28 @@ def test_expert_invite_decision_chain_error_falls_cash(test_context,
     _pts = {'卡-1': Point(300, 400), mod.CASH_AREA: Point(500, 900)}
     monkeypatch.setattr(cw_obs_core, 'area_center',
                         lambda ctx, name, screen: _pts.get(name))
-    clicks: list[Point] = []
-    monkeypatch.setattr(
-        test_context, 'controller',
-        SimpleNamespace(mouse_move=lambda p: None,
-                        click=lambda p: clicks.append(p)), raising=False)
-    with fast_sleep(op):   # 选卡动画等待/轮间等待桩(零真实等待)
+    # pick-op-unify:点卡即选迁入 CwActionPickExpertInviteOp;本锁桩派发
+    # 捕获(param/env),机械链行为锁 = test_cw_unified_action_4。
+    dispatches: list = []
+
+    class _StubPickOp:
+        def __init__(self, param, env) -> None:
+            self.param = param
+            self.env = env
+
+        def execute(self) -> bool:
+            dispatches.append(self)
+            return True
+
+    import sr_od.application.currency_war.operations.cw_op.cw_action_registry as _reg
+    monkeypatch.setattr(_reg, 'action_op_for',
+                        lambda act, ctx, env: _StubPickOp(act, env))
+    with fast_sleep(op):   # 轮间等待桩(零真实等待)
         rs = op.act()
     assert not rs.is_success and '点击已发' in (rs.status or ''), (
         f'异常被吸收,round 照常机械交回:{rs!r}')
-    assert [(p.x, p.y) for p in clicks] == [(500, 900)], (
-        f'兜底应落「现金为王」area:{[(p.x, p.y) for p in clicks]}')
+    assert len(dispatches) == 1, f'选卡链恰一次派发:{dispatches!r}'
+    assert dispatches[0].param.idx == -1, (
+        f'兜底应落「现金为王」(idx=-1):{dispatches[0].param!r}')
+    assert (dispatches[0].env.target.x, dispatches[0].env.target.y) == (
+        500, 900), f'兜底应落「现金为王」area:{dispatches[0].env.target!r}'

@@ -72,12 +72,16 @@ from sr_od.application.currency_war.operations.cw_op.cw_action_registry import (
     action_op_class_for_type,
 )
 from sr_od.application.currency_war.operations.cw_op.cw_overlay_pick_action import (
+    CwActionPickBoxCardOp,
     CwActionPickEncounterOp,
+    CwActionPickEquipOp,
+    CwActionPickExpertInviteOp,
     CwActionPickFortuneOp,
     CwActionPickInvestOp,
     CwActionPickMegastarOp,
     CwActionPickPartnerOp,
     CwActionPickPlannerOp,
+    CwActionPickStarTomeOp,
     CwActionPickSupplyOp,
     CwActionPickWishTrialOp,
     OverlayPickExecEnv,
@@ -108,12 +112,9 @@ _LOGIC_SIG = ChannelSig(family='logic_action', actor='cw-t216-test',
 # - 三刷新动作(handler 自管点击链;attack4 M6 裁定 (a):与
 #   CwActionRefreshInvestCardsParam 同型豁免);
 # - HoldFrame(分支拦截型,等待帧非动作)= 永久豁免,无 op 行。
-# (pick 12 类已随 pick-op-unify 批全量收编入表/分批收编中:PickInvest
-#  随 T-2、PickFortune/PickWishTrial 随 T-3 入表,余者随批入表后自本集
-#  移除——锁全覆盖。)
+# (pick 12 类已随 pick-op-unify 批全量收编入表:豁免集终形 = 三刷新
+#  动作 + HoldFrame。)
 _TERMINAL_CONTRACT_REGISTRY_EXEMPT = (
-    CwActionPickStarTomeParam, CwActionPickBoxCardParam,
-    CwActionPickExpertInviteParam, CwActionPickEquipParam,
     CwActionRefreshNodeOptionsParam, CwActionRefreshSupplyParam, CwActionRefreshInvestCardsParam, HoldFrame,
 )
 
@@ -154,6 +155,10 @@ def test_pick_rows_resolve_class_and_instance_consistently():
         (CwActionPickInvestParam, CwActionPickInvestOp),
         (CwActionPickFortuneParam, CwActionPickFortuneOp),
         (CwActionPickWishTrialParam, CwActionPickWishTrialOp),
+        (CwActionPickStarTomeParam, CwActionPickStarTomeOp),
+        (CwActionPickBoxCardParam, CwActionPickBoxCardOp),
+        (CwActionPickExpertInviteParam, CwActionPickExpertInviteOp),
+        (CwActionPickEquipParam, CwActionPickEquipOp),
     ]
     for cls, expected in rows:
         assert action_op_class_for_type(cls) is expected, cls.__name__
@@ -424,6 +429,51 @@ def test_wish_trial_pick_op_clicks_card_area_confirms_and_self_reports(
                               {'success_wait': 1.5})]
     assert env.round_result is rs
     assert len(reported) == 1 and reported[0].idx == 0
+
+
+def test_pick_no_confirm_ops_click_and_self_report(
+        no_pick_sleep, monkeypatch):
+    """点卡即选族四 op 行为锁(pick-op-unify T-4):装备/武装箱/星徽秘典/
+    专家邀请函 = 选中点击 + 各自动画等待,零确认步;自上报接线;派发
+    param 携真实 idx(专家邀请函含 -1 = 现金为王语义透传)。"""
+    import sr_od.application.currency_war.operations.cw_op.cw_overlay_pick_action as pick_mod
+
+    cases = [
+        (CwActionPickEquipOp, CwActionPickEquipParam, Point(1070, 280),
+         [(1070, 280)], 1),
+        (CwActionPickBoxCardOp, CwActionPickBoxCardParam, Point(1027, 290),
+         [(1027, 290)], 2),
+        (CwActionPickStarTomeOp, CwActionPickStarTomeParam, Point(700, 500),
+         [(700, 500)], 0),
+        (CwActionPickExpertInviteOp, CwActionPickExpertInviteParam,
+         Point(300, 600), [(300, 600)], -1),
+    ]
+    for op_cls, param_cls, target, want_clicks, want_idx in cases:
+        ctrl = _RecordingController()
+        op = SimpleNamespace(ctx=SimpleNamespace(controller=ctrl))
+        env = OverlayPickExecEnv(op=op, idx=want_idx, target=target)
+        reported: list = []
+        monkeypatch.setattr(pick_mod, 'game_state_from_ctx',
+                            lambda ctx: SimpleNamespace(sentinel='gs'))
+        monkeypatch.setattr(pick_mod, 'report_action_pick_equip_param',
+                            lambda gs, param, sig: reported.append(param),
+                            raising=False)
+        monkeypatch.setattr(pick_mod, 'report_action_pick_box_card_param',
+                            lambda gs, param, sig: reported.append(param),
+                            raising=False)
+        monkeypatch.setattr(pick_mod, 'report_action_pick_star_tome_param',
+                            lambda gs, param, sig: reported.append(param),
+                            raising=False)
+        monkeypatch.setattr(pick_mod, 'report_action_pick_expert_invite_param',
+                            lambda gs, param, sig: reported.append(param),
+                            raising=False)
+        assert op_cls(env.op.ctx, param_cls(idx=want_idx),
+                      env=env).run().is_success, param_cls.__name__
+        assert [(p.x, p.y) for p, _t in ctrl.clicks] == want_clicks, \
+            param_cls.__name__
+        assert len(ctrl.moves) == len(ctrl.clicks), param_cls.__name__
+        assert len(reported) == 1 and reported[0].idx == want_idx, \
+            param_cls.__name__
 
 
 # ===== 4. 比对收口锁(三面迁观察侧)=====

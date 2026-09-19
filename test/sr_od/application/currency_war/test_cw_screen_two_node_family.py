@@ -295,9 +295,10 @@ def test_wish_chosen_written_at_reentry_adjudication_only(
 def test_equip_act_decides_from_container_and_round_wait(
         test_context, monkeypatch) -> None:
     """决策动作 node 锁(无门单发型代表):决策从容器零参读(决策调用
-    形态不变;写槽已由 report 落容器)→ 点卡点击序列 → round_wait 推进
-    循环(不计节点重试预算)。红 = 决策形态回迁带参 / 点击序列漂移 /
-    循环推进回退为计预算的 retry。"""
+    形态不变;写槽已由 report 落容器)→ 选卡链派发(pick-op-unify 批:
+    点卡即选迁入 ``CwActionPickEquipOp``;机械链行为锁 =
+    test_cw_unified_action_4)→ round_wait 推进循环(不计节点重试预算)。
+    红 = 决策形态回迁带参 / 定位点漂移 / 循环推进回退为计预算的 retry。"""
     from one_dragon.base.operation.operation_round_result import (
         OperationRoundResultEnum,
     )
@@ -316,22 +317,31 @@ def test_equip_act_decides_from_container_and_round_wait(
     monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
     monkeypatch.setattr(op, '_read_cards',
                         lambda s: ['甲卡', '乙卡', '丙卡'])
-    clicks: list = []
-    monkeypatch.setattr(
-        test_context, 'controller',
-        SimpleNamespace(mouse_move=lambda p, **k: None,
-                        click=lambda p, **k: clicks.append(p)),
-        raising=False)
     # 观察 node(report 落容器)+ 决策动作 node(零参决策消费)
     _run_node(test_context, op, op.observe)
     assert game_state_of(session).equip_pick_opts.value == [
         '甲卡', '乙卡', '丙卡'], '前置:观察已落容器'
-    monkeypatch.setattr(mod.time, 'sleep', lambda *_: None, raising=False)
+    dispatches: list = []
+
+    class _StubPickOp:
+        def __init__(self, param, env) -> None:
+            self.param = param
+            self.env = env
+
+        def execute(self) -> bool:
+            dispatches.append(self)
+            return True
+
+    import sr_od.application.currency_war.operations.cw_op.cw_action_registry as _reg
+    monkeypatch.setattr(_reg, 'action_op_for',
+                        lambda act, ctx, env: _StubPickOp(act, env))
     rs = _run_node(test_context, op, op.act)
     assert _decide_calls == [1], f'零参决策恰一次:{_decide_calls!r}'
-    assert [(p.x, p.y) for p in clicks] == [
-        (mod.CwScreenEquipPick.CARD_XS[1], mod.CwScreenEquipPick.CARD_Y)], (
-        f'点卡点击序列(策略 idx=1 → 第二卡):{clicks!r}')
+    assert len(dispatches) == 1 and dispatches[0].param.idx == 1, (
+        f'选卡链恰一次派发,param 携真实 idx:{dispatches!r}')
+    assert (dispatches[0].env.target.x, dispatches[0].env.target.y) == (
+        mod.CwScreenEquipPick.CARD_XS[1], mod.CwScreenEquipPick.CARD_Y), (
+        f'定位点(策略 idx=1 → 第二卡):{dispatches[0].env.target!r}')
     assert rs.result == OperationRoundResultEnum.WAIT, (
         f'循环推进 = round_wait(不计节点重试预算):{rs!r}')
     assert op._pick_pending is True, '点击已发 → 重入裁决标志置位'

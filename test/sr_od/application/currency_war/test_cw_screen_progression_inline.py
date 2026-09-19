@@ -390,9 +390,10 @@ def test_box_pick_observe_gates_skip_report(test_context, monkeypatch,
 
 
 def test_box_pick_act_clicks_decided_card(test_context, monkeypatch):
-    """决策动作 node 锁:容器外读数决策(零参策略契约)→ 点卡点击序列
-    (选中即确认)→ 选卡即终结 success。红 = 决策形态漂移 / 点击坐标
-    漂移 / 终结交回语义漂移。"""
+    """决策动作 node 锁:容器外读数决策(零参策略契约)→ 选卡链派发
+    (pick-op-unify 批:点卡选中即确认 + 动画等待迁入
+    ``CwActionPickBoxCardOp``;机械链行为锁 = test_cw_unified_action_4)→
+    选卡即终结 success。红 = 决策形态漂移 / 定位点漂移 / 终结交回语义漂移。"""
     import importlib
 
     mod = importlib.import_module(f'{_PKG}.cw_screen_box_pick')
@@ -404,11 +405,27 @@ def test_box_pick_act_clicks_decided_card(test_context, monkeypatch):
         decide_box_card=lambda: (_decide_calls.append(1)
                                  or SimpleNamespace(idx=1, reason='stub')))
     _run_node(test_context, op, op.observe)   # 前置:观察装载读数
-    clicks = _stub_controller(test_context, monkeypatch)
-    monkeypatch.setattr(mod.time, 'sleep', lambda *_: None, raising=False)
+    dispatches: list = []
+
+    class _StubPickOp:
+        def __init__(self, param, env) -> None:
+            self.param = param
+            self.env = env
+
+        def execute(self) -> bool:
+            dispatches.append(self)
+            return True
+
+    import sr_od.application.currency_war.operations.cw_op.cw_action_registry as _reg
+    monkeypatch.setattr(_reg, 'action_op_for',
+                        lambda act, ctx, env: _StubPickOp(act, env))
     rs = _run_node(test_context, op, op.act)
     assert _decide_calls == [1], f'零参决策恰一次:{_decide_calls!r}'
-    assert [(p.x, p.y) for p in clicks] == [(900, mod.CwScreenBoxPick.CARD_Y)], (
-        f'点卡点击序列(策略 idx=1 → 第二卡 x 中心 + CARD_Y):{clicks!r}')
+    assert len(dispatches) == 1 and dispatches[0].param.idx == 1, (
+        f'选卡链恰一次派发,param 携真实 idx:{dispatches!r}')
+    assert (dispatches[0].env.target.x, dispatches[0].env.target.y) == (
+        900, mod.CwScreenBoxPick.CARD_Y), (
+        f'定位点(策略 idx=1 → 第二卡 x 中心 + CARD_Y):'
+        f'{dispatches[0].env.target!r}')
     assert rs.is_success and '选卡即终结' in (rs.status or ''), (
         f'选卡即终结交回:{rs!r}')
