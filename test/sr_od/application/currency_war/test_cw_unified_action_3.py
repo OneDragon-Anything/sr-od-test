@@ -110,13 +110,12 @@ def test_open_shop_row_is_terminal_carrier_and_execute_loud_fails():
     """CwActionOpenShopOp = terminal 承载行:注册表解析可命中;执行抛
     AssertionError(防静默复活)——CwActionOpenShopParam 流程编排归画面 op 流程层
     (cw_screen_prep._act_execute_default 截流),注册行在正常路径不可达,
-    可达即分派漏斗被绕过。read_only 两形态 = 动作字段承载(op 实例持
+    可达即分派漏斗被绕过。restricted_spend 形态 = 动作字段承载(op 实例持
     动作对象,注册表不表达形态分叉)。"""
-    for a in (CwActionOpenShopParam(), CwActionOpenShopParam(read_only=True)):
-        op = CwActionOpenShopOp(SimpleNamespace(), a, env=SimpleNamespace())
-        assert op.param.read_only == a.read_only
-        with pytest.raises(AssertionError):
-            op.run()
+    op = CwActionOpenShopOp(SimpleNamespace(), CwActionOpenShopParam(),
+                            env=SimpleNamespace())
+    with pytest.raises(AssertionError):
+        op.run()
 
 
 # ===== CwActionStartBattleParam 基类契约在册例外锁(T-286 出战域重设计:点击序列语义;
