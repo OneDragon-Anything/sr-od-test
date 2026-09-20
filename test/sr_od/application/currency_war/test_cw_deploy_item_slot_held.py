@@ -3,10 +3,12 @@
 锁面 = is_item_slot 候选在部署围栏中恒 held、拒因 'item_slot',
 先于一切围栏/cap 判定被剔除——防部署装配点把占槽物品当角色上场。
 benchchar-retirement 迭代将本防线改 kind 口,本锁为改口前回归网。
+(P3 锁载体迁移:select_deployments 随落位决策权归策略迁
+mandate_v1/deploy_plan,断言零改。)
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.kernel.cw_deploy_logic import (
+from sr_od.application.currency_war.strategies.impl.mandate_v1.deploy_plan import (
     select_deployments,
 )
 from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar

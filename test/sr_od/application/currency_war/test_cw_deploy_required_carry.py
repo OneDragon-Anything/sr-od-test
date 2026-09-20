@@ -27,13 +27,16 @@ from sr_od.application.currency_war.kernel.cw_comps import (
 from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     SwapPlanContext,
     required_swap_arm_pending,
-    select_deployments,
     select_swap_plan,
     swap_sell_exclusion_reason,
 )
 from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
 from sr_od.application.currency_war.kernel.cw_intention import (
     pair_target_comp,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.deploy_plan import (
+    select_deployments,
+    select_deployments_reasoned,
 )
 
 # 真实注册表角色(锁语义不锁巧合;registry 真值):
@@ -178,7 +181,7 @@ def test_swap_plan_seats_required_carry_after_sell() -> None:
     """
     ctx = _ctx(board=[_SANGBO, _KAFKA, _NATASHA, _HUAHUO],
                bench=[_TIBAO, _XIER], cap=4)
-    plan = select_swap_plan(ctx)
+    plan = select_swap_plan(ctx, select_up=select_deployments_reasoned)
     assert plan.nonempty
     assert plan.sell_names == [_NATASHA]
     up_names = {ctx.bench[i].char_id for i in plan.up_bench}

@@ -34,6 +34,9 @@ from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
 from sr_od.application.currency_war.kernel.cw_intention import (
     pair_target_comp,
 )
+from sr_od.application.currency_war.strategies.impl.mandate_v1.deploy_plan import (
+    select_deployments_reasoned,
+)
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate import (
     _redeploy_emission_allowed,
 )
@@ -128,7 +131,7 @@ def test_completion_member_yields_target_seat() -> None:
     assert swap_sell_exclusion_reason(_HUAHUO, ctx) == ''
     assert swap_sell_exclusion_reason(_NATASHA, ctx) == ''
     assert swap_sell_exclusion_reason(_KAFKA, ctx) == 'target_keep'
-    plan = select_swap_plan(ctx)
+    plan = select_swap_plan(ctx, select_up=select_deployments_reasoned)
     assert plan.nonempty
     assert plan.sell_names == [_HUAHUO]
     assert {ctx.bench[i].char_id for i in plan.up_bench} == {_HEITIANQUE}

@@ -25,10 +25,6 @@ from sr_od.application.currency_war.kernel.cw_action_report import (
     report_action_sell_bench_param,
     report_action_sell_deployed_param,
 )
-from sr_od.application.currency_war.kernel.cw_deploy_logic import (
-    assign_deploy_slots,
-    empty_deploy_slots,
-)
 from sr_od.application.currency_war.kernel.cw_economy import (
     xp_apply_clicks,
 )
@@ -39,6 +35,9 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     bench_slots_of,
     deployed_slots_of,
     game_state_of,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.deploy_plan import (
+    deploy_slot_plans,
 )
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
     select_ore_clicks,
@@ -306,17 +305,20 @@ def test_levelup_logic_state_advances_xp_level_and_gold():
 
 # ===== 原子通路对照锁(判据 7)=====
 
-def test_deploy_slot_assignment_matches_kernel_plan():
-    """原子部署发射位件(发射×执行单一源对照):选排指派输出覆盖
-    select_deployments 上场集(每件恰一 move)、槽位取自空槽集、前排保证
-    (pref=back ∧ 前排全空 → 真 front 先提/无 front 强转)。"""
-    bench = [BenchChar(slot=1, char_id='甲', position_pref='back'),
-             BenchChar(slot=2, char_id='乙', position_pref='front'),
-             BenchChar(slot=3, char_id='丙', position_pref='back')]
-    fe, be = empty_deploy_slots([], front_total=4, back_total=6)
-    assert fe == [1, 2, 3, 4] and be == [1, 2, 3, 4, 5, 6]
-    moves = assign_deploy_slots(bench, [0, 1, 2], fe, be)
-    # 前排保证:甲 pref=back、前排全空、乙为真 front → 乙先提
+def test_deploy_slot_plans_front_guarantee_and_slot_set():
+    """落位策略锁(P3 锁载体迁移:原 kernel assign/empty 锁迁
+    mandate_v1 deploy_plan.deploy_slot_plans,断言语义不变):输出覆盖
+    上场集(每件恰一 move)、槽位取自容器空槽集、前排保证(pref=back ∧
+    前排全空 → 真 front 先提/无 front 强转)。
+
+    名字表达纪律:排偏好经注册表角色名获得(砂金=front,花火/爻光=
+    back〔flex 派生 back〕),禁种子构造注入口。"""
+    gs = game_state_of(None)   # 行域未观察 = 前后排全空
+    bench = [BenchChar(slot=1, char_id='花火'),
+             BenchChar(slot=2, char_id='砂金'),
+             BenchChar(slot=3, char_id='爻光')]
+    moves = deploy_slot_plans(bench, [0, 1, 2], None, gs)
+    # 前排保证:花火 pref=back、前排全空、砂金为真 front → 砂金先提
     assert moves[0][0] == 1 and moves[0][1] == 'front'
     # 槽位不重叠、全部来自空槽集
     used = [(row, slot) for _i, row, slot in moves]
@@ -324,7 +326,14 @@ def test_deploy_slot_assignment_matches_kernel_plan():
     assert all(slot in (set(range(1, 5)) if row == 'front'
                         else set(range(1, 7))) for row, slot in used)
     # 两排全满 = 截断(防御停)
-    moves2 = assign_deploy_slots(bench, [0], [], [])
+    gs_full = game_state_of(None)
+    gs_full.observe(gs_full.front_row,
+                    [Unit(char_id=f'前{i}', star=1, equips=[], slot=i)
+                     for i in range(1, 5)], evidence='t', sig=_SIG_OBS)
+    gs_full.observe(gs_full.back_row,
+                    [Unit(char_id=f'后{i}', star=1, equips=[], slot=i)
+                     for i in range(1, 7)], evidence='t', sig=_SIG_OBS)
+    moves2 = deploy_slot_plans(bench, [0], None, gs_full)
     assert moves2 == []
 
 

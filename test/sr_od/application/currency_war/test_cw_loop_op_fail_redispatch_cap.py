@@ -192,8 +192,10 @@ def test_on_fail_retry_branch_capped_before_retry_pool(monkeypatch):
 # 静默保留后值 → CwActionDeployMoveParam 对位同槽号另一条目、拖错人出场。修 = 判据
 # 单一源 bench_slots_healthy(槽号健康不变量)前置门:不健康 →
 # 整份部署计划 fail-closed 不出 + cw4 分键显影。
+# (P3 锁载体迁移:计划单一源迁 mandate_v1/deploy_plan,分键随迁改名
+# deploy_plan_slot_table_unhealthy,断言面不变。)
 
-_KEY_UNHEALTHY = 'deploy_chain_slot_table_unhealthy'
+_KEY_UNHEALTHY = 'deploy_plan_slot_table_unhealthy'
 
 
 def _bcd_host(monkeypatch, bench_slots, counters):
@@ -207,7 +209,7 @@ def _bcd_host(monkeypatch, bench_slots, counters):
         StrategySession,
     )
     from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
-        mandate as _mandate_mod,
+        deploy_plan as _dp_mod,
     )
 
     gs = _NS(node=_NS(value=None), back_layout=_NS(value=None),
@@ -218,7 +220,7 @@ def _bcd_host(monkeypatch, bench_slots, counters):
     session.strategy_state = _NS(cw4_counters=counters)
     monkeypatch.setattr(_gs_mod, 'game_state_of', lambda s: gs)
     monkeypatch.setattr(_gs_mod, 'bench_slots_of', lambda b: bench_slots)
-    monkeypatch.setattr(_mandate_mod, '_deploy_plan_inputs',
+    monkeypatch.setattr(_dp_mod, '_deploy_plan_inputs',
                         lambda *a, **k: {})
     return session
 
@@ -239,8 +241,10 @@ def test_deploy_chain_unhealthy_slot_table_fails_closed(monkeypatch, bench_slots
     counters: dict = {}
     session = _bcd_host(monkeypatch, bench_slots, counters)
 
-    import sr_od.application.currency_war.kernel.cw_deploy_logic as _dl_mod
-    monkeypatch.setattr(_dl_mod, 'select_deployments_reasoned',
+    from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+        deploy_plan as _dp_mod,
+    )
+    monkeypatch.setattr(_dp_mod, 'select_deployments_reasoned',
                         lambda **k: ([0], [], []))   # 计划段有选择,逼入门内
 
     assert _battle_chain_deploy_moves(session) == []   # 零 CwActionDeployMoveParam
@@ -260,8 +264,10 @@ def test_deploy_chain_healthy_table_maps_and_launches(monkeypatch):
                    + [None] * 7)
     session = _bcd_host(monkeypatch, bench_slots, counters)
 
-    import sr_od.application.currency_war.kernel.cw_deploy_logic as _dl_mod
-    monkeypatch.setattr(_dl_mod, 'select_deployments_reasoned',
+    from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+        deploy_plan as _dp_mod,
+    )
+    monkeypatch.setattr(_dp_mod, 'select_deployments_reasoned',
                         lambda **k: ([0], [], []))   # 选 bench 下标 0 上场
 
     moves = _battle_chain_deploy_moves(session)
@@ -269,4 +275,4 @@ def test_deploy_chain_healthy_table_maps_and_launches(monkeypatch):
     assert len(moves) == 1
     assert moves[0].bench_idx == 0   # = 槽号 1 在容器槽位表的下标(非槽号本身)
     assert moves[0].faction == '风'   # faction = 容器槽位表角色对象现取
-    assert moves[0].to_row in ('front', 'back')   # 前排保证语义归 assign 单一源
+    assert moves[0].to_row in ('front', 'back')   # 前排保证语义归策略落位单一源

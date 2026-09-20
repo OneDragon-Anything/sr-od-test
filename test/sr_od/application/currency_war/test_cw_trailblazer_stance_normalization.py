@@ -1,9 +1,10 @@
-"""开拓者形态归一现状锁。
+"""开拓者形态归一锁(§3 不变量 5 哨兵)。
 
-锁面 = 换排形态归一的现状不对称:swap 上报经归一口(换排即切换
-前台记忆/后台欢愉形态,char_id/faction 同步),deploy_move 上报缺
-归一(形态不随排切换)——后者为已申报的不对称缺陷,归一口统一后
-第二段断言翻转为期待形态切换。
+锁面 = 换排形态归一归一口唯一:swap 上报与 deploy_move 上报均经同源
+归一核(cw_exec_state.trailblazer_row_identity → trailblazer_row_unit),
+换排即切换前台记忆/后台欢愉形态(char_id/faction 同步)。P3 申报的
+缺陷修复(deploy_move 上报缺归一)落地后,第二段断言已由现状锚
+翻转为期待形态切换(唯一允许翻转的锁,提交说明单独申报)。
 """
 from __future__ import annotations
 
@@ -55,10 +56,11 @@ def test_swap_report_normalizes_trailblazer_form_to_target_row() -> None:
     assert dep[0].position_pref == 'front', '排归属同步'
 
 
-def test_deploy_move_report_lacks_form_normalization_current() -> None:
-    """现状缺陷锚:deploy_move 上报缺归一——开拓者拖上场后排变了、
-    形态(char_id)不切换。归一口统一后,本断言翻转为期待
-    『开拓者·记忆』(申报的缺陷修复,禁顺带静默改)。"""
+def test_deploy_move_report_normalizes_trailblazer_form_to_target_row() -> None:
+    """deploy_move 上报与 swap 同源归一(benchchar-retirement P3 缺陷修复
+    申报面,design §3 不变量 5):开拓者拖上场 → 排变、形态(char_id)
+    同步切目标排(原现状锚 = 缺归一,已按申报翻转,全文件唯一语义变更
+    点)。"""
     gs = _gs_with_bench_trailblazer(deployed_occupied=False)
     out = report_action_deploy_move_param(
         gs, CwActionDeployMoveParam(bench_idx=0, to_row='front',
@@ -67,5 +69,5 @@ def test_deploy_move_report_lacks_form_normalization_current() -> None:
     assert out.applied, f'部署应成功,实得 {out.reason!r}'
     dep = deployed_slots_of(gs)
     assert dep[0].position_pref == 'front', '排归属写入'
-    assert dep[0].char_id == '开拓者·欢愉', \
-        f'现状 = 形态不随排切换,实得 {dep[0].char_id!r}'
+    assert dep[0].char_id == '开拓者·记忆', \
+        f'换到前排 → 记忆形态(与 swap 同源归一),实得 {dep[0].char_id!r}'
