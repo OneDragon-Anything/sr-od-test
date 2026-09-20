@@ -23,7 +23,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.entry import (
     _ore_bench_free,
 )
 
-_SIG = ChannelSig(family='obs', actor='synthesize_from_game_state',
+_SIG = ChannelSig(family='obs', actor='cw4_seed',
                   mode='synthesized')
 
 

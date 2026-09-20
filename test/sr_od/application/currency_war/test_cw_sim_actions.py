@@ -10,11 +10,12 @@ from __future__ import annotations
 from sr_od.application.currency_war.kernel.cw_economy import XP_TO_NEXT_LEVEL
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
+    BenchSlot,
+    BenchView,
     ChannelSig,
     GameState,
     ShopPayload,
     ShopSlot,
-    bench_view_of_slots,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionBuyCardParam,
@@ -45,7 +46,9 @@ def _prep_gs(gold: int = 20, level: int = 3) -> GameState:
         name='花火', faction='盛会之星', cost=3, star=1, cost_source='roster',
         slot=1))], refresh_probs={1: 1.0})
     gs.observe(gs.shop, payload, sig=_OBS)
-    gs.observe(gs.bench, bench_view_of_slots([]), sig=_OBS)
+    gs.observe(gs.bench, BenchView(slots=[BenchSlot(kind='empty')
+                                           for _ in range(9)], capacity=9),
+               sig=_OBS)
     return gs
 
 

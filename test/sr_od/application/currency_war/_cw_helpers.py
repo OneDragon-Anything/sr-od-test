@@ -1,8 +1,8 @@
 """cw 策略测试共享构造器六件套与 obs_arch 运行夹具的单一源。
 
-**种子载体(benchchar-retirement P5 起)**:CwSimFrame 帧通道已随 sim 帧
-退役删除——测试种子经本模块 builder **直写容器域**(与观察链同写入口
-``GameState.observe``,design §2.5 测试种子纪律),不设帧→容器换形续命:
+**种子载体(benchchar-retirement P5 起)**:帧→容器换形通道不存在——
+测试种子经本模块 builder **直写容器域**(与观察链同写入口
+``GameState.observe``,design §2.5 测试种子纪律):
 
 - **容器域种子**(``cw4_gs``/``cw4_box``):gold/level/xp/hp/deploy_cap/
   node/bench/deployed 行/shop 等各轴参数化,直写 session 容器或一次性
@@ -101,8 +101,7 @@ def cw4_bc(name: str, star: int = 1, slot: int = 1) -> BenchSlot:
 
 def cw4_bview(entries: list) -> BenchView:
     """BenchView 直构(容器形状种子;条目 = BenchSlot | None,槽位 =
-    下标 + 1,不足容量补空槽)。旧「BenchChar 槽表 → bench_view_of_slots
-    换形再写容器」的种子路径在本 helper 直达容器形状。"""
+    下标 + 1,不足容量补空槽)。"""
     slots = [e if e is not None else BenchSlot(kind='empty')
              for e in entries]
     while len(slots) < BENCH_CAPACITY_DEFAULT:
@@ -171,8 +170,7 @@ class Area:
 
 
 # ============================================================ 容器域种子
-# 原帧配方(CwSimFrame + synthesize_from_game_state)的退役承接:两条
-# 历史配方的语义差异原样保留(存量断言辖),收敛归本批统一载体——
+# 两条种子配方的语义差异原样保留(存量断言辖),收敛归本批统一载体——
 # - ``cw4_gs``(原 cw4_state+cw4_feed 配方):决策帧家族缺省
 #   (gold=30/level=3/round_num=2/hp=100);空牌面 = 在屏空 payload;
 #   节点缺席补写 evidence='kind_inherited'(帧未识别的忠实镜像);

@@ -27,6 +27,7 @@ from sr_od.application.currency_war.kernel.cw_action_report import (
 from sr_od.application.currency_war.kernel.cw_exec_state import (
     DEPLOYED_CAPACITY,
     deployed_idx_of,
+    deployed_rows_to_indexed,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
@@ -34,7 +35,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     GameState,
     Unit,
-    deployed_slots_of,
+    bench_view_slots_of,
     game_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
@@ -84,14 +85,12 @@ def test_write_side_lands_at_payload_slot_not_first_empty():
                                     faction=''),
         sig=_SIG_LOGIC)
     assert out.applied, f'应按载荷直落,实得 {out.reason!r}'
-    dep = deployed_slots_of(gs)
+    dep = deployed_rows_to_indexed(gs.front_row.value, gs.back_row.value)
     assert dep[2] is not None and dep[2].char_id == '甲', \
         '落位 = 载荷指定槽(表下标 2)'
     assert dep[1] is None, '更低位的空槽(2 号)不被静默填充(禁首空位现读)'
-    from sr_od.application.currency_war.kernel.cw_game_state import (
-        bench_slots_of,
-    )
-    assert bench_slots_of(gs)[0] is None, '源槽摘除'
+    _s0 = bench_view_slots_of(gs)[0]
+    assert _s0 is None or _s0.kind == 'empty', '源槽摘除'
 
 
 def test_write_side_rejects_invalid_payload_slot_zero_write():

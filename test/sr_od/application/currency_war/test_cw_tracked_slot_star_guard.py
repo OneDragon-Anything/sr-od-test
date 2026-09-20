@@ -9,16 +9,15 @@ run_20260915_054718 §5/§8 候选2 实锤「回退即采新」让同名多星�
 锚上身份变换(换人/落新单元)星级随身份直采。缺读帧打断两帧序列
 (缺读 = 证据中断):候选锚部分缺读/整帧双空读(守卫早退)即清除,
 同值复现须重新连续两帧。载体 = P6 观察链直产容器形状(备战席 BenchView /
-上场位 (前排, 后排) Unit 行;P6 前读链产 BenchChar 紧缩表,语义断言零变):
+上场位 (前排, 后排) Unit 行,语义断言自载体迁移零变):
 部分缺读帧的写回随实读整表替换(缺席槽置空)→ 旧「缺读 + 账 intact 重计」
 形态失去可达输入,由守卫早退形态(形态二)与失读侧候选保持锁承接。
 
-锁 2(tracked 槽号守卫)不受本批影响,原样保留:
-- 实机缺陷台账 bench_slot_unhealthy 四局(slots=[2,2,3]/[…9,9],
-  reseed 健康门 L0/L1 显影);摘除腿按下标置 None(pad 态契约不破坏)+
-  写点健康显影。旧「对账仲裁门拒绝重复槽号」锁随直产退役:直产读载体
-  BenchView 槽号 = 下标+1 结构性健康(ADR-0646 无守卫槽号面随形状消失),
-  脏输入不可构造 = 生产不可达状态不锁。
+锁 2(tracked 槽号守卫)随载体收窄只剩健康静默腿:摘除腿按下标置 None
+(pad 态契约不破坏)+ 写点健康显影。反帧显影腿(重复/越界槽号 → 台账行)
+随 BenchChar 信息位载体退役删除:tracked 容器形槽号 = 下标+1 结构性健康
+(ADR-0646 无守卫槽号面随形状消失),脏输入不可构造 = 生产不可达状态不锁
+(同 P6 拒写回锁退役口径)。
 """
 from __future__ import annotations
 
@@ -31,8 +30,6 @@ import sr_od.application.currency_war.kernel.cw_reconcile as cw_reconcile
 from sr_od.application.currency_war import prep_actions as pa
 from sr_od.application.currency_war.kernel.cw_exec_state import (
     BENCH_CAPACITY,
-    BenchChar,
-    bench_from_compact,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
     BenchSlot,
@@ -103,8 +100,14 @@ def _deployed_sig(session) -> list:
             if b is not None]
 
 
-def _bc(slot: int, name: str, star: int) -> BenchChar:
-    return BenchChar(slot=slot, char_id=name, star=star)
+def _tracked_bench(*specs: tuple[int, str, int]) -> list:
+    """tracked bench 种子(§2.3 定稿形状 list[BenchSlot | None],定长 9;
+    specs = (物理槽号, 规范名, 星),缺席槽 = None 洞)。"""
+    bench: list = [None] * BENCH_CAPACITY
+    for slot_no, name, star in specs:
+        bench[slot_no - 1] = BenchSlot(
+            kind='unit', unit=Unit(char_id=name, star=star, slot=slot_no))
+    return bench
 
 
 def _view(*specs: tuple[int, str, int]) -> BenchView:
@@ -140,8 +143,8 @@ def test_star_single_frame_jitter_held(monkeypatch):
     抖动台账行;下帧读回与账一致 → 候选作废,无新增台账行(常态无噪声)。"""
     rows = _spy_conflicts(monkeypatch)
     session = StrategySession()
-    game_state_of(session).tracked_books.bench = bench_from_compact(
-        [_bc(1, '不死途', 3)])
+    game_state_of(session).tracked_books.bench = _tracked_bench(
+        (1, '不死途', 3))
 
     reconcile_tracking(session, _view((1, '不死途', 1)), _EMPTY_ROWS,
                        source='test')
@@ -162,8 +165,8 @@ def test_star_change_needs_two_frame_consistency(monkeypatch):
     读数同样须两帧(合成后实读延迟一帧,防单帧抖动毒化 3★ 合成判断)。"""
     _spy_conflicts(monkeypatch)
     session = StrategySession()
-    game_state_of(session).tracked_books.bench = bench_from_compact(
-        [_bc(1, '不死途', 3)])
+    game_state_of(session).tracked_books.bench = _tracked_bench(
+        (1, '不死途', 3))
 
     reconcile_tracking(session, _view((1, '不死途', 1)), _EMPTY_ROWS,
                        source='test')
@@ -185,8 +188,8 @@ def test_same_name_multi_star_slot_anchored_no_cross_star(monkeypatch):
     按新槽位落账且全程不串星;换人(锚上身份变)星级随身份直采不辖门。"""
     _spy_conflicts(monkeypatch)
     session = StrategySession()
-    game_state_of(session).tracked_books.bench = bench_from_compact(
-        [_bc(4, '不死途', 1), _bc(6, '不死途', 2), _bc(7, '不死途', 3)])
+    game_state_of(session).tracked_books.bench = _tracked_bench(
+        (4, '不死途', 1), (6, '不死途', 2), (7, '不死途', 3))
     # 帧1:槽7 单帧读 1★(抖动),槽4/6 照读 → 逐槽保旧,邻槽不串
     reconcile_tracking(session, _view((4, '不死途', 1), (6, '不死途', 2),
                                       (7, '不死途', 1)),
@@ -222,8 +225,8 @@ def test_star_gate_name_agnostic_silver_wolf(monkeypatch):
     """门按锚判定与名无关(银狼升费形态无豁免):单帧保旧,两帧采新。"""
     _spy_conflicts(monkeypatch)
     session = StrategySession()
-    game_state_of(session).tracked_books.bench = bench_from_compact(
-        [_bc(1, '银狼', 2)])
+    game_state_of(session).tracked_books.bench = _tracked_bench(
+        (1, '银狼', 2))
 
     reconcile_tracking(session, _view((1, '银狼', 1)), _EMPTY_ROWS,
                        source='test')
@@ -260,8 +263,8 @@ def test_merge_effect_window_freezes_confirmation(monkeypatch):
     monkeypatch.setattr(cw_reconcile, '_IS_MERGE_EFFECT_FRAME',
                         lambda screen: True)
     session = StrategySession()
-    game_state_of(session).tracked_books.bench = bench_from_compact(
-        [_bc(1, '不死途', 3)])
+    game_state_of(session).tracked_books.bench = _tracked_bench(
+        (1, '不死途', 3))
     _scr = np.zeros((4, 4), dtype='uint8')   # 非 None 帧才进特效窗判别
 
     reconcile_tracking(session, _view((1, '不死途', 1)), _EMPTY_ROWS,
@@ -293,8 +296,8 @@ def test_missing_read_frame_breaks_confirmation(monkeypatch):
     _spy_conflicts(monkeypatch)
     # 形态一:部分缺读(帧2 读侧不含槽1 → 缺席槽随实读置空)
     session = StrategySession()
-    game_state_of(session).tracked_books.bench = bench_from_compact(
-        [_bc(1, '不死途', 3)])
+    game_state_of(session).tracked_books.bench = _tracked_bench(
+        (1, '不死途', 3))
     reconcile_tracking(session, _view((1, '不死途', 1)), _EMPTY_ROWS,
                        source='test')
     assert _tracked_sig(session) == [('不死途', 3)]   # 帧1:抖读保旧+候选登记
@@ -306,8 +309,8 @@ def test_missing_read_frame_breaks_confirmation(monkeypatch):
     assert _tracked_sig(session) == [('不死途', 1)]   # 帧3:单元重落,直采
     # 形态二:双空读守卫早退帧(探针原样序列)
     session2 = StrategySession()
-    game_state_of(session2).tracked_books.bench = bench_from_compact(
-        [_bc(1, '不死途', 3)])
+    game_state_of(session2).tracked_books.bench = _tracked_bench(
+        (1, '不死途', 3))
     reconcile_tracking(session2, _view((1, '不死途', 1)), _EMPTY_ROWS,
                        source='test')
     assert _tracked_sig(session2) == [('不死途', 3)]   # 抖读保旧+候选登记
@@ -324,8 +327,8 @@ def test_missing_read_frame_breaks_confirmation(monkeypatch):
     # 形态三:bench 侧失读(None)——候选保持、写回跳过;同值复现帧
     # 单帧采新 = 「不辖」语义的可观察面(deployed 侧照常读)。
     session3 = StrategySession()
-    game_state_of(session3).tracked_books.bench = bench_from_compact(
-        [_bc(1, '不死途', 3)])
+    game_state_of(session3).tracked_books.bench = _tracked_bench(
+        (1, '不死途', 3))
     reconcile_tracking(session3, _view((1, '不死途', 1)), _EMPTY_ROWS,
                        source='test')
     assert _tracked_sig(session3) == [('不死途', 3)]   # 抖读保旧+候选登记
@@ -347,8 +350,8 @@ def test_removal_keeps_layout_sell_and_move_legs():
     槽位信息位 = unit.slot;断言语义逐位不变。)"""
     # sell 腿:卖槽2(下标 1)
     session = StrategySession()
-    game_state_of(session).tracked_books.bench = bench_from_compact(
-        [_bc(1, '花火', 1), _bc(2, '刃', 1), _bc(3, '椒丘', 1)])
+    game_state_of(session).tracked_books.bench = _tracked_bench(
+        (1, '花火', 1), (2, '刃', 1), (3, '椒丘', 1))
     ex = _mk_executor(session)
 
     ex._track_remove_bench(1)
@@ -363,8 +366,8 @@ def test_removal_keeps_layout_sell_and_move_legs():
     # 不移位:槽3 件仍在槽3(旧紧凑重排会把它挪到槽2)
     # move 腿:花火 bench槽1 → 前排槽1
     session_m = StrategySession()
-    game_state_of(session_m).tracked_books.bench = bench_from_compact(
-        [_bc(1, '花火', 1), _bc(2, '刃', 1)])
+    game_state_of(session_m).tracked_books.bench = _tracked_bench(
+        (1, '花火', 1), (2, '刃', 1))
     game_state_of(session_m).tracked_books.deployed = []
     ex_m = _mk_executor(session_m)
 
@@ -380,31 +383,14 @@ def test_removal_keeps_layout_sell_and_move_legs():
             for i, b in enumerate(deployed)] == [('花火', 'front')]
 
 
-def test_tracked_write_guard_defect_and_healthy_silence(monkeypatch):
-    """写点健康显影两帧(并一):既有重复槽号 → bench_slot_unhealthy
-    台账行(reader_source=tracked_write_guard),摘除腿照常执行(只减
-    不增);健康账摘除零显影(常态无噪声)。"""
-    # 反帧:既有污染形态(信息位重复;模拟旧紧凑重排+买入追加累积产物)
-    rows = _spy_defects(monkeypatch)
-    session = StrategySession()
-    game_state_of(session).tracked_books.bench = [
-        _bc(1, '花火', 1), _bc(2, '刃', 1), _bc(2, '椒丘', 1)]
-    ex = _mk_executor(session)
-
-    ex._track_remove_bench(0)
-
-    assert len(rows) == 1
-    surface, kind, observed, reader = rows[0]
-    assert (surface, kind) == ('bench', defects.DEFECT_KIND_BENCH_SLOT_UNHEALTHY)
-    assert observed == "slots=['1', '2', '2']"
-    assert reader == 'tracked_write_guard'
-    tracked = game_state_of(session).tracked_books.bench
-    assert tracked[0] is None   # 摘除未被拒(拒绝会让已卖件滞留 tracked)
-    # 正帧:健康账摘除
+def test_tracked_write_guard_healthy_silence(monkeypatch):
+    """写点健康静默:健康账摘除零显影(常态无噪声)。(反帧显影腿随
+    BenchChar 信息位载体退役删除:容器形槽号 = 下标+1 结构性健康,
+    重复/越界槽号不可构造,生产不可达状态不锁——见模块头锁 2 节。)"""
     rows_h = _spy_defects(monkeypatch)
     session_h = StrategySession()
-    game_state_of(session_h).tracked_books.bench = bench_from_compact(
-        [_bc(1, '花火', 1), _bc(2, '刃', 1)])
+    game_state_of(session_h).tracked_books.bench = _tracked_bench(
+        (1, '花火', 1), (2, '刃', 1))
     ex_h = _mk_executor(session_h)
 
     ex_h._track_remove_bench(1)

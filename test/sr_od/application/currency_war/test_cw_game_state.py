@@ -45,7 +45,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     apply_effect_burst_grant,
     bench_free_slots,
     bench_is_full,
-    bench_slots_to_legacy,
     consume_defect_sink,
     game_state_of,
     grant_effect_node_refresh_balance,
@@ -53,7 +52,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     set_defect_sink,
     shop_card_to_container,
     shop_cards_to_legacy,
-    unit_rows_to_deployed,
 )
 
 # ---- W1 sig 铺满 helper(测试写入口签名必填,ADR-0634;actor 已登记)----
@@ -71,9 +69,6 @@ from sr_od.application.currency_war.kernel.cw_mismatch_policy import (
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
-)
-from sr_od.application.currency_war.kernel.cw_vocab import (
-    BenchChar,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     ShopCard as StateShopCard,
@@ -1241,10 +1236,11 @@ def test_restore_session_empty_refused_then_late_truth_lands(
 
 # ==================== 容器视图转换/合成口/ShopCard 映射(自 w5_passthrough 归并) ====================
 
-# unit_rows_to_deployed 旧槽表重建/bench_slots_to_legacy 注册表派生阵营/
-# ShopCard 映射单一源往返 + kernel 内零旧类型引用静态锁
-# (转换只许在映射函数发生)。分排腿随 P6 直产退役(分排由读链行参承载,
-# deployed_rows_from_obs 换形口删除);其余断言零改动。
+# 旧槽表换算族席位转换腿(test_unit_rows_to_deployed_rebuilds_legacy_slot_table /
+# test_bench_slots_to_legacy_derives_faction_from_registry 及其合并壳)随
+# benchchar-retirement P7 换形层退役删除:被测换形口不复存在,阵营派生
+# 消费面走注册表单一源(char_first_faction,faction 三类口径锁另辖)。
+# ShopCard 映射单一源往返腿保留(test_shop_card_mapping_roundtrip)。
 def _mk_legacy_card(x: int, name: str, *, cost: int = 1, star: int = 1,
                     faction: str = '仙舟',
                     cost_source: str = 'badge',
@@ -1253,41 +1249,6 @@ def _mk_legacy_card(x: int, name: str, *, cost: int = 1, star: int = 1,
     return ShopCard(x=x, faction=faction, name=name, cost=cost, star=star,
                     cost_source=cost_source,
                     slot=slot)
-
-
-def test_container_seat_view_conversions() -> None:
-    """容器席位转换往返一锁(三合一;合并原
-    test_deployed_rows_from_obs_splits_rows_and_guards_empty /
-    test_unit_rows_to_deployed_rebuilds_legacy_slot_table /
-    test_bench_slots_to_legacy_derives_faction_from_registry。分排守卫腿
-    随 P6 直产退役——分排由读链行参承载,换形口 deployed_rows_from_obs
-    删除,空读守卫移驻读链/reconcile 双空守卫;其余断言腿逐条保留):
-
-    - 席位重建(容器席位 → 旧定长槽表,ADR-0392 0 基 0-3 前/4-9 后):
-      视图收编后消费形状零变化(None 填充,行内 1 基 slot = 旧下标换算);
-    - bench 槽表(BenchView → 旧槽表):阵营不入容器(§3.2.3),查角色
-      注册表派生(识别链同源 get_char);槽位两端同构 1:1。"""
-    from sr_od.application.currency_war.kernel.cw_game_state import (
-        bench_view_of_slots,
-    )
-    # —— deployed 旧槽表重建(原 2 件帧:希儿前/景元后;P6 直产行域直构)——
-    front2 = [Unit(char_id='希儿', star=2, slot=2)]
-    back2 = [Unit(char_id='景元', star=1, slot=1)]
-    table = unit_rows_to_deployed(front2, back2)
-    assert len(table) == 10
-    assert table[1] is not None and table[1].char_id == '希儿' \
-        and table[1].position_pref == 'front'
-    assert table[4] is not None and table[4].char_id == '景元' \
-        and table[4].position_pref == 'back'
-    assert all(table[i] is None for i in (0, 2, 3, 5, 6, 7, 8, 9))
-    # —— bench 槽表(阵营自注册表派生)——
-    view = bench_view_of_slots([BenchChar(slot=1, char_id='花火', star=2),
-                                None])
-    btable = bench_slots_to_legacy(view)
-    assert btable[0] is not None and btable[0].char_id == '花火' \
-        and btable[0].star == 2 and btable[0].slot == 1
-    assert btable[0].faction != '?', '阵营自注册表派生(非容器存储)'
-    assert btable[1] is None and len(btable) == 9
 
 
 def test_shop_card_mapping_roundtrip() -> None:

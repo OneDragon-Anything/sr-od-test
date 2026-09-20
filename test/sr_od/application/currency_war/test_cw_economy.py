@@ -11,8 +11,8 @@ R2 息线 floor / D 牌期望边界 / ev_arm 值域(aggregate_economy 分型登�
 
 退役面(审计判决删除):金净守恒代表锁(test_gold_net_conserved_buy_sell_
 roundtrip,连 simulate import——锁的 simulate 全仓零生产消费,金钱面
-= 实机结算对账 + transfer_golden 活转移函数直锁)、economy_score 利息/
-streak 真值(src 零调用)、区分力非零证明锚(元测试)、refresh_prob 查表
+= 实机结算对账 + transfer_golden 活转移函数直锁)、利息/streak 真值
+(src 零调用)、区分力非零证明锚(元测试)、refresh_prob 查表
 一致性锚(缺级→0 腿并入 D 牌期望边界)、xp 兜底支钳 0 单测(并入 joy
 真值表一行)、pair 断供驱逐墓碑、ADR-0150 base 层全量计数锚(纯数据计
 数;其「过继锁禁删」声明随审计判决解除,335/83 计数归编 #15
@@ -821,5 +821,5 @@ def test_injection_consistency_single_registry_source() -> None:
 # (原 test_tracking_view_isolated_from_session_writers 随修正裁定
 #  删除:锁主对象 _tracking_view(tracking 优先 + snapshot 静默回退)已按
 #  裁定退役——滞回职责被对账仲裁批 kernel 锚定取代,回退路径即要消灭的掩盖
-#  面;策略消费只剩 game state。snapshot_copy 自身语义由迁移哨兵锁另辖。)
+#  面;策略消费只剩 game state。)
 

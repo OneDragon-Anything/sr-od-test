@@ -18,7 +18,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     BenchSlot,
     ChannelSig,
     Unit,
-    deployed_slots_of,
+    deployed_rows_of,
     game_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
@@ -52,10 +52,9 @@ def test_swap_report_normalizes_trailblazer_form_to_target_row() -> None:
     out = report_action_swap_deploy_param(
         gs, CwActionSwapDeployParam(deployed_idx=0, bench_idx=0), sig=_SIG)
     assert out.applied, f'swap 应成功,实得 {out.reason!r}'
-    dep = deployed_slots_of(gs)
-    assert dep[0].char_id == '开拓者·记忆', \
-        f'换到前排 → 记忆形态,实得 {dep[0].char_id!r}'
-    assert dep[0].position_pref == 'front', '排归属同步'
+    front, _ = deployed_rows_of(gs)
+    assert front and front[0].char_id == '开拓者·记忆', \
+        f'换到前排 → 记忆形态,实得 {front[0].char_id!r}'   # 排归属 = 前排行成员
 
 
 def test_deploy_move_report_normalizes_trailblazer_form_to_target_row() -> None:
@@ -69,7 +68,7 @@ def test_deploy_move_report_normalizes_trailblazer_form_to_target_row() -> None:
                                     to_slot=1, faction=''),
         sig=_SIG)
     assert out.applied, f'部署应成功,实得 {out.reason!r}'
-    dep = deployed_slots_of(gs)
-    assert dep[0].position_pref == 'front', '排归属写入'
-    assert dep[0].char_id == '开拓者·记忆', \
-        f'换到前排 → 记忆形态(与 swap 同源归一),实得 {dep[0].char_id!r}'
+    front, _ = deployed_rows_of(gs)
+    assert front and front[0].char_id == '开拓者·记忆', \
+        f'换到前排 → 记忆形态(与 swap 同源归一),实得 {front[0].char_id!r}'
+    # 排归属 = 容器行域承载(前排行成员)

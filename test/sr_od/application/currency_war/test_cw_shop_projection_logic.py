@@ -14,10 +14,9 @@
 冻结(离屏 None 归一空表 = 旧紧缩列表等价读法);bench 期望按槽位
 占用签名 (idx, char_id, star) 冻结;xp 未读域按种子缺席钉(None)。
 
-种子载体(benchchar-retirement P5):原 CwSimFrame+合成口路径已退役,
-场景种子 = 容器域直写(cw4_gs 裸帧配方:节点不写、空店离屏,与原
-合成口域覆盖集逐域一致);投影输出逐字节保形凭据 = 改前/改后探针
-diff 为空(.debug/temp/p5_m1/)。
+种子载体(benchchar-retirement P5 起):场景种子 = 容器域直写
+(cw4_gs 裸帧配方:节点不写、空店离屏);投影输出逐字节保形凭据 =
+改前/改后探针 diff 为空(.debug/temp/p5_m1/)。
 """
 from __future__ import annotations
 

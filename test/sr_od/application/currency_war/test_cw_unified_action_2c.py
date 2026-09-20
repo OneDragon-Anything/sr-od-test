@@ -21,14 +21,16 @@ from sr_od.application.currency_war.kernel.cw_action_report import (
     report_action_deploy_move_param,
     report_action_open_bookcard_param,
 )
+from sr_od.application.currency_war.kernel.cw_exec_state import (
+    deployed_rows_to_indexed,
+)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     BenchSlot,
     BenchView,
     ChannelSig,
     Unit,
     bench_free_slots,
-    bench_slots_to_legacy,
-    deployed_slots_of,
+    bench_view_slots_of,
     game_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
@@ -128,7 +130,7 @@ def test_open_bookcard_logic_state_frees_slot():
     )
     session = cw4_session()
     gs = game_state_of(session)
-    _sig = ChannelSig(family='obs', actor='synthesize_from_game_state',
+    _sig = ChannelSig(family='obs', actor='cw4_seed',
                       mode='synthesized')
     _slots = [BenchSlot(kind='unit', unit=Unit(char_id='甲', star=1,
                                                equips=[], slot=1)),
@@ -187,9 +189,8 @@ def test_entry_card_arms_emit_from_bench_kind():
 
 def test_entry_box_tome_arms_read_benchview_kind():
     """回归锁:开箱/开典籍臂与卡片臂同读容器 BenchView.slots kind
-    (历史隐患申报:臂曾读 legacy ``bench_slots_of`` 元素 .kind——legacy
-    换算把占位件压成 is_item_slot 布尔,元素无 kind 属性,bench 非空即
-    AttributeError)。本锁钉死 box/tome 臂在真 kind 载荷上照常命中。"""
+    (占位件三分类 kind 直读,单一形状无换形路)。本锁钉死 box/tome 臂
+    在真 kind 载荷上照常命中。"""
     out = _emit_with_bench([BenchSlot(kind='supply_box')])
     assert len(out) == 1
     from sr_od.application.currency_war.kernel.cw_vocab import (
@@ -205,18 +206,16 @@ def test_entry_box_tome_arms_read_benchview_kind():
     assert out[0].action.slot == 4
 
 
-def test_bench_slot_bookcard_kind_roundtrip_as_item_placeholder():
-    """容器 kind 细分往返:bookcard 槽经 legacy 换算 = 占位件
-    is_item_slot 旗标——部署装配点识别线/占位恒拒防线消费同
-    旗标;占席语义不变(kind ≠ empty 占 1 槽,席空数派生同源)。"""
+def test_bench_slot_bookcard_kind_occupies_one_slot():
+    """容器 kind 细分占席语义:bookcard 槽恒占 1 席(kind ≠ empty),
+    席空数派生同源(bench_free_slots,9−2=7)。(legacy is_item_slot
+    旗标往返面随换形层退役删除。)"""
     slots = [BenchSlot(kind='unit', unit=Unit(char_id='甲', star=1,
                                               equips=[], slot=1)),
              BenchSlot(kind='bookcard')]
     slots += [BenchSlot(kind='empty')] * 7
     view = BenchView(slots=slots, capacity=9)
-    legacy = bench_slots_to_legacy(view)
-    assert legacy[0] is not None and legacy[0].char_id == '甲'
-    assert legacy[1].is_item_slot
+    assert view.slots[1].kind == 'bookcard'
     # 占席语义:bookcard 占 1 槽,席空数派生同源(9−2=7)
     from test.sr_od.application.currency_war._cw_helpers import cw4_session
     _gs = game_state_of(cw4_session())
@@ -228,20 +227,18 @@ def test_bench_slot_bookcard_kind_roundtrip_as_item_placeholder():
 # ===== CwActionDeployMoveParam 帧投影占用集(改动三审 代-1 应修行为锁)=====
 
 def test_deploymove_projection_records_resolved_row():
-    """CwActionDeployMoveParam 容器逻辑态载荷直落锁(落位载荷契约改造;
-    原「deployed_place 首空单一源 fallback」锁随首空位退役翻面):断言
-    容器写侧按载荷 (to_row, to_slot) 直落——目标有人 = 交换(被占位者
-    回源 bench 槽),载荷槽空 = 放置,源槽空 = 陈旧提案零写。"""
+    """CwActionDeployMoveParam 容器逻辑态载荷直落锁:容器写侧按载荷
+    (to_row, to_slot) 直落——目标有人 = 交换(被占位者回源 bench 槽),
+    载荷槽空 = 放置,源槽空 = 陈旧提案零写(框架零落位决定)。"""
     from test.sr_od.application.currency_war._cw_helpers import cw4_session
 
     from sr_od.application.currency_war.kernel.cw_game_state import (
-        bench_slots_of,
         game_state_of,
     )
     from sr_od.application.currency_war.kernel.cw_vocab import CwActionDeployMoveParam
     session = cw4_session()
     gs = game_state_of(session)
-    _sig = ChannelSig(family='obs', actor='synthesize_from_game_state',
+    _sig = ChannelSig(family='obs', actor='cw4_seed',
                       mode='synthesized')
     _logic = ChannelSig(family='logic_action', actor='CwScreenPrep')
     _slots = [BenchSlot(kind='unit', unit=Unit(char_id='甲', star=1,
@@ -258,13 +255,13 @@ def test_deploymove_projection_records_resolved_row():
                                                    to_slot=2,
                                                    faction=''),
                                     sig=_logic)
-    dep = deployed_slots_of(gs)
+    dep = deployed_rows_to_indexed(gs.front_row.value, gs.back_row.value)
     assert dep[1] is not None and dep[1].char_id == '甲', \
         '载荷直落:落参数指定槽(to_slot=2 → 表下标 1)'
     assert [d.char_id for i, d in enumerate(dep[:4]) if i != 1] \
         == ['丙0', '丙2', '丙3'], '交换只动目标槽,其余占位不受波及'
-    _b = bench_slots_of(gs)[0]
-    assert _b is not None and _b.char_id == '丙1', \
+    _b = bench_view_slots_of(gs)[0]
+    assert _b is not None and _b.kind == 'unit' and _b.unit.char_id == '丙1', \
         '交换语义:被占位角色回发射者源 bench 槽'
     # 载荷槽空 = 放置(前排 1 号被乙占,载荷指 2 号空槽 → 照落 2 号)
     gs2 = game_state_of(cw4_session())
@@ -276,7 +273,7 @@ def test_deploymove_projection_records_resolved_row():
                                                     to_slot=2,
                                                     faction=''),
                                     sig=_logic)
-    dep2 = deployed_slots_of(gs2)
+    dep2 = deployed_rows_to_indexed(gs2.front_row.value, gs2.back_row.value)
     assert dep2[1] is not None and dep2[1].char_id == '甲'   # 载荷槽 = 表 1 位
     assert dep2[0].char_id == '乙', '占位槽不受放置波及'
     # 源槽无件(bench_idx 越界空槽)= 陈旧提案,本口零写

@@ -61,8 +61,7 @@ def _km() -> list[str]:
 
 
 def _bc(name: str, star: int = 1, slot: int = 1):
-    """行域单位(容器形状;本文件与 press_narrow 转型域共用直构面,
-    旧 BenchChar 直构随帧退役后的同签名承接)。"""
+    """行域单位(容器形状;本文件与 press_narrow 转型域共用直构面)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import Unit
     return Unit(char_id=name, star=star, slot=slot)
 

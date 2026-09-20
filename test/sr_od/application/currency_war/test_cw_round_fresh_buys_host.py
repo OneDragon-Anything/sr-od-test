@@ -36,7 +36,7 @@ def _feed_phase(session: StrategySession, plane: int,
     gs.observe(gs.node, NodeKey(plane=plane, round_num=round_num, kind=''),
                evidence='kind_inherited',
                sig=ChannelSig(family='obs',
-                              actor='synthesize_from_game_state',
+                              actor='cw4_seed',
                               mode='synthesized'))
     return gs
 

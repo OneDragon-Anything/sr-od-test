@@ -66,7 +66,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     GameState,
     Unit,
-    bench_slots_of,
+    bench_units_of,
     consume_defect_sink,
     set_defect_sink,
 )
@@ -173,7 +173,7 @@ def test_upgrade_transform_exactly_one(
     out = apply_pick_planner_landing(gs, leg_type='upgrade', norm_item='',
                                      sig=_lsig())
     assert out.applied is True
-    units = [(b.char_id, b.star) for b in bench_slots_of(gs) if b is not None]
+    units = [(u.char_id, u.star) for u in bench_units_of(gs)]
     assert ('银狼LV.999', 1) in units, '变换为 1★(下一费用档,身份保持)'
     assert ('银狼LV.999', 2) not in units, '2★ 源已消费'
     assert ('希儿', 1) in units, '无关单位零差'
@@ -190,8 +190,8 @@ def test_upgrade_transform_multiple_flips_source(
     out = apply_pick_planner_landing(gs, leg_type='upgrade', norm_item='',
                                      sig=_lsig())
     assert out.applied is True
-    stars = sorted(b.star for b in bench_slots_of(gs)
-                   if b is not None and b.char_id == '银狼LV.999')
+    stars = sorted(u.star for u in bench_units_of(gs)
+                   if u.char_id == '银狼LV.999')
     assert stars == [2, 2], '值不变(触发单位不可辨,不写变换)'
     assert gs.bench.source == 'logic_rand', '受影响域值不变翻来源'
     assert gs.write_seq > seq_before, '翻来源占写序(遥测行)'
@@ -230,7 +230,7 @@ def test_upgrade_cascade_lv999_normal_merge(
     out = apply_pick_planner_landing(gs, leg_type='upgrade', norm_item='',
                                      sig=_lsig())
     assert out.applied is True
-    units = [(b.char_id, b.star) for b in bench_slots_of(gs) if b is not None]
+    units = [(u.char_id, u.star) for u in bench_units_of(gs)]
     assert units == [('银狼LV.999', 2)], '正常推演:3×1★ 合成 → 2★(普通单位同语义)'
     assert gs.bench.source == 'logic', '级联确定面 write_logic'
     assert rows_sink.kinds() == [], '正常推演零留证行'
@@ -250,7 +250,7 @@ def test_equip_leg_gain_with_consequence_chain(
     assert out.applied is True
     assert gs.equips.value == ['幸运星', '分身墨镜'], '装备入栏'
     assert gs.equips.source == 'logic'
-    units = [(b.char_id, b.star) for b in bench_slots_of(gs) if b is not None]
+    units = [(u.char_id, u.star) for u in bench_units_of(gs)]
     assert units == [('银狼', 2)], '送出 1★银狼与既有两枚合成 → 2★(购买同语义)'
     assert gs.bench.source == 'logic', '后果链确定面同源 write_logic'
     assert rows_sink.kinds() == [], '表内件零留证行'
@@ -337,8 +337,7 @@ def test_deploy_transform_window_3star_lv999(
     assert gs.front_row.value[1].char_id == '银狼LV.999', '落场'
     assert gs.front_row.value[1].star == 1, '变换窗:落场写 1★(下一费用档)'
     assert gs.front_row.source == 'logic'
-    bench_units = [(b.char_id, b.star) for b in bench_slots_of(gs)
-                   if b is not None]
+    bench_units = [(u.char_id, u.star) for u in bench_units_of(gs)]
     assert ('希儿', 1) in bench_units and \
         ('银狼LV.999', 3) not in bench_units, 'bench 源已摘除'
     assert rows_sink.kinds() == [], '无组可合零留证'
@@ -377,8 +376,7 @@ def test_deploy_cascade_lv999_normal_merge(
         _lsig('CwActionDeployMoveOp'))
     assert out.applied is True
     assert gs.front_row.value[0].star == 2, '级联正常推演:场上载体 1★→2★'
-    bench_units = [(b.char_id, b.star) for b in bench_slots_of(gs)
-                   if b is not None]
+    bench_units = [(u.char_id, u.star) for u in bench_units_of(gs)]
     assert bench_units == [], '备战素材被合成消费腾槽'
     assert gs.bench.source == 'logic' \
         and gs.front_row.source == 'logic', '受影响域逐级落行(write_logic)'
@@ -409,7 +407,7 @@ def test_invest_strategy_landing_hacker_wolf(
     assert gs.write_seq > seq_before, '分步更新各占写序(多遥测行 = 预期)'
     assert gs.active_strategies.value == ['骇客专家:银狼'], '第一步入持卡面'
     assert gs.active_strategies.source == 'logic'
-    units = [(b.char_id, b.star) for b in bench_slots_of(gs) if b is not None]
+    units = [(u.char_id, u.star) for u in bench_units_of(gs)]
     assert units == [('银狼', 2)], 'bench 腿:送出 1★银狼与既有合成 → 2★'
     assert gs.equips.value == ['破解芯片'], '随机改件入栏(采样值)'
     assert gs.equips.source == 'logic_rand', '随机腿 logic_rand'
@@ -432,8 +430,7 @@ def test_invest_strategy_landing_hacker_wolf(
         evidence=EVIDENCE_OVERLAY_CLOSED)
     assert out3.applied is True
     assert gs3.equips.value == ['数据拷贝仪Max'], '改件入栏'
-    units3 = [(b.char_id, b.star) for b in bench_slots_of(gs3)
-              if b is not None]
+    units3 = [(u.char_id, u.star) for u in bench_units_of(gs3)]
     assert ('银狼LV.999', 1) in units3, '链内后果:改件送出 1★ 银狼LV.999'
 
 
@@ -452,7 +449,7 @@ def test_invest_portal_landing_no_card_pollution(
         evidence=EVIDENCE_OVERLAY_CLOSED)
     assert out.applied is True
     assert gs.active_strategies.value in (None, []), '双屏分流防污染锁'
-    units = [(b.char_id, b.star) for b in bench_slots_of(gs) if b is not None]
+    units = [(u.char_id, u.star) for u in bench_units_of(gs)]
     assert ('银狼LV.999', 1) in units, 'immediate 腿(chars_immediate 实证)'
     assert gs.bench.source == 'logic_rand', '条件腿临时闩翻来源(bench)'
     assert gs.equips.source == 'logic_rand' \
@@ -533,8 +530,8 @@ def test_grant_channel_consequence_anchor(
     r2 = apply_equip_acquire_consequence(gs, '数据拷贝仪Max', frame='token')
     assert r2.performed is True and r2.granted == '银狼LV.999' \
         and r2.star == 1, '表内件后果应用(送出 1★ 银狼LV.999)'
-    assert any(b.char_id == '银狼LV.999' and b.star == 1
-               for b in bench_slots_of(gs))
+    assert any(u.char_id == '银狼LV.999' and u.star == 1
+               for u in bench_units_of(gs))
 
 
 def test_deploy_move_module_uses_shared_cascade() -> None:

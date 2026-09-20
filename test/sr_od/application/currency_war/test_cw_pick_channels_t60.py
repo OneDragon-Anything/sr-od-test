@@ -54,7 +54,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     GameState,
     Unit,
-    bench_slots_of,
+    bench_units_of,
     consume_defect_sink,
     set_defect_sink,
 )
@@ -89,7 +89,7 @@ def _make_gs(*, bench: list[tuple[str, int]] | None = None,
 
 
 def _units(gs: GameState) -> list[tuple[str, int]]:
-    return [(b.char_id, b.star) for b in bench_slots_of(gs) if b is not None]
+    return [(u.char_id, u.star) for u in bench_units_of(gs)]
 
 
 class _RowSink:

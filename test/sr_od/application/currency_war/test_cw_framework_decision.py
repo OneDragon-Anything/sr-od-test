@@ -36,7 +36,8 @@ from sr_od.application.currency_war.kernel.cw_transition import (
     pick_framework,
     transition_score,
 )
-from sr_od.application.currency_war.kernel.cw_vocab import BenchChar, ShopCard
+from sr_od.application.currency_war.kernel.cw_game_state import Unit
+from sr_od.application.currency_war.kernel.cw_vocab import ShopCard
 
 
 def _sig() -> ChannelSig:
@@ -53,9 +54,9 @@ def _gs(*, plane: int = 1) -> GameState:
     return gs
 
 
-def _bc(name: str) -> BenchChar:
-    """持有件(备战/上阵同型,char_id 载名)。"""
-    return BenchChar(slot=1, char_id=name)
+def _bc(name: str) -> Unit:
+    """持有件(备战/上阵同型,char_id 载名;计数面鸭子读 = char_id)。"""
+    return Unit(char_id=name, star=1)
 
 
 def _card(name: str) -> ShopCard:

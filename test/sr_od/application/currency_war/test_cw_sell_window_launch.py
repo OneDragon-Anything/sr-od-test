@@ -85,7 +85,7 @@ _TRANS_CHEAP = '三月七'
 
 
 def _bc(name: str, star: int = 1, slot: int = 1) -> BenchSlot:
-    """容器占席条目(直构面;旧 BenchChar 种子随帧退役同签名承接)。"""
+    """容器占席条目(直构面)。"""
     return BenchSlot(kind='unit', unit=Unit(char_id=name, star=star,
                                             slot=slot))
 

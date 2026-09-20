@@ -2,7 +2,7 @@
 
 设计出处 = docs/develop/sr_od/application/currency_war/changes/
 2026-09-20-benchchar-retirement/design.md §2.2「mandate_v1 内聚落位策略」
-与 §1 根因二(旧链路:kernel assign_deploy_slots 定排,备战候选注册表
+与 §1 根因二(旧链路:框架定排,备战候选注册表
 position_pref 恒被丢弃、候选恒按后排路由,「真 front 候选提前」分支永不
 触发)。被锁行为:
 

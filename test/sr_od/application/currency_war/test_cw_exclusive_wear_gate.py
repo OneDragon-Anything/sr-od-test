@@ -101,7 +101,7 @@ def test_allocator_excludes_illegal_pair():
     assert ('丹恒·饮月', '垃圾袋') in out
 
 
-_OBS_SIG = ChannelSig(family='obs', actor='synthesize_from_game_state',
+_OBS_SIG = ChannelSig(family='obs', actor='cw4_seed',
                       mode='synthesized')
 
 

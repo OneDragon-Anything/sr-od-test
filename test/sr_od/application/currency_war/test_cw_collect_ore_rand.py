@@ -38,7 +38,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     GameState,
     OreSight,
     Unit,
-    bench_slots_of,
+    bench_units_of,
 )
 from sr_od.application.currency_war.kernel.cw_ore_reward import (
     _SIMPLE_EQUIP_POOL,
@@ -192,7 +192,7 @@ def test_char_branch_merge_dual_domain(monkeypatch: pytest.MonkeyPatch) -> None:
                     if e == 'proj_ore_merge#1#ore1']
     assert merge_fields == ['bench', 'front_row', 'back_row'], \
         f'双域变更各落一行(bench 素材清 + 行载体升星 + 对侧行整表): {merge_fields}'
-    assert [b.star for b in bench_slots_of(gs) if b is not None] == [], \
+    assert [u.star for u in bench_units_of(gs)] == [], \
         'bench 侧素材全部置 None(载体在场上)'
     assert gs.front_row.value[0].star == 2, '场上载体升 2★'
     board_writes = [c for c in calls if c[0] == 'board']
@@ -210,7 +210,7 @@ def test_char_branch_bench_carrier_chain(monkeypatch: pytest.MonkeyPatch) -> Non
     out = report_action_collect_ore_param(
         gs, CwActionCollectOreParam(points=((1, 1),)), _SIG)
     assert out.applied is True
-    stars = [b.star for b in bench_slots_of(gs) if b is not None]
+    stars = [u.star for u in bench_units_of(gs)]
     assert stars == [2], '3×1★ → 2★ 载体留备战'
     seq = [(n, e) for n, e, _ in calls]
     assert ('bench', 'proj_ore_reward_char#ore1') in seq, '落位行'
@@ -256,7 +256,7 @@ def test_multi_point_partial_skip(monkeypatch: pytest.MonkeyPatch) -> None:
     assert 'proj_collect_ore_drop#ore1' in evs, '首点开成'
     assert not any(e.endswith('#ore2') for e in evs), '次点席满不写不采'
     assert gs.spheres.value.count == 1, '未开晶矿留在 spheres'
-    names = [b.char_id for b in bench_slots_of(gs) if b is not None]
+    names = [u.char_id for u in bench_units_of(gs)]
     assert names.count('B') == 1, '角色奖励已落位(耗掉最后空位)'
 
 

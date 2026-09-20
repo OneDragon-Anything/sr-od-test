@@ -24,7 +24,7 @@ from sr_od.application.currency_war.kernel.cw_prep_actions import (
 )
 from sr_od.application.currency_war.kernel.cw_vocab import CwActionCollectOreParam
 
-_SIG = ChannelSig(family='obs', actor='synthesize_from_game_state',
+_SIG = ChannelSig(family='obs', actor='cw4_seed',
                   mode='synthesized')
 _LOGIC_SIG = ChannelSig(family='logic_action', actor='CwScreenPrep')
 

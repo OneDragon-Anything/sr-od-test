@@ -29,12 +29,14 @@ from sr_od.application.currency_war.kernel.cw_action_report import (
 from sr_od.application.currency_war.kernel.cw_economy import (
     xp_apply_clicks,
 )
+from sr_od.application.currency_war.kernel.cw_exec_state import (
+    deployed_rows_to_indexed,
+)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     BenchSlot,
     ChannelSig,
     Unit,
-    bench_slots_of,
-    deployed_slots_of,
+    bench_view_slots_of,
     game_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
@@ -102,7 +104,7 @@ def test_ore_executor_is_mechanical_payload_clicks(monkeypatch):
     gs.observe(gs.spheres, OreSight(
         count=2, colors=('gold', 'blue'),
         points=(('gold', 12, 34, 50), ('blue', 99, 99, 10))),
-               sig=ChannelSig(family='obs', actor='synthesize_from_game_state',
+               sig=ChannelSig(family='obs', actor='cw4_seed',
                        mode='synthesized'))
     # logic-rand-sampling 迭代:bench/level 前置守卫在册,须观测方可摘除
     gs.observe(gs.bench, BenchView(
@@ -168,7 +170,7 @@ def test_vocab_actions_all_have_logic_state_projection():
 
     session = cw4_session()
     gs = game_state_of(session)
-    _sig = ChannelSig(family='obs', actor='synthesize_from_game_state',
+    _sig = ChannelSig(family='obs', actor='cw4_seed',
                       mode='synthesized')
     _logic = ChannelSig(family='logic_action', actor='CwScreenPrep')
     # 供数容器:bench(2 unit+1 tome+1 bookcard+1 box)、front 1 人、gold/level/xp、晶矿
@@ -358,9 +360,9 @@ def test_deploymove_logic_state_moves_unit_and_increments_board():
                                                    to_slot=1,
                                                    faction=''),
                                     sig=_SIG)
-    bench_after = bench_slots_of(gs)
-    assert bench_after[2] is None
-    dep = deployed_slots_of(gs)
+    bench_after = bench_view_slots_of(gs)
+    assert bench_after[2] is None or bench_after[2].kind == 'empty'
+    dep = deployed_rows_to_indexed(gs.front_row.value, gs.back_row.value)
     # 落位 = 载荷直落(前排 1 号)
     assert dep[0] is not None and dep[0].char_id == '甲'
     # 目标槽有人 = 交换:甲拖到前排 1 号(乙0 占位)→ 甲落 1 号、乙0 回源
@@ -377,12 +379,13 @@ def test_deploymove_logic_state_moves_unit_and_increments_board():
                                                    to_slot=1,
                                                    faction=''),
                                     sig=_SIG)
-    dep = deployed_slots_of(gs)
+    dep = deployed_rows_to_indexed(gs.front_row.value, gs.back_row.value)
     assert dep[0] is not None and dep[0].char_id == '甲', \
         '交换语义:上场者落被占位的目标槽'
     assert dep[1].char_id == '乙1', '其余占位不受交换波及'
-    swapped_back = bench_slots_of(gs)[2]
-    assert swapped_back is not None and swapped_back.char_id == '乙0', \
+    swapped_back = bench_view_slots_of(gs)[2]
+    assert swapped_back is not None and swapped_back.kind == 'unit' \
+        and swapped_back.unit.char_id == '乙0', \
         '交换语义:被占位角色回发射者源 bench 槽'
     # 陈旧提案:载荷槽跨排(前排无 5 号,front 5 号换算落表后段不符)
     # = 零写(源槽不摘)
@@ -391,7 +394,9 @@ def test_deploymove_logic_state_moves_unit_and_increments_board():
                                                    to_slot=5,
                                                    faction=''),
                                     sig=_SIG)
-    assert bench_slots_of(gs)[2].char_id == '乙0'   # 源槽未摘(整笔零写)
+    _src2 = bench_view_slots_of(gs)[2]
+    assert _src2 is not None and _src2.kind == 'unit' \
+        and _src2.unit.char_id == '乙0'   # 源槽未摘(整笔零写)
 
 
 def test_selldeployed_logic_state_clears_slot_and_recounts_board():
@@ -403,7 +408,7 @@ def test_selldeployed_logic_state_clears_slot_and_recounts_board():
                                    slot=1)], evidence='t', sig=_SIG_OBS)
     report_action_sell_deployed_param(
         gs, CwActionSellDeployedParam(deployed_idx=0), sig=_SIG)
-    dep = deployed_slots_of(gs)
+    dep = deployed_rows_to_indexed(gs.front_row.value, gs.back_row.value)
     assert dep[0] is None
     assert gs.gold.value is None   # gold 未观察 = 域级跳写
     # 槽空(陈旧提案)= 零写不炸

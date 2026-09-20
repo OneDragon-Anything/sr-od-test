@@ -3,7 +3,7 @@
 出处:迭代详设「腾席资格面与代理收窄」(IC-1 跨通道共享谓词)+
 交付报告未尽①同族暴露登记。缺陷(修复前):criteria/sell.py
 ``sell_for_interest`` / ``funding_support_sell`` 资格循环对占位件
-(``BenchChar.is_item_slot=True``,SIFT 不可读 ⇒ char_id=''、默认 1★)
+(备战槽占位 kind,SIFT 不可读 ⇒ char_id=''、默认 1★)
 无物理门——空名不在排除集/线内、星级 1、无同名副本、注册表查无此名
 ⇒ bench_effect 谓词 False,门组全放行;凑息缺口帧/筹资帧占位件按
 未知名保守估 3 金计入止盈贪心 → 对不可卖对象发射 CwActionSellBenchParam(实机 =
@@ -22,9 +22,8 @@
   帧只用真件、不足诚实短欠);仅占位件可「筹」的帧同 = 诚实空集。
 
 (谓词自身 True/False 行为半由两通道锁承压,独立真值表锁退役;
-``is_item_slot`` 属性读唯一合法居所 = 谓词本体(statefn/predicates.py),
-部署侧 cw_deploy_logic 同名读在其树外(防误上面,恒 held)——防线归
-review 与代码规范。)
+占位判定唯一合法居所 = 谓词本体(statefn/predicates.py,槽位 kind 面)——
+防线归 review 与代码规范。)
 """
 from __future__ import annotations
 

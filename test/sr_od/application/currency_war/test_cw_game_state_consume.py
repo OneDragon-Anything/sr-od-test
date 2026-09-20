@@ -32,9 +32,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 from sr_od.application.currency_war.kernel.cw_game_state import (  # noqa: E402
     ChannelSig as _ChannelSig,
 )
-from sr_od.application.currency_war.kernel.cw_vocab import (
-    BenchChar,
-)
 
 
 def _sig() -> _ChannelSig:
@@ -201,35 +198,25 @@ def test_detect_merge_upgrade_signature() -> None:
         '合成域 = 全场(bench+deployed)'
 
 
-def test_bench_view_of_slots_positional_mapping() -> None:
-    """投影槽位表(0 基 + None 洞)→ BenchView 1:1(槽 i = 物理槽 i+1,
-    与 sim 合成口同构);不足容量补空槽。"""
-    from sr_od.application.currency_war.kernel.cw_game_state import (
-        bench_view_of_slots,
-    )
-    view = bench_view_of_slots([
-        BenchChar(slot=1, char_id='花火', star=2),
-        None,
-        BenchChar(slot=3, char_id='希儿', star=1),
-    ])
-    assert view.capacity == 9
-    kinds = [s.kind for s in view.slots]
-    assert kinds == ['unit', 'empty', 'unit'] + ['empty'] * 6
-    assert view.slots[0].unit.star == 2
-    assert view.slots[2].unit.slot == 3
-
-
 def test_merge_projection_direct_write_and_observe_wins() -> None:
     """§3.2.18 修法 a 两态制形态(ADR-0651):CwActionBuyCardParam 合成升星投影经
     write_logic **直写 bench**(策略器立即可读);下一备战帧实读覆盖
-    (观察赢)——一致静默,失配 = 投影 bug 缺陷留证后修推算代码。"""
+    (观察赢)——一致静默,失配 = 投影 bug 缺陷留证后修推算代码。
+    投影视图构造 = 容器写侧单一源 bench_view_of_working(工作槽表直构)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
-        bench_view_of_slots,
+        BenchSlot,
+        Unit,
+        bench_view_of_working,
     )
     consume_defect_sink()
-    proj_bench = [BenchChar(slot=1, char_id='花火', star=2)] + [None] * 8
-    proj_view = bench_view_of_slots(proj_bench)
-    real_view = bench_view_of_slots([BenchChar(slot=1, char_id='花火', star=2)])
+
+    def _view(star: int):
+        table = [BenchSlot(kind='unit',
+                           unit=Unit(char_id='花火', star=star, slot=1))]
+        return bench_view_of_working(table + [None] * 8)
+
+    proj_view = _view(2)
+    real_view = _view(2)
     # 一致路径:逻辑直写 → 字段立即可读;同值实读覆盖 = 静默
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.write_logic(gs.bench, proj_view, produced_by='CwActionBuyCardParam', sig=_lsig())
@@ -247,9 +234,8 @@ def test_merge_projection_direct_write_and_observe_wins() -> None:
     # 失配路径:观察赢覆盖真值 + 缺陷留证(失配 = 推算 bug,修推算代码)
     bs2 = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     bs2.observe(bs2.bench, real_view, sig=_sig())
-    bs2.write_logic(bs2.bench, bench_view_of_slots(
-        [BenchChar(slot=1, char_id='花火', star=1)] + [None] * 8),
-        produced_by='CwActionBuyCardParam', sig=_lsig())
+    bs2.write_logic(bs2.bench, _view(1),
+                    produced_by='CwActionBuyCardParam', sig=_lsig())
     rows2: list[dict] = []
     set_defect_sink(rows2.append)
     try:

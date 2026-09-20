@@ -25,7 +25,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     Unit,
     bench_free_slots,
-    bench_slots_of,
+    bench_view_slots_of,
     game_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
@@ -77,9 +77,11 @@ def test_prep_mirror_backfills_card_and_keeps_free_count():
     report_action_sell_bench_param(gs, CwActionSellBenchParam(bench_idx=0),
                                    sig=_LOGIC_SIG, session=session)
 
-    dep = bench_slots_of(gs)
-    assert dep[0] is not None and dep[0].char_id == '不死途'   # 入位卡回占槽 1
-    assert dep[1] is not None and dep[1].char_id == '刃'
+    dep = bench_view_slots_of(gs)
+    assert dep[0] is not None and dep[0].kind == 'unit' \
+        and dep[0].unit.char_id == '不死途'   # 入位卡回占槽 1
+    assert dep[1] is not None and dep[1].kind == 'unit' \
+        and dep[1].unit.char_id == '刃'
     assert bench_free_slots(gs) == 7       # 回占 → 不 +1(缺镜像 = 假空席绕过席满门)
     tracked = game_state_of(session).tracked_books.bench
     assert [(b.unit.char_id, b.unit.star) for b in tracked if b is not None] == [
@@ -100,8 +102,9 @@ def test_prep_mirror_needs_leg_landed_not_flag_alone():
     report_action_sell_bench_param(gs, CwActionSellBenchParam(bench_idx=0),
                                    sig=_LOGIC_SIG)
 
-    dep = bench_slots_of(gs)
-    assert dep[0] is None and dep[1].char_id == '刃'   # 容器零写
+    dep = bench_view_slots_of(gs)
+    assert (dep[0] is None or dep[0].kind == 'empty') \
+        and dep[1].kind == 'unit' and dep[1].unit.char_id == '刃'   # 容器零写
     assert gs.overflow_warning.value is True    # 旗标未消费(写口零写)
     assert bench_free_slots(gs) == 8            # 零写 → 席空数不变
     tracked = game_state_of(session).tracked_books.bench
