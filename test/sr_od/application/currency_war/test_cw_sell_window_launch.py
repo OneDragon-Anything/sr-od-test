@@ -49,8 +49,8 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
     CwActionCloseShopParam,
-    CwSimFrame,
     CwActionSellBenchParam,
+    CwSimFrame,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
     entry,

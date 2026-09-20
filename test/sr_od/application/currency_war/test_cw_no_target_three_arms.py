@@ -20,8 +20,8 @@ from test.sr_od.application.currency_war._cw_helpers import (
     cw4_box as _kbridge,
 )
 from test.sr_od.application.currency_war._cw_helpers import (
-    cw4_gs,
     cw4_feed,
+    cw4_gs,
 )
 
 from sr_od.application.currency_war.kernel import cw_intention
@@ -48,8 +48,8 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
     BenchChar,
     CwActionBuyCardParam,
-    CwSimFrame,
     CwActionRefreshShopParam,
+    CwSimFrame,
     ShopCard,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import mandate, shop
@@ -607,13 +607,13 @@ class TestArmCHoldDefault:
         assert ct_ms.get('shop_r1_no_chaseable_member') == 1
         assert 'must_spend_r1_account_yielded' not in ct_ms
         # —— 升级不冻结面 ——
-        from sr_od.application.currency_war.kernel.cw_vocab import (
-            CwActionLevelUpParam,
-        )
         # P4 容器形:MandateFrame 直构面 = 占席条目 + 行域 Unit
         from sr_od.application.currency_war.kernel.cw_game_state import (
             BenchSlot,
             Unit,
+        )
+        from sr_od.application.currency_war.kernel.cw_vocab import (
+            CwActionLevelUpParam,
         )
         deployed = [Unit(char_id=f'注册表外散件{i}', star=2, slot=i + 1)
                     for i in range(4)]
@@ -663,12 +663,12 @@ class TestKMembersDownstream:
         assert str(rejects.get('注册表外散件Z', '')).startswith('non_line')
         # 卖免面直核:燃料候选 = 非成员(成员被 zero_overlap 排除集挡住;
         # P4 容器形:候选域 = 占席条目,身份经解包口)
-        from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
-            mandate as m,
-        )
         from sr_od.application.currency_war.kernel.cw_game_state import (
             BenchSlot,
             Unit,
+        )
+        from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+            mandate as m,
         )
 
         def _entry(name: str, slot: int):

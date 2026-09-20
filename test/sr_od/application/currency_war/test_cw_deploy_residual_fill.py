@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """P24 残余补部署计划判据锁(kernel 单一源直锁)。
 
 判据出处 = docs/develop/sr_od/application/currency_war/proofs/
@@ -44,7 +43,7 @@ def test_fill_dup_name_stays_bench():
 
 def test_fill_stops_at_cap():
     # cap 满不补;半满 → 只补到 cap 截断。
-    rows = dict(front_empty=[0, 1], back_empty=[0, 1, 2, 3, 4, 5])
+    rows = {'front_empty': [0, 1], 'back_empty': [0, 1, 2, 3, 4, 5]}
     plan = residual_fill_plan(
         held=[3, 4], bench_pos={3: 'back', 4: 'back'},
         bench_cid={3: '停云', 4: '青雀'},

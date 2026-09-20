@@ -39,6 +39,8 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.deploy_plan impor
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate import (
     _redeploy_emission_allowed,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate import (
     _slot_cid as _slot_cid_of,
 )
 
@@ -56,11 +58,6 @@ _SANYUEQI = '三月七'
 # 持续伤害+希儿系 pair(真实 pair 键;判据 = DOT2 ∧ (量2∨贝2) ∧ 希儿在板;
 # 单一源 = pair_target_comp)。
 _PAIR = ('持续伤害', '希儿系')
-
-
-def _bc(name: str, idx: int) -> BenchChar:
-    """bench/板上件(slot = 1 基物理槽;idx 供唯一 slot)。"""
-    return BenchChar(slot=idx, char_id=name, star=1)
 
 
 def _ctx(*, board: list[str], bench: list[str], cap: int,

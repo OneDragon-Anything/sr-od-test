@@ -27,7 +27,6 @@ from sr_od.application.currency_war.kernel.cw_card_identity import (
     transition_release_names,
 )
 from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
-from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
 from sr_od.application.currency_war.kernel.cw_game_state import (
     BenchSlot,
     BenchView,

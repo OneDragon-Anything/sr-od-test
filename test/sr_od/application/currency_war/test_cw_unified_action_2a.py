@@ -37,9 +37,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     deployed_slots_of,
     game_state_of,
 )
-from sr_od.application.currency_war.strategies.impl.mandate_v1.deploy_plan import (
-    deploy_slot_plans,
-)
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
     select_ore_clicks,
 )
@@ -52,6 +49,9 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionSellBenchParam,
     CwActionSellDeployedParam,
     CwActionWearEquipParam,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.deploy_plan import (
+    deploy_slot_plans,
 )
 
 _SIG = ChannelSig(family='logic_action', actor='CwScreenPrep')
