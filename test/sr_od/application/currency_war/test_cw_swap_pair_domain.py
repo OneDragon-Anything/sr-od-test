@@ -30,7 +30,7 @@ from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     select_swap_plan,
     swap_sell_exclusion_reason,
 )
-from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_game_state import BenchSlot, Unit
 from sr_od.application.currency_war.kernel.cw_intention import (
     pair_target_comp,
 )
@@ -39,6 +39,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.deploy_plan impor
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate import (
     _redeploy_emission_allowed,
+    _slot_cid as _slot_cid_of,
 )
 
 # 真实注册表角色(锁语义不锁巧合):卡芙卡/黑天鹅 = 持续伤害(flow) /
@@ -77,10 +78,11 @@ def _ctx(*, board: list[str], bench: list[str], cap: int,
         membership=frozenset(),
         fresh_buys=frozenset(),
         board={},
-        deployed=[BenchChar(slot=i + 1, char_id=n, star=1,
-                            position_pref='back')
+        deployed=[Unit(slot=i + 1, char_id=n, star=1)
                   for i, n in enumerate(board)],
-        bench=[_bc(n, i + 1) for i, n in enumerate(bench)],
+        bench=[BenchSlot(kind='unit',
+                         unit=Unit(char_id=n, star=1, slot=i + 1))
+               for i, n in enumerate(bench)],
         cap=cap,
         front_slots=4,
         back_slots=6,
@@ -134,7 +136,9 @@ def test_completion_member_yields_target_seat() -> None:
     plan = select_swap_plan(ctx, select_up=select_deployments_reasoned)
     assert plan.nonempty
     assert plan.sell_names == [_HUAHUO]
-    assert {ctx.bench[i].char_id for i in plan.up_bench} == {_HEITIANQUE}
+    # (P4 容器形:bench 身份经解包口读)
+    assert {_slot_cid_of(ctx.bench[i]) for i in plan.up_bench} \
+        == {_HEITIANQUE}
 
 
 def test_completion_channel_gates() -> None:

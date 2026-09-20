@@ -30,6 +30,7 @@ from sr_od.application.currency_war.kernel.cw_economy import (
 )
 from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
 from sr_od.application.currency_war.kernel.cw_game_state import (
+    BenchSlot,
     ChannelSig,
     Unit,
     bench_slots_of,
@@ -314,9 +315,13 @@ def test_deploy_slot_plans_front_guarantee_and_slot_set():
     名字表达纪律:排偏好经注册表角色名获得(砂金=front,花火/爻光=
     back〔flex 派生 back〕),禁种子构造注入口。"""
     gs = game_state_of(None)   # 行域未观察 = 前后排全空
-    bench = [BenchChar(slot=1, char_id='花火'),
-             BenchChar(slot=2, char_id='砂金'),
-             BenchChar(slot=3, char_id='爻光')]
+    # P4 容器形:落位策略输入 = 容器占席条目
+    bench = [BenchSlot(kind='unit', unit=Unit(char_id='花火', star=1,
+                                              slot=1)),
+             BenchSlot(kind='unit', unit=Unit(char_id='砂金', star=1,
+                                              slot=2)),
+             BenchSlot(kind='unit', unit=Unit(char_id='爻光', star=1,
+                                              slot=3))]
     moves = deploy_slot_plans(bench, [0, 1, 2], None, gs)
     # 前排保证:花火 pref=back、前排全空、砂金为真 front → 砂金先提
     assert moves[0][0] == 1 and moves[0][1] == 'front'

@@ -26,7 +26,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     BenchSlot,
     ChannelSig,
     Unit,
-    bench_slots_of,
+    bench_entries_of,
     bench_view_of_slots,
     game_state_of,
 )
@@ -51,11 +51,12 @@ _SIG = ChannelSig(family='logic_action', actor='CwScreenPrep')
 def _frame(**kw) -> MandateFrame:
     """最小骨架帧:round>1 免 M5;gold 充裕免凑息/买面;上阵 1 人免
     empty_board_sell_guard(场上无人禁卖守卫);单 1★ 备战件(椒丘 = 新
-    会话默认身份排除集外的中性位,可入燃料候选)。"""
+    会话默认身份排除集外的中性位,可入燃料候选)。
+    P4 容器形:bench = 占席条目,deployed = 行域 Unit。"""
     base = {'gold': 200, 'level': 7,
-            'bench': [BenchChar(slot=1, char_id='椒丘', star=1)],
-            'deployed': [BenchChar(slot=1, char_id='刃', star=1,
-                                   position_pref='front')],
+            'bench': [BenchSlot(kind='unit',
+                                unit=Unit(char_id='椒丘', star=1, slot=1))],
+            'deployed': [Unit(slot=1, char_id='刃', star=1)],
             'deploy_cap': 7, 'node_type': 'battle',
             'stop_flag': False, 'k_members': ('刃',), 'round_num': 5}
     base.update(kw)
@@ -113,9 +114,9 @@ def test_sellbench_overflow_logic_state_absorbs_card():
     report_action_sell_bench_param(gs, CwActionSellBenchParam(bench_idx=0),
                                    sig=_SIG)
 
-    slots = bench_slots_of(gs)
-    assert slots[0] is not None and slots[0].char_id == '不死途'
-    assert slots[1].char_id == '刃'
+    slots = bench_entries_of(gs)
+    assert slots[0] is not None and slots[0].unit.char_id == '不死途'
+    assert slots[1].unit.char_id == '刃'
     # 退款 = sell_refund(1★, 2费) = cost 全额 = 2(10 → 12)
     assert gs.gold.value == 12
     assert gs.overflow_card.value == ''
@@ -141,8 +142,8 @@ def test_sellbench_overflow_missing_identity_skips_absorb():
     report_action_sell_bench_param(gs, CwActionSellBenchParam(bench_idx=0),
                                    sig=_SIG, session=session)
 
-    slots = bench_slots_of(gs)
-    assert slots[0] is None
+    slots = bench_entries_of(gs)
+    assert '花火' not in [s.unit.char_id for s in slots]   # 摘卖件槽留空等观察
     assert gs.gold.value == 12
     assert gs.overflow_warning.value is True    # 未消费(未入位),留观察覆盖
     assert gs.overflow_card.value == ''
@@ -193,8 +194,8 @@ def test_overflow_absorb_syncs_tracked():
         ('不死途', 1), ('刃', 1)]
     assert tracked[0] is not None and tracked[0].unit.slot == 1   # 被卖槽回占
     # 吸收锁(事故本形):容器腿与 tracked 腿同槽同身份。
-    assert [(b.char_id, b.star) for b in
-            bench_slots_of(gs) if b is not None] == [
+    assert [(b.unit.char_id, b.unit.star) for b in
+            bench_entries_of(gs) if b is not None] == [
         ('不死途', 1), ('刃', 1)]
 
 

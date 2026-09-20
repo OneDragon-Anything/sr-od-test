@@ -66,6 +66,22 @@ def _bc(name: str, star: int = 1, slot: int = 1) -> BenchChar:
     return BenchChar(slot=slot, char_id=name, star=star)
 
 
+def _bs(name: str, star: int = 1, slot: int = 1):
+    """容器占席条目(P4 载体迁移:MandateFrame/判据直构面)。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        BenchSlot,
+        Unit,
+    )
+    return BenchSlot(kind='unit', unit=Unit(char_id=name, star=star,
+                                            slot=slot))
+
+
+def _bu(name: str, star: int = 1, slot: int = 1):
+    """容器行域单位(P4 载体迁移:deployed 直构面)。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import Unit
+    return Unit(char_id=name, star=star, slot=slot)
+
+
 def _card(name: str, cost: int = 2, star: int = 1) -> ShopCard:
     return ShopCard(x=100, name=name, cost=cost, star=star)
 
@@ -150,7 +166,7 @@ class TestL3FlagRemoval:
         )
         sess = StrategySession()
         state_of(sess).cw4_counters = {}
-        bench = [_bc(f'高价{i}', star=3, slot=i + 1) for i in range(9)]
+        bench = [_bs(f'高价{i}', star=3, slot=i + 1) for i in range(9)]
         frame = mandate.MandateFrame(
             gold=60, level=3, bench=bench, deployed=[],
             deploy_cap=5, node_type=None, stop_flag=False,
@@ -244,8 +260,9 @@ class TestL7AllInCategoryFilter:
             _bsb(st), sess, 30, 5, ('甲',), [], [], 2, 4)
         assert ok is False and why == 'all_in_xp_category_filtered'
         # 支A:板满(cap 5)+ bench 有 2★ 等待件 → 兑现链当帧可兑现
-        deployed = [_bc(f'甲{i}', star=2, slot=i + 1) for i in range(5)]
-        bench = [_bc('乙', star=2, slot=1)]
+        # (P4 容器形:bench = 占席条目,deployed = 行域 Unit)
+        deployed = [_bu(f'甲{i}', star=2, slot=i + 1) for i in range(5)]
+        bench = [_bs('乙', star=2, slot=1)]
         ok2, why2 = crit_levelup.levelup_budget_gate(
             _bsb(st), sess, 30, 5, ('甲', '乙'), bench, deployed, 2, 4)
         assert ok2 is True and why2 == ''

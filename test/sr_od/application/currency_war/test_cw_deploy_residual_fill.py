@@ -19,7 +19,7 @@ from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     residual_fill_plan,
     xianzhou_supply_exists,
 )
-from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_game_state import BenchSlot, Unit
 
 
 def test_fill_legal_held_on_empty_slot():
@@ -100,4 +100,6 @@ def test_fill_floor_gate_direct_kernel():
     # → 门照拦
     assert recipe_floor_holds(
         '列车同行', 2, 0, True,
-        xianzhou_supply_exists([BenchChar(slot=3, char_id='停云')], set()))
+        xianzhou_supply_exists(
+            [BenchSlot(kind='unit',
+                       unit=Unit(char_id='停云', star=1, slot=3))], set()))

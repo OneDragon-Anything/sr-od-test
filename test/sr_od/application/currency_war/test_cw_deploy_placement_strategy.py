@@ -21,8 +21,8 @@ char_positions 万敌→front,攻略实证「燃血角斗场吃受击」)。
 from __future__ import annotations
 
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
-from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
 from sr_od.application.currency_war.kernel.cw_game_state import (
+    BenchSlot,
     ChannelSig,
     Unit,
     game_state_of,
@@ -33,6 +33,10 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.deploy_plan impor
 )
 
 _SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep')
+
+
+def _bs(slot: int, char_id: str) -> BenchSlot:
+    return BenchSlot(kind='unit', unit=Unit(char_id=char_id, star=1, slot=slot))
 
 
 def _rows_of(state) -> list[str]:
@@ -55,7 +59,7 @@ def test_comp_position_override_beats_registry_pref() -> None:
         'comp 覆盖压过注册表派生(①>②)'
 
     gs = game_state_of(None)   # 行域全空:两排都有空,路由无 fallback 干扰
-    bench = [BenchChar(slot=1, char_id='万敌')]
+    bench = [_bs(1, '万敌')]
     moves = deploy_slot_plans(bench, [0], comp, gs)
     assert moves[0][1] == 'front', \
         f'落位计划按覆盖排路由,实得 {moves[0]!r}'
@@ -67,8 +71,8 @@ def test_registry_front_char_seats_front_when_front_has_room() -> None:
     """注册表前排角色(开拓者·记忆,position_pref='front')在前排有空时
     被落位策略排到前排——旧链路恒按后排,本锁钉住派生真实生效。"""
     gs = game_state_of(None)
-    bench = [BenchChar(slot=1, char_id='开拓者·记忆'),
-             BenchChar(slot=2, char_id='花火')]   # 花火 = 注册表 back(对照组)
+    bench = [_bs(1, '开拓者·记忆'),
+             _bs(2, '花火')]   # 花火 = 注册表 back(对照组)
     moves = deploy_slot_plans(bench, [0, 1], None, gs)
     assert moves[0][:2] == (0, 'front'), \
         f'注册表前排角色落前排,实得 {moves[0]!r}'
@@ -85,7 +89,7 @@ def test_unregistered_name_falls_back_to_back() -> None:
     gs.observe(gs.front_row,
                [Unit(char_id='砂金', star=1, equips=[], slot=1)],
                evidence='t', sig=_SIG_OBS)
-    bench = [BenchChar(slot=1, char_id='未注册角色名')]
+    bench = [_bs(1, '未注册角色名')]
     moves = deploy_slot_plans(bench, [0], None, gs)
     assert moves[0][1] == 'back', '未注册名兜底后排'
 
@@ -100,7 +104,7 @@ def test_back_slots_capped_by_back_layout_baseline() -> None:
     gs.observe(gs.front_row,
                [Unit(char_id=f'前{i}', star=1, equips=[], slot=i)
                 for i in range(1, 5)], evidence='t', sig=_SIG_OBS)
-    bench = [BenchChar(slot=i + 1, char_id='花火') for i in range(8)]
+    bench = [_bs(i + 1, '花火') for i in range(8)]
     moves = deploy_slot_plans(bench, list(range(8)), None, gs)
     back_slots = [slot for _bi, row, slot in moves if row == 'back']
     assert back_slots == [1, 2, 3, 4, 5, 6], \
@@ -116,7 +120,7 @@ def test_back_layout_extended_value_extends_back_slots() -> None:
     gs.observe(gs.front_row,
                [Unit(char_id=f'前{i}', star=1, equips=[], slot=i)
                 for i in range(1, 5)], evidence='t', sig=_SIG_OBS)
-    bench = [BenchChar(slot=i + 1, char_id='花火') for i in range(8)]
+    bench = [_bs(i + 1, '花火') for i in range(8)]
     moves = deploy_slot_plans(bench, list(range(8)), None, gs)
     back_slots = [slot for _bi, row, slot in moves if row == 'back']
     assert back_slots == [1, 2, 3, 4, 5, 6, 7, 8], \

@@ -610,10 +610,18 @@ class TestArmCHoldDefault:
         from sr_od.application.currency_war.kernel.cw_vocab import (
             CwActionLevelUpParam,
         )
-        deployed = [_bc(f'注册表外散件{i}', star=2, slot=i + 1)
+        # P4 容器形:MandateFrame 直构面 = 占席条目 + 行域 Unit
+        from sr_od.application.currency_war.kernel.cw_game_state import (
+            BenchSlot,
+            Unit,
+        )
+        deployed = [Unit(char_id=f'注册表外散件{i}', star=2, slot=i + 1)
                     for i in range(4)]
         frame = mandate.MandateFrame(
-            gold=80, level=4, bench=[_bc('注册表外散件A', slot=1)],
+            gold=80, level=4,
+            bench=[BenchSlot(kind='unit',
+                             unit=Unit(char_id='注册表外散件A', star=1,
+                                       slot=1))],
             deployed=deployed, deploy_cap=4, node_type='battle',
             stop_flag=False, k_members=(), round_num=2)
         st_m3 = CwSimFrame(gold=80, level=4, hp=30, plane=2, round_num=2)
@@ -653,14 +661,23 @@ class TestKMembersDownstream:
             'shop_no_target_arm_a_adopted') == 1
         rejects = getattr(state_of(sess), 'cw4_shop_rejects', {})
         assert str(rejects.get('注册表外散件Z', '')).startswith('non_line')
-        # 卖免面直核:燃料候选 = 非成员(成员被 zero_overlap 排除集挡住)
+        # 卖免面直核:燃料候选 = 非成员(成员被 zero_overlap 排除集挡住;
+        # P4 容器形:候选域 = 占席条目,身份经解包口)
         from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
             mandate as m,
         )
+        from sr_od.application.currency_war.kernel.cw_game_state import (
+            BenchSlot,
+            Unit,
+        )
+
+        def _entry(name: str, slot: int):
+            return BenchSlot(kind='unit',
+                             unit=Unit(char_id=name, star=1, slot=slot))
         fuel = m.fuel_sell_candidates(
-            [_bc(missing_piece, slot=8), _bc('注册表外散件Y', slot=9)],
+            [_entry(missing_piece, 8), _entry('注册表外散件Y', 9)],
             tuple(sorted(chars)), state=_kbridge(st))
-        names = [c.char_id or '' for c in fuel]
+        names = [m._slot_cid(c) for c in fuel]
         assert '注册表外散件Y' in names
         assert missing_piece not in names
 

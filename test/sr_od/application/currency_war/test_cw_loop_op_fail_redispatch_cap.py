@@ -29,7 +29,10 @@ from types import SimpleNamespace
 
 import pytest
 
-from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    BenchSlot,
+    Unit,
+)
 from sr_od.application.currency_war.operations import cw_loop as cw_loop_mod
 from sr_od.application.currency_war.operations.cw_loop import (
     CwLoop,
@@ -201,10 +204,14 @@ _KEY_UNHEALTHY = 'deploy_chain_slot_table_unhealthy'
 def _bcd_host(monkeypatch, bench_slots, counters):
     """`_battle_chain_deploy_moves` 离线宿主:容器读口给真读口喂桩容器、
     mandate 计划段桩化(select 返回指定 up_idx),锁定对位门行为
-    (镜像恢复路由锁的替身纪律)。"""
+    (镜像恢复路由锁的替身纪律)。
+    P4 容器形:槽位表以容器 BenchView 直喂桩容器(``gs.bench.value``),
+    身份/槽号 = 内嵌 Unit 信息位(faction 载荷改注册表派生后种子不再
+    自带 faction 字段)。"""
     from types import SimpleNamespace as _NS
 
     import sr_od.application.currency_war.kernel.cw_game_state as _gs_mod
+    from sr_od.application.currency_war.kernel.cw_game_state import BenchView
     from sr_od.application.currency_war.kernel.cw_strategy_session import (
         StrategySession,
     )
@@ -212,23 +219,24 @@ def _bcd_host(monkeypatch, bench_slots, counters):
         deploy_plan as _dp_mod,
     )
 
+    slots = list(bench_slots) + [None] * (9 - len(bench_slots))
     gs = _NS(node=_NS(value=None), back_layout=_NS(value=None),
              deploy_cap=_NS(value=None), gold=_NS(value=10),
              level=_NS(value=5), front_row=_NS(value=None),
-             back_row=_NS(value=None))
+             back_row=_NS(value=None),
+             bench=_NS(value=BenchView(slots=slots, capacity=9)))
     session = StrategySession()
     session.strategy_state = _NS(cw4_counters=counters)
     monkeypatch.setattr(_gs_mod, 'game_state_of', lambda s: gs)
-    monkeypatch.setattr(_gs_mod, 'bench_slots_of', lambda b: bench_slots)
     monkeypatch.setattr(_dp_mod, '_deploy_plan_inputs',
                         lambda *a, **k: {})
     return session
 
 
 @pytest.mark.parametrize('bench_slots', [
-    [BenchChar(slot=1, char_id='花火', faction='风'),
-     BenchChar(slot=1, char_id='艾丝妲', faction='光')] + [None] * 7,
-    [BenchChar(slot=10, char_id='花火', faction='风')],
+    [BenchSlot(kind='unit', unit=Unit(char_id='花火', star=1, slot=1)),
+     BenchSlot(kind='unit', unit=Unit(char_id='艾丝妲', star=1, slot=1))],
+    [BenchSlot(kind='unit', unit=Unit(char_id='花火', star=1, slot=10))],
 ], ids=['duplicate-slot', 'out-of-range-slot'])
 def test_deploy_chain_unhealthy_slot_table_fails_closed(monkeypatch, bench_slots):
     """锁8/9 槽号不健康(重复/越界)→ 整份计划不出(遮蔽通道 fail-closed)
@@ -253,15 +261,15 @@ def test_deploy_chain_unhealthy_slot_table_fails_closed(monkeypatch, bench_slots
 
 def test_deploy_chain_healthy_table_maps_and_launches(monkeypatch):
     """锁10 健康表直通:门不误伤,对位取容器槽位表下标(bench_idx 语义)。"""
-    from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
     from sr_od.application.currency_war.operations.cw_loop import (
         _battle_chain_deploy_moves,
     )
 
     counters: dict = {}
-    bench_slots = ([BenchChar(slot=1, char_id='花火', faction='风'),
-                    BenchChar(slot=2, char_id='艾丝妲', faction='光')]
-                   + [None] * 7)
+    bench_slots = [BenchSlot(kind='unit', unit=Unit(char_id='花火', star=1,
+                                                    slot=1)),
+                   BenchSlot(kind='unit', unit=Unit(char_id='艾丝妲', star=1,
+                                                    slot=2))]
     session = _bcd_host(monkeypatch, bench_slots, counters)
 
     from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
@@ -274,5 +282,8 @@ def test_deploy_chain_healthy_table_maps_and_launches(monkeypatch):
     assert counters == {}   # 健康表零分键(门未触发)
     assert len(moves) == 1
     assert moves[0].bench_idx == 0   # = 槽号 1 在容器槽位表的下标(非槽号本身)
-    assert moves[0].faction == '风'   # faction = 容器槽位表角色对象现取
+    # faction 载体 = 主阵营注册表派生单一源(char_first_faction,§2.1
+    # faction 类1;P4 容器形后种子不再自带 faction 字段)
+    from sr_od.application.currency_war.data.cw_chars import char_first_faction
+    assert moves[0].faction == char_first_faction('花火')
     assert moves[0].to_row in ('front', 'back')   # 前排保证语义归策略落位单一源

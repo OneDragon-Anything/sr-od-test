@@ -73,6 +73,24 @@ def _item(slot: int = 1) -> BenchChar:
     return BenchChar(slot=slot, char_id='', star=1, is_item_slot=True)
 
 
+def _entries(bench: list):
+    """BenchChar 种子 → 容器占席条目(P4 载体迁移:直接调用面收容器形,
+    帧种子保持 legacy——CwSimFrame 属 P5 辖域)。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        BenchSlot,
+        Unit,
+    )
+    out = []
+    for b in bench:
+        if getattr(b, 'is_item_slot', False):
+            out.append(BenchSlot(kind='supply_box', unit=None))
+        else:
+            out.append(BenchSlot(kind='unit', unit=Unit(
+                char_id=b.char_id or '', star=b.star or 1,
+                slot=b.slot)))
+    return out
+
+
 # ===== 判定直调真值表(shop.p92_seat_recoverable)=====
 
 
@@ -99,20 +117,20 @@ class TestP92SeatRecoverableDirect:
                        and not getattr(c, 'bench_effect', ''))
         s, st, k = self._frame([_bc(fuel, star=1, slot=1)])
         assert shop.p92_seat_recoverable(
-            s, st.bench, k, _bsb(st), cap_hold=None, current_round=_ROUND,
-            defer_names=frozenset()) is True
+            s, _entries(st.bench), k, _bsb(st), cap_hold=None,
+            current_round=_ROUND, defer_names=frozenset()) is True
         s2, st2, k2 = self._frame([_bc(filler2, star=2, slot=1)])
         assert shop.p92_seat_recoverable(
-            s2, st2.bench, k2, _bsb(st2), cap_hold=None, current_round=_ROUND,
-            defer_names=frozenset()) is False
+            s2, _entries(st2.bench), k2, _bsb(st2), cap_hold=None,
+            current_round=_ROUND, defer_names=frozenset()) is False
 
     def test_placeholder_only_false_t18_gate_inherited(self):
         """仅占位件帧 ⇒ False:收窄判定经 fuel_sell_candidates 单一源
         自动继承占位件滤门(收窄不复活占位件高估灶面)。"""
         s, st, k = self._frame([_item(slot=1)])
         assert shop.p92_seat_recoverable(
-            s, st.bench, k, _bsb(st), cap_hold=None, current_round=_ROUND,
-            defer_names=frozenset()) is False
+            s, _entries(st.bench), k, _bsb(st), cap_hold=None,
+            current_round=_ROUND, defer_names=frozenset()) is False
 
 
 # ===== 集成行为差锁(P92 门经 decide_shop_screen)=====

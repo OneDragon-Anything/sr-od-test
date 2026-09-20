@@ -30,9 +30,12 @@ from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     select_swap_plan,
     swap_sell_exclusion_reason,
 )
-from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_game_state import BenchSlot, Unit
 from sr_od.application.currency_war.kernel.cw_intention import (
     pair_target_comp,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+    deploy_plan as dp,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.deploy_plan import (
     select_deployments,
@@ -50,9 +53,9 @@ _TIBAO = '缇宝'
 _XIER = '希儿'
 
 
-def _bc(name: str, idx: int) -> BenchChar:
-    """bench 件(slot = 1 基物理槽;idx 供唯一 slot)。"""
-    return BenchChar(slot=idx, char_id=name, star=1)
+def _bc(name: str, idx: int) -> BenchSlot:
+    """bench 件(容器占席条目;slot = 1 基物理槽,idx 供唯一 slot)。"""
+    return BenchSlot(kind='unit', unit=Unit(char_id=name, star=1, slot=idx))
 
 
 # 持续伤害+希儿系 pair 的判据腿(真实 pair 键;fallback 分支产物 =
@@ -84,13 +87,13 @@ def test_required_carry_seats_first_under_cap_competition() -> None:
         bench, deployed_cids=set(), deployed_fac={}, board={},
         cap=1, target_factions={'贝洛伯格', '持续伤害'},
         target_cores={_SANGBO, _XIER}, required_names={_XIER})
-    assert [bench[i].char_id for i in up] == [_XIER]
+    assert [dp._slot_cid(bench[i]) for i in up] == [_XIER]
 
     up_old, _held = select_deployments(
         bench, deployed_cids=set(), deployed_fac={}, board={},
         cap=1, target_factions={'贝洛伯格', '持续伤害'},
         target_cores={_SANGBO, _XIER})
-    assert [bench[i].char_id for i in up_old] == [_SANGBO]
+    assert [dp._slot_cid(bench[i]) for i in up_old] == [_SANGBO]
 
 
 # ============================================================ 换入臂
@@ -108,8 +111,7 @@ def _ctx(*, board: list[str], bench: list[str], cap: int,
         membership=frozenset(),
         fresh_buys=frozenset(),
         board={},
-        deployed=[BenchChar(slot=i + 1, char_id=n, star=1,
-                            position_pref='back')
+        deployed=[Unit(slot=i + 1, char_id=n, star=1)
                   for i, n in enumerate(board)],
         bench=[_bc(n, i + 1) for i, n in enumerate(bench)],
         cap=cap,
@@ -184,7 +186,7 @@ def test_swap_plan_seats_required_carry_after_sell() -> None:
     plan = select_swap_plan(ctx, select_up=select_deployments_reasoned)
     assert plan.nonempty
     assert plan.sell_names == [_NATASHA]
-    up_names = {ctx.bench[i].char_id for i in plan.up_bench}
+    up_names = {dp._slot_cid(ctx.bench[i]) for i in plan.up_bench}
     assert up_names == {_XIER}
 
 
@@ -199,9 +201,8 @@ def test_swap_arm_never_opens_protect_extension() -> None:
     ctx = _ctx(board=[_SANGBO, _KAFKA, _NATASHA, _HUAHUO],
                bench=[_XIER], cap=4, comp=comp)
     ctx.protect_names = frozenset({'万敌'})
-    ctx.deployed = list(ctx.deployed) + [BenchChar(slot=5, char_id='万敌',
-                                                   star=1,
-                                                   position_pref='back')]
+    ctx.deployed = list(ctx.deployed) + [Unit(slot=5, char_id='万敌',
+                                              star=1)]
     ctx.cap = 5
     ctx.board_full = True
     assert swap_sell_exclusion_reason('万敌', ctx) == 'target_keep'

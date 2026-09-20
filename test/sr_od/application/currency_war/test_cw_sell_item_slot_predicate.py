@@ -34,10 +34,8 @@ from test.sr_od.application.currency_war._cw_helpers import (
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
-from sr_od.application.currency_war.kernel.cw_vocab import (
-    BenchChar,
-    CwSimFrame,
-)
+from sr_od.application.currency_war.kernel.cw_game_state import BenchSlot, Unit
+from sr_od.application.currency_war.kernel.cw_vocab import CwSimFrame
 from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
     sell,
 )
@@ -49,22 +47,27 @@ _COMP = '列车同行'
 _K = ('线内件',)
 
 
-def _bc(name: str, star: int = 1, slot: int = 1) -> BenchChar:
-    return BenchChar(slot=slot, char_id=name, star=star)
+def _bc(name: str, star: int = 1, slot: int = 1) -> BenchSlot:
+    """容器占席条目(P4 载体迁移:身份/星级/槽号随内嵌 Unit)。"""
+    return BenchSlot(kind='unit',
+                     unit=Unit(char_id=name, star=star, slot=slot))
 
 
-def _item(slot: int = 1, star: int = 1) -> BenchChar:
-    """占位件(假环境同款形态):SIFT 不可读 → char_id=''、默认 1★。"""
-    return BenchChar(slot=slot, char_id='', star=star, is_item_slot=True)
+def _item(slot: int = 1, star: int = 1) -> BenchSlot:
+    """占位件(假环境同款形态):kind 非 unit、无内嵌单位。"""
+    return BenchSlot(kind='tome', unit=None)
 
 
-def _state(bench: list[BenchChar],
-           deployed: list[BenchChar] | None = None) -> CwSimFrame:
+def _state(bench: list, deployed: list | None = None) -> CwSimFrame:
     # deployed 缺省非空板:空板帧会被空板止损守卫
     # (sell_gate.empty_board_sell_blocked,ADR-0636)先于资格循环短路,
     # 测不到本文件辖的物理门本体;plane=2 压掉 P1 血线禁令域(凑息)。
     if deployed is None:
-        deployed = [_bc('前线', slot=1)]
+        # 帧层 deployed = legacy 载体(CwSimFrame,阶段 P5 辖域);bench 侧
+        # 资格循环输入 = 容器占席条目(本文件辖的载体)。
+        from sr_od.application.currency_war.kernel.cw_vocab import BenchChar
+        deployed = [BenchChar(slot=1, char_id='前线', star=1,
+                              position_pref='front')]
     st = CwSimFrame()
     st.plane = 2
     st.hp = 50

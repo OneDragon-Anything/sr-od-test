@@ -14,10 +14,16 @@ from test.sr_od.application.currency_war._cw_helpers import (
     cw4_state,
 )
 
+from sr_od.application.currency_war.kernel.cw_game_state import BenchSlot, Unit
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import mandate
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
 )
+
+
+def _bs(name: str, slot: int) -> BenchSlot:
+    """容器占席条目(P4 载体迁移:MandateFrame 直构面)。"""
+    return BenchSlot(kind='unit', unit=Unit(char_id=name, star=1, slot=slot))
 
 
 def _full_board_session():
@@ -33,11 +39,13 @@ def _full_board_session():
 
 
 def _stale_frame(round_num: int = 2):
-    """陈旧决策帧:黑板名单仍是 2 人(缺刚上场的第 3 人)——事故帧形态。"""
+    """陈旧决策帧:黑板名单仍是 2 人(缺刚上场的第 3 人)——事故帧形态。
+    P4 容器形:bench = 占席条目,deployed = 行域 Unit。"""
     return mandate.MandateFrame(
         gold=10, level=3,
-        bench=[cw4_bc('艾丝妲', slot=1)],
-        deployed=[cw4_bc('丹恒·饮月', slot=1), cw4_bc('卡芙卡', slot=2)],
+        bench=[_bs('艾丝妲', slot=1)],
+        deployed=[Unit(slot=1, char_id='丹恒·饮月', star=1),
+                  Unit(slot=2, char_id='卡芙卡', star=1)],
         deploy_cap=3, node_type=None, stop_flag=False,
         k_members=(), round_num=round_num)
 

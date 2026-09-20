@@ -39,6 +39,7 @@ from sr_od.application.currency_war.kernel.cw_exec_state import (
     deployed_row_slot,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
+    BenchSlot,
     ChannelSig,
     Unit,
     bench_view_of_slots,
@@ -109,10 +110,12 @@ def test_levelup_emission_carries_cost_and_auth_basis():
     XP_CLICK_COST_FALLBACK 折扣支,发射位零本地回退分支);auth_basis =
     发射臂放行名分键(arm1/arm0/pop/must_spend 封闭集);route_tag 沿
     Emitted.reason 透传(m3_levelup_batch:<tag>)。"""
-    deployed = [BenchChar(slot=i + 1, char_id=f'注册表外散件{i}', star=2)
+    # P4 容器形:MandateFrame 直构面 = 占席条目 + 行域 Unit
+    deployed = [Unit(slot=i + 1, char_id=f'注册表外散件{i}', star=2)
                 for i in range(4)]
     frame = mandate.MandateFrame(
-        gold=80, level=4, bench=[BenchChar(slot=1, char_id='注册表外散件A')],
+        gold=80, level=4, bench=[BenchSlot(kind='unit', unit=Unit(
+            char_id='注册表外散件A', star=1, slot=1))],
         deployed=deployed, deploy_cap=4, node_type='battle',
         stop_flag=False, k_members=(), round_num=2)
     st = CwSimFrame(gold=80, level=4, hp=30, plane=2, round_num=2)
@@ -148,11 +151,13 @@ def test_sellbench_emission_carries_channel_reason():
     from sr_od.application.currency_war.kernel.cw_intention import (
         IntentionState,
     )
-    deployed = [BenchChar(slot=i + 1, char_id=f'注册表外散件{i}', star=2)
+    # P4 容器形:MandateFrame 直构面 = 占席条目 + 行域 Unit
+    deployed = [Unit(slot=i + 1, char_id=f'注册表外散件{i}', star=2)
                 for i in range(4)]
     frame = mandate.MandateFrame(
         gold=80, level=4,
-        bench=[BenchChar(slot=1, char_id='注册表外散件A', star=1)],
+        bench=[BenchSlot(kind='unit', unit=Unit(
+            char_id='注册表外散件A', star=1, slot=1))],
         deployed=deployed, deploy_cap=4, node_type='battle',
         stop_flag=False, k_members=(), round_num=2, overflow_warning=True)
     st = CwSimFrame(gold=80, level=4, hp=30, plane=2, round_num=2)
@@ -165,8 +170,8 @@ def test_sellbench_emission_carries_channel_reason():
         [BenchChar(slot=1, char_id='注册表外散件A', star=1)]),
         produced_by='T', sig=_SIG)
     gs.write_logic(gs.front_row, [
-        BenchChar(slot=i + 1, char_id=f'注册表外散件{i}', star=2,
-                  position_pref='front') for i in range(4)],
+        Unit(slot=i + 1, char_id=f'注册表外散件{i}', star=2)
+        for i in range(4)],
         produced_by='T', sig=_SIG)
     sess = _NS(cw4_counters={}, target_comp=None,
                v3_intention=IntentionState(), active_strategies=[])
@@ -194,17 +199,16 @@ def test_emission_resolves_container_index_fail_closed():
                    produced_by='T', sig=_SIG)
     assert mandate._bench_container_idx_by_slot(gs, 4) == 3   # 槽4 → 下标3
     assert mandate._bench_container_idx(
-        gs, BenchChar(slot=4, char_id='甲', star=1)) == 3
+        gs, BenchSlot(kind='unit', unit=Unit(char_id='甲', star=1, slot=4))
+    ) == 3
     assert mandate._bench_container_idx_by_slot(gs, 9) is None   # 空槽失配
     assert mandate._bench_container_idx_by_slot(gs, 0) is None   # 非法值
     assert mandate._deployed_container_idx(
-        gs, BenchChar(slot=2, char_id='刃', star=1, position_pref='front')) \
-        == 1   # front slot2 → 下标1
-    # fail-closed = (排, 槽号) 键失配(对位键不含身份:两视图同帧同源,
-    # 身份随槽位键而来);后排槽位缺席 → None。
+        gs, Unit(slot=2, char_id='刃', star=1)) \
+        == 1   # front slot2 → 下标1(对位键 = (身份, 行内槽号))
+    # fail-closed = (身份, 行内槽号) 键失配;后排槽位缺席 → None。
     assert mandate._deployed_container_idx(
-        gs, BenchChar(slot=3, char_id='不在场', star=1,
-                      position_pref='back')) is None
+        gs, Unit(slot=3, char_id='不在场', star=1)) is None
     # 执行坐标边换算函数(kernel 单一源)互逆且边界正确(原互逆锁迁并):
     # 下标 0-9 → (排, 槽号) → 下标恒等;跨界值域锁定(front 1-4 / back 1-6)。
     for idx in range(10):
