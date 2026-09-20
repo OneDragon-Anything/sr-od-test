@@ -39,7 +39,6 @@ from sr_od.application.currency_war.kernel.cw_comps import (
 from sr_od.application.currency_war.kernel.cw_equip_wear_plan import (
     _build_equip_wear_plan,
 )
-from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
 from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     game_state_of,
@@ -91,9 +90,13 @@ def test_unregistered_items_unaffected():
 def test_allocator_excludes_illegal_pair():
     """事故路径锁:comp=None 兜底轮转也不把分身墨镜Max 发给丹恒·饮月
     (run_075416:该对进过穿戴规划 → 拖拽静默不生效 → 安灯停局);同池
-    普通件(垃圾袋)照常分配,专属件留 owned。"""
-    deployed = [BenchChar(slot=1, char_id='丹恒·饮月', star=2, position_pref='front')]
-    out = equip_allocation(None, deployed, ['分身墨镜Max', '垃圾袋'], occupied={})
+    普通件(垃圾袋)照常分配,专属件留 owned。
+    载体 = 容器行域 (front_row, back_row) 的 Unit(P4 容器形,排归属由行)。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import Unit
+    deployed_rows = ([Unit(char_id='丹恒·饮月', star=2, equips=[], slot=1)],
+                     [])
+    out = equip_allocation(None, deployed_rows,
+                           ['分身墨镜Max', '垃圾袋'], occupied={})
     assert ('丹恒·饮月', '分身墨镜Max') not in out
     assert ('丹恒·饮月', '垃圾袋') in out
 
