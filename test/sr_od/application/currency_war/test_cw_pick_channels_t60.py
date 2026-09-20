@@ -1,0 +1,263 @@
+"""T-60 验收修复批锁:两通道零写迁移(选择装备屏 pick_equip + 补给确认
+pick_supply,银狼闭环 design.md §2.2 确定性通道·通道宿主迁移)。
+
+设计正本 = changes/2026-09-18-yinlang-exclusive-loop/design.md §2.2 +
+landing.md §3.2④「选择装备屏/补给确认两通道零写迁移接线」(3.2 批漏项,
+本批补齐)。锁面:
+
+- **两通道迁移锁**:专属件经两渠道 → 装备入栏 + 送角色腿触发(购买同
+  语义,可触发合成级联);补给单位腿 = 按实际开出内容应用(char 入席 +
+  装备后果腿;装备入栏写端 = ConfirmSupply 既有到账边,落地相零双写);
+- **零写退役锁**:zero_writes 两行委托不复存在,包级命名规约解析路由到
+  具名模块;发射相写入者登记面锁(op 模块导入期全量自登记,缺登记 =
+  实机发射相 ValueError 炸动作链);
+- **未解析名翻来源锁**(既有形态):随机开出件名未解析 = 值不变翻来源
+  + 留证行;补给内容全未知(兜底点卡路径)= 受影响域值不变翻来源;
+- **发射相零写**(证据闩,同 pick_invest/planner 形态):发射相仅意图
+  遥测,重派发重复发射零容器写;
+- **载荷扩展不换键**:归一件名/角色载荷字段 action_key_exclude(幂等键
+  不变,PickInvest 先例)。
+
+观察收口基座锁(等值静默/差异 logic_rand_outcome)=
+test_cw_game_state.py::test_write_logic_rand_and_observe_random_outcome,
+不重复。
+"""
+from __future__ import annotations
+
+import pytest
+
+from sr_od.application.currency_war.kernel.cw_action_report import (
+    pick_equip as pick_equip_mod,
+)
+from sr_od.application.currency_war.kernel.cw_action_report import (
+    pick_supply as pick_supply_mod,
+)
+from sr_od.application.currency_war.kernel.cw_action_report import (
+    zero_writes as zero_writes_mod,
+)
+from sr_od.application.currency_war.kernel.cw_action_report.pick_equip import (
+    EVIDENCE_OVERLAY_CLOSED as EQUIP_EVIDENCE,
+)
+from sr_od.application.currency_war.kernel.cw_action_report.pick_equip import (
+    report_action_pick_equip_param,
+)
+from sr_od.application.currency_war.kernel.cw_action_report.pick_supply import (
+    EVIDENCE_OVERLAY_CLOSED as SUPPLY_EVIDENCE,
+)
+from sr_od.application.currency_war.kernel.cw_action_report.pick_supply import (
+    report_action_pick_supply_param,
+)
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    GAME_STATE_SCHEMA_VERSION,
+    REGISTERED_ACTORS,
+    BenchSlot,
+    BenchView,
+    ChannelSig,
+    GameState,
+    Unit,
+    bench_slots_of,
+    consume_defect_sink,
+    register_sig_actors,
+    set_defect_sink,
+)
+from sr_od.application.currency_war.kernel.cw_vocab import (
+    CwActionPickEquipParam,
+    CwActionPickSupplyParam,
+    action_key,
+)
+
+# 本文件签名写入者登记(测试惯例;发射相 actor = 动作 op 类名)。
+register_sig_actors('CwActionPickEquipOp', 'CwActionPickSupplyOp')
+
+_SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep')
+
+
+def _lsig(actor: str) -> ChannelSig:
+    return ChannelSig(family='logic_action', actor=actor, mode='compute')
+
+
+def _make_gs(*, bench: list[tuple[str, int]] | None = None,
+             equips: list[str] | None = None) -> GameState:
+    """观测面按参组装(None = 保持未观察,供 None 边界腿)。"""
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    if bench is not None:
+        slots = [BenchSlot(kind='unit',
+                           unit=Unit(char_id=c, star=s, slot=i + 1))
+                 for i, (c, s) in enumerate(bench)]
+        slots += [BenchSlot(kind='empty')] * (9 - len(slots))
+        gs.observe(gs.bench, BenchView(slots=slots, capacity=9), sig=_SIG_OBS)
+    if equips is not None:
+        gs.observe(gs.equips, list(equips), sig=_SIG_OBS)
+    return gs
+
+
+def _units(gs: GameState) -> list[tuple[str, int]]:
+    return [(b.char_id, b.star) for b in bench_slots_of(gs) if b is not None]
+
+
+class _RowSink:
+    """缺陷台账行收集(set_defect_sink 缺省关,fixture 装配 + 必达收尾)。"""
+
+    def __init__(self) -> None:
+        self.rows: list[dict] = []
+        set_defect_sink(self.rows.append)
+
+    def close(self) -> None:
+        set_defect_sink(None)
+        consume_defect_sink()
+
+    def kinds(self) -> list[str]:
+        return [r['kind'] for r in self.rows]
+
+
+@pytest.fixture
+def rows_sink() -> _RowSink:
+    s = _RowSink()
+    try:
+        yield s
+    finally:
+        s.close()
+
+
+# ============================================================ 两通道迁移锁
+
+
+def test_pick_equip_landing_gain_with_consequence(
+        rows_sink: _RowSink) -> None:
+    """选择装备屏迁移锁(design §2.2 确定性通道):落地相装备腿 = 入栏 +
+    获得后果链——分身墨镜送 1★银狼与既有两枚合成 2★(购买同语义)。"""
+    gs = _make_gs(bench=[('银狼', 1), ('银狼', 1)], equips=['幸运星'])
+    out = report_action_pick_equip_param(
+        gs, CwActionPickEquipParam(idx=1, norm_item='分身墨镜'),
+        _lsig('CwScreenEquipPick'), evidence=EQUIP_EVIDENCE)
+    assert out.applied is True
+    assert gs.equips.value == ['幸运星', '分身墨镜'], '装备入栏'
+    assert gs.equips.source == 'logic', '入栏 write_logic'
+    assert _units(gs) == [('银狼', 2)], '送角色腿触发合成(效果同商店购买)'
+    assert gs.bench.source == 'logic', '后果链同源 write_logic'
+    assert rows_sink.kinds() == [], '表内件零留证行'
+
+
+def test_pick_supply_landing_char_and_consequence(
+        rows_sink: _RowSink) -> None:
+    """补给确认迁移锁(design §2.2 单位/补给腿 = 按实际开出内容应用):
+    单位腿 char 入席(1★)+ 合成级联;装备后果腿命中表 → 送角色腿;
+    装备入栏 = ConfirmSupply 既有到账边(发射相),落地相零双写。"""
+    gs = _make_gs(bench=[('银狼', 1), ('银狼', 1)], equips=[])
+    out = report_action_pick_supply_param(
+        gs, CwActionPickSupplyParam(idx=0, char_name='银狼',
+                                    norm_item='分身墨镜'),
+        _lsig('CwScreenSupplyNode'), evidence=SUPPLY_EVIDENCE)
+    assert out.applied is True
+    units = _units(gs)
+    assert ('银狼', 2) in units and ('银狼', 1) in units, \
+        '单位腿 1★入席合成 2★ + 后果腿送出 1★(购买同语义)'
+    assert gs.bench.source == 'logic', '双腿同源 write_logic'
+    assert gs.equips.source == 'observation' and gs.equips.value == [], \
+        '落地相不重复写 equips(入栏写端 = ConfirmSupply 到账边,无双计面)'
+
+
+def test_pick_channels_emission_phase_is_intent_only(
+        rows_sink: _RowSink) -> None:
+    """发射相零写(证据闩,重派发重复发射零容器写):两渠道同锁。"""
+    gs = _make_gs(bench=[('银狼LV.999', 2)], equips=['幸运星'])
+    seq_before = gs.write_seq
+    p_equip = CwActionPickEquipParam(idx=0, norm_item='分身墨镜')
+    p_supply = CwActionPickSupplyParam(idx=1, char_name='银狼',
+                                       norm_item='分身墨镜Max')
+    out1 = report_action_pick_equip_param(gs, p_equip, _lsig('CwActionPickEquipOp'))
+    out2 = report_action_pick_equip_param(gs, p_equip, _lsig('CwActionPickEquipOp'))
+    out3 = report_action_pick_supply_param(gs, p_supply, _lsig('CwActionPickSupplyOp'))
+    out4 = report_action_pick_supply_param(gs, p_supply, _lsig('CwActionPickSupplyOp'))
+    assert all(o.applied and o.reason == 'intent_only'
+               for o in (out1, out2, out3, out4)), '受理(意图遥测)'
+    assert gs.write_seq == seq_before, '发射相零容器写(重派发不重写)'
+    assert gs.equips.value == ['幸运星'], '入栏未被发射相触碰'
+    assert gs.bench.source == 'observation', 'bench 未被发射相触碰'
+
+
+# ============================================================ 零写退役锁
+
+
+def test_zero_write_delegates_retired_and_routing_migrated() -> None:
+    """零写退役锁:zero_writes 两行委托不复存在;包级命名规约解析路由到
+    具名模块(直接 import 零写委托的旧消费面 = AttributeError 响亮)。"""
+    assert not hasattr(zero_writes_mod, 'report_action_pick_equip_param'), \
+        'pick_equip 零写委托已迁出'
+    assert not hasattr(zero_writes_mod, 'report_action_pick_supply_param'), \
+        'pick_supply 零写委托已迁出'
+    assert pick_equip_mod.report_action_pick_equip_param.__module__ \
+        .endswith('.pick_equip'), '包级解析路由到 pick_equip 具名模块'
+    assert pick_supply_mod.report_action_pick_supply_param.__module__ \
+        .endswith('.pick_supply'), '包级解析路由到 pick_supply 具名模块'
+
+
+def test_pick_op_actors_registered_for_emission_report() -> None:
+    """发射相写入者登记面锁:动作 op 模块导入期全量自登记——缺登记 =
+    实机发射相自上报 _validate_sig ValueError 炸(动作 op 全链 FAIL;
+    契约扩员 12→15 七类漏登记的回归锁)。"""
+    from sr_od.application.currency_war.operations.cw_op import (
+        cw_overlay_pick_action,
+    )
+
+    for name in dir(cw_overlay_pick_action):
+        if name.startswith('CwActionPick') and name.endswith('Op'):
+            assert name in REGISTERED_ACTORS, f'发射相 actor 未登记: {name}'
+
+
+def test_pick_channels_payload_fields_excluded_from_action_key() -> None:
+    """载荷扩展不换键(照 PickInvest 先例):归一件名/角色载荷字段
+    action_key_exclude,幂等键与纯 idx 形态恒等。"""
+    assert action_key(CwActionPickEquipParam(idx=1, norm_item='分身墨镜')) \
+        == action_key(CwActionPickEquipParam(idx=1)), 'equip 载荷不入键'
+    assert action_key(CwActionPickSupplyParam(idx=2, char_name='银狼',
+                                              norm_item='分身墨镜Max')) \
+        == action_key(CwActionPickSupplyParam(idx=2)), 'supply 载荷不入键'
+
+
+# ============================================================ 未解析名翻来源锁
+
+
+def test_pick_equip_unresolved_flips_source(rows_sink: _RowSink) -> None:
+    """选择装备屏未解析名(既有形态):禁猜名,equips 值不变翻来源 +
+    留证行;无后果链(不猜件名)。"""
+    gs = _make_gs(bench=[('希儿', 1)], equips=['幸运星'])
+    out = report_action_pick_equip_param(
+        gs, CwActionPickEquipParam(idx=2, norm_item=''),
+        _lsig('CwScreenEquipPick'), evidence=EQUIP_EVIDENCE)
+    assert out.applied is True and out.reason == 'equip_name_unresolved'
+    assert gs.equips.value == ['幸运星'], '值不变'
+    assert gs.equips.source == 'logic_rand', '翻来源(观察差异收口自愈)'
+    assert rows_sink.kinds() == ['pick_equip_name_unresolved'], '留证行 kind'
+    assert gs.bench.source == 'observation', '不猜名 → 无后果链'
+
+
+def test_pick_supply_equip_unresolved_flips_source(
+        rows_sink: _RowSink) -> None:
+    """补给装备名未解析(既有形态):单位腿照常应用,装备腿禁猜——
+    equips 值不变翻来源 + 留证行。"""
+    gs = _make_gs(bench=[('希儿', 1)], equips=['折叠小刀'])
+    out = report_action_pick_supply_param(
+        gs, CwActionPickSupplyParam(idx=0, char_name='希儿', norm_item=''),
+        _lsig('CwScreenSupplyNode'), evidence=SUPPLY_EVIDENCE)
+    assert out.applied is True
+    assert ('希儿', 1) in _units(gs), '单位腿不受装备名未解析影响'
+    assert gs.equips.value == ['折叠小刀'], '装备腿值不变'
+    assert gs.equips.source == 'logic_rand', '翻来源'
+    assert rows_sink.kinds() == ['pick_supply_name_unresolved'], '留证行 kind'
+
+
+def test_pick_supply_content_unknown_flips_domains(
+        rows_sink: _RowSink) -> None:
+    """补给内容全未知(兜底点卡路径,载荷空):禁猜——bench/equips 值
+    不变翻来源 + 留证行(观察覆盖差异收口自愈)。"""
+    gs = _make_gs(bench=[('希儿', 1)], equips=['折叠小刀'])
+    out = report_action_pick_supply_param(
+        gs, CwActionPickSupplyParam(idx=0),
+        _lsig('CwScreenSupplyNode'), evidence=SUPPLY_EVIDENCE)
+    assert out.applied is True and out.reason == 'content_unresolved'
+    assert _units(gs) == [('希儿', 1)] and gs.bench.source == 'logic_rand', \
+        'bench 值不变翻来源'
+    assert gs.equips.value == ['折叠小刀'] and gs.equips.source == 'logic_rand', \
+        'equips 值不变翻来源'
+    assert rows_sink.kinds() == ['pick_supply_content_unresolved'], '留证行 kind'
