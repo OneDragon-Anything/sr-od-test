@@ -455,16 +455,16 @@ def test_pick_no_confirm_ops_click_and_self_report(
         monkeypatch.setattr(pick_mod, 'game_state_from_ctx',
                             lambda ctx: SimpleNamespace(sentinel='gs'))
         monkeypatch.setattr(pick_mod, 'report_action_pick_equip_param',
-                            lambda gs, param, sig: reported.append(param),
+                            lambda gs, param, sig, _r=reported: _r.append(param),
                             raising=False)
         monkeypatch.setattr(pick_mod, 'report_action_pick_box_card_param',
-                            lambda gs, param, sig: reported.append(param),
+                            lambda gs, param, sig, _r=reported: _r.append(param),
                             raising=False)
         monkeypatch.setattr(pick_mod, 'report_action_pick_star_tome_param',
-                            lambda gs, param, sig: reported.append(param),
+                            lambda gs, param, sig, _r=reported: _r.append(param),
                             raising=False)
         monkeypatch.setattr(pick_mod, 'report_action_pick_expert_invite_param',
-                            lambda gs, param, sig: reported.append(param),
+                            lambda gs, param, sig, _r=reported: _r.append(param),
                             raising=False)
         assert op_cls(env.op.ctx, param_cls(idx=want_idx),
                       env=env).run().is_success, param_cls.__name__
@@ -511,7 +511,7 @@ def _shop_state_with_gold_and_cards() -> tuple:
 
 def test_refresh_shop_op_persists_evidence_without_comparison(monkeypatch):
     """RefreshShopOp 零比对(裁决3 批4):execute 只落账(刷前/刷后名集
-    原样 + 期望外发),零缺陷发射;退役字段不再在场(对象面运行时检查,
+    原样),零缺陷发射;退役字段不再在场(对象面运行时检查,
     非源码扫描)。"""
     monkeypatch.setattr('time.sleep', lambda _s: None)
     defect_calls: list = []
@@ -538,56 +538,14 @@ def test_refresh_shop_op_persists_evidence_without_comparison(monkeypatch):
     assert ledger.refresh_pre_names == ['旧卡A']
     assert ledger.refresh_post_names == ['新卡A', '新卡B']
     assert not hasattr(ledger, 'refresh_board_changed')
-    # 期望随账本外发(刷前构建,消费点 = 入口观察对账点)
-    assert ledger.refresh_expect is not None
-    assert ledger.refresh_expect[0].gold_after == 48
-    # 零缺陷发射(refresh_expect_mismatch 迁观察侧对账点)
+    # 零缺陷发射
     assert defect_calls == []
-
-
-def test_entry_reconcile_emits_expect_mismatch_defect(monkeypatch):
-    """入口观察对账点·期望腿(批4 迁入宿主):入口金 ≠ 期望金 →
-    refresh_expect_mismatch 缺陷落台账(零决策;plane/round 取期望构建
-    时点快照)。免费腿不满足(金已扣)→ 无存证调用。"""
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_buy_cards as buy_mod,
-    )
-    from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
-        build_refresh_expect,
-    )
-    defect_calls: list = []
-    monkeypatch.setattr(cw_defects, 'record_defect',
-                        lambda *a, **k: defect_calls.append((a, k)))
-    free_calls: list = []
-    monkeypatch.setattr(buy_mod, '_record_free_refresh_proc',
-                        lambda *a, **k: free_calls.append((a, k)))
-    expect = build_refresh_expect(50, 2, [('旧卡A', 1)], 2, 5)
-    ledger = ShopVisitLedger()
-    ledger.refresh_pre_gold = 50
-    ledger.refresh_pre_names = ['旧卡A']
-    ledger.refresh_pending_reconcile = True
-    ledger.refresh_expect = expect
-    entry = SimpleNamespace(
-        gold=49,   # ≠ 期望 gold_after=48(刷价另有实况)→ 金腿开票
-        shop=[SimpleNamespace(kind='content',
-                              card=SimpleNamespace(name='新卡A')),
-              SimpleNamespace(kind='content',
-                              card=SimpleNamespace(name='新卡B'))],
-        plane=2, round_num=5)
-    buy_mod._reconcile_refresh_pending(SimpleNamespace(), ledger, entry)
-    assert len(defect_calls) == 1
-    args, kwargs = defect_calls[0]
-    assert args[0] == 'shop' and args[1] == 'refresh_expect_mismatch'
-    assert kwargs['plane'] == 2 and kwargs['round_num'] == 5
-    assert kwargs['reader_source'] == 'refresh_expect_reconcile'
-    assert 'gold/-: 48' in kwargs['expected'] and kwargs['observed'] == '49'
-    assert free_calls == []
 
 
 def test_entry_reconcile_free_leg_fires_on_unchanged_gold(monkeypatch):
     """入口观察对账点·免费腿(三值单一源消费):金未扣 ∧ 牌面已变 →
-    存证调用(存证体桩化,零真实 IO);期望腿同帧同评(本例期望 None
-    隔离)。名集未变分支 = 零存证(比对单一源的 False 臂)。"""
+    存证调用(存证体桩化,零真实 IO)。名集未变分支 = 零存证(比对
+    单一源的 False 臂)。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_buy_cards as buy_mod,
     )
@@ -598,7 +556,6 @@ def test_entry_reconcile_free_leg_fires_on_unchanged_gold(monkeypatch):
     ledger.refresh_pre_gold = 48
     ledger.refresh_pre_names = ['旧卡A']
     ledger.refresh_pending_reconcile = True
-    ledger.refresh_expect = None   # 期望腿隔离
     entry = SimpleNamespace(
         gold=48,   # 金未扣
         shop=[SimpleNamespace(kind='content',
