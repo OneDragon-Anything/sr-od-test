@@ -393,6 +393,78 @@ def test_observe_mismatch_three_way_routing(
     assert len(fired) == 1, '真失配钩子照触发'
 
 
+def test_write_logic_rand_and_observe_random_outcome(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """逻辑随机态(logic_rand)契约并一锁:写口/观察覆盖差异/消费查询面。
+
+    - 写口腿:write_logic_rand 落 source=logic_rand,策略器立即可读;
+      渠道族守卫与 write_logic 同一条(obs 族签名显式炸);prov 快照随写;
+    - 观察覆盖腿:差异 = 随机效果落地**预期内非 bug**——只落
+      logic_rand_outcome 台账行(无 [cw!] 告警、安灯不触发),覆盖照常
+      观察赢;等值观察零新信息不产行;
+    - 消费查询腿:logic_rand_fields 列随机态字段、观察后自然移出;
+      logic_written_fields(严格对账巡检面)不辖随机态字段。"""
+    from sr_od.application.currency_war.kernel import cw_game_state as _gs_mod
+    from sr_od.application.currency_war.kernel import (
+        cw_mismatch_policy as _policy,
+    )
+
+    fired: list[dict] = []
+    monkeypatch.setattr(_policy, '_ANDON_HOOK', fired.append)
+    warns: list[tuple] = []
+    monkeypatch.setattr(_gs_mod.log, 'warning',
+                        lambda *a, **k: warns.append(a))
+
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    # 渠道族守卫:随机直写与 write_logic 同族校验,obs 族签名拒绝
+    with pytest.raises(ValueError):
+        gs.write_logic_rand(gs.gold, 12, produced_by='TestSigWriter',
+                            sig=_sig())
+    # —— 写口腿 ——
+    gs.write_logic_rand(gs.gold, 12, produced_by='TestSigWriter',
+                        evidence='sphere_rand@p1-r2', sig=_lsig())
+    assert gs.gold.source == 'logic_rand' and gs.gold.value == 12, \
+        '随机口径直写落 logic_rand 来源,策略器立即可读'
+    assert gs.logic_rand_fields() == ['gold'], '随机态字段在册(消费门查询口)'
+    assert gs.gold not in [getattr(gs, n) for n in gs.logic_written_fields()] \
+        and 'gold' not in gs.logic_written_fields(), \
+        '严格对账巡检面(logic_written_fields)不辖随机态字段'
+    snap = gs.full_state_snapshot()
+    assert snap['prov']['gold']['source'] == 'logic_rand', \
+        'prov 快照随写(遥测面可判读随机口径)'
+    # —— 观察覆盖腿:差异 = 预期内,logic_rand_outcome 行,无告警无安灯 ——
+    rows: list[dict] = []
+    set_defect_sink(rows.append)
+    try:
+        gs.observe(gs.gold, 25, evidence='prep_gold@p1-r2', sig=_sig())
+    finally:
+        set_defect_sink(None)
+        consume_defect_sink()
+    assert len(rows) == 1 and rows[0]['kind'] == 'logic_rand_outcome', \
+        '差异只落随机结果台账行(预期内,不进失配三分流)'
+    assert rows[0]['expected'] == 12 and rows[0]['actual'] == 25 \
+        and rows[0]['logic_evidence'] == 'sphere_rand@p1-r2', \
+        '行携带随机口径预期/实读/写端注记(校准遥测面)'
+    assert fired == [], '安灯不触发(随机落地非 bug)'
+    assert not any('观察覆盖 logic 失配' in str(w) for w in warns), \
+        '无 [cw!] 告警面'
+    assert gs.gold.source == 'observation' and gs.gold.value == 25, \
+        '覆盖照常 = 随机结果采新(观察赢)'
+    assert gs.logic_rand_fields() == [], '观察后字段自然移出随机态清单'
+    # —— 等值观察反腿:随机口径撞中实读 = 零新信息,不产行 ——
+    bs2 = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    bs2.write_logic_rand(bs2.gold, 12, produced_by='TestSigWriter',
+                         sig=_lsig())
+    rows_eq: list[dict] = []
+    set_defect_sink(rows_eq.append)
+    try:
+        bs2.observe(bs2.gold, 12, sig=_sig())
+    finally:
+        set_defect_sink(None)
+        consume_defect_sink()
+    assert rows_eq == [], '等值观察零新信息不产行(settle_truth 同纪律)'
+
+
 # ============================================================ 单例宿主与心跳观察者
 
 
