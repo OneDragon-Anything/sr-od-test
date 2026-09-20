@@ -114,7 +114,7 @@ _OBS_ROWS = {
          'partner_opts', [PartnerOption(idx=0, char_id='charA'),
                           PartnerOption(idx=1, char_id='charB')]),
     'planner':
-        ('cw_screen_planner', 'CwScreenPlanner',
+        ('cw_screen_yinlang', 'CwScreenYinLang',
          lambda op, mp: mp.setattr(op.ctx, 'ocr_service', _StubOcr(
              map_result={'左卡文': _mrl(500, 350), '右卡文': _mrl(1200, 350)}),
              raising=False),

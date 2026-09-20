@@ -467,7 +467,7 @@ _DEFAULT_SIGS = {
     'megastar': ('logic_action', 'CwScreenMegastar', None, 'compute'),
     'equip_pick': ('logic_action', 'CwScreenEquipPick', None, 'compute'),
     'partner': ('logic_action', 'CwScreenPartner', None, 'compute'),
-    'planner': ('logic_action', 'CwScreenPlanner', None, 'compute'),
+    'planner': ('logic_action', 'CwScreenYinLang', None, 'compute'),
     'fortune': ('logic_action', 'CwScreenFortune', None, 'compute'),
     'bookcard': ('logic_action', 'CwScreenBookcard', None, 'compute'),
     'expert_invite': ('logic_action', 'CwScreenExpertInvite', None, 'compute'),

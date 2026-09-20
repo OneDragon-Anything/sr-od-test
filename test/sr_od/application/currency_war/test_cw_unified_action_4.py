@@ -319,8 +319,8 @@ def test_partner_pick_op_confirm_missing_retries_without_click(no_pick_sleep):
 def test_planner_pick_op_clicks_target_and_confirm(no_pick_sleep):
     """策划确认链:点卡(press_time 透传)→ 确认(pending 置位 +
     全词裁决词);轮次结果旁路回传。"""
-    from sr_od.application.currency_war.operations.cw_screen.cw_screen_planner import (
-        CwScreenPlanner,
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_yinlang import (
+        CwScreenYinLang,
     )
     rs = SimpleNamespace(sentinel='rs')
     ctrl = _RecordingController()
@@ -332,7 +332,7 @@ def test_planner_pick_op_clicks_target_and_confirm(no_pick_sleep):
     env = OverlayPickExecEnv(op=op, target=Point(700, 420))
     assert CwActionPickPlannerOp(env.op.ctx, PlannerPick(idx=1), env=env).run().is_success
     assert [(p.x, p.y, t) for p, t in ctrl.clicks] == [
-        (700, 420, 0.15), (CwScreenPlanner.CONFIRM.x, CwScreenPlanner.CONFIRM.y, 0.15)]
+        (700, 420, 0.15), (CwScreenYinLang.CONFIRM.x, CwScreenYinLang.CONFIRM.y, 0.15)]
     assert op._confirm_pending is True
     assert env.round_result is rs
 

@@ -74,14 +74,14 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionDeployMoveParam,
     CwActionPickInvestParam,
 )
-from sr_od.application.currency_war.operations.cw_screen.cw_screen_planner import (
+from sr_od.application.currency_war.operations.cw_screen.cw_screen_yinlang import (
     apply_pick_planner_landing,
 )
 
 _SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep')
 
 
-def _lsig(actor: str = 'CwScreenPlanner') -> ChannelSig:
+def _lsig(actor: str = 'CwScreenYinLang') -> ChannelSig:
     return ChannelSig(family='logic_action', actor=actor, mode='compute')
 
 
