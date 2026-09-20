@@ -130,24 +130,26 @@ def test_reentry_arbitration_flag_gate_combination(test_context,
     红 = 裁决出口语义漂移(门命中误判完成 / 落地轮旗标复活 / 裁决移位)。"""
     # 投资环境·落地轮:pending 在位 + 锚已退 → 裁决出口 success,零动作
     op_land, _m, _s, _d = _make_env(test_context, monkeypatch, in_screen=False)
-    op_land._confirm_pending = True
+    op_land._confirm_pending = '彩虹时代'
     rs_land = _run_node(test_context, op_land, op_land.act)
     assert rs_land.is_success and '重入观察裁决' in (rs_land.status or ''), (
         f'落地轮裁决出口 success 交回:{rs_land!r}')
-    assert op_land._confirm_pending is False, (
+    assert op_land._confirm_pending is None, (
         '裁决先行消费旗标,落地轮不残留待裁决旗标')
     # 投资环境·门命中轮:pending 在位 + 锚仍在 → 不误判完成,确认链重发
     events: list = []
     op_hit, _m2, _s2, _d2 = _make_env(test_context, monkeypatch, in_screen=True,
                                       opts=[('追击概念股', 460)], events=events)
-    op_hit._confirm_pending = True
+    op_hit._confirm_pending = '追击概念股'
     rs_hit = _run_node(test_context, op_hit, op_hit.act)
     assert rs_hit.result == OperationRoundResultEnum.WAIT, (
         f'锚在 = 确认未落地,裁决不误判完成(round_wait 机械交回):{rs_hit!r}')
     assert any(e[0] == 'card_click' for e in events), (
         f'裁决消费后正常流程重发(选卡点击在案):{events!r}')
-    assert op_hit._confirm_pending is True, (
-        f'旗标经确认体重置(非裁决出口):{events!r}')
+    assert op_hit._confirm_pending is None, (
+        '旗标经确认体重置(非裁决出口);桩轮无候选 → 选中名 ? → 不置名 '
+        '(载荷语义:值 = 选中名,银狼闭环双屏分流):'
+        f'{events!r}')
     # 投资策略·门命中轮:pending 在位 + 入口锚在 → 裁决不触发,在屏轮
     # 零 append(append 只归裁决出口)
     book = _FrameBook([object()])
@@ -311,8 +313,9 @@ def test_invest_env_active_env_written_at_pick_time(test_context,
         '源形态断言)')
     assert len(dispatches) == 1 and dispatches[0].param.idx == 1, (
         f'选卡+确认链恰一次派发,param 携真实 idx:{dispatches!r}')
-    assert op._confirm_pending is True, (
-        '确认已发 → pending 置位(重入裁决承载)')
+    assert op._confirm_pending == '彩虹时代', (
+        '确认已发 → pending 置位携选中名(重入裁决承载;银狼闭环双屏分流'
+        '载荷 = 落地相效果分派输入)')
     assert rs.result == OperationRoundResultEnum.WAIT, (
         f'确认链机械交回 round_wait(循环推进):{rs!r}')
 
