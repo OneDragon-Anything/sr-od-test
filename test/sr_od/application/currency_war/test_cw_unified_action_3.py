@@ -27,6 +27,7 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionLevelUpParam,
     CwActionLevelUpShopParam,
     CwActionLuckyTokenUseParam,
+    CwActionObsParam,
     CwActionOpenBookcardParam,
     CwActionOpenBoxParam,
     CwActionOpenShopParam,
@@ -97,6 +98,7 @@ def test_prep_terminal_set_matches_registry_terminal_attrs():
         CwActionFurnaceUseParam(target_kind='char', row='front', slot=1),
         CwActionWrenchUseParam(row='front', slot=1),
         CwActionLuckyTokenUseParam(row='front', slot=1),
+        CwActionObsParam(),   # 环内重观察:非终结(执行后决策环原地续跑)
     ]
     for a in mechanical_cases:
         assert _op_cls(a).terminal is False, type(a).__name__
