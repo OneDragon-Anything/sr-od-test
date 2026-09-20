@@ -14,7 +14,8 @@
 - **幂等证据闩**(design §2.1①/对抗审③⑦):发射相仅意图遥测零容器写
   (重派发不重写);效果腿只在落地相应用一次;
 - **上阵变换窗**(design §2.1A):3★银狼LV.999 落场写下一费用档 1★;
-  其余单位恒等搬运零行为差;级联涉 LV.999 → 禁猜降级留证;
+  其余单位恒等搬运零行为差;级联全员正常推演(费用档不同时存在,
+  2026-09-18 定谳[口述·权威],分组键 (char_id, star) 无跨档歧义);
 - **获得后果**(design §2.2):分身墨镜系送出银狼族进备战席 + 合成级联;
 - **pick_invest 迁移**(design §2.3):分步上报——策略屏确认落地入
   active_strategies + 效果分派(骇客专家:银狼 = bench 腿 + 商店池申报行
@@ -218,21 +219,21 @@ def test_upgrade_transform_zero_or_unobserved(
                                  'planner_upgrade_source_missing']
 
 
-def test_upgrade_cascade_lv999_downgraded(
+def test_upgrade_cascade_lv999_normal_merge(
         monkeypatch: pytest.MonkeyPatch,
         rows_sink: _RowSink) -> None:
-    """跨档合并禁猜降级锁(design §2.0):变换出的 1★ 凑满 LV.999 同星组
-    → 级联不推演,受影响域值不变翻来源 + 留证(lv999_merge_undecided)。"""
+    """涉 LV.999 级联合并正常推演锁(费用档不同时存在,2026-09-18 定谳
+    [口述·权威]——分组键 (char_id, star) 无跨档歧义):变换出的 1★ 凑满
+    同星组 → 与普通单位同语义升星(write_logic 逐级落行,零留证行)。"""
     gs = _make_gs(bench=[('银狼LV.999', 2), ('银狼LV.999', 1),
                          ('银狼LV.999', 1)], equips=[])
     out = apply_pick_planner_landing(gs, leg_type='upgrade', norm_item='',
                                      sig=_lsig())
     assert out.applied is True
     units = [(b.char_id, b.star) for b in bench_slots_of(gs) if b is not None]
-    assert units.count(('银狼LV.999', 1)) == 3, '降级:合成不推演,三枚 1★ 原样'
-    assert ('银狼LV.999', 2) not in units, '变换腿本身照常应用'
-    assert gs.bench.source == 'logic_rand', '级联域值不变翻来源'
-    assert 'lv999_merge_undecided' in rows_sink.kinds(), '降级留证行'
+    assert units == [('银狼LV.999', 2)], '正常推演:3×1★ 合成 → 2★(普通单位同语义)'
+    assert gs.bench.source == 'logic', '级联确定面 write_logic'
+    assert rows_sink.kinds() == [], '正常推演零留证行'
 
 
 # ============================================================ 装备腿与获得后果
@@ -361,25 +362,25 @@ def test_deploy_non_target_identity(
         assert rows_sink.kinds() == []
 
 
-def test_deploy_cascade_lv999_downgraded(
+def test_deploy_cascade_lv999_normal_merge(
         monkeypatch: pytest.MonkeyPatch,
         rows_sink: _RowSink) -> None:
-    """上阵级联禁猜降级:变换出的 1★ 与备战 2× 1★ 凑满同星组 → 不推演,
-    翻来源 + 留证(3.1④ 定谳前)。"""
+    """上阵级联正常推演锁(同 2026-09-18 定谳,普通单位同语义):变换出的
+    1★ 落场与备战 2× 1★ 凑满全场同星组 → 合成载体 = 场上那张(场上优先,
+    _merge_bench 语义),备战素材被消费腾槽,write_logic 逐级落行。"""
     gs = _make_gs(bench=[('银狼LV.999', 3), ('银狼LV.999', 1),
                          ('银狼LV.999', 1)], front=[], equips=[])
     out = report_action_deploy_move_param(
         gs, CwActionDeployMoveParam(bench_idx=0, to_row='front', faction=''),
         _lsig('CwActionDeployMoveOp'))
     assert out.applied is True
-    assert gs.front_row.value[0].star == 1, '变换腿照常'
+    assert gs.front_row.value[0].star == 2, '级联正常推演:场上载体 1★→2★'
     bench_units = [(b.char_id, b.star) for b in bench_slots_of(gs)
                    if b is not None]
-    assert bench_units == [('银狼LV.999', 1), ('银狼LV.999', 1)], \
-        '备战素材不推演合成'
-    assert gs.bench.source == 'logic_rand' \
-        and gs.front_row.source == 'logic_rand', '受影响域值不变翻来源'
-    assert 'lv999_merge_undecided' in rows_sink.kinds()
+    assert bench_units == [], '备战素材被合成消费腾槽'
+    assert gs.bench.source == 'logic' \
+        and gs.front_row.source == 'logic', '受影响域逐级落行(write_logic)'
+    assert rows_sink.kinds() == [], '正常推演零留证行'
 
 
 # ============================================================ pick_invest 迁移
@@ -535,6 +536,6 @@ def test_grant_channel_consequence_anchor(
 
 
 def test_deploy_move_module_uses_shared_cascade() -> None:
-    """变换窗级联走共享降级体(单源消费;禁消费方手搓级联)。"""
+    """变换窗级联走共享级联体(单源消费;禁消费方手搓级联)。"""
     assert deploy_move_mod.merge_cascade_write.__module__ == \
         'sr_od.application.currency_war.kernel.cw_effect_inventory'
