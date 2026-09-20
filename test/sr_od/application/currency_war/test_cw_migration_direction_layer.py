@@ -49,6 +49,7 @@ from test.sr_od.application.currency_war._cw_helpers import (
 )
 
 from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
+from sr_od.application.currency_war.kernel.cw_game_state import Unit
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     committed_authority,
@@ -57,11 +58,8 @@ from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY as _REG,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
-    BENCH_CAPACITY,
-    BenchChar,
     CwActionBuyCardParam,
     CwActionCloseShopParam,
-    CwSimFrame,
     CwActionRefreshShopParam,
     ShopCard,
 )
@@ -77,13 +75,10 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicate
 )
 
 
-def _state(plane: int = 1, round_num: int = 2, gold: int = 40) -> CwSimFrame:
-    st = CwSimFrame()
-    st.plane = plane
-    st.round_num = round_num
-    st.gold = gold
-    st.level = 3
-    return st
+def _state(plane: int = 1, round_num: int = 2, gold: int = 40) -> dict:
+    """方向层场景种子轴(桥配方缺省;返回 = ``cw4_box`` kwargs)。"""
+    return {'plane': plane, 'round_num': round_num, 'gold': gold,
+            'level': 3}
 
 
 # ----------------------------------------------------- D2 缺供给保守侧
@@ -114,14 +109,14 @@ def test_p6_registry_injection_reaches_state_machine():
     """
     from sr_od.application.currency_war.kernel.cw_intention import update_intention
     st = _state(plane=2, round_num=1)   # P2:comp 锁定通道(P1 配方锁区不锁 comp)
-    st.enemy_affixes = ['净化身心']            # 对抗词缀(万敌强环境不命中)
-    st.shop = [SimpleNamespace(name='万敌')]   # ③核心卡信号可见
+    st['enemy_affixes'] = ['净化身心']            # 对抗词缀(万敌强环境不命中)
+    st['shop'] = [SimpleNamespace(name='万敌')]   # ③核心卡信号可见
     reg_def = _REG
     reg_inj = replace(_REG, line_env_lock_min_round=99)
-    ist_def = update_intention(cw4_box(st),
+    ist_def = update_intention(cw4_box(**st),
                                IntentionState(phase='weak', weak_comp='万敌单C'),
                                None, registry=reg_def)
-    ist_inj = update_intention(cw4_box(st),
+    ist_inj = update_intention(cw4_box(**st),
                                IntentionState(phase='weak', weak_comp='万敌单C'),
                                None, registry=reg_inj)
     assert ist_def.locked_comp == ''            # 缺省臂:环境判据缓锁(weak 保持)
@@ -145,17 +140,17 @@ def _sc(name: str, cost: int = _JU23_STOCK_COST, star: int = 1) -> ShopCard:
     return ShopCard(name=name, faction='仙舟罗浮', cost=cost, x=0, star=star)
 
 
-def _ju23_frame(gold: int, shop: list[ShopCard] | None = None) -> CwSimFrame:
-    """局23 型帧:线成型(全员 2★ 上场)+ 备战空 + P1 局中。"""
-    return CwSimFrame(
-        plane=1, round_num=4, gold=gold, level=6, hp=80,
-        shop_refresh_cost=2,
-        deployed=[BenchChar(slot=20 + i, char_id=m, faction='仙舟罗浮',
-                            star=2)
-                  for i, m in enumerate(line_members(_JU23_COMP))],
-        bench=[None] * BENCH_CAPACITY,
-        shop=shop if shop is not None else [],
-        node_type='battle', board={})
+def _ju23_axes(gold: int, shop: list[ShopCard] | None = None) -> dict:
+    """局23 型种子轴:线成型(全员 2★ 上场,前排 4/后排按行内槽号)
+    + 备战空 + P1 局中(返回 = ``cw4_gs`` kwargs,feed 配方)。"""
+    members = list(line_members(_JU23_COMP))
+    return {'plane': 1, 'round_num': 4, 'gold': gold, 'level': 6,
+            'hp': 80, 'node': 'battle',
+            'front_row': [Unit(char_id=m, star=2, slot=i + 1)
+                          for i, m in enumerate(members) if i < 4],
+            'back_row': [Unit(char_id=m, star=2, slot=i - 3)
+                         for i, m in enumerate(members) if i >= 4],
+            'shop': shop if shop is not None else []}
 
 
 def _ju23_session() -> StrategySession:
@@ -198,8 +193,8 @@ def test_ju23_star2_stock_card_has_no_refund_backing_no_spend():
     """
     cfg = SimpleNamespace(ev_arm='full')
     sess = _ju23_session()
-    act = decide_shop_action(cw4_gs(_ju23_frame(
-        100, [_sc('花火', star=2)]), sess), sess, cfg)
+    act = decide_shop_action(cw4_gs(sess, **_ju23_axes(
+        100, [_sc('花火', star=2)])), sess, cfg)
     assert not isinstance(act, (CwActionBuyCardParam, CwActionRefreshShopParam))
     # 收缩后帧终态 = 收工关店(零支出语义不变)
     assert isinstance(act, CwActionCloseShopParam)
@@ -231,20 +226,20 @@ def test_ju23_full_surface_gold_never_breaks_interest_line():
     cfg = SimpleNamespace(ev_arm='full')
     # 扫面收窄(审计判决):连续 0..100 → 息线两侧边界 + 两端代表点
     for gold0 in (0, 49, 50, 51, 100):
-        st = _ju23_frame(gold0, [_sc('局23杂件')])
+        st = _ju23_axes(gold0, [_sc('局23杂件')])
         sess = _ju23_session()
         for _ in range(15):
-            act = decide_shop_action(cw4_gs(st, sess), sess, cfg)
+            act = decide_shop_action(cw4_gs(sess, **st), sess, cfg)
             if isinstance(act, CwActionBuyCardParam):
                 cost = act.card.cost if act.card.cost else 3
                 if gold0 <= 50:
-                    assert st.gold - cost >= 50, (gold0, st.gold, cost)
-                st.gold -= cost
-                st.shop = [c for c in st.shop if c is not act.card]
+                    assert st['gold'] - cost >= 50, (gold0, st['gold'], cost)
+                st['gold'] -= cost
+                st['shop'] = [c for c in st['shop'] if c is not act.card]
             elif isinstance(act, CwActionRefreshShopParam):
                 if gold0 <= 50:
-                    assert st.gold - act.cost >= 50, (gold0, st.gold)
-                st.gold -= act.cost
+                    assert st['gold'] - act.cost >= 50, (gold0, st['gold'])
+                st['gold'] -= act.cost
             elif isinstance(act, CwActionCloseShopParam):
                 break
             else:
@@ -252,7 +247,7 @@ def test_ju23_full_surface_gold_never_breaks_interest_line():
         else:
             raise AssertionError(f'决策不收敛(死守嫌疑)@ {gold0} 金')
         if gold0 <= 50:
-            assert st.gold == gold0, (gold0, st.gold)
+            assert st['gold'] == gold0, (gold0, st['gold'])
 
 
 # ------------------------------------------- committed 权威判定直锁

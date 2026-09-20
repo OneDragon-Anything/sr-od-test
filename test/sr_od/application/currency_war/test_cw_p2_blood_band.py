@@ -33,14 +33,11 @@ import pytest
 from test.sr_od.application.currency_war._cw_helpers import (
     cw4_box as _bsb,
 )
-from test.sr_od.application.currency_war._cw_helpers import cw4_feed
+from test.sr_od.application.currency_war._cw_helpers import cw4_gs
 
 from sr_od.application.currency_war.kernel import cw_intention as ci
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
-)
-from sr_od.application.currency_war.kernel.cw_vocab import (
-    CwSimFrame,
 )
 from sr_od.application.currency_war.strategies.impl.cw_strategy import (
     StrategySession,
@@ -57,19 +54,16 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import (
 )
 
 
-def _st2(hp: int = 10, plane: int = 2, gold: int = 30,
+def _st2(hp: int | None = 10, plane: int = 2, gold: int = 30,
          round_num: int = 2, level: int = 7,
-         node_type: str | None = None) -> CwSimFrame:
-    """P2 濒死带构造帧(信任门真值位显式置位;hp 缺省 10 ⊂ ≤15 带)。
-    经济读口已切容器:消费位经 ``_bsb`` 桥装取容器。"""
-    st = CwSimFrame(gold=gold, level=level, round_num=round_num, hp=hp)
-    st.plane = plane
-    st.hp_readable = True
-    st.hp_trusted = False
-    st.level_readable = True
+         node_type: str | None = None) -> dict:
+    """P2 濒死带场景种子轴(hp 缺省 10 ⊂ ≤15 带;返回 = ``_bsb`` kwargs,
+    消费位逐次装箱取容器,hp=None = 域未观察)。"""
+    axes: dict = {'hp': hp, 'plane': plane, 'gold': gold,
+                  'round_num': round_num, 'level': level}
     if node_type is not None:
-        st.node_type = node_type   # 终态契约 §A′:node 单一源 = gs(帧喂入)
-    return st
+        axes['node'] = node_type   # 终态契约 §A′:node 单一源 = gs
+    return axes
 
 
 # ===== 1. 判据结构:域谓词 + 授权闩合成 =====
@@ -89,30 +83,28 @@ class TestP2BloodFloorPredicate:
         P3 帧属 P2+ 域(谓词 plane≥2 口径)。"""
         # [真值表]
         st = _st2(hp=10)
-        assert preds.p2_blood_floor(_bsb(st)) is True
-        st.hp = 16
-        assert preds.p2_blood_floor(_bsb(st)) is False
-        st.hp = 15   # ≤15 族含边界(p1_blood_floor 同款)
-        assert preds.p2_blood_floor(_bsb(st)) is True
-        st.hp = None
-        assert preds.p2_blood_floor(_bsb(st)) is False
-        st.hp = 10
-        st.hp_readable = False   # P1 hp 读链毒化史口径:不可信帧 fail 向
-        st.hp = None             # 容器形态:不可读 = 域未观察(无可信值可桥)
-        assert preds.p2_blood_floor(_bsb(st)) is False
+        assert preds.p2_blood_floor(_bsb(**st)) is True
+        st['hp'] = 16
+        assert preds.p2_blood_floor(_bsb(**st)) is False
+        st['hp'] = 15   # ≤15 族含边界(p1_blood_floor 同款)
+        assert preds.p2_blood_floor(_bsb(**st)) is True
+        st['hp'] = None
+        assert preds.p2_blood_floor(_bsb(**st)) is False
+        st['hp'] = None   # 不可读 = 域未观察(无可信值可桥,fail 向)
+        assert preds.p2_blood_floor(_bsb(**st)) is False
         # 阈值单一源:边界随常量走
         from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.lambda_death import (
             HP_BAND_NEAR_DEATH,
         )
-        assert preds.p2_blood_floor(_bsb(_st2(hp=HP_BAND_NEAR_DEATH))) is True
+        assert preds.p2_blood_floor(_bsb(**_st2(hp=HP_BAND_NEAR_DEATH))) is True
         assert preds.p2_blood_floor(
-            _bsb(_st2(hp=HP_BAND_NEAR_DEATH + 1))) is False
+            _bsb(**_st2(hp=HP_BAND_NEAR_DEATH + 1))) is False
         # [互补]
         st = _st2(hp=10, plane=1)
-        assert preds.p1_blood_floor(_bsb(st)) is True
-        assert preds.p2_blood_floor(_bsb(st)) is False, 'P1 帧禁开 P2 域谓词'
+        assert preds.p1_blood_floor(_bsb(**st)) is True
+        assert preds.p2_blood_floor(_bsb(**st)) is False, 'P1 帧禁开 P2 域谓词'
         st3 = _st2(hp=10, plane=3)
-        assert preds.p2_blood_floor(_bsb(st3)) is True
+        assert preds.p2_blood_floor(_bsb(**st3)) is True
 
 
 # ===== 2. 危机带停付面(在产 p2_crisis_band 全额管辖)=====
@@ -137,19 +129,19 @@ class TestUnlockPackageFailClosed:
             sell_for_interest,
         )
         sess = SimpleNamespace(node_type_current='normal')
-        assert level_spend_blocked(_bsb(_st2(hp=10)), sess,
+        assert level_spend_blocked(_bsb(**_st2(hp=10)), sess,
                                    DEFAULT_REGISTRY) is True, (
             'P2 濒死帧停付照常(危机带管辖)')
         # 保底金门照查(生存域不出辖)
         assert _guarantee_floor_holds(
-            _bsb(_st2(hp=10)), sess, 5, 1, 4, 5) is False
+            _bsb(**_st2(hp=10)), sess, 5, 1, 4, 5) is False
         # 凑息不进 P2 禁令支(拒因键非 p2_blood_floor)
-        slots, key = sell_for_interest(30, [], 4, (), state=_bsb(_st2(hp=10)))
+        slots, key = sell_for_interest(30, [], 4, (), state=_bsb(**_st2(hp=10)))
         assert slots == [] and key != 'p2_blood_floor', (
             'P2 帧凑息行为零变更')
         # P1 域对照:禁令在册语义零改('blood_floor' 原键)
         _slots_p1, key_p1 = sell_for_interest(30, [], 4, (),
-                                              state=_bsb(_st2(hp=10, plane=1)))
+                                              state=_bsb(**_st2(hp=10, plane=1)))
         assert key_p1 == 'blood_floor'
 
 
@@ -158,14 +150,14 @@ class TestUnlockPackageFailClosed:
 
 class TestNearDeathObservationKeys:
 
-    def _run_mandate(self, state: CwSimFrame) -> StrategySession:
+    def _run_mandate(self, state: dict) -> StrategySession:
         frame = mandate.MandateFrame(
-            gold=state.gold, level=state.level, bench=[], deployed=[],
+            gold=state['gold'], level=state['level'], bench=[], deployed=[],
             deploy_cap=6, node_type=None, stop_flag=False,
-            k_members=(), round_num=state.round_num)
+            k_members=(), round_num=state['round_num'])
         sess = StrategySession()
         state_of(sess).cw4_counters = {}
-        out = mandate.run_mandate(frame, sess, state=_bsb(state))
+        out = mandate.run_mandate(frame, sess, state=_bsb(**state))
         assert not any(e.reason.startswith('m3_levelup_batch') for e in out)
         return sess
 
@@ -242,15 +234,15 @@ class TestLockGenObservationKeys:
             # 容器),emit 去 obs 形参——本桩随退役收缩为恒 None 占位。
             return None
 
-        def _mk_frame(gold: int, hp: int) -> CwSimFrame:
+        def _mk_frame(gold: int, hp: int) -> dict:
             # 容器化段 2:局内事实喂 session 容器(观察源契约),黑板帧
             # 只载视觉/占用域。
-            return CwSimFrame(gold=gold, level=6, round_num=2, hp=hp,
-                              plane=2, node_type='战斗')
+            return {'gold': gold, 'level': 6, 'round_num': 2, 'hp': hp,
+                    'plane': 2, 'node': '战斗'}
 
         st = _mk_frame(40, 10)
         sess = SimpleNamespace(cw4_counters={}, v3_intention=IntentionState())
-        cw4_feed(sess, st)
+        cw4_gs(sess, **st)
         out = entry.emit(sess, None)
         assert state_of(sess).cw4_counters.get('terminal_targetless_idle') == 1
         assert not any(isinstance(e.action, mandate.CwActionLevelUpParam) for e in out), (
@@ -258,14 +250,14 @@ class TestLockGenObservationKeys:
         # 域外对照:同帧 g>g* ⇒ 不计
         st_z = _mk_frame(80, 10)
         sess_z = SimpleNamespace(cw4_counters={}, v3_intention=IntentionState())
-        cw4_feed(sess_z, st_z)
+        cw4_gs(sess_z, **st_z)
         entry.emit(sess_z, None)
         assert 'terminal_targetless_idle' not in state_of(sess_z).cw4_counters
         # 负对照:非濒死帧(hp=60)不计(键只辖濒死带形态,与既有
         # advisor 计数面零交集)
         st_h = _mk_frame(40, 60)
         sess_h = SimpleNamespace(cw4_counters={}, v3_intention=IntentionState())
-        cw4_feed(sess_h, st_h)
+        cw4_gs(sess_h, **st_h)
         entry.emit(sess_h, None)
         assert 'terminal_targetless_idle' not in state_of(sess_h).cw4_counters
 
@@ -284,20 +276,20 @@ class TestLockGenObservationKeys:
         sess_lo = self._sess()
         ms_lo = state_of(sess_lo)
         ms_lo.cw4_counters = {}
-        strategy._refresh_direction(_bsb(_st2(hp=10, gold=0)), ms_lo)
+        strategy._refresh_direction(_bsb(**_st2(hp=10, gold=0)), ms_lo)
         ct_lo = ms_lo.cw4_counters
         assert ct_lo.get('lock_gen_feasibility_obs_lock_open_total') == 1
         assert ct_lo.get('lock_gen_feasibility_obs_lock_open_lowband') == 1
         sess_hi = self._sess()
         ms_hi = state_of(sess_hi)
         ms_hi.cw4_counters = {}
-        strategy._refresh_direction(_bsb(_st2(hp=40, gold=0)), ms_hi)
+        strategy._refresh_direction(_bsb(**_st2(hp=40, gold=0)), ms_hi)
         ct_hi = ms_hi.cw4_counters
         assert ct_hi.get('lock_gen_feasibility_obs_lock_open_total') == 1
         assert 'lock_gen_feasibility_obs_lock_open_lowband' not in ct_hi
         # 保持锁帧(帧2同 session,已锁不转移)不分母重复计
         strategy._refresh_direction(
-            _bsb(_st2(hp=40, gold=0, round_num=2)), ms_hi)
+            _bsb(**_st2(hp=40, gold=0, round_num=2)), ms_hi)
         assert ct_hi.get('lock_gen_feasibility_obs_lock_open_total') == 1, (
             '帧2保持锁非锁开事件,分母不重复计')
 
@@ -313,7 +305,7 @@ class TestLockGenObservationKeys:
         ms = state_of(sess)
         ms.cw4_counters = {}
         # node 单一源 = gs(终态契约 §A′):'boss' 经帧喂入 gs.node,不再挂 session
-        bump_lock_gen_feasibility_obs(ms, _bsb(_st2(hp=10, gold=0,
+        bump_lock_gen_feasibility_obs(ms, _bsb(**_st2(hp=10, gold=0,
                                                     node_type='boss')),
                                       IntentionState(), 'lock:旧事件')
         assert ms.cw4_counters.get(
@@ -324,7 +316,7 @@ class TestLockGenObservationKeys:
         sess2 = self._sess()
         ms2 = state_of(sess2)
         ms2.cw4_counters = {}
-        bump_lock_gen_feasibility_obs(ms2, _bsb(_st2(hp=40, gold=0,
+        bump_lock_gen_feasibility_obs(ms2, _bsb(**_st2(hp=40, gold=0,
                                                      node_type='boss')),
                                       IntentionState(), 'lock:旧事件')
         assert 'lock_gen_feasibility_obs_boss_neardeath_p2' \

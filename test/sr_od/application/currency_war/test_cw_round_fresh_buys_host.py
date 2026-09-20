@@ -30,7 +30,7 @@ from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
 
 def _feed_phase(session: StrategySession, plane: int,
                 round_num: int) -> GameState:
-    """容器节点播种(与 _cw_helpers.cw4_feed 节点补写同式;kind 空串 =
+    """容器节点播种(与 _cw_helpers 种子节点补写同式;kind 空串 =
     帧未识别的忠实镜像,相位读口 plane_of/round_num_of 只读键维)。"""
     gs = game_state_of(session)
     gs.observe(gs.node, NodeKey(plane=plane, round_num=round_num, kind=''),

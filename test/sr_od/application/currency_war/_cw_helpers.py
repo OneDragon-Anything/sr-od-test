@@ -1,40 +1,34 @@
-"""cw4 策略测试共享构造器(六件套)、prep 单测装配与 obs_arch 运行夹具的单一源。
+"""cw 策略测试共享构造器六件套与 obs_arch 运行夹具的单一源。
 
-收纳此前散布在十余个测试文件、各持一份近同构副本的桩构造六件套
-(``_comp/_members/_session/_state/_card/_bc/_decide``,DEBTS.md D17)、
-备战单轮 op 装配(``_make_round_director``,DEBTS.md D22)与 obs_arch
-六文件的运行外壳两件(``run_node``/``Area``,
-夹具收敛——原为 6/4 份逐文件复制)。收敛建立在测试仓 README
-「跨文件的复制夹具是漂移源头」纪律之上(README 常驻摘要不编号,故不引
-条号);本模块文件名以下划线开头,pytest 不收集。
+**种子载体(benchchar-retirement P5 起)**:CwSimFrame 帧通道已随 sim 帧
+退役删除——测试种子经本模块 builder **直写容器域**(与观察链同写入口
+``GameState.observe``,design §2.5 测试种子纪律),不设帧→容器换形续命:
 
-消费面分层(参照 DEBTS D3/D17 的分叉教训,禁强行合一):
-
+- **容器域种子**(``cw4_gs``/``cw4_box``):gold/level/xp/hp/deploy_cap/
+  node/bench/deployed 行/shop 等各轴参数化,直写 session 容器或一次性
+  空白容器;**商店屏态域字段** ``shop_screen`` 承接原合成口
+  shop_open/shop_empty_off_screen 三分支语义(字段语义在
+  :func:`_seed_write` docstring 声明);
+- **名字表达纪律**(design §2.5):测试想要某阵营/前后排偏好 = 挑对应
+  注册表角色名;未知阵营 = 注册表外名字(如 'c0'/'杂1');占位件 =
+  ``BenchSlot(kind=...)`` 直种。种子不提供绕过注册表派生的覆盖参数
+  (无注入口);
 - **StrategySession 桩族**(``cw4_session``):cw4_counters 空表 +
-  target_comp 可空 + cw4_line_state 可关(refresh_ledger 的配方对语境
-  不建 LineState)+ plane_lengths 可注(vgap/refresh_ledger 的位面史);
-- **prep/shop 决策帧族**(``cw4_state``):shop/bench/deployed/node/
-  deploy_cap/xp/hp 各轴参数化——六件套各文件的历史分叉(hp/xp/
-  deploy_cap)全部落在参数上,round_num=2 为家族共同缺省;
-- **血线战斗帧族**(``battle_state`` + ``ns_session``):budget_gate/
-  guarantee_floor 的开态可读等级/plane=2 battle/单击 4 金/禁刷新帧,
-  与 SimpleNamespace 策略 session 四键桩;
-- **备战单轮 op 装配**(``make_prep_round_director``):CwScreenPrep
-  最小桩面,同源服务签名写点锁(no_progress_guard)与 token 载体写点
-  锁(stall_cache)。
+  target_comp 可空 + cw4_line_state 可关 + plane_lengths 可注;
+- **商店决策驱动**(``cw4_decide``):装配 mandate 策略器并跑
+  decide_shop_screen(种子由调用方先经 ``cw4_gs`` 落容器);
+- **备战席件构造**(``cw4_bc``):BenchSlot 占席条目(容器形状);
+- **obs_arch 运行外壳**(``run_node``/``Area``)。
 
-各文件专属形状不入本模块、留在原文件自持:interest_floor 的垫卡 shop
-帧、spend_face 的 decide_shop_action 桩族(_shop_session/_st)、
-deploy_transition 的 faction 版 BenchChar(参数序与构造都不同)、
-encounter 桩族(_LAMBDA_TABLE monkeypatch 模式)、suspect_review/
-auth_crossface 的两行授权帧(D53 亲读驳回:真实重复面仅 ~5 行骨架
-dict,字段面即消费语义,参数化合一会把单侧夹具语义编码进共享件)。
+各文件专属形状不入本模块、留在原文件自持。
 
 消费方式 = 别名导入(调用点零改动)::
 
     from test.sr_od.application.currency_war._cw_helpers import cw4_bc as _bc
 """
 from __future__ import annotations
+
+import dataclasses
 
 from test.harness.fixture_controller import (
     enter_running_state,
@@ -46,12 +40,23 @@ from sr_od.application.currency_war.kernel.cw_comps import (
     COMP_LIBRARY,
     get_comp,
 )
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    BENCH_CAPACITY_DEFAULT,
+    SIM_SYNTHESIZED,
+    BenchSlot,
+    BenchView,
+    ChannelSig,
+    NodeKey,
+    ShopPayload,
+    ShopSlot,
+    Unit,
+    game_state_of,
+    shop_card_to_container,
+)
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
-    BenchChar,
-    CwSimFrame,
     ShopCard,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import proof
@@ -86,15 +91,28 @@ def cw4_members(comp) -> list[str]:
     return list(dict.fromkeys(ms))
 
 
-def cw4_bc(name: str, star: int = 1, slot: int = 1) -> BenchChar:
-    """备战席件(slot/char_id/star;faction 走 BenchChar 缺省)。"""
-    return BenchChar(slot=slot, char_id=name, star=star)
+def cw4_bc(name: str, star: int = 1, slot: int = 1) -> BenchSlot:
+    """备战席占席条目(容器形状;slot = 物理槽位 1 基信息位,落位以种子
+    列表下标为准——builder 按 ``槽位 = 下标 + 1`` 归一,与原合成口
+    「下标权威」口径一致)。"""
+    return BenchSlot(kind='unit',
+                     unit=Unit(char_id=name, star=star, slot=slot))
+
+
+def cw4_bview(entries: list) -> BenchView:
+    """BenchView 直构(容器形状种子;条目 = BenchSlot | None,槽位 =
+    下标 + 1,不足容量补空槽)。旧「BenchChar 槽表 → bench_view_of_slots
+    换形再写容器」的种子路径在本 helper 直达容器形状。"""
+    slots = [e if e is not None else BenchSlot(kind='empty')
+             for e in entries]
+    while len(slots) < BENCH_CAPACITY_DEFAULT:
+        slots.append(BenchSlot(kind='empty'))
+    return BenchView(slots=slots, capacity=BENCH_CAPACITY_DEFAULT)
 
 
 def cw4_card(name: str, cost: int = 3, star: int = 1, x: int = 0) -> ShopCard:
-    """在售店卡(x = 牌位桩值;三态合成口按 x 对物理槽(0 基,越界丢卡,
-    用户三态裁定 2026-09-13),缺省 0 = 物理槽 1;旧「画面横向坐标 100」
-    桩值语义已随容器三态化退役)。"""
+    """在售店卡(x = 牌位桩值;种子按 x 对物理槽(0 基,越界丢卡,
+    用户三态裁定 2026-09-13),缺省 0 = 物理槽 1)。"""
     return ShopCard(x=x, name=name, cost=cost, star=star)
 
 
@@ -109,38 +127,15 @@ def cw4_session(comp=None, *, plane_lengths=None,
     if line_state:
         state_of(s).cw4_line_state = proof.LineState()
     if plane_lengths is not None:
-        from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
         game_state_of(s).node_books.plane_lengths_seen = list(plane_lengths)   # 终态契约 §A′
     return s
 
 
-def cw4_state(gold: int = 30, shop=None, bench=None, deployed=None,
-              level: int = 3, node=None, deploy_cap: int | None = None,
-              xp=None, hp: int = 100) -> CwSimFrame:
-    """prep/shop 决策帧(round_num=2 家族缺省;各轴缺省 = 空店/空席)。"""
-    st = CwSimFrame(gold=gold, level=level, round_num=2, node_type=node,
-                   hp=hp)
-    st.shop = shop if shop is not None else []
-    st.bench = bench if bench is not None else []
-    st.deployed = deployed if deployed is not None else []
-    if deploy_cap is not None:
-        st.deploy_cap = deploy_cap
-    if xp is not None:
-        st.xp_progress = xp
-    return st
-
-
-def cw4_decide(state: CwSimFrame, session, cfg=None):
-    """商店决策驱动(decide_shop_screen)。注册表恒 = live 真值表
-    DEFAULT_REGISTRY(旧 sim 注入视图随 sim 重做删除面退役,sim 重做
-    设计稿 §2.4.4:策略器自带注册表,sim 不构造策略视图;原可选注入
-    参零显式调用方,随形删参);cfg 缺省 = ``DecideCfg()``
-    (ev_arm='full',与各文件原 SimpleNamespace/type 桩同语义:cfg 对象
-    只承载 ev_arm 读数)。
-
-    W6 波 4 黑板容器化:喂入通道 = sim 合成口写容器(生产/离线同路;
-    原黑板槽直写随槽退役消亡,设计件《商店黑板容器化方案》§2.4-3)。"""
-    from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
+def cw4_decide(session, cfg=None):
+    """商店决策驱动(decide_shop_screen)。种子由调用方先经
+    :func:`cw4_gs` 落容器,本函数只装配策略器与决策(原「收帧再喂」
+    两步随帧退役并一步)。注册表恒 = live 真值表 DEFAULT_REGISTRY;
+    cfg 缺省 = ``DecideCfg()``(ev_arm='full')。"""
     from sr_od.application.currency_war.kernel.cw_registry import (
         DEFAULT_REGISTRY,
     )
@@ -149,12 +144,7 @@ def cw4_decide(state: CwSimFrame, session, cfg=None):
         game_state_of(session),
         _cfg,
         registry=DEFAULT_REGISTRY)   # 终态契约:构造注入
-    from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
-        state_of as _state_of,
-    )
-    strat.state = _state_of(session)   # 状态归一:策略器状态 = 会话播种对象(config 同源)
-
-    cw4_feed(session, state)
+    strat.state = state_of(session)   # 状态归一:策略器状态 = 会话播种对象(config 同源)
     return strat.decide_shop_screen(session, _cfg)
 
 
@@ -180,125 +170,219 @@ class Area:
         self.is_success = ok
 
 
-# (原 make_prep_round_director 删:声明消费方 test_cw_gate_hooks 文件已
-#  不存在,全树零消费死代码 ~68 行;备战单轮 op 装配需求出现时按现行
-#  纪律随锁重建。)
+# ============================================================ 容器域种子
+# 原帧配方(CwSimFrame + synthesize_from_game_state)的退役承接:两条
+# 历史配方的语义差异原样保留(存量断言辖),收敛归本批统一载体——
+# - ``cw4_gs``(原 cw4_state+cw4_feed 配方):决策帧家族缺省
+#   (gold=30/level=3/round_num=2/hp=100);空牌面 = 在屏空 payload;
+#   节点缺席补写 evidence='kind_inherited'(帧未识别的忠实镜像);
+# - ``cw4_box``(原桥装箱配方):帧缺省(gold=0/level=1/round_num=1/
+#   hp 不写);空牌面 = 离屏分支原样;节点缺席补写 evidence=
+#   sim:synthesized;D 类域补写(level_up_cost/shop_refresh_cost/
+#   selected_difficulty)仅本配方承接(喂入口域覆盖集不含三域,
+#   帧值缺席不写——读口侧回落 None 缺省的语义与桥期一致)。
 
 
-def cw4_feed(session, frame):
-    """帧 → session 容器喂入(W6 波 4 测试迁移单一源;生产同路 = sim
-    合成口)。空牌面补在屏空 payload(旧测试语境「在屏 ∧ 牌面空」,
-    与合成口「空表=离屏」真值口径的分叉在此显式对齐)。
-
-    节点缺席补写(node_type=None 帧的 plane/round 保真):合成口对
-    node_type 未识别帧不写 node(禁 'prep' 占位假值),旧决策链直读
-    ``CwSimFrame.plane/round_num`` 标量、位面门照常生效——补写
-    ``NodeKey(kind='')``(kind 空串 = 帧未识别的忠实镜像,禁词表值
-    冒充真值),保喂入路对未识别帧决策面行为保真。"""
-    from sr_od.application.currency_war.kernel.cw_game_state import (
-        ChannelSig,
-        NodeKey,
-        ShopPayload,
-        game_state_of,
-        synthesize_from_game_state,
-    )
-    _gs = game_state_of(session)
-    synthesize_from_game_state(_gs, frame)
-    _sig = ChannelSig(family='obs', actor='synthesize_from_game_state',
-                      mode='synthesized')
-    if _gs.node.value is None:
-        _gs.observe(_gs.node,
-                    NodeKey(plane=int(getattr(frame, 'plane', 1) or 1),
-                            round_num=int(getattr(frame, 'round_num', 1)
-                                          or 1),
-                            kind=''),
-                    evidence='kind_inherited', sig=_sig)
-    if _gs.shop.value is None:
-        _gs.observe(_gs.shop, ShopPayload(
-            cards=[],
-            refresh_probs={int(k): float(v) for k, v in
-                           (getattr(frame, 'refresh_probs', None)
-                            or {}).items()}),
-            sig=ChannelSig(family='obs', actor='synthesize_from_game_state',
-                           mode='synthesized'))
-    return _gs
+def _seed_slot(entry: BenchSlot | None, idx: int) -> BenchSlot:
+    """备战席条目归一:占位件 kind 直种原样;unit 条目按 ``槽位 = 下标+1``
+    归一(原合成口「下标权威」口径,条目自带 slot 信息位不参与落位)。"""
+    if entry is None:
+        return BenchSlot(kind='empty')
+    if entry.kind != 'unit':
+        return entry
+    u = entry.unit
+    if u is not None and u.slot != idx + 1:
+        u = dataclasses.replace(u, slot=idx + 1)
+    return BenchSlot(kind='unit', unit=u)
 
 
-def cw4_gs(frame, session):
-    """帧 → 容器并返回容器(cw4_feed 的取值形态;decide_shop_action
-    首参直喂迁移用)。"""
-    return cw4_feed(session, frame)
+def _seed_write(gs, *, sig: ChannelSig, ev: str, ev_node_fill: str,
+                gold: int, gold_unread: bool, level: int, level_unread: bool,
+                xp, streak, hp, deploy_cap, back_max,
+                plane: int, round_num: int, node,
+                bench, bench_unread: bool, front_row, back_row,
+                shop, shop_screen: str, refresh_probs,
+                active_strategies, enemy_affixes, plane_bosses,
+                active_env, equips, board,
+                level_up_cost, shop_refresh_cost,
+                selected_difficulty) -> None:
+    """容器域种子写实现(与观察链同写入口;域覆盖口径 = 原合成口语义):
 
-
-class _DuckFrame:
-    """鸭子帧属性缺读回落 CwSimFrame 缺省(轻量桩帧兼容——旧链消费只读
-    桩提供的字段;装箱经合成口搬运全域,缺属性按同帧 ``CwSimFrame()``
-    缺省解释,与「缺读 = 缺省保守值」惯例一致)。"""
-
-    __slots__ = ('_st', '_base')
-
-    def __init__(self, st_: object, base_: object) -> None:
-        object.__setattr__(self, '_st', st_)
-        object.__setattr__(self, '_base', base_)
-
-    def __getattr__(self, name: str):
-        st = object.__getattribute__(self, '_st')
-        base = object.__getattribute__(self, '_base')
-        try:
-            return getattr(st, name)
-        except AttributeError:
-            return getattr(base, name)
-
-
-def cw4_box(frame, session=None):
-    """帧 → 容器一次性装箱(「桥装箱」配方的退役承接:桥本体删除
-    批起,本函数 = 该配方测试侧单一源)。域写入语义与退役的 kernel
-    ``board_state_bridge`` 逐位同构,消费方式 = 别名导入(调用点零改动,
-    见模块头)。
-
-    - 载体 = 容器读口 ``game_state_of(session)``:session=None(缺省)
-      = 一次性空白容器(读口 None 分支契约:不缓存不挂载);传 session
-      时装入该 session 单例(适合「装箱面与生产读口面须同容器」的用例,
-      注意多次装箱同 session 为累加写,与一次性桥语义有差);
-    - 域写入 = 生产同路合成口 ``synthesize_from_game_state`` + 节点缺席
-      补写(NodeKey(kind=''),evidence=sim:synthesized)+ D 类域补写
-      (level_up_cost/shop_refresh_cost/selected_difficulty,帧值缺席
-      不写——喂入口现不写这三域(fields.md D 类行),桥期由桥独有补写
-      承载,此处原样承接,读口侧回落 None 缺省的语义与桥期一致);
-    - 与 cw4_feed 的两处刻意分叉(沿桥语义,勿「对齐」):①不补在屏空
-      payload(桥语义 = 合成口离屏分支原样,cw4_feed 的空牌面补写是旧
-      商店语境的对齐面);②节点补写 evidence=sim:synthesized(cw4_feed
-      用 kind_inherited)。两分叉各有存量断言辖,收敛归喂入口域覆盖批。"""
-    from sr_od.application.currency_war.kernel.cw_game_state import (
-        SIM_SYNTHESIZED,
-        ChannelSig,
-        NodeKey,
-        game_state_of,
-        synthesize_from_game_state,
-    )
-    from sr_od.application.currency_war.kernel.cw_vocab import (
-        CwSimFrame as _FrameDefaults,
-    )
-    gs = game_state_of(session)
-    _sig = ChannelSig(family='obs', actor='synthesize_from_game_state',
-                      mode='synthesized')
-    st_view: object = (_DuckFrame(frame, _FrameDefaults())
-                       if not isinstance(frame, _FrameDefaults) else frame)
-    synthesize_from_game_state(gs, st_view)
-    if gs.node.value is None:
+    - 可读域全记 observation,evidence 恒 ``sim:synthesized``;声明缺席
+      的域不写(保持 None/现值,禁种子合成假值);
+    - bench 条目按 ``槽位 = 下标 + 1`` 归一补齐到容量 9(``bench_unread``
+      = True 时整域跳写——未读域≠真空域,不覆盖容器已有真读);
+    - deployed 行域 = front_row/back_row 的 Unit 行直写(两行全空不写,
+      与原合成口一致);
+    - **shop 三态**(原合成口 shop_open/shop_empty_off_screen 分支在
+      种子层的承接口径):
+      * 牌面非空 → 按 x 对物理槽(0 基,越界丢卡)落 payload;
+      * 空 + ``shop_screen='on'`` → 在屏空牌面 = 买空合法真值
+        ([empty×5] 照写,None 仅离屏);
+      * 空 + ``shop_screen='off'`` → 结构离屏(leave_screen,禁旧
+        payload 连旧 evidence 残留);
+      * 空 + ``shop_screen='unread'`` → 识别域失读窗:不写保现值
+        (2026-09-13 实机事故口径:买空店重进禁被清 None);
+    - encounter/supply 两 payload 域种子不建模,恒离屏口径;
+    - node:声明 kind 照写;缺席补写 ``kind=''``(帧未识别的忠实镜像,
+      禁词表值冒充真值;``ev_node_fill=''`` = 原裸帧合成语义,节点整域
+      不写)。
+    """
+    if node is not None:
         gs.observe(gs.node,
-                   NodeKey(plane=int(getattr(frame, 'plane', 1) or 1),
-                           round_num=int(getattr(frame, 'round_num', 1)
-                                         or 1),
-                           kind=''),
-                   evidence=SIM_SYNTHESIZED, sig=_sig)
-    if getattr(frame, 'level_up_cost', None) is not None:
-        gs.observe(gs.level_up_cost, int(frame.level_up_cost),
-                   evidence=SIM_SYNTHESIZED, sig=_sig)
-    if getattr(frame, 'shop_refresh_cost', None) is not None:
-        gs.observe(gs.shop_refresh_cost, int(frame.shop_refresh_cost),
-                   evidence=SIM_SYNTHESIZED, sig=_sig)
-    if getattr(frame, 'selected_difficulty', None):
-        gs.observe(gs.selected_difficulty, str(frame.selected_difficulty),
-                   evidence=SIM_SYNTHESIZED, sig=_sig)
+                   NodeKey(plane=int(plane), round_num=int(round_num),
+                           kind=str(node)), evidence=ev, sig=sig)
+    elif ev_node_fill:
+        gs.observe(gs.node,
+                   NodeKey(plane=int(plane), round_num=int(round_num),
+                           kind=''), evidence=ev_node_fill, sig=sig)
+    if not gold_unread:
+        gs.observe(gs.gold, int(gold), evidence=ev, sig=sig)
+    if not level_unread:
+        gs.observe(gs.level, int(level), evidence=ev, sig=sig)
+    if xp is not None:
+        gs.observe(gs.xp, tuple(xp), evidence=ev, sig=sig)
+    if streak is not None:
+        gs.observe(gs.streak, int(streak), evidence=ev, sig=sig)
+    if hp is not None:
+        gs.observe(gs.hp, int(hp), evidence=ev, sig=sig)
+    if deploy_cap is not None:
+        gs.observe(gs.deploy_cap, int(deploy_cap), evidence=ev, sig=sig)
+    if back_max is not None:
+        gs.observe(gs.back_layout, int(back_max), evidence=ev, sig=sig)
+    if plane_bosses:
+        gs.observe(gs.plane_bosses, list(plane_bosses), evidence=ev, sig=sig)
+    if enemy_affixes:
+        gs.observe(gs.enemy_affixes, list(enemy_affixes), evidence=ev,
+                   sig=sig)
+    if active_env:
+        gs.observe(gs.active_env, str(active_env), evidence=ev, sig=sig)
+    if equips:
+        gs.observe(gs.equips, list(equips), evidence=ev, sig=sig)
+    if front_row or back_row:
+        gs.observe(gs.front_row, list(front_row), evidence=ev, sig=sig)
+        gs.observe(gs.back_row, list(back_row), evidence=ev, sig=sig)
+    if not bench_unread:
+        slots = [_seed_slot(e, i) for i, e in enumerate(bench)]
+        while len(slots) < BENCH_CAPACITY_DEFAULT:
+            slots.append(BenchSlot(kind='empty'))
+        gs.observe(gs.bench,
+                   BenchView(slots=slots, capacity=BENCH_CAPACITY_DEFAULT),
+                   evidence=ev, sig=sig)
+    if board:
+        gs.observe(gs.board, dict(board), evidence=ev, sig=sig)
+    probs = ({int(k): float(v) for k, v in refresh_probs.items()}
+             if refresh_probs else {})
+    if shop:
+        # 牌转换 = 映射单一源;定长槽映射:卡 x = 物理槽-1,按 x 对槽
+        # (缺位 empty)——紧凑列表顺延映射会错位槽几何(三态裁定)。
+        slots = [ShopSlot(kind='empty') for _ in range(5)]
+        for c in shop:
+            _i = int(getattr(c, 'x', 0) or 0)
+            if 0 <= _i < 5:
+                slots[_i] = ShopSlot(kind='content',
+                                     card=shop_card_to_container(c))
+        gs.observe(gs.shop, ShopPayload(cards=slots, refresh_probs=probs),
+                   evidence=ev, sig=sig)
+    elif shop_screen == 'on':
+        gs.observe(gs.shop,
+                   ShopPayload(cards=[ShopSlot(kind='empty')
+                                      for _ in range(5)], refresh_probs=probs),
+                   evidence=ev, sig=sig)
+    elif shop_screen == 'off':
+        gs.leave_screen(gs.shop, sig=sig)
+    elif shop_screen != 'unread':
+        raise ValueError(f'shop_screen 非法值:{shop_screen!r}'
+                         "(合法 = 'on'/'off'/'unread')")
+    gs.leave_screen(gs.encounter, sig=sig)
+    gs.leave_screen(gs.supply, sig=sig)
+    if active_strategies:
+        gs.observe(gs.active_strategies, list(active_strategies),
+                   evidence=ev, sig=sig)
+    if level_up_cost is not None:
+        gs.observe(gs.level_up_cost, int(level_up_cost), evidence=ev, sig=sig)
+    if shop_refresh_cost is not None:
+        gs.observe(gs.shop_refresh_cost, int(shop_refresh_cost),
+                   evidence=ev, sig=sig)
+    if selected_difficulty:
+        gs.observe(gs.selected_difficulty, str(selected_difficulty),
+                   evidence=ev, sig=sig)
+    gs.mark_frame_obs('full')
+
+
+_SEED_SIG = ChannelSig(family='obs', actor='cw4_seed', mode='synthesized')
+
+
+def cw4_gs(target=None, *, gold: int = 30, gold_unread: bool = False,
+           level: int = 3, level_unread: bool = False,
+           xp=None, streak=None, hp: int | None = 100,
+           deploy_cap=None, back_max: int = 6,
+           plane: int = 1, round_num: int = 2, node=None,
+           bench=(), bench_unread: bool = False,
+           front_row=(), back_row=(),
+           shop=(), shop_screen: str = 'on', refresh_probs=None,
+           active_strategies=(), enemy_affixes=(), plane_bosses=(),
+           active_env: str = '', equips=(), board=None,
+           node_fill: bool = True) -> object:
+    """决策帧家族的容器域种子(原 cw4_state+cw4_feed 配方退役承接)。
+
+    target = session(装入其容器,多次调用为累加覆盖写)或 None(一次性
+    空白容器);返回容器。家族缺省 = 旧决策帧家族口径:gold=30、
+    level=3、round_num=2、hp=100(各轴显式传参覆盖;hp 传 None = 不写,
+    容器保持诚实缺位)。shop_screen 缺省 'on'(旧 feed 配方:空牌面 =
+    在屏空 payload);节点缺席补写 evidence='kind_inherited'。
+    ``node_fill=False`` = 原裸帧合成语义(节点整域不写,M1 投影锁等
+    直合成配方场景用)。域语义全表见 :func:`_seed_write`。"""
+    gs = game_state_of(target)
+    _seed_write(
+        gs, sig=_SEED_SIG, ev=SIM_SYNTHESIZED,
+        ev_node_fill='kind_inherited' if node_fill else '',
+        gold=gold, gold_unread=gold_unread, level=level,
+        level_unread=level_unread, xp=xp, streak=streak, hp=hp,
+        deploy_cap=deploy_cap, back_max=back_max, plane=plane,
+        round_num=round_num, node=node, bench=bench,
+        bench_unread=bench_unread, front_row=front_row, back_row=back_row,
+        shop=shop, shop_screen=shop_screen, refresh_probs=refresh_probs,
+        active_strategies=active_strategies, enemy_affixes=enemy_affixes,
+        plane_bosses=plane_bosses, active_env=active_env, equips=equips,
+        board=board, level_up_cost=None, shop_refresh_cost=None,
+        selected_difficulty='')
+    return gs
+
+
+def cw4_box(target=None, *, gold: int = 0, gold_unread: bool = False,
+            level: int = 1, level_unread: bool = False,
+            xp=None, streak=None, hp: int | None = None,
+            deploy_cap=None, back_max: int = 6,
+            plane: int = 1, round_num: int = 1, node=None,
+            bench=(), bench_unread: bool = False,
+            front_row=(), back_row=(),
+            shop=(), shop_screen: str = 'off', refresh_probs=None,
+            active_strategies=(), enemy_affixes=(), plane_bosses=(),
+            active_env: str = '', equips=(), board=None,
+            level_up_cost=None, shop_refresh_cost=None,
+            selected_difficulty: str = '') -> object:
+    """桥装箱配方的容器域种子承接(原 cw4_box;域写入语义与退役的
+    kernel ``board_state_bridge`` 逐位同构)。
+
+    与 :func:`cw4_gs` 的三处刻意分叉(沿桥语义,勿「对齐」):
+    ①帧缺省(gold=0/level=1/round_num=1/hp 不写);②空牌面 = 离屏分支
+    原样(shop_screen 缺省 'off',不补在屏空 payload);③节点缺席补写
+    evidence=sim:synthesized,且独有 D 类域补写(level_up_cost/
+    shop_refresh_cost/selected_difficulty,声明缺席不写——读口侧回落
+    None 缺省的语义与桥期一致)。"""
+    gs = game_state_of(target)
+    _seed_write(
+        gs, sig=_SEED_SIG, ev=SIM_SYNTHESIZED, ev_node_fill=SIM_SYNTHESIZED,
+        gold=gold, gold_unread=gold_unread, level=level,
+        level_unread=level_unread, xp=xp, streak=streak, hp=hp,
+        deploy_cap=deploy_cap, back_max=back_max, plane=plane,
+        round_num=round_num, node=node, bench=bench,
+        bench_unread=bench_unread, front_row=front_row, back_row=back_row,
+        shop=shop, shop_screen=shop_screen, refresh_probs=refresh_probs,
+        active_strategies=active_strategies, enemy_affixes=enemy_affixes,
+        plane_bosses=plane_bosses, active_env=active_env, equips=equips,
+        board=board, level_up_cost=level_up_cost,
+        shop_refresh_cost=shop_refresh_cost,
+        selected_difficulty=selected_difficulty)
     return gs

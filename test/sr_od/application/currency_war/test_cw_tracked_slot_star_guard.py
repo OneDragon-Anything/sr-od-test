@@ -33,6 +33,7 @@ from sr_od.application.currency_war.kernel.cw_exec_state import (
     bench_slots_healthy,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
+    Unit,
     game_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_reconcile import (
@@ -192,13 +193,12 @@ def test_star_gate_name_agnostic_silver_wolf(monkeypatch):
 
 def test_deployed_slot_anchor_two_frame(monkeypatch):
     """deployed 侧锚 = 槽位表下标→(排, 排内槽号)(ADR-0392):后排槽3
-    单帧 3★→1★ 保旧,两帧一致采新。(种子直构 pad 态槽位表——
-    deployed_from_compact 按首空槽落位,不保 slot 信息位。)"""
+    单帧 3★→1★ 保旧,两帧一致采新。(tracked 种子 = §2.3 定稿形状
+    list[Unit | None],槽位表下标 6 = 后排槽 3 → 行内槽号 3。)"""
     _spy_conflicts(monkeypatch)
     session = StrategySession()
     _dep: list = [None] * 10
-    _dep[6] = BenchChar(slot=3, char_id='不死途', star=3,
-                        position_pref='back')   # 下标 6 = 后排槽 3
+    _dep[6] = Unit(char_id='不死途', star=3, slot=3)   # 下标 6 = 后排槽 3
     game_state_of(session).tracked_books.deployed = _dep
 
     def _read_back3(star: int) -> list[BenchChar]:

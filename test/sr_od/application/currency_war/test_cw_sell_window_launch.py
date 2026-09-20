@@ -40,6 +40,10 @@ from sr_od.application.currency_war.kernel.cw_card_identity import (
     line_identity_tier,
     sell_hold_exclusion_names,
 )
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    BenchSlot,
+    Unit,
+)
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
 )
@@ -47,10 +51,8 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
-    BenchChar,
     CwActionCloseShopParam,
     CwActionSellBenchParam,
-    CwSimFrame,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
     entry,
@@ -82,21 +84,10 @@ _TRANS_HOLD = '丹恒·饮月'
 _TRANS_CHEAP = '三月七'
 
 
-def _bc(name: str, star: int = 1, slot: int = 1) -> BenchChar:
-    return BenchChar(slot=slot, char_id=name, star=star)
-
-
-def _ent(bench: list):
-    """BenchChar 种子 → 容器占席条目(P4 载体迁移:直接调用面收容器形;
-    帧种子保持 legacy——CwSimFrame 属 P5 辖域)。"""
-    from sr_od.application.currency_war.kernel.cw_game_state import (
-        BenchSlot,
-        Unit,
-    )
-    return [BenchSlot(kind='unit', unit=Unit(char_id=b.char_id or '',
-                                             star=b.star or 1,
-                                             slot=b.slot))
-            for b in bench]
+def _bc(name: str, star: int = 1, slot: int = 1) -> BenchSlot:
+    """容器占席条目(直构面;旧 BenchChar 种子随帧退役同签名承接)。"""
+    return BenchSlot(kind='unit', unit=Unit(char_id=name, star=star,
+                                            slot=slot))
 
 
 def _sess() -> StrategySession:
@@ -108,19 +99,17 @@ def _sess() -> StrategySession:
     return s
 
 
-def _state(gold: int, bench: list[BenchChar], *,
-           round_num: int = 3, node: str = 'battle') -> CwSimFrame:
-    st = CwSimFrame(gold=gold, level=7, round_num=round_num, hp=60)
-    st.plane = 2
-    st.node_type = node
-    st.bench = list(bench)
+def _state(gold: int, bench: list, *,
+           round_num: int = 3, node: str = 'battle') -> dict:
+    """发射窗口场景种子轴(返回 = 桥/feed 两配方公共 kwargs)。"""
+    axes: dict = {'gold': gold, 'level': 7, 'round_num': round_num,
+                  'hp': 60, 'plane': 2, 'node': node, 'bench': list(bench)}
     # 非空板前置(空板止损守卫):守卫钉「待卖后 deployed 为空 ⇒
     # 拒卖」(单一源 = sell_gate.empty_board_sell_blocked),卖出判据/
     # 发射位的直调环境须 ≥1 上场件,否则守卫 fail-closed 拒帧——与被
     # 测语义无关的红按环境前置补齐,非跟绿。
-    st.deployed = [_bc('板上件锚', slot=1)]
-    st.shop = []
-    return st
+    axes['front_row'] = [Unit(char_id='板上件锚', star=1, slot=1)]
+    return axes
 
 
 def _registry(sess: StrategySession) -> dict:
@@ -357,17 +346,17 @@ class TestW1SameVisitBan:
         sess = _sess()
         sell_gate.register_launch(sess, _FUEL, cause='press', round_num=3)
         act = decide_shop_action(
-            cw4_gs(_state(1, [_bc(_FUEL, slot=1)]), sess),
+            cw4_gs(sess, **_state(1, [_bc(_FUEL, slot=1)])),
             sess, SimpleNamespace(ev_arm='full'))
         assert not isinstance(act, CwActionSellBenchParam), \
             'W1:press 登记活跃件被同轮筹资卖出 = 同 visit 卖回未闭死'
         assert isinstance(act, CwActionCloseShopParam)
         # 红证:仅身份段装配下燃料件穿过身份段外谓词入卖出槽集
         # (P4 容器形:直接调用面 = 容器占席条目)
-        bench = [_ent([_bc(_FUEL, slot=1)])[0]]
+        bench = [_bc(_FUEL, slot=1)]
         excl = sell_gate.identity_exclusions(sess, ('目标件',))
         slots, key = crit_sell.funding_support_sell(
-            1, 3, bench, ('目标件',), state=_bridge(_state(1, [_bc(_FUEL, slot=1)])),
+            1, 3, bench, ('目标件',), state=_bridge(**_state(1, [_bc(_FUEL, slot=1)])),
             exclude_names=excl)
         assert key == '' and slots == [1], '红证失效:燃料件未穿过身份段外谓词'
 
@@ -376,13 +365,13 @@ class TestW1SameVisitBan:
         筹资卖出(方案 v3 §2.9 新格 A 三位同源;登记侧实装后差分闭死)。"""
         sess = _sess()
         sell_gate.register_launch(sess, _FUEL, cause='press', round_num=2)
-        bench = [_ent([_bc(_FUEL, slot=1)])[0]]   # P4 容器形直构面
+        bench = [_bc(_FUEL, slot=1)]   # P4 容器形直构面
         frame = mandate.MandateFrame(
             gold=1, level=5, bench=bench, deployed=[], deploy_cap=6,
             node_type=None, stop_flag=True, k_members=('目标件',),
             round_num=2)
         out = entry._criteria_pass(frame, sess,
-                                   _bridge(_state(1, bench, round_num=2)),
+                                   _bridge(**_state(1, bench, round_num=2)),
                                    ('目标件',), k_switched=False,
                                    old_line_members=())
         assert not [e for e in out if isinstance(e.action, CwActionSellBenchParam)]
@@ -392,16 +381,16 @@ class TestW1SameVisitBan:
         红证 = 身份段-only 装配下该件恰入候选。"""
         sess = _sess()
         sell_gate.register_launch(sess, _FUEL, cause='press', round_num=3)
-        bench = [_ent([_bc(_FUEL, slot=1)])[0]]   # P4 容器形直构面
+        bench = [_bc(_FUEL, slot=1)]   # P4 容器形直构面
         st = _state(30, [_bc(_FUEL, slot=1)])
         window = sell_gate.sell_exclusions(sess, ('目标件',),
                                            channel='m4_fuel', current_round=3)
         assert not mandate.fuel_sell_candidates(bench, ('目标件',),
-                                                state=_bridge(st),
+                                                state=_bridge(**st),
                                                 exclude_names=window)
         identity_only = sell_gate.identity_exclusions(sess, ('目标件',))
         cands = mandate.fuel_sell_candidates(bench, ('目标件',),
-                                             state=_bridge(st),
+                                             state=_bridge(**st),
                                              exclude_names=identity_only)
         assert [mandate._slot_cid(b) for b in cands] == [_FUEL], '红证失效'
 
@@ -431,13 +420,13 @@ class TestFundingFallbackEntryConsumer:
         分键已随 2026-09-08 用户归因遥测删除指令拆除)。"""
         sess = SimpleNamespace()
         state_of(sess).cw4_counters = {}
-        bench = [_ent([_bc(_TRANS_HOLD, slot=1)])[0]]   # cost=2 → 退 2 ≥ 缺口 3−1;P4 容器形直构面
+        bench = [_bc(_TRANS_HOLD, slot=1)]   # cost=2 → 退 2 ≥ 缺口 3−1;P4 容器形直构面
         frame = mandate.MandateFrame(
             gold=1, level=5, bench=bench, deployed=[], deploy_cap=6,
             node_type=None, stop_flag=True, k_members=('目标件',),
             round_num=2)
         out = entry._criteria_pass(frame, sess,
-                                   _bridge(_state(1, bench, round_num=2)),
+                                   _bridge(**_state(1, bench, round_num=2)),
                                    ('目标件',), k_switched=False,
                                    old_line_members=())
         sells = [e.action for e in out if isinstance(e.action, CwActionSellBenchParam)]

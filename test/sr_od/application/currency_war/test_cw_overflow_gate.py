@@ -15,19 +15,16 @@
 """
 from __future__ import annotations
 
+from test.sr_od.application.currency_war._cw_helpers import cw4_bview
+
 from sr_od.application.currency_war.kernel.cw_action_report import (
     report_action_sell_bench_param,
-)
-from sr_od.application.currency_war.kernel.cw_exec_state import (
-    BenchChar,
-    bench_from_compact,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
     BenchSlot,
     ChannelSig,
     Unit,
     bench_entries_of,
-    bench_view_of_slots,
     game_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
@@ -69,8 +66,8 @@ def _state():
     批2b 换算收口后溢出发射位按容器槽位表解析下标,黑板视图与容器同帧
     同源是解析前提)。"""
     gs = game_state_of(None)
-    gs.write_logic(gs.bench, bench_view_of_slots(
-        [BenchChar(slot=1, char_id='椒丘', star=1)]),
+    gs.write_logic(gs.bench, cw4_bview(
+        [BenchSlot(kind='unit', unit=Unit(char_id='椒丘', star=1, slot=1))]),
         produced_by='test', sig=_SIG)
     gs.write_logic(gs.front_row, [Unit(slot=1, char_id='刃', star=1)],
                    produced_by='test', sig=_SIG)
@@ -103,9 +100,9 @@ def test_overflow_gate_releases_when_cleared():
 def test_sellbench_overflow_logic_state_absorbs_card():
     """溢出态 CwActionSellBenchParam 逻辑态:摘卖件 + 溢出卡入自由槽 + 旗标/身份消亡。"""
     gs = game_state_of(None)
-    gs.write_logic(gs.bench, bench_view_of_slots(
-        [BenchChar(slot=1, char_id='花火', star=1),
-         BenchChar(slot=2, char_id='刃', star=1)]),
+    gs.write_logic(gs.bench, cw4_bview(
+        [BenchSlot(kind='unit', unit=Unit(char_id='花火', star=1, slot=1)),
+         BenchSlot(kind='unit', unit=Unit(char_id='刃', star=1, slot=2))]),
         produced_by='test', sig=_SIG)
     gs.write_logic(gs.gold, 10, produced_by='test', sig=_SIG)
     gs.write_logic(gs.overflow_warning, True, produced_by='test', sig=_SIG)
@@ -128,16 +125,16 @@ def test_sellbench_overflow_missing_identity_skips_absorb():
     tracked 主账对称零写(容器/tracked 两侧一测,原 sync 文件腿并入)。"""
     session = StrategySession()
     gs = game_state_of(session)
-    gs.write_logic(gs.bench, bench_view_of_slots(
-        [BenchChar(slot=1, char_id='花火', star=1),
-         BenchChar(slot=2, char_id='刃', star=1)]),
+    gs.write_logic(gs.bench, cw4_bview(
+        [BenchSlot(kind='unit', unit=Unit(char_id='花火', star=1, slot=1)),
+         BenchSlot(kind='unit', unit=Unit(char_id='刃', star=1, slot=2))]),
         produced_by='test', sig=_SIG)
     gs.write_logic(gs.gold, 10, produced_by='test', sig=_SIG)
     gs.write_logic(gs.overflow_warning, True, produced_by='test', sig=_SIG)
     gs.write_logic(gs.overflow_card, '', produced_by='test', sig=_SIG)
-    gs.tracked_books.bench = bench_from_compact([
-        BenchChar(slot=1, char_id='花火', star=1),
-        BenchChar(slot=2, char_id='刃', star=1)])
+    gs.tracked_books.bench = [
+        BenchSlot(kind='unit', unit=Unit(char_id='花火', star=1, slot=1)),
+        BenchSlot(kind='unit', unit=Unit(char_id='刃', star=1, slot=2))]
 
     report_action_sell_bench_param(gs, CwActionSellBenchParam(bench_idx=0),
                                    sig=_SIG, session=session)
@@ -160,9 +157,9 @@ def test_sellbench_overflow_missing_identity_skips_absorb():
 def _seed(session, tracked, *, ov_id: str = '不死途'):
     """容器 bench=[花火@1, 刃@2] + 溢出态写入 + tracked 初始账。"""
     gs = game_state_of(session)
-    gs.write_logic(gs.bench, bench_view_of_slots(
-        [BenchChar(slot=1, char_id='花火', star=1),
-         BenchChar(slot=2, char_id='刃', star=1)]),
+    gs.write_logic(gs.bench, cw4_bview(
+        [BenchSlot(kind='unit', unit=Unit(char_id='花火', star=1, slot=1)),
+         BenchSlot(kind='unit', unit=Unit(char_id='刃', star=1, slot=2))]),
         produced_by='test', sig=_SIG)
     gs.write_logic(gs.gold, 10, produced_by='test', sig=_SIG)
     gs.write_logic(gs.overflow_warning, True, produced_by='test', sig=_SIG)
@@ -182,9 +179,9 @@ def test_overflow_absorb_syncs_tracked():
     AssertionError」表述随批退役改写:分叉检出现归观察边界 reconcile
     纠漂,本锁锁的吸收行为本体不变。)"""
     session = StrategySession()
-    gs = _seed(session, bench_from_compact([
-        BenchChar(slot=1, char_id='花火', star=1),
-        BenchChar(slot=2, char_id='刃', star=1)]))
+    gs = _seed(session, [
+        BenchSlot(kind='unit', unit=Unit(char_id='花火', star=1, slot=1)),
+        BenchSlot(kind='unit', unit=Unit(char_id='刃', star=1, slot=2))])
 
     report_action_sell_bench_param(gs, CwActionSellBenchParam(bench_idx=0),
                                    sig=_SIG, session=session)

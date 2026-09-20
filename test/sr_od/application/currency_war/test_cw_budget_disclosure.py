@@ -31,7 +31,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from test.sr_od.application.currency_war._cw_helpers import cw4_feed
+from test.sr_od.application.currency_war._cw_helpers import cw4_gs
 
 from sr_od.application.currency_war.kernel.cw_economy import (
     reserve_cap as kernel_reserve_cap,
@@ -48,9 +48,8 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
     strategy_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
-    CwActionBuyCardParam,
     CwAction,
-    CwSimFrame,
+    CwActionBuyCardParam,
     CwActionRefreshShopParam,
     ShopCard,
 )
@@ -76,11 +75,11 @@ class _StubMatch:
         self.session = session
 
 
-def _cur(plane: int, round_num: int, gold: int = 53,
-         node_type: str | None = None) -> CwSimFrame:
-    """帧构造(node_type = 喂容器时的节点轴载体,直调帧轴读属性不经容器)。"""
-    return CwSimFrame(gold=gold, level=5, plane=plane, round_num=round_num,
-                      hp=100, node_type=node_type)
+def _cur(sess: StrategySession, plane: int, round_num: int, gold: int = 53,
+         node_type: str | None = None) -> None:
+    """容器域种子(node_type = 节点轴;决策面直读容器)。"""
+    cw4_gs(sess, gold=gold, level=5, plane=plane, round_num=round_num,
+           hp=100, node=node_type)
 
 
 def _run_buy_waves_offline_host(monkeypatch: pytest.MonkeyPatch,
@@ -169,10 +168,10 @@ class TestBudgetDisclosureWriteRead:
     def test_state_fields_equal_same_frame_computed_values(self):
         """披露后状态四字段 == 同帧独立现算值(R*/溢余/义务)。红证 =
         现码恒 0(52 行全零实证);本腿断的是「值对」,非「非零」。
-        W6 波 4:预算接缝读 session 容器单例,喂入先于披露(生产同路 =
-        观察漏斗,测试同路 = cw4_feed 合成口)。"""
+        W6 波 4:预算接缝读 session 容器单例,种子先于披露(生产同路 =
+        观察漏斗,测试同路 = cw4_gs 容器域种子)。"""
         sess = StrategySession()
-        cw4_feed(sess, _cur(1, 8, 53, node_type='prep'))
+        _cur(sess, 1, 8, 53, node_type='prep')
         disclose_budget(game_state_of(sess), sess)
         st = state_of(sess)
         # 独立现算 oracle:同输入现算确定 ⇒ 与披露写点内部同值(非转抄
@@ -205,9 +204,8 @@ class TestShopOpenFrameDualWrite:
         影响(gold 无关)——关店 0 语义由容器金缺席承载(F2 门:gold
         仅店开态可信,关店读空不写容器)。"""
         sess = StrategySession()
-        cw4_feed(sess, CwSimFrame(gold=0, gold_readable=False, level=5,
-                                  plane=1, round_num=8, hp=100,
-                                  node_type='prep'))
+        cw4_gs(sess, gold_unread=True, level=5, plane=1, round_num=8,
+               hp=100, node='prep')
         disclose_budget(game_state_of(sess), sess)
         st = state_of(sess)
         assert st.v3_reserve_cap == kernel_reserve_cap(
@@ -226,12 +224,11 @@ class TestShopOpenFrameDualWrite:
         disclose_budget(game_state_of(sess), sess)
         st = state_of(sess)
         assert st.v3_reserve_overflow == 0
-        # ② 店开帧覆写(帧现值):金源切容器(W6 波 4),店开帧经喂入口写
-        # 容器(生产同路 = 观察漏斗;测试同路 = cw4_feed 合成口),披露读
+        # ② 店开帧覆写(帧现值):金源切容器(W6 波 4),店开帧经种子写
+        # 容器(生产同路 = 观察漏斗;测试同路 = cw4_gs 容器域种子),披露读
         # 容器现值
-        shop_state = CwSimFrame(gold=64, level=5, plane=1, round_num=8,
-                                hp=100, node_type='prep')
-        cw4_feed(sess, shop_state)
+        cw4_gs(sess, gold=64, level=5, plane=1, round_num=8, hp=100,
+               node='prep')
         disclose_budget_at_shop_frame(game_state_of(sess), sess)
         assert st.v3_reserve_overflow == 64 - st.v3_reserve_cap
         assert st.v3_reserve_overflow > 0
@@ -244,9 +241,8 @@ class TestShopOpenFrameDualWrite:
         # 口径):披露 = 容器现值重算。「陈旧店开溢余复位 0」旧语义随
         # 金源切容器消亡——失读沿用下披露恒按沿用金重算,不存在复位面;
         # F1 新会话构造测不到「覆写后再披露」面(翻轮清零语义归锁 D)。
-        cw4_feed(sess, CwSimFrame(gold=0, gold_readable=False, level=5,
-                                  plane=1, round_num=9, hp=100,
-                                  node_type='prep'))
+        cw4_gs(sess, gold_unread=True, level=5, plane=1, round_num=9,
+               hp=100, node='prep')
         disclose_budget(game_state_of(sess), sess)
         assert st.v3_reserve_overflow == 64 - st.v3_reserve_cap
         assert st.v3_reserve_overflow > 0
@@ -261,12 +257,12 @@ class TestRoundBoundaryReset:
         reason==''(F5 裁决①:reason 并入键戳清零块,杜绝跨轮陈读)、
         键戳已翻新。键戳轴 = session 容器(W6 波 4),每轮披露前喂入。"""
         sess = StrategySession()
-        cw4_feed(sess, _cur(1, 8, 53, node_type='prep'))
+        _cur(sess, 1, 8, 53, node_type='prep')
         disclose_budget(game_state_of(sess), sess)
         st = state_of(sess)
         st.v3_release_spent = 7
         st.v3_release_reason = 'must_spend'
-        cw4_feed(sess, _cur(1, 9, 53, node_type='prep'))
+        _cur(sess, 1, 9, 53, node_type='prep')
         disclose_budget(game_state_of(sess), sess)
         assert st.v3_release_spent == 0
         assert st.v3_release_reason == ''
@@ -277,11 +273,11 @@ class TestRoundBoundaryReset:
         spent 存活期 = 本轮披露后至下一轮键戳变更(与「轮内截至采样时点
         累计」语义一致)。键戳轴 = session 容器(W6 波 4),披露前喂入。"""
         sess = StrategySession()
-        cw4_feed(sess, _cur(1, 8, 53, node_type='prep'))
+        _cur(sess, 1, 8, 53, node_type='prep')
         disclose_budget(game_state_of(sess), sess)
         st = state_of(sess)
         accrue_release_spent(_StubMatch(sess), CwActionRefreshShopParam(cost=2), True)
-        cw4_feed(sess, _cur(1, 8, 51, node_type='prep'))
+        _cur(sess, 1, 8, 51, node_type='prep')
         disclose_budget(game_state_of(sess), sess)   # 同轮重入(刷新后金位变化)
         assert st.v3_release_spent == 2
         assert st.v3_disclosure_key == (1, 8)
@@ -296,7 +292,7 @@ class TestReleaseSpentAccrual:
         (执行回执位逐笔累计)。键戳轴 = session 容器(W6 波 4),披露前
         喂入使键戳成文。"""
         sess = StrategySession()
-        cw4_feed(sess, _cur(1, 8, 53, node_type='prep'))
+        _cur(sess, 1, 8, 53, node_type='prep')
         disclose_budget(game_state_of(sess), sess)
         st = state_of(sess)
         m = _StubMatch(sess)
@@ -330,10 +326,10 @@ class TestReleaseSpentAccrual:
         防「本轮预算披露行混入上轮累计」的键界漂移。轮键现役轴 = 容器
         读口:喂入翻轮即回执轮已翻,键戳仍钉上一轮。"""
         sess = StrategySession()
-        cw4_feed(sess, _cur(1, 8, 53, node_type='prep'))
+        _cur(sess, 1, 8, 53, node_type='prep')
         disclose_budget(game_state_of(sess), sess)
         st = state_of(sess)
-        cw4_feed(sess, _cur(1, 9, 53, node_type='prep'))
+        _cur(sess, 1, 9, 53, node_type='prep')
         accrue_release_spent(_StubMatch(sess), CwActionRefreshShopParam(cost=2), True)
         assert st.v3_release_spent == 0
 
@@ -365,7 +361,7 @@ def test_armed_shortcircuit_frame_writes_no_disclosure(
     )
 
     sess = StrategySession()
-    cw4_feed(sess, _cur(1, 8, 53, node_type='prep'))
+    _cur(sess, 1, 8, 53, node_type='prep')
     # (黑板帧装配已随 gs.prep_obs 退役删除——阶段 3.5:决策输入 = 容器
     #  直读,「观察帧缺失即抛错」入口内务门随黑板消亡;决策核发射缝已桩 =
     #  不可达,本帧内容不在锁面。)

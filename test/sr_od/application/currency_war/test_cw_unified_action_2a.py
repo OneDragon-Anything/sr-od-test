@@ -16,6 +16,7 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
+from test.sr_od.application.currency_war._cw_helpers import cw4_bview
 
 from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war.kernel.cw_action_report import (
@@ -28,7 +29,6 @@ from sr_od.application.currency_war.kernel.cw_action_report import (
 from sr_od.application.currency_war.kernel.cw_economy import (
     xp_apply_clicks,
 )
-from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
 from sr_od.application.currency_war.kernel.cw_game_state import (
     BenchSlot,
     ChannelSig,
@@ -348,13 +348,10 @@ def test_deploymove_logic_state_moves_unit_and_increments_board():
     交换交互(被占位角色回源 bench 槽);载荷槽非法/源槽空 = 零写。
     (docstring 收窄:board 羁绊增量面本测未断言,不虚报。)"""
     gs = game_state_of(None)
-    bc = BenchChar(slot=3, char_id='甲', star=1)
-    slots = [None] * 9
+    bc = BenchSlot(kind='unit', unit=Unit(char_id='甲', star=1, slot=3))
+    slots: list[BenchSlot | None] = [None] * 9
     slots[2] = bc
-    from sr_od.application.currency_war.kernel.cw_game_state import (
-        bench_view_of_slots,
-    )
-    gs.observe(gs.bench, bench_view_of_slots(slots), evidence='t', sig=_SIG_OBS)
+    gs.observe(gs.bench, cw4_bview(slots), evidence='t', sig=_SIG_OBS)
     gs.observe(gs.board, {'欢愉': 1}, evidence='t', sig=_SIG_OBS)
     report_action_deploy_move_param(gs, CwActionDeployMoveParam(bench_idx=2,
                                                    to_row='front',
@@ -368,7 +365,7 @@ def test_deploymove_logic_state_moves_unit_and_increments_board():
     assert dep[0] is not None and dep[0].char_id == '甲'
     # 目标槽有人 = 交换:甲拖到前排 1 号(乙0 占位)→ 甲落 1 号、乙0 回源
     # bench 槽 3(与 CwActionSwapDeployParam 换位契约同语义)
-    gs.observe(gs.bench, bench_view_of_slots(list(slots)), evidence='t', sig=_SIG_OBS)
+    gs.observe(gs.bench, cw4_bview(list(slots)), evidence='t', sig=_SIG_OBS)
     gs.observe(gs.front_row, [Unit(char_id=f'乙{i}', star=1, equips=[],
                                    slot=i + 1) for i in range(4)],
                evidence='t', sig=_SIG_OBS)
@@ -429,19 +426,16 @@ def test_prep_sell_gold_booked_exactly_once_across_seam_and_projection():
     from sr_od.application.currency_war.kernel.cw_exec_state import (
         apply_confirm_effect,
     )
-    from sr_od.application.currency_war.kernel.cw_game_state import (
-        bench_view_of_slots,
-    )
     session = SimpleNamespace()
     gs = game_state_of(session)
-    bc = BenchChar(slot=1, char_id='甲', star=1)
-    slots = [None] * 9
+    bc = BenchSlot(kind='unit', unit=Unit(char_id='甲', star=1, slot=1))
+    slots: list[BenchSlot | None] = [None] * 9
     slots[0] = bc
     gs.observe(gs.gold, 10, evidence='t', sig=_SIG_OBS)
-    gs.observe(gs.bench, bench_view_of_slots(slots), evidence='t',
+    gs.observe(gs.bench, cw4_bview(slots), evidence='t',
                sig=_SIG_OBS)
     gs.tracked_books.bench = [bc]   # 旧执行缝腿的数据源(腿复返即红)
-    refund = sell_refund(1, bench_char_cost(bc))
+    refund = sell_refund(1, bench_char_cost(bc.unit))
     action = CwActionSellBenchParam(bench_idx=0)
     apply_confirm_effect(session, action)   # 确认口:动作参数零入账
     report_action_sell_bench_param(gs, action, sig=_SIG)

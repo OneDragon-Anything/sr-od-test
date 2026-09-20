@@ -11,14 +11,15 @@
 """
 import pytest
 
-from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_game_state import BenchSlot, Unit
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import mandate
 
 
-def _bench_char(char_id: str, star: int = 1, slot: int = 1) -> BenchChar:
-    """构造最小 bench 件(仅 char_id/star 参与判据;slot = 备战栏 1-based
-    物理槽,判据不消费)。"""
-    return BenchChar(slot=slot, char_id=char_id, star=star)
+def _bench_char(char_id: str, star: int = 1, slot: int = 1) -> BenchSlot:
+    """构造最小 bench 占席条目(容器形状;仅 char_id/star 参与判据;
+    slot = 备战栏 1-based 物理槽,判据不消费)。"""
+    return BenchSlot(kind='unit', unit=Unit(char_id=char_id, star=star,
+                                            slot=slot))
 
 
 class TestDeadStockPairBuyReject:
@@ -38,7 +39,7 @@ class TestDeadStockPairBuyReject:
             '缇宝', 1, bench, [], ()) == ''
         # C=1 第二张拒
         bench1 = [_bench_char('阿格莱雅'), _bench_char('缇宝')]
-        deployed1 = [_bench_char('青雀', star=2)]
+        deployed1 = [Unit(char_id='青雀', star=2, slot=1)]
         assert mandate.dead_stock_pair_buy_reject_reason(
             '阿格莱雅', 1, bench1, deployed1, ()) == 'dead_stock_pair'
         # C=2 第三张(合成消对)放行
@@ -55,7 +56,7 @@ class TestDeadStockPairBuyReject:
         assert mandate.dead_stock_pair_buy_reject_reason(
             '阿格莱雅', 2, bench_star2, [], ()) == ''
         # deployed 域计数
-        deployed = [_bench_char('阿格莱雅')]
+        deployed = [Unit(char_id='阿格莱雅', star=1, slot=1)]
         assert mandate.dead_stock_pair_buy_reject_reason(
             '阿格莱雅', 1, [], deployed, ()) == 'dead_stock_pair'
         # 空名放行

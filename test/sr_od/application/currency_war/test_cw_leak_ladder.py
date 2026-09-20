@@ -35,8 +35,6 @@ from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
-    BenchChar,
-    CwSimFrame,
     ShopCard,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
@@ -62,8 +60,39 @@ def _km() -> list[str]:
     return list(predicates.line_members(get_comp(_COMP)))
 
 
-def _bc(name: str, star: int = 1, slot: int = 1) -> BenchChar:
-    return BenchChar(slot=slot, char_id=name, star=star)
+def _bc(name: str, star: int = 1, slot: int = 1):
+    """行域单位(容器形状;本文件与 press_narrow 转型域共用直构面,
+    旧 BenchChar 直构随帧退役后的同签名承接)。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import Unit
+    return Unit(char_id=name, star=star, slot=slot)
+
+
+def _st(gold: int, cards, *, locked: bool = True, level: int = 5,
+        deploy_cap: int | None = None, bench=None, deployed=None,
+        plane: int = 2, hp: int = 60, xp=None) -> dict:
+    """漏斗阶梯场景种子轴(旧帧配方退役承接 = 桥/feed 两配方公共
+    kwargs;``deployed`` = 旧槽表序 Units,前 4 位前排/其余后排的语义
+    在此分行承接,槽号 1 基信息位随行重排;``locked`` 轴不在容器域,
+    保留参数位 = session 侧语义,由调用方自持)。"""
+    axes: dict = {'gold': gold, 'level': level, 'round_num': 2, 'hp': hp,
+                  'plane': plane, 'shop': list(cards)}
+    if bench is not None:
+        axes['bench'] = bench
+    if deployed is not None:
+        from sr_od.application.currency_war.kernel.cw_game_state import Unit
+        axes['front_row'] = [
+            Unit(char_id=u.char_id, star=u.star,
+                 equips=list(u.equips or []), slot=i + 1)
+            for i, u in enumerate(deployed[:4])]
+        axes['back_row'] = [
+            Unit(char_id=u.char_id, star=u.star,
+                 equips=list(u.equips or []), slot=i - 3)
+            for i, u in enumerate(deployed[4:], start=4)]
+    if deploy_cap is not None:
+        axes['deploy_cap'] = deploy_cap
+    if xp is not None:
+        axes['xp'] = xp
+    return axes
 
 
 def _bs(name: str, star: int = 1, slot: int = 1):
@@ -110,29 +139,6 @@ def _session_stub(locked: bool = True, target_comp=None) -> SimpleNamespace:
     return s
 
 
-def _st(gold: int, cards, *, locked: bool = True, level: int = 5,
-        deploy_cap: int | None = None, bench=None, deployed=None,
-        plane: int = 2, hp: int = 60, xp=None) -> CwSimFrame:
-    km = _km()
-    if deployed is None:
-        # 席位构造:cap=level(缺省)时上板 level−1 人 → vacancy≥1 且
-        # arm0 的 level≥cap 短路(M3 三臂全静,防抢发射)。
-        n_dep = max(level - 1, 0)
-        deployed = [_bc(m, star=2, slot=i + 1)
-                    for i, m in enumerate(km[:n_dep])]
-    st = CwSimFrame(gold=gold, level=level, round_num=2, hp=hp)
-    st.level_readable = True
-    st.plane = plane
-    st.shop = list(cards)
-    st.bench = list(bench) if bench is not None else []
-    st.deployed = deployed
-    if deploy_cap is not None:
-        st.deploy_cap = deploy_cap
-    if xp is not None:
-        st.xp_progress = xp
-    return st
-
-
 # ===== LF′:档 2 轮内新鲜度排除载体相位过期 =====
 
 
@@ -141,15 +147,14 @@ class TestL2L5LFM6Compression:
     def test_lf_round_registry_expiry(self):
         """新鲜度载体键式相位过期:跨轮/跨位面读数空集(排除上界 ≤1 轮)。"""
         sess = SimpleNamespace()
-        st = CwSimFrame(gold=10, level=5, round_num=3)
-        st.plane = 2
-        mandate.record_round_sold(sess, _bsb(st), '甲')
-        assert mandate.round_sold_names(sess, _bsb(st)) == frozenset({'甲'})
-        st.round_num = 4
-        assert mandate.round_sold_names(sess, _bsb(st)) == frozenset()
-        st.round_num = 3
-        st.plane = 3
-        assert mandate.round_sold_names(sess, _bsb(st)) == frozenset()
+        axes = {'gold': 10, 'level': 5, 'round_num': 3, 'plane': 2}
+        mandate.record_round_sold(sess, _bsb(**axes), '甲')
+        assert mandate.round_sold_names(sess, _bsb(**axes)) == frozenset({'甲'})
+        axes['round_num'] = 4
+        assert mandate.round_sold_names(sess, _bsb(**axes)) == frozenset()
+        axes['round_num'] = 3
+        axes['plane'] = 3
+        assert mandate.round_sold_names(sess, _bsb(**axes)) == frozenset()
 
 
 # ===== L3′:prep 位 M6 摘旗可达性 =====
@@ -171,10 +176,8 @@ class TestL3FlagRemoval:
             gold=60, level=3, bench=bench, deployed=[],
             deploy_cap=5, node_type=None, stop_flag=False,
             k_members=('目标件',), round_num=3)
-        state = CwSimFrame(gold=60, level=3, round_num=3)
-        state.hp = 60
-        state.hp_readable = True
-        mandate.run_mandate(frame, sess, state=_bsb(state))
+        state = _bsb(gold=60, level=3, round_num=3, hp=60)
+        mandate.run_mandate(frame, sess, state=state)
         assert state_of(sess).cw4_counters.get('m6_bench_full', 0) >= 1
 
 
@@ -188,15 +191,10 @@ class TestL3FlagRemoval:
 
 class TestL7AllInCategoryFilter:
 
-    def _allin_state(self, hp: int, *, readable: bool = True) -> CwSimFrame:
-        """CwSimFrame 帧(mandate_v1 闸入口仍持 CwSimFrame,闸内经一次性装箱;
-        位面/节点语义同 _allin_gs)。"""
-        st = CwSimFrame(gold=30, level=5, round_num=7, node_type='boss',
-                       hp=hp)
-        st.plane = 2
-        st.hp_readable = readable
-        st.hp_trusted = False
-        return st
+    def _allin_state(self, hp: int) -> dict:
+        """ALL IN 闸场景种子轴(闸内一次性装箱;P2r7 boss 帧)。"""
+        return {'gold': 30, 'level': 5, 'round_num': 7, 'node': 'boss',
+                'hp': hp, 'plane': 2}
 
     def _allin_gs(self, hp: int | None, *, source: str = 'observation'
                   ) -> 'GameState':
@@ -257,17 +255,17 @@ class TestL7AllInCategoryFilter:
         sess = self._allin_session()
         st = self._allin_state(10)
         ok, why = crit_levelup.levelup_budget_gate(
-            _bsb(st), sess, 30, 5, ('甲',), [], [], 2, 4)
+            _bsb(**st), sess, 30, 5, ('甲',), [], [], 2, 4)
         assert ok is False and why == 'all_in_xp_category_filtered'
         # 支A:板满(cap 5)+ bench 有 2★ 等待件 → 兑现链当帧可兑现
         # (P4 容器形:bench = 占席条目,deployed = 行域 Unit)
         deployed = [_bu(f'甲{i}', star=2, slot=i + 1) for i in range(5)]
         bench = [_bs('乙', star=2, slot=1)]
         ok2, why2 = crit_levelup.levelup_budget_gate(
-            _bsb(st), sess, 30, 5, ('甲', '乙'), bench, deployed, 2, 4)
+            _bsb(**st), sess, 30, 5, ('甲', '乙'), bench, deployed, 2, 4)
         assert ok2 is True and why2 == ''
         # 域外(hp>停线):全豁免放行
         st_out = self._allin_state(100)
         ok3, why3 = crit_levelup.levelup_budget_gate(
-            _bsb(st_out), sess, 30, 5, ('甲',), [], [], 2, 4)
+            _bsb(**st_out), sess, 30, 5, ('甲',), [], [], 2, 4)
         assert ok3 is True and why3 == ''

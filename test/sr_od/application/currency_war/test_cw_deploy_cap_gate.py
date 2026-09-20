@@ -11,7 +11,6 @@ from test.sr_od.application.currency_war._cw_helpers import (
     cw4_comp,
     cw4_gs,
     cw4_session,
-    cw4_state,
 )
 
 from sr_od.application.currency_war.kernel.cw_game_state import BenchSlot, Unit
@@ -27,15 +26,13 @@ def _bs(name: str, slot: int) -> BenchSlot:
 
 
 def _full_board_session():
-    """容器 3/3 满板(deployed 前 3 槽有人)+ 备战席候选;返回 (session, gs)。"""
+    """容器 3/3 满板(上阵前 3 人)+ 备战席候选;返回 (session, gs)。"""
     session = cw4_session(cw4_comp())
-    frame = cw4_state(
-        deployed=[cw4_bc('丹恒·饮月', slot=1), cw4_bc('卡芙卡', slot=2),
-                  cw4_bc('杰帕德', slot=3), None, None, None, None, None,
-                  None, None],
-        bench=[cw4_bc('艾丝妲', slot=1)],
-        deploy_cap=3)
-    return session, cw4_gs(frame, session)
+    gs = cw4_gs(session, deploy_cap=3, bench=[cw4_bc('艾丝妲', slot=1)],
+                front_row=[Unit(char_id='丹恒·饮月', star=1, slot=1),
+                           Unit(char_id='卡芙卡', star=1, slot=2),
+                           Unit(char_id='杰帕德', star=1, slot=3)])
+    return session, gs
 
 
 def _stale_frame(round_num: int = 2):
@@ -64,12 +61,9 @@ def test_cap_roomy_stale_container_still_deploys():
     """陈旧视图锁:容器 2/3 未满时照常产出部署(换源不改坏正常路径);
     容器名单为部署输入真值——板满判定读容器而非帧。"""
     session = cw4_session(cw4_comp())
-    frame = cw4_state(
-        deployed=[cw4_bc('丹恒·饮月', slot=1), cw4_bc('卡芙卡', slot=2),
-                  None, None, None, None, None, None, None, None],
-        bench=[cw4_bc('艾丝妲', slot=1)],
-        deploy_cap=3)
-    gs = cw4_gs(frame, session)
+    gs = cw4_gs(session, deploy_cap=3, bench=[cw4_bc('艾丝妲', slot=1)],
+                front_row=[Unit(char_id='丹恒·饮月', star=1, slot=1),
+                           Unit(char_id='卡芙卡', star=1, slot=2)])
     stale = _stale_frame()
     assert mandate._deployable(stale, session, gs) is True
     out: list = []

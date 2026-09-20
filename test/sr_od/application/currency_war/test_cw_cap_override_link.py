@@ -40,7 +40,6 @@ from sr_od.application.currency_war.kernel.cw_investments import (
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
-from sr_od.application.currency_war.kernel.cw_vocab import CwSimFrame
 
 #: 注册表可达息帽覆写值域(测试只许经注册表名注入,禁裸数字——值与
 #: 标签错配是五犯实证错误类,attack 纪律:数值锚点注册表直调)。
@@ -115,25 +114,19 @@ def test_budget_face_reserve_floor_linkage() -> None:
     买断制局刷新授权车道不再被 50 金地板压死(囤金车道收口),利息
     上调局守息线抬到 100。registry 旋钮不辖本链(ADR-0516 归一)。"""
     from sr_od.application.currency_war.kernel.cw_economy import reserve_cap
-    from sr_od.application.currency_war.kernel.cw_strategy_session import (
-        strategy_state_of,
-    )
 
-    def _frame(gold: int, session: StrategySession) -> CwSimFrame:
-        # 排程关闭态帧(bench 空、等级已到峰值):R* = 守息线分量裸值
-        st = CwSimFrame(plane=1, round_num=5, gold=gold, level=9, hp=80,
-                       shop_refresh_cost=2, deployed=[],
-                       bench=[None] * 10, shop=[], node_type='battle',
-                       board={})
-        strategy_state_of(session)   # 状态面触达(与生产读口同形)
-        return st
+    def _boxed_gs(gold: int):
+        """排程关闭态容器种子(bench 空、等级已到峰值):R* = 守息线分量
+        裸值(桥配方 = 帧缺省 + 空店离屏)。"""
+        return _bridge(plane=1, round_num=5, gold=gold, level=9, hp=80,
+                       shop_refresh_cost=2, node='battle')
 
-    base = reserve_cap(_bridge(_frame(30, StrategySession())), StrategySession())
+    base = reserve_cap(_boxed_gs(30), StrategySession())
     assert base == saturation_line(DEFAULT_INTEREST_CAP)
     buyout_sess = _sess_with('买断制')
-    assert reserve_cap(_bridge(_frame(30, buyout_sess)), buyout_sess) == 0
+    assert reserve_cap(_boxed_gs(30), buyout_sess) == 0
     rich_sess = _sess_with('利息上调')
-    assert reserve_cap(_bridge(_frame(30, rich_sess)), rich_sess) \
+    assert reserve_cap(_boxed_gs(30), rich_sess) \
         == saturation_line(10)
 
 
@@ -145,16 +138,14 @@ def test_line_switch_affordable_window_linkage() -> None:
     from sr_od.application.currency_war.kernel.cw_line_switch import e_rounds
 
     comp = next(c for c in COMP_LIBRARY if c.form_tiers)
-    st = CwSimFrame(plane=2, round_num=2, gold=55, level=7, hp=60,
-                   shop_refresh_cost=2, deployed=[],
-                   bench=[None] * 10, shop=[], node_type='battle',
-                   board={})
-    e_base = e_rounds(comp, _bridge(st), session=StrategySession())
-    e_buyout = e_rounds(comp, _bridge(st), session=_sess_with('买断制'))
+    axes = {'plane': 2, 'round_num': 2, 'gold': 55, 'level': 7, 'hp': 60,
+            'shop_refresh_cost': 2, 'node': 'battle'}
+    e_base = e_rounds(comp, _bridge(**axes), session=StrategySession())
+    e_buyout = e_rounds(comp, _bridge(**axes), session=_sess_with('买断制'))
     assert e_buyout < e_base   # 可负担刷数变多 → E_rounds 变小(单调)
     # 换算核:affordable 差 = 息线差 50 金 / 刷价 2 = 25 刷(帽前);
     # 单调判 + 同 session 双调幂等即可,禁在此复算第二套账(单一源)。
-    assert e_rounds(comp, _bridge(st), session=_sess_with('买断制')) == e_buyout
+    assert e_rounds(comp, _bridge(**axes), session=_sess_with('买断制')) == e_buyout
 
 
 # (原墓碑 grep 锁 test_grep_lock_no_cw4_cap_override_in_src 删:源码扫描

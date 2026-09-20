@@ -27,6 +27,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
+from test.sr_od.application.currency_war._cw_helpers import cw4_gs
 
 from sr_od.application.currency_war.kernel.cw_effect_inventory import (
     ActiveEffectInventory,
@@ -53,7 +54,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     set_defect_sink,
     shop_card_to_container,
     shop_cards_to_legacy,
-    synthesize_from_game_state,
     unit_rows_to_deployed,
 )
 
@@ -75,7 +75,6 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
-    CwSimFrame,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     ShopCard as StateShopCard,
@@ -85,6 +84,12 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
 def _sig() -> _ChannelSig:
     """渠道①签名(obs 族;观察/沿用/先验/离屏/观察事件)。"""
     return _ChannelSig(family='obs', actor='TestSigWriter', mode='read')
+
+
+def _bslot(slot_no: int, name: str, star: int) -> BenchSlot:
+    """备战席占席条目直构(种子容器形状)。"""
+    return BenchSlot(kind='unit', unit=Unit(char_id=name, star=star,
+                                            slot=slot_no))
 
 
 def _lsig() -> _ChannelSig:
@@ -493,57 +498,54 @@ def test_game_state_of_binds_per_session() -> None:
 @pytest.mark.parametrize('case', ['truth-on-preserves-bench-slots',
                                   'truth-off-not-written'])
 def test_sim_synthesis_truth_domain(case: str) -> None:
-    """§2.1/§3.2.5 合成口真值域 on/off 两形态一锁(参数化并一):
-    - truth-on:sim 真值合成 bench 槽位保序(0 基下标 → 1 基物理槽位),
-      记录模型不采 sim「箱不占席」内部口径;evidence 恒带 sim:synthesized
-      标记(at_round 轮键并入,P2-6 非死参);真值记 observation;
-    - truth-off:sim 帧真值 None 的字段不写(sim 无识别过程,不存在失读;
-      未建模域保持 None 诚实缺位,禁合成假值;合成口不写节点序——节点由
-      观察链派生)。"""
+    """§2.1/§3.2.5 种子真值域 on/off 两形态一锁(参数化并一;载体迁移 =
+    benchchar-retirement P5,原合成口 at_round 轮键注记随口退役,证据
+    恒种子基串 sim:synthesized——断言值改写逐处申报):
+    - truth-on:真值种子 bench 槽位保序(0 基下标 → 1 基物理槽位),
+      记录模型不采 sim「箱不占席」内部口径;evidence 恒带
+      sim:synthesized 标记;真值记 observation;
+    - truth-off:种子声明缺席的字段不写(sim 无识别过程,不存在失读;
+      未建模域保持 None 诚实缺位,禁种子合成假值;种子不写节点序——
+      节点由观察链派生)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if case == 'truth-on-preserves-bench-slots':
-        # 经构造器传入(__post_init__ pad 到定长 9,ADR-0316 形状契约;直赋值
-        # 绕过 pad 是旧紧缩构造兼容域,合成口输出侧补齐见模块实现)。
-        st = CwSimFrame(bench=[
-            BenchChar(slot=1, char_id='阿格莱雅', star=1),
-            None,
-            BenchChar(slot=3, char_id='花火', star=2),
-        ])
-        st.gold = 20
-        st.hp = 80
-        synthesize_from_game_state(gs, st, at_round='p1-r2')
+        cw4_gs(gs, gold=20, level=1, hp=80,
+               bench=[_bslot(1, '阿格莱雅', 1), None, _bslot(3, '花火', 2)],
+               node_fill=False, shop_screen='off')
         view = gs.bench.value
         assert view is not None and view.capacity == 9
         assert [s.kind for s in view.slots] == ['unit', 'empty', 'unit'] \
-            + ['empty'] * 6, '槽位保序:sim 紧缩/稀疏表 1:1 映射物理槽位'
+            + ['empty'] * 6, '槽位保序:种子紧缩/稀疏表 1:1 映射物理槽位'
         assert view.slots[0].unit is not None \
             and view.slots[0].unit.char_id == '阿格莱雅'
         assert gs.gold.value == 20
-        assert gs.gold.evidence == 'sim:synthesized@p1-r2', \
-            '§2.1:evidence 恒带标记;at_round 轮键并入注记(P2-6,非死参)'
+        # 改写申报:原断言 evidence=='sim:synthesized@p1-r2'(at_round
+        # 轮键并入注记,P2-6)随合成口退役;种子证据恒基串。
+        assert gs.gold.evidence == 'sim:synthesized', \
+            '§2.1:evidence 恒带 sim 真值合成标记'
         assert gs.gold.source == 'observation', 'sim 真值记 observation'
         assert gs.hp.value == 80
         return
-    st = CwSimFrame()   # hp=None(未观测态);gold 默认 0 且 readable=True(P2-3 实断言依据)
-    synthesize_from_game_state(gs, st, at_round='p1-r1')
+    # truth-off:裸种子(仅 gold=0/level=1/back_layout 域照写,其余缺席)
+    cw4_gs(gs, gold=0, level=1, hp=None, node_fill=False,
+           shop_screen='off')
     assert gs.hp.value is None
     assert gs.node.value is None, \
-        'node_type 未建模(裸构造 None)不合成 kind 占位(P1-1 同型泛化)'
-    assert gs.node_ord.value is None, '合成口不写节点序(节点由观察链派生)'
+        'node 缺席种子不合成 kind 占位(P1-1 同型泛化)'
+    assert gs.node_ord.value is None, '种子不写节点序(节点由观察链派生)'
     assert gs.gold.value == 0 \
-        and gs.gold.evidence == 'sim:synthesized@p1-r1', \
-        'gold 真值(缺省 0,readable)合成 observation;at_round 并入 evidence(P2-6)'
+        and gs.gold.evidence == 'sim:synthesized', \
+        'gold 真值(缺省 0)种子记 observation'
 
 
 def test_synthesis_unread_bench_no_clobber() -> None:
-    """bench 写门(CwSimFrame.bench_readable,对齐 board_readable 先例):
-    未读域≠真空域。v1 漏斗帧(read_game_state 不读 bench 身份,bench 恒
-    默认空表)合成必须跳写 bench——容器内备战装配环的真读观察保持原值
-    原版本;可读真值帧(sim 形态,缺省 True)照写不回归。回归形态 = 无门
-    合成把 prep 装配环真读覆盖成「9 槽全空」假真空,容器与执行账 tracked
-    两账从此不同源(实机 2026-09-13 商店段循环崩溃实证;原表述
-    中的双账对账载体已随批退役,本门的防覆盖语义独立存续)。"""
-    sig = _ChannelSig(family='obs', actor='TestSigWriter', mode='read')
+    """bench 写门(载体迁移 = benchchar-retirement P5;语义锚:未读域≠
+    真空域)。种子对未声明 bench 域整域跳写(bench_unread)——容器内
+    备战装配环的真读观察保持原值原版本;可读真值种子照写不回归。
+    原防御对象 = 旧合成口无门合成把漏斗真读覆盖成「9 槽全空」假真空
+    (实机 2026-09-13 商店段循环崩溃实证),载体随合成口退役,跳写
+    语义在种子域纪律层等价存续(防覆盖 = 种子只写声明域)。"""
+    sig = _sig()
     # 容器先有漏斗真读(deploy 后留 bench:物理槽 4 一人,1 基槽号信息位)
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.observe(gs.bench, BenchView(
@@ -552,22 +554,21 @@ def test_synthesis_unread_bench_no_clobber() -> None:
         + [BenchSlot(kind='empty')] * 5,
         capacity=BENCH_CAPACITY_DEFAULT), sig=sig)
     bench_field_before = gs.bench   # Field 实例同一性:_swap 写入即换实例
-    # v1 形态帧:bench 恒默认空表 + 不可读位(生产置位点 = read_game_state)
-    st_v1 = CwSimFrame()
-    st_v1.bench_readable = False
-    synthesize_from_game_state(gs, st_v1, at_round='p1-r1')
+    # 未读 bench 域种子(bench_unread)
+    cw4_gs(gs, gold=0, level=1, node_fill=False, shop_screen='off',
+           hp=None, bench_unread=True)
     view = gs.bench.value
     assert view is not None and view.slots[3].unit is not None \
         and view.slots[3].unit.char_id == '银枝', \
-        '未读 bench 合成跳写:容器内漏斗真读保持原值'
+        '未读 bench 种子跳写:容器内漏斗真读保持原值'
     assert gs.bench is bench_field_before, \
-        '跳写 = bench Field 实例不换(其余域合成照写,版本推进不涉本域)'
-    # 真值帧(sim 形态,缺省可读)照写:域语义不回归
-    st_sim = CwSimFrame(bench=[BenchChar(slot=1, char_id='花火', star=2)])
-    synthesize_from_game_state(gs, st_sim, at_round='p1-r2')
+        '跳写 = bench Field 实例不换(其余域照写,版本推进不涉本域)'
+    # 可读真值种子照写:域语义不回归
+    cw4_gs(gs, gold=0, level=1, node_fill=False, shop_screen='off',
+           hp=None, bench=[_bslot(1, '花火', 2)])
     assert gs.bench.value.slots[0].unit is not None \
         and gs.bench.value.slots[0].unit.char_id == '花火', \
-        '可读帧合成照写(真值域语义不变)'
+        '可读种子照写(真值域语义不变)'
 
 
 def _feed_ctx(sess: SimpleNamespace) -> SimpleNamespace:
@@ -1031,24 +1032,23 @@ def test_bump_key_advances_only_tracked_entries() -> None:
 
 
 def test_synthesis_payload_offscreen_branch() -> None:
-    """C8:合成口 shop 真值缺席 = 结构离屏(置 None+left_screen,等价
-    leave_screen)——禁旧 shop payload 连旧 evidence 残留(把「不在商店」帧
-    误读成「商店仍开着」);encounter/supply 两域 sim 不建模,合成帧恒
-    离屏口径;牌面在场帧照常观察落 payload。"""
+    """C8:种子空店离屏分支(shop_screen='off';§2.2 例外:真值缺席 =
+    结构离屏,禁旧 payload 残留)——禁旧 shop payload 连旧 evidence 残留
+    (把「不在商店」帧误读成「商店仍开着」);encounter/supply 两域种子
+    不建模,恒离屏口径;牌面在场帧照常观察落 payload。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
-    st_shop = CwSimFrame()
-    st_shop.shop = [StateShopCard(x=1, name='花火', cost=2, star=1,
-                                  cost_source='badge')]
-    synthesize_from_game_state(gs, st_shop, at_round='p1-r2')
+    cw4_gs(gs, gold=0, level=1, node_fill=False,
+           shop=[StateShopCard(x=1, name='花火', cost=2, star=1,
+                                cost_source='badge')])
     # 改写依据:三态定长五槽模型(用户三态裁定 2026-09-13)后 payload
     # 形态 = ShopSlot 包裹,x=1 → 下标 1 content 槽;离屏分支断言不变。
     _slot = gs.shop.value.cards[1] if gs.shop.value is not None else None
     assert _slot is not None and _slot.kind == 'content' \
         and _slot.card is not None and _slot.card.name == '花火'
 
-    # 连续合成帧:真值缺席 → 离屏(旧 payload 不残留)
-    st_prep = CwSimFrame()
-    synthesize_from_game_state(gs, st_prep, at_round='p1-r3')
+    # 连续种子帧:空店离屏(旧 payload 不残留)
+    cw4_gs(gs, gold=0, level=1, hp=None, node_fill=False,
+           shop_screen='off')
     assert gs.shop.value is None, '离屏帧 payload 置 None(禁残留)'
     assert gs.shop.source == 'observation' \
         and gs.shop.evidence == 'left_screen', '结构离屏 = left_screen 标记'
@@ -1058,24 +1058,22 @@ def test_synthesis_payload_offscreen_branch() -> None:
 
 
 def test_synthesis_shop_empty_keeps_payload_in_recognition_domain() -> None:
-    """识别域(``shop_empty_off_screen=False``,店开相位实机喂入)
+    """识别域空店失读窗(shop_screen='unread',店开相位实机喂入口径)
     空牌面 = 买空/OCR 失读窗 → 不写保现值(失读窗沿用上一开店牌面),禁按
     离屏清 None。实证 = 2026-09-13 实机局 run_20260913_085025:买空店重进
     被真值口径清 None,``decide_shop_action`` 在屏前置 shop=None 契约崩
     循环(journal 同帧 current_screen 开商店 ∧ prov.shop left_screen)。
     真值域缺省分支的同帧行为 = test_synthesis_payload_offscreen_branch
-    (离屏锁不变,两域分叉 = 合成口 docstring「payload 域离屏分支」申报)。"""
+    (离屏锁不变,两域分叉 = 三态语义在种子层 shop_screen 字段的表达)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
-    st_shop = CwSimFrame()
-    st_shop.shop = [StateShopCard(x=1, name='花火', cost=2, star=1,
-                                  cost_source='badge')]
-    synthesize_from_game_state(gs, st_shop, at_round='p1-r2')
+    cw4_gs(gs, gold=0, level=1, node_fill=False,
+           shop=[StateShopCard(x=1, name='花火', cost=2, star=1,
+                                cost_source='badge')])
     assert gs.shop.value is not None
 
-    # 买空店重进帧:shop 空表,识别域口径 → 保现值沿用(其余域照常合成)
-    st_empty = CwSimFrame()
-    synthesize_from_game_state(gs, st_empty, at_round='p1-r2',
-                               shop_empty_off_screen=False)
+    # 买空店重进帧:shop 空表,识别域口径 → 保现值沿用(其余域照常种子)
+    cw4_gs(gs, gold=0, level=1, hp=None, node_fill=False,
+           shop_screen='unread')
     assert gs.shop.value is not None, '识别域空表 = 失读窗,禁清 None'
     # 改写依据:三态定长五槽模型(用户三态裁定 2026-09-13)后沿用值形态 =
     # ShopSlot 包裹,content 槽紧缩视图语义等价旧紧缩列表读法。

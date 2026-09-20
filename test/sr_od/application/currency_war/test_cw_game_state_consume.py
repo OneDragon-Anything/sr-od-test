@@ -23,8 +23,8 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     GameState,
     apply_settlement_cover,
     board_next_tier_of,
-    game_state_of,
     consume_defect_sink,
+    game_state_of,
     set_defect_sink,
 )
 
@@ -34,7 +34,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (  # noqa: E402
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
-    CwSimFrame,
 )
 
 
@@ -169,29 +168,35 @@ def test_settlement_cover_writes_truth_group() -> None:
 
 def test_detect_merge_upgrade_signature() -> None:
     """§3.2.18 修法 a 触发判定:同名最高星被抬升 = 合成签名(星级只经
-    合成上升);普通买新卡/无变化 → False。"""
+    合成上升);普通买新卡/无变化 → False。种子 = 生产同形快照
+    (_NS(bench=占席条目, deployed=行域 Unit),与 buy_card 升星腿同构)。"""
+    from types import SimpleNamespace as _NS
+
     from sr_od.application.currency_war.kernel.cw_game_state import (
+        BenchSlot,
+        Unit,
         detect_merge_upgrade,
     )
 
-    def _mk(bench, deployed=None):
-        st = CwSimFrame()
-        st.bench = bench
-        st.deployed = deployed or []
-        return st
+    def _b(slot: int, name: str, star: int) -> BenchSlot:
+        return BenchSlot(kind='unit', unit=Unit(char_id=name, star=star,
+                                                slot=slot))
 
-    c1 = BenchChar(slot=1, char_id='花火', star=1)
-    c2 = BenchChar(slot=2, char_id='花火', star=1)
-    c3 = BenchChar(slot=3, char_id='花火', star=1)
+    def _mk(bench, deployed=None):
+        return _NS(bench=list(bench), deployed=list(deployed or []))
+
+    c1 = _b(1, '花火', 1)
+    c2 = _b(2, '花火', 1)
+    c3 = _b(3, '花火', 1)
     cur = _mk([c1, c2, c3])
-    proj = _mk([BenchChar(slot=1, char_id='花火', star=2)])
+    proj = _mk([_b(1, '花火', 2)])
     assert detect_merge_upgrade(cur, proj) is True, '3 合 1 → 同名最高星抬升'
     assert detect_merge_upgrade(cur, _mk([c1, c2, c3])) is False, '无变化'
     assert detect_merge_upgrade(
-        _mk([c1]), _mk([c1, BenchChar(slot=2, char_id='花火', star=1)]),
+        _mk([c1]), _mk([c1, _b(2, '花火', 1)]),
     ) is False, '普通买新卡不抬最高星'
-    deployed_old = _mk([], [BenchChar(slot=1, char_id='希儿', star=1)])
-    deployed_new = _mk([], [BenchChar(slot=1, char_id='希儿', star=2)])
+    deployed_old = _mk([], [Unit(char_id='希儿', star=1, slot=1)])
+    deployed_new = _mk([], [Unit(char_id='希儿', star=2, slot=1)])
     assert detect_merge_upgrade(deployed_old, deployed_new) is True, \
         '合成域 = 全场(bench+deployed)'
 
@@ -272,17 +277,8 @@ def test_streak_miss_semantics_parse_and_observation_half() -> None:
       '连胜×0' = 真 0(方向真值,fixture 核实 2026-08-11),两者分写;
     - 消费腿(失读守卫):obs.streak None → session.last_streak 跳过沿用
       (旧行为失读写 0 = 连胜/连败假复位);真值照写。"""
-    from sr_od.application.currency_war.kernel.cw_performance import (
-        RoundOutcome,
-    )
     from sr_od.application.currency_war.obs.cw_settlement_obs import (
         parse_streak,
-    )
-    from sr_od.application.currency_war.operations.cw_screen.cw_screen_battle_wait import (
-        _write_settlement_observation,
-    )
-    from sr_od.application.currency_war.strategies.impl.cw_strategy import (
-        StrategySession,
     )
     # 解析腿
     assert parse_streak(['挑战结束', '数据统计']) is None, '失读非 0'

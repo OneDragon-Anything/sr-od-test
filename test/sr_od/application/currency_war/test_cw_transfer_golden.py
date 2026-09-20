@@ -37,9 +37,6 @@ from sr_od.application.currency_war.kernel.cw_economy import (
     bench_char_cost,
     sell_refund,
 )
-from sr_od.application.currency_war.kernel.cw_exec_state import (
-    BenchChar,
-)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
     BenchSlot,
@@ -65,7 +62,7 @@ _SIG_LOGIC = ChannelSig(family='logic_action', actor='MandateV1Strategy',
 #: 退款真值从注册表现算(1★ 银枝,cost 2 → 退 2,金样捕获 2026-09-13 钉
 #: 10→12 同源),不手抄常数。
 _REFUND_1STAR = sell_refund(1, bench_char_cost(
-    BenchChar(slot=1, char_id='银枝', star=1)))
+    Unit(char_id='银枝', star=1, slot=1)))
 
 _EMPTY_SHOP = ShopPayload(cards=[ShopSlot(kind='empty')] * 5,
                           refresh_probs={})

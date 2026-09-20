@@ -34,15 +34,14 @@ from sr_od.application.currency_war.kernel.cw_economy import (
     xp_click_cost,
 )
 from sr_od.application.currency_war.kernel.cw_exec_state import (
-    BenchChar,
     deployed_idx_of,
     deployed_row_slot,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
     BenchSlot,
+    BenchView,
     ChannelSig,
     Unit,
-    bench_view_of_slots,
     game_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
@@ -50,7 +49,6 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionLevelUpParam,
     CwActionSellBenchParam,
     CwActionSellDeployedParam,
-    CwSimFrame,
     action_key,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
@@ -118,21 +116,19 @@ def test_levelup_emission_carries_cost_and_auth_basis():
             char_id='注册表外散件A', star=1, slot=1))],
         deployed=deployed, deploy_cap=4, node_type='battle',
         stop_flag=False, k_members=(), round_num=2)
-    st = CwSimFrame(gold=80, level=4, hp=30, plane=2, round_num=2)
-    st.level_readable = True
-    st.deploy_cap = 4
-    st.node_type = 'battle'
+    st = {'gold': 80, 'level': 4, 'hp': 30, 'plane': 2, 'round_num': 2,
+          'deploy_cap': 4, 'node': 'battle'}
     from sr_od.application.currency_war.kernel.cw_intention import (
         IntentionState,
     )
     sess = SimpleNamespace(cw4_counters={}, target_comp=None,
                            v3_intention=IntentionState(),
                            active_strategies=[])
-    out = mandate.run_mandate(frame, sess, state=cw4_box(st))
+    out = mandate.run_mandate(frame, sess, state=cw4_box(**st))
     lv = [e for e in out if isinstance(e.action, CwActionLevelUpParam)]
     assert lv, '构帧须命中 M3 升级臂(与 no_target 三臂锁 4 同形)'
-    gs_cost_view = cw4_box(CwSimFrame(gold=80, level=4, hp=30, plane=2,
-                                      round_num=2, level_up_cost=4))
+    gs_cost_view = cw4_box(gold=80, level=4, hp=30, plane=2,
+                           round_num=2, level_up_cost=4)
     a = lv[0].action
     assert a.cost == xp_click_cost(gs_cost_view)   # 现算单一源(含回退支)
     assert a.auth_basis in ('arm1', 'arm0', 'pop', 'must_spend')
@@ -160,14 +156,12 @@ def test_sellbench_emission_carries_channel_reason():
             char_id='注册表外散件A', star=1, slot=1))],
         deployed=deployed, deploy_cap=4, node_type='battle',
         stop_flag=False, k_members=(), round_num=2, overflow_warning=True)
-    st = CwSimFrame(gold=80, level=4, hp=30, plane=2, round_num=2)
-    st.level_readable = True
-    st.deploy_cap = 4
-    st.node_type = 'battle'
     gs = game_state_of(None)
     # 燃料资格面读容器(空板守卫读 deployed + bench 边际维),双容器预写
-    gs.write_logic(gs.bench, bench_view_of_slots(
-        [BenchChar(slot=1, char_id='注册表外散件A', star=1)]),
+    gs.write_logic(gs.bench, BenchView(
+        slots=[BenchSlot(kind='unit', unit=Unit(
+            char_id='注册表外散件A', star=1, slot=1))]
+        + [BenchSlot(kind='empty')] * 8, capacity=9),
         produced_by='T', sig=_SIG)
     gs.write_logic(gs.front_row, [
         Unit(slot=i + 1, char_id=f'注册表外散件{i}', star=2)
@@ -190,10 +184,12 @@ def test_emission_resolves_container_index_fail_closed():
     域按槽位信息位与容器槽位表读口对位取枚举下标;deployed 域按
     (排, 槽号) 二元组对位;失配 = None(fail-closed 跳过,禁猜位)。"""
     gs = game_state_of(None)
-    # 槽位表构造 = 位置映射(bench_view_of_slots:槽 i = 列表下标 i,信息位
-    # 槽号 = i+1 由视图重建)——槽 4 的件放列表下标 3。
-    gs.write_logic(gs.bench, bench_view_of_slots(
-        [None, None, None, BenchChar(slot=4, char_id='甲', star=1)]),
+    # 槽位表构造 = 位置映射(槽 i = 列表下标 i,信息位槽号 = i+1 由视图
+    # 重建)——槽 4 的件放列表下标 3。
+    gs.write_logic(gs.bench, BenchView(
+        slots=[BenchSlot(kind='empty')] * 3
+        + [BenchSlot(kind='unit', unit=Unit(char_id='甲', star=1, slot=4))]
+        + [BenchSlot(kind='empty')] * 5, capacity=9),
         produced_by='T', sig=_SIG)
     gs.write_logic(gs.front_row, [Unit(slot=2, char_id='刃', star=1)],
                    produced_by='T', sig=_SIG)

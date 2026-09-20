@@ -37,6 +37,9 @@ from test.sr_od.application.currency_war._cw_helpers import (
     cw4_decide as _decide,
 )
 from test.sr_od.application.currency_war._cw_helpers import (
+    cw4_gs,
+)
+from test.sr_od.application.currency_war._cw_helpers import (
     cw4_members as _members,
 )
 from test.sr_od.application.currency_war._cw_helpers import (
@@ -45,14 +48,16 @@ from test.sr_od.application.currency_war._cw_helpers import (
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.data.cw_shop_odds import refresh_prob
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    BenchSlot,
+    Unit,
+)
 from sr_od.application.currency_war.kernel.cw_intention import (
     pair_target_comp,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
-    BenchChar,
     CwActionRefreshShopParam,
-    CwSimFrame,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
     shop,
@@ -68,27 +73,9 @@ _COMP_PAIR = ('仙舟', '持续伤害')
 _ROUND = 2
 
 
-def _item(slot: int = 1) -> BenchChar:
-    """占位件(假环境同款形态):SIFT 不可读 → char_id=''、1★。"""
-    return BenchChar(slot=slot, char_id='', star=1, is_item_slot=True)
-
-
-def _entries(bench: list):
-    """BenchChar 种子 → 容器占席条目(P4 载体迁移:直接调用面收容器形,
-    帧种子保持 legacy——CwSimFrame 属 P5 辖域)。"""
-    from sr_od.application.currency_war.kernel.cw_game_state import (
-        BenchSlot,
-        Unit,
-    )
-    out = []
-    for b in bench:
-        if getattr(b, 'is_item_slot', False):
-            out.append(BenchSlot(kind='supply_box', unit=None))
-        else:
-            out.append(BenchSlot(kind='unit', unit=Unit(
-                char_id=b.char_id or '', star=b.star or 1,
-                slot=b.slot)))
-    return out
+def _item(slot: int = 1) -> BenchSlot:
+    """占位件(kind 直种,supply_box 五分类;SIFT 不可读形态)。"""
+    return BenchSlot(kind='supply_box', unit=None)
 
 
 # ===== 判定直调真值表(shop.p92_seat_recoverable)=====
@@ -96,15 +83,14 @@ def _entries(bench: list):
 
 class TestP92SeatRecoverableDirect:
 
-    def _frame(self, bench: list[BenchChar]):
+    def _frame(self, bench: list):
         comp = pair_target_comp(_COMP_PAIR)
         k = tuple(line_members(comp))
         s = _session(comp, plane_lengths=[9, 5, 7], line_state=False)
-        st = CwSimFrame(gold=100, level=4, plane=1, round_num=_ROUND,
-                       node_type='reward', hp=100)
-        st.bench = list(bench)
-        st.deployed = [_bc('前线', slot=1)]
-        return s, st, k
+        axes = {'gold': 100, 'level': 4, 'plane': 1, 'round_num': _ROUND,
+                'node': 'reward', 'hp': 100, 'bench': list(bench),
+                'front_row': [Unit(char_id='前线', star=1, slot=1)]}
+        return s, axes, k
 
     def test_truth_table_fuel_vs_empty(self):
         """有可变现 1★ 燃料件 ⇒ True;无可变现件(全 2★)⇒ False。"""
@@ -115,32 +101,32 @@ class TestP92SeatRecoverableDirect:
         filler2 = next(n for n, c in CHARACTERS.items()
                        if n not in k and n != fuel
                        and not getattr(c, 'bench_effect', ''))
-        s, st, k = self._frame([_bc(fuel, star=1, slot=1)])
+        s, axes, k = self._frame([_bc(fuel, star=1, slot=1)])
         assert shop.p92_seat_recoverable(
-            s, _entries(st.bench), k, _bsb(st), cap_hold=None,
+            s, axes['bench'], k, _bsb(**axes), cap_hold=None,
             current_round=_ROUND, defer_names=frozenset()) is True
-        s2, st2, k2 = self._frame([_bc(filler2, star=2, slot=1)])
+        s2, axes2, k2 = self._frame([_bc(filler2, star=2, slot=1)])
         assert shop.p92_seat_recoverable(
-            s2, _entries(st2.bench), k2, _bsb(st2), cap_hold=None,
+            s2, axes2['bench'], k2, _bsb(**axes2), cap_hold=None,
             current_round=_ROUND, defer_names=frozenset()) is False
 
     def test_placeholder_only_false_t18_gate_inherited(self):
         """仅占位件帧 ⇒ False:收窄判定经 fuel_sell_candidates 单一源
         自动继承占位件滤门(收窄不复活占位件高估灶面)。"""
-        s, st, k = self._frame([_item(slot=1)])
+        s, axes, k = self._frame([_item(slot=1)])
         assert shop.p92_seat_recoverable(
-            s, _entries(st.bench), k, _bsb(st), cap_hold=None,
+            s, axes['bench'], k, _bsb(**axes), cap_hold=None,
             current_round=_ROUND, defer_names=frozenset()) is False
 
 
 # ===== 集成行为差锁(P92 门经 decide_shop_screen)=====
 
 
-def _p92_frame(extra_bench_last: BenchChar) -> tuple[CwSimFrame, object, str]:
-    """P92 集成帧(直达构造;缺员腾席臂隔离声明):
+def _p92_frame(extra_bench_last: BenchSlot) -> tuple[dict, object, str]:
+    """P92 集成种子轴(直达构造;缺员腾席臂隔离声明):
 
     - gold=100 > g*=50 过 r1 账/r2 预算门直达 P92 位;店空 ⇒ 其余
-      买入臂全死;
+      买入臂全死(feed 配方在屏空牌面);
     - **全员 owned(缺员 = ∅)**:w 以 1★×1 在席 = 臂①囤腿候选
       (_cnt(m,1)==1 ∧ _cnt(m,2)==0,lv4 可刷 0.65 ∧ 可负担)——② 的
       活性只取决于席可落。缺员置空是隔离关键:缺员 ∧ 席满帧会先触发
@@ -158,27 +144,27 @@ def _p92_frame(extra_bench_last: BenchChar) -> tuple[CwSimFrame, object, str]:
     rest = [m for m in members if m != w]
     bench_rest_len = min(len(rest), BENCH_CAPACITY - 3)
     bench_rest = [_bc(m, star=2, slot=1) for m in rest[:bench_rest_len]]
-    # 全员 owned:主力超出席面的成员入 deployed(测试投影帧,只读消费)
-    st_deployed = [_bc(m, star=2, slot=i + 1)
+    # 全员 owned:主力超出席面的成员入上阵行(测试投影种子,只读消费)
+    st_deployed = [Unit(char_id=m, star=2, slot=i + 1)
                    for i, m in enumerate(rest[bench_rest_len:])]
     assert st_deployed, '锁前提:线成员规模变动(全员 owned 需要上阵位)'
+    last_name = (extra_bench_last.unit.char_id
+                 if extra_bench_last.unit is not None else '') or ''
     pool = iter(n for n, c in CHARACTERS.items()
                 if n not in members and not getattr(c, 'bench_effect', '')
-                and n != (extra_bench_last.char_id or ''))
+                and n != last_name)
     fill = BENCH_CAPACITY - 2 - len(bench_rest)
     assert fill >= 1, '锁前提:线成员过多(席面装不下)'
     s = _session(comp, plane_lengths=[9, 5, 7], line_state=False)
-    st = CwSimFrame(gold=100, level=4, plane=1, round_num=_ROUND,
-                   node_type='reward', hp=100)
-    st.deployed = st_deployed
     bench = [_bc(w, star=1, slot=1)]
     bench += bench_rest
     bench += [_bc(next(pool), star=2, slot=1) for _ in range(fill)]
     bench.append(extra_bench_last)
     assert len(bench) == BENCH_CAPACITY   # 席满 = bench_free 0 的承载前提
-    st.bench = bench
-    st.shop = []
-    return st, s, w
+    axes = {'gold': 100, 'level': 4, 'plane': 1, 'round_num': _ROUND,
+            'node': 'reward', 'hp': 100, 'bench': bench,
+            'front_row': st_deployed}
+    return axes, s, w
 
 
 class TestP92AssemblyBehaviorDiff:
@@ -187,8 +173,9 @@ class TestP92AssemblyBehaviorDiff:
         """对照锁:同构帧唯一「可腾件」为占位件 ⇒ 两视图同空 ⇒ 席不可落
         ⇒ 全通道死 ⇒ 拦刷 + 分键开火(收窄不复活占位件高估灶面;
         旧代理与收窄判定在该帧同判,零行为差)。"""
-        st, s, _w = _p92_frame(_item(slot=BENCH_CAPACITY))
-        acts = _decide(st, s)
+        axes, s, _w = _p92_frame(_item(slot=BENCH_CAPACITY))
+        cw4_gs(s, **axes)
+        acts = _decide(s)
         assert not [a for a in acts if isinstance(a, CwActionRefreshShopParam)], acts
         cnt = state_of(s).cw4_counters
         assert cnt.get('p92_no_buy_refresh_blocked', 0) >= 1

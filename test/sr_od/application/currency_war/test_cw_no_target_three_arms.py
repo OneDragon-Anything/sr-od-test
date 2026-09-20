@@ -7,9 +7,9 @@
   (§3 定理 A/B1-B5/C/M;§4 必答六件终裁;§6 落码批增量条款九件)。
 
 锁编号对齐:正本 §5.2 锁 1-7 + 证明批 §6 增量 1-9,逐测试 docstring 引出处。
-构帧口径:CwSimFrame 缺省 hp=0 ⇒ ``p2_supply_horizon``=0 ⇒ 全线 G=0(机器
-判死形态的自然构帧);甲臂判活帧显式给 hp 并授满某线全部核心(G=1.0)。
-判读注册表事实(cov/声明序)一律运行时直调派生,不写死清单。
+构种子口径:hp 缺省 60;判死形态帧显式 hp=15/0 ⇒ ``p2_supply_horizon``
+趋 0 ⇒ 全线 G=0(机器判死形态);甲臂判活帧显式给 hp 并授满某线全部
+核心(G=1.0)。判读注册表事实(cov/声明序)一律运行时直调派生,不写死清单。
 """
 from __future__ import annotations
 
@@ -20,7 +20,6 @@ from test.sr_od.application.currency_war._cw_helpers import (
     cw4_box as _kbridge,
 )
 from test.sr_od.application.currency_war._cw_helpers import (
-    cw4_feed,
     cw4_gs,
 )
 
@@ -28,6 +27,10 @@ from sr_od.application.currency_war.kernel import cw_intention
 from sr_od.application.currency_war.kernel.cw_comps import (
     CORE_SINGLE_CARD_REGISTRY,
     get_comp,
+)
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    BenchSlot,
+    Unit,
 )
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
@@ -46,10 +49,8 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
-    BenchChar,
     CwActionBuyCardParam,
     CwActionRefreshShopParam,
-    CwSimFrame,
     ShopCard,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import mandate, shop
@@ -78,15 +79,19 @@ def _session(ist: IntentionState | None = None) -> StrategySession:
 
 def _state(gold: int = 45, level: int = 5, hp: int = 60,
            shop_cards: list[ShopCard] | None = None,
-           bench: list[BenchChar] | None = None,
-           deployed: list[BenchChar] | None = None,
-           round_num: int = 2) -> CwSimFrame:
-    st = CwSimFrame(gold=gold, level=level, round_num=round_num, hp=hp)
-    st.plane = 2
-    st.shop = shop_cards if shop_cards is not None else []
-    st.bench = bench if bench is not None else []
-    st.deployed = deployed if deployed is not None else []
-    return st
+           bench: list[BenchSlot] | None = None,
+           deployed: list[Unit] | None = None,
+           round_num: int = 2) -> dict:
+    """三臂场景种子轴(返回 = 桥/feed 两配方的公共 kwargs;deployed =
+    前排行域 Units,旧槽表首 4 位即前排的语义经显式行表达)。"""
+    axes: dict = {'gold': gold, 'level': level, 'round_num': round_num,
+                  'hp': hp, 'plane': 2,
+                  'shop': shop_cards if shop_cards is not None else []}
+    if bench is not None:
+        axes['bench'] = bench
+    if deployed is not None:
+        axes['front_row'] = deployed
+    return axes
 
 
 def _card(name: str, cost: int = 3, star: int = 1, x: int = 0) -> ShopCard:
@@ -95,19 +100,21 @@ def _card(name: str, cost: int = 3, star: int = 1, x: int = 0) -> ShopCard:
     return ShopCard(x=x, name=name, cost=cost, star=star)
 
 
-def _bc(name: str, star: int = 1, slot: int = 1) -> BenchChar:
-    return BenchChar(slot=slot, char_id=name, star=star)
+def _bc(name: str, star: int = 1, slot: int = 1) -> BenchSlot:
+    """占席条目(容器形状;bench/燃料候选域直构面)。"""
+    return BenchSlot(kind='unit', unit=Unit(char_id=name, star=star,
+                                            slot=slot))
 
 
-def _decide(st: CwSimFrame, sess: StrategySession):
-    return shop.decide_shop_action(cw4_gs(st, sess), sess, _cfg())
+def _decide(st: dict, sess: StrategySession):
+    return shop.decide_shop_action(cw4_gs(sess, **st), sess, _cfg())
 
 
 def _ct(sess: StrategySession) -> dict:
     return state_of(sess).cw4_counters or {}
 
 
-def _own(*names: str) -> list[BenchChar]:
+def _own(*names: str) -> list[BenchSlot]:
     return [_bc(n, slot=i + 1) for i, n in enumerate(names)]
 
 
@@ -125,13 +132,13 @@ class TestArmAStrongGate:
         arm_a_live_direction 扫描支,F-4 指针修正后落位)。"""
         comp = get_comp('希儿量子')
         st = _state(hp=100)
-        st.bench = _own(*comp.core_chars)
+        st['bench'] = _own(*comp.core_chars)
         ist = IntentionState()
-        assert arm_a_live_direction(_kbridge(st), ist) == '希儿量子'
+        assert arm_a_live_direction(_kbridge(**st), ist) == '希儿量子'
         # (原「独立重算对拍」段删:按 cw_intention 内部谓词链重算候选集再
         #  断言同名 = 复刻被测逻辑形态,删被测函数该段照样绿;强锁门行为
         #  面由上断言与 fallback 两腿承重。)
-        kfb, tok = k_empty_window_fallback(_kbridge(st), ist)
+        kfb, tok = k_empty_window_fallback(_kbridge(**st), ist)
         assert tok == 'p2plus'
         chars, _eq = cw_intention._line_hoard(comp)
         assert kfb == frozenset(chars)
@@ -161,39 +168,39 @@ class TestArmAStrongGate:
         if case == 'dead-g0-no-hoard':
             st = _state()
             ist = IntentionState()
-            arms = no_target_arms(_kbridge(st), ist)
+            arms = no_target_arms(_kbridge(**st), ist)
             assert arms.direction == ''
             assert arms.char_targets == frozenset()
-            ht = hoard_target_set(_kbridge(st), ist)
+            ht = hoard_target_set(_kbridge(**st), ist)
             assert ht.mode == 'fallback_hold' and not ht.char_targets
-            kfb, tok = k_empty_window_fallback(_kbridge(st), ist)
+            kfb, tok = k_empty_window_fallback(_kbridge(**st), ist)
             assert kfb == frozenset() and tok == 'p2plus'
         elif case == 'dead-partial-g-no-hoard':
             reg = DEFAULT_REGISTRY
             st = _state(hp=15, level=7)
             cores = [m for m in get_comp('绯英欢愉').core_chars
                      if m != '瓦尔特']
-            st.bench = _own(*cores)
+            st['bench'] = _own(*cores)
             ist = IntentionState()
-            g = line_completion_feasibility(_kbridge(st), get_comp('绯英欢愉'),
+            g = line_completion_feasibility(_kbridge(**st), get_comp('绯英欢愉'),
                                             None, reg, None)
             assert 0 < g <= reg.revoke_miss_tolerance_eps
-            assert arm_a_live_direction(_kbridge(st), ist) == ''
+            assert arm_a_live_direction(_kbridge(**st), ist) == ''
         elif case == 'p1-bands-and-weak':
             st1 = _state(hp=100)
-            st1.plane = 1
+            st1['plane'] = 1
             ist1 = IntentionState()
-            assert no_target_arms(_kbridge(st1), ist1).direction == ''
-            assert no_target_arms(_kbridge(st1), ist1).hub_names == ()
+            assert no_target_arms(_kbridge(**st1), ist1).direction == ''
+            assert no_target_arms(_kbridge(**st1), ist1).hub_names == ()
             # p1_gap 带回退 = 四体系引擎件全集(既有判据族,不入三臂)
-            kfb, tok = k_empty_window_fallback(_kbridge(st1), ist1)
+            kfb, tok = k_empty_window_fallback(_kbridge(**st1), ist1)
             assert tok == 'p1_gap' and kfb
             stw = _state()
             istw = IntentionState()
             istw.phase = 'weak'
-            assert no_target_arms(_kbridge(stw), istw) == \
+            assert no_target_arms(_kbridge(**stw), istw) == \
                 cw_intention.NoTargetArms('', frozenset())
-            assert hoard_target_set(_kbridge(stw), istw).mode == 'weak' \
+            assert hoard_target_set(_kbridge(**stw), istw).mode == 'weak' \
                 # 跨线骨架分带
         else:
             assert case == 'locked-frame-dormant'
@@ -201,7 +208,7 @@ class TestArmAStrongGate:
             ist.phase = 'locked'
             ist.locked_comp = '希儿量子'
             st = _state(shop_cards=[_card('花火', cost=2)])
-            assert no_target_arms(_kbridge(st), ist).hub_names == ()
+            assert no_target_arms(_kbridge(**st), ist).hub_names == ()
             sess = _session(ist)
             state_of(sess).target_comp = get_comp('希儿量子')
             act = _decide(st, sess)
@@ -239,18 +246,18 @@ class TestHubEligibility:
         # —— 计数边界 ——
         st = _state()
         ist = IntentionState()
-        assert len(hub_covered_lines(_kbridge(st), ist, '希儿')) == 1
-        assert '希儿' not in hub_option_names(_kbridge(st), ist)
-        assert len(hub_covered_lines(_kbridge(st), ist, '花火')) >= 2
-        hubs = hub_option_names(_kbridge(st), ist)
+        assert len(hub_covered_lines(_kbridge(**st), ist, '希儿')) == 1
+        assert '希儿' not in hub_option_names(_kbridge(**st), ist)
+        assert len(hub_covered_lines(_kbridge(**st), ist, '花火')) >= 2
+        hubs = hub_option_names(_kbridge(**st), ist)
         assert '花火' in hubs and hubs
         # —— 银狼反例 + 双通道互斥 ——
         st_y = _state(shop_cards=[_card('银狼LV.999', cost=5)])
         ist_y = IntentionState()
-        assert len(hub_covered_lines(_kbridge(st_y), ist_y,
+        assert len(hub_covered_lines(_kbridge(**st_y), ist_y,
                                      '银狼LV.999')) == 2
         assert '银狼LV.999' in CORE_SINGLE_CARD_REGISTRY
-        assert '银狼LV.999' not in hub_option_names(_kbridge(st_y), ist_y)
+        assert '银狼LV.999' not in hub_option_names(_kbridge(**st_y), ist_y)
         sess = _session(ist_y)
         act = _decide(st_y, sess)
         assert isinstance(act, CwActionBuyCardParam)
@@ -303,7 +310,7 @@ class TestHubEmission:
         # 非合并素材:副本在部署面(复核观察变体:核对面 = bench∪deployed
         # 全场域,same_star_count 单一源计数)
         st_d = _state(shop_cards=[_card('花火', cost=2)],
-                      deployed=[_bc('花火', star=1, slot=1)])
+                      deployed=[Unit(char_id='花火', star=1, slot=1)])
         sess_d = _session(IntentionState())
         act_d = _decide(st_d, sess_d)
         assert not isinstance(act_d, CwActionBuyCardParam)
@@ -355,7 +362,8 @@ class TestHubEmission:
         from sr_od.application.currency_war.kernel.cw_vocab import (
             merge_material_stale_names,
         )
-        assert merge_material_stale_names(st.bench, st.deployed) == ('花火',)
+        assert merge_material_stale_names(st['bench'],
+                                          st.get('front_row')) == ('花火',)
         assert not refund_full_star_ok(2, 2)   # 2★ 出口面(吞升后资格消失)
         sess = _session(IntentionState())
         act = _decide(st, sess)
@@ -392,12 +400,12 @@ class TestHubEmission:
         # ——fresh_buys 只保当轮,攻击报告「跨轮自动失效」形态;非并集时
         # 该名落回凑息/腾席燃料资格 = 期权被己方卖面销毁)
         st_next = _state(round_num=3)
-        cw4_feed(sess, st_next)
+        cw4_gs(sess, **st_next)
         excl_next = sell_gate.sell_exclusions(
             sess, (), channel='interest', current_round=3)
         assert '瓦尔特' in excl_next
         fuel = mandate.fuel_sell_candidates(
-            [_bc('瓦尔特', slot=1)], (), state=_kbridge(st_next),
+            [_bc('瓦尔特', slot=1)], (), state=_kbridge(**st_next),
             exclude_names=excl_next)
         assert not fuel
         # 面③:读口单一源(登记域/身份段/部署域三面同源)
@@ -427,8 +435,8 @@ class TestArbitration:
         不写死);甲臂成员集含缺员件供 M2 竞争。"""
         comp = get_comp(comp_name)
         st = _state(gold=gold, hp=100, shop_cards=shop_cards)
-        st.bench = _own(*comp.core_chars)
-        assert arm_a_live_direction(_kbridge(st), IntentionState()) == comp_name
+        st['bench'] = _own(*comp.core_chars)
+        assert arm_a_live_direction(_kbridge(**st), IntentionState()) == comp_name
         return st
     def test_layer1_dominance_and_shop_order_independence(self, monkeypatch):
         """第一层支配序一锁(合并原 test_layer1_covering_hub_beats_single_
@@ -537,8 +545,8 @@ class TestArbitration:
                                 _card('三月七', cost=1, x=1)])
         ist = IntentionState()
         assert char_declaration_index('三月七') < char_declaration_index('花火')
-        assert len(hub_covered_lines(_kbridge(st), ist, '三月七')) \
-            < len(hub_covered_lines(_kbridge(st), ist, '花火'))
+        assert len(hub_covered_lines(_kbridge(**st), ist, '三月七')) \
+            < len(hub_covered_lines(_kbridge(**st), ist, '花火'))
         sess = _session(ist)
         act = _decide(st, sess)
         assert isinstance(act, CwActionBuyCardParam) and act.reason == 'hub_option_buy'
@@ -546,17 +554,17 @@ class TestArbitration:
         # —— 甲臂漏授角 ——
         st_c = _state(hp=15, level=5, round_num=9,
                       shop_cards=[_card('绯英', cost=3)])
-        st_c.bench = _own('绯英')
+        st_c['bench'] = _own('绯英')
         ist_c = IntentionState()
-        arms = no_target_arms(_kbridge(st_c), ist_c)
+        arms = no_target_arms(_kbridge(**st_c), ist_c)
         assert arms.direction == ''
         assert arms.corner_names == ('绯英欢愉',)
         # R2 双门分歧:同帧同输入,缓锁门 core 可见短路放行、强锁门判死
         reg = DEFAULT_REGISTRY
-        vis = cw_intention._visible_chars(_kbridge(st_c))
+        vis = cw_intention._visible_chars(_kbridge(**st_c))
         sig = cw_intention.IntentionSignal(3, 'core_card', '绯英欢愉', '', 1.0)
-        assert cw_intention._p2_signal_supply_ok(st_c, sig, None, reg, vis)
-        assert line_completion_feasibility(_kbridge(st_c),
+        assert cw_intention._p2_signal_supply_ok(_kbridge(**st_c), sig, None, reg, vis)
+        assert line_completion_feasibility(_kbridge(**st_c),
                                            get_comp('绯英欢愉'), None,
                                            reg, None) \
             <= reg.revoke_miss_tolerance_eps
@@ -608,10 +616,6 @@ class TestArmCHoldDefault:
         assert 'must_spend_r1_account_yielded' not in ct_ms
         # —— 升级不冻结面 ——
         # P4 容器形:MandateFrame 直构面 = 占席条目 + 行域 Unit
-        from sr_od.application.currency_war.kernel.cw_game_state import (
-            BenchSlot,
-            Unit,
-        )
         from sr_od.application.currency_war.kernel.cw_vocab import (
             CwActionLevelUpParam,
         )
@@ -624,14 +628,12 @@ class TestArmCHoldDefault:
                                        slot=1))],
             deployed=deployed, deploy_cap=4, node_type='battle',
             stop_flag=False, k_members=(), round_num=2)
-        st_m3 = CwSimFrame(gold=80, level=4, hp=30, plane=2, round_num=2)
-        st_m3.level_readable = True
-        st_m3.deploy_cap = 4
-        st_m3.node_type = 'battle'
+        st_m3 = {'gold': 80, 'level': 4, 'hp': 30, 'plane': 2,
+                 'round_num': 2, 'node': 'battle', 'deploy_cap': 4}
         sess_m3 = SimpleNamespace(cw4_counters={}, target_comp=None,
                                   v3_intention=IntentionState(),
                                   active_strategies=[])
-        out = mandate.run_mandate(frame, sess_m3, state=_kbridge(st_m3))
+        out = mandate.run_mandate(frame, sess_m3, state=_kbridge(**st_m3))
         assert [e for e in out if isinstance(e.action, CwActionLevelUpParam)], \
             '丙臂守息不得冻结升级既有授权(发展优先不变量,01 §8-2)'
 
@@ -651,8 +653,8 @@ class TestKMembersDownstream:
                                if m not in comp.core_chars)[0]
         st = _state(hp=100, shop_cards=[_card(missing_piece, cost=1),
                                         _card('注册表外散件Z', cost=1, x=1)])
-        st.bench = _own(*comp.core_chars)
-        st.deployed = [_bc('板上件锚', slot=1)]   # 空板止损守卫前置
+        st['bench'] = _own(*comp.core_chars)
+        st['front_row'] = [Unit(char_id='板上件锚', star=1, slot=1)]   # 空板止损守卫前置(前排行域 Unit)
         sess = _session(IntentionState())
         act = _decide(st, sess)
         assert isinstance(act, CwActionBuyCardParam) and act.reason == 'm2_line_member'
@@ -663,10 +665,6 @@ class TestKMembersDownstream:
         assert str(rejects.get('注册表外散件Z', '')).startswith('non_line')
         # 卖免面直核:燃料候选 = 非成员(成员被 zero_overlap 排除集挡住;
         # P4 容器形:候选域 = 占席条目,身份经解包口)
-        from sr_od.application.currency_war.kernel.cw_game_state import (
-            BenchSlot,
-            Unit,
-        )
         from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
             mandate as m,
         )
@@ -676,7 +674,7 @@ class TestKMembersDownstream:
                              unit=Unit(char_id=name, star=1, slot=slot))
         fuel = m.fuel_sell_candidates(
             [_entry(missing_piece, 8), _entry('注册表外散件Y', 9)],
-            tuple(sorted(chars)), state=_kbridge(st))
+            tuple(sorted(chars)), state=_kbridge(**st))
         names = [m._slot_cid(c) for c in fuel]
         assert '注册表外散件Y' in names
         assert missing_piece not in names

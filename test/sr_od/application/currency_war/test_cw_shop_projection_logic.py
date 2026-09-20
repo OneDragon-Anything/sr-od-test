@@ -12,7 +12,12 @@
 
 口径申报:payload 期望按槽序 content 紧缩视图 (idx, name, star, cost)
 冻结(离屏 None 归一空表 = 旧紧缩列表等价读法);bench 期望按槽位
-占用签名 (idx, char_id, star) 冻结;xp 未读域按合成初值钉(None)。
+占用签名 (idx, char_id, star) 冻结;xp 未读域按种子缺席钉(None)。
+
+种子载体(benchchar-retirement P5):原 CwSimFrame+合成口路径已退役,
+场景种子 = 容器域直写(cw4_gs 裸帧配方:节点不写、空店离屏,与原
+合成口域覆盖集逐域一致);投影输出逐字节保形凭据 = 改前/改后探针
+diff 为空(.debug/temp/p5_m1/)。
 """
 from __future__ import annotations
 
@@ -24,7 +29,7 @@ from test.sr_od.application.currency_war._cw_helpers import (
     cw4_card as _card,
 )
 from test.sr_od.application.currency_war._cw_helpers import (
-    cw4_state as _state,
+    cw4_gs,
 )
 
 from sr_od.application.currency_war.kernel.cw_action_report import (
@@ -37,9 +42,7 @@ from sr_od.application.currency_war.kernel.cw_action_report import (
 from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     ShopActionExecuted,
-    bench_slots_to_legacy,
     game_state_of,
-    synthesize_from_game_state,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionBuyCardParam,
@@ -47,7 +50,6 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionLevelUpShopParam,
     CwActionRefreshShopParam,
     CwActionSellBenchParam,
-    bench_occupied,
 )
 
 # 改写依据(分诊):写入者登记面随「商店单动作循环收编」演进——
@@ -57,11 +59,10 @@ _SIG = ChannelSig(family='logic_action', actor='CwScreenBuyCards',
                   mode='compute', group_id='act:CwScreenBuyCards@1')
 
 
-def _gs_of(st):
-    """CwSimFrame 桩帧 → 容器(sim 合成口;测试/生产同一条喂入通道)。"""
-    gs = game_state_of(None)
-    synthesize_from_game_state(gs, st)
-    return gs
+def _gs_of(**axes):
+    """M1 场景种子(原裸帧合成配方承接:节点整域不写、空店离屏;
+    域覆盖集与原合成口逐域一致)。"""
+    return cw4_gs(node_fill=False, shop_screen='off', **axes)
 
 
 def _content_of(gs):
@@ -78,9 +79,12 @@ def _content_of(gs):
 
 def _bench_slots(gs):
     """bench 槽位占用签名,槽序 (idx, char_id, star);空槽跳过。"""
-    return [(i, b.char_id, b.star)
-            for i, b in enumerate(bench_slots_to_legacy(gs.bench.value))
-            if b is not None]
+    view = gs.bench.value
+    if view is None:
+        return []
+    return [(i, s.unit.char_id, s.unit.star)
+            for i, s in enumerate(view.slots)
+            if s.kind != 'empty' and s.unit is not None]
 
 
 def _report_action(gs, action, executed=None):
@@ -115,7 +119,7 @@ class TestM5Registration:
 
     def test_wrong_family_sig_rejected(self):
         """渠道签名纪律:非 logic_action 族显式炸(§3.2.4 硬约束 2)。"""
-        gs = _gs_of(_state(gold=30, shop=[_card('希儿')]))
+        gs = _gs_of(gold=30, shop=[_card('希儿')])
         with pytest.raises(ValueError):
             report_action_buy_card_param(
                 gs, CwActionBuyCardParam(card=_card('希儿')),
@@ -130,8 +134,7 @@ class TestM1DirectLock:
 
     def test_buy_simple_placement(self):
         """简单买:gold −单价 + bench 落位(首空槽)+ payload −该张。"""
-        st = _state(gold=30, shop=[_card('希儿', cost=3)])
-        gs = _gs_of(st)
+        gs = _gs_of(gold=30, shop=[_card('希儿', cost=3)])
         _report_action(
             gs, CwActionBuyCardParam(card=_card('希儿', cost=3)),
             ShopActionExecuted(bought_count=1))
@@ -140,7 +143,7 @@ class TestM1DirectLock:
             'shop payload: 期望全空(所购槽置 empty,5 槽无货)'
         assert _bench_slots(gs) == [(0, '希儿', 1)], \
             'bench: 期望落位首空槽(槽1,1★希儿)'
-        assert gs.xp.value is None, 'xp: 买腿零写(未读域保持合成初值 None)'
+        assert gs.xp.value is None, 'xp: 买腿零写(未读域保持种子初值 None)'
 
     # (收口整删)原 test_buy_triggers_merge「合成买(2 副本在席 + 买第
     #  3 张)」删:与 test_full_bench_merge_buy_k(满栏合成 k=2)和
@@ -152,14 +155,12 @@ class TestM1DirectLock:
         (本口零落位)。"""
         bench = [_bc(f'c{i}', star=1, slot=i + 1) for i in range(8)]
         bench.append(_bc('希儿', star=1, slot=9))
-        st = _state(gold=60, shop=[_card('希儿', cost=3, x=0),
-                                   _card('希儿', cost=3, x=1)],
-                    bench=bench)
-        gs = _gs_of(st)
+        cards = [_card('希儿', cost=3, x=0), _card('希儿', cost=3, x=1)]
+        gs = _gs_of(gold=60, shop=cards, bench=bench)
         from sr_od.application.currency_war.kernel.cw_vocab import (
             merge_buy_k,
         )
-        k = merge_buy_k('希儿', 1, st.bench, st.deployed, st.shop)
+        k = merge_buy_k('希儿', 1, bench, None, cards)
         _report_action(
             gs, CwActionBuyCardParam(card=_card('希儿', cost=3)),
             ShopActionExecuted(bought_count=k))
@@ -170,7 +171,7 @@ class TestM1DirectLock:
         assert _bench_slots(gs) == (
             [(i, f'c{i}', 1) for i in range(8)] + [(8, '希儿', 2)]), \
             'bench: 期望满栏零落位,3 副本合 1 升 2★(在席副本槽9)'
-        assert gs.xp.value is None, 'xp: 买腿零写(未读域保持合成初值 None)'
+        assert gs.xp.value is None, 'xp: 买腿零写(未读域保持种子初值 None)'
 
     def test_merge_buy_single_report_two_forms(self):
         """合成买单口两形态直锁(升星腿内聚 report_action_buy_card_param 后,
@@ -179,50 +180,48 @@ class TestM1DirectLock:
         合成):非满栏合成买(2 副本在席买第 3 张 → 落位即合成升 2★)与
         满栏合成买(k=2,3 副本合 1 升 2★ 在席副本槽9)。gold −单价×k 与
         payload −k 由同一单口携带(原「腿零写」申报随两写合一消亡)。"""
-        for title, st, act, k, bench_expect in (
+        for title, axes, act, k, bench_expect in (
             ('非满栏合成买',
-             _state(gold=30, shop=[_card('希儿', cost=3)],
-                    bench=[_bc('希儿', star=1, slot=1),
-                           _bc('希儿', star=1, slot=2)]),
+             {'gold': 30, 'shop': [_card('希儿', cost=3)],
+              'bench': [_bc('希儿', star=1, slot=1),
+                        _bc('希儿', star=1, slot=2)]},
              CwActionBuyCardParam(card=_card('希儿', cost=3)),
              1, [(0, '希儿', 2)]),
             ('满栏合成买(k=2)',
-             _state(gold=60, shop=[_card('希儿', cost=3, x=0),
+             {'gold': 60, 'shop': [_card('希儿', cost=3, x=0),
                                    _card('希儿', cost=3, x=1)],
-                    bench=[_bc(f'c{i}', star=1, slot=i + 1)
-                           for i in range(8)] + [_bc('希儿', star=1, slot=9)]),
+              'bench': [_bc(f'c{i}', star=1, slot=i + 1)
+                        for i in range(8)] + [_bc('希儿', star=1, slot=9)]},
              CwActionBuyCardParam(card=_card('希儿', cost=3)),
              2, [(i, f'c{i}', 1) for i in range(8)] + [(8, '希儿', 2)]),
         ):
-            gs = _gs_of(st)
+            gs = _gs_of(**axes)
             seq0 = gs.write_seq
             out = report_action_buy_card_param(gs, act, _SIG, executed=None)
             assert out.applied and out.bought_count == k, \
                 f'{title}: executed 缺 = 理想执行自算 k'
             assert _bench_slots(gs) == bench_expect, \
                 f'{title}: bench 槽位期望 {bench_expect}'
-            assert gs.gold.value == st.gold - 3 * k, f'{title}: gold −单价×k'
+            assert gs.gold.value == axes['gold'] - 3 * k, f'{title}: gold −单价×k'
             assert _content_of(gs) == [], f'{title}: payload −k 张'
             assert gs.write_seq > seq0, f'{title}: 升星腿整表直写'
 
     def test_sell_bench_refund(self):
         """卖备战席:bench −该牌 + gold +退款(sell_refund 锚)。"""
-        st = _state(gold=10, shop=[], bench=[_bc('希儿', star=1, slot=1)])
-        gs = _gs_of(st)
+        gs = _gs_of(gold=10, shop=[], bench=[_bc('希儿', star=1, slot=1)])
         _report_action(gs, CwActionSellBenchParam(bench_idx=0, income=3))
         assert gs.gold.value == 13, \
             'gold: 期望 10 +退款 3(1★ 希儿 sell_refund 现算)'
         assert _content_of(gs) == [], \
             'shop payload: 期望空(shop 空表帧 = 离屏,零写透传)'
         assert _bench_slots(gs) == [], 'bench: 期望卖出槽置空(9 槽全空)'
-        assert gs.xp.value is None, 'xp: 卖腿零写(未读域保持合成初值 None)'
+        assert gs.xp.value is None, 'xp: 卖腿零写(未读域保持种子初值 None)'
 
     def test_levelup_clicks_and_level_cross(self):
         """升级:击数×单击价扣金 + xp/level 推进(跨档结转 + level 跨档
         直写,与 prep 腿同款;域集扩申报 = SHOP_PROJECTION_DOMAINS 登记
         面);满级腿(并入):lv10 购买无效,零金零经验零写。"""
-        st = _state(gold=30, shop=[], level=3, xp=(2, 6))
-        gs = _gs_of(st)
+        gs = _gs_of(gold=30, shop=[], level=3, xp=(2, 6))
         _report_action(
             gs, CwActionLevelUpShopParam(cost=4), ShopActionExecuted(levelup_clicks=1))
         assert gs.gold.value == 26, 'gold: 期望 30 −单击价 4×1 击 = 26'
@@ -237,8 +236,7 @@ class TestM1DirectLock:
             'level: 跨档直写 3→4(xp_apply_clicks 单一源;等级滞留会让' \
             '下一击按旧级重算 = 花金零等级推进)'
         # 满级腿(并入,原 test_levelup_full_cap_noop):零金零经验零写
-        st_cap = _state(gold=30, shop=[], level=10, xp=(0, 4))
-        gs_cap = _gs_of(st_cap)
+        gs_cap = _gs_of(gold=30, shop=[], level=10, xp=(0, 4))
         _report_action(
             gs_cap, CwActionLevelUpShopParam(cost=4),
             ShopActionExecuted(levelup_clicks=1))
@@ -257,8 +255,7 @@ class TestM1DirectLock:
         from sr_od.application.currency_war.kernel.cw_game_state import (
             max_units_of,
         )
-        st = _state(gold=30, shop=[], level=5, xp=(18, 20))
-        gs = _gs_of(st)
+        gs = _gs_of(gold=30, shop=[], level=5, xp=(18, 20))
         assert max_units_of(gs) == 5, '前置:cap 地板 = 滞留级 5'
         _report_action(
             gs, CwActionLevelUpShopParam(cost=4), ShopActionExecuted(levelup_clicks=2))
@@ -273,16 +270,13 @@ class TestM1DirectLock:
         """门槛边界:未达门槛零跨档(level 不写,xp 照推进);域级跳写对:
         level 未读帧推进对整体跳写(禁缺省 1 参与推进计算),gold 域
         独立照写。"""
-        st = _state(gold=30, shop=[], level=5, xp=(15, 20))
-        gs = _gs_of(st)
+        gs = _gs_of(gold=30, shop=[], level=5, xp=(15, 20))
         _report_action(
             gs, CwActionLevelUpShopParam(cost=4), ShopActionExecuted(levelup_clicks=1))
         assert gs.level.value == 5, 'level: 15+4=19 < 门槛 20 零跨档不写'
         assert gs.xp.value == (19, 20), 'xp: 推进到位 (19, 20)'
-        # 域级跳写对:level 未读(level_readable=False 合成跳写)+ xp 已读
-        st_nolv = _state(gold=30, shop=[], xp=(15, 20))
-        st_nolv.level_readable = False
-        gs2 = _gs_of(st_nolv)
+        # 域级跳写对:level 未读(level_unread 种子缺席)+ xp 已读
+        gs2 = _gs_of(gold=30, shop=[], xp=(15, 20), level_unread=True)
         assert gs2.level.value is None and gs2.xp.value == (15, 20)
         seq0 = gs2.write_seq
         report_action_level_up_shop_param(
@@ -291,14 +285,13 @@ class TestM1DirectLock:
         assert gs2.level.value is None, 'level 未读保持未读'
         assert gs2.xp.value == (15, 20) and gs2.xp.source == 'observation', \
             'level 未读 → 推进对整体跳写(禁缺省 1 参与推进计算;' \
-            'xp 值留观察原值,source 不翻 logic)'
+            'xp 值留种子原值,source 不翻 logic)'
         assert gs2.gold.value == 26, 'gold 域独立于推进对照写'
         assert gs2.write_seq > seq0, '跳写对 ≠ 整动作零写(gold 仍落)'
 
     def test_refresh_paid_deducts_gold(self):
         """付费刷新:gold −刷新费;payload 不写(刷后牌面等续段重观察)。"""
-        st = _state(gold=30, shop=[_card('希儿')])
-        gs = _gs_of(st)
+        gs = _gs_of(gold=30, shop=[_card('希儿')])
         _report_action(
             gs, CwActionRefreshShopParam(cost=2), ShopActionExecuted(refresh_paid=2))
         assert gs.gold.value == 28, 'gold: 期望 30 −刷新费 2'
@@ -306,12 +299,11 @@ class TestM1DirectLock:
             'shop payload: 刷新不写牌面(期望原 5 槽保持:槽1 希儿)'
         assert _bench_slots(gs) == [], 'bench: 刷新腿零写(保持全空)'
         assert gs.xp.value is None, \
-            'xp: 刷新腿零写(未读域保持合成初值 None)'
+            'xp: 刷新腿零写(未读域保持种子初值 None)'
 
     def test_refresh_free_gold_unwritten(self):
         """免费帧(paid=0):gold 不写(fields.md §3.3.4 免费帧不写语义)。"""
-        st = _state(gold=30, shop=[_card('希儿')])
-        gs = _gs_of(st)
+        gs = _gs_of(gold=30, shop=[_card('希儿')])
         report_action_refresh_shop_param(gs, CwActionRefreshShopParam(cost=2),
                                          _SIG,
                                          executed=ShopActionExecuted(refresh_paid=0))
@@ -319,8 +311,7 @@ class TestM1DirectLock:
 
     def test_close_shop_leaves_screen(self):
         """CwActionCloseShopParam:结构离屏(shop payload → None,left_screen)。"""
-        st = _state(gold=30, shop=[_card('希儿')])
-        gs = _gs_of(st)
+        gs = _gs_of(gold=30, shop=[_card('希儿')])
         assert gs.shop.value is not None
         report_action_close_shop_param(gs, CwActionCloseShopParam(), _SIG)
         assert gs.shop.value is None
@@ -335,14 +326,13 @@ class TestM1DirectLock:
         from sr_od.application.currency_war.kernel.cw_game_state import (
             shop_payload_content_cards,
         )
-        st = _state(gold=30, shop=[_card('希儿', cost=3)])
-        gs = _gs_of(st)
+        gs = _gs_of(gold=30, shop=[_card('希儿', cost=3)])
         report_action_buy_card_param(gs, CwActionBuyCardParam(card=_card('希儿', cost=3)),
                                      _SIG, executed=ShopActionExecuted())
         assert gs.gold.value == 27, '自算 k=1:gold −单价'
         assert len(shop_payload_content_cards(gs.shop.value)) == 0, \
             'payload 该张移除'
-        assert bench_occupied(bench_slots_to_legacy(gs.bench.value)) == 1, \
+        assert sum(1 for s in gs.bench.value.slots if s.kind != 'empty') == 1, \
             'bench 落位'
 
     def test_none_gold_domain_skip(self):
@@ -350,26 +340,24 @@ class TestM1DirectLock:
         from sr_od.application.currency_war.kernel.cw_game_state import (
             shop_payload_content_cards,
         )
-        st = _state(gold=30, shop=[_card('希儿', cost=3)])
-        gs = _gs_of(st)
+        gs = _gs_of(gold=30, shop=[_card('希儿', cost=3)])
         gs.write_logic(gs.gold, None, produced_by='test',
                        sig=ChannelSig(family='logic_hook',
-                                      actor='synthesize_from_game_state'))
+                                      actor='cw4_seed'))
         report_action_buy_card_param(gs, CwActionBuyCardParam(card=_card('希儿', cost=3)),
                                      _SIG, executed=ShopActionExecuted(bought_count=1))
         assert gs.gold.value is None
         # 改写依据:三态定长五槽(用户三态裁定 2026-09-13),买后 content
         # 紧缩计数 = 旧紧缩列表长度等价读法。
         assert len(shop_payload_content_cards(gs.shop.value)) == 0
-        assert bench_occupied(bench_slots_to_legacy(gs.bench.value)) == 1
+        assert sum(1 for s in gs.bench.value.slots if s.kind != 'empty') == 1
 
     def test_stale_sell_proposal_no_write(self):
         """陈旧卖出提案(空槽/越界):守卫辖面,拒绝 = applied=False 零写。
         (集外动作型零写腿删:上报函数族每动作恰一函数,无按类型聚合的
         登记面可「静默收编集外型」——闭集性质归命名规约完备锁
         test_cw_action_report_contract 辖。)"""
-        st = _state(gold=30, shop=[])
-        gs = _gs_of(st)
+        gs = _gs_of(gold=30, shop=[])
         seq0 = gs.write_seq
         report_action_sell_bench_param(
             gs, CwActionSellBenchParam(bench_idx=0, income=3), _SIG)
@@ -379,8 +367,7 @@ class TestM1DirectLock:
         """满栏且合成不可达 = 游戏拒买(ADR-0283):零写(own=0 满栏域
         ADR-0619 门)。"""
         bench = [_bc(f'c{i}', star=1, slot=i + 1) for i in range(9)]
-        st = _state(gold=30, shop=[_card('姬子', cost=3)], bench=bench)
-        gs = _gs_of(st)
+        gs = _gs_of(gold=30, shop=[_card('姬子', cost=3)], bench=bench)
         seq0 = gs.write_seq
         report_action_buy_card_param(gs, CwActionBuyCardParam(card=_card('姬子', cost=3)),
                                      _SIG, executed=ShopActionExecuted(bought_count=1))
@@ -394,12 +381,11 @@ class TestM1DirectLock:
 
 def test_shop_entry_funnel_bench_survives_synthesis() -> None:
     """商店入口漏斗 bench 写门场景锁(run_buy_waves 入口链回归):
-    visit 入口 = v1 帧合成;容器 bench 由漏斗真读写入(deploy 后留 bench
-    一人),v1 形态帧(bench_readable=False)合成对未读 bench 域跳写——
-    容器 bench 保持漏斗真读值,与执行账 tracked 同源不破。回归形态 = 无门
-    合成把容器 bench 覆盖成「9 槽全空」假真空(实机 2026-09-13 商店段
-    循环崩溃 15+ 连发实证;原断言载体双账守卫已退役,本锁改
-    容器/tracked 双侧直断言)。"""
+    种子对未声明 bench 域整域跳写(bench_unread)——容器 bench 保持
+    漏斗真读值,与执行账 tracked 同源不破。回归形态 = 种子把容器 bench
+    覆盖成「9 槽全空」假真空(原防御对象 = 旧合成口无门合成,实机
+    2026-09-13 商店段循环崩溃 15+ 连发实证;载体随合成口退役改种子
+    域纪律锁:未读域≠真空域,跳写语义在种子层等价存续)。"""
     from types import SimpleNamespace
 
     from sr_od.application.currency_war.kernel.cw_game_state import (
@@ -420,15 +406,12 @@ def test_shop_entry_funnel_bench_survives_synthesis() -> None:
     session = SimpleNamespace()
     _tracked = [_bc('银枝', star=1, slot=4)]
     game_state_of(session).tracked_books.bench = _tracked
-    # v1 形态帧:bench 恒默认空表 + 不可读位(生产置位点 = read_game_state)
-    st = _state(gold=30, shop=[])
-    st.bench_readable = False
-    synthesize_from_game_state(gs, st)
-    # 旧无门合成在此把容器 bench 覆盖成 9 空槽假真空
+    # 未读 bench 域种子(生产置位点 = read_game_state 漏斗不读席位的形态)
+    cw4_gs(gs, gold=30, shop_screen='off', bench_unread=True, node_fill=False)
     view = gs.bench.value
     assert view is not None and view.slots[3].unit is not None \
         and view.slots[3].unit.char_id == '银枝', \
-        '合成后容器 bench 仍为漏斗真读值(未读域跳写,兜底空表不覆盖)'
-    assert [(b.char_id, b.star) for b in
+        '种子后容器 bench 仍为漏斗真读值(未读域跳写,兜底空表不覆盖)'
+    assert [(b.unit.char_id, b.unit.star) for b in
             game_state_of(session).tracked_books.bench if b is not None] \
-        == [('银枝', 1)], '执行账 tracked 不受合成影响(容器/执行两账同源)'
+        == [('银枝', 1)], '执行账 tracked 不受种子影响(容器/执行两账同源)'

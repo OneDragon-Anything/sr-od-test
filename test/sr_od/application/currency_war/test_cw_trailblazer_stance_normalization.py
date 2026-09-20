@@ -8,15 +8,16 @@
 """
 from __future__ import annotations
 
+from test.sr_od.application.currency_war._cw_helpers import cw4_bview
+
 from sr_od.application.currency_war.kernel.cw_action_report import (
     report_action_deploy_move_param,
     report_action_swap_deploy_param,
 )
-from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
 from sr_od.application.currency_war.kernel.cw_game_state import (
+    BenchSlot,
     ChannelSig,
     Unit,
-    bench_view_of_slots,
     deployed_slots_of,
     game_state_of,
 )
@@ -33,9 +34,10 @@ def _gs_with_bench_trailblazer(deployed_occupied: bool):
     """bench 0 号槽 = 后台形态开拓者;deployed_occupied=True 时
     场上前排 1 号 = 普通角色『甲』(swap 场景需要在场交换对象)。"""
     gs = game_state_of(None)
-    slots: list[BenchChar | None] = [None] * 9
-    slots[0] = BenchChar(slot=1, char_id='开拓者·欢愉', star=4)
-    gs.observe(gs.bench, bench_view_of_slots(slots),
+    slots: list[BenchSlot | None] = [None] * 9
+    slots[0] = BenchSlot(kind='unit', unit=Unit(char_id='开拓者·欢愉',
+                                                star=4, slot=1))
+    gs.observe(gs.bench, cw4_bview(slots),
                evidence='t', sig=_SIG_OBS)
     if deployed_occupied:
         gs.observe(gs.front_row,

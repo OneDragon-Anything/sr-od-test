@@ -44,16 +44,19 @@ from test.sr_od.application.currency_war._cw_helpers import (
     cw4_bc as _bc,
 )
 from test.sr_od.application.currency_war._cw_helpers import (
-    cw4_box,
+    cw4_box as _bsb,
 )
 from test.sr_od.application.currency_war._cw_helpers import (
-    cw4_box as _bsb,
+    cw4_card as _card,
 )
 from test.sr_od.application.currency_war._cw_helpers import (
     cw4_comp as _comp,
 )
 from test.sr_od.application.currency_war._cw_helpers import (
     cw4_decide as _decide,
+)
+from test.sr_od.application.currency_war._cw_helpers import (
+    cw4_gs,
 )
 from test.sr_od.application.currency_war._cw_helpers import (
     cw4_members as _members,
@@ -77,6 +80,9 @@ from sr_od.application.currency_war.kernel.cw_economy import (
     reserve_cap,
     schedule_upgrade,
 )
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    Unit,
+)
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     pair_target_comp,
@@ -91,8 +97,6 @@ from sr_od.application.currency_war.kernel.cw_registry import (
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BENCH_CAPACITY,
-    BenchChar,
-    CwSimFrame,
     CwActionRefreshShopParam,
     ShopCard,
 )
@@ -235,18 +239,16 @@ def test_half3_distinguish_fixtures(patched_registry) -> None:
 # 帧专属形状,留本地自持)
 
 
-def _state(gold: int, level: int = 3) -> CwSimFrame:
-    st = CwSimFrame(gold=gold, level=level, round_num=2)
-    st.shop = [ShopCard(x=100, name='垫', cost=3, star=1)]
-    st.bench = []
-    st.deployed = []
-    return st
+def _state(sess, gold: int, level: int = 3) -> None:
+    """R2 决策种子(垫卡店帧:牌位越界丢卡 = 在屏空牌面)。"""
+    cw4_gs(sess, gold=gold, level=level,
+           shop=[_card('垫', cost=3, x=100)])
 
 
 class TestR2InterestFloor:
 
     def _frame(self, gold: int):
-        """R1 可负担性过账帧(ADR-0516 形式二;旧 V_GAP 注入开闸语义随
+        """R1 可负担性过账种子(ADR-0516 形式二;旧 V_GAP 注入开闸语义随
         V̄ 链退役):lv6、合格集收缩到单目标成员(其余线成员 2★ 成型
         出域)、目标 j=2 差 1 张(账 ≈19 金)⇒ 金 ≥80 时 R1 必过,
         R2 成唯一门。视界先验(9,5,7)。
@@ -263,21 +265,20 @@ class TestR2InterestFloor:
         others = [m for m in members if m != target]
         bench = [_bc(target), _bc(target, slot=2)] \
             + [_bc(m, star=2, slot=i + 3) for i, m in enumerate(others)]
-        st = _state(gold, level=6)
-        st.bench = bench
         sess = _session(comp)
         from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
         game_state_of(sess).node_books.plane_lengths_seen = [9, 5, 7]   # 终态契约 §A′
-        return comp, st, sess
+        cw4_gs(sess, gold=gold, level=6, bench=bench)
+        return comp, sess
 
     def test_cap_resolved_parameterizes_floor(self):
         """cap 语境锁(息线表锚):g*=10×cap_resolved 随 session 覆写参数
         化——cap=10(息律投资语境)下金 80 < 100+ρ ⇒ 拒(50 非域常数,
         息线 floor「拍常数」禁案的判别锁)。
         (金钱类收缩:floor 门过下界/贴线拒刷两行按裁决不搬,git 可复活。)"""
-        comp, st, sess = self._frame(80)
+        comp, sess = self._frame(80)
         _seed_actives(sess, ['利息上调'])   # ADR-0598 注入面迁移(容器单源)
-        acts = _decide(st, sess)
+        acts = _decide(sess)
         assert not [a for a in acts if isinstance(a, CwActionRefreshShopParam)]
 
 
@@ -380,13 +381,12 @@ _JUST_SPY = '商业间谍'      # xp_buy_cost_discount=1(cw_investments 注册)
 
 def _xp_state(level: int = 5, strategies: list[str] | None = None,
               display: int | None = None) -> GameState:
-    """费用轴最小决策帧(经济读口已切容器:桥装为测试迁移单一源形态)。
+    """费用轴最小决策种子(经济读口已切容器:桥装为测试迁移单一源形态)。
     strategies=已持投资策略;display=OCR 显示价,None=未读到走兜底支
     ——两支来源凭容器 level_up_cost Field 判别。"""
-    st = CwSimFrame(gold=30, level=level, round_num=2)
-    st.active_strategies = list(strategies or [])
-    st.level_up_cost = display
-    return _bsb(st)
+    return _bsb(gold=30, level=level, round_num=2,
+                active_strategies=list(strategies or []),
+                level_up_cost=display)
 
 
 def test_xp_fee_no_discount_invariant_and_display_passthrough() -> None:
@@ -491,17 +491,32 @@ _REG = DEFAULT_REGISTRY
 # 2026-09-04 用户裁定清理。)
 
 
-def _ba_state(*, gold: int = 100, plane: int = 1, r: int = 5, level: int = 6,
-           hp: int = 80,
-           bench: list[BenchChar | None] | None = None,
-           shop: list[ShopCard] | None = None,
-           board: dict | None = None) -> CwSimFrame:
-    return CwSimFrame(
-        plane=plane, round_num=r, gold=gold, level=level, hp=hp,
-        shop_refresh_cost=2,
-        deployed=[], bench=bench if bench is not None else [None] * BENCH_CAPACITY,
-        shop=shop if shop is not None else [], node_type='battle',
-        board=board or {})
+def _ba_state(*, gold: int = 100, plane: int = 1, round_num: int = 5,
+              level: int = 6, hp: int = 80,
+              bench: list | None = None,
+              shop: list[ShopCard] | None = None,
+              board: dict | None = None,
+              front_row: list[Unit] | None = None,
+              back_row: list[Unit] | None = None,
+              active_strategies: list[str] | None = None) -> dict:
+    """排程/预算核场景种子轴(容器域直写;返回 = ``_bsb`` kwargs,
+    每次调用点装箱出新容器,与旧「帧→桥」逐次新容器语义同构)。"""
+    axes: dict = {'plane': plane, 'round_num': round_num, 'gold': gold,
+                  'level': level, 'hp': hp, 'shop_refresh_cost': 2,
+                  'node': 'battle'}
+    if bench is not None:
+        axes['bench'] = bench
+    if shop is not None:
+        axes['shop'] = shop
+    if board:
+        axes['board'] = board
+    if front_row:
+        axes['front_row'] = front_row
+    if back_row:
+        axes['back_row'] = back_row
+    if active_strategies:
+        axes['active_strategies'] = active_strategies
+    return axes
 
 
 def _sc(name: str, cost: int = 2) -> ShopCard:
@@ -516,38 +531,33 @@ def _sc(name: str, cost: int = 2) -> ShopCard:
 
 
 def _schedule_rows() -> dict:
-    """排程触发①②表行构造器(帧构造延迟调用,保各触发前置构帧差异;
+    """排程触发①②表行构造器(种子轴构造延迟调用,保各触发前置差异;
     断言腿逐条 = 原 test_schedule_pop_slot_trigger /
     test_schedule_probability_trigger_requires_engine)。"""
-    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-    from sr_od.application.currency_war.kernel.cw_vocab import (
-        deployed_occupied,
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        max_units_of,
     )
 
-    def _ch(name: str, slot: int, star: int) -> BenchChar:
-        fac = (CHARACTERS[name].factions or ('?',))[0]
-        return BenchChar(slot=slot, char_id=name, faction=fac, star=star)
-
-    def _formed_bench() -> list[BenchChar]:
-        return [_ch('阿格莱雅', i, 2) for i in range(BENCH_CAPACITY)]
+    def _formed_bench() -> list:
+        # 2★ 成型件九连(注册表前排角色名;阵营经注册表派生,名字表达纪律)
+        return [_bc('阿格莱雅', star=2, slot=i + 1)
+                for i in range(BENCH_CAPACITY)]
 
     def pop_not_full():
-        # ①负腿:bench 满 2★ 成型件 ∧ deployed 未满 → 人口位不触发
-        #(gold 30<息线:禁升②不触发——双负前置帧)
-        st = _ba_state(gold=30, level=6, r=9, bench=_formed_bench())
-        assert deployed_occupied(st.deployed) < st.max_units()   # 有空位
-        assert not schedule_upgrade(cw4_box(st), _ba_sess_of(st))
-        st.dep = None
+        # ①负腿:bench 满 2★ 成型件 ∧ 未部署(有空位)→ 人口位不触发
+        #(gold 30<息线:禁升②不触发——双负前置种子)
+        st = _ba_state(gold=30, level=6, round_num=9, bench=_formed_bench())
+        assert not st.get('front_row') and not st.get('back_row')   # 有空位
         return st, _ba_sess_of(st)
 
     def pop_cap_full():
-        # ①正腿:cap 满(deployed 填满)→ 人口位触发(最高义务)
-        st = _ba_state(gold=30, level=6, r=9, bench=_formed_bench())
-        st.dep = None
-        st.deployed = [BenchChar(slot=20 + i, char_id=f'杂{i}',
-                                 faction='公司', star=1)
-                       for i in range(st.max_units())]
-        assert deployed_occupied(st.deployed) >= st.max_units()
+        # ①正腿:cap 满(上场 6 人 = lv6 席位上限,前排 4 + 后排 2)
+        #→ 人口位触发(最高义务);'杂{i}' = 注册表外名(未知阵营占位)
+        front = [Unit(char_id=f'杂{i}', star=1, slot=i + 1) for i in range(4)]
+        back = [Unit(char_id=f'杂{i}', star=1, slot=i - 3) for i in range(4, 6)]
+        st = _ba_state(gold=30, level=6, round_num=9, bench=_formed_bench(),
+                       front_row=front, back_row=back)
+        assert len(front) + len(back) >= max_units_of(_bsb(**st))
         return st, _ba_sess_of(st)
 
     def prob_engine_live():
@@ -572,7 +582,7 @@ def _schedule_rows() -> dict:
     }
 
 
-def _ba_sess_of(state: CwSimFrame) -> StrategySession:
+def _ba_sess_of(state: dict) -> StrategySession:
     return StrategySession()
 
 
@@ -605,7 +615,7 @@ def test_schedule_triggers_truth_table(case_id: str) -> None:
     未立不追级(gold<息线,False 即预告态也不发)、峰值已达无排程。"""
     build, expect_scheduled = _schedule_rows()[case_id]
     st, sess = build()
-    got = schedule_upgrade(cw4_box(st), sess)
+    got = schedule_upgrade(_bsb(**st), sess)
     if expect_scheduled:
         assert got, f'{case_id}: 应排程'
     else:
@@ -636,10 +646,10 @@ def test_schedule_ul_threshold_negative_small_shift_band() -> None:
     state_of(sess).v3_intention = IntentionState(
         phase='locked', locked_comp=comp.name)
     st = _ba_state(gold=60, level=5)      # 2 费 lv5→6:benefit≈9.9 < U_L 20
-    assert not _upgrade_ul_threshold_ok(cw4_box(st), sess)
+    assert not _upgrade_ul_threshold_ok(_bsb(**st), sess)
     # 行为面同帧:schedule_upgrade ② 臂同样被收紧(引擎已立 60≥息线、
     # 峰值 6>5,唯 U_L 检验拦下)
-    assert not schedule_upgrade(cw4_box(st), sess)
+    assert not schedule_upgrade(_bsb(**st), sess)
 
 
 def test_schedule_predictive_even_when_fee_unaffordable() -> None:
@@ -647,20 +657,20 @@ def test_schedule_predictive_even_when_fee_unaffordable() -> None:
     gold 51(远不够升级费)∧ 峰值未达 → 排程照发、R* 计入升级费;
     「付得起才排」会造 R* 塌缩 → 义务花光 → 更排不上的贫穷循环。"""
     st = _ba_state(gold=51, level=7)
-    assert schedule_upgrade(cw4_box(st), _ba_locked_4cost_sess())
-    assert reserve_cap(cw4_box(st), _ba_locked_4cost_sess()) > 50
+    assert schedule_upgrade(_bsb(**st), _ba_locked_4cost_sess())
+    assert reserve_cap(_bsb(**st), _ba_locked_4cost_sess()) > 50
 
 
 def test_schedule_gold_digger_retires_levelup(monkeypatch) -> None:
     """淘金客姿态:升级通道退役(W621:CwActionLevelUpParam 退役是刷驱姿态主驱动;
     谓词单一址=cw_investments.refresh_invest_active,授权链同址关闭)。"""
     st = _ba_state(gold=100, level=7)
-    assert schedule_upgrade(cw4_box(st), _ba_locked_4cost_sess())   # 前置:常态帧排程成立
+    assert schedule_upgrade(_bsb(**st), _ba_locked_4cost_sess())   # 前置:常态帧排程成立
     monkeypatch.setattr(
         'sr_od.application.currency_war.kernel.cw_investments.STRATEGY_ECONOMY',
         {'淘金客': EconomyEffect(xp_per_refresh=2)})
-    st.active_strategies = ['淘金客']
-    assert not schedule_upgrade(cw4_box(st), _ba_locked_4cost_sess())
+    st['active_strategies'] = ['淘金客']   # 持卡后:升级通道退役,不排程
+    assert not schedule_upgrade(_bsb(**st), _ba_locked_4cost_sess())
 
 
 # --- 预算核契约锁(W623 D2;值域+合法 0 帧表驱动并一)---------------------
@@ -704,7 +714,7 @@ def test_budget_value_domain_and_legal_zero_frames(case_id: str) -> None:
     空帧豁免优先(细则见 ADR-0475)。"""
     build, expect = _budget_rows()[case_id]
     st, sess = build()
-    got = refresh_ev_budget(cw4_box(st), sess)
+    got = refresh_ev_budget(_bsb(**st), sess)
     if expect == '>0':
         assert got > 0, f'{case_id}: 应为正值(空帧豁免)'
     else:
@@ -738,9 +748,9 @@ def test_pair_materialization_and_drought_reset() -> None:
     ist.p1_pair = ('持续伤害', '仙舟')
     sess = StrategySession()
     state_of(sess).v3_intention = ist
-    st = _ba_state(r=5, gold=100,
+    st = _ba_state(round_num=5, gold=100,
                 shop=[_sc('卡芙卡', 4)], board={})   # 卡芙卡=DOT 系成员
-    update_intention(cw4_box(st), ist, sess)
+    update_intention(_bsb(**st), ist, sess)
     assert ist.pair_drought.get('持续伤害', 0) == 0
 
 
@@ -759,51 +769,53 @@ def test_injection_consistency_single_registry_source() -> None:
     保形。"""
     import dataclasses
     reg2 = dataclasses.replace(_REG, interest_cap=4)
-    st1 = _ba_state(gold=45, level=7, r=5)
+    st1 = _ba_state(gold=45, level=7)
     sess = _ba_locked_4cost_sess()
-    assert not schedule_upgrade(cw4_box(st1), sess, _REG)
-    assert not schedule_upgrade(cw4_box(st1), sess, reg2)   # registry 旋钮不动 resolved 链
+    assert not schedule_upgrade(_bsb(**st1), sess, _REG)
+    assert not schedule_upgrade(_bsb(**st1), sess, reg2)   # registry 旋钮不动 resolved 链
     sess_ov = _ba_locked_4cost_sess()
     _seed_actives(sess_ov, ['买断制'])   # 注册表可达覆写 cap=0 → 息线 0
-    assert schedule_upgrade(cw4_box(st1), sess_ov)    # gold 45 ≥ 息线 0 → ② 前置过
-    assert refresh_ev_budget(cw4_box(st1), sess, reg2) == \
-        refresh_ev_budget(cw4_box(st1), sess, _REG)   # registry 旋钮对预算逐位惰性(ADR-0598 归一)
+    assert schedule_upgrade(_bsb(**st1), sess_ov)    # gold 45 ≥ 息线 0 → ② 前置过
+    assert refresh_ev_budget(_bsb(**st1), sess, reg2) == \
+        refresh_ev_budget(_bsb(**st1), sess, _REG)   # registry 旋钮对预算逐位惰性(ADR-0598 归一)
     # 预算面同链:R* 守息线分量随 resolved cap 动(买断制 floor=0+费
     # < 默认 50+费),registry 旋钮不动;gold 96:默认 R*=50+lv7 升级金
     #(52)=102 → 零预算;买断制 R*=0+52=52 → 正预算(lv5 旧帧随 U_L
     # 重锚帧上移,数字按帧现算)
-    st2 = _ba_state(gold=96, level=7, r=5)
-    assert reserve_cap(cw4_box(st2), sess_ov) < reserve_cap(
-        cw4_box(st2), sess)
-    assert refresh_ev_budget(cw4_box(st2), sess, _REG) == 0
-    assert refresh_ev_budget(cw4_box(st2), sess_ov) > 0
+    st2 = _ba_state(gold=96, level=7)
+    assert reserve_cap(_bsb(**st2), sess_ov) < reserve_cap(
+        _bsb(**st2), sess)
+    assert refresh_ev_budget(_bsb(**st2), sess, _REG) == 0
+    assert refresh_ev_budget(_bsb(**st2), sess_ov) > 0
     # 披露面装配单源(W636 A 载体 = 披露函数):注入 reg2 披露后,披露
     # 字段 == 逐字段显式注入值(现算与披露写入合一 =
-    # economy_cycle.disclose_budget;局内事实先经合成口喂入 = 生产同路)
-    from test.sr_od.application.currency_war._cw_helpers import cw4_feed
-
+    # economy_cycle.disclose_budget;局内事实先经种子写容器 = 生产同路;
+    # 装配轴 = 桥配方轴集剥 D 类域(shop_refresh_cost 属桥补写域,feed
+    # 配方域覆盖集不含))
     from sr_od.application.currency_war.kernel.cw_game_state import (
         game_state_of,
         gold_of,
     )
-    cw4_feed(sess_ov, st2)
+    _feed_axes = {k: v for k, v in st2.items()
+                  if k != 'shop_refresh_cost'}
+    cw4_gs(sess_ov, shop_screen='on', **_feed_axes)
     from sr_od.application.currency_war.strategies.impl.mandate_v1.economy_cycle import (
         disclose_budget,
         obligation,
     )
     disclose_budget(game_state_of(sess_ov), sess_ov, reg2)
     st_ov = state_of(sess_ov)
-    assert st_ov.v3_reserve_cap == reserve_cap(cw4_box(st2), sess_ov)
+    assert st_ov.v3_reserve_cap == reserve_cap(_bsb(**st2), sess_ov)
     assert st_ov.v3_reserve_overflow == max(
         0, gold_of(game_state_of(sess_ov)) - st_ov.v3_reserve_cap)
-    assert st_ov.v3_release_budget == obligation(cw4_box(st2), sess_ov, reg2)
-    assert st_ov.v3_disclosure_key == (st2.plane, st2.round_num)
+    assert st_ov.v3_release_budget == obligation(_bsb(**st2), sess_ov, reg2)
+    assert st_ov.v3_disclosure_key == (st2['plane'], st2['round_num'])
     # registry 旋钮(非注册表可达值 cap=4)对披露预算面逐位惰性:非买断
     # session 同帧披露,储备线 = 默认息线链(旋钮不动预算面)
-    cw4_feed(sess, st2)
+    cw4_gs(sess, shop_screen='on', **_feed_axes)
     disclose_budget(game_state_of(sess), sess, reg2)
     st_base = state_of(sess)
-    assert st_base.v3_reserve_cap == reserve_cap(cw4_box(st2), sess)
+    assert st_base.v3_reserve_cap == reserve_cap(_bsb(**st2), sess)
 
 
 # (原 test_tracking_view_isolated_from_session_writers 随修正裁定

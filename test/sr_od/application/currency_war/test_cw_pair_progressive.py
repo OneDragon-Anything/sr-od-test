@@ -26,17 +26,13 @@
 from __future__ import annotations
 
 import math
-from types import SimpleNamespace
 
-import pytest
-from test.sr_od.application.currency_war._cw_helpers import (
-    cw4_bc as _bc,
-)
 from test.sr_od.application.currency_war._cw_helpers import (
     cw4_box,
 )
 
 from sr_od.application.currency_war.kernel import cw_intention as intention_mod
+from sr_od.application.currency_war.kernel.cw_game_state import Unit
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     pair_target_comp,
@@ -46,28 +42,26 @@ from sr_od.application.currency_war.kernel.cw_launch_admission import (
     readiness_form_ok,
 )
 from sr_od.application.currency_war.kernel.cw_line_switch import e_rounds
-from sr_od.application.currency_war.kernel.cw_vocab import CwSimFrame
 
 
-def _frame(*, deployed, gold: int = 100, level: int = 5, r: int = 5,
-           board: dict | None = None) -> CwSimFrame:
-    """P1 备战帧(容器装箱前形态;board 显式给,与 deployed 一致)。"""
-    return CwSimFrame(
-        plane=1, round_num=r, gold=gold, level=level, hp=80,
-        shop_refresh_cost=2,
-        deployed=list(deployed),
-        bench=[None] * 9,
-        shop=[], node_type='reward',
-        board=board or {})
+def _seed_gs(*, deployed, gold: int = 100, level: int = 5, r: int = 5,
+             board: dict | None = None) -> object:
+    """P1 备战场景种子(容器域直写;board 显式给,与 deployed 行一致;
+    deployed = 行域 Units,槽号 1 基信息位)。"""
+    return cw4_box(plane=1, round_num=r, gold=gold, level=level, hp=80,
+                   shop_refresh_cost=2, node='reward',
+                   front_row=list(deployed[:4]), back_row=list(deployed[4:]),
+                   board=board or None)
 
 
 def _ignite_dot_board(train_n: int = 0) -> tuple[list, dict]:
     """DOT 点火态(桑博+艾丝妲;DOT 支持 = 2/2 = 1.0 → 在任席在 Q 内),
     外加 train_n 个列车件(三/四月七占位;1 件 = 支持 0.5 不入 Q)。"""
-    dep = [_bc('桑博'), _bc('艾丝妲')]
+    dep = [Unit(char_id='桑博', star=1, slot=1),
+           Unit(char_id='艾丝妲', star=1, slot=2)]
     board = {'持续伤害': 2}
-    for i in range(train_n):
-        dep.append(_bc('三月七'))
+    for _ in range(train_n):
+        dep.append(Unit(char_id='三月七', star=1, slot=len(dep) + 1))
         board['列车同行'] = board.get('列车同行', 0) + 1
     return dep, board
 
@@ -81,7 +75,7 @@ def test_ignited_pair_upgrades_to_estimator_argmin_second_seat() -> None:
     pair 升级为两体系、第二席 = argmin 胜者、无单体系冻结(form_ok 在
     两档 AND 语义下为 False = readiness 对齐 kernel 成型线)。"""
     dep, board = _ignite_dot_board(train_n=1)
-    gs = cw4_box(_frame(deployed=dep, board=board))
+    gs = _seed_gs(deployed=dep, board=board)
     e_train = e_rounds(pair_target_comp(('持续伤害', '列车同行')), gs)
     e_xz = e_rounds(pair_target_comp(('持续伤害', '仙舟')), gs)
     assert e_train < e_xz, '判别态失守:构造的列车应劣于仙舟的 E(表漂移?)'
@@ -105,7 +99,7 @@ def test_window_closed_keeps_single_pair_and_freezes(monkeypatch) -> None:
     E > R_rem 的确定性构造。保持单体系冻结 = 旧行为(窗口关了没有可做
     的渐进,停手战是对的),本锁钉的是「门拒不写 pair」的保守方向。"""
     dep, board = _ignite_dot_board()
-    gs = cw4_box(_frame(deployed=dep, board=board))
+    gs = _seed_gs(deployed=dep, board=board)
     monkeypatch.setattr(intention_mod, 'e_rounds',
                         lambda *a, **k: math.inf)
     ist = IntentionState()
@@ -120,9 +114,9 @@ def test_window_closed_keeps_single_pair_and_freezes(monkeypatch) -> None:
 def test_q_challenger_fill_path_unchanged() -> None:
     """锁 4a:chall 非空支零漂移——满支持挑战者照旧从 Q 直填(无候选对、
     不走可行性门),真两体系成型照旧冻结(成型停手语义不变)。"""
-    dep = [_bc('桑博'), _bc('艾丝妲'), _bc('三月七'), _bc('丹恒·饮月')]
+    dep = [Unit(char_id='桑博', star=1, slot=1), Unit(char_id='艾丝妲', star=1, slot=2), Unit(char_id='三月七', star=1, slot=3), Unit(char_id='丹恒·饮月', star=1, slot=4)]
     board = {'持续伤害': 2, '列车同行': 2}
-    gs = cw4_box(_frame(deployed=dep, board=board))
+    gs = _seed_gs(deployed=dep, board=board)
     ist = IntentionState()
     ist.p1_pair = ('持续伤害',)
     update_intention(gs, ist, None)
@@ -139,7 +133,7 @@ def test_seele_system_never_progressive_pick() -> None:
     渐进填充不得选出希儿系(E 对它结构性失真:距离恒 0 虚假;carry
     单卡依赖),只在三桥体系内选。"""
     dep, board = _ignite_dot_board()
-    gs = cw4_box(_frame(deployed=dep, board=board))
+    gs = _seed_gs(deployed=dep, board=board)
     ist = IntentionState()
     ist.p1_pair = ('持续伤害',)
     update_intention(gs, ist, None)
@@ -149,7 +143,7 @@ def test_seele_system_never_progressive_pick() -> None:
 
 def test_empty_window_still_empty() -> None:
     """锁 4b:空窗支零漂移——零资产帧派生对恒空。"""
-    gs = cw4_box(_frame(deployed=[]))
+    gs = _seed_gs(deployed=[])
     ist = IntentionState()
     update_intention(gs, ist, None)
     assert ist.p1_pair == (), '空窗恒空对(既有语义)'

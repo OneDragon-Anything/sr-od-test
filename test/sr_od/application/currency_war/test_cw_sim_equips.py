@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import random
 
+from test.sr_od.application.currency_war._cw_helpers import cw4_bview
+
 from sr_od.application.currency_war.data.cw_equipment_data import (
     EQUIPMENTS,
     get_equip,
@@ -17,12 +19,12 @@ from sr_od.application.currency_war.data.cw_synthesis import (
     CROSS_RECIPES,
     synthesize_target,
 )
-from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
+    BenchSlot,
     ChannelSig,
     GameState,
-    bench_view_of_slots,
+    Unit,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionPrecisionWrenchUseParam,
@@ -61,13 +63,12 @@ def _gs() -> GameState:
 
 def _gs_with_bench_unit(char_id: str, equips: list[str] | None = None,
                         slot: int = 1) -> GameState:
-    """容器 + 备战席单角色(0 基槽表下标 = slot−1;BenchChar 形状经
-    bench_view_of_slots 转容器视图,r1 S1 同构)。"""
+    """容器 + 备战席单角色(0 基槽表下标 = slot−1;容器形状直构)。"""
     gs = _gs()
-    slots: list[BenchChar | None] = [None] * 9
-    slots[slot - 1] = BenchChar(slot=slot, char_id=char_id, faction='散',
-                                star=1, equips=list(equips or []))
-    gs.observe(gs.bench, bench_view_of_slots(slots), sig=_SIG)
+    slots: list[BenchSlot | None] = [None] * 9
+    slots[slot - 1] = BenchSlot(kind='unit', unit=Unit(
+        char_id=char_id, star=1, equips=list(equips or []), slot=slot))
+    gs.observe(gs.bench, cw4_bview(slots), sig=_SIG)
     return gs
 
 

@@ -8,6 +8,10 @@
 from __future__ import annotations
 
 import pytest
+from test.sr_od.application.currency_war._cw_helpers import (
+    cw4_bc,
+    cw4_bview,
+)
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS, chars_by_cost
 from sr_od.application.currency_war.data.cw_shop_odds import (
@@ -20,7 +24,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     GameState,
     Unit,
-    bench_view_of_slots,
 )
 from sr_od.application.currency_war.sim.cw_sim_pool import (
     EXPERT_COPIES_ASSUMED,
@@ -69,11 +72,10 @@ def test_held_derived_from_bench_and_deployed_stars() -> None:
     gs = _fresh_gs()
     n1 = chars_by_cost(1)[0].name
     n2 = chars_by_cost(2)[0].name
-    from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
     sig = ChannelSig(family='obs', actor='TestSigWriter')
-    gs.observe(gs.bench, bench_view_of_slots([
-        BenchChar(slot=1, char_id=n1, star=1),
-        BenchChar(slot=2, char_id=n1, star=1),
+    gs.observe(gs.bench, cw4_bview([
+        cw4_bc(n1, star=1, slot=1),
+        cw4_bc(n1, star=1, slot=2),
     ]), sig=sig)
     gs.observe(gs.front_row, [Unit(char_id=n2, star=2)], sig=sig)
     held = held_copies(gs)
@@ -89,9 +91,8 @@ def test_drawable_names_nine_copy_clearance() -> None:
     27 副本下剩余仍 >0(两条件不可互替)。"""
     gs = _fresh_gs()
     n1 = chars_by_cost(1)[0].name
-    from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
-    gs.observe(gs.bench, bench_view_of_slots([
-        BenchChar(slot=1, char_id=n1, star=3),   # 3★ = 9 副本
+    gs.observe(gs.bench, cw4_bview([
+        cw4_bc(n1, star=3, slot=1),   # 3★ = 9 副本
     ]), sig=ChannelSig(family='obs', actor='TestSigWriter'))
     assert held_copies(gs)[n1] == 9
     assert remaining_pool(gs)[n1] == POOL_COPIES_PER_CARD[1] - 9, \

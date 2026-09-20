@@ -35,7 +35,6 @@ from test.sr_od.application.currency_war._cw_helpers import (
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
 from sr_od.application.currency_war.kernel.cw_game_state import BenchSlot, Unit
-from sr_od.application.currency_war.kernel.cw_vocab import CwSimFrame
 from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
     sell,
 )
@@ -58,22 +57,16 @@ def _item(slot: int = 1, star: int = 1) -> BenchSlot:
     return BenchSlot(kind='tome', unit=None)
 
 
-def _state(bench: list, deployed: list | None = None) -> CwSimFrame:
-    # deployed 缺省非空板:空板帧会被空板止损守卫
+def _state(bench: list, deployed: list | None = None) -> dict:
+    # 上阵缺省非空板:空板帧会被空板止损守卫
     # (sell_gate.empty_board_sell_blocked,ADR-0636)先于资格循环短路,
     # 测不到本文件辖的物理门本体;plane=2 压掉 P1 血线禁令域(凑息)。
+    # 资格循环输入 = 容器占席条目(本文件辖的载体);返回 = ``_bsb``
+    # kwargs(桥配方,旧帧缺省 gold=0/hp 直写)。
     if deployed is None:
-        # 帧层 deployed = legacy 载体(CwSimFrame,阶段 P5 辖域);bench 侧
-        # 资格循环输入 = 容器占席条目(本文件辖的载体)。
-        from sr_od.application.currency_war.kernel.cw_vocab import BenchChar
-        deployed = [BenchChar(slot=1, char_id='前线', star=1,
-                              position_pref='front')]
-    st = CwSimFrame()
-    st.plane = 2
-    st.hp = 50
-    st.bench = list(bench)
-    st.deployed = list(deployed)
-    return st
+        deployed = [Unit(char_id='前线', star=1, slot=1)]
+    return {'plane': 2, 'hp': 50, 'bench': list(bench),
+            'front_row': list(deployed)}
 
 
 def _fuel_pair() -> tuple[str, str]:
@@ -97,13 +90,13 @@ class TestInterestItemSlotGate:
         fuel_a, _fuel_b = _fuel_pair()
         bench = [_item(slot=1), _bc(fuel_a, slot=2)]
         slots, key = sell.sell_for_interest(
-            0, bench, 5, _K, state=_bsb(_state(bench)))
+            0, bench, 5, _K, state=_bsb(**_state(bench)))
         assert key == ''
         assert slots == [2]
         # 仅占位件帧 = 诚实空集
         bench_only = [_item(slot=1)]
         slots2, key2 = sell.sell_for_interest(
-            0, bench_only, 5, _K, state=_bsb(_state(bench_only)))
+            0, bench_only, 5, _K, state=_bsb(**_state(bench_only)))
         assert slots2 == []
         assert key2 == ''
 
@@ -126,13 +119,13 @@ class TestFundingItemSlotGate:
         fuel_a, _fuel_b = _fuel_pair()
         bench = [_item(slot=1), _bc(fuel_a, slot=2)]
         slots, key = sell.funding_support_sell(
-            0, 5, bench, _K, state=_bsb(_state(bench)))
+            0, 5, bench, _K, state=_bsb(**_state(bench)))
         assert key == ''
         assert slots == [2]
         # 仅占位件帧 = 诚实空集
         bench_only = [_item(slot=1)]
         slots2, key2 = sell.funding_support_sell(
-            0, 5, bench_only, _K, state=_bsb(_state(bench_only)))
+            0, 5, bench_only, _K, state=_bsb(**_state(bench_only)))
         assert slots2 == []
         assert key2 == ''
 

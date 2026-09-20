@@ -207,7 +207,7 @@ def test_entry_box_tome_arms_read_benchview_kind():
 
 def test_bench_slot_bookcard_kind_roundtrip_as_item_placeholder():
     """容器 kind 细分往返:bookcard 槽经 legacy 换算 = 占位件
-    BenchChar(is_item_slot=True)——部署装配点识别线/占位恒拒防线消费同
+    is_item_slot 旗标——部署装配点识别线/占位恒拒防线消费同
     旗标;占席语义不变(kind ≠ empty 占 1 槽,席空数派生同源)。"""
     slots = [BenchSlot(kind='unit', unit=Unit(char_id='甲', star=1,
                                               equips=[], slot=1)),

@@ -13,20 +13,20 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
+from test.sr_od.application.currency_war._cw_helpers import cw4_bview
 
 from sr_od.application.currency_war.data.cw_equipment_data import (
     EQUIPMENTS,
     get_equip,
 )
 from sr_od.application.currency_war.data.cw_synthesis import CROSS_RECIPES
-from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
 from sr_od.application.currency_war.kernel.cw_game_state import (
+    BenchSlot,
     ChannelSig,
     ShopCard,
     ShopPayload,
     ShopSlot,
     Unit,
-    bench_view_of_slots,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionBuyCardParam,
@@ -183,10 +183,10 @@ def test_prep_wear_equip_routes_to_sim_leg() -> None:
     a, b, advance = _advance_pair()
     eng = CwSimEngine()
     gs = eng.reset(7, _CFG).gs
-    slots: list[BenchChar | None] = [None] * 9
-    slots[0] = BenchChar(slot=1, char_id='淘金客', faction='散', star=1,
-                         equips=[a])
-    gs.observe(gs.bench, bench_view_of_slots(slots), sig=_SIG)
+    slots: list[BenchSlot | None] = [None] * 9
+    slots[0] = BenchSlot(kind='unit', unit=Unit(char_id='淘金客', star=1,
+                                                equips=[a], slot=1))
+    gs.observe(gs.bench, cw4_bview(slots), sig=_SIG)
     gs.observe(gs.equips, [b], sig=_SIG)
     ret = eng.step(CwActionWearEquipParam(item_name=b, char_name='淘金客',
                              row='front', slot=1))
@@ -288,10 +288,10 @@ def test_planner_trigger_fires_on_deployed_merge() -> None:
     = SILVER_WOLF_ID。overlay 呈现于下一结算收尾(M22 队列序)。"""
     eng = CwSimEngine()
     gs = eng.reset(7, _CFG).gs
-    slots: list[BenchChar | None] = [None] * 9
-    slots[0] = BenchChar(slot=1, char_id=SILVER_WOLF_ID, faction='?',
-                         star=1)
-    gs.observe(gs.bench, bench_view_of_slots(slots), sig=_SIG)
+    slots: list[BenchSlot | None] = [None] * 9
+    slots[0] = BenchSlot(kind='unit', unit=Unit(char_id=SILVER_WOLF_ID,
+                                                star=1, slot=1))
+    gs.observe(gs.bench, cw4_bview(slots), sig=_SIG)
     gs.observe(gs.front_row, [Unit(char_id=SILVER_WOLF_ID, star=1)],
                sig=_SIG)
     card = ShopCard(name=SILVER_WOLF_ID, cost=3, star=1)

@@ -52,11 +52,14 @@ from test.sr_od.application.currency_war._cw_helpers import (
     cw4_decide as _decide,
 )
 from test.sr_od.application.currency_war._cw_helpers import (
+    cw4_gs,
+)
+from test.sr_od.application.currency_war._cw_helpers import (
     cw4_session as _session,
 )
 
+from sr_od.application.currency_war.kernel.cw_game_state import Unit
 from sr_od.application.currency_war.kernel.cw_vocab import (
-    CwSimFrame,
     CwActionRefreshShopParam,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
@@ -85,20 +88,16 @@ def _session_t88():
                     plane_lengths=[9, 5, 7], line_state=False)
 
 
-def _p1r8_frame(gold: int = 53) -> tuple[CwSimFrame, object]:
-    """档案 p1r8 帧内联(gold/level/deployed 抄档案;bench 空;空店面
-    隔离买面,使 R1 刷新为该帧唯一可能发射)。"""
-    deployed = [
-        _bc('椒丘', star=2, slot=1),
-        _bc('艾丝妲', star=1, slot=2),
-        _bc('藿藿', star=2, slot=1),
-        _bc('忘归人', star=1, slot=2),
-    ]
-    st = CwSimFrame(gold=gold, level=5, plane=1, round_num=8, hp=100)
-    st.shop = []
-    st.bench = []
-    st.deployed = deployed
-    return st, _session_t88()
+def _p1r8_axes(gold: int = 53) -> dict:
+    """档案 p1r8 场景种子轴(gold/level/上阵 4 人抄档案;bench 空;空店面
+    隔离买面,使 R1 刷新为该帧唯一可能发射;上阵槽号 = 档案槽表下标
+    顺延 1-4,行域 Unit)。"""
+    return {'gold': gold, 'level': 5, 'plane': 1, 'round_num': 8,
+            'hp': 100,
+            'front_row': [Unit(char_id='椒丘', star=2, slot=1),
+                          Unit(char_id='艾丝妲', star=1, slot=2),
+                          Unit(char_id='藿藿', star=2, slot=3),
+                          Unit(char_id='忘归人', star=1, slot=4)]}
 
 
 # ===== 锁 A:合格集语义单帧锁(主锁)=====
@@ -206,16 +205,18 @@ class TestArchiveP1R8Frame:
         恢复无关(域外本就按账判)。末轮豁免支的发射形态由
         TestHorizonClosedYield 承载,不双锁。"""
         # 区内帧(gold=53,过息线)
-        st, sess = _p1r8_frame()
-        acts = _decide(st, sess)
+        sess = _session_t88()
+        cw4_gs(sess, **_p1r8_axes())
+        acts = _decide(sess)
         cnt = state_of(sess).cw4_counters
         assert 'shop_r1_no_chaseable_member' not in cnt
         assert not [a for a in acts if isinstance(a, CwActionRefreshShopParam)], acts
         assert cnt.get('must_spend_r1_account_fail', 0) >= 1
         assert state_of(sess).v3_release_reason == 'must_spend'
         # 区外对照帧(gold=40,息线下)
-        st_out, sess_out = _p1r8_frame(gold=40)
-        acts_out = _decide(st_out, sess_out)
+        sess_out = _session_t88()
+        cw4_gs(sess_out, **_p1r8_axes(gold=40))
+        acts_out = _decide(sess_out)
         assert not [a for a in acts_out if isinstance(a, CwActionRefreshShopParam)]
         cnt_out = state_of(sess_out).cw4_counters
         assert cnt_out.get('shop_r1_account_over_budget', 0) >= 1
@@ -233,19 +234,11 @@ class TestHorizonClosedYield:
         """P3 r7(全局末轮,plane_lengths=[9,5,7] ⇒ r_remaining=1)
         超账帧:刷新发射 reason='must_spend_r1_yielded' + yielded 分键
         在案——豁免支活性行为锁。空店面隔离买面(R1 刷新为该帧唯一
-        可能发射,与 _p1r8_frame 同构)。"""
-        deployed = [
-            _bc('椒丘', star=2, slot=1),
-            _bc('艾丝妲', star=1, slot=2),
-            _bc('藿藿', star=2, slot=1),
-            _bc('忘归人', star=1, slot=2),
-        ]
-        st = CwSimFrame(gold=53, level=5, plane=3, round_num=7, hp=100)
-        st.shop = []
-        st.bench = []
-        st.deployed = deployed
+        可能发射,与 _p1r8_axes 同构)。"""
         sess = _session_t88()
-        acts = _decide(st, sess)
+        cw4_gs(sess, gold=53, level=5, plane=3, round_num=7, hp=100,
+               front_row=_p1r8_axes()['front_row'])
+        acts = _decide(sess)
         cnt = state_of(sess).cw4_counters
         assert cnt.get('must_spend_r1_account_yielded', 0) >= 1
         refreshes = [a for a in acts if isinstance(a, CwActionRefreshShopParam)]
