@@ -208,8 +208,8 @@ def test_entry_box_tome_arms_read_benchview_kind():
 
 def test_bench_slot_bookcard_kind_occupies_one_slot():
     """容器 kind 细分占席语义:bookcard 槽恒占 1 席(kind ≠ empty),
-    席空数派生同源(bench_free_slots,9−2=7)。(legacy is_item_slot
-    旗标往返面随换形层退役删除。)"""
+    席空数派生同源(bench_free_slots,9−2=7)。(legacy 旗标往返面
+    随换形层退役删除。)"""
     slots = [BenchSlot(kind='unit', unit=Unit(char_id='甲', star=1,
                                               equips=[], slot=1)),
              BenchSlot(kind='bookcard')]

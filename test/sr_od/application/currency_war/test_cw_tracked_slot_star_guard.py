@@ -15,7 +15,7 @@ run_20260915_054718 §5/§8 候选2 实锤「回退即采新」让同名多星�
 
 锁 2(tracked 槽号守卫)随载体收窄只剩健康静默腿:摘除腿按下标置 None
 (pad 态契约不破坏)+ 写点健康显影。反帧显影腿(重复/越界槽号 → 台账行)
-随 BenchChar 信息位载体退役删除:tracked 容器形槽号 = 下标+1 结构性健康
+随角色形信息位载体退役删除:tracked 容器形槽号 = 下标+1 结构性健康
 (ADR-0646 无守卫槽号面随形状消失),脏输入不可构造 = 生产不可达状态不锁
 (同 P6 拒写回锁退役口径)。
 """
@@ -385,7 +385,7 @@ def test_removal_keeps_layout_sell_and_move_legs():
 
 def test_tracked_write_guard_healthy_silence(monkeypatch):
     """写点健康静默:健康账摘除零显影(常态无噪声)。(反帧显影腿随
-    BenchChar 信息位载体退役删除:容器形槽号 = 下标+1 结构性健康,
+    角色形信息位载体退役删除:容器形槽号 = 下标+1 结构性健康,
     重复/越界槽号不可构造,生产不可达状态不锁——见模块头锁 2 节。)"""
     rows_h = _spy_defects(monkeypatch)
     session_h = StrategySession()

@@ -1236,11 +1236,9 @@ def test_restore_session_empty_refused_then_late_truth_lands(
 
 # ==================== 容器视图转换/合成口/ShopCard 映射(自 w5_passthrough 归并) ====================
 
-# 旧槽表换算族席位转换腿(test_unit_rows_to_deployed_rebuilds_legacy_slot_table /
-# test_bench_slots_to_legacy_derives_faction_from_registry 及其合并壳)随
-# benchchar-retirement P7 换形层退役删除:被测换形口不复存在,阵营派生
-# 消费面走注册表单一源(char_first_faction,faction 三类口径锁另辖)。
-# ShopCard 映射单一源往返腿保留(test_shop_card_mapping_roundtrip)。
+# 旧槽表换算族的席位转换锁随换形层退役删除:被测换形口不复存在,
+# 阵营派生消费面走注册表单一源(char_first_faction,faction 三类口径
+# 锁另辖)。ShopCard 映射单一源往返腿保留(test_shop_card_mapping_roundtrip)。
 def _mk_legacy_card(x: int, name: str, *, cost: int = 1, star: int = 1,
                     faction: str = '仙舟',
                     cost_source: str = 'badge',
