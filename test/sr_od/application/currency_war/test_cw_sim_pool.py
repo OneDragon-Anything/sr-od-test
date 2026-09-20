@@ -21,7 +21,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     GameState,
     Unit,
     bench_view_of_slots,
-    register_sig_actors,
 )
 from sr_od.application.currency_war.sim.cw_sim_pool import (
     EXPERT_COPIES_ASSUMED,
@@ -36,8 +35,6 @@ from sr_od.application.currency_war.sim.cw_sim_shop import (
     refresh_cost_for,
 )
 from sr_od.application.currency_war.sim.cw_sim_streams import stream_rng
-
-register_sig_actors('TestSigWriter')
 
 
 def _lsig() -> ChannelSig:

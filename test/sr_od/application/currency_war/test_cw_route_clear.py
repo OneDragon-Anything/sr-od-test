@@ -5,8 +5,7 @@
 1. 未识别轮 = 清全部十槽(route_clearable 位);
 2. 属屏命中轮 = 只清异属屏、属屏槽保活;
 3. shop route_clearable=False 永不清(既有显式清点口独占);
-4. 已 None 跳过(不占 write_seq);
-5. actor 三登记在册(在册校验防线前置)。
+4. 已 None 跳过(不占 write_seq)。
 """
 
 from types import SimpleNamespace
@@ -17,7 +16,6 @@ from sr_od.application.currency_war.kernel.cw_events import (
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
     _PAYLOAD_DOMAINS,
-    REGISTERED_ACTORS,
     ChannelSig,
     EncounterPayload,
     GameState,
@@ -91,8 +89,7 @@ def test_route_clear_shop_exempt_and_none_skip():
     assert gs.write_seq == seq_after_first         # 已 None 跳过不占版本
 
 
-def test_route_clear_actor_registered_and_clear_uses_action_type_guard():
-    assert 'cw_loop_route_clear' in REGISTERED_ACTORS
+def test_route_clear_uses_action_type_guard():
     gs = GameState(schema_version=1)
     gs.write_logic(gs.encounter, EncounterPayload(), produced_by='test',
                    sig=ChannelSig(family='logic_action', actor='CwLoop',

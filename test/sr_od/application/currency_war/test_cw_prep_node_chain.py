@@ -19,14 +19,12 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     NodeKey,
     TokenCell,
     game_state_of,
-    register_sig_actors,
 )
 from sr_od.application.currency_war.obs.cw_node_reader import NodeSlot
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
     _write_prep_node_chain,
 )
 
-register_sig_actors('TestChainWriter')
 _SIG = ChannelSig(family='obs', actor='TestChainWriter', mode='read')
 
 

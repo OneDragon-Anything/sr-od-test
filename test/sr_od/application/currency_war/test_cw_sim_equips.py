@@ -23,7 +23,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     GameState,
     bench_view_of_slots,
-    register_sig_actors,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionPrecisionWrenchUseParam,
@@ -52,8 +51,6 @@ from sr_od.application.currency_war.sim.cw_sim_special import (
     silver_wolf_effective_cost,
     trailblazer_form_of,
 )
-
-register_sig_actors('TestSigWriter')
 
 _SIG = ChannelSig(family='obs', actor='TestSigWriter')
 

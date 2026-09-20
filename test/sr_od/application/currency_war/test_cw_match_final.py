@@ -46,9 +46,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 from sr_od.application.currency_war.kernel.cw_game_state import (  # noqa: E402
     ChannelSig as _ChannelSig,
 )
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    register_sig_actors as _register_sig_actors,
-)
 from sr_od.application.currency_war.kernel.cw_state_journal import (
     install_state_telemetry,
     reset_state_telemetry,
@@ -60,8 +57,6 @@ from sr_od.application.currency_war.obs.cw_observation import (
 )
 from sr_od.application.currency_war.telemetry import match_archive
 from sr_od.application.currency_war.telemetry import state as tel_state
-
-_register_sig_actors('TestSigWriter')
 
 
 def _lsig() -> _ChannelSig:

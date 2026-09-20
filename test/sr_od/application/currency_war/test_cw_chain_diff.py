@@ -15,10 +15,8 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     TokenCell,
     chain_diff,
     maybe_emit_chain_diff,
-    register_sig_actors,
 )
 
-register_sig_actors('TestChainWriter')
 _SIG = ChannelSig(family='obs', actor='TestChainWriter', mode='read')
 
 

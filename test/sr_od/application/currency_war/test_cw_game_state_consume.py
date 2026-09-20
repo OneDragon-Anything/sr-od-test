@@ -32,15 +32,10 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 from sr_od.application.currency_war.kernel.cw_game_state import (  # noqa: E402
     ChannelSig as _ChannelSig,
 )
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    register_sig_actors as _register_sig_actors,
-)
 from sr_od.application.currency_war.kernel.cw_vocab import (
     BenchChar,
     CwSimFrame,
 )
-
-_register_sig_actors('TestSigWriter')
 
 
 def _sig() -> _ChannelSig:
@@ -58,7 +53,6 @@ def _hsig() -> _ChannelSig:
     """渠道③签名(logic_hook 族;relay 中继)。"""
     return _ChannelSig(family='logic_hook', actor='TestSigWriter',
                        mode='compute')
-
 
 
 # ============================================================ 共用 helper

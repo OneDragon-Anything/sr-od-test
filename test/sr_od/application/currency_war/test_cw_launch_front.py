@@ -16,7 +16,6 @@ from sr_od.application.currency_war.kernel import cw_economy, cw_launch_admissio
 from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     game_state_of,
-    register_sig_actors,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import CwActionOpenShopParam, CwActionStartBattleParam
 from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
@@ -26,7 +25,6 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
     state_of,
 )
 
-register_sig_actors('TestSigWriter')
 
 _GREEN = {'armed': True, 'quality': {'defer_by_quality': False},
           'quality_eval_error': False}

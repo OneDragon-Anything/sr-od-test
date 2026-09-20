@@ -38,7 +38,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     ShopPayload,
     ShopSlot,
     game_state_of,
-    register_sig_actors,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
@@ -97,8 +96,6 @@ from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
 )
 from sr_od.application.currency_war.telemetry import defects as cw_defects
 from sr_od.operations.sr_operation import SrOperation
-
-register_sig_actors('cw-t216-test')
 
 _LOGIC_SIG = ChannelSig(family='logic_action', actor='cw-t216-test',
                         mode='compute')

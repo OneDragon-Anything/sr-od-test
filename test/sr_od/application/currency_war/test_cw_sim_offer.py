@@ -13,7 +13,6 @@ import random
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
     GameState,
-    register_sig_actors,
 )
 from sr_od.application.currency_war.kernel.cw_investments import (
     INVESTMENT_ENVS,
@@ -32,8 +31,6 @@ from sr_od.application.currency_war.sim.cw_sim_offer import (
     sample_env_offer,
     sample_strategy_offer,
 )
-
-register_sig_actors('TestSigWriter')
 
 
 def _gs() -> GameState:

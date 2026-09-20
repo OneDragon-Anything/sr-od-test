@@ -34,7 +34,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     Unit,
     bench_view_of_slots,
     game_state_of,
-    register_sig_actors,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
@@ -63,7 +62,6 @@ from sr_od.application.currency_war.strategies.mandate_v1_strategy import (
 _SIG = ChannelSig(family='logic_action', actor='cw-t253-test', mode='compute')
 _OBS_SIG = ChannelSig(family='obs', actor='cw-t253-test', mode='synthesized')
 
-register_sig_actors('cw-t253-test')
 
 _ROUND = 5
 _LINE = set(COMP_LIBRARY[0].core_chars) | set(COMP_LIBRARY[0].shared_chars)

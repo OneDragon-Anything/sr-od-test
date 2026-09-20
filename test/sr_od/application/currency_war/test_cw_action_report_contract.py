@@ -38,10 +38,8 @@ def test_report_function_accepts_param_and_sig(t):
     from sr_od.application.currency_war.kernel.cw_game_state import (
         ChannelSig,
         GameState,
-        register_sig_actors,
     )
 
-    register_sig_actors('cw-report-lock')
     gs = GameState(schema_version=1)
     sig = ChannelSig(family='logic_action', actor='cw-report-lock',
                      mode='compute')

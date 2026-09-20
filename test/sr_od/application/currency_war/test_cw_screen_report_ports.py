@@ -11,7 +11,7 @@
    简报三闸/过渡链防御)单独成测;
 3. 渠道签名锁:缺省 sig 构造逐位沿用现役写点原值(family/actor/screen/
    mode)——经状态流水捕获行断言(sink/run_id 官方注入槽,monkeypatch
-   测试结束自动还原),REGISTERED_ACTORS 零扩面的行为锁。
+   测试结束自动还原)的行为锁。
 
 纪律:串行、零识别零点击零真实 IO、不断言容器写入行为以外的东西。
 """
@@ -38,7 +38,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     NodeChain,
     SupplyPayload,
     TokenCell,
-    register_sig_actors,
 )
 
 _PKG = 'sr_od.application.currency_war.kernel.cw_screen_report'
@@ -333,7 +332,6 @@ def test_empty_stub_gate_semantics(screen):
 def test_briefing_three_gate_semantics():
     """简报三闸逐位平移:词缀幂等门(已有不重写)/ boss 恒覆写(读空写
     None)/ 难度仅 None 才写。"""
-    register_sig_actors('TestSigWriter')
     mod = _screen_module('briefing')
     gs = _blank_gs()
     gs.write_logic(gs.enemy_affixes, ['已有词缀'],
@@ -351,7 +349,6 @@ def test_briefing_three_gate_semantics():
 def test_plane_transition_chain_defenses():
     """过渡链防御逐位平移:非开局且节点镜像缺禁猜跳写 / chain 缺诚实缺位 /
     基线幂等门(基线已有不覆写)。"""
-    register_sig_actors('TestSigWriter')
     mod = _screen_module('plane_transition')
     chain = NodeChain(plane=1, seq=[TokenCell('battle', 'hu', 0.1)])
 
@@ -391,7 +388,6 @@ def test_prep_optional_domains_field_presence_and_takeover_cluster(
     - 渠道签名 = ResumeAttach logic_hook(bosses/affixes 行 screen='' 原值),
       状态流水行断言。
     """
-    register_sig_actors('TestSigWriter')
     mod = _screen_module('prep')
     # 全 None → 零写
     gs = _blank_gs()
@@ -434,7 +430,6 @@ def test_prep_optional_domains_field_presence_and_takeover_cluster(
 def test_prep_chain_baseline_idempotent_gate():
     """备战链域基线幂等门(与位面过渡链同款防线):现行链照写、基线已有
     不覆写;sig 形参透传(原写点观察渠道链,actor 不受限缺省)。"""
-    register_sig_actors('TestChainSigWriter')
     mod = _screen_module('prep')
     chain = NodeChain(plane=1, seq=[TokenCell('battle', 'hu', 0.1)])
     existing = NodeChain(plane=2, seq=[TokenCell(None, 'none')])
@@ -465,7 +460,7 @@ def test_placeholder_report_is_documented_noop():
 # ============================================================ 3. 渠道签名锁
 
 
-#: 缺省 sig 原值表(逐位沿用各画面现役写点;REGISTERED_ACTORS 零扩面):
+#: 缺省 sig 原值表(逐位沿用各画面现役写点):
 #: screen → (family, actor, screen, mode)。
 _DEFAULT_SIGS = {
     'encounter': ('logic_action', 'CwScreenEncounter', None, 'compute'),

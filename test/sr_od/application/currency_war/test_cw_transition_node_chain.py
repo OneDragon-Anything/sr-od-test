@@ -18,7 +18,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     NodeKey,
     TokenCell,
     game_state_of,
-    register_sig_actors,
 )
 from sr_od.application.currency_war.kernel.cw_screen_report.plane_transition import (
     CwScreenPlaneTransitionObs,
@@ -29,7 +28,6 @@ from sr_od.application.currency_war.operations.cw_screen.cw_screen_plane_transit
     _build_transition_chain,
 )
 
-register_sig_actors('TestChainWriter')
 _SIG = ChannelSig(family='obs', actor='TestChainWriter', mode='read')
 
 

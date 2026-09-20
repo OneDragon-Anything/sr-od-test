@@ -27,7 +27,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     ShopSlot,
     Unit,
     bench_view_of_slots,
-    register_sig_actors,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionBuyCardParam,
@@ -54,8 +53,6 @@ from sr_od.application.currency_war.sim.cw_sim_equips import (
 from sr_od.application.currency_war.sim.cw_sim_phase import CwSimPhase
 from sr_od.application.currency_war.sim.cw_sim_run_config import RunConfig
 from sr_od.application.currency_war.sim.cw_sim_special import SILVER_WOLF_ID
-
-register_sig_actors('TestSigWriter')
 
 _SIG = ChannelSig(family='obs', actor='TestSigWriter')
 

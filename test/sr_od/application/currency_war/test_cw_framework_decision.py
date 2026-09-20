@@ -23,7 +23,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     GameState,
     NodeKey,
-    register_sig_actors,
 )
 from sr_od.application.currency_war.kernel.cw_recipe import (
     decision_target,
@@ -38,8 +37,6 @@ from sr_od.application.currency_war.kernel.cw_transition import (
     transition_score,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import BenchChar, ShopCard
-
-register_sig_actors('TestSigWriter')
 
 
 def _sig() -> ChannelSig:

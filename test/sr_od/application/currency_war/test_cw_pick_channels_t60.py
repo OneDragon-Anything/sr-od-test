@@ -49,7 +49,6 @@ from sr_od.application.currency_war.kernel.cw_action_report.pick_supply import (
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
-    REGISTERED_ACTORS,
     BenchSlot,
     BenchView,
     ChannelSig,
@@ -57,7 +56,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     Unit,
     bench_slots_of,
     consume_defect_sink,
-    register_sig_actors,
     set_defect_sink,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
@@ -67,7 +65,6 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
 )
 
 # 本文件签名写入者登记(测试惯例;发射相 actor = 动作 op 类名)。
-register_sig_actors('CwActionPickEquipOp', 'CwActionPickSupplyOp')
 
 _SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep')
 
@@ -190,19 +187,6 @@ def test_zero_write_delegates_retired_and_routing_migrated() -> None:
         .endswith('.pick_equip'), '包级解析路由到 pick_equip 具名模块'
     assert pick_supply_mod.report_action_pick_supply_param.__module__ \
         .endswith('.pick_supply'), '包级解析路由到 pick_supply 具名模块'
-
-
-def test_pick_op_actors_registered_for_emission_report() -> None:
-    """发射相写入者登记面锁:动作 op 模块导入期全量自登记——缺登记 =
-    实机发射相自上报 _validate_sig ValueError 炸(动作 op 全链 FAIL;
-    契约扩员 12→15 七类漏登记的回归锁)。"""
-    from sr_od.application.currency_war.operations.cw_op import (
-        cw_overlay_pick_action,
-    )
-
-    for name in dir(cw_overlay_pick_action):
-        if name.startswith('CwActionPick') and name.endswith('Op'):
-            assert name in REGISTERED_ACTORS, f'发射相 actor 未登记: {name}'
 
 
 def test_pick_channels_payload_fields_excluded_from_action_key() -> None:

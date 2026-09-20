@@ -15,7 +15,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     ShopPayload,
     ShopSlot,
     bench_view_of_slots,
-    register_sig_actors,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionBuyCardParam,
@@ -30,8 +29,6 @@ from sr_od.application.currency_war.sim.cw_sim_actions import (
 )
 from sr_od.application.currency_war.sim.cw_sim_shop import deal_shop
 from sr_od.application.currency_war.sim.cw_sim_streams import stream_rng
-
-register_sig_actors('TestSigWriter')
 
 _OBS = ChannelSig(family='obs', actor='TestSigWriter')
 

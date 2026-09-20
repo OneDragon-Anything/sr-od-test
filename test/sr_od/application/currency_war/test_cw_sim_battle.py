@@ -11,7 +11,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
     ChannelSig,
     GameState,
-    register_sig_actors,
 )
 from sr_od.application.currency_war.sim.cw_sim_battle import (
     SIM_BATTLE_FACE,
@@ -22,8 +21,6 @@ from sr_od.application.currency_war.sim.cw_sim_battle import (
     settle_battle,
 )
 from sr_od.application.currency_war.sim.cw_sim_streams import stream_rng
-
-register_sig_actors('TestSigWriter')
 
 _OBS_SIG = ChannelSig(family='obs', actor='TestSigWriter')
 

@@ -34,15 +34,12 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     bench_is_full,
     board_next_tier_of,
     node_ordinal_of,
-    register_sig_actors,
     slot_occupies,
     write_match_final,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig as Sig,
 )
-
-register_sig_actors('TestSigWriter')
 
 
 def _sig() -> Sig:
@@ -381,13 +378,13 @@ def journal_sink():
     set_state_journal_sink(None)
 
 
-# ============================================================ §9 渠道签名封闭集(登记门,自 state_journal 归并)
+# ============================================================ §9 渠道签名封闭集(渠道门,自 state_journal 归并)
 
 def test_channel_family_closed_set() -> None:
-    """§3.2.1/§3.2.4 硬约束 2 签名门三分支:①family 封闭集 {obs,
+    """§3.2.1/§3.2.4 硬约束 2 签名门两分支:①family 封闭集 {obs,
     logic_action, logic_hook},集外 = 红;②per-family 模态封闭(obs 族子模
-    = read/carried/prior/synthesized,logic 两族恒 compute,集外 = 红);
-    ③显式 sig 的 actor 须为登记面在册,集外 = 红。"""
+    = read/carried/prior/synthesized,logic 两族恒 compute,集外 = 红)。
+    actor 无白名单闸(仅遥测身份标注)。"""
     for family in ('obs', 'logic_action', 'logic_hook'):
         assert Sig(family=family, actor='cw_observation').family == family
     with pytest.raises(ValueError):
@@ -403,13 +400,3 @@ def test_channel_family_closed_set() -> None:
         Sig(family=family, actor='derive_node_observed', mode='compute')
         with pytest.raises(ValueError):
             Sig(family=family, actor='derive_node_observed', mode='read')
-    # ③ actor 登记门
-    from sr_od.application.currency_war.kernel.cw_game_state import (
-        register_sig_actors,
-    )
-    register_sig_actors('TestActorR1')
-    gs = _gs()
-    with pytest.raises(ValueError):
-        gs.observe(gs.gold, 20, sig=Sig(family='obs', actor='NeverRegistered'))
-    gs.observe(gs.gold, 20, sig=Sig(family='obs', actor='TestActorR1'))
-    assert gs.gold.value == 20

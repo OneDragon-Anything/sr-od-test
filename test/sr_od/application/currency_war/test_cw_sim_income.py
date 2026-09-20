@@ -12,7 +12,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
     ChannelSig,
     GameState,
-    register_sig_actors,
 )
 from sr_od.application.currency_war.sim.cw_sim_income import (
     IncomeApplied,
@@ -21,8 +20,6 @@ from sr_od.application.currency_war.sim.cw_sim_income import (
     streak_income_after,
     streak_signed_after,
 )
-
-register_sig_actors('TestSigWriter')
 
 
 def _gs(gold: int, strategies: list[str] | None = None) -> GameState:

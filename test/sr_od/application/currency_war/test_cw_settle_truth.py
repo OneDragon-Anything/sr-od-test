@@ -17,10 +17,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
     ChannelSig,
     GameState,
-    register_sig_actors,
 )
-
-register_sig_actors('TestSigWriter')
 
 
 def _sig():

@@ -14,7 +14,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     GameState,
     NodeKey,
-    register_sig_actors,
 )
 from sr_od.application.currency_war.sim.cw_sim_nodes import (
     BOX_CANDIDATES,
@@ -37,8 +36,6 @@ from sr_od.application.currency_war.sim.cw_sim_overlay import (
     pending_disclosure_items,
     sample_options,
 )
-
-register_sig_actors('TestSigWriter')
 
 
 def _gs(node_kind: str = 'reward') -> GameState:

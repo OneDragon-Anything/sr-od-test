@@ -34,7 +34,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     ExpertInvitePayload,
     game_state_of,
-    register_sig_actors,
 )
 from sr_od.application.currency_war.kernel.cw_intention import IntentionState
 from sr_od.application.currency_war.kernel.cw_vocab import (
@@ -44,8 +43,6 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionPickExpertInviteParam,
     CwActionPickFortuneParam,
 )
-
-register_sig_actors('cw-mig2-test')
 
 _SIG = ChannelSig(family='logic_action', actor='cw-mig2-test', mode='compute')
 

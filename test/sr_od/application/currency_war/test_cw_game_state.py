@@ -61,9 +61,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 from sr_od.application.currency_war.kernel.cw_game_state import (  # noqa: E402
     ChannelSig as _ChannelSig,
 )
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    register_sig_actors as _register_sig_actors,
-)
 from sr_od.application.currency_war.kernel.cw_investments import (
     STRATEGY_EFFECTS,
 )
@@ -84,8 +81,6 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     ShopCard as StateShopCard,
 )
 
-_register_sig_actors('TestSigWriter')
-
 
 def _sig() -> _ChannelSig:
     """渠道①签名(obs 族;观察/沿用/先验/离屏/观察事件)。"""
@@ -102,7 +97,6 @@ def _hsig() -> _ChannelSig:
     """渠道③签名(logic_hook 族;relay 中继)。"""
     return _ChannelSig(family='logic_hook', actor='TestSigWriter',
                        mode='compute')
-
 
 
 # ============================================================ §8.6-1/§2.1
@@ -1327,6 +1321,5 @@ def test_shop_card_mapping_roundtrip() -> None:
     back = shop_cards_to_legacy([container])
     assert back[0].x == 0, 'x 置 0 不消费(执行侧按槽号现取坐标)'
     assert back[0].slot == 3, '槽号自容器透传(点击取坐标依据,不按下标)'
-
 
 

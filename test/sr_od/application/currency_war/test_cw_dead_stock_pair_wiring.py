@@ -44,7 +44,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     ShopSlot,
     Unit,
     game_state_of,
-    register_sig_actors,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import CwActionBuyCardParam
 from sr_od.application.currency_war.strategies.impl.cw_strategy import (
@@ -56,8 +55,6 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 from sr_od.application.currency_war.strategies.mandate_v1_strategy import (
     MandateV1Live,
 )
-
-register_sig_actors('cw-t243-test')
 
 _LOGIC_SIG = ChannelSig(family='logic_action', actor='cw-t243-test',
                         mode='compute')
