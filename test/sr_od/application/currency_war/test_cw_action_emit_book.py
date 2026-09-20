@@ -243,7 +243,8 @@ def test_deploy_move_tracks_immediately_on_emit(monkeypatch):
         char_id='甲', star=1, slot=2))]
 
     env = _deploy_env(session)
-    action = CwActionDeployMoveParam(bench_idx=1, to_row='front', faction='')
+    action = CwActionDeployMoveParam(bench_idx=1, to_row='front', to_slot=1,
+                                     faction='')
     ok = CwActionDeployMoveOp(env.op.ctx, action, env=env).run()
 
     assert ok.is_success, '机械发出即职责完成(round 成功态)'

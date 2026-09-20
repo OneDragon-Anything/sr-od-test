@@ -62,7 +62,7 @@ def test_deploy_move_report_lacks_form_normalization_current() -> None:
     gs = _gs_with_bench_trailblazer(deployed_occupied=False)
     out = report_action_deploy_move_param(
         gs, CwActionDeployMoveParam(bench_idx=0, to_row='front',
-                                    faction=''),
+                                    to_slot=1, faction=''),
         sig=_SIG)
     assert out.applied, f'部署应成功,实得 {out.reason!r}'
     dep = deployed_slots_of(gs)

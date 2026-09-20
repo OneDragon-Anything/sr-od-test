@@ -82,7 +82,7 @@ def test_action_key_faces_pinned_per_class():
     assert 'cost' in action_key(CwActionLevelUpParam(cost=4))
     # CwActionDeployMoveParam/CwActionSellDeployedParam:容器下标字段替换物理槽位字段,键形态同构
     assert 'bench_idx' in action_key(CwActionDeployMoveParam(bench_idx=1, to_row='front',
-                                                faction=''))
+                                                to_slot=1, faction=''))
     assert 'deployed_idx' in action_key(CwActionSellDeployedParam(deployed_idx=0))
 
 

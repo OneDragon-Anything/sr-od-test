@@ -228,13 +228,14 @@ def test_bench_slot_bookcard_kind_roundtrip_as_item_placeholder():
 # ===== CwActionDeployMoveParam 帧投影占用集(改动三审 代-1 应修行为锁)=====
 
 def test_deploymove_projection_records_resolved_row():
-    """CwActionDeployMoveParam 容器逻辑态首空落位 fallback 锁(阶段 3.5 宿主迁移版;
-    原黑板占用集 fallback 记行锁随 _project_prep_obs 退役,新锁断言容器
-    ``deployed_place`` 首空单一源的 fallback 语义:首选排满落位 fallback
-    另一排,记实落排)。"""
+    """CwActionDeployMoveParam 容器逻辑态载荷直落锁(落位载荷契约改造;
+    原「deployed_place 首空单一源 fallback」锁随首空位退役翻面):断言
+    容器写侧按载荷 (to_row, to_slot) 直落——目标有人 = 交换(被占位者
+    回源 bench 槽),载荷槽空 = 放置,源槽空 = 陈旧提案零写。"""
     from test.sr_od.application.currency_war._cw_helpers import cw4_session
 
     from sr_od.application.currency_war.kernel.cw_game_state import (
+        bench_slots_of,
         game_state_of,
     )
     from sr_od.application.currency_war.kernel.cw_vocab import CwActionDeployMoveParam
@@ -247,34 +248,42 @@ def test_deploymove_projection_records_resolved_row():
                                                equips=[], slot=3))]
     _slots += [BenchSlot(kind='empty') for _ in range(8)]
     gs.observe(gs.bench, BenchView(slots=_slots, capacity=9), sig=_sig)
-    # 前排满(4 人)fallback 后排:实落后排(记实落排语义由 deployed_place
-    # 首空单一源承载)
+    # 前排满(4 人):载荷指前排 2 号(丙1 占位)→ 交换,甲落 2 号、
+    # 丙1 回源 bench 槽 3
     gs.observe(gs.front_row, [Unit(char_id=f'丙{i}', star=1, equips=[],
                                    slot=i + 1) for i in range(4)],
                sig=_sig)
     report_action_deploy_move_param(gs, CwActionDeployMoveParam(bench_idx=0,
                                                    to_row='front',
+                                                   to_slot=2,
                                                    faction=''),
                                     sig=_logic)
     dep = deployed_slots_of(gs)
-    assert dep[4] is not None and dep[4].char_id == '甲'   # 后排首槽
-    # 前排保持原 4 人(不被新增污染;fallback 实落排语义)
-    assert [d.char_id for d in dep[:4]] == ['丙0', '丙1', '丙2', '丙3']
-    # 前排有空位:首选排照落(回归面)
+    assert dep[1] is not None and dep[1].char_id == '甲', \
+        '载荷直落:落参数指定槽(to_slot=2 → 表下标 1)'
+    assert [d.char_id for i, d in enumerate(dep[:4]) if i != 1] \
+        == ['丙0', '丙2', '丙3'], '交换只动目标槽,其余占位不受波及'
+    _b = bench_slots_of(gs)[0]
+    assert _b is not None and _b.char_id == '丙1', \
+        '交换语义:被占位角色回发射者源 bench 槽'
+    # 载荷槽空 = 放置(前排 1 号被乙占,载荷指 2 号空槽 → 照落 2 号)
     gs2 = game_state_of(cw4_session())
     gs2.observe(gs2.bench, BenchView(slots=_slots, capacity=9), sig=_sig)
     gs2.observe(gs2.front_row, [Unit(char_id='乙', star=1, equips=[],
                                      slot=1)], sig=_sig)
     report_action_deploy_move_param(gs2, CwActionDeployMoveParam(bench_idx=0,
                                                     to_row='front',
+                                                    to_slot=2,
                                                     faction=''),
                                     sig=_logic)
     dep2 = deployed_slots_of(gs2)
-    assert dep2[1] is not None and dep2[1].char_id == '甲'   # 首空 = 表 1 位(0 位是乙)
+    assert dep2[1] is not None and dep2[1].char_id == '甲'   # 载荷槽 = 表 1 位
+    assert dep2[0].char_id == '乙', '占位槽不受放置波及'
     # 源槽无件(bench_idx 越界空槽)= 陈旧提案,本口零写
     before = gs2.write_seq
     report_action_deploy_move_param(gs2, CwActionDeployMoveParam(bench_idx=5,
                                                     to_row='front',
+                                                    to_slot=2,
                                                     faction=''),
                                     sig=_logic)
     assert gs2.write_seq == before

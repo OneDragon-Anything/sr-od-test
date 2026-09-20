@@ -330,7 +330,8 @@ def test_deploy_transform_window_3star_lv999(
     gs = _make_gs(bench=[('银狼LV.999', 3), ('希儿', 1)],
                   front=[Unit(char_id='黑塔', star=1, slot=1)], equips=[])
     out = report_action_deploy_move_param(
-        gs, CwActionDeployMoveParam(bench_idx=0, to_row='front', faction=''),
+        gs, CwActionDeployMoveParam(bench_idx=0, to_row='front', to_slot=2,
+                                    faction=''),
         _lsig('CwActionDeployMoveOp'))
     assert out.applied is True
     assert gs.front_row.value[1].char_id == '银狼LV.999', '落场'
@@ -353,7 +354,7 @@ def test_deploy_non_target_identity(
         gs = _make_gs(bench=bench_units, front=[], equips=[])
         out = report_action_deploy_move_param(
             gs, CwActionDeployMoveParam(bench_idx=idx, to_row='back',
-                                        faction=''),
+                                        to_slot=1, faction=''),
             _lsig('CwActionDeployMoveOp'))
         assert out.applied is True
         moved = gs.back_row.value[0]
@@ -371,7 +372,8 @@ def test_deploy_cascade_lv999_normal_merge(
     gs = _make_gs(bench=[('银狼LV.999', 3), ('银狼LV.999', 1),
                          ('银狼LV.999', 1)], front=[], equips=[])
     out = report_action_deploy_move_param(
-        gs, CwActionDeployMoveParam(bench_idx=0, to_row='front', faction=''),
+        gs, CwActionDeployMoveParam(bench_idx=0, to_row='front', to_slot=1,
+                                    faction=''),
         _lsig('CwActionDeployMoveOp'))
     assert out.applied is True
     assert gs.front_row.value[0].star == 2, '级联正常推演:场上载体 1★→2★'

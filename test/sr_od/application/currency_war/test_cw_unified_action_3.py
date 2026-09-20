@@ -89,7 +89,8 @@ def test_prep_terminal_set_matches_registry_terminal_attrs():
     mechanical_cases = [
         CwActionSellBenchParam(bench_idx=0),
         CwActionSellDeployedParam(deployed_idx=0),
-        CwActionDeployMoveParam(bench_idx=0, to_row='front', faction=''),
+        CwActionDeployMoveParam(bench_idx=0, to_row='front', to_slot=1,
+                                faction=''),
         CwActionWearEquipParam(item_name='轮滑鞋', char_name='刃', row='front', slot=1),
         CwActionCollectOreParam(points=((1, 2),)),
         CwActionOpenTomeParam(),

@@ -196,7 +196,8 @@ def test_vocab_actions_all_have_logic_state_projection():
     written: list = [
         CwActionSellBenchParam(bench_idx=0),
         CwActionSellDeployedParam(deployed_idx=0),
-        CwActionDeployMoveParam(bench_idx=1, to_row='front', faction=''),
+        CwActionDeployMoveParam(bench_idx=1, to_row='front', to_slot=2,
+                                faction=''),
         CwActionLevelUpParam(cost=0),
         CwActionCollectOreParam(points=((1, 2),)),
         CwActionOpenTomeParam(slot=None),
@@ -328,9 +329,10 @@ def test_deploy_slot_assignment_matches_kernel_plan():
 
 
 def test_deploymove_logic_state_moves_unit_and_increments_board():
-    """CwActionDeployMoveParam 容器逻辑态(§3.1 落码):bench 摘槽 + deployed 落槽;
-    陈旧提案(源槽空/目标被占)= 零写。(docstring 收窄:board 羁绊增量
-    面本测未断言,不虚报。)"""
+    """CwActionDeployMoveParam 容器逻辑态(§3.1 落码;落位载荷契约改造):
+    bench 摘槽 + deployed 按载荷 (to_row, to_slot) 直落;目标槽有人 =
+    交换交互(被占位角色回源 bench 槽);载荷槽非法/源槽空 = 零写。
+    (docstring 收窄:board 羁绊增量面本测未断言,不虚报。)"""
     gs = game_state_of(None)
     bc = BenchChar(slot=3, char_id='甲', star=1)
     slots = [None] * 9
@@ -342,14 +344,16 @@ def test_deploymove_logic_state_moves_unit_and_increments_board():
     gs.observe(gs.board, {'欢愉': 1}, evidence='t', sig=_SIG_OBS)
     report_action_deploy_move_param(gs, CwActionDeployMoveParam(bench_idx=2,
                                                    to_row='front',
+                                                   to_slot=1,
                                                    faction=''),
                                     sig=_SIG)
     bench_after = bench_slots_of(gs)
     assert bench_after[2] is None
     dep = deployed_slots_of(gs)
-    # 落位 = 首空(deployed_place 单一源,与 simulate 同式):前排 1 号
+    # 落位 = 载荷直落(前排 1 号)
     assert dep[0] is not None and dep[0].char_id == '甲'
-    # 陈旧提案:两排全满 → deployed_place 无位 = 零写(源槽不摘)
+    # 目标槽有人 = 交换:甲拖到前排 1 号(乙0 占位)→ 甲落 1 号、乙0 回源
+    # bench 槽 3(与 CwActionSwapDeployParam 换位契约同语义)
     gs.observe(gs.bench, bench_view_of_slots(list(slots)), evidence='t', sig=_SIG_OBS)
     gs.observe(gs.front_row, [Unit(char_id=f'乙{i}', star=1, equips=[],
                                    slot=i + 1) for i in range(4)],
@@ -359,9 +363,24 @@ def test_deploymove_logic_state_moves_unit_and_increments_board():
                evidence='t', sig=_SIG_OBS)
     report_action_deploy_move_param(gs, CwActionDeployMoveParam(bench_idx=2,
                                                    to_row='front',
+                                                   to_slot=1,
                                                    faction=''),
                                     sig=_SIG)
-    assert bench_slots_of(gs)[2].char_id == '甲'   # 源槽未摘(整笔零写)
+    dep = deployed_slots_of(gs)
+    assert dep[0] is not None and dep[0].char_id == '甲', \
+        '交换语义:上场者落被占位的目标槽'
+    assert dep[1].char_id == '乙1', '其余占位不受交换波及'
+    swapped_back = bench_slots_of(gs)[2]
+    assert swapped_back is not None and swapped_back.char_id == '乙0', \
+        '交换语义:被占位角色回发射者源 bench 槽'
+    # 陈旧提案:载荷槽跨排(前排无 5 号,front 5 号换算落表后段不符)
+    # = 零写(源槽不摘)
+    report_action_deploy_move_param(gs, CwActionDeployMoveParam(bench_idx=2,
+                                                   to_row='front',
+                                                   to_slot=5,
+                                                   faction=''),
+                                    sig=_SIG)
+    assert bench_slots_of(gs)[2].char_id == '乙0'   # 源槽未摘(整笔零写)
 
 
 def test_selldeployed_logic_state_clears_slot_and_recounts_board():
