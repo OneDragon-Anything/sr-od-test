@@ -50,15 +50,26 @@ def test_sphere_click_targets_roundtrip():
 
 def test_collect_ore_container_precise_drop():
     """容器逻辑态:CwActionCollectOreParam 载荷坐标精确摘除(未被点的晶矿保留);
-    count/colors 随载荷同步重算。"""
+    count/colors 随载荷同步重算。(logic-rand-sampling 迭代:摘除写改
+    随机态,bench/level 前置守卫在册——未观察整批拒。)"""
     session = cw4_session()
     gs = game_state_of(session)
     _write_spheres(session, (('gold', 100, 200, 30), ('blue', 300, 400, 20)))
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        BenchSlot,
+        BenchView,
+    )
+
+    gs.observe(gs.bench, BenchView(
+        slots=[BenchSlot(kind='empty') for _ in range(9)], capacity=9),
+        sig=_SIG)
+    gs.observe(gs.level, 5, sig=_SIG)
     report_action_collect_ore_param(
         gs, CwActionCollectOreParam(points=((300, 400),)), sig=_LOGIC_SIG)
     view = gs.spheres.value
     assert view.points == (('gold', 100, 200, 30),)
     assert view.count == 1 and view.colors == ('gold',)
+    assert gs.spheres.source == 'logic_rand', '摘除写属采样世界(随机态)'
 
 
 def test_collect_ore_stale_payload_zero_write():

@@ -92,7 +92,11 @@ def test_sphere_executor_is_mechanical_payload_clicks(monkeypatch):
     # 断言随 _project_prep_obs 退役)。
     from test.sr_od.application.currency_war._cw_helpers import cw4_session
 
-    from sr_od.application.currency_war.kernel.cw_game_state import OreSight
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        BenchSlot,
+        BenchView,
+        OreSight,
+    )
     session = cw4_session()
     gs = game_state_of(session)
     gs.observe(gs.spheres, OreSight(
@@ -100,6 +104,11 @@ def test_sphere_executor_is_mechanical_payload_clicks(monkeypatch):
         points=(('gold', 12, 34, 50), ('blue', 99, 99, 10))),
                sig=ChannelSig(family='obs', actor='synthesize_from_game_state',
                        mode='synthesized'))
+    # logic-rand-sampling 迭代:bench/level 前置守卫在册,须观测方可摘除
+    gs.observe(gs.bench, BenchView(
+        slots=[BenchSlot(kind='empty') for _ in range(9)], capacity=9),
+        sig=ChannelSig(family='obs', actor='CwScreenPrep'))
+    gs.observe(gs.level, 5, sig=ChannelSig(family='obs', actor='CwScreenPrep'))
     report_action_collect_ore_param(
         gs, CwActionCollectOreParam(points=((12, 34),)),
         sig=ChannelSig(family='logic_action', actor='CwScreenPrep'))
