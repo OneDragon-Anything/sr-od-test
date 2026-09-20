@@ -192,10 +192,10 @@ def test_on_fail_retry_branch_capped_before_retry_pool(monkeypatch):
 # 静默保留后值 → CwActionDeployMoveParam 对位同槽号另一条目、拖错人出场。修 = 判据
 # 单一源 bench_slots_healthy(槽号健康不变量)前置门:不健康 →
 # 整份部署计划 fail-closed 不出 + cw4 分键显影。
-# (P3 锁载体迁移:计划单一源迁 mandate_v1/deploy_plan,分键随迁改名
-# deploy_plan_slot_table_unhealthy,断言面不变。)
+# (P3 锁载体迁移:计划单一源迁 mandate_v1/deploy_plan,发射点统一后
+# 键名保留现役 deploy_chain_slot_table_unhealthy 不变,断言面不变。)
 
-_KEY_UNHEALTHY = 'deploy_plan_slot_table_unhealthy'
+_KEY_UNHEALTHY = 'deploy_chain_slot_table_unhealthy'
 
 
 def _bcd_host(monkeypatch, bench_slots, counters):
