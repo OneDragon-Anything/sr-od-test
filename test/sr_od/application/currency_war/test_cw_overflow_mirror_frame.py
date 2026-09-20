@@ -76,7 +76,7 @@ def test_prep_mirror_backfills_card_and_keeps_free_count():
     assert dep[1] is not None and dep[1].char_id == '刃'
     assert bench_free_slots(gs) == 7       # 回占 → 不 +1(缺镜像 = 假空席绕过席满门)
     tracked = game_state_of(session).tracked_books.bench
-    assert [(b.char_id, b.star) for b in tracked if b is not None] == [
+    assert [(b.unit.char_id, b.unit.star) for b in tracked if b is not None] == [
         ('不死途', 1), ('刃', 1)]          # 写口调用点透传 session = 执行账吸收
 
 
@@ -98,5 +98,5 @@ def test_prep_mirror_needs_leg_landed_not_flag_alone():
     assert gs.overflow_warning.value is True    # 旗标未消费(写口零写)
     assert bench_free_slots(gs) == 8            # 零写 → 席空数不变
     tracked = game_state_of(session).tracked_books.bench
-    assert [(b.char_id, b.star) for b in tracked if b is not None] == [
+    assert [(b.unit.char_id, b.unit.star) for b in tracked if b is not None] == [
         ('花火', 1), ('刃', 1)]            # 执行账零写

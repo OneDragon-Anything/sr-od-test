@@ -7,24 +7,32 @@
 
 合成规则本体 = merge_mechanics(既有投影直锁钉住),本文件不重锁规则,
 只锁回调机制。
+
+载体 = benchchar-retirement P1 容器原生形状(§2.3);回调机制断言
+逐位不变(载体迁移,非语义变更)。
 """
 from __future__ import annotations
 
 from copy import deepcopy
 
-from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    BenchSlot,
+    Unit,
+)
 from sr_od.application.currency_war.kernel.cw_merge_simulate import (
     _merge_bench,
 )
 
 
-def _char(slot: int, star: int, char_id: str = '阿格莱雅') -> BenchChar:
-    return BenchChar(slot=slot, char_id=char_id, star=star)
+def _char(slot: int, star: int, char_id: str = '阿格莱雅') -> BenchSlot:
+    return BenchSlot(kind='unit', unit=Unit(char_id=char_id, star=star,
+                                            slot=slot))
 
 
-def _snapshot(bench: list[BenchChar | None]) -> list[tuple[str, int] | None]:
+def _snapshot(bench: list[BenchSlot | None]) -> list[tuple[str, int] | None]:
     """列表值快照(防别名:回调后列表继续被改,快照才留得住每级终态)。"""
-    return [None if b is None else (b.char_id, b.star) for b in bench]
+    return [None if b is None else (b.unit.char_id, b.unit.star)
+            for b in bench]
 
 
 def test_on_step_fires_once_per_merge_level() -> None:
@@ -34,7 +42,7 @@ def test_on_step_fires_once_per_merge_level() -> None:
     steps: list[list[tuple[str, int] | None]] = []
     _merge_bench(bench, None, on_step=lambda: steps.append(_snapshot(bench)))
     assert len(steps) == 2, f'连锁两级 = 回调 2 次,实得 {len(steps)}'
-    assert bench and bench[0] is not None and bench[0].star == 3, \
+    assert bench and bench[0] is not None and bench[0].unit.star == 3, \
         '终态 = 3★ 载体'
 
 
@@ -56,7 +64,8 @@ def test_on_step_dual_domain_level_fires_once() -> None:
     on_step 恰 1 次,两域列表在回调时均已落定——调用侧按受影响域
     各落一行(design §2.2 #1 写入契约)。"""
     bench = [_char(1, 1)]
-    deployed = [_char(1, 1), _char(2, 1)]
+    deployed = [Unit(char_id='阿格莱雅', star=1, slot=1),
+                Unit(char_id='阿格莱雅', star=1, slot=2)]
     calls: list[tuple[list, list]] = []
     _merge_bench(bench, deployed,
                  on_step=lambda: calls.append((deepcopy(bench),
@@ -74,4 +83,4 @@ def test_on_step_none_default_unchanged() -> None:
     bench = [_char(1, 1), _char(2, 1), _char(3, 1)]
     _merge_bench(bench, None)
     upgraded = [b for b in bench if b is not None]
-    assert len(upgraded) == 1 and upgraded[0].star == 2, '缺省行为不变'
+    assert len(upgraded) == 1 and upgraded[0].unit.star == 2, '缺省行为不变'

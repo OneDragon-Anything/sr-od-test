@@ -26,11 +26,12 @@ from one_dragon.base.geometry.rectangle import Rect
 
 import sr_od.application.currency_war.operations.cw_op.cw_buy_card_action \
     as buy_action_mod
-from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
 from sr_od.application.currency_war.kernel.cw_game_state import (
+    BenchSlot,
     ChannelSig,
     ShopPayload,
     ShopSlot,
+    Unit,
     game_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
@@ -130,7 +131,7 @@ def test_buy_card_emits_and_books_unconditionally(monkeypatch):
     assert len(ledger.buy_purchases) == 1
     assert ledger.buy_purchases[0].crop is not None, \
         '买前裁片 = 纯留证零判效(保留面)'
-    assert [(b.char_id, b.star)
+    assert [(b.unit.char_id, b.unit.star)
             for b in gs.tracked_books.bench if b is not None] == [('花火', 1)]
 
 
@@ -238,7 +239,8 @@ def test_deploy_move_tracks_immediately_on_emit(monkeypatch):
     monkeypatch.setattr('time.sleep', lambda _s: None)
     session = StrategySession()
     gs = game_state_of(session)
-    gs.tracked_books.bench = [None, BenchChar(slot=2, char_id='甲', star=1)]
+    gs.tracked_books.bench = [None, BenchSlot(kind='unit', unit=Unit(
+        char_id='甲', star=1, slot=2))]
 
     env = _deploy_env(session)
     action = CwActionDeployMoveParam(bench_idx=1, to_row='front', faction='')
@@ -250,5 +252,6 @@ def test_deploy_move_tracks_immediately_on_emit(monkeypatch):
     moved = [d for d in gs.tracked_books.deployed
              if d is not None and d.char_id == '甲']
     assert moved, 'tracked 记上阵(拖后零变化也照记 = 零判效)'
-    assert all(b is None or b.char_id != '甲'
+    assert all(b is None or b.kind != 'unit' or b.unit is None
+               or b.unit.char_id != '甲'
                for b in (gs.tracked_books.bench or [])), 'bench 侧摘除照旧'

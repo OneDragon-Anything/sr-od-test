@@ -37,8 +37,10 @@ from sr_od.application.currency_war.kernel.cw_exec_state import (
     BenchChar,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
+    BenchSlot,
     ChannelSig,
     ShopPayload,
+    Unit,
     game_state_of,
     tracked_unobserved,
 )
@@ -165,7 +167,7 @@ def test_reconcile_bench_writeback_marks_observed():
     assert ok is True
     assert not tracked_unobserved(session)
     assert game_state_of(session).tracked_account_observed.value is True
-    assert [(b.char_id, b.star) for b in
+    assert [(b.unit.char_id, b.unit.star) for b in
             game_state_of(session).tracked_books.bench if b is not None] \
         == [('花火', 1)]
 
@@ -183,8 +185,8 @@ def test_reconcile_failed_anchor_keeps_unobserved():
     # 双空读守卫(双空读 + 前值非空 = 疑过渡帧保旧):返 False 不置位。
     s2 = StrategySession()
     _mark_unobserved(s2)
-    game_state_of(s2).tracked_books.bench = [
-        BenchChar(slot=1, char_id='花火', star=1)]
+    game_state_of(s2).tracked_books.bench = [BenchSlot(
+        kind='unit', unit=Unit(char_id='花火', star=1, slot=1))]
     assert _reconcile(s2, [], []) is False
     assert tracked_unobserved(s2)
 

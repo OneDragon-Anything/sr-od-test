@@ -83,14 +83,18 @@ def _mk_executor(session):
 
 
 def _tracked_sig(session) -> list:
-    return [(b.char_id, b.star) for b in
-            (game_state_of(session).tracked_books.bench or [])
+    """tracked bench 值签名(P1 形状:BenchSlot → 内嵌 Unit 身份)。"""
+    return [((b.unit.char_id, b.unit.star) if getattr(b, 'kind', None) == 'unit'
+             and b.unit is not None else ('', 1))
+            for b in (game_state_of(session).tracked_books.bench or [])
             if b is not None]
 
 
 def _deployed_sig(session) -> list:
-    return [(b.char_id, b.position_pref, b.star) for b in
-            (game_state_of(session).tracked_books.deployed or [])
+    """tracked deployed 值签名(P1 形状:Unit 下标表,排归属由下标派生)。"""
+    return [(b.char_id, 'front' if i < 4 else 'back', b.star)
+            for i, b in enumerate(
+                game_state_of(session).tracked_books.deployed or [])
             if b is not None]
 
 
@@ -274,9 +278,10 @@ def test_missing_read_frame_breaks_confirmation(monkeypatch):
 
 
 def test_removal_keeps_layout_sell_and_move_legs():
-    """摘除腿按下标置 None 两腿(并一):sell 腿 pad 态契约不破坏,存件
-    不移位、信息位不动;CwActionDeployMoveParam 腿同治本,bench 置 None 不移位 +
-    deployed 正常落槽。"""
+    """摘除腿按下标置 None 两腿(并一):sell 腿保洞契约不破坏,存件
+    不移位、槽位信息位不动;CwActionDeployMoveParam 腿同治本,bench 置 None 不移位 +
+    deployed 正常落槽。(载体 = P1 tracked 新形状:BenchSlot 内嵌 Unit,
+    槽位信息位 = unit.slot;断言语义逐位不变。)"""
     # sell 腿:卖槽2(下标 1)
     session = StrategySession()
     game_state_of(session).tracked_books.bench = bench_from_compact(
@@ -286,12 +291,13 @@ def test_removal_keeps_layout_sell_and_move_legs():
     ex._track_remove_bench(1)
 
     tracked = game_state_of(session).tracked_books.bench
-    assert len(tracked) == BENCH_CAPACITY   # pad 态保持
+    assert len(tracked) == BENCH_CAPACITY   # 定长保持
     assert tracked[1] is None
-    assert tracked[0] is not None and (tracked[0].char_id, tracked[0].slot) \
-        == ('花火', 1)
-    assert tracked[2] is not None and (tracked[2].char_id, tracked[2].slot) \
-        == ('椒丘', 3)   # 不移位:槽3 件仍在槽3(旧紧凑重排会把它挪到槽2)
+    assert tracked[0] is not None \
+        and (tracked[0].unit.char_id, tracked[0].unit.slot) == ('花火', 1)
+    assert tracked[2] is not None \
+        and (tracked[2].unit.char_id, tracked[2].unit.slot) == ('椒丘', 3)
+    # 不移位:槽3 件仍在槽3(旧紧凑重排会把它挪到槽2)
     # move 腿:花火 bench槽1 → 前排槽1
     session_m = StrategySession()
     game_state_of(session_m).tracked_books.bench = bench_from_compact(
@@ -302,11 +308,13 @@ def test_removal_keeps_layout_sell_and_move_legs():
     ex_m._track_move_deployed(0, 'front', 1)
 
     tracked_m = game_state_of(session_m).tracked_books.bench
-    assert tracked_m[0] is None and tracked_m[1].char_id == '刃' \
-        and tracked_m[1].slot == 2   # 刃 不移位
+    assert tracked_m[0] is None \
+        and tracked_m[1].unit.char_id == '刃' \
+        and tracked_m[1].unit.slot == 2   # 刃 不移位
     deployed = [b for b in game_state_of(session_m).tracked_books.deployed
                 if b is not None]
-    assert [(b.char_id, b.position_pref) for b in deployed] == [('花火', 'front')]
+    assert [(b.char_id, 'front' if i < 4 else 'back')
+            for i, b in enumerate(deployed)] == [('花火', 'front')]
 
 
 def test_tracked_write_guard_defect_and_healthy_silence(monkeypatch):

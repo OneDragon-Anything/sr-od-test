@@ -23,6 +23,7 @@ from sr_od.application.currency_war.kernel.cw_exec_state import (
     bench_from_compact,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
+    BenchSlot,
     ChannelSig,
     Unit,
     bench_slots_of,
@@ -145,9 +146,10 @@ def test_sellbench_overflow_missing_identity_skips_absorb():
     assert gs.gold.value == 12
     assert gs.overflow_warning.value is True    # 未消费(未入位),留观察覆盖
     assert gs.overflow_card.value == ''
-    # tracked 对称零写(身份缺读不吸收,两侧同测)
+    # tracked 对称零写(身份缺读不吸收,两侧同测;P1 tracked 形状 = 内嵌
+    # Unit 身份)
     after = game_state_of(session).tracked_books.bench
-    assert [(b.char_id, b.star) for b in after if b is not None] == [
+    assert [(b.unit.char_id, b.unit.star) for b in after if b is not None] == [
         ('花火', 1), ('刃', 1)]
 
 
@@ -187,9 +189,9 @@ def test_overflow_absorb_syncs_tracked():
                                    sig=_SIG, session=session)
 
     tracked = game_state_of(session).tracked_books.bench
-    assert [(b.char_id, b.star) for b in tracked if b is not None] == [
+    assert [(b.unit.char_id, b.unit.star) for b in tracked if b is not None] == [
         ('不死途', 1), ('刃', 1)]
-    assert tracked[0] is not None and tracked[0].slot == 1   # 被卖槽回占
+    assert tracked[0] is not None and tracked[0].unit.slot == 1   # 被卖槽回占
     # 吸收锁(事故本形):容器腿与 tracked 腿同槽同身份。
     assert [(b.char_id, b.star) for b in
             bench_slots_of(gs) if b is not None] == [
@@ -197,18 +199,21 @@ def test_overflow_absorb_syncs_tracked():
 
 
 def test_overflow_absorb_after_executor_removal_compact_shape():
-    """生产时序:执行器摘除腿先行(tracked 紧缩缺卖件)→ 吸收按槽号
-    重建槽位表,存件不丢、不串槽。
+    """生产时序:执行器摘除腿先行(tracked 缺卖件、保洞缺页)→ 吸收按
+    下标直写,存件不丢、不串槽。
     (分诊随迁:原「session 缺席零写」兼容腿删——生产 CwActionSellBenchParam 调用点
     唯一且恒传 session,无消费者形态不留测试;「身份缺读对称跳过」腿
-    并入上方缺读锁,两侧一测。)"""
+    并入上方缺读锁,两侧一测。载体 = P1 tracked 新形状:
+    摘除腿后 tracked[0] = None 洞、刃在下标 1。)"""
     session = StrategySession()
-    gs = _seed(session, [BenchChar(slot=2, char_id='刃', star=1)])  # 花火已被摘
+    gs = _seed(session, [None, BenchSlot(kind='unit', unit=Unit(
+        char_id='刃', star=1, slot=2))])   # 花火已被摘
 
     report_action_sell_bench_param(gs, CwActionSellBenchParam(bench_idx=0),
                                    sig=_SIG, session=session)
 
     tracked = game_state_of(session).tracked_books.bench
-    assert [(b.char_id, b.star) for b in tracked if b is not None] == [
+    assert [(b.unit.char_id, b.unit.star) for b in tracked if b is not None] == [
         ('不死途', 1), ('刃', 1)]
-    assert tracked[1] is not None and tracked[1].char_id == '刃'   # 刃 仍在槽 2
+    assert tracked[1] is not None \
+        and tracked[1].unit.char_id == '刃'   # 刃 仍在槽 2
