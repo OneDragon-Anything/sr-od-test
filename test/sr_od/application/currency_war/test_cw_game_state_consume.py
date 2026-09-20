@@ -291,32 +291,39 @@ def test_streak_miss_semantics_parse_and_observation_half() -> None:
 
 # ============================================================ 批次二返工批修复锁(P2-1/P3-x)
 
-def test_bench_view_from_obs_empty_is_miss_not_full() -> None:
+def test_bench_read_empty_is_miss_not_full(monkeypatch) -> None:
     """P2-1:备战席 SIFT 空集 = 失读(overlay 残留/动画帧/识别退化)≠实席
-    全空——值构造返 None(调用方走 carried,§2.2 处置①;宁缺勿造),禁把
-    「9 槽全空」当 observation 入记录(席空数派生误报 free=9/挂起合成升星
-    预期被空视图误清);非空 = 槽位保序映射;越界条目丢弃(读链漂移)。"""
-    from sr_od.application.currency_war.kernel.cw_game_state import (
-        bench_view_from_obs,
-    )
-    assert bench_view_from_obs([]) is None, '空集 = 失读,禁合成全空视图'
-    assert bench_view_from_obs(None) is None
-    view = bench_view_from_obs([
-        BenchChar(slot=2, char_id='花火', star=2),
-        BenchChar(slot=0, char_id='越界角色', star=1),   # 越界:丢弃
-        BenchChar(slot=11, char_id='越界角色2', star=1),  # 越界:丢弃
-    ])
+    全空——读链直产(P6,原观察写端值构造器空集守卫移驻读链)零占用返
+    None(调用方走 carried,§2.2 处置①;宁缺勿造),禁把「9 槽全空」当
+    observation 入记录(席空数派生误报 free=9/挂起合成升星预期被空视图
+    误清);非空 = 槽位保序视图 + 占位件 kind 识别期细分 + SIFT 身份胜出;
+    越界条目丢弃(读链漂移)。"""
+    from sr_od.application.currency_war.obs import cw_identity_obs as obs
+    # 空读:零命中 + 零占槽物品 → None(禁合成全空视图)
+    monkeypatch.setattr(obs, 'identify_slots', lambda *a, **k: [])
+    monkeypatch.setattr(obs, '_ctx_slots', lambda ctx, prefix, count: [])
+    monkeypatch.setattr(obs, '_bench_item_kind_by_slot',
+                        lambda ctx, screen: {})
+    assert obs.read_bench_view(object(), object(), object()) is None, \
+        '空集 = 失读,禁合成全空视图'
+    # 非空 = 槽位保序视图;越界条目不落槽;占位物品 kind 细分,SIFT 身份胜出
+    from sr_od.application.currency_war.kernel.cw_game_state import Unit
+    view = obs._bench_view_of(
+        [Unit(char_id='花火', star=2, slot=2),
+         Unit(char_id='越界角色', star=1, slot=0),    # 越界:丢弃
+         Unit(char_id='越界角色2', star=1, slot=11)],  # 越界:丢弃
+        {1: 'tome', 2: 'supply_box'})
     assert view is not None
-    assert [s.kind for s in view.slots] == ['empty', 'unit'] + ['empty'] * 7, \
-        '槽位保序(物理槽 2);越界条目不落槽'
+    assert [s.kind for s in view.slots] == ['tome', 'unit'] + ['empty'] * 7, \
+        '槽位保序(物理槽 1=典籍,2=角色);越界条目不落槽;占槽物品只填空槽'
     assert view.slots[1].unit is not None and view.slots[1].unit.star == 2
 
 
 # (三审整删)原 test_prep_bench_obs_miss_guard_and_tome_choice_wiring
-# 「接线存在性烟雾」(getsource 字符串在场四断言:bench_view_from_obs 接线/
+# 「接线存在性烟雾」(getsource 字符串在场四断言:备战观察写端接线/
 # _gs_obs.carry/特效窗门/chosen_tome 写端)——源码扫描形态(README 禁止
 # 清单,判据「红时哪个运行行为坏了」答不出)。守卫函数行为半由
-# test_bench_view_from_obs_empty_is_miss_not_full 辖;特效窗门行为半由
+# test_bench_read_empty_is_miss_not_full 辖;特效窗门行为半由
 # test_merge_effect_window_gate_default_off_and_injectable 辖;op 装配面
 # 接线归 review 与代码规范。
 

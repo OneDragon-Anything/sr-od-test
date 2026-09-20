@@ -33,11 +33,9 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.kernel.cw_exec_state import (
-    BenchChar,
-)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     BenchSlot,
+    BenchView,
     ChannelSig,
     ShopPayload,
     Unit,
@@ -157,12 +155,13 @@ def test_default_and_anchored_states_pass_gate_to_core(monkeypatch):
 # ===== 锁3 锚定置位(kernel reconcile_tracking 写回点)=====
 
 def test_reconcile_bench_writeback_marks_observed():
-    """bench 侧屏幕真值写回成功 → 容器观察态 True(唯一生产置位点)。"""
+    """bench 侧屏幕真值写回成功 → 容器观察态 True(唯一生产置位点)。
+    (载体 = P6 直产 BenchView;断言语义零变。)"""
     session = StrategySession()
     _mark_unobserved(session)
     assert tracked_unobserved(session)
 
-    ok = _reconcile(session, [BenchChar(slot=1, char_id='花火', star=1)], [])
+    ok, _, _ = _reconcile(session, _bench_view1('花火', 1), ([], []))
 
     assert ok is True
     assert not tracked_unobserved(session)
@@ -179,7 +178,7 @@ def test_reconcile_failed_anchor_keeps_unobserved():
     # 零写 = 主账未锚定。
     s1 = StrategySession()
     _mark_unobserved(s1)
-    assert _reconcile(s1, None, []) is True
+    assert _reconcile(s1, None, ([], []))[0] is True
     assert tracked_unobserved(s1)
     assert game_state_of(s1).tracked_account_observed.value is False
     # 双空读守卫(双空读 + 前值非空 = 疑过渡帧保旧):返 False 不置位。
@@ -187,11 +186,18 @@ def test_reconcile_failed_anchor_keeps_unobserved():
     _mark_unobserved(s2)
     game_state_of(s2).tracked_books.bench = [BenchSlot(
         kind='unit', unit=Unit(char_id='花火', star=1, slot=1))]
-    assert _reconcile(s2, [], []) is False
+    assert _reconcile(s2, BenchView(), ([], []))[0] is False
     assert tracked_unobserved(s2)
 
 
-def _reconcile(session, bench, deployed) -> bool:
+def _bench_view1(name: str, star: int) -> BenchView:
+    """单占用槽视图(槽 1)构造(P6 直产读载体)。"""
+    slots = [BenchSlot(kind='empty')] * 8
+    return BenchView(slots=[BenchSlot(
+        kind='unit', unit=Unit(char_id=name, star=star, slot=1))] + slots)
+
+
+def _reconcile(session, bench, deployed) -> tuple:
     from sr_od.application.currency_war.kernel.cw_reconcile import (
         reconcile_tracking,
     )

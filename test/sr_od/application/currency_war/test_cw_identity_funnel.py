@@ -8,13 +8,13 @@
 锁定两条设计契约:
 1. L1/L2 子集命中必须清加严线(``_FUNNEL_SUBSET_MIN_INLIERS_FACTOR`` ×
    min_inliers),弱命中一律下探 L3 全库仲裁——子集冠军 ≠ 全局冠军;
-2. 漏斗路径(read_bench_chars_tiered,heavy 生产主路径)必须挂召唤物
+2. 漏斗路径(read_bench_view_tiered,heavy 生产主路径)必须挂召唤物
    停机钩子(_summon_unknown_hook)——「占用未识别」的槽不允许静默丢弃。
 """
 
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_game_state import Unit
 from sr_od.application.currency_war.obs import cw_identity_obs as obs
 
 
@@ -39,7 +39,7 @@ def test_funnel_subset_weak_champion_falls_through_to_full(monkeypatch):
         calls.append((frozenset(names), min_inliers))
         if inliers >= min_inliers:
             winner = '甲' if '甲' in names else '乙'
-            return [BenchChar(slot=slots[0][0], char_id=winner, star=1)]
+            return [Unit(slot=slots[0][0], char_id=winner, star=1)]
         return []
 
     monkeypatch.setattr(obs, 'identify_slots', fake_identify_slots)
@@ -52,7 +52,7 @@ def test_funnel_subset_weak_champion_falls_through_to_full(monkeypatch):
                                     templates={'甲': object(), '乙': object()},
                                     slots=slots, row='', min_inliers=10)
 
-    assert [c.char_id for c in out] == ['甲']
+    assert [u.char_id for u in out] == ['甲']
     # 加严线契约:L1/L2 子集调用 = 2× 基准档;L3 全库调用 = 基准档原样
     subset_calls = [(s, m) for s, m in calls if s == frozenset({'乙'})]
     full_calls = [(s, m) for s, m in calls if s == frozenset({'甲', '乙'})]
@@ -65,21 +65,22 @@ def test_funnel_subset_weak_champion_falls_through_to_full(monkeypatch):
 def test_tiered_bench_read_wires_summon_hook(monkeypatch):
     """漏斗路径备战席读必须挂召唤物停机钩子(占用未识别不允许静默丢弃)。"""
     sent_ctx, sent_screen, sent_templates = object(), object(), object()
-    sent_chars = [BenchChar(slot=1, char_id='甲')]
+    sent_hits = [Unit(slot=1, char_id='甲', star=1)]
     hook_calls = []
-    merge_calls = []
+    kind_calls = []
     monkeypatch.setattr(obs, 'identify_slots_tiered',
-                        lambda *a, **k: list(sent_chars))
+                        lambda *a, **k: list(sent_hits))
     monkeypatch.setattr(obs, '_ctx_slots', lambda ctx, prefix, count: [])
     monkeypatch.setattr(obs, '_summon_unknown_hook',
-                        lambda ctx, screen, chars: hook_calls.append(
-                            (ctx, screen, chars)))
-    monkeypatch.setattr(obs, '_merge_item_occupied_slots',
-                        lambda ctx, screen, chars: merge_calls.append(chars))
+                        lambda ctx, screen, hits: hook_calls.append(
+                            (ctx, screen, hits)))
+    monkeypatch.setattr(obs, '_bench_item_kind_by_slot',
+                        lambda ctx, screen: kind_calls.append((ctx, screen)) or {})
 
-    out = obs.read_bench_chars_tiered(SimpleNamespace(), sent_ctx,
-                                      sent_screen, sent_templates)
+    out = obs.read_bench_view_tiered(SimpleNamespace(), sent_ctx,
+                                     sent_screen, sent_templates)
 
-    assert out == sent_chars
-    assert hook_calls == [(sent_ctx, sent_screen, sent_chars)]
-    assert merge_calls == [sent_chars]
+    assert [s.unit for s in out.slots if s.kind == 'unit'] == sent_hits
+    assert out.capacity == 9
+    assert hook_calls == [(sent_ctx, sent_screen, sent_hits)]
+    assert kind_calls == [(sent_ctx, sent_screen)]
