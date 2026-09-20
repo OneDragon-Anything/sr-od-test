@@ -465,6 +465,22 @@ def test_write_logic_rand_and_observe_random_outcome(
     assert rows_eq == [], '等值观察零新信息不产行(settle_truth 同纪律)'
 
 
+def test_any_logic_rand_truth_table() -> None:
+    """any_logic_rand 污染判定口真值表(logic-rand-sampling 迭代):
+    空集 → False;含随机态域 → True;全非随机态 → False;未在册名
+    容错跳过不炸。消费面 = 动作上报入口跨动作污染判定(design §2.2 #3)。"""
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    gs.observe(gs.gold, 10, sig=_sig())
+    gs.write_logic(gs.hp, 80, produced_by='TestSigWriter', sig=_lsig())
+    assert gs.any_logic_rand([]) is False, '空集恒 False'
+    assert gs.any_logic_rand(['gold', 'hp']) is False, '无随机态 → False'
+    gs.write_logic_rand(gs.gold, 12, produced_by='TestSigWriter', sig=_lsig())
+    assert gs.any_logic_rand(['gold', 'hp']) is True, '含随机态域 → True'
+    assert gs.any_logic_rand(['hp']) is False, '其余域不误报'
+    assert gs.any_logic_rand(['nonexistent_field', 'gold']) is True, \
+        '未在册名容错跳过,不炸且不遮蔽在册判定'
+
+
 # ============================================================ 单例宿主与心跳观察者
 
 

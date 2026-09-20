@@ -141,6 +141,27 @@ def test_resync_writes_board_with_derived_evidence() -> None:
     assert gs.board.evidence == 'proj_board_resync'
 
 
+def test_resync_board_inherits_row_rand_source() -> None:
+    """board 派生写继承行域写入来源(逻辑随机态采样链,logic-rand-
+    sampling 迭代):行域 write_logic_rand → board 派生行同标
+    logic_rand(行域真值形态随采样奖励而变,board 为其派生,污染沿
+    派生链传递);行域 write_logic 回归腿 → board 仍 logic。"""
+    gs = game_state_of(None)
+    gs.observe(gs.back_row, [_heita(1)], sig=_SIG_OBS)
+    gs.observe(gs.board, {'银河学者': 1, '群攻': 1}, sig=_SIG_OBS)
+    gs.write_logic_rand(gs.back_row, [_heita(1), _wandi(2)],
+                        produced_by='T', sig=_SIG)
+    assert gs.board.source == 'logic_rand', \
+        '随机行写 → board 派生行继承随机态(污染沿派生链)'
+    assert gs.board.evidence == 'proj_board_resync', '派生证据名不变'
+    gs2 = game_state_of(None)
+    gs2.observe(gs2.back_row, [_heita(1)], sig=_SIG_OBS)
+    gs2.observe(gs2.board, {'银河学者': 1, '群攻': 1}, sig=_SIG_OBS)
+    gs2.write_logic(gs2.back_row, [_heita(1), _wandi(2)],
+                    produced_by='T', sig=_SIG)
+    assert gs2.board.source == 'logic', '回归腿:确定行写 board 仍 logic'
+
+
 def test_pure_reorder_logic_write_yields_zero_board_delta() -> None:
     """纯重排零差零写:同单位多重集的行内排列写(键含槽位号前已滤)
     不产生 board 写(羁绊计数与顺序无关),board 帧保持原引用语义
