@@ -40,7 +40,6 @@ def test_report_function_accepts_param_and_sig(t):
         GameState,
         register_sig_actors,
     )
-    from sr_od.application.currency_war.kernel.cw_vocab import HoldFrame
 
     register_sig_actors('cw-report-lock')
     gs = GameState(schema_version=1)
@@ -49,6 +48,7 @@ def test_report_function_accepts_param_and_sig(t):
     fn = getattr(rpt, f'report_action_{_snake(t.__name__)}_param')
     # 构造最小 param:必填字段给哑值(仅为了走函数入口;写路径按域锁覆盖)
     import dataclasses
+
     from sr_od.application.currency_war.kernel.cw_vocab import ShopCard
 
     kwargs = {}
@@ -60,5 +60,3 @@ def test_report_function_accepts_param_and_sig(t):
     outcome = fn(gs, param, sig)
     assert outcome is not None
     assert isinstance(outcome.applied, bool)
-    # HoldFrame 不应出现在执行链,但其上报函数仍须在场(全集覆盖)
-    assert HoldFrame is not None

@@ -1,8 +1,7 @@
-"""环内重观察动作锁(CwActionObs):策略发射 → 宿主重观察上报 → 决策环
-原地续跑(不交回外循环)。
+"""重观察动作锁(CwActionObs):策略发射 → 请求新鲜观察,scope 选口径。
 
 出处 = docs/develop/sr_od/application/currency_war/flow/action_exec.md §3
-(备战单动作消费·环内重观察通道)+ screens/prep.md §4(循环形态·读屏点
+(备战单动作消费·重观察通道)+ screens/prep.md §4(循环形态·读屏点
 在册例外)。零真实 IO:op 级 = 桩宿主(SimpleNamespace,同
 test_cw_unified_action_4 harness 形状);环级 = 桩策略 + 实例级重观察桩
 (同 test_cw_prep_contract_shape 消费端形状)。
@@ -10,15 +9,16 @@ test_cw_unified_action_4 harness 形状);环级 = 桩策略 + 实例级重观察
 锁面清单:
 1. 注册表语义:obs 行非终结 + terminal_wait=0(决策环续跑的形状前提;
    终结集等价锁归 test_cw_unified_action_3,此处锁 obs 自身行);
-2. op 行为:宿主重观察恰一次 + round_success(零点击零拖拽);自上报
-   接线(零写函数恰一次,param 原样透传);
+2. op 行为(in_place 口径):宿主重观察恰一次 + round_success(零点击);
+   自上报接线(零写函数被桩捕获);
 3. overlay bail:重观察回执 event_overlay 非空 → CwObsOverlayBail
    (tag 透传;自上报已在 bail 前完成 = 发出即记账);
-4. 域能力守卫:env.op 未接线 reobserve_in_visit → AssertionError 响亮
-   (策略器在无能力域发射 = 策略器 bug,禁静默);
-5. 环级接线:桩策略 [Obs, HoldFrame] → 重观察执行 + 帧代次标 full
-   (方向重估触发,同入口帧)+ 循环续跑至 HoldFrame 交回(重观察恰一次,
-   decide 恰两次;环不因 obs 交回外循环)。
+4. 域能力守卫:env.op 未接线 reobserve_in_visit → AssertionError 响亮;
+   scope 拼错值 → F3 validate 拒绝(值域闭集 OBS_SCOPES);
+5. 环级接线:桩策略 [Obs(in_place), Obs(outer_loop)] → in_place 经注册表
+   派发执行(重观察恰一次 + 帧代次标 full)+ 循环续跑;outer_loop 在 F3
+   之前拦截交回外循环(不进执行器,行为 = 原 HoldFrame 收编,
+   用户裁定 2026-09-20)。
 """
 from __future__ import annotations
 
@@ -38,7 +38,6 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionObsParam,
-    HoldFrame,
 )
 from sr_od.application.currency_war.operations.cw_op.cw_action_registry import (
     action_op_class_for,
@@ -50,6 +49,7 @@ from sr_od.application.currency_war.operations.cw_op.cw_obs_action import (
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
     CwScreenPrep,
 )
+from sr_od.application.currency_war.prep_actions import PrepActionExecutor
 from sr_od.application.currency_war.strategies.impl.cw_strategy import (
     CurrencyWarMatch,
 )
@@ -127,24 +127,42 @@ def test_obs_op_env_without_capability_loud_fails():
         op.run()
 
 
+def test_obs_scope_invalid_value_f3_rejected():
+    """F3 值域校验:scope 拼错值 → validate 拒绝(参数非法通道交回留证;
+    值域闭集单一源 = OBS_SCOPES)。outer_loop 口径在决策循环 F3 之前拦截,
+    到不了 validate——此处锁的是 in_place 执行路径的拼错值防线。"""
+    ex = PrepActionExecutor(
+        SimpleNamespace(),
+        SimpleNamespace(controller=SimpleNamespace(), cw_match=None,
+                        screen_loader=SimpleNamespace(
+                            get_screen=lambda name: None)))
+    err = ex.validate(CwActionObsParam(scope='outter'))
+    assert err is not None and 'OBS_SCOPES' in err
+    assert ex.validate(CwActionObsParam()) is None
+    assert ex.validate(CwActionObsParam(scope='in_place')) is None
+    assert ex.validate(CwActionObsParam(scope='outer_loop')) is None
+
+
 # ===== 5. 环级接线(桩策略 + 实例级重观察桩)=====
 
 def test_prep_loop_obs_reobserves_in_place_and_continues(
         test_context, monkeypatch):
-    """环级:策略发射 [Obs, HoldFrame] → obs 经注册表派发执行(宿主重
-    观察恰一次)+ 帧代次标 full + 循环续跑至 HoldFrame 交回外循环。
+    """环级:策略发射 [Obs(in_place), Obs(outer_loop)] → in_place 经注册表
+    派发执行(宿主重观察恰一次)+ 帧代次标 full + 循环续跑;outer_loop 在
+    F3 之前拦截交回外循环(不进执行器 → 重观察仍恰一次)。
 
-    判据三件:①重观察恰一次(环内通道,不经外循环重分发);②decide 恰
-    两次(obs 后原地续决策,非交回);③frame_class_prep == 'full'
-    (方向重估触发,同入口帧)。红 = obs 被当终结交回 / 帧代次误标 none /
-    重观察未触发。"""
-    from sr_od.application.currency_war.prep_actions import PrepActionExecutor
+    判据四件:①重观察恰一次(outer 拦截型不触发重观察,收编自 HoldFrame
+    的行为不变量);②decide 恰两次(in_place 后原地续决策,非交回);
+    ③frame_class_prep == 'full'(方向重估触发,同入口帧;outer 交回路径
+    不写帧代次);④交回语义文案带 outer_loop 标识。红 = outer 误进执行器 /
+    in_place 被当终结交回 / 帧代次误标 none / 重观察未触发。"""
 
-    emissions = [CwActionObsParam(reason='loop_probe'), HoldFrame()]
+    emissions = [CwActionObsParam(reason='loop_probe'),
+                 CwActionObsParam(scope='outer_loop')]
     decide_calls: list = []
 
     class _QueuePrepStrategy:
-        """桩策略:按序回放发射队列(HoldFrame 收尾交回)。"""
+        """桩策略:按序回放发射队列(obs 交回口径收尾)。"""
 
         def decide_prep_screen(self):
             decide_calls.append(1)
@@ -164,8 +182,8 @@ def test_prep_loop_obs_reobserves_in_place_and_continues(
     monkeypatch.setattr(op, 'reobserve_in_visit', _fake_reobserve)
     op._executor = PrepActionExecutor(op, test_context)
     rs = run_node(test_context, op, op.act)
-    assert rs.is_success, f'环应经 HoldFrame 正常交回:{rs!r}'
-    assert 'HoldFrame' in (rs.status or ''), f'交回语义:{rs!r}'
+    assert rs.is_success, f'环应经 obs(outer_loop) 正常交回:{rs!r}'
+    assert 'outer_loop' in (rs.status or ''), f'交回语义:{rs!r}'
     assert len(reobserve_calls) == 1, f'重观察恰一次:{reobserve_calls!r}'
     assert len(decide_calls) == 2, f'obs 后原地续决策:{decide_calls!r}'
     assert game_state_of(session).frame_class_prep == 'full', (

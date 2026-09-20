@@ -45,7 +45,6 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CW_ACTION_TYPES,
-    HoldFrame,
     CwActionLevelUpParam,
     CwActionLevelUpShopParam,
     CwActionPickBoxCardParam,
@@ -92,12 +91,12 @@ from sr_od.application.currency_war.operations.cw_op.cw_prep_level_up_action imp
 from sr_od.application.currency_war.operations.cw_op.cw_refresh_shop_action import (
     CwActionRefreshShopOp,
 )
-from sr_od.operations.sr_operation import SrOperation
 from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
     ShopExecEnv,
     ShopVisitLedger,
 )
 from sr_od.application.currency_war.telemetry import defects as cw_defects
+from sr_od.operations.sr_operation import SrOperation
 
 register_sig_actors('cw-t216-test')
 
@@ -110,12 +109,12 @@ _LOGIC_SIG = ChannelSig(family='logic_action', actor='cw-t216-test',
 # 终态契约动作类型的注册豁免集(终态契约 landing §3.5 锁规格:白名单
 # 成员要么有注册行、要么在豁免集——无 op 行例外申报):
 # - 三刷新动作(handler 自管点击链;attack4 M6 裁定 (a):与
-#   CwActionRefreshInvestCardsParam 同型豁免);
-# - HoldFrame(分支拦截型,等待帧非动作)= 永久豁免,无 op 行。
-# (pick 12 类已随 pick-op-unify 批全量收编入表:豁免集终形 = 三刷新
-#  动作 + HoldFrame。)
+#   CwActionRefreshInvestCardsParam 同型豁免)。
+# (HoldFrame 曾在豁免集,随 2026-09-20 用户裁定收编进
+#  CwActionObsParam(scope='outer_loop') 删除;7 pick 类已随
+#  pick-op-unify 批收编入表——豁免集现形 = 三刷新动作。)
 _TERMINAL_CONTRACT_REGISTRY_EXEMPT = (
-    CwActionRefreshNodeOptionsParam, CwActionRefreshSupplyParam, CwActionRefreshInvestCardsParam, HoldFrame,
+    CwActionRefreshNodeOptionsParam, CwActionRefreshSupplyParam, CwActionRefreshInvestCardsParam,
 )
 
 
@@ -373,10 +372,10 @@ def test_fortune_pick_op_clicks_card_confirms_and_self_reports(
         no_pick_sleep, monkeypatch):
     """命运卜者确认链(pick-op-unify T-3):点卡 → 确认;轮次结果旁路
     回传;自上报接线。确认钮 = 建档缺失臂兜底常量(screen_loader 桩)。"""
+    import sr_od.application.currency_war.operations.cw_op.cw_overlay_pick_action as pick_mod
     from sr_od.application.currency_war.operations.cw_screen.cw_screen_fortune import (
         CwScreenFortune,
     )
-    import sr_od.application.currency_war.operations.cw_op.cw_overlay_pick_action as pick_mod
 
     rs = SimpleNamespace(sentinel='rs')
     ctrl = _RecordingController()
