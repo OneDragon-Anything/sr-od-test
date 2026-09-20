@@ -9,16 +9,23 @@ kernel/cw_comps._wearable_gate_ok W3(equip_allocation 分配前排除)。
 静默不生效 → 装备滞留 owned → equips 实读失配安灯停局。本批后该对在分配器
 候选过滤即被排除(件留 owned,不发拖拽)。
 
-锁的五件事:
+锁的六件事:
 1. 登记完整性:件级门恰好 = 口述 10 件清单,白名单恒 = 银狼两角色;
 2. 白名单放行:10 件 × {银狼, 银狼LV.999} 全部可穿;
 3. 白名单外拒绝:10 件 × 普通角色全部被拒(拖错角色 = 游戏静默拒);
 4. 未登记件不受影响:特殊类非专属件(垃圾袋)恒可穿;骇客类非专属件
    (扑满病毒)走类别门定谳白名单;
 5. 分配器消费位:comp=None 兜底轮转也不把专属件发给白名单外角色(事故
-   路径分配前排除);互检:全量健康零警告 + 孤儿条目/错字角色显警。
+   路径分配前排除);互检:全量健康零警告 + 孤儿条目/错字角色显警;
+6. 回退帧门锁:身份读失败帧(front_only 回退分支)专属件在 owned →
+   计划不含专属件(fail-closed,件滞留 owned),无门件照常入计划。
 """
 from __future__ import annotations
+
+from test.sr_od.application.currency_war._cw_helpers import (
+    cw4_comp,
+    cw4_session,
+)
 
 from sr_od.application.currency_war.data.cw_equipment_wear_rules_data import (
     ITEM_WEAR_GATES,
@@ -29,7 +36,14 @@ from sr_od.application.currency_war.kernel.cw_comps import (
     _wearable_gate_ok,
     equip_allocation,
 )
+from sr_od.application.currency_war.kernel.cw_equip_wear_plan import (
+    _build_equip_wear_plan,
+)
 from sr_od.application.currency_war.kernel.cw_exec_state import BenchChar
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    ChannelSig,
+    game_state_of,
+)
 
 #: 口述 10 件清单(2026-09-18 用户定谳;测试锚 = 本批登记的完整性,防漏登/多登)。
 ORAL_EXCLUSIVE_TEN = frozenset({
@@ -82,6 +96,31 @@ def test_allocator_excludes_illegal_pair():
     out = equip_allocation(None, deployed, ['分身墨镜Max', '垃圾袋'], occupied={})
     assert ('丹恒·饮月', '分身墨镜Max') not in out
     assert ('丹恒·饮月', '垃圾袋') in out
+
+
+_OBS_SIG = ChannelSig(family='obs', actor='synthesize_from_game_state',
+                      mode='synthesized')
+
+
+def test_front_only_fallback_excludes_gated_items():
+    """回退帧门锁(fail-closed):身份读失败帧(deployed 空 → front_only
+    回退分支)专属件在 owned → 回退计划不含专属件(件滞留 owned,不发
+    拖拽);同池无门件照常入计划(行为不变);空栏前置件(worn=[] 无
+    信息恒过)也入计划 = 回退帧只补 W3 有效辖域。"""
+    session = cw4_session(cw4_comp())
+    gs = game_state_of(session)
+    gs.observe(gs.equips, ['分身墨镜Max', '扑满病毒', '掩体生成枪', '随便骰子'],
+               sig=_OBS_SIG)
+    gs.observe(gs.occupied_equips, {}, sig=_OBS_SIG)
+    ret = _build_equip_wear_plan(session)
+    assert ret.branch == 'front_only'
+    planned = {s.item_name for s in ret.steps}
+    assert planned == {'掩体生成枪', '随便骰子'}
+    assert set(ret.owned_wearable_names) == {'掩体生成枪', '随便骰子'}
+    for s in ret.steps:
+        assert s.char_name == ''
+        assert s.row == 'front'
+        assert 1 <= s.slot <= 4
 
 
 def test_wear_rule_coverage_zero_warnings():
