@@ -260,6 +260,31 @@ def test_multi_point_partial_skip(monkeypatch: pytest.MonkeyPatch) -> None:
     assert names.count('B') == 1, '角色奖励已落位(耗掉最后空位)'
 
 
+def test_char_reward_preserves_item_slot_kinds(monkeypatch: pytest.MonkeyPatch) -> None:
+    """占位件 kind 保留(回归锁,vocab 覆盖锁实锁暴露):bench 有典籍/
+    书册卡/箱槽时,角色奖励整表写不得把它们降级 supply_box——降级会让
+    后续 OpenTome/OpenBookcard 按 kind 找不到槽(真缺陷,不定态随机抽中
+    角色时触发)。"""
+    slots = [BenchSlot(kind='unit', unit=Unit(char_id='A', star=1, slot=1)),
+             BenchSlot(kind='unit', unit=Unit(char_id='A', star=1, slot=2)),
+             BenchSlot(kind='tome'),
+             BenchSlot(kind='bookcard'),
+             BenchSlot(kind='supply_box')]
+    slots += [BenchSlot(kind='empty') for _ in range(4)]
+    gs = _make_gs(ores=[_ore('金', 1, 1)])
+    gs.observe(gs.bench, BenchView(slots=slots, capacity=9), sig=_SIG_OBS)
+    monkeypatch.setattr(collect_ore_mod, 'roll_ore_reward',
+                        _seq_rewards(OreReward(kind='char', char_id='A')))
+    out = report_action_collect_ore_param(
+        gs, CwActionCollectOreParam(points=((1, 1),)), _SIG)
+    assert out.applied is True
+    kinds = [s.kind for s in gs.bench.value.slots]
+    assert kinds[2] == 'tome' and kinds[3] == 'bookcard' \
+        and kinds[4] == 'supply_box', f'占位件 kind 不得降级: {kinds}'
+    units = [s for s in gs.bench.value.slots if s.kind == 'unit']
+    assert len(units) == 1 and units[0].unit.star == 2, '3×1★ → 2★ 载体'
+
+
 # ============================================================ None 边界与拒分支
 
 

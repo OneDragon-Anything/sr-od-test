@@ -61,7 +61,7 @@ _SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep')
 
 # ===== CwActionCollectOreParam 改形专锁(判据 3 前半)=====
 
-def test_sphere_selection_kernel_orders_big_first_and_caps():
+def test_ore_selection_kernel_orders_big_first_and_caps():
     """挑选 kernel 单一源:大晶矿优先(r 降序稳定排序)+ 预算上界;载荷 =
     有序 (x, y) 坐标列。"""
     spheres = [('blue', Point(30, 40), 20),
@@ -73,7 +73,7 @@ def test_sphere_selection_kernel_orders_big_first_and_caps():
     assert select_ore_clicks([], 3) == ()
 
 
-def test_sphere_executor_is_mechanical_payload_clicks(monkeypatch):
+def test_ore_executor_is_mechanical_payload_clicks(monkeypatch):
     """执行器机械半:逐载荷坐标点击,零读屏(读屏选晶矿半随 R4 改形退役,
     旧形态靠 op.screenshot 选晶矿——零 screenshot 调用即机械化证明)。
     (monkeypatch time.sleep = 溢出/动画家族固定等待空等,真机等待节奏

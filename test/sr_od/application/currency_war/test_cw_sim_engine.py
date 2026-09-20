@@ -66,7 +66,7 @@ def _auto(frame):
     """全相位自适应桩策略(「无动作 = 选终结动作」 mandate 语义的
     测试桩形态;晶矿面板 = 点第一个剩余晶矿)。"""
     phase = frame.phase
-    if phase is CwSimPhase.REWARD_BALL:
+    if phase is CwSimPhase.REWARD_ORE:
         return CwActionPickEventParam(option_idx=0)
     if phase in (CwSimPhase.OPENING_ENV, CwSimPhase.INVEST_OFFER,
                  CwSimPhase.ENCOUNTER_OFFER, CwSimPhase.SUPPLY_PICK,
@@ -274,7 +274,7 @@ def test_board_covers_obs_channel_row_write_drift() -> None:
     gs.observe(gs.equips, ['贝洛伯格星徽'], sig=_SIG)
     ret = eng.step(CwActionStartBattleParam())
     while ret.observation is not None \
-            and ret.observation.phase is CwSimPhase.REWARD_BALL:
+            and ret.observation.phase is CwSimPhase.REWARD_ORE:
         ret = eng.step(CwActionPickEventParam(option_idx=0))
     assert gs.board.value == {'昼之半神': 1, '能量': 1}
     ret2 = eng.step(CwActionWearEquipParam(item_name='贝洛伯格星徽',
@@ -320,8 +320,8 @@ def test_planner_trigger_fires_on_deployed_merge() -> None:
 
 # ============================================================ 结算推进
 
-def test_reward_win_leads_to_ball_phase_and_settlement() -> None:
-    """奖励节点胜 → REWARD_BALL(U23 单例锚 8 晶矿)→ 逐晶矿点完 →
+def test_reward_win_leads_to_ore_phase_and_settlement() -> None:
+    """奖励节点胜 → REWARD_ORE(U23 单例锚 8 晶矿)→ 逐晶矿点完 →
     推进下一节点;败 → 直接推进。流键定 seed,双分支都锁。"""
     for seed in (7, 21):
         eng = CwSimEngine()
@@ -329,10 +329,10 @@ def test_reward_win_leads_to_ball_phase_and_settlement() -> None:
         ret = eng.step(CwActionStartBattleParam())
         phase_after = ret.observation.phase
         node_after = ret.observation.node
-        if phase_after is CwSimPhase.REWARD_BALL:
-            assert len(ret.observation.balls) == 8, 'U23 单例锚'
+        if phase_after is CwSimPhase.REWARD_ORE:
+            assert len(ret.observation.ores) == 8, 'U23 单例锚'
             ret2 = eng.step(CwActionPickEventParam(option_idx=0))
-            assert len(ret2.observation.balls) == 7, '逐晶矿收缩'
+            assert len(ret2.observation.ores) == 7, '逐晶矿收缩'
         else:
             assert phase_after is CwSimPhase.PREP
             assert (node_after.plane, node_after.round_num) == (1, 2)

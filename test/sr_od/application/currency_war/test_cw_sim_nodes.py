@@ -20,14 +20,14 @@ from sr_od.application.currency_war.sim.cw_sim_nodes import (
     BOX_CANDIDATES,
     ENCOUNTER_TIER_BONUS,
     ENCOUNTER_TIER_COUNT,
-    apply_ball_pick,
     apply_box_pick,
     apply_encounter_pick,
+    apply_ore_pick,
     apply_supply_pick,
     box_options,
     encounter_options,
     is_piggy_node,
-    reward_ball_panel,
+    reward_ore_panel,
     supply_options,
 )
 from sr_od.application.currency_war.sim.cw_sim_overlay import (
@@ -83,26 +83,26 @@ def test_piggy_env_replacement_single_source() -> None:
     assert not is_piggy_node(_gs('battle')), '非奖励节点恒 False'
 
 
-def test_reward_ball_panel_u23_anchor() -> None:
+def test_reward_ore_panel_u23_anchor() -> None:
     """U23 单例锚:面板 = 1 大金晶矿+5 蓝晶矿+2 灰晶矿(共 8 晶矿;颜色结构 =
     唯一有据面)。"""
-    panel = reward_ball_panel()
+    panel = reward_ore_panel()
     assert len(panel) == 8
     by_color = {c: sum(1 for b in panel if b.color == c)
                 for c in ('金', '蓝', '灰')}
     assert by_color == {'金': 1, '蓝': 5, '灰': 2}
 
 
-def test_ball_pick_gold_and_equip_settlement() -> None:
+def test_ore_pick_gold_and_equip_settlement() -> None:
     """采晶矿即时入账:金晶矿直加金账;蓝晶矿直入装备栏。"""
     gs = _gs()
     sig = ChannelSig(family='obs', actor='TestSigWriter')
     gs.observe(gs.gold, 10, sig=sig)
-    kind, amount = apply_ball_pick(gs, 0, rng=random.Random(1))  # 0 = 金晶矿
+    kind, amount = apply_ore_pick(gs, 0, rng=random.Random(1))  # 0 = 金晶矿
     assert (kind, amount) == ('gold', 30)
     assert gs.gold.value == 40
     equip_count_before = len(gs.equips.value or [])
-    kind, amount = apply_ball_pick(gs, 1, rng=random.Random(2))  # 1 = 蓝晶矿
+    kind, amount = apply_ore_pick(gs, 1, rng=random.Random(2))  # 1 = 蓝晶矿
     assert (kind, amount) == ('equip', 1)
     assert len(gs.equips.value) == equip_count_before + 1
 

@@ -80,7 +80,7 @@ def test_phase_enum_covers_design_vocabulary() -> None:
     """相位枚举 = 设计稿 §2.0.1 十一相位一一对应(策略路由依据)。"""
     assert {p.value for p in CwSimPhase} == {
         'opening_env', 'prep', 'invest_offer', 'encounter_offer',
-        'supply_pick', 'box_pick', 'reward_ball', 'event_overlay',
+        'supply_pick', 'box_pick', 'reward_ore', 'event_overlay',
         'settlement', 'plane_transition', 'game_over',
     }
 

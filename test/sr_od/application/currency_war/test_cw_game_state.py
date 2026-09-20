@@ -422,7 +422,7 @@ def test_write_logic_rand_and_observe_random_outcome(
                             sig=_sig())
     # —— 写口腿 ——
     gs.write_logic_rand(gs.gold, 12, produced_by='TestSigWriter',
-                        evidence='sphere_rand@p1-r2', sig=_lsig())
+                        evidence='ore_rand@p1-r2', sig=_lsig())
     assert gs.gold.source == 'logic_rand' and gs.gold.value == 12, \
         '随机口径直写落 logic_rand 来源,策略器立即可读'
     assert gs.logic_rand_fields() == ['gold'], '随机态字段在册(消费门查询口)'
@@ -443,7 +443,7 @@ def test_write_logic_rand_and_observe_random_outcome(
     assert len(rows) == 1 and rows[0]['kind'] == 'logic_rand_outcome', \
         '差异只落随机结果台账行(预期内,不进失配三分流)'
     assert rows[0]['expected'] == 12 and rows[0]['actual'] == 25 \
-        and rows[0]['logic_evidence'] == 'sphere_rand@p1-r2', \
+        and rows[0]['logic_evidence'] == 'ore_rand@p1-r2', \
         '行携带随机口径预期/实读/写端注记(校准遥测面)'
     assert fired == [], '安灯不触发(随机落地非 bug)'
     assert not any('观察覆盖 logic 失配' in str(w) for w in warns), \
