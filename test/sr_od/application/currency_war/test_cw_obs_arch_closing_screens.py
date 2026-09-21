@@ -1,20 +1,18 @@
-"""统一观察架构·收尾五屏迁移锁 + cw_screen/cw_op 收口锁(余项收口阶段三)。
+"""统一观察架构·收尾屏迁移锁 + cw_screen/cw_op 收口锁(余项收口阶段三)。
 
 断言集模板 = test_cw_obs_arch_event_screens.py(事件屏两 node 形态先例)。
-本批五屏:位面过渡 CwScreenPlaneTransition / 武装箱弹窗 CwScreenArmoryBox /
-未达上限弹窗 CwScreenDeployNotFull / 等待1-1 CwScreenWaitOneOne / 位面
-情报采集 CwScreenPlaneIntel。位面过渡/武装箱/未达上限/等待1-1已迁移
-两 node 形态(迭代 2026-09-18-screen-op-flat-report);位面情报采集 =
-薄转录直通(装帧观察 node + 双节点图保留)。
+本文件辖:位面过渡 CwScreenPlaneTransition / 武装箱弹窗 CwScreenArmoryBox /
+未达上限弹窗 CwScreenDeployNotFull / 等待1-1 CwScreenWaitOneOne(均已迁移
+两 node 形态,迭代 2026-09-18-screen-op-flat-report)。位面情报采集
+CwScreenPlaneIntel 已重构为 6 node 管线(接管域迭代
+2026-09-20-takeover-intel-pipeline),其行为锁随迁
+test_cw_takeover_intel_pipeline.py,本文件不再辖。
 
 **F11 sim 腿不适用例外清单(随迁移批逐屏落测试 docstring,总纲 §2.2-3)**:
 
 - 位面过渡/武装箱弹窗/未达上限弹窗/等待1-1:sim 腿 = 不适用——sim 无对应
   画面段(架构设计 §3.4 过渡相位/中断弹窗行),等价判据主承重 =
-  实机在册行为锁 + 本文件两 node 形态锁,禁引用 sim 域对拍;
-- 位面情报采集:sim 腿 = 不适用——sim 无位面详情/敌人情报对应画面段
-  (§3.4 sim 侧申报),等价判据主承重 = 纯函数三件在册测试锁
-  (零触碰)+ 双节点图边锁。
+  实机在册行为锁 + 本文件两 node 形态锁,禁引用 sim 域对拍。
 
 锁的语义(测试纪律 7 自检;出处 = landing 阶段三判据;行为锁单驱动
 生产路径):
@@ -30,8 +28,6 @@
   接线,链容器终值锁);门早退轮 obs 不装载。
 - **round_wait 语义锁**(两 node 形态屏):循环推进 = round_wait(不烧
   节点重试预算);等待1-1 = 轮询 round_wait 自环观察 node。
-- **薄转录锁**(位面情报采集):双节点图边(采集→关闭并回写)保留;
-  装帧观察 node 不前移场景门。
 - **收口锁不恢复**(分诊,原 landing 阶段三判据的目录级守卫):
   「cw_screen/ 与 cw_op/ 顶层 op 类必为 CwScreenOpBase 后代(豁免登记
   门)」以 AST 全目录扫描实现,属源码扫描形态(AGENTS §10.4.4 禁),
@@ -99,8 +95,7 @@ def test_reentry_arbitration_flag_gate_combination(test_context,
     - 未达上限:门命中 + pending 在位 → 裁决不触发,勾选+确认重发、
       旗标经确认体重置(弹窗仍在 = 重发非完成);miss 已发 → 裁决
       success(零动作)。
-    等待1-1/位面情报采集无裁决旗标(等待1-1 = 纯等待轮询,位面情报采集
-    = 薄转录装帧)。红 = 裁决出口语义漂移(门命中误判完成 / 失败轮旗标
+    等待1-1无裁决旗标(纯等待轮询)。红 = 裁决出口语义漂移(门命中误判完成 / 失败轮旗标
     复活)。"""
     # 位面过渡:门命中 + pending 在位 → 重点一轮(不误判完成)
     blank = SimpleNamespace(x=960, y=540)
@@ -436,55 +431,8 @@ def test_wait_one_one_timeout_leaves_evidence(test_context,
         '轮询至上界才退出,非首轮放弃')
 
 
-# ==================== 位面情报采集:薄转录装帧 + 双节点保留 ====================
-
-
-# (收口整删)原 test_plane_intel_thin_transcription_single_body「薄转录
-# 锁行为半(新五段/旧零段迹双驱动)」删:装端口段迹面随并存窗收口退役;
-# 采集完 success 语义由双节点图边锁同文件同构体承重,转录单一源面归
-# review 与代码规范。
-
-
-def test_plane_intel_observe_mount_and_placeholder_report(
-        test_context, monkeypatch) -> None:
-    """装帧观察 node 锁(薄转录直通形态):观察 node 仅装配稳定帧 →
-    obs{on_screen} → 占位 report 接线恰一次(match/gs 在场;本屏现役零
-    容器写点,接口为统一形态占位)→ round_success 进采集 node;场景门
-    [在位面详情/备战/其它]不前移(仍住采集体,采集轮不被观察 node 拦截)。
-    红 = 场景门前移 / 接线断流。"""
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_plane_intel as pim,
-    )
-    op = pim.CwScreenPlaneIntel(test_context)
-    monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
-    _reports: list = []
-    monkeypatch.setattr(pim, 'report_screen_plane_intel_obs',
-                        lambda gs, obs: _reports.append(obs))
-    monkeypatch.setattr(test_context, 'cw_match',
-                        SimpleNamespace(session=SimpleNamespace(), gs=object()),
-                        raising=False)
-    rs = _run_node(test_context, op, op.observe)
-    assert rs.is_success, f'装帧观察 success 进采集 node:{rs!r}'
-    assert op._obs is not None and op._obs.on_screen is True, 'obs 挂实例属性'
-    assert len(_reports) == 1 and _reports[0] is op._obs, (
-        f'占位 report 接线恰一次(统一形态调用):{_reports!r}')
-
-
-def test_plane_intel_dual_node_graph_edge_preserved(test_context) -> None:
-    """双节点图边保留:「采集 → 关闭并回写」显式 node_from 边在位(首跑
-    教训:无显式边时采集 success 被当 op 终点,关闭节点漏跑,画面留在
-    位面详情);装帧观察 node 前置后边不丢。红 = 迁移顺手并节点复活该
-    事故形态。"""
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_plane_intel as pim,
-    )
-    # 边的登记面以运行时节点图为准(下方真图查询);不另做装饰器源码
-    # 字面扫描——合法改写登记写法即假红,纪律 8(运行时锁承重同事实)。
-    op = pim.CwScreenPlaneIntel(test_context)
-    op._init_network()   # 显式建图(框架在 execute 前调;测试内直调取边登记面)
-    edges = op._node_edges_map.get('采集', [])
-    assert any(e.node_to.cn == '关闭并回写' for e in edges), (
-        f'采集→关闭并回写 边未在节点图登记:{op._node_edges_map!r}')
+# (位面情报采集两锁——薄转录装帧观察 node / 双节点图边——随 6 node 管线
+#  重构退役,行为锁迁 test_cw_takeover_intel_pipeline.py。)
 
 
 # ==================== 收口锁(不恢复)====================

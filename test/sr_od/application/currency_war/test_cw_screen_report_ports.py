@@ -45,7 +45,7 @@ _PKG = 'sr_od.application.currency_war.kernel.cw_screen_report'
 #: 包内全部画面文件(包 ``__init__`` 不暴露模块,项目惯例 → 显式点名;
 #: 新增屏文件必须登记到此处,漏登记 = 完备锁红)。
 _SCREENS = (
-    # 含 report 的 23 屏(15 实体写点 + 8 文档化占位)
+    # 含 report 的 23 屏(17 实体写点 + 6 文档化占位)
     'encounter', 'megastar', 'equip_pick', 'partner', 'planner', 'fortune',
     'bookcard', 'expert_invite', 'supply_node', 'invest_env',
     'invest_strategy', 'wish_trial', 'box_pick', 'briefing',
@@ -445,53 +445,23 @@ def test_plane_transition_chain_defenses():
     assert gs3.node_path_baseline.value == existing
 
 
-def test_prep_optional_domains_field_presence_and_takeover_cluster(
-        monkeypatch):
-    """备战可选域字段在场才写(重型屏迁移批升级后契约):
+def test_prep_optional_domains_field_presence_after_takeover_retirement():
+    """备战可选域字段在场才写(接管域退役批后契约:链域 = 唯一可选写域):
     - 全 None obs(仅 prep 整包缺省)→ 零写(占位语义存续面);
-    - 接管补采簇(takeover_tries/done/plane_bosses/enemy_affixes)→
-      write_logic 逐字段落值,evidence 渠道③原值(takeover_collect_tries/
-      takeover_collect_done),bosses/affixes 无 evidence(原写点逐位);
-    - 渠道签名 = ResumeAttach logic_hook(bosses/affixes 行 screen='' 原值),
-      状态流水行断言。
-    """
+    - 接管域四字段(takeover_tries/takeover_collect_done/plane_bosses/
+      enemy_affixes)已随编排单一源退役出 obs 类(零残留断言)。"""
+    import dataclasses
+
     mod = _screen_module('prep')
+    field_names = {f.name for f in dataclasses.fields(mod.CwScreenPrepObs)}
+    assert 'node_path_chain' in field_names, '链域可选写域存续'
+    for retired in ('takeover_tries', 'takeover_collect_done',
+                    'plane_bosses', 'enemy_affixes'):
+        assert retired not in field_names, f'接管域字段应已退役:{retired}'
     # 全 None → 零写
     gs = _blank_gs()
     mod.report_screen_prep_obs(gs, mod.CwScreenPrepObs())
     assert gs.write_seq == 0, '全 None 可选域 = 本轮无此面,零写'
-    # 接管补采簇:四域一次上报,字段在场才写
-    rows: list[dict] = []
-    monkeypatch.setattr(gs_mod, '_STATE_JOURNAL_SINK', rows.append)
-    monkeypatch.setattr(gs_mod, '_RUN_ID_PROVIDER', lambda: 'test-run')
-    gs2 = _blank_gs()
-    mod.report_screen_prep_obs(gs2, mod.CwScreenPrepObs(
-        takeover_tries=1, takeover_collect_done=True,
-        plane_bosses=['幻胧', None, None], enemy_affixes=['词缀甲']))
-    assert gs2.takeover_tries.value == 1 \
-        and gs2.takeover_tries.source == 'logic' \
-        and gs2.takeover_tries.evidence == 'takeover_collect_tries', \
-        '补采计数 = logic + evidence 原值'
-    assert gs2.takeover_collect_done.value is True \
-        and gs2.takeover_collect_done.evidence == 'takeover_collect_done', \
-        '完成闩 = logic + evidence 原值'
-    assert gs2.plane_bosses.value == ['幻胧', None, None] \
-        and gs2.plane_bosses.evidence is None, \
-        'boss 保位写 = 原写点无 evidence'
-    assert gs2.enemy_affixes.value == ['词缀甲'] \
-        and gs2.enemy_affixes.evidence is None, \
-        '词缀补采 = 原写点无 evidence'
-    got = {(r['field'],
-            r['sig']['family'], r['sig']['actor'],
-            r['sig']['screen'], r['sig']['mode'])
-           for r in rows if r['row'] == 'write'}
-    assert got == {
-        ('takeover_tries', 'logic_hook', 'ResumeAttach', None, 'compute'),
-        ('takeover_collect_done', 'logic_hook', 'ResumeAttach', None,
-         'compute'),
-        ('plane_bosses', 'logic_hook', 'ResumeAttach', '', 'compute'),
-        ('enemy_affixes', 'logic_hook', 'ResumeAttach', '', 'compute'),
-    }, f'接管簇渠道签名偏离原写点原值: {got}'
 
 
 def test_prep_chain_baseline_idempotent_gate():

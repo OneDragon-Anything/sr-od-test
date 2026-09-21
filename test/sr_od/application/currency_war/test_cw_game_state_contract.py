@@ -168,16 +168,16 @@ def test_same_value_rewrite_flags_and_consumes_version(journal_sink) -> None:
 
 
 def test_match_facts_domain_version_bumped_lands_in_journal_rows() -> None:
-    """match_facts 域版本 bump 落行(载体解散迭代 3.5:接管/恢复三字段
-    resumed_match/takeover_collect_done/takeover_tries 迁入 = 域内容变更,
-    gs_schema 域版本 2):DEFAULT_GS_SCHEMA 声明值 = 2,写行内嵌快照
+    """match_facts 域版本 bump 落行(接管域迭代 2026-09-20-takeover-intel-pipeline:
+    接管补采计数/完成闩两字段退役 = 域内容变更,gs_schema 域版本 3):
+    DEFAULT_GS_SCHEMA 声明值 = 3,写行内嵌快照
     state.gs_schema 同值(行行自足,判读不前溯可查域版本)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         DEFAULT_GS_SCHEMA,
         set_run_id_provider,
         set_state_journal_sink,
     )
-    assert DEFAULT_GS_SCHEMA['match_facts'] == 2
+    assert DEFAULT_GS_SCHEMA['match_facts'] == 3
     gs = _gs()
     run_sink: list[dict] = []
     set_state_journal_sink(run_sink.append)
@@ -192,7 +192,7 @@ def test_match_facts_domain_version_bumped_lands_in_journal_rows() -> None:
     row = run_sink[0]
     assert row['row'] == 'write' and row['field'] == 'resumed_match'
     assert row['after'] is True
-    assert row['state']['gs_schema']['match_facts'] == 2, \
+    assert row['state']['gs_schema']['match_facts'] == 3, \
         '域版本 bump 落行(行内 state 快照携带)'
     assert row['sig']['family'] == 'logic_hook', '接管协议渠道③签名随行'
 
