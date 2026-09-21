@@ -21,6 +21,9 @@ import pytest
 from sr_od.application.currency_war.data.cw_equipment_data import (
     EQUIPMENTS,
 )
+from sr_od.application.currency_war.data.cw_equipment_wear_rules_data import (
+    ITEM_WEAR_GATES,
+)
 from sr_od.application.currency_war.kernel import cw_gain_chain
 from sr_od.application.currency_war.kernel.cw_action_report import tool_use
 from sr_od.application.currency_war.kernel.cw_action_report.tool_use import (
@@ -177,6 +180,30 @@ def test_furnace_char_legs_equips_rand_and_row_logic(
     assert gs.front_row.source == 'logic', '行域腿 = 确定面'
 
 
+def test_furnace_char_leg_mixed_worn_keeps_out_of_scope(
+        rows_sink: _RowSink) -> None:
+    """炉·拖角色作用域白名单(口述·权威 2026-09-21):混合穿戴(简易 +
+    非白名单)下白名单件采样替换、越白名单件保留原样 + 聚合留证行
+    (kind=furnace_mutate_out_of_scope_kept);行域仍全拆清空(越白名单
+    件是否随动作消失未采证,v0 保留 = 库存面)。"""
+    gs = _make_gs(front=[Unit(char_id='丙', star=1,
+                              equips=['轮滑鞋', '反重力皮靴·特权'], slot=1)],
+                  equips=['冶金炉', '折叠小刀'])
+    out = report_action_furnace_use_param(
+        gs, CwActionFurnaceUseParam(target_kind='char', row='front', slot=1),
+        _lsig(), rng=random.Random(7))
+    assert out.applied is True
+    inv = gs.equips.value
+    assert '反重力皮靴·特权' in inv, '越白名单穿戴件保留原样入库存'
+    r_shoes = tool_use.furnace_mutate_sample(random.Random(7), '轮滑鞋')
+    assert r_shoes in inv, '白名单穿戴件采样替换'
+    assert '冶金炉' not in inv, '工具消耗移除'
+    unit = gs.front_row.value[0]
+    assert unit.equips == [], '行域全拆清空'
+    assert 'furnace_mutate_out_of_scope_kept' in rows_sink.kinds(), \
+        '聚合留证行落证'
+
+
 def _rng_after(rng: random.Random, item: str) -> random.Random:
     """复刻同种子流:先消耗 item 的一次采样,返回后续状态的 rng
     (等值期望从采样器单一来源现算,不手抄采样值)。"""
@@ -187,8 +214,8 @@ def _rng_after(rng: random.Random, item: str) -> random.Random:
 def test_furnace_sample_same_seed_and_sim_crosscheck() -> None:
     """采样锁:同种子同产物(可复现)+ 与 sim ``furnace_reroll`` 对拍——
     同池同输入逐次等值(两实现等价钉死,禁第二套口径;design §2.2)。
-    代表样本跨类别(简易/特殊/工具)各抽一。"""
-    for item in ('轮滑鞋', '垃圾袋', '冶金炉'):
+    样本限作用域白名单内(简易/进阶;白名单 = 口述·权威 2026-09-21)。"""
+    for item in ('轮滑鞋', '反重力皮靴'):
         pool = tool_use.furnace_mutate_pool(item)
         assert pool is not None and pool, f'{item} 池可用'
         for seed in (0, 1, 42):
@@ -209,27 +236,40 @@ def test_furnace_sample_same_seed_and_sim_crosscheck() -> None:
     assert vals[0] == vals[1], '同种子报告结果可复现'
 
 
-def test_furnace_consequence_candidate_evidence_row(
+def test_furnace_pool_scope_whitelist() -> None:
+    """作用域白名单锁(口述·权威 2026-09-21):冶金炉只作用简易/进阶——
+    特殊/工具目标池 = None(不可作用);白名单池不含特殊/骇客/专属件。"""
+    assert tool_use.furnace_mutate_pool('垃圾袋') is None, '特殊不可作用'
+    assert tool_use.furnace_mutate_pool('冶金炉') is None, '工具不可作用'
+    assert tool_use.furnace_mutate_pool('分身墨镜') is None, '专属不可作用'
+    for name, e in EQUIPMENTS.items():
+        if e.category not in ('简易', '进阶'):
+            continue
+        pool = tool_use.furnace_mutate_pool(name)
+        assert pool is not None, f'{name} 白名单内池可用'
+        cats = {EQUIPMENTS[n].category for n in pool}
+        assert cats <= {'简易', '进阶'}, f'{name} 产物域越白名单'
+        exclusives = set(ITEM_WEAR_GATES)
+        assert not (set(pool) & exclusives), f'{name} 池含银狼专属件'
+        from sr_od.application.currency_war.kernel.cw_effect_inventory import (
+            EQUIP_ACQUIRE_CONSEQUENCES,
+        )
+        assert not (set(pool) & set(EQUIP_ACQUIRE_CONSEQUENCES)), \
+            f'{name} 池含后果表成员(结构性不触发面)'
+
+
+def test_furnace_equip_leg_target_out_of_scope_fail_closed(
         rows_sink: _RowSink) -> None:
-    """变异后果采证钩子:采样命中 ``EQUIP_ACQUIRE_CONSEQUENCES`` 键集 →
-    留证行(kind=furnace_mutate_consequence_candidate,design §2.2;
-    实机采证点的采集机制)。"""
+    """炉·目标越白名单(特殊)= fail-closed 零写 + 留证(禁猜;容器含
+    工具与目标件原样)。"""
     gs = _make_gs(equips=['冶金炉', '垃圾袋'])
-    pool = tool_use.furnace_mutate_pool('垃圾袋')
-    idx = pool.index('分身墨镜')   # 后果表成员(分身墨镜→1★银狼)
-
-    class _StubRng:
-        def randrange(self, n: int) -> int:
-            assert n == len(pool)
-            return idx
-
     out = report_action_furnace_use_param(
-        gs, CwActionFurnaceUseParam(target_kind='equip', item_name='垃圾袋'),
-        _lsig(), rng=_StubRng())   # type: ignore[arg-type]
+        gs, CwActionFurnaceUseParam(target_kind='equip',
+                                    item_name='垃圾袋'),
+        _lsig(), rng=random.Random(7))
     assert out.applied is True
-    assert gs.equips.value.count('分身墨镜') == 1, '采样替换照写'
-    assert rows_sink.kinds() == ['furnace_mutate_consequence_candidate'], \
-        '采证行落证(留证不停机)'
+    assert gs.equips.value == ['冶金炉', '垃圾袋'], '越白名单零容器写'
+    assert 'tool_bridge_zero_write' in rows_sink.kinds(), '留证行落证'
 
 
 def test_privilege_equip_merged_single_logic_write(
