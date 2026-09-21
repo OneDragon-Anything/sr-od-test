@@ -348,8 +348,21 @@ def _op_with_session(op_cls: type, sess: object) -> object:
 def _chosen_rows() -> dict:
     """chosen 记录面表行(遭遇/专家/祈愿三案;每行 = op 类 + chosen 字段
     + 真选调用 + 期望值 + fallback 调用集;supply 暂存生命周期独立成案,
-    见下)。"""
+    见下)。遭遇臂 = 动作侧发射即写(遭遇扩围批:写端迁
+    ``kernel/cw_action_report/pick_encounter.py``,真选/fallback 经 report
+    函数直调,payload 槽前置播种模拟入口观察)。"""
+    from sr_od.application.currency_war.kernel.cw_action_report.pick_encounter import (
+        report_action_pick_encounter_param,
+    )
     from sr_od.application.currency_war.kernel.cw_events import EncounterOption
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        ChannelSig,
+        EncounterPayload,
+        game_state_of,
+    )
+    from sr_od.application.currency_war.kernel.cw_vocab import (
+        CwActionPickEncounterParam,
+    )
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_encounter,
         cw_screen_expert_invite,
@@ -359,20 +372,25 @@ def _chosen_rows() -> dict:
     opts = [EncounterOption(idx=0, difficulty=1, rewards=['金币×2']),
             EncounterOption(idx=1, difficulty=3, rewards=['随机4费×3'])]
     bonds: list[str | None] = ['仙舟', None, '贝洛伯格', None]
+    _sig = ChannelSig(family='logic_action', actor='test', mode='compute')
+
+    def _enc_report(op, idx: int, *, seed: bool) -> None:
+        gs = game_state_of(op.ctx.cw_match.session)
+        if seed:
+            gs.write_logic(gs.encounter, EncounterPayload(options=list(opts)),
+                           produced_by='test', sig=_sig)
+        report_action_pick_encounter_param(
+            gs, CwActionPickEncounterParam(idx=idx), _sig)
 
     return {
         'encounter': {
             'op_cls': cw_screen_encounter.CwScreenEncounter,
             'field': 'chosen_encounter',
-            'pick': lambda op: op._record_chosen(op.ctx.cw_match.session,
-                                                 opts, 1),
+            'pick': lambda op: _enc_report(op, 1, seed=True),
             'expected': (3, '随机4费×3'),
             'fallbacks': [
-                lambda op: op._record_chosen(None, opts, 0),      # 无会话 = 盲选
-                lambda op: op._record_chosen(op.ctx.cw_match.session,
-                                             [], 0),              # 候选未读到
-                lambda op: op._record_chosen(op.ctx.cw_match.session,
-                                             opts, 5)],           # 决策越界
+                lambda op: _enc_report(op, 1, seed=False),   # payload 离屏(观察层失约)
+                lambda op: _enc_report(op, 5, seed=True)],   # idx 越界(盲选防御)
         },
         'expert': {
             'op_cls': cw_screen_expert_invite.CwScreenExpertInvite,

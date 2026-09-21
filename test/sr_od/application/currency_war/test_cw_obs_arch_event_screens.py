@@ -17,8 +17,15 @@
   终结交回——无同访问 ``screenshot()`` 重读面、无 report 二次覆盖写、
   无重决策、零选卡派发;闸拒绝(剩余 0/None)→ 零点击,重调一次决策
   按原评分选卡;重调仍建议刷新(闸数据不一致)→ 零点击终结交回。
-- **重入裁决时机锁**(遭遇):确认已发 → 锚在 = 未落地 → 不写 chosen、
-  清标志重走;锚不在 = 落地 → 此刻才写 chosen_encounter + success 交回。
+- **派发即终结锁**(遭遇,迭代 2026-09-21-event-refresh-unify-supply-pick
+  3.3 扩围):选卡确认链派发后 round_success 终结交回(零重入裁决轮);
+  空候选/局外 = 零点击终结交回(禁盲选派发确认——不可逆消耗);闸拒绝
+  重调落选卡后同样终结。chosen_encounter 发射即写契约(动作侧 report
+  函数级)= test_cw_screen_report_ports 承重,本文件不重复。
+- **奖励兑现回调锁**(遭遇,kernel ``claim_encounter_reward``):双证
+  判遭遇(node 镜像 token)∧ progress_delta>0 单判;兑现写
+  ``encounter_reward_claimed`` 且 chosen 随即清(单次消费,重触发天然
+  幂等);非遭遇/未达标/删失/无 chosen = 不写不清。
 - **盛会之星族锁**(节点循环形态):完成门/懒读保真/防重入旗标/chosen
   写端(选择点留守)各一锁,语义见各 docstring。
 
@@ -179,41 +186,40 @@ def test_encounter_observe_reports_container(
     assert op._refresh_point is not None, '刷新文本锚点挂实例属性'
 
 
-def test_encounter_act_round_wait_and_reentry_chosen(
+def test_encounter_act_dispatch_terminal(
         test_context, monkeypatch) -> None:
-    """决策动作 node 锁 + chosen 写时机锁:零参决策 → 点卡 + 确认机械交回
-    → round_wait 推进循环(不计节点重试预算);chosen_encounter = 重入
-    裁决点留守写端——确认未落地(锚在)不写、清标志重走;落地(锚不在)
-    此刻才写 + success 交回。红 = 循环推进回退为计预算 retry / 落地前写
-    (幻影 chosen)/ 落地后断流。"""
+    """派发即终结锁(迭代 …3.3 扩围):零参决策 → 选卡确认链派发 →
+    round_success 终结交回(零重入裁决轮、零刷新点击)。红 = round_wait
+    循环回潮(重入裁决复活)/ 派发断流 / 刷新臂误触发。"""
     opts = [EncounterOption(idx=0, difficulty=1, rewards=['金币×2']),
             EncounterOption(idx=1, difficulty=3, rewards=['随机4费×3'])]
-    op, _match, session = _make_encounter(
+    clicks, dispatches = _refresh_fixture(test_context, monkeypatch)
+    op, _match, _session = _make_encounter(
         test_context, monkeypatch, in_screen=True, options=opts,
         pick=CwActionPickEncounterParam(idx=1, reason='stub'))
     _run_node(test_context, op, op.observe)
-    # ① 决策动作轮:确认机械交回 → round_wait;pending 置位;chosen 不写
     rs = _run_node(test_context, op, op.act)
-    assert rs.result == OperationRoundResultEnum.WAIT, (
-        f'循环推进 = round_wait(不计节点重试预算):{rs!r}')
-    assert op._confirm_pending == (opts, 1), (
-        f'确认已发 → (options, idx) 快照置位:{op._confirm_pending!r}')
-    assert game_state_of(session).chosen_encounter.value is None, (
-        '确认未落地轮不写 chosen(时点 = 重入裁决)')
-    # ② 未落地重走(锚在):清标志 → 重选重确认 → 仍不写
-    rs2 = _run_node(test_context, op, op.act)
-    assert rs2.result == OperationRoundResultEnum.WAIT, f'未落地重走机械交回:{rs2!r}'
-    assert game_state_of(session).chosen_encounter.value is None, (
-        '锚在(未落地)重走仍不写 chosen')
-    # ③ 落地(锚不在):此刻才写 chosen + success 交回
-    monkeypatch.setattr(op, 'round_by_find_area',
-                        lambda scr, s, a, **k: _Area(False))
-    rs3 = _run_node(test_context, op, op.act)
-    assert rs3.is_success and '重入观察裁决' in (rs3.status or ''), (
-        f'落地 → success 交回:{rs3!r}')
-    assert game_state_of(session).chosen_encounter.value == (3, '随机4费×3'), (
-        'chosen_encounter = 重入裁决点留守写端(落地后值才可信)')
-    assert op._confirm_pending is None, '裁决消费待裁决快照'
+    assert rs.is_success and '终结交回' in (rs.status or ''), (
+        f'派发后 round_success 终结交回:{rs!r}')
+    assert len(dispatches) == 1, f'选卡派发恰一次:{dispatches!r}'
+    assert clicks == [], '非刷新臂零点击'
+
+
+def test_encounter_empty_options_zero_click_terminal(
+        test_context, monkeypatch) -> None:
+    """空候选零点击终结锁(attack3 X2):候选读缺(obs.options 空)→
+    零点击零派发 round_success 终结交回重读。红 = 盲选 idx0 派发确认
+    回潮(选卡确认不可逆消耗本节点)。"""
+    clicks, dispatches = _refresh_fixture(test_context, monkeypatch)
+    op, _match, _session = _make_encounter(
+        test_context, monkeypatch, in_screen=True, options=[],
+        pick=CwActionPickEncounterParam(idx=0, reason='stub'))
+    _run_node(test_context, op, op.observe)
+    rs = _run_node(test_context, op, op.act)
+    assert rs.is_success and '零点击' in (rs.status or ''), (
+        f'空候选 = 零点击终结交回重读:{rs!r}')
+    assert clicks == [] and dispatches == [], (
+        f'空候选禁盲选派发:clicks={clicks!r} dispatches={dispatches!r}')
 
 
 def _refresh_fixture(test_context, monkeypatch) -> tuple[list, list]:
@@ -272,18 +278,17 @@ def test_encounter_refresh_terminal_click_once_and_success(
         f'零二次覆盖写(容器终值 = 刷前候选):{gs.encounter.value!r}')
     assert gs.encounter_refresh_left.value == 1, 'left 不被访问内改写'
     assert dispatches == [], '终结轮零选卡派发'
-    assert op._confirm_pending is None, '终结轮不进入确认链'
 
 
 def test_encounter_refresh_gate_rejects_zero_and_none(
         test_context, monkeypatch) -> None:
     """刷新闸拒绝锁:建议刷新但剩余 0 / None(未观察)→ 零点击不按刷新
-    终结,重调一次决策按原评分选卡(确认链照发 round_wait 推进)。
-    红 = 闸失守重刷 / 拒绝轮漏选卡。"""
+    终结,重调一次决策按原评分选卡(派发即终结交回)。红 = 闸失守重刷 /
+    拒绝轮漏选卡。"""
     opts = [EncounterOption(idx=0, difficulty=1, rewards=['金币×2']),
             EncounterOption(idx=1, difficulty=3, rewards=['随机4费×3'])]
     clicks, dispatches = _refresh_fixture(test_context, monkeypatch)
-    # ① 剩余 0 → 零点击,重调落选卡
+    # ① 剩余 0 → 零点击,重调落选卡派发即终结
     op, _match, session = _make_encounter(
         test_context, monkeypatch, in_screen=True, options=opts,
         pick=CwActionPickEncounterParam(idx=1, reason='rescore'),
@@ -293,13 +298,11 @@ def test_encounter_refresh_gate_rejects_zero_and_none(
     assert game_state_of(session).encounter_refresh_left.value == 0, (
         '前置:观察轮摄入 left=0')
     rs = _run_node(test_context, op, op.act)
-    assert rs.result == OperationRoundResultEnum.WAIT, (
-        f'拒绝轮重调落选卡 → 确认链 round_wait 推进:{rs!r}')
+    assert rs.is_success and '终结交回' in (rs.status or ''), (
+        f'拒绝轮重调落选卡 → 派发即终结交回:{rs!r}')
     assert clicks == [], f'剩余 0 = 刷新钮零点击:{clicks!r}'
-    assert op._confirm_pending == (opts, 1), (
-        f'重调一次决策按原评分选卡:{op._confirm_pending!r}')
     assert len(dispatches) == 1, '选卡派发照发'
-    # ② 剩余 None(读缺未摄入)→ 零点击,重调落选卡
+    # ② 剩余 None(读缺未摄入)→ 零点击,重调落选卡派发即终结
     op2, _m2, session2 = _make_encounter(
         test_context, monkeypatch, in_screen=True, options=opts,
         pick=CwActionPickEncounterParam(idx=0, reason='rescore'),
@@ -309,10 +312,10 @@ def test_encounter_refresh_gate_rejects_zero_and_none(
     assert game_state_of(session2).encounter_refresh_left.value is None, (
         '前置:读缺跳写,容器 left 未写')
     rs2 = _run_node(test_context, op2, op2.act)
-    assert rs2.result == OperationRoundResultEnum.WAIT, (
-        f'None 拒绝轮重调落选卡:{rs2!r}')
+    assert rs2.is_success and '终结交回' in (rs2.status or ''), (
+        f'None 拒绝轮重调落选卡派发即终结:{rs2!r}')
     assert clicks == [], f'None = 刷新钮零点击:{clicks!r}'
-    assert op2._confirm_pending == (opts, 0), 'None 拒绝轮按原评分选卡'
+    assert len(dispatches) == 2, 'None 拒绝轮派发照发(桩跨臂累计 ①+②)'
 
 
 def test_encounter_refresh_gate_mismatch_zero_click_terminal(
@@ -333,7 +336,66 @@ def test_encounter_refresh_gate_mismatch_zero_click_terminal(
         f'重调仍建议刷新 → 零点击终结交回:{rs!r}')
     assert clicks == [], '零点击'
     assert dispatches == [], '零选卡派发'
-    assert op._confirm_pending is None, '不进入确认链'
+
+
+def test_claim_encounter_reward_branches(
+        test_context, monkeypatch) -> None:
+    """奖励兑现回调五型锁(迭代 …3.3 扩围 design §2.4):非遭遇(chosen
+    残留防线)/未达标/删失/无 chosen = 不写不清;达标双证(node 镜像
+    token 'encounter' ∧ progress_delta>0)→ 写 encounter_reward_claimed
+    且 chosen 随即清(单次消费),重触发 = no-chosen 天然幂等。红 = 误
+    兑现面复活(镜像残留兑现/删失兑现)/消费后 chosen 不清(重兑现面)。"""
+    from sr_od.application.currency_war.kernel.cw_encounter_selection import (
+        claim_encounter_reward,
+    )
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        ChannelSig,
+        NodeKey,
+        Settlement,
+    )
+
+    def _set_frame(session, *, kind: str, delta: int | None) -> None:
+        gs = game_state_of(session)
+        _sig = ChannelSig(family='obs', actor='test', mode='read')
+        gs.observe(gs.node, NodeKey(plane=1, round_num=7, kind=kind),
+                   sig=_sig)
+        gs.observe(gs.settlement,
+                   Settlement(hp_after=80, streak_after=1, killed=None,
+                              progress_delta=delta, gold=10, level=3,
+                              xp=(5, 20)),
+                   sig=_sig, note='battle_done:遭遇')
+
+    session = StrategySession()
+    gs = game_state_of(session)
+    _sig = ChannelSig(family='logic_action', actor='test', mode='compute')
+    gs.write_logic(gs.chosen_encounter, (3, '随机4费×3'),
+                   produced_by='test', sig=_sig)
+    # ① 非遭遇(chosen 残留):不写不清(镜像残留防线)
+    _set_frame(session, kind='battle', delta=2)
+    assert claim_encounter_reward(gs) == 'not-encounter', '非遭遇拒兑现'
+    assert gs.encounter_reward_claimed.value is None, '非遭遇零写'
+    assert gs.chosen_encounter.value == (3, '随机4费×3'), '非遭遇不清 chosen'
+    # ② 遭遇未达标(败局负值):不写不清
+    _set_frame(session, kind='encounter', delta=-22)
+    assert claim_encounter_reward(gs) == 'not-qualified', '败局不兑现'
+    assert gs.encounter_reward_claimed.value is None and \
+        gs.chosen_encounter.value == (3, '随机4费×3'), '未达标零写零清'
+    # ③ 遭遇删失(delta None):不写不清(fail-closed)
+    _set_frame(session, kind='encounter', delta=None)
+    assert claim_encounter_reward(gs) == 'not-qualified', '删失不兑现'
+    # ④ 达标双证:兑现写 + chosen 随即清(单次消费)
+    _set_frame(session, kind='encounter', delta=2)
+    assert claim_encounter_reward(gs) == 'claimed', '达标兑现'
+    assert gs.encounter_reward_claimed.value == (3, '随机4费×3'), (
+        '兑现记录 = 所选 (难度, 奖励)')
+    assert gs.chosen_encounter.value is None, '兑现后清 chosen(单次消费)'
+    # ⑤ 重触发(驻留轮二调):no-chosen 天然幂等
+    assert claim_encounter_reward(gs) == 'no-chosen', '重触发幂等'
+    assert gs.encounter_reward_claimed.value == (3, '随机4费×3'), (
+        '幂等轮不覆写')
+    # ⑥ 遭遇达标但无 chosen:不兑现
+    _set_frame(session, kind='encounter', delta=2)
+    assert claim_encounter_reward(gs) == 'no-chosen', '无 chosen 不兑现'
 
 
 # ==================== 盛会之星(节点循环形态)====================
