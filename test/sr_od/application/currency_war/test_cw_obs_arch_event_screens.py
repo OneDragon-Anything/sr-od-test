@@ -9,13 +9,14 @@
   文案沿用现役,且不进读链(obs 不装载);盛会之星 = 节点完成门(overlay
   消失 = 节点完成 success 交还外层)。
 - **观察上报接线锁**(遭遇):观察 node 稳定帧一次读(候选 + 剩余次数)
-  → report 经屏文件落容器 ``encounter``(容器终值)+ obs 挂实例属性;
-  per-visit 位 ``encounter_refreshed_in_visit`` 留守决策面(观察轮不写)。
-- **刷新链语义锁**(遭遇):建议刷新 → 双闸(容器计数读端在位 / 剩余次数
-  读缺 ≤0)→ 点钮 + 固定等待 → 无条件重读 → 重读候选经 report 二次覆盖写
-  (容器终值 = 刷后候选)→ per-visit 位置 True → 重调 decide(按新决策
-  选);刷新计数写端随画面 op 基类退役(记账归动作 op 会话承接,本 op 不
-  写计数——容器计数断言不设,读端闸由闸锁承重)。
+  → report 经屏文件落容器 ``encounter`` + ``encounter_refresh_left``
+  (容器终值)+ obs 与刷新文本锚点挂实例属性。
+- **刷新链终结锁**(遭遇,迭代 2026-09-21-event-refresh-unify-supply-pick
+  3.3:刷新 = 终结动作,剩余闸 = 观察真值):建议刷新 ∧ 闸放行(容器
+  left>0 且锚点在位)→ 文本锚定点圆钮恰一次 + 固定等待 → round_success
+  终结交回——无同访问 ``screenshot()`` 重读面、无 report 二次覆盖写、
+  无重决策、零选卡派发;闸拒绝(剩余 0/None)→ 零点击,重调一次决策
+  按原评分选卡;重调仍建议刷新(闸数据不一致)→ 零点击终结交回。
 - **重入裁决时机锁**(遭遇):确认已发 → 锚在 = 未落地 → 不写 chosen、
   清标志重走;锚不在 = 落地 → 此刻才写 chosen_encounter + success 交回。
 - **盛会之星族锁**(节点循环形态):完成门/懒读保真/防重入旗标/chosen
@@ -42,7 +43,6 @@ from sr_od.application.currency_war.kernel.cw_events import (
     EncounterOption,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
-    ChannelSig,
     game_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import StrategySession
@@ -65,14 +65,11 @@ def _make_encounter(test_context, monkeypatch, *, in_screen: bool,
                     options: list[EncounterOption],
                     pick: object,
                     picks: list | None = None,
-                    cnt: tuple | None = (1, (771, 899)),
-                    refresh_opts: list[EncounterOption] | None = None):
-    """遭遇屏真类装配(两 node 形态):门桩 + 稳定帧读链桩 + 刷新机械桩 +
-    确认链桩。``_try_refresh`` 方法级桩(刷新机械执行面:点钮+固定等待+
-    重读;验效双通道已拆除——用户裁定 2026-09-10 动作 op 只管机械执行
-    禁止验效——本桩回传重读候选,空表 = 读缺失败安全形态)。``picks``
-    = 零参决策桩回值队列(刷后重调回值;耗尽后回落 ``pick``)。返回
-    (op, match, session)。"""
+                    cnt: tuple | None = (1, (771, 899))):
+    """遭遇屏真类装配(两 node 形态):门桩 + 稳定帧读链桩 + 确认链桩。
+    ``picks`` = 零参决策桩回值队列(闸拒绝重调用例;耗尽后回落
+    ``pick``)。刷新机械半 = 真代码路径(controller 桩在用例内打)。
+    返回 (op, match, session)。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_encounter as em,
     )
@@ -96,8 +93,6 @@ def _make_encounter(test_context, monkeypatch, *, in_screen: bool,
     monkeypatch.setattr(op, 'round_by_find_area',
                         lambda scr, s, a, **k: _Area(in_screen))
     monkeypatch.setattr(op, 'screenshot', lambda: _FRAME)
-    monkeypatch.setattr(op, '_try_refresh',
-                        lambda text_pt: list(refresh_opts or []))
     monkeypatch.setattr(em, 'read_encounter_options',
                         lambda ctx, scr: list(options))
     monkeypatch.setattr(em, 'read_encounter_refresh_count',
@@ -163,9 +158,9 @@ def test_encounter_observe_gate_fails_off_screen(
 def test_encounter_observe_reports_container(
         test_context, monkeypatch) -> None:
     """观察上报接线锁:观察 node 稳定帧一次读(候选 + 剩余次数)→ report
-    落容器 ``encounter``(容器终值 = 候选)+ obs 挂实例属性;per-visit 位
-    ``encounter_refreshed_in_visit`` 留守决策面(观察轮不写)。红 = 接线
-    断流 / 容器终值漂移 / per-visit 位被观察轮写。"""
+    落容器 ``encounter``(容器终值 = 候选)+ ``encounter_refresh_left``
+    (剩余语义摄入;读缺跳写闸在 report 内)+ obs 与刷新文本锚点挂实例
+    属性。红 = 接线断流 / 容器终值漂移 / left 未摄入。"""
     opts = [EncounterOption(idx=0, difficulty=1, rewards=['金币×2'])]
     op, _match, session = _make_encounter(
         test_context, monkeypatch, in_screen=True, options=opts,
@@ -177,10 +172,11 @@ def test_encounter_observe_reports_container(
     assert gs.encounter.value is not None \
         and list(gs.encounter.value.options) == opts, (
         f'report 落容器(容器终值):{gs.encounter.value!r}')
+    assert gs.encounter_refresh_left.value == 2, (
+        'report 摄入剩余次数(容器 left = 观察真值)')
     assert op._obs is not None and op._obs.refresh_left == 2, (
         'obs 挂实例属性(剩余次数随观察一次读)')
-    assert gs.encounter_refreshed_in_visit.value is None, (
-        'per-visit 位留守决策面(观察轮不写)')
+    assert op._refresh_point is not None, '刷新文本锚点挂实例属性'
 
 
 def test_encounter_act_round_wait_and_reentry_chosen(
@@ -220,21 +216,39 @@ def test_encounter_act_round_wait_and_reentry_chosen(
     assert op._confirm_pending is None, '裁决消费待裁决快照'
 
 
-def test_encounter_refresh_chain_rereads_redecides_rewrites(
+def _refresh_fixture(test_context, monkeypatch) -> tuple[list, list]:
+    """刷新臂公共桩:controller 点击记录 + 机械等待替身 + 动作派发计数。
+    返回 (clicks, dispatches)。"""
+    clicks: list = []
+    dispatches: list = []
+    monkeypatch.setattr(test_context.controller, 'mouse_move',
+                        lambda p, **k: None, raising=False)
+    monkeypatch.setattr(test_context.controller, 'click',
+                        lambda p, **k: clicks.append((p.x, p.y)))
+    import sr_od.application.currency_war.operations.cw_op.cw_action_registry as reg_mod
+    monkeypatch.setattr(reg_mod, 'action_op_for',
+                        lambda act, ctx, env: dispatches.append(act)
+                        or SimpleNamespace(execute=lambda: True))
+    return clicks, dispatches
+
+
+def test_encounter_refresh_terminal_click_once_and_success(
         test_context, monkeypatch) -> None:
-    """刷新链语义锁:建议刷新 → 双闸通过 → 点钮 + 固定等待 → 无条件重读 →
-    重读候选经 report 二次覆盖写(容器终值 = 刷后候选)→ per-visit 位置
-    True → 重调 decide 按新决策选 → 确认机械交回 round_wait。刷新计数写端
-    随画面 op 基类退役(记账归动作 op 会话承接,本 op 不写计数——容器计数
-    断言不设)。红 = 刷后零比对不重读回潮 / 二次覆盖写断流 / per-visit 位
-    未置位。"""
+    """刷新链终结锁(迭代 2026-09-21-event-refresh-unify-supply-pick
+    design §2.0A):建议刷新 ∧ 剩余闸放行(容器 left=1 ∧ 锚点在位)→
+    文本锚定点圆钮**恰一次** + 固定等待 → round_success 终结交回;同访问
+    零 ``screenshot()`` 重读、零 report 二次覆盖写(容器终值 = 刷前候选)、
+    零重决策(恰一次决策)、零选卡派发。红 = 重读回潮 / 二次覆盖写回潮 /
+    重复点钮 / 终结交回失败。"""
     opts = [EncounterOption(idx=0, difficulty=1, rewards=['金币×2'])]
+    clicks, dispatches = _refresh_fixture(test_context, monkeypatch)
     op, match, session = _make_encounter(
         test_context, monkeypatch, in_screen=True, options=opts,
-        pick=CwActionPickEncounterParam(idx=0, reason='stub'),
-        picks=[CwActionRefreshNodeOptionsParam(reason='stub'),
-               CwActionPickEncounterParam(idx=0, reason='re-decide')],
-        refresh_opts=opts)
+        pick=CwActionRefreshNodeOptionsParam(reason='stub'),
+        cnt=(1, (771, 899)))
+    _ss_calls: list[int] = []
+    monkeypatch.setattr(op, 'screenshot',
+                        lambda: _ss_calls.append(1) or _FRAME)
     _decide_calls: list[int] = []
     _orig_decide = match.strategy.decide_encounter
 
@@ -245,86 +259,81 @@ def test_encounter_refresh_chain_rereads_redecides_rewrites(
     match.strategy.decide_encounter = _counting
     _run_node(test_context, op, op.observe)
     gs = game_state_of(session)
-    assert list(gs.encounter.value.options) == opts, '前置:观察轮首写槽落容器'
+    assert gs.encounter_refresh_left.value == 1, '前置:观察轮摄入容器 left'
+    _ss_calls.clear()
     rs = _run_node(test_context, op, op.act)
-    assert len(_decide_calls) == 2, (
-        f'刷后无条件重读+自然重决策(恰两次决策):{_decide_calls!r}')
+    assert rs.is_success and '终结交回' in (rs.status or ''), (
+        f'点钮后 round_success 终结交回:{rs!r}')
+    assert clicks == [(771 - 100, 899)], (
+        f'刷新圆钮文本锚定偏移点击恰一次:{clicks!r}')
+    assert _decide_calls == [1], f'零重决策(恰一次决策):{_decide_calls!r}'
+    assert _ss_calls == [], '同访问零 screenshot() 重读面'
     assert list(gs.encounter.value.options) == opts, (
-        f'刷后重读候选经 report 二次覆盖写(容器终值 = 刷后候选):'
-        f'{gs.encounter.value!r}')
-    assert gs.encounter_refreshed_in_visit.value is True, (
-        '建议处置完毕 → per-visit 位置 True(留守决策面写)')
+        f'零二次覆盖写(容器终值 = 刷前候选):{gs.encounter.value!r}')
+    assert gs.encounter_refresh_left.value == 1, 'left 不被访问内改写'
+    assert dispatches == [], '终结轮零选卡派发'
+    assert op._confirm_pending is None, '终结轮不进入确认链'
+
+
+def test_encounter_refresh_gate_rejects_zero_and_none(
+        test_context, monkeypatch) -> None:
+    """刷新闸拒绝锁:建议刷新但剩余 0 / None(未观察)→ 零点击不按刷新
+    终结,重调一次决策按原评分选卡(确认链照发 round_wait 推进)。
+    红 = 闸失守重刷 / 拒绝轮漏选卡。"""
+    opts = [EncounterOption(idx=0, difficulty=1, rewards=['金币×2']),
+            EncounterOption(idx=1, difficulty=3, rewards=['随机4费×3'])]
+    clicks, dispatches = _refresh_fixture(test_context, monkeypatch)
+    # ① 剩余 0 → 零点击,重调落选卡
+    op, _match, session = _make_encounter(
+        test_context, monkeypatch, in_screen=True, options=opts,
+        pick=CwActionPickEncounterParam(idx=1, reason='rescore'),
+        picks=[CwActionRefreshNodeOptionsParam(reason='stub')],
+        cnt=(0, (771, 899)))
+    _run_node(test_context, op, op.observe)
+    assert game_state_of(session).encounter_refresh_left.value == 0, (
+        '前置:观察轮摄入 left=0')
+    rs = _run_node(test_context, op, op.act)
     assert rs.result == OperationRoundResultEnum.WAIT, (
-        f'确认机械交回 → round_wait 推进循环:{rs!r}')
-
-
-def test_encounter_refresh_gated_by_count_and_reads(
-        test_context, monkeypatch) -> None:
-    """刷新闸读端锁(计数写端出辖,读端逐位):建议刷新但 ①容器计数在位
-    (本局已用)/ ②剩余次数读缺(≤0)→ 不点钮不重读,per-visit 位置 True
-    后重调落选卡(按原评分选)。红 = 闸失守重刷 / 闸分支漏置位。"""
-    opts = [EncounterOption(idx=0, difficulty=1, rewards=['金币×2'])]
-    # ① 容器计数在位(本局已用)→ 不点钮
-    op, match, session = _make_encounter(
+        f'拒绝轮重调落选卡 → 确认链 round_wait 推进:{rs!r}')
+    assert clicks == [], f'剩余 0 = 刷新钮零点击:{clicks!r}'
+    assert op._confirm_pending == (opts, 1), (
+        f'重调一次决策按原评分选卡:{op._confirm_pending!r}')
+    assert len(dispatches) == 1, '选卡派发照发'
+    # ② 剩余 None(读缺未摄入)→ 零点击,重调落选卡
+    op2, _m2, session2 = _make_encounter(
         test_context, monkeypatch, in_screen=True, options=opts,
-        pick=CwActionPickEncounterParam(idx=0, reason='re-decide'),
+        pick=CwActionPickEncounterParam(idx=0, reason='rescore'),
         picks=[CwActionRefreshNodeOptionsParam(reason='stub')],
-        refresh_opts=opts)
-    _gs = game_state_of(session)
-    _gs.write_logic(_gs.encounter_refresh_used, 1,
-                    produced_by='CwScreenEncounter',
-                    sig=ChannelSig(family='logic_action',
-                                   actor='CwScreenEncounter',
-                                   mode='compute'))
-    _try_calls: list[int] = []
-    monkeypatch.setattr(op, '_try_refresh',
-                        lambda pt: _try_calls.append(1) or list(opts))
-    _run_node(test_context, op, op.observe)
-    _run_node(test_context, op, op.act)
-    assert _try_calls == [], '本局已用(容器计数 >0)→ 不点钮不重读'
-    assert _gs.encounter_refresh_used.value == 1, (
-        '读端闸不写计数(写端出辖,由动作 op 会话承接)')
-    # ② 无剩余次数(读缺)→ 不点钮
-    op2, _m2, _s2 = _make_encounter(
-        test_context, monkeypatch, in_screen=True, options=opts,
-        pick=CwActionPickEncounterParam(idx=0, reason='re-decide'),
-        picks=[CwActionRefreshNodeOptionsParam(reason='stub')],
-        cnt=None, refresh_opts=opts)
-    _try_calls2: list[int] = []
-    monkeypatch.setattr(op2, '_try_refresh',
-                        lambda pt: _try_calls2.append(1) or list(opts))
+        cnt=None)
     _run_node(test_context, op2, op2.observe)
-    _run_node(test_context, op2, op2.act)
-    assert _try_calls2 == [], '无剩余次数(读数=None)→ 不点钮不重读'
+    assert game_state_of(session2).encounter_refresh_left.value is None, (
+        '前置:读缺跳写,容器 left 未写')
+    rs2 = _run_node(test_context, op2, op2.act)
+    assert rs2.result == OperationRoundResultEnum.WAIT, (
+        f'None 拒绝轮重调落选卡:{rs2!r}')
+    assert clicks == [], f'None = 刷新钮零点击:{clicks!r}'
+    assert op2._confirm_pending == (opts, 0), 'None 拒绝轮按原评分选卡'
 
 
-def test_encounter_refresh_resuggestion_after_disposal_no_loop(
+def test_encounter_refresh_gate_mismatch_zero_click_terminal(
         test_context, monkeypatch) -> None:
-    """建议处置防循环锁:per-visit 位置 True 后重调仍返回刷新建议(策略未
-    消费置位)→ 不再循环,按无决策处理失败安全盲选 idx0 + 确认。红 = 处
-    置后循环重刷(防御帽回潮形态)或漏处置死循环。"""
+    """闸数据不一致防御锁:拒绝后重调仍返回刷新建议(策略未消费剩余闸)
+    → 不再循环,零点击终结交回(外循环重进 = 入口重建重试观察)。
+    红 = 拒绝-重调环回潮(防循环面)或漏处置死循环。"""
+    clicks, dispatches = _refresh_fixture(test_context, monkeypatch)
     opts = [EncounterOption(idx=0, difficulty=1, rewards=['金币×2'])]
-    op, match, session = _make_encounter(
+    op, _match, _session = _make_encounter(
         test_context, monkeypatch, in_screen=True, options=opts,
-        pick=CwActionRefreshNodeOptionsParam(reason='stub'),
-        picks=[CwActionRefreshNodeOptionsParam(reason='stub'),
-               CwActionRefreshNodeOptionsParam(reason='stub-again')],
-        refresh_opts=opts)
-    _decide_calls: list[int] = []
-    _orig_decide = match.strategy.decide_encounter
-
-    def _counting():
-        _decide_calls.append(1)
-        return _orig_decide()
-
-    match.strategy.decide_encounter = _counting
+        pick=CwActionRefreshNodeOptionsParam(reason='stub-again'),
+        picks=[CwActionRefreshNodeOptionsParam(reason='stub')],
+        cnt=(0, (771, 899)))
     _run_node(test_context, op, op.observe)
-    _run_node(test_context, op, op.act)
-    assert len(_decide_calls) == 2, (
-        f'建议处置(发射)后重调恰一次,不再循环:{_decide_calls!r}')
-    assert op._confirm_pending is not None \
-        and op._confirm_pending[1] == 0, (
-        f'按无决策处理 → 失败安全盲选 idx0:{op._confirm_pending!r}')
+    rs = _run_node(test_context, op, op.act)
+    assert rs.is_success and '终结交回' in (rs.status or ''), (
+        f'重调仍建议刷新 → 零点击终结交回:{rs!r}')
+    assert clicks == [], '零点击'
+    assert dispatches == [], '零选卡派发'
+    assert op._confirm_pending is None, '不进入确认链'
 
 
 # ==================== 盛会之星(节点循环形态)====================

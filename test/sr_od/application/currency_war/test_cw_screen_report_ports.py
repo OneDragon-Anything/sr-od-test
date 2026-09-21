@@ -162,7 +162,8 @@ def _case_encounter(m):
     opts = [EncounterOption(idx=0, difficulty=2),
             EncounterOption(idx=1, difficulty=3)]
     return (m.CwScreenEncounterObs(options=opts, refresh_left=2),
-            {'encounter': (EncounterPayload(options=opts), 'logic')})
+            {'encounter': (EncounterPayload(options=opts), 'logic'),
+             'encounter_refresh_left': (2, 'logic')})
 
 
 def _case_megastar(m):
@@ -313,7 +314,10 @@ def test_report_writes_stub_obs_into_container(screen):
 #: 空桩门语义:候选空 = 原「读得才写」早退闸不写(None);原写点无空门
 #: 的屏空表照写([])——防线逐位平移,不加强不减弱。
 _EMPTY_OBS_CASES = {
-    'encounter': (lambda m: m.CwScreenEncounterObs(), {'encounter': None}),
+    # 摄入序锁(迭代 2026-09-21-event-refresh-unify-supply-pick 3.3):
+    # options 空 = 整函数早退不写含 left——left 读得(3)也不入容器。
+    'encounter': (lambda m: m.CwScreenEncounterObs(refresh_left=3),
+                  {'encounter': None, 'encounter_refresh_left': None}),
     'megastar': (lambda m: m.CwScreenMegastarObs(), {'megastar_opts': None}),
     'partner': (lambda m: m.CwScreenPartnerObs(), {'partner_opts': None}),
     'bookcard': (lambda m: m.CwScreenBookcardObs(), {'star_tome_opts': None}),

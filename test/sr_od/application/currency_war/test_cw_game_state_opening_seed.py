@@ -54,7 +54,7 @@ _A_SEEDED: tuple[str, ...] = (
     'spheres', 'gold', 'level', 'xp', 'hp', 'streak', 'back_layout',
     'deploy_cap', 'overflow_warning', 'overflow_card', 'active_env',
     'active_strategies', 'enemy_affixes', 'shop_refresh_cost',
-    'prev_node_spent', 'encounter_refresh_used',
+    'prev_node_spent',
     'strategy_refresh_left',
 )
 
@@ -62,7 +62,8 @@ _A_SEEDED: tuple[str, ...] = (
 _BC_UNSEEDED: tuple[str, ...] = (
     'node', 'node_ord', 'node_path', 'shop', 'encounter', 'supply',
     'settlement', 'match_final', 'selected_difficulty', 'enemy_difficulty',
-    'game_mode', 'env_refresh_left', 'supply_refresh_left', 'plane_bosses',
+    'game_mode', 'env_refresh_left', 'supply_refresh_left',
+    'encounter_refresh_left', 'plane_bosses',
     'event_overlay',
     'lv999_cost_tier', 'round_fresh_buys', 'level_up_cost', 'top_bar_raw',
     'tracked_account_observed', 'consumables', 'board',
@@ -104,7 +105,6 @@ def test_cold_build_seeds_all_a_fields(monkeypatch) -> None:
     assert gs.enemy_affixes.value == []
     assert gs.shop_refresh_cost.value == REFRESH_COST_BASE
     assert gs.prev_node_spent.value is False
-    assert gs.encounter_refresh_used.value == 0
     assert gs.strategy_refresh_left.value == {}
     # —— 来源断言:logic_rand + seed:opening(种子字段全集)——
     for name in _A_SEEDED:

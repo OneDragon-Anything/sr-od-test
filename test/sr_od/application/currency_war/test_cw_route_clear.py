@@ -122,16 +122,16 @@ def test_terminal_contract_schema_and_match_shape(monkeypatch):
         assert DEFAULT_GS_SCHEMA[key] == 1, key
     assert DEFAULT_GS_SCHEMA['encounter'] == 2
     assert DEFAULT_GS_SCHEMA['supply'] == 2
-    assert DEFAULT_GS_SCHEMA['node_screen_refresh'] == 3
+    assert DEFAULT_GS_SCHEMA['node_screen_refresh'] == 4
     # Match additive 前置字段:生产漏斗填充形态,缺省 None(3.5 收紧必填)
     gs = GameState(schema_version=1)
     m = CurrencyWarMatch(strategy=None, session=None, gs=gs)
     assert m.gs is gs and m.performance is None
-    # 十二槽:8 新槽 + per-visit 位在容器上可解析(声明健康性)
+    # 十二槽:8 新槽(7 opts + box_card_names 经 getattr 同名域字段)在容器
+    # 上可解析(声明健康性)
     for name in ('invest_strategy_opts', 'invest_env_opts', 'megastar_opts',
                  'partner_opts', 'planner_opts', 'star_tome_opts',
-                 'wish_trial_opts', 'box_card_names',
-                 'encounter_refreshed_in_visit'):
+                 'wish_trial_opts', 'box_card_names'):
         assert getattr(gs, name).value is None, name
     # typed 选项可构造(cw_events 宿主,3.5 接线消费)
     assert MegastarOption(idx=0) and PartnerOption(idx=0) and PlannerOption(idx=0)
