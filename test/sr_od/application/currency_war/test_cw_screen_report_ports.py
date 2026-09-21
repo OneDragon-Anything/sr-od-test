@@ -71,12 +71,13 @@ _NO_REPORT = frozenset({
 
 #: 文档化占位 report(现役零观察容器写点,统一形态占位)。
 #: (prep 已于重型屏迁移批升级为真实写面——可选域字段在场才写,见
-#:  _WRITE_CASES['prep'] 与 prep 专项锁;buy_cards 保持占位:唯一候选
-#:  写点 = 段头 gold 救援补写,属入口观察链内纠正补写,勘察结论申报
-#:  在 kernel 屏文件模块头,不收编交后续批裁决。)
+#:  _WRITE_CASES['prep'] 与 prep 专项锁;plane_intel 已于接管域迭代
+#:  2026-09-20-takeover-intel-pipeline 升级为真实写面——采集真值写门,
+#:  见 _WRITE_CASES['plane_intel'] 与写门专项锁;buy_cards 保持占位:
+#:  唯一候选写点 = 段头 gold 救援补写,属入口观察链内纠正补写,勘察
+#:  结论申报在 kernel 屏文件模块头,不收编交后续批裁决。)
 _PLACEHOLDERS = ('armory_box', 'boss_briefing', 'wait_one_one',
-                 'deploy_not_full', 'battle_wait', 'plane_intel',
-                 'buy_cards')
+                 'deploy_not_full', 'battle_wait', 'buy_cards')
 
 _TEST_SIG = ChannelSig(family='logic_action', actor='TestSigWriter',
                        mode='compute')
@@ -257,6 +258,15 @@ def _case_prep(m):
              'node_path_baseline': (chain, 'observation')})
 
 
+def _case_plane_intel(m):
+    return (m.CwScreenPlaneIntelObs(on_screen=True,
+                                    plane_bosses=['幻胧', '巨鹿生物制药',
+                                                  '镜泊影卫'],
+                                    enemy_affixes=['灼热轰炸']),
+            {'plane_bosses': (['幻胧', '巨鹿生物制药', '镜泊影卫'], 'logic'),
+             'enemy_affixes': (['灼热轰炸'], 'logic')})
+
+
 #: 逐实体 report 接口的 obs 桩与期望容器终值(字段 → (期望值, 期望来源);
 #: 门语义不在此表,见空桩/分屏闸专项)。
 _WRITE_CASES = {
@@ -276,6 +286,7 @@ _WRITE_CASES = {
     'briefing': _case_briefing,
     'plane_transition': _case_plane_transition,
     'prep': _case_prep,
+    'plane_intel': _case_plane_intel,
 }
 
 
@@ -344,6 +355,62 @@ def test_briefing_three_gate_semantics():
     assert gs.enemy_affixes.value == ['已有词缀'], '词缀幂等门:已有不重写'
     assert gs.plane_bosses.value is None, 'boss 恒覆写:读空写 None'
     assert gs.enemy_difficulty.value == 2, '难度仅 None 才写:已有值不动'
+
+
+def test_plane_intel_write_gates():
+    """位面情报写门两件(接管域迭代 design §2.3):boss 已有真值不覆写
+    (简报源先落 = 真值已在,实采不冲真值)/ 词缀幂等门(仅容器空时写;
+    空读数 = 无词缀不落写,空表覆写会把真值抹成「无数据」)。"""
+    mod = _screen_module('plane_intel')
+    # boss 已有真值(简报源,含 None 槽)→ 跳写;词缀空读数 → 不写
+    gs = _blank_gs()
+    gs.write_logic(gs.plane_bosses, ['简报boss', None, None],
+                   produced_by='TestSigWriter', sig=_TEST_SIG)
+    mod.report_screen_plane_intel_obs(gs, mod.CwScreenPlaneIntelObs(
+        on_screen=True, plane_bosses=['实采甲', '实采乙', '实采丙'],
+        enemy_affixes=[]))
+    assert gs.plane_bosses.value == ['简报boss', None, None], \
+        'boss 已有真值不覆写'
+    assert gs.enemy_affixes.value is None, '词缀空读数不落写'
+    # 词缀已有 → 幂等门不重写;boss 无真值 → 全量写
+    gs2 = _blank_gs()
+    gs2.write_logic(gs2.enemy_affixes, ['已有词缀'],
+                    produced_by='TestSigWriter', sig=_TEST_SIG)
+    mod.report_screen_plane_intel_obs(gs2, mod.CwScreenPlaneIntelObs(
+        on_screen=True, plane_bosses=['实采甲', '实采乙', '实采丙'],
+        enemy_affixes=['新词缀']))
+    assert gs2.enemy_affixes.value == ['已有词缀'], '词缀幂等门:已有不重写'
+    assert gs2.plane_bosses.value == ['实采甲', '实采乙', '实采丙'], \
+        'boss 无真值 = 3 槽保位全量写'
+    assert gs2.plane_bosses.source == 'logic', '写门 = logic 直写'
+
+
+def test_plane_intel_channel_sig_fixed_shape(monkeypatch):
+    """位面情报写门渠道签名 = 定死形状(logic_action/CwScreenPlaneIntel/
+    screen=货币战争-位面详情/compute;evidence = plane_intel_row /
+    plane_intel_affixes),经状态流水捕获行断言;screens 行签名逐位对照。"""
+    rows: list[dict] = []
+    monkeypatch.setattr(gs_mod, '_STATE_JOURNAL_SINK', rows.append)
+    monkeypatch.setattr(gs_mod, '_RUN_ID_PROVIDER', lambda: 'test-run')
+    mod = _screen_module('plane_intel')
+    gs = _blank_gs()
+    mod.report_screen_plane_intel_obs(gs, mod.CwScreenPlaneIntelObs(
+        on_screen=True, plane_bosses=['甲', '乙', '丙'],
+        enemy_affixes=['词缀']))
+    got = {(r['field'],
+            r['sig']['family'], r['sig']['actor'],
+            r['sig']['screen'], r['sig']['mode'])
+           for r in rows if r['row'] == 'write'}
+    assert got == {
+        ('plane_bosses', 'logic_action', 'CwScreenPlaneIntel',
+         '货币战争-位面详情', 'compute'),
+        ('enemy_affixes', 'logic_action', 'CwScreenPlaneIntel',
+         '货币战争-位面详情', 'compute'),
+    }, f'写门渠道签名偏离定死形状: {got}'
+    assert gs.plane_bosses.evidence == 'plane_intel_row', \
+        'boss 行 evidence = 实采语义段'
+    assert gs.enemy_affixes.evidence == 'plane_intel_affixes', \
+        '词缀行 evidence = 实采语义段'
 
 
 def test_plane_transition_chain_defenses():
