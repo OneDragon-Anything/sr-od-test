@@ -52,7 +52,7 @@ from sr_od.application.currency_war.kernel.cw_action_report.pick_invest import (
     PICK_INVEST_SOURCE_STRATEGY,
     roll_hacker_mod,
 )
-from sr_od.application.currency_war.kernel.cw_action_report.zero_writes import (
+from sr_od.application.currency_war.kernel.cw_action_report.pick_planner import (
     report_action_pick_planner_param,
 )
 from sr_od.application.currency_war.kernel.cw_events import (
@@ -73,9 +73,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionDeployMoveParam,
     CwActionPickInvestParam,
-)
-from sr_od.application.currency_war.operations.cw_screen.cw_screen_yinlang import (
-    apply_pick_planner_landing,
 )
 
 _SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep')
@@ -170,8 +167,8 @@ def test_upgrade_transform_exactly_one(
         rows_sink: _RowSink) -> None:
     """恰一枚 2★银狼LV.999 → 工作副本变换(2★→1★,身份保持),write_logic。"""
     gs = _make_gs(bench=[('希儿', 1), ('银狼LV.999', 2)], equips=[])
-    out = apply_pick_planner_landing(gs, leg_type='upgrade', norm_item='',
-                                     sig=_lsig())
+    out = report_action_pick_planner_param(gs, None, leg_type='upgrade', norm_item='',
+                                     sig=_lsig(), evidence=EVIDENCE_OVERLAY_CLOSED)
     assert out.applied is True
     units = [(u.char_id, u.star) for u in bench_units_of(gs)]
     assert ('银狼LV.999', 1) in units, '变换为 1★(下一费用档,身份保持)'
@@ -187,8 +184,8 @@ def test_upgrade_transform_multiple_flips_source(
     """多枚(二次升费现实可发)→ 禁猜:值不变翻来源 + 留证自愈。"""
     gs = _make_gs(bench=[('银狼LV.999', 2), ('银狼LV.999', 2)], equips=[])
     seq_before = gs.write_seq
-    out = apply_pick_planner_landing(gs, leg_type='upgrade', norm_item='',
-                                     sig=_lsig())
+    out = report_action_pick_planner_param(gs, None, leg_type='upgrade', norm_item='',
+                                     sig=_lsig(), evidence=EVIDENCE_OVERLAY_CLOSED)
     assert out.applied is True
     stars = sorted(u.star for u in bench_units_of(gs)
                    if u.char_id == '银狼LV.999')
@@ -205,15 +202,15 @@ def test_upgrade_transform_zero_or_unobserved(
     # 零枚(已观察但无 2★ 源)。
     gs = _make_gs(bench=[('银狼LV.999', 1)], equips=[])
     seq_before = gs.write_seq
-    out = apply_pick_planner_landing(gs, leg_type='upgrade', norm_item='',
-                                     sig=_lsig())
+    out = report_action_pick_planner_param(gs, None, leg_type='upgrade', norm_item='',
+                                     sig=_lsig(), evidence=EVIDENCE_OVERLAY_CLOSED)
     assert out.applied is False and out.reason == 'upgrade_source_missing'
     assert gs.write_seq == seq_before, '零枚不写'
     assert rows_sink.kinds() == ['planner_upgrade_source_missing']
     # 未观察(三容器全 None)同态。
     gs2 = _make_gs()
-    out2 = apply_pick_planner_landing(gs2, leg_type='upgrade', norm_item='',
-                                      sig=_lsig())
+    out2 = report_action_pick_planner_param(gs2, None, leg_type='upgrade', norm_item='',
+                                      sig=_lsig(), evidence=EVIDENCE_OVERLAY_CLOSED)
     assert out2.applied is False and out2.reason == 'upgrade_source_unobserved'
     assert rows_sink.kinds() == ['planner_upgrade_source_missing',
                                  'planner_upgrade_source_missing']
@@ -227,8 +224,8 @@ def test_upgrade_cascade_lv999_normal_merge(
     同星组 → 与普通单位同语义升星(write_logic 逐级落行,零留证行)。"""
     gs = _make_gs(bench=[('银狼LV.999', 2), ('银狼LV.999', 1),
                          ('银狼LV.999', 1)], equips=[])
-    out = apply_pick_planner_landing(gs, leg_type='upgrade', norm_item='',
-                                     sig=_lsig())
+    out = report_action_pick_planner_param(gs, None, leg_type='upgrade', norm_item='',
+                                     sig=_lsig(), evidence=EVIDENCE_OVERLAY_CLOSED)
     assert out.applied is True
     units = [(u.char_id, u.star) for u in bench_units_of(gs)]
     assert units == [('银狼LV.999', 2)], '正常推演:3×1★ 合成 → 2★(普通单位同语义)'
@@ -245,8 +242,8 @@ def test_equip_leg_gain_with_consequence_chain(
     """装备腿(design §2.1②/§2.2):入栏 + 获得后果链(分身墨镜送 1★银狼
     进备战席,与 2× 既有 1★ 银狼合成升星——效果同商店购买)。"""
     gs = _make_gs(bench=[('银狼', 1), ('银狼', 1)], equips=['幸运星'])
-    out = apply_pick_planner_landing(gs, leg_type='equip', norm_item='分身墨镜',
-                                     sig=_lsig())
+    out = report_action_pick_planner_param(gs, None, leg_type='equip', norm_item='分身墨镜',
+                                     sig=_lsig(), evidence=EVIDENCE_OVERLAY_CLOSED)
     assert out.applied is True
     assert gs.equips.value == ['幸运星', '分身墨镜'], '装备入栏'
     assert gs.equips.source == 'logic'
@@ -261,8 +258,8 @@ def test_equip_leg_unresolved_flips_source(
         rows_sink: _RowSink) -> None:
     """未解析(norm_item='')→ 禁猜名:equips 值不变翻来源 + 留证行。"""
     gs = _make_gs(bench=[('希儿', 1)], equips=['幸运星'])
-    out = apply_pick_planner_landing(gs, leg_type='equip', norm_item='',
-                                     sig=_lsig())
+    out = report_action_pick_planner_param(gs, None, leg_type='equip', norm_item='',
+                                     sig=_lsig(), evidence=EVIDENCE_OVERLAY_CLOSED)
     assert out.applied is True
     assert gs.equips.value == ['幸运星'], '值不变'
     assert gs.equips.source == 'logic_rand', '翻来源(观察差异收口自愈)'
@@ -276,12 +273,12 @@ def test_unknown_leg_evidenced_weaken_zero(
     """unknown = 零记账 + 留证证未识别事实;weaken = 纯零记账。"""
     gs = _make_gs(bench=[('希儿', 1)], equips=[])
     seq_before = gs.write_seq
-    out = apply_pick_planner_landing(gs, leg_type='unknown', norm_item='',
-                                     sig=_lsig())
+    out = report_action_pick_planner_param(gs, None, leg_type='unknown', norm_item='',
+                                     sig=_lsig(), evidence=EVIDENCE_OVERLAY_CLOSED)
     assert out.applied is True and gs.write_seq == seq_before, '零容器写'
     assert rows_sink.kinds() == ['planner_leg_unknown']
-    out2 = apply_pick_planner_landing(gs, leg_type='weaken', norm_item='',
-                                      sig=_lsig())
+    out2 = report_action_pick_planner_param(gs, None, leg_type='weaken', norm_item='',
+                                      sig=_lsig(), evidence=EVIDENCE_OVERLAY_CLOSED)
     assert out2.applied is True and gs.write_seq == seq_before
     assert rows_sink.kinds() == ['planner_leg_unknown'], 'weaken 零留证'
 
@@ -337,6 +334,7 @@ def test_deploy_transform_window_3star_lv999(
     assert gs.front_row.value[1].char_id == '银狼LV.999', '落场'
     assert gs.front_row.value[1].star == 1, '变换窗:落场写 1★(下一费用档)'
     assert gs.front_row.source == 'logic'
+    assert gs.lv999_cost_tier.value == 4, '上阵变费档行(3费档 3★ 上场 → 4)'
     bench_units = [(u.char_id, u.star) for u in bench_units_of(gs)]
     assert ('希儿', 1) in bench_units and \
         ('银狼LV.999', 3) not in bench_units, 'bench 源已摘除'
@@ -359,6 +357,7 @@ def test_deploy_non_target_identity(
         moved = gs.back_row.value[0]
         assert moved.star == bench_units[idx][1], \
             f'恒等搬运保持 {bench_units[idx]} 星级'
+        assert gs.lv999_cost_tier.value is None, '非目标恒等搬运零档写'
         assert rows_sink.kinds() == []
 
 
@@ -376,6 +375,7 @@ def test_deploy_cascade_lv999_normal_merge(
         _lsig('CwActionDeployMoveOp'))
     assert out.applied is True
     assert gs.front_row.value[0].star == 2, '级联正常推演:场上载体 1★→2★'
+    assert gs.lv999_cost_tier.value == 4, '上阵变费档行(级联同批落)'
     bench_units = [(u.char_id, u.star) for u in bench_units_of(gs)]
     assert bench_units == [], '备战素材被合成消费腾槽'
     assert gs.bench.source == 'logic' \

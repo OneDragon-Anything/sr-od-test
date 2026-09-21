@@ -31,8 +31,7 @@ from test.sr_od.application.currency_war._cw_helpers import (
     run_node as _run_node,
 )
 
-from sr_od.application.currency_war.kernel.cw_events import PartnerOption
-from sr_od.application.currency_war.kernel.cw_events import PlannerOption
+from sr_od.application.currency_war.kernel.cw_events import PartnerOption, PlannerOption
 from sr_od.application.currency_war.kernel.cw_game_state import (
     ExpertInvitePayload,
     game_state_of,
@@ -116,7 +115,9 @@ _OBS_ROWS = {
     'planner':
         ('cw_screen_yinlang', 'CwScreenYinLang',
          lambda op, mp: mp.setattr(op.ctx, 'ocr_service', _StubOcr(
-             map_result={'左卡文': _mrl(500, 350), '右卡文': _mrl(1200, 350)}),
+             # 桩文本位置 = 建档两卡 rect 中心(观察过滤 = 中心点落入
+             # area rect,坐标单一真相源回 yml;银狼升星记账批 §2.4)。
+             map_result={'左卡文': _mrl(795, 317), '右卡文': _mrl(1305, 317)}),
              raising=False),
          'planner_opts', [PlannerOption(idx=0, text='左卡文'),
                           PlannerOption(idx=1, text='右卡文')]),
