@@ -172,32 +172,33 @@ def test_match_facts_domain_version_bumped_lands_in_journal_rows() -> None:
     """match_facts 域版本 bump 落行(接管域迭代 2026-09-20-takeover-intel-pipeline:
     接管补采计数/完成闩两字段退役 = 域内容变更,gs_schema 域版本 3;
     银狼升星记账批 2026-09-20-yinlang-starup-accounting 新增
-    lv999_cost_tier = 域版本 4):
-    DEFAULT_GS_SCHEMA 声明值 = 4,写行内嵌快照
+    lv999_cost_tier = 域版本 4;迭代 2026-09-20-node-advance-action-report T-8
+    退役零消费恢复局旗标 resumed_match = 域版本 5):
+    DEFAULT_GS_SCHEMA 声明值 = 5,写行内嵌快照
     state.gs_schema 同值(行行自足,判读不前溯可查域版本)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         DEFAULT_GS_SCHEMA,
         set_run_id_provider,
         set_state_journal_sink,
     )
-    assert DEFAULT_GS_SCHEMA['match_facts'] == 4
+    assert DEFAULT_GS_SCHEMA['match_facts'] == 5
     gs = _gs()
     run_sink: list[dict] = []
     set_state_journal_sink(run_sink.append)
     set_run_id_provider(lambda: 'run_probe')
     try:
-        gs.write_logic(gs.resumed_match, True, produced_by='ResumeAttach',
-                       evidence='takeover_resumed', sig=_hsig())
+        gs.write_logic(gs.lv999_cost_tier, 1, produced_by='ContractTest',
+                       evidence='match_facts_domain_version_probe',
+                       sig=_lsig())
     finally:
         set_state_journal_sink(None)
         set_run_id_provider(None)
     assert len(run_sink) == 1
     row = run_sink[0]
-    assert row['row'] == 'write' and row['field'] == 'resumed_match'
-    assert row['after'] is True
-    assert row['state']['gs_schema']['match_facts'] == 4, \
+    assert row['row'] == 'write' and row['field'] == 'lv999_cost_tier'
+    assert row['after'] == 1
+    assert row['state']['gs_schema']['match_facts'] == 5, \
         '域版本 bump 落行(行内 state 快照携带)'
-    assert row['sig']['family'] == 'logic_hook', '接管协议渠道③签名随行'
 
 
 def test_obs_event_consumes_version_without_state_change(journal_sink) -> None:

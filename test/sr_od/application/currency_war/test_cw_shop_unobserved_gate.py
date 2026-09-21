@@ -21,7 +21,7 @@ tracked 亦退役:对账唯一合法时点 = 观察边界 kernel cw_reconcile,�
    决策核——空表/未写不能冒充未观察(空账混同反向锁);
 3. 锚定置位:reconcile_tracking bench 侧屏幕真值写回成功 → True;
    失败形态(deployed-only 写回/双空读守卫)不置位 = 保持未观察;
-4. 接管置位:cw_loop._mark_session_resumed → False(接管检测确认点);
+4. 接管置位:cw_loop._invalidate_tracked_on_takeover → False(接管检测确认点);
 5. 未观察访问跳过留痕:run_buy_waves 收到策略关店 → 缺陷台账分键
    shop_skipped_unobserved 显影 + 连续计数 +1,visit 以 (None, ledger)
    正常收工(跳过非失败,交回外循环重判);
@@ -208,17 +208,15 @@ def _reconcile(session, bench, deployed) -> tuple:
 # ===== 锁4 接管置位(cw_loop 恢复检测确认点)=====
 
 def test_takeover_marks_tracked_unobserved():
-    """接管检测确认点 → 容器观察态 False(显式失效事件写点);恢复局旗标
-    落容器 match_facts 域 Field(观察汇聚漏斗读同一容器字段作弹窗腿输入,
-    载体解散迭代迁入)。"""
+    """接管检测确认点 → 容器观察态 False(显式失效事件写点)。恢复局旗标
+    resumed_match 原为同口第二写端,已随零消费退役(迭代 T-8),不再断言。"""
     session = StrategySession()
     assert not tracked_unobserved(session)
     _stub_self = SimpleNamespace(ctx=SimpleNamespace(cw_match=SimpleNamespace(
         session=session)))
 
-    CwLoop._mark_session_resumed(_stub_self)
+    CwLoop._invalidate_tracked_on_takeover(_stub_self)
 
-    assert game_state_of(session).resumed_match.value is True
     assert tracked_unobserved(session)
     assert game_state_of(session).tracked_account_observed.value is False
 
