@@ -61,6 +61,9 @@ def _make_supply(test_context, monkeypatch, *, pick, opts):
     monkeypatch.setattr(op, 'round_by_find_area',
                         lambda scr, s, a, **k: _Area(True))
     monkeypatch.setattr(sn, 'read_supply_options', lambda ctx, screen: list(opts))
+    # 节点条锚定桩(读不得 = 跳过;锚定接线锁归
+    # test_cw_supply_advance_wiring,本文件不重复)
+    monkeypatch.setattr(op, '_read_node_bar', lambda screen: None)
 
     class _StubPickOp:
         def __init__(self) -> None:
