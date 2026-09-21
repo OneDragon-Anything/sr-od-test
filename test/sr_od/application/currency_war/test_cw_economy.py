@@ -823,3 +823,35 @@ def test_injection_consistency_single_registry_source() -> None:
 #  裁定退役——滞回职责被对账仲裁批 kernel 锚定取代,回退路径即要消灭的掩盖
 #  面;策略消费只剩 game state。)
 
+
+# ===== effective_cost(银狼升星记账批:当前费用档唯一读口)=====
+
+
+def test_effective_cost_tier_and_registry_routing():
+    """当前费用档读口三形态:LV.999 档透传(未观察归约 3)/其余角色注册表
+    值/未注册名 0(与 bench_char_cost 未知→3 退款保守估分野)。锁设计
+    changes/2026-09-20-yinlang-starup-accounting/design.md §2.1。"""
+    from dataclasses import replace
+
+    from sr_od.application.currency_war.kernel.cw_economy import effective_cost
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        GAME_STATE_SCHEMA_VERSION,
+        Field,
+        GameState,
+    )
+
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    assert gs.lv999_cost_tier.value is None
+    # 未观察 = 未触发任何变换 → 开局档 3(读口 None 归约)
+    assert effective_cost(gs, '银狼LV.999') == 3
+    # 升费腿/上阵变费腿写档后透传(值域 {3,4,5};Field frozen,写 = 换帧,
+    # 测试以 replace 构造等价帧)
+    gs = replace(gs, lv999_cost_tier=Field(value=4, source='logic'))
+    assert effective_cost(gs, '银狼LV.999') == 4
+    gs = replace(gs, lv999_cost_tier=Field(value=5, source='logic'))
+    assert effective_cost(gs, '银狼LV.999') == 5
+    # 其余角色 = 注册表静态起始费(档字段不影响非 LV.999 路由)
+    assert effective_cost(gs, '希儿') == CHARACTERS['希儿'].cost
+    # 未注册名 → 0(无费用语义;与 bench_char_cost 未知→3 分野锁)
+    assert effective_cost(gs, '不存在角色') == 0
+
