@@ -2,8 +2,10 @@
 
 设计正本 = ``docs/develop/sr_od/application/currency_war/changes/
 2026-09-15-sim-redesign/design.md``;锁面 = U25 难度定谳成分与基础
-None 披露/U02 boss 池采样与覆盖优先/U26 银狼升费口径与开拓者形态/
-M10 穿着即合成·扳手回区·冶金炉同类型重掷。
+None 披露/U02 boss 池采样与覆盖优先/U26 银狼策划触发判据与开拓者
+形态(银狼升费旧口径已退役,当前档 = 容器推演状态,读口 =
+``kernel.cw_economy.effective_cost``)/M10 穿着即合成·扳手回区·冶金炉
+同类型重掷。
 """
 from __future__ import annotations
 
@@ -47,10 +49,8 @@ from sr_od.application.currency_war.sim.cw_sim_equips import (
     furnace_reroll,
 )
 from sr_od.application.currency_war.sim.cw_sim_special import (
-    SILVER_WOLF_COST_BY_STAR,
     SILVER_WOLF_ID,
     planner_overlay_due,
-    silver_wolf_effective_cost,
     trailblazer_form_of,
 )
 
@@ -144,16 +144,6 @@ def test_plane_boss_override_priority_and_pool_membership() -> None:
 
 
 # ============================================================ M21 特殊角色
-
-def test_silver_wolf_cost_by_star_and_front_gate() -> None:
-    """U26:2星→4费、3星(5费线)→5费;备战栏不升费(恒基础 3 费);
-    非银狼 → None 非本辖域。"""
-    assert SILVER_WOLF_COST_BY_STAR == {1: 3, 2: 4, 3: 5}
-    assert silver_wolf_effective_cost(SILVER_WOLF_ID, 2, on_front=True) == 4
-    assert silver_wolf_effective_cost(SILVER_WOLF_ID, 3, on_front=True) == 5
-    assert silver_wolf_effective_cost(SILVER_WOLF_ID, 2, on_front=False) == 3
-    assert silver_wolf_effective_cost('淘金客', 2, on_front=True) is None
-
 
 def test_planner_overlay_due_on_first_two_star() -> None:
     """「我来当策划」触发判据:银狼升达 2 星的合成事件(1→2);

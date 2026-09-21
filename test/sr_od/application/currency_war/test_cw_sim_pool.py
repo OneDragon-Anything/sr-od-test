@@ -25,10 +25,11 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     GameState,
     Unit,
 )
-from sr_od.application.currency_war.sim.cw_sim_pool import (
+from sr_od.application.currency_war.kernel.cw_pool import (
     EXPERT_COPIES_ASSUMED,
     drawable_names,
     fixed_pool,
+    grant_bucket_names,
     held_copies,
     remaining_pool,
 )
@@ -100,6 +101,60 @@ def test_drawable_names_nine_copy_clearance() -> None:
     assert n1 not in drawable_names(gs, 1), '≥9 清空:不再进店'
     other = [n for n in drawable_names(gs, 1) if n != n1]
     assert other, '同档其余牌照常可进店'
+
+
+# ============================================================ 档感知与授予出口(池升格 kernel 批新增)
+
+def test_drawable_names_tier_aware_bucket() -> None:
+    """档感知:档 = 4(写点先例 = pick_planner 升费腿 write_logic 档行)
+    → drawable_names(4) 含银狼LV.999、drawable_names(3) 不含;档未
+    观察(None)→ 归约 3 费桶(起始档语义默认)。授予出口同享档过滤。"""
+    gs = _fresh_gs()
+    sw = '银狼LV.999'
+    gs.write_logic(gs.lv999_cost_tier, 4, produced_by='TestWriter',
+                   sig=_lsig())
+    assert sw in drawable_names(gs, 4), '升费后归新费用档桶'
+    assert sw not in drawable_names(gs, 3), '升费后旧档抽不出'
+    assert sw in grant_bucket_names(gs, 4), '授予出口同享档过滤'
+    gs_default = _fresh_gs()
+    assert sw in drawable_names(gs_default, 3), '档未观察归约 3 费桶'
+    assert sw not in drawable_names(gs_default, 4)
+    assert sw in grant_bucket_names(gs_default, 3)
+
+
+def test_dual_exit_divergence_on_nine_copies() -> None:
+    """双出口分野:held ∈ [9,26] 的 1 费卡(3★ = 9 副本,27 副本下剩余
+    18 >0)在 drawable_names(商店出口)被 ≥9 清空、在 grant_bucket_names
+    (授予出口,不含 ≥9 过滤)仍在册——两出口集合不等锁。"""
+    gs = _fresh_gs()
+    n1 = chars_by_cost(1)[0].name
+    gs.observe(gs.bench, cw4_bview([
+        cw4_bc(n1, star=3, slot=1),   # 3★ = 9 副本
+    ]), sig=ChannelSig(family='obs', actor='TestSigWriter'))
+    assert held_copies(gs)[n1] == 9
+    assert remaining_pool(gs)[n1] == POOL_COPIES_PER_CARD[1] - 9, \
+        '剩余 >0(共享条件在,分野纯由 ≥9 过滤产生)'
+    assert n1 not in drawable_names(gs, 1), '商店出口:≥9 清空'
+    assert n1 in grant_bucket_names(gs, 1), '授予出口:无 ≥9 过滤'
+
+
+def test_conservation_safe_across_tier_transform() -> None:
+    """守恒跨档安全:升费变换 2★→1★(升费腿形态,held 3 份→1 份)不炸
+    守恒、旧档桶账面不出负值;副本数按名计与档无关(3/4/5 费同 9,
+    升费只换桶归属)。"""
+    sw = '银狼LV.999'
+    sig = ChannelSig(family='obs', actor='TestSigWriter')
+    gs = _fresh_gs()
+    gs.observe(gs.bench, cw4_bview([cw4_bc(sw, star=2, slot=1)]), sig=sig)
+    assert held_copies(gs)[sw] == 3
+    gs.write_logic(gs.lv999_cost_tier, 4, produced_by='TestWriter',
+                   sig=_lsig())
+    gs.observe(gs.bench, cw4_bview([cw4_bc(sw, star=1, slot=1)]), sig=sig)
+    assert held_copies(gs)[sw] == 1
+    assert remaining_pool(gs)[sw] == POOL_COPIES_PER_CARD[3] - 1, \
+        '守恒按名核对跨档不误炸,旧档账面不为负'
+    assert sw in drawable_names(gs, 4)
+    assert sw in grant_bucket_names(gs, 4)
 
 
 # ============================================================ M05 发牌与刷价
