@@ -178,22 +178,27 @@ def test_derivation_shop_panel_popup_advanced_hist_wins_over_stale_mirror():
 def test_derived_node_type_regression_write_dropped_with_event():
     """类型直定倒退免疫锁(R3 规则三同簇):目标序 < 镜像序 → 丢弃留证
     不写(镜像比派生目标鲜活,直定旧节点 = 把新节点回写旧键);镜像值
-    保持,arbitrate obs_event 在案。走弹窗直定屏路径(投资策略 ∈ 直定
-    映射,目标 = hist)。"""
+    保持,arbitrate obs_event 在案。走 BOSS 简报直定路径(类型直定迁移后
+    的专属屏直定写端,design §2.5 表,目标 = hist)。"""
+    from sr_od.application.currency_war.kernel.cw_screen_report.boss_briefing import (
+        CwScreenBossBriefingObs,
+        report_screen_boss_briefing_obs,
+    )
     session = SimpleNamespace()
     gs = game_state_of(session)
     gs.observe(gs.node, NodeKey(plane=1, round_num=3, kind='reward'),
                evidence='votes', sig=_SIG)
-    _seed_watermark(gs, 2)
+    gs.node_hist_ord = 2
     events = []
     gs.note_obs_event = (  # 实例级捕获(obs_event 发射面)
         lambda event, field, payload, verdict='', sig=None:
         events.append((event, field, payload)))
 
-    gs.observe_screen_context('货币战争-投资策略', sig=_SIG)
+    report_screen_boss_briefing_obs(
+        gs, CwScreenBossBriefingObs(on_screen=True))
 
     assert (gs.node.value.plane, gs.node.value.round_num,
             gs.node.value.kind) == (1, 3, 'reward'), \
-        '倒退直定丢弃:镜像 (1,3) 不被 (1,2,invest) 回写'
+        '倒退直定丢弃:镜像 (1,3) 不被 (1,2,boss) 回写'
     assert events and events[0][0] == 'arbitrate' and events[0][1] == 'node'
     assert events[0][2]['target_ord'] == 2, '留证行携带被拒目标'

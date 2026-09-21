@@ -37,7 +37,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
     MATCH_FINAL_FIELD,
     GameState,
-    _derive_node_observed,
+    observe_node_anchor,
     set_match_final_listener,
     write_match_final,
 )
@@ -240,21 +240,24 @@ def test_match_final_listener_fires_unarmed_and_offmatch(tmp_path) -> None:
 
 
 def test_g10_retrograde_obs_event_evidence(journal, run_id) -> None:
-    """G10 倒退留证:候选 < hist → 零状态变更(字段不动)+ obs_event 留证
-    (event=arbitrate,actor 保留触发规则归因,占版本)。"""
+    """G10 倒退留证(锚定口径,迭代 2026-09-20-node-advance-action-report
+    切换后写端 = observe_node_anchor):读数 < 现值 → 零状态变更(字段不动)
+    + obs_event 留证(event=arbitrate,actor = 锚定宿主登记名,占版本)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
-    _derive_node_observed(gs, 5, trigger_screen='货币战争-备战', seq=1)
+    observe_node_anchor(gs, 5, trigger_screen='货币战争-备战',
+                        actor='TestAnchor')
     assert gs.node_ord.value == 5
     n_before = len(_rows())
-    _derive_node_observed(gs, 4, trigger_screen='货币战争-备战', seq=2)
+    observe_node_anchor(gs, 4, trigger_screen='货币战争-备战',
+                        actor='TestAnchor')
     assert gs.node_ord.value == 5, '倒退免疫:字段不动(R3 规则三)'
     evs = [r for r in _rows()[n_before:] if r['row'] == 'obs_event']
     assert len(evs) == 1, '倒退丢弃 obs_event 留证(占版本零状态变更)'
     ev = evs[0]
     assert ev['event'] == 'arbitrate'
     assert ev['field'] == 'node_ord'
-    assert ev['observed'] == {'candidate': 4, 'hist': 5}
-    assert ev['sig']['actor'] == 'derive_node_observed'
+    assert ev['observed'] == {'reading': 4, 'current': 5}
+    assert ev['sig']['actor'] == 'TestAnchor'
     assert '倒退' in ev['verdict']
 
 

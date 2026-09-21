@@ -10,7 +10,8 @@
 - §2 版本与状态流水：写占版本、读不占、obs_event 占版本零状态变更、
   同值重写 same_value 旗标、行自足快照、局外（无 run_id）拒写行；
 - §3 快照：full_state_snapshot 值域/来源注记/同态同形；
-- §4 画面上下文 → 节点派生（四腿代表行 + 去重 + 冲突留证）；
+- §4 画面上下文与节点域(动作上报化切换后口径:漏斗只写上下文对;
+  BOSS 类型直定迁移);
 - §5 合成口与新旧映射（sim 合成、ShopCard 往返、bench/deployed 槽表）；
 - §6 终局与结算（write_match_final 幂等、词汇封闭）。
 
@@ -245,85 +246,52 @@ def test_full_state_snapshot_shape() -> None:
     assert bs2.full_state_snapshot() == snap, '同态同形'
 
 
-# ============================================================ §4 画面上下文 → 节点派生
+# ============================================================ §4 画面上下文与节点域(动作上报化切换后口径)
 
-def test_screen_context_prep_leg_writes_authoritative_node() -> None:
-    """备战腿(规则①):干净备战画面(SCREEN_PREP_FRAME)+ 顶栏
-    (plane, round) 读数 → 节点域权威值;非备战画面不触发。"""
+def test_screen_context_writes_pair_only_no_advance() -> None:
+    """漏斗瘦身(迭代 2026-09-20-node-advance-action-report design §2.4
+    攻击 B1):observe_screen_context 只写上下文对(prev/current)——推进域
+    (node_ord/hist)零触碰,四推断腿已退役;节点推进唯一落账入口 =
+    advance_node_effective(动作上报/观察锚定)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         SCREEN_PREP_FRAME,
     )
     gs = _gs()
-    gs.observe_screen_context(SCREEN_PREP_FRAME, phase_round=(1, 1),
-                              sig=_sig())
-    assert gs.node_ord.value == 1, '备战腿落序键(逻辑层)'
-    assert gs.node.value is None, '类型未定型,组合键不写'
+    gs.observe_screen_context(SCREEN_PREP_FRAME, sig=_sig())
+    assert gs.current_screen.value == SCREEN_PREP_FRAME, '上下文对写入'
+    assert gs.node_ord.value is None and gs.node_hist_ord is None, \
+        '备战帧上下文零推进(腿已退役)'
     other = _gs()
-    other.observe_screen_context('货币战争-战斗等待', phase_round=(1, 1),
-                                 sig=_sig())
-    assert other.node.value is None, '非备战画面不触发备战腿'
+    other.observe_screen_context('货币战争-战斗等待', sig=_sig())
+    other.observe_screen_context('货币战争-补给', sig=_sig())
+    assert other.node_ord.value is None and other.node_hist_ord is None, \
+        '战斗等待→补给(prev∈旧守卫族形态)零推进(弹窗腿已退役)'
 
 
-def test_screen_context_same_frame_revisit_does_not_readvance() -> None:
-    """重复采到同值不再推进(候选 ≤ hist 不写不锚,去重键 =
-    (run_id, effective_ord);同序恰一次推进)。"""
+def test_boss_briefing_report_types_hist_node() -> None:
+    """BOSS 类型直定迁移(design §2.5 表):简报屏上报经 kernel report
+    直定 boss 类型,目标 = 现 hist;序号推进半部已退役(简报上报零
+    node_ord 写);hist 未推进 = 零写禁猜。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
-        SCREEN_PREP_FRAME,
+        observe_node_anchor,
+    )
+    from sr_od.application.currency_war.kernel.cw_screen_report.boss_briefing import (
+        CwScreenBossBriefingObs,
+        report_screen_boss_briefing_obs,
     )
     gs = _gs()
-    gs.observe_screen_context(SCREEN_PREP_FRAME, phase_round=(1, 2),
-                              sig=_sig())
-    first = gs.node.value
-    gs.observe_screen_context(SCREEN_PREP_FRAME, phase_round=(1, 2),
-                              sig=_sig())
-    assert gs.node.value == first, '同帧重采不再推进'
-
-
-def test_screen_context_popup_leg_infers_and_types() -> None:
-    """弹窗腿(规则④)+类型派生:守卫前置画面(战斗等待)后进专属弹窗
-    (补给) → 推断推进 + 类型直定 supply。"""
-    from sr_od.application.currency_war.kernel.cw_game_state import (
-        SCREEN_PREP_FRAME,
-    )
-    gs = _gs()
-    gs.observe_screen_context(SCREEN_PREP_FRAME, phase_round=(1, 2),
-                              sig=_sig())
-    prep_node = gs.node.value
-    gs.observe_screen_context('货币战争-战斗等待', sig=_sig())
-    gs.observe_screen_context('货币战争-补给', sig=_sig())
-    assert gs.node.value is not None
-    assert gs.node.value.kind == 'supply'
-    assert gs.node.value != prep_node
-
-
-def test_screen_context_boss_brief_leg_advances_and_types() -> None:
-    """BOSS 简报腿(规则③,确定性):0p 被采到 → 当前节点+1 且类型=boss
-    (禁写死 round=9,boss 序位随位面格数漂移)。"""
-    from sr_od.application.currency_war.kernel.cw_game_state import (
-        SCREEN_BOSS_BRIEFING,
-        SCREEN_PREP_FRAME,
-    )
-    gs = _gs()
-    gs.observe_screen_context(SCREEN_PREP_FRAME, phase_round=(2, 1),
-                              sig=_sig())
-    before = gs.node_ord.value
-    gs.observe_screen_context(SCREEN_BOSS_BRIEFING, sig=_sig())
-    assert gs.node_ord.value == before + 1, '当前节点+1(禁写死 round=9)'
-    assert gs.node.value is not None and gs.node.value.kind == 'boss', '类型随简报证据同批落账'
-
-
-def test_plane_transition_leg_advances_plane() -> None:
-    """位面过渡腿(规则②,确定性):0q 被采到 → 逻辑节点 =
-    (当前位面+1, 1)。"""
-    from sr_od.application.currency_war.kernel.cw_game_state import (
-        SCREEN_PLANE_TRANSITION,
-        SCREEN_PREP_FRAME,
-    )
-    gs = _gs()
-    gs.observe_screen_context(SCREEN_PREP_FRAME, phase_round=(1, 5),
-                              sig=_sig())
-    gs.observe_screen_context(SCREEN_PLANE_TRANSITION, sig=_sig())
-    assert gs.node_ord.value == node_ordinal_of(2, 1), '逻辑节点 = (plane+1, 1)'
+    report_screen_boss_briefing_obs(
+        gs, CwScreenBossBriefingObs(on_screen=True))
+    assert gs.node.value is None, 'hist 未推进零写(禁猜)'
+    assert gs.node_ord.value is None, '简报上报零序号写(序号半部已退役)'
+    observe_node_anchor(gs, node_ordinal_of(2, 1),
+                        trigger_screen='货币战争-备战', actor='TestAnchor')
+    report_screen_boss_briefing_obs(
+        gs, CwScreenBossBriefingObs(on_screen=True))
+    assert gs.node.value is not None \
+        and gs.node.value.kind == 'boss', '类型随简报证据落账(boss)'
+    assert (gs.node.value.plane, gs.node.value.round_num) == (2, 1), \
+        '目标 = 现 hist 反解位(禁写死 round=9)'
 
 
 # ============================================================ §5 合成口与映射
@@ -399,6 +367,6 @@ def test_channel_family_closed_set() -> None:
     with pytest.raises(ValueError):
         Sig(family='obs', actor='cw_observation', mode='compute')
     for family in ('logic_action', 'logic_hook'):
-        Sig(family=family, actor='derive_node_observed', mode='compute')
+        Sig(family=family, actor='CwScreenPrep', mode='compute')
         with pytest.raises(ValueError):
-            Sig(family=family, actor='derive_node_observed', mode='read')
+            Sig(family=family, actor='CwScreenPrep', mode='read')

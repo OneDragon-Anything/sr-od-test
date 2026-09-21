@@ -45,7 +45,7 @@ _PKG = 'sr_od.application.currency_war.kernel.cw_screen_report'
 #: 包内全部画面文件(包 ``__init__`` 不暴露模块,项目惯例 → 显式点名;
 #: 新增屏文件必须登记到此处,漏登记 = 完备锁红)。
 _SCREENS = (
-    # 含 report 的 23 屏(17 实体写点 + 6 文档化占位)
+    # 含 report 的 23 屏(18 实体写点 + 5 文档化占位)
     'encounter', 'megastar', 'equip_pick', 'partner', 'planner', 'fortune',
     'bookcard', 'expert_invite', 'supply_node', 'invest_env',
     'invest_strategy', 'wish_trial', 'box_pick', 'briefing',
@@ -73,10 +73,13 @@ _NO_REPORT = frozenset({
 #: (prep 已于重型屏迁移批升级为真实写面——可选域字段在场才写,见
 #:  _WRITE_CASES['prep'] 与 prep 专项锁;plane_intel 已于接管域迭代
 #:  2026-09-20-takeover-intel-pipeline 升级为真实写面——采集真值写门,
-#:  见 _WRITE_CASES['plane_intel'] 与写门专项锁;buy_cards 保持占位:
+#:  见 _WRITE_CASES['plane_intel'] 与写门专项锁;boss_briefing 已于
+#:  2026-09-20-node-advance-action-report 切换批升级为真实写面——BOSS
+#:  类型直定(目标 = 现 hist),写门/直定专项锁归 test_cw_node_chain 与
+#:  test_cw_game_state_contract 节点域锁;buy_cards 保持占位:
 #:  唯一候选写点 = 段头 gold 救援补写,属入口观察链内纠正补写,勘察
 #:  结论申报在 kernel 屏文件模块头,不收编交后续批裁决。)
-_PLACEHOLDERS = ('armory_box', 'boss_briefing', 'wait_one_one',
+_PLACEHOLDERS = ('armory_box', 'wait_one_one',
                  'deploy_not_full', 'battle_wait', 'buy_cards')
 
 _TEST_SIG = ChannelSig(family='logic_action', actor='TestSigWriter',
