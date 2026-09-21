@@ -23,9 +23,10 @@
   重调落选卡后同样终结。chosen_encounter 发射即写契约(动作侧 report
   函数级)= test_cw_screen_report_ports 承重,本文件不重复。
 - **奖励兑现回调锁**(遭遇,kernel ``claim_encounter_reward``):双证
-  判遭遇(node 镜像 token)∧ progress_delta>0 单判;兑现写
-  ``encounter_reward_claimed`` 且 chosen 随即清(单次消费,重触发天然
-  幂等);非遭遇/未达标/删失/无 chosen = 不写不清。
+  判遭遇(node 镜像 token ∧ settlement_ring 尾行 node_type)∧
+  progress_delta>0 单判;兑现写 ``encounter_reward_claimed`` 且 chosen
+  随即清(单次消费,重触发天然幂等);单腿不合/未达标/删失/无 chosen
+  = 不写不清。
 - **盛会之星族锁**(节点循环形态):完成门/懒读保真/防重入旗标/chosen
   写端(选择点留守)各一锁,语义见各 docstring。
 
@@ -340,13 +341,17 @@ def test_encounter_refresh_gate_mismatch_zero_click_terminal(
 
 def test_claim_encounter_reward_branches(
         test_context, monkeypatch) -> None:
-    """奖励兑现回调五型锁(迭代 …3.3 扩围 design §2.4):非遭遇(chosen
-    残留防线)/未达标/删失/无 chosen = 不写不清;达标双证(node 镜像
-    token 'encounter' ∧ progress_delta>0)→ 写 encounter_reward_claimed
-    且 chosen 随即清(单次消费),重触发 = no-chosen 天然幂等。红 = 误
-    兑现面复活(镜像残留兑现/删失兑现)/消费后 chosen 不清(重兑现面)。"""
+    """奖励兑现回调锁(迭代 …3.3 扩围 design §2.4,R1 复攻定谳后形态):
+    判遭遇 = 双证(node 镜像 token 'encounter' ∧ settlement_ring 尾行
+    node_type='遭遇')——单腿不满足即拒(ring-mismatch 臂 = 镜像遭遇但
+    ring 尾行普通战斗的陈旧镜像防线);达标 = progress_delta>0 单判。
+    达标双证 → 写 encounter_reward_claimed 且 chosen 随即清(单次消费),
+    重触发 = no-chosen 天然幂等;非遭遇/删失/无 chosen = 不写不清。
+    红 = 单证兑现回潮(note 腿静默删除旧形态)/ 陈旧镜像误兑现 /
+    消费后 chosen 不清(重兑现面)。"""
     from sr_od.application.currency_war.kernel.cw_encounter_selection import (
         claim_encounter_reward,
+        record_settlement_row,
     )
     from sr_od.application.currency_war.kernel.cw_game_state import (
         ChannelSig,
@@ -354,47 +359,68 @@ def test_claim_encounter_reward_branches(
         Settlement,
     )
 
-    def _set_frame(session, *, kind: str, delta: int | None) -> None:
+    def _set_frame(session, *, kind: str, delta: int | None,
+                   ring_node: str, round_num: int = 7) -> None:
         gs = game_state_of(session)
-        _sig = ChannelSig(family='obs', actor='test', mode='read')
-        gs.observe(gs.node, NodeKey(plane=1, round_num=7, kind=kind),
-                   sig=_sig)
+        _obs_sig = ChannelSig(family='obs', actor='test', mode='read')
+        gs.observe(gs.node, NodeKey(plane=1, round_num=round_num, kind=kind),
+                   sig=_obs_sig)
         gs.observe(gs.settlement,
                    Settlement(hp_after=80, streak_after=1, killed=None,
                               progress_delta=delta, gold=10, level=3,
                               xp=(5, 20)),
-                   sig=_sig, note='battle_done:遭遇')
+                   sig=_obs_sig)
+        # 结算行入环(与生产同口 = record_settlement_row 单一写端;
+        # outcome 腿只取 killed/progress_fill_ratio,桩最小面)。
+        # round_num 逐臂递增 = 模拟不同节点(环按 plane+round 去重合并,
+        # 同键会合并进首见行,node_type 以首见为准)。
+        record_settlement_row(
+            gs, SimpleNamespace(killed=None, progress_fill_ratio=None),
+            plane=1, round_num=round_num, node_type=ring_node,
+            difficulty_node=None, encounter_tier=None)
 
     session = StrategySession()
     gs = game_state_of(session)
     _sig = ChannelSig(family='logic_action', actor='test', mode='compute')
     gs.write_logic(gs.chosen_encounter, (3, '随机4费×3'),
                    produced_by='test', sig=_sig)
-    # ① 非遭遇(chosen 残留):不写不清(镜像残留防线)
-    _set_frame(session, kind='battle', delta=2)
+    # ① 镜像=encounter 但 ring 尾行=普通战斗:双证第二腿不合 → 拒
+    #    (attack3 R1 陈旧镜像防线;「单证兑现」缺陷形态回归锁)
+    _set_frame(session, kind='encounter', delta=2, ring_node='普通战斗',
+               round_num=7)
+    assert claim_encounter_reward(gs) == 'ring-mismatch', 'ring 腿不合拒兑现'
+    assert gs.encounter_reward_claimed.value is None, 'ring 腿不合零写'
+    assert gs.chosen_encounter.value == (3, '随机4费×3'), 'ring 腿不合不清'
+    # ② 镜像非遭遇(镜像腿独立防面):拒
+    _set_frame(session, kind='battle', delta=2, ring_node='遭遇',
+               round_num=8)
     assert claim_encounter_reward(gs) == 'not-encounter', '非遭遇拒兑现'
     assert gs.encounter_reward_claimed.value is None, '非遭遇零写'
     assert gs.chosen_encounter.value == (3, '随机4费×3'), '非遭遇不清 chosen'
-    # ② 遭遇未达标(败局负值):不写不清
-    _set_frame(session, kind='encounter', delta=-22)
+    # ③ 双证合未达标(败局负值):不写不清
+    _set_frame(session, kind='encounter', delta=-22, ring_node='遭遇',
+               round_num=9)
     assert claim_encounter_reward(gs) == 'not-qualified', '败局不兑现'
     assert gs.encounter_reward_claimed.value is None and \
         gs.chosen_encounter.value == (3, '随机4费×3'), '未达标零写零清'
-    # ③ 遭遇删失(delta None):不写不清(fail-closed)
-    _set_frame(session, kind='encounter', delta=None)
+    # ④ 双证合删失(delta None):不写不清(fail-closed)
+    _set_frame(session, kind='encounter', delta=None, ring_node='遭遇',
+               round_num=10)
     assert claim_encounter_reward(gs) == 'not-qualified', '删失不兑现'
-    # ④ 达标双证:兑现写 + chosen 随即清(单次消费)
-    _set_frame(session, kind='encounter', delta=2)
+    # ⑤ 达标双证:兑现写 + chosen 随即清(单次消费)
+    _set_frame(session, kind='encounter', delta=2, ring_node='遭遇',
+               round_num=11)
     assert claim_encounter_reward(gs) == 'claimed', '达标兑现'
     assert gs.encounter_reward_claimed.value == (3, '随机4费×3'), (
         '兑现记录 = 所选 (难度, 奖励)')
     assert gs.chosen_encounter.value is None, '兑现后清 chosen(单次消费)'
-    # ⑤ 重触发(驻留轮二调):no-chosen 天然幂等
+    # ⑥ 重触发(驻留轮二调):no-chosen 天然幂等
     assert claim_encounter_reward(gs) == 'no-chosen', '重触发幂等'
     assert gs.encounter_reward_claimed.value == (3, '随机4费×3'), (
         '幂等轮不覆写')
-    # ⑥ 遭遇达标但无 chosen:不兑现
-    _set_frame(session, kind='encounter', delta=2)
+    # ⑦ 遭遇双证达标但无 chosen:不兑现
+    _set_frame(session, kind='encounter', delta=2, ring_node='遭遇',
+               round_num=12)
     assert claim_encounter_reward(gs) == 'no-chosen', '无 chosen 不兑现'
 
 
