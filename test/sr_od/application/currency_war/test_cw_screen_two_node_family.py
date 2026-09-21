@@ -13,8 +13,9 @@ screens.py 盛会之星段;report 函数级契约由 test_cw_screen_report_ports
   → 此刻才写 chosen_wish + success 交回;标识在 = 未落地 → 不写、重走
   (chosen_* 动作事实边界留守重入裁决点);
 - **决策动作 node 锁**(装备三选一代表,无门单发型):决策从容器零参读
-  (决策调用形态不变)→ 点卡点击序列 → round_wait 推进循环(不计节点
-  重试预算)。
+  (决策调用形态不变)→ 组装 param(idx + 注册表分层归一 norm_item)→
+  点卡链派发 → 派发即 round_success 终结(零重入裁决轮;即时上报迭代
+  2026-09-21-pick-planner-equip-immediate-report)。
 
 驱动方式 = 真类实例(构造走 __init__)+ 读链/门/机械点击链桩化,节点
 函数直驱(run_node 外壳)。
@@ -293,16 +294,16 @@ def test_wish_chosen_written_at_reentry_adjudication_only(
 
 # ==================== 决策动作 node 锁(装备三选一代表)====================
 
-def test_equip_act_decides_from_container_and_round_wait(
+def test_equip_act_decides_from_container_and_dispatch_terminal(
         test_context, monkeypatch) -> None:
     """决策动作 node 锁(无门单发型代表):决策从容器零参读(决策调用
-    形态不变;写槽已由 report 落容器)→ 选卡链派发(pick-op-unify 批:
-    点卡即选迁入 ``CwActionPickEquipOp``;机械链行为锁 =
-    test_cw_unified_action_4)→ round_wait 推进循环(不计节点重试预算)。
-    红 = 决策形态回迁带参 / 定位点漂移 / 循环推进回退为计预算的 retry。"""
-    from one_dragon.base.operation.operation_round_result import (
-        OperationRoundResultEnum,
-    )
+    形态不变;写槽已由 report 落容器)→ 组装 param(idx + 注册表分层
+    归一 norm_item)→ 选卡链派发(pick-op-unify 批:点卡即选迁入
+    ``CwActionPickEquipOp``,点卡后立即上报完整结果)→ 派发即
+    ``round_success`` 终结(零重入裁决轮;迭代
+    2026-09-21-pick-planner-equip-immediate-report design §2.1)。
+    红 = 决策形态回迁带参 / 定位点漂移 / 归一换源回退银狼锚 / 终结
+    回退为 wait/retry。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_equip_pick as mod,
     )
@@ -316,12 +317,15 @@ def test_equip_act_decides_from_container_and_round_wait(
     monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
     op = mod.CwScreenEquipPick(test_context)
     monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
+    # 第 2 卡 = 泛用注册表件(银狼 10 件锚外):锁归一换源
+    # normalize_registry_equip_name——锚级归一下恒 ''(泛用件永不入栏的
+    # 现状缺陷),注册表级分层归一命中规范名入上报 param。
     monkeypatch.setattr(op, '_read_cards',
-                        lambda s: ['甲卡', '乙卡', '丙卡'])
+                        lambda s: ['甲卡', '幸运星', '丙卡'])
     # 观察 node(report 落容器)+ 决策动作 node(零参决策消费)
     _run_node(test_context, op, op.observe)
     assert game_state_of(session).equip_pick_opts.value == [
-        '甲卡', '乙卡', '丙卡'], '前置:观察已落容器'
+        '甲卡', '幸运星', '丙卡'], '前置:观察已落容器'
     dispatches: list = []
 
     class _StubPickOp:
@@ -340,9 +344,9 @@ def test_equip_act_decides_from_container_and_round_wait(
     assert _decide_calls == [1], f'零参决策恰一次:{_decide_calls!r}'
     assert len(dispatches) == 1 and dispatches[0].param.idx == 1, (
         f'选卡链恰一次派发,param 携真实 idx:{dispatches!r}')
+    assert dispatches[0].param.norm_item == '幸运星', (
+        '泛用注册表件归一命中(组装点换 normalize_registry_equip_name)')
     assert (dispatches[0].env.target.x, dispatches[0].env.target.y) == (
         mod.CwScreenEquipPick.CARD_XS[1], mod.CwScreenEquipPick.CARD_Y), (
         f'定位点(策略 idx=1 → 第二卡):{dispatches[0].env.target!r}')
-    assert rs.result == OperationRoundResultEnum.WAIT, (
-        f'循环推进 = round_wait(不计节点重试预算):{rs!r}')
-    assert op._pick_pending is True, '点击已发 → 重入裁决标志置位'
+    assert rs.is_success, f'派发即 round_success 终结(零重入裁决轮):{rs!r}'

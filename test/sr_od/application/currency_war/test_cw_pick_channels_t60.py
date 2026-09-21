@@ -9,13 +9,16 @@ landing.md §3.2④「选择装备屏/补给确认两通道零写迁移接线」
   语义,可触发合成级联);补给单位腿 = 按实际开出内容应用(char 入席 +
   装备后果腿;supply 为即时单相上报——确认点击后一口写
   owned 规范名 + 单位腿 + 后果腿,补给确认无第二写边);
+- **pick_equip 即时单相锁**(迭代 2026-09-21-pick-planner-equip-
+  immediate-report design §2.1):点卡后一口写 owned 规范名 + 获得后果
+  链;泛用注册表件(银狼锚外)照常入栏零后果;未解析名翻来源留证;
+  重复调用重复应用不设防(增补 2 禁止清单第 4 条:重派 → 效果腿重复
+  应用风险按裁定接受,禁判重保护);
 - **零写退役锁**:zero_writes 两行委托不复存在,包级命名规约解析路由到
   具名模块;发射相写入者登记面锁(op 模块导入期全量自登记,缺登记 =
   实机发射相 ValueError 炸动作链);
 - **未解析名翻来源锁**(既有形态):随机开出件名未解析 = 值不变翻来源
   + 留证行;补给内容全未知(兜底点卡路径)= 受影响域值不变翻来源;
-- **发射相零写**(证据闩,pick_equip 现役形态):装备通道发射相仅意图
-  遥测,重派发重复发射零容器写(supply 已改即时单相,不在本锁面);
 - **载荷扩展不换键**:归一件名/角色载荷字段 action_key_exclude(幂等键
   不变,PickInvest 先例)。
 
@@ -35,9 +38,6 @@ from sr_od.application.currency_war.kernel.cw_action_report import (
 )
 from sr_od.application.currency_war.kernel.cw_action_report import (
     zero_writes as zero_writes_mod,
-)
-from sr_od.application.currency_war.kernel.cw_action_report.pick_equip import (
-    EVIDENCE_OVERLAY_CLOSED as EQUIP_EVIDENCE,
 )
 from sr_od.application.currency_war.kernel.cw_action_report.pick_equip import (
     report_action_pick_equip_param,
@@ -117,20 +117,48 @@ def rows_sink() -> _RowSink:
 # ============================================================ 两通道迁移锁
 
 
-def test_pick_equip_landing_gain_with_consequence(
+def test_pick_equip_immediate_gain_with_consequence(
         rows_sink: _RowSink) -> None:
-    """选择装备屏迁移锁(design §2.2 确定性通道):落地相装备腿 = 入栏 +
-    获得后果链——分身墨镜送 1★银狼与既有两枚合成 2★(购买同语义)。"""
+    """选择装备屏即时单相锁(点卡后一口写,迭代 design §2.1):归一件名
+    命中 → 入栏 + 获得后果链——分身墨镜送 1★银狼与既有两枚合成 2★
+    (购买同语义);无 evidence 参数(证据闩已随单相化退役)。"""
     gs = _make_gs(bench=[('银狼', 1), ('银狼', 1)], equips=['幸运星'])
     out = report_action_pick_equip_param(
         gs, CwActionPickEquipParam(idx=1, norm_item='分身墨镜'),
-        _lsig('CwScreenEquipPick'), evidence=EQUIP_EVIDENCE)
+        _lsig('CwActionPickEquipOp'))
     assert out.applied is True
     assert gs.equips.value == ['幸运星', '分身墨镜'], '装备入栏'
     assert gs.equips.source == 'logic', '入栏 write_logic'
     assert _units(gs) == [('银狼', 2)], '送角色腿触发合成(效果同商店购买)'
     assert gs.bench.source == 'logic', '后果链同源 write_logic'
     assert rows_sink.kinds() == [], '表内件零留证行'
+
+
+def test_pick_equip_registry_generic_item_lands(
+        rows_sink: _RowSink) -> None:
+    """泛用注册表件归一命中用例(design §2.1):泛用件(银狼 10 件锚外,
+    归一换源 ``normalize_registry_equip_name`` 后)规范名照常入栏;
+    表外后果零写零行为。"""
+    gs = _make_gs(bench=[('希儿', 1)], equips=['分身墨镜'])
+    out = report_action_pick_equip_param(
+        gs, CwActionPickEquipParam(idx=0, norm_item='幸运星'),
+        _lsig('CwActionPickEquipOp'))
+    assert out.applied is True
+    assert gs.equips.value == ['分身墨镜', '幸运星'], '泛用件规范名入栏'
+    assert gs.equips.source == 'logic', '入栏 write_logic'
+    assert _units(gs) == [('希儿', 1)], '表外件零后果链'
+    assert gs.bench.source == 'observation', 'bench 未被触碰'
+    assert rows_sink.kinds() == [], '泛用件零留证行'
+
+
+def test_pick_equip_repeat_call_reapplies_no_guard() -> None:
+    """单相重复应用不设防锁(增补 2 禁止清单第 4 条):点卡未生效重派 =
+    代码 bug 域,重复调用重复入栏——禁判重保护/幂等门(风险按裁定接受)。"""
+    gs = _make_gs(equips=[])
+    p = CwActionPickEquipParam(idx=0, norm_item='幸运星')
+    report_action_pick_equip_param(gs, p, _lsig('CwActionPickEquipOp'))
+    report_action_pick_equip_param(gs, p, _lsig('CwActionPickEquipOp'))
+    assert gs.equips.value == ['幸运星', '幸运星'], '重复调用重复入栏(不设防)'
 
 
 def test_pick_supply_immediate_char_and_consequence(
@@ -151,22 +179,6 @@ def test_pick_supply_immediate_char_and_consequence(
     assert gs.bench.source == 'logic', '双腿同源 write_logic'
     assert gs.equips.value == ['分身墨镜'], 'owned += 规范名(即时入栏)'
     assert gs.equips.source == 'logic', '入栏 write_logic(单相一口写)'
-
-
-def test_pick_channels_emission_phase_is_intent_only(
-        rows_sink: _RowSink) -> None:
-    """装备通道发射相零写(证据闩,重派发重复发射零容器写;supply 已改
-    即时单相上报,发射相语义消亡,不进本锁面)。"""
-    gs = _make_gs(bench=[('银狼LV.999', 2)], equips=['幸运星'])
-    seq_before = gs.write_seq
-    p_equip = CwActionPickEquipParam(idx=0, norm_item='分身墨镜')
-    out1 = report_action_pick_equip_param(gs, p_equip, _lsig('CwActionPickEquipOp'))
-    out2 = report_action_pick_equip_param(gs, p_equip, _lsig('CwActionPickEquipOp'))
-    assert all(o.applied and o.reason == 'intent_only'
-               for o in (out1, out2)), '受理(意图遥测)'
-    assert gs.write_seq == seq_before, '发射相零容器写(重派发不重写)'
-    assert gs.equips.value == ['幸运星'], '入栏未被发射相触碰'
-    assert gs.bench.source == 'observation', 'bench 未被发射相触碰'
 
 
 # ============================================================ 零写退役锁
@@ -210,12 +222,12 @@ def test_pick_channels_payload_fields_excluded_from_action_key() -> None:
 
 
 def test_pick_equip_unresolved_flips_source(rows_sink: _RowSink) -> None:
-    """选择装备屏未解析名(既有形态):禁猜名,equips 值不变翻来源 +
+    """选择装备屏未解析名(既有形态,单相):禁猜名,equips 值不变翻来源 +
     留证行;无后果链(不猜件名)。"""
     gs = _make_gs(bench=[('希儿', 1)], equips=['幸运星'])
     out = report_action_pick_equip_param(
         gs, CwActionPickEquipParam(idx=2, norm_item=''),
-        _lsig('CwScreenEquipPick'), evidence=EQUIP_EVIDENCE)
+        _lsig('CwActionPickEquipOp'))
     assert out.applied is True and out.reason == 'equip_name_unresolved'
     assert gs.equips.value == ['幸运星'], '值不变'
     assert gs.equips.source == 'logic_rand', '翻来源(观察差异收口自愈)'
