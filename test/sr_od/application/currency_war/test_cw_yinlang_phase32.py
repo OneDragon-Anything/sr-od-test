@@ -17,11 +17,12 @@
   其余单位恒等搬运零行为差;级联全员正常推演(费用档不同时存在,
   2026-09-18 定谳[口述·权威],分组键 (char_id, star) 无跨档歧义);
 - **获得后果**(design §2.2):分身墨镜系送出银狼族进备战席 + 合成级联;
-- **pick_invest 迁移**(design §2.3):分步上报——策略屏确认落地入
-  active_strategies + 效果分派(骇客专家:银狼 = bench 腿 + 商店池申报行
-  + 随机改件采样链,翻来源域集不含 gold);portal 确认只走效果分派
-  (欢愉契约 immediate 腿 + 条件腿临时翻来源闩 joy_contract_provisional),
-  禁污染持卡面;未收录卡行为与迁移前一致(回归锁);
+- **pick_invest 迁移**(design §2.3;gain-chain 3.2):分步上报——策略屏
+  确认落地入 active_strategies + 效果分派(骇客专家:银狼 = bench 腿 +
+  商店池申报行 + 随机改件采样链,翻来源域集不含 gold);portal 确认整支
+  走获得链 gain_invest_env(active_env 写 + ENV_GIFTS 全量接入 + 欢愉
+  契约 provisional 闩随 on_env_gained 迁 kernel),禁污染持卡面;表外
+  环境效果面安静不写;
 - **采样链 v0 池**(design §2.4):硬编码名单(4 费排除 Max 件口径的
   显式第二真相源)无 Max 件,种子可复现。
 
@@ -437,18 +438,21 @@ def test_invest_strategy_landing_hacker_wolf(
 def test_invest_portal_landing_no_card_pollution(
         monkeypatch: pytest.MonkeyPatch,
         rows_sink: _RowSink) -> None:
-    """portal 确认(欢愉契约)只走效果分派(design §2.3 双屏分流):
-    禁入 active_strategies(防 portal 卡污染持卡面);immediate 腿 =
-    银狼LV.999 1★ 入席;条件腿临时翻来源闩生效(bench/equips 翻来源 +
-    joy_contract_provisional 留证)。"""
+    """portal 确认(欢愉契约)整支走获得链(gain-chain design §2.5):
+    active_env 写(选择事实落地经 gain_invest_env)+ 银狼LV.999 1★ 入席
+    递归(on_env_gained chars_immediate)+ 条件腿临时翻来源闩随枚举迁
+    kernel(bench/equips 翻来源 + joy_contract_provisional 留证,kind
+    不变);禁入 active_strategies(防 portal 卡污染持卡面)。"""
     gs = _make_gs(bench=[('希儿', 1)], equips=['幸运星'], gold=30)
     param = CwActionPickInvestParam(idx=1, source=PICK_INVEST_SOURCE_PORTAL,
                                     norm_name='欢愉契约')
     out = pick_invest_mod.report_action_pick_invest_param(
         gs, param, _lsig('CwScreenInvestEnv'),
         evidence=EVIDENCE_OVERLAY_CLOSED)
-    assert out.applied is True
+    assert out.applied is True and out.reason == 'gain_chain_applied'
     assert gs.active_strategies.value in (None, []), '双屏分流防污染锁'
+    assert gs.active_env.value == '欢愉契约', '选择事实落地经获得链写'
+    assert gs.active_env.source == 'logic', '确定性入口 write_logic'
     units = [(u.char_id, u.star) for u in bench_units_of(gs)]
     assert ('银狼LV.999', 1) in units, 'immediate 腿(chars_immediate 实证)'
     assert gs.bench.source == 'logic_rand', '条件腿临时闩翻来源(bench)'
@@ -457,11 +461,31 @@ def test_invest_portal_landing_no_card_pollution(
     assert 'joy_contract_provisional' in rows_sink.kinds(), '披露键留证行'
 
 
+def test_invest_portal_env_gifts_full_access(
+        monkeypatch: pytest.MonkeyPatch,
+        rows_sink: _RowSink) -> None:
+    """ENV_GIFTS 全量即时发放经落地相可用(gain-chain design §2.6-②:
+    此前仅欢愉契约有容器写腿,现契约类 chars_immediate 全部经链生效;
+    表外环境安静不写)。公司契约 = 翡翠/砂金 逐个 1★ 入席递归。"""
+    gs = _make_gs(bench=[], equips=[])
+    out = pick_invest_mod.report_action_pick_invest_param(
+        gs, CwActionPickInvestParam(idx=0, source=PICK_INVEST_SOURCE_PORTAL,
+                                    norm_name='公司契约'),
+        _lsig('CwScreenInvestEnv'), evidence=EVIDENCE_OVERLAY_CLOSED)
+    assert out.applied is True and out.reason == 'gain_chain_applied'
+    assert gs.active_env.value == '公司契约'
+    units = [(u.char_id, u.star) for u in bench_units_of(gs)]
+    assert units == [('翡翠', 1), ('砂金', 1)], 'chars_immediate 逐个入席'
+    assert gs.bench.source == 'logic', '确定发放 write_logic'
+    assert rows_sink.kinds() == [], '非欢愉契约零留证行'
+
+
 def test_invest_unregistered_card_unchanged(
         monkeypatch: pytest.MonkeyPatch,
         rows_sink: _RowSink) -> None:
-    """未收录卡行为不变回归锁:策略屏未收录卡只走第一步(入表零效果);
-    portal 未收录卡零容器写(与迁移前零写族行为一致)。"""
+    """未收录卡行为回归锁(3.2 后口径):策略屏未收录卡只走第一步(入表
+    零效果);portal 表外环境 = active_env 选择事实写(经获得链,§2.6-①
+    写时点迁移)+ 效果面安静不写(表外环境零入席,裁定④)。"""
     gs = _make_gs(bench=[('希儿', 1)], equips=['幸运星'])
     seq_before = gs.write_seq
     out = pick_invest_mod.report_action_pick_invest_param(
@@ -472,7 +496,7 @@ def test_invest_unregistered_card_unchanged(
     assert gs.active_strategies.value == ['随便一张未收录卡'], \
         '未收录策略只走第一步'
     assert gs.write_seq == seq_before + 1, '恰一行遥测(持卡面),零效果腿'
-    # portal 未收录 = 零写。
+    # portal 表外环境 = 选择事实写 + 零效果。
     gs2 = _make_gs(bench=[('希儿', 1)], equips=['幸运星'])
     seq2_before = gs2.write_seq
     out2 = pick_invest_mod.report_action_pick_invest_param(
@@ -480,10 +504,16 @@ def test_invest_unregistered_card_unchanged(
                                      norm_name='随便一个未收录环境'),
         _lsig('CwScreenInvestEnv'), evidence=EVIDENCE_OVERLAY_CLOSED)
     assert out2.applied is True
-    assert gs2.write_seq == seq2_before, 'portal 未收录零容器写(行为与迁移前一致)'
+    assert gs2.active_env.value == '随便一个未收录环境', \
+        '选择事实落地写(表外环境同样经链注册)'
+    assert gs2.write_seq == seq2_before + 1, '恰 active_env 一行,零效果腿'
+    assert bench_units_of(gs2) and \
+        [(u.char_id, u.star) for u in bench_units_of(gs2)] == [('希儿', 1)], \
+        '表外环境零入席(安静不写)'
     assert gs2.active_strategies.value in (None, [])
-    # 效果注册表恰两张(本批边界:全量收录 = 推广批)。
-    assert set(PICK_INVEST_EFFECTS) == {'骇客专家:银狼', '欢愉契约'}
+    # 效果注册表收窄为单行(欢愉契约随 portal 支迁获得链;行 = 策略屏
+    # 专用死键已删,gain-chain design §2.5)。
+    assert set(PICK_INVEST_EFFECTS) == {'骇客专家:银狼'}
 
 
 def test_hacker_mod_pool_v0_no_max() -> None:

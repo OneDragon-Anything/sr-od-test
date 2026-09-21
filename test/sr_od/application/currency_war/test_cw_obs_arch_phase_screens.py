@@ -39,8 +39,9 @@ CwScreenBriefing / BOSS 简报 CwScreenBossBriefing。
   现读 >0 → 点钮恰一次 → 终结交回 round_success(交回外循环重进 = 入口
   重建);刷新计数写端随画面 op 基类退役(记账归动作 op 会话承接),
   闸 2 容器计数读端原样。
-- **写入流对拍锁**:``active_env`` 选卡时点写(值/写时点 = 点卡前,
-  决策面留守)、``active_strategies`` 重入裁决出口 append(值/时点)、
+- **写入流对拍锁**:``active_env`` 写时点(gain-chain 3.2 反转:点卡/派发
+  时点零写,落地相经获得链写;ADR-0598 点卡前写退役)、
+  ``active_strategies`` 重入裁决出口 append(值/时点)、
   简报三字段容器写(词缀幂等辖「读+采」/boss 恒覆写/难度仅 None 写)
   逐位;结算观察半直写(D-94 时序)经战斗等待在册行为锁的轨迹断言承载。
 - **判别单一源消费面锁**:`is_boss_briefing_texts` 消费点集合迁移前后不变
@@ -212,7 +213,7 @@ def _make_env(test_context, monkeypatch: pytest.MonkeyPatch, *,
     批起选卡+确认机械链迁入 ``CwActionPickInvestOp``,本文件桩派发捕获
     (param, env) 断言决策半产物与写端时序;机械链行为锁 =
     test_cw_unified_action_4 投资 op 锁)。派发时点快照 ``active_env``
-    现值(选卡时点写对拍载体 = 写在点卡链派发前)。
+    现值(写时点对拍载体 = 点卡/派发时点应零写,写发生在落地相获得链)。
     (台账写点②桩面已随该方法退役删除——链观察落地批:环境改型由返回
     备战后的入口观察链读承接,op 层零自读。)"""
     from sr_od.application.currency_war.operations.cw_screen import (
@@ -291,13 +292,13 @@ def test_invest_env_observe_gate_and_report(test_context,
     assert op._obs is not None and op._obs.options == opts, 'obs 挂实例属性'
 
 
-def test_invest_env_active_env_written_at_pick_time(test_context,
+def test_invest_env_active_env_write_timing_reversed(test_context,
                                                     monkeypatch) -> None:
-    """写入流对拍(§9.1-F2 主门 (b)):``active_env`` 选卡时点写——写时点 =
-    点卡链派发**前**(派发时点快照已见新值,pick-op-unify 批起点卡链
-    迁入动作 op,对拍载体 = 派发时点快照)、值 = 决策选中名(决策面留守,
-    ADR-0598 投资两屏各自实证语义);确认发出置 pending(落地归重入裁决)。
-    红 = 写时点后移(落派发后)、值漂移或确认链置位断线。"""
+    """写入流对拍(gain-chain design §2.5/§2.6-①,写时点锁反转):点卡/
+    派发时点**零** ``active_env`` 写(选择事实零容器写,画面 op 只观察/
+    决策/机械派发;ADR-0598 点卡前写退役);落地相(重入裁决出口,锚不在
+    = overlay 已关)经 ``gain_invest_env`` 有写、值 = 决策选中名。红 =
+    写时点回退到点卡前,或落地相链断流。"""
     events: list = []
     opts = [('追击概念股', 460), ('彩虹时代', 960), ('头彩', 1460)]
     op, _match, session, dispatches = _make_env(test_context, monkeypatch,
@@ -306,18 +307,27 @@ def test_invest_env_active_env_written_at_pick_time(test_context,
                                                 events=events)
     _run_node(test_context, op, op.observe)
     rs = _run_node(test_context, op, op.act)
-    assert ('active_env_at_dispatch', '彩虹时代') in events, (
-        f'active_env 须写在点卡链派发前(选卡时点语义):{events!r}')
-    assert game_state_of(session).active_env.value == '彩虹时代', (
-        '值 = 决策选中名(produced_by 面 = CwScreenInvestEnv,见豁免留守锁'
-        '源形态断言)')
+    assert ('active_env_at_dispatch', None) in events, (
+        f'点卡/派发时点零 active_env 写(选卡时点写已退役):{events!r}')
+    assert game_state_of(session).active_env.value is None, (
+        '派发后 active_env 仍空(选择事实未落地)')
     assert len(dispatches) == 1 and dispatches[0].param.idx == 1, (
         f'选卡+确认链恰一次派发,param 携真实 idx:{dispatches!r}')
     assert op._confirm_pending == '彩虹时代', (
-        '确认已发 → pending 置位携选中名(重入裁决承载;银狼闭环双屏分流'
-        '载荷 = 落地相效果分派输入)')
+        '确认已发 → pending 置位携选中名(重入裁决承载;落地相经获得链'
+        '上报输入)')
     assert rs.result == OperationRoundResultEnum.WAIT, (
         f'确认链机械交回 round_wait(循环推进):{rs!r}')
+    # 落地相:锚不在(overlay 已关)→ 重入裁决出口上报经获得链写。
+    op2, _m2, session2, _d2 = _make_env(test_context, monkeypatch,
+                                        in_screen=False,
+                                        opts=opts, pick_idx=1)
+    _run_node(test_context, op2, op2.observe)
+    op2._confirm_pending = '彩虹时代'
+    rs2 = _run_node(test_context, op2, op2.act)
+    assert rs2.is_success, f'重入裁决 success 交回:{rs2!r}'
+    assert game_state_of(session2).active_env.value == '彩虹时代', (
+        '落地相(重入裁决锚不在路径)经 gain_invest_env 有写')
 
 
 # ==================== 投资策略:分流双向 + 发射型接线 + 对拍 ====================
