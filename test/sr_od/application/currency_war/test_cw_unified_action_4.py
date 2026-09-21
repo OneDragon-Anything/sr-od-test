@@ -242,10 +242,11 @@ def test_encounter_pick_op_clicks_card_then_confirm(no_pick_sleep):
     assert env.round_result is rs
 
 
-def test_supply_pick_op_clicks_target_confirms_and_registers_arrival(
-        no_pick_sleep):
-    """补给确认链:点卡 → 「按钮-确认」area 确认 → 到账登记
-    (ConfirmSupply 写边随确认链同体,last_owned_equips +1)。"""
+def test_supply_pick_op_clicks_target_and_confirms(no_pick_sleep):
+    """补给确认链:点卡 → 「按钮-确认」area 确认(机械半零判效);
+    补给确认无到账登记写边(入栏/后果腿 =
+    ``report_action_pick_supply_param`` 即时单相,行为锁见
+    test_cw_supply_pick_immediate_report);本锁只锁机械点击面。"""
     confirm_calls: list[tuple] = []
     ctrl = _RecordingController()
     op = SimpleNamespace(
@@ -262,10 +263,10 @@ def test_supply_pick_op_clicks_target_confirms_and_registers_arrival(
     assert [(p.x, p.y) for p, _t in ctrl.clicks] == [(500, 400)]
     assert confirm_calls == [('货币战争-补给', '按钮-确认',
                               {'success_wait': 1.5})]
-    # 到账登记(写边;equip 未读到 = 不登记,此处正锁)。
-    # 终态契约 §B:单一源 = gs.equips(容器直写)。
+    # 补给确认无到账登记写边(局外 ctx 无 cw_match,即时上报同跳过;
+    # equips 保持开局种子 [] ,未混入选中装备名)。
     from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
-    assert game_state_of(session).equips.value == ['星币收集器']
+    assert game_state_of(session).equips.value == []
 
 
 def test_megastar_pick_op_clicks_confirm_once(no_pick_sleep):

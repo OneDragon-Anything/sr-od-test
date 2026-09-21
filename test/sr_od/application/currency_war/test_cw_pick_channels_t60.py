@@ -7,14 +7,15 @@ landing.md §3.2④「选择装备屏/补给确认两通道零写迁移接线」
 
 - **两通道迁移锁**:专属件经两渠道 → 装备入栏 + 送角色腿触发(购买同
   语义,可触发合成级联);补给单位腿 = 按实际开出内容应用(char 入席 +
-  装备后果腿;装备入栏写端 = ConfirmSupply 既有到账边,落地相零双写);
+  装备后果腿;supply 为即时单相上报——确认点击后一口写
+  owned 规范名 + 单位腿 + 后果腿,补给确认无第二写边);
 - **零写退役锁**:zero_writes 两行委托不复存在,包级命名规约解析路由到
   具名模块;发射相写入者登记面锁(op 模块导入期全量自登记,缺登记 =
   实机发射相 ValueError 炸动作链);
 - **未解析名翻来源锁**(既有形态):随机开出件名未解析 = 值不变翻来源
   + 留证行;补给内容全未知(兜底点卡路径)= 受影响域值不变翻来源;
-- **发射相零写**(证据闩,同 pick_invest/planner 形态):发射相仅意图
-  遥测,重派发重复发射零容器写;
+- **发射相零写**(证据闩,pick_equip 现役形态):装备通道发射相仅意图
+  遥测,重派发重复发射零容器写(supply 已改即时单相,不在本锁面);
 - **载荷扩展不换键**:归一件名/角色载荷字段 action_key_exclude(幂等键
   不变,PickInvest 先例)。
 
@@ -40,9 +41,6 @@ from sr_od.application.currency_war.kernel.cw_action_report.pick_equip import (
 )
 from sr_od.application.currency_war.kernel.cw_action_report.pick_equip import (
     report_action_pick_equip_param,
-)
-from sr_od.application.currency_war.kernel.cw_action_report.pick_supply import (
-    EVIDENCE_OVERLAY_CLOSED as SUPPLY_EVIDENCE,
 )
 from sr_od.application.currency_war.kernel.cw_action_report.pick_supply import (
     report_action_pick_supply_param,
@@ -135,39 +133,37 @@ def test_pick_equip_landing_gain_with_consequence(
     assert rows_sink.kinds() == [], '表内件零留证行'
 
 
-def test_pick_supply_landing_char_and_consequence(
+def test_pick_supply_immediate_char_and_consequence(
         rows_sink: _RowSink) -> None:
-    """补给确认迁移锁(design §2.2 单位/补给腿 = 按实际开出内容应用):
-    单位腿 char 入席(1★)+ 合成级联;装备后果腿命中表 → 送角色腿;
-    装备入栏 = ConfirmSupply 既有到账边(发射相),落地相零双写。"""
+    """补给确认即时单相上报锁(迭代 2026-09-21-event-refresh-unify-
+    supply-pick design §2.0B):一口写 owned 规范名 + 单位腿(char 入席
+    1★ + 合成级联)+ 装备后果腿(命中表 → 送角色腿)——无发射/落地
+    两相,无证据参数。"""
     gs = _make_gs(bench=[('银狼', 1), ('银狼', 1)], equips=[])
     out = report_action_pick_supply_param(
         gs, CwActionPickSupplyParam(idx=0, char_name='银狼',
                                     norm_item='分身墨镜'),
-        _lsig('CwScreenSupplyNode'), evidence=SUPPLY_EVIDENCE)
+        _lsig('CwActionPickSupplyOp'))
     assert out.applied is True
     units = _units(gs)
     assert ('银狼', 2) in units and ('银狼', 1) in units, \
         '单位腿 1★入席合成 2★ + 后果腿送出 1★(购买同语义)'
     assert gs.bench.source == 'logic', '双腿同源 write_logic'
-    assert gs.equips.source == 'observation' and gs.equips.value == [], \
-        '落地相不重复写 equips(入栏写端 = ConfirmSupply 到账边,无双计面)'
+    assert gs.equips.value == ['分身墨镜'], 'owned += 规范名(即时入栏)'
+    assert gs.equips.source == 'logic', '入栏 write_logic(单相一口写)'
 
 
 def test_pick_channels_emission_phase_is_intent_only(
         rows_sink: _RowSink) -> None:
-    """发射相零写(证据闩,重派发重复发射零容器写):两渠道同锁。"""
+    """装备通道发射相零写(证据闩,重派发重复发射零容器写;supply 已改
+    即时单相上报,发射相语义消亡,不进本锁面)。"""
     gs = _make_gs(bench=[('银狼LV.999', 2)], equips=['幸运星'])
     seq_before = gs.write_seq
     p_equip = CwActionPickEquipParam(idx=0, norm_item='分身墨镜')
-    p_supply = CwActionPickSupplyParam(idx=1, char_name='银狼',
-                                       norm_item='分身墨镜Max')
     out1 = report_action_pick_equip_param(gs, p_equip, _lsig('CwActionPickEquipOp'))
     out2 = report_action_pick_equip_param(gs, p_equip, _lsig('CwActionPickEquipOp'))
-    out3 = report_action_pick_supply_param(gs, p_supply, _lsig('CwActionPickSupplyOp'))
-    out4 = report_action_pick_supply_param(gs, p_supply, _lsig('CwActionPickSupplyOp'))
     assert all(o.applied and o.reason == 'intent_only'
-               for o in (out1, out2, out3, out4)), '受理(意图遥测)'
+               for o in (out1, out2)), '受理(意图遥测)'
     assert gs.write_seq == seq_before, '发射相零容器写(重派发不重写)'
     assert gs.equips.value == ['幸运星'], '入栏未被发射相触碰'
     assert gs.bench.source == 'observation', 'bench 未被发射相触碰'
@@ -234,7 +230,7 @@ def test_pick_supply_equip_unresolved_flips_source(
     gs = _make_gs(bench=[('希儿', 1)], equips=['折叠小刀'])
     out = report_action_pick_supply_param(
         gs, CwActionPickSupplyParam(idx=0, char_name='希儿', norm_item=''),
-        _lsig('CwScreenSupplyNode'), evidence=SUPPLY_EVIDENCE)
+        _lsig('CwScreenSupplyNode'))
     assert out.applied is True
     assert ('希儿', 1) in _units(gs), '单位腿不受装备名未解析影响'
     assert gs.equips.value == ['折叠小刀'], '装备腿值不变'
@@ -249,7 +245,7 @@ def test_pick_supply_content_unknown_flips_domains(
     gs = _make_gs(bench=[('希儿', 1)], equips=['折叠小刀'])
     out = report_action_pick_supply_param(
         gs, CwActionPickSupplyParam(idx=0),
-        _lsig('CwScreenSupplyNode'), evidence=SUPPLY_EVIDENCE)
+        _lsig('CwScreenSupplyNode'))
     assert out.applied is True and out.reason == 'content_unresolved'
     assert _units(gs) == [('希儿', 1)] and gs.bench.source == 'logic_rand', \
         'bench 值不变翻来源'
