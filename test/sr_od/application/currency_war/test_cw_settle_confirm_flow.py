@@ -1,0 +1,233 @@
+"""结算确认动作 op 流程锁(迭代 2026-09-20-node-advance-action-report
+landing §3.2 判据面:CwOpSettleConfirm 点击/证据等待/推进上报接线)。
+
+判据 ↔ 测试对照(landing §3.2 完成判据):
+
+- 结算帧 → op → 点击落位 → 白名单锚帧 → 上报恰一次
+  (重入帧不重复上报——第二遍白名单已命中不重复点) →
+  test_settle_confirm_clicks_evidence_and_reports_once
+- 战败分支不进本 op(终局路径回归不变)→
+  test_defeat_branch_never_enters_settle_confirm
+- 证据 miss(白名单帧不给)= 不上报,长按兜底继续重试(M39 迁入锁)→
+  test_evidence_miss_no_report_long_press_retry
+
+驱动 = 真帧 fixture + 真 OCR 识别链(FixtureController 剧本推进),容器
+= cw4_session 旁表 + observe_node_anchor 预锚定 observation 态(新路径
+全可测,不经共存期观察态门挡)。
+"""
+from __future__ import annotations
+
+import importlib
+from types import SimpleNamespace
+
+import pytest
+from test.harness.fixture_controller import (
+    FixtureController,
+    WatchdogOperationMixin,
+    enter_running_state,
+    fast_sleep,
+    reset_running_state,
+)
+from test.sr_od.application.currency_war._cw_helpers import (
+    Area as _Area,
+)
+from test.sr_od.application.currency_war._cw_helpers import (
+    cw4_session,
+)
+
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    game_state_of,
+    observe_node_anchor,
+)
+from sr_od.application.currency_war.operations.cw_op.cw_op_settle_confirm import (
+    CwOpSettleConfirm,
+)
+
+settle_confirm_mod = importlib.import_module(
+    'sr_od.application.currency_war.operations.cw_op.cw_op_settle_confirm')
+
+_SETTLE_FRAME = ('货币战争-结算', 'win')
+_BOARD_FRAME = ('货币战争-备战', 'deployed_2star')
+_SETTLE_SCREEN = '货币战争-结算'
+_SETTLE_BTN = '按钮-继续挑战'
+
+
+class _WatchedConfirm(WatchdogOperationMixin, CwOpSettleConfirm):
+    pass
+
+
+@pytest.fixture()
+def fixture_controller(
+    test_context,
+    monkeypatch: pytest.MonkeyPatch,
+) -> FixtureController:
+    ctrl = FixtureController(
+        ctx=test_context,
+        standard_width=test_context.project_config.screen_standard_width,
+        standard_height=test_context.project_config.screen_standard_height,
+    )
+    monkeypatch.setattr(test_context, 'controller', ctrl)
+    monkeypatch.setattr(ctrl, 'mouse_move', lambda pos: None, raising=False)
+    return ctrl
+
+
+def _anchored_session(test_context, monkeypatch, ordinal: int = 1):
+    """锚定容器态:session 旁表 + node_ord 预锚定 observation(新路径
+    可测前提;共存期生产会被观察态门挡,测试直接构造锚定态)。"""
+    session = cw4_session()
+    monkeypatch.setattr(test_context, 'cw_match',
+                        SimpleNamespace(session=session), raising=False)
+    gs = game_state_of(session)
+    observe_node_anchor(gs, ordinal, trigger_screen='货币战争-备战',
+                        actor='TestHost')
+    return gs
+
+
+def _run_execute(test_context, op) -> object:
+    enter_running_state(test_context)
+    try:
+        with fast_sleep(op):
+            return op.execute()
+    finally:
+        reset_running_state(test_context, op)
+
+
+def test_settle_confirm_clicks_evidence_and_reports_once(
+    test_context, monkeypatch: pytest.MonkeyPatch,
+    fixture_controller: FixtureController,
+) -> None:
+    """主链路锁:结算帧 → 点「继续挑战」落位 → 白名单锚帧 → settle_confirm
+    上报恰一档(logic 态);重入已命中帧零点击零推进(观察态门结构挡)。"""
+    if not test_context.has_screen(*_SETTLE_FRAME):
+        pytest.skip(f'存档截图缺失:screens/{_SETTLE_FRAME[0]}/{_SETTLE_FRAME[1]}.webp')
+    if not test_context.has_screen(*_BOARD_FRAME):
+        pytest.skip(f'存档截图缺失:screens/{_BOARD_FRAME[0]}/{_BOARD_FRAME[1]}.webp')
+    gs = _anchored_session(test_context, monkeypatch, ordinal=1)
+
+    fixture_controller.set_phases([
+        {
+            'frame': _SETTLE_FRAME,
+            'exit': ('on_click_in', _SETTLE_SCREEN, _SETTLE_BTN),
+        },
+        {'frame': _BOARD_FRAME},   # terminal:白名单锚帧(转移证据)
+    ])
+    op = _WatchedConfirm(test_context)
+    op._init_watchdog()
+    result = _run_execute(test_context, op)
+
+    assert result.success, (
+        f'结算确认未成功:status={result.status!r} '
+        f'phase_idx={fixture_controller.phase_idx} '
+        f'clicks={fixture_controller.recorded_clicks}')
+    assert fixture_controller.phase_idx == 1, (
+        f'点击应推进到白名单锚帧:phase_idx={fixture_controller.phase_idx}')
+    assert fixture_controller.click_hit_area(_SETTLE_SCREEN, _SETTLE_BTN), (
+        f'「继续挑战」点击落位缺失:{fixture_controller.recorded_clicks}')
+    assert gs.node_ord.value == 2 and gs.node_ord.source == 'logic', (
+        '转移证据命中后上报恰一档(logic 推进未确认态)')
+
+    # 重入帧:白名单已命中 → 不重复点击、不重复上报(结构挡)
+    fixture_controller.set_phases([{'frame': _BOARD_FRAME}])
+    _clicks_before = len(fixture_controller.recorded_clicks)
+    op2 = _WatchedConfirm(test_context)
+    op2._init_watchdog()
+    result2 = _run_execute(test_context, op2)
+    assert result2.success
+    assert len(fixture_controller.recorded_clicks) == _clicks_before, \
+        '已命中帧不重复点击'
+    assert gs.node_ord.value == 2, '重复上报零推进(观察态门挡)'
+
+
+def test_evidence_miss_no_report_long_press_retry(
+    test_context, monkeypatch: pytest.MonkeyPatch,
+    fixture_controller: FixtureController,
+) -> None:
+    """证据 miss 锁:白名单帧不给(结算屏恒在)→ 不上报 + M39 长按兜底
+    继续重试(第 3 轮停留长按 (960,898) press_time=0.5,现行为迁入)。"""
+    if not test_context.has_screen(*_SETTLE_FRAME):
+        pytest.skip(f'存档截图缺失:screens/{_SETTLE_FRAME[0]}/{_SETTLE_FRAME[1]}.webp')
+    gs = _anchored_session(test_context, monkeypatch, ordinal=1)
+
+    # 长按兜底 press_time 断言面:包一层记录 kwargs(不改变推进判定)
+    _press_recorder: list[tuple[float, float]] = []
+    _orig_click = fixture_controller.click
+
+    def _click_recorder(pos=None, press_time: float = 0, **kw):
+        if pos is not None:
+            _press_recorder.append((float(pos.x), float(press_time)))
+        return _orig_click(pos, press_time=press_time, **kw)
+
+    monkeypatch.setattr(fixture_controller, 'click', _click_recorder)
+
+    fixture_controller.set_phases([
+        {'frame': _SETTLE_FRAME},   # 无 exit:白名单永不出现(证据 miss)
+    ])
+    op = _WatchedConfirm(test_context)
+    op.watchdog_max_rounds = 8   # 有界驱动:长按触发后即可停
+    op._init_watchdog()
+    result = _run_execute(test_context, op)
+
+    assert not result.success, '证据 miss 形态不得假成功(看门狗截停)'
+    assert gs.node_ord.value == 1 and gs.node_ord.source == 'observation', (
+        '证据 miss = 不上报(现值保持锚定态)')
+    assert fixture_controller.click_hit_area(_SETTLE_SCREEN, _SETTLE_BTN), (
+        '长按兜底前先有正常「继续挑战」点击(重试现行为)')
+    long_presses = [(x, pt) for x, pt in _press_recorder
+                    if (x, pt) == (960.0, 0.5)]
+    assert long_presses, (
+        f'M39 第 3 轮停留应长按 (960,898) press_time=0.5:{_press_recorder}')
+
+
+def test_defeat_branch_never_enters_settle_confirm(
+    test_context, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """战败分支回归锁:失败结算页(1f 分支)不进结算确认 op、不推进
+    (终局流转,节点序止于终局;战败路径回归不变)。"""
+    import time
+
+    from sr_od.application.currency_war.currency_war_config import (
+        CurrencyWarConfig,
+    )
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_battle_wait as bwo,
+    )
+
+    gs = _anchored_session(test_context, monkeypatch, ordinal=1)
+
+    calls: list = []
+
+    class _OpRecorder:
+        def __init__(self, ctx):
+            calls.append(ctx)
+
+    monkeypatch.setattr(settle_confirm_mod, 'CwOpSettleConfirm', _OpRecorder)
+
+    st = bwo.SettlementState(run_start_ts=time.monotonic(), is_new_match=True)
+    op = bwo.CwScreenBattleWait(
+        test_context, st,
+        CurrencyWarConfig(test_context.current_instance_idx))
+    monkeypatch.setattr(op, 'last_screenshot', None, raising=False)
+    monkeypatch.setattr(op, 'screenshot', lambda: None)
+    _1f_marks = {('货币战争-结算-失败', '标识-挑战进度'),
+                 ('货币战争-结算-失败', '标识-挑战结束')}
+    monkeypatch.setattr(op, 'round_by_find_area',
+                        lambda scr, s, a, **k: _Area((s, a) in _1f_marks))
+    monkeypatch.setattr(op, 'round_by_find_and_click_area',
+                        lambda *a, **k: _Area(False))
+    monkeypatch.setattr(op, 'round_by_ocr_and_click',
+                        lambda *a, **k: _Area(False))
+    monkeypatch.setattr(op, 'round_by_ocr',
+                        lambda scr, text, **k: _Area(text == '前往结算'))
+    monkeypatch.setattr(op, 'save_screenshot', lambda prefix=None: '')
+    monkeypatch.setattr(op, 'park_cursor', lambda *a, **k: None)
+    monkeypatch.setattr(
+        test_context, 'ocr_service',
+        SimpleNamespace(get_ocr_result_list=lambda **kw: []),
+        raising=False)
+
+    rs = op.wait()
+
+    assert calls == [], '战败分支(1f)不得进入结算确认 op'
+    assert gs.node_ord.value == 1, '战败终局不推进节点序'
+    assert not rs.is_success and rs.result is not None, (
+        f'战败页按 1f 分支流转(翻页/点空白 round_wait):{rs!r}')

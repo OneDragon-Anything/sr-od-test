@@ -876,49 +876,41 @@ def test_battle_wait_normal_exits(test_context, monkeypatch) -> None:
 
     _rec.called = False
     monkeypatch.setattr(op, '_record_round_outcome', _rec)
-    _orig_click_area = op.round_by_find_and_click_area
 
-    def _click_area(*a, **k):
-        order.append('click')
-        return _orig_click_area(*a, **k)
+    # ②段已改调结算确认动作 op(landing §3.2):桩化子 op 为点击记录器
+    # (M39 长按/证据等待/上报的行为锁迁 test_cw_settle_confirm_flow)。
+    import importlib
 
-    monkeypatch.setattr(op, 'round_by_find_and_click_area', _click_area)
+    settle_confirm_mod = importlib.import_module(
+        'sr_od.application.currency_war.operations.cw_op.cw_op_settle_confirm')
+
+    class _ConfirmRecorder:
+        def __init__(self, ctx):
+            pass
+
+        def execute(self):
+            order.append('click')
+            return SimpleNamespace(success=True, status='转移证据命中桩')
+
+    monkeypatch.setattr(settle_confirm_mod, 'CwOpSettleConfirm',
+                        _ConfirmRecorder)
     rs = op.wait()
     assert order == ['record', 'click'], (
         f'D-94 读点先于点击(时序红线):{order!r}')
     assert _rec.called
     assert op._st.rounds_done == 1, 'C-1 新结算帧计数'
-    assert op._st.settle_stay == 1, '停留计数继续执行到 round_wait'
     assert not rs.is_success and rs.result == OperationRoundResultEnum.WAIT, (
-        '驻留轮 round_wait(等待语义)')
+        '驻留轮 round_wait(等待语义;子 op 成功后回 ③段出口收口)')
 
 
 def test_battle_wait_fallback_exits(test_context, monkeypatch) -> None:
-    """兜底出口两段并一(生产路径驱动)。
-    [长按] M39 停留第 3 轮(点击未生效)→ 长按 (960,898)
-    press_time=0.5 兜底推进 + 停留计数归零(在册时序行为锁)。
+    """兜底出口(生产路径驱动)。
     [未知 bail] 未知帧达 UNKNOWN_BAIL_N(10)→ round_fail 交主循环
     兜底链 + op 截图留证(flag 已退役,零真实 .debug 落盘)。
-    生产路径逐轮 = 观察门双 miss → 决策循环分支链 miss → 计数。"""
-    # [长按]
-    clicks: list = []
-    op = _make_bwait(
-        test_context, monkeypatch,
-        frozenset({('货币战争-结算', '按钮-继续挑战')}))
-    monkeypatch.setattr(
-        test_context, 'controller',
-        SimpleNamespace(click=lambda pt, **kw: clicks.append((pt, kw)),
-                        mouse_move=lambda *a, **k: None),
-        raising=False)
-    op.wait()
-    op.wait()
-    assert clicks == [], '停留 1-2 轮未达长按线'
-    op.wait()
-    assert len(clicks) == 1, '第 3 轮恰触发长按兜底'
-    (point, kw), = clicks
-    assert (point.x, point.y) == (960, 898)
-    assert kw == {'press_time': 0.5}
-    assert op._st.settle_stay == 0, '长按兜底后停留计数归零'
+    生产路径逐轮 = 观察门双 miss → 决策循环分支链 miss → 计数。
+    (原 [长按] M39 锁随结算点击/M39 迁入 CwOpSettleConfirm 改住
+    test_cw_settle_confirm_flow,迭代 2026-09-20-node-advance-action-report
+    landing §3.2。)"""
     # [未知 bail]
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_battle_wait as bwo,
