@@ -1,0 +1,125 @@
+"""效果账本桥·板面重写(apply_board_rewrite)锚定通道行为锁。
+
+机制单一源 = ``cw_effect_inventory.apply_board_rewrite`` 注(通道择道
+单一源 = ``cw_game_state.anchor_aware_write``;通道规则「未锚定 →
+随机态」,语义域 = 容器正本 game_state/fields.md「开局种子底座」节)。
+锁面:
+
+- **人力重组双臂**:种子容器(未闩)SELL_ALL 清空写恰三行
+  source=logic_rand(未验证推算走随机态);置闩(测试专口直赋)后
+  同路径 source=logic(确定面,失配网生效);
+- **静默覆盖臂**:未闩清空写被观察以不同值覆盖 → 零
+  observe_vs_logic_mismatch 失配行、差异落 logic_rand_outcome(首观察
+  静默覆盖);置闩后同场景 → 失配缺陷行(失配网未盲);
+- **回归臂**:全员晋升(UPGRADE_ALL)零容器写不变;非板面重写条目
+  过桥零动作;burst 桥写端(免费刷新余额累加,效果账本侧)行为不变。
+"""
+from __future__ import annotations
+
+from sr_od.application.currency_war.kernel.cw_effect_inventory import (
+    BOARD_REWRITE_UPGRADE_ALL,
+    apply_board_rewrite,
+)
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    BenchSlot,
+    BenchView,
+    ChannelSig,
+    GameState,
+    Unit,
+    apply_effect_burst_grant,
+    consume_defect_sink,
+    game_state_of,
+)
+from sr_od.application.currency_war.kernel.cw_investments import (
+    STRATEGY_EFFECTS,
+)
+from sr_od.application.currency_war.kernel.cw_strategy_session import (
+    StrategySession,
+)
+
+_SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep', mode='read')
+
+_SELL_ALL = STRATEGY_EFFECTS['人力重组']
+
+
+def _seeded_gs() -> GameState:
+    """种子容器(经 game_state_of 缓存单例支冷建,与生产局容器同构)。"""
+    return game_state_of(StrategySession())
+
+
+def test_sell_all_channel_dual_arm_by_anchor() -> None:
+    """人力重组双臂(通道规则「未锚定 → 随机态」):种子容器(未闩)
+    SELL_ALL 清空写恰三行 source=logic_rand(未验证推算走随机态,首观察
+    静默覆盖);置闩(测试专口直赋)后同路径 source=logic(确定面)。"""
+    # 臂 1:种子容器(未闩)→ 清空写走随机态
+    gs = _seeded_gs()
+    assert gs.front_row.source == 'logic_rand', '前置:冷建含种子底座'
+    seq_before = gs.write_seq
+    report = apply_board_rewrite(gs, _SELL_ALL)
+    assert report is not None
+    assert report.cleared_fields == ('front_row', 'back_row', 'bench'), \
+        '种子后三门全开,三域各一行清空写'
+    assert report.refund_gold == 0 and report.sold_units == 0, \
+        '种子空底座无可出售面,退款零'
+    assert gs.write_seq - seq_before == 3, '恰好三行清空写'
+    assert gs.front_row.source == 'logic_rand'
+    assert gs.back_row.source == 'logic_rand'
+    assert gs.bench.source == 'logic_rand'
+    # 臂 2:置闩后同路径 → 按现语义 write_logic
+    gs2 = _seeded_gs()
+    gs2.prep_anchored = True
+    report2 = apply_board_rewrite(gs2, _SELL_ALL)
+    assert report2 is not None
+    assert report2.cleared_fields == ('front_row', 'back_row', 'bench')
+    assert gs2.front_row.source == 'logic'
+    assert gs2.back_row.source == 'logic'
+    assert gs2.bench.source == 'logic'
+
+
+def test_sell_all_silent_override_unanchored_mismatch_after_anchor() -> None:
+    """静默覆盖臂:未闩清空写(随机态)被观察以不同值覆盖 → 零失配
+    三分流行、差异落 logic_rand_outcome(首观察静默覆盖);置闩后同场景
+    (确定面清空写)被观察覆盖 → observe_vs_logic_mismatch 缺陷行
+    (失配网未盲)。"""
+    other_view = BenchView(
+        slots=[BenchSlot(kind='unit',
+                         unit=Unit(char_id='停云', star=1, slot=1))]
+        + [BenchSlot(kind='empty')] * 8, capacity=9)
+    # 未闩臂:随机态清空写 → 观察覆盖静默
+    gs = _seeded_gs()
+    apply_board_rewrite(gs, _SELL_ALL)
+    consume_defect_sink()
+    gs.observe(gs.bench, other_view, sig=_SIG_OBS)
+    kinds = [r['kind'] for r in consume_defect_sink()]
+    assert 'observe_vs_logic_mismatch' not in kinds, '未锚定期首观察零失配行'
+    assert 'logic_rand_outcome' in kinds, '随机态差异落 logic_rand_outcome'
+    # 闩臂:确定面清空写 → 观察覆盖产真失配行
+    gs2 = _seeded_gs()
+    gs2.prep_anchored = True
+    apply_board_rewrite(gs2, _SELL_ALL)
+    consume_defect_sink()
+    gs2.observe(gs2.bench, other_view, sig=_SIG_OBS)
+    kinds2 = [r['kind'] for r in consume_defect_sink()]
+    assert 'observe_vs_logic_mismatch' in kinds2, '锚定后失配网原样生效'
+
+
+def test_upgrade_all_and_other_bridges_unchanged() -> None:
+    """回归臂:全员晋升(UPGRADE_ALL)零容器写不变(替换面随机,报告作
+    负写端留证);非板面重写条目过桥零动作;burst 桥写端(免费刷新余额
+    一次累加,效果账本侧)行为不变、零 Field 行。"""
+    gs = _seeded_gs()
+    seq_before = gs.write_seq
+    report = apply_board_rewrite(gs, STRATEGY_EFFECTS['全员晋升'])
+    assert report is not None
+    assert report.rewrite == BOARD_REWRITE_UPGRADE_ALL
+    assert report.cleared_fields == ()
+    assert report.refund_gold == 0 and report.sold_units == 0
+    assert report.partial_read is False
+    assert gs.write_seq == seq_before, 'UPGRADE_ALL 零容器写(随机面观察收口)'
+    # 非板面重写条目 → None 零动作(零 Field 写)
+    assert apply_board_rewrite(gs, STRATEGY_EFFECTS['固定理财']) is None
+    assert gs.write_seq == seq_before
+    # burst 桥:免费刷新余额一次累加(效果账本侧,零容器 Field 行)
+    apply_effect_burst_grant(gs, STRATEGY_EFFECTS['固定理财'])
+    assert gs.effects.free_refresh_balance == 2
+    assert gs.write_seq == seq_before, 'burst 桥零容器 Field 行'
