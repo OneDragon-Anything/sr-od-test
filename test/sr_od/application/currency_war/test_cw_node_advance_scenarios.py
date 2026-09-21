@@ -8,9 +8,9 @@ changes/2026-09-20-node-advance-action-report landing §3.6 走查集按新模�
   test_cw_node_advance_report.test_first_anchor_establishes_and_grants
 - S2 快弹窗全型(确认→弹窗→选卡→备战锚定)→
   test_fast_popup_advance_precedes_pick_and_prep_reanchor
-- 补给两形态 → 已有 test_cw_supply_advance_wiring(两剧本 + 证据 miss)
-- boss 段(奖励关确认推进 + 简报类型直定 + 证据 miss/bail 后迟到流转
-  不产生错位类型直定)→ test_boss_segment_bail_seam_and_cross_plane
+- 补给两形态 → 已有 test_cw_supply_advance_wiring(两剧本,点击即推进)
+- boss 段(奖励关确认点击即推进 + 简报类型直定 + 直定目标恒正确)→
+  test_boss_segment_click_advance_and_cross_plane
   (简报直定 hist 目标基础锁 = 已有
   test_cw_game_state_contract.test_boss_briefing_report_types_hist_node)
 - 跨位面确认(序号公式自然跨位,E13)→ 同上测试尾段
@@ -25,7 +25,6 @@ changes/2026-09-20-node-advance-action-report landing §3.6 走查集按新模�
 """
 from __future__ import annotations
 
-import time
 from types import SimpleNamespace
 
 from test.sr_od.application.currency_war._cw_helpers import (
@@ -74,11 +73,11 @@ def _gs_with(test_context, monkeypatch, spec_name: str) -> GameState:
 def test_fast_popup_advance_precedes_pick_and_prep_reanchor(
     test_context, monkeypatch,
 ) -> None:
-    """S2 快弹窗全型:结算确认的转移证据 = 弹窗锚(投资策略,白名单全集
-    成员)→ 确认时点即推进(design §2.3「先推进后选卡」由因果序结构性
-    成立,不依赖弹窗推断);选卡登记零推进(登记语义归拿卡上报侧,
-    design §2.6);选卡后备战帧锚定等值 reanchor 翻回观察态,下一终结
-    动作解锁。"""
+    """S2 快弹窗全型:结算确认**点击即上报**(去证据门,用户裁定
+    2026-09-21——点了就是上报,无弹窗锚探查)→ 推进先于弹窗选卡由因果序
+    结构性成立(design §2.3,不依赖弹窗推断);选卡登记零推进(登记语义
+    归拿卡上报侧,design §2.6);选卡后备战帧锚定等值 reanchor 翻回观察态,
+    下一终结动作解锁。"""
     from sr_od.application.currency_war.operations.cw_op.cw_op_settle_confirm import (
         CwOpSettleConfirm,
     )
@@ -88,15 +87,13 @@ def test_fast_popup_advance_precedes_pick_and_prep_reanchor(
 
     op = CwOpSettleConfirm(test_context)
     monkeypatch.setattr(op, 'last_screenshot', object(), raising=False)
-    # 证据集仅弹窗锚命中(遭遇/投资策略锚 = 白名单成员;design §2.3
-    # 证据集同源条款),其余锚 miss
+    monkeypatch.setattr(op, 'screenshot', lambda: object())
+    # 「继续挑战」点击机械半全桩命中(点击即上报,零证据探查)
     monkeypatch.setattr(
-        op, 'round_by_find_area',
-        lambda scr, s, a, **k: _Area(
-            (s, a) == ('货币战争-投资策略', '标识-请选择投资策略')))
-    rs = _run_node(test_context, op, op.confirm)
+        op, 'round_by_find_and_click_area',
+        lambda *a, **k: _Area(True))
+    _run_node(test_context, op, op.confirm)
 
-    assert rs.is_success, f'弹窗锚证据应放行上报:{rs!r}'
     assert gs.node_ord.value == 2 and gs.node_ord.source == 'logic', (
         '确认点击时点即推进(快弹窗:推进先于弹窗选卡)')
 
@@ -112,56 +109,33 @@ def test_fast_popup_advance_precedes_pick_and_prep_reanchor(
     assert effective_node_ord(gs) == 3, 'reanchor 后下一确认可推进'
 
 
-# ================================================== boss 段:bail 封缝 + 跨位面
+# ============================================== boss 段:直定目标 + 跨位面
 
 
-def test_boss_segment_bail_seam_and_cross_plane(
+def test_boss_segment_click_advance_and_cross_plane(
     test_context, monkeypatch,
 ) -> None:
-    """boss 段帧序列锁(S6/E12/E13 + 攻击 R3 bail 变体):
+    """boss 段帧序列锁(S6/E12/E13;去证据门重述 2026-09-21):
 
-    - E12 奖励关结算确认推进 → boss 节点(位面末 ord 9);
-    - **bail 封缝(T-2 reviewer 转交)**:CwOpSettleConfirm bail(过渡帧
-      双 miss 上界退出)后流转迟到(简报锚后现身)——CwScreenBattleWait
-      ③段白名单命中出口补 settle_confirm 上报,恢复「白名单命中 ⇒ 必有
-      上报」不变量(design §2.3 证据集同源条款):hist 已推进至 boss 节点,
-      简报类型直定目标不落错节点(不写奖励关 ord 8);
+    - E12 奖励关结算确认**点击即推进** → boss 节点(位面末 ord 9);
+    - 简报类型直定目标恒正确:无证据门 ⇒ 上报先于下一节点任何画面渲染
+      恒成立 ⇒ hist 已推进至 boss 节点,简报直定不落错节点(不写奖励关
+      ord 8)——原 bail 缝随证据等待机制退役结构性消失;
     - E13 boss 结算确认 → 序号公式自然跨位面(9+1=10=(2-1)*9+1,
       design §2.1),位面 2 首备战帧等值 reanchor 解锁下一确认。
     """
-    from sr_od.application.currency_war.currency_war_config import (
-        CurrencyWarConfig,
-    )
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_battle_wait as bwo,
-    )
-
     gs = _gs_with(test_context, monkeypatch, '双手狸开键盘！')
-    # 奖励关(ord 8)已锚定;结算确认推进 → boss 节点 ord 9(E12)
+    # 奖励关(ord 8)已锚定;结算确认点击即推进 → boss 节点 ord 9(E12)
     observe_node_anchor(gs, 8, trigger_screen='货币战争-备战', actor=_ACTOR)
     assert report_node_advance(gs, trigger='settle_confirm') is True
     assert effective_node_ord(gs) == 9
 
-    # bail 后迟到流转:hist 已在 9(logic),简报直定目标 = 9(boss 节点)
+    # 简报帧直定:hist 已在 9(logic),简报直定目标 = 9(boss 节点)
     report_screen_boss_briefing_obs(gs, CwScreenBossBriefingObs(on_screen=True))
     _node = gs.node.value
     assert _node is not None and _node.kind == 'boss'
     assert (_node.plane, _node.round_num) == (1, 9), (
         '简报类型直定目标 = 现 hist(boss 节点),不落错奖励关节点')
-
-    # 补报出口(bail 封缝)行为锁:白名单命中 → settle_confirm 补报幂等
-    # (op 内已报则观察态门挡零推进)
-    st = bwo.SettlementState(run_start_ts=time.monotonic(), is_new_match=False)
-    op = bwo.CwScreenBattleWait(
-        test_context, st, CurrencyWarConfig(test_context.current_instance_idx))
-    monkeypatch.setattr(op, 'last_screenshot', None, raising=False)
-    monkeypatch.setattr(op, 'round_by_find_area',
-                        lambda scr, s, a, **k: _Area(False))
-    monkeypatch.setattr(op, '_hit_completion_anchor', lambda screen: True)
-    rs = op.wait()
-    assert rs.is_success and rs.status == 'back_to_loop', (
-        f'白名单命中出口应交回循环:{rs!r}')
-    assert effective_node_ord(gs) == 9, '补报幂等:已推进零重复推进'
 
     # E13:boss 结算确认 → 10 = 位面2 第1轮(序号公式自然跨位面)
     observe_node_anchor(gs, 9, trigger_screen='货币战争-备战', actor=_ACTOR)

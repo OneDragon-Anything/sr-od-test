@@ -1,15 +1,15 @@
 """结算确认动作 op 流程锁(迭代 2026-09-20-node-advance-action-report
-landing §3.2 判据面:CwOpSettleConfirm 点击/证据等待/推进上报接线)。
+landing §3.2 判据面;去证据门形态 2026-09-21 用户裁定)。
 
-判据 ↔ 测试对照(landing §3.2 完成判据):
+判据 ↔ 测试对照:
 
-- 结算帧 → op → 点击落位 → 白名单锚帧 → 上报恰一次
-  (重入帧不重复上报——第二遍白名单已命中不重复点) →
-  test_settle_confirm_clicks_evidence_and_reports_once
+- 结算帧 → op → 点击即上报(logic 态恰一档)→ 按钮离场交回宿主 →
+  test_click_reports_once_and_returns
+- 死点击(结算屏恒在)→ 重复点击重复上报被观察态门挡(零推进)+
+  M39 长按兜底(M39 迁入锁)→
+  test_dead_click_gate_blocks_and_long_press_retry
 - 战败分支不进本 op(终局路径回归不变)→
   test_defeat_branch_never_enters_settle_confirm
-- 证据 miss(白名单帧不给)= 不上报,长按兜底继续重试(M39 迁入锁)→
-  test_evidence_miss_no_report_long_press_retry
 
 驱动 = 真帧 fixture + 真 OCR 识别链(FixtureController 剧本推进),容器
 = cw4_session 旁表 + observe_node_anchor 预锚定 observation 态(新路径
@@ -92,12 +92,13 @@ def _run_execute(test_context, op) -> object:
         reset_running_state(test_context, op)
 
 
-def test_settle_confirm_clicks_evidence_and_reports_once(
+def test_click_reports_once_and_returns(
     test_context, monkeypatch: pytest.MonkeyPatch,
     fixture_controller: FixtureController,
 ) -> None:
-    """主链路锁:结算帧 → 点「继续挑战」落位 → 白名单锚帧 → settle_confirm
-    上报恰一档(logic 态);重入已命中帧零点击零推进(观察态门结构挡)。"""
+    """主链路锁:结算帧 → 点「继续挑战」落位 → **点击即上报**恰一档
+    (logic 态)→ 按钮离场(流转落地)→ op 交回宿主。重入已流转帧:
+    按钮不在场零点击零上报,直 success 交回(出口判定归宿主白名单)。"""
     if not test_context.has_screen(*_SETTLE_FRAME):
         pytest.skip(f'存档截图缺失:screens/{_SETTLE_FRAME[0]}/{_SETTLE_FRAME[1]}.webp')
     if not test_context.has_screen(*_BOARD_FRAME):
@@ -109,7 +110,7 @@ def test_settle_confirm_clicks_evidence_and_reports_once(
             'frame': _SETTLE_FRAME,
             'exit': ('on_click_in', _SETTLE_SCREEN, _SETTLE_BTN),
         },
-        {'frame': _BOARD_FRAME},   # terminal:白名单锚帧(转移证据)
+        {'frame': _BOARD_FRAME},   # terminal:流转落地(按钮离场)
     ])
     op = _WatchedConfirm(test_context)
     op._init_watchdog()
@@ -120,13 +121,13 @@ def test_settle_confirm_clicks_evidence_and_reports_once(
         f'phase_idx={fixture_controller.phase_idx} '
         f'clicks={fixture_controller.recorded_clicks}')
     assert fixture_controller.phase_idx == 1, (
-        f'点击应推进到白名单锚帧:phase_idx={fixture_controller.phase_idx}')
+        f'点击应推进到流转落地帧:phase_idx={fixture_controller.phase_idx}')
     assert fixture_controller.click_hit_area(_SETTLE_SCREEN, _SETTLE_BTN), (
         f'「继续挑战」点击落位缺失:{fixture_controller.recorded_clicks}')
     assert gs.node_ord.value == 2 and gs.node_ord.source == 'logic', (
-        '转移证据命中后上报恰一档(logic 推进未确认态)')
+        '点击即上报恰一档(logic 推进未确认态;无证据等待)')
 
-    # 重入帧:白名单已命中 → 不重复点击、不重复上报(结构挡)
+    # 重入已流转帧:按钮不在场 → 零点击零上报,直 success 交回宿主
     fixture_controller.set_phases([{'frame': _BOARD_FRAME}])
     _clicks_before = len(fixture_controller.recorded_clicks)
     op2 = _WatchedConfirm(test_context)
@@ -134,16 +135,17 @@ def test_settle_confirm_clicks_evidence_and_reports_once(
     result2 = _run_execute(test_context, op2)
     assert result2.success
     assert len(fixture_controller.recorded_clicks) == _clicks_before, \
-        '已命中帧不重复点击'
+        '已流转帧不点击(按钮离场即交回)'
     assert gs.node_ord.value == 2, '重复上报零推进(观察态门挡)'
 
 
-def test_evidence_miss_no_report_long_press_retry(
+def test_dead_click_gate_blocks_and_long_press_retry(
     test_context, monkeypatch: pytest.MonkeyPatch,
     fixture_controller: FixtureController,
 ) -> None:
-    """证据 miss 锁:白名单帧不给(结算屏恒在)→ 不上报 + M39 长按兜底
-    继续重试(第 3 轮停留长按 (960,898) press_time=0.5,现行为迁入)。"""
+    """死点击锁:结算屏恒在(点击不生效)→ 每轮重试点击 + 重复上报被
+    观察态门挡(推进恰一档后零推进)+ 第 3 轮停留长按 (960,898)
+    press_time=0.5(M39 迁入锁;去证据门后死点击自愈链靠宿主重分派)。"""
     if not test_context.has_screen(*_SETTLE_FRAME):
         pytest.skip(f'存档截图缺失:screens/{_SETTLE_FRAME[0]}/{_SETTLE_FRAME[1]}.webp')
     gs = _anchored_session(test_context, monkeypatch, ordinal=1)
@@ -160,16 +162,16 @@ def test_evidence_miss_no_report_long_press_retry(
     monkeypatch.setattr(fixture_controller, 'click', _click_recorder)
 
     fixture_controller.set_phases([
-        {'frame': _SETTLE_FRAME},   # 无 exit:白名单永不出现(证据 miss)
+        {'frame': _SETTLE_FRAME},   # 无 exit:结算屏恒在(死点击形态)
     ])
     op = _WatchedConfirm(test_context)
     op.watchdog_max_rounds = 8   # 有界驱动:长按触发后即可停
     op._init_watchdog()
     result = _run_execute(test_context, op)
 
-    assert not result.success, '证据 miss 形态不得假成功(看门狗截停)'
-    assert gs.node_ord.value == 1 and gs.node_ord.source == 'observation', (
-        '证据 miss = 不上报(现值保持锚定态)')
+    assert not result.success, '死点击形态驻留不收工(看门狗截停)'
+    assert gs.node_ord.value == 2 and gs.node_ord.source == 'logic', (
+        '首报推进恰一档后,重复上报被观察态门挡(零推进,结构挡)')
     assert fixture_controller.click_hit_area(_SETTLE_SCREEN, _SETTLE_BTN), (
         '长按兜底前先有正常「继续挑战」点击(重试现行为)')
     long_presses = [(x, pt) for x, pt in _press_recorder
