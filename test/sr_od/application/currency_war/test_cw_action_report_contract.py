@@ -2,7 +2,8 @@
 
 规约:词表类 ``CwActionXxxParam`` 恰有同名上报函数
 ``report_action_<snake>_param``(kernel/cw_action_report 包,每动作
-一文件;零写族落 zero_writes;包级 ``__getattr__`` 命名规约解析)。
+一文件;工具族落 ``tool_use``,其余零写族落 ``zero_writes``;包级
+``__getattr__`` 命名规约解析)。
 新增动作漏建上报函数/漏建文件 = 本锁红。声明面即命名规约本身,
 无分发表——分派只允许出现在实机 op 直调与 sim/回放引擎入口。
 """
@@ -11,7 +12,20 @@ import re
 import pytest
 
 from sr_od.application.currency_war.kernel import cw_action_report as rpt
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    consume_defect_sink,
+)
 from sr_od.application.currency_war.kernel.cw_vocab import CW_ACTION_TYPES
+
+
+@pytest.fixture
+def _isolate_defect_buffer():
+    """缺陷台账缓冲隔离(工具七类上报升格容器写后,冒烟路径对空参/未观察
+    容器会产生 tool_* 留证行;前清防他测残留、后清防本测外泄——全局缓冲
+    被后续测试整池排水对账,残留行即假红)。"""
+    consume_defect_sink()
+    yield
+    consume_defect_sink()
 
 
 def _snake(cls_name: str) -> str:
@@ -32,7 +46,7 @@ def test_every_action_type_has_report_function():
 
 
 @pytest.mark.parametrize('t', CW_ACTION_TYPES, ids=lambda t: t.__name__)
-def test_report_function_accepts_param_and_sig(t):
+def test_report_function_accepts_param_and_sig(t, _isolate_defect_buffer):
     """逐类冒烟:上报函数以零写/拒绝路径可调用(不要求容器效果,
     只锁「函数在场且签名可走」——语义正确性归各域直锁)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (

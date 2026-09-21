@@ -37,6 +37,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     Unit,
     bench_view_slots_of,
+    consume_defect_sink,
     game_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_prep_actions import (
@@ -119,23 +120,38 @@ def test_ore_executor_is_mechanical_payload_clicks(monkeypatch):
 
 # ===== R9 逻辑态全覆盖锁(判据 5)=====
 
-def test_vocab_actions_all_have_logic_state_projection():
+@pytest.fixture
+def _isolate_defect_buffer():
+    """缺陷台账缓冲隔离(工具上报升格容器写后,本测覆盖循环会落 tool_*
+    留证行;后清防外泄——全局缓冲被后续测试整池排水对账,残留行即假红)。"""
+    consume_defect_sink()
+    yield
+    consume_defect_sink()
+
+
+def test_vocab_actions_all_have_logic_state_projection(
+        _isolate_defect_buffer):
     """词表逻辑态覆盖锁(R9;动作 op 重组后宿主 = 上报函数族
     ``kernel/cw_action_report``,每动作恰一个具名函数——原聚合写口
     ``apply_prep_action_logic`` 随批退役)。
 
-    覆盖面两集(登记面申报 = 函数族 docstring:有容器写动作一动作
+    覆盖面三集(登记面申报 = 函数族 docstring:有容器写动作一动作
     一文件,零写族集中 ``zero_writes``):
     - **容器写集**:CwActionSellBenchParam/CwActionSellDeployedParam/
       CwActionDeployMoveParam/CwActionLevelUpParam/CwActionCollectOreParam/
       CwActionOpenTomeParam/CwActionOpenBookcardParam/CwActionWearEquipParam
       ——供数容器上逐动作必产生容器写(write_seq 推进);
-    - **合法零写集**(正本申报「消费真值归观察」):CwActionOpenBoxParam
-      (R7 终结化)/工具原子七类——容器零写。
+    - **工具容器写集**(tool-gain-report 迭代自零写族升格,机械执行直接
+      上报写容器):冶金炉/特权赋予卡/拆装扳手/精密拆装扳手/员工投影仪/
+      完美投影仪——逐动作面对相同入场态(equips 含该工具 + 目标件/穿戴
+      面)必产生容器写;好运令牌除外(见零写集);
+    - **合法零写集**:CwActionOpenBoxParam(R7 终结化)/CwActionLuckyTokenUse
+      Param(判据面 fail-closed 永不准入,上报零写留证)。
     裁决注记:CwActionWearEquipParam 原在零写集(聚合口形态),上报
     函数族起穿戴 = 发出即记账 owned −1(在册才减,执行侧效果收编进
-    上报),按新事实移入容器写集。函数名机械推导(snake 规约同
-    test_cw_action_report_contract)。"""
+    上报),按新事实移入容器写集;工具六类原在零写集(零写占位),
+    2026-09-21-tool-gain-report 迭代升格容器写。函数名机械推导(snake
+    规约同 test_cw_action_report_contract)。"""
     import re
 
     from test.sr_od.application.currency_war._cw_helpers import cw4_session
@@ -195,6 +211,36 @@ def test_vocab_actions_all_have_logic_state_projection():
     def _seq() -> int:
         return gs.write_seq
 
+    # 工具容器写集(tool-gain-report 升格):逐动作重播种「equips 含该
+    # 工具 + 目标件/穿戴面 + 前排 1 号位有单位」的相同入场态——前序工具
+    # 动作会消耗件名(炉替换/特权变换/扳手回区)与穿戴面,覆盖锁按同一
+    # 入场态逐个评估写行为;重播种 = 容器域 builder 同写入口(observe)。
+    def _reseed_tool_state(tool_name: str, target_unit: Unit) -> None:
+        gs.observe(gs.equips, [tool_name, '轮滑鞋'], sig=_sig)
+        gs.observe(gs.front_row, [target_unit], sig=_sig)
+
+    tools_written: list = [
+        (CwActionFurnaceUseParam(target_kind='equip', item_name='轮滑鞋'),
+         '冶金炉'),
+        (CwActionPrivilegeCardUseParam(target_kind='equip',
+                                       item_name='轮滑鞋'), '特权赋予卡'),
+        (CwActionWrenchUseParam(row='front', slot=1), '拆装扳手'),
+        (CwActionPrecisionWrenchUseParam(row='front', slot=1), '精密拆装扳手'),
+        (CwActionStaffProjectorUseParam(row='front', slot=1), '员工投影仪'),
+        (CwActionPerfectProjectorUseParam(row='front', slot=1), '完美投影仪'),
+    ]
+    for action, tool in tools_written:
+        _reseed_tool_state(tool, Unit(char_id='丙', star=1,
+                                      equips=['轮滑鞋'], slot=1))
+        before = _seq()
+        _report(gs, action)
+        assert _seq() > before, f'{type(action).__name__} 应产生容器写'
+    # 供数容器重播种(工具循环的消耗/置换不复原;穿戴腿依赖
+    # owned 在册、卖出腿依赖前排 1 号位有单位)。
+    gs.observe(gs.equips, ['轮滑鞋'], sig=_sig)
+    gs.observe(gs.front_row, [Unit(char_id='丙', star=1, equips=[],
+                                   slot=1)], sig=_sig)
+
     written: list = [
         CwActionSellBenchParam(bench_idx=0),
         CwActionSellDeployedParam(deployed_idx=0),
@@ -209,12 +255,6 @@ def test_vocab_actions_all_have_logic_state_projection():
     ]
     zero: list = [
         CwActionOpenBoxParam(slot=None),
-        CwActionFurnaceUseParam(target_kind='equip', item_name='轮滑鞋'),
-        CwActionPrivilegeCardUseParam(target_kind='equip', item_name='轮滑鞋'),
-        CwActionWrenchUseParam(row='front', slot=1),
-        CwActionPrecisionWrenchUseParam(row='front', slot=1),
-        CwActionStaffProjectorUseParam(row='front', slot=1),
-        CwActionPerfectProjectorUseParam(row='front', slot=1),
         CwActionLuckyTokenUseParam(row='front', slot=1),
     ]
     for action in written:
@@ -225,14 +265,15 @@ def test_vocab_actions_all_have_logic_state_projection():
         before = _seq()
         _report(gs, action)
         assert _seq() == before, f'{type(action).__name__} 应合法零写'
-    # 词表覆盖完备性:两集并集覆盖 CW_ACTION_TYPES 中非转场/非组合壳成员
+    # 词表覆盖完备性:三集并集覆盖 CW_ACTION_TYPES 中非转场/非组合壳成员
     names = {c.__name__ for c in CW_ACTION_TYPES}
-    covered = ({type(a).__name__ for a in written}
+    covered = ({type(a).__name__ for a, _t in tools_written}
+               | {type(a).__name__ for a in written}
                | {type(a).__name__ for a in zero})
     assert {'CwActionCollectOreParam', 'CwActionOpenTomeParam', 'CwActionOpenBookcardParam', 'CwActionOpenBoxParam',
             'CwActionSellBenchParam', 'CwActionDeployMoveParam', 'CwActionSellDeployedParam', 'CwActionLevelUpParam',
             'CwActionWearEquipParam'} <= covered
-    assert names >= covered   # 两集均为词表成员(不越词表)
+    assert names >= covered   # 三集均为词表成员(不越词表)
 
 
 # ===== CwActionLevelUpParam 形态锁 2a 半(判据 2)=====

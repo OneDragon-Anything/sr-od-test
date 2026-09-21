@@ -177,12 +177,23 @@ def test_pick_channels_emission_phase_is_intent_only(
 
 
 def test_zero_write_delegates_retired_and_routing_migrated() -> None:
-    """零写退役锁:zero_writes 两行委托不复存在;包级命名规约解析路由到
-    具名模块(直接 import 零写委托的旧消费面 = AttributeError 响亮)。"""
+    """零写退役锁:zero_writes 五行委托(pick_equip/pick_supply + 工具七类,
+    后者随 tool-gain-report 迭代迁 tool_use)不复存在;包级命名规约解析
+    路由到具名模块(直接 import 零写委托的旧消费面 = AttributeError
+    响亮)。"""
     assert not hasattr(zero_writes_mod, 'report_action_pick_equip_param'), \
         'pick_equip 零写委托已迁出'
     assert not hasattr(zero_writes_mod, 'report_action_pick_supply_param'), \
         'pick_supply 零写委托已迁出'
+    for name in ('report_action_furnace_use_param',
+                 'report_action_privilege_card_use_param',
+                 'report_action_wrench_use_param',
+                 'report_action_precision_wrench_use_param',
+                 'report_action_staff_projector_use_param',
+                 'report_action_perfect_projector_use_param',
+                 'report_action_lucky_token_use_param'):
+        assert not hasattr(zero_writes_mod, name), \
+            f'{name} 零写委托已迁出(tool_use 容器写)'
     assert pick_equip_mod.report_action_pick_equip_param.__module__ \
         .endswith('.pick_equip'), '包级解析路由到 pick_equip 具名模块'
     assert pick_supply_mod.report_action_pick_supply_param.__module__ \
