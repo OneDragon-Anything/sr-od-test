@@ -171,7 +171,9 @@ class TestBudgetDisclosureWriteRead:
         W6 波 4:预算接缝读 session 容器单例,种子先于披露(生产同路 =
         观察漏斗,测试同路 = cw4_gs 容器域种子)。"""
         sess = StrategySession()
-        _cur(sess, 1, 8, 53, node_type='prep')
+        # 构造金 120:开局种子底座后备战帧息帽含排程升级费(种子域喂入
+        # reserve_cap 现算),取高金保「溢余/义务非退化」判据有效。
+        _cur(sess, 1, 8, 120, node_type='prep')
         disclose_budget(game_state_of(sess), sess)
         st = state_of(sess)
         # 独立现算 oracle:同输入现算确定 ⇒ 与披露写点内部同值(非转抄
@@ -214,23 +216,24 @@ class TestShopOpenFrameDualWrite:
         assert st.v3_release_budget == 0
 
     def test_shop_open_frame_overwrites_with_frame_values(self):
-        """店开观察帧覆写:overflow/budget 变帧现值(gold 64 > cap ⇒
-        溢余 14/义务 >0);同轮重复覆写不清 spent(轮界清零归 prep 键戳
+        """店开观察帧覆写:overflow/budget 变帧现值(gold 120 > 息帽 ⇒
+        溢余/义务 >0;开局种子底座后备战帧息帽含排程升级费,构造金取高
+        保非退化);同轮重复覆写不清 spent(轮界清零归 prep 键戳
         独占);下轮 prep 关店帧 ⇒ 披露 = 容器现值重算(W6 波 4 语义
         变更,见④注;键戳翻轮清零断言面 = 锁 D 主锁,此处不重复)。"""
         sess = StrategySession()
-        # ① prep 关店帧(轮入口披露;容器金缺席 = 关店不采金,首读无前值
-        # 不 carry ⇒「金未采」0 语义保持)
+        # ① prep 关店帧(轮入口披露;种子金(基线 3)低于息帽,溢余 0——
+        # 「金未采/金低」两形态在披露面同值,语义注释见锁 F 首案)
         disclose_budget(game_state_of(sess), sess)
         st = state_of(sess)
         assert st.v3_reserve_overflow == 0
         # ② 店开帧覆写(帧现值):金源切容器(W6 波 4),店开帧经种子写
         # 容器(生产同路 = 观察漏斗;测试同路 = cw4_gs 容器域种子),披露读
         # 容器现值
-        cw4_gs(sess, gold=64, level=5, plane=1, round_num=8, hp=100,
+        cw4_gs(sess, gold=120, level=5, plane=1, round_num=8, hp=100,
                node='prep')
         disclose_budget_at_shop_frame(game_state_of(sess), sess)
-        assert st.v3_reserve_overflow == 64 - st.v3_reserve_cap
+        assert st.v3_reserve_overflow == 120 - st.v3_reserve_cap
         assert st.v3_reserve_overflow > 0
         assert st.v3_release_budget > 0
         # ③ 同轮重复覆写不清 spent
@@ -244,7 +247,7 @@ class TestShopOpenFrameDualWrite:
         cw4_gs(sess, gold_unread=True, level=5, plane=1, round_num=9,
                hp=100, node='prep')
         disclose_budget(game_state_of(sess), sess)
-        assert st.v3_reserve_overflow == 64 - st.v3_reserve_cap
+        assert st.v3_reserve_overflow == 120 - st.v3_reserve_cap
         assert st.v3_reserve_overflow > 0
 
 

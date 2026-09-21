@@ -1221,8 +1221,10 @@ def test_restore_session_empty_refused_then_late_truth_lands(
     test_restore_session_late_truth_relay_lands,断言腿逐条保留):
 
     - 阶段 1(空默认拒):恢复局新 session 五镜像字段停会话默认
-      (''/[])→ 生产 feed(read_game_state 观察流)逐帧中继全被空值闸拒,
-      GameState 五字段保持 None(未知态不固化成正式值);
+      (''/[])→ 生产 feed(read_game_state 观察流)逐帧中继全被空值闸拒:
+      非种子的 plane_bosses 保持 None(未知态不固化成正式值);开局种子
+      底座三 A 类镜像字段(active_strategies/active_env/enemy_affixes)
+      冷建即种子态,拒写语义 = 保持种子原样、不落 session_carrier 痕迹;
     - 阶段 2(真值后到):session 侧被接管协议/事件屏 handler 写入 →
       下一帧中继正常落五镜像(source=logic + evidence=session_carrier)
       ——空默认拒写不拦截后到真值。"""
@@ -1235,9 +1237,12 @@ def test_restore_session_empty_refused_then_late_truth_lands(
     cw_observation.read_game_state(ctx, None, phase='prep_clean')
 
     gs = game_state_of(sess)
-    for name in _MIRROR_FIELDS:
+    assert gs.plane_bosses.value is None, '非种子镜像保持 None(空默认拒)'
+    for name in ('active_strategies', 'active_env', 'enemy_affixes'):
         fld = getattr(gs, name)
-        assert fld.value is None, f'恢复局空默认禁中继落记录:{name}'
+        assert fld.source == 'logic_rand' \
+            and fld.evidence == 'seed:opening', \
+            f'空默认拒写:保持开局种子态不落中继痕迹:{name}'
 
     # 真值后到(恢复局:简报/事件屏/难度确认屏写端补齐会话侧事实)
     # active 双字段播种随终态契约 §B 迁容器(write_logic 直写;中继读已切容器源)

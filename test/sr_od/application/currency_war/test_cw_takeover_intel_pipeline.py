@@ -253,7 +253,9 @@ def test_plane_intel_sift_miss_fails_loudly(test_context, monkeypatch) -> None:
     assert 'SIFT 未命中' in (res.status or ''), f'失败状态留证:{res!r}'
     gs = game_state_of(sess)
     assert gs.plane_bosses.value is None, '失败零写容器(响亮失败,不留半真值)'
-    assert gs.enemy_affixes.value is None, '失败零写容器(词缀同)'
+    assert gs.enemy_affixes.value == [] \
+        and gs.enemy_affixes.source == 'logic_rand', \
+        '失败零写容器:词缀保持开局种子空表原样(不留半真值)'
     node_bar = _rect_of(test_context, '货币战争-位面详情', '区域-节点条')
     boss_clicks = [p for p in ctrl.recorded_clicks if _in_rect(p, node_bar)]
     assert 3 <= len(boss_clicks) <= 5, (
