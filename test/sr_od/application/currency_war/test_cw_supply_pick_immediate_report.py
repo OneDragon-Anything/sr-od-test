@@ -130,6 +130,7 @@ def test_chosen_supply_written_before_dispatch_and_no_landing_phase(
     monkeypatch.setattr(sn, 'read_supply_options',
                         lambda ctx, screen: [(opt, SimpleNamespace(x=900, y=550))])
     monkeypatch.setattr(op, '_read_node_bar', lambda screen: None)
+    monkeypatch.setattr(op, '_read_refresh_anchor', lambda screen: None)
 
     chosen_at_dispatch: list = []
 

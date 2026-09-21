@@ -122,7 +122,7 @@ def test_terminal_contract_schema_and_match_shape(monkeypatch):
         assert DEFAULT_GS_SCHEMA[key] == 1, key
     assert DEFAULT_GS_SCHEMA['encounter'] == 2
     assert DEFAULT_GS_SCHEMA['supply'] == 2
-    assert DEFAULT_GS_SCHEMA['node_screen_refresh'] == 2
+    assert DEFAULT_GS_SCHEMA['node_screen_refresh'] == 3
     # Match additive 前置字段:生产漏斗填充形态,缺省 None(3.5 收紧必填)
     gs = GameState(schema_version=1)
     m = CurrencyWarMatch(strategy=None, session=None, gs=gs)

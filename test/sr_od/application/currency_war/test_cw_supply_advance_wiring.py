@@ -82,6 +82,7 @@ def _run_supply_observe(test_context, monkeypatch, ordinal: int | None):
                         lambda scr, s, a, **k: _Area(True))
     monkeypatch.setattr(sn, 'read_supply_options', lambda ctx, screen: [])
     monkeypatch.setattr(op, '_read_node_bar', lambda screen: ordinal)
+    monkeypatch.setattr(op, '_read_refresh_anchor', lambda screen: None)
     _run_node(test_context, op, op.observe)
 
 

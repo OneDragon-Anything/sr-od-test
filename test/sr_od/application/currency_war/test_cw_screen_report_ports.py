@@ -213,8 +213,10 @@ def _case_expert_invite(m):
 def _case_supply_node(m):
     opts = [SupplyOption(idx=0, char='三月七', equip='记忆镜',
                          has_diamond=True)]
-    return (m.CwScreenSupplyNodeObs(in_node=True, options=opts),
-            {'supply': (SupplyPayload(options=opts), 'logic')})
+    return (m.CwScreenSupplyNodeObs(in_node=True, options=opts,
+                                    refresh_left=2),
+            {'supply': (SupplyPayload(options=opts), 'logic'),
+             'supply_refresh_left': (2, 'logic')})
 
 
 def _case_invest_env(m):

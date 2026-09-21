@@ -353,6 +353,37 @@ def test_supply_node_picks_equipment() -> None:
     assert ret2.observation.gs.equips.value, '选中装备入账'
 
 
+def test_supply_refresh_segment_left_semantics() -> None:
+    """sim 补给刷新段(剩余语义,迭代 2026-09-21-event-refresh-unify-
+    supply-pick 3.2):补给节点入口写初始 left=1(sim 世界授予真值);
+    刷新 left−1(≥0 截断)且仍在 SUPPLY_PICK;刷后再刷新 = left=0 闸关,
+    不重掷(落选卡路径);选项重掷流键与旧计数闸等价(used 推导)。"""
+    eng = CwSimEngine()
+    frame = eng.reset(1013, _CFG)
+    for _ in range(64):
+        if (frame.node.plane, frame.node.round_num, frame.node.kind) \
+                == (1, 5, 'supply') and frame.phase is CwSimPhase.PREP:
+            break
+        ret = eng.step(_auto(frame))
+        frame = ret.observation
+    ret = eng.step(CwActionStartBattleParam())
+    gs = ret.observation.gs
+    assert gs.supply_refresh_left.value == 1, '节点入口初始 left=1'
+    opts_before = ret.observation.supply_options
+    # 刷新:left 1→0,仍在 SUPPLY_PICK(选项重掷)
+    ret1 = eng.step(CwActionPickEventParam(option_idx=0, refresh=True))
+    assert gs.supply_refresh_left.value == 0, '刷新 left−1'
+    assert ret1.observation.phase is CwSimPhase.SUPPLY_PICK
+    assert ret1.observation.supply_options != opts_before, '选项重掷'
+    # 刷后再刷:left=0 闸关——不重掷不消耗,落选卡入账路径
+    opts_after_refresh = ret1.observation.supply_options
+    ret2 = eng.step(CwActionPickEventParam(option_idx=0, refresh=True))
+    assert gs.supply_refresh_left.value == 0, 'left 截断于 0(无负值)'
+    assert ret2.observation.supply_options == opts_after_refresh, \
+        'left=0 闸关:零重掷'
+    assert ret2.observation.gs.equips.value, '闸关落选卡入账(节点完成)'
+
+
 def test_invest_offer_fires_at_p1r3_u07() -> None:
     """U07:打完 1-2 → P1r3 备战窗口前呈现 INVEST_OFFER;选卡入
     active_strategies(全程去重集累计)。"""
