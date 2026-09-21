@@ -120,6 +120,24 @@ def test_sellbench_overflow_logic_state_absorbs_card():
     assert gs.overflow_warning.value is False
 
 
+def test_sellbench_lv999_tiered_refund():
+    """银狼LV.999 档感知卖价(口述·权威 2026-09-21:升费后按新费用档
+    标准公式计价,无特殊口径):档 = 4 的 1★ LV.999 卖出退款 = 4
+    (注册表起始费 3 会被错卖成 3)。"""
+    gs = game_state_of(None)
+    gs.write_logic(gs.bench, cw4_bview(
+        [BenchSlot(kind='unit', unit=Unit(char_id='银狼LV.999', star=1,
+                                          slot=1))]),
+        produced_by='test', sig=_SIG)
+    gs.write_logic(gs.gold, 10, produced_by='test', sig=_SIG)
+    gs.write_logic(gs.lv999_cost_tier, 4, produced_by='test', sig=_SIG)
+
+    report_action_sell_bench_param(gs, CwActionSellBenchParam(bench_idx=0),
+                                   sig=_SIG)
+
+    assert gs.gold.value == 14, '退款 = sell_refund(1★, 当前档 4) = 4'
+
+
 def test_sellbench_overflow_missing_identity_skips_absorb():
     """身份缺读(''):容器跳过入位(槽留空等观察覆盖),卖出/退款本体照常;
     tracked 主账对称零写(容器/tracked 两侧一测,原 sync 文件腿并入)。"""
