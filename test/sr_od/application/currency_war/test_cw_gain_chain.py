@@ -1,8 +1,9 @@
-"""获得链(gain-chain)行为锁(gain-chain 3.1 落地 + 开局种子底座批 3.2)。
+"""获得链(gain-chain)行为锁(链式规范 + 开局种子底座通道规则)。
 
-设计 = docs/develop/sr_od/application/currency_war/changes/2026-09-21-gain-chain/
-design.md §2.1-2.4/§2.7 + 2026-09-21-gs-opening-seed design.md §2.5/§2.7 +
-landing.md 3.2 完成判据。锁面:
+锁面依据(语义正本,changes/ 过程件不引):获得链正本 =
+docs/develop/sr_od/application/currency_war/game_state/gain-chain.md
+(§2 原语契约/§2.5 单级合成/§6 失败安全);通道规则与种子底座正本 =
+同目录 fields.md §2.6(未锚定 → 随机态、锚定后按形参、失配网生效)。锁面:
 
 - **对拍一致**(§2.1-3):单级合成 ``merge_step_once`` ×N 次终态与
   ``cw_merge_simulate.merge_simulate`` 同池同输入不动点终态一致(禁第二
