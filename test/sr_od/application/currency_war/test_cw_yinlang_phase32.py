@@ -403,7 +403,10 @@ def test_invest_strategy_landing_hacker_wolf(
     assert out.applied is True and out.reason == 'gain_chain_applied'
     assert gs.write_seq > seq_before, '分步更新各占写序(多遥测行 = 预期)'
     assert gs.active_strategies.value == ['骇客专家:银狼'], '注册入持卡面'
-    assert gs.active_strategies.source == 'logic'
+    # 投资策略屏在生产链序(简报→投资环境→投资策略→备战)位于锚定(备战
+    # heavy)之前,通道规则「未锚定 → 随机态」使确定入口链写改道
+    # logic_rand(开局种子底座与锚定闩批行为申报,首观察静默覆盖)。
+    assert gs.active_strategies.source == 'logic_rand'
     units = [(u.char_id, u.star) for u in bench_units_of(gs)]
     assert units == [('银狼', 2)], '狼腿经链:送出 1★银狼与既有合成 → 2★'
     assert gs.equips.value == ['破解芯片'], '随机改件入栏(采样值)'
@@ -462,7 +465,8 @@ def test_invest_portal_landing_no_card_pollution(
     assert out.applied is True and out.reason == 'gain_chain_applied'
     assert gs.active_strategies.value in (None, []), '双屏分流防污染锁'
     assert gs.active_env.value == '欢愉契约', '选择事实落地经获得链写'
-    assert gs.active_env.source == 'logic', '确定性入口 write_logic'
+    # 投资环境屏同在锚定前(未锚定期):链写改道 logic_rand(通道规则)。
+    assert gs.active_env.source == 'logic_rand'
     units = [(u.char_id, u.star) for u in bench_units_of(gs)]
     assert ('银狼LV.999', 1) in units, 'immediate 腿(chars_immediate 实证)'
     assert gs.bench.source == 'logic_rand', '条件腿临时闩翻来源(bench)'
@@ -485,7 +489,8 @@ def test_invest_portal_env_gifts_full_access(
     assert gs.active_env.value == '公司契约'
     units = [(u.char_id, u.star) for u in bench_units_of(gs)]
     assert units == [('翡翠', 1), ('砂金', 1)], 'chars_immediate 逐个入席'
-    assert gs.bench.source == 'logic', '确定发放 write_logic'
+    # 未锚定期(投资环境屏)送卡链写被通道规则改道 logic_rand。
+    assert gs.bench.source == 'logic_rand'
     assert rows_sink.kinds() == [], '非欢愉契约零留证行'
 
 

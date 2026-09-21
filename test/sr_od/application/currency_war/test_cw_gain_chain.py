@@ -1,19 +1,22 @@
-"""获得链(gain-chain)3.1 落地锁。
+"""获得链(gain-chain)行为锁(gain-chain 3.1 落地 + 开局种子底座批 3.2)。
 
 设计 = docs/develop/sr_od/application/currency_war/changes/2026-09-21-gain-chain/
-design.md §2.1-2.4/§2.7 + landing.md 3.1 完成判据。锁面:
+design.md §2.1-2.4/§2.7 + 2026-09-21-gs-opening-seed design.md §2.5/§2.7 +
+landing.md 3.2 完成判据。锁面:
 
 - **对拍一致**(§2.1-3):单级合成 ``merge_step_once`` ×N 次终态与
   ``cw_merge_simulate.merge_simulate`` 同池同输入不动点终态一致(禁第二
   套语义的执行锁);
 - **调用序**(§2.1 固定时序):落位 → 回调 → 升星 → 产物递归;回调补齐
   第三只后再合成;
-- **rand 透传**(§2.4):确定入口走 write_logic、rand=True 透传走
-  write_logic_rand、采样效果腿可翻转子链通道;
+- **通道收口双臂**(通道规则「未锚定 → 随机态」):直构未闩容器
+  rand=False 链写被改道 write_logic_rand;置闩(测试专口直赋)后
+  rand=False 恢复 write_logic;rand=True 恒 write_logic_rand;采样
+  效果腿对子链的通道翻转只及子链;
 - **失败安全**(§2.7):溢出落位/归位/溢出位被占留证;bench/equips
-  未观察 = 零写 + 留证不停机;
-- **ENV_GIFTS 分道**(§2.3):advisor=True 不入席只申报、advisor=False
-  入席递归;查无效果安静不写(裁定④)。
+  未观察(直构域)= 拒落档零写、零缺陷发射(两未观察 kind 已随开局
+  种子底座与锚定闩批退役);种子容器(缓存单例支,接管局同构)正常
+  落账;置闩后失配网原样生效(确定面被观察覆盖产失配行)。
 """
 from __future__ import annotations
 
@@ -28,8 +31,6 @@ from sr_od.application.currency_war.kernel.cw_effect_inventory import (
 )
 from sr_od.application.currency_war.kernel.cw_gain_chain import (
     DEFECT_ADVISOR_DECL,
-    DEFECT_BENCH_UNOBSERVED,
-    DEFECT_EQUIPS_UNOBSERVED,
     DEFECT_OVERFLOW_TAKEN,
     PICK_INVEST_INVALID_PAYLOAD,
     GainOutcome,
@@ -49,6 +50,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     Unit,
     bench_units_of,
     consume_defect_sink,
+    game_state_of,
     set_defect_sink,
 )
 from sr_od.application.currency_war.kernel.cw_investments import (
@@ -57,6 +59,9 @@ from sr_od.application.currency_war.kernel.cw_investments import (
 )
 from sr_od.application.currency_war.kernel.cw_merge_simulate import (
     merge_simulate,
+)
+from sr_od.application.currency_war.kernel.cw_strategy_session import (
+    StrategySession,
 )
 
 _SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep')
@@ -186,6 +191,9 @@ def test_call_order_place_callback_merge_recurse(
     """固定时序锁(§2.1):落位 → 回调 → 升星 → 产物递归;回调补齐第三只
     后再合成(用户裁定「先触发回调…回来后再触发 3 合 1 升星判断」)。"""
     gs = _make_gs(bench=[('银狼', 1), ('希儿', 1)])
+    # 置闩(测试专口直赋):本测试焦点 = 调用序,置闩使 rand=False 链写
+    # 走 write_logic 桩(未闩会被通道规则改道 write_logic_rand,桩不触发)。
+    gs.prep_anchored = True
     events: list[str] = []
     granted = {'n': 0}
 
@@ -226,12 +234,45 @@ def test_call_order_place_callback_merge_recurse(
 # ============================================================ rand 纪律(§2.4)
 
 
-def test_rand_passthrough_and_flip(monkeypatch: pytest.MonkeyPatch) -> None:
-    """rand 透传与翻转(§2.4):确定入口 rand=False 走 write_logic;
-    rand=True 透传走 write_logic_rand;采样效果腿对子链传 rand=True 只
-    翻转自己的子链(现役枚举无采样腿,以桩模拟采样效果验证机制)。"""
-    gs = _make_gs(bench=[], equips=[])
-    orig_logic, orig_rand = gs.write_logic, gs.write_logic_rand
+def test_rand_passthrough_and_channel_by_anchor(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """通道收口双臂 + rand 透传(通道规则「未锚定 → 随机态」):直构
+    未闩容器 rand=False 链写被改道 write_logic_rand(未验证推算,首观察
+    静默覆盖);置闩(测试专口直赋)后 rand=False 恢复 write_logic;
+    rand=True 恒 write_logic_rand;采样效果腿对子链的通道翻转只及子链。"""
+    # 臂 1:直构未闩 + rand=False → 通道改道 logic_rand
+    gs = _make_gs(bench=[])
+    assert gs.prep_anchored is False
+    out = gain_character(gs, '希儿', 1, rand=False, sig=_lsig(),
+                         evidence='g', producer='T')
+    assert out.placed is True
+    assert gs.bench.source == 'logic_rand', '未锚定期确定入口被改道随机态'
+    # 臂 2:置闩 + rand=False → 恢复按形参走 write_logic
+    gs2 = _make_gs(bench=[])
+    gs2.prep_anchored = True
+    gain_character(gs2, '希儿', 1, rand=False, sig=_lsig(), evidence='g',
+                   producer='T')
+    assert gs2.bench.source == 'logic', '锚定后确定面通道按形参'
+    # 臂 3:rand=True 恒 logic_rand(与闩无关)
+    gs3 = _make_gs(bench=[])
+    gs3.prep_anchored = True
+    gain_character(gs3, '停云', 1, rand=True, sig=_lsig(), evidence='g',
+                   producer='T')
+    assert gs3.bench.source == 'logic_rand'
+
+    # 采样效果腿翻转子链(机制锁,rand 透传纪律;置闩容器上外链与子链
+    # 通道可分辨):确定入口走 write_logic,采样子链走 write_logic_rand,
+    # 外链不被子链污染。
+    def sampling_cb(gs: GameState, name: str, star: int, *, rand: bool,
+                    sig: ChannelSig) -> tuple[str, ...]:
+        gain_character(gs, '希儿', 1, rand=True, sig=sig,
+                       evidence='sampled', producer='T')
+        return ()
+
+    monkeypatch.setattr(cw_gain_chain, 'on_character_gained', sampling_cb)
+    gs4 = _make_gs(bench=[])
+    gs4.prep_anchored = True
+    orig_logic, orig_rand = gs4.write_logic, gs4.write_logic_rand
     chan: list[tuple[str, str | None]] = []
 
     def rec_l(target, value, **kw) -> None:
@@ -242,28 +283,15 @@ def test_rand_passthrough_and_flip(monkeypatch: pytest.MonkeyPatch) -> None:
         chan.append(('logic_rand', kw.get('evidence')))
         orig_rand(target, value, **kw)
 
-    monkeypatch.setattr(gs, 'write_logic', rec_l)
-    monkeypatch.setattr(gs, 'write_logic_rand', rec_r)
-
-    def sampling_cb(gs: GameState, name: str, star: int, *, rand: bool,
-                    sig: ChannelSig) -> tuple[str, ...]:
-        gain_character(gs, '希儿', 1, rand=True, sig=sig,
-                       evidence='sampled', producer='T')
-        return ()
-
-    monkeypatch.setattr(cw_gain_chain, 'on_character_gained', sampling_cb)
-    gain_character(gs, '银狼', 1, rand=False, sig=_lsig(), evidence='main',
+    monkeypatch.setattr(gs4, 'write_logic', rec_l)
+    monkeypatch.setattr(gs4, 'write_logic_rand', rec_r)
+    gain_character(gs4, '银狼', 1, rand=False, sig=_lsig(), evidence='main',
                    producer='T')
-    assert ('logic', 'main#place') in chan, '确定入口落位走 write_logic'
+    assert ('logic', 'main#place') in chan, '置闩确定入口落位走 write_logic'
     assert ('logic_rand', 'sampled#place') in chan, \
         '采样效果子链走 write_logic_rand(翻转只及子链)'
     assert all(c == 'logic' for c, e in chan if e and e.startswith('main')), \
         '外链(确定面)不被采样子链污染'
-    # 透传态:rand=True 入口全链走随机通道
-    gs2 = _make_gs(bench=[])
-    gain_character(gs2, '停云', 1, rand=True, sig=_lsig(), evidence='main',
-                   producer='T')
-    assert gs2.bench.source == 'logic_rand'
 
 
 # ============================================================ 溢出落位/归位/被占(§2.7)
@@ -313,11 +341,13 @@ def test_overflow_slot_taken_zero_write(rows_sink: _RowSink) -> None:
     assert rows_sink.kinds() == [DEFECT_OVERFLOW_TAKEN]
 
 
-# ============================================================ 未观察留证(§2.7 裁定⑤)
+# ============================================================ 未观察退役 + 种子容器(§2.6-2/§2.7)
 
 
-def test_unobserved_zero_write_with_defect(rows_sink: _RowSink) -> None:
-    """bench/equips 未观察 = bug 面:零写 + 留证不停机(裁定⑤)。"""
+def test_unobserved_direct_zero_write_no_defect(rows_sink: _RowSink) -> None:
+    """bench/equips 未观察(直构容器,种子底座下生产不可达):拒落档
+    零写 + detail 档保留,零缺陷行发射(两未观察 kind 已退役——退役
+    断言走台账面:调链原语后台账无新增行,禁源码扫描)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     seq_before = gs.write_seq
     out_c = gain_character(gs, '希儿', 1, rand=False, sig=_lsig(),
@@ -326,9 +356,57 @@ def test_unobserved_zero_write_with_defect(rows_sink: _RowSink) -> None:
     out_e = gain_equipment(gs, '分身墨镜', rand=False, sig=_lsig(),
                            evidence='g', producer='T')
     assert out_e.placed is False and out_e.detail == 'equips_unobserved'
-    assert gs.write_seq == seq_before
-    assert rows_sink.kinds() == [DEFECT_BENCH_UNOBSERVED,
-                                 DEFECT_EQUIPS_UNOBSERVED]
+    assert gs.write_seq == seq_before, '拒落档零写'
+    assert rows_sink.kinds() == [], '退役 kind 零发射(台账零新增行)'
+
+
+def test_seeded_container_chain_lands_and_takeover_isomorphic(
+        rows_sink: _RowSink) -> None:
+    """种子容器(经 game_state_of 缓存单例支,新局/接管局同构)链原语
+    正常落账:bench 空底座(种子)落位、equips 空栏追加入栏——未观察
+    拒落档生产死化。"""
+    gs = game_state_of(StrategySession())
+    assert gs.bench.source == 'logic_rand' \
+        and gs.bench.evidence == 'seed:opening', '缓存单例支冷建含种子'
+    out_c = gain_character(gs, '希儿', 1, rand=False, sig=_lsig(),
+                           evidence='g', producer='T')
+    assert out_c.placed is True and out_c.landing == 'bench'
+    assert [(u.char_id, u.star) for u in bench_units_of(gs)] == [('希儿', 1)]
+    out_e = gain_equipment(gs, '分身墨镜', rand=False, sig=_lsig(),
+                           evidence='g', producer='T')
+    assert out_e.placed is True
+    assert gs.equips.value == ['分身墨镜'], '种子空栏追加入栏'
+    assert rows_sink.kinds() == [], '种子底座上链落账零缺陷行'
+
+
+def test_anchor_gates_mismatch_net() -> None:
+    """锚定闩辖失配网(通道规则的验证信号面):置闩后链写(确定面)被
+    观察以不同值覆盖 → 产 observe_vs_logic_mismatch 失配行(网未盲);
+    未锚定期链写(随机态)被观察覆盖 → 仅 logic_rand_outcome 台账行、
+    零失配行(首观察静默覆盖)。"""
+    sig_obs = ChannelSig(family='obs', actor='CwScreenPrep', mode='read')
+    other_view = BenchView(
+        slots=[BenchSlot(kind='unit',
+                         unit=Unit(char_id='停云', star=1, slot=1))]
+        + [BenchSlot(kind='empty')] * 8, capacity=9)
+    # 未闩臂:随机态链写 → 观察覆盖静默(差异落 logic_rand_outcome)
+    gs = _make_gs(bench=[])
+    consume_defect_sink()
+    gain_character(gs, '希儿', 1, rand=False, sig=_lsig(), evidence='g',
+                   producer='T')
+    gs.observe(gs.bench, other_view, sig=sig_obs)
+    kinds = [r['kind'] for r in consume_defect_sink()]
+    assert 'observe_vs_logic_mismatch' not in kinds, '未锚定期首观察零失配行'
+    assert 'logic_rand_outcome' in kinds, '随机态差异落 logic_rand_outcome'
+    # 闩臂:确定面链写 → 观察覆盖产真失配行(失配网未盲)
+    gs2 = _make_gs(bench=[])
+    gs2.prep_anchored = True
+    consume_defect_sink()
+    gain_character(gs2, '希儿', 1, rand=False, sig=_lsig(), evidence='g',
+                   producer='T')
+    gs2.observe(gs2.bench, other_view, sig=sig_obs)
+    kinds2 = [r['kind'] for r in consume_defect_sink()]
+    assert 'observe_vs_logic_mismatch' in kinds2, '锚定后失配网原样生效'
 
 
 # ============================================================ ENV_GIFTS 分道(§2.3)
@@ -338,8 +416,10 @@ def test_env_gift_advisor_split_and_quiet(rows_sink: _RowSink) -> None:
     """ENV_GIFTS 分道(§2.3-1):advisor=True 不入席只申报;advisor=False
     入席递归(chars_immediate 1★);表外环境查无效果安静不写(裁定④)。
     session=None = 登记腿跳过、容器写照常(编排语义裁定)。"""
-    # advisor:特邀专家 → 顾问入商店,不入席
+    # advisor:特邀专家 → 顾问入商店,不入席(置闩保持确定面通道断言;
+    # 本测试焦点 = 分道)
     gs_a = _make_gs(bench=[], equips=[])
+    gs_a.prep_anchored = True
     out_a = gain_invest_env(gs_a, None, '特邀专家:停云', rand=False,
                            sig=_lsig())
     assert out_a.effects == ('advisor_decl:特邀专家:停云',)
@@ -349,6 +429,7 @@ def test_env_gift_advisor_split_and_quiet(rows_sink: _RowSink) -> None:
     assert rows_sink.kinds() == [DEFECT_ADVISOR_DECL]
     # 契约:直接送卡 → 入席递归
     gs_c = _make_gs(bench=[], equips=[])
+    gs_c.prep_anchored = True
     out_c = gain_invest_env(gs_c, None, '公司契约', rand=False, sig=_lsig())
     assert out_c.effects == ('env_gift:翡翠', 'env_gift:砂金')
     units = [(u.char_id, u.star) for u in bench_units_of(gs_c)]
@@ -356,6 +437,7 @@ def test_env_gift_advisor_split_and_quiet(rows_sink: _RowSink) -> None:
     # 表外环境:查无效果安静不写
     quiet = next(n for n in INVESTMENT_ENVS if n not in ENV_GIFTS)
     gs_q = _make_gs(bench=[], equips=[])
+    gs_q.prep_anchored = True
     out_q = gain_invest_env(gs_q, None, quiet, rand=False, sig=_lsig())
     assert out_q.effects == () and out_q.placed is True
     assert bench_units_of(gs_q) == []
@@ -419,6 +501,9 @@ def test_gain_invest_strategy_register_dedup_and_hacker_chain(
     monkeypatch.setattr(random.Random, 'choice',
                         lambda self, seq: '破解芯片')   # 表外件(无后果腿)
     gs = _make_gs(bench=[('银狼', 1), ('银狼', 1)], equips=[])
+    # 置闩(测试专口直赋):注册腿确定面通道断言(source == 'logic')以
+    # 通道规则前置;采样腿 rand=True 恒 logic_rand 不受影响。
+    gs.prep_anchored = True
     seq_before = gs.write_seq
     gain_invest_strategy(gs, None, '骇客专家:银狼', rand=False,
                          sig=_lsig())
