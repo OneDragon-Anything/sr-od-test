@@ -234,3 +234,81 @@ def test_settle_truth_gold_samples_conditional_grant(
     assert gs.effects.free_refresh_balance == 3, (
         '推进时点按结算真值 85 评估:超出 35 → 每 10 金 1 次,封顶 3'
         '(采到陈旧金 40 则为 0——时序锁)')
+
+
+# ================================= CwScreenPrep 锚定接线(design §2.4 写端 1)
+
+
+def test_prep_heavy_receipt_anchors_node(test_context, monkeypatch) -> None:
+    """备战帧锚定接线锁(design §2.4 写端 1,攻击 F1 定谳;T-6 r1 打回补):
+    CwScreenPrep heavy 观察回执携带本帧 plane/round →
+    ``observe_node_anchor``(唯一生产锚定缝,cw_screen_prep.py::_observe
+    heavy 段)——首帧 first_anchor 建账含尾段发放、后续读数 advance/
+    reanchor 落账、回执缺位跳过(禁猜)。本缝静默丢失时生产 value 门挡
+    全程卡死,故直锁 wiring 面(与补给屏锚定对称,先例 =
+    test_cw_supply_advance_wiring)。"""
+    from sr_od.application.currency_war.obs import cw_observe_full as ofm
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_prep as pp,
+    )
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
+        CwScreenPrep,
+    )
+
+    session = cw4_session()
+    monkeypatch.setattr(test_context, 'cw_match',
+                        SimpleNamespace(session=session), raising=False)
+    gs = game_state_of(session)
+    gs.effects.register_strategy(STRATEGY_EFFECTS['双手狸开键盘！'], acquired_t=5)
+
+    # 回执剧本位:(plane, round) 可变;level=None(cap 审计跳过)
+    _receipt: dict = {}
+
+    def _fake_observe_full(ctx, screen, **kw):
+        _r = _receipt.get('r')
+        return {
+            'bench_view': None, 'deployed_rows': None,
+            'read_receipt': (SimpleNamespace(plane=_r[0], round_num=_r[1],
+                                             level=None)
+                             if _r is not None else None),
+            'node_slots': None, 'owned_equips': None,
+            'occupied_equips': None, 'substate': None,
+        }
+
+    monkeypatch.setattr(ofm, 'observe_full', _fake_observe_full)
+    op = CwScreenPrep(test_context)
+    monkeypatch.setattr(op, 'park_cursor', lambda **k: None)
+    monkeypatch.setattr(op, 'round_by_find_area',
+                        lambda scr, s, a, **k: _Area(False))
+    monkeypatch.setattr(op, '_reconcile_tracking',
+                        lambda bv, dr, screen: (None, None, None))
+    monkeypatch.setattr(pp, 'row_area_centers', lambda ctx, name: [])
+    monkeypatch.setattr(pp, 'read_ore_sights', lambda ctx, screen: [])
+    monkeypatch.setattr(pp, 'read_deploy_cap', lambda ctx, screen: None)
+    monkeypatch.setattr(pp, 'read_deployed_count', lambda ctx, screen: None)
+
+    def _run_observe() -> None:
+        _run_node(test_context, op,
+                  lambda: op._observe(True, screen=object()))
+
+    # 回执缺位(读数未读)→ 跳过锚定(禁猜,best-effort)
+    _receipt['r'] = None
+    _run_observe()
+    assert gs.node_ord.value is None, '回执缺位零锚定(禁猜)'
+
+    # 开局首帧(1-1)→ first_anchor 建账 + 尾段发放
+    _receipt['r'] = (1, 1)
+    _run_observe()
+    assert gs.node_ord.value == 1 and gs.node_ord.source == 'observation'
+    assert gs.node_hist_ord == 1
+    assert gs.effects.free_refresh_balance == 2, '首锚定当帧发放'
+
+    # 下一节点读数(1-2)→ advance 补推落账(观察采新即确认态)
+    _receipt['r'] = (1, 2)
+    _run_observe()
+    assert gs.node_ord.value == 2 and gs.node_ord.source == 'observation'
+
+    # 同值再读 → reanchor(等值确认,源态保持 observation)
+    _receipt['r'] = (1, 2)
+    _run_observe()
+    assert gs.node_ord.value == 2 and gs.node_ord.source == 'observation'
