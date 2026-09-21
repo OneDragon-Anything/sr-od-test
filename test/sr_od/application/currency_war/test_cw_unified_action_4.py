@@ -51,7 +51,8 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionPickEquipParam,
     CwActionPickExpertInviteParam,
     CwActionPickFortuneParam,
-    CwActionPickInvestParam,
+    CwActionPickInvestEnvParam,
+    CwActionPickInvestStrategyParam,
     CwActionPickMegastarParam,
     CwActionPickPartnerParam,
     CwActionPickPlannerParam,
@@ -148,7 +149,8 @@ def test_pick_rows_resolve_class_and_instance_consistently():
         (CwActionPickMegastarParam, CwActionPickMegastarOp),
         (CwActionPickPartnerParam, CwActionPickPartnerOp),
         (CwActionPickPlannerParam, CwActionPickPlannerOp),
-        (CwActionPickInvestParam, CwActionPickInvestOp),
+        (CwActionPickInvestEnvParam, CwActionPickInvestOp),   # 投资两屏拆类:两行同指一 op
+        (CwActionPickInvestStrategyParam, CwActionPickInvestOp),
         (CwActionPickFortuneParam, CwActionPickFortuneOp),
         (CwActionPickWishTrialParam, CwActionPickWishTrialOp),
         (CwActionPickStarTomeParam, CwActionPickStarTomeOp),
@@ -339,9 +341,9 @@ def test_planner_pick_op_clicks_target_and_confirm(no_pick_sleep):
 
 def test_invest_pick_op_clicks_target_confirms_and_self_reports(
         no_pick_sleep, monkeypatch):
-    """投资确认链(pick-op-unify T-2,投资环境/策略两屏共用 op):
-    点选中位 → 确认;轮次结果旁路回传;自上报在机械链发出后调用
-    (零写函数被桩捕获 = 契约面接线锁;gs 供给桩 = 无局 None 时跳过)。"""
+    """投资确认链(投资两屏共用 op,拆类后两 param 类同指;即时上报契约):
+    点选中位 → 确认 → **按 param 类型立即自上报完整结果**(分步上报废
+    除);轮次结果旁路回传;上报接线 = 机械链发出后恰一次。"""
     import sr_od.application.currency_war.operations.cw_op.cw_overlay_pick_action as pick_mod
 
     rs = SimpleNamespace(sentinel='rs')
@@ -353,16 +355,29 @@ def test_invest_pick_op_clicks_target_confirms_and_self_reports(
     reported: list = []
     monkeypatch.setattr(pick_mod, 'game_state_from_ctx',
                         lambda ctx: SimpleNamespace(sentinel='gs'))
-    monkeypatch.setattr(pick_mod, 'report_action_pick_invest_param',
-                        lambda gs, param, sig: reported.append((gs, param, sig)))
-    assert CwActionPickInvestOp(env.op.ctx, CwActionPickInvestParam(idx=2),
+    monkeypatch.setattr(pick_mod, 'report_action_pick_invest_env_param',
+                        lambda gs, param, sig, **kw:
+                        reported.append((gs, param, sig)))
+    assert CwActionPickInvestOp(env.op.ctx, CwActionPickInvestEnvParam(idx=2),
                                 env=env).run().is_success
     # 点击序 = 选中位 → 确认钮;每次点击前 bug#1 mouse_move 缓解。
     assert [(p.x, p.y) for p, _t in ctrl.clicks] == [(900, 450), (1082, 982)]
     assert len(ctrl.moves) == len(ctrl.clicks)
     assert env.round_result is rs
-    # 自上报接线(机械链发出后恰一次;param 原样透传)。
+    # 即时上报接线(机械链发出后恰一次;param 原样透传;Env param → env 支)。
     assert len(reported) == 1 and reported[0][1].idx == 2
+
+    # 策略 param → strategy 支(类型机械分派锁)。
+    reported_st: list = []
+    monkeypatch.setattr(pick_mod, 'report_action_pick_invest_strategy_param',
+                        lambda gs, param, sig, **kw:
+                        reported_st.append((gs, param, sig)))
+    env_st = OverlayPickExecEnv(op=op, idx=0, target=Point(700, 450),
+                                confirm=Point(1082, 982), entry_keyword='投资策略')
+    assert CwActionPickInvestOp(env_st.op.ctx,
+                                CwActionPickInvestStrategyParam(idx=0),
+                                env=env_st).run().is_success
+    assert len(reported_st) == 1 and reported_st[0][1].idx == 0
 
 
 def test_fortune_pick_op_clicks_card_confirms_and_self_reports(

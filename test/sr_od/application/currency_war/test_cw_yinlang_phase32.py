@@ -40,25 +40,26 @@ from sr_od.application.currency_war.kernel.cw_action_report import (
     deploy_move as deploy_move_mod,
 )
 from sr_od.application.currency_war.kernel.cw_action_report import (
-    pick_invest as pick_invest_mod,
-)
-from sr_od.application.currency_war.kernel.cw_action_report import (
     report_action_deploy_move_param,
 )
-from sr_od.application.currency_war.kernel.cw_action_report.pick_invest import (
-    EVIDENCE_OVERLAY_CLOSED,
-    HACKER_MOD_POOL_V0,
-    PICK_INVEST_EFFECTS,
-    PICK_INVEST_SOURCE_PORTAL,
-    PICK_INVEST_SOURCE_STRATEGY,
-    roll_hacker_mod,
+from sr_od.application.currency_war.kernel.cw_action_report.pick_invest_env import (
+    report_action_pick_invest_env_param,
+)
+from sr_od.application.currency_war.kernel.cw_action_report.pick_invest_strategy import (
+    report_action_pick_invest_strategy_param,
 )
 from sr_od.application.currency_war.kernel.cw_action_report.pick_planner import (
+    EVIDENCE_OVERLAY_CLOSED,
     report_action_pick_planner_param,
 )
 from sr_od.application.currency_war.kernel.cw_events import (
     classify_planner_leg,
     normalize_equip_name,
+)
+from sr_od.application.currency_war.kernel.cw_gain_effects import (
+    HACKER_MOD_POOL_V0,
+    PICK_INVEST_EFFECTS,
+    roll_hacker_mod,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
@@ -73,7 +74,8 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionDeployMoveParam,
-    CwActionPickInvestParam,
+    CwActionPickInvestEnvParam,
+    CwActionPickInvestStrategyParam,
 )
 
 _SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep')
@@ -290,13 +292,13 @@ def test_unknown_leg_evidenced_weaken_zero(
 def test_emission_phase_is_intent_only(
         monkeypatch: pytest.MonkeyPatch,
         rows_sink: _RowSink) -> None:
-    """证据闩锁(design §2.1①/对抗审③⑦):发射相(动作 op 自上报)仅登记
-    意图遥测——容器零写;重派发重复发射仍零写(实例闩不设防面由证据
-    绑定兜住),效果腿只在落地相应用一次。"""
+    """证据闩锁(策划屏现役形态;投资两屏已迁即时上报,本锁收窄至 planner):
+    发射相(动作 op 自上报)仅登记意图遥测——容器零写;效果腿只在落地相
+    应用一次。投资策略侧对应锁 = 即时上报
+    (test_invest_strategy_landing_hacker_wolf:点完即写入)。"""
     gs = _make_gs(bench=[('银狼LV.999', 2)], equips=['幸运星'])
     seq_before = gs.write_seq
-    param = CwActionPickInvestParam(idx=1, source=PICK_INVEST_SOURCE_STRATEGY,
-                                    norm_name='骇客专家:银狼')
+    param = CwActionPickInvestStrategyParam(idx=1, norm_name='骇客专家:银狼')
     out1 = report_action_pick_planner_param(gs, param, _lsig('CwActionPickPlannerOp'),
                                             leg_type='upgrade')
     out2 = report_action_pick_planner_param(gs, param, _lsig('CwActionPickPlannerOp'),
@@ -304,17 +306,12 @@ def test_emission_phase_is_intent_only(
     assert out1.applied and out2.applied, '受理(意图遥测)'
     assert gs.write_seq == seq_before, '发射相零容器写(重派发不重写)'
     assert gs.bench.value.slots[0].unit.star == 2, '2★ 源未被发射相触碰'
-    out_inv = pick_invest_mod.report_action_pick_invest_param(gs, param, _lsig())
-    out_inv2 = pick_invest_mod.report_action_pick_invest_param(gs, param, _lsig())
-    assert out_inv.reason == 'intent_only' and out_inv2.reason == 'intent_only'
-    assert gs.write_seq == seq_before, '投资发射相同锁'
-    assert gs.active_strategies.value in (None, []), '持卡面未被发射相触碰'
+    assert gs.active_strategies.value in (None, []), '持卡面未被 planner 发射相触碰'
     # 落地相才应用(对照)。
-    out_land = pick_invest_mod.report_action_pick_invest_param(
-        gs, param, _lsig('CwScreenInvestStrategy'),
-        evidence=EVIDENCE_OVERLAY_CLOSED)
+    out_land = report_action_pick_planner_param(
+        gs, param, _lsig('CwScreenYinLang'),
+        leg_type='upgrade', evidence=EVIDENCE_OVERLAY_CLOSED)
     assert out_land.applied is True
-    assert gs.active_strategies.value == ['骇客专家:银狼'], '落地相才入表'
 
 
 # ============================================================ 上阵变换窗
@@ -390,49 +387,64 @@ def test_deploy_cascade_lv999_normal_merge(
 def test_invest_strategy_landing_hacker_wolf(
         monkeypatch: pytest.MonkeyPatch,
         rows_sink: _RowSink) -> None:
-    """策略屏确认落地(design §2.3 分步):①入 active_strategies(判重)
-    + 遥测一行;②骇客专家:银狼效果链 = bench 银狼(merge 级联)+ 商店池
-    遥测申报行(零容器写)+ 随机改件采样链(equips + 命中后果表三件则链内
-    后果);翻来源域集不含 gold(对抗审⑪)。"""
+    """策略屏选择即时上报(投资两屏迁移批):点完即写入 = 注册按名字去重
+    追加(active_strategies)+ 登记腿(session=None 跳过)+ 效果分派
+    骇客专家:银狼(经获得链:狼腿 gain_character 入席合成 + 商店池申报行
+    + 改件 gain_equipment 采样入栏,后果表件经 on_equipment_gained 回调
+    送单位);翻来源域集不含 gold(对抗审⑪)。"""
     # 场景一:改件采样 = 破解芯片(表外件,链内无后果腿)。
     monkeypatch.setattr(random.Random, 'choice',
                         lambda self, seq: '破解芯片')
     gs = _make_gs(bench=[('银狼', 1), ('银狼', 1)], equips=[])
     seq_before = gs.write_seq
-    param = CwActionPickInvestParam(idx=0, source=PICK_INVEST_SOURCE_STRATEGY,
-                                    norm_name='骇客专家:银狼')
-    out = pick_invest_mod.report_action_pick_invest_param(
-        gs, param, _lsig('CwScreenInvestStrategy'),
-        evidence=EVIDENCE_OVERLAY_CLOSED)
-    assert out.applied is True
+    param = CwActionPickInvestStrategyParam(idx=0, norm_name='骇客专家:银狼')
+    out = report_action_pick_invest_strategy_param(
+        gs, param, _lsig('CwActionPickInvestOp'))
+    assert out.applied is True and out.reason == 'gain_chain_applied'
     assert gs.write_seq > seq_before, '分步更新各占写序(多遥测行 = 预期)'
-    assert gs.active_strategies.value == ['骇客专家:银狼'], '第一步入持卡面'
+    assert gs.active_strategies.value == ['骇客专家:银狼'], '注册入持卡面'
     assert gs.active_strategies.source == 'logic'
     units = [(u.char_id, u.star) for u in bench_units_of(gs)]
-    assert units == [('银狼', 2)], 'bench 腿:送出 1★银狼与既有合成 → 2★'
+    assert units == [('银狼', 2)], '狼腿经链:送出 1★银狼与既有合成 → 2★'
     assert gs.equips.value == ['破解芯片'], '随机改件入栏(采样值)'
     assert gs.equips.source == 'logic_rand', '随机腿 logic_rand'
     assert gs.gold.source == 'observation' and gs.gold.value == 30, \
         'gold 不翻来源(改件链域集裁剪,无噪声行)'
     assert 'pick_invest_shop_pool_decl' in rows_sink.kinds(), '商店池腿遥测申报行'
-    # 判重:同卡二次落地不重复入表(效果腿由证据闩保证一次;表面去重兜底)。
-    out2 = pick_invest_mod.report_action_pick_invest_param(
-        gs, param, _lsig('CwScreenInvestStrategy'),
-        evidence=EVIDENCE_OVERLAY_CLOSED)
-    assert out2.applied is True
-    assert gs.active_strategies.value == ['骇客专家:银狼'], '判重不重复入列'
-    # 场景二:改件采样命中后果表三件(Max 件张力形状)→ 链内后果腿
-    #(design §2.4 链序:装备入栏 → 送角色腿 → 级联)。
+    # 去重:同卡二次上报 → 持卡面跳写不重复;效果腿零闸照走(裁定⑩)。
+    seq2 = gs.write_seq
+    report_action_pick_invest_strategy_param(
+        gs, param, _lsig('CwActionPickInvestOp'))
+    assert gs.active_strategies.value == ['骇客专家:银狼'], '持卡面单份(去重)'
+    assert gs.write_seq > seq2, '效果腿照走(零幂等闸)'
+    # 场景二:改件采样命中后果表三件(Max 件张力形状)→ 回调后果腿
+    #(gain_equipment → on_equipment_gained 回调 → gain_character 送单位)。
     monkeypatch.setattr(random.Random, 'choice',
                         lambda self, seq: '数据拷贝仪Max')
     gs3 = _make_gs(bench=[('希儿', 1)], equips=[])
-    out3 = pick_invest_mod.report_action_pick_invest_param(
-        gs3, param, _lsig('CwScreenInvestStrategy'),
-        evidence=EVIDENCE_OVERLAY_CLOSED)
+    out3 = report_action_pick_invest_strategy_param(
+        gs3, param, _lsig('CwActionPickInvestOp'))
     assert out3.applied is True
     assert gs3.equips.value == ['数据拷贝仪Max'], '改件入栏'
     units3 = [(u.char_id, u.star) for u in bench_units_of(gs3)]
-    assert ('银狼LV.999', 1) in units3, '链内后果:改件送出 1★ 银狼LV.999'
+    assert ('银狼LV.999', 1) in units3, '回调后果:改件送出 1★ 银狼LV.999'
+
+
+def test_invest_strategy_landing_invalid_payload(
+        rows_sink: _RowSink) -> None:
+    """无效载荷拒绝(即时上报契约配套):归一后空/'?' = 零写 + 缺陷留证,
+    持卡面不收无效名。"""
+    for bad in ('', '?'):
+        gs = _make_gs(bench=[('希儿', 1)], equips=['幸运星'])
+        seq_before = gs.write_seq
+        out = report_action_pick_invest_strategy_param(
+            gs, CwActionPickInvestStrategyParam(idx=0, norm_name=bad),
+            _lsig('CwActionPickInvestOp'))
+        assert out.applied is True
+        assert gs.active_strategies.value in (None, []), '零写'
+        assert gs.write_seq == seq_before
+    assert rows_sink.kinds() == ['pick_invest_invalid_payload',
+                                 'pick_invest_invalid_payload']
 
 
 def test_invest_portal_landing_no_card_pollution(
@@ -444,11 +456,9 @@ def test_invest_portal_landing_no_card_pollution(
     kernel(bench/equips 翻来源 + joy_contract_provisional 留证,kind
     不变);禁入 active_strategies(防 portal 卡污染持卡面)。"""
     gs = _make_gs(bench=[('希儿', 1)], equips=['幸运星'], gold=30)
-    param = CwActionPickInvestParam(idx=1, source=PICK_INVEST_SOURCE_PORTAL,
-                                    norm_name='欢愉契约')
-    out = pick_invest_mod.report_action_pick_invest_param(
-        gs, param, _lsig('CwScreenInvestEnv'),
-        evidence=EVIDENCE_OVERLAY_CLOSED)
+    param = CwActionPickInvestEnvParam(idx=1, norm_name='欢愉契约')
+    out = report_action_pick_invest_env_param(
+        gs, param, _lsig('CwActionPickInvestOp'))
     assert out.applied is True and out.reason == 'gain_chain_applied'
     assert gs.active_strategies.value in (None, []), '双屏分流防污染锁'
     assert gs.active_env.value == '欢愉契约', '选择事实落地经获得链写'
@@ -468,10 +478,9 @@ def test_invest_portal_env_gifts_full_access(
     此前仅欢愉契约有容器写腿,现契约类 chars_immediate 全部经链生效;
     表外环境安静不写)。公司契约 = 翡翠/砂金 逐个 1★ 入席递归。"""
     gs = _make_gs(bench=[], equips=[])
-    out = pick_invest_mod.report_action_pick_invest_param(
-        gs, CwActionPickInvestParam(idx=0, source=PICK_INVEST_SOURCE_PORTAL,
-                                    norm_name='公司契约'),
-        _lsig('CwScreenInvestEnv'), evidence=EVIDENCE_OVERLAY_CLOSED)
+    out = report_action_pick_invest_env_param(
+        gs, CwActionPickInvestEnvParam(idx=0, norm_name='公司契约'),
+        _lsig('CwActionPickInvestOp'))
     assert out.applied is True and out.reason == 'gain_chain_applied'
     assert gs.active_env.value == '公司契约'
     units = [(u.char_id, u.star) for u in bench_units_of(gs)]
@@ -488,10 +497,9 @@ def test_invest_unregistered_card_unchanged(
     写时点迁移)+ 效果面安静不写(表外环境零入席,裁定④)。"""
     gs = _make_gs(bench=[('希儿', 1)], equips=['幸运星'])
     seq_before = gs.write_seq
-    out = pick_invest_mod.report_action_pick_invest_param(
-        gs, CwActionPickInvestParam(idx=0, source=PICK_INVEST_SOURCE_STRATEGY,
-                                    norm_name='随便一张未收录卡'),
-        _lsig('CwScreenInvestStrategy'), evidence=EVIDENCE_OVERLAY_CLOSED)
+    out = report_action_pick_invest_strategy_param(
+        gs, CwActionPickInvestStrategyParam(idx=0, norm_name='随便一张未收录卡'),
+        _lsig('CwActionPickInvestOp'))
     assert out.applied is True
     assert gs.active_strategies.value == ['随便一张未收录卡'], \
         '未收录策略只走第一步'
@@ -499,10 +507,9 @@ def test_invest_unregistered_card_unchanged(
     # portal 表外环境 = 选择事实写 + 零效果。
     gs2 = _make_gs(bench=[('希儿', 1)], equips=['幸运星'])
     seq2_before = gs2.write_seq
-    out2 = pick_invest_mod.report_action_pick_invest_param(
-        gs2, CwActionPickInvestParam(idx=0, source=PICK_INVEST_SOURCE_PORTAL,
-                                     norm_name='随便一个未收录环境'),
-        _lsig('CwScreenInvestEnv'), evidence=EVIDENCE_OVERLAY_CLOSED)
+    out2 = report_action_pick_invest_env_param(
+        gs2, CwActionPickInvestEnvParam(idx=0, norm_name='随便一个未收录环境'),
+        _lsig('CwActionPickInvestOp'))
     assert out2.applied is True
     assert gs2.active_env.value == '随便一个未收录环境', \
         '选择事实落地写(表外环境同样经链注册)'
@@ -512,7 +519,7 @@ def test_invest_unregistered_card_unchanged(
         '表外环境零入席(安静不写)'
     assert gs2.active_strategies.value in (None, [])
     # 效果注册表收窄为单行(欢愉契约随 portal 支迁获得链;行 = 策略屏
-    # 专用死键已删,gain-chain design §2.5)。
+    # 专用死键已删,gain-chain design §2.5;迁移批 = 表住 cw_gain_effects)。
     assert set(PICK_INVEST_EFFECTS) == {'骇客专家:银狼'}
 
 

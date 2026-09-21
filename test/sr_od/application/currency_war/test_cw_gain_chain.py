@@ -18,20 +18,27 @@ design.md §2.1-2.4/§2.7 + landing.md 3.1 完成判据。锁面:
 from __future__ import annotations
 
 import dataclasses
+import random
 
 import pytest
 
 from sr_od.application.currency_war.kernel import cw_gain_chain
+from sr_od.application.currency_war.kernel.cw_effect_inventory import (
+    SOURCE_STRATEGY,
+)
 from sr_od.application.currency_war.kernel.cw_gain_chain import (
     DEFECT_ADVISOR_DECL,
     DEFECT_BENCH_UNOBSERVED,
     DEFECT_EQUIPS_UNOBSERVED,
     DEFECT_OVERFLOW_TAKEN,
+    PICK_INVEST_INVALID_PAYLOAD,
     GainOutcome,
     gain_character,
     gain_equipment,
     gain_invest_env,
+    gain_invest_strategy,
     merge_step_once,
+    on_strategy_gained,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
@@ -382,3 +389,85 @@ def test_gain_outcome_shape_on_skip() -> None:
                     effects=(), detail='bench_unobserved')
     with pytest.raises(dataclasses.FrozenInstanceError):
         o.placed = True   # type: ignore[misc]  # frozen 载体禁就地改
+
+
+# ============================================================ 获得投资策略(策略屏迁移批 3.1)
+
+
+def test_gain_invest_strategy_invalid_payload_zero_write(
+        rows_sink: _RowSink) -> None:
+    """无效载荷拒绝(归一后空/'?' = 零写 + 缺陷留证;无效输入拒绝非防
+    重复保护,design §2.4-0)。"""
+    gs = _make_gs(bench=[], equips=[])
+    seq_before = gs.write_seq
+    for bad in ('', '?'):
+        out = gain_invest_strategy(gs, None, bad, rand=False, sig=_lsig())
+        assert out.placed is False and out.detail == 'invalid_payload'
+    assert gs.active_strategies.value in (None, [])
+    assert gs.write_seq == seq_before, '零写'
+    assert rows_sink.kinds() == [PICK_INVEST_INVALID_PAYLOAD,
+                                 PICK_INVEST_INVALID_PAYLOAD]
+
+
+def test_gain_invest_strategy_register_dedup_and_hacker_chain(
+        monkeypatch: pytest.MonkeyPatch, rows_sink: _RowSink) -> None:
+    """三段式主链(design §2.4):注册按名字去重追加(裁定⑩持卡列表
+    写入语义)→ 登记腿(session=None 跳过)→ on_strategy_gained 分派
+    骇客效果(狼腿经 gain_character 链入席 + 合成;改件经 gain_equipment
+    rand=True 入栏,后果表件经 on_equipment_gained 回调送单位;标记域 =
+    前后值快照比对,gold 永不翻)。"""
+    monkeypatch.setattr(random.Random, 'choice',
+                        lambda self, seq: '破解芯片')   # 表外件(无后果腿)
+    gs = _make_gs(bench=[('银狼', 1), ('银狼', 1)], equips=[])
+    seq_before = gs.write_seq
+    gain_invest_strategy(gs, None, '骇客专家:银狼', rand=False,
+                         sig=_lsig())
+    assert gs.active_strategies.value == ['骇客专家:银狼'], '注册入表'
+    assert gs.active_strategies.source == 'logic', '确定面 write_logic'
+    units = [(u.char_id, u.star) for u in bench_units_of(gs)]
+    assert units == [('银狼', 2)], '狼腿经链:送出 1★ 与既有合成 → 2★'
+    assert gs.equips.value == ['破解芯片'], '改件入栏(采样值)'
+    assert gs.equips.source == 'logic_rand', '采样腿 logic_rand'
+    assert gs.write_seq > seq_before, '多步各占写序'
+    assert 'pick_invest_shop_pool_decl' in rows_sink.kinds(), '商店池申报行'
+    # 去重:同卡再入 → 持卡面跳写不重复;效果腿照常(裁定⑩语义 = 仅持卡
+    # 列表去重,效果分派零闸)
+    seq2 = gs.write_seq
+    gain_invest_strategy(gs, None, '骇客专家:银狼', rand=False,
+                         sig=_lsig())
+    assert gs.active_strategies.value == ['骇客专家:银狼'], '持卡面单份'
+    assert gs.write_seq > seq2, '效果腿照走(零幂等闸)'
+
+
+def test_gain_invest_strategy_session_ledger_leg() -> None:
+    """登记腿(design §2.4-2):session 在场 + STRATEGY_EFFECTS 命中 →
+    register_strategy 入册 + burst 桥累加免费刷新余额;session=None =
+    登记腿跳过、注册照常;未收录卡登记腿零动作。(选卡 = 固定理财:
+    STRATEGY_EFFECTS 在册条目且 payload.free_refresh_burst=2,桥 docstring
+    背书;市场干预仅在经济聚合表 STRATEGY_ECONOMY,不入本表。)"""
+    gs = _make_gs(bench=[], equips=[])
+    gain_invest_strategy(gs, object(), '固定理财', rand=False, sig=_lsig())
+    assert gs.active_strategies.value == ['固定理财']
+    assert [e.spec.name for e in gs.effects.by_source(SOURCE_STRATEGY)] \
+        == ['固定理财'], 'register_strategy 入册'
+    assert gs.effects.free_refresh_balance == 2, 'burst 桥(free_refresh_burst)'
+    gs2 = _make_gs(bench=[], equips=[])
+    gain_invest_strategy(gs2, None, '固定理财', rand=False, sig=_lsig())
+    assert gs2.active_strategies.value == ['固定理财'], '注册照常'
+    assert gs2.effects.by_source(SOURCE_STRATEGY) == [], 'session=None 跳过'
+    assert gs2.effects.free_refresh_balance == 0, 'burst 零累加'
+
+
+def test_on_strategy_gained_unregistered_quiet() -> None:
+    """未收录卡:查无效果安静不写(gain-chain §3 裁定④);效果表键集
+    现役单行(迁移零变化)。"""
+    from sr_od.application.currency_war.kernel.cw_gain_effects import (
+        PICK_INVEST_EFFECTS,
+    )
+    assert set(PICK_INVEST_EFFECTS) == {'骇客专家:银狼'}
+    gs = _make_gs(bench=[('希儿', 1)], equips=[])
+    seq_before = gs.write_seq
+    effects = on_strategy_gained(gs, '随便一张未收录卡', rand=False,
+                                 sig=_lsig())
+    assert effects == ()
+    assert gs.write_seq == seq_before, '零写'
