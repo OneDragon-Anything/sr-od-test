@@ -944,6 +944,56 @@ def test_effect_refresh_balance_grant_forms(case: str) -> None:
     assert gs.effects.free_refresh_balance == 4, '下一节点再 +2'
 
 
+def test_gas_station_pick_node_grant_matches_official_text() -> None:
+    """拿卡登记期核查锁·加油站(a 组,行为结论单一源 =
+    docs/game/currency_war/research/per_node_pick_node_grant.md):官方文
+    「现在及每次进入新节点时获得1次免费刷新」——拿卡当节点即享:
+    - 本节点边界推进先于拿卡(终结动作上报时序),在册前零发放;
+    - 拿卡登记期 burst +1(「现在」腿,apply_effect_burst_grant 按 payload);
+    - 拿卡节点边界去重(已推进过)不重复发 per_node;
+    - 下一节点边界 per_node +1(「每次进入新节点」腿)。"""
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    gs.effects.advance_node(2)   # 本节点边界已在拿卡前推进(拿卡晚于边界)
+    grant_effect_node_refresh_balance(gs, frame='p1-r2')
+    assert gs.effects.free_refresh_balance == 0, '效果在册前边界零发放'
+    apply_effect_burst_grant(gs, STRATEGY_EFFECTS['加油站'], frame='p1-r2')
+    gs.effects.register_strategy(STRATEGY_EFFECTS['加油站'], acquired_t=2)
+    assert gs.effects.free_refresh_balance == 1, '拿卡当节点「现在」腿即发'
+    adv_same, _ex = gs.effects.advance_node(2)
+    if adv_same:
+        grant_effect_node_refresh_balance(gs, frame='p1-r2')
+    assert gs.effects.free_refresh_balance == 1, '拿卡节点边界去重不补发'
+    adv_next, _ex2 = gs.effects.advance_node(3)
+    assert adv_next is True
+    grant_effect_node_refresh_balance(gs, frame='p1-r3')
+    assert gs.effects.free_refresh_balance == 2, '下一节点「每次进入新节点」腿 +1'
+
+
+def test_per_node_family_without_now_clause_no_pick_grant() -> None:
+    """拿卡登记期核查锁·(b) 组(结论单一源 =
+    docs/game/currency_war/research/per_node_pick_node_grant.md):官方文无
+    「现在/立刻」立即腿的三张(搜打撤/双手狸开键盘!/本金充裕+)payload
+    不得携带登记期 burst 额度——拿卡当节点不发放,首发放次节点起。"""
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        STRATEGY_ECONOMY,
+    )
+    assert STRATEGY_ECONOMY['搜打撤'].free_refresh_burst == 0
+    assert getattr(STRATEGY_EFFECTS['双手狸开键盘！'].payload,
+                   'free_refresh_burst', 0) == 0
+    assert STRATEGY_ECONOMY['本金充裕'].free_refresh_burst == 0
+    assert STRATEGY_ECONOMY['本金充裕+'].free_refresh_burst == 0
+    # 在册代表(双手狸):登记期零发放,首发放 = 下一节点边界 +2。
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    gs.effects.register_strategy(STRATEGY_EFFECTS['双手狸开键盘！'],
+                                 acquired_t=2)
+    apply_effect_burst_grant(gs, STRATEGY_EFFECTS['双手狸开键盘！'])
+    assert gs.effects.free_refresh_balance == 0, '无立即腿 = 登记期零发放'
+    adv_next, _ex = gs.effects.advance_node(3)
+    assert adv_next is True
+    grant_effect_node_refresh_balance(gs, frame='p1-r3')
+    assert gs.effects.free_refresh_balance == 2, '首发放 = 下一节点 +2'
+
+
 def test_capacity_projection_activates_and_recovers() -> None:
     """桥·容量投影(§3.2.5):在册容量声明 payload.capacity_limit=3 → bench
     容量投影 3;条目到期移除 → 回默认 9;bench 未观察(None)= 无容器跳过;
