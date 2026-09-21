@@ -38,7 +38,6 @@ import pytest
 
 from sr_od.application.currency_war.kernel import cw_gain_chain
 from sr_od.application.currency_war.kernel.cw_action_report.pick_planner import (
-    EVIDENCE_OVERLAY_CLOSED,
     report_action_pick_planner_param,
 )
 from sr_od.application.currency_war.kernel.cw_effect_inventory import (
@@ -612,7 +611,7 @@ def test_joy_rider_grant_channel_rand_anchor_and_coverage(
     gs = _joy_seeded_gs()
     out = report_action_pick_planner_param(
         gs, None, _lsig('CwScreenYinLang'), leg_type='unknown',
-        evidence=EVIDENCE_OVERLAY_CLOSED, rng=random.Random(seed))
+        rng=random.Random(seed))
     assert out.applied is True
     granted = [u.char_id for u in bench_units_of(gs) if u.char_id in cands]
     assert granted == [cands[0]], '恰一次授予,选中单位 = 注入 rng 采样值'
@@ -630,7 +629,7 @@ def test_joy_rider_grant_channel_rand_anchor_and_coverage(
     gs2.prep_anchored = True
     report_action_pick_planner_param(
         gs2, None, _lsig('CwScreenYinLang'), leg_type='unknown',
-        evidence=EVIDENCE_OVERLAY_CLOSED, rng=random.Random(seed))
+        rng=random.Random(seed))
     assert gs2.bench.source == 'logic_rand', '锚定后授予仍 logic_rand(采样面)'
 
 
@@ -643,7 +642,7 @@ def test_joy_rider_registry_gate(rows_sink: _RowSink) -> None:
     seq = gs.write_seq
     report_action_pick_planner_param(
         gs, None, _lsig('CwScreenYinLang'), leg_type='unknown',
-        evidence=EVIDENCE_OVERLAY_CLOSED, rng=random.Random(seed))
+        rng=random.Random(seed))
     assert [u for u in bench_units_of(gs) if u.char_id in cands] == [], \
         '空环境零授予'
     assert gs.write_seq == seq, '空环境零容器写'
@@ -651,14 +650,14 @@ def test_joy_rider_registry_gate(rows_sink: _RowSink) -> None:
     seq2 = gs.write_seq
     report_action_pick_planner_param(
         gs, None, _lsig('CwScreenYinLang'), leg_type='unknown',
-        evidence=EVIDENCE_OVERLAY_CLOSED, rng=random.Random(seed))
+        rng=random.Random(seed))
     assert [u for u in bench_units_of(gs) if u.char_id in cands] == [], \
         '其他环境零授予'
     assert gs.write_seq == seq2, '其他环境零容器写'
     gs.observe(gs.active_env, '欢愉契约', sig=_SIG_OBS)
     report_action_pick_planner_param(
         gs, None, _lsig('CwScreenYinLang'), leg_type='unknown',
-        evidence=EVIDENCE_OVERLAY_CLOSED, rng=random.Random(seed))
+        rng=random.Random(seed))
     granted = [u.char_id for u in bench_units_of(gs) if u.char_id in cands]
     assert granted == [cands[0]], '欢愉契约在册恰一次授予'
     kinds = rows_sink.kinds()
@@ -681,19 +680,19 @@ def test_joy_rider_rng_injection_deterministic_and_reaches_both(
             gs = _joy_seeded_gs()
             report_action_pick_planner_param(
                 gs, None, _lsig('CwScreenYinLang'), leg_type='unknown',
-                evidence=EVIDENCE_OVERLAY_CLOSED, rng=random.Random(seed))
+                rng=random.Random(seed))
             units_by_container += [u.char_id for u in bench_units_of(gs)
                                    if u.char_id in cands]
         assert units_by_container == [c, c], \
             f'seed={seed} 同 seed 同单位且恒选 {c}'
 
 
-def test_joy_rider_fires_once_per_landing_leg_not_emission(
+def test_joy_rider_fires_once_per_report_call(
         rows_sink: _RowSink) -> None:
-    """触发计数封闭清单:落地相(证据闩)equip/upgrade/unknown 三腿各
-    恰一次授予(rider 在腿型分派前,与腿型无关);发射相(evidence 缺省)
-    零授予零容器写;leg_type='' 直调落地相 rider 仍触发(兜底形态)且
-    走终态兜底零写(reason = unrouted_leg_zero_write,退役后更名)。"""
+    """触发计数封闭清单(单相即时上报,迭代 2026-09-21-pick-planner-
+    equip-immediate-report):一次上报 equip/upgrade/unknown 三腿各恰一次
+    授予(rider 在腿型分派前,与腿型无关);leg_type='' 直调 rider 仍触发
+    (兜底形态)且走终态兜底零写(reason = unrouted_leg_zero_write)。"""
     cands = _joy_candidates()
     seed = _joy_seed_for(cands[0])
     expect = [random.Random(seed).choice(cands)]
@@ -710,26 +709,16 @@ def test_joy_rider_fires_once_per_landing_leg_not_emission(
                        sig=_SIG_OBS)
         out = report_action_pick_planner_param(
             gs, None, _lsig('CwScreenYinLang'), leg_type=leg,
-            evidence=EVIDENCE_OVERLAY_CLOSED, rng=random.Random(seed), **kw)
+            rng=random.Random(seed), **kw)
         assert out.applied is True
         granted = [u.char_id for u in bench_units_of(gs)
                    if u.char_id in cands]
         assert granted == expect, f'{leg} 腿 rider 恰一次'
-    # 发射相(evidence 缺省)零授予零容器写。
-    gs3 = _joy_seeded_gs()
-    seq3 = gs3.write_seq
-    out3 = report_action_pick_planner_param(
-        gs3, None, _lsig('CwActionPickPlannerOp'), leg_type='upgrade',
-        rng=random.Random(seed))
-    assert out3.applied is True and out3.reason == 'intent_only'
-    assert gs3.write_seq == seq3, '发射相零容器写'
-    assert [u for u in bench_units_of(gs3) if u.char_id in cands] == [], \
-        '发射相零授予'
     # leg_type='' 直调落地相(兜底形态):rider 仍触发 + 终态兜底零写。
     gs4 = _joy_seeded_gs()
     out4 = report_action_pick_planner_param(
         gs4, None, _lsig('CwScreenYinLang'),
-        evidence=EVIDENCE_OVERLAY_CLOSED, rng=random.Random(seed))
+        rng=random.Random(seed))
     assert out4.applied is True
     assert out4.reason == 'unrouted_leg_zero_write', '终态兜底 reason'
     granted4 = [u.char_id for u in bench_units_of(gs4)
@@ -754,7 +743,7 @@ def test_joy_rider_failure_best_effort(
     monkeypatch.setattr(pp_mod, 'gain_character', _boom)
     out = report_action_pick_planner_param(
         gs, None, _lsig('CwScreenYinLang'), leg_type='upgrade',
-        evidence=EVIDENCE_OVERLAY_CLOSED, rng=random.Random(0))
+        rng=random.Random(0))
     assert out.applied is True
     units = [(u.char_id, u.star) for u in bench_units_of(gs)]
     assert ('银狼LV.999', 1) in units and ('银狼LV.999', 2) not in units, \
@@ -779,7 +768,7 @@ def test_joy_rider_grant_chain_timing_merge(rows_sink: _RowSink) -> None:
     report_action_pick_planner_param(
         gs, None, _lsig('CwScreenYinLang'), leg_type='equip',
         norm_item='破解芯片',   # 表外件(无后果腿)→ 台账零留证行,焦点留给授予时序
-        evidence=EVIDENCE_OVERLAY_CLOSED, rng=random.Random(seed))
+        rng=random.Random(seed))
     units = [(u.char_id, u.star) for u in bench_units_of(gs)]
     assert units == [(cands[0], 2)], '三枚合成 2★(链固定时序,非旁路直写)'
     assert rows_sink.kinds() == [], '正常授予合成零留证行'

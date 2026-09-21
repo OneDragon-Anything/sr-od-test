@@ -13,8 +13,8 @@
   零枚/未观察 → 不写 + 留证(planner_upgrade_source_missing);
 - **装备腿**(design §2.1②):归一命中 → 入栏 + 获得后果链;未解析 →
   值不变翻来源 + 留证(planner_equip_name_unresolved);
-- **幂等证据闩**(design §2.1①/对抗审③⑦):发射相仅意图遥测零容器写
-  (重派发不重写);效果腿只在落地相应用一次;
+- **即时单相上报**(迭代 2026-09-21-pick-planner-equip-immediate-report
+  design §2.0):一次上报即应用完整效果腿,无发射/落地两相、无证据闩;
 - **上阵变换窗**(design §2.1A):3★银狼LV.999 落场写下一费用档 1★;
   其余单位恒等搬运零行为差;级联全员正常推演(费用档不同时存在,
   2026-09-18 定谳[口述·权威],分组键 (char_id, star) 无跨档歧义);
@@ -23,7 +23,7 @@
   确认落地入 active_strategies + 效果分派(骇客专家:银狼 = bench 腿 +
   商店池申报行 + 随机改件采样链,翻来源域集不含 gold);portal 确认整支
   走获得链 gain_invest_env(active_env 写 + ENV_GIFTS 全量接入,欢愉
-  契约仅 immediate 腿——条件腿临时闩已退役,正式模型 = 银狼策划落地相
+  契约仅 immediate 腿——条件腿临时闩已退役,正式模型 = 银狼策划上报
   条件腿 rider),禁污染持卡面;表外
   环境效果面安静不写;
 - **采样链 v0 池**(design §2.4):硬编码名单(4 费排除 Max 件口径的
@@ -52,7 +52,6 @@ from sr_od.application.currency_war.kernel.cw_action_report.pick_invest_strategy
     report_action_pick_invest_strategy_param,
 )
 from sr_od.application.currency_war.kernel.cw_action_report.pick_planner import (
-    EVIDENCE_OVERLAY_CLOSED,
     report_action_pick_planner_param,
 )
 from sr_od.application.currency_war.kernel.cw_events import (
@@ -195,7 +194,7 @@ def test_upgrade_transform_exactly_one(
     """恰一枚 2★银狼LV.999 → 工作副本变换(2★→1★,身份保持),write_logic。"""
     gs = _make_gs(bench=[('希儿', 1), ('银狼LV.999', 2)], equips=[])
     out = report_action_pick_planner_param(gs, None, leg_type='upgrade', norm_item='',
-                                     sig=_lsig(), evidence=EVIDENCE_OVERLAY_CLOSED)
+                                     sig=_lsig())
     assert out.applied is True
     units = [(u.char_id, u.star) for u in bench_units_of(gs)]
     assert ('银狼LV.999', 1) in units, '变换为 1★(下一费用档,身份保持)'
@@ -212,7 +211,7 @@ def test_upgrade_transform_multiple_flips_source(
     gs = _make_gs(bench=[('银狼LV.999', 2), ('银狼LV.999', 2)], equips=[])
     seq_before = gs.write_seq
     out = report_action_pick_planner_param(gs, None, leg_type='upgrade', norm_item='',
-                                     sig=_lsig(), evidence=EVIDENCE_OVERLAY_CLOSED)
+                                     sig=_lsig())
     assert out.applied is True
     stars = sorted(u.star for u in bench_units_of(gs)
                    if u.char_id == '银狼LV.999')
@@ -230,14 +229,14 @@ def test_upgrade_transform_zero_or_unobserved(
     gs = _make_gs(bench=[('银狼LV.999', 1)], equips=[])
     seq_before = gs.write_seq
     out = report_action_pick_planner_param(gs, None, leg_type='upgrade', norm_item='',
-                                     sig=_lsig(), evidence=EVIDENCE_OVERLAY_CLOSED)
+                                     sig=_lsig())
     assert out.applied is False and out.reason == 'upgrade_source_missing'
     assert gs.write_seq == seq_before, '零枚不写'
     assert rows_sink.kinds() == ['planner_upgrade_source_missing']
     # 未观察(三容器全 None)同态。
     gs2 = _make_gs()
     out2 = report_action_pick_planner_param(gs2, None, leg_type='upgrade', norm_item='',
-                                      sig=_lsig(), evidence=EVIDENCE_OVERLAY_CLOSED)
+                                      sig=_lsig())
     assert out2.applied is False and out2.reason == 'upgrade_source_unobserved'
     assert rows_sink.kinds() == ['planner_upgrade_source_missing',
                                  'planner_upgrade_source_missing']
@@ -252,7 +251,7 @@ def test_upgrade_cascade_lv999_normal_merge(
     gs = _make_gs(bench=[('银狼LV.999', 2), ('银狼LV.999', 1),
                          ('银狼LV.999', 1)], equips=[])
     out = report_action_pick_planner_param(gs, None, leg_type='upgrade', norm_item='',
-                                     sig=_lsig(), evidence=EVIDENCE_OVERLAY_CLOSED)
+                                     sig=_lsig())
     assert out.applied is True
     units = [(u.char_id, u.star) for u in bench_units_of(gs)]
     assert units == [('银狼LV.999', 2)], '正常推演:3×1★ 合成 → 2★(普通单位同语义)'
@@ -270,7 +269,7 @@ def test_equip_leg_gain_with_consequence_chain(
     进备战席,与 2× 既有 1★ 银狼合成升星——效果同商店购买)。"""
     gs = _make_gs(bench=[('银狼', 1), ('银狼', 1)], equips=['幸运星'])
     out = report_action_pick_planner_param(gs, None, leg_type='equip', norm_item='分身墨镜',
-                                     sig=_lsig(), evidence=EVIDENCE_OVERLAY_CLOSED)
+                                     sig=_lsig())
     assert out.applied is True
     assert gs.equips.value == ['幸运星', '分身墨镜'], '装备入栏'
     assert gs.equips.source == 'logic'
@@ -286,7 +285,7 @@ def test_equip_leg_unresolved_flips_source(
     """未解析(norm_item='')→ 禁猜名:equips 值不变翻来源 + 留证行。"""
     gs = _make_gs(bench=[('希儿', 1)], equips=['幸运星'])
     out = report_action_pick_planner_param(gs, None, leg_type='equip', norm_item='',
-                                     sig=_lsig(), evidence=EVIDENCE_OVERLAY_CLOSED)
+                                     sig=_lsig())
     assert out.applied is True
     assert gs.equips.value == ['幸运星'], '值不变'
     assert gs.equips.source == 'logic_rand', '翻来源(观察差异收口自愈)'
@@ -303,11 +302,11 @@ def test_unknown_leg_evidenced_zero_write(
     gs = _make_gs(bench=[('希儿', 1)], equips=[])
     seq_before = gs.write_seq
     out = report_action_pick_planner_param(gs, None, leg_type='unknown', norm_item='',
-                                     sig=_lsig(), evidence=EVIDENCE_OVERLAY_CLOSED)
+                                     sig=_lsig())
     assert out.applied is True and gs.write_seq == seq_before, '零容器写'
     assert rows_sink.kinds() == ['planner_leg_unknown']
     out2 = report_action_pick_planner_param(gs, None, leg_type='', norm_item='',
-                                      sig=_lsig(), evidence=EVIDENCE_OVERLAY_CLOSED)
+                                      sig=_lsig())
     assert out2.applied is True and gs.write_seq == seq_before
     assert out2.reason == 'unrouted_leg_zero_write', '终态兜底 reason 更名'
     assert rows_sink.kinds() == ['planner_leg_unknown'], '兜底零留证'
@@ -316,29 +315,19 @@ def test_unknown_leg_evidenced_zero_write(
 # ============================================================ 幂等证据闩
 
 
-def test_emission_phase_is_intent_only(
-        monkeypatch: pytest.MonkeyPatch,
+def test_planner_report_is_immediate_single_phase(
         rows_sink: _RowSink) -> None:
-    """证据闩锁(策划屏现役形态;投资两屏已迁即时上报,本锁收窄至 planner):
-    发射相(动作 op 自上报)仅登记意图遥测——容器零写;效果腿只在落地相
-    应用一次。投资策略侧对应锁 = 即时上报
-    (test_invest_strategy_landing_hacker_wolf:点完即写入)。"""
+    """单相即时上报锁(迭代 2026-09-21-pick-planner-equip-immediate-report
+    design §2.0):确认点击后一次上报即应用效果腿(2★ 源即消费)——无
+    发射相零写窗、无落地证据闩(两相已退役);与投资策略侧即时上报锁
+    (test_invest_strategy_landing_hacker_wolf)同形态。"""
     gs = _make_gs(bench=[('银狼LV.999', 2)], equips=['幸运星'])
-    seq_before = gs.write_seq
     param = CwActionPickInvestStrategyParam(idx=1, norm_name='骇客专家:银狼')
     out1 = report_action_pick_planner_param(gs, param, _lsig('CwActionPickPlannerOp'),
                                             leg_type='upgrade')
-    out2 = report_action_pick_planner_param(gs, param, _lsig('CwActionPickPlannerOp'),
-                                            leg_type='upgrade')
-    assert out1.applied and out2.applied, '受理(意图遥测)'
-    assert gs.write_seq == seq_before, '发射相零容器写(重派发不重写)'
-    assert gs.bench.value.slots[0].unit.star == 2, '2★ 源未被发射相触碰'
-    assert gs.active_strategies.value in (None, []), '持卡面未被 planner 发射相触碰'
-    # 落地相才应用(对照)。
-    out_land = report_action_pick_planner_param(
-        gs, param, _lsig('CwScreenYinLang'),
-        leg_type='upgrade', evidence=EVIDENCE_OVERLAY_CLOSED)
-    assert out_land.applied is True
+    assert out1.applied is True
+    assert gs.bench.value.slots[0].unit.star == 1, '一次上报即变换(无证据闩)'
+    assert gs.active_strategies.value in (None, []), '持卡面未被 planner 上报触碰'
 
 
 # ============================================================ 上阵变换窗
@@ -483,7 +472,7 @@ def test_invest_portal_landing_no_card_pollution(
     """portal 确认(欢愉契约)整支走获得链(gain-chain design §2.5):
     active_env 写(选择事实落地经 gain_invest_env)+ 银狼LV.999 1★ 入席
     递归(on_env_gained chars_immediate 唯一腿——条件腿临时翻来源闩已
-    撤:零翻面、零 provisional 标记行,正式模型 = 银狼策划落地相条件腿
+    撤:零翻面、零 provisional 标记行,正式模型 = 银狼策划上报条件腿
     rider,锁面归 test_cw_gain_chain.py rider 组);禁入 active_strategies
     (防 portal 卡污染持卡面)。"""
     gs = _make_gs(bench=[('希儿', 1)], equips=['幸运星'], gold=30)

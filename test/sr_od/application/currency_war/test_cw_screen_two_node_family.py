@@ -12,9 +12,10 @@ screens.py 盛会之星段;report 函数级契约由 test_cw_screen_report_ports
 - **chosen 写时机锁**(祈愿试炼代表):确认已发 → 标识不在 = 选卡落地
   → 此刻才写 chosen_wish + success 交回;标识在 = 未落地 → 不写、重走
   (chosen_* 动作事实边界留守重入裁决点);
-- **决策动作 node 锁**(装备三选一代表,无门单发型):决策从容器零参读
-  (决策调用形态不变)→ 组装 param(idx + 注册表分层归一 norm_item)→
-  点卡链派发 → 派发即 round_success 终结(零重入裁决轮;即时上报迭代
+- **决策动作 node 锁**(装备三选一/银狼策划,无门单发型):决策从容器零参读
+  (决策调用形态不变)→ 组装 param/equip(装备 idx + 注册表分层归一
+  norm_item;策划腿型载荷 classify_planner_leg)→ 点卡链派发 → 派发即
+  round_success 终结(零重入裁决轮;即时上报迭代
   2026-09-21-pick-planner-equip-immediate-report)。
 
 驱动方式 = 真类实例(构造走 __init__)+ 读链/门/机械点击链桩化,节点
@@ -349,4 +350,59 @@ def test_equip_act_decides_from_container_and_dispatch_terminal(
     assert (dispatches[0].env.target.x, dispatches[0].env.target.y) == (
         mod.CwScreenEquipPick.CARD_XS[1], mod.CwScreenEquipPick.CARD_Y), (
         f'定位点(策略 idx=1 → 第二卡):{dispatches[0].env.target!r}')
+    assert rs.is_success, f'派发即 round_success 终结(零重入裁决轮):{rs!r}'
+
+
+def test_planner_act_decides_leg_and_dispatch_terminal(
+        test_context, monkeypatch) -> None:
+    """决策动作 node 锁(银狼策划,即时上报迭代 2026-09-21-pick-planner-
+    equip-immediate-report design §2.1):零参决策 → 腿型判定单源
+    ``classify_planner_leg`` → env 携腿型载荷 → 选卡确认链派发即
+    ``round_success`` 终结(零重入裁决轮、零证据闩存证——效果腿在动作 op
+    确认点击后即时上报)。
+    红 = 腿型载荷断流 / 派发后回退 wait(重入裁决回潮)/ 存证闩回潮。"""
+    from sr_od.application.currency_war.kernel.cw_screen_report.planner import (
+        CwScreenPlannerObs,
+    )
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_yinlang as ymod,
+    )
+
+    session = StrategySession()
+    _decide_calls: list[int] = []
+    match = _make_match(
+        session,
+        decide_planner=lambda: (_decide_calls.append(1)
+                                or SimpleNamespace(idx=1, reason='stub')))
+    monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
+    op = ymod.CwScreenYinLang(test_context)
+    monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
+    # 决策半腿型判定输入 = 选中的右卡卡文(破解芯片 = 装备域锚命中)。
+    op._obs = CwScreenPlannerObs(
+        on_screen=True,
+        options=[PlannerOption(idx=0, text='随便什么左卡'),
+                 PlannerOption(idx=1, text='破解芯片 前台强度 30%')],
+        screen=_FRAME)
+    dispatches: list = []
+
+    class _StubPickOp:
+        def __init__(self, param, env) -> None:
+            self.param = param
+            self.env = env
+
+        def execute(self) -> bool:
+            dispatches.append(self)
+            return True
+
+    import sr_od.application.currency_war.operations.cw_op.cw_action_registry as _reg
+    monkeypatch.setattr(_reg, 'action_op_for',
+                        lambda act, ctx, env: _StubPickOp(act, env))
+    rs = _run_node(test_context, op, op.act)
+    assert _decide_calls == [1], f'零参决策恰一次:{_decide_calls!r}'
+    assert len(dispatches) == 1 and dispatches[0].param.idx == 1, (
+        f'选卡确认链恰一次派发,param 携真实 idx:{dispatches!r}')
+    assert dispatches[0].env.leg_type == 'equip', (
+        'env 携腿型载荷(classify_planner_leg 单源)')
+    assert dispatches[0].env.norm_item == '破解芯片', '归一件名随 env 透传'
+    assert dispatches[0].env.target is not None, '点卡定位点经 env 传入'
     assert rs.is_success, f'派发即 round_success 终结(零重入裁决轮):{rs!r}'
