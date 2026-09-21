@@ -17,7 +17,17 @@ docs/develop/sr_od/application/currency_war/game_state/gain-chain.md
 - **失败安全**(§2.7):溢出落位/归位/溢出位被占留证;bench/equips
   未观察(直构域)= 拒落档零写、零缺陷发射(两未观察 kind 已随开局
   种子底座与锚定闩批退役);种子容器(缓存单例支,接管局同构)正常
-  落账;置闩后失配网原样生效(确定面被观察覆盖产失配行)。
+  落账;置闩后失配网原样生效(确定面被观察覆盖产失配行);
+- **欢愉契约条件腿 rider**(条件腿正式模型,锁面 = 银狼策划选择落地相
+  上报的授予行为):通道语义(授予 rand=True 全通道 logic_rand,rand
+  形参优先于锚定闩——未闩/置闩同通道)+ 覆盖校准面 = 观察覆盖落
+  logic_rand_outcome 行零失配行;在册判定(active_env 归一 = 欢愉契约)、
+  rng 注入确定性(同 seed 同单位,两候选均可达)、触发计数封闭清单
+  (落地相 equip/upgrade/unknown 各恰一次,发射相零授予,leg_type=''
+  兜底仍触发且终态兜底 reason = unrouted_leg_zero_write)、授予失败
+  调用点级 best-effort(腿型分派照常 + joy_conditional_grant_failed
+  留证行)、授予走链固定时序(预置两枚同候选可合成);弱化兜底档退役
+  锁(分类落 unknown/打分两档制)归 test_cw_yinlang_phase32.py。
 """
 from __future__ import annotations
 
@@ -27,6 +37,10 @@ import random
 import pytest
 
 from sr_od.application.currency_war.kernel import cw_gain_chain
+from sr_od.application.currency_war.kernel.cw_action_report.pick_planner import (
+    EVIDENCE_OVERLAY_CLOSED,
+    report_action_pick_planner_param,
+)
 from sr_od.application.currency_war.kernel.cw_effect_inventory import (
     SOURCE_STRATEGY,
 )
@@ -557,3 +571,215 @@ def test_on_strategy_gained_unregistered_quiet() -> None:
                                  sig=_lsig())
     assert effects == ()
     assert gs.write_seq == seq_before, '零写'
+
+
+# ============================================================ 欢愉契约条件腿
+# ============================================================ rider(银狼策划落地相正式模型)
+
+
+def _joy_candidates() -> list[str]:
+    """条件腿候选名集单一源(结构化在册数据,禁测试内第二抄本)。"""
+    return [name for name, _text in ENV_GIFTS['欢愉契约'].chars_conditional]
+
+
+def _joy_seed_for(candidate: str) -> int:
+    """使 ``random.Random(seed).choice`` 选中指定候选的最小非负种子
+    (采样面探针;rider 的采样注入语义与之同一)。"""
+    cands = _joy_candidates()
+    return next(s for s in range(200)
+                if random.Random(s).choice(cands) == candidate)
+
+
+def _joy_seeded_gs(env_name: str = '欢愉契约') -> GameState:
+    """种子容器(缓存单例支冷建即含开局种子底座)+ 在册环境直写
+    (观察链同写入口;'' = 保持种子初值空环境)。"""
+    gs = game_state_of(StrategySession())
+    if env_name:
+        gs.observe(gs.active_env, env_name, sig=_SIG_OBS)
+    return gs
+
+
+def test_joy_rider_grant_channel_rand_anchor_and_coverage(
+        rows_sink: _RowSink) -> None:
+    """通道语义(授予体含采样 → rand=True 全通道 logic_rand,rand 形参
+    优先于锚定闩):种子容器未闩臂授予落 bench source=logic_rand;置闩
+    (测试专口直赋)后同路径 source 仍 = logic_rand;未闩臂观察覆盖落
+    logic_rand_outcome 行、零 observe_vs_logic_mismatch(无失配网辖 =
+    采样面本义,校准面 = outcome 行)。"""
+    cands = _joy_candidates()
+    seed = _joy_seed_for(cands[0])
+    # 臂 1:未闩(种子底座窗)。
+    gs = _joy_seeded_gs()
+    out = report_action_pick_planner_param(
+        gs, None, _lsig('CwScreenYinLang'), leg_type='unknown',
+        evidence=EVIDENCE_OVERLAY_CLOSED, rng=random.Random(seed))
+    assert out.applied is True
+    granted = [u.char_id for u in bench_units_of(gs) if u.char_id in cands]
+    assert granted == [cands[0]], '恰一次授予,选中单位 = 注入 rng 采样值'
+    assert gs.bench.source == 'logic_rand', '未闩授予落随机态'
+    # 观察覆盖:差异落 logic_rand_outcome、零失配行(首观察静默覆盖)。
+    sig_obs = ChannelSig(family='obs', actor='CwScreenPrep', mode='read')
+    other = BenchView(slots=[BenchSlot(kind='empty')] * 9, capacity=9)
+    consume_defect_sink()
+    gs.observe(gs.bench, other, sig=sig_obs)
+    kinds = [r['kind'] for r in consume_defect_sink()]
+    assert 'observe_vs_logic_mismatch' not in kinds, '随机态覆盖零失配行'
+    assert 'logic_rand_outcome' in kinds, '校准面 = outcome 行'
+    # 臂 2:置闩后同路径 —— source 仍 = logic_rand(rand 优先于闩)。
+    gs2 = _joy_seeded_gs()
+    gs2.prep_anchored = True
+    report_action_pick_planner_param(
+        gs2, None, _lsig('CwScreenYinLang'), leg_type='unknown',
+        evidence=EVIDENCE_OVERLAY_CLOSED, rng=random.Random(seed))
+    assert gs2.bench.source == 'logic_rand', '锚定后授予仍 logic_rand(采样面)'
+
+
+def test_joy_rider_registry_gate(rows_sink: _RowSink) -> None:
+    """在册判定:active_env 空(种子初值)/其他环境 → 零授予零写;欢愉
+    契约在册 → 恰一次授予(正常授予零留证行,unknown 腿载荷各留一行)。"""
+    cands = _joy_candidates()
+    seed = _joy_seed_for(cands[0])
+    gs = _joy_seeded_gs('')          # 空 = 种子初值
+    seq = gs.write_seq
+    report_action_pick_planner_param(
+        gs, None, _lsig('CwScreenYinLang'), leg_type='unknown',
+        evidence=EVIDENCE_OVERLAY_CLOSED, rng=random.Random(seed))
+    assert [u for u in bench_units_of(gs) if u.char_id in cands] == [], \
+        '空环境零授予'
+    assert gs.write_seq == seq, '空环境零容器写'
+    gs.observe(gs.active_env, '公司契约', sig=_SIG_OBS)
+    seq2 = gs.write_seq
+    report_action_pick_planner_param(
+        gs, None, _lsig('CwScreenYinLang'), leg_type='unknown',
+        evidence=EVIDENCE_OVERLAY_CLOSED, rng=random.Random(seed))
+    assert [u for u in bench_units_of(gs) if u.char_id in cands] == [], \
+        '其他环境零授予'
+    assert gs.write_seq == seq2, '其他环境零容器写'
+    gs.observe(gs.active_env, '欢愉契约', sig=_SIG_OBS)
+    report_action_pick_planner_param(
+        gs, None, _lsig('CwScreenYinLang'), leg_type='unknown',
+        evidence=EVIDENCE_OVERLAY_CLOSED, rng=random.Random(seed))
+    granted = [u.char_id for u in bench_units_of(gs) if u.char_id in cands]
+    assert granted == [cands[0]], '欢愉契约在册恰一次授予'
+    kinds = rows_sink.kinds()
+    # 台账除三腿载荷行外,仅「观察覆盖种子('' → 公司契约)」的 outcome
+    # 行(随机态覆盖预期内,与授予无关);授予自身零留证。
+    assert kinds.count('planner_leg_unknown') == 3, 'unknown 腿载荷恰各一行'
+    assert 'joy_conditional_grant_failed' not in kinds, '正常授予零授予失败留证'
+
+
+def test_joy_rider_rng_injection_deterministic_and_reaches_both(
+        rows_sink: _RowSink) -> None:
+    """rng 注入(缺省 None = 实机未播种猜测语义,不在此锁面;注入面 =
+    sim 消费契约):同 seed 同单位;两候选均可达(各候选都有使其经完整
+    上报路径落位的种子)。"""
+    cands = _joy_candidates()
+    for c in cands:
+        seed = _joy_seed_for(c)
+        units_by_container = []
+        for _ in range(2):
+            gs = _joy_seeded_gs()
+            report_action_pick_planner_param(
+                gs, None, _lsig('CwScreenYinLang'), leg_type='unknown',
+                evidence=EVIDENCE_OVERLAY_CLOSED, rng=random.Random(seed))
+            units_by_container += [u.char_id for u in bench_units_of(gs)
+                                   if u.char_id in cands]
+        assert units_by_container == [c, c], \
+            f'seed={seed} 同 seed 同单位且恒选 {c}'
+
+
+def test_joy_rider_fires_once_per_landing_leg_not_emission(
+        rows_sink: _RowSink) -> None:
+    """触发计数封闭清单:落地相(证据闩)equip/upgrade/unknown 三腿各
+    恰一次授予(rider 在腿型分派前,与腿型无关);发射相(evidence 缺省)
+    零授予零容器写;leg_type='' 直调落地相 rider 仍触发(兜底形态)且
+    走终态兜底零写(reason = unrouted_leg_zero_write,退役后更名)。"""
+    cands = _joy_candidates()
+    seed = _joy_seed_for(cands[0])
+    expect = [random.Random(seed).choice(cands)]
+    for leg, kw in (('equip', {'norm_item': '破解芯片'}),
+                    ('upgrade', {}), ('unknown', {})):
+        gs = _joy_seeded_gs()
+        if leg == 'upgrade':
+            # 升费腿前置:恰一枚 2★银狼LV.999(rider 候选与其无身份交叠)。
+            slots = [BenchSlot(kind='unit',
+                               unit=Unit(char_id='银狼LV.999', star=2,
+                                         slot=1))]
+            slots += [BenchSlot(kind='empty')] * 8
+            gs.observe(gs.bench, BenchView(slots=slots, capacity=9),
+                       sig=_SIG_OBS)
+        out = report_action_pick_planner_param(
+            gs, None, _lsig('CwScreenYinLang'), leg_type=leg,
+            evidence=EVIDENCE_OVERLAY_CLOSED, rng=random.Random(seed), **kw)
+        assert out.applied is True
+        granted = [u.char_id for u in bench_units_of(gs)
+                   if u.char_id in cands]
+        assert granted == expect, f'{leg} 腿 rider 恰一次'
+    # 发射相(evidence 缺省)零授予零容器写。
+    gs3 = _joy_seeded_gs()
+    seq3 = gs3.write_seq
+    out3 = report_action_pick_planner_param(
+        gs3, None, _lsig('CwActionPickPlannerOp'), leg_type='upgrade',
+        rng=random.Random(seed))
+    assert out3.applied is True and out3.reason == 'intent_only'
+    assert gs3.write_seq == seq3, '发射相零容器写'
+    assert [u for u in bench_units_of(gs3) if u.char_id in cands] == [], \
+        '发射相零授予'
+    # leg_type='' 直调落地相(兜底形态):rider 仍触发 + 终态兜底零写。
+    gs4 = _joy_seeded_gs()
+    out4 = report_action_pick_planner_param(
+        gs4, None, _lsig('CwScreenYinLang'),
+        evidence=EVIDENCE_OVERLAY_CLOSED, rng=random.Random(seed))
+    assert out4.applied is True
+    assert out4.reason == 'unrouted_leg_zero_write', '终态兜底 reason'
+    granted4 = [u.char_id for u in bench_units_of(gs4)
+                if u.char_id in cands]
+    assert granted4 == expect, '兜底形态 rider 仍触发恰一次'
+
+
+def test_joy_rider_failure_best_effort(
+        monkeypatch: pytest.MonkeyPatch, rows_sink: _RowSink) -> None:
+    """授予失败语义(调用点级 best-effort,链零吞错纪律的显式例外):
+    gain_character 注入异常 → 恰一行 joy_conditional_grant_failed 留证
+    (expected/actual/evidence 对齐),腿型分派照常执行(升费变换仍应用)
+    ——授予与选项应用两条独立因果,授予失败不拖垮选项应用。"""
+    import sr_od.application.currency_war.kernel.cw_action_report.\
+        pick_planner as pp_mod
+    gs = _make_gs(bench=[('银狼LV.999', 2)], equips=[])
+    gs.observe(gs.active_env, '欢愉契约', sig=_SIG_OBS)
+
+    def _boom(gs: GameState, name: str, star: int, **kw: object) -> object:
+        raise RuntimeError('授予通道注入异常')
+
+    monkeypatch.setattr(pp_mod, 'gain_character', _boom)
+    out = report_action_pick_planner_param(
+        gs, None, _lsig('CwScreenYinLang'), leg_type='upgrade',
+        evidence=EVIDENCE_OVERLAY_CLOSED, rng=random.Random(0))
+    assert out.applied is True
+    units = [(u.char_id, u.star) for u in bench_units_of(gs)]
+    assert ('银狼LV.999', 1) in units and ('银狼LV.999', 2) not in units, \
+        '腿型分派照常执行(升费变换仍应用)'
+    fails = [r for r in rows_sink.rows
+             if r['kind'] == 'joy_conditional_grant_failed']
+    assert len(fails) == 1, '恰一行授予失败留证'
+    row = fails[0]
+    assert row['expected'] == '条件腿授予成功'
+    assert '授予通道注入异常' in str(row['actual']), 'actual = 异常摘要'
+    assert str(row['observed_evidence']).startswith('joy_conditional:')
+
+
+def test_joy_rider_grant_chain_timing_merge(rows_sink: _RowSink) -> None:
+    """时序锁:授予走获得链固定时序(落位 → 回调 → 单级合成)——bench
+    预置两枚同候选单位,rider 授予第三枚 → 3 合 1 合成 2★(4 费单位正常
+    参与合成,非旁路直写)。"""
+    cands = _joy_candidates()
+    seed = _joy_seed_for(cands[0])
+    gs = _make_gs(bench=[(cands[0], 1), (cands[0], 1)], equips=[])
+    gs.observe(gs.active_env, '欢愉契约', sig=_SIG_OBS)
+    report_action_pick_planner_param(
+        gs, None, _lsig('CwScreenYinLang'), leg_type='equip',
+        norm_item='破解芯片',   # 表外件(无后果腿)→ 台账零留证行,焦点留给授予时序
+        evidence=EVIDENCE_OVERLAY_CLOSED, rng=random.Random(seed))
+    units = [(u.char_id, u.star) for u in bench_units_of(gs)]
+    assert units == [(cands[0], 2)], '三枚合成 2★(链固定时序,非旁路直写)'
+    assert rows_sink.kinds() == [], '正常授予合成零留证行'

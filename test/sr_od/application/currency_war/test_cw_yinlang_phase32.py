@@ -5,7 +5,9 @@
 
 - **腿型判定单源**(design §2.1①):装备域优先——破解芯片卡文含「弱化」
   仍判 equip(碰撞治理);longest-match(分身墨镜Max 不被短名截胡);相似
-  归一唯一命中;多命中 = equip 且件名未解析(禁猜);关键词降级/unknown;
+  归一唯一命中;多命中 = equip 且件名未解析(禁猜);升费关键词/unknown
+  (弱化兜底档已退役:含弱化词未知名卡文落 unknown,原文二分法 =
+  修改自身费用/获得妙妙小道具,弱化分类无原文依据且实机零出现);
 - **R1 升费变换窗三态**(design §2.1③):恰一枚 2★银狼LV.999 → 变换
   (write_logic);多枚 → 值不变翻来源 + 留证(planner_upgrade_ambiguous);
   零枚/未观察 → 不写 + 留证(planner_upgrade_source_missing);
@@ -20,8 +22,9 @@
 - **pick_invest 迁移**(design §2.3;gain-chain 3.2):分步上报——策略屏
   确认落地入 active_strategies + 效果分派(骇客专家:银狼 = bench 腿 +
   商店池申报行 + 随机改件采样链,翻来源域集不含 gold);portal 确认整支
-  走获得链 gain_invest_env(active_env 写 + ENV_GIFTS 全量接入 + 欢愉
-  契约 provisional 闩随 on_env_gained 迁 kernel),禁污染持卡面;表外
+  走获得链 gain_invest_env(active_env 写 + ENV_GIFTS 全量接入,欢愉
+  契约仅 immediate 腿——条件腿临时闩已退役,正式模型 = 银狼策划落地相
+  条件腿 rider),禁污染持卡面;表外
   环境效果面安静不写;
 - **采样链 v0 池**(design §2.4):硬编码名单(4 费排除 Max 件口径的
   显式第二真相源)无 Max 件,种子可复现。
@@ -53,7 +56,9 @@ from sr_od.application.currency_war.kernel.cw_action_report.pick_planner import 
     report_action_pick_planner_param,
 )
 from sr_od.application.currency_war.kernel.cw_events import (
+    PlannerOption,
     classify_planner_leg,
+    decide_planner,
     normalize_equip_name,
 )
 from sr_od.application.currency_war.kernel.cw_gain_effects import (
@@ -138,7 +143,8 @@ def test_leg_classifier_equip_domain_first_and_longest_match() -> None:
     """腿型分类锁(design §2.1①):装备域优先——破解芯片卡文含「弱化」
     仍判 equip(决策关键词碰撞治理);longest-match;相似归一;多命中
     = equip+未解析;关键词降级;unknown。"""
-    # 破解芯片 = 名字 + 含「弱化」效果文 → 装备域锚先行,不落 weaken。
+    # 破解芯片 = 名字 + 含「弱化」效果文 → 装备域锚先行(碰撞治理;
+    # 含弱化词未知名卡文退役后落 unknown)。
     assert classify_planner_leg(
         '破解芯片 前台强度 30% 首次穿戴该装备时，会使多个节点变为弱化状'
         '态：敌人的生命上限降低10%，伤害降低 20%') == ('equip', '破解芯片')
@@ -154,12 +160,30 @@ def test_leg_classifier_equip_domain_first_and_longest_match() -> None:
     # (禁猜——繁体形变使「数据拷贝仪」基础名锚不中,Max 与基础名同时高相似)。
     assert normalize_equip_name('数據拷贝仪Max') == ''
     assert classify_planner_leg('数據拷贝仪Max') == ('equip', '')
-    # 关键词降级(锚/相似均未中才轮到)。
+    # 关键词(锚/相似均未中才轮到;弱化兜底档退役后含弱化词未知名卡文同落 unknown)。
     assert classify_planner_leg(
         '提升费用至4费,变为1星银狼LV.999') == ('upgrade', '')
-    assert classify_planner_leg('使后续节点【弱化】') == ('weaken', '')
+    assert classify_planner_leg('使后续节点【弱化】') == ('unknown', '')
     assert classify_planner_leg('随便什么不认识的卡') == ('unknown', '')
     assert classify_planner_leg('') == ('unknown', '')
+
+
+def test_decide_planner_weaken_tier_retired(rows_sink: _RowSink) -> None:
+    """打分两档制退役锁(升费档 > 装备档):无名弱化卡文零弱化档分——按
+    装备档回落(reason = 装备(...)),不再有 55 分「全场弱化」占优档;
+    已知装备小分卡(轮滑鞋 = 4 分)对无名弱化卡文(0 分)胜出(退役前
+    55 分弱化档占优)。"""
+    gs = _make_gs(bench=[], equips=[])
+    pick = decide_planner(
+        [PlannerOption(idx=0, text='使后续节点【弱化】'),
+         PlannerOption(idx=1, text='轮滑鞋')], gs)
+    assert pick.idx == 1, '装备档 4 分胜出(退役前弱化档 55 分占优)'
+    assert '全场弱化' not in pick.reason
+    pick2 = decide_planner(
+        [PlannerOption(idx=0, text='使后续节点【弱化】')], gs)
+    assert pick2.idx == 0
+    assert pick2.reason.startswith('装备('), '无名弱化卡文按装备档回落'
+    assert '全场弱化' not in pick2.reason, '弱化档 reason 词已不存在'
 
 
 # ============================================================ R1 升费变换窗三态
@@ -270,20 +294,23 @@ def test_equip_leg_unresolved_flips_source(
     assert gs.bench.source == 'observation', '无后果链(不猜件名)'
 
 
-def test_unknown_leg_evidenced_weaken_zero(
+def test_unknown_leg_evidenced_zero_write(
         monkeypatch: pytest.MonkeyPatch,
         rows_sink: _RowSink) -> None:
-    """unknown = 零记账 + 留证证未识别事实;weaken = 纯零记账。"""
+    """unknown = 零记账 + 留证证未识别事实(含弱化词未知名卡文退役后落
+    此档——静默零记账变响亮申报;原 weaken 派发分支已删,未路由腿型 =
+    终态兜底零写)。"""
     gs = _make_gs(bench=[('希儿', 1)], equips=[])
     seq_before = gs.write_seq
     out = report_action_pick_planner_param(gs, None, leg_type='unknown', norm_item='',
                                      sig=_lsig(), evidence=EVIDENCE_OVERLAY_CLOSED)
     assert out.applied is True and gs.write_seq == seq_before, '零容器写'
     assert rows_sink.kinds() == ['planner_leg_unknown']
-    out2 = report_action_pick_planner_param(gs, None, leg_type='weaken', norm_item='',
+    out2 = report_action_pick_planner_param(gs, None, leg_type='', norm_item='',
                                       sig=_lsig(), evidence=EVIDENCE_OVERLAY_CLOSED)
     assert out2.applied is True and gs.write_seq == seq_before
-    assert rows_sink.kinds() == ['planner_leg_unknown'], 'weaken 零留证'
+    assert out2.reason == 'unrouted_leg_zero_write', '终态兜底 reason 更名'
+    assert rows_sink.kinds() == ['planner_leg_unknown'], '兜底零留证'
 
 
 # ============================================================ 幂等证据闩
@@ -455,9 +482,10 @@ def test_invest_portal_landing_no_card_pollution(
         rows_sink: _RowSink) -> None:
     """portal 确认(欢愉契约)整支走获得链(gain-chain design §2.5):
     active_env 写(选择事实落地经 gain_invest_env)+ 银狼LV.999 1★ 入席
-    递归(on_env_gained chars_immediate)+ 条件腿临时翻来源闩随枚举迁
-    kernel(bench/equips 翻来源 + joy_contract_provisional 留证,kind
-    不变);禁入 active_strategies(防 portal 卡污染持卡面)。"""
+    递归(on_env_gained chars_immediate 唯一腿——条件腿临时翻来源闩已
+    撤:零翻面、零 provisional 标记行,正式模型 = 银狼策划落地相条件腿
+    rider,锁面归 test_cw_gain_chain.py rider 组);禁入 active_strategies
+    (防 portal 卡污染持卡面)。"""
     gs = _make_gs(bench=[('希儿', 1)], equips=['幸运星'], gold=30)
     param = CwActionPickInvestEnvParam(idx=1, norm_name='欢愉契约')
     out = report_action_pick_invest_env_param(
@@ -468,11 +496,12 @@ def test_invest_portal_landing_no_card_pollution(
     # 投资环境屏同在锚定前(未锚定期):链写改道 logic_rand(通道规则)。
     assert gs.active_env.source == 'logic_rand'
     units = [(u.char_id, u.star) for u in bench_units_of(gs)]
-    assert ('银狼LV.999', 1) in units, 'immediate 腿(chars_immediate 实证)'
-    assert gs.bench.source == 'logic_rand', '条件腿临时闩翻来源(bench)'
-    assert gs.equips.source == 'logic_rand' \
-        and gs.equips.value == ['幸运星'], '条件腿临时闩翻来源(equips 值不变)'
-    assert 'joy_contract_provisional' in rows_sink.kinds(), '披露键留证行'
+    assert units == [('希儿', 1), ('银狼LV.999', 1)], \
+        'immediate 腿唯一(撤闩后 on_env_gained 仅 chars_immediate)'
+    assert gs.bench.source == 'logic_rand', '送卡链写未锚定期改道随机态'
+    assert gs.equips.source == 'observation' \
+        and gs.equips.value == ['幸运星'], '零翻面(equips 值与来源均不动)'
+    assert rows_sink.kinds() == [], 'provisional 标记行零发射(撤闩后台账零新增)'
 
 
 def test_invest_portal_env_gifts_full_access(
