@@ -340,21 +340,34 @@ def test_empty_stub_gate_semantics(screen):
             f'{screen}.{field_name} 空桩门语义不符'
 
 
-def test_briefing_three_gate_semantics():
-    """简报三闸逐位平移:词缀幂等门(已有不重写)/ boss 恒覆写(读空写
-    None)/ 难度仅 None 才写。"""
+def test_briefing_write_semantics():
+    """简报写语义(统一读写口径):三字段读到非空恒覆写(重读自愈
+    首次误读)/ 读空跳过写(读缺=跳过写,瞬时 OCR 失手不擦同局已读
+    真值;跨局残留由每局容器冷建/丢弃挡死)。"""
     mod = _screen_module('briefing')
     gs = _blank_gs()
     gs.write_logic(gs.enemy_affixes, ['已有词缀'],
                    produced_by='TestSigWriter', sig=_TEST_SIG)
+    gs.write_logic(gs.plane_bosses, ['旧boss', None, None],
+                   produced_by='TestSigWriter', sig=_TEST_SIG)
     gs.write_logic(gs.enemy_difficulty, 2,
                    produced_by='TestSigWriter', sig=_TEST_SIG)
+    # 读到非空 → 恒覆写
     obs = mod.CwScreenBriefingObs(on_screen=True, enemy_affixes=['新词缀'],
-                                  plane_bosses=None, enemy_difficulty=9)
+                                  plane_bosses=['新boss', None, None],
+                                  enemy_difficulty=9)
     mod.report_screen_briefing_obs(gs, obs)
-    assert gs.enemy_affixes.value == ['已有词缀'], '词缀幂等门:已有不重写'
-    assert gs.plane_bosses.value is None, 'boss 恒覆写:读空写 None'
-    assert gs.enemy_difficulty.value == 2, '难度仅 None 才写:已有值不动'
+    assert gs.enemy_affixes.value == ['新词缀'], '词缀读到必写(恒覆写)'
+    assert gs.plane_bosses.value == ['新boss', None, None], \
+        'boss 读到必写(恒覆写,None 槽保位)'
+    assert gs.enemy_difficulty.value == 9, '难度读到必写(恒覆写)'
+    # 读空 → 跳过写(不擦已读真值)
+    obs_empty = mod.CwScreenBriefingObs(on_screen=True, enemy_affixes=[],
+                                        plane_bosses=None, enemy_difficulty=None)
+    mod.report_screen_briefing_obs(gs, obs_empty)
+    assert gs.enemy_affixes.value == ['新词缀'], '词缀读空跳过写'
+    assert gs.plane_bosses.value == ['新boss', None, None], 'boss 读空跳过写'
+    assert gs.enemy_difficulty.value == 9, '难度读空跳过写'
 
 
 def test_plane_intel_write_gates():

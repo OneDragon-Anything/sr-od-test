@@ -565,7 +565,7 @@ def _make_briefing(test_context, monkeypatch: pytest.MonkeyPatch, *,
                    affixes: list | None = None, difficulty: int | None = 5,
                    session: StrategySession | None = None):
     """简报真类装配(两 node 形态)。桩面 = 画面门/「下一步」点击/三读链;
-    读链桩按记录器计数(幂等守卫辖「读+采」断言载体)。返回 (op, session, calls)。"""
+    读链桩按记录器计数(读写语义断言载体)。返回 (op, session, calls)。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_briefing as bm,
     )
@@ -606,8 +606,8 @@ def _make_briefing(test_context, monkeypatch: pytest.MonkeyPatch, *,
 # (原 test_briefing_dispatch_and_session_writes「简报分流双向」删:装两
 #  端口走五段新路径的分流/段迹面随并存窗收口整删;其跨路径幸存断言
 #  (「下一步」发出置 pending / 标识 miss 门 fail 早退零读链)分别由
-#  test_reentry_arbitration_flag_gate_combination 的简报两腿与三字段锁
-#  的幂等守卫腿承重。)
+#  test_reentry_arbitration_flag_gate_combination 的简报两腿与三字段写
+#  语义锁承重。)
 
 
 def test_briefing_observe_gate_and_report(test_context, monkeypatch) -> None:
@@ -643,18 +643,17 @@ def test_briefing_observe_gate_and_report(test_context, monkeypatch) -> None:
         f'难度经 report 落容器:{_gs.enemy_difficulty.value!r}')
     assert op._obs is not None and op._obs.enemy_affixes == ['火弱点'], (
         'obs 挂实例属性')
-    assert calls['diff_read'] == 1, '难度容器缺省 → 读一次(仅缺省读)'
+    assert calls['diff_read'] == 1, '难度每次进屏重读(读一次)'
 
 
 def test_briefing_session_write_semantics_three_fields(test_context,
                                                        monkeypatch) -> None:
-    """写入流对拍:简报三字段三种写语义逐字——①词缀幂等守卫辖「读+采」
-    (容器非空 → 跳过读与点采,观察侧读门);②boss 恒覆写(不做已存
-    跳过,防跨局残留;读空 → 清 None);③敌人难度仅 None 时写(容器
-    已有不读不写)。单驱动观察 node(读侧住观察 node,写闸住 report 屏
-    文件,report 函数级闸面由 test_cw_screen_report_ports 承重,本锁辖
-    op 侧读门接线)。
-    红 = 守卫辖面漂移(如幂等只辖读不辖采)或覆写语义丢失。"""
+    """写入流对拍:简报三字段统一读写语义逐字——每次进屏都重读,
+    读到非空恒覆写(重读自愈首次误读)/ 读空跳过写(读缺=跳过写,
+    不擦同局已读真值)。单驱动观察 node(读侧住观察 node,写闸住
+    report 屏文件,report 函数级闸面由 test_cw_screen_report_ports
+    承重,本锁辖 op 侧读链接线)。
+    红 = 读链被已读守卫短路 / 覆写或跳写语义漂移。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         ChannelSig as _cs_t,
     )
@@ -669,51 +668,45 @@ def test_briefing_session_write_semantics_three_fields(test_context,
             sig=_cs_t(family='logic_action', actor='CwLoop',
                       screen='', mode='compute'))
 
-    # ① 词缀幂等守卫辖「读+采」
+    # ① 词缀:容器已有也重读重采重写(无已读守卫)
     session = StrategySession()
     _seed(session, 'enemy_affixes', ['已有词缀'])
     op, session, calls = _make_briefing(test_context, monkeypatch,
-                                        mark_hit=True, affixes=['新词缀'],
+                                        mark_hit=True,
+                                        affixes=[('新词缀', None)],
                                         bosses=['碎星王虫'], session=session)
     _run_node(test_context, op, op.observe)
-    assert calls['affix_read'] == 0 and calls['affix_collect'] == 0, (
-        f'容器已有词缀 → 跳过读与点采(幂等辖「读+采」):{calls!r}')
-    assert _gso_t(session).enemy_affixes.value == ['已有词缀'], '幂等轮不覆写词缀'
-    assert _gso_t(session).plane_bosses.value == ['碎星王虫'], 'boss 幂等豁免(恒覆写)照写'
-    # ② boss 恒覆写:残留 → 本局真值;读空 → 清 None
+    assert calls['affix_read'] == 1 and calls['affix_collect'] == 1, (
+        f'词缀无已读守卫 → 重读重采:{calls!r}')
+    assert _gso_t(session).enemy_affixes.value == ['新词缀'], '词缀读到必写'
+    assert _gso_t(session).plane_bosses.value == ['碎星王虫'], \
+        'boss 读到必写(恒覆写)'
+    # ② boss:读到恒覆写(重读自愈)/ 读空跳过写(不擦已读真值)
     session2 = StrategySession()
-    _seed(session2, 'plane_bosses', ['上一局残留'])
+    _seed(session2, 'plane_bosses', ['首次误读'])
     op2, session2, _c2 = _make_briefing(test_context, monkeypatch,
                                         mark_hit=True, bosses=['碎星王虫'],
                                         session=session2)
     _run_node(test_context, op2, op2.observe)
-    assert _gso_t(session2).plane_bosses.value == ['碎星王虫'], 'boss 恒覆写防跨局残留'
+    assert _gso_t(session2).plane_bosses.value == ['碎星王虫'], \
+        'boss 读到恒覆写(重读自愈)'
     op2b, session2b, _c2b = _make_briefing(test_context, monkeypatch,
                                            mark_hit=True, bosses=[],
                                            session=StrategySession())
-    _seed(session2b, 'plane_bosses', ['上一局残留'])
+    _seed(session2b, 'plane_bosses', ['首读真值'])
     _run_node(test_context, op2b, op2b.observe)
-    assert _gso_t(session2b).plane_bosses.value is None, 'boss 读空 → 清 None(防假真值)'
-    # ③ 难度仅 None 写(容器已有不读不写)
+    assert _gso_t(session2b).plane_bosses.value == ['首读真值'], \
+        'boss 读空跳过写(不擦已读真值)'
+    # ③ 难度:容器已有也重读重写(无仅缺省读门)
     session3 = StrategySession()
-    from sr_od.application.currency_war.kernel.cw_game_state import (
-        ChannelSig as _cs3,
-    )
-    from sr_od.application.currency_war.kernel.cw_game_state import (
-        game_state_of as _gso3,
-    )
-    _gso3(session3).write_logic(
-        _gso3(session3).enemy_difficulty, 3,
-        produced_by='test',
-        sig=_cs3(family='logic_action', actor='CwLoop',
-                 screen='', mode='compute'))
+    _seed(session3, 'enemy_difficulty', 3)
     op3, session3, calls3 = _make_briefing(test_context, monkeypatch,
                                            mark_hit=True, difficulty=5,
                                            session=session3)
     _run_node(test_context, op3, op3.observe)
-    assert calls3['diff_read'] == 0 and _gso3(
-        session3).enemy_difficulty.value == 3, (
-        '难度已有值 → 不读不写(仅缺省写)')
+    assert calls3['diff_read'] == 1, '难度无已读守卫 → 重读'
+    assert _gso_t(session3).enemy_difficulty.value == 5, \
+        '难度读到必写(恒覆写)'
 
 
 # ==================== BOSS 简报:误读接管(生产路径)====================
