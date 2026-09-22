@@ -76,7 +76,10 @@ def test_pick_confirm_reports_full_result_immediately(
     owned 规范名 + 单位腿(1★入席合成级联)+ 装备后果腿(分身墨镜
     → 送 1★银狼)——一口写,无发射/落地两相。"""
     from sr_od.application.currency_war.operations.cw_op import (
-        cw_overlay_pick_action as pa,
+        cw_pick_supply_action as pa,
+    )
+    from sr_od.application.currency_war.operations.cw_op.cw_overlay_pick_env import (
+        OverlayPickExecEnv,
     )
 
     session, gs = _seeded_gs()
@@ -87,7 +90,7 @@ def test_pick_confirm_reports_full_result_immediately(
         screenshot=lambda: object(),
         round_by_find_and_click_area=lambda *a, **k: _Area(True),
     )
-    env = pa.OverlayPickExecEnv(op=host, match=None, idx=0,
+    env = OverlayPickExecEnv(op=host, match=None, idx=0,
                                 target=SimpleNamespace(x=900, y=550),
                                 picked=None)
     op = pa.CwActionPickSupplyOp(

@@ -57,19 +57,41 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
 from sr_od.application.currency_war.operations.cw_op.cw_action_registry import (
     action_op_class_for_type,
 )
-from sr_od.application.currency_war.operations.cw_op.cw_overlay_pick_action import (
-    CwActionPickBoxCardOp,
-    CwActionPickEncounterOp,
-    CwActionPickExpertInviteOp,
-    CwActionPickFortuneOp,
-    CwActionPickInvestOp,
-    CwActionPickMegastarOp,
-    CwActionPickPartnerOp,
-    CwActionPickPlannerOp,
-    CwActionPickStarTomeOp,
-    CwActionPickSupplyOp,
-    CwActionPickWishTrialOp,
+from sr_od.application.currency_war.operations.cw_op.cw_overlay_pick_env import (
     OverlayPickExecEnv,
+)
+from sr_od.application.currency_war.operations.cw_op.cw_pick_box_card_action import (
+    CwActionPickBoxCardOp,
+)
+from sr_od.application.currency_war.operations.cw_op.cw_pick_encounter_action import (
+    CwActionPickEncounterOp,
+)
+from sr_od.application.currency_war.operations.cw_op.cw_pick_expert_invite_action import (
+    CwActionPickExpertInviteOp,
+)
+from sr_od.application.currency_war.operations.cw_op.cw_pick_fortune_action import (
+    CwActionPickFortuneOp,
+)
+from sr_od.application.currency_war.operations.cw_op.cw_pick_invest_action import (
+    CwActionPickInvestOp,
+)
+from sr_od.application.currency_war.operations.cw_op.cw_pick_megastar_action import (
+    CwActionPickMegastarOp,
+)
+from sr_od.application.currency_war.operations.cw_op.cw_pick_partner_action import (
+    CwActionPickPartnerOp,
+)
+from sr_od.application.currency_war.operations.cw_op.cw_pick_planner_action import (
+    CwActionPickPlannerOp,
+)
+from sr_od.application.currency_war.operations.cw_op.cw_pick_star_tome_action import (
+    CwActionPickStarTomeOp,
+)
+from sr_od.application.currency_war.operations.cw_op.cw_pick_supply_action import (
+    CwActionPickSupplyOp,
+)
+from sr_od.application.currency_war.operations.cw_op.cw_pick_wish_trial_action import (
+    CwActionPickWishTrialOp,
 )
 from sr_od.application.currency_war.operations.cw_op.cw_prep_level_up_action import (
     CwActionLevelUpOp,
@@ -186,13 +208,32 @@ def _screen_loader_none() -> SimpleNamespace:
 
 @pytest.fixture()
 def no_pick_sleep(monkeypatch):
-    """pick 族模块与确认收尾助手的机械等待替身(零真睡)。"""
-    import sr_od.application.currency_war.operations.cw_op.cw_overlay_pick_action as pick_mod
+    """pick 族各 op 模块与确认收尾助手的机械等待替身(零真睡;拆分后
+    各 op 单文件,逐模块打桩)。"""
+    from sr_od.application.currency_war.operations.cw_op import (
+        cw_pick_box_card_action,
+        cw_pick_encounter_action,
+        cw_pick_expert_invite_action,
+        cw_pick_fortune_action,
+        cw_pick_invest_action,
+        cw_pick_megastar_action,
+        cw_pick_partner_action,
+        cw_pick_planner_action,
+        cw_pick_star_tome_action,
+        cw_pick_supply_action,
+        cw_pick_wish_trial_action,
+    )
     from sr_od.application.currency_war.operations.cw_screen import (
         _overlay_confirm,
     )
     sleeper = _NoSleep()
-    monkeypatch.setattr(pick_mod, 'time', sleeper)
+    for mod in (cw_pick_box_card_action, cw_pick_encounter_action,
+                cw_pick_expert_invite_action, cw_pick_fortune_action,
+                cw_pick_invest_action, cw_pick_megastar_action,
+                cw_pick_partner_action, cw_pick_planner_action,
+                cw_pick_star_tome_action, cw_pick_supply_action,
+                cw_pick_wish_trial_action):
+        monkeypatch.setattr(mod, 'time', sleeper)
     monkeypatch.setattr(_overlay_confirm, 'time', _NoSleep())
     return sleeper
 
@@ -317,7 +358,7 @@ def test_invest_pick_op_clicks_target_confirms_and_self_reports(
     """投资确认链(投资两屏共用 op,拆类后两 param 类同指;即时上报契约):
     点选中位 → 确认 → **按 param 类型立即自上报完整结果**(分步上报废
     除);轮次结果旁路回传;上报接线 = 机械链发出后恰一次。"""
-    import sr_od.application.currency_war.operations.cw_op.cw_overlay_pick_action as pick_mod
+    import sr_od.application.currency_war.operations.cw_op.cw_pick_invest_action as pick_mod
 
     rs = SimpleNamespace(sentinel='rs')
     ctrl = _RecordingController()
@@ -357,7 +398,7 @@ def test_fortune_pick_op_clicks_card_confirms_and_self_reports(
         no_pick_sleep, monkeypatch):
     """命运卜者确认链(pick-op-unify T-3):点卡 → 确认;轮次结果旁路
     回传;自上报接线。确认钮 = 建档缺失臂兜底常量(screen_loader 桩)。"""
-    import sr_od.application.currency_war.operations.cw_op.cw_overlay_pick_action as pick_mod
+    import sr_od.application.currency_war.operations.cw_op.cw_pick_fortune_action as pick_mod
     from sr_od.application.currency_war.operations.cw_screen.cw_screen_fortune import (
         CwScreenFortune,
     )
@@ -385,7 +426,7 @@ def test_wish_trial_pick_op_clicks_card_area_confirms_and_self_reports(
         no_pick_sleep, monkeypatch):
     """祈愿试炼确认链(pick-op-unify T-3):点卡 → 「按钮-确认选择」area
     确认;轮次结果旁路回传;自上报接线。"""
-    import sr_od.application.currency_war.operations.cw_op.cw_overlay_pick_action as pick_mod
+    import sr_od.application.currency_war.operations.cw_op.cw_pick_wish_trial_action as pick_mod
 
     rs = SimpleNamespace(sentinel='rs')
     ctrl = _RecordingController()
@@ -421,30 +462,32 @@ def test_pick_no_confirm_ops_click_and_self_report(
     专家邀请函 = 选中点击 + 各自动画等待,零确认步;自上报接线;派发
     param 携真实 idx(专家邀请函含 -1 = 现金为王语义透传。原装备行随
     选择装备屏误判退役删除)。"""
-    import sr_od.application.currency_war.operations.cw_op.cw_overlay_pick_action as pick_mod
+    from sr_od.application.currency_war.operations.cw_op import (
+        cw_pick_box_card_action,
+        cw_pick_expert_invite_action,
+        cw_pick_star_tome_action,
+    )
 
+    # (op_cls, param_cls, target, want_clicks, want_idx, op_mod, report_name)
     cases = [
         (CwActionPickBoxCardOp, CwActionPickBoxCardParam, Point(1027, 290),
-         [(1027, 290)], 2),
+         [(1027, 290)], 2, cw_pick_box_card_action,
+         'report_action_pick_box_card_param'),
         (CwActionPickStarTomeOp, CwActionPickStarTomeParam, Point(700, 500),
-         [(700, 500)], 0),
+         [(700, 500)], 0, cw_pick_star_tome_action,
+         'report_action_pick_star_tome_param'),
         (CwActionPickExpertInviteOp, CwActionPickExpertInviteParam,
-         Point(300, 600), [(300, 600)], -1),
+         Point(300, 600), [(300, 600)], -1, cw_pick_expert_invite_action,
+         'report_action_pick_expert_invite_param'),
     ]
-    for op_cls, param_cls, target, want_clicks, want_idx in cases:
+    for op_cls, param_cls, target, want_clicks, want_idx, op_mod, report_name in cases:
         ctrl = _RecordingController()
         op = SimpleNamespace(ctx=SimpleNamespace(controller=ctrl))
         env = OverlayPickExecEnv(op=op, idx=want_idx, target=target)
         reported: list = []
-        monkeypatch.setattr(pick_mod, 'game_state_from_ctx',
+        monkeypatch.setattr(op_mod, 'game_state_from_ctx',
                             lambda ctx: SimpleNamespace(sentinel='gs'))
-        monkeypatch.setattr(pick_mod, 'report_action_pick_box_card_param',
-                            lambda gs, param, sig, _r=reported: _r.append(param),
-                            raising=False)
-        monkeypatch.setattr(pick_mod, 'report_action_pick_star_tome_param',
-                            lambda gs, param, sig, _r=reported: _r.append(param),
-                            raising=False)
-        monkeypatch.setattr(pick_mod, 'report_action_pick_expert_invite_param',
+        monkeypatch.setattr(op_mod, report_name,
                             lambda gs, param, sig, _r=reported: _r.append(param),
                             raising=False)
         assert op_cls(env.op.ctx, param_cls(idx=want_idx),

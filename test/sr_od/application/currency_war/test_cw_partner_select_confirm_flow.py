@@ -69,7 +69,7 @@ def _make_watched_op(test_context, monkeypatch) -> CwScreenPartner:
     # 模块内 time 替身随体迁移(替身跟随被迁体,锁的「不真睡」意图不变;
     # partner 模块本体已无直接 sleep)。本测试桩化的伙伴脉冲确认收尾
     # (partner reset 根因链)不读屏,桩面= 记录点击。
-    import sr_od.application.currency_war.operations.cw_op.cw_overlay_pick_action as pick_mod
+    import sr_od.application.currency_war.operations.cw_op.cw_pick_partner_action as pick_mod
     monkeypatch.setattr(pick_mod, 'time', _NoSleep())
     return op
 

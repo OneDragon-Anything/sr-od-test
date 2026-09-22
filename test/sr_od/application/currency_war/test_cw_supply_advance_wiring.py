@@ -52,7 +52,10 @@ def _run_pick_supply(test_context, monkeypatch, match):
     """跑 CwActionPickSupplyOp 确认链:宿主机械半全桩(点选/确认点击),
     只留记录面(意图遥测 + 推进上报)真跑。"""
     from sr_od.application.currency_war.operations.cw_op import (
-        cw_overlay_pick_action as pa,
+        cw_pick_supply_action as pa,
+    )
+    from sr_od.application.currency_war.operations.cw_op.cw_overlay_pick_env import (
+        OverlayPickExecEnv,
     )
 
     host = SimpleNamespace(
@@ -61,7 +64,7 @@ def _run_pick_supply(test_context, monkeypatch, match):
         screenshot=lambda: object(),
         round_by_find_and_click_area=lambda *a, **k: _Area(True),
     )
-    env = pa.OverlayPickExecEnv(op=host, match=None, idx=0,
+    env = OverlayPickExecEnv(op=host, match=None, idx=0,
                                 target=SimpleNamespace(x=900, y=550),
                                 picked=None)
     op = pa.CwActionPickSupplyOp(

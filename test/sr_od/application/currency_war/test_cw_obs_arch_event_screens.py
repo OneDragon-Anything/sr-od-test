@@ -113,7 +113,7 @@ def _make_encounter(test_context, monkeypatch, *, in_screen: bool,
     # 统一动作工厂批4:遭遇确认链体迁 pick op 模块——safe_click/emit_overlay_
     # confirm 桩随体迁移(替身跟随被迁体;桩语义不变:机械点击空操作、确认
     # 链回指定轮次结果);机械等待替身(mock 画面瞬时切换,等待纯属空睡)。
-    import sr_od.application.currency_war.operations.cw_op.cw_overlay_pick_action as pick_mod
+    import sr_od.application.currency_war.operations.cw_op.cw_pick_encounter_action as pick_mod
     monkeypatch.setattr(pick_mod, 'safe_click', lambda o, pt, **k: None)
     monkeypatch.setattr(pick_mod, 'time', SimpleNamespace(sleep=lambda *_: None))
     monkeypatch.setattr(em.time, 'sleep', lambda *_: None)
