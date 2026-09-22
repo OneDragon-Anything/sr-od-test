@@ -201,8 +201,8 @@ class _NoSleep:
 
 
 def _screen_loader_none() -> SimpleNamespace:
-    """screen_loader 桩:get_screen 恒 None → area_center 全走兜底常量
-    (screen_info 缺失臂,常量兜底语义顺带在锁)。"""
+    """screen_loader 桩:get_screen 恒 None → area_center 走缺失臂
+    (None;供「area 缺失 = 显式失败禁兜底坐标」语义锁)。"""
     return SimpleNamespace(get_screen=lambda name: None)
 
 
@@ -238,13 +238,13 @@ def no_pick_sleep(monkeypatch):
     return sleeper
 
 
-def test_encounter_pick_op_clicks_card_then_confirm(no_pick_sleep):
-    """遭遇确认链:idx=1 → 右卡兜底常量点选 → 「按钮-选择」area 查找点击
-    确认(确认钮查找全族统一,用户裁定 2026-09-22);轮次结果经
-    env.round_result 旁路回传。"""
-    from sr_od.application.currency_war.operations.cw_screen.cw_screen_encounter import (
-        CwScreenEncounter,
-    )
+def test_encounter_pick_op_clicks_card_then_confirm(no_pick_sleep, monkeypatch):
+    """遭遇确认链:idx=1 → 建档「遭遇卡-其二」area 取点点选 → 「按钮-选择」
+    area 查找点击确认(确认钮查找全族统一,用户裁定 2026-09-22);轮次结果经
+    env.round_result 旁路回传。卡位 area 缺失 = 显式 round_fail 零点击
+    (禁兜底坐标,失败臂)。"""
+    import sr_od.application.currency_war.operations.cw_op.cw_pick_encounter_action as pick_mod
+
     rs = SimpleNamespace(sentinel='rs')
     ctrl = _RecordingController()
     confirm_calls: list[tuple] = []
@@ -254,12 +254,33 @@ def test_encounter_pick_op_clicks_card_then_confirm(no_pick_sleep):
         round_by_find_and_click_area=lambda shot, s, a, **kw:
             confirm_calls.append((s, a, kw)) or rs)
     env = OverlayPickExecEnv(op=op)
+    # 命中臂:建档 area_center 命中「遭遇卡-其二」中心。
+    monkeypatch.setattr(pick_mod, 'area_center',
+                        lambda ctx, name, screen=None: Point(1288, 550))
     assert CwActionPickEncounterOp(env.op.ctx, EncounterPick(idx=1), env=env).run().is_success
-    assert [p for p, _t in ctrl.clicks] == [CwScreenEncounter.CARD_RIGHT]
+    assert [(p.x, p.y) for p, _t in ctrl.clicks] == [(1288, 550)]
     assert len(ctrl.moves) == len(ctrl.clicks)   # 选中点击前 bug#1 缓解 mouse_move
     assert confirm_calls == [('货币战争-遭遇节点', '按钮-选择',
                               {'success_wait': 1.0})]
     assert env.round_result is rs
+
+    # 失败臂:卡位 area 缺失(get_screen 恒 None)→ round_fail 零点击
+    # 零确认步(禁兜底坐标静默点击);失败轮次结果经旁路回传。
+    monkeypatch.setattr(pick_mod, 'area_center',
+                        lambda ctx, name, screen=None: None)
+    ctrl2 = _RecordingController()
+    confirm_calls2: list[tuple] = []
+    op2 = SimpleNamespace(
+        ctx=SimpleNamespace(controller=ctrl2, screen_loader=_screen_loader_none()),
+        screenshot=lambda: 'shot',
+        round_by_find_and_click_area=lambda shot, s, a, **kw:
+            confirm_calls2.append((s, a, kw)) or rs)
+    env2 = OverlayPickExecEnv(op=op2)
+    rs2 = CwActionPickEncounterOp(env2.op.ctx, EncounterPick(idx=1), env=env2).run()
+    assert not rs2.is_success, '卡位 area 缺失 = 显式 round_fail(禁兜底坐标)'
+    assert ctrl2.clicks == [] and ctrl2.moves == [], '失败臂零点击零移动'
+    assert confirm_calls2 == [], '失败臂不进确认步'
+    assert env2.round_result is rs2, '失败轮次结果经旁路回传'
 
 
 def test_supply_pick_op_clicks_target_and_confirms(no_pick_sleep):

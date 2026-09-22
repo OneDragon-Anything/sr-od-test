@@ -308,18 +308,32 @@ def _make_executor(controller: _RecordingController,
     return pa.PrepActionExecutor(op, ctx)
 
 
-def test_levelup_executes_single_click_per_frame():
+def test_levelup_executes_single_click_per_frame(monkeypatch):
     """R6 定案④执行器半:一次 execute = 恰一次单击(零授权零循环;
     升 N 击 = N 帧)。金腿批2b 翻转 = action.cost 逻辑态直写(唯一写点
     report_action_level_up_param),执行缝金差退役:执行点
-    gold_delta 恒 0(不进回执 extra 键、不经 _advance_gold)。"""
+    gold_delta 恒 0(不进回执 extra 键、不经 _advance_gold)。
+    建档纪律(用户裁定 2026-09-22):按钮 area 命中 = 每帧恰一击;
+    缺失 = round_fail 零点击(禁兜底坐标,emitted=False 未发出事实)。"""
+    import sr_od.application.currency_war.operations.cw_op.cw_prep_level_up_action as lvl_mod
+
     controller = _RecordingController()
     ex = _make_executor(controller)
+    # 命中臂:area_center 命中「备战标识-购买经验」→ 每帧恰一击。
+    monkeypatch.setattr(lvl_mod, 'area_center',
+                        lambda ctx, name: Point(296, 860))
     ex.execute(CwActionLevelUpParam(cost=4))
     assert len(controller.clicks) == 1
     assert ex.last_gold_delta == 0   # 执行缝金差退役(防双记)
     ex.execute(CwActionLevelUpParam(cost=4))
     assert len(controller.clicks) == 2   # 第二帧再击
+    # 缺失臂:area 缺失 → round_fail 零点击零移动(禁兜底坐标静默点击)。
+    controller_miss = _RecordingController()
+    ex_miss = _make_executor(controller_miss)
+    monkeypatch.setattr(lvl_mod, 'area_center', lambda ctx, name: None)
+    ex_miss.execute(CwActionLevelUpParam(cost=4))
+    assert controller_miss.clicks == [] and controller_miss.moves == [], \
+        '按钮 area 缺失 = 零点击(禁兜底坐标)'
 
 
 def test_levelup_logic_state_advances_xp_level_and_gold():
