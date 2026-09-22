@@ -30,9 +30,12 @@
 - **盛会之星族锁**(节点循环形态):完成门/懒读保真/防重入旗标/chosen
   写端(选择点留守)/局外交回(无 match/gs 零读屏零派发)/观察标准化门
   (双源域命中·转换失败·歧义拒判·LCS 同分取域序首确定性)/决策守卫
-  (候选空 fail 零盲发·idx 越界断言)/选择坐标观察上报收敛(观察产 xy
-  左右映射·area 缺失回退常量·标准化透传·派发 env idx-only·动作 op 容器
-  取点守卫三臂断言零点击)各一锁,语义见各 docstring。
+  (候选空 fail 零盲发·idx 越界断言)/选择坐标观察上报收敛(候选检测
+  重做批:标签带限定 OCR 定卡 1..N + 逐卡立绘 SIFT 交叉验证,xy =
+  各卡标签中心 x + 在册卡身线 y 每卡自带,零枚举映射;fixture 全链·
+  部分读 xy 自带·SIFT 交叉裁决·reader 失败信号透传 round_fail·
+  标准化透传·派发 env idx-only·动作 op 容器取点守卫三臂断言零点击)
+  各一锁,语义见各 docstring。
 
 驱动方式 = 真类实例(构造走 __init__)+ 读链/门/机械点击链桩化,节点
 函数直驱(run_node 外壳)。
@@ -838,65 +841,179 @@ def test_megastar_lcs_tie_resolves_domain_first(
         f'{game_state_of(session).megastar_opts.value!r} 域首={domain_first!r}')
 
 
-# ==================== 盛会之星(选择坐标观察上报收敛)====================
+# ==================== 盛会之星(候选检测重做:标签带 OCR 定卡 + SIFT 交叉验证)====================
+
+
+def _ocr_hit(center_x: float) -> SimpleNamespace:
+    """OCR map 单 hit 桩值(text → mrl.max.center.x 读取形,与
+    ``get_ocr_result_map`` 返回形同构)。"""
+    return SimpleNamespace(max=SimpleNamespace(
+        center=SimpleNamespace(x=center_x)))
+
+
+def _stub_screen() -> object:
+    """reader 裁片用的假帧(1080p 零图;identify 桩不消费裁片内容)。"""
+    import numpy as np
+    return np.zeros((1080, 1920, 3), dtype=np.uint8)
+
+
+def _read_stub_ctx(ocr_map: dict, *, gs: object | None = None) -> SimpleNamespace:
+    """reader 离线装配 stub ctx:标签带 area(screen_info 桩,归档 fixture
+    实测 rect)+ OCR map 桩 + cw_match.gs(星徽动态域源;None = 不挂 =
+    静态域 only,与生产局外守卫后的直调形态同构)。"""
+    from one_dragon.base.geometry.rectangle import Rect
+    band = SimpleNamespace(area_name='候选标签带',
+                           pc_rect=Rect(420, 300, 1690, 380))
+    ctx = SimpleNamespace(
+        screen_loader=SimpleNamespace(
+            get_screen=lambda name: (SimpleNamespace(area_list=[band])
+                                     if name == '货币战争-盛会之星' else None)),
+        ocr_service=SimpleNamespace(
+            get_ocr_result_map=lambda image, rect, color_range, crop_first:
+                dict(ocr_map)),
+    )
+    if gs is not None:
+        ctx.cw_match = SimpleNamespace(gs=gs)
+    return ctx
+
+
+def test_megastar_read_fixture_full_chain(test_context) -> None:
+    """fixture 全链锁(候选检测重做批;归档 fixture = 本屏在册存档
+    「未选择.webp」,双候选:左 = 星期日 / 右 = 花火):标签带限定 OCR
+    定卡 + 逐卡立绘 SIFT 交叉验证全链真跑(真 OCR + 真 SIFT 立绘库,
+    零桩)→ 2 选项 = 标准名,xy = 各卡标签中心 x + 在册卡身线 y,
+    序左→右。红 = 标签带 area 失效 / OCR 漏读 / SIFT 裁区漂移 /
+    标准化门误拒 / 序或坐标错。"""
+    import sr_od.application.currency_war.obs.cw_megastar_obs as mo
+    screen = test_context.load_screen('货币战争-盛会之星', '未选择')
+    opts = mo.read_megastar_options(test_context, screen)
+    assert opts is not None and len(opts) == 2, f'双候选定卡:{opts!r}'
+    assert [o.char_id for o in opts] == ['星期日', '花火'], (
+        f'标准名左→右:{[o.char_id for o in opts]!r}')
+    # 标签中心 fixture OCR 实测:星期日 823+199/2≈922、花火 1060+199/2≈1160;
+    # 容差 2px 容 OCR 亚像素漂移;y = 在册卡身线 333。
+    assert abs(opts[0].xy[0] - 922) <= 2 and opts[0].xy[1] == 333, (
+        f'左卡 xy:{opts[0].xy!r}')
+    assert abs(opts[1].xy[0] - 1160) <= 2 and opts[1].xy[1] == 333, (
+        f'右卡 xy:{opts[1].xy!r}')
+    assert [o.idx for o in opts] == [0, 1], 'idx 按 x 左→右 0..N-1'
+
+
+def test_megastar_read_partial_hit_uses_own_xy(monkeypatch) -> None:
+    """部分读回归锁(F3 灭绝锁):桩 OCR 只喂右卡 hit(单候选在右槽
+    布局)→ 该卡 xy = 右卡标签中心 (1160, 333)。旧「idx 枚举序恒映射
+    左右槽」模型此处必错(idx0 → 左槽常量 (822,333) 点到空位——名字
+    与点击位错位的实锤缺陷形态),坐标随卡自带后该缺陷类整体灭绝
+    (退役常量 ``CANDIDATE_LEFT``/``CANDIDATE_RIGHT`` 已不存在)。
+    红 = 枚举序映射回潮 / xy 取兜底常量而非标签中心。"""
+    import sr_od.application.currency_war.obs.cw_megastar_obs as mo
+    ctx = _read_stub_ctx({'盛会之星一花火女士！': _ocr_hit(1160)})
+    opts = mo.read_megastar_options(ctx, _stub_screen(),
+                                    identify=lambda _crop: '花火')
+    assert opts is not None and len(opts) == 1, f'单 hit 定卡:{opts!r}'
+    assert opts[0].idx == 0 and opts[0].char_id == '花火', f'{opts[0]!r}'
+    assert opts[0].xy == (1160, 333), (
+        f'xy = 该卡标签中心 + 卡身线(非左槽常量):{opts[0].xy!r}')
+
+
+def test_megastar_read_sift_cross_validate(monkeypatch) -> None:
+    """SIFT 交叉裁决锁(候选检测重做批模型②,四臂):
+    ① SIFT 命中且与 OCR 转换名一致 → 放行;
+    ② 不一致 → 置 ``READ_FAILED`` 哨兵,过标准化门判观察失败(识别质量
+      不足以区分);
+    ③ SIFT 未命中(None = 库缺新角色形态)→ OCR 转换名承重(不硬依赖);
+    ④ OCR 名域外 → 原值留列表过门,标准化门既有判法判观察失败。
+    红 = 不一致放行 / 未命中误判失败 / 域外名放行。"""
+    import sr_od.application.currency_war.obs.cw_megastar_obs as mo
+    ctx = _read_stub_ctx({'盛会之星一花火女士！': _ocr_hit(1160)})
+
+    # ① 命中一致 → 放行(SIFT 名即规范名)
+    opts = mo.read_megastar_options(ctx, _stub_screen(),
+                                    identify=lambda _crop: '花火')
+    assert opts is not None and [o.char_id for o in opts] == ['花火'], (
+        f'一致放行:{opts!r}')
+
+    # ② 不一致 → 哨兵过门判失败(OCR 花火 vs SIFT 星期日 = 识别质量不足)
+    opts2 = mo.read_megastar_options(ctx, _stub_screen(),
+                                     identify=lambda _crop: '星期日')
+    assert opts2 is not None \
+        and [o.char_id for o in opts2] == [mo.READ_FAILED], (
+        f'不一致 = 失败哨兵:{opts2!r}')
+    assert mo.standardize_megastar_options(opts2, None) is None, (
+        '哨兵过标准化门判失败')
+
+    # ③ 未命中 → OCR 转换名承重
+    opts3 = mo.read_megastar_options(ctx, _stub_screen(),
+                                     identify=lambda _crop: None)
+    assert opts3 is not None and [o.char_id for o in opts3] == ['花火'], (
+        f'未命中 OCR 承重:{opts3!r}')
+
+    # ④ OCR 名域外 → 原值过门判失败(标准化门既有判法;「乱码」域外由
+    #   既有失败锁 test_megastar_observe_standardize_failure_fails_clean
+    #   同源)
+    ctx4 = _read_stub_ctx({'盛会之星一乱码先生！': _ocr_hit(600)})
+    opts4 = mo.read_megastar_options(ctx4, _stub_screen(),
+                                     identify=lambda _crop: '花火')
+    assert opts4 is not None and [o.char_id for o in opts4] == ['乱码'], (
+        f'域外名原值过门:{opts4!r}')
+    assert mo.standardize_megastar_options(opts4, None) is None, (
+        '域外名过标准化门判失败')
+
+
+def test_megastar_read_failure_round_fails_clean(
+        test_context, monkeypatch) -> None:
+    """reader 失败信号裁决锁:真 read 交叉验证反证失败(真 OCR 定卡 +
+    identify 桩注入不一致 → ``READ_FAILED`` 哨兵)经真实 observe node →
+    标准化门判失败 → round_fail 零写容器零上报零点击(现役失败机制
+    保持、调用方零改;失败信号以列表形态过门,fail 消息构造迭代列表)。
+    红 = 哨兵被吞成空读成功 / 容器被写 / fail 前点击派发。"""
+    import sr_od.application.currency_war.obs.cw_megastar_obs as mo
+    import sr_od.application.currency_war.operations.cw_screen.cw_screen_megastar as ms
+    clicks, dispatches = _refresh_fixture(test_context, monkeypatch)
+
+    def _mismatch_read(ctx, scr):
+        # 真 reader + SIFT 桩恒回「星期日」:左卡(星期日)一致放行,
+        # 右卡(花火)不一致 → 置 READ_FAILED 哨兵 → 整函数观察失败。
+        return mo.read_megastar_options(ctx, scr,
+                                        identify=lambda _crop: '星期日')
+
+    op, match, session, _calls = _make_megastar(
+        test_context, monkeypatch, in_node=True, options=[])
+    monkeypatch.setattr(ms, 'read_megastar_options', _mismatch_read)
+    # 真实读链输入:fixture 帧(真标签带 OCR;观察 node 读 last_screenshot)
+    monkeypatch.setattr(
+        op, 'last_screenshot',
+        test_context.load_screen('货币战争-盛会之星', '未选择'),
+        raising=False)
+    session.strategy_state = StrategyState()   # 未选中 → 本访问将选择(读候选)
+    rs = _run_node(test_context, op, op.observe)
+    assert not rs.is_success and '标准化' in (rs.status or ''), (
+        f'reader 失败信号 → observe round_fail:{rs!r}')
+    assert mo.READ_FAILED in (rs.status or ''), (
+        f'fail 消息含失败哨兵留证:{rs.status!r}')
+    assert game_state_of(session).megastar_opts.value is None, '零写容器'
+    assert op._obs is None, '零上报(obs 不装载)'
+    assert clicks == [] and dispatches == [], (
+        f'fail 前零点击零派发:{clicks!r} {dispatches!r}')
 
 
 def test_megastar_observe_reports_xy_and_standardize_passthrough(
         test_context, monkeypatch) -> None:
-    """观察上报 xy 锁(选择坐标观察上报收敛,规范 = screens/op-layer.md
-    §1.1「选择坐标观察上报」):
-    - ① read 逐候选产 xy:idx 0 = 「候选-左」area 中心、其余 = 「候选-右」
-      area 中心(左右映射;与按 center-x 排序的 idx 同序);
-    - ② area 缺失回退 obs 域兜底常量 ``CANDIDATE_LEFT``/``CANDIDATE_RIGHT``
-      (兜底常量宿主 = obs/cw_megastar_obs.py,坐标生产半住观察域);
-    - ③ 标准化门转换后 xy 原值透传(转换只动名字,名字与坐标同进退),
-      经真实观察链落容器后 xy 仍在(动作 op 取点输入)。
-    红 = 左右映射颠倒 / area 缺失不回退 / 标准化剥坐标 / 观察链容器终值
-    丢 xy。"""
-    import sr_od.application.currency_war.obs.cw_megastar_obs as mo
-    from one_dragon.base.geometry.point import Point
+    """观察上报 xy 透传锁(选择坐标观察上报收敛,规范 = screens/op-layer.md
+    §1.1「选择坐标观察上报」):read 产每卡自带 xy(标签中心 x + 在册
+    卡身线 y,候选检测重做批新坐标模型;xy 生产正确性由候选检测重做批
+    各锁承重,本锁不重复),经标准化门转换后 xy 原值透传(转换只动名字,
+    名字与坐标同进退),经真实观察链落容器后 xy 仍在(动作 op 取点输入)。
+    红 = 标准化剥坐标 / 观察链容器终值丢 xy。"""
     from sr_od.application.currency_war.kernel.cw_events import MegastarOption
     from sr_od.application.currency_war.kernel.cw_game_state import (
         ChannelSig,
         Unit,
     )
-
-    # ① 左右映射(area 在场;OCR 读序经 center-x 排序,花火 822 < 星期日 1061)
-    _ocr_map = {
-        '盛会之星一星期日先生!': SimpleNamespace(
-            max=SimpleNamespace(center=SimpleNamespace(x=1061))),
-        '盛会之星一花火先生!': SimpleNamespace(
-            max=SimpleNamespace(center=SimpleNamespace(x=822))),
-    }
-    _areas = {'候选-左': Point(820, 330), '候选-右': Point(1060, 330)}
-    stub_ctx = SimpleNamespace(ocr_service=SimpleNamespace(
-        get_ocr_result_map=lambda image, rect, color_range, crop_first:
-            dict(_ocr_map)))
-    monkeypatch.setattr(mo, 'area_center',
-                        lambda ctx, name, screen=None: _areas.get(name))
-    opts = mo.read_megastar_options(stub_ctx, object())
-    assert [(o.idx, o.char_id) for o in opts] == \
-        [(0, '花火'), (1, '星期日')], f'候选读数序:{opts!r}'
-    assert opts[0].xy == (820, 330) and opts[1].xy == (1060, 330), (
-        f'xy 左右映射(idx0=候选-左/其余=候选-右):'
-        f'{[o.xy for o in opts]!r}')
-    assert all(isinstance(o.xy, tuple) for o in opts), (
-        'xy = tuple[int, int](JSON 序列化安全形,非 Point)')
-
-    # ② area 缺失回退兜底常量(宿主 = obs 域)
-    monkeypatch.setattr(mo, 'area_center',
-                        lambda ctx, name, screen=None: None)
-    opts2 = mo.read_megastar_options(stub_ctx, object())
-    assert opts2[0].xy == (mo.CANDIDATE_LEFT.x, mo.CANDIDATE_LEFT.y), (
-        f'idx0 area 缺失回退 CANDIDATE_LEFT:{opts2[0].xy!r}')
-    assert opts2[1].xy == (mo.CANDIDATE_RIGHT.x, mo.CANDIDATE_RIGHT.y), (
-        f'idx1 area 缺失回退 CANDIDATE_RIGHT:{opts2[1].xy!r}')
-
-    # ③ 标准化透传 + 观察链容器终值携 xy(动态域入员照标准化命中锁装配)
     op, match, session, _calls = _make_megastar(
         test_context, monkeypatch, in_node=True,
-        options=[MegastarOption(idx=0, char_id='花火', xy=(822, 333)),
-                 MegastarOption(idx=1, char_id='Ａｒｃｈｅｒ', xy=(1061, 333))])
+        options=[MegastarOption(idx=0, char_id='花火', xy=(1160, 333)),
+                 MegastarOption(idx=1, char_id='Ａｒｃｈｅｒ', xy=(1400, 333))])
     gs = match.gs
     _sig = ChannelSig(family='obs', actor='test', mode='read')
     gs.observe(gs.front_row, [Unit(char_id='Archer', star=1,
@@ -907,7 +1024,7 @@ def test_megastar_observe_reports_xy_and_standardize_passthrough(
     container_opts = game_state_of(session).megastar_opts.value
     assert [o.char_id for o in container_opts] == ['花火', 'Archer'], (
         f'容器存规范名:{container_opts!r}')
-    assert [o.xy for o in container_opts] == [(822, 333), (1061, 333)], (
+    assert [o.xy for o in container_opts] == [(1160, 333), (1400, 333)], (
         f'标准化透传 xy(转换只动名字,坐标同进退落容器):'
         f'{[o.xy for o in container_opts]!r}')
 
