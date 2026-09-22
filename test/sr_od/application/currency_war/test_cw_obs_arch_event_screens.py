@@ -30,7 +30,9 @@
 - **盛会之星族锁**(节点循环形态):完成门/懒读保真/防重入旗标/chosen
   写端(选择点留守)/局外交回(无 match/gs 零读屏零派发)/观察标准化门
   (双源域命中·转换失败·歧义拒判·LCS 同分取域序首确定性)/决策守卫
-  (候选空 fail 零盲发·idx 越界断言)各一锁,语义见各 docstring。
+  (候选空 fail 零盲发·idx 越界断言)/选择坐标观察上报收敛(观察产 xy
+  左右映射·area 缺失回退常量·标准化透传·派发 env idx-only·动作 op 容器
+  取点守卫三臂断言零点击)各一锁,语义见各 docstring。
 
 驱动方式 = 真类实例(构造走 __init__)+ 读链/门/机械点击链桩化,节点
 函数直驱(run_node 外壳)。
@@ -40,7 +42,6 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
-
 from test.sr_od.application.currency_war._cw_helpers import (
     Area as _Area,
 )
@@ -524,8 +525,12 @@ def test_megastar_redispatch_no_reclick_and_gate_reset(
     - 状态对象缺席(裸 session,第三方策略面)→ 读退 False、写跳过,
       执行层不冷建策略器状态(禁 impl ``state_of`` 装配语义);
     - chosen_megastar = 选择点留守写端(动作事实边界,不进 report),
-      首派发选中时点落容器。
-    红 = 重入再触发选中 / 门 miss 不复位 / 缺席态炸错或冷建 / chosen 断流。"""
+      首派发选中时点落容器;
+    - 派发 env = idx-only 构造(选择坐标观察上报收敛):零 target 传参,
+      候选点击坐标由动作 op 自容器取(op-layer.md §1.1「选择坐标观察
+      上报」)。
+    红 = 重入再触发选中 / 门 miss 不复位 / 缺席态炸错或冷建 / chosen 断流
+    / 派发 env 回潮带 target 坐标。"""
     import sr_od.application.currency_war.operations.cw_op.cw_action_registry as reg_mod
     from sr_od.application.currency_war.kernel.cw_events import MegastarOption
     from sr_od.application.currency_war.operations.cw_screen import (
@@ -551,14 +556,12 @@ def test_megastar_redispatch_no_reclick_and_gate_reset(
                         lambda scr, s, a, **k: _Area(True))
     monkeypatch.setattr(ms, 'read_megastar_options',
                         lambda ctx, scr: [MegastarOption(idx=0, char_id='花火')])
-    monkeypatch.setattr(ms, 'area_center',
-                        lambda ctx, name, screen=None: SimpleNamespace(
-                            x=822, y=333))
 
-    # 派发桩:捕获每次派发的 need_select(选中半触发标志;选中点击的
-    # 机械行为锁 = test_cw_unified_action_4 巨星 op 锁,本锁只锁画面 op
-    # 的防重入语义)。
+    # 派发桩:捕获每次派发的 need_select(选中半触发标志)与 env.target
+    # (idx-only 断言;选中点击的机械行为锁 = test_cw_unified_action_4
+    # 巨星 op 锁,本锁只锁画面 op 的防重入与派发形态)。
     dispatches: list[bool] = []
+    env_targets: list[object] = []
 
     class _StubPickOp:
         def __init__(self, env) -> None:
@@ -566,6 +569,7 @@ def test_megastar_redispatch_no_reclick_and_gate_reset(
 
         def execute(self) -> bool:
             dispatches.append(bool(getattr(self.env, 'need_select', False)))
+            env_targets.append(getattr(self.env, 'target', 'MISSING'))
             return True
 
     monkeypatch.setattr(reg_mod, 'action_op_for',
@@ -575,6 +579,8 @@ def test_megastar_redispatch_no_reclick_and_gate_reset(
     # ① 首派发:触发选中(need_select=True)+ 发射即置位 + chosen 留守写端落容器
     op._do_action()
     assert dispatches == [True], f'首派发触发选中半:{dispatches!r}'
+    assert env_targets == [None], (
+        f'派发 env = idx-only 构造零 target 传参:{env_targets!r}')
     assert st.megastar_clicked is True, '置位落策略器 StrategyState'
     assert match.gs.chosen_megastar.value == '花火', (
         'chosen_megastar = 选择点留守写端(动作事实边界不进 report)')
@@ -602,6 +608,7 @@ def test_megastar_redispatch_no_reclick_and_gate_reset(
     op2._do_action()
     assert dispatches == [True, False, True], (
         '缺席态读退 False → 照常触发选中(无宿主防重入)')
+    assert env_targets[-1] is None, '缺席态派发 env 仍 idx-only 零 target'
     assert session2.strategy_state is None, '缺席态写跳过,执行层不冷建'
 
 
@@ -828,3 +835,149 @@ def test_megastar_lcs_tie_resolves_domain_first(
         MegastarOption(idx=0, char_id=domain_first)], (
         f'平分取域序首(固定序确定性):'
         f'{game_state_of(session).megastar_opts.value!r} 域首={domain_first!r}')
+
+
+# ==================== 盛会之星(选择坐标观察上报收敛)====================
+
+
+def test_megastar_observe_reports_xy_and_standardize_passthrough(
+        test_context, monkeypatch) -> None:
+    """观察上报 xy 锁(选择坐标观察上报收敛,规范 = screens/op-layer.md
+    §1.1「选择坐标观察上报」):
+    - ① read 逐候选产 xy:idx 0 = 「候选-左」area 中心、其余 = 「候选-右」
+      area 中心(左右映射;与按 center-x 排序的 idx 同序);
+    - ② area 缺失回退 obs 域兜底常量 ``CANDIDATE_LEFT``/``CANDIDATE_RIGHT``
+      (兜底常量宿主 = obs/cw_megastar_obs.py,坐标生产半住观察域);
+    - ③ 标准化门转换后 xy 原值透传(转换只动名字,名字与坐标同进退),
+      经真实观察链落容器后 xy 仍在(动作 op 取点输入)。
+    红 = 左右映射颠倒 / area 缺失不回退 / 标准化剥坐标 / 观察链容器终值
+    丢 xy。"""
+    import sr_od.application.currency_war.obs.cw_megastar_obs as mo
+    from one_dragon.base.geometry.point import Point
+    from sr_od.application.currency_war.kernel.cw_events import MegastarOption
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        ChannelSig,
+        Unit,
+    )
+
+    # ① 左右映射(area 在场;OCR 读序经 center-x 排序,花火 822 < 星期日 1061)
+    _ocr_map = {
+        '盛会之星一星期日先生!': SimpleNamespace(
+            max=SimpleNamespace(center=SimpleNamespace(x=1061))),
+        '盛会之星一花火先生!': SimpleNamespace(
+            max=SimpleNamespace(center=SimpleNamespace(x=822))),
+    }
+    _areas = {'候选-左': Point(820, 330), '候选-右': Point(1060, 330)}
+    stub_ctx = SimpleNamespace(ocr_service=SimpleNamespace(
+        get_ocr_result_map=lambda image, rect, color_range, crop_first:
+            dict(_ocr_map)))
+    monkeypatch.setattr(mo, 'area_center',
+                        lambda ctx, name, screen=None: _areas.get(name))
+    opts = mo.read_megastar_options(stub_ctx, object())
+    assert [(o.idx, o.char_id) for o in opts] == \
+        [(0, '花火'), (1, '星期日')], f'候选读数序:{opts!r}'
+    assert opts[0].xy == (820, 330) and opts[1].xy == (1060, 330), (
+        f'xy 左右映射(idx0=候选-左/其余=候选-右):'
+        f'{[o.xy for o in opts]!r}')
+    assert all(isinstance(o.xy, tuple) for o in opts), (
+        'xy = tuple[int, int](JSON 序列化安全形,非 Point)')
+
+    # ② area 缺失回退兜底常量(宿主 = obs 域)
+    monkeypatch.setattr(mo, 'area_center',
+                        lambda ctx, name, screen=None: None)
+    opts2 = mo.read_megastar_options(stub_ctx, object())
+    assert opts2[0].xy == (mo.CANDIDATE_LEFT.x, mo.CANDIDATE_LEFT.y), (
+        f'idx0 area 缺失回退 CANDIDATE_LEFT:{opts2[0].xy!r}')
+    assert opts2[1].xy == (mo.CANDIDATE_RIGHT.x, mo.CANDIDATE_RIGHT.y), (
+        f'idx1 area 缺失回退 CANDIDATE_RIGHT:{opts2[1].xy!r}')
+
+    # ③ 标准化透传 + 观察链容器终值携 xy(动态域入员照标准化命中锁装配)
+    op, match, session, _calls = _make_megastar(
+        test_context, monkeypatch, in_node=True,
+        options=[MegastarOption(idx=0, char_id='花火', xy=(822, 333)),
+                 MegastarOption(idx=1, char_id='Ａｒｃｈｅｒ', xy=(1061, 333))])
+    gs = match.gs
+    _sig = ChannelSig(family='obs', actor='test', mode='read')
+    gs.observe(gs.front_row, [Unit(char_id='Archer', star=1,
+                                   equips=['盛会之星星徽'], slot=1)],
+               sig=_sig)
+    rs = _run_node(test_context, op, op.observe)
+    assert rs.is_success, f'标准化门放行:{rs!r}'
+    container_opts = game_state_of(session).megastar_opts.value
+    assert [o.char_id for o in container_opts] == ['花火', 'Archer'], (
+        f'容器存规范名:{container_opts!r}')
+    assert [o.xy for o in container_opts] == [(822, 333), (1061, 333)], (
+        f'标准化透传 xy(转换只动名字,坐标同进退落容器):'
+        f'{[o.xy for o in container_opts]!r}')
+
+
+def test_megastar_pick_op_asserts_container_xy_before_click(
+        test_context, monkeypatch) -> None:
+    """动作 op 容器取点守卫锁(action_ops.md §1 增补 5 + op-layer.md §1.3):
+    选中半(need_select=True)点击坐标 = 容器 ``megastar_opts[env.idx].xy``
+    ——容器缺席/空、下标越界、元素缺 xy 三臂均 AssertionError 响亮暴露
+    且零点击(守卫在选中点击与确认点击之前;禁控制流回退、禁 screen_info
+    二次取点)。红 = 静默跳过选中(旧 target None 消极臂回潮)/ 坐标现算
+    回退 / 越界钳位 / 守卫前发生点击。"""
+    import sr_od.application.currency_war.operations.cw_op.cw_pick_megastar_action as pm
+    from sr_od.application.currency_war.kernel.cw_events import MegastarOption
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        ChannelSig,
+        game_state_of,
+    )
+    from sr_od.application.currency_war.kernel.cw_vocab import (
+        CwActionPickMegastarParam,
+    )
+    from sr_od.application.currency_war.operations.cw_op.cw_overlay_pick_env import (
+        OverlayPickExecEnv,
+    )
+    from sr_od.application.currency_war.operations.cw_op.cw_pick_megastar_action import (
+        CwActionPickMegastarOp,
+    )
+
+    monkeypatch.setattr(pm, 'time', SimpleNamespace(sleep=lambda *_: None))
+    # 确认钮 area 读缺 → 兜底常量(三臂均不该到达确认点击,恒零点击)。
+    monkeypatch.setattr(pm, 'area_center',
+                        lambda ctx, name, screen=None: None)
+
+    def _run_arm(session, *, idx: int) -> list[tuple[int, int]]:
+        """三臂公共装配:match 桂挂 session → 容器供给口可达;controller
+        点击记录;env idx-only + need_select=True;返回点击序。"""
+        monkeypatch.setattr(test_context, 'cw_match',
+                            SimpleNamespace(session=session), raising=False)
+        clicks: list[tuple[int, int]] = []
+        monkeypatch.setattr(test_context.controller, 'mouse_move',
+                            lambda p, **k: None, raising=False)
+        monkeypatch.setattr(test_context.controller, 'click',
+                            lambda p, **k: clicks.append((p.x, p.y)),
+                            raising=False)
+        stub_op = SimpleNamespace(ctx=test_context)
+        env = OverlayPickExecEnv(op=stub_op, idx=idx, need_select=True)
+        op = CwActionPickMegastarOp(test_context,
+                                    CwActionPickMegastarParam(idx=idx),
+                                    env=env)
+        with pytest.raises(AssertionError):
+            op.run()
+        return clicks
+
+    # ① 容器缺席/空(megastar_opts 未写)
+    session1 = StrategySession()
+    clicks1 = _run_arm(session1, idx=0)
+    assert clicks1 == [], f'容器缺席臂零点击:{clicks1!r}'
+    # ② 下标越界(容器 1 元,env.idx=5)
+    session2 = StrategySession()
+    _sig = ChannelSig(family='logic_action', actor='test', mode='compute')
+    game_state_of(session2).write_logic(
+        game_state_of(session2).megastar_opts,
+        [MegastarOption(idx=0, char_id='花火', xy=(822, 333))],
+        produced_by='test', sig=_sig)
+    clicks2 = _run_arm(session2, idx=5)
+    assert clicks2 == [], f'越界臂零点击:{clicks2!r}'
+    # ③ 元素缺 xy(观察上报未产坐标)
+    session3 = StrategySession()
+    game_state_of(session3).write_logic(
+        game_state_of(session3).megastar_opts,
+        [MegastarOption(idx=0, char_id='花火')],
+        produced_by='test', sig=_sig)
+    clicks3 = _run_arm(session3, idx=0)
+    assert clicks3 == [], f'缺 xy 臂零点击:{clicks3!r}'

@@ -298,6 +298,46 @@ def test_megastar_pick_op_clicks_confirm_once(no_pick_sleep):
     assert [p for p, _t in ctrl.clicks] == [CwScreenMegastar.CONFIRM]
 
 
+def test_megastar_pick_op_select_clicks_container_xy(no_pick_sleep):
+    """巨星选中半容器取点(选择坐标观察上报收敛,规范 = screens/
+    op-layer.md §1.1「选择坐标观察上报」+ action_ops.md §1 增补 5):
+    need_select=True → 点候选(点击坐标 = 容器 ``megastar_opts[idx].xy``,
+    env idx-only 零 target 传参)→ 确认钮(兜底常量臂)。红 = 选中半
+    回潮消费 env.target / 容器取点断流 / 点击序漂移。"""
+    from sr_od.application.currency_war.kernel.cw_events import MegastarOption
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        ChannelSig,
+        game_state_of,
+    )
+    from sr_od.application.currency_war.kernel.cw_vocab import (
+        CwActionPickMegastarParam,
+    )
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_megastar import (
+        CwScreenMegastar,
+    )
+
+    ctrl = _RecordingController()
+    session = StrategySession()
+    _sig = ChannelSig(family='logic_action', actor='test', mode='compute')
+    game_state_of(session).write_logic(
+        game_state_of(session).megastar_opts,
+        [MegastarOption(idx=0, char_id='花火', xy=(822, 333)),
+         MegastarOption(idx=1, char_id='星期日', xy=(1061, 333))],
+        produced_by='test', sig=_sig)
+    ctx = SimpleNamespace(
+        controller=ctrl,
+        screen_loader=_screen_loader_none(),   # area 缺失 → 确认走兜底常量
+        cw_match=SimpleNamespace(session=session))
+    op = SimpleNamespace(ctx=ctx)
+    env = OverlayPickExecEnv(op=op, idx=1, need_select=True)
+    assert CwActionPickMegastarOp(ctx, CwActionPickMegastarParam(idx=1),
+                                  env=env).run().is_success
+    # 点击序 = 选中位(容器 megastar_opts[1].xy)→ 确认钮;每次点击前 mouse_move。
+    assert [(p.x, p.y) for p, _t in ctrl.clicks] == [
+        (1061, 333), (CwScreenMegastar.CONFIRM.x, CwScreenMegastar.CONFIRM.y)]
+    assert len(ctrl.moves) == len(ctrl.clicks)
+
+
 def test_partner_pick_op_pulses_select_then_confirm(no_pick_sleep):
     """伙伴脉冲链:未选中实证 → 点候选 + 点确认;脉冲计数与 pending
     置位(画面 op 宿主状态经 env.op 消费),轮次结果旁路回传。"""
