@@ -235,7 +235,7 @@ def _run_visit_unobserved_host(monkeypatch, tmp_path, counters, *,
     节点函数直驱(过渡薄壳已随 3.4 退役,先例 =
     test_cw_shop_two_node_form)。
     """
-    import sr_od.application.currency_war.operations.cw_screen.cw_screen_buy_cards as buy_mod
+    import sr_od.application.currency_war.operations.cw_screen.cw_screen_shop as buy_mod
     from sr_od.application.currency_war.obs.cw_observation import (
         GameStateReadReceipt,
     )
@@ -331,7 +331,7 @@ def _run_visit_unobserved_host(monkeypatch, tmp_path, counters, *,
     from one_dragon.base.operation.operation_round_result import (
         OperationRoundResultEnum,
     )
-    shell = buy_mod.CwScreenBuyCards(_Op.ctx)
+    shell = buy_mod.CwScreenShop(_Op.ctx)
     rr = shell.observe()
     if not rr.is_success:
         return (rr, None), match.session

@@ -1,7 +1,7 @@
-"""buy_cards 防御路径改道引导漏斗·三行为差消除锁(终态契约 T-5 返工)。
+"""商店 op 防御路径改道引导漏斗·三行为差消除锁(终态契约 T-5 返工)。
 
 病理(T-5-r1 验收①,.debug/change-reviews/2026-09-16-strategy-terminal-contract/
-T-5-r1.md §5.1a):``cw_screen_buy_cards`` 独立单跑的 cw_match 缺席防御
+T-5-r1.md §5.1a):``cw_screen_shop`` 独立单跑的 cw_match 缺席防御
 分支此前裸构造 ``CurrencyWarMatch``,与生产容器建立漏斗
 ``establish_new_match`` 实差三处行为:rng 种子(漏斗按 config.strategy_seed
 播 session.rng)/reset_layout_unknown_state(新局起点复位布局未知态计数)/
@@ -31,14 +31,14 @@ import pytest
 
 import sr_od.application.currency_war.kernel.cw_game_state as gs_mod
 import sr_od.application.currency_war.kernel.cw_vocab as vocab_mod
-import sr_od.application.currency_war.operations.cw_screen.cw_screen_buy_cards as buy_mod
+import sr_od.application.currency_war.operations.cw_screen.cw_screen_shop as buy_mod
 from sr_od.application.currency_war.telemetry import state as tel_state
 
 
 def _run_observe_node(ctx: SimpleNamespace):
     """观察 node 直驱(薄壳退役承接):构造真类实例跑观察 node,返回
     轮次结果(防御路径锁只辖观察 node 段,决策循环不入锁面)。"""
-    op = buy_mod.CwScreenBuyCards(ctx)
+    op = buy_mod.CwScreenShop(ctx)
     return op.observe()
 
 

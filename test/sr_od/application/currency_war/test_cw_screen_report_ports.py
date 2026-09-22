@@ -50,7 +50,7 @@ _SCREENS = (
     'bookcard', 'expert_invite', 'supply_node', 'invest_env',
     'invest_strategy', 'wish_trial', 'box_pick', 'briefing',
     'plane_transition', 'armory_box', 'boss_briefing', 'wait_one_one',
-    'deploy_not_full', 'battle_wait', 'plane_intel', 'prep', 'buy_cards',
+    'deploy_not_full', 'battle_wait', 'plane_intel', 'prep', 'shop',
     # 推进型/商店框 12 屏(无 report)
     'next_button', 'plane_detail', 'consumable_overlay',
     'emblem_detail_popup', 'item_detail_popup', 'interrupt_dialog',
@@ -78,11 +78,11 @@ _NO_REPORT = frozenset({
 #:  见 _WRITE_CASES['plane_intel'] 与写门专项锁;boss_briefing 已于
 #:  2026-09-20-node-advance-action-report 切换批升级为真实写面——BOSS
 #:  类型直定(目标 = 现 hist),写门/直定专项锁归 test_cw_node_chain 与
-#:  test_cw_game_state_contract 节点域锁;buy_cards 保持占位:
+#:  test_cw_game_state_contract 节点域锁;shop 保持占位:
 #:  唯一候选写点 = 段头 gold 救援补写,属入口观察链内纠正补写,勘察
 #:  结论申报在 kernel 屏文件模块头,不收编交后续批裁决。)
 _PLACEHOLDERS = ('armory_box', 'wait_one_one',
-                 'deploy_not_full', 'battle_wait', 'buy_cards')
+                 'deploy_not_full', 'battle_wait', 'shop')
 
 _TEST_SIG = ChannelSig(family='logic_action', actor='TestSigWriter',
                        mode='compute')

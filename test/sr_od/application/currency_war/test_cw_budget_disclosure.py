@@ -13,9 +13,9 @@ decisions 切片四字段全 ``(0, 0, 0, 0, '')``,含升级窗口与滞留金轮
   过 F2 门不可得 ⇒ overflow/budget 恒 0 =「金未采」已知语义(实机
   首局 g_20260907_025608 锚⑤定谳);
 - ``economy_cycle.disclose_budget_at_shop_frame``(店开观察帧,经
-  ``cw_screen_buy_cards`` 段顶 lazy import 调用):overflow/budget
+  ``cw_screen_shop`` 段顶 lazy import 调用):overflow/budget
   覆写为帧现值;
-- ``cw_screen_buy_cards.accrue_release_spent``(执行回执位):spent 只
+- ``cw_screen_shop.accrue_release_spent``(执行回执位):spent 只
   计刷新实花(首版「宁窄勿虚」收窄口径,ADR-0571);轮键 = 容器读口
   现读。
 
@@ -53,7 +53,7 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionRefreshShopParam,
     ShopCard,
 )
-from sr_od.application.currency_war.operations.cw_screen.cw_screen_buy_cards import (
+from sr_od.application.currency_war.operations.cw_screen.cw_screen_shop import (
     accrue_release_spent,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.economy_cycle import (
@@ -96,7 +96,7 @@ def _run_shop_visit_offline_host(monkeypatch: pytest.MonkeyPatch,
     先例 = test_cw_shop_two_node_form)。
     disclose_impl 替换店开帧披露写点(接线点为函数内 lazy import,每次
     调用取模块属性,monkeypatch 即生效)。"""
-    import sr_od.application.currency_war.operations.cw_screen.cw_screen_buy_cards as buy_mod
+    import sr_od.application.currency_war.operations.cw_screen.cw_screen_shop as buy_mod
     from sr_od.application.currency_war.kernel.cw_vocab import CwActionCloseShopParam
     from sr_od.application.currency_war.obs.cw_observation import (
         GameStateReadReceipt,
@@ -176,7 +176,7 @@ def _run_shop_visit_offline_host(monkeypatch: pytest.MonkeyPatch,
     from one_dragon.base.operation.operation_round_result import (
         OperationRoundResultEnum,
     )
-    shell = buy_mod.CwScreenBuyCards(_Op.ctx)
+    shell = buy_mod.CwScreenShop(_Op.ctx)
     rr = shell.observe()
     if not rr.is_success:
         return warned, rr, None
@@ -422,7 +422,7 @@ def test_shop_frame_disclosure_wired_at_shop_entry(
     前提(黑板帧非 None)结构性不成立,收口为接线存在 + 循环收工两腿;
     黑板容器化后的喂入位次语义归容器化迁移批重放件)。改名申报:原
     ``..._after_blackboard_write`` 名嵌退役载体词,恢复时随接线段现址
-    (cw_screen_buy_cards 店开观察帧段顶)正名。"""
+    (cw_screen_shop 店开观察帧段顶)正名。"""
     seen_calls: list = []
 
     def _spy(state, session, registry=None) -> None:

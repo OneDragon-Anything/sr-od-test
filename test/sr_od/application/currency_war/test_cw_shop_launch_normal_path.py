@@ -54,7 +54,7 @@ def test_restricted_session_normal_path_chain(monkeypatch, tmp_path):
     真执行收访问 → 段内已访正常发射 StartBattle。"""
     from test.sr_od.application.currency_war._cw_helpers import cw4_card, cw4_gs
 
-    import sr_od.application.currency_war.operations.cw_screen.cw_screen_buy_cards as buy_mod
+    import sr_od.application.currency_war.operations.cw_screen.cw_screen_shop as buy_mod
     from sr_od.application.currency_war.operations.cw_op.cw_close_shop_action import (
         CwActionCloseShopOp,
     )
@@ -161,7 +161,7 @@ def test_restricted_session_normal_path_chain(monkeypatch, tmp_path):
     monkeypatch.setattr(economy_cycle_mod, 'disclose_budget_at_shop_frame',
                         lambda *a, **k: None)
 
-    shell = buy_mod.CwScreenBuyCards(_Op.ctx)
+    shell = buy_mod.CwScreenShop(_Op.ctx)
     assert shell.observe().is_success
     rr = shell.act()
     assert rr.is_success, '政策外提案 → 决策改发 CloseShop 收访问(终结交回)'

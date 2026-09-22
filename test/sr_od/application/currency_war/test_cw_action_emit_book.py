@@ -57,7 +57,7 @@ from sr_od.application.currency_war.operations.cw_op.cw_wear_equip_action import
 )
 from sr_od.application.currency_war.prep_actions import PrepExecEnv
 
-_SIG = ChannelSig(family='logic_action', actor='CwScreenBuyCards')
+_SIG = ChannelSig(family='logic_action', actor='CwScreenShop')
 
 
 # ============================================================

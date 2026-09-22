@@ -23,7 +23,7 @@ from types import SimpleNamespace
 import pytest
 
 import sr_od.application.currency_war.kernel.cw_game_state as gs_mod
-import sr_od.application.currency_war.operations.cw_screen.cw_screen_buy_cards as buy_mod
+import sr_od.application.currency_war.operations.cw_screen.cw_screen_shop as buy_mod
 from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
@@ -40,14 +40,14 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
 from sr_od.application.currency_war.operations.cw_op.cw_close_shop_action import (
     CwActionCloseShopOp,
 )
-from sr_od.application.currency_war.operations.cw_screen.cw_screen_buy_cards import (
-    CwScreenBuyCards,
+from sr_od.application.currency_war.operations.cw_screen.cw_screen_shop import (
+    CwScreenShop,
 )
 from sr_od.application.currency_war.strategies.impl.cw_strategy import (
     CurrencyWarMatch,
 )
 
-_LOGIC_SIG = ChannelSig(family='logic_action', actor='CwScreenBuyCards',
+_LOGIC_SIG = ChannelSig(family='logic_action', actor='CwScreenShop',
                         mode='compute')
 
 
@@ -143,7 +143,7 @@ def _shop_host(monkeypatch: pytest.MonkeyPatch, strategy) -> tuple:
 
     monkeypatch.setattr(gs_mod, 'note_action_receipt', _note_action_receipt)
 
-    op = CwScreenBuyCards(_Op.ctx)
+    op = CwScreenShop(_Op.ctx)
     return op, match, gs, reads, frame_tags, close_clicks, receipt_ops
 
 
@@ -163,7 +163,7 @@ def test_observe_node_reads_once_and_books_segment_head(monkeypatch):
     assert st.cw4_segment_serial == 1, '段序号 +1(visit 边界 = op 边界)'
     assert gs.frame_class_shop == 'full', '帧代次 = 每访问入口 full'
     assert op._obs is not None and op._obs.gold == 30, \
-        'CwScreenBuyCardsObs 镜像挂实例属性'
+        'CwScreenShopObs 镜像挂实例属性'
     assert frame_tags == ['shop_entry'], 'shop_entry 决策帧恰一帧'
 
 

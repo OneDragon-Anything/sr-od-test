@@ -2,7 +2,7 @@
 changes/2026-09-21-shop-refresh-terminal 详设 §2.8;landing 3.4 判据
 「备战入口 heavy 观察触发槽序表/台账写」)。
 
-节点行写点原宿主 = 商店访问尾探针(``cw_screen_buy_cards.probe_node_type``,
+节点行写点原宿主 = 商店访问尾探针(``cw_screen_shop.probe_node_type``,
 已随其退役删除),整体迁备战 heavy 观察链节点行消费位
 (``cw_screen_prep._write_prep_node_chain`` 同帧同点),识别零新增
 (``observe_full`` 现役 ``read_node_sequence`` 调用回传 slots)。守卫逐位

@@ -1082,7 +1082,7 @@ def test_on_buy_bumps_buy_key_by_k() -> None:
 # ============================================================ 挂点接线锁(缓交)
 # 原 test_effect_hooks_wired_at_production_sites(§5.1 四挂点+B1 桥两采样点
 # 字符串在场断言)本批不收录:分诊=修复需 import 在飞互斥面符号
-# (cw_screen_buy_cards 的执行落地 bump、cw_loop 的节点 tick),且本体为
+# (cw_screen_shop 的执行落地 bump、cw_loop 的节点 tick),且本体为
 # 源码扫描形态(AGENTS §10.4.4 禁)。挂点接线的行为锁待在飞批落地后按
 # 行为锁形态重写,台账见 .debug/progress/2026-09-11-cw-clear-run/reports/
 # 分诊报告(易失)。

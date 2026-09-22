@@ -51,8 +51,8 @@ from sr_od.application.currency_war.operations.cw_op.cw_close_shop_action import
     CwActionCloseShopOp,
 )
 
-_LOGIC_SIG = ChannelSig(family='logic_action', actor='CwScreenBuyCards',
-                        mode='compute', group_id='act:CwScreenBuyCards@1')
+_LOGIC_SIG = ChannelSig(family='logic_action', actor='CwScreenShop',
+                        mode='compute', group_id='act:CwScreenShop@1')
 _OBS_SIG = ChannelSig(family='obs', actor='cw_observation',
                       screen='货币战争-备战-开商店', mode='read')
 
