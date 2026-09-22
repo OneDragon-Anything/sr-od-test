@@ -229,11 +229,15 @@ def _run_buy_waves_unobserved_host(monkeypatch, tmp_path, counters, *,
 
     构造 = 容器在屏空牌面 + 观察态按参;策略 = 生产 MandateV1Strategy
     (真实门路径:未观察 → CwActionCloseShopParam;观察态用例传 Idle 关店策略)。
+    关店执行位点击桩化(统一执行路径含 CloseShop 真点击;离线零画面)。
     返回 (run_buy_waves 结果元组, session)。
     """
     import sr_od.application.currency_war.operations.cw_screen.cw_screen_buy_cards as buy_mod
     from sr_od.application.currency_war.obs.cw_observation import (
         GameStateReadReceipt,
+    )
+    from sr_od.application.currency_war.operations.cw_op.cw_close_shop_action import (
+        CwActionCloseShopOp,
     )
     from sr_od.application.currency_war.strategies.impl.cw_strategy import (
         CurrencyWarMatch,
@@ -278,16 +282,21 @@ def _run_buy_waves_unobserved_host(monkeypatch, tmp_path, counters, *,
         _mark_unobserved(match.session)
     _write_shop_payload(match.session)
 
-    class _Op:
-        """离线宿主替身:run_buy_waves 消费面仅 ctx/screenshot/park_cursor。"""
+    class _Ctl:
+        """op 框架经 ctx.controller 触达的最小替身(截图/光标停车)。"""
 
-        ctx = SimpleNamespace(current_instance_idx=1)
+        def screenshot(self, *a, **k):
+            return (0.0, b'')
 
-        def screenshot(self) -> bytes:
-            return b''
-
-        def park_cursor(self, after_wait: float = 0.0) -> None:
+        def park_cursor(self, *a, **k) -> None:
             pass
+
+    class _Op:
+        """离线宿主替身:观察节点消费面仅 ctx(controller 截图/停车)+ 熔断
+        支 save_screenshot/round_fail。"""
+
+        ctx = SimpleNamespace(current_instance_idx=1, cw_match=match,
+                              controller=_Ctl())
 
         def save_screenshot(self, prefix: str = '') -> str:
             return ''
@@ -300,6 +309,11 @@ def _run_buy_waves_unobserved_host(monkeypatch, tmp_path, counters, *,
                                     hp_readable=True, hp_trusted=True,
                                     level=5, plane=1, round_num=8)
 
+    # 关店执行位点击桩化(「收起」命中 → 点击臂;动画等待经全局 time 桩)。
+    monkeypatch.setattr(CwActionCloseShopOp, 'screenshot', lambda self: None)
+    monkeypatch.setattr(CwActionCloseShopOp, 'round_by_find_and_click_area',
+                        lambda self, *a, **k: SimpleNamespace(is_success=True))
+    monkeypatch.setattr('time.sleep', lambda _s: None)
     monkeypatch.setattr(buy_mod, 'read_game_state', _entry_receipt)
     monkeypatch.setattr(buy_mod, 'save_decision_frame', lambda *a, **k: None)
     monkeypatch.setattr(buy_mod, 'shop_card_click_points', lambda ctx: [])

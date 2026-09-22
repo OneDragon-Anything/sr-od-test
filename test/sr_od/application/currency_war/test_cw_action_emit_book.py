@@ -8,8 +8,9 @@ bug 修),不是投影 bug。
 
 本锁钉拆除后的「发出即记账」语义(原 T-22 部署 / T-44 买牌 / T-55
 穿戴三件落地像素验证 + miss 刹车随拆除退役):
-1. BuyCardOp:点击后零像素验证,恒返回 True + 账本/tracked 直写;
-   买前裁片 = 纯留证零判效(保留面);
+1. BuyCardOp:点击后零像素验证零读屏,恒返回 True + 账本/tracked 直写
+   (买前裁片已随动作 op 零读屏收口退役,证据职能归下一入口观察);
+   点位缺失/槽号越界 = 显式 round_fail(禁兜底坐标静默点击);
 2. WearEquipOp:单次机械拖拽 + emitted=True(拖后零读屏零判定);
    定位落空 = 未发出通道(emitted=False),非判效语义保留;
 3. DeployMoveOp:拖拽发出即 tracked 记上阵(拖后画面零变化也不回滚
@@ -21,11 +22,9 @@ from types import SimpleNamespace
 
 import numpy as np
 import pytest
-from one_dragon.base.geometry.point import Point
-from one_dragon.base.geometry.rectangle import Rect
 
-import sr_od.application.currency_war.operations.cw_op.cw_buy_card_action \
-    as buy_action_mod
+import sr_od.application.currency_war.operations.cw_op.cw_buy_card_action as buy_action_mod
+from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war.kernel.cw_game_state import (
     BenchSlot,
     ChannelSig,
@@ -40,50 +39,37 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionBuyCardParam,
     CwActionDeployMoveParam,
-    ShopCard,
     CwActionWearEquipParam,
+    ShopCard,
 )
 from sr_od.application.currency_war.operations.cw_op.cw_buy_card_action import (
     CwActionBuyCardOp,
 )
-from sr_od.application.currency_war.operations.cw_op.cw_deploy_move_action \
-    import CwActionDeployMoveOp
+from sr_od.application.currency_war.operations.cw_op.cw_deploy_move_action import (
+    CwActionDeployMoveOp,
+)
 from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
     ShopExecEnv,
     ShopVisitLedger,
 )
-from sr_od.application.currency_war.operations.cw_op.cw_wear_equip_action \
-    import CwActionWearEquipOp
+from sr_od.application.currency_war.operations.cw_op.cw_wear_equip_action import (
+    CwActionWearEquipOp,
+)
 from sr_od.application.currency_war.prep_actions import PrepExecEnv
 
 _SIG = ChannelSig(family='logic_action', actor='CwScreenBuyCards')
-
-# 帧尺寸 = 5 槽宽(5×96)× 槽高 270;槽 i rect = ((i-1)*96, 0, i*96, 270)。
-_FRAME_H, _FRAME_W = 270, 480
-
-
-def _frame() -> np.ndarray:
-    return np.zeros((_FRAME_H, _FRAME_W, 3), dtype=np.uint8)
 
 
 # ============================================================
 # 锁1 BuyCardOp:点击发出即记账(零像素验证,恒 True)
 # ============================================================
 
-def _fake_area_rect(ctx, name: str, screen_name: str = '') -> Rect | None:
-    try:
-        idx = int(str(name).replace('商店牌-', ''))
-    except ValueError:
-        return None
-    return (Rect((idx - 1) * 96, 0, idx * 96, _FRAME_H)
-            if 1 <= idx <= 5 else None)
-
 
 def _buy_op_env(monkeypatch: pytest.MonkeyPatch,
-                frames: list[np.ndarray]):
-    """BuyCardOp 离线执行环境(零真实副作用):容器在屏 payload 槽1 =
-    花火;frames = op.screenshot 依序弹出(拆除后仅买前裁片一采)。
-    返回 (op, env, ledger, gs, clicks)。"""
+                click_pts: list[Point] | None = None):
+    """BuyCardOp 离线执行环境(零真实副作用,零读屏替身):容器在屏
+    payload 槽1 = 花火;click_pts 可参(缺省槽1命中)。返回 (op, env,
+    ledger, gs, clicks)。"""
     session = StrategySession()
     gs = game_state_of(session)
     card = ShopCard(x=50, slot=1, name='花火', faction='?', cost=3, star=1)
@@ -103,24 +89,20 @@ def _buy_op_env(monkeypatch: pytest.MonkeyPatch,
     class _Op:
         ctx = SimpleNamespace(controller=_Ctrl())
 
-        def screenshot(self):
-            return frames.pop(0) if frames else None
-
     env = ShopExecEnv(
         op=_Op(), match=SimpleNamespace(session=session), config=None,
-        click_pts=[Point(50, 50)], level_btn=None, refresh_btn=None,
+        click_pts=click_pts if click_pts is not None else [Point(50, 50)],
+        level_btn=None, refresh_btn=None,
         ledger=ledger, state=gs)
-    monkeypatch.setattr(buy_action_mod, '_area_rect', _fake_area_rect)
     monkeypatch.setattr(buy_action_mod.time, 'sleep', lambda s: None)
     return CwActionBuyCardOp(env.op.ctx, CwActionBuyCardParam(card=card), env=env), env, ledger, gs, clicks
 
 
 def test_buy_card_emits_and_books_unconditionally(monkeypatch):
-    """机械执行主锁:拖后画面零变化(同帧零差)也恒返回 True + 照常落账
-    (账本/tracked 全落)——零判效的直接证据;落地真值归下一入口观察
-    对账(静默不生效 → shop+gold 失配安灯停,按真 bug 修)。"""
-    frame = _frame()   # 点击前后同帧 = 旧像素验证必判 miss 的形态
-    op, env, ledger, gs, clicks = _buy_op_env(monkeypatch, [frame])
+    """机械执行主锁:恒返回 True + 照常落账(账本/tracked 全落)——零判效
+    的直接证据;落地真值归下一入口观察对账(静默不生效 → shop+gold 失配
+    安灯停,按真 bug 修)。"""
+    op, env, ledger, gs, clicks = _buy_op_env(monkeypatch)
 
     ok = op.run()
 
@@ -129,10 +111,22 @@ def test_buy_card_emits_and_books_unconditionally(monkeypatch):
     assert ledger.total_buy == 1 and ledger.spend_executed == 3
     assert ledger.bought_names == ['花火']
     assert len(ledger.buy_purchases) == 1
-    assert ledger.buy_purchases[0].crop is not None, \
-        '买前裁片 = 纯留证零判效(保留面)'
     assert [(b.unit.char_id, b.unit.star)
             for b in gs.tracked_books.bench if b is not None] == [('花火', 1)]
+
+
+def test_buy_card_missing_slot_point_fails_loudly(monkeypatch):
+    """兜底坐标清除锁:槽号越界(点位缺失同出口)→ 显式 round_fail
+    (错误信息带 area 名,与 level_btn/refresh_btn 同款纪律),零点击
+    零记账——禁兜底坐标静默点击(坐标单一真相源)。"""
+    op, _env, ledger, _gs, clicks = _buy_op_env(monkeypatch, click_pts=[])
+
+    ok = op.run()
+
+    assert ok.is_success is False, '点位缺失 = 显式失败(非兜底点击)'
+    assert '商店牌-' in (ok.status or ''), '错误信息带 area 名'
+    assert clicks == [], '零点击(禁兜底坐标)'
+    assert ledger.total_buy == 0, '零记账(动作未发出)'
 
 
 # ============================================================

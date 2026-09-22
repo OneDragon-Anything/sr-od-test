@@ -51,22 +51,24 @@ _SCREENS = (
     'invest_strategy', 'wish_trial', 'box_pick', 'briefing',
     'plane_transition', 'armory_box', 'boss_briefing', 'wait_one_one',
     'deploy_not_full', 'battle_wait', 'plane_intel', 'prep', 'buy_cards',
-    # 推进型/商店框 13 屏(无 report)
+    # 推进型/商店框 12 屏(无 report)
     'next_button', 'plane_detail', 'consumable_overlay',
     'emblem_detail_popup', 'item_detail_popup', 'interrupt_dialog',
     'refresh_odds_popup', 'role_detail_overlay', 'shop_card_detail',
-    'prep_locked_return', 'aha_equip_pick', 'open_shop', 'close_shop',
+    'prep_locked_return', 'aha_equip_pick', 'open_shop',
 )
 
 #: 推进型/商店框(空决策形态,无 report 接口;design.md §2.2)。
 #: 名单外的 obs 类默认必须带 report 函数——新增屏漏归侧即红。
+#: (关店编排壳 obs 行随壳退役删除,迭代 2026-09-21-shop-refresh-terminal
+#:  3.4:CloseShop 执行位收编进 CwActionCloseShopOp,孤儿 obs 文件随壳退役。)
 _NO_REPORT = frozenset({
     'CwScreenNextButtonObs', 'CwScreenPlaneDetailObs',
     'CwScreenConsumableOverlayObs', 'CwScreenEmblemDetailPopupObs',
     'CwScreenItemDetailPopupObs', 'CwScreenInterruptDialogObs',
     'CwScreenRefreshOddsPopupObs', 'CwScreenRoleDetailOverlayObs',
     'CwScreenShopCardDetailPopupObs', 'CwScreenPrepLockedReturnObs',
-    'CwScreenAhaEquipPickObs', 'CwOpOpenShopObs', 'CwOpCloseShopObs',
+    'CwScreenAhaEquipPickObs', 'CwOpOpenShopObs',
 })
 
 #: 文档化占位 report(现役零观察容器写点,统一形态占位)。

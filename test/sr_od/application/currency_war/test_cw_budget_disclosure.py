@@ -85,18 +85,22 @@ def _cur(sess: StrategySession, plane: int, round_num: int, gold: int = 53,
 def _run_buy_waves_offline_host(monkeypatch: pytest.MonkeyPatch,
                                 tmp_path: Path, disclose_impl) -> tuple[
         list, object, object]:
-    """锁 F 行为腿共用离线宿主(零真实副作用)。替身面 = run_buy_waves
-    段顶消费面(读屏/帧留证/种子读链/决策源/遥测单例全替身):决策源
-    首动作即 CwActionCloseShopParam 终结,循环只走入口观察组装段一次;入口读屏回执
-    gold=10 非零(跳过 gold 救援重读支);种子段读链桩 = 分型的
-    「屏幕席真空」合法态(生产 SIFT 读链离线不可用,空账重建出口按
-    合法态零写零台账);帧留证不落盘。返回 (warned, rr, ledger);
-    disclose_impl 替换店开帧披露写点(接线点为函数内 lazy import,每次
-    调用取模块属性,monkeypatch 即生效)。"""
+    """锁 F 行为腿共用离线宿主(零真实副作用)。替身面 = 观察节点段顶
+    消费面(读屏/帧留证/种子读链/决策源/遥测单例全替身)+ 关店执行位
+    点击桩化:决策源首动作即 CwActionCloseShopParam 终结,循环只走入口
+    观察段一次后经统一执行路径关店收工;入口读屏回执 gold=10 非零
+    (跳过 gold 救援重读支);种子段读链桩 = 分型的「屏幕席真空」合法态
+    (生产 SIFT 读链离线不可用,空账重建出口按合法态零写零台账);帧留证
+    不落盘。返回 (warned, rr, ledger);disclose_impl 替换店开帧披露写点
+    (接线点为函数内 lazy import,每次调用取模块属性,monkeypatch 即
+    生效)。"""
     import sr_od.application.currency_war.operations.cw_screen.cw_screen_buy_cards as buy_mod
     from sr_od.application.currency_war.kernel.cw_vocab import CwActionCloseShopParam
     from sr_od.application.currency_war.obs.cw_observation import (
         GameStateReadReceipt,
+    )
+    from sr_od.application.currency_war.operations.cw_op.cw_close_shop_action import (
+        CwActionCloseShopOp,
     )
     from sr_od.application.currency_war.strategies.impl.cw_strategy import (
         CurrencyWarMatch,
@@ -124,16 +128,20 @@ def _run_buy_waves_offline_host(monkeypatch: pytest.MonkeyPatch,
 
     match = CurrencyWarMatch(_CloseShopStrategy(), StrategySession())
 
-    class _Op:
-        """离线宿主替身:run_buy_waves 消费面仅 ctx/screenshot/park_cursor。"""
+    class _Ctl:
+        """op 框架经 ctx.controller 触达的最小替身(截图/光标停车)。"""
 
-        ctx = SimpleNamespace(current_instance_idx=1)
+        def screenshot(self, *a, **k):
+            return (0.0, b'')
 
-        def screenshot(self) -> bytes:
-            return b''
-
-        def park_cursor(self, after_wait: float = 0.0) -> None:
+        def park_cursor(self, *a, **k) -> None:
             pass
+
+    class _Op:
+        """离线宿主替身:观察节点消费面仅 ctx(controller 截图/停车)。"""
+
+        ctx = SimpleNamespace(current_instance_idx=1, cw_match=match,
+                              controller=_Ctl())
 
     def _entry_receipt(*a, **k) -> GameStateReadReceipt:
         """段顶入口观察回执(gold=10 非零,跳过 gold 救援重读支)。"""
@@ -141,6 +149,12 @@ def _run_buy_waves_offline_host(monkeypatch: pytest.MonkeyPatch,
                                     hp_readable=True, hp_trusted=True,
                                     level=5, plane=1, round_num=8)
 
+    # 关店执行位点击桩化(统一执行路径含 CloseShop 真点击;离线零画面):
+    # 「收起」命中 → 点击臂(动画等待经全局 time 桩跳过)。
+    monkeypatch.setattr(CwActionCloseShopOp, 'screenshot', lambda self: None)
+    monkeypatch.setattr(CwActionCloseShopOp, 'round_by_find_and_click_area',
+                        lambda self, *a, **k: SimpleNamespace(is_success=True))
+    monkeypatch.setattr('time.sleep', lambda _s: None)
     monkeypatch.setattr(buy_mod, 'read_game_state', _entry_receipt)
     monkeypatch.setattr(buy_mod, 'save_decision_frame', lambda *a, **k: None)
     monkeypatch.setattr(buy_mod, 'shop_card_click_points', lambda ctx: [])

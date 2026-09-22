@@ -74,7 +74,6 @@ def test_refresh_fee_unobserved_field_falls_back_to_base(monkeypatch):
 
     assert ledger.spend_executed == REFRESH_COST_BASE
     assert ledger.total_refresh == 1
-    assert ledger.did_refresh is True
 
 
 def test_refresh_fee_observed_value_is_used(monkeypatch):

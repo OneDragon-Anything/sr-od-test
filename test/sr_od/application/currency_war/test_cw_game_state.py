@@ -1066,6 +1066,19 @@ def test_bump_key_advances_only_tracked_entries() -> None:
         '未声明记账义务的条目不被推进'
 
 
+def test_on_buy_bumps_buy_key_by_k() -> None:
+    """购买回调计数面(形态镜像 on_level_up;挂点 = 买牌上报函数获取
+    计算完时点):满栏合成一击多买按实际张数 k 计 k 次(返利族「每购
+    3 张 5 费」门槛面);推进只辖 duties.track=True 条目(bump_key 同一
+    承载);缺省 k=1 = 简单腿单击单张。"""
+    inv = ActiveEffectInventory()
+    inv.register_strategy(STRATEGY_EFFECTS['采购专员·金'], acquired_t=1)  # track=True
+    inv.on_buy(card=None, star=1, k=3)
+    assert inv.counter('201201', CounterKey.BUY) == 3, 'k 张计 k 次'
+    inv.on_buy(card=None, star=1)
+    assert inv.counter('201201', CounterKey.BUY) == 4, '缺省 k=1'
+
+
 # ============================================================ 挂点接线锁(缓交)
 # 原 test_effect_hooks_wired_at_production_sites(§5.1 四挂点+B1 桥两采样点
 # 字符串在场断言)本批不收录:分诊=修复需 import 在飞互斥面符号

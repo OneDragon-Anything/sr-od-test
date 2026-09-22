@@ -424,3 +424,60 @@ def test_shop_entry_funnel_bench_survives_synthesis() -> None:
     assert [(b.unit.char_id, b.unit.star) for b in
             game_state_of(session).tracked_books.bench if b is not None] \
         == [('银枝', 1)], '执行账 tracked 不受种子影响(容器/执行两账同源)'
+
+
+# ==================== 买牌获取回调腿(计数归上报单点)====================
+
+
+class _SpyEffects:
+    """effects 替身:on_buy 记录调用参数(时点判据载体);其余委托真册。"""
+
+    def __init__(self, real, seen: list) -> None:
+        self._real = real
+        self._seen = seen
+
+    def on_buy(self, card, star, k) -> None:
+        self._seen.append((getattr(card, 'name', ''), star, k))
+
+    def __getattr__(self, name):
+        return getattr(self._real, name)
+
+
+def test_on_buy_fires_after_acquisition_compute(monkeypatch):
+    """购买回调腿(k 计数 + 时点):回调 = 获取计算完(落位 + 合成连锁 +
+    升星腿全毕)后恰一次——满栏一击多买按实际张数 k 计 k 次(k = 上报
+    executed);回调可见购买后的席面/升星事实(升星腿已毕)。"""
+    bench = [_bc(f'c{i}', star=1, slot=i + 1) for i in range(8)]
+    bench.append(_bc('希儿', star=1, slot=9))
+    gs = _gs_of(gold=60,
+                shop=[_card('希儿', cost=3, x=0), _card('希儿', cost=3, x=1)],
+                bench=bench)
+    seen: list = []
+    monkeypatch.setattr(gs, 'effects', _SpyEffects(gs.effects, seen))
+
+    out = report_action_buy_card_param(
+        gs, CwActionBuyCardParam(card=_card('希儿', cost=3)), _SIG,
+        executed=ShopActionExecuted(bought_count=2))
+
+    assert out.applied and out.bought_count == 2
+    assert seen == [('希儿', 1, 2)], \
+        '回调恰一次,k = executed 张数(满栏计 k 次)'
+    assert _bench_slots(gs) == (
+        [(i, f'c{i}', 1) for i in range(8)] + [(8, '希儿', 2)]), \
+        '回调时点 = 升星腿已毕(3 副本合 1 升 2★ 在席副本)'
+
+
+def test_on_buy_not_fired_on_rejected_buy(monkeypatch):
+    """拒买(满栏且合成不可达,applied=False 早退)不触回调(未购买,
+    计数不虚进)。"""
+    bench = [_bc(f'c{i}', star=1, slot=i + 1) for i in range(9)]
+    gs = _gs_of(gold=30, shop=[_card('姬子', cost=3)], bench=bench)
+    seen: list = []
+    monkeypatch.setattr(gs, 'effects', _SpyEffects(gs.effects, seen))
+
+    out = report_action_buy_card_param(
+        gs, CwActionBuyCardParam(card=_card('姬子', cost=3)), _SIG,
+        executed=ShopActionExecuted(bought_count=1))
+
+    assert not out.applied, '前置:满栏且合成不可达 = 拒买'
+    assert seen == [], '拒买不触回调'

@@ -1,12 +1,14 @@
 """buy_cards 防御路径改道引导漏斗·三行为差消除锁(终态契约 T-5 返工)。
 
 病理(T-5-r1 验收①,.debug/change-reviews/2026-09-16-strategy-terminal-contract/
-T-5-r1.md §5.1a):``cw_screen_buy_cards.run_buy_waves`` 的 match=None
-防御分支此前裸构造 ``CurrencyWarMatch``,与生产容器建立漏斗
+T-5-r1.md §5.1a):``cw_screen_buy_cards`` 独立单跑的 cw_match 缺席防御
+分支此前裸构造 ``CurrencyWarMatch``,与生产容器建立漏斗
 ``establish_new_match`` 实差三处行为:rng 种子(漏斗按 config.strategy_seed
 播 session.rng)/reset_layout_unknown_state(新局起点复位布局未知态计数)/
 遥测 run_id_provider(局容器建立点注入 journal 装配)。修复 = 防御分支直调
-漏斗(先 ``discard_stale_match_container`` 保「局外不复用」,再 establish)。
+漏斗(先 ``discard_stale_match_container`` 保「局外不复用」,再 establish)
+——现居观察 node 首拍(两 node 规范形态:兜底建核 = 观察 node 第①步,
+触发条件 = ctx.cw_match 缺席)。
 
 锁三件(接线锁形态照 test_cw_journal_assembly_guard):
 1. 种子:防御构建的容器 session.rng 按 config.strategy_seed 播种
@@ -15,8 +17,9 @@ T-5-r1.md §5.1a):``cw_screen_buy_cards.run_buy_waves`` 的 match=None
 3. 遥测:防御构建经 game_state_of 建立点以遥测 ``current_run_id`` 为
    provider 触发 journal 装配。
 
-离线宿主判据:run_buy_waves(match=None) 在入口 area 校验处收工
-(level 按钮缺失 → round_fail),执行段恰好只含防御建核 + 漏斗序,零读屏。
+离线宿主判据:cw_match 缺席入跑,防御建核后入口 area 校验处收工
+(level 按钮缺失 → round_fail),执行段恰好只含防御建核 + 漏斗序 +
+area 锚定,零读屏。
 """
 from __future__ import annotations
 
@@ -31,36 +34,21 @@ import sr_od.application.currency_war.operations.cw_screen.cw_screen_buy_cards a
 from sr_od.application.currency_war.telemetry import state as tel_state
 
 
-class _Op:
-    """离线宿主替身:防御段消费面 = ctx + round_fail(area 缺失出口)。
-
-    ctx 带漏斗三消费位(cw_match / cw_selected_difficulty /
-    currency_war_strategy_plugin_dirs);空插件目录 → StrategyManager 走
-    强制登记核(mandate_v1 注册壳),与生产同一条实例化链。"""
-
-    def __init__(self) -> None:
-        self.fail_msgs: list = []
-        self.ctx = SimpleNamespace(
-            current_instance_idx=1, cw_match=None,
-            cw_selected_difficulty=None,
-            currency_war_strategy_plugin_dirs=[])
-
-    def round_fail(self, *a, **k):
-        self.fail_msgs.append(a)
-        return ('fail', a)
-
-
 def _defense_host(monkeypatch: pytest.MonkeyPatch, *,
-                  strategy_seed: int | None) -> _Op:
-    """替身缝 = run_buy_waves 段顶消费面:config 工厂(seed 可参)/
-    点击点位/area 中心(恒缺 → 入口校验 round_fail 早退)。"""
+                  strategy_seed: int | None) -> SimpleNamespace:
+    """替身缝 = 观察 node 顶部消费面:config 工厂(seed 可参)/
+    点击点位/area 中心(恒缺 → 入口校验 round_fail 早退)。
+    ctx.cw_match 缺席 = 独立单跑前提(兜底建核触发面)。"""
     monkeypatch.setattr(
         buy_mod, 'CurrencyWarConfig',
         lambda idx: SimpleNamespace(strategy_id='mandate_v1',
                                     strategy_seed=strategy_seed))
     monkeypatch.setattr(buy_mod, 'shop_card_click_points', lambda ctx: [])
     monkeypatch.setattr(buy_mod, 'area_center', lambda *a, **k: None)
-    return _Op()
+    return SimpleNamespace(
+        current_instance_idx=1, cw_match=None,
+        cw_selected_difficulty=None,
+        currency_war_strategy_plugin_dirs=[])
 
 
 def test_defense_path_wires_seed_and_telemetry_like_funnel(
@@ -73,12 +61,13 @@ def test_defense_path_wires_seed_and_telemetry_like_funnel(
                         lambda provider: assembly_calls.append(provider))
     monkeypatch.setattr(tel_state, '_CURRENT_RUN_ID', 't-def-42')
 
-    op = _defense_host(monkeypatch, strategy_seed=42)
-    rr, _ledger = buy_mod.run_buy_waves(op, None)
+    ctx = _defense_host(monkeypatch, strategy_seed=42)
+    rr, _ledger = buy_mod.run_buy_waves(_HostOp(ctx), None)
 
-    assert op.fail_msgs            # 入口 area 校验早退(执行段零读屏)
-    assert rr == ('fail', op.fail_msgs[0])
-    match = op.ctx.cw_match
+    assert rr is not None and rr.is_success is False, \
+        '入口 area 校验早退(执行段零读屏)'
+    assert 'area 缺失' in (rr.status or ''), 'area 缺失显式失败(带 area 名)'
+    match = ctx.cw_match
     assert match is not None
     # 差①种子:漏斗同款(session.rng = Random(config.strategy_seed))
     assert match.session.rng.random() == random.Random(42).random()
@@ -94,16 +83,23 @@ def test_defense_path_wires_seed_and_telemetry_like_funnel(
     assert strategy_state_of(match.session) is match.strategy.state
 
 
+class _HostOp:
+    """薄壳宿主位(消费面仅 ctx;round 判定 = 薄壳返回值)。"""
+
+    def __init__(self, ctx: SimpleNamespace) -> None:
+        self.ctx = ctx
+
+
 def test_defense_path_seed_none_keeps_default_rng(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """种子 None 臂:漏斗同款不播(config.strategy_seed=None 不覆盖
     session.rng,保持 StrategySession 缺省固定 0 种)。"""
     monkeypatch.setattr(gs_mod, 'ensure_journal_assembly', lambda _p: None)
 
-    op = _defense_host(monkeypatch, strategy_seed=None)
-    buy_mod.run_buy_waves(op, None)
+    ctx = _defense_host(monkeypatch, strategy_seed=None)
+    buy_mod.run_buy_waves(_HostOp(ctx), None)
 
-    match = op.ctx.cw_match
+    match = ctx.cw_match
     assert match.session.rng.random() == random.Random(0).random()
 
 
@@ -116,24 +112,26 @@ def test_defense_path_resets_layout_unknown_state(
                         lambda: reset_calls.append(True))
     monkeypatch.setattr(gs_mod, 'ensure_journal_assembly', lambda _p: None)
 
-    buy_mod.run_buy_waves(_defense_host(monkeypatch, strategy_seed=None),
-                          None)
+    buy_mod.run_buy_waves(_HostOp(_defense_host(monkeypatch,
+                                                strategy_seed=None)), None)
 
     assert len(reset_calls) == 1
 
 
 def test_defense_path_rebuilds_fresh_per_invocation(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """防御语义保持(局外不复用):同一 ctx 第二次独立调用先弃置残留容器
-    再新建(discard+establish 同款衔接),session 全量重建非复用——
+    """防御语义保持(局外不复用):cw_match 缺席的独立调用先弃置残留
+    容器再新建(discard+establish 同款衔接),session 全量重建非复用——
     与入口链 CwEntryStart 的残留弃置纪律一致。"""
     monkeypatch.setattr(gs_mod, 'ensure_journal_assembly', lambda _p: None)
-    op = _defense_host(monkeypatch, strategy_seed=None)
+    ctx = _defense_host(monkeypatch, strategy_seed=None)
+    host = _HostOp(ctx)
 
-    buy_mod.run_buy_waves(op, None)
-    first = op.ctx.cw_match
-    buy_mod.run_buy_waves(op, None)
-    second = op.ctx.cw_match
+    buy_mod.run_buy_waves(host, None)
+    first = ctx.cw_match
+    ctx.cw_match = None   # 再次独立单跑(cw_match 缺席前提)
+    buy_mod.run_buy_waves(host, None)
+    second = ctx.cw_match
 
     assert first is not None and second is not None
     assert second is not first

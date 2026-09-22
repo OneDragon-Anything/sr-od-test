@@ -1,17 +1,18 @@
 """发射帧受限消费·策略侧自限(flow.decide_shop_action 提案后谓词检)单帧锁:
 迭代 changes/2026-09-21-shop-refresh-terminal 详设 §2.10(用户裁定:策略的
-事情不进流程框架,规范正本 = flow/README §1 决策控制分层铁律;run-1 =
-策略侧自限先行,flow 闸暂留待退役、行为连续)。
+事情不进流程框架,规范正本 = flow/README §1 决策控制分层铁律;受限消费
+政策单一面 = 决策入口自限,flow 闸已退役)。
 
 锁的语义(判定数学零复制:armed 核、息线判定、预算闸谓词全部 kernel
 单一源直调,断言走真实判定链非桩值——金位经缺省息帽链派生 g*):
-- 受限会话帧(armed ∧ 金超息线,派生标记每帧现算)政策内动作 → 提案
-  原样发射,零受阻遥测;
+- 受限会话帧(armed ∧ 金达息线,派生标记每帧现算;恰落线帧 = 受限,
+  与 kernel 闸带内拒域对齐)政策内动作 → 提案原样发射,零受阻遥测;
 - 受限会话政策外提案 → 谓词拒 → 决策改发 CwActionCloseShopParam(消费
   终止:不重咨询决策核,非改试次优,金出口族红线 5)+ 受阻遥测分键
   launch_arbitrage_gate_blocked 落 strategy_state.cw4_counters(kernel
-  常量,与 flow 闸闭包同键);
-- 金回线内 / 非武装帧 → 现行为逐位不变(提案透传、零检零遥测);
+  常量);
+- 金回线内(严格低于息线)/ 非武装帧 → 现行为逐位不变(提案透传、
+  零检零遥测);
 - 段旗 cw4_launch_spend_visited 与派生标记互不消费:自限拒拍前后段旗值
   不变(留守语义不回退;写端单一源仍 = bridge._launch_front_check)。
 """
@@ -48,7 +49,8 @@ _LOGIC_SIG = ChannelSig(family='logic_action', actor='TestShopSpendSelfLimit')
 # 形态对应的放行/拒拍/带内三域,不引常量进断言式):
 _GOLD_OVER = 60    # 溢出段;3 费买入花后在线上 → 政策内(放行域)
 _GOLD_NEAR = 51    # 溢出段;同动作花后跌破息线 → 政策外(拒拍域)
-_GOLD_INBAND = 50  # 金回线内(带内,派生标记灭 = 非受限会话)
+_GOLD_AT_LINE = 50  # 恰落线(派生标记燃,>= 放宽;3 费买入花后跌破 → 拒拍域)
+_GOLD_INBAND = 49  # 金回线内(严格低于息线,派生标记灭 = 非受限会话)
 
 _GREEN = {'armed': True, 'quality': {'defer_by_quality': False},
           'quality_eval_error': False}
@@ -142,9 +144,28 @@ def test_restricted_out_of_policy_proposal_converts_to_close_shop(monkeypatch):
     assert counters.get(KEY_GATE_BLOCKS) == 1
 
 
+def test_at_line_frame_treated_restricted(monkeypatch):
+    """恰落线帧(金 == g*)→ 派生标记燃(>= 放宽)→ 谓词检生效:3 费
+    提案花后跌破息线 → 拒 → CwActionCloseShopParam + 受阻分键。与旧闸
+    带内拒域对齐(闸在 gold == g* 帧拒一切正成本动作),闸退役后同边界
+    不失守;入段判定(前置发射位严格 >)不动。"""
+    session = StrategySession()
+    _write_shop_payload(session, _GOLD_AT_LINE)
+    proposal = _proposal()
+    seen = _stub_core(monkeypatch, proposal)
+    strategy = _strategy(monkeypatch, session, _GREEN)
+
+    act = strategy.decide_shop_action()
+
+    assert isinstance(act, CwActionCloseShopParam)
+    assert seen == [proposal], '拒拍后不重咨询决策核(消费终止非改试次优)'
+    counters = state_of(game_state_of(session)).cw4_counters
+    assert counters.get(KEY_GATE_BLOCKS) == 1
+
+
 def test_inband_frame_behavior_unchanged(monkeypatch):
-    """金回线内(带内,派生标记灭)→ 提案透传(即便花后会跌破息线),
-    零检零遥测 = 非受限会话现行为逐位不变(闸辖域外禁咨询)。"""
+    """金回线内(严格低于息线,派生标记灭)→ 提案透传(即便花后会跌破
+    息线),零检零遥测 = 非受限会话现行为逐位不变(闸辖域外禁咨询)。"""
     session = StrategySession()
     _write_shop_payload(session, _GOLD_INBAND)
     proposal = _proposal()
