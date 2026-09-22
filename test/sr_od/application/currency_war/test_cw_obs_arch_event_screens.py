@@ -914,7 +914,7 @@ def test_megastar_observe_reports_xy_and_standardize_passthrough(
 def test_megastar_pick_op_asserts_container_xy_before_click(
         test_context, monkeypatch) -> None:
     """动作 op 容器取点守卫锁(action_ops.md §1 增补 5 + op-layer.md §1.3):
-    选中半(need_select=True)点击坐标 = 容器 ``megastar_opts[env.idx].xy``
+    选中半(need_select=True)点击坐标 = 容器 ``megastar_opts[param.idx].xy``
     ——容器缺席/空、下标越界、元素缺 xy 三臂均 AssertionError 响亮暴露
     且零点击(守卫在选中点击与确认点击之前;禁控制流回退、禁 screen_info
     二次取点)。红 = 静默跳过选中(旧 target None 消极臂回潮)/ 坐标现算
@@ -942,7 +942,8 @@ def test_megastar_pick_op_asserts_container_xy_before_click(
 
     def _run_arm(session, *, idx: int) -> list[tuple[int, int]]:
         """三臂公共装配:match 桂挂 session → 容器供给口可达;controller
-        点击记录;env idx-only + need_select=True;返回点击序。"""
+        点击记录;env 零机械下标(取点键 = param.idx)+ need_select=True;
+        返回点击序。"""
         monkeypatch.setattr(test_context, 'cw_match',
                             SimpleNamespace(session=session), raising=False)
         clicks: list[tuple[int, int]] = []
@@ -952,7 +953,7 @@ def test_megastar_pick_op_asserts_container_xy_before_click(
                             lambda p, **k: clicks.append((p.x, p.y)),
                             raising=False)
         stub_op = SimpleNamespace(ctx=test_context)
-        env = OverlayPickExecEnv(op=stub_op, idx=idx, need_select=True)
+        env = OverlayPickExecEnv(op=stub_op, need_select=True)
         op = CwActionPickMegastarOp(test_context,
                                     CwActionPickMegastarParam(idx=idx),
                                     env=env)
@@ -964,7 +965,7 @@ def test_megastar_pick_op_asserts_container_xy_before_click(
     session1 = StrategySession()
     clicks1 = _run_arm(session1, idx=0)
     assert clicks1 == [], f'容器缺席臂零点击:{clicks1!r}'
-    # ② 下标越界(容器 1 元,env.idx=5)
+    # ② 下标越界(容器 1 元,param.idx=5)
     session2 = StrategySession()
     _sig = ChannelSig(family='logic_action', actor='test', mode='compute')
     game_state_of(session2).write_logic(

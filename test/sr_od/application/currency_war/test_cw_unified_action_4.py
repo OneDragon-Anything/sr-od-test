@@ -239,21 +239,26 @@ def no_pick_sleep(monkeypatch):
 
 
 def test_encounter_pick_op_clicks_card_then_confirm(no_pick_sleep):
-    """遭遇确认链:idx=1 → 右卡兜底常量点选 → 确认钮点选;轮次结果经
-    env.round_result 旁路回传(emit_overlay_confirm 机械交回)。"""
+    """遭遇确认链:idx=1 → 右卡兜底常量点选 → 「按钮-选择」area 查找点击
+    确认(确认钮查找全族统一,用户裁定 2026-09-22);轮次结果经
+    env.round_result 旁路回传。"""
     from sr_od.application.currency_war.operations.cw_screen.cw_screen_encounter import (
         CwScreenEncounter,
     )
     rs = SimpleNamespace(sentinel='rs')
     ctrl = _RecordingController()
+    confirm_calls: list[tuple] = []
     op = SimpleNamespace(
         ctx=SimpleNamespace(controller=ctrl, screen_loader=_screen_loader_none()),
-        round_retry=lambda **kw: rs)
+        screenshot=lambda: 'shot',
+        round_by_find_and_click_area=lambda shot, s, a, **kw:
+            confirm_calls.append((s, a, kw)) or rs)
     env = OverlayPickExecEnv(op=op)
     assert CwActionPickEncounterOp(env.op.ctx, EncounterPick(idx=1), env=env).run().is_success
-    assert [p for p, _t in ctrl.clicks] == [CwScreenEncounter.CARD_RIGHT,
-                                            CwScreenEncounter.SELECT_BTN]
-    assert len(ctrl.moves) == len(ctrl.clicks)   # 每次点击前 bug#1 缓解 mouse_move
+    assert [p for p, _t in ctrl.clicks] == [CwScreenEncounter.CARD_RIGHT]
+    assert len(ctrl.moves) == len(ctrl.clicks)   # 选中点击前 bug#1 缓解 mouse_move
+    assert confirm_calls == [('货币战争-遭遇节点', '按钮-选择',
+                              {'success_wait': 1.0})]
     assert env.round_result is rs
 
 
@@ -285,24 +290,30 @@ def test_supply_pick_op_clicks_target_and_confirms(no_pick_sleep):
 
 
 def test_megastar_pick_op_clicks_confirm_once(no_pick_sleep):
-    """巨星确认半:确认钮单发(screen_info 缺失走兜底常量)。"""
-    from sr_od.application.currency_war.operations.cw_screen.cw_screen_megastar import (
-        CwScreenMegastar,
-    )
+    """巨星确认半:「按钮-确认选择」area 查找点击单发(确认钮查找全族
+    统一,用户裁定 2026-09-22)。"""
+    rs = SimpleNamespace(sentinel='rs')
     ctrl = _RecordingController()
+    confirm_calls: list[tuple] = []
     op = SimpleNamespace(
         ctx=SimpleNamespace(controller=ctrl,
-                            screen_loader=_screen_loader_none()))
+                            screen_loader=_screen_loader_none()),
+        screenshot=lambda: 'shot',
+        round_by_find_and_click_area=lambda shot, s, a, **kw:
+            confirm_calls.append((s, a, kw)) or rs)
     _env = OverlayPickExecEnv(op=op)
     assert CwActionPickMegastarOp(op.ctx, MegastarPick(idx=0), env=_env).run().is_success
-    assert [p for p, _t in ctrl.clicks] == [CwScreenMegastar.CONFIRM]
+    assert confirm_calls == [('货币战争-盛会之星', '按钮-确认选择',
+                              {'success_wait': 0.9})]
+    assert ctrl.clicks == []   # 确认零直接坐标点击(area 查找点击承责)
 
 
 def test_megastar_pick_op_select_clicks_container_xy(no_pick_sleep):
     """巨星选中半容器取点(选择坐标观察上报收敛,规范 = screens/
     op-layer.md §1.1「选择坐标观察上报」+ action_ops.md §1 增补 5):
-    need_select=True → 点候选(点击坐标 = 容器 ``megastar_opts[idx].xy``,
-    env idx-only 零 target 传参)→ 确认钮(兜底常量臂)。红 = 选中半
+    need_select=True → 点候选(点击坐标 = 容器 ``megastar_opts[param.idx].xy``,
+    env 零机械下标零 target 传参)→ 确认钮(area 查找点击,全族统一)。
+    红 = 选中半
     回潮消费 env.target / 容器取点断流 / 点击序漂移。"""
     from sr_od.application.currency_war.kernel.cw_events import MegastarOption
     from sr_od.application.currency_war.kernel.cw_game_state import (
@@ -311,9 +322,6 @@ def test_megastar_pick_op_select_clicks_container_xy(no_pick_sleep):
     )
     from sr_od.application.currency_war.kernel.cw_vocab import (
         CwActionPickMegastarParam,
-    )
-    from sr_od.application.currency_war.operations.cw_screen.cw_screen_megastar import (
-        CwScreenMegastar,
     )
 
     ctrl = _RecordingController()
@@ -324,34 +332,40 @@ def test_megastar_pick_op_select_clicks_container_xy(no_pick_sleep):
         [MegastarOption(idx=0, char_id='花火', xy=(822, 333)),
          MegastarOption(idx=1, char_id='星期日', xy=(1061, 333))],
         produced_by='test', sig=_sig)
+    rs = SimpleNamespace(sentinel='rs')
     ctx = SimpleNamespace(
         controller=ctrl,
-        screen_loader=_screen_loader_none(),   # area 缺失 → 确认走兜底常量
         cw_match=SimpleNamespace(session=session))
-    op = SimpleNamespace(ctx=ctx)
-    env = OverlayPickExecEnv(op=op, idx=1, need_select=True)
+    op = SimpleNamespace(ctx=ctx, screenshot=lambda: 'shot',
+                         round_by_find_and_click_area=lambda shot, s, a, **kw: rs)
+    env = OverlayPickExecEnv(op=op, need_select=True)
     assert CwActionPickMegastarOp(ctx, CwActionPickMegastarParam(idx=1),
                                   env=env).run().is_success
-    # 点击序 = 选中位(容器 megastar_opts[1].xy)→ 确认钮;每次点击前 mouse_move。
-    assert [(p.x, p.y) for p, _t in ctrl.clicks] == [
-        (1061, 333), (CwScreenMegastar.CONFIRM.x, CwScreenMegastar.CONFIRM.y)]
+    # 点击序 = 选中位(容器 megastar_opts[param.idx].xy);确认 = area 查找
+    # 点击(桩承接),零直接坐标点击。
+    assert [(p.x, p.y) for p, _t in ctrl.clicks] == [(1061, 333)]
     assert len(ctrl.moves) == len(ctrl.clicks)
 
 
 def test_partner_pick_op_pulses_select_then_confirm(no_pick_sleep):
-    """伙伴脉冲链:未选中实证 → 点候选 + 点确认;脉冲计数与 pending
-    置位(画面 op 宿主状态经 env.op 消费),轮次结果旁路回传。"""
+    """伙伴脉冲链:未选中实证 → 点候选 + 「按钮-确认选择」area 查找点击
+    确认(全族统一);脉冲计数与 pending 置位(画面 op 宿主状态经
+    env.op 消费),轮次结果旁路回传。"""
     rs = SimpleNamespace(sentinel='rs')
     ctrl = _RecordingController()
+    confirm_calls: list[tuple] = []
     op = SimpleNamespace(
         ctx=SimpleNamespace(controller=ctrl),
         screenshot=lambda: 'shot',
         _pick_point=Point(300, 300), _confirm_pulses=0, _confirm_pending=False,
-        _find_text_center=lambda shot, text: Point(900, 600),
+        round_by_find_and_click_area=lambda shot, s, a, **kw:
+            confirm_calls.append((s, a, kw)) or rs,
         round_retry=lambda **kw: rs)
     env = OverlayPickExecEnv(op=op, unselected=True)
     assert CwActionPickPartnerOp(env.op.ctx, PartnerPick(idx=0), env=env).run().is_success
-    assert [(p.x, p.y) for p, _t in ctrl.clicks] == [(300, 300), (900, 600)]
+    assert [(p.x, p.y) for p, _t in ctrl.clicks] == [(300, 300)]
+    assert confirm_calls == [('货币战争-列车同行', '按钮-确认选择',
+                              {'success_wait': 1.0, 'retry_wait': 1})]
     assert op._confirm_pulses == 1
     assert op._confirm_pending is True
     assert env.round_result is rs
@@ -359,37 +373,37 @@ def test_partner_pick_op_pulses_select_then_confirm(no_pick_sleep):
 
 def test_partner_pick_op_confirm_missing_retries_without_click(no_pick_sleep):
     """确认钮读缺 → 零点击 round_retry(脉冲计数不动;读缺分支语义)。"""
-    rs = SimpleNamespace(sentinel='rs')
+    rs_fail = SimpleNamespace(sentinel='fail', is_success=False)
     ctrl = _RecordingController()
     op = SimpleNamespace(
         ctx=SimpleNamespace(controller=ctrl),
         screenshot=lambda: 'shot',
         _pick_point=Point(300, 300), _confirm_pulses=2, _confirm_pending=False,
-        _find_text_center=lambda shot, text: None,
-        round_retry=lambda **kw: rs)
+        round_by_find_and_click_area=lambda shot, s, a, **kw: rs_fail)
     env = OverlayPickExecEnv(op=op, unselected=False)
     assert CwActionPickPartnerOp(env.op.ctx, PartnerPick(idx=0), env=env).run().is_success
     assert ctrl.clicks == []
     assert op._confirm_pulses == 2   # 未点确认不计数
-    assert env.round_result is rs
+    assert env.round_result is rs_fail
 
 
 def test_planner_pick_op_clicks_target_and_confirm(no_pick_sleep):
-    """策划确认链:点卡(press_time 透传)→ 确认(全词裁决词);轮次结果
-    旁路回传(单相即时上报迭代后宿主无 pending 置位面)。"""
-    from sr_od.application.currency_war.operations.cw_screen.cw_screen_yinlang import (
-        CwScreenYinLang,
-    )
+    """策划确认链:点卡(press_time 透传)→ 「按钮-骇入确认」area 查找
+    点击确认(全族统一);轮次结果旁路回传。"""
     rs = SimpleNamespace(sentinel='rs')
     ctrl = _RecordingController()
+    confirm_calls: list[tuple] = []
     op = SimpleNamespace(
         ctx=SimpleNamespace(controller=ctrl, screen_loader=_screen_loader_none()),
         CLICK_PRESS_TIME=0.15,
-        round_retry=lambda **kw: rs)
+        screenshot=lambda: 'shot',
+        round_by_find_and_click_area=lambda shot, s, a, **kw:
+            confirm_calls.append((s, a, kw)) or rs)
     env = OverlayPickExecEnv(op=op, target=Point(700, 420))
     assert CwActionPickPlannerOp(env.op.ctx, PlannerPick(idx=1), env=env).run().is_success
-    assert [(p.x, p.y, t) for p, t in ctrl.clicks] == [
-        (700, 420, 0.15), (CwScreenYinLang.CONFIRM.x, CwScreenYinLang.CONFIRM.y, 0.15)]
+    assert [(p.x, p.y, t) for p, t in ctrl.clicks] == [(700, 420, 0.15)]
+    assert confirm_calls == [('货币战争-银狼升星', '按钮-骇入确认',
+                              {'success_wait': 1.0})]
     assert env.round_result is rs
 
 
