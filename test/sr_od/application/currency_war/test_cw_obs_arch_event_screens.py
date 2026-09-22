@@ -29,7 +29,8 @@
   = 不写不清。
 - **盛会之星族锁**(节点循环形态):完成门/懒读保真/防重入旗标/chosen
   写端(选择点留守)/局外交回(无 match/gs 零读屏零派发)/观察标准化门
-  (双源域命中·转换失败·歧义拒判)各一锁,语义见各 docstring。
+  (双源域命中·转换失败·歧义拒判·LCS 同分取域序首确定性)/决策守卫
+  (候选空 fail 零盲发·idx 越界断言)各一锁,语义见各 docstring。
 
 驱动方式 = 真类实例(构造走 __init__)+ 读链/门/机械点击链桩化,节点
 函数直驱(run_node 外壳)。
@@ -37,6 +38,8 @@
 from __future__ import annotations
 
 from types import SimpleNamespace
+
+import pytest
 
 from test.sr_od.application.currency_war._cw_helpers import (
     Area as _Area,
@@ -57,6 +60,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 from sr_od.application.currency_war.kernel.cw_strategy_session import StrategySession
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionPickEncounterParam,
+    CwActionPickMegastarParam,
     CwActionRefreshNodeOptionsParam,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
@@ -122,16 +126,24 @@ def _make_encounter(test_context, monkeypatch, *, in_screen: bool,
 
 
 def _make_megastar(test_context, monkeypatch, *, in_node: bool,
-                   options: list | None = None):
+                   options: list | None = None,
+                   pick: object | None = None,
+                   stub_action: bool = True):
     """盛会之星真类装配(两 node 形态,迭代 2026-09-18-screen-op-flat-report):
     门桩 + 候选读链桩(观察 node 读屏函数注入点)+ 动作体调用计数。
-    旗标宿主 = 策略器 StrategyState(经 session.strategy_state 通道)。"""
+    旗标宿主 = 策略器 StrategyState(经 session.strategy_state 通道)。
+    ``pick`` = 策略桩回值(决策守卫锁用;传真实 ``CwActionPickMegastar
+    Param`` = 守卫② 类型收紧后桩须同型);``stub_action=False`` = 不桩
+    ``_do_action``(守卫锁直驱真动作体,经 act 消费),此时第 4 元恒
+    空表(计数桩未挂)。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_megastar as ms,
     )
 
     session = _make_session()
     match = SimpleNamespace(session=session)
+    if pick is not None:
+        match.strategy = SimpleNamespace(decide_megastar=lambda: pick)
     from sr_od.application.currency_war.kernel.cw_game_state import (
         game_state_of as _gso_match,
     )
@@ -144,7 +156,8 @@ def _make_megastar(test_context, monkeypatch, *, in_node: bool,
     monkeypatch.setattr(ms, 'read_megastar_options',
                         lambda ctx, scr: list(options or []))
     calls: list[int] = []
-    monkeypatch.setattr(op, '_do_action', lambda: calls.append(1))
+    if stub_action:
+        monkeypatch.setattr(op, '_do_action', lambda: calls.append(1))
     return op, match, session, calls
 
 
@@ -525,7 +538,7 @@ def test_megastar_redispatch_no_reclick_and_gate_reset(
     match = SimpleNamespace(
         session=session,
         strategy=SimpleNamespace(
-            decide_megastar=lambda: SimpleNamespace(
+            decide_megastar=lambda: CwActionPickMegastarParam(
                 idx=0, reason='stub')))
     from sr_od.application.currency_war.kernel.cw_game_state import (
         game_state_of as _gso_match,
@@ -743,3 +756,75 @@ def test_megastar_observe_standardize_ambiguity_rejected(
     assert not rs2.is_success and '标准化' in (rs2.status or ''), (
         f'近分歧义 = 拒判:{rs2!r}')
     assert game_state_of(session2).megastar_opts.value is None, '零写容器'
+
+
+# ==================== 盛会之星(决策守卫 + 同分确定性)====================
+
+
+def test_megastar_empty_options_fail_not_blindfire(
+        test_context, monkeypatch) -> None:
+    """决策输入守卫锁①b(规范 = screens/op-layer.md §1.1 出口③「空候选
+    /决策无有效输出零盲发」):选中半访问 + 策略器在位正常 + 候选空
+    (读链桩返 [])→ act 具名 round_fail 交回外循环(不计节点重试预算)、
+    零派发零点击(守卫在派发前;确认点击不可逆消耗)。红 = 屏内缺省支
+    盲选 idx0 派发回潮。"""
+    clicks, dispatches = _refresh_fixture(test_context, monkeypatch)
+    op, _match, _session, _calls = _make_megastar(
+        test_context, monkeypatch, in_node=True, options=[],
+        pick=CwActionPickMegastarParam(idx=0, reason='stub'),
+        stub_action=False)
+    assert _run_node(test_context, op, op.observe).is_success, (
+        '前置:空候选 = 合法读(标准化门空集放行),观察 success')
+    rs = _run_node(test_context, op, op.act)
+    assert not rs.is_success and '零盲发' in (rs.status or ''), (
+        f'候选空 = 具名 round_fail 零盲发:{rs!r}')
+    assert dispatches == [], f'零派发(守卫在派发前):{dispatches!r}'
+    assert clicks == [], f'零点击:{clicks!r}'
+
+
+def test_megastar_out_of_range_idx_asserts_before_click(
+        test_context, monkeypatch) -> None:
+    """决策值域守卫锁②(规范 = screens/op-layer.md §1.3「非法返回 =
+    策略器 bug 响亮暴露,禁静默钳位」):策略器返回越界 idx(真实
+    ``CwActionPickMegastarParam(idx=5)``、options 1 元,守卫② 同型放行)
+    → AssertionError 传播(守卫③断言,消息含 idx/len/pick 留证)、零
+    点击零派发(守卫均在派发前)。红 = 钳位改写回潮 / 越界放行派发。"""
+    clicks, dispatches = _refresh_fixture(test_context, monkeypatch)
+    from sr_od.application.currency_war.kernel.cw_events import MegastarOption
+    op, _match, _session, _calls = _make_megastar(
+        test_context, monkeypatch, in_node=True,
+        options=[MegastarOption(idx=0, char_id='花火')],
+        pick=CwActionPickMegastarParam(idx=5, reason='stub'),
+        stub_action=False)
+    assert _run_node(test_context, op, op.observe).is_success, (
+        '前置:观察 success(obs.options 1 元)')
+    with pytest.raises(AssertionError, match='禁钳位'):
+        _run_node(test_context, op, op.act)
+    assert clicks == [] and dispatches == [], (
+        f'断言前零点击零派发:{clicks!r} {dispatches!r}')
+
+
+def test_megastar_lcs_tie_resolves_domain_first(
+        test_context, monkeypatch) -> None:
+    """LCS 同分确定性锁(设计钉面 = 标准化门评分循环「固定序,平分取序
+    首」):桩控域内全员 LCS 同分(最高/次高分差 0)+ 边距常量桩 0 放行
+    (边距拒判本身由歧义锁承重,本锁只锁平分取向的稳定序确定性)→ 转换
+    放行且取域序首规范名(静态域 = 注册表序)。红 = 平分结果随内部容
+    器序漂移(同分不可确定 = 识别结果不稳定)。"""
+    import sr_od.application.currency_war.obs.cw_megastar_obs as mo
+    from sr_od.application.currency_war.data.cw_chars import chars_by_faction
+    from sr_od.application.currency_war.kernel.cw_events import MegastarOption
+    op, _match, session, _calls = _make_megastar(
+        test_context, monkeypatch, in_node=True,
+        options=[MegastarOption(idx=0, char_id='花钬')])
+    monkeypatch.setattr(mo, 'longest_common_subsequence_length',
+                        lambda a, b: len(b))
+    monkeypatch.setattr(mo._MegastarGate, 'MEGASTAR_LCS_AMBIGUITY_MARGIN',
+                        0.0)
+    rs = _run_node(test_context, op, op.observe)
+    assert rs.is_success, f'边距桩 0 → 同分放行:{rs!r}'
+    domain_first = chars_by_faction('盛会之星', include_flows=False)[0].name
+    assert game_state_of(session).megastar_opts.value == [
+        MegastarOption(idx=0, char_id=domain_first)], (
+        f'平分取域序首(固定序确定性):'
+        f'{game_state_of(session).megastar_opts.value!r} 域首={domain_first!r}')
