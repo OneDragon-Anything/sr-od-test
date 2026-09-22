@@ -87,7 +87,10 @@ def test_megastar_node_flow_act_wait_then_success() -> None:
     """巨星流转两段(两 node 形态,迭代 2026-09-18-screen-op-flat-report):
     仍在 overlay → 决策动作 node 恰一个动作 + round_wait(不计节点重试
     预算;无防御上限);overlay 消失 → success(完成承诺 = 固定 settle
-    时长;选中标记复位副作用随 ``_in_node`` 复检迁)。"""
+    时长;选中标记复位副作用随 ``_in_node`` 复检迁)。夹具 = 对局内
+    (match 带 gs):局外 = 零决策零点击 round_success 交回(正本
+    op-layer.md §1.1「画面 op 不支持局外单独调用」),其语义归
+    test_cw_obs_arch_event_screens 巨星局外交回锁;本锁只辖流转形态。"""
     from sr_od.application.currency_war.operations.cw_screen.cw_flow_const import (
         CW_OVERLAY_SETTLE_S,
     )
@@ -96,6 +99,7 @@ def test_megastar_node_flow_act_wait_then_success() -> None:
     )
     actions: list = []
     op = _make_op(CwScreenMegastar, in_node=True, do_action_calls=actions)
+    op.ctx = SimpleNamespace(cw_match=SimpleNamespace(gs=object()))
     res = op.act()
     assert actions == [1]                      # 每轮恰好一个动作
     assert getattr(res, '_wait', False) is True   # 循环推进 = round_wait

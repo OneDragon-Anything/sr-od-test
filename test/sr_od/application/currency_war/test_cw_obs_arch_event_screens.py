@@ -28,7 +28,8 @@
   随即清(单次消费,重触发天然幂等);单腿不合/未达标/删失/无 chosen
   = 不写不清。
 - **盛会之星族锁**(节点循环形态):完成门/懒读保真/防重入旗标/chosen
-  写端(选择点留守)各一锁,语义见各 docstring。
+  写端(选择点留守)/局外交回(无 match/gs 零读屏零派发)/观察标准化门
+  (双源域命中·转换失败·歧义拒判)各一锁,语义见各 docstring。
 
 驱动方式 = 真类实例(构造走 __init__)+ 读链/门/机械点击链桩化,节点
 函数直驱(run_node 外壳)。
@@ -513,6 +514,7 @@ def test_megastar_redispatch_no_reclick_and_gate_reset(
       首派发选中时点落容器。
     红 = 重入再触发选中 / 门 miss 不复位 / 缺席态炸错或冷建 / chosen 断流。"""
     import sr_od.application.currency_war.operations.cw_op.cw_action_registry as reg_mod
+    from sr_od.application.currency_war.kernel.cw_events import MegastarOption
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_megastar as ms,
     )
@@ -535,7 +537,7 @@ def test_megastar_redispatch_no_reclick_and_gate_reset(
     monkeypatch.setattr(op, 'round_by_find_area',
                         lambda scr, s, a, **k: _Area(True))
     monkeypatch.setattr(ms, 'read_megastar_options',
-                        lambda ctx, scr: [SimpleNamespace(char_id='花火')])
+                        lambda ctx, scr: [MegastarOption(idx=0, char_id='花火')])
     monkeypatch.setattr(ms, 'area_center',
                         lambda ctx, name, screen=None: SimpleNamespace(
                             x=822, y=333))
@@ -588,3 +590,156 @@ def test_megastar_redispatch_no_reclick_and_gate_reset(
     assert dispatches == [True, False, True], (
         '缺席态读退 False → 照常触发选中(无宿主防重入)')
     assert session2.strategy_state is None, '缺席态写跳过,执行层不冷建'
+
+
+# ==================== 盛会之星(局外交回 + 观察标准化门)====================
+
+
+def test_megastar_out_of_match_zero_read_and_return(
+        test_context, monkeypatch) -> None:
+    """局外交回锁(正本 = screens/op-layer.md §1.1「画面 op 不支持局外
+    单独调用」,判式 = match/gs 双缺宽判,对齐投资环境在飞双判):选中半
+    访问 + 无 match / match 无 gs → observe 零读屏(读链桩零调用、零
+    obs 装载零上报)、act round_success 局外交回(零决策零点击)、零派发。
+    红 = 局外仍读屏 / act 盲走决策体 / 交回回潮 fail。"""
+    import sr_od.application.currency_war.operations.cw_op.cw_action_registry as reg_mod
+    import sr_od.application.currency_war.operations.cw_screen.cw_screen_megastar as ms
+
+    dispatches: list[object] = []
+    monkeypatch.setattr(reg_mod, 'action_op_for',
+                        lambda act, ctx, env: dispatches.append(act)
+                        or SimpleNamespace(execute=lambda: True))
+
+    # ① 无 match
+    monkeypatch.setattr(test_context, 'cw_match', None, raising=False)
+    op = ms.CwScreenMegastar(test_context)
+    monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
+    monkeypatch.setattr(op, 'round_by_find_area',
+                        lambda scr, s, a, **k: _Area(True))
+    _read_calls: list[int] = []
+    monkeypatch.setattr(ms, 'read_megastar_options',
+                        lambda ctx, scr: _read_calls.append(1) or [])
+    rs = _run_node(test_context, op, op.observe)
+    assert rs.is_success and _read_calls == [], (
+        f'无 match 局外:观察零读屏:{rs!r} reads={_read_calls!r}')
+    assert op._obs is None, '局外零 obs 装载零上报'
+    rs2 = _run_node(test_context, op, op.act)
+    assert rs2.is_success and '局外交回' in (rs2.status or ''), (
+        f'act 局外交回(零决策零点击):{rs2!r}')
+    assert dispatches == [], f'局外零派发:{dispatches!r}'
+
+    # ② match 无 gs(宽判式第二腿)
+    session = _make_session()
+    monkeypatch.setattr(test_context, 'cw_match',
+                        SimpleNamespace(session=session), raising=False)
+    op2 = ms.CwScreenMegastar(test_context)
+    monkeypatch.setattr(op2, 'last_screenshot', _FRAME, raising=False)
+    monkeypatch.setattr(op2, 'round_by_find_area',
+                        lambda scr, s, a, **k: _Area(True))
+    _read_calls.clear()
+    rs3 = _run_node(test_context, op2, op2.observe)
+    assert rs3.is_success and _read_calls == [], (
+        f'match 无 gs 局外:观察零读屏:{rs3!r}')
+    rs4 = _run_node(test_context, op2, op2.act)
+    assert rs4.is_success and '局外交回' in (rs4.status or ''), (
+        f'match 无 gs:act 局外交回:{rs4!r}')
+    assert dispatches == [], '局外零派发'
+
+
+def test_megastar_observe_standardizes_options_with_dual_source_domain(
+        test_context, monkeypatch) -> None:
+    """观察标准化门·命中锁(规范 = screens/op-layer.md §1.1 观察标准化
+    门):选中半候选含可转换名 → 容器存规范名(idx 原值保留)。覆盖三判
+    与双源域(用户裁定 2026-09-22:匹配域 = 盛会之星阵营成员 ∪ 场上持
+    「盛会之星星徽」角色):
+    - 静态域精确命中(「花火」= 阵营成员);
+    - ①形变归一(全角字母数字转半角)后精确命中 + 动态域入员(「Ａｒｃ
+      ｈｅｒ」→ Archer,域源 = 前排星徽持有者);
+    - ②域内 LCS 兜底(漏「·」单字缺)过阈值命中 + ③边距放行(域内唯
+      一过阈值名)+ 动态域开拓者按排归一(后排欢愉形态)。
+    红 = 转换门断流(脏名直报容器)/ 归一失效 / LCS 兜底失效 / 动态域
+    漏员 / idx 丢失。"""
+    from sr_od.application.currency_war.kernel.cw_events import MegastarOption
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        ChannelSig,
+        Unit,
+    )
+    op, match, session, _calls = _make_megastar(
+        test_context, monkeypatch, in_node=True,
+        options=[MegastarOption(idx=0, char_id='花火'),
+                 MegastarOption(idx=1, char_id='Ａｒｃｈｅｒ'),
+                 MegastarOption(idx=2, char_id='开拓者欢愉')])
+    gs = match.gs
+    _sig = ChannelSig(family='obs', actor='test', mode='read')
+    gs.observe(gs.front_row, [Unit(char_id='Archer', star=1,
+                                   equips=['盛会之星星徽'], slot=1)],
+               sig=_sig)
+    gs.observe(gs.back_row, [Unit(char_id='开拓者·欢愉', star=1,
+                                  equips=['盛会之星星徽'], slot=1)],
+               sig=_sig)
+    rs = _run_node(test_context, op, op.observe)
+    assert rs.is_success, f'全候选可转换 → 观察 success:{rs!r}'
+    assert game_state_of(session).megastar_opts.value == [
+        MegastarOption(idx=0, char_id='花火'),
+        MegastarOption(idx=1, char_id='Archer'),
+        MegastarOption(idx=2, char_id='开拓者·欢愉')], (
+        '容器存规范名(转换门产出;idx 原值保留):'
+        f'{game_state_of(session).megastar_opts.value!r}')
+
+
+def test_megastar_observe_standardize_failure_fails_clean(
+        test_context, monkeypatch) -> None:
+    """观察标准化门·失败锁(规范 = screens/op-layer.md §1.1 观察标准化
+    门):候选含未注册乱串或域外注册名 → 转换失败 = observe round_fail
+    整函数早退,零写容器零上报零点击(禁带病上报),消息含候选原值列表。
+    转置例 = 「火花」(星间旅人,既非盛会之星阵营、gs 亦无穿徽记录;与
+    「花火」互为形近误读——域收窄后域外注册名同样不可达)。红 = 脏名
+    进容器 / 转换失败静默续跑 / fail 前发生点击派发。"""
+    from sr_od.application.currency_war.kernel.cw_events import MegastarOption
+    clicks, dispatches = _refresh_fixture(test_context, monkeypatch)
+    op, _match, session, _calls = _make_megastar(
+        test_context, monkeypatch, in_node=True,
+        options=[MegastarOption(idx=0, char_id='乱码'),
+                 MegastarOption(idx=1, char_id='火花')])
+    rs = _run_node(test_context, op, op.observe)
+    assert not rs.is_success and '标准化' in (rs.status or ''), (
+        f'转换失败 = 观察 round_fail:{rs!r}')
+    assert '乱码' in (rs.status or '') and '火花' in (rs.status or ''), (
+        f'fail 消息含候选原值列表:{rs.status!r}')
+    assert game_state_of(session).megastar_opts.value is None, (
+        '零写容器(转换失败不落脏名)')
+    assert op._obs is None, '零上报(整函数早退,obs 不装载)'
+    assert clicks == [] and dispatches == [], (
+        f'零点击零派发:{clicks!r} {dispatches!r}')
+
+
+def test_megastar_observe_standardize_ambiguity_rejected(
+        test_context, monkeypatch) -> None:
+    """观察标准化门·歧义拒判锁(规范 = screens/op-layer.md §1.1 观察
+    标准化门):≥2 候选命中同一规范名(识别质量不足以区分)或单候选
+    域内最高/次高分差小于边距 → round_fail 零写零上报。近分腿 = 桩控
+    LCS 分值原语(实机短名域近分形态难自然构造,控分直接锁边距分支)。
+    红 = 重复命中放行 / 近分放行(共享词素族跨名借分通道回潮)。"""
+    import sr_od.application.currency_war.obs.cw_megastar_obs as mo
+    from sr_od.application.currency_war.kernel.cw_events import MegastarOption
+
+    # ① 两候选命中同一规范名(「 花火」形变归一即「花火」)
+    op, _match, session, _calls = _make_megastar(
+        test_context, monkeypatch, in_node=True,
+        options=[MegastarOption(idx=0, char_id='花火'),
+                 MegastarOption(idx=1, char_id=' 花火')])
+    rs = _run_node(test_context, op, op.observe)
+    assert not rs.is_success and '标准化' in (rs.status or ''), (
+        f'重复命中 = 拒判:{rs!r}')
+    assert game_state_of(session).megastar_opts.value is None, '零写容器'
+
+    # ② 单候选最高/次高分差 < 边距(桩控:域内全员同分 → 分差 0)
+    op2, _m2, session2, _c2 = _make_megastar(
+        test_context, monkeypatch, in_node=True,
+        options=[MegastarOption(idx=0, char_id='花钬')])
+    monkeypatch.setattr(mo, 'longest_common_subsequence_length',
+                        lambda a, b: len(b))
+    rs2 = _run_node(test_context, op2, op2.observe)
+    assert not rs2.is_success and '标准化' in (rs2.status or ''), (
+        f'近分歧义 = 拒判:{rs2!r}')
+    assert game_state_of(session2).megastar_opts.value is None, '零写容器'
