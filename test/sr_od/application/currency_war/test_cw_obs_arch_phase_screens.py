@@ -471,6 +471,49 @@ def test_invest_strategy_empty_opts_fail_not_blindfire(
         '零盲发:无候选不写持卡面')
 
 
+def test_invest_strategy_no_match_zero_decision_handback(
+        test_context, monkeypatch) -> None:
+    """局外无 match = 零决策零点击 round_success 终结交回(遭遇屏同款
+    处置;决策控制分层铁律:画面 op 不产决策,局外兜底决策路径废除——
+    flow/README.md §1,op-layer.md §1.1 两件职责;原局外分支 = 裸空容器
+    decide_event 产决策 + 真实点击选卡确认链,已删)。
+    红 = 局外 kernel 直调决策回潮 / 零决策出口误改点击派发。"""
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_invest_strategy as ism,
+    )
+    op = ism.CwScreenInvestStrategy(test_context)
+    monkeypatch.setattr(test_context, 'cw_match', None, raising=False)
+    monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
+    from sr_od.application.currency_war.kernel.cw_screen_report.invest_strategy import (
+        CwScreenInvestStrategyObs as _ObsT,
+    )
+    # 非空候选 obs(区分于空候选早退:本锁辖 match 判空出口)
+    op._obs = _ObsT(entry_ok=True,
+                    options=_opts_of(['赌神·银', '恢复生机', '气氛组']))
+    clicks: list = []
+    monkeypatch.setattr(ism, 'safe_click',
+                        lambda op_, pt, **k: clicks.append(pt))
+    dispatches: list = []
+
+    class _SpyPickOp:
+        def __init__(self, param, env) -> None:
+            self.param = param
+            self.env = env
+
+        def execute(self) -> bool:
+            dispatches.append(self)
+            return True
+
+    import sr_od.application.currency_war.operations.cw_op.cw_action_registry as _reg
+    monkeypatch.setattr(_reg, 'action_op_for',
+                        lambda act, ctx, env: _SpyPickOp(act, env))
+    rs = _run_node(test_context, op, op.act)
+    assert rs.is_success and '零决策零点击' in (rs.status or ''), (
+        f'局外零决策零点击终结交回:{rs!r}')
+    assert clicks == [], f'零点击:{clicks!r}'
+    assert dispatches == [], f'零派发零上报:{dispatches!r}'
+
+
 # (原 test_strategy_refresh_emission_wired_to_registry 删:注册表取证型
 #  断言——登记件缺席时发射行为半必红,取证面零独立判别力,登记形状重构
 #  = 误红源;行为半由 test_strategy_refresh_emission_semantics 承重。
