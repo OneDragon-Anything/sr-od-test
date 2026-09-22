@@ -900,7 +900,7 @@ def test_megastar_read_fixture_full_chain(test_context) -> None:
 
 
 def test_megastar_read_partial_hit_uses_own_xy(monkeypatch) -> None:
-    """部分读回归锁(F3 灭绝锁):桩 OCR 只喂右卡 hit(单候选在右槽
+    """部分读回归锁(单候选右槽 xy 随卡):桩 OCR 只喂右卡 hit(单候选在右槽
     布局)→ 该卡 xy = 右卡标签中心 (1160, 333)。旧「idx 枚举序恒映射
     左右槽」模型此处必错(idx0 → 左槽常量 (822,333) 点到空位——名字
     与点击位错位的实锤缺陷形态),坐标随卡自带后该缺陷类整体灭绝
