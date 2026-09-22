@@ -197,8 +197,11 @@ def _case_fortune(m):
 
 def _case_bookcard(m):
     opts = ['巡猎', '丰饶']
-    return (m.CwScreenBookcardObs(on_screen=True, options=opts),
-            {'star_tome_opts': (opts, 'logic')})
+    pts = [(760, 500), (1140, 500)]
+    return (m.CwScreenBookcardObs(on_screen=True, options=opts,
+                                  option_points=pts),
+            {'star_tome_opts': (opts, 'logic'),
+             'star_tome_opts_xy': (pts, 'logic')})
 
 
 def _case_expert_invite(m):
@@ -326,7 +329,8 @@ _EMPTY_OBS_CASES = {
                   {'encounter': None, 'encounter_refresh_left': None}),
     'megastar': (lambda m: m.CwScreenMegastarObs(), {'megastar_opts': None}),
     'partner': (lambda m: m.CwScreenPartnerObs(), {'partner_opts': None}),
-    'bookcard': (lambda m: m.CwScreenBookcardObs(), {'star_tome_opts': None}),
+    'bookcard': (lambda m: m.CwScreenBookcardObs(),
+                 {'star_tome_opts': None, 'star_tome_opts_xy': None}),
     'supply_node': (lambda m: m.CwScreenSupplyNodeObs(), {'supply': None}),
     # 摄入序同 encounter 行:options 空 = 整函数早退不写含 left——left
     # 读得(3)也不入容器(观察写端缺口补测随行登记)。
@@ -380,6 +384,19 @@ def test_wish_trial_report_equal_length_guard():
     with pytest.raises(AssertionError):
         mod.report_screen_wish_trial_obs(gs, obs)
     assert gs.wish_trial_opts.value is None, '守卫先于写点,零写零上报'
+
+
+def test_bookcard_report_equal_length_guard():
+    """bookcard 同门双写等长守卫:坐标域与名字域不等长 = 观察 bug,
+    AssertionError 响亮暴露禁错位双写(同构先例 = wish_trial 行)。"""
+    mod = _screen_module('bookcard')
+    gs = _blank_gs()
+    obs = mod.CwScreenBookcardObs(on_screen=True,
+                                  options=['巡猎', '丰饶'],
+                                  option_points=[(760, 500)])
+    with pytest.raises(AssertionError):
+        mod.report_screen_bookcard_obs(gs, obs)
+    assert gs.star_tome_opts.value is None, '守卫先于写点,零写零上报'
 
 
 def test_briefing_write_semantics():

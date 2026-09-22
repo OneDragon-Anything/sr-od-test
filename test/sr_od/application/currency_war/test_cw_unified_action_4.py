@@ -627,21 +627,18 @@ def test_wish_trial_pick_op_container_guard_rejects_without_click(
 
 def test_pick_no_confirm_ops_click_and_self_report(
         no_pick_sleep, monkeypatch):
-    """点卡即选族过渡期屏行为锁(pick-op-unify T-4):星徽秘典/专家邀请函
-    = 选中点击(env.target 过渡取点)+ 各自动画等待,零确认步;自上报
-    接线;派发 param 携真实 idx(专家邀请函含 -1 = 现金为王语义透传。
-    武装箱已收敛容器取点,行为锁 = test_pick_box_card_takes_point_from_
-    container;原装备行随选择装备屏误判退役删除)。"""
+    """点卡即选族过渡期屏行为锁(pick-op-unify T-4):专家邀请函
+    = 选中点击(env.target 过渡取点)+ 动画等待,零确认步;自上报
+    接线;派发 param 携真实 idx(-1 = 现金为王语义透传。星徽秘典/武装箱
+    已收敛容器取点,行为锁 = test_pick_box_card_takes_point_from_
+    container / test_pick_star_tome_takes_point_from_container;原装备行
+    随选择装备屏误判退役删除)。"""
     from sr_od.application.currency_war.operations.cw_op import (
         cw_pick_expert_invite_action,
-        cw_pick_star_tome_action,
     )
 
     # (op_cls, param_cls, target, want_clicks, want_idx, op_mod, report_name)
     cases = [
-        (CwActionPickStarTomeOp, CwActionPickStarTomeParam, Point(700, 500),
-         [(700, 500)], 0, cw_pick_star_tome_action,
-         'report_action_pick_star_tome_param'),
         (CwActionPickExpertInviteOp, CwActionPickExpertInviteParam,
          Point(300, 600), [(300, 600)], -1, cw_pick_expert_invite_action,
          'report_action_pick_expert_invite_param'),
@@ -663,6 +660,52 @@ def test_pick_no_confirm_ops_click_and_self_report(
         assert len(ctrl.moves) == len(ctrl.clicks), param_cls.__name__
         assert len(reported) == 1 and reported[0].idx == want_idx, \
             param_cls.__name__
+
+
+def test_pick_star_tome_takes_point_from_container(no_pick_sleep, monkeypatch):
+    """星徽秘典选卡取坐标锁(选择坐标观察上报收敛,op-layer.md §1.1 :35):
+    点击点 = 容器 ``star_tome_opts_xy[param.idx]``(坐标单一真相源 =
+    观察上报;禁回退 env.target、禁坐标现算)→ safe_click + 自上报照发;
+    坐标域缺席(gs 缺席)/下标越界 = 守卫断言 AssertionError 响亮暴露
+    且零点击(防 bug 路栏非控制流,禁现算回退)。"""
+    import sr_od.application.currency_war.operations.cw_op.cw_pick_star_tome_action as pick_mod
+
+    # ① 注入容器值 → 点击坐标 = 容器值 + 自上报照发(env idx-only 停喂
+    # target;safe_click = mouse_move + click 防吞点击)。
+    ctrl = _RecordingController()
+    op = SimpleNamespace(ctx=SimpleNamespace(controller=ctrl))
+    env = OverlayPickExecEnv(op=op, idx=1)
+    gs = SimpleNamespace(star_tome_opts_xy=SimpleNamespace(
+        value=[(300, 500), (760, 500)]))
+    reported: list = []
+    monkeypatch.setattr(pick_mod, 'game_state_from_ctx', lambda ctx: gs)
+    monkeypatch.setattr(pick_mod, 'report_action_pick_star_tome_param',
+                        lambda gs_, param, sig, _r=reported: _r.append(param))
+    assert CwActionPickStarTomeOp(env.op.ctx, CwActionPickStarTomeParam(idx=1),
+                                  env=env).run().is_success
+    assert [(p.x, p.y) for p, _t in ctrl.clicks] == [(760, 500)]
+    assert len(ctrl.moves) == len(ctrl.clicks) == 1
+    assert len(reported) == 1 and reported[0].idx == 1
+
+    # ② 坐标域缺席(gs 缺席)→ AssertionError 零点击。
+    ctrl2 = _RecordingController()
+    op2 = SimpleNamespace(ctx=SimpleNamespace(controller=ctrl2))
+    env2 = OverlayPickExecEnv(op=op2, idx=0)
+    monkeypatch.setattr(pick_mod, 'game_state_from_ctx', lambda ctx: None)
+    with pytest.raises(AssertionError):
+        CwActionPickStarTomeOp(env2.op.ctx, CwActionPickStarTomeParam(idx=0),
+                               env=env2).run()
+    assert ctrl2.clicks == [] and ctrl2.moves == [], '缺席零点击(禁回退)'
+
+    # ③ 下标越界 → AssertionError 零点击。
+    ctrl3 = _RecordingController()
+    op3 = SimpleNamespace(ctx=SimpleNamespace(controller=ctrl3))
+    env3 = OverlayPickExecEnv(op=op3, idx=5)
+    monkeypatch.setattr(pick_mod, 'game_state_from_ctx', lambda ctx: gs)
+    with pytest.raises(AssertionError):
+        CwActionPickStarTomeOp(env3.op.ctx, CwActionPickStarTomeParam(idx=5),
+                               env=env3).run()
+    assert ctrl3.clicks == [] and ctrl3.moves == [], '越界零点击(禁回退)'
 
 
 def test_pick_box_card_takes_point_from_container(no_pick_sleep, monkeypatch):

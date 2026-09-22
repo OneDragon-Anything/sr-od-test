@@ -137,10 +137,10 @@ _OBS_ROWS = {
 
 
 @pytest.mark.parametrize('screen_key', [
-    'partner', 'planner', 'wish_trial', 'bookcard', 'expert_invite'])
+    'partner', 'planner', 'wish_trial', 'expert_invite'])
 def test_observe_reports_container_per_screen(test_context, monkeypatch,
                                               screen_key: str) -> None:
-    """观察上报接线锁(表驱动五屏;命运卜者双域锁拆独立 = 下一锁):
+    """观察上报接线锁(表驱动四屏;命运卜者/星徽秘典双域锁拆独立 = 下两锁):
     观察 node 读链桩化 → observe success → report 经屏文件落容器
     (容器终值逐位 = 现役写点转录值)+ obs 挂实例属性。红 = 接线断流 /
     容器终值漂移 / obs 未装载。"""
@@ -236,6 +236,117 @@ def test_wish_observe_reports_dual_domain(test_context, monkeypatch) -> None:
     assert op._obs is not None, 'wish: obs 挂实例属性'
     assert op._obs.option_points == gs.wish_trial_opts_xy.value, (
         'obs 坐标与容器同源')
+
+
+def test_bookcard_observe_reports_dual_domain(test_context, monkeypatch) -> None:
+    """星徽秘典观察上报锁(双域,选择坐标观察上报条款):观察 node 读链
+    桩化(OCR 桩 + 门桩放行 + area_center 读桩回定值,恒稳断言不读真实
+    建档)→ 标准化门(「列车同行星徽」→ FACTIONS 精确命中)→ observe
+    success → report 双写 star_tome_opts / star_tome_opts_xy(同门同序
+    等长;坐标 = OCR x 中心 + x 近邻「星徽卡-N」建档中心 y,观察期一次
+    解出)+ obs 挂实例属性。红 = 接线断流 / 坐标域未随观察上报 / 双域
+    终值漂移 / 标准化门失守(裸 OCR 名直写容器)。"""
+    from one_dragon.base.geometry.point import Point
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_bookcard as mod,
+    )
+
+    op = mod.CwScreenBookcard(test_context)
+    monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
+    monkeypatch.setattr(op, 'round_by_find_area',
+                        lambda s, sc, a, **k: _Area(True), raising=False)
+    monkeypatch.setattr(op.ctx, 'ocr_service', _StubOcr(
+        list_result=[SimpleNamespace(data='列车同行星徽', x=700, y=100,
+                                     w=120, h=30)]), raising=False)
+    # area 读桩回定值(恒稳;不读真实建档,桩序 = 星徽卡-1..4)。
+    monkeypatch.setattr(
+        mod, 'area_center',
+        lambda ctx, name, screen_name: Point(
+            {'星徽卡-1': 260, '星徽卡-2': 700, '星徽卡-3': 1140,
+             '星徽卡-4': 1580}[name], 500))
+    session = StrategySession()
+    monkeypatch.setattr(test_context, 'cw_match',
+                        _make_match(session), raising=False)
+    rs = _run_node(test_context, op, op.observe)
+    assert rs.is_success, f'bookcard: 观察 success:{rs!r}'
+    gs = game_state_of(session)
+    assert gs.star_tome_opts.value == ['列车同行'], (
+        f'bookcard: report 落名字域(标准化注册名):'
+        f'{gs.star_tome_opts.value!r}')
+    assert gs.star_tome_opts_xy.value == [(760, 500)], (
+        f'bookcard: report 落坐标域(同门双写):'
+        f'{gs.star_tome_opts_xy.value!r}')
+    assert len(gs.star_tome_opts_xy.value) == len(gs.star_tome_opts.value), (
+        '坐标域与名字域同序等长')
+    assert op._obs is not None, 'bookcard: obs 挂实例属性'
+    assert op._obs.option_points == gs.star_tome_opts_xy.value, (
+        'obs 坐标与容器同源')
+
+
+def test_bookcard_observe_gate_failures_zero_write(test_context,
+                                                   monkeypatch) -> None:
+    """星徽秘典观察失败三态锁(观察标准化门 + 解点失败归宿;名字与坐标
+    同进退双域零写零上报):①任一候选转换失败(可转换+乱名混读,两段
+    皆不中)/②多候选命中同一注册名(选项互斥屏同判)/③「星徽卡-N」
+    建档缺失(area_center 返 None)→ 均 observe round_fail 早退、
+    star_tome_opts / star_tome_opts_xy 双域零写、obs 不装载。红 = 带病
+    上报 / 裸 OCR 名直写 / 半截状态(名字域写、坐标域不写)。"""
+    from one_dragon.base.geometry.point import Point
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_bookcard as mod,
+    )
+
+    def _row(text: str, x: int) -> SimpleNamespace:
+        return SimpleNamespace(data=text, x=x, y=100, w=120, h=30)
+
+    def _run(ocr_rows: list) -> tuple:
+        op = mod.CwScreenBookcard(test_context)
+        monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
+        monkeypatch.setattr(op, 'round_by_find_area',
+                            lambda s, sc, a, **k: _Area(True), raising=False)
+        monkeypatch.setattr(op.ctx, 'ocr_service', _StubOcr(
+            list_result=ocr_rows), raising=False)
+        monkeypatch.setattr(
+            mod, 'area_center',
+            lambda ctx, name, screen_name: Point(700, 500))
+        session = StrategySession()
+        monkeypatch.setattr(test_context, 'cw_match',
+                            _make_match(session), raising=False)
+        rs = _run_node(test_context, op, op.observe)
+        gs = game_state_of(session)
+        assert gs.star_tome_opts.value is None, '观察失败名字域零写'
+        assert gs.star_tome_opts_xy.value is None, '观察失败坐标域零写(同进退)'
+        assert op._obs is None, '观察失败不装载 obs'
+        return rs
+
+    # ① 任一候选转换失败 = 观察失败(仙舟可转换;乱名带「星徽」后缀过
+    # 读链过滤、去后缀后两段皆不中)。
+    rs = _run([_row('仙舟星徽', 700), _row('乱码七八星徽', 1500)])
+    assert not rs.is_success and '标准化失败' in (rs.status or ''), (
+        f'转换失败 = 观察失败 round_fail:{rs!r}')
+    # ② 多候选命中同一注册名(选项互斥屏)= 同判转换失败。
+    rs = _run([_row('仙舟星徽', 700), _row('仙舟星徽', 1500)])
+    assert not rs.is_success and '标准化失败' in (rs.status or ''), (
+        f'多候选同名同判转换失败:{rs!r}')
+    # ③ 「星徽卡-N」建档缺失(解点返 None)= 观察失败。
+    op = mod.CwScreenBookcard(test_context)
+    monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
+    monkeypatch.setattr(op, 'round_by_find_area',
+                        lambda s, sc, a, **k: _Area(True), raising=False)
+    monkeypatch.setattr(op.ctx, 'ocr_service', _StubOcr(
+        list_result=[_row('仙舟星徽', 700)]), raising=False)
+    monkeypatch.setattr(mod, 'area_center',
+                        lambda ctx, name, screen_name: None)
+    session = StrategySession()
+    monkeypatch.setattr(test_context, 'cw_match',
+                        _make_match(session), raising=False)
+    rs = _run_node(test_context, op, op.observe)
+    assert not rs.is_success and '建档' in (rs.status or ''), (
+        f'建档缺失 = 观察失败 round_fail:{rs!r}')
+    gs = game_state_of(session)
+    assert gs.star_tome_opts.value is None, '建档缺失名字域零写'
+    assert gs.star_tome_opts_xy.value is None, '建档缺失坐标域零写(同进退)'
+    assert op._obs is None, '建档缺失不装载 obs'
 
 
 # ==================== 入口门语义锁(带门四屏)====================
@@ -652,3 +763,111 @@ def test_fortune_act_no_match_ends_success_without_decision_or_click(
         f'守卫⓪:局外零决策零点击 round_success 终结交回:{rs!r}')
     assert dispatches == [], '守卫⓪:零派发'
     assert op._confirm_pending is False, '守卫⓪:确认未置位(零点击)'
+
+
+# ==================== 星徽秘典决策出口锁(守卫①a/①b/②③ + 直发)====================
+
+def _setup_bookcard_act(test_context, monkeypatch, session, decide):
+    """bookcard act 锁公共装配(fortune 锁同构):match 桩挂零参决策桩
+    (decide=None = cw_match None 局外态)+ 观察产物注入 + 注册表派发
+    捕获。"""
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_bookcard as mod,
+    )
+
+    monkeypatch.setattr(
+        test_context, 'cw_match',
+        None if decide is None else _make_match(session, decide_star_tome=decide),
+        raising=False)
+    op = mod.CwScreenBookcard(test_context)
+    monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
+    # 观察产物注入(标准化注册名 + x 中心;act 消费面 = self._cards)。
+    op._cards = [('列车同行', 700), ('仙舟', 1100)]
+    dispatches: list = []
+
+    class _StubPickOp:
+        def __init__(self, param, env) -> None:
+            self.param = param
+            self.env = env
+
+        def execute(self) -> bool:
+            dispatches.append(self)
+            return True
+
+    import sr_od.application.currency_war.operations.cw_op.cw_action_registry as _reg
+    monkeypatch.setattr(_reg, 'action_op_for',
+                        lambda act, ctx, env: _StubPickOp(act, env))
+    return op, dispatches
+
+
+def test_bookcard_act_no_match_ends_success_without_decision_or_click(
+        test_context, monkeypatch) -> None:
+    """守卫①a(局外臂,op-layer.md §1.1 局外单跑条款):cw_match=None →
+    act round_success(消息含「零决策零点击终结交回」)、零派发零点击、
+    _pick_pending 保持未置位;局外臂先于任何决策消费(遭遇屏先例同款)。
+    红 = 局外兜底决策路径回潮(盲发首卡)。"""
+    session = StrategySession()
+    op, dispatches = _setup_bookcard_act(test_context, monkeypatch, session,
+                                         None)
+    rs = _run_node(test_context, op, op.act)
+    assert rs.is_success and '零决策零点击终结交回' in (rs.status or ''), (
+        f'守卫①a:局外零决策零点击 round_success 终结交回:{rs!r}')
+    assert dispatches == [], '守卫①a:零派发'
+    assert op._pick_pending is None, '守卫①a:pending 未置位(零点击)'
+
+
+def test_bookcard_act_empty_candidates_fails_without_dispatch(
+        test_context, monkeypatch) -> None:
+    """守卫①b(候选空臂,op-layer.md §1.1 出口③):match 在场、观察产物
+    候选空(OCR 失读形态)→ act 具名 round_fail(消息含候选数)、零派发
+    零点击、_pick_pending 保持未置位。红 = 空候选盲发 idx0 回潮。"""
+    from sr_od.application.currency_war.kernel.cw_vocab import (
+        CwActionPickStarTomeParam,
+    )
+
+    session = StrategySession()
+    op, dispatches = _setup_bookcard_act(
+        test_context, monkeypatch, session,
+        lambda: CwActionPickStarTomeParam(idx=0))
+    op._cards = []
+    rs = _run_node(test_context, op, op.act)
+    assert not rs.is_success and '决策无有效输出零盲发' in (rs.status or ''), (
+        f'守卫①b:候选空具名 fail 零盲发:{rs!r}')
+    assert dispatches == [], '守卫①b:零派发'
+    assert op._pick_pending is None, '守卫①b:pending 未置位(零点击)'
+
+
+def test_bookcard_act_guard_invalid_decision_fails_without_dispatch(
+        test_context, monkeypatch) -> None:
+    """守卫②(返回契约):decide_star_tome 返 None/词表外(SimpleNamespace)
+    两子态合一锁 → act 具名 round_fail(消息含「决策无有效输出」,留证
+    原值)、零派发零点击、_pick_pending 保持未置位。红 = 守卫缺失盲发 /
+    钳位回潮 / 策略异常被吞。"""
+    for stub in (None, SimpleNamespace(idx=0, reason='stub')):
+        session = StrategySession()
+        op, dispatches = _setup_bookcard_act(
+            test_context, monkeypatch, session, lambda s=stub: s)
+        rs = _run_node(test_context, op, op.act)
+        assert not rs.is_success and '决策无有效输出' in (rs.status or ''), (
+            f'守卫②({stub!r}):具名 round_fail 零盲发:{rs!r}')
+        assert dispatches == [], f'守卫②({stub!r}):零派发'
+        assert op._pick_pending is None, (
+            f'守卫②({stub!r}):pending 未置位(零点击)')
+
+
+def test_bookcard_act_guard_idx_out_of_range_asserts(
+        test_context, monkeypatch) -> None:
+    """守卫③(值域):真词表类 idx=5(候选 2 元越界)→ AssertionError
+    传播(守卫断言响亮暴露,禁钳位)、零派发零点击。红 = 钳位回潮。"""
+    from sr_od.application.currency_war.kernel.cw_vocab import (
+        CwActionPickStarTomeParam,
+    )
+
+    session = StrategySession()
+    op, dispatches = _setup_bookcard_act(
+        test_context, monkeypatch, session,
+        lambda: CwActionPickStarTomeParam(idx=5))
+    with pytest.raises(AssertionError, match='越界'):
+        _run_node(test_context, op, op.act)
+    assert dispatches == [], '守卫③:零派发'
+    assert op._pick_pending is None, '守卫③:pending 未置位(零点击)'

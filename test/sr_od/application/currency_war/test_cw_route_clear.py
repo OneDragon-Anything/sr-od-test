@@ -160,8 +160,8 @@ def test_single_field_slot_schema_keys_align_with_field_names():
     single_field_slots = (
         'megastar_opts', 'partner_opts', 'planner_opts',
         'star_tome_opts', 'wish_trial_opts', 'box_card_names',
-        'box_card_names_xy', 'wish_trial_opts_xy', 'fortune_opts',
-        'expert_invite',
+        'box_card_names_xy', 'wish_trial_opts_xy', 'star_tome_opts_xy',
+        'fortune_opts', 'expert_invite',
     )
     field_names = {f.name for f in fields(GameState)}
     for name in single_field_slots:
