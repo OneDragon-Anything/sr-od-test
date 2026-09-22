@@ -13,9 +13,9 @@
 - equip:key_fit 子串 +100 压倒泛用关键词 +1.0,并列取首卡,锁定线解析
   失败按未锁态。
 
-契约面锁:三新 Pick 子类型入双注册表;ABC 抽象入口 15;flow 三零参入口
-= 槽离屏 ValueError(观察层失约)+ 写槽后同 kernel 结论(同输入同输出)+
-equip 意向注入(self.state.locked_comp → kernel 参数)。
+契约面锁:新 Pick 子类型入双注册表;ABC 抽象入口含新零参入口;
+flow 零参入口 = 槽离屏 ValueError(观察层失约)+ 写槽后同 kernel 结论
+(同输入同输出)。
 """
 from __future__ import annotations
 
@@ -23,9 +23,6 @@ from types import SimpleNamespace
 
 import pytest
 
-from sr_od.application.currency_war.kernel.cw_equip_value import (
-    decide_equip_overlay_pick,
-)
 from sr_od.application.currency_war.kernel.cw_events import (
     choose_expert_index,
     decide_fortune,
@@ -35,11 +32,9 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     ExpertInvitePayload,
     game_state_of,
 )
-from sr_od.application.currency_war.kernel.cw_intention import IntentionState
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CW_ACTION_TYPES,
     PICK_ACTION_TYPES,
-    CwActionPickEquipParam,
     CwActionPickExpertInviteParam,
     CwActionPickFortuneParam,
 )
@@ -88,52 +83,26 @@ def test_expert_dominant_line_then_any_present_line_then_cash():
     assert choose_expert_index([], {'仙舟': 1}) == -1
 
 
-# ==================== F-overlay-03:选择装备(decide_equip_overlay_pick)====================
-
-def test_equip_overlay_generic_leg_and_defaults(monkeypatch):
-    """未锁态 = 仅泛用关键词腿;key_fit 子串 +100 压倒泛用;并列/空取首卡。"""
-    # 未锁:泛用腿(伤害/强度/提高)命中者胜
-    assert decide_equip_overlay_pick(['无特效甲', '强度提高药剂'],
-                                     locked_comp='') == 1
-    # 全无命中并列取首卡;空输入取 0
-    assert decide_equip_overlay_pick(['甲', '乙'], locked_comp='') == 0
-    assert decide_equip_overlay_pick([], locked_comp='') == 0
-
-    # 锁定线:key_fit_names(成品∪材料)子串命中 +100,压过泛用腿
-    import sr_od.application.currency_war.kernel.cw_comps as cw_comps_mod
-
-    def _fake_get_comp(name: str):
-        if name == '目标线':
-            return SimpleNamespace(key_equips=('轮滑鞋',))
-        return None
-
-    monkeypatch.setattr(cw_comps_mod, 'get_comp', _fake_get_comp)
-    assert decide_equip_overlay_pick(['伤害提高药剂', '轮滑鞋·改'],
-                                     locked_comp='目标线') == 1
-    # 注册表漂移(锁线解析失败)= 按未锁态(仅泛用腿,保守:漏提权非错提权)
-    assert decide_equip_overlay_pick(['伤害提高药剂', '无特效乙'],
-                                     locked_comp='不存在的线') == 0
-
-
-# ==================== 契约面:扩员 12→15 ====================
+# ==================== 契约面:扩员新 Pick 子类型 ====================
 
 def test_new_pick_types_in_both_registries():
-    """三新子类型入统一词表与选择族单表,且逐类自持 idx/reason 字段
-    (词表摊平后无公共基类,选择族契约 = 逐类重声明)。"""
-    for cls in (CwActionPickFortuneParam, CwActionPickExpertInviteParam, CwActionPickEquipParam):
+    """扩员子类型入统一词表与选择族单表,且逐类自持 idx/reason 字段
+    (词表摊平后无公共基类,选择族契约 = 逐类重声明;原第三口
+    CwActionPickEquipParam 随选择装备屏误判退役删除)。"""
+    for cls in (CwActionPickFortuneParam, CwActionPickExpertInviteParam):
         assert cls in CW_ACTION_TYPES, cls.__name__
         assert cls in PICK_ACTION_TYPES, cls.__name__
         assert 'idx' in cls.__dataclass_fields__, cls.__name__
         assert 'reason' in cls.__dataclass_fields__, cls.__name__
 
 
-def test_abstract_entries_expanded_to_15():
-    """ABC 抽象入口 12→15:三新零参入口在 abstract 集(运行时契约面)。"""
+def test_abstract_entries_expanded():
+    """ABC 抽象入口扩员:新零参入口在 abstract 集(运行时契约面)。"""
     from sr_od.application.currency_war.strategies.impl.cw_strategy import (
         CwStrategy,
     )
     abstract_names = CwStrategy.__abstractmethods__
-    for name in ('decide_fortune', 'decide_expert_invite', 'decide_equip_pick'):
+    for name in ('decide_fortune', 'decide_expert_invite'):
         assert name in abstract_names, name
 
 
@@ -152,8 +121,6 @@ def test_flow_entries_fail_loud_on_offscreen_slot():
         strategy.decide_fortune()
     with pytest.raises(ValueError):
         strategy.decide_expert_invite()
-    with pytest.raises(ValueError):
-        strategy.decide_equip_pick()
 
 
 def test_flow_decide_fortune_reads_slot_returns_action():
@@ -181,25 +148,3 @@ def test_flow_decide_expert_invite_cash_and_card_paths():
         ExpertInvitePayload(card_bonds=[None, '仙舟'], board={'仙舟': 2}),
         produced_by='cw-mig2-test', sig=_SIG)
     assert _live(gs).decide_expert_invite().idx == 1   # 主力同线卡
-
-
-def test_flow_decide_equip_pick_injects_locked_comp(monkeypatch):
-    """equip 意向注入:handler 零意向读,flow 入口自 self.state 取
-    locked_comp 注 kernel → key_fit 腿生效(压过泛用腿)。"""
-    import sr_od.application.currency_war.kernel.cw_comps as cw_comps_mod
-
-    def _fake_get_comp(name: str):
-        if name == '目标线':
-            return SimpleNamespace(key_equips=('轮滑鞋',))
-        return None
-
-    monkeypatch.setattr(cw_comps_mod, 'get_comp', _fake_get_comp)
-    gs = _fresh_gs()
-    gs.write_logic(gs.equip_pick_opts, ['伤害提高药剂', '轮滑鞋·改'],
-                   produced_by='cw-mig2-test', sig=_SIG)
-    strategy = _live(gs)
-    strategy.state.v3_intention = IntentionState()
-    strategy.state.v3_intention.locked_comp = '目标线'
-    pick = strategy.decide_equip_pick()
-    assert isinstance(pick, CwActionPickEquipParam)
-    assert pick.idx == 1   # key_fit 子串 +100 压过泛用腿

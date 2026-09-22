@@ -45,8 +45,8 @@ _PKG = 'sr_od.application.currency_war.kernel.cw_screen_report'
 #: 包内全部画面文件(包 ``__init__`` 不暴露模块,项目惯例 → 显式点名;
 #: 新增屏文件必须登记到此处,漏登记 = 完备锁红)。
 _SCREENS = (
-    # 含 report 的 23 屏(18 实体写点 + 5 文档化占位)
-    'encounter', 'megastar', 'equip_pick', 'partner', 'planner', 'fortune',
+    # 含 report 的 22 屏(17 实体写点 + 5 文档化占位)
+    'encounter', 'megastar', 'partner', 'planner', 'fortune',
     'bookcard', 'expert_invite', 'supply_node', 'invest_env',
     'invest_strategy', 'wish_trial', 'box_pick', 'briefing',
     'plane_transition', 'armory_box', 'boss_briefing', 'wait_one_one',
@@ -174,12 +174,6 @@ def _case_megastar(m):
             {'megastar_opts': (opts, 'logic')})
 
 
-def _case_equip_pick(m):
-    opts = ['装备甲', '装备乙', '装备丙']
-    return (m.CwScreenEquipPickObs(on_screen=True, options=opts),
-            {'equip_pick_opts': (opts, 'logic')})
-
-
 def _case_partner(m):
     opts = [PartnerOption(idx=0, char_id='丹恒')]
     return (m.CwScreenPartnerObs(on_screen=True, options=opts),
@@ -282,7 +276,6 @@ def _case_plane_intel(m):
 _WRITE_CASES = {
     'encounter': _case_encounter,
     'megastar': _case_megastar,
-    'equip_pick': _case_equip_pick,
     'partner': _case_partner,
     'planner': _case_planner,
     'fortune': _case_fortune,
@@ -332,8 +325,6 @@ _EMPTY_OBS_CASES = {
                    {'invest_env_opts': None, 'env_refresh_left': None}),
     'invest_strategy': (lambda m: m.CwScreenInvestStrategyObs(),
                         {'invest_strategy_opts': None}),
-    'equip_pick': (lambda m: m.CwScreenEquipPickObs(),
-                   {'equip_pick_opts': []}),
     'planner': (lambda m: m.CwScreenPlannerObs(), {'planner_opts': []}),
     'fortune': (lambda m: m.CwScreenFortuneObs(), {'fortune_opts': []}),
     'wish_trial': (lambda m: m.CwScreenWishTrialObs(),
@@ -530,7 +521,6 @@ def test_placeholder_report_is_documented_noop():
 _DEFAULT_SIGS = {
     'encounter': ('logic_action', 'CwScreenEncounter', None, 'compute'),
     'megastar': ('logic_action', 'CwScreenMegastar', None, 'compute'),
-    'equip_pick': ('logic_action', 'CwScreenEquipPick', None, 'compute'),
     'partner': ('logic_action', 'CwScreenPartner', None, 'compute'),
     'planner': ('logic_action', 'CwScreenYinLang', None, 'compute'),
     'fortune': ('logic_action', 'CwScreenFortune', None, 'compute'),

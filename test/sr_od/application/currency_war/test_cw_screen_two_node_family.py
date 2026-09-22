@@ -12,11 +12,11 @@ screens.py 盛会之星段;report 函数级契约由 test_cw_screen_report_ports
 - **chosen 写时机锁**(祈愿试炼代表):确认已发 → 标识不在 = 选卡落地
   → 此刻才写 chosen_wish + success 交回;标识在 = 未落地 → 不写、重走
   (chosen_* 动作事实边界留守重入裁决点);
-- **决策动作 node 锁**(装备三选一/银狼策划,无门单发型):决策从容器零参读
-  (决策调用形态不变)→ 组装 param/equip(装备 idx + 注册表分层归一
-  norm_item;策划腿型载荷 classify_planner_leg)→ 点卡链派发 → 派发即
-  round_success 终结(零重入裁决轮;即时上报迭代
-  2026-09-21-pick-planner-equip-immediate-report)。
+- **决策动作 node 锁**(银狼策划,无门单发型):决策从容器零参读
+  (决策调用形态不变)→ 组装 equip(腿型载荷 classify_planner_leg)→
+  点卡链派发 → 派发即 round_success 终结(零重入裁决轮;即时上报迭代
+  2026-09-21-pick-planner-equip-immediate-report。原装备三选一代表锁
+  随该屏误判退役删除)。
 
 驱动方式 = 真类实例(构造走 __init__)+ 读链/门/机械点击链桩化,节点
 函数直驱(run_node 外壳)。
@@ -100,11 +100,6 @@ def _setup_expert(op, monkeypatch) -> None:
 
 # 屏键 → (模块名, 类名, 装配钩子(op, monkeypatch), 期望容器字段, 期望终值)
 _OBS_ROWS = {
-    'equip_pick':
-        ('cw_screen_equip_pick', 'CwScreenEquipPick',
-         lambda op, mp: mp.setattr(op, '_read_cards',
-                                   lambda s: ['甲卡', '乙卡', '丙卡']),
-         'equip_pick_opts', ['甲卡', '乙卡', '丙卡']),
     'partner':
         ('cw_screen_partner', 'CwScreenPartner',
          lambda op, mp: (mp.setattr(op, '_read_candidates',
@@ -147,11 +142,11 @@ _OBS_ROWS = {
 
 
 @pytest.mark.parametrize('screen_key', [
-    'equip_pick', 'partner', 'planner', 'fortune', 'wish_trial', 'bookcard',
+    'partner', 'planner', 'fortune', 'wish_trial', 'bookcard',
     'expert_invite'])
 def test_observe_reports_container_per_screen(test_context, monkeypatch,
                                               screen_key: str) -> None:
-    """观察上报接线锁(表驱动七屏):观察 node 读链桩化 → observe success →
+    """观察上报接线锁(表驱动六屏):观察 node 读链桩化 → observe success →
     report 经屏文件落容器(容器终值逐位 = 现役写点转录值)+ obs 挂实例
     属性。红 = 接线断流 / 容器终值漂移 / obs 未装载。"""
     import importlib
@@ -293,65 +288,7 @@ def test_wish_chosen_written_at_reentry_adjudication_only(
         'chosen_wish = 重入裁决点留守写端(落地后值才可信)')
 
 
-# ==================== 决策动作 node 锁(装备三选一代表)====================
-
-def test_equip_act_decides_from_container_and_dispatch_terminal(
-        test_context, monkeypatch) -> None:
-    """决策动作 node 锁(无门单发型代表):决策从容器零参读(决策调用
-    形态不变;写槽已由 report 落容器)→ 组装 param(idx + 注册表分层
-    归一 norm_item)→ 选卡链派发(pick-op-unify 批:点卡即选迁入
-    ``CwActionPickEquipOp``,点卡后立即上报完整结果)→ 派发即
-    ``round_success`` 终结(零重入裁决轮;迭代
-    2026-09-21-pick-planner-equip-immediate-report design §2.1)。
-    红 = 决策形态回迁带参 / 定位点漂移 / 归一换源回退银狼锚 / 终结
-    回退为 wait/retry。"""
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_equip_pick as mod,
-    )
-
-    session = StrategySession()
-    _decide_calls: list[int] = []
-    match = _make_match(
-        session,
-        decide_equip_pick=lambda: (_decide_calls.append(1)
-                                   or SimpleNamespace(idx=1, reason='stub')))
-    monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
-    op = mod.CwScreenEquipPick(test_context)
-    monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
-    # 第 2 卡 = 泛用注册表件(银狼 10 件锚外):锁归一换源
-    # normalize_registry_equip_name——锚级归一下恒 ''(泛用件永不入栏的
-    # 现状缺陷),注册表级分层归一命中规范名入上报 param。
-    monkeypatch.setattr(op, '_read_cards',
-                        lambda s: ['甲卡', '幸运星', '丙卡'])
-    # 观察 node(report 落容器)+ 决策动作 node(零参决策消费)
-    _run_node(test_context, op, op.observe)
-    assert game_state_of(session).equip_pick_opts.value == [
-        '甲卡', '幸运星', '丙卡'], '前置:观察已落容器'
-    dispatches: list = []
-
-    class _StubPickOp:
-        def __init__(self, param, env) -> None:
-            self.param = param
-            self.env = env
-
-        def execute(self) -> bool:
-            dispatches.append(self)
-            return True
-
-    import sr_od.application.currency_war.operations.cw_op.cw_action_registry as _reg
-    monkeypatch.setattr(_reg, 'action_op_for',
-                        lambda act, ctx, env: _StubPickOp(act, env))
-    rs = _run_node(test_context, op, op.act)
-    assert _decide_calls == [1], f'零参决策恰一次:{_decide_calls!r}'
-    assert len(dispatches) == 1 and dispatches[0].param.idx == 1, (
-        f'选卡链恰一次派发,param 携真实 idx:{dispatches!r}')
-    assert dispatches[0].param.norm_item == '幸运星', (
-        '泛用注册表件归一命中(组装点换 normalize_registry_equip_name)')
-    assert (dispatches[0].env.target.x, dispatches[0].env.target.y) == (
-        mod.CwScreenEquipPick.CARD_XS[1], mod.CwScreenEquipPick.CARD_Y), (
-        f'定位点(策略 idx=1 → 第二卡):{dispatches[0].env.target!r}')
-    assert rs.is_success, f'派发即 round_success 终结(零重入裁决轮):{rs!r}'
-
+# ==================== 决策动作 node 锁(银狼策划代表)====================
 
 def test_planner_act_decides_leg_and_dispatch_terminal(
         test_context, monkeypatch) -> None:

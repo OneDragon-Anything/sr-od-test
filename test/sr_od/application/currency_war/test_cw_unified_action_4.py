@@ -40,7 +40,6 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionLevelUpShopParam,
     CwActionPickBoxCardParam,
     CwActionPickEncounterParam,
-    CwActionPickEquipParam,
     CwActionPickExpertInviteParam,
     CwActionPickFortuneParam,
     CwActionPickInvestEnvParam,
@@ -61,7 +60,6 @@ from sr_od.application.currency_war.operations.cw_op.cw_action_registry import (
 from sr_od.application.currency_war.operations.cw_op.cw_overlay_pick_action import (
     CwActionPickBoxCardOp,
     CwActionPickEncounterOp,
-    CwActionPickEquipOp,
     CwActionPickExpertInviteOp,
     CwActionPickFortuneOp,
     CwActionPickInvestOp,
@@ -133,7 +131,6 @@ def test_pick_rows_resolve_class_and_instance_consistently():
         (CwActionPickStarTomeParam, CwActionPickStarTomeOp),
         (CwActionPickBoxCardParam, CwActionPickBoxCardOp),
         (CwActionPickExpertInviteParam, CwActionPickExpertInviteOp),
-        (CwActionPickEquipParam, CwActionPickEquipOp),
     ]
     for cls, expected in rows:
         assert action_op_class_for_type(cls) is expected, cls.__name__
@@ -420,14 +417,13 @@ def test_wish_trial_pick_op_clicks_card_area_confirms_and_self_reports(
 
 def test_pick_no_confirm_ops_click_and_self_report(
         no_pick_sleep, monkeypatch):
-    """点卡即选族四 op 行为锁(pick-op-unify T-4):装备/武装箱/星徽秘典/
+    """点卡即选族三 op 行为锁(pick-op-unify T-4):武装箱/星徽秘典/
     专家邀请函 = 选中点击 + 各自动画等待,零确认步;自上报接线;派发
-    param 携真实 idx(专家邀请函含 -1 = 现金为王语义透传)。"""
+    param 携真实 idx(专家邀请函含 -1 = 现金为王语义透传。原装备行随
+    选择装备屏误判退役删除)。"""
     import sr_od.application.currency_war.operations.cw_op.cw_overlay_pick_action as pick_mod
 
     cases = [
-        (CwActionPickEquipOp, CwActionPickEquipParam, Point(1070, 280),
-         [(1070, 280)], 1),
         (CwActionPickBoxCardOp, CwActionPickBoxCardParam, Point(1027, 290),
          [(1027, 290)], 2),
         (CwActionPickStarTomeOp, CwActionPickStarTomeParam, Point(700, 500),
@@ -442,9 +438,6 @@ def test_pick_no_confirm_ops_click_and_self_report(
         reported: list = []
         monkeypatch.setattr(pick_mod, 'game_state_from_ctx',
                             lambda ctx: SimpleNamespace(sentinel='gs'))
-        monkeypatch.setattr(pick_mod, 'report_action_pick_equip_param',
-                            lambda gs, param, sig, _r=reported: _r.append(param),
-                            raising=False)
         monkeypatch.setattr(pick_mod, 'report_action_pick_box_card_param',
                             lambda gs, param, sig, _r=reported: _r.append(param),
                             raising=False)
