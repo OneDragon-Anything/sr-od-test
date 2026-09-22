@@ -9,7 +9,7 @@ test_cw_obs_arch_event_screens.py)。本批五屏:投资环境 CwScreenInvestEnv
 投资策略 CwScreenInvestStrategy / 战斗等待 CwScreenBattleWait / 简报
 CwScreenBriefing / BOSS 简报 CwScreenBossBriefing。
 
-**F11 sim 腿不适用例外清单(随迁移批逐屏落测试 docstring,总纲 §2.2-3)**:
+**sim 腿不适用例外清单(随迁移批逐屏落测试 docstring,总纲 §2.2-3)**:
 
 - 投资环境/投资策略:sim 腿 = 不适用——有 sim 事实来源(``decide_invest``
   注入段,架构设计 §3.2)但 sim 端口适配器未建(归 sim 接线批),本批
@@ -44,9 +44,8 @@ CwScreenBriefing / BOSS 简报 CwScreenBossBriefing。
   ``active_strategies`` 重入裁决出口 append(值/时点)、
   简报三字段容器写(词缀幂等辖「读+采」/boss 恒覆写/难度仅 None 写)
   逐位;结算观察半直写(D-94 时序)经战斗等待在册行为锁的轨迹断言承载。
-- **判别单一源消费面锁**:`is_boss_briefing_texts` 消费点集合迁移前后不变
-  (cw_loop / cw_screen_battle_wait / cw_screen_boss_briefing;防转录顺手
-  复制判别逻辑)。
+- **判别单一源消费面锁**已随三审整删退役(见文件尾在册注;源码扫描
+  测试禁令不重建),防线归 review 与代码规范。
 
 驱动方式 = 真类实例(构造走 __init__)+ 读链/点击链桩化,节点函数直驱
 (run_node 外壳);战斗等待 = 生产缺省形态(行为锁
@@ -974,12 +973,12 @@ def test_boss_briefing_misread_takeover(test_context, monkeypatch) -> None:
     assert rs2.is_success and '点空白已发' in (rs2.status or '')
 
 
-def test_boss_briefing_observe_gate_and_placeholder_report(
+def test_boss_briefing_observe_gate_and_report_wiring(
         test_context, monkeypatch) -> None:
     """BOSS 简报观察 node 锁(两 node 形态):横幅已退(area 锚 miss +
     片段判别 miss)→ 早退 success 交回外循环重判(零点击,obs 不装载);
-    横幅在 → obs 装载 + 占位 report 接线恰一次(match/gs 在场;本屏现役
-    零容器写点,接口为统一形态占位)。
+    横幅在 → obs 装载 + report 接线恰一次(match/gs 在场;boss 类型直定,
+    目标 = 现 hist)。
     红 = 门语义反转 / 接线断流。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_boss_briefing as bb,
@@ -992,7 +991,7 @@ def test_boss_briefing_observe_gate_and_placeholder_report(
         f'横幅已退早退语义:{rs_gone!r}')
     assert clicks_gone == [] and op_gone._obs is None, (
         f'早退轮零动作零 obs:{clicks_gone!r} {op_gone._obs!r}')
-    # ② 横幅在 → obs 装载 + 占位 report 恰一次
+    # ② 横幅在 → obs 装载 + report 恰一次
     op, _clicks = _make_boss(test_context, monkeypatch, area_hit=True,
                              ocr_texts=[])
     _reports: list = []
@@ -1005,7 +1004,7 @@ def test_boss_briefing_observe_gate_and_placeholder_report(
     assert rs.is_success, f'观察 success:{rs!r}'
     assert op._obs is not None and op._obs.on_screen is True, 'obs 挂实例属性'
     assert len(_reports) == 1 and _reports[0] is op._obs, (
-        f'占位 report 接线恰一次(统一形态调用):{_reports!r}')
+        f'report 接线恰一次(统一形态调用):{_reports!r}')
 
 
 # (三审整删)原 test_boss_discrimination_single_source_consumers_

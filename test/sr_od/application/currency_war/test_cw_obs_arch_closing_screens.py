@@ -8,7 +8,7 @@ CwScreenPlaneIntel 已重构为 6 node 管线(接管域迭代
 2026-09-20-takeover-intel-pipeline),其行为锁随迁
 test_cw_takeover_intel_pipeline.py,本文件不再辖。
 
-**F11 sim 腿不适用例外清单(随迁移批逐屏落测试 docstring,总纲 §2.2-3)**:
+**sim 腿不适用例外清单(随迁移批逐屏落测试 docstring,总纲 §2.2-3)**:
 
 - 位面过渡/武装箱弹窗/未达上限弹窗/等待1-1:sim 腿 = 不适用——sim 无对应
   画面段(架构设计 §3.4 过渡相位/中断弹窗行),等价判据主承重 =
@@ -336,6 +336,53 @@ def _make_deploy_not_full(test_context, monkeypatch: pytest.MonkeyPatch, *,
                         or _RETRY_RS)
     monkeypatch.setattr(dnm.time, 'sleep', lambda *_: None)
     return op, clicks
+
+
+def test_deploy_not_full_observe_gate_and_placeholder_report(
+        test_context, monkeypatch) -> None:
+    """未达上限观察 node 锁(两 node 形态,补齐观察门申报面):
+    标识门 miss = round_fail 早退(现役文案,obs 不装载、零 report);
+    门 hit + gs 在场 → obs 装载 + 占位 report 接线恰一次;
+    cw_match/gs 缺席 → 跳过 report 不炸(obs 仍装载,局外兜底路径)。
+    红 = 门失效 / 接线断流 / 缺席路径误炸。"""
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_deploy_not_full as dnm,
+    )
+    # ① 门 miss → fail 早退,obs 不装载零 report
+    op_off, _c0 = _make_deploy_not_full(test_context, monkeypatch,
+                                        mark_hit=False)
+    _reports_off: list = []
+    monkeypatch.setattr(dnm, 'report_screen_deploy_not_full_obs',
+                        lambda gs, obs: _reports_off.append(obs))
+    rs_off = _run_node(test_context, op_off, op_off.observe)
+    assert not rs_off.is_success and '非未达上限弹窗' in (rs_off.status or ''), (
+        f'门 miss 文案沿用现役:{rs_off!r}')
+    assert op_off._obs is None and _reports_off == [], (
+        f'门早退不装载 obs 零 report:{op_off._obs!r}')
+    # ② 门 hit + gs 在场 → obs 装载 + 占位 report 恰一次
+    _reports: list = []
+    monkeypatch.setattr(dnm, 'report_screen_deploy_not_full_obs',
+                        lambda gs, obs: _reports.append(obs))
+    monkeypatch.setattr(test_context, 'cw_match',
+                        SimpleNamespace(gs=object()), raising=False)
+    op, _clicks = _make_deploy_not_full(test_context, monkeypatch,
+                                        mark_hit=True)
+    rs = _run_node(test_context, op, op.observe)
+    assert rs.is_success, f'观察 success:{rs!r}'
+    assert op._obs is not None and op._obs.on_screen is True, 'obs 挂实例属性'
+    assert len(_reports) == 1 and _reports[0] is op._obs, (
+        f'占位 report 接线恰一次(统一形态调用):{_reports!r}')
+    # ③ cw_match 缺席 → 跳过 report(obs 仍装载,局外兜底路径不炸)
+    _reports_skip: list = []
+    monkeypatch.setattr(dnm, 'report_screen_deploy_not_full_obs',
+                        lambda gs, obs: _reports_skip.append(obs))
+    monkeypatch.setattr(test_context, 'cw_match', None, raising=False)
+    op_s, _c2 = _make_deploy_not_full(test_context, monkeypatch,
+                                      mark_hit=True)
+    rs_s = _run_node(test_context, op_s, op_s.observe)
+    assert rs_s.is_success, f'缺席路径观察 success:{rs_s!r}'
+    assert op_s._obs is not None and _reports_skip == [], (
+        f'gs 缺席跳过 report,obs 仍装载:{op_s._obs!r}')
 
 
 # (收口整删)原 test_deploy_not_full_dispatch_both_ways「未达上限分流
