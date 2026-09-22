@@ -457,8 +457,10 @@ def test_invest_pick_op_clicks_target_confirms_and_self_reports(
 
 def test_fortune_pick_op_clicks_card_confirms_and_self_reports(
         no_pick_sleep, monkeypatch):
-    """命运卜者确认链(pick-op-unify T-3):点卡 → 「按钮-确认选择」area
-    查找点击确认(全族统一);轮次结果旁路回传;自上报接线。"""
+    """命运卜者确认链(坐标随报收敛后):点卡坐标 = 按下标自容器
+    ``fortune_opts_xy`` 读(缺/越界 = 守卫断言,二态见下一锁)→
+    「按钮-确认选择」area 查找点击确认(全族统一);轮次结果旁路回传;
+    自上报接线。env 停喂 idx/target(已收敛屏)。"""
     import sr_od.application.currency_war.operations.cw_op.cw_pick_fortune_action as pick_mod
 
     rs = SimpleNamespace(sentinel='rs')
@@ -469,19 +471,59 @@ def test_fortune_pick_op_clicks_card_confirms_and_self_reports(
                          screenshot=lambda: 'shot',
                          round_by_find_and_click_area=lambda shot, s, a, **kw:
                              confirm_calls.append((s, a, kw)) or rs)
-    env = OverlayPickExecEnv(op=op, idx=1, target=Point(900, 480))
+    seed_pts = [(510, 480), (900, 480), (1290, 480)]   # 容器坐标种子(3 槽定值)
+    _gs = SimpleNamespace(fortune_opts_xy=SimpleNamespace(value=list(seed_pts)))
+    monkeypatch.setattr(pick_mod, 'game_state_from_ctx', lambda ctx: _gs)
     reported: list = []
-    monkeypatch.setattr(pick_mod, 'game_state_from_ctx',
-                        lambda ctx: SimpleNamespace(sentinel='gs'))
     monkeypatch.setattr(pick_mod, 'report_action_pick_fortune_param',
                         lambda gs, param, sig: reported.append(param))
+    env = OverlayPickExecEnv(op=op)
     assert CwActionPickFortuneOp(env.op.ctx, CwActionPickFortuneParam(idx=1),
                                  env=env).run().is_success
-    assert [(p.x, p.y) for p, _t in ctrl.clicks] == [(900, 480)]
+    # 点击点 = 容器值(param.idx 对槽),零 env.target 依赖。
+    assert [(p.x, p.y) for p, _t in ctrl.clicks] == [seed_pts[1]]
     assert confirm_calls == [('货币战争-命运卜者强化', '按钮-确认选择',
                               {'success_wait': 1.0})]
     assert env.round_result is rs
     assert len(reported) == 1 and reported[0].idx == 1
+
+
+def test_fortune_pick_op_container_guard_rejects_without_click(
+        no_pick_sleep, monkeypatch):
+    """命运卜者取点守卫二态锁(坐标随报条款;A 类伴随域无 None 元素,
+    守卫二态 = 缺域/越界):容器 fortune_opts_xy 缺席/空、param.idx 越界
+    → AssertionError 且零点击零上报(禁坐标现算回退)。红 = 现算回退 /
+    守卫缺位静默续跑。"""
+    import sr_od.application.currency_war.operations.cw_op.cw_pick_fortune_action as pick_mod
+
+    rs = SimpleNamespace(sentinel='rs')
+    # (gs 桩 fortune_opts_xy.value,param.idx,消息片段)
+    cases = [
+        (None, 0, '缺席/空'),   # 容器缺域(Field 恒未观察 None)
+        ([], 0, '缺席/空'),     # 容器空
+        ([(510, 480), (900, 480), (1290, 480)], 3, '越界'),   # 槽数 = 3
+    ]
+    for xy_value, idx, fragment in cases:
+        ctrl = _RecordingController()
+        op = SimpleNamespace(ctx=SimpleNamespace(controller=ctrl),
+                             screenshot=lambda: 'shot',
+                             round_by_find_and_click_area=lambda shot, s, a,
+                             **kw: rs)
+        _gs = SimpleNamespace(
+            fortune_opts_xy=SimpleNamespace(value=xy_value))
+        monkeypatch.setattr(pick_mod, 'game_state_from_ctx',
+                            lambda ctx, g=_gs: g)
+        reported: list = []
+        monkeypatch.setattr(pick_mod, 'report_action_pick_fortune_param',
+                            lambda gs, param, sig, r=reported:
+                                r.append(param))
+        env = OverlayPickExecEnv(op=op)
+        with pytest.raises(AssertionError, match=fragment):
+            CwActionPickFortuneOp(env.op.ctx,
+                                  CwActionPickFortuneParam(idx=idx),
+                                  env=env).run()
+        assert ctrl.clicks == [], f'守卫拦截({fragment})= 零点击'
+        assert reported == [], f'守卫拦截({fragment})= 零上报'
 
 
 def test_wish_trial_pick_op_clicks_card_area_confirms_and_self_reports(

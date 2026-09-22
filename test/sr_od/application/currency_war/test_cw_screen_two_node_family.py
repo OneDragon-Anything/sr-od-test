@@ -4,7 +4,8 @@
 screens.py 盛会之星段;report 函数级契约由 test_cw_screen_report_ports 锁
 承重,本文件不重复):
 
-- **观察上报接线锁**(表驱动七屏):观察 node 读链桩化 → 驱动 observe →
+- **观察上报接线锁**(表驱动;命运卜者双域拆独立锁):观察 node 读链桩化 →
+  驱动 observe →
   report 经屏文件落容器(容器终值);盛会之星接线由 obs_arch_event_screens
   同文件锁承重(懒读保真,不在本表);
 - **入口门语义锁**(带门四屏):门 miss = round_fail 交回外循环重判,
@@ -96,7 +97,7 @@ def _setup_expert(op, monkeypatch) -> None:
                         lambda ctx, screen: {'仙舟': 3})
 
 
-# ==================== 观察上报接线锁(七屏表驱动)====================
+# ==================== 观察上报接线锁(表驱动)====================
 
 # 屏键 → (模块名, 类名, 装配钩子(op, monkeypatch), 期望容器字段, 期望终值)
 _OBS_ROWS = {
@@ -118,12 +119,6 @@ _OBS_ROWS = {
              raising=False),
          'planner_opts', [PlannerOption(idx=0, text='左卡文'),
                           PlannerOption(idx=1, text='右卡文')]),
-    'fortune':
-        ('cw_screen_fortune', 'CwScreenFortune',
-         lambda op, mp: mp.setattr(op.ctx, 'ocr_service', _StubOcr(
-             map_result={'甲文': _mrl(510, 350), '乙文': _mrl(900, 350)}),
-             raising=False),
-         'fortune_opts', ['甲文', '乙文', '']),
     'wish_trial':
         ('cw_screen_wish_trial', 'CwScreenWishTrial',
          lambda op, mp: mp.setattr(op.ctx, 'ocr_service', _StubOcr(
@@ -142,13 +137,13 @@ _OBS_ROWS = {
 
 
 @pytest.mark.parametrize('screen_key', [
-    'partner', 'planner', 'fortune', 'wish_trial', 'bookcard',
-    'expert_invite'])
+    'partner', 'planner', 'wish_trial', 'bookcard', 'expert_invite'])
 def test_observe_reports_container_per_screen(test_context, monkeypatch,
                                               screen_key: str) -> None:
-    """观察上报接线锁(表驱动六屏):观察 node 读链桩化 → observe success →
-    report 经屏文件落容器(容器终值逐位 = 现役写点转录值)+ obs 挂实例
-    属性。红 = 接线断流 / 容器终值漂移 / obs 未装载。"""
+    """观察上报接线锁(表驱动五屏;命运卜者双域锁拆独立 = 下一锁):
+    观察 node 读链桩化 → observe success → report 经屏文件落容器
+    (容器终值逐位 = 现役写点转录值)+ obs 挂实例属性。红 = 接线断流 /
+    容器终值漂移 / obs 未装载。"""
     import importlib
 
     mod_name, cls_name, setup, field, expected = _OBS_ROWS[screen_key]
@@ -172,6 +167,40 @@ def test_observe_reports_container_per_screen(test_context, monkeypatch,
         f'{screen_key}: report 落容器(容器终值):'
         f'{getattr(gs, field).value!r}')
     assert op._obs is not None, f'{screen_key}: obs 挂实例属性'
+
+
+def test_fortune_observe_reports_dual_domain(test_context, monkeypatch) -> None:
+    """命运卜者观察上报锁(双域,坐标随报条款):表驱动 5 元组不容双域
+    拆独立锁——观察 node 读链桩化(OCR + area_center 读桩回定值,恒稳
+    断言不读真实建档)→ observe success → report 双写 fortune_opts /
+    fortune_opts_xy(同门同序等长)+ obs 挂实例属性。红 = 接线断流 /
+    坐标域未随观察上报 / 双域终值漂移。"""
+    from one_dragon.base.geometry.point import Point
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_fortune as mod,
+    )
+
+    op = mod.CwScreenFortune(test_context)
+    monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
+    monkeypatch.setattr(op.ctx, 'ocr_service', _StubOcr(
+        map_result={'甲文': _mrl(510, 350), '乙文': _mrl(900, 350)}),
+        raising=False)
+    # area 读桩回定值(恒稳;不读真实建档,桩序 = 卡-强化1/2/3)。
+    monkeypatch.setattr(
+        mod, 'area_center',
+        lambda ctx, name, screen_name: Point(
+            {'卡-强化1': 511, '卡-强化2': 901, '卡-强化3': 1291}[name], 481))
+    session = StrategySession()
+    monkeypatch.setattr(test_context, 'cw_match',
+                        _make_match(session), raising=False)
+    rs = _run_node(test_context, op, op.observe)
+    assert rs.is_success, f'fortune: 观察 success:{rs!r}'
+    gs = game_state_of(session)
+    assert gs.fortune_opts.value == ['甲文', '乙文', ''], (
+        f'fortune: report 落名字域:{gs.fortune_opts.value!r}')
+    assert gs.fortune_opts_xy.value == [(511, 481), (901, 481), (1291, 481)], (
+        f'fortune: report 落坐标域(同门双写):{gs.fortune_opts_xy.value!r}')
+    assert op._obs is not None, 'fortune: obs 挂实例属性'
 
 
 # ==================== 入口门语义锁(带门四屏)====================
@@ -343,3 +372,122 @@ def test_planner_act_decides_leg_and_dispatch_terminal(
     assert dispatches[0].env.norm_item == '破解芯片', '归一件名随 env 透传'
     assert dispatches[0].env.target is not None, '点卡定位点经 env 传入'
     assert rs.is_success, f'派发即 round_success 终结(零重入裁决轮):{rs!r}'
+
+
+# ==================== 命运卜者决策出口锁(守卫⓪①② + 直发)====================
+
+def _setup_fortune_act(test_context, monkeypatch, session, decide):
+    """fortune act 锁公共装配(祈愿锁先例同构):match 桩挂零参决策桩
+    (decide=None = cw_match None 局外态)+ obs 注入 + 注册表派发捕获。"""
+    from sr_od.application.currency_war.kernel.cw_screen_report.fortune import (
+        CwScreenFortuneObs,
+    )
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_fortune as mod,
+    )
+
+    monkeypatch.setattr(
+        test_context, 'cw_match',
+        None if decide is None else _make_match(session, decide_fortune=decide),
+        raising=False)
+    op = mod.CwScreenFortune(test_context)
+    monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
+    op._obs = CwScreenFortuneObs(on_screen=True,
+                                 options=['甲文', '乙文', '丙文'],
+                                 option_points=[(511, 481), (901, 481),
+                                                (1291, 481)],
+                                 screen=_FRAME)   # obs 注入(观察 node 产物形态)
+    dispatches: list = []
+
+    class _StubPickOp:
+        def __init__(self, param, env) -> None:
+            self.param = param
+            self.env = env
+
+        def execute(self) -> bool:
+            dispatches.append(self)
+            return True
+
+    import sr_od.application.currency_war.operations.cw_op.cw_action_registry as _reg
+    monkeypatch.setattr(_reg, 'action_op_for',
+                        lambda act, ctx, env: _StubPickOp(act, env))
+    return op, dispatches
+
+
+def test_fortune_act_guard_invalid_decision_fails_without_dispatch(
+        test_context, monkeypatch) -> None:
+    """补锁①(返回契约):decide_fortune 返 None/词表外(SimpleNamespace)
+    两子态合一锁 → act 具名 round_fail(消息含「决策无有效输出」,留证
+    原值)、零派发零点击、_confirm_pending 保持未置位。红 = 守卫缺失盲发
+    / 钳位回潮 / 策略异常被吞。"""
+    for stub in (None, SimpleNamespace(idx=0, reason='stub')):
+        session = StrategySession()
+        op, dispatches = _setup_fortune_act(
+            test_context, monkeypatch, session, lambda s=stub: s)
+        rs = _run_node(test_context, op, op.act)
+        assert not rs.is_success and '决策无有效输出' in (rs.status or ''), (
+            f'守卫①({stub!r}):具名 round_fail 零盲发:{rs!r}')
+        assert dispatches == [], f'守卫①({stub!r}):零派发'
+        assert op._confirm_pending is False, (
+            f'守卫①({stub!r}):确认未置位(零点击)')
+
+
+def test_fortune_act_guard_idx_out_of_range_asserts(
+        test_context, monkeypatch) -> None:
+    """补锁②(值域):真词表类 idx=3(槽数 = 3 越界)→ AssertionError
+    传播(守卫断言响亮暴露,禁钳位)、零派发零点击。红 = 钳位回潮。"""
+    from sr_od.application.currency_war.kernel.cw_vocab import (
+        CwActionPickFortuneParam,
+    )
+
+    session = StrategySession()
+    op, dispatches = _setup_fortune_act(
+        test_context, monkeypatch, session,
+        lambda: CwActionPickFortuneParam(idx=3))
+    with pytest.raises(AssertionError, match='越界'):
+        _run_node(test_context, op, op.act)
+    assert dispatches == [], '守卫②:零派发'
+    assert op._confirm_pending is False, '守卫②:确认未置位(零点击)'
+
+
+def test_fortune_act_dispatches_strategy_param_env_op_only(
+        test_context, monkeypatch) -> None:
+    """补锁③(正路形态):真词表类 idx=1 → 恰一次派发且派发 param 即
+    策略产实例(直发零重建,reason 归因不丢)、env 仅携 op(零 target
+    零 idx——坐标随报条款,点击坐标 = 动作 op 自容器读)、rs = round_wait、
+    _confirm_pending 置位。红 = 派发实例重建 / env 坐标喂回潮。"""
+    from one_dragon.base.operation.operation_round_result import (
+        OperationRoundResultEnum,
+    )
+    from sr_od.application.currency_war.kernel.cw_vocab import (
+        CwActionPickFortuneParam,
+    )
+
+    session = StrategySession()
+    pick = CwActionPickFortuneParam(idx=1, reason='stub')
+    op, dispatches = _setup_fortune_act(
+        test_context, monkeypatch, session, lambda: pick)
+    rs = _run_node(test_context, op, op.act)
+    assert len(dispatches) == 1, f'恰一次派发:{dispatches!r}'
+    assert dispatches[0].param is pick, '派发 param = 策略产实例(直发零重建)'
+    assert dispatches[0].env.target is None and dispatches[0].env.idx is None, (
+        'env 仅携 op(零 target 零 idx,停喂)')
+    assert rs.result == OperationRoundResultEnum.WAIT, (
+        f'round_wait 推进循环(确认未落地轮重走):{rs!r}')
+    assert op._confirm_pending is True, '确认已发待重入裁决置位'
+
+
+def test_fortune_act_no_match_ends_success_without_decision_or_click(
+        test_context, monkeypatch) -> None:
+    """补锁④(局外臂,op-layer.md §1.1 :37):cw_match=None → act
+    round_success(消息含「零决策零点击终结交回」)、零派发零点击、
+    _confirm_pending 保持未置位;局外臂先于任何决策消费(kernel 直调
+    兜底派发退役)。红 = 局外兜底决策路径回潮。"""
+    session = StrategySession()
+    op, dispatches = _setup_fortune_act(test_context, monkeypatch, session,
+                                        None)
+    rs = _run_node(test_context, op, op.act)
+    assert rs.is_success and '零决策零点击终结交回' in (rs.status or ''), (
+        f'守卫⓪:局外零决策零点击 round_success 终结交回:{rs!r}')
+    assert dispatches == [], '守卫⓪:零派发'
+    assert op._confirm_pending is False, '守卫⓪:确认未置位(零点击)'

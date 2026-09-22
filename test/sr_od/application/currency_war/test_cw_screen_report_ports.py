@@ -188,8 +188,11 @@ def _case_planner(m):
 
 def _case_fortune(m):
     opts = ['强化甲', '强化乙', '强化丙']
-    return (m.CwScreenFortuneObs(on_screen=True, options=opts),
-            {'fortune_opts': (opts, 'logic')})
+    pts = [(510, 480), (900, 480), (1290, 480)]
+    return (m.CwScreenFortuneObs(on_screen=True, options=opts,
+                                 option_points=pts),
+            {'fortune_opts': (opts, 'logic'),
+             'fortune_opts_xy': (pts, 'logic')})
 
 
 def _case_bookcard(m):
