@@ -238,9 +238,12 @@ def _case_wish_trial(m):
 
 
 def _case_box_pick(m):
+    pts = [(500, 290), (900, 290)]
     return (m.CwScreenBoxPickObs(on_screen=True,
-                                 card_names=['铁驭头盔', '开拓脊角']),
-            {'box_card_names': (['铁驭头盔', '开拓脊角'], 'logic')})
+                                 card_names=['铁驭头盔', '开拓脊角'],
+                                 points=pts),
+            {'box_card_names': (['铁驭头盔', '开拓脊角'], 'logic'),
+             'box_card_names_xy': (pts, 'logic')})
 
 
 def _case_briefing(m):
@@ -332,7 +335,8 @@ _EMPTY_OBS_CASES = {
     'fortune': (lambda m: m.CwScreenFortuneObs(), {'fortune_opts': []}),
     'wish_trial': (lambda m: m.CwScreenWishTrialObs(),
                    {'wish_trial_opts': []}),
-    'box_pick': (lambda m: m.CwScreenBoxPickObs(), {'box_card_names': []}),
+    'box_pick': (lambda m: m.CwScreenBoxPickObs(),
+                 {'box_card_names': [], 'box_card_names_xy': []}),
 }
 
 
@@ -347,6 +351,19 @@ def test_empty_stub_gate_semantics(screen):
     for field_name, want in expected.items():
         assert getattr(gs, field_name).value == want, \
             f'{screen}.{field_name} 空桩门语义不符'
+
+
+def test_box_pick_report_equal_length_guard():
+    """box_pick 同门双写等长守卫:坐标域与名字域不等长 = 观察 bug,
+    AssertionError 响亮暴露禁错位双写(同构先例 = fortune 行)。"""
+    mod = _screen_module('box_pick')
+    gs = _blank_gs()
+    obs = mod.CwScreenBoxPickObs(on_screen=True,
+                                 card_names=['铁驭头盔', '开拓脊角'],
+                                 points=[(500, 290)])
+    with pytest.raises(AssertionError):
+        mod.report_screen_box_pick_obs(gs, obs)
+    assert gs.box_card_names.value is None, '守卫先于写点,零写零上报'
 
 
 def test_briefing_write_semantics():

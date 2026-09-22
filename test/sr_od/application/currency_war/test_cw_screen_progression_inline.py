@@ -20,10 +20,13 @@ family.py):
   (不烧节点重试预算);推进体未落地 = round_fail + 旗标不置位;
 - **免锚出口锁**(参数化屏空锚构造):无「已离开」观察信号 → 发出即
   success(免锚),重入裁决不可达;
-- **武装箱观察上报接线锁**:门 hit + 读数非空 → 容器 ``box_card_names``
-  终值 = 卡名表(经 report 接线);读数空/门 miss → fail 交回 + 容器与
-  obs 均空(report 不调,禁盲值);决策动作 node = 容器外读数决策 →
-  点卡点击序列 → 选卡即终结 success。
+- **武装箱观察上报接线锁**:门 hit + 读数非空 → 观察标准化门 → 容器
+  ``box_card_names`` 终值 = 标准名表 + 坐标同门双写
+  ``box_card_names_xy``(观察期解点);读数空/门 miss/转换失败 → fail
+  交回 + 容器与 obs 均空(report 不调,禁盲值;名字与坐标同进退);
+  决策动作 node = 容器外读数决策 → 选卡链派发(env idx-only,target
+  停喂)→ 选卡即终结 success;局外(match 缺席)= 零决策零点击
+  终结交回。
 
 驱动方式 = 真类实例(构造走 __init__)+ 门/推进体桩化,节点函数直驱
 (run_node 外壳)。
@@ -330,7 +333,9 @@ def test_area_center_advance_missing_fail(test_context, monkeypatch) -> None:
 
 # ==================== 武装箱选卡观察上报接线锁 ====================
 
-_CARDS = [('甲卡', 500), ('乙卡', 900)]   # x 升序读数桩
+#: x 升序读数桩(名字 = 装备注册表在册名——观察标准化门要求读数可
+#: 转换为标准注册名,桩名必须真名可命中)。
+_CARDS = [('反重力皮靴', 500), ('光能电池', 900)]
 
 
 def _make_box_pick(test_context, monkeypatch: pytest.MonkeyPatch,
@@ -353,20 +358,29 @@ def _make_box_pick(test_context, monkeypatch: pytest.MonkeyPatch,
 
 
 def test_box_pick_observe_reports_card_names(test_context, monkeypatch):
-    """观察上报接线锁:门 hit + 读数非空 → 容器 ``box_card_names`` 终值 =
-    卡名表(report 接线落容器)+ obs/原始读数挂实例属性(点击定位要
-    x 坐标,x 对留守 op 不进容器)。红 = 接线断流 / 容器终值漂移。"""
+    """观察上报接线锁:门 hit + 读数非空 → 观察标准化门 → 容器
+    ``box_card_names`` 终值 = 标准名表(report 接线落容器)+ 坐标同门
+    双写 ``box_card_names_xy``(观察期解点,x + CARD_Y)。红 = 接线断流 /
+    容器终值漂移 / 坐标域断供。"""
+    import importlib
+
+    mod = importlib.import_module(f'{_PKG}.cw_screen_box_pick')
     op, session = _make_box_pick(test_context, monkeypatch, gate_ok=True,
                                  cards=list(_CARDS))
     rs = _run_node(test_context, op, op.observe)
     assert rs.is_success, f'观察 success 进决策动作 node:{rs!r}'
     gs = game_state_of(session)
-    assert gs.box_card_names.value == ['甲卡', '乙卡'], (
-        f'report 落容器(容器终值 = 卡名表):{gs.box_card_names.value!r}')
+    assert gs.box_card_names.value == ['反重力皮靴', '光能电池'], (
+        f'report 落容器(容器终值 = 标准名表):{gs.box_card_names.value!r}')
     assert gs.box_card_names.source == 'logic', '容器来源渠道 = logic'
-    assert op._obs is not None and op._obs.card_names == ['甲卡', '乙卡'], (
-        'obs 装载(字段对齐 T-1 契约)')
-    assert op._cards == _CARDS, '原始读数(x 对)挂实例属性供决策动作 node'
+    assert gs.box_card_names_xy.value == [
+        (500, mod.CwScreenBoxPick.CARD_Y),
+        (900, mod.CwScreenBoxPick.CARD_Y)], (
+        f'坐标同门双写(观察期解点):{gs.box_card_names_xy.value!r}')
+    assert op._obs is not None and op._obs.card_names == [
+        '反重力皮靴', '光能电池'], 'obs 装载(标准名字段)'
+    assert op._obs.points == gs.box_card_names_xy.value, 'obs 坐标与容器同源'
+    assert op._cards == _CARDS, '标准化读数(x 对)挂实例属性'
 
 
 @pytest.mark.parametrize('gate_ok, cards, expect_status', [
@@ -389,11 +403,48 @@ def test_box_pick_observe_gates_skip_report(test_context, monkeypatch,
     assert op._obs is None and op._cards == [], '闸早退不装载 obs/读数'
 
 
+def test_box_pick_observe_standardization_gate_and_duplicates(
+        test_context, monkeypatch):
+    """观察标准化门锁(op-layer.md §1.1 条款①):任一候选转换不到标准
+    注册名 = 观察失败 round_fail 零写零上报交回重读(名字与坐标同进退,
+    禁带病上报);形变读数两段转换命中标准名;重复名合法(四卡可能
+    同名,同装备多张)逐候选独立归一,不适用互斥拒判。红 = 带病直报 /
+    重复名误拒 / 转换失败未同进退零写。"""
+    # ① 转换失败:注册表外名字 → fail 早退,名字与坐标域双零写。
+    op, session = _make_box_pick(test_context, monkeypatch, gate_ok=True,
+                                 cards=[('甲卡', 500)])
+    rs = _run_node(test_context, op, op.observe)
+    assert not rs.is_success and '卡名标准化失败' in (rs.status or ''), (
+        f'转换失败 = 观察失败交回重读:{rs!r}')
+    gs = game_state_of(session)
+    assert gs.box_card_names.value is None and gs.box_card_names_xy.value \
+        is None, '转换失败名字坐标同进退零写'
+    assert op._obs is None, '转换失败不装载 obs'
+    # ② 形变读数:两段转换(归一精确 miss → LCS)命中标准注册名。
+    op2, session2 = _make_box_pick(test_context, monkeypatch, gate_ok=True,
+                                   cards=[('光能电地', 700)])
+    rs2 = _run_node(test_context, op2, op2.observe)
+    assert rs2.is_success, f'形变读数标准化命中:{rs2!r}'
+    assert game_state_of(session2).box_card_names.value == ['光能电池'], (
+        f'两段转换落标准名:{game_state_of(session2).box_card_names.value!r}')
+    # ③ 重复名合法:同名双卡逐候选独立归一,容器保重复项,坐标等长。
+    op3, session3 = _make_box_pick(test_context, monkeypatch, gate_ok=True,
+                                   cards=[('反重力皮靴', 300),
+                                          ('反重力皮靴', 900)])
+    rs3 = _run_node(test_context, op3, op3.observe)
+    assert rs3.is_success, f'重复名成功上报:{rs3!r}'
+    gs3 = game_state_of(session3)
+    assert gs3.box_card_names.value == ['反重力皮靴', '反重力皮靴'], (
+        f'重复名合法(容器保重复项):{gs3.box_card_names.value!r}')
+    assert len(gs3.box_card_names_xy.value) == 2, '坐标域与名字域同序等长'
+
+
 def test_box_pick_act_clicks_decided_card(test_context, monkeypatch):
     """决策动作 node 锁:容器外读数决策(零参策略契约)→ 选卡链派发
-    (pick-op-unify 批:点卡选中即确认 + 动画等待迁入
-    ``CwActionPickBoxCardOp``;机械链行为锁 = test_cw_unified_action_4)→
-    选卡即终结 success。红 = 决策形态漂移 / 定位点漂移 / 终结交回语义漂移。"""
+    (点卡选中即确认 + 动画等待迁入 ``CwActionPickBoxCardOp``;机械链
+    行为锁 = test_cw_unified_action_4)→ 选卡即终结 success。红 = 决策
+    形态漂移 / 坐标现算回潮(env.target 停喂后禁再喂)/ 终结交回语义
+    漂移。"""
     import importlib
 
     mod = importlib.import_module(f'{_PKG}.cw_screen_box_pick')
@@ -423,9 +474,38 @@ def test_box_pick_act_clicks_decided_card(test_context, monkeypatch):
     assert _decide_calls == [1], f'零参决策恰一次:{_decide_calls!r}'
     assert len(dispatches) == 1 and dispatches[0].param.idx == 1, (
         f'选卡链恰一次派发,param 携真实 idx:{dispatches!r}')
-    assert (dispatches[0].env.target.x, dispatches[0].env.target.y) == (
-        900, mod.CwScreenBoxPick.CARD_Y), (
-        f'定位点(策略 idx=1 → 第二卡 x 中心 + CARD_Y):'
-        f'{dispatches[0].env.target!r}')
+    assert dispatches[0].env.target is None, (
+        'env idx-only(target 停喂——坐标单一真相源 = 观察上报容器,'
+        '点击坐标由动作 op 自取)')
     assert rs.is_success and '选卡即终结' in (rs.status or ''), (
         f'选卡即终结交回:{rs!r}')
+    assert mod.CwScreenBoxPick.CARD_Y == 290, '画面常量在册(避让几何)'
+
+
+def test_box_pick_act_off_match_terminates_without_click(test_context,
+                                                         monkeypatch):
+    """局外出口锁:match 缺席(局外)= 零决策零点击 round_success 终结
+    交回(op-layer.md §1.1「画面 op 不支持局外单独调用」;遭遇屏先例
+    同款),观察 report 跳过容器零写、act 零派发。红 = 兜底决策路径
+    回潮(局外调机器决策/发点击/写容器)。"""
+    op, session = _make_box_pick(test_context, monkeypatch, gate_ok=True,
+                                 cards=list(_CARDS))
+    monkeypatch.setattr(test_context, 'cw_match', None, raising=False)
+    _run_node(test_context, op, op.observe)   # 局外观察:report 跳过,obs 照常装载
+    dispatched: list = []
+
+    class _SpyPickOp:
+        def __init__(self, param, env) -> None:
+            dispatched.append(self)
+
+        def execute(self) -> bool:
+            return True
+
+    import sr_od.application.currency_war.operations.cw_op.cw_action_registry as _reg
+    monkeypatch.setattr(_reg, 'action_op_for',
+                        lambda act, ctx, env: _SpyPickOp(act, env))
+    rs = _run_node(test_context, op, op.act)
+    assert rs.is_success and '局外' in (rs.status or ''), (
+        f'局外零决策零点击终结交回:{rs!r}')
+    assert dispatched == [], '零派发(局外禁选卡动作)'
+    assert game_state_of(session).box_card_names.value is None, '容器零写'
