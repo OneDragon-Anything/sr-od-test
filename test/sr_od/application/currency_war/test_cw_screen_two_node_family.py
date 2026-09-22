@@ -203,6 +203,41 @@ def test_fortune_observe_reports_dual_domain(test_context, monkeypatch) -> None:
     assert op._obs is not None, 'fortune: obs 挂实例属性'
 
 
+def test_wish_observe_reports_dual_domain(test_context, monkeypatch) -> None:
+    """祈愿试炼观察上报锁(双域,选择坐标观察上报条款):观察 node 读链
+    桩化(OCR 桩 + 门桩放行,恒稳断言不读真实建档)→ observe success →
+    report 双写 wish_trial_opts / wish_trial_opts_xy(同门同序等长;坐标
+    = CARD_XS 桶锚 + CARD_Y 观察期一次解出,值锚 660/340 槽常量)+
+    obs 挂实例属性。红 = 接线断流 / 坐标域未随观察上报 / 双域终值漂移。"""
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_wish_trial as mod,
+    )
+
+    op = mod.CwScreenWishTrial(test_context)
+    monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
+    monkeypatch.setattr(op, 'round_by_find_area',
+                        lambda s, sc, a, **k: _Area(True), raising=False)
+    monkeypatch.setattr(op.ctx, 'ocr_service', _StubOcr(
+        list_result=[SimpleNamespace(data='objective甲', x=600, y=300,
+                                     w=100, h=30)]), raising=False)
+    session = StrategySession()
+    monkeypatch.setattr(test_context, 'cw_match',
+                        _make_match(session), raising=False)
+    rs = _run_node(test_context, op, op.observe)
+    assert rs.is_success, f'wish: 观察 success:{rs!r}'
+    gs = game_state_of(session)
+    assert gs.wish_trial_opts.value == ['objective甲', '', ''], (
+        f'wish: report 落名字域:{gs.wish_trial_opts.value!r}')
+    assert gs.wish_trial_opts_xy.value == [
+        (660, 340), (960, 340), (1260, 340)], (
+        f'wish: report 落坐标域(同门双写):{gs.wish_trial_opts_xy.value!r}')
+    assert len(gs.wish_trial_opts_xy.value) == len(gs.wish_trial_opts.value), (
+        '坐标域与名字域同序等长')
+    assert op._obs is not None, 'wish: obs 挂实例属性'
+    assert op._obs.option_points == gs.wish_trial_opts_xy.value, (
+        'obs 坐标与容器同源')
+
+
 # ==================== 入口门语义锁(带门四屏)====================
 
 _GATE_ROWS = [
@@ -258,16 +293,18 @@ def test_wish_chosen_written_at_reentry_adjudication_only(
     from sr_od.application.currency_war.kernel.cw_screen_report.wish_trial import (
         CwScreenWishTrialObs,
     )
+    from sr_od.application.currency_war.kernel.cw_vocab import (
+        CwActionPickWishTrialParam,
+    )
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_wish_trial as mod,
     )
 
     session = StrategySession()
+    pick_stub = CwActionPickWishTrialParam(idx=0, reason='stub')
     monkeypatch.setattr(
         test_context, 'cw_match',
-        _make_match(session,
-                    decide_wish_trial=lambda: SimpleNamespace(idx=0,
-                                                              reason='stub')),
+        _make_match(session, decide_wish_trial=lambda: pick_stub),
         raising=False)
     op = mod.CwScreenWishTrial(test_context)
     monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
@@ -302,9 +339,12 @@ def test_wish_chosen_written_at_reentry_adjudication_only(
         f'未落地重走:round_wait 机械交回:{rs!r}')
     assert len(dispatches) == 1, f'未落地重走:选卡确认链恰一次派发:{dispatches!r}'
     assert dispatches[0].param.idx == 0, '零参决策 idx=0'
-    assert (dispatches[0].env.target.x, dispatches[0].env.target.y) == (
-        mod.CwScreenWishTrial.FIRST_CARD.x, mod.CwScreenWishTrial.FIRST_CARD.y), (
-        f'定位点 = 首卡:{dispatches[0].env.target!r}')
+    assert dispatches[0].param is pick_stub, (
+        '派发 param = 策略产实例(直发零重建,reason 归因不丢)')
+    assert (dispatches[0].env.target is None
+            and dispatches[0].env.idx is None), (
+        'env 仅携 op(定位点 = 观察上报坐标,动作 op 自容器 '
+        'wish_trial_opts_xy 取,零 env 坐标喂)')
     assert op._confirm_pending == (['累计刷新10次', ''], 0), (
         '重走后待裁决快照重置(本轮选择)')
     # ② 落地:标识不在 → 此刻才写 chosen + success 交回
@@ -315,6 +355,127 @@ def test_wish_chosen_written_at_reentry_adjudication_only(
         f'落地 → success 交回:{rs2!r}')
     assert game_state_of(session).chosen_wish.value == '累计刷新10次', (
         'chosen_wish = 重入裁决点留守写端(落地后值才可信)')
+
+
+# ==================== 祈愿试炼决策出口锁(守卫①②③ + 直发)====================
+
+def _setup_wish_act(test_context, monkeypatch, session, decide):
+    """wish act 锁公共装配(fortune 锁同构):match 桩挂零参决策桩
+    (decide=None = cw_match None 局外态)+ obs 注入 + 注册表派发捕获。"""
+    from sr_od.application.currency_war.kernel.cw_screen_report.wish_trial import (
+        CwScreenWishTrialObs,
+    )
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_wish_trial as mod,
+    )
+
+    monkeypatch.setattr(
+        test_context, 'cw_match',
+        None if decide is None else _make_match(session, decide_wish_trial=decide),
+        raising=False)
+    op = mod.CwScreenWishTrial(test_context)
+    monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
+    op._obs = CwScreenWishTrialObs(on_screen=True,
+                                   options=['甲objective', '乙objective', ''],
+                                   option_points=[(660, 340), (960, 340),
+                                                  (1260, 340)],
+                                   screen=_FRAME)   # obs 注入(观察 node 产物形态)
+    dispatches: list = []
+
+    class _StubPickOp:
+        def __init__(self, param, env) -> None:
+            self.param = param
+            self.env = env
+
+        def execute(self) -> bool:
+            dispatches.append(self)
+            return True
+
+    import sr_od.application.currency_war.operations.cw_op.cw_action_registry as _reg
+    monkeypatch.setattr(_reg, 'action_op_for',
+                        lambda act, ctx, env: _StubPickOp(act, env))
+    return op, dispatches
+
+
+def test_wish_act_no_match_ends_success_without_decision_or_click(
+        test_context, monkeypatch):
+    """守卫①(局外臂,op-layer.md §1.1「画面 op 不支持局外单独调用」):
+    cw_match=None → act round_success(消息含「零决策零点击终结交回」)、
+    零派发零点击、_confirm_pending 保持未置位;局外臂先于任何决策消费
+    (遭遇屏先例同款)。红 = 局外兜底决策路径回潮(盲发首卡)。"""
+    session = StrategySession()
+    op, dispatches = _setup_wish_act(test_context, monkeypatch, session, None)
+    rs = _run_node(test_context, op, op.act)
+    assert rs.is_success and '零决策零点击终结交回' in (rs.status or ''), (
+        f'守卫①:局外零决策零点击 round_success 终结交回:{rs!r}')
+    assert dispatches == [], '守卫①:零派发'
+    assert op._confirm_pending is None, '守卫①:确认未置位(零点击)'
+
+
+def test_wish_act_guard_invalid_decision_fails_without_dispatch(
+        test_context, monkeypatch):
+    """守卫②(返回契约):decide_wish_trial 返 None/词表外(SimpleNamespace)
+    两子态合一锁 → act 具名 round_fail(消息含「决策无有效输出」,留证
+    原值)、零派发零点击、_confirm_pending 保持未置位。红 = 守卫缺失盲发
+    / 钳位回潮 / 策略异常被吞。"""
+    for stub in (None, SimpleNamespace(idx=0, reason='stub')):
+        session = StrategySession()
+        op, dispatches = _setup_wish_act(
+            test_context, monkeypatch, session, lambda s=stub: s)
+        rs = _run_node(test_context, op, op.act)
+        assert not rs.is_success and '决策无有效输出' in (rs.status or ''), (
+            f'守卫②({stub!r}):具名 round_fail 零盲发:{rs!r}')
+        assert dispatches == [], f'守卫②({stub!r}):零派发'
+        assert op._confirm_pending is None, (
+            f'守卫②({stub!r}):确认未置位(零点击)')
+
+
+def test_wish_act_guard_idx_out_of_range_asserts(
+        test_context, monkeypatch):
+    """守卫③(值域):真词表类 idx=3(槽常量现值 3,越界)→
+    AssertionError 传播(守卫断言响亮暴露,禁钳位)、零派发零点击。
+    红 = 钳位回潮。"""
+    from sr_od.application.currency_war.kernel.cw_vocab import (
+        CwActionPickWishTrialParam,
+    )
+
+    session = StrategySession()
+    op, dispatches = _setup_wish_act(
+        test_context, monkeypatch, session,
+        lambda: CwActionPickWishTrialParam(idx=3))
+    with pytest.raises(AssertionError, match='越界'):
+        _run_node(test_context, op, op.act)
+    assert dispatches == [], '守卫③:零派发'
+    assert op._confirm_pending is None, '守卫③:确认未置位(零点击)'
+
+
+def test_wish_act_dispatches_strategy_param_env_op_only(
+        test_context, monkeypatch):
+    """正路形态:真词表类 idx=1 → 恰一次派发且派发 param 即策略产实例
+    (直发零重建,reason 归因不丢)、env 仅携 op(零 target 零 idx——
+    坐标随报条款,点击坐标 = 动作 op 自容器 wish_trial_opts_xy 读)、
+    rs = round_wait、_confirm_pending 置位快照 = 本轮选择。红 = 派发
+    实例重建 / env 坐标喂回潮。"""
+    from one_dragon.base.operation.operation_round_result import (
+        OperationRoundResultEnum,
+    )
+    from sr_od.application.currency_war.kernel.cw_vocab import (
+        CwActionPickWishTrialParam,
+    )
+
+    session = StrategySession()
+    pick = CwActionPickWishTrialParam(idx=1, reason='stub')
+    op, dispatches = _setup_wish_act(
+        test_context, monkeypatch, session, lambda: pick)
+    rs = _run_node(test_context, op, op.act)
+    assert len(dispatches) == 1, f'恰一次派发:{dispatches!r}'
+    assert dispatches[0].param is pick, '派发 param = 策略产实例(直发零重建)'
+    assert dispatches[0].env.target is None and dispatches[0].env.idx is None, (
+        'env 仅携 op(零 target 零 idx,停喂)')
+    assert rs.result == OperationRoundResultEnum.WAIT, (
+        f'round_wait 推进循环(确认未落地轮重走):{rs!r}')
+    assert op._confirm_pending == (['甲objective', '乙objective', ''], 1), (
+        '确认已发待重入裁决置位(快照 = 本轮选择)')
 
 
 # ==================== 决策动作 node 锁(银狼策划代表)====================

@@ -233,8 +233,11 @@ def _case_invest_strategy(m):
 
 
 def _case_wish_trial(m):
-    return (m.CwScreenWishTrialObs(on_screen=True, options=['objective甲']),
-            {'wish_trial_opts': (['objective甲'], 'logic')})
+    pts = [(660, 340)]
+    return (m.CwScreenWishTrialObs(on_screen=True, options=['objective甲'],
+                                   option_points=pts),
+            {'wish_trial_opts': (['objective甲'], 'logic'),
+             'wish_trial_opts_xy': (pts, 'logic')})
 
 
 def _case_box_pick(m):
@@ -334,7 +337,7 @@ _EMPTY_OBS_CASES = {
     'planner': (lambda m: m.CwScreenPlannerObs(), {'planner_opts': []}),
     'fortune': (lambda m: m.CwScreenFortuneObs(), {'fortune_opts': []}),
     'wish_trial': (lambda m: m.CwScreenWishTrialObs(),
-                   {'wish_trial_opts': []}),
+                   {'wish_trial_opts': [], 'wish_trial_opts_xy': []}),
     'box_pick': (lambda m: m.CwScreenBoxPickObs(),
                  {'box_card_names': [], 'box_card_names_xy': []}),
 }
@@ -364,6 +367,19 @@ def test_box_pick_report_equal_length_guard():
     with pytest.raises(AssertionError):
         mod.report_screen_box_pick_obs(gs, obs)
     assert gs.box_card_names.value is None, '守卫先于写点,零写零上报'
+
+
+def test_wish_trial_report_equal_length_guard():
+    """wish_trial 同门双写等长守卫:坐标域与名字域不等长 = 观察 bug,
+    AssertionError 响亮暴露禁错位双写(同构先例 = box_pick 行)。"""
+    mod = _screen_module('wish_trial')
+    gs = _blank_gs()
+    obs = mod.CwScreenWishTrialObs(on_screen=True,
+                                   options=['objective甲', ''],
+                                   option_points=[(660, 340)])
+    with pytest.raises(AssertionError):
+        mod.report_screen_wish_trial_obs(gs, obs)
+    assert gs.wish_trial_opts.value is None, '守卫先于写点,零写零上报'
 
 
 def test_briefing_write_semantics():

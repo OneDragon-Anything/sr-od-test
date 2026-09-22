@@ -549,8 +549,10 @@ def test_fortune_pick_op_container_guard_rejects_without_click(
 
 def test_wish_trial_pick_op_clicks_card_area_confirms_and_self_reports(
         no_pick_sleep, monkeypatch):
-    """祈愿试炼确认链(pick-op-unify T-3):点卡 → 「按钮-确认选择」area
-    确认;轮次结果旁路回传;自上报接线。"""
+    """祈愿试炼确认链(坐标随报收敛后):点卡坐标 = 按下标自容器
+    ``wish_trial_opts_xy`` 读(缺/越界 = 守卫断言,二态见下一锁)→
+    「按钮-确认选择」area 查找点击确认(全族统一);轮次结果旁路回传;
+    自上报接线。env 停喂 idx/target(已收敛屏)。"""
     import sr_od.application.currency_war.operations.cw_op.cw_pick_wish_trial_action as pick_mod
 
     rs = SimpleNamespace(sentinel='rs')
@@ -566,19 +568,61 @@ def test_wish_trial_pick_op_clicks_card_area_confirms_and_self_reports(
         screenshot=lambda: 'shot',
         round_by_find_and_click_area=_confirm_stub,
         round_retry=lambda **kw: rs)
-    env = OverlayPickExecEnv(op=op, idx=0, target=Point(960, 340))
+    seed_pts = [(660, 340), (960, 340), (1260, 340)]   # 容器坐标种子(3 槽定值)
+    _gs = SimpleNamespace(wish_trial_opts_xy=SimpleNamespace(value=list(seed_pts)))
+    monkeypatch.setattr(pick_mod, 'game_state_from_ctx', lambda ctx: _gs)
     reported: list = []
-    monkeypatch.setattr(pick_mod, 'game_state_from_ctx',
-                        lambda ctx: SimpleNamespace(sentinel='gs'))
     monkeypatch.setattr(pick_mod, 'report_action_pick_wish_trial_param',
                         lambda gs, param, sig: reported.append(param))
+    env = OverlayPickExecEnv(op=op)
     assert CwActionPickWishTrialOp(env.op.ctx, CwActionPickWishTrialParam(idx=0),
                                    env=env).run().is_success
-    assert [(p.x, p.y) for p, _t in ctrl.clicks] == [(960, 340)]
+    # 点击点 = 容器值(param.idx 对槽),零 env.target 依赖。
+    assert [(p.x, p.y) for p, _t in ctrl.clicks] == [seed_pts[0]]
+    assert len(ctrl.moves) == len(ctrl.clicks) == 1
     assert confirm_calls == [('货币战争-祈愿试炼', '按钮-确认选择',
                               {'success_wait': 1.5})]
     assert env.round_result is rs
     assert len(reported) == 1 and reported[0].idx == 0
+
+
+def test_wish_trial_pick_op_container_guard_rejects_without_click(
+        no_pick_sleep, monkeypatch):
+    """祈愿试炼取点守卫二态锁(选择坐标观察上报条款;A 类伴随域无 None
+    元素,守卫二态 = 缺域/越界):容器 wish_trial_opts_xy 缺席/空、
+    param.idx 越界 → AssertionError 且零点击零上报(禁坐标现算回退)。
+    红 = 现算回退 / 守卫缺位静默续跑。"""
+    import sr_od.application.currency_war.operations.cw_op.cw_pick_wish_trial_action as pick_mod
+
+    rs = SimpleNamespace(sentinel='rs')
+    # (gs 桩 wish_trial_opts_xy.value,param.idx,案例标签;守卫单一合并
+    # 断言(box_pick 同款),案例只辨二态不辨消息片段)
+    cases = [
+        (None, 0, '容器缺域'),   # Field 恒未观察 None
+        ([], 0, '容器空'),
+        ([(660, 340), (960, 340), (1260, 340)], 3, '越界(槽数 = 3)'),
+    ]
+    for xy_value, idx, label in cases:
+        ctrl = _RecordingController()
+        op = SimpleNamespace(ctx=SimpleNamespace(controller=ctrl),
+                             screenshot=lambda: 'shot',
+                             round_by_find_and_click_area=lambda shot, s, a,
+                             **kw: rs)
+        _gs = SimpleNamespace(
+            wish_trial_opts_xy=SimpleNamespace(value=xy_value))
+        monkeypatch.setattr(pick_mod, 'game_state_from_ctx',
+                            lambda ctx, g=_gs: g)
+        reported: list = []
+        monkeypatch.setattr(pick_mod, 'report_action_pick_wish_trial_param',
+                            lambda gs, param, sig, r=reported:
+                                r.append(param))
+        env = OverlayPickExecEnv(op=op)
+        with pytest.raises(AssertionError):
+            CwActionPickWishTrialOp(env.op.ctx,
+                                    CwActionPickWishTrialParam(idx=idx),
+                                    env=env).run()
+        assert ctrl.clicks == [], f'守卫拦截({label})= 零点击'
+        assert reported == [], f'守卫拦截({label})= 零上报'
 
 
 def test_pick_no_confirm_ops_click_and_self_report(

@@ -145,11 +145,12 @@ def test_terminal_contract_schema_and_match_shape(monkeypatch):
 
 def test_single_field_slot_schema_keys_align_with_field_names():
     """schema 域键 ↔ 槽字段名同名对齐(登记漂移防线)。正向辖域 =
-    九个在册单字段槽域键(非 ``_opts`` 后缀成员 = box_card_names/
-    box_card_names_xy/expert_invite)双向同名断言(域键在册 ∧ 字段在册);
-    反向辖域 = ``_opts`` 型域键(除 invest_opts 合并标签)必须为字段名。
-    组域语义域名键(node/units/economy 等)无 ``_opts`` 后缀天然不入;
-    invest_opts 为唯一显式豁免。新增槽域须同步扩正向清单。"""
+    十个在册单字段槽域键(非 ``_opts`` 后缀成员 = box_card_names/
+    box_card_names_xy/wish_trial_opts_xy/expert_invite)双向同名断言
+    (域键在册 ∧ 字段在册);反向辖域 = ``_opts`` 型域键(除 invest_opts
+    合并标签)必须为字段名。组域语义域名键(node/units/economy 等)无
+    ``_opts`` 后缀天然不入;invest_opts 为唯一显式豁免。新增槽域须同步
+    扩正向清单。"""
     from dataclasses import fields
 
     from sr_od.application.currency_war.kernel.cw_game_state import (
@@ -159,7 +160,8 @@ def test_single_field_slot_schema_keys_align_with_field_names():
     single_field_slots = (
         'megastar_opts', 'partner_opts', 'planner_opts',
         'star_tome_opts', 'wish_trial_opts', 'box_card_names',
-        'box_card_names_xy', 'fortune_opts', 'expert_invite',
+        'box_card_names_xy', 'wish_trial_opts_xy', 'fortune_opts',
+        'expert_invite',
     )
     field_names = {f.name for f in fields(GameState)}
     for name in single_field_slots:
