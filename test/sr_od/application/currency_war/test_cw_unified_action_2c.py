@@ -16,6 +16,8 @@ from __future__ import annotations
 import time
 from types import SimpleNamespace
 
+import pytest
+
 from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war.kernel.cw_action_report import (
     report_action_deploy_move_param,
@@ -293,8 +295,8 @@ def test_expert_invite_entry_select_only(test_context, monkeypatch):
     弹窗已开单一形态(两 node 形态观察 node 承载,迭代
     2026-09-18-screen-op-flat-report)——弹窗不在 = fail 交回外循环重识别
     (外循环按下一帧画面重分发自愈;开卡缺位由备战词表
-    CwActionOpenBookcardParam 链承接)。选卡成功链的行为面由决策链降级锁
-    承重,本锁不重复。"""
+    CwActionOpenBookcardParam 链承接)。选卡成功链的行为面由决策出口守卫
+    锁组承重,本锁不重复。"""
     from test.sr_od.application.currency_war._cw_helpers import (
         Area,
         run_node,
@@ -312,22 +314,17 @@ def test_expert_invite_entry_select_only(test_context, monkeypatch):
     assert not rs.is_success and '弹窗未现' in (rs.status or '')
 
 
-# ===== CwScreenExpertInvite 决策链异常降级(三姊妹 handler catch→fallback
-# ===== 姿态对齐;兜底 = kernel 直调同无 match else 分支,现金为王语义)=====
+# ===== CwScreenExpertInvite 决策出口守卫锁组(原「决策链异常降级」锁 =====
+# ===== 原位改写:异常传播/返回契约/值域/正路两态/局外终结;op-layer =====
+# ===== §1.1 出口③ + §1.3 + 局外单跑条款)=====
 
-def test_expert_invite_decision_chain_error_falls_cash(test_context,
-                                                       monkeypatch):
-    """局内决策链 decide_expert_invite 抛异常 → 异常不出 op,落「现金为王」
-    兜底(kernel 直调同无 match else 分支),round 照常机械交回(与
-    fortune/equip 两姊妹 handler 的 catch→fallback 防御姿态对齐;补丁前该
-    链异常直接冒出 op 中断本轮)。写槽(弹窗载体)已由观察 node report 落
-    容器(两 node 形态,迭代 2026-09-18-screen-op-flat-report):本锁经
-    读屏函数注入点驱动观察 node(卡羁绊/板面读链桩)装载 obs,再驱动
-    决策动作 node。本例输入:卡羁绊有读数但与板面无同线 → 兜底 kernel
-    判据 ③ 落现金为王。红 = 异常逃逸 / report 断流 / 落点漂移 / 缺坐标
-    fail 交回。"""
-    from test.harness.fixture_controller import fast_sleep
-    from test.sr_od.application.currency_war._cw_helpers import Area, run_node
+def _expert_guard_harness(test_context, monkeypatch, strategy):
+    """守卫锁组装配(承原降级锁 harness 改写):obs 读链桩 + area_center 桩
+    (迁观察链 = 观察上报坐标域种子,act 决策段零 area_center 可桩)+ 注册
+    表 action_op_for 派发捕获桩。strategy = decide_expert_invite 注入体
+    (match = StrategySession 冷建;strategy=None = 局外无 match 语境)。
+    返回 (op, match, dispatches)。"""
+    from test.sr_od.application.currency_war._cw_helpers import Area
 
     from sr_od.application.currency_war.kernel import cw_obs_core
     from sr_od.application.currency_war.kernel.cw_strategy_session import (
@@ -338,17 +335,16 @@ def test_expert_invite_decision_chain_error_falls_cash(test_context,
         cw_screen_expert_invite as mod,
     )
 
-    def _boom():
-        raise RuntimeError('决策链注入异常(测试)')
-
     session = StrategySession()
-    match = SimpleNamespace(
+    match = (None if strategy is None else SimpleNamespace(
         session=session,
-        strategy=SimpleNamespace(decide_expert_invite=_boom))
-    match.gs = game_state_of(match.session)
+        strategy=SimpleNamespace(decide_expert_invite=strategy)))
+    if match is not None:
+        match.gs = game_state_of(match.session)
     monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
     op = mod.CwScreenExpertInvite(test_context)
-    # 卡羁绊读数在位但与板面({'仙舟': 2})无同线 → 兜底 kernel 判据落 -1
+    # 卡羁绊/板面读链桩(观察载体在位:卡-1 = 能量,与板面 {'仙舟': 2}
+    # 无同线;判据语义对锁组无感——决策值全由 strategy 桩给定)。
     monkeypatch.setattr(mod, '_resolve_card_bonds',
                         lambda ctx, screen, a: '能量' if a == '卡-1' else None)
     monkeypatch.setattr(cw_observation, 'read_board',
@@ -357,15 +353,14 @@ def test_expert_invite_decision_chain_error_falls_cash(test_context,
     monkeypatch.setattr(op, 'screenshot', lambda: object(), raising=False)
     monkeypatch.setattr(op, 'round_by_find_area',
                         lambda s, sc, a, **k: Area(True))
-    rs = run_node(test_context, op, op.observe)
-    assert rs.is_success, f'在门观察 success:{rs!r}'
-    assert match.gs.expert_invite.value is not None, (
-        '观察上报落容器(ExpertInvitePayload 经 report 写槽)')
-    _pts = {'卡-1': Point(300, 400), mod.CASH_AREA: Point(500, 900)}
+    # 坐标域种子(观察链桩;观察上报经 report 落容器,决策段零坐标现算,
+    # 坐标消费 = 动作 op 容器取点锁 test_cw_unified_action_4)。
+    _pts = {'卡-1': Point(300, 400), '卡-2': Point(700, 400),
+            '卡-3': Point(1100, 400), '卡-4': Point(1500, 400),
+            mod.CASH_AREA: Point(500, 900)}
     monkeypatch.setattr(cw_obs_core, 'area_center',
                         lambda ctx, name, screen: _pts.get(name))
-    # pick-op-unify:点卡即选迁入 CwActionPickExpertInviteOp;本锁桩派发
-    # 捕获(param/env),机械链行为锁 = test_cw_unified_action_4。
+    # 派发捕获桩(机械链行为锁 = test_cw_unified_action_4)。
     dispatches: list = []
 
     class _StubPickOp:
@@ -380,12 +375,188 @@ def test_expert_invite_decision_chain_error_falls_cash(test_context,
     import sr_od.application.currency_war.operations.cw_op.cw_action_registry as _reg
     monkeypatch.setattr(_reg, 'action_op_for',
                         lambda act, ctx, env: _StubPickOp(act, env))
-    with fast_sleep(op):   # 轮间等待桩(零真实等待)
+    return op, match, dispatches
+
+
+def test_expert_invite_decision_exception_propagates(test_context, monkeypatch):
+    """锁A(异常传播,op-layer §1.1 出口③):策略桩 decide_expert_invite
+    抛 RuntimeError → act 异常传播(pytest.raises)、零派发、_pick_pending
+    保持 None。原「异常不出 op,落现金为王兜底续跑」降级形态随守卫化退役
+    (策略异常 = 错误传播交外循环,流程侧禁任何兜底决策)。红 = 异常被
+    吸收降级续跑 / 派发照发。"""
+    from test.harness.fixture_controller import fast_sleep
+    from test.sr_od.application.currency_war._cw_helpers import run_node
+
+    def _boom() -> None:
+        raise RuntimeError('决策链注入异常(测试)')
+
+    op, _match, dispatches = _expert_guard_harness(test_context, monkeypatch,
+                                                   _boom)
+    rs = run_node(test_context, op, op.observe)
+    assert rs.is_success, f'在门观察 success:{rs!r}'
+    with fast_sleep(op), pytest.raises(RuntimeError):
+        op.act()
+    assert dispatches == [], '异常传播 = 零派发(零盲发)'
+    assert op._pick_pending is None, '异常传播 = pending 保持 None'
+
+
+def test_expert_invite_decision_invalid_return_named_fail(test_context,
+                                                          monkeypatch):
+    """锁B(返回契约,op-layer §1.1 出口③):策略桩返回 None 与词表外对象
+    (SimpleNamespace(idx=0))两子态 → act 具名 round_fail(消息含「决策
+    无有效输出」与原值 repr)、零派发零点击、_pick_pending None。原
+    AttributeError 传播路径收编进具名 fail(诊断面原值 repr 直读)。红 =
+    盲发派发 / 消息缺原值。"""
+    from test.harness.fixture_controller import fast_sleep
+    from test.sr_od.application.currency_war._cw_helpers import run_node
+
+    for bad, frag in ((None, 'None'), (SimpleNamespace(idx=0), 'idx=0')):
+        op, _match, dispatches = _expert_guard_harness(
+            test_context, monkeypatch, lambda b=bad: b)
+        rs = run_node(test_context, op, op.observe)
+        assert rs.is_success, f'在门观察 success:{rs!r}'
+        with fast_sleep(op):
+            rs = op.act()
+        assert not rs.is_success and '决策无有效输出' in (rs.status or ''), \
+            f'词表外/None = 具名 fail 零盲发:{rs!r}'
+        assert frag in (rs.status or ''), f'消息含原值 repr({frag}):{rs!r}'
+        assert dispatches == [], '零派发零点击(守卫①拦截)'
+        assert op._pick_pending is None, 'pending 保持 None'
+
+
+def test_expert_invite_pick_idx_out_of_domain_asserts(test_context,
+                                                      monkeypatch):
+    """锁C(值域,op-layer §1.3):真词表类域外 idx(-2 = 原「<0 静默并入
+    现金分支」路径 / 4 = 原 IndexError 意外出口)→ AssertionError 传播、
+    零派发零点击、_pick_pending None;idx=-1 不炸(域内现金语义,归锁D)。
+    红 = 域外并入现金分支 / 越界非守卫断言出口。"""
+    from test.harness.fixture_controller import fast_sleep
+    from test.sr_od.application.currency_war._cw_helpers import run_node
+
+    from sr_od.application.currency_war.kernel.cw_vocab import (
+        CwActionPickExpertInviteParam,
+    )
+
+    for bad_idx in (-2, 4):
+        op, _match, dispatches = _expert_guard_harness(
+            test_context, monkeypatch,
+            lambda i=bad_idx: CwActionPickExpertInviteParam(idx=i))
+        run_node(test_context, op, op.observe)
+        with fast_sleep(op), pytest.raises(AssertionError):
+            op.act()
+        assert dispatches == [], f'域外 idx={bad_idx} = 零派发零点击'
+        assert op._pick_pending is None, 'pending 保持 None'
+
+
+def test_expert_invite_decision_direct_dispatch_two_states(test_context,
+                                                           monkeypatch):
+    """锁D(正路两态):真词表类 idx=-1 → 恰一次派发、派发 param 即策略产
+    实例(is 比对,零重建构造点)、env.idx == -1 且 env 停喂 target
+    (idx-only)、容器坐标域 cash_point 在位(坐标源断言 = 容器值,机械
+    消费归 test_cw_unified_action_4 容器取点锁)、round WAIT;idx=1 →
+    env.idx == 1、容器 card_points[1] 在位、_pick_pending 置位。红 = 重建
+    构造点回潮 / env 复喂 target / 观察双写断流。"""
+    from test.harness.fixture_controller import fast_sleep
+    from test.sr_od.application.currency_war._cw_helpers import run_node
+
+    from sr_od.application.currency_war.kernel.cw_vocab import (
+        CwActionPickExpertInviteParam,
+    )
+
+    pts = [(300, 400), (700, 400), (1100, 400), (1500, 400)]
+    for idx in (-1, 1):
+        pick = CwActionPickExpertInviteParam(idx=idx)
+        op, match, dispatches = _expert_guard_harness(
+            test_context, monkeypatch, lambda p=pick: p)
+        rs = run_node(test_context, op, op.observe)
+        assert rs.is_success, f'在门观察 success:{rs!r}'
+        payload = match.gs.expert_invite.value
+        assert payload.card_points == pts and payload.cash_point == (500, 900), \
+            f'观察上报同门双写坐标域:{payload!r}'
+        with fast_sleep(op):
+            rs = op.act()
+        assert not rs.is_success and '点击已发' in (rs.status or ''), \
+            f'round WAIT 机械交回:{rs!r}'
+        assert len(dispatches) == 1, f'恰一次派发:{dispatches!r}'
+        assert dispatches[0].param is pick, '直发策略产实例(零重建)'
+        assert dispatches[0].env.idx == idx, 'env.idx = 策略产值'
+        assert dispatches[0].env.target is None, 'env = idx-only(停喂 target)'
+        if idx == 1:
+            assert op._pick_pending == (1, ['能量', None, None, None]), \
+                f'_pick_pending 置位:{op._pick_pending!r}'
+
+
+def test_expert_invite_no_match_round_success_no_fallback(test_context,
+                                                          monkeypatch):
+    """锁E(局外臂,op-layer §1.1 局外单跑条款):cw_match = None(观察链
+    桩照常给 obs)→ act 返回 round_success(零决策零点击终结交回)、
+    _pick_pending 保持 None;kernel choose_expert_index 桩零调用(兜底判据
+    支随局外单跑条款退役的回归锁)。红 = 局外兜底决策/派发回潮。"""
+    from test.harness.fixture_controller import fast_sleep
+    from test.sr_od.application.currency_war._cw_helpers import run_node
+
+    from sr_od.application.currency_war.kernel import cw_events
+
+    calls: list = []
+
+    def _spy_choose(*args, **kwargs):
+        calls.append(args)
+        return -1
+
+    monkeypatch.setattr(cw_events, 'choose_expert_index', _spy_choose)
+    op, _match, dispatches = _expert_guard_harness(test_context, monkeypatch,
+                                                   None)
+    rs = run_node(test_context, op, op.observe)
+    assert rs.is_success, f'在门观察 success:{rs!r}'
+    assert op._obs is not None, '观察链桩照常给 obs'
+    with fast_sleep(op):
         rs = op.act()
-    assert not rs.is_success and '点击已发' in (rs.status or ''), (
-        f'异常被吸收,round 照常机械交回:{rs!r}')
-    assert len(dispatches) == 1, f'选卡链恰一次派发:{dispatches!r}'
-    assert dispatches[0].param.idx == -1, (
-        f'兜底应落「现金为王」(idx=-1):{dispatches[0].param!r}')
-    assert (dispatches[0].env.target.x, dispatches[0].env.target.y) == (
-        500, 900), f'兜底应落「现金为王」area:{dispatches[0].env.target!r}'
+    assert rs.is_success and '零决策零点击' in (rs.status or ''), \
+        f'局外 = round_success 终结交回:{rs!r}'
+    assert dispatches == [], '局外 = 零派发零点击'
+    assert calls == [], 'kernel choose_expert_index 零调用(兜底判据支退役)'
+    assert op._pick_pending is None, 'pending 保持 None'
+
+
+def test_expert_invite_report_dual_domain_write():
+    """report 双写锁(选择坐标观察上报,op-layer §1.1 :35):同一调用同一
+    写门写 ``ExpertInvitePayload`` 四字段(card_bonds/board/card_points/
+    cash_point);同序等长写端构造守卫——不等长(定长 4)= AssertionError
+    响亮暴露零写;坐标域欠供(None)随名字域同门照报(:34 欠账形态同格,
+    不半截收敛——清偿批同名同坐标一次落净)。红 = 拆门双写 / 等长守卫
+    缺位 / 坐标域单独收敛。"""
+    from test.sr_od.application.currency_war._cw_helpers import cw4_session
+
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        game_state_of,
+    )
+    from sr_od.application.currency_war.kernel.cw_screen_report.expert_invite import (
+        CwScreenExpertInviteObs,
+        report_screen_expert_invite_obs,
+    )
+
+    pts = [(300, 400), (700, 400), (1100, 400), (1500, 400)]
+    gs = game_state_of(cw4_session())
+    report_screen_expert_invite_obs(gs, CwScreenExpertInviteObs(
+        on_screen=True, card_bonds=['仙舟', None, None, None],
+        board={'仙舟': 3}, card_points=pts, cash_point=(500, 900)))
+    payload = gs.expert_invite.value
+    assert payload is not None, 'report 落容器'
+    assert payload.card_bonds == ['仙舟', None, None, None]
+    assert payload.board == {'仙舟': 3}
+    assert payload.card_points == pts, '坐标域同门一并写'
+    assert payload.cash_point == (500, 900), '现金为王点同门一并写'
+    # 等长守卫触发即红(不等长 = 观察 bug,响亮暴露零写)
+    before = gs.write_seq
+    with pytest.raises(AssertionError):
+        report_screen_expert_invite_obs(gs, CwScreenExpertInviteObs(
+            on_screen=True, card_bonds=['仙舟', None, None, None],
+            board={}, card_points=pts[:3]))
+    assert gs.write_seq == before, '等长守卫拦截 = 零写'
+    # 坐标域欠供(None)随名字域同门照报(不半截收敛)
+    gs2 = game_state_of(cw4_session())
+    report_screen_expert_invite_obs(gs2, CwScreenExpertInviteObs(
+        on_screen=True, card_bonds=['仙舟', None, None, None], board={}))
+    p2 = gs2.expert_invite.value
+    assert p2.card_points is None and p2.cash_point is None, '坐标域欠供照报 None'
+    assert p2.card_bonds == ['仙舟', None, None, None], '名字域照报(同门)'

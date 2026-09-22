@@ -625,41 +625,68 @@ def test_wish_trial_pick_op_container_guard_rejects_without_click(
         assert reported == [], f'守卫拦截({label})= 零上报'
 
 
-def test_pick_no_confirm_ops_click_and_self_report(
-        no_pick_sleep, monkeypatch):
-    """点卡即选族过渡期屏行为锁(pick-op-unify T-4):专家邀请函
-    = 选中点击(env.target 过渡取点)+ 动画等待,零确认步;自上报
-    接线;派发 param 携真实 idx(-1 = 现金为王语义透传。星徽秘典/武装箱
-    已收敛容器取点,行为锁 = test_pick_box_card_takes_point_from_
-    container / test_pick_star_tome_takes_point_from_container;原装备行
-    随选择装备屏误判退役删除)。"""
-    from sr_od.application.currency_war.operations.cw_op import (
-        cw_pick_expert_invite_action,
-    )
+def test_pick_expert_invite_takes_point_from_container(no_pick_sleep,
+                                                       monkeypatch):
+    """专家邀请函选卡取坐标锁(选择坐标观察上报收敛,op-layer.md §1.1 :35):
+    点击点 = 容器 ``expert_invite`` payload 双源按 param.idx 取——idx=-1 =
+    词表特形(现金为王)显式分支消费 ``cash_point``;idx ∈ 0..3 = 消费
+    ``card_points[idx]``(坐标单一真相源 = 观察上报;禁回退 env.target、
+    禁坐标现算)→ 点击 + 自上报照发(env idx-only 停喂 target);缺席
+    (payload 缺席 / cash_point None / card_points None·长度≠4 / idx 越界)
+    = 守卫断言 AssertionError 响亮暴露且零点击零上报(防 bug 路栏非控制
+    流,禁现算回退)。原 env.target 过渡取点行为锁
+    (test_pick_no_confirm_ops_click_and_self_report 专家行)随收敛批退役
+    改写。"""
+    import sr_od.application.currency_war.operations.cw_op.cw_pick_expert_invite_action as pick_mod
 
-    # (op_cls, param_cls, target, want_clicks, want_idx, op_mod, report_name)
-    cases = [
-        (CwActionPickExpertInviteOp, CwActionPickExpertInviteParam,
-         Point(300, 600), [(300, 600)], -1, cw_pick_expert_invite_action,
-         'report_action_pick_expert_invite_param'),
-    ]
-    for op_cls, param_cls, target, want_clicks, want_idx, op_mod, report_name in cases:
+    pts = [(300, 400), (700, 400), (1100, 400), (1500, 400)]
+
+    def _make(payload_value):
         ctrl = _RecordingController()
         op = SimpleNamespace(ctx=SimpleNamespace(controller=ctrl))
-        env = OverlayPickExecEnv(op=op, idx=want_idx, target=target)
+        env = OverlayPickExecEnv(op=op)
+        gs = SimpleNamespace(
+            expert_invite=SimpleNamespace(value=payload_value))
         reported: list = []
-        monkeypatch.setattr(op_mod, 'game_state_from_ctx',
-                            lambda ctx: SimpleNamespace(sentinel='gs'))
-        monkeypatch.setattr(op_mod, report_name,
-                            lambda gs, param, sig, _r=reported: _r.append(param),
-                            raising=False)
-        assert op_cls(env.op.ctx, param_cls(idx=want_idx),
-                      env=env).run().is_success, param_cls.__name__
-        assert [(p.x, p.y) for p, _t in ctrl.clicks] == want_clicks, \
-            param_cls.__name__
-        assert len(ctrl.moves) == len(ctrl.clicks), param_cls.__name__
-        assert len(reported) == 1 and reported[0].idx == want_idx, \
-            param_cls.__name__
+        monkeypatch.setattr(pick_mod, 'game_state_from_ctx',
+                            lambda ctx: gs)
+        monkeypatch.setattr(pick_mod, 'report_action_pick_expert_invite_param',
+                            lambda gs_, param, sig, _r=reported:
+                                _r.append(param))
+        return op, env, ctrl, reported
+
+    # ① idx=-1 → 恰消费 cash_point(词表特形显式分支);② idx=1 → 消费
+    # card_points[1]:点击坐标 = 容器值,自上报照发。
+    for idx, want_pt in ((-1, (500, 900)), (1, pts[1])):
+        op, env, ctrl, reported = _make(SimpleNamespace(
+            card_points=list(pts), cash_point=(500, 900)))
+        assert CwActionPickExpertInviteOp(
+            op.ctx, CwActionPickExpertInviteParam(idx=idx),
+            env=env).run().is_success
+        assert [(p.x, p.y) for p, _t in ctrl.clicks] == [want_pt]
+        assert len(ctrl.moves) == len(ctrl.clicks) == 1
+        assert len(reported) == 1 and reported[0].idx == idx
+
+    # ③ 缺席/越界守卫(payload 值,分支覆盖):AssertionError 且零点击零上报。
+    guard_cases = [
+        (None, 1, 'payload 缺席(Field 恒未观察 None)'),
+        (SimpleNamespace(card_points=list(pts), cash_point=None), -1,
+         'cash_point 缺席'),
+        (SimpleNamespace(card_points=None, cash_point=(500, 900)), 1,
+         'card_points 缺席'),
+        (SimpleNamespace(card_points=pts[:3], cash_point=(500, 900)), 1,
+         'card_points 长度≠4(定长 4)'),
+        (SimpleNamespace(card_points=list(pts), cash_point=(500, 900)), 4,
+         'idx 越界'),
+    ]
+    for payload_value, idx, label in guard_cases:
+        op, env, ctrl, reported = _make(payload_value)
+        with pytest.raises(AssertionError):
+            CwActionPickExpertInviteOp(
+                op.ctx, CwActionPickExpertInviteParam(idx=idx),
+                env=env).run()
+        assert ctrl.clicks == [], f'守卫拦截({label})= 零点击'
+        assert reported == [], f'守卫拦截({label})= 零上报'
 
 
 def test_pick_star_tome_takes_point_from_container(no_pick_sleep, monkeypatch):

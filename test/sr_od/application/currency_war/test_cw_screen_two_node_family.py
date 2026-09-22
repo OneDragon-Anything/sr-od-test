@@ -86,7 +86,10 @@ def _setup_bookcard(op, monkeypatch) -> None:
 
 
 def _setup_expert(op, monkeypatch) -> None:
-    """专家邀请函读链桩(卡羁绊解析模块符号 + 羁绊面板读口)。"""
+    """专家邀请函读链桩(卡羁绊解析模块符号 + 羁绊面板读口 + area_center
+    读桩回定值——坐标域随观察上报入 payload 后,恒稳断言不读真实建档)。"""
+    from one_dragon.base.geometry.point import Point
+    from sr_od.application.currency_war.kernel import cw_obs_core
     from sr_od.application.currency_war.obs import cw_observation
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_expert_invite as mod,
@@ -95,6 +98,11 @@ def _setup_expert(op, monkeypatch) -> None:
                         lambda ctx, screen, a: '仙舟' if a == '卡-1' else None)
     monkeypatch.setattr(cw_observation, 'read_board',
                         lambda ctx, screen: {'仙舟': 3})
+    _pts = {'卡-1': Point(300, 400), '卡-2': Point(700, 400),
+            '卡-3': Point(1100, 400), '卡-4': Point(1500, 400),
+            mod.CASH_AREA: Point(500, 900)}
+    monkeypatch.setattr(cw_obs_core, 'area_center',
+                        lambda ctx, name, screen: _pts.get(name))
 
 
 # ==================== 观察上报接线锁(表驱动)====================
@@ -132,7 +140,10 @@ _OBS_ROWS = {
         ('cw_screen_expert_invite', 'CwScreenExpertInvite',
          _setup_expert, 'expert_invite',
          ExpertInvitePayload(card_bonds=['仙舟', None, None, None],
-                             board={'仙舟': 3})),
+                             board={'仙舟': 3},
+                             card_points=[(300, 400), (700, 400),
+                                          (1100, 400), (1500, 400)],
+                             cash_point=(500, 900))),
 }
 
 
