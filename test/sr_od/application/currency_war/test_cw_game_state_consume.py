@@ -71,26 +71,23 @@ def _hsig() -> _ChannelSig:
 
 
 def test_refresh_execution_paid_and_free_frame_gates() -> None:
-    """§3.3.6-8 刷新执行主锁(三腿一锁):①付费刷新 = paid+1 ∧ total+1
-    (付费帧不动免费余额);②免费帧闸 = 免费帧不进付费累计(长线利好
-    触发计数载体禁混入免费刷),消耗免费余额 + total 照计;③免费余额
-    下限 0(计数器单调域,禁负值漂移)。载体 = 效果账本
-    ``gs.effects.record_refresh``(原 Field 版 record_refresh_execution
-    随迁入裁决退役;evidence 轮键面随 Field 通道退役)。"""
+    """§3.3.6-8 刷新执行计数主锁(三腿一锁):①付费刷新 = paid+1 ∧
+    total+1;②免费帧闸 = 免费帧不进付费累计(长线利好触发计数载体禁混入
+    免费刷)∧ total 照计;③免费余额下限 0(扣减在 Field,由上报函数承载
+    ——2026-09-21 Field 化:免费次数升格容器字段 ``gs.free_refresh_left``,
+    账本 ``record_refresh`` 只留 paid/total 累计;Field 下限 0 锁 = 上报
+    函数扣减腿,见 test_cw_shop_refresh_field)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.effects.record_refresh(free=False)
     assert gs.effects.refresh_paid == 1
     assert gs.effects.refresh_total == 1
-    assert gs.effects.free_refresh_balance == 0, '付费帧不动免费余额'
-    # ②/③ 免费帧闸:效果发放预置余额后免费刷新消耗
+    # ② 免费帧闸:免费刷新不进付费计数(余额账已迁 Field,账本零动作)
     bs2 = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
-    bs2.effects.grant_free_refreshes(1)
     bs2.effects.record_refresh(free=True)
     assert bs2.effects.refresh_paid == 0, '免费帧禁写付费计数'
-    assert bs2.effects.free_refresh_balance == 0, '免费余额消耗,下限 0'
     assert bs2.effects.refresh_total == 1, '全量计数含免费'
     bs2.effects.record_refresh(free=True)
-    assert bs2.effects.free_refresh_balance == 0, '免费余额下限 0(禁负值漂移)'
+    assert bs2.effects.refresh_paid == 0, '免费帧恒不进付费计数'
 
 
 # ============================================================ §3.2.6 派生单一源(ADR-0488)

@@ -26,17 +26,17 @@ def test_none_guard_skips_whole_segment() -> None:
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.effects.register_strategy(STRATEGY_EFFECTS['双手狸开键盘！'], acquired_t=5)
     tick_effect_boundary(gs)
-    assert gs.effects.free_refresh_balance == 0, '未观察 = 不发放'
+    assert gs.free_refresh_left.value is None, '未观察 = 不发放(零 Field 行)'
     assert gs.node_hist_ord is None
 
 
 def test_advances_and_grants() -> None:
-    """判据②:生效序推进 → 账本 advanced + 刷新余额按节点额度到账。"""
+    """判据②:生效序推进 → 账本 advanced + 刷新剩余次数 Field 到账。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.effects.register_strategy(STRATEGY_EFFECTS['双手狸开键盘！'], acquired_t=5)
     gs.node_hist_ord = 6
     tick_effect_boundary(gs)
-    assert gs.effects.free_refresh_balance == 2, '每进节点 +2(双手狸活载体)'
+    assert gs.free_refresh_left.value == 2, '每进节点 +2(双手狸活载体)'
 
 
 def test_segment_swallows_exceptions(monkeypatch) -> None:

@@ -192,12 +192,17 @@ def test_deal_shop_level9_domain_and_registered_names() -> None:
 
 
 def test_refresh_cost_free_balance_first() -> None:
-    """免费刷额度先行 → 0;额度耗尽/零 → 基价 2 恒定(M05 定谳;余额域 =
-    效果账本,2026-09-18 迁入裁决)。"""
+    """免费刷额度先行 → 0;额度耗尽/零/未观察(None)→ 基价 2 恒定
+    (M05 定谳;余额域 = 容器字段 ``gs.free_refresh_left``,
+    2026-09-21 Field 化)。"""
     gs = _fresh_gs()
-    assert refresh_cost_for(gs) == REFRESH_COST_BASE
-    gs.effects.grant_free_refreshes(1)
+    assert refresh_cost_for(gs) == REFRESH_COST_BASE, 'None = 未观察按基价'
+    gs.write_logic(gs.free_refresh_left, 1, produced_by='test-bridge',
+                   sig=ChannelSig(family='logic_hook', actor='TestSigWriter'))
     assert refresh_cost_for(gs) == 0, '免费额度在场先行'
+    gs.write_logic(gs.free_refresh_left, 0, produced_by='test-bridge',
+                   sig=ChannelSig(family='logic_hook', actor='TestSigWriter'))
+    assert refresh_cost_for(gs) == REFRESH_COST_BASE, '额度耗尽回基价'
 
 
 def test_effective_deal_probs_rotation_toggle() -> None:

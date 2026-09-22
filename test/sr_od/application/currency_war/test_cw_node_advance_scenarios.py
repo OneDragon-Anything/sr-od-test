@@ -170,7 +170,7 @@ def test_locked_resume_value_guard_self_heal(test_context, monkeypatch) -> None:
                                actor='CwScreenPrep') == 'first_anchor'
     assert gs.node_ord.value == 7 and gs.node_ord.source == 'observation'
     assert gs.node_hist_ord == 7
-    assert gs.effects.free_refresh_balance == 2, '首锚定当帧发放(无 skew)'
+    assert gs.free_refresh_left.value == 2, '首锚定当帧发放(无 skew)'
 
     # 自愈后流程续行:下一结算确认正常推进
     assert report_node_advance(gs, trigger='settle_confirm') is True
@@ -196,7 +196,7 @@ def test_settle_truth_gold_samples_conditional_grant(
                                   actor='TestBoardIncome', mode='compute'))
     observe_node_anchor(gs, 2, trigger_screen='货币战争-备战', actor=_ACTOR)
     assert gs.gold.value == 40
-    assert gs.effects.free_refresh_balance == 0, (
+    assert gs.free_refresh_left.value is None, (
         '战前陈旧金 40 ≤ 阈值 50:首锚定零条件授予')
 
     # 结算链先于确认点击:结算屏真值金 85 无条件收口(settle_truth)
@@ -205,7 +205,7 @@ def test_settle_truth_gold_samples_conditional_grant(
 
     assert report_node_advance(gs, trigger='settle_confirm') is True
     assert effective_node_ord(gs) == 3
-    assert gs.effects.free_refresh_balance == 3, (
+    assert gs.free_refresh_left.value == 3, (
         '推进时点按结算真值 85 评估:超出 35 → 每 10 金 1 次,封顶 3'
         '(采到陈旧金 40 则为 0——时序锁)')
 
@@ -275,7 +275,7 @@ def test_prep_heavy_receipt_anchors_node(test_context, monkeypatch) -> None:
     _run_observe()
     assert gs.node_ord.value == 1 and gs.node_ord.source == 'observation'
     assert gs.node_hist_ord == 1
-    assert gs.effects.free_refresh_balance == 2, '首锚定当帧发放'
+    assert gs.free_refresh_left.value == 2, '首锚定当帧发放'
 
     # 下一节点读数(1-2)→ advance 补推落账(观察采新即确认态)
     _receipt['r'] = (1, 2)

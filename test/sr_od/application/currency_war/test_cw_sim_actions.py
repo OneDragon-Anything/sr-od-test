@@ -68,17 +68,19 @@ def test_buy_card_routes_through_transfer_function() -> None:
 
 
 def test_refresh_free_then_paid_bookkeeping() -> None:
-    """刷新 = 免费额度先行(实付 0 喂 executed → gold 不写)→ 计数走
-    效果账本免费帧闸;额度耗尽 → 基价 2 扣金 + 付费计数(2026-09-18
-    迁入裁决:计数住效果账本,上报函数单口)。"""
+    """刷新 = 免费额度先行(实付 0 喂 executed → gold 不写,Field 扣减)→
+    计数走效果账本免费帧闸;额度耗尽 → 基价 2 扣金 + 付费计数(2026-09-21
+    Field 化:免费次数住容器字段 ``gs.free_refresh_left``,发放经 write_logic
+    预置、上报函数扣减;付费/全量计数留效果账本)。"""
     gs = _prep_gs(gold=10)
-    gs.effects.grant_free_refreshes(1)
+    gs.write_logic(gs.free_refresh_left, 1, produced_by='test-bridge',
+                   sig=ChannelSig(family='logic_hook', actor='TestSigWriter'))
     outcome = apply_player_action(gs, CwActionRefreshShopParam(), node_tag='p1r2')
     assert outcome is not None and outcome.applied
     assert gs.gold.value == 10, '免费帧零扣金'
     assert gs.effects.refresh_paid == 0, '免费帧禁进付费计数'
     assert gs.effects.refresh_total == 1
-    assert gs.effects.free_refresh_balance == 0
+    assert gs.free_refresh_left.value == 0, '免费腿 Field 扣减,下限 0'
     outcome2 = apply_player_action(gs, CwActionRefreshShopParam(), node_tag='p1r2')
     assert outcome2 is not None and outcome2.applied
     assert gs.gold.value == 8, '第二刷 = 基价 2'

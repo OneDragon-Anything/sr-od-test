@@ -910,38 +910,42 @@ def test_node_tick_and_advance_dedup_guard_expiry() -> None:
 @pytest.mark.parametrize('case', ['burst-once-grant',
                                   'per-node-once-per-node'])
 def test_effect_refresh_balance_grant_forms(case: str) -> None:
-    """B1 账本·免费刷余额授权两形态一锁(参数化并一;2026-09-18 迁入
-    裁决后余额住效果账本,桥 = grant_free_refreshes 统一出口):
-    - burst:登记时点把 payload.free_refresh_burst 一次性累加进余额
-      (固定理财即时段=2 活载体);零额度 payload(免战牌)= no-op。
+    """B1 桥·免费刷发放两形态一锁(参数化并一;2026-09-21 Field 化:免费
+    次数升格容器字段 ``gs.free_refresh_left``,两桥 write_logic 同格登记,
+    None 基 = 0 起算):
+    - burst:登记时点把 payload.free_refresh_burst 一次性累加进 Field
+      (固定理财即时段=2 活载体);零额度 payload(免战牌)= no-op 零行。
       「一次性」由调用点唯一性承载(登记挂点,接线锁辖),函数本体不加
       去重;
-    - per_node:节点边界一次,把在场条目声明的每节点额度累加(双手狸
-      free_refresh_on_node_enter=2 活载体);同节点重复挂点采样不双计
-      (闸 = advance_node advanced 位)。"""
+    - per_node:节点边界一次,把在场条目声明的每节点额度累加进 Field
+      (双手狸 free_refresh_on_node_enter=2 活载体);同节点重复挂点采样
+      不双计(闸 = advance_node advanced 位)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if case == 'burst-once-grant':
+        assert gs.free_refresh_left.value is None, '未发放 = 未写(None 基)'
         apply_effect_burst_grant(gs, STRATEGY_EFFECTS['固定理财'],
                                  frame='p1-r2')
-        assert gs.effects.free_refresh_balance == 2
+        assert gs.free_refresh_left.value == 2, 'None 基 = 0 起算'
+        assert gs.free_refresh_left.source == 'logic'
+        assert gs.free_refresh_left.evidence == 'effect_burst@p1-r2'
         apply_effect_burst_grant(gs, STRATEGY_EFFECTS['免战牌'])
-        assert gs.effects.free_refresh_balance == 2, '零额度 = no-op'
+        assert gs.free_refresh_left.value == 2, '零额度 = no-op 零行'
         return
     gs.effects.register_strategy(STRATEGY_EFFECTS['双手狸开键盘！'],
                                  acquired_t=5)
     adv, _ex = gs.effects.advance_node(6)
     if adv:
         grant_effect_node_refresh_balance(gs, frame='p1-r6')
-    assert gs.effects.free_refresh_balance == 2
+    assert gs.free_refresh_left.value == 2, 'None 基 = 0 起算'
     # 同节点重复采样(挂点每备战环一次):去重位关闭累加
     adv2, _ex2 = gs.effects.advance_node(6)
     if adv2:
         grant_effect_node_refresh_balance(gs, frame='p1-r6')
-    assert gs.effects.free_refresh_balance == 2, '同节点禁双计'
+    assert gs.free_refresh_left.value == 2, '同节点禁双计'
     adv3, _ex3 = gs.effects.advance_node(7)
     if adv3:
         grant_effect_node_refresh_balance(gs, frame='p1-r7')
-    assert gs.effects.free_refresh_balance == 4, '下一节点再 +2'
+    assert gs.free_refresh_left.value == 4, '下一节点再 +2'
 
 
 def test_gas_station_pick_node_grant_matches_official_text() -> None:
@@ -955,18 +959,18 @@ def test_gas_station_pick_node_grant_matches_official_text() -> None:
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.effects.advance_node(2)   # 本节点边界已在拿卡前推进(拿卡晚于边界)
     grant_effect_node_refresh_balance(gs, frame='p1-r2')
-    assert gs.effects.free_refresh_balance == 0, '效果在册前边界零发放'
+    assert gs.free_refresh_left.value is None, '效果在册前边界零发放(零行)'
     apply_effect_burst_grant(gs, STRATEGY_EFFECTS['加油站'], frame='p1-r2')
     gs.effects.register_strategy(STRATEGY_EFFECTS['加油站'], acquired_t=2)
-    assert gs.effects.free_refresh_balance == 1, '拿卡当节点「现在」腿即发'
+    assert gs.free_refresh_left.value == 1, '拿卡当节点「现在」腿即发'
     adv_same, _ex = gs.effects.advance_node(2)
     if adv_same:
         grant_effect_node_refresh_balance(gs, frame='p1-r2')
-    assert gs.effects.free_refresh_balance == 1, '拿卡节点边界去重不补发'
+    assert gs.free_refresh_left.value == 1, '拿卡节点边界去重不补发'
     adv_next, _ex2 = gs.effects.advance_node(3)
     assert adv_next is True
     grant_effect_node_refresh_balance(gs, frame='p1-r3')
-    assert gs.effects.free_refresh_balance == 2, '下一节点「每次进入新节点」腿 +1'
+    assert gs.free_refresh_left.value == 2, '下一节点「每次进入新节点」腿 +1'
 
 
 def test_per_node_family_without_now_clause_no_pick_grant() -> None:
@@ -987,11 +991,11 @@ def test_per_node_family_without_now_clause_no_pick_grant() -> None:
     gs.effects.register_strategy(STRATEGY_EFFECTS['双手狸开键盘！'],
                                  acquired_t=2)
     apply_effect_burst_grant(gs, STRATEGY_EFFECTS['双手狸开键盘！'])
-    assert gs.effects.free_refresh_balance == 0, '无立即腿 = 登记期零发放'
+    assert gs.free_refresh_left.value is None, '无立即腿 = 登记期零发放(零行)'
     adv_next, _ex = gs.effects.advance_node(3)
     assert adv_next is True
     grant_effect_node_refresh_balance(gs, frame='p1-r3')
-    assert gs.effects.free_refresh_balance == 2, '首发放 = 下一节点 +2'
+    assert gs.free_refresh_left.value == 2, '首发放 = 下一节点 +2'
 
 
 def test_capacity_projection_activates_and_recovers() -> None:

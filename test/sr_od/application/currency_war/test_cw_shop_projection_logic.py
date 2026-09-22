@@ -288,25 +288,35 @@ class TestM1DirectLock:
         assert gs2.gold.value == 26, 'gold 域独立于推进对照写'
         assert gs2.write_seq > seq0, '跳写对 ≠ 整动作零写(gold 仍落)'
 
-    def test_refresh_paid_deducts_gold(self):
-        """付费刷新:gold −刷新费;payload 不写(刷后牌面等续段重观察)。"""
+    def test_refresh_paid_deducts_gold_and_samples_rand_payload(self):
+        """付费刷新:gold −刷新费;payload = 随机态采样(2026-09-21 Field
+        化 supersession:2026-09-18「终结跳写 payload 不写」的 payload 半边
+        收窄为 write_logic_rand 随机态——观察覆盖差异预期内,采样即猜测)。"""
         gs = _gs_of(gold=30, shop=[_card('希儿')])
         _report_action(
             gs, CwActionRefreshShopParam(cost=2), ShopActionExecuted(refresh_paid=2))
         assert gs.gold.value == 28, 'gold: 期望 30 −刷新费 2'
-        assert _content_of(gs) == [(0, '希儿', 1, 3)], \
-            'shop payload: 刷新不写牌面(期望原 5 槽保持:槽1 希儿)'
+        assert gs.shop.source == 'logic_rand', \
+            'shop payload: 随机态腿采样写(write_logic_rand 专用通道)'
+        assert gs.shop.evidence == 'refresh_random_sample', '随机态写端注记'
+        assert len(gs.shop.value.cards) == 5, '采样 payload = 定长 5 槽'
         assert _bench_slots(gs) == [], 'bench: 刷新腿零写(保持全空)'
         assert gs.xp.value is None, \
             'xp: 刷新腿零写(未读域保持种子初值 None)'
 
     def test_refresh_free_gold_unwritten(self):
-        """免费帧(paid=0):gold 不写(fields.md §3.3.4 免费帧不写语义)。"""
+        """免费帧(paid=0):gold 不写(fields.md §3.3.4 免费帧不写语义;
+        free 显式喂 True = sim 形态)。Field 扣减语义锁 =
+        test_cw_shop_refresh_field。"""
         gs = _gs_of(gold=30, shop=[_card('希儿')])
+        gs.write_logic(gs.free_refresh_left, 2, produced_by='test-bridge',
+                       sig=ChannelSig(family='logic_hook', actor='cw4_seed'))
         report_action_refresh_shop_param(gs, CwActionRefreshShopParam(cost=2),
                                          _SIG,
-                                         executed=ShopActionExecuted(refresh_paid=0))
+                                         executed=ShopActionExecuted(refresh_paid=0),
+                                         free=True)
         assert gs.gold.value == 30
+        assert gs.effects.refresh_paid == 0, '免费帧禁进付费计数'
 
     def test_close_shop_leaves_screen(self):
         """CwActionCloseShopParam:结构离屏(shop payload → None,left_screen)。"""

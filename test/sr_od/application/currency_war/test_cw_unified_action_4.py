@@ -553,40 +553,10 @@ def test_refresh_shop_op_persists_evidence_without_comparison(monkeypatch):
     assert defect_calls == []
 
 
-def test_entry_reconcile_free_leg_fires_on_unchanged_gold(monkeypatch):
-    """入口观察对账点·免费腿(三值单一源消费):金未扣 ∧ 牌面已变 →
-    存证调用(存证体桩化,零真实 IO)。名集未变分支 = 零存证(比对
-    单一源的 False 臂)。"""
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_buy_cards as buy_mod,
-    )
-    free_calls: list = []
-    monkeypatch.setattr(buy_mod, '_record_free_refresh_proc',
-                        lambda *a, **k: free_calls.append((a, k)))
-    ledger = ShopVisitLedger()
-    ledger.refresh_pre_gold = 48
-    ledger.refresh_pre_names = ['旧卡A']
-    ledger.refresh_pending_reconcile = True
-    entry = SimpleNamespace(
-        gold=48,   # 金未扣
-        shop=[SimpleNamespace(kind='content',
-                              card=SimpleNamespace(name='新卡X'))],
-        plane=1, round_num=3)
-    buy_mod._reconcile_refresh_pending(SimpleNamespace(), ledger, entry)
-    assert len(free_calls) == 1
-    kwargs = free_calls[0][1]
-    assert kwargs['pre_gold'] == 48 and kwargs['gold_after'] == 48
-    assert kwargs['pre_names'] == ['旧卡A']
-    assert kwargs['post_names'] == ['新卡X']
-    # 名集未变(牌面没动)→ 零存证
-    free_calls.clear()
-    entry2 = SimpleNamespace(
-        gold=48,
-        shop=[SimpleNamespace(kind='content',
-                              card=SimpleNamespace(name='旧卡A'))],
-        plane=1, round_num=3)
-    buy_mod._reconcile_refresh_pending(SimpleNamespace(), ledger, entry2)
-    assert free_calls == []
+# (原 test_entry_reconcile_free_leg_fires_on_unchanged_gold 删:宿主
+#  _reconcile_refresh_pending/_record_free_refresh_proc 已随 2026-09-21
+#  Field 化退役——免费刷新事实可见性改由 free_refresh_left Field 锚定
+#  失配安灯承接,锁与所辖面同批退役,正本 = test_cw_shop_refresh_field。)
 
 
 def test_invest_env_refresh_no_effect_reconcile_records_defect(monkeypatch):

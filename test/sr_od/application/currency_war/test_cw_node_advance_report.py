@@ -41,7 +41,7 @@ def test_gate_blocks_fresh_container() -> None:
     assert report_node_advance(gs, trigger='settle_confirm') is False
     assert gs.node_ord.value is None, '零推进'
     assert gs.node_hist_ord is None
-    assert gs.effects.free_refresh_balance == 0, '门挡 = 不触效果尾段'
+    assert gs.free_refresh_left.value is None, '门挡 = 不触效果尾段(零 Field 行)'
 
 
 def test_first_anchor_establishes_and_grants() -> None:
@@ -52,7 +52,7 @@ def test_first_anchor_establishes_and_grants() -> None:
     assert token == 'first_anchor'
     assert gs.node_ord.value == 1 and gs.node_ord.source == 'observation'
     assert gs.node_hist_ord == 1
-    assert gs.effects.free_refresh_balance == 2, '首锚定即节点进入,尾段发放'
+    assert gs.free_refresh_left.value == 2, '首锚定即节点进入,尾段发放'
 
 
 def test_gate_blocks_unconfirmed_logic() -> None:
@@ -62,10 +62,10 @@ def test_gate_blocks_unconfirmed_logic() -> None:
     observe_node_anchor(gs, 2, trigger_screen='货币战争-备战', actor=_ACTOR)
     assert report_node_advance(gs, trigger='settle_confirm') is True
     assert gs.node_ord.value == 3 and gs.node_ord.source == 'logic'
-    balance_after_first = gs.effects.free_refresh_balance
+    balance_after_first = gs.free_refresh_left.value
     assert report_node_advance(gs, trigger='settle_confirm') is False
     assert gs.node_ord.value == 3, '重复上报零推进'
-    assert gs.effects.free_refresh_balance == balance_after_first, '门挡不触尾段'
+    assert gs.free_refresh_left.value == balance_after_first, '门挡不触尾段'
 
 
 def test_gate_passes_advances_exactly_one() -> None:
@@ -108,9 +108,9 @@ def test_repair_advance_ticks_ledger() -> None:
     gs = _gs_with_double_pair()
     observe_node_anchor(gs, 2, trigger_screen='货币战争-备战', actor=_ACTOR)
     report_node_advance(gs, trigger='settle_confirm')   # → 3
-    assert gs.effects.free_refresh_balance == 4   # 节点 2 + 节点 3 各 +2
+    assert gs.free_refresh_left.value == 4   # 节点 2 + 节点 3 各 +2
     assert observe_node_anchor(gs, 5, trigger_screen='货币战争-备战',
                                actor=_ACTOR) == 'advance'
     assert effective_node_ord(gs) == 5
-    assert gs.effects.free_refresh_balance == 6, \
+    assert gs.free_refresh_left.value == 6, \
         '补推节点 5 当帧拿到发放(漏 tick 即永久少一档)'

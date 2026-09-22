@@ -105,8 +105,8 @@ def test_sell_all_silent_override_unanchored_mismatch_after_anchor() -> None:
 
 def test_upgrade_all_and_other_bridges_unchanged() -> None:
     """回归臂:全员晋升(UPGRADE_ALL)零容器写不变(替换面随机,报告作
-    负写端留证);非板面重写条目过桥零动作;burst 桥写端(免费刷新余额
-    一次累加,效果账本侧)行为不变、零 Field 行。"""
+    负写端留证);非板面重写条目过桥零动作;burst 桥(免费刷新剩余次数,
+    2026-09-21 Field 化后 = 容器字段 write_logic)正常发放。"""
     gs = _seeded_gs()
     seq_before = gs.write_seq
     report = apply_board_rewrite(gs, STRATEGY_EFFECTS['全员晋升'])
@@ -119,7 +119,10 @@ def test_upgrade_all_and_other_bridges_unchanged() -> None:
     # 非板面重写条目 → None 零动作(零 Field 写)
     assert apply_board_rewrite(gs, STRATEGY_EFFECTS['固定理财']) is None
     assert gs.write_seq == seq_before
-    # burst 桥:免费刷新余额一次累加(效果账本侧,零容器 Field 行)
+    # burst 桥:免费刷新剩余次数 Field 登记(2026-09-21 Field 化:效果
+    # 账本 int 升格容器字段,桥 write_logic 落一行 Field 写)
+    seq_before_burst = gs.write_seq
     apply_effect_burst_grant(gs, STRATEGY_EFFECTS['固定理财'])
-    assert gs.effects.free_refresh_balance == 2
-    assert gs.write_seq == seq_before, 'burst 桥零容器 Field 行'
+    assert gs.free_refresh_left.value == 2, 'None 基 = 0 起算'
+    assert gs.free_refresh_left.source == 'logic'
+    assert gs.write_seq > seq_before_burst, 'burst 桥落 Field 行'

@@ -549,12 +549,12 @@ def test_gain_invest_strategy_session_ledger_leg() -> None:
     assert gs.active_strategies.value == ['固定理财']
     assert [e.spec.name for e in gs.effects.by_source(SOURCE_STRATEGY)] \
         == ['固定理财'], 'register_strategy 入册'
-    assert gs.effects.free_refresh_balance == 2, 'burst 桥(free_refresh_burst)'
+    assert gs.free_refresh_left.value == 2, 'burst 桥(free_refresh_burst)'
     gs2 = _make_gs(bench=[], equips=[])
     gain_invest_strategy(gs2, None, '固定理财', rand=False, sig=_lsig())
     assert gs2.active_strategies.value == ['固定理财'], '注册照常'
     assert gs2.effects.by_source(SOURCE_STRATEGY) == [], 'session=None 跳过'
-    assert gs2.effects.free_refresh_balance == 0, 'burst 零累加'
+    assert gs2.free_refresh_left.value is None, 'burst 零累加(零 Field 行)'
 
 
 def test_on_strategy_gained_unregistered_quiet() -> None:
