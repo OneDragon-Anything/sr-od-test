@@ -223,8 +223,10 @@ def _case_supply_node(m):
 
 
 def _case_invest_env(m):
-    return (m.CwScreenInvestEnvObs(hit=True, options=[('轮岗', 400)]),
-            {'invest_env_opts': (['轮岗'], 'logic')})
+    return (m.CwScreenInvestEnvObs(hit=True, options=[('轮岗', 400)],
+                                   refresh=(2, 772, 983)),
+            {'invest_env_opts': (['轮岗'], 'logic'),
+             'env_refresh_left': (2, 'logic')})
 
 
 def _case_invest_strategy(m):
@@ -324,8 +326,10 @@ _EMPTY_OBS_CASES = {
     'partner': (lambda m: m.CwScreenPartnerObs(), {'partner_opts': None}),
     'bookcard': (lambda m: m.CwScreenBookcardObs(), {'star_tome_opts': None}),
     'supply_node': (lambda m: m.CwScreenSupplyNodeObs(), {'supply': None}),
-    'invest_env': (lambda m: m.CwScreenInvestEnvObs(),
-                   {'invest_env_opts': None}),
+    # 摄入序同 encounter 行:options 空 = 整函数早退不写含 left——left
+    # 读得(3)也不入容器(观察写端缺口补测随行登记)。
+    'invest_env': (lambda m: m.CwScreenInvestEnvObs(refresh=(3, 772, 983)),
+                   {'invest_env_opts': None, 'env_refresh_left': None}),
     'invest_strategy': (lambda m: m.CwScreenInvestStrategyObs(),
                         {'invest_strategy_opts': None}),
     'equip_pick': (lambda m: m.CwScreenEquipPickObs(),

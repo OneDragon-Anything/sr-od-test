@@ -476,6 +476,10 @@ def test_invest_portal_landing_no_card_pollution(
     rider,锁面归 test_cw_gain_chain.py rider 组);禁入 active_strategies
     (防 portal 卡污染持卡面)。"""
     gs = _make_gs(bench=[('希儿', 1)], equips=['幸运星'], gold=30)
+    # 按 idx 取名契约(op-layer.md §1.1 观察标准化门):env 上报自容器
+    # invest_env_opts 取标准名——播种容器承载(名字 = 原 norm_name 语义)。
+    gs.write_logic(gs.invest_env_opts, ['彩虹时代', '欢愉契约'],
+                   produced_by='test', sig=_lsig())
     param = CwActionPickInvestEnvParam(idx=1, norm_name='欢愉契约')
     out = report_action_pick_invest_env_param(
         gs, param, _lsig('CwActionPickInvestOp'))
@@ -500,6 +504,9 @@ def test_invest_portal_env_gifts_full_access(
     此前仅欢愉契约有容器写腿,现契约类 chars_immediate 全部经链生效;
     表外环境安静不写)。公司契约 = 翡翠/砂金 逐个 1★ 入席递归。"""
     gs = _make_gs(bench=[], equips=[])
+    # 按 idx 取名契约(op-layer.md §1.1):上报自容器取标准名,播种承载。
+    gs.write_logic(gs.invest_env_opts, ['公司契约'],
+                   produced_by='test', sig=_lsig())
     out = report_action_pick_invest_env_param(
         gs, CwActionPickInvestEnvParam(idx=0, norm_name='公司契约'),
         _lsig('CwActionPickInvestOp'))
@@ -529,6 +536,9 @@ def test_invest_unregistered_card_unchanged(
     assert gs.write_seq == seq_before + 1, '恰一行遥测(持卡面),零效果腿'
     # portal 表外环境 = 选择事实写 + 零效果。
     gs2 = _make_gs(bench=[('希儿', 1)], equips=['幸运星'])
+    # 按 idx 取名契约(op-layer.md §1.1):上报自容器取标准名,播种承载。
+    gs2.write_logic(gs2.invest_env_opts, ['随便一个未收录环境'],
+                    produced_by='test', sig=_lsig())
     seq2_before = gs2.write_seq
     out2 = report_action_pick_invest_env_param(
         gs2, CwActionPickInvestEnvParam(idx=0, norm_name='随便一个未收录环境'),

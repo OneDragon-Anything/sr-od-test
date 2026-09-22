@@ -69,6 +69,46 @@ def test_report_function_accepts_param_and_sig(t, _isolate_defect_buffer):
             kwargs[f.name] = ShopCard(x=0) if f.name == 'card' else (
                 0 if f.type == 'int' else '')
     param = t(**kwargs)
+    if t.__name__ == 'CwActionPickInvestEnvParam':
+        # 按 idx 取名契约(op-layer.md §1.1 观察标准化门):env 上报从容器
+        # invest_env_opts 取标准名直传链,容器缺读 = 响亮失败——冒烟播种
+        # 容器承载该路径(裸容器直调会被正当拒绝)。播种名 = 环境注册表
+        # 真名(含半角冒号,兼覆盖链内归一幂等路径;ENV_GIFTS 仅条件腿,
+        # 效果面安静零写)。
+        gs.write_logic(gs.invest_env_opts, ['特邀专家:银狼'],
+                       produced_by='test', sig=sig)
     outcome = fn(gs, param, sig)
     assert outcome is not None
     assert isinstance(outcome.applied, bool)
+
+
+def test_report_pick_invest_env_container_miss_loud_failure():
+    """env 上报「按 idx 取名」契约拒绝腿(op-layer.md §1.1;即时上报契约:
+    选卡链发生时观察必然已完成,容器缺读/idx 越界 = 代码 bug = 响亮失败,
+    异常上抛禁吞)。红 = 静默零写 noop 回潮 / 非法索引穿透。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        ChannelSig,
+        GameState,
+    )
+    from sr_od.application.currency_war.kernel.cw_vocab import (
+        CwActionPickInvestEnvParam,
+    )
+
+    sig = ChannelSig(family='logic_action', actor='cw-report-lock',
+                     mode='compute')
+    fn = rpt.report_action_pick_invest_env_param
+    # ① 容器缺读(None)
+    with pytest.raises(ValueError):
+        fn(GameState(schema_version=1), CwActionPickInvestEnvParam(idx=0), sig)
+    # ② 容器空(读得空 = 同判缺读)
+    gs_empty = GameState(schema_version=1)
+    gs_empty.write_logic(gs_empty.invest_env_opts, [],
+                         produced_by='test', sig=sig)
+    with pytest.raises(ValueError):
+        fn(gs_empty, CwActionPickInvestEnvParam(idx=0), sig)
+    # ③ idx 越界(容器非空但 idx 出界)
+    gs_seeded = GameState(schema_version=1)
+    gs_seeded.write_logic(gs_seeded.invest_env_opts, ['特邀专家:银狼'],
+                          produced_by='test', sig=sig)
+    with pytest.raises(ValueError):
+        fn(gs_seeded, CwActionPickInvestEnvParam(idx=3), sig)

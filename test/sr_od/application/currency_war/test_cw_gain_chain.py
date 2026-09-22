@@ -458,6 +458,21 @@ def test_env_gift_advisor_split_and_quiet(rows_sink: _RowSink) -> None:
     assert rows_sink.kinds() == [DEFECT_ADVISOR_DECL], '表外零留证行'
 
 
+def test_gain_invest_env_invalid_payload_zero_write(rows_sink: _RowSink) -> None:
+    """无效载荷拒绝(env 支步 0,与策略支同形锁同构,gain-chain.md §2.1
+    步 0):归一后空/'?' = 零写 + 缺陷留证(active_env 值不变;无效输入
+    拒绝,非防重复保护)。"""
+    gs = _make_gs(bench=[], equips=[])
+    seq_before = gs.write_seq
+    for bad in ('', '?'):
+        out = gain_invest_env(gs, None, bad, rand=False, sig=_lsig())
+        assert out.placed is False and out.detail == 'invalid_payload'
+    assert gs.active_env.value in (None, ''), '零写:active_env 值不变'
+    assert gs.write_seq == seq_before, '零写'
+    assert rows_sink.kinds() == [PICK_INVEST_INVALID_PAYLOAD,
+                                 PICK_INVEST_INVALID_PAYLOAD]
+
+
 # ============================================================ 装备获得(§2.1/§2.3-3)
 
 

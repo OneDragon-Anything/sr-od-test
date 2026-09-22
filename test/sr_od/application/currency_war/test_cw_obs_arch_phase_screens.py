@@ -192,7 +192,7 @@ def test_reentry_arbitration_flag_gate_combination(test_context,
 
 def _make_env(test_context, monkeypatch: pytest.MonkeyPatch, *,
               in_screen: bool, opts: list | None = None, pick_idx: int = 0,
-              events: list | None = None):
+              events: list | None = None, counts: list | None = None):
     """投资环境真类装配(生产构造走 __init__ = 适配器位/注册表在位)。
 
     桩面 = 画面门/截屏/候选读/策略器/计数读 + 派发动作 op 桩(pick-op-unify
@@ -200,6 +200,8 @@ def _make_env(test_context, monkeypatch: pytest.MonkeyPatch, *,
     (param, env) 断言决策半产物与写端时序;机械链行为锁 =
     test_cw_unified_action_4 投资 op 锁)。派发时点快照 ``active_env``
     现值(写时点对拍载体 = 点卡/派发时点应零写,写发生在落地相获得链)。
+    ``counts`` = 计数读桩回值(缺省 [] = 读缺,obs.refresh=None → report
+    跳写 env_refresh_left;走真计数用例传 [(count, x, y), ...])。
     (台账写点②桩面已随该方法退役删除——链观察落地批:环境改型由返回
     备战后的入口观察链读承接,op 层零自读。)"""
     from sr_od.application.currency_war.operations.cw_screen import (
@@ -223,7 +225,7 @@ def _make_env(test_context, monkeypatch: pytest.MonkeyPatch, *,
     monkeypatch.setattr(op, '_read_options',
                         lambda screen: list(opts or []))
     monkeypatch.setattr(iem, 'read_invest_refresh_counts',
-                        lambda ctx, scr, kind: [])
+                        lambda ctx, scr, kind: list(counts or []))
 
     dispatches: list = []
 
@@ -308,6 +310,154 @@ def test_invest_env_active_env_written_at_dispatch(test_context,
         f'选卡+确认链恰一次派发,param 携真实 idx:{dispatches!r}')
     assert rs.is_success and '已派发' in (rs.status or ''), (
         f'派发后 round_success 终结交回:{rs!r}')
+
+
+def test_invest_env_observe_standardization_gate(test_context,
+                                                 monkeypatch) -> None:
+    """观察标准化门锁(op-layer.md §1.1;观察层在观察时把读数转换成标准
+    注册数据,容器值域 = 标准注册名):
+    - 可转换名(全角冒号形变走归一精确命中;仅 LCS 可命中的单字误读形变)
+      → 容器与 obs 存标准名(含「彩虹吋代」3/4 恰达阈值命中 = 拒判不过严
+      回归锚);
+    - 候选含转换失败名(乱串,注册表零重叠)→ 观察 round_fail,零写零
+      上报(obs 不装载);
+    - 两候选命中同一注册名(选项互斥屏重复名 = 必有误读)→ round_fail;
+    - LCS 近分歧义(「击口概念股」对击破/追击概念股同分 0.8,注册表内
+      歧义不可分辨)→ round_fail(防静默错标准化)。
+    红 = 观察门漏转(脏值入容器)/ 转换失败带病上报 / 分差拒判缺失或过严。"""
+    # ① 可转换名 → 标准名落容器('彩虹吋代' 仅 LCS 可命中:归一后不在注册
+    # 表,LCS 3/4 恰达阈值且次高分明显低 → 命中;全角冒号走归一精确命中)
+    opts = [('特邀专家：银狼', 460), ('彩虹吋代', 960), ('头彩', 1460)]
+    op, _m, session, _disp = _make_env(test_context, monkeypatch, in_screen=True,
+                                       opts=opts)
+    rs = _run_node(test_context, op, op.observe)
+    assert rs.is_success, f'可转换候选观察 success:{rs!r}'
+    assert game_state_of(session).invest_env_opts.value == [
+        '特邀专家:银狼', '彩虹时代', '头彩'], (
+        f'容器存标准注册名(值域收敛):'
+        f'{game_state_of(session).invest_env_opts.value!r}')
+    assert op._obs is not None and op._obs.options == [
+        ('特邀专家:银狼', 460), ('彩虹时代', 960), ('头彩', 1460)], (
+        'obs 携标准名(x 坐标原样保留)')
+    # ② 转换失败名(乱串)→ round_fail 零写零上报
+    op_bad, _m2, session2, _d2 = _make_env(
+        test_context, monkeypatch, in_screen=True,
+        opts=[('骉羴犇', 460), ('头彩', 960)])
+    rs_bad = _run_node(test_context, op_bad, op_bad.observe)
+    assert not rs_bad.is_success and '标准化失败' in (rs_bad.status or ''), (
+        f'转换失败观察早退:{rs_bad!r}')
+    assert op_bad._obs is None, '失败路径 obs 不装载(零上报)'
+    assert game_state_of(session2).invest_env_opts.value in (None, []), (
+        '零写容器')
+    # ③ 两候选命中同一注册名 → round_fail
+    op_dup, _m3, session3, _d3 = _make_env(
+        test_context, monkeypatch, in_screen=True,
+        opts=[('彩虹时代', 460), ('彩虹吋代', 960)])
+    rs_dup = _run_node(test_context, op_dup, op_dup.observe)
+    assert not rs_dup.is_success and '标准化失败' in (rs_dup.status or ''), (
+        f'重复命中判失败:{rs_dup!r}')
+    assert game_state_of(session3).invest_env_opts.value in (None, []), (
+        '重复命中零写容器')
+    # ④ LCS 近分歧义(实机探针:「击口概念股」对击破/追击概念股同分
+    # 0.8 → 注册表内歧义不可分辨,禁静默错标准化)
+    op_amb, _m4, session4, _d4 = _make_env(
+        test_context, monkeypatch, in_screen=True,
+        opts=[('击口概念股', 460), ('头彩', 960)])
+    rs_amb = _run_node(test_context, op_amb, op_amb.observe)
+    assert not rs_amb.is_success and '标准化失败' in (rs_amb.status or ''), (
+        f'近分歧义拒判:{rs_amb!r}')
+    assert game_state_of(session4).invest_env_opts.value in (None, []), (
+        '歧义零写容器')
+
+
+def test_invest_env_refresh_left_observed_write(test_context,
+                                                monkeypatch) -> None:
+    """env_refresh_left 观察写端双腿锁(观察写端缺口补测):计数读得
+    → report 落 ``env_refresh_left``(值 = 桩读数首条);读缺(缺省桩恒
+    [])→ 跳写(缺省行为不变)。红 = 观察写端断流。"""
+    op_hit, _m1, session1, _d1 = _make_env(
+        test_context, monkeypatch, in_screen=True,
+        opts=[('追击概念股', 460), ('彩虹时代', 960), ('头彩', 1460)],
+        counts=[(2, 772, 983)])
+    rs1 = _run_node(test_context, op_hit, op_hit.observe)
+    assert rs1.is_success, f'前置:观察 success:{rs1!r}'
+    assert game_state_of(session1).env_refresh_left.value == 2, (
+        '计数读得 → env_refresh_left 值写入(读数首条)')
+    op_miss, _m2, session2, _d2 = _make_env(
+        test_context, monkeypatch, in_screen=True,
+        opts=[('追击概念股', 460), ('彩虹时代', 960), ('头彩', 1460)])
+    rs2 = _run_node(test_context, op_miss, op_miss.observe)
+    assert rs2.is_success, f'前置:观察 success:{rs2!r}'
+    assert game_state_of(session2).env_refresh_left.value is None, (
+        '读缺 → 跳写')
+
+
+def test_invest_env_empty_opts_fail_not_blindfire(test_context,
+                                                  monkeypatch) -> None:
+    """空候选 = round_fail 显式失败(零盲发;op-layer.md §1.1 + action_ops.md
+    §1 增补 2「没有选到就是代码 bug」;策略屏同形锁
+    test_invest_strategy_empty_opts_fail_not_blindfire 同构)。"""
+    op = _phase_mod('cw_screen_invest_env').CwScreenInvestEnv(test_context)
+    session = StrategySession()
+    match = SimpleNamespace(strategy=SimpleNamespace(), session=session)
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        game_state_of as _gso_match,
+    )
+    match.gs = _gso_match(match.session)
+    monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
+    monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
+    from sr_od.application.currency_war.kernel.cw_screen_report.invest_env import (
+        CwScreenInvestEnvObs as _ObsT,
+    )
+    # 装载「锚在但候选读空」的 obs(observe 成功形态;读缺发生在读链半)
+    op._obs = _ObsT(hit=True, options=[])
+    rs_empty = _run_node(test_context, op, op.act)
+    assert not rs_empty.is_success and '读缺' in (rs_empty.status or ''), (
+        f'空候选显式失败(零盲发):{rs_empty!r}')
+    assert game_state_of(session).active_env.value in (None, ''), (
+        '零盲发:无候选不写选择事实')
+
+
+def test_invest_env_no_match_zero_decision_handback(test_context,
+                                                    monkeypatch) -> None:
+    """局外无 match = 零决策零点击 round_success 终结交回(match=None +
+    非空候选 obs,区分空候选早退出口;遭遇屏在册先例同款,策略屏孪生锁
+    test_invest_strategy_no_match_zero_decision_handback 同构;op-layer.md
+    §1.1:画面 op 不产决策、不支持局外单独调用,不设兜底决策路径)。
+    红 = 局外 kernel 直调决策回潮 / 零决策出口误改点击派发。"""
+    iem = _phase_mod('cw_screen_invest_env')
+    op = iem.CwScreenInvestEnv(test_context)
+    monkeypatch.setattr(test_context, 'cw_match', None, raising=False)
+    monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
+    from sr_od.application.currency_war.kernel.cw_screen_report.invest_env import (
+        CwScreenInvestEnvObs as _ObsT,
+    )
+    # 非空候选 obs(区分于空候选早退:本锁辖 match 判空出口)
+    op._obs = _ObsT(hit=True,
+                    options=[('追击概念股', 460), ('彩虹时代', 960),
+                             ('头彩', 1460)])
+    clicks: list = []
+    monkeypatch.setattr(iem, 'safe_click',
+                        lambda op_, pt, **k: clicks.append(pt))
+    dispatches: list = []
+
+    class _SpyPickOp:
+        def __init__(self, param, env) -> None:
+            self.param = param
+            self.env = env
+
+        def execute(self) -> bool:
+            dispatches.append(self)
+            return True
+
+    import sr_od.application.currency_war.operations.cw_op.cw_action_registry as _reg
+    monkeypatch.setattr(_reg, 'action_op_for',
+                        lambda act, ctx, env: _SpyPickOp(act, env))
+    rs = _run_node(test_context, op, op.act)
+    assert rs.is_success and '零决策零点击' in (rs.status or ''), (
+        f'局外零决策零点击终结交回:{rs!r}')
+    assert clicks == [], f'零点击:{clicks!r}'
+    assert dispatches == [], f'零派发零上报:{dispatches!r}'
 
 
 # ==================== 投资策略:分流双向 + 发射型接线 + 对拍 ====================
