@@ -32,6 +32,7 @@ import pytest
 import sr_od.application.currency_war.kernel.cw_game_state as gs_mod
 import sr_od.application.currency_war.kernel.cw_vocab as vocab_mod
 import sr_od.application.currency_war.operations.cw_screen.cw_screen_shop as buy_mod
+from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war.telemetry import state as tel_state
 
 
@@ -135,3 +136,124 @@ def test_defense_path_rebuilds_fresh_per_invocation(
     assert first is not None and second is not None
     assert second is not first
     assert second.session is not first.session
+
+
+# ============================================================
+# A 层段首锚定门锁(设计稿 buy_cards §2.2-A:牌位点表全 5 槽判据,
+# 与升级钮/刷新钮缺失检查同款纪律;定长 5 槽结构无合法缺槽形态)
+# ============================================================
+
+
+def _anchor_host(monkeypatch: pytest.MonkeyPatch, *, click_pts: list,
+                 area_centers: dict | None = None) -> SimpleNamespace:
+    """A 层段首锚定门宿主:点表可参(静默缩短形态可演),area_center
+    按 area 名替身(缺省恒缺);其余沿 _defense_host(防御建核触发,
+    ctx.cw_match 缺席)。"""
+    centers = dict(area_centers or {})
+
+    def _area_center(_ctx, name, *a, **k):
+        return centers.get(name)
+
+    monkeypatch.setattr(
+        buy_mod, 'CurrencyWarConfig',
+        lambda idx: SimpleNamespace(strategy_id='mandate_v1',
+                                    strategy_seed=None))
+    monkeypatch.setattr(buy_mod, 'shop_card_click_points',
+                        lambda ctx: click_pts)
+    monkeypatch.setattr(buy_mod, 'area_center', _area_center)
+
+    class _Ctl:
+        """截图/停车替身(op 框架经 ctx.controller 触达;先例 =
+        test_cw_shop_two_node_form _Ctl)。"""
+
+        def screenshot(self, *a, **k):
+            return (0.0, b'')
+
+        def park_cursor(self, *a, **k) -> None:
+            pass
+
+    return SimpleNamespace(
+        current_instance_idx=1, cw_match=None, controller=_Ctl(),
+        cw_selected_difficulty=None,
+        currency_war_strategy_plugin_dirs=[])
+
+
+def test_segment_head_short_card_points_fail_with_area_names(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """A 层·牌位臂:点表静默缩短(缺 商店牌-2/-5)→ 访问不开始
+    round_fail,逐槽复查收缺失 area 名——部分缺失按位取点 = 错槽,
+    禁兜底(判据 = 全 5 槽在,非「非空」)。"""
+    centers = {f'商店牌-{i}': Point(50, 50) for i in (1, 3, 4)}
+    rr = _run_observe_node(_anchor_host(
+        monkeypatch, click_pts=[Point(50, 50)] * 3, area_centers=centers))
+
+    assert rr is not None and rr.is_success is False, \
+        '全 5 槽判据:缺失即访问不开始'
+    status = rr.status or ''
+    assert '商店牌-2' in status and '商店牌-5' in status, \
+        '逐槽复查缺失 area 名进 fail 信息'
+    assert 'area 缺失' in status, '形态与升级钮/刷新钮行一致'
+
+
+def test_segment_head_level_button_missing_fails(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """A 层·升级钮臂:全 5 槽在而升级钮缺失 → round_fail 带钮名
+    (存量纪律回归锚)。"""
+    centers = {f'商店牌-{i}': Point(50, 50) for i in range(1, 6)}
+    rr = _run_observe_node(_anchor_host(
+        monkeypatch, click_pts=[Point(50, 50)] * 5, area_centers=centers))
+
+    assert rr is not None and rr.is_success is False
+    assert buy_mod.BUY_EXP_AREA in (rr.status or ''), '信息带升级钮 area 名'
+
+
+def test_segment_head_refresh_button_missing_fails(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """A 层·刷新钮臂:牌位/升级钮在而刷新钮缺失 → round_fail 带钮名。"""
+    centers = {f'商店牌-{i}': Point(50, 50) for i in range(1, 6)}
+    centers[buy_mod.BUY_EXP_AREA] = Point(60, 60)
+    rr = _run_observe_node(_anchor_host(
+        monkeypatch, click_pts=[Point(50, 50)] * 5, area_centers=centers))
+
+    assert rr is not None and rr.is_success is False
+    assert '按钮-刷新' in (rr.status or ''), '信息带刷新钮 area 名'
+
+
+def test_segment_head_all_five_slots_proceed_to_access(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """A 层·通过臂:全 5 槽 ∧ 升级钮 ∧ 刷新钮齐备 → 越过段首门正常
+    进入访问(入口观察恰一次读,观察 node round_success)。"""
+    centers = {f'商店牌-{i}': Point(50, 50) for i in range(1, 6)}
+    centers[buy_mod.BUY_EXP_AREA] = Point(60, 60)
+    centers['按钮-刷新'] = Point(70, 70)
+    ctx = _anchor_host(monkeypatch, click_pts=[Point(50, 50)] * 5,
+                       area_centers=centers)
+    # 入口读链/决策帧/预算披露桩化(全桩先例 = test_cw_shop_two_node_form
+    # _shop_host;真实容器由防御建核漏斗建立)。
+    reads: list = []
+
+    def _entry_receipt(*a, **k):
+        reads.append(1)
+        from sr_od.application.currency_war.obs.cw_observation import (
+            GameStateReadReceipt,
+        )
+        return GameStateReadReceipt(gold=30, gold_readable=True, hp=100,
+                                    hp_readable=True, hp_trusted=True,
+                                    level=3, plane=1, round_num=2)
+
+    monkeypatch.setattr(buy_mod, 'read_game_state', _entry_receipt)
+    monkeypatch.setattr(buy_mod, 'save_decision_frame', lambda *a, **k: None)
+    monkeypatch.setattr(buy_mod.time, 'sleep', lambda s: None)
+    monkeypatch.setattr(buy_mod.CwScreenShop, 'park_cursor',
+                        lambda self, **k: None)
+    monkeypatch.setattr(gs_mod, 'ensure_journal_assembly', lambda _p: None)
+    from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+        economy_cycle as economy_cycle_mod,
+    )
+    monkeypatch.setattr(economy_cycle_mod, 'disclose_budget_at_shop_frame',
+                        lambda *a, **k: None)
+
+    rr = _run_observe_node(ctx)
+
+    assert rr is not None and rr.is_success, '三锚齐备 = 访问正常开始'
+    assert reads == [1], '入口观察恰一次读'

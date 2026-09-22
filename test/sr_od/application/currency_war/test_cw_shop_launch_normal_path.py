@@ -20,6 +20,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war.kernel import cw_launch_admission
 from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
@@ -152,7 +153,8 @@ def test_restricted_session_normal_path_chain(monkeypatch, tmp_path):
     monkeypatch.setattr('time.sleep', lambda _s: None)
     monkeypatch.setattr(buy_mod, 'read_game_state', _entry_receipt)
     monkeypatch.setattr(buy_mod, 'save_decision_frame', lambda *a, **k: None)
-    monkeypatch.setattr(buy_mod, 'shop_card_click_points', lambda ctx: [])
+    monkeypatch.setattr(buy_mod, 'shop_card_click_points',
+                        lambda ctx: [Point(50, 50)] * 5)   # 定长 5 槽(段首全 5 槽门)
     monkeypatch.setattr(buy_mod, 'area_center', lambda *a, **k: (0, 0))
     monkeypatch.setattr(buy_mod.time, 'sleep', lambda s: None)
     monkeypatch.setattr(buy_mod, 'CurrencyWarConfig',

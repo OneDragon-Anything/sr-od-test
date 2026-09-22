@@ -8,9 +8,10 @@ bug 修),不是投影 bug。
 
 本锁钉拆除后的「发出即记账」语义(原 T-22 部署 / T-44 买牌 / T-55
 穿戴三件落地像素验证 + miss 刹车随拆除退役):
-1. BuyCardOp:点击后零像素验证零读屏,恒返回 True + 账本/tracked 直写
+1. BuyCardOp:点击后零像素验证零读屏,发出即成功态 + 账本/tracked 直写
    (买前裁片已随动作 op 零读屏收口退役,证据职能归下一入口观察);
-   点位缺失/槽号越界 = 显式 round_fail(禁兜底坐标静默点击);
+   槽解析失败(payload 无此牌,card.slot 旧档兜底已删)/槽号越界/点位
+   缺失 = 显式 round_fail 未发出事实(禁兜底坐标静默点击);
 2. WearEquipOp:单次机械拖拽 + emitted=True(拖后零读屏零判定);
    定位落空 = 未发出通道(emitted=False),非判效语义保留;
 3. DeployMoveOp:拖拽发出即 tracked 记上阵(拖后画面零变化也不回滚
@@ -127,6 +128,86 @@ def test_buy_card_missing_slot_point_fails_loudly(monkeypatch):
     assert '商店牌-' in (ok.status or ''), '错误信息带 area 名'
     assert clicks == [], '零点击(禁兜底坐标)'
     assert ledger.total_buy == 0, '零记账(动作未发出)'
+
+
+# ============================================================
+# B 层解析链两档契约锁(buy_cards §2.2-B:解析恰两档,card.slot 旧档
+# 兜底已删;失败语义 = 逐形态 round_fail 未发出事实,零记账零点击)
+# ============================================================
+
+
+def _buy_op_env_ex(monkeypatch: pytest.MonkeyPatch, *, slots: list,
+                   action_card: ShopCard, click_pts: list[Point]):
+    """B 层失败形态宿主:payload 槽阵列/动作牌/点表全可参,其余与
+    _buy_op_env 同式(零真实副作用,零读屏)。返回 (op, ledger, clicks)。"""
+    session = StrategySession()
+    gs = game_state_of(session)
+    gs.write_logic(
+        gs.shop,
+        ShopPayload(cards=list(slots), refresh_probs={}),
+        produced_by='test', sig=_SIG)
+    ledger = ShopVisitLedger()
+    clicks: list = []
+
+    class _Ctrl:
+        def click(self, pt) -> None:
+            clicks.append(pt)
+
+    class _Op:
+        ctx = SimpleNamespace(controller=_Ctrl())
+
+    env = ShopExecEnv(
+        op=_Op(), match=SimpleNamespace(session=session), config=None,
+        click_pts=click_pts, level_btn=None, refresh_btn=None,
+        ledger=ledger, state=gs)
+    monkeypatch.setattr(buy_action_mod.time, 'sleep', lambda s: None)
+    return (CwActionBuyCardOp(env.op.ctx, CwActionBuyCardParam(card=action_card),
+                              env=env), ledger, clicks)
+
+
+def test_buy_card_unknown_proposal_fails_without_slot_fallback(monkeypatch):
+    """B 层·槽解析失败:payload 无此牌(身份同一性 ∧ (name,star) 双未
+    命中)→ round_fail 非 round_success,信息含 slot_no=None 与双未命中
+    形态——card.slot 旧档兜底已删,提案数据 bug 响亮暴露(静默错槽
+    掩盖 bug 禁);零点击零记账。"""
+    in_shop = ShopCard(x=60, slot=2, name='景元', faction='?', cost=4, star=2)
+    ghost = ShopCard(x=50, slot=0, name='花火', faction='?', cost=3, star=1)
+    op, ledger, clicks = _buy_op_env_ex(
+        monkeypatch,
+        slots=[ShopSlot(kind='content', card=in_shop)]
+        + [ShopSlot(kind='empty') for _ in range(4)],
+        action_card=ghost, click_pts=[Point(50, 50)] * 5)
+
+    rr = op.run()
+
+    assert rr.is_success is False, 'payload 无此牌 = round_fail(非恒 success)'
+    status = rr.status or ''
+    assert 'slot_no=None' in status, '信息含 slot_no=None 形态'
+    assert '身份未命中' in status, '信息含双未命中形态'
+    assert clicks == [] and ledger.total_buy == 0, '零点击零记账(未发出事实)'
+    assert ledger.spend_executed == 0 and ledger.bought_names == [], \
+        '记账面零增量'
+
+
+def test_buy_card_slot_out_of_range_fails(monkeypatch):
+    """B 层·槽号越界:payload 槽号 7 对 5 点表 → round_fail 越界形态
+    (信息含 slot 与点表长,槽号-点表不一致 = 建档/数据漂移上游显影);
+    零点击零记账。"""
+    deep = ShopCard(x=70, slot=7, name='停云', faction='?', cost=2, star=1)
+    op, ledger, clicks = _buy_op_env_ex(
+        monkeypatch,
+        slots=[ShopSlot(kind='empty') for _ in range(6)]
+        + [ShopSlot(kind='content', card=deep)],
+        action_card=deep, click_pts=[Point(50, 50)] * 5)
+
+    rr = op.run()
+
+    assert rr.is_success is False, '槽号越界 = round_fail'
+    status = rr.status or ''
+    assert 'slot=7' in status and 'click_pts=5' in status, \
+        '信息含槽号与点表长(槽号-点表不一致形态)'
+    assert '槽号-点表不一致' in status
+    assert clicks == [] and ledger.total_buy == 0, '零点击零记账(未发出事实)'
 
 
 # ============================================================

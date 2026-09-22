@@ -33,6 +33,7 @@ from types import SimpleNamespace
 import pytest
 from test.sr_od.application.currency_war._cw_helpers import cw4_gs
 
+from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war.kernel.cw_economy import (
     reserve_cap as kernel_reserve_cap,
 )
@@ -159,7 +160,8 @@ def _run_shop_visit_offline_host(monkeypatch: pytest.MonkeyPatch,
     monkeypatch.setattr('time.sleep', lambda _s: None)
     monkeypatch.setattr(buy_mod, 'read_game_state', _entry_receipt)
     monkeypatch.setattr(buy_mod, 'save_decision_frame', lambda *a, **k: None)
-    monkeypatch.setattr(buy_mod, 'shop_card_click_points', lambda ctx: [])
+    monkeypatch.setattr(buy_mod, 'shop_card_click_points',
+                        lambda ctx: [Point(50, 50)] * 5)   # 定长 5 槽(段首全 5 槽门)
     monkeypatch.setattr(buy_mod, 'area_center', lambda *a, **k: (0, 0))
     monkeypatch.setattr(buy_mod.time, 'sleep', lambda s: None)
     monkeypatch.setattr(buy_mod, 'CurrencyWarConfig',

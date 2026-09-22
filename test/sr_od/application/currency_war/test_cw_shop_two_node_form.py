@@ -115,7 +115,7 @@ def _shop_host(monkeypatch: pytest.MonkeyPatch, strategy) -> tuple:
     monkeypatch.setattr(buy_mod, 'save_decision_frame',
                         lambda op_, tag, screen=None: frame_tags.append(tag))
     monkeypatch.setattr(buy_mod, 'shop_card_click_points',
-                        lambda ctx: [Point(50, 50)])
+                        lambda ctx: [Point(50, 50)] * 5)   # 定长 5 槽(段首全 5 槽门)
     monkeypatch.setattr(buy_mod, 'area_center', lambda *a, **k: (0, 0))
     monkeypatch.setattr(buy_mod.time, 'sleep', lambda s: None)
     monkeypatch.setattr(buy_mod, 'CurrencyWarConfig',
