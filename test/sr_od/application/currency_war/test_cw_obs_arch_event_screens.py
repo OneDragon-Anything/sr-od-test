@@ -111,15 +111,16 @@ def _make_encounter(test_context, monkeypatch, *, in_screen: bool,
                         lambda ctx, scr: list(options))
     monkeypatch.setattr(em, 'read_encounter_refresh_count',
                         lambda ctx, scr: cnt)
-    # 统一动作工厂批4:遭遇确认链体迁 pick op 模块——safe_click/emit_overlay_
-    # confirm 桩随体迁移(替身跟随被迁体;桩语义不变:机械点击空操作、确认
-    # 链回指定轮次结果);机械等待替身(mock 画面瞬时切换,等待纯属空睡)。
+    # 统一动作工厂批4:遭遇确认链体迁 pick op 模块——safe_click 桩随体迁移;
+    # 确认 = area 查找点击(确认钮查找全族统一,用户裁定 2026-09-22),
+    # 宿主 op 桩承接(桩语义不变:确认链回指定轮次结果);机械等待替身
+    # (mock 画面瞬时切换,等待纯属空睡)。
     import sr_od.application.currency_war.operations.cw_op.cw_pick_encounter_action as pick_mod
     monkeypatch.setattr(pick_mod, 'safe_click', lambda o, pt, **k: None)
     monkeypatch.setattr(pick_mod, 'time', SimpleNamespace(sleep=lambda *_: None))
     monkeypatch.setattr(em.time, 'sleep', lambda *_: None)
-    monkeypatch.setattr(pick_mod, 'emit_overlay_confirm',
-                        lambda o, **k: op.round_retry('stub-confirm'))
+    monkeypatch.setattr(op, 'round_by_find_and_click_area',
+                        lambda scr, s, a, **k: op.round_retry('stub-confirm'))
     # (record_event_choice 替身桩已随删除波 1 移除——exogenous 写入端退役,
     #  encounter 模块不再引用 telemetry;(gs_view 桩同批移除——模块本体
     #  随波 5b 双删,桩对象不存在。))
@@ -936,9 +937,6 @@ def test_megastar_pick_op_asserts_container_xy_before_click(
     )
 
     monkeypatch.setattr(pm, 'time', SimpleNamespace(sleep=lambda *_: None))
-    # 确认钮 area 读缺 → 兜底常量(三臂均不该到达确认点击,恒零点击)。
-    monkeypatch.setattr(pm, 'area_center',
-                        lambda ctx, name, screen=None: None)
 
     def _run_arm(session, *, idx: int) -> list[tuple[int, int]]:
         """三臂公共装配:match 桂挂 session → 容器供给口可达;controller

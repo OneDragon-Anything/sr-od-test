@@ -351,7 +351,7 @@ def test_partner_pick_op_pulses_select_then_confirm(no_pick_sleep):
     """伙伴脉冲链:未选中实证 → 点候选 + 「按钮-确认选择」area 查找点击
     确认(全族统一);脉冲计数与 pending 置位(画面 op 宿主状态经
     env.op 消费),轮次结果旁路回传。"""
-    rs = SimpleNamespace(sentinel='rs')
+    rs = SimpleNamespace(sentinel='rs', is_success=True)
     ctrl = _RecordingController()
     confirm_calls: list[tuple] = []
     op = SimpleNamespace(
@@ -410,16 +410,23 @@ def test_planner_pick_op_clicks_target_and_confirm(no_pick_sleep):
 def test_invest_pick_op_clicks_target_confirms_and_self_reports(
         no_pick_sleep, monkeypatch):
     """投资确认链(投资两屏共用 op,拆类后两 param 类同指;即时上报契约):
-    点选中位 → 确认 → **按 param 类型立即自上报完整结果**(分步上报废
+    点选中位 → 「按钮-确认」area 查找点击确认(屏名按宿主屏类解析,全族
+    统一)→ **按 param 类型立即自上报完整结果**(分步上报废
     除);轮次结果旁路回传;上报接线 = 机械链发出后恰一次。"""
     import sr_od.application.currency_war.operations.cw_op.cw_pick_invest_action as pick_mod
 
     rs = SimpleNamespace(sentinel='rs')
     ctrl = _RecordingController()
-    op = SimpleNamespace(ctx=SimpleNamespace(controller=ctrl),
-                         round_retry=lambda **kw: rs)
-    env = OverlayPickExecEnv(op=op, idx=2, target=Point(900, 450),
-                             confirm=Point(1082, 982), entry_keyword='投资环境')
+    confirm_calls: list[tuple] = []
+
+    class _Host(SimpleNamespace):
+        SCREEN_NAME = '货币战争-投资环境'   # round_by_find_and_click_area 屏名解析键
+
+    op = _Host(ctx=SimpleNamespace(controller=ctrl),
+               screenshot=lambda: 'shot',
+               round_by_find_and_click_area=lambda shot, s, a, **kw:
+                   confirm_calls.append((s, a, kw)) or rs)
+    env = OverlayPickExecEnv(op=op, idx=2, target=Point(900, 450))
     reported: list = []
     monkeypatch.setattr(pick_mod, 'game_state_from_ctx',
                         lambda ctx: SimpleNamespace(sentinel='gs'))
@@ -428,9 +435,10 @@ def test_invest_pick_op_clicks_target_confirms_and_self_reports(
                         reported.append((gs, param, sig)))
     assert CwActionPickInvestOp(env.op.ctx, CwActionPickInvestEnvParam(idx=2),
                                 env=env).run().is_success
-    # 点击序 = 选中位 → 确认钮;每次点击前 bug#1 mouse_move 缓解。
-    assert [(p.x, p.y) for p, _t in ctrl.clicks] == [(900, 450), (1082, 982)]
-    assert len(ctrl.moves) == len(ctrl.clicks)
+    # 点击序 = 选中位;确认 = area 查找点击(桩承接),零直接坐标点击。
+    assert [(p.x, p.y) for p, _t in ctrl.clicks] == [(900, 450)]
+    assert confirm_calls == [('货币战争-投资环境', '按钮-确认',
+                              {'success_wait': 1.0})]
     assert env.round_result is rs
     # 即时上报接线(机械链发出后恰一次;param 原样透传;Env param → env 支)。
     assert len(reported) == 1 and reported[0][1].idx == 2
@@ -440,8 +448,7 @@ def test_invest_pick_op_clicks_target_confirms_and_self_reports(
     monkeypatch.setattr(pick_mod, 'report_action_pick_invest_strategy_param',
                         lambda gs, param, sig, **kw:
                         reported_st.append((gs, param, sig)))
-    env_st = OverlayPickExecEnv(op=op, idx=0, target=Point(700, 450),
-                                confirm=Point(1082, 982), entry_keyword='投资策略')
+    env_st = OverlayPickExecEnv(op=op, idx=0, target=Point(700, 450))
     assert CwActionPickInvestOp(env_st.op.ctx,
                                 CwActionPickInvestStrategyParam(idx=0),
                                 env=env_st).run().is_success
@@ -450,18 +457,18 @@ def test_invest_pick_op_clicks_target_confirms_and_self_reports(
 
 def test_fortune_pick_op_clicks_card_confirms_and_self_reports(
         no_pick_sleep, monkeypatch):
-    """命运卜者确认链(pick-op-unify T-3):点卡 → 确认;轮次结果旁路
-    回传;自上报接线。确认钮 = 建档缺失臂兜底常量(screen_loader 桩)。"""
+    """命运卜者确认链(pick-op-unify T-3):点卡 → 「按钮-确认选择」area
+    查找点击确认(全族统一);轮次结果旁路回传;自上报接线。"""
     import sr_od.application.currency_war.operations.cw_op.cw_pick_fortune_action as pick_mod
-    from sr_od.application.currency_war.operations.cw_screen.cw_screen_fortune import (
-        CwScreenFortune,
-    )
 
     rs = SimpleNamespace(sentinel='rs')
     ctrl = _RecordingController()
+    confirm_calls: list[tuple] = []
     op = SimpleNamespace(ctx=SimpleNamespace(controller=ctrl,
                                              screen_loader=_screen_loader_none()),
-                         round_retry=lambda **kw: rs)
+                         screenshot=lambda: 'shot',
+                         round_by_find_and_click_area=lambda shot, s, a, **kw:
+                             confirm_calls.append((s, a, kw)) or rs)
     env = OverlayPickExecEnv(op=op, idx=1, target=Point(900, 480))
     reported: list = []
     monkeypatch.setattr(pick_mod, 'game_state_from_ctx',
@@ -470,8 +477,9 @@ def test_fortune_pick_op_clicks_card_confirms_and_self_reports(
                         lambda gs, param, sig: reported.append(param))
     assert CwActionPickFortuneOp(env.op.ctx, CwActionPickFortuneParam(idx=1),
                                  env=env).run().is_success
-    assert [(p.x, p.y) for p, _t in ctrl.clicks] == [
-        (900, 480), (CwScreenFortune.CONFIRM.x, CwScreenFortune.CONFIRM.y)]
+    assert [(p.x, p.y) for p, _t in ctrl.clicks] == [(900, 480)]
+    assert confirm_calls == [('货币战争-命运卜者强化', '按钮-确认选择',
+                              {'success_wait': 1.0})]
     assert env.round_result is rs
     assert len(reported) == 1 and reported[0].idx == 1
 
