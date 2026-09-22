@@ -513,11 +513,10 @@ def test_wear_equip_single_mechanical_drag_no_diff_verification(monkeypatch):
     monkeypatch.setattr('time.sleep', lambda _s: None)
     from sr_od.application.currency_war import prep_actions as pa
     from sr_od.application.currency_war.obs import cw_equipment
-    from sr_od.application.currency_war.operations.cw_op import cw_op_equip_all
 
     controller = _RecordingController()
     screens: list[int] = []
-    monkeypatch.setattr(cw_op_equip_all, 'get_equip_templates_cached',
+    monkeypatch.setattr(cw_equipment, 'ensure_equip_sift_templates',
                         lambda ctx: object())
     monkeypatch.setattr(cw_equipment, 'read_equips',
                         lambda screen, templates, equip_rect=None:

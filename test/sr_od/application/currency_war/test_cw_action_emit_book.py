@@ -164,7 +164,6 @@ def _wear_env(monkeypatch: pytest.MonkeyPatch) -> tuple:
     # 坐标边注入(替身缝 = 执行器实例方法;等价于 screen_info 命中形态)。
     ex._equip_slot_drag_point = lambda row, slot: Point(420, 421)
     ex._owned_grid_locate = lambda name: Point(1768, 247)
-    ex._wait_stable_frame = lambda *a, **k: None
     env = PrepExecEnv(op=op, match=ctx.cw_match, executor=ex)
     monkeypatch.setattr('time.sleep', lambda _s: None)
     return CwActionWearEquipOp(ctx, CwActionWearEquipParam(item_name='轮滑鞋', char_name='刃',
@@ -207,8 +206,6 @@ def _deploy_env(session: object | None):
     op = type('_Op', (), {
         'screenshot': staticmethod(lambda: None),
         'park_cursor': staticmethod(lambda **kw: None),
-        'round_by_find_area': staticmethod(
-            lambda *a, **k: type('_R', (), {'is_success': False})()),
         'ctx': type('_Ctx', (), {
             'controller': controller,
             'cw_match': (None if session is None

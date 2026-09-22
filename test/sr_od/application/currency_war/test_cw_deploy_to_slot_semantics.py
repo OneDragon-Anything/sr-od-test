@@ -121,8 +121,6 @@ def _deploy_op_env(session: object, drags: list[dict]):
     op = type('_Op', (), {
         'screenshot': staticmethod(lambda: None),
         'park_cursor': staticmethod(lambda **kw: None),
-        'round_by_find_area': staticmethod(
-            lambda *a, **k: type('_R', (), {'is_success': False})()),
         'ctx': type('_Ctx', (), {
             'controller': controller,
             'cw_match': (None if session is None
