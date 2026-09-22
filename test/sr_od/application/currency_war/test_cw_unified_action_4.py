@@ -14,8 +14,7 @@
    解析可命中(action_op_class_for_type;is-a 兜底语义同注册表);
 2. pick 五行类级/实例级解析一致性 + 未知类型响亮暴露;
 3. pick op 机械行为锁(五屏确认链,桩宿主记录点击);
-4. 比对收口锁:三值对比单一源真值表 / RefreshShopOp 零比对只落账 /
-   入口观察对账点两腿判定 / 投资环境零效果留证迁重入观察侧。
+4. 比对收口锁:三值对比单一源真值表 / 投资环境零效果留证迁重入观察侧。
 """
 
 from __future__ import annotations
@@ -31,13 +30,6 @@ from sr_od.application.currency_war.kernel.cw_events import (
     PartnerPick,
     PlannerPick,
     SupplyPick,
-)
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    ChannelSig,
-    ShopCard,
-    ShopPayload,
-    ShopSlot,
-    game_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
@@ -61,7 +53,6 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionPickWishTrialParam,
     CwActionRefreshInvestCardsParam,
     CwActionRefreshNodeOptionsParam,
-    CwActionRefreshShopParam,
     CwActionRefreshSupplyParam,
 )
 from sr_od.application.currency_war.obs.cw_shop_refresh_obs import (
@@ -88,19 +79,8 @@ from sr_od.application.currency_war.operations.cw_op.cw_overlay_pick_action impo
 from sr_od.application.currency_war.operations.cw_op.cw_prep_level_up_action import (
     CwActionLevelUpOp,
 )
-from sr_od.application.currency_war.operations.cw_op.cw_refresh_shop_action import (
-    CwActionRefreshShopOp,
-)
-from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
-    ShopExecEnv,
-    ShopVisitLedger,
-)
 from sr_od.application.currency_war.telemetry import defects as cw_defects
 from sr_od.operations.sr_operation import SrOperation
-
-_LOGIC_SIG = ChannelSig(family='logic_action', actor='cw-t216-test',
-                        mode='compute')
-
 
 # ===== 1. 注册完备锁(判据:词表全类型覆盖,遍历运行时元组,零源码读取)=====
 
@@ -498,59 +478,11 @@ def test_refresh_board_changed_of_three_value():
     assert refresh_board_changed_of(['a', 'b'], ['b', 'c']) is True
 
 
-class _FakeShopRow:
-    """read_shop_cards 读数行桩(kind/card.name 面)。"""
-
-    def __init__(self, name: str | None) -> None:
-        self.kind = 'content'
-        self.card = SimpleNamespace(name=name, star=1, cost=1)
-
-
-def _shop_state_with_gold_and_cards() -> tuple:
-    """容器店面逻辑态(刷前现读输入;金 50 + 具名牌 1 张)。"""
-    session = StrategySession()
-    gs = game_state_of(session)
-    gs.write_logic(gs.gold, 50, produced_by='cw-t216-test', sig=_LOGIC_SIG)
-    slots = [ShopSlot(kind='content',
-                      card=ShopCard(name='旧卡A', faction='', cost=1,
-                                    star=1, slot=1))]
-    slots += [ShopSlot(kind='empty')] * 4
-    gs.write_logic(gs.shop, ShopPayload(cards=slots, refresh_probs={}),
-                   produced_by='cw-t216-test', sig=_LOGIC_SIG)
-    return session, game_state_of(session)
-
-
-def test_refresh_shop_op_persists_evidence_without_comparison(monkeypatch):
-    """RefreshShopOp 零比对(裁决3 批4):execute 只落账(刷前/刷后名集
-    原样),零缺陷发射;退役字段不再在场(对象面运行时检查,
-    非源码扫描)。"""
-    monkeypatch.setattr('time.sleep', lambda _s: None)
-    defect_calls: list = []
-    monkeypatch.setattr(cw_defects, 'record_defect',
-                        lambda *a, **k: defect_calls.append((a, k)))
-    from sr_od.application.currency_war.operations.cw_screen import (
-        cw_screen_buy_cards as buy_mod,
-    )
-    monkeypatch.setattr(buy_mod, 'read_shop_cards',
-                        lambda ctx, shot: [_FakeShopRow('新卡A'),
-                                           _FakeShopRow('新卡B'),
-                                           _FakeShopRow(None)])
-    _session, state = _shop_state_with_gold_and_cards()
-    ledger = ShopVisitLedger()
-    env = ShopExecEnv(
-        op=SimpleNamespace(
-            ctx=SimpleNamespace(controller=_RecordingController()),
-            screenshot=lambda: None),
-        match=None, config=None, click_pts=[],
-        level_btn=Point(0, 0), refresh_btn=Point(1603, 479),
-        ledger=ledger, state=state)
-    assert CwActionRefreshShopOp(env.op.ctx, CwActionRefreshShopParam(), env=env).run().is_success
-    # 只读不比:刷前/刷后名集原样落账,比对结果不再由动作 op 预计算
-    assert ledger.refresh_pre_names == ['旧卡A']
-    assert ledger.refresh_post_names == ['新卡A', '新卡B']
-    assert not hasattr(ledger, 'refresh_board_changed')
-    # 零缺陷发射
-    assert defect_calls == []
+# (原 test_refresh_shop_op_persists_evidence_without_comparison 及其
+#  _FakeShopRow/_shop_state_with_gold_and_cards 桩删:宿主面(刷前/刷后
+#  名集落账)已随 2026-09-21 商店迭代 3.3 零读屏化退役——动作 op 零读屏
+#  (action_ops §1 增补 3),ledger 对账件字段删除,判效权归下一入口
+#  观察;刷新机械执行锁正本 = test_cw_refresh_fee_field_value。)
 
 
 # (原 test_entry_reconcile_free_leg_fires_on_unchanged_gold 删:宿主

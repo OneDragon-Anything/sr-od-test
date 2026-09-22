@@ -47,14 +47,11 @@ class _FakeCtx:
 
 
 class _FakeOp:
-    """execute 所需最小 op 面:首动作段读走容器(零 OCR)、截图桩 None
-    (刷后牌面读在 try 内,异常被吞不阻塞)。"""
+    """execute 所需最小 op 面(零截图桩:动作 op 零读屏,若回归出读屏
+    调用即在缺属性处响亮失败)。"""
 
     def __init__(self) -> None:
         self.ctx = _FakeCtx()
-
-    def screenshot(self):
-        return None
 
 
 def _env(state, ledger: ShopVisitLedger) -> ShopExecEnv:
