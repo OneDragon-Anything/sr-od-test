@@ -906,6 +906,23 @@ def test_briefing_session_write_semantics_three_fields(test_context,
         '难度读到必写(恒覆写)'
 
 
+def test_briefing_boss_standardize_fail_round_fail_zero_write(test_context, monkeypatch) -> None:
+    """观察标准化门失败语义锁:boss 读数两段转换失败(任一候选未归一
+    到规范名)= 观察失败——observe round_fail 早退、容器零写零上报、
+    obs 不装载(op-layer.md §1.1 观察标准化门;禁原名透传带病上报)。
+    红 = 失败路径回潮为透传照写照报。"""
+    import sr_od.application.currency_war.operations.cw_screen.cw_screen_briefing as bm
+    from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
+    op, session, _calls = _make_briefing(test_context, monkeypatch,
+                                         mark_hit=True, bosses=['未知读数'],
+                                         session=StrategySession())
+    monkeypatch.setattr(bm, 'clean_boss_names_by_lcs', lambda gs: None)
+    rs = _run_node(test_context, op, op.observe)
+    assert not rs.is_success, f'转换失败须 round_fail 早退:{rs!r}'
+    assert game_state_of(session).plane_bosses.value is None, '容器零写'
+    assert op._obs is None, 'obs 不装载(零上报)'
+
+
 # ==================== BOSS 简报:误读接管(生产路径)====================
 
 

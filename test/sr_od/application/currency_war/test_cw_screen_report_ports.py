@@ -402,7 +402,8 @@ def test_bookcard_report_equal_length_guard():
 def test_briefing_write_semantics():
     """简报写语义(统一读写口径):三字段读到非空恒覆写(重读自愈
     首次误读)/ 读空跳过写(读缺=跳过写,瞬时 OCR 失手不擦同局已读
-    真值;跨局残留由每局容器冷建/丢弃挡死)。"""
+    真值;跨局残留由每局容器冷建/丢弃挡死)。转换失败 = 观察侧
+    round_fail,不进本写点(标准化留口,屏契约登记见 screens/briefing.md)。"""
     mod = _screen_module('briefing')
     gs = _blank_gs()
     gs.write_logic(gs.enemy_affixes, ['已有词缀'],
