@@ -110,9 +110,8 @@ def test_prep_terminal_set_matches_registry_terminal_attrs():
 def test_open_shop_row_is_terminal_carrier_and_execute_loud_fails():
     """CwActionOpenShopOp = terminal 承载行:注册表解析可命中;执行抛
     AssertionError(防静默复活)——CwActionOpenShopParam 流程编排归画面 op 流程层
-    (cw_screen_prep._act_execute_default 截流),注册行在正常路径不可达,
-    可达即分派漏斗被绕过。restricted_spend 形态 = 动作字段承载(op 实例持
-    动作对象,注册表不表达形态分叉)。"""
+    (cw_screen_prep._act_execute_default → _open_shop_phase),注册行在
+    正常路径不可达,可达即分派漏斗被绕过。"""
     op = CwActionOpenShopOp(SimpleNamespace(), CwActionOpenShopParam(),
                             env=SimpleNamespace())
     with pytest.raises(AssertionError):

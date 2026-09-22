@@ -191,7 +191,7 @@ def test_overflow_absorb_syncs_tracked():
     入位卡,槽位/身份与容器腿同源(2026-09-11 实机 2-4 停机事故本形:
     溢出腿把入位卡写进容器 bench 而执行侧 tracked 主账未吸收 → 商店
     visit 入口两账结构性分叉粘性不可自愈——店开 0n 分发路径
-    (visit_open_shop→run_buy_waves)不经过 director heavy 观察,
+    (visit_open_shop→商店画面 op)不经过 director heavy 观察,
     reconcile_tracking 唯一生产写点;read_game_state 漏斗 prep_shop_open
     阶段设计上不读 bench 身份——→ 崩溃循环停机。原「种子守卫
     AssertionError」表述随批退役改写:分叉检出现归观察边界 reconcile

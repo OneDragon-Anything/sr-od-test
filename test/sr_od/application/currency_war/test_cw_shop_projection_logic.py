@@ -389,7 +389,7 @@ class TestM1DirectLock:
 
 
 def test_shop_entry_funnel_bench_survives_synthesis() -> None:
-    """商店入口漏斗 bench 写门场景锁(run_buy_waves 入口链回归):
+    """商店入口漏斗 bench 写门场景锁(商店画面 op 入口链回归):
     种子对未声明 bench 域整域跳写(bench_unread)——容器 bench 保持
     漏斗真读值,与执行账 tracked 同源不破。回归形态 = 种子把容器 bench
     覆盖成「9 槽全空」假真空(原防御对象 = 旧合成口无门合成,实机

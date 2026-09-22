@@ -82,8 +82,8 @@ def _cur(sess: StrategySession, plane: int, round_num: int, gold: int = 53,
            hp=100, node=node_type)
 
 
-def _run_buy_waves_offline_host(monkeypatch: pytest.MonkeyPatch,
-                                tmp_path: Path, disclose_impl) -> tuple[
+def _run_shop_visit_offline_host(monkeypatch: pytest.MonkeyPatch,
+                                 tmp_path: Path, disclose_impl) -> tuple[
         list, object, object]:
     """锁 F 行为腿共用离线宿主(零真实副作用)。替身面 = 观察节点段顶
     消费面(读屏/帧留证/种子读链/决策源/遥测单例全替身)+ 关店执行位
@@ -91,9 +91,11 @@ def _run_buy_waves_offline_host(monkeypatch: pytest.MonkeyPatch,
     观察段一次后经统一执行路径关店收工;入口读屏回执 gold=10 非零
     (跳过 gold 救援重读支);种子段读链桩 = 分型的「屏幕席真空」合法态
     (生产 SIFT 读链离线不可用,空账重建出口按合法态零写零台账);帧留证
-    不落盘。返回 (warned, rr, ledger);disclose_impl 替换店开帧披露写点
-    (接线点为函数内 lazy import,每次调用取模块属性,monkeypatch 即
-    生效)。"""
+    不落盘。返回 (warned, rr, ledger);rr=None = 正常收工(出参交接契约,
+    详设 §2.2)。驱动 = 真类实例 + 节点函数直驱(过渡薄壳已随 3.4 退役,
+    先例 = test_cw_shop_two_node_form)。
+    disclose_impl 替换店开帧披露写点(接线点为函数内 lazy import,每次
+    调用取模块属性,monkeypatch 即生效)。"""
     import sr_od.application.currency_war.operations.cw_screen.cw_screen_buy_cards as buy_mod
     from sr_od.application.currency_war.kernel.cw_vocab import CwActionCloseShopParam
     from sr_od.application.currency_war.obs.cw_observation import (
@@ -171,8 +173,20 @@ def _run_buy_waves_offline_host(monkeypatch: pytest.MonkeyPatch,
     warned: list = []
     monkeypatch.setattr(buy_mod.log, 'warning',
                         lambda *a, **k: warned.append(a))
-    rr, ledger = buy_mod.run_buy_waves(_Op(), match)
-    return warned, rr, ledger
+    from one_dragon.base.operation.operation_round_result import (
+        OperationRoundResultEnum,
+    )
+    shell = buy_mod.CwScreenBuyCards(_Op.ctx)
+    rr = shell.observe()
+    if not rr.is_success:
+        return warned, rr, None
+    while True:
+        rr = shell.act()
+        if rr.result == OperationRoundResultEnum.SUCCESS:
+            return warned, None, shell.ledger
+        if rr.result == OperationRoundResultEnum.WAIT:
+            continue
+        return warned, rr, None
 
 
 # ===== 锁 C:写读闭环锁(主锁)=====
@@ -414,8 +428,8 @@ def test_shop_frame_disclosure_wired_at_shop_entry(
     def _spy(state, session, registry=None) -> None:
         seen_calls.append(1)
 
-    _warned, rr, ledger = _run_buy_waves_offline_host(monkeypatch, tmp_path,
-                                                      _spy)
+    _warned, rr, ledger = _run_shop_visit_offline_host(monkeypatch, tmp_path,
+                                                       _spy)
     assert len(seen_calls) == 1, \
         f'店开帧披露写点调用次数异常({len(seen_calls)}):接线断裂/漂移'
     assert rr is None and ledger is not None, '商店循环未正常收工'
@@ -425,15 +439,15 @@ def test_shop_frame_disclosure_failure_degrades_with_warning(
         monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """行为锁(原④字面串锁整形,三审 T1④):披露覆写失败 → log.warning
     降级留痕、不外抛中断商店循环(遥测 best-effort 契约;锚⑤缺陷无声
-    复发防线)。触发法 = 薄壳符号 monkeypatch 成抛错,经共用离线宿主
-    驱动 ``run_buy_waves`` 段顶接线段,断言 warning 被调且循环正常收工
+    复发防线)。触发法 = 披露写点 monkeypatch 成抛错,经共用离线宿主
+    驱动观察 node 段顶接线段,断言 warning 被调且循环正常收工
     ——log 措辞/写法漂移不再假红。"""
 
     def _boom(*a, **k):
         raise RuntimeError('t1 注入:披露覆写失败')
 
-    warned, rr, ledger = _run_buy_waves_offline_host(monkeypatch, tmp_path,
-                                                     _boom)
+    warned, rr, ledger = _run_shop_visit_offline_host(monkeypatch, tmp_path,
+                                                      _boom)
     assert warned, '披露覆写失败未走 log.warning 降级(静默 no-op 回归)'
     assert rr is None and ledger is not None, \
         '降级未收工:披露失败不应中断商店循环'

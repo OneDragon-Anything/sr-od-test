@@ -1,5 +1,5 @@
 """商店画面 op 两 node 规范形态锁(迭代 changes/2026-09-21-shop-refresh-terminal
-3.4:run_buy_waves 解体为观察 node + 决策动作 node)。
+3.4:段机解体为观察 node + 决策动作 node)。
 
 锁的语义(op-layer §1.1 两 node 形态;离线宿主替身沿 test_cw_budget_
 disclosure 同式,零真实副作用):

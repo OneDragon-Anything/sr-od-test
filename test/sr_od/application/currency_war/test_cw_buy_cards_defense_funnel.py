@@ -19,7 +19,8 @@ T-5-r1.md §5.1a):``cw_screen_buy_cards`` 独立单跑的 cw_match 缺席防御
 
 离线宿主判据:cw_match 缺席入跑,防御建核后入口 area 校验处收工
 (level 按钮缺失 → round_fail),执行段恰好只含防御建核 + 漏斗序 +
-area 锚定,零读屏。
+area 锚定,零读屏。驱动 = 真类实例 + 节点函数直驱(过渡薄壳已随 3.4
+退役;先例 = test_cw_shop_two_node_form)。
 """
 from __future__ import annotations
 
@@ -32,6 +33,13 @@ import sr_od.application.currency_war.kernel.cw_game_state as gs_mod
 import sr_od.application.currency_war.kernel.cw_vocab as vocab_mod
 import sr_od.application.currency_war.operations.cw_screen.cw_screen_buy_cards as buy_mod
 from sr_od.application.currency_war.telemetry import state as tel_state
+
+
+def _run_observe_node(ctx: SimpleNamespace):
+    """观察 node 直驱(薄壳退役承接):构造真类实例跑观察 node,返回
+    轮次结果(防御路径锁只辖观察 node 段,决策循环不入锁面)。"""
+    op = buy_mod.CwScreenBuyCards(ctx)
+    return op.observe()
 
 
 def _defense_host(monkeypatch: pytest.MonkeyPatch, *,
@@ -62,7 +70,7 @@ def test_defense_path_wires_seed_and_telemetry_like_funnel(
     monkeypatch.setattr(tel_state, '_CURRENT_RUN_ID', 't-def-42')
 
     ctx = _defense_host(monkeypatch, strategy_seed=42)
-    rr, _ledger = buy_mod.run_buy_waves(_HostOp(ctx), None)
+    rr = _run_observe_node(ctx)
 
     assert rr is not None and rr.is_success is False, \
         '入口 area 校验早退(执行段零读屏)'
@@ -83,13 +91,6 @@ def test_defense_path_wires_seed_and_telemetry_like_funnel(
     assert strategy_state_of(match.session) is match.strategy.state
 
 
-class _HostOp:
-    """薄壳宿主位(消费面仅 ctx;round 判定 = 薄壳返回值)。"""
-
-    def __init__(self, ctx: SimpleNamespace) -> None:
-        self.ctx = ctx
-
-
 def test_defense_path_seed_none_keeps_default_rng(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """种子 None 臂:漏斗同款不播(config.strategy_seed=None 不覆盖
@@ -97,7 +98,7 @@ def test_defense_path_seed_none_keeps_default_rng(
     monkeypatch.setattr(gs_mod, 'ensure_journal_assembly', lambda _p: None)
 
     ctx = _defense_host(monkeypatch, strategy_seed=None)
-    buy_mod.run_buy_waves(_HostOp(ctx), None)
+    _run_observe_node(ctx)
 
     match = ctx.cw_match
     assert match.session.rng.random() == random.Random(0).random()
@@ -112,8 +113,7 @@ def test_defense_path_resets_layout_unknown_state(
                         lambda: reset_calls.append(True))
     monkeypatch.setattr(gs_mod, 'ensure_journal_assembly', lambda _p: None)
 
-    buy_mod.run_buy_waves(_HostOp(_defense_host(monkeypatch,
-                                                strategy_seed=None)), None)
+    _run_observe_node(_defense_host(monkeypatch, strategy_seed=None))
 
     assert len(reset_calls) == 1
 
@@ -125,12 +125,11 @@ def test_defense_path_rebuilds_fresh_per_invocation(
     与入口链 CwEntryStart 的残留弃置纪律一致。"""
     monkeypatch.setattr(gs_mod, 'ensure_journal_assembly', lambda _p: None)
     ctx = _defense_host(monkeypatch, strategy_seed=None)
-    host = _HostOp(ctx)
 
-    buy_mod.run_buy_waves(host, None)
+    _run_observe_node(ctx)
     first = ctx.cw_match
     ctx.cw_match = None   # 再次独立单跑(cw_match 缺席前提)
-    buy_mod.run_buy_waves(host, None)
+    _run_observe_node(ctx)
     second = ctx.cw_match
 
     assert first is not None and second is not None

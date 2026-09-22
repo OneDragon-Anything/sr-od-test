@@ -55,9 +55,6 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionRefreshNodeOptionsParam,
     CwActionRefreshSupplyParam,
 )
-from sr_od.application.currency_war.obs.cw_shop_refresh_obs import (
-    refresh_board_changed_of,
-)
 from sr_od.application.currency_war.operations.cw_op.cw_action_registry import (
     action_op_class_for_type,
 )
@@ -466,16 +463,10 @@ def test_pick_no_confirm_ops_click_and_self_report(
             param_cls.__name__
 
 
-# ===== 4. 比对收口锁(三面迁观察侧)=====
-
-def test_refresh_board_changed_of_three_value():
-    """三值对比单一源真值表(与退役前 execute 内联式逐字等价):任一侧
-    空 = None 不可判不猜;否则 = 刷前/刷后具名牌名集不一致。"""
-    assert refresh_board_changed_of([], ['a']) is None
-    assert refresh_board_changed_of(['a'], []) is None
-    assert refresh_board_changed_of([], []) is None
-    assert refresh_board_changed_of(['a', 'b'], ['b', 'a']) is False
-    assert refresh_board_changed_of(['a', 'b'], ['b', 'c']) is True
+# (原 test_refresh_board_changed_of_three_value 删:三值对比单一源
+#  refresh_board_changed_of 已随 2026-09-21 商店迭代清理批退役——两消费面
+#  (段顶对账点/刷新回执 extra)均随免费刷新 proc 通道退役,生产零消费
+#  实证(grep);判效权归下一入口观察对账。)
 
 
 # (原 test_refresh_shop_op_persists_evidence_without_comparison 及其

@@ -6,7 +6,7 @@
 不可消费;True=备战环 heavy 观察 reconcile 屏幕真值写回成功=已锚定)。
 接管(cw_loop 接管检测确认点)写 False;商店开遇未观察 → 策略门
 (flow.decide_shop_action,判定单一源 = kernel tracked_unobserved)返回恒
-可用终结 CwActionCloseShopParam → 编排壳收店 → 外循环重判落回备战节点锚定 → 再进店,
+可用终结 CwActionCloseShopParam → 商店画面 op 执行收店 → 外循环重判落回备战节点锚定 → 再进店,
 店内零原地重建。mandate_v1._tracking_view(tracking 优先 + snapshot 静默
 回退)已随三次修正删除——策略禁读执行侧簿记,消费口只有 game state
 (空账混同根因由此类型/架构层封死)。原读屏重建出口/单向
@@ -22,7 +22,7 @@ tracked 亦退役:对账唯一合法时点 = 观察边界 kernel cw_reconcile,�
 3. 锚定置位:reconcile_tracking bench 侧屏幕真值写回成功 → True;
    失败形态(deployed-only 写回/双空读守卫)不置位 = 保持未观察;
 4. 接管置位:cw_loop._invalidate_tracked_on_takeover → False(接管检测确认点);
-5. 未观察访问跳过留痕:run_buy_waves 收到策略关店 → 缺陷台账分键
+5. 未观察访问跳过留痕:商店画面 op 收到策略关店 → 缺陷台账分键
    shop_skipped_unobserved 显影 + 连续计数 +1,visit 以 (None, ledger)
    正常收工(跳过非失败,交回外循环重判);
 6. 连续跳过熔断:计数达 SHOP_UNOBSERVED_SKIP_LIMIT → (round_fail, None)
@@ -221,16 +221,19 @@ def test_takeover_marks_tracked_unobserved():
     assert game_state_of(session).tracked_account_observed.value is False
 
 
-# ===== 锁5/锁6/锁7 访问级流锁(run_buy_waves CwActionCloseShopParam 出口)=====
+# ===== 锁5/锁6/锁7 访问级流锁(商店画面 op CwActionCloseShopParam 出口)=====
 
-def _run_buy_waves_unobserved_host(monkeypatch, tmp_path, counters, *,
-                                   unobserved: bool):
+def _run_visit_unobserved_host(monkeypatch, tmp_path, counters, *,
+                               unobserved: bool):
     """未观察跳过流锁的离线宿主(替身面沿恢复路由锁宿主同式)。
 
     构造 = 容器在屏空牌面 + 观察态按参;策略 = 生产 MandateV1Strategy
     (真实门路径:未观察 → CwActionCloseShopParam;观察态用例传 Idle 关店策略)。
     关店执行位点击桩化(统一执行路径含 CloseShop 真点击;离线零画面)。
-    返回 (run_buy_waves 结果元组, session)。
+    返回 (访问结果元组, session):正常收工 → (None, ledger),round_fail →
+    (round_fail 结果, None)(出参交接契约,详设 §2.2)。驱动 = 真类实例 +
+    节点函数直驱(过渡薄壳已随 3.4 退役,先例 =
+    test_cw_shop_two_node_form)。
     """
     import sr_od.application.currency_war.operations.cw_screen.cw_screen_buy_cards as buy_mod
     from sr_od.application.currency_war.obs.cw_observation import (
@@ -325,8 +328,20 @@ def _run_buy_waves_unobserved_host(monkeypatch, tmp_path, counters, *,
     monkeypatch.setattr(economy_cycle_mod, 'disclose_budget_at_shop_frame',
                         lambda *a, **k: None)
 
-    result = buy_mod.run_buy_waves(_Op(), match)
-    return result, match.session
+    from one_dragon.base.operation.operation_round_result import (
+        OperationRoundResultEnum,
+    )
+    shell = buy_mod.CwScreenBuyCards(_Op.ctx)
+    rr = shell.observe()
+    if not rr.is_success:
+        return (rr, None), match.session
+    while True:
+        rr = shell.act()
+        if rr.result == OperationRoundResultEnum.SUCCESS:
+            return (None, shell.ledger), match.session
+        if rr.result == OperationRoundResultEnum.WAIT:
+            continue
+        return (rr, None), match.session
 
 
 def test_unobserved_visit_skips_with_defect_and_streak(monkeypatch, tmp_path):
@@ -335,7 +350,7 @@ def test_unobserved_visit_skips_with_defect_and_streak(monkeypatch, tmp_path):
     rows = _spy_defects(monkeypatch)
     counters: dict = {}
 
-    (rr, ledger), _session = _run_buy_waves_unobserved_host(
+    (rr, ledger), _session = _run_visit_unobserved_host(
         monkeypatch, tmp_path, counters, unobserved=True)
 
     assert rr is None and ledger is not None   # 正常收工交回外循环
@@ -350,7 +365,7 @@ def test_unobserved_skip_streak_limit_stops(monkeypatch, tmp_path):
     rows = _spy_defects(monkeypatch)
     counters: dict = {'shop_skipped_unobserved_streak': 1}   # 已跳过一次
 
-    (rr, ledger), _session = _run_buy_waves_unobserved_host(
+    (rr, ledger), _session = _run_visit_unobserved_host(
         monkeypatch, tmp_path, counters, unobserved=True)
 
     assert rr is not None and not rr.is_success   # round_fail 单次停
@@ -366,7 +381,7 @@ def test_observed_visit_resets_streak_and_no_defect(monkeypatch, tmp_path):
     rows = _spy_defects(monkeypatch)
     counters: dict = {'shop_skipped_unobserved_streak': 1}   # 前次残留
 
-    (rr, ledger), _session = _run_buy_waves_unobserved_host(
+    (rr, ledger), _session = _run_visit_unobserved_host(
         monkeypatch, tmp_path, counters, unobserved=False)
 
     assert rr is None and ledger is not None   # 正常收工
