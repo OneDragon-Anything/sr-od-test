@@ -23,6 +23,8 @@ fixture = ``screens/货币战争-列车同行/伙伴遮罩-未选中.webp``(2026
 """
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 from test.harness.fixture_controller import (
     FixtureController,
@@ -32,6 +34,7 @@ from test.harness.fixture_controller import (
     reset_running_state,
 )
 
+from sr_od.application.currency_war.kernel.cw_vocab import CwActionPickPartnerParam
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_partner import (
     CwScreenPartner,
 )
@@ -53,13 +56,21 @@ class _NoSleep:
 
 
 def _make_watched_op(test_context, monkeypatch) -> CwScreenPartner:
-    """真类 + 桩面装配:cw_match=None(idx0 兜底,决策质量不在锁范围)、
-    SIFT 立绘识别回落 label 名(跳过模板库加载)、模块内 time 不真睡。"""
+    """真类 + 桩面装配:cw_match 桩(decide_partner 恒 idx=0;决策质量不在
+    锁范围,守卫面锁 = test_cw_screen_two_node_family 伙伴臂)、SIFT 立绘
+    识别回落 label 名(跳过模板库加载)、模块内 time 不真睡。桩无 ``gs``
+    属性 → chosen 写端经 ``getattr(match, 'gs', None)`` 跳过(两锁零容器
+    断言不受影响)。"""
 
     class _WatchedPartner(WatchdogOperationMixin, CwScreenPartner):
         pass
 
-    monkeypatch.setattr(test_context, 'cw_match', None, raising=False)
+    monkeypatch.setattr(
+        test_context, 'cw_match',
+        SimpleNamespace(strategy=SimpleNamespace(
+            decide_partner=lambda: CwActionPickPartnerParam(idx=0,
+                                                            reason='stub'))),
+        raising=False)
     op = _WatchedPartner(test_context)
     op._init_watchdog()  # type: ignore[attr-defined]
     monkeypatch.setattr(

@@ -882,3 +882,120 @@ def test_bookcard_act_guard_idx_out_of_range_asserts(
         _run_node(test_context, op, op.act)
     assert dispatches == [], '守卫③:零派发'
     assert op._pick_pending is None, '守卫③:pending 未置位(零点击)'
+
+
+# ==================== 选择伙伴决策出口锁(守卫①两臂 + ②③)====================
+
+def _setup_partner_act(test_context, monkeypatch, session, decide,
+                       cands: list | None = None):
+    """partner act 锁公共装配(fortune/bookcard 锁同构):match 桩挂零参
+    决策桩(decide=None = cw_match None 局外态)+ 读链桩两元/门桩放行
+    (装配同 ``_OBS_ROWS['partner']``,观察 node 先行产出 obs/cands)+
+    注册表派发捕获;``cands=[]`` = 候选空臂(读链桩改返空)。"""
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_partner as mod,
+    )
+
+    monkeypatch.setattr(
+        test_context, 'cw_match',
+        None if decide is None else _make_match(session, decide_partner=decide),
+        raising=False)
+    op = mod.CwScreenPartner(test_context)
+    monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
+    # 门桩放行(入口门/未选中提示两读全部命中;门 miss 语义由既有锁承重)。
+    monkeypatch.setattr(op, 'round_by_find_area',
+                        lambda s, sc, a, **k: _Area(True), raising=False)
+    monkeypatch.setattr(
+        op, '_read_candidates',
+        lambda s: [('护盾', 800, 360), ('能量', 1100, 360)]
+        if cands is None else cands, raising=False)
+    monkeypatch.setattr(op, '_identify_portraits',
+                        lambda s, c: ['charA', 'charB'], raising=False)
+    dispatches: list = []
+
+    class _StubPickOp:
+        def __init__(self, param, env) -> None:
+            self.param = param
+            self.env = env
+
+        def execute(self) -> bool:
+            dispatches.append(self)
+            return True
+
+    import sr_od.application.currency_war.operations.cw_op.cw_action_registry as _reg
+    monkeypatch.setattr(_reg, 'action_op_for',
+                        lambda act, ctx, env: _StubPickOp(act, env))
+    rs = _run_node(test_context, op, op.observe)
+    assert rs.is_success, f'partner: 观察 success(锁前置):{rs!r}'
+    return op, dispatches
+
+
+def test_partner_act_empty_candidates_fails_without_dispatch(
+        test_context, monkeypatch) -> None:
+    """守卫①候选空臂(op-layer.md §1.1 出口③,两臂分开断言):match 在场、
+    读链桩改返空(options 空 ⇔ cands 空)→ act 具名 round_fail(「伙伴屏
+    无候选」在册文案)、零派发零点击、_confirm_pending 保持未置位。
+    红 = 空候选盲发回潮 / 在册文案漂移。"""
+    session = StrategySession()
+    op, dispatches = _setup_partner_act(
+        test_context, monkeypatch, session,
+        lambda: SimpleNamespace(idx=0, reason='stub'), cands=[])
+    rs = _run_node(test_context, op, op.act)
+    assert not rs.is_success and '伙伴屏无候选' in (rs.status or ''), (
+        f'守卫①候选空臂:具名 round_fail 零盲发:{rs!r}')
+    assert dispatches == [], '守卫①候选空臂:零派发'
+    assert op._confirm_pending is False, '守卫①候选空臂:确认未置位(零点击)'
+
+
+def test_partner_act_no_match_ends_success_without_decision_or_click(
+        test_context, monkeypatch):
+    """守卫①match 缺席臂(op-layer.md §1.1 局外单跑条款,两臂分开断言):
+    cw_match=None + 读链桩两元(候选在场)→ act round_success(消息含
+    「零决策零点击终结交回」)、零派发零点击、_confirm_pending 保持未置位;
+    局外臂先于任何决策消费(遭遇屏先例同款)。红 = 局外兜底决策路径回潮
+    (盲发首卡)。"""
+    session = StrategySession()
+    op, dispatches = _setup_partner_act(test_context, monkeypatch, session,
+                                        None)
+    rs = _run_node(test_context, op, op.act)
+    assert rs.is_success and '零决策零点击终结交回' in (rs.status or ''), (
+        f'守卫①match 缺席臂:局外零决策零点击 round_success 终结交回:{rs!r}')
+    assert dispatches == [], '守卫①match 缺席臂:零派发'
+    assert op._confirm_pending is False, (
+        '守卫①match 缺席臂:确认未置位(零点击)')
+
+
+def test_partner_act_guard_invalid_decision_fails_without_dispatch(
+        test_context, monkeypatch) -> None:
+    """守卫②(返回契约):decide_partner 返 None/词表外(SimpleNamespace)
+    两子态合一锁 → act 具名 round_fail(消息含「词表外」,留证原值)、
+    零派发零点击、_confirm_pending 保持未置位。红 = 守卫缺失盲发 /
+    策略异常被吞。"""
+    for stub in (None, SimpleNamespace(idx=0, reason='stub')):
+        session = StrategySession()
+        op, dispatches = _setup_partner_act(
+            test_context, monkeypatch, session, lambda s=stub: s)
+        rs = _run_node(test_context, op, op.act)
+        assert not rs.is_success and '词表外' in (rs.status or ''), (
+            f'守卫②({stub!r}):具名 round_fail 零盲发:{rs!r}')
+        assert dispatches == [], f'守卫②({stub!r}):零派发'
+        assert op._confirm_pending is False, (
+            f'守卫②({stub!r}):确认未置位(零点击)')
+
+
+def test_partner_act_guard_idx_out_of_range_asserts(
+        test_context, monkeypatch) -> None:
+    """守卫③(值域):真词表类 idx=5(候选 2 元越界)→ AssertionError
+    传播(守卫断言响亮暴露,禁钳位)、零派发零点击。红 = 钳位回潮。"""
+    from sr_od.application.currency_war.kernel.cw_vocab import (
+        CwActionPickPartnerParam,
+    )
+
+    session = StrategySession()
+    op, dispatches = _setup_partner_act(
+        test_context, monkeypatch, session,
+        lambda: CwActionPickPartnerParam(idx=5, reason='stub'))
+    with pytest.raises(AssertionError, match='越界'):
+        _run_node(test_context, op, op.act)
+    assert dispatches == [], '守卫③:零派发'
+    assert op._confirm_pending is False, '守卫③:确认未置位(零点击)'
