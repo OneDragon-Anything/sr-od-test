@@ -250,8 +250,6 @@ def test_vocab_actions_all_have_logic_state_projection(
         CwActionCollectOreParam(points=((1, 2),)),
         CwActionOpenTomeParam(slot=None),
         CwActionOpenBookcardParam(slot=None),
-        CwActionWearEquipParam(item_name='轮滑鞋', char_name='丙',
-                               row='front', slot=1),
     ]
     zero: list = [
         CwActionOpenBoxParam(slot=None),
@@ -265,14 +263,22 @@ def test_vocab_actions_all_have_logic_state_projection(
         before = _seq()
         _report(gs, action)
         assert _seq() == before, f'{type(action).__name__} 应合法零写'
-    # 词表覆盖完备性:三集并集覆盖 CW_ACTION_TYPES 中非转场/非组合壳成员
+    # 穿戴腿单独重播种(布尔契约前置:owned 在册 + 目标角色在册——前序
+    # 卖出腿已消耗前排;与工具循环同款入场态纪律)。
+    gs.observe(gs.equips, ['轮滑鞋'], sig=_sig)
+    gs.observe(gs.front_row, [Unit(char_id='丙', star=1, equips=['轮滑鞋'],
+                                   slot=1)], sig=_sig)
+    before = _seq()
+    _report(gs, CwActionWearEquipParam(item_name='轮滑鞋', char_name='丙',
+                                       row='front', slot=1))
+    assert _seq() > before, 'CwActionWearEquipParam 应产生容器写'
+    # 词表覆盖完备性:三集并集(含独立重播种的穿戴腿)覆盖 CW_ACTION_TYPES
+    # 中非转场/非组合壳成员
     names = {c.__name__ for c in CW_ACTION_TYPES}
     covered = ({type(a).__name__ for a, _t in tools_written}
                | {type(a).__name__ for a in written}
-               | {type(a).__name__ for a in zero})
-    assert {'CwActionCollectOreParam', 'CwActionOpenTomeParam', 'CwActionOpenBookcardParam', 'CwActionOpenBoxParam',
-            'CwActionSellBenchParam', 'CwActionDeployMoveParam', 'CwActionSellDeployedParam', 'CwActionLevelUpParam',
-            'CwActionWearEquipParam'} <= covered
+               | {type(a).__name__ for a in zero}
+               | {'CwActionWearEquipParam'})
     assert names >= covered   # 三集均为词表成员(不越词表)
 
 

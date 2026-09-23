@@ -1,9 +1,8 @@
-"""sim 重做 S3(M04 轮首收入 + M15 连胜经济)回归锁。
+"""sim 轮首收入与连胜经济(M04/M15)回归锁(sim 后端规则件)。
 
-设计正本 = ``docs/develop/sr_od/application/currency_war/changes/
-2026-09-15-sim-redesign/design.md``;锁面 = U04 败轮金(被败节点基础
-奖励 + 利息,平面感知取键)/U05 补给轮照发/U06 无事件金/三分支单一源
-值分解/连胜双账转移/持卡收入修饰聚合链。
+锁面 = U04 败轮金(被败节点基础奖励 + 利息,平面感知取键)/U05 补给轮
+照发/U06 无事件金/三分支单一源值分解/连胜转移/持卡收入修饰聚合链。
+规则件归宿 = sim/cw_sim_backend(驱动反转迭代平移,语义零改)。
 """
 from __future__ import annotations
 
@@ -13,7 +12,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     GameState,
 )
-from sr_od.application.currency_war.sim.cw_sim_income import (
+from sr_od.application.currency_war.sim.cw_sim_backend import (
     IncomeApplied,
     apply_round_start_income,
     income_modifiers_of,

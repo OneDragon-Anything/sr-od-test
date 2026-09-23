@@ -9,9 +9,10 @@
   一行,evidence ``proj_ore_merge#<级>#ore<k>``);
 - 席满即止:前点奖励耗席后后续点留在 spheres(不摘不采);混合批出参
   ``ore_partial_open_skipped``;全席满 = ``bench_full_no_open`` 零写;
-- None 边界:None 域跳写不标记;bench 未观察 / level 缺读整批拒;
-- sim 接线:前置分派拦截(apply_player_action 不被触达)、ore_uses
-  拒分支不耗序、流键 group_id ``act:sim@M1x/ore/{uses}``。
+- None 边界:None 域跳写不标记;bench 未观察 / level 缺读整批拒。
+
+(sim 接线锁 = 后端侧测试:test_cw_sim_backend.py 晶矿子态经流键 rng
+注入消费本上报,采样即世界真值。)
 
 观察收口(等值静默/差异 logic_rand_outcome)= 基座锁
 test_cw_game_state.py::test_write_logic_rand_and_observe_random_outcome,不重复。
@@ -19,7 +20,6 @@ test_cw_game_state.py::test_write_logic_rand_and_observe_random_outcome,不重�
 from __future__ import annotations
 
 import random
-from types import SimpleNamespace
 
 import pytest
 
@@ -319,34 +319,3 @@ def test_bench_unobserved_rejects_whole_batch() -> None:
     assert out.applied is False and out.reason == 'bench_unobserved'
     assert gs.spheres.value.count == 1, '拒分支零写'
 
-
-# ============================================================ sim 接线
-
-
-def test_sim_dispatch_intercepts_and_counts_uses(
-        monkeypatch: pytest.MonkeyPatch) -> None:
-    """sim 接线:_step_prep 前置拦截 CollectOre(主转移函数不被触达)、
-    流键 group_id ``act:sim@M1x/ore/{uses}``、拒分支不耗 ore_uses。"""
-    from sr_od.application.currency_war.sim import cw_sim_engine as eng_mod
-
-    def _boom(*a, **k):   # pragma: no cover - 被触达即失败
-        raise AssertionError('apply_player_action 不应被触达(旁路直调)')
-
-    monkeypatch.setattr(eng_mod, 'apply_player_action', _boom)
-    engine = eng_mod.CwSimEngine()
-
-    # 成功腿:ore_uses 0 → 1,group_id 带流键坐标
-    gs = _make_gs(bench=[('A', 1)], ores=[_ore('金', 1, 1)])
-    feng = SimpleNamespace(seed=7, ore_uses=0, gs=gs)
-    calls = _record_writes(gs, monkeypatch)
-    out = engine._step_prep(feng, CwActionCollectOreParam(points=((1, 1),)))
-    assert out is not None and out.applied is True, '前置分派受理并回执'
-    assert feng.ore_uses == 1, '成功耗序'
-    assert calls and calls[0][2] == 'act:sim@M1x/ore/1', '流键 group_id'
-
-    # 拒腿(level 缺读):ore_uses 不耗序
-    gs2 = _make_gs(bench=[('A', 1)], level=None, ores=[_ore('金', 1, 1)])
-    feng2 = SimpleNamespace(seed=7, ore_uses=3, gs=gs2)
-    out2 = engine._step_prep(feng2, CwActionCollectOreParam(points=((1, 1),)))
-    assert out2 is not None and out2.applied is False
-    assert feng2.ore_uses == 3, '拒分支不耗序(与炉先例一致)'

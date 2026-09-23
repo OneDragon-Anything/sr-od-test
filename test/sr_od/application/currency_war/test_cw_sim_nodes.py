@@ -1,9 +1,10 @@
-"""sim 重做 S7(M16 遭遇/M17 晶矿·扑满·箱/M18 补给/M22 overlay)回归锁。
+"""sim 节点事件面(M16 遭遇/M17 晶矿·扑满·箱/M18 补给/M22 overlay)
+回归锁(sim 后端规则件)。
 
-设计正本 = ``docs/develop/sr_od/application/currency_war/changes/
-2026-09-15-sim-redesign/design.md``;锁面 = U22 遭遇档位结构与加成
-真值/U23 晶矿面板单例锚与入账语义/扑满替换单一源/U24 补给 3 选 1 基础件
-均匀 + 带钻占位/M22 overlay 队列框架与占位披露。
+锁面 = U22 遭遇档位结构/U23 晶矿面板单例锚/扑满替换单一源/U24 补给
+3 选 1 基础件均匀 + 带钻占位/M22 overlay 队列框架与占位披露。pick 动作
+入账腿退役(锁面迁 test_cw_sim_backend.py:选卡走 op → 上报函数族获得
+链,与实机同构);遭遇加成真值表归宿 = cw_sim_enemy(难度账域)。
 """
 from __future__ import annotations
 
@@ -15,19 +16,15 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     GameState,
     NodeKey,
 )
-from sr_od.application.currency_war.sim.cw_sim_nodes import (
+from sr_od.application.currency_war.sim.cw_sim_backend import (
     BOX_CANDIDATES,
-    ENCOUNTER_TIER_BONUS,
-    ENCOUNTER_TIER_COUNT,
-    apply_box_pick,
-    apply_encounter_pick,
-    apply_ore_pick,
-    apply_supply_pick,
     box_options,
     encounter_options,
     is_piggy_node,
-    reward_ore_panel,
     supply_options,
+)
+from sr_od.application.currency_war.sim.cw_sim_enemy import (
+    ENCOUNTER_TIER_BONUS,
 )
 from sr_od.application.currency_war.sim.cw_sim_overlay import (
     OVERLAY_KINDS,
@@ -49,22 +46,12 @@ def _gs(node_kind: str = 'reward') -> GameState:
 
 def test_encounter_options_structure_and_tier_bonus_truth() -> None:
     """U22:档位集 = 四档序结构;遭遇等级加成四档 0/10/20/30 = 定谳
-    真值(economy.md §9,唯一有档数值)。"""
+    真值(economy.md §9,唯一有档数值;表住 cw_sim_enemy 难度账域)。"""
     opts = encounter_options()
-    assert len(opts) == ENCOUNTER_TIER_COUNT == 4
+    assert len(opts) == 4
     assert [o.difficulty for o in opts] == [1, 2, 3, 4]
     assert [o.idx for o in opts] == [0, 1, 2, 3]
     assert ENCOUNTER_TIER_BONUS == (0, 10, 20, 30)
-
-
-def test_encounter_pick_writes_chosen() -> None:
-    """选档入账:chosen_encounter = (难度档 1 基, 奖励文本)——引擎把
-    加成表对应档进 M19 难度账。"""
-    gs = _gs()
-    tier, reward_text = apply_encounter_pick(gs, 2)
-    assert tier == 3
-    assert gs.chosen_encounter.value == (3, reward_text)
-    assert reward_text
 
 
 # ============================================================ M17 晶矿/扑满/箱
@@ -80,44 +67,18 @@ def test_piggy_env_replacement_single_source() -> None:
     assert not is_piggy_node(_gs('battle')), '非奖励节点恒 False'
 
 
-def test_reward_ore_panel_u23_anchor() -> None:
-    """U23 单例锚:面板 = 1 大金晶矿+5 蓝晶矿+2 灰晶矿(共 8 晶矿;颜色结构 =
-    唯一有据面)。"""
-    panel = reward_ore_panel()
-    assert len(panel) == 8
-    by_color = {c: sum(1 for b in panel if b.color == c)
-                for c in ('金', '蓝', '灰')}
-    assert by_color == {'金': 1, '蓝': 5, '灰': 2}
-
-
-def test_ore_pick_gold_and_equip_settlement() -> None:
-    """采晶矿即时入账:金晶矿直加金账;蓝晶矿直入装备栏。"""
-    gs = _gs()
-    sig = ChannelSig(family='obs', actor='TestSigWriter')
-    gs.observe(gs.gold, 10, sig=sig)
-    kind, amount = apply_ore_pick(gs, 0, rng=random.Random(1))  # 0 = 金晶矿
-    assert (kind, amount) == ('gold', 30)
-    assert gs.gold.value == 40
-    equip_count_before = len(gs.equips.value or [])
-    kind, amount = apply_ore_pick(gs, 1, rng=random.Random(2))  # 1 = 蓝晶矿
-    assert (kind, amount) == ('equip', 1)
-    assert len(gs.equips.value) == equip_count_before + 1
-
-
-def test_box_pick_four_choices_into_equips() -> None:
-    """补给箱 4 选 1 装备:候选 = 4(U23);开箱入装备栏。"""
+def test_box_candidates_four_choices() -> None:
+    """补给箱 4 选 1 装备:候选 = 4(U23);入栏腿走获得链(锁面 =
+    test_cw_sim_backend.py 箱腿)。"""
     assert len(box_options()) == BOX_CANDIDATES == 4
-    gs = _gs()
-    pick = box_options()[0]
-    apply_box_pick(gs, pick)
-    assert gs.equips.value == [pick]
 
 
 # ============================================================ M18 补给
 
 def test_supply_options_three_distinct_one_diamond() -> None:
     """U24:3 选项 = 8 基础件池不放回(互不重名)+ 恰一带钻槽(均匀
-    占位);char 维恒空(补给 = 装备选)。"""
+    占位);char 维恒空(补给 = 装备选)。带钻授予腿 = 后端
+    diamond_count 写端(锁面 = test_cw_sim_backend.py 补给窗)。"""
     seen_equips: set[str] = set()
     for seed in range(30):
         opts = supply_options(random.Random(seed))
@@ -127,17 +88,6 @@ def test_supply_options_three_distinct_one_diamond() -> None:
         assert all(o.char == '' for o in opts)
         seen_equips.update(o.equip for o in opts)
     assert len(seen_equips) >= 5, '多 seed 下池取样有分散度'
-
-
-def test_supply_pick_writes_equip_returns_diamond() -> None:
-    """选卡入账:装备入装备栏;带钻选项返回 True(引擎宝钻计数消费)。"""
-    gs = _gs()
-    opts = supply_options(random.Random(7))
-    diamond = next(o for o in opts if o.has_diamond)
-    plain = next(o for o in opts if not o.has_diamond)
-    assert apply_supply_pick(gs, plain) is False
-    assert apply_supply_pick(gs, diamond) is True
-    assert set(gs.equips.value) >= {plain.equip, diamond.equip}
 
 
 # ============================================================ M22 overlay

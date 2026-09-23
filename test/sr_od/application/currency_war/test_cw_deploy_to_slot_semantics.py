@@ -45,7 +45,6 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
 from sr_od.application.currency_war.operations.cw_op.cw_deploy_move_action import (
     CwActionDeployMoveOp,
 )
-from sr_od.application.currency_war.sim.cw_sim_actions import apply_player_action
 
 _SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep')
 _SIG_LOGIC = ChannelSig(family='logic_action', actor='CwScreenPrep')
@@ -232,14 +231,14 @@ def test_executor_rejects_slot_beyond_screen_points_no_drag(
 # ===== ③ sim 应用:目标槽有人 = 交换语义 =====
 
 def test_sim_applies_occupied_target_as_swap():
-    """sim 应用宿主对「目标槽有人」按交换建模:上场者落载荷槽、被占位
-    角色回发射者源 bench 槽(经上报函数单一源,引擎零私有占位规则)。"""
+    """部署上报(动作腿单一源)对「目标槽有人」按交换建模:上场者落
+    载荷槽、被占位角色回发射者源 bench 槽(经上报函数,零私有占位规则)。"""
     gs = _gs(bench=[BenchSlot(kind='unit', unit=_unit('甲', 1))],
              front=[_unit('乙', 1)])
-    apply_player_action(
+    report_action_deploy_move_param(
         gs, CwActionDeployMoveParam(bench_idx=0, to_row='front', to_slot=1,
                                     faction=''),
-        node_tag='p1r2')
+        _SIG_LOGIC)
     assert gs.front_row.value[0].char_id == '甲', '上场者落载荷槽'
     slot = gs.bench.value.slots[0]
     assert slot.kind == 'unit' and slot.unit.char_id == '乙', \
@@ -247,13 +246,13 @@ def test_sim_applies_occupied_target_as_swap():
 
 
 def test_sim_applies_empty_target_as_place():
-    """对照腿:载荷槽空 = 放置(sim 与写侧同一转移函数)。"""
+    """对照腿:载荷槽空 = 放置(上报函数与写侧同一转移函数)。"""
     gs = _gs(bench=[BenchSlot(kind='unit', unit=_unit('甲', 1))],
              front=[], back=[])
-    apply_player_action(
+    report_action_deploy_move_param(
         gs, CwActionDeployMoveParam(bench_idx=0, to_row='back', to_slot=4,
                                     faction=''),
-        node_tag='p1r2')
+        _SIG_LOGIC)
     assert gs.back_row.value[0].char_id == '甲', '空槽 = 放置'
 
 

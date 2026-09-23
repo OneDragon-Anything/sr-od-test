@@ -1,9 +1,8 @@
-"""sim 重做 S1(基座/RunConfig/流键/相位/日程真值/M01 开局)回归锁。
+"""sim 开局与日程(M01/M03)回归锁(基座/RunConfig/流键/日程真值)。
 
-设计正本 = ``docs/develop/sr_od/application/currency_war/changes/
-2026-09-15-sim-redesign/design.md``;本文件只锁设计稿已裁定的表现:
-U28 开局四要素/U15 HP 实证档硬表/§2.0.4 流键子流/§2.0.1 相位词表/
-§2.2 M03 地面真值序列(P3 不运行)。
+锁面(设计已裁定的表现):U28 开局四要素/U15 HP 实证档硬表/
+流键子流隔离/§2.2 M03 地面真值序列(P3 不运行)。相位词表随旧引擎
+相位机退役(替代面 = 画面状态机,锁面 = test_cw_sim_backend.py)。
 """
 from __future__ import annotations
 
@@ -25,7 +24,6 @@ from sr_od.application.currency_war.sim.cw_sim_opening import (
     opening_bench_chars,
     opening_hp_or_raise,
 )
-from sr_od.application.currency_war.sim.cw_sim_phase import CwSimPhase
 from sr_od.application.currency_war.sim.cw_sim_plane_schedule import (
     P1_NODE_SEQUENCE,
     P2_NODE_SEQUENCE,
@@ -72,17 +70,6 @@ def test_stream_rng_deterministic_and_key_isolated() -> None:
     c2 = stream_rng(7, 'M05/p1/r3')
     assert [c1.random() for _ in range(8)] != [c2.random() for _ in range(8)], \
         'seed 变则同键流变(可复现承诺 = seed+开局参数+注册表指纹)'
-
-
-# ============================================================ 相位词表(§2.0.1)
-
-def test_phase_enum_covers_design_vocabulary() -> None:
-    """相位枚举 = 设计稿 §2.0.1 十一相位一一对应(策略路由依据)。"""
-    assert {p.value for p in CwSimPhase} == {
-        'opening_env', 'prep', 'invest_offer', 'encounter_offer',
-        'supply_pick', 'box_pick', 'reward_ore', 'event_overlay',
-        'settlement', 'plane_transition', 'game_over',
-    }
 
 
 # ============================================================ 日程真值(M03/U19)

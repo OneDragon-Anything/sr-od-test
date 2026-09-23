@@ -302,7 +302,7 @@ def test_board_adopt_sim_evidence_suppressed_from_production_sink(
     rows: list[dict] = []
     set_defect_sink(rows.append)
     try:
-        # sim 步末板面真值观察形态(cw_sim_engine._refresh_board):
+        # sim 步末板面真值观察形态(cw_sim_backend._refresh_board):
         # 真值与派生失配,observed_evidence 带 sim:engine 前缀
         gs.observe(gs.board, {'巡海游侠': 1, '击破': 1},
                    evidence='sim:engine:board:p1r2', sig=_SIG_OBS)

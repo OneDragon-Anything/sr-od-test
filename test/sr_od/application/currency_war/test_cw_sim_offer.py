@@ -1,10 +1,10 @@
-"""sim 重做 S6(M11/M02 offer 引擎 + 注入核)回归锁。
+"""sim 投资 offer 引擎(M11/M02)回归锁(sim 后端规则件)。
 
-设计正本 = ``docs/develop/sr_od/application/currency_war/changes/
-2026-09-15-sim-redesign/design.md``;锁面 = U07 固定日程(P1r3/P2r2/
-P3r2 + 联席决策 2-6 额外槽)/U07③ 候选结构(品质→池取样、offer 内
-去重、全程不重复)/U08 环境 offer 同构 3 选 1/品质分布显式常量占位/
-容器写端与注入核直写。
+锁面 = U07 固定日程(P1r3/P2r2/P3r2 + 联席决策 2-6 额外槽)/U07③ 候选
+结构(品质→池取样、offer 内去重、全程不重复)/U08 环境 offer 同构
+3 选 1/品质分布显式常量占位。选卡入账腿 = kernel 获得链(锁面迁
+test_cw_sim_backend.py,注入核随退役删除);品质覆写名单常量位 =
+kernel cw_investments。
 """
 from __future__ import annotations
 
@@ -17,15 +17,13 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 from sr_od.application.currency_war.kernel.cw_investments import (
     INVESTMENT_ENVS,
     INVESTMENT_STRATEGIES,
+    QUALITY_REWRITE_ENV_NAMES,
 )
-from sr_od.application.currency_war.sim.cw_sim_offer import (
+from sr_od.application.currency_war.sim.cw_sim_backend import (
     INVEST_OFFER_SCHEDULE,
     JOINT_DECISION_ENV_NAME,
     OFFER_CANDIDATES,
     QUALITY_DISTRIBUTION,
-    apply_env_pick,
-    apply_strategy_pick,
-    inject_choices,
     offer_slots,
     quality_rewrite_hit,
     sample_env_offer,
@@ -132,36 +130,14 @@ def test_env_offer_shape_and_registry_membership() -> None:
     assert tiny == ()
 
 
-# ============================================================ 容器写端/注入核
-
-def test_env_and_strategy_pick_write_container() -> None:
-    """选卡入账:环境写 active_env 定局;策略 append active_strategies
-    且同名不重复入列(实机 handler 去重语义对齐)。"""
-    gs = _gs()
-    apply_env_pick(gs, '轮岗')
-    assert gs.active_env.value == '轮岗'
-    apply_strategy_pick(gs, '淘金客')
-    apply_strategy_pick(gs, '躺平')
-    apply_strategy_pick(gs, '淘金客')
-    assert gs.active_strategies.value == ['淘金客', '躺平']
-
-
-def test_inject_choices_bypasses_sampling() -> None:
-    """注入核(§2.4.1 保留面):显式点名直写容器,供定向测试固定
-    环境/持卡;重复策略名去重兜底。"""
-    gs = _gs()
-    inject_choices(gs, env_name='联席决策',
-                   strategy_names=('本金充裕', '伟大征服', '本金充裕'))
-    assert gs.active_env.value == '联席决策'
-    assert gs.active_strategies.value == ['本金充裕', '伟大征服']
-
-
 # ============================================================ 披露判据
 
 def test_quality_rewrite_envs_flagged_not_modeled() -> None:
     """品质覆写族(彩虹/黄金/白银时代等)首版不建模:命中判据为真,
-    供引擎层按 QUALITY_REWRITE_ENVS_PENDING 披露;普通环境不误报。"""
+    供后端按 QUALITY_REWRITE_ENVS_PENDING 披露;普通环境不误报;
+    名单常量位 = kernel(游戏事实单一源)。"""
     assert quality_rewrite_hit('彩虹时代')
     assert quality_rewrite_hit('头彩')
     assert not quality_rewrite_hit('轮岗')
     assert not quality_rewrite_hit(None)
+    assert '彩虹时代' in QUALITY_REWRITE_ENV_NAMES

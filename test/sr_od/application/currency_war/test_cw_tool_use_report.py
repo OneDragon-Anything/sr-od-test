@@ -5,8 +5,8 @@
 - 逐工具写端锁:记账载体 = equips 合并单笔写(消耗移除与效果同笔,
   禁拆两笔);扳手两笔(equips 合并 + 行域清空);炉随机面
   write_logic_rand 采样链;
-- 冶金炉采样锁:rng 注入同种子同产物;与 ``cw_sim_equips.furnace_reroll``
-  对拍锁(同池同输入逐次等值);采样命中后果表键集 → 采证行;
+- 冶金炉采样锁:rng 注入同种子同产物(采样单一源 = 本模块;sim 私有
+  动作腿随驱动反转退役,原对拍腿删除);采样命中后果表键集 → 采证行;
 - 投影仪走链锁:经 ``gain_character``(回调触发 + 凑满三连合成);
   变异面(冶金炉/特权卡)不走链、不触发获得回调;
 - 特权卡 char 腿 fail-closed;费用门防御;EQUIP_WRITE_SIDES 新词表
@@ -58,7 +58,6 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionStaffProjectorUseParam,
     CwActionWrenchUseParam,
 )
-from sr_od.application.currency_war.sim.cw_sim_equips import furnace_reroll
 
 _SIG_OBS = ChannelSig(family='obs', actor='CwToolUseReportSeed')
 
@@ -211,19 +210,21 @@ def _rng_after(rng: random.Random, item: str) -> random.Random:
     return rng
 
 
-def test_furnace_sample_same_seed_and_sim_crosscheck() -> None:
-    """采样锁:同种子同产物(可复现)+ 与 sim ``furnace_reroll`` 对拍——
-    同池同输入逐次等值(两实现等价钉死,禁第二套口径;design §2.2)。
-    样本限作用域白名单内(简易/进阶;白名单 = 口述·权威 2026-09-21)。"""
+def test_furnace_sample_same_seed_reproducible() -> None:
+    """采样锁:同种子同产物(可复现;rng 注入槽,同种子同序列)。
+    样本限作用域白名单内(简易/进阶;白名单 = 口述·权威 2026-09-21)。
+    原对拍腿(旧 sim 私有重掷实现)随 sim 私有动作腿退役删除,
+    采样单一源 = 本模块。"""
     for item in ('轮滑鞋', '反重力皮靴'):
         pool = tool_use.furnace_mutate_pool(item)
         assert pool is not None and pool, f'{item} 池可用'
         for seed in (0, 1, 42):
             r1, r2 = random.Random(seed), random.Random(seed)
-            ours = [tool_use.furnace_mutate_sample(r1, item)
-                    for _ in range(10)]
-            sim = [furnace_reroll(r2, item) for _ in range(10)]
-            assert ours == sim, f'{item} seed={seed} 对拍失配'
+            first = [tool_use.furnace_mutate_sample(r1, item)
+                     for _ in range(10)]
+            second = [tool_use.furnace_mutate_sample(r2, item)
+                      for _ in range(10)]
+            assert first == second, f'{item} seed={seed} 同种子异序列'
     # 报告函数同种子复现:两次独立容器同 rng 种子 → 同终值。
     vals = []
     for _ in range(2):

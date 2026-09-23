@@ -18,7 +18,6 @@ from sr_od.application.currency_war.data.cw_shop_odds import (
     POOL_COPIES_PER_CARD,
     REFRESH_PROB,
 )
-from sr_od.application.currency_war.kernel.cw_economy import REFRESH_COST_BASE
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
     ChannelSig,
@@ -33,10 +32,10 @@ from sr_od.application.currency_war.kernel.cw_pool import (
     held_copies,
     remaining_pool,
 )
-from sr_od.application.currency_war.sim.cw_sim_shop import (
+from sr_od.application.currency_war.sim.cw_sim_backend import (
+    ROTATION_ASSUMPTION_DISCLOSURE,
     deal_shop,
     effective_deal_probs,
-    refresh_cost_for,
 )
 from sr_od.application.currency_war.sim.cw_sim_streams import stream_rng
 
@@ -191,26 +190,9 @@ def test_deal_shop_level9_domain_and_registered_names() -> None:
             assert slot.card.name in CHARACTERS
 
 
-def test_refresh_cost_free_balance_first() -> None:
-    """免费刷额度先行 → 0;额度耗尽/零/未观察(None)→ 基价 2 恒定
-    (M05 定谳;余额域 = 容器字段 ``gs.free_refresh_left``,
-    2026-09-21 Field 化)。"""
-    gs = _fresh_gs()
-    assert refresh_cost_for(gs) == REFRESH_COST_BASE, 'None = 未观察按基价'
-    gs.write_logic(gs.free_refresh_left, 1, produced_by='test-bridge',
-                   sig=ChannelSig(family='logic_hook', actor='TestSigWriter'))
-    assert refresh_cost_for(gs) == 0, '免费额度在场先行'
-    gs.write_logic(gs.free_refresh_left, 0, produced_by='test-bridge',
-                   sig=ChannelSig(family='logic_hook', actor='TestSigWriter'))
-    assert refresh_cost_for(gs) == REFRESH_COST_BASE, '额度耗尽回基价'
-
-
 def test_effective_deal_probs_rotation_toggle() -> None:
     """基线 = REFRESH_PROB 原表;轮岗开 = 重掷翻倍档(1/5 均匀系假设档,
     假设随 ROTATION_ASSUMPTION_DISCLOSURE 申报)或不可行档退基线。"""
-    from sr_od.application.currency_war.sim.cw_sim_shop import (
-        ROTATION_ASSUMPTION_DISCLOSURE,
-    )
     base = effective_deal_probs(6, stream_rng(1, 'M05/rotation/1/6'),
                                 rotation_on=False)
     assert base == dict(REFRESH_PROB[6])
