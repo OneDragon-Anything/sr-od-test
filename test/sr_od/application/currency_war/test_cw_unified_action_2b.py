@@ -179,6 +179,48 @@ def test_sellbench_emission_carries_channel_reason():
 
 # ===== 4. 换算收口锁 =====
 
+def test_bridge_recheck_context_uses_slot_table_indices(monkeypatch):
+    """桥复检语境坐标锁(批2b「bridge 复检语境容器下标化」行为半):
+    ``decide_prep_frame`` 供给截断复检的 bench 占用集必须 = **定长槽位表
+    下标**(动作参数坐标系,bench_idx 同系,cw_vocab 坐标契约节单一源)
+    ——前部有洞帧按紧缩序(bench_entries_of)枚举下标供给会错杀后部
+    占用槽的合法引用,发射被截空后世界不变 → 备战环「本帧无动作」
+    无限交回(sim 多种子首局活锁实证,实机同链路同受害)。"""
+    from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+        bridge,
+        entry,
+    )
+    from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate import (
+        Emitted,
+    )
+
+    class _Cfg:
+        ev_arm = 'full'
+
+    session = SimpleNamespace()
+    gs = game_state_of(session)
+    # 前部两洞 + 槽3/槽5 占席(槽位信息位 = 数组下标+1);占用槽表下标
+    # 集 = {2, 4},紧缩序枚举下标集 = {0, 1}——两坐标系此帧分叉。
+    gs.write_logic(gs.bench, BenchView(
+        slots=[BenchSlot(kind='empty')] * 2
+        + [BenchSlot(kind='unit', unit=Unit(char_id='甲', star=1, slot=3)),
+           BenchSlot(kind='empty'),
+           BenchSlot(kind='unit', unit=Unit(char_id='乙', star=1, slot=5))]
+        + [BenchSlot(kind='empty')] * 4, capacity=9),
+        produced_by='T', sig=_SIG)
+    # 正半:引用占用槽表下标 4(乙)必须通过复检照发——错杀即本锁红。
+    sell = CwActionSellBenchParam(bench_idx=4, reason='interest_prep')
+    monkeypatch.setattr(entry, 'emit',
+                        lambda *a, **k: [Emitted(sell, True, 'interest_prep')])
+    assert bridge.decide_prep_frame(session, _Cfg()) == [sell]
+    # 负半:真空槽引用(下标 0)照旧 fail-closed 截空——复检防线语义
+    # 不因坐标修复放宽。
+    ghost = CwActionSellBenchParam(bench_idx=0, reason='interest_prep')
+    monkeypatch.setattr(entry, 'emit',
+                        lambda *a, **k: [Emitted(ghost, True, 'interest_prep')])
+    assert bridge.decide_prep_frame(session, _Cfg()) == []
+
+
 def test_emission_resolves_container_index_fail_closed():
     """发射面容器下标解析(换算归属裁定,持久索引见模块头):bench
     域按槽位信息位与容器槽位表读口对位取枚举下标;deployed 域按

@@ -7,13 +7,14 @@
 - 确定性:同 seed 同 RunConfig 双跑容器逐位一致(双跑快照 diff 为空);
 - 容器不变式:金币不出现无规则依据的负值 / hp 轨迹与结算写流一致 /
   经验等级符合规则表(carry 与阈值表)/ 局终无未消费败态挂账;
+- 多种子完备性:非验收 seed(MULTI_SEEDS)首局同样跑完零活锁;
 - L1 全量绿(由全量运行承载,非本文件断言面)。
 
 设计依据 = flow-seam 详设 §4(运行器装配缝)+ sim-backend 详设(状态机
 与序列语义;迭代内合法引用,正本更新义务归末阶段)。运行原语住
 ``test/harness/sim_backend_runner.py``(装配缝单一源,本文件只消费)。
 
-运行成本:一次模块夹具跑两整局(确定性双跑共用),秒级~分钟级 →
+运行成本:确定性双跑共用两整局 + 多种子完备性逐 seed 一整局 →
 慢桶登记(slow_marks.txt)。
 """
 from __future__ import annotations
@@ -21,7 +22,6 @@ from __future__ import annotations
 from typing import Any
 
 import pytest
-
 from test.harness.sim_backend_runner import run_sim_full_match
 
 #: 验收局种子(世界后端与策略器共用;经种子扫描选定 = 该 seed 下真
@@ -31,6 +31,13 @@ ACCEPT_SEED: int = 20260923
 #: 种子扫描终局下限:验收局至少到达第二位面(P2 boss 辖域)。
 _EXPECT_MIN_PLANE: int = 2
 
+#: 多种子完备性局种子集(非验收 seed,含种子扫描实证活锁 seed 7/61):
+#: 验收 seed 为扫描选定后,其余 seed 首局曾在 P1r1「本帧无动作」活锁
+#: 至看门狗——根因 = 桥复检语境坐标错位(机制锁 =
+#: test_cw_unified_action_2b 桥复检语境坐标锁);本集合锁修复后多种子
+#: 首局完备(第三 seed = 非验收扫描通过候选,与验收 seed 不同值)。
+MULTI_SEEDS: tuple[int, ...] = (7, 61, 31337)
+
 
 @pytest.fixture(scope='module')
 def two_runs(test_context: Any, tmp_path_factory: Any) -> tuple:
@@ -39,6 +46,14 @@ def two_runs(test_context: Any, tmp_path_factory: Any) -> tuple:
     tmp2 = tmp_path_factory.mktemp('sim_run_b')
     return (_one_run(test_context, tmp1, ACCEPT_SEED),
             _one_run(test_context, tmp2, ACCEPT_SEED))
+
+
+@pytest.fixture(scope='module', params=MULTI_SEEDS)
+def seeded_run(request: Any, test_context: Any,
+               tmp_path_factory: Any) -> Any:
+    """非验收 seed 单局(逐 seed 一次;多种子完备性断言消费)。"""
+    tmp = tmp_path_factory.mktemp(f'sim_run_s{request.param}')
+    return _one_run(test_context, tmp, request.param)
 
 
 def _one_run(test_context: Any, tmp_path: Any, seed: int) -> Any:
@@ -70,6 +85,19 @@ def test_first_match_runs_to_game_over_without_op_fail(two_runs: tuple) -> None:
         f'未到达 P{_EXPECT_MIN_PLANE} 辖域: {node!r}'
     assert run.loop._op_fail_streak_n < 5, '外环 op 连续 fail 计数触限'
     assert run.loop._settle.rounds_done >= 1, '零结算轮(未打任何一场战斗)'
+
+
+def test_non_acceptance_seed_first_run_completes(seeded_run: Any) -> None:
+    """多种子完备性:非验收 seed 首局 e2e 跑完零活锁(多种子集见
+    MULTI_SEEDS)。
+
+    活锁形态 = 策略帧恒定「本帧无动作」交回,世界不变,直至看门狗
+    轮限 success=False(T-4 验收实证 seed 7/61)——判据即「成功收口
+    ∧ 局终位 done」;活锁时二者必假,看门狗轮限内不会假绿。"""
+    run = seeded_run
+    assert run.result is not None and run.result.success, \
+        f'非验收 seed 首局未成功收口: {getattr(run.result, "status", "")!r}'
+    assert run.backend.done, '后端局终位未置(done)'
 
 
 # ============================================================ 尺① 确定性

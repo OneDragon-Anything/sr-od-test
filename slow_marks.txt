@@ -17,3 +17,7 @@ test/sr_od/application/currency_war/test_cw_sim_first_run.py::test_first_match_g
 test/sr_od/application/currency_war/test_cw_sim_first_run.py::test_first_match_hp_trail_matches_settlement_writes
 test/sr_od/application/currency_war/test_cw_sim_first_run.py::test_first_match_level_follows_rule_table
 test/sr_od/application/currency_war/test_cw_sim_first_run.py::test_first_match_no_unconsumed_pending_loss
+# 多种子完备性(T-4 验收新发现收口):逐非验收 seed 一整局 sim(~25-45s/seed)
+test/sr_od/application/currency_war/test_cw_sim_first_run.py::test_non_acceptance_seed_first_run_completes[7]
+test/sr_od/application/currency_war/test_cw_sim_first_run.py::test_non_acceptance_seed_first_run_completes[61]
+test/sr_od/application/currency_war/test_cw_sim_first_run.py::test_non_acceptance_seed_first_run_completes[31337]
