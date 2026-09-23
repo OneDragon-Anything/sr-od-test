@@ -10,3 +10,10 @@
 test_back_to_normal_world_plus.py::TestBattleFailScreenBranch::test_battle_fail_clicks_blank
 test_back_to_normal_world_plus.py::TestCwLobbyResidualBranch::test_residual_lobby_closes
 test/sr_od/application/currency_war/test_cw_dispatch_corpus.py::test_dispatch_corpus_true_direction
+# sim 统一 3.4 首局验收:模块夹具跑两整局 sim(~43s),六条验收测试共享
+test/sr_od/application/currency_war/test_cw_sim_first_run.py::test_first_match_runs_to_game_over_without_op_fail
+test/sr_od/application/currency_war/test_cw_sim_first_run.py::test_first_match_deterministic_double_run_identical
+test/sr_od/application/currency_war/test_cw_sim_first_run.py::test_first_match_gold_never_negative
+test/sr_od/application/currency_war/test_cw_sim_first_run.py::test_first_match_hp_trail_matches_settlement_writes
+test/sr_od/application/currency_war/test_cw_sim_first_run.py::test_first_match_level_follows_rule_table
+test/sr_od/application/currency_war/test_cw_sim_first_run.py::test_first_match_no_unconsumed_pending_loss

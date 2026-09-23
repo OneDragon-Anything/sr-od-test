@@ -668,3 +668,73 @@ def test_node_key_field_convergence() -> None:
             '旧引擎双账字段不复活'
     finally:
         uninstall_backend()
+
+
+# ============================================================ 3.4 联调机制锁
+
+def test_node_window_front_section_idempotent_on_click_replay() -> None:
+    """窗口前段幂等守卫(3.4 联调裁决①):同节点线性序的窗口收口二次
+    进入(实机形态 = 位面过渡点空白点击重放)不双发轮首收入——收入是
+    窗口前段唯一的真双账面(发牌覆盖同值无感)。"""
+    b = _backend(7)
+    try:
+        b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+        b._maybe_finish_wait()
+        assert b.gs.node.value is not None
+        gold = b.gs.gold.value
+        b._handle_click_source('货币战争-位面过渡', '区域-空白点击')
+        assert b.gs.gold.value == gold, '窗口前段收入被双发'
+    finally:
+        uninstall_backend()
+
+
+def test_game_over_presents_lobby_terminal_screen() -> None:
+    """局终终态呈现 = 大厅屏(死亡/第一期辖域尽头两源共用;3.4 联调
+    接线):呈现即可达流程终局链(CwScreenBattleWait 终局锚 → 主循环
+    3c 收口),与实机「终局 → 返回货币战争 → 大厅」消费链同形。"""
+    from sr_od.application.currency_war.sim.cw_sim_backend import (
+        SCREEN_LOBBY,
+    )
+    b = _backend(7)
+    try:
+        b._game_over()
+        assert b.done
+        assert b.screen_identity() == SCREEN_LOBBY
+    finally:
+        uninstall_backend()
+
+
+def test_expert_screen_presentation_raises_loud_on_observe() -> None:
+    """SCREEN_EXPERT「呈现即响错」语义锁(3.4 联调裁决③):open_bookcard
+    转移呈现专家邀请函屏;该屏非金路径 13 档(实机触发条件零档,数据
+    缺口族),observe 必 LookupError 具名响错——防未来把响错静默降级成
+    注册屏/空产物(flow-seam §3 未注册屏响错锁的呈现态配对)。"""
+    from sr_od.application.currency_war.kernel.cw_event_hooks import (
+        TransitionEvent,
+    )
+    from sr_od.application.currency_war.sim.cw_sim_backend import (
+        SCREEN_EXPERT,
+    )
+    b = _backend(7)
+    try:
+        b.on_transition_event(TransitionEvent(kind='open_bookcard'))
+        assert b.screen_identity() == SCREEN_EXPERT
+        with pytest.raises(LookupError, match='未注册'):
+            b.observe(SCREEN_EXPERT)
+    finally:
+        uninstall_backend()
+
+
+def test_unpresented_overlay_anchor_not_visible_on_prep() -> None:
+    """visible area 级细化(3.4 联调):sim 不可呈现浮层的在场锚恒
+    False(阿哈装备选择浮层检测锚;sim 不建模该浮层 = 世界真值)——
+    画面档匹配语义会把它误答真,备战帧被浮层分支抢走。"""
+    b = _backend(7)
+    try:
+        b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+        b._maybe_finish_wait()
+        assert b.visible(SCREEN_PREP, '备战标识-购买经验'), '备战锚可见'
+        assert not b.visible(SCREEN_PREP, '标识-简易装备'), \
+            '不可呈现浮层锚必须不可见'
+    finally:
+        uninstall_backend()

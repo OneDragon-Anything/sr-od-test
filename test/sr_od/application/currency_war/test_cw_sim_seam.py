@@ -195,3 +195,60 @@ def test_transition_event_closed_set_and_default_off():
         emit_fact_event,
     )
     emit_fact_event('board_changed')
+
+
+# ============================================================ 3.4 联调接线锁
+
+def test_identity_helper_filters_by_screen_list():
+    """画面身份读点改道 helper(sim 统一 3.4;flow-seam 附录 A.2
+    「sim 画面身份归 screen_identity」):装配后 = 状态机答口,且清单外
+    返回 None(与实机 get_match_screen_name 清单过滤同形,备战双锚默认
+    分支不受扰);缺省关 = 原识别链零行为变化。"""
+    with sim_backend_fixture(MinimalSimBackend(screen='货币战争-补给')):
+        assert cw_sim_ports.sim_or_live_identity(
+            ('货币战争-补给',), lambda: 'LIVE') == '货币战争-补给'
+        assert cw_sim_ports.sim_or_live_identity(
+            (_PREP_SCREEN,), lambda: 'LIVE') is None
+    assert cw_sim_ports.sim_or_live_identity(
+        (_PREP_SCREEN,), lambda: 'LIVE') == 'LIVE'
+
+
+def test_mechanical_io_allowed_default_true_sim_false():
+    """机械 IO 腿检查口(直连旁路 port 检查的共用判定,flow-seam §2):
+    实机(未装配)= True 零行为变化;sim 装配后 = False(机械腿静默
+    跳过,自上报照走)。"""
+    assert cw_sim_ports.mechanical_io_allowed() is True
+    with sim_backend_fixture():
+        assert cw_sim_ports.mechanical_io_allowed() is False
+    assert cw_sim_ports.mechanical_io_allowed() is True
+
+
+def test_action_rng_provider_seeded_on_install_reset_on_uninstall():
+    """动作腿采样 rng 注入槽(T-2 偏差申报的归属点接线):SimBackend
+    install_backend 接通提供槽(流键 rng,同 seed 同调用序确定性);
+    uninstall_backend 复位 = 实机未播种口径零变化。"""
+    from sr_od.application.currency_war.kernel.cw_action_report import (
+        provided_action_rng,
+    )
+    from sr_od.application.currency_war.sim.cw_sim_backend import (
+        SimBackend,
+        install_backend,
+        uninstall_backend,
+    )
+    from sr_od.application.currency_war.sim.cw_sim_run_config import RunConfig
+
+    assert provided_action_rng('collect_ore') is None, '缺省必须关'
+    install_backend(SimBackend(seed=9, cfg=RunConfig(
+        selected_difficulty='A8', enemy_difficulty=108)))
+    try:
+        first = provided_action_rng('collect_ore').random()
+    finally:
+        uninstall_backend()
+    assert provided_action_rng('collect_ore') is None, '卸载必须复位'
+    install_backend(SimBackend(seed=9, cfg=RunConfig(
+        selected_difficulty='A8', enemy_difficulty=108)))
+    try:
+        second = provided_action_rng('collect_ore').random()
+    finally:
+        uninstall_backend()
+    assert first == second, '同 seed 同键序采样必须一致(确定性)'
