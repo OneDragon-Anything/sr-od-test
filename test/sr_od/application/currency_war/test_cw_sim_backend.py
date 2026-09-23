@@ -5,7 +5,7 @@
 - 字段收敛:无第二账——节点键/连胜/相位载荷全部落容器;
 - 初始序列(简报 → 环境 → wait_one_one → P1r1)与节点推进序列(收入/
   经验/环境金/发牌/offer 日程)平移语义零改;
-- 转移事件重入幂等 + 选卡腿接获得链(契约送卡/burst 即时金/板面重写/
+- 转移事件重入幂等 + 选卡腿接获得链(契约送卡/burst 免费刷新/板面重写/
   骇客改件,对齐 cw_gain_chain 现役语义);
 - 装备腿:穿着即合成住 kernel 穿装备上报(规则件缺口补 kernel,sim 与
   实机动作腿同构)。
@@ -284,6 +284,51 @@ def test_boss_briefing_click_resolves_battle() -> None:
         uninstall_backend()
 
 
+def test_node_window_overlay_detour_reruns_offer_check() -> None:
+    """overlay 让路恢复序:offer 槽节点窗起点 overlay 在场 → 呈现压住
+    节点屏,选定后复走 offer 检查呈现策略选卡屏(让路不吞 offer 槽),
+    选卡落地直出节点屏;窗口前段(轮首收入)不因让路重入。权威序 =
+    旧引擎实测收尾检查序(overlay → offer → 下一节点)+ U07 固定日程
+    (P1r3/P2r2/P3r2)生效于本节点备战窗口前。"""
+    from sr_od.application.currency_war.kernel.cw_action_report import (
+        report_action_pick_planner_param,
+    )
+    b = _backend(7)
+    try:
+        b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+        b._maybe_finish_wait()
+        gs = b.gs
+        # P1r1(奖励)→ P1r2(战斗)
+        report_action_start_battle_param(gs, SimpleNamespace(), _SIG)
+        assert b.screen_identity() == SCREEN_SETTLE
+        assert report_node_advance(gs, trigger='settle_confirm')
+        assert (gs.node.value.plane, gs.node.value.round_num) == (1, 2)
+        # P1r3(U07 offer 槽)窗口起点 overlay 在场 = 让路前提
+        # (队列 = 后端簿记直推;入队源评估器另有锁面)
+        b.overlay_queue.push('planner')
+        report_action_start_battle_param(gs, SimpleNamespace(), _SIG)
+        assert report_node_advance(gs, trigger='settle_confirm')
+        assert gs.node.value.round_num == 3
+        assert b.screen_identity() == '货币战争-银狼升星', \
+            '窗起点 overlay 先呈现(压住节点屏)'
+        gold_at_detour = gs.gold.value
+        assert report_action_pick_planner_param(
+            gs, SimpleNamespace(), _SIG).applied
+        assert b.screen_identity() == SCREEN_INVEST_STRATEGY, \
+            '让路结束复走 offer 检查(U07 P1r3 槽不被跳过)'
+        assert gs.gold.value == gold_at_detour, '窗口前段不因让路重入'
+        assert gs.invest_strategy_opts.value, 'offer 候选写容器槽'
+        gs.write_logic(gs.invest_strategy_opts,
+                       ['加油站', '躺平', '淘金客'],
+                       produced_by='Test', evidence='t:opts', sig=_SIG)
+        assert report_action_pick_invest_strategy_param(
+            gs, SimpleNamespace(norm_name='加油站'), _SIG,
+            session=SimpleNamespace()).applied
+        assert b.screen_identity() == SCREEN_PREP, 'offer 选定 → 节点屏'
+    finally:
+        uninstall_backend()
+
+
 # ============================================================ 选卡腿获得链
 
 def test_contract_env_pick_sends_cards_to_bench() -> None:
@@ -308,8 +353,10 @@ def test_contract_env_pick_sends_cards_to_bench() -> None:
 
 
 def test_strategy_pick_chain_burst_gold() -> None:
-    """获得链断言:选 burst 策略卡(加油站)→ 即时金 +8 与免费刷新
-    发放生效(effect burst 桥,容器零私持)。"""
+    """获得链断言:选 burst 策略卡(加油站)→ 免费刷新发放生效
+    (effect burst 桥,容器零私持);即时金通道现役无写端不发生
+    (kernel ``apply_effect_burst_grant`` 只载 free_refresh_burst),
+    断言面只锁免费刷新发放。"""
     b = _backend(7)
     try:
         b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
