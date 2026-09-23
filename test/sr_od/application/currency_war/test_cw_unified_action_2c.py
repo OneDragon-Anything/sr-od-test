@@ -315,8 +315,8 @@ def test_expert_invite_entry_select_only(test_context, monkeypatch):
 
 
 # ===== CwScreenExpertInvite 决策出口守卫锁组(原「决策链异常降级」锁 =====
-# ===== 原位改写:异常传播/返回契约/值域/正路两态/局外终结;op-layer =====
-# ===== §1.1 出口③ + §1.3 + 局外单跑条款)=====
+# ===== 原位改写:异常传播/返回契约/值域/正路两态/局外无早退支自然失败; =====
+# ===== op-layer §1.1 出口③ + §1.3 + 全族删门)=====
 
 def _expert_guard_harness(test_context, monkeypatch, strategy):
     """守卫锁组装配(承原降级锁 harness 改写):obs 读链桩 + area_center 桩
@@ -486,12 +486,13 @@ def test_expert_invite_decision_direct_dispatch_two_states(test_context,
                 f'_pick_pending 置位:{op._pick_pending!r}'
 
 
-def test_expert_invite_no_match_round_success_no_fallback(test_context,
-                                                          monkeypatch):
-    """锁E(局外臂,op-layer §1.1 局外单跑条款):cw_match = None(观察链
-    桩照常给 obs)→ act 返回 round_success(零决策零点击终结交回)、
-    _pick_pending 保持 None;kernel choose_expert_index 桩零调用(兜底判据
-    支随局外单跑条款退役的回归锁)。红 = 局外兜底决策/派发回潮。"""
+def test_expert_invite_no_match_fails_via_normal_chain(test_context,
+                                                       monkeypatch):
+    """锁E(局外无早退支,用户裁决 2026-09-22 全族删门,op-layer §1.1):
+    cw_match = None(观察链桩照常给 obs)→ act 不设局外早退门,沿正常
+    链路因缺上下文自然失败(AttributeError)、零派发零点击、_pick_pending
+    保持 None;kernel choose_expert_index 桩零调用(兜底判据支退役的回归
+    锁)。红 = 局外 round_success 早退门回潮 / 局外兜底决策/派发回潮。"""
     from test.harness.fixture_controller import fast_sleep
     from test.sr_od.application.currency_war._cw_helpers import run_node
 
@@ -509,10 +510,8 @@ def test_expert_invite_no_match_round_success_no_fallback(test_context,
     rs = run_node(test_context, op, op.observe)
     assert rs.is_success, f'在门观察 success:{rs!r}'
     assert op._obs is not None, '观察链桩照常给 obs'
-    with fast_sleep(op):
-        rs = op.act()
-    assert rs.is_success and '零决策零点击' in (rs.status or ''), \
-        f'局外 = round_success 终结交回:{rs!r}'
+    with fast_sleep(op), pytest.raises(AttributeError, match='strategy'):
+        op.act()   # 无 match 正常链路失败
     assert dispatches == [], '局外 = 零派发零点击'
     assert calls == [], 'kernel choose_expert_index 零调用(兜底判据支退役)'
     assert op._pick_pending is None, 'pending 保持 None'

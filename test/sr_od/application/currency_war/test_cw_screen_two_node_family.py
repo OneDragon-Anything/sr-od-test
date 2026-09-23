@@ -519,17 +519,15 @@ def _setup_wish_act(test_context, monkeypatch, session, decide):
     return op, dispatches
 
 
-def test_wish_act_no_match_ends_success_without_decision_or_click(
-        test_context, monkeypatch):
-    """守卫①(局外臂,op-layer.md §1.1「画面 op 不支持局外单独调用」):
-    cw_match=None → act round_success(消息含「零决策零点击终结交回」)、
-    零派发零点击、_confirm_pending 保持未置位;局外臂先于任何决策消费
-    (遭遇屏先例同款)。红 = 局外兜底决策路径回潮(盲发首卡)。"""
+def test_wish_act_no_match_fails_via_normal_chain(test_context, monkeypatch):
+    """守卫①(局外无早退支,用户裁决 2026-09-22 全族删门,op-layer.md
+    §1.1):cw_match=None → act 不设局外早退门,沿正常链路因缺上下文自然
+    失败(AttributeError)、零派发零点击、_confirm_pending 保持未置位。
+    红 = 局外 round_success 早退门回潮 / 局外兜底决策路径回潮(盲发首卡)。"""
     session = StrategySession()
     op, dispatches = _setup_wish_act(test_context, monkeypatch, session, None)
-    rs = _run_node(test_context, op, op.act)
-    assert rs.is_success and '零决策零点击终结交回' in (rs.status or ''), (
-        f'守卫①:局外零决策零点击 round_success 终结交回:{rs!r}')
+    with pytest.raises(AttributeError, match='strategy'):
+        _run_node(test_context, op, op.act)   # 无 match 正常链路失败
     assert dispatches == [], '守卫①:零派发'
     assert op._confirm_pending is None, '守卫①:确认未置位(零点击)'
 
@@ -760,18 +758,17 @@ def test_fortune_act_dispatches_strategy_param_env_op_only(
     assert op._confirm_pending is True, '确认已发待重入裁决置位'
 
 
-def test_fortune_act_no_match_ends_success_without_decision_or_click(
+def test_fortune_act_no_match_fails_via_normal_chain(
         test_context, monkeypatch) -> None:
-    """补锁④(局外臂,op-layer.md §1.1 :37):cw_match=None → act
-    round_success(消息含「零决策零点击终结交回」)、零派发零点击、
-    _confirm_pending 保持未置位;局外臂先于任何决策消费(kernel 直调
-    兜底派发退役)。红 = 局外兜底决策路径回潮。"""
+    """补锁④(局外无早退支,用户裁决 2026-09-22 全族删门,op-layer.md
+    §1.1):cw_match=None → act 不设局外早退门,沿正常链路因缺上下文自然
+    失败(AttributeError)、零派发零点击、_confirm_pending 保持未置位。
+    红 = 局外 round_success 早退门回潮 / 局外兜底决策路径回潮。"""
     session = StrategySession()
     op, dispatches = _setup_fortune_act(test_context, monkeypatch, session,
                                         None)
-    rs = _run_node(test_context, op, op.act)
-    assert rs.is_success and '零决策零点击终结交回' in (rs.status or ''), (
-        f'守卫⓪:局外零决策零点击 round_success 终结交回:{rs!r}')
+    with pytest.raises(AttributeError, match='strategy'):
+        _run_node(test_context, op, op.act)   # 无 match 正常链路失败
     assert dispatches == [], '守卫⓪:零派发'
     assert op._confirm_pending is False, '守卫⓪:确认未置位(零点击)'
 
@@ -811,18 +808,17 @@ def _setup_bookcard_act(test_context, monkeypatch, session, decide):
     return op, dispatches
 
 
-def test_bookcard_act_no_match_ends_success_without_decision_or_click(
+def test_bookcard_act_no_match_fails_via_normal_chain(
         test_context, monkeypatch) -> None:
-    """守卫①a(局外臂,op-layer.md §1.1 局外单跑条款):cw_match=None →
-    act round_success(消息含「零决策零点击终结交回」)、零派发零点击、
-    _pick_pending 保持未置位;局外臂先于任何决策消费(遭遇屏先例同款)。
-    红 = 局外兜底决策路径回潮(盲发首卡)。"""
+    """守卫①a(局外无早退支,用户裁决 2026-09-22 全族删门,op-layer.md
+    §1.1):cw_match=None → act 不设局外早退门,沿正常链路因缺上下文自然
+    失败(AttributeError)、零派发零点击、_pick_pending 保持未置位。
+    红 = 局外 round_success 早退门回潮 / 局外兜底决策路径回潮(盲发首卡)。"""
     session = StrategySession()
     op, dispatches = _setup_bookcard_act(test_context, monkeypatch, session,
                                          None)
-    rs = _run_node(test_context, op, op.act)
-    assert rs.is_success and '零决策零点击终结交回' in (rs.status or ''), (
-        f'守卫①a:局外零决策零点击 round_success 终结交回:{rs!r}')
+    with pytest.raises(AttributeError, match='strategy'):
+        _run_node(test_context, op, op.act)   # 无 match 正常链路失败
     assert dispatches == [], '守卫①a:零派发'
     assert op._pick_pending is None, '守卫①a:pending 未置位(零点击)'
 
@@ -947,19 +943,18 @@ def test_partner_act_empty_candidates_fails_without_dispatch(
     assert op._confirm_pending is False, '守卫①候选空臂:确认未置位(零点击)'
 
 
-def test_partner_act_no_match_ends_success_without_decision_or_click(
-        test_context, monkeypatch):
-    """守卫①match 缺席臂(op-layer.md §1.1 局外单跑条款,两臂分开断言):
-    cw_match=None + 读链桩两元(候选在场)→ act round_success(消息含
-    「零决策零点击终结交回」)、零派发零点击、_confirm_pending 保持未置位;
-    局外臂先于任何决策消费(遭遇屏先例同款)。红 = 局外兜底决策路径回潮
-    (盲发首卡)。"""
+def test_partner_act_no_match_fails_via_normal_chain(test_context,
+                                                     monkeypatch):
+    """守卫①match 缺席臂(局外无早退支,用户裁决 2026-09-22 全族删门,
+    op-layer.md §1.1,两臂分开断言):cw_match=None + 读链桩两元(候选
+    在场)→ act 不设局外早退门,沿正常链路因缺上下文自然失败
+    (AttributeError)、零派发零点击、_confirm_pending 保持未置位。
+    红 = 局外 round_success 早退门回潮 / 局外兜底决策路径回潮(盲发首卡)。"""
     session = StrategySession()
     op, dispatches = _setup_partner_act(test_context, monkeypatch, session,
                                         None)
-    rs = _run_node(test_context, op, op.act)
-    assert rs.is_success and '零决策零点击终结交回' in (rs.status or ''), (
-        f'守卫①match 缺席臂:局外零决策零点击 round_success 终结交回:{rs!r}')
+    with pytest.raises(AttributeError, match='strategy'):
+        _run_node(test_context, op, op.act)   # 无 match 正常链路失败
     assert dispatches == [], '守卫①match 缺席臂:零派发'
     assert op._confirm_pending is False, (
         '守卫①match 缺席臂:确认未置位(零点击)')

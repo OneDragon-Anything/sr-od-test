@@ -32,7 +32,8 @@
   随即清(单次消费,重触发天然幂等);单腿不合/未达标/删失/无 chosen
   = 不写不清。
 - **盛会之星族锁**(节点循环形态):完成门/懒读保真/防重入旗标/chosen
-  写端(选择点留守)/局外交回(无 match/gs 零读屏零派发)/观察标准化门
+  写端(选择点留守)/局外无早退支(observe 照常读链、act 正常链路失败,
+  用户裁决 2026-09-22 全族删门)/观察标准化门
   (双源域命中·转换失败·歧义拒判·LCS 同分取域序首确定性)/决策守卫
   (候选空 fail 零盲发·idx 越界断言)/选择坐标观察上报收敛(候选检测
   重做批:标签带限定 OCR 定卡 1..N + 逐卡立绘 SIFT 交叉验证,xy =
@@ -661,16 +662,16 @@ def test_megastar_redispatch_no_reclick_and_gate_reset(
     assert session2.strategy_state is None, '缺席态写跳过,执行层不冷建'
 
 
-# ==================== 盛会之星(局外交回 + 观察标准化门)====================
+# ==================== 盛会之星(局外无早退支 + 观察标准化门)====================
 
 
-def test_megastar_out_of_match_zero_read_and_return(
+def test_megastar_out_of_match_no_early_exit_normal_chain(
         test_context, monkeypatch) -> None:
-    """局外交回锁(正本 = screens/op-layer.md §1.1「画面 op 不支持局外
-    单独调用」,判式 = match/gs 双缺宽判,对齐投资环境在飞双判):选中半
-    访问 + 无 match / match 无 gs → observe 零读屏(读链桩零调用、零
-    obs 装载零上报)、act round_success 局外交回(零决策零点击)、零派发。
-    红 = 局外仍读屏 / act 盲走决策体 / 交回回潮 fail。"""
+    """局外无早退支锁(用户裁决 2026-09-22 全族删门,op-layer.md §1.1):
+    无 match / match 无 gs 两态 → observe 照常走读链(读链桩被调、obs
+    装载,report 空候选零写不炸)、act 无局外早退门——沿正常链路走候选
+    空守卫具名 round_fail,零派发。红 = 局外 round_success 早退门回潮
+    (observe 零读早退 / act 局外交回)。"""
     import sr_od.application.currency_war.operations.cw_op.cw_action_registry as reg_mod
     import sr_od.application.currency_war.operations.cw_screen.cw_screen_megastar as ms
 
@@ -689,15 +690,14 @@ def test_megastar_out_of_match_zero_read_and_return(
     monkeypatch.setattr(ms, 'read_megastar_options',
                         lambda ctx, scr: _read_calls.append(1) or [])
     rs = _run_node(test_context, op, op.observe)
-    assert rs.is_success and _read_calls == [], (
-        f'无 match 局外:观察零读屏:{rs!r} reads={_read_calls!r}')
-    assert op._obs is None, '局外零 obs 装载零上报'
+    assert rs.is_success and _read_calls == [1], (
+        f'无 match 局外:观察照常走读链:{rs!r} reads={_read_calls!r}')
+    assert op._obs is not None, '局外 obs 照常装载(无早退门)'
     rs2 = _run_node(test_context, op, op.act)
-    assert rs2.is_success and '局外交回' in (rs2.status or ''), (
-        f'act 局外交回(零决策零点击):{rs2!r}')
+    assert not rs2.is_success, f'act 无局外早退门(候选空守卫 fail):{rs2!r}'
     assert dispatches == [], f'局外零派发:{dispatches!r}'
 
-    # ② match 无 gs(宽判式第二腿)
+    # ② match 无 gs
     session = _make_session()
     monkeypatch.setattr(test_context, 'cw_match',
                         SimpleNamespace(session=session), raising=False)
@@ -707,11 +707,10 @@ def test_megastar_out_of_match_zero_read_and_return(
                         lambda scr, s, a, **k: _Area(True))
     _read_calls.clear()
     rs3 = _run_node(test_context, op2, op2.observe)
-    assert rs3.is_success and _read_calls == [], (
-        f'match 无 gs 局外:观察零读屏:{rs3!r}')
+    assert rs3.is_success and _read_calls == [1], (
+        f'match 无 gs 局外:观察照常走读链:{rs3!r}')
     rs4 = _run_node(test_context, op2, op2.act)
-    assert rs4.is_success and '局外交回' in (rs4.status or ''), (
-        f'match 无 gs:act 局外交回:{rs4!r}')
+    assert not rs4.is_success, f'match 无 gs:act 无局外早退门:{rs4!r}'
     assert dispatches == [], '局外零派发'
 
 
@@ -905,7 +904,7 @@ def _stub_screen() -> object:
 def _read_stub_ctx(ocr_map: dict, *, gs: object | None = None) -> SimpleNamespace:
     """reader 离线装配 stub ctx:标签带 area(screen_info 桩,归档 fixture
     实测 rect)+ OCR map 桩 + cw_match.gs(星徽动态域源;None = 不挂 =
-    静态域 only,与生产局外守卫后的直调形态同构)。"""
+    静态域 only;局外无早退支后,gs 缺席态在生产同样可达 reader 此路径)。"""
     from one_dragon.base.geometry.rectangle import Rect
     band = SimpleNamespace(area_name='候选标签带',
                            pc_rect=Rect(420, 300, 1690, 380))

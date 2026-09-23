@@ -25,8 +25,8 @@ family.py):
   ``box_card_names_xy``(观察期解点);读数空/门 miss/转换失败 → fail
   交回 + 容器与 obs 均空(report 不调,禁盲值;名字与坐标同进退);
   决策动作 node = 容器外读数决策 → 选卡链派发(env idx-only,target
-  停喂)→ 选卡即终结 success;局外(match 缺席)= 零决策零点击
-  终结交回。
+  停喂)→ 选卡即终结 success;无 match 局外不设早退支(用户裁决
+  2026-09-22 全族删门),沿正常链路自然失败。
 
 驱动方式 = 真类实例(构造走 __init__)+ 门/推进体桩化,节点函数直驱
 (run_node 外壳)。
@@ -482,12 +482,12 @@ def test_box_pick_act_clicks_decided_card(test_context, monkeypatch):
     assert mod.CwScreenBoxPick.CARD_Y == 290, '画面常量在册(避让几何)'
 
 
-def test_box_pick_act_off_match_terminates_without_click(test_context,
-                                                         monkeypatch):
-    """局外出口锁:match 缺席(局外)= 零决策零点击 round_success 终结
-    交回(op-layer.md §1.1「画面 op 不支持局外单独调用」;遭遇屏先例
-    同款),观察 report 跳过容器零写、act 零派发。红 = 兜底决策路径
-    回潮(局外调机器决策/发点击/写容器)。"""
+def test_box_pick_act_off_match_fails_via_normal_chain(test_context,
+                                                       monkeypatch):
+    """局外无早退支锁(用户裁决 2026-09-22 全族删门,op-layer.md §1.1):
+    match 缺席(局外)不设 round_success 早退门,act 沿正常链路因缺上下文
+    自然失败(AttributeError),零派发零容器写。红 = 局外 round_success
+    早退门回潮 / 兜底决策路径回潮(局外调机器决策/发点击/写容器)。"""
     op, session = _make_box_pick(test_context, monkeypatch, gate_ok=True,
                                  cards=list(_CARDS))
     monkeypatch.setattr(test_context, 'cw_match', None, raising=False)
@@ -504,8 +504,7 @@ def test_box_pick_act_off_match_terminates_without_click(test_context,
     import sr_od.application.currency_war.operations.cw_op.cw_action_registry as _reg
     monkeypatch.setattr(_reg, 'action_op_for',
                         lambda act, ctx, env: _SpyPickOp(act, env))
-    rs = _run_node(test_context, op, op.act)
-    assert rs.is_success and '局外' in (rs.status or ''), (
-        f'局外零决策零点击终结交回:{rs!r}')
+    with pytest.raises(AttributeError, match='strategy'):
+        _run_node(test_context, op, op.act)   # 无 match 正常链路失败
     assert dispatched == [], '零派发(局外禁选卡动作)'
     assert game_state_of(session).box_card_names.value is None, '容器零写'

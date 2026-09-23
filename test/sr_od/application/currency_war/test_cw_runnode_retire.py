@@ -88,9 +88,9 @@ def test_megastar_node_flow_act_wait_then_success() -> None:
     仍在 overlay → 决策动作 node 恰一个动作 + round_wait(不计节点重试
     预算;无防御上限);overlay 消失 → success(完成承诺 = 固定 settle
     时长;选中标记复位副作用随 ``_in_node`` 复检迁)。夹具 = 对局内
-    (match 带 gs):局外 = 零决策零点击 round_success 交回(正本
-    op-layer.md §1.1「画面 op 不支持局外单独调用」),其语义归
-    test_cw_obs_arch_event_screens 巨星局外交回锁;本锁只辖流转形态。"""
+    (match 带 gs):局外不设早退支(用户裁决 2026-09-22 全族删门,
+    op-layer.md §1.1),其语义归 test_cw_obs_arch_event_screens 巨星
+    局外无早退支锁;本锁只辖流转形态。"""
     from sr_od.application.currency_war.operations.cw_screen.cw_flow_const import (
         CW_OVERLAY_SETTLE_S,
     )
