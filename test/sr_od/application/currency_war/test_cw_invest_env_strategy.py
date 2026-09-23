@@ -17,6 +17,12 @@
 - ⑥ 自拆台排除(板面 DoT/减益 ≥2 时克制者排除,机制归一调 kernel 表);
 - ⑦ 构建校验(立场表缺行即炸 + 系数表键完备)。
 
+追加锁面(3.1 验收 reviewer 派回):全排除退化帧两态(次数闸关 →
+all-excluded-fallback 退化选卡 / 剩余 ≥1 → 建议刷);系数表缺键拒绝锁。
+校验「import 即炸」的接线面按 reviewer 裁定归 3.2 消费侧行为覆盖,本文件
+只锁校验逻辑本体(直接调校验入口 + 篡改表副本断言抛错,不用 reload /
+源码扫描)。
+
 测试纪律:零真实副作用(不写项目目录、不发网络);断言锁设计语义而非
 实现细节;断言依据 = 注册表真实数据(提交进仓)与本文件自造输入。
 """
@@ -273,6 +279,36 @@ def test_no_self_defeat_without_dot_board():
     assert out.idx == 0
 
 
+#: 全排除退化帧:三条概念股同被 env_forbid 子串命中(排除规则覆盖全体)。
+_ALL_EXCLUDED_OPTS = ('仙舟概念股', '减益概念股', '击破概念股')
+
+
+def test_all_excluded_frame_falls_back_to_decision():
+    """全排除退化帧 + 次数闸关:排除规则失去选择面,沿旧 kernel
+    decide_event 全禁帧退化行为(全体 argmax 最不负分者)返回选卡决策,
+    归因串以 all-excluded-fallback 开头——3.2 接线后该帧会真发选卡动作,
+    reason 是判读面唯一标识(不锁 idx:位次随阵容库注册值漂移,锁类型 +
+    归因前缀即设计语义)。"""
+    gs = _fresh_gs()
+    _set_refresh_left(gs, 0)
+    cfg = SimpleNamespace(env_priority=[], env_forbid=['概念股'])
+    out = invest_env.decide(list(_ALL_EXCLUDED_OPTS), gs, '', False,
+                            frozenset(), cfg)
+    assert isinstance(out, InvestEnvDecision)
+    assert out.reason.startswith('all-excluded-fallback')
+
+
+def test_all_excluded_frame_with_budget_suggests_refresh():
+    """对照帧:同帧剩余 ≥1 → 禁选槽存在优先建议刷(排除规则有选择面,
+    不做退化选卡;design §2.7 禁选槽 ∨ 低分即刷)。"""
+    gs = _fresh_gs()
+    _set_refresh_left(gs, 1)
+    cfg = SimpleNamespace(env_priority=[], env_forbid=['概念股'])
+    out = invest_env.decide(list(_ALL_EXCLUDED_OPTS), gs, '', False,
+                            frozenset(), cfg)
+    assert isinstance(out, RefreshSuggestion)
+
+
 # ==================== ⑦ 构建期校验(design §2.9)====================
 
 def test_build_validation_missing_stance_row_raises(monkeypatch):
@@ -306,3 +342,22 @@ def test_build_validation_coefficient_tables_complete():
     )
     assert {'core', 'shared', 'transition', 'off'} <= set(GIFT_TIER_SCORE)
     assert {'S', 'A', 'B'} <= set(LINE_STRENGTH_SCORE)
+
+
+def test_build_validation_coefficient_missing_key_raises(monkeypatch):
+    """系数表缺键即炸(校验逻辑本体拒绝锁;import 接线面 = 3.2 消费侧行为
+    覆盖,reviewer 裁定不在本批用 reload/源码扫描锁):线强度档缺 B 与
+    赠卡档缺 transition 两分支各自拒绝。两段用独立 context 隔离——
+    monkeypatch 默认测试级还原,同测试内前段篡改会泄漏进后段。"""
+    with monkeypatch.context() as m:
+        m.setattr(invest_env, 'LINE_STRENGTH_SCORE',
+                  {k: v for k, v in invest_env.LINE_STRENGTH_SCORE.items()
+                   if k != 'B'})
+        with pytest.raises(ValueError, match='线强度档分缺键'):
+            invest_env._validate_coefficient_tables()
+    with monkeypatch.context() as m:
+        m.setattr(invest_env, 'GIFT_TIER_SCORE',
+                  {k: v for k, v in invest_env.GIFT_TIER_SCORE.items()
+                   if k != 'transition'})
+        with pytest.raises(ValueError, match='赠卡档分缺键'):
+            invest_env._validate_coefficient_tables()
