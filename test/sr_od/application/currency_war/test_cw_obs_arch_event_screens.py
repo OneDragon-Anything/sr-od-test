@@ -19,9 +19,13 @@
   按原评分选卡;重调仍建议刷新(闸数据不一致)→ 零点击终结交回。
 - **派发即终结锁**(遭遇,迭代 2026-09-21-event-refresh-unify-supply-pick
   3.3 扩围):选卡确认链派发后 round_success 终结交回(零重入裁决轮);
-  空候选/局外 = 零点击终结交回(禁盲选派发确认——不可逆消耗);闸拒绝
+  空候选 = 零点击终结交回(禁盲选派发确认——不可逆消耗);闸拒绝
   重调落选卡后同样终结。chosen_encounter 发射即写契约(动作侧 report
   函数级)= test_cw_screen_report_ports 承重,本文件不重复。
+- **决策出口守卫锁**(遭遇):决策无有效输出(decide_encounter 返回
+  词表外/None)= 具名 round_fail 零盲发(op-layer §1.1 出口③);pick
+  idx 越界 = 守卫断言 AssertionError(§1.3 禁钳位)——两守卫均派发前
+  零点击零派发,直发策略产实例(流程侧零值域改写)。
 - **奖励兑现回调锁**(遭遇,kernel ``claim_encounter_reward``):双证
   判遭遇(node 镜像 token ∧ settlement_ring 尾行 node_type)∧
   progress_delta>0 单判;兑现写 ``encounter_reward_claimed`` 且 chosen
@@ -240,6 +244,47 @@ def test_encounter_empty_options_zero_click_terminal(
         f'空候选 = 零点击终结交回重读:{rs!r}')
     assert clicks == [] and dispatches == [], (
         f'空候选禁盲选派发:clicks={clicks!r} dispatches={dispatches!r}')
+
+
+def test_encounter_decision_invalid_named_fail_zero_blindfire(
+        test_context, monkeypatch) -> None:
+    """决策无输出守卫锁(规范 = screens/op-layer.md §1.1 出口③「决策无
+    有效输出也走此出口——零盲发」):decide_encounter 返回 None / 词表外
+    类型 → 具名 round_fail(消息含策略器原值)零点击零派发。红 = 默认
+    idx0 盲选左卡派发回潮(决策失败被静默降级为不可逆的选卡消耗)。"""
+    clicks, dispatches = _refresh_fixture(test_context, monkeypatch)
+    for bad in (None, object()):
+        op, _match, _session = _make_encounter(
+            test_context, monkeypatch, in_screen=True,
+            options=[EncounterOption(idx=0, difficulty=1, rewards=['金币×2'])],
+            pick=bad)
+        assert _run_node(test_context, op, op.observe).is_success, (
+            f'前置:观察 success(候选 1 元,bad={bad!r})')
+        rs = _run_node(test_context, op, op.act)
+        assert not rs.is_success and '决策无有效输出' in (rs.status or ''), (
+            f'词表外/None = 具名 fail 零盲发(bad={bad!r}):{rs!r}')
+    assert clicks == [] and dispatches == [], (
+        f'守卫零盲发(零点击零派发):{clicks!r} {dispatches!r}')
+
+
+def test_encounter_out_of_range_idx_asserts_before_click(
+        test_context, monkeypatch) -> None:
+    """决策值域守卫锁(规范 = screens/op-layer.md §1.3「非法返回 = 策略器
+    bug 响亮暴露,禁静默钳位」):策略器返回越界 idx(真实
+    ``CwActionPickEncounterParam(idx=5)``、options 1 元)→ AssertionError
+    传播(消息含 idx/len/原值留证)、零点击零派发(守卫在派发前——越界
+    放行会确认错卡,不可逆)。红 = 静默钳 0 续跑回潮 / 越界放行派发。"""
+    clicks, dispatches = _refresh_fixture(test_context, monkeypatch)
+    op, _match, _session = _make_encounter(
+        test_context, monkeypatch, in_screen=True,
+        options=[EncounterOption(idx=0, difficulty=1, rewards=['金币×2'])],
+        pick=CwActionPickEncounterParam(idx=5, reason='stub'))
+    assert _run_node(test_context, op, op.observe).is_success, (
+        '前置:观察 success(obs.options 1 元)')
+    with pytest.raises(AssertionError, match='禁钳位'):
+        _run_node(test_context, op, op.act)
+    assert clicks == [] and dispatches == [], (
+        f'断言前零点击零派发:{clicks!r} {dispatches!r}')
 
 
 def _refresh_fixture(test_context, monkeypatch) -> tuple[list, list]:
