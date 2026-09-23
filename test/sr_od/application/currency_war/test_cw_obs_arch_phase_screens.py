@@ -417,13 +417,13 @@ def test_invest_env_empty_opts_fail_not_blindfire(test_context,
         '零盲发:无候选不写选择事实')
 
 
-def test_invest_env_no_match_zero_decision_handback(test_context,
-                                                    monkeypatch) -> None:
-    """局外无 match = 零决策零点击 round_success 终结交回(match=None +
-    非空候选 obs,区分空候选早退出口;遭遇屏在册先例同款,策略屏孪生锁
-    test_invest_strategy_no_match_zero_decision_handback 同构;op-layer.md
-    §1.1:画面 op 不产决策、不支持局外单独调用,不设兜底决策路径)。
-    红 = 局外 kernel 直调决策回潮 / 零决策出口误改点击派发。"""
+def test_invest_env_out_of_match_no_early_exit_normal_chain(
+        test_context, monkeypatch) -> None:
+    """无 match 局外无早退支锁(用户裁决 2026-09-22 全族删门,op-layer.md
+    §1.1:画面 op 不支持局外单独调用,不设单跑防御分支):cw_match=None +
+    非空候选 obs(区分空候选早退出口)→ act 不设局外早退门,沿正常链路
+    因缺上下文自然失败(AttributeError)、零派发零点击。红 = 局外
+    round_success 早退门回潮 / 局外 kernel 直调兜底决策回潮。"""
     iem = _phase_mod('cw_screen_invest_env')
     op = iem.CwScreenInvestEnv(test_context)
     monkeypatch.setattr(test_context, 'cw_match', None, raising=False)
@@ -431,7 +431,7 @@ def test_invest_env_no_match_zero_decision_handback(test_context,
     from sr_od.application.currency_war.kernel.cw_screen_report.invest_env import (
         CwScreenInvestEnvObs as _ObsT,
     )
-    # 非空候选 obs(区分于空候选早退:本锁辖 match 判空出口)
+    # 非空候选 obs(区分于空候选早退:本锁辖局外无早退支)
     op._obs = _ObsT(hit=True,
                     options=[('追击概念股', 460), ('彩虹时代', 960),
                              ('头彩', 1460)])
@@ -452,9 +452,8 @@ def test_invest_env_no_match_zero_decision_handback(test_context,
     import sr_od.application.currency_war.operations.cw_op.cw_action_registry as _reg
     monkeypatch.setattr(_reg, 'action_op_for',
                         lambda act, ctx, env: _SpyPickOp(act, env))
-    rs = _run_node(test_context, op, op.act)
-    assert rs.is_success and '零决策零点击' in (rs.status or ''), (
-        f'局外零决策零点击终结交回:{rs!r}')
+    with pytest.raises(AttributeError, match='strategy'):
+        _run_node(test_context, op, op.act)   # 无 match 正常链路失败
     assert clicks == [], f'零点击:{clicks!r}'
     assert dispatches == [], f'零派发零上报:{dispatches!r}'
 
@@ -620,13 +619,14 @@ def test_invest_strategy_empty_opts_fail_not_blindfire(
         '零盲发:无候选不写持卡面')
 
 
-def test_invest_strategy_no_match_zero_decision_handback(
+def test_invest_strategy_out_of_match_no_early_exit_normal_chain(
         test_context, monkeypatch) -> None:
-    """局外无 match = 零决策零点击 round_success 终结交回(遭遇屏同款
-    处置;决策控制分层铁律:画面 op 不产决策,局外兜底决策路径废除——
-    flow/README.md §1,op-layer.md §1.1 两件职责;原局外分支 = 裸空容器
-    decide_event 产决策 + 真实点击选卡确认链,已删)。
-    红 = 局外 kernel 直调决策回潮 / 零决策出口误改点击派发。"""
+    """无 match 局外无早退支锁(用户裁决 2026-09-22 全族删门,op-layer.md
+    §1.1:画面 op 不支持局外单独调用,不设单跑防御分支):cw_match=None +
+    非空候选 obs(区分空候选早退出口;原局外分支 = 裸空容器 decide_event
+    产决策 + 真实点击选卡确认链,已删)→ act 不设局外早退门,沿正常链路
+    因缺上下文自然失败(AttributeError)、零派发零点击。红 = 局外
+    round_success 早退门回潮 / 局外 kernel 直调兜底决策回潮。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_invest_strategy as ism,
     )
@@ -636,7 +636,7 @@ def test_invest_strategy_no_match_zero_decision_handback(
     from sr_od.application.currency_war.kernel.cw_screen_report.invest_strategy import (
         CwScreenInvestStrategyObs as _ObsT,
     )
-    # 非空候选 obs(区分于空候选早退:本锁辖 match 判空出口)
+    # 非空候选 obs(区分于空候选早退:本锁辖局外无早退支)
     op._obs = _ObsT(entry_ok=True,
                     options=_opts_of(['赌神·银', '恢复生机', '气氛组']))
     clicks: list = []
@@ -656,9 +656,8 @@ def test_invest_strategy_no_match_zero_decision_handback(
     import sr_od.application.currency_war.operations.cw_op.cw_action_registry as _reg
     monkeypatch.setattr(_reg, 'action_op_for',
                         lambda act, ctx, env: _SpyPickOp(act, env))
-    rs = _run_node(test_context, op, op.act)
-    assert rs.is_success and '零决策零点击' in (rs.status or ''), (
-        f'局外零决策零点击终结交回:{rs!r}')
+    with pytest.raises(AttributeError, match='strategy'):
+        _run_node(test_context, op, op.act)   # 无 match 正常链路失败
     assert clicks == [], f'零点击:{clicks!r}'
     assert dispatches == [], f'零派发零上报:{dispatches!r}'
 
