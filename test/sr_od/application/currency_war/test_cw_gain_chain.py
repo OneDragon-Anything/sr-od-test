@@ -45,6 +45,7 @@ from sr_od.application.currency_war.kernel.cw_effect_inventory import (
 )
 from sr_od.application.currency_war.kernel.cw_gain_chain import (
     DEFECT_ADVISOR_DECL,
+    DEFECT_ITEM_DECL,
     DEFECT_OVERFLOW_TAKEN,
     PICK_INVEST_INVALID_PAYLOAD,
     GainOutcome,
@@ -456,6 +457,22 @@ def test_env_gift_advisor_split_and_quiet(rows_sink: _RowSink) -> None:
     assert out_q.effects == () and out_q.placed is True
     assert bench_units_of(gs_q) == []
     assert rows_sink.kinds() == [DEFECT_ADVISOR_DECL], '表外零留证行'
+
+
+def test_env_gift_item_channel(rows_sink: _RowSink) -> None:
+    """ENV_GIFTS 道具通道(§2.3):items_immediate 命中 → 效果串
+    ``item_gift:<名>``(数量 = 元素重复次数)+ 每道具一申报行;不写容器
+    (道具无承载字段,占席待开箱归外循环画面分发承接;容器 Field 归
+    sim 统一容器字段判据辖域)。"""
+    gs = _make_gs(bench=[], equips=[])
+    gs.prep_anchored = True
+    out = gain_invest_env(gs, None, '火药味', rand=False, sig=_lsig())
+    assert out.effects == ('item_gift:简易武装箱', 'item_gift:简易武装箱'), \
+        '道具通道效果串:数量 = 元素重复次数'
+    assert gs.active_env.value == '火药味'   # 容器写照常
+    assert bench_units_of(gs) == [], '道具不入席(占席待开箱归画面分发)'
+    assert rows_sink.kinds() == [DEFECT_ITEM_DECL, DEFECT_ITEM_DECL], \
+        '每道具一申报行(容器无承载字段)'
 
 
 def test_gain_invest_env_invalid_payload_zero_write(rows_sink: _RowSink) -> None:
