@@ -788,7 +788,6 @@ def test_megastar_observe_standardize_ambiguity_rejected(
     域内最高/次高分差小于边距 → round_fail 零写零上报。近分腿 = 桩控
     LCS 分值原语(实机短名域近分形态难自然构造,控分直接锁边距分支)。
     红 = 重复命中放行 / 近分放行(共享词素族跨名借分通道回潮)。"""
-    import sr_od.application.currency_war.obs.cw_megastar_obs as mo
     from sr_od.application.currency_war.kernel.cw_events import MegastarOption
 
     # ① 两候选命中同一规范名(「 花火」形变归一即「花火」)
@@ -801,11 +800,13 @@ def test_megastar_observe_standardize_ambiguity_rejected(
         f'重复命中 = 拒判:{rs!r}')
     assert game_state_of(session).megastar_opts.value is None, '零写容器'
 
-    # ② 单候选最高/次高分差 < 边距(桩控:域内全员同分 → 分差 0)
+    # ② 单候选最高/次高分差 < 边距(桩控:域内全员同分 → 分差 0;LCS
+    # 分值原语单一源 = cw_obs_core,拒判判法全族统一后桩点随迁)。
     op2, _m2, session2, _c2 = _make_megastar(
         test_context, monkeypatch, in_node=True,
         options=[MegastarOption(idx=0, char_id='花钬')])
-    monkeypatch.setattr(mo, 'longest_common_subsequence_length',
+    import sr_od.application.currency_war.kernel.cw_obs_core as _oc
+    monkeypatch.setattr(_oc, 'longest_common_subsequence_length',
                         lambda a, b: len(b))
     rs2 = _run_node(test_context, op2, op2.observe)
     assert not rs2.is_success and '标准化' in (rs2.status or ''), (
@@ -866,13 +867,14 @@ def test_megastar_lcs_tie_resolves_domain_first(
     (边距拒判本身由歧义锁承重,本锁只锁平分取向的稳定序确定性)→ 转换
     放行且取域序首规范名(静态域 = 注册表序)。红 = 平分结果随内部容
     器序漂移(同分不可确定 = 识别结果不稳定)。"""
+    import sr_od.application.currency_war.kernel.cw_obs_core as _oc
     import sr_od.application.currency_war.obs.cw_megastar_obs as mo
     from sr_od.application.currency_war.data.cw_chars import chars_by_faction
     from sr_od.application.currency_war.kernel.cw_events import MegastarOption
     op, _match, session, _calls = _make_megastar(
         test_context, monkeypatch, in_node=True,
         options=[MegastarOption(idx=0, char_id='花钬')])
-    monkeypatch.setattr(mo, 'longest_common_subsequence_length',
+    monkeypatch.setattr(_oc, 'longest_common_subsequence_length',
                         lambda a, b: len(b))
     monkeypatch.setattr(mo._MegastarGate, 'MEGASTAR_LCS_AMBIGUITY_MARGIN',
                         0.0)

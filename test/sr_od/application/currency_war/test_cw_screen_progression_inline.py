@@ -439,6 +439,36 @@ def test_box_pick_observe_standardization_gate_and_duplicates(
     assert len(gs3.box_card_names_xy.value) == 2, '坐标域与名字域同序等长'
 
 
+def test_box_pick_lcs_ambiguity_rejection_and_unique_pass(test_context,
+                                                          monkeypatch):
+    """观察标准化门第二段·次高分差拒判锁(op-layer.md §1.1;用户裁定
+    2026-09-22 全族统一):LCS 阶段最高分未明显高于次高分(差值不足
+    ``_EQUIP_LCS_AMBIGUITY_MARGIN``)= 歧义 = 转换失败,禁直接取最高分
+    ——「穿剌死棘之枪」对穿刺/穿越死棘之枪同分 5/6 ≈ 0.833(①段归一
+    相似救援层多命中拒后落②段),旧形态取注册表序首个 = 静默错配,现判
+    round_fail 零写零上报;明确唯一(「击破星甲徽」噪声插入,对击破星徽
+    4/4 = 1.0 与次高追击星徽 3/4 = 0.75,差 0.25)②段照常命中 = 拒判
+    不过严回归锚。红 = 歧义静默取最高分回潮 / 拒判误杀唯一命中。"""
+    # ① 歧义对 → round_fail,名字与坐标同进退零写、obs 不装载
+    op, session = _make_box_pick(test_context, monkeypatch, gate_ok=True,
+                                 cards=[('穿剌死棘之枪', 500)])
+    rs = _run_node(test_context, op, op.observe)
+    assert not rs.is_success and '卡名标准化失败' in (rs.status or ''), (
+        f'近分歧义 = 转换失败交回重读:{rs!r}')
+    gs = game_state_of(session)
+    assert gs.box_card_names.value is None and gs.box_card_names_xy.value \
+        is None, '歧义名字坐标同进退零写'
+    assert op._obs is None, '歧义不装载 obs'
+    # ② 明确唯一(②段兜底命中,分差足额)→ 通过,容器落标准名
+    op2, session2 = _make_box_pick(test_context, monkeypatch, gate_ok=True,
+                                   cards=[('击破星甲徽', 700)])
+    rs2 = _run_node(test_context, op2, op2.observe)
+    assert rs2.is_success, f'②段唯一命中放行(拒判不过严):{rs2!r}'
+    assert game_state_of(session2).box_card_names.value == ['击破星徽'], (
+        f'②段唯一命中落标准名:'
+        f'{game_state_of(session2).box_card_names.value!r}')
+
+
 def test_box_pick_act_clicks_decided_card(test_context, monkeypatch):
     """决策动作 node 锁:容器外读数决策(零参策略契约)→ 选卡链派发
     (点卡选中即确认 + 动画等待迁入 ``CwActionPickBoxCardOp``;机械链

@@ -921,6 +921,21 @@ def test_briefing_boss_standardize_fail_round_fail_zero_write(test_context, monk
     assert op._obs is None, 'obs 不装载(零上报)'
 
 
+def test_clean_boss_names_lcs_ambiguity_rejection_and_unique_pass() -> None:
+    """boss 两段转换·次高分差拒判锁(op-layer.md §1.1;用户裁定
+    2026-09-22 全族统一,纯函数直测):LCS 阶段最高分未明显高于次高分 =
+    歧义 = 转换失败返 None,禁直接取最高分——「造梦互动影业」对造梦
+    兄弟影业/造梦互动娱乐同分 4/6 ≈ 0.667(共享词素族跨名借分),旧
+    形态取注册表序首个 = 静默错配;明确唯一(「银甲武装公私」对银甲
+    武装公司 5/6 ≈ 0.833,次高不过阈)照常命中 = 拒判不过严回归锚。
+    红 = 歧义取最高分回潮 / 拒判误杀唯一命中。"""
+    from sr_od.application.currency_war.obs import cw_briefing_obs as cbo
+    assert cbo.clean_boss_names_by_lcs(['造梦互动影业']) is None, (
+        '近分歧义 = 转换失败(禁静默取最高分)')
+    assert cbo.clean_boss_names_by_lcs(
+        ['银甲武装公私']) == ['银甲武装公司'], '②段唯一命中归一规范名'
+
+
 # ==================== BOSS 简报:误读接管(生产路径)====================
 
 

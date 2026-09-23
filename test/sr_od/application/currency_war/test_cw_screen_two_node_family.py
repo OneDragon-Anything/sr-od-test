@@ -360,6 +360,58 @@ def test_bookcard_observe_gate_failures_zero_write(test_context,
     assert op._obs is None, '建档缺失不装载 obs'
 
 
+def test_bookcard_lcs_ambiguity_rejection_and_unique_pass(test_context,
+                                                          monkeypatch) -> None:
+    """星徽秘典观察标准化门·次高分差拒判锁(op-layer.md §1.1;用户裁定
+    2026-09-22 全族统一):LCS 阶段最高分未明显高于次高分 = 歧义 =
+    转换失败,禁直接取最高分——「宙之半神」对昼之/夜之半神同分 3/4 =
+    0.75,旧形态取注册表序首个 = 一半概率错配(点卡即选不可逆),现判
+    round_fail 零写零上报;明确唯一(「昼之半祌」对昼之半神 3/4 = 0.75、
+    对夜之半神 2/4 = 0.5,差 0.25)照常命中 = 拒判不过严回归锚。红 =
+    歧义静默取最高分回潮 / 拒判误杀唯一命中。"""
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_bookcard as mod,
+    )
+
+    def _row(text: str, x: int) -> SimpleNamespace:
+        return SimpleNamespace(data=text, x=x, y=100, w=120, h=30)
+
+    def _run(ocr_rows: list) -> tuple:
+        op = mod.CwScreenBookcard(test_context)
+        monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
+        monkeypatch.setattr(op, 'round_by_find_area',
+                            lambda s, sc, a, **k: _Area(True), raising=False)
+        monkeypatch.setattr(op.ctx, 'ocr_service', _StubOcr(
+            list_result=ocr_rows), raising=False)
+        # 解点读桩(area_center 回定值;唯一命中腿要过解点才落容器)。
+        monkeypatch.setattr(
+            mod, 'area_center',
+            lambda ctx, name, screen_name: Point(700, 500))
+        session = StrategySession()
+        monkeypatch.setattr(test_context, 'cw_match',
+                            _make_match(session), raising=False)
+        rs = _run_node(test_context, op, op.observe)
+        return rs, session, op
+
+    # ① 歧义对(同分)→ round_fail,双域零写、obs 不装载。
+    from one_dragon.base.geometry.point import Point
+    rs, session, op = _run([_row('宙之半神星徽', 700)])
+    assert not rs.is_success and '标准化失败' in (rs.status or ''), (
+        f'近分歧义 = 转换失败 round_fail:{rs!r}')
+    gs = game_state_of(session)
+    assert gs.star_tome_opts.value is None, '歧义名字域零写'
+    assert gs.star_tome_opts_xy.value is None, '歧义坐标域零写(同进退)'
+    assert op._obs is None, '歧义不装载 obs'
+    # ② 明确唯一(分差足额)→ 通过,容器落标准注册名 + 坐标同门双写。
+    rs2, session2, op2 = _run([_row('昼之半祌星徽', 700)])
+    assert rs2.is_success, f'唯一命中放行(拒判不过严):{rs2!r}'
+    gs2 = game_state_of(session2)
+    assert gs2.star_tome_opts.value == ['昼之半神'], (
+        f'唯一命中落标准注册名:{gs2.star_tome_opts.value!r}')
+    assert gs2.star_tome_opts_xy.value == [(760, 500)], (
+        f'坐标同门双写:{gs2.star_tome_opts_xy.value!r}')
+
+
 # ==================== 入口门语义锁(带门四屏)====================
 
 _GATE_ROWS = [
