@@ -29,7 +29,6 @@ from sr_od.application.currency_war.kernel.cw_events import (
     MegastarPick,
     PartnerPick,
     PlannerPick,
-    SupplyPick,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
@@ -300,7 +299,7 @@ def test_supply_pick_op_clicks_target_and_confirms(no_pick_sleep):
         op=op, match=SimpleNamespace(session=session),
         target=Point(500, 400),
         picked={'char': '希儿', 'equip': '星币收集器', 'has_diamond': True})
-    assert CwActionPickSupplyOp(env.op.ctx, SupplyPick(idx=0), env=env).run().is_success
+    assert CwActionPickSupplyOp(env.op.ctx, CwActionPickSupplyParam(idx=0), env=env).run().is_success
     assert [(p.x, p.y) for p, _t in ctrl.clicks] == [(500, 400)]
     assert confirm_calls == [('货币战争-补给', '按钮-确认',
                               {'success_wait': 1.5})]

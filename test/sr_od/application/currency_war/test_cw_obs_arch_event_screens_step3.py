@@ -131,8 +131,14 @@ def test_supply_refresh_gate_left_semantics(test_context, monkeypatch) -> None:
     """supply 刷新闸行为锁(剩余语义观察真值,迭代
     2026-09-21-event-refresh-unify-supply-pick design §2.0A/§2.1):
     - 剩余 1 → 建议刷新 → 点钮恰一次 + 终结交回(_do_action 返回 True);
-    - 剩余 0 / None → 零点击不按刷新终结,重调一次决策按原评分选卡
+    - 剩余 0 / None → 零点击不按刷新终结,重调一次决策后落选卡
       (机械派发半照发,刷新钮零点击)。
+    注(补给画面策略迁移批语义过期注记):判据侧次数闸已内嵌策略层
+    decide(``strategies/impl/mandate_v1/supply.py``,仅剩余 ≥1 才可能返
+    刷新建议),生产中「建议刷 ∧ 对照闸拒绝」仅剩刷新锚点缺失一种触发面
+    ——重调同输入同输出仍建议刷 → 零点击终结交回;「按原评分选卡」为旧
+    kernel 评分叙述,决策本体现 = 策略层三级字典序。本锁以 stub 驱动,
+    保留 op 面对照闸的行为断言(闸拒绝零点击、重调链有界)。
     OCR 读链/机械派发/固定等待桩化,只锁闸面与点击面。"""
     from one_dragon.base.geometry.point import Point
     from sr_od.application.currency_war.operations.cw_screen import (
