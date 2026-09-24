@@ -461,18 +461,36 @@ def test_env_gift_advisor_split_and_quiet(rows_sink: _RowSink) -> None:
 
 def test_env_gift_item_channel(rows_sink: _RowSink) -> None:
     """ENV_GIFTS 道具通道(§2.3):items_immediate 命中 → 效果串
-    ``item_gift:<名>``(数量 = 元素重复次数)+ 每道具一申报行;不写容器
-    (道具无承载字段,占席待开箱归外循环画面分发承接;容器 Field 归
-    sim 统一容器字段判据辖域)。"""
+    ``item_gift:<名>``(数量 = 元素重复次数)+ 落席写入(送卡落席同构,
+    备战空槽 ``kind='supply_box'``;双端同一获得链,sim 世界写入即容器写);
+    正常路径零申报行。"""
     gs = _make_gs(bench=[], equips=[])
     gs.prep_anchored = True
     out = gain_invest_env(gs, None, '火药味', rand=False, sig=_lsig())
     assert out.effects == ('item_gift:简易武装箱', 'item_gift:简易武装箱'), \
         '道具通道效果串:数量 = 元素重复次数'
     assert gs.active_env.value == '火药味'   # 容器写照常
-    assert bench_units_of(gs) == [], '道具不入席(占席待开箱归画面分发)'
+    slots = gs.bench.value.slots
+    assert sum(1 for s in slots if s.kind == 'supply_box') == 2, \
+        '两箱落备战席空槽(supply_box 槽件)'
+    assert bench_units_of(gs) == [], '道具非角色,单位域不变'
+    assert rows_sink.kinds() == [], '正常路径零申报行'
+
+
+def test_env_gift_item_channel_bench_full(rows_sink: _RowSink) -> None:
+    """ENV_GIFTS 道具通道席满(实机席满行为未实证,禁猜):零写 + 每道具
+    一申报留证;效果串恒登记(发放事实与落席成败解耦)。"""
+    gs = _make_gs(bench=[('希儿', 1)] * 9, equips=[])
+    gs.prep_anchored = True
+    out = gain_invest_env(gs, None, '火药味', rand=False, sig=_lsig())
+    assert out.effects == ('item_gift:简易武装箱', 'item_gift:简易武装箱'), \
+        '发放事实恒登记'
+    assert sum(1 for s in gs.bench.value.slots
+               if s.kind == 'supply_box') == 0, '席满零写(禁猜)'
+    units = [(u.char_id, u.star) for u in bench_units_of(gs)]
+    assert units == [('希儿', 1)] * 9, '席原样'
     assert rows_sink.kinds() == [DEFECT_ITEM_DECL, DEFECT_ITEM_DECL], \
-        '每道具一申报行(容器无承载字段)'
+        '每道具一申报留证(席满)'
 
 
 def test_gain_invest_env_invalid_payload_zero_write(rows_sink: _RowSink) -> None:
