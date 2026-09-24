@@ -452,7 +452,8 @@ def test_invest_pick_op_clicks_target_confirms_and_self_reports(
                         lambda ctx: SimpleNamespace(sentinel='gs'))
     monkeypatch.setattr(pick_mod, 'report_action_pick_invest_env_param',
                         lambda gs, param, sig, **kw:
-                        reported.append((gs, param, sig)))
+                        reported.append((gs, param, sig))
+                        or SimpleNamespace(world_decl=None))
     assert CwActionPickInvestOp(env.op.ctx, CwActionPickInvestEnvParam(idx=2),
                                 env=env).run().is_success
     # 点击序 = 选中位;确认 = area 查找点击(桩承接),零直接坐标点击。
@@ -467,7 +468,8 @@ def test_invest_pick_op_clicks_target_confirms_and_self_reports(
     reported_st: list = []
     monkeypatch.setattr(pick_mod, 'report_action_pick_invest_strategy_param',
                         lambda gs, param, sig, **kw:
-                        reported_st.append((gs, param, sig)))
+                        reported_st.append((gs, param, sig))
+                        or SimpleNamespace(world_decl=None))
     env_st = OverlayPickExecEnv(op=op, idx=0, target=Point(700, 450))
     assert CwActionPickInvestOp(env_st.op.ctx,
                                 CwActionPickInvestStrategyParam(idx=0),
@@ -496,7 +498,8 @@ def test_fortune_pick_op_clicks_card_confirms_and_self_reports(
     monkeypatch.setattr(pick_mod, 'game_state_from_ctx', lambda ctx: _gs)
     reported: list = []
     monkeypatch.setattr(pick_mod, 'report_action_pick_fortune_param',
-                        lambda gs, param, sig: reported.append(param))
+                        lambda gs, param, sig: reported.append(param)
+                        or SimpleNamespace(world_decl=None))
     env = OverlayPickExecEnv(op=op)
     assert CwActionPickFortuneOp(env.op.ctx, CwActionPickFortuneParam(idx=1),
                                  env=env).run().is_success
@@ -572,7 +575,8 @@ def test_wish_trial_pick_op_clicks_card_area_confirms_and_self_reports(
     monkeypatch.setattr(pick_mod, 'game_state_from_ctx', lambda ctx: _gs)
     reported: list = []
     monkeypatch.setattr(pick_mod, 'report_action_pick_wish_trial_param',
-                        lambda gs, param, sig: reported.append(param))
+                        lambda gs, param, sig: reported.append(param)
+                        or SimpleNamespace(world_decl=None))
     env = OverlayPickExecEnv(op=op)
     assert CwActionPickWishTrialOp(env.op.ctx, CwActionPickWishTrialParam(idx=0),
                                    env=env).run().is_success
@@ -651,7 +655,8 @@ def test_pick_expert_invite_takes_point_from_container(no_pick_sleep,
                             lambda ctx: gs)
         monkeypatch.setattr(pick_mod, 'report_action_pick_expert_invite_param',
                             lambda gs_, param, sig, _r=reported:
-                                _r.append(param))
+                                _r.append(param)
+                                or SimpleNamespace(world_decl=None))
         return op, env, ctrl, reported
 
     # ① idx=-1 → 恰消费 cash_point(词表特形显式分支);② idx=1 → 消费
@@ -706,7 +711,9 @@ def test_pick_star_tome_takes_point_from_container(no_pick_sleep, monkeypatch):
     reported: list = []
     monkeypatch.setattr(pick_mod, 'game_state_from_ctx', lambda ctx: gs)
     monkeypatch.setattr(pick_mod, 'report_action_pick_star_tome_param',
-                        lambda gs_, param, sig, _r=reported: _r.append(param))
+                        lambda gs_, param, sig, _r=reported:
+                            _r.append(param)
+                            or SimpleNamespace(world_decl=None))
     assert CwActionPickStarTomeOp(env.op.ctx, CwActionPickStarTomeParam(idx=1),
                                   env=env).run().is_success
     assert [(p.x, p.y) for p, _t in ctrl.clicks] == [(760, 500)]
@@ -755,7 +762,9 @@ def test_pick_box_card_takes_point_from_container(no_pick_sleep, monkeypatch):
                         lambda ctx: gs)
     monkeypatch.setattr(cw_pick_box_card_action,
                         'report_action_pick_box_card_param',
-                        lambda gs_, param, sig, _r=reported: _r.append(param))
+                        lambda gs_, param, sig, _r=reported:
+                            _r.append(param)
+                            or SimpleNamespace(world_decl=None))
     assert CwActionPickBoxCardOp(env.op.ctx, CwActionPickBoxCardParam(idx=1),
                                  env=env).run().is_success
     assert [(p.x, p.y) for p, _t in ctrl.clicks] == [(1027, 290)]

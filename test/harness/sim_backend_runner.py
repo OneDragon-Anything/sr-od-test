@@ -152,9 +152,11 @@ class SimFullRun:
     hp_trail: tuple
 
 
-#: 非世界状态的墙钟度量键(确定性对拍域外;match_final 记录内嵌的局时
-#: 长 = 真实运行耗时,双跑必然不同,与 sim 世界确定性无关)。
-_NONDETERMINISTIC_META_KEYS: frozenset = frozenset({'duration_s'})
+#: 非世界状态的元数据键(确定性对拍域外,冻结时剥除):match_final 记录
+#: 内嵌的局时长(真实运行耗时,双跑必然不同)与 code_commit(落快照时
+#: 的代码 HEAD 短哈希,随提交变化)——两者均与 sim 世界确定性无关。
+_NONDETERMINISTIC_META_KEYS: frozenset = frozenset({'duration_s',
+                                                    'code_commit'})
 
 
 def _freeze_value(value: Any) -> Any:
@@ -211,7 +213,7 @@ def freeze_cw_module_time() -> Iterator[list]:
     import sys
     import time as _time_mod
 
-    import one_dragon.base.operation.operation as _operation_mod
+    import one_dragon.base.operation.operation as _operation_mod  # noqa: F401  (import 即注册 sys.modules,冻结循环才能覆盖 operation 模块)
 
     skipped: list = []
     saved: list = []
@@ -222,7 +224,7 @@ def freeze_cw_module_time() -> Iterator[list]:
         mod = sys.modules.get(name)
         if mod is None or not hasattr(mod, 'time'):
             continue
-        if getattr(mod, 'time') is not _time_mod:
+        if mod.time is not _time_mod:
             continue   # 已被别处桩住(fast_sleep 等)→ 不重复包
         saved.append((mod, mod.time))
         mod.time = _ModuleTimeProxy(_time_mod, skipped)  # type: ignore[assignment]
@@ -293,9 +295,6 @@ def run_sim_full_match(test_context: Any,
     """
     from types import SimpleNamespace
 
-    from sr_od.application.currency_war.currency_war_config import (
-        CurrencyWarConfig,
-    )
     from sr_od.application.currency_war.kernel.cw_game_state import (
         bind_session_container,
     )
@@ -312,9 +311,6 @@ def run_sim_full_match(test_context: Any,
         reset_phase_round_cache,
     )
     from sr_od.application.currency_war.operations.cw_loop import CwLoop
-    from sr_od.application.currency_war.operations.decision_frame_hooks import (
-        get_project_root as _dframe_gpr,
-    )
     from sr_od.application.currency_war.sim.cw_sim_backend import (
         SimBackend,
         install_backend,
@@ -359,7 +355,6 @@ def run_sim_full_match(test_context: Any,
     strategy = cw_bridge.MandateV1Strategy(
         backend.gs, SimpleNamespace(strategy_seed=strategy_seed))
     session.strategy_state = strategy.state
-    config = CurrencyWarConfig(test_context.current_instance_idx)
     match = CurrencyWarMatch(strategy, session, backend.gs,
                              performance=getattr(session, 'performance',
                                                  None))

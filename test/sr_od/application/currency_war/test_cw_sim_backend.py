@@ -5,7 +5,7 @@
 - 字段收敛:无第二账——节点键/连胜/相位载荷全部落容器;
 - 初始序列(简报 → 环境 → wait_one_one → P1r1)与节点推进序列(收入/
   经验/环境金/发牌/offer 日程)平移语义零改;
-- 转移事件重入幂等 + 选卡腿接获得链(契约送卡/burst 免费刷新/板面重写/
+- 转移声明重入幂等 + 选卡腿接获得链(契约送卡/burst 免费刷新/板面重写/
   骇客改件,对齐 cw_gain_chain 现役语义);
 - 装备腿:穿着即合成住 kernel 穿装备上报(规则件缺口补 kernel,sim 与
   实机动作腿同构)。
@@ -83,15 +83,6 @@ def _backend(seed: int = 7, cfg: RunConfig = _CFG) -> SimBackend:
     return backend
 
 
-def _report_opening_pick(b: SimBackend, idx: int = 0) -> None:
-    """开局序列推进:简报下一步 → 环境选卡上报(事件驱动交回)。"""
-    b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
-    out = report_action_pick_invest_env_param(
-        b.gs, SimpleNamespace(idx=idx), _SIG)
-    assert out.applied
-    b._maybe_finish_wait()
-
-
 def _start_battle_feed(gs: GameState) -> None:
     """出战上报 + 声明喂入(声明化单轨;动作 op「上报后一行喂入」同形)。"""
     out = report_action_start_battle_param(gs, SimpleNamespace(), _SIG)
@@ -163,6 +154,7 @@ def test_reset_presents_briefing_and_env_gating_u07u08() -> None:
             b_env.gs, SimpleNamespace(idx=1), _SIG)
         assert out.applied
         assert (b_env.gs.active_env.value or '') == opts[1]
+        cw_sim_ports.declare_world(out.world_decl)
         b_env._maybe_finish_wait()
         assert b_env.screen_identity() == SCREEN_PREP, '选卡确认交回备战'
     finally:
@@ -240,7 +232,7 @@ def test_start_battle_reentry_idempotent() -> None:
 
 def _drive_step(b: SimBackend, rng_seed: int) -> None:
     """单步驱动(backend 直驱测试共用;按呈现屏分派到对应真实写端;
-    已迁四动作 = 上报 + 声明喂入单轨,未迁动作仍走事件半部)。"""
+    18 动作全量单轨 = 上报 + 声明喂入,动作 op 同形)。"""
     from sr_od.application.currency_war.kernel.cw_action_report import (
         report_action_pick_megastar_param,
         report_action_pick_planner_param,
@@ -255,19 +247,21 @@ def _drive_step(b: SimBackend, rng_seed: int) -> None:
         from sr_od.application.currency_war.kernel.cw_action_report import (
             report_action_pick_supply_param,
         )
-        report_action_pick_supply_param(
+        out = report_action_pick_supply_param(
             gs, SimpleNamespace(idx=0, char_name='', norm_item=opts[0].equip),
             _SIG)
+        cw_sim_ports.declare_world(out.world_decl)
         _node_advance_feed(gs, trigger='supply_confirm')
     elif screen == SCREEN_INVEST_STRATEGY:
         opts = gs.invest_strategy_opts.value
         from sr_od.application.currency_war.kernel.cw_action_report import (
             report_action_pick_invest_strategy_param,
         )
-        report_action_pick_invest_strategy_param(
+        out = report_action_pick_invest_strategy_param(
             gs, SimpleNamespace(norm_name=opts[0]), _SIG,
             rng=stream_rng(rng_seed, 'M11/pick/part'),
             session=SimpleNamespace())
+        cw_sim_ports.declare_world(out.world_decl)
     elif screen == SCREEN_SETTLE:
         _node_advance_feed(gs, trigger='settle_confirm')
     elif screen == '货币战争-位面过渡':
@@ -277,9 +271,11 @@ def _drive_step(b: SimBackend, rng_seed: int) -> None:
     elif screen == '货币战争-遭遇节点':
         _encounter_pick_feed(gs)
     elif screen == '货币战争-盛会之星':
-        report_action_pick_megastar_param(gs, SimpleNamespace(), _SIG)
+        out = report_action_pick_megastar_param(gs, SimpleNamespace(), _SIG)
+        cw_sim_ports.declare_world(out.world_decl)
     elif screen == '货币战争-银狼升星':
-        report_action_pick_planner_param(gs, SimpleNamespace(), _SIG)
+        out = report_action_pick_planner_param(gs, SimpleNamespace(), _SIG)
+        cw_sim_ports.declare_world(out.world_decl)
     elif screen == SCREEN_PREP:
         _start_battle_feed(gs)
     else:
@@ -341,8 +337,10 @@ def test_node_window_overlay_detour_reruns_offer_check() -> None:
         assert b.screen_identity() == '货币战争-银狼升星', \
             '窗起点 overlay 先呈现(压住节点屏)'
         gold_at_detour = gs.gold.value
-        assert report_action_pick_planner_param(
-            gs, SimpleNamespace(), _SIG).applied
+        planner_out = report_action_pick_planner_param(
+            gs, SimpleNamespace(), _SIG)
+        assert planner_out.applied
+        cw_sim_ports.declare_world(planner_out.world_decl)
         assert b.screen_identity() == SCREEN_INVEST_STRATEGY, \
             '让路结束复走 offer 检查(U07 P1r3 槽不被跳过)'
         assert gs.gold.value == gold_at_detour, '窗口前段不因让路重入'
@@ -350,9 +348,11 @@ def test_node_window_overlay_detour_reruns_offer_check() -> None:
         gs.write_logic(gs.invest_strategy_opts,
                        ['加油站', '躺平', '淘金客'],
                        produced_by='Test', evidence='t:opts', sig=_SIG)
-        assert report_action_pick_invest_strategy_param(
+        invest_out = report_action_pick_invest_strategy_param(
             gs, SimpleNamespace(norm_name='加油站'), _SIG,
-            session=SimpleNamespace()).applied
+            session=SimpleNamespace())
+        assert invest_out.applied
+        cw_sim_ports.declare_world(invest_out.world_decl)
         assert b.screen_identity() == SCREEN_PREP, 'offer 选定 → 节点屏'
     finally:
         uninstall_backend()
@@ -372,7 +372,10 @@ def test_contract_env_pick_sends_cards_to_bench() -> None:
         b.gs.write_logic(b.gs.invest_env_opts,
                          ['公司契约', '轮岗', '头彩'],
                          produced_by='Test', evidence='t:opts', sig=_SIG)
-        report_action_pick_invest_env_param(b.gs, SimpleNamespace(idx=0), _SIG)
+        env_out = report_action_pick_invest_env_param(
+            b.gs, SimpleNamespace(idx=0), _SIG)
+        assert env_out.applied
+        cw_sim_ports.declare_world(env_out.world_decl)
         chars = {s.unit.char_id for s in b.gs.bench.value.slots
                  if s is not None and s.kind == 'unit' and s.unit is not None}
         assert {'翡翠', '砂金'} <= chars, '契约送卡入席'
@@ -505,6 +508,7 @@ def test_supply_node_window_refresh_and_pick() -> None:
             _SIG)
         assert out.applied
         assert pick.equip in b.gs.equips.value, '装备腿入栏'
+        cw_sim_ports.declare_world(out.world_decl)
         _node_advance_feed(b.gs, trigger='supply_confirm')
         assert b.gs.diamond_count.value == (1 if diamond else 0)
     finally:
@@ -513,18 +517,23 @@ def test_supply_node_window_refresh_and_pick() -> None:
 
 def test_box_open_pick_grant_via_gain_chain() -> None:
     """开箱动作落地 → 武装箱画面(候选写容器);装备卡点击记录 + 选定
-    落地 → 选中装备经获得链入栏;模态交回备战。"""
+    落地 → 选中装备经获得链入栏;模态交回备战。上报 + 声明喂入单轨
+    (open_box / pick_box_card 两腿,动作 op 同形)。"""
     b = _backend(7)
     try:
         b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
         b._maybe_finish_wait()
-        report_action_open_box_param(b.gs, CwActionOpenBoxParam(), _SIG)
+        open_out = report_action_open_box_param(
+            b.gs, CwActionOpenBoxParam(), _SIG)
+        cw_sim_ports.declare_world(open_out.world_decl)
         assert b.screen_identity() == SCREEN_BOX
         cands = b.gs.box_card_names.value
         assert cands is not None and len(cands) == 4
         b._handle_click_source(SCREEN_BOX, '装备卡-3')
-        out = report_action_pick_box_card_param(b.gs, SimpleNamespace(), _SIG)
-        assert out.applied
+        pick_out = report_action_pick_box_card_param(
+            b.gs, SimpleNamespace(), _SIG)
+        assert pick_out.applied
+        cw_sim_ports.declare_world(pick_out.world_decl)
         assert cands[2] in b.gs.equips.value, '选中装备入栏(获得链)'
         assert b.screen_identity() == SCREEN_PREP, '模态交回'
     finally:
@@ -735,18 +744,16 @@ def test_game_over_presents_lobby_terminal_screen() -> None:
 
 def test_expert_screen_presentation_raises_loud_on_observe() -> None:
     """SCREEN_EXPERT「呈现即响错」语义锁(3.4 联调裁决③):open_bookcard
-    转移呈现专家邀请函屏;该屏非金路径 13 档(实机触发条件零档,数据
-    缺口族),observe 必 LookupError 具名响错——防未来把响错静默降级成
-    注册屏/空产物(flow-seam §3 未注册屏响错锁的呈现态配对)。"""
-    from sr_od.application.currency_war.kernel.cw_event_hooks import (
-        TransitionEvent,
-    )
+    声明(纯转移)驱动专家邀请函屏呈现;该屏非金路径 13 档(实机触发
+    条件零档,数据缺口族),observe 必 LookupError 具名响错——防未来把
+    响错静默降级成注册屏/空产物(flow-seam §3 未注册屏响错锁的呈现态
+    配对)。"""
     from sr_od.application.currency_war.sim.cw_sim_backend import (
         SCREEN_EXPERT,
     )
     b = _backend(7)
     try:
-        b.on_transition_event(TransitionEvent(kind='open_bookcard'))
+        b.advance(WorldDecl(next_screen=SCREEN_EXPERT, trigger=''))
         assert b.screen_identity() == SCREEN_EXPERT
         with pytest.raises(LookupError, match='未注册'):
             b.observe(SCREEN_EXPERT)

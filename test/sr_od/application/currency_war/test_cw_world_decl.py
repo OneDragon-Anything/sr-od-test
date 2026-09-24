@@ -1,5 +1,5 @@
 """世界后果声明对照锁(schema 形状 / 载体兼容 / 喂入端口 / 分派校验 /
-表 #1-#4 逐动作声明对照)。
+表 #1-#18 逐动作声明对照)。
 
 锁设计约定(动作后果声明化迭代总纲 design.md §2.2 契约 1/2/3/5 + 详设
 details/world-decl.md §1/§2/§3/§7;3.1 = 声明基建骨架,行为对照锁随
@@ -11,9 +11,10 @@ details/world-decl.md §1/§2/§3/§7;3.1 = 声明基建骨架,行为对照锁�
 - declare_world 喂入契约锁(未装配 no-op = 实机零行为变化的机制
   前提;装配后转发后端 advance;decl=None 端口层直返);
 - advance 分派表集外值 ValueError 锁(封闭集防线与转移事件同型);
-- 表 #1-#4 对照锁(3.2):桩 gs 触发上报,断言 world_decl 的
-  trigger/next_screen 与对照表逐位一致;node_advance 按推导规则对桩
-  gs 节点序断言(含局终分支 eff 超总长 → '');applied=False → None。
+- 表 #1-#18 对照锁(3.2 表 #1-#4 + 3.3 表 #5-#18):桩 gs 触发上报,
+  断言 world_decl 的 trigger/next_screen 与对照表逐位一致;node_advance
+  按推导规则对桩 gs 节点序断言(含局终分支 eff 超总长 → '');
+  applied=False → None。
 """
 import dataclasses
 from types import SimpleNamespace
@@ -24,26 +25,58 @@ from test.harness.sim_backend_runner import (
     sim_backend_fixture,
 )
 
-from sr_od.application.currency_war.kernel.cw_action_report.pick_encounter import (
+from sr_od.application.currency_war.kernel.cw_action_report import (
     report_action_pick_encounter_param,
+)
+from sr_od.application.currency_war.kernel.cw_action_report.close_shop import (
+    report_action_close_shop_param,
+)
+from sr_od.application.currency_war.kernel.cw_action_report.open_bookcard import (
+    report_action_open_bookcard_param,
+)
+from sr_od.application.currency_war.kernel.cw_action_report.pick_invest_env import (
+    report_action_pick_invest_env_param,
+)
+from sr_od.application.currency_war.kernel.cw_action_report.pick_invest_strategy import (
+    report_action_pick_invest_strategy_param,
+)
+from sr_od.application.currency_war.kernel.cw_action_report.pick_planner import (
+    report_action_pick_planner_param,
+)
+from sr_od.application.currency_war.kernel.cw_action_report.pick_supply import (
+    report_action_pick_supply_param,
 )
 from sr_od.application.currency_war.kernel.cw_action_report.start_battle import (
     report_action_start_battle_param,
 )
+from sr_od.application.currency_war.kernel.cw_action_report.zero_writes import (
+    report_action_open_box_param,
+    report_action_pick_box_card_param,
+    report_action_pick_expert_invite_param,
+    report_action_pick_fortune_param,
+    report_action_pick_megastar_param,
+    report_action_pick_partner_param,
+    report_action_pick_star_tome_param,
+    report_action_pick_wish_trial_param,
+)
 from sr_od.application.currency_war.kernel.cw_events import EncounterOption
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
+    BenchSlot,
+    BenchView,
     ChannelSig,
     GameState,
     LogicOutcome,
     observe_node_anchor,
     report_node_advance,
 )
+from sr_od.application.currency_war.kernel.cw_vocab import CwActionOpenBoxParam
 from sr_od.application.currency_war.kernel.cw_world_decl import WorldDecl
 from sr_od.application.currency_war.sim import cw_sim_ports
 from sr_od.application.currency_war.sim.cw_sim_ports import declare_world
 
 _SIG = ChannelSig(family='logic_action', actor='WorldDeclTest', mode='compute')
+_SIG_OBS = ChannelSig(family='obs', actor='WorldDeclTest')
 
 #: 桩 gs 节点序 → 预期 next_screen(推导规则逐分支对照;ord = 推进后
 #: 新序,总长 = P1(9) + P2(7) = 16,超长 = 局终 '')。
@@ -245,28 +278,252 @@ def test_pick_encounter_decl_none_on_unresolved():
     assert out.world_decl is None
 
 
-# ============================================================ 单轨锁(3.2)
+# ============================================================ 表 #5-#18 对照锁
+# (3.3:选卡族与箱 / 书册卡 / 关店,余 14 动作;桩 gs 最小播种,声明逐位
+#  对照详设 world-decl.md §2 终值)
 
-def test_migrated_actions_single_track_no_transition_event():
-    """单动作单轨锁(详设 §5):已迁四动作的上报不再广播转移事件
-    (装饰器/emit 摘除)——sink 在场收不到事件,推进唯一驱动 = 声明喂入。"""
+#: 纯转移选卡族共用声明(partner/fortune/wish_trial/star_tome/expert_invite:
+#: trigger = '' 零专属过程,backend 仅按 next_screen 幂等交回备战)。
+_PREP_PURE_DECL: WorldDecl = WorldDecl(next_screen='货币战争-备战', trigger='')
+
+
+def test_zero_write_transition_family_decl_rows_5_9_10_13_17():
+    """零写族 8 转移上报对照锁(表 #5/#9/#10/#13-#17):applied 出口声明
+    逐位一致——open_box = 武装箱选择档 + 具名 trigger;pick_box_card/
+    pick_megastar = 备战 + 具名 trigger;纯转移五选卡 = 备战 + ''。
+    桩 gs = 新容器(容器零写,真值归观察)。"""
+    cases: tuple[tuple[str, object, WorldDecl], ...] = (
+        ('open_box', CwActionOpenBoxParam(),
+         WorldDecl(next_screen='货币战争-备战-武装箱选择',
+                   trigger='open_box')),
+        ('pick_box_card', SimpleNamespace(),
+         WorldDecl(next_screen='货币战争-备战', trigger='pick_box_card')),
+        ('pick_megastar', SimpleNamespace(),
+         WorldDecl(next_screen='货币战争-备战', trigger='pick_megastar')),
+        ('pick_partner', SimpleNamespace(), _PREP_PURE_DECL),
+        ('pick_fortune', SimpleNamespace(), _PREP_PURE_DECL),
+        ('pick_wish_trial', SimpleNamespace(), _PREP_PURE_DECL),
+        ('pick_star_tome', SimpleNamespace(), _PREP_PURE_DECL),
+        ('pick_expert_invite', SimpleNamespace(), _PREP_PURE_DECL),
+    )
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    for name, param, expected in cases:
+        out = globals()[f'report_action_{name}_param'](gs, param, _SIG)
+        assert out.applied
+        assert out.world_decl == expected, f'{name} 声明与对照表不一致'
+
+
+def test_pick_supply_decl_row12_both_applied_exits():
+    """表 #12 对照锁:补给选卡上报两个 applied 出口(内容未知翻来源腿/
+    装备落地腿)声明同形 = (补给屏, pick_supply)——选卡后画面本瞬间
+    不变,随后到的 node_advance 声明才切走。装备名 = 注册表真名
+    (垃圾袋);留证行经 consume_defect_sink 前清后清隔离。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        consume_defect_sink,
+    )
+    expected = WorldDecl(next_screen='货币战争-补给', trigger='pick_supply')
+    consume_defect_sink()
+    try:
+        gs_unknown = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+        out_unknown = report_action_pick_supply_param(
+            gs_unknown, SimpleNamespace(idx=0, char_name='', norm_item=''),
+            _SIG)
+        assert out_unknown.applied
+        assert out_unknown.world_decl == expected
+
+        gs_landing = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+        gs_landing.observe(gs_landing.equips, [], sig=_SIG_OBS)
+        out_landing = report_action_pick_supply_param(
+            gs_landing,
+            SimpleNamespace(idx=0, char_name='', norm_item='垃圾袋'),
+            _SIG)
+        assert out_landing.applied
+        assert out_landing.world_decl == expected
+        assert '垃圾袋' in (gs_landing.equips.value or []), \
+            '装备腿照常落账(声明不改上报写语义)'
+    finally:
+        consume_defect_sink()
+
+
+def test_pick_invest_env_decl_row7():
+    """表 #7 对照锁:投资环境上报 applied 出口声明 = (备战,
+    pick_invest_env);获得链照常落账(active_env 写入)。"""
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    gs.write_logic(gs.invest_env_opts, ['公司契约', '轮岗', '头彩'],
+                   produced_by='WorldDeclTest', sig=_SIG)
+    out = report_action_pick_invest_env_param(
+        gs, SimpleNamespace(idx=0), _SIG)
+    assert out.applied
+    assert out.world_decl == WorldDecl(next_screen='货币战争-备战',
+                                       trigger='pick_invest_env')
+    assert gs.active_env.value == '公司契约', '获得链照常落账'
+
+
+def test_pick_invest_strategy_decl_row8():
+    """表 #8 对照锁:投资策略上报 applied 出口声明 = (备战,
+    pick_invest_strategy);获得链照常落账(active_strategies 追加)。"""
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    gs.write_logic(gs.invest_strategy_opts, ['加油站', '躺平', '淘金客'],
+                   produced_by='WorldDeclTest', sig=_SIG)
+    out = report_action_pick_invest_strategy_param(
+        gs, SimpleNamespace(norm_name='加油站'), _SIG, session=None)
+    assert out.applied
+    assert out.world_decl == WorldDecl(next_screen='货币战争-备战',
+                                       trigger='pick_invest_strategy')
+    assert '加油站' in (gs.active_strategies.value or []), '获得链照常落账'
+
+
+def test_pick_planner_decl_row11_applied_and_reject():
+    """表 #11 对照锁:银狼策划上报未路由腿(终态兜底零写)applied 出口
+    声明 = (备战, pick_planner);升费前置硬校验拒出口 applied=False →
+    声明 None(留证行经 consume_defect_sink 前清后清隔离)。"""
+    from sr_od.application.currency_war.kernel.cw_events import (
+        PLANNER_LEG_UPGRADE,
+    )
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        consume_defect_sink,
+    )
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    out = report_action_pick_planner_param(gs, SimpleNamespace(), _SIG,
+                                           leg_type='')
+    assert out.applied
+    assert out.world_decl == WorldDecl(next_screen='货币战争-备战',
+                                       trigger='pick_planner')
+    consume_defect_sink()
+    try:
+        gs_unobserved = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+        out_rej = report_action_pick_planner_param(
+            gs_unobserved, SimpleNamespace(), _SIG,
+            leg_type=PLANNER_LEG_UPGRADE)
+        assert out_rej.applied is False
+        assert out_rej.world_decl is None
+    finally:
+        consume_defect_sink()
+
+
+def test_open_bookcard_decl_row6_all_exits():
+    """表 #6 对照锁:开书册卡上报三出口声明——bench 未观察(零写占位
+    出口)与腾席成功出口均 applied=True = (专家邀请函, '')纯转移;槽
+    类型不符拒出口 applied=False → None。腾席写端 = 本上报(开卡即腾席),
+    声明不改写语义。"""
+    gs_unobserved = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    out_unobserved = report_action_open_bookcard_param(
+        gs_unobserved, SimpleNamespace(slot=None), _SIG)
+    assert out_unobserved.applied, 'bench 未观察出口 = 零写占位(applied)'
+    assert out_unobserved.world_decl == WorldDecl(
+        next_screen='货币战争-备战-专家邀请函', trigger='')
+
+    slots: list[BenchSlot | None] = [BenchSlot(kind='unit'),
+                                     BenchSlot(kind='bookcard')]
+    slots += [BenchSlot(kind='empty') for _ in range(7)]
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    gs.observe(gs.bench, BenchView(slots=slots, capacity=9), sig=_SIG_OBS)
+    out = report_action_open_bookcard_param(gs, SimpleNamespace(slot=2), _SIG)
+    assert out.applied
+    assert out.world_decl == WorldDecl(next_screen='货币战争-备战-专家邀请函',
+                                       trigger='')
+    assert gs.bench.value.slots[1].kind == 'empty', '腾席照常落账'
+
+    out_rej = report_action_open_bookcard_param(gs, SimpleNamespace(slot=2),
+                                                _SIG)
+    assert out_rej.applied is False
+    assert out_rej.world_decl is None
+
+
+def test_close_shop_decl_row18():
+    """表 #18 对照锁:关店上报 applied 出口声明 = (备战, '')纯转移
+    (离屏写端 = 本上报);离屏写照常落账(shop payload 离屏)。"""
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    out = report_action_close_shop_param(gs, SimpleNamespace(), _SIG)
+    assert out.applied
+    assert out.world_decl == WorldDecl(next_screen='货币战争-备战',
+                                       trigger='')
+
+
+# ============================================================ 单轨锁(3.2/3.3)
+
+#: 零写族上报直引表(具名 import 消费,禁包级 ``__getattr__`` 动态解析
+#: ——静态可见,漏 import = 收集期红;单轨锁驱动表按动作名取用)。
+_ZERO_WRITE_REPORTS: dict[str, object] = {
+    'pick_box_card': report_action_pick_box_card_param,
+    'pick_megastar': report_action_pick_megastar_param,
+    'pick_partner': report_action_pick_partner_param,
+    'pick_fortune': report_action_pick_fortune_param,
+    'pick_wish_trial': report_action_pick_wish_trial_param,
+    'pick_star_tome': report_action_pick_star_tome_param,
+    'pick_expert_invite': report_action_pick_expert_invite_param,
+}
+
+
+def _report_transition_stub(name: str) -> None:
+    """桩容器触发指定转移动作上报(单轨锁驱动表;均走零播种可用的
+    applied 出口,不影响世界状态断言面)。"""
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    if name == 'start_battle':
+        report_action_start_battle_param(gs, SimpleNamespace(), _SIG)
+    elif name == 'pick_encounter':
+        gs.observe(gs.encounter, SimpleNamespace(options=[
+            EncounterOption(idx=0, difficulty=1, affixes=['超凡入圣'],
+                            rewards=['金币+100']),
+            EncounterOption(idx=1, difficulty=3, affixes=['不速之约'],
+                            rewards=['装备+1', '钻石+5']),
+        ]), sig=_SIG_OBS)
+        report_action_pick_encounter_param(gs, SimpleNamespace(idx=0), _SIG)
+    elif name in ('settle_confirm', 'supply_confirm'):
+        observe_node_anchor(gs, 1, trigger_screen='货币战争-备战',
+                            actor='WorldDeclTest')
+        report_node_advance(gs, trigger=name)
+    elif name == 'open_box':
+        report_action_open_box_param(gs, CwActionOpenBoxParam(), _SIG)
+    elif name == 'open_bookcard':
+        report_action_open_bookcard_param(gs, SimpleNamespace(slot=None),
+                                          _SIG)
+    elif name == 'close_shop':
+        report_action_close_shop_param(gs, SimpleNamespace(), _SIG)
+    elif name == 'pick_supply':
+        report_action_pick_supply_param(
+            gs, SimpleNamespace(idx=0, char_name='', norm_item=''), _SIG)
+    elif name == 'pick_invest_env':
+        gs.write_logic(gs.invest_env_opts, ['特邀专家:银狼'],
+                       produced_by='WorldDeclTest', sig=_SIG)
+        report_action_pick_invest_env_param(gs, SimpleNamespace(idx=0), _SIG)
+    elif name == 'pick_invest_strategy':
+        report_action_pick_invest_strategy_param(
+            gs, SimpleNamespace(norm_name='加油站'), _SIG)
+    elif name == 'pick_planner':
+        report_action_pick_planner_param(gs, SimpleNamespace(), _SIG,
+                                         leg_type='')
+    else:
+        fn = _ZERO_WRITE_REPORTS.get(name)
+        assert fn is not None, f'单轨锁驱动表缺上报函数: {name}'
+        fn(gs, SimpleNamespace(), _SIG)  # type: ignore[operator]
+
+
+def test_all_18_transition_actions_single_track_no_transition_event():
+    """单动作单轨锁(详设 §5,3.3 收全 18 动作):全部转移动作上报不再
+    广播转移事件(装饰器/emit 摘净)——sink 在场收不到事件,推进唯一
+    驱动 = 声明喂入。留证行经 consume_defect_sink 前清后清隔离(桩腿
+    的缺陷留证不外泄)。"""
     from sr_od.application.currency_war.kernel.cw_event_hooks import (
         set_transition_event_sink,
     )
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        consume_defect_sink,
+    )
     received: list[str] = []
     set_transition_event_sink(lambda ev: received.append(ev.kind))
+    consume_defect_sink()
     try:
-        # start_battle / pick_encounter:applied 出口
-        gs = _gs_with_encounter_payload()
-        report_action_start_battle_param(gs, SimpleNamespace(), _SIG)
-        report_action_pick_encounter_param(gs, SimpleNamespace(idx=0), _SIG)
-        # node_advance:落账出口
-        gs2 = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
-        observe_node_anchor(gs2, 1, trigger_screen='货币战争-备战',
-                            actor='WorldDeclTest')
-        out = report_node_advance(gs2, trigger='settle_confirm')
-        assert out.applied
+        for name in ('settle_confirm', 'supply_confirm', 'start_battle',
+                     'pick_encounter', 'pick_supply', 'pick_megastar',
+                     'pick_partner', 'pick_planner', 'pick_invest_env',
+                     'pick_invest_strategy', 'pick_fortune',
+                     'pick_wish_trial', 'pick_star_tome', 'pick_box_card',
+                     'pick_expert_invite', 'open_box', 'open_bookcard',
+                     'close_shop'):
+            _report_transition_stub(name)
     finally:
         set_transition_event_sink(None)
+        consume_defect_sink()
     assert received == [], \
         f'已迁动作不得广播转移事件(单轨): {received}'

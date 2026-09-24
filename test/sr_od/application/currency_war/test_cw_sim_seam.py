@@ -7,8 +7,9 @@
   腿经后端 click_answer(机械镜:档案点位直成功 + until 可见性问询)、
   find_area 腿 visible 应答;
 - controller 桩:直连真实 IO 触碰即 AssertionError(双保险兜底);
-- kernel 事件钩子:转移事件封闭集校验 + 上报函数 applied 出口广播、
-  缺省关零行为。
+- kernel 事件钩子:转移事件封闭集校验(机制本体在役至声明化 3.4;
+  3.3 起上报面广播全摘——广播断言退役为声明对照锁,test_cw_world_decl)
+  + 事实事件缺省关零行为。
 """
 import pytest
 from test.harness.sim_backend_runner import (
@@ -22,19 +23,10 @@ from one_dragon.base.operation.operation_round_result import (
     OperationRoundResult,
     OperationRoundResultEnum,
 )
-from sr_od.application.currency_war.kernel.cw_action_report.zero_writes import (
-    report_action_open_box_param,
-)
 from sr_od.application.currency_war.kernel.cw_event_hooks import (
     TRANSITION_EVENT_KINDS,
     emit_transition_event,
-    set_transition_event_sink,
 )
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    ChannelSig,
-    GameState,
-)
-from sr_od.application.currency_war.kernel.cw_vocab import CwActionOpenBoxParam
 from sr_od.application.currency_war.operations.cw_operation_base import (
     CwOperation,
 )
@@ -174,22 +166,13 @@ def test_find_area_leg_visible_query(_sim_ctx):
 
 
 def test_transition_event_closed_set_and_default_off():
-    """事件钩子槽:转移事件封闭集 emit 校验(集外 ValueError 响亮);
-    上报函数 applied 出口广播(open_box 真实生产路径:零写族
-    applied=True);事实事件缺省关 = 未装 sink 时 emit 零行为。"""
+    """事件钩子槽机制锁(在役至声明化 3.4):转移事件封闭集 emit 校验
+    (集外 ValueError 响亮);事实事件缺省关 = 未装 sink 时 emit 零行为。
+    上报面广播断言已随 3.3 单轨迁移退役(18 动作零广播,单轨锁与声明
+    对照锁 = test_cw_world_decl)。"""
     assert 'open_box' in TRANSITION_EVENT_KINDS
     with pytest.raises(ValueError, match='集外'):
         emit_transition_event('不在封闭集的动作')
-    events: list = []
-    set_transition_event_sink(events.append)
-    try:
-        gs = GameState(schema_version=1)
-        sig = ChannelSig(family='logic_action', actor='sim-seam-test',
-                         mode='compute')
-        report_action_open_box_param(gs, CwActionOpenBoxParam(), sig)
-        assert [e.kind for e in events] == ['open_box']
-    finally:
-        set_transition_event_sink(None)
     # 事实事件缺省关(sink 恒 None):emit 零行为
     from sr_od.application.currency_war.kernel.cw_event_hooks import (
         emit_fact_event,

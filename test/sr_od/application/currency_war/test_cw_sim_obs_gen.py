@@ -100,8 +100,8 @@ def _start_battle_feed(gs) -> None:
 
 
 def _step(b: SimBackend) -> None:
-    """单步驱动(按呈现屏分派到对应真实写端;走局推进共用;已迁四动作 =
-    上报 + 声明喂入单轨,未迁动作仍走事件半部)。"""
+    """单步驱动(按呈现屏分派到对应真实写端;走局推进共用;18 动作全量
+    单轨 = 上报 + 声明喂入,动作 op 同形)。"""
     from sr_od.application.currency_war.sim import cw_sim_ports
     screen = b.screen_identity()
     gs = b.gs
@@ -110,15 +110,17 @@ def _step(b: SimBackend) -> None:
         gs.write_logic(gs.chosen_supply,
                        ('', opts[0].equip, opts[0].has_diamond),
                        produced_by='Test', evidence='t:chosen', sig=_SIG)
-        report_action_pick_supply_param(
+        out = report_action_pick_supply_param(
             gs, SimpleNamespace(idx=0, char_name='', norm_item=opts[0].equip),
             _SIG)
+        cw_sim_ports.declare_world(out.world_decl)
         _node_advance_feed(gs, trigger='supply_confirm')
     elif screen == SCREEN_INVEST_STRATEGY:
         opts = gs.invest_strategy_opts.value
-        report_action_pick_invest_strategy_param(
+        out = report_action_pick_invest_strategy_param(
             gs, SimpleNamespace(norm_name=opts[0]), _SIG,
             session=SimpleNamespace())
+        cw_sim_ports.declare_world(out.world_decl)
     elif screen == SCREEN_SETTLE:
         _node_advance_feed(gs, trigger='settle_confirm')
     elif screen == SCREEN_PLANE_TRANSITION:
@@ -131,9 +133,11 @@ def _step(b: SimBackend) -> None:
         assert out.applied
         cw_sim_ports.declare_world(out.world_decl)
     elif screen == SCREEN_MEGASTAR:
-        report_action_pick_megastar_param(gs, SimpleNamespace(), _SIG)
+        out = report_action_pick_megastar_param(gs, SimpleNamespace(), _SIG)
+        cw_sim_ports.declare_world(out.world_decl)
     elif screen == SCREEN_PLANNER:
-        report_action_pick_planner_param(gs, SimpleNamespace(), _SIG)
+        out = report_action_pick_planner_param(gs, SimpleNamespace(), _SIG)
+        cw_sim_ports.declare_world(out.world_decl)
     elif screen == SCREEN_PREP:
         _start_battle_feed(gs)
     else:
@@ -390,7 +394,10 @@ def test_gen_box_candidates_and_points_same_order() -> None:
     try:
         _open_to_first_window(b)
         b._maybe_finish_wait()
-        report_action_open_box_param(b.gs, CwActionOpenBoxParam(), _SIG)
+        from sr_od.application.currency_war.sim import cw_sim_ports
+        open_out = report_action_open_box_param(
+            b.gs, CwActionOpenBoxParam(), _SIG)
+        cw_sim_ports.declare_world(open_out.world_decl)
         assert b.screen_identity() == SCREEN_BOX
         names = b.gs.box_card_names.value
         points = b.gs.box_card_names_xy.value
