@@ -4,13 +4,16 @@ changes/2026-09-24-supply-screen-strategy-migration landing.md §3.1
 = strategy-docs/30_supply_screen.md)。
 
 锁语义不锁牌面:断言的是「这段判据应该怎么表现」(三级序、需求计数、
-凑星布尔 tiebreak、闸 fail-closed),不断言 reason 全文。判据映射:
+凑星布尔 tiebreak、闸 fail-closed);reason 仅断言 design 明文指定的
+字面(⑨ no-options),其余不断言。判据映射:
 - ① 带钻必选(单钻直选;多钻按角色/装备细分);
 - ② 锁线帧终局成员卡压高价值装备卡;
 - ③ 未锁线/降格帧/get_comp 解析失败帧角色级空转、装备级无 key 参照
   (解析失败帧 = flow 层 None 传入,行为锁见 flow 接线锁);
-- ④ 已持够数成品不再高分、组件/近兑现升档(两账口径);
-- ⑤ 三级全空才刷 + left 缺/尽不刷不阻塞落选卡(闸内嵌 fail-closed);
+- ④ 已持够数成品不再高分、组件/近兑现升档(两账口径:备用账与上阵/
+  备战席穿戴账两半边各有帧);
+- ⑤ 三级全空才刷 + left 缺/尽不刷不阻塞落选卡(闸内嵌 fail-closed)
+  + 带钻帧永不建议刷(「无带钻」合取支);
 - ⑥ 席满无特殊分支(溢出席语义 = 正常选卡);
 - ⑦ 凑星 tiebreak:同名 1★ 恰 2 张先于不凑星终局成员,含 2 张分跨
   备战席/上阵行域的构造(钉死 deployed 展平,防只数备战席漏域);
@@ -180,6 +183,19 @@ def test_demand_counting_and_component_upgrades_two_accounts():
     assert isinstance(out, SupplyDecision)
     assert out.idx == 1
 
+    # 穿戴账半边(两账口径的另一支):备用账空 + 上阵单位穿戴有目标装备
+    # → 需求按总账判定(火力风暴潮 tier 0 已满足,反重力皮靴 tier 3 胜出)。
+    # 备用与穿戴互补的帧面:备用账独扛时 owned_total 回落 owned_spare
+    # 与正确实现同值,只有本构造能测出穿戴账透传缺口
+    comp3 = _comp(['飞霄'], key=['火力风暴潮', '反重力皮靴'])
+    gs3 = _fresh_gs()
+    _set_equips(gs3, [])
+    _set_rows(gs3, [Unit(char_id='飞霄', star=1, equips=['火力风暴潮'])], [])
+    opts3 = [_opt(0, equip='火力风暴潮'), _opt(1, equip='反重力皮靴')]
+    out = supply.decide(opts3, gs3, comp3, False)
+    assert isinstance(out, SupplyDecision)
+    assert out.idx == 1, '上阵穿戴计入总账:火力风暴潮需求已满足,反重力皮靴直击胜出'
+
 
 # ==================== ⑤ 刷新判据(三级全空才刷)====================
 
@@ -209,6 +225,17 @@ def test_refresh_gate_all_three_empty_and_fail_closed():
     out = supply.decide([_opt(0, equip='火力风暴潮')], _fresh_gs(), comp,
                         False)
     assert isinstance(out, SupplyDecision) and out.idx == 0
+    # 带钻帧永不建议刷(「无带钻」合取支):多钻帧才到达闸面(单钻经
+    # 第 1 级早退不经闸)——两钻均非终局成员/非 key 件(装备全 tier 0)
+    # + left=1,现实现钻内细分落选卡;凭据①的多钻帧未构造次数闸读数,
+    # 测不出该支
+    gs_dia = _fresh_gs()
+    _set_left(gs_dia, 1)
+    out = supply.decide([_opt(0, char='三月七', equip='红钻', has_diamond=True),
+                         _opt(1, equip='蓝钻', has_diamond=True)],
+                        gs_dia, comp, False)
+    assert isinstance(out, SupplyDecision) and out.idx == 0, \
+        '带钻帧永不建议刷:钻内细分落选卡(红钻/蓝钻同值取输入序先)'
     # left 缺(None 未观察)/尽(0):fail-closed 不刷,直接落第 3 级选卡
     gs_dry = _fresh_gs()
     _set_left(gs_dry, 0)
