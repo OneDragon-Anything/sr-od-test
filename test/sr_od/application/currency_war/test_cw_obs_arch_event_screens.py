@@ -16,7 +16,9 @@
   left>0 且锚点在位)→ 文本锚定点圆钮恰一次 + 固定等待 → round_success
   终结交回——无同访问 ``screenshot()`` 重读面、无 report 二次覆盖写、
   无重决策、零选卡派发;闸拒绝(剩余 0/None)→ 零点击,重调一次决策
-  按原评分选卡;重调仍建议刷新(闸数据不一致)→ 零点击终结交回。
+  落选卡;重调仍建议刷新(刷新锚读缺面)→ round_fail 交回(计入外循环
+  重派上限——防线行为,迭代 2026-09-24-encounter-screen-strategy-
+  migration §2.5)。
 - **派发即终结锁**(遭遇,迭代 2026-09-21-event-refresh-unify-supply-pick
   3.3 扩围):选卡确认链派发后 round_success 终结交回(零重入裁决轮);
   空候选 = 零点击终结交回(禁盲选派发确认——不可逆消耗);闸拒绝
@@ -384,11 +386,15 @@ def test_encounter_refresh_gate_rejects_zero_and_none(
     assert len(dispatches) == 2, 'None 拒绝轮派发照发(桩跨臂累计 ①+②)'
 
 
-def test_encounter_refresh_gate_mismatch_zero_click_terminal(
+def test_encounter_refresh_gate_mismatch_round_fail_redispatch(
         test_context, monkeypatch) -> None:
-    """闸数据不一致防御锁:拒绝后重调仍返回刷新建议(策略未消费剩余闸)
-    → 不再循环,零点击终结交回(外循环重进 = 入口重建重试观察)。
-    红 = 拒绝-重调环回潮(防循环面)或漏处置死循环。"""
+    """刷新锚读缺防线锁(迭代 2026-09-24-encounter-screen-strategy-
+    migration design §2.5):拒绝后重调仍返回刷新建议(刷新锚点读缺面)
+    → round_fail 交回——失败计入外循环重派上限
+    (``OP_FAIL_REDISPATCH_LIMIT`` 只计连续 fail,零点击 round_success
+    交回不计数且清零计数窗,故改 fail 有界收敛;设计定谳「零点击交回」
+    对「锚持续读缺 ∧ 建议刷恒成立」无防护)。红 = 零点击 round_success
+    终结交回回潮(无界重进循环面)/ 拒绝-重调环回潮漏处置死循环。"""
     clicks, dispatches = _refresh_fixture(test_context, monkeypatch)
     opts = [EncounterOption(idx=0, difficulty=1, rewards=['金币×2'])]
     op, _match, _session = _make_encounter(
@@ -398,8 +404,8 @@ def test_encounter_refresh_gate_mismatch_zero_click_terminal(
         cnt=(0, (771, 899)))
     _run_node(test_context, op, op.observe)
     rs = _run_node(test_context, op, op.act)
-    assert rs.is_success and '终结交回' in (rs.status or ''), (
-        f'重调仍建议刷新 → 零点击终结交回:{rs!r}')
+    assert not rs.is_success and '刷新锚点读缺' in (rs.status or ''), (
+        f'重调仍建议刷新 → round_fail 交回:{rs!r}')
     assert clicks == [], '零点击'
     assert dispatches == [], '零选卡派发'
 

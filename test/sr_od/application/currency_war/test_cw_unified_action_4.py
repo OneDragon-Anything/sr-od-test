@@ -25,7 +25,6 @@ import pytest
 
 from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war.kernel.cw_events import (
-    EncounterPick,
     MegastarPick,
     PartnerPick,
     PlannerPick,
@@ -256,7 +255,7 @@ def test_encounter_pick_op_clicks_card_then_confirm(no_pick_sleep, monkeypatch):
     # 命中臂:建档 area_center 命中「遭遇卡-其二」中心。
     monkeypatch.setattr(pick_mod, 'area_center',
                         lambda ctx, name, screen=None: Point(1288, 550))
-    assert CwActionPickEncounterOp(env.op.ctx, EncounterPick(idx=1), env=env).run().is_success
+    assert CwActionPickEncounterOp(env.op.ctx, CwActionPickEncounterParam(idx=1), env=env).run().is_success
     assert [(p.x, p.y) for p, _t in ctrl.clicks] == [(1288, 550)]
     assert len(ctrl.moves) == len(ctrl.clicks)   # 选中点击前 bug#1 缓解 mouse_move
     assert confirm_calls == [('货币战争-遭遇节点', '按钮-选择',
@@ -275,7 +274,7 @@ def test_encounter_pick_op_clicks_card_then_confirm(no_pick_sleep, monkeypatch):
         round_by_find_and_click_area=lambda shot, s, a, **kw:
             confirm_calls2.append((s, a, kw)) or rs)
     env2 = OverlayPickExecEnv(op=op2)
-    rs2 = CwActionPickEncounterOp(env2.op.ctx, EncounterPick(idx=1), env=env2).run()
+    rs2 = CwActionPickEncounterOp(env2.op.ctx, CwActionPickEncounterParam(idx=1), env=env2).run()
     assert not rs2.is_success, '卡位 area 缺失 = 显式 round_fail(禁兜底坐标)'
     assert ctrl2.clicks == [] and ctrl2.moves == [], '失败臂零点击零移动'
     assert confirm_calls2 == [], '失败臂不进确认步'
