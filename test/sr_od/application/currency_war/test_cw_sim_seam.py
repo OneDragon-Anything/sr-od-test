@@ -7,9 +7,8 @@
   腿经后端 click_answer(机械镜:档案点位直成功 + until 可见性问询)、
   find_area 腿 visible 应答;
 - controller 桩:直连真实 IO 触碰即 AssertionError(双保险兜底);
-- kernel 事件钩子:转移事件封闭集校验(机制本体在役至声明化 3.4;
-  3.3 起上报面广播全摘——广播断言退役为声明对照锁,test_cw_world_decl)
-  + 事实事件缺省关零行为。
+- kernel 事件钩子:事实事件缺省关零行为(sink 未装时 emit 零外送;
+  画面转移后果的声明通道锁 = test_cw_world_decl)。
 """
 import pytest
 from test.harness.sim_backend_runner import (
@@ -22,10 +21,6 @@ from one_dragon.base.operation.operation_node import operation_node
 from one_dragon.base.operation.operation_round_result import (
     OperationRoundResult,
     OperationRoundResultEnum,
-)
-from sr_od.application.currency_war.kernel.cw_event_hooks import (
-    TRANSITION_EVENT_KINDS,
-    emit_transition_event,
 )
 from sr_od.application.currency_war.operations.cw_operation_base import (
     CwOperation,
@@ -165,15 +160,9 @@ def test_find_area_leg_visible_query(_sim_ctx):
         assert r_hit.result is OperationRoundResultEnum.SUCCESS
 
 
-def test_transition_event_closed_set_and_default_off():
-    """事件钩子槽机制锁(在役至声明化 3.4):转移事件封闭集 emit 校验
-    (集外 ValueError 响亮);事实事件缺省关 = 未装 sink 时 emit 零行为。
-    上报面广播断言已随 3.3 单轨迁移退役(18 动作零广播,单轨锁与声明
-    对照锁 = test_cw_world_decl)。"""
-    assert 'open_box' in TRANSITION_EVENT_KINDS
-    with pytest.raises(ValueError, match='集外'):
-        emit_transition_event('不在封闭集的动作')
-    # 事实事件缺省关(sink 恒 None):emit 零行为
+def test_fact_event_default_off():
+    """事实事件缺省关(sink 未装 = 缺省态):emit 零外送不误伤
+    (board_changed 在封闭集内,校验通过即静默返回)。"""
     from sr_od.application.currency_war.kernel.cw_event_hooks import (
         emit_fact_event,
     )
