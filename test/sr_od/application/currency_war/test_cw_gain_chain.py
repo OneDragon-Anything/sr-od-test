@@ -45,7 +45,6 @@ from sr_od.application.currency_war.kernel.cw_effect_inventory import (
 )
 from sr_od.application.currency_war.kernel.cw_gain_chain import (
     DEFECT_ADVISOR_DECL,
-    DEFECT_ITEM_DECL,
     DEFECT_OVERFLOW_TAKEN,
     PICK_INVEST_INVALID_PAYLOAD,
     GainOutcome,
@@ -478,19 +477,43 @@ def test_env_gift_item_channel(rows_sink: _RowSink) -> None:
 
 
 def test_env_gift_item_channel_bench_full(rows_sink: _RowSink) -> None:
-    """ENV_GIFTS 道具通道席满(实机席满行为未实证,禁猜):零写 + 每道具
-    一申报留证;效果串恒登记(发放事实与落席成败解耦)。"""
+    """ENV_GIFTS 道具通道席满(实机真值:道具与角色同款溢出语义):
+    第一箱溢出落位(两字段直写,身份 = 道具名),第二箱撞被占溢出位 →
+    零写一留证;效果串恒登记(发放事实与落位成败解耦)。"""
     gs = _make_gs(bench=[('希儿', 1)] * 9, equips=[])
     gs.prep_anchored = True
     out = gain_invest_env(gs, None, '火药味', rand=False, sig=_lsig())
     assert out.effects == ('item_gift:简易武装箱', 'item_gift:简易武装箱'), \
         '发放事实恒登记'
     assert sum(1 for s in gs.bench.value.slots
-               if s.kind == 'supply_box') == 0, '席满零写(禁猜)'
+               if s.kind == 'supply_box') == 0, '席满不入备战槽'
+    assert gs.overflow_warning.value is True, '第一箱溢出落位(告警在场)'
+    assert gs.overflow_card.value == '简易武装箱', '溢出位身份 = 道具名'
     units = [(u.char_id, u.star) for u in bench_units_of(gs)]
     assert units == [('希儿', 1)] * 9, '席原样'
-    assert rows_sink.kinds() == [DEFECT_ITEM_DECL, DEFECT_ITEM_DECL], \
-        '每道具一申报留证(席满)'
+    assert rows_sink.kinds() == [DEFECT_OVERFLOW_TAKEN], \
+        '第二箱撞被占溢出位,零写一留证'
+
+
+def test_overflow_item_merges_back_as_box_and_clears() -> None:
+    """溢出道具进合成池 = 惰性槽件(BENCH_ITEM_NAMES 判 kind,禁成假角色
+    素材)→ 合成腾槽后归位为 supply_box(§4 身份两分);溢出位两字段成对
+    清写。"""
+    gs = _make_gs(bench=[('银狼', 1), ('银狼', 1),
+                         ('希儿', 1), ('翡翠', 1), ('砂金', 1), ('符玄', 1),
+                         ('卡芙卡', 1), ('黑天鹅', 1)])   # 8/9,无三连
+    gs.observe(gs.overflow_card, '简易武装箱', sig=_SIG_OBS)
+    gs.observe(gs.overflow_warning, True, sig=_SIG_OBS)
+    gain_character(gs, '银狼', 1, rand=False, sig=_lsig(),
+                   evidence='g', producer='T')
+    units = [(u.char_id, u.star) for u in bench_units_of(gs)]
+    assert units.count(('银狼', 2)) == 1, '合成产物落位'
+    assert all(c != '简易武装箱' for c, _ in units), '道具禁入角色域'
+    slots = gs.bench.value.slots
+    assert sum(1 for s in slots if s.kind == 'supply_box') == 1, \
+        '合成腾槽 → 溢出道具归位备战槽(supply_box 槽件)'
+    assert gs.overflow_warning.value is False and gs.overflow_card.value == '', \
+        '溢出位腾空,两字段成对清写'
 
 
 def test_gain_invest_env_invalid_payload_zero_write(rows_sink: _RowSink) -> None:

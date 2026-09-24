@@ -120,6 +120,32 @@ def test_sellbench_overflow_logic_state_absorbs_card():
     assert gs.overflow_warning.value is False
 
 
+def test_sellbench_overflow_absorbs_item_as_supply_box():
+    """溢出件 = 占席道具(BENCH_ITEM_NAMES 命中):卖牌腾槽入位落
+    supply_box 槽件,禁造假角色(道具与角色同款溢出语义,2026-09-24
+    用户确认;判据单一源 = cw_investments.BENCH_ITEM_NAMES)。"""
+    gs = game_state_of(None)
+    gs.write_logic(gs.bench, cw4_bview(
+        [BenchSlot(kind='unit', unit=Unit(char_id='花火', star=1, slot=1)),
+         BenchSlot(kind='unit', unit=Unit(char_id='刃', star=1, slot=2))]),
+        produced_by='test', sig=_SIG)
+    gs.write_logic(gs.gold, 10, produced_by='test', sig=_SIG)
+    gs.write_logic(gs.overflow_warning, True, produced_by='test', sig=_SIG)
+    gs.write_logic(gs.overflow_card, '简易武装箱', produced_by='test',
+                   sig=_SIG)
+
+    report_action_sell_bench_param(gs, CwActionSellBenchParam(bench_idx=0),
+                                   sig=_SIG)
+
+    slots = bench_entries_of(gs)
+    assert slots[0] is not None and slots[0].kind == 'supply_box', \
+        '道具入位 = supply_box 槽件'
+    assert slots[0].unit is None, '无假角色身份'
+    assert slots[1].unit.char_id == '刃'
+    assert gs.overflow_card.value == ''
+    assert gs.overflow_warning.value is False
+
+
 def test_sellbench_lv999_tiered_refund():
     """银狼LV.999 档感知卖价(口述·权威 2026-09-21:升费后按新费用档
     标准公式计价,无特殊口径):档 = 4 的 1★ LV.999 卖出退款 = 4
