@@ -105,7 +105,7 @@ def test_fast_popup_advance_precedes_pick_and_prep_reanchor(
     # 选卡后备战帧锚定:等值 reanchor 翻观察态 → 下一终结动作解锁
     assert observe_node_anchor(gs, 2, trigger_screen='货币战争-备战',
                                actor='CwScreenPrep') == 'reanchor'
-    assert report_node_advance(gs, trigger='settle_confirm') is True
+    assert report_node_advance(gs, trigger='settle_confirm').applied
     assert effective_node_ord(gs) == 3, 'reanchor 后下一确认可推进'
 
 
@@ -127,7 +127,7 @@ def test_boss_segment_click_advance_and_cross_plane(
     gs = _gs_with(test_context, monkeypatch, '双手狸开键盘！')
     # 奖励关(ord 8)已锚定;结算确认点击即推进 → boss 节点 ord 9(E12)
     observe_node_anchor(gs, 8, trigger_screen='货币战争-备战', actor=_ACTOR)
-    assert report_node_advance(gs, trigger='settle_confirm') is True
+    assert report_node_advance(gs, trigger='settle_confirm').applied
     assert effective_node_ord(gs) == 9
 
     # 简报帧直定:hist 已在 9(logic),简报直定目标 = 9(boss 节点)
@@ -139,13 +139,13 @@ def test_boss_segment_click_advance_and_cross_plane(
 
     # E13:boss 结算确认 → 10 = 位面2 第1轮(序号公式自然跨位面)
     observe_node_anchor(gs, 9, trigger_screen='货币战争-备战', actor=_ACTOR)
-    assert report_node_advance(gs, trigger='settle_confirm') is True
+    assert report_node_advance(gs, trigger='settle_confirm').applied
     assert effective_node_ord(gs) == 10 == node_ordinal_of(2, 1)
     # 位面 2 首备战帧等值 reanchor → 下一确认解锁
     assert observe_node_anchor(
         gs, node_ordinal_of(2, 1), trigger_screen='货币战争-备战',
         actor='CwScreenPrep') == 'reanchor'
-    assert report_node_advance(gs, trigger='settle_confirm') is True
+    assert report_node_advance(gs, trigger='settle_confirm').applied
     assert effective_node_ord(gs) == 11
 
 
@@ -161,7 +161,7 @@ def test_locked_resume_value_guard_self_heal(test_context, monkeypatch) -> None:
     gs = _gs_with(test_context, monkeypatch, '双手狸开键盘！')
 
     # 锁定臂直出战:无任何锚定,首次结算确认被 value 守卫挡
-    assert report_node_advance(gs, trigger='settle_confirm') is False
+    assert report_node_advance(gs, trigger='settle_confirm').applied is False
     assert gs.node_ord.value is None and gs.node_hist_ord is None, (
         'value 守卫挡首确认(零推进零 hist)')
 
@@ -173,7 +173,7 @@ def test_locked_resume_value_guard_self_heal(test_context, monkeypatch) -> None:
     assert gs.free_refresh_left.value == 2, '首锚定当帧发放(无 skew)'
 
     # 自愈后流程续行:下一结算确认正常推进
-    assert report_node_advance(gs, trigger='settle_confirm') is True
+    assert report_node_advance(gs, trigger='settle_confirm').applied
     assert effective_node_ord(gs) == 8
 
 
@@ -203,7 +203,7 @@ def test_settle_truth_gold_samples_conditional_grant(
     apply_settlement_cover(gs, hp_after=80, streak_after=1, gold=85)
     assert gs.gold.value == 85
 
-    assert report_node_advance(gs, trigger='settle_confirm') is True
+    assert report_node_advance(gs, trigger='settle_confirm').applied
     assert effective_node_ord(gs) == 3
     assert gs.free_refresh_left.value == 3, (
         '推进时点按结算真值 85 评估:超出 35 → 每 10 金 1 次,封顶 3'

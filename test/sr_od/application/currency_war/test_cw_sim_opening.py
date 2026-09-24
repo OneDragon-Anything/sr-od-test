@@ -12,6 +12,12 @@ import pytest
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
+from sr_od.application.currency_war.kernel.cw_node_schedule import (
+    P1_NODE_SEQUENCE,
+    P2_NODE_SEQUENCE,
+    P3UnobservedError,
+    node_sequence_of,
+)
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
@@ -23,12 +29,6 @@ from sr_od.application.currency_war.sim.cw_sim_opening import (
     apply_opening,
     opening_bench_chars,
     opening_hp_or_raise,
-)
-from sr_od.application.currency_war.sim.cw_sim_plane_schedule import (
-    P1_NODE_SEQUENCE,
-    P2_NODE_SEQUENCE,
-    P3UnobservedError,
-    node_sequence_of,
 )
 from sr_od.application.currency_war.sim.cw_sim_run_config import RunConfig
 from sr_od.application.currency_war.sim.cw_sim_streams import stream_rng

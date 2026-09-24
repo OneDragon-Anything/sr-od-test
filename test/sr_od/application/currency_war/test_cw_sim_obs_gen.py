@@ -84,8 +84,25 @@ def _open_to_first_window(b: SimBackend, *, env_present: bool = False) -> None:
     b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
 
 
+def _node_advance_feed(gs, *, trigger: str) -> None:
+    """节点推进上报 + 声明喂入(声明化单轨;动作 op「上报后一行喂入」同形)。"""
+    from sr_od.application.currency_war.sim import cw_sim_ports
+    out = report_node_advance(gs, trigger=trigger)
+    assert out.applied, f'节点推进未落账: {out.reason!r}'
+    cw_sim_ports.declare_world(out.world_decl)
+
+
+def _start_battle_feed(gs) -> None:
+    """出战上报 + 声明喂入(声明化单轨)。"""
+    from sr_od.application.currency_war.sim import cw_sim_ports
+    out = report_action_start_battle_param(gs, SimpleNamespace(), _SIG)
+    cw_sim_ports.declare_world(out.world_decl)
+
+
 def _step(b: SimBackend) -> None:
-    """单步驱动(按呈现屏分派到对应真实写端;走局推进共用)。"""
+    """单步驱动(按呈现屏分派到对应真实写端;走局推进共用;已迁四动作 =
+    上报 + 声明喂入单轨,未迁动作仍走事件半部)。"""
+    from sr_od.application.currency_war.sim import cw_sim_ports
     screen = b.screen_identity()
     gs = b.gs
     if screen == SCREEN_SUPPLY:
@@ -96,26 +113,29 @@ def _step(b: SimBackend) -> None:
         report_action_pick_supply_param(
             gs, SimpleNamespace(idx=0, char_name='', norm_item=opts[0].equip),
             _SIG)
-        report_node_advance(gs, trigger='supply_confirm')
+        _node_advance_feed(gs, trigger='supply_confirm')
     elif screen == SCREEN_INVEST_STRATEGY:
         opts = gs.invest_strategy_opts.value
         report_action_pick_invest_strategy_param(
             gs, SimpleNamespace(norm_name=opts[0]), _SIG,
             session=SimpleNamespace())
     elif screen == SCREEN_SETTLE:
-        report_node_advance(gs, trigger='settle_confirm')
+        _node_advance_feed(gs, trigger='settle_confirm')
     elif screen == SCREEN_PLANE_TRANSITION:
         b._handle_click_source(SCREEN_PLANE_TRANSITION, '区域-空白点击')
     elif screen == SCREEN_BOSS_BRIEFING:
         b._handle_click_source(SCREEN_BOSS_BRIEFING, '区域-空白点击')
     elif screen == SCREEN_ENCOUNTER:
-        report_action_pick_encounter_param(gs, SimpleNamespace(idx=0), _SIG)
+        out = report_action_pick_encounter_param(gs, SimpleNamespace(idx=0),
+                                                 _SIG)
+        assert out.applied
+        cw_sim_ports.declare_world(out.world_decl)
     elif screen == SCREEN_MEGASTAR:
         report_action_pick_megastar_param(gs, SimpleNamespace(), _SIG)
     elif screen == SCREEN_PLANNER:
         report_action_pick_planner_param(gs, SimpleNamespace(), _SIG)
     elif screen == SCREEN_PREP:
-        report_action_start_battle_param(gs, SimpleNamespace(), _SIG)
+        _start_battle_feed(gs)
     else:
         raise AssertionError(f'未知呈现屏 {screen}')
 
@@ -262,7 +282,7 @@ def test_gen_battle_wait_on_screen_at_settle_window() -> None:
     try:
         _open_to_first_window(b)
         b._maybe_finish_wait()
-        report_action_start_battle_param(b.gs, SimpleNamespace(), _SIG)
+        _start_battle_feed(b.gs)
         assert b.screen_identity() == SCREEN_SETTLE
         obs = b.observe(SCREEN_SETTLE)
         assert obs.on_screen is True

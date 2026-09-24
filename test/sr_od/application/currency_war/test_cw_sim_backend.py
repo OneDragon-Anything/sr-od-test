@@ -49,6 +49,8 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionOpenBoxParam,
     CwActionWearEquipParam,
 )
+from sr_od.application.currency_war.kernel.cw_world_decl import WorldDecl
+from sr_od.application.currency_war.sim import cw_sim_ports
 from sr_od.application.currency_war.sim.cw_sim_backend import (
     DISCLOSURE_P3_UNOBSERVED,
     NODE_XP_BY_TYPE,
@@ -88,6 +90,29 @@ def _report_opening_pick(b: SimBackend, idx: int = 0) -> None:
         b.gs, SimpleNamespace(idx=idx), _SIG)
     assert out.applied
     b._maybe_finish_wait()
+
+
+def _start_battle_feed(gs: GameState) -> None:
+    """出战上报 + 声明喂入(声明化单轨;动作 op「上报后一行喂入」同形)。"""
+    out = report_action_start_battle_param(gs, SimpleNamespace(), _SIG)
+    cw_sim_ports.declare_world(out.world_decl)
+
+
+def _node_advance_feed(gs: GameState, *, trigger: str) -> None:
+    """节点推进上报 + 声明喂入(声明化单轨;喂入 = 动作 op 同形)。"""
+    out = report_node_advance(gs, trigger=trigger)
+    assert out.applied, f'节点推进未落账: {out.reason!r}'
+    cw_sim_ports.declare_world(out.world_decl)
+
+
+def _encounter_pick_feed(gs: GameState) -> None:
+    """遭遇选档上报 + 声明喂入(派发即终结 → battle_resolve 推进)。"""
+    from sr_od.application.currency_war.kernel.cw_action_report import (
+        report_action_pick_encounter_param,
+    )
+    out = report_action_pick_encounter_param(gs, SimpleNamespace(idx=0), _SIG)
+    assert out.applied
+    cw_sim_ports.declare_world(out.world_decl)
 
 
 # ============================================================ 确定性
@@ -166,11 +191,8 @@ def test_affix_override_bypasses_sampling() -> None:
 
 def test_node_advance_sequence_income_streak_and_next_window() -> None:
     """节点推进序列平移:终结动作上报 → 经验入账(被离开节点)→ 下一
-    节点窗口(轮首收入/发牌)→ 备战呈现;转移事件重放(同一事件对象
-    重入)不二次推进(后端线性序守卫)。"""
-    from sr_od.application.currency_war.kernel.cw_event_hooks import (
-        TransitionEvent,
-    )
+    节点窗口(轮首收入/发牌)→ 备战呈现;声明重放(同一 node_advance
+    声明重入)不二次推进(后端线性序守卫)。"""
     b = _backend(7)
     try:
         b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
@@ -178,19 +200,20 @@ def test_node_advance_sequence_income_streak_and_next_window() -> None:
         gs = b.gs
         assert gs.gold.value == 7
         xp_before = gs.xp.value
-        report_action_start_battle_param(gs, SimpleNamespace(), _SIG)
+        _start_battle_feed(gs)
         assert b.screen_identity() == SCREEN_SETTLE, '战斗窗口呈现结算页'
         assert gs.streak.value == 0, '奖励轮战斗连胜不动(M15:非战斗类)'
-        assert report_node_advance(gs, trigger='settle_confirm')
+        _node_advance_feed(gs, trigger='settle_confirm')
         assert (gs.node.value.plane, gs.node.value.round_num) == (1, 2)
         assert gs.xp.value[0] == xp_before[0] + NODE_XP_BY_TYPE['reward'], \
             '节点经验在推进时入账(奖励节点 +2)'
         assert b.screen_identity() == SCREEN_PREP
         assert gs.shop.value is not None, '节点切换自动全刷'
-        # 重入幂等:同一转移事件重放(无新 kernel 推进)→ 窗口不重入、
-        # 收入不重发
+        # 重入幂等:同一 node_advance 声明重放(无新 kernel 推进)→
+        # 窗口不重入、收入不重发
         gold_before = gs.gold.value
-        b.on_transition_event(TransitionEvent(kind='settle_confirm'))
+        cw_sim_ports.declare_world(WorldDecl(next_screen=SCREEN_PREP,
+                                             trigger='node_advance'))
         assert (gs.node.value.round_num) == 2
         assert gs.gold.value == gold_before, '收入不重发'
     finally:
@@ -198,17 +221,17 @@ def test_node_advance_sequence_income_streak_and_next_window() -> None:
 
 
 def test_start_battle_reentry_idempotent() -> None:
-    """转移事件重入幂等:同一终结动作重复上报不二次结算(扣血/连胜
+    """出战重入幂等:同一终结动作重复上报不二次结算(扣血/连胜
     不双计)。"""
     b = _backend(7)
     try:
         b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
         b._maybe_finish_wait()
         gs = b.gs
-        report_action_start_battle_param(gs, SimpleNamespace(), _SIG)
+        _start_battle_feed(gs)
         hp_after_first = gs.hp.value
         streak_after_first = gs.streak.value
-        report_action_start_battle_param(gs, SimpleNamespace(), _SIG)
+        _start_battle_feed(gs)
         assert gs.hp.value == hp_after_first, '重复上报零二次扣血'
         assert gs.streak.value == streak_after_first
     finally:
@@ -216,9 +239,9 @@ def test_start_battle_reentry_idempotent() -> None:
 
 
 def _drive_step(b: SimBackend, rng_seed: int) -> None:
-    """单步驱动(backend 直驱测试共用;按呈现屏分派到对应真实写端)。"""
+    """单步驱动(backend 直驱测试共用;按呈现屏分派到对应真实写端;
+    已迁四动作 = 上报 + 声明喂入单轨,未迁动作仍走事件半部)。"""
     from sr_od.application.currency_war.kernel.cw_action_report import (
-        report_action_pick_encounter_param,
         report_action_pick_megastar_param,
         report_action_pick_planner_param,
     )
@@ -229,30 +252,36 @@ def _drive_step(b: SimBackend, rng_seed: int) -> None:
         gs.write_logic(gs.chosen_supply,
                        ('', opts[0].equip, opts[0].has_diamond),
                        produced_by='Test', evidence='t:chosen', sig=_SIG)
+        from sr_od.application.currency_war.kernel.cw_action_report import (
+            report_action_pick_supply_param,
+        )
         report_action_pick_supply_param(
             gs, SimpleNamespace(idx=0, char_name='', norm_item=opts[0].equip),
             _SIG)
-        report_node_advance(gs, trigger='supply_confirm')
+        _node_advance_feed(gs, trigger='supply_confirm')
     elif screen == SCREEN_INVEST_STRATEGY:
         opts = gs.invest_strategy_opts.value
+        from sr_od.application.currency_war.kernel.cw_action_report import (
+            report_action_pick_invest_strategy_param,
+        )
         report_action_pick_invest_strategy_param(
             gs, SimpleNamespace(norm_name=opts[0]), _SIG,
             rng=stream_rng(rng_seed, 'M11/pick/part'),
             session=SimpleNamespace())
     elif screen == SCREEN_SETTLE:
-        report_node_advance(gs, trigger='settle_confirm')
+        _node_advance_feed(gs, trigger='settle_confirm')
     elif screen == '货币战争-位面过渡':
         b._handle_click_source('货币战争-位面过渡', '区域-空白点击')
     elif screen == '货币战争-BOSS简报':
         b._handle_click_source('货币战争-BOSS简报', '区域-空白点击')
     elif screen == '货币战争-遭遇节点':
-        report_action_pick_encounter_param(gs, SimpleNamespace(idx=0), _SIG)
+        _encounter_pick_feed(gs)
     elif screen == '货币战争-盛会之星':
         report_action_pick_megastar_param(gs, SimpleNamespace(), _SIG)
     elif screen == '货币战争-银狼升星':
         report_action_pick_planner_param(gs, SimpleNamespace(), _SIG)
     elif screen == SCREEN_PREP:
-        report_action_start_battle_param(gs, SimpleNamespace(), _SIG)
+        _start_battle_feed(gs)
     else:
         raise AssertionError(f'未知呈现屏 {screen}')
 
@@ -269,13 +298,13 @@ def test_boss_briefing_click_resolves_battle() -> None:
             if b.done or b.screen_identity() == '货币战争-BOSS简报':
                 break
             if b.screen_identity() == SCREEN_SETTLE:
-                report_node_advance(b.gs, trigger='settle_confirm')
+                _node_advance_feed(b.gs, trigger='settle_confirm')
             else:
                 _drive_step(b, 61)
         assert b.screen_identity() == '货币战争-BOSS简报'
         b._handle_click_source('货币战争-BOSS简报', '区域-空白点击')
         assert b.screen_identity() == SCREEN_SETTLE
-        assert report_node_advance(b.gs, trigger='settle_confirm')
+        _node_advance_feed(b.gs, trigger='settle_confirm')
         assert (b.gs.node.value.plane, b.gs.node.value.round_num) == (2, 1)
         assert b.screen_identity() == '货币战争-位面过渡', 'P2 首轮位面过渡'
         b._handle_click_source('货币战争-位面过渡', '区域-空白点击')
@@ -299,15 +328,15 @@ def test_node_window_overlay_detour_reruns_offer_check() -> None:
         b._maybe_finish_wait()
         gs = b.gs
         # P1r1(奖励)→ P1r2(战斗)
-        report_action_start_battle_param(gs, SimpleNamespace(), _SIG)
+        _start_battle_feed(gs)
         assert b.screen_identity() == SCREEN_SETTLE
-        assert report_node_advance(gs, trigger='settle_confirm')
+        _node_advance_feed(gs, trigger='settle_confirm')
         assert (gs.node.value.plane, gs.node.value.round_num) == (1, 2)
         # P1r3(U07 offer 槽)窗口起点 overlay 在场 = 让路前提
         # (队列 = 后端簿记直推;入队源评估器另有锁面)
         b.overlay_queue.push('planner')
-        report_action_start_battle_param(gs, SimpleNamespace(), _SIG)
-        assert report_node_advance(gs, trigger='settle_confirm')
+        _start_battle_feed(gs)
+        _node_advance_feed(gs, trigger='settle_confirm')
         assert gs.node.value.round_num == 3
         assert b.screen_identity() == '货币战争-银狼升星', \
             '窗起点 overlay 先呈现(压住节点屏)'
@@ -457,9 +486,9 @@ def test_supply_node_window_refresh_and_pick() -> None:
         b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
         b._maybe_finish_wait()
         while b.gs.node.value.round_num < 5:
-            report_action_start_battle_param(b.gs, SimpleNamespace(), _SIG)
+            _start_battle_feed(b.gs)
             if b.screen_identity() == SCREEN_SETTLE:
-                report_node_advance(b.gs, trigger='settle_confirm')
+                _node_advance_feed(b.gs, trigger='settle_confirm')
         assert b.screen_identity() == SCREEN_SUPPLY
         assert b.gs.supply_refresh_left.value == 1, '节点入口初始 left=1'
         opts_before = [o.equip for o in b.gs.supply.value.options]
@@ -476,7 +505,7 @@ def test_supply_node_window_refresh_and_pick() -> None:
             _SIG)
         assert out.applied
         assert pick.equip in b.gs.equips.value, '装备腿入栏'
-        assert report_node_advance(b.gs, trigger='supply_confirm')
+        _node_advance_feed(b.gs, trigger='supply_confirm')
         assert b.gs.diamond_count.value == (1 if diamond else 0)
     finally:
         uninstall_backend()
@@ -574,7 +603,7 @@ def test_full_walk_terminates_with_p3_disclosure() -> None:
             if b.done:
                 break
             if b.screen_identity() == SCREEN_SETTLE:
-                report_node_advance(b.gs, trigger='settle_confirm')
+                _node_advance_feed(b.gs, trigger='settle_confirm')
             else:
                 _drive_step(b, 61)
         assert b.done
