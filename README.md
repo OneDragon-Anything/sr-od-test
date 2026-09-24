@@ -58,6 +58,8 @@ sr-od-test/
 - `enter_running_state` / `reset_running_state`：运行态前置与复位（别手改 `_run_state` 字段）。
 - `fast_sleep()`：把框架的轮次间/点击前等待变成空等（上下文管理器，包住 `execute()` 或直调的节点方法）。**不包就会真睡**——框架的等待是给真机等画面用的，mock 画面瞬间切换，等待纯属空等。
 
+**单条超时看门狗**（`pytest-timeout`，配置在主仓 `pyproject.toml` `[tool.pytest.ini_options]`）：单条用例超 60s 视为死循环——dump 全线程栈（超时位置直接可见）后杀整个测试进程。个别确需长跑的用例用 `@pytest.mark.timeout(N)` 单独放宽；临时调整用命令行 `--timeout`。
+
 ## 测试纪律
 
 ### 第一原则：测试只覆盖核心内容，极致运行效率
