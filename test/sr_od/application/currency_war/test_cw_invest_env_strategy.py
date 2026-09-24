@@ -24,8 +24,11 @@ all-excluded-fallback 退化选卡 / 剩余 ≥1 → 建议刷);系数表缺键�
 源码扫描)。
 
 追加锁面(3.2 验收 reviewer 必修单):flow 消费侧接线锁四条——env 帧路由
-与动作包装 / memo 三态 / decide 与 decide_pick 零漂移 / 策略轴回归
-(兑现上文「归 3.2 消费侧行为覆盖」的义务申报)。
+与动作包装 / memo 三态 / decide 与 decide_pick 零漂移 / 策略轴接线
+(兑现上文「归 3.2 消费侧行为覆盖」的义务申报)。投资策略屏迁移批 3.2
+接线落地:策略轴回归锁改指策略层新语义(reason 形态 ``pick total=``,
+原「仍走 kernel」锁退役)+ 增补策略轴 memo 三态锁(落选卡取数口 =
+invest_strategy.decide_pick)。
 
 测试纪律:零真实副作用(不写项目目录、不发网络);断言锁设计语义而非
 实现细节;断言依据 = 注册表真实数据(提交进仓)与本文件自造输入。
@@ -445,11 +448,12 @@ def test_decide_and_decide_pick_agree():
     assert (h2.idx, h2.reason) == (h1.idx, h1.reason)
 
 
-def test_flow_strategy_axis_still_kernel():
-    """d. 策略轴回归:kind='strategy' 仍走 kernel decide_event——产物 =
-    CwActionPickInvestStrategyParam 且 reason 带 decide_event 签名性
-    'score=' 尾缀(策略层新机 reason 形态为 'pick total=...',来源可辨);
-    idx 落在候选域。"""
+def test_flow_strategy_axis_strategy_layer_reason_shape():
+    """d. 策略轴接线回归:kind='strategy' 走策略层 ``invest_strategy.decide``
+    (投资策略屏迁移批 3.2 原子接线,kernel ``decide_event`` 已退役)——
+    产物 = CwActionPickInvestStrategyParam 且 reason 为策略层新机签名
+    形态 ``pick total=...`` 前缀(旧 kernel 机 ``score=`` 尾缀随之退役,
+    归因来源可辨);idx 落在候选域。"""
     from sr_od.application.currency_war.kernel.cw_vocab import (
         CwActionPickInvestStrategyParam,
     )
@@ -459,4 +463,40 @@ def test_flow_strategy_axis_still_kernel():
     out = _wired_strategy(gs).decide_invest_strategy()
     assert isinstance(out, CwActionPickInvestStrategyParam)
     assert out.idx in (0, 1)
-    assert 'score=' in out.reason
+    assert out.reason.startswith('pick total=')
+    assert 'score=' not in out.reason
+
+
+#: 策略轴建议帧(三张精确低分卡:帧级门过、全槽可刷——同帧取自
+#: test_cw_invest_strategy.py 刷新判据锁,注册表真实数据)。
+_STRATEGY_REFRESH_FRAME = ['嘴硬', '二极管', '免费升舱']
+
+
+def _write_strategy_frame(gs: GameState, options: list[str]) -> None:
+    """写策略帧 slots(候选;观察真值形态)。"""
+    gs.write_logic(gs.invest_strategy_opts, options,
+                   produced_by='cw-invest-env-test', sig=_SIG_LOGIC)
+
+
+def test_flow_strategy_frame_memo_three_states():
+    """e. 策略轴 memo 三态(迁移批 design §2.10 同帧去重语义;缺 decide_pick
+    落选卡口则建议帧三闸全败时 op round_fail 的行为缺口锁):建议帧首调发
+    CwActionRefreshInvestCardsParam(slots = 策略层动作集)→ 同候选重调落
+    选卡 CwActionPickInvestStrategyParam(reason = pick total= 前缀,取数口
+    = invest_strategy.decide_pick 同一评分基线)→ 再调恢复首调建议(键清;
+    行为面证明,不摸 scratch 内部)。"""
+    from sr_od.application.currency_war.kernel.cw_vocab import (
+        CwActionPickInvestStrategyParam,
+        CwActionRefreshInvestCardsParam,
+    )
+    gs = _fresh_gs()
+    _write_strategy_frame(gs, _STRATEGY_REFRESH_FRAME)
+    strategy = _wired_strategy(gs)
+    first = strategy.decide_invest_strategy()
+    assert isinstance(first, CwActionRefreshInvestCardsParam)
+    assert first.slots == (0, 1, 2)
+    again = strategy.decide_invest_strategy()
+    assert isinstance(again, CwActionPickInvestStrategyParam)
+    assert again.reason.startswith('pick total=')
+    third = strategy.decide_invest_strategy()
+    assert isinstance(third, CwActionRefreshInvestCardsParam)
