@@ -623,8 +623,8 @@ def test_invest_strategy_out_of_match_no_early_exit_normal_chain(
         test_context, monkeypatch) -> None:
     """无 match 局外无早退支锁(用户裁决 2026-09-22 全族删门,op-layer.md
     §1.1:画面 op 不支持局外单独调用,不设单跑防御分支):cw_match=None +
-    非空候选 obs(区分空候选早退出口;原局外分支 = 裸空容器 decide_event
-    产决策 + 真实点击选卡确认链,已删)→ act 不设局外早退门,沿正常链路
+    非空候选 obs(区分空候选早退出口;本锁防局外直调 kernel 决策器的
+    兜底分支回潮)→ act 不设局外早退门,沿正常链路
     因缺上下文自然失败(AttributeError)、零派发零点击。红 = 局外
     round_success 早退门回潮 / 局外 kernel 直调兜底决策回潮。"""
     from sr_od.application.currency_war.operations.cw_screen import (

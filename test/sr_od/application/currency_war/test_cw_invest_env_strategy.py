@@ -291,9 +291,9 @@ _ALL_EXCLUDED_OPTS = ('仙舟概念股', '减益概念股', '击破概念股')
 
 
 def test_all_excluded_frame_falls_back_to_decision():
-    """全排除退化帧 + 次数闸关:排除规则失去选择面,沿旧 kernel
-    decide_event 全禁帧退化行为(全体 argmax 最不负分者)返回选卡决策,
-    归因串以 all-excluded-fallback 开头——3.2 接线后该帧会真发选卡动作,
+    """全排除退化帧 + 次数闸关:排除规则失去选择面,落地件对全体候选
+    (含被禁)取 argmax 最不负分者返回选卡决策,
+    归因串以 all-excluded-fallback 开头——该帧会真发选卡动作,
     reason 是判读面唯一标识(不锁 idx:位次随阵容库注册值漂移,锁类型 +
     归因前缀即设计语义)。"""
     gs = _fresh_gs()
@@ -449,11 +449,9 @@ def test_decide_and_decide_pick_agree():
 
 
 def test_flow_strategy_axis_strategy_layer_reason_shape():
-    """d. 策略轴接线回归:kind='strategy' 走策略层 ``invest_strategy.decide``
-    (投资策略屏迁移批 3.2 原子接线,kernel ``decide_event`` 已退役)——
+    """d. 策略轴接线回归:kind='strategy' 走策略层 ``invest_strategy.decide``——
     产物 = CwActionPickInvestStrategyParam 且 reason 为策略层新机签名
-    形态 ``pick total=...`` 前缀(旧 kernel 机 ``score=`` 尾缀随之退役,
-    归因来源可辨);idx 落在候选域。"""
+    形态 ``pick total=...`` 前缀(归因来源可辨);idx 落在候选域。"""
     from sr_od.application.currency_war.kernel.cw_vocab import (
         CwActionPickInvestStrategyParam,
     )

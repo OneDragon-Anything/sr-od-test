@@ -1,9 +1,7 @@
-"""投资策略画面策略层迁移 3.1 单测(纯新增阶段;判据 = landing.md §3.1 ①-⑩)。
-
-设计依据 = docs/develop/sr_od/application/currency_war/changes/
-2026-09-23-invest-strategy-screen-migration/design.md(下称 design §)
-与 landing.md §3.1 完成判据。3.1 期策略层新文件与 kernel 旧机并存,
-flow 仍走 kernel decide_event(零调用);3.2 接线后本文件锁面随切换验证。
+"""投资策略画面策略层单测(判据正本 = docs/develop/sr_od/application/
+currency_war/strategy-docs/29_invest_strategy_screen.md;规格出处 =
+同目录 changes/2026-09-23-invest-strategy-screen-migration/design.md,
+下称 design §)。
 
 判据映射:
 - ① 现金分(strategy_economy 通道公式:面值/分期金 R−1 截断/XP 双通道/
@@ -110,7 +108,7 @@ _R_OPENING = 27
 
 def test_cash_instant_gold_face_value():
     """instant_gold 面值直计:藏一手 = 80(注册表全表最大一次性金;
-    旧 PICK_VALUE 65 系拍值,新标尺按金等价)。"""
+    现金分语义 = 金等价面值,非拍值评估分)。"""
     assert strategy_economy_value('藏一手', _fresh_gs()) == (80.0, True)
 
 
