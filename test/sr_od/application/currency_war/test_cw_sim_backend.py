@@ -515,6 +515,38 @@ def test_strategy_pick_chain_hacker_part_grant() -> None:
         uninstall_backend()
 
 
+def test_strategy_pick_chain_box_grant_immediate() -> None:
+    """获得链断言:选进阶武装箱腿策略卡(三卡 offer 一次注入、pick
+    战术义眼++)→ 进阶武装箱获得时点立即落备战席(supply_box 槽件;
+    仅选中卡效果体分派——另两卡若误分派席上会多出箱,恰 1 = 唯一分派
+    证据)+ pending_item_grants 不受扰(直发不经定时队列,与特权阶级
+    「登记入队、到点发放」形态相斥)。"""
+    b = _backend(7)
+    try:
+        b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+        b._maybe_finish_wait()
+        gs = b.gs
+
+        def _box_count() -> int:
+            return sum(1 for s in gs.bench.value.slots
+                       if s is not None and s.kind == 'supply_box')
+
+        assert _box_count() == 0, '开局备战无箱(发放前基线)'
+        gs.write_logic(gs.invest_strategy_opts,
+                       ['战术义眼++', '保守派', '快请专家·彩'],
+                       produced_by='Test', evidence='t:opts', sig=_SIG)
+        out = report_action_pick_invest_strategy_param(
+            gs, SimpleNamespace(norm_name='战术义眼++'), _SIG,
+            session=SimpleNamespace())
+        assert out.applied
+        assert '战术义眼++' in gs.active_strategies.value
+        assert _box_count() == 1, '选中卡箱腿立即落备战席(supply_box 槽件)'
+        assert gs.pending_item_grants.value == [], \
+            '获得时点直发,不进入定时队列'
+    finally:
+        uninstall_backend()
+
+
 # ============================================================ 节点事件面
 
 def test_reward_node_ore_substate_and_collect_via_report() -> None:
