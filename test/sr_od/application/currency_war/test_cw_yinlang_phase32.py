@@ -551,9 +551,11 @@ def test_invest_unregistered_card_unchanged(
         [(u.char_id, u.star) for u in bench_units_of(gs2)] == [('希儿', 1)], \
         '表外环境零入席(安静不写)'
     assert gs2.active_strategies.value in (None, [])
-    # 效果注册表收窄为单行(欢愉契约随 portal 支迁获得链;行 = 策略屏
-    # 专用死键已删,gain-chain design §2.5;迁移批 = 表住 cw_gain_effects)。
-    assert set(PICK_INVEST_EFFECTS) == {'骇客专家:银狼'}
+    # 效果注册表 = 骇客单行 + 三箱腿卡(工厂自 _STRATEGY_BOX_GRANTS 生成,
+    # 迭代 2026-09-24-advanced-armory-box;欢愉契约随 portal 支迁获得链,
+    # 策略屏专用死键已删,迁移批 = 表住 cw_gain_effects)。
+    assert set(PICK_INVEST_EFFECTS) == {
+        '骇客专家:银狼', '战术义眼++', '保守派', '快请专家·彩'}
 
 
 def test_hacker_mod_pool_v0_no_max() -> None:
