@@ -250,8 +250,9 @@ def test_grant_advisor_halved():
 
 def test_grant_registry_counts_and_closed_set():
     """底册计数锁(对账记录 = 迭代目录 strategy-grants-reconciliation.md):
-    83 条 = 11 顾问 + 68 绑定母体白得 + 4 反扫补网;顾问档名单在册。"""
-    assert len(STRATEGY_GRANTS) == 83
+    86 条 = 11 顾问 + 68 绑定母体白得 + 4 反扫补网 + 3 箱腿(占席道具
+    直读,迭代 2026-09-24-advanced-armory-box);顾问档名单在册。"""
+    assert len(STRATEGY_GRANTS) == 86
     advisors = {n for n, g in STRATEGY_GRANTS.items() if g.advisor}
     assert len(advisors) == 11
     assert {'停云顾问', '加拉赫顾问', '摸个鱼吧I'} <= advisors
@@ -280,12 +281,29 @@ def test_grants_validation_char_drift_raises(monkeypatch):
 
 
 def test_grants_validation_empty_grant_raises(monkeypatch):
-    """空发放集即炸(③)。"""
+    """空发放集即炸(③ 四通道全空判定,沿 _validate_env_gifts 先例)。"""
     bad = dict(STRATEGY_GRANTS)
     bad['借力打力'] = GiftGrant()
     _patch_grants(monkeypatch, bad)
     with pytest.raises(ValueError, match='空发放集'):
         cw_investments._validate_strategy_grants()
+
+
+def test_grants_box_legs_items_only_pass_validation(monkeypatch):
+    """箱腿条目(占席道具直读)通过构建校验(③ 四通道扩法:chars 两通道
+    空 + items_immediate 非空 = 合法,登记面先例 = 三张棱彩箱腿卡);
+    箱条目经消费口恒 off → 0 分(design 取舍 3,占席道具不进打分零改动)。"""
+    for name in ('战术义眼++', '保守派', '快请专家·彩'):
+        grant = STRATEGY_GRANTS[name]
+        assert grant.items_immediate == ('进阶武装箱',), '箱腿直读登记'
+        assert grant.chars_immediate == () and grant.chars_conditional == ()
+        assert grant.advisor is False
+    assert grant_gift_value(STRATEGY_GRANTS['保守派'], frozenset()) == 0.0
+    # 正面:新 items-only 条目(融合召唤,注册表在册卡)通过校验不炸
+    patched = dict(STRATEGY_GRANTS)
+    patched['融合召唤'] = GiftGrant(items_immediate=('进阶武装箱',))
+    _patch_grants(monkeypatch, patched)
+    cw_investments._validate_strategy_grants()
 
 
 def test_grants_validation_scan_closure_breach_raises(monkeypatch):

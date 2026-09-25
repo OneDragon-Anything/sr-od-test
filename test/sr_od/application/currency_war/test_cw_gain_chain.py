@@ -49,6 +49,7 @@ from sr_od.application.currency_war.kernel.cw_gain_chain import (
     PICK_INVEST_INVALID_PAYLOAD,
     GainOutcome,
     discharge_due_item_grants,
+    gain_bench_item,
     gain_character,
     gain_equipment,
     gain_invest_env,
@@ -72,6 +73,7 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     BENCH_ITEM_NAMES,
     ENV_GIFTS,
     INVESTMENT_ENVS,
+    STRATEGY_GRANTS,
     GiftGrant,
 )
 from sr_od.application.currency_war.kernel.cw_merge_simulate import (
@@ -601,9 +603,11 @@ def test_discharge_overflow_semantics_reused(rows_sink: _RowSink) -> None:
 def test_bench_item_names_cover_scheduled_channel() -> None:
     """占席道具词表派生面:BENCH_ITEM_NAMES 并入 items_scheduled 道具名
     (定时道具同为占席道具,溢出位身份 kind 判定同面——缺派生会把箱当
-    角色,假身份进合成素材组)。"""
+    角色,假身份进合成素材组);策略箱腿登记同样自动派生覆盖(design
+    §2.1 断言:登记即入词表,进阶武装箱首例)。"""
     assert '特权武装箱' in BENCH_ITEM_NAMES, 'scheduled 派生覆盖'
     assert '简易武装箱' in BENCH_ITEM_NAMES, 'immediate 派生保持'
+    assert '进阶武装箱' in BENCH_ITEM_NAMES, '策略箱腿登记即派生覆盖'
 
 
 def test_pending_item_grants_audit_row_declared() -> None:
@@ -765,18 +769,117 @@ def test_gain_invest_strategy_session_ledger_leg() -> None:
 
 
 def test_on_strategy_gained_unregistered_quiet() -> None:
-    """未收录卡:查无效果安静不写(gain-chain §3 裁定④);效果表键集
-    现役单行(迁移零变化)。"""
+    """未收录卡:查无效果安静不写(gain-chain §3 裁定④);效果表键集 =
+    骇客单行 + 三箱腿卡(箱腿由工厂自 _STRATEGY_BOX_GRANTS 生成,
+    迭代 2026-09-24-advanced-armory-box)。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
         PICK_INVEST_EFFECTS,
     )
-    assert set(PICK_INVEST_EFFECTS) == {'骇客专家:银狼'}
+    assert set(PICK_INVEST_EFFECTS) == {
+        '骇客专家:银狼', '战术义眼++', '保守派', '快请专家·彩'}
     gs = _make_gs(bench=[('希儿', 1)], equips=[])
     seq_before = gs.write_seq
     effects = on_strategy_gained(gs, '随便一张未收录卡', rand=False,
                                  sig=_lsig())
     assert effects == ()
     assert gs.write_seq == seq_before, '零写'
+
+
+# ============================================================ 策略箱腿效果
+# (策略卡获得时点占席道具发放,进阶武装箱首例;迭代
+# 2026-09-24-advanced-armory-box design §2.3)
+
+
+@pytest.mark.parametrize('card', ['战术义眼++', '保守派', '快请专家·彩'])
+def test_strategy_box_leg_effect_places_box(
+        card: str, rows_sink: _RowSink) -> None:
+    """三箱腿卡效果体(on_strategy_gained 分派):备战空槽 supply_box×1 +
+    步串 ``box_grant:进阶武装箱(placed=True)``(沿骇客卡 steps 形态);
+    确定发放(rand=False 走确定面,rng 不消费);道具非角色,单位域不变;
+    正常路径零留证。"""
+    gs = _make_gs(bench=[])
+    gs.prep_anchored = True
+    seq_before = gs.write_seq
+    effects = on_strategy_gained(gs, card, rand=False, sig=_lsig(),
+                                 rng=random.Random(0))
+    assert effects == ('box_grant:进阶武装箱(placed=True)',), '单箱步串'
+    slots = gs.bench.value.slots
+    assert sum(1 for s in slots if s.kind == 'supply_box') == 1, '落备战空槽'
+    assert bench_units_of(gs) == [], '道具非角色,单位域不变'
+    assert gs.bench.source == 'logic', '确定发放走确定面'
+    assert gs.write_seq > seq_before, '落位写一行'
+    assert rows_sink.kinds() == [], '正常路径零申报行'
+
+
+def test_strategy_box_leg_bench_full_overflow_name(
+        rows_sink: _RowSink) -> None:
+    """席满行为锁(名字经溢出落位真值暴露——BenchSlot kind 与道具名解耦,
+    备战断言发现不了名字漂移):bench 满 9 → pick 箱腿卡 → 溢出落位,
+    overflow_card == '进阶武装箱'(BENCH_ITEM_NAMES 判 kind → 身份两分
+    正确)。"""
+    gs = _make_gs(bench=[('希儿', 1)] * 9)
+    gs.prep_anchored = True
+    effects = on_strategy_gained(gs, '保守派', rand=False, sig=_lsig(),
+                                 rng=random.Random(0))
+    assert effects == ('box_grant:进阶武装箱(placed=True)',)
+    assert gs.overflow_warning.value is True, '席满溢出落位(告警在场)'
+    assert gs.overflow_card.value == '进阶武装箱', '溢出位身份 = 道具名'
+    assert rows_sink.kinds() == [], '席满溢出落位是既定语义,零留证'
+
+
+def test_strategy_box_grants_consistency_lock() -> None:
+    """发放名单单一源一致性锁(attack.md A4 阻断修订):效果体工厂表
+    _STRATEGY_BOX_GRANTS 与登记表 STRATEGY_GRANTS 三卡 items_immediate
+    逐对相等(表集同锁,防工厂表扩员而登记面漏登——两处独立字面量的
+    名字漂移在备战断言不可见,唯此锁 + 席满溢出真值可暴露)。"""
+    from sr_od.application.currency_war.kernel.cw_gain_effects import (
+        _STRATEGY_BOX_GRANTS,
+    )
+    assert set(_STRATEGY_BOX_GRANTS) == {
+        '战术义眼++', '保守派', '快请专家·彩'}
+    for name, item in _STRATEGY_BOX_GRANTS.items():
+        assert STRATEGY_GRANTS[name].items_immediate == (item,), \
+            f'{name} 效果体发放名与登记表 items_immediate 漂移'
+
+
+def test_gain_bench_item_three_landings(
+        monkeypatch: pytest.MonkeyPatch, rows_sink: _RowSink) -> None:
+    """公开原语落位三态 + 署名透传(design §2.2:与 on_env_gained 既有
+    道具通道语义逐项一致——备战空槽 → 席满溢出落位 → 溢出位被占零写
+    留证;producer 形参自定义署名透传写端,环境通道现役调用点不传即
+    链缺省署名,行为不变形)。"""
+    # 态 1:备战空槽 → True + supply_box 落位;自定义 producer 透传写端
+    gs = _make_gs(bench=[])
+    gs.prep_anchored = True
+    captured: list[str | None] = []
+    orig_write = gs.write_logic
+
+    def rec_write(target, value, **kw) -> None:
+        captured.append(kw.get('produced_by'))
+        orig_write(target, value, **kw)
+
+    monkeypatch.setattr(gs, 'write_logic', rec_write)
+    assert gain_bench_item(gs, '进阶武装箱', rand=False, sig=_lsig(),
+                           evidence='t', producer='CustomProducer') is True
+    assert sum(1 for s in gs.bench.value.slots
+               if s.kind == 'supply_box') == 1, '落备战空槽'
+    assert captured == ['CustomProducer'], '自定义写端署名透传'
+    # 态 2:席满 → True + 溢出落位两字段(身份 = 道具名)
+    gs2 = _make_gs(bench=[('希儿', 1)] * 9)
+    gs2.prep_anchored = True
+    assert gain_bench_item(gs2, '进阶武装箱', rand=False, sig=_lsig(),
+                           evidence='t') is True
+    assert gs2.overflow_card.value == '进阶武装箱', '溢出位身份 = 道具名'
+    assert gs2.overflow_warning.value is True
+    # 态 3:溢出位被占 → False + 零写 + 留证(角色腿同款)
+    gs3 = _make_gs(bench=[('希儿', 1)] * 9,
+                   overflow_card='简易武装箱', overflow_warning=True)
+    gs3.prep_anchored = True
+    seq3 = gs3.write_seq
+    assert gain_bench_item(gs3, '进阶武装箱', rand=False, sig=_lsig(),
+                           evidence='t') is False
+    assert gs3.write_seq == seq3, '零写'
+    assert rows_sink.kinds() == [DEFECT_OVERFLOW_TAKEN], '零写一留证'
 
 
 # ============================================================ 欢愉契约条件腿
