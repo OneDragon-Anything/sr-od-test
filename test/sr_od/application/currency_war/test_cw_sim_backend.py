@@ -384,6 +384,66 @@ def test_contract_env_pick_sends_cards_to_bench() -> None:
         uninstall_backend()
 
 
+def test_scheduled_env_gift_discharged_at_plane2_first_window() -> None:
+    """定时环境发放 sim 收口:选特权阶级 → 队列登记 (2,1) 发放项(登记
+    不落席);(1,x) 各节点窗开启与位面过渡屏呈现期队列原样(未到点不
+    消费);位面过渡点空白收口(2-1 节点窗打开)→ 特权武装箱落备战席
+    (supply_box 槽件)+ 队列回写空。时机语义:「第二位面开始时」=
+    位面过渡屏被点掉、2-1 节点窗打开时,发放收口与窗口幂等守卫同段
+    (seed 61 通道沿 boss 简报用例:局必经 P1r9 与位面过渡)。"""
+    b = SimBackend(seed=61, cfg=RunConfig(
+        selected_difficulty='A8', enemy_difficulty=108, env_present=True))
+    install_backend(b)
+    try:
+        b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+        assert b.screen_identity() == SCREEN_INVEST_ENV
+        gs = b.gs
+        gs.write_logic(gs.invest_env_opts,
+                       ['特权阶级', '轮岗', '头彩'],
+                       produced_by='Test', evidence='t:opts', sig=_SIG)
+        env_out = report_action_pick_invest_env_param(
+            gs, SimpleNamespace(idx=0), _SIG)
+        assert env_out.applied
+        assert gs.active_env.value == '特权阶级'
+        cw_sim_ports.declare_world(env_out.world_decl)
+        queued = [{'env': '特权阶级', 'plane': 2, 'round_num': 1,
+                   'item': '特权武装箱'}]
+        assert gs.pending_item_grants.value == queued, '定时支登记入队'
+        b._maybe_finish_wait()
+        assert (gs.node.value.plane, gs.node.value.round_num) == (1, 1)
+        assert gs.pending_item_grants.value == queued, \
+            '(1,1) 节点窗开启不消费(未到点)'
+        # 先行推进一节点:(1,2) 窗口收口对未到点队列零写
+        _start_battle_feed(gs)
+        _node_advance_feed(gs, trigger='settle_confirm')
+        assert (gs.node.value.plane, gs.node.value.round_num) == (1, 2)
+        assert gs.pending_item_grants.value == queued, '(1,2) 窗口队列原样'
+        # 推进至 P1r9 BOSS 简报 → 结算 → (2,1) 位面过渡
+        for _ in range(64):
+            if b.done or b.screen_identity() == '货币战争-BOSS简报':
+                break
+            if b.screen_identity() == SCREEN_SETTLE:
+                _node_advance_feed(gs, trigger='settle_confirm')
+            else:
+                _drive_step(b, 61)
+        assert b.screen_identity() == '货币战争-BOSS简报'
+        b._handle_click_source('货币战争-BOSS简报', '区域-空白点击')
+        assert b.screen_identity() == SCREEN_SETTLE
+        _node_advance_feed(gs, trigger='settle_confirm')
+        assert (gs.node.value.plane, gs.node.value.round_num) == (2, 1)
+        assert b.screen_identity() == '货币战争-位面过渡'
+        assert gs.pending_item_grants.value == queued, \
+            '位面过渡屏呈现时队列未消费(发放收口在点空白后的节点窗)'
+        b._handle_click_source('货币战争-位面过渡', '区域-空白点击')
+        assert b.screen_identity() == SCREEN_PREP
+        assert gs.pending_item_grants.value == [], '到点发放队列回写空'
+        boxes = [s for s in gs.bench.value.slots
+                 if s is not None and s.kind == 'supply_box']
+        assert len(boxes) == 1, '特权武装箱落备战席(supply_box 槽件)'
+    finally:
+        uninstall_backend()
+
+
 def test_strategy_pick_chain_burst_gold() -> None:
     """获得链断言:选 burst 策略卡(加油站)→ 免费刷新发放生效
     (effect burst 桥,容器零私持);即时金通道现役无写端不发生
