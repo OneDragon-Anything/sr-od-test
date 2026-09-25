@@ -173,15 +173,17 @@ def test_match_facts_domain_version_bumped_lands_in_journal_rows() -> None:
     接管补采计数/完成闩两字段退役 = 域内容变更,gs_schema 域版本 3;
     银狼升星记账批 2026-09-20-yinlang-starup-accounting 新增
     lv999_cost_tier = 域版本 4;迭代 2026-09-20-node-advance-action-report T-8
-    退役零消费恢复局旗标 resumed_match = 域版本 5):
-    DEFAULT_GS_SCHEMA 声明值 = 5,写行内嵌快照
+    退役零消费恢复局旗标 resumed_match = 域版本 5;迭代
+    2026-09-24-scheduled-env-gifts 新增定时道具发放队列 pending_item_grants
+    = 域版本 6):
+    DEFAULT_GS_SCHEMA 声明值 = 6,写行内嵌快照
     state.gs_schema 同值(行行自足,判读不前溯可查域版本)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         DEFAULT_GS_SCHEMA,
         set_run_id_provider,
         set_state_journal_sink,
     )
-    assert DEFAULT_GS_SCHEMA['match_facts'] == 5
+    assert DEFAULT_GS_SCHEMA['match_facts'] == 6
     gs = _gs()
     run_sink: list[dict] = []
     set_state_journal_sink(run_sink.append)
@@ -197,7 +199,7 @@ def test_match_facts_domain_version_bumped_lands_in_journal_rows() -> None:
     row = run_sink[0]
     assert row['row'] == 'write' and row['field'] == 'lv999_cost_tier'
     assert row['after'] == 1
-    assert row['state']['gs_schema']['match_facts'] == 5, \
+    assert row['state']['gs_schema']['match_facts'] == 6, \
         '域版本 bump 落行(行内 state 快照携带)'
 
 

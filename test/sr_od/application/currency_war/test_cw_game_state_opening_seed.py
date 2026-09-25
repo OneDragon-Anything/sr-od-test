@@ -53,8 +53,8 @@ _A_SEEDED: tuple[str, ...] = (
     'front_row', 'back_row', 'bench', 'equips', 'occupied_equips',
     'spheres', 'gold', 'level', 'xp', 'hp', 'streak', 'back_layout',
     'deploy_cap', 'overflow_warning', 'overflow_card', 'active_env',
-    'active_strategies', 'enemy_affixes', 'shop_refresh_cost',
-    'prev_node_spent',
+    'active_strategies', 'pending_item_grants', 'enemy_affixes',
+    'shop_refresh_cost', 'prev_node_spent',
     'strategy_refresh_left',
 )
 
@@ -102,6 +102,7 @@ def test_cold_build_seeds_all_a_fields(monkeypatch) -> None:
     assert gs.overflow_card.value == ''
     assert gs.active_env.value == ''
     assert gs.active_strategies.value == []
+    assert gs.pending_item_grants.value == [], '定时道具队列冷建空底座'
     assert gs.enemy_affixes.value == []
     assert gs.shop_refresh_cost.value == REFRESH_COST_BASE
     assert gs.prev_node_spent.value is False

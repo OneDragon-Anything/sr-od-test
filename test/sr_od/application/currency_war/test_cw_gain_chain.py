@@ -36,7 +36,7 @@ import random
 
 import pytest
 
-from sr_od.application.currency_war.kernel import cw_gain_chain
+from sr_od.application.currency_war.kernel import cw_gain_chain, cw_investments
 from sr_od.application.currency_war.kernel.cw_action_report.pick_planner import (
     report_action_pick_planner_param,
 )
@@ -48,6 +48,7 @@ from sr_od.application.currency_war.kernel.cw_gain_chain import (
     DEFECT_OVERFLOW_TAKEN,
     PICK_INVEST_INVALID_PAYLOAD,
     GainOutcome,
+    discharge_due_item_grants,
     gain_character,
     gain_equipment,
     gain_invest_env,
@@ -68,8 +69,10 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     set_defect_sink,
 )
 from sr_od.application.currency_war.kernel.cw_investments import (
+    BENCH_ITEM_NAMES,
     ENV_GIFTS,
     INVESTMENT_ENVS,
+    GiftGrant,
 )
 from sr_od.application.currency_war.kernel.cw_merge_simulate import (
     merge_simulate,
@@ -514,6 +517,137 @@ def test_overflow_item_merges_back_as_box_and_clears() -> None:
         '合成腾槽 → 溢出道具归位备战槽(supply_box 槽件)'
     assert gs.overflow_warning.value is False and gs.overflow_card.value == '', \
         '溢出位腾空,两字段成对清写'
+
+
+# ============================================================ 定时道具通道
+# (环境定时发放:items_scheduled 登记入队 + discharge_due_item_grants 到点发放)
+
+
+def test_env_gift_scheduled_channel_enqueues(rows_sink: _RowSink) -> None:
+    """定时通道登记(gain_invest_env):items_scheduled 逐项入容器队列
+    pending_item_grants(一次 write 回写整表;entry 形 =
+    {env, plane, round_num, item}),效果串 ``item_scheduled:<名>@<节点键>``;
+    登记不落席(零 supply_box 落位),active_env 容器写照常。"""
+    gs = _make_gs(bench=[], equips=[])
+    gs.prep_anchored = True
+    out = gain_invest_env(gs, None, '特权阶级', rand=False, sig=_lsig())
+    assert out.effects == ('item_scheduled:特权武装箱@2-1',), \
+        '定时通道效果串:发放事实登记,数量 = 元素重复次数'
+    assert gs.active_env.value == '特权阶级'
+    assert gs.active_env.source == 'logic', '容器写照常(确定面)'
+    assert gs.pending_item_grants.value == [
+        {'env': '特权阶级', 'plane': 2, 'round_num': 1, 'item': '特权武装箱'}], \
+        '入队 = 解析好的目标节点 + 来源环境'
+    assert gs.pending_item_grants.source == 'logic', '登记期确定面写'
+    slots = gs.bench.value.slots
+    assert sum(1 for s in slots if s.kind == 'supply_box') == 0, '登记不落席'
+    assert bench_units_of(gs) == [], '道具非角色,单位域不变'
+    assert rows_sink.kinds() == [], '正常路径零申报行'
+
+
+def test_discharge_due_item_grants_place_and_drain(rows_sink: _RowSink) -> None:
+    """到点发放(原语主径):命中 (plane, round_num) 项逐个落位(备战空槽
+    supply_box)+ 效果串 ``item_gift:<名>`` + 队列回写保留集;非到点节点
+    零写零效果、队列原样。"""
+    gs = _make_gs(bench=[], equips=[])
+    gs.prep_anchored = True
+    gain_invest_env(gs, None, '特权阶级', rand=False, sig=_lsig())
+    effects = discharge_due_item_grants(gs, plane=2, round_num=1,
+                                        rand=False, sig=_lsig())
+    assert effects == ('item_gift:特权武装箱',)
+    slots = gs.bench.value.slots
+    assert sum(1 for s in slots if s.kind == 'supply_box') == 1, '到点落位'
+    assert gs.pending_item_grants.value == [], '命中清空,队列回写保留集'
+    assert rows_sink.kinds() == [], '正常路径零申报行'
+    # 非到点:零写零效果、队列原样
+    gs2 = _make_gs(bench=[], equips=[])
+    gs2.prep_anchored = True
+    gain_invest_env(gs2, None, '特权阶级', rand=False, sig=_lsig())
+    seq_before = gs2.write_seq
+    effects2 = discharge_due_item_grants(gs2, plane=1, round_num=1,
+                                         rand=False, sig=_lsig())
+    assert effects2 == () and gs2.write_seq == seq_before, '非到点零写'
+    assert gs2.pending_item_grants.value == [
+        {'env': '特权阶级', 'plane': 2, 'round_num': 1, 'item': '特权武装箱'}], \
+        '队列原样'
+
+
+def test_discharge_overflow_semantics_reused(rows_sink: _RowSink) -> None:
+    """落位语义复用(design §2.3 ②):席满 → 溢出落位两字段(身份 = 道具名,
+    角色腿同款);溢出位再被占 → 该项零写留证(DEFECT_OVERFLOW_TAKEN);
+    队列回写只看命中非空,与落位成败解耦。"""
+    gs = _make_gs(bench=[('希儿', 1)] * 9, equips=[])
+    gs.prep_anchored = True
+    gain_invest_env(gs, None, '特权阶级', rand=False, sig=_lsig())
+    effects = discharge_due_item_grants(gs, plane=2, round_num=1,
+                                        rand=False, sig=_lsig())
+    assert effects == ('item_gift:特权武装箱',), '发放事实恒登记'
+    assert gs.overflow_warning.value is True, '席满溢出落位(告警在场)'
+    assert gs.overflow_card.value == '特权武装箱', '溢出位身份 = 道具名'
+    assert gs.pending_item_grants.value == []
+    assert rows_sink.kinds() == [], '席满溢出落位是既定语义,零留证'
+    gs2 = _make_gs(bench=[('希儿', 1)] * 9, equips=[],
+                   overflow_card='简易武装箱', overflow_warning=True)
+    gs2.prep_anchored = True
+    gain_invest_env(gs2, None, '特权阶级', rand=False, sig=_lsig())
+    effects2 = discharge_due_item_grants(gs2, plane=2, round_num=1,
+                                         rand=False, sig=_lsig())
+    assert effects2 == ('item_gift:特权武装箱',)
+    assert gs2.overflow_card.value == '简易武装箱', '溢出位被占:零写'
+    assert rows_sink.kinds() == [DEFECT_OVERFLOW_TAKEN], '零写一留证'
+    assert gs2.pending_item_grants.value == [], '队列回写与落位成败解耦'
+
+
+def test_bench_item_names_cover_scheduled_channel() -> None:
+    """占席道具词表派生面:BENCH_ITEM_NAMES 并入 items_scheduled 道具名
+    (定时道具同为占席道具,溢出位身份 kind 判定同面——缺派生会把箱当
+    角色,假身份进合成素材组)。"""
+    assert '特权武装箱' in BENCH_ITEM_NAMES, 'scheduled 派生覆盖'
+    assert '简易武装箱' in BENCH_ITEM_NAMES, 'immediate 派生保持'
+
+
+def test_pending_item_grants_audit_row_declared() -> None:
+    """对账申报(容器字段完备性纪律):新容器字段必须在 PROJECTION_AUDIT
+    登记行,行状态 = process_only(队列 = 卡文推算知识,无观察读端)。"""
+    from sr_od.application.currency_war.kernel.cw_projection_audit import (
+        AUDIT_PROCESS_ONLY,
+        PROJECTION_AUDIT,
+    )
+    row = PROJECTION_AUDIT.get('pending_item_grants')
+    assert row is not None, '登记行在册'
+    assert row.status == AUDIT_PROCESS_ONLY, '无观察读端 → process_only'
+
+
+def test_env_gifts_validation_bad_node_key_raises(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """定时节点键格式(注入 + 直调,沿孤儿键测试惯用法):非 '位-轮' 形
+    即炸。"""
+    bad = dict(ENV_GIFTS)
+    bad['特权阶级'] = GiftGrant(items_scheduled=(('10-1', '特权武装箱'),))
+    monkeypatch.setattr(cw_investments, 'ENV_GIFTS', bad)
+    with pytest.raises(ValueError, match='节点键格式'):
+        cw_investments._validate_env_gifts()
+
+
+def test_env_gifts_validation_item_char_clash_raises(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """定时道具名禁 ∈ CHARACTER_ROSTER(道具/角色通道串行防呆)。"""
+    bad = dict(ENV_GIFTS)
+    bad['特权阶级'] = GiftGrant(items_scheduled=(('2-1', '希儿'),))
+    monkeypatch.setattr(cw_investments, 'ENV_GIFTS', bad)
+    with pytest.raises(ValueError, match='定时道具'):
+        cw_investments._validate_env_gifts()
+
+
+def test_env_gifts_validation_empty_grant_includes_scheduled(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """空发放集判定并入 items_scheduled:即时角色/条件角色/即时道具/定时
+    道具全空 = 数据残缺,即炸。"""
+    bad = dict(ENV_GIFTS)
+    bad['火药味'] = GiftGrant()
+    monkeypatch.setattr(cw_investments, 'ENV_GIFTS', bad)
+    with pytest.raises(ValueError, match='空发放集'):
+        cw_investments._validate_env_gifts()
 
 
 def test_gain_invest_env_invalid_payload_zero_write(rows_sink: _RowSink) -> None:
