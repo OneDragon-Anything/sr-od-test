@@ -26,7 +26,11 @@ family.py):
   交回 + 容器与 obs 均空(report 不调,禁盲值;名字与坐标同进退);
   决策动作 node = 容器外读数决策 → 选卡链派发(env idx-only,target
   停喂)→ 选卡即终结 success;无 match 局外不设早退支(用户裁决
-  2026-09-22 全族删门),沿正常链路自然失败。
+  2026-09-22 全族删门),沿正常链路自然失败;
+- **读数闸放宽锁**(design.md §2.7):读数闸上限 ``_CARD_NAME_LEN_MAX``
+  派生自装备注册表最长名(防手抄常数),9 字特权名经真读数闸存活并
+  归一精确命中(旧 8 字手抄上限先于归一化确定性丢弃 9 字名 = 四选一
+  缩三选一)。
 
 驱动方式 = 真类实例(构造走 __init__)+ 门/推进体桩化,节点函数直驱
 (run_node 外壳)。
@@ -45,6 +49,9 @@ from test.sr_od.application.currency_war._cw_helpers import (
 
 from one_dragon.base.operation.operation_round_result import (
     OperationRoundResultEnum,
+)
+from sr_od.application.currency_war.data.cw_equipment_data import (
+    EQUIPMENT_ROSTER,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
     game_state_of,
@@ -467,6 +474,56 @@ def test_box_pick_lcs_ambiguity_rejection_and_unique_pass(test_context,
     assert game_state_of(session2).box_card_names.value == ['击破星徽'], (
         f'②段唯一命中落标准名:'
         f'{game_state_of(session2).box_card_names.value!r}')
+
+
+def test_box_pick_read_gate_admits_registry_longest_priv_name(
+        test_context, monkeypatch):
+    """读数闸放宽锁(design.md §2.7):上限 ``_CARD_NAME_LEN_MAX`` = 注册表
+    最长名派生(防手抄常数——手抄值在注册表最长名变化时即红),9 字特权名
+    「战场进化手册·特权」经真读数闸存活(旧 8 字手抄上限先于归一化会把它
+    确定性静默丢弃 = 四选一缩三选一),并经标准化门归一精确命中落容器;
+    下限 2 不动(单字噪声仍滤除)。
+    ``_make_box_pick`` 把 ``_read_card_names`` 整个桩掉恰好绕开闸,测闸须
+    还原真读数闸直调;``cw_screen_box_pick`` 对 ``_ocr``/``_area_rect`` 是
+    模块级绑定,OCR 桩打在本模块命名空间(同 takeover 管线
+    ``cw_obs_core._ocr`` patch 惯用法——该屏函数内导入故打 cw_obs_core,
+    本屏模块级导入故打本模块,同形不同位)。
+    红 = 上限回退手抄 8 / 派生常数漂移 / 9 字名进不了容器。"""
+    import importlib
+    from types import MethodType
+
+    mod = importlib.import_module(f'{_PKG}.cw_screen_box_pick')
+    # 常数一致性锁:派生式对拍注册表最长名。
+    assert max(
+        len(n) for n in mod._EQUIP_ROSTER_LIST) == mod._CARD_NAME_LEN_MAX, (
+        '读数闸上限必须派生自装备注册表最长名,禁手抄常数')
+    nine = '战场进化手册·特权'
+    assert len(nine) == 9 and nine in EQUIPMENT_ROSTER, (
+        '用例前提:9 字特权名在册(旧 8 字闸必丢的形态)')
+    op, session = _make_box_pick(test_context, monkeypatch, gate_ok=True,
+                                 cards=[])
+    # 还原真读数闸 + OCR/rect 桩(读数 = 9 字特权名 + 1 字噪声 + 4 字简易名)。
+    monkeypatch.setattr(mod, '_area_rect',
+                        lambda ctx, name, screen_name=None: 'rect',
+                        raising=False)
+    _rows = [SimpleNamespace(data=nine, center=SimpleNamespace(x=500)),
+             SimpleNamespace(data='长', center=SimpleNamespace(x=100)),
+             SimpleNamespace(data='光能电池', center=SimpleNamespace(x=900))]
+    monkeypatch.setattr(mod, '_ocr', lambda ctx, screen, rect: _rows,
+                        raising=False)
+    monkeypatch.setattr(op, '_read_card_names',
+                        MethodType(mod.CwScreenBoxPick._read_card_names, op),
+                        raising=False)
+    # ① 直调真读数闸:9 字名存活、1 字噪声被下限滤除、x 升序保序。
+    cards = op._read_card_names('屏')
+    assert cards == [(nine, 500), ('光能电池', 900)], (
+        f'9 字特权名经闸存活(1 字噪声滤除):{cards!r}')
+    # ② 全链观察:闸存活读数经标准化门归一精确命中(段一注册名全等)落容器。
+    rs = _run_node(test_context, op, op.observe)
+    assert rs.is_success, f'观察 success 进决策:{rs!r}'
+    assert game_state_of(session).box_card_names.value == [nine, '光能电池'], (
+        f'归一精确命中落容器:'
+        f'{game_state_of(session).box_card_names.value!r}')
 
 
 def test_box_pick_act_clicks_decided_card(test_context, monkeypatch):
