@@ -152,8 +152,8 @@ class TestM1DirectLock:
     def test_full_bench_merge_buy_k(self):
         """满栏多买(k=2):gold −k×单价 + payload −k 张 + bench 归升星腿
         (本口零落位)。"""
-        bench = [_bc(f'c{i}', star=1, slot=i + 1) for i in range(8)]
-        bench.append(_bc('希儿', star=1, slot=9))
+        bench = [_bc(f'c{i}', star=1) for i in range(8)]
+        bench.append(_bc('希儿', star=1))
         cards = [_card('希儿', cost=3, x=0), _card('希儿', cost=3, x=1)]
         gs = _gs_of(gold=60, shop=cards, bench=bench)
         from sr_od.application.currency_war.kernel.cw_vocab import (
@@ -182,15 +182,15 @@ class TestM1DirectLock:
         for title, axes, act, k, bench_expect in (
             ('非满栏合成买',
              {'gold': 30, 'shop': [_card('希儿', cost=3)],
-              'bench': [_bc('希儿', star=1, slot=1),
-                        _bc('希儿', star=1, slot=2)]},
+              'bench': [_bc('希儿', star=1),
+                        _bc('希儿', star=1)]},
              CwActionBuyCardParam(card=_card('希儿', cost=3)),
              1, [(0, '希儿', 2)]),
             ('满栏合成买(k=2)',
              {'gold': 60, 'shop': [_card('希儿', cost=3, x=0),
                                    _card('希儿', cost=3, x=1)],
-              'bench': [_bc(f'c{i}', star=1, slot=i + 1)
-                        for i in range(8)] + [_bc('希儿', star=1, slot=9)]},
+              'bench': [_bc(f'c{i}', star=1)
+                        for i in range(8)] + [_bc('希儿', star=1)]},
              CwActionBuyCardParam(card=_card('希儿', cost=3)),
              2, [(i, f'c{i}', 1) for i in range(8)] + [(8, '希儿', 2)]),
         ):
@@ -207,7 +207,7 @@ class TestM1DirectLock:
 
     def test_sell_bench_refund(self):
         """卖备战席:bench −该牌 + gold +退款(sell_refund 锚)。"""
-        gs = _gs_of(gold=10, shop=[], bench=[_bc('希儿', star=1, slot=1)])
+        gs = _gs_of(gold=10, shop=[], bench=[_bc('希儿', star=1)])
         _report_action(gs, CwActionSellBenchParam(bench_idx=0, income=3))
         assert gs.gold.value == 13, \
             'gold: 期望 10 +退款 3(1★ 希儿 sell_refund 现算)'
@@ -375,7 +375,7 @@ class TestM1DirectLock:
     def test_buy_rejected_when_full_and_no_merge(self):
         """满栏且合成不可达 = 游戏拒买(ADR-0283):零写(own=0 满栏域
         ADR-0619 门)。"""
-        bench = [_bc(f'c{i}', star=1, slot=i + 1) for i in range(9)]
+        bench = [_bc(f'c{i}', star=1) for i in range(9)]
         gs = _gs_of(gold=30, shop=[_card('姬子', cost=3)], bench=bench)
         seq0 = gs.write_seq
         report_action_buy_card_param(gs, CwActionBuyCardParam(card=_card('姬子', cost=3)),
@@ -408,12 +408,12 @@ def test_shop_entry_funnel_bench_survives_synthesis() -> None:
     # 复刻其产物形态):deploy 后 bench 物理槽 4 留一人
     gs.observe(gs.bench, BenchView(
         slots=[BenchSlot(kind='empty')] * 3
-        + [BenchSlot(kind='unit', unit=Unit(char_id='银枝', star=1, slot=4))]
+        + [BenchSlot(kind='unit', unit=Unit(char_id='银枝', star=1))]
         + [BenchSlot(kind='empty')] * 5,
         capacity=9),
         sig=ChannelSig(family='obs', actor='CwScreenPrep', mode='read'))
     session = SimpleNamespace()
-    _tracked = [_bc('银枝', star=1, slot=4)]
+    _tracked = [_bc('银枝', star=1)]
     game_state_of(session).tracked_books.bench = _tracked
     # 未读 bench 域种子(生产置位点 = read_game_state 漏斗不读席位的形态)
     cw4_gs(gs, gold=30, shop_screen='off', bench_unread=True, node_fill=False)
@@ -447,8 +447,8 @@ def test_on_buy_fires_after_acquisition_compute(monkeypatch):
     """购买回调腿(k 计数 + 时点):回调 = 获取计算完(落位 + 合成连锁 +
     升星腿全毕)后恰一次——满栏一击多买按实际张数 k 计 k 次(k = 上报
     executed);回调可见购买后的席面/升星事实(升星腿已毕)。"""
-    bench = [_bc(f'c{i}', star=1, slot=i + 1) for i in range(8)]
-    bench.append(_bc('希儿', star=1, slot=9))
+    bench = [_bc(f'c{i}', star=1) for i in range(8)]
+    bench.append(_bc('希儿', star=1))
     gs = _gs_of(gold=60,
                 shop=[_card('希儿', cost=3, x=0), _card('希儿', cost=3, x=1)],
                 bench=bench)
@@ -470,7 +470,7 @@ def test_on_buy_fires_after_acquisition_compute(monkeypatch):
 def test_on_buy_not_fired_on_rejected_buy(monkeypatch):
     """拒买(满栏且合成不可达,applied=False 早退)不触回调(未购买,
     计数不虚进)。"""
-    bench = [_bc(f'c{i}', star=1, slot=i + 1) for i in range(9)]
+    bench = [_bc(f'c{i}', star=1) for i in range(9)]
     gs = _gs_of(gold=30, shop=[_card('姬子', cost=3)], bench=bench)
     seen: list = []
     monkeypatch.setattr(gs, 'effects', _SpyEffects(gs.effects, seen))

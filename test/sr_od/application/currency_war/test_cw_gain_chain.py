@@ -31,6 +31,10 @@ docs/develop/sr_od/application/currency_war/game_state/gain-chain.md
 """
 from __future__ import annotations
 
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    deployed_view_sequential as _dvs,
+)
+
 import dataclasses
 import random
 
@@ -99,13 +103,12 @@ def _make_gs(*, bench: list[tuple[str, int]] | None = None,
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if bench is not None:
         slots = [BenchSlot(kind='unit',
-                           unit=Unit(char_id=c, star=s, slot=i + 1))
+                           unit=Unit(char_id=c, star=s))
                  for i, (c, s) in enumerate(bench)]
         slots += [BenchSlot(kind='empty')] * (9 - len(slots))
         gs.observe(gs.bench, BenchView(slots=slots, capacity=9), sig=_SIG_OBS)
     if front is not None:
-        gs.observe(gs.front_row, list(front), sig=_SIG_OBS)
-        gs.observe(gs.back_row, [], sig=_SIG_OBS)
+        gs.observe(gs.deployed, _dvs(list(front), []), sig=_SIG_OBS)
     if equips is not None:
         gs.observe(gs.equips, list(equips), sig=_SIG_OBS)
     if overflow_card is not None:
@@ -173,8 +176,7 @@ def test_merge_step_once_parity_with_merge_simulate(
     bench += [None] * (9 - len(bench))
     dep: list[Unit | None] = [None] * 10
     if dep_idx is not None:
-        dep[dep_idx] = Unit(char_id=bench_spec[0][0], star=bench_spec[0][1],
-                            slot=1)
+        dep[dep_idx] = Unit(char_id=bench_spec[0][0], star=bench_spec[0][1])
     ours_b, ours_d, ours_ovf = list(bench), list(dep), []
     steps = 0
     while merge_step_once(ours_b, ours_d, ours_ovf) is not None:
@@ -406,7 +408,7 @@ def test_anchor_gates_mismatch_net() -> None:
     sig_obs = ChannelSig(family='obs', actor='CwScreenPrep', mode='read')
     other_view = BenchView(
         slots=[BenchSlot(kind='unit',
-                         unit=Unit(char_id='停云', star=1, slot=1))]
+                         unit=Unit(char_id='停云', star=1))]
         + [BenchSlot(kind='empty')] * 8, capacity=9)
     # 未闩臂:随机态链写 → 观察覆盖静默(差异落 logic_rand_outcome)
     gs = _make_gs(bench=[])
@@ -1012,8 +1014,7 @@ def test_joy_rider_fires_once_per_report_call(
         if leg == 'upgrade':
             # 升费腿前置:恰一枚 2★银狼LV.999(rider 候选与其无身份交叠)。
             slots = [BenchSlot(kind='unit',
-                               unit=Unit(char_id='银狼LV.999', star=2,
-                                         slot=1))]
+                               unit=Unit(char_id='银狼LV.999', star=2))]
             slots += [BenchSlot(kind='empty')] * 8
             gs.observe(gs.bench, BenchView(slots=slots, capacity=9),
                        sig=_SIG_OBS)

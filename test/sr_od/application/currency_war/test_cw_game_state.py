@@ -82,8 +82,7 @@ def _sig() -> _ChannelSig:
 
 def _bslot(slot_no: int, name: str, star: int) -> BenchSlot:
     """备战席占席条目直构(种子容器形状)。"""
-    return BenchSlot(kind='unit', unit=Unit(char_id=name, star=star,
-                                            slot=slot_no))
+    return BenchSlot(kind='unit', unit=Unit(char_id=name, star=star))
 
 
 def _lsig() -> _ChannelSig:
@@ -544,7 +543,7 @@ def test_synthesis_unread_bench_no_clobber() -> None:
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.observe(gs.bench, BenchView(
         slots=[BenchSlot(kind='empty')] * 3
-        + [BenchSlot(kind='unit', unit=Unit(char_id='银枝', star=1, slot=4))]
+        + [BenchSlot(kind='unit', unit=Unit(char_id='银枝', star=1))]
         + [BenchSlot(kind='empty')] * 5,
         capacity=BENCH_CAPACITY_DEFAULT), sig=sig)
     bench_field_before = gs.bench   # Field 实例同一性:_swap 写入即换实例

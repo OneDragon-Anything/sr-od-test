@@ -55,7 +55,7 @@ _XIER = '希儿'
 
 def _bc(name: str, idx: int) -> BenchSlot:
     """bench 件(容器占席条目;slot = 1 基物理槽,idx 供唯一 slot)。"""
-    return BenchSlot(kind='unit', unit=Unit(char_id=name, star=1, slot=idx))
+    return BenchSlot(kind='unit', unit=Unit(char_id=name, star=1))
 
 
 # 持续伤害+希儿系 pair 的判据腿(真实 pair 键;fallback 分支产物 =
@@ -111,7 +111,7 @@ def _ctx(*, board: list[str], bench: list[str], cap: int,
         membership=frozenset(),
         fresh_buys=frozenset(),
         board={},
-        deployed=[Unit(slot=i + 1, char_id=n, star=1)
+        deployed=[Unit( char_id=n, star=1)
                   for i, n in enumerate(board)],
         bench=[_bc(n, i + 1) for i, n in enumerate(bench)],
         cap=cap,
@@ -201,7 +201,7 @@ def test_swap_arm_never_opens_protect_extension() -> None:
     ctx = _ctx(board=[_SANGBO, _KAFKA, _NATASHA, _HUAHUO],
                bench=[_XIER], cap=4, comp=comp)
     ctx.protect_names = frozenset({'万敌'})
-    ctx.deployed = list(ctx.deployed) + [Unit(slot=5, char_id='万敌',
+    ctx.deployed = list(ctx.deployed) + [Unit( char_id='万敌',
                                               star=1)]
     ctx.cap = 5
     ctx.board_full = True

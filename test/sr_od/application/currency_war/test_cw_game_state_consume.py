@@ -173,8 +173,7 @@ def test_detect_merge_upgrade_signature() -> None:
     )
 
     def _b(slot: int, name: str, star: int) -> BenchSlot:
-        return BenchSlot(kind='unit', unit=Unit(char_id=name, star=star,
-                                                slot=slot))
+        return BenchSlot(kind='unit', unit=Unit(char_id=name, star=star))
 
     def _mk(bench, deployed=None):
         return _NS(bench=list(bench), deployed=list(deployed or []))
@@ -189,8 +188,8 @@ def test_detect_merge_upgrade_signature() -> None:
     assert detect_merge_upgrade(
         _mk([c1]), _mk([c1, _b(2, '花火', 1)]),
     ) is False, '普通买新卡不抬最高星'
-    deployed_old = _mk([], [Unit(char_id='希儿', star=1, slot=1)])
-    deployed_new = _mk([], [Unit(char_id='希儿', star=2, slot=1)])
+    deployed_old = _mk([], [Unit(char_id='希儿', star=1)])
+    deployed_new = _mk([], [Unit(char_id='希儿', star=2)])
     assert detect_merge_upgrade(deployed_old, deployed_new) is True, \
         '合成域 = 全场(bench+deployed)'
 
@@ -209,7 +208,7 @@ def test_merge_projection_direct_write_and_observe_wins() -> None:
 
     def _view(star: int):
         table = [BenchSlot(kind='unit',
-                           unit=Unit(char_id='花火', star=star, slot=1))]
+                           unit=Unit(char_id='花火', star=star))]
         return bench_view_of_working(table + [None] * 8)
 
     proj_view = _view(2)
@@ -292,9 +291,9 @@ def test_bench_read_empty_is_miss_not_full(monkeypatch) -> None:
     # 非空 = 槽位保序视图;越界条目不落槽;占位物品 kind 细分,SIFT 身份胜出
     from sr_od.application.currency_war.kernel.cw_game_state import Unit
     view = obs._bench_view_of(
-        [Unit(char_id='花火', star=2, slot=2),
-         Unit(char_id='越界角色', star=1, slot=0),    # 越界:丢弃
-         Unit(char_id='越界角色2', star=1, slot=11)],  # 越界:丢弃
+        [(2, Unit(char_id='花火', star=2)),
+         (10, Unit(char_id='越界角色', star=1)),    # 越界:丢弃
+         (0, Unit(char_id='越界角色2', star=1))],  # 越界:丢弃
         {1: 'tome', 2: 'supply_box'})
     assert view is not None
     assert [s.kind for s in view.slots] == ['tome', 'unit'] + ['empty'] * 7, \

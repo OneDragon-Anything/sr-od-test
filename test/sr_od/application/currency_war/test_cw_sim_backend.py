@@ -15,6 +15,10 @@
 """
 from __future__ import annotations
 
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    deployed_view_sequential as _dvs,
+)
+
 from types import SimpleNamespace
 
 import pytest
@@ -42,6 +46,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     GameState,
     NodeKey,
     Unit,
+    deployed_rows_of_view,
     report_node_advance,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
@@ -114,7 +119,7 @@ def test_reset_deterministic_double_run_container_identical() -> None:
     b1 = SimBackend(seed=42, cfg=_CFG)
     b2 = SimBackend(seed=42, cfg=_CFG)
     for name in ('hp', 'gold', 'level', 'xp', 'streak', 'bench',
-                 'front_row', 'back_row', 'enemy_affixes', 'plane_bosses',
+                 'deployed', 'enemy_affixes', 'plane_bosses',
                  'active_env', 'active_strategies', 'shop_locked',
                  'diamond_count', 'pending_loss', 'equips'):
         v1 = getattr(b1.gs, name).value
@@ -477,7 +482,7 @@ def test_strategy_pick_chain_board_rewrite() -> None:
         b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
         b._maybe_finish_wait()
         gs = b.gs
-        gs.observe(gs.front_row, [Unit(char_id='淘金客', star=1)],
+        gs.observe(gs.deployed, _dvs([Unit(char_id='淘金客', star=1)], []),
                    sig=_SIG_OBS)
         gs.write_logic(gs.invest_strategy_opts,
                        ['人力重组', '躺平', '淘金客'],
@@ -486,7 +491,8 @@ def test_strategy_pick_chain_board_rewrite() -> None:
             gs, SimpleNamespace(norm_name='人力重组'), _SIG,
             session=SimpleNamespace())
         assert out.applied
-        assert gs.front_row.value == [], '前台清空'
+        _f, _b = deployed_rows_of_view(gs.deployed.value)
+        assert (_f, _b) == ([], []), '场清空(板面重写)'
         assert gs.gold.value > 0, '卖价退款入金(>0 = 清空前有单位)'
     finally:
         uninstall_backend()
@@ -647,8 +653,8 @@ def test_megastar_evaluator_fires_on_faction_tier_cross() -> None:
         b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
         b._maybe_finish_wait()
         gs = b.gs
-        gs.observe(gs.front_row, [Unit(char_id='大丽花', star=1),
-                                  Unit(char_id='加拉赫', star=1)],
+        gs.observe(gs.deployed, _dvs([Unit(char_id='大丽花', star=1),
+                                  Unit(char_id='加拉赫', star=1)], []),
                    sig=_SIG_OBS)
         emit_fact_event('board_changed', {'actor': 'test'})
         assert b.screen_identity() == '货币战争-盛会之星', '跨首层模态呈现'
@@ -671,12 +677,12 @@ def test_planner_evaluator_fires_on_silver_wolf_two_star() -> None:
         gs = b.gs
         slots: list[BenchSlot | None] = [None] * 9
         slots[0] = BenchSlot(kind='unit', unit=Unit(char_id='银狼LV.999',
-                                                    star=1, slot=1))
+                                                    star=1))
         gs.observe(gs.bench, cw4_bview(slots), sig=_SIG_OBS)
-        gs.observe(gs.front_row, [Unit(char_id='银狼LV.999', star=1)],
+        gs.observe(gs.deployed, _dvs([Unit(char_id='银狼LV.999', star=1)], []),
                    sig=_SIG_OBS)
         # kernel 合成产物落点 = 场上同名位:直接以 star_up 事实事件驱动
-        gs.observe(gs.front_row, [Unit(char_id='银狼LV.999', star=2)],
+        gs.observe(gs.deployed, _dvs([Unit(char_id='银狼LV.999', star=2)], []),
                    sig=_SIG_OBS)
         from sr_od.application.currency_war.kernel.cw_event_hooks import (
             emit_fact_event,
@@ -733,7 +739,7 @@ def test_wear_report_synthesis_leg() -> None:
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     slots: list[BenchSlot | None] = [None] * 9
     slots[0] = BenchSlot(kind='unit', unit=Unit(char_id='淘金客', star=1,
-                                                equips=[a], slot=1))
+                                                equips=[a]))
     gs.observe(gs.bench, cw4_bview(slots), sig=_SIG_OBS)
     gs.observe(gs.equips, [b], sig=_SIG_OBS)
     action = CwActionWearEquipParam(item_name=b, char_name='淘金客',

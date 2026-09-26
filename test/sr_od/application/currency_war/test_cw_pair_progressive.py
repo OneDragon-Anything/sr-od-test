@@ -57,11 +57,11 @@ def _seed_gs(*, deployed, gold: int = 100, level: int = 5, r: int = 5,
 def _ignite_dot_board(train_n: int = 0) -> tuple[list, dict]:
     """DOT 点火态(桑博+艾丝妲;DOT 支持 = 2/2 = 1.0 → 在任席在 Q 内),
     外加 train_n 个列车件(三/四月七占位;1 件 = 支持 0.5 不入 Q)。"""
-    dep = [Unit(char_id='桑博', star=1, slot=1),
-           Unit(char_id='艾丝妲', star=1, slot=2)]
+    dep = [Unit(char_id='桑博', star=1),
+           Unit(char_id='艾丝妲', star=1)]
     board = {'持续伤害': 2}
     for _ in range(train_n):
-        dep.append(Unit(char_id='三月七', star=1, slot=len(dep) + 1))
+        dep.append(Unit(char_id='三月七', star=1 + 1))
         board['列车同行'] = board.get('列车同行', 0) + 1
     return dep, board
 
@@ -114,7 +114,7 @@ def test_window_closed_keeps_single_pair_and_freezes(monkeypatch) -> None:
 def test_q_challenger_fill_path_unchanged() -> None:
     """锁 4a:chall 非空支零漂移——满支持挑战者照旧从 Q 直填(无候选对、
     不走可行性门),真两体系成型照旧冻结(成型停手语义不变)。"""
-    dep = [Unit(char_id='桑博', star=1, slot=1), Unit(char_id='艾丝妲', star=1, slot=2), Unit(char_id='三月七', star=1, slot=3), Unit(char_id='丹恒·饮月', star=1, slot=4)]
+    dep = [Unit(char_id='桑博', star=1), Unit(char_id='艾丝妲', star=1), Unit(char_id='三月七', star=1), Unit(char_id='丹恒·饮月', star=1)]
     board = {'持续伤害': 2, '列车同行': 2}
     gs = _seed_gs(deployed=dep, board=board)
     ist = IntentionState()

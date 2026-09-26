@@ -48,15 +48,15 @@ def _seed(session, *, ov_id: str = '不死途'):
     """容器 bench=[花火@1, 刃@2] + 溢出态 + tracked 初始账(三账同基)。"""
     gs = game_state_of(session)
     gs.write_logic(gs.bench, cw4_bview(
-        [BenchSlot(kind='unit', unit=Unit(char_id='花火', star=1, slot=1)),
-         BenchSlot(kind='unit', unit=Unit(char_id='刃', star=1, slot=2))]),
+        [BenchSlot(kind='unit', unit=Unit(char_id='花火', star=1)),
+         BenchSlot(kind='unit', unit=Unit(char_id='刃', star=1))]),
         produced_by='test', sig=_SIG)
     gs.write_logic(gs.gold, 10, produced_by='test', sig=_SIG)
     gs.write_logic(gs.overflow_warning, True, produced_by='test', sig=_SIG)
     gs.write_logic(gs.overflow_card, ov_id, produced_by='test', sig=_SIG)
     game_state_of(session).tracked_books.bench = [
-        BenchSlot(kind='unit', unit=Unit(char_id='花火', star=1, slot=1)),
-        BenchSlot(kind='unit', unit=Unit(char_id='刃', star=1, slot=2))]
+        BenchSlot(kind='unit', unit=Unit(char_id='花火', star=1)),
+        BenchSlot(kind='unit', unit=Unit(char_id='刃', star=1))]
     return gs
 
 
@@ -95,8 +95,7 @@ def test_prep_mirror_needs_leg_landed_not_flag_alone():
     gs = _seed(session)
     # 陈旧提案:卖出槽 1 容器已空(提案与容器失配,写口守卫零写)
     gs.write_logic(gs.bench, cw4_bview(
-        [None, BenchSlot(kind='unit', unit=Unit(char_id='刃', star=1,
-                                                slot=2))]),
+        [None, BenchSlot(kind='unit', unit=Unit(char_id='刃', star=1))]),
         produced_by='test', sig=_SIG)
 
     report_action_sell_bench_param(gs, CwActionSellBenchParam(bench_idx=0),

@@ -24,6 +24,10 @@ CwActionLevelUpParam 携 cost(单击价现算装载)+auth_basis(授权记录分�
 
 from __future__ import annotations
 
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    deployed_view_sequential as _dvs,
+)
+
 from types import SimpleNamespace
 
 from test.sr_od.application.currency_war._cw_helpers import (
@@ -41,6 +45,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     BenchSlot,
     BenchView,
     ChannelSig,
+    DeployedView,
     Unit,
     game_state_of,
 )
@@ -109,11 +114,11 @@ def test_levelup_emission_carries_cost_and_auth_basis():
     发射臂放行名分键(arm1/arm0/pop/must_spend 封闭集);route_tag 沿
     Emitted.reason 透传(m3_levelup_batch:<tag>)。"""
     # P4 容器形:MandateFrame 直构面 = 占席条目 + 行域 Unit
-    deployed = [Unit(slot=i + 1, char_id=f'注册表外散件{i}', star=2)
+    deployed = [Unit( char_id=f'注册表外散件{i}', star=2)
                 for i in range(4)]
     frame = mandate.MandateFrame(
         gold=80, level=4, bench=[BenchSlot(kind='unit', unit=Unit(
-            char_id='注册表外散件A', star=1, slot=1))],
+            char_id='注册表外散件A', star=1))],
         deployed=deployed, deploy_cap=4, node_type='battle',
         stop_flag=False, k_members=(), round_num=2)
     st = {'gold': 80, 'level': 4, 'hp': 30, 'plane': 2, 'round_num': 2,
@@ -148,24 +153,24 @@ def test_sellbench_emission_carries_channel_reason():
         IntentionState,
     )
     # P4 容器形:MandateFrame 直构面 = 占席条目 + 行域 Unit
-    deployed = [Unit(slot=i + 1, char_id=f'注册表外散件{i}', star=2)
+    deployed = [Unit( char_id=f'注册表外散件{i}', star=2)
                 for i in range(4)]
     frame = mandate.MandateFrame(
         gold=80, level=4,
         bench=[BenchSlot(kind='unit', unit=Unit(
-            char_id='注册表外散件A', star=1, slot=1))],
+            char_id='注册表外散件A', star=1))],
         deployed=deployed, deploy_cap=4, node_type='battle',
         stop_flag=False, k_members=(), round_num=2, overflow_warning=True)
     gs = game_state_of(None)
     # 燃料资格面读容器(空板守卫读 deployed + bench 边际维),双容器预写
     gs.write_logic(gs.bench, BenchView(
         slots=[BenchSlot(kind='unit', unit=Unit(
-            char_id='注册表外散件A', star=1, slot=1))]
+            char_id='注册表外散件A', star=1))]
         + [BenchSlot(kind='empty')] * 8, capacity=9),
         produced_by='T', sig=_SIG)
-    gs.write_logic(gs.front_row, [
-        Unit(slot=i + 1, char_id=f'注册表外散件{i}', star=2)
-        for i in range(4)],
+    gs.write_logic(gs.deployed, _dvs([
+        Unit( char_id=f'注册表外散件{i}', star=2)
+        for i in range(4)], []),
         produced_by='T', sig=_SIG)
     sess = _NS(cw4_counters={}, target_comp=None,
                v3_intention=IntentionState(), active_strategies=[])
@@ -203,9 +208,9 @@ def test_bridge_recheck_context_uses_slot_table_indices(monkeypatch):
     # 集 = {2, 4},紧缩序枚举下标集 = {0, 1}——两坐标系此帧分叉。
     gs.write_logic(gs.bench, BenchView(
         slots=[BenchSlot(kind='empty')] * 2
-        + [BenchSlot(kind='unit', unit=Unit(char_id='甲', star=1, slot=3)),
+        + [BenchSlot(kind='unit', unit=Unit(char_id='甲', star=1)),
            BenchSlot(kind='empty'),
-           BenchSlot(kind='unit', unit=Unit(char_id='乙', star=1, slot=5))]
+           BenchSlot(kind='unit', unit=Unit(char_id='乙', star=1))]
         + [BenchSlot(kind='empty')] * 4, capacity=9),
         produced_by='T', sig=_SIG)
     # 正半:引用占用槽表下标 4(乙)必须通过复检照发——错杀即本锁红。
@@ -223,30 +228,33 @@ def test_bridge_recheck_context_uses_slot_table_indices(monkeypatch):
 
 def test_emission_resolves_container_index_fail_closed():
     """发射面容器下标解析(换算归属裁定,持久索引见模块头):bench
-    域按槽位信息位与容器槽位表读口对位取枚举下标;deployed 域按
-    (排, 槽号) 二元组对位;失配 = None(fail-closed 跳过,禁猜位)。"""
+    域按紧缩位键(overlay-trigger 3.1:占席序 0 基)与容器槽位表枚举
+    对位取下标;deployed 域按视图子表条目对位;失配 = None
+    (fail-closed 跳过,禁猜位)。"""
     gs = game_state_of(None)
-    # 槽位表构造 = 位置映射(槽 i = 列表下标 i,信息位槽号 = i+1 由视图
-    # 重建)——槽 4 的件放列表下标 3。
+    # 槽位表构造 = 位置映射(槽 i = 列表下标 i)——槽 4(第 1 个占用槽)
+    # 的件放列表下标 3。
     gs.write_logic(gs.bench, BenchView(
         slots=[BenchSlot(kind='empty')] * 3
-        + [BenchSlot(kind='unit', unit=Unit(char_id='甲', star=1, slot=4))]
+        + [BenchSlot(kind='unit', unit=Unit(char_id='甲', star=1))]
         + [BenchSlot(kind='empty')] * 5, capacity=9),
         produced_by='T', sig=_SIG)
-    gs.write_logic(gs.front_row, [Unit(slot=2, char_id='刃', star=1)],
+    gs.write_logic(gs.deployed,
+                   DeployedView(front_slots=[None, Unit(char_id='刃', star=1)],
+                                back_slots=[]),
                    produced_by='T', sig=_SIG)
-    assert mandate._bench_container_idx_by_slot(gs, 4) == 3   # 槽4 → 下标3
+    assert mandate._bench_container_idx_by_compact(gs, 0) == 3   # 首占用槽
     assert mandate._bench_container_idx(
-        gs, BenchSlot(kind='unit', unit=Unit(char_id='甲', star=1, slot=4))
+        gs, BenchSlot(kind='unit', unit=Unit(char_id='甲', star=1))
     ) == 3
-    assert mandate._bench_container_idx_by_slot(gs, 9) is None   # 空槽失配
-    assert mandate._bench_container_idx_by_slot(gs, 0) is None   # 非法值
+    assert mandate._bench_container_idx_by_compact(gs, 1) is None   # 无第 2 占用
+    assert mandate._bench_container_idx_by_compact(gs, -1) is None  # 非法值
     assert mandate._deployed_container_idx(
-        gs, Unit(slot=2, char_id='刃', star=1)) \
-        == 1   # front slot2 → 下标1(对位键 = (身份, 行内槽号))
-    # fail-closed = (身份, 行内槽号) 键失配;后排槽位缺席 → None。
+        gs, Unit( char_id='刃', star=1)) \
+        == 1   # front slot2 → 下标1(视图子表下标对位)
+    # fail-closed = 视图子表条目失配;不在场 → None。
     assert mandate._deployed_container_idx(
-        gs, Unit(slot=3, char_id='不在场', star=1)) is None
+        gs, Unit( char_id='不在场', star=1)) is None
     # 执行坐标边换算函数(kernel 单一源)互逆且边界正确(原互逆锁迁并):
     # 下标 0-9 → (排, 槽号) → 下标恒等;跨界值域锁定(front 1-4 / back 1-6)。
     for idx in range(10):

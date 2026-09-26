@@ -20,6 +20,10 @@ char_positions 万敌→front,攻略实证「燃血角斗场吃受击」)。
 """
 from __future__ import annotations
 
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    deployed_view_sequential as _dvs,
+)
+
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
 from sr_od.application.currency_war.kernel.cw_game_state import (
     BenchSlot,
@@ -36,7 +40,7 @@ _SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep')
 
 
 def _bs(slot: int, char_id: str) -> BenchSlot:
-    return BenchSlot(kind='unit', unit=Unit(char_id=char_id, star=1, slot=slot))
+    return BenchSlot(kind='unit', unit=Unit(char_id=char_id, star=1))
 
 
 def _rows_of(state) -> list[str]:
@@ -86,8 +90,7 @@ def test_unregistered_name_falls_back_to_back() -> None:
     正确行为,不混入本锁)。"""
     assert deploy_row_pref('未注册角色名', None) == 'back'
     gs = game_state_of(None)
-    gs.observe(gs.front_row,
-               [Unit(char_id='砂金', star=1, equips=[], slot=1)],
+    gs.observe(gs.deployed, _dvs([Unit(char_id='砂金', star=1, equips=[])], []),
                evidence='t', sig=_SIG_OBS)
     bench = [_bs(1, '未注册角色名')]
     moves = deploy_slot_plans(bench, [0], None, gs)
@@ -101,9 +104,8 @@ def test_back_slots_capped_by_back_layout_baseline() -> None:
     永不发射 7-9 号槽(执行面 6 槽,越界载荷 = 静默分歧的消除面)。"""
     gs = game_state_of(None)
     gs.observe(gs.back_layout, 6, evidence='t', sig=_SIG_OBS)
-    gs.observe(gs.front_row,
-               [Unit(char_id=f'前{i}', star=1, equips=[], slot=i)
-                for i in range(1, 5)], evidence='t', sig=_SIG_OBS)
+    gs.observe(gs.deployed, _dvs([Unit(char_id=f'前{i}', star=1, equips=[])
+                for i in range(1, 5)], []), evidence='t', sig=_SIG_OBS)
     bench = [_bs(i + 1, '花火') for i in range(8)]
     moves = deploy_slot_plans(bench, list(range(8)), None, gs)
     back_slots = [slot for _bi, row, slot in moves if row == 'back']
@@ -117,9 +119,8 @@ def test_back_layout_extended_value_extends_back_slots() -> None:
     前排保证强转(不混入本锁)。"""
     gs = game_state_of(None)
     gs.observe(gs.back_layout, 8, evidence='t', sig=_SIG_OBS)
-    gs.observe(gs.front_row,
-               [Unit(char_id=f'前{i}', star=1, equips=[], slot=i)
-                for i in range(1, 5)], evidence='t', sig=_SIG_OBS)
+    gs.observe(gs.deployed, _dvs([Unit(char_id=f'前{i}', star=1, equips=[])
+                for i in range(1, 5)], []), evidence='t', sig=_SIG_OBS)
     bench = [_bs(i + 1, '花火') for i in range(8)]
     moves = deploy_slot_plans(bench, list(range(8)), None, gs)
     back_slots = [slot for _bi, row, slot in moves if row == 'back']

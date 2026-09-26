@@ -12,6 +12,12 @@ kernel/执行器级用桩宿主,零真实 IO。
 
 from __future__ import annotations
 
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    deployed_view_sequential as _dvs,
+    deployed_indexed_of_view,
+)
+
+
 from types import SimpleNamespace
 
 import numpy as np
@@ -191,16 +197,15 @@ def test_vocab_actions_all_have_logic_state_projection(
     _logic = ChannelSig(family='logic_action', actor='CwScreenPrep')
     # 供数容器:bench(2 unit+1 tome+1 bookcard+1 box)、front 1 人、gold/level/xp、晶矿
     _slots = [BenchSlot(kind='unit', unit=Unit(char_id='甲', star=1,
-                                               equips=[], slot=1)),
+                                               equips=[])),
               BenchSlot(kind='unit', unit=Unit(char_id='乙', star=1,
-                                               equips=[], slot=2)),
+                                               equips=[])),
               BenchSlot(kind='tome'),
               BenchSlot(kind='bookcard'),
               BenchSlot(kind='supply_box')]
     _slots += [BenchSlot(kind='empty') for _ in range(4)]
     gs.observe(gs.bench, BenchView(slots=_slots, capacity=9), sig=_sig)
-    gs.observe(gs.front_row, [Unit(char_id='丙', star=1, equips=[],
-                                   slot=1)], sig=_sig)
+    gs.observe(gs.deployed, _dvs([Unit(char_id='丙', star=1, equips=[])], []), sig=_sig)
     gs.observe(gs.gold, 10, sig=_sig)
     gs.observe(gs.level, 3, sig=_sig)
     gs.observe(gs.xp, (0, 4), sig=_sig)
@@ -217,7 +222,7 @@ def test_vocab_actions_all_have_logic_state_projection(
     # 入场态逐个评估写行为;重播种 = 容器域 builder 同写入口(observe)。
     def _reseed_tool_state(tool_name: str, target_unit: Unit) -> None:
         gs.observe(gs.equips, [tool_name, '轮滑鞋'], sig=_sig)
-        gs.observe(gs.front_row, [target_unit], sig=_sig)
+        gs.observe(gs.deployed, _dvs([target_unit], []), sig=_sig)
 
     tools_written: list = [
         (CwActionFurnaceUseParam(target_kind='equip', item_name='轮滑鞋'),
@@ -231,15 +236,14 @@ def test_vocab_actions_all_have_logic_state_projection(
     ]
     for action, tool in tools_written:
         _reseed_tool_state(tool, Unit(char_id='丙', star=1,
-                                      equips=['轮滑鞋'], slot=1))
+                                      equips=['轮滑鞋']))
         before = _seq()
         _report(gs, action)
         assert _seq() > before, f'{type(action).__name__} 应产生容器写'
     # 供数容器重播种(工具循环的消耗/置换不复原;穿戴腿依赖
     # owned 在册、卖出腿依赖前排 1 号位有单位)。
     gs.observe(gs.equips, ['轮滑鞋'], sig=_sig)
-    gs.observe(gs.front_row, [Unit(char_id='丙', star=1, equips=[],
-                                   slot=1)], sig=_sig)
+    gs.observe(gs.deployed, _dvs([Unit(char_id='丙', star=1, equips=[])], []), sig=_sig)
 
     written: list = [
         CwActionSellBenchParam(bench_idx=0),
@@ -266,8 +270,7 @@ def test_vocab_actions_all_have_logic_state_projection(
     # 穿戴腿单独重播种(布尔契约前置:owned 在册 + 目标角色在册——前序
     # 卖出腿已消耗前排;与工具循环同款入场态纪律)。
     gs.observe(gs.equips, ['轮滑鞋'], sig=_sig)
-    gs.observe(gs.front_row, [Unit(char_id='丙', star=1, equips=['轮滑鞋'],
-                                   slot=1)], sig=_sig)
+    gs.observe(gs.deployed, _dvs([Unit(char_id='丙', star=1, equips=['轮滑鞋'])], []), sig=_sig)
     before = _seq()
     _report(gs, CwActionWearEquipParam(item_name='轮滑鞋', char_name='丙',
                                        row='front', slot=1))
@@ -379,12 +382,9 @@ def test_deploy_slot_plans_front_guarantee_and_slot_set():
     back〔flex 派生 back〕),禁种子构造注入口。"""
     gs = game_state_of(None)   # 行域未观察 = 前后排全空
     # P4 容器形:落位策略输入 = 容器占席条目
-    bench = [BenchSlot(kind='unit', unit=Unit(char_id='花火', star=1,
-                                              slot=1)),
-             BenchSlot(kind='unit', unit=Unit(char_id='砂金', star=1,
-                                              slot=2)),
-             BenchSlot(kind='unit', unit=Unit(char_id='爻光', star=1,
-                                              slot=3))]
+    bench = [BenchSlot(kind='unit', unit=Unit(char_id='花火', star=1)),
+             BenchSlot(kind='unit', unit=Unit(char_id='砂金', star=1)),
+             BenchSlot(kind='unit', unit=Unit(char_id='爻光', star=1))]
     moves = deploy_slot_plans(bench, [0, 1, 2], None, gs)
     # 前排保证:花火 pref=back、前排全空、砂金为真 front → 砂金先提
     assert moves[0][0] == 1 and moves[0][1] == 'front'
@@ -395,12 +395,12 @@ def test_deploy_slot_plans_front_guarantee_and_slot_set():
                         else set(range(1, 7))) for row, slot in used)
     # 两排全满 = 截断(防御停)
     gs_full = game_state_of(None)
-    gs_full.observe(gs_full.front_row,
-                    [Unit(char_id=f'前{i}', star=1, equips=[], slot=i)
-                     for i in range(1, 5)], evidence='t', sig=_SIG_OBS)
-    gs_full.observe(gs_full.back_row,
-                    [Unit(char_id=f'后{i}', star=1, equips=[], slot=i)
-                     for i in range(1, 7)], evidence='t', sig=_SIG_OBS)
+    gs_full.observe(gs_full.deployed,
+                    _dvs([Unit(char_id=f'前{i}', star=1, equips=[])
+                          for i in range(1, 5)],
+                         [Unit(char_id=f'后{i}', star=1, equips=[])
+                          for i in range(1, 7)]),
+                    evidence='t', sig=_SIG_OBS)
     moves2 = deploy_slot_plans(bench, [0], None, gs_full)
     assert moves2 == []
 
@@ -411,7 +411,7 @@ def test_deploymove_logic_state_moves_unit_and_increments_board():
     交换交互(被占位角色回源 bench 槽);载荷槽非法/源槽空 = 零写。
     (docstring 收窄:board 羁绊增量面本测未断言,不虚报。)"""
     gs = game_state_of(None)
-    bc = BenchSlot(kind='unit', unit=Unit(char_id='甲', star=1, slot=3))
+    bc = BenchSlot(kind='unit', unit=Unit(char_id='甲', star=1))
     slots: list[BenchSlot | None] = [None] * 9
     slots[2] = bc
     gs.observe(gs.bench, cw4_bview(slots), evidence='t', sig=_SIG_OBS)
@@ -423,24 +423,22 @@ def test_deploymove_logic_state_moves_unit_and_increments_board():
                                     sig=_SIG)
     bench_after = bench_view_slots_of(gs)
     assert bench_after[2] is None or bench_after[2].kind == 'empty'
-    dep = deployed_rows_to_indexed(gs.front_row.value, gs.back_row.value)
+    dep = deployed_indexed_of_view(gs.deployed.value)
     # 落位 = 载荷直落(前排 1 号)
     assert dep[0] is not None and dep[0].char_id == '甲'
     # 目标槽有人 = 交换:甲拖到前排 1 号(乙0 占位)→ 甲落 1 号、乙0 回源
     # bench 槽 3(与 CwActionSwapDeployParam 换位契约同语义)
     gs.observe(gs.bench, cw4_bview(list(slots)), evidence='t', sig=_SIG_OBS)
-    gs.observe(gs.front_row, [Unit(char_id=f'乙{i}', star=1, equips=[],
-                                   slot=i + 1) for i in range(4)],
-               evidence='t', sig=_SIG_OBS)
-    gs.observe(gs.back_row, [Unit(char_id=f'丙{i}', star=1, equips=[],
-                                  slot=i + 1) for i in range(6)],
+    gs.observe(gs.deployed,
+               _dvs([Unit(char_id=f'乙{i}', star=1, equips=[]) for i in range(4)],
+                    [Unit(char_id=f'丙{i}', star=1, equips=[]) for i in range(6)]),
                evidence='t', sig=_SIG_OBS)
     report_action_deploy_move_param(gs, CwActionDeployMoveParam(bench_idx=2,
                                                    to_row='front',
                                                    to_slot=1,
                                                    faction=''),
                                     sig=_SIG)
-    dep = deployed_rows_to_indexed(gs.front_row.value, gs.back_row.value)
+    dep = deployed_indexed_of_view(gs.deployed.value)
     assert dep[0] is not None and dep[0].char_id == '甲', \
         '交换语义:上场者落被占位的目标槽'
     assert dep[1].char_id == '乙1', '其余占位不受交换波及'
@@ -465,11 +463,10 @@ def test_selldeployed_logic_state_clears_slot_and_recounts_board():
     = gold 未观察时跳写(回金公式单一源 = sell_refund)。(docstring 收窄:
     board 重算面本测未断言,不虚报。)"""
     gs = game_state_of(None)
-    gs.observe(gs.front_row, [Unit(char_id='甲', star=2, equips=[],
-                                   slot=1)], evidence='t', sig=_SIG_OBS)
+    gs.observe(gs.deployed, _dvs([Unit(char_id='甲', star=2, equips=[])], []), evidence='t', sig=_SIG_OBS)
     report_action_sell_deployed_param(
         gs, CwActionSellDeployedParam(deployed_idx=0), sig=_SIG)
-    dep = deployed_rows_to_indexed(gs.front_row.value, gs.back_row.value)
+    dep = deployed_indexed_of_view(gs.deployed.value)
     assert dep[0] is None
     assert gs.gold.value is None   # gold 未观察 = 域级跳写
     # 槽空(陈旧提案)= 零写不炸
@@ -494,7 +491,7 @@ def test_prep_sell_gold_booked_exactly_once_across_seam_and_projection():
     )
     session = SimpleNamespace()
     gs = game_state_of(session)
-    bc = BenchSlot(kind='unit', unit=Unit(char_id='甲', star=1, slot=1))
+    bc = BenchSlot(kind='unit', unit=Unit(char_id='甲', star=1))
     slots: list[BenchSlot | None] = [None] * 9
     slots[0] = bc
     gs.observe(gs.gold, 10, evidence='t', sig=_SIG_OBS)

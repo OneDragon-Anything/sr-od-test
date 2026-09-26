@@ -45,10 +45,10 @@ _COMP = '列车同行'
 _K = ('线内件',)
 
 
-def _bc(name: str, star: int = 1, slot: int = 1) -> BenchSlot:
+def _bc(name: str, star: int = 1) -> BenchSlot:
     """容器占席条目(P4 载体迁移:身份/星级/槽号随内嵌 Unit)。"""
     return BenchSlot(kind='unit',
-                     unit=Unit(char_id=name, star=star, slot=slot))
+                     unit=Unit(char_id=name, star=star))
 
 
 def _item(slot: int = 1, star: int = 1) -> BenchSlot:
@@ -63,7 +63,7 @@ def _state(bench: list, deployed: list | None = None) -> dict:
     # 资格循环输入 = 容器占席条目(本文件辖的载体);返回 = ``_bsb``
     # kwargs(桥配方,旧帧缺省 gold=0/hp 直写)。
     if deployed is None:
-        deployed = [Unit(char_id='前线', star=1, slot=1)]
+        deployed = [Unit(char_id='前线', star=1)]
     return {'plane': 2, 'hp': 50, 'bench': list(bench),
             'front_row': list(deployed)}
 
@@ -87,11 +87,11 @@ class TestInterestItemSlotGate:
         """占位件不入资格集,同帧真燃料件照卖(修复前形态 = 两槽全入);
         仅占位件可「凑」的帧 = 诚实空集(占位件槽永不入发射列)。"""
         fuel_a, _fuel_b = _fuel_pair()
-        bench = [_item(slot=1), _bc(fuel_a, slot=2)]
+        bench = [_item(slot=1), _bc(fuel_a)]
         slots, key = sell.sell_for_interest(
             0, bench, 5, _K, state=_bsb(**_state(bench)))
         assert key == ''
-        assert slots == [2]
+        assert slots == [1]   # 紧缩位键(overlay-trigger 3.1:0 基)
         # 仅占位件帧 = 诚实空集
         bench_only = [_item(slot=1)]
         slots2, key2 = sell.sell_for_interest(
@@ -116,11 +116,11 @@ class TestFundingItemSlotGate:
         修复后 = 只用真件,占位件槽不入发射列、缺口诚实短欠;仅占位件
         可「筹」的帧 = 诚实空集。"""
         fuel_a, _fuel_b = _fuel_pair()
-        bench = [_item(slot=1), _bc(fuel_a, slot=2)]
+        bench = [_item(slot=1), _bc(fuel_a)]
         slots, key = sell.funding_support_sell(
             0, 5, bench, _K, state=_bsb(**_state(bench)))
         assert key == ''
-        assert slots == [2]
+        assert slots == [1]   # 紧缩位键(overlay-trigger 3.1:0 基)
         # 仅占位件帧 = 诚实空集
         bench_only = [_item(slot=1)]
         slots2, key2 = sell.funding_support_sell(

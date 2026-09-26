@@ -49,6 +49,10 @@
 """
 from __future__ import annotations
 
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    deployed_view_sequential as _dvs,
+)
+
 from types import SimpleNamespace
 
 import pytest
@@ -745,11 +749,11 @@ def test_megastar_observe_standardizes_options_with_dual_source_domain(
                  MegastarOption(idx=2, char_id='开拓者欢愉')])
     gs = match.gs
     _sig = ChannelSig(family='obs', actor='test', mode='read')
-    gs.observe(gs.front_row, [Unit(char_id='Archer', star=1,
-                                   equips=['盛会之星星徽'], slot=1)],
-               sig=_sig)
-    gs.observe(gs.back_row, [Unit(char_id='开拓者·欢愉', star=1,
-                                  equips=['盛会之星星徽'], slot=1)],
+    gs.observe(gs.deployed,
+               _dvs([Unit(char_id='Archer', star=1,
+                          equips=['盛会之星星徽'])],
+                    [Unit(char_id='开拓者·欢愉', star=1,
+                          equips=['盛会之星星徽'])]),
                sig=_sig)
     rs = _run_node(test_context, op, op.observe)
     assert rs.is_success, f'全候选可转换 → 观察 success:{rs!r}'
@@ -1068,8 +1072,8 @@ def test_megastar_observe_reports_xy_and_standardize_passthrough(
                  MegastarOption(idx=1, char_id='Ａｒｃｈｅｒ', xy=(1400, 333))])
     gs = match.gs
     _sig = ChannelSig(family='obs', actor='test', mode='read')
-    gs.observe(gs.front_row, [Unit(char_id='Archer', star=1,
-                                   equips=['盛会之星星徽'], slot=1)],
+    gs.observe(gs.deployed, _dvs([Unit(char_id='Archer', star=1,
+                                   equips=['盛会之星星徽'])], []),
                sig=_sig)
     rs = _run_node(test_context, op, op.observe)
     assert rs.is_success, f'标准化门放行:{rs!r}'

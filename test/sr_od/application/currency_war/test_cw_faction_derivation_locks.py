@@ -19,6 +19,10 @@ faction/position_pref 不入容器形状,消费点经注册表按 char_id 派生
 """
 from __future__ import annotations
 
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    deployed_view_sequential as _dvs,
+)
+
 from sr_od.application.currency_war.data.cw_chars import char_first_faction
 from sr_od.application.currency_war.kernel.cw_board_by_row import (
     board_by_row,
@@ -32,7 +36,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 
 
 def _unit(cid: str, slot: int, star: int = 1) -> Unit:
-    return Unit(char_id=cid, star=star, equips=[], slot=slot)
+    return Unit(char_id=cid, star=star, equips=[])
 
 
 def _gs(front: list[Unit] | None = None,
@@ -41,10 +45,9 @@ def _gs(front: list[Unit] | None = None,
     from sr_od.application.currency_war.kernel.cw_game_state import ChannelSig
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     _sig = ChannelSig(family='obs', actor='CwScreenPrep')
-    if front is not None:
-        gs.observe(gs.front_row, list(front), sig=_sig)
-    if back is not None:
-        gs.observe(gs.back_row, list(back), sig=_sig)
+    if front is not None or back is not None:
+        gs.observe(gs.deployed, _dvs(list(front or []),
+                                     list(back or [])), sig=_sig)
     if board is not None:
         gs.observe(gs.board, dict(board), sig=_sig)
     return gs

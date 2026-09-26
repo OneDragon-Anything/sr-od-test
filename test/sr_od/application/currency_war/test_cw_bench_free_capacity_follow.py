@@ -18,6 +18,10 @@ capacity,读数严格分档;非复述单一源实现):
 """
 from __future__ import annotations
 
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    deployed_view_sequential as _dvs,
+)
+
 import math
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
@@ -71,7 +75,7 @@ def _filler_names(n: int) -> list[str]:
 def _slots(entries: list[tuple[str, int]], capacity: int) -> BenchView:
     """占席条目 → BenchView(空槽补齐至 capacity;T-17 载体)。"""
     slots = [BenchSlot(kind='unit',
-                       unit=Unit(char_id=name, star=star, slot=i + 1))
+                       unit=Unit(char_id=name, star=star))
              for i, (name, star) in enumerate(entries)]
     slots += [BenchSlot(kind='empty')] * (capacity - len(slots))
     return BenchView(slots=slots, capacity=capacity)
@@ -133,8 +137,7 @@ def test_lock_frame_csat_follows_bench_capacity():
         gs.write_logic(gs.bench,
                        _slots([(n, 1) for n in names], capacity),
                        produced_by='t17', sig=_SIG)
-        gs.write_logic(gs.front_row,
-                       [Unit(char_id='希儿', star=1, slot=1)],
+        gs.write_logic(gs.deployed, _dvs([Unit(char_id='希儿', star=1)], []),
                        produced_by='t17', sig=_SIG)
         return proof.assemble_lock_frame(gs, sess)[2]
 
@@ -167,7 +170,7 @@ def test_fill_account_follows_bench_capacity():
                        produced_by='t17', sig=_SIG)
         gs.observe(gs.shop,
                    ShopPayload(cards=[ShopSlot(kind='content', card=ShopCard(
-                       name=f'注册表外件{c}', cost=c, star=1, slot=i + 1))
+                       name=f'注册表外件{c}', cost=c, star=1))
                        for i, c in enumerate((10, 20, 30))],
                        refresh_probs={}),
                    sig=_SIG_OBS)

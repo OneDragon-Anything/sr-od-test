@@ -19,6 +19,12 @@ test_cw_game_state.py::test_write_logic_rand_and_observe_random_outcome,不重�
 """
 from __future__ import annotations
 
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    deployed_view_sequential as _dvs,
+    deployed_rows_of_view,
+)
+
+
 import random
 
 import pytest
@@ -60,7 +66,7 @@ def _ore(color: str, x: int, y: int, r: int = 10) -> tuple[str, int, int, int]:
 
 def _bench(units: list[tuple[str, int]]) -> BenchView:
     slots = [BenchSlot(kind='unit',
-                       unit=Unit(char_id=c, star=s, slot=i + 1))
+                       unit=Unit(char_id=c, star=s))
              for i, (c, s) in enumerate(units)]
     while len(slots) < 9:
         slots.append(BenchSlot(kind='empty'))
@@ -89,8 +95,7 @@ def _make_gs(*, bench: list[tuple[str, int]] | None = None,
     if equips is not None:
         gs.observe(gs.equips, list(equips), sig=_SIG_OBS)
     if front is not None:
-        gs.observe(gs.front_row, list(front), sig=_SIG_OBS)
-        gs.observe(gs.back_row, [], sig=_SIG_OBS)
+        gs.observe(gs.deployed, _dvs(list(front), []), sig=_SIG_OBS)
     if board is not None:
         gs.observe(gs.board, dict(board), sig=_SIG_OBS)
     return gs
@@ -161,8 +166,7 @@ def test_gold_branch_write_sequence(monkeypatch: pytest.MonkeyPatch) -> None:
         ('spheres', 'proj_collect_ore_drop#ore1'),
         ('equips', 'proj_ore_mark_equips#ore1'),
         ('bench', 'proj_ore_mark_bench#ore1'),
-        ('front_row', 'proj_ore_mark_front_row#ore1'),
-        ('back_row', 'proj_ore_mark_back_row#ore1'),
+        ('deployed', 'proj_ore_mark_deployed#ore1'),
         ('gold', 'proj_ore_reward_gold#ore1'),
     ], f'写序不符: {[(n, e) for n, e, _ in calls]}'
     assert {g for _, _, g in calls} == {'g1'}, '同动作同组'
@@ -190,11 +194,11 @@ def test_char_branch_merge_dual_domain(monkeypatch: pytest.MonkeyPatch) -> None:
         '一级合并落行(双域同号,行序内断言见下)'
     merge_fields = [n for n, e, _ in calls
                     if e == 'proj_ore_merge#1#ore1']
-    assert merge_fields == ['bench', 'front_row', 'back_row'], \
-        f'双域变更各落一行(bench 素材清 + 行载体升星 + 对侧行整表): {merge_fields}'
+    assert merge_fields == ['bench', 'deployed'], \
+        f'双域变更各落一行(bench 素材清 + 行载体升星;行域合卷 = deployed 单行): {merge_fields}'
     assert [u.star for u in bench_units_of(gs)] == [], \
         'bench 侧素材全部置 None(载体在场上)'
-    assert gs.front_row.value[0].star == 2, '场上载体升 2★'
+    assert deployed_rows_of_view(gs.deployed.value)[0][0].star == 2, '场上载体升 2★'
     board_writes = [c for c in calls if c[0] == 'board']
     assert board_writes == [], \
         '升星不改羁绊标签 → board 增量为零零写(派生量纪律)'
@@ -215,7 +219,7 @@ def test_char_branch_bench_carrier_chain(monkeypatch: pytest.MonkeyPatch) -> Non
     seq = [(n, e) for n, e, _ in calls]
     assert ('bench', 'proj_ore_reward_char#ore1') in seq, '落位行'
     assert ('bench', 'proj_ore_merge#1#ore1') in seq, '合成行'
-    assert ('front_row', 'proj_ore_mark_front_row#ore1') in seq, \
+    assert ('deployed', 'proj_ore_mark_deployed#ore1') in seq, \
         '行域未触及 → 值不变标记'
 
 
@@ -242,7 +246,7 @@ def test_multi_point_partial_skip(monkeypatch: pytest.MonkeyPatch) -> None:
     """混合批:首点角色奖励耗掉最后空位 → 次点席满跳过(留在 spheres),
     出参 'ore_partial_open_skipped',已开点照常入账。"""
     slots = [BenchSlot(kind='unit',
-                       unit=Unit(char_id=f'F{i}', star=1, slot=i + 1))
+                       unit=Unit(char_id=f'F{i}', star=1))
              for i in range(8)] + [BenchSlot(kind='empty')]
     gs = _make_gs(ores=[_ore('金', 1, 1), _ore('金', 2, 2)])
     gs.observe(gs.bench, BenchView(slots=slots, capacity=9), sig=_SIG_OBS)
@@ -265,8 +269,8 @@ def test_char_reward_preserves_item_slot_kinds(monkeypatch: pytest.MonkeyPatch) 
     书册卡/箱槽时,角色奖励整表写不得把它们降级 supply_box——降级会让
     后续 OpenTome/OpenBookcard 按 kind 找不到槽(真缺陷,不定态随机抽中
     角色时触发)。"""
-    slots = [BenchSlot(kind='unit', unit=Unit(char_id='A', star=1, slot=1)),
-             BenchSlot(kind='unit', unit=Unit(char_id='A', star=1, slot=2)),
+    slots = [BenchSlot(kind='unit', unit=Unit(char_id='A', star=1)),
+             BenchSlot(kind='unit', unit=Unit(char_id='A', star=1)),
              BenchSlot(kind='tome'),
              BenchSlot(kind='bookcard'),
              BenchSlot(kind='supply_box')]

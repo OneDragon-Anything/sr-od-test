@@ -39,7 +39,7 @@ def test_funnel_subset_weak_champion_falls_through_to_full(monkeypatch):
         calls.append((frozenset(names), min_inliers))
         if inliers >= min_inliers:
             winner = '甲' if '甲' in names else '乙'
-            return [Unit(slot=slots[0][0], char_id=winner, star=1)]
+            return [(1, Unit(char_id=winner, star=1))]
         return []
 
     monkeypatch.setattr(obs, 'identify_slots', fake_identify_slots)
@@ -52,7 +52,7 @@ def test_funnel_subset_weak_champion_falls_through_to_full(monkeypatch):
                                     templates={'甲': object(), '乙': object()},
                                     slots=slots, row='', min_inliers=10)
 
-    assert [u.char_id for u in out] == ['甲']
+    assert [u.char_id for _s, u in out] == ['甲']
     # 加严线契约:L1/L2 子集调用 = 2× 基准档;L3 全库调用 = 基准档原样
     subset_calls = [(s, m) for s, m in calls if s == frozenset({'乙'})]
     full_calls = [(s, m) for s, m in calls if s == frozenset({'甲', '乙'})]
@@ -65,7 +65,7 @@ def test_funnel_subset_weak_champion_falls_through_to_full(monkeypatch):
 def test_tiered_bench_read_wires_summon_hook(monkeypatch):
     """漏斗路径备战席读必须挂召唤物停机钩子(占用未识别不允许静默丢弃)。"""
     sent_ctx, sent_screen, sent_templates = object(), object(), object()
-    sent_hits = [Unit(slot=1, char_id='甲', star=1)]
+    sent_hits = [(1, Unit(char_id='甲', star=1))]   # 槽位对(3.1 载体)
     hook_calls = []
     kind_calls = []
     monkeypatch.setattr(obs, 'identify_slots_tiered',
@@ -80,7 +80,8 @@ def test_tiered_bench_read_wires_summon_hook(monkeypatch):
     out = obs.read_bench_view_tiered(SimpleNamespace(), sent_ctx,
                                      sent_screen, sent_templates)
 
-    assert [s.unit for s in out.slots if s.kind == 'unit'] == sent_hits
+    assert [s.unit for s in out.slots if s.kind == 'unit'] \
+        == [u for _s, u in sent_hits]
     assert out.capacity == 9
     assert hook_calls == [(sent_ctx, sent_screen, sent_hits)]
     assert kind_calls == [(sent_ctx, sent_screen)]

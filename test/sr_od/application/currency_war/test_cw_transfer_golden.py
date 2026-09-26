@@ -26,6 +26,10 @@ gold/bench/front_row/back_row/board/equips 域写回 + 未辖域零写）：
 """
 from __future__ import annotations
 
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    deployed_view_sequential as _dvs,
+)
+
 import pytest
 
 from sr_od.application.currency_war.kernel.cw_action_report import (
@@ -62,14 +66,14 @@ _SIG_LOGIC = ChannelSig(family='logic_action', actor='MandateV1Strategy',
 #: 退款真值从注册表现算(1★ 银枝,cost 2 → 退 2,金样捕获 2026-09-13 钉
 #: 10→12 同源),不手抄常数。
 _REFUND_1STAR = sell_refund(1, bench_char_cost(
-    Unit(char_id='银枝', star=1, slot=1)))
+    Unit(char_id='银枝', star=1)))
 
 _EMPTY_SHOP = ShopPayload(cards=[ShopSlot(kind='empty')] * 5,
                           refresh_probs={})
 
 
 def _unit(char_id: str, slot: int, *, equips: list[str] | None = None) -> Unit:
-    return Unit(char_id=char_id, star=1, equips=list(equips or []), slot=slot)
+    return Unit(char_id=char_id, star=1, equips=list(equips or []))
 
 
 def _gs_with(*, bench: list[Unit], front: list[Unit], gold: int = 10,
@@ -85,8 +89,7 @@ def _gs_with(*, bench: list[Unit], front: list[Unit], gold: int = 10,
         if u is not None:
             slots[i] = BenchSlot(kind='unit', unit=u)
     gs.observe(gs.bench, BenchView(slots=slots, capacity=9), sig=_SIG_OBS)
-    gs.observe(gs.front_row, list(front), sig=_SIG_OBS)
-    gs.observe(gs.back_row, [], sig=_SIG_OBS)
+    gs.observe(gs.deployed, _dvs(list(front), []), sig=_SIG_OBS)
     if board is not None:
         gs.observe(gs.board, dict(board), sig=_SIG_OBS)
     gs.observe(gs.back_layout, 6, sig=_SIG_OBS)
@@ -109,9 +112,12 @@ def _bench_units(gs: GameState) -> list[tuple[int, str]]:
             if s.kind == 'unit' and s.unit is not None]
 
 
-def _row_pairs(gs, field) -> list[tuple[str, int]]:
-    v = getattr(gs, field).value
-    return [(u.char_id, u.slot) for u in (v or [])]
+def _row_pairs(gs) -> list[tuple[str, int]]:
+    """前排视图 → (char_id, 物理槽号) 断言面(overlay-trigger 3.1:
+    位置 = 子表下标 + 1 派生)。"""
+    view = gs.deployed.value
+    return [(u.char_id, i + 1) for i, u in enumerate(
+        getattr(view, 'front_slots', None) or []) if u is not None]
 
 
 # 案表:(案名, 动作构造, 初态构造参数, applied, reason(None=不辖,原金样
@@ -212,7 +218,7 @@ def test_cw_transfer_golden(case_name: str, make_action, init_kw: dict,
     assert gs.gold.value == gold, f'{case_name}: gold'
     assert _bench_units(gs) == bench_expect, f'{case_name}: bench'
     if front_expect is not None:
-        assert _row_pairs(gs, 'front_row') == front_expect, \
+        assert _row_pairs(gs) == front_expect, \
             f'{case_name}: front_row'
     if board_expect is not None:
         assert gs.board.value == board_expect, f'{case_name}: board'

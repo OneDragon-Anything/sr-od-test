@@ -16,8 +16,8 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.deploy_plan impor
 
 
 def _unit_slot(slot: int, char_id: str, star: int = 1) -> BenchSlot:
-    return BenchSlot(kind='unit', unit=Unit(char_id=char_id, star=star,
-                                            slot=slot))
+    """占席单位槽(``slot`` 参数保留签名兼容,位置 = 列表下标)。"""
+    return BenchSlot(kind='unit', unit=Unit(char_id=char_id, star=star))
 
 
 def test_item_slot_candidate_held_with_item_slot_reason() -> None:

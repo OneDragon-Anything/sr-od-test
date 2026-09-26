@@ -8,6 +8,10 @@
 """
 from __future__ import annotations
 
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    deployed_view_sequential as _dvs,
+)
+
 from test.sr_od.application.currency_war._cw_helpers import cw4_bview
 
 from sr_od.application.currency_war.kernel.cw_action_report import (
@@ -36,12 +40,11 @@ def _gs_with_bench_trailblazer(deployed_taken: bool):
     gs = game_state_of(None)
     slots: list[BenchSlot | None] = [None] * 9
     slots[0] = BenchSlot(kind='unit', unit=Unit(char_id='开拓者·欢愉',
-                                                star=4, slot=1))
+                                                star=4))
     gs.observe(gs.bench, cw4_bview(slots),
                evidence='t', sig=_SIG_OBS)
     if deployed_taken:
-        gs.observe(gs.front_row,
-                   [Unit(char_id='甲', star=1, equips=[], slot=1)],
+        gs.observe(gs.deployed, _dvs([Unit(char_id='甲', star=1, equips=[])], []),
                    evidence='t', sig=_SIG_OBS)
     return gs
 

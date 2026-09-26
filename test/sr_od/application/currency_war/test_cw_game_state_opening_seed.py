@@ -29,6 +29,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
     BenchSlot,
     BenchView,
+    DeployedView,
     ChannelSig,
     GameState,
     OreSight,
@@ -36,6 +37,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     consume_defect_sink,
     game_state_of,
     prep_anchored_of,
+    deployed_rows_of_view,
 )
 from sr_od.application.currency_war.kernel.cw_opening_hp import (
     OPENING_HP_BASE,
@@ -48,9 +50,10 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
 )
 
 #: A 类种子字段全集(与 seed_opening_state 写面一一对应;board 不入——
-#: 派生量禁双写,journal 行面断言兜住)。
+#: 派生量禁双写,journal 行面断言兜住;overlay-trigger 3.1:行域合卷为
+#: deployed 单字段)。
 _A_SEEDED: tuple[str, ...] = (
-    'front_row', 'back_row', 'bench', 'equips', 'occupied_equips',
+    'deployed', 'bench', 'equips', 'occupied_equips',
     'spheres', 'gold', 'level', 'xp', 'hp', 'streak', 'back_layout',
     'deploy_cap', 'overflow_warning', 'overflow_card', 'active_env',
     'active_strategies', 'pending_item_grants', 'enemy_affixes',
@@ -86,8 +89,8 @@ def test_cold_build_seeds_all_a_fields(monkeypatch) -> None:
     assert gs.bench.value == BenchView(
         slots=[BenchSlot(kind='empty')] * BENCH_CAPACITY_DEFAULT,
         capacity=BENCH_CAPACITY_DEFAULT)
-    assert gs.front_row.value == []
-    assert gs.back_row.value == []
+    assert deployed_rows_of_view(gs.deployed.value) == ([], [])
+    assert gs.deployed.value.back_slots == [None] * 6, '后排容量基线 6'
     assert gs.equips.value == []
     assert gs.occupied_equips.value == {}
     assert gs.spheres.value == OreSight()
@@ -164,7 +167,7 @@ def test_reconcile_bench_anchor_sets_prep_anchored() -> None:
     assert prep_anchored_of(session) is False
 
     ok, _, _ = reconcile_tracking(session, _bench_view1('花火', 1),
-                                  ([], []), screen=None, source='test')
+                                  DeployedView(), screen=None, source='test')
 
     assert ok is True
     assert game_state_of(session).tracked_account_observed.value is True
@@ -177,7 +180,7 @@ def test_reconcile_deployed_only_keeps_prep_anchored_off() -> None:
     闩保持 False——两闩同一成功条件,不新增判断分支。"""
     session = StrategySession()
 
-    ok, _, _ = reconcile_tracking(session, None, ([], []), screen=None,
+    ok, _, _ = reconcile_tracking(session, None, DeployedView(), screen=None,
                                   source='test')
 
     assert ok is True   # deployed 侧照常写回
@@ -223,4 +226,4 @@ def _bench_view1(name: str, star: int) -> BenchView:
     """单占用槽视图(槽 1)构造(P6 直产读载体,同 tracked 观察态锁)。"""
     slots = [BenchSlot(kind='empty')] * 8
     return BenchView(slots=[BenchSlot(
-        kind='unit', unit=Unit(char_id=name, star=star, slot=1))] + slots)
+        kind='unit', unit=Unit(char_id=name, star=star))] + slots)

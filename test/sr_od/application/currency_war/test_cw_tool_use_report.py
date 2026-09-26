@@ -14,6 +14,10 @@
 """
 from __future__ import annotations
 
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    deployed_view_sequential as _dvs,
+)
+
 import random
 
 import pytest
@@ -97,12 +101,12 @@ def _make_gs(*, bench: list[tuple[str, int]] | None = None,
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if bench is not None:
         slots = [BenchSlot(kind='unit',
-                           unit=Unit(char_id=c, star=s, slot=i + 1))
+                           unit=Unit(char_id=c, star=s))
                  for i, (c, s) in enumerate(bench)]
         slots += [BenchSlot(kind='empty')] * (9 - len(slots))
         gs.observe(gs.bench, BenchView(slots=slots, capacity=9), sig=_SIG_OBS)
     if front is not None:
-        gs.observe(gs.front_row, list(front), sig=_SIG_OBS)
+        gs.observe(gs.deployed, _dvs(list(front), []), sig=_SIG_OBS)
     if equips is not None:
         gs.observe(gs.equips, list(equips), sig=_SIG_OBS)
     return gs
@@ -160,7 +164,7 @@ def test_furnace_char_legs_equips_rand_and_row_logic(
     采样替换);②目标角色行域 write_logic(穿戴清空);两腿各落一行
     (design §2.2 表 rand/logic 分面)。"""
     gs = _make_gs(front=[Unit(char_id='丙', star=1,
-                              equips=['轮滑鞋', '幸运星'], slot=1)],
+                              equips=['轮滑鞋', '幸运星'])],
                   equips=['冶金炉', '折叠小刀'])
     seq0 = gs.write_seq
     out = report_action_furnace_use_param(
@@ -174,9 +178,9 @@ def test_furnace_char_legs_equips_rand_and_row_logic(
     assert gs.equips.source == 'logic_rand'
     assert gs.equips.value == ['折叠小刀', r_shoes, r_star], \
         '工具与穿戴件已移除、各采样替换追加'
-    unit = gs.front_row.value[0]
+    unit = gs.deployed.value.front_slots[0]
     assert unit.char_id == '丙' and unit.equips == [], '行域穿戴清空'
-    assert gs.front_row.source == 'logic', '行域腿 = 确定面'
+    assert gs.deployed.source == 'logic', '行域腿 = 确定面'
 
 
 def test_furnace_char_leg_mixed_worn_keeps_out_of_scope(
@@ -186,7 +190,7 @@ def test_furnace_char_leg_mixed_worn_keeps_out_of_scope(
     (kind=furnace_mutate_out_of_scope_kept);行域仍全拆清空(越白名单
     件是否随动作消失未采证,v0 保留 = 库存面)。"""
     gs = _make_gs(front=[Unit(char_id='丙', star=1,
-                              equips=['轮滑鞋', '反重力皮靴·特权'], slot=1)],
+                              equips=['轮滑鞋', '反重力皮靴·特权'])],
                   equips=['冶金炉', '折叠小刀'])
     out = report_action_furnace_use_param(
         gs, CwActionFurnaceUseParam(target_kind='char', row='front', slot=1),
@@ -197,7 +201,7 @@ def test_furnace_char_leg_mixed_worn_keeps_out_of_scope(
     r_shoes = tool_use.furnace_mutate_sample(random.Random(7), '轮滑鞋')
     assert r_shoes in inv, '白名单穿戴件采样替换'
     assert '冶金炉' not in inv, '工具消耗移除'
-    unit = gs.front_row.value[0]
+    unit = gs.deployed.value.front_slots[0]
     assert unit.equips == [], '行域全拆清空'
     assert 'furnace_mutate_out_of_scope_kept' in rows_sink.kinds(), \
         '聚合留证行落证'
@@ -294,7 +298,7 @@ def test_privilege_char_leg_fail_closed(rows_sink: _RowSink) -> None:
     """特权卡·拖角色腿 fail-closed(用户裁定 2026-09-21 按不能拖角色处理):
     零写 + 留证行(kind=tool_privilege_worn_unsupported)。"""
     gs = _make_gs(front=[Unit(char_id='丙', star=1,
-                              equips=['反重力皮靴'], slot=1)],
+                              equips=['反重力皮靴'])],
                   equips=['特权赋予卡'])
     seq0 = gs.write_seq
     out = report_action_privilege_card_use_param(
@@ -304,7 +308,7 @@ def test_privilege_char_leg_fail_closed(rows_sink: _RowSink) -> None:
     assert out.applied is True
     assert gs.write_seq == seq0, '零写'
     assert gs.equips.value == ['特权赋予卡'], '库存未被触碰'
-    assert gs.front_row.value[0].equips == ['反重力皮靴'], '穿戴未被触碰'
+    assert gs.deployed.value.front_slots[0].equips == ['反重力皮靴'], '穿戴未被触碰'
     assert rows_sink.kinds() == ['tool_privilege_worn_unsupported']
 
 
@@ -312,7 +316,7 @@ def test_wrench_returns_worn_and_consumes_tool(rows_sink: _RowSink) -> None:
     """扳手:两笔 write_logic——①equips 合并(移除工具 ∧ 追加全部穿戴件);
     ②行域穿戴清空(design §2.2 表;归属迁移非获得)。"""
     gs = _make_gs(front=[Unit(char_id='丙', star=1,
-                              equips=['轮滑鞋', '幸运星'], slot=1)],
+                              equips=['轮滑鞋', '幸运星'])],
                   equips=['拆装扳手'])
     seq0 = gs.write_seq
     out = report_action_wrench_use_param(
@@ -322,19 +326,19 @@ def test_wrench_returns_worn_and_consumes_tool(rows_sink: _RowSink) -> None:
     assert gs.equips.source == 'logic'
     assert sorted(gs.equips.value) == ['幸运星', '轮滑鞋'], \
         '工具已消耗、穿戴件全量回区'
-    assert gs.front_row.value[0].equips == [], '行域穿戴清空'
+    assert gs.deployed.value.front_slots[0].equips == [], '行域穿戴清空'
 
 
 def test_precision_wrench_keeps_tool_in_inventory(rows_sink: _RowSink) -> None:
     """精密扳手:同扳手两笔 logic,但 equips 不移除工具(无限次不递减)。"""
     gs = _make_gs(front=[Unit(char_id='丙', star=1,
-                              equips=['轮滑鞋'], slot=1)],
+                              equips=['轮滑鞋'])],
                   equips=['精密拆装扳手'])
     out = report_action_precision_wrench_use_param(
         gs, CwActionPrecisionWrenchUseParam(row='front', slot=1), _lsig())
     assert out.applied is True
     assert gs.equips.value == ['精密拆装扳手', '轮滑鞋'], '工具不递减、回区照写'
-    assert gs.front_row.value[0].equips == []
+    assert gs.deployed.value.front_slots[0].equips == []
 
 
 # ============================================================ 投影仪走链锁
@@ -350,8 +354,7 @@ def test_staff_projector_walks_gain_chain_and_merges(
     monkeypatch.setattr(cw_gain_chain, 'on_character_gained',
                         _record_char_calls(calls))
     gs = _make_gs(bench=[(_COST3_CHAR, 1), (_COST3_CHAR, 1)],
-                  front=[Unit(char_id=_COST3_CHAR, star=1, equips=[],
-                              slot=1)],
+                  front=[Unit(char_id=_COST3_CHAR, star=1, equips=[])],
                   equips=['员工投影仪'])
     out = report_action_staff_projector_use_param(
         gs, CwActionStaffProjectorUseParam(row='front', slot=1), _lsig())
@@ -367,8 +370,7 @@ def test_staff_projector_walks_gain_chain_and_merges(
 def test_staff_projector_cost_gate_defense(rows_sink: _RowSink) -> None:
     """费用门防御纵深(发射位已辖,上报侧注册表现读前置查):>3 费目标 =
     零写 + 留证行(tool_bridge_zero_write),工具不移除。"""
-    gs = _make_gs(front=[Unit(char_id=_COST4_CHAR, star=1, equips=[],
-                              slot=1)],
+    gs = _make_gs(front=[Unit(char_id=_COST4_CHAR, star=1, equips=[])],
                   equips=['员工投影仪'])
     seq0 = gs.write_seq
     out = report_action_staff_projector_use_param(
@@ -389,7 +391,7 @@ def test_perfect_projector_no_gate_walks_chain(monkeypatch,
     monkeypatch.setattr(cw_gain_chain, 'on_character_gained',
                         _record_char_calls(calls))
     gs = _make_gs(bench=[], front=[Unit(char_id=_COST4_CHAR, star=1,
-                                        equips=[], slot=1)],
+                                        equips=[])],
                   equips=['完美投影仪'])
     out = report_action_perfect_projector_use_param(
         gs, CwActionPerfectProjectorUseParam(row='front', slot=1), _lsig())
@@ -406,7 +408,7 @@ def test_perfect_projector_no_gate_walks_chain(monkeypatch,
 def test_lucky_token_zero_write_not_admitted(rows_sink: _RowSink) -> None:
     """好运令牌:零写 + 留证行(kind=tool_token_not_admitted 注记;发射位
     永不准入,写端随 R9 判据批,design §2.2)。"""
-    gs = _make_gs(front=[Unit(char_id='丙', star=1, equips=[], slot=1)],
+    gs = _make_gs(front=[Unit(char_id='丙', star=1, equips=[])],
                   equips=['好运令牌'])
     seq0 = gs.write_seq
     out = report_action_lucky_token_use_param(
@@ -420,7 +422,7 @@ def test_target_unit_missing_zero_write_with_evidence(
         rows_sink: _RowSink) -> None:
     """目标单位缺失(行域未观察/漂移)= bug 面:char 模式各工具零写 +
     留证行(kind=tool_target_unit_missing,design §2.2;留证不停机)。"""
-    gs = _make_gs(front=[Unit(char_id='丙', star=1, equips=[], slot=1)],
+    gs = _make_gs(front=[Unit(char_id='丙', star=1, equips=[])],
                   equips=['拆装扳手'])
     seq0 = gs.write_seq
     params = [

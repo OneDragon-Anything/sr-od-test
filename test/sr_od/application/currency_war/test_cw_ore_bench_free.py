@@ -34,7 +34,7 @@ def _write_bench(session, kinds: list[str]) -> None:
     for i, kind in enumerate(kinds):
         if kind == 'unit':
             slots[i] = BenchSlot(kind='unit', unit=Unit(
-                char_id=f'c{i}', star=1, equips=[], slot=i + 1))
+                char_id=f'c{i}', star=1, equips=[]))
         elif kind in ('supply_box', 'tome'):
             slots[i] = BenchSlot(kind=kind)
     gs.observe(gs.bench, BenchView(slots=slots, capacity=len(kinds)),

@@ -146,9 +146,9 @@ def _ju23_axes(gold: int, shop: list[ShopCard] | None = None) -> dict:
     members = list(line_members(_JU23_COMP))
     return {'plane': 1, 'round_num': 4, 'gold': gold, 'level': 6,
             'hp': 80, 'node': 'battle',
-            'front_row': [Unit(char_id=m, star=2, slot=i + 1)
+            'front_row': [Unit(char_id=m, star=2)
                           for i, m in enumerate(members) if i < 4],
-            'back_row': [Unit(char_id=m, star=2, slot=i - 3)
+            'back_row': [Unit(char_id=m, star=2)
                          for i, m in enumerate(members) if i >= 4],
             'shop': shop if shop is not None else []}
 

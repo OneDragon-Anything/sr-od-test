@@ -101,4 +101,4 @@ def test_fill_floor_gate_direct_kernel():
         '列车同行', 2, 0, True,
         xianzhou_supply_exists(
             [BenchSlot(kind='unit',
-                       unit=Unit(char_id='停云', star=1, slot=3))], set()))
+                       unit=Unit(char_id='停云', star=1))], set()))

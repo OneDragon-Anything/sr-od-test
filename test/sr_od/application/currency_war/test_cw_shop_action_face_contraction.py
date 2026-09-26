@@ -27,6 +27,10 @@
 (写端 xp_apply_clicks 元组不变量)。
 """
 
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    deployed_view_sequential as _dvs,
+)
+
 import random
 from types import SimpleNamespace
 
@@ -105,13 +109,12 @@ def _frame_session(*, bench_units: list[str], deployed_units: list[str],
                    sig=_LOGIC_SIG)
     gs.observe(gs.hp, hp, evidence='cw-t271-test', sig=_OBS_SIG)
     slots = [BenchSlot(kind='unit',
-                       unit=Unit(char_id=n, star=1, slot=i + 1))
+                       unit=Unit(char_id=n, star=1))
              for i, n in enumerate(bench_units)]
     gs.write_logic(gs.bench, BenchView(slots=slots, capacity=9),
                    produced_by='cw-t271-test', sig=_LOGIC_SIG)
-    gs.write_logic(gs.front_row,
-                   [Unit(char_id=n, star=1, slot=i + 1)
-                    for i, n in enumerate(deployed_units)],
+    gs.write_logic(gs.deployed, _dvs([Unit(char_id=n, star=1)
+                    for i, n in enumerate(deployed_units)], []),
                    produced_by='cw-t271-test', sig=_LOGIC_SIG)
     cards = [ShopSlot(kind='content',
                       card=ShopCard(name=n, faction='', cost=c,

@@ -35,6 +35,10 @@ test_cw_game_state.py::test_write_logic_rand_and_observe_random_outcome,
 """
 from __future__ import annotations
 
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    deployed_view_sequential as _dvs,
+)
+
 import random
 
 import pytest
@@ -97,13 +101,12 @@ def _make_gs(*, bench: list[tuple[str, int]] | None = None,
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if bench is not None:
         slots = [BenchSlot(kind='unit',
-                           unit=Unit(char_id=c, star=s, slot=i + 1))
+                           unit=Unit(char_id=c, star=s))
                  for i, (c, s) in enumerate(bench)]
         slots += [BenchSlot(kind='empty')] * (9 - len(slots))
         gs.observe(gs.bench, BenchView(slots=slots, capacity=9), sig=_SIG_OBS)
     if front is not None:
-        gs.observe(gs.front_row, list(front), sig=_SIG_OBS)
-        gs.observe(gs.back_row, [], sig=_SIG_OBS)
+        gs.observe(gs.deployed, _dvs(list(front), []), sig=_SIG_OBS)
     if gold is not None:
         gs.observe(gs.gold, gold, sig=_SIG_OBS)
     if equips is not None:
@@ -339,15 +342,15 @@ def test_deploy_transform_window_3star_lv999(
     """上阵变换窗(design §2.1A):3★银狼LV.999 拖上场 → 落场写下一费用档
     1★(非 3★ 原样)+ bench 摘除源;级联无组可合 → 零额外行。"""
     gs = _make_gs(bench=[('银狼LV.999', 3), ('希儿', 1)],
-                  front=[Unit(char_id='黑塔', star=1, slot=1)], equips=[])
+                  front=[Unit(char_id='黑塔', star=1)], equips=[])
     out = report_action_deploy_move_param(
         gs, CwActionDeployMoveParam(bench_idx=0, to_row='front', to_slot=2,
                                     faction=''),
         _lsig('CwActionDeployMoveOp'))
     assert out.applied is True
-    assert gs.front_row.value[1].char_id == '银狼LV.999', '落场'
-    assert gs.front_row.value[1].star == 1, '变换窗:落场写 1★(下一费用档)'
-    assert gs.front_row.source == 'logic'
+    assert gs.deployed.value.front_slots[1].char_id == '银狼LV.999', '落场'
+    assert gs.deployed.value.front_slots[1].star == 1, '变换窗:落场写 1★(下一费用档)'
+    assert gs.deployed.source == 'logic'
     assert gs.lv999_cost_tier.value == 4, '上阵变费档行(3费档 3★ 上场 → 4)'
     bench_units = [(u.char_id, u.star) for u in bench_units_of(gs)]
     assert ('希儿', 1) in bench_units and \
@@ -368,7 +371,7 @@ def test_deploy_non_target_identity(
                                         to_slot=1, faction=''),
             _lsig('CwActionDeployMoveOp'))
         assert out.applied is True
-        moved = gs.back_row.value[0]
+        moved = gs.deployed.value.back_slots[0]
         assert moved.star == bench_units[idx][1], \
             f'恒等搬运保持 {bench_units[idx]} 星级'
         assert gs.lv999_cost_tier.value is None, '非目标恒等搬运零档写'
@@ -388,12 +391,12 @@ def test_deploy_cascade_lv999_normal_merge(
                                     faction=''),
         _lsig('CwActionDeployMoveOp'))
     assert out.applied is True
-    assert gs.front_row.value[0].star == 2, '级联正常推演:场上载体 1★→2★'
+    assert gs.deployed.value.front_slots[0].star == 2, '级联正常推演:场上载体 1★→2★'
     assert gs.lv999_cost_tier.value == 4, '上阵变费档行(级联同批落)'
     bench_units = [(u.char_id, u.star) for u in bench_units_of(gs)]
     assert bench_units == [], '备战素材被合成消费腾槽'
     assert gs.bench.source == 'logic' \
-        and gs.front_row.source == 'logic', '受影响域逐级落行(write_logic)'
+        and gs.deployed.source == 'logic', '受影响域逐级落行(write_logic)'
     assert rows_sink.kinds() == [], '正常推演零留证行'
 
 

@@ -94,10 +94,10 @@ def _p1r8_axes(gold: int = 53) -> dict:
     顺延 1-4,行域 Unit)。"""
     return {'gold': gold, 'level': 5, 'plane': 1, 'round_num': 8,
             'hp': 100,
-            'front_row': [Unit(char_id='椒丘', star=2, slot=1),
-                          Unit(char_id='艾丝妲', star=1, slot=2),
-                          Unit(char_id='藿藿', star=2, slot=3),
-                          Unit(char_id='忘归人', star=1, slot=4)]}
+            'front_row': [Unit(char_id='椒丘', star=2),
+                          Unit(char_id='艾丝妲', star=1),
+                          Unit(char_id='藿藿', star=2),
+                          Unit(char_id='忘归人', star=1)]}
 
 
 # ===== 锁 A:合格集语义单帧锁(主锁)=====
@@ -111,7 +111,7 @@ class TestR1QualifiedSetSemantics:
 
     @pytest.mark.parametrize('members,bench,level', [
         (('景元',), [], 5),                                  # 成员全不可追(lv5 的 5 费)
-        (('停云',), [_bc('停云', star=2, slot=1)], 5),       # 全 2★ 成型出域
+        (('停云',), [_bc('停云', star=2)], 5),       # 全 2★ 成型出域
         ((), [], 5),                                         # 成员集空
     ], ids=['all-unchaseable', 'all-formed', 'empty-membership'])
     def test_qualified_set_empty_sources_are_inf(
@@ -134,7 +134,7 @@ class TestR1QualifiedSetSemantics:
         from sr_od.application.currency_war.data.cw_shop_odds import (
             refresh_prob,
         )
-        bench = [_bc('停云', star=2, slot=1)]
+        bench = [_bc('停云', star=2)]
         # 探针判别力前提:成型件在该级本可追(否则两判定顺序同果)
         assert refresh_prob(7, CHARACTERS['停云'].cost) > 0
         e_sum, fees = _r1_ledger_terms(('停云', '景元'), bench, [], 7)

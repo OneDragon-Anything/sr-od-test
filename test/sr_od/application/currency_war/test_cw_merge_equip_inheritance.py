@@ -22,8 +22,7 @@ from sr_od.application.currency_war.kernel.cw_merge_simulate import (
 def _char(slot: int, star: int, char_id: str = '阿格莱雅',
           equips: list[str] | None = None) -> BenchSlot:
     return BenchSlot(kind='unit', unit=Unit(char_id=char_id, star=star,
-                                            equips=list(equips or []),
-                                            slot=slot))
+                                            equips=list(equips or [])))
 
 
 def test_bench_merge_inherits_material_equips_to_carrier() -> None:
@@ -54,7 +53,7 @@ def test_deployed_carrier_inherits_bench_material_equips() -> None:
     载体升星(装备跟人走,不掉落在 bench)。"""
     bench = [_char(1, 1, equips=['a']),
              _char(2, 1, equips=['b'])]
-    deployed = [Unit(char_id='阿格莱雅', star=1, equips=['x'], slot=1)]
+    deployed = [Unit(char_id='阿格莱雅', star=1, equips=['x'])]
     _merge_bench(bench, deployed)
     carrier = deployed[0]
     assert carrier is not None and carrier.star == 2, '场上载体升 2★'

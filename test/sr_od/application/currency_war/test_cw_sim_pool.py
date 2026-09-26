@@ -7,6 +7,10 @@
 """
 from __future__ import annotations
 
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    deployed_view_sequential as _dvs,
+)
+
 import pytest
 from test.sr_od.application.currency_war._cw_helpers import (
     cw4_bc,
@@ -74,10 +78,10 @@ def test_held_derived_from_bench_and_deployed_stars() -> None:
     n2 = chars_by_cost(2)[0].name
     sig = ChannelSig(family='obs', actor='TestSigWriter')
     gs.observe(gs.bench, cw4_bview([
-        cw4_bc(n1, star=1, slot=1),
-        cw4_bc(n1, star=1, slot=2),
+        cw4_bc(n1, star=1),
+        cw4_bc(n1, star=1),
     ]), sig=sig)
-    gs.observe(gs.front_row, [Unit(char_id=n2, star=2)], sig=sig)
+    gs.observe(gs.deployed, _dvs([Unit(char_id=n2, star=2)], []), sig=sig)
     held = held_copies(gs)
     assert held[n1] == 2, '两只 1★ = 2 副本'
     assert held[n2] == 3, '2★ = 3 副本(3^(2−1))'
@@ -92,7 +96,7 @@ def test_drawable_names_nine_copy_clearance() -> None:
     gs = _fresh_gs()
     n1 = chars_by_cost(1)[0].name
     gs.observe(gs.bench, cw4_bview([
-        cw4_bc(n1, star=3, slot=1),   # 3★ = 9 副本
+        cw4_bc(n1, star=3),   # 3★ = 9 副本
     ]), sig=ChannelSig(family='obs', actor='TestSigWriter'))
     assert held_copies(gs)[n1] == 9
     assert remaining_pool(gs)[n1] == POOL_COPIES_PER_CARD[1] - 9, \
@@ -128,7 +132,7 @@ def test_dual_exit_divergence_on_nine_copies() -> None:
     gs = _fresh_gs()
     n1 = chars_by_cost(1)[0].name
     gs.observe(gs.bench, cw4_bview([
-        cw4_bc(n1, star=3, slot=1),   # 3★ = 9 副本
+        cw4_bc(n1, star=3),   # 3★ = 9 副本
     ]), sig=ChannelSig(family='obs', actor='TestSigWriter'))
     assert held_copies(gs)[n1] == 9
     assert remaining_pool(gs)[n1] == POOL_COPIES_PER_CARD[1] - 9, \
@@ -144,11 +148,11 @@ def test_conservation_safe_across_tier_transform() -> None:
     sw = '银狼LV.999'
     sig = ChannelSig(family='obs', actor='TestSigWriter')
     gs = _fresh_gs()
-    gs.observe(gs.bench, cw4_bview([cw4_bc(sw, star=2, slot=1)]), sig=sig)
+    gs.observe(gs.bench, cw4_bview([cw4_bc(sw, star=2)]), sig=sig)
     assert held_copies(gs)[sw] == 3
     gs.write_logic(gs.lv999_cost_tier, 4, produced_by='TestWriter',
                    sig=_lsig())
-    gs.observe(gs.bench, cw4_bview([cw4_bc(sw, star=1, slot=1)]), sig=sig)
+    gs.observe(gs.bench, cw4_bview([cw4_bc(sw, star=1)]), sig=sig)
     assert held_copies(gs)[sw] == 1
     assert remaining_pool(gs)[sw] == POOL_COPIES_PER_CARD[3] - 1, \
         '守恒按名核对跨档不误炸,旧档账面不为负'

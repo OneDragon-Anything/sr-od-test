@@ -18,6 +18,12 @@
 """
 from __future__ import annotations
 
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    deployed_view_sequential as _dvs,
+    deployed_indexed_of_view,
+)
+
+
 import pytest
 
 from one_dragon.base.geometry.point import Point
@@ -61,15 +67,14 @@ def _gs(*, bench: list[BenchSlot | None] | None = None,
         )
         slots = list(bench) + [BenchSlot(kind='empty')] * (9 - len(bench))
         gs.observe(gs.bench, BenchView(slots=slots, capacity=9), sig=_SIG_OBS)
-    if front is not None:
-        gs.observe(gs.front_row, list(front), sig=_SIG_OBS)
-    if back is not None:
-        gs.observe(gs.back_row, list(back), sig=_SIG_OBS)
+    if front is not None or back is not None:
+        gs.observe(gs.deployed, _dvs(list(front or []),
+                                     list(back or [])), sig=_SIG_OBS)
     return gs
 
 
 def _unit(cid: str, slot: int, star: int = 1) -> Unit:
-    return Unit(char_id=cid, star=star, equips=[], slot=slot)
+    return Unit(char_id=cid, star=star, equips=[])
 
 
 # ===== ① 写侧:载荷直落,非首空 =====
@@ -84,7 +89,7 @@ def test_write_side_lands_at_payload_slot_not_first_empty():
                                     faction=''),
         sig=_SIG_LOGIC)
     assert out.applied, f'应按载荷直落,实得 {out.reason!r}'
-    dep = deployed_rows_to_indexed(gs.front_row.value, gs.back_row.value)
+    dep = deployed_indexed_of_view(gs.deployed.value)
     assert dep[2] is not None and dep[2].char_id == '甲', \
         '落位 = 载荷指定槽(表下标 2)'
     assert dep[1] is None, '更低位的空槽(2 号)不被静默填充(禁首空位现读)'
@@ -149,11 +154,9 @@ def test_executor_drag_point_and_tracked_lands_at_payload_slot(
     session = StrategySession()
     gs = game_state_of(session)
     gs.tracked_books.bench = [BenchSlot(kind='unit',
-                                        unit=Unit(char_id='甲', star=1,
-                                                  slot=1))]
+                                        unit=Unit(char_id='甲', star=1))]
     dep = [None] * DEPLOYED_CAPACITY
-    dep[deployed_idx_of('back', 1)] = Unit(char_id='乙', star=1, equips=[],
-                                           slot=1)
+    dep[deployed_idx_of('back', 1)] = Unit(char_id='乙', star=1, equips=[])
     gs.tracked_books.deployed = dep
     drags: list[dict] = []
     env = _deploy_op_env(session, drags)
@@ -184,11 +187,9 @@ def test_executor_occupied_target_swaps_without_rejection(
     session = StrategySession()
     gs = game_state_of(session)
     gs.tracked_books.bench = [BenchSlot(kind='unit',
-                                        unit=Unit(char_id='甲', star=1,
-                                                  slot=1))]
+                                        unit=Unit(char_id='甲', star=1))]
     dep = [None] * DEPLOYED_CAPACITY
-    dep[deployed_idx_of('front', 2)] = Unit(char_id='乙', star=2, equips=[],
-                                            slot=2)
+    dep[deployed_idx_of('front', 2)] = Unit(char_id='乙', star=2, equips=[])
     gs.tracked_books.deployed = dep
     drags: list[dict] = []
     env = _deploy_op_env(session, drags)
@@ -201,7 +202,7 @@ def test_executor_occupied_target_swaps_without_rejection(
         '上场者落被占位载荷槽'
     _src = gs.tracked_books.bench[0]
     assert _src is not None and _src.kind == 'unit' \
-        and _src.unit.char_id == '乙' and _src.unit.slot == 1, \
+        and _src.unit.char_id == '乙', \
         '被占位者回发射者源 bench 槽(交换契约,装备随单位对象)'
 
 
@@ -216,8 +217,7 @@ def test_executor_rejects_slot_beyond_screen_points_no_drag(
     session = StrategySession()
     gs = game_state_of(session)
     gs.tracked_books.bench = [BenchSlot(kind='unit',
-                                        unit=Unit(char_id='甲', star=1,
-                                                  slot=1))]
+                                        unit=Unit(char_id='甲', star=1))]
     gs.tracked_books.deployed = [None] * DEPLOYED_CAPACITY
     drags: list[dict] = []
     env = _deploy_op_env(session, drags)
@@ -239,7 +239,7 @@ def test_sim_applies_occupied_target_as_swap():
         gs, CwActionDeployMoveParam(bench_idx=0, to_row='front', to_slot=1,
                                     faction=''),
         _SIG_LOGIC)
-    assert gs.front_row.value[0].char_id == '甲', '上场者落载荷槽'
+    assert gs.deployed.value.front_slots[0].char_id == '甲', '上场者落载荷槽'
     slot = gs.bench.value.slots[0]
     assert slot.kind == 'unit' and slot.unit.char_id == '乙', \
         '被占位角色回源 bench 槽(交换语义,非占位拒绝)'
@@ -253,7 +253,7 @@ def test_sim_applies_empty_target_as_place():
         gs, CwActionDeployMoveParam(bench_idx=0, to_row='back', to_slot=4,
                                     faction=''),
         _SIG_LOGIC)
-    assert gs.back_row.value[0].char_id == '甲', '空槽 = 放置'
+    assert gs.deployed.value.back_slots[3].char_id == '甲', '空槽 = 放置(载荷槽 4)'
 
 
 # ===== tracked 同步口(mutate_bench_deployed 部署分支)同规则 =====
@@ -270,8 +270,8 @@ def test_mutate_bench_deployed_deploy_branch_payload_direct():
         CwActionDeployMoveParam(bench_idx=0, to_row='back', to_slot=3,
                                 faction=''))
     assert dep[deployed_idx_of('back', 3)].char_id == '甲', '载荷直落'
-    assert bench[0].kind == 'unit' and bench[0].unit.char_id == '乙' \
-        and bench[0].unit.slot == 1, '被占位者回源 bench 槽'
+    assert bench[0].kind == 'unit' and bench[0].unit.char_id == '乙', \
+        '被占位者回源 bench 槽'
     # 载荷槽非法(后排 7 号越出定长表)= 整笔不写
     bench2: list[BenchSlot | None] = [BenchSlot(kind='unit',
                                                 unit=_unit('甲', 1))]

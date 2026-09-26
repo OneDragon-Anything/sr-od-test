@@ -60,10 +60,10 @@ def _km() -> list[str]:
     return list(predicates.line_members(get_comp(_COMP)))
 
 
-def _bc(name: str, star: int = 1, slot: int = 1):
+def _bc(name: str, star: int = 1):
     """行域单位(容器形状;本文件与 press_narrow 转型域共用直构面)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import Unit
-    return Unit(char_id=name, star=star, slot=slot)
+    return Unit(char_id=name, star=star)
 
 
 def _st(gold: int, cards, *, locked: bool = True, level: int = 5,
@@ -81,11 +81,11 @@ def _st(gold: int, cards, *, locked: bool = True, level: int = 5,
         from sr_od.application.currency_war.kernel.cw_game_state import Unit
         axes['front_row'] = [
             Unit(char_id=u.char_id, star=u.star,
-                 equips=list(u.equips or []), slot=i + 1)
+                 equips=list(u.equips or []))
             for i, u in enumerate(deployed[:4])]
         axes['back_row'] = [
             Unit(char_id=u.char_id, star=u.star,
-                 equips=list(u.equips or []), slot=i - 3)
+                 equips=list(u.equips or []))
             for i, u in enumerate(deployed[4:], start=4)]
     if deploy_cap is not None:
         axes['deploy_cap'] = deploy_cap
@@ -100,14 +100,13 @@ def _bs(name: str, star: int = 1, slot: int = 1):
         BenchSlot,
         Unit,
     )
-    return BenchSlot(kind='unit', unit=Unit(char_id=name, star=star,
-                                            slot=slot))
+    return BenchSlot(kind='unit', unit=Unit(char_id=name, star=star))
 
 
 def _bu(name: str, star: int = 1, slot: int = 1):
     """容器行域单位(P4 载体迁移:deployed 直构面)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import Unit
-    return Unit(char_id=name, star=star, slot=slot)
+    return Unit(char_id=name, star=star)
 
 
 def _card(name: str, cost: int = 2, star: int = 1) -> ShopCard:

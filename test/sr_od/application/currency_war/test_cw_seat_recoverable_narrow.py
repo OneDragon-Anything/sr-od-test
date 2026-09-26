@@ -89,7 +89,7 @@ class TestP92SeatRecoverableDirect:
         s = _session(comp, plane_lengths=[9, 5, 7], line_state=False)
         axes = {'gold': 100, 'level': 4, 'plane': 1, 'round_num': _ROUND,
                 'node': 'reward', 'hp': 100, 'bench': list(bench),
-                'front_row': [Unit(char_id='前线', star=1, slot=1)]}
+                'front_row': [Unit(char_id='前线', star=1)]}
         return s, axes, k
 
     def test_truth_table_fuel_vs_empty(self):
@@ -101,11 +101,11 @@ class TestP92SeatRecoverableDirect:
         filler2 = next(n for n, c in CHARACTERS.items()
                        if n not in k and n != fuel
                        and not getattr(c, 'bench_effect', ''))
-        s, axes, k = self._frame([_bc(fuel, star=1, slot=1)])
+        s, axes, k = self._frame([_bc(fuel, star=1)])
         assert shop.p92_seat_recoverable(
             s, axes['bench'], k, _bsb(**axes), cap_hold=None,
             current_round=_ROUND, defer_names=frozenset()) is True
-        s2, axes2, k2 = self._frame([_bc(filler2, star=2, slot=1)])
+        s2, axes2, k2 = self._frame([_bc(filler2, star=2)])
         assert shop.p92_seat_recoverable(
             s2, axes2['bench'], k2, _bsb(**axes2), cap_hold=None,
             current_round=_ROUND, defer_names=frozenset()) is False
@@ -143,9 +143,9 @@ def _p92_frame(extra_bench_last: BenchSlot) -> tuple[dict, object, str]:
     assert refresh_prob(4, 1) > 0.0   # 囤腿费档该级可刷(② 活性前提)
     rest = [m for m in members if m != w]
     bench_rest_len = min(len(rest), BENCH_CAPACITY - 3)
-    bench_rest = [_bc(m, star=2, slot=1) for m in rest[:bench_rest_len]]
+    bench_rest = [_bc(m, star=2) for m in rest[:bench_rest_len]]
     # 全员 owned:主力超出席面的成员入上阵行(测试投影种子,只读消费)
-    st_deployed = [Unit(char_id=m, star=2, slot=i + 1)
+    st_deployed = [Unit(char_id=m, star=2)
                    for i, m in enumerate(rest[bench_rest_len:])]
     assert st_deployed, '锁前提:线成员规模变动(全员 owned 需要上阵位)'
     last_name = (extra_bench_last.unit.char_id
@@ -156,9 +156,9 @@ def _p92_frame(extra_bench_last: BenchSlot) -> tuple[dict, object, str]:
     fill = BENCH_CAPACITY - 2 - len(bench_rest)
     assert fill >= 1, '锁前提:线成员过多(席面装不下)'
     s = _session(comp, plane_lengths=[9, 5, 7], line_state=False)
-    bench = [_bc(w, star=1, slot=1)]
+    bench = [_bc(w, star=1)]
     bench += bench_rest
-    bench += [_bc(next(pool), star=2, slot=1) for _ in range(fill)]
+    bench += [_bc(next(pool), star=2) for _ in range(fill)]
     bench.append(extra_bench_last)
     assert len(bench) == BENCH_CAPACITY   # 席满 = bench_free 0 的承载前提
     axes = {'gold': 100, 'level': 4, 'plane': 1, 'round_num': _ROUND,

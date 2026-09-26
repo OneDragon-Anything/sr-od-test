@@ -100,10 +100,9 @@ def _card(name: str, cost: int = 3, star: int = 1, x: int = 0) -> ShopCard:
     return ShopCard(x=x, name=name, cost=cost, star=star)
 
 
-def _bc(name: str, star: int = 1, slot: int = 1) -> BenchSlot:
+def _bc(name: str, star: int = 1) -> BenchSlot:
     """占席条目(容器形状;bench/燃料候选域直构面)。"""
-    return BenchSlot(kind='unit', unit=Unit(char_id=name, star=star,
-                                            slot=slot))
+    return BenchSlot(kind='unit', unit=Unit(char_id=name, star=star))
 
 
 def _decide(st: dict, sess: StrategySession):
@@ -115,7 +114,7 @@ def _ct(sess: StrategySession) -> dict:
 
 
 def _own(*names: str) -> list[BenchSlot]:
-    return [_bc(n, slot=i + 1) for i, n in enumerate(names)]
+    return [_bc(n) for i, n in enumerate(names)]
 
 
 # ===== 正本 §5.2 锁 1/2:甲臂强锁门逐字 + 判死出辖 =====
@@ -302,7 +301,7 @@ class TestHubEmission:
         assert ct.get('shop_no_target_arm_a_dead_defer') == 1
         # —— 拒因面:非合并素材(副本在 bench)——
         st_m = _state(shop_cards=[_card('花火', cost=2)],
-                      bench=[_bc('花火', slot=1)])
+                      bench=[_bc('花火')])
         sess_m = _session(IntentionState())
         act_m = _decide(st_m, sess_m)
         assert not isinstance(act_m, CwActionBuyCardParam)
@@ -310,14 +309,14 @@ class TestHubEmission:
         # 非合并素材:副本在部署面(复核观察变体:核对面 = bench∪deployed
         # 全场域,same_star_count 单一源计数)
         st_d = _state(shop_cards=[_card('花火', cost=2)],
-                      deployed=[Unit(char_id='花火', star=1, slot=1)])
+                      deployed=[Unit(char_id='花火', star=1)])
         sess_d = _session(IntentionState())
         act_d = _decide(st_d, sess_d)
         assert not isinstance(act_d, CwActionBuyCardParam)
         assert _ct(sess_d).get('hub_option_reject_merge_material') == 1
         # 席位:bench 满
         st_s = _state(shop_cards=[_card('花火', cost=2)],
-                      bench=[_bc(f'注册表外散件{i}', slot=i + 1)
+                      bench=[_bc(f'注册表外散件{i}')
                              for i in range(BENCH_CAPACITY)])
         sess_s = _session(IntentionState())
         act_s = _decide(st_s, sess_s)
@@ -357,7 +356,7 @@ class TestHubEmission:
         消失(refund_full_star_ok(2,·)=False 事实面),乙臂对该名不再发射
         (场内副本 ≥1 即拒)。"""
         st = _state(shop_cards=[_card('花火', cost=2)],
-                    bench=[_bc('花火', slot=1), _bc('花火', slot=2)])
+                    bench=[_bc('花火'), _bc('花火')])
         # 合并冻结态显影:同名同 1★ 对在场 = 滞留素材(判定单一源直核)
         from sr_od.application.currency_war.kernel.cw_vocab import (
             merge_material_stale_names,
@@ -405,7 +404,7 @@ class TestHubEmission:
             sess, (), channel='interest', current_round=3)
         assert '瓦尔特' in excl_next
         fuel = mandate.fuel_sell_candidates(
-            [_bc('瓦尔特', slot=1)], (), state=_kbridge(**st_next),
+            [_bc('瓦尔特')], (), state=_kbridge(**st_next),
             exclude_names=excl_next)
         assert not fuel
         # 面③:读口单一源(登记域/身份段/部署域三面同源)
@@ -619,13 +618,12 @@ class TestArmCHoldDefault:
         from sr_od.application.currency_war.kernel.cw_vocab import (
             CwActionLevelUpParam,
         )
-        deployed = [Unit(char_id=f'注册表外散件{i}', star=2, slot=i + 1)
+        deployed = [Unit(char_id=f'注册表外散件{i}', star=2)
                     for i in range(4)]
         frame = mandate.MandateFrame(
             gold=80, level=4,
             bench=[BenchSlot(kind='unit',
-                             unit=Unit(char_id='注册表外散件A', star=1,
-                                       slot=1))],
+                             unit=Unit(char_id='注册表外散件A', star=1))],
             deployed=deployed, deploy_cap=4, node_type='battle',
             stop_flag=False, k_members=(), round_num=2)
         st_m3 = {'gold': 80, 'level': 4, 'hp': 30, 'plane': 2,
@@ -654,7 +652,7 @@ class TestKMembersDownstream:
         st = _state(hp=100, shop_cards=[_card(missing_piece, cost=1),
                                         _card('注册表外散件Z', cost=1, x=1)])
         st['bench'] = _own(*comp.core_chars)
-        st['front_row'] = [Unit(char_id='板上件锚', star=1, slot=1)]   # 空板止损守卫前置(前排行域 Unit)
+        st['front_row'] = [Unit(char_id='板上件锚', star=1)]   # 空板止损守卫前置(前排行域 Unit)
         sess = _session(IntentionState())
         act = _decide(st, sess)
         assert isinstance(act, CwActionBuyCardParam) and act.reason == 'm2_line_member'
@@ -671,7 +669,7 @@ class TestKMembersDownstream:
 
         def _entry(name: str, slot: int):
             return BenchSlot(kind='unit',
-                             unit=Unit(char_id=name, star=1, slot=slot))
+                             unit=Unit(char_id=name, star=1))
         fuel = m.fuel_sell_candidates(
             [_entry(missing_piece, 8), _entry('注册表外散件Y', 9)],
             tuple(sorted(chars)), state=_kbridge(**st))

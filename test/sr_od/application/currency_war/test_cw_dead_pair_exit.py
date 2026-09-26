@@ -17,6 +17,10 @@ test_cw_dead_stock_pair_wiring 同款防漂移);锁①②③④ 走备战域
 读源,缺写 = fail-closed 保留 = 释放恒不可达)。
 """
 
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    deployed_view_sequential as _dvs,
+)
+
 import random
 from types import SimpleNamespace
 
@@ -98,16 +102,16 @@ def _prep_frame(*, pair_ledger_round: int | None,
     gs.write_logic(gs.gold, gold, produced_by='cw-t253-test', sig=_SIG)
     # P4 容器形种子:bench = 占席条目(BenchSlot,槽序),deployed = 行域 Unit
     slots = [BenchSlot(kind='unit',
-                       unit=Unit(char_id=pair, star=1, slot=1)),
+                       unit=Unit(char_id=pair, star=1)),
              BenchSlot(kind='unit',
-                       unit=Unit(char_id=pair, star=1, slot=2))]
+                       unit=Unit(char_id=pair, star=1))]
     slots += [BenchSlot(kind='unit',
-                        unit=Unit(char_id=_FILLER, star=2, slot=i))
+                        unit=Unit(char_id=_FILLER, star=2))
               for i in range(3, 10)]
     slots += [BenchSlot(kind='empty')] * (9 - len(slots))
     gs.write_logic(gs.bench, BenchView(slots=slots, capacity=9),
                    produced_by='cw-t253-test', sig=_SIG)
-    gs.write_logic(gs.front_row, [Unit(slot=1, char_id='刃', star=1)],
+    gs.write_logic(gs.deployed, _dvs([Unit( char_id='刃', star=1)], []),
                    produced_by='cw-t253-test', sig=_SIG)
     if pair_ledger_round is not None:
         assert sell_gate.register_acquisition(
@@ -115,7 +119,7 @@ def _prep_frame(*, pair_ledger_round: int | None,
     frame = MandateFrame(
         gold=gold, level=7, bench=[s for s in slots
                                    if s.kind != 'empty'],
-        deployed=[Unit(slot=1, char_id='刃', star=1)],
+        deployed=[Unit( char_id='刃', star=1)],
         deploy_cap=7, node_type='battle', stop_flag=False,
         k_members=k_members, round_num=_ROUND)
     return sess, gs, frame
@@ -286,7 +290,7 @@ class TestWriteEnd:
                        produced_by='cw-t253-test', sig=_SIG)
         gs.observe(gs.hp, 60, evidence='cw-t253-test', sig=_OBS_SIG)
         slots = [BenchSlot(kind='unit',
-                           unit=Unit(char_id=_FILLER, star=1, slot=i + 1))
+                           unit=Unit(char_id=_FILLER, star=1))
                  for i in range(5)]
         gs.write_logic(gs.bench, BenchView(slots=slots, capacity=9),
                        produced_by='cw-t253-test', sig=_SIG)
@@ -337,9 +341,9 @@ class TestCriterionUnits:
         gs.write_logic(gs.node, NodeKey(plane=1, round_num=_ROUND,
                                         kind='prep'),
                        produced_by='cw-t253-test', sig=_SIG)
-        bench = [BenchSlot(kind='unit', unit=Unit(char_id=_PAIR, star=1, slot=1)),
-                 BenchSlot(kind='unit', unit=Unit(char_id=_PAIR, star=1, slot=2)),
-                 BenchSlot(kind='unit', unit=Unit(char_id=_PAIR, star=2, slot=3))]
+        bench = [BenchSlot(kind='unit', unit=Unit(char_id=_PAIR, star=1)),
+                 BenchSlot(kind='unit', unit=Unit(char_id=_PAIR, star=1)),
+                 BenchSlot(kind='unit', unit=Unit(char_id=_PAIR, star=2))]
         assert sell_gate.register_acquisition(sess, _PAIR, plane=1,
                                               round_num=1, star=1)
         release = sell_gate.dead_pair_exit_release(
@@ -355,8 +359,8 @@ class TestCriterionUnits:
         gs_k.write_logic(gs_k.node, NodeKey(plane=1, round_num=_ROUND,
                                             kind='prep'),
                          produced_by='cw-t253-test', sig=_SIG)
-        bench_k = [BenchSlot(kind='unit', unit=Unit(char_id=member, star=1, slot=1)),
-                   BenchSlot(kind='unit', unit=Unit(char_id=member, star=1, slot=2))]
+        bench_k = [BenchSlot(kind='unit', unit=Unit(char_id=member, star=1)),
+                   BenchSlot(kind='unit', unit=Unit(char_id=member, star=1))]
         assert sell_gate.register_acquisition(sess_k, member, plane=1,
                                               round_num=1, star=1)
         release_k = sell_gate.dead_pair_exit_release(
@@ -380,12 +384,12 @@ class TestCriterionUnits:
         gs.write_logic(gs.node, NodeKey(plane=1, round_num=_ROUND,
                                         kind='prep'),
                        produced_by='cw-t253-test', sig=_SIG)
-        bench = [BenchSlot(kind='unit', unit=Unit(char_id=_PAIR, star=1, slot=1)),
-                 BenchSlot(kind='unit', unit=Unit(char_id=_PAIR, star=1, slot=2))]
+        bench = [BenchSlot(kind='unit', unit=Unit(char_id=_PAIR, star=1)),
+                 BenchSlot(kind='unit', unit=Unit(char_id=_PAIR, star=1))]
         # 凑息守卫读容器上阵域(非形参):front_row 必写,免空板止损守卫
-        gs.write_logic(gs.front_row, [Unit(slot=1, char_id='刃', star=1)],
+        gs.write_logic(gs.deployed, _dvs([Unit( char_id='刃', star=1)], []),
                        produced_by='cw-t253-test', sig=_SIG)
-        deployed = [Unit(slot=1, char_id='刃', star=1)]
+        deployed = [Unit( char_id='刃', star=1)]
         assert sell_gate.register_acquisition(sess, _PAIR, plane=1,
                                               round_num=1, star=1)
         release = sell_gate.dead_pair_exit_release(sess, (), bench,
@@ -394,8 +398,7 @@ class TestCriterionUnits:
         gold = saturation_line(7) - refund - 1
         slots, _key = crit_sell.sell_for_interest(
             gold, bench, 7, (), gs, merge_guard_release=release)
-        sold_names = {next((mandate._slot_cid(b) for b in bench
-                            if mandate._slot_no_of(b) == s), '') for s in slots}
+        sold_names = {mandate._slot_cid(bench[s]) for s in slots}
         assert sold_names == {_PAIR}
         # 燃料通道旁路对照(原零漂移锁旁路半迁并)
         sess_f, gs_f, frame_f = _prep_frame(pair_ledger_round=2)
@@ -422,12 +425,12 @@ class TestCriterionUnits:
         gs.write_logic(gs.node, NodeKey(plane=1, round_num=_ROUND,
                                         kind='prep'),
                        produced_by='cw-t253-test', sig=_SIG)
-        bench = [BenchSlot(kind='unit', unit=Unit(char_id=_PAIR, star=1, slot=1)),
-                 BenchSlot(kind='unit', unit=Unit(char_id=_PAIR, star=1, slot=2))]
+        bench = [BenchSlot(kind='unit', unit=Unit(char_id=_PAIR, star=1)),
+                 BenchSlot(kind='unit', unit=Unit(char_id=_PAIR, star=1))]
         # 塌缩守卫读容器上阵域(非形参):front_row 必写,免空板止损守卫
-        gs.write_logic(gs.front_row, [Unit(slot=1, char_id='刃', star=1)],
+        gs.write_logic(gs.deployed, _dvs([Unit( char_id='刃', star=1)], []),
                        produced_by='cw-t253-test', sig=_SIG)
-        deployed = [Unit(slot=1, char_id='刃', star=1)]
+        deployed = [Unit( char_id='刃', star=1)]
         assert sell_gate.register_acquisition(sess, _PAIR, plane=1,
                                               round_num=1, star=1)
         release = sell_gate.dead_pair_exit_release(sess, (), bench,
@@ -440,7 +443,7 @@ class TestCriterionUnits:
             slots, _key = crit_sell.line_switch_sell(
                 (_PAIR,), (), bench, deployed, gs, k_switched=True,
                 merge_guard_release=release)
-            assert slots == [1, 2]
+            assert slots == [0, 1]   # 紧缩位键(overlay-trigger 3.1:0 基)
             slots_guarded, _key2 = crit_sell.line_switch_sell(
                 (_PAIR,), (), bench, deployed, gs, k_switched=True)
             assert slots_guarded == []

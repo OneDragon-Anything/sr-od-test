@@ -66,7 +66,7 @@ def _make_gs(*, bench: list[tuple[str, int]] | None = None,
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if bench is not None:
         slots = [BenchSlot(kind='unit',
-                           unit=Unit(char_id=c, star=s, slot=i + 1))
+                           unit=Unit(char_id=c, star=s))
                  for i, (c, s) in enumerate(bench)]
         slots += [BenchSlot(kind='empty')] * (9 - len(slots))
         gs.observe(gs.bench, BenchView(slots=slots, capacity=9), sig=_SIG_OBS)

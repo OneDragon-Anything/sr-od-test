@@ -13,6 +13,12 @@ kernel/执行器级用桩宿主,零真实 IO(harness 惯例同 test_cw_unified_a
 
 from __future__ import annotations
 
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    deployed_view_sequential as _dvs,
+    deployed_indexed_of_view,
+)
+
+
 import time
 from types import SimpleNamespace
 
@@ -135,7 +141,7 @@ def test_open_bookcard_logic_state_frees_slot():
     _sig = ChannelSig(family='obs', actor='cw4_seed',
                       mode='synthesized')
     _slots = [BenchSlot(kind='unit', unit=Unit(char_id='甲', star=1,
-                                               equips=[], slot=1)),
+                                               equips=[])),
               BenchSlot(kind='bookcard')]
     _slots += [BenchSlot(kind='empty') for _ in range(7)]
     gs.observe(gs.bench, BenchView(slots=_slots, capacity=9), sig=_sig)
@@ -179,7 +185,7 @@ def test_entry_card_arms_emit_from_bench_kind():
     误判,用户定谳 2026-09-19,禁再建模。)"""
     # bookcard 槽 → OpenBookcard(slot=下标+1)
     out = _emit_with_bench([BenchSlot(kind='unit', unit=Unit(
-        char_id='甲', star=1, equips=[], slot=1)),
+        char_id='甲', star=1, equips=[])),
         BenchSlot(kind='bookcard')])
     assert len(out) == 1 and isinstance(out[0].action, CwActionOpenBookcardParam)
     assert out[0].action.slot == 2
@@ -213,7 +219,7 @@ def test_bench_slot_bookcard_kind_occupies_one_slot():
     席空数派生同源(bench_free_slots,9−2=7)。(legacy 旗标往返面
     随换形层退役删除。)"""
     slots = [BenchSlot(kind='unit', unit=Unit(char_id='甲', star=1,
-                                              equips=[], slot=1)),
+                                              equips=[])),
              BenchSlot(kind='bookcard')]
     slots += [BenchSlot(kind='empty')] * 7
     view = BenchView(slots=slots, capacity=9)
@@ -244,20 +250,20 @@ def test_deploymove_projection_records_resolved_row():
                       mode='synthesized')
     _logic = ChannelSig(family='logic_action', actor='CwScreenPrep')
     _slots = [BenchSlot(kind='unit', unit=Unit(char_id='甲', star=1,
-                                               equips=[], slot=3))]
+                                               equips=[]))]
     _slots += [BenchSlot(kind='empty') for _ in range(8)]
     gs.observe(gs.bench, BenchView(slots=_slots, capacity=9), sig=_sig)
     # 前排满(4 人):载荷指前排 2 号(丙1 占位)→ 交换,甲落 2 号、
     # 丙1 回源 bench 槽 3
-    gs.observe(gs.front_row, [Unit(char_id=f'丙{i}', star=1, equips=[],
-                                   slot=i + 1) for i in range(4)],
+    gs.observe(gs.deployed, _dvs([Unit(char_id=f'丙{i}', star=1, equips=[])
+                                  for i in range(4)], []),
                sig=_sig)
     report_action_deploy_move_param(gs, CwActionDeployMoveParam(bench_idx=0,
                                                    to_row='front',
                                                    to_slot=2,
                                                    faction=''),
                                     sig=_logic)
-    dep = deployed_rows_to_indexed(gs.front_row.value, gs.back_row.value)
+    dep = deployed_indexed_of_view(gs.deployed.value)
     assert dep[1] is not None and dep[1].char_id == '甲', \
         '载荷直落:落参数指定槽(to_slot=2 → 表下标 1)'
     assert [d.char_id for i, d in enumerate(dep[:4]) if i != 1] \
@@ -268,14 +274,14 @@ def test_deploymove_projection_records_resolved_row():
     # 载荷槽空 = 放置(前排 1 号被乙占,载荷指 2 号空槽 → 照落 2 号)
     gs2 = game_state_of(cw4_session())
     gs2.observe(gs2.bench, BenchView(slots=_slots, capacity=9), sig=_sig)
-    gs2.observe(gs2.front_row, [Unit(char_id='乙', star=1, equips=[],
-                                     slot=1)], sig=_sig)
+    gs2.observe(gs2.deployed, _dvs([Unit(char_id='乙', star=1, equips=[])],
+                                   []), sig=_sig)
     report_action_deploy_move_param(gs2, CwActionDeployMoveParam(bench_idx=0,
                                                     to_row='front',
                                                     to_slot=2,
                                                     faction=''),
                                     sig=_logic)
-    dep2 = deployed_rows_to_indexed(gs2.front_row.value, gs2.back_row.value)
+    dep2 = deployed_indexed_of_view(gs2.deployed.value)
     assert dep2[1] is not None and dep2[1].char_id == '甲'   # 载荷槽 = 表 1 位
     assert dep2[0].char_id == '乙', '占位槽不受放置波及'
     # 源槽无件(bench_idx 越界空槽)= 陈旧提案,本口零写

@@ -312,7 +312,7 @@ def test_deploy_move_tracks_immediately_on_emit(monkeypatch):
     session = StrategySession()
     gs = game_state_of(session)
     gs.tracked_books.bench = [None, BenchSlot(kind='unit', unit=Unit(
-        char_id='甲', star=1, slot=2))]
+        char_id='甲', star=1))]
 
     env = _deploy_env(session)
     action = CwActionDeployMoveParam(bench_idx=1, to_row='front', to_slot=1,

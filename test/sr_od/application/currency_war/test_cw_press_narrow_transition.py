@@ -98,7 +98,7 @@ def _d_frame_deps(n_km: int = 0) -> tuple[list[Unit], frozenset[str]]:
     names = list(km[:n_km])
     while len(names) < 5:
         names.append(_lad_off_name(exclude=tuple(names)))
-    deps = [_lad_bc(m, star=2, slot=i + 1) for i, m in enumerate(names)]
+    deps = [_lad_bc(m, star=2) for i, m in enumerate(names)]
     return deps, frozenset(names)
 
 

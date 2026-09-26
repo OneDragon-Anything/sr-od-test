@@ -22,16 +22,16 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 
 def _bs(name: str, slot: int) -> BenchSlot:
     """容器占席条目(P4 载体迁移:MandateFrame 直构面)。"""
-    return BenchSlot(kind='unit', unit=Unit(char_id=name, star=1, slot=slot))
+    return BenchSlot(kind='unit', unit=Unit(char_id=name, star=1))
 
 
 def _full_board_session():
     """容器 3/3 满板(上阵前 3 人)+ 备战席候选;返回 (session, gs)。"""
     session = cw4_session(cw4_comp())
-    gs = cw4_gs(session, deploy_cap=3, bench=[cw4_bc('艾丝妲', slot=1)],
-                front_row=[Unit(char_id='丹恒·饮月', star=1, slot=1),
-                           Unit(char_id='卡芙卡', star=1, slot=2),
-                           Unit(char_id='杰帕德', star=1, slot=3)])
+    gs = cw4_gs(session, deploy_cap=3, bench=[cw4_bc('艾丝妲')],
+                front_row=[Unit(char_id='丹恒·饮月', star=1),
+                           Unit(char_id='卡芙卡', star=1),
+                           Unit(char_id='杰帕德', star=1)])
     return session, gs
 
 
@@ -41,8 +41,8 @@ def _stale_frame(round_num: int = 2):
     return mandate.MandateFrame(
         gold=10, level=3,
         bench=[_bs('艾丝妲', slot=1)],
-        deployed=[Unit(slot=1, char_id='丹恒·饮月', star=1),
-                  Unit(slot=2, char_id='卡芙卡', star=1)],
+        deployed=[Unit( char_id='丹恒·饮月', star=1),
+                  Unit( char_id='卡芙卡', star=1)],
         deploy_cap=3, node_type=None, stop_flag=False,
         k_members=(), round_num=round_num)
 
@@ -61,9 +61,9 @@ def test_cap_roomy_stale_container_still_deploys():
     """陈旧视图锁:容器 2/3 未满时照常产出部署(换源不改坏正常路径);
     容器名单为部署输入真值——板满判定读容器而非帧。"""
     session = cw4_session(cw4_comp())
-    gs = cw4_gs(session, deploy_cap=3, bench=[cw4_bc('艾丝妲', slot=1)],
-                front_row=[Unit(char_id='丹恒·饮月', star=1, slot=1),
-                           Unit(char_id='卡芙卡', star=1, slot=2)])
+    gs = cw4_gs(session, deploy_cap=3, bench=[cw4_bc('艾丝妲')],
+                front_row=[Unit(char_id='丹恒·饮月', star=1),
+                           Unit(char_id='卡芙卡', star=1)])
     stale = _stale_frame()
     assert mandate._deployable(stale, session, gs) is True
     out: list = []

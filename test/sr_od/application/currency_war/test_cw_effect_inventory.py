@@ -53,26 +53,24 @@ def test_sell_all_channel_dual_arm_by_anchor() -> None:
     静默覆盖);置闩(测试专口直赋)后同路径 source=logic(确定面)。"""
     # 臂 1:种子容器(未闩)→ 清空写走随机态
     gs = _seeded_gs()
-    assert gs.front_row.source == 'logic_rand', '前置:冷建含种子底座'
+    assert gs.deployed.source == 'logic_rand', '前置:冷建含种子底座'
     seq_before = gs.write_seq
     report = apply_board_rewrite(gs, _SELL_ALL)
     assert report is not None
-    assert report.cleared_fields == ('front_row', 'back_row', 'bench'), \
-        '种子后三门全开,三域各一行清空写'
+    assert report.cleared_fields == ('deployed', 'bench'), \
+        '种子后两门全开(行域合卷 = deployed 单字段),两域各一行清空写'
     assert report.refund_gold == 0 and report.sold_units == 0, \
         '种子空底座无可出售面,退款零'
-    assert gs.write_seq - seq_before == 3, '恰好三行清空写'
-    assert gs.front_row.source == 'logic_rand'
-    assert gs.back_row.source == 'logic_rand'
+    assert gs.write_seq - seq_before == 2, '恰好两行清空写'
+    assert gs.deployed.source == 'logic_rand'
     assert gs.bench.source == 'logic_rand'
     # 臂 2:置闩后同路径 → 按现语义 write_logic
     gs2 = _seeded_gs()
     gs2.prep_anchored = True
     report2 = apply_board_rewrite(gs2, _SELL_ALL)
     assert report2 is not None
-    assert report2.cleared_fields == ('front_row', 'back_row', 'bench')
-    assert gs2.front_row.source == 'logic'
-    assert gs2.back_row.source == 'logic'
+    assert report2.cleared_fields == ('deployed', 'bench')
+    assert gs2.deployed.source == 'logic'
     assert gs2.bench.source == 'logic'
 
 
@@ -83,7 +81,7 @@ def test_sell_all_silent_override_unanchored_mismatch_after_anchor() -> None:
     (失配网未盲)。"""
     other_view = BenchView(
         slots=[BenchSlot(kind='unit',
-                         unit=Unit(char_id='停云', star=1, slot=1))]
+                         unit=Unit(char_id='停云', star=1))]
         + [BenchSlot(kind='empty')] * 8, capacity=9)
     # 未闩臂:随机态清空写 → 观察覆盖静默
     gs = _seeded_gs()

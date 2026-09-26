@@ -1,5 +1,6 @@
 """board 派生视图 + 行槽位纯重排吸收 锁面(观察对账族架构收口,20260918-
-reconcile 第 5 例收口批)。
+reconcile 第 5 例收口批;overlay-trigger 3.1 容器合并:行域 = deployed
+单字段视图,断言同步改写)。
 
 出处 = ``.debug/temp/incidents/20260918-reconcile/report.md`` 第 5 例
 (run_20260918_045918 p1-r2 停局:board 减益1 vs 实读 减益2 + back_row
@@ -7,12 +8,12 @@ reconcile 第 5 例收口批)。
 (字段完备性审计)。
 
 锁面(全部运行时行为锁,零真实 IO):
-- board 派生一致性:front_row/back_row 任何逻辑写端(含历史上忘记写
+- board 派生一致性:deployed 任何逻辑写端(含历史上忘记写
   board 的写端)后 board 自动按单位集合增量重算单一源
   (``GameState._resync_board_delta``);纯重排写 = 零差零写;
 - 观察基座贡献保留:增量口径(非全量重算)不抹掉面板真值中容器行未
   建模的装备羁绊贡献(实机 5 例形态:环境卡星徽穿戴只在面板);
-- 纯重排吸收:同单位多重集排列差异 → ``deploy_slot_reorder`` 台账行
+- 纯重排吸收:同子表内单位多重集排列差异 → ``deploy_slot_reorder`` 台账行
   采新(安灯面→纠漂面),缺员/多员/星级差/装备差照真失配停;
 - board 派生漂移观察覆盖采新(board_derived_adopt):board 为派生量,
   以观察为真值源——环境卡星徽佩戴者移除的幽灵计数/未知身份入行零
@@ -27,6 +28,9 @@ reconcile 第 5 例收口批)。
 
 单帧锁自足:动作语义复用既有 golden 面(test_cw_transfer_golden),
 本文件不重锁动作域写回,只锁 board 派生与重排吸收两块新契约。
+
+种子纪律(3.1 起):行域 = DeployedView;紧缩行序 → 视图 = 顺延落位
+(deployed_view_sequential,与旧紧凑行域「顺序即占位」口径等价)。
 """
 
 from __future__ import annotations
@@ -44,6 +48,8 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     GameState,
     Unit,
     consume_defect_sink,
+    deployed_rows_of_view,
+    deployed_view_sequential,
     game_state_of,
     set_defect_sink,
 )
@@ -58,26 +64,35 @@ _SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep')
 
 
 # 注册表真值(data/cw_chars.py):乱破=[巡海游侠,击破],佩佩=零标签。
-def _unit(char_id: str, slot: int, *, star: int = 1,
+def _unit(char_id: str, *, star: int = 1,
           equips: list[str] | None = None) -> Unit:
-    return Unit(char_id=char_id, star=star, equips=list(equips or []),
-                slot=slot)
+    return Unit(char_id=char_id, star=star, equips=list(equips or []))
 
 
-def _pepe(slot: int) -> Unit:
-    return _unit('佩佩', slot)
+def _pepe() -> Unit:
+    return _unit('佩佩')
 
 
-def _luanpo(slot: int) -> Unit:
-    return _unit('乱破', slot)
+def _luanpo() -> Unit:
+    return _unit('乱破')
 
 
-def _heita(slot: int) -> Unit:
-    return _unit('黑塔', slot)
+def _heita() -> Unit:
+    return _unit('黑塔')
 
 
-def _wandi(slot: int) -> Unit:
-    return _unit('万敌', slot)
+def _wandi() -> Unit:
+    return _unit('万敌')
+
+
+def _fv(front: list[Unit]) -> object:
+    """前排紧缩序 → deployed 视图(顺延落位;后排空)。"""
+    return deployed_view_sequential(front, [])
+
+
+def _bv(back: list[Unit]) -> object:
+    """后排紧缩序 → deployed 视图(顺延落位;前排空)。"""
+    return deployed_view_sequential([], back)
 
 
 class _AndonRecorder:
@@ -108,9 +123,9 @@ def test_row_write_resyncs_board_and_preserves_observed_base() -> None:
     (巡海游侠/击破)自动入 board——历史上忘记写 board 的写端(直接
     write_logic 行域)不再产生「加了单位 board 没跟上」。"""
     gs = game_state_of(None)
-    gs.observe(gs.back_row, [_pepe(1)], sig=_SIG_OBS)
+    gs.observe(gs.deployed, _bv([_pepe()]), sig=_SIG_OBS)
     gs.observe(gs.board, {'减益': 1}, sig=_SIG_OBS)
-    gs.write_logic(gs.back_row, [_pepe(1), _luanpo(2)],
+    gs.write_logic(gs.deployed, _bv([_pepe(), _luanpo()]),
                    produced_by='T', sig=_SIG)
     assert gs.board.value == {'减益': 1, '巡海游侠': 1, '击破': 1}, \
         '基座贡献保留 + 新增单位标签联动(board 派生单一源)'
@@ -120,9 +135,9 @@ def test_row_clear_resyncs_board_to_dropped_tags() -> None:
     """清排写端补锁(EffectLedgerBridge 全场出售清 rows 形态):行写端
     清空后 board 对应标签摘除(减至 0 摘键),不残留幽灵计数。"""
     gs = game_state_of(None)
-    gs.observe(gs.front_row, [_luanpo(1)], sig=_SIG_OBS)
+    gs.observe(gs.deployed, _fv([_luanpo()]), sig=_SIG_OBS)
     gs.observe(gs.board, {'巡海游侠': 1, '击破': 1}, sig=_SIG_OBS)
-    gs.write_logic(gs.front_row, [], produced_by='EffectLedgerBridge',
+    gs.write_logic(gs.deployed, _fv([]), produced_by='EffectLedgerBridge',
                    sig=ChannelSig(family='logic_hook',
                                   actor='EffectLedgerBridge'))
     assert gs.board.value == {}, '行清空 → board 标签摘除(派生联动)'
@@ -133,9 +148,9 @@ def test_resync_writes_board_with_derived_evidence() -> None:
     proj_board_resync(journal 排障入口;独立手写 board 的旧证据名
     proj_board_recount/proj_deploy_board_incr 已随单一源退役)。"""
     gs = game_state_of(None)
-    gs.observe(gs.back_row, [_heita(1)], sig=_SIG_OBS)
+    gs.observe(gs.deployed, _bv([_heita()]), sig=_SIG_OBS)
     gs.observe(gs.board, {'银河学者': 1, '群攻': 1}, sig=_SIG_OBS)
-    gs.write_logic(gs.back_row, [_heita(1), _wandi(2)],
+    gs.write_logic(gs.deployed, _bv([_heita(), _wandi()]),
                    produced_by='T', sig=_SIG)
     assert gs.board.source == 'logic'
     assert gs.board.evidence == 'proj_board_resync'
@@ -147,17 +162,17 @@ def test_resync_board_inherits_row_rand_source() -> None:
     logic_rand(行域真值形态随采样奖励而变,board 为其派生,污染沿
     派生链传递);行域 write_logic 回归腿 → board 仍 logic。"""
     gs = game_state_of(None)
-    gs.observe(gs.back_row, [_heita(1)], sig=_SIG_OBS)
+    gs.observe(gs.deployed, _bv([_heita()]), sig=_SIG_OBS)
     gs.observe(gs.board, {'银河学者': 1, '群攻': 1}, sig=_SIG_OBS)
-    gs.write_logic_rand(gs.back_row, [_heita(1), _wandi(2)],
+    gs.write_logic_rand(gs.deployed, _bv([_heita(), _wandi()]),
                         produced_by='T', sig=_SIG)
     assert gs.board.source == 'logic_rand', \
         '随机行写 → board 派生行继承随机态(污染沿派生链)'
     assert gs.board.evidence == 'proj_board_resync', '派生证据名不变'
     gs2 = game_state_of(None)
-    gs2.observe(gs2.back_row, [_heita(1)], sig=_SIG_OBS)
+    gs2.observe(gs2.deployed, _bv([_heita()]), sig=_SIG_OBS)
     gs2.observe(gs2.board, {'银河学者': 1, '群攻': 1}, sig=_SIG_OBS)
-    gs2.write_logic(gs2.back_row, [_heita(1), _wandi(2)],
+    gs2.write_logic(gs2.deployed, _bv([_heita(), _wandi()]),
                     produced_by='T', sig=_SIG)
     assert gs2.board.source == 'logic', '回归腿:确定行写 board 仍 logic'
 
@@ -167,10 +182,10 @@ def test_pure_reorder_logic_write_yields_zero_board_delta() -> None:
     不产生 board 写(羁绊计数与顺序无关),board 帧保持原引用语义
     (evidence 不变 = 未发生 board 写)。"""
     gs = game_state_of(None)
-    gs.observe(gs.back_row, [_pepe(1), _heita(2), _wandi(3)], sig=_SIG_OBS)
+    gs.observe(gs.deployed, _bv([_pepe(), _heita(), _wandi()]), sig=_SIG_OBS)
     gs.observe(gs.board, {'银河学者': 1, '群攻': 1}, sig=_SIG_OBS)
     board_before = gs.board
-    gs.write_logic(gs.back_row, [_heita(1), _wandi(2), _pepe(3)],
+    gs.write_logic(gs.deployed, _bv([_heita(), _wandi(), _pepe()]),
                    produced_by='T', sig=_SIG)
     assert gs.board.value == {'银河学者': 1, '群攻': 1}
     assert gs.board is board_before, '零差 → 零 board 写(原帧未换)'
@@ -180,7 +195,7 @@ def test_selldeployed_updates_board_via_derived_resync() -> None:
     """投影写端走同一派生口:CwActionSellDeployedParam 容器腿(旧 board 全量重算写端
     已退役)卖出场上单位后 board 经 resync 摘除其标签。"""
     gs = game_state_of(None)
-    gs.observe(gs.front_row, [_luanpo(1)], sig=_SIG_OBS)
+    gs.observe(gs.deployed, _fv([_luanpo()]), sig=_SIG_OBS)
     gs.observe(gs.board, {'巡海游侠': 1, '击破': 1}, sig=_SIG_OBS)
     gs.observe(gs.gold, 10, sig=_SIG_OBS)
     report_action_sell_deployed_param(gs, CwActionSellDeployedParam(deployed_idx=0),
@@ -193,8 +208,8 @@ def test_resync_skips_when_board_never_observed() -> None:
     """板未读(None)= 无派生基座,行写端跳过重算等观察首读(禁造空板
     假值;与「观察基座 + 增量」语义一致)。"""
     gs = game_state_of(None)
-    gs.observe(gs.back_row, [_luanpo(1)], sig=_SIG_OBS)
-    gs.write_logic(gs.back_row, [_luanpo(1), _wandi(2)],
+    gs.observe(gs.deployed, _bv([_luanpo()]), sig=_SIG_OBS)
+    gs.write_logic(gs.deployed, _bv([_luanpo(), _wandi()]),
                    produced_by='T', sig=_SIG)
     assert gs.board.value is None, '板未读 → 跳过派生(不造假值)'
 
@@ -211,9 +226,9 @@ def test_env_badge_wearer_removal_ghost_count_adopts(andon) -> None:
     修前此形态 = 真失配安灯停局(20260918-reconcile 第 5 例停局族在
     行变更侧的复发径,docstring 曾自称「观察覆盖收敛」而接线缺失)。"""
     gs = game_state_of(None)
-    gs.observe(gs.back_row, [_pepe(1)], sig=_SIG_OBS)
+    gs.observe(gs.deployed, _bv([_pepe()]), sig=_SIG_OBS)
     gs.observe(gs.board, {'减益': 1}, sig=_SIG_OBS)  # 星徽贡献只在面板
-    gs.write_logic(gs.back_row, [_luanpo(1)], produced_by='T', sig=_SIG)
+    gs.write_logic(gs.deployed, _bv([_luanpo()]), produced_by='T', sig=_SIG)
     assert gs.board.value == {'减益': 1, '巡海游侠': 1, '击破': 1}, \
         '幽灵计数随派生写入保留(增量口径,基座贡献保留)'
     assert gs.board.source == 'logic'
@@ -244,9 +259,9 @@ def test_unknown_identity_row_entry_zero_contribution_adopts(andon) -> None:
     失配经 ``board_derived_adopt`` 采新,安灯不触发(修前 = 必然失配
     停局)。"""
     gs = game_state_of(None)
-    gs.observe(gs.back_row, [], sig=_SIG_OBS)
+    gs.observe(gs.deployed, _bv([]), sig=_SIG_OBS)
     gs.observe(gs.board, {}, sig=_SIG_OBS)
-    gs.write_logic(gs.back_row, [_heita(1), _unit('狸狸', 2)],
+    gs.write_logic(gs.deployed, _bv([_heita(), _unit('狸狸')]),
                    produced_by='T', sig=_SIG)
     assert gs.board.value == {'银河学者': 1, '群攻': 1}, \
         '未知身份零贡献(容器派生不回退 faction,注册表外不入账)'
@@ -295,9 +310,9 @@ def test_board_adopt_sim_evidence_suppressed_from_production_sink(
     质量面)——吸收族不经 ``_route_logic_mismatch`` 路由层,抑制检查须
     在 ``_emit_defect`` 发射口;吸收采新本身照常(观察赢,安灯不触发)。"""
     gs = game_state_of(None)
-    gs.observe(gs.back_row, [_pepe(1)], sig=_SIG_OBS)
+    gs.observe(gs.deployed, _bv([_pepe()]), sig=_SIG_OBS)
     gs.observe(gs.board, {'减益': 1}, sig=_SIG_OBS)
-    gs.write_logic(gs.back_row, [_luanpo(1)], produced_by='T', sig=_SIG)
+    gs.write_logic(gs.deployed, _bv([_luanpo()]), produced_by='T', sig=_SIG)
     assert gs.board.source == 'logic'
     rows: list[dict] = []
     set_defect_sink(rows.append)
@@ -321,13 +336,13 @@ def test_board_adopt_sim_evidence_suppressed_from_production_sink(
 
 
 def _seed_row_logic(gs: GameState) -> None:
-    """5 例事故行态:逻辑 back_row = [佩佩@1, 黑塔@2, 万敌@3](放置序)。"""
-    gs.write_logic(gs.back_row, [_pepe(1), _heita(2), _wandi(3)],
+    """5 例事故行态:逻辑后排 = [佩佩@1, 黑塔@2, 万敌@3](放置序)。"""
+    gs.write_logic(gs.deployed, _bv([_pepe(), _heita(), _wandi()]),
                    produced_by='T', sig=_SIG)
 
 
 def test_pure_slot_reorder_observed_absorbed_with_ledger_row(andon) -> None:
-    """纯重排吸收主锁(5 例 back_row 形态):同单位多重集、仅槽位排列
+    """纯重排吸收主锁(5 例后排形态):同单位多重集、仅槽位排列
     不同 → deploy_slot_reorder 台账行(无告警无停机)+ 采新覆盖,安灯
     不触发(「纯重排」从安灯面移入纠漂面)。"""
     gs = game_state_of(None)
@@ -336,16 +351,17 @@ def test_pure_slot_reorder_observed_absorbed_with_ledger_row(andon) -> None:
     set_defect_sink(rows.append)
     try:
         # 游戏侧排序(实读):黑塔@1, 万敌@2, 佩佩@3
-        gs.observe(gs.back_row, [_heita(1), _wandi(2), _pepe(3)],
+        gs.observe(gs.deployed, _bv([_heita(), _wandi(), _pepe()]),
                    sig=_SIG_OBS)
     finally:
         set_defect_sink(None)
         drained = consume_defect_sink()
-    assert gs.back_row.source == 'observation', '采新(游戏排序为画面事实)'
-    assert [u.char_id for u in gs.back_row.value] == ['黑塔', '万敌', '佩佩']
+    assert gs.deployed.source == 'observation', '采新(游戏排序为画面事实)'
+    assert [u.char_id for u in deployed_rows_of_view(
+        gs.deployed.value)[1]] == ['黑塔', '万敌', '佩佩']
     assert len(rows) == 1 and rows[0]['kind'] == 'deploy_slot_reorder', \
         '台账行落证(无告警无停机族)'
-    assert rows[0]['field'] == 'back_row'
+    assert rows[0]['field'] == 'deployed'
     assert andon.rows == [], '纯重排不触发安灯'
     assert drained == rows
 
@@ -358,7 +374,7 @@ def test_row_missing_member_is_real_mismatch(andon) -> None:
     rows: list[dict] = []
     set_defect_sink(rows.append)
     try:
-        gs.observe(gs.back_row, [_heita(1), _wandi(2)], sig=_SIG_OBS)
+        gs.observe(gs.deployed, _bv([_heita(), _wandi()]), sig=_SIG_OBS)
     finally:
         set_defect_sink(None)
         consume_defect_sink()
@@ -374,9 +390,9 @@ def test_row_star_diff_is_real_mismatch(andon) -> None:
     rows: list[dict] = []
     set_defect_sink(rows.append)
     try:
-        gs.observe(gs.back_row, [
-            Unit(char_id='佩佩', star=2, equips=[], slot=1),
-            _heita(2), _wandi(3)], sig=_SIG_OBS)
+        gs.observe(gs.deployed, _bv([
+            Unit(char_id='佩佩', star=2, equips=[]),
+            _heita(), _wandi()]), sig=_SIG_OBS)
     finally:
         set_defect_sink(None)
         consume_defect_sink()
@@ -392,9 +408,9 @@ def test_row_equip_diff_is_real_mismatch(andon) -> None:
     rows: list[dict] = []
     set_defect_sink(rows.append)
     try:
-        gs.observe(gs.back_row, [
-            Unit(char_id='佩佩', star=1, equips=['减益星徽'], slot=1),
-            _heita(2), _wandi(3)], sig=_SIG_OBS)
+        gs.observe(gs.deployed, _bv([
+            Unit(char_id='佩佩', star=1, equips=['减益星徽']),
+            _heita(), _wandi()]), sig=_SIG_OBS)
     finally:
         set_defect_sink(None)
         consume_defect_sink()
@@ -410,12 +426,12 @@ def test_andon_hook_absent_reorder_still_adopts_silently() -> None:
     rows: list[dict] = []
     set_defect_sink(rows.append)
     try:
-        gs.observe(gs.back_row, [_wandi(1), _pepe(2), _heita(3)],
+        gs.observe(gs.deployed, _bv([_wandi(), _pepe(), _heita()]),
                    sig=_SIG_OBS)
     finally:
         set_defect_sink(None)
         consume_defect_sink()
-    assert gs.back_row.source == 'observation'
+    assert gs.deployed.source == 'observation'
     assert rows[0]['kind'] == 'deploy_slot_reorder'
     fire_reconcile_andon({'probe': True})   # 钩子缺席 = best-effort 静默
 

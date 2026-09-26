@@ -25,8 +25,7 @@ from sr_od.application.currency_war.kernel.cw_merge_simulate import (
 
 
 def _char(slot: int, star: int, char_id: str = '阿格莱雅') -> BenchSlot:
-    return BenchSlot(kind='unit', unit=Unit(char_id=char_id, star=star,
-                                            slot=slot))
+    return BenchSlot(kind='unit', unit=Unit(char_id=char_id, star=star))
 
 
 def _snapshot(bench: list[BenchSlot | None]) -> list[tuple[str, int] | None]:
@@ -64,8 +63,8 @@ def test_on_step_dual_domain_level_fires_once() -> None:
     on_step 恰 1 次,两域列表在回调时均已落定——调用侧按受影响域
     各落一行(design §2.2 #1 写入契约)。"""
     bench = [_char(1, 1)]
-    deployed = [Unit(char_id='阿格莱雅', star=1, slot=1),
-                Unit(char_id='阿格莱雅', star=1, slot=2)]
+    deployed = [Unit(char_id='阿格莱雅', star=1),
+                Unit(char_id='阿格莱雅', star=1)]
     calls: list[tuple[list, list]] = []
     _merge_bench(bench, deployed,
                  on_step=lambda: calls.append((deepcopy(bench),

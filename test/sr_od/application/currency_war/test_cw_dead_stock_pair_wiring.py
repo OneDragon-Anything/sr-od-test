@@ -100,7 +100,7 @@ def _single_card_session(node_kind: str, gold: int,
                    sig=_LOGIC_SIG)
     gs.observe(gs.hp, 60, evidence='cw-t243-test', sig=_OBS_SIG)
     slots = [BenchSlot(kind='unit',
-                       unit=Unit(char_id=n, star=1, slot=i + 1))
+                       unit=Unit(char_id=n, star=1))
              for i, n in enumerate(bench_names)]
     gs.write_logic(gs.bench, BenchView(slots=slots, capacity=9),
                    produced_by='cw-t243-test', sig=_LOGIC_SIG)

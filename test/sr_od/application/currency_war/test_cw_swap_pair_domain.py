@@ -75,10 +75,10 @@ def _ctx(*, board: list[str], bench: list[str], cap: int,
         membership=frozenset(),
         fresh_buys=frozenset(),
         board={},
-        deployed=[Unit(slot=i + 1, char_id=n, star=1)
+        deployed=[Unit( char_id=n, star=1)
                   for i, n in enumerate(board)],
         bench=[BenchSlot(kind='unit',
-                         unit=Unit(char_id=n, star=1, slot=i + 1))
+                         unit=Unit(char_id=n, star=1))
                for i, n in enumerate(bench)],
         cap=cap,
         front_slots=4,

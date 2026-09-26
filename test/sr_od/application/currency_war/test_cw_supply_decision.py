@@ -27,6 +27,10 @@ cw_equipment_data)。
 """
 from __future__ import annotations
 
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    deployed_view_sequential as _dvs,
+)
+
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.kernel.cw_comps import Comp
@@ -80,8 +84,9 @@ def _set_equips(gs: GameState, equips: list[str]) -> None:
 
 
 def _set_rows(gs: GameState, front: list[Unit], back: list[Unit]) -> None:
-    gs.write_logic(gs.front_row, front, produced_by=_PB, sig=_SIG)
-    gs.write_logic(gs.back_row, back, produced_by=_PB, sig=_SIG)
+    """行域合一写(overlay-trigger 3.1:front/back 两参描述游戏排,
+    落容器 = 单字段 DeployedView 一次写)。"""
+    gs.write_logic(gs.deployed, _dvs(front, back), produced_by=_PB, sig=_SIG)
 
 
 def _set_bench_units(gs: GameState, units: list[Unit]) -> None:

@@ -34,6 +34,7 @@ from sr_od.application.currency_war.kernel.cw_exec_state import (
 from sr_od.application.currency_war.kernel.cw_game_state import (
     BenchSlot,
     BenchView,
+    DeployedView,
     Unit,
     game_state_of,
 )
@@ -106,7 +107,7 @@ def _tracked_bench(*specs: tuple[int, str, int]) -> list:
     bench: list = [None] * BENCH_CAPACITY
     for slot_no, name, star in specs:
         bench[slot_no - 1] = BenchSlot(
-            kind='unit', unit=Unit(char_id=name, star=star, slot=slot_no))
+            kind='unit', unit=Unit(char_id=name, star=star))
     return bench
 
 
@@ -116,23 +117,24 @@ def _view(*specs: tuple[int, str, int]) -> BenchView:
     slots: list[BenchSlot] = [BenchSlot(kind='empty')] * BENCH_CAPACITY
     for slot_no, name, star in specs:
         slots[slot_no - 1] = BenchSlot(
-            kind='unit', unit=Unit(char_id=name, star=star, slot=slot_no))
+            kind='unit', unit=Unit(char_id=name, star=star))
     return BenchView(slots=slots)
 
 
 _EMPTY_VIEW = BenchView()
-_EMPTY_ROWS: tuple = ([], [])
+_EMPTY_ROWS = DeployedView()
 
 
-def _rows(*specs: tuple[str, int, str, int]) -> tuple:
-    """P6 直产读载体:上场位 (前排, 后排) Unit 行
-    (specs = (排, 排内槽号, 规范名, 星))。"""
-    front: list[Unit] = []
-    back: list[Unit] = []
+def _rows(*specs: tuple[str, int, str, int]):
+    """P6 直产读载体:上场位 DeployedView(overlay-trigger 3.1:读侧
+    分排读屏、对账载体 = 合一视图;specs = (排, 排内槽号, 规范名, 星),
+    槽号 = 子表下标 + 1)。"""
+    front: list[Unit | None] = [None] * 4
+    back: list[Unit | None] = [None] * 6
     for row, slot_no, name, star in specs:
-        (front if row == 'front' else back).append(
-            Unit(char_id=name, star=star, slot=slot_no))
-    return front, back
+        (front if row == 'front' else back)[slot_no - 1] = \
+            Unit(char_id=name, star=star)
+    return DeployedView(front_slots=front, back_slots=back)
 
 
 # ===== 锁 1:星级抖动门(槽位锚定 + 两帧一致才采新)=====
@@ -244,7 +246,7 @@ def test_deployed_slot_anchor_two_frame(monkeypatch):
     _spy_conflicts(monkeypatch)
     session = StrategySession()
     _dep: list = [None] * 10
-    _dep[6] = Unit(char_id='不死途', star=3, slot=3)   # 下标 6 = 后排槽 3
+    _dep[6] = Unit(char_id='不死途', star=3)   # 下标 6 = 后排槽 3
     game_state_of(session).tracked_books.deployed = _dep
 
     def _read_back3(star: int) -> tuple:
@@ -360,10 +362,11 @@ def test_removal_keeps_layout_sell_and_move_legs():
     assert len(tracked) == BENCH_CAPACITY   # 定长保持
     assert tracked[1] is None
     assert tracked[0] is not None \
-        and (tracked[0].unit.char_id, tracked[0].unit.slot) == ('花火', 1)
+        and tracked[0].unit.char_id == '花火'
     assert tracked[2] is not None \
-        and (tracked[2].unit.char_id, tracked[2].unit.slot) == ('椒丘', 3)
-    # 不移位:槽3 件仍在槽3(旧紧凑重排会把它挪到槽2)
+        and tracked[2].unit.char_id == '椒丘'
+    # 不移位:槽3 件仍在槽3(旧紧凑重排会把它挪到槽2;位置 = 下标,
+    # Unit 无槽位信息位——overlay-trigger 3.1)
     # move 腿:花火 bench槽1 → 前排槽1
     session_m = StrategySession()
     game_state_of(session_m).tracked_books.bench = _tracked_bench(
@@ -375,8 +378,7 @@ def test_removal_keeps_layout_sell_and_move_legs():
 
     tracked_m = game_state_of(session_m).tracked_books.bench
     assert tracked_m[0] is None \
-        and tracked_m[1].unit.char_id == '刃' \
-        and tracked_m[1].unit.slot == 2   # 刃 不移位
+        and tracked_m[1].unit.char_id == '刃'   # 刃 不移位(位置 = 下标)
     deployed = [b for b in game_state_of(session_m).tracked_books.deployed
                 if b is not None]
     assert [(b.char_id, 'front' if i < 4 else 'back')

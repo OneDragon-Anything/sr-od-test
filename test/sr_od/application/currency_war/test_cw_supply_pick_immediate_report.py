@@ -52,7 +52,7 @@ def _seeded_gs():
     """剧本容器:bench 两枚 1★银狼 + equips 空读(后果腿合成级联素材)。"""
     session = StrategySession()
     gs = game_state_of(session)
-    slots = [BenchSlot(kind='unit', unit=Unit(char_id='银狼', star=1, slot=i + 1))
+    slots = [BenchSlot(kind='unit', unit=Unit(char_id='银狼', star=1))
              for i in range(2)]
     slots += [BenchSlot(kind='empty')] * (9 - len(slots))
     gs.observe(gs.bench, BenchView(slots=slots, capacity=9), sig=_SIG_OBS)

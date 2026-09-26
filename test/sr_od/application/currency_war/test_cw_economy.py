@@ -263,8 +263,8 @@ class TestR2InterestFloor:
             key=lambda m: expected_refreshes_for_card(
                  6, CHARACTERS[m].cost, 2, 2))
         others = [m for m in members if m != target]
-        bench = [_bc(target), _bc(target, slot=2)] \
-            + [_bc(m, star=2, slot=i + 3) for i, m in enumerate(others)]
+        bench = [_bc(target), _bc(target)] \
+            + [_bc(m, star=2) for i, m in enumerate(others)]
         sess = _session(comp)
         from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
         game_state_of(sess).node_books.plane_lengths_seen = [9, 5, 7]   # 终态契约 §A′
@@ -540,7 +540,7 @@ def _schedule_rows() -> dict:
 
     def _formed_bench() -> list:
         # 2★ 成型件九连(注册表前排角色名;阵营经注册表派生,名字表达纪律)
-        return [_bc('阿格莱雅', star=2, slot=i + 1)
+        return [_bc('阿格莱雅', star=2)
                 for i in range(BENCH_CAPACITY)]
 
     def pop_not_full():
@@ -553,8 +553,8 @@ def _schedule_rows() -> dict:
     def pop_cap_full():
         # ①正腿:cap 满(上场 6 人 = lv6 席位上限,前排 4 + 后排 2)
         #→ 人口位触发(最高义务);'杂{i}' = 注册表外名(未知阵营占位)
-        front = [Unit(char_id=f'杂{i}', star=1, slot=i + 1) for i in range(4)]
-        back = [Unit(char_id=f'杂{i}', star=1, slot=i - 3) for i in range(4, 6)]
+        front = [Unit(char_id=f'杂{i}', star=1) for i in range(4)]
+        back = [Unit(char_id=f'杂{i}', star=1) for i in range(4, 6)]
         st = _ba_state(gold=30, level=6, round_num=9, bench=_formed_bench(),
                        front_row=front, back_row=back)
         assert len(front) + len(back) >= max_units_of(_bsb(**st))

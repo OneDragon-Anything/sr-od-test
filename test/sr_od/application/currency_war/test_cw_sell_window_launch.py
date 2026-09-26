@@ -84,10 +84,9 @@ _TRANS_HOLD = '丹恒·饮月'
 _TRANS_CHEAP = '三月七'
 
 
-def _bc(name: str, star: int = 1, slot: int = 1) -> BenchSlot:
+def _bc(name: str, star: int = 1) -> BenchSlot:
     """容器占席条目(直构面)。"""
-    return BenchSlot(kind='unit', unit=Unit(char_id=name, star=star,
-                                            slot=slot))
+    return BenchSlot(kind='unit', unit=Unit(char_id=name, star=star))
 
 
 def _sess() -> StrategySession:
@@ -108,7 +107,7 @@ def _state(gold: int, bench: list, *,
     # 拒卖」(单一源 = sell_gate.empty_board_sell_blocked),卖出判据/
     # 发射位的直调环境须 ≥1 上场件,否则守卫 fail-closed 拒帧——与被
     # 测语义无关的红按环境前置补齐,非跟绿。
-    axes['front_row'] = [Unit(char_id='板上件锚', star=1, slot=1)]
+    axes['front_row'] = [Unit(char_id='板上件锚', star=1)]
     return axes
 
 
@@ -346,26 +345,27 @@ class TestW1SameVisitBan:
         sess = _sess()
         sell_gate.register_launch(sess, _FUEL, cause='press', round_num=3)
         act = decide_shop_action(
-            cw4_gs(sess, **_state(1, [_bc(_FUEL, slot=1)])),
+            cw4_gs(sess, **_state(1, [_bc(_FUEL)])),
             sess, SimpleNamespace(ev_arm='full'))
         assert not isinstance(act, CwActionSellBenchParam), \
             'W1:press 登记活跃件被同轮筹资卖出 = 同 visit 卖回未闭死'
         assert isinstance(act, CwActionCloseShopParam)
         # 红证:仅身份段装配下燃料件穿过身份段外谓词入卖出槽集
         # (P4 容器形:直接调用面 = 容器占席条目)
-        bench = [_bc(_FUEL, slot=1)]
+        bench = [_bc(_FUEL)]
         excl = sell_gate.identity_exclusions(sess, ('目标件',))
         slots, key = crit_sell.funding_support_sell(
-            1, 3, bench, ('目标件',), state=_bridge(**_state(1, [_bc(_FUEL, slot=1)])),
+            1, 3, bench, ('目标件',), state=_bridge(**_state(1, [_bc(_FUEL)])),
             exclude_names=excl)
-        assert key == '' and slots == [1], '红证失效:燃料件未穿过身份段外谓词'
+        assert key == '' and slots == [0], \
+            '红证失效:燃料件未穿过身份段外谓词(紧缩位键 0 基)'
 
     def _case_entry_ev(self):
         """消费位②(entry EV pass funding):press 活跃件不被 prep
         筹资卖出(方案 v3 §2.9 新格 A 三位同源;登记侧实装后差分闭死)。"""
         sess = _sess()
         sell_gate.register_launch(sess, _FUEL, cause='press', round_num=2)
-        bench = [_bc(_FUEL, slot=1)]   # P4 容器形直构面
+        bench = [_bc(_FUEL)]   # P4 容器形直构面
         frame = mandate.MandateFrame(
             gold=1, level=5, bench=bench, deployed=[], deploy_cap=6,
             node_type=None, stop_flag=True, k_members=('目标件',),
@@ -381,8 +381,8 @@ class TestW1SameVisitBan:
         红证 = 身份段-only 装配下该件恰入候选。"""
         sess = _sess()
         sell_gate.register_launch(sess, _FUEL, cause='press', round_num=3)
-        bench = [_bc(_FUEL, slot=1)]   # P4 容器形直构面
-        st = _state(30, [_bc(_FUEL, slot=1)])
+        bench = [_bc(_FUEL)]   # P4 容器形直构面
+        st = _state(30, [_bc(_FUEL)])
         window = sell_gate.sell_exclusions(sess, ('目标件',),
                                            channel='m4_fuel', current_round=3)
         assert not mandate.fuel_sell_candidates(bench, ('目标件',),
@@ -420,7 +420,7 @@ class TestFundingFallbackEntryConsumer:
         分键已随 2026-09-08 用户归因遥测删除指令拆除)。"""
         sess = SimpleNamespace()
         state_of(sess).cw4_counters = {}
-        bench = [_bc(_TRANS_HOLD, slot=1)]   # cost=2 → 退 2 ≥ 缺口 3−1;P4 容器形直构面
+        bench = [_bc(_TRANS_HOLD)]   # cost=2 → 退 2 ≥ 缺口 3−1;P4 容器形直构面
         frame = mandate.MandateFrame(
             gold=1, level=5, bench=bench, deployed=[], deploy_cap=6,
             node_type=None, stop_flag=True, k_members=('目标件',),
