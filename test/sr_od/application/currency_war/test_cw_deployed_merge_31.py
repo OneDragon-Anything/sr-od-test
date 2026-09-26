@@ -234,7 +234,9 @@ def test_row_reposition_observed_write_is_single() -> None:
             back_slots=[_u('佩佩'), None, None, None, None, None]),
             sig=_SIG_OBS)
     assert rec.count('deployed') == 1
-    # 同子表纯重排:观察 = 采新 + deploy_slot_reorder 台账行,仍单写
+    # 同子表纯重排:观察 = 采新覆盖(observe 源不走 logic 吸收路径,
+    # 纯重排台账行为由 test_cw_board_derived_and_reorder 行域族锁定),
+    # 仍单写。
     with _WriteRecorder(gs) as rec2:
         gs.observe(gs.deployed, DeployedView(
             front_slots=[_u('万敌'), _u('黑塔'), None, None],
@@ -302,3 +304,89 @@ def test_unit_has_no_slot_information_bit() -> None:
     front_raw = snap['values']['deployed']['front_slots']
     assert front_raw[0] == {'char_id': '甲', 'star': 1, 'equips': []}, \
         '序列化键集 = 身份/星级/装备(槽位不入 Unit)'
+
+
+# ============================================================ 评审修复批(需修-1 / 建议-4 / 建议-5)
+
+
+def test_board_rewrite_clear_then_front_deploy_no_crash() -> None:
+    """清盘 → 再买 → 前排部署不崩(需修-1 交互锁):EffectLedgerBridge
+    全场出售清空后视图 = 规范形空视图(front_slots 定长 4),后续
+    deploy_move 前排直址落位不 IndexError;清盘写本身保持单写。"""
+    from sr_od.application.currency_war.kernel.cw_effect_inventory import (
+        apply_board_rewrite,
+    )
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        STRATEGY_EFFECTS,
+    )
+    gs = _gs_with(
+        DeployedView(front_slots=[_u('银枝'), None, None, None],
+                     back_slots=[_u('刃'), None, None, None, None, None]),
+        bench=[BenchSlot(kind='unit', unit=_u('停云'))])
+
+    report = apply_board_rewrite(gs, STRATEGY_EFFECTS['人力重组'])
+    assert report is not None and 'deployed' in report.cleared_fields
+
+    view = gs.deployed.value
+    assert len(view.front_slots) == 4, '清盘后 front_slots 恒定长 4(规范形不变量)'
+    assert all(u is None for u in view.front_slots)
+    assert all(u is None for u in view.back_slots), '两排全空(语义清盘)'
+
+    # 清盘 → 再买(落席)→ 前排部署:不崩 + 落位正确。
+    gs.observe(gs.bench, BenchView(
+        slots=[BenchSlot(kind='unit', unit=_u('甲'))]
+        + [BenchSlot(kind='empty')] * 8,
+        capacity=BENCH_CAPACITY_DEFAULT), sig=_SIG_OBS)
+    report_action_deploy_move_param(
+        gs, CwActionDeployMoveParam(bench_idx=0, to_row='front',
+                                    to_slot=4, faction=''),
+        _SIG)
+    assert gs.deployed.value.front_slots[3].char_id == '甲', \
+        '前排 4 号直址落位(清盘后规范形视图上不崩)'
+
+
+def test_deploy_move_back_slot8_with_nine_layout_applies_and_extends() -> None:
+    """偏差③直锁:back_layout=9 局 to_slot=8 applied + 视图扩容到 8——
+    动态容量布局真值辖载荷校验(旧定长表结构性拒绝的表示缺陷消失);
+    同载荷在默认 6 档仍拒绝(布局真值辖域互不越界)。"""
+    from sr_od.application.currency_war.kernel.cw_action_report import (
+        report_action_deploy_move_param as _dep,
+    )
+    # 9 格局:to_slot=8 落位 + 视图随落位扩容
+    gs = _gs_with(DeployedView(front_slots=[None] * 4,
+                               back_slots=[None] * 6),
+                  bench=[BenchSlot(kind='unit', unit=_u('甲'))])
+    gs.observe(gs.back_layout, 9, sig=_SIG_OBS)
+    out = _dep(gs, CwActionDeployMoveParam(bench_idx=0, to_row='back',
+                                           to_slot=8, faction=''),
+               _SIG)
+    assert out.applied, '9 格局 to_slot=8 在容量内(旧定长表拒绝 = 表示缺陷)'
+    assert len(gs.deployed.value.back_slots) == 8, '视图随落位扩容'
+    assert gs.deployed.value.back_slots[7].char_id == '甲'
+    # 对照:默认 6 档同载荷拒绝(未观察 back_layout = 6 基线)
+    gs6 = _gs_with(DeployedView(front_slots=[None] * 4,
+                                back_slots=[None] * 6),
+                   bench=[BenchSlot(kind='unit', unit=_u('甲'))])
+    out6 = _dep(gs6, CwActionDeployMoveParam(bench_idx=0, to_row='back',
+                                             to_slot=8, faction=''),
+                _SIG)
+    assert not out6.applied, '6 档 to_slot=8 越容量 = 陈旧载荷零写'
+
+
+def test_deployed_view_of_hits_back_bounds_and_extension() -> None:
+    """观察命中构造的越界边界(建议-5):后排命中越提示容量但在布局
+    值域 {6..9} 内 → 扩容落位;超上界 9 或 <1 → 丢弃留证不崩。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        deployed_view_of_hits,
+    )
+    view = deployed_view_of_hits(
+        [], [(8, _u('甲')), (3, _u('乙'))], back_capacity=6)
+    assert len(view.back_slots) == 8, '合法命中(≤9)越提示 6 → 扩容'
+    assert view.back_slots[7].char_id == '甲'
+    assert view.back_slots[2].char_id == '乙'
+
+    view2 = deployed_view_of_hits(
+        [], [(10, _u('越界')), (0, _u('零位'))], back_capacity=9)
+    assert all(u is None for u in view2.back_slots), \
+        '>布局上界 9 / <1 → 丢弃(读链漂移留证,不扩容不落位)'
+    assert len(view2.back_slots) == 9, '容量不被漂移命中撑大'

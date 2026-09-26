@@ -33,7 +33,6 @@ from sr_od.application.currency_war.kernel.cw_action_report import (
 from sr_od.application.currency_war.kernel.cw_exec_state import (
     DEPLOYED_CAPACITY,
     deployed_idx_of,
-    deployed_rows_to_indexed,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,

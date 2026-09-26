@@ -35,9 +35,7 @@ from sr_od.application.currency_war.kernel.cw_action_report import (
 from sr_od.application.currency_war.kernel.cw_economy import (
     xp_apply_clicks,
 )
-from sr_od.application.currency_war.kernel.cw_exec_state import (
-    deployed_rows_to_indexed,
-)
+
 from sr_od.application.currency_war.kernel.cw_game_state import (
     BenchSlot,
     ChannelSig,

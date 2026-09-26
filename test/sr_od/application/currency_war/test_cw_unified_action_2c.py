@@ -29,9 +29,7 @@ from sr_od.application.currency_war.kernel.cw_action_report import (
     report_action_deploy_move_param,
     report_action_open_bookcard_param,
 )
-from sr_od.application.currency_war.kernel.cw_exec_state import (
-    deployed_rows_to_indexed,
-)
+
 from sr_od.application.currency_war.kernel.cw_game_state import (
     BenchSlot,
     BenchView,
