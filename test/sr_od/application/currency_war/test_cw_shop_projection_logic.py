@@ -516,9 +516,9 @@ class TestGuardProposalVsMainDomain:
             guard_proposal_vs_expected,
         )
         gs = _gs_of(gold=30, shop=[_card('花火', cost=3)], bench=[])
-        guard_proposal_vs_expected(
+        assert guard_proposal_vs_expected(
             CwActionSellBenchParam(bench_idx=0, expect=''), gs) is None
-        guard_proposal_vs_expected(
+        assert guard_proposal_vs_expected(
             CwActionBuyCardParam(card=_card('花火', cost=3)), gs) is None
         with pytest.raises(AssertionError, match='不在期望态店中'):
             guard_proposal_vs_expected(

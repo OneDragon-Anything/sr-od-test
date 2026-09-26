@@ -72,7 +72,7 @@ def test_prep_mirror_backfills_card_and_keeps_free_count():
     gs = _seed(session)
 
     report_action_sell_bench_param(gs, CwActionSellBenchParam(bench_idx=0),
-                                   sig=_LOGIC_SIG, session=session)
+                                   sig=_LOGIC_SIG)
 
     dep = bench_view_slots_of(gs)
     assert dep[0] is not None and dep[0].kind == 'unit' \

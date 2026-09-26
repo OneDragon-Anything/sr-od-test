@@ -181,7 +181,7 @@ def test_sellbench_overflow_missing_identity_skips_absorb():
     gs.write_logic(gs.overflow_card, '', produced_by='test', sig=_SIG)
 
     report_action_sell_bench_param(gs, CwActionSellBenchParam(bench_idx=0),
-                                   sig=_SIG, session=session)
+                                   sig=_SIG)
 
     slots = bench_entries_of(gs)
     assert '花火' not in [s.unit.char_id for s in slots]   # 摘卖件槽留空等观察
@@ -209,7 +209,7 @@ def test_overflow_absorb_lands_at_sold_slot():
     gs.write_logic(gs.overflow_card, '不死途', produced_by='test', sig=_SIG)
 
     report_action_sell_bench_param(gs, CwActionSellBenchParam(bench_idx=0),
-                                   sig=_SIG, session=session)
+                                   sig=_SIG)
 
     assert [(b.unit.char_id, b.unit.star) for b in
             bench_entries_of(gs) if b is not None] == [

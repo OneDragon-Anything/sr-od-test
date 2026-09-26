@@ -251,24 +251,29 @@ def test_emission_resolves_container_index_fail_closed():
     # fail-closed = 视图子表条目失配;不在场 → None。
     assert mandate._deployed_container_idx(
         gs, Unit( char_id='不在场', star=1)) is None
-    # 执行坐标边固定双射(overlay-trigger 3.2:换算函数族退役,双射为
-    # 内联算术;本段锁值域不变):下标 0-9 → (排, 槽号) → 下标恒等
-    #(front 1-4 / back 1-6)。
-    from sr_od.application.currency_war.kernel.cw_exec_state import (
-        DEPLOYED_FRONT_CAPACITY,
+    # 生产桥互逆锁(overlay-trigger 3.2:换算函数族退役,动作坐标系
+    # 工作副本桥 = deployed_indexed_of_view/deployed_view_of_indexed,
+    # 保留裁定在案):视图 → 定长 10 表 → 视图逐位等价(前排原样 +
+    # 后排 1-6 位;7-9 扩展格经 orig 参继承,不截断——工作副本往返
+    # 不得丢容量)。front 1-4 / back 1-6 值域同步钉死。
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        deployed_indexed_of_view,
+        deployed_view_of_indexed,
     )
 
-    def _row_slot(idx: int) -> tuple[str, int]:
-        return ('front' if idx < DEPLOYED_FRONT_CAPACITY else 'back',
-                (idx + 1 if idx < DEPLOYED_FRONT_CAPACITY
-                 else idx - DEPLOYED_FRONT_CAPACITY + 1))
-
-    for idx in range(10):
-        row, slot_no = _row_slot(idx)
-        _back = (slot_no - 1 if row == 'front'
-                 else DEPLOYED_FRONT_CAPACITY + slot_no - 1)
-        assert _back == idx
-    assert _row_slot(0) == ('front', 1)
-    assert _row_slot(3) == ('front', 4)
-    assert _row_slot(4) == ('back', 1)
-    assert _row_slot(9) == ('back', 6)
+    view = DeployedView(
+        front_slots=[Unit(char_id='甲', star=1), None,
+                     Unit(char_id='乙', star=2), None],
+        back_slots=[None, Unit(char_id='丙', star=1), None, None,
+                    Unit(char_id='丁', star=3), None,
+                    Unit(char_id='扩展七格', star=1)])
+    dep = deployed_indexed_of_view(view)
+    assert len(dep) == 10
+    assert [(u.char_id if u is not None else None) for u in dep] == [
+        '甲', None, '乙', None,
+        None, '丙', None, None, '丁', None], \
+        'front 1-4 直取 + back 1-6 位(7-9 扩展格不入动作坐标系)'
+    rebuilt = deployed_view_of_indexed(dep, view)
+    assert rebuilt.front_slots == view.front_slots
+    assert rebuilt.back_slots == view.back_slots, \
+        'orig 参继承原容量(往返等价,7-9 扩展格不丢)'
