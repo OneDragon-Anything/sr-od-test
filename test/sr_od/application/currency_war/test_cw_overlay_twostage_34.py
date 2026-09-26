@@ -1,7 +1,7 @@
 """货币战争 overlay 两段式判定/识别对账行/兜底清空()
 实机外循环面行为锁。
 
-锁面(3.4 评审 M2 裁定:锁**真实现** ``CwLoop._resolve_frame_identity``/
+锁面(判定段提取为纯函数,锁**真实现** ``CwLoop._resolve_frame_identity``/
 ``_fallback_clear_pending``——loop 大方法零桩整跑成本高,身份判定段已
 提取为纯函数,测试锁函数本体而非复刻表达式):
 

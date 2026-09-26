@@ -1,6 +1,6 @@
 """货币战争 overlay 触发登记消费面()行为锁。
 
-锁面(landing 3.4 完成判据):
+锁面(消费面完成判据):
 - 宿主交回:备战/商店两宿主每动作后 pending 非空 → round_success 交回;
 - 两段式:pending 画面首中(实机专属;未中落全扫描兜底不变);
 - 识别对账行:pending 预测 vs 实扫不一致 → journal 留证;
