@@ -1,4 +1,4 @@
-"""overlay-trigger 3.1 容器合并(DeployedView)落地锁面。
+""" 容器合并(DeployedView)落地锁面。
 
 锁三块(design details/deployed-merge.md 验收判据):
 - 快照旧档迁移等价:schema 1 紧凑行域档(front_row/back_row 两键、

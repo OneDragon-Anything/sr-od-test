@@ -12,8 +12,7 @@
 ① 载荷 (to_row, to_slot) 直落 = 参数指定槽(反「首空」证据:存在更低位
    空槽仍落载荷指定槽),写侧与执行链同规则;
 ② 容器写侧落位与执行拖点同源——同一载荷下,写侧落表下标 = 执行主域
-   落位下标 = 拖点 area 序(to_slot−1),位置 = 载荷槽(overlay-trigger
-   3.2:换算族退役,固定双射内联承载);
+   落位下标 = 拖点 area 序(to_slot−1),位置 = 载荷槽;换算族退役,固定双射内联承载);
 ③ 目标槽有人 = 交换(被占位角色回发射者源 bench 槽,与
    CwActionSwapDeployParam 换位契约同语义),sim 应用与执行链均不拒。
 """
@@ -178,7 +177,7 @@ def test_executor_drag_point_and_main_domain_lands_at_payload_slot(
         monkeypatch: pytest.MonkeyPatch):
     """执行链同源锁:载荷 (back, 3) → 拖点 = 后排 area 序 3−1;
     主域 deployed 落位 = 载荷槽子表下标(与容器写侧同式;
-    overlay-trigger 3.2:tracked 同步腿退役,op 自上报单点写主域)。
+    tracked 同步腿退役,op 自上报单点写主域)。
     后排 1 号已有占位乙(更低位占用不影响),载荷槽 3 空 = 放置。"""
     monkeypatch.setattr('time.sleep', lambda _s: None)
     from sr_od.application.currency_war.kernel.cw_strategy_session import (
@@ -281,5 +280,5 @@ def test_sim_applies_empty_target_as_place():
 
 
 
-# (mutate 同步口测试段已随 overlay-trigger 3.2 tracked 第二账退役删除:
+# (mutate 同步口测试段已随  tracked 第二账退役删除:
 #  同步口本身已删,载荷直落/交换语义由上方 sim 应用段(上报函数)承载。)

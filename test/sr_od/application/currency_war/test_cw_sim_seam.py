@@ -160,7 +160,7 @@ def test_find_area_leg_visible_query(_sim_ctx):
         assert r_hit.result is OperationRoundResultEnum.SUCCESS
 
 
-# (事实事件缺省关测试已随 overlay-trigger 3.5 事实事件槽退役删除:
+# (事实事件缺省关测试已随事实事件槽退役删除:
 #  事实事件槽本体与全部广播调用点同批删除,sim 呈现 =
 #  容器登记 + 问询时点懒呈现,锁在 test_cw_sim_backend 懒呈现两测试。)
 

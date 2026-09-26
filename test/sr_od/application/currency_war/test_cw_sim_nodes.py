@@ -26,11 +26,6 @@ from sr_od.application.currency_war.sim.cw_sim_backend import (
 from sr_od.application.currency_war.sim.cw_sim_enemy import (
     ENCOUNTER_TIER_BONUS,
 )
-from sr_od.application.currency_war.sim.cw_sim_overlay import (
-    apply_disclosed_pick,
-    pending_disclosure_items,
-    sample_options,
-)
 
 
 def _gs(node_kind: str = 'reward') -> GameState:
@@ -89,31 +84,8 @@ def test_supply_options_three_distinct_one_diamond() -> None:
 
 
 # ============================================================ M22 overlay
-# (统一队列 FIFO/词表守卫测试已随 overlay-trigger 3.5 队列
+# (统一队列 FIFO/词表守卫测试已随  队列
 #  退役删除:呈现数据源 = 容器登记,kind 词表守卫 =
 #  register 口封闭集,锁在 test_cw_overlay_trigger_33。)
-
-def test_overlay_options_placeholders_distinct() -> None:
-    """选项生成占位:expert 五选一(画面档语义)/其余三选一;同屏不
-    重名;pending 清单按族过滤。"""
-    roster = tuple(f'角色{i}' for i in range(8))
-    assert len(sample_options(random.Random(1), 'expert', roster)) == 5
-    assert len(sample_options(random.Random(2), 'megastar', roster)) == 3
-    assert 'expert_trigger' in pending_disclosure_items('expert')
-    assert not pending_disclosure_items('planner'), 'planner 触发有档(M21)'
-    assert 'fate_gate_and_rewards' in pending_disclosure_items('fate')
-
-
-def test_disclosed_pick_chosen_field_mapping() -> None:
-    """占位效果应用:在册 chosen 位按族映射写入;无位族(fate/aha)
-    不写容器词表外字段。"""
-    gs = _gs()
-    apply_disclosed_pick(gs, 'megastar', '角色A')
-    assert gs.chosen_megastar.value == '角色A'
-    apply_disclosed_pick(gs, 'partner', '角色B')
-    assert gs.chosen_partner.value == '角色B'
-    apply_disclosed_pick(gs, 'planner', '选项X')
-    assert gs.chosen_hack.value == '选项X'
-    apply_disclosed_pick(gs, 'fate', '选项Y')  # 不炸、不写
-    apply_disclosed_pick(gs, 'aha', '选项Z')
-    assert gs.chosen_fortune.value is None
+# (overlay 选项生成占位测试已随占位框架退役删除:选项效果建模候实机补档按需重建,呈现数据源 = 容器登记。)
+# (占位效果应用测试已随占位框架退役删除:选中值写容器归选卡上报链,chosen 位映射见 kernel 词表。)

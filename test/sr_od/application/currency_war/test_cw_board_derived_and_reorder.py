@@ -1,5 +1,5 @@
 """board 派生视图 + 行槽位纯重排吸收 锁面(观察对账族架构收口,20260918-
-reconcile 第 5 例收口批;overlay-trigger 3.1 容器合并:行域 = deployed
+reconcile 第 5 例收口批; 容器合并:行域 = deployed
 单字段视图,断言同步改写)。
 
 出处 = ``.debug/temp/incidents/20260918-reconcile/report.md`` 第 5 例

@@ -17,7 +17,6 @@ from sr_od.application.currency_war.sim.cw_sim_enemy import (
     resolve_plane_bosses,
 )
 from sr_od.application.currency_war.sim.cw_sim_special import (
-    SILVER_WOLF_ID,
     trailblazer_form_of,
 )
 
@@ -78,7 +77,7 @@ def test_plane_boss_override_priority_and_pool_membership() -> None:
 
 
 # ============================================================ M21 特殊角色
-# (planner 升星判据助手测试已随 overlay-trigger 3.5 评估器退役
+# (planner 升星判据助手测试已随  评估器退役
 #  删除:判据单一源 = 值回调[S3],每费用档簿记锁在
 #  test_cw_overlay_trigger_33。)
 

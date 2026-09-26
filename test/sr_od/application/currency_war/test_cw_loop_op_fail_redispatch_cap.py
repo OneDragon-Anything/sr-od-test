@@ -192,7 +192,7 @@ def test_on_fail_retry_branch_capped_before_retry_pool(monkeypatch):
     assert host.rounds[-1][0] == 'fail'   # 达限显式停
 
 
-# ===== 追加(三审代-2 升应修;overlay-trigger 3.1 改写):出战链紧缩对位防线 =====
+# ===== 追加(三审代-2 升应修; 改写):出战链紧缩对位防线 =====
 # 病理(原形态):容器槽位表存在重复/越界槽号时 `{slot:下标}` 字典推导
 # 静默保留后值 → 对位错条目拖错人出场。Unit.slot 信息位退役后该病理
 # 结构性不可构造(位置 = 下标派生,重复/越界槽号无从产生);现役防线 =

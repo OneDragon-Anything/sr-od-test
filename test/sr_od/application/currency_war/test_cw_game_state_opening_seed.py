@@ -50,7 +50,7 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
 )
 
 #: A 类种子字段全集(与 seed_opening_state 写面一一对应;board 不入——
-#: 派生量禁双写,journal 行面断言兜住;overlay-trigger 3.1:行域合卷为
+#: 派生量禁双写,journal 行面断言兜住;行域合卷为
 #: deployed 单字段)。
 _A_SEEDED: tuple[str, ...] = (
     'deployed', 'bench', 'equips', 'occupied_equips',

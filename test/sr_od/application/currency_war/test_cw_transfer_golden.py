@@ -113,7 +113,7 @@ def _bench_units(gs: GameState) -> list[tuple[int, str]]:
 
 
 def _row_pairs(gs) -> list[tuple[str, int]]:
-    """前排视图 → (char_id, 物理槽号) 断言面(overlay-trigger 3.1:
+    """前排视图 → (char_id, 物理槽号) 断言面(
     位置 = 子表下标 + 1 派生)。"""
     view = gs.deployed.value
     return [(u.char_id, i + 1) for i, u in enumerate(

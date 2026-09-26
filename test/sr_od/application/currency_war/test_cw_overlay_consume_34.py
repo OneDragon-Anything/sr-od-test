@@ -1,4 +1,4 @@
-"""货币战争 overlay 触发登记消费面(overlay-trigger 3.4)行为锁。
+"""货币战争 overlay 触发登记消费面()行为锁。
 
 锁面(landing 3.4 完成判据):
 - 宿主交回:备战/商店两宿主每动作后 pending 非空 → round_success 交回;
@@ -166,7 +166,7 @@ class TestSimPresentationFromPending:
 
     def test_fortune_gate_only_on_prep_base(self):
         """fortune 逐 kind 呈现门:底层非备战不呈现、条目存活;底层 =
-        备战时呈现(trigger-inventory §1.5)。"""
+        备战时呈现(用户确认口径)。"""
         b = _backend()
         try:
             b._screen = '货币战争-补给'
@@ -340,7 +340,7 @@ class TestHostHandback:
 
 
 class TestPrepBaseFallbackClear:
-    """识别回备战底屏兜底清空(register-consume「生命周期」②)。"""
+    """识别回备战底屏兜底清空(overlay 生命周期契约(兜底清空腿))。"""
 
     def test_clear_drops_all_pending(self):
         gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)

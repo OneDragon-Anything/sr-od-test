@@ -224,7 +224,7 @@ def test_bridge_recheck_context_uses_slot_table_indices(monkeypatch):
 
 def test_emission_resolves_container_index_fail_closed():
     """发射面容器下标解析(换算归属裁定,持久索引见模块头):bench
-    域按紧缩位键(overlay-trigger 3.1:占席序 0 基)与容器槽位表枚举
+    域按紧缩位键(占席序 0 基)与容器槽位表枚举
     对位取下标;deployed 域按视图子表条目对位;失配 = None
     (fail-closed 跳过,禁猜位)。"""
     gs = game_state_of(None)
@@ -251,7 +251,7 @@ def test_emission_resolves_container_index_fail_closed():
     # fail-closed = 视图子表条目失配;不在场 → None。
     assert mandate._deployed_container_idx(
         gs, Unit( char_id='不在场', star=1)) is None
-    # 生产桥互逆锁(overlay-trigger 3.2:换算函数族退役,动作坐标系
+    # 生产桥互逆锁(换算函数族退役,动作坐标系
     # 工作副本桥 = deployed_indexed_of_view/deployed_view_of_indexed,
     # 保留裁定在案):视图 → 定长 10 表 → 视图逐位等价(前排原样 +
     # 后排 1-6 位;7-9 扩展格经 orig 参继承,不截断——工作副本往返

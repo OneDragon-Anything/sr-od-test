@@ -84,7 +84,7 @@ def _set_equips(gs: GameState, equips: list[str]) -> None:
 
 
 def _set_rows(gs: GameState, front: list[Unit], back: list[Unit]) -> None:
-    """行域合一写(overlay-trigger 3.1:front/back 两参描述游戏排,
+    """行域合一写(front/back 两参描述游戏排,
     落容器 = 单字段 DeployedView 一次写)。"""
     gs.write_logic(gs.deployed, _dvs(front, back), produced_by=_PB, sig=_SIG)
 

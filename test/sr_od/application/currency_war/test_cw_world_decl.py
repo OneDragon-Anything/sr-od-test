@@ -302,7 +302,7 @@ _ZERO_WRITE_REPORTS: dict[str, object] = {
 
 def test_zero_write_transition_family_decl_rows_5_9_10_13_17():
     """零写族 8 转移上报对照锁(表 #5/#9/#10/#13-#17):applied 出口声明
-    逐位一致——open_box = 备战底屏 + 具名 trigger(overlay-trigger 3.4
+    逐位一致——open_box = 备战底屏 + 具名 trigger(
     S6:武装箱选择画面出现事实改登记承载,声明回归底层屏);
     pick_box_card/pick_megastar = 备战 + 具名 trigger;纯转移五选卡 =
     备战 + ''。桩 gs = 新容器(容器零写,真值归观察)。"""
@@ -420,7 +420,7 @@ def test_pick_planner_decl_row11_applied_and_reject():
 def test_open_bookcard_decl_row6_all_exits():
     """表 #6 对照锁:开书册卡上报三出口声明——bench 未观察(零写占位
     出口)与腾席成功出口均 applied=True = (备战底屏, '')纯转移
-    (overlay-trigger 3.4 S6:专家邀请函画面出现事实改登记承载,声明
+    ( S6:专家邀请函画面出现事实改登记承载,声明
     回归底层屏);槽类型不符拒出口 applied=False → None。腾席写端 =
     本上报(开卡即腾席),声明不改写语义。"""
     gs_unobserved = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)

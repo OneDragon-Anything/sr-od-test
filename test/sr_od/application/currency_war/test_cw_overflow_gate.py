@@ -196,7 +196,7 @@ def test_sellbench_overflow_missing_identity_skips_absorb():
 def test_overflow_absorb_lands_at_sold_slot():
     """溢出腿落地 → 入位卡按被卖槽下标落容器 bench(2026-09-11 实机
     2-4 停机事故本形:溢出腿入位卡未达执行主账 → 商店 visit 入口两账
-    结构性分叉粘性不可自愈。overlay-trigger 3.2 单账化后分叉结构性
+    结构性分叉粘性不可自愈。 单账化后分叉结构性
     不可能:容器 bench 即唯一账,吸收锁 = 入位卡落槽 + 存件不串。"""
     session = StrategySession()
     gs = game_state_of(session)

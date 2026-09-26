@@ -1,4 +1,4 @@
-"""货币战争 overlay 触发登记(overlay-trigger 3.3)行为锁。
+"""货币战争 overlay 触发登记()行为锁。
 
 锁面(landing 3.3 完成判据逐条):
 - 伙伴(S2):成员增减弹 / 星徽穿卸弹 / 经典合成集合不变不弹 /
@@ -130,7 +130,7 @@ class TestPartnerTrigger:
 
     def test_member_removal_fires_and_to_anchor_only_not(self):
         """成员减弹(写后仍 ≥2 人:姬子 + 另一成员);卖到只剩姬子不弹
-        (「另有成员」前提不满足——trigger-inventory §1.2 在册边界)。"""
+        (「另有成员」前提不满足——用户确认口径 §1.2 在册边界)。"""
         gs = _gs()
         _write_dep(gs, _view(front=[_u('三月七'), _u('姬子·启行'),
                                      _u('丹恒·饮月')]))
@@ -346,7 +346,7 @@ class TestPlannerStarTrigger:
         assert _pending_kinds(gs) == ['planner'], '上场才弹'
 
     def test_direct_3star_fires_and_per_tier_bookkeeping(self):
-        """无→3 按弹(用户裁定暂按会,实机复核标注 = trigger-inventory
+        """无→3 按弹(用户裁定暂按会,实机复核标注 = 用户确认口径
         §4);升费后 4 费档再 2★ 再弹(每费用档一次)。"""
         gs = _gs()
         _write_dep(gs, _view(front=[_u('银狼LV.999', star=3)]))

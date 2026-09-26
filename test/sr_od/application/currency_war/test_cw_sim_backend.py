@@ -338,7 +338,7 @@ def test_node_window_overlay_detour_reruns_offer_check() -> None:
         _node_advance_feed(gs, trigger='settle_confirm')
         assert (gs.node.value.plane, gs.node.value.round_num) == (1, 2)
         # P1r3(U07 offer 槽)窗口起点 overlay 在场 = 让路前提
-        # (overlay-trigger 3.4:呈现数据源 = 容器登记,队列直推退役)
+        # (呈现数据源 = 容器登记,队列直推退役)
         register_screen_change(
             gs, 'planner', '货币战争-银狼升星', source='test')
         _start_battle_feed(gs)
@@ -654,7 +654,7 @@ def test_megastar_lazy_presentation_on_identity_query() -> None:
         b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
         b._maybe_finish_wait()
         gs = b.gs
-        # overlay-trigger 3.4:呈现数据源 = 容器登记(逻辑写 → 值回调
+        # 呈现数据源 = 容器登记(逻辑写 → 值回调
         # 判据 register;观察写零回调),事实事件保留为呈现检查触发点。
         gs.write_logic(gs.deployed, _dvs([Unit(char_id='大丽花', star=1),
                                       Unit(char_id='加拉赫', star=1)], []),

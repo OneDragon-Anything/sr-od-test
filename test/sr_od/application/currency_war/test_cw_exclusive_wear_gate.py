@@ -91,7 +91,7 @@ def test_allocator_excludes_illegal_pair():
     """事故路径锁:comp=None 兜底轮转也不把分身墨镜Max 发给丹恒·饮月
     (run_075416:该对进过穿戴规划 → 拖拽静默不生效 → 安灯停局);同池
     普通件(垃圾袋)照常分配,专属件留 owned。
-    载体 = 上阵视图 DeployedView(overlay-trigger 3.1,位置 = 子表
+    载体 = 上阵视图 DeployedView(,位置 = 子表
     下标派生)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         Unit,

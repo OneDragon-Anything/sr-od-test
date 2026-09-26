@@ -94,8 +94,7 @@ def cw4_members(comp) -> list[str]:
 
 
 def cw4_bc(name: str, star: int = 1) -> BenchSlot:
-    """备战席占席条目(容器形状;位置 = 种子列表下标,overlay-trigger
-    3.1:Unit 无槽位信息位,槽位 = 表下标派生)。"""
+    """备战席占席条目(容器形状;位置 = 种子列表下标:Unit 无槽位信息位,槽位 = 表下标派生)。"""
     return BenchSlot(kind='unit', unit=Unit(char_id=name, star=star))
 
 
@@ -183,8 +182,7 @@ class Area:
 
 def _seed_slot(entry: BenchSlot | None, idx: int) -> BenchSlot:
     """备战席条目归一:占位件 kind 直种原样;unit 条目按 ``槽位 = 下标+1``
-    归一(原合成口「下标权威」口径;Unit 无槽位信息位——overlay-trigger
-    3.1,位置 = 表下标派生,归一腿为占位件 kind 直通)。"""
+    归一(原合成口「下标权威」口径;Unit 无槽位信息位——位置 = 表下标派生,归一腿为占位件 kind 直通)。"""
     if entry is None:
         return BenchSlot(kind='empty')
     return entry
@@ -254,7 +252,7 @@ def _seed_write(gs, *, sig: ChannelSig, ev: str, ev_node_fill: str,
     if equips:
         gs.observe(gs.equips, list(equips), evidence=ev, sig=sig)
     if front_row or back_row:
-        # deployed 域种子 = 紧缩行序顺延落位视图(overlay-trigger 3.1
+        # deployed 域种子 = 紧缩行序顺延落位视图(
         # 容器合并:第 k 个单位落槽 k,与原紧凑行域「顺序即占位」口径
         # 等价;后排容量 = back_max)。
         gs.observe(gs.deployed,

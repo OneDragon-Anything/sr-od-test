@@ -11,7 +11,7 @@ run_20260915_054718 §5/§8 候选2 实锤「回退即采新」让同名多星�
 同值复现须重新连续两帧。载体 = P6 观察链直产容器形状(备战席 BenchView /
 上场位 DeployedView,语义断言自载体迁移零变)。
 
-overlay-trigger 3.2(tracked 第二账退役):比较基线 = 主域席位视图
+(tracked 第二账退役):比较基线 = 主域席位视图
 (bench/deployed,锚 = (子表, 下标));门后副本经返回值交 director 观察
 写主域——本文件 _recon 辅助 = 生产 director 环路的测试镜像
 (reconcile → 门后视图 observe 落主域,两帧间账面与生产同源)。
@@ -89,7 +89,7 @@ _EMPTY_ROWS = DeployedView()
 
 
 def _rows(*specs: tuple[str, int, str, int]):
-    """P6 直产读载体:上场位 DeployedView(overlay-trigger 3.1:读侧
+    """P6 直产读载体:上场位 DeployedView(读侧
     分排读屏、对账载体 = 合一视图;specs = (排, 排内槽号, 规范名, 星),
     槽号 = 子表下标 + 1)。"""
     front: list[Unit | None] = [None] * 4

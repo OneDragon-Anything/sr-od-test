@@ -91,7 +91,7 @@ class TestInterestItemSlotGate:
         slots, key = sell.sell_for_interest(
             0, bench, 5, _K, state=_bsb(**_state(bench)))
         assert key == ''
-        assert slots == [1]   # 紧缩位键(overlay-trigger 3.1:0 基)
+        assert slots == [1]   # 紧缩位键(0 基)
         # 仅占位件帧 = 诚实空集
         bench_only = [_item(slot=1)]
         slots2, key2 = sell.sell_for_interest(
@@ -120,7 +120,7 @@ class TestFundingItemSlotGate:
         slots, key = sell.funding_support_sell(
             0, 5, bench, _K, state=_bsb(**_state(bench)))
         assert key == ''
-        assert slots == [1]   # 紧缩位键(overlay-trigger 3.1:0 基)
+        assert slots == [1]   # 紧缩位键(0 基)
         # 仅占位件帧 = 诚实空集
         bench_only = [_item(slot=1)]
         slots2, key2 = sell.funding_support_sell(

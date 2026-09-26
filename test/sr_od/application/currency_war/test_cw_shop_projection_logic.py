@@ -479,7 +479,7 @@ def test_on_buy_not_fired_on_rejected_buy(monkeypatch):
     assert seen == [], '拒买不触回调'
 
 
-# ==================== 双响防御(提案守卫 expected-vs-主域;overlay-trigger 3.2)====================
+# ==================== 双响防御(提案守卫 expected-vs-主域;)====================
 
 
 class TestGuardProposalVsMainDomain:

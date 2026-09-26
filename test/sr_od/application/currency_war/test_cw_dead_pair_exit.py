@@ -443,7 +443,7 @@ class TestCriterionUnits:
             slots, _key = crit_sell.line_switch_sell(
                 (_PAIR,), (), bench, deployed, gs, k_switched=True,
                 merge_guard_release=release)
-            assert slots == [0, 1]   # 紧缩位键(overlay-trigger 3.1:0 基)
+            assert slots == [0, 1]   # 紧缩位键(0 基)
             slots_guarded, _key2 = crit_sell.line_switch_sell(
                 (_PAIR,), (), bench, deployed, gs, k_switched=True)
             assert slots_guarded == []

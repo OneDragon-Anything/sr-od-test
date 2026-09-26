@@ -1,7 +1,7 @@
-"""货币战争 OpenTome 单击化(overlay-trigger 3.5)动作 op 链路锁。
+"""货币战争 OpenTome 单击化()动作 op 链路锁。
 
 单击化依据:用户确认 2026-09-25 游戏实际 = 点典籍槽一次即弹星徽四选一
-(trigger-inventory §1.9);原双击序列第二击落在已弹弹窗上有误触风险。
+(用户确认口径);原双击序列第二击落在已弹弹窗上有误触风险。
 实机核凭据 = 待实机局 journal(代码批先落地,实机验证随迭代收尾)。
 
 锁面:单次点击(选中即开启,无第二击)→ 固定动画等待 → 自上报
@@ -97,9 +97,7 @@ def test_open_tome_single_click_registers_and_clears(
     assert len(clicks) == 1 and tuple(clicks[0]) == (401, 402), \
         '恰一次点击落载荷槽中心(双击序列已退役,第二击有误触风险)'
     assert gs.bench.value.slots[1].kind == 'empty', '开件腾席落账'
-    assert [p.kind for p in gs.screen_changes.pending] == ['star_tar'
-                                                           ] or [
-        p.kind for p in gs.screen_changes.pending] == ['star_tome'], \
+    assert [p.kind for p in gs.screen_changes.pending] == ['star_tome'], \
         'star_tome 登记在册'
 
     # 槽失配:零点击零登记
