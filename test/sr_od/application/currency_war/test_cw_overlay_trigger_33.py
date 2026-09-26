@@ -168,19 +168,32 @@ class TestPartnerTrigger:
                                     _u('姬子·启行')]))
         assert _pending_kinds(gs) == [], '名集合不变 → 静默(存活对仅星变)'
 
-    def test_merge_inheritance_gains_qualification_fires(self):
-        """合成继承获资格弹(用户裁定):载体穿戴列车同行星徽 + 备战持徽
-        copies 合成,产物 equips 并集持徽 → 集合真变 → 弹。"""
+    def test_merge_inheritance_badge_gain_fires(self):
+        """合成继承获资格弹(用户裁定):非列车同出身的花火经单写获得
+        「列车同行星徽」(合成继承形态的最小表达:存活对 equips 差含
+        星徽;真实合成链 = 载体 equips 三方并集,资格变化面同此差)→
+        集合真变 → partner 登记。"""
+        gs = _gs()
+        _write_dep(gs, _view(front=[_u('花火'), _u('姬子·启行'),
+                                     _u('三月七')]))
+        consume_screen_change(gs, 'partner')
+        _write_dep(gs, _view(front=[_u('花火',
+                                       equips=['列车同行星徽']),
+                                    _u('姬子·启行'), _u('三月七')]))
+        assert _pending_kinds(gs) == ['partner'], \
+            '存活对装备差含星徽(继承获徽)= 集合增 → 弹'
+
+    def test_badge_already_held_equip_change_silent(self):
+        """徽保持静默边界:徽已持,后续装备变化(加非徽件)不改资格集
+        → 不弹(资格集只看星徽在场性,不看装备数量)。"""
         gs = _gs()
         _write_dep(gs, _view(front=[_u('花火',
                                        equips=['列车同行星徽']),
-                                    _u('姬子·启行')]))
+                                    _u('姬子·启行'), _u('三月七')]))
         consume_screen_change(gs, 'partner')
-        # 合成:同名 2★ 单位在场,新写把星变 3(equips 并集含徽,资格保持)
-        # —— 换「非成员载体获徽」形态:花火 equips 增第二件(徽仍在)。
         _write_dep(gs, _view(front=[_u('花火',
                                        equips=['列车同行星徽', '轮滑鞋']),
-                                    _u('姬子·启行')]))
+                                    _u('姬子·启行'), _u('三月七')]))
         assert _pending_kinds(gs) == [], '资格未变(徽已持):静默'
 
     def test_row_switch_non_trailblazer_silent(self):
