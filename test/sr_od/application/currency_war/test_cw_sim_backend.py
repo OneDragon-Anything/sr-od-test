@@ -15,6 +15,9 @@
 """
 from __future__ import annotations
 
+from sr_od.application.currency_war.kernel.cw_overlay_register import (
+    register_screen_change,
+)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     deployed_view_sequential as _dvs,
 )
@@ -334,8 +337,9 @@ def test_node_window_overlay_detour_reruns_offer_check() -> None:
         _node_advance_feed(gs, trigger='settle_confirm')
         assert (gs.node.value.plane, gs.node.value.round_num) == (1, 2)
         # P1r3(U07 offer 槽)窗口起点 overlay 在场 = 让路前提
-        # (队列 = 后端簿记直推;入队源评估器另有锁面)
-        b.overlay_queue.push('planner')
+        # (overlay-trigger 3.4:呈现数据源 = 容器登记,队列直推退役)
+        register_screen_change(
+            gs, 'planner', '货币战争-银狼升星', source='test')
         _start_battle_feed(gs)
         _node_advance_feed(gs, trigger='settle_confirm')
         assert gs.node.value.round_num == 3
@@ -653,13 +657,19 @@ def test_megastar_evaluator_fires_on_faction_tier_cross() -> None:
         b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
         b._maybe_finish_wait()
         gs = b.gs
-        gs.observe(gs.deployed, _dvs([Unit(char_id='大丽花', star=1),
-                                  Unit(char_id='加拉赫', star=1)], []),
-                   sig=_SIG_OBS)
+        # overlay-trigger 3.4:呈现数据源 = 容器登记(逻辑写 → 值回调
+        # 判据 register;观察写零回调),事实事件保留为呈现检查触发点。
+        gs.write_logic(gs.deployed, _dvs([Unit(char_id='大丽花', star=1),
+                                      Unit(char_id='加拉赫', star=1)], []),
+                       produced_by='test', evidence='t',
+                       sig=ChannelSig(family='logic_action', actor='test',
+                                      mode='compute'))
+        assert any(p.kind == 'megastar'
+                   for p in gs.screen_changes.pending), '判据登记在册'
         emit_fact_event('board_changed', {'actor': 'test'})
         assert b.screen_identity() == '货币战争-盛会之星', '跨首层模态呈现'
         assert gs.megastar_opts.value, '候选写容器槽'
-        assert len(b.overlay_queue) == 1
+        assert len(b.overlay_queue) == 1   # 评估器入队(3.5 退役清扫面)
         # 幂等:同层重复事实事件不再入队(水位不回退)
         emit_fact_event('board_changed', {'actor': 'test'})
         assert len(b.overlay_queue) == 1
@@ -668,8 +678,9 @@ def test_megastar_evaluator_fires_on_faction_tier_cross() -> None:
 
 
 def test_planner_evaluator_fires_on_silver_wolf_two_star() -> None:
-    """planner 评估器:star_up 事实事件(银狼合成升 2 星)→ 入队呈现;
-    「首次」语义 = 一次性标志,二次升星事件不重复。"""
+    """planner 呈现(overlay-trigger 3.4:数据源 = 容器登记):场上银狼
+    逻辑写 1★→2★(值回调判据 register)→ star_up 事实事件呈现检查 →
+    模态呈现;同费用档簿记使二次升星不重复。"""
     b = _backend(7)
     try:
         b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
@@ -679,18 +690,25 @@ def test_planner_evaluator_fires_on_silver_wolf_two_star() -> None:
         slots[0] = BenchSlot(kind='unit', unit=Unit(char_id='银狼LV.999',
                                                     star=1))
         gs.observe(gs.bench, cw4_bview(slots), sig=_SIG_OBS)
-        gs.observe(gs.deployed, _dvs([Unit(char_id='银狼LV.999', star=1)], []),
-                   sig=_SIG_OBS)
-        # kernel 合成产物落点 = 场上同名位:直接以 star_up 事实事件驱动
-        gs.observe(gs.deployed, _dvs([Unit(char_id='银狼LV.999', star=2)], []),
-                   sig=_SIG_OBS)
+        gs.write_logic(gs.deployed, _dvs([Unit(char_id='银狼LV.999', star=1)], []),
+                       produced_by='test', evidence='t',
+                       sig=ChannelSig(family='logic_action', actor='test',
+                                      mode='compute'))
+        # kernel 合成产物落点 = 场上同名位:逻辑写升星(判据 = 值回调,
+        # 观察写零回调)
+        gs.write_logic(gs.deployed, _dvs([Unit(char_id='银狼LV.999', star=2)], []),
+                       produced_by='test', evidence='t',
+                       sig=ChannelSig(family='logic_action', actor='test',
+                                      mode='compute'))
+        assert any(p.kind == 'planner'
+                   for p in gs.screen_changes.pending), '判据登记在册'
         from sr_od.application.currency_war.kernel.cw_event_hooks import (
             emit_fact_event,
         )
         emit_fact_event('star_up', {'card': '银狼LV.999'})
         assert b.screen_identity() == '货币战争-银狼升星'
         assert b.planner_fired
-        assert len(b.overlay_queue) == 1
+        assert len(b.overlay_queue) == 1   # 评估器入队(3.5 退役清扫面)
         emit_fact_event('star_up', {'card': '银狼LV.999'})
         assert len(b.overlay_queue) == 1, '一次性标志去重(队列不重复入队)'
         assert b.screen_identity() == '货币战争-银狼升星'
@@ -851,7 +869,11 @@ def test_expert_screen_presentation_raises_loud_on_observe() -> None:
     )
     b = _backend(7)
     try:
-        b.advance(WorldDecl(next_screen=SCREEN_EXPERT, trigger=''))
+        # 3.4:专家画面呈现由登记承载(open_bookcard 上报 register)——
+        # 声明侧改底层屏后,advance 纯转移 + pending 呈现检查。
+        register_screen_change(b.gs, 'expert_invite', SCREEN_EXPERT,
+                               source='test')
+        b.advance(WorldDecl(next_screen='货币战争-备战', trigger=''))
         assert b.screen_identity() == SCREEN_EXPERT
         with pytest.raises(LookupError, match='未注册'):
             b.observe(SCREEN_EXPERT)

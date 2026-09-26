@@ -418,10 +418,15 @@ def test_gen_megastar_candidates_from_container() -> None:
     try:
         _open_to_first_window(b)
         b._maybe_finish_wait()
-        b.gs.observe(b.gs.deployed,
-                     _dvs([Unit(char_id='大丽花', star=1),
-                           Unit(char_id='加拉赫', star=1)], []),
-                     sig=_SIG_OBS)
+        # 3.4:呈现数据源 = 容器登记(逻辑写经值回调判据 register;
+        # 观察写零回调)。
+        b.gs.write_logic(
+            b.gs.deployed,
+            _dvs([Unit(char_id='大丽花', star=1),
+                  Unit(char_id='加拉赫', star=1)], []),
+            produced_by='test', evidence='t',
+            sig=ChannelSig(family='logic_action', actor='test',
+                           mode='compute'))
         emit_fact_event('board_changed', {'actor': 'test'})
         assert b.screen_identity() == SCREEN_MEGASTAR
         opts_before = b.gs.megastar_opts.value
@@ -445,9 +450,13 @@ def test_gen_planner_empty_bucket_writes_like_live() -> None:
         slots[0] = BenchSlot(kind='unit', unit=Unit(char_id='银狼LV.999',
                                                     star=1))
         b.gs.observe(b.gs.bench, cw4_bview(slots), sig=_SIG_OBS)
-        b.gs.observe(b.gs.deployed,
-                     _dvs([Unit(char_id='银狼LV.999', star=2)], []),
-                     sig=_SIG_OBS)
+        # 3.4:呈现数据源 = 容器登记(逻辑写经值回调判据 register;
+        # 观察写零回调)。
+        b.gs.write_logic(
+            b.gs.deployed, _dvs([Unit(char_id='银狼LV.999', star=2)], []),
+            produced_by='test', evidence='t',
+            sig=ChannelSig(family='logic_action', actor='test',
+                           mode='compute'))
         emit_fact_event('star_up', {'card': '银狼LV.999'})
         assert b.screen_identity() == SCREEN_PLANNER
         obs = b.observe(SCREEN_PLANNER)
