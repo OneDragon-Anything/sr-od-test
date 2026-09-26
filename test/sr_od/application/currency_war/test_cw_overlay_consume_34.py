@@ -160,7 +160,7 @@ class TestSimPresentationFromPending:
                        for p in b.gs.screen_changes.pending), '判据自动登记'
             b._present_pending_overlay()
             assert b.gs.screen_changes.pending == [], '消费(不呈现)'
-            assert OVERLAY_PARAM_PENDING in b.disclosures, '披露标记'
+            assert f'{OVERLAY_PARAM_PENDING}:partner' in b.disclosures, '披露标记'
         finally:
             uninstall_backend()
 
@@ -179,7 +179,7 @@ class TestSimPresentationFromPending:
             b._screen = '货币战争-备战'
             b._present_pending_overlay()
             assert b.gs.screen_changes.pending == [], '底层备战时收口消费'
-            assert OVERLAY_PARAM_PENDING in b.disclosures, '呈现门收口披露'
+            assert f'{OVERLAY_PARAM_PENDING}:fortune' in b.disclosures, '呈现门收口披露'
         finally:
             uninstall_backend()
 
