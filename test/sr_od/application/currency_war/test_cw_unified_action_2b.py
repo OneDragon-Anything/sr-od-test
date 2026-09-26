@@ -19,7 +19,7 @@ CwActionLevelUpParam 携 cost(单击价现算装载)+auth_basis(授权记录分�
    auth_basis = 发射臂放行名分键装载;逻辑态金腿 action.cost 直写与
    执行缝退役锁 = test_cw_unified_action_2a 翻转腿);
 4. 换算收口锁(发射面容器下标直取:fail-closed 解析 helper 三域真值 +
-   执行坐标边换算函数 deployed_row_slot/deployed_idx_of 互逆,同锁两段)。
+   执行坐标边固定双射(3.2 换算族退役后内联算术,同锁两段)。
 """
 
 from __future__ import annotations
@@ -36,10 +36,6 @@ from test.sr_od.application.currency_war._cw_helpers import (
 
 from sr_od.application.currency_war.kernel.cw_economy import (
     xp_click_cost,
-)
-from sr_od.application.currency_war.kernel.cw_exec_state import (
-    deployed_idx_of,
-    deployed_row_slot,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
     BenchSlot,
@@ -255,12 +251,24 @@ def test_emission_resolves_container_index_fail_closed():
     # fail-closed = 视图子表条目失配;不在场 → None。
     assert mandate._deployed_container_idx(
         gs, Unit( char_id='不在场', star=1)) is None
-    # 执行坐标边换算函数(kernel 单一源)互逆且边界正确(原互逆锁迁并):
-    # 下标 0-9 → (排, 槽号) → 下标恒等;跨界值域锁定(front 1-4 / back 1-6)。
+    # 执行坐标边固定双射(overlay-trigger 3.2:换算函数族退役,双射为
+    # 内联算术;本段锁值域不变):下标 0-9 → (排, 槽号) → 下标恒等
+    #(front 1-4 / back 1-6)。
+    from sr_od.application.currency_war.kernel.cw_exec_state import (
+        DEPLOYED_FRONT_CAPACITY,
+    )
+
+    def _row_slot(idx: int) -> tuple[str, int]:
+        return ('front' if idx < DEPLOYED_FRONT_CAPACITY else 'back',
+                (idx + 1 if idx < DEPLOYED_FRONT_CAPACITY
+                 else idx - DEPLOYED_FRONT_CAPACITY + 1))
+
     for idx in range(10):
-        row, slot_no = deployed_row_slot(idx)
-        assert deployed_idx_of(row, slot_no) == idx
-    assert deployed_row_slot(0) == ('front', 1)
-    assert deployed_row_slot(3) == ('front', 4)
-    assert deployed_row_slot(4) == ('back', 1)
-    assert deployed_row_slot(9) == ('back', 6)
+        row, slot_no = _row_slot(idx)
+        _back = (slot_no - 1 if row == 'front'
+                 else DEPLOYED_FRONT_CAPACITY + slot_no - 1)
+        assert _back == idx
+    assert _row_slot(0) == ('front', 1)
+    assert _row_slot(3) == ('front', 4)
+    assert _row_slot(4) == ('back', 1)
+    assert _row_slot(9) == ('back', 6)

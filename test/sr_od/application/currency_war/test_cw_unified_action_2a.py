@@ -495,7 +495,8 @@ def test_prep_sell_gold_booked_exactly_once_across_seam_and_projection():
     gs.observe(gs.gold, 10, evidence='t', sig=_SIG_OBS)
     gs.observe(gs.bench, cw4_bview(slots), evidence='t',
                sig=_SIG_OBS)
-    gs.tracked_books.bench = [bc]   # 旧执行缝腿的数据源(腿复返即红)
+    # (3.2:旧执行缝腿数据源 tracked 第二账已退役;确认口零入账判据
+    #  由「动作参数零入账」本身承载,主域 bench 即唯一账。)
     refund = sell_refund(1, bench_char_cost(bc.unit))
     action = CwActionSellBenchParam(bench_idx=0)
     apply_confirm_effect(session, action)   # 确认口:动作参数零入账

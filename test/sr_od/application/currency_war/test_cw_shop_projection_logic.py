@@ -412,18 +412,14 @@ def test_shop_entry_funnel_bench_survives_synthesis() -> None:
         + [BenchSlot(kind='empty')] * 5,
         capacity=9),
         sig=ChannelSig(family='obs', actor='CwScreenPrep', mode='read'))
-    session = SimpleNamespace()
-    _tracked = [_bc('银枝', star=1)]
-    game_state_of(session).tracked_books.bench = _tracked
     # 未读 bench 域种子(生产置位点 = read_game_state 漏斗不读席位的形态)
     cw4_gs(gs, gold=30, shop_screen='off', bench_unread=True, node_fill=False)
     view = gs.bench.value
     assert view is not None and view.slots[3].unit is not None \
         and view.slots[3].unit.char_id == '银枝', \
         '种子后容器 bench 仍为漏斗真读值(未读域跳写,兜底空表不覆盖)'
-    assert [(b.unit.char_id, b.unit.star) for b in
-            game_state_of(session).tracked_books.bench if b is not None] \
-        == [('银枝', 1)], '执行账 tracked 不受种子影响(容器/执行两账同源)'
+    # (3.2 单账化:原「执行账 tracked 不受种子影响」断言随第二账退役删,
+    #  容器即唯一账,上式即全量锁面。)
 
 
 # ==================== 买牌获取回调腿(计数归上报单点)====================
@@ -481,3 +477,49 @@ def test_on_buy_not_fired_on_rejected_buy(monkeypatch):
 
     assert not out.applied, '前置:满栏且合成不可达 = 拒买'
     assert seen == [], '拒买不触回调'
+
+
+# ==================== 双响防御(提案守卫 expected-vs-主域;overlay-trigger 3.2)====================
+
+
+class TestGuardProposalVsMainDomain:
+    """商店提案守卫:expected 侧 = 主域席位视图(3.2 单账化;历史病灶 =
+    2026-09-09 双响事故,满栏合成买在第二账丢件 → 同 visit 下一动作
+    守卫对拍误炸;单账后分叉结构性不可能,守卫对拍主域即闭环)。
+    分叉停机路径 = AssertionError 响亮炸出(禁静默跳过)。"""
+
+    def test_stale_bench_idx_empty_slot_raises(self):
+        """卖出提案指向主域空槽(跨代际提案)→ AssertionError 停机
+        (空槽形 = 槽内无身份 → 名-槽不一致分支,actual 空)。"""
+        from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
+            guard_proposal_vs_expected,
+        )
+        gs = _gs_of(bench=[_bc('花火', star=1)])   # 仅槽 1 占用
+        with pytest.raises(AssertionError, match='名-槽不一致|空槽|越界'):
+            guard_proposal_vs_expected(
+                CwActionSellBenchParam(bench_idx=3, expect='花火'), gs)
+
+    def test_expect_name_mismatch_raises(self):
+        """卖出提案 expect 名与主域槽内身份不符(名-槽漂移)→ 炸出。"""
+        from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
+            guard_proposal_vs_expected,
+        )
+        gs = _gs_of(bench=[_bc('花火', star=1)])
+        with pytest.raises(AssertionError, match='名-槽不一致'):
+            guard_proposal_vs_expected(
+                CwActionSellBenchParam(bench_idx=0, expect='刃'), gs)
+
+    def test_healthy_proposal_passes_and_buy_off_shop_raises(self):
+        """健康提案零炸出(主域对得上);买牌提案指向店外牌 → 炸出
+        (跨代际/已消费提案 = 策略器 bug 显影)。"""
+        from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
+            guard_proposal_vs_expected,
+        )
+        gs = _gs_of(gold=30, shop=[_card('花火', cost=3)], bench=[])
+        guard_proposal_vs_expected(
+            CwActionSellBenchParam(bench_idx=0, expect=''), gs) is None
+        guard_proposal_vs_expected(
+            CwActionBuyCardParam(card=_card('花火', cost=3)), gs) is None
+        with pytest.raises(AssertionError, match='不在期望态店中'):
+            guard_proposal_vs_expected(
+                CwActionBuyCardParam(card=_card('刃', cost=3)), gs)

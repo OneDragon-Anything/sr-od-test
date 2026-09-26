@@ -10,9 +10,10 @@
 
 锁面:
 ① 载荷 (to_row, to_slot) 直落 = 参数指定槽(反「首空」证据:存在更低位
-   空槽仍落载荷指定槽),写侧与执行链 tracked 同规则;
-② 容器写侧落位与执行拖点同源——同一载荷下,写侧落表下标 = 执行 tracked
-   写入下标 = 拖点 area 序(to_slot−1),换算单一源 = deployed_idx_of;
+   空槽仍落载荷指定槽),写侧与执行链同规则;
+② 容器写侧落位与执行拖点同源——同一载荷下,写侧落表下标 = 执行主域
+   落位下标 = 拖点 area 序(to_slot−1),位置 = 载荷槽(overlay-trigger
+   3.2:换算族退役,固定双射内联承载);
 ③ 目标槽有人 = 交换(被占位角色回发射者源 bench 槽,与
    CwActionSwapDeployParam 换位契约同语义),sim 应用与执行链均不拒。
 """
@@ -30,14 +31,11 @@ from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war.kernel.cw_action_report import (
     report_action_deploy_move_param,
 )
-from sr_od.application.currency_war.kernel.cw_exec_state import (
-    DEPLOYED_CAPACITY,
-    deployed_idx_of,
-)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
     BenchSlot,
     ChannelSig,
+    DeployedView,
     GameState,
     Unit,
     bench_view_slots_of,
@@ -45,14 +43,49 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionDeployMoveParam,
-    mutate_bench_deployed,
 )
 from sr_od.application.currency_war.operations.cw_op.cw_deploy_move_action import (
     CwActionDeployMoveOp,
 )
 
-_SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep')
+_SIG_OBS = ChannelSig(family='obs', actor='cw4_seed', mode='synthesized')
+
+@pytest.fixture(autouse=True)
+def _drain_defect_buffer():
+    """测试卫生(3.2):主域种子经 observe 覆盖开局种子(logic_rand 通道)
+    会产预期内 logic_rand_outcome 行入进程级缓冲——前后双清,防跨用例
+    顺序依赖红(同 test_cw_deployed_merge_31 事故教训)。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        consume_defect_sink,
+    )
+    consume_defect_sink()
+    yield
+    consume_defect_sink()
 _SIG_LOGIC = ChannelSig(family='logic_action', actor='CwScreenPrep')
+
+
+def _seed_main(gs: GameState, *,
+               bench_units: list[tuple[str, int]] | None = None,
+               dep_units: list[tuple[str, int, str, int]] | None = None
+               ) -> None:
+    """主域账面种子(3.2:tracked 第二账退役,执行链测试种子/断言全在
+    主域):bench_units = [(名, 星)] 紧凑落位;dep_units = [(排, 槽号,
+    名, 星)] 载荷落位。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import BenchView
+    if bench_units is not None:
+        slots = [BenchSlot(kind='unit', unit=Unit(char_id=n, star=s))
+                 for n, s in bench_units]
+        slots += [BenchSlot(kind='empty')] * (9 - len(slots))
+        gs.observe(gs.bench, BenchView(slots=slots, capacity=9), sig=_SIG_OBS)
+    if dep_units is not None:
+        front: list[Unit | None] = [None] * 4
+        back: list[Unit | None] = [None] * 6
+        for row, slot_no, name, star in dep_units:
+            (front if row == 'front' else back)[slot_no - 1] = \
+                Unit(char_id=name, star=star)
+        gs.observe(gs.deployed,
+                   DeployedView(front_slots=front, back_slots=back),
+                   sig=_SIG_OBS)
 
 
 def _gs(*, bench: list[BenchSlot | None] | None = None,
@@ -141,10 +174,11 @@ def _deploy_op_env(session: object, drags: list[dict]):
     return env
 
 
-def test_executor_drag_point_and_tracked_lands_at_payload_slot(
+def test_executor_drag_point_and_main_domain_lands_at_payload_slot(
         monkeypatch: pytest.MonkeyPatch):
     """执行链同源锁:载荷 (back, 3) → 拖点 = 后排 area 序 3−1;
-    tracked 写入下标 = deployed_idx_of(同换算单一源,与容器写侧同式)。
+    主域 deployed 落位 = 载荷槽子表下标(与容器写侧同式;
+    overlay-trigger 3.2:tracked 同步腿退役,op 自上报单点写主域)。
     后排 1 号已有占位乙(更低位占用不影响),载荷槽 3 空 = 放置。"""
     monkeypatch.setattr('time.sleep', lambda _s: None)
     from sr_od.application.currency_war.kernel.cw_strategy_session import (
@@ -152,11 +186,8 @@ def test_executor_drag_point_and_tracked_lands_at_payload_slot(
     )
     session = StrategySession()
     gs = game_state_of(session)
-    gs.tracked_books.bench = [BenchSlot(kind='unit',
-                                        unit=Unit(char_id='甲', star=1))]
-    dep = [None] * DEPLOYED_CAPACITY
-    dep[deployed_idx_of('back', 1)] = Unit(char_id='乙', star=1, equips=[])
-    gs.tracked_books.deployed = dep
+    _seed_main(gs, bench_units=[('甲', 1)],
+               dep_units=[('back', 1, '乙', 1)])
     drags: list[dict] = []
     env = _deploy_op_env(session, drags)
     action = CwActionDeployMoveParam(bench_idx=0, to_row='back', to_slot=3,
@@ -165,41 +196,37 @@ def test_executor_drag_point_and_tracked_lands_at_payload_slot(
     assert ok.is_success, '载荷槽合法 = 机械发出(占位只看载荷槽,不拒)'
     assert len(drags) == 1 and drags[0]['end'] == env.executor._back_pts[2], \
         '拖点 = 载荷槽 area 序(to_slot−1),与写侧同源'
-    dep_after = list(gs.tracked_books.deployed)
-    assert dep_after[deployed_idx_of('back', 3)] is not None \
-        and dep_after[deployed_idx_of('back', 3)].char_id == '甲', \
-        'tracked 落载荷槽(换算单一源 = deployed_idx_of)'
-    assert dep_after[deployed_idx_of('back', 1)].char_id == '乙', \
+    _dep_after = gs.deployed.value
+    assert _dep_after.back_slots[2] is not None \
+        and _dep_after.back_slots[2].char_id == '甲', \
+        '主域落载荷槽(位置 = 子表下标,拖点同源)'
+    assert _dep_after.back_slots[0].char_id == '乙', \
         '既有占位不受放置波及(禁静默换槽)'
-    assert gs.tracked_books.bench[0] is None, 'bench 侧摘除照旧'
+    assert gs.bench.value.slots[0].kind == 'empty', 'bench 侧摘除照旧'
 
 
 def test_executor_occupied_target_swaps_without_rejection(
         monkeypatch: pytest.MonkeyPatch):
     """拖拽语义:载荷槽有人 = 交换交互——执行层不判断占位、不拒
-    (round_success 照常发出);tracked 镜像:上场者落载荷槽、被占位者
-    回源 bench 槽。"""
+    (round_success 照常发出);主域镜像(自上报):上场者落载荷槽、
+    被占位者回源 bench 槽。"""
     monkeypatch.setattr('time.sleep', lambda _s: None)
     from sr_od.application.currency_war.kernel.cw_strategy_session import (
         StrategySession,
     )
     session = StrategySession()
     gs = game_state_of(session)
-    gs.tracked_books.bench = [BenchSlot(kind='unit',
-                                        unit=Unit(char_id='甲', star=1))]
-    dep = [None] * DEPLOYED_CAPACITY
-    dep[deployed_idx_of('front', 2)] = Unit(char_id='乙', star=2, equips=[])
-    gs.tracked_books.deployed = dep
+    _seed_main(gs, bench_units=[('甲', 1)],
+               dep_units=[('front', 2, '乙', 2)])
     drags: list[dict] = []
     env = _deploy_op_env(session, drags)
     action = CwActionDeployMoveParam(bench_idx=0, to_row='front', to_slot=2,
                                      faction='')
     ok = CwActionDeployMoveOp(env.op.ctx, action, env=env).run()
     assert ok.is_success, '目标槽有人 = 交换交互,不视为异常、不拒'
-    dep_after = list(gs.tracked_books.deployed)
-    assert dep_after[deployed_idx_of('front', 2)].char_id == '甲', \
+    assert gs.deployed.value.front_slots[1].char_id == '甲', \
         '上场者落被占位载荷槽'
-    _src = gs.tracked_books.bench[0]
+    _src = gs.bench.value.slots[0]
     assert _src is not None and _src.kind == 'unit' \
         and _src.unit.char_id == '乙', \
         '被占位者回发射者源 bench 槽(交换契约,装备随单位对象)'
@@ -208,23 +235,21 @@ def test_executor_occupied_target_swaps_without_rejection(
 def test_executor_rejects_slot_beyond_screen_points_no_drag(
         monkeypatch: pytest.MonkeyPatch):
     """载荷槽越出画面槽位数(back 7 > 6 槽)= 陈旧载荷未发出
-    (round_fail),零拖拽零 tracked 写(观察重派)。"""
+    (round_fail),零拖拽零主域写(观察重派)。"""
     monkeypatch.setattr('time.sleep', lambda _s: None)
     from sr_od.application.currency_war.kernel.cw_strategy_session import (
         StrategySession,
     )
     session = StrategySession()
     gs = game_state_of(session)
-    gs.tracked_books.bench = [BenchSlot(kind='unit',
-                                        unit=Unit(char_id='甲', star=1))]
-    gs.tracked_books.deployed = [None] * DEPLOYED_CAPACITY
+    _seed_main(gs, bench_units=[('甲', 1)])
     drags: list[dict] = []
     env = _deploy_op_env(session, drags)
     action = CwActionDeployMoveParam(bench_idx=0, to_row='back', to_slot=7,
                                      faction='')
     ok = CwActionDeployMoveOp(env.op.ctx, action, env=env).run()
     assert not ok.is_success and drags == [], '越界载荷未发出'
-    assert gs.tracked_books.bench[0] is not None, 'tracked 整笔未写'
+    assert gs.bench.value.slots[0].kind == 'unit', '主域整笔未写'
 
 
 # ===== ③ sim 应用:目标槽有人 = 交换语义 =====
@@ -255,30 +280,6 @@ def test_sim_applies_empty_target_as_place():
     assert gs.deployed.value.back_slots[3].char_id == '甲', '空槽 = 放置(载荷槽 4)'
 
 
-# ===== tracked 同步口(mutate_bench_deployed 部署分支)同规则 =====
 
-def test_mutate_bench_deployed_deploy_branch_payload_direct():
-    """tracked 同步口部署分支同吃载荷契约:载荷直落 + 有人 = 交换;
-    载荷槽非法 = 整笔不写(bench 摘除也不做)。"""
-    bench: list[BenchSlot | None] = [BenchSlot(kind='unit',
-                                               unit=_unit('甲', 1))]
-    dep: list[Unit | None] = [None] * DEPLOYED_CAPACITY
-    dep[deployed_idx_of('back', 3)] = _unit('乙', 3)
-    mutate_bench_deployed(
-        bench, dep,
-        CwActionDeployMoveParam(bench_idx=0, to_row='back', to_slot=3,
-                                faction=''))
-    assert dep[deployed_idx_of('back', 3)].char_id == '甲', '载荷直落'
-    assert bench[0].kind == 'unit' and bench[0].unit.char_id == '乙', \
-        '被占位者回源 bench 槽'
-    # 载荷槽非法(后排 7 号越出定长表)= 整笔不写
-    bench2: list[BenchSlot | None] = [BenchSlot(kind='unit',
-                                                unit=_unit('甲', 1))]
-    dep2: list[Unit | None] = [None] * DEPLOYED_CAPACITY
-    mutate_bench_deployed(
-        bench2, dep2,
-        CwActionDeployMoveParam(bench_idx=0, to_row='back', to_slot=7,
-                                faction=''))
-    assert bench2[0] is not None and bench2[0].unit.char_id == '甲', \
-        '载荷槽非法 = bench 摘除也不做'
-    assert all(d is None for d in dep2), 'deployed 零写'
+# (mutate 同步口测试段已随 overlay-trigger 3.2 tracked 第二账退役删除:
+#  同步口本身已删,载荷直落/交换语义由上方 sim 应用段(上报函数)承载。)

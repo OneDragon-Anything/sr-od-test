@@ -31,9 +31,24 @@ tracked 亦退役:对账唯一合法时点 = 观察边界 kernel cw_reconcile,�
 """
 from __future__ import annotations
 
+import pytest
+
 from types import SimpleNamespace
 
 from one_dragon.base.geometry.point import Point
+
+@pytest.fixture(autouse=True)
+def _drain_defect_buffer():
+    """测试卫生(3.2):主域种子经 observe 覆盖开局种子(logic_rand 通道)
+    会产预期内 logic_rand_outcome 行入进程级缓冲——前后双清,防跨用例
+    顺序依赖红。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        consume_defect_sink,
+    )
+    consume_defect_sink()
+    yield
+    consume_defect_sink()
+
 from sr_od.application.currency_war.kernel.cw_game_state import (
     BenchSlot,
     BenchView,
@@ -154,40 +169,50 @@ def test_default_and_anchored_states_pass_gate_to_core(monkeypatch):
     assert act is _sentinel
 
 
-# ===== 锁3 锚定置位(kernel reconcile_tracking 写回点)=====
+# ===== 锁3 锚定置位(kernel reconcile_tracking 对账成功点)=====
 
 def test_reconcile_bench_writeback_marks_observed():
-    """bench 侧屏幕真值写回成功 → 容器观察态 True(唯一生产置位点)。
+    """bench 侧屏幕真值对账成功 → 容器观察锚 True(唯一生产置位点;
+    3.2:锚定语义 = 主域已按屏幕真值对账,置位点不变)。
     (载体 = P6 直产 BenchView;断言语义零变。)"""
     session = StrategySession()
     _mark_unobserved(session)
     assert tracked_unobserved(session)
 
-    ok, _, _ = _reconcile(session, _bench_view1('花火', 1), DeployedView())
+    ok, bench_out, _ = _reconcile(session, _bench_view1('花火', 1), DeployedView())
 
     assert ok is True
     assert not tracked_unobserved(session)
     assert game_state_of(session).tracked_account_observed.value is True
-    assert [(b.unit.char_id, b.unit.star) for b in
-            game_state_of(session).tracked_books.bench if b is not None] \
-        == [('花火', 1)]
+    # director 消费门后视图(生产环式:reconcile 返回值 observe 落主域)。
+    gs = game_state_of(session)
+    gs.observe(gs.bench, bench_out,
+               sig=ChannelSig(family='obs', actor='t', mode='read'))
+    _view = gs.bench.value
+    assert [(s.unit.char_id, s.unit.star)
+            for s in (_view.slots if _view is not None else [])
+            if s.kind == 'unit' and s.unit is not None] == [('花火', 1)]
 
 
 def test_reconcile_failed_anchor_keeps_unobserved():
-    """失败形态不置位:deployed-only 写回(bench 未读)与双空读守卫均
+    """失败形态不置位:deployed-only 对账(bench 未读)与双空读守卫均
     保持原观察态——账未锚定,商店访问继续走关店重判链。"""
-    # deployed-only(bench=None):函数写回 deployed 返 True,但 bench 侧
-    # 零写 = 主账未锚定。
+    # deployed-only(bench=None):函数对账 deployed 返 True,但 bench 侧
+    # 零读 = 主账未锚定。
     s1 = StrategySession()
     _mark_unobserved(s1)
     assert _reconcile(s1, None, DeployedView())[0] is True
     assert tracked_unobserved(s1)
     assert game_state_of(s1).tracked_account_observed.value is False
     # 双空读守卫(双空读 + 前值非空 = 疑过渡帧保旧):返 False 不置位。
+    # 前值非空的构造 = 主域 bench 先观察(3.2:前值基线 = 主域现值)。
     s2 = StrategySession()
     _mark_unobserved(s2)
-    game_state_of(s2).tracked_books.bench = [BenchSlot(
-        kind='unit', unit=Unit(char_id='花火', star=1))]
+    _slots = [BenchSlot(kind='unit', unit=Unit(char_id='花火', star=1))] \
+        + [BenchSlot(kind='empty')] * 8
+    game_state_of(s2).observe(
+        game_state_of(s2).bench, BenchView(slots=_slots, capacity=9),
+        sig=ChannelSig(family='obs', actor='t', mode='read'))
     assert _reconcile(s2, BenchView(), DeployedView())[0] is False
     assert tracked_unobserved(s2)
 

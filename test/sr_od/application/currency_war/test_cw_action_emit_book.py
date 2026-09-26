@@ -61,6 +61,19 @@ from sr_od.application.currency_war.prep_actions import PrepExecEnv
 _SIG = ChannelSig(family='logic_action', actor='CwScreenShop')
 
 
+@pytest.fixture(autouse=True)
+def _drain_defect_buffer():
+    """测试卫生(3.2):主域种子经 observe 覆盖开局种子(logic_rand 通道)
+    会产预期内 logic_rand_outcome 行入进程级缓冲——前后双清,防跨用例
+    顺序依赖红(同 test_cw_deployed_merge_31 事故教训)。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        consume_defect_sink,
+    )
+    consume_defect_sink()
+    yield
+    consume_defect_sink()
+
+
 # ============================================================
 # 锁1 BuyCardOp:点击发出即记账(零像素验证,恒 True)
 # ============================================================
@@ -88,7 +101,8 @@ def _buy_op_env(monkeypatch: pytest.MonkeyPatch,
             clicks.append(pt)
 
     class _Op:
-        ctx = SimpleNamespace(controller=_Ctrl())
+        ctx = SimpleNamespace(controller=_Ctrl(),
+                              cw_match=SimpleNamespace(session=session))
 
     env = ShopExecEnv(
         op=_Op(), match=SimpleNamespace(session=session), config=None,
@@ -100,9 +114,9 @@ def _buy_op_env(monkeypatch: pytest.MonkeyPatch,
 
 
 def test_buy_card_emits_and_books_unconditionally(monkeypatch):
-    """机械执行主锁:恒返回 True + 照常落账(账本/tracked 全落)——零判效
-    的直接证据;落地真值归下一入口观察对账(静默不生效 → shop+gold 失配
-    安灯停,按真 bug 修)。"""
+    """机械执行主锁:恒返回 True + 照常落账(账本/主域 bench 全落)——
+    零判效的直接证据;落地真值归下一入口观察对账(静默不生效 →
+    shop+gold 失配安灯停,按真 bug 修)。"""
     op, env, ledger, gs, clicks = _buy_op_env(monkeypatch)
 
     ok = op.run()
@@ -112,8 +126,10 @@ def test_buy_card_emits_and_books_unconditionally(monkeypatch):
     assert ledger.total_buy == 1 and ledger.spend_executed == 3
     assert ledger.bought_names == ['花火']
     assert len(ledger.buy_purchases) == 1
-    assert [(b.unit.char_id, b.unit.star)
-            for b in gs.tracked_books.bench if b is not None] == [('花火', 1)]
+    _view = gs.bench.value
+    assert [(s.unit.char_id, s.unit.star)
+            for s in (_view.slots if _view is not None else [])
+            if s.kind == 'unit' and s.unit is not None] == [('花火', 1)]
 
 
 def test_buy_card_missing_slot_point_fails_loudly(monkeypatch):
@@ -305,14 +321,17 @@ def _deploy_env(session: object | None):
 
 
 def test_deploy_move_tracks_immediately_on_emit(monkeypatch):
-    """发出即记账主锁:拖拽发出即 tracked 记上阵 + bench 摘除;拖后
-    画面零变化(零差帧形态)也不回滚不申报——落地判定归观察侧 reconcile
-    (静默不生效 → 账实失配安灯停,按真 bug 修)。"""
+    """发出即记账主锁:拖拽发出即主域记上阵 + bench 摘除(3.2:自上报
+    单点写主域);拖后画面零变化(零差帧形态)也不回滚不申报——落地
+    判定归观察侧 reconcile(静默不生效 → 账实失配安灯停,按真 bug 修)。"""
     monkeypatch.setattr('time.sleep', lambda _s: None)
     session = StrategySession()
     gs = game_state_of(session)
-    gs.tracked_books.bench = [None, BenchSlot(kind='unit', unit=Unit(
-        char_id='甲', star=1))]
+    from sr_od.application.currency_war.kernel.cw_game_state import BenchView
+    _slots = [BenchSlot(kind='empty'), BenchSlot(kind='unit', unit=Unit(
+        char_id='甲', star=1))] + [BenchSlot(kind='empty')] * 7
+    gs.observe(gs.bench, BenchView(slots=_slots, capacity=9),
+               sig=ChannelSig(family='obs', actor='t', mode='read'))
 
     env = _deploy_env(session)
     action = CwActionDeployMoveParam(bench_idx=1, to_row='front', to_slot=1,
@@ -320,11 +339,10 @@ def test_deploy_move_tracks_immediately_on_emit(monkeypatch):
     ok = CwActionDeployMoveOp(env.op.ctx, action, env=env).run()
 
     assert ok.is_success, '机械发出即职责完成(round 成功态)'
-    assert ok.is_success, '发出即记账'
     assert '发出即记账' in (ok.status or '')
-    moved = [d for d in gs.tracked_books.deployed
-             if d is not None and d.char_id == '甲']
-    assert moved, 'tracked 记上阵(拖后零变化也照记 = 零判效)'
-    assert all(b is None or b.kind != 'unit' or b.unit is None
-               or b.unit.char_id != '甲'
-               for b in (gs.tracked_books.bench or [])), 'bench 侧摘除照旧'
+    moved = [u for u in (gs.deployed.value.front_slots or [])
+             if u is not None and u.char_id == '甲']
+    assert moved, '主域记上阵(拖后零变化也照记 = 零判效)'
+    assert all(s.kind != 'unit' or s.unit is None
+               or s.unit.char_id != '甲'
+               for s in (gs.bench.value.slots or [])), 'bench 侧摘除照旧'

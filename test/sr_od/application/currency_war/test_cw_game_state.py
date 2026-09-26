@@ -606,7 +606,7 @@ def _patch_clean_readers(monkeypatch: pytest.MonkeyPatch) -> None:
                         raising=False)
     monkeypatch.setattr(obs, 'resolve_paddle_pair',
                         lambda ctx, screen, level: (None, None), raising=False)
-    monkeypatch.setattr(obs, 'board_from_tracked', lambda tracked: None,
+    monkeypatch.setattr(obs, 'board_from_deployed', lambda tracked: None,
                         raising=False)
     monkeypatch.setattr(obs, 'is_prep_like_frame',
                         lambda ctx, screen: True, raising=False)
@@ -698,7 +698,7 @@ def test_observation_feed_shop_open_reads_refresh_price(
                         (82, False), raising=False)
     monkeypatch.setattr(obs, 'read_level_up_cost', lambda ctx, screen: 4,
                         raising=False)
-    monkeypatch.setattr(obs, 'board_from_tracked', lambda tracked: None,
+    monkeypatch.setattr(obs, 'board_from_deployed', lambda tracked: None,
                         raising=False)
     monkeypatch.setattr(obs, '_board_pairs',
                         lambda ctx, screen, max_count=9, expected=None:

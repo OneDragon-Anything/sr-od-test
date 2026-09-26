@@ -112,7 +112,7 @@ def _patch_shop_open_readers(monkeypatch: pytest.MonkeyPatch,
                         (82, False), raising=False)
     monkeypatch.setattr(obs, 'read_level_up_cost', lambda ctx, screen: 4,
                         raising=False)
-    monkeypatch.setattr(obs, 'board_from_tracked', lambda tracked: None,
+    monkeypatch.setattr(obs, 'board_from_deployed', lambda tracked: None,
                         raising=False)
     monkeypatch.setattr(obs, '_board_pairs',
                         lambda ctx, screen, max_count=9, expected=None:
