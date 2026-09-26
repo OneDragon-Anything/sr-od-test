@@ -312,9 +312,16 @@ def test_unit_has_no_slot_information_bit() -> None:
 def test_board_rewrite_clear_then_front_deploy_no_crash() -> None:
     """清盘 → 再买 → 前排部署不崩(需修-1 交互锁):EffectLedgerBridge
     全场出售清空后视图 = 规范形空视图(front_slots 定长 4),后续
-    deploy_move 前排直址落位不 IndexError;清盘写本身保持单写。"""
+    deploy_move 前排直址落位不 IndexError;清盘写本身保持单写。
+
+    测试卫生:未锚定清盘走 write_logic_rand,下方 bench 再观察覆盖
+    异值 → 一行 logic_rand_outcome 入进程级缺陷缓冲(预期内,非安灯)
+    ——用例末尾 consume_defect_sink 排水,防跨用例顺序依赖红。"""
     from sr_od.application.currency_war.kernel.cw_effect_inventory import (
         apply_board_rewrite,
+    )
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        consume_defect_sink,
     )
     from sr_od.application.currency_war.kernel.cw_investments import (
         STRATEGY_EFFECTS,
@@ -343,6 +350,7 @@ def test_board_rewrite_clear_then_front_deploy_no_crash() -> None:
         _SIG)
     assert gs.deployed.value.front_slots[3].char_id == '甲', \
         '前排 4 号直址落位(清盘后规范形视图上不崩)'
+    consume_defect_sink()   # 排水:logic_rand_outcome 行不跨用例泄漏
 
 
 def test_deploy_move_back_slot8_with_nine_layout_applies_and_extends() -> None:
