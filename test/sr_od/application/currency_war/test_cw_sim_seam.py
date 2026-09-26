@@ -160,13 +160,9 @@ def test_find_area_leg_visible_query(_sim_ctx):
         assert r_hit.result is OperationRoundResultEnum.SUCCESS
 
 
-def test_fact_event_default_off():
-    """事实事件缺省关(sink 未装 = 缺省态):emit 零外送不误伤
-    (board_changed 在封闭集内,校验通过即静默返回)。"""
-    from sr_od.application.currency_war.kernel.cw_event_hooks import (
-        emit_fact_event,
-    )
-    emit_fact_event('board_changed')
+# (事实事件缺省关测试已随 overlay-trigger 3.5 事实事件槽退役删除:
+#  事实事件槽本体与全部广播调用点同批删除,sim 呈现 =
+#  容器登记 + 问询时点懒呈现,锁在 test_cw_sim_backend 懒呈现两测试。)
 
 
 # ============================================================ 3.4 联调接线锁

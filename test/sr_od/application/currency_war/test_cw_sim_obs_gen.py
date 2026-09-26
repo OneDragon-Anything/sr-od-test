@@ -27,9 +27,6 @@ from sr_od.application.currency_war.kernel.cw_action_report import (
     report_action_pick_supply_param,
     report_action_start_battle_param,
 )
-from sr_od.application.currency_war.kernel.cw_event_hooks import (
-    emit_fact_event,
-)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     BenchSlot,
     ChannelSig,
@@ -427,7 +424,6 @@ def test_gen_megastar_candidates_from_container() -> None:
             produced_by='test', evidence='t',
             sig=ChannelSig(family='logic_action', actor='test',
                            mode='compute'))
-        emit_fact_event('board_changed', {'actor': 'test'})
         assert b.screen_identity() == SCREEN_MEGASTAR
         opts_before = b.gs.megastar_opts.value
         assert opts_before
@@ -457,7 +453,6 @@ def test_gen_planner_empty_bucket_writes_like_live() -> None:
             produced_by='test', evidence='t',
             sig=ChannelSig(family='logic_action', actor='test',
                            mode='compute'))
-        emit_fact_event('star_up', {'card': '银狼LV.999'})
         assert b.screen_identity() == SCREEN_PLANNER
         obs = b.observe(SCREEN_PLANNER)
         assert obs.on_screen is True

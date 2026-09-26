@@ -27,8 +27,6 @@ from sr_od.application.currency_war.sim.cw_sim_enemy import (
     ENCOUNTER_TIER_BONUS,
 )
 from sr_od.application.currency_war.sim.cw_sim_overlay import (
-    OVERLAY_KINDS,
-    OverlayQueue,
     apply_disclosed_pick,
     pending_disclosure_items,
     sample_options,
@@ -91,26 +89,9 @@ def test_supply_options_three_distinct_one_diamond() -> None:
 
 
 # ============================================================ M22 overlay
-
-def test_overlay_queue_fifo_and_registry_guard() -> None:
-    """队列:入队序呈现(FIFO);集外 kind 入队即炸(防词表漂移);
-    peek 不出队。"""
-    q = OverlayQueue()
-    assert q.peek() is None
-    q.push('megastar')
-    q.push('partner')
-    assert q.peek() == 'megastar'
-    assert len(q) == 2
-    assert q.pop() == 'megastar'
-    assert q.pop() == 'partner'
-    try:
-        q.push('nope')
-        raise AssertionError('集外 kind 应炸错')
-    except ValueError:
-        pass
-    assert {'megastar', 'partner', 'expert', 'fate', 'aha', 'hack',
-            'planner'} <= OVERLAY_KINDS
-
+# (统一队列 FIFO/词表守卫测试已随 overlay-trigger 3.5 队列
+#  退役删除:呈现数据源 = 容器登记,kind 词表守卫 =
+#  register 口封闭集,锁在 test_cw_overlay_trigger_33。)
 
 def test_overlay_options_placeholders_distinct() -> None:
     """选项生成占位:expert 五选一(画面档语义)/其余三选一;同屏不
@@ -131,7 +112,7 @@ def test_disclosed_pick_chosen_field_mapping() -> None:
     assert gs.chosen_megastar.value == '角色A'
     apply_disclosed_pick(gs, 'partner', '角色B')
     assert gs.chosen_partner.value == '角色B'
-    apply_disclosed_pick(gs, 'hack', '选项X')
+    apply_disclosed_pick(gs, 'planner', '选项X')
     assert gs.chosen_hack.value == '选项X'
     apply_disclosed_pick(gs, 'fate', '选项Y')  # 不炸、不写
     apply_disclosed_pick(gs, 'aha', '选项Z')

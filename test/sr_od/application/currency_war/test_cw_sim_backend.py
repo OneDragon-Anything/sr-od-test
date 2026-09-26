@@ -16,6 +16,7 @@
 from __future__ import annotations
 
 from sr_od.application.currency_war.kernel.cw_overlay_register import (
+    consume_screen_change,
     register_screen_change,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
@@ -644,14 +645,10 @@ def test_box_open_pick_grant_via_gain_chain() -> None:
 
 # ============================================================ overlay 触发层
 
-def test_megastar_evaluator_fires_on_faction_tier_cross() -> None:
-    """巨星评估器:board_changed 事实事件消费盛会之星羁绊计数,跨层
-    (tiers 首层 2)入队并模态呈现;重复事件不重复入队(逐层水位)。
-    阵容成员单一源 = data/cw_chars.py 注册表;事件发射 = 真实写端形态
-    (行域观察后 emit,与 deploy/buy/sell/wear 上报落地同形)。"""
-    from sr_od.application.currency_war.kernel.cw_event_hooks import (
-        emit_fact_event,
-    )
+def test_megastar_lazy_presentation_on_identity_query() -> None:
+    """巨星呈现(3.5 终态):盛会之星资格集跨档(逻辑写 → 值回调判据
+    register)→ 问询时点懒呈现;值等重写零回调不重复登记。
+    阵容成员单一源 = data/cw_chars.py 注册表。"""
     b = _backend(7)
     try:
         b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
@@ -666,21 +663,27 @@ def test_megastar_evaluator_fires_on_faction_tier_cross() -> None:
                                       mode='compute'))
         assert any(p.kind == 'megastar'
                    for p in gs.screen_changes.pending), '判据登记在册'
-        emit_fact_event('board_changed', {'actor': 'test'})
+        # 3.5:呈现位 = screen_identity 问询时点懒呈现(事实事件槽退役)。
         assert b.screen_identity() == '货币战争-盛会之星', '跨首层模态呈现'
         assert gs.megastar_opts.value, '候选写容器槽'
-        assert len(b.overlay_queue) == 1   # 评估器入队(3.5 退役清扫面)
-        # 幂等:同层重复事实事件不再入队(水位不回退)
-        emit_fact_event('board_changed', {'actor': 'test'})
-        assert len(b.overlay_queue) == 1
+        assert any(p.kind == 'megastar'
+                   for p in gs.screen_changes.pending), \
+            '呈现不清条目(消费归选卡上报)'
+        consume_screen_change(gs, 'megastar')
+        b._dismiss_modal()
+        # 幂等:值等重写零回调(判据不重复登记)
+        gs.write_logic(gs.deployed, gs.deployed.value,
+                       produced_by='test', evidence='t',
+                       sig=ChannelSig(family='logic_action', actor='test',
+                                      mode='compute'))
+        assert not gs.screen_changes.pending, '值等写零回调(无重复登记)'
     finally:
         uninstall_backend()
 
 
-def test_planner_evaluator_fires_on_silver_wolf_two_star() -> None:
-    """planner 呈现(overlay-trigger 3.4:数据源 = 容器登记):场上银狼
-    逻辑写 1★→2★(值回调判据 register)→ star_up 事实事件呈现检查 →
-    模态呈现;同费用档簿记使二次升星不重复。"""
+def test_planner_lazy_presentation_dedup_marker() -> None:
+    """planner 呈现(3.5 终态):场上银狼逻辑写 1★→2★(值回调判据
+    register)→ 问询时点懒呈现;同费用档簿记使二次升星不重复。"""
     b = _backend(7)
     try:
         b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
@@ -702,16 +705,16 @@ def test_planner_evaluator_fires_on_silver_wolf_two_star() -> None:
                                       mode='compute'))
         assert any(p.kind == 'planner'
                    for p in gs.screen_changes.pending), '判据登记在册'
-        from sr_od.application.currency_war.kernel.cw_event_hooks import (
-            emit_fact_event,
-        )
-        emit_fact_event('star_up', {'card': '银狼LV.999'})
+        # 3.5:呈现位 = screen_identity 问询时点懒呈现(事实事件槽退役)。
         assert b.screen_identity() == '货币战争-银狼升星'
-        assert b.planner_fired
-        assert len(b.overlay_queue) == 1   # 评估器入队(3.5 退役清扫面)
-        emit_fact_event('star_up', {'card': '银狼LV.999'})
-        assert len(b.overlay_queue) == 1, '一次性标志去重(队列不重复入队)'
-        assert b.screen_identity() == '货币战争-银狼升星'
+        consume_screen_change(gs, 'planner')
+        b._dismiss_modal()
+        # 同费用档簿记:二次升星(值等重写零回调)不重复登记
+        gs.write_logic(gs.deployed, gs.deployed.value,
+                       produced_by='test', evidence='t',
+                       sig=ChannelSig(family='logic_action', actor='test',
+                                      mode='compute'))
+        assert not gs.screen_changes.pending, '费用档已弹过(零重复登记)'
     finally:
         uninstall_backend()
 

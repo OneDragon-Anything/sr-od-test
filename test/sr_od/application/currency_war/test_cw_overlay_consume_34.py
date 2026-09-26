@@ -195,7 +195,9 @@ class TestSimPresentationFromPending:
             b._present_pending_overlay()
             assert b.screen_identity() == '货币战争-备战', '零呈现'
             assert b.gs.screen_changes.pending == [], '三 kind 全消费'
-            assert OVERLAY_PARAM_PENDING in b.disclosures, '披露标记在册'
+            assert all(f'{OVERLAY_PARAM_PENDING}:{k}' in b.disclosures
+                       for k in ('aha', 'wish_trial', 'star_tome')), \
+                '逐 kind 披露留痕(aha/wish_trial/star_tome 各自键)'
         finally:
             uninstall_backend()
 
