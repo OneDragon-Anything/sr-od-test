@@ -1,5 +1,5 @@
 """节点推进动作上报 kernel 原语直测:迭代
-changes/2026-09-20-node-advance-action-report landing 3.1 判据面
+节点推进上报判据面
 (推进生效原语 advance_node_effective / report_node_advance 观察态门 /
 observe_node_anchor 锚定处置)。
 

@@ -1,5 +1,5 @@
 """补给侧节点推进接线行为锁(迭代
-changes/2026-09-20-node-advance-action-report landing 3.3 判据面;
+补给节点推进接线判据面;
 去证据门形态 2026-09-21 用户裁定):
 
 - ``CwScreenSupplyNode`` 观察 node 节点条锚定(顶部「备战阶段 X-Y」→

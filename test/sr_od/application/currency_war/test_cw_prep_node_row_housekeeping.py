@@ -1,5 +1,5 @@
 """节点行观察归位·备战观察域消费位锁(迭代
-changes/2026-09-21-shop-refresh-terminal 详设 §2.8;landing 3.4 判据
+商店刷新终结判据
 「备战入口 heavy 观察触发槽序表/台账写」)。
 
 节点行写点原宿主 = 商店访问尾探针(``cw_screen_shop.probe_node_type``,

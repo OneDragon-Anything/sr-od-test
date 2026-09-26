@@ -1,5 +1,5 @@
 """出战统一执行器(launch_battle_unified)直测:迭代
-changes/2026-09-16-prep-visit-op landing 3.1 判据面。
+统一发射判据面。
 
 出战执行路径现存测试锁 = 零(audit-executor.md §2.4 实证),本文件为首批:
 - armed 全绿 → 事实返回,无调用面私有记账(失败语义分轨);

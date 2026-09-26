@@ -1,5 +1,5 @@
 """效果推进段(tick_effect_boundary)直测:迁移迭代
-changes/2026-09-15-effect-ledger-self-advance landing 3.1 判据面。
+效果账本自推进判据面。
 
 节点边界金公式结算腿已随「结算真值收口」批退役(回滚 b390db204/77503d353/
 5f7f69820:金真值 = 结算屏右上角计数经 apply_settlement_cover/settle_truth

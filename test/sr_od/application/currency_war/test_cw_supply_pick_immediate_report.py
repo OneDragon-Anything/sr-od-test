@@ -1,5 +1,5 @@
 """补给选卡即时上报 + 装备名注册表级分层归一 行为锁(迭代
-changes/2026-09-21-event-refresh-unify-supply-pick landing 3.1 判据面;
+补给选卡即时上报判据面;
 design §2.0B/§3 验收锚 1)。
 
 - **pick 即时上报锁**(fixture 剧本,宿主机械半全桩):确认点击后
