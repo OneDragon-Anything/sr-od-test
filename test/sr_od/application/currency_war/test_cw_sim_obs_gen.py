@@ -8,7 +8,7 @@
 - 金路径清单覆盖核对:13 档名逐行有生成器(注册表 = 清单的代码镜像,
   键集零差零冗余)。
 
-设计依据 = sim 统一迭代 design.md §2 + details/flow-seam.md §3(迭代内
+设计依据 = sim- + flow-seam 接缝契约(正本 = sim/sim-
 合法引用;正本更新义务归末阶段)。
 """
 from __future__ import annotations

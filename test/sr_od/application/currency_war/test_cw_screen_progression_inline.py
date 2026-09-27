@@ -1,5 +1,5 @@
 """推进型 11 屏骨架内联形态锁 + 武装箱选卡观察上报接线锁(迭代
-2026-09-18-screen-op-flat-report T-6 批)。
+ T-6 批)。
 
 背景:11 推进型屏脱离共享骨架(原推进型基类,其骨架语义 = 「入口观察 →
 单次推进 → 重入观察裁决交回」),逐屏内联为「观察 node → 决策动作 node」
@@ -27,7 +27,7 @@ family.py):
   决策动作 node = 容器外读数决策 → 选卡链派发(env idx-only,target
   停喂)→ 选卡即终结 success;无 match 局外不设早退支(用户裁决
   2026-09-22 全族删门),沿正常链路自然失败;
-- **读数闸放宽锁**(design.md §2.7):读数闸上限 ``_CARD_NAME_LEN_MAX``
+- **读数闸放宽锁**(:读数闸上限 ``_CARD_NAME_LEN_MAX``
   派生自装备注册表最长名(防手抄常数),9 字特权名经真读数闸存活并
   归一精确命中(旧 8 字手抄上限先于归一化确定性丢弃 9 字名 = 四选一
   缩三选一)。
@@ -478,7 +478,7 @@ def test_box_pick_lcs_ambiguity_rejection_and_unique_pass(test_context,
 
 def test_box_pick_read_gate_admits_registry_longest_priv_name(
         test_context, monkeypatch):
-    """读数闸放宽锁(design.md §2.7):上限 ``_CARD_NAME_LEN_MAX`` = 注册表
+    """读数闸放宽锁(:上限 ``_CARD_NAME_LEN_MAX`` = 注册表
     最长名派生(防手抄常数——手抄值在注册表最长名变化时即红),9 字特权名
     「战场进化手册·特权」经真读数闸存活(旧 8 字手抄上限先于归一化会把它
     确定性静默丢弃 = 四选一缩三选一),并经标准化门归一精确命中落容器;

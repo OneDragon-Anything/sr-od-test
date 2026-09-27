@@ -830,7 +830,7 @@ def test_injection_consistency_single_registry_source() -> None:
 def test_effective_cost_tier_and_registry_routing():
     """当前费用档读口三形态:LV.999 档透传(未观察归约 3)/其余角色注册表
     值/未注册名 0(与 bench_char_cost 未知→3 退款保守估分野)。锁设计
-    changes/2026-09-20-yinlang-starup-accounting/design.md §2.1。"""
+    。"""
     from dataclasses import replace
 
     from sr_od.application.currency_war.kernel.cw_economy import effective_cost

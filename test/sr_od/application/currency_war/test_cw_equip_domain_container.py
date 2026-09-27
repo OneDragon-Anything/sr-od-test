@@ -1,4 +1,4 @@
-"""装备域容器换源三锁(迭代 2026-09-18-prep-obs-retirement 阶段 3.2/T-2)。
+"""装备域容器换源三锁( 阶段 3.2/T-2)。
 
 M7 装备计划(``_build_equip_wear_plan``)四路输入(owned/occupied/
 back_layout/deployed)全面换容器 game state 读口,黑板帧消费清零。锁:

@@ -1,4 +1,4 @@
-"""晶矿容器化三锁(迭代 2026-09-18-prep-obs-retirement 阶段 3.4/T-4)。
+"""晶矿容器化三锁( 阶段 3.4/T-4)。
 
 晶矿决策输入换容器 spheres 域(OreSight.points 载荷坐标;旧黑板
 ``obs.spheres`` 读点清零)——锁:
@@ -83,7 +83,7 @@ def test_collect_ore_stale_payload_zero_write():
 
 
 def test_ore_empty_read_yields_no_targets():
-    """空读上报语义锁(reviewer r1 打回项1):count=0/points=() 空载荷
+    """空读上报语义锁:count=0/points=() 空载荷
     → 读口空列——空读照写语义兑现,防上一帧残留假晶矿坐标喂进点击载荷。"""
     session = cw4_session()
     gs = game_state_of(session)

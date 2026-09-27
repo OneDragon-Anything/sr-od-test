@@ -113,7 +113,7 @@ def test_prep_consumer_rejects_illegal_return_f3_fail(
     守卫断言
     语义 = 策略器 bug 响亮暴露:决策循环在执行前拒绝并以具名 fail
     交回外循环,禁静默跳过。走 op 决策动作 node 路径(两 node 形态
-    (迭代 2026-09-18-screen-op-flat-report)的 ③-⑤ 单动作决策循环宿主,
+    ()的 ③-⑤ 单动作决策循环宿主,
     守卫逐字同,单锁辖同一条契约)。
     """
 

@@ -1,4 +1,4 @@
-"""备战帧现行链写端锁(链观察落地批 landing.md §3.2;语义正本 =
+"""备战帧现行链写端锁(链观察落地批 ;语义正本 =
 game_state/chain-observation.md §3)。
 
 写端 = cw_screen_prep._write_prep_node_chain(模块级纯函数,session/slots/

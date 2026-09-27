@@ -1,6 +1,6 @@
 """商店免费刷新次数 GameState Field 化回归锁(迭代
-2026-09-21-shop-refresh-terminal 阶段 3.2;设计依据 =
-changes/2026-09-21-shop-refresh-terminal/landing.md §3.2 与
+ 阶段 3.2;设计依据 =
+ 与
 details/shop-visit-loop.md §2.3/§2.9)。
 
 判据 ↔ 测试对照(landing §3.2 完成判据):

@@ -1,7 +1,6 @@
-"""工具上报容器写锁(tool-gain-report 迭代;design.md §2.2/§2.5)。
+"""工具上报容器写锁(容器写语义;判据见正文。
 
-设计依据 = docs/develop/sr_od/application/currency_war/changes/
-2026-09-21-tool-gain-report/design.md(定稿):
+(定稿):
 - 逐工具写端锁:记账载体 = equips 合并单笔写(消耗移除与效果同笔,
   禁拆两笔);扳手两笔(equips 合并 + 行域清空);炉随机面
   write_logic_rand 采样链;

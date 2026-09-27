@@ -1,4 +1,4 @@
-"""遭遇节点 + 盛会之星 两 node 形态锁(迭代 2026-09-18-screen-op-flat-report)。
+"""遭遇节点 + 盛会之星 两 node 形态锁()。
 
 两屏均已迁移「观察 node → 决策动作 node」直继承 SrOperation 形态(盛会之星
 = 节点循环 overlay 环形;遭遇 = 带分支刷新链的全形态)。锁的语义(测试
@@ -11,15 +11,15 @@
 - **观察上报接线锁**(遭遇):观察 node 稳定帧一次读(候选 + 剩余次数)
   → report 经屏文件落容器 ``encounter`` + ``encounter_refresh_left``
   (容器终值)+ obs 与刷新文本锚点挂实例属性。
-- **刷新链终结锁**(遭遇,迭代 2026-09-21-event-refresh-unify-supply-pick
+- **刷新链终结锁**(遭遇,
   3.3:刷新 = 终结动作,剩余闸 = 观察真值):建议刷新 ∧ 闸放行(容器
   left>0 且锚点在位)→ 文本锚定点圆钮恰一次 + 固定等待 → round_success
   终结交回——无同访问 ``screenshot()`` 重读面、无 report 二次覆盖写、
   无重决策、零选卡派发;闸拒绝(剩余 0/None)→ 零点击,重调一次决策
   落选卡;重调仍建议刷新(刷新锚读缺面)→ round_fail 交回(计入外循环
-  重派上限——防线行为,迭代 2026-09-24-encounter-screen-strategy-
+  重派上限——防线行为,
   migration §2.5)。
-- **派发即终结锁**(遭遇,迭代 2026-09-21-event-refresh-unify-supply-pick
+- **派发即终结锁**(遭遇,
   3.3 扩围):选卡确认链派发后 round_success 终结交回(零重入裁决轮);
   空候选 = 零点击终结交回(禁盲选派发确认——不可逆消耗);闸拒绝
   重调落选卡后同样终结。chosen_encounter 发射即写契约(动作侧 report
@@ -145,7 +145,7 @@ def _make_megastar(test_context, monkeypatch, *, in_node: bool,
                    options: list | None = None,
                    pick: object | None = None,
                    stub_action: bool = True):
-    """盛会之星真类装配(两 node 形态,迭代 2026-09-18-screen-op-flat-report):
+    """盛会之星真类装配(两 node 形态,):
     门桩 + 候选读链桩(观察 node 读屏函数注入点)+ 动作体调用计数。
     旗标宿主 = 策略器 StrategyState(经 session.strategy_state 通道)。
     ``pick`` = 策略桩回值(决策守卫锁用;传真实 ``CwActionPickMegastar
@@ -312,7 +312,7 @@ def _refresh_fixture(test_context, monkeypatch) -> tuple[list, list]:
 
 def test_encounter_refresh_terminal_click_once_and_success(
         test_context, monkeypatch) -> None:
-    """刷新链终结锁(迭代 2026-09-21-event-refresh-unify-supply-pick
+    """刷新链终结锁(
     design §2.0A):建议刷新 ∧ 剩余闸放行(容器 left=1 ∧ 锚点在位)→
     文本锚定点圆钮**恰一次** + 固定等待 → round_success 终结交回;同访问
     零 ``screenshot()`` 重读、零 report 二次覆盖写(容器终值 = 刷前候选)、
@@ -392,7 +392,7 @@ def test_encounter_refresh_gate_rejects_zero_and_none(
 
 def test_encounter_refresh_gate_mismatch_round_fail_redispatch(
         test_context, monkeypatch) -> None:
-    """刷新锚读缺防线锁(迭代 2026-09-24-encounter-screen-strategy-
+    """刷新锚读缺防线锁(
     migration design §2.5):拒绝后重调仍返回刷新建议(刷新锚点读缺面)
     → round_fail 交回——失败计入外循环重派上限
     (``OP_FAIL_REDISPATCH_LIMIT`` 只计连续 fail,零点击 round_success

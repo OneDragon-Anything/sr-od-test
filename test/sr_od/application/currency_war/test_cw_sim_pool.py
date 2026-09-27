@@ -1,7 +1,7 @@
 """sim 重做 S2(M06 派生池 + M05 商店发牌)回归锁。
 
-设计正本 = ``docs/develop/sr_od/application/currency_war/changes/
-2026-09-15-sim-redesign/design.md`` §2.2 M05/M06;锁面 = 副本数真值
+设计正本 = ``
+`` §2.2 M05/M06;锁面 = 副本数真值
 (27/27/9/9/9)/held 星级派生不变量/≥9 清空发牌过滤(U11)/专家入池
 假设(U10)/5 槽发牌与概率表/免费刷先行(M05)。
 """

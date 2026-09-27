@@ -1,6 +1,6 @@
 """GameState 消费切换批回归锁(迁移批次二;设计正本 =
 docs/develop/sr_od/application/currency_war/
-changes/2026-09-11-unified-state/details/GameState-数据结构设计.md,下称「设计」)。
+容器数据结构设计,下称「设计」;正本 = game_state/fields.md)。
 
 锁面 = 批次二任务书件:§3.4 单次逻辑写入口(申报豁免写端,合同正本在
 批一文件)/§3.3.6-8 刷新执行事实组(付费/免费闸/下限 0/evidence 轮键
@@ -241,7 +241,7 @@ def test_merge_projection_direct_write_and_observe_wins() -> None:
         consume_defect_sink()
     assert len(rows2) == 1, '失配留证(kind=observe_vs_logic_mismatch)'
     assert rows2[0]['kind'] == 'observe_vs_logic_mismatch'
-    assert rows2[0]['ts'], '缺陷行补 ts(迭代 2026-09-16-unified-obs-reconcile 新行形状)'
+    assert rows2[0]['ts'], '缺陷行补 ts( 新行形状)'
     assert bs2.bench.value == real_view \
         and bs2.bench.source == 'observation', \
         '观察赢:实读覆盖逻辑值(推算 bug 不挂账,留证修码)'

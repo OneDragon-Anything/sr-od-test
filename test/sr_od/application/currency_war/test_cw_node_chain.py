@@ -1,7 +1,6 @@
 """链观察载体锁(NodeChain/TokenCell + node_path/baseline 字段 + 查询口)。
 
-出处 = docs/develop/sr_od/application/currency_war/changes/
-2026-09-16-chain-observation-landing/landing.md §3.1(载体升级批);
+ §3.1(载体升级批);
 语义正本 = game_state/chain-observation.md §2/§6。
 """
 from __future__ import annotations

@@ -1,9 +1,8 @@
 """CW 统一动作工厂 批3 锁面(备战执行器收编:体迁零行为,出战链在册
 例外)。
 
-出处 = docs/develop/sr_od/application/currency_war/changes/
-2026-09-14-unified-action-factory/landing.md §3.3 判据 +
-design.md §2.4(分派改查注册表 / PrepExecEnv detail-emitted 旁路 /
+ §3.3 判据 +
+分派改查注册表 / PrepExecEnv detail-emitted 旁路 /
 终结判定对齐 terminal+terminal_wait / OpenShopOp terminal 承载行 /
 StartBattleOp 基类契约在册例外)。规则正本 =
 flow/action-logic-state.md 与 flow/logic-updates/prep-executor-actions.md。

@@ -1,4 +1,4 @@
-"""统一观察架构·补给节点行为锁(两 node 形态,迭代 2026-09-18-screen-op-flat-report)。
+"""统一观察架构·补给节点行为锁(两 node 形态,)。
 
 补给 CwScreenSupplyNode 已迁移「观察 node → 决策动作 node」直继承
 SrOperation 形态(同批原七选卡屏与结构/分流/源面锁已随并存窗收口整删,
@@ -12,7 +12,7 @@ SrOperation 形态(同批原七选卡屏与结构/分流/源面锁已随并存�
   三元组,机械派发半照发(记录面不拦截动作);刷新轮不写 = 真选守卫
   (兜底点卡/刷新路径与真选分支互斥)。
 - **supply 刷新闸锁**(剩余语义观察真值,迭代
-  2026-09-21-event-refresh-unify-supply-pick 3.2):剩余 1 → 建议刷新 →
+   3.2):剩余 1 → 建议刷新 →
   点钮恰一次 + 终结交回;剩余 0/None → 零点击不按刷新终结,重调一次
   决策按原评分选卡。原「已用计数发射即记」写端锁随计数闸退役(考古走 git)。
 
@@ -129,7 +129,7 @@ def test_supply_chosen_written_on_confirm_pick(test_context, monkeypatch) -> Non
 
 def test_supply_refresh_gate_left_semantics(test_context, monkeypatch) -> None:
     """supply 刷新闸行为锁(剩余语义观察真值,迭代
-    2026-09-21-event-refresh-unify-supply-pick design §2.0A/§2.1):
+     design §2.0A/§2.1):
     - 剩余 1 → 建议刷新 → 点钮恰一次 + 终结交回(_do_action 返回 True);
     - 剩余 0 / None → 零点击不按刷新终结,重调一次决策后落选卡
       (机械派发半照发,刷新钮零点击)。

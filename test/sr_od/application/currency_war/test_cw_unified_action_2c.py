@@ -1,8 +1,7 @@
 """CW 统一动作工厂 批2c 锁面(书册卡开卡归位 R10;卡片臂策略器化 2026-09-19)。
 
-出处 = docs/develop/sr_od/application/currency_war/changes/
-2026-09-14-unified-action-factory/landing.md §3.2c 判据 +
-design.md §2.6 R10 条款。规则正本 = flow/action-logic-state.md §3.7。
+ §3.2c 判据 +
+ R10 条款。规则正本 = flow/action-logic-state.md §3.7。
 2026-09-19 用户裁定:开卡时机归策略实现管——备战环入口清场段
 (``cw_screen_prep._clear_prep_cards``)撤销,发射位 = 策略器 entry ①
 prep 实体面卡片臂(容器 bench kind 触发);本文件接线锁随之换面。
@@ -297,7 +296,7 @@ def test_deploymove_projection_records_resolved_row():
 def test_expert_invite_entry_select_only(test_context, monkeypatch):
     """收缩为弹窗画面 op:open_card 节点拆退役(属性不在场);入口门 =
     弹窗已开单一形态(两 node 形态观察 node 承载,迭代
-    2026-09-18-screen-op-flat-report)——弹窗不在 = fail 交回外循环重识别
+    )——弹窗不在 = fail 交回外循环重识别
     (外循环按下一帧画面重分发自愈;开卡缺位由备战词表
     CwActionOpenBookcardParam 链承接)。选卡成功链的行为面由决策出口守卫
     锁组承重,本锁不重复。"""

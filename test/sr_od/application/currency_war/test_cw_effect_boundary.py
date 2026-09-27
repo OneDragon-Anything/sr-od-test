@@ -5,7 +5,7 @@
 5f7f69820:金真值 = 结算屏右上角计数经 apply_settlement_cover/settle_truth
 无条件收口,公式腿再叠算 = 双计)——本文件只保留账本推进/刷新发放/异常
 边界三判据(prep_frame 形参随金结算腿退役删除,迭代
-2026-09-20-node-advance-action-report):
+):
 
 - ①None 守卫(未观察不当真进节点)        → test_none_guard_skips_whole_segment
 - ②生效序推进 → advanced + 刷新到账      → test_advances_and_grants

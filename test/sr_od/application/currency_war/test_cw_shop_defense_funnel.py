@@ -1,6 +1,6 @@
 """商店 op 防御路径改道引导漏斗·三行为差消除锁(终态契约 T-5 返工)。
 
-病理(T-5-r1 验收①,.debug/change-reviews/2026-09-16-strategy-terminal-contract/
+病理(T-5-r1 验收①,.debug/change-reviews//
 T-5-r1.md §5.1a):``cw_screen_shop`` 独立单跑的 cw_match 缺席防御
 分支此前裸构造 ``CurrencyWarMatch``,与生产容器建立漏斗
 ``establish_new_match`` 实差三处行为:rng 种子(漏斗按 config.strategy_seed

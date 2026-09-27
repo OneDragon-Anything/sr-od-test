@@ -1,7 +1,7 @@
 """cw_mismatch_policy 单元锁:豁免注册表三维度查表 + 安灯钩子槽。
 
-锁面来源 = 迭代 2026-09-16-unified-obs-reconcile design.md §2.2/§2.4
-(落地判据见同目录 landing.md §3.1)。注册表经 monkeypatch 换测试专用
+锁面来源 =  §2.4
+(落地判据见)。注册表经 monkeypatch 换测试专用
 dict,不污染模块常量(真注册表恒空,扩面走代码 review)。"""
 from __future__ import annotations
 

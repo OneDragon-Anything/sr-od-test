@@ -1,8 +1,8 @@
 """T-60 验收修复批锁:零写迁移通道锁(补给确认 pick_supply,银狼闭环
-design.md §2.2 确定性通道·通道宿主迁移)。
+ 确定性通道·通道宿主迁移)。
 
-设计正本 = changes/2026-09-18-yinlang-exclusive-loop/design.md §2.2 +
-landing.md §3.2④(3.2 批漏项,本批补齐)。锁面:
+设计正本 =  +
+ 批漏项,本批补齐)。锁面:
 
 - **补给单位腿锁** = 按实际开出内容应用(char 入席 +
   装备后果腿;supply 为即时单相上报——确认点击后一口写
@@ -108,7 +108,7 @@ def rows_sink() -> _RowSink:
 
 def test_pick_supply_immediate_char_and_consequence(
         rows_sink: _RowSink) -> None:
-    """补给确认即时单相上报锁(迭代 2026-09-21-event-refresh-unify-
+    """补给确认即时单相上报锁(
     supply-pick design §2.0B):一口写 owned 规范名 + 单位腿(char 入席
     1★ + 合成级联)+ 装备后果腿(命中表 → 送角色腿)——无发射/落地
     两相,无证据参数。"""

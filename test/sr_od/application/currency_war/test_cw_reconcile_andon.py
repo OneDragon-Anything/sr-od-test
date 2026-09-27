@@ -1,4 +1,4 @@
-"""统一观察对账安灯·装配闭包锁(迭代 2026-09-16-unified-obs-reconcile §2.4;
+"""统一观察对账安灯·装配闭包锁( §2.4;
 2026-09-16 框架化:处置壳 = stop_running 一行,截图归框架,flag/闩退役)。
 
 闭包工厂 = currency_war_app._build_reconcile_andon(ctx);kernel 槽缺省关的

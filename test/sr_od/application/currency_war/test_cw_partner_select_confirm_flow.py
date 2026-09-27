@@ -208,7 +208,7 @@ def test_partner_confirm_rejected_bounded_retry(
         f'未选中实证下每脉冲都应重点选候选:{len(card_clicks)} clicks={clicks}')
     assert len(set(map(str, card_clicks))) == 1, (
         f'重入轮点位应稳定(决策一次,防跨轮换候选):{card_clicks}')
-    # 轮次上限算术(两 node 形态,迭代 2026-09-18-screen-op-flat-report):
+    # 轮次上限算术(两 node 形态,):
     # 检测游戏窗口 1 + 观察 1 + 脉冲 4 + 守卫 fail 1 = MAX + 3(原单 node
     # 形态无观察段 = MAX + 2)。锁的语义 = 显式退出先于节点预算耗尽,
     # 非轮次精确值。

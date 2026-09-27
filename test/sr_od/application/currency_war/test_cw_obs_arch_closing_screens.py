@@ -3,9 +3,9 @@
 断言集模板 = test_cw_obs_arch_event_screens.py(事件屏两 node 形态先例)。
 本文件辖:位面过渡 CwScreenPlaneTransition / 武装箱弹窗 CwScreenArmoryBox /
 未达上限弹窗 CwScreenDeployNotFull / 等待1-1 CwScreenWaitOneOne(均已迁移
-两 node 形态,迭代 2026-09-18-screen-op-flat-report)。位面情报采集
+两 node 形态,)。位面情报采集
 CwScreenPlaneIntel 已重构为 6 node 管线(接管域迭代
-2026-09-20-takeover-intel-pipeline),其行为锁随迁
+),其行为锁随迁
 test_cw_takeover_intel_pipeline.py,本文件不再辖。
 
 **sim 腿不适用例外清单(随迁移批逐屏落测试 docstring,总纲 §2.2-3)**:
@@ -19,7 +19,7 @@ test_cw_takeover_intel_pipeline.py,本文件不再辖。
 
 - **重入裁决×门组合行为锁**:「已发」旗标裁决位 = 位面过渡(两 node
   形态)住决策动作 node 顶部,直驱 act 承重;武装箱(两 node 形态,
-  迭代 2026-09-18-screen-op-flat-report)同位;未达上限(两 node 形态)
+  )同位;未达上限(两 node 形态)
   同位——门命中 + 旗标在位 → 裁决不触发、确认重发,miss 已发 → 裁决
   success(原「裁决先行式 vs miss 分支内式」位序差异随两 node 拆分自然
   消解,行为观测点 = 门命中+旗标在位时旗标清否,由组合行为锁承重)。
@@ -86,7 +86,7 @@ def _stub_controller(test_context, monkeypatch: pytest.MonkeyPatch) -> list:
 def test_reentry_arbitration_flag_gate_combination(test_context,
                                                    monkeypatch) -> None:
     """重入裁决×门组合行为锁(位面过渡/武装箱/未达上限均已迁移两 node
-    形态(迭代 2026-09-18-screen-op-flat-report),「已发」旗标裁决住决策
+    形态(),「已发」旗标裁决住决策
     动作 node 顶部,直驱 act 承重):
     - 位面过渡:门命中 + pending 在位 → 裁决不误判完成(门在 = 动作未
       落地,重点一次机械交回 round_wait);推进体缺坐标的失败轮旗标保持
@@ -276,7 +276,7 @@ def _make_armory(test_context, monkeypatch: pytest.MonkeyPatch, *,
 
 def test_armory_box_two_node_observe_report_and_round_wait(
         test_context, monkeypatch) -> None:
-    """武装箱两 node 形态锁(轻屏统一形态,迭代 2026-09-18-screen-op-flat-
+    """武装箱两 node 形态锁(轻屏统一形态,
     report):观察 node = 标识门(miss = round_fail 交编排壳,obs 不装载)+
     obs{on_screen} → 占位 report 接线(gs 缺席跳过不炸;本屏现役零容器
     写点,接口为统一形态占位);决策动作 node = 点 × 关闭机械交回

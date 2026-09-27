@@ -1,7 +1,6 @@
 """遭遇选档决策单帧锁(能力态直通形;判据语义 =
-docs/develop/sr_od/application/currency_war/changes/
-2026-09-24-encounter-screen-strategy-migration/design.md §2.2-§2.5,
-落地凭据 = 同目录 landing.md §3.1;验收锚点 = design §2.12 锚点 1-6
+ §2.2-§2.5,
+;验收锚点 = design §2.12 锚点 1-6
 + 立场重拍回退态(design §2.2/§2.3)。
 
 锁语义不写巧合:断言「这段判据应该怎么表现」(窗口普战口径、κ_S 三态、

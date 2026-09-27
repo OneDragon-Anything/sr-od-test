@@ -1,7 +1,7 @@
 """G-S1 死库存退出通道行为锁(判据⑤)。
 
 出处与语义单一源:
-- 判据规格 = changes/2026-09-15-gs1-exit-channel/design.md §2.1.5((a)(b)(c)
+- 判据规格 = 
   三合取 + 遥测三键族),数学论证 = proofs P96(帧级支配 + N=3 载体寿命);
 - 载体 = ``sell_gate.dead_pair_exit_release`` 单点函数 + 持久获取账
   (``register_acquisition``,写端 = shop._emit_buy 发射位);

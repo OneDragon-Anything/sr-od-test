@@ -1,6 +1,6 @@
 """sim 接缝锁测试(端口模块 + CwOperation 覆写面 + 事件钩子槽 + 桩)。
 
-锁设计约定(sim 统一迭代 design.md §2 接口契约 + flow-seam 详设 §1/§2/§4):
+锁设计约定(sim 端口接口契约,正本 = sim/sim-;flow-seam §1/§2/§4):
 - 端口模块槽缺省关(不装后端 = 纯实机,读屏改道 helper 走原读链);
 - 单装配纪律(重复安装 raise / uninstall 幂等 / teardown 必卸);
 - sim 模式 CwOperation 三条腿:screenshot 哨兵帧不触 controller、点击

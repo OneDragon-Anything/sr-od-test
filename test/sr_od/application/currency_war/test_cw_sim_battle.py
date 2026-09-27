@@ -1,7 +1,7 @@
 """sim 重做 S4(M12/M13/M14 战斗结算)回归锁。
 
-设计正本 = ``docs/develop/sr_od/application/currency_war/changes/
-2026-09-15-sim-redesign/design.md``;锁面 = U01 随机输出面(胜负 P=0.5
+设计正本 = ``
+``;锁面 = U01 随机输出面(胜负 P=0.5
 均匀伯努利/扣血均匀区间 [23,70]/流键可复现)/U03 分项置 None/简化档
 标记/M14 结构规则(败才扣血/首次 0hp 保底剩 1/再次归零局终)。
 """

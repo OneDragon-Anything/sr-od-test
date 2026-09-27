@@ -1,8 +1,7 @@
 """统一观察架构·五相位屏迁移锁(余项收口阶段一)。
 
 设计正本 = docs/develop/sr_od/application/currency_war/flow/统一观察架构-画面op基类设计.md
-(下称「架构设计」);迁移粒度/五段形态依据 = changes/2026-09-11-
-unified-observation/details/五相位屏迁移详设.md(逐屏五段表与语义保真点);
+(下称「架构设计」);迁移粒度/五段形态依据 = );
 迁移手法单一源 = 装配点分流 + 五段钩子转录 + 实机适配器①封口 + on_outcome
 注册表(先例:CwScreenPrep/遭遇/盛会之星,断言集模板 =
 test_cw_obs_arch_event_screens.py)。本批五屏:投资环境 CwScreenInvestEnv /
@@ -26,7 +25,7 @@ CwScreenBriefing / BOSS 简报 CwScreenBossBriefing。
 
 - **重入裁决归属锁**(单一定谳;锁形 = 裁决×门组合行为锁
   ``test_reentry_arbitration_flag_gate_combination``):投资环境/投资策略/
-  简报已迁移两 node 形态(迭代 2026-09-18-screen-op-flat-report),
+  简报已迁移两 node 形态(),
   「已发」旗标裁决住决策动作 node 顶部(直驱 act 承重);BOSS 简报
   (两 node 形态)无裁决旗标,横幅退场裁决 = 外循环重派后的下一次
   入口门;战斗等待无裁决旗标。
@@ -1136,7 +1135,7 @@ def test_battle_wait_fallback_exits(test_context, monkeypatch) -> None:
     兜底链 + op 截图留证(flag 已退役,零真实 .debug 落盘)。
     生产路径逐轮 = 观察门双 miss → 决策循环分支链 miss → 计数。
     (原 [长按] M39 锁随结算点击/M39 迁入 CwOpSettleConfirm 改住
-    test_cw_settle_confirm_flow,迭代 2026-09-20-node-advance-action-report
+    test_cw_settle_confirm_flow,
     landing §3.2。)"""
     # [未知 bail]
     from sr_od.application.currency_war.operations.cw_screen import (

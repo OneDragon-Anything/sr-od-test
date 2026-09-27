@@ -1,7 +1,7 @@
 """银狼闭环 3.2 落码批锁(R1 双腿 + 上阵变换窗 + 获得后果 + pick_invest 迁移)。
 
-设计正本 = changes/2026-09-18-yinlang-exclusive-loop/design.md §2.0-§2.4/§2.1A
-+ landing.md §3.2 完成判据。锁面:
+设计正本 = §2.4/§2.1A
++  完成判据。锁面:
 
 - **腿型判定单源**(design §2.1①):装备域优先——破解芯片卡文含「弱化」
   仍判 equip(碰撞治理);longest-match(分身墨镜Max 不被短名截胡);相似
@@ -13,7 +13,7 @@
   零枚/未观察 → 不写 + 留证(planner_upgrade_source_missing);
 - **装备腿**(design §2.1②):归一命中 → 入栏 + 获得后果链;未解析 →
   值不变翻来源 + 留证(planner_equip_name_unresolved);
-- **即时单相上报**(迭代 2026-09-21-pick-planner-equip-immediate-report
+- **即时单相上报**(
   design §2.0):一次上报即应用完整效果腿,无发射/落地两相、无证据闩;
 - **上阵变换窗**(design §2.1A):3★银狼LV.999 落场写下一费用档 1★;
   其余单位恒等搬运零行为差;级联全员正常推演(费用档不同时存在,
@@ -320,7 +320,7 @@ def test_unknown_leg_evidenced_zero_write(
 
 def test_planner_report_is_immediate_single_phase(
         rows_sink: _RowSink) -> None:
-    """单相即时上报锁(迭代 2026-09-21-pick-planner-equip-immediate-report
+    """单相即时上报锁(
     design §2.0):确认点击后一次上报即应用效果腿(2★ 源即消费)——无
     发射相零写窗、无落地证据闩(两相已退役);与投资策略侧即时上报锁
     (test_invest_strategy_landing_hacker_wolf)同形态。"""
@@ -555,7 +555,7 @@ def test_invest_unregistered_card_unchanged(
         '表外环境零入席(安静不写)'
     assert gs2.active_strategies.value in (None, [])
     # 效果注册表 = 骇客单行 + 三箱腿卡(工厂自 _STRATEGY_BOX_GRANTS 生成,
-    # 迭代 2026-09-24-advanced-armory-box;欢愉契约随 portal 支迁获得链,
+    # ;欢愉契约随 portal 支迁获得链,
     # 策略屏专用死键已删,迁移批 = 表住 cw_gain_effects)。
     assert set(PICK_INVEST_EFFECTS) == {
         '骇客专家:银狼', '战术义眼++', '保守派', '快请专家·彩'}

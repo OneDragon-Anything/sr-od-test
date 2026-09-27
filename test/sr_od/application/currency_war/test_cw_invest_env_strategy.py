@@ -1,8 +1,7 @@
-"""投资环境策略层迁移 3.1 单测(纯新增阶段;判据 = landing.md §3.1 ①-⑦)。
+"""投资环境策略层单测(纯新增阶段;判据 = ①-⑦)。
 
-设计依据 = docs/develop/sr_od/application/currency_war/changes/
-2026-09-23-invest-env-strategy-migration/design.md §2.2-§2.9(下称 design §)
-与 landing.md §3.1 完成判据。3.1 期策略层新文件与 kernel 旧机并存;3.2 起
+ §2.2-§2.9(下称 design §)
+与  完成判据。3.1 期策略层新文件与 kernel 旧机并存;3.2 起
 接线生效,本文件补 flow 消费侧锁面(见下)。
 
 判据映射:

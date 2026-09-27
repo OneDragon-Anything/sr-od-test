@@ -1,6 +1,6 @@
 """商店费用徽章 → (费用, 星级) 解析锁:银狼LV.999 升费后基准费 ≠ 注册表
 起始费形态(银狼升星记账批;设计 = docs/develop/sr_od/application/
-currency_war/changes/2026-09-20-yinlang-starup-accounting/design.md §2.3)。
+currency_war/。
 倍数体系 = 3^(星级−1):1★×1 / 2★×3 / 3★×9(cw_observation.
 _SHOP_COST_MULT_TO_STAR)。
 """

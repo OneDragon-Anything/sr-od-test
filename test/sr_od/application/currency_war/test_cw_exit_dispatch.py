@@ -1,7 +1,7 @@
 """退出链三分发结构行为锁(cw-exit-dispatch 落地 3.2,landing §3.2 ①-⑥)。
 
-出处 = docs/develop/sr_od/application/currency_war/changes/2026-09-15-cw-exit-dispatch/
-design.md §2.1(判定序表/默认委托/互踢推演)。真帧 fixture 驱动、真建档识别链,
+出处 = 
+判定序表/默认委托/互踢推演)。真帧 fixture 驱动、真建档识别链,
 FixtureController 记录点击。CwLoop 在委托锁①⑤中桩化(边界 op,内部行为不在
 本锁范围);停机位行为由锁⑥直跑真 CwLoop 覆盖(免战帧 = 旧穿透双锚判否、
 新名单判是的分歧点)。

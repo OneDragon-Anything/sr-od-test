@@ -1,7 +1,6 @@
 """落位载荷与执行面锁(P2 拖拽语义落码;载荷契约/拖拽语义/sim 语义)。
 
-设计依据 = docs/develop/sr_od/application/currency_war/changes/
-2026-09-20-benchchar-retirement/design.md §2.2(落位决策权归策略层):
+ §2.2(落位决策权归策略层):
 - 载荷契约:CwActionDeployMoveParam.to_slot(排内 1 基画面槽号)与 to_row
   合成完整落位意图;执行链与容器写侧均禁首空位现读,按载荷直落;
 - 拖拽语义 = 游戏规则:目标槽空 = 放置,有人 = 交换交互;执行层不判断

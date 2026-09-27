@@ -1,5 +1,5 @@
 """GameState 迁移回归锁(迁移批次一;设计正本 = docs/develop/sr_od/application/currency_war/
-changes/2026-09-11-unified-state/details/GameState-数据结构设计.md,下称「设计」)。
+容器数据结构设计,下称「设计」;正本 = game_state/fields.md)。
 
 锁面 = 写入口两态制与构造守卫(§2.1-§2.4/§8.6-5)+ 派生不存储
 (§8.6-4 续)+ 观察流接线与 hp 失读统一口径 + 心跳哨兵(§2.4 关键
@@ -267,7 +267,7 @@ def test_observe_over_logic_mismatch_defect_row_and_sink_drain() -> None:
 
 def test_observe_mismatch_three_way_routing(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """失配三分流并一锁(迭代 2026-09-16-unified-obs-reconcile,design §2.3):
+    """失配三分流并一锁(,design §2.3):
 
     - 真失配腿:缺陷行落盘后安灯钩子同步被调(行同构);sim 前缀两值
       (sim:engine 现役 / sim:synthesized 本迭代并列)→ 不落行不调钩子;
@@ -769,7 +769,7 @@ def test_observation_feed_battle_frame_kind_inherits(
 
 def test_observation_feed_carries_screen_name_and_precise_exempt(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """漏斗画面名贯通锁(迭代 2026-09-16-unified-obs-reconcile):主喂入口
+    """漏斗画面名贯通锁():主喂入口
     read_game_state(screen_name=...) 观察侧 sig 带画面名 → 金字段失配行
     screen 在场(非 None),精确豁免键 (画面, gold, 写端前缀) 可命中。
     screen_name 缺省 None 形态 = 现状测试不变(sig.screen=None 仅通配可豁免)。"""
@@ -1083,7 +1083,7 @@ def test_on_buy_bumps_buy_key_by_k() -> None:
 # 字符串在场断言)本批不收录:分诊=修复需 import 在飞互斥面符号
 # (cw_screen_shop 的执行落地 bump、cw_loop 的节点 tick),且本体为
 # 源码扫描形态(AGENTS §10.4.4 禁)。挂点接线的行为锁待在飞批落地后按
-# 行为锁形态重写,台账见 .debug/progress/2026-09-11-cw-clear-run/reports/
+# 行为锁形态重写,台账见 .debug/progress//reports/
 # 分诊报告(易失)。
 
 

@@ -1,8 +1,7 @@
 """CW 统一动作工厂 批4 锁面(事件线 pick 收编 + 比对收口迁移 + 注册完备
 锁)。
 
-出处 = docs/develop/sr_od/application/currency_war/changes/
-2026-09-14-unified-action-factory/landing.md §3.4 完成判据 + design.md
+ §3.4 完成判据 + 
 §2.5(pick 注册 / 注册完备锁)+ §2.4 比对收口清单(三面迁观察侧)。
 
 锁面全部为运行时行为锁(源码扫描测试禁止,AGENTS.md §10.4);桩宿主

@@ -10,7 +10,7 @@
 - 装备腿:穿着即合成住 kernel 穿装备上报(规则件缺口补 kernel,sim 与
   实机动作腿同构)。
 
-设计依据 = sim 统一迭代 design.md §2 + details/sim-backend.md(迭代内
+设计依据 = sim- 后端结构(正本 = sim/sim-
 合法引用;正本更新义务归末阶段)。
 """
 from __future__ import annotations

@@ -240,7 +240,7 @@ def test_match_final_listener_fires_unarmed_and_offmatch(tmp_path) -> None:
 
 
 def test_g10_retrograde_obs_event_evidence(journal, run_id) -> None:
-    """G10 倒退留证(锚定口径,迭代 2026-09-20-node-advance-action-report
+    """G10 倒退留证(锚定口径,
     切换后写端 = observe_node_anchor):读数 < 现值 → 零状态变更(字段不动)
     + obs_event 留证(event=arbitrate,actor = 锚定宿主登记名,占版本)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)

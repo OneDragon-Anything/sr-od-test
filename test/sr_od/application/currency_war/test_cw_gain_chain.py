@@ -773,7 +773,7 @@ def test_gain_invest_strategy_session_ledger_leg() -> None:
 def test_on_strategy_gained_unregistered_quiet() -> None:
     """未收录卡:查无效果安静不写(gain-chain §3 裁定④);效果表键集 =
     骇客单行 + 三箱腿卡(箱腿由工厂自 _STRATEGY_BOX_GRANTS 生成,
-    迭代 2026-09-24-advanced-armory-box)。"""
+    )。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
         PICK_INVEST_EFFECTS,
     )
@@ -789,7 +789,7 @@ def test_on_strategy_gained_unregistered_quiet() -> None:
 
 # ============================================================ 策略箱腿效果
 # (策略卡获得时点占席道具发放,进阶武装箱首例;迭代
-# 2026-09-24-advanced-armory-box design §2.3)
+#  design §2.3)
 
 
 @pytest.mark.parametrize('card', ['战术义眼++', '保守派', '快请专家·彩'])
@@ -830,7 +830,7 @@ def test_strategy_box_leg_bench_full_overflow_name(
 
 
 def test_strategy_box_grants_consistency_lock() -> None:
-    """发放名单单一源一致性锁(attack.md A4 阻断修订):效果体工厂表
+    """发放名单单一源一致性锁(阻断修订):效果体工厂表
     _STRATEGY_BOX_GRANTS 与登记表 STRATEGY_GRANTS 三卡 items_immediate
     逐对相等(表集同锁,防工厂表扩员而登记面漏登——两处独立字面量的
     名字漂移在备战断言不可见,唯此锁 + 席满溢出真值可暴露)。"""
@@ -1001,7 +1001,7 @@ def test_joy_rider_rng_injection_deterministic_and_reaches_both(
 
 def test_joy_rider_fires_once_per_report_call(
         rows_sink: _RowSink) -> None:
-    """触发计数封闭清单(单相即时上报,迭代 2026-09-21-pick-planner-
+    """触发计数封闭清单(单相即时上报,
     equip-immediate-report):一次上报 equip/upgrade/unknown 三腿各恰一次
     授予(rider 在腿型分派前,与腿型无关);leg_type='' 直调 rider 仍触发
     (兜底形态)且走终态兜底零写(reason = unrouted_leg_zero_write)。"""

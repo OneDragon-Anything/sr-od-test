@@ -86,6 +86,6 @@ def test_supply_options_three_distinct_one_diamond() -> None:
 # ============================================================ M22 overlay
 # (统一队列 FIFO/词表守卫测试已随  队列
 #  退役删除:呈现数据源 = 容器登记,kind 词表守卫 =
-#  register 口封闭集,锁在 test_cw_overlay_trigger_33。)
+#  register 口封闭集,锁在 test_cw_overlay_trigger。)
 # (overlay 选项生成占位测试已随占位框架退役删除:选项效果建模候实机补档按需重建,呈现数据源 = 容器登记。)
 # (占位效果应用测试已随占位框架退役删除:选中值写容器归选卡上报链,chosen 位映射见 kernel 词表。)

@@ -1,4 +1,4 @@
-"""晶矿谓词席自由槽容器锁(迭代 2026-09-18-prep-obs-retirement 阶段 3.3/T-3)。
+"""晶矿谓词席自由槽容器锁( 阶段 3.3/T-3)。
 
 ``_sphere_bench_free`` 改容器派生读口 ``bench_free_slots``(旧黑板
 ``free_bench_slots`` 独立记账退役)——锁:

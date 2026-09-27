@@ -1,4 +1,4 @@
-"""节点循环族 8 屏两 node 形态锁(迭代 2026-09-18-screen-op-flat-report)。
+"""节点循环族 8 屏两 node 形态锁()。
 
 锁的语义(测试纪律:只锁新形态的核心约定,先例 = test_cw_obs_arch_event_
 screens.py 盛会之星段;report 函数级契约由 test_cw_screen_report_ports 锁
@@ -16,7 +16,7 @@ screens.py 盛会之星段;report 函数级契约由 test_cw_screen_report_ports
 - **决策动作 node 锁**(银狼策划,无门单发型):决策从容器零参读
   (决策调用形态不变)→ 组装 equip(腿型载荷 classify_planner_leg)→
   点卡链派发 → 派发即 round_success 终结(零重入裁决轮;即时上报迭代
-  2026-09-21-pick-planner-equip-immediate-report。原装备三选一代表锁
+  。原装备三选一代表锁
   随该屏误判退役删除)。
 
 驱动方式 = 真类实例(构造走 __init__)+ 读链/门/机械点击链桩化,节点
@@ -654,7 +654,7 @@ def test_wish_act_dispatches_strategy_param_env_op_only(
 
 def test_planner_act_decides_leg_and_dispatch_terminal(
         test_context, monkeypatch) -> None:
-    """决策动作 node 锁(银狼策划,即时上报迭代 2026-09-21-pick-planner-
+    """决策动作 node 锁(银狼策划,即时上报
     equip-immediate-report design §2.1):零参决策 → 腿型判定单源
     ``classify_planner_leg`` → env 携腿型载荷 → 选卡确认链派发即
     ``round_success`` 终结(零重入裁决轮、零证据闩存证——效果腿在动作 op

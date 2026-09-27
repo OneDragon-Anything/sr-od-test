@@ -1,4 +1,4 @@
-"""部署 cap 板满门三锁(迭代 2026-09-18-prep-obs-retirement 阶段 3.1)。
+"""部署 cap 板满门三锁( 阶段 3.1)。
 
 事故形态 = match_g_20260918_023823(定谳见 .debug/temp/incidents/
 20260918-reconcile/rootcause-reopen.md 案一):板满 3/3 时决策帧黑板名单

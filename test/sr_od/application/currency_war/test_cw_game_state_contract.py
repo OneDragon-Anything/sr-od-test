@@ -169,12 +169,12 @@ def test_same_value_rewrite_flags_and_consumes_version(journal_sink) -> None:
 
 
 def test_match_facts_domain_version_bumped_lands_in_journal_rows() -> None:
-    """match_facts 域版本 bump 落行(接管域迭代 2026-09-20-takeover-intel-pipeline:
+    """match_facts 域版本 bump 落行(接管域:
     接管补采计数/完成闩两字段退役 = 域内容变更,gs_schema 域版本 3;
-    银狼升星记账批 2026-09-20-yinlang-starup-accounting 新增
-    lv999_cost_tier = 域版本 4;迭代 2026-09-20-node-advance-action-report T-8
+    银狼升星记账批  新增
+    lv999_cost_tier = 域版本 4; T-8
     退役零消费恢复局旗标 resumed_match = 域版本 5;迭代
-    2026-09-24-scheduled-env-gifts 新增定时道具发放队列 pending_item_grants
+     新增定时道具发放队列 pending_item_grants
     = 域版本 6):
     DEFAULT_GS_SCHEMA 声明值 = 6,写行内嵌快照
     state.gs_schema 同值(行行自足,判读不前溯可查域版本)。"""
@@ -252,7 +252,7 @@ def test_full_state_snapshot_shape() -> None:
 # ============================================================ §4 画面上下文与节点域(动作上报化切换后口径)
 
 def test_screen_context_writes_pair_only_no_advance() -> None:
-    """漏斗瘦身(迭代 2026-09-20-node-advance-action-report design §2.4
+    """漏斗瘦身( design §2.4
     攻击 B1):observe_screen_context 只写上下文对(prev/current)——推进域
     (node_ord/hist)零触碰,四推断腿已退役;节点推进唯一落账入口 =
     advance_node_effective(动作上报/观察锚定)。"""

@@ -1,6 +1,6 @@
 """投资策略画面策略层单测(判据正本 = docs/develop/sr_od/application/
 currency_war/strategy-docs/29_invest_strategy_screen.md;规格出处 =
-同目录 changes/2026-09-23-invest-strategy-screen-migration/design.md,
+
 下称 design §)。
 
 判据映射:
@@ -251,7 +251,7 @@ def test_grant_advisor_halved():
 def test_grant_registry_counts_and_closed_set():
     """底册计数锁(对账记录 = 迭代目录 strategy-grants-reconciliation.md):
     86 条 = 11 顾问 + 68 绑定母体白得 + 4 反扫补网 + 3 箱腿(占席道具
-    直读,迭代 2026-09-24-advanced-armory-box);顾问档名单在册。"""
+    直读,);顾问档名单在册。"""
     assert len(STRATEGY_GRANTS) == 86
     advisors = {n for n, g in STRATEGY_GRANTS.items() if g.advisor}
     assert len(advisors) == 11

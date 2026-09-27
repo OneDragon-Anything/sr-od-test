@@ -2,7 +2,7 @@
 
 判据来源 = 对抗裁决 F-overlay-01/02/03(CONFIRMED;裁决过程档
 `.debug/temp/audit-sweep/adjudication-1.md`,寿命随迁移批,锁语义自足)+
-终态契约 design.md「契约扩员附记」。
+终态契约 。
 
 行为保持判据:三件判据自画面 handler 逐位平移 kernel,期望值 = 迁移前
 实码语义手推(同输入同输出):

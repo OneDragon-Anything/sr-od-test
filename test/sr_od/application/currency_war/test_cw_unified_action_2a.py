@@ -1,8 +1,7 @@
 """CW 统一动作工厂 批2a 锁面(原子通路就位 + 逻辑态建模扩域)。
 
-出处 = docs/develop/sr_od/application/currency_war/changes/
-2026-09-14-unified-action-factory/landing.md §3.2a 判据七组锁(2a 半)+
-design.md §2.6(R2 组合壳溶解 / R4 CwActionCollectOreParam 改形 / R6 CwActionLevelUpParam 定案④ /
+ §3.2a 判据七组锁(2a 半)+
+ 组合壳溶解 / R4 CwActionCollectOreParam 改形 / R6 CwActionLevelUpParam 定案④ /
 R7 武装箱画面 op / R8 工具各立类 / R9 逻辑态全覆盖 / 裁决 3 零比对)。
 规则正本 = flow/action-logic-state.md(同批转录版)。
 
@@ -154,7 +153,7 @@ def test_vocab_actions_all_have_logic_state_projection(
     裁决注记:CwActionWearEquipParam 原在零写集(聚合口形态),上报
     函数族起穿戴 = 发出即记账 owned −1(在册才减,执行侧效果收编进
     上报),按新事实移入容器写集;工具六类原在零写集(零写占位),
-    2026-09-21-tool-gain-report 迭代升格容器写。函数名机械推导(snake
+     迭代升格容器写。函数名机械推导(snake
     规约同 test_cw_action_report_contract)。"""
     import re
 

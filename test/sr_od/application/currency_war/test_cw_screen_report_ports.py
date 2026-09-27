@@ -1,5 +1,5 @@
 """画面观察上报端口锁(kernel/cw_screen_report 包;迭代
-2026-09-18-screen-op-flat-report T-1 kernel 基座)。
+ T-1 kernel 基座)。
 
 三面锁(同动作族 test_cw_action_report_contract 形态;零真实副作用,
 纯容器直驱):
@@ -58,9 +58,9 @@ _SCREENS = (
     'prep_locked_return', 'aha_equip_pick', 'open_shop',
 )
 
-#: 推进型/商店框(空决策形态,无 report 接口;design.md §2.2)。
+#: 推进型/商店框(空决策形态,无 report 接口;。
 #: 名单外的 obs 类默认必须带 report 函数——新增屏漏归侧即红。
-#: (关店编排壳 obs 行随壳退役删除,迭代 2026-09-21-shop-refresh-terminal
+#: (关店编排壳 obs 行随壳退役删除,
 #:  3.4:CloseShop 执行位收编进 CwActionCloseShopOp,孤儿 obs 文件随壳退役。)
 _NO_REPORT = frozenset({
     'CwScreenNextButtonObs', 'CwScreenPlaneDetailObs',
@@ -74,9 +74,9 @@ _NO_REPORT = frozenset({
 #: 文档化占位 report(现役零观察容器写点,统一形态占位)。
 #: (prep 已于重型屏迁移批升级为真实写面——可选域字段在场才写,见
 #:  _WRITE_CASES['prep'] 与 prep 专项锁;plane_intel 已于接管域迭代
-#:  2026-09-20-takeover-intel-pipeline 升级为真实写面——采集真值写门,
+#:   升级为真实写面——采集真值写门,
 #:  见 _WRITE_CASES['plane_intel'] 与写门专项锁;boss_briefing 已于
-#:  2026-09-20-node-advance-action-report 切换批升级为真实写面——BOSS
+#:   切换批升级为真实写面——BOSS
 #:  类型直定(目标 = 现 hist),写门/直定专项锁归 test_cw_node_chain 与
 #:  test_cw_game_state_contract 节点域锁;shop 保持占位:
 #:  唯一候选写点 = 段头 gold 救援补写,属入口观察链内纠正补写,勘察
@@ -323,7 +323,7 @@ def test_report_writes_stub_obs_into_container(screen):
 #: 空桩门语义:候选空 = 原「读得才写」早退闸不写(None);原写点无空门
 #: 的屏空表照写([])——防线逐位平移,不加强不减弱。
 _EMPTY_OBS_CASES = {
-    # 摄入序锁(迭代 2026-09-21-event-refresh-unify-supply-pick 3.3):
+    # 摄入序锁( 3.3):
     # options 空 = 整函数早退不写含 left——left 读得(3)也不入容器。
     'encounter': (lambda m: m.CwScreenEncounterObs(refresh_left=3),
                   {'encounter': None, 'encounter_refresh_left': None}),

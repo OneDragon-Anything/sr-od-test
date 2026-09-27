@@ -1,6 +1,6 @@
 """sim 统一 3.4 首局验收(MVP 终局四条尺的可执行形态)。
 
-锁面 = sim 统一迭代 landing.md §3.4 完成判据(design.md §2 里程碑 M3 四条尺):
+锁面 = sim 全量局完成判据(确定性双跑/多种子完备/不变式断言四条尺):
 
 - 跑完:真策略 mandate_v1 决策 + 真 CwLoop 驱动,SimBackend 从 reset 经
   P1 → P2 boss 到局终,op 执行零失败(成功收口 = 回大厅终局链);

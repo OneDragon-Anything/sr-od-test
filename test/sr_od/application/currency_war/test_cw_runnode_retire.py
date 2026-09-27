@@ -5,7 +5,7 @@ RunMegastarNode → CwScreenMegastar 内联(委托壳废止)。本文件锁迁�
 **行为断言一致**:①验证完成才 success(离开节点画面)(原 ADR-0264 关态
 基线预置断言随 gate 模块退役删除,见 test_supply_leaves_node_success 注);
 ②仍在节点内 = 做一个动作 + 循环推进轮次(两屏均两 node 形态,迭代
-2026-09-18-screen-op-flat-report:决策动作 node round_wait 推进,不计节点
+:决策动作 node round_wait 推进,不计节点
 重试预算,无防御上限)。
 
 恢复分诊:原文件第③腿「源码零残留掩蔽扫描」(fixtures.masked_scan
@@ -84,7 +84,7 @@ def test_supply_node_flow_act_wait_then_success() -> None:
 # ==================== 巨星流转(行为等价①②) ====================
 
 def test_megastar_node_flow_act_wait_then_success() -> None:
-    """巨星流转两段(两 node 形态,迭代 2026-09-18-screen-op-flat-report):
+    """巨星流转两段(两 node 形态,):
     仍在 overlay → 决策动作 node 恰一个动作 + round_wait(不计节点重试
     预算;无防御上限);overlay 消失 → success(完成承诺 = 固定 settle
     时长;选中标记复位副作用随 ``_in_node`` 复检迁)。夹具 = 对局内
