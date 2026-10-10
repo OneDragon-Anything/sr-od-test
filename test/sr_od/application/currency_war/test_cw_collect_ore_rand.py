@@ -1,15 +1,23 @@
-"""点晶矿随机态上报锁(logic-rand-sampling 迭代 3.2;design §2.3-§2.5)。
+"""点晶矿随机态上报锁(logic-rand-sampling 3.2 → 迭代 2026-10-10-ore-
+reward-attach 3.2 兑现改造;详设 details/ore-click-consume.md §1/§4)。
 
 锁面:
 - 采样器支撑集(定种子):gold ∈ 1..5 / equip ∈ 简易池 / char ∈ 注册表,
-  种子可复现(同种子同序列);
-- 三分支写序:spheres 摘除 → 未抽中域标记 → 奖励应用,evidence 点序
-  ``#ore<k>``,全部来源 logic_rand,同组 group_id;
+  种子可复现(同种子同序列)——缺项兜底掷走同一采样器;
+- 附着兑现(主路径):命中 ore_rewards 键 → 直接应用**零掷骰**(roll
+  调用计数为零);三分支写序 = spheres 摘除 → ore_reward_detach 键
+  移除 → 未抽中域标记 → 奖励应用,evidence 点序 ``#ore<k>`` 语义不变,
+  全部来源 logic_rand,同组 group_id;开成键移除、跳点附着随矿保全;
 - 角色分支:落位 + 3合1 连锁(载体在场上 = 双域变更,受影响域各落
   一行,evidence ``proj_ore_merge#<级>#ore<k>``);
 - 席满即止:前点奖励耗席后后续点留在 spheres(不摘不采);混合批出参
   ``ore_partial_open_skipped``;全席满 = ``bench_full_no_open`` 零写;
-- None 边界:None 域跳写不标记;bench 未观察 / level 缺读整批拒。
+- 缺项兜底:无附着键 → roll_ore_reward 兜底恰掷一次,该点全部写行
+  evidence 前缀 ``ore_reward_attach_missing#``,无 detach 行;缺项 ∧
+  level 缺读 → 该点跳过不采(矿留 spheres 零写),reason
+  ``ore_reward_attach_missing_level``——附着命中不需 level,原
+  'level_unread' 整批拒随采样退役;
+- None 边界:None 域跳写不标记;bench 未观察整批拒。
 
 (sim 接线锁 = 后端侧测试:test_cw_sim_backend.py 晶矿子态经流键 rng
 注入消费本上报,采样即世界真值。)
@@ -101,14 +109,24 @@ def _make_gs(*, bench: list[tuple[str, int]] | None = None,
     return gs
 
 
-def _seq_rewards(*rewards: OreReward):
-    """按序吐出预置采样结果(写序锁用,隔离真采样分布)。"""
-    it = iter(rewards)
+def _attach(gs: GameState, rewards: dict[str, OreReward]) -> None:
+    """预置 ore_rewards 附着域(挂接入口同款随机态直写,测试底座)。"""
+    gs.write_logic_rand(gs.ore_rewards, dict(rewards),
+                        produced_by='test-seed', sig=_SIG)
 
-    def fake(rng: random.Random, level: int) -> OreReward:
-        return next(it)
 
-    return fake
+def _count_rolls(monkeypatch: pytest.MonkeyPatch) -> list[int]:
+    """roll_ore_reward 调用计数(透传真实现零行为变化;命中零掷/兜底
+    恰掷一次的断言口)。"""
+    calls = [0]
+    real = collect_ore_mod.roll_ore_reward
+
+    def counting(rng: random.Random, level: int) -> OreReward:
+        calls[0] += 1
+        return real(rng, level)
+
+    monkeypatch.setattr(collect_ore_mod, 'roll_ore_reward', counting)
+    return calls
 
 
 def _record_writes(gs: GameState,
@@ -152,18 +170,22 @@ def test_sampler_support_set_and_reproducibility() -> None:
 
 
 def test_gold_branch_write_sequence(monkeypatch: pytest.MonkeyPatch) -> None:
-    """金分支写序:spheres → 未抽中域标记(equips/bench/front/back)→
-    奖励金;全部 logic_rand、同组 group_id。"""
+    """金分支写序(附着命中):spheres 摘除 → 附着键移除
+    (ore_reward_detach#ore1,随摘除同点随机态写)→ 未抽中域标记
+    (equips/bench/front/back)→ 奖励金;全部 logic_rand、同组 group_id;
+    命中零掷骰(roll 调用计数为零),开成键从 ore_rewards 移除。"""
     gs = _make_gs(bench=[('阿格莱雅', 1)], front=[Unit(char_id='黑塔', star=1)],
                   equips=[], ores=[_ore('金', 1, 1)])
+    _attach(gs, {'1,1': OreReward(kind='gold', gold=3)})
     calls = _record_writes(gs, monkeypatch)
-    monkeypatch.setattr(collect_ore_mod, 'roll_ore_reward',
-                        _seq_rewards(OreReward(kind='gold', gold=3)))
+    rolls = _count_rolls(monkeypatch)
     param = CwActionCollectOreParam(points=((1, 1),))
     out = report_action_collect_ore_param(gs, param, _SIG)
     assert out.applied is True
+    assert rolls[0] == 0, '附着命中零掷骰(掷骰已前移到生成侧)'
     assert [(n, e) for n, e, _ in calls] == [
         ('spheres', 'proj_collect_ore_drop#ore1'),
+        ('ore_rewards', 'ore_reward_detach#ore1'),
         ('equips', 'proj_ore_mark_equips#ore1'),
         ('bench', 'proj_ore_mark_bench#ore1'),
         ('deployed', 'proj_ore_mark_deployed#ore1'),
@@ -174,6 +196,7 @@ def test_gold_branch_write_sequence(monkeypatch: pytest.MonkeyPatch) -> None:
     assert gs.equips.value == [] and gs.equips.source == 'logic_rand', \
         '未抽中域值不变仅翻来源'
     assert gs.spheres.value.count == 0, '晶矿已摘除'
+    assert gs.ore_rewards.value == {}, '开成即附着键移除'
 
 
 def test_char_branch_merge_dual_domain(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -182,9 +205,8 @@ def test_char_branch_merge_dual_domain(monkeypatch: pytest.MonkeyPatch) -> None:
     (升星不改羁绊标签,派生零差零写;继承机制由 T-1 board 专锁)。"""
     gs = _make_gs(bench=[('A', 1)], front=[Unit(char_id='A', star=1)], board={},
                   ores=[_ore('金', 1, 1)])
+    _attach(gs, {'1,1': OreReward(kind='char', char_id='A')})
     calls = _record_writes(gs, monkeypatch)
-    monkeypatch.setattr(collect_ore_mod, 'roll_ore_reward',
-                        _seq_rewards(OreReward(kind='char', char_id='A')))
     out = report_action_collect_ore_param(
         gs, CwActionCollectOreParam(points=((1, 1),)), _SIG)
     assert out.applied is True
@@ -208,9 +230,8 @@ def test_char_branch_bench_carrier_chain(monkeypatch: pytest.MonkeyPatch) -> Non
     """角色分支·载体在备战(3×1★ 备战内合并):bench 两次写(落位行 +
     merge 行),行域未被合成触及 → 步 4 值不变标记。"""
     gs = _make_gs(bench=[('A', 1), ('A', 1)], front=[], ores=[_ore('金', 1, 1)])
+    _attach(gs, {'1,1': OreReward(kind='char', char_id='A')})
     calls = _record_writes(gs, monkeypatch)
-    monkeypatch.setattr(collect_ore_mod, 'roll_ore_reward',
-                        _seq_rewards(OreReward(kind='char', char_id='A')))
     out = report_action_collect_ore_param(
         gs, CwActionCollectOreParam(points=((1, 1),)), _SIG)
     assert out.applied is True
@@ -225,21 +246,19 @@ def test_char_branch_bench_carrier_chain(monkeypatch: pytest.MonkeyPatch) -> Non
 
 def test_multi_point_full_bench_skip(monkeypatch: pytest.MonkeyPatch) -> None:
     """全席满:逐点判守卫全跳过 → applied=False 'bench_full_no_open',
-    spheres 零写(晶矿全部保留),采样零消耗。"""
+    spheres 零写(晶矿全部保留),零掷骰,附着键随矿保全(未被兑现)。"""
     gs = _make_gs(bench=[('A', i + 1) for i in range(9)],
                   ores=[_ore('金', 1, 1), _ore('金', 2, 2)])
-    consumed: list[int] = []
-
-    def fake(rng: random.Random, level: int) -> OreReward:
-        consumed.append(1)
-        return OreReward(kind='gold', gold=1)
-
-    monkeypatch.setattr(collect_ore_mod, 'roll_ore_reward', fake)
+    _attach(gs, {'1,1': OreReward(kind='gold', gold=1),
+                 '2,2': OreReward(kind='gold', gold=1)})
+    rolls = _count_rolls(monkeypatch)
     out = report_action_collect_ore_param(
         gs, CwActionCollectOreParam(points=((1, 1), (2, 2))), _SIG)
     assert out.applied is False and out.reason == 'bench_full_no_open'
-    assert consumed == [], '席满点不采样'
+    assert rolls[0] == 0, '席满点不采样'
     assert gs.spheres.value.count == 2, '晶矿全部保留'
+    assert set(gs.ore_rewards.value) == {'1,1', '2,2'}, \
+        '跳点附着随矿保全(键不提前移除)'
 
 
 def test_multi_point_partial_skip(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -250,9 +269,8 @@ def test_multi_point_partial_skip(monkeypatch: pytest.MonkeyPatch) -> None:
              for i in range(8)] + [BenchSlot(kind='empty')]
     gs = _make_gs(ores=[_ore('金', 1, 1), _ore('金', 2, 2)])
     gs.observe(gs.bench, BenchView(slots=slots, capacity=9), sig=_SIG_OBS)
+    _attach(gs, {'1,1': OreReward(kind='char', char_id='B')})
     calls = _record_writes(gs, monkeypatch)
-    monkeypatch.setattr(collect_ore_mod, 'roll_ore_reward',
-                        _seq_rewards(OreReward(kind='char', char_id='B')))
     out = report_action_collect_ore_param(
         gs, CwActionCollectOreParam(points=((1, 1), (2, 2))), _SIG)
     assert out.applied is True and out.reason == 'ore_partial_open_skipped'
@@ -260,6 +278,7 @@ def test_multi_point_partial_skip(monkeypatch: pytest.MonkeyPatch) -> None:
     assert 'proj_collect_ore_drop#ore1' in evs, '首点开成'
     assert not any(e.endswith('#ore2') for e in evs), '次点席满不写不采'
     assert gs.spheres.value.count == 1, '未开晶矿留在 spheres'
+    assert '1,1' not in (gs.ore_rewards.value or {}), '已开点附着键移除'
     names = [u.char_id for u in bench_units_of(gs)]
     assert names.count('B') == 1, '角色奖励已落位(耗掉最后空位)'
 
@@ -277,8 +296,7 @@ def test_char_reward_preserves_item_slot_kinds(monkeypatch: pytest.MonkeyPatch) 
     slots += [BenchSlot(kind='empty') for _ in range(4)]
     gs = _make_gs(ores=[_ore('金', 1, 1)])
     gs.observe(gs.bench, BenchView(slots=slots, capacity=9), sig=_SIG_OBS)
-    monkeypatch.setattr(collect_ore_mod, 'roll_ore_reward',
-                        _seq_rewards(OreReward(kind='char', char_id='A')))
+    _attach(gs, {'1,1': OreReward(kind='char', char_id='A')})
     out = report_action_collect_ore_param(
         gs, CwActionCollectOreParam(points=((1, 1),)), _SIG)
     assert out.applied is True
@@ -289,24 +307,82 @@ def test_char_reward_preserves_item_slot_kinds(monkeypatch: pytest.MonkeyPatch) 
     assert len(units) == 1 and units[0].unit.star == 2, '3×1★ → 2★ 载体'
 
 
+# ============================================================ 缺项兜底与 level 收窄
+
+
+def test_missing_attach_fallback_evidence_prefix(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """缺项兜底路径:无附着键 → roll_ore_reward 兜底恰掷一次(沿现解析
+    口,同种子同输出),该点全部写行 evidence 前缀
+    'ore_reward_attach_missing#'(含 drop/标记/奖励应用),无 detach 行;
+    采样结果照常应用(兜底采样器即原采样器)。"""
+    gs = _make_gs(bench=[('A', 1)], gold=30, equips=[],
+                  ores=[_ore('金', 1, 1)])   # 不预置附着域 = 缺项
+    calls = _record_writes(gs, monkeypatch)
+    rolls = _count_rolls(monkeypatch)
+    expected = roll_ore_reward(random.Random(21), 5)
+    out = report_action_collect_ore_param(
+        gs, CwActionCollectOreParam(points=((1, 1),)), _SIG,
+        rng=random.Random(21))
+    assert out.applied is True
+    assert rolls[0] == 1, '缺项兜底恰掷一次'
+    evs = [(n, e) for n, e, _ in calls]
+    assert evs and all(e.startswith('ore_reward_attach_missing#')
+                       for _n, e in evs), f'该点全部写行带前缀: {evs}'
+    assert ('spheres',
+            'ore_reward_attach_missing#proj_collect_ore_drop#ore1') in evs, \
+        'drop 行带前缀'
+    assert not any('ore_reward_detach' in e for _n, e in evs), \
+        '缺项无键可摘,零 detach 行'
+    if expected.kind == 'gold':
+        assert gs.gold.value == 30 + expected.gold
+    elif expected.kind == 'equip':
+        assert gs.equips.value == [expected.equip]
+    else:
+        assert expected.char_id in [u.char_id for u in bench_units_of(gs)]
+
+
+def test_hit_needs_no_level_and_missing_level_reason_precedence(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """level 语义收窄:附着命中不需 level(level 缺读照开成入账);同批
+    缺项点因 level 缺读跳过(矿留 spheres 零写)→ 出参 reason
+    'ore_reward_attach_missing_level'(优先于 ore_partial_open_skipped
+    表达具体原因),命中点键移除。"""
+    gs = _make_gs(bench=[('A', 1)], gold=30, equips=[], level=None,
+                  ores=[_ore('金', 1, 1), _ore('金', 2, 2)])
+    _attach(gs, {'1,1': OreReward(kind='gold', gold=4)})
+    rolls = _count_rolls(monkeypatch)
+    out = report_action_collect_ore_param(
+        gs, CwActionCollectOreParam(points=((1, 1), (2, 2))), _SIG)
+    assert out.applied is True \
+        and out.reason == 'ore_reward_attach_missing_level'
+    assert rolls[0] == 0, '命中点零掷;缺项点因 level 缺读不掷(跳过)'
+    assert gs.gold.value == 34, '命中点照常兑现(不需 level)'
+    assert gs.spheres.value.count == 1, '缺项点矿留 spheres 不摘'
+    assert gs.ore_rewards.value == {}, '命中点键移除(缺项点本无键)'
+
+
 # ============================================================ None 边界与拒分支
 
 
-def test_none_domains_skip_and_level_unread(monkeypatch: pytest.MonkeyPatch) -> None:
-    """None 边界:equips 未观察 → 无标记无奖励写(诚实缺失);
-    level 缺读 → 整批拒 'level_unread' 零写。"""
+def test_none_domains_skip_and_missing_level_reason(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """None 边界:equips 未观察 → 无标记无奖励写(诚实缺失);缺项 ∧
+    level 缺读 → 该点跳过不采,reason 'ore_reward_attach_missing_level'
+    (零写跳过,reason 是唯一可断言通道;原 'level_unread' 整批拒已随
+    采样退役)。"""
     gs = _make_gs(bench=[('A', 1)], gold=30, equips=None, level=None,
                   ores=[_ore('金', 1, 1)])
     out = report_action_collect_ore_param(
         gs, CwActionCollectOreParam(points=((1, 1),)), _SIG)
-    assert out.applied is False and out.reason == 'level_unread'
-    assert gs.spheres.value.count == 1, '拒分支先于任何写'
+    assert out.applied is False \
+        and out.reason == 'ore_reward_attach_missing_level'
+    assert gs.spheres.value.count == 1, '跳过点先于任何写(矿留 spheres)'
 
     gs2 = _make_gs(bench=[('A', 1)], gold=30, equips=None, level=5,
                    ores=[_ore('金', 1, 1)])
+    _attach(gs2, {'1,1': OreReward(kind='equip', equip='幸运星')})
     calls = _record_writes(gs2, monkeypatch)
-    monkeypatch.setattr(collect_ore_mod, 'roll_ore_reward',
-                        _seq_rewards(OreReward(kind='equip', equip='幸运星')))
     out2 = report_action_collect_ore_param(
         gs2, CwActionCollectOreParam(points=((1, 1),)), _SIG)
     assert out2.applied is True

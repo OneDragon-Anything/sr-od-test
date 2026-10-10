@@ -103,6 +103,7 @@ def test_ore_executor_is_mechanical_payload_clicks(monkeypatch):
         BenchView,
         OreSight,
     )
+    from sr_od.application.currency_war.kernel.cw_ore_reward import OreReward
     session = cw4_session()
     gs = game_state_of(session)
     gs.observe(gs.spheres, OreSight(
@@ -115,10 +116,18 @@ def test_ore_executor_is_mechanical_payload_clicks(monkeypatch):
         slots=[BenchSlot(kind='empty') for _ in range(9)], capacity=9),
         sig=ChannelSig(family='obs', actor='CwScreenPrep'))
     gs.observe(gs.level, 5, sig=ChannelSig(family='obs', actor='CwScreenPrep'))
+    gs.write_logic_rand(
+        gs.ore_rewards,
+        {'12,34': OreReward(kind='gold', gold=2),
+         '99,99': OreReward(kind='gold', gold=2)},
+        produced_by='test-seed',
+        sig=ChannelSig(family='logic_action', actor='CwScreenPrep'))
     report_action_collect_ore_param(
         gs, CwActionCollectOreParam(points=((12, 34),)),
         sig=ChannelSig(family='logic_action', actor='CwScreenPrep'))
     assert [(p[1], p[2]) for p in gs.spheres.value.points] == [(99, 99)]
+    assert '12,34' not in (gs.ore_rewards.value or {}), '开成即键移除'
+    assert '99,99' in gs.ore_rewards.value, '未被点的附着保全'
 
 
 # ===== R9 逻辑态全覆盖锁(判据 5)=====
