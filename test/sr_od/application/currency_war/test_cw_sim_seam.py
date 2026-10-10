@@ -194,7 +194,9 @@ def test_mechanical_io_allowed_default_true_sim_false():
 def test_action_rng_provider_seeded_on_install_reset_on_uninstall():
     """动作腿采样 rng 注入槽(T-2 偏差申报的归属点接线):SimBackend
     install_backend 接通提供槽(流键 rng,同 seed 同调用序确定性);
-    uninstall_backend 复位 = 实机未播种口径零变化。"""
+    uninstall_backend 复位 = 实机未播种口径零变化。断言键面含
+    'ore_reward_gen'(迭代 2026-10-10-ore-reward-attach 3.3:挂接生成腿
+    键随 action_sampling_rng 首调自动生效,装配方零改动)。"""
     from sr_od.application.currency_war.kernel.cw_action_report import (
         provided_action_rng,
     )
@@ -206,17 +208,22 @@ def test_action_rng_provider_seeded_on_install_reset_on_uninstall():
     from sr_od.application.currency_war.sim.cw_sim_run_config import RunConfig
 
     assert provided_action_rng('collect_ore') is None, '缺省必须关'
+    assert provided_action_rng('ore_reward_gen') is None, '缺省必须关'
     install_backend(SimBackend(seed=9, cfg=RunConfig(
         selected_difficulty='A8', enemy_difficulty=108)))
     try:
         first = provided_action_rng('collect_ore').random()
+        gen_first = provided_action_rng('ore_reward_gen').random()
     finally:
         uninstall_backend()
     assert provided_action_rng('collect_ore') is None, '卸载必须复位'
+    assert provided_action_rng('ore_reward_gen') is None, '卸载必须复位'
     install_backend(SimBackend(seed=9, cfg=RunConfig(
         selected_difficulty='A8', enemy_difficulty=108)))
     try:
         second = provided_action_rng('collect_ore').random()
+        gen_second = provided_action_rng('ore_reward_gen').random()
     finally:
         uninstall_backend()
     assert first == second, '同 seed 同键序采样必须一致(确定性)'
+    assert gen_first == gen_second, 'ore_reward_gen 键同 seed 确定性'

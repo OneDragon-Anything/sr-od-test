@@ -27,12 +27,6 @@ test_cw_game_state.py::test_write_logic_rand_and_observe_random_outcome,不重�
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    deployed_view_sequential as _dvs,
-    deployed_rows_of_view,
-)
-
-
 import random
 
 import pytest
@@ -53,6 +47,10 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     OreSight,
     Unit,
     bench_units_of,
+    deployed_rows_of_view,
+)
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    deployed_view_sequential as _dvs,
 )
 from sr_od.application.currency_war.kernel.cw_ore_reward import (
     _SIMPLE_EQUIP_POOL,
@@ -398,4 +396,53 @@ def test_bench_unobserved_rejects_whole_batch() -> None:
         gs, CwActionCollectOreParam(points=((1, 1),)), _SIG)
     assert out.applied is False and out.reason == 'bench_unobserved'
     assert gs.spheres.value.count == 1, '拒分支零写'
+
+
+# ============================================================ 三方并存 corner
+# (3.2 验收 reviews/T-2-r1.md §5 建议项,3.3 顺手批补锁):席满跳点与
+# 缺项∧level 缺读跳点的 reason 优先级。几何事实:席满判定读
+# work_bench 现值,批内仅角色奖励落位改变之——全跳批(opened==0)内
+# 席满态恒定,两类跳点不可并存;「席满 + 缺项∧level 缺读并存」只能在
+# 含命中点的混合批构造(命中角色奖励耗席后,后续点席满)。
+
+
+def test_corner_mixed_batch_missing_level_reason_precedence(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """三方并存混合批(命中 + 席满 + 缺项∧level 缺读):缺项点因 level
+    缺读先跳(彼时席未满),命中角色奖励耗掉最后空位 → 后续点席满跳过
+    → 出参 reason 'ore_reward_attach_missing_level'(优先于
+    ore_partial_open_skipped 表达具体原因;含席满跳点的混合批同此,
+    锁现状防将来无意翻转)。"""
+    slots = [BenchSlot(kind='unit',
+                       unit=Unit(char_id=f'F{i}', star=1))
+             for i in range(8)] + [BenchSlot(kind='empty')]
+    gs = _make_gs(level=None, ores=[_ore('金', 1, 1), _ore('金', 2, 2),
+                                    _ore('金', 3, 3)])
+    gs.observe(gs.bench, BenchView(slots=slots, capacity=9), sig=_SIG_OBS)
+    _attach(gs, {'2,2': OreReward(kind='char', char_id='B')})
+    rolls = _count_rolls(monkeypatch)
+    out = report_action_collect_ore_param(
+        gs, CwActionCollectOreParam(points=((1, 1), (2, 2), (3, 3))), _SIG)
+    assert out.applied is True \
+        and out.reason == 'ore_reward_attach_missing_level'
+    assert rolls[0] == 0, '命中零掷;缺项点 level 缺读不掷(跳过)'
+    assert gs.spheres.value.count == 2, '跳点矿留 spheres(缺项点+席满点)'
+    assert gs.ore_rewards.value == {}, '命中点开成即键移除'
+    names = [u.char_id for u in bench_units_of(gs)]
+    assert names.count('B') == 1, '命中角色奖励落位(耗掉最后空位)'
+
+
+def test_corner_full_bench_masks_missing_level_all_skip(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """全跳批·席满掩蔽:席满守卫先于缺项∧level 判定——席满批内各点
+    不达缺项检查(missing_level 恒 0),出参 'bench_full_no_open' 而非
+    'ore_reward_attach_missing_level';零写零掷(锁守卫次序)。"""
+    gs = _make_gs(bench=[('A', i + 1) for i in range(9)], level=None,
+                  ores=[_ore('金', 1, 1), _ore('金', 2, 2)])
+    rolls = _count_rolls(monkeypatch)
+    out = report_action_collect_ore_param(
+        gs, CwActionCollectOreParam(points=((1, 1), (2, 2))), _SIG)
+    assert out.applied is False and out.reason == 'bench_full_no_open'
+    assert rolls[0] == 0, '席满点不采样'
+    assert gs.spheres.value.count == 2, '晶矿全部保留'
 

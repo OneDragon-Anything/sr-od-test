@@ -15,14 +15,6 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.kernel.cw_overlay_register import (
-    consume_screen_change,
-    register_screen_change,
-)
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    deployed_view_sequential as _dvs,
-)
-
 from types import SimpleNamespace
 
 import pytest
@@ -46,12 +38,23 @@ from sr_od.application.currency_war.kernel.cw_economy import MAX_PLAYER_LEVEL
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
     BenchSlot,
+    BenchView,
     ChannelSig,
     GameState,
     NodeKey,
     Unit,
     deployed_rows_of_view,
     report_node_advance,
+)
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    deployed_view_sequential as _dvs,
+)
+from sr_od.application.currency_war.kernel.cw_ore_reward import (
+    OreReward,
+)
+from sr_od.application.currency_war.kernel.cw_overlay_register import (
+    consume_screen_change,
+    register_screen_change,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionCollectOreParam,
@@ -63,6 +66,8 @@ from sr_od.application.currency_war.sim import cw_sim_ports
 from sr_od.application.currency_war.sim.cw_sim_backend import (
     DISCLOSURE_P3_UNOBSERVED,
     NODE_XP_BY_TYPE,
+    ORE_PLANE_START_PENDING,
+    SCREEN_BOSS_BRIEFING,
     SCREEN_BOX,
     SCREEN_BRIEFING,
     SCREEN_INVEST_ENV,
@@ -560,9 +565,26 @@ def test_strategy_pick_chain_box_grant_immediate() -> None:
 
 # ============================================================ 节点事件面
 
-def test_reward_node_ore_substate_and_collect_via_report() -> None:
-    """奖励节点 = 备战档晶矿子态:面板写容器 spheres(U23 锚 8 晶矿);
-    点晶矿走 kernel 上报(流键 rng 注入,采样即世界真值)。"""
+def _count_ore_rolls(monkeypatch: pytest.MonkeyPatch) -> list[int]:
+    """collect_ore 兜底掷计数(透传真实现零行为变化;命中路径断言口)。"""
+    import sr_od.application.currency_war.kernel.cw_action_report.collect_ore as collect_ore_mod
+    calls = [0]
+    real = collect_ore_mod.roll_ore_reward
+
+    def counting(rng, level):
+        calls[0] += 1
+        return real(rng, level)
+
+    monkeypatch.setattr(collect_ore_mod, 'roll_ore_reward', counting)
+    return calls
+
+
+def test_reward_node_ore_substate_and_collect_via_report(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """奖励节点 = 备战档晶矿子态:面板写容器 spheres(U23 锚 8 晶矿)经
+    挂接入口**生成即附着**(同批一次写);点晶矿走 kernel 上报按附着值
+    兑现——命中零掷骰(掷骰已前移生成侧),金入账 = 附着金精确合计
+    (采样即世界真值)。"""
     b = _backend(7)
     try:
         b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
@@ -572,13 +594,256 @@ def test_reward_node_ore_substate_and_collect_via_report() -> None:
         assert b._sub == 'ore', '晶矿子态'
         points = gs.spheres.value.points
         assert len(points) == 8, 'U23 单例锚'
+        rewards = dict(gs.ore_rewards.value or {})
+        assert len(rewards) == 8, '面板矿全部生成附着(无缺项 → 不走兜底)'
+        expected_gold = sum(r.gold for r in rewards.values())
+        rolls = _count_ore_rolls(monkeypatch)
         gold_before = gs.gold.value
         out = report_action_collect_ore_param(
             gs, CwActionCollectOreParam(points=[(p[1], p[2]) for p in points]),
-            _SIG, rng=stream_rng(7, 'M1x/ore/1'))
+            _SIG)
         assert out.applied
+        assert rolls[0] == 0, '命中路径零掷骰(兜底掷 = 挂接入口不变量破坏)'
         assert gs.spheres.value.count == 0, '逐点摘除'
-        assert gs.gold.value > gold_before, '晶矿内容即时入账'
+        assert gs.gold.value == gold_before + expected_gold, \
+            '按附着值精确入账(含声明/采样金合计)'
+    finally:
+        uninstall_backend()
+
+
+# ============================================================ 3.3 声明矿 sim 接线锁
+# (迭代 2026-10-10-ore-reward-attach 3.3;详设 details/ore-sim-plane-start.md
+#  §1-§5:节点窗起点分道入队 + 过期清理接线 / 位面开局矿呈现与面板矿
+#  同批合并 / spheres 写端统一过挂接入口 / rng 键装配 / 占位退役与披露。)
+
+_ORE_ENV = '增发货币'
+
+
+def _ore_env_backend(seed: int = 61) -> SimBackend:
+    """开局选增发货币环境的装配后端(调用方负责 uninstall)。"""
+    b = SimBackend(seed=seed, cfg=RunConfig(
+        selected_difficulty='A8', enemy_difficulty=108, env_present=True))
+    install_backend(b)
+    b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+    assert b.screen_identity() == SCREEN_INVEST_ENV
+    b.gs.write_logic(b.gs.invest_env_opts,
+                     [_ORE_ENV, '轮岗', '头彩'],
+                     produced_by='Test', evidence='t:opts', sig=_SIG)
+    out = report_action_pick_invest_env_param(
+        b.gs, SimpleNamespace(idx=0), _SIG)
+    assert out.applied
+    cw_sim_ports.declare_world(out.world_decl)
+    return b
+
+
+def _record_logic_writes(gs: GameState,
+                         monkeypatch: pytest.MonkeyPatch) -> list[tuple]:
+    """包装 write_logic/write_logic_rand 记录 (通道, 字段, evidence) 写序
+    (透传真实现零行为变化;入队先于生成 / 过期留痕的断言口)。"""
+    calls: list[tuple] = []
+
+    def _wrap(real, channel: str):
+        def rec(target, value, *, produced_by, evidence=None, sig, note=''):
+            calls.append((channel, gs._field_name(target), evidence))
+            real(target, value, produced_by=produced_by, evidence=evidence,
+                 sig=sig, note=note)
+        return rec
+
+    monkeypatch.setattr(gs, 'write_logic', _wrap(gs.write_logic, 'logic'))
+    monkeypatch.setattr(gs, 'write_logic_rand',
+                        _wrap(gs.write_logic_rand, 'rand'))
+    return calls
+
+
+def test_ore_env_plane1_declare_instead_of_direct_gold(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """增发货币 P1(详设 §1/§2):位面开局金不再直发(gold = 开局 +
+    轮首收入,直发形态 = 13)→ 声明入队在呈现时消费(pending → done)→
+    位面开局声明矿与面板锚点矿**同批合并**一次 spheres 写(第 9 点
+    (90,10) 面板序续接,坐标无撞键;声明 6 金归属由生成 rng 掷,采样金
+    1..5 与 6 唯一可辨)→ 入队写先于同帧生成写(承载性次序)→ 点击
+    全部矿按附着值精确入账(含 6)。"""
+    b = _ore_env_backend(61)
+    try:
+        calls = _record_logic_writes(b.gs, monkeypatch)
+        b._maybe_finish_wait()
+        gs = b.gs
+        assert b.screen_identity() == SCREEN_PREP and b._sub == 'ore'
+        assert gs.gold.value == 7, \
+            '位面开局金不再直发(开局 3 + P1r1 轮首收入 4)'
+        assert gs.ore_declared_pending.value == (), '声明在呈现时消费'
+        assert gs.ore_declared_done.value == ((_ORE_ENV, 1),)
+        pts = gs.spheres.value.points
+        assert len(pts) == 9 and pts[-1] == ('金', 90, 10, 10), \
+            '8 面板矿 + 1 声明矿(面板序续接第 9 点,r=10 与面板同)'
+        assert len({(p[1], p[2]) for p in pts}) == 9, '同批坐标无撞键'
+        rewards = dict(gs.ore_rewards.value or {})
+        assert len(rewards) == 9, '同批合并一次写:全部现役身份已附着'
+        declared = [k for k, v in rewards.items()
+                    if v.kind == 'gold' and v.gold == 6]
+        assert len(declared) == 1, \
+            '声明 6 金恰占一席(采样金区间 1..5,值域唯一可辨)'
+        seq = [(c, n) for c, n, _e in calls]
+        assert seq.index(('logic', 'ore_declared_pending')) \
+            < seq.index(('rand', 'ore_rewards')), \
+            '声明入队写先于挂接生成写(接反则声明永不附着)'
+        assert [e for c, n, e in calls
+                if c == 'rand' and n == 'ore_rewards'] == ['ore_gen#p1+9'], \
+            f'同批恰一次生成写: {calls}'
+        assert b.disclosures.get(ORE_PLANE_START_PENDING) is not None, \
+            '位面开局矿呈现面披露键在册(实机首遇校)'
+        # 入队电平幂等:绕过窗口守卫直查(窗口重放守卫外的第二道保险)
+        b._apply_env_plane_start(1)
+        assert gs.ore_declared_pending.value == () \
+            and gs.ore_declared_done.value == ((_ORE_ENV, 1),), \
+            'done 守卫跨查不重发'
+        expected = sum(v.gold for v in rewards.values())
+        gold_before = gs.gold.value
+        out = report_action_collect_ore_param(
+            gs, CwActionCollectOreParam(points=[(p[1], p[2]) for p in pts]),
+            _SIG)
+        assert out.applied
+        assert gs.gold.value == gold_before + expected, \
+            '点击入账 = 附着金合计(含声明 6)'
+    finally:
+        uninstall_backend()
+
+
+def test_ore_env_generation_deterministic_same_seed() -> None:
+    """掷序确定性(详设 §4):同 seed 同调用序 → 声明矿附着逐位一致
+    (rng 键 'ore_reward_gen' 随 action_sampling_rng 首调自动生效,装配方
+    零改动;键序确定性责任在调用序,先例 = 现动作腿键)。"""
+    rewards = []
+    for _ in range(2):
+        b = _ore_env_backend(61)
+        try:
+            b._maybe_finish_wait()
+            rewards.append(dict(b.gs.ore_rewards.value or {}))
+        finally:
+            uninstall_backend()
+    assert rewards[0] and rewards[0] == rewards[1], \
+        '同 seed 双跑声明矿附着必须逐位一致'
+
+
+def test_non_ore_env_keeps_direct_plane_gold_channel(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """直发金通道留置(详设 §1 关键取舍:ENV_ORE_GRANTS 命中即绕行,
+    通道为非矿形态位面开局金预留):env ∉ 注册表 ∧ gold_per_plane_start
+    非空 → 保留直发(现无此形态环境,以注册表清空构造分道前提)。"""
+    import sr_od.application.currency_war.sim.cw_sim_backend as backend_mod
+    monkeypatch.setattr(backend_mod, 'ENV_ORE_GRANTS', {})
+    b = _ore_env_backend(61)
+    try:
+        b._maybe_finish_wait()
+        gs = b.gs
+        assert gs.gold.value == 13, \
+            '直发腿生效(开局 3 + 轮首收入 4 + 位面开局金 6)'
+        assert gs.ore_declared_pending.value == () \
+            and gs.ore_declared_done.value == (), '零声明域写'
+        assert len(gs.spheres.value.points) == 8, '无声明矿点(纯面板)'
+        assert gs.ore_rewards.value is not None \
+            and len(gs.ore_rewards.value) == 8, '面板矿照常生成附着'
+    finally:
+        uninstall_backend()
+
+
+def test_battle_prep_empty_spheres_write_cleans_stale_identities() -> None:
+    """空读照写清理(详设 §3):普通 battle 备战呈现 spheres 空读照写
+    count=0 亦过挂接入口——上节点残留矿身份(未点击面板)在此清理;同
+    坐标面板重呈现 = 配对命中继承旧附着零重掷(跨面板别名,sim 侧经济
+    中性,ore-reward-channel §4 披露角)。"""
+    b = _backend(7)
+    try:
+        b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+        b._maybe_finish_wait()
+        gs = b.gs
+        attached = dict(gs.ore_rewards.value or {})
+        assert len(attached) == 8, 'P1r1 面板 8 矿附着(不点击)'
+        _start_battle_feed(gs)
+        _node_advance_feed(gs, trigger='settle_confirm')
+        assert (gs.node.value.plane, gs.node.value.round_num) == (1, 2)
+        assert b.screen_identity() == SCREEN_PREP and b._sub == 'ore'
+        assert gs.ore_rewards.value == attached, \
+            'P1r2 同坐标面板重呈现:配对命中继承(零重掷零清洗)'
+        _start_battle_feed(gs)
+        _node_advance_feed(gs, trigger='settle_confirm')
+        assert (gs.node.value.plane, gs.node.value.round_num) == (1, 3)
+        # P1r3 = U07 offer 槽(固定日程生效于本节点备战窗口前):选卡后
+        # 直出节点屏
+        assert b.screen_identity() == SCREEN_INVEST_STRATEGY
+        out = report_action_pick_invest_strategy_param(
+            gs, SimpleNamespace(norm_name=gs.invest_strategy_opts.value[0]),
+            _SIG, session=SimpleNamespace())
+        assert out.applied
+        cw_sim_ports.declare_world(out.world_decl)
+        assert b.screen_identity() == SCREEN_PREP and b._sub == '', \
+            '战斗节点无面板无声明 → 常规备战子态'
+        assert gs.spheres.value.count == 0, '空读照写 count=0'
+        assert gs.ore_rewards.value == {}, '上节点残留矿身份清理'
+    finally:
+        uninstall_backend()
+
+
+def test_ore_env_plane2_declared_ore_and_expiry_cleanup(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """增发货币 P2(详设 §1/§2):位面过渡窗口起点声明入队(8 金档)+
+    过期清理留痕(done p1 条目移除,evidence ``ore_declared_expired#p1``);
+    P2 首节点为战斗节点 → 声明矿点单独呈现(面板序续接首点 (10,10),
+    子态 PREP_SUB_ORE),点击入账 8(sim 辖域 P1+P2;12 由 3.1 单测覆盖,
+    位面 3 不可达)。"""
+    b = _ore_env_backend(61)
+    try:
+        gs = b.gs
+        b._maybe_finish_wait()
+        # 走到 P1r9 BOSS 简报 → 结算 → (2,1) 位面过渡(seed 61 通道沿
+        # boss 简报用例:局必经 P1r9 与位面过渡)
+        for _ in range(64):
+            if b.done or b.screen_identity() == SCREEN_BOSS_BRIEFING:
+                break
+            if b.screen_identity() == SCREEN_SETTLE:
+                _node_advance_feed(gs, trigger='settle_confirm')
+            else:
+                _drive_step(b, 61)
+        assert b.screen_identity() == SCREEN_BOSS_BRIEFING
+        b._handle_click_source(SCREEN_BOSS_BRIEFING, '区域-空白点击')
+        _node_advance_feed(gs, trigger='settle_confirm')
+        assert b.screen_identity() == '货币战争-位面过渡'
+        # 测试侧整理(真策略同构行为:部署腾席 + 奖励面板点击收口):
+        # 备战单位移上板 + 清掉未点击面板残留。不清则残留 (10,10)/(20,10)
+        # 与声明点跨面板别名继承 → 声明饿死(该角为 ore-reward-channel
+        # §4 在册披露,非本测锁面)。
+        units = [s.unit for s in gs.bench.value.slots
+                 if s is not None and s.kind == 'unit' and s.unit is not None]
+        gs.observe(gs.deployed, _dvs(units[:4], units[4:]), sig=_SIG_OBS)
+        gs.observe(gs.bench, BenchView(
+            slots=[BenchSlot(kind='empty')] * 9, capacity=9), sig=_SIG_OBS)
+        leftover = gs.spheres.value.points
+        out = report_action_collect_ore_param(
+            gs, CwActionCollectOreParam(
+                points=[(p[1], p[2]) for p in leftover]), _SIG)
+        assert out.applied and gs.spheres.value.count == 0 \
+            and gs.ore_rewards.value == {}, '残留面板清理(腾席后全开)'
+        calls = _record_logic_writes(gs, monkeypatch)
+        # 位面过渡点空白 → (2,1) 节点窗(声明入队 + 过期清理 + 呈现)
+        b._handle_click_source('货币战争-位面过渡', '区域-空白点击')
+        assert b.screen_identity() == SCREEN_PREP and b._sub == 'ore', \
+            '战斗节点备战档呈现声明矿(面板在场语义复用 PREP_SUB_ORE)'
+        assert gs.spheres.value.points == (('金', 10, 10, 10),), \
+            'P2 首节点(战斗)声明矿单独呈现(面板序续接首点)'
+        assert gs.ore_declared_pending.value == (), '呈现消费(出队即消费)'
+        assert gs.ore_declared_done.value == ((_ORE_ENV, 2),)
+        assert gs.ore_rewards.value == {
+            '10,10': OreReward(kind='gold', gold=8)}, '声明 8 金附着'
+        expiry = [e for _c, _n, e in calls
+                  if e is not None and e.startswith('ore_declared_expired')]
+        assert expiry == ['ore_declared_expired#p1'], \
+            f'位面过渡过期清理留痕(p1 done 条目): {calls}'
+        gold_before = gs.gold.value
+        out = report_action_collect_ore_param(
+            gs, CwActionCollectOreParam(points=[(10, 10)]), _SIG)
+        assert out.applied
+        assert gs.gold.value == gold_before + 8, '点击声明矿入账 8(位面 2 档)'
+        assert gs.ore_rewards.value == {} and gs.spheres.value.count == 0
     finally:
         uninstall_backend()
 
