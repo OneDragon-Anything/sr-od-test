@@ -29,15 +29,15 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
     BenchSlot,
     BenchView,
-    DeployedView,
     ChannelSig,
+    DeployedView,
     GameState,
     OreSight,
     Unit,
     consume_defect_sink,
+    deployed_rows_of_view,
     game_state_of,
     prep_anchored_of,
-    deployed_rows_of_view,
 )
 from sr_od.application.currency_war.kernel.cw_opening_hp import (
     OPENING_HP_BASE,
@@ -59,6 +59,9 @@ _A_SEEDED: tuple[str, ...] = (
     'active_strategies', 'pending_item_grants', 'enemy_affixes',
     'shop_refresh_cost', 'prev_node_spent',
     'strategy_refresh_left',
+    # 晶矿附着奖励与声明通道三域(迭代 2026-10-10-ore-reward-attach:
+    # 空底座,幂等守卫 membership 与挂接入口合并写零 None 防御)
+    'ore_rewards', 'ore_declared_pending', 'ore_declared_done',
 )
 
 #: B/C 类抽检面(None = 设计语义或无观察源,设计分诊表禁种)。
@@ -94,6 +97,9 @@ def test_cold_build_seeds_all_a_fields(monkeypatch) -> None:
     assert gs.equips.value == []
     assert gs.occupied_equips.value == {}
     assert gs.spheres.value == OreSight()
+    assert gs.ore_rewards.value == {}, '附着奖励域冷建空底座'
+    assert gs.ore_declared_pending.value == (), '声明队列冷建空底座'
+    assert gs.ore_declared_done.value == (), '声明消费标记冷建空底座'
     assert gs.gold.value == 3
     assert gs.level.value == 3
     assert gs.xp.value == (0, XP_TO_NEXT_LEVEL[3])
