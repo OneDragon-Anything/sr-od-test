@@ -6,7 +6,10 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.kernel.cw_economy import LostNodeRef
+from sr_od.application.currency_war.kernel.cw_economy import (
+    LostNodeRef,
+    round_start_income,
+)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
     ChannelSig,
@@ -52,6 +55,19 @@ def test_reward_branch_streak_paid_including_zero_counter() -> None:
     cold = apply_round_start_income(_gs(25), plane=1, round_num=5,
                                     node_type='reward', streak=0)
     assert cold.row.streak == 1, 'counter0 照发表首档'
+
+
+def test_reward_branch_lost_round_drops_streak_component() -> None:
+    """统一公式败局形(lost_round):奖励轮战败无连胜成分——基础+息照发,
+    分支仍 reward(扑满败局消费面,2026-10-10 用户裁定);胜局形不变。
+    (kernel 单一源直测;sim 包装不透传该参数,递延落账走 kernel 直调。)"""
+    lost = round_start_income(1, 5, 'reward', 25, 3, lost_round=True)
+    assert lost.branch == 'reward'
+    assert lost.base == 5 and lost.interest == 2
+    assert lost.streak == 0, '败局形:连胜成分 = 0(战败无)'
+    assert lost.total == 7
+    won = round_start_income(1, 5, 'reward', 25, 3)
+    assert won.streak == 2, '胜局形不受参数影响(streak_gold(3)=2)'
 
 
 def test_combat_branch_win_income() -> None:
@@ -100,7 +116,8 @@ def test_loss_pending_retained_on_supply_reward_rounds() -> None:
 # ============================================================ 连胜双账转移(M15)
 
 def test_streak_transfers_combat_only() -> None:
-    """战斗类胜 +1/败归零(带符号取负向计数);奖励/补给轮两账都不动。"""
+    """战斗类胜 +1/败归零(带符号取负向计数);奖励/补给轮两账都不动;
+    扑满帧例外 = 胜 +1/败清零(2026-10-10 用户裁定,败清零非负账)。"""
     assert streak_income_after(3, node_type='battle', won=True) == 4
     assert streak_income_after(3, node_type='battle', won=False) == 0
     assert streak_income_after(3, node_type='reward', won=True) == 3
@@ -110,6 +127,14 @@ def test_streak_transfers_combat_only() -> None:
     assert streak_signed_after(-2, node_type='battle', won=False) == -3
     assert streak_signed_after(-2, node_type='reward', won=False) == -2
     assert streak_signed_after(0, node_type='encounter', won=False) == -1
+    assert streak_signed_after(3, node_type='reward', won=True,
+                               piggy=True) == 4
+    assert streak_signed_after(-2, node_type='reward', won=True,
+                               piggy=True) == 1, '胜向与战斗类同式'
+    assert streak_signed_after(3, node_type='reward', won=False,
+                               piggy=True) == 0
+    assert streak_signed_after(3, node_type='battle', won=False,
+                               piggy=False) == -1, '非扑满照旧负账'
 
 
 # ============================================================ 持卡收入修饰

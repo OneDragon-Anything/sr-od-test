@@ -1469,3 +1469,127 @@ def test_env_grant_check_receives_signed_streak_loss_no_grant(
         assert gs.diamond_count.value == 0
     finally:
         uninstall_backend()
+
+
+# ============================================================ 3.4 扑满结算统一公式接线锁
+# (T-6 经济过热,2026-10-10 用户裁定:战斗结算收入 = 统一公式「基础+息
+#  +连胜成分,战败无」;扑满胜负接入连胜账 = 胜+1/败清零;收入递延至
+#  结算腿落账,基数 = 窗口开快照即轮初口径。)
+
+_PIGGY_ENV = '经济过热'
+
+
+def _piggy_backend(seed: int = 31) -> SimBackend:
+    """开局选经济过热环境的装配后端(调用方负责 uninstall)。"""
+    b = SimBackend(seed=seed, cfg=RunConfig(
+        selected_difficulty='A8', enemy_difficulty=108, env_present=True))
+    install_backend(b)
+    b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+    assert b.screen_identity() == SCREEN_INVEST_ENV
+    b.gs.write_logic(b.gs.invest_env_opts,
+                     [_PIGGY_ENV, '轮岗', '头彩'],
+                     produced_by='Test', evidence='t:opts', sig=_SIG)
+    out = report_action_pick_invest_env_param(
+        b.gs, SimpleNamespace(idx=0), _SIG)
+    assert out.applied
+    cw_sim_ports.declare_world(out.world_decl)
+    return b
+
+
+def _reward_expect(gold_at_window: int, base: int, streak_in: int,
+                   won: bool) -> int:
+    """统一公式期望收入(缺省修饰):基础+息恒有;连胜成分 = 进轮
+    streak_gold(缺省倍率 1),战败无(lost_round 形)。"""
+    from sr_od.application.currency_war.kernel.cw_economy import streak_gold
+    streak_part = streak_gold(streak_in) if won else 0
+    return base + min(gold_at_window // 10, 5) + streak_part
+
+
+def test_piggy_win_income_deferred_and_streak_counts(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """扑满胜局:备战帧(开战前)金不含本节点收入(递延锁);结算腿一次
+    落账 = 基础+进轮连胜金+息;连胜账 0→1→2(胜局计数,用户裁定)。"""
+    from sr_od.application.currency_war.kernel.cw_economy import \
+        REWARD_BASE_GOLD_BY_ROUND
+    b = _piggy_backend()
+    try:
+        gs = b.gs
+        assert b.screen_identity() == SCREEN_PREP
+        _force_settle(monkeypatch, won=True)
+        # r1 备战:递延生效,金 = 初始值;连胜 0
+        gold0 = int(gs.gold.value or 0)
+        assert int(gs.streak.value or 0) == 0
+        _start_battle_feed(gs)
+        expect1 = gold0 + _reward_expect(gold0, REWARD_BASE_GOLD_BY_ROUND[1],
+                                         0, won=True)
+        assert int(gs.gold.value or 0) == expect1, 'r1 收入 = 基础+连胜+息'
+        assert int(gs.streak.value or 0) == 1, '扑满胜局 +1'
+        # r2 备战:r2 收入同样递延(金停在 r1 落账值)
+        _node_advance_feed(gs, trigger='settle_confirm')
+        assert b.screen_identity() == SCREEN_PREP
+        assert int(gs.gold.value or 0) == expect1, 'r2 收入未提前落账'
+        _start_battle_feed(gs)
+        expect2 = expect1 + _reward_expect(expect1,
+                                           REWARD_BASE_GOLD_BY_ROUND[2],
+                                           1, won=True)
+        assert int(gs.gold.value or 0) == expect2
+        assert int(gs.streak.value or 0) == 2, '连胜 1→2'
+    finally:
+        uninstall_backend()
+
+
+def test_piggy_loss_base_interest_only_and_streak_reset(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """扑满败局(统一公式败局形):收入 = 基础+息(无连胜成分);连胜账
+    1→0(清零,非负账);不掉血豁免照常(hp 不动)。"""
+    from sr_od.application.currency_war.kernel.cw_economy import \
+        REWARD_BASE_GOLD_BY_ROUND
+    b = _piggy_backend()
+    try:
+        gs = b.gs
+        assert b.screen_identity() == SCREEN_PREP
+        _force_settle(monkeypatch, won=True)
+        _start_battle_feed(gs)
+        gold1 = int(gs.gold.value or 0)
+        assert int(gs.streak.value or 0) == 1
+        hp_before = int(gs.hp.value or 0)
+        _node_advance_feed(gs, trigger='settle_confirm')
+        assert b.screen_identity() == SCREEN_PREP
+        _force_settle(monkeypatch, won=False)
+        _start_battle_feed(gs)
+        assert int(gs.gold.value or 0) == gold1 + _reward_expect(
+            gold1, REWARD_BASE_GOLD_BY_ROUND[2], 1, won=False), \
+            'r2 败局收入 = 基础+息(无连胜成分)'
+        assert int(gs.streak.value or 0) == 0, '扑满败局清零'
+        assert int(gs.hp.value or 0) == hp_before, '扑满不掉血'
+    finally:
+        uninstall_backend()
+
+
+def test_non_piggy_reward_income_still_window_open(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """非扑满对照:常态奖励轮收入仍在窗口开落账(备战帧金已含收入),
+    递延仅扑满域(常态行为零变化)。"""
+    from sr_od.application.currency_war.kernel.cw_economy import \
+        REWARD_BASE_GOLD_BY_ROUND
+    b = SimBackend(seed=33, cfg=RunConfig(
+        selected_difficulty='A8', enemy_difficulty=108, env_present=True))
+    install_backend(b)
+    try:
+        gs = b.gs
+        b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+        assert b.screen_identity() == SCREEN_INVEST_ENV
+        gold0 = int(gs.gold.value or 0)
+        gs.write_logic(gs.invest_env_opts,
+                       ['轮岗', '头彩', _PIGGY_ENV],
+                       produced_by='Test', evidence='t:opts', sig=_SIG)
+        out = report_action_pick_invest_env_param(
+            gs, SimpleNamespace(idx=0), _SIG)
+        assert out.applied
+        cw_sim_ports.declare_world(out.world_decl)
+        assert b.screen_identity() == SCREEN_PREP
+        assert int(gs.gold.value or 0) == gold0 + _reward_expect(
+            gold0, REWARD_BASE_GOLD_BY_ROUND[1], 0, won=True), \
+            '窗口开已落账(备战金已含收入)'
+    finally:
+        uninstall_backend()
