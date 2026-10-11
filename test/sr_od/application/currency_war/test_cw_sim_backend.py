@@ -35,6 +35,9 @@ from sr_od.application.currency_war.kernel.cw_action_report import (
     report_action_wear_equip_param,
 )
 from sr_od.application.currency_war.kernel.cw_economy import MAX_PLAYER_LEVEL
+from sr_od.application.currency_war.kernel.cw_env_grants import (
+    FIRST_STREAK_KEY,
+)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
     BenchSlot,
@@ -81,6 +84,10 @@ from sr_od.application.currency_war.sim.cw_sim_backend import (
     stream_rng,
     uninstall_backend,
     xp_apply_amount,
+)
+from sr_od.application.currency_war.sim.cw_sim_battle import (
+    SIM_BATTLE_FACE,
+    BattleOutcome,
 )
 from sr_od.application.currency_war.sim.cw_sim_run_config import RunConfig
 
@@ -1160,5 +1167,305 @@ def test_unpresented_overlay_anchor_not_visible_on_prep() -> None:
         assert b.visible(SCREEN_PREP, '备战标识-购买经验'), '备战锚可见'
         assert not b.visible(SCREEN_PREP, '标识-简易装备'), \
             '不可呈现浮层锚必须不可见'
+    finally:
+        uninstall_backend()
+
+
+# ============================================================ 3.3 环境条件发放 sim 接线锁
+# (迭代 2026-10-10-env-conditional-grants landing 3.3;详设
+#  details/env-conditional-grant.md §4/§5:结算腿触发检查接线于 streak
+#  observe 之后 / 触发函数两写 sig 写死单形态 = logic_sig('sim:env') /
+#  宝钻回调内构 obs 族 sig 三写 / 带钻补给零改动不采纳回调。)
+
+_ENV_GRANT_ENV = '深井角斗场'
+_ENV_GRANT_EQUIP = '财富宝钻'
+
+
+def _forced_outcome(won: bool) -> BattleOutcome:
+    """强制胜负结算输出(胜 hp_delta=0 零扣血;败 −23 保不致死)。"""
+    return BattleOutcome(won=won, progress=1.0 if won else 0.0,
+                         base_damage=None, progress_damage=None,
+                         hp_delta=0 if won else -23, face=SIM_BATTLE_FACE)
+
+
+def _force_settle(monkeypatch: pytest.MonkeyPatch, won: bool) -> None:
+    """强制战斗胜负(patch 面 = 调用方模块命名空间绑定;定义模块
+    patch 对 from-import 调用点不可见,规约见 CW skill sim-testing)。"""
+    import sr_od.application.currency_war.sim.cw_sim_backend as backend_mod
+    monkeypatch.setattr(backend_mod, 'settle_battle',
+                        lambda rng, *, plane, round_num: _forced_outcome(won))
+
+
+def _env_grant_backend(seed: int = 23) -> SimBackend:
+    """开局选深井角斗场环境的装配后端(调用方负责 uninstall)。"""
+    b = SimBackend(seed=seed, cfg=RunConfig(
+        selected_difficulty='A8', enemy_difficulty=108, env_present=True))
+    install_backend(b)
+    b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+    assert b.screen_identity() == SCREEN_INVEST_ENV
+    b.gs.write_logic(b.gs.invest_env_opts,
+                     [_ENV_GRANT_ENV, '轮岗', '头彩'],
+                     produced_by='Test', evidence='t:opts', sig=_SIG)
+    out = report_action_pick_invest_env_param(
+        b.gs, SimpleNamespace(idx=0), _SIG)
+    assert out.applied
+    cw_sim_ports.declare_world(out.world_decl)
+    return b
+
+
+def _record_all_writes(gs: GameState,
+                       monkeypatch: pytest.MonkeyPatch) -> list[tuple]:
+    """包装 write_logic/write_logic_rand/observe 记录
+    (通道, 字段名, evidence, sig) 写序(透传真实现零行为变化)。"""
+    calls: list[tuple[str, str, str | None, ChannelSig]] = []
+
+    def _wrap_logic(real, channel: str):
+        def rec(target, value, *, produced_by, evidence=None, sig, note=''):
+            calls.append((channel, gs._field_name(target), evidence, sig))
+            real(target, value, produced_by=produced_by, evidence=evidence,
+                 sig=sig, note=note)
+        return rec
+
+    def _wrap_obs(real):
+        def rec(target, value, *, evidence=None, sig, note=''):
+            calls.append(('obs', gs._field_name(target), evidence, sig))
+            real(target, value, evidence=evidence, sig=sig, note=note)
+        return rec
+
+    monkeypatch.setattr(gs, 'write_logic', _wrap_logic(gs.write_logic,
+                                                       'logic'))
+    monkeypatch.setattr(gs, 'write_logic_rand',
+                        _wrap_logic(gs.write_logic_rand, 'rand'))
+    monkeypatch.setattr(gs, 'observe', _wrap_obs(gs.observe))
+    return calls
+
+
+def _drive_env_grant_step(b: SimBackend) -> None:
+    """深井局单步驱动(补给恒选无钻选项,保触发局 diamond_count 基线
+    干净;带钻补给归专项用例;策略定卡加油站 = 零判读域写,断言与
+    seed 采样解耦)。"""
+    from sr_od.application.currency_war.kernel.cw_action_report import (
+        report_action_pick_megastar_param,
+        report_action_pick_planner_param,
+    )
+    screen = b.screen_identity()
+    gs = b.gs
+    if screen == SCREEN_SETTLE:
+        _node_advance_feed(gs, trigger='settle_confirm')
+    elif screen == SCREEN_SUPPLY:
+        opts = gs.supply.value.options
+        pick = next(o for o in opts if not o.has_diamond)
+        gs.write_logic(gs.chosen_supply,
+                       ('', pick.equip, pick.has_diamond),
+                       produced_by='Test', evidence='t:chosen', sig=_SIG)
+        out = report_action_pick_supply_param(
+            gs, SimpleNamespace(idx=opts.index(pick), char_name='',
+                                norm_item=pick.equip), _SIG)
+        cw_sim_ports.declare_world(out.world_decl)
+        _node_advance_feed(gs, trigger='supply_confirm')
+    elif screen == SCREEN_INVEST_STRATEGY:
+        gs.write_logic(gs.invest_strategy_opts,
+                       ['加油站', '躺平', '淘金客'],
+                       produced_by='Test', evidence='t:opts', sig=_SIG)
+        out = report_action_pick_invest_strategy_param(
+            gs, SimpleNamespace(norm_name='加油站'), _SIG,
+            session=SimpleNamespace())
+        cw_sim_ports.declare_world(out.world_decl)
+    elif screen == '货币战争-遭遇节点':
+        _encounter_pick_feed(gs)
+    elif screen == SCREEN_BOSS_BRIEFING:
+        b._handle_click_source(SCREEN_BOSS_BRIEFING, '区域-空白点击')
+    elif screen == '货币战争-盛会之星':
+        out = report_action_pick_megastar_param(gs, SimpleNamespace(), _SIG)
+        cw_sim_ports.declare_world(out.world_decl)
+    elif screen == '货币战争-银狼升星':
+        out = report_action_pick_planner_param(gs, SimpleNamespace(), _SIG)
+        cw_sim_ports.declare_world(out.world_decl)
+    elif screen == SCREEN_PREP:
+        _start_battle_feed(gs)
+    else:
+        raise AssertionError(f'未预期的呈现屏 {screen}')
+
+
+def _drive_until(b: SimBackend, pred, limit: int = 200) -> None:
+    """步进驱动至谓词成立(超限响错防死循环)。"""
+    for _ in range(limit):
+        if pred():
+            return
+        _drive_env_grant_step(b)
+    raise AssertionError('驱动步数超限,谓词未达成')
+
+
+def _grant_snapshot(gs: GameState) -> dict[str, object]:
+    """触发局判读域快照(重放对拍共用)。"""
+    return {
+        'streak': gs.streak.value,
+        'equips': list(gs.equips.value or []),
+        'env_grants_done': gs.env_grants_done.value,
+        'diamond_count': gs.diamond_count.value,
+        'deploy_cap': gs.deploy_cap.value,
+        'back_layout': gs.back_layout.value,
+        'level': gs.level.value,
+        'gold': gs.gold.value,
+        'hp': gs.hp.value,
+    }
+
+
+def test_env_grant_fires_at_fifth_streak_with_diamond_callback(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """数值对照(landing 3.3):深井角斗场 sim 局 5 连胜达成结算 →
+    装备在库(库尾追加)+ done 标记 + diamond_count +1 + deploy_cap
+    = level+1 + back_layout +1(基线 6 → 7,min9 未触);同时锁写行
+    形态:触发两写 sig 单形态 = logic_action 族 'sim:env',回调三写 =
+    observe 渠道 obs 族 'sim:env-diamond'。"""
+    b = _env_grant_backend()
+    try:
+        gs = b.gs
+        calls = _record_all_writes(gs, monkeypatch)
+        _force_settle(monkeypatch, won=True)
+        _drive_until(b, lambda: int(gs.streak.value or 0) >= 5)
+        # P1 战斗类节点恰 5 个(r3/r4/r6/r7/r9):全胜 → 5 连胜达成于
+        # r9 boss 结算腿,断言面即触发局现值
+        assert int(gs.streak.value or 0) == 5
+        assert gs.equips.value[-1] == _ENV_GRANT_EQUIP, '装备在库(库尾追加)'
+        assert gs.env_grants_done.value == ((_ENV_GRANT_ENV,
+                                             FIRST_STREAK_KEY),)
+        assert gs.diamond_count.value == 1, 'diamond_count +1(回调)'
+        assert gs.deploy_cap.value == int(gs.level.value) + 1, \
+            'deploy_cap = level + 拥有财富宝钻数'
+        assert gs.back_layout.value == 7, 'back_layout 基线 6 → +1'
+        # 触发两写:随机态发放 + done 登记,同 sig 单形态(禁 obs 族)
+        grant_rows = [c for c in calls
+                      if c[2] is not None and c[2].startswith('env_grant#')]
+        assert [(c[0], c[1]) for c in grant_rows] == [
+            ('rand', 'equips'), ('logic', 'env_grants_done')]
+        for c in grant_rows:
+            assert c[3].family == 'logic_action' \
+                and c[3].group_id == 'sim:env', f'触发 sig 单形态: {c}'
+        # 回调三写:observe 渠道,内构 obs 族 sig(同组同窗)
+        cb_rows = [c for c in calls
+                   if c[0] == 'obs' and c[2] == 'env_diamond']
+        assert [c[1] for c in cb_rows] == [
+            'diamond_count', 'deploy_cap', 'back_layout']
+        for c in cb_rows:
+            assert c[3].family == 'obs' \
+                and c[3].group_id == 'sim:env-diamond', f'回调 obs 族: {c}'
+        assert gs.equips.source == 'logic_rand', '发放 = 随机态通道'
+        assert gs.env_grants_done.source == 'logic', 'done = 登记直写'
+        assert gs.diamond_count.source == 'observation', '回调 = 观察通道'
+        assert gs.deploy_cap.source == 'observation'
+        assert gs.back_layout.source == 'observation'
+    finally:
+        uninstall_backend()
+
+
+def test_env_grant_same_seed_replay_identical(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """同 seed 重放一致(sim 确定性判据):同 seed 深井局全胜驱动两跑,
+    判读域快照逐键一致(发放/回调在确定性链上,无双发无漂移)。"""
+    snaps: list[dict[str, object]] = []
+    for _ in range(2):
+        b = _env_grant_backend()
+        try:
+            _force_settle(monkeypatch, won=True)
+            _drive_until(b, lambda bb=b: int(bb.gs.streak.value or 0) >= 5)
+            snaps.append(_grant_snapshot(b.gs))
+        finally:
+            uninstall_backend()
+    assert snaps[0]['env_grants_done'] == ((_ENV_GRANT_ENV,
+                                            FIRST_STREAK_KEY),), \
+        '两跑均触发发放(非偶然单发)'
+    assert snaps[0] == snaps[1], f'同 seed 重放漂移: {snaps}'
+
+
+def test_supply_diamond_pick_keeps_zero_callback(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """supply 路径零行为变化(landing 3.3):深井角斗场在册环境下带钻
+    补给选定 → 仅 diamond_count +1(_on_supply_picked 既有行为),
+    deploy_cap/back_layout 零写、零发放——钻类型未建模,不采纳回调。"""
+    b = _env_grant_backend()
+    try:
+        gs = b.gs
+        _force_settle(monkeypatch, won=True)
+        _drive_until(b, lambda: b.screen_identity() == SCREEN_SUPPLY)
+        assert int(gs.streak.value or 0) == 2, 'r3/r4 两胜,补给轮前 <5'
+        opts = gs.supply.value.options
+        pick = next(o for o in opts if o.has_diamond)
+        cap_before = gs.deploy_cap.value
+        back_before = gs.back_layout.value
+        gs.write_logic(gs.chosen_supply,
+                       ('', pick.equip, pick.has_diamond),
+                       produced_by='Test', evidence='t:chosen', sig=_SIG)
+        out = report_action_pick_supply_param(
+            gs, SimpleNamespace(idx=opts.index(pick), char_name='',
+                                norm_item=pick.equip), _SIG)
+        cw_sim_ports.declare_world(out.world_decl)
+        assert gs.diamond_count.value == 1, '带钻补给聚合计数 +1(既有行为)'
+        assert gs.deploy_cap.value == cap_before, '不采纳回调:cap 零写'
+        assert gs.back_layout.value == back_before, \
+            '不采纳回调:back_layout 零写'
+        assert gs.env_grants_done.value == (), '连胜未达标,零发放'
+        assert _ENV_GRANT_EQUIP not in gs.equips.value
+    finally:
+        uninstall_backend()
+
+
+def test_env_grant_non_diamond_equip_skips_callback(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """宝钻裁决只认财富宝钻(接线层):登记表换发非宝钻装备 → 触发照常
+    (发放 + done),回调三写零发生(回调内非财富宝钻早退,接线不预判)。"""
+    import sr_od.application.currency_war.kernel.cw_env_grants as env_grants_mod
+    monkeypatch.setattr(env_grants_mod, 'ENV_STREAK_GRANTS',
+                        {_ENV_GRANT_ENV: (5, '永动机')})
+    b = _env_grant_backend()
+    try:
+        gs = b.gs
+        calls = _record_all_writes(gs, monkeypatch)
+        _force_settle(monkeypatch, won=True)
+        _drive_until(b, lambda: int(gs.streak.value or 0) >= 5)
+        assert '永动机' in gs.equips.value, '发放照常(库内追加)'
+        assert gs.env_grants_done.value == ((_ENV_GRANT_ENV,
+                                             FIRST_STREAK_KEY),)
+        assert gs.diamond_count.value == 0, '非财富宝钻:回调早退零写'
+        assert gs.deploy_cap.value == 3 and gs.back_layout.value == 6, \
+            '三域零写(开局值不动)'
+        assert not [c for c in calls if c[2] == 'env_diamond'], \
+            '回调三写零发生'
+    finally:
+        uninstall_backend()
+
+
+def test_env_grant_check_receives_signed_streak_loss_no_grant(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """败向口径:结算腿以带符号 streak 调触发检查(败 −1 传入,kernel
+    ≤0 短路)→ 零发放零回调;调用边界 sig = logic_action 'sim:env'
+    单形态。"""
+    b = _env_grant_backend()
+    try:
+        gs = b.gs
+        import sr_od.application.currency_war.sim.cw_sim_backend as backend_mod
+        real_check = backend_mod.check_env_streak_grants
+        seen: list[tuple[int, ChannelSig]] = []
+
+        def _rec_check(gs_, streak_after, sig):
+            seen.append((streak_after, sig))
+            return real_check(gs_, streak_after, sig)
+
+        monkeypatch.setattr(backend_mod, 'check_env_streak_grants',
+                            _rec_check)
+        calls = _record_all_writes(gs, monkeypatch)
+        _force_settle(monkeypatch, won=False)
+        _drive_until(b, lambda: int(gs.streak.value or 0) < 0)
+        assert seen, '触发检查在结算腿被调用'
+        last_streak, last_sig = seen[-1]
+        assert last_streak == -1, '带符号口径(败向 −1 传入)'
+        assert last_sig.family == 'logic_action' \
+            and last_sig.group_id == 'sim:env', '调用边界 sig 单形态'
+        assert not [c for c in calls
+                    if c[2] is not None and c[2].startswith('env_grant#')], \
+            '败向零发放写'
+        assert gs.env_grants_done.value == ()
+        assert _ENV_GRANT_EQUIP not in gs.equips.value
+        assert gs.diamond_count.value == 0
     finally:
         uninstall_backend()
