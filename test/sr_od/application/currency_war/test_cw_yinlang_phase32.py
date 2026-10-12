@@ -80,6 +80,9 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     consume_defect_sink,
     set_defect_sink,
 )
+from sr_od.application.currency_war.kernel.cw_node_schedule import (
+    PLANE_NODE_TABLES,
+)
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionDeployMoveParam,
     CwActionPickInvestEnvParam,
@@ -549,7 +552,12 @@ def test_invest_unregistered_card_unchanged(
     assert out2.applied is True
     assert gs2.active_env.value == '随便一个未收录环境', \
         '选择事实落地写(表外环境同样经链注册)'
-    assert gs2.write_seq == seq2_before + 1, '恰 active_env 一行,零效果腿'
+    # T-8 起注册尾段恒两行:active_env 选择事实 + node_seq_by_plane 场字段
+    #(表外环境落默认表,字段恒全量无半态;写点唯一 = 获得链尾段)。
+    assert gs2.write_seq == seq2_before + 2, \
+        '恰 active_env + node_seq_by_plane 两行(零其他效果腿)'
+    assert gs2.node_seq_by_plane.value == dict(PLANE_NODE_TABLES), \
+        '表外环境场字段落默认表'
     assert bench_units_of(gs2) and \
         [(u.char_id, u.star) for u in bench_units_of(gs2)] == [('希儿', 1)], \
         '表外环境零入席(安静不写)'

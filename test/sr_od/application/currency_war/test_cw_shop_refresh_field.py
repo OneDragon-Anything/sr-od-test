@@ -105,7 +105,8 @@ def _patch_shop_open_readers(monkeypatch: pytest.MonkeyPatch,
 
     monkeypatch.setattr(obs, 'read_gold_settled', lambda ctx, screen: 20,
                         raising=False)
-    monkeypatch.setattr(obs, 'read_phase_round', lambda ctx, screen: (1, 5),
+    monkeypatch.setattr(obs, 'read_phase_round',
+                        lambda ctx, screen, round_caps=None: (1, 5),
                         raising=False)
     monkeypatch.setattr(cw_reconcile, 'reconcile_hp',
                         lambda sess_, opt, screen, source='', node_t=None:

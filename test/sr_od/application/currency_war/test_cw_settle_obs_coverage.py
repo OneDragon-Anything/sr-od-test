@@ -104,7 +104,7 @@ def test_record_round_outcome_refreshes_window_anchor(
     monkeypatch.setattr(op, 'round_by_find_area',
                         lambda scr, s, a, **k: _Area(False))
     monkeypatch.setattr(bw_mod, 'read_phase_round',
-                        lambda ctx, scr: (1, 1))
+                        lambda ctx, scr, round_caps=None: (1, 1))
     monkeypatch.setattr(
         bw_mod, 'read_round_outcome',
         lambda ctx, scr, **k: RoundOutcome(

@@ -581,7 +581,7 @@ def _patch_clean_readers(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(obs, 'read_gold_settled', lambda ctx, screen: 20,
                         raising=False)
-    monkeypatch.setattr(obs, 'read_phase_round', lambda ctx, screen: (1, 4),
+    monkeypatch.setattr(obs, 'read_phase_round', lambda ctx, screen, round_caps=None: (1, 4),
                         raising=False)
     monkeypatch.setattr(obs, 'read_hp_opt', lambda ctx, screen: None,
                         raising=False)
@@ -691,7 +691,7 @@ def test_observation_feed_shop_open_reads_refresh_price(
     sess = SimpleNamespace(last_streak=0, active_strategies=[])
     monkeypatch.setattr(obs, 'read_gold_settled', lambda ctx, screen: 20,
                         raising=False)
-    monkeypatch.setattr(obs, 'read_phase_round', lambda ctx, screen: (1, 5),
+    monkeypatch.setattr(obs, 'read_phase_round', lambda ctx, screen, round_caps=None: (1, 5),
                         raising=False)
     monkeypatch.setattr(cw_reconcile, 'reconcile_hp',
                         lambda sess_, opt, screen, source='', node_t=None:
@@ -739,7 +739,7 @@ def test_observation_feed_battle_frame_kind_inherits(
     from sr_od.application.currency_war.obs import cw_observation as obs
 
     sess = SimpleNamespace(last_streak=0, active_strategies=[])
-    monkeypatch.setattr(obs, 'read_phase_round', lambda ctx, screen: (1, 9),
+    monkeypatch.setattr(obs, 'read_phase_round', lambda ctx, screen, round_caps=None: (1, 9),
                         raising=False)
     monkeypatch.setattr(cw_reconcile, 'reconcile_hp',
                         lambda sess_, opt, screen, source='', node_t=None:

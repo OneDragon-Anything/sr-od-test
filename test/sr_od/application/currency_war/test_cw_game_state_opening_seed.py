@@ -76,6 +76,8 @@ _BC_UNSEEDED: tuple[str, ...] = (
     'event_overlay',
     'lv999_cost_tier', 'round_fresh_buys', 'level_up_cost', 'top_bar_raw',
     'tracked_account_observed', 'consumables', 'board',
+    # 逐位面节点序列场字段(T-8:None = 未注册态是设计语义,B 类不种)
+    'node_seq_by_plane',
 )
 
 _OBS_SIG = ChannelSig(family='obs', actor='CwScreenPrep', mode='read')

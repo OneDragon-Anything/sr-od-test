@@ -72,7 +72,7 @@ def _make_op(test_context, monkeypatch,
     monkeypatch.setattr(op, 'round_by_find_area',
                         lambda scr, s, a, **k: _Area(False))
     monkeypatch.setattr(bw_mod, 'read_phase_round',
-                        lambda ctx, scr: (1, 1))
+                        lambda ctx, scr, round_caps=None: (1, 1))
     queue = list(outcomes)
     monkeypatch.setattr(bw_mod, 'read_round_outcome',
                         lambda ctx, scr, **k: queue.pop(0))
