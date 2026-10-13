@@ -55,7 +55,6 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionSellBenchParam,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
-    entry,
     mandate,
     sell_gate,
 )
@@ -323,7 +322,7 @@ class TestWindowLifecycle:
 # ===== W1:同 visit 卖回全通道被禁(P78-1;shop_sell 报告 W1)=====
 
 
-_W1_CHANNEL_CASES = ('funding-e2e', 'entry-ev', 'm4-candidates')
+_W1_CHANNEL_CASES = ('funding-e2e', 'm4-candidates')
 
 
 class TestW1SameVisitBan:
@@ -360,22 +359,6 @@ class TestW1SameVisitBan:
         assert key == '' and slots == [0], \
             '红证失效:燃料件未穿过身份段外谓词(紧缩位键 0 基)'
 
-    def _case_entry_ev(self):
-        """消费位②(entry EV pass funding):press 活跃件不被 prep
-        筹资卖出(方案 v3 §2.9 新格 A 三位同源;登记侧实装后差分闭死)。"""
-        sess = _sess()
-        sell_gate.register_launch(sess, _FUEL, cause='press', round_num=2)
-        bench = [_bc(_FUEL)]   # P4 容器形直构面
-        frame = mandate.MandateFrame(
-            gold=1, level=5, bench=bench, deployed=[], deploy_cap=6,
-            node_type=None, stop_flag=True, k_members=('目标件',),
-            round_num=2)
-        out = entry._criteria_pass(frame, sess,
-                                   _bridge(**_state(1, bench, round_num=2)),
-                                   ('目标件',), k_switched=False,
-                                   old_line_members=())
-        assert not [e for e in out if isinstance(e.action, CwActionSellBenchParam)]
-
     def _case_m4_candidates(self):
         """M4 通道同禁(P78 INV 通道无关):press 活跃件不入腾席候选;
         红证 = 身份段-only 装配下该件恰入候选。"""
@@ -395,42 +378,27 @@ class TestW1SameVisitBan:
         assert [mandate._slot_cid(b) for b in cands] == [_FUEL], '红证失效'
 
 
+# (W1 'entry-ev' 消费位锁退役〔2026-10-12 迭代批 3.3〕:entry EV pass 随
+#  备战九段全扫重写删除,备战域筹资发射位消亡——press 活跃件不被筹资
+#  卖出的同面语义仍由本文件 funding-e2e(店内 decide_shop_action)与
+#  评估器资格面测试〔test_cw_sell_candidates〕承载;店内筹资消费位
+#  随 3.6 会话重排接续。)
 _W1_CASES = {
     'funding-e2e': TestW1SameVisitBan._case_funding_e2e,
-    'entry-ev': TestW1SameVisitBan._case_entry_ev,
     'm4-candidates': TestW1SameVisitBan._case_m4_candidates,
 }
 
 
 # ===== funding 兜底豁免(P78-5 四条件)=====
 
-
 # (原 TestFundingHoldFallback 店侧五锁随商店期筹资形态收缩退役:
 #  店内兜底变现发射面删除,筹资形态 = 关店交回(锁 =
 #  test_cw_shop_action_face_contraction::test_funding_form_closes_with_
-#  defer_counter);兜底池定义/减法与达成量化的活跃消费位 =
-#  entry ②(a)/EV pass 备战侧,下方 entry 消费位锁保留。)
-
-
-class TestFundingFallbackEntryConsumer:
-    """兜底豁免 entry 消费位锁(②(a)/EV pass 备战侧)。"""
-
-    def test_entry_ev_fallback_liquidates_prep_carrier(self):
-        """消费位②(entry EV pass):兜底经 prep 载体发射(行为面;计数
-        分键已随 2026-09-08 用户归因遥测删除指令拆除)。"""
-        sess = SimpleNamespace()
-        state_of(sess).cw4_counters = {}
-        bench = [_bc(_TRANS_HOLD)]   # cost=2 → 退 2 ≥ 缺口 3−1;P4 容器形直构面
-        frame = mandate.MandateFrame(
-            gold=1, level=5, bench=bench, deployed=[], deploy_cap=6,
-            node_type=None, stop_flag=True, k_members=('目标件',),
-            round_num=2)
-        out = entry._criteria_pass(frame, sess,
-                                   _bridge(**_state(1, bench, round_num=2)),
-                                   ('目标件',), k_switched=False,
-                                   old_line_members=())
-        sells = [e.action for e in out if isinstance(e.action, CwActionSellBenchParam)]
-        assert [s.bench_idx for s in sells] == [0]
+#  defer_counter);原 entry 侧消费位锁〔TestFundingFallbackEntryConsumer,
+#  经 entry._criteria_pass 发射〕随 2026-10-12 迭代批 3.3 备战九段全扫
+#  重写退役——EV pass 删除,备战域兜底发射位消亡;兜底池定义单一源
+#  〔sell_gate.funding_hold_fallback〕与达成量化语义由 3.6 会话内筹资
+#  消费循环接线时新锁承载。)
 
 
 # ===== P78-6:projection 视图 = interest 全资格面(含 T3 活跃集)=====

@@ -225,14 +225,18 @@ class TestLockGenObservationKeys:
         """形态⑥观测键(241 §5.1 键名,不分位面):target 空窗 ∧ 濒死带
         ∧ 域外 ∧ 持金 ∧ 本帧零金消费 ⇒ terminal_targetless_idle 计 1;
         域外帧(g>g* 且必花域判定真)与非濒死帧(hp=60)零显影。纯观测:
-        计数不改发射序列。"""
-        monkeypatch.setattr(mandate, 'run_mandate',
-                            lambda frame, session, **kw: [])
-
-        def _obs(st: SimpleNamespace) -> SimpleNamespace:
-            # 阶段 3.5:黑板只载控制信号域(boxes/tomes/spheres 消费已切
-            # 容器),emit 去 obs 形参——本桩随退役收缩为恒 None 占位。
-            return None
+        计数不改发射序列。
+        (九段工序重排对账:观测载体辖域 = 到达第 7 步之后的帧——帧构造
+        需打 shop_handled 标记〔商店会话已处理〕,否则第 4 步开店命中
+        提前返回不入键;monkeypatch run_mandate 桩随 emit 不再调用骨架
+        pass 自然失效,保留无害。)"""
+        from sr_od.application.currency_war.kernel.cw_game_state import (
+            ChannelSig,
+            game_state_of,
+        )
+        from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+            session_scope as _ss,
+        )
 
         def _mk_frame(gold: int, hp: int) -> dict:
             # 容器化段 2:局内事实喂 session 容器(观察源契约),黑板帧
@@ -240,24 +244,31 @@ class TestLockGenObservationKeys:
             return {'gold': gold, 'level': 6, 'round_num': 2, 'hp': hp,
                     'plane': 2, 'node': '战斗'}
 
-        st = _mk_frame(40, 10)
-        sess = SimpleNamespace(cw4_counters={}, v3_intention=IntentionState())
-        cw4_gs(sess, **st)
+        def _mk_sess(st: dict) -> SimpleNamespace:
+            _sess = SimpleNamespace(cw4_counters={},
+                                    v3_intention=IntentionState())
+            _gs = cw4_gs(_sess, **st)
+            # 生效序位写端(node_pos;标记判定 = effective_node_pos 读口,
+            # 未观察 None 不当真)+ 商店会话标记(第 4 步跳过 → 帧到达
+            # 第 7/8 步,观测辖域内)。
+            _gs.observe(_gs.node_pos, (int(st['plane']), int(st['round_num'])),
+                        sig=ChannelSig(family='obs', actor='cw4_seed',
+                                       mode='synthesized'))
+            _ss.mark_shop_handled(game_state_of(_sess))
+            return _sess
+
+        sess = _mk_sess(_mk_frame(40, 10))
         out = entry.emit(sess, None)
         assert state_of(sess).cw4_counters.get('terminal_targetless_idle') == 1
         assert not any(isinstance(e.action, mandate.CwActionLevelUpParam) for e in out), (
             '观测零行为:形态⑥帧发射序列不变(无动作 ⇒ 出战路径)')
         # 域外对照:同帧 g>g* ⇒ 不计
-        st_z = _mk_frame(80, 10)
-        sess_z = SimpleNamespace(cw4_counters={}, v3_intention=IntentionState())
-        cw4_gs(sess_z, **st_z)
+        sess_z = _mk_sess(_mk_frame(80, 10))
         entry.emit(sess_z, None)
         assert 'terminal_targetless_idle' not in state_of(sess_z).cw4_counters
         # 负对照:非濒死帧(hp=60)不计(键只辖濒死带形态,与既有
         # advisor 计数面零交集)
-        st_h = _mk_frame(40, 60)
-        sess_h = SimpleNamespace(cw4_counters={}, v3_intention=IntentionState())
-        cw4_gs(sess_h, **st_h)
+        sess_h = _mk_sess(_mk_frame(40, 60))
         entry.emit(sess_h, None)
         assert 'terminal_targetless_idle' not in state_of(sess_h).cw4_counters
 
