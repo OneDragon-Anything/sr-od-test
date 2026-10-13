@@ -162,17 +162,62 @@ def test_pick_channels_payload_fields_excluded_from_action_key() -> None:
 
 def test_pick_supply_equip_unresolved_flips_source(
         rows_sink: _RowSink) -> None:
-    """补给装备名未解析(既有形态):单位腿照常应用,装备腿禁猜——
-    equips 值不变翻来源 + 留证行。"""
+    """补给装备名未解析(逐件 fail-closed,T-9 列表式装备腿):未解析件
+    禁猜——equips 值不变翻来源 + 留证行;已解析件照常入账(不整批弃)。
+    形态 = 装备腿集合内含 '' 件(norm_item=''+附加件非空,或附加件
+    归一未解析);``char≠'' ∧ 全部腿空`` 已改走零装备名分支(见
+    test_pick_supply_char_only_zero_equip_column,旧「主件空 = 未解析」
+    归因随 T-9 退役)。"""
     gs = _make_gs(bench=[('希儿', 1)], equips=['折叠小刀'])
     out = report_action_pick_supply_param(
-        gs, CwActionPickSupplyParam(idx=0, char_name='希儿', norm_item=''),
+        gs, CwActionPickSupplyParam(idx=0, char_name='希儿',
+                                    norm_item='量产型装甲',
+                                    extra_norm_items=('',)),
         _lsig('CwScreenSupplyNode'))
     assert out.applied is True
     assert ('希儿', 1) in _units(gs), '单位腿不受装备名未解析影响'
-    assert gs.equips.value == ['折叠小刀'], '装备腿值不变'
-    assert gs.equips.source == 'logic_rand', '翻来源'
+    assert gs.equips.value == ['折叠小刀', '量产型装甲'], \
+        '已解析件照常入账(fail-closed 不整批弃)'
+    assert gs.equips.source == 'logic_rand', '未解析件值不变翻来源'
     assert rows_sink.kinds() == ['pick_supply_name_unresolved'], '留证行 kind'
+
+
+def test_pick_supply_char_only_zero_equip_column_no_defect(
+        rows_sink: _RowSink) -> None:
+    """char-only 选定锁(T-9 对抗 r1 A1):char 非空 ∧ 装备腿全空 →
+    装备域零写(无预测无期望,零翻来源)+ reason 留证、**零缺陷行**
+    ——合法无装备读数列(人才储备类 char-only 列/件名全失读列)禁发
+    「装备名未解析」伪缺陷。"""
+    gs = _make_gs(bench=[('希儿', 1)], equips=['折叠小刀'])
+    before = (gs.equips.value, gs.equips.source)
+    out = report_action_pick_supply_param(
+        gs, CwActionPickSupplyParam(idx=0, char_name='希儿', norm_item=''),
+        _lsig('CwScreenSupplyNode'))
+    assert out.applied is True and out.reason == 'no_equip_column', \
+        '零装备名分支留证载体 = reason'
+    assert (gs.equips.value, gs.equips.source) == before, '装备域零写'
+    assert rows_sink.kinds() == [], '零缺陷行(伪缺陷治理)'
+
+
+def test_pick_supply_extra_norm_items_land_all_legs(
+        rows_sink: _RowSink) -> None:
+    """附加装备腿锁(T-9):extra_norm_items 两件 → owned 尾追两件
+    (主件 → 附加件画面 y 序)+ 获得后果链逐件(主件分身墨镜送银狼 1★
+    合成 2★、附加件分身墨镜Max 送银狼 2★)——世界写入 = 角色 + 随选
+    装备组全列。"""
+    gs = _make_gs(bench=[('银狼', 1), ('银狼', 1)], equips=[])
+    out = report_action_pick_supply_param(
+        gs, CwActionPickSupplyParam(idx=0, char_name='银狼',
+                                    norm_item='分身墨镜',
+                                    extra_norm_items=('分身墨镜Max',)),
+        _lsig('CwActionPickSupplyOp'))
+    assert out.applied is True
+    assert gs.equips.value == ['分身墨镜', '分身墨镜Max'], \
+        '装备腿 0..n 件按画面 y 序全列入栏'
+    units = _units(gs)
+    assert units.count(('银狼', 2)) == 2, \
+        '后果链逐件:主件合成 2★ + 附加件 Max 直送 2★'
+    assert rows_sink.kinds() == [], '全解析零缺陷'
 
 
 def test_pick_supply_content_unknown_flips_domains(

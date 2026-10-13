@@ -106,7 +106,7 @@ def _step(b: SimBackend) -> None:
     if screen == SCREEN_SUPPLY:
         opts = gs.supply.value.options
         gs.write_logic(gs.chosen_supply,
-                       ('', opts[0].equip, opts[0].has_diamond),
+                       ('', (opts[0].equip, *opts[0].extra_equips)),
                        produced_by='Test', evidence='t:chosen', sig=_SIG)
         out = report_action_pick_supply_param(
             gs, SimpleNamespace(idx=0, char_name='', norm_item=opts[0].equip),

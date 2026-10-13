@@ -120,13 +120,14 @@ def test_terminal_contract_schema_and_match_shape(monkeypatch):
     # 七新域键在册(终态契约八新槽,invest_opts 辖两字段;
     # megastar_opts 随选择坐标观察上报收敛批扩 MegastarOption.xy,
     # 按 game_state/fields.md §3.4.5a「B 类 typed 扩 xy = 域版本自现值
-    # bump 一档」bump 至 2;同款先例 = expert_invite payload 扩坐标字段)
+    # bump 一档」bump 至 2;同款先例 = expert_invite payload 扩坐标字段;
+    # supply 随 T-9 SupplyOption 扩 extra_equips 同款 bump 至 3)
     for key in ('invest_opts', 'partner_opts', 'planner_opts',
                 'star_tome_opts', 'wish_trial_opts', 'box_card_names'):
         assert DEFAULT_GS_SCHEMA[key] == 1, key
     assert DEFAULT_GS_SCHEMA['megastar_opts'] == 2
     assert DEFAULT_GS_SCHEMA['encounter'] == 2
-    assert DEFAULT_GS_SCHEMA['supply'] == 2
+    assert DEFAULT_GS_SCHEMA['supply'] == 3
     assert DEFAULT_GS_SCHEMA['node_screen_refresh'] == 4
     # Match additive 前置字段:生产漏斗填充形态,缺省 None(3.5 收紧必填)
     gs = GameState(schema_version=1)

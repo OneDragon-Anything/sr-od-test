@@ -263,7 +263,7 @@ def _drive_step(b: SimBackend, rng_seed: int) -> None:
     if screen == SCREEN_SUPPLY:
         opts = gs.supply.value.options
         gs.write_logic(gs.chosen_supply,
-                       ('', opts[0].equip, opts[0].has_diamond),
+                       ('', (opts[0].equip, *opts[0].extra_equips)),
                        produced_by='Test', evidence='t:chosen', sig=_SIG)
         from sr_od.application.currency_war.kernel.cw_action_report import (
             report_action_pick_supply_param,
@@ -857,8 +857,11 @@ def test_ore_env_plane2_declared_ore_and_expiry_cleanup(
 
 def test_supply_node_window_refresh_and_pick() -> None:
     """补给节点窗:呈现补给屏(3 选项写容器 + 免费刷新 left=1);刷新
-    = 点击源(left 递减 + 选项重掷);pick_supply 走获得链,带钻选项给
-    宝钻(世界事实写 diamond_count)。"""
+    = 点击源(left 递减 + 选项重掷);pick_supply 走获得链。宝钻腿 =
+    chosen_supply (角色, 装备名列表) 按 DIAMOND_EQUIP_NAMES 名单派生
+    (T-9 裁定 2)——sim 选项件名恒非钻名 → 派生不发(选项级钻标属
+    呈现面近似,U24 披露在册);含钻名形态的派生锁 =
+    test_supply_diamond_leg_derives_from_chosen_name_list。"""
     b = _backend(1013)
     try:
         b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
@@ -869,14 +872,16 @@ def test_supply_node_window_refresh_and_pick() -> None:
                 _node_advance_feed(b.gs, trigger='settle_confirm')
         assert b.screen_identity() == SCREEN_SUPPLY
         assert b.gs.supply_refresh_left.value == 1, '节点入口初始 left=1'
-        opts_before = [o.equip for o in b.gs.supply.value.options]
+        opts_before = [(o.equip, o.extra_equips)
+                       for o in b.gs.supply.value.options]
         b._handle_click_source(SCREEN_SUPPLY, '文本-剩余次数')
         assert b.gs.supply_refresh_left.value == 0, '刷新 left−1'
-        opts_after = [o.equip for o in b.gs.supply.value.options]
+        opts_after = [(o.equip, o.extra_equips)
+                      for o in b.gs.supply.value.options]
         assert opts_after != opts_before, '选项重掷'
-        diamond = any(o.has_diamond for o in b.gs.supply.value.options)
         pick = b.gs.supply.value.options[0]
-        b.gs.write_logic(b.gs.chosen_supply, ('', pick.equip, pick.has_diamond),
+        b.gs.write_logic(b.gs.chosen_supply,
+                         ('', (pick.equip, *pick.extra_equips)),
                          produced_by='Test', evidence='t:chosen', sig=_SIG)
         out = report_action_pick_supply_param(
             b.gs, SimpleNamespace(idx=0, char_name='', norm_item=pick.equip),
@@ -885,7 +890,8 @@ def test_supply_node_window_refresh_and_pick() -> None:
         assert pick.equip in b.gs.equips.value, '装备腿入栏'
         cw_sim_ports.declare_world(out.world_decl)
         _node_advance_feed(b.gs, trigger='supply_confirm')
-        assert b.gs.diamond_count.value == (1 if diamond else 0)
+        assert b.gs.diamond_count.value == 0, \
+            'sim 选项名单不含钻名 → 列表派生零宝钻腿(fail-visible 边)'
     finally:
         uninstall_backend()
 
@@ -1256,7 +1262,7 @@ def _drive_env_grant_step(b: SimBackend) -> None:
         opts = gs.supply.value.options
         pick = next(o for o in opts if not o.has_diamond)
         gs.write_logic(gs.chosen_supply,
-                       ('', pick.equip, pick.has_diamond),
+                       ('', (pick.equip, *pick.extra_equips)),
                        produced_by='Test', evidence='t:chosen', sig=_SIG)
         out = report_action_pick_supply_param(
             gs, SimpleNamespace(idx=opts.index(pick), char_name='',
@@ -1381,24 +1387,26 @@ def test_env_grant_same_seed_replay_identical(
 def test_supply_diamond_pick_keeps_zero_callback(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """supply 路径零行为变化(landing 3.3):深井角斗场在册环境下带钻
-    补给选定 → 仅 diamond_count +1(_on_supply_picked 既有行为),
-    deploy_cap/back_layout 零写、零发放——钻类型未建模,不采纳回调。"""
+    补给选定 → 仅 diamond_count +1(_on_supply_picked 既有行为,带钻以
+    名单内件名入 chosen 列表承载——T-9 列表派生,sim 选项级钻标属呈现
+    面不入名单),deploy_cap/back_layout 零写、零发放——钻类型未建模,
+    不采纳回调。"""
     b = _env_grant_backend()
     try:
         gs = b.gs
         _force_settle(monkeypatch, won=True)
         _drive_until(b, lambda: b.screen_identity() == SCREEN_SUPPLY)
         assert int(gs.streak.value or 0) == 2, 'r3/r4 两胜,补给轮前 <5'
-        opts = gs.supply.value.options
-        pick = next(o for o in opts if o.has_diamond)
         cap_before = gs.deploy_cap.value
         back_before = gs.back_layout.value
+        # 红钻 = 三钻之一(避开 _ENV_GRANT_EQUIP=财富宝钻,两腿不混淆:
+        # 本锁只证 supply 钻腿聚合,环境发放仍零发生)
         gs.write_logic(gs.chosen_supply,
-                       ('', pick.equip, pick.has_diamond),
+                       ('', ('红钻',)),
                        produced_by='Test', evidence='t:chosen', sig=_SIG)
         out = report_action_pick_supply_param(
-            gs, SimpleNamespace(idx=opts.index(pick), char_name='',
-                                norm_item=pick.equip), _SIG)
+            gs, SimpleNamespace(idx=0, char_name='', norm_item='红钻'),
+            _SIG)
         cw_sim_ports.declare_world(out.world_decl)
         assert gs.diamond_count.value == 1, '带钻补给聚合计数 +1(既有行为)'
         assert gs.deploy_cap.value == cap_before, '不采纳回调:cap 零写'
@@ -1406,6 +1414,27 @@ def test_supply_diamond_pick_keeps_zero_callback(
             '不采纳回调:back_layout 零写'
         assert gs.env_grants_done.value == (), '连胜未达标,零发放'
         assert _ENV_GRANT_EQUIP not in gs.equips.value
+    finally:
+        uninstall_backend()
+
+
+def test_supply_diamond_leg_derives_from_chosen_name_list() -> None:
+    """sim 宝钻腿列表派生锁(T-9 裁定 2):chosen_supply = (角色,
+    装备名列表),列表任一件名命中 DIAMOND_EQUIP_NAMES → diamond_count
+    +1;不含 → 不发(两态同 backend 直驱;live 写端 = 画面 op 确认即写,
+    sim 决策腿未接 = chosen 恒 None 死腿维持)。OCR 误读边(列表名不
+    匹配漏发)= fail-visible,装备/钻数观察下一帧暴露,披露 4 在册。"""
+    b = _backend(5)
+    try:
+        gs = b.gs
+        gs.write_logic(gs.chosen_supply, ('', ('折叠小刀', '财富宝钻')),
+                       produced_by='Test', evidence='t:chosen', sig=_SIG)
+        b._on_supply_picked()
+        assert gs.diamond_count.value == 1, '列表含钻名 → 宝钻腿 +1'
+        gs.write_logic(gs.chosen_supply, ('', ('折叠小刀', '垃圾袋')),
+                       produced_by='Test', evidence='t:chosen', sig=_SIG)
+        b._on_supply_picked()
+        assert gs.diamond_count.value == 1, '列表不含钻名 → 不发'
     finally:
         uninstall_backend()
 

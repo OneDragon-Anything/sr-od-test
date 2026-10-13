@@ -4,7 +4,7 @@ design §2.0B/§3 验收锚 1)。
 
 - **pick 即时上报锁**(fixture 剧本,宿主机械半全桩):确认点击后
   (不等下一帧)容器即持 owned 规范名 + 单位腿 + 装备后果腿;
-  ``chosen_supply`` 三元组在派发前已由画面 op 写(写点 = 选择点,
+  ``chosen_supply`` 2 元组在派发前已由画面 op 写(写点 = 选择点,
   ``op-layer.md`` §2.2 动作事实边界);画面 op 无落地相补写面
   (节点完成门 miss 后零容器写);
 - **分层归一三型锁**(``normalize_registry_equip_name``):
@@ -108,9 +108,10 @@ def test_pick_confirm_reports_full_result_immediately(
 
 def test_chosen_supply_written_before_dispatch_and_no_landing_phase(
         test_context, monkeypatch) -> None:
-    """画面 op 侧锁:chosen_supply 三元组在动作派发前已写(写点 = 选择点,
-    ``op-layer.md`` §2.2);选卡派发即终结(_do_action 返回 True);
-    节点完成门 miss(act 分发身份安全网)后零容器写(无落地相补写面)。"""
+    """画面 op 侧锁:chosen_supply 2 元组(角色, 装备名列表;T-9 裁定 2)
+    在动作派发前已写(写点 = 选择点,``op-layer.md`` §2.2);选卡派发即终结
+    (_do_action 返回 True);节点完成门 miss(act 分发身份安全网)后零容器写
+    (无落地相补写面)。"""
     from sr_od.application.currency_war.operations.cw_op import (
         cw_action_registry,
     )
@@ -129,7 +130,8 @@ def test_chosen_supply_written_before_dispatch_and_no_landing_phase(
     monkeypatch.setattr(op, 'last_screenshot', object(), raising=False)
     monkeypatch.setattr(op, 'round_by_find_area',
                         lambda scr, s, a, **k: _Area(True))
-    opt = SimpleNamespace(char='希儿', equip='星币收集器', has_diamond=True)
+    opt = SimpleNamespace(char='希儿', equip='星币收集器', has_diamond=True,
+                          extra_equips=('垃圾袋',))
     monkeypatch.setattr(sn, 'read_supply_options',
                         lambda ctx, screen: [(opt, SimpleNamespace(x=900, y=550))])
     monkeypatch.setattr(op, '_read_node_bar', lambda screen: None)
@@ -146,8 +148,8 @@ def test_chosen_supply_written_before_dispatch_and_no_landing_phase(
                         lambda act, ctx, env: _ProbeStubOp())
     _run_node(test_context, op, op.observe)   # 观察 node 装载 obs(report 落容器)
     assert op._do_action() is True, '选卡派发即终结(终结交回)'
-    assert chosen_at_dispatch == [('希儿', '星币收集器', True)], \
-        'chosen_supply 三元组在派发前已写(写点 = 选择点)'
+    assert chosen_at_dispatch == [('希儿', ('星币收集器', '垃圾袋'))], \
+        'chosen_supply 2 元组在派发前已写(写点 = 选择点,携全列装备)'
     write_seq_after_dispatch = gs.write_seq
     # 节点完成门 miss(overlay 已关)= 分发身份安全网 success 交回,
     # 零落地相补写面(证据闩已随即时上报批退役)。

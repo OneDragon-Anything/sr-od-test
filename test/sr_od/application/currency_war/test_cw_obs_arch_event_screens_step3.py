@@ -8,8 +8,9 @@ SrOperation 形态(同批原七选卡屏与结构/分流/源面锁已随并存�
 - **chosen_supply 确认即写锁**(口径分叉申报:supply 直写,chosen_tome
   维持出口验真后写家族口径——差异理由 = supply 的中转暂存宿主已随执行
   层状态类目退役,直写是载体消亡后的唯一形态):
-  真选(有选项 + 决策选列)→ 确认分支单次逻辑写入 (角色,装备,有钻石)
-  三元组,机械派发半照发(记录面不拦截动作);刷新轮不写 = 真选守卫
+  真选(有选项 + 决策选列)→ 确认分支单次逻辑写入 (角色, 装备名列表)
+  2 元组(T-9 裁定 2,不带钻字段),机械派发半照发(记录面不拦截动作);
+  刷新轮不写 = 真选守卫
   (兜底点卡/刷新路径与真选分支互斥)。
 - **supply 刷新闸锁**(剩余语义观察真值,迭代
    3.2):剩余 1 → 建议刷新 →
@@ -89,15 +90,18 @@ def _make_supply(test_context, monkeypatch, *, pick, opts,
 def test_supply_chosen_written_on_confirm_pick(test_context, monkeypatch) -> None:
     """补给 chosen_supply 确认即写行为锁(选定中转暂存宿主已随执行层状态
     类目退役,写端 = 选定确认时点;口径分叉申报见文件头):
-    - 真选(有选项 + 决策选列):确认分支单次逻辑写入 (角色,装备,有钻石)
-      三元组,source=logic,机械派发半照发(记录面不拦截动作);
-      选定快照携 ``refresh_left`` 键 = 容器剩余次数现值(可 None);
+    - 真选(有选项 + 决策选列):确认分支单次逻辑写入 (角色, 装备名列表)
+      2 元组(T-9 裁定 2:不带钻字段,带钻与否消费侧自名单派生),
+      source=logic,机械派发半照发(记录面不拦截动作);
+      选定快照携 ``refresh_left`` 键 = 容器剩余次数现值(可 None)
+      + ``extra_equips`` 键 = 列内附加装备;
     - 刷新轮不写 = 真选守卫(闸拒绝零点击路径语义)。
     OCR 读链/配置/机械派发半桩化,只锁记录面。"""
     from one_dragon.base.geometry.point import Point
 
     # ① 真选:确认即写(锚读 1 → 容器 left=1 → 快照 refresh_left=1)
-    opt = SimpleNamespace(char='希儿', equip='星币收集器', has_diamond=True)
+    opt = SimpleNamespace(char='希儿', equip='星币收集器', has_diamond=True,
+                          extra_equips=())
     op, _match, session, stub, envs = _make_supply(
         test_context, monkeypatch,
         pick=CwActionPickSupplyParam(idx=0, reason='test'),
@@ -106,17 +110,31 @@ def test_supply_chosen_written_on_confirm_pick(test_context, monkeypatch) -> Non
     _run_node(test_context, op, op.observe)   # 观察 node 装载 obs(report 落容器)
     op._do_action()
     gs = game_state_of(session)
-    assert gs.chosen_supply.value == ('希儿', '星币收集器', True), (
-        f'确认即写:容器持选定三元组,实得 {gs.chosen_supply.value!r}')
+    assert gs.chosen_supply.value == ('希儿', ('星币收集器',)), (
+        f'确认即写:容器持选定 2 元组(角色, 装备名列表),'
+        f'实得 {gs.chosen_supply.value!r}')
     assert gs.chosen_supply.source == 'logic', '单次逻辑写入(source=logic)'
     assert stub.executed == 1, '机械派发半照发(记录面不拦截动作链)'
     assert gs.supply.value is not None, '前置:观察轮 report 落容器 supply'
     assert gs.supply_refresh_left.value == 1, '观察轮锚读摄入容器 left'
     assert envs and envs[0].picked is not None \
-        and envs[0].picked['refresh_left'] == 1, (
-            f"选定快照携 refresh_left=容器现值:"
+        and envs[0].picked['refresh_left'] == 1 \
+        and envs[0].picked['extra_equips'] == (), (
+            f"选定快照携 refresh_left + extra_equips 键:"
             f"{envs[0].picked!r}")
-    # ② 刷新轮不写(真选守卫;闸拒绝零点击语义)
+    # ② 双排修饰局:chosen 携全列装备(首件 + extra_equips,OCR 原文 y 序)
+    opt1b = SimpleNamespace(char='镜流', equip='折叠小刀', has_diamond=False,
+                            extra_equips=('垃圾袋', '财富宝钻'))
+    op1b, _m1b, s1b, _s1b, _ = _make_supply(
+        test_context, monkeypatch,
+        pick=CwActionPickSupplyParam(idx=0, reason='test'),
+        opts=[(opt1b, SimpleNamespace(x=900, y=550))])
+    _run_node(test_context, op1b, op1b.observe)
+    op1b._do_action()
+    assert game_state_of(s1b).chosen_supply.value == \
+        ('镜流', ('折叠小刀', '垃圾袋', '财富宝钻')), \
+        'chosen 2 元组携全列装备(带钻与否自名单派生,不写入)'
+    # ③ 刷新轮不写(真选守卫;闸拒绝零点击语义)
     op2, _m2, s2, _stub2, _ = _make_supply(
         test_context, monkeypatch,
         pick=CwActionRefreshSupplyParam(reason='test'),
@@ -145,7 +163,8 @@ def test_supply_refresh_gate_left_semantics(test_context, monkeypatch) -> None:
         cw_screen_supply_node as sn,
     )
 
-    opt = SimpleNamespace(char='希儿', equip='星币收集器', has_diamond=True)
+    opt = SimpleNamespace(char='希儿', equip='星币收集器', has_diamond=True,
+                          extra_equips=())
     opts = [(opt, SimpleNamespace(x=900, y=550))]
     clicks: list = []
     monkeypatch.setattr(test_context.controller, 'mouse_move',
