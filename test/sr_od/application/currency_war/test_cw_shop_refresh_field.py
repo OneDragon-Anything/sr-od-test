@@ -109,7 +109,7 @@ def _patch_shop_open_readers(monkeypatch: pytest.MonkeyPatch,
                         lambda ctx, screen, round_caps=None: (1, 5),
                         raising=False)
     monkeypatch.setattr(cw_reconcile, 'reconcile_hp',
-                        lambda sess_, opt, screen, source='', node_t=None:
+                        lambda sess_, opt, screen, source='':
                         (82, False), raising=False)
     monkeypatch.setattr(obs, 'read_level_up_cost', lambda ctx, screen: 4,
                         raising=False)

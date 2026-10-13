@@ -586,7 +586,7 @@ def _patch_clean_readers(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(obs, 'read_hp_opt', lambda ctx, screen: None,
                         raising=False)
     monkeypatch.setattr(cw_reconcile, 'reconcile_hp',
-                        lambda sess_, opt, screen, source='', node_t=None:
+                        lambda sess_, opt, screen, source='':
                         (82, False), raising=False)
     monkeypatch.setattr(obs, 'read_node_type', lambda ctx, screen: 'battle',
                         raising=False)
@@ -653,7 +653,7 @@ def test_observation_feed_wiring_and_hp_loss_semantics(
     sess2 = SimpleNamespace(last_streak=0, active_strategies=[],
                             last_hp_real=80, last_hp_real_node=12)
     monkeypatch.setattr(cw_reconcile, 'reconcile_hp',
-                        lambda sess_, opt, screen, source='', node_t=None:
+                        lambda sess_, opt, screen, source='':
                         (80, False), raising=False)
     cw_observation.read_game_state(_feed_ctx(sess2), None,
                                    phase='prep_clean')
@@ -663,7 +663,7 @@ def test_observation_feed_wiring_and_hp_loss_semantics(
 
     # 真值帧到达 → observation 转正
     monkeypatch.setattr(cw_reconcile, 'reconcile_hp',
-                        lambda sess_, opt, screen, source='', node_t=None:
+                        lambda sess_, opt, screen, source='':
                         (76, True), raising=False)
     cw_observation.read_game_state(_feed_ctx(sess2), None, phase='prep_clean')
     assert bs2.hp.value == 76 and bs2.hp.source == 'observation'
@@ -672,7 +672,7 @@ def test_observation_feed_wiring_and_hp_loss_semantics(
     #(禁清成 None;终态契约 §A:(值,False) 拒信态已随守卫退役——miss 恒
     # (先验或 None, False),沿用走 gs.carry)
     monkeypatch.setattr(cw_reconcile, 'reconcile_hp',
-                        lambda sess_, opt, screen, source='', node_t=None:
+                        lambda sess_, opt, screen, source='':
                         (None, False), raising=False)
     cw_observation.read_game_state(_feed_ctx(sess2), None, phase='prep_clean')
     assert bs2.hp.value == 76, '硬边界:正式值永不清成 None(沿用上一真值 76)'
@@ -694,7 +694,7 @@ def test_observation_feed_shop_open_reads_refresh_price(
     monkeypatch.setattr(obs, 'read_phase_round', lambda ctx, screen, round_caps=None: (1, 5),
                         raising=False)
     monkeypatch.setattr(cw_reconcile, 'reconcile_hp',
-                        lambda sess_, opt, screen, source='', node_t=None:
+                        lambda sess_, opt, screen, source='':
                         (82, False), raising=False)
     monkeypatch.setattr(obs, 'read_level_up_cost', lambda ctx, screen: 4,
                         raising=False)
@@ -742,7 +742,7 @@ def test_observation_feed_battle_frame_kind_inherits(
     monkeypatch.setattr(obs, 'read_phase_round', lambda ctx, screen, round_caps=None: (1, 9),
                         raising=False)
     monkeypatch.setattr(cw_reconcile, 'reconcile_hp',
-                        lambda sess_, opt, screen, source='', node_t=None:
+                        lambda sess_, opt, screen, source='':
                         (None, False), raising=False)
 
     # 无现值且未读:battle 帧 node 不写(占位 'prep' 已裁撤)
