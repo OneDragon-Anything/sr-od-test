@@ -206,6 +206,32 @@ class TestStep0SelfRescue:
                                              CwActionStartBattleParam))]
 
 
+# ============================================================ 第 1 步:消耗品
+
+
+class TestStep1Consumable:
+    """第 1 步点开消耗品锁(prep_pipeline §1 第 1 步:点开顺序 =
+    书册卡 → 补给箱 → 星徽秘典,依据 = 现行实体面臂序在案)。"""
+
+    def test_kind_priority_dominates_slot_order(self):
+        """点开优先级差分锁:同帧 bookcard 与 supply_box 均在场且
+        supply_box 槽位在前(槽 0)、bookcard 在后(槽 1)→ 按 kind
+        优先级取书册卡——锁「kind 优先序」非「槽位序首中」(若按槽位
+        序会先开槽 0 的补给箱)。"""
+        from sr_od.application.currency_war.kernel.cw_vocab import (
+            CwActionOpenBookcardParam,
+        )
+        sess = cw4_session()
+        cw4_gs(sess, gold=30, level=6, round_num=2, node='战斗',
+               bench=[BenchSlot(kind='supply_box'), BenchSlot(kind='bookcard')]
+               + [_bc('c0')] * 7,
+               front_row=_units(('三月七',)), back_row=())
+        out = _emit(sess)
+        assert len(out) == 1 \
+            and isinstance(out[0].action, CwActionOpenBookcardParam)
+        assert out[0].action.slot == 2, 'kind 优先:书册卡(槽 2)先于补给箱(槽 1)'
+
+
 # ============================================================ 第 2 步:晶矿
 
 
@@ -281,6 +307,31 @@ class TestStep2Ore:
         out2 = _emit(sess)
         assert len(out2) == 1 \
             and isinstance(out2[0].action, CwActionCollectOreParam)
+
+    def test_pad_filter_dominates_global_value_order(self):
+        """垫件过滤优先于全局价值排序(对抗差分态):垫件(5费 1★
+        流萤——该等级刷不出 ⇒ 再遇窗 inf,价值排全池末位)∧ 全池价值
+        最小件为非垫件(1费 2★ 艾丝妲)时,仍取垫件——锁「垫件谓词
+        过滤后取价值最小」非「全池排序首位」(价值函数无垫件身份维,
+        prep_pipeline 第 2 步消费声明;防未来回归成全池取最小)。"""
+        sess = cw4_session()
+        cw4_gs(sess, gold=30, level=6, round_num=2, node='战斗',
+               bench=[_bc('艾丝妲', star=2), _bc('流萤')]
+               + [_bc('c3', star=2)] * 7,
+               front_row=_units(('三月七',)), back_row=())
+        _write_ores(game_state_of(sess), (('gold', 100, 200, 30),))
+        # 全池序首位 = 艾丝妲(非垫件,价值更低)——全池取最小会卖它
+        gs = game_state_of(sess)
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.sell_candidates import (
+            evaluate_sell_candidates,
+        )
+        cands, _why = evaluate_sell_candidates(gs, 'ore_make_room')
+        assert cands[0].char_id == '艾丝妲' and cands[0].star == 2
+        out = _emit(sess)
+        sells = [e.action for e in out
+                 if isinstance(e.action, CwActionSellBenchParam)]
+        assert len(sells) == 1 and sells[0].bench_idx == 1, \
+            '垫件过滤优先:卖流萤(垫件)而非全池价值最小的艾丝妲'
 
 
 # ============================================================ 第 3 步:空段透传
