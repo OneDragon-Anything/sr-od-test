@@ -25,6 +25,7 @@ from sr_od.application.currency_war.kernel.cw_comps import (
     CARRY_ANCHOR_FALLBACK,
     COMP_LIBRARY,
     carry_anchor,
+    carry_set,
     char_lock_hit,
     strategy_lock_hit,
 )
@@ -67,6 +68,17 @@ def test_carry_anchor_plaza_first_fallback_registered():
     assert (CARRY_ANCHOR_FALLBACK['银枝群攻'] == '银枝'
             and CARRY_ANCHOR_FALLBACK['追击飞霄'] == '飞霄'
             and CARRY_ANCHOR_FALLBACK['专家桑博DOT'] == '桑博')
+
+
+def test_carry_set_union_anchor_and_core():
+    """③' CARRY 档 = 单名锚 ∪ core_chars 合流（§1.2「plaza_carry ∪ core_chars
+    合流」的派生落地；3.7 持有证据按「持有任一档内成员计 CARRY 档」消费）——
+    core 全员进档（review P1：单名锚窄化会把 core 成员错档到骨架/插件档）。"""
+    for comp in COMP_LIBRARY:
+        cs = carry_set(comp)
+        assert cs, comp.name
+        assert set(comp.core_chars) <= cs, comp.name
+        assert carry_anchor(comp) in cs, comp.name
 
 
 def test_char_lock_hit_and_semantics():
