@@ -1,0 +1,393 @@
+"""统一卖出候选评估器锁(契约 D 单一入口;迭代 2026-10-12-prep-shop-workflow-redesign 批 3.2)。
+
+出处 = 迭代总纲 design.md 契约 D(八场景参数表:候选池四族/资格面/
+消费方式)+ line_and_upgrade §4(价值评估函数金当量三项统一口径)+
+prep_pipeline §1 第 2 步(垫件谓词现文口径)与 §1 第 0 步(空板守卫
+as-built 不收窄)。锁语义 = 「价值低先让位」的排序结构与各场景候选池
+差分,非具体牌名。
+
+本批边界:评估器本体锁——生产接线(3.3/3.5/3.6 各发射位)不在本锁面。
+"""
+from __future__ import annotations
+
+import pytest
+from test.sr_od.application.currency_war._cw_helpers import (
+    cw4_bc,
+    cw4_gs,
+)
+
+from sr_od.application.currency_war.data.cw_shop_odds import (
+    reencounter_window_frames,
+)
+from sr_od.application.currency_war.kernel.cw_deploy_logic import (
+    SwapPlanContext,
+)
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    BenchSlot,
+    Unit,
+)
+from sr_od.application.currency_war.kernel.cw_strategy_session import (
+    StrategySession,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import provisional
+from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.sell_candidates import (
+    INTEREST_MARGIN_PER_ROUND,
+    MERGE_PROGRESS_X2_SLOT,
+    REJECT_NO_CANDIDATES,
+    REJECT_SWAP_CTX_MISSING,
+    SCENE_SPECS,
+    SELL_SCENARIOS,
+    evaluate_sell_candidates,
+    is_field_irrelevant_unit,
+    is_ore_pad_unit,
+    sell_gold_equivalent,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.sell_gate import (
+    EMPTY_BOARD_SELL_GUARD_KEY,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.session_scope import (
+    write_line_lock,
+)
+
+# 注册表事实锚(测试种子选名依据,别换名后不解注册表):
+# - 万敌(1费,夜之半神+燃血,非引擎/非持有集/非插件)= 干净垫件/无关件;
+# - 远坂凛(1费)/Saber(3费)/Archer(5费)= 命运圣杯族(tiers (2,3,4,5)),
+#   单独在场不激活,双人在场 = 贡献件对(且恰在档 = 掉档);
+# - 刻律德菈(3费,插件成员)、希儿(registry 核心)、卡芙卡(引擎件,
+#   持续伤害)、瓦尔特(列车同行线成员,非静态持有集)。
+LV = 7   # 多费用档可刷等级(1-5 费概率全正;3 级纯 1 费会把高费变 inf)
+
+
+def _mk_gs(**kw):
+    """裸会话 + 容器种子(cw4_gs 家族缺省;node 观察使轮号可解析)。"""
+    sess = StrategySession()
+    gs = cw4_gs(sess, plane=1, round_num=2, node='prep', level=LV, **kw)
+    return sess, gs
+
+
+def _fu(name: str, star: int = 1) -> Unit:
+    """场上行域单位(DeployedView 行域元素 = 容器 Unit——别混用备战
+    ``cw4_bc`` 的 BenchSlot 形:羁绊聚合/SellCandidate 直读 char_id,
+    BenchSlot 塞进行域会被静默读空标签,贡献件判定假阴性)。"""
+    return Unit(char_id=name, star=star)
+
+
+def _names(cands) -> list[str]:
+    return [c.char_id for c in cands]
+
+
+def _swap_ctx(gs) -> SwapPlanContext:
+    """换血判定语境(测试手装:fenced 义务臂 + 未锁帧 + 空目标视图——
+    现行判据在该语境下对非 core/非 target 件放行,足够锁池族差分;
+    装配链本体(3.3)不在本锁面)。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        bench_entries_of,
+        deployed_rows_of,
+    )
+    front, back = deployed_rows_of(gs)
+    return SwapPlanContext(
+        target_factions=frozenset(), target_cores=frozenset(),
+        fw_carry=frozenset(), locked_factions=frozenset(),
+        protect_names=frozenset(), membership=frozenset(),
+        fresh_buys=frozenset(), board={}, deployed=[*front, *back],
+        bench=bench_entries_of(gs), cap=10, fenced_on=True, locked=False)
+
+
+# ===== 场景闭集与 fail-closed 输入面 =====
+
+
+class TestSceneClosedSet:
+
+    def test_unknown_scenario_rejected(self):
+        """场景闭集防线:枚举外值抛错(与 sell_gate SELL_CHANNELS 同款
+        单一入口纪律;新场景先登记 SCENE_SPECS 再接线)。"""
+        _sess, gs = _mk_gs(bench=[cw4_bc('万敌')], front_row=[_fu('三月七')])
+        with pytest.raises(ValueError, match='未知卖出场景'):
+            evaluate_sell_candidates(gs, 'bogus_scene')
+
+    def test_deploy_swap_without_ctx_fail_closed(self):
+        """换血场景缺判定语境 ⇒ 拒评估(现行判据 ctx=None 返回全放行是
+        fail-open 形态,评估器侧拒收——资格判据禁缺语境放行)。"""
+        _sess, gs = _mk_gs(bench=[cw4_bc('万敌')], front_row=[_fu('三月七')])
+        cands, why = evaluate_sell_candidates(gs, 'deploy_swap')
+        assert cands == ()
+        assert why == REJECT_SWAP_CTX_MISSING
+
+
+# ===== 四族候选池边界(同状态各场景差分;契约 D 候选池列) =====
+
+
+class TestCandidatePoolFamilies:
+
+    def _pool_gs(self):
+        """同状态种子:bench = 无关件 + 线内件(索引 0 = 占位件,兼锁 bench
+        idx 紧缩占席序坐标系);场上 = 无关件 + 命运圣杯贡献件对;候选快照
+        = 列车同行(未锁定期线内身份集 = 候选 top3 线内成员)。"""
+        sess, gs = _mk_gs(
+            bench=[BenchSlot(kind='bookcard'), cw4_bc('刻律德菈'),
+                   cw4_bc('瓦尔特')],
+            front_row=[_fu('万敌')],
+            back_row=[_fu('远坂凛'), _fu('Saber')])
+        state_of(gs).line_candidates = ('列车同行',)
+        return sess, gs
+
+    def test_bench_only_scenes_exclude_field_zone(self):
+        """腾槽族/店内族 = 仅备战席:场上件不入池(即使无关),备战席内
+        线内件(瓦尔特)被常规面线内排除;bench idx = 紧缩占席序(占位件
+        占 0 号下标)。"""
+        _sess, gs = self._pool_gs()
+        for scene in ('ore_make_room', 'shop_swap', 'session_funding',
+                      'c1_make_room', 'levelup_liquidate_shop'):
+            cands, why = evaluate_sell_candidates(gs, scene)
+            assert why == ''
+            assert _names(cands) == ['刻律德菈'], scene
+            assert cands[0].zone == 'bench'
+            assert cands[0].idx == 1, scene   # bookcard 占 0 号紧缩下标
+
+    def test_income_family_adds_field_irrelevant_only(self):
+        """来金族(节末凑息/备战升级变现)= 备战席 ∪ 场上无关角色:无关
+        场上件(万敌)入池;贡献件对(远坂凛/Saber,命运圣杯 2 人恰激活
+        2 档)不入池;场上支无「挂后台」资格谓词(刻律德菈为插件仍在池)。"""
+        _sess, gs = self._pool_gs()
+        for scene in ('node_end_interest', 'levelup_liquidate_prep'):
+            cands, why = evaluate_sell_candidates(gs, scene)
+            assert why == ''
+            assert set(_names(cands)) == {'刻律德菈', '万敌'}, scene
+            zones = {c.char_id: c.zone for c in cands}
+            assert zones['万敌'] == 'deployed', scene
+
+    def test_deploy_swap_field_and_bench_pool(self):
+        """部署换血 = 场上 ∪ 备战席(场上锁定线成员/羁绊件的唯一卖出
+        场景):场上三件与备战席两件(含线内件瓦尔特——换血资格走现行
+        swap 判据,不走装配 A 的线内排除)全部入池。"""
+        _sess, gs = self._pool_gs()
+        cands, why = evaluate_sell_candidates(gs, 'deploy_swap',
+                                              swap_ctx=_swap_ctx(gs))
+        assert why == ''
+        assert set(_names(cands)) == {'刻律德菈', '瓦尔特', '万敌',
+                                      '远坂凛', 'Saber'}
+
+    def test_locked_line_view_drives_membership(self):
+        """锁定态线内身份集切换:锁定写入后线内判定 = line_members_view
+        名单(瓦尔特仍线内被常规面排除),候选快照不再承载判定职责。"""
+        _sess, gs = self._pool_gs()
+        state_of(gs).line_candidates = ()   # 候选快照清空(锁定态唯一源)
+        write_line_lock(gs, '列车同行')
+        cands, why = evaluate_sell_candidates(gs, 'ore_make_room')
+        assert why == ''
+        assert _names(cands) == ['刻律德菈']   # 瓦尔特仍被锁定线名单排除
+
+
+# ===== 自救扩展面(P78 通道豁免 + 线内末位;契约 D 自救行) =====
+
+
+class TestSelfRescueFullPool:
+
+    def test_full_pool_waives_p78_family(self):
+        """自救 = 真全量持有:registry 核心(希儿,P78-4)/ 同 visit 买入
+        (卡芙卡,P78-1)/ 线内件(瓦尔特)全部可卖——同状态下常规面场景
+        (晶矿)三者全被排除、空候选显影;线内件在自救让位序整体置末层
+        (自救扩展面,组内仍按金当量序)。"""
+        sess, gs = _mk_gs(
+            bench=[cw4_bc('希儿'), cw4_bc('卡芙卡'), cw4_bc('瓦尔特')],
+            front_row=[_fu('三月七')])
+        state_of(gs).line_candidates = ('列车同行',)
+        from sr_od.application.currency_war.kernel.cw_deploy_logic import (
+            record_fresh_buy,
+        )
+        record_fresh_buy(None, gs, '卡芙卡')
+        # 常规面(晶矿):P78 族三通道排除全生效 → 空候选
+        cands, why = evaluate_sell_candidates(gs, 'ore_make_room')
+        assert (cands, why) == ((), REJECT_NO_CANDIDATES)
+        # 自救:真全量 + 线内件末位
+        cands, why = evaluate_sell_candidates(gs, 'self_rescue')
+        assert why == ''
+        assert set(_names(cands)) == {'希儿', '卡芙卡', '瓦尔特'}
+        assert cands[-1].char_id == '瓦尔特'
+        assert cands[-1].line_member is True
+        assert all(c.line_member is False for c in cands[:-1])
+
+
+# ===== 价值排序序(金当量三项构造对比;line_and_upgrade §4) =====
+
+
+class TestValueOrdering:
+
+    def _value_gs(self):
+        """远坂凛 1★ 单张 / 万敌 1★×2(差一张)/ Archer 2★ 高费;场上
+        垫一个非同名单位避开空板守卫。"""
+        return _mk_gs(
+            bench=[cw4_bc('远坂凛'), cw4_bc('万敌'), cw4_bc('万敌'),
+                   cw4_bc('Archer', star=2)],
+            front_row=[_fu('三月七')])
+
+    def test_order_single_then_pair_then_high_star(self):
+        """让位序 = 金当量升序:零散单张(自身再遇期权)< 差一张对(持有
+        更多久窗更长 + 合成进度沉淀)< 2★ 高费(变现价×3 + 高费再遇窗
+        长,持有期权值钱)——三项维度各锁一档。"""
+        _sess, gs = self._value_gs()
+        cands, why = evaluate_sell_candidates(gs, 'self_rescue')
+        assert why == ''
+        assert _names(cands) == ['远坂凛', '万敌', '万敌', 'Archer']
+
+    def test_single_value_composition(self):
+        """零散单张金当量 = 变现价 + 再遇期权 + 合成进度(单张 = 自身
+        再遇期权)——三项构成 + 边际率 1 金/轮 + fail-closed ×1 的量纲
+        锁(期望从注册表单一源现算,非手抄常数)。"""
+        from sr_od.application.currency_war.kernel.cw_economy import (
+            bench_char_cost,
+            sell_refund,
+        )
+        _sess, gs = self._value_gs()
+        unit = cw4_bc('远坂凛').unit
+        expected = (
+            sell_refund(1, bench_char_cost(unit, gs))
+            + reencounter_window_frames(LV, 1, 1) * INTEREST_MARGIN_PER_ROUND
+            + reencounter_window_frames(LV, 1, 1) * INTEREST_MARGIN_PER_ROUND)
+        assert sell_gold_equivalent(gs, unit) == pytest.approx(expected)
+        # 同状态候选行携带同一值(评估器消费同一价值函数)
+        cands, _ = evaluate_sell_candidates(gs, 'self_rescue')
+        assert cands[0].gold_value == pytest.approx(expected)
+
+    def test_merge_pair_multiplier_slot(self):
+        """合成进度 ×2 系数走 provisional 槽:缺省 ×1(fail-closed 线性)
+        → 注入 2.0 后差一张对价值 = 变现价 + 再遇期权 + 2×再遇期权
+        (增量恰为一个再遇期权);值域守卫拒绝 [1,2] 外注入。"""
+        _sess, gs = self._value_gs()
+        unit = cw4_bc('万敌').unit
+        before = sell_gold_equivalent(gs, unit)
+        window = reencounter_window_frames(LV, 1, 2) * INTEREST_MARGIN_PER_ROUND
+        try:
+            provisional.inject(MERGE_PROGRESS_X2_SLOT,
+                               provisional.CalibValue(value=2.0))
+            assert sell_gold_equivalent(gs, unit) == pytest.approx(before + window)
+            with pytest.raises(ValueError):
+                provisional.inject(MERGE_PROGRESS_X2_SLOT,
+                                   provisional.CalibValue(value=3.0))
+        finally:
+            provisional.reset(MERGE_PROGRESS_X2_SLOT)
+
+    def test_bond_drop_rule_orders_after_non_drop(self):
+        """羁绊排序规则项(不折金):卖后掉当前羁绊档的场上件排在全部
+        不掉档件之后——命运圣杯 2 人恰在 2 档(卖一掉档)整体置后于
+        无关件万敌(不掉档),与其金当量相对大小无关。"""
+        _sess, gs = _mk_gs(
+            bench=[], front_row=[_fu('万敌')],
+            back_row=[_fu('远坂凛'), _fu('Saber')])
+        cands, why = evaluate_sell_candidates(gs, 'deploy_swap',
+                                              swap_ctx=_swap_ctx(gs))
+        assert why == ''
+        assert cands[0].char_id == '万敌'
+        assert cands[0].bond_drop is False
+        assert {c.char_id for c in cands[1:]} == {'远坂凛', 'Saber'}
+        assert all(c.bond_drop is True for c in cands[1:])
+
+
+# ===== 垫件谓词(晶矿场景过滤;prep_pipeline §1 第 2 步) =====
+
+
+class TestOrePadPredicate:
+
+    def test_pad_predicate_matrix(self):
+        """合取六项逐项否决:1★ / 非线内 / 非合成素材 / 非通用插件 /
+        非 registry 核心④件 / 非引擎件(种子身份层);全过 = 纯垫件。"""
+        _sess, gs = _mk_gs(bench=[cw4_bc('万敌')],
+                           front_row=[_fu('三月七')])
+        state_of(gs).line_candidates = ('列车同行',)
+        assert is_ore_pad_unit(gs, '万敌', 1) is True
+        assert is_ore_pad_unit(gs, '万敌', 2) is False        # 非 1★
+        assert is_ore_pad_unit(gs, '瓦尔特', 1) is False      # 线内(候选成员)
+        assert is_ore_pad_unit(gs, '刻律德菈', 1) is False    # 通用插件成员
+        assert is_ore_pad_unit(gs, '希儿', 1) is False        # registry 核心
+        assert is_ore_pad_unit(gs, '卡芙卡', 1) is False      # 引擎件(种子身份层)
+        # 合成素材:同名同星另有副本
+        _s2, gs2 = _mk_gs(bench=[cw4_bc('万敌'), cw4_bc('万敌')],
+                          front_row=[_fu('三月七')])
+        assert is_ore_pad_unit(gs2, '万敌', 1) is False
+
+    def test_ore_consumption_pads_filter_not_pool_head(self):
+        """晶矿消费 = 垫件谓词过滤后取价值最小(非全池排序首位判断——
+        价值函数无垫件身份维):引擎件卡芙卡(1★ 低费,非垫件)按金当量
+        排首位,垫件过滤后取到的是高费纯垫件 Archer。"""
+        _sess, gs = _mk_gs(bench=[cw4_bc('卡芙卡'), cw4_bc('Archer')],
+                           front_row=[_fu('三月七')])
+        cands, why = evaluate_sell_candidates(gs, 'ore_make_room')
+        assert why == ''
+        assert cands[0].char_id == '卡芙卡'          # 全池首位(金当量最小)
+        assert is_ore_pad_unit(gs, '卡芙卡', 1) is False
+        assert is_ore_pad_unit(gs, 'Archer', 1) is True
+        pads = [c for c in cands if is_ore_pad_unit(gs, c.char_id, c.star)]
+        assert _names(pads) == ['Archer']            # 过滤后价值最小 = Archer
+
+
+# ===== 场上无关角色谓词(契约 D 来金族候选池的场上支准入) =====
+
+
+class TestFieldIrrelevantPredicate:
+
+    def test_irrelevant_vs_contributor_vs_line_member(self):
+        """无关 = 非线内 ∧ 非有效羁绊贡献件:单挂万敌无关;命运圣杯
+        2 人(激活 2 档)为贡献件;线内件(锁定线/候选成员)非无关。"""
+        sess, gs = _mk_gs(
+            bench=[], front_row=[_fu('万敌'), _fu('远坂凛')],
+            back_row=[_fu('Saber')])
+        state_of(gs).line_candidates = ('列车同行',)
+        assert is_field_irrelevant_unit(gs, cw4_bc('万敌').unit, 'front') is True
+        assert is_field_irrelevant_unit(gs, cw4_bc('远坂凛').unit, 'front') is False
+        assert is_field_irrelevant_unit(gs, cw4_bc('Saber').unit, 'back') is False
+        # 线内件(三月七 ∈ 列车同行名单)非无关——即使羁绊不激活
+        _s2, gs2 = _mk_gs(bench=[], front_row=[_fu('三月七')])
+        state_of(gs2).line_candidates = ('列车同行',)
+        assert is_field_irrelevant_unit(gs2, cw4_bc('三月七').unit,
+                                        'front') is False
+
+
+# ===== 空板守卫(as-built 收编;全场景) =====
+
+
+class TestEmptyBoardGuard:
+
+    def test_empty_board_blocks_all_scenes(self):
+        """deployed = 0 帧全部卖出场景哑火(prep_pipeline §1 第 0 步
+        as-built 申报:现行守卫语义不收窄;拒因键与 sell_gate 单一源
+        同键)。"""
+        _sess, gs = _mk_gs(bench=[cw4_bc('万敌'), cw4_bc('卡芙卡')])
+        for scene in ('self_rescue', 'ore_make_room', 'deploy_swap'):
+            cands, why = evaluate_sell_candidates(
+                gs, scene, swap_ctx=_swap_ctx(gs) if scene == 'deploy_swap'
+                else None)
+            assert cands == (), scene
+            assert why == EMPTY_BOARD_SELL_GUARD_KEY, scene
+
+
+# ===== P78 通道重映射(现行五通道资格面 → 新场景) =====
+
+
+class TestChannelRemap:
+
+    def test_scene_table_covers_legacy_channels(self):
+        """通道重映射行完整性:凑息→节末凑息 / 筹资→会话内筹资+升级变现
+        两域 / m4_fuel→晶矿;line_switch→退役不接(无场景消费该通道,
+        部署换血 legacy_channel=None 走现行 swap 判据);projection→
+        保留不动(不进评估器场景表)。"""
+        assert SCENE_SPECS['node_end_interest'].legacy_channel == 'interest'
+        assert SCENE_SPECS['session_funding'].legacy_channel == 'funding'
+        assert SCENE_SPECS['levelup_liquidate_prep'].legacy_channel == 'funding'
+        assert SCENE_SPECS['levelup_liquidate_shop'].legacy_channel == 'funding'
+        assert SCENE_SPECS['ore_make_room'].legacy_channel == 'm4_fuel'
+        assert SCENE_SPECS['deploy_swap'].legacy_channel is None
+        assert 'line_switch' not in {s.legacy_channel for s in
+                                     SCENE_SPECS.values()}
+        assert 'projection' not in {s.legacy_channel for s in
+                                    SCENE_SPECS.values()}
+        # 常规面装配通道 ∈ 现行通道闭集(闭集外值会被 sell_exclusions 拒收)
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.sell_gate import (
+            SELL_CHANNELS,
+        )
+        for spec in SCENE_SPECS.values():
+            if spec.legacy_channel is not None:
+                assert spec.legacy_channel in SELL_CHANNELS
+        assert len(SELL_SCENARIOS) == 9   # 八场景(升级变现分域两行)
