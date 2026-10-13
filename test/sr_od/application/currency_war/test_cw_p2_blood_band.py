@@ -271,9 +271,7 @@ class TestLockGenObservationKeys:
         _ms 形参。帧种上阵核心件 = 移交候选可达前置:total_remaining_
         nodes 场字段修正(P2 视界封顶 modeled planes)后遭遇窗门按真值
         判可达,空手帧核心全部不可达 = 候选空帧;核心在显即可达,
-        与视界无关。)
-        (终态契约 §2.5 impl 桶:_refresh_direction 状态宿主 = 显式
-        _ms 形参。)"""
+        与视界无关。"""
         from sr_od.application.currency_war.kernel.cw_game_state import Unit
         monkeypatch.setattr(ci, 'detect_signals', lambda s: [])
         monkeypatch.setattr(ci, 'line_completion_feasibility',
