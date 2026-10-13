@@ -15,7 +15,7 @@ T-8-renshenyiwai-xian.md(裁决点 1-7 已裁;本文件锁的是设计约定,不
 - 锁 7 白名单归属校验(import 期孤儿键炸);
 - 锁 8 默认局回归(env 无修饰全链局终轮次与现役基线同);
 - 锁 9 坐标消费面修饰局(商店查链反解/镜像序/直定倒退免疫/两锚定写端);
-- 锁 10 acquired_t 同坐标系(登记当拍不递减);
+- 锁 10 acquired_key 同坐标系(登记当拍不递减);
 - 锁 11 结算读数与单调门(两位数/粘连噪声/元组比较三态/HP 推断路径消亡)。
 """
 from __future__ import annotations
@@ -452,7 +452,7 @@ def test_lock9_supply_bar_write_end_passes_field(test_context) -> None:
 
 # ============================================================ 锁 10 acquired_key
 
-def test_lock10_acquired_t_same_coordinate_system() -> None:
+def test_lock10_acquired_key_same_coordinate_system() -> None:
     """登记时点快照与推进入账同坐标系:修饰局 (2,2) 登记「接下来 N 节点」
     → 快照 = (2,2) 序位元组;登记节点当拍不递减,推进至 (2,3) 起递减。"""
     session = cw4_session()

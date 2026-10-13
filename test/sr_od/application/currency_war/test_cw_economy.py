@@ -251,7 +251,8 @@ class TestR2InterestFloor:
         """R1 可负担性过账种子(ADR-0516 形式二;旧 V_GAP 注入开闸语义随
         V̄ 链退役):lv6、合格集收缩到单目标成员(其余线成员 2★ 成型
         出域)、目标 j=2 差 1 张(账 ≈19 金)⇒ 金 ≥80 时 R1 必过,
-        R2 成唯一门。视界先验(9,5,7)。
+        R2 成唯一门。视界 = 场字段默认表(P1=9/P2=7,None 未注册回退;
+        plane_lengths_seen 写入 = 簿记位,不入决策)。
         """
         comp = _comp()
         members = _members(comp)
@@ -267,7 +268,7 @@ class TestR2InterestFloor:
             + [_bc(m, star=2) for i, m in enumerate(others)]
         sess = _session(comp)
         from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
-        game_state_of(sess).node_books.plane_lengths_seen = [9, 5, 7]   # 终态契约 §A′
+        game_state_of(sess).node_books.plane_lengths_seen = [9, 5, 7]   # 簿记位(视界真值 = 场字段,不入决策)
         cw4_gs(sess, gold=gold, level=6, bench=bench)
         return comp, sess
 

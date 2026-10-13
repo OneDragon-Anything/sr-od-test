@@ -183,7 +183,8 @@ class TestArchiveP1R8Frame:
     """p1r8 帧(gold=53,lv5,金过息线 50)= 本局「r8 该 D 未 D」的帧级
     事实。修复前:R1 账被污染为 inf → rkey=no_chaseable_member → 零动作;
     污染修复后:真 account_over_budget → 必花域切分线 yield → CwActionRefreshShopParam
-    发射;刷新止损批期望账前件恢复后:同帧(r_remaining=14,非末轮)超账
+    发射;刷新止损批期望账前件恢复后:同帧(场字段默认表视界
+    r_remaining=9,非末轮)超账
     → 域内拦,零刷新发射。本文件主旨 = 拒因归真墓碑(污染签名不得
     复现)不变;行为断言随账前件恢复演进——旧语义(全域 yielded 放行,
     账买不齐也刷)把零产出烧金段固化成行为(2026-09-15 sim 批量找问题
@@ -194,7 +195,7 @@ class TestArchiveP1R8Frame:
         """档案 p1r8 必花域帧双帧同锁(区内 + 区外):①拒因归真墓碑——
         ``shop_r1_no_chaseable_member`` 键不得出现(修复前该键恰出现,
         ADR-0571 污染签名);②区内超账拦阻——零刷新发射 + 域内账拦分键
-        ``must_spend_r1_account_fail`` 开火(该帧 r_remaining=14 含
+        ``must_spend_r1_account_fail`` 开火(该帧 r_remaining=9 含
         后续位面,末轮豁免不辖);③域内义务来源披露照写
         v3_release_reason='must_spend'(披露面独立于刷新发射,写点在
         R1 之前;同帧围栏键加密面无独立覆盖锁——现役近邻
@@ -225,13 +226,14 @@ class TestArchiveP1R8Frame:
 
 class TestHorizonClosedYield:
     """末轮豁免锁(全局局终帧;谓词单一源 = crit_refresh.
-    r1_horizon_closed):r_remaining=1(含当前节点)帧金随局终沉没,
+    r1_horizon_closed):P3 帧位面 ∉ 序列表键集 = 建模域外 → r_remaining
+    = 0(details horizon-cleanup §3 契约)≤ 1,金随局终沉没,
     刷新机会成本 = 0,正概率出牌机会弱支配停手——必花域超账帧放行
     照旧。这是域内 yielded 放行在账前件恢复后的唯一存活辖域;非末轮
     域内超账拦形态由 TestArchiveP1R8Frame 承载,不双锁。"""
 
     def test_global_final_frame_overaccount_still_yields(self):
-        """P3 r7(全局末轮,plane_lengths=[9,5,7] ⇒ r_remaining=1)
+        """P3 r7(建模域外帧,场字段键集 = {1,2} → r_remaining=0)
         超账帧:刷新发射 reason='must_spend_r1_yielded' + yielded 分键
         在案——豁免支活性行为锁。空店面隔离买面(R1 刷新为该帧唯一
         可能发射,与 _p1r8_axes 同构)。"""

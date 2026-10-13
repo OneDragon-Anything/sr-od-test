@@ -5,7 +5,7 @@ currency_war/strategy-docs/29_invest_strategy_screen.md;规格出处 =
 
 判据映射:
 - ① 现金分(strategy_economy 通道公式:面值/分期金 R−1 截断/XP 双通道/
-  固定息/boss 位面末槽几何/待建模塌 0/位置缺失退化);
+  固定息/boss kind 计数/待建模塌 0/位置缺失退化);
 - ② 方向分(触线集 comp 空间像:锁线并集/未锁线 max/线排除像/降格帧/
   角色绑定窄口径);
 - ③ 赠卡分(STRATEGY_GRANTS + grant_gift_value:即时最高档/条件降档/
@@ -42,6 +42,9 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     NodeKey,
     game_state_of,
 )
+from sr_od.application.currency_war.kernel.cw_node_schedule import (
+    P2_NODE_SEQUENCE,
+)
 from sr_od.application.currency_war.kernel.cw_investments import (
     INVESTMENT_STRATEGIES,
     STRATEGY_ECONOMY,
@@ -77,11 +80,16 @@ def _fresh_gs() -> GameState:
 
 
 def _gs_at(plane: int, round_num: int,
-           plane_lengths: list[int] | None = None) -> GameState:
-    """写在帧节点位置(可选写已揭晓位面长度表 = schedule 真值)。"""
+           node_seqs: dict[int, tuple[str, ...]] | None = None) -> GameState:
+    """写在帧节点位置(可选写节点序列场字段 = 视界长度真值;
+    None = 未注册态,读侧回退默认表)。"""
     gs = _fresh_gs()
-    if plane_lengths is not None:
-        gs.node_books.plane_lengths_seen = list(plane_lengths)
+    if node_seqs is not None:
+        gs.write_logic(gs.node_seq_by_plane, node_seqs,
+                       produced_by='test', evidence='node_seq:env',
+                       sig=ChannelSig(family='logic_action',
+                                      actor='cw-invest-strategy-test',
+                                      mode='compute'))
     gs.observe(gs.node, NodeKey(plane=plane, round_num=round_num, kind=''),
                evidence='test', sig=_SIG_OBS)
     return gs
@@ -101,9 +109,11 @@ def _decide_pick(options: list[str], gs: GameState,
 
 # ==================== ① 现金分(design §2.3)====================
 
-#: 开局帧剩余节点数(node 缺失 → (1,1) 退化 + 未揭晓回退 (9,9,9)):
-#: R = 9 + 9 + 9 = 27(strategy_economy 位置缺失退化断言的共用口径)
-_R_OPENING = 27
+#: 开局帧剩余节点数(node 缺失 → (1,1) 退化 + 场字段 None 回退默认表
+#: P1=9/P2=7,视界封顶 modeled planes,P3 虚拟轮不计):R = 9 + 7 = 16
+#: (strategy_economy 位置缺失退化断言的共用口径;迭代 abolish-node-
+#: ordinal details §8.2 真值修正申报面)
+_R_OPENING = 16
 
 
 def test_cash_instant_gold_face_value():
@@ -114,9 +124,10 @@ def test_cash_instant_gold_face_value():
 
 def test_cash_gold_next_nodes_r_minus_1_truncation():
     """分期金 =「现在」腿 + count 腿按 R−1 截断(design §2.3;
-    「接下来」不含当前节点)。开局帧 R=27:长期主义 = 7×(1+min(3,26)) = 28
+    「接下来」不含当前节点)。开局帧 R=16:长期主义 = 7×(1+min(3,15)) = 28
     (勿读 instant_gold——长期主义该字段 = 0,误读即漏现在腿);
-    终局帧 P3R9(R=1):count 腿截断为 0 → 仅「现在」腿 7。"""
+    P3R9 帧(位面 ∉ 序列表键集 = 建模域外 → R=0,details §3 契约):
+    count 腿截断为 0 → 仅「现在」腿 7。"""
     assert strategy_economy_value('长期主义', _fresh_gs()) == (28.0, True)
     assert strategy_economy_value('长期主义+', _fresh_gs()) == (36.0, True)
     assert strategy_economy_value('长期主义', _gs_at(3, 9)) == (7.0, True)
@@ -124,32 +135,53 @@ def test_cash_gold_next_nodes_r_minus_1_truncation():
 
 def test_cash_per_node_interest_xp_channels():
     """per-node 流/固定息/XP 双通道(值 = 注册表【注】× R 查表):
-    定期福利 = 4 + 2×27;狸财经狸息腿 = 2×27(活计分腿,取款/存款腿
+    定期福利 = 4 + 2×16;狸财经狸息腿 = 2×16(活计分腿,取款/存款腿
     待建模不关门——design 申报 7);伟大征服 xp_instant = 12;
-    买断制 = 15 + 4×27(xp_per_node 流);XP_GOLD_RATE = 1.0。"""
-    assert strategy_economy_value('定期福利', _fresh_gs()) == (58.0, True)
-    assert strategy_economy_value('狸财经狸', _fresh_gs()) == (54.0, True)
+    买断制 = 15 + 4×16(xp_per_node 流);XP_GOLD_RATE = 1.0。
+    (R 开局 27→16 = P3 虚拟轮移除,行为申报 details §8.2。)"""
+    assert strategy_economy_value('定期福利', _fresh_gs()) == (36.0, True)
+    assert strategy_economy_value('狸财经狸', _fresh_gs()) == (32.0, True)
     assert strategy_economy_value('伟大征服', _fresh_gs()) == (12.0, True)
-    assert strategy_economy_value('买断制', _fresh_gs()) == (123.0, True)
+    assert strategy_economy_value('买断制', _fresh_gs()) == (79.0, True)
 
 
 def test_cash_schedule_truth_lookup():
-    """剩余口径按 schedule_of 位面实际长度查表(P2=7 进表自适应;
-    单一源 = cw_plane_table.r_global,经 statefn/horizon 门面):
-    P2R4 长度表 (9,7,9) → R = 本位面剩余 4 + P3 9 = 13,
-    定期福利 = 4 + 2×13 = 30。"""
-    assert strategy_economy_value('定期福利', _gs_at(2, 4, [9, 7, 9])) \
-        == (30.0, True)
-
-
-def test_cash_boss_channel_plane_end_geometry():
-    """boss 通道 = plane_end_slots 位面末槽几何(每位面恰一 boss):
-    P2R4 长度表 (9,7,9) → 当前全局节点 13,末槽 {8,15,23} → 剩余 2 →
-    特战资金 = 7×2 = 14(含当前位面口径,偏差申报见模块 docstring)。"""
-    assert strategy_economy_value('特战资金', _gs_at(2, 4, [9, 7, 9])) \
+    """剩余口径按节点序列场字段真值(None 回退默认表 P2=7;修饰表
+    P2=8 进字段自适应;单一源 = statefn/horizon 门面场字段自算):
+    P2R4 修饰表(boss 前插补给,P2=8)→ R = 本位面剩余 5(旧 [1,9]
+    夹取不存在的真值,details §8.1)= 5,定期福利 = 4 + 2×5 = 14;
+    未注册态回退默认表 P2=7 → R = 4 → 12。"""
+    from sr_od.application.currency_war.kernel.cw_node_schedule import (
+        resolve_plane_node_seqs,
+    )
+    modified = resolve_plane_node_seqs('人身意外险')
+    assert strategy_economy_value('定期福利', _gs_at(2, 4, modified)) \
         == (14.0, True)
-    assert strategy_economy_value('特战资金+', _gs_at(2, 4, [9, 7, 9])) \
-        == (22.0, True)
+    assert strategy_economy_value('定期福利', _gs_at(2, 4)) == (12.0, True)
+
+
+def test_cash_boss_channel_kind_count():
+    """boss 通道 = 场字段序列自当前节点(含)起 'boss' kind 直查
+    (details §6 kind 化;封顶 modeled planes → P3 虚拟末槽移除,默认局
+    P1 段 3→2、P2 起 2→1,行为申报 details §8.3):
+    P2R4 默认表 → 当前位面 r4 起恰 1 个 boss(r7),P3 不计 → 特战资金
+    = 7×1 = 7、特战资金+ = 11×1 = 11(含当前位面口径,偏差申报见模块
+    docstring)。"""
+    assert strategy_economy_value('特战资金', _gs_at(2, 4)) == (7.0, True)
+    assert strategy_economy_value('特战资金+', _gs_at(2, 4)) == (11.0, True)
+
+
+def test_cash_boss_channel_kind_not_geometry():
+    """kind 计数非几何的判别锁:boss 不在位面末槽的场字段序列下,几何
+    末槽假设与 kind 直查分叉——自当前节点(含)起的真实 boss 计数 = 2
+    (P1 r3 boss + P2 全程 1 个;P1 位面末槽假设会漏计 r3 的 boss)。"""
+    displaced = {
+        1: ('battle', 'battle', 'boss', 'reward', 'reward', 'reward',
+            'reward', 'reward', 'reward'),
+        2: P2_NODE_SEQUENCE,
+    }
+    assert strategy_economy_value('特战资金', _gs_at(1, 1, displaced)) \
+        == (14.0, True)
 
 
 def test_cash_missing_node_degrades_to_opening_frame():

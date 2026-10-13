@@ -329,7 +329,7 @@ class TestHubEmission:
         assert not isinstance(act_i, CwActionBuyCardParam)
         assert _ct(sess_i).get('hub_option_reject_interest') == 1
         # 金:不足帧的拒因按规范门序(席→息→金)取首败项——帧输入
-        #(r_remaining=17 的息轨迹)下 poor 帧 L>0 先真,unaffordable 被
+        #(场字段默认表视界 r_remaining=15 的息轨迹)下 poor 帧 L>0 先真,unaffordable 被
         # t5 结构性前遮;此处锁「门序首败项归真」语义本身,affordable
         # 闸独立显影面 = 消费同一单一源 mandate.check_affordable 的
         # C1/M2 通道既有锁。

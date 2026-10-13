@@ -118,7 +118,10 @@ def cw4_session(comp=None, *, plane_lengths=None,
                 line_state: bool = True) -> StrategySession:
     """StrategySession 桩:cw4_counters 空表 + target_comp;``line_state``
     = 建 proof.LineState()(shop 线决策语境;refresh_ledger 的配方对
-    锁帧不建,传 False);``plane_lengths`` = 位面长度史注记。"""
+    锁帧不建,传 False);``plane_lengths`` = 位面长度史注记(**簿记位,
+    不入决策**——视界长度真值 = GameState 场字段 ``node_seq_by_plane``
+    (None 回退默认表),旧 schedule_of 读数已随 9 制几何层退役;
+    strategy 域判定不再消费本注记,仅为 node_books 簿记形状)。"""
     s = StrategySession()
     state_of(s).cw4_counters = {}
     state_of(s).target_comp = comp

@@ -268,7 +268,13 @@ class TestLockGenObservationKeys:
         比值派生,禁写进计数(只记不判)。非低血带帧只进分母;分母只辖
         锁开事件——保持锁帧零重复计数(率读数不被保持帧稀释)。
         (终态契约 §2.5 impl 桶:_refresh_direction 状态宿主 = 显式
+        _ms 形参。帧种上阵核心件 = 移交候选可达前置:total_remaining_
+        nodes 场字段修正(P2 视界封顶 modeled planes)后遭遇窗门按真值
+        判可达,空手帧核心全部不可达 = 候选空帧;核心在显即可达,
+        与视界无关。)
+        (终态契约 §2.5 impl 桶:_refresh_direction 状态宿主 = 显式
         _ms 形参。)"""
+        from sr_od.application.currency_war.kernel.cw_game_state import Unit
         monkeypatch.setattr(ci, 'detect_signals', lambda s: [])
         monkeypatch.setattr(ci, 'line_completion_feasibility',
                             lambda *a, **k: 0.5)   # 移交候选可行 → 帧即锁
@@ -276,14 +282,18 @@ class TestLockGenObservationKeys:
         sess_lo = self._sess()
         ms_lo = state_of(sess_lo)
         ms_lo.cw4_counters = {}
-        strategy._refresh_direction(_bsb(**_st2(hp=10, gold=0)), ms_lo)
+        strategy._refresh_direction(
+            _bsb(front_row=[Unit(char_id='姬子·启行', star=1)],
+                 **_st2(hp=10, gold=0)), ms_lo)
         ct_lo = ms_lo.cw4_counters
         assert ct_lo.get('lock_gen_feasibility_obs_lock_open_total') == 1
         assert ct_lo.get('lock_gen_feasibility_obs_lock_open_lowband') == 1
         sess_hi = self._sess()
         ms_hi = state_of(sess_hi)
         ms_hi.cw4_counters = {}
-        strategy._refresh_direction(_bsb(**_st2(hp=40, gold=0)), ms_hi)
+        strategy._refresh_direction(
+            _bsb(front_row=[Unit(char_id='姬子·启行', star=1)],
+                 **_st2(hp=40, gold=0)), ms_hi)
         ct_hi = ms_hi.cw4_counters
         assert ct_hi.get('lock_gen_feasibility_obs_lock_open_total') == 1
         assert 'lock_gen_feasibility_obs_lock_open_lowband' not in ct_hi
