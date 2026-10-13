@@ -110,20 +110,21 @@ class TestNodeBoundaryReset:
 class TestBoundaryKeepsDirectionState:
 
     def test_boundary_keeps_direction_state_and_current_target_comp(self):
-        """清单第 5 项负登记:方向状态(锁定线/候选快照/配方键)与
-        现行 target_comp 跨节点保留——节点边界不清方向,契约 C;
-        签名置失效(第 4 项)与之同帧对照,锁分界本身。"""
+        """清单第 5 项负登记:方向状态(锁定线/配方键)与现行
+        target_comp 跨节点保留——节点边界不清方向,契约 C;候选快照
+        键边界亦不辖(锁定写入时已被清空,手工哨兵 = 模拟外部写入后
+        边界不复位);签名置失效(第 4 项)与之同帧对照,锁分界本身。"""
         sess, gs = _sess_with_node(1, 2)
         st = state_of(gs)
         comp = cw4_comp()
         write_line_lock(gs, comp.name)
-        st.line_candidates = ('frozen',)
+        st.line_candidates = ('external-write',)
         st.opening_recipe_comp = comp
         st.target_comp = comp   # 现行物化链产物(边界函数不辖此键)
         gs.node_hist_pos = (1, 5)
         handle_node_boundary(gs)
         assert st.line_locked_comp == comp.name   # 锁定跨节点保留
-        assert st.line_candidates == ('frozen',)
+        assert st.line_candidates == ('external-write',)
         assert st.opening_recipe_comp is comp
         assert st.target_comp is comp             # 现行键零破坏
         assert st.line_eval_signature is None     # 签名置失效(对照)
@@ -178,6 +179,21 @@ class TestLineRefreshSkeleton:
         assert st.line_candidates != ('sentinel',)
         assert st.line_candidates == ()   # 未定向 → 空候选
 
+    def test_level_dimension_change_triggers_recompute(self):
+        """等级维独立触发重算(签名多维性,review-31 风险②):同持有/
+        同节点号、仅等级变化 → 签名变化 → 重算。等级入签名的动机 =
+        店内整级购买经验后概率表变,消费旧等级 = 评估陈旧
+        (line_and_upgrade §3 步骤 1)。"""
+        sess = StrategySession()
+        gs = cw4_gs(sess, plane=1, round_num=2, node='prep', level=3)
+        st = state_of(gs)
+        refresh_line_if_needed(gs)
+        st.line_candidates = ('sentinel',)
+        # 仅等级变化(持有/节点号/装备/投资集不变)
+        cw4_gs(sess, plane=1, round_num=2, node='prep', level=4)
+        refresh_line_if_needed(gs)
+        assert st.line_candidates != ('sentinel',)
+
     def test_recompute_reads_current_target_comp_chain(self):
         """本阶段行为等价锁:重算照读现行 target_comp 物化链产物
         (配方键 = 产物本体、候选快照 = 产物名单元素);未锁定视图 =
@@ -202,7 +218,8 @@ class TestLineRefreshSkeleton:
 class TestLineLockSkeleton:
 
     def test_write_lock_side_effects_and_readonly(self):
-        """锁定写入联动三件(清预授权键/清商店标记/快照停算)+ 锁后
+        """锁定写入联动三件(清预授权键/清商店标记/候选快照清空并停算
+        ——review-31 风险③:锁定后读快照恒 = 空集,消费无歧义)+ 锁后
         只读(重复写入不改锁定线;硬规则判定本体测试归 3.7)。"""
         sess = StrategySession()
         gs = cw4_gs(sess, plane=1, round_num=2, node='prep')
@@ -210,15 +227,16 @@ class TestLineLockSkeleton:
         comp = cw4_comp()
         st.levelup_preauth = LevelUpPreAuth(gold_cost=10, blood_cost=0)
         st.shop_handled = (1, 2)
+        st.line_candidates = ('候选态',)   # 锁定前的非空候选态
         write_line_lock(gs, comp.name)
         assert st.line_locked_comp == comp.name
         assert st.levelup_preauth is None   # ①清升级预授权键
         assert st.shop_handled is None      # ②清商店会话标记
-        # ③快照停算:签名变化后 refresh 不再覆写候选快照
-        st.line_candidates = ('frozen',)
+        assert st.line_candidates == ()     # ③候选快照清空
+        # 停算:签名变化后重算不再写入快照(恒空)
         gs.node_hist_pos = (1, 3)
         refresh_line_if_needed(gs)
-        assert st.line_candidates == ('frozen',)
+        assert st.line_candidates == ()
         # 锁后只读:重复写入不改锁定线(骨架不解析线名,参数即意图)
         write_line_lock(gs, '其他线名')
         assert st.line_locked_comp == comp.name
