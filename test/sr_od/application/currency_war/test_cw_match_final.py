@@ -244,19 +244,19 @@ def test_g10_retrograde_obs_event_evidence(journal, run_id) -> None:
     切换后写端 = observe_node_anchor):读数 < 现值 → 零状态变更(字段不动)
     + obs_event 留证(event=arbitrate,actor = 锚定宿主登记名,占版本)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
-    observe_node_anchor(gs, 5, trigger_screen='货币战争-备战',
+    observe_node_anchor(gs, (1, 5), trigger_screen='货币战争-备战',
                         actor='TestAnchor')
-    assert gs.node_ord.value == 5
+    assert gs.node_pos.value == (1, 5)
     n_before = len(_rows())
-    observe_node_anchor(gs, 4, trigger_screen='货币战争-备战',
+    observe_node_anchor(gs, (1, 4), trigger_screen='货币战争-备战',
                         actor='TestAnchor')
-    assert gs.node_ord.value == 5, '倒退免疫:字段不动(R3 规则三)'
+    assert gs.node_pos.value == (1, 5), '倒退免疫:字段不动(R3 规则三)'
     evs = [r for r in _rows()[n_before:] if r['row'] == 'obs_event']
     assert len(evs) == 1, '倒退丢弃 obs_event 留证(占版本零状态变更)'
     ev = evs[0]
     assert ev['event'] == 'arbitrate'
-    assert ev['field'] == 'node_ord'
-    assert ev['observed'] == {'reading': 4, 'current': 5}
+    assert ev['field'] == 'node_pos'
+    assert ev['observed'] == {'reading': '1-4', 'current': '1-5'}
     assert ev['sig']['actor'] == 'TestAnchor'
     assert '倒退' in ev['verdict']
 

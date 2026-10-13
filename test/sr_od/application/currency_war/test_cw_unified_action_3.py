@@ -302,7 +302,7 @@ def test_freeze_card_decrement_via_report_path(monkeypatch):
     # 跳过型:登记免战牌 → 经包络执行 → 递减 2→1
     sess = SimpleNamespace()
     gs = game_state_of(sess)
-    gs.effects.register_strategy(STRATEGY_EFFECTS['免战牌'], acquired_t=None)
+    gs.effects.register_strategy(STRATEGY_EFFECTS['免战牌'], acquired_key=None)
     ex = _make_executor(_RecordingController(), _make_stub_op({_HIT_SKIP}),
                         cw_match=SimpleNamespace(session=sess))
     with fast_sleep():
@@ -311,7 +311,7 @@ def test_freeze_card_decrement_via_report_path(monkeypatch):
     # 常规出战(非跳过):零递减
     sess2 = SimpleNamespace()
     bs2 = game_state_of(sess2)
-    bs2.effects.register_strategy(STRATEGY_EFFECTS['免战牌'], acquired_t=None)
+    bs2.effects.register_strategy(STRATEGY_EFFECTS['免战牌'], acquired_key=None)
     ex2 = _make_executor(_RecordingController(), _make_stub_op({_HIT_BTN}),
                          cw_match=SimpleNamespace(session=sess2))
     with fast_sleep():

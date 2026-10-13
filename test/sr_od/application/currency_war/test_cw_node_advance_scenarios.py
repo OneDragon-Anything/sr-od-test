@@ -1,6 +1,7 @@
 """节点推进动作上报 场景锁(迭代
  §3.6 走查集按新模型
-收口§2.4/§2.7)。
+收口§2.4/§2.7;2026-10-12-abolish-node-ordinal §3.2 起
+节点序位 = (位面, 轮) 元组键)。
 
 场景 ↔ 测试对照(landing §3.6 清单;**已有的不重写**,本文件只收缺口):
 
@@ -13,7 +14,7 @@
   test_boss_segment_click_advance_and_cross_plane
   (简报直定 hist 目标基础锁 = 已有
   test_cw_game_state_contract.test_boss_briefing_report_types_hist_node)
-- 跨位面确认(序号公式自然跨位,E13)→ 同上测试尾段
+- 跨位面确认(P1 末后继 = P2 首,E13)→ 同上测试尾段
 - S9 恢复局锚定 / 锁定臂门挡自愈(value 守卫挡首确认→战后锚定补齐)→
   test_locked_resume_value_guard_self_heal
 - 重复上报结构挡 → 已有
@@ -41,9 +42,8 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     GameState,
     apply_settlement_cover,
-    effective_node_ord,
+    effective_node_pos,
     game_state_of,
-    node_ordinal_of,
     observe_node_anchor,
     report_node_advance,
 )
@@ -63,7 +63,8 @@ def _gs_with(test_context, monkeypatch, spec_name: str) -> GameState:
     monkeypatch.setattr(test_context, 'cw_match',
                         SimpleNamespace(session=session), raising=False)
     gs = game_state_of(session)
-    gs.effects.register_strategy(STRATEGY_EFFECTS[spec_name], acquired_t=5)
+    gs.effects.register_strategy(STRATEGY_EFFECTS[spec_name],
+                                 acquired_key=(1, 5))
     return gs
 
 
@@ -83,7 +84,7 @@ def test_fast_popup_advance_precedes_pick_and_prep_reanchor(
     )
 
     gs = _gs_with(test_context, monkeypatch, '双手狸开键盘！')
-    observe_node_anchor(gs, 1, trigger_screen='货币战争-备战', actor=_ACTOR)
+    observe_node_anchor(gs, (1, 1), trigger_screen='货币战争-备战', actor=_ACTOR)
 
     op = CwOpSettleConfirm(test_context)
     monkeypatch.setattr(op, 'last_screenshot', object(), raising=False)
@@ -94,19 +95,19 @@ def test_fast_popup_advance_precedes_pick_and_prep_reanchor(
         lambda *a, **k: _Area(True))
     _run_node(test_context, op, op.confirm)
 
-    assert gs.node_ord.value == 2 and gs.node_ord.source == 'logic', (
+    assert gs.node_pos.value == (1, 2) and gs.node_pos.source == 'logic', (
         '确认点击时点即推进(快弹窗:推进先于弹窗选卡)')
 
     # 选卡登记(拿卡上报侧):零节点推进
-    gs.effects.register_strategy(STRATEGY_EFFECTS['加油站'], acquired_t=6)
-    assert gs.node_ord.value == 2 and gs.node_ord.source == 'logic', (
+    gs.effects.register_strategy(STRATEGY_EFFECTS['加油站'], acquired_key=(1, 6))
+    assert gs.node_pos.value == (1, 2) and gs.node_pos.source == 'logic', (
         '选卡登记不推进节点(登记语义归拿卡侧,design §2.6)')
 
     # 选卡后备战帧锚定:等值 reanchor 翻观察态 → 下一终结动作解锁
-    assert observe_node_anchor(gs, 2, trigger_screen='货币战争-备战',
+    assert observe_node_anchor(gs, (1, 2), trigger_screen='货币战争-备战',
                                actor='CwScreenPrep') == 'reanchor'
     assert report_node_advance(gs, trigger='settle_confirm').applied
-    assert effective_node_ord(gs) == 3, 'reanchor 后下一确认可推进'
+    assert effective_node_pos(gs) == (1, 3), 'reanchor 后下一确认可推进'
 
 
 # ============================================== boss 段:直定目标 + 跨位面
@@ -117,36 +118,36 @@ def test_boss_segment_click_advance_and_cross_plane(
 ) -> None:
     """boss 段帧序列锁(S6/E12/E13;去证据门重述 2026-09-21):
 
-    - E12 奖励关结算确认**点击即推进** → boss 节点(位面末 ord 9);
+    - E12 奖励关结算确认**点击即推进** → boss 节点 (1,9);
     - 简报类型直定目标恒正确:无证据门 ⇒ 上报先于下一节点任何画面渲染
       恒成立 ⇒ hist 已推进至 boss 节点,简报直定不落错节点(不写奖励关
-      ord 8)——原 bail 缝随证据等待机制退役结构性消失;
-    - E13 boss 结算确认 → 序号公式自然跨位面(9+1=10=(2-1)*9+1,
-      design §2.1),位面 2 首备战帧等值 reanchor 解锁下一确认。
+      (1,8))——原 bail 缝随证据等待机制退役结构性消失;
+    - E13 boss 结算确认 → 后继原语自然跨位面((1,9) → (2,1),design
+      §2.1),位面 2 首备战帧等值 reanchor 解锁下一确认。
     """
     gs = _gs_with(test_context, monkeypatch, '双手狸开键盘！')
-    # 奖励关(ord 8)已锚定;结算确认点击即推进 → boss 节点 ord 9(E12)
-    observe_node_anchor(gs, 8, trigger_screen='货币战争-备战', actor=_ACTOR)
+    # 奖励关 (1,8) 已锚定;结算确认点击即推进 → boss 节点 (1,9)(E12)
+    observe_node_anchor(gs, (1, 8), trigger_screen='货币战争-备战', actor=_ACTOR)
     assert report_node_advance(gs, trigger='settle_confirm').applied
-    assert effective_node_ord(gs) == 9
+    assert effective_node_pos(gs) == (1, 9)
 
-    # 简报帧直定:hist 已在 9(logic),简报直定目标 = 9(boss 节点)
+    # 简报帧直定:hist 已在 (1,9)(logic),简报直定目标 = (1,9)(boss 节点)
     report_screen_boss_briefing_obs(gs, CwScreenBossBriefingObs(on_screen=True))
     _node = gs.node.value
     assert _node is not None and _node.kind == 'boss'
     assert (_node.plane, _node.round_num) == (1, 9), (
         '简报类型直定目标 = 现 hist(boss 节点),不落错奖励关节点')
 
-    # E13:boss 结算确认 → 10 = 位面2 第1轮(序号公式自然跨位面)
-    observe_node_anchor(gs, 9, trigger_screen='货币战争-备战', actor=_ACTOR)
+    # E13:boss 结算确认 → (2,1)(后继原语自然跨位面)
+    observe_node_anchor(gs, (1, 9), trigger_screen='货币战争-备战', actor=_ACTOR)
     assert report_node_advance(gs, trigger='settle_confirm').applied
-    assert effective_node_ord(gs) == 10 == node_ordinal_of(2, 1)
+    assert effective_node_pos(gs) == (2, 1)
     # 位面 2 首备战帧等值 reanchor → 下一确认解锁
     assert observe_node_anchor(
-        gs, node_ordinal_of(2, 1), trigger_screen='货币战争-备战',
+        gs, (2, 1), trigger_screen='货币战争-备战',
         actor='CwScreenPrep') == 'reanchor'
     assert report_node_advance(gs, trigger='settle_confirm').applied
-    assert effective_node_ord(gs) == 11
+    assert effective_node_pos(gs) == (2, 2)
 
 
 # ================================================= S9 恢复局 / 锁定臂自愈
@@ -157,24 +158,24 @@ def test_locked_resume_value_guard_self_heal(test_context, monkeypatch) -> None:
     (v=None)→ 首次结算确认被 **value 守卫**挡(攻击 R1:新容器缺省
     source 即 observation,门必须按 value 在场判);战后备战帧观察锚定
     以绝对读数首锚定补齐(恢复局重建语义,S9:R=局中任意节点)——
-    绝对值坐标无 skew,后续终结动作正常推进。"""
+    键表示无 skew,后续终结动作正常推进。"""
     gs = _gs_with(test_context, monkeypatch, '双手狸开键盘！')
 
     # 锁定臂直出战:无任何锚定,首次结算确认被 value 守卫挡
     assert report_node_advance(gs, trigger='settle_confirm').applied is False
-    assert gs.node_ord.value is None and gs.node_hist_ord is None, (
+    assert gs.node_pos.value is None and gs.node_hist_pos is None, (
         'value 守卫挡首确认(零推进零 hist)')
 
-    # 战后备战帧锚定:恢复局 mid-game 读数 7 → 首锚定 + 尾段发放
-    assert observe_node_anchor(gs, 7, trigger_screen='货币战争-备战',
+    # 战后备战帧锚定:恢复局 mid-game 读数 (1,7) → 首锚定 + 尾段发放
+    assert observe_node_anchor(gs, (1, 7), trigger_screen='货币战争-备战',
                                actor='CwScreenPrep') == 'first_anchor'
-    assert gs.node_ord.value == 7 and gs.node_ord.source == 'observation'
-    assert gs.node_hist_ord == 7
+    assert gs.node_pos.value == (1, 7) and gs.node_pos.source == 'observation'
+    assert gs.node_hist_pos == (1, 7)
     assert gs.free_refresh_left.value == 2, '首锚定当帧发放(无 skew)'
 
     # 自愈后流程续行:下一结算确认正常推进
     assert report_node_advance(gs, trigger='settle_confirm').applied
-    assert effective_node_ord(gs) == 8
+    assert effective_node_pos(gs) == (1, 8)
 
 
 # ================================================== 结算真值金采样(§2.7-3)
@@ -194,7 +195,7 @@ def test_settle_truth_gold_samples_conditional_grant(
     gs.write_logic(gs.gold, 40, produced_by='TestBoardIncome',
                    sig=ChannelSig(family='logic_action',
                                   actor='TestBoardIncome', mode='compute'))
-    observe_node_anchor(gs, 2, trigger_screen='货币战争-备战', actor=_ACTOR)
+    observe_node_anchor(gs, (1, 2), trigger_screen='货币战争-备战', actor=_ACTOR)
     assert gs.gold.value == 40
     assert gs.free_refresh_left.value is None, (
         '战前陈旧金 40 ≤ 阈值 50:首锚定零条件授予')
@@ -204,7 +205,7 @@ def test_settle_truth_gold_samples_conditional_grant(
     assert gs.gold.value == 85
 
     assert report_node_advance(gs, trigger='settle_confirm').applied
-    assert effective_node_ord(gs) == 3
+    assert effective_node_pos(gs) == (1, 3)
     assert gs.free_refresh_left.value == 3, (
         '推进时点按结算真值 85 评估:超出 35 → 每 10 金 1 次,封顶 3'
         '(采到陈旧金 40 则为 0——时序锁)')
@@ -233,7 +234,8 @@ def test_prep_heavy_receipt_anchors_node(test_context, monkeypatch) -> None:
     monkeypatch.setattr(test_context, 'cw_match',
                         SimpleNamespace(session=session), raising=False)
     gs = game_state_of(session)
-    gs.effects.register_strategy(STRATEGY_EFFECTS['双手狸开键盘！'], acquired_t=5)
+    gs.effects.register_strategy(STRATEGY_EFFECTS['双手狸开键盘！'],
+                                 acquired_key=(1, 5))
 
     # 回执剧本位:(plane, round) 可变;level=None(cap 审计跳过)
     _receipt: dict = {}
@@ -268,21 +270,21 @@ def test_prep_heavy_receipt_anchors_node(test_context, monkeypatch) -> None:
     # 回执缺位(读数未读)→ 跳过锚定(禁猜,best-effort)
     _receipt['r'] = None
     _run_observe()
-    assert gs.node_ord.value is None, '回执缺位零锚定(禁猜)'
+    assert gs.node_pos.value is None, '回执缺位零锚定(禁猜)'
 
     # 开局首帧(1-1)→ first_anchor 建账 + 尾段发放
     _receipt['r'] = (1, 1)
     _run_observe()
-    assert gs.node_ord.value == 1 and gs.node_ord.source == 'observation'
-    assert gs.node_hist_ord == 1
+    assert gs.node_pos.value == (1, 1) and gs.node_pos.source == 'observation'
+    assert gs.node_hist_pos == (1, 1)
     assert gs.free_refresh_left.value == 2, '首锚定当帧发放'
 
     # 下一节点读数(1-2)→ advance 补推落账(观察采新即确认态)
     _receipt['r'] = (1, 2)
     _run_observe()
-    assert gs.node_ord.value == 2 and gs.node_ord.source == 'observation'
+    assert gs.node_pos.value == (1, 2) and gs.node_pos.source == 'observation'
 
     # 同值再读 → reanchor(等值确认,源态保持 observation)
     _receipt['r'] = (1, 2)
     _run_observe()
-    assert gs.node_ord.value == 2 and gs.node_ord.source == 'observation'
+    assert gs.node_pos.value == (1, 2) and gs.node_pos.source == 'observation'

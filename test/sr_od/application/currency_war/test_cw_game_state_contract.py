@@ -34,7 +34,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     bench_free_slots,
     bench_is_full,
     board_next_tier_of,
-    node_ordinal_of,
     slot_occupies,
     write_match_final,
 )
@@ -254,7 +253,7 @@ def test_full_state_snapshot_shape() -> None:
 def test_screen_context_writes_pair_only_no_advance() -> None:
     """漏斗瘦身( design §2.4
     攻击 B1):observe_screen_context 只写上下文对(prev/current)——推进域
-    (node_ord/hist)零触碰,四推断腿已退役;节点推进唯一落账入口 =
+    (node_pos/hist)零触碰,四推断腿已退役;节点推进唯一落账入口 =
     advance_node_effective(动作上报/观察锚定)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         SCREEN_PREP_FRAME,
@@ -262,19 +261,19 @@ def test_screen_context_writes_pair_only_no_advance() -> None:
     gs = _gs()
     gs.observe_screen_context(SCREEN_PREP_FRAME, sig=_sig())
     assert gs.current_screen.value == SCREEN_PREP_FRAME, '上下文对写入'
-    assert gs.node_ord.value is None and gs.node_hist_ord is None, \
+    assert gs.node_pos.value is None and gs.node_hist_pos is None, \
         '备战帧上下文零推进(腿已退役)'
     other = _gs()
     other.observe_screen_context('货币战争-战斗等待', sig=_sig())
     other.observe_screen_context('货币战争-补给', sig=_sig())
-    assert other.node_ord.value is None and other.node_hist_ord is None, \
+    assert other.node_pos.value is None and other.node_hist_pos is None, \
         '战斗等待→补给(prev∈旧守卫族形态)零推进(弹窗腿已退役)'
 
 
 def test_boss_briefing_report_types_hist_node() -> None:
     """BOSS 类型直定迁移(design §2.5 表):简报屏上报经 kernel report
     直定 boss 类型,目标 = 现 hist;序号推进半部已退役(简报上报零
-    node_ord 写);hist 未推进 = 零写禁猜。"""
+    node_pos 写);hist 未推进 = 零写禁猜。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         observe_node_anchor,
     )
@@ -286,8 +285,8 @@ def test_boss_briefing_report_types_hist_node() -> None:
     report_screen_boss_briefing_obs(
         gs, CwScreenBossBriefingObs(on_screen=True))
     assert gs.node.value is None, 'hist 未推进零写(禁猜)'
-    assert gs.node_ord.value is None, '简报上报零序号写(序号半部已退役)'
-    observe_node_anchor(gs, node_ordinal_of(2, 1),
+    assert gs.node_pos.value is None, '简报上报零序号写(序号半部已退役)'
+    observe_node_anchor(gs, (2, 1),
                         trigger_screen='货币战争-备战', actor='TestAnchor')
     report_screen_boss_briefing_obs(
         gs, CwScreenBossBriefingObs(on_screen=True))
@@ -299,15 +298,16 @@ def test_boss_briefing_report_types_hist_node() -> None:
 
 # ============================================================ §5 合成口与映射
 # (sim 合成口合同锁正本 = test_cw_game_state.py sim 合成口组,含
-#  「node_ord 不写」腿;ShopCard 往返 / bench-deployed 槽表转换的合同锁
+#  「node_pos 不写」腿;ShopCard 往返 / bench-deployed 槽表转换的合同锁
 #  正本 = test_cw_game_state.py「容器视图转换」组;此处不重复。)
 
 
-def test_node_ordinal_and_tier_helpers() -> None:
-    """坐标系纯函数:节点序(位面内序 + 前面位面累计);棋盘阵营升档
-    (同阵营 ≥2 才有下一档);bench 空位语义。"""
-    assert (node_ordinal_of(1, 1), node_ordinal_of(1, 9),
-            node_ordinal_of(2, 1)) == (1, 9, 10)
+def test_board_tier_and_bench_helpers() -> None:
+    """坐标系纯函数:棋盘阵营升档
+    (同阵营 ≥2 才有下一档);bench 空位语义。(节点序位键原语锁正本 =
+    test_cw_node_pos_primitive.py,编号读法已随编号表示退役,此处不再
+    重复锁。)"""
+    assert board_next_tier_of({'仙舟': 2, '联盟': 1}) == {'仙舟': 3}
     assert board_next_tier_of({'仙舟': 2, '联盟': 1}) == {'仙舟': 3}
     assert slot_occupies('bench') and slot_occupies('deployed')
     gs = _gs()

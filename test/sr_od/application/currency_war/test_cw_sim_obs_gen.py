@@ -340,10 +340,10 @@ def test_gen_boss_briefing_direct_set_idempotent() -> None:
         b._maybe_finish_wait()
         _walk_to(b, 1, 9)
         assert b.screen_identity() == SCREEN_BOSS_BRIEFING
-        hist_before = b.gs.node_hist_ord
+        hist_before = b.gs.node_hist_pos
         obs = b.observe(SCREEN_BOSS_BRIEFING)
         assert obs.on_screen is True
-        assert b.gs.node_hist_ord == hist_before
+        assert b.gs.node_hist_pos == hist_before
         assert b.gs.node.value.kind == 'boss'
     finally:
         uninstall_backend()
@@ -356,7 +356,7 @@ def test_gen_plane_transition_chain_absent_honest() -> None:
     try:
         _open_to_first_window(b)
         b._maybe_finish_wait()
-        b._enter_node_window(2, 1)
+        b._enter_node_window((2, 1))
         assert b.screen_identity() == SCREEN_PLANE_TRANSITION
         path_before = b.gs.node_path.value
         obs = b.observe(SCREEN_PLANE_TRANSITION)

@@ -35,8 +35,8 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
 )
 from sr_od.application.currency_war.kernel.cw_vocab import CwActionPickSupplyParam
 
-#: 剧本读数:节点条「备战阶段 1-5」→ 序号 5(补给节点 = 位面1 第5轮)。
-_ORD_1_5 = (1 - 1) * 9 + 5
+#: 剧本读数:节点条「备战阶段 1-5」→ 序位键 (1, 5)(补给节点 = 位面1 第5轮)。
+_POS_1_5: tuple[int, int] = (1, 5)
 
 
 def _make_match(test_context, monkeypatch):
@@ -72,7 +72,8 @@ def _run_pick_supply(test_context, monkeypatch, match):
     _run_node(test_context, op, op.run)
 
 
-def _run_supply_observe(test_context, monkeypatch, ordinal: int | None):
+def _run_supply_observe(test_context, monkeypatch,
+                        pos: tuple[int, int] | None):
     """跑 CwScreenSupplyNode 观察 node:门内 + 选项读/节点条读桩化
     (节点条返回剧本读数;None = 读不得跳过锁的对照位)。"""
     from sr_od.application.currency_war.operations.cw_screen import (
@@ -84,7 +85,7 @@ def _run_supply_observe(test_context, monkeypatch, ordinal: int | None):
     monkeypatch.setattr(op, 'round_by_find_area',
                         lambda scr, s, a, **k: _Area(True))
     monkeypatch.setattr(sn, 'read_supply_options', lambda ctx, screen: [])
-    monkeypatch.setattr(op, '_read_node_bar', lambda screen: ordinal)
+    monkeypatch.setattr(op, '_read_node_bar', lambda screen: pos)
     monkeypatch.setattr(op, '_read_refresh_anchor', lambda screen: None)
     _run_node(test_context, op, op.observe)
 
@@ -96,14 +97,14 @@ def test_auto_popup_supply_advances_once(test_context, monkeypatch) -> None:
     (推进后 source=logic)。"""
     match = _make_match(test_context, monkeypatch)
     gs = match.gs
-    _run_supply_observe(test_context, monkeypatch, _ORD_1_5)
-    assert gs.node_ord.value == _ORD_1_5, \
+    _run_supply_observe(test_context, monkeypatch, _POS_1_5)
+    assert gs.node_pos.value == _POS_1_5, \
         '自动弹形态:补给屏观察 node 完成首锚定(v=None 行)'
-    assert gs.node_ord.source == 'observation'
+    assert gs.node_pos.source == 'observation'
     _run_pick_supply(test_context, monkeypatch, match)
-    assert gs.node_ord.value == _ORD_1_5 + 1, \
+    assert gs.node_pos.value == (1, 6), \
         '确认点击即推进恰一档(点击即上报,无证据门)'
-    assert gs.node_ord.source == 'logic', '动作推进 = 推进未确认态'
+    assert gs.node_pos.source == 'logic', '动作推进 = 推进未确认态'
 
 
 def test_divert_form_supply_advances_once(test_context, monkeypatch) -> None:
@@ -112,10 +113,10 @@ def test_divert_form_supply_advances_once(test_context, monkeypatch) -> None:
     supply_confirm 推进恰一次(5 → 6)。"""
     match = _make_match(test_context, monkeypatch)
     gs = match.gs
-    observe_node_anchor(gs, _ORD_1_5, trigger_screen='货币战争-备战',
+    observe_node_anchor(gs, _POS_1_5, trigger_screen='货币战争-备战',
                         actor='CwScreenPrep')
     # 备战→补给 divert:补给屏等值读数 reanchor(仍 observation 态)
-    _run_supply_observe(test_context, monkeypatch, _ORD_1_5)
-    assert gs.node_ord.source == 'observation', 'divert 形态:等值 reanchor'
+    _run_supply_observe(test_context, monkeypatch, _POS_1_5)
+    assert gs.node_pos.source == 'observation', 'divert 形态:等值 reanchor'
     _run_pick_supply(test_context, monkeypatch, match)
-    assert gs.node_ord.value == _ORD_1_5 + 1, 'divert 形态:推进恰一档'
+    assert gs.node_pos.value == (1, 6), 'divert 形态:推进恰一档'

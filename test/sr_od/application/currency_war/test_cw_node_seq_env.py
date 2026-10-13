@@ -35,18 +35,17 @@ from sr_od.application.currency_war.kernel import cw_game_state as gs_mod
 from sr_od.application.currency_war.kernel import cw_investments
 from sr_od.application.currency_war.kernel import cw_node_schedule as ns
 from sr_od.application.currency_war.kernel.cw_effect_inventory import (
-    _portal_acquired_t,
+    _portal_acquired_key,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
     ChannelSig,
     GameState,
     NodeKey,
-    _obs_node_ordinal,
+    _obs_node_pos,
     _shop_panel_type_target,
     _write_derived_node_type,
     game_state_of,
-    node_ordinal_of,
     observe_node_anchor,
     report_node_advance,
     restore_state_snapshot,
@@ -59,7 +58,6 @@ from sr_od.application.currency_war.kernel.cw_node_schedule import (
     P2_NODE_SEQUENCE,
     PLANE_NODE_TABLES,
     P3UnobservedError,
-    node_pos_of,
     node_round_cap,
     node_sequence_of,
     resolve_plane_node_seqs,
@@ -121,32 +119,11 @@ def test_lock1_resolve_modified_inserts_supply_before_each_boss() -> None:
         node_sequence_of(3, mod)
 
 
-# ============================================================ 锁 2 正反解互逆
-
-def test_lock2_forward_inverse_modified_domain_exhaustive() -> None:
-    """修饰制 (plane, round) ↔ ordinal 全域对拍(P1×10 + P2×8 穷举);
-    域外点 (3,1) 两函数同抛 P3UnobservedError。"""
-    mod = _modified()
-    for plane in (1, 2):
-        for r in range(1, len(mod[plane]) + 1):
-            o = node_ordinal_of(plane, r, mod)
-            assert node_pos_of(o, mod) == (plane, r)
-    assert node_ordinal_of(2, 1, mod) == 11
-    assert node_ordinal_of(1, 10, mod) == 10, '修饰制 (1,10)/(2,1) 不塌缩'
-    with pytest.raises(P3UnobservedError):
-        node_ordinal_of(3, 1, mod)
-    with pytest.raises(P3UnobservedError):
-        node_pos_of(19, mod)
-
-
-def test_lock2_none_fallback_equals_legacy_formula() -> None:
-    """seqs=None 与固定 9 制公式在有效域内逐值等价(现役行为回归)。"""
-    for plane in (1, 2):
-        for r in range(1, 10):
-            assert node_ordinal_of(plane, r) == (plane - 1) * 9 + r
-    assert node_pos_of(10) == (2, 1)
-    assert node_pos_of(9) == (1, 9)
-
+# ============================================================ 锁 2 正反解互逆(已随编号表示退役)
+# 互逆锁整体退役:kernel 正解 node_ordinal_of 与反解 node_pos_of 已随键化
+# 删除,无可互逆对象(design 披露 5);后继语义锁 =
+# test_cw_node_pos_primitive.py 的 sequence_next 四态契约
+# + 本文件锁 9/锁 10 的键化消费面。
 
 # ============================================================ 锁 3 场字段生命周期
 
@@ -198,29 +175,29 @@ def test_lock3_snapshot_restore_carries_field() -> None:
 
 def test_lock4_next_screen_modified_regime() -> None:
     """修饰制推进声明:P1 r8→r9 = 补给、r9→r10 = boss 简报、跨位面 =
-    位面过渡、P2 r7→r8 = boss 简报、超 18(eff=19)= 局终空档。"""
+    位面过渡、P2 r7→r8 = boss 简报、P2 r8 后无后继 = 局终声明事件式。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         SCREEN_BOSS_BRIEFING,
     )
     gs = _gs_with_field(_modified())
     anchor = '货币战争-备战'
-    observe_node_anchor(gs, 8, trigger_screen=anchor, actor='TestSeqEnv')
+    observe_node_anchor(gs, (1, 8), trigger_screen=anchor, actor='TestSeqEnv')
     out = report_node_advance(gs, trigger='settle_confirm')
     assert out.applied and out.world_decl.next_screen == '货币战争-补给'
-    observe_node_anchor(gs, 9, trigger_screen=anchor, actor='TestSeqEnv')
+    observe_node_anchor(gs, (1, 9), trigger_screen=anchor, actor='TestSeqEnv')
     out = report_node_advance(gs, trigger='settle_confirm')
     assert out.applied and out.world_decl.next_screen == SCREEN_BOSS_BRIEFING
-    observe_node_anchor(gs, 10, trigger_screen=anchor, actor='TestSeqEnv')
+    observe_node_anchor(gs, (1, 10), trigger_screen=anchor, actor='TestSeqEnv')
     out = report_node_advance(gs, trigger='settle_confirm')
     assert out.applied \
         and out.world_decl.next_screen == '货币战争-位面过渡'
-    observe_node_anchor(gs, 17, trigger_screen=anchor, actor='TestSeqEnv')
+    observe_node_anchor(gs, (2, 7), trigger_screen=anchor, actor='TestSeqEnv')
     out = report_node_advance(gs, trigger='settle_confirm')
     assert out.applied and out.world_decl.next_screen == SCREEN_BOSS_BRIEFING
-    observe_node_anchor(gs, 18, trigger_screen=anchor, actor='TestSeqEnv')
+    observe_node_anchor(gs, (2, 8), trigger_screen=anchor, actor='TestSeqEnv')
     out = report_node_advance(gs, trigger='settle_confirm')
     assert out.applied and out.world_decl.next_screen == '', \
-        'eff=19 超修饰表总长 → 局终声明'
+        'P2 末无后继 → 局终声明事件式(match_end)'
 
 
 # ============================================================ 锁 6 观察读链
@@ -318,11 +295,11 @@ def test_lock7_registry_ownership_orphan_key_raises(monkeypatch) -> None:
 
 # ============================================================ 锁 9 坐标消费面
 
-def _shop_gs_with_target(mod_target_ord: int,
+def _shop_gs_with_target(mod_target_pos: tuple[int, int],
                          mirror: NodeKey | None) -> GameState:
-    """修饰局商店帧容器:生效序 = 修饰制目标序(hist/ord 同值),镜像按参。"""
+    """修饰局商店帧容器:生效键 = 修饰制目标序位(hist/ord 同值),镜像按参。"""
     gs = _gs_with_field(_modified())
-    observe_node_anchor(gs, mod_target_ord, trigger_screen='货币战争-备战',
+    observe_node_anchor(gs, mod_target_pos, trigger_screen='货币战争-备战',
                         actor='TestSeqEnv')
     if mirror is not None:
         gs.observe(gs.node, mirror, evidence='t', sig=_SIG_OBS)
@@ -330,10 +307,10 @@ def _shop_gs_with_target(mod_target_ord: int,
 
 
 def test_lock9_shop_chain_query_key_modified_not_9shift(monkeypatch) -> None:
-    """①商店查链:修饰局 P2 r2(修饰制 ord 12)店开帧 → 链查询键 =
-    (2,2),非 9 制解码的 (2,3)(漏改则恒查后一节点,类型查链静默失效);
-    直定反解同源落 (2,2) 键。"""
-    gs = _shop_gs_with_target(12, NodeKey(plane=2, round_num=2, kind=''))
+    """①商店查链:修饰局 P2 r2 店开帧 → 链查询键 = (2,2),非 9 制解码的
+    (2,3)(漏改则恒查后一节点,类型查链静默失效);目标即键,直定无反解
+    (旧 _node_key_for_ord 反解锁随表示退役)。"""
+    gs = _shop_gs_with_target((2, 2), NodeKey(plane=2, round_num=2, kind=''))
     queried: list[tuple[int, int]] = []
 
     def _fake_chain(g, plane, round_num):
@@ -346,56 +323,47 @@ def test_lock9_shop_chain_query_key_modified_not_9shift(monkeypatch) -> None:
     monkeypatch.setattr(gs_mod, 'chain_node_type', _fake_chain)
     gs.observe_screen_context('货币战争-备战-开商店', sig=_SIG_OBS)
     assert queried == [(2, 2)]
-    assert _node_key_for_ord_modified(12) == (2, 2), '直定反解 = 修饰制 (2,2)'
-
-
-def _node_key_for_ord_modified(ordinal: int) -> tuple[int, int]:
-    from sr_od.application.currency_war.kernel.cw_game_state import (
-        _node_key_for_ord,
-    )
-    key = _node_key_for_ord(ordinal, 'boss', seqs=_modified())
-    return key.plane, key.round_num
 
 
 def test_lock9_mirror_sequence_reads_field(monkeypatch) -> None:
-    """③镜像序:镜像 (2,3)/生效序 12(修饰制 (2,2))的修饰局 →
-    `_shop_panel_type_target` 取 max = 修饰制 (2,3) 序 13(镜像领先保护
-    维持);场字段缺位反差镜 = 9 制 12(漏传即回归本锁红的病理形态)。"""
-    gs = _shop_gs_with_target(12, NodeKey(plane=2, round_num=3, kind='battle'))
-    assert _obs_node_ordinal(gs) == 13
-    assert _shop_panel_type_target(gs) == 13
-    # 反差镜:同镜像按 9 制解码 = 12(漏读场字段的退化值,非现役行为)
-    gs9 = _shop_gs_with_target(12, NodeKey(plane=2, round_num=3,
-                                           kind='battle'))
+    """③镜像序:镜像 (2,3)/生效键 (2,2) 的修饰局 →
+    `_shop_panel_type_target` 取 max = (2,3)(镜像领先保护维持);
+    镜像即键不依赖场字段(字段 None 反差镜下仍 (2,3)——9 制退化值
+    随表示消亡)。"""
+    gs = _shop_gs_with_target((2, 2), NodeKey(plane=2, round_num=3, kind='battle'))
+    assert _obs_node_pos(gs) == (2, 3)
+    assert _shop_panel_type_target(gs) == (2, 3)
+    # 字段 None:镜像键派生不依赖场字段
+    gs9 = _shop_gs_with_target((2, 2), NodeKey(plane=2, round_num=3,
+                                               kind='battle'))
     gs9.write_logic(gs9.node_seq_by_plane, None, produced_by='TestSeqEnv',
                     evidence='t:none', sig=_logic_sig())
-    assert _obs_node_ordinal(gs9) == 12
+    assert _obs_node_pos(gs9) == (2, 3)
 
 
 def test_lock9_direct_write_regression_immunity_uses_field() -> None:
-    """②直定倒退免疫:镜像 (2,3) 领先、直定目标 (2,2)(修饰制 ord 12)
-    → 修饰制镜像序 13 > 12 丢弃留证不回写;直定 (2,3)(ord 13)照常落
-    (2,3) 键。漏读场字段则 12>12 判假、类型串写——本锁必红。"""
-    gs = _shop_gs_with_target(12, NodeKey(plane=2, round_num=3,
-                                          kind='battle'))
+    """②直定倒退免疫:镜像 (2,3) 领先、直定目标 (2,2) → 镜像键 (2,3) >
+    (2,2) 丢弃留证不回写;直定目标 (2,3) 照常落 (2,3) 键。"""
+    gs = _shop_gs_with_target((2, 2), NodeKey(plane=2, round_num=3,
+                                              kind='battle'))
     seq = gs.write_seq
-    _write_derived_node_type(gs, 'boss', target_ord=12, actor='TestSeqEnv',
+    _write_derived_node_type(gs, 'boss', target_pos=(2, 2), actor='TestSeqEnv',
                              trigger_screen='货币战争-备战-开商店',
                              seq=seq + 1)
     assert gs.node.value.round_num == 3, '倒退丢弃:镜像节点不被回写'
     # 同帧不落直定(node 镜像未被改写;丢弃走 obs_event 留证)
-    _write_derived_node_type(gs, 'boss', target_ord=13, actor='TestSeqEnv',
+    _write_derived_node_type(gs, 'boss', target_pos=(2, 3), actor='TestSeqEnv',
                              trigger_screen='货币战争-备战-开商店',
                              seq=seq + 2)
     assert (gs.node.value.plane, gs.node.value.round_num, gs.node.value.kind) \
-        == (2, 3, 'boss'), '目标序 = 修饰制 (2,3),直定落同键'
+        == (2, 3, 'boss'), '目标 = (2,3),直定落同键'
 
 
 def test_lock9_prep_anchor_write_end_passes_field(
         test_context, monkeypatch) -> None:
-    """④live 锚定写端 1(CwScreenPrep 备战帧,P2 战斗节点唯一 node_ord
-    观察写端):修饰局 (2,1) 回执 → 锚定 ordinal = 11(场字段派生);
-    漏传 = 9 制 10 → 恒滞后一节影子轨道,本锁红。"""
+    """④live 锚定写端 1(CwScreenPrep 备战帧,P2 战斗节点唯一节点键
+    观察写端):修饰局 (2,1) 回执 → 锚定 = (2,1) 序位(键直传,无坐标
+    换算——9 制影子轨道病理随表示消亡)。"""
     from test.sr_od.application.currency_war._cw_helpers import (
         run_node,
     )
@@ -442,15 +410,15 @@ def test_lock9_prep_anchor_write_end_passes_field(
 
     _receipt['r'] = (2, 1)
     run_node(test_context, op, lambda: op._observe(True, screen=object()))
-    assert gs.node_ord.value == 11, \
-        '修饰局 (2,1) 锚定 = 修饰制序 11(9 制 10 = 影子轨道回归)'
-    assert gs.node_ord.source == 'observation'
+    assert gs.node_pos.value == (2, 1), \
+        '修饰局 (2,1) 锚定 = 序位键直传'
+    assert gs.node_pos.source == 'observation'
 
 
 def test_lock9_supply_bar_write_end_passes_field(test_context) -> None:
     """④live 锚定写端 2(CwScreenSupplyNode 节点条):修饰局「2-7」读数
-    → ordinal 17(场字段派生,消第二份内联公式);「2-8」随 cap 8 放行 =
-    18;场字段缺位反差镜 = 9 制 16 / 「2-8」拒(漏传回归形态)。"""
+    → (2,7) 序位键;「2-8」随 cap 8 放行 = (2,8);场字段缺位反差镜 =
+    cap 7:读数仍 (2,7)(键表示下两态同值)、「2-8」拒(cap 不放宽)。"""
     from sr_od.application.currency_war.operations.cw_screen.cw_screen_supply_node import (
         CwScreenSupplyNode,
     )
@@ -471,23 +439,22 @@ def test_lock9_supply_bar_write_end_passes_field(test_context) -> None:
 
     mod = _modified()
     op = _make(_gs_with_field(mod), '备战阶段 2-7')
-    assert op._read_node_bar(object()) == 17, '修饰制 (2,7) = 17'
+    assert op._read_node_bar(object()) == (2, 7), '修饰制 (2,7) 序位键'
     op = _make(_gs_with_field(mod), '备战阶段 2-8')
-    assert op._read_node_bar(object()) == 18, 'cap 随场字段放宽到 8'
+    assert op._read_node_bar(object()) == (2, 8), 'cap 随场字段放宽到 8'
 
-    # 反差镜:场字段缺位(未注册)→ cap 7:「2-7」= 9 制 16、「2-8」拒
+    # 反差镜:场字段缺位(未注册)→ cap 7:「2-7」读数仍 (2,7)、「2-8」拒
     op9 = _make(_gs_with_field(None), '备战阶段 2-7')
-    assert op9._read_node_bar(object()) == 16
+    assert op9._read_node_bar(object()) == (2, 7)
     op9 = _make(_gs_with_field(None), '备战阶段 2-8')
     assert op9._read_node_bar(object()) is None
 
 
-# ============================================================ 锁 10 acquired_t
+# ============================================================ 锁 10 acquired_key
 
 def test_lock10_acquired_t_same_coordinate_system() -> None:
     """登记时点快照与推进入账同坐标系:修饰局 (2,2) 登记「接下来 N 节点」
-    → 快照 = 12(修饰制;9 制 11 = 回归形态);登记节点当拍不递减,推进
-    至 (2,3)(13)起递减。"""
+    → 快照 = (2,2) 序位元组;登记节点当拍不递减,推进至 (2,3) 起递减。"""
     session = cw4_session()
     gs = game_state_of(session)
     gs.write_logic(gs.node_seq_by_plane, _modified(),
@@ -495,14 +462,14 @@ def test_lock10_acquired_t_same_coordinate_system() -> None:
                    sig=_logic_sig())
     gs.observe(gs.node, NodeKey(plane=2, round_num=2, kind='battle'),
                evidence='t', sig=_SIG_OBS)
-    acquired = _portal_acquired_t(gs, session)
-    assert acquired == 12, '登记快照 = 修饰制 (2,2) 序(9 制 11 = 漏改)'
+    acquired = _portal_acquired_key(gs, session)
+    assert acquired == (2, 2), '登记快照 = (2,2) 序位元组'
     gs.effects.register_strategy(STRATEGY_EFFECTS['躺平'], acquired)
-    advanced, expired = gs.effects.advance_node(12)
+    advanced, expired = gs.effects.advance_node((2, 2))
     assert advanced and not expired
     entry = next(e for e in gs.effects.entries if e.spec.name == '躺平')
     assert entry.remaining_nodes == 3, '登记节点当拍不递减'
-    advanced, expired = gs.effects.advance_node(13)
+    advanced, expired = gs.effects.advance_node((2, 3))
     assert advanced and not expired
     assert entry.remaining_nodes == 2, '推进至 (2,3) 起递减'
 

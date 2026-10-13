@@ -494,7 +494,7 @@ def test_plane_transition_chain_defenses():
 
     # 非开局且镜像缺:行归属位面不可知 → 全跳
     gs = _blank_gs()
-    gs.node_hist_ord = 5
+    gs.node_hist_pos = (1, 5)
     mod.report_screen_plane_transition_obs(
         gs, mod.CwScreenPlaneTransitionObs(on_screen=True, chain=chain))
     assert gs.node_path.value is None

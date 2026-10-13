@@ -241,8 +241,8 @@ def test_grant_bridges_field_write_end(monkeypatch: pytest.MonkeyPatch) -> None:
                             'effect_burst@p1-r2'), 'burst 桥写端元数据'
     gs2 = _fresh_gs()
     gs2.effects.register_strategy(STRATEGY_EFFECTS['双手狸开键盘！'],
-                                  acquired_t=5)
-    gs2.effects.advance_node(6)
+                                  acquired_key=(1, 5))
+    gs2.effects.advance_node((1, 6))
     grant_effect_node_refresh_balance(gs2, frame='p1-r6')
     assert gs2.free_refresh_left.value == 2, 'None 基 = 0 起算'
     assert captured[-1] == ('free_refresh_left', 2,

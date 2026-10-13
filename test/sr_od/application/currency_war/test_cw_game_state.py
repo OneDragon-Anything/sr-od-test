@@ -525,7 +525,7 @@ def test_sim_synthesis_truth_domain(case: str) -> None:
     assert gs.hp.value is None
     assert gs.node.value is None, \
         'node 缺席种子不合成 kind 占位(P1-1 同型泛化)'
-    assert gs.node_ord.value is None, '种子不写节点序(节点由观察链派生)'
+    assert gs.node_pos.value is None, '种子不写节点序(节点由观察链派生)'
     assert gs.gold.value == 0 \
         and gs.gold.evidence == 'sim:synthesized', \
         'gold 真值(缺省 0)种子记 observation'
@@ -865,9 +865,9 @@ def test_register_seeds_remaining_uses_and_nodes() -> None:
     """§3.2.19/§5.1:登记播种双轨——次数类(duration_uses>0)播
     remaining_uses(免战牌=2),N_NODES 播 remaining_nodes(躺平=3)。"""
     inv = ActiveEffectInventory()
-    e_skip = inv.register_strategy(STRATEGY_EFFECTS['免战牌'], acquired_t=5)
+    e_skip = inv.register_strategy(STRATEGY_EFFECTS['免战牌'], acquired_key=(1, 5))
     assert e_skip.remaining_uses == 2 and e_skip.remaining_nodes is None
-    e_lie = inv.register_strategy(STRATEGY_EFFECTS['躺平'], acquired_t=5)
+    e_lie = inv.register_strategy(STRATEGY_EFFECTS['躺平'], acquired_key=(1, 5))
     assert e_lie.remaining_nodes == 3 and e_lie.remaining_uses is None
 
 
@@ -878,26 +878,26 @@ def test_node_tick_and_advance_dedup_guard_expiry() -> None:
     advance_node 的 advanced 位 = 余额累加闸(同节点重复推进 advanced=
     False,每节点恰一次)。"""
     inv = ActiveEffectInventory()
-    inv.register_strategy(STRATEGY_EFFECTS['躺平'], acquired_t=5)
-    assert inv.tick_node(5) == [], '登记当节点不推进(吞节点即错口径)'
-    assert inv.tick_node(5) == [], '同节点去重:幂等'
+    inv.register_strategy(STRATEGY_EFFECTS['躺平'], acquired_key=(1, 5))
+    assert inv.tick_node((1, 5)) == [], '登记当节点不推进(吞节点即错口径)'
+    assert inv.tick_node((1, 5)) == [], '同节点去重:幂等'
     assert inv.first('102001').remaining_nodes == 3
-    assert inv.tick_node(6) == [] and inv.first('102001').remaining_nodes == 2
-    assert inv.tick_node(6) == [], '同节点去重'
-    inv.tick_node(7)
-    expired = inv.tick_node(8)
+    assert inv.tick_node((1, 6)) == [] and inv.first('102001').remaining_nodes == 2
+    assert inv.tick_node((1, 6)) == [], '同节点去重'
+    inv.tick_node((1, 7))
+    expired = inv.tick_node((1, 8))
     assert [e.spec.id for e in expired] == ['102001'], '归零移除+到期返回'
     assert inv.first('102001') is None
-    assert inv.tick_node(8) == [], '空清单 tick 幂等'
+    assert inv.tick_node((1, 8)) == [], '空清单 tick 幂等'
     # advance_node 双返回口:advanced 位 = 余额累加闸门
     inv2 = ActiveEffectInventory()
-    inv2.register_strategy(STRATEGY_EFFECTS['躺平'], acquired_t=5)
-    advanced, expired1 = inv2.advance_node(6)
+    inv2.register_strategy(STRATEGY_EFFECTS['躺平'], acquired_key=(1, 5))
+    advanced, expired1 = inv2.advance_node((1, 6))
     assert advanced is True and expired1 == []
-    advanced2, _ = inv2.advance_node(6)
+    advanced2, _ = inv2.advance_node((1, 6))
     assert advanced2 is False, '同节点去重位 = 余额累加闸门'
-    inv2.advance_node(7)
-    advanced3, expired3 = inv2.advance_node(8)
+    inv2.advance_node((1, 7))
+    advanced3, expired3 = inv2.advance_node((1, 8))
     assert advanced3 is True and [e.spec.id for e in expired3] == ['102001'], \
         '三次有效推进(6/7/8)后到期移除'
 
@@ -931,17 +931,17 @@ def test_effect_refresh_balance_grant_forms(case: str) -> None:
         assert gs.free_refresh_left.value == 2, '零额度 = no-op 零行'
         return
     gs.effects.register_strategy(STRATEGY_EFFECTS['双手狸开键盘！'],
-                                 acquired_t=5)
-    adv, _ex = gs.effects.advance_node(6)
+                                 acquired_key=(1, 5))
+    adv, _ex = gs.effects.advance_node((1, 6))
     if adv:
         grant_effect_node_refresh_balance(gs, frame='p1-r6')
     assert gs.free_refresh_left.value == 2, 'None 基 = 0 起算'
     # 同节点重复采样(挂点每备战环一次):去重位关闭累加
-    adv2, _ex2 = gs.effects.advance_node(6)
+    adv2, _ex2 = gs.effects.advance_node((1, 6))
     if adv2:
         grant_effect_node_refresh_balance(gs, frame='p1-r6')
     assert gs.free_refresh_left.value == 2, '同节点禁双计'
-    adv3, _ex3 = gs.effects.advance_node(7)
+    adv3, _ex3 = gs.effects.advance_node((1, 7))
     if adv3:
         grant_effect_node_refresh_balance(gs, frame='p1-r7')
     assert gs.free_refresh_left.value == 4, '下一节点再 +2'
@@ -956,17 +956,17 @@ def test_gas_station_pick_node_grant_matches_official_text() -> None:
     - 拿卡节点边界去重(已推进过)不重复发 per_node;
     - 下一节点边界 per_node +1(「每次进入新节点」腿)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
-    gs.effects.advance_node(2)   # 本节点边界已在拿卡前推进(拿卡晚于边界)
+    gs.effects.advance_node((1, 2))   # 本节点边界已在拿卡前推进(拿卡晚于边界)
     grant_effect_node_refresh_balance(gs, frame='p1-r2')
     assert gs.free_refresh_left.value is None, '效果在册前边界零发放(零行)'
     apply_effect_burst_grant(gs, STRATEGY_EFFECTS['加油站'], frame='p1-r2')
-    gs.effects.register_strategy(STRATEGY_EFFECTS['加油站'], acquired_t=2)
+    gs.effects.register_strategy(STRATEGY_EFFECTS['加油站'], acquired_key=(1, 2))
     assert gs.free_refresh_left.value == 1, '拿卡当节点「现在」腿即发'
-    adv_same, _ex = gs.effects.advance_node(2)
+    adv_same, _ex = gs.effects.advance_node((1, 2))
     if adv_same:
         grant_effect_node_refresh_balance(gs, frame='p1-r2')
     assert gs.free_refresh_left.value == 1, '拿卡节点边界去重不补发'
-    adv_next, _ex2 = gs.effects.advance_node(3)
+    adv_next, _ex2 = gs.effects.advance_node((1, 3))
     assert adv_next is True
     grant_effect_node_refresh_balance(gs, frame='p1-r3')
     assert gs.free_refresh_left.value == 2, '下一节点「每次进入新节点」腿 +1'
@@ -988,10 +988,10 @@ def test_per_node_family_without_now_clause_no_pick_grant() -> None:
     # 在册代表(双手狸):登记期零发放,首发放 = 下一节点边界 +2。
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.effects.register_strategy(STRATEGY_EFFECTS['双手狸开键盘！'],
-                                 acquired_t=2)
+                                 acquired_key=(1, 2))
     apply_effect_burst_grant(gs, STRATEGY_EFFECTS['双手狸开键盘！'])
     assert gs.free_refresh_left.value is None, '无立即腿 = 登记期零发放(零行)'
-    adv_next, _ex = gs.effects.advance_node(3)
+    adv_next, _ex = gs.effects.advance_node((1, 3))
     assert adv_next is True
     grant_effect_node_refresh_balance(gs, frame='p1-r3')
     assert gs.free_refresh_left.value == 2, '首发放 = 下一节点 +2'
@@ -1020,7 +1020,7 @@ def test_capacity_projection_activates_and_recovers() -> None:
         id='test_cap', name='容量测试桩', trigger=TriggerKind.CONDITIONAL,
         duration=DurationKind.N_NODES, category=EffectKind.ECONOMY,
         payload=_NS(capacity_limit=3), duties=DutyFlags(track=True),
-        duration_nodes=2), acquired_t=5)
+        duration_nodes=2), acquired_key=(1, 5))
     project_effect_capacity(gs)
     assert gs.bench.value is None, 'bench 未观察 = 无容器,不造帧'
     # 观察(默认容量 9)→ 投影 3
@@ -1032,8 +1032,8 @@ def test_capacity_projection_activates_and_recovers() -> None:
     assert gs.bench.source == 'logic' \
         and gs.bench.evidence == 'capacity_project'
     # 条目到期(N_NODES=2,两次推进)→ 移除后投影回默认 9
-    inv.advance_node(6)
-    inv.advance_node(7)
+    inv.advance_node((1, 6))
+    inv.advance_node((1, 7))
     project_effect_capacity(gs)
     assert gs.bench.value.capacity == BENCH_CAPACITY_DEFAULT == 9, \
         '到期自动回 9(§3.2.5)'
@@ -1044,7 +1044,7 @@ def test_consume_use_decrements_removes_and_tolerates_missing() -> None:
     (递减挂点与登记挂点解耦,不炸执行链)。"""
     inv = ActiveEffectInventory()
     assert inv.consume_use('151301') is None, '未登记 = None 零动作'
-    inv.register_strategy(STRATEGY_EFFECTS['免战牌'], acquired_t=3)
+    inv.register_strategy(STRATEGY_EFFECTS['免战牌'], acquired_key=(1, 3))
     assert inv.consume_use('151301') == 1
     assert inv.first('151301') is not None, '尚有余量不移除'
     assert inv.consume_use('151301') == 0
@@ -1056,8 +1056,8 @@ def test_bump_key_advances_only_tracked_entries() -> None:
     """§5.1 计数 bump:动作侧全量推进只辖 duties.track=True 条目(「谁要
     记账」的声明单一源);消费按 (spec_id, key) 隔离读。"""
     inv = ActiveEffectInventory()
-    inv.register_strategy(STRATEGY_EFFECTS['采购专员·金'], acquired_t=1)  # track=True
-    inv.register_strategy(STRATEGY_EFFECTS['人力重组'], acquired_t=1)     # predict only
+    inv.register_strategy(STRATEGY_EFFECTS['采购专员·金'], acquired_key=(1, 1))  # track=True
+    inv.register_strategy(STRATEGY_EFFECTS['人力重组'], acquired_key=(1, 1))     # predict only
     inv.bump_key(CounterKey.REFRESH)
     inv.bump_key(CounterKey.REFRESH)
     assert inv.counter('201201', CounterKey.REFRESH) == 2
@@ -1071,7 +1071,7 @@ def test_on_buy_bumps_buy_key_by_k() -> None:
     3 张 5 费」门槛面);推进只辖 duties.track=True 条目(bump_key 同一
     承载);缺省 k=1 = 简单腿单击单张。"""
     inv = ActiveEffectInventory()
-    inv.register_strategy(STRATEGY_EFFECTS['采购专员·金'], acquired_t=1)  # track=True
+    inv.register_strategy(STRATEGY_EFFECTS['采购专员·金'], acquired_key=(1, 1))  # track=True
     inv.on_buy(card=None, star=1, k=3)
     assert inv.counter('201201', CounterKey.BUY) == 3, 'k 张计 k 次'
     inv.on_buy(card=None, star=1)

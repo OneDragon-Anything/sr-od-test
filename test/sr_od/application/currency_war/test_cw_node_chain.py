@@ -84,7 +84,7 @@ def test_derivation_shop_panel_chain_query_writes_kind():
         TokenCell('reward', 'hu'), TokenCell('supply', 'hu', 1.1),
         TokenCell('battle', 'hu', 0.7),
     ]), evidence='t', sig=_SIG)
-    gs.node_hist_ord = 2   # P1 r2(商店弹在 r2)
+    gs.node_hist_pos = (1, 2)   # P1 r2(商店弹在 r2)
     gs.observe_screen_context('货币战争-备战-开商店', sig=_SIG)
     assert gs.node.value is not None, '直定写经节点域(node.kind)'
     assert (gs.node.value.plane, gs.node.value.round_num,
@@ -112,7 +112,7 @@ def test_derivation_non_shop_screen_no_chain_query():
     gs.observe(gs.node_path, NodeChain(plane=1, seq=[
         TokenCell('supply', 'hu'), TokenCell('battle', 'hu'),
     ]), evidence='t', sig=_SIG)
-    gs.node_hist_ord = 2
+    gs.node_hist_pos = (1, 2)
     gs.observe_screen_context('货币战争-备战', sig=_SIG)
     assert gs.node.value is None, '非商店画面零查链零写'
 
@@ -121,11 +121,11 @@ _HOOK_SIG = ChannelSig(family='logic_hook', actor='TestChainWriter',
                        mode='compute')
 
 
-def _seed_watermark(gs, ord_val: int) -> None:
-    """推进水位播种(备战腿等价形态:node_ord 逻辑层 + hist 双写)。"""
-    gs.write_logic(gs.node_ord, ord_val, produced_by='TestChainWriter',
+def _seed_watermark(gs, pos_val: tuple[int, int]) -> None:
+    """推进水位播种(备战腿等价形态:node_pos 逻辑层 + hist 双写)。"""
+    gs.write_logic(gs.node_pos, pos_val, produced_by='TestChainWriter',
                    sig=_HOOK_SIG)
-    gs.node_hist_ord = ord_val
+    gs.node_hist_pos = pos_val
 
 
 def test_derivation_shop_panel_targets_observed_node_not_stale_hist():
@@ -143,7 +143,7 @@ def test_derivation_shop_panel_targets_observed_node_not_stale_hist():
         TokenCell('reward', 'hu'), TokenCell('reward', 'hu', 0.1),
         TokenCell('battle', 'hu', 0.7),
     ]), evidence='t', sig=_SIG)
-    _seed_watermark(gs, 2)
+    _seed_watermark(gs, (1, 2))
     gs.observe(gs.node, NodeKey(plane=1, round_num=3, kind='reward'),
                evidence='votes', sig=_SIG)
 
@@ -163,7 +163,7 @@ def test_derivation_shop_panel_popup_advanced_hist_wins_over_stale_mirror():
         TokenCell('reward', 'hu'), TokenCell('supply', 'hu'),
         TokenCell('battle', 'hu', 0.7),
     ]), evidence='t', sig=_SIG)
-    _seed_watermark(gs, 3)
+    _seed_watermark(gs, (1, 3))
     gs.observe(gs.node, NodeKey(plane=1, round_num=2, kind='reward'),
                evidence='votes', sig=_SIG)
 
@@ -187,7 +187,7 @@ def test_derived_node_type_regression_write_dropped_with_event():
     gs = game_state_of(session)
     gs.observe(gs.node, NodeKey(plane=1, round_num=3, kind='reward'),
                evidence='votes', sig=_SIG)
-    gs.node_hist_ord = 2
+    gs.node_hist_pos = (1, 2)
     events = []
     gs.note_obs_event = (  # 实例级捕获(obs_event 发射面)
         lambda event, field, payload, verdict='', sig=None:
@@ -200,4 +200,4 @@ def test_derived_node_type_regression_write_dropped_with_event():
             gs.node.value.kind) == (1, 3, 'reward'), \
         '倒退直定丢弃:镜像 (1,3) 不被 (1,2,boss) 回写'
     assert events and events[0][0] == 'arbitrate' and events[0][1] == 'node'
-    assert events[0][2]['target_ord'] == 2, '留证行携带被拒目标'
+    assert events[0][2]['target_pos'] == '1-2', '留证行携带被拒目标'

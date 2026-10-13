@@ -54,7 +54,7 @@ def test_transition_opening_pipeline_writes_baseline_and_snapshot():
     写 P1 入口基线(transition_row)+ 现行链离场快照,行位面 = 1。"""
     session = SimpleNamespace()
     gs = game_state_of(session)
-    assert gs.node.value is None and gs.node_hist_ord is None
+    assert gs.node.value is None and gs.node_hist_pos is None
     chain = _build_transition_chain(gs, _p1_slots())
     assert chain is not None and chain.plane == 1, '开局行归属位面 = 1'
     report_screen_plane_transition_obs(
@@ -90,7 +90,7 @@ def test_transition_mirror_missing_non_opening_skips():
     report 同门跳写(诚实缺位)。"""
     session = SimpleNamespace()
     gs = game_state_of(session)
-    gs.node_hist_ord = 10   # 非开局信号在,镜像缺
+    gs.node_hist_pos = (2, 1)   # 非开局信号在,镜像缺
     assert _build_transition_chain(gs, _p1_slots()) is None, \
         '镜像缺禁猜(构造诚实缺位)'
     report_screen_plane_transition_obs(

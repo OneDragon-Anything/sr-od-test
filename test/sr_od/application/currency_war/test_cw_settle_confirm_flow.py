@@ -71,14 +71,15 @@ def fixture_controller(
     return ctrl
 
 
-def _anchored_session(test_context, monkeypatch, ordinal: int = 1):
-    """锚定容器态:session 旁表 + node_ord 预锚定 observation(新路径
+def _anchored_session(test_context, monkeypatch,
+                      pos: tuple[int, int] = (1, 1)):
+    """锚定容器态:session 旁表 + node_pos 预锚定 observation(新路径
     可测前提;共存期生产会被观察态门挡,测试直接构造锚定态)。"""
     session = cw4_session()
     monkeypatch.setattr(test_context, 'cw_match',
                         SimpleNamespace(session=session), raising=False)
     gs = game_state_of(session)
-    observe_node_anchor(gs, ordinal, trigger_screen='货币战争-备战',
+    observe_node_anchor(gs, pos, trigger_screen='货币战争-备战',
                         actor='TestHost')
     return gs
 
@@ -103,7 +104,7 @@ def test_click_reports_once_and_returns(
         pytest.skip(f'存档截图缺失:screens/{_SETTLE_FRAME[0]}/{_SETTLE_FRAME[1]}.webp')
     if not test_context.has_screen(*_BOARD_FRAME):
         pytest.skip(f'存档截图缺失:screens/{_BOARD_FRAME[0]}/{_BOARD_FRAME[1]}.webp')
-    gs = _anchored_session(test_context, monkeypatch, ordinal=1)
+    gs = _anchored_session(test_context, monkeypatch, pos=(1, 1))
 
     fixture_controller.set_phases([
         {
@@ -124,7 +125,7 @@ def test_click_reports_once_and_returns(
         f'点击应推进到流转落地帧:phase_idx={fixture_controller.phase_idx}')
     assert fixture_controller.click_hit_area(_SETTLE_SCREEN, _SETTLE_BTN), (
         f'「继续挑战」点击落位缺失:{fixture_controller.recorded_clicks}')
-    assert gs.node_ord.value == 2 and gs.node_ord.source == 'logic', (
+    assert gs.node_pos.value == (1, 2) and gs.node_pos.source == 'logic', (
         '点击即上报恰一档(logic 推进未确认态;无证据等待)')
 
     # 重入已流转帧:按钮不在场 → 零点击零上报,直 success 交回宿主
@@ -136,7 +137,7 @@ def test_click_reports_once_and_returns(
     assert result2.success
     assert len(fixture_controller.recorded_clicks) == _clicks_before, \
         '已流转帧不点击(按钮离场即交回)'
-    assert gs.node_ord.value == 2, '重复上报零推进(观察态门挡)'
+    assert gs.node_pos.value == (1, 2), '重复上报零推进(观察态门挡)'
 
 
 def test_dead_click_gate_blocks_and_long_press_retry(
@@ -148,7 +149,7 @@ def test_dead_click_gate_blocks_and_long_press_retry(
     press_time=0.5(M39 迁入锁;去证据门后死点击自愈链靠宿主重分派)。"""
     if not test_context.has_screen(*_SETTLE_FRAME):
         pytest.skip(f'存档截图缺失:screens/{_SETTLE_FRAME[0]}/{_SETTLE_FRAME[1]}.webp')
-    gs = _anchored_session(test_context, monkeypatch, ordinal=1)
+    gs = _anchored_session(test_context, monkeypatch, pos=(1, 1))
 
     # 长按兜底 press_time 断言面:包一层记录 kwargs(不改变推进判定)
     _press_recorder: list[tuple[float, float]] = []
@@ -170,7 +171,7 @@ def test_dead_click_gate_blocks_and_long_press_retry(
     result = _run_execute(test_context, op)
 
     assert not result.success, '死点击形态驻留不收工(看门狗截停)'
-    assert gs.node_ord.value == 2 and gs.node_ord.source == 'logic', (
+    assert gs.node_pos.value == (1, 2) and gs.node_pos.source == 'logic', (
         '首报推进恰一档后,重复上报被观察态门挡(零推进,结构挡)')
     assert fixture_controller.click_hit_area(_SETTLE_SCREEN, _SETTLE_BTN), (
         '长按兜底前先有正常「继续挑战」点击(重试现行为)')
@@ -194,7 +195,7 @@ def test_defeat_branch_never_enters_settle_confirm(
         cw_screen_battle_wait as bwo,
     )
 
-    gs = _anchored_session(test_context, monkeypatch, ordinal=1)
+    gs = _anchored_session(test_context, monkeypatch, pos=(1, 1))
 
     calls: list = []
 
@@ -230,6 +231,6 @@ def test_defeat_branch_never_enters_settle_confirm(
     rs = op.wait()
 
     assert calls == [], '战败分支(1f)不得进入结算确认 op'
-    assert gs.node_ord.value == 1, '战败终局不推进节点序'
+    assert gs.node_pos.value == (1, 1), '战败终局不推进节点序'
     assert not rs.is_success and rs.result is not None, (
         f'战败页按 1f 分支流转(翻页/点空白 round_wait):{rs!r}')

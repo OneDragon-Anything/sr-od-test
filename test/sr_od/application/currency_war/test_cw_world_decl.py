@@ -78,17 +78,17 @@ from sr_od.application.currency_war.sim.cw_sim_ports import declare_world
 _SIG = ChannelSig(family='logic_action', actor='WorldDeclTest', mode='compute')
 _SIG_OBS = ChannelSig(family='obs', actor='WorldDeclTest')
 
-#: 桩 gs 节点序 → 预期 next_screen(推导规则逐分支对照;ord = 推进后
-#: 新序,总长 = P1(9) + P2(7) = 16,超长 = 局终 '')。
-_NODE_ADVANCE_SCREEN_TABLE: tuple[tuple[int, str], ...] = (
-    (2, '货币战争-备战'),          # P1r2 battle
-    (5, '货币战争-补给'),          # P1r5 supply
-    (7, '货币战争-遭遇节点'),      # P1r7 encounter
-    (9, '货币战争-BOSS简报'),      # P1r9 boss
-    (10, '货币战争-位面过渡'),     # P2r1 位面切换优先
-    (11, '货币战争-备战'),         # P2r2 battle
-    (16, '货币战争-BOSS简报'),     # P2r7 boss(真值表末节点)
-    (17, ''),                      # 局终分支:eff 超总长 → ''
+#: 桩 gs 节点键 → 预期 next_screen(推导规则逐分支对照;键 = 推进后
+#: 新序位,总长 = P1(9) + P2(7) = 16,P2 末无后继 = 局终 '')。
+_NODE_ADVANCE_SCREEN_TABLE: tuple[tuple[tuple[int, int], str], ...] = (
+    ((1, 1), '货币战争-备战'),          # →P1r2 battle
+    ((1, 4), '货币战争-补给'),          # →P1r5 supply
+    ((1, 6), '货币战争-遭遇节点'),      # →P1r7 encounter
+    ((1, 8), '货币战争-BOSS简报'),      # →P1r9 boss
+    ((1, 9), '货币战争-位面过渡'),      # →P2r1 位面切换优先
+    ((2, 1), '货币战争-备战'),          # →P2r2 battle
+    ((2, 6), '货币战争-BOSS简报'),      # →P2r7 boss(真值表末节点)
+    ((2, 7), ''),                       # 局终:P2 末无后继 → 事件式 ''
 )
 
 
@@ -174,7 +174,7 @@ def test_node_advance_decl_normalizes_both_triggers():
     ——归一不改推进/去重逻辑,详设 world-decl.md §2 表 #1/#2)。"""
     for trigger in ('settle_confirm', 'supply_confirm'):
         gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
-        observe_node_anchor(gs, 1, trigger_screen='货币战争-备战',
+        observe_node_anchor(gs, (1, 1), trigger_screen='货币战争-备战',
                             actor='WorldDeclTest')
         out = report_node_advance(gs, trigger=trigger)
         assert out.applied
@@ -185,12 +185,12 @@ def test_node_advance_decl_normalizes_both_triggers():
 
 def test_node_advance_decl_next_screen_derivation_table():
     """表 #1/#2 next_screen 推导规则锁(详设 §2 推导规则逐分支):
-    桩 gs 锚定节点序 → 上报推进 → eff 新序按「超总长局终 → 变长反解 →
-    位面切换优先 → kind 映射」断言单值(权威源 = kernel 节点日程
-    真值表 cw_node_schedule + effective_node_ord,禁读 gs.node 镜像)。"""
-    for eff_new, expected_screen in _NODE_ADVANCE_SCREEN_TABLE:
+    桩 gs 锚定节点键 → 上报推进 → 新键按「无后继局终事件式 → 位面切换
+    优先 → kind 映射」断言单值(权威源 = kernel 节点日程真值表
+    cw_node_schedule + effective_node_pos,禁读 gs.node 镜像)。"""
+    for anchor_pos, expected_screen in _NODE_ADVANCE_SCREEN_TABLE:
         gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
-        observe_node_anchor(gs, eff_new - 1, trigger_screen='货币战争-备战',
+        observe_node_anchor(gs, anchor_pos, trigger_screen='货币战争-备战',
                             actor='WorldDeclTest')
         out = report_node_advance(gs, trigger='settle_confirm')
         assert out.applied
@@ -198,7 +198,7 @@ def test_node_advance_decl_next_screen_derivation_table():
         assert decl is not None
         assert decl.trigger == 'node_advance'
         assert decl.next_screen == expected_screen, \
-            f'eff={eff_new} 推导值 {decl.next_screen!r} ≠ {expected_screen!r}'
+            f'anchor={anchor_pos} 推导值 {decl.next_screen!r} ≠ {expected_screen!r}'
 
 
 def test_node_advance_decl_none_on_gate_blocked():
@@ -237,7 +237,7 @@ def test_start_battle_decl_skip_substate_exit():
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     session = SimpleNamespace()
     game_state_of(session).effects.register_strategy(
-        STRATEGY_EFFECTS['免战牌'], acquired_t=None)
+        STRATEGY_EFFECTS['免战牌'], acquired_key=None)
     out = report_action_start_battle_param(
         gs, SimpleNamespace(), _SIG, session=session, skip_substate=True)
     assert out.applied

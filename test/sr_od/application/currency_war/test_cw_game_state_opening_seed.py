@@ -69,7 +69,7 @@ _A_SEEDED: tuple[str, ...] = (
 
 #: B/C 类抽检面(None = 设计语义或无观察源,设计分诊表禁种)。
 _BC_UNSEEDED: tuple[str, ...] = (
-    'node', 'node_ord', 'node_path', 'shop', 'encounter', 'supply',
+    'node', 'node_pos', 'node_path', 'shop', 'encounter', 'supply',
     'settlement', 'match_final', 'selected_difficulty', 'enemy_difficulty',
     'game_mode', 'env_refresh_left', 'supply_refresh_left',
     'encounter_refresh_left', 'plane_bosses',

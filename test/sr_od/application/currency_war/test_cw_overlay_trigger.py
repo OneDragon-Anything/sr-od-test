@@ -372,18 +372,18 @@ class TestFortuneBattleCount:
             report_node_advance,
         )
         gs = _gs()
-        gs.observe(gs.node_ord, 1, sig=_SIG_OBS)
+        gs.observe(gs.node_pos, (1, 1), sig=_SIG_OBS)
         _write_dep(gs, _view(front=[_u('黑天鹅')]))
         report_node_advance(gs, trigger='settle_confirm')
         assert _pending_kinds(gs) == [], '第 1 场(计数 1)不弹'
         # 结算屏观察重锚(生产 = settle 确认后下一节点被观察;动作推进门
         # 只放行 observation 态)。
-        gs.observe(gs.node_ord, gs.node_ord.value, sig=_SIG_OBS)
+        gs.observe(gs.node_pos, gs.node_pos.value, sig=_SIG_OBS)
         report_node_advance(gs, trigger='settle_confirm')
         assert _pending_kinds(gs) == ['fortune'], '第 2 场(2 倍数)弹'
         assert gs.screen_changes.fortune_battles == 2
         consume_screen_change(gs, 'fortune')
-        gs.observe(gs.node_ord, gs.node_ord.value, sig=_SIG_OBS)
+        gs.observe(gs.node_pos, gs.node_pos.value, sig=_SIG_OBS)
         report_node_advance(gs, trigger='settle_confirm')
         assert _pending_kinds(gs) == [] and \
             gs.screen_changes.fortune_battles == 3, '第 3 场不弹'
