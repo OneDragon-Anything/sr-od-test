@@ -1,9 +1,11 @@
 """装备域锁(机制主题文件;穿戴计划 → 合并继承 → 可穿性门全链)。
 
 被锁机制(按节):
-- **穿戴计划容器换源**(M7 ``_build_equip_wear_plan`` 四路输入全面换
-  容器 game state 读口):黑盒区分(无黑板帧照常产出)+ fail 门方向
-  (owned/occupied 未观察分别保守关);
+- **穿戴计划容器换源**(M7 ``_build_equip_wear_plan`` 输入全面换容器
+  game state 读口):黑盒区分(无黑板帧照常产出)+ fail 门方向
+  (owned 未观察保守关)+ **穿戴闭环锁**(穿戴上报落账后已穿槽位
+  输入即反映,已穿件零重派、满装单位零再派——决策环零读屏下的
+  自旋形态锁);
 - **merge 装备继承**(语义源 = merge_mechanics):同名同星 3 合 1,
   素材装备按扫描序继承到载体(场上载体优先;载体自有在前),素材槽
   清空——重写容器形状时的不变量哨兵;
@@ -85,12 +87,71 @@ def test_m7_fail_gate_owned_unobserved():
 
 
 def test_m7_fail_gate_occupied_unobserved():
-    """fail 门:occupied 域未观察(None) → 保守关,fail_reason 指向
-    occupied。(直构容器承载,理由同 owned 门锁。)"""
-    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
-    gs.observe(gs.equips, ['星币收集器'], sig=_SIG)
-    ret = _build_equip_wear_plan(gs)
-    assert 'occupied' in ret.fail_reason
+    """穿戴闭环锁:穿戴上报落账后,计划构建的已穿槽位输入即反映已穿
+    (输入源 = deployed 视图 ``unit.equips`` 逻辑推导,不读
+    ``gs.occupied_equips`` 观察面)——已穿件零重派、满装单位(容量
+    EQUIP_CAPACITY)零再派。
+
+    锁的故障形态:零读屏决策环(ADR-0517「期望态投影承载」)内,观察
+    面无穿戴写端恒为入口快照 → 分配容量与 kernel 穿戴上限判据
+    (unit.equips 活账)双基分裂 → 满装后上报拒绝(零写)→ 同输入
+    重派同一动作 → 无限重建计划自旋(sim 首局挂栈实证)。本测试零写
+    观察面(occupied 恒 None),同时钉住「观察面缺席不再关 fail 门」。
+
+    载荷 = 三件进阶终品(基础件两两配方 K8 闭合,终品互不合成,恰好
+    穿满单人容量 3)。"""
+    from sr_od.application.currency_war.kernel.cw_action_report.wear_equip import (
+        report_action_wear_equip_param,
+    )
+    from sr_od.application.currency_war.kernel.cw_comps import (
+        EQUIP_CAPACITY,
+    )
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        deployed_view_sequential,
+    )
+    from sr_od.application.currency_war.kernel.cw_vocab import (
+        CwActionWearEquipParam,
+    )
+
+    session = cw4_session()   # comp=None:通用兜底分配,与阵容判据解耦
+    gs = game_state_of(session)
+    # 5 件进阶终品 > 单人容量 3:载荷必须超容量,否则旧观察面输入源下
+    # owned 恰好在容量处耗尽,超派拒绝分支不可达(红证明失效形态)。
+    items = ['物质分解液', '冷笑话引擎', '电磁弹射器', '胜利之旗', '斩首行动']
+    gs.observe(gs.equips, list(items), sig=_SIG)
+    gs.observe(gs.deployed,
+               deployed_view_sequential(
+                   [Unit(char_id='加拉赫', star=1)], [], back_capacity=6),
+               sig=_SIG)
+    sig = ChannelSig(family='logic_action', actor='test', mode='compute')
+
+    def _worn() -> list[str]:
+        view = gs.deployed.value
+        return next(list(u.equips) for u in (view.front_slots or [])
+                    if u is not None and u.char_id == '加拉赫')
+
+    for _ in range(len(items) + 3):   # 有界环:重派同件 = 内层断言即红
+        build = _build_equip_wear_plan(session)
+        assert build.fail_reason == '', f'输入读通(fail={build.fail_reason!r})'
+        if not build.steps:
+            break
+        step = build.steps[0]
+        assert step.item_name not in _worn(), \
+            f'{step.item_name} 已穿仍重派(已穿槽位输入未反映穿戴结果)'
+        outcome = report_action_wear_equip_param(
+            gs,
+            CwActionWearEquipParam(item_name=step.item_name,
+                                   char_name=step.char_name,
+                                   row=step.row, slot=step.slot),
+            sig)
+        assert outcome.applied, \
+            f'计划内穿戴被拒:{outcome.reason}(分配容量与 kernel 上限双基分裂)'
+    assert len(_worn()) == EQUIP_CAPACITY, \
+        f'终态恰满装,实得 {_worn()}'
+    assert set(_worn()) < set(items), '穿满即止,超额件滞留 owned'
+    final = _build_equip_wear_plan(session)
+    assert not final.steps, \
+        f'满装后仍有派发(自旋形态):{[(s.item_name, s.char_name) for s in final.steps]}'
 
 
 # ============================================================ merge 装备继承

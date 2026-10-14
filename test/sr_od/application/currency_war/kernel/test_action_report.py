@@ -917,6 +917,53 @@ def test_wear_equip_single_mechanical_drag_emits(monkeypatch):
     assert _r2.is_success is False and drags2 == []
 
 
+def test_wear_locate_slot_anchor_over_name_match():
+    """穿戴目标定位锁:计划步恒戳的物理槽位锚优先于名匹配——同名角色
+    跨域在场(deployed 空装 + bench 副本穿满)时,旧 bench 先序名匹配
+    会把穿戴记到席上副本 → 超限拒单零写 → 决策环同输入重派无限自旋
+    (sim 冒烟 seed 20261014 实证);机械拖拽的真实落点 = 槽位 avatar,
+    账随拖点走。槽位在位者与 char_name 不符 = 陈旧提案,如实拒(禁
+    静默按名改目标)。"""
+    from sr_od.application.currency_war.kernel.cw_action_report.wear_equip import (
+        report_action_wear_equip_param,
+    )
+    sig_obs = ChannelSig(family='obs', actor='lock', mode='synthesized')
+    sig = ChannelSig(family='logic_action', actor='lock', mode='compute')
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    slots: list[BenchSlot | None] = [None] * 9
+    slots[0] = BenchSlot(kind='unit', unit=Unit(
+        char_id='椒丘', star=2, equips=['追逐星辰', '动能激发剑', '生命之花']))
+    gs.observe(gs.bench,
+               BenchView(slots=[s if s is not None else BenchSlot(kind='empty')
+                                for s in slots], capacity=9), sig=sig_obs)
+    gs.observe(gs.deployed,
+               _dvs([Unit(char_id='三月七', star=1),
+                     Unit(char_id='椒丘', star=1)], [], back_capacity=6),
+               sig=sig_obs)
+    gs.observe(gs.equips, ['幸运星'], sig=sig_obs)
+    # 槽位锚:front:2 = deployed 椒丘(空装)→ 穿上;bench 同名副本不动。
+    out = report_action_wear_equip_param(
+        gs, CwActionWearEquipParam(item_name='幸运星', char_name='椒丘',
+                                   row='front', slot=2), sig)
+    assert out.applied, f'槽位锚应命中 deployed 椒丘,实得 {out.reason!r}'
+    dep = gs.deployed.value
+    assert dep is not None and dep.front_slots[1] is not None \
+        and dep.front_slots[1].char_id == '椒丘' \
+        and list(dep.front_slots[1].equips) == ['幸运星'], \
+        '账随拖点走:穿戴落在槽位锚指名的 deployed 单位'
+    bench_unit = gs.bench.value.slots[0].unit
+    assert bench_unit is not None and len(bench_unit.equips) == 3, \
+        'bench 同名副本不动(名匹配不再先序)'
+    # 陈旧提案:槽位在位者与 char_name 不符 → 拒(禁静默按名改目标)。
+    gs.observe(gs.equips, ['和平手枪'], sig=sig_obs)
+    out_stale = report_action_wear_equip_param(
+        gs, CwActionWearEquipParam(item_name='和平手枪', char_name='椒丘',
+                                   row='front', slot=1), sig)
+    assert not out_stale.applied \
+        and out_stale.reason == 'wear_target_unit_missing', \
+        '槽位身份不符 = 陈旧提案如实拒'
+
+
 def _deploy_env(session: object | None):
     """DeployMoveOp 离线执行环境(坐标注入;截图序列 scripted)。"""
     from sr_od.application.currency_war import prep_actions as pa
