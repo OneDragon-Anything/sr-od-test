@@ -262,3 +262,137 @@ class TestRefreshDrivesLock:
         assert st.target_comp is not None
         assert st.target_comp.name == '黄泉减益'
         assert st.v3_intention.locked_comp == '黄泉减益'
+
+
+# ===== review-37 修复锁(P1 过期配方读口 / R2 滑动基线)=====
+
+
+class TestP2WindowRecipeRetirement:
+    """进 P2 后开局面配方键退役(review-37 P1):P2 未锁窗
+    direction 读口 = None(两键都空契约),过期 P1 配方禁消费。"""
+
+    @staticmethod
+    def _strategy(gs):
+        from types import SimpleNamespace
+
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
+            MandateV1Strategy,
+        )
+        return MandateV1Strategy(gs, SimpleNamespace(strategy_seed=None))
+
+    def test_p2_entry_clears_recipe_and_direction_reads_none(self):
+        """端到端:P1 帧配方物化(开局面键非空)→ 进 P2(窗口谓词置位)
+        首个贵段清配方锁 + 开局面键同点清空 → 未锁窗 direction_comp_of
+        返回 None——shop 序 1 未锁分支/k 空窗回退/形态⑥观测的消费输入
+        面统一恢复(review-37 P1 三消费端)。"""
+        from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+            session_scope,
+        )
+        sess = StrategySession()
+        gs = cw4_gs(sess, plane=1, round_num=9, node='prep')
+        gs.node_hist_pos = (1, 9)
+        strat = self._strategy(gs)
+        st = state_of(gs)
+        from sr_od.application.currency_war.kernel.cw_intention import (
+            IntentionState,
+        )
+        st.v3_intention = IntentionState(p1_pair=('仙舟', '持续伤害'))
+        strat._refresh_direction(gs, st)
+        assert st.opening_recipe_comp is not None, 'P1 帧配方物化前置'
+        assert session_scope.direction_comp_of(gs) is st.opening_recipe_comp
+        # 进 P2:边界置窗口谓词 + 贵段清配方(写端)+ 读口守卫(双保险)
+        cw4_gs(sess, plane=2, round_num=1, node='prep')
+        gs.node_hist_pos = (2, 1)
+        session_scope.handle_node_boundary(gs)
+        strat._refresh_direction(gs, st)
+        assert st.v3_intention.p1_pair == (), '配方锁退场'
+        assert st.opening_recipe_comp is None, '开局面键同点清空(写端)'
+        assert st.target_comp is None, '未锁窗(P2 首帧未选卡)'
+        assert session_scope.direction_comp_of(gs) is None, (
+            'P2 未锁窗 direction 读口 = None(两键都空契约)')
+        # K 空窗回退 p2plus 带可达性(k=None 判定不再被过期配方遮蔽)
+        from sr_od.application.currency_war.kernel.cw_intention import (
+            k_empty_window_fallback,
+        )
+        fallback, band = k_empty_window_fallback(gs, st.v3_intention,
+                                                 session=sess)
+        assert band == 'p2plus', '未锁 P2 帧回退带 = p2plus(可达)'
+
+    def test_direction_read_guard_against_stale_recipe(self):
+        """防御双保险:清空写端未及执行的帧(plane2 首帧先于贵段),
+        读口 plane2_started 守卫仍不消费过期 P1 配方。"""
+        from sr_od.application.currency_war.kernel.cw_comps import get_comp
+        from sr_od.application.currency_war.kernel.cw_game_state import (
+            game_state_of,
+        )
+        from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+            session_scope,
+        )
+        sess = StrategySession()
+        gs = game_state_of(sess)
+        st = state_of(gs)
+        st.plane2_started = True          # 窗口谓词已置位
+        st.opening_recipe_comp = get_comp('列车同行')   # 过期残留(哨兵)
+        st.target_comp = None             # 未锁
+        assert session_scope.direction_comp_of(gs) is None
+
+
+class TestP2PickBaselineSliding:
+    """P1 滑动基线(review-37 R2):P2 首帧快照会把先于首决策帧完成的
+    开局三选一吞进基线(兜底退化为第二笔获得帧);滑动基线以 P1 末次
+    刷新快照冻结,首笔 P2 获得照常侦测。"""
+
+    @staticmethod
+    def _observe_strategies(gs, names):
+        from sr_od.application.currency_war.kernel.cw_game_state import (
+            ChannelSig,
+        )
+        gs.observe(gs.active_strategies, names, evidence='cw-37-rev',
+                   sig=ChannelSig(family='obs', actor='cw-37-rev',
+                                  mode='read'))
+
+    def test_p1_acquisition_in_baseline_no_false_trigger(self):
+        """P1 期间获得的策略(加场卡)入滑动基线:进 P2 首帧不误触发
+        兜底(该笔不是 P2 获得)。"""
+        from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+            session_scope,
+        )
+        sess = StrategySession()
+        gs = cw4_gs(sess, plane=1, round_num=5, node='prep')
+        gs.node_hist_pos = (1, 5)
+        self._observe_strategies(gs, ['白银投资'])
+        refresh_line_if_needed(gs)
+        st = state_of(gs)
+        assert st.p2_pick_baseline == frozenset({'白银投资'})
+        # 进 P2:策略集未变(该笔已在基线)→ 无增长 → 不触发
+        cw4_gs(sess, plane=2, round_num=1, node='prep')
+        gs.node_hist_pos = (2, 1)
+        session_scope.handle_node_boundary(gs)
+        refresh_line_if_needed(gs)
+        assert st.p2_strategy_pick_done is False, 'P1 获得不计 P2 增长'
+        assert st.target_comp is None
+
+    def test_p2_pick_before_first_decision_frame_detected(self):
+        """吞签退化形态的消解锁:P2 开局三选一先于首个 P2 决策帧完成
+        ——滑动基线(P1 末次刷新快照)使该笔在首个 P2 决策帧即被侦测
+        为增长,兜底锁当帧触发(不退化到第二笔获得)。"""
+        from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+            session_scope,
+        )
+        sess = StrategySession()
+        gs = cw4_gs(sess, plane=1, round_num=9, node='prep')
+        gs.node_hist_pos = (1, 9)
+        refresh_line_if_needed(gs)
+        st = state_of(gs)
+        assert st.p2_pick_baseline == frozenset()
+        # 进 P2:开局选卡(获得先于任何 P2 决策帧)→ 首个 P2 决策帧侦测
+        cw4_gs(sess, plane=2, round_num=1, node='prep')
+        gs.node_hist_pos = (2, 1)
+        session_scope.handle_node_boundary(gs)
+        self._observe_strategies(gs, ['黑塔纪元'])
+        refresh_line_if_needed(gs)
+        assert st.p2_strategy_pick_done is True, (
+            '先于首决策帧的 P2 首笔获得须被滑动基线侦测(吞签形态消解)')
+        # 黑塔纪元 = 大黑塔银河学者策略型硬规则命中 → 该帧硬规则锁
+        assert st.target_comp is not None
+        assert st.target_comp.name == '大黑塔银河学者'
