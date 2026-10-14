@@ -134,6 +134,9 @@ from sr_od.application.currency_war.sim.cw_sim_battle import (
     SIM_BATTLE_FACE,
     BattleOutcome,
 )
+from sr_od.application.currency_war.sim.cw_sim_enemy import (
+    ENCOUNTER_TIER_BONUS,
+)
 from sr_od.application.currency_war.sim.cw_sim_obs_gen import (
     GOLDEN_PATH_SCREEN_NAMES,
     registered_screens,
@@ -1212,6 +1215,115 @@ def test_rainbow_env_overlay_detour_offer_counted_once() -> None:
         assert invest_out.applied
         cw_sim_ports.declare_world(invest_out.world_decl)
         assert b.screen_identity() == SCREEN_PREP, 'offer 选定 → 节点屏'
+    finally:
+        uninstall_backend()
+
+
+# ============================================================ 黄金时代局(验收面)+ 难度账记录
+
+_GOLDEN_ENV = '黄金时代'
+
+
+def _golden_env_backend(seed: int = 61) -> SimBackend:
+    """开局选黄金时代环境的装配后端(调用方负责 uninstall;装配模式 =
+    _rainbow_env_backend 同款:opts 首位定向 → idx=0 上报 → 声明喂入)。"""
+    b = SimBackend(seed=seed, cfg=RunConfig(
+        selected_difficulty='A8', enemy_difficulty=108, env_present=True))
+    install_backend(b)
+    b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+    assert b.screen_identity() == SCREEN_INVEST_ENV
+    b.gs.write_logic(b.gs.invest_env_opts,
+                     [_GOLDEN_ENV, '轮岗', '头彩'],
+                     produced_by='Test', evidence='t:opts', sig=_SIG)
+    out = report_action_pick_invest_env_param(
+        b.gs, SimpleNamespace(idx=0), _SIG)
+    assert out.applied
+    cw_sim_ports.declare_world(out.world_decl)
+    return b
+
+
+def test_golden_env_full_walk_offers_all_gold() -> None:
+    """黄金时代 sim 全流程锁(T-12 验收主锁一;品质改写机制 = T-11
+    已落地全改写型判据自动覆盖):开局环境 offer 不进取卡序;此后每次
+    策略三选一呈现,候选全金注册名(改写目标品质 '棱彩'→'金' 为两族
+    唯一行为差);呈现次数 = 固定日程落在建模域内的槽数(现算,防日程/
+    建模域漂移静默失配);局终序数 = 呈现次数。披露键已随 T-11 整体
+    退役,无改写申报面可断言(设计稿 §8.4①)。"""
+    b = _golden_env_backend(61)
+    try:
+        assert b._invest_pick_ordinal == 0, '开局环境 offer 不计数'
+        modelled_slots = [slot for slot in INVEST_OFFER_SCHEDULE
+                          if slot[0] in PLANE_NODE_TABLES]
+        offers_seen = 0
+        for _ in range(4096):
+            if b.done:
+                break
+            if b.screen_identity() == SCREEN_SETTLE:
+                _node_advance_feed(b.gs, trigger='settle_confirm')
+                continue
+            if b.screen_identity() == SCREEN_INVEST_STRATEGY:
+                opts = b.gs.invest_strategy_opts.value
+                assert len(opts) == OFFER_CANDIDATES
+                for name in opts:
+                    assert name in INVESTMENT_STRATEGIES, name
+                    assert INVESTMENT_STRATEGIES[name].rarity == '金', \
+                        f'改写次候选必金: {name}'
+                offers_seen += 1
+            _drive_step(b, 61)
+        assert b.done, '黄金局走完到局终'
+        assert offers_seen == len(modelled_slots), \
+            (offers_seen, modelled_slots)
+        assert b._invest_pick_ordinal == offers_seen, \
+            '序数 = 实际呈现次数(呈现一次计一次)'
+    finally:
+        uninstall_backend()
+
+
+def test_golden_env_difficulty_records_track_selections() -> None:
+    """难度账记录轨迹锁(T-12 验收主锁二;2026-10-14 用户裁定:sim 对
+    选择后的难度做记录更新,胜负建模另批):
+
+    - 每场战斗结算恰一条记录,记录数 = 结算屏出现数(落账在幂等守卫
+      后,重入无双计);
+    - 逐条对账:品质分量 = 该结算时点已选策略数 × 金档(黄金局改写后
+      选择全金,记录随选择 0→3→6 自动更新——「选择后记录更新」的
+      可执行形态);
+    - encounter 类记录遭遇档分量在册表值域内,非遭遇类恒 0;
+    - 轨迹单调不减(选择只增不减);轨迹首段存在 0(取卡日程前的
+      战斗)且末段 = 两次取卡后全金 6——两段齐 = 全链被拉通。"""
+    b = _golden_env_backend(61)
+    try:
+        picks_at_settle: list[int] = []
+        for _ in range(4096):
+            if b.done:
+                break
+            if b.screen_identity() == SCREEN_SETTLE:
+                picks_at_settle.append(
+                    len(b.gs.active_strategies.value or []))
+                _node_advance_feed(b.gs, trigger='settle_confirm')
+                continue
+            _drive_step(b, 61)
+        assert b.done, '黄金局走完到局终'
+        records = b.difficulty_records
+        assert len(records) == len(picks_at_settle), \
+            (len(records), len(picks_at_settle))
+        quality_seq: list[int] = []
+        for rec, picks in zip(records, picks_at_settle, strict=True):
+            assert rec.breakdown.base is None, 'U25 基础曲线未采恒 None'
+            assert rec.breakdown.quality_bonus == picks * 3, \
+                (rec.plane, rec.round_num, rec.node_kind,
+                 rec.breakdown.quality_bonus, picks)
+            if rec.node_kind == 'encounter':
+                assert rec.breakdown.encounter_tier_bonus \
+                    in ENCOUNTER_TIER_BONUS
+            else:
+                assert rec.breakdown.encounter_tier_bonus == 0
+            quality_seq.append(rec.breakdown.quality_bonus)
+        assert quality_seq == sorted(quality_seq), \
+            '轨迹单调不减(选择只增不减)'
+        assert quality_seq[0] == 0, '取卡日程前的战斗品质分量为 0'
+        assert quality_seq[-1] == 6, \
+            '建模域两次取卡后(全金)末段记录 = 2×金档'
     finally:
         uninstall_backend()
 
