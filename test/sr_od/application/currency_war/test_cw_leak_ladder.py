@@ -245,25 +245,10 @@ class TestL7AllInCategoryFilter:
         assert all_in_xp_domain_hit(no_hp, sess,
                                     DEFAULT_REGISTRY) is False
 
-    def test_l7_gate_rejects_non_support_xp(self):
-        """P72 闸 ALL IN 支收窄:P21 域内非支A 帧 XP 拒(新拒因分键);
-        支A 形态(板满 ∧ bench 2★)与域外帧维持全豁免。保底金门注
-        (ADR-0603):「全豁免」指 (3a) 量闸——两形态另受豁免支花后
-        ≥1 息档下界辖(本类场景 g=30 批 8 花后 22 ≥10,不受影响)。"""
-        sess = self._allin_session()
-        st = self._allin_state(10)
-        ok, why = crit_levelup.levelup_budget_gate(
-            _bsb(**st), sess, 30, 5, ('甲',), [], [], 2, 4)
-        assert ok is False and why == 'all_in_xp_category_filtered'
-        # 支A:板满(cap 5)+ bench 有 2★ 等待件 → 兑现链当帧可兑现
-        # (P4 容器形:bench = 占席条目,deployed = 行域 Unit)
-        deployed = [_bu(f'甲{i}', star=2, slot=i + 1) for i in range(5)]
-        bench = [_bs('乙', star=2, slot=1)]
-        ok2, why2 = crit_levelup.levelup_budget_gate(
-            _bsb(**st), sess, 30, 5, ('甲', '乙'), bench, deployed, 2, 4)
-        assert ok2 is True and why2 == ''
-        # 域外(hp>停线):全豁免放行
-        st_out = self._allin_state(100)
-        ok3, why3 = crit_levelup.levelup_budget_gate(
-            _bsb(**st_out), sess, 30, 5, ('甲',), [], [], 2, 4)
-        assert ok3 is True and why3 == ''
+    # (P72 闸 ALL IN 支收窄锁 test_l7_gate_rejects_non_support_xp 已随
+    # levelup_budget_gate 量闸本体退役消亡——迭代 2026-10-12-prep-shop-
+    # workflow-redesign 批 3.4;line_and_upgrade §2.3 P72(3a) 本体删除
+    # 行:量闸整体不再存在,「ALL IN 帧类别白名单拒 XP」的防线语义随
+    # 之消亡(ALL IN 帧花光拦截现役载体 = 无——末位面末战保底金门出辖
+    # = ALL IN 花光原语义;替代语义考古走 git 历史)。辖域谓词本体
+    # all_in_xp_domain_hit 的锁 = test_l7_domain_predicate_p21。)

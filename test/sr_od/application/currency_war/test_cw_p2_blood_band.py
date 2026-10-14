@@ -114,15 +114,17 @@ class TestUnlockPackageFailClosed:
 
     def test_m3_spend_still_blocked_while_latch_off(self):
         """危机带停付面:实锁 = 产线在产 p2_crisis_band 对 P2 濒死帧
-        (hp≤15 ⊂ 危机带 41)全额管辖(设计稿 §1.3-4)——M3 停付照常;
-        保底金门照查(花后下界不豁免,生存域不出辖);凑息不进
-        p2_blood_floor 禁令支(P1 域 'blood_floor' 原键在册语义零改,
-        分键禁并,设计稿 §4-8 键族零交集)。"""
+        (hp≤15 ⊂ 危机带 41)全额管辖——停付照常;保底金门照查(花后
+        下界不豁免;血线地板解锁让位支已随血线地板删除链退役——迭代
+        2026-10-12-prep-shop-workflow-redesign 批 3.4,line_and_upgrade
+        §2.3 血线地板解锁行:替代语义 = 濒死响应走修经济/阵容本身);
+        凑息不受血线辖(凑息禁令位已随同链退役,凑息行为由金位缺口
+        驱动)。"""
         from sr_od.application.currency_war.kernel.cw_registry import (
             DEFAULT_REGISTRY,
         )
         from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.levelup import (
-            _guarantee_floor_holds,
+            guarantee_floor_gate,
             level_spend_blocked,
         )
         from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.sell import (
@@ -132,58 +134,26 @@ class TestUnlockPackageFailClosed:
         assert level_spend_blocked(_bsb(**_st2(hp=10)), sess,
                                    DEFAULT_REGISTRY) is True, (
             'P2 濒死帧停付照常(危机带管辖)')
-        # 保底金门照查(生存域不出辖)
-        assert _guarantee_floor_holds(
+        # 保底金门照查(血线让位支已退役:无豁免,花后下界照设)
+        assert guarantee_floor_gate(
             _bsb(**_st2(hp=10)), sess, 5, 1, 4, 5) is False
-        # 凑息不进 P2 禁令支(拒因键非 p2_blood_floor)
-        slots, key = sell_for_interest(30, [], 4, (), state=_bsb(**_st2(hp=10)))
-        assert slots == [] and key != 'p2_blood_floor', (
-            'P2 帧凑息行为零变更')
-        # P1 域对照:禁令在册语义零改('blood_floor' 原键)
-        _slots_p1, key_p1 = sell_for_interest(30, [], 4, (),
-                                              state=_bsb(**_st2(hp=10, plane=1)))
-        assert key_p1 == 'blood_floor'
-
-
+        # 凑息不受血线辖(血线拒因键退役:两域帧的拒因键族里血线键
+        # 不复存在——空板守卫等金位/板面键照常,P1/P2 域同判)
+        for _st in (_st2(hp=10), _st2(hp=10, plane=1)):
+            slots_k, key_k = sell_for_interest(
+                30, [], 4, (), state=_bsb(**_st))
+            assert slots_k == []
+            assert key_k not in ('blood_floor', 'p2_blood_floor'), (
+                '血线拒因键已随凑息禁令位退役')
 # ===== 3. 观测分键(纯观测零行为)=====
 
 
-class TestNearDeathObservationKeys:
-
-    def _run_mandate(self, state: dict) -> StrategySession:
-        frame = mandate.MandateFrame(
-            gold=state['gold'], level=state['level'], bench=[], deployed=[],
-            deploy_cap=6, node_type=None, stop_flag=False,
-            k_members=(), round_num=state['round_num'])
-        sess = StrategySession()
-        state_of(sess).cw4_counters = {}
-        out = mandate.run_mandate(frame, sess, state=_bsb(**state))
-        assert not any(e.reason.startswith('m3_levelup_batch') for e in out)
-        return sess
-
-    def test_l3_pregate_shortcircuit_keyed_by_plane_domain(self):
-        """l3_pregate_targetless_neardeath_p1|p2 位面维分列(R3-低3):
-        四元合取 = 濒死带(P2 域谓词)∧ 轴 B 空(target_comp None)∧
-        域外(g≤g*)∧ ¬(arms∨zone)——M3 前置短路帧按授权域显影
-        (241 §15.1;P2 帧落 _p2、P1 帧落 _p1,防 P1/P2 授权域不同混键
-        重演 fenced/precheck 教训);必花域内帧(g>g* = 50)不合取
-        「域外」项零计数(R3-低3「防宽化为一切前置短路帧」)。"""
-        sess = self._run_mandate(_st2(hp=10, gold=30))
-        ct = state_of(sess).cw4_counters
-        assert ct.get('l3_pregate_targetless_neardeath_p2') == 1
-        assert 'l3_pregate_targetless_neardeath_p1' not in ct
-        # P1 域对照帧:同形态落 _p1 分键
-        sess1 = self._run_mandate(_st2(hp=10, plane=1, gold=30))
-        ct1 = state_of(sess1).cw4_counters
-        assert ct1.get('l3_pregate_targetless_neardeath_p1') == 1
-        assert 'l3_pregate_targetless_neardeath_p2' not in ct1
-        # 域外负控:必花域内帧(g>g*)不入键
-        sess_o = self._run_mandate(_st2(hp=10, gold=80))
-        ct_o = state_of(sess_o).cw4_counters
-        assert 'l3_pregate_targetless_neardeath_p2' not in ct_o
-        assert 'l3_pregate_targetless_neardeath_p1' not in ct_o
-
-
+# (l3_pregate_targetless_neardeath_p1|p2 观测分键类已随 mandate M3 段
+# 退役消亡——迭代 2026-10-12-prep-shop-workflow-redesign 批 3.4:升级
+# 判据内核收拢为 entry 备战第 3 步(criteria/levelup.upgrade_trigger
+# 五臂),M3 前置短路形态不复存在,该分键无触发面;替代语义考古走
+# git 历史。观测族的存续成员〔形态⑥ terminal_targetless_idle /
+# lock_gen_feasibility_obs_*〕由 TestLockGenObservationKeys 承载。)
 class TestLockGenObservationKeys:
     """面③出辖观察件(载体 = flow.bump_lock_gen_feasibility_obs,strategies
     侧消费位;kernel 观察位禁反向 import strategies,布局依赖矩阵)。

@@ -30,6 +30,7 @@ from sr_od.application.currency_war.kernel.cw_comps import (
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
     BenchSlot,
+    ChannelSig,
     Unit,
 )
 from sr_od.application.currency_war.kernel.cw_intention import (
@@ -613,27 +614,32 @@ class TestArmCHoldDefault:
         ct_ms = _ct(sess_ms)
         assert ct_ms.get('shop_r1_no_chaseable_member') == 1
         assert 'must_spend_r1_account_yielded' not in ct_ms
-        # —— 升级不冻结面 ——
-        # P4 容器形:MandateFrame 直构面 = 占席条目 + 行域 Unit
+        # —— 升级不冻结面(发射位重锚 = entry 备战第 3 步;原 mandate
+        # M3 段随升级判据重轴退役〔迭代 2026-10-12-prep-shop-workflow-
+        # redesign 批 3.4〕,不变量语义不变)——
         from sr_od.application.currency_war.kernel.cw_vocab import (
             CwActionLevelUpParam,
         )
-        deployed = [Unit(char_id=f'注册表外散件{i}', star=2)
-                    for i in range(4)]
-        frame = mandate.MandateFrame(
-            gold=80, level=4,
-            bench=[BenchSlot(kind='unit',
-                             unit=Unit(char_id='注册表外散件A', star=1))],
-            deployed=deployed, deploy_cap=4, node_type='battle',
-            stop_flag=False, k_members=(), round_num=2)
-        st_m3 = {'gold': 80, 'level': 4, 'hp': 30, 'plane': 2,
-                 'round_num': 2, 'node': 'battle', 'deploy_cap': 4}
-        sess_m3 = SimpleNamespace(cw4_counters={}, target_comp=None,
-                                  v3_intention=IntentionState(),
-                                  active_strategies=[])
-        out = mandate.run_mandate(frame, sess_m3, state=_kbridge(**st_m3))
+        from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+            entry,
+            session_scope as _ss3,
+        )
+        sess_m3 = _session(IntentionState())
+        cw4_gs(sess_m3, gold=80, level=4, round_num=2, node='battle',
+               bench=[BenchSlot(kind='unit',
+                                unit=Unit(char_id='注册表外散件A', star=1))],
+               front_row=[Unit(char_id=f'注册表外散件{i}', star=2)
+                          for i in range(4)], deploy_cap=4)
+        cw4_gs(sess_m3).observe(
+            cw4_gs(sess_m3).node_pos, (2, 2),
+            sig=ChannelSig(family='obs', actor='cw4_seed',
+                           mode='synthesized'))
+        _ss3.mark_shop_handled(cw4_gs(sess_m3))
+        out = entry.emit(sess_m3, None)
         assert [e for e in out if isinstance(e.action, CwActionLevelUpParam)], \
             '丙臂守息不得冻结升级既有授权(发展优先不变量,01 §8-2)'
+
+
 
 
 # ===== 正本 §4.6 k_members 三下游(锁 6):甲臂换源同源断言 =====

@@ -334,17 +334,19 @@ class TestStep2Ore:
             '垫件过滤优先:卖流萤(垫件)而非全池价值最小的艾丝妲'
 
 
-# ============================================================ 第 3 步:空段透传
+# ============================================================ 第 3 步:升级检查
 
 
-class TestStep3Passthrough:
-    """第 3 步零动作透传锁:旧升级判据内核随 emit 重写直删(用户裁定
-    2026-10-13),本步为空段——任何帧零升级动作,扫描继续(新判据 3.4
-    落码,line_and_upgrade §2)。"""
+class TestStep3LevelUp:
+    """第 3 步升级锁(line_and_upgrade §2:五臂判据 + 整级预授权——
+    迭代 2026-10-12-prep-shop-workflow-redesign 批 3.4 落码;判据单帧
+    锁主文件 = test_cw_levelup_prob_axis.py,本类只锁工序接线形态)。"""
 
-    def test_no_levelup_in_upgrade_friendly_states(self):
-        """升级友好形态(金充裕 + 板满 + 线内候补在席)零升级动作——
-        旧 M3 判据链在此形态会评估发射,空段期恒透传。"""
+    def test_upgrade_friendly_state_emits_batch(self):
+        """升级友好形态(金充裕 + 板满 + 线内候补在席)发射升级整批:
+        溢余段臂(gold 100 > 息线 50,「金这么多都是要花的」)触发,
+        裸金足 → 同帧执行帧一次买齐(P48 整买;先前空段期透传锁已随
+        新判据落码终结,替代语义 = 本形态锁)。"""
         sess = cw4_session(cw4_comp('列车同行'))
         cw4_gs(sess, gold=100, level=4, round_num=2, node='战斗',
                bench=[_bc('c0')] * 9,
@@ -352,11 +354,10 @@ class TestStep3Passthrough:
                back_row=())
         _mark_handled(sess)
         out = _emit(sess)
-        assert not [e for e in out
-                    if isinstance(e.action, CwActionLevelUpParam)], \
-            '第 3 步空段:零升级动作透传(3.4 落新判据)'
-        # 凑息不触发(gold 100 ≥ 50)→ 出战兜底
-        assert isinstance(out[0].action, CwActionStartBattleParam)
+        ups = [e for e in out
+               if isinstance(e.action, CwActionLevelUpParam)]
+        assert ups, '升级友好形态:溢余段臂触发升级发射'
+        assert ups[0].action.clicks >= 1
 
 
 # ============================================================ 第 4 步:商店会话
@@ -379,7 +380,9 @@ class TestStep4ShopSession:
         """标记 = 当前节点号(本节点已处理)→ 跳过本步,扫描继续到
         出战。"""
         sess = cw4_session()
-        cw4_gs(sess, gold=60, level=6, round_num=2, node='战斗',
+        # gold 50 = 恰在溢余带外(不 > 息线)且凑息线外(不 < 息线):
+        # 两金带动作都不触发,帧走满全扫到出战
+        cw4_gs(sess, gold=50, level=6, round_num=2, node='战斗',
                bench=[], front_row=(), back_row=())
         _mark_handled(sess)
         out = _emit(sess)
@@ -396,10 +399,10 @@ class TestStep5DeployWindow:
 
     @staticmethod
     def _window_frame(front: tuple[str, ...]):
-        # gold 60 ≥ 息线 50:防第 7 步凑息(来金族场上支)先中——窗口
-        # 辖域锁只锁第 5 步部署
+        # gold 50 = 恰在两金带外(不 > 息线 ⇒ 第 3 步溢余臂不触发;不 <
+        # 息线 ⇒ 第 7 步凑息不触发)——窗口辖域锁只锁第 5 步部署
         sess = cw4_session()
-        cw4_gs(sess, gold=60, level=6, round_num=2, node='战斗',
+        cw4_gs(sess, gold=50, level=6, round_num=2, node='战斗',
                bench=[_bc('飞霄')],
                front_row=_units(front), back_row=(), deploy_cap=8)
         _mark_handled(sess)
@@ -462,7 +465,7 @@ class TestStep6EquipTools:
         """owned 可穿 → 穿戴计划发射(CwActionWearEquipParam);工具
         评估留痕(m7_5_evaluated;零可执行件帧 reject_none 显影)。"""
         sess = cw4_session()
-        cw4_gs(sess, gold=60, level=6, round_num=2, node='战斗',
+        cw4_gs(sess, gold=50, level=6, round_num=2, node='战斗',
                bench=[], front_row=(), back_row=(),
                equips=['火力风暴潮'])
         _mark_handled(sess)
@@ -505,8 +508,10 @@ class TestStep7NodeEndInterest:
 
     def test_gap_closed_stops_selling(self):
         """闭合即止锁:卖出退金使金位 ≥ 息线后,下一帧不再卖(不多卖
-        一张,卖回量最小化)。"""
-        sess = self._frame(48, [_bc('c0')])   # 48 + 3(退) = 51 ≥ 50
+        一张,卖回量最小化)。bench = 卡芙卡(2 费 1★ 退 2,48+2 = 50
+        恰闭合不越线——越过息线即入溢余带,第 3 步升级臂会接手,本锁
+        只锁凑息即止)。"""
+        sess = self._frame(48, [_bc('卡芙卡')])   # 48 + 2(退) = 50 ≥ 50
         out1 = _emit(sess)
         sell = next(e.action for e in out1
                     if isinstance(e.action, CwActionSellBenchParam))
@@ -519,8 +524,9 @@ class TestStep7NodeEndInterest:
         assert isinstance(out2[0].action, CwActionStartBattleParam)
 
     def test_above_line_no_sell(self):
-        """金 ≥ 息线 → 本步零动作(透传到出战)。"""
-        sess = self._frame(60, [_bc('c0')])
+        """金 ≥ 息线 → 本步零动作(透传到出战;50 = 恰在溢余带外,
+        第 3 步升级臂亦不触发)。"""
+        sess = self._frame(50, [_bc('c0')])
         out = _emit(sess)
         assert isinstance(out[0].action, CwActionStartBattleParam)
         assert not [e for e in out
@@ -535,7 +541,8 @@ class TestStep8Battle:
 
     def test_all_quiet_starts_battle(self):
         sess = cw4_session()
-        cw4_gs(sess, gold=60, level=6, round_num=2, node='战斗',
+        # gold 50 = 两金带外(不溢余不凑息),全静帧走满全扫
+        cw4_gs(sess, gold=50, level=6, round_num=2, node='战斗',
                bench=[], front_row=(), back_row=())
         _mark_handled(sess)
         out = _emit(sess)

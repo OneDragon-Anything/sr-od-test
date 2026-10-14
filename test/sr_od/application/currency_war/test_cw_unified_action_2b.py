@@ -107,35 +107,43 @@ def test_levelup_emission_carries_cost_and_auth_basis():
     """发射面装载(CwActionLevelUpParam 粒度定案③口径,持久索引见模块头):cost = kernel
     xp_click_cost 现算(gs.level_up_cost 缺读时函数内回退
     XP_CLICK_COST_FALLBACK 折扣支,发射位零本地回退分支);auth_basis =
-    发射臂放行名分键(arm1/arm0/pop/must_spend 封闭集);route_tag 沿
-    Emitted.reason 透传(m3_levelup_batch:<tag>)。"""
-    # P4 容器形:MandateFrame 直构面 = 占席条目 + 行域 Unit
-    deployed = [Unit( char_id=f'注册表外散件{i}', star=2)
-                for i in range(4)]
-    frame = mandate.MandateFrame(
-        gold=80, level=4, bench=[BenchSlot(kind='unit', unit=Unit(
-            char_id='注册表外散件A', star=1))],
-        deployed=deployed, deploy_cap=4, node_type='battle',
-        stop_flag=False, k_members=(), round_num=2)
-    st = {'gold': 80, 'level': 4, 'hp': 30, 'plane': 2, 'round_num': 2,
-          'deploy_cap': 4, 'node': 'battle'}
+    发射臂放行名分键(五臂封闭集:pop_slot/arm0/must_spend/stay_gate/
+    prob_account——迭代 2026-10-12-prep-shop-workflow-redesign 批 3.4
+    重轴,发射位 = entry 备战第 3 步);route_tag 沿 Emitted.reason 透传
+    (step3_levelup_batch:<tag>;动作对象 route_tag 由桥伴在
+    decide_prep_frame 装载,发射位直跑不经桥 → reason 承载)。"""
     from sr_od.application.currency_war.kernel.cw_intention import (
         IntentionState,
     )
+    from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+        entry,
+        session_scope as _ss,
+    )
+    st = {'gold': 80, 'level': 4, 'hp': 30, 'plane': 2, 'round_num': 2,
+          'deploy_cap': 4, 'node': 'battle',
+          'bench': [BenchSlot(kind='unit', unit=Unit(
+              char_id='注册表外散件A', star=1))],
+          'front_row': [Unit(char_id=f'注册表外散件{i}', star=2)
+                        for i in range(4)]}
     sess = SimpleNamespace(cw4_counters={}, target_comp=None,
                            v3_intention=IntentionState(),
                            active_strategies=[])
-    out = mandate.run_mandate(frame, sess, state=cw4_box(**st))
+    gs = cw4_box(sess, **st)   # 挂 sess:emit 经 game_state_of(session) 解析同容器
+    gs.observe(gs.node_pos, (2, 2), sig=ChannelSig(
+        family='obs', actor='cw4_seed', mode='synthesized'))
+    _ss.mark_shop_handled(gs)   # 跳过第 4 步,帧直达第 3 步升级检查
+    out = entry.emit(sess, None)
     lv = [e for e in out if isinstance(e.action, CwActionLevelUpParam)]
-    assert lv, '构帧须命中 M3 升级臂(与 no_target 三臂锁 4 同形)'
+    assert lv, '构帧须命中升级溢余段臂(gold 80 > 息线 50)'
     gs_cost_view = cw4_box(gold=80, level=4, hp=30, plane=2,
                            round_num=2, level_up_cost=4)
     a = lv[0].action
     assert a.cost == xp_click_cost(gs_cost_view)   # 现算单一源(含回退支)
-    assert a.auth_basis in ('arm1', 'arm0', 'pop', 'must_spend')
-    # route_tag 透传面 = Emitted.reason(动作对象 route_tag 由桥伴在
-    # decide_prep_frame 装载,发射位直跑不经桥 → reason 承载)
-    assert lv[0].reason.startswith('m3_levelup_batch:')
+    assert a.auth_basis in ('pop_slot', 'arm0', 'must_spend',
+                            'stay_gate', 'prob_account')
+    assert lv[0].reason.startswith('step3_levelup_batch:')
+    # 整批击数字段随授权装载(一次买齐;批大小 = 门槛表差值折击数)
+    assert a.clicks >= 1
 
 
 def test_sellbench_emission_carries_channel_reason():

@@ -562,22 +562,25 @@ def _schedule_rows() -> dict:
         return st, _ba_sess_of(st)
 
     def prob_engine_live():
-        # ②正腿:锁定 4 费核(大移位带,U_L 检验过;ADR-0516 修正①)
-        #+ 息引擎已立 + 峰值 9>7 ∧ 60≥息线
+        # ②臂退役后的排程面(迭代 2026-10-12-prep-shop-workflow-
+        # redesign 批 3.4;line_and_upgrade §2.3 升级②臂行):概率改善
+        # 排程语义已迁策略层概率主账(criteria/levelup.prob_account_ok,
+        # 锁定后 ∧ plane2_started 双条件),本函数人口位单臂——此类帧
+        # (息引擎已立 + 峰值在前 + 金 60)不再排程
         return _ba_state(gold=60, level=7), _ba_locked_4cost_sess()
 
     def prob_engine_missing():
-        # ②负腿:金 49<息线 50 → 引擎未立,禁升(False 即预告态也不发)
+        # ②退役帧对照:金 49<息线(旧②负腿形态)——同样不排程
         return _ba_state(gold=49, level=7), _ba_locked_4cost_sess()
 
     def prob_peak_reached():
-        # ②负腿:峰值已达(lv9=峰值级)→ 无排程
+        # ②退役帧对照:峰值已达——不排程
         return _ba_state(gold=60, level=9), _ba_locked_4cost_sess()
 
     return {
         'pop-slot-bench-formed-not-full': (pop_not_full, False),
         'pop-slot-cap-full': (pop_cap_full, True),
-        'probability-engine-live-peak-ahead': (prob_engine_live, True),
+        'probability-engine-live-peak-ahead': (prob_engine_live, False),
         'probability-engine-missing': (prob_engine_missing, False),
         'probability-peak-reached': (prob_peak_reached, False),
     }
@@ -609,11 +612,14 @@ def _ba_locked_4cost_sess() -> StrategySession:
 
 @pytest.mark.parametrize('case_id', list(_schedule_rows()))
 def test_schedule_triggers_truth_table(case_id: str) -> None:
-    """排程触发①②真值表一锁(参数化并一):
+    """排程触发真值表一锁(参数化并一;迭代 2026-10-12-prep-shop-
+    workflow-redesign 批 3.4 后 = 人口位单臂):
     ①人口位[33]:cap 满 ∧ bench 有成型件(2★)→ 排程(最高义务,不受
-    息引擎前置辖——当轮兑现战力);
-    ②概率级[3]+[12]:目标峰值级>当前级 ∧ 息引擎已立;禁升条件 = 息引擎
-    未立不追级(gold<息线,False 即预告态也不发)、峰值已达无排程。"""
+    可负担前置辖——当轮兑现战力);
+    ②概率级已随升级判据重轴退役(「概率改善才升」语义迁策略层概率
+    主账,criteria/levelup.prob_account_ok——锁定后 ∧ plane2_started
+    双条件消费,line_and_upgrade §2.3 升级②臂行):旧②三形态帧
+    (引擎已立/未立/峰值已达)在本函数一律不排程。"""
     build, expect_scheduled = _schedule_rows()[case_id]
     st, sess = build()
     got = schedule_upgrade(_bsb(**st), sess)
@@ -623,55 +629,56 @@ def test_schedule_triggers_truth_table(case_id: str) -> None:
         assert not got, f'{case_id}: 不应排程'
 
 
-def test_schedule_ul_threshold_negative_small_shift_band() -> None:
-    """ADR-0516 修正①负向锁:2 费小移位带帧断言 U_L 阈值检验 False。
-
-    帧形态:锁定 2 费核(峰值级 6>当前级 5,「峰值级>当前级」合取
-    成立)、E(D|5)=28.63 / E(D|6)=23.69 ⇒ benefit = 刷价 2×4.95
-    ≈ 9.9 < U_L = 5击×4金 = 20(+息损 ≥0)——纯概率账独自不过阈
-    ⇒ ``_upgrade_ul_threshold_ok`` 返回 False。检验被删(恒 True)或
-    反向(比较项颠倒)本锁发红;正向对照 = 4 费大移位带帧(同文件
-    test_schedule_probability_trigger_requires_engine)。
-    """
-    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-    from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
-    from sr_od.application.currency_war.kernel.cw_economy import (
-        _upgrade_ul_threshold_ok,
-    )
-    from sr_od.application.currency_war.kernel.cw_intention import intention_core
-
-    comp = next(c for c in COMP_LIBRARY
-                if (CHARACTERS.get(intention_core(c)) is not None
-                    and CHARACTERS[intention_core(c)].cost == 2))
-    sess = StrategySession()
-    state_of(sess).v3_intention = IntentionState(
-        phase='locked', locked_comp=comp.name)
-    st = _ba_state(gold=60, level=5)      # 2 费 lv5→6:benefit≈9.9 < U_L 20
-    assert not _upgrade_ul_threshold_ok(_bsb(**st), sess)
-    # 行为面同帧:schedule_upgrade ② 臂同样被收紧(引擎已立 60≥息线、
-    # 峰值 6>5,唯 U_L 检验拦下)
-    assert not schedule_upgrade(_bsb(**st), sess)
+# (U_L 阈值检验负向锁 test_schedule_ul_threshold_negative_small_shift_band
+#  已随 schedule_upgrade ②臂退役消亡——迭代 2026-10-12-prep-shop-
+#  workflow-redesign 批 3.4:检验函数 _upgrade_ul_threshold_ok 随②臂
+#  删除,「小移位带过度升级」的防线由策略层概率主账
+#  criteria/levelup.prob_account_ok 承载〔同一不等式形态,辖域改锁定后
+#  ∧ plane2_started 双条件,负向锁 = test_cw_levelup_prob_axis 的
+#  概率账不触发形态〕;替代语义考古走 git 历史。)
 
 
 def test_schedule_predictive_even_when_fee_unaffordable() -> None:
     """预告态契约(W623 D1,判前锁):排程不以当帧可负担为前置——
-    gold 51(远不够升级费)∧ 峰值未达 → 排程照发、R* 计入升级费;
-    「付得起才排」会造 R* 塌缩 → 义务花光 → 更排不上的贫穷循环。"""
-    st = _ba_state(gold=51, level=7)
-    assert schedule_upgrade(_bsb(**st), _ba_locked_4cost_sess())
-    assert reserve_cap(_bsb(**st), _ba_locked_4cost_sess()) > 50
+    人口位触发帧(cap 满 ∧ bench 2★ 成型件)gold 30(远不够升级费)
+    → 排程照发、R* 计入升级费;「付得起才排」会造 R* 塌缩 → 义务
+    花光 → 更排不上的贫穷循环。(重锚申报:原用概率级②帧承载,
+    ②臂随升级判据重轴退役〔迭代 2026-10-12-prep-shop-workflow-
+    redesign 批 3.4〕后改人口位帧,契约语义不变。)"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        max_units_of,
+    )
+    front = [Unit(char_id=f'杂{i}', star=1) for i in range(4)]
+    back = [Unit(char_id=f'杂{i}', star=1) for i in range(4, 6)]
+    bench = [_bc('阿格莱雅', star=2) for i in range(BENCH_CAPACITY)]
+    st = _ba_state(gold=30, level=6, round_num=5, bench=bench,
+                   front_row=front, back_row=back)
+    assert len(front) + len(back) >= max_units_of(_bsb(**st))
+    assert schedule_upgrade(_bsb(**st), StrategySession())
+    assert reserve_cap(_bsb(**st), StrategySession()) > 50
 
 
 def test_schedule_gold_digger_retires_levelup(monkeypatch) -> None:
     """淘金客姿态:升级通道退役(W621:CwActionLevelUpParam 退役是刷驱姿态主驱动;
-    谓词单一址=cw_investments.refresh_invest_active,授权链同址关闭)。"""
-    st = _ba_state(gold=100, level=7)
-    assert schedule_upgrade(_bsb(**st), _ba_locked_4cost_sess())   # 前置:常态帧排程成立
+    谓词单一址=cw_investments.refresh_invest_active,授权链同址关闭)。
+    (重锚申报:原前置用概率级②帧,②臂随升级判据重轴退役〔迭代
+    2026-10-12-prep-shop-workflow-redesign 批 3.4〕后改人口位帧,
+    淘金客停机语义不变。)"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        max_units_of,
+    )
+    front = [Unit(char_id=f'杂{i}', star=1) for i in range(4)]
+    back = [Unit(char_id=f'杂{i}', star=1) for i in range(4, 6)]
+    bench = [_bc('阿格莱雅', star=2) for i in range(BENCH_CAPACITY)]
+    st = _ba_state(gold=100, level=6, round_num=5, bench=bench,
+                   front_row=front, back_row=back)
+    assert len(front) + len(back) >= max_units_of(_bsb(**st))
+    assert schedule_upgrade(_bsb(**st), StrategySession())   # 前置:常态帧排程成立
     monkeypatch.setattr(
         'sr_od.application.currency_war.kernel.cw_investments.STRATEGY_ECONOMY',
         {'淘金客': EconomyEffect(xp_per_refresh=2)})
     st['active_strategies'] = ['淘金客']   # 持卡后:升级通道退役,不排程
-    assert not schedule_upgrade(_bsb(**st), _ba_locked_4cost_sess())
+    assert not schedule_upgrade(_bsb(**st), StrategySession())
 
 
 # --- 预算核契约锁(W623 D2;值域+合法 0 帧表驱动并一)---------------------
@@ -767,23 +774,26 @@ def test_injection_consistency_single_registry_source() -> None:
     「注入面 cw4_cap_override=4(registry 不可达值)压过 registry 旋钮」
     随死通道退役重写为「买断制(可达值 0)在排程前置与预算面同帧
     生效,registry 旋钮双臂逐位不动」——判别结构(链动/旋钮不动)
-    保形。"""
+    保形。(②臂随升级判据重轴退役〔批 3.4〕后,排程面的链动腿消亡,
+    预算面的链动腿保形承载本锁。)"""
     import dataclasses
     reg2 = dataclasses.replace(_REG, interest_cap=4)
     st1 = _ba_state(gold=45, level=7)
     sess = _ba_locked_4cost_sess()
+    # 排程面:②臂已随升级判据重轴退役(批 3.4),本帧(无人口位触发)
+    # 两 registry 下同 False——registry 旋钮不动排程的判别结构保形;
+    # 概率改善排程的 resolved 链语义已迁策略层概率主账
     assert not schedule_upgrade(_bsb(**st1), sess, _REG)
     assert not schedule_upgrade(_bsb(**st1), sess, reg2)   # registry 旋钮不动 resolved 链
     sess_ov = _ba_locked_4cost_sess()
     _seed_actives(sess_ov, ['买断制'])   # 注册表可达覆写 cap=0 → 息线 0
-    assert schedule_upgrade(_bsb(**st1), sess_ov)    # gold 45 ≥ 息线 0 → ② 前置过
+    assert not schedule_upgrade(_bsb(**st1), sess_ov)   # ②退役:买断制帧同不排程
     assert refresh_ev_budget(_bsb(**st1), sess, reg2) == \
         refresh_ev_budget(_bsb(**st1), sess, _REG)   # registry 旋钮对预算逐位惰性(ADR-0598 归一)
-    # 预算面同链:R* 守息线分量随 resolved cap 动(买断制 floor=0+费
-    # < 默认 50+费),registry 旋钮不动;gold 96:默认 R*=50+lv7 升级金
-    #(52)=102 → 零预算;买断制 R*=0+52=52 → 正预算(lv5 旧帧随 U_L
-    # 重锚帧上移,数字按帧现算)
-    st2 = _ba_state(gold=96, level=7)
+    # 预算面同链:R* 守息线分量随 resolved cap 动(买断制 floor=0
+    # < 默认 50),registry 旋钮不动;②臂退役后无排程帧 R* = 守息线
+    # 单分量:gold 45 ≤ 默认 50 → 零预算;买断制 0 → 正预算
+    st2 = _ba_state(gold=45, level=7)
     assert reserve_cap(_bsb(**st2), sess_ov) < reserve_cap(
         _bsb(**st2), sess)
     assert refresh_ev_budget(_bsb(**st2), sess, _REG) == 0
