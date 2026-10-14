@@ -1,0 +1,109 @@
+"""pick_invest_env 上报 rng 条件解析锁(迭代 2026-09-23-invest-effects-calc
+T-10 人才引进;镜像 src = kernel/cw_action_report/pick_invest_env.py)。
+
+锁面依据 = 该迭代 designs/T-10-rencai-yinjin.md §2.4/§4 锁 5:
+上报函数仅当**选中环境登记了随机支**(ENV_GIFTS[名].chars_random_immediate
+非空)才经 ``action_sampling_rng('pick_invest_env', rng)`` 解析采样 rng
+(显式传入 > 注入槽 > 自掷);无随机支环境透传 None 零解析。理由:注入槽
+(install_backend)每次调用即推序号——无条件解析会使任何环境选卡都推号,
+后继动作采样流键整体位移 = 跨版本 sim A/B 无关变量噪声;条件解析使
+「默认环境局(无随机支)rng 消耗序列逐位不变」严格成立。
+
+计数 provider 双态断言:无随机支环境(火药味)→ provider 零调用;
+人才引进 → 恰一次;显式传入优先于注入槽(显式 rng 在场则 provider
+不触,落席名 = 显式 rng 的掷骰结果)。
+"""
+from __future__ import annotations
+
+import random
+from types import SimpleNamespace
+
+import pytest
+
+from sr_od.application.currency_war.kernel.cw_action_report import (
+    report_action_pick_invest_env_param,
+    set_action_rng_provider,
+)
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    GAME_STATE_SCHEMA_VERSION,
+    BenchSlot,
+    BenchView,
+    ChannelSig,
+    GameState,
+)
+from sr_od.application.currency_war.kernel.cw_investments import (
+    RandomCharSpec,
+    random_char_pool,
+)
+
+_SIG = ChannelSig(family='logic_action', actor='PickInvestEnvTest',
+                  mode='compute')
+_SIG_OBS = ChannelSig(family='obs', actor='PickInvestEnvTest')
+
+
+def _make_gs(opts: list[str]) -> GameState:
+    """直构容器:bench 观察(空席,发放腿可落)+ 选卡槽逻辑写。"""
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    gs.observe(gs.bench,
+               BenchView(slots=[BenchSlot(kind='empty')] * 9, capacity=9),
+               sig=_SIG_OBS)
+    gs.write_logic(gs.invest_env_opts, opts, produced_by='T',
+                   evidence='t:opts', sig=_SIG)
+    return gs
+
+
+def _bench_units(gs: GameState) -> list[tuple[str, int]]:
+    return [(s.unit.char_id, s.unit.star) for s in gs.bench.value.slots
+            if s is not None and s.kind == 'unit' and s.unit is not None]
+
+
+@pytest.fixture
+def provider_calls() -> list[str]:
+    """计数 provider(返回固定种子 rng;调用即记录 tool 键),必达复位。"""
+    calls: list[str] = []
+
+    def _fn(tool: str) -> random.Random:
+        calls.append(tool)
+        return random.Random(0)
+
+    set_action_rng_provider(_fn)
+    try:
+        yield calls
+    finally:
+        set_action_rng_provider(None)
+
+
+def test_no_random_leg_env_skips_rng_resolution(provider_calls: list[str]) -> None:
+    """条件解析负态:选无随机支环境(火药味 = 道具支 only)→ provider
+    零调用(序号不推,默认环境局 rng 消耗序列逐位不变)。"""
+    gs = _make_gs(['火药味', '轮岗', '头彩'])
+    out = report_action_pick_invest_env_param(gs, SimpleNamespace(idx=0), _SIG)
+    assert out.applied
+    assert provider_calls == [], '无随机支环境零解析'
+
+
+def test_random_leg_env_resolves_rng_exactly_once(
+        provider_calls: list[str]) -> None:
+    """条件解析正态:选人才引进 → 恰一次解析(tool 键 = pick_invest_env),
+    注入槽 rng 采样即落席(bench 追加 1 张 1★,名 ∈ 4 费规格池)。"""
+    gs = _make_gs(['人才引进', '轮岗', '头彩'])
+    out = report_action_pick_invest_env_param(gs, SimpleNamespace(idx=0), _SIG)
+    assert out.applied
+    assert provider_calls == ['pick_invest_env'], '恰一次解析'
+    units = _bench_units(gs)
+    assert len(units) == 1 and units[0][1] == 1, '采样落席 1 张 1★'
+    assert units[0][0] in random_char_pool(RandomCharSpec(cost=4, star=1))
+
+
+def test_explicit_rng_beats_provider(provider_calls: list[str]) -> None:
+    """显式传入优先于注入槽(action_sampling_rng 解析序):装 provider 下
+    显式传 rng → provider 零调用,落席名 = 显式 rng 的掷骰结果(同 seed
+    现算期望,不手抄)。"""
+    pool = random_char_pool(RandomCharSpec(cost=4, star=1))
+    expected = random.Random(20261014).choice(pool)
+    gs = _make_gs(['人才引进', '轮岗', '头彩'])
+    out = report_action_pick_invest_env_param(
+        gs, SimpleNamespace(idx=0), _SIG, rng=random.Random(20261014))
+    assert out.applied
+    assert provider_calls == [], '显式 rng 在场,注入槽不触'
+    assert _bench_units(gs) == [(expected, 1)], '落席 = 显式 rng 掷骰'

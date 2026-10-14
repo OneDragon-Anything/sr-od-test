@@ -39,6 +39,9 @@ from one_dragon.base.operation.operation_round_result import (
     OperationRoundResult,
     OperationRoundResultEnum,
 )
+from sr_od.application.currency_war.data.cw_chars import (
+    chars_by_cost,
+)
 from sr_od.application.currency_war.data.cw_synthesis import (
     CROSS_RECIPES,
     synthesize_target,
@@ -432,6 +435,45 @@ def test_contract_env_pick_sends_cards_to_bench() -> None:
         assert b.gs.active_env.value == '公司契约'
     finally:
         uninstall_backend()
+
+
+def test_random_env_gift_sim_seeded_roll_to_bench() -> None:
+    """随机环境赠卡 sim 全链(迭代 2026-09-23-invest-effects-calc T-10
+    设计 §4 锁 7):播种 invest_env_opts 选人才引进 → 选卡后 bench = 5 张
+    (4 张 M01 开局 + 1 张随机 4 费 1★ 赠卡);恰 1 张 4 费(开局手牌
+    费用形状 (1,1,1,3)/(1,1,2,2) 无 4 费件,4 费 = 赠卡);同 seed 重放
+    确定性(同名同星)——rng 经 install_backend 动作腿提供槽(流键
+    action/pick_invest_env/0)注入 = 采样即世界真值。"""
+    def _pick_once() -> list[tuple[str, int]]:
+        b = SimBackend(seed=7, cfg=RunConfig(
+            selected_difficulty='A8', enemy_difficulty=108, env_present=True))
+        install_backend(b)
+        try:
+            b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+            assert b.screen_identity() == SCREEN_INVEST_ENV
+            b.gs.write_logic(b.gs.invest_env_opts,
+                             ['人才引进', '轮岗', '头彩'],
+                             produced_by='Test', evidence='t:opts', sig=_SIG)
+            env_out = report_action_pick_invest_env_param(
+                b.gs, SimpleNamespace(idx=0), _SIG)
+            assert env_out.applied
+            cw_sim_ports.declare_world(env_out.world_decl)
+            units = [(s.unit.char_id, s.unit.star)
+                     for s in b.gs.bench.value.slots
+                     if s is not None and s.kind == 'unit'
+                     and s.unit is not None]
+            assert len(units) == 5, '4 张 M01 开局 + 1 张随机赠卡'
+            assert all(st == 1 for _, st in units), '开局手牌与赠卡全 1★'
+            cost4 = {c.name for c in chars_by_cost(4)}  # 注册表现算
+            assert sum(1 for n, _ in units if n in cost4) == 1, \
+                '恰 1 张 4 费(开局形状无 4 费件,4 费 = 赠卡)'
+            return units
+        finally:
+            uninstall_backend()
+
+    first = _pick_once()
+    second = _pick_once()
+    assert first == second, '同 seed 重放确定性(同名同星)'
 
 
 def test_scheduled_env_gift_discharged_at_plane2_first_window() -> None:

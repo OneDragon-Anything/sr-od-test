@@ -73,6 +73,7 @@ from sr_od.application.currency_war.kernel.cw_gain_chain import (
     gain_invest_env,
     gain_invest_strategy,
     merge_step_once,
+    on_env_gained,
     on_strategy_gained,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
@@ -99,6 +100,8 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     INVESTMENT_ENVS,
     STRATEGY_GRANTS,
     GiftGrant,
+    RandomCharSpec,
+    random_char_pool,
 )
 from sr_od.application.currency_war.kernel.cw_merge_simulate import (
     merge_simulate,
@@ -555,6 +558,57 @@ def test_overflow_item_merges_back_as_box_and_clears() -> None:
         '合成腾槽 → 溢出道具归位备战槽(supply_box 槽件)'
     assert gs.overflow_warning.value is False and gs.overflow_card.value == '', \
         '溢出位腾空,两字段成对清写'
+
+
+# ============================================================ 随机角色通道
+# (环境随机发放:chars_random_immediate 规格池掷骰;迭代
+# 2026-09-23-invest-effects-calc T-10 人才引进)
+
+
+def test_env_gift_random_leg_seeded_roll(rows_sink: _RowSink) -> None:
+    """随机支发放腿(on_env_gained 直构,T-10 设计 §4 锁 3):固定种子
+    rng → bench 追加 1 张 1★ 且名 ∈ 4 费规格池;效果串
+    ``env_gift_random:<名>@1star`` 前缀 + 后缀同断言(采样发放的审计
+    对账键);星级 = spec.star(人才引进 = 1 先验)。期望名从同 seed
+    现算(单一来源,不手抄)。"""
+    gs = _make_gs(bench=[], equips=[])
+    pool = random_char_pool(RandomCharSpec(cost=4, star=1))
+    expected = random.Random(20261014).choice(pool)
+    out = on_env_gained(gs, None, '人才引进', rand=False, sig=_lsig(),
+                        rng=random.Random(20261014))
+    assert out == (f'env_gift_random:{expected}@1star',)
+    units = [(u.char_id, u.star) for u in bench_units_of(gs)]
+    assert units == [(expected, 1)], '落席 1 张,星级 = 先验 1'
+    assert rows_sink.kinds() == [], '正常路径零申报行'
+
+
+def test_env_gift_random_leg_anchored_rand_channel(
+        rows_sink: _RowSink) -> None:
+    """随机支通道语义(T-10 设计 §4 锁 4):锚定容器 + 采样子链
+    rand=True → 写值照常生效且不进失配网(随机态语义,gain-chain.md
+    §5:采样写走 write_logic_rand,首观察静默覆盖不响安灯);未锚定
+    写生效已由 seeded_roll 锁(直构缺省未锚定)。"""
+    gs = _make_gs(bench=[], equips=[])
+    gs.prep_anchored = True
+    out = on_env_gained(gs, None, '人才引进', rand=False, sig=_lsig(),
+                        rng=random.Random(7))
+    assert len(out) == 1 and out[0].startswith('env_gift_random:')
+    units = [(u.char_id, u.star) for u in bench_units_of(gs)]
+    assert len(units) == 1 and units[0][1] == 1, '锚定后采样写照常落席'
+    assert rows_sink.kinds() == [], '随机态写不进失配网,零缺陷行'
+
+
+def test_env_gift_conditional_only_quiet_after_random_leg(
+        rows_sink: _RowSink) -> None:
+    """具名支回归(T-10 设计 §4 锁 6):仅条件腿条目(量子同频契约)
+    在随机支落地后行为逐位不变——零即时发放、零效果串、零容器写
+    (随机支为追加分支,前置分支零触碰)。"""
+    gs = _make_gs(bench=[], equips=[])
+    seq_before = gs.write_seq
+    out = on_env_gained(gs, None, '量子同频契约', rand=False, sig=_lsig())
+    assert out == (), '条件腿不即时发放'
+    assert bench_units_of(gs) == []
+    assert gs.write_seq == seq_before, '安静不写,零容器写'
 
 
 # ============================================================ 定时道具通道
