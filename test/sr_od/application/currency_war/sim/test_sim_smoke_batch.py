@@ -17,20 +17,18 @@
 (装配缝单一源:端口槽/容器绑定/时间冻结/journal 内存捕获/留证重定向);
 崩点上下文(node/画面/步数)由运行原语以异常 note 注入。
 
-种子集 = :data:`SMOKE_SEEDS`(代表性子集 2 连号;含慢桶全量 ≤180s 裁决
-2026-10-14,smoke 预算 ≤70s)。原注册批 = 2026-10-12 起 20 连号,极致
-压缩轮逐 seed 实测普查(2026-10-14,在飞 strategies/operations 改动
-工作树):曾跑通 4 seed = 20261016/20261023/20261024/20261025(逐进程
-计时 10.2/12.1/13.0/12.3s),保留最快两个;其余 16 seed 该树状态下
-13 崩(补给/备战节点 op 异常或 fail 重派触限)3 挂(备战动作日志
-flush 阻死,pytest-timeout 不可杀)——非测试面问题,修复责任在被测
-侧,修后可按本判据扩回样本。**失败重派环分支放弃整局覆盖**(普查中
-带重派环的局全部触限失败,无一整局跑通),该分支由 test_loop.py
-「op-fail 重派防线上限」锁单独承压。
+种子集 = :data:`SMOKE_SEEDS` = 2026-10-12 起 20 连号(3.8 设计判据全量;
+编排者裁决扩回——中间态曾缩 2 seed 子集,依据 = 修复前带病树同 20 seed
+普查 13 崩(补给/备战节点 op 异常或 fail 重派触限)3 挂(备战决策环
+自旋,pytest-timeout 不可杀),修复后同批 20/20 实测全跑通)。与首局
+验收在册固定 seed〔20260923/7/61〕零重叠。**失败重派环分支放弃整局
+覆盖**(普查中带重派环的局全部触限失败,无一整局跑通),该分支由
+test_loop.py「op-fail 重派防线上限」锁单独承压。
 
-运行成本:单局实测 ~8-13s(含进程启动;健康树注册时 ~21-45s)× 2 →
-慢桶登记(slow_marks.txt 逐 seed 条目);复跑带 ``-s`` 可收逐局统计行;
-单条 timeout 放宽 300s(看门狗 1200 轮触顶局需要余量,真挂死仍被兜住)。
+运行成本:健康树单跑整批 20 局实测约 2 分钟;整批慢桶登记
+(slow_marks.txt 逐 seed 条目),不进快集(``-m "not slow"`` 排除)。
+复跑带 ``-s`` 可收逐局统计行;单条 timeout 放宽 300s(看门狗 1200 轮
+触顶局需要余量,真挂死仍被兜住)。
 """
 from __future__ import annotations
 
@@ -40,10 +38,9 @@ from typing import Any
 import pytest
 from test.harness.sim_backend_runner import run_sim_full_match
 
-#: 冒烟批种子集(代表性子集 2 个,内置常量;完成判据 = 全部跑通)。
-#: 取值 = 曾跑通 4 seed 中逐进程实测最快两个(计时见模块 docstring 探针
-#: 记录),与首局验收在册固定 seed〔20260923/7/61〕零重叠。
-SMOKE_SEEDS: tuple[int, ...] = (20261016, 20261023)
+#: 冒烟批种子集(2026-10-12 起 20 连号,内置常量;完成判据 = 全部跑通),
+#: 与首局验收在册固定 seed〔20260923/7/61〕零重叠。
+SMOKE_SEEDS: tuple[int, ...] = tuple(range(20261012, 20261032))
 
 
 def _stats_line(seed: int, run: Any, duration_s: float) -> str:
@@ -58,7 +55,9 @@ def _stats_line(seed: int, run: Any, duration_s: float) -> str:
     node = run.gs.node.value
     if not run.backend.done:
         terminal = 'abandoned'
-    elif int(run.gs.hp.value or -1) == 0:
+    elif run.gs.hp.value is not None and int(run.gs.hp.value) == 0:
+        # hp=0 是 falsy:禁 ``or`` 缺省式(None 哨兵混吃 0 → 死亡局
+        # 误标 p3_enter),None 判别必须显式 is not None。
         terminal = 'death'
     else:
         terminal = 'p3_enter'
