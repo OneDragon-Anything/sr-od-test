@@ -336,7 +336,7 @@ def test_levelup_executes_single_click_per_frame(monkeypatch):
     ex = _make_executor(controller)
     # 命中臂:area_center 命中「备战标识-购买经验」→ 每帧恰一击。
     monkeypatch.setattr(lvl_mod, 'area_center',
-                        lambda ctx, name: Point(296, 860))
+                        lambda ctx, name, screen_name='': Point(296, 860))
     ex.execute(CwActionLevelUpParam(cost=4))
     assert len(controller.clicks) == 1
     assert ex.last_gold_delta == 0   # 执行缝金差退役(防双记)
@@ -345,7 +345,8 @@ def test_levelup_executes_single_click_per_frame(monkeypatch):
     # 缺失臂:area 缺失 → round_fail 零点击零移动(禁兜底坐标静默点击)。
     controller_miss = _RecordingController()
     ex_miss = _make_executor(controller_miss)
-    monkeypatch.setattr(lvl_mod, 'area_center', lambda ctx, name: None)
+    monkeypatch.setattr(lvl_mod, 'area_center',
+                        lambda ctx, name, screen_name='': None)
     ex_miss.execute(CwActionLevelUpParam(cost=4))
     assert controller_miss.clicks == [] and controller_miss.moves == [], \
         '按钮 area 缺失 = 零点击(禁兜底坐标)'
