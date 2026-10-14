@@ -208,7 +208,7 @@ class TestGoldLedgerProtocol:
         账面(消除累积漂移);失效帧的决策入口先锚定后消费。"""
         live, sess, gs, st = _frame()
         st.gold_ledger = None
-        act = live.decide_shop_action()
+        live.decide_shop_action()
         assert st.gold_ledger == 60   # 首帧锚定
         # 失效后重进(刷新重进序号 +1):再锚定。
         st.gold_ledger = None
@@ -252,6 +252,21 @@ class TestGoldLedgerProtocol:
         assert buys and buys[0].card.name == _MEMBER, \
             '凑够即买(缺口闭合后下一帧买入接手)'
 
+    def test_anchor_drift_counter(self):
+        """锚定位漏账偏差留痕(R1):锚定前账面 ≠ 实读 ⇒ drift 计数
+        + 末次差值;无偏差帧零计数(伴生记账正确的对照面)。"""
+        live, sess, gs, st = _frame(gold=60)
+        st.gold_ledger = 55   # 假设漏账:账面 55 vs 实读 60
+        st.cw4_segment_serial += 1
+        shop_sess.anchor_gold_ledger_if_new_visit(gs)
+        ct = st.cw4_counters
+        assert ct.get('gold_ledger_drift') == 1
+        assert ct.get('gold_ledger_drift_last_delta') == 5
+        # 对照:账面对齐帧零新增。
+        st.cw4_segment_serial += 1
+        shop_sess.anchor_gold_ledger_if_new_visit(gs)
+        assert ct.get('gold_ledger_drift') == 1
+
     def test_companion_gold_accounted(self):
         """伴生入金记账(§4.2 协议① 单卡型):返利族 5 费第三笔买入
         ⇒ +3 双写(账面 + gs.gold 期望态投影扩展)——漏账偏差侦测的
@@ -268,13 +283,14 @@ class TestGoldLedgerProtocol:
         act = live.decide_shop_action()
         assert isinstance(act, CwActionBuyCardParam) \
             and act.card.name == five_cost
-        st.shop_five_cost_buys == 1
+        assert st.shop_five_cost_buys == 1, \
+            '返利族 5 费购买计数未随发射位登记'
         st.gold_ledger = gs.gold.value
         # 再两笔 5 费买入(同会话):第三笔触发 +3。
         g0 = gs.gold.value
         led0 = st.gold_ledger
         card = ShopCard(name=five_cost, faction='', cost=5, star=1, slot=2)
-        for i in range(2):
+        for _i in range(2):
             shop_sess.account_buy_companion_gold(gs, card)
         assert gs.gold.value == g0 + 3
         assert st.gold_ledger == led0 + 3, '双写同步:账面与容器同额入金'
@@ -383,7 +399,7 @@ class TestThreeStageRefresh:
         """P2 未锁窗口:候选缺件驱动——候选线缺员且等级 ≥ 其概率带
         下界 → 可刷;全员持有(无缺件)→ 不刷。"""
         comp = COMP_LIBRARY[0]
-        missing = next(m for m in sorted(_LINE)
+        next(m for m in sorted(_LINE)
                        if not _skip_member(m))
         live, sess, gs, st = _frame(gold=60, plane=2, hist=(2, 1),
                                     node_kind='reward', comp=comp,

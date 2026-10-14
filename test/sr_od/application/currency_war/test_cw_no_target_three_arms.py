@@ -221,9 +221,23 @@ class TestHubFoldedIntoOrderOne:
     def test_hub_hold_registration_face(self):
         """乙臂持有段(获取 = 免费期权持有语义)的卖面保护随装配 A
         存活:hub_acquired_names_of 并集(identity_exclusions 单一源)。
-        正负锁:登记后名入排除集;未登记名不入。"""
-    # (登记位 = sell_gate.register_hub_hold;正面已在 test_cw_sell_window
-    # 族的装配 A 锁覆盖,本类不重复第二份登记面锁。)
+        正负锁:登记名入集;未登记名不入。"""
+        from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+            sell_gate,
+        )
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+            state_of,
+        )
+        sess = _session(IntentionState())
+        # 写点载体 = StrategyState 属性(sell_gate.HUB_ACQUIRED_ATTR
+        # duck-typed 契约;发射位原写点已随乙臂收编退役,持有段读面
+        # 仍消费本属性——收编后的写者 = 3.7 候选体系持有登记,过渡期
+        # 由测试直写载体验证读面)。
+        setattr(state_of(sess), sell_gate.HUB_ACQUIRED_ATTR, ['花火'])
+        assert '花火' in sell_gate.hub_acquired_names_of(sess)
+        assert '三月七' not in sell_gate.hub_acquired_names_of(sess)
+        # 排除集消费位(装配 A 单一源):登记名入 identity 排除并集。
+        assert '花火' in sell_gate.identity_exclusions(sess, ())
 
 
 # ===== 丙臂收编:守息缺省并入统一金约束门 =====
