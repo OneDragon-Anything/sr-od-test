@@ -241,8 +241,8 @@ def test_bench_blocked_forms_sell_in_shop(case: str):
         '(置换账/筹资/恒买腾位未接产)')
     assert action.reason in ('shop_swap', 'session_funding', 'c1_make_room'), \
         action.reason
-    assert state_of(sess).cw4_shop_wanted_pending is None, \
-        'wanted 残差跨段状态应随腾位链废止保持空置'
+    # (原 wanted 残差断言已随 S2 字段族退役删除——批 3.7 死码清理,
+    # 会话循环无跨段残差形态。)
 
 
 def test_vacate_chain_reopen_keeps_shop_face_and_buys():

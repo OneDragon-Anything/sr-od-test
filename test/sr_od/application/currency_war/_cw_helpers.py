@@ -14,7 +14,7 @@
   ``BenchSlot(kind=...)`` 直种。种子不提供绕过注册表派生的覆盖参数
   (无注入口);
 - **StrategySession 桩族**(``cw4_session``):cw4_counters 空表 +
-  target_comp 可空 + cw4_line_state 可关 + plane_lengths 可注;
+  target_comp 可空 + target_comp 可空(锁定线槽直种) + plane_lengths 可注;
 - **商店决策驱动**(``cw4_decide``):装配 mandate 策略器并跑
   decide_shop_screen(种子由调用方先经 ``cw4_gs`` 落容器);
 - **备战席件构造**(``cw4_bc``):BenchSlot 占席条目(容器形状);
@@ -58,7 +58,6 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
 from sr_od.application.currency_war.kernel.cw_vocab import (
     ShopCard,
 )
-from sr_od.application.currency_war.strategies.impl.mandate_v1 import proof
 from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
     MandateV1Strategy,
 )
@@ -111,19 +110,17 @@ def cw4_card(name: str, cost: int = 3, star: int = 1, x: int = 0) -> ShopCard:
     return ShopCard(x=x, name=name, cost=cost, star=star)
 
 
-def cw4_session(comp=None, *, plane_lengths=None,
-                line_state: bool = True) -> StrategySession:
-    """StrategySession 桩:cw4_counters 空表 + target_comp;``line_state``
-    = 建 proof.LineState()(shop 线决策语境;refresh_ledger 的配方对
-    锁帧不建,传 False);``plane_lengths`` = 位面长度史注记(**簿记位,
-    不入决策**——视界长度真值 = GameState 场字段 ``node_seq_by_plane``
-    (None 回退默认表),旧 schedule_of 读数已随 9 制几何层退役;
-    strategy 域判定不再消费本注记,仅为 node_books 簿记形状)。"""
+def cw4_session(comp=None, *, plane_lengths=None) -> StrategySession:
+    """StrategySession 桩:cw4_counters 空表 + target_comp(锁定线槽直种
+    ——批 3.7 键面归一后 target_comp 非空即锁定态;``plane_lengths``
+    = 位面长度史注记(**簿记位,不入决策**——视界长度真值 = GameState
+    场字段 ``node_seq_by_plane``(None 回退默认表),旧 schedule_of 读数
+    已随 9 制几何层退役;strategy 域判定不再消费本注记,仅为 node_books
+    簿记形状)。原 ``line_state`` 参数已随 proof.LineState 退役删除
+    (批 3.7 换线机器退役)。"""
     s = StrategySession()
     state_of(s).cw4_counters = {}
     state_of(s).target_comp = comp
-    if line_state:
-        state_of(s).cw4_line_state = proof.LineState()
     if plane_lengths is not None:
         game_state_of(s).node_books.plane_lengths_seen = list(plane_lengths)   # 终态契约 §A′
     return s

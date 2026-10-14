@@ -41,9 +41,6 @@ from sr_od.application.currency_war.kernel.cw_node_schedule import (
     P2_NODE_SEQUENCE,
     resolve_plane_node_seqs,
 )
-from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import (
-    calibration,
-)
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.horizon import (
     r_global,
     r_remaining,
@@ -175,11 +172,3 @@ def test_total_remaining_nodes_matches_facade_in_modeled_planes():
     assert total_remaining_nodes(_gs_at(3, 1)) == 0
 
 
-# ===== 标定域 18(details §7/§8.6)=====
-
-def test_calibration_domain_r_remain_max_is_18():
-    """标定域收紧:E2_DOMAIN_R_REMAIN_MAX = 18(场字段 modeled 总长
-    上界 = 修饰 P1+P2 = 10+8);域边界:18 在域内、19 出域 fail-closed。"""
-    assert calibration.E2_DOMAIN_R_REMAIN_MAX == 18
-    assert calibration.band_in_domain(6, 18) is True
-    assert calibration.band_in_domain(6, 19) is False

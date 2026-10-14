@@ -110,8 +110,9 @@ class TestNodeBoundaryReset:
 class TestBoundaryKeepsDirectionState:
 
     def test_boundary_keeps_direction_state_and_current_target_comp(self):
-        """清单第 5 项负登记:方向状态(锁定线/配方键)与现行
-        target_comp 跨节点保留——节点边界不清方向,契约 C;候选快照
+        """清单第 5 项负登记:方向状态(锁定线槽 target_comp/配方键)
+        跨节点保留——节点边界不清方向,契约 C(批 3.7 键面归一:锁定
+        线槽 = target_comp,line_locked_comp 过渡键已收键);候选快照
         键边界亦不辖(锁定写入时已被清空,手工哨兵 = 模拟外部写入后
         边界不复位);签名置失效(第 4 项)与之同帧对照,锁分界本身。"""
         sess, gs = _sess_with_node(1, 2)
@@ -120,13 +121,11 @@ class TestBoundaryKeepsDirectionState:
         write_line_lock(gs, comp.name)
         st.line_candidates = ('external-write',)
         st.opening_recipe_comp = comp
-        st.target_comp = comp   # 现行物化链产物(边界函数不辖此键)
         gs.node_hist_pos = (1, 5)
         handle_node_boundary(gs)
-        assert st.line_locked_comp == comp.name   # 锁定跨节点保留
+        assert st.target_comp is comp           # 锁定跨节点保留(锁定线槽)
         assert st.line_candidates == ('external-write',)
         assert st.opening_recipe_comp is comp
-        assert st.target_comp is comp             # 现行键零破坏
         assert st.line_eval_signature is None     # 签名置失效(对照)
 
 
@@ -173,11 +172,12 @@ class TestLineRefreshSkeleton:
         st.line_candidates = ('sentinel',)
         refresh_line_if_needed(gs)
         assert st.line_candidates == ('sentinel',)
-        # 签名变化(节点号推进)→ 重算发生(哨兵被覆写)
+        # 签名变化(节点号推进)→ 重算发生(哨兵被覆写为 top3 候选)
         gs.node_hist_pos = (1, 3)
         refresh_line_if_needed(gs)
         assert st.line_candidates != ('sentinel',)
-        assert st.line_candidates == ()   # 未定向 → 空候选
+        assert len(st.line_candidates) == 3   # 未锁定 → top3 候选快照
+        assert st.target_comp is None         # 无硬规则/未到时点 → 未锁
 
     def test_level_dimension_change_triggers_recompute(self):
         """等级维独立触发重算(签名多维性,review-31 风险②):同持有/
@@ -194,22 +194,30 @@ class TestLineRefreshSkeleton:
         refresh_line_if_needed(gs)
         assert st.line_candidates != ('sentinel',)
 
-    def test_recompute_reads_current_target_comp_chain(self):
-        """本阶段行为等价锁:重算照读现行 target_comp 物化链产物
-        (配方键 = 产物本体、候选快照 = 产物名单元素);未锁定视图 =
-        空名单 + 未锁定旗标。"""
+    def test_recompute_respects_lock_slot_and_view(self):
+        """键面归一锁:target_comp = 锁定线槽(终态单写者 =
+        write_line_lock)——锁定态下重算不覆写配方键/候选停算;未锁定
+        视图 = 空名单 + 未锁定旗标(候选快照另由真内核产出,主题锁在
+        test_cw_line_select)。"""
         sess = StrategySession()
         gs = cw4_gs(sess, plane=1, round_num=2, node='prep')
         st = state_of(gs)
         comp = cw4_comp()
-        st.target_comp = comp   # 现行物化链产物(测试直种 = 照读输入)
+        write_line_lock(gs, comp.name)
+        st.opening_recipe_comp = comp   # 外部哨兵:锁定态重算不辖配方键
         refresh_line_if_needed(gs)
-        assert st.opening_recipe_comp is comp
-        assert st.line_candidates == (comp.name,)
+        assert st.opening_recipe_comp is comp   # 重算零写(配方链写端在 flow)
         view = line_members_view(gs)
-        assert view.locked is False
-        assert view.comp_name is None
-        assert view.members == ()
+        assert view.locked is True
+        assert view.comp_name == comp.name
+        # 未锁定视图(独立局):空名单 + 未锁定旗标
+        sess2 = StrategySession()
+        gs2 = cw4_gs(sess2, plane=1, round_num=2, node='prep')
+        refresh_line_if_needed(gs2)
+        view2 = line_members_view(gs2)
+        assert view2.locked is False
+        assert view2.comp_name is None
+        assert view2.members == ()
 
 
 # ===== 锁定写入骨架(连带动作三件 + 锁后只读)=====
@@ -229,7 +237,7 @@ class TestLineLockSkeleton:
         st.shop_handled = (1, 2)
         st.line_candidates = ('候选态',)   # 锁定前的非空候选态
         write_line_lock(gs, comp.name)
-        assert st.line_locked_comp == comp.name
+        assert st.target_comp is comp           # 锁定线槽写入(解析产物)
         assert st.levelup_preauth is None   # ①清升级预授权键
         assert st.shop_handled is None      # ②清商店会话标记
         assert st.line_candidates == ()     # ③候选快照清空
@@ -237,9 +245,14 @@ class TestLineLockSkeleton:
         gs.node_hist_pos = (1, 3)
         refresh_line_if_needed(gs)
         assert st.line_candidates == ()
-        # 锁后只读:重复写入不改锁定线(骨架不解析线名,参数即意图)
+        assert st.target_comp is comp       # 锁后只读(重算不复位锁定)
+        # 锁后只读:重复写入/未注册名写入均不改锁定线
         write_line_lock(gs, '其他线名')
-        assert st.line_locked_comp == comp.name
+        assert st.target_comp is comp
+        # 派生缓存同步:ist.locked_comp/phase 同帧生效
+        ist = getattr(st, 'v3_intention', None)
+        assert ist is not None and ist.locked_comp == comp.name
+        assert ist.phase == 'locked'
 
     def test_locked_view_returns_line_members(self):
         """锁定后视图 = 锁定线名单(core ∪ shared 集合语义,注册表

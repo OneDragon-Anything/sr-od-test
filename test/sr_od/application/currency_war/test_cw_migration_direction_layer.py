@@ -39,12 +39,10 @@ W620 BATCH2_APPENDIX 三危险供给点(D1/D2/D3):
 """
 from __future__ import annotations
 
-from dataclasses import replace
 from types import SimpleNamespace
 
 import pytest
 from test.sr_od.application.currency_war._cw_helpers import (
-    cw4_box,
     cw4_gs,
 )
 
@@ -53,9 +51,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import Unit
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     committed_authority,
-)
-from sr_od.application.currency_war.kernel.cw_registry import (
-    DEFAULT_REGISTRY as _REG,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionBuyCardParam,
@@ -92,35 +87,6 @@ def _state(plane: int = 1, round_num: int = 2, gold: int = 40) -> dict:
 # 扫描形态(AGENTS §10.4.4 禁,判据「红的时候是哪个运行行为坏了」答不
 # 出);「interest_floor 只可方法调用不可裸属性读」的 API 契约防线归
 # review 与代码规范,不进测试网。
-
-
-# ----------------------------------------------------- P6 注入分歧探针
-
-def test_p6_registry_injection_reaches_state_machine():
-    """P6 注入分歧探针:注入臂与缺省臂必须出现受控分歧,无分歧 = 注入链断。
-
-    旋钮 = line_env_lock_min_round(环境判据观察期):调大 = 判据本轮不辖
-    → 对抗环境帧缺省臂缓锁、注入臂落锁——两臂 ist 分歧即注入链可达证。
-    【夹具演进(经济冻结批)】原 plane=2 unlocked 帧:旧形态缺省臂保持
-    unlocked;现 P2 unlocked 帧被强制移交重锁域接管(目标不空窗
-    语义,载体 = test_cw_line_feasibility.py P2 移交组),与旋钮无关
-    → 不再承载分歧。改用 weak 帧(撤销机器在册态,移交不辖,「直至
-    新信号」语义保留)。
-    """
-    from sr_od.application.currency_war.kernel.cw_intention import update_intention
-    st = _state(plane=2, round_num=1)   # P2:comp 锁定通道(P1 配方锁区不锁 comp)
-    st['enemy_affixes'] = ['净化身心']            # 对抗词缀(万敌强环境不命中)
-    st['shop'] = [SimpleNamespace(name='万敌')]   # ③核心卡信号可见
-    reg_def = _REG
-    reg_inj = replace(_REG, line_env_lock_min_round=99)
-    ist_def = update_intention(cw4_box(**st),
-                               IntentionState(phase='weak', weak_comp='万敌单C'),
-                               None, registry=reg_def)
-    ist_inj = update_intention(cw4_box(**st),
-                               IntentionState(phase='weak', weak_comp='万敌单C'),
-                               None, registry=reg_inj)
-    assert ist_def.locked_comp == ''            # 缺省臂:环境判据缓锁(weak 保持)
-    assert ist_inj.locked_comp != ''            # 注入臂:判据不辖 → 落锁
 
 
 # ----------------------------------------------------- 哨兵锁:局23 型帧
@@ -279,25 +245,32 @@ def _gs_state(plane: int, round_num: int):
 
 
 @pytest.mark.parametrize('case', [
-    'p1_unarmed_conservative', 'locked_committed', 'p1_pair_committed'],
-    ids=['p1-unarmed-conservative', 'locked-committed', 'p1-pair-committed'])
+    'p1_unarmed_conservative', 'locked_committed', 'p1_pair_committed',
+    'p2_unlocked_dual_track'],
+    ids=['p1-unarmed-conservative', 'locked-committed', 'p1-pair-committed',
+         'p2-unlocked-dual-track'])
 def test_committed_authority_semantics(case: str):
-    """committed 权威判定直锁(方向层单一派生源;原逐帧对拍锁的现役
-    语义腿重锚为直锁,对拍半边随退役旧判定式删除——迁移对照到期纪律)。
+    """committed 权威判定直锁(方向层单一派生源;批 3.7 候选-锁定制
+    语义重锚)。
 
-    权威序任一成立即 True:①plane≥2 ②ist.phase=='locked' ③ist.p1_pair
-    非空;缺供给(state/session 缺、未锁线)= 保守 False——True=已定型=
-    激进侧,攒息门/双轨买门全开(供给点清单 D2:拔掉供给探针必须落
-    保守侧)。锁面三案 = 保守真帧一支(P1 未锁线)+ ist 定型两支
-    (locked/p1_pair);plane≥2 位面序支与 None 退化输入案经审计判决
-    简化(None 案直锁 = test_cw_session_separation)。"""
+    权威序任一成立即 True:①``st.target_comp`` 非空(锁定线槽——定型
+    语义 = 锁定线非空,line_and_upgrade §1.6 判定源迁移)②ist.p1_pair
+    非空(P1 配方锁,保留项);缺供给(state/session 缺、未锁线)= 保守
+    False——True=已定型=激进侧,攒息门/双轨买门全开(供给点清单 D2)。
+    原「plane≥2 恒定型」支已退役(P2 时点兜底锁定替代)——P2 入口至
+    兜底锁帧之间的短窗 committed=False(双轨期口径,§1.6 行为差申报,
+    p2_unlocked_dual_track 案锁此短窗)。"""
     if case == 'p1_unarmed_conservative':
         assert committed_authority(_gs_state(1, 3), StrategySession()) is False
         return
+    if case == 'p2_unlocked_dual_track':
+        # P2 未锁帧(兜底锁未触发):committed=False——双轨期口径
+        assert committed_authority(_gs_state(2, 1), StrategySession()) is False
+        return
     sess = StrategySession()
     if case == 'locked_committed':
-        state_of(sess).v3_intention = IntentionState(phase='locked',
-                                                     locked_comp='万敌燃血')
+        from sr_od.application.currency_war.kernel.cw_comps import get_comp
+        state_of(sess).target_comp = get_comp('万敌单C')   # 锁定线槽直种
     else:   # p1_pair_committed
         state_of(sess).v3_intention = IntentionState(p1_pair=('万敌燃血',))
     assert committed_authority(_gs_state(1, 8), sess) is True

@@ -36,7 +36,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import Unit
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     pair_target_comp,
-    update_intention,
+    update_p1_recipe,
 )
 from sr_od.application.currency_war.kernel.cw_launch_admission import (
     readiness_form_ok,
@@ -82,7 +82,7 @@ def test_ignited_pair_upgrades_to_estimator_argmin_second_seat() -> None:
 
     ist = IntentionState()
     ist.p1_pair = ('持续伤害',)
-    update_intention(gs, ist, None)
+    update_p1_recipe(gs, ist, None)
     assert len(ist.p1_pair) == 2, '点火帧必须升级两体系目标(渐进通道)'
     assert ist.p1_pair == ('持续伤害', '列车同行'), \
         f'第二席应为估计器 argmin(列车),got {ist.p1_pair}'
@@ -104,7 +104,7 @@ def test_window_closed_keeps_single_pair_and_freezes(monkeypatch) -> None:
                         lambda *a, **k: math.inf)
     ist = IntentionState()
     ist.p1_pair = ('持续伤害',)
-    update_intention(gs, ist, None)
+    update_p1_recipe(gs, ist, None)
     assert ist.p1_pair == ('持续伤害',), '门拒帧保持单体系对(不写 pair)'
     assert ist.p1_pair_frozen, '窗口关闭 → 单体系冻结(停手战,旧行为)'
     # 事件面申报:同帧先 pair_gate:deny 后被 freeze 事件覆写(现有事件
@@ -119,7 +119,7 @@ def test_q_challenger_fill_path_unchanged() -> None:
     gs = _seed_gs(deployed=dep, board=board)
     ist = IntentionState()
     ist.p1_pair = ('持续伤害',)
-    update_intention(gs, ist, None)
+    update_p1_recipe(gs, ist, None)
     assert ist.p1_pair == ('持续伤害', '列车同行')
     assert str(ist.last_event).startswith('p1_pair:'), \
         f'Q 填充走 p1_pair 事件(非 pair_gate 路由),got {ist.last_event!r}'
@@ -136,7 +136,7 @@ def test_seele_system_never_progressive_pick() -> None:
     gs = _seed_gs(deployed=dep, board=board)
     ist = IntentionState()
     ist.p1_pair = ('持续伤害',)
-    update_intention(gs, ist, None)
+    update_p1_recipe(gs, ist, None)
     assert len(ist.p1_pair) == 2
     assert '希儿系' not in ist.p1_pair
 
@@ -145,5 +145,5 @@ def test_empty_window_still_empty() -> None:
     """锁 4b:空窗支零漂移——零资产帧派生对恒空。"""
     gs = _seed_gs(deployed=[])
     ist = IntentionState()
-    update_intention(gs, ist, None)
+    update_p1_recipe(gs, ist, None)
     assert ist.p1_pair == (), '空窗恒空对(既有语义)'

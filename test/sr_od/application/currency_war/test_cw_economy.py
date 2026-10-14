@@ -86,7 +86,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     pair_target_comp,
-    update_intention,
+    update_p1_recipe,
 )
 from sr_od.application.currency_war.kernel.cw_investments import (
     EconomyEffect,
@@ -758,7 +758,7 @@ def test_pair_materialization_and_drought_reset() -> None:
     state_of(sess).v3_intention = ist
     st = _ba_state(round_num=5, gold=100,
                 shop=[_sc('卡芙卡', 4)], board={})   # 卡芙卡=DOT 系成员
-    update_intention(_bsb(**st), ist, sess)
+    update_p1_recipe(_bsb(**st), ist, sess)
     assert ist.pair_drought.get('持续伤害', 0) == 0
 
 

@@ -396,33 +396,35 @@ class TestThreeStageRefresh:
                     and a.cost > 0], 'P1 帧零主动付费刷新'
 
     def test_p2_unlocked_gap_drives(self):
-        """P2 未锁窗口:候选缺件驱动——候选线缺员且等级 ≥ 其概率带
-        下界 → 可刷;全员持有(无缺件)→ 不刷。"""
+        """P2 未锁窗口:候选缺件驱动(候选快照 = 本判据申报输入面,
+        直种锁定语义免耦合评分内核——评分面主题锁在 test_cw_line_select)。
+
+        - 候选线缺员且等级 ≥ 其概率带下界 → 可刷;
+        - 候选线全员持有(缺员 ∅)→ 不刷(fail-closed)。
+        (批 3.7 键面归一:target_comp 非空 = 锁定线槽,未锁窗口帧须显式
+        置 None + 直种候选快照。)"""
         comp = COMP_LIBRARY[0]
-        next(m for m in sorted(_LINE)
-                       if not _skip_member(m))
+        members = list(comp.core_chars) + list(
+            getattr(comp, 'shared_chars', None) or [])
+        # 缺员帧:候选线成员全不在手 ⇒ 缺员存在(等级 3 ≥ 1-2 费带下界)。
         live, sess, gs, st = _frame(gold=60, plane=2, hist=(2, 1),
-                                    node_kind='reward', comp=comp,
+                                    node_kind='reward',
                                     bench=[(n, 1) for n in _fuel(2)],
                                     deployed=[_fuel(3)[0]])
-        # bench/deployed 无线内成员 ⇒ 缺员存在(等级 3 ≥ 1-2 费带下界)。
+        st.target_comp = None
+        st.line_candidates = (comp.name,)
         ok, key = self._warrant(live, sess, gs)
-        assert ok or key in ('unlocked_no_qualified_gap',)
-        # 全员持有帧:缺员 ∅ ⇒ 不刷(构造 = 全线成员塞入 bench 槽不足
-        # 时按上阵补——用小线避免槽溢出)。
-        small = next(c for c in COMP_LIBRARY
-                     if len(set(c.core_chars)
-                            | set(getattr(c, 'shared_chars', None) or ()))
-                     <= 9)
-        members = list(small.core_chars) \
-            + list(getattr(small, 'shared_chars', None) or [])
+        assert (ok, key) == (True, ''), '候选缺员 + 带内 → 可刷'
+        # 全员持有帧:缺员 ∅ ⇒ 不刷。
         live2, sess2, gs2, st2 = _frame(
-            gold=60, plane=2, hist=(2, 1), node_kind='reward', comp=small,
+            gold=60, plane=2, hist=(2, 1), node_kind='reward',
             bench=[(m, 1) for m in members[:9]],
             deployed=members[9:] or [members[0]])
+        st2.target_comp = None
+        st2.line_candidates = (comp.name,)
         ok2, key2 = self._warrant(live2, sess2, gs2)
-        assert (ok2, key2) == (False, 'unlocked_no_qualified_gap'), \
-            '全员持有时刷新无目标(候选缺件驱动 fail-closed)'
+        assert (ok2, key2) == (False, 'unlocked_no_qualified_gap'), (
+            '候选全员持有时刷新无目标(候选缺件驱动 fail-closed)')
 
     def test_locked_star_target_and_stay_gate(self):
         """锁定后星级目标驱动:停留目标存在 ∧ 等级 ≥ 带下界 → 可刷;

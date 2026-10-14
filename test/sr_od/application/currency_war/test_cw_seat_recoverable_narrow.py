@@ -86,7 +86,7 @@ class TestP92SeatRecoverableDirect:
     def _frame(self, bench: list):
         comp = pair_target_comp(_COMP_PAIR)
         k = tuple(line_members(comp))
-        s = _session(comp, plane_lengths=[9, 5, 7], line_state=False)
+        s = _session(comp, plane_lengths=[9, 5, 7])
         axes = {'gold': 100, 'level': 4, 'plane': 1, 'round_num': _ROUND,
                 'node': 'reward', 'hp': 100, 'bench': list(bench),
                 'front_row': [Unit(char_id='前线', star=1)]}
@@ -122,42 +122,31 @@ class TestP92SeatRecoverableDirect:
 # ===== 集成行为差锁(P92 门经 decide_shop_screen)=====
 
 
-def _p92_frame(extra_bench_last: BenchSlot) -> tuple[dict, object, str]:
-    """P92 集成种子轴(直达构造;缺员腾席臂隔离声明):
+def _p92_frame(extra_bench_last: BenchSlot):
+    """P92 对照帧(批 3.7 键面归一重锚:锁定线槽 = 真实注册表线,
+    刷新授权前提 = 锁定后星级目标〔stay_target〕——原配方伪 comp 种子
+    在新键面下 = 注册表外名,star 目标解析恒空,授权前提构造性不可达)。
 
-    - gold=100 > g*=50 过 r1 账/r2 预算门直达 P92 位;店空 ⇒ 其余
-      买入臂全死(feed 配方在屏空牌面);
-    - **全员 owned(缺员 = ∅)**:w 以 1★×1 在席 = 臂①囤腿候选
-      (_cnt(m,1)==1 ∧ _cnt(m,2)==0,lv4 可刷 0.65 ∧ 可负担)——② 的
-      活性只取决于席可落。缺员置空是隔离关键:缺员 ∧ 席满帧会先触发
-      M2 缺员腾席位(shop.py ``missing and bench_free <= 0`` 支)卖件
-      腾席、下轮经 bench_free 合法放行,代理差被腾席臂掩蔽;
+    - comp = 专家桑博DOT(真实线,need_star['桑博'] = 3、桑博 1 费):
+      全员 owned、桑博 1★ → 停留目标 (桑博, 3★, 1 费);level 4 ≥ 1 费
+      带下界 ∧ refresh_prob(4, 1) > 0 ⇒ 三段式刷新判据可刷(P92 门
+      可达前提);
     - bench 满 9:唯一「可腾件」= 末槽 ``extra_bench_last``
-      (垫保 1★ 或占位件),其余全 2★ 非燃料(w 线内非燃料);
-    - ①dominance 死(席满)/③EV 生产 fail-closed 死/④无 1★ 同名对死
-      (w 单张不成对)。
+      (垫保 1★ 或占位件),其余全 2★ 非燃料(线内非燃料);
+    - ①dominance 死(席满)/③EV 生产 fail-closed 死/④无 1★ 同名对死。
     """
-    comp = pair_target_comp(_COMP_PAIR)
+    from sr_od.application.currency_war.kernel.cw_comps import get_comp
+    comp = get_comp('专家桑博DOT')
     members = list(_members(comp))
-    w = next(m for m in members if CHARACTERS[m].cost == 1)
-    assert refresh_prob(4, 1) > 0.0   # 囤腿费档该级可刷(② 活性前提)
+    w = next(m for m in members if (comp.need_star or {}).get(m, 1) >= 2
+             and int(CHARACTERS[m].cost) <= 2)
+    assert refresh_prob(4, int(CHARACTERS[w].cost)) > 0.0
     rest = [m for m in members if m != w]
-    # 3.6:三段式刷新判据的授权前提——留一名低成本线成员缺员(刷新
-    # 有目标可追;级 4 在其概率带内可刷),P92 门可达性保持。
-    from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
-        levelup as _crit_levelup,
-    )
-    _miss = next(m for m in rest
-                 if _crit_levelup.prob_band_of_cost(
-                     int(CHARACTERS[m].cost))[0] <= 4
-                 and refresh_prob(4, int(CHARACTERS[m].cost)) > 0.0)
-    rest = [m for m in rest if m != _miss]
     bench_rest_len = min(len(rest), BENCH_CAPACITY - 3)
     bench_rest = [_bc(m, star=2) for m in rest[:bench_rest_len]]
     # 全员 owned:主力超出席面的成员入上阵行(测试投影种子,只读消费)
     st_deployed = [Unit(char_id=m, star=2)
                    for i, m in enumerate(rest[bench_rest_len:])]
-    assert st_deployed, '锁前提:线成员规模变动(全员 owned 需要上阵位)'
     last_name = (extra_bench_last.unit.char_id
                  if extra_bench_last.unit is not None else '') or ''
     pool = iter(n for n, c in CHARACTERS.items()
@@ -165,7 +154,7 @@ def _p92_frame(extra_bench_last: BenchSlot) -> tuple[dict, object, str]:
                 and n != last_name)
     fill = BENCH_CAPACITY - 2 - len(bench_rest)
     assert fill >= 1, '锁前提:线成员过多(席面装不下)'
-    s = _session(comp, plane_lengths=[9, 5, 7], line_state=False)
+    s = _session(comp, plane_lengths=[9, 5, 7])
     bench = [_bc(w, star=1)]
     bench += bench_rest
     bench += [_bc(next(pool), star=2) for _ in range(fill)]

@@ -23,6 +23,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     GameState,
     NodeKey,
+    Unit,
 )
 from sr_od.application.currency_war.kernel.cw_recipe import (
     decision_target,
@@ -36,7 +37,6 @@ from sr_od.application.currency_war.kernel.cw_transition import (
     pick_framework,
     transition_score,
 )
-from sr_od.application.currency_war.kernel.cw_game_state import Unit
 from sr_od.application.currency_war.kernel.cw_vocab import ShopCard
 
 
@@ -188,47 +188,44 @@ def _target_comp() -> Comp:
                 form_tiers={'追击': 3}, strength='S', form_difficulty='easy')
 
 
-def _session(framework: str, target_comp: Comp,
-             *, locked: bool = False) -> StrategySession:
+def _session(framework: str, target_comp: Comp | None) -> StrategySession:
     """策略状态桩:transition_framework/target_comp 黑盒引用
-    (decision_target 两读口);locked = 附意向状态机锁线帧。"""
+    (decision_target 两读口);批 3.7 键面归一后 target_comp 非空 =
+    锁定线槽(锁定态),None = 未锁(双轨期口径)。"""
     st = SimpleNamespace(transition_framework=framework,
                          target_comp=target_comp)
-    if locked:
-        st.v3_intention = SimpleNamespace(phase='locked', p1_pair=())
     s = StrategySession()
     s.strategy_state = st
     return s
 
 
 def test_decision_target_recipe_in_dual_track() -> None:
-    """双轨期目标线 = 配方伪 comp(单一入口,消费方零改动):权威派生
-    保守 False(plane<2 且无意向状态供给)→ transition_framework='仙舟'
-    → recipe_comp('仙舟') 同一对象;配方形状即消费契约——仙舟键面含
+    """双轨期(未锁定)目标线 = 配方伪 comp(单一入口,消费方零改动):
+    committed=False(锁定线槽空)→ transition_framework='仙舟' →
+    recipe_comp('仙舟') 同一对象;配方形状即消费契约——仙舟键面含
     持续伤害(deploy 围栏视图键面补全,cw_recipe._RECIPES 注),
     爻光必后台(站位规则住 comp,漏了落 position_pref 兜底),
-    form_tiers = 3 仙舟主羁绊档。framework='' → 终局 comp 散件口径;
+    form_tiers = 3 仙舟主羁绊档。framework='' 且未锁 → None(散件口径);
     策略状态未装配(裸 session,None-safe)→ None。
     """
     rc = recipe_comp('仙舟')
-    sentinel = _target_comp()
-    got = decision_target(_session('仙舟', sentinel), _gs())
+    got = decision_target(_session('仙舟', None), _gs())
     assert got is rc
     assert got.name == '过渡·仙舟配方'
     assert got.factions == ['仙舟', '持续伤害']
     assert got.form_tiers == {'仙舟': 3}
     assert got.char_positions == {'爻光': 'back'}
-    assert decision_target(_session('', sentinel), _gs()) is sentinel
+    assert decision_target(_session('', None), _gs()) is None
     assert decision_target(StrategySession(), _gs()) is None
 
 
 def test_decision_target_committed_returns_terminal_line() -> None:
-    """定型权威(任一)压过配方路由 → 终局 comp:①plane≥2(P2 起恒定型);
-    ②意向状态机 phase='locked'(plane 1 锁线)。两分支同返回 target_comp
-    本体——休眠期零漂移面(cw_recipe.decision_target docstring:生产路径
-    transition_framework 恒 '',双分支同返回)。"""
+    """定型权威压过配方路由 → 终局 comp:锁定线槽非空(committed,
+    批 3.7 候选-锁定制语义——P1 硬规则锁定与 P2 时点兜底统一承载;
+    原 plane≥2 恒定型支已退役)→ 返回 target_comp 本体。"""
     sentinel = _target_comp()
     assert decision_target(_session('仙舟', sentinel),
-                           _gs(plane=2)) is sentinel
-    assert decision_target(_session('仙舟', sentinel, locked=True),
-                           _gs()) is sentinel
+                           _gs(plane=1)) is sentinel
+    # P2 未锁短窗(双轨期口径):committed=False,配方路由照走
+    assert decision_target(_session('仙舟', None),
+                           _gs(plane=2)).name == '过渡·仙舟配方'
