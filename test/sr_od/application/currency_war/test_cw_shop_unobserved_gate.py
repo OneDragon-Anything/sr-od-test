@@ -31,11 +31,28 @@ tracked 亦退役:对账唯一合法时点 = 观察边界 kernel cw_reconcile,�
 """
 from __future__ import annotations
 
-import pytest
-
 from types import SimpleNamespace
 
+import pytest
+
 from one_dragon.base.geometry.point import Point
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    BenchSlot,
+    BenchView,
+    ChannelSig,
+    DeployedView,
+    ShopPayload,
+    Unit,
+    game_state_of,
+    tracked_unobserved,
+)
+from sr_od.application.currency_war.kernel.cw_strategy_session import (
+    StrategySession,
+)
+from sr_od.application.currency_war.kernel.cw_vocab import CwActionCloseShopParam
+from sr_od.application.currency_war.operations.cw_loop import CwLoop
+from sr_od.application.currency_war.telemetry import defects
+
 
 @pytest.fixture(autouse=True)
 def _drain_defect_buffer():
@@ -48,23 +65,6 @@ def _drain_defect_buffer():
     consume_defect_sink()
     yield
     consume_defect_sink()
-
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    BenchSlot,
-    BenchView,
-    DeployedView,
-    ChannelSig,
-    ShopPayload,
-    Unit,
-    game_state_of,
-    tracked_unobserved,
-)
-from sr_od.application.currency_war.kernel.cw_strategy_session import (
-    StrategySession,
-)
-from sr_od.application.currency_war.kernel.cw_vocab import CwActionCloseShopParam
-from sr_od.application.currency_war.operations.cw_loop import CwLoop
-from sr_od.application.currency_war.telemetry import defects
 
 _SIG = ChannelSig(family='logic_action', actor='CwScreenPrep')
 
@@ -260,7 +260,7 @@ def _run_visit_unobserved_host(monkeypatch, tmp_path, counters, *,
     返回 (访问结果元组, session):正常收工 → (None, ledger),round_fail →
     (round_fail 结果, None)(出参交接契约,详设 §2.2)。驱动 = 真类实例 +
     节点函数直驱(过渡薄壳已随 3.4 退役,先例 =
-    test_cw_shop_two_node_form)。
+    test_cw_shop_screen_op)。
     """
     import sr_od.application.currency_war.operations.cw_screen.cw_screen_shop as buy_mod
     from sr_od.application.currency_war.obs.cw_observation import (

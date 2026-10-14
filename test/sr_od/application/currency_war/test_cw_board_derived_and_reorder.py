@@ -26,7 +26,7 @@ reconcile 第 5 例收口批; 容器合并:行域 = deployed
 - 字段审计完备性:GameState 全部容器字段已在 ``PROJECTION_AUDIT``
   登记且无缺口态(「无写端无规则」恒空)。
 
-单帧锁自足:动作语义复用既有 golden 面(test_cw_transfer_golden),
+单帧锁自足:动作语义复用既有 transfer 契约面(test_cw_gain_chain 卖/换上报契约节),
 本文件不重锁动作域写回,只锁 board 派生与重排吸收两块新契约。
 
 种子纪律(3.1 起):行域 = DeployedView;紧缩行序 → 视图 = 顺延落位
@@ -103,6 +103,20 @@ class _AndonRecorder:
 
     def __call__(self, row: dict) -> None:
         self.rows.append(dict(row))
+
+
+@pytest.fixture(autouse=True)
+def _drain_defect_buffer():
+    """测试卫生:进程级缺陷缓冲前后双清——本文件多条锁断言
+    ``drained == rows``(缓冲逐位相等),任何先行用例残留的
+    logic_rand_outcome 行都会误红;同 test_cw_deploy /
+    test_cw_tracked_slot_star_guard 排水纪律。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        consume_defect_sink,
+    )
+    consume_defect_sink()
+    yield
+    consume_defect_sink()
 
 
 @pytest.fixture()

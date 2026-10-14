@@ -1,5 +1,6 @@
 """终局线选择(候选-锁定制)内核锁——迭代
-2026-10-12-prep-shop-workflow-redesign 批 3.7。
+2026-10-12-prep-shop-workflow-redesign 批 3.7;含选线决策族两翼
+(过渡框架判定 + session 作用域载体)。
 
 出处 = line_and_upgrade §1.2-§1.4(判据唯一源):
 - §1.2 线分数 = 字典序(环境分级 → 持有证据级 → 攻略热度,注册序终局)
@@ -9,26 +10,74 @@
   知识卡原语;时点兜底 = plane2_started ∧ P2 投资策略选卡完成)+
   同帧多命中裁决(线分数最高 + 热度 tie-break + 注册序终局,禁遍历序)。
 
-锁定写入/连带动作/键面归一(target_comp 终态单写者)的载体面锁在
-test_cw_session_scope;本文件锁判据本体。
+分节组织(同文件三节):
+- 判据本体(本文件主节):候选快照 / 硬规则锁定 / 时点兜底 / 端到端;
+- 过渡框架判定(pick_framework / transition_score / decision_target):
+  P1 框架选线前置阶段,期望源 = kernel 现行实现(plaza 784 篇 V4.4
+  数据实证 + MC 2000 局预囤实证)与 knowledge/cw_line_facts;
+- session 作用域载体(节点边界重置 / 窗口谓词 / 方向状态骨架 /
+  商店会话标记与机会清单 / 双域接线):锁定写入与判重载体面。
 """
 from __future__ import annotations
 
-from test.sr_od.application.currency_war._cw_helpers import cw4_gs
+from types import SimpleNamespace
 
-from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
-from sr_od.application.currency_war.kernel.cw_game_state import Unit
+import pytest
+from test.sr_od.application.currency_war._cw_helpers import (
+    cw4_comp,
+    cw4_gs,
+)
+
+from sr_od.application.currency_war.kernel.cw_comps import (
+    COMP_LIBRARY,
+    Comp,
+)
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    GAME_STATE_SCHEMA_VERSION,
+    ChannelSig,
+    GameState,
+    NodeKey,
+    Unit,
+    game_state_of,
+)
+from sr_od.application.currency_war.kernel.cw_recipe import (
+    decision_target,
+    recipe_comp,
+)
+from sr_od.application.currency_war.kernel.cw_registry import (
+    DEFAULT_REGISTRY,
+)
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
+from sr_od.application.currency_war.kernel.cw_transition import (
+    _framework_counts,
+    pick_framework,
+    transition_score,
+)
+from sr_od.application.currency_war.kernel.cw_vocab import ShopCard
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
     line_select,
 )
+from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
+    MandateV1Strategy,
+)
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    LevelUpPreAuth,
+    ShopOpportunity,
     state_of,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.session_scope import (
+    clear_shop_handled,
+    clear_shop_opportunities,
+    handle_node_boundary,
+    line_members_view,
+    mark_shop_handled,
+    plane2_started_of,
+    record_shop_opportunity,
     refresh_line_if_needed,
+    shop_handled_for_current_node,
+    shop_opportunities_of,
     write_line_lock,
 )
 
@@ -376,9 +425,6 @@ class TestP2PickBaselineSliding:
         """吞签退化形态的消解锁:P2 开局三选一先于首个 P2 决策帧完成
         ——滑动基线(P1 末次刷新快照)使该笔在首个 P2 决策帧即被侦测
         为增长,兜底锁当帧触发(不退化到第二笔获得)。"""
-        from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
-            session_scope,
-        )
         sess = StrategySession()
         gs = cw4_gs(sess, plane=1, round_num=9, node='prep')
         gs.node_hist_pos = (1, 9)
@@ -388,7 +434,7 @@ class TestP2PickBaselineSliding:
         # 进 P2:开局选卡(获得先于任何 P2 决策帧)→ 首个 P2 决策帧侦测
         cw4_gs(sess, plane=2, round_num=1, node='prep')
         gs.node_hist_pos = (2, 1)
-        session_scope.handle_node_boundary(gs)
+        handle_node_boundary(gs)
         self._observe_strategies(gs, ['黑塔纪元'])
         refresh_line_if_needed(gs)
         assert st.p2_strategy_pick_done is True, (
@@ -396,3 +442,491 @@ class TestP2PickBaselineSliding:
         # 黑塔纪元 = 大黑塔银河学者策略型硬规则命中 → 该帧硬规则锁
         assert st.target_comp is not None
         assert st.target_comp.name == '大黑塔银河学者'
+
+
+# ============================================================ 过渡框架判定
+# (pick_framework / transition_score / decision_target;改动三审覆盖缺口
+#  申报期写入:TRANSITION_PACK/FRAMEWORK_FACTIONS 权威副本 =
+#  knowledge/cw_line_facts,花火=('量子','carry') 修正已传播。)
+
+
+def _fw_sig() -> ChannelSig:
+    """渠道①签名(obs 族;观察写入口签名必填)。"""
+    return ChannelSig(family='obs', actor='TestSigWriter', mode='read')
+
+
+def _fw_gs(*, plane: int = 1) -> GameState:
+    """容器:缺省未观察节点(plane_of 缺省 1);plane=2 写节点键。"""
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    if plane != 1:
+        gs.observe(gs.node, NodeKey(plane=plane, round_num=1, kind='prep'),
+                   sig=_fw_sig())
+    return gs
+
+
+def _fw_bc(name: str) -> Unit:
+    """持有件(备战/上阵同型,char_id 载名;计数面鸭子读 = char_id)。"""
+    return Unit(char_id=name, star=1)
+
+
+def _fw_card(name: str) -> ShopCard:
+    """在售店卡(name 载名)。"""
+    return ShopCard(x=0, name=name)
+
+
+def _fw_target_comp() -> Comp:
+    """终局哨兵线(合成 Comp,身份断言用;值域无关)。"""
+    return Comp(name='测试·终局哨兵', factions=['追击'], core_chars=['飞霄'],
+                form_tiers={'追击': 3}, strength='S', form_difficulty='easy')
+
+
+def _fw_session(framework: str, target_comp: Comp | None) -> StrategySession:
+    """策略状态桩:transition_framework/target_comp 黑盒引用
+    (decision_target 两读口);锁定线槽非空 = 锁定态,None = 未锁。"""
+    st = SimpleNamespace(transition_framework=framework,
+                         target_comp=target_comp)
+    s = StrategySession()
+    s.strategy_state = st
+    return s
+
+
+def test_framework_counts_owned_vs_merged_semantics() -> None:
+    """计数语义:owned = deployed+bench 整权(bot 真持有,None 槽跳过);
+    counts = owned + 商店在售 0.5/张(在售 = 即可得);三框架全键零值
+    初始化。花火 = 量子线(knowledge/cw_line_facts 花火=('量子','carry'):
+    注册表花火 = 盛会之星阵营+量子同频流派,无列车同行——计数归属量子,
+    列车计数不受污染)。通用件(千冶·刃)不入任何框架键。
+
+    场景:deployed=[藿藿,千冶·刃] + bench=[花火,None] + 店=[三月七×2]
+    → owned={仙舟:1, 列车:0, 量子:1};counts={仙舟:1.0, 列车:1.0,
+    量子:1.0}(两张在售三月七 = 列车 +1.0)。
+    """
+    owned, counts = _framework_counts(
+        bench=[_fw_bc('花火'), None],
+        deployed=[_fw_bc('藿藿'), _fw_bc('千冶·刃')],
+        shop=[_fw_card('三月七'), _fw_card('三月七')])
+    assert owned == {'仙舟': 1, '列车': 0, '量子': 1}
+    assert counts == {'仙舟': 1.0, '列车': 1.0, '量子': 1.0}
+
+
+def test_pick_framework_startup_gate_merged_weight() -> None:
+    """启动门(合并权 ≥1.5):纯 shop 半权不够——2 张在售 = 1.0 < 1.5,
+    防刷新噪声选定;持有 1 + 在售 1 = 1.5 即可选定(合并权启动判定,
+    破「不买框架件 → 计数永不涨」死锁;MC 2000 局预囤实证:门 2→1.5 后
+    C 策略启动率 99.9%)。门下现任手里有真件仍保持(防闪烁回退 ''),
+    真件卖空才回落未定 ''。
+    """
+    assert pick_framework([], [],
+                          shop=[_fw_card('三月七'), _fw_card('姬子·启行')]) == ''
+    assert pick_framework([], [_fw_bc('三月七')],
+                          shop=[_fw_card('三月七')]) == '列车'
+    assert pick_framework([], [_fw_bc('藿藿')], current='仙舟') == '仙舟'
+    assert pick_framework([], [_fw_bc('三月七')], current='仙舟') == ''
+
+
+def test_pick_framework_hysteresis_and_tie() -> None:
+    """滞回:换线门 = 挑战者持有权(整权)领先现任 ≥1——shop 半权只参与
+    「谁先过启动线」,翻不动现任(挑战者合并权 1.5 过线但持有 0 < 现任 1
+    → 留任);真实持有领先才翻转(仙舟 3 整权 > 列车 1)。平局按
+    FRAMEWORKS 序偏仙舟(knowledge FRAMEWORKS 首位;主流先验 32% vs 29%,
+    docstring 注明有意为之)。
+    """
+    board = [_fw_bc('三月七'), _fw_bc('藿藿'), _fw_bc('丹恒·饮月'), _fw_bc('爻光')]
+    assert pick_framework([], board, current='列车') == '仙舟'
+    assert pick_framework([], [_fw_bc('三月七')],
+                          shop=[_fw_card('藿藿'), _fw_card('爻光'), _fw_card('椒丘')],
+                          current='列车') == '列车'
+    tie = [_fw_bc('藿藿'), _fw_bc('爻光'), _fw_bc('三月七'), _fw_bc('姬子·启行')]
+    assert pick_framework([], tie) == '仙舟'
+
+
+def test_pick_framework_portal_bias() -> None:
+    """portal 偏置:开局环境名含框架名 → 该框架计数 +3 等效权(数据级
+    先验,普通来牌权压不过;portal 信号家族 = final_jizi_train.md
+    「列车同行概念股」/transition_combos.md 量子契约 portal)——
+    量子 1 持有无 portal 恒未定(''),有 portal 即选定。偏置非锁死:
+    4 张对立框架真件(仙舟 4.0)压过列车偏置(3.0)。
+    """
+    assert pick_framework([], [_fw_bc('花火')]) == ''
+    assert pick_framework([], [_fw_bc('花火')], portal='量子契约') == '量子'
+    assert pick_framework(
+        [], [_fw_bc('藿藿'), _fw_bc('丹恒·饮月'), _fw_bc('爻光'), _fw_bc('椒丘')],
+        portal='列车概念股') == '仙舟'
+
+
+def test_transition_score_tiers_and_prehoard() -> None:
+    """打分表档位(docstring 档位表):carry 1.0 / partial 0.6 /
+    drop 0.4;framework=''(预囤模式)= 见框架件就囤但 drop 恒 0
+    (应急件囤了 P1 末就卖 = 浪费金),未在册散件 0(无框架无阵营兜底);
+    通用插件按 carry 档 + 通用 0.15。
+
+    ⚠️ 分叉待裁:通用件在预囤模式(framework='')仍得通用 +0.15
+    (elif 链「fw == '通用'」臂不依赖 framework 是否为空),而函数体
+    尾注写「预囤:base 保持档位分」——本锁按现行实现钉 1.15;若裁决
+    预囤应保持纯档位分,改实现同时改本断言。
+    """
+    assert transition_score('藿藿', '仙舟', framework='') == pytest.approx(1.0)
+    assert transition_score('爻光', '仙舟', framework='') == pytest.approx(0.6)
+    assert transition_score('卡芙卡', '星核猎手', framework='') == 0.0
+    assert transition_score('千冶·刃', '星核猎手',
+                            framework='') == pytest.approx(1.15)
+    assert transition_score('阿格莱雅', '昼之半神', framework='') == 0.0
+
+
+def test_transition_score_framework_bonus_and_faction_fallback() -> None:
+    """框架已定的加成与阵营兜底:同框架集中 +0.3(椒丘 0.4+0.3;
+    faction 实参不入框架键面,不叠契合加成);通用 +0.15;carry 全栈 =
+    同框架 0.3 + faction 契合 0.2(三月七 1.5);partial 同框架 = 0.9
+    (缇宝,registry 流派含量子同频但 elif 链只走同框架臂)。
+    阵营兜底:在册他框架件 registry 阵营命中当前框架 → +0.2(丹恒·饮月
+    = 仙舟+列车双阵营,列车框架下 1.2——「列车×4 难凑齐」修正);
+    非在册角色阵营命中 = partial 级 0.6(星期日,列车同行阵营)。
+    """
+    assert transition_score('椒丘', '狼狩',
+                            framework='仙舟') == pytest.approx(0.7)
+    assert transition_score('缇宝', '昼之半神',
+                            framework='量子') == pytest.approx(0.9)
+    assert transition_score('三月七', '列车同行',
+                            framework='列车') == pytest.approx(1.5)
+    assert transition_score('千冶·刃', '星核猎手',
+                            framework='仙舟') == pytest.approx(1.15)
+    assert transition_score('丹恒·饮月', '仙舟',
+                            framework='列车') == pytest.approx(1.2)
+    assert transition_score('星期日', '盛会之星',
+                            framework='列车') == pytest.approx(0.6)
+
+
+def test_decision_target_recipe_in_dual_track() -> None:
+    """双轨期(未锁定)目标线 = 配方伪 comp(单一入口,消费方零改动):
+    committed=False(锁定线槽空)→ transition_framework='仙舟' →
+    recipe_comp('仙舟') 同一对象;配方形状即消费契约——仙舟键面含
+    持续伤害(deploy 围栏视图键面补全,cw_recipe._RECIPES 注),
+    爻光必后台(站位规则住 comp,漏了落 position_pref 兜底),
+    form_tiers = 3 仙舟主羁绊档。framework='' 且未锁 → None(散件口径);
+    策略状态未装配(裸 session,None-safe)→ None。
+    """
+    rc = recipe_comp('仙舟')
+    got = decision_target(_fw_session('仙舟', None), _fw_gs())
+    assert got is rc
+    assert got.name == '过渡·仙舟配方'
+    assert got.factions == ['仙舟', '持续伤害']
+    assert got.form_tiers == {'仙舟': 3}
+    assert got.char_positions == {'爻光': 'back'}
+    assert decision_target(_fw_session('', None), _fw_gs()) is None
+    assert decision_target(StrategySession(), _fw_gs()) is None
+
+
+def test_decision_target_committed_returns_terminal_line() -> None:
+    """定型权威压过配方路由 → 终局 comp:锁定线槽非空(committed,
+    候选-锁定制语义——P1 硬规则锁定与 P2 时点兜底统一承载)→ 返回
+    target_comp 本体;P2 未锁短窗(双轨期口径):committed=False,
+    配方路由照走。"""
+    sentinel = _fw_target_comp()
+    assert decision_target(_fw_session('仙舟', sentinel),
+                           _fw_gs(plane=1)) is sentinel
+    assert decision_target(_fw_session('仙舟', None),
+                           _fw_gs(plane=2)).name == '过渡·仙舟配方'
+
+
+# ============================================================ session 作用域载体
+# (节点边界重置 / 窗口谓词 / 方向状态骨架 / 商店会话标记与机会清单 /
+#  双域接线;判据本体 = 本文件主节。节点号驱动 = 直赋 ``gs.node_hist_pos``
+#  〔生效序位的单调水位分量,生产写端 = advance_node_effective〕。)
+
+
+def _sess_with_node(plane: int, round_num: int):
+    """裸容器 + 生效节点号直种(node_hist_pos 水位分量驱动)。"""
+    sess = StrategySession()
+    gs = game_state_of(sess)
+    gs.node_hist_pos = (plane, round_num)
+    return sess, gs
+
+
+class TestNodeBoundaryReset:
+
+    def test_boundary_resets_registered_keys_then_dedupes(self):
+        """清单四项重置键在节点号变化时按表复位;同节点号重复调用不
+        重复执行(哨兵存活 = 判重跳过);节点号再变 → 再次执行。"""
+        sess, gs = _sess_with_node(1, 2)
+        st = state_of(gs)
+        st.shop_handled = (1, 1)
+        st.shop_opportunities = (ShopOpportunity(
+            card_name='x', blocked_by='bench_full', price=1,
+            order_class='seq1'),)
+        st.levelup_preauth = LevelUpPreAuth(gold_cost=10, blood_cost=0)
+        st.line_eval_signature = ('stale',)
+        handle_node_boundary(gs)
+        assert st.shop_handled is None          # ①标记清值
+        assert st.shop_opportunities == ()      # ②清单清空
+        assert st.levelup_preauth is None       # ③预授权键清零
+        assert st.line_eval_signature is None   # ④签名置失效
+        assert st.node_boundary_last_pos == (1, 2)
+        # 判重:同节点号重复调用不重复执行
+        st.shop_handled = (1, 2)
+        handle_node_boundary(gs)
+        assert st.shop_handled == (1, 2)
+        # 节点号变化 → 再次执行
+        gs.node_hist_pos = (1, 3)
+        handle_node_boundary(gs)
+        assert st.shop_handled is None
+        assert st.node_boundary_last_pos == (1, 3)
+
+    def test_boundary_noop_without_node_pos(self):
+        """节点号未观察(None)不执行:未观察不当真(prev 记录不被
+        无效帧污染)。"""
+        sess = StrategySession()
+        gs = game_state_of(sess)
+        st = state_of(gs)
+        st.shop_handled = (1, 2)
+        handle_node_boundary(gs)
+        assert st.shop_handled == (1, 2)
+        assert st.node_boundary_last_pos is None
+
+
+class TestBoundaryKeepsDirectionState:
+
+    def test_boundary_keeps_direction_state_and_current_target_comp(self):
+        """清单第 5 项负登记:方向状态(锁定线槽 target_comp/配方键)
+        跨节点保留——节点边界不清方向,契约 C(键面归一:锁定线槽 =
+        target_comp);候选快照键边界亦不辖(锁定写入时已被清空,手工
+        哨兵 = 模拟外部写入后边界不复位);签名置失效(第 4 项)与之
+        同帧对照,锁分界本身。"""
+        sess, gs = _sess_with_node(1, 2)
+        st = state_of(gs)
+        comp = cw4_comp()
+        write_line_lock(gs, comp.name)
+        st.line_candidates = ('external-write',)
+        st.opening_recipe_comp = comp
+        gs.node_hist_pos = (1, 5)
+        handle_node_boundary(gs)
+        assert st.target_comp is comp           # 锁定跨节点保留(锁定线槽)
+        assert st.line_candidates == ('external-write',)
+        assert st.opening_recipe_comp is comp
+        assert st.line_eval_signature is None     # 签名置失效(对照)
+
+
+class TestPlane2StartedFlag:
+
+    def test_flag_sets_on_first_plane2_node_and_survives_boundary(self):
+        """node_hist_pos 序位首入 (2,*) 段置位;P1 内不置位;置位后
+        跨节点保留(边界重置不复位——历史事实非节点作用域态)。"""
+        sess = StrategySession()
+        gs = game_state_of(sess)
+        st = state_of(gs)
+        gs.node_hist_pos = (1, 9)
+        handle_node_boundary(gs)
+        assert st.plane2_started is False
+        gs.node_hist_pos = (2, 1)
+        handle_node_boundary(gs)
+        assert st.plane2_started is True
+        assert plane2_started_of(gs) is True
+        # 跨节点保留:节点推进触发边界重置,标志不复位
+        st.shop_handled = (2, 1)
+        gs.node_hist_pos = (2, 2)
+        handle_node_boundary(gs)
+        assert st.shop_handled is None       # 边界重置确实发生了
+        assert st.plane2_started is True
+
+
+class TestLineRefreshSkeleton:
+
+    def test_signature_skip_and_recompute(self):
+        """签名不变跳过重算、签名变化触发重算(幂等性;哨兵法——
+        重算的可观测副作用 = 派生快照覆写)。"""
+        sess = StrategySession()
+        gs = cw4_gs(sess, plane=1, round_num=2, node='prep')
+        st = state_of(gs)
+        refresh_line_if_needed(gs)
+        assert st.line_eval_signature is not None
+        # 签名未变:哨兵存活 = 重算被跳过
+        st.line_candidates = ('sentinel',)
+        refresh_line_if_needed(gs)
+        assert st.line_candidates == ('sentinel',)
+        # 签名变化(节点号推进)→ 重算发生(哨兵被覆写为 top3 候选)
+        gs.node_hist_pos = (1, 3)
+        refresh_line_if_needed(gs)
+        assert st.line_candidates != ('sentinel',)
+        assert len(st.line_candidates) == 3   # 未锁定 → top3 候选快照
+        assert st.target_comp is None         # 无硬规则/未到时点 → 未锁
+
+    def test_level_dimension_change_triggers_recompute(self):
+        """等级维独立触发重算(签名多维性):同持有/同节点号、仅等级变化
+        → 签名变化 → 重算。等级入签名的动机 = 店内整级购买经验后概率表
+        变,消费旧等级 = 评估陈旧(line_and_upgrade §3 步骤 1)。"""
+        sess = StrategySession()
+        gs = cw4_gs(sess, plane=1, round_num=2, node='prep', level=3)
+        st = state_of(gs)
+        refresh_line_if_needed(gs)
+        st.line_candidates = ('sentinel',)
+        # 仅等级变化(持有/节点号/装备/投资集不变)
+        cw4_gs(sess, plane=1, round_num=2, node='prep', level=4)
+        refresh_line_if_needed(gs)
+        assert st.line_candidates != ('sentinel',)
+
+    def test_recompute_respects_lock_slot_and_view(self):
+        """键面归一锁:target_comp = 锁定线槽(终态单写者 =
+        write_line_lock)——锁定态下重算不覆写配方键/候选停算;未锁定
+        视图 = 空名单 + 未锁定旗标(候选快照另由真内核产出,主题锁 =
+        本文件判据本体节)。"""
+        sess = StrategySession()
+        gs = cw4_gs(sess, plane=1, round_num=2, node='prep')
+        st = state_of(gs)
+        comp = cw4_comp()
+        write_line_lock(gs, comp.name)
+        st.opening_recipe_comp = comp   # 外部哨兵:锁定态重算不辖配方键
+        refresh_line_if_needed(gs)
+        assert st.opening_recipe_comp is comp   # 重算零写(配方链写端在 flow)
+        view = line_members_view(gs)
+        assert view.locked is True
+        assert view.comp_name == comp.name
+        # 未锁定视图(独立局):空名单 + 未锁定旗标
+        sess2 = StrategySession()
+        gs2 = cw4_gs(sess2, plane=1, round_num=2, node='prep')
+        refresh_line_if_needed(gs2)
+        view2 = line_members_view(gs2)
+        assert view2.locked is False
+        assert view2.comp_name is None
+        assert view2.members == ()
+
+
+class TestLineLockSkeleton:
+
+    def test_write_lock_side_effects_and_readonly(self):
+        """锁定写入联动三件(清预授权键/清商店标记/候选快照清空并停算)
+        + 锁后只读(重复写入不改锁定线)。"""
+        sess = StrategySession()
+        gs = cw4_gs(sess, plane=1, round_num=2, node='prep')
+        st = state_of(gs)
+        comp = cw4_comp()
+        st.levelup_preauth = LevelUpPreAuth(gold_cost=10, blood_cost=0)
+        st.shop_handled = (1, 2)
+        st.line_candidates = ('候选态',)   # 锁定前的非空候选态
+        write_line_lock(gs, comp.name)
+        assert st.target_comp is comp           # 锁定线槽写入(解析产物)
+        assert st.levelup_preauth is None   # ①清升级预授权键
+        assert st.shop_handled is None      # ②清商店会话标记
+        assert st.line_candidates == ()     # ③候选快照清空
+        # 停算:签名变化后重算不再写入快照(恒空)
+        gs.node_hist_pos = (1, 3)
+        refresh_line_if_needed(gs)
+        assert st.line_candidates == ()
+        assert st.target_comp is comp       # 锁后只读(重算不复位锁定)
+        # 锁后只读:重复写入/未注册名写入均不改锁定线
+        write_line_lock(gs, '其他线名')
+        assert st.target_comp is comp
+        # 派生缓存同步:ist.locked_comp/phase 同帧生效
+        ist = getattr(st, 'v3_intention', None)
+        assert ist is not None and ist.locked_comp == comp.name
+        assert ist.phase == 'locked'
+
+    def test_locked_view_returns_line_members(self):
+        """锁定后视图 = 锁定线名单(core ∪ shared 集合语义,注册表
+        单一源现算对照);未锁定视图空名单由 TestLineRefreshSkeleton 辖。"""
+        _, gs = _sess_with_node(1, 2)
+        comp = cw4_comp()
+        write_line_lock(gs, comp.name)
+        view = line_members_view(gs)
+        assert view.locked is True
+        assert view.comp_name == comp.name
+        assert view.members
+        assert set(view.members) == (set(comp.core_chars)
+                                     | set(getattr(comp, 'shared_chars', None) or ()))
+
+
+class TestShopMarksStorage:
+
+    def test_mark_query_and_value_comparison(self):
+        """标记值 = 当前节点号二元组;值比对双保险(值 ≠ 当前节点号
+        视为未处理);清除口。"""
+        sess, gs = _sess_with_node(1, 5)
+        st = state_of(gs)
+        mark_shop_handled(gs)
+        assert st.shop_handled == (1, 5)
+        assert shop_handled_for_current_node(gs) is True
+        gs.node_hist_pos = (1, 6)
+        assert shop_handled_for_current_node(gs) is False   # 双保险
+        clear_shop_handled(gs)
+        assert st.shop_handled is None
+
+    def test_mark_noop_without_node_pos(self):
+        """节点号未观察时写标记 no-op(未观察不当真)。"""
+        sess = StrategySession()
+        gs = game_state_of(sess)
+        mark_shop_handled(gs)
+        assert state_of(gs).shop_handled is None
+
+    def test_opportunity_record_query_clear_and_node_reset(self):
+        """清单追加/查询/清空存储口 + 节点边界重置清空(清单表②)。"""
+        sess, gs = _sess_with_node(1, 5)
+        st = state_of(gs)
+        rec = ShopOpportunity(card_name='三月七', blocked_by='gold_short',
+                              price=2, order_class='seq1')
+        record_shop_opportunity(gs, rec)
+        assert shop_opportunities_of(gs) == (rec,)
+        clear_shop_opportunities(gs)
+        assert shop_opportunities_of(gs) == ()
+        # 节点边界重置清空(存储函数之外的重置路径 = 清单表复位)
+        record_shop_opportunity(gs, rec)
+        gs.node_hist_pos = (1, 6)
+        handle_node_boundary(gs)
+        assert st.shop_opportunities == ()
+
+
+class TestEntryWiring:
+
+    def test_prep_entry_runs_boundary(self, monkeypatch: pytest.MonkeyPatch):
+        """备战入口接线锁:decide_prep_screen 到达任何决策前执行边界
+        重置(armed 短路帧同样先过边界——接线位 = 入口最前;armed
+        判定核桩化为单键替身,真 armed 判据不在本锁面)。"""
+        import sr_od.application.currency_war.kernel.cw_launch_admission as admit_mod
+        from sr_od.application.currency_war.kernel.cw_vocab import CwAction
+
+        sess = StrategySession()
+        gs = cw4_gs(sess, plane=1, round_num=2, node='prep',
+                    shop_screen='off')
+        gs.node_hist_pos = (1, 2)
+        monkeypatch.setattr(admit_mod, 'readiness_launch_decision',
+                            lambda *a, **k: {'armed': True})
+        strat = MandateV1Strategy(gs, SimpleNamespace(strategy_seed=None))
+        st = state_of(gs)   # 构造 setter 已接线容器 → 同一状态对象
+        st.shop_handled = (1, 1)   # 污染(上一节点残留态)
+        action = strat.decide_prep_screen()
+        assert isinstance(action, CwAction)
+        assert st.shop_handled is None    # 备战入口已执行边界重置
+
+    def test_shop_entry_runs_boundary(self):
+        """商店入口接线锁:decide_shop_action 单动作核入口先过边界
+        (生产单动作循环与 decide_shop_screen 驱动器共用本口)。"""
+        from test.sr_od.application.currency_war._cw_helpers import DecideCfg
+
+        sess = StrategySession()
+        gs = cw4_gs(sess, plane=1, round_num=2, node='prep',
+                    shop_screen='on')
+        gs.node_hist_pos = (1, 2)
+        strat = MandateV1Strategy(
+            gs, DecideCfg(), registry=DEFAULT_REGISTRY)
+        st = state_of(gs)
+        st.node_boundary_last_pos = None   # 边界未处理形态(种子稳态钉位解除)
+        st.shop_handled = (1, 1)
+        strat.decide_shop_action()
+        # 边界已执行:判重键推进到当前节点(重置后若会话零动作收工,
+        # 标记由会话收工位重写——此处锁边界执行本身,不锁收工位零标记)。
+        assert st.node_boundary_last_pos == (1, 2)
+        assert st.shop_handled in (None, (1, 2))
+
+    def test_both_entries_share_one_boundary_state(self):
+        """两入口共用同一判重键(契约 C「同一函数」):备战入口已执行
+        边界处理后,商店入口同节点号不重复执行(哨兵存活)。"""
+        from test.sr_od.application.currency_war._cw_helpers import DecideCfg
+
+        sess = StrategySession()
+        gs = cw4_gs(sess, plane=1, round_num=2, node='prep',
+                    shop_screen='on')
+        gs.node_hist_pos = (1, 2)
+        handle_node_boundary(gs)   # 模拟备战入口已执行
+        st = state_of(gs)
+        st.shop_handled = (1, 2)   # 判重哨兵(同节点号残留)
+        strat = MandateV1Strategy(
+            gs, DecideCfg(), registry=DEFAULT_REGISTRY)
+        strat.decide_shop_action()
+        assert st.shop_handled == (1, 2)   # 同节点号:商店入口判重跳过

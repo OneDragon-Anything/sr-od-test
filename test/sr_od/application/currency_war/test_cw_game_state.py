@@ -5,9 +5,11 @@
 (§8.6-4 续)+ 观察流接线与 hp 失读统一口径 + 心跳哨兵(§2.4 关键
 结构 2)+ sim 合成口箱占席语义(§3.2.5;迁移批次一任务书第 7 件)
 + 设计 §8.7 批次三(挂点机制/B1 桥)与批次四(退役 + relay 空值闸)
-两组锁——原独立批次文件按主题文件纪律归并,断言体零语义改动。断言
-全部按设计语义写,禁按 level 驱动表/线性外推写(设计 §3.2.7 回归
-测试断言约束)。
+两组锁。机制主题归并(禁批次命名):本文件 = GameState 容器机制正名
+主题文件,消费切换批(刷新计数/结算覆盖/合成升星判定/streak 解析/
+备战席读链)、容器合同(六通道/版本流水/快照/画面上下文/渠道签名
+封闭集)、开局种子底座与锚定闩、deployed 视图桥与快照迁移各节按
+机制并入(断言体零语义改动)。
 
 退役面:§8.6 差距清单逐条锁(gap3/gap4 组)与 §3 字段语义抽样组已删;
 心跳写点序/断流计数两锁并一,level_up/battle_end 挂点两锁并一,
@@ -16,19 +18,25 @@ tick/advance_node 两锁并一(并入腿见各测试 docstring)。
 合并面(第二刀,断言腿零丢失):bench_free 两形态参数化并一;失配缺陷
 台账+sink drain 并一;合成口真值域 on/off 参数化并一;feed 接线+hp 三
 分支同帧驱动并一;burst/per_node 授权两形态参数化并一;relay 单元三锁
-表驱动并一(并自 test_cw_game_state_consume 移入 relay_skips_official);
-relay 端到端两锁并一;席位视图转换三锁并一(ShopCard 映射单锁独立)。
+表驱动并一;relay 端到端两锁并一;席位视图转换三锁并一(ShopCard 映射
+单锁独立)。
 
 草板对照物 = .debug/temp/currency_war/record_data_model/board_state.py
 (易失产物,不构成出处;出处 = 设计章节号)。
 """
 from __future__ import annotations
 
+import dataclasses
 from types import SimpleNamespace
 
 import pytest
 from test.sr_od.application.currency_war._cw_helpers import cw4_gs
 
+from sr_od.application.currency_war.kernel import cw_game_state as gs_mod
+from sr_od.application.currency_war.kernel.cw_economy import (
+    REFRESH_COST_BASE,
+    XP_TO_NEXT_LEVEL,
+)
 from sr_od.application.currency_war.kernel.cw_effect_inventory import (
     ActiveEffectInventory,
     CounterKey,
@@ -39,19 +47,29 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     BenchSlot,
     BenchView,
     ChannelSig,
+    DeployedView,
     GameState,
     NodeKey,
+    OreSight,
     Unit,
     apply_effect_burst_grant,
+    apply_settlement_cover,
     bench_free_slots,
     bench_is_full,
+    board_next_tier_of,
     consume_defect_sink,
+    deployed_indexed_of_view,
+    deployed_rows_of_view,
+    deployed_view_of_indexed,
+    deployed_view_sequential,
     game_state_of,
     grant_effect_node_refresh_balance,
+    prep_anchored_of,
     project_effect_capacity,
     set_defect_sink,
     shop_card_to_container,
     shop_cards_to_legacy,
+    write_match_final,
 )
 
 # ---- W1 sig 铺满 helper(测试写入口签名必填,ADR-0634;actor 已登记)----
@@ -66,6 +84,12 @@ from sr_od.application.currency_war.kernel.cw_mismatch_policy import (
 )
 from sr_od.application.currency_war.kernel.cw_mismatch_policy import (
     ExemptEntry as _ExemptEntry,
+)
+from sr_od.application.currency_war.kernel.cw_opening_hp import (
+    OPENING_HP_BASE,
+)
+from sr_od.application.currency_war.kernel.cw_reconcile import (
+    reconcile_tracking,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
@@ -1170,9 +1194,7 @@ def test_relay_unit_gate_truth_table() -> None:
     """§2.1 relay 空值闸单元锁(表驱动并一;合并原
     test_relay_rejects_session_empty_defaults /
     test_relay_gate_scope_is_empty_string_and_containers_only /
-    test_relay_empty_refusal_does_not_block_late_truth,并自
-    test_cw_game_state_consume 移入 test_relay_skips_fields_with_
-    official_value;断言腿逐条保留):
+    test_relay_empty_refusal_does_not_block_late_truth;断言腿逐条保留):
 
     - 空值 = 未知态禁中继:字符串空/空白、列表/元组/字典/集合空 = 会话
       侧值未确立,一律拒写(返回 False,字段保持从未写过,不留来源痕迹);
@@ -1335,5 +1357,883 @@ def test_shop_card_mapping_roundtrip() -> None:
     back = shop_cards_to_legacy([container])
     assert back[0].x == 0, 'x 置 0 不消费(执行侧按槽号现取坐标)'
     assert back[0].slot == 3, '槽号自容器透传(点击取坐标依据,不按下标)'
+
+
+# ============================================================ 消费切换批
+# §3.3.6-8 刷新执行计数 / §3.5.1 结算覆盖写端 / §3.2.18 合成升星判定 /
+# §8.8 streak 失读解析 / 备战席读链空集失读 / 特效窗判定口 /
+# §3.4.5 四事件屏 chosen 记录面
+
+def test_refresh_execution_paid_and_free_frame_gates() -> None:
+    """§3.3.6-8 刷新执行计数主锁(三腿一锁):①付费刷新 = paid+1 ∧
+    total+1;②免费帧闸 = 免费帧不进付费累计(长线利好触发计数载体禁混入
+    免费刷)∧ total 照计;③免费余额下限 0(扣减在 Field,由上报函数承载
+    ——2026-09-21 Field 化:免费次数升格容器字段 ``gs.free_refresh_left``,
+    账本 ``record_refresh`` 只留 paid/total 累计;Field 下限 0 锁 = 上报
+    函数扣减腿,见 test_cw_shop_projection_logic 刷新 Field 段)。"""
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    gs.effects.record_refresh(free=False)
+    assert gs.effects.refresh_paid == 1
+    assert gs.effects.refresh_total == 1
+    # ② 免费帧闸:免费刷新不进付费计数(余额账已迁 Field,账本零动作)
+    bs2 = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    bs2.effects.record_refresh(free=True)
+    assert bs2.effects.refresh_paid == 0, '免费帧禁写付费计数'
+    assert bs2.effects.refresh_total == 1, '全量计数含免费'
+    bs2.effects.record_refresh(free=True)
+    assert bs2.effects.refresh_paid == 0, '免费帧恒不进付费计数'
+
+
+def test_settlement_cover_writes_truth_group() -> None:
+    """§3.5.1 结算覆盖写端四形态一锁:①胜局 = observation 真值组(hp/
+    streak 带方向/gold·level·xp 仅胜局)+ settlement 结构同步落;
+    ②败局页无收入面板(gold/level/xp 缺席不写),hp/streak 真值照覆;
+    ③hp 失读(结算页 OCR miss)不写(不可信帧不写,§2.2 写入闸),不清
+    既有正式值;④progress_delta 带符号真值落 settlement 结构(胜局正/
+    败局负;battle_wait 调用点传参为接线半,本锁辖函数半)。"""
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    apply_settlement_cover(gs, hp_after=76, streak_after=4,
+                           killed=True, gold=23, level=6, xp=(3, 10))
+    assert gs.hp.value == 76 and gs.hp.source == 'observation'
+    assert gs.streak.value == 4, '带方向真值(正=连胜)'
+    assert gs.gold.value == 23 and gs.level.value == 6
+    assert gs.xp.value == (3, 10)
+    s = gs.settlement.value
+    assert s is not None and s.hp_after == 76 and s.killed is True
+    # ② 败局页
+    bs2 = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    apply_settlement_cover(bs2, hp_after=41, streak_after=-2, killed=False)
+    assert bs2.hp.value == 41 and bs2.streak.value == -2
+    assert bs2.gold.value is None and bs2.level.value is None
+    assert bs2.xp.value is None
+    assert bs2.settlement.value.gold is None
+    # ③ hp 失读不写
+    bs3 = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    bs3.observe(bs3.hp, 80, sig=_sig())
+    apply_settlement_cover(bs3, hp_after=None, streak_after=None)
+    assert bs3.hp.value == 80 and bs3.hp.source == 'observation'
+    # ④ progress_delta 带符号
+    bs4 = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    apply_settlement_cover(bs4, hp_after=76, streak_after=4, killed=True,
+                           progress_delta=2, gold=23)
+    assert bs4.settlement.value is not None \
+        and bs4.settlement.value.progress_delta == 2
+    apply_settlement_cover(bs4, hp_after=70, streak_after=-1, killed=False,
+                           progress_delta=-22)
+    assert bs4.settlement.value.progress_delta == -22, '败局负增量照落'
+
+
+def test_detect_merge_upgrade_signature() -> None:
+    """§3.2.18 修法 a 触发判定:同名最高星被抬升 = 合成签名(星级只经
+    合成上升);普通买新卡/无变化 → False。种子 = 生产同形快照
+    (_NS(bench=占席条目, deployed=行域 Unit),与 buy_card 升星腿同构)。"""
+    from types import SimpleNamespace as _NS
+
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        BenchSlot,
+        Unit,
+        detect_merge_upgrade,
+    )
+
+    def _b(slot: int, name: str, star: int) -> BenchSlot:
+        return BenchSlot(kind='unit', unit=Unit(char_id=name, star=star))
+
+    def _mk(bench, deployed=None):
+        return _NS(bench=list(bench), deployed=list(deployed or []))
+
+    c1 = _b(1, '花火', 1)
+    c2 = _b(2, '花火', 1)
+    c3 = _b(3, '花火', 1)
+    cur = _mk([c1, c2, c3])
+    proj = _mk([_b(1, '花火', 2)])
+    assert detect_merge_upgrade(cur, proj) is True, '3 合 1 → 同名最高星抬升'
+    assert detect_merge_upgrade(cur, _mk([c1, c2, c3])) is False, '无变化'
+    assert detect_merge_upgrade(
+        _mk([c1]), _mk([c1, _b(2, '花火', 1)]),
+    ) is False, '普通买新卡不抬最高星'
+    deployed_old = _mk([], [Unit(char_id='希儿', star=1)])
+    deployed_new = _mk([], [Unit(char_id='希儿', star=2)])
+    assert detect_merge_upgrade(deployed_old, deployed_new) is True, \
+        '合成域 = 全场(bench+deployed)'
+
+
+def test_streak_miss_semantics_parse_and_observation_half() -> None:
+    """streak 失读两腿并一:
+
+    - 解析腿(§8.8):失读 → None(与 read_hp 100 假值同型消除);
+      '连胜×0' = 真 0(方向真值,fixture 核实 2026-08-11),两者分写;
+    - 消费腿(失读守卫):结算带符号真值由 apply_settlement_cover
+      直写 gs.streak(见上方结算覆盖锁)——失读跳过语义由覆盖写端
+      None 守卫承载(fields.md §3.2.12/§3.5.1)。"""
+    from sr_od.application.currency_war.obs.cw_settlement_obs import (
+        parse_streak,
+    )
+    # 解析腿
+    assert parse_streak(['挑战结束', '数据统计']) is None, '失读非 0'
+    assert parse_streak(['连胜×0']) == 0, '真 0 保留'
+    assert parse_streak(['连败×2']) == -2
+
+
+def test_bench_read_empty_is_miss_not_full(monkeypatch) -> None:
+    """P2-1:备战席 SIFT 空集 = 失读(overlay 残留/动画帧/识别退化)≠实席
+    全空——读链直产(P6,原观察写端值构造器空集守卫移驻读链)零占用返
+    None(调用方走 carried,§2.2 处置①;宁缺勿造),禁把「9 槽全空」当
+    observation 入记录(席空数派生误报 free=9/挂起合成升星预期被空视图
+    误清);非空 = 槽位保序视图 + 占位件 kind 识别期细分 + SIFT 身份胜出;
+    越界条目丢弃(读链漂移)。"""
+    from sr_od.application.currency_war.obs import cw_identity_obs as obs
+    # 空读:零命中 + 零占槽物品 → None(禁合成全空视图)
+    monkeypatch.setattr(obs, 'identify_slots', lambda *a, **k: [])
+    monkeypatch.setattr(obs, '_ctx_slots', lambda ctx, prefix, count: [])
+    monkeypatch.setattr(obs, '_bench_item_kind_by_slot',
+                        lambda ctx, screen: {})
+    assert obs.read_bench_view(object(), object(), object()) is None, \
+        '空集 = 失读,禁合成全空视图'
+    # 非空 = 槽位保序视图;越界条目不落槽;占位物品 kind 细分,SIFT 身份胜出
+    from sr_od.application.currency_war.kernel.cw_game_state import Unit
+    view = obs._bench_view_of(
+        [(2, Unit(char_id='花火', star=2)),
+         (10, Unit(char_id='越界角色', star=1)),    # 越界:丢弃
+         (0, Unit(char_id='越界角色2', star=1))],  # 越界:丢弃
+        {1: 'tome', 2: 'supply_box'})
+    assert view is not None
+    assert [s.kind for s in view.slots] == ['tome', 'unit'] + ['empty'] * 7, \
+        '槽位保序(物理槽 1=典籍,2=角色);越界条目不落槽;占槽物品只填空槽'
+    assert view.slots[1].unit is not None and view.slots[1].unit.star == 2
+
+
+def test_merge_effect_window_gate_default_off_and_injectable(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """P3-10:特效窗判定读口——screen=None/槽缺省关恒 False(核对放行,
+    与既有门 best-effort 语义同向);注入后按实现判定(monkeypatch 还原)。"""
+    from sr_od.application.currency_war.kernel import cw_reconcile
+
+    assert cw_reconcile.is_merge_effect_window(None) is False, \
+        'screen=None 不拦(离线/测试注入态)'
+    monkeypatch.setattr(cw_reconcile, '_IS_MERGE_EFFECT_FRAME', None,
+                        raising=False)
+    assert cw_reconcile.is_merge_effect_window(object()) is False, \
+        '槽缺省关(未装配)= 核对放行'
+    monkeypatch.setattr(cw_reconcile, '_IS_MERGE_EFFECT_FRAME',
+                        lambda screen: True, raising=False)
+    assert cw_reconcile.is_merge_effect_window(object()) is True, \
+        '窗内 = 顺延核对信号'
+    monkeypatch.setattr(cw_reconcile, '_IS_MERGE_EFFECT_FRAME',
+                        lambda screen: False, raising=False)
+    assert cw_reconcile.is_merge_effect_window(object()) is False
+
+
+def _op_with_session(op_cls: type, sess: object) -> object:
+    """``__new__`` 绕过 op 构造(SrContext 全量依赖不可裸建);只喂四屏
+    chosen 记录面读取的唯一 ctx 依赖面 = cw_match.session。"""
+    op = op_cls.__new__(op_cls)
+    op.ctx = SimpleNamespace(cw_match=SimpleNamespace(session=sess))
+    return op
+
+
+def _chosen_rows() -> dict:
+    """chosen 记录面表行(遭遇/专家/祈愿三案;每行 = op 类 + chosen 字段
+    + 真选调用 + 期望值 + fallback 调用集;supply 暂存生命周期独立成案,
+    归事件屏驱动测试)。遭遇臂 = 动作侧发射即写(遭遇扩围批:写端迁
+    ``kernel/cw_action_report/pick_encounter.py``,真选/fallback 经 report
+    函数直调,payload 槽前置播种模拟入口观察)。"""
+    from sr_od.application.currency_war.kernel.cw_action_report.pick_encounter import (
+        report_action_pick_encounter_param,
+    )
+    from sr_od.application.currency_war.kernel.cw_events import EncounterOption
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        EncounterPayload,
+    )
+    from sr_od.application.currency_war.kernel.cw_vocab import (
+        CwActionPickEncounterParam,
+    )
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_encounter,
+        cw_screen_expert_invite,
+        cw_screen_wish_trial,
+    )
+
+    opts = [EncounterOption(idx=0, difficulty=1, rewards=['金币×2']),
+            EncounterOption(idx=1, difficulty=3, rewards=['随机4费×3'])]
+    bonds: list[str | None] = ['仙舟', None, '贝洛伯格', None]
+    _sig = ChannelSig(family='logic_action', actor='test', mode='compute')
+
+    def _enc_report(op, idx: int, *, seed: bool) -> None:
+        gs = game_state_of(op.ctx.cw_match.session)
+        if seed:
+            gs.write_logic(gs.encounter, EncounterPayload(options=list(opts)),
+                           produced_by='test', sig=_sig)
+        report_action_pick_encounter_param(
+            gs, CwActionPickEncounterParam(idx=idx), _sig)
+
+    return {
+        'encounter': {
+            'op_cls': cw_screen_encounter.CwScreenEncounter,
+            'field': 'chosen_encounter',
+            'pick': lambda op: _enc_report(op, 1, seed=True),
+            'expected': (3, '随机4费×3'),
+            'fallbacks': [
+                lambda op: _enc_report(op, 1, seed=False),   # payload 离屏(观察层失约)
+                lambda op: _enc_report(op, 5, seed=True)],   # idx 越界(盲选防御)
+        },
+        'expert': {
+            'op_cls': cw_screen_expert_invite.CwScreenExpertInvite,
+            'field': 'chosen_expert',
+            'pick': lambda op: op._record_chosen_expert(0, bonds),
+            'expected': '仙舟',
+            'fallbacks': [
+                lambda op: op._record_chosen_expert(-1, bonds),   # 现金为王兜底
+                lambda op: op._record_chosen_expert(9, bonds),    # 越界(防御面)
+                lambda op: op._record_chosen_expert(1, bonds)],   # 羁绊缺失(防御面)
+        },
+        'wish': {
+            'op_cls': cw_screen_wish_trial.CwScreenWishTrial,
+            'field': 'chosen_wish',
+            'pick': lambda op: op._record_chosen(['累计刷新10次', '', ''], 0),
+            'expected': '累计刷新10次',
+            'fallbacks': [
+                lambda op: op._record_chosen(None, 0),            # objective 未读到
+                lambda op: op._record_chosen(['', '难度3+战斗'], 0),  # 选中槽文本空
+                lambda op: op._record_chosen(['累计刷新10次'], 7)],    # 越界
+        },
+    }
+
+
+@pytest.mark.parametrize('case_id', list(_chosen_rows()))
+def test_chosen_record_face_true_pick_only(case_id: str) -> None:
+    """四事件屏 chosen_* 记录面真值表一锁(§3.4.5 余屏写端;三案表驱动
+    并一):
+
+    - 真选写:值 = 原名口径(遭遇 = (难度档, 奖励文本) / 专家 = 卡羁绊
+      原文名 / 祈愿 = objective 原文名),source=logic(单次逻辑写入);
+    - fallback(无会话/候选未读到/越界/羁绊缺失/选中槽文本空)不写;
+      专家「现金为王」兜底不写——该事实由 ConfirmExpertCash +4 金到账
+      登记通道承载,照旧不动;真选守卫照 chosen_tome 式。
+    (写端接线在位/落地验真后写的调用时点面归 review 与代码规范;本锁
+    辖记录面行为半。)"""
+    from sr_od.application.currency_war.strategies.impl.cw_strategy import (
+        StrategySession,
+    )
+
+    row = _chosen_rows()[case_id]
+    sess = StrategySession()
+    op = _op_with_session(row['op_cls'], sess)
+    row['pick'](op)
+    fld = getattr(game_state_of(sess), row['field'])
+    assert fld.value == row['expected'], f'{case_id}: 真选值 = 原名口径'
+    assert fld.source == 'logic', f'{case_id}: 单次逻辑写入(source=logic)'
+    # fallback 帧(全新会话):逐个不写
+    sess2 = StrategySession()
+    op2 = _op_with_session(row['op_cls'], sess2)
+    for fallback in row['fallbacks']:
+        fallback(op2)
+    assert getattr(game_state_of(sess2), row['field']).value is None, \
+        f'{case_id}: fallback 不写'
+
+
+# ============================================================ 容器合同
+# §1 写入口六通道(observe/carry/身份匹配)/ §2 版本与状态流水 /
+# §3 快照 / §4 画面上下文与节点域 / §5 坐标系纯函数 / §6 终局 /
+# §9 渠道签名封闭集
+
+def _gs() -> GameState:
+    return GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+
+
+def test_observe_writes_and_overrides() -> None:
+    """观察通道:亲眼看 → source=observation,覆盖旧值;value=None 拒绝
+    (§2.2 失读不是观察值,禁清正式值);渠道面校验 = 观察 口 只收 obs 族。"""
+    gs = _gs()
+    gs.observe(gs.gold, 37, sig=_sig())
+    assert gs.gold.value == 37 and gs.gold.source == 'observation'
+    gs.observe(gs.gold, 40, sig=_sig())
+    assert gs.gold.value == 40
+    with pytest.raises(ValueError, match='observe 不接受 None'):
+        gs.observe(gs.gold, None, sig=_sig())
+    with pytest.raises(ValueError, match="不属本写入口合法族"):
+        gs.observe(gs.gold, 1, sig=_lsig())
+
+
+def test_carry_carries_good_value_and_skips_never_read() -> None:
+    """失读处置①(§2.2):沿用上次好值,evidence=carried:<帧>;
+    从未读字段(机制性 None)→ no-op 不占版本不换来源(不造假历史)。"""
+    gs = _gs()
+    gs.observe(gs.gold, 30, sig=_sig())
+    v_before = gs.current_version()
+    gs.carry(gs.gold, frame='p1-r2', sig=_sig())
+    assert gs.gold.source == 'carried'
+    assert gs.gold.evidence == 'carried:p1-r2'
+    assert gs.gold.value == 30
+    assert gs.current_version() == v_before + 1
+    hp_version = gs.current_version()
+    gs.carry(gs.hp, frame='p1-r2', sig=_sig())
+    assert gs.hp.source == 'observation' and gs.hp.value is None
+    assert gs.current_version() == hp_version, '从未读 carry 不占版本'
+
+
+def test_cross_instance_field_reference_rejected() -> None:
+    """身份匹配(§8.4):target 须是本单例字段现引用,跨单例引用 = 写丢
+    事故形态,显式炸错禁静默。"""
+    gs_a, gs_b = _gs(), _gs()
+    with pytest.raises(KeyError):
+        gs_a.observe(gs_b.gold, 1, sig=_sig())
+
+
+def test_versions_monotonic_reads_do_not_consume() -> None:
+    """版本语义(§3.2.2):写占版本;读(current_version)不占;
+    carry 未读字段不占(no-op)。"""
+    gs = _gs()
+    assert gs.current_version() == 0
+    gs.observe(gs.gold, 1, sig=_sig())
+    v1 = gs.current_version()
+    assert v1 == 1
+    assert gs.current_version() == v1, '读不占版本'
+    gs.observe(gs.gold, 2, sig=_sig())
+    assert gs.current_version() == v1 + 1
+
+
+@pytest.fixture()
+def journal_sink():
+    """未设 run_id_provider 的空转 sink:验证「局外拒写行」分支。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        set_state_journal_sink,
+    )
+    rows: list[dict] = []
+    set_state_journal_sink(rows.append)
+    yield rows
+    set_state_journal_sink(None)
+
+
+def test_journal_rows_self_contained_and_run_gated(journal_sink) -> None:
+    """状态流水行(§3.2.3):写入行带 v/ts/run_id/field/after/自足 state 快照/
+    sig;run_id 空 = 局外写入,拒写行(诚实缺失,不写假行)。"""
+    gs = _gs()
+    gs.observe(gs.gold, 5, sig=_sig())
+    rows = journal_sink
+    assert rows == [], '无 run_id(局外)不落行'
+    run_sink: list[dict] = []
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        set_run_id_provider,
+        set_state_journal_sink,
+    )
+    set_state_journal_sink(run_sink.append)
+    set_run_id_provider(lambda: 'run_probe')
+    try:
+        gs.observe(gs.hp, 70, sig=_sig())
+    finally:
+        set_state_journal_sink(None)
+        set_run_id_provider(None)
+    assert len(run_sink) == 1
+    row = run_sink[0]
+    assert row['row'] == 'write' and row['field'] == 'hp'
+    assert row['after'] == 70 and row['run_id'] == 'run_probe'
+    assert row['state']['values']['hp'] == 70, '行内 state 自足'
+    assert row['sig']['actor'] == 'TestSigWriter'
+
+
+def test_same_value_rewrite_flags_and_consumes_version(journal_sink) -> None:
+    """同值重写:仍占版本(写语义统一),行带 same_value=True
+    (判读者可辨「重复写」与「值变化」)。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        set_run_id_provider,
+        set_state_journal_sink,
+    )
+    gs = _gs()
+    gs.observe(gs.gold, 9, sig=_sig())
+    run_sink: list[dict] = []
+    set_state_journal_sink(run_sink.append)
+    set_run_id_provider(lambda: 'run_probe')
+    try:
+        gs.observe(gs.gold, 9, sig=_sig())
+    finally:
+        set_state_journal_sink(None)
+        set_run_id_provider(None)
+    assert gs.current_version() == 2
+    assert run_sink[-1]['same_value'] is True
+
+
+def test_match_facts_domain_version_bumped_lands_in_journal_rows() -> None:
+    """match_facts 域版本 bump 落行(接管域):DEFAULT_GS_SCHEMA 声明值与
+    写行内嵌快照 state.gs_schema 同值(行行自足,判读不前溯可查域版本)。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        DEFAULT_GS_SCHEMA,
+        set_run_id_provider,
+        set_state_journal_sink,
+    )
+    gs = _gs()
+    run_sink: list[dict] = []
+    set_state_journal_sink(run_sink.append)
+    set_run_id_provider(lambda: 'run_probe')
+    try:
+        gs.write_logic(gs.lv999_cost_tier, 1, produced_by='ContractTest',
+                       evidence='match_facts_domain_version_probe',
+                       sig=_lsig())
+    finally:
+        set_state_journal_sink(None)
+        set_run_id_provider(None)
+    assert len(run_sink) == 1
+    row = run_sink[0]
+    assert row['row'] == 'write' and row['field'] == 'lv999_cost_tier'
+    assert row['after'] == 1
+    assert row['state']['gs_schema']['match_facts'] \
+        == DEFAULT_GS_SCHEMA['match_facts'], \
+        '域版本 bump 落行(行内 state 快照携带,与声明值同源)'
+
+
+def test_obs_event_consumes_version_without_state_change(journal_sink) -> None:
+    """观察事件行(行型 2):同流占版本、零 Field 变更;事件词表封闭
+    (arbitrate|miss|popup|chain_diff),集外炸错。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        OBS_EVENT_EVENTS,
+        set_run_id_provider,
+        set_state_journal_sink,
+    )
+    assert OBS_EVENT_EVENTS == ('arbitrate', 'miss', 'popup', 'chain_diff')
+    gs = _gs()
+    gs.observe(gs.gold, 3, sig=_sig())
+    v = gs.current_version()
+    run_sink: list[dict] = []
+    set_state_journal_sink(run_sink.append)
+    set_run_id_provider(lambda: 'run_probe')
+    try:
+        gs.note_obs_event('arbitrate', 'hp', {'old': 1, 'new': 2},
+                          verdict='冲突', sig=_sig())
+    finally:
+        set_state_journal_sink(None)
+        set_run_id_provider(None)
+    assert gs.current_version() == v + 1, 'obs_event 占版本'
+    assert gs.gold.value == 3, '零状态变更'
+    assert run_sink[-1]['row'] == 'obs_event'
+    with pytest.raises(ValueError, match='集外'):
+        gs.note_obs_event('bogus', 'hp', None, sig=_sig())
+
+
+def test_full_state_snapshot_shape() -> None:
+    """自足快照(§3.2.3):values 只收非 None;prov 记非默认来源
+    (source≠observation 或 evidence 非 None);同态同形 = 同内容快照逐键一致。"""
+    gs = _gs()
+    gs.observe(gs.gold, 30, sig=_sig())
+    gs.write_logic(gs.hp, 70, produced_by='p', sig=_lsig())
+    snap = gs.full_state_snapshot()
+    assert snap['values']['gold'] == 30 and snap['values']['hp'] == 70
+    assert 'hp' in snap['prov'] and snap['prov']['hp']['source'] == 'logic'
+    assert 'gold' not in snap['prov'], 'observation 无 evidence 不进 prov'
+    bs2 = _gs()
+    bs2.observe(bs2.gold, 30, sig=_sig())
+    bs2.write_logic(bs2.hp, 70, produced_by='p', sig=_lsig())
+    assert bs2.full_state_snapshot() == snap, '同态同形'
+
+
+def test_screen_context_writes_pair_only_no_advance() -> None:
+    """漏斗瘦身(design §2.4 攻击 B1):observe_screen_context 只写上下文对
+    (prev/current)——推进域(node_pos/hist)零触碰,四推断腿已退役;节点
+    推进唯一落账入口 = advance_node_effective(动作上报/观察锚定)。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        SCREEN_PREP_FRAME,
+    )
+    gs = _gs()
+    gs.observe_screen_context(SCREEN_PREP_FRAME, sig=_sig())
+    assert gs.current_screen.value == SCREEN_PREP_FRAME, '上下文对写入'
+    assert gs.node_pos.value is None and gs.node_hist_pos is None, \
+        '备战帧上下文零推进(腿已退役)'
+    other = _gs()
+    other.observe_screen_context('货币战争-战斗等待', sig=_sig())
+    other.observe_screen_context('货币战争-补给', sig=_sig())
+    assert other.node_pos.value is None and other.node_hist_pos is None, \
+        '战斗等待→补给(prev∈旧守卫族形态)零推进(弹窗腿已退役)'
+
+
+def test_boss_briefing_report_types_hist_node() -> None:
+    """BOSS 类型直定迁移(design §2.5 表):简报屏上报经 kernel report
+    直定 boss 类型,目标 = 现 hist;序号推进半部已退役(简报上报零
+    node_pos 写);hist 未推进 = 零写禁猜。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        observe_node_anchor,
+    )
+    from sr_od.application.currency_war.kernel.cw_screen_report.boss_briefing import (
+        CwScreenBossBriefingObs,
+        report_screen_boss_briefing_obs,
+    )
+    gs = _gs()
+    report_screen_boss_briefing_obs(
+        gs, CwScreenBossBriefingObs(on_screen=True))
+    assert gs.node.value is None, 'hist 未推进零写(禁猜)'
+    assert gs.node_pos.value is None, '简报上报零序号写(序号半部已退役)'
+    observe_node_anchor(gs, (2, 1),
+                        trigger_screen='货币战争-备战', actor='TestAnchor')
+    report_screen_boss_briefing_obs(
+        gs, CwScreenBossBriefingObs(on_screen=True))
+    assert gs.node.value is not None \
+        and gs.node.value.kind == 'boss', '类型随简报证据落账(boss)'
+    assert (gs.node.value.plane, gs.node.value.round_num) == (2, 1), \
+        '目标 = 现 hist 反解位(禁写死 round=9)'
+
+
+def test_board_next_tier_concrete_shape() -> None:
+    """坐标系纯函数:棋盘阵营升档 = 同阵营 ≥2 才有下一档(具体形直锁;
+    节点序位键原语锁 = test_cw_node_pos_primitive)。"""
+    assert board_next_tier_of({'仙舟': 2, '联盟': 1}) == {'仙舟': 3}
+    assert board_next_tier_of({}) == {}
+
+
+def test_write_match_final_idempotent() -> None:
+    """终局行(G12 写前查重):首写 True,同段二写 no-op 返 False
+    (终局防重)。"""
+    gs = _gs()
+    assert write_match_final(gs, final_type='loss', plane=1) is True
+    assert write_match_final(gs, final_type='loss', plane=1) is False
+
+
+def test_channel_family_closed_set() -> None:
+    """§3.2.1/§3.2.4 硬约束 2 签名门两分支:①family 封闭集 {obs,
+    logic_action, logic_hook},集外 = 红;②per-family 模态封闭(obs 族子模
+    = read/carried/prior/synthesized,logic 两族恒 compute,集外 = 红)。
+    actor 无白名单闸(仅遥测身份标注)。"""
+    for family in ('obs', 'logic_action', 'logic_hook'):
+        assert ChannelSig(family=family, actor='cw_observation').family == family
+    with pytest.raises(ValueError):
+        ChannelSig(family='event', actor='x')
+    with pytest.raises(ValueError):
+        ChannelSig(family='hook', actor='x')
+    # ② per-family 模态封闭
+    for mode in ('read', 'carried', 'prior', 'synthesized'):
+        ChannelSig(family='obs', actor='cw_observation', mode=mode)
+    with pytest.raises(ValueError):
+        ChannelSig(family='obs', actor='cw_observation', mode='compute')
+    for family in ('logic_action', 'logic_hook'):
+        ChannelSig(family=family, actor='CwScreenPrep', mode='compute')
+        with pytest.raises(ValueError):
+            ChannelSig(family=family, actor='CwScreenPrep', mode='read')
+
+
+# ============================================================ 开局种子底座 + 锚定闩 + carry 收窄
+
+#: A 类种子字段全集(与 seed_opening_state 写面一一对应;board 不入——
+#: 派生量禁双写,journal 行面断言兜住;行域合卷为 deployed 单字段)。
+_A_SEEDED: tuple[str, ...] = (
+    'deployed', 'bench', 'equips', 'occupied_equips',
+    'spheres', 'gold', 'level', 'xp', 'hp', 'streak', 'back_layout',
+    'deploy_cap', 'overflow_warning', 'overflow_card', 'active_env',
+    'active_strategies', 'pending_item_grants', 'enemy_affixes',
+    'shop_refresh_cost', 'prev_node_spent',
+    'strategy_refresh_left',
+    # 晶矿附着奖励与声明通道三域(迭代 2026-10-10-ore-reward-attach:
+    # 空底座,幂等守卫 membership 与挂接入口合并写零 None 防御)
+    'ore_rewards', 'ore_declared_pending', 'ore_declared_done',
+    # 环境条件发放已发标记(迭代 2026-10-10-env-conditional-grants:
+    # 空底座,「本局首次」守卫初始真值 = 空集)
+    'env_grants_done',
+)
+
+#: B/C 类抽检面(None = 设计语义或无观察源,设计分诊表禁种)。
+_BC_UNSEEDED: tuple[str, ...] = (
+    'node', 'node_pos', 'node_path', 'shop', 'encounter', 'supply',
+    'settlement', 'match_final', 'selected_difficulty', 'enemy_difficulty',
+    'game_mode', 'env_refresh_left', 'supply_refresh_left',
+    'encounter_refresh_left', 'plane_bosses',
+    'event_overlay',
+    'lv999_cost_tier', 'round_fresh_buys', 'level_up_cost', 'top_bar_raw',
+    'tracked_account_observed', 'consumables', 'board',
+    # 逐位面节点序列场字段(T-8:None = 未注册态是设计语义,B 类不种)
+    'node_seq_by_plane',
+)
+
+_OBS_SIG = ChannelSig(family='obs', actor='CwScreenPrep', mode='read')
+
+
+def test_cold_build_seeds_all_a_fields(monkeypatch) -> None:
+    """冷建即含种子(缓存单例支):A 类逐字段值 + 来源(logic_rand/
+    seed:opening)+ journal 种子行过滤键(actor/mode);B/C 类仍 None;
+    board 不落种子行;锚定闩缺省 False。"""
+    rows: list[dict] = []
+    monkeypatch.setattr(gs_mod, '_STATE_JOURNAL_SINK', rows.append)
+    monkeypatch.setattr(gs_mod, '_RUN_ID_PROVIDER', lambda: 'seed-t')
+    session = StrategySession()
+    gs = game_state_of(session)
+
+    # —— A 类逐字段值(种子值语义:常量引用单一源,不手抄可查表值)——
+    assert gs.bench.value == BenchView(
+        slots=[BenchSlot(kind='empty')] * BENCH_CAPACITY_DEFAULT,
+        capacity=BENCH_CAPACITY_DEFAULT)
+    assert deployed_rows_of_view(gs.deployed.value) == ([], [])
+    assert gs.deployed.value.back_slots == [None] * 6, '后排容量基线 6'
+    assert gs.equips.value == []
+    assert gs.occupied_equips.value == {}
+    assert gs.spheres.value == OreSight()
+    assert gs.ore_rewards.value == {}, '附着奖励域冷建空底座'
+    assert gs.ore_declared_pending.value == (), '声明队列冷建空底座'
+    assert gs.ore_declared_done.value == (), '声明消费标记冷建空底座'
+    assert gs.env_grants_done.value == (), '条件发放标记冷建空底座'
+    assert gs.gold.value == 3
+    assert gs.level.value == 3
+    assert gs.xp.value == (0, XP_TO_NEXT_LEVEL[3])
+    assert gs.hp.value == OPENING_HP_BASE
+    assert gs.streak.value == 0
+    assert gs.back_layout.value == 6
+    assert gs.deploy_cap.value == 3
+    assert gs.overflow_warning.value is False
+    assert gs.overflow_card.value == ''
+    assert gs.active_env.value == ''
+    assert gs.active_strategies.value == []
+    assert gs.pending_item_grants.value == [], '定时道具队列冷建空底座'
+    assert gs.enemy_affixes.value == []
+    assert gs.shop_refresh_cost.value == REFRESH_COST_BASE
+    assert gs.prev_node_spent.value is False
+    assert gs.strategy_refresh_left.value == {}
+    # —— 来源断言:logic_rand + seed:opening(种子字段全集)——
+    for name in _A_SEEDED:
+        f = getattr(gs, name)
+        assert f.source == 'logic_rand', name
+        assert f.evidence == 'seed:opening', name
+    # —— journal 种子行:过滤键 actor + mode;行字段集 = 种子全集
+    # (board 派生行不产:种子空行零差 + 板未读无派生基座 = 禁双写守住)——
+    seed_rows = [r for r in rows if r['sig']['actor'] == 'GsOpeningSeed']
+    assert {r['field'] for r in seed_rows} == set(_A_SEEDED)
+    assert all(r['sig']['mode'] == 'compute' for r in seed_rows)
+    # —— B/C 类字段仍 None ——
+    for name in _BC_UNSEEDED:
+        assert getattr(gs, name).value is None, name
+    # —— 锚定闩缺省 False(直读 + 读口解析,本体直通形态)——
+    assert gs.prep_anchored is False
+    assert prep_anchored_of(session) is False
+    assert prep_anchored_of(gs) is False
+
+
+def test_none_session_and_direct_construct_not_seeded() -> None:
+    """session=None 一次性支与直构 GameState 不种(种子只挂两个缓存单例
+    建支;测试/sim 直构域依赖未写形态)。"""
+    gs_none = game_state_of(None)
+    assert gs_none.gold.value is None
+    assert gs_none.gold.source == 'observation'   # 从未写(非种子通道)
+    assert gs_none.bench.value is None
+
+    direct = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    assert direct.gold.value is None and direct.bench.value is None
+    assert direct.level.value is None and direct.hp.value is None
+
+
+def test_reconcile_bench_anchor_sets_prep_anchored() -> None:
+    """锚定闩生产置位:reconcile_tracking bench 侧屏幕真值写回成功 →
+    prep_anchored 置位 + 读口 True(tracked True 同一成功条件)。"""
+    session = StrategySession()
+    assert prep_anchored_of(session) is False
+
+    ok, _, _ = reconcile_tracking(session, _bench_view1('花火', 1),
+                                  DeployedView(), screen=None, source='test')
+
+    assert ok is True
+    assert game_state_of(session).tracked_account_observed.value is True
+    assert game_state_of(session).prep_anchored is True
+    assert prep_anchored_of(session) is True
+
+
+def test_reconcile_deployed_only_keeps_prep_anchored_off() -> None:
+    """失败形态不置位:bench 侧未读(deployed-only 写回成功)= 未锚定,
+    闩保持 False——两闩同一成功条件,不新增判断分支。"""
+    session = StrategySession()
+
+    ok, _, _ = reconcile_tracking(session, None, DeployedView(), screen=None,
+                                  source='test')
+
+    assert ok is True   # deployed 侧照常写回
+    assert game_state_of(session).tracked_account_observed.value is None
+    assert prep_anchored_of(session) is False
+
+
+def test_carry_narrows_logic_rand_keeps_legacy() -> None:
+    """carry 收窄双臂:现值来源 logic_rand(种子态)失读不沿用——值与
+    来源不变,宁保持未验证态不洗白成 carried;非 rand 来源(logic)存量
+    行为不变(沿用 + carried:<帧> 注记)。"""
+    logic_sig = ChannelSig(family='logic_action', actor='test',
+                           mode='compute')
+    # 收窄臂:logic_rand 现值(种子形态)→ carry 不动
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    gs.write_logic_rand(gs.gold, 3, produced_by='GsOpeningSeed',
+                        evidence='seed:opening', sig=logic_sig)
+    gs.carry(gs.gold, frame='f1', sig=_OBS_SIG)
+    assert gs.gold.value == 3
+    assert gs.gold.source == 'logic_rand'
+    assert gs.gold.evidence == 'seed:opening'
+    # 存量回归臂:logic 现值照旧沿用
+    gs2 = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    gs2.write_logic(gs2.hp, 80, produced_by='test', sig=logic_sig)
+    gs2.carry(gs2.hp, frame='f1', sig=_OBS_SIG)
+    assert gs2.hp.source == 'carried'
+    assert gs2.hp.evidence == 'carried:f1'
+    assert gs2.hp.value == 80
+
+
+def _bench_view1(name: str, star: int) -> BenchView:
+    """单占用槽视图(槽 1)构造(P6 直产读载体,同 tracked 观察态锁)。"""
+    slots = [BenchSlot(kind='empty')] * 8
+    return BenchView(slots=[BenchSlot(
+        kind='unit', unit=Unit(char_id=name, star=star))] + slots)
+
+
+# ============================================================ deployed 视图桥 + 快照迁移
+# (DeployedView 容器合并落地锁:快照旧档迁移等价 / 视图 ↔ 定长工作表
+#  两桥往返 / 紧缩行序顺延 / 容量继承 / 信息位退役)
+
+_M31_SIG_OBS = ChannelSig(family='obs', actor='cw4_seed', mode='synthesized')
+
+
+def _m31_u(cid: str, star: int = 1,
+           equips: list[str] | None = None) -> Unit:
+    return Unit(char_id=cid, star=star, equips=list(equips or []))
+
+
+def _m31_gs_with(view: DeployedView,
+                 bench: list[BenchSlot] | None = None) -> GameState:
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    slots = list(bench or []) + [BenchSlot(kind='empty')] * (
+        BENCH_CAPACITY_DEFAULT - len(bench or []))
+    gs.observe(gs.bench, BenchView(slots=slots,
+                                   capacity=BENCH_CAPACITY_DEFAULT),
+               sig=_M31_SIG_OBS)
+    gs.observe(gs.deployed, view, sig=_M31_SIG_OBS)
+    gs.observe(gs.gold, 10, sig=_M31_SIG_OBS)
+    return gs
+
+
+def test_restore_migrates_schema1_rows_snapshot_by_slot_bits() -> None:
+    """旧档迁移主锁:schema 1 行域档 → deployed 视图按 slot 信息位
+    等价落位(前排槽 4 → front_slots[3];后排槽 1 → back_slots[0]);
+    行键消费后摘除,restore 幂等可重放。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        restore_state_snapshot,
+    )
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    snap = {'values': {
+        'front_row': [{'char_id': '丙', 'star': 2, 'equips': ['轮滑鞋'],
+                       'slot': 4}],
+        'back_row': [{'char_id': '丁', 'star': 1, 'equips': [],
+                      'slot': 1}],
+    }, 'prov': {}}
+
+    restore_state_snapshot(gs, snap)
+
+    view = gs.deployed.value
+    assert [u.char_id if u else None for u in view.front_slots] \
+        == [None, None, None, '丙'], '槽位语义等价(前排槽 4 → 下标 3)'
+    assert [u.char_id if u else None for u in view.back_slots][:2] \
+        == ['丁', None], '后排槽 1 → 下标 0'
+    assert view.front_slots[3].equips == ['轮滑鞋'], '装备随单位重建'
+    # 重放幂等(转换不破坏原 snap:values 拷贝单次转换)
+    gs2 = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    restore_state_snapshot(gs2, snap)
+    assert gs2.deployed.value == view
+
+
+def test_restore_migrates_missing_slot_bits_sequential_fallback() -> None:
+    """迁移兜底腿:slot 信息位缺席(0)按占用序顺延;越界(>cap)
+    同兜底(旧 deployed_rows_to_indexed 兼容口径同向)。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        restore_state_snapshot,
+    )
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    restore_state_snapshot(gs, {'values': {
+        'front_row': [{'char_id': '甲', 'star': 1, 'equips': [], 'slot': 0},
+                      {'char_id': '乙', 'star': 1, 'equips': [], 'slot': 99}],
+        'back_row': [],
+    }, 'prov': {}})
+    assert [u.char_id if u else None for u in gs.deployed.value.front_slots] \
+        == ['甲', '乙', None, None], '缺席/越界顺延落位'
+
+
+def test_new_schema_snapshot_round_trip_no_legacy_keys() -> None:
+    """新档往返:schema 2 快照只现 deployed 键(front_row/back_row
+    均不现),往返视图逐位等价(含空槽显式 None)。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        restore_state_snapshot,
+    )
+    gs = _m31_gs_with(DeployedView(
+        front_slots=[_m31_u('甲'), None, _m31_u('乙'), None],
+        back_slots=[None, _m31_u('丙'), None, None, None, None]))
+    snap = gs.full_state_snapshot()
+    assert 'deployed' in snap['values']
+    assert 'front_row' not in snap['values'] \
+        and 'back_row' not in snap['values'], '新档行键不现'
+
+    gs2 = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    restore_state_snapshot(gs2, snap)
+    assert gs2.deployed.value == gs.deployed.value, '往返逐位等价'
+
+
+def test_indexed_bridge_round_trip_within_back_capacity() -> None:
+    """两桥往返等价:视图 → 定长 10 表 → 视图(后排容量 6 内逐位
+    等价;7-9 扩展格截断 = 旧 tracked 表硬上限语义,续辖)。"""
+    view = DeployedView(
+        front_slots=[_m31_u('甲'), None, _m31_u('乙'), None],
+        back_slots=[None, _m31_u('丙'), None, None, _m31_u('丁'), None,
+                    _m31_u('越界七格')])   # 后排第 7 格(超出 6)
+    dep = deployed_indexed_of_view(view)
+    assert len(dep) == 10, '定长 10 工作表'
+    assert dep[0].char_id == '甲' and dep[2].char_id == '乙'
+    assert dep[5].char_id == '丙' and dep[8].char_id == '丁'
+    assert dep[9] is None
+    back2 = deployed_view_of_indexed(dep, view)
+    assert back2.front_slots == view.front_slots
+    assert back2.back_slots[:6] == view.back_slots[:6]
+    assert back2.back_slots[6:] == [_m31_u('越界七格')], \
+        '7-9 扩展格继承原视图(容量改写不丢扩展格)'
+
+
+def test_sequential_placement_matches_compact_row_semantics() -> None:
+    """紧缩行序顺延落位 = 旧紧凑行域「顺序即占位」口径:第 k 个单位
+    落槽 k;紧缩行读回(deployed_rows_of_view)保序往返。"""
+    view = deployed_view_sequential(
+        [_m31_u('甲'), _m31_u('乙')], [_m31_u('丙'), _m31_u('丁')],
+        back_capacity=6)
+    assert [u.char_id if u else None for u in view.front_slots] \
+        == ['甲', '乙', None, None]
+    assert [u.char_id if u else None for u in view.back_slots] \
+        == ['丙', '丁', None, None, None, None]
+    front, back = deployed_rows_of_view(view)
+    assert [u.char_id for u in front] == ['甲', '乙']
+    assert [u.char_id for u in back] == ['丙', '丁'], '紧缩行保序'
+
+
+def test_deployed_field_replacement_inherits_capacity() -> None:
+    """容量变化 = 整视图结构性写:seed 底座后排容量 6;7-9 扩展格由
+    语义写端显式扩容(工作副本桥 orig 参继承),禁静默截断。"""
+    view = deployed_view_sequential([], [_m31_u('甲')] * 7, back_capacity=7)
+    assert len(view.back_slots) == 7, '7 格局显式扩容'
+    dep = deployed_indexed_of_view(view)
+    assert [d.char_id for d in dep[4:10]] == ['甲'] * 6, \
+        '动作坐标系 10 槽内:后排 1-6 格'
+    rebuilt = deployed_view_of_indexed(dep, view)
+    assert rebuilt.back_slots == view.back_slots, \
+        '桥继承 orig 容量(7 格不截断回 6)'
+
+
+def test_unit_has_no_slot_information_bit() -> None:
+    """信息位退役直锁:Unit 数据类无 slot 字段(位置 = 载体下标纯派生;
+    快照序列化同样不出现该键)。"""
+    assert not any(f.name == 'slot' for f in dataclasses.fields(Unit))
+    gs = _m31_gs_with(DeployedView(front_slots=[_m31_u('甲'), None, None, None],
+                                   back_slots=[None] * 6))
+    snap = gs.full_state_snapshot()
+    front_raw = snap['values']['deployed']['front_slots']
+    assert front_raw[0] == {'char_id': '甲', 'star': 1, 'equips': []}, \
+        '序列化键集 = 身份/星级/装备(槽位不入 Unit)'
+
+
+def test_deployed_view_of_hits_back_bounds_and_extension() -> None:
+    """观察命中构造的越界边界:后排命中越提示容量但在布局值域 {6..9}
+    内 → 扩容落位;超上界 9 或 <1 → 丢弃留证不崩。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        deployed_view_of_hits,
+    )
+    view = deployed_view_of_hits(
+        [], [(8, _m31_u('甲')), (3, _m31_u('乙'))], back_capacity=6)
+    assert len(view.back_slots) == 8, '合法命中(≤9)越提示 6 → 扩容'
+    assert view.back_slots[7].char_id == '甲'
+    assert view.back_slots[2].char_id == '乙'
+
+    view2 = deployed_view_of_hits(
+        [], [(10, _m31_u('越界')), (0, _m31_u('零位'))], back_capacity=9)
+    assert all(u is None for u in view2.back_slots), \
+        '>布局上界 9 / <1 → 丢弃(读链漂移留证,不扩容不落位)'
+    assert len(view2.back_slots) == 9, '容量不被漂移命中撑大'
 
 

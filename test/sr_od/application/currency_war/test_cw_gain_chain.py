@@ -27,22 +27,37 @@ docs/develop/sr_od/application/currency_war/game_state/gain-chain.md
   兜底仍触发且终态兜底 reason = unrouted_leg_zero_write)、授予失败
   调用点级 best-effort(腿型分派照常 + joy_conditional_grant_failed
   留证行)、授予走链固定时序(预置两枚同候选可合成);弱化兜底档退役
-  锁(分类落 unknown/打分两档制)归 test_cw_yinlang_phase32.py。
+  锁(分类落 unknown/打分两档制)归 test_cw_planner_report.py;
+- **LV.999 变换窗**(银狼费用档变换,2026-09-18 定谳〔口述·权威〕:
+  费用档不同时存在,分组键 (char_id, star) 无跨档歧义):升费腿 2★→1★
+  变换三态与级联合并、上阵 3★→1★ 变换窗与恒等搬运对照;
+- **选卡上报落地**(投资策略屏/portal 经获得链):策略屏注册去重 +
+  骇客效果分派、portal 整支走获得链、表外安静不写;
+- **卖/换动作上报 v2 族契约**(sell bench/deployed + swap deploy:
+  出参 applied/reason/income + 域写回 + 未辖域零写;原金样迁移史见
+  git 历史,现锁 = 活上报函数直锁)。
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    deployed_view_sequential as _dvs,
-)
-
-import dataclasses
 import random
 
 import pytest
 
 from sr_od.application.currency_war.kernel import cw_gain_chain, cw_investments
+from sr_od.application.currency_war.kernel.cw_action_report import (
+    report_action_deploy_move_param,
+    report_action_pick_invest_env_param,
+    report_action_pick_invest_strategy_param,
+    report_action_sell_bench_param,
+    report_action_sell_deployed_param,
+    report_action_swap_deploy_param,
+)
 from sr_od.application.currency_war.kernel.cw_action_report.pick_planner import (
     report_action_pick_planner_param,
+)
+from sr_od.application.currency_war.kernel.cw_economy import (
+    bench_char_cost,
+    sell_refund,
 )
 from sr_od.application.currency_war.kernel.cw_effect_inventory import (
     SOURCE_STRATEGY,
@@ -51,7 +66,6 @@ from sr_od.application.currency_war.kernel.cw_gain_chain import (
     DEFECT_ADVISOR_DECL,
     DEFECT_OVERFLOW_TAKEN,
     PICK_INVEST_INVALID_PAYLOAD,
-    GainOutcome,
     discharge_due_item_grants,
     gain_bench_item,
     gain_character,
@@ -67,11 +81,17 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     BenchView,
     ChannelSig,
     GameState,
+    NodeKey,
+    ShopPayload,
+    ShopSlot,
     Unit,
     bench_units_of,
     consume_defect_sink,
     game_state_of,
     set_defect_sink,
+)
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    deployed_view_sequential as _dvs,
 )
 from sr_od.application.currency_war.kernel.cw_investments import (
     BENCH_ITEM_NAMES,
@@ -83,8 +103,19 @@ from sr_od.application.currency_war.kernel.cw_investments import (
 from sr_od.application.currency_war.kernel.cw_merge_simulate import (
     merge_simulate,
 )
+from sr_od.application.currency_war.kernel.cw_node_schedule import (
+    PLANE_NODE_TABLES,
+)
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
+)
+from sr_od.application.currency_war.kernel.cw_vocab import (
+    CwActionDeployMoveParam,
+    CwActionPickInvestEnvParam,
+    CwActionPickInvestStrategyParam,
+    CwActionSellBenchParam,
+    CwActionSellDeployedParam,
+    CwActionSwapDeployParam,
 )
 
 _SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep')
@@ -97,6 +128,7 @@ def _lsig(actor: str = 'CwGainChain') -> ChannelSig:
 def _make_gs(*, bench: list[tuple[str, int]] | None = None,
              front: list[Unit] | None = None,
              equips: list[str] | None = None,
+             gold: int | None = None,
              overflow_card: str | None = None,
              overflow_warning: bool | None = None) -> GameState:
     """观测面按参组装(None = 保持未观察,供未观察边界腿)。"""
@@ -111,6 +143,8 @@ def _make_gs(*, bench: list[tuple[str, int]] | None = None,
         gs.observe(gs.deployed, _dvs(list(front), []), sig=_SIG_OBS)
     if equips is not None:
         gs.observe(gs.equips, list(equips), sig=_SIG_OBS)
+    if gold is not None:
+        gs.observe(gs.gold, gold, sig=_SIG_OBS)
     if overflow_card is not None:
         gs.observe(gs.overflow_card, overflow_card, sig=_SIG_OBS)
     if overflow_warning is not None:
@@ -691,13 +725,8 @@ def test_gain_equipment_consequence_and_quiet() -> None:
     assert bench_units_of(gs2) == [], '表外件无后果声明,零单位写'
 
 
-def test_gain_outcome_shape_on_skip() -> None:
-    """GainOutcome 为 frozen 留证载体(§2.1;沿 BenchGrantResult 先例,
-    零决策消费)——拒落路径的形状锁(detail 键词表)。"""
-    o = GainOutcome(placed=False, landing='skipped', merge_levels=0,
-                    effects=(), detail='bench_unobserved')
-    with pytest.raises(dataclasses.FrozenInstanceError):
-        o.placed = True   # type: ignore[misc]  # frozen 载体禁就地改
+# (GainOutcome frozen 形状构造断言已删:dataclass 冻结属性为语言级保证,
+#  无可判别的运行故障形态——留证载体行为由各拒落路径测试实锁。)
 
 
 # ============================================================ 获得投资策略(策略屏迁移批 3.1)
@@ -1083,3 +1112,496 @@ def test_joy_rider_grant_chain_timing_merge(rows_sink: _RowSink) -> None:
     units = [(u.char_id, u.star) for u in bench_units_of(gs)]
     assert units == [(cands[0], 2)], '三枚合成 2★(链固定时序,非旁路直写)'
     assert rows_sink.kinds() == [], '正常授予合成零留证行'
+
+
+# ============================================================ LV.999 变换窗
+# (银狼费用档变换;升费腿经 pick_planner 上报、上阵腿经 deploy_move 上报,
+#  2026-09-18 定谳〔口述·权威〕:费用档不同时存在,分组键 (char_id, star)
+#  无跨档歧义)
+
+
+def test_upgrade_transform_exactly_one(rows_sink: _RowSink) -> None:
+    """恰一枚 2★银狼LV.999 → 工作副本变换(2★→1★,身份保持),write_logic。"""
+    gs = _make_gs(bench=[('希儿', 1), ('银狼LV.999', 2)], equips=[])
+    out = report_action_pick_planner_param(gs, None, leg_type='upgrade',
+                                           norm_item='',
+                                           sig=_lsig('CwScreenYinLang'))
+    assert out.applied is True
+    units = [(u.char_id, u.star) for u in bench_units_of(gs)]
+    assert ('银狼LV.999', 1) in units, '变换为 1★(下一费用档,身份保持)'
+    assert ('银狼LV.999', 2) not in units, '2★ 源已消费'
+    assert ('希儿', 1) in units, '无关单位零差'
+    assert gs.bench.source == 'logic', '确定面 write_logic'
+    assert rows_sink.kinds() == [], '正常变换零留证行'
+
+
+def test_upgrade_transform_multiple_flips_source(rows_sink: _RowSink) -> None:
+    """多枚(二次升费现实可发)→ 禁猜:值不变翻来源 + 留证自愈。"""
+    gs = _make_gs(bench=[('银狼LV.999', 2), ('银狼LV.999', 2)], equips=[])
+    seq_before = gs.write_seq
+    out = report_action_pick_planner_param(gs, None, leg_type='upgrade',
+                                           norm_item='',
+                                           sig=_lsig('CwScreenYinLang'))
+    assert out.applied is True
+    stars = sorted(u.star for u in bench_units_of(gs)
+                   if u.char_id == '银狼LV.999')
+    assert stars == [2, 2], '值不变(触发单位不可辨,不写变换)'
+    assert gs.bench.source == 'logic_rand', '受影响域值不变翻来源'
+    assert gs.write_seq > seq_before, '翻来源占写序(遥测行)'
+    assert rows_sink.kinds() == ['planner_upgrade_ambiguous'], '留证行 kind'
+
+
+def test_upgrade_transform_zero_or_unobserved(rows_sink: _RowSink) -> None:
+    """零枚/未观察 → 不写 + 留证(真异常,照真失配响停,fail-closed 禁猜)。"""
+    # 零枚(已观察但无 2★ 源)。
+    gs = _make_gs(bench=[('银狼LV.999', 1)], equips=[])
+    seq_before = gs.write_seq
+    out = report_action_pick_planner_param(gs, None, leg_type='upgrade',
+                                           norm_item='',
+                                           sig=_lsig('CwScreenYinLang'))
+    assert out.applied is False and out.reason == 'upgrade_source_missing'
+    assert gs.write_seq == seq_before, '零枚不写'
+    assert rows_sink.kinds() == ['planner_upgrade_source_missing']
+    # 未观察(三容器全 None)同态。
+    gs2 = _make_gs()
+    out2 = report_action_pick_planner_param(gs2, None, leg_type='upgrade',
+                                            norm_item='',
+                                            sig=_lsig('CwScreenYinLang'))
+    assert out2.applied is False and out2.reason == 'upgrade_source_unobserved'
+    assert rows_sink.kinds() == ['planner_upgrade_source_missing',
+                                 'planner_upgrade_source_missing']
+
+
+def test_upgrade_cascade_lv999_normal_merge(rows_sink: _RowSink) -> None:
+    """涉 LV.999 级联合并正常推演锁(费用档不同时存在——分组键
+    (char_id, star) 无跨档歧义):变换出的 1★ 凑满同星组 → 与普通单位
+    同语义升星(write_logic 逐级落行,零留证行)。"""
+    gs = _make_gs(bench=[('银狼LV.999', 2), ('银狼LV.999', 1),
+                         ('银狼LV.999', 1)], equips=[])
+    out = report_action_pick_planner_param(gs, None, leg_type='upgrade',
+                                           norm_item='',
+                                           sig=_lsig('CwScreenYinLang'))
+    assert out.applied is True
+    units = [(u.char_id, u.star) for u in bench_units_of(gs)]
+    assert units == [('银狼LV.999', 2)], '正常推演:3×1★ 合成 → 2★(普通单位同语义)'
+    assert gs.bench.source == 'logic', '级联确定面 write_logic'
+    assert rows_sink.kinds() == [], '正常推演零留证行'
+
+
+def test_deploy_transform_window_3star_lv999(rows_sink: _RowSink) -> None:
+    """上阵变换窗:3★银狼LV.999 拖上场 → 落场写下一费用档 1★(非 3★
+    原样)+ bench 摘除源;级联无组可合 → 零额外行。"""
+    gs = _make_gs(bench=[('银狼LV.999', 3), ('希儿', 1)],
+                  front=[Unit(char_id='黑塔', star=1)], equips=[])
+    out = report_action_deploy_move_param(
+        gs, CwActionDeployMoveParam(bench_idx=0, to_row='front', to_slot=2,
+                                    faction=''),
+        _lsig('CwActionDeployMoveOp'))
+    assert out.applied is True
+    assert gs.deployed.value.front_slots[1].char_id == '银狼LV.999', '落场'
+    assert gs.deployed.value.front_slots[1].star == 1, '变换窗:落场写 1★(下一费用档)'
+    assert gs.deployed.source == 'logic'
+    assert gs.lv999_cost_tier.value == 4, '上阵变费档行(3费档 3★ 上场 → 4)'
+    bench_units = [(u.char_id, u.star) for u in bench_units_of(gs)]
+    assert ('希儿', 1) in bench_units and \
+        ('银狼LV.999', 3) not in bench_units, 'bench 源已摘除'
+    assert rows_sink.kinds() == [], '无组可合零留证'
+
+
+def test_deploy_non_target_identity(rows_sink: _RowSink) -> None:
+    """非 (银狼LV.999,3★) 单位 = 恒等搬运零行为差(2★ LV.999 与 3★ 普通件)。"""
+    for bench_units, idx in (
+            ([('银狼LV.999', 2), ('希儿', 3)], 1),   # 3★ 非目标角色
+            ([('银狼LV.999', 3), ('银狼LV.999', 2)], 1)):  # 2★ 目标名
+        gs = _make_gs(bench=bench_units, front=[], equips=[])
+        out = report_action_deploy_move_param(
+            gs, CwActionDeployMoveParam(bench_idx=idx, to_row='back',
+                                        to_slot=1, faction=''),
+            _lsig('CwActionDeployMoveOp'))
+        assert out.applied is True
+        moved = gs.deployed.value.back_slots[0]
+        assert moved.star == bench_units[idx][1], \
+            f'恒等搬运保持 {bench_units[idx]} 星级'
+        assert gs.lv999_cost_tier.value is None, '非目标恒等搬运零档写'
+        assert rows_sink.kinds() == []
+
+
+def test_deploy_cascade_lv999_normal_merge(rows_sink: _RowSink) -> None:
+    """上阵级联正常推演锁(同 2026-09-18 定谳,普通单位同语义):变换出的
+    1★ 落场与备战 2× 1★ 凑满全场同星组 → 合成载体 = 场上那张(场上优先,
+    _merge_bench 语义),备战素材被消费腾槽,write_logic 逐级落行。"""
+    gs = _make_gs(bench=[('银狼LV.999', 3), ('银狼LV.999', 1),
+                         ('银狼LV.999', 1)], front=[], equips=[])
+    out = report_action_deploy_move_param(
+        gs, CwActionDeployMoveParam(bench_idx=0, to_row='front', to_slot=1,
+                                    faction=''),
+        _lsig('CwActionDeployMoveOp'))
+    assert out.applied is True
+    assert gs.deployed.value.front_slots[0].star == 2, '级联正常推演:场上载体 1★→2★'
+    assert gs.lv999_cost_tier.value == 4, '上阵变费档行(级联同批落)'
+    bench_units = [(u.char_id, u.star) for u in bench_units_of(gs)]
+    assert bench_units == [], '备战素材被合成消费腾槽'
+    assert gs.bench.source == 'logic' \
+        and gs.deployed.source == 'logic', '受影响域逐级落行(write_logic)'
+    assert rows_sink.kinds() == [], '正常推演零留证行'
+
+
+# ============================================================ 选卡上报落地
+# (投资策略屏/portal 经获得链落账;按 idx 取名契约 = op-layer.md §1.1
+#  观察标准化门)
+
+
+def test_invest_strategy_landing_hacker_wolf(
+        monkeypatch: pytest.MonkeyPatch,
+        rows_sink: _RowSink) -> None:
+    """策略屏选择即时上报:点完即写入 = 注册按名字去重追加
+    (active_strategies)+ 登记腿(session=None 跳过)+ 效果分派
+    骇客专家:银狼(经获得链:狼腿 gain_character 入席合成 + 商店池
+    申报行 + 改件 gain_equipment 采样入栏,后果表件经 on_equipment_gained
+    回调送单位);翻来源域集不含 gold(对抗审⑪)。"""
+    # 场景一:改件采样 = 破解芯片(表外件,链内无后果腿)。
+    monkeypatch.setattr(random.Random, 'choice',
+                        lambda self, seq: '破解芯片')
+    gs = _make_gs(bench=[('银狼', 1), ('银狼', 1)], equips=[], gold=30)
+    seq_before = gs.write_seq
+    param = CwActionPickInvestStrategyParam(idx=0, norm_name='骇客专家:银狼')
+    out = report_action_pick_invest_strategy_param(
+        gs, param, _lsig('CwActionPickInvestOp'))
+    assert out.applied is True and out.reason == 'gain_chain_applied'
+    assert gs.write_seq > seq_before, '分步更新各占写序(多遥测行 = 预期)'
+    assert gs.active_strategies.value == ['骇客专家:银狼'], '注册入持卡面'
+    # 投资策略屏在生产链序(简报→投资环境→投资策略→备战)位于锚定(备战
+    # heavy)之前,通道规则「未锚定 → 随机态」使确定入口链写改道
+    # logic_rand(开局种子底座与锚定闩批行为申报,首观察静默覆盖)。
+    assert gs.active_strategies.source == 'logic_rand'
+    units = [(u.char_id, u.star) for u in bench_units_of(gs)]
+    assert units == [('银狼', 2)], '狼腿经链:送出 1★银狼与既有合成 → 2★'
+    assert gs.equips.value == ['破解芯片'], '随机改件入栏(采样值)'
+    assert gs.equips.source == 'logic_rand', '随机腿 logic_rand'
+    assert gs.gold.source == 'observation' and gs.gold.value == 30, \
+        'gold 不翻来源(改件链域集裁剪,无噪声行)'
+    assert 'pick_invest_shop_pool_decl' in rows_sink.kinds(), '商店池腿遥测申报行'
+    # 去重:同卡二次上报 → 持卡面跳写不重复;效果腿零闸照走(裁定⑩)。
+    seq2 = gs.write_seq
+    report_action_pick_invest_strategy_param(
+        gs, param, _lsig('CwActionPickInvestOp'))
+    assert gs.active_strategies.value == ['骇客专家:银狼'], '持卡面单份(去重)'
+    assert gs.write_seq > seq2, '效果腿照走(零幂等闸)'
+    # 场景二:改件采样命中后果表三件(Max 件张力形状)→ 回调后果腿
+    #(gain_equipment → on_equipment_gained 回调 → gain_character 送单位)。
+    monkeypatch.setattr(random.Random, 'choice',
+                        lambda self, seq: '数据拷贝仪Max')
+    gs3 = _make_gs(bench=[('希儿', 1)], equips=[])
+    out3 = report_action_pick_invest_strategy_param(
+        gs3, param, _lsig('CwActionPickInvestOp'))
+    assert out3.applied is True
+    assert gs3.equips.value == ['数据拷贝仪Max'], '改件入栏'
+    units3 = [(u.char_id, u.star) for u in bench_units_of(gs3)]
+    assert ('银狼LV.999', 1) in units3, '回调后果:改件送出 1★ 银狼LV.999'
+
+
+def test_invest_strategy_landing_invalid_payload(
+        rows_sink: _RowSink) -> None:
+    """无效载荷拒绝(即时上报契约配套):归一后空/'?' = 零写 + 缺陷留证,
+    持卡面不收无效名。"""
+    for bad in ('', '?'):
+        gs = _make_gs(bench=[('希儿', 1)], equips=['幸运星'])
+        seq_before = gs.write_seq
+        out = report_action_pick_invest_strategy_param(
+            gs, CwActionPickInvestStrategyParam(idx=0, norm_name=bad),
+            _lsig('CwActionPickInvestOp'))
+        assert out.applied is True
+        assert gs.active_strategies.value in (None, []), '零写'
+        assert gs.write_seq == seq_before
+    assert rows_sink.kinds() == ['pick_invest_invalid_payload',
+                                 'pick_invest_invalid_payload']
+
+
+def test_invest_portal_landing_no_card_pollution(
+        rows_sink: _RowSink) -> None:
+    """portal 确认(欢愉契约)整支走获得链:active_env 写(选择事实落地
+    经 gain_invest_env)+ 银狼LV.999 1★ 入席递归(on_env_gained
+    chars_immediate 唯一腿——条件腿临时翻来源闩已撤:零翻面、零
+    provisional 标记行,正式模型 = 银狼策划上报条件腿 rider,锁面 =
+    本文件 rider 组);禁入 active_strategies(防 portal 卡污染持卡面)。"""
+    gs = _make_gs(bench=[('希儿', 1)], equips=['幸运星'], gold=30)
+    # 按 idx 取名契约(op-layer.md §1.1 观察标准化门):env 上报自容器
+    # invest_env_opts 取标准名——播种容器承载(名字 = 原 norm_name 语义)。
+    gs.write_logic(gs.invest_env_opts, ['彩虹时代', '欢愉契约'],
+                   produced_by='test', sig=_lsig('CwScreenYinLang'))
+    param = CwActionPickInvestEnvParam(idx=1, norm_name='欢愉契约')
+    out = report_action_pick_invest_env_param(
+        gs, param, _lsig('CwActionPickInvestOp'))
+    assert out.applied is True and out.reason == 'gain_chain_applied'
+    assert gs.active_strategies.value in (None, []), '双屏分流防污染锁'
+    assert gs.active_env.value == '欢愉契约', '选择事实落地经获得链写'
+    # 投资环境屏同在锚定前(未锚定期):链写改道 logic_rand(通道规则)。
+    assert gs.active_env.source == 'logic_rand'
+    units = [(u.char_id, u.star) for u in bench_units_of(gs)]
+    assert units == [('希儿', 1), ('银狼LV.999', 1)], \
+        'immediate 腿唯一(撤闩后 on_env_gained 仅 chars_immediate)'
+    assert gs.bench.source == 'logic_rand', '送卡链写未锚定期改道随机态'
+    assert gs.equips.source == 'observation' \
+        and gs.equips.value == ['幸运星'], '零翻面(equips 值与来源均不动)'
+    assert rows_sink.kinds() == [], 'provisional 标记行零发射(撤闩后台账零新增)'
+
+
+def test_invest_portal_env_gifts_full_access(
+        rows_sink: _RowSink) -> None:
+    """ENV_GIFTS 全量即时发放经落地相可用(此前仅欢愉契约有容器写腿,
+    现契约类 chars_immediate 全部经链生效;表外环境安静不写)。
+    公司契约 = 翡翠/砂金 逐个 1★ 入席递归。"""
+    gs = _make_gs(bench=[], equips=[])
+    # 按 idx 取名契约(op-layer.md §1.1):上报自容器取标准名,播种承载。
+    gs.write_logic(gs.invest_env_opts, ['公司契约'],
+                   produced_by='test', sig=_lsig('CwScreenYinLang'))
+    out = report_action_pick_invest_env_param(
+        gs, CwActionPickInvestEnvParam(idx=0, norm_name='公司契约'),
+        _lsig('CwActionPickInvestOp'))
+    assert out.applied is True and out.reason == 'gain_chain_applied'
+    assert gs.active_env.value == '公司契约'
+    units = [(u.char_id, u.star) for u in bench_units_of(gs)]
+    assert units == [('翡翠', 1), ('砂金', 1)], 'chars_immediate 逐个入席'
+    # 未锚定期(投资环境屏)送卡链写被通道规则改道 logic_rand。
+    assert gs.bench.source == 'logic_rand'
+    assert rows_sink.kinds() == [], '非欢愉契约零留证行'
+
+
+def test_invest_unregistered_card_unchanged(
+        rows_sink: _RowSink) -> None:
+    """未收录卡行为回归锁:策略屏未收录卡只走第一步(入表零效果);portal
+    表外环境 = active_env 选择事实写(经获得链,写时点随选卡上报迁移)+
+    效果面安静不写(表外环境零入席)。"""
+    gs = _make_gs(bench=[('希儿', 1)], equips=['幸运星'])
+    seq_before = gs.write_seq
+    out = report_action_pick_invest_strategy_param(
+        gs, CwActionPickInvestStrategyParam(idx=0, norm_name='随便一张未收录卡'),
+        _lsig('CwActionPickInvestOp'))
+    assert out.applied is True
+    assert gs.active_strategies.value == ['随便一张未收录卡'], \
+        '未收录策略只走第一步'
+    assert gs.write_seq == seq_before + 1, '恰一行遥测(持卡面),零效果腿'
+    # portal 表外环境 = 选择事实写 + 零效果。
+    gs2 = _make_gs(bench=[('希儿', 1)], equips=['幸运星'])
+    # 按 idx 取名契约(op-layer.md §1.1):上报自容器取标准名,播种承载。
+    gs2.write_logic(gs2.invest_env_opts, ['随便一个未收录环境'],
+                    produced_by='test', sig=_lsig('CwScreenYinLang'))
+    seq2_before = gs2.write_seq
+    out2 = report_action_pick_invest_env_param(
+        gs2, CwActionPickInvestEnvParam(idx=0, norm_name='随便一个未收录环境'),
+        _lsig('CwActionPickInvestOp'))
+    assert out2.applied is True
+    assert gs2.active_env.value == '随便一个未收录环境', \
+        '选择事实落地写(表外环境同样经链注册)'
+    # 注册尾段恒两行:active_env 选择事实 + node_seq_by_plane 场字段
+    #(表外环境落默认表,字段恒全量无半态;写点唯一 = 获得链尾段)。
+    assert gs2.write_seq == seq2_before + 2, \
+        '恰 active_env + node_seq_by_plane 两行(零其他效果腿)'
+    assert gs2.node_seq_by_plane.value == dict(PLANE_NODE_TABLES), \
+        '表外环境场字段落默认表'
+    assert bench_units_of(gs2) and \
+        [(u.char_id, u.star) for u in bench_units_of(gs2)] == [('希儿', 1)], \
+        '表外环境零入席(安静不写)'
+    assert gs2.active_strategies.value in (None, [])
+
+
+def test_grant_channel_consequence_anchor(
+        monkeypatch: pytest.MonkeyPatch,
+        rows_sink: _RowSink) -> None:
+    """好运令牌 grant_equip_item 渠道同纳后果链锚(§2.2 全渠道):后果
+    函数对表外件零写零行为(令牌推荐四件域恒表外 = 渠道零差);表内件
+    直锁后果应用(送出 1★ 银狼LV.999 进备战席)。"""
+    from test.sr_od.application.currency_war._cw_helpers import cw4_session
+
+    from sr_od.application.currency_war.kernel.cw_effect_inventory import (
+        apply_equip_acquire_consequence,
+    )
+    session = cw4_session()
+    gs = game_state_of(session)
+    gs.observe(gs.equips, ['轮滑鞋'], sig=_SIG_OBS)
+    gs.observe(gs.bench, BenchView(slots=[BenchSlot(kind='empty')] * 9,
+                                   capacity=9), sig=_SIG_OBS)
+    seq_before = gs.write_seq
+    r = apply_equip_acquire_consequence(gs, '轮滑鞋', frame='token')
+    assert r.performed is False and r.detail == 'no_consequence_declared', \
+        '表外件零写零行为(令牌渠道零差)'
+    assert gs.write_seq == seq_before
+    r2 = apply_equip_acquire_consequence(gs, '数据拷贝仪Max', frame='token')
+    assert r2.performed is True and r2.granted == '银狼LV.999' \
+        and r2.star == 1, '表内件后果应用(送出 1★ 银狼LV.999)'
+    assert any(u.char_id == '银狼LV.999' and u.star == 1
+               for u in bench_units_of(gs))
+
+
+# ============================================================ 卖/换动作上报
+# (v2 族契约直锁:出参 applied/reason/income + gold/bench/front_row/
+#  back_row/board/equips 域写回 + 未辖域零写;历史金样对照已按到期兑现
+#  改活等价锁,初态本地构造经观察写入口。)
+
+_TR_SIG_OBS = ChannelSig(family='obs', actor='cw_observation', mode='read')
+_TR_SIG_LOGIC = ChannelSig(family='logic_action', actor='MandateV1Strategy',
+                           mode='compute')
+
+#: 初态共用底稿(原金样捕获帧 p1-r3 battle / lv5 / xp(4,20) / hp80 /
+#: 金 10);退款真值从注册表现算(1★ 银枝 cost 2),不手抄常数。
+_TR_REFUND = sell_refund(1, bench_char_cost(Unit(char_id='银枝', star=1)))
+
+_TR_EMPTY_SHOP = ShopPayload(cards=[ShopSlot(kind='empty')] * 5,
+                             refresh_probs={})
+
+
+def _tr_unit(char_id: str, slot: int, *,
+             equips: list[str] | None = None) -> Unit:
+    return Unit(char_id=char_id, star=1, equips=list(equips or []))
+
+
+def _tr_gs_with(*, bench: list[Unit], front: list[Unit], gold: int = 10,
+                equips: list[str] | None = None,
+                board: dict[str, int] | None = None) -> GameState:
+    """初态本地构造(共用底稿 + 案给定域,全部经观察写入口,生产同路)。"""
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    gs.observe(gs.node, NodeKey(plane=1, round_num=3, kind='battle'),
+               sig=_TR_SIG_OBS)
+    slots = [BenchSlot(kind='empty')] * 9
+    for i, u in enumerate(bench):
+        if u is not None:
+            slots[i] = BenchSlot(kind='unit', unit=u)
+    gs.observe(gs.bench, BenchView(slots=slots, capacity=9), sig=_TR_SIG_OBS)
+    gs.observe(gs.deployed, _dvs(list(front), []), sig=_TR_SIG_OBS)
+    if board is not None:
+        gs.observe(gs.board, dict(board), sig=_TR_SIG_OBS)
+    gs.observe(gs.back_layout, 6, sig=_TR_SIG_OBS)
+    gs.observe(gs.gold, gold, sig=_TR_SIG_OBS)
+    gs.observe(gs.level, 5, sig=_TR_SIG_OBS)
+    gs.observe(gs.xp, (4, 20), sig=_TR_SIG_OBS)
+    gs.observe(gs.hp, 80, sig=_TR_SIG_OBS)
+    gs.observe(gs.shop, ShopPayload(cards=[ShopSlot(kind='empty')] * 5,
+                                     refresh_probs={}), sig=_TR_SIG_OBS)
+    if equips is not None:
+        gs.observe(gs.equips, list(equips), sig=_TR_SIG_OBS)
+    return gs
+
+
+def _tr_bench_units(gs: GameState) -> list[tuple[int, str]]:
+    """bench 视图 → (槽下标, char_id) 紧缩断言面。"""
+    view = gs.bench.value
+    assert view is not None
+    return [(i, s.unit.char_id) for i, s in enumerate(view.slots)
+            if s.kind == 'unit' and s.unit is not None]
+
+
+def _tr_row_pairs(gs) -> list[tuple[str, int]]:
+    """前排视图 → (char_id, 物理槽号) 断言面(位置 = 子表下标 + 1 派生)。"""
+    view = gs.deployed.value
+    return [(u.char_id, i + 1) for i, u in enumerate(
+        getattr(view, 'front_slots', None) or []) if u is not None]
+
+
+# 案表:(案名, 动作构造, 初态构造参数, applied, reason(None=不辖),
+# income(None=不辖 | 数值=现算退款断言), 期望金, 期望 bench 紧缩,
+# 期望 front 行(char_id, slot) | None=断言不变, 期望 board | None=未观察
+# 不写, 期望 equips | None=未观察不写)。
+_TR_CASES = [
+    pytest.param(
+        'sellbench_apply_equips',
+        lambda: CwActionSellBenchParam(bench_idx=0, expect='银枝', reason='test'),
+        {'bench': [_tr_unit('银枝', 1, equips=['以太钻头']),
+                   _tr_unit('爻光', 2)],
+         'front': [], 'equips': ['光速螺旋桨·特权']},
+        True, None, _TR_REFUND, 10 + _TR_REFUND,
+        [(1, '爻光')], None, None, ['光速螺旋桨·特权', '以太钻头'],
+        id='sellbench-apply-equips'),
+    pytest.param(
+        'sellbench_stale_reject',
+        lambda: CwActionSellBenchParam(bench_idx=0, expect='刃', reason='test'),
+        {'bench': [_tr_unit('银枝', 1), _tr_unit('爻光', 2)], 'front': []},
+        False, 'stale_proposal:刃!=银枝', None, 10,
+        [(0, '银枝'), (1, '爻光')], None, None, None,
+        id='sellbench-stale-reject'),
+    pytest.param(
+        'selldeployed_apply',
+        lambda: CwActionSellDeployedParam(deployed_idx=0, expect='银枝', reason='test'),
+        {'bench': [], 'front': [_tr_unit('银枝', 1, equips=['以太钻头'])],
+         'board': {'星间旅人': 1, '群攻': 1}},
+        True, 'test', _TR_REFUND, 10 + _TR_REFUND,
+        [], [], {}, ['以太钻头'],
+        id='selldeployed-apply'),
+    pytest.param(
+        'selldeployed_stale_reject',
+        lambda: CwActionSellDeployedParam(deployed_idx=0, expect='刃', reason='test'),
+        {'bench': [], 'front': [_tr_unit('银枝', 1)],
+         'board': {'星间旅人': 1, '群攻': 1}},
+        False, 'stale_proposal:刃!=银枝', None, 10,
+        [], [('银枝', 1)], {'星间旅人': 1, '群攻': 1}, None,
+        id='selldeployed-stale-reject'),
+    pytest.param(
+        'swapdeploy_apply',
+        lambda: CwActionSwapDeployParam(deployed_idx=0, bench_idx=0, reason='test'),
+        {'bench': [_tr_unit('爻光', 1), _tr_unit('停云', 2)],
+         'front': [_tr_unit('银枝', 1)],
+         'board': {'星间旅人': 1, '群攻': 1}},
+        True, 'test', None, 10,
+        [(0, '银枝'), (1, '停云')], [('爻光', 1)],
+        {'仙舟': 1, '欢愉': 1}, None,
+        id='swapdeploy-apply'),
+    pytest.param(
+        'swapdeploy_idx_reject',
+        lambda: CwActionSwapDeployParam(deployed_idx=5, bench_idx=0, reason='test'),
+        {'bench': [_tr_unit('爻光', 1)], 'front': [_tr_unit('银枝', 1)],
+         'board': {'星间旅人': 1, '群攻': 1}},
+        False, 'idx_out_of_range:d5/b0', None, 10,
+        [(0, '爻光')], [('银枝', 1)], {'星间旅人': 1, '群攻': 1}, None,
+        id='swapdeploy-idx-reject'),
+]
+
+
+def _tr_report(gs: GameState, action) -> object:
+    """按动作类型直调对应上报函数(每动作一函数,零聚合分派)。"""
+    if isinstance(action, CwActionSellBenchParam):
+        return report_action_sell_bench_param(gs, action, sig=_TR_SIG_LOGIC)
+    if isinstance(action, CwActionSellDeployedParam):
+        return report_action_sell_deployed_param(gs, action, sig=_TR_SIG_LOGIC)
+    if isinstance(action, CwActionSwapDeployParam):
+        return report_action_swap_deploy_param(gs, action, sig=_TR_SIG_LOGIC)
+    raise AssertionError(f'未覆盖的动作类型:{type(action).__name__}')
+
+
+@pytest.mark.parametrize(
+    'case_name,make_action,init_kw,applied,reason,income,gold,'
+    'bench_expect,front_expect,board_expect,equips_expect',
+    _TR_CASES)
+def test_sell_swap_transfer_v2_contract(
+        case_name: str, make_action, init_kw: dict,
+        applied: bool, reason: str | None,
+        income: int | None, gold: int,
+        bench_expect: list[tuple[int, str]],
+        front_expect: list[tuple[str, int]] | None,
+        board_expect: dict[str, int] | None,
+        equips_expect: list[str] | None) -> None:
+    """v2 族直锁(案表驱动;断言域 = 平移契约申报表全集):出参契约
+    (applied/reason/income)+ gold/bench/rows/board/equips 域写回 +
+    未辖域(hp/level/xp/shop/back_layout)零写。"""
+    gs = _tr_gs_with(**init_kw)
+    out = _tr_report(gs, make_action())
+    # —— 出参契约(LogicOutcome;拒绝 = applied=False + reason 零写)——
+    assert out.applied is applied, f'{case_name}: applied'
+    if reason is not None:
+        assert out.reason == reason, f'{case_name}: reason'
+    if income is not None:
+        assert out.income == income, f'{case_name}: income(注册表现算)'
+    # —— 域写回 ——
+    assert gs.gold.value == gold, f'{case_name}: gold'
+    assert _tr_bench_units(gs) == bench_expect, f'{case_name}: bench'
+    if front_expect is not None:
+        assert _tr_row_pairs(gs) == front_expect, \
+            f'{case_name}: front_row'
+    if board_expect is not None:
+        assert gs.board.value == board_expect, f'{case_name}: board'
+    if equips_expect is not None:
+        assert gs.equips.value == equips_expect, \
+            f'{case_name}: equips(回收进 owned 池尾)'
+    # —— 未辖域零写(域封闭腿;初态常量即期望)——
+    assert gs.hp.value == 80 and gs.level.value == 5 \
+        and gs.xp.value == (4, 20), f'{case_name}: hp/level/xp 零写'
+    assert gs.back_layout.value == 6, f'{case_name}: back_layout 零写'
+    assert gs.shop.value == _TR_EMPTY_SHOP, f'{case_name}: shop 零写'

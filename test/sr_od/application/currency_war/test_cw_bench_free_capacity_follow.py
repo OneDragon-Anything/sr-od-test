@@ -2,16 +2,14 @@
 ``bench_free_slots``,跟随 BenchView.capacity——节省工位改写帧按实席
 数计,非定长 9 基线)。
 
-被锁行为(三处消费位各一,均为**关系断言**——同 occupancy 差一档
-capacity,读数严格分档;非复述单一源实现):
-1. ``cw_line_switch.e_rounds`` 买刷截断:capacity 8(6 占席 → 空位 2)
-   vs capacity 9(6 占席 → 空位 3),affordable 充裕时 rolls = 空位数,
-   E_rounds 比值 = (1+3)/(1+2) = 4/3(闭式可算,dist/p 同帧同源);
-2. ``proof.assemble_lock_frame`` c_sat 席位压力项:capacity 8(7 占席 →
-   空位 1,v_slot 席压项激活)vs capacity 9(7 占席 → 空位 2,「在库
-   免手写」门 v_slot=0)⇒ c_hold 严格分档;
-3. ``economy_cycle._scan_shop_buy_accounts`` O1 填补账:capacity 8
-   (6 占席 → 空位 2)只扩账最便宜 2 件;capacity 9 同占席 → 3 件全扩。
+被锁行为(关系断言——同 occupancy 差一档 capacity,读数严格分档;
+非复述单一源实现):``cw_line_switch.e_rounds`` 买刷截断:capacity 8
+(6 占席 → 空位 2)vs capacity 9(6 占席 → 空位 3),affordable 充裕时
+rolls = 空位数,E_rounds 比值 = (1+3)/(1+2) = 4/3(闭式可算,dist/p
+同帧同源)。
+
+(原 proof.assemble_lock_frame c_sat 席压项与 economy_cycle O1 填补账
+两锁已随退役载体在前轮删除,docstring 本处同步收敛为单锁。)
 
 载体 = 容器 BenchView 直写(节省工位效果帧的容器形态;capacity 字段
 单一源语义见 kernel BenchView docstring)。

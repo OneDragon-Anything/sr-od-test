@@ -487,7 +487,7 @@ def test_wish_chosen_written_at_reentry_adjudication_only(
                                    screen=_FRAME)   # obs 注入(观察 node 产物形态)
     # pick-op-unify:选卡+确认机械链迁入 CwActionPickWishTrialOp;本锁桩
     # 派发捕获(param/env)断言决策半产物,机械链行为锁 =
-    # test_cw_unified_action_4 祈愿 op 锁。
+    # test_cw_overlay_ops 祈愿 pick op 锁。
     dispatches: list = []
 
     class _StubPickOp:

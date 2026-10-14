@@ -11,7 +11,7 @@
       经 P72 闸拒;支A 形态/域外帧放行(指标 G=0 的判据面)。
 
 测试构造声明:候选/帧构造基建(_km/_bc/_card/_off_name/_session_stub/
-_st)保留 = test_cw_press_narrow_transition 的候选构造单一源(跨文件
+_st)保留 = test_cw_front_window_predicates 的候选构造单一源(跨文件
 消费);L1/L1b/L2/L3/L5/LF 发射面锁与档 1 锁线门负腿已退役。
 """
 from types import SimpleNamespace

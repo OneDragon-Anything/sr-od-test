@@ -43,15 +43,17 @@
   部分读 xy 自带·SIFT 交叉裁决·reader 失败信号透传 round_fail·
   标准化透传·派发 env idx-only·动作 op 容器取点守卫三臂断言零点击)
   各一锁,语义见各 docstring。
+- **补给节点锁**(CwScreenSupplyNode,两 node 形态;原 step3 文件并入):
+  chosen_supply 确认即写(真选分支单次逻辑写入 2 元组 + 机械派发照发;
+  刷新轮不写 = 真选守卫)与 supply 刷新闸(剩余语义观察真值:剩余 1 →
+  点钮恰一次终结交回;剩余 0/None → 零点击重调落选卡)各一锁;
+  另辖 act 流转形态锁(仍在节点屏 = 恰一动作 + round_wait 不计重试
+  预算;离开节点画面 = success 零动作——原 runnode 等价锁并入)。
 
 驱动方式 = 真类实例(构造走 __init__)+ 读链/门/机械点击链桩化,节点
 函数直驱(run_node 外壳)。
 """
 from __future__ import annotations
-
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    deployed_view_sequential as _dvs,
-)
 
 from types import SimpleNamespace
 
@@ -70,13 +72,18 @@ from sr_od.application.currency_war.kernel.cw_events import (
     EncounterOption,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
+    deployed_view_sequential as _dvs,
+)
+from sr_od.application.currency_war.kernel.cw_game_state import (
     game_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import StrategySession
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionPickEncounterParam,
     CwActionPickMegastarParam,
+    CwActionPickSupplyParam,
     CwActionRefreshNodeOptionsParam,
+    CwActionRefreshSupplyParam,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     StrategyState,
@@ -521,6 +528,26 @@ def test_megastar_observe_gate_completes_off_overlay(
     assert calls == [], '离屏早退 = 不发动作'
     assert game_state_of(session).megastar_opts.value is None, (
         '门早退不进读链,容器零写')
+    # act 顶部裁决腿(并入原 runnode 流转等价锁):门仍 miss = overlay 已
+    # 消失 → 决策动作 node 完成裁决 success 交回,完成承诺 = 固定 settle
+    # 时长(round_success wait 形参,经包装捕获),零动作。
+    # 红 = 完成裁决丢失 / settle 等待承诺漂移 / 完成轮误动作。
+    from sr_od.application.currency_war.operations.cw_screen.cw_flow_const import (
+        CW_OVERLAY_SETTLE_S,
+    )
+    _wait_seen: list[float] = []
+    _orig_round_success = op.round_success
+
+    def _rs_capture(status='', wait: float = 0):
+        _wait_seen.append(wait)
+        return _orig_round_success(status, wait=wait)
+
+    monkeypatch.setattr(op, 'round_success', _rs_capture)
+    rs_act = _run_node(test_context, op, op.act)
+    assert rs_act.is_success, f'act 完成裁决 success 交回:{rs_act!r}'
+    assert _wait_seen == [CW_OVERLAY_SETTLE_S], (
+        f'完成承诺 = 固定 settle 时长(非即返/非轮询):{_wait_seen!r}')
+    assert calls == [], '完成裁决轮零动作'
 
 
 def test_megastar_observe_reports_and_act_acts(
@@ -618,8 +645,8 @@ def test_megastar_redispatch_no_reclick_and_gate_reset(
                         lambda ctx, scr: [MegastarOption(idx=0, char_id='花火')])
 
     # 派发桩:捕获每次派发的 need_select(选中半触发标志)与 env.target
-    # (idx-only 断言;选中点击的机械行为锁 = test_cw_unified_action_4
-    # 巨星 op 锁,本锁只锁画面 op 的防重入与派发形态)。
+    # (idx-only 断言;选中点击的机械行为锁 = test_cw_overlay_ops
+    # 巨星 pick op 锁,本锁只锁画面 op 的防重入与派发形态)。
     dispatches: list[bool] = []
     env_targets: list[object] = []
 
@@ -1153,3 +1180,236 @@ def test_megastar_pick_op_asserts_container_xy_before_click(
         produced_by='test', sig=_sig)
     clicks3 = _run_arm(session3, idx=0)
     assert clicks3 == [], f'缺 xy 臂零点击:{clicks3!r}'
+
+
+# ==================== 补给节点(两 node 形态;原 step3/runnode 并入)====
+
+
+def _make_supply(test_context, monkeypatch, *, pick, opts,
+                 anchor=None):
+    """补给真类装配(两 node 形态):门桩 + 选项读链桩 + 锚读桩 +
+    机械派发半桩;观察 node 装载 obs(report 落容器)+ 动作体载体。
+    ``pick`` = decide_supply 返回值或可调用(闸拒绝重调用例传序列);
+    ``anchor`` = ``_read_refresh_anchor`` 桩返回值(默认 None=读缺)。
+    返回 (op, match, session, stub, envs)。"""
+    from sr_od.application.currency_war.operations.cw_op import (
+        cw_action_registry,
+    )
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_supply_node as sn,
+    )
+
+    session = StrategySession()
+    _decide = pick if callable(pick) else (lambda: pick)
+    match = SimpleNamespace(
+        session=session,
+        strategy=SimpleNamespace(decide_supply=_decide))
+    match.gs = game_state_of(match.session)
+    monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
+    op = sn.CwScreenSupplyNode(test_context)
+    monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
+    monkeypatch.setattr(op, 'round_by_find_area',
+                        lambda scr, s, a, **k: _Area(True))
+    monkeypatch.setattr(sn, 'read_supply_options', lambda ctx, screen: list(opts))
+    monkeypatch.setattr(op, '_read_refresh_anchor', lambda screen: anchor)
+    # 节点条锚定桩(读不得 = 跳过;锚定接线锁归
+    # test_cw_supply,本文件不重复)
+    monkeypatch.setattr(op, '_read_node_bar', lambda screen: None)
+
+    class _StubPickOp:
+        def __init__(self) -> None:
+            self.executed = 0
+
+        def execute(self) -> bool:
+            self.executed += 1
+            return True
+
+    stub = _StubPickOp()
+    envs: list = []
+    monkeypatch.setattr(cw_action_registry, 'action_op_for',
+                        lambda act, ctx, env: (envs.append(env), stub)[1])
+    return op, match, session, stub, envs
+
+
+def test_supply_chosen_written_on_confirm_pick(test_context, monkeypatch) -> None:
+    """补给 chosen_supply 确认即写行为锁(选定中转暂存宿主已随执行层状态
+    类目退役,写端 = 选定确认时点;口径分叉申报:supply 直写,chosen_tome
+    维持出口验真后写家族口径——差异理由 = supply 的中转暂存宿主已随执行
+    层状态类目退役,直写是载体消亡后的唯一形态):
+    - 真选(有选项 + 决策选列):确认分支单次逻辑写入 (角色, 装备名列表)
+      2 元组(T-9 裁定 2:不带钻字段,带钻与否消费侧自名单派生),
+      source=logic,机械派发半照发(记录面不拦截动作链);
+      选定快照携 ``refresh_left`` 键 = 容器剩余次数现值(可 None)
+      + ``extra_equips`` 键 = 列内附加装备;
+    - 刷新轮不写 = 真选守卫(闸拒绝零点击路径语义)。
+    OCR 读链/配置/机械派发半桩化,只锁记录面。"""
+    from one_dragon.base.geometry.point import Point
+
+    # ① 真选:确认即写(锚读 1 → 容器 left=1 → 快照 refresh_left=1)
+    opt = SimpleNamespace(char='希儿', equip='星币收集器', has_diamond=True,
+                          extra_equips=())
+    op, _match, session, stub, envs = _make_supply(
+        test_context, monkeypatch,
+        pick=CwActionPickSupplyParam(idx=0, reason='test'),
+        opts=[(opt, SimpleNamespace(x=900, y=550))],
+        anchor=(1, Point(1315, 983)))
+    _run_node(test_context, op, op.observe)   # 观察 node 装载 obs(report 落容器)
+    op._do_action()
+    gs = game_state_of(session)
+    assert gs.chosen_supply.value == ('希儿', ('星币收集器',)), (
+        f'确认即写:容器持选定 2 元组(角色, 装备名列表),'
+        f'实得 {gs.chosen_supply.value!r}')
+    assert gs.chosen_supply.source == 'logic', '单次逻辑写入(source=logic)'
+    assert stub.executed == 1, '机械派发半照发(记录面不拦截动作链)'
+    assert gs.supply.value is not None, '前置:观察轮 report 落容器 supply'
+    assert gs.supply_refresh_left.value == 1, '观察轮锚读摄入容器 left'
+    assert envs and envs[0].picked is not None \
+        and envs[0].picked['refresh_left'] == 1 \
+        and envs[0].picked['extra_equips'] == (), (
+            f"选定快照携 refresh_left + extra_equips 键:"
+            f"{envs[0].picked!r}")
+    # ② 双排修饰局:chosen 携全列装备(首件 + extra_equips,OCR 原文 y 序)
+    opt1b = SimpleNamespace(char='镜流', equip='折叠小刀', has_diamond=False,
+                            extra_equips=('垃圾袋', '财富宝钻'))
+    op1b, _m1b, s1b, _s1b, _ = _make_supply(
+        test_context, monkeypatch,
+        pick=CwActionPickSupplyParam(idx=0, reason='test'),
+        opts=[(opt1b, SimpleNamespace(x=900, y=550))])
+    _run_node(test_context, op1b, op1b.observe)
+    op1b._do_action()
+    assert game_state_of(s1b).chosen_supply.value == \
+        ('镜流', ('折叠小刀', '垃圾袋', '财富宝钻')), \
+        'chosen 2 元组携全列装备(带钻与否自名单派生,不写入)'
+    # ③ 刷新轮不写(真选守卫;闸拒绝零点击语义)
+    op2, _m2, s2, _stub2, _ = _make_supply(
+        test_context, monkeypatch,
+        pick=CwActionRefreshSupplyParam(reason='test'),
+        opts=[(opt, SimpleNamespace(x=900, y=550))])
+    _run_node(test_context, op2, op2.observe)
+    op2._do_action()
+    assert game_state_of(s2).chosen_supply.value is None, \
+        '刷新轮不写 = 真选守卫'
+
+
+def test_supply_refresh_gate_left_semantics(test_context, monkeypatch) -> None:
+    """supply 刷新闸行为锁(剩余语义观察真值,统一刷新判据面 §2.0A/§2.1):
+    - 剩余 1 → 建议刷新 → 点钮恰一次 + 终结交回(_do_action 返回 True);
+    - 剩余 0 / None → 零点击不按刷新终结,重调一次决策后落选卡
+      (机械派发半照发,刷新钮零点击)。
+    注(补给画面策略迁移批语义过期注记):判据侧次数闸已内嵌策略层
+    decide(``strategies/impl/mandate_v1/supply.py``,仅剩余 ≥1 才可能返
+    刷新建议),生产中「建议刷 ∧ 对照闸拒绝」仅剩刷新锚点缺失一种触发面
+    ——重调同输入同输出仍建议刷 → 零点击终结交回;「按原评分选卡」为旧
+    kernel 评分叙述,决策本体现 = 策略层三级字典序。本锁以 stub 驱动,
+    保留 op 面对照闸的行为断言(闸拒绝零点击、重调链有界)。
+    OCR 读链/机械派发/固定等待桩化,只锁闸面与点击面。"""
+    from one_dragon.base.geometry.point import Point
+    from sr_od.application.currency_war.operations.cw_screen import (
+        cw_screen_supply_node as sn,
+    )
+
+    opt = SimpleNamespace(char='希儿', equip='星币收集器', has_diamond=True,
+                          extra_equips=())
+    opts = [(opt, SimpleNamespace(x=900, y=550))]
+    clicks: list = []
+    monkeypatch.setattr(test_context.controller, 'mouse_move',
+                        lambda p, **k: None, raising=False)
+    monkeypatch.setattr(test_context.controller, 'click',
+                        lambda p, **k: clicks.append((p.x, p.y)))
+    monkeypatch.setattr(sn.time, 'sleep', lambda s: None)   # 固定等待 2s 桩
+
+    # ① 剩余 1:点钮恰一次 + 终结交回
+    op, _m, _s, stub, _ = _make_supply(
+        test_context, monkeypatch,
+        pick=CwActionRefreshSupplyParam(reason='test'), opts=opts,
+        anchor=(1, Point(1315, 983)))
+    _run_node(test_context, op, op.observe)
+    assert op._do_action() is True, '放行:动作已发,终结交回'
+    assert clicks == [(1315 - 100, 983)], \
+        f'刷新圆钮文本锚定偏移点击恰一次:{clicks!r}'
+    assert stub.executed == 0, '放行轮零选卡派发'
+    # ② 剩余 0:零点击不终结,重调按原评分选卡
+    picks = iter([CwActionRefreshSupplyParam(reason='test'),
+                  CwActionPickSupplyParam(idx=0, reason='rescore')])
+    op2, _m2, _s2, stub2, _ = _make_supply(
+        test_context, monkeypatch, pick=lambda: next(picks), opts=opts,
+        anchor=(0, Point(1315, 983)))
+    _run_node(test_context, op2, op2.observe)
+    assert op2._do_action() is True, '拒绝轮经重选落选卡派发(终结交回)'
+    n_clicks = len(clicks)
+    assert n_clicks == 1, f'剩余 0 = 刷新钮零点击:{clicks!r}'
+    assert stub2.executed == 1, '重调一次决策按原评分选卡(派发照发)'
+    # ③ None(未观察/读缺):零点击不终结,重调按原评分选卡
+    picks3 = iter([CwActionRefreshSupplyParam(reason='test'),
+                   CwActionPickSupplyParam(idx=0, reason='rescore')])
+    op3, _m3, _s3, stub3, _ = _make_supply(
+        test_context, monkeypatch, pick=lambda: next(picks3), opts=opts,
+        anchor=None)
+    _run_node(test_context, op3, op3.observe)
+    assert op3._do_action() is True
+    assert len(clicks) == 1, f'None = 刷新钮零点击(容器未写):{clicks!r}'
+    assert stub3.executed == 1, 'None 拒绝轮重调按原评分选卡'
+
+
+def _make_supply_flow_op(cls, *, in_node: bool, do_action_calls: list):
+    """补给流转形态锁装配(bypass __init__):round_by_find_area 程序化回
+    in_node;``_do_action`` 桩只记调用(原 runnode 等价锁并入,锁 act
+    流转形态而非动作内容——动作内容由上两锁承重)。"""
+
+    class _FakeArea:
+        def __init__(self, ok: bool): self.is_success = ok
+
+    class _Op(cls):
+        def __init__(self):  # noqa: D107  桩:bypass SrOperation.__init__
+            self.last_screenshot = object()
+            self.op_name = cls.__name__
+            self.ctx = SimpleNamespace(cw_match=None)
+
+        def round_by_find_area(self, scr, screen, area, **k):
+            return _FakeArea(in_node)
+
+        def _do_action(self, screen=None):
+            do_action_calls.append(1)
+
+        def round_success(self, status='', wait: float = 0):
+            return SimpleNamespace(status=status, wait=wait, success=True)
+
+        def round_retry(self, status='', wait: float = 0):
+            return SimpleNamespace(status=status, success=None,
+                                   _retry=True)
+
+        def round_wait(self, status='', wait: float = 0):
+            return SimpleNamespace(status=status, success=None,
+                                   _wait=True)
+
+        def round_fail(self, status=''):
+            return SimpleNamespace(status=status, success=False)
+
+        def save_screenshot(self, prefix=None):
+            return ''
+
+    return _Op()
+
+
+def test_supply_node_flow_act_wait_then_success() -> None:
+    """补给流转两段形态锁(仍在补给屏 → 决策动作 node 恰一个动作 +
+    round_wait,不计节点重试预算、无防御上限;锚 miss(离开节点画面)
+    → success 零动作——验证完成才 success。离开画面的完成门行为在
+    分发身份安全网锁(test_cw_supply)亦有消费面
+    断言;本锁补齐「在屏轮 act 驱动恰一动作 + round_wait 循环推进」半。)"""
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_supply_node import (
+        CwScreenSupplyNode,
+    )
+    actions: list = []
+    op = _make_supply_flow_op(CwScreenSupplyNode, in_node=True,
+                              do_action_calls=actions)
+    res = op.act()
+    assert actions == [1]                      # 每轮恰好一个动作
+    assert getattr(res, '_wait', False) is True   # 循环推进 = round_wait
+    actions2: list = []
+    op2 = _make_supply_flow_op(CwScreenSupplyNode, in_node=False,
+                               do_action_calls=actions2)
+    res2 = op2.act()
+    assert res2.success is True
+    assert '节点完成' in res2.status
+    assert actions2 == []                       # 离开节点 = 不再发动作

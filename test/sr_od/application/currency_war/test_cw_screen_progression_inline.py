@@ -529,7 +529,7 @@ def test_box_pick_read_gate_admits_registry_longest_priv_name(
 def test_box_pick_act_clicks_decided_card(test_context, monkeypatch):
     """决策动作 node 锁:容器外读数决策(零参策略契约)→ 选卡链派发
     (点卡选中即确认 + 动画等待迁入 ``CwActionPickBoxCardOp``;机械链
-    行为锁 = test_cw_unified_action_4)→ 选卡即终结 success。红 = 决策
+    行为锁 = test_cw_overlay_ops pick op)→ 选卡即终结 success。红 = 决策
     形态漂移 / 坐标现算回潮(env.target 停喂后禁再喂)/ 终结交回语义
     漂移。"""
     import importlib

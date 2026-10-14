@@ -19,6 +19,10 @@
 
 kernel 判据本体(cw_intention.no_target_arms/k_empty_window_fallback
 等)保留为空窗回退的单一源——真值表直锁(纯函数面)随批保留。
+(原 test_refund_backing_face_retained 背书面两行断言删:全额退背书门
+refund_full_star_ok 的 (2,2) 拒 /(1,2) 过真值已由
+test_cw_sell_window_launch::test_hold_registration_qualification_
+conjunction 的资格合取锁完整辖住——子集断言不留。)
 """
 from __future__ import annotations
 
@@ -58,9 +62,6 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import shop
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
-)
-from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.vopt import (
-    refund_full_star_ok,
 )
 
 # ===== 基建 =====
@@ -327,10 +328,3 @@ class TestKMembersDownstream:
         for c in fuel:
             assert m._slot_cid(c) not in k_members, \
                 '回退成员不得入燃料候选(卖免面换源失效)'
-
-
-def test_refund_backing_face_retained():
-    """背书面承继:全额退背书门(refund_full_star_ok)在无目标帧对
-    2★ 件维持拒(乙臂收编后 2★ 出口仍无背书——收编不越已证辖域)。"""
-    assert not refund_full_star_ok(2, 2)
-    assert refund_full_star_ok(1, 2)

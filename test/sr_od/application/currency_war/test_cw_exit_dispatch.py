@@ -1,6 +1,6 @@
 """退出链三分发结构行为锁(cw-exit-dispatch 落地 3.2,landing §3.2 ①-⑥)。
 
-出处 = 
+出处 =
 判定序表/默认委托/互踢推演)。真帧 fixture 驱动、真建档识别链,
 FixtureController 记录点击。CwLoop 在委托锁①⑤中桩化(边界 op,内部行为不在
 本锁范围);停机位行为由锁⑥直跑真 CwLoop 覆盖(免战帧 = 旧穿透双锚判否、
@@ -21,6 +21,8 @@ test_route_table_has_no_battle_pause_dead_entry「ROUTE_BY_SCREEN 无死项」
 """
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 from test.harness.fixture_controller import (
     FixtureController,
@@ -30,6 +32,13 @@ from test.harness.fixture_controller import (
     reset_running_state,
 )
 
+from sr_od.application.currency_war.cw_screen_state import (
+    in_match_screen_names,
+)
+from sr_od.application.currency_war.kernel.cw_entry_policy import (
+    DifficultyEntryIntent,
+    difficulty_entry_intent,
+)
 from sr_od.application.currency_war.operations.cw_entry import (
     cw_entry_exit as exit_mod,
 )
@@ -263,3 +272,71 @@ def test_lock6_stop_at_prep_returns_immediately_on_class_a(
     assert not fixture_controller.recorded_clicks, (
         '停机位命中前不得有任何分发点击'
         f':{fixture_controller.recorded_clicks}')
+
+
+# ==================== 对局中名单契约(原 screen_state 并入)=============
+# 出处:cw-exit-dispatch 迭代 3.1——5 张对局前画面/图鉴查询页移出对局中
+# 名单(前缀误收修正)。机制:对局中态屏名 = screen_info 全集中带
+# ``货币战争-`` 前缀者,减去 ``LOBBY_STATE_SCREENS`` 白名单;新对局画面
+# 建档(命名带前缀)自动进判定列表,白名单必须显式排除非对局屏——漏加 =
+# 带前缀的非对局屏在场即误判「已在对局中」,入口导航被跳过。
+
+# 移出清单(对局前画面/图鉴查询页,带前缀会被自动误收的形态)
+_REMOVED_FROM_IN_MATCH: tuple[str, ...] = (
+    '货币战争-难度确认',
+    '货币战争-数据银行',
+    '货币战争-装备图鉴',
+    '货币战争-竞争对手图鉴列表',
+    '货币战争-竞争对手图鉴详情',
+)
+
+
+def _si(name: str) -> SimpleNamespace:
+    """screen_info 桩:判定函数只读 ``screen_name`` 字段。"""
+    return SimpleNamespace(screen_name=name)
+
+
+def test_removed_lobby_screens_not_in_match():
+    """5 张移出屏不入对局中输出;备战/备战-免战等在册对局屏不受影响。"""
+    names = [*_REMOVED_FROM_IN_MATCH, '货币战争-备战', '货币战争-备战-免战']
+    out = in_match_screen_names([_si(n) for n in names])
+    assert not (set(_REMOVED_FROM_IN_MATCH) & set(out))
+    assert '货币战争-备战' in out
+    assert '货币战争-备战-免战' in out
+
+
+def test_prefixed_new_screen_auto_collected():
+    """白名单不误伤前缀自动收集:未知前缀新屏照常进对局中输出。"""
+    out = in_match_screen_names([_si('货币战争-未来新屏')])
+    assert out == ['货币战争-未来新屏']
+
+
+# ==================== 入口难度缺省判据(原 entry_policy 并入)===========
+# 锁面依据 = 难度选择判据单一源设计(判据居 kernel/cw_entry_policy,
+# 入口链 cw_entry_start 只观察+机械点击;行为保持契约 = 同输入同动作)。
+
+
+def test_go_highest_btn_present_switches_to_highest() -> None:
+    """在场分支:「返回最高职级」在场 = 未在最高 → 恒切最高。
+
+    切最高先于开始对局(原入口链分支序):同帧双在场仍切最高;职级读数
+    不参与缺省策略分支(恒选最高与当前是 A5 还是 A8 无关)。"""
+    assert difficulty_entry_intent(
+        True, False, 'A5') is DifficultyEntryIntent.SWITCH_TO_HIGHEST, \
+        '切最高按钮在场 → 切最高'
+    assert difficulty_entry_intent(
+        True, True, 'A8') is DifficultyEntryIntent.SWITCH_TO_HIGHEST, \
+        '双按钮同帧在场 → 仍先切最高(行为保持)'
+
+
+def test_go_highest_btn_absent_starts_or_keeps_observing() -> None:
+    """不在场分支:切最高按钮不在场(已在最高)→ 按开始对局在场性分流。
+
+    「开始对局」在场 → 开始对局;两按钮皆缺(转场帧)→ 不动作落回其余
+    推进分支,入口链不得凭空点击。"""
+    assert difficulty_entry_intent(
+        False, True, 'A8') is DifficultyEntryIntent.START_MATCH, \
+        '已在最高且开始对局在场 → 开始对局'
+    assert difficulty_entry_intent(
+        False, False, None) is DifficultyEntryIntent.KEEP_OBSERVING, \
+        '两按钮皆缺 → 保持观察(零动作)'

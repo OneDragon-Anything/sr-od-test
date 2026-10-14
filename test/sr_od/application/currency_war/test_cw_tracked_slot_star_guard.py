@@ -18,15 +18,12 @@ run_20260915_054718 §5/§8 候选2 实锤「回退即采新」让同名多星�
 
 锁 2(原 tracked 槽号守卫/摘除腿保洞)随 tracked 第二账退役整删:
 同步腿删除后无锁面对象;主域侧「摘槽不移位/落位正确」语义由动作上报
-测试族(test_cw_unified_action_2a/2c、test_cw_transfer_golden)承载。
+测试族(test_cw_prep_action_ops、test_cw_gain_chain)承载。
 """
 from __future__ import annotations
 
-import pytest
-
-from types import SimpleNamespace
-
 import numpy as np
+import pytest
 
 import sr_od.application.currency_war.kernel.cw_observe as cw_observe
 import sr_od.application.currency_war.kernel.cw_reconcile as cw_reconcile
@@ -54,7 +51,8 @@ _SIG_OBS = ChannelSig(family='obs', actor='cw4_seed', mode='synthesized')
 def _drain_defect_buffer():
     """测试卫生(3.2):主域种子经 observe 覆盖开局种子(logic_rand 通道)
     会产预期内 logic_rand_outcome 行入进程级缓冲——前后双清,防跨用例
-    顺序依赖红(同 test_cw_deployed_merge_31 事故教训)。"""
+    顺序依赖红(同 test_cw_deploy / test_cw_effect_inventory 同款排水
+    纪律)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         consume_defect_sink,
     )
@@ -140,7 +138,7 @@ def _deployed_sig(session) -> list:
     out: list = []
     for row, sub in (('front', view.front_slots if view else None),
                      ('back', view.back_slots if view else None)):
-        for i, u in enumerate(sub or []):
+        for _i, u in enumerate(sub or []):
             if u is not None:
                 out.append((u.char_id, row, u.star))
     return out

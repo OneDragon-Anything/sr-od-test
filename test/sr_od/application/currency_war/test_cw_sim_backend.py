@@ -1,4 +1,5 @@
-"""sim 游戏后端 SimBackend 回归锁(驱动反转迭代;世界本体 + 画面状态机)。
+"""sim 游戏后端 SimBackend 回归锁(驱动反转迭代;世界本体 + 画面状态机
++ 观察生成 + 装配接缝 + 商店写回)。
 
 锁面 = 迭代设计判据的可执行形态:
 - 确定性:同 seed 同 RunConfig reset 双跑容器逐位一致(全采样由 seed 派生);
@@ -8,7 +9,15 @@
 - 转移声明重入幂等 + 选卡腿接获得链(契约送卡/burst 免费刷新/板面重写/
   骇客改件,对齐 cw_gain_chain 现役语义);
 - 装备腿:穿着即合成住 kernel 穿装备上报(规则件缺口补 kernel,sim 与
-  实机动作腿同构)。
+  实机动作腿同构);
+- 观察生成(sim 统一 3.3):金路径 13 档名注册表与清单零差零冗余,逐档
+  生成器经 backend.observe 生产路径落容器;未注册屏 LookupError 具名
+  响错(防静默失真);
+- 装配接缝(flow-seam §1/§2):端口槽缺省关 + 单装配纪律;sim 模式
+  CwOperation 三条腿(哨兵帧不触 controller/点击腿机械镜/find_area
+  visible 应答);controller 桩触碰即炸;动作腿 rng 提供槽装卸复位;
+- 商店牌面(2026-10-17 用户裁定):牌面 = 节点级持久事实(发牌时定),
+  开店呈现写回/关店清呈现不清记录/节点切换新发牌覆盖。
 
 设计依据 = sim- 后端结构(正本 = sim/sim-
 合法引用;正本更新义务归末阶段)。
@@ -18,8 +27,18 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
+from test.harness.sim_backend_runner import (
+    MinimalSimBackend,
+    SimControllerStub,
+    sim_backend_fixture,
+)
 from test.sr_od.application.currency_war._cw_helpers import cw4_bview
 
+from one_dragon.base.operation.operation_node import operation_node
+from one_dragon.base.operation.operation_round_result import (
+    OperationRoundResult,
+    OperationRoundResultEnum,
+)
 from sr_od.application.currency_war.data.cw_synthesis import (
     CROSS_RECIPES,
     synthesize_target,
@@ -28,11 +47,17 @@ from sr_od.application.currency_war.kernel.cw_action_report import (
     report_action_collect_ore_param,
     report_action_open_box_param,
     report_action_pick_box_card_param,
+    report_action_pick_encounter_param,
     report_action_pick_invest_env_param,
     report_action_pick_invest_strategy_param,
+    report_action_pick_megastar_param,
+    report_action_pick_planner_param,
     report_action_pick_supply_param,
     report_action_start_battle_param,
     report_action_wear_equip_param,
+)
+from sr_od.application.currency_war.kernel.cw_action_report.close_shop import (
+    report_action_close_shop_param,
 )
 from sr_od.application.currency_war.kernel.cw_economy import MAX_PLAYER_LEVEL
 from sr_od.application.currency_war.kernel.cw_env_grants import (
@@ -60,11 +85,15 @@ from sr_od.application.currency_war.kernel.cw_overlay_register import (
     register_screen_change,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
+    CwActionCloseShopParam,
     CwActionCollectOreParam,
     CwActionOpenBoxParam,
     CwActionWearEquipParam,
 )
 from sr_od.application.currency_war.kernel.cw_world_decl import WorldDecl
+from sr_od.application.currency_war.operations.cw_operation_base import (
+    CwOperation,
+)
 from sr_od.application.currency_war.sim import cw_sim_ports
 from sr_od.application.currency_war.sim.cw_sim_backend import (
     DISCLOSURE_P3_UNOBSERVED,
@@ -73,10 +102,15 @@ from sr_od.application.currency_war.sim.cw_sim_backend import (
     SCREEN_BOSS_BRIEFING,
     SCREEN_BOX,
     SCREEN_BRIEFING,
+    SCREEN_ENCOUNTER,
     SCREEN_INVEST_ENV,
     SCREEN_INVEST_STRATEGY,
+    SCREEN_MEGASTAR,
+    SCREEN_PLANE_TRANSITION,
+    SCREEN_PLANNER,
     SCREEN_PREP,
     SCREEN_SETTLE,
+    SCREEN_SHOP,
     SCREEN_SUPPLY,
     SimBackend,
     apply_node_xp,
@@ -88,6 +122,16 @@ from sr_od.application.currency_war.sim.cw_sim_backend import (
 from sr_od.application.currency_war.sim.cw_sim_battle import (
     SIM_BATTLE_FACE,
     BattleOutcome,
+)
+from sr_od.application.currency_war.sim.cw_sim_obs_gen import (
+    GOLDEN_PATH_SCREEN_NAMES,
+    registered_screens,
+)
+from sr_od.application.currency_war.sim.cw_sim_ports import (
+    install_sim_backend,
+    sim_backend_installed,
+    sim_or_live_observation,
+    uninstall_sim_backend,
 )
 from sr_od.application.currency_war.sim.cw_sim_run_config import RunConfig
 
@@ -119,9 +163,6 @@ def _node_advance_feed(gs: GameState, *, trigger: str) -> None:
 
 def _encounter_pick_feed(gs: GameState) -> None:
     """遭遇选档上报 + 声明喂入(派发即终结 → battle_resolve 推进)。"""
-    from sr_od.application.currency_war.kernel.cw_action_report import (
-        report_action_pick_encounter_param,
-    )
     out = report_action_pick_encounter_param(gs, SimpleNamespace(idx=0), _SIG)
     assert out.applied
     cw_sim_ports.declare_world(out.world_decl)
@@ -254,10 +295,6 @@ def test_start_battle_reentry_idempotent() -> None:
 def _drive_step(b: SimBackend, rng_seed: int) -> None:
     """单步驱动(backend 直驱测试共用;按呈现屏分派到对应真实写端;
     18 动作全量单轨 = 上报 + 声明喂入,动作 op 同形)。"""
-    from sr_od.application.currency_war.kernel.cw_action_report import (
-        report_action_pick_megastar_param,
-        report_action_pick_planner_param,
-    )
     screen = b.screen_identity()
     gs = b.gs
     if screen == SCREEN_SUPPLY:
@@ -265,9 +302,6 @@ def _drive_step(b: SimBackend, rng_seed: int) -> None:
         gs.write_logic(gs.chosen_supply,
                        ('', (opts[0].equip, *opts[0].extra_equips)),
                        produced_by='Test', evidence='t:chosen', sig=_SIG)
-        from sr_od.application.currency_war.kernel.cw_action_report import (
-            report_action_pick_supply_param,
-        )
         out = report_action_pick_supply_param(
             gs, SimpleNamespace(idx=0, char_name='', norm_item=opts[0].equip),
             _SIG)
@@ -275,9 +309,6 @@ def _drive_step(b: SimBackend, rng_seed: int) -> None:
         _node_advance_feed(gs, trigger='supply_confirm')
     elif screen == SCREEN_INVEST_STRATEGY:
         opts = gs.invest_strategy_opts.value
-        from sr_od.application.currency_war.kernel.cw_action_report import (
-            report_action_pick_invest_strategy_param,
-        )
         out = report_action_pick_invest_strategy_param(
             gs, SimpleNamespace(norm_name=opts[0]), _SIG,
             rng=stream_rng(rng_seed, 'M11/pick/part'),
@@ -336,9 +367,6 @@ def test_node_window_overlay_detour_reruns_offer_check() -> None:
     选卡落地直出节点屏;窗口前段(轮首收入)不因让路重入。权威序 =
     旧引擎实测收尾检查序(overlay → offer → 下一节点)+ U07 固定日程
     (P1r3/P2r2/P3r2)生效于本节点备战窗口前。"""
-    from sr_od.application.currency_war.kernel.cw_action_report import (
-        report_action_pick_planner_param,
-    )
     b = _backend(7)
     try:
         b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
@@ -1250,10 +1278,6 @@ def _drive_env_grant_step(b: SimBackend) -> None:
     """深井局单步驱动(补给恒选无钻选项,保触发局 diamond_count 基线
     干净;带钻补给归专项用例;策略定卡加油站 = 零判读域写,断言与
     seed 采样解耦)。"""
-    from sr_od.application.currency_war.kernel.cw_action_report import (
-        report_action_pick_megastar_param,
-        report_action_pick_planner_param,
-    )
     screen = b.screen_identity()
     gs = b.gs
     if screen == SCREEN_SETTLE:
@@ -1538,8 +1562,9 @@ def test_piggy_win_income_deferred_and_streak_counts(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """扑满胜局:备战帧(开战前)金不含本节点收入(递延锁);结算腿一次
     落账 = 基础+进轮连胜金+息;连胜账 0→1→2(胜局计数,用户裁定)。"""
-    from sr_od.application.currency_war.kernel.cw_economy import \
-        REWARD_BASE_GOLD_BY_ROUND
+    from sr_od.application.currency_war.kernel.cw_economy import (
+        REWARD_BASE_GOLD_BY_ROUND,
+    )
     b = _piggy_backend()
     try:
         gs = b.gs
@@ -1571,8 +1596,9 @@ def test_piggy_loss_base_interest_only_and_streak_reset(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """扑满败局(统一公式败局形):收入 = 基础+息(无连胜成分);连胜账
     1→0(清零,非负账);不掉血豁免照常(hp 不动)。"""
-    from sr_od.application.currency_war.kernel.cw_economy import \
-        REWARD_BASE_GOLD_BY_ROUND
+    from sr_od.application.currency_war.kernel.cw_economy import (
+        REWARD_BASE_GOLD_BY_ROUND,
+    )
     b = _piggy_backend()
     try:
         gs = b.gs
@@ -1599,8 +1625,9 @@ def test_non_piggy_reward_income_still_window_open(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """非扑满对照:常态奖励轮收入仍在窗口开落账(备战帧金已含收入),
     递延仅扑满域(常态行为零变化)。"""
-    from sr_od.application.currency_war.kernel.cw_economy import \
-        REWARD_BASE_GOLD_BY_ROUND
+    from sr_od.application.currency_war.kernel.cw_economy import (
+        REWARD_BASE_GOLD_BY_ROUND,
+    )
     b = SimBackend(seed=33, cfg=RunConfig(
         selected_difficulty='A8', enemy_difficulty=108, env_present=True))
     install_backend(b)
@@ -1622,3 +1649,674 @@ def test_non_piggy_reward_income_still_window_open(
             '窗口开已落账(备战金已含收入)'
     finally:
         uninstall_backend()
+
+
+# ============================================================ 观察生成器
+# (sim 统一 3.3:每生成器单测 = 构造世界态 → backend.observe(档名) 生成
+#  obs(生产路径 = 注册表分派,产物经同名 report_screen_* 落容器)→ 容器
+#  字段断言;设计依据 = sim- + flow-seam 接缝契约。)
+
+def _open_to_first_window(b: SimBackend, *, env_present: bool = False) -> None:
+    """开局序列推进到 P1r1(无环境)或投资环境屏(env_present=True)。"""
+    if env_present:
+        b.cfg = RunConfig(selected_difficulty='A8', enemy_difficulty=108,
+                          env_present=True)
+    b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+
+
+def _obs_step(b: SimBackend) -> None:
+    """观察生成器走局单步驱动(按呈现屏分派到对应真实写端;与
+    _drive_step 同形,唯策略选卡不注入 rng —— 生成器锁面与采样值无关)。"""
+    screen = b.screen_identity()
+    gs = b.gs
+    if screen == SCREEN_SUPPLY:
+        opts = gs.supply.value.options
+        gs.write_logic(gs.chosen_supply,
+                       ('', (opts[0].equip, *opts[0].extra_equips)),
+                       produced_by='Test', evidence='t:chosen', sig=_SIG)
+        out = report_action_pick_supply_param(
+            gs, SimpleNamespace(idx=0, char_name='', norm_item=opts[0].equip),
+            _SIG)
+        cw_sim_ports.declare_world(out.world_decl)
+        _node_advance_feed(gs, trigger='supply_confirm')
+    elif screen == SCREEN_INVEST_STRATEGY:
+        opts = gs.invest_strategy_opts.value
+        out = report_action_pick_invest_strategy_param(
+            gs, SimpleNamespace(norm_name=opts[0]), _SIG,
+            session=SimpleNamespace())
+        cw_sim_ports.declare_world(out.world_decl)
+    elif screen == SCREEN_SETTLE:
+        _node_advance_feed(gs, trigger='settle_confirm')
+    elif screen == SCREEN_PLANE_TRANSITION:
+        b._handle_click_source(SCREEN_PLANE_TRANSITION, '区域-空白点击')
+    elif screen == SCREEN_BOSS_BRIEFING:
+        b._handle_click_source(SCREEN_BOSS_BRIEFING, '区域-空白点击')
+    elif screen == SCREEN_ENCOUNTER:
+        out = report_action_pick_encounter_param(gs, SimpleNamespace(idx=0),
+                                                 _SIG)
+        assert out.applied
+        cw_sim_ports.declare_world(out.world_decl)
+    elif screen == SCREEN_MEGASTAR:
+        out = report_action_pick_megastar_param(gs, SimpleNamespace(), _SIG)
+        cw_sim_ports.declare_world(out.world_decl)
+    elif screen == SCREEN_PLANNER:
+        out = report_action_pick_planner_param(gs, SimpleNamespace(), _SIG)
+        cw_sim_ports.declare_world(out.world_decl)
+    elif screen == SCREEN_PREP:
+        _start_battle_feed(gs)
+    else:
+        raise AssertionError(f'未知呈现屏 {screen}')
+
+
+def _walk_to(b: SimBackend, plane: int, round_num: int,
+             cap: int = 64) -> None:
+    """局推进到目标节点窗(P1r1 起点;防失控 cap)。"""
+    for _ in range(cap):
+        if b.done:
+            raise AssertionError('局已终未达目标节点窗')
+        node = b.gs.node.value
+        if node is not None and (node.plane, node.round_num) == (plane,
+                                                                 round_num):
+            return
+        _obs_step(b)
+    raise AssertionError('超过推进步数上限未达目标节点窗')
+
+
+def test_registry_covers_golden_path_checklist_exactly() -> None:
+    """金路径清单覆盖核对:注册表键集与 13 档名清单零差零冗余(清单
+    逐行有生成器;清单外注册 = 辖域外屏混入,同样拒绝)。"""
+    assert set(registered_screens()) == set(GOLDEN_PATH_SCREEN_NAMES)
+    assert len(registered_screens()) == 13
+
+
+def test_unregistered_screen_raises_named_error() -> None:
+    """状态机呈现未注册屏 = LookupError 具名响错(防静默失真锁):金路径
+    清单外的档名(如大厅/武装箱弹窗)观察请求必须响亮拒绝,禁产空产物。"""
+    b = _backend()
+    try:
+        assert b.screen_identity() == SCREEN_BRIEFING   # 简报在册,先确认基线
+        b.observe(SCREEN_BRIEFING)
+        with pytest.raises(LookupError, match='未注册'):
+            b.observe('货币战争-大厅')
+    finally:
+        uninstall_backend()
+
+
+def test_gen_briefing_round_trips_three_readings() -> None:
+    """简报生成器:三读数(词缀/位面序 boss/难度)自容器直填,经同名
+    report 落容器(读到非空恒覆写,同值幂等)。"""
+    b = _backend()
+    try:
+        assert b.screen_identity() == SCREEN_BRIEFING
+        obs = b.observe(SCREEN_BRIEFING)
+        gs = b.gs
+        assert obs.on_screen is True
+        assert obs.enemy_affixes == list(gs.enemy_affixes.value)
+        assert obs.plane_bosses == list(gs.plane_bosses.value)
+        assert obs.enemy_difficulty == gs.enemy_difficulty.value
+        # report 腿容器断言:同值覆写后容器与 obs 逐位一致(生成器 →
+        # report → 容器全链走通)。
+        assert gs.enemy_affixes.value == obs.enemy_affixes
+    finally:
+        uninstall_backend()
+
+
+def test_gen_invest_env_candidates_from_container_slot() -> None:
+    """投资环境生成器:候选名自容器 opts 槽(M02 采样写点),report 腿
+    同值回写幂等;x = 下标派生合成值(身份键,无画面语义)。"""
+    b = _backend(seed=11, cfg=RunConfig(
+        selected_difficulty='A8', enemy_difficulty=108, env_present=True))
+    try:
+        _open_to_first_window(b, env_present=True)
+        assert b.screen_identity() == SCREEN_INVEST_ENV
+        opts_before = b.gs.invest_env_opts.value
+        assert opts_before is not None and len(opts_before) == 3
+        obs = b.observe(SCREEN_INVEST_ENV)
+        assert [n for n, _x in obs.options] == opts_before
+        assert [x for _n, x in obs.options] == [10, 20, 30]
+        assert b.gs.invest_env_opts.value == opts_before, 'report 腿同值回写'
+    finally:
+        uninstall_backend()
+
+
+def test_gen_prep_ore_substate_control_signals() -> None:
+    """备战生成器·晶矿子态:P1r1 = 奖励节点 → 备战档 ore 子态分派;
+    控制信号(shop_open=False/event_overlay=None/substate 标注)随观察
+    产出(flow-seam §3);node_path_chain = None 诚实缺位 → report 零写。"""
+    b = _backend()
+    try:
+        _open_to_first_window(b)
+        b._maybe_finish_wait()
+        assert b.screen_identity() == SCREEN_PREP
+        assert b._sub == 'ore'
+        obs = b.observe(SCREEN_PREP)
+        assert obs.prep.substate == {'sub': 'ore'}
+        assert obs.prep.shop_open is False
+        assert obs.prep.event_overlay is None
+        assert obs.event_overlay is None
+        assert obs.node_path_chain is None
+    finally:
+        uninstall_backend()
+
+
+def test_gen_prep_wait_one_one_variant_dispatch() -> None:
+    """备战生成器·wait_one_one 变体:同档名子态内部分派(子态不设独立
+    注册键);惰性完成前观察 = wait_one_one 标注。"""
+    b = _backend()
+    try:
+        b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+        # 注意:screen_identity() 问询会惰性完成等待变体(进 P1r1),
+        # 本测必须只查子态载荷、不走问询口。
+        assert b._sub == 'wait_one_one'
+        obs = b.observe(SCREEN_PREP)
+        assert obs.prep.substate == {'sub': 'wait_one_one'}
+    finally:
+        uninstall_backend()
+
+
+def test_gen_shop_mirrors_container_receipt_face() -> None:
+    """商店生成器:入口回执同面镜像域(gold/hp/level/board/shop/plane/
+    round/node_type)自容器直填;开店点击源进商店档后观察合法。"""
+    b = _backend()
+    try:
+        _open_to_first_window(b)
+        b._maybe_finish_wait()
+        b._handle_click_source(SCREEN_PREP, '按钮-商店')
+        assert b.screen_identity() == SCREEN_SHOP
+        obs = b.observe(SCREEN_SHOP)
+        gs = b.gs
+        assert obs.gold == gs.gold.value
+        assert obs.gold_readable is True
+        assert obs.hp == gs.hp.value and obs.hp_trusted is True
+        assert obs.level == gs.level.value
+        node = gs.node.value
+        assert (obs.plane, obs.round_num) == (node.plane, node.round_num)
+        assert obs.node_type == node.kind
+        assert obs.board == dict(gs.board.value or {})
+        assert obs.shop == list(gs.shop.value.cards)
+    finally:
+        uninstall_backend()
+
+
+def test_gen_battle_wait_on_screen_at_settle_window() -> None:
+    """battle_wait 生成器(battle_wait 档名 = sim 战斗窗口呈现屏):出战
+    上报 → 结算窗瞬时呈现,生成器答 on_screen;report 为统一形态占位
+    (零容器写点,导入契约不炸)。"""
+    b = _backend()
+    try:
+        _open_to_first_window(b)
+        b._maybe_finish_wait()
+        _start_battle_feed(b.gs)
+        assert b.screen_identity() == SCREEN_SETTLE
+        obs = b.observe(SCREEN_SETTLE)
+        assert obs.on_screen is True
+    finally:
+        uninstall_backend()
+
+
+def test_gen_supply_options_and_refresh_left() -> None:
+    """补给生成器:选项载荷自容器呈现写点回读,refresh_left = 容器剩余
+    语义观察真值(入口 left=1);report 腿同值回写幂等。"""
+    b = _backend(seed=1013)
+    try:
+        _open_to_first_window(b)
+        b._maybe_finish_wait()
+        _walk_to(b, 1, 5)
+        assert b.screen_identity() == SCREEN_SUPPLY
+        obs = b.observe(SCREEN_SUPPLY)
+        gs = b.gs
+        assert obs.in_node is True
+        assert obs.options == list(gs.supply.value.options)
+        assert obs.refresh_left == gs.supply_refresh_left.value == 1
+        assert gs.supply.value.options == obs.options, 'report 腿同值回写'
+    finally:
+        uninstall_backend()
+
+
+def test_gen_invest_strategy_candidates_at_offer_window() -> None:
+    """投资策略生成器:P1r3 = U07 固定 offer 日程 → 策略屏呈现,候选名
+    自容器 opts 槽回读;refresh_slots 空 → report 逐槽跳写。"""
+    b = _backend()
+    try:
+        _open_to_first_window(b)
+        b._maybe_finish_wait()
+        _walk_to(b, 1, 3)
+        assert b.screen_identity() == SCREEN_INVEST_STRATEGY
+        opts_before = b.gs.invest_strategy_opts.value
+        assert opts_before is not None and len(opts_before) == 3
+        obs = b.observe(SCREEN_INVEST_STRATEGY)
+        assert obs.entry_ok is True
+        assert [n for n, _x, _y in obs.options] == opts_before
+        assert obs.refresh_slots == []
+        assert b.gs.invest_strategy_opts.value == opts_before
+    finally:
+        uninstall_backend()
+
+
+def test_gen_boss_briefing_direct_set_idempotent() -> None:
+    """boss 简报生成器:obs 门判定 + report 半部 boss 类型直定(目标 =
+    现 hist;sim 侧节点锚定已写 boss 类型,直定同值幂等不炸)。"""
+    b = _backend(seed=61)
+    try:
+        _open_to_first_window(b)
+        b._maybe_finish_wait()
+        _walk_to(b, 1, 9)
+        assert b.screen_identity() == SCREEN_BOSS_BRIEFING
+        hist_before = b.gs.node_hist_pos
+        obs = b.observe(SCREEN_BOSS_BRIEFING)
+        assert obs.on_screen is True
+        assert b.gs.node_hist_pos == hist_before
+        assert b.gs.node.value.kind == 'boss'
+    finally:
+        uninstall_backend()
+
+
+def test_gen_plane_transition_chain_absent_honest() -> None:
+    """位面过渡生成器:链值诚实缺位(sim 不产底部全亮行识别面)→
+    report 按「chain 缺不写」防御语义零写;P2r1 位面过渡屏呈现态。"""
+    b = _backend(seed=61)
+    try:
+        _open_to_first_window(b)
+        b._maybe_finish_wait()
+        b._enter_node_window((2, 1))
+        assert b.screen_identity() == SCREEN_PLANE_TRANSITION
+        path_before = b.gs.node_path.value
+        obs = b.observe(SCREEN_PLANE_TRANSITION)
+        assert obs.on_screen is True
+        assert obs.chain is None
+        assert b.gs.node_path.value == path_before, '链缺零写(诚实缺位)'
+    finally:
+        uninstall_backend()
+
+
+def test_gen_encounter_tier_options_from_container() -> None:
+    """遭遇生成器:档位候选自容器呈现写点回读(四档集);report 腿同值
+    回写幂等。"""
+    b = _backend()
+    try:
+        _open_to_first_window(b)
+        b._maybe_finish_wait()
+        _walk_to(b, 1, 7)
+        assert b.screen_identity() == SCREEN_ENCOUNTER
+        obs = b.observe(SCREEN_ENCOUNTER)
+        assert obs.options == list(b.gs.encounter.value.options)
+        assert len(obs.options) == 4, 'U22 四档集'
+        assert b.gs.encounter.value.options == obs.options
+    finally:
+        uninstall_backend()
+
+
+def test_gen_box_candidates_and_points_same_order() -> None:
+    """开箱生成器(武装箱选择档):候选名 + 点击点自容器呈现写点回读,
+    同序等长(report 写端守卫同契约);选定腿消费面 = 动作 op 按 idx 取
+    xy(合成坐标,身份键)。"""
+    b = _backend()
+    try:
+        _open_to_first_window(b)
+        b._maybe_finish_wait()
+        open_out = report_action_open_box_param(
+            b.gs, CwActionOpenBoxParam(), _SIG)
+        cw_sim_ports.declare_world(open_out.world_decl)
+        assert b.screen_identity() == SCREEN_BOX
+        names = b.gs.box_card_names.value
+        points = b.gs.box_card_names_xy.value
+        obs = b.observe(SCREEN_BOX)
+        assert obs.on_screen is True
+        assert obs.card_names == list(names)
+        assert obs.points == list(points)
+        assert len(obs.card_names) == len(obs.points) == 4
+    finally:
+        uninstall_backend()
+
+
+def test_gen_megastar_candidates_from_container() -> None:
+    """巨星生成器:候选(含持星徽贡献与合成坐标)自容器呈现写点回读;
+    事实事件触发的呈现态下观察合法。"""
+    b = _backend()
+    try:
+        _open_to_first_window(b)
+        b._maybe_finish_wait()
+        # 3.4:呈现数据源 = 容器登记(逻辑写经值回调判据 register;
+        # 观察写零回调)。
+        b.gs.write_logic(
+            b.gs.deployed,
+            _dvs([Unit(char_id='大丽花', star=1),
+                  Unit(char_id='加拉赫', star=1)], []),
+            produced_by='test', evidence='t',
+            sig=ChannelSig(family='logic_action', actor='test',
+                           mode='compute'))
+        assert b.screen_identity() == SCREEN_MEGASTAR
+        opts_before = b.gs.megastar_opts.value
+        assert opts_before
+        obs = b.observe(SCREEN_MEGASTAR)
+        assert obs.in_node is True
+        assert obs.options == list(opts_before)
+        assert b.gs.megastar_opts.value == list(opts_before)
+    finally:
+        uninstall_backend()
+
+
+def test_gen_planner_empty_bucket_writes_like_live() -> None:
+    """planner 生成器:两卡选项自容器回读;sim 呈现写点缺位 = 空桶,
+    与实机「恒写两卡 OCR 桶,空桶照写」语义同形(report 无空门直写)。"""
+    b = _backend()
+    try:
+        _open_to_first_window(b)
+        b._maybe_finish_wait()
+        slots: list[BenchSlot | None] = [None] * 9
+        slots[0] = BenchSlot(kind='unit', unit=Unit(char_id='银狼LV.999',
+                                                    star=1))
+        b.gs.observe(b.gs.bench, cw4_bview(slots), sig=_SIG_OBS)
+        # 3.4:呈现数据源 = 容器登记(逻辑写经值回调判据 register;
+        # 观察写零回调)。
+        b.gs.write_logic(
+            b.gs.deployed, _dvs([Unit(char_id='银狼LV.999', star=2)], []),
+            produced_by='test', evidence='t',
+            sig=ChannelSig(family='logic_action', actor='test',
+                           mode='compute'))
+        assert b.screen_identity() == SCREEN_PLANNER
+        obs = b.observe(SCREEN_PLANNER)
+        assert obs.on_screen is True
+        assert obs.options == list(b.gs.planner_opts.value or [])
+        assert b.gs.planner_opts.value is not None, '空桶照写(无空门直写)'
+    finally:
+        uninstall_backend()
+
+
+# ============================================================ 商店牌面写回
+# (观察层商店缺口修复:牌面 = 节点级持久事实(发牌时定),开店呈现时写回
+#  gs.shop(对偶实机「每次进店读屏」);关店清呈现不清记录;节点切换新发
+#  牌覆盖记录。病理:3.6 会话模型合法产生同节点两次进店,第二次进店
+#  gs.shop 空 → decide_shop_action 按 fail-loud 契约崩。)
+
+def _drive_to_first_prep(b: SimBackend) -> None:
+    """驱动到 P1r1 备战(简报下一步 → wait_one_one 惰性完成进节点窗)。"""
+    b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+    b._maybe_finish_wait()
+    assert b.screen_identity() == SCREEN_PREP
+
+
+def _close_shop_feed(b: SimBackend) -> None:
+    """关店动作上报 + 声明喂入(动作 op「上报后一行喂入」同形)。"""
+    out = report_action_close_shop_param(b.gs, CwActionCloseShopParam(),
+                                         _SIG)
+    assert out.applied, f'关店上报未落账: {out.reason!r}'
+    cw_sim_ports.declare_world(out.world_decl)
+
+
+def _open_shop(b: SimBackend) -> None:
+    """开店点击(备战按钮-商店;点击源直驱)。"""
+    b._handle_click_source(SCREEN_PREP, '按钮-商店')
+
+
+def test_same_node_second_visit_restores_payload() -> None:
+    """同节点二次进店可观察:开店 → 关店 → 再开店 → gs.shop 牌面在且
+    同值(3.6 会话模型合法形态,修复主径)。
+
+    首访 = 节点窗起发牌后在屏态,开店保持现值零写;关店清呈现;再
+    开店以节点级记录补写——实机对偶 = live 漏斗每次进店重读屏。"""
+    b = _backend(seed=7)
+    try:
+        _drive_to_first_prep(b)
+        gs = b.gs
+        first = gs.shop.value
+        assert first is not None, '前置:节点窗起发牌已写容器'
+
+        _open_shop(b)
+        assert b.screen_identity() == SCREEN_SHOP, '开店呈现商店态'
+        assert gs.shop.value == first, '首访在屏态保持现值(零写回)'
+        obs = b.observe(SCREEN_SHOP)
+        assert obs.shop == list(first.cards), '首访观察产物 = 发牌牌面'
+
+        _close_shop_feed(b)
+        assert gs.shop.value is None, '关店清呈现(payload 离屏)'
+        assert b.screen_identity() == SCREEN_PREP, '纯转移交回备战'
+
+        _open_shop(b)
+        assert gs.shop.value is not None, '再开店必须可观察(修复面:缺口即此处崩)'
+        assert gs.shop.value == first, '牌面 = 节点级记录同值'
+        obs2 = b.observe(SCREEN_SHOP)
+        assert obs2.shop == list(first.cards), '再访观察产物同值(策略决策面)'
+    finally:
+        uninstall_backend()
+
+
+def test_node_switch_new_deal_overrides_record() -> None:
+    """节点切换发牌更新:推进到下一节点 → 新发牌覆盖记录 → 再开店写回
+    = 当前节点牌面(非旧节点残值);顺带锁记录与呈现的分界(关店离屏
+    期间新发牌在屏,记录跟随新值)。"""
+    b = _backend(seed=7)
+    try:
+        _drive_to_first_prep(b)
+        gs = b.gs
+        first = gs.shop.value
+        assert first is not None, '前置:P1r1 发牌在屏'
+
+        _close_shop_feed(b)
+        assert gs.shop.value is None, '离屏后再推进(记录存活,呈现清空)'
+
+        # 节点推进(P1r1 奖励节点:出战 → 结算确认;声明化单轨同形)
+        out = report_action_start_battle_param(gs, SimpleNamespace(), _SIG)
+        cw_sim_ports.declare_world(out.world_decl)
+        adv = report_node_advance(gs, trigger='settle_confirm')
+        assert adv.applied, f'节点推进未落账: {adv.reason!r}'
+        cw_sim_ports.declare_world(adv.world_decl)
+        second = gs.shop.value
+        assert second is not None, '前置:节点切换自动全刷新发牌'
+        assert second != first, '前置:新旧节点发牌分形(记录覆盖可判)'
+        assert b.screen_identity() == SCREEN_PREP, 'P1r2 备战呈现'
+
+        _close_shop_feed(b)
+        assert gs.shop.value is None
+        _open_shop(b)
+        assert gs.shop.value == second, \
+            '写回 = 当前节点发牌(记录随节点窗新发牌覆盖)'
+    finally:
+        uninstall_backend()
+
+
+# ============================================================ 装配接缝
+# (sim 端口接口契约 + CwOperation 覆写面 + controller 桩,flow-seam
+#  §1/§2:端口槽缺省关(不装后端 = 纯实机,读屏改道 helper 走原读链);
+#  单装配纪律;sim 模式 CwOperation 三条腿;controller 桩直连真实 IO
+#  触碰即 AssertionError(双保险兜底)。)
+
+#: 哨兵帧形状(1080p 基准,area 裁剪不崩、识别恒空 = 双保险第一线)
+_SENTINEL_SHAPE = (1080, 1920, 3)
+#: 真实建档(screen_info currency_war_battle_prep.yml):点击腿测试用
+_PREP_SCREEN = '货币战争-备战'
+
+
+class _ProbeOp(CwOperation):
+    """探针 op:直调基类覆写面(不走 execute 循环,零运行态前置)。"""
+
+    def __init__(self, ctx):
+        CwOperation.__init__(self, ctx, op_name='sim-seam-probe',
+                             need_check_game_win=False)
+
+    @operation_node(name='probe', is_start_node=True)
+    def run(self) -> OperationRoundResult:
+        return self.round_success()
+
+
+@pytest.fixture
+def _sim_ctx(test_context, monkeypatch):
+    """测试 ctx + controller 桩(monkeypatch 自动还原,防污染共享 ctx)。
+
+    桩兜底语义:测试体内任何直连 controller 路径未改道 = 撞桩即炸,
+    测试红 = 覆写面漏改,真值可见。
+    """
+    monkeypatch.setattr(test_context, 'controller', SimControllerStub())
+    return test_context
+
+
+def test_ports_default_off_and_live_read_chain():
+    """端口缺省关:不装后端 = 纯实机(判据 1 的缺省前提)。
+
+    读屏改道 helper 未装配时执行原读链(live_read),不触后端口。"""
+    assert sim_backend_installed() is False
+    assert cw_sim_ports.get_sim_backend() is None
+    marker = object()
+    assert sim_or_live_observation(_PREP_SCREEN, lambda: marker) is marker
+
+
+def test_install_discipline_duplicate_raises_uninstall_idempotent():
+    """单装配纪律(端口协议锁):重复安装 raise;uninstall 幂等;
+    卸载后可再装;teardown 卸载复位。"""
+    with sim_backend_fixture() as backend:
+        assert sim_backend_installed() is True
+        assert cw_sim_ports.get_sim_backend() is backend
+        with pytest.raises(RuntimeError, match='重复安装'):
+            install_sim_backend(MinimalSimBackend())
+    # teardown 必卸
+    assert sim_backend_installed() is False
+    # uninstall 幂等 + 卸载后可再装
+    uninstall_sim_backend()
+    assert sim_backend_installed() is False
+    with sim_backend_fixture():
+        assert sim_backend_installed() is True
+
+
+def test_screenshot_returns_sentinel_without_touching_controller(_sim_ctx):
+    """sim 哨兵帧:装配后端后 CwOperation.screenshot 返回 1080p 空白帧、
+    last_screenshot 置位,全程不触 controller(ctx.controller = 桩,触即炸)。
+    空白语义:漏改的帧消费者在哨兵帧上真识别 = 恒未找到(双保险第一线)。"""
+
+    with sim_backend_fixture():
+        op = _ProbeOp(_sim_ctx)
+        frame = op.screenshot()
+        assert frame.shape == _SENTINEL_SHAPE
+        assert not frame.any()
+        assert op.last_screenshot is frame
+        assert op.last_screenshot_time > 0
+
+
+def test_direct_controller_access_raises(_sim_ctx):
+    """controller 桩(双保险兜底):sim 装配下直连 controller 任何接口
+    = AssertionError 响亮(报「sim 模式触碰真实 IO」)。"""
+    with sim_backend_fixture():
+        op = _ProbeOp(_sim_ctx)
+        with pytest.raises(AssertionError, match='sim 模式触碰真实 IO'):
+            _ = op.ctx.controller.click
+        with pytest.raises(AssertionError, match='sim 模式触碰真实 IO'):
+            _ = op.ctx.controller.game_win
+
+
+def test_click_leg_archive_point_and_until_polling(_sim_ctx):
+    """sim 点击腿(机械镜契约):无 until = 档案点位直成功(node_clicked
+    置位);带 until = 先点击后 round_wait,转移证据可见后下一轮
+    round_success;轮询重入不重复进后端 click_answer(点击腿不重发);
+    屏门 = 问询屏区域可见才点得着(实机「本帧找到才点得着」对偶,防
+    越屏偷跑推进);区域未建档 = round_fail 响亮。"""
+    click_area = '按钮-商店'
+    click_target = (_PREP_SCREEN, click_area)
+    until_target = ('货币战争-商店', '标识-商店牌面')
+    with sim_backend_fixture() as backend:
+        op = _ProbeOp(_sim_ctx)
+        # 屏门前置:按钮在本帧可见(点得着的前提)
+        backend.visible_areas.add(click_target)
+        # ① 无 until:直成功 + 后端收到恰一次点击
+        r1 = op.round_by_find_and_click_area(
+            screen_name=_PREP_SCREEN, area_name=click_area)
+        assert r1.result is OperationRoundResultEnum.SUCCESS
+        assert op.node_clicked is True
+        assert backend.clicked == [click_target]
+        # ② until 未满足:round_wait 轮询,且不重复进后端(点击腿已成功)
+        r2 = op.round_by_find_and_click_area(
+            screen_name=_PREP_SCREEN, area_name=click_area,
+            until_find_all=[until_target])
+        assert r2.result is OperationRoundResultEnum.WAIT
+        assert backend.clicked == [click_target]
+        # ③ 转移证据可见:下一轮 round_success(轮询腿直接问 visible)
+        backend.visible_areas.add(until_target)
+        r3 = op.round_by_find_and_click_area(
+            screen_name=_PREP_SCREEN, area_name=click_area,
+            until_find_all=[until_target])
+        assert r3.result is OperationRoundResultEnum.SUCCESS
+        assert backend.clicked == [click_target]
+        # ④ 屏门拒点:按钮不可见(世界已切走)→ retry(防驻留型动作 op
+        # 越屏偷跑推进,冒烟批阻断二实证形态; MinimalSimBackend 先记录
+        # 请求再委托机械镜,拒绝在镜像层发生,故 clicked 记录增长)
+        backend.visible_areas.discard(click_target)
+        r4 = op.round_by_find_and_click_area(
+            screen_name=_PREP_SCREEN, area_name=click_area)
+        assert r4.result is OperationRoundResultEnum.RETRY
+        assert len(backend.clicked) == 2, '第二次点击到达后端但被屏门拒绝'
+        # ⑤ 区域未建档:fail 响亮(与实机 AREA_NO_CONFIG 同形)
+        r5 = op.round_by_find_and_click_area(
+            screen_name=_PREP_SCREEN, area_name='不存在的区域')
+        assert r5.result is OperationRoundResultEnum.FAIL
+
+
+def test_find_area_leg_visible_query(_sim_ctx):
+    """sim find_area 腿:端口 visible 应答(可见 = success,不可见 =
+    retry),不触截图识别链。"""
+    area = (_PREP_SCREEN, '按钮-商店')
+    with sim_backend_fixture() as backend:
+        op = _ProbeOp(_sim_ctx)
+        r_miss = op.round_by_find_area(None, area[0], area[1])
+        assert r_miss.result is OperationRoundResultEnum.RETRY
+        backend.visible_areas.add(area)
+        r_hit = op.round_by_find_area(None, area[0], area[1])
+        assert r_hit.result is OperationRoundResultEnum.SUCCESS
+
+
+# (事实事件缺省关测试已随事实事件槽退役删除:
+#  事实事件槽本体与全部广播调用点同批删除,sim 呈现 =
+#  容器登记 + 问询时点懒呈现,锁在本文件懒呈现两测试。)
+
+
+def test_identity_helper_filters_by_screen_list():
+    """画面身份读点改道 helper(sim 统一 3.4;flow-seam 附录 A.2
+    「sim 画面身份归 screen_identity」):装配后 = 状态机答口,且清单外
+    返回 None(与实机 get_match_screen_name 清单过滤同形,备战双锚默认
+    分支不受扰);缺省关 = 原识别链零行为变化。"""
+    with sim_backend_fixture(MinimalSimBackend(screen='货币战争-补给')):
+        assert cw_sim_ports.sim_or_live_identity(
+            ('货币战争-补给',), lambda: 'LIVE') == '货币战争-补给'
+        assert cw_sim_ports.sim_or_live_identity(
+            (_PREP_SCREEN,), lambda: 'LIVE') is None
+    assert cw_sim_ports.sim_or_live_identity(
+        (_PREP_SCREEN,), lambda: 'LIVE') == 'LIVE'
+
+
+def test_mechanical_io_allowed_default_true_sim_false():
+    """机械 IO 腿检查口(直连旁路 port 检查的共用判定,flow-seam §2):
+    实机(未装配)= True 零行为变化;sim 装配后 = False(机械腿静默
+    跳过,自上报照走)。"""
+    assert cw_sim_ports.mechanical_io_allowed() is True
+    with sim_backend_fixture():
+        assert cw_sim_ports.mechanical_io_allowed() is False
+    assert cw_sim_ports.mechanical_io_allowed() is True
+
+
+def test_action_rng_provider_seeded_on_install_reset_on_uninstall():
+    """动作腿采样 rng 注入槽(T-2 偏差申报的归属点接线):SimBackend
+    install_backend 接通提供槽(流键 rng,同 seed 同调用序确定性);
+    uninstall_backend 复位 = 实机未播种口径零变化。断言键面含
+    'ore_reward_gen'(挂接生成腿键随 action_sampling_rng 首调自动生效,
+    装配方零改动)。"""
+    from sr_od.application.currency_war.kernel.cw_action_report import (
+        provided_action_rng,
+    )
+
+    assert provided_action_rng('collect_ore') is None, '缺省必须关'
+    assert provided_action_rng('ore_reward_gen') is None, '缺省必须关'
+    install_backend(SimBackend(seed=9, cfg=RunConfig(
+        selected_difficulty='A8', enemy_difficulty=108)))
+    try:
+        first = provided_action_rng('collect_ore').random()
+        gen_first = provided_action_rng('ore_reward_gen').random()
+    finally:
+        uninstall_backend()
+    assert provided_action_rng('collect_ore') is None, '卸载必须复位'
+    assert provided_action_rng('ore_reward_gen') is None, '卸载必须复位'
+    install_backend(SimBackend(seed=9, cfg=RunConfig(
+        selected_difficulty='A8', enemy_difficulty=108)))
+    try:
+        second = provided_action_rng('collect_ore').random()
+        gen_second = provided_action_rng('ore_reward_gen').random()
+    finally:
+        uninstall_backend()
+    assert first == second, '同 seed 同键序采样必须一致(确定性)'
+    assert gen_first == gen_second, 'ore_reward_gen 键同 seed 确定性'

@@ -1,40 +1,49 @@
-"""效果账本桥·板面重写(apply_board_rewrite)锚定通道行为锁。
+"""效果账本域锁(机制主题文件):账本桥·板面重写通道 + 节点边界推进。
 
-机制单一源 = ``cw_effect_inventory.apply_board_rewrite`` 注(通道择道
-单一源 = ``cw_game_state.anchor_aware_write``;通道规则「未锚定 →
-随机态」,语义域 = 容器正本 game_state/fields.md「开局种子底座」节)。
-锁面:
-
-- **人力重组双臂**:种子容器(未闩)SELL_ALL 清空写恰三行
-  source=logic_rand(未验证推算走随机态);置闩(测试专口直赋)后
-  同路径 source=logic(确定面,失配网生效);
-- **静默覆盖臂**:未闩清空写被观察以不同值覆盖 → 零
-  observe_vs_logic_mismatch 失配行、差异落 logic_rand_outcome(首观察
-  静默覆盖);置闩后同场景 → 失配缺陷行(失配网未盲);
-- **回归臂**:全员晋升(UPGRADE_ALL)零容器写不变;非板面重写条目
-  过桥零动作;burst 桥写端(免费刷新余额累加,效果账本侧)行为不变。
+被锁机制(按节):
+- **apply_board_rewrite 锚定通道行为**(通道择道单一源 =
+  ``cw_game_state.anchor_aware_write``;通道规则「未锚定 → 随机态」,
+  语义域 = 容器正本 game_state/fields.md「开局种子底座」节):人力
+  重组双臂(种子未闩 → logic_rand / 置闩 → logic)、静默覆盖臂
+  (未闩零失配行落 logic_rand_outcome,置闩失配网生效)、回归臂
+  (UPGRADE_ALL 零容器写 / 非板面条目零动作 / burst 桥 Field 发放);
+- **效果推进段 tick_effect_boundary**(结算真值收口后只剩账本推进/
+  刷新发放/异常边界三判据;2026-10-12-abolish-node-ordinal §3.2 起
+  生效序位 = (位面, 轮) 元组键):None 守卫 / 推进+到账 / 吞异常;
+- **清盘 → 再买 → 前排部署交互**(清盘后规范形空视图不崩,清盘写
+  保持单写)。
 """
 from __future__ import annotations
 
+from sr_od.application.currency_war.kernel.cw_action_report import (
+    report_action_deploy_move_param,
+)
 from sr_od.application.currency_war.kernel.cw_effect_inventory import (
     BOARD_REWRITE_UPGRADE_ALL,
     apply_board_rewrite,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
+    BENCH_CAPACITY_DEFAULT,
+    GAME_STATE_SCHEMA_VERSION,
     BenchSlot,
     BenchView,
     ChannelSig,
+    DeployedView,
     GameState,
     Unit,
     apply_effect_burst_grant,
     consume_defect_sink,
     game_state_of,
+    tick_effect_boundary,
 )
 from sr_od.application.currency_war.kernel.cw_investments import (
     STRATEGY_EFFECTS,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
+)
+from sr_od.application.currency_war.kernel.cw_vocab import (
+    CwActionDeployMoveParam,
 )
 
 _SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep', mode='read')
@@ -45,6 +54,11 @@ _SELL_ALL = STRATEGY_EFFECTS['人力重组']
 def _seeded_gs() -> GameState:
     """种子容器(经 game_state_of 缓存单例支冷建,与生产局容器同构)。"""
     return game_state_of(StrategySession())
+
+
+def _u(cid: str, star: int = 1, equips: list[str] | None = None) -> Unit:
+    """单位直构(装备跟单位对象)。"""
+    return Unit(char_id=cid, star=star, equips=list(equips or []))
 
 
 def test_sell_all_channel_dual_arm_by_anchor() -> None:
@@ -124,3 +138,84 @@ def test_upgrade_all_and_other_bridges_unchanged() -> None:
     assert gs.free_refresh_left.value == 2, 'None 基 = 0 起算'
     assert gs.free_refresh_left.source == 'logic'
     assert gs.write_seq > seq_before_burst, 'burst 桥落 Field 行'
+
+
+# ============================================================ 效果推进段(tick_effect_boundary)
+
+def test_none_guard_skips_whole_segment() -> None:
+    """判据①:effective None → 整段跳过——在册效果零发放(「未观察不当真
+    进节点」守卫,禁虚耗余期/虚累余额;现码 cw_loop 禁令随迁)。"""
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    gs.effects.register_strategy(STRATEGY_EFFECTS['双手狸开键盘！'],
+                                 acquired_key=(1, 5))
+    tick_effect_boundary(gs)
+    assert gs.free_refresh_left.value is None, '未观察 = 不发放(零 Field 行)'
+    assert gs.node_hist_pos is None
+
+
+def test_advances_and_grants() -> None:
+    """判据②:生效序位推进 → 账本 advanced + 刷新剩余次数 Field 到账。"""
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    gs.effects.register_strategy(STRATEGY_EFFECTS['双手狸开键盘！'],
+                                 acquired_key=(1, 5))
+    gs.node_hist_pos = (1, 6)
+    tick_effect_boundary(gs)
+    assert gs.free_refresh_left.value == 2, '每进节点 +2(双手狸活载体)'
+
+
+def test_segment_swallows_exceptions(monkeypatch) -> None:
+    """异常边界:段内失败吞 Exception 记 warning 不上抛(不毒化派生链)。"""
+
+    def _boom(node_key):
+        raise RuntimeError('probe')
+
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    gs.node_hist_pos = (2, 3)
+    monkeypatch.setattr(type(gs.effects), 'advance_node', _boom)
+    tick_effect_boundary(gs)   # 不上抛即判据
+
+
+# ============================================================ 清盘 → 再买 → 前排部署交互
+
+_M31_SIG_LOGIC = ChannelSig(family='logic_action', actor='MandateV1Strategy',
+                            mode='compute')
+
+
+def test_board_rewrite_clear_then_front_deploy_no_crash() -> None:
+    """清盘 → 再买 → 前排部署不崩(交互锁):EffectLedgerBridge 全场出售
+    清空后视图 = 规范形空视图(front_slots 定长 4),后续 deploy_move
+    前排直址落位不 IndexError;清盘写本身保持单写。
+
+    测试卫生:未锚定清盘走 write_logic_rand,下方 bench 再观察覆盖
+    异值 → 一行 logic_rand_outcome 入进程级缺陷缓冲(预期内,非安灯)
+    ——用例末尾 consume_defect_sink 排水,防跨用例顺序依赖红。"""
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    gs.observe(gs.bench, BenchView(
+        slots=[BenchSlot(kind='unit', unit=_u('停云'))]
+        + [BenchSlot(kind='empty')] * (BENCH_CAPACITY_DEFAULT - 1),
+        capacity=BENCH_CAPACITY_DEFAULT), sig=_SIG_OBS)
+    gs.observe(gs.deployed, DeployedView(
+        front_slots=[_u('银枝'), None, None, None],
+        back_slots=[_u('刃'), None, None, None, None, None]), sig=_SIG_OBS)
+    gs.observe(gs.gold, 10, sig=_SIG_OBS)
+
+    report = apply_board_rewrite(gs, STRATEGY_EFFECTS['人力重组'])
+    assert report is not None and 'deployed' in report.cleared_fields
+
+    view = gs.deployed.value
+    assert len(view.front_slots) == 4, '清盘后 front_slots 恒定长 4(规范形不变量)'
+    assert all(u is None for u in view.front_slots)
+    assert all(u is None for u in view.back_slots), '两排全空(语义清盘)'
+
+    # 清盘 → 再买(落席)→ 前排部署:不崩 + 落位正确。
+    gs.observe(gs.bench, BenchView(
+        slots=[BenchSlot(kind='unit', unit=_u('甲'))]
+        + [BenchSlot(kind='empty')] * 8,
+        capacity=BENCH_CAPACITY_DEFAULT), sig=_SIG_OBS)
+    report_action_deploy_move_param(
+        gs, CwActionDeployMoveParam(bench_idx=0, to_row='front',
+                                    to_slot=4, faction=''),
+        _M31_SIG_LOGIC)
+    assert gs.deployed.value.front_slots[3].char_id == '甲', \
+        '前排 4 号直址落位(清盘后规范形视图上不崩)'
+    consume_defect_sink()   # 排水:logic_rand_outcome 行不跨用例泄漏

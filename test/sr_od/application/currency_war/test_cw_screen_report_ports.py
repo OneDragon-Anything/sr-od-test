@@ -1,7 +1,7 @@
 """画面观察上报端口锁(kernel/cw_screen_report 包;迭代
  T-1 kernel 基座)。
 
-三面锁(同动作族 test_cw_action_report_contract 形态;零真实副作用,
+三面锁(同动作族 test_cw_action_report 形态;零真实副作用,
 纯容器直驱):
 
 1. 完备锁:遍历包内全部 obs 类,断言「非推进型 ↔ report_screen_<snake>_obs
@@ -78,7 +78,7 @@ _NO_REPORT = frozenset({
 #:  见 _WRITE_CASES['plane_intel'] 与写门专项锁;boss_briefing 已于
 #:   切换批升级为真实写面——BOSS
 #:  类型直定(目标 = 现 hist),写门/直定专项锁归 test_cw_node_chain 与
-#:  test_cw_game_state_contract 节点域锁;shop 保持占位:
+#:  test_cw_game_state 节点域锁;shop 保持占位:
 #:  唯一候选写点 = 段头 gold 救援补写,属入口观察链内纠正补写,勘察
 #:  结论申报在 kernel 屏文件模块头,不收编交后续批裁决。)
 _PLACEHOLDERS = ('armory_box', 'wait_one_one',
@@ -516,25 +516,6 @@ def test_plane_transition_chain_defenses():
         gs3, mod.CwScreenPlaneTransitionObs(on_screen=True, chain=chain))
     assert gs3.node_path.value == chain
     assert gs3.node_path_baseline.value == existing
-
-
-def test_prep_optional_domains_field_presence_after_takeover_retirement():
-    """备战可选域字段在场才写(接管域退役批后契约:链域 = 唯一可选写域):
-    - 全 None obs(仅 prep 整包缺省)→ 零写(占位语义存续面);
-    - 接管域四字段(takeover_tries/takeover_collect_done/plane_bosses/
-      enemy_affixes)已随编排单一源退役出 obs 类(零残留断言)。"""
-    import dataclasses
-
-    mod = _screen_module('prep')
-    field_names = {f.name for f in dataclasses.fields(mod.CwScreenPrepObs)}
-    assert 'node_path_chain' in field_names, '链域可选写域存续'
-    for retired in ('takeover_tries', 'takeover_collect_done',
-                    'plane_bosses', 'enemy_affixes'):
-        assert retired not in field_names, f'接管域字段应已退役:{retired}'
-    # 全 None → 零写
-    gs = _blank_gs()
-    mod.report_screen_prep_obs(gs, mod.CwScreenPrepObs())
-    assert gs.write_seq == 0, '全 None 可选域 = 本轮无此面,零写'
 
 
 def test_prep_chain_baseline_idempotent_gate():

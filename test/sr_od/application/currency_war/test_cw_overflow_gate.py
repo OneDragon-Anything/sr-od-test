@@ -9,15 +9,12 @@
 2. 告警消失 → 门释放(无强收窄卖出,常规决策接管);
 3. 溢出态 CwActionSellBenchParam 逻辑态 = 摘卖件 + 溢出卡入自由槽 + 旗标/身份消亡;
    身份缺读('')= 跳过入位(槽留空等观察),卖出本体不受阻;
-4. 溢出腿执行账吸收(原 test_cw_overflow_tracked_sync.py 全文件迁并,
-   该文件已删):落地时刻容器 + tracked 两账一测 + 执行器摘除腿先行的
-   紧缩重建腿。
+4. 溢出腿吸收与镜像语义(原 test_cw_overflow_tracked_sync.py 与
+   test_cw_overflow_mirror_frame.py 全文件先后迁并,均已删):入位卡回占
+   被卖槽(席空数派生不 +1,缺回占 = 决策面假空席,席满拒落类门被假象
+   绕过)+ 陈旧提案(卖出槽容器已空)写口零写、旗标不清(镜像不误发)。
 """
 from __future__ import annotations
-
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    deployed_view_sequential as _dvs,
-)
 
 from test.sr_od.application.currency_war._cw_helpers import cw4_bview
 
@@ -29,7 +26,12 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     Unit,
     bench_entries_of,
+    bench_free_slots,
+    bench_view_slots_of,
     game_state_of,
+)
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    deployed_view_sequential as _dvs,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
@@ -118,6 +120,8 @@ def test_sellbench_overflow_logic_state_absorbs_card():
     slots = bench_entries_of(gs)
     assert slots[0] is not None and slots[0].unit.char_id == '不死途'
     assert slots[1].unit.char_id == '刃'
+    # 席空数派生不 +1(原 mirror 锁回占腿并入:缺回占 = 假空席绕过席满门)
+    assert bench_free_slots(gs) == 7
     # 退款 = sell_refund(1★, 2费) = cost 全额 = 2(10 → 12)
     assert gs.gold.value == 12
     assert gs.overflow_card.value == ''
@@ -190,14 +194,13 @@ def test_sellbench_overflow_missing_identity_skips_absorb():
     assert gs.overflow_card.value == ''
 
 
-# ===== 溢出腿吸收(原 test_cw_overflow_tracked_sync.py;3.2 单账化)=====
+# ===== 溢出腿吸收/镜像补遗(原 test_cw_overflow_mirror_frame.py 迁并)=====
 
 
-def test_overflow_absorb_lands_at_sold_slot():
-    """溢出腿落地 → 入位卡按被卖槽下标落容器 bench(2026-09-11 实机
-    2-4 停机事故本形:溢出腿入位卡未达执行主账 → 商店 visit 入口两账
-    结构性分叉粘性不可自愈。 单账化后分叉结构性
-    不可能:容器 bench 即唯一账,吸收锁 = 入位卡落槽 + 存件不串。"""
+def test_sellbench_stale_proposal_zero_write_flag_kept():
+    """镜像不误发:陈旧提案(卖出槽容器已空)→ 写口零写、旗标不清 →
+    席空数派生不变(零写即零变化;原黑板帧镜像腿随黑板退役,镜像语义
+    由卖备战上报函数溢出分支单点承载)。"""
     session = StrategySession()
     gs = game_state_of(session)
     gs.write_logic(gs.bench, cw4_bview(
@@ -207,10 +210,16 @@ def test_overflow_absorb_lands_at_sold_slot():
     gs.write_logic(gs.gold, 10, produced_by='test', sig=_SIG)
     gs.write_logic(gs.overflow_warning, True, produced_by='test', sig=_SIG)
     gs.write_logic(gs.overflow_card, '不死途', produced_by='test', sig=_SIG)
+    # 陈旧提案:卖出槽 1 容器已空(提案与容器失配,写口守卫零写)
+    gs.write_logic(gs.bench, cw4_bview(
+        [None, BenchSlot(kind='unit', unit=Unit(char_id='刃', star=1))]),
+        produced_by='test', sig=_SIG)
 
     report_action_sell_bench_param(gs, CwActionSellBenchParam(bench_idx=0),
                                    sig=_SIG)
 
-    assert [(b.unit.char_id, b.unit.star) for b in
-            bench_entries_of(gs) if b is not None] == [
-        ('不死途', 1), ('刃', 1)], '入位卡占被卖槽,存件不丢不串槽'
+    dep = bench_view_slots_of(gs)
+    assert (dep[0] is None or dep[0].kind == 'empty') \
+        and dep[1].kind == 'unit' and dep[1].unit.char_id == '刃'   # 容器零写
+    assert gs.overflow_warning.value is True    # 旗标未消费(写口零写)
+    assert bench_free_slots(gs) == 8            # 零写 → 席空数不变

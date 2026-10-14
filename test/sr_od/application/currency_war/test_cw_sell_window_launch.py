@@ -22,8 +22,18 @@
 
 锁面组织(极限合并):闭集三锁(枚举拒/15 臂映射/press-stall 双视图)
 并一;生命周期三锁(τ 同轮/锁线不清登记/四出口)表驱动并一;通道无关
-阻断三锁(funding e2e/entry EV/M4)参数化并一;投影正证+红证并一;
+阻断三锁(funding e2e/M4)参数化并一;投影正证+红证并一;
 资格合取与 fallback 发射独立保留。
+
+并段(**轮内新鲜度账容器宿主 + 商店访问账本死字段退役**,原
+test_cw_round_fresh_buys_host 并入;同 visit 卖回防线第二载体,逐字段
+处置表 #18/#19):轮内新鲜度账宿主 = 容器 Field ``GameState.round_
+fresh_buys``(record_fresh_buy 写 → fresh_buys_of/fresh_buys_sell_face
+读同一容器,写读单口 sim/live 同口;相位失配 = 跨轮整体作废、读取零销
+账;值形状 names = list);商店访问账本的四死基座字段(期望态残留,
+全为写端无读端)不再在场——对象面运行时检查,非源码扫描。(原卖出
+落地锁随商店域 SellBenchOp 退役移除:动作 op 重组批③,备战域卖出由
+CwActionSellBenchOp 承接。)
 """
 from __future__ import annotations
 
@@ -40,9 +50,18 @@ from sr_od.application.currency_war.kernel.cw_card_identity import (
     line_identity_tier,
     sell_hold_exclusion_names,
 )
+from sr_od.application.currency_war.kernel.cw_deploy_logic import (
+    fresh_buys_of,
+    fresh_buys_sell_face,
+    record_fresh_buy,
+)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     BenchSlot,
+    ChannelSig,
+    GameState,
+    NodeKey,
     Unit,
+    game_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
@@ -53,6 +72,9 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionCloseShopParam,
     CwActionSellBenchParam,
+)
+from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
+    ShopVisitLedger,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
     mandate,
@@ -393,8 +415,9 @@ _W1_CASES = {
 
 # (原 TestFundingHoldFallback 店侧五锁随商店期筹资形态收缩退役:
 #  店内兜底变现发射面删除,筹资形态 = 关店交回(锁 =
-#  test_cw_shop_action_face_contraction::test_funding_form_closes_with_
-#  defer_counter);原 entry 侧消费位锁〔TestFundingFallbackEntryConsumer,
+#  test_cw_shop_session_loop::test_funding_hold_fallback_records_
+#  opportunity,原文件名 test_cw_shop_action_face_contraction 已并入);
+#  原 entry 侧消费位锁〔TestFundingFallbackEntryConsumer,
 #  经 entry._criteria_pass 发射〕随 2026-10-12 迭代批 3.3 备战九段全扫
 #  重写退役——EV pass 删除,备战域兜底发射位消亡;兜底池定义单一源
 #  〔sell_gate.funding_hold_fallback〕与达成量化语义由 3.6 会话内筹资
@@ -439,3 +462,77 @@ class TestProjectionFullFace:
         assert '垫件P' in sell_gate.sell_exclusions(
             sess_red, k, channel='projection', current_round=3)
         assert '垫件P' not in no_t3, '红证失效:无 T3 并入面仍含垫件'
+
+
+# ============================================================
+# 并段:轮内新鲜度账容器宿主 + 商店访问账本死字段退役(原
+# test_cw_round_fresh_buys_host 并入;同 visit 卖回防线第二载体)
+# ============================================================
+
+
+def _feed_phase(session: StrategySession, plane: int,
+                round_num: int) -> GameState:
+    """容器节点播种(与 _cw_helpers 种子节点补写同式;kind 空串 =
+    帧未识别的忠实镜像,相位读口 plane_of/round_num_of 只读键维)。"""
+    gs = game_state_of(session)
+    gs.observe(gs.node, NodeKey(plane=plane, round_num=round_num, kind=''),
+               evidence='kind_inherited',
+               sig=ChannelSig(family='obs',
+                              actor='cw4_seed',
+                              mode='synthesized'))
+    return gs
+
+
+def test_round_fresh_buys_host_switch_same_container() -> None:
+    """宿主切换同口:record 写入容器 Field,读端自同容器解析(相位内)。"""
+    session = StrategySession()
+    gs = _feed_phase(session, plane=2, round_num=3)
+    record_fresh_buy(session, gs, '三月七')
+    # 写端落容器 Field(值形状:phase 元组对 + names list,非 set)
+    assert gs.round_fresh_buys.value == {'phase': (2, 3),
+                                         'names': ['三月七']}
+    # 同批发射逐名入集(防批量漏记语义保留)
+    record_fresh_buy(session, gs, '丹恒')
+    assert gs.round_fresh_buys.value['names'] == ['三月七', '丹恒']
+    # 读端 = 同容器(同口;换出守卫视角)
+    assert fresh_buys_of(session, gs) == frozenset({'三月七', '丹恒'})
+
+
+def test_round_fresh_buys_phase_mismatch_invalidates_whole_record() -> None:
+    """相位失配 = 跨轮整体作废(读取零销账,无逐名生命周期面);新相位
+    写入 = 换记录,旧相位名不泄入。"""
+    session = StrategySession()
+    gs = _feed_phase(session, plane=2, round_num=3)
+    record_fresh_buy(session, gs, '三月七')
+    assert fresh_buys_of(session, gs) == frozenset({'三月七'})
+    # 轮次推进:旧记录整体作废,且记录本体未被读端销账(零销账)
+    gs = _feed_phase(session, plane=2, round_num=4)
+    assert fresh_buys_of(session, gs) == frozenset()
+    assert gs.round_fresh_buys.value['names'] == ['三月七']
+    record_fresh_buy(session, gs, '丹恒')
+    assert gs.round_fresh_buys.value == {'phase': (2, 4), 'names': ['丹恒']}
+
+
+def test_fresh_buys_sell_face_failclosed_and_phase_gate() -> None:
+    """L1 卖侧闩读端(容器宿主):节点未定帧 = fail-closed 排除当前记录
+    全集(方向安全,上界单轮);节点已定帧相位失配 = 整体作废。"""
+    session = StrategySession()
+    gs = game_state_of(session)   # node 未定:相位键 = 缺省 (1, 1)
+    record_fresh_buy(session, gs, '三月七')
+    assert fresh_buys_sell_face(session) == frozenset({'三月七'})
+    # 节点已定且相位失配 = 跨轮,整体作废
+    _feed_phase(session, plane=2, round_num=3)
+    assert fresh_buys_sell_face(session) == frozenset()
+    # 同相位重录后硬面恢复可见
+    record_fresh_buy(session, gs, '丹恒')
+    assert fresh_buys_sell_face(session) == frozenset({'丹恒'})
+
+
+def test_buy_ledger_dead_base_fields_retired() -> None:
+    """四死基座字段不再在场(期望态残留,全为写端无读端,对象面运行时
+    检查);存活面 buy_purchases 保留。"""
+    ledger = ShopVisitLedger()
+    for _dead in ('buy_pre_bench', 'buy_pre_deployed', 'buy_has_sell',
+                  'buy_unidentified'):
+        assert not hasattr(ledger, _dead)
+    assert ledger.buy_purchases == []

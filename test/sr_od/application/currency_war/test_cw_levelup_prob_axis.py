@@ -1,4 +1,5 @@
-"""CW 升级判据重轴单帧锁(迭代 2026-10-12-prep-shop-workflow-redesign 批 3.4)。
+"""CW 升级判据重轴单帧锁(迭代 2026-10-12-prep-shop-workflow-redesign 批 3.4)
++ P2 低血带授权域(fail-closed 落码)。
 
 出处(持久索引):details/line_and_upgrade.md §2(触发五臂/支出形态/
 拦截层处置)与 §2.3 处置表;design.md 条 4(升级判据重轴)。判据本体 =
@@ -16,6 +17,13 @@ strategies/impl/mandate_v1/criteria/levelup.py,发射位 = entry 备战第
 构帧纪律:锁定线经 session_scope.write_line_lock(3.1 键,同帧种子后写);
 plane2_started 经 node_hist_pos 直赋 + handle_node_boundary 置位(单调
 水位驱动,3.1 口径)。
+
+P2 血带节(原 P2 低血带授权域统一件):单一语义权威 = 生产符号
+(谓词/授权闩 = statefn.predicates,停付面 = criteria/levelup,
+分键写入端 = flow)。锁两类事:①p2_blood_floor 域谓词真值表(信任门/
+阈值单一源 = HP_BAND_NEAR_DEATH,位面域互补);②危机带停付面 + 凑息
+拒因键域(血线拒因键退役)。保底金门真值表 = 本文件
+TestRetainedGates::test_guarantee_floor_gate_truth_table 承载,不重复。
 """
 from __future__ import annotations
 
@@ -23,6 +31,9 @@ from types import SimpleNamespace
 
 from test.sr_od.application.currency_war._cw_helpers import (
     cw4_bc as _bc,
+)
+from test.sr_od.application.currency_war._cw_helpers import (
+    cw4_box as _bsb,
 )
 from test.sr_od.application.currency_war._cw_helpers import cw4_gs
 
@@ -459,3 +470,85 @@ class TestFundingHoldFallback:
         trig, key = levelup.upgrade_trigger(gs, s)
         assert trig and key == levelup.ARM_POPULATION, \
             '板满 ∧ 同羁绊等待件:人口位三元触发'
+
+
+# ===== 6. P2 低血带授权域(谓词 + 危机带停付面)=====
+
+
+class TestP2BloodBand:
+
+    def _st2(self, hp: int | None = 10, plane: int = 2, gold: int = 30,
+             round_num: int = 2, level: int = 7,
+             node_type: str | None = None) -> dict:
+        """P2 濒死带场景种子轴(hp 缺省 10 ⊂ ≤15 带;返回 = ``_bsb``
+        kwargs,hp=None = 域未观察)。"""
+        axes: dict = {'hp': hp, 'plane': plane, 'gold': gold,
+                      'round_num': round_num, 'level': level}
+        if node_type is not None:
+            axes['node'] = node_type   # 终态契约 §A′:node 单一源 = gs
+        return axes
+
+    def test_domain_truth_table_and_p1_complement(self):
+        """域真值表 + 位面域互补并一。
+        [真值表] p2_blood_floor:plane≥2 ∧ hp≤15 ∧ 可信 ⇒ True;
+        hp>15 / hp None / 不可信帧 fail 向 ⇒ False(与 p1_blood_floor
+        逐行同构)。阈值单一源(「禁任何第二份字面量 15」):谓词边界 =
+        HP_BAND_NEAR_DEATH 读数(≤15 族含边界),非本地第二份——改常量
+        即改边界,无第二值可漂。
+        [互补] 位面域互补且不交(「同构不同域,禁搭车」):P1 帧不得开
+        P2 域谓词;P3 帧属 P2+ 域(谓词 plane≥2 口径)。"""
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import (
+            predicates as preds,
+        )
+        # [真值表]
+        st = self._st2(hp=10)
+        assert preds.p2_blood_floor(_bsb(**st)) is True
+        st['hp'] = 16
+        assert preds.p2_blood_floor(_bsb(**st)) is False
+        st['hp'] = 15   # ≤15 族含边界(p1_blood_floor 同款)
+        assert preds.p2_blood_floor(_bsb(**st)) is True
+        st['hp'] = None
+        assert preds.p2_blood_floor(_bsb(**st)) is False
+        st['hp'] = None   # 不可读 = 域未观察(无可信值可桥,fail 向)
+        assert preds.p2_blood_floor(_bsb(**st)) is False
+        # 阈值单一源:边界随常量走
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.lambda_death import (
+            HP_BAND_NEAR_DEATH,
+        )
+        assert preds.p2_blood_floor(
+            _bsb(**self._st2(hp=HP_BAND_NEAR_DEATH))) is True
+        assert preds.p2_blood_floor(
+            _bsb(**self._st2(hp=HP_BAND_NEAR_DEATH + 1))) is False
+        # [互补]
+        st = self._st2(hp=10, plane=1)
+        assert preds.p1_blood_floor(_bsb(**st)) is True
+        assert preds.p2_blood_floor(_bsb(**st)) is False, 'P1 帧禁开 P2 域谓词'
+        st3 = self._st2(hp=10, plane=3)
+        assert preds.p2_blood_floor(_bsb(**st3)) is True
+
+    def test_crisis_band_blocks_spend_and_interest_key_domain(self):
+        """危机带停付面:产线在产 p2_crisis_band 对 P2 濒死帧全额管辖——
+        停付照常(P2/P1 域同判);凑息不受血线辖(凑息禁令位已随血线地板
+        删除链退役:两域帧的拒因键族里血线键不复存在——空板守卫等金位/
+        板面键照常)。(保底金门真值表含出辖两支 =
+        TestRetainedGates::test_guarantee_floor_gate_truth_table,不重复。)"""
+        from sr_od.application.currency_war.kernel.cw_registry import (
+            DEFAULT_REGISTRY,
+        )
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.levelup import (
+            level_spend_blocked,
+        )
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.sell import (
+            sell_for_interest,
+        )
+        sess = SimpleNamespace(node_type_current='normal')
+        assert level_spend_blocked(_bsb(**self._st2(hp=10)), sess,
+                                   DEFAULT_REGISTRY) is True, (
+            'P2 濒死帧停付照常(危机带管辖)')
+        # 凑息不受血线辖(血线拒因键退役:两域帧同判)
+        for _st in (self._st2(hp=10), self._st2(hp=10, plane=1)):
+            slots_k, key_k = sell_for_interest(
+                30, [], 4, (), state=_bsb(**_st))
+            assert slots_k == []
+            assert key_k not in ('blood_floor', 'p2_blood_floor'), (
+                '血线拒因键已随凑息禁令位退役')

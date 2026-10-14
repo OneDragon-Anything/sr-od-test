@@ -1,4 +1,6 @@
-"""faction 三类注册表派生口径锁(benchchar-retirement design §2.1)。
+"""faction 三类注册表派生口径锁(benchchar-retirement design §2.1)
++ 线知识卡三字段锁(line_and_upgrade §1.2/§1.4/§1.5)
++ 开拓者形态归一上报锁(§3 不变量 5 哨兵)。
 
 faction/position_pref 不入容器形状,消费点经注册表按 char_id 派生,三类
 消费口径(§2.1):
@@ -10,28 +12,63 @@ faction/position_pref 不入容器形状,消费点经注册表按 char_id 派生
 ① board_by_row 容器行输入:排归属 = 行入参(前排/后排分桶),多羁绊角色
    每系都计,total = 两行之和;
 ② 开拓者形态按排归一(防御性再归一):前排槽携带后台形态 id 时按前排
-   形态取羁绊(欢愉不计),后排照旧;
+   形态取羁绊(欢愉不计),后排照旧;上报侧(swap/deploy_move)同源
+   归一核,换排即切换前台记忆/后台欢愉形态(char_id/faction 同步);
 ③ 未知名/注册表无羁绊名 = 零标签(未知 '?' 不计);
 ④ 类2 体系卡 _faction_count:身份计数(board_by_row)与 board OCR 兜底
    取 max;未知名不进身份计数;
 ⑤ char_first_faction 派生式(主阵营单一源):命中 → factions[0],
    注册但无阵营 = '',未注册/空名 = '?'。
+
+知识卡节:①schema 全 20 线三字段非空(角色型 = 唯一恒可判定硬规则
+路径);②名字空间 ⊆ 注册表键(手编建表笔误防线——写错名 = 判定永不
+命中且静默);③ CARRY 锚派生(plaza_carry 直用 + 攻略补全登记)与
+CARRY 档 = 单名锚 ∪ core_chars 合流;④单帧锁(char_lock_hit AND /
+strategy_lock_hit OR + OCR 间隔号形变归一)。
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    deployed_view_sequential as _dvs,
-)
+from test.sr_od.application.currency_war._cw_helpers import cw4_bview
 
-from sr_od.application.currency_war.data.cw_chars import char_first_faction
+from sr_od.application.currency_war.data.cw_chars import (
+    CHARACTERS,
+    char_first_faction,
+)
+from sr_od.application.currency_war.data.cw_invest_data import (
+    PLAZA_AUGMENTS,
+    PLAZA_PORTALS,
+)
+from sr_od.application.currency_war.kernel.cw_action_report import (
+    report_action_deploy_move_param,
+    report_action_swap_deploy_param,
+)
 from sr_od.application.currency_war.kernel.cw_board_by_row import (
     board_by_row,
     board_by_row_of,
 )
+from sr_od.application.currency_war.kernel.cw_comps import (
+    CARRY_ANCHOR_FALLBACK,
+    COMP_LIBRARY,
+    carry_anchor,
+    carry_set,
+    char_lock_hit,
+    strategy_lock_hit,
+)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
+    BenchSlot,
+    ChannelSig,
     GameState,
     Unit,
+    deployed_rows_of,
+    game_state_of,
+)
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    deployed_view_sequential as _dvs,
+)
+from sr_od.application.currency_war.kernel.cw_vocab import (
+    CwActionDeployMoveParam,
+    CwActionSwapDeployParam,
 )
 
 
@@ -137,3 +174,130 @@ def test_board_by_row_of_reads_container_rows():
     assert bb.front == {'量子同频': 1, '贝洛伯格': 1}
     assert bb.back == {'贝洛伯格': 1, '星间旅人': 1, '持续伤害': 1}
     assert bb.count('贝洛伯格') == 2
+
+
+# ============================================================ 线知识卡三字段
+
+
+def test_knowledge_card_schema_nonempty_all_lines():
+    """① 三字段全 20 线非空;角色型每线在册(判据「lock_rules 角色型按持有状态
+    可判定」的前提 = 每线有可判定的角色组合);策略型两键齐(值可空表)。"""
+    assert len(COMP_LIBRARY) == 20
+    for comp in COMP_LIBRARY:
+        assert comp.lock_rules, comp.name
+        assert comp.lock_rules.get('角色型'), comp.name
+        assert '策略型' in comp.lock_rules, comp.name
+        assert comp.need_star, comp.name
+        assert comp.key_items, comp.name
+
+
+def test_knowledge_card_names_in_registries():
+    """② 名单/键全落注册表键空间:角色名 ⊆ CHARACTERS、策略型名 ⊆ 投资注册表
+    (augment+portal 并集)。建表是手编数据,名字写错 = 锁定判定永不命中。"""
+    invest_names = ({a.name for a in PLAZA_AUGMENTS}
+                    | {p.name for p in PLAZA_PORTALS})
+    for comp in COMP_LIBRARY:
+        for rule in comp.lock_rules['策略型']:
+            assert rule in invest_names, (comp.name, rule)
+        for name in (*comp.lock_rules['角色型'], *comp.need_star, *comp.key_items):
+            assert name in CHARACTERS, (comp.name, name)
+
+
+def test_carry_anchor_plaza_first_fallback_registered():
+    """③ 锚派生口径(§1.2):plaza_carry 非空直用;空值线恰为攻略补全登记的
+    3 线(银枝/飞霄/桑博,依据 = CARRY_ANCHOR_FALLBACK 就地注释)。"""
+    for comp in COMP_LIBRARY:
+        anchor = carry_anchor(comp)
+        assert anchor, comp.name
+        if comp.plaza_carry:
+            assert anchor == comp.plaza_carry, comp.name
+    assert set(CARRY_ANCHOR_FALLBACK) == {
+        c.name for c in COMP_LIBRARY if not c.plaza_carry}
+    assert (CARRY_ANCHOR_FALLBACK['银枝群攻'] == '银枝'
+            and CARRY_ANCHOR_FALLBACK['追击飞霄'] == '飞霄'
+            and CARRY_ANCHOR_FALLBACK['专家桑博DOT'] == '桑博')
+
+
+def test_carry_set_union_anchor_and_core():
+    """③' CARRY 档 = 单名锚 ∪ core_chars 合流(§1.2「plaza_carry ∪ core_chars
+    合流」的派生落地;3.7 持有证据按「持有任一档内成员计 CARRY 档」消费)——
+    core 全员进档(单名锚窄化会把 core 成员错档到骨架/插件档)。"""
+    for comp in COMP_LIBRARY:
+        cs = carry_set(comp)
+        assert cs, comp.name
+        assert set(comp.core_chars) <= cs, comp.name
+        assert carry_anchor(comp) in cs, comp.name
+
+
+def test_char_lock_hit_and_semantics():
+    """④ 角色型单帧锁:全组合在手命中、缺任一未命中(AND = §1.4「关键角色组合
+    到手」);无关持有不命中(万敌线 3 件组合)。"""
+    wandi = next(c for c in COMP_LIBRARY if c.name == '万敌单C')
+    combo = wandi.lock_rules['角色型']
+    assert len(combo) == 3   # 万敌+千冶·刃+刻律德菈
+    assert char_lock_hit(wandi, set(combo))
+    for missing in combo:
+        assert not char_lock_hit(wandi, set(combo) - {missing})
+    assert not char_lock_hit(wandi, {'希儿', '花火'})
+
+
+def test_strategy_lock_hit_any_and_ocr_normalization():
+    """④ 策略型任一命中(OR = §1.4「策略定义线」);OCR 间隔号形变(•→·)
+    经归一仍命中(run_20260826_004527 缺陷链同型防线)。"""
+    jing = next(c for c in COMP_LIBRARY if c.name == '景元仙舟')
+    assert strategy_lock_hit(jing, {'飞光·映月'})
+    assert strategy_lock_hit(jing, {'嘴硬', '飞光·传剑'})   # 多持有任一命中
+    assert not strategy_lock_hit(jing, {'嘴硬'})
+    assert strategy_lock_hit(jing, {'飞光•映月'})   # OCR bullet 形变归一命中
+
+
+# ============================================================ 开拓者形态归一(上报侧)
+# (换排形态归一归一口唯一:swap 上报与 deploy_move 上报均经同源归一核
+#  cw_exec_state.trailblazer_row_identity → trailblazer_row_unit,换排即
+#  切换前台记忆/后台欢愉形态;计数侧同构锁 = 本文件
+#  test_board_by_row_trailblazer_row_normalization。)
+
+_ST_SIG = ChannelSig(family='logic_action', actor='CwScreenPrep')
+_ST_SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep')
+
+
+def _gs_with_bench_trailblazer(deployed_taken: bool):
+    """bench 0 号槽 = 后台形态开拓者;deployed_taken=True 时
+    场上前排 1 号 = 普通角色『甲』(swap 场景需要在场交换对象)。"""
+    gs = game_state_of(None)
+    slots: list[BenchSlot | None] = [None] * 9
+    slots[0] = BenchSlot(kind='unit', unit=Unit(char_id='开拓者·欢愉',
+                                                star=4))
+    gs.observe(gs.bench, cw4_bview(slots),
+               evidence='t', sig=_ST_SIG_OBS)
+    if deployed_taken:
+        gs.observe(gs.deployed, _dvs([Unit(char_id='甲', star=1, equips=[])], []),
+                   evidence='t', sig=_ST_SIG_OBS)
+    return gs
+
+
+def test_swap_report_normalizes_trailblazer_form_to_target_row() -> None:
+    """swap 上报有归一:开拓者换排上场 → char_id 切换目标排形态。"""
+    gs = _gs_with_bench_trailblazer(deployed_taken=True)
+    out = report_action_swap_deploy_param(
+        gs, CwActionSwapDeployParam(deployed_idx=0, bench_idx=0), sig=_ST_SIG)
+    assert out.applied, f'swap 应成功,实得 {out.reason!r}'
+    front, _ = deployed_rows_of(gs)
+    assert front and front[0].char_id == '开拓者·记忆', \
+        f'换到前排 → 记忆形态,实得 {front[0].char_id!r}'   # 排归属 = 前排行成员
+
+
+def test_deploy_move_report_normalizes_trailblazer_form_to_target_row() -> None:
+    """deploy_move 上报与 swap 同源归一(benchchar-retirement P3 缺陷修复
+    申报面,design §3 不变量 5):开拓者拖上场 → 排变、形态(char_id)
+    同步切目标排。"""
+    gs = _gs_with_bench_trailblazer(deployed_taken=False)
+    out = report_action_deploy_move_param(
+        gs, CwActionDeployMoveParam(bench_idx=0, to_row='front',
+                                    to_slot=1, faction=''),
+        sig=_ST_SIG)
+    assert out.applied, f'部署应成功,实得 {out.reason!r}'
+    front, _ = deployed_rows_of(gs)
+    assert front and front[0].char_id == '开拓者·记忆', \
+        f'换到前排 → 记忆形态(与 swap 同源归一),实得 {front[0].char_id!r}'
+    # 排归属 = 容器行域承载(前排行成员)
