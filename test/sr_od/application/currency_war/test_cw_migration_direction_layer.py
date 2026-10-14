@@ -187,17 +187,21 @@ def test_ju23_star2_stock_card_has_no_refund_backing_no_spend():
     stockpile_buy 与 dominance 同以 refund_full_star_ok 为背书门:
     2★ 件两条买面都不可发射,溢余滞留(不放行)而非带病买——
     锁「背书门在局23 帧端到端成立」,非单位锁复述。
-    商店收缩适配:必花域末位 L3 升级消费随商店期升级决策面退役,
-    「全层无对象」的帧表达 = CwActionCloseShopParam 收工交回(原 CwActionLevelUpShopParam
-    (m3_batch:must_spend) 形态不保留)。
+    商店收缩适配 → 3.6 会话重排再翻转:前置升级检查恢复店内溢余段
+    升级消费(次序翻转行为差形态锁)——gold 100 > 息线的帧首动作 =
+    CwActionLevelUpShopParam(must_spend 整批授权发射)。
     """
     cfg = SimpleNamespace(ev_arm='full')
     sess = _ju23_session()
     act = decide_shop_action(cw4_gs(sess, **_ju23_axes(
         100, [_sc('花火', star=2)])), sess, cfg)
     assert not isinstance(act, (CwActionBuyCardParam, CwActionRefreshShopParam))
-    # 收缩后帧终态 = 收工关店(零支出语义不变)
-    assert isinstance(act, CwActionCloseShopParam)
+    from sr_od.application.currency_war.kernel.cw_vocab import (
+        CwActionLevelUpShopParam,
+    )
+    assert isinstance(act, CwActionLevelUpShopParam), (
+        f'溢余帧应前置升级(翻转行为差): {act!r}')
+    assert act.auth_basis == 'must_spend'
 
 
 # (test_ju23_liquid_refund_shifts_s_reserve_down 已删 2026-09-08 覆盖对账:
@@ -240,6 +244,13 @@ def test_ju23_full_surface_gold_never_breaks_interest_line():
                 if gold0 <= 50:
                     assert st['gold'] - act.cost >= 50, (gold0, st['gold'])
                 st['gold'] -= act.cost
+            elif type(act).__name__ == 'CwActionLevelUpShopParam':
+                # 3.6 前置升级(翻转行为差):溢余段整批消费,花后 ≥ 保底
+                # 金门(义务臂不受守 50 辖;升级即收工下一帧关店)。
+                spend = act.cost * act.clicks
+                assert st['gold'] - spend >= 10, (gold0, st['gold'], spend)
+                st['gold'] -= spend
+                st['level'] = st.get('level', 5) + 1
             elif isinstance(act, CwActionCloseShopParam):
                 break
             else:

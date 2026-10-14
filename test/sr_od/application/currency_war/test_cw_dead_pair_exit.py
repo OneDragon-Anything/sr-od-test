@@ -1,7 +1,7 @@
 """G-S1 死库存退出通道行为锁(判据⑤)。
 
 出处与语义单一源:
-- 判据规格 = 
+- 判据规格 =
   三合取 + 遥测三键族),数学论证 = proofs P96(帧级支配 + N=3 载体寿命);
 - 载体 = ``sell_gate.dead_pair_exit_release`` 单点函数 + 持久获取账
   (``register_acquisition``,写端 = shop._emit_buy 发射位);
@@ -16,10 +16,6 @@ test_cw_dead_stock_pair_wiring 同款防漂移);锁①②③④ 走备战域
 直调 ``dead_pair_exit_release``;黑板 node 必写(位面/轮轴 = 判据 (c)
 读源,缺写 = fail-closed 保留 = 释放恒不可达)。
 """
-
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    deployed_view_sequential as _dvs,
-)
 
 import random
 from types import SimpleNamespace
@@ -38,6 +34,9 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     NodeKey,
     Unit,
     game_state_of,
+)
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    deployed_view_sequential as _dvs,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
@@ -97,7 +96,7 @@ def _prep_frame(*, pair_ledger_round: int | None,
     燃料资格 ⇒ 对成员是唯一 1★ 候选,卖出对象确定。"""
     sess = StrategySession()
     gs = game_state_of(sess)
-    gs.write_logic(gs.node, NodeKey(plane=1, round_num=_ROUND, kind='prep'),
+    gs.write_logic(gs.node, NodeKey(plane=1, round_num=_ROUND, kind='reward'),   # 3.6:奖励帧抑制会话内升级(翻转行为差隔离——本锁辖买面登记)
                    produced_by='cw-t253-test', sig=_SIG)
     gs.write_logic(gs.gold, gold, produced_by='cw-t253-test', sig=_SIG)
     # P4 容器形种子:bench = 占席条目(BenchSlot,槽序),deployed = 行域 Unit
@@ -281,7 +280,7 @@ class TestWriteEnd:
             StrategySession(rng=random.Random('cw-t253'))))
         sess = StrategySession(rng=random.Random('cw-t253'))
         gs = game_state_of(sess)
-        gs.write_logic(gs.node, NodeKey(plane=1, round_num=3, kind='prep'),
+        gs.write_logic(gs.node, NodeKey(plane=1, round_num=3, kind='reward'),   # 3.6:奖励帧抑制会话内升级(本锁辖买面登记)
                        produced_by='cw-t253-test', sig=_SIG)
         gs.write_logic(gs.level, 3, produced_by='cw-t253-test', sig=_SIG)
         gs.write_logic(gs.xp, (0, XP_TO_NEXT_LEVEL[3]),

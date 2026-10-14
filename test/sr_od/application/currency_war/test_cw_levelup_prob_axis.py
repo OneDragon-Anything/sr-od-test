@@ -35,6 +35,8 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
     entry,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
     session_scope as _ss,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
@@ -74,6 +76,11 @@ def _frame(*, level: int, gold: int = 30, plane: int = 2,
     _ss.handle_node_boundary(gs)   # 窗口谓词置位(node_hist_pos 水位驱动)
     if locked:
         _ss.write_line_lock(gs, _LOCK_LINE)
+    # 边界处理按重置表清金位账面(读数协议失效语义,3.6);测试帧 =
+    # 边界后稳态,重新锚定账面并钉位判重键(失效行为测试显式置 None)。
+    _st = state_of(gs)
+    _st.gold_ledger = int(gold)
+    _st.node_boundary_last_pos = (int(plane), 2)
     return gs, gs
 
 

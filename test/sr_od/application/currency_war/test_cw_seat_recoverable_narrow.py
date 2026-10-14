@@ -142,6 +142,16 @@ def _p92_frame(extra_bench_last: BenchSlot) -> tuple[dict, object, str]:
     w = next(m for m in members if CHARACTERS[m].cost == 1)
     assert refresh_prob(4, 1) > 0.0   # 囤腿费档该级可刷(② 活性前提)
     rest = [m for m in members if m != w]
+    # 3.6:三段式刷新判据的授权前提——留一名低成本线成员缺员(刷新
+    # 有目标可追;级 4 在其概率带内可刷),P92 门可达性保持。
+    from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
+        levelup as _crit_levelup,
+    )
+    _miss = next(m for m in rest
+                 if _crit_levelup.prob_band_of_cost(
+                     int(CHARACTERS[m].cost))[0] <= 4
+                 and refresh_prob(4, int(CHARACTERS[m].cost)) > 0.0)
+    rest = [m for m in rest if m != _miss]
     bench_rest_len = min(len(rest), BENCH_CAPACITY - 3)
     bench_rest = [_bc(m, star=2) for m in rest[:bench_rest_len]]
     # 全员 owned:主力超出席面的成员入上阵行(测试投影种子,只读消费)
@@ -161,7 +171,7 @@ def _p92_frame(extra_bench_last: BenchSlot) -> tuple[dict, object, str]:
     bench += [_bc(next(pool), star=2) for _ in range(fill)]
     bench.append(extra_bench_last)
     assert len(bench) == BENCH_CAPACITY   # 席满 = bench_free 0 的承载前提
-    axes = {'gold': 100, 'level': 4, 'plane': 1, 'round_num': _ROUND,
+    axes = {'gold': 100, 'level': 4, 'plane': 2, 'round_num': _ROUND,
             'node': 'reward', 'hp': 100, 'bench': bench,
             'front_row': st_deployed}
     return axes, s, w
@@ -175,6 +185,18 @@ class TestP92AssemblyBehaviorDiff:
         旧代理与收窄判定在该帧同判,零行为差)。"""
         axes, s, _w = _p92_frame(_item(slot=BENCH_CAPACITY))
         cw4_gs(s, **axes)
+        # 3.6:P2 段边界 + 金位账面稳态(三段式刷新判据的授权前提;
+        # 边界处理清账面后重锚)。
+        from sr_od.application.currency_war.kernel.cw_game_state import (
+            game_state_of as _gso2,
+        )
+        _gs = _gso2(s)
+        _gs.node_hist_pos = (2, 1)
+        from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+            session_scope as _ss,
+        )
+        _ss.handle_node_boundary(_gs)
+        state_of(s).gold_ledger = axes['gold']
         acts = _decide(s)
         assert not [a for a in acts if isinstance(a, CwActionRefreshShopParam)], acts
         cnt = state_of(s).cw4_counters

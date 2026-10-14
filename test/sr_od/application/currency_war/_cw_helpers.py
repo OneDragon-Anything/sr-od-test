@@ -28,8 +28,6 @@
 """
 from __future__ import annotations
 
-import dataclasses
-
 from test.harness.fixture_controller import (
     enter_running_state,
     fast_sleep,
@@ -46,7 +44,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     BenchSlot,
     BenchView,
     ChannelSig,
-    DeployedView,
     NodeKey,
     ShopPayload,
     ShopSlot,
@@ -313,6 +310,22 @@ def _seed_write(gs, *, sig: ChannelSig, ev: str, ev_node_fill: str,
 _SEED_SIG = ChannelSig(family='obs', actor='cw4_seed', mode='synthesized')
 
 
+def _seed_steady_pins(gs, target, *, plane: int, round_num: int,
+                      gold: int, gold_unread: bool) -> None:
+    """种子稳态钉位(读数协议/节点边界的种子层承载,3.6 批):
+    金位账面锚定(种子帧 = 可信金读)+ 节点边界判重键钉位(种子帧 =
+    「本节点边界已处理」稳态;target=None 一次性容器形态经 gs 动态
+    挂载状态同宿主)。失效态/边界触发类测试显式改写 ``gold_ledger``/
+    ``node_boundary_last_pos``。"""
+    try:
+        st = state_of(gs)   # 宿主 = 容器态(session_scope/读数协议函数族同宿主)
+    except Exception:   # noqa: BLE001  无状态宿主 = 无钉位面
+        return
+    if not gold_unread:
+        st.gold_ledger = int(gold)
+    st.node_boundary_last_pos = (int(plane), int(round_num))
+
+
 def cw4_gs(target=None, *, gold: int = 30, gold_unread: bool = False,
            level: int = 3, level_unread: bool = False,
            xp=None, streak=None, hp: int | None = 100,
@@ -347,6 +360,8 @@ def cw4_gs(target=None, *, gold: int = 30, gold_unread: bool = False,
         plane_bosses=plane_bosses, active_env=active_env, equips=equips,
         board=board, level_up_cost=None, shop_refresh_cost=None,
         selected_difficulty='')
+    _seed_steady_pins(gs, target, plane=plane, round_num=round_num,
+                      gold=gold, gold_unread=gold_unread)
     return gs
 
 

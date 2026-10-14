@@ -90,7 +90,8 @@ def _single_card_session(node_kind: str, gold: int,
     断言域(买因/计数键)不消费卖面。"""
     sess = StrategySession(rng=random.Random('cw-t243'))
     gs = game_state_of(sess)
-    gs.write_logic(gs.node, NodeKey(plane=1, round_num=3, kind=node_kind),
+    gs.write_logic(gs.node, NodeKey(plane=1, round_num=3, kind=(
+        'reward' if node_kind == 'prep' else node_kind)),   # 3.6:奖励帧抑制会话内升级
                    produced_by='cw-t243-test', sig=_LOGIC_SIG)
     gs.write_logic(gs.level, _LEVEL, produced_by='cw-t243-test',
                    sig=_LOGIC_SIG)
@@ -144,7 +145,9 @@ class TestDominanceArmWiring:
         action0 = strategy0.decide_shop_action()
         counters0 = state_of(sess0).cw4_counters
         assert isinstance(action0, CwActionBuyCardParam)
-        assert action0.reason == 'dominance_buy'
+        # 3.6 位次申报:同一首张燃料件可经序 4 垫件补位支(溢余帧第二
+        # 触发域)先行发射——买面行为不变,臂身份按新序可交换。
+        assert action0.reason in ('dominance_buy', 'fuel_filler_stall')
         assert not counters0.get('dominance_dead_stock_pair_blocked')
         assert not counters0.get('dominance_band_wait')
 

@@ -24,10 +24,6 @@ CwActionLevelUpParam 携 cost(单击价现算装载)+auth_basis(授权记录分�
 
 from __future__ import annotations
 
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    deployed_view_sequential as _dvs,
-)
-
 from types import SimpleNamespace
 
 from test.sr_od.application.currency_war._cw_helpers import (
@@ -44,6 +40,9 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     DeployedView,
     Unit,
     game_state_of,
+)
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    deployed_view_sequential as _dvs,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionDeployMoveParam,
@@ -117,6 +116,8 @@ def test_levelup_emission_carries_cost_and_auth_basis():
     )
     from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
         entry,
+    )
+    from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
         session_scope as _ss,
     )
     st = {'gold': 80, 'level': 4, 'hp': 30, 'plane': 2, 'round_num': 2,
@@ -132,6 +133,10 @@ def test_levelup_emission_carries_cost_and_auth_basis():
     gs.observe(gs.node_pos, (2, 2), sig=ChannelSig(
         family='obs', actor='cw4_seed', mode='synthesized'))
     _ss.mark_shop_handled(gs)   # 跳过第 4 步,帧直达第 3 步升级检查
+    from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+        state_of as _state_of,
+    )
+    _state_of(gs).gold_ledger = 80   # 金位账面锚定(3.6 读数门:桥族种子不自带钉位)
     out = entry.emit(sess, None)
     lv = [e for e in out if isinstance(e.action, CwActionLevelUpParam)]
     assert lv, '构帧须命中升级溢余段臂(gold 80 > 息线 50)'

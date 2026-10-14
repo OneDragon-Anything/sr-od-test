@@ -1,35 +1,29 @@
-"""CW 商店期动作面收缩锁(判例 = screens-actions-capability §5)。
+"""CW 商店期动作面锁(迭代 2026-10-12-prep-shop-workflow-redesign 批 3.6)。
 
-判例:商店期动作面 = **买牌/刷新/关店**——卖备战(CwActionSellBenchParam)与买经验
-(CwActionLevelUpParam/CwActionLevelUpShopParam)收缩至备战期决策(策略归属 = strategy-docs
-22/23 号篇);腾位/筹资/凑息动机的「先卖后做」由跨段状态 substrate
-承载(``shop.decide_shop_action`` 尾声明),框架侧不做动机判断。
+2026-09-14 收缩裁定(判例 = screens-actions-capability §5「卖备战/买
+经验收缩至备战期」)随 3.6 会话重写**废止**(用户裁定 2026-10-13:旧
+代码直接删废弃替换):店内动作面 = **买牌/刷新/关店/卖备战席/购买经验
+整批**(shop_session §1 能力面与用户裁定 2026-10-12)。本文件前身 =
+test_cw_sell_bench_m3_reach → test_cw_shop_action_face_contraction(收缩
+锁),本批改锁重排后的目标形态:
 
-本文件前身 = test_cw_sell_bench_m3_reach.py(六处店内卖
-决策点发射 CwActionSellBenchParam 锁 + M3 发射位可达锁)——该发射面随收缩退役,
-违例形态锁不保留,本文件改锁收缩后的目标形态:
-
-1. 商店域决策形态帧逐一参数化锁(原六处卖射位的席位/缺金形态全保):
-   首动作 ∈ {CwActionBuyCardParam, CwActionRefreshShopParam, CwActionCloseShopParam},恒不发射 CwActionSellBenchParam/
-   CwActionLevelUpShopParam(任一处发射面复活即红);
-2. 席满缺员帧 = 关店交回 + 义务残差状态在(bench_full_buy_abandon 计数
-   + ``cw4_shop_wanted_pending`` 置位)——「交回+状态在」锁到框架
-   边界;备战期消费臂(wanted_closure_emit)评估腾席/重开归策略侧;
-   筹资形态的 funding_close_defer 分键计数随本锁同承(原筹资专锁并入);
-3. 腾位链牌面持久契约锁:节点内关店→重开不刷新牌面
-   (research/economy.md §2.1)——同 session 同店面 payload,关店
-   交回 → 备战腾席(bench 移除一件)→ 重开重判,原缺员件在店且被
-   买入(腾位/筹资/凑息往返不损失已刷牌面)。
+1. 商店域决策形态帧逐一参数化锁:各形态帧首动作 ∈ 扩展闭集
+   {买牌, 刷新, 关店, 卖备战席(置换/筹资/变现通道), 购买经验整批};
+2. 席满买入 = **店内置换账**(shop_session §3):value(X) > value(Y)
+   同口径直比成立 → 首动作卖 Y(reason=shop_swap);「关店→备战卖→
+   重开」腾位链废止(不再有关店交回 + wanted 残差置位形态);
+3. 席满恒买豁免(C1 支配语义):核心在售即买,腾位按价值让位直接
+   发生(c1_make_room 场景卖首位);
+4. 筹资形态:缺员 + 金不足 + 活期件在场 → 会话内筹资卖出
+   (session_funding),不再关店交回复战;
+5. 牌面持久契约锁(承继):节点内卖出腾位 → 买入原在店件,牌面不
+   因店内卖出/重开刷新(research/economy.md §2.1)。
 
 帧构造边界(判据面,断言不依赖):deployed 非空(空板帧语义独立,
 本锁不辖)、bench 燃料件异名(同名同星互为合成素材被 G-S1 守卫拒入
 燃料集)、hp 走 observation 源、xp 域 need 槽 = XP_TO_NEXT_LEVEL[等级]
 (写端 xp_apply_clicks 元组不变量)。
 """
-
-from sr_od.application.currency_war.kernel.cw_game_state import (
-    deployed_view_sequential as _dvs,
-)
 
 import random
 from types import SimpleNamespace
@@ -55,6 +49,9 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     Unit,
     game_state_of,
 )
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    deployed_view_sequential as _dvs,
+)
 from sr_od.application.currency_war.strategies.impl.cw_strategy import (
     StrategySession,
 )
@@ -65,9 +62,9 @@ from sr_od.application.currency_war.strategies.mandate_v1_strategy import (
     MandateV1Live,
 )
 
-_LOGIC_SIG = ChannelSig(family='logic_action', actor='cw-t271-test',
+_LOGIC_SIG = ChannelSig(family='logic_action', actor='cw-36-test',
                         mode='compute')
-_OBS_SIG = ChannelSig(family='obs', actor='cw-t271-test',
+_OBS_SIG = ChannelSig(family='obs', actor='cw-36-test',
                       mode='synthesized')
 
 _LEVEL = 3
@@ -86,7 +83,7 @@ def _fuel_names(count: int, exclude: tuple[str, ...] = ()) -> list[str]:
 
 
 def _core_out_of_line() -> str:
-    """线外 registry_core 名(C1 恒买/③④静态持有件夹具;现算防漂移)。"""
+    """线外 registry_core 名(C1 恒买夹具;现算防漂移)。"""
     return next(n for n in CORE_SINGLE_CARD_REGISTRY
                 if n not in _LINE and CHARACTERS.get(n))
 
@@ -95,77 +92,80 @@ def _frame_session(*, bench_units: list[str], deployed_units: list[str],
                    card_names: list[tuple[str, int]], gold: int,
                    hp: int = 60, node_kind: str = 'prep'):
     """通用最小商店决策帧(bench/上场/店面卡/金/血可参)。deployed_
-    units 非空 = 板空帧语义独立(本锁断言域不辖)。"""
+    units 非空 = 板空帧语义独立(本锁断言域不辖)。金位账面随种子锚定
+    (读数协议③稳态;失效行为测试显式置 None)。"""
     comp = COMP_LIBRARY[0]
-    sess = StrategySession(rng=random.Random('cw-t271'))
+    sess = StrategySession(rng=random.Random('cw-36'))
     gs = game_state_of(sess)
     gs.write_logic(gs.node, NodeKey(plane=1, round_num=3, kind=node_kind),
-                   produced_by='cw-t271-test', sig=_LOGIC_SIG)
-    gs.write_logic(gs.level, _LEVEL, produced_by='cw-t271-test',
+                   produced_by='cw-36-test', sig=_LOGIC_SIG)
+    gs.write_logic(gs.level, _LEVEL, produced_by='cw-36-test',
                    sig=_LOGIC_SIG)
     gs.write_logic(gs.xp, (0, XP_TO_NEXT_LEVEL[_LEVEL]),
-                   produced_by='cw-t271-test', sig=_LOGIC_SIG)
-    gs.write_logic(gs.gold, gold, produced_by='cw-t271-test',
+                   produced_by='cw-36-test', sig=_LOGIC_SIG)
+    gs.write_logic(gs.gold, gold, produced_by='cw-36-test',
                    sig=_LOGIC_SIG)
-    gs.observe(gs.hp, hp, evidence='cw-t271-test', sig=_OBS_SIG)
+    gs.observe(gs.hp, hp, evidence='cw-36-test', sig=_OBS_SIG)
     slots = [BenchSlot(kind='unit',
                        unit=Unit(char_id=n, star=1))
              for i, n in enumerate(bench_units)]
     gs.write_logic(gs.bench, BenchView(slots=slots, capacity=9),
-                   produced_by='cw-t271-test', sig=_LOGIC_SIG)
+                   produced_by='cw-36-test', sig=_LOGIC_SIG)
     gs.write_logic(gs.deployed, _dvs([Unit(char_id=n, star=1)
-                    for i, n in enumerate(deployed_units)], []),
-                   produced_by='cw-t271-test', sig=_LOGIC_SIG)
+                     for i, n in enumerate(deployed_units)], []),
+                   produced_by='cw-36-test', sig=_LOGIC_SIG)
     cards = [ShopSlot(kind='content',
                       card=ShopCard(name=n, faction='', cost=c,
                                     star=1, slot=i + 1))
              for i, (n, c) in enumerate(card_names)]
     cards += [ShopSlot(kind='empty')] * (5 - len(cards))
     gs.write_logic(gs.shop, ShopPayload(cards=cards, refresh_probs={}),
-                   produced_by='cw-t271-test', sig=_LOGIC_SIG)
+                   produced_by='cw-36-test', sig=_LOGIC_SIG)
     state_of(sess).target_comp = comp
-    from sr_od.application.currency_war.kernel.cw_game_state import (
-        game_state_of as _gso,
-    )
-    live = MandateV1Live(_gso(sess), SimpleNamespace(strategy_seed=None))   # 终态契约:构造注入
-    live.state = state_of(sess)   # 状态同源接线:会话播种对象(零参口决策读 self.state)
+    st = state_of(sess)
+    st.gold_ledger = gold
+    st.node_boundary_last_pos = (1, 3)
+    live = MandateV1Live(gs, SimpleNamespace(strategy_seed=None))   # 终态契约:构造注入
+    live.state = st   # 状态同源接线:会话播种对象(零参口决策读 self.state)
     return live, sess, SimpleNamespace(ev_arm='full')
 
 
-# ---- 原六处卖射位的席位/缺金形态帧(发射面退役,形态保留供收缩锁)----
+# ---- 形态帧(席满置换/恒买腾位/凑息/筹资;3.6 重排后语义)----
 
 def _frame_m4_missing_vacate():
     """M2 缺员遇席满:席满(9 燃料)+缺员(member 不在场)+店有缺员件
-    → 关店交回(腾位链第一步)。"""
+    → 置换账:卖首燃料(value(X) 线成员 > value(Y) 燃料,同口径直比
+    成立)。"""
     fuels = [n for n in CHARACTERS if n not in _LINE][:9]
     assert len(fuels) == 9
     return _frame_session(
         bench_units=fuels,
         deployed_units=list(COMP_LIBRARY[0].core_chars[1:4]),
-        card_names=[(_MEMBER, 3)], gold=60)
+        card_names=[(_MEMBER, 3)], gold=60, node_kind='reward')
 
 
 def _frame_m2_stockpile_vacate():
-    """囤腿遇席满:成员持有恰 1 张,店刷同员 1★ 第二张 → 关店交回。"""
+    """囤腿遇席满:成员持有恰 1 张,店刷同员 1★ 第二张 → 置换账卖燃料。"""
     fuels = _fuel_names(8)
     return _frame_session(
         bench_units=[_MEMBER] + fuels,
         deployed_units=list(COMP_LIBRARY[0].core_chars[1:4]),
-        card_names=[(_MEMBER, 3)], gold=60)
+        card_names=[(_MEMBER, 3)], gold=60, node_kind='reward')
 
 
 def _frame_core_unlocked_vacate():
-    """C1 恒买遇席满:店刷线外 registry_core 名,金可足、席满 → 关店交回。"""
+    """C1 恒买遇席满:店刷线外 registry_core 名,金可足、席满 → 恒买
+    豁免价值比较(c1_make_room 直接卖首位让位候选)。"""
     fuels = _fuel_names(8)
     return _frame_session(
         bench_units=[_MEMBER] + fuels,
         deployed_units=list(COMP_LIBRARY[0].core_chars[1:4]),
-        card_names=[(_core_out_of_line(), 3)], gold=45)
+        card_names=[(_core_out_of_line(), 3)], gold=45, node_kind='reward')
 
 
 def _frame_interest_sell():
-    """凑息回拉形态:金贴息线下、席不满、缺员件不在店 → 零卖射,收工
-    关店交回备战(金位回拉归备战期 ②(a) 接线)。"""
+    """凑息回拉形态:金贴息线下、席不满、缺员件不在店 → 店内零凑息
+    卖射(凑息 = 备战第 7 步接线),收工关店交回备战。"""
     return _frame_session(
         bench_units=_fuel_names(5),
         deployed_units=list(COMP_LIBRARY[0].core_chars[1:2]),
@@ -173,22 +173,24 @@ def _frame_interest_sell():
 
 
 def _frame_funding_support_sell():
-    """筹资形态(主路径):缺员+金不足最廉可买形态 → 关店交回备战筹资。"""
+    """筹资形态(主路径):缺员在店 + 金不足 + bench 活期件在场 →
+    会话内筹资卖出(session_funding;凑够即买下一帧接手)。"""
+    fuels = _fuel_names(8, exclude=(_fuel_names(1)[0],))
     return _frame_session(
-        bench_units=_fuel_names(8, exclude=(_fuel_names(1)[0],)),
+        bench_units=fuels,
         deployed_units=_fuel_names(1),
-        card_names=[], gold=0, hp=10)
+        card_names=[(_MEMBER, 3)], gold=1, hp=10)
 
 
 def _frame_funding_hold_fallback():
-    """筹资形态(③④持有件在场):缺员+金不足 → 同一关店交回形态。"""
-    held = [_core_out_of_line()]
-    held += [n for n in CORE_SINGLE_CARD_REGISTRY
-             if n not in _LINE and n != held[0] and CHARACTERS.get(n)][:1]
+    """筹资穷尽形态:缺员在店 + 金不足 + bench 空仓(活期/兜底池全
+    空)→ 候选与兜底双穷尽 → 记录金不足机会清单收工(shop_session
+    §2.3;义务类兜底可卖持有件〔腿①〕的形态由同文件卖出锁辖,本帧
+    锁穷尽边界)。"""
     return _frame_session(
-        bench_units=held,
-        deployed_units=_fuel_names(1, exclude=tuple(held)),
-        card_names=[], gold=0, hp=10)
+        bench_units=[],
+        deployed_units=_fuel_names(1),
+        card_names=[(_MEMBER, 3)], gold=1, hp=10)
 
 
 _FORM_FRAMES = {
@@ -200,72 +202,94 @@ _FORM_FRAMES = {
     'funding_hold_fallback': _frame_funding_hold_fallback,
 }
 
-_SHOP_ACTION_FACE = {'CwActionBuyCardParam', 'CwActionRefreshShopParam', 'CwActionCloseShopParam'}
+#: 3.6 重排后的商店域动作面闭集(店内卖备战席与购买经验整批启用,
+#: shop_session §1 店内动作边界)。
+_SHOP_ACTION_FACE = {'CwActionBuyCardParam', 'CwActionRefreshShopParam',
+                     'CwActionCloseShopParam', 'CwActionSellBenchParam',
+                     'CwActionLevelUpShopParam'}
+
+#: 席满买入三形态(置换账/恒买腾位/筹资)的首动作 = 店内卖出。
+_SELL_FIRST_FORMS = {'m4_missing_vacate', 'm2_stockpile_vacate',
+                     'core_unlocked_vacate', 'funding_support'}
 
 
 @pytest.mark.parametrize('case', list(_FORM_FRAMES))
-def test_shop_forms_stay_in_contracted_action_face(case: str):
-    """收缩锁(六形态逐一;参数化纪律沿袭):各形态帧首动作 ∈
-    买牌/刷新/关店闭集,恒不发射 CwActionSellBenchParam/CwActionLevelUpShopParam——任一处卖射/
-    升级射复活(策略面回退)即响亮红。"""
+def test_shop_forms_stay_in_reordered_action_face(case: str):
+    """动作面锁(六形态逐一;参数化纪律沿袭):各形态帧首动作 ∈ 扩展
+    闭集(买/刷/关/卖备战席/购买经验整批)——2026-09-14 收缩裁定的
+    「商店期零卖射零升级射」废止,席满置换/筹资/店内升级为在产形态;
+    闭集外类型(部署/卖场上等店内禁做面)发射即红。"""
     strategy, sess, config = _FORM_FRAMES[case]()
     action = strategy.decide_shop_action()
     name = type(action).__name__
     assert name in _SHOP_ACTION_FACE, (
         f'{case} 首动作 {name} 越出商店期动作面闭集 '
-        f'{sorted(_SHOP_ACTION_FACE)}(CwActionSellBenchParam/CwActionLevelUpShopParam 已收缩至'
-        '备战期,复活 = 商店收缩回退)')
+        f'{sorted(_SHOP_ACTION_FACE)}(店内禁做面 = 卖场上/点消耗品/'
+        '拖角色上阵,发射即策略面回退)')
 
 
-def test_bench_full_close_hands_back_with_defer_state():
-    """腾位形态流锁(交回+状态在):席满缺员帧 = CwActionCloseShopParam 交回 +
-    义务残差跨段状态置位(wanted_pending)——备战期消费臂评估腾席/
-    重开归策略侧,框架只锁「交回发生且状态在」。筹资形态计数腿(并入,
-    原筹资专锁):缺员+金不足 = CwActionCloseShopParam 交回备战筹资
-    (funding_close_defer 分键),零卖射。"""
-    strategy, sess, config = _frame_m4_missing_vacate()
+@pytest.mark.parametrize('case', sorted(_SELL_FIRST_FORMS))
+def test_bench_blocked_forms_sell_in_shop(case: str):
+    """席满/缺金形态的店内卖出锁:置换账(value 比较)与恒买豁免
+    (c1_make_room)与筹资(session_funding)首动作 = CwActionSellBenchParam,
+    「关店→备战卖→重开」腾位链废止——帧内一步完成,不再产生
+    wanted 残差跨段状态(S2 机器退役)。"""
+    strategy, sess, config = _FORM_FRAMES[case]()
     action = strategy.decide_shop_action()
-    assert type(action).__name__ == 'CwActionCloseShopParam'
-    st = state_of(sess)
-    assert st.cw4_shop_wanted_pending is not None, \
-        '关店交回但 wanted 残差缺席 = 备战侧消费臂失去闭环输入'
-    ct = st.cw4_counters
-    assert ct.get('bench_full_buy_abandon', 0) == 1
-    # 筹资形态计数腿(并入):同形关店交回,分键计数归属正确
-    strategy_f, sess_f, config_f = _frame_funding_support_sell()
-    action_f = strategy_f.decide_shop_action()
-    assert type(action_f).__name__ == 'CwActionCloseShopParam'
-    assert state_of(sess_f).cw4_counters.get('funding_close_defer', 0) == 1, (
-        '筹资形态关店交回,分键 = funding_close_defer(零卖射)')
+    assert type(action).__name__ == 'CwActionSellBenchParam', (
+        f'{case} 席满/缺金形态首动作 {type(action).__name__} 非店内卖出'
+        '(置换账/筹资/恒买腾位未接产)')
+    assert action.reason in ('shop_swap', 'session_funding', 'c1_make_room'), \
+        action.reason
+    assert state_of(sess).cw4_shop_wanted_pending is None, \
+        'wanted 残差跨段状态应随腾位链废止保持空置'
 
 
 def test_vacate_chain_reopen_keeps_shop_face_and_buys():
-    """腾位链牌面持久契约锁:节点内关店→重开不刷新牌面
-    (research/economy.md §2.1)——同一 session/同一店面 payload 下:
-    席满帧关店交回 → 备战腾席(bench 移除一件,店面 payload 不动)
-    → 重开重判,原缺员件在店且被买入。牌面若被重开刷新(跨节点语义
-    误用到节点内),缺员件不在店,本锁红。"""
+    """牌面持久契约锁(置换形态;承继 research/economy.md §2.1):同一
+    session/同一店面 payload 下:席满帧置换卖出(bench 移除一件,
+    店面 payload 不动)→ 下帧重判,原缺员件在店且被买入。牌面若被
+    卖出/重开刷新(跨节点语义误用到节点内),缺员件不在店,本锁红。"""
     strategy, sess, config = _frame_m4_missing_vacate()
     act1 = strategy.decide_shop_action()
-    assert type(act1).__name__ == 'CwActionCloseShopParam'
+    assert type(act1).__name__ == 'CwActionSellBenchParam'
     gs = game_state_of(sess)
-    # 备战期腾席:bench 移除一件燃料(逻辑态直写,同容器转移函数通道);
-    # 店面 payload 与 gold/缺员语境全不动 = 「节点内重开」的决策级建模。
-    fuels = [b for b in gs.bench.value.slots
-             if b is not None and b.unit is not None
-             and (b.unit.char_id or '') != _MEMBER]
-    kept = fuels[0]
-    rest = [s for s in gs.bench.value.slots if s is not kept]
-    gs.write_logic(gs.bench, BenchView(slots=rest, capacity=9),
-                   produced_by='cw-t271-test', sig=_LOGIC_SIG)
+    # 置换卖出的落地建模:bench 移除被卖槽(逻辑态直写,同容器转移
+    # 函数通道);店面 payload 与 gold/缺员语境全不动。
+    kept_idx = act1.bench_idx
+    slots = list(gs.bench.value.slots)
+    slots[kept_idx] = BenchSlot(kind='empty')
+    gs.write_logic(gs.bench, BenchView(slots=slots, capacity=9),
+                   produced_by='cw-36-test', sig=_LOGIC_SIG)
+    # 卖出上报(筹资/置换卖出腿的容器投影;回金入账面)
+    gs.write_logic(gs.gold, gs.gold.value + (action_income(act1) or 0),
+                   produced_by='cw-36-test', sig=_LOGIC_SIG)
+    state_of(sess).gold_ledger = gs.gold.value
     act2 = strategy.decide_shop_action()
     assert type(act2).__name__ == 'CwActionBuyCardParam', (
-        f'重开后未恢复买入(得 {type(act2).__name__})= 牌面持久被破坏'
-        '或腾位链断')
+        f'腾位后未恢复买入(得 {type(act2).__name__})= 牌面持久被破坏'
+        '或置换链断')
     assert act2.card.name == _MEMBER, (
-        f'重开买入 {act2.card.name!r} 非原在店缺员件 = 牌面被刷新'
+        f'腾位后买入 {act2.card.name!r} 非原在店缺员件 = 牌面被刷新'
         '(跨节点自动刷新语义误用到节点内)')
 
-# (收口整删)原 test_funding_form_closes_with_defer_counter「筹资形态
-# 专锁」删:funding_close_defer 分键计数腿并入上方腾位形态流锁(同形
-# 关店交回,分键归属面由同锁分腿承重)。
+
+def action_income(act) -> int:
+    """卖出动作的预期回金(income 记录字段;未标 = 0 保守)。"""
+    return int(getattr(act, 'income', 0) or 0)
+
+
+def test_funding_hold_fallback_records_opportunity():
+    """筹资兜底腿②拒形态:核心件持有账 > 0 → 不卖;该牌进未消费机会
+    清单(拦因 = 金不足),收工关店(读数协议 §4.2 清单闭环)。"""
+    strategy, sess, config = _frame_funding_hold_fallback()
+    action = strategy.decide_shop_action()
+    assert type(action).__name__ == 'CwActionCloseShopParam'
+    st = state_of(sess)
+    ct = st.cw4_counters
+    assert ct.get('session_funding_exhausted', 0) >= 1, \
+        '筹资候选穷尽分键缺席(兜底腿②拒后应记录)'
+    recs = st.shop_opportunities
+    assert any(r.card_name == _MEMBER and r.blocked_by == 'gold_short'
+               for r in recs), \
+        f'金不足机会清单记录缺席:实际 {recs}'

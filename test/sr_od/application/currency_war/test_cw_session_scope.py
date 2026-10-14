@@ -334,9 +334,13 @@ class TestEntryWiring:
         strat = MandateV1Strategy(
             gs, DecideCfg(), registry=DEFAULT_REGISTRY)
         st = state_of(gs)
+        st.node_boundary_last_pos = None   # 边界未处理形态(种子稳态钉位解除)
         st.shop_handled = (1, 1)
         strat.decide_shop_action()
-        assert st.shop_handled is None    # 商店入口已执行边界重置
+        # 边界已执行:判重键推进到当前节点(重置后若会话零动作收工,
+        # 标记由会话收工位重写——此处锁边界执行本身,不锁收工位零标记)。
+        assert st.node_boundary_last_pos == (1, 2)
+        assert st.shop_handled in (None, (1, 2))
 
     def test_both_entries_share_one_boundary_state(self):
         """两入口共用同一判重键(契约 C「同一函数」):备战入口已执行

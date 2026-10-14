@@ -150,12 +150,12 @@ class TestLaunchRegistry:
                 'ev_buy', 'core_single_card_buy',
                 'core_single_card_buy:unlocked', 'transition_component_buy',
                 'dead_gold_press_buy', 'fuel_filler_stall',
-                't3_unlocked_hemostat', 'hub_option_buy')
+                't3_unlocked_hemostat', 'scene_plugin_buy')
         assert set(sell_gate.LAUNCH_CAUSE_BY_ARM) == set(arms)
         assert set(sell_gate.LAUNCH_CAUSE_BY_ARM.values()) \
             <= sell_gate.LAUNCH_CAUSES
         assert sell_gate.launch_cause_of('ev_buy') == 'press'
-        assert sell_gate.launch_cause_of('hub_option_buy') == 'hold'
+        assert sell_gate.launch_cause_of('scene_plugin_buy') == 'press'
         assert sell_gate.launch_cause_of('不存在的臂') is None
         # P88 迁并腿:收窄集 ⊆ 闭集;豁免集恰 13 键——新买入臂入映射表
         # 即红(强制分类进收窄/豁免,防绕辖域前置的第五臂;对账符号 =
@@ -172,7 +172,7 @@ class TestLaunchRegistry:
             'core_single_card_buy:unlocked', 'm6_stockpile',
             'press_buy_deployable', 'ev_buy', 'transition_component_buy',
             'dead_gold_press_buy', 'fuel_filler_stall',
-            't3_unlocked_hemostat',
+            't3_unlocked_hemostat', 'scene_plugin_buy',
         }
         assert exempt == must_exempt, \
             f'豁免集漂移: 多={exempt - must_exempt} 少={must_exempt - exempt}'

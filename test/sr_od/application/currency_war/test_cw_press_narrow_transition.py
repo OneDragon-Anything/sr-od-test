@@ -136,13 +136,17 @@ class TestDominanceNarrowFire:
 
 class TestHubSentinel:
     def test_f9_hub_natural_frame_untouched(self):
-        """锁 F9 控制(空开火面申报的常态面):未锁无目标帧(乙臂自然
-        辖域)收窄旗恒 False ⇒ hub 照常发射、哨兵键零显影。"""
+        """锁 F9 控制(空开火面申报的常态面)→ 3.6 乙臂收编改锁:未锁
+        无目标帧(枢纽件自然辖域)收窄旗恒 False ⇒ 枢纽件经序 1 成员面
+        照常发射(m2 买因;hub_option_buy 发射位随乙臂收编退役)、
+        哨兵键零显影。"""
         st = _hub_state(shop_cards=[_hub_card('花火', cost=2)])
         sess = _hub_session(IntentionState())
         assert mandate.swap_transition_narrow_frame(_bridge(**st), sess) is False
         act = _hub_decide(st, sess)
-        assert isinstance(act, CwActionBuyCardParam) and act.reason == 'hub_option_buy'
+        assert isinstance(act, CwActionBuyCardParam), act
+        assert act.card.name == '花火'
+        assert act.reason.startswith('m2_'), act.reason
         ct = _hub_ct(sess)
-        assert ct.get('hub_option_buy_hit') == 1
+        assert 'hub_option_buy_hit' not in ct
         assert _NARROW_HUB_KEY not in ct
