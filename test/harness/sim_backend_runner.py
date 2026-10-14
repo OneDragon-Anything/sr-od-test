@@ -374,6 +374,16 @@ def run_sim_full_match(test_context: Any,
             loop = _WatchedLoop(test_context)
             with fast_sleep(loop):
                 result = loop.execute()
+    except Exception as exc:
+        # 崩点上下文注入(PEP-678 add_note:不改异常类型/不吞 traceback,
+        # 报告面追加世界状态——冒烟批「哪节点崩」的最小凭据;「哪动作」
+        # 由原 traceback 承载。读 backend 私有槽仅取现值,无副作用)。
+        exc.add_note(
+            'sim 全流程局崩点上下文: '
+            f'seed={seed}, node={backend.gs.node.value!r}, '
+            f'screen={backend._screen!r}, steps={backend._steps}, '
+            f'hp={backend.gs.hp.value!r}, gold={backend.gs.gold.value!r}')
+        raise
     finally:
         if loop is not None:
             reset_running_state(test_context, loop)
