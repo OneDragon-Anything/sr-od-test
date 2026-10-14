@@ -1817,6 +1817,40 @@ def test_non_piggy_reward_income_still_window_open(
         uninstall_backend()
 
 
+def test_non_piggy_reward_always_wins_no_hp_loss(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """普通奖励关恒胜白拿(奖励关不需要战力 = 用户账本 408 行裁定,
+    单一源 = kernel cw_reward_node.py 裁定权威行):强制败局结算输出
+    (−23)也被结算腿改写为胜——hp 不掉、败态不登记 pending_loss、
+    连胜账不动(奖励关不计连胜);扑满局不受本改写(掷点语义保留,
+    见 test_piggy_loss_base_interest_only_and_streak_reset)。"""
+    b = SimBackend(seed=35, cfg=RunConfig(
+        selected_difficulty='A8', enemy_difficulty=108, env_present=True))
+    install_backend(b)
+    try:
+        gs = b.gs
+        b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+        assert b.screen_identity() == SCREEN_INVEST_ENV
+        gs.write_logic(gs.invest_env_opts,
+                       ['轮岗', '头彩', _PIGGY_ENV],
+                       produced_by='Test', evidence='t:opts', sig=_SIG)
+        out = report_action_pick_invest_env_param(
+            gs, SimpleNamespace(idx=0), _SIG)
+        assert out.applied
+        cw_sim_ports.declare_world(out.world_decl)
+        assert b.screen_identity() == SCREEN_PREP
+        hp0 = int(gs.hp.value or 0)
+        streak0 = int(gs.streak.value or 0)
+        _force_settle(monkeypatch, won=False)   # 强制败局输出(−23)
+        _start_battle_feed(gs)
+        assert b.screen_identity() == SCREEN_SETTLE
+        assert int(gs.hp.value or 0) == hp0, '奖励关恒胜:不掉血'
+        assert int(gs.streak.value or 0) == streak0, '奖励关不计连胜'
+        assert (gs.pending_loss.value is None), '胜局不登记败态'
+    finally:
+        uninstall_backend()
+
+
 # ============================================================ 观察生成器
 # (sim 统一 3.3:每生成器单测 = 构造世界态 → backend.observe(档名) 生成
 #  obs(生产路径 = 注册表分派,产物经同名 report_screen_* 落容器)→ 容器

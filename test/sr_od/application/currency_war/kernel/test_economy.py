@@ -380,6 +380,29 @@ def test_blood_xp_gate_untrusted_hp_fail_closed() -> None:
     assert blood_xp_gate_for(st_ghost, _blood_session()) is False
 
 
+# ==================== 下一利息档线(凑息止盈目标单一源) ====================
+
+def test_next_interest_line_tier_boundaries() -> None:
+    """凑息止盈目标线边界(kernel next_interest_line 单一源):档内金取
+    下一档线(18→20/0→10);跨档后按新档推进(20→30);达满档(50,
+    cap=5)与买断制(cap≤0)= 无档可跨 → None(凑息零收益,消费位
+    必须零发出)。修复锚:旧判据卖到饱和线 g*=50,P1 早期金 10~40 永远
+    凑不齐 → 同档零收益卖光 bench(20261016 复盘缺陷①)。"""
+    from sr_od.application.currency_war.kernel.cw_economy import (
+        next_interest_line,
+    )
+    assert next_interest_line(18, 5) == 20
+    assert next_interest_line(0, 5) == 10
+    assert next_interest_line(20, 5) == 30
+    assert next_interest_line(45, 5) == 50
+    assert next_interest_line(50, 5) is None   # 满档,利息已封顶
+    assert next_interest_line(80, 5) is None
+    assert next_interest_line(10, 0) is None   # 买断制:息通道关闭
+    # cap 覆写语境(息律投资 cap=10):满档线随之右移
+    assert next_interest_line(80, 10) == 90
+    assert next_interest_line(100, 10) is None
+
+
 # ==================== D 牌期望模型边界 ====================
 # 边界语义(data/cw_shop_odds.py 现行口径):p≤0/k≤0/j≥k → 0;查表无数据 → 0。
 # v/a 参数从注册表单一源现算(DISTINCT_CARDS_PER_COST/POOL_COPIES_PER_CARD),

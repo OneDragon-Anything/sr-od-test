@@ -462,19 +462,42 @@ class TestInterestItemSlotGate:
 
     def test_placeholder_excluded_real_fuel_kept(self):
         """占位件不入资格集,同帧真燃料件照卖(修复前形态 = 两槽全入);
-        仅占位件可「凑」的帧 = 诚实空集(占位件槽永不入发射列)。"""
+        仅占位件可「凑」的帧 = 诚实空集(占位件槽永不入发射列)。
+        调用帧 = gold 9(下一利息档线 10,缺口 1,燃料件退金 ≥ 1 可行)
+        ——跨档止盈判据(单件退金 ≥ 缺口,单一源 = kernel
+        next_interest_line)下 gold 0 帧(缺口 10)无可行件,
+        'no_tier_gain' 零发出,资格面不可观测。"""
         fuel_a, _fuel_b = _fuel_pair()
         bench = [_item(slot=1), _bc(fuel_a)]
         slots, key = sell.sell_for_interest(
-            0, bench, 5, _K, state=_bsb(**_gate_state(bench)))
+            9, bench, 5, _K, state=_bsb(**_gate_state(bench)))
         assert key == ''
         assert slots == [1]   # 紧缩位键(0 基)
-        # 仅占位件帧 = 诚实空集
+        # 仅占位件帧 = 诚实空集(资格集空,拒因保持 '')
         bench_only = [_item(slot=1)]
         slots2, key2 = sell.sell_for_interest(
-            0, bench_only, 5, _K, state=_bsb(**_gate_state(bench_only)))
+            9, bench_only, 5, _K, state=_bsb(**_gate_state(bench_only)))
         assert slots2 == []
         assert key2 == ''
+
+    def test_below_tier_gap_no_sell(self):
+        """跨档止盈:单件退金 < 到下一利息档缺口 = 零利息收益,一件不卖
+        ('no_tier_gain')——同档卖出纯亏持有资产,旧判据(卖到饱和线
+        g*=50)会把 bench 卖光。"""
+        fuel_a, _fuel_b = _fuel_pair()
+        bench = [_item(slot=1), _bc(fuel_a)]
+        # gold 0:下一档线 10,缺口 10,燃料件退金(cost ≤ 5)< 缺口
+        slots, key = sell.sell_for_interest(
+            0, bench, 5, _K, state=_bsb(**_gate_state(bench)))
+        assert slots == []
+        assert key == 'no_tier_gain'
+        # 同判据的反向帧:缺口 1(金 9)即发射(上一条已锁,此处钉
+        # 「缺口与退金的 ≥ 关系」边界:退金恰等缺口可行)
+        slots3, key3 = sell.sell_for_interest(
+            9, [_bc(fuel_a)], 5, _K, state=_bsb(
+                **_gate_state([_bc(fuel_a)])))
+        assert key3 == ''
+        assert len(slots3) == 1
 
     # 「门序锁」已删(同燃料通道判):滤门禁用变异下 star=2 占位件
     # 输入仍被星门(criteria/sell.py 内 b.star != 1)同样拒——两门同为纯拒、

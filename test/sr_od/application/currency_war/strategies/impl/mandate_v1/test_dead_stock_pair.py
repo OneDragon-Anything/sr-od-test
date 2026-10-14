@@ -583,9 +583,10 @@ class TestCriterionUnits:
 
     def test_interest_channel_bypass(self):
         """通道旁路单元:释放成员入资格集(凑息回拉 + 燃料腾席迁并对照;
-        缺口触发/目标量止盈语义零改,仅 G-S1 子谓词被旁路)。凑息:缺口
-        恰容一张,卖出对象确定;燃料:显式传释放集 ⇒ 腾席资格集放行且
-        拒因零计数。上阵 1 人免空板止损守卫(守卫先于资格循环)。"""
+        仅 G-S1 子谓词被旁路,跨档止盈判据不受旁路影响)。凑息帧 =
+        缺口恰容一张(gold = 档线 − refund,单件退金 ≥ 缺口可行),卖出
+        对象确定;燃料:显式传释放集 ⇒ 腾席资格集放行且拒因零计数。
+        上阵 1 人免空板止损守卫(守卫先于资格循环)。"""
         from sr_od.application.currency_war.kernel.cw_economy import (
             bench_char_cost,
             sell_refund,
@@ -606,7 +607,7 @@ class TestCriterionUnits:
         release = sell_gate.dead_pair_exit_release(sess, (), bench,
                                                    deployed, _ROUND)
         refund = sell_refund(1, bench_char_cost(mandate._slot_unit(bench[0])))
-        gold = saturation_line(7) - refund - 1
+        gold = saturation_line(7) - refund   # 缺口 = refund:单张恰好跨档
         slots, _key = crit_sell.sell_for_interest(
             gold, bench, 7, (), gs, merge_guard_release=release)
         sold_names = {mandate._slot_cid(bench[s]) for s in slots}

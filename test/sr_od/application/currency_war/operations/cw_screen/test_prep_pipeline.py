@@ -614,9 +614,12 @@ class TestStep7NodeEndInterest:
         return sess
 
     def test_below_line_sells_single_refund_unit(self):
-        """金 40 < 息线 50 → 卖 1★ 全额退件候选一张(单动作循环:每帧
-        一张,卖出上报更新金位后下帧重评)。"""
-        sess = self._frame(40, [_bc('c0'), _bc('c1')])
+        """跨档可行帧(金 48,下一档线 50,缺口 2):卖 1★ 全额退件候选
+        一张(退金 ≥ 缺口才发,取退金最小;单动作循环:每帧一张,卖出
+        上报更新金位后下帧重评)。跨不了档的帧(gold 40 缺 10,退金 3)
+        = 'no_tier_gain' 零卖出,资格面该锁由 criteria/test_sell_
+        candidates 承载。"""
+        sess = self._frame(48, [_bc('c0'), _bc('c1')])
         out = _emit(sess)
         sells = [e.action for e in out
                  if isinstance(e.action, CwActionSellBenchParam)]
