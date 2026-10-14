@@ -5,8 +5,10 @@ M06/M05 + 节点选项生成 M16/M17/M18)。
 - 投资 offer:U07 固定日程(P1r3/P2r2/P3r2 + 联席决策 2-6 额外槽)/
   U07③ 候选结构(品质→池取样、offer 内去重、全程不重复)/U08 环境
   offer 同构 3 选 1/品质分布显式常量占位。选卡入账腿 = kernel 获得链
-  (锁面迁 test_sim_backend.py,注入核随退役删除);品质覆写名单
-  常量位 = kernel cw_investments;
+  (锁面迁 test_sim_backend.py,注入核随退役删除);品质改写已接入
+  三选一抽样(判据锁 rewrite_quality_for_pick 只接全改写型 + kernel
+  游戏事实名单一致性锁;「未建模」披露键已退役,名单常量位仍 =
+  kernel cw_investments);
 - 派生池与发牌:副本数真值(27/27/9/9/9)/held 星级派生不变量/≥9 清空
   发牌过滤(U11)与双出口分野/专家入池假设(U10)/5 槽发牌与概率表/
   免费刷先行(M05);
@@ -46,6 +48,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     deployed_view_sequential as _dvs,
 )
 from sr_od.application.currency_war.kernel.cw_investments import (
+    ENV_POOL_REWRITE,
     INVESTMENT_ENVS,
     INVESTMENT_STRATEGIES,
     QUALITY_REWRITE_ENV_NAMES,
@@ -68,7 +71,7 @@ from sr_od.application.currency_war.sim.cw_sim_backend import (
     encounter_options,
     is_piggy_node,
     offer_slots,
-    quality_rewrite_hit,
+    rewrite_quality_for_pick,
     sample_env_offer,
     sample_strategy_offer,
     supply_options,
@@ -158,6 +161,54 @@ def test_strategy_offer_quality_distribution_uniform_placeholder() -> None:
         assert abs(p - 1.0 / 3.0) < 6 * sigma, (quality, p)
 
 
+# ============================================================ 投资 offer:品质改写次抽样(forced_quality)
+
+def test_strategy_offer_forced_quality_targets_pool() -> None:
+    """品质改写次抽样(2026-10-14 用户裁定:固定目标品质后照常抽
+    3 张):forced_quality='棱彩' → 候选全棱彩注册名 + offer 内去重;
+    预置排除集生效(排除名不再出现);多 seed 扫。"""
+    prism_names = {n for n, s in INVESTMENT_STRATEGIES.items()
+                   if s.rarity == '棱彩'}
+    assert prism_names, '注册表棱彩池非空(建表前提)'
+    for seed in range(20):
+        # 排除集取棱彩池头部两名(现算,非手抄名):锁「排除集在
+        # 改写次同样生效」,不锁具体候选值
+        banned = set(sorted(prism_names)[:2])
+        picks = sample_strategy_offer(random.Random(seed), set(banned),
+                                      forced_quality='棱彩')
+        assert len(picks) == OFFER_CANDIDATES
+        assert len(set(picks)) == OFFER_CANDIDATES, 'offer 内去重'
+        for name in picks:
+            assert name in INVESTMENT_STRATEGIES and \
+                INVESTMENT_STRATEGIES[name].rarity == '棱彩', name
+            assert name not in banned, '排除集生效'
+
+
+def test_strategy_offer_forced_quality_pool_exhausted_falls_back() -> None:
+    """防御语义(用户裁定:回退全池契约沿用,不扩防御分支):排除集
+    = 全部棱彩名(注册表现算)→ 目标品质池吃光,回退全池(排除后)
+    照常发满 3 张;候选必然非棱彩(棱彩名已全部在排除集)。"""
+    prism_names = {n for n, s in INVESTMENT_STRATEGIES.items()
+                   if s.rarity == '棱彩'}
+    picks = sample_strategy_offer(random.Random(7), set(prism_names),
+                                  forced_quality='棱彩')
+    assert len(picks) == OFFER_CANDIDATES, '池吃光回退全池,如实少发不触发'
+    for name in picks:
+        assert name in INVESTMENT_STRATEGIES
+        assert name not in prism_names, '排除集照常排除(候选必非棱彩)'
+
+
+def test_strategy_offer_default_regression_forced_empty() -> None:
+    """默认局回归:forced_quality='' 与不传参逐值同(同 seed 同排除集
+    对拍)——默认局抽样路径零变化。"""
+    for seed in range(12):
+        ex: set[str] = set(sorted(INVESTMENT_STRATEGIES)[:seed * 3])
+        a = sample_strategy_offer(random.Random(seed), set(ex))
+        b = sample_strategy_offer(random.Random(seed), set(ex),
+                                  forced_quality='')
+        assert a == b, seed
+
+
 def test_env_offer_shape_and_registry_membership() -> None:
     """U08:环境 offer = 3 张占位、互不重名、全在环境注册表;排除集
     生效(同构去重)。"""
@@ -176,17 +227,33 @@ def test_env_offer_shape_and_registry_membership() -> None:
     assert tiny == ()
 
 
-# ============================================================ 投资 offer:披露判据
+# ============================================================ 投资 offer:品质改写判据与名单一致性
 
-def test_quality_rewrite_envs_flagged_not_modeled() -> None:
-    """品质覆写族(彩虹/黄金/白银时代等)首版不建模:命中判据为真,
-    供后端按 QUALITY_REWRITE_ENVS_PENDING 披露;普通环境不误报;
-    名单常量位 = kernel(游戏事实单一源)。"""
-    assert quality_rewrite_hit('彩虹时代')
-    assert quality_rewrite_hit('头彩')
-    assert not quality_rewrite_hit('轮岗')
-    assert not quality_rewrite_hit(None)
-    assert '彩虹时代' in QUALITY_REWRITE_ENV_NAMES
+def test_rewrite_quality_for_pick_full_rewrite_family_only() -> None:
+    """品质改写判据(2026-10-14 用户裁定:只接全改写型,判据 =
+    rewrite_picks == (1,2,3) 结构特征):时代族命中次返回目标品质
+    (彩虹 1/2/3 次 → 棱彩,第 4 次不存在于固定日程但判据仍闭)、
+    黄金/白银同构族自动覆盖;部分改写型(头彩 picks=(1,)/尾彩
+    picks=(3,))offer 覆盖面歧义未定谳不接入 → None;联席决策无
+    rewrite_quality → None;None/空/名单外环境恒 None。"""
+    assert rewrite_quality_for_pick('彩虹时代', 1) == '棱彩'
+    assert rewrite_quality_for_pick('彩虹时代', 2) == '棱彩'
+    assert rewrite_quality_for_pick('彩虹时代', 3) == '棱彩'
+    assert rewrite_quality_for_pick('彩虹时代', 4) is None
+    assert rewrite_quality_for_pick('黄金时代', 2) == '金'
+    assert rewrite_quality_for_pick('白银时代', 3) == '银'
+    assert rewrite_quality_for_pick('头彩', 1) is None, '部分改写型不接入'
+    assert rewrite_quality_for_pick('尾彩', 3) is None, '部分改写型不接入'
+    assert rewrite_quality_for_pick('联席决策', 1) is None, \
+        '数量通道无 rewrite_quality'
+    for env in (None, '', '轮岗', '经济过热'):
+        assert rewrite_quality_for_pick(env, 1) is None, env
+
+
+def test_quality_rewrite_name_list_subset_of_registry() -> None:
+    """游戏事实名单 ⊆ 结构化注册表(防双名单漂移:名单新增环境而
+    ENV_POOL_REWRITE 未建条目时,品质改写会静默漏接,本锁红)。"""
+    assert set(QUALITY_REWRITE_ENV_NAMES) <= set(ENV_POOL_REWRITE)
 
 
 # ============================================================ 派生池(M06)

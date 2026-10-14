@@ -80,6 +80,12 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 from sr_od.application.currency_war.kernel.cw_game_state import (
     deployed_view_sequential as _dvs,
 )
+from sr_od.application.currency_war.kernel.cw_investments import (
+    INVESTMENT_STRATEGIES,
+)
+from sr_od.application.currency_war.kernel.cw_node_schedule import (
+    PLANE_NODE_TABLES,
+)
 from sr_od.application.currency_war.kernel.cw_ore_reward import (
     OreReward,
 )
@@ -100,7 +106,9 @@ from sr_od.application.currency_war.operations.cw_operation_base import (
 from sr_od.application.currency_war.sim import cw_sim_ports
 from sr_od.application.currency_war.sim.cw_sim_backend import (
     DISCLOSURE_P3_UNOBSERVED,
+    INVEST_OFFER_SCHEDULE,
     NODE_XP_BY_TYPE,
+    OFFER_CANDIDATES,
     ORE_PLANE_START_PENDING,
     SCREEN_BOSS_BRIEFING,
     SCREEN_BOX,
@@ -1088,6 +1096,122 @@ def test_full_walk_terminates_with_p3_disclosure() -> None:
         assert result.plane_reached == 2
         assert all(hp >= 0 for hp in result.hp_trail)
         assert len(result.hp_trail) >= 8, 'hp 轨迹覆盖两位面'
+    finally:
+        uninstall_backend()
+
+
+# ============================================================ 品质改写接入(彩虹时代局)
+
+_RAINBOW_ENV = '彩虹时代'
+
+
+def _rainbow_env_backend(seed: int = 61) -> SimBackend:
+    """开局选彩虹时代环境的装配后端(调用方负责 uninstall;装配模式 =
+    _ore_env_backend 同款:opts 首位定向 → idx=0 上报 → 声明喂入)。"""
+    b = SimBackend(seed=seed, cfg=RunConfig(
+        selected_difficulty='A8', enemy_difficulty=108, env_present=True))
+    install_backend(b)
+    b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+    assert b.screen_identity() == SCREEN_INVEST_ENV
+    b.gs.write_logic(b.gs.invest_env_opts,
+                     [_RAINBOW_ENV, '轮岗', '头彩'],
+                     produced_by='Test', evidence='t:opts', sig=_SIG)
+    out = report_action_pick_invest_env_param(
+        b.gs, SimpleNamespace(idx=0), _SIG)
+    assert out.applied
+    cw_sim_ports.declare_world(out.world_decl)
+    return b
+
+
+def test_rainbow_env_full_walk_offers_all_prism() -> None:
+    """彩虹时代 sim 全流程锁(品质改写接入 sim 三选一;2026-10-14 用户
+    裁定:全改写型 + 取卡全局序):开局环境 offer 走 opening 形态不进
+    取卡序(选环境后序数 = 0);此后每次策略三选一呈现,候选全棱彩
+    注册名;呈现次数 = 固定日程落在建模域内的槽数(P3 未观测局终,
+    第 3 槽 P3r2 不可达;槽数自 PLANE_NODE_TABLES 现算,防日程/建模域
+    漂移静默失配);局终序数 = 呈现次数(每呈现恰 +1,overlay 让路/
+    其余节点不计数——单计另锁 overlay 用例);品质改写披露键已退役,
+    disclosures 无 invest_quality_rewrite 前缀键。
+
+    seed 61 = 走满建模域锚(探针实测全程 min_hp=1 不触发死亡终局,
+    恰好呈现全部建模域槽;改写判据对序数 3 的行为由判据锁与抽样锁
+    覆盖)。"""
+    b = _rainbow_env_backend(61)
+    try:
+        assert b._invest_pick_ordinal == 0, '开局环境 offer 不计数'
+        modelled_slots = [slot for slot in INVEST_OFFER_SCHEDULE
+                          if slot[0] in PLANE_NODE_TABLES]
+        offers_seen = 0
+        for _ in range(4096):
+            if b.done:
+                break
+            if b.screen_identity() == SCREEN_SETTLE:
+                _node_advance_feed(b.gs, trigger='settle_confirm')
+                continue
+            if b.screen_identity() == SCREEN_INVEST_STRATEGY:
+                opts = b.gs.invest_strategy_opts.value
+                assert len(opts) == OFFER_CANDIDATES
+                for name in opts:
+                    assert name in INVESTMENT_STRATEGIES, name
+                    assert INVESTMENT_STRATEGIES[name].rarity == '棱彩', \
+                        f'改写次候选必棱彩: {name}'
+                offers_seen += 1
+            _drive_step(b, 61)
+        assert b.done, '彩虹局走完到局终'
+        assert offers_seen == len(modelled_slots), \
+            (offers_seen, modelled_slots)
+        assert b._invest_pick_ordinal == offers_seen, \
+            '序数 = 实际呈现次数(呈现一次计一次)'
+        assert not [k for k in b.disclosures
+                    if k.startswith('invest_quality_rewrite')], \
+            '品质改写披露键已退役'
+    finally:
+        uninstall_backend()
+
+
+def test_rainbow_env_overlay_detour_offer_counted_once() -> None:
+    """overlay 让路单计锁:offer 槽节点窗起点 overlay 在场 → 让路呈现
+    planner(此时取卡序数仍 0,让路不进 offer 分支),选定复走 offer
+    检查 → 改写次候选全棱彩,序数恰 +1(复走无双计;开局环境 offer
+    走 opening 形态不计数 → 首呈现后序数 = 1)。让路序权威 = 旧引擎
+    实测收尾检查序(overlay → offer → 下一节点)。"""
+    b = _rainbow_env_backend(7)
+    try:
+        b._maybe_finish_wait()
+        assert b.screen_identity() == SCREEN_PREP
+        assert b._invest_pick_ordinal == 0
+        gs = b.gs
+        # P1r1(奖励)→ P1r2(战斗)
+        _start_battle_feed(gs)
+        assert b.screen_identity() == SCREEN_SETTLE
+        _node_advance_feed(gs, trigger='settle_confirm')
+        assert (gs.node.value.plane, gs.node.value.round_num) == (1, 2)
+        # P1r3(U07 offer 槽)窗口起点 overlay 在场 = 让路前提
+        register_screen_change(
+            gs, 'planner', '货币战争-银狼升星', source='test')
+        _start_battle_feed(gs)
+        _node_advance_feed(gs, trigger='settle_confirm')
+        assert gs.node.value.round_num == 3
+        assert b.screen_identity() == '货币战争-银狼升星', \
+            '窗起点 overlay 先呈现(压住节点屏)'
+        assert b._invest_pick_ordinal == 0, '让路期间不计数'
+        planner_out = report_action_pick_planner_param(
+            gs, SimpleNamespace(), _SIG)
+        assert planner_out.applied
+        cw_sim_ports.declare_world(planner_out.world_decl)
+        assert b.screen_identity() == SCREEN_INVEST_STRATEGY, \
+            '让路结束复走 offer 检查(U07 P1r3 槽不被跳过)'
+        opts = gs.invest_strategy_opts.value
+        assert opts, 'offer 候选写容器槽'
+        for name in opts:
+            assert INVESTMENT_STRATEGIES[name].rarity == '棱彩', name
+        assert b._invest_pick_ordinal == 1, '呈现恰计一次(复走无双计)'
+        invest_out = report_action_pick_invest_strategy_param(
+            gs, SimpleNamespace(norm_name=opts[0]), _SIG,
+            session=SimpleNamespace())
+        assert invest_out.applied
+        cw_sim_ports.declare_world(invest_out.world_decl)
+        assert b.screen_identity() == SCREEN_PREP, 'offer 选定 → 节点屏'
     finally:
         uninstall_backend()
 
