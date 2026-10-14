@@ -1281,29 +1281,36 @@ def test_golden_env_full_walk_offers_all_gold() -> None:
 
 def test_golden_env_difficulty_records_track_selections() -> None:
     """难度账记录轨迹锁(T-12 验收主锁二;2026-10-14 用户裁定:sim 对
-    选择后的难度做记录更新,胜负建模另批):
+    选择后的难度做记录更新,胜负建模另批)。两个观察面一起锁:
 
-    - 每场战斗结算恰一条记录,记录数 = 结算屏出现数(落账在幂等守卫
-      后,重入无双计);
-    - 逐条对账:品质分量 = 该结算时点已选策略数 × 金档(黄金局改写后
-      选择全金,记录随选择 0→3→6 自动更新——「选择后记录更新」的
-      可执行形态);
-    - encounter 类记录遭遇档分量在册表值域内,非遭遇类恒 0;
-    - 轨迹单调不减(选择只增不减);轨迹首段存在 0(取卡日程前的
-      战斗)且末段 = 两次取卡后全金 6——两段齐 = 全链被拉通。"""
+    - **备战旗牌观察面**(``gs.enemy_difficulty``):每次结算屏时点,
+      值 = 局级输入档 108 + 该时点已选数×金档——选卡落地即时反映
+      (0→3→6 移动的可观察形态);写点 = 节点窗开 + 选卡落地。
+    - **难度账快照面**(``difficulty_records``):每场战斗结算恰一条
+      记录(落账在幂等守卫后,重入无双计),逐条品质分量 = 该结算
+      时点已选数×金档;encounter 类遭遇档分量在册表值域内,非遭遇类
+      恒 0;轨迹单调不减;首段 0 + 末段 6 两段齐 = 全链拉通。"""
     b = _golden_env_backend(61)
     try:
         picks_at_settle: list[int] = []
+        flag_at_settle: list[int] = []
         for _ in range(4096):
             if b.done:
                 break
             if b.screen_identity() == SCREEN_SETTLE:
                 picks_at_settle.append(
                     len(b.gs.active_strategies.value or []))
+                flag_at_settle.append(int(b.gs.enemy_difficulty.value or 0))
                 _node_advance_feed(b.gs, trigger='settle_confirm')
                 continue
             _drive_step(b, 61)
         assert b.done, '黄金局走完到局终'
+        # 备战旗牌观察面(gs.enemy_difficulty,live 生产主源 = 备战旗牌
+        # 管线):值随选择即时更新,= 局级输入档 108 + 该时点已选数×金档;
+        # 节点间基线移动不在 sim 面(U25 基础曲线未采,基线恒 108)。
+        assert flag_at_settle == [108 + p * 3 for p in picks_at_settle], \
+            (flag_at_settle, picks_at_settle)
+        assert flag_at_settle[-1] == 114, '两次取卡后旗牌 = 108+2×金档'
         records = b.difficulty_records
         assert len(records) == len(picks_at_settle), \
             (len(records), len(picks_at_settle))
