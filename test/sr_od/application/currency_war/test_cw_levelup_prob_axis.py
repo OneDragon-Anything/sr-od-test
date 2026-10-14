@@ -386,29 +386,56 @@ class TestRetainedGates:
 
 
 class TestFundingHoldFallback:
-    def test_fallback_emitted_when_main_path_empty(self):
-        """P78-5 兜底豁免对拍(design 契约 D 升级变现行登记的执行侧
-        载体;P78 行四条件 + P78-5′ 两腿的落码形态 = 主路径尽 ∧ 缺口
-        未闭合时 funding_hold_fallback 单笔即止):键驱动帧主路径
-        (评估器常规面)候选空——hold 核心件(三月七,非锁定线成员)
-        被装配 A 排除——兜底池放行且单笔退金 ≥ 缺口 → 发射卖出
-        (levelup_funding_fallback_sell 分键;单一源 =
-        sell_gate.funding_hold_fallback,消费循环只拼装)。"""
+    def test_fallback_leg1_duty_arm_emits_core(self):
+        """P78-5′ 腿①(义务血统臂,验臂):arm0 触发的升级,兜底全量
+        消费——主路径尽 ∧ 缺口未闭合时 hold 核心件(三月七,非锁定线
+        成员)经 funding_hold_fallback 放行、单笔即止(levelup_funding_
+        fallback_sell 分键;单一源 = sell_gate.funding_hold_fallback,
+        消费循环只拼装)。design 契约 D 升级变现行豁免构成 = 义务账 ∨
+        对象无损;义务账腿候选 = 人口位/arm0 骨架义务血统(review-34
+        F1 落码)。"""
         from sr_od.application.currency_war.kernel.cw_game_state import Unit
         bench = _stay_bench() + [_bc('三月七', 1)]   # hold 核心,非线内
         gs, s = _frame(level=7, gold=50, bench=bench,
                        front_row=(Unit(char_id='花火', star=1),))
         _mark_handled(gs)
-        state_of(s).levelup_preauth = LevelUpPreAuth(gold_cost=51,
-                                                     blood_cost=0)
-        # 主路径空(三月七 hold 排除)∧ 缺口 1 ≤ 三月七 1★ 退金 1 → 兜底
+        state_of(s).levelup_preauth = LevelUpPreAuth(
+            gold_cost=51, blood_cost=0, source_arm=levelup.ARM_ARM0)
         out = entry.emit(s, None)
         sells = [e for e in out
                  if isinstance(e.action, CwActionSellBenchParam)]
         assert sells and sells[0].action.reason == 'levelup_liquidate', \
-            '主路径尽 → P78-5 兜底豁免发射(单笔即止)'
+            '腿①:义务臂兜底全量(主路径尽 → 核心件放行)'
         assert state_of(s).cw4_counters.get(
             'levelup_funding_fallback_sell') == 1
+
+    def test_fallback_leg2_preference_arm_rejects_core(self):
+        """P78-5′ 腿②(对象级无损维,验对象非验触发臂):偏好账臂
+        (停留门/概率账/溢余段-L3——P78-5′ 账性判别上零息损不构成
+        「不做会输」= 偏好账)触发的升级,兜底变卖核心/④件被拒——
+        被放行对象须持有账 ≈ 0(非核心/非④件 ∧ 非种子);funding_
+        hold_fallback 兜底池 ⊆ hold 核心集(池条件 = holds ∩ A 排除),
+        偏好臂下结构性恒拒(levelup_fallback_leg_reject 分键 + 键
+        保留零动作;review-34 F1:锁两腿分派语义)。"""
+        from sr_od.application.currency_war.kernel.cw_game_state import Unit
+        bench = _stay_bench() + [_bc('三月七', 1)]
+        gs, s = _frame(level=7, gold=50, bench=bench,
+                       front_row=(Unit(char_id='花火', star=1),))
+        _mark_handled(gs)
+        for arm in (levelup.ARM_STAY_GATE, levelup.ARM_PROB_ACCOUNT,
+                    levelup.ARM_MUST_SPEND, ''):
+            st2 = state_of(s)
+            st2.levelup_preauth = LevelUpPreAuth(
+                gold_cost=51, blood_cost=0, source_arm=arm)
+            out = entry.emit(s, None)
+            assert not [e for e in out
+                        if isinstance(e.action, CwActionSellBenchParam)], \
+                f'腿②:{arm or "无臂身份(保守侧)"} 臂兜底核心件被拒'
+            assert st2.cw4_counters.get('levelup_fallback_leg_reject') \
+                == (1 if arm else 1), f'{arm}:腿拒分键'
+            st2.cw4_counters.clear()
+            st2.levelup_preauth = None
+
 
     def test_population_arm_triggers(self):
         """人口位三元触发(line_and_upgrade §2.1 三元谓词完整保留:
