@@ -11,16 +11,16 @@ test_back_to_normal_world_plus.py::TestBattleFailScreenBranch::test_battle_fail_
 test_back_to_normal_world_plus.py::TestCwLobbyResidualBranch::test_residual_lobby_closes
 # 2026-10-15 摘牌:cw 分发语料 true 向(登记名早已失效=函数更名后未同步,
 # mark 实际未生效);现名 call 实测 0.25s(conftest OCR 磁盘缓存层),现役
-# 位置 = test_cw_loop.py::test_dispatch_corpus_identity_true_direction
+# 位置 = operations/test_loop.py::test_dispatch_corpus_identity_true_direction
 # sim 统一 3.4 首局验收:模块夹具跑两整局 sim(~43s),三条验收测试共享
 # (容器不变式四条尺 2026-10-14 归并一条,消费同一夹具产物;多种子完备性
 # 2026-10-14 裁决整批摘除——与 smoke 冒烟逐 seed 整局完全重叠,语义由
 # smoke_batch 承接,活锁机制锁 = test_cw_prep_action_ops 桥复检语境坐标锁)
-test/sr_od/application/currency_war/test_cw_sim_first_run.py::test_first_match_runs_to_game_over_without_op_fail
-test/sr_od/application/currency_war/test_cw_sim_first_run.py::test_first_match_deterministic_double_run_identical
-test/sr_od/application/currency_war/test_cw_sim_first_run.py::test_first_match_container_invariants
+test/sr_od/application/currency_war/sim/test_sim_first_run.py::test_first_match_runs_to_game_over_without_op_fail
+test/sr_od/application/currency_war/sim/test_sim_first_run.py::test_first_match_deterministic_double_run_identical
+test/sr_od/application/currency_war/sim/test_sim_first_run.py::test_first_match_container_invariants
 # sim 冒烟批:代表性子集 2 seed(2026-10-14 含慢桶全量 ≤180s 裁决,从原
 # 20 连号逐 seed 实测普查后取最快两个,探针记录见测试文件 docstring);
 # 逐 seed 一整局 sim(实测 ~10-13s/seed 含进程启动),复跑带 -s 收逐局统计行
-test/sr_od/application/currency_war/test_cw_sim_smoke_batch.py::test_smoke_match_completes[20261016]
-test/sr_od/application/currency_war/test_cw_sim_smoke_batch.py::test_smoke_match_completes[20261023]
+test/sr_od/application/currency_war/sim/test_sim_smoke_batch.py::test_smoke_match_completes[20261016]
+test/sr_od/application/currency_war/sim/test_sim_smoke_batch.py::test_smoke_match_completes[20261023]
