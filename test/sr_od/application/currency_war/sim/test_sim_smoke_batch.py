@@ -5,10 +5,10 @@
 各批单帧测试承载;用户裁定 2026-10-13 本迭代冒烟不设基线与 A/B 对照):
 
 - 逐 seed 一整局:真 mandate_v1 策略 + 真 CwLoop 驱动 SimBackend,从
-  reset 经 P1 → P2 到局终,op 执行零失败收口(死循环由看门狗轮限转
+  reset 经 P1 → P2 → P3 到局终,op 执行零失败收口(死循环由看门狗轮限转
   execute 失败承载,崩溃由异常传播承载——两者都让本测试红);
-- 终局合法形态 = 死亡(hp 归零且保底已用)/ P2 末完成进 P3(sim 建模
-  域 = P1+P2,P3 未观测进场即局终),两源都算「跑完」;
+- 终局合法形态 = 死亡(hp 归零且保底已用)/ 胜利(走完位面 3,披露键
+  run_complete),两源都算「跑完」;
 - 逐局统计行(复跑加 ``-s`` 可收):seed/终局源/终点/结算轮/驱动步/
   节点写数/末金/末级/hp 低点/耗时——冒烟报告的产出面,不作断言
   (统计数值随策略正常调整变动,断言即过时)。
@@ -46,21 +46,21 @@ SMOKE_SEEDS: tuple[int, ...] = tuple(range(20261012, 20261032))
 def _stats_line(seed: int, run: Any, duration_s: float) -> str:
     """逐局统计行(冒烟报告产出面;字段取现值快照,不做断言)。
 
-    字段口径:终局源 = 死亡(``final_hp == 0``,保底已用归零)/ 存活进
-    P3(建模域尽头)/ abandoned(局未收口即停——execute 失败/崩溃局,
-    终点字段仅记录崩点位置);节点写数 = 状态 journal ``node`` 域写行数
-    (每进一节点恰一写);驱动步 = 后端端口驱动计数(advance + click
-    合计)。
+    字段口径:终局源 = 死亡(``final_hp == 0``,保底已用归零)/ 胜利
+    (走完位面 3,披露键 run_complete)/ abandoned(局未收口即停——
+    execute 失败/崩溃局,终点字段仅记录崩点位置);节点写数 = 状态
+    journal ``node`` 域写行数(每进一节点恰一写);驱动步 = 后端端口
+    驱动计数(advance + click 合计)。
     """
     node = run.gs.node.value
     if not run.backend.done:
         terminal = 'abandoned'
     elif run.gs.hp.value is not None and int(run.gs.hp.value) == 0:
         # hp=0 是 falsy:禁 ``or`` 缺省式(None 哨兵混吃 0 → 死亡局
-        # 误标 p3_enter),None 判别必须显式 is not None。
+        # 误标 run_complete),None 判别必须显式 is not None。
         terminal = 'death'
     else:
-        terminal = 'p3_enter'
+        terminal = 'run_complete'
     node_writes = sum(1 for r in run.journal_rows
                       if r.get('row') == 'write' and r.get('field') == 'node')
     hp_trail = run.hp_trail or (0,)
@@ -87,6 +87,15 @@ def test_smoke_match_completes(seed: int, test_context: Any,
     以计数暴露(连续 fail 达限即软死循环)。
     """
     started = time.perf_counter()
+    # 实机采集停机钩子不进 sim:``_spec_invest_shop_stop_hook`` = 用户裁定
+    # 2026-09-16 的临时人工采集装置(停实机局留现场帧供 MCP 补帧);sim
+    # 世界无实机画面可采,钩子语义不适用——策略分值随真值表联动变化选中
+    # 名单策略即假停整局。桩掉 = sim 局语义澄清,非绕过验证面。
+    from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
+        CwScreenPrep,
+    )
+    monkeypatch.setattr(CwScreenPrep, '_spec_invest_shop_stop_hook',
+                        lambda self: None)
     try:
         run = run_sim_full_match(test_context, monkeypatch, tmp_path,
                                  seed=seed, strategy_seed=seed)

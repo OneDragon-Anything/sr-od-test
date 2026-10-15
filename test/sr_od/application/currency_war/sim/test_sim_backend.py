@@ -117,7 +117,7 @@ from sr_od.application.currency_war.operations.cw_operation_base import (
 )
 from sr_od.application.currency_war.sim import cw_sim_ports
 from sr_od.application.currency_war.sim.cw_sim_backend import (
-    DISCLOSURE_P3_UNOBSERVED,
+    DISCLOSURE_RUN_COMPLETE,
     INVEST_OFFER_SCHEDULE,
     NODE_XP_BY_TYPE,
     OFFER_CANDIDATES,
@@ -1293,8 +1293,10 @@ def test_planner_lazy_presentation_dedup_marker() -> None:
 
 # ============================================================ 局终
 
-def test_full_walk_terminates_with_p3_disclosure() -> None:
-    """P2 走完 → 局终(P3 进场即局终披露);局结果面自容器节点键读。"""
+def test_full_walk_terminates_with_terminal_invariant() -> None:
+    """全链走查到局终:终局合法形态二值不变式(胜利 = run_complete 披露
+    且 hp>0 / 死亡 = hp 归零且无 run_complete,胜负判别单一源在披露集);
+    位面 3 行入表后全链自然走进位面 3。局结果面自容器节点键读。"""
     b = _backend(61)
     try:
         b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
@@ -1307,11 +1309,13 @@ def test_full_walk_terminates_with_p3_disclosure() -> None:
             else:
                 _drive_step(b, 61)
         assert b.done
-        assert DISCLOSURE_P3_UNOBSERVED in b.result().unmodeled
         result = b.result()
-        assert result.plane_reached == 2
+        assert result.plane_reached == 3, '位面 3 在表,全链走进 P3'
+        assert (DISCLOSURE_RUN_COMPLETE in result.unmodeled) \
+            == (result.final_hp > 0), \
+            '终局二值不变式:run_complete ⟺ 存活'
         assert all(hp >= 0 for hp in result.hp_trail)
-        assert len(result.hp_trail) >= 8, 'hp 轨迹覆盖两位面'
+        assert len(result.hp_trail) >= 8, 'hp 轨迹覆盖多节点'
     finally:
         uninstall_backend()
 
@@ -1343,15 +1347,15 @@ def test_rainbow_env_full_walk_offers_all_prism() -> None:
     """彩虹时代 sim 全流程测试(品质改写接入 sim 三选一;2026-10-14 用户
     裁定:全改写型 + 取卡全局序):开局环境 offer 走 opening 形态不进
     取卡序(选环境后序数 = 0);此后每次策略三选一呈现,候选全棱彩
-    注册名;呈现次数 = 固定日程落在建模域内的槽数(P3 未观测局终,
-    第 3 槽 P3r2 不可达;槽数自 PLANE_NODE_TABLES 现算,防日程/建模域
-    漂移静默失配);局终序数 = 呈现次数(每呈现恰 +1,overlay 让路/
-    其余节点不计数——单计另由 overlay 用例校验);品质改写披露键已退役,
+    注册名;呈现次数 = 固定日程落在序列表内的槽数(P3 行入表后第 3 槽
+    P3r2 可达;槽数自 PLANE_NODE_TABLES 现算,防日程/建模域漂移静默
+    失配);局终序数 = 呈现次数(每呈现恰 +1,overlay 让路/其余节点不
+    计数——单计另由 overlay 用例校验);品质改写披露键已退役,
     disclosures 无 invest_quality_rewrite 前缀键。
 
-    seed 61 = 走满建模域锚(探针实测全程 min_hp=1 不触发死亡终局,
-    恰好呈现全部建模域槽;改写判据对序数 3 的行为由判据测试与抽样测试
-    覆盖)。"""
+    seed 61 = 全槽呈现锚(探针实测:P3r2 offer 在 3-2 窗呈现后局于
+    3-5 死亡收口,三个日程槽全部呈现;改写判据对序数 3 的行为由判据
+    测试与抽样测试覆盖)。"""
     b = _rainbow_env_backend(61)
     try:
         assert b._invest_pick_ordinal == 0, '开局环境 offer 不计数'
@@ -1502,7 +1506,8 @@ def test_golden_env_difficulty_records_track_selections() -> None:
     - **难度账快照面**(``difficulty_records``):每场战斗结算恰一条
       记录(落账在幂等守卫后,重入无双计),逐条品质分量 = 该结算
       时点已选数×金档;encounter 类遭遇档分量在册表值域内,非遭遇类
-      恒 0;轨迹单调不减;首段 0 + 末段两档齐 = 全链拉通。"""
+      恒 0;轨迹单调不减;首段 0 + 末段三档齐 = 全链拉通(P3 行入表后
+      固定日程三槽全部可达)。"""
     b = _golden_env_backend(61)
     try:
         picks_at_settle: list[int] = []
@@ -1526,13 +1531,20 @@ def test_golden_env_difficulty_records_track_selections() -> None:
             [108 + p * QUALITY_DIFFICULTY_BONUS['金'] for p in picks_at_settle], \
             (flag_at_settle, picks_at_settle)
         assert flag_at_settle[-1] == \
-            108 + 2 * QUALITY_DIFFICULTY_BONUS['金'], \
-            '两次取卡后敌方难度读数 = 108+2×金档'
+            108 + 3 * QUALITY_DIFFICULTY_BONUS['金'], \
+            '三个日程槽(P1r3/P2r2/P3r2)全部取卡后敌方难度读数 = 108+3×金档'
         records = b.difficulty_records
-        assert len(records) == len(picks_at_settle), \
+        # 死亡收口形态(seed 61 死于 3-5):死亡节点在结算起点已落记录、
+        # 死亡腿不经结算屏 → 记录数 = 结算读数 + 1(末条无对应结算读数)。
+        assert len(records) == len(picks_at_settle) + 1, \
             (len(records), len(picks_at_settle))
+        assert (records[-1].plane, records[-1].round_num) == (3, 5), \
+            '末条记录 = 死亡节点(战斗类结算起点落账,死亡腿不删)'
+        assert records[-1].breakdown.quality_bonus \
+            == 3 * QUALITY_DIFFICULTY_BONUS['金'], \
+            '死亡节点记录品质分量 = 终局已选数'
         quality_seq: list[int] = []
-        for rec, picks in zip(records, picks_at_settle, strict=True):
+        for rec, picks in zip(records[:-1], picks_at_settle, strict=True):
             assert rec.breakdown.base is None, 'U25 基础曲线未采恒 None'
             assert rec.breakdown.quality_bonus \
                 == picks * QUALITY_DIFFICULTY_BONUS['金'], \
@@ -1547,8 +1559,8 @@ def test_golden_env_difficulty_records_track_selections() -> None:
         assert quality_seq == sorted(quality_seq), \
             '轨迹单调不减(选择只增不减)'
         assert quality_seq[0] == 0, '取卡日程前的战斗品质分量为 0'
-        assert quality_seq[-1] == 2 * QUALITY_DIFFICULTY_BONUS['金'], \
-            '建模域两次取卡后(全金)末段记录 = 2×金档'
+        assert quality_seq[-1] == 3 * QUALITY_DIFFICULTY_BONUS['金'], \
+            '全部日程槽取卡后(全金)末段记录 = 3×金档(P3 行入表后第 3 槽可达)'
     finally:
         uninstall_backend()
 

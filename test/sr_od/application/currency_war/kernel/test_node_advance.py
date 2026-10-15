@@ -59,8 +59,8 @@ from sr_od.application.currency_war.kernel.cw_investments import (
 from sr_od.application.currency_war.kernel.cw_node_schedule import (
     P1_NODE_SEQUENCE,
     P2_NODE_SEQUENCE,
+    P3_NODE_SEQUENCE,
     PLANE_NODE_TABLES,
-    P3UnobservedError,
     node_round_cap,
     node_sequence_of,
     resolve_plane_node_seqs,
@@ -191,34 +191,34 @@ def test_cross_plane_advance() -> None:
 
 
 def test_out_of_domain_reading_dropped() -> None:
-    """越域读数丢弃(design §2.11 测试 4 位面在表守卫):位面 3 无序列表
+    """越域读数丢弃(design §2.11 测试 4 位面在表守卫):位面 4 无序列表
     (OCR 位面误读形态)→ 不写任何水位 + arbitrate 留证,返回
     out_of_domain_dropped(与 prep suppress 零写入/supply 响亮抛错语义
-    等价的 kernel 侧显式处置)。"""
+    等价的 kernel 侧显式处置;位面 3 行入表后表外防御 = ≥4)。"""
     gs = _gs_with_double_pair()
     observe_node_anchor(gs, (1, 2), trigger_screen='货币战争-备战', actor=_ACTOR)
-    assert observe_node_anchor(gs, (3, 1), trigger_screen='货币战争-补给',
+    assert observe_node_anchor(gs, (4, 1), trigger_screen='货币战争-补给',
                                actor=_ACTOR) == 'out_of_domain_dropped'
     assert gs.node_pos.value == (1, 2), '越域读数不写水位'
     assert gs.node_hist_pos == (1, 2), '越域读数不推 hist'
 
 
 def test_terminal_match_end_event_style() -> None:
-    """终局事件式(design §2.11 测试 3):P2 末 boss (2,7) 结算确认 →
+    """终局事件式(design §2.11 测试 3):位面 3 末 boss (3,7) 结算确认 →
     sequence_next = None → applied=True reason='match_end' + 声明
     next_screen='';零写入(node_pos/node_hist_pos 保持锚定态)零效果
     tick(在册效果余期不递减)。applied 语义扩展 = 终结动作落地事实。"""
     gs = _gs_with_double_pair()
-    observe_node_anchor(gs, (2, 7), trigger_screen='货币战争-备战', actor=_ACTOR)
-    assert gs.free_refresh_left.value == 2, '锚定 (2,7) 当帧发放(对照基线)'
+    observe_node_anchor(gs, (3, 7), trigger_screen='货币战争-备战', actor=_ACTOR)
+    assert gs.free_refresh_left.value == 2, '锚定 (3,7) 当帧发放(对照基线)'
     out = report_node_advance(gs, trigger='settle_confirm')
     assert out.applied is True, 'applied = 终结动作落地事实(语义扩展)'
     assert out.reason == 'match_end'
     assert out.world_decl is not None
     assert out.world_decl.next_screen == ''
     assert out.world_decl.trigger == 'node_advance'
-    assert gs.node_pos.value == (2, 7), '终局零写入'
-    assert gs.node_hist_pos == (2, 7), '终局不推水位'
+    assert gs.node_pos.value == (3, 7), '终局零写入'
+    assert gs.node_hist_pos == (3, 7), '终局不推水位'
     assert gs.free_refresh_left.value == 2, '终局零效果 tick(余期不递减)'
 
 
@@ -467,28 +467,33 @@ def _gs_with_field(
 # ------------------------------------------------------------ 修饰规则
 
 def test_lock1_resolve_default_env_returns_default_tables() -> None:
-    """白名单外环境(含空名)原样返回默认表;默认表元组对象不被复制也不
+    """表外环境(含空名)原样返回默认表;默认表元组对象不被复制也不
     被原地改(对象同一性)。"""
     for name in ('头彩', '火药味', '过剩经费', ''):
         out = resolve_plane_node_seqs(name)
-        assert out == {1: P1_NODE_SEQUENCE, 2: P2_NODE_SEQUENCE}
-        assert out[1] is P1_NODE_SEQUENCE and out[2] is P2_NODE_SEQUENCE
-    assert PLANE_NODE_TABLES == {1: P1_NODE_SEQUENCE, 2: P2_NODE_SEQUENCE}
+        assert out == {1: P1_NODE_SEQUENCE, 2: P2_NODE_SEQUENCE,
+                       3: P3_NODE_SEQUENCE}
+        assert out[1] is P1_NODE_SEQUENCE and out[2] is P2_NODE_SEQUENCE \
+            and out[3] is P3_NODE_SEQUENCE
+    assert PLANE_NODE_TABLES == {1: P1_NODE_SEQUENCE, 2: P2_NODE_SEQUENCE,
+                                 3: P3_NODE_SEQUENCE}
 
 
 def test_lock1_resolve_modified_inserts_supply_before_each_boss() -> None:
-    """人身意外险:P1 r9 supply + r10 boss、P2 r7 supply + r8 boss(每个
-    boss 位前各一);P3 不产出键(不运行现状)。"""
+    """人身意外险:P1 r9 supply + r10 boss、P2 r7 supply + r8 boss、
+    P3 r7 supply + r8 boss(每个 boss 位前各一;P3 行入表后插入自动
+    适用,统一注册表迁移护航)。"""
     mod = _modified()
-    assert set(mod) == {1, 2}
+    assert set(mod) == {1, 2, 3}
     assert mod[1][-2:] == ('supply', 'boss')
     assert mod[1][:-2] == P1_NODE_SEQUENCE[:-1]
     assert len(mod[1]) == 10
     assert mod[2][-2:] == ('supply', 'boss')
     assert mod[2][:-2] == P2_NODE_SEQUENCE[:-1]
     assert len(mod[2]) == 8
-    with pytest.raises(P3UnobservedError):
-        node_sequence_of(3, mod)
+    assert mod[3][-2:] == ('supply', 'boss')
+    assert mod[3][:-2] == P3_NODE_SEQUENCE[:-1]
+    assert len(mod[3]) == 8
 
 
 # (原「正反解互逆」测试整体退役:kernel 正解 node_ordinal_of 与反解
@@ -546,7 +551,8 @@ def test_lock3_snapshot_restore_carries_field() -> None:
 
 def test_lock4_next_screen_modified_regime() -> None:
     """修饰制推进声明:P1 r8→r9 = 补给、r9→r10 = boss 简报、跨位面 =
-    位面过渡、P2 r7→r8 = boss 简报、P2 r8 后无后继 = 局终声明事件式。"""
+    位面过渡、P2 r7→r8 = boss 简报、P2 r8 → 位面过渡(P3 在表)、
+    P3 r7→r8 = boss 简报(插入尾槽)、P3 r8 后无后继 = 局终声明事件式。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         SCREEN_BOSS_BRIEFING,
     )
@@ -567,8 +573,16 @@ def test_lock4_next_screen_modified_regime() -> None:
     assert out.applied and out.world_decl.next_screen == SCREEN_BOSS_BRIEFING
     observe_node_anchor(gs, (2, 8), trigger_screen=anchor, actor='TestSeqEnv')
     out = report_node_advance(gs, trigger='settle_confirm')
+    assert out.applied \
+        and out.world_decl.next_screen == '货币战争-位面过渡', \
+        'P2 末跨入 P3(位面 3 在表)'
+    observe_node_anchor(gs, (3, 7), trigger_screen=anchor, actor='TestSeqEnv')
+    out = report_node_advance(gs, trigger='settle_confirm')
+    assert out.applied and out.world_decl.next_screen == SCREEN_BOSS_BRIEFING
+    observe_node_anchor(gs, (3, 8), trigger_screen=anchor, actor='TestSeqEnv')
+    out = report_node_advance(gs, trigger='settle_confirm')
     assert out.applied and out.world_decl.next_screen == '', \
-        'P2 末无后继 → 局终声明事件式(match_end)'
+        'P3 末无后继 → 局终声明事件式(match_end,超位面 3 = 胜利终局)'
 
 
 # ------------------------------------------------------------ 观察读链两位数
@@ -596,11 +610,14 @@ def test_lock6_parse_and_cap_two_digit_round() -> None:
     assert parse_phase_round_text('Lv.3', digit_fallback=True) == (3, 3)
 
 
-def test_lock6_p3_cap_margin_twelve_both_states() -> None:
-    """P3 无观测表:seqs 给定缺该位面与 seqs=None 两态均落 12 余量
-    (数值单一源 = node_round_cap)。"""
-    assert node_round_cap(3, _modified()) == 12
-    assert node_round_cap(3, None) == 12
+def test_lock6_p3_cap_and_out_of_domain_margin() -> None:
+    """round 读数上限三态:修饰表 P3 = 8(插入随动)、默认表 P3 = 7
+    (入表口径);真表外位面(≥4)缺键两态均落 12 余量(数值单一源 =
+    node_round_cap)。"""
+    assert node_round_cap(3, _modified()) == 8
+    assert node_round_cap(3, None) == 7
+    assert node_round_cap(4, _modified()) == 12
+    assert node_round_cap(4, None) == 12
 
 
 def test_lock6_recognizer_tool_state_shares_parsing(
@@ -656,11 +673,11 @@ def test_lock6_recorder_and_funnel_wiring_passes_caps(
 # ------------------------------------------------------------ 白名单归属校验
 
 def test_lock7_registry_ownership_orphan_key_raises(monkeypatch) -> None:
-    """白名单键改名漂移(注册表无此环境)→ 校验炸(键 ⊆ INVESTMENT_ENVS,
+    """注册表键改名漂移(注册表无此环境)→ 校验炸(键 ⊆ INVESTMENT_ENVS,
     防版本改名静默失联);现役键校验通过。"""
     cw_investments._validate_env_node_seq()   # 现役键通过
-    monkeypatch.setattr(ns, 'ENV_NODE_SUPPLY_BEFORE_BOSS',
-                        frozenset({'不存在的环境'}))
+    monkeypatch.setattr(ns, 'ENV_NODE_REWRITE_RULES',
+                        {'不存在的环境': (('insert_supply_before_boss',),)})
     with pytest.raises(ValueError, match='孤儿键'):
         cw_investments._validate_env_node_seq()
 
@@ -930,7 +947,7 @@ def test_lock11_killed_hp_fallback_path_gone(
 
 # ------------------------------------------------------------ sim 世界真值
 
-_DEF_STEPS = 160
+_DEF_STEPS = 400
 
 
 def _start_game(env_present: bool, seed: int = 7):
@@ -1033,14 +1050,17 @@ def _drive_step(b, rng_seed: int) -> None:
 def test_lock5_sim_modified_game_full_chain(monkeypatch) -> None:
     """修饰局 sim 全链:选人身意外险 → 场字段落修饰表;P1 r9 呈现补给屏
     (M18 选项)+ 收入 supply 分支(连胜不动);r10 boss;P2 r7/r8 同构;
-    局终 = 推进超 18(eff=19)成立;全程零 DECL_SCREEN_DRIFT。"""
+    P3 r7 插入补给自动适用,走完 P3 r8 = 胜利终局(run_complete 披露,
+    修饰局共 25 节点);全程零 DECL_SCREEN_DRIFT。seed 24 = 修饰局走满
+    锚(探针实测:唯一前 80 号内达 (3,8) 胜利终局的种子;P3 插入使
+    boss 挪至 r8,结算流键随轮次变化,与默认局存活集不同)。"""
     from sr_od.application.currency_war.kernel.cw_action_report import (
         report_action_pick_invest_env_param,
     )
     from sr_od.application.currency_war.sim import cw_sim_ports
     from sr_od.application.currency_war.sim.cw_sim_backend import (
         DECL_SCREEN_DRIFT,
-        DISCLOSURE_P3_UNOBSERVED,
+        DISCLOSURE_RUN_COMPLETE,
         SCREEN_BOSS_BRIEFING,
         SCREEN_BRIEFING,
         SCREEN_INVEST_ENV,
@@ -1048,7 +1068,7 @@ def test_lock5_sim_modified_game_full_chain(monkeypatch) -> None:
         uninstall_backend,
     )
 
-    b = _start_game(env_present=True, seed=61)
+    b = _start_game(env_present=True, seed=24)
     try:
         assert b.screen_identity() == SCREEN_BRIEFING
         b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
@@ -1069,6 +1089,7 @@ def test_lock5_sim_modified_game_full_chain(monkeypatch) -> None:
         seen_supply_r9 = False
         seen_boss_r10 = False
         seen_supply_p2r7 = False
+        seen_supply_p3r7 = False
         for _ in range(_DEF_STEPS):
             if b.done:
                 break
@@ -1081,19 +1102,23 @@ def test_lock5_sim_modified_game_full_chain(monkeypatch) -> None:
                         'M18 三选一(插入补给走现役通道)'
                 if (node.plane, node.round_num) == (2, 7):
                     seen_supply_p2r7 = True
+                if (node.plane, node.round_num) == (3, 7):
+                    seen_supply_p3r7 = True
             if screen == SCREEN_BOSS_BRIEFING and node is not None \
                     and (node.plane, node.round_num) == (1, 10):
                 seen_boss_r10 = True
-            _drive_step(b, 61)
+            _drive_step(b, 24)
         assert seen_supply_r9, 'P1 r9 = 插入补给屏'
         assert seen_boss_r10, 'P1 r10 = boss 简报'
         assert seen_supply_p2r7, 'P2 r7 = 插入补给屏'
-        assert b.done, '局终(推进超 18)'
-        assert DISCLOSURE_P3_UNOBSERVED in b.disclosures
+        assert seen_supply_p3r7, 'P3 r7 = 插入补给屏(P3 行入表自动适用)'
+        assert b.done, '局终(走完修饰 P3)'
+        assert DISCLOSURE_RUN_COMPLETE in b.disclosures, \
+            '超位面 3 = 胜利终局'
         assert DECL_SCREEN_DRIFT not in b.disclosures, \
             b.disclosures.get(DECL_SCREEN_DRIFT)
-        assert (b.gs.node.value.plane, b.gs.node.value.round_num) == (2, 8), \
-            '修饰局真实末节点 = P2 r8(18 节点)'
+        assert (b.gs.node.value.plane, b.gs.node.value.round_num) == (3, 8), \
+            '修饰局真实末节点 = P3 r8(25 节点)'
     finally:
         uninstall_backend()
 
@@ -1145,11 +1170,13 @@ def test_lock5_sim_modified_supply_income_keeps_streak() -> None:
 
 
 def test_lock8_sim_default_game_regression() -> None:
-    """默认局回归:无环境局全链一次,局终轮次 = 现役基线(P2 r7,16 节点,
-    eff=17 局终),零 DECL_SCREEN_DRIFT(默认环境零修饰行为不变)。"""
+    """默认局回归:无环境局全链一次,局终 = 走进位面 3 后 hp 归零死亡腿
+    (seed 61 探针锚:前 16 节点与现役基线逐值同,3-5 遭遇战死,保底已用;
+    默认环境零修饰行为不变),零 DECL_SCREEN_DRIFT;败局无 run_complete
+    披露(胜负判别单一源在披露集)。"""
     from sr_od.application.currency_war.sim.cw_sim_backend import (
         DECL_SCREEN_DRIFT,
-        DISCLOSURE_P3_UNOBSERVED,
+        DISCLOSURE_RUN_COMPLETE,
         SCREEN_BRIEFING,
         uninstall_backend,
     )
@@ -1164,9 +1191,12 @@ def test_lock8_sim_default_game_regression() -> None:
                 break
             _drive_step(b, 61)
         assert b.done
-        assert DISCLOSURE_P3_UNOBSERVED in b.disclosures, 'P2 末局终(p3_unobserved)'
+        assert DISCLOSURE_RUN_COMPLETE not in b.disclosures, \
+            'hp 归零败局不经胜利分支'
         assert DECL_SCREEN_DRIFT not in b.disclosures
-        assert (b.gs.node.value.plane, b.gs.node.value.round_num) == (2, 7), \
-            '默认局末节点 = P2 r7(现役基线轮次)'
+        assert (b.gs.node.value.plane, b.gs.node.value.round_num) == (3, 5), \
+            '默认局 seed 61 终点 = P3 r5(死亡腿,基线轮次探针实测)'
+        assert int(b.gs.hp.value or 0) == 0, 'hp 归零'
+        assert bool(b.gs.hp_floor_triggered.value) is True, '保底已用'
     finally:
         uninstall_backend()

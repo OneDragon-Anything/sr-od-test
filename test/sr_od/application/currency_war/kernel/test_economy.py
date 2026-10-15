@@ -106,6 +106,7 @@ from sr_od.application.currency_war.kernel.cw_investments import (
 from sr_od.application.currency_war.kernel.cw_node_schedule import (
     P1_NODE_SEQUENCE,
     P2_NODE_SEQUENCE,
+    P3_NODE_SEQUENCE,
     resolve_plane_node_seqs,
 )
 from sr_od.application.currency_war.kernel.cw_registry import (
@@ -964,9 +965,10 @@ def _hz_legacy_r_global(seq_lengths: dict[int, int], plane: int,
 def test_facade_default_table_matches_legacy_formula_frame_by_frame():
     """默认表(None 回退)全 modeled 帧逐值对拍:门面场字段求和 =
     退役公式(同真值源),含当前节点、到局终、封顶 modeled planes
-    (默认局总视界 16,旧 27 制不再出现)。"""
-    lengths = {1: len(P1_NODE_SEQUENCE), 2: len(P2_NODE_SEQUENCE)}
-    for plane in (1, 2):
+    (P3 行入表后默认局总视界 23,旧 27 制不再出现)。"""
+    lengths = {1: len(P1_NODE_SEQUENCE), 2: len(P2_NODE_SEQUENCE),
+               3: len(P3_NODE_SEQUENCE)}
+    for plane in (1, 2, 3):
         for rnd in range(1, lengths[plane] + 1):
             gs = _hz_gs_at(plane, rnd)
             expect = _hz_legacy_r_global(lengths, plane, rnd)
@@ -975,64 +977,71 @@ def test_facade_default_table_matches_legacy_formula_frame_by_frame():
 
 
 def test_facade_none_fallback_default_table():
-    """None(未注册态)回退默认表:P1R1 = 16(默认表 P1+P2,零 P3
-    虚拟);P2R1 = 7(旧 schedule_of 先验回退给 9 → 7,details §8.5
-    真值修正方向)。"""
+    """None(未注册态)回退默认表:P1R1 = 23(默认表 P1+P2+P3,P3 行
+    2026-10-15 用户裁定入码);P2R1 = 14;P3R1 = 7。"""
     gs = _hz_gs_at(1, 1)
-    assert r_global(gs, 1, 1) == 16
-    assert r_global(gs, 2, 1) == 7
+    assert r_global(gs, 1, 1) == 23
+    assert r_global(gs, 2, 1) == 14
+    assert r_global(gs, 3, 1) == 7
 
 
 def test_facade_modified_table_unclamped_truth():
-    """修饰表(P1=10/P2=8)封顶对拍:[1,9] 夹取不存在的真值——
-    (1,10) 在位面内仍余 1(旧夹取归 0,details §8.1 少 1 偏差消除);
-    (1,9) 余 2;(1,1) = 10+8 = 18(details §8.2 修饰局总视界);
-    位面末 (2,8) = 1。"""
-    assert r_global(_hz_gs_at(1, 1, _HZ_MODIFIED), 1, 1) == 18
-    assert r_global(_hz_gs_at(1, 9, _HZ_MODIFIED), 1, 9) == 10
-    assert r_global(_hz_gs_at(1, 10, _HZ_MODIFIED), 1, 10) == 9
-    assert r_global(_hz_gs_at(2, 8, _HZ_MODIFIED), 2, 8) == 1
+    """修饰表(P1=10/P2=8/P3=8)封顶对拍:[1,9] 夹取不存在的真值——
+    (1,10) 在位面内仍余 2(旧夹取归 0,details §8.1 少 1 偏差消除);
+    (1,1) = 10+8+8 = 26(details §8.2 修饰局总视界,P3 入表后含修饰
+    P3=8);位面末 (2,8) = 1 + 8 = 9。"""
+    assert r_global(_hz_gs_at(1, 1, _HZ_MODIFIED), 1, 1) == 26
+    assert r_global(_hz_gs_at(1, 9, _HZ_MODIFIED), 1, 9) == 18
+    assert r_global(_hz_gs_at(1, 10, _HZ_MODIFIED), 1, 10) == 17
+    assert r_global(_hz_gs_at(2, 8, _HZ_MODIFIED), 2, 8) == 9
 
 
 def test_facade_plane_outside_key_set_returns_zero():
-    """位面 ∉ 序列表键集(含 P3)契约 = 返回 0(details §3:局终后无
-    剩余轮;禁 KeyError/异常形态;P3 = 建模域外 = 运行终局)。"""
+    """位面 ∉ 序列表键集(≥4,表外防御)契约 = 返回 0(表外位面无
+    剩余轮;禁 KeyError/异常形态);P3 已在表,普通帧返回真值。"""
     for seqs in (None, _HZ_MODIFIED):
-        gs = _hz_gs_at(3, 1, seqs)
-        assert r_global(gs, 3, 1) == 0
-        assert r_remaining(gs, 3, 7) == 0
+        gs = _hz_gs_at(4, 1, seqs)
+        assert r_global(gs, 4, 1) == 0
+        assert r_remaining(gs, 4, 2) == 0
 
 
 def test_hp_safe_nodes_left_capped_at_modeled_planes():
-    """hp_safe 阈对拍:默认局 P2R1 nodes_left 27 制闭式 18 → 场字段
-    modeled 总长 7(期望值用生产 plane_hp_ratio 按 7 重算,单测对象 =
-    nodes_left 接线,非生存模型;帧取 lv7 = 板强档 2——该档 7/18 节点
-    两口径比值分叉 1.75 vs 1.851,接线错接旧闭式即红);P1 分支同式
-    不变(直接返 base);P3 帧(位面 ∉ 键集 → 0)→ 零未来掉血节点 →
-    阈回落 base。"""
+    """hp_safe 阈对拍:默认局 P2R1 nodes_left = 场字段求和 14(P3 行
+    入表后含 P3 段;期望值用生产 plane_hp_ratio 按 14 重算,单测对象 =
+    nodes_left 接线,非生存模型;帧取 lv7 = 板强档 2——该档 14/18 节点
+    两口径比值分叉 1.838 vs 1.851,接线错接旧闭式即红);P1 分支同式
+    不变(直接返 base);P3 帧(lv7)nodes_left = 7 → 按 P3 曲线比值
+    现场算(不再落 0 余量)。"""
     p2r1 = _hz_gs_at(2, 1)
     p2r1.observe(p2r1.level, 7, evidence='test', sig=_HZ_SIG_OBS)
     tier = board_tier_of(level_of(p2r1))
     assert tier == 2, '前置:该档下 nodes_left 两口径可判别'
-    assert plane_hp_ratio(tier, 7, plane=2) != plane_hp_ratio(tier, 18, plane=2)
-    expect = min(100, int(HP_SAFE_THRESHOLD * plane_hp_ratio(tier, 7, plane=2)))
+    assert plane_hp_ratio(tier, 14, plane=2) != plane_hp_ratio(tier, 18,
+                                                               plane=2)
+    expect = min(100, int(HP_SAFE_THRESHOLD * plane_hp_ratio(tier, 14,
+                                                             plane=2)))
     assert effective_hp_threshold(p2r1) == expect
     # P1 分支:plane <= 1 直接返 base(difficulty 缺省 → HP_SAFE_THRESHOLD)
     assert effective_hp_threshold(_hz_gs_at(1, 5)) == HP_SAFE_THRESHOLD
-    # P3 帧:nodes_left = 0 → ratio 1.0 → base
-    assert effective_hp_threshold(_hz_gs_at(3, 1)) == HP_SAFE_THRESHOLD
+    # P3 帧:lv7 → nodes_left = 7,期望按生产曲线现场算(P3 档比值 ≠ 1)
+    p3r1 = _hz_gs_at(3, 1)
+    p3r1.observe(p3r1.level, 7, evidence='test', sig=_HZ_SIG_OBS)
+    p3_expect = min(100, int(HP_SAFE_THRESHOLD * plane_hp_ratio(
+        board_tier_of(level_of(p3r1)), 7, plane=3)))
+    assert effective_hp_threshold(p3r1) == p3_expect
 
 
 def test_total_remaining_nodes_matches_facade_in_modeled_planes():
-    """修正后默认局 P1/P2 段与门面同值(逐帧);P3 段不再虚构(旧 27
-    制闭式在 P3 仍给正余量,新 = 0)。"""
-    lengths = {1: len(P1_NODE_SEQUENCE), 2: len(P2_NODE_SEQUENCE)}
-    for plane in (1, 2):
+    """修正后默认局三位面帧与门面同值(逐帧);表外位面不再虚构
+    (旧 27 制闭式越表仍给正余量,现契约 = 0)。"""
+    lengths = {1: len(P1_NODE_SEQUENCE), 2: len(P2_NODE_SEQUENCE),
+               3: len(P3_NODE_SEQUENCE)}
+    for plane in (1, 2, 3):
         for rnd in range(1, lengths[plane] + 1):
             gs = _hz_gs_at(plane, rnd)
             assert total_remaining_nodes(gs) == r_global(gs, plane, rnd), \
                 (plane, rnd)
-    assert total_remaining_nodes(_hz_gs_at(3, 1)) == 0
+    assert total_remaining_nodes(_hz_gs_at(4, 1)) == 0
 
 
 # ==================== 预算遥测披露(决策环数据流断链修复 · 缺陷②回归)=====

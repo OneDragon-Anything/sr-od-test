@@ -79,7 +79,7 @@ _SIG = ChannelSig(family='logic_action', actor='WorldDeclTest', mode='compute')
 _SIG_OBS = ChannelSig(family='obs', actor='WorldDeclTest')
 
 #: 桩 gs 节点键 → 预期 next_screen(推导规则逐分支对照;键 = 推进后
-#: 新序位,总长 = P1(9) + P2(7) = 16,P2 末无后继 = 局终 '')。
+#: 新序位,总长 = P1(9) + P2(7) + P3(7) = 23,P3 末无后继 = 局终 '')。
 _NODE_ADVANCE_SCREEN_TABLE: tuple[tuple[tuple[int, int], str], ...] = (
     ((1, 1), '货币战争-备战'),          # →P1r2 battle
     ((1, 4), '货币战争-补给'),          # →P1r5 supply
@@ -87,8 +87,10 @@ _NODE_ADVANCE_SCREEN_TABLE: tuple[tuple[tuple[int, int], str], ...] = (
     ((1, 8), '货币战争-BOSS简报'),      # →P1r9 boss
     ((1, 9), '货币战争-位面过渡'),      # →P2r1 位面切换优先
     ((2, 1), '货币战争-备战'),          # →P2r2 battle
-    ((2, 6), '货币战争-BOSS简报'),      # →P2r7 boss(真值表末节点)
-    ((2, 7), ''),                       # 局终:P2 末无后继 → 事件式 ''
+    ((2, 6), '货币战争-BOSS简报'),      # →P2r7 boss
+    ((2, 7), '货币战争-位面过渡'),      # →P3r1 位面切换优先(P3 在表)
+    ((3, 6), '货币战争-BOSS简报'),      # →P3r7 boss(真值表末节点)
+    ((3, 7), ''),                       # 局终:P3 末无后继 → 事件式 ''
 )
 
 
@@ -449,9 +451,41 @@ def test_open_bookcard_decl_row6_all_exits():
 
 def test_close_shop_decl_row18():
     """表 #18 对照测试:关店上报 applied 出口声明 = (备战, '')纯转移
-    (离屏写端 = 本上报);离屏写照常落账(shop payload 离屏)。"""
+    (离屏写端 = 本上报);离屏写照常落账(shop payload 离屏)。
+    裸容器生效序位缺位 → 推导回退备战档,与历史口径同值。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     out = report_action_close_shop_param(gs, SimpleNamespace(), _SIG)
     assert out.applied
     assert out.world_decl == WorldDecl(next_screen='货币战争-备战',
                                        trigger='')
+
+
+def test_bottom_screen_decl_family_derives_at_encounter_slot():
+    """「返回节点屏」声明族按当前生效节点推导(统一节点改写批修根):
+    生效序位锚在遭遇槽(战争边疆替换使固定 offer 槽 P3-2 变遭遇)→
+    上报声明 next_screen = 遭遇节点档——历史硬编码备战与节点窗底层屏
+    失真,对局必现 DECL_SCREEN_DRIFT;本测试钉「声明 = 当前节点屏」
+    逐族(pick_invest_strategy / pick_megastar / 纯转移选卡),全链
+    零漂移对拍面 = sim/cw_sim_backend/test_p3_win_terminal。"""
+    from sr_od.application.currency_war.kernel.cw_node_schedule import (
+        resolve_plane_node_seqs,
+    )
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    gs.write_logic(gs.node_seq_by_plane,
+                   resolve_plane_node_seqs('战争边疆'),
+                   produced_by='WorldDeclTest', evidence='node_seq:env',
+                   sig=_SIG)
+    observe_node_anchor(gs, (3, 2), trigger_screen='货币战争-遭遇节点',
+                        actor='WorldDeclTest')
+    out = report_action_pick_invest_strategy_param(
+        gs, SimpleNamespace(norm_name='加油站'), _SIG, session=None)
+    assert out.applied
+    assert out.world_decl == WorldDecl(next_screen='货币战争-遭遇节点',
+                                       trigger='pick_invest_strategy'), \
+        'offer 选卡结束返回遭遇节点屏(非硬编码备战)'
+    out = report_action_pick_megastar_param(gs, SimpleNamespace(), _SIG)
+    assert out.world_decl == WorldDecl(next_screen='货币战争-遭遇节点',
+                                       trigger='pick_megastar')
+    out = report_action_pick_fortune_param(gs, SimpleNamespace(), _SIG)
+    assert out.world_decl == WorldDecl(next_screen='货币战争-遭遇节点',
+                                       trigger=''), '纯转移同归当前节点屏'

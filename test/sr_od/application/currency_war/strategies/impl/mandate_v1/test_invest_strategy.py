@@ -132,10 +132,10 @@ def _decide_pick(options: list[str], gs: GameState,
 # ==================== ① 现金分(design §2.3)====================
 
 #: 开局帧剩余节点数(node 缺失 → (1,1) 退化 + 场字段 None 回退默认表
-#: P1=9/P2=7,视界封顶 modeled planes,P3 虚拟轮不计):R = 9 + 7 = 16
-#: (strategy_economy 位置缺失退化断言的共用口径;迭代 abolish-node-
-#: ordinal details §8.2 真值修正申报面)
-_R_OPENING = 16
+#: P1=9/P2=7/P3=7,视界封顶 modeled planes):R = 9 + 7 + 7 = 23
+#: (strategy_economy 位置缺失退化断言的共用口径;P3 行 2026-10-15
+#: 用户裁定入码后随真值联动)
+_R_OPENING = 23
 
 
 def test_cash_instant_gold_face_value():
@@ -146,51 +146,51 @@ def test_cash_instant_gold_face_value():
 
 def test_cash_gold_next_nodes_r_minus_1_truncation():
     """分期金 =「现在」腿 + count 腿按 R−1 截断(design §2.3;
-    「接下来」不含当前节点)。开局帧 R=16:长期主义 = 7×(1+min(3,15)) = 28
-    (勿读 instant_gold——长期主义该字段 = 0,误读即漏现在腿);
-    P3R9 帧(位面 ∉ 序列表键集 = 建模域外 → R=0,details §3 契约):
-    count 腿截断为 0 → 仅「现在」腿 7。"""
+    「接下来」不含当前节点)。开局帧 R=23:长期主义 = 7×(1+min(3,22))
+    = 28(count 腿 3 封顶,R 变不越帽——勿读 instant_gold,长期主义该
+    字段 = 0,误读即漏现在腿);表外位面帧(4,1)(位面 ∉ 序列表键集
+    → R=0,horizon §3 契约):count 腿截断为 0 → 仅「现在」腿 7。"""
     assert strategy_economy_value('长期主义', _fresh_gs()) == (28.0, True)
     assert strategy_economy_value('长期主义+', _fresh_gs()) == (36.0, True)
-    assert strategy_economy_value('长期主义', _gs_at(3, 9)) == (7.0, True)
+    assert strategy_economy_value('长期主义', _gs_at(4, 1)) == (7.0, True)
 
 
 def test_cash_per_node_interest_xp_channels():
     """per-node 流/固定息/XP 双通道(值 = 注册表【注】× R 查表):
-    定期福利 = 4 + 2×16;狸财经狸息腿 = 2×16(活计分腿,取款/存款腿
+    定期福利 = 4 + 2×23;狸财经狸息腿 = 2×23(活计分腿,取款/存款腿
     待建模不关门——design 申报 7);伟大征服 xp_instant = 12;
-    买断制 = 15 + 4×16(xp_per_node 流);XP_GOLD_RATE = 1.0。
-    (R 开局 27→16 = P3 虚拟轮移除,行为申报 details §8.2。)"""
-    assert strategy_economy_value('定期福利', _fresh_gs()) == (36.0, True)
-    assert strategy_economy_value('狸财经狸', _fresh_gs()) == (32.0, True)
+    买断制 = 15 + 4×23(xp_per_node 流);XP_GOLD_RATE = 1.0。
+    (R 开局 16→23 = P3 行入真值表,2026-10-15 用户裁定联动。)"""
+    assert strategy_economy_value('定期福利', _fresh_gs()) == (50.0, True)
+    assert strategy_economy_value('狸财经狸', _fresh_gs()) == (46.0, True)
     assert strategy_economy_value('伟大征服', _fresh_gs()) == (12.0, True)
-    assert strategy_economy_value('买断制', _fresh_gs()) == (79.0, True)
+    assert strategy_economy_value('买断制', _fresh_gs()) == (107.0, True)
 
 
 def test_cash_schedule_truth_lookup():
-    """剩余口径按节点序列场字段真值(None 回退默认表 P2=7;修饰表
-    P2=8 进字段自适应;单一源 = statefn/horizon 门面场字段自算):
-    P2R4 修饰表(boss 前插补给,P2=8)→ R = 本位面剩余 5(旧 [1,9]
-    夹取不存在的真值,details §8.1)= 5,定期福利 = 4 + 2×5 = 14;
-    未注册态回退默认表 P2=7 → R = 4 → 12。"""
+    """剩余口径按节点序列场字段真值(None 回退默认表;修饰表进字段
+    自适应;单一源 = statefn/horizon 门面场字段自算):
+    P2R4 修饰表(boss 前插补给,P1=10/P2=8/P3=8)→ R = 本位面剩余 5
+    + P3 8 = 13,定期福利 = 4 + 2×13 = 30;未注册态回退默认表 →
+    R = 4 + 7 = 11 → 26。"""
     from sr_od.application.currency_war.kernel.cw_node_schedule import (
         resolve_plane_node_seqs,
     )
     modified = resolve_plane_node_seqs('人身意外险')
     assert strategy_economy_value('定期福利', _gs_at(2, 4, modified)) \
-        == (14.0, True)
-    assert strategy_economy_value('定期福利', _gs_at(2, 4)) == (12.0, True)
+        == (30.0, True)
+    assert strategy_economy_value('定期福利', _gs_at(2, 4)) == (26.0, True)
 
 
 def test_cash_boss_channel_kind_count():
     """boss 通道 = 场字段序列自当前节点(含)起 'boss' kind 直查
-    (details §6 kind 化;封顶 modeled planes → P3 虚拟末槽移除,默认局
-    P1 段 3→2、P2 起 2→1,行为申报 details §8.3):
-    P2R4 默认表 → 当前位面 r4 起恰 1 个 boss(r7),P3 不计 → 特战资金
-    = 7×1 = 7、特战资金+ = 11×1 = 11(含当前位面口径,偏差申报见模块
+    (details §6 kind 化;封顶 modeled planes,P3 行入表后默认局跨位面
+    boss 一并计入,2026-10-15 联动):
+    P2R4 默认表 → 当前位面 r4 起 1 个 boss(r7)+ P3 r7 = 2 → 特战资金
+    = 7×2 = 14、特战资金+ = 11×2 = 22(含当前位面口径,偏差申报见模块
     docstring)。"""
-    assert strategy_economy_value('特战资金', _gs_at(2, 4)) == (7.0, True)
-    assert strategy_economy_value('特战资金+', _gs_at(2, 4)) == (11.0, True)
+    assert strategy_economy_value('特战资金', _gs_at(2, 4)) == (14.0, True)
+    assert strategy_economy_value('特战资金+', _gs_at(2, 4)) == (22.0, True)
 
 
 def test_cash_boss_channel_kind_not_geometry():

@@ -1,7 +1,7 @@
 """sim 开局与日程(M01/M03)回归测试(基座/RunConfig/流键/日程真值)。
 
 测试面(设计已裁定的表现):U28 开局四要素/U15 HP 实证档硬表/
-流键子流隔离/§2.2 M03 地面真值序列(P3 不运行)。相位词表随旧引擎
+流键子流隔离/§2.2 M03 地面真值序列(P1+P2+P3 全在表)。相位词表随旧引擎
 相位机退役(替代面 = 画面状态机,测试面 = test_sim_backend.py)。
 """
 from __future__ import annotations
@@ -15,7 +15,8 @@ from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
 from sr_od.application.currency_war.kernel.cw_node_schedule import (
     P1_NODE_SEQUENCE,
     P2_NODE_SEQUENCE,
-    P3UnobservedError,
+    P3_NODE_SEQUENCE,
+    PlaneSeqMissingError,
     node_sequence_of,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
@@ -74,18 +75,22 @@ def test_stream_rng_deterministic_and_key_isolated() -> None:
 
 # ============================================================ 日程真值(M03/U19)
 
-def test_plane_truth_sequences_and_p3_unobserved() -> None:
-    """P1=9/P2=7 地面真值序列逐位钉死(42 局零反例);P3 无完整观测 =
-    显式停机并披露 p3_unobserved(禁回退先验)。"""
+def test_plane_truth_sequences_three_planes() -> None:
+    """P1=9/P2=7/P3=7 地面真值序列逐位钉死(P1 42 局零反例;P3 =
+    2026-10-15 用户裁定入码,证据等级低于 P1/P2,单一源 =
+    plane_schedule_observed.md);表外位面直查响亮(缺键防御)。"""
     assert P1_NODE_SEQUENCE == ('reward', 'reward', 'battle', 'battle',
                                 'supply', 'battle', 'encounter', 'reward',
                                 'boss')
     assert P2_NODE_SEQUENCE == ('battle', 'battle', 'supply', 'battle',
                                 'encounter', 'reward', 'boss')
+    assert P3_NODE_SEQUENCE == ('battle', 'battle', 'supply', 'battle',
+                                'encounter', 'reward', 'boss')
     assert node_sequence_of(1) == P1_NODE_SEQUENCE
     assert node_sequence_of(2) == P2_NODE_SEQUENCE
-    with pytest.raises(P3UnobservedError, match='p3_unobserved'):
-        node_sequence_of(3)
+    assert node_sequence_of(3) == P3_NODE_SEQUENCE
+    with pytest.raises(PlaneSeqMissingError, match='不在节点序列表'):
+        node_sequence_of(4)
 
 
 # ============================================================ M01 开局
