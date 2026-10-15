@@ -427,6 +427,67 @@ _W1_CASES = {
 #  消费循环接线时新测试承载。)
 
 
+class TestProtectionIdentityMigration:
+    """卖面身份段/兜底池换挂保护集(统一保护集 changes/2026-10-15-
+    unified-protection-set design.md §2.3;landing 3.3 兜底对账判据)。
+
+    成员锚(注册表事实,机械重推):椒丘 = 持续伤害系 drop 档四体系件
+    (旧策展静态集**外**——档位过滤不收 drop,新保护集**内**);银狼
+    LV.999 = registry 核心(星核猎手+欢愉,非四体系——核心保留理由
+    本体);万敌/阿格莱雅 = 非四体系非核心。
+    """
+
+    def test_identity_segment_is_protection_union_core(self):
+        """装配 A 身份段构成 = 义务基座 ∪ 保护集 ∪ registry 核心:
+        保护集成员(椒丘)与 registry 核心(银狼LV.999)入排除集,
+        非保护非核心件(阿格莱雅 = _FUEL 红证锚)不入——④ 策展静态集
+        口径(档位过滤)由保护集全域取代的直接验证。"""
+        excl = sell_gate.identity_exclusions(_sess(), ())
+        assert '椒丘' in excl, '保护集成员未入身份段(常规通道禁卖失守)'
+        assert '银狼LV.999' in excl, 'registry 核心保留腿失守'
+        assert '希儿' in excl
+        assert _FUEL not in excl, \
+            '非保护非核心件被误排除(身份段超扩,凑息燃料面被掏空)'
+
+    def test_funding_fallback_pool_admits_protection_member(self):
+        """兜底对账断言(landing 3.3):全场保护档帧(椒丘构造),P78-5
+        兜底池 = 「保护集 ∪ registry 核心」的直接验证——①椒丘(旧静态
+        集 drop 档外)入兜底池可放行(退金 ≥ 缺口,达成量化腿);②
+        银狼LV.999 经核心腿入池(非四体系仍受兜底辖);③万敌(非保护
+        非核心)不入池(兜底 = 持有件最后手段,非一般燃料通道)。"""
+        # ①椒丘:1★ 1费 退 1 ≥ 缺口 1(gold 9 / need 10)
+        sess = _sess()
+        cw4_gs(sess, plane=1, round_num=2, node='prep',
+               bench=[_bc('椒丘')], front_row=[Unit(char_id='万敌',
+                                                    star=1)])
+        out = sell_gate.funding_hold_fallback(
+            sess, (), [_bc('椒丘')], gold=9, need=10,
+            a_exclusions=sell_gate.identity_exclusions(sess, ()),
+            deployed=[Unit(char_id='万敌', star=1)])
+        assert [mandate._slot_cid(b) for b in out] == ['椒丘'], \
+            '保护档成员未入兜底池(兜底 = 唯一可卖保护件通道失守)'
+        # ②银狼LV.999:registry 核心,bench_char_cost 档感知退 3 ≥ 缺口 3
+        sess2 = _sess()
+        cw4_gs(sess2, plane=1, round_num=2, node='prep',
+               bench=[_bc('银狼LV.999')],
+               front_row=[Unit(char_id='万敌', star=1)])
+        out2 = sell_gate.funding_hold_fallback(
+            sess2, (), [_bc('银狼LV.999')], gold=7, need=10,
+            a_exclusions=sell_gate.identity_exclusions(sess2, ()),
+            deployed=[Unit(char_id='万敌', star=1)])
+        assert [mandate._slot_cid(b) for b in out2] == ['银狼LV.999']
+        # ③万敌:非保护非核心,退金再高也不入兜底池
+        sess3 = _sess()
+        cw4_gs(sess3, plane=1, round_num=2, node='prep',
+               bench=[_bc('万敌')],
+               front_row=[Unit(char_id='刃', star=1)])
+        out3 = sell_gate.funding_hold_fallback(
+            sess3, (), [_bc('万敌')], gold=9, need=10,
+            a_exclusions=sell_gate.identity_exclusions(sess3, ()),
+            deployed=[Unit(char_id='刃', star=1)])
+        assert out3 == [], '非持有件混入兜底池(兜底 ≠ 一般燃料通道)'
+
+
 # ===== P78-6:projection 视图 = interest 全资格面(含 T3 活跃集)=====
 
 

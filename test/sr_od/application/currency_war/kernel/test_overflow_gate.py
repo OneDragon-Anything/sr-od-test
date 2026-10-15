@@ -53,12 +53,14 @@ _SIG = ChannelSig(family='logic_action', actor='CwScreenPrep')
 
 def _frame(**kw) -> MandateFrame:
     """最小骨架帧:round>1 免 M5;gold 充裕免凑息/买面;上阵 1 人免
-    empty_board_sell_guard(场上无人禁卖守卫);单 1★ 备战件(椒丘 = 新
-    会话默认身份排除集外的中性位,可入燃料候选)。
+    empty_board_sell_guard(场上无人禁卖守卫);单 1★ 备战件(万敌 =
+    非四体系中性位,保护集身份段外的可入燃料候选;统一保护集
+    changes/2026-10-15-unified-protection-set design.md §2.3——原椒丘
+    已属保护集,常规卖出资格面排除,不再充当中性位)。
     P4 容器形:bench = 占席条目,deployed = 行域 Unit。"""
     base = {'gold': 200, 'level': 7,
             'bench': [BenchSlot(kind='unit',
-                                unit=Unit(char_id='椒丘', star=1))],
+                                unit=Unit(char_id='万敌', star=1))],
             'deployed': [Unit( char_id='刃', star=1)],
             'deploy_cap': 7, 'node_type': 'battle',
             'stop_flag': False, 'k_members': ('刃',), 'round_num': 5}
@@ -73,7 +75,7 @@ def _state():
     同源是解析前提)。"""
     gs = game_state_of(None)
     gs.write_logic(gs.bench, cw4_bview(
-        [BenchSlot(kind='unit', unit=Unit(char_id='椒丘', star=1))]),
+        [BenchSlot(kind='unit', unit=Unit(char_id='万敌', star=1))]),
         produced_by='test', sig=_SIG)
     gs.write_logic(gs.deployed, _dvs([Unit( char_id='刃', star=1)], []),
                    produced_by='test', sig=_SIG)
@@ -87,7 +89,7 @@ def test_overflow_gate_narrows_to_single_sell():
                       state=_state())
     assert len(out) == 1
     assert isinstance(out[0].action, CwActionSellBenchParam)
-    assert out[0].action.bench_idx == 0   # 唯一冗余位 = 椒丘槽(槽1 → 容器下标0)
+    assert out[0].action.bench_idx == 0   # 唯一冗余位 = 万敌槽(槽1 → 容器下标0)
     assert not any(isinstance(e.action, CwActionStartBattleParam) for e in out)
     assert state_of(session).cw4_counters.get('overflow_clear_sell') == 1
 

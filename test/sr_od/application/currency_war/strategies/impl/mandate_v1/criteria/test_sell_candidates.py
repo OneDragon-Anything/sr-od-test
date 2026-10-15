@@ -76,11 +76,11 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicate
 )
 
 # 注册表事实锚(测试种子选名依据,别换名后不解注册表):
-# - 万敌(1费,夜之半神+燃血,非引擎/非持有集/非插件)= 干净垫件/无关件;
+# - 万敌(1费,夜之半神+燃血,非引擎/非保护集/非插件)= 干净垫件/无关件;
 # - 远坂凛(1费)/Saber(3费)/Archer(5费)= 命运圣杯族(tiers (2,3,4,5)),
 #   单独在场不激活,双人在场 = 贡献件对(且恰在档 = 掉档);
-# - 刻律德菈(3费,插件成员)、希儿(registry 核心)、卡芙卡(引擎件,
-#   持续伤害)、瓦尔特(列车同行线成员,非静态持有集)。
+# - 刻律德菈(3费,插件成员,非四体系)、希儿(registry 核心 ∩ 希儿系)、
+#   卡芙卡(持续伤害系保护档)、瓦尔特(列车同行系保护档 + 线内候选)。
 LV = 7   # 多费用档可刷等级(1-5 费概率全正;3 级纯 1 费会把高费变 inf)
 
 
@@ -316,7 +316,9 @@ class TestOrePadPredicate:
 
     def test_pad_predicate_matrix(self):
         """合取六项逐项否决:1★ / 非线内 / 非合成素材 / 非通用插件 /
-        非 registry 核心④件 / 非引擎件(种子身份层);全过 = 纯垫件。"""
+        非保护集(统一保护集 design §2.3 垫件腿迁移——registry 核心
+        〔希儿〕与四体系件〔卡芙卡〕同被保护身份腿排除)/ 非引擎件
+        (种子身份层);全过 = 纯垫件。"""
         _sess, gs = _mk_gs(bench=[cw4_bc('万敌')],
                            front_row=[_fu('三月七')])
         state_of(gs).line_candidates = ('列车同行',)
@@ -324,8 +326,8 @@ class TestOrePadPredicate:
         assert is_ore_pad_unit(gs, '万敌', 2) is False        # 非 1★
         assert is_ore_pad_unit(gs, '瓦尔特', 1) is False      # 线内(候选成员)
         assert is_ore_pad_unit(gs, '刻律德菈', 1) is False    # 通用插件成员
-        assert is_ore_pad_unit(gs, '希儿', 1) is False        # registry 核心
-        assert is_ore_pad_unit(gs, '卡芙卡', 1) is False      # 引擎件(种子身份层)
+        assert is_ore_pad_unit(gs, '希儿', 1) is False        # 保护集(registry 核心 ∩ 希儿系)
+        assert is_ore_pad_unit(gs, '卡芙卡', 1) is False      # 保护集(持续伤害系)
         # 合成素材:同名同星另有副本
         _s2, gs2 = _mk_gs(bench=[cw4_bc('万敌'), cw4_bc('万敌')],
                           front_row=[_fu('三月七')])
@@ -333,14 +335,17 @@ class TestOrePadPredicate:
 
     def test_ore_consumption_pads_filter_not_pool_head(self):
         """晶矿消费 = 垫件谓词过滤后取价值最小(非全池排序首位判断——
-        价值函数无垫件身份维):引擎件卡芙卡(1★ 低费,非垫件)按金当量
-        排首位,垫件过滤后取到的是高费纯垫件 Archer。"""
-        _sess, gs = _mk_gs(bench=[cw4_bc('卡芙卡'), cw4_bc('Archer')],
+        价值函数无垫件身份维):通用插件件刻律德菈(3费 1★,非垫件——
+        插件腿,非保护身份)按金当量排首位,垫件过滤后取到的是高费纯垫件
+        Archer(对照件须在保护集身份段外的常规面在池;统一保护集
+        changes/2026-10-15-unified-protection-set design.md §2.3——原
+        引擎件卡芙卡样本已属保护档,常规面禁卖,不再在池)。"""
+        _sess, gs = _mk_gs(bench=[cw4_bc('刻律德菈'), cw4_bc('Archer')],
                            front_row=[_fu('三月七')])
         cands, why = evaluate_sell_candidates(gs, 'ore_make_room')
         assert why == ''
-        assert cands[0].char_id == '卡芙卡'          # 全池首位(金当量最小)
-        assert is_ore_pad_unit(gs, '卡芙卡', 1) is False
+        assert cands[0].char_id == '刻律德菈'        # 全池首位(金当量最小)
+        assert is_ore_pad_unit(gs, '刻律德菈', 1) is False
         assert is_ore_pad_unit(gs, 'Archer', 1) is True
         pads = [c for c in cands if is_ore_pad_unit(gs, c.char_id, c.star)]
         assert _names(pads) == ['Archer']            # 过滤后价值最小 = Archer

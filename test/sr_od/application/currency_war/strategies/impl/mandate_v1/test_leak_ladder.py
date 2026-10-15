@@ -25,10 +25,10 @@ from test.sr_od.application.currency_war._cw_helpers import (
     cw4_box as _bsb,
 )
 
-from sr_od.application.currency_war.kernel.cw_card_identity import (
+from sr_od.application.currency_war.kernel.cw_comps import (
     CORE_SINGLE_CARD_REGISTRY,
+    get_comp,
 )
-from sr_od.application.currency_war.kernel.cw_comps import get_comp
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
 )

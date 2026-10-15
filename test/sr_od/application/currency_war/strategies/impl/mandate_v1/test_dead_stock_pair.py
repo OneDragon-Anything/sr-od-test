@@ -33,10 +33,10 @@ from types import SimpleNamespace
 import pytest
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.kernel.cw_card_identity import (
+from sr_od.application.currency_war.kernel.cw_comps import (
+    COMP_LIBRARY,
     CORE_SINGLE_CARD_REGISTRY,
 )
-from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
 from sr_od.application.currency_war.kernel.cw_economy import (
     XP_TO_NEXT_LEVEL,
     cap_resolved_of_session,

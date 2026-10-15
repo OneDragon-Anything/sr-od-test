@@ -427,22 +427,25 @@ class TestStep2Ore:
     def test_pad_filter_dominates_global_value_order(self):
         """垫件过滤优先于全局价值排序(对抗差分态):垫件(5费 1★
         流萤——该等级刷不出 ⇒ 再遇窗 inf,价值排全池末位)∧ 全池价值
-        最小件为非垫件(1费 2★ 艾丝妲)时,仍取垫件——校验「垫件谓词
+        最小件为非垫件(1费 2★ 万敌)时,仍取垫件——校验「垫件谓词
         过滤后取价值最小」非「全池排序首位」(价值函数无垫件身份维,
-        prep_pipeline 第 2 步消费声明;防未来回归成全池取最小)。"""
+        prep_pipeline 第 2 步消费声明;防未来回归成全池取最小)。
+        万敌 = 非四体系:对照件须穿过保护集身份段(统一保护集
+        changes/2026-10-15-unified-protection-set design.md §2.3;原
+        艾丝妲属持续伤害系保护档,常规面禁卖,不再在池)。"""
         sess = cw4_session()
         cw4_gs(sess, gold=30, level=6, round_num=2, node='战斗',
-               bench=[_bc('艾丝妲', star=2), _bc('流萤')]
+               bench=[_bc('万敌', star=2), _bc('流萤')]
                + [_bc('c3', star=2)] * 7,
                front_row=_units(('三月七',)), back_row=())
         _write_ores(game_state_of(sess), (('gold', 100, 200, 30),))
-        # 全池序首位 = 艾丝妲(非垫件,价值更低)——全池取最小会卖它
+        # 全池序首位 = 万敌(非垫件,价值更低)——全池取最小会卖它
         gs = game_state_of(sess)
         from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.sell_candidates import (
             evaluate_sell_candidates,
         )
         cands, _why = evaluate_sell_candidates(gs, 'ore_make_room')
-        assert cands[0].char_id == '艾丝妲' and cands[0].star == 2
+        assert cands[0].char_id == '万敌' and cands[0].star == 2
         out = _emit(sess)
         sells = [e.action for e in out
                  if isinstance(e.action, CwActionSellBenchParam)]
@@ -628,10 +631,13 @@ class TestStep7NodeEndInterest:
 
     def test_gap_closed_stops_selling(self):
         """闭合即止测试:卖出退金使金位 ≥ 息线后,下一帧不再卖(不多卖
-        一张,卖回量最小化)。bench = 卡芙卡(2 费 1★ 退 2,48+2 = 50
+        一张,卖回量最小化)。bench = 风堇(2 费 1★ 退 2,48+2 = 50
         恰闭合不越线——越过息线即入溢余带,第 3 步升级臂会接手,本测试
-        只校验凑息即止)。"""
-        sess = self._frame(48, [_bc('卡芙卡')])   # 48 + 2(退) = 50 ≥ 50
+        只校验凑息即止)。风堇 = 非四体系(昼之半神/燃血):凑息资格件
+        须穿过保护集身份段(统一保护集 changes/2026-10-15-unified-
+        protection-set design.md §2.3;原构架卡芙卡属持续伤害系保护档,
+        常规面禁卖,不再可作凑息样本)。"""
+        sess = self._frame(48, [_bc('风堇')])   # 48 + 2(退) = 50 ≥ 50
         out1 = _emit(sess)
         sell = next(e.action for e in out1
                     if isinstance(e.action, CwActionSellBenchParam))
@@ -651,6 +657,29 @@ class TestStep7NodeEndInterest:
         assert isinstance(out[0].action, CwActionStartBattleParam)
         assert not [e for e in out
                     if isinstance(e.action, CwActionSellBenchParam)]
+
+    def test_all_protected_pool_blocks_interest_with_counter(self):
+        """凑息保护档阻断观测键(统一保护集 changes/2026-10-15-unified-
+        protection-set design.md §2.3 凑息语义):缺口 > 0 + 常规合格集
+        空(bench 全保护档,卡芙卡 = 持续伤害系保护档被身份段排除)+ 被排
+        除保护成员存在退金 ≥ 缺口者(卡芙卡 1★ 退 2 ≥ 缺口 2,反事实支
+        = 「若无保护本可跨档」)→ 零卖出 + ``interest_round_protected_
+        block`` 计 1;对照帧:保护成员退金 < 缺口(青雀 1 费退 1 < 缺口
+        2,第三合取不成立)→ 不计数(与「无可行件本就不卖」的常态帧
+        分键)。"""
+        sess = self._frame(48, [_bc('卡芙卡')])
+        out = _emit(sess)
+        assert not [e for e in out
+                    if isinstance(e.action, CwActionSellBenchParam)], \
+            '全保护档帧零卖出(常规通道绝对禁卖)'
+        ct = state_of(sess).cw4_counters
+        assert ct.get('interest_round_protected_block') == 1
+        # 对照:退金不足缺口的保护档帧 = 普通无可行件,不落本键
+        sess2 = self._frame(48, [_bc('青雀')])
+        _emit(sess2)
+        assert not state_of(sess2).cw4_counters.get(
+            'interest_round_protected_block'), \
+            '反事实支(退金 ≥ 缺口)不成立帧不得计数'
 
 
 # ============================================================ 上线窗口信号表(数据地基)
