@@ -1157,3 +1157,150 @@ def test_env_flow_strategy_frame_memo_three_states():
     assert again.reason.startswith('pick total=')
     third = strategy.decide_invest_strategy()
     assert isinstance(third, CwActionRefreshInvestCardsParam)
+
+
+# ==================== ⑫ 阵容冲突护栏(护栏设计 §2.2/§2.3)====================
+# 判据 = changes/2026-10-17-invest-direction-guard/design.md §2.2/§2.3。
+# 指向集派生与查询归一在 kernel 单元(test_cw_investments.py 指向集节)
+# 锁定,本节锁选卡/刷新行为面,期望值全部注册表现算。§4 清单的「兼容卡」
+# 用命运圣杯星徽承载——命运圣杯契约是环境名非策略卡(PlazaPortal 1202),
+# 策略屏候选域无此卡(env 名防御路径),不可作本面候选。
+
+def _gs_holding(env: str = '',
+                strategies: tuple[str, ...] | None = None) -> GameState:
+    """写持有投资(观察真值形态;与生产写入同通道,§3.4.4/active_env
+    选择事实)。"""
+    gs = _fresh_gs()
+    if env:
+        gs.observe(gs.active_env, env, evidence='test', sig=_SIG_OBS)
+    if strategies:
+        gs.observe(gs.active_strategies, list(strategies),
+                   evidence='test', sig=_SIG_OBS)
+    return gs
+
+
+def test_guard_held_frame_excludes_conflicting_defining():
+    """持有指向帧 + 冲突定义型排除:持命运圣杯邀请(基准 = {命运圣杯,
+    能量}),黑塔纪元({银河学者, 群攻})与全部持有指向零交 → 出域,
+    通用卡胜出(护栏设计 §2.3 规则表行 3)。"""
+    out = _decide_pick(['黑塔纪元', '嘴硬', '二极管'],
+                       _gs_holding(env='命运圣杯邀请'))
+    assert out.idx != 0
+    assert out.reason.startswith('off-direction')
+
+
+def test_guard_held_frame_excludes_conflicting_component():
+    """持有指向帧 + 冲突组件型排除(§4 清单):琼玉专家:青雀({仙舟})
+    对圣杯基零交 → 出域。"""
+    out = _decide_pick(['琼玉专家:青雀', '嘴硬', '二极管'],
+                       _gs_holding(env='命运圣杯邀请'))
+    assert out.idx != 0
+    assert out.reason.startswith('off-direction')
+
+
+def test_guard_compatible_card_scores_normal():
+    """兼容卡正常(§4 清单):命运圣杯星徽(指向 ⊇ 命运圣杯)对圣杯基
+    有交 → 不出域,高分胜出且无护栏前缀。"""
+    out = _decide_pick(['命运圣杯星徽', '嘴硬', '二极管'],
+                       _gs_holding(env='命运圣杯邀请'))
+    assert out.idx == 0
+    assert out.reason.startswith('pick total=')
+
+
+def test_guard_generic_frame_unchanged_with_basis():
+    """通用卡正常 + 护栏未生效帧逐位不变(§4 清单):基准非空但全帧无
+    出域候选 → 与无持有帧 idx/reason/total 逐位一致(tag 不加前缀)。"""
+    frame = ['嘴硬', '二极管', '免费升舱']
+    held = _decide_pick(frame, _gs_holding(env='命运圣杯邀请'))
+    bare = _decide_pick(frame, _fresh_gs())
+    assert (held.idx, held.reason, held.total) == \
+        (bare.idx, bare.reason, bare.total)
+
+
+def test_guard_scopeless_holdings_defining_pick_unchanged():
+    """无指向持有帧定义型秒选不回归(§4 清单):只持打捞人才库(指向集
+    空)→ 基准空 → 护栏不辖,定义型分区秒选照旧(§2.3 规则表行 1)。"""
+    out = _decide_pick(['黑塔纪元', '本姑娘就是罗刹', '藏一手'],
+                       _gs_holding(strategies=('打捞人才库',)))
+    assert out.idx == 1 and out.total == 150.0
+    assert out.reason.startswith('defining-zone')
+
+
+def test_guard_all_off_direction_falls_back_full_argmax():
+    """全出域回退(§4 清单):圣杯基下三候选全出域 → 回退全候选 argmax
+    (不制造空选),定义型分区照常在回退域内收缩,标签按管线序拼接。"""
+    out = _decide_pick(['黑塔纪元', '琼玉专家:青雀', '列车同行星徽'],
+                       _gs_holding(env='命运圣杯邀请'))
+    assert out.idx == 0   # 黑塔纪元:回退域内唯一定义型(150 分)
+    assert out.reason.startswith('off-direction fallback defining-zone')
+
+
+def test_guard_refresh_off_slot_in_action_not_frame_top():
+    """刷新交互(§4 清单):出域定义型卡不入帧级顶级判定(对照:无持有
+    帧 test_refresh_blocked_by_defining_top 同帧整帧不刷)且出域槽恒入
+    动作集(占槽应刷掉换本线卡机会)。"""
+    out = invest_strategy.decide(['黑塔纪元', '嘴硬', '二极管'],
+                                 _gs_holding(env='命运圣杯邀请'),
+                                 '', False, frozenset(), _EMPTY_CONFIG)
+    assert isinstance(out, StrategyRefreshSuggestion)
+    assert out.slots == (0, 1, 2)
+
+
+def test_guard_refresh_unique_l1_excludes_off_slot():
+    """刷新交互·L1 剔除(§4 清单):唯一非血槽恰为出域槽 → 与被禁同款
+    不算 L1,F2 守卫不保护它(否则动作集被摘空,出域槽刷不掉)。"""
+    out = invest_strategy.decide(
+        ['琼玉专家:青雀', '奋斗协议', '不等价交换'],
+        _gs_holding(env='命运圣杯邀请'),
+        '', False, frozenset(), _EMPTY_CONFIG)
+    assert isinstance(out, StrategyRefreshSuggestion)
+    assert out.slots == (0, 1, 2)
+
+
+def test_guard_reason_grammar_off_direction_then_blood_forced():
+    """reason 文法锁(护栏设计 §2.3):标签按管线序拼接、空格分隔——
+    出域过滤后非血域掏空 → off-direction → blood-forced → pick total=。"""
+    out = _decide_pick(['黑塔纪元', '奋斗协议', '不等价交换'],
+                       _gs_holding(env='命运圣杯邀请'))
+    assert out.reason.startswith('off-direction blood-forced pick total=')
+
+
+def test_guard_reason_grammar_off_direction_then_defining_zone():
+    """reason 文法锁·定义型支:锁定景元仙舟帧(基准 = {仙舟}),黑塔
+    纪元出域、飞光·映月(仙舟)兼容定义型 → off-direction → defining-zone。"""
+    out = _decide_pick(['黑塔纪元', '飞光·映月', '嘴硬'], _fresh_gs(),
+                       locked_comp='景元仙舟')
+    assert out.idx == 1
+    assert out.reason.startswith('off-direction defining-zone')
+
+
+def test_guard_lock_switch_held_mistake_not_in_basis():
+    """锁定换基·历史误持不入基(§4 清单):误持黑塔纪元后锁双王圣杯,
+    基准 = 锁线 factions(不并持有)→ 银河学者星徽照排出域,圣杯兼容卡
+    胜出。"""
+    gs = _gs_holding(strategies=('黑塔纪元',))
+    out = _decide_pick(['银河学者星徽', '命运圣杯星徽', '嘴硬'], gs,
+                       locked_comp='双王圣杯')
+    assert out.idx == 1
+    assert out.reason.startswith('off-direction')
+
+
+def test_guard_lock_switch_tighten_energy_becomes_off():
+    """锁定换基·收紧(护栏设计 §2.3 基准演化申报):持命运圣杯邀请(旧基
+    含能量)后锁命运圣杯红A(新基 = {命运圣杯})→ 能量星徽由兼容变出域。"""
+    gs = _gs_holding(env='命运圣杯邀请')
+    out = _decide_pick(['能量星徽', '嘴硬', '二极管'], gs,
+                       locked_comp='命运圣杯红A')
+    assert out.idx != 0
+    assert out.reason.startswith('off-direction')
+
+
+def test_guard_lock_switch_relax_pursuit_compatible_after_lock():
+    """锁定换基·放松(护栏设计 §2.3 基准演化申报):持减益概念股(旧基
+    {减益})后兜底锁追击飞霄(新基 = {追击})→ 追击星徽由出域变兼容,
+    胜出且无护栏前缀。"""
+    gs = _gs_holding(env='减益概念股')
+    out = _decide_pick(['追击星徽', '嘴硬', '二极管'], gs,
+                       locked_comp='追击飞霄')
+    assert out.idx == 0
+    assert out.reason.startswith('pick total=')

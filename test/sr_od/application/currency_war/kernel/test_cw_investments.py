@@ -27,10 +27,14 @@ from sr_od.application.currency_war.kernel import cw_investments
 from sr_od.application.currency_war.kernel.cw_investments import (
     ENV_ECONOMY,
     ENV_GIFTS,
+    INVESTMENT_STRATEGIES,
+    STRATEGY_BINDINGS,
     STRATEGY_GRANTS,
     GiftGrant,
     RandomCharSpec,
+    env_faction_scope,
     random_char_pool,
+    strategy_faction_scope,
 )
 
 
@@ -99,3 +103,93 @@ def test_random_char_pool_derivation_properties() -> None:
     assert set(pool_tag) <= set(pool_all), '过滤池 ⊆ 全档'
     for name in pool_tag:
         assert '输出' in CHARACTERS[name].char_type.split('、')
+
+
+# ==================== 阵容指向集(投资选卡阵容冲突护栏 §2.1)====================
+# 判据 = changes/2026-10-17-invest-direction-guard/design.md §2.1 三腿派生
+# (faction/亲和/成员),期望值全部注册表现算(非快照)。设计 §4 测试清单
+# 有两处期望简写与 §2.1 规则的完整推导不一致(黑塔纪元/命运圣杯契约),
+# 在对应测试 docstring 逐条申报,断言以 §2.1 正本规则为准。
+
+def test_strategy_scope_defining_card_heita_epoch() -> None:
+    """黑塔纪元(绑 ∅ + {大黑塔, 黑塔}):角色腿①(大黑塔/黑塔 factions =
+    银河学者)∪ 成员腿②(大黑塔 ∈ 大黑塔银河学者 core,该线 factions 全集
+    = 银河学者+群攻)。设计 §4 简写作 {银河学者}(括注「经大黑塔/黑塔
+    factions」即仅角色腿①的值);成员腿按 §2.1 把群攻随线带入,全集以
+    §2.1 推导为准——申报差异,非实现自由裁量。"""
+    assert strategy_faction_scope('黑塔纪元') == frozenset({'银河学者', '群攻'})
+
+
+def test_strategy_scope_char_leg_qiongyu_qingque() -> None:
+    """琼玉专家:青雀(绑 ∅ + {青雀})→ {仙舟}:青雀 factions = (仙舟,)
+    且不在任何线 core/shared(成员腿零命中)→ 精确单阵营(§4 清单)。"""
+    assert strategy_faction_scope('琼玉专家:青雀') == frozenset({'仙舟'})
+
+
+def test_env_scope_affinity_leg_grail_invite_and_contract() -> None:
+    """命运圣杯邀请/契约(faction 腿命运圣杯;同亲和表 {双王圣杯, 命运圣杯
+    红A})→ 亲和腿双王圣杯线 factions 全集(命运圣杯+能量)→
+    {命运圣杯, 能量}(副阵营随线带入,§2.1 例)。设计 §4 对契约简写作
+    {命运圣杯}(仅 faction 腿值);契约与邀请同在 ENV_COMP_AFFINITY,亲和
+    腿照 §2.1 照常生效——申报差异,以 §2.1 为准。"""
+    assert env_faction_scope('命运圣杯邀请') == frozenset({'命运圣杯', '能量'})
+    assert env_faction_scope('命运圣杯契约') == frozenset({'命运圣杯', '能量'})
+
+
+def test_env_scope_sampo_affinity_leg() -> None:
+    """特邀专家:桑博 faction 腿空但亲和专家桑博DOT(1.0)→ 指向集 = 该线
+    factions 全集 {持续伤害, 贝洛伯格}(单 faction 腿会误判通用,§4 清单)。"""
+    assert env_faction_scope('特邀专家:桑博') == frozenset(
+        {'持续伤害', '贝洛伯格'})
+
+
+def test_env_scope_gallagher_faction_exception() -> None:
+    """特邀专家:加拉赫 = faction 例外条(_ENV_FACTION_EXCEPTIONS → 击破)
+    且无亲和 → {击破}(§4 清单)。"""
+    assert env_faction_scope('特邀专家:加拉赫') == frozenset({'击破'})
+
+
+def test_strategy_scope_membership_leg_equipfan_contains_pursuit() -> None:
+    """成员腿(§4 清单):装备党绑飞霄,飞霄 ∈ 追击飞霄线 core → 该线
+    factions {追击} 入集;阵营腿狼狩照常在集。"""
+    scope = strategy_faction_scope('装备党')
+    assert '追击' in scope
+    assert '狼狩' in scope
+
+
+def test_strategy_scope_multi_faction_char_expansion() -> None:
+    """多阵营角色展开(§4 清单):列车同行星徽绑丹恒·饮月(factions =
+    仙舟+列车同行)→ 两阵营全入集。"""
+    assert {'仙舟', '列车同行'} <= strategy_faction_scope('列车同行星徽')
+
+
+def test_scope_unbound_and_unregistered_empty() -> None:
+    """无绑定/未注册 → 空集(通用卡,护栏不辖):打捞人才库(注册表在册、
+    STRATEGY_BINDINGS 无条目);未注册策略名;未注册环境名(§4 清单)。"""
+    assert '打捞人才库' in INVESTMENT_STRATEGIES
+    assert strategy_faction_scope('打捞人才库') == frozenset()
+    assert strategy_faction_scope('不存在的策略名') == frozenset()
+    assert env_faction_scope('不存在的环境名') == frozenset()
+
+
+def test_strategy_scope_unregistered_char_skipped(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """绑定角色不在 CHARACTERS → 跳过不炸(§4 清单;角色腿①收窄宁放行,
+    注册表外名字不落任何线名单,成员腿同跳)。注入含未注册角色的绑定
+    条目验证(表注入沿本文件 ENV_GIFTS 校验测试惯用法)。"""
+    fake = dict(STRATEGY_BINDINGS)
+    fake['测试卡(不存在角色)'] = (
+        frozenset({'狼狩'}), frozenset({'不存在的角色X', '黑塔'}))
+    monkeypatch.setattr(cw_investments, 'STRATEGY_BINDINGS', fake)
+    assert strategy_faction_scope('测试卡(不存在角色)') == frozenset(
+        {'狼狩', '银河学者', '群攻'})
+
+
+def test_scope_queries_normalize_ocr_variants() -> None:
+    """查询归一(§2.1 明文):全角冒号/分隔符 bullet 形变与规范名同值——
+    持有名 OCR 形变不归一 = 查表 miss → 基准弱化漏拦。"""
+    assert strategy_faction_scope('琼玉专家：青雀') == frozenset({'仙舟'})
+    assert strategy_faction_scope('飞光•映月') == \
+        strategy_faction_scope('飞光·映月')
+    assert env_faction_scope('特邀专家：桑博') == \
+        env_faction_scope('特邀专家:桑博')
