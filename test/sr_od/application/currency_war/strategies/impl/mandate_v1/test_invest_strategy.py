@@ -1304,3 +1304,15 @@ def test_guard_lock_switch_relax_pursuit_compatible_after_lock():
                        locked_comp='追击飞霄')
     assert out.idx == 0
     assert out.reason.startswith('pick total=')
+
+
+def test_guard_demoted_frame_falls_back_to_holdings_basis():
+    """锁定换基·降格帧(demoted_endgame,前瞻语义,护栏设计 §2.2/§2.6):
+    锁线不入基,基准回持有指向并集——误持黑塔纪元({银河学者})+ 降格,
+    银河学者星徽按持有兼容合法胜出;命运圣杯星徽对持有基冲突出域(帧级
+    off-direction 标记;降格 = 终局方向暂席,锁线阵营不再保护)。"""
+    gs = _gs_holding(strategies=('黑塔纪元',))
+    out = _decide_pick(['银河学者星徽', '命运圣杯星徽', '嘴硬'], gs,
+                       locked_comp='双王圣杯', demoted_endgame=True)
+    assert out.idx == 0
+    assert out.reason.startswith('off-direction')
