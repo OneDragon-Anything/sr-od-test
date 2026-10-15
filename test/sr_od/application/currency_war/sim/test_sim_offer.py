@@ -12,8 +12,9 @@ M06/M05 + 节点选项生成 M16/M17/M18)。
 - 派生池与发牌:副本数真值(27/27/9/9/9)/held 星级派生不变量/≥9 清空
   发牌过滤(U11)与双出口分野/专家入池假设(U10)/5 槽发牌与概率表/
   免费刷先行(M05);
-- 节点选项:U22 遭遇档位结构/扑满替换单一源/U24·T-9 补给 3 选 1 基础件
-  放回均匀 + 带钻占位 + 环境每列件数表(ENV_SUPPLY_EQUIP_COUNT)。
+- 节点选项:U22 遭遇档位结构/扑满替换单一源(两卡同构参数化)+ 面板矿
+  占位增量登记闸(ENV_ORE_PANEL_BONUS 手抄锁值)/U24·T-9 补给 3 选 1
+  基础件放回均匀 + 带钻占位 + 环境每列件数表(ENV_SUPPLY_EQUIP_COUNT)。
   pick 动作入账腿退役(测试面迁 test_sim_backend.py:选卡走 op → 上报
   函数族获得链,与实机同构);遭遇加成真值表归宿 = cw_sim_enemy(难度
   账域)。
@@ -51,6 +52,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     deployed_view_sequential as _dvs,
 )
 from sr_od.application.currency_war.kernel.cw_investments import (
+    ENV_ORE_PANEL_BONUS,
     ENV_POOL_REWRITE,
     INVESTMENT_ENVS,
     INVESTMENT_STRATEGIES,
@@ -440,16 +442,30 @@ def test_encounter_options_structure_and_tier_bonus_truth() -> None:
     assert ENCOUNTER_TIER_BONUS == (0, 10, 20, 30)
 
 
-def test_piggy_env_replacement_single_source() -> None:
-    """扑满替换守卫:经济过热族环境 + reward 节点 → True;其它环境/
-    其它节点型恒 False(单一源 = PIGGY_ENV_NAMES × active_env)。"""
+@pytest.mark.parametrize('piggy_env', ['经济过热', '经济严重过热'])
+def test_piggy_env_replacement_single_source(piggy_env: str) -> None:
+    """扑满替换守卫(两卡同构参数化,设计 designs/T-20-jingji-
+    yanzhong-guore.md §2.1.2):扑满族环境 + reward 节点 → True;其它
+    环境/其它节点型恒 False(单一源 = PIGGY_ENV_NAMES × active_env;
+    谓词级无变体分叉,变体分叉仅在面板矿增量注册表)。"""
     sig = ChannelSig(family='obs', actor='TestSigWriter')
     gs = _gs('reward')
-    gs.observe(gs.active_env, '经济过热', sig=sig)
+    gs.observe(gs.active_env, piggy_env, sig=sig)
     assert is_piggy_node(gs)
     gs.observe(gs.active_env, '轮岗', sig=sig)
     assert not is_piggy_node(gs)
     assert not is_piggy_node(_gs('battle')), '非奖励节点恒 False'
+
+
+def test_env_ore_panel_bonus_registry_gate() -> None:
+    """面板矿占位增量登记闸:恰两键且值逐字锁定。
+
+    手抄期望是刻意的(sr-od-test README「数值期望现算」纪律的显式
+    豁免,设计 designs/T-20-jingji-yanzhong-guore.md §2.1.2):期望若
+    从注册表现算,占位值改动会自动跟随、登记闸失效——手抄锁死现值,
+    任何占位值改动(含实采校准)必须过本测试显式更新 = 占位漂移在
+    测试期可见,防「好心现算化」废闸与静默改值。"""
+    assert ENV_ORE_PANEL_BONUS == {'经济过热': 4, '经济严重过热': 8}
 
 
 def test_supply_options_replacement_sampling_and_env_driven() -> None:
