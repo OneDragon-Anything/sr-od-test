@@ -1,4 +1,4 @@
-"""备战工序锁面(决策契约单动作形状 + 九段全扫行为 + 上线窗口信号表)。
+"""备战工序测试面(决策契约单动作形状 + 九段全扫行为 + 上线窗口信号表)。
 
 两部分,判据唯一源 = prep_pipeline §1 + docs/develop/sr_od/application/
 currency_war/flow/README.md §2.2 备战接口行:
@@ -9,9 +9,9 @@ currency_war/flow/README.md §2.2 备战接口行:
   重观察;原 HoldFrame 通道收编,用户裁定 2026-09-20,``None`` 退役);
   非法形状由消费端 F3 守卫拒绝(策略器 bug 响亮暴露,禁静默跳过);
 - **九段全扫**(``entry.emit``):各段触发态首中断言 + 回扫语义、自救
-  动作序(按损失递增 + 真全量豁免)、晶矿垫件锁(垫件谓词过滤后取价值
-  最小)、第 3 步空段零动作透传锁(旧升级判据直删后透传,新判据落码)、
-  节末凑息闭合即止锁、上线窗口信号表建表完备性。
+  动作序(按损失递增 + 真全量豁免)、晶矿垫件测试(垫件谓词过滤后取价值
+  最小)、第 3 步空段零动作透传测试(旧升级判据直删后透传,新判据落码)、
+  节末凑息闭合即止测试、上线窗口信号表建表完备性。
 
 帧构造纪律:
 - 第 4 步商店会话标记(``shop_handled``)未打的帧会在第 4 步开店命中
@@ -20,10 +20,10 @@ currency_war/flow/README.md §2.2 备战接口行:
   (``effective_node_pos`` 读口,未观察 None 不当真)。
 - 窗口辖域测试用追击飞霄线(synergy 3 = 板面追击 3 档;追击为流派
   键,``board_by_row`` 聚合含 flows)——规避配方底线门辖列车件的
-  干扰(围栏语义与窗口辖域分立,锁只锁窗口)。
+  干扰(围栏语义与窗口辖域分立,测试只校验窗口)。
 - 卖出场景帧 deployed 非空(空板守卫 = 评估器 as-built 收编语义,
   deployed = 0 帧卖出哑火)且 deploy_vacancy = 0(防第 5 步部署先中,
-  散件填位与凑息让位的序差属第 5 步语义,第 7 步锁只锁凑息)。
+  散件填位与凑息让位的序差属第 5 步语义,第 7 步测试只校验凑息)。
 """
 from __future__ import annotations
 
@@ -94,9 +94,9 @@ def _prep_strategy(monkeypatch: pytest.MonkeyPatch,
         cw_bridge.MandateV1Strategy, StrategySession]:
     """mandate_v1 具现(真实类)+ 决策核发射缝桩,离线直调备战契约入口。
 
-    - ``decide_prep_frame`` 模块桩 = 决策核发射缝——本锁辖「边界把发射
+    - ``decide_prep_frame`` 模块桩 = 决策核发射缝——本测试辖「边界把发射
       序列映射成单动作/空发射 obs」的形状,核内三遍编排/帧稳定截断不在
-      锁面;预算披露(决策入口前置发射位之后)走真实现,零屏零外部面;
+      测试面;预算披露(决策入口前置发射位之后)走真实现,零屏零外部面;
     - ``gs.frame_class_prep`` 缺省 'none' → 入口内务(帧代次消费)
       空转,方向刷新不触发,测试零全局残留。
     """
@@ -117,7 +117,7 @@ def test_prep_contract_returns_single_action_first_of_emission(
     """备战契约边界:有动作帧 → 返回恰一个 ``CwAction`` = 发射序列首项。
 
     出处 = docs/develop/sr_od/application/currency_war/flow/README.md §2.2 备战接口行(恰一个动作)。
-    发射两动作只取首项:锁「单动作循环
+    发射两动作只取首项:校验「单动作循环
     逐帧恰取一个动作」的边界映射——契约面返回列表整体(旧形状回潮)或
     取尾项都会在此红。
     """
@@ -155,7 +155,7 @@ def test_prep_consumer_rejects_illegal_return_f3_fail(
     语义 = 策略器 bug 响亮暴露:决策循环在执行前拒绝并以具名 fail
     交回外循环,禁静默跳过。走 op 决策动作 node 路径(两 node 形态
     ()的 ③-⑤ 单动作决策循环宿主,
-    守卫逐字同,单锁辖同一条契约)。
+    守卫逐字同,单测试辖同一条契约)。
     """
 
     class _IllegalPrepStrategy:
@@ -210,7 +210,7 @@ def _emit(sess):
 
 
 class TestStep0SelfRescue:
-    """自救动作序锁(按损失递增:上阵安置 → 点消耗品 → 卖出 → 防御
+    """自救动作序测试(按损失递增:上阵安置 → 点消耗品 → 卖出 → 防御
     分支;每帧重评取首个可行,无试错计数;prep_pipeline §1 第 0 步)。"""
 
     @staticmethod
@@ -276,7 +276,7 @@ class TestStep0SelfRescue:
         assert sells[0].bench_idx == 0, '价值最低散件让位,线内件置末层'
 
     def test_state3_full_pool_exemptions_reach_line_member(self):
-        """真全量豁免锁:候选只剩线内核心件(常规面恒拒)时自救仍可卖
+        """真全量豁免测试:候选只剩线内核心件(常规面恒拒)时自救仍可卖
         ——P78-4 核心/④件身份段在自救场景豁免、按价值序末位可卖。"""
         sess = cw4_session(cw4_comp('列车同行'))
         cw4_gs(sess, gold=30, level=4, round_num=2, node='战斗',
@@ -326,13 +326,13 @@ class TestStep0SelfRescue:
 
 
 class TestStep1Consumable:
-    """第 1 步点开消耗品锁(prep_pipeline §1 第 1 步:点开顺序 =
+    """第 1 步点开消耗品测试(prep_pipeline §1 第 1 步:点开顺序 =
     书册卡 → 补给箱 → 星徽秘典,依据 = 现行实体面臂序在案)。"""
 
     def test_kind_priority_dominates_slot_order(self):
-        """点开优先级差分锁:同帧 bookcard 与 supply_box 均在场且
+        """点开优先级差分测试:同帧 bookcard 与 supply_box 均在场且
         supply_box 槽位在前(槽 0)、bookcard 在后(槽 1)→ 按 kind
-        优先级取书册卡——锁「kind 优先序」非「槽位序首中」(若按槽位
+        优先级取书册卡——校验「kind 优先序」非「槽位序首中」(若按槽位
         序会先开槽 0 的补给箱)。"""
         from sr_od.application.currency_war.kernel.cw_vocab import (
             CwActionOpenBookcardParam,
@@ -352,7 +352,7 @@ class TestStep1Consumable:
 
 
 class TestStep2Ore:
-    """晶矿锁(prep_pipeline §1 第 2 步:席未满点全部;席满垫件谓词
+    """晶矿测试(prep_pipeline §1 第 2 步:席未满点全部;席满垫件谓词
     过滤后取价值最小,无试错计数;ore_defer 键族退役)。"""
 
     @staticmethod
@@ -410,7 +410,7 @@ class TestStep2Ore:
         assert state_of(sess).cw4_counters.get('ore_yield_no_pad') == 1
 
     def test_rescan_collects_after_seat_freed(self):
-        """回扫语义锁:席满卖垫件腾位(上报后席 8)→ 下帧全扫回到第 2
+        """回扫语义测试:席满卖垫件腾位(上报后席 8)→ 下帧全扫回到第 2
         步 → 点晶矿(腾位后回头点晶矿的回跳在全扫下自然表达)。"""
         sess = self._full_bench_frame()
         _write_ores(game_state_of(sess), (('gold', 100, 200, 30),))
@@ -427,7 +427,7 @@ class TestStep2Ore:
     def test_pad_filter_dominates_global_value_order(self):
         """垫件过滤优先于全局价值排序(对抗差分态):垫件(5费 1★
         流萤——该等级刷不出 ⇒ 再遇窗 inf,价值排全池末位)∧ 全池价值
-        最小件为非垫件(1费 2★ 艾丝妲)时,仍取垫件——锁「垫件谓词
+        最小件为非垫件(1费 2★ 艾丝妲)时,仍取垫件——校验「垫件谓词
         过滤后取价值最小」非「全池排序首位」(价值函数无垫件身份维,
         prep_pipeline 第 2 步消费声明;防未来回归成全池取最小)。"""
         sess = cw4_session()
@@ -454,15 +454,15 @@ class TestStep2Ore:
 
 
 class TestStep3LevelUp:
-    """第 3 步升级锁(line_and_upgrade §2:五臂判据 + 整级预授权——
-    判据单帧锁主文件 = test_levelup_prob_axis.py,本类只锁工序接线
+    """第 3 步升级测试(line_and_upgrade §2:五臂判据 + 整级预授权——
+    判据单帧测试主文件 = test_levelup_prob_axis.py,本类只校验工序接线
     形态)。"""
 
     def test_upgrade_friendly_state_emits_batch(self):
         """升级友好形态(金充裕 + 板满 + 线内候补在席)发射升级整批:
         溢余段臂(gold 100 > 息线 50,「金这么多都是要花的」)触发,
-        裸金足 → 同帧执行帧一次买齐(P48 整买;先前空段期透传锁已随
-        新判据落码终结,替代语义 = 本形态锁)。"""
+        裸金足 → 同帧执行帧一次买齐(P48 整买;先前空段期透传测试已随
+        新判据落码终结,替代语义 = 本形态测试)。"""
         sess = cw4_session(cw4_comp('列车同行'))
         cw4_gs(sess, gold=100, level=4, round_num=2, node='战斗',
                bench=[_bc('c0')] * 9,
@@ -480,9 +480,9 @@ class TestStep3LevelUp:
 
 
 class TestStep4ShopSession:
-    """第 4 步商店会话入口锁(契约 A:标记判定 + 解拦复核接线位)。
+    """第 4 步商店会话入口测试(契约 A:标记判定 + 解拦复核接线位)。
     ``test_handled_marker_skips_step`` 兼辖「全静帧唯一完成态」事实
-    (以上全部步骤无动作 → 恰一个出战交回,原第 8 步锁同帧同断言)。"""
+    (以上全部步骤无动作 → 恰一个出战交回,原第 8 步测试同帧同断言)。"""
 
     def test_unhandled_opens_shop(self):
         """标记未处理(值 ≠ 当前节点号)→ CwActionOpenShopParam(备战侧
@@ -510,14 +510,14 @@ class TestStep4ShopSession:
 
 
 class TestStep5DeployWindow:
-    """部署窗口辖域锁(用户裁定 2026-10-12:终局成员在其上线窗口前
+    """部署窗口辖域测试(用户裁定 2026-10-12:终局成员在其上线窗口前
     不上阵;纯终局件谓词 = 终局库成员 ∧ 非现行过渡配方成员;窗口到 =
     entry_signals 信号命中——追击飞霄线 synergy 3 = 板面追击 3 档)。"""
 
     @staticmethod
     def _window_frame(front: tuple[str, ...]):
         # gold 50 = 恰在两金带外(不 > 息线 ⇒ 第 3 步溢余臂不触发;不 <
-        # 息线 ⇒ 第 7 步凑息不触发)——窗口辖域锁只锁第 5 步部署
+        # 息线 ⇒ 第 7 步凑息不触发)——窗口辖域测试只校验第 5 步部署
         sess = cw4_session()
         cw4_gs(sess, gold=50, level=6, round_num=2, node='战斗',
                bench=[_bc('飞霄')],
@@ -575,7 +575,7 @@ class TestStep5DeployWindow:
 
 
 class TestStep6EquipTools:
-    """第 6 步装备与工具接线锁(装备穿戴判据本体保留;工具评估留痕
+    """第 6 步装备与工具接线测试(装备穿戴判据本体保留;工具评估留痕
     计数 = 现行 M7.5 发射位口径)。"""
 
     def test_wear_plan_emits_and_tool_eval_counter(self):
@@ -598,7 +598,7 @@ class TestStep6EquipTools:
 
 
 class TestStep7NodeEndInterest:
-    """节末凑息锁(金 < 息线 → 卖 1★ 全额退件补缺口;卖到缺口闭合
+    """节末凑息测试(金 < 息线 → 卖 1★ 全额退件补缺口;卖到缺口闭合
     即止、不多卖一张)。"""
 
     @staticmethod
@@ -617,7 +617,7 @@ class TestStep7NodeEndInterest:
         """跨档可行帧(金 48,下一档线 50,缺口 2):卖 1★ 全额退件候选
         一张(退金 ≥ 缺口才发,取退金最小;单动作循环:每帧一张,卖出
         上报更新金位后下帧重评)。跨不了档的帧(gold 40 缺 10,退金 3)
-        = 'no_tier_gain' 零卖出,资格面该锁由 criteria/test_sell_
+        = 'no_tier_gain' 零卖出,资格面该测试由 criteria/test_sell_
         candidates 承载。"""
         sess = self._frame(48, [_bc('c0'), _bc('c1')])
         out = _emit(sess)
@@ -627,10 +627,10 @@ class TestStep7NodeEndInterest:
         assert sells[0].bench_idx == 0
 
     def test_gap_closed_stops_selling(self):
-        """闭合即止锁:卖出退金使金位 ≥ 息线后,下一帧不再卖(不多卖
+        """闭合即止测试:卖出退金使金位 ≥ 息线后,下一帧不再卖(不多卖
         一张,卖回量最小化)。bench = 卡芙卡(2 费 1★ 退 2,48+2 = 50
-        恰闭合不越线——越过息线即入溢余带,第 3 步升级臂会接手,本锁
-        只锁凑息即止)。"""
+        恰闭合不越线——越过息线即入溢余带,第 3 步升级臂会接手,本测试
+        只校验凑息即止)。"""
         sess = self._frame(48, [_bc('卡芙卡')])   # 48 + 2(退) = 50 ≥ 50
         out1 = _emit(sess)
         sell = next(e.action for e in out1
@@ -657,7 +657,7 @@ class TestStep7NodeEndInterest:
 
 
 class TestEntrySignalsTable:
-    """上线窗口信号表建表锁(landing:COMP_LIBRARY 扩 entry_signals
+    """上线窗口信号表建表测试(landing:COMP_LIBRARY 扩 entry_signals
     字段并建表——20 线全登记、值域合法、键 ⊆ 线终局成员;fail 读法 =
     缺行 → 窗口谓词恒假,数据地基由完备性保证不静默)。"""
 

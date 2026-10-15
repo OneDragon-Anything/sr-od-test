@@ -1,15 +1,15 @@
-"""席空数 capacity 跟随单一源锁(T-17 用户裁定:三处消费读数统一改吃
+"""席空数 capacity 跟随单一源测试(T-17 用户裁定:三处消费读数统一改吃
 ``bench_free_slots``,跟随 BenchView.capacity——节省工位改写帧按实席
 数计,非定长 9 基线)。
 
-被锁行为(关系断言——同 occupancy 差一档 capacity,读数严格分档;
+被测行为(关系断言——同 occupancy 差一档 capacity,读数严格分档;
 非复述单一源实现):``cw_line_switch.e_rounds`` 买刷截断:capacity 8
 (6 占席 → 空位 2)vs capacity 9(6 占席 → 空位 3),affordable 充裕时
 rolls = 空位数,E_rounds 比值 = (1+3)/(1+2) = 4/3(闭式可算,dist/p
 同帧同源)。
 
 (原 proof.assemble_lock_frame c_sat 席压项与 economy_cycle O1 填补账
-两锁已随退役载体在前轮删除,docstring 本处同步收敛为单锁。)
+两个测试已随退役载体在前轮删除,docstring 本处同步收敛为单测试。)
 
 载体 = 容器 BenchView 直写(节省工位效果帧的容器形态;capacity 字段
 单一源语义见 kernel BenchView docstring)。
@@ -49,11 +49,11 @@ def _pair_comp():
 
 
 def _filler_names(n: int) -> list[str]:
-    """非持续伤害线的注册表角色名 n 个(占席件;锁前提自检)。"""
+    """非持续伤害线的注册表角色名 n 个(占席件;测试前提自检)。"""
     names = [name for name, ch in sorted(CHARACTERS.items())
              if ch.cost and '持续伤害' not in (ch.flows or ())
              and name != '希儿']
-    assert len(names) >= n, '注册表非 DOT 名不足(锁前提失效)'
+    assert len(names) >= n, '注册表非 DOT 名不足(测试前提失效)'
     return names[:n]
 
 
@@ -73,7 +73,7 @@ def _session_with(comp):
     return s
 
 
-# ===== 锁 1:e_rounds 买刷截断跟随 capacity =====
+# ===== 测试 1:e_rounds 买刷截断跟随 capacity =====
 
 
 def test_e_rounds_rolls_follow_bench_capacity():
@@ -96,9 +96,9 @@ def test_e_rounds_rolls_follow_bench_capacity():
         return e_rounds(comp, gs)
 
     e8, e9 = _e(8), _e(9)
-    assert math.isfinite(e8) and math.isfinite(e9), '锁前提:双帧 E 有限'
+    assert math.isfinite(e8) and math.isfinite(e9), '测试前提:双帧 E 有限'
     assert abs(e8 / e9 - 4.0 / 3.0) < 1e-6, \
         f'席空数未跟随 capacity(E8/E9={e8 / e9!r},期望 4/3)'
 
 
-# ===== 锁 2:proof c_sat 席位压力项跟随 capacity =====
+# ===== 测试 2:proof c_sat 席位压力项跟随 capacity =====

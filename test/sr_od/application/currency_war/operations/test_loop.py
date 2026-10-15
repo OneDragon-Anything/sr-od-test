@@ -1,4 +1,4 @@
-"""CW 外环(CwLoop)机制锁面:分发身份语料 + boss 简报帧排他 + op-fail
+"""CW 外环(CwLoop)机制测试面:分发身份语料 + boss 简报帧排他 + op-fail
 重派防线 + 出战链紧缩对位防线。
 
 三节归并自原三个主题文件(测试函数名全量保留,原文件已删):
@@ -6,7 +6,7 @@
 1. 分发身份语料回归(原 test_cw_dispatch_corpus.py;纪律单一源 = skill
    反馈「分发用画面身份必须过语料验证」+ flow/outer_loop.md §2.2:每画面
    身份须两向验证——本画面全部已存档实机帧 True + 堆叠底图/兄弟画面帧
-   False;身份组合语料误杀 dc435da4d 事故锁);
+   False;身份组合语料误杀 dc435da4d 事故测试);
 2. boss 简报帧误派位面过渡防线(原 test_cw_loop_boss_frame_exclusion.py;
    病理 = 第五局 1-9 实锤:boss 帧标题 OCR 误读击穿身份后,旧全帧裸文本
    兜底命中共享文案 → 误派位面过渡空 fail 死循环);
@@ -53,7 +53,7 @@ from sr_od.application.currency_war.operations.cw_screen import (
 )
 
 # ============================================================
-# 1. 分发身份语料回归(两阶段身份分发的语料纪律可执行锁)
+# 1. 分发身份语料回归(两阶段身份分发的语料纪律可执行测试)
 # ============================================================
 
 _SCREENS_DIR = Path(__file__).parents[4] / 'screens'
@@ -178,7 +178,7 @@ def _make_loop(test_context, monkeypatch, *, match_name, ocr_texts,
     monkeypatch.setattr(cw_loop_mod, '_log_cw_op',
                         lambda name, pos, dur, outcome, detail='':
                         calls.append((name, outcome)))
-    # boss 判别单一源保持真函数,只桩 OCR 读链(锁「片段进派发裁决」)
+    # boss 判别单一源保持真函数,只桩 OCR 读链(校验「片段进派发裁决」)
     monkeypatch.setattr(bb_mod, 'read_ocr_texts',
                         lambda ctx, scr: list(ocr_texts))
     monkeypatch.setattr(cw_loop_mod, 'CwScreenBossBriefing', _StubBoss)
@@ -189,7 +189,7 @@ def _make_loop(test_context, monkeypatch, *, match_name, ocr_texts,
 
 def test_stage1_transition_identity_boss_frame_takeover(test_context,
                                                         monkeypatch) -> None:
-    """锁1 阶段一排他:位面过渡身份帧含「强敌」片段(标题误读形态)→
+    """测试1 阶段一排他:位面过渡身份帧含「强敌」片段(标题误读形态)→
     接管派发 BOSS 简报,零位面过渡派发。"""
     op, calls = _make_loop(
         test_context, monkeypatch, match_name='货币战争-位面过渡',
@@ -201,7 +201,7 @@ def test_stage1_transition_identity_boss_frame_takeover(test_context,
 
 def test_boss_frame_without_anchors_falls_to_unknown_fallback(
         test_context, monkeypatch) -> None:
-    """锁2 劣化形态终端:boss 帧位面锚 miss ∧ 判别片段 miss(全帧只剩
+    """测试2 劣化形态终端:boss 帧位面锚 miss ∧ 判别片段 miss(全帧只剩
     共享文案)→ 零派发,落未知兜底 retry(终端 = 停机留证,不为未建档
     形态预建兜底)。"""
     op, calls = _make_loop(
@@ -229,8 +229,8 @@ def _spy_cw_op(monkeypatch) -> list[tuple[str, str]]:
 
 class _Host:
     """``_dispatch_screen_op`` 离线宿主:只供给包装消费面(round 工厂/
-    留证/上限值),镜像恢复路由锁的替身纪律(ctx 缺省缺席 = 位置键退 (0, 0);
-    刻意**不**预置 ``_op_fail_streak_key/_n``——锁 getattr 缺省初始化
+    留证/上限值),镜像恢复路由测试的替身纪律(ctx 缺省缺席 = 位置键退 (0, 0);
+    刻意**不**预置 ``_op_fail_streak_key/_n``——校验 getattr 缺省初始化
     路径与生产首帧形态一致。
     """
 
@@ -279,13 +279,13 @@ def _dispatch(host, op, journal_name: str, **kwargs):
                                       frame_tag=None, wait=2, **kwargs)
 
 
-# (原 test_tick_window_semantics 删:纯函数窗口语义被锁2/3/4 的接线级
+# (原 test_tick_window_semantics 删:纯函数窗口语义被测试2/3/4 的接线级
 #  断言完全辖——同键 ok 复位/异键 ok 闭窗计数从 1 重计/达限转 fail,单层
 #  归因价值不及冗余成本。)
 
 
 def test_cap_fires_at_limit_with_readout(monkeypatch):
-    """锁2 接线:上限-1 次维持默认映射,第 LIMIT 次转可判读 round_fail。"""
+    """测试2 接线:上限-1 次维持默认映射,第 LIMIT 次转可判读 round_fail。"""
     calls = _spy_cw_op(monkeypatch)
     host = _Host(CwLoop.OP_FAIL_REDISPATCH_LIMIT)
     limit = CwLoop.OP_FAIL_REDISPATCH_LIMIT
@@ -302,7 +302,7 @@ def test_cap_fires_at_limit_with_readout(monkeypatch):
 
 
 def test_intermittent_ok_resets_window(monkeypatch):
-    """锁3 间歇 ok 复位:ok 打断后需重新连败 LIMIT 次才触发。
+    """测试3 间歇 ok 复位:ok 打断后需重新连败 LIMIT 次才触发。
 
     判据形态:ok 前已积 limit-1 连败;若无复位,ok 后第 1 次 fail 即达限
     (4+1=5)。实测 ok 后 limit-1 次连败全 wait = 计数确已清零,第 limit
@@ -320,7 +320,7 @@ def test_intermittent_ok_resets_window(monkeypatch):
 
 
 def test_other_op_ok_closes_window(monkeypatch):
-    """锁4 异键 ok 同闭窗:其他 op 的 ok 打断粘滞 op 的 fail 序列。"""
+    """测试4 异键 ok 同闭窗:其他 op 的 ok 打断粘滞 op 的 fail 序列。"""
     _spy_cw_op(monkeypatch)
     host = _Host(CwLoop.OP_FAIL_REDISPATCH_LIMIT)
     limit = CwLoop.OP_FAIL_REDISPATCH_LIMIT
@@ -337,7 +337,7 @@ def test_other_op_ok_closes_window(monkeypatch):
 
 
 def test_dedicated_hook_shadows_cap(monkeypatch):
-    """锁5 hook 早退先于通用网:hook 返回自身轮次 → 恒 hook 结果且不计数。"""
+    """测试5 hook 早退先于通用网:hook 返回自身轮次 → 恒 hook 结果且不计数。"""
     _spy_cw_op(monkeypatch)
     host = _Host(CwLoop.OP_FAIL_REDISPATCH_LIMIT)
     op = _ScriptedOp([False] * 20)
@@ -356,7 +356,7 @@ def test_dedicated_hook_shadows_cap(monkeypatch):
 
 
 def test_on_fail_retry_branch_capped_before_retry_pool(monkeypatch):
-    """锁6 on_fail_retry 分支同辖:达限转 round_fail,不再进 400 重试池。"""
+    """测试6 on_fail_retry 分支同辖:达限转 round_fail,不再进 400 重试池。"""
     _spy_cw_op(monkeypatch)
     host = _Host(CwLoop.OP_FAIL_REDISPATCH_LIMIT)
     limit = CwLoop.OP_FAIL_REDISPATCH_LIMIT
@@ -396,7 +396,7 @@ def _bcd_gs(bench_slots) -> object:
 
 
 def test_deploy_chain_unhealthy_slot_table_fails_closed(monkeypatch):
-    """锁8/9(3.1 改写):紧缩占席序与容器槽位表占用数不等(陈旧帧,
+    """测试8/9(3.1 改写):紧缩占席序与容器槽位表占用数不等(陈旧帧,
     如计划后 bench 被卖出/合成腾位而帧未刷新)→ 整份计划不出
     (fail-closed 防错位拖拽)+ 分键显影——单一占用数守门。"""
     from types import SimpleNamespace as _NS
@@ -431,7 +431,7 @@ def test_deploy_chain_unhealthy_slot_table_fails_closed(monkeypatch):
 
 
 def test_deploy_chain_healthy_table_maps_and_launches(monkeypatch):
-    """锁10 健康表直通:门不误伤,对位取容器槽位表下标(bench_idx 语义)。"""
+    """测试10 健康表直通:门不误伤,对位取容器槽位表下标(bench_idx 语义)。"""
     from types import SimpleNamespace as _NS
 
     from sr_od.application.currency_war.kernel.cw_game_state import (

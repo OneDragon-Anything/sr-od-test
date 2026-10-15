@@ -1,25 +1,25 @@
-"""GameState 迁移回归锁(迁移批次一;设计正本 = docs/develop/sr_od/application/currency_war/
+"""GameState 迁移回归测试(迁移批次一;设计正本 = docs/develop/sr_od/application/currency_war/
 容器数据结构设计,下称「设计」;正本 = game_state/fields.md)。
 
-锁面 = 写入口两态制与构造守卫(§2.1-§2.4/§8.6-5)+ 派生不存储
+测试面 = 写入口两态制与构造守卫(§2.1-§2.4/§8.6-5)+ 派生不存储
 (§8.6-4 续)+ 观察流接线与 hp 失读统一口径 + 心跳哨兵(§2.4 关键
 结构 2)+ sim 合成口箱占席语义(§3.2.5;迁移批次一任务书第 7 件)
 + 设计 §8.7 批次三(挂点机制/B1 桥)与批次四(退役 + relay 空值闸)
-两组锁。机制主题归并(禁批次命名):本文件 = GameState 容器机制正名
+两组测试。机制主题归并(禁批次命名):本文件 = GameState 容器机制正名
 主题文件,消费切换批(刷新计数/结算覆盖/合成升星判定/streak 解析/
 备战席读链)、容器合同(六通道/版本流水/快照/画面上下文/渠道签名
 封闭集)、开局种子底座与锚定闩、deployed 视图桥与快照迁移各节按
 机制并入(断言体零语义改动)。
 
-退役面:§8.6 差距清单逐条锁(gap3/gap4 组)与 §3 字段语义抽样组已删;
-心跳写点序/断流计数两锁并一,level_up/battle_end 挂点两锁并一,
-tick/advance_node 两锁并一(并入腿见各测试 docstring)。
+退役面:§8.6 差距清单逐条测试(gap3/gap4 组)与 §3 字段语义抽样组已删;
+心跳写点序/断流计数两个测试并一,level_up/battle_end 挂点两个测试并一,
+tick/advance_node 两个测试并一(并入腿见各测试 docstring)。
 
 合并面(第二刀,断言腿零丢失):bench_free 两形态参数化并一;失配缺陷
 台账+sink drain 并一;合成口真值域 on/off 参数化并一;feed 接线+hp 三
-分支同帧驱动并一;burst/per_node 授权两形态参数化并一;relay 单元三锁
-表驱动并一;relay 端到端两锁并一;席位视图转换三锁并一(ShopCard 映射
-单锁独立)。
+分支同帧驱动并一;burst/per_node 授权两形态参数化并一;relay 单元三个测试
+表驱动并一;relay 端到端两个测试并一;席位视图转换三个测试并一(ShopCard 映射
+单测试独立)。
 
 草板对照物 = .debug/temp/currency_war/record_data_model/board_state.py
 (易失产物,不构成出处;出处 = 设计章节号)。
@@ -130,7 +130,7 @@ def _hsig() -> _ChannelSig:
 
 
 def test_write_logic_direct_write_immediately_readable() -> None:
-    """ADR-0651 两态制核心锁(写通道合同正本,全仓唯一份):逻辑推算值经
+    """ADR-0651 两态制核心测试(写通道合同正本,全仓唯一份):逻辑推算值经
     write_logic **直接写字段**(source=logic)——策略器立即可读,无「预期
     条目表挂账」中间态;evidence 透传入账。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
@@ -164,7 +164,7 @@ def test_write_seq_monotonic_counter() -> None:
 @pytest.mark.parametrize('case', ['unobserved-honest-none',
                                   'occupying-kinds-counted'])
 def test_bench_free_slots_and_full_derivation(case: str) -> None:
-    """§3.2.5 席空数派生两形态一锁(参数化并一):
+    """§3.2.5 席空数派生两形态一测试(参数化并一):
     - unobserved-honest-none:席空数没读到 = 不确定,**禁猜 0**——bench
       从未观察返 None(bench_is_full 同为 None);
     - occupying-kinds-counted:席空数派生 = capacity − 占席槽数;箱占席
@@ -291,7 +291,7 @@ def test_observe_over_logic_mismatch_defect_row_and_sink_drain() -> None:
 
 def test_observe_mismatch_three_way_routing(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """失配三分流并一锁(,design §2.3):
+    """失配三分流并一测试(,design §2.3):
 
     - 真失配腿:缺陷行落盘后安灯钩子同步被调(行同构);sim 前缀两值
       (sim:engine 现役 / sim:synthesized 本迭代并列)→ 不落行不调钩子;
@@ -411,7 +411,7 @@ def test_observe_mismatch_three_way_routing(
 
 def test_write_logic_rand_and_observe_random_outcome(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """逻辑随机态(logic_rand)契约并一锁:写口/观察覆盖差异/消费查询面。
+    """逻辑随机态(logic_rand)契约并一测试:写口/观察覆盖差异/消费查询面。
 
     - 写口腿:write_logic_rand 落 source=logic_rand,策略器立即可读;
       渠道族守卫与 write_logic 同一条(obs 族签名显式炸);prov 快照随写;
@@ -515,7 +515,7 @@ def test_game_state_of_binds_per_session() -> None:
 @pytest.mark.parametrize('case', ['truth-on-preserves-bench-slots',
                                   'truth-off-not-written'])
 def test_sim_synthesis_truth_domain(case: str) -> None:
-    """§2.1/§3.2.5 种子真值域 on/off 两形态一锁(参数化并一;载体迁移 =
+    """§2.1/§3.2.5 种子真值域 on/off 两形态一测试(参数化并一;载体迁移 =
     benchchar-retirement P5,原合成口 at_round 轮键注记随口退役,证据
     恒种子基串 sim:synthesized——断言值改写逐处申报):
     - truth-on:真值种子 bench 槽位保序(0 基下标 → 1 基物理槽位),
@@ -641,7 +641,7 @@ def _patch_clean_readers(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_observation_feed_wiring_and_hp_loss_semantics(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """观察流接线 + hp 失读统一口径同帧驱动一锁(合并原
+    """观察流接线 + hp 失读统一口径同帧驱动一测试(合并原
     test_observation_feed_wires_board_state /
     test_observation_feed_hp_unified_loss_semantics,断言腿逐条保留):
 
@@ -793,7 +793,7 @@ def test_observation_feed_battle_frame_kind_inherits(
 
 def test_observation_feed_carries_screen_name_and_precise_exempt(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """漏斗画面名贯通锁():主喂入口
+    """漏斗画面名贯通测试():主喂入口
     read_game_state(screen_name=...) 观察侧 sig 带画面名 → 金字段失配行
     screen 在场(非 None),精确豁免键 (画面, gold, 写端前缀) 可命中。
     screen_name 缺省 None 形态 = 现状测试不变(sig.screen=None 仅通配可豁免)。"""
@@ -856,11 +856,11 @@ def test_observation_feed_carries_screen_name_and_precise_exempt(
 
 # ============================================================ §8.7 批次三
 # 策略器状态归位(原独立批次文件按主题文件纪律归并入本文件;断言体零语义
-# 改动)。锁面 = §8.7 批次三现存件:§5.1 effect_inventory 挂点机制(登记/
+# 改动)。测试面 = §8.7 批次三现存件:§5.1 effect_inventory 挂点机制(登记/
 # 节点 tick 与 advance/计数 bump/到期尾款返回面)+ §3.2.19 跳过递减/
 # §5.1 账本载体归一(挂点
 # 写点落在 GameState.effects 单例)。断言全部按设计语义写,与上方批次一/
-# 消费批锁面不重复。
+# 消费批测试面不重复。
 
 
 # ============================================================ §5.1 载体归一
@@ -933,12 +933,12 @@ def test_node_tick_and_advance_dedup_guard_expiry() -> None:
 @pytest.mark.parametrize('case', ['burst-once-grant',
                                   'per-node-once-per-node'])
 def test_effect_refresh_balance_grant_forms(case: str) -> None:
-    """B1 桥·免费刷发放两形态一锁(参数化并一;2026-09-21 Field 化:免费
+    """B1 桥·免费刷发放两形态一测试(参数化并一;2026-09-21 Field 化:免费
     次数升格容器字段 ``gs.free_refresh_left``,两桥 write_logic 同格登记,
     None 基 = 0 起算):
     - burst:登记时点把 payload.free_refresh_burst 一次性累加进 Field
       (固定理财即时段=2 活载体);零额度 payload(免战牌)= no-op 零行。
-      「一次性」由调用点唯一性承载(登记挂点,接线锁辖),函数本体不加
+      「一次性」由调用点唯一性承载(登记挂点,接线测试辖),函数本体不加
       去重;
     - per_node:节点边界一次,把在场条目声明的每节点额度累加进 Field
       (双手狸 free_refresh_on_node_enter=2 活载体);同节点重复挂点采样
@@ -972,7 +972,7 @@ def test_effect_refresh_balance_grant_forms(case: str) -> None:
 
 
 def test_gas_station_pick_node_grant_matches_official_text() -> None:
-    """拿卡登记期核查锁·加油站(a 组,行为结论单一源 =
+    """拿卡登记期核查测试·加油站(a 组,行为结论单一源 =
     docs/game/currency_war/research/per_node_pick_node_grant.md):官方文
     「现在及每次进入新节点时获得1次免费刷新」——拿卡当节点即享:
     - 本节点边界推进先于拿卡(终结动作上报时序),在册前零发放;
@@ -997,7 +997,7 @@ def test_gas_station_pick_node_grant_matches_official_text() -> None:
 
 
 def test_per_node_family_without_now_clause_no_pick_grant() -> None:
-    """拿卡登记期核查锁·(b) 组(结论单一源 =
+    """拿卡登记期核查测试·(b) 组(结论单一源 =
     docs/game/currency_war/research/per_node_pick_node_grant.md):官方文无
     「现在/立刻」立即腿的三张(搜打撤/双手狸开键盘!/本金充裕+)payload
     不得携带登记期 burst 额度——拿卡当节点不发放,首发放次节点起。"""
@@ -1102,12 +1102,12 @@ def test_on_buy_bumps_buy_key_by_k() -> None:
     assert inv.counter('201201', CounterKey.BUY) == 4, '缺省 k=1'
 
 
-# ============================================================ 挂点接线锁(缓交)
+# ============================================================ 挂点接线测试(缓交)
 # 原 test_effect_hooks_wired_at_production_sites(§5.1 四挂点+B1 桥两采样点
 # 字符串在场断言)本批不收录:分诊=修复需 import 在飞互斥面符号
 # (cw_screen_shop 的执行落地 bump、cw_loop 的节点 tick),且本体为
-# 源码扫描形态(AGENTS §10.4.4 禁)。挂点接线的行为锁待在飞批落地后按
-# 行为锁形态重写,台账见 .debug/progress//reports/
+# 源码扫描形态(AGENTS §10.4.4 禁)。挂点接线的行为测试待在飞批落地后按
+# 行为测试形态重写,台账见 .debug/progress//reports/
 # 分诊报告(易失)。
 
 
@@ -1169,13 +1169,13 @@ def test_synthesis_shop_empty_keeps_payload_in_recognition_domain() -> None:
 
 # ============================================================ §8.7 批次四
 # 退役 + relay 空值闸(原独立批次文件按主题文件纪律归并入本文件;断言体
-# 零语义改动)。锁面 = §8.7 批次四:
+# 零语义改动)。测试面 = §8.7 批次四:
 # - relay 会话侧值已确立闸(§2.1:会话载体默认空值 ''/[] 是「未知」非
-#   「已知事实」,禁中继成正式值;字符串非空/列表非空才中继)——单元锁 +
-#   恢复局场景端到端锁(新 session 空默认不落 GameState、真值后到可落);
-#   端到端两锁复用上方观察流域的 _feed_ctx/_patch_clean_readers(镜像字段
+#   「已知事实」,禁中继成正式值;字符串非空/列表非空才中继)——单元测试 +
+#   恢复局场景端到端测试(新 session 空默认不落 GameState、真值后到可落);
+#   端到端两个测试复用上方观察流域的 _feed_ctx/_patch_clean_readers(镜像字段
 #   中继走 feed 尾部公共段,reader 读值与本组断言面无关);
-# - 退役载体零残留(AST 级静态锁,标识符面):已退役符号全仓零命中 +
+# - 退役载体零残留(AST 级静态测试,标识符面):已退役符号全仓零命中 +
 #   记录面(kernel/cw_game_state.py)零 last_state 标识符命中。
 # payload 域三域口径的对齐断言在本文件上方(test_leave_screen_payload_only
 # 负断言辖 settlement),本节不重复。
@@ -1191,7 +1191,7 @@ _MIRROR_FIELDS = ('active_strategies', 'active_env', 'plane_bosses',
 
 
 def test_relay_unit_gate_truth_table() -> None:
-    """§2.1 relay 空值闸单元锁(表驱动并一;合并原
+    """§2.1 relay 空值闸单元测试(表驱动并一;合并原
     test_relay_rejects_session_empty_defaults /
     test_relay_gate_scope_is_empty_string_and_containers_only /
     test_relay_empty_refusal_does_not_block_late_truth;断言腿逐条保留):
@@ -1254,7 +1254,7 @@ def test_relay_unit_gate_truth_table() -> None:
 
 def test_restore_session_empty_refused_then_late_truth_lands(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """§2.1 恢复局场景端到端一锁(两阶段并一;合并原
+    """§2.1 恢复局场景端到端一测试(两阶段并一;合并原
     test_restore_session_empty_mirrors_not_relayed /
     test_restore_session_late_truth_relay_lands,断言腿逐条保留):
 
@@ -1329,9 +1329,9 @@ def test_restore_session_empty_refused_then_late_truth_lands(
 
 # ==================== 容器视图转换/合成口/ShopCard 映射(自 w5_passthrough 归并) ====================
 
-# 旧槽表换算族的席位转换锁随换形层退役删除:被测换形口不复存在,
+# 旧槽表换算族的席位转换测试随换形层退役删除:被测换形口不复存在,
 # 阵营派生消费面走注册表单一源(char_first_faction,faction 三类口径
-# 锁另辖)。ShopCard 映射单一源往返腿保留(test_shop_card_mapping_roundtrip)。
+# 测试另辖)。ShopCard 映射单一源往返腿保留(test_shop_card_mapping_roundtrip)。
 def _mk_legacy_card(x: int, name: str, *, cost: int = 1, star: int = 1,
                     faction: str = '仙舟',
                     cost_source: str = 'badge',
@@ -1365,11 +1365,11 @@ def test_shop_card_mapping_roundtrip() -> None:
 # §3.4.5 四事件屏 chosen 记录面
 
 def test_refresh_execution_paid_and_free_frame_gates() -> None:
-    """§3.3.6-8 刷新执行计数主锁(三腿一锁):①付费刷新 = paid+1 ∧
+    """§3.3.6-8 刷新执行计数主测试(三腿一测试):①付费刷新 = paid+1 ∧
     total+1;②免费帧闸 = 免费帧不进付费累计(长线利好触发计数载体禁混入
     免费刷)∧ total 照计;③免费余额下限 0(扣减在 Field,由上报函数承载
     ——2026-09-21 Field 化:免费次数升格容器字段 ``gs.free_refresh_left``,
-    账本 ``record_refresh`` 只留 paid/total 累计;Field 下限 0 锁 = 上报
+    账本 ``record_refresh`` 只留 paid/total 累计;Field 下限 0 校验 = 上报
     函数扣减腿,见 test_shop_projection_logic 刷新 Field 段)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.effects.record_refresh(free=False)
@@ -1385,12 +1385,12 @@ def test_refresh_execution_paid_and_free_frame_gates() -> None:
 
 
 def test_settlement_cover_writes_truth_group() -> None:
-    """§3.5.1 结算覆盖写端四形态一锁:①胜局 = observation 真值组(hp/
+    """§3.5.1 结算覆盖写端四形态一测试:①胜局 = observation 真值组(hp/
     streak 带方向/gold·level·xp 仅胜局)+ settlement 结构同步落;
     ②败局页无收入面板(gold/level/xp 缺席不写),hp/streak 真值照覆;
     ③hp 失读(结算页 OCR miss)不写(不可信帧不写,§2.2 写入闸),不清
     既有正式值;④progress_delta 带符号真值落 settlement 结构(胜局正/
-    败局负;battle_wait 调用点传参为接线半,本锁辖函数半)。"""
+    败局负;battle_wait 调用点传参为接线半,本测试辖函数半)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     apply_settlement_cover(gs, hp_after=76, streak_after=4,
                            killed=True, gold=23, level=6, xp=(3, 10))
@@ -1463,7 +1463,7 @@ def test_streak_miss_semantics_parse_and_observation_half() -> None:
     - 解析腿(§8.8):失读 → None(与 read_hp 100 假值同型消除);
       '连胜×0' = 真 0(方向真值,fixture 核实 2026-08-11),两者分写;
     - 消费腿(失读守卫):结算带符号真值由 apply_settlement_cover
-      直写 gs.streak(见上方结算覆盖锁)——失读跳过语义由覆盖写端
+      直写 gs.streak(见上方结算覆盖测试)——失读跳过语义由覆盖写端
       None 守卫承载(fields.md §3.2.12/§3.5.1)。"""
     from sr_od.application.currency_war.obs.cw_settlement_obs import (
         parse_streak,
@@ -1601,7 +1601,7 @@ def _chosen_rows() -> dict:
 
 @pytest.mark.parametrize('case_id', list(_chosen_rows()))
 def test_chosen_record_face_true_pick_only(case_id: str) -> None:
-    """四事件屏 chosen_* 记录面真值表一锁(§3.4.5 余屏写端;三案表驱动
+    """四事件屏 chosen_* 记录面真值表一测试(§3.4.5 余屏写端;三案表驱动
     并一):
 
     - 真选写:值 = 原名口径(遭遇 = (难度档, 奖励文本) / 专家 = 卡羁绊
@@ -1609,7 +1609,7 @@ def test_chosen_record_face_true_pick_only(case_id: str) -> None:
     - fallback(无会话/候选未读到/越界/羁绊缺失/选中槽文本空)不写;
       专家「现金为王」兜底不写——该事实由 ConfirmExpertCash +4 金到账
       登记通道承载,照旧不动;真选守卫照 chosen_tome 式。
-    (写端接线在位/落地验真后写的调用时点面归 review 与代码规范;本锁
+    (写端接线在位/落地验真后写的调用时点面归 review 与代码规范;本测试
     辖记录面行为半。)"""
     from sr_od.application.currency_war.strategies.impl.cw_strategy import (
         StrategySession,
@@ -1870,8 +1870,8 @@ def test_boss_briefing_report_types_hist_node() -> None:
 
 
 def test_board_next_tier_concrete_shape() -> None:
-    """坐标系纯函数:棋盘阵营升档 = 同阵营 ≥2 才有下一档(具体形直锁;
-    节点序位键原语锁 = test_node_pos_primitive)。"""
+    """坐标系纯函数:棋盘阵营升档 = 同阵营 ≥2 才有下一档(具体形直测;
+    节点序位键原语测试 = test_node_pos_primitive)。"""
     assert board_next_tier_of({'仙舟': 2, '联盟': 1}) == {'仙舟': 3}
     assert board_next_tier_of({}) == {}
 
@@ -2064,14 +2064,14 @@ def test_carry_narrows_logic_rand_keeps_legacy() -> None:
 
 
 def _bench_view1(name: str, star: int) -> BenchView:
-    """单占用槽视图(槽 1)构造(P6 直产读载体,同 tracked 观察态锁)。"""
+    """单占用槽视图(槽 1)构造(P6 直产读载体,同 tracked 观察态测试)。"""
     slots = [BenchSlot(kind='empty')] * 8
     return BenchView(slots=[BenchSlot(
         kind='unit', unit=Unit(char_id=name, star=star))] + slots)
 
 
 # ============================================================ deployed 视图桥 + 快照迁移
-# (DeployedView 容器合并落地锁:快照旧档迁移等价 / 视图 ↔ 定长工作表
+# (DeployedView 容器合并落地测试:快照旧档迁移等价 / 视图 ↔ 定长工作表
 #  两桥往返 / 紧缩行序顺延 / 容量继承 / 信息位退役)
 
 _M31_SIG_OBS = ChannelSig(family='obs', actor='cw4_seed', mode='synthesized')
@@ -2096,7 +2096,7 @@ def _m31_gs_with(view: DeployedView,
 
 
 def test_restore_migrates_schema1_rows_snapshot_by_slot_bits() -> None:
-    """旧档迁移主锁:schema 1 行域档 → deployed 视图按 slot 信息位
+    """旧档迁移主测试:schema 1 行域档 → deployed 视图按 slot 信息位
     等价落位(前排槽 4 → front_slots[3];后排槽 1 → back_slots[0]);
     行键消费后摘除,restore 幂等可重放。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
@@ -2207,7 +2207,7 @@ def test_deployed_field_replacement_inherits_capacity() -> None:
 
 
 def test_unit_has_no_slot_information_bit() -> None:
-    """信息位退役直锁:Unit 数据类无 slot 字段(位置 = 载体下标纯派生;
+    """信息位退役直测:Unit 数据类无 slot 字段(位置 = 载体下标纯派生;
     快照序列化同样不出现该键)。"""
     assert not any(f.name == 'slot' for f in dataclasses.fields(Unit))
     gs = _m31_gs_with(DeployedView(front_slots=[_m31_u('甲'), None, None, None],

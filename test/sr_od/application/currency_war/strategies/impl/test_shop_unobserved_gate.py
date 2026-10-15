@@ -1,4 +1,4 @@
-"""tracked 观察状态行为锁(用户裁定「观察状态落 game state 字段,
+"""tracked 观察状态行为测试(用户裁定「观察状态落 game state 字段,
 策略消费只走 game state」)。
 
 设计:容器字段 ``GameState.tracked_account_observed``(三态:None=从未写
@@ -10,15 +10,15 @@
 店内零原地重建。mandate_v1._tracking_view(tracking 优先 + snapshot 静默
 回退)已随三次修正删除——策略禁读执行侧簿记,消费口只有 game state
 (空账混同根因由此类型/架构层封死)。原读屏重建出口/单向
-阀门与恢复路由锁随守卫退役同批移除;守卫本体 guard_expected_vs_
+阀门与恢复路由测试随守卫退役同批移除;守卫本体 guard_expected_vs_
 tracked 亦退役:对账唯一合法时点 = 观察边界 kernel cw_reconcile,规则
 文本 = flow/screen_op.md §2.3/§4。
 
-锁的七件事:
+测试的七件事:
 1. 未观察门:容器观察态 False → decide_shop_action 返回 CwActionCloseShopParam,决策
    核不可达(零咨询);
 2. 缺省可信/已观察放行:字段从未写(None,缺省)与已锚定(True)均放行
-   决策核——空表/未写不能冒充未观察(空账混同反向锁);
+   决策核——空表/未写不能冒充未观察(空账混同反向测试);
 3. 锚定置位:reconcile_tracking bench 侧屏幕真值写回成功 → True;
    失败形态(deployed-only 写回/双空读守卫)不置位 = 保持未观察;
 4. 接管置位:cw_loop._invalidate_tracked_on_takeover → False(接管检测确认点);
@@ -95,7 +95,7 @@ def _mark_unobserved(session) -> None:
                    sig=_SIG)
 
 
-# ===== 锁1/锁2 策略门单元(flow.decide_shop_action)=====
+# ===== 测试1/测试2 策略门单元(flow.decide_shop_action)=====
 
 def _mandate_strategy(monkeypatch, session):
     """生产策略实例(mandate_v1.bridge;decide_shop_action 不被覆写,
@@ -107,7 +107,7 @@ def _mandate_strategy(monkeypatch, session):
     strategy = MandateV1Strategy(
         game_state_of(session),
         SimpleNamespace(strategy_seed=None))   # 终态契约:构造注入
-    # 门后内务(方向帧消费/镜像遥测)与本锁无关,桩成 no-op 保单测面窄。
+    # 门后内务(方向帧消费/镜像遥测)与本测试无关,桩成 no-op 保单测面窄。
     monkeypatch.setattr(strategy, '_consume_shop_direction_frame',
                         lambda: None)
     monkeypatch.setattr(strategy, 'write_shop_mirrors',
@@ -117,7 +117,7 @@ def _mandate_strategy(monkeypatch, session):
 
 def test_unobserved_gate_returns_close_shop_without_consulting_core(
         monkeypatch):
-    """锁1 未观察门:观察态 False → 返回 CwActionCloseShopParam,决策核不可达。"""
+    """测试1 未观察门:观察态 False → 返回 CwActionCloseShopParam,决策核不可达。"""
     from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
         shop as mandate_shop,
     )
@@ -138,8 +138,8 @@ def test_unobserved_gate_returns_close_shop_without_consulting_core(
 
 
 def test_default_and_anchored_states_pass_gate_to_core(monkeypatch):
-    """锁2 缺省可信/已锚定放行:字段从未写(None,缺省)与 True 均放行
-    决策核——席面观察态不能由「空账形态」推断(混同反向锁)。"""
+    """测试2 缺省可信/已锚定放行:字段从未写(None,缺省)与 True 均放行
+    决策核——席面观察态不能由「空账形态」推断(混同反向测试)。"""
     from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
         shop as mandate_shop,
     )
@@ -169,7 +169,7 @@ def test_default_and_anchored_states_pass_gate_to_core(monkeypatch):
     assert act is _sentinel
 
 
-# ===== 锁3 锚定置位(kernel reconcile_tracking 对账成功点)=====
+# ===== 测试3 锚定置位(kernel reconcile_tracking 对账成功点)=====
 
 def test_reconcile_bench_writeback_marks_observed():
     """bench 侧屏幕真值对账成功 → 容器观察锚 True(唯一生产置位点;
@@ -232,7 +232,7 @@ def _reconcile(session, bench, deployed) -> tuple:
                               source='test')
 
 
-# ===== 锁4 接管置位(cw_loop 恢复检测确认点)=====
+# ===== 测试4 接管置位(cw_loop 恢复检测确认点)=====
 
 def test_takeover_marks_tracked_unobserved():
     """接管检测确认点 → 容器观察态 False(显式失效事件写点)。恢复局旗标
@@ -248,11 +248,11 @@ def test_takeover_marks_tracked_unobserved():
     assert game_state_of(session).tracked_account_observed.value is False
 
 
-# ===== 锁5/锁6/锁7 访问级流锁(商店画面 op CwActionCloseShopParam 出口)=====
+# ===== 测试5/测试6/测试7 访问级流测试(商店画面 op CwActionCloseShopParam 出口)=====
 
 def _run_visit_unobserved_host(monkeypatch, tmp_path, counters, *,
                                unobserved: bool):
-    """未观察跳过流锁的离线宿主(替身面沿恢复路由锁宿主同式)。
+    """未观察跳过流测试的离线宿主(替身面沿恢复路由测试宿主同式)。
 
     构造 = 容器在屏空牌面 + 观察态按参;策略 = 生产 MandateV1Strategy
     (真实门路径:未观察 → CwActionCloseShopParam;观察态用例传 Idle 关店策略)。
@@ -373,7 +373,7 @@ def _run_visit_unobserved_host(monkeypatch, tmp_path, counters, *,
 
 
 def test_unobserved_visit_skips_with_defect_and_streak(monkeypatch, tmp_path):
-    """锁5 未观察访问跳过:策略关店 → 缺陷分键显影 + 连续计数 +1,visit
+    """测试5 未观察访问跳过:策略关店 → 缺陷分键显影 + 连续计数 +1,visit
     以 (None, ledger) 正常收工(交回外循环重判,跳过非失败)。"""
     rows = _spy_defects(monkeypatch)
     counters: dict = {}
@@ -388,7 +388,7 @@ def test_unobserved_visit_skips_with_defect_and_streak(monkeypatch, tmp_path):
 
 
 def test_unobserved_skip_streak_limit_stops(monkeypatch, tmp_path):
-    """锁6 连续跳过熔断:计数达上限 → (round_fail, None) 显式停
+    """测试6 连续跳过熔断:计数达上限 → (round_fail, None) 显式停
     (锚定失败出口,禁无限静默重试)。"""
     rows = _spy_defects(monkeypatch)
     counters: dict = {'shop_skipped_unobserved_streak': 1}   # 已跳过一次
@@ -404,7 +404,7 @@ def test_unobserved_skip_streak_limit_stops(monkeypatch, tmp_path):
 
 
 def test_observed_visit_resets_streak_and_no_defect(monkeypatch, tmp_path):
-    """锁7 观察态正常访问完整收工:复位连续计数,关店零跳过感知零台账行
+    """测试7 观察态正常访问完整收工:复位连续计数,关店零跳过感知零台账行
     (复位点 = 访问完成出口,K=2 数连续因未观察跳过)。"""
     rows = _spy_defects(monkeypatch)
     counters: dict = {'shop_skipped_unobserved_streak': 1}   # 前次残留

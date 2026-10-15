@@ -1,4 +1,4 @@
-"""CW 遥测按局档案域锁面(状态流水装配收口 + 跨档去重 + 重装配保真 +
+"""CW 遥测按局档案域测试面(状态流水装配收口 + 跨档去重 + 重装配保真 +
 局终行写口/判定/下游识别)。
 
 四节归并自原四个主题文件(测试函数名全量保留,原文件已删):
@@ -97,7 +97,7 @@ def test_ensure_assembly_installs_at_default_root_when_absent(
 
 def test_game_state_establish_wires_assembly() -> None:
     """正主单例建立路径接线:game_state_of 局容器建立注入 run_id_provider
-    即装配(重定向原「run 领取单点接线」锁;精化令 2026-09-15:触发
+    即装配(重定向原「run 领取单点接线」测试;精化令 2026-09-15:触发
     只钉该建立点,GameState 构造器零装配逻辑;行为等价 = 未初始化容器首写
     前装配已发生)。"""
     reset_state_telemetry()
@@ -222,7 +222,7 @@ def _seed_wrong_archive(md: Path, gid: str, seg_rids: list[str],
 def test_assemble_converges_double_counted_segment(tmp_path: Path):
     """装配收尾守卫收敛双计段:正确归属档案持有、错误档案摘除、核验归零;
     错误档案按当前口径整体重装配收敛(段集摘除续段,重装配路径不产生
-    剪枝记录——「不产剪枝记录」腿原属 rebuild 锁,并入)。"""
+    剪枝记录——「不产剪枝记录」腿原属 rebuild 测试,并入)。"""
     rd = tmp_path / 'live'
     md = ma.matches_dir(rd)
     b_rows = [_row(_R_B, '2026-09-08T12:00:00', 2, 6),
@@ -332,7 +332,7 @@ def _outcome(rid: str, ts: str, plane: int, rnd: int, hp_after: int) -> dict:
 
 
 def _journal_row(rid: str, ts: str, plane: int, rnd: int) -> dict:
-    """最小 journal write 行(段首帧判据消费面,与 dedup 锁面同型)。"""
+    """最小 journal write 行(段首帧判据消费面,与 dedup 测试面同型)。"""
     return {'v': 1, 'ts': ts, 'run_id': rid, 'row': 'write', 'field': 'hp',
             'after': 48,
             'state': {'values': {'node': {'plane': plane, 'round_num': rnd,
@@ -583,13 +583,13 @@ def _final_rows() -> list[dict]:
 #  判读/档案消费面无人读 gs_schema['match_final'] 键——write 系测试红时
 #  同故障,子集断言不留。)
 # (收口整删)原 test_match_final_closed_vocab「终局类型词表封闭集」:
-#  集外炸错腿并入下方原子行锁(常量字面断言不留);原
-#  test_match_final_version_stamps「版本戳」:载荷戳腿并入原子行锁,
-#  解析器等值对拍半(kernel 复刻 vs telemetry 单一源双实现等值)随锁退役
+#  集外炸错腿并入下方原子行测试(常量字面断言不留);原
+#  test_match_final_version_stamps「版本戳」:载荷戳腿并入原子行测试,
+#  解析器等值对拍半(kernel 复刻 vs telemetry 单一源双实现等值)随该测试退役
 #  ——src 侧 cw_game_state.py 常量段注释仍指针本文件对拍,收口申报见报告。
 # 原 test_write_match_final_default_duration_segment_level「duration_s
 # 缺省 = 段级自算」删:缺省时长 = time.monotonic 差值 ≥0,语言自带保证面,
-# 显式传值直通半由原子行锁 duration_s=1234.5 断言承重。
+# 显式传值直通半由原子行测试 duration_s=1234.5 断言承重。
 
 
 def test_write_match_final_one_atomic_row(journal, run_id,
@@ -597,8 +597,8 @@ def test_write_match_final_one_atomic_row(journal, run_id,
     """同版本原子:一次调用恰一行,载荷(类型/版本 id/快照/时长/版本戳)
     一次装配(行头 v 与 at_version 恒等);渠道签名 = logic_hook/MatchClose;
     终局类型词表封闭(集外显式炸错,禁自由串);版本戳取模块级常量填充
-    (monkeypatch 常量即见即锁,常量与取值单一源 telemetry/version_stamp
-    的等值对拍面随退役锁申报)。红 = 拆行/签名漂移/集外放行/戳断供。"""
+    (monkeypatch 常量即见即断言,常量与取值单一源 telemetry/version_stamp
+    的等值对拍面随退役测试申报)。红 = 拆行/签名漂移/集外放行/戳断供。"""
     monkeypatch.setattr(gs_mod, '_CODE_COMMIT', 't244commit')
     monkeypatch.setattr(gs_mod, '_REGISTRY_FINGERPRINT', 't244finger')
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
@@ -658,7 +658,7 @@ def test_abnormal_backfill_note_recovered_version_allocated(journal, run_id) -> 
 def test_match_final_listener_fires_on_row_only(journal, run_id) -> None:
     """复盘触发器挂点(武装+局内态):监听缺省关;写口受理成功即触发
     (幂等跳过不触发);事件携带 run_id/终局类型/版本;监听异常不毒化终局
-    流转。未武装/局外两态的触发真值 = 下一把锁。"""
+    流转。未武装/局外两态的触发真值 = 下一个测试。"""
     fired: list[dict] = []
     set_match_final_listener(fired.append)
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
@@ -680,7 +680,7 @@ def test_match_final_listener_fires_on_row_only(journal, run_id) -> None:
 
 
 def test_match_final_listener_fires_unarmed_and_offmatch(tmp_path) -> None:
-    """触发真值两态(申报勘误钉锁):未武装(无 sink)/局外(供给槽返空)
+    """触发真值两态(申报勘误钉住的测试):未武装(无 sink)/局外(供给槽返空)
     行均不落而监听照触发,事件 run_id=''——消费方(复盘触发接线)按此
     自滤,禁按「落行才触发」旧申报消费。"""
     fired: list[dict] = []
@@ -709,7 +709,7 @@ def test_match_final_listener_fires_unarmed_and_offmatch(tmp_path) -> None:
 # (收口整删)原 test_obs_event_vocab_closed_set「obs_event 事件词表封闭
 #  集(硬约束 2)」删:常量字面断言 + 炸错腿 = 事实源在 cw_vocab 词表定义,
 #  集外炸错由 pytest.raises 形态与封闭集测试同构面承重不成立——如实申报:
-#  note_obs_event 集外炸错行为现无独立锁,词表漂移归 kernel 既有锁与
+#  note_obs_event 集外炸错行为现无独立测试,词表漂移归 kernel 既有测试与
 #  review 面(覆盖缺口随收口申报)。
 
 
@@ -823,14 +823,14 @@ def test_extract_match_final_rows_recognition() -> None:
 
 
 # (收口整删)原 test_view_match_final_reading「判读 CLI 读面(view_
-#  match_final 显影/无行提示)」删:CLI 输出文案锁(「type=」「补写」等
+#  match_final 显影/无行提示)」删:CLI 输出文案测试(「type=」「补写」等
 #  字样断言)= 展示层快照,红时答不出哪个消费行为坏了;判读读数面由
-#  match_final_rows 行取数(原 view 测试内同函数断言)与下游档案锁承重。
+#  match_final_rows 行取数(原 view 测试内同函数断言)与下游档案测试承重。
 
 
 def test_build_archive_endgame_match_final(tmp_path, monkeypatch) -> None:
     """档案端到端(假环境):新账局终行在档 → endgame.match_final 装配;
-    无局终行 → None 键(旧档案/影子未开形态)。加法键零 bump 申报锁。"""
+    无局终行 → None 键(旧档案/影子未开形态)。加法键零 bump 申报测试。"""
     rd = tmp_path / 'replay'
     (rd / 'state').mkdir(parents=True)
     for name in ('decisions.jsonl', 'outcomes.jsonl', 'runs.jsonl'):
@@ -853,7 +853,7 @@ def test_build_archive_endgame_match_final(tmp_path, monkeypatch) -> None:
 
 
 def test_match_final_payload_carries_cw4_aggregate(journal, run_id) -> None:
-    """载荷聚合锁:write_match_final(cw4_counters=…) → 载荷原样落账;
+    """载荷聚合测试:write_match_final(cw4_counters=…) → 载荷原样落账;
     写口浅拷贝(传入容器后写不串账)。None = 无策略载体诚实缺省;聚合键
     进 journal 局终行 after 载荷,行行自足可读(判读直接读行,零重放;
     原 cw4_aggregate_in_journal_row 行可见性腿并入)。"""

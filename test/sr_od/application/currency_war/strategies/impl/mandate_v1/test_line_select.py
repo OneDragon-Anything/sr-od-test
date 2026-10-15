@@ -1,4 +1,4 @@
-"""终局线选择(候选-锁定制)内核锁——迭代
+"""终局线选择(候选-锁定制)内核测试——迭代
 2026-10-12-prep-shop-workflow-redesign 批 3.7;含选线决策族两翼
 (过渡框架判定 + session 作用域载体)。
 
@@ -313,7 +313,7 @@ class TestRefreshDrivesLock:
         assert st.v3_intention.locked_comp == '黄泉减益'
 
 
-# ===== review-37 修复锁(P1 过期配方读口 / R2 滑动基线)=====
+# ===== review-37 修复测试(P1 过期配方读口 / R2 滑动基线)=====
 
 
 class TestP2WindowRecipeRetirement:
@@ -562,7 +562,7 @@ def test_transition_score_tiers_and_prehoard() -> None:
 
     ⚠️ 分叉待裁:通用件在预囤模式(framework='')仍得通用 +0.15
     (elif 链「fw == '通用'」臂不依赖 framework 是否为空),而函数体
-    尾注写「预囤:base 保持档位分」——本锁按现行实现钉 1.15;若裁决
+    尾注写「预囤:base 保持档位分」——本测试按现行实现钉 1.15;若裁决
     预囤应保持纯档位分,改实现同时改本断言。
     """
     assert transition_score('藿藿', '仙舟', framework='') == pytest.approx(1.0)
@@ -690,7 +690,7 @@ class TestBoundaryKeepsDirectionState:
         跨节点保留——节点边界不清方向,契约 C(键面归一:锁定线槽 =
         target_comp);候选快照键边界亦不辖(锁定写入时已被清空,手工
         哨兵 = 模拟外部写入后边界不复位);签名置失效(第 4 项)与之
-        同帧对照,锁分界本身。"""
+        同帧对照,校验分界本身。"""
         sess, gs = _sess_with_node(1, 2)
         st = state_of(gs)
         comp = cw4_comp()
@@ -764,9 +764,9 @@ class TestLineRefreshSkeleton:
         assert st.line_candidates != ('sentinel',)
 
     def test_recompute_respects_lock_slot_and_view(self):
-        """键面归一锁:target_comp = 锁定线槽(终态单写者 =
+        """键面归一测试:target_comp = 锁定线槽(终态单写者 =
         write_line_lock)——锁定态下重算不覆写配方键/候选停算;未锁定
-        视图 = 空名单 + 未锁定旗标(候选快照另由真内核产出,主题锁 =
+        视图 = 空名单 + 未锁定旗标(候选快照另由真内核产出,主题测试 =
         本文件判据本体节)。"""
         sess = StrategySession()
         gs = cw4_gs(sess, plane=1, round_num=2, node='prep')
@@ -875,9 +875,9 @@ class TestShopMarksStorage:
 class TestEntryWiring:
 
     def test_prep_entry_runs_boundary(self, monkeypatch: pytest.MonkeyPatch):
-        """备战入口接线锁:decide_prep_screen 到达任何决策前执行边界
+        """备战入口接线测试:decide_prep_screen 到达任何决策前执行边界
         重置(armed 短路帧同样先过边界——接线位 = 入口最前;armed
-        判定核桩化为单键替身,真 armed 判据不在本锁面)。"""
+        判定核桩化为单键替身,真 armed 判据不在本测试面)。"""
         import sr_od.application.currency_war.kernel.cw_launch_admission as admit_mod
         from sr_od.application.currency_war.kernel.cw_vocab import CwAction
 
@@ -895,7 +895,7 @@ class TestEntryWiring:
         assert st.shop_handled is None    # 备战入口已执行边界重置
 
     def test_shop_entry_runs_boundary(self):
-        """商店入口接线锁:decide_shop_action 单动作核入口先过边界
+        """商店入口接线测试:decide_shop_action 单动作核入口先过边界
         (生产单动作循环与 decide_shop_screen 驱动器共用本口)。"""
         from test.sr_od.application.currency_war._cw_helpers import DecideCfg
 
@@ -910,7 +910,7 @@ class TestEntryWiring:
         st.shop_handled = (1, 1)
         strat.decide_shop_action()
         # 边界已执行:判重键推进到当前节点(重置后若会话零动作收工,
-        # 标记由会话收工位重写——此处锁边界执行本身,不锁收工位零标记)。
+        # 标记由会话收工位重写——此处校验边界执行本身,不断言收工位零标记)。
         assert st.node_boundary_last_pos == (1, 2)
         assert st.shop_handled in (None, (1, 2))
 

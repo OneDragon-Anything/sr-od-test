@@ -1,10 +1,10 @@
-"""CW 动作词表与分派注册表锁面。
+"""CW 动作词表与分派注册表测试面。
 
 单一源:备战词表与坐标系裁定 = kernel/cw_vocab.py 模块头(现役声明与
 全类居所);动作 → op 分派 = operations/cw_op/cw_action_registry.py
 (单一表一键一行;域依赖经 env 结构化传入,op-layer.md §1.2)。
 
-锁面四组(全部运行时行为锁,源码扫描测试禁止,AGENTS.md §10.4):
+测试面四组(全部运行时行为测试,源码扫描测试禁止,AGENTS.md §10.4):
 1. **键粒度**(幂等键消费 = cw_screen_prep 重派/对账去重):行为参数
    入键(变化 → 键变 = 幂等键分裂);发射臂路由标签不入键;容器下标
    字段构成键面;
@@ -115,7 +115,7 @@ from sr_od.application.currency_war.prep_actions import (
 )
 from sr_od.operations.sr_operation import SrOperation
 
-# 终态契约动作类型的注册豁免集(终态契约 landing 锁规格:白名单成员
+# 终态契约动作类型的注册豁免集(终态契约 landing 测试规格:白名单成员
 # 要么有注册行、要么在豁免集——无 op 行例外申报):三刷新动作
 # (handler 自管点击链;attack4 M6 裁定 (a):同型豁免)。
 # (HoldFrame 曾在豁免集,随 2026-09-20 用户裁定收编进
@@ -136,7 +136,7 @@ def test_action_key_faces_pinned_per_class():
     - 行为参数入键(变化 → 键变 = 幂等键分裂);
     - 发射臂路由标签不入键(同槽不同 tag = 同一动作实例);
     - 容器下标字段(bench_idx/deployed_idx)构成键面(替换物理槽位字段)。
-    (原「键串 = 归一前族A 形态逐字」腿降规格:逐字 repr 锁的是 Python
+    (原「键串 = 归一前族A 形态逐字」腿降规格:逐字 repr 校验的是 Python
     repr 格式,过度规格,消费面只需键稳定性与粒度。)"""
     # CwActionSellBenchParam:行为参数分裂幂等键;route_tag(发射臂路由标签)不入键
     assert action_key(CwActionSellBenchParam(bench_idx=3)) != \
@@ -199,7 +199,7 @@ def test_prep_terminal_set_matches_registry_terminal_attrs():
     ⟺ 注册表 op 类 terminal=True,逐一等价;备战机械动作全部非终结。
     terminal_wait 同源比对:OpenBoxOp/OpenBookcardOp =
     ``_OVERLAY_ANIM_WAIT_S``(落地交回等待常量对象,漂移即红,禁消费点
-    私表);StartBattleOp 交回节奏见其类注(现状等价锁 = 本终结集锁)。"""
+    私表);StartBattleOp 交回节奏见其类注(现状等价测试 = 本终结集测试)。"""
     terminal_cases = [
         CwActionStartBattleParam(),
         CwActionOpenShopParam(),
@@ -243,9 +243,9 @@ def test_open_shop_row_is_terminal_carrier_and_execute_loud_fails():
 # ============================================================ 4. 注册完备
 
 def test_registry_covers_unified_vocab_and_pick_types():
-    """注册完备锁(主判据;终态契约 §2.2 收敛单表):统一词表
+    """注册完备测试(主判据;终态契约 §2.2 收敛单表):统一词表
     CW_ACTION_TYPES 单表逐类断言注册表**类级**解析可命中(不构造业务
-    动作实例,不读源码)——未注册 = 锁红;退役 = 删类,元组中不存在即
+    动作实例,不读源码)——未注册 = 测试红;退役 = 删类,元组中不存在即
     天然不可复活(R1)。kernel EVENT_PICK_TYPES = 纯函数返回载体,策略
     产出词表化后不再进注册表面(§2.2)。
 
@@ -267,7 +267,7 @@ def test_registry_covers_unified_vocab_and_pick_types():
 def test_pick_rows_resolve_class_and_instance_consistently():
     """pick 行收编面(终态契约 §2.2 换键名:策略器产出 = 词表子类型;
     pick-op-unify 批起分批扩至全 12 类):类级解析与实例级工厂解析同
-    op 类(行序 is-a 语义一致;实例级仅本锁构造,注册完备锁本体不
+    op 类(行序 is-a 语义一致;实例级仅本测试构造,注册完备测试本体不
     构造)。"""
     rows = [
         (CwActionPickEncounterParam, CwActionPickEncounterOp),

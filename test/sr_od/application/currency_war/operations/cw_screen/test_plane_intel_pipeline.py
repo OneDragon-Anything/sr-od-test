@@ -1,25 +1,25 @@
-"""接管链整体切换行为锁(接管域)。
+"""接管链整体切换行为测试(接管域)。
 
-锁面(设计依据 = §2.2/§2.3):
+测试面(设计依据 = §2.2/§2.3):
 
-1. **位面 op 6 node 流程锁**:识别位面1 → 点开位面2 → 识别位面2 →
+1. **位面 op 6 node 流程测试**:识别位面1 → 点开位面2 → 识别位面2 →
    点开位面3 → 识别位面3 → 上报 全链走通;三张位面卡各点一次 + 每位面
    点 boss 节点(动态定位);采集 op 零关闭动作(开/关转场归编排 op)。
    附属机制挂点随流程验:节点台账 plane_detail 源 + boss 位回填、敌人
    难度参考值逐位面落账(三识别 node 各读、上报节点落账)、词缀效果
    账本登记恰一次。识别域读法(节点条/类型名标签/SIFT/词缀/难度)桩化,
    画面门与点击/写门真跑(fixture 帧 + 真 screen_info area + 真容器)。
-2. **识别失败响亮失败锁**:桩 SIFT 恒未命中 → 识别 node 重试耗尽 →
+2. **识别失败响亮失败测试**:桩 SIFT 恒未命中 → 识别 node 重试耗尽 →
    op fail(状态含 SIFT 未命中);失败零写容器(无 None/占位/降级分支),
    点击有界(重试账收敛,看门狗零触发)。
-3. **node1 入口门锁**:非位面详情屏 = fail + 存证截图,不进重试空转。
-4. **entry 编排锁**:真值跳过门(容器已有位面真值 → 零点击直通成功,
+3. **node1 入口门测试**:非位面详情屏 = fail + 存证截图,不进重试空转。
+4. **entry 编排测试**:真值跳过门(容器已有位面真值 → 零点击直通成功,
    防手动调起白开白关详情屏)/ 画面不合法 fail + 存证 / 备战进详情 →
    委派 → 关闭全链(委派子 op 桩化,编排责任面单测)。
-5. **prep 触发委派锁**:触发谓词 = 容器无位面真值;半开帧(节点条
+5. **prep 触发委派测试**:触发谓词 = 容器无位面真值;半开帧(节点条
    不可读)不委派、等下轮免费重判;委派结果透传(失败 = round_fail
    交外循环失败链,不自旋)。
-6. **点开转移证据锁**:详情条联动判据(节点编号 OCR 位面段 = 目标位面;
+6. **点开转移证据测试**:详情条联动判据(节点编号 OCR 位面段 = 目标位面;
    读不出 = 未联动)。
 
 fixture 帧:screens/货币战争-位面详情/位面详情全屏.png(详情屏判定)、
@@ -153,7 +153,7 @@ def _run_op(test_context, op) -> object:
         reset_running_state(test_context, op)
 
 
-# ==================== 1. 位面 op 6 node 流程锁 ====================
+# ==================== 1. 位面 op 6 node 流程测试 ====================
 
 
 def test_plane_intel_six_node_pipeline_flow(test_context, monkeypatch) -> None:
@@ -210,7 +210,7 @@ def test_plane_intel_six_node_pipeline_flow(test_context, monkeypatch) -> None:
     # 附属机制③:难度参考值逐位面读(三识别 node 各一次)
     assert len(calls['difficulty']) == 3, (
         f'难度参考值应逐位面读 3 次:{calls["difficulty"]}')
-    # 上报写门落容器(§2.3 定死写门经 3.1 端口锁;此处锁全链贯通)
+    # 上报写门落容器(§2.3 定死写门经 3.1 端口测试;此处校验全链贯通)
     gs = game_state_of(sess)
     assert gs.plane_bosses.value == _BOSS_NAMES and gs.plane_bosses.source == 'logic'
     assert gs.enemy_affixes.value == ['灼热轰炸'] and gs.enemy_affixes.source == 'logic'
@@ -227,7 +227,7 @@ def test_plane_intel_six_node_pipeline_flow(test_context, monkeypatch) -> None:
 
 
 def test_plane_intel_sift_miss_fails_loudly(test_context, monkeypatch) -> None:
-    """识别失败响亮失败锁:SIFT 恒未命中 → 识别 node 重试耗尽 → op fail;
+    """识别失败响亮失败测试:SIFT 恒未命中 → 识别 node 重试耗尽 → op fail;
     失败零写容器(无 None/占位/降级),点击有界(重试账收敛)。"""
     if not test_context.has_screen(*_DETAIL_FRAME):
         pytest.skip(f'存档截图缺失:screens/{_DETAIL_FRAME[0]}/{_DETAIL_FRAME[1]}.png')
@@ -306,7 +306,7 @@ def test_plane_intel_select_plane_evidence(test_context, monkeypatch) -> None:
     assert op._plane_no_on_detail_bar('屏') is None, '读不出 → 未联动'
 
 
-# ==================== 4. entry 编排锁 ====================
+# ==================== 4. entry 编排测试 ====================
 
 
 def test_entry_truth_skip_gate_zero_click(test_context, monkeypatch) -> None:
@@ -378,7 +378,7 @@ def test_entry_full_orchestration_open_delegate_close(
     monkeypatch.setattr(cwo, 'read_node_sequence',
                         lambda ctx, screen: [SimpleNamespace(
                             cx=40, cy=30, state='current')])
-    # 委派子 op 桩(编排责任面单测;子 op 管线已单独锁)
+    # 委派子 op 桩(编排责任面单测;子 op 管线已单独测试)
     sub_runs: list = []
 
     class _FakeSub:
@@ -411,7 +411,7 @@ def test_entry_full_orchestration_open_delegate_close(
         f'关闭后应回备战帧(转移证据):phase_idx={ctrl.phase_idx}')
 
 
-# ==================== 5. prep 触发委派锁 ====================
+# ==================== 5. prep 触发委派测试 ====================
 
 
 def _make_prep(test_context, monkeypatch, sess, *, node_bar_readable: bool):

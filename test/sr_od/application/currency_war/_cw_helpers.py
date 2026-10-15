@@ -341,7 +341,7 @@ def cw4_gs(target=None, *, gold: int = 30, gold_unread: bool = False,
     level=3、round_num=2、hp=100(各轴显式传参覆盖;hp 传 None = 不写,
     容器保持诚实缺位)。shop_screen 缺省 'on'(旧 feed 配方:空牌面 =
     在屏空 payload);节点缺席补写 evidence='kind_inherited'。
-    ``node_fill=False`` = 原裸帧合成语义(节点整域不写,M1 投影锁等
+    ``node_fill=False`` = 原裸帧合成语义(节点整域不写,M1 投影测试等
     直合成配方场景用)。域语义全表见 :func:`_seed_write`。"""
     gs = game_state_of(target)
     _seed_write(

@@ -1,33 +1,33 @@
-"""推进型 11 屏骨架内联形态锁 + 武装箱选卡观察上报接线锁(迭代
+"""推进型 11 屏骨架内联形态测试 + 武装箱选卡观察上报接线测试(迭代
  T-6 批)。
 
 背景:11 推进型屏脱离共享骨架(原推进型基类,其骨架语义 = 「入口观察 →
 单次推进 → 重入观察裁决交回」),逐屏内联为「观察 node → 决策动作 node」
 两段直继承 SrOperation;武装箱选卡屏两 node 化并把卡名写点收编至
 ``report_screen_box_pick_obs``(kernel 屏文件,report 函数级契约由
-test_screen_report_ports 锁承重,本文件不重复)。
+test_screen_report_ports 测试承重,本文件不重复)。
 
-锁的语义(测试纪律:只锁新形态的核心约定,先例 = test_screen_two_node_
+测试的语义(测试纪律:只校验新形态的核心约定,先例 = test_screen_two_node_
 family.py):
 
-- **入口门 miss 锁**(表驱动,覆盖全部入口形状):门 miss 未发 =
+- **入口门 miss 测试**(表驱动,覆盖全部入口形状):门 miss 未发 =
   round_fail 交回外循环重判(文案沿用现役),obs 不装载;
-- **观察装载锁**(表驱动全 11 屏):门 hit → obs{on_screen=True, screen}
-  挂实例属性(空决策形态无 report,本锁不涉容器);
-- **重入裁决×旗标组合锁**(默认 area 锚 + 自有 OCR 两形状代表 + 免锚
+- **观察装载测试**(表驱动全 11 屏):门 hit → obs{on_screen=True, screen}
+  挂实例属性(空决策形态无 report,本测试不涉容器);
+- **重入裁决×旗标组合测试**(默认 area 锚 + 自有 OCR 两形状代表 + 免锚
   参数化屏):已发 + 门 miss = 已离开本画面 → success 交回 + 旗标清 +
   推进体零调用;已发/未发 + 门在 = 再推进恰一次 → round_wait 循环
   (不烧节点重试预算);推进体未落地 = round_fail + 旗标不置位;
-- **免锚出口锁**(参数化屏空锚构造):无「已离开」观察信号 → 发出即
+- **免锚出口测试**(参数化屏空锚构造):无「已离开」观察信号 → 发出即
   success(免锚),重入裁决不可达;
-- **武装箱观察上报接线锁**:门 hit + 读数非空 → 观察标准化门 → 容器
+- **武装箱观察上报接线测试**:门 hit + 读数非空 → 观察标准化门 → 容器
   ``box_card_names`` 终值 = 标准名表 + 坐标同门双写
   ``box_card_names_xy``(观察期解点);读数空/门 miss/转换失败 → fail
   交回 + 容器与 obs 均空(report 不调,禁盲值;名字与坐标同进退);
   决策动作 node = 容器外读数决策 → 选卡链派发(env idx-only,target
   停喂)→ 选卡即终结 success;无 match 局外不设早退支(用户裁决
   2026-09-22 全族删门),沿正常链路自然失败;
-- **读数闸放宽锁**(:读数闸上限 ``_CARD_NAME_LEN_MAX``
+- **读数闸放宽测试**(:读数闸上限 ``_CARD_NAME_LEN_MAX``
   派生自装备注册表最长名(防手抄常数),9 字特权名经真读数闸存活并
   归一精确命中(旧 8 字手抄上限先于归一化确定性丢弃 9 字名 = 四选一
   缩三选一)。
@@ -84,7 +84,7 @@ def _stub_controller(ctx, monkeypatch: pytest.MonkeyPatch) -> list:
     return clicks
 
 
-# ==================== 入口门 miss 锁(全部入口形状)====================
+# ==================== 入口门 miss 测试(全部入口形状)====================
 
 #: 屏键 → (模块名, 类名, 构造参数, 门 miss 桩装配(op, monkeypatch))
 _GATE_MISS_ROWS = {
@@ -129,7 +129,7 @@ _GATE_MISS_ROWS = {
 @pytest.mark.parametrize('screen_key', sorted(_GATE_MISS_ROWS))
 def test_entry_gate_miss_fails_back(test_context, monkeypatch,
                                     screen_key: str) -> None:
-    """入口门 miss 锁:miss 未发 = round_fail 交回外循环重判(现役文案),
+    """入口门 miss 测试:miss 未发 = round_fail 交回外循环重判(现役文案),
     obs 不装载。红 = 门失效 / 文案漂移 / miss 后仍装载 obs。"""
     mod_name, cls_name, args, miss = _GATE_MISS_ROWS[screen_key]
     op = _make_op(mod_name, cls_name, test_context, *args)
@@ -142,7 +142,7 @@ def test_entry_gate_miss_fails_back(test_context, monkeypatch,
     assert op._obs is None, f'{screen_key}: 门早退不装载 obs'
 
 
-# ==================== 观察装载锁(全 11 屏)====================
+# ==================== 观察装载测试(全 11 屏)====================
 
 #: 屏键 → (模块名, 类名, 构造参数, 门 hit 桩装配(op, monkeypatch))
 _OBS_ROWS = {
@@ -211,7 +211,7 @@ _OBS_ROWS = {
 @pytest.mark.parametrize('screen_key', sorted(_OBS_ROWS))
 def test_observe_loads_obs_on_hit(test_context, monkeypatch,
                                   screen_key: str) -> None:
-    """观察装载锁:门 hit → obs{on_screen=True, screen=帧} 挂实例属性
+    """观察装载测试:门 hit → obs{on_screen=True, screen=帧} 挂实例属性
     (空决策形态无 report,观察 node 不触容器)。红 = obs 断流/字段漂移。"""
     mod_name, cls_name, args, hit = _OBS_ROWS[screen_key]
     op = _make_op(mod_name, cls_name, test_context, *args)
@@ -224,7 +224,7 @@ def test_observe_loads_obs_on_hit(test_context, monkeypatch,
     assert op._obs.screen is _FRAME, f'{screen_key}: 稳定帧引用透传'
 
 
-# ==================== 重入裁决×旗标组合锁 ====================
+# ==================== 重入裁决×旗标组合测试 ====================
 
 #: 裁决代表屏:默认 area 锚形状(位面详情)+ 自有 OCR 形状(前进按钮)。
 #: advance 桩 = 推进体 ok/miss 程序化回值;clicks = 推进体调用记录。
@@ -249,7 +249,7 @@ _ADJUDICATION_ROWS = {
 @pytest.mark.parametrize('screen_key', sorted(_ADJUDICATION_ROWS))
 def test_reentry_arbitration_flag_combination(test_context, monkeypatch,
                                               screen_key: str) -> None:
-    """重入裁决×旗标组合锁(两入口形状代表):
+    """重入裁决×旗标组合测试(两入口形状代表):
     - 已发 + 门 miss = 已离开本画面 → success 交回(现役文案)+ 旗标清
       + 推进体零调用(裁决出口 = 入口观察的合法重判,非动作层判效);
     - 已发 + 门在 = 点击未落地 → 再推进恰一次 → round_wait(循环推进
@@ -302,7 +302,7 @@ def test_reentry_arbitration_flag_combination(test_context, monkeypatch,
 
 def test_anchor_free_advance_succeeds_immediately(test_context,
                                                   monkeypatch) -> None:
-    """免锚出口锁(参数化屏空锚构造 = 免锚形态):无「已离开」观察信号,
+    """免锚出口测试(参数化屏空锚构造 = 免锚形态):无「已离开」观察信号,
     发出即 success(免锚),重入裁决不可达(已发与否同出口)。
     红 = 空锚误走重入裁决 / 免锚出口漂移。"""
     op = _make_op('cw_screen_prep_locked_return', 'CwScreenPrepLockedReturn',
@@ -338,7 +338,7 @@ def test_area_center_advance_missing_fail(test_context, monkeypatch) -> None:
     assert op._advanced_once is False, '失败轮旗标不置位'
 
 
-# ==================== 武装箱选卡观察上报接线锁 ====================
+# ==================== 武装箱选卡观察上报接线测试 ====================
 
 #: x 升序读数桩(名字 = 装备注册表在册名——观察标准化门要求读数可
 #: 转换为标准注册名,桩名必须真名可命中)。
@@ -365,7 +365,7 @@ def _make_box_pick(test_context, monkeypatch: pytest.MonkeyPatch,
 
 
 def test_box_pick_observe_reports_card_names(test_context, monkeypatch):
-    """观察上报接线锁:门 hit + 读数非空 → 观察标准化门 → 容器
+    """观察上报接线测试:门 hit + 读数非空 → 观察标准化门 → 容器
     ``box_card_names`` 终值 = 标准名表(report 接线落容器)+ 坐标同门
     双写 ``box_card_names_xy``(观察期解点,x + CARD_Y)。红 = 接线断流 /
     容器终值漂移 / 坐标域断供。"""
@@ -397,7 +397,7 @@ def test_box_pick_observe_reports_card_names(test_context, monkeypatch):
 def test_box_pick_observe_gates_skip_report(test_context, monkeypatch,
                                             gate_ok: bool, cards: list,
                                             expect_status: str) -> None:
-    """两道闸锁(现役单 node 首闸/读数闸逐位):锚 miss / 卡名空 →
+    """两道闸测试(现役单 node 首闸/读数闸逐位):锚 miss / 卡名空 →
     fail 交回外循环重派(现役文案),容器与 obs 均空(report 不调,
     禁盲值进容器)。红 = 闸失效 / 盲写容器。"""
     op, session = _make_box_pick(test_context, monkeypatch, gate_ok=gate_ok,
@@ -412,7 +412,7 @@ def test_box_pick_observe_gates_skip_report(test_context, monkeypatch,
 
 def test_box_pick_observe_standardization_gate_and_duplicates(
         test_context, monkeypatch):
-    """观察标准化门锁(op-layer.md §1.1 条款①):任一候选转换不到标准
+    """观察标准化门测试(op-layer.md §1.1 条款①):任一候选转换不到标准
     注册名 = 观察失败 round_fail 零写零上报交回重读(名字与坐标同进退,
     禁带病上报);形变读数两段转换命中标准名;重复名合法(四卡可能
     同名,同装备多张)逐候选独立归一,不适用互斥拒判。红 = 带病直报 /
@@ -448,7 +448,7 @@ def test_box_pick_observe_standardization_gate_and_duplicates(
 
 def test_box_pick_lcs_ambiguity_rejection_and_unique_pass(test_context,
                                                           monkeypatch):
-    """观察标准化门第二段·次高分差拒判锁(op-layer.md §1.1;用户裁定
+    """观察标准化门第二段·次高分差拒判测试(op-layer.md §1.1;用户裁定
     2026-09-22 全族统一):LCS 阶段最高分未明显高于次高分(差值不足
     ``_EQUIP_LCS_AMBIGUITY_MARGIN``)= 歧义 = 转换失败,禁直接取最高分
     ——「穿剌死棘之枪」对穿刺/穿越死棘之枪同分 5/6 ≈ 0.833(①段归一
@@ -478,7 +478,7 @@ def test_box_pick_lcs_ambiguity_rejection_and_unique_pass(test_context,
 
 def test_box_pick_read_gate_admits_registry_longest_priv_name(
         test_context, monkeypatch):
-    """读数闸放宽锁(:上限 ``_CARD_NAME_LEN_MAX`` = 注册表
+    """读数闸放宽测试(:上限 ``_CARD_NAME_LEN_MAX`` = 注册表
     最长名派生(防手抄常数——手抄值在注册表最长名变化时即红),9 字特权名
     「战场进化手册·特权」经真读数闸存活(旧 8 字手抄上限先于归一化会把它
     确定性静默丢弃 = 四选一缩三选一),并经标准化门归一精确命中落容器;
@@ -493,7 +493,7 @@ def test_box_pick_read_gate_admits_registry_longest_priv_name(
     from types import MethodType
 
     mod = importlib.import_module(f'{_PKG}.cw_screen_box_pick')
-    # 常数一致性锁:派生式对拍注册表最长名。
+    # 常数一致性测试:派生式对拍注册表最长名。
     assert max(
         len(n) for n in mod._EQUIP_ROSTER_LIST) == mod._CARD_NAME_LEN_MAX, (
         '读数闸上限必须派生自装备注册表最长名,禁手抄常数')
@@ -527,9 +527,9 @@ def test_box_pick_read_gate_admits_registry_longest_priv_name(
 
 
 def test_box_pick_act_clicks_decided_card(test_context, monkeypatch):
-    """决策动作 node 锁:容器外读数决策(零参策略契约)→ 选卡链派发
+    """决策动作 node 测试:容器外读数决策(零参策略契约)→ 选卡链派发
     (点卡选中即确认 + 动画等待迁入 ``CwActionPickBoxCardOp``;机械链
-    行为锁 = test_overlay_ops pick op)→ 选卡即终结 success。红 = 决策
+    行为测试 = test_overlay_ops pick op)→ 选卡即终结 success。红 = 决策
     形态漂移 / 坐标现算回潮(env.target 停喂后禁再喂)/ 终结交回语义
     漂移。"""
     import importlib
@@ -571,7 +571,7 @@ def test_box_pick_act_clicks_decided_card(test_context, monkeypatch):
 
 def test_box_pick_act_off_match_fails_via_normal_chain(test_context,
                                                        monkeypatch):
-    """局外无早退支锁(用户裁决 2026-09-22 全族删门,op-layer.md §1.1):
+    """局外无早退支测试(用户裁决 2026-09-22 全族删门,op-layer.md §1.1):
     match 缺席(局外)不设 round_success 早退门,act 沿正常链路因缺上下文
     自然失败(AttributeError),零派发零容器写。红 = 局外 round_success
     早退门回潮 / 兜底决策路径回潮(局外调机器决策/发点击/写容器)。"""

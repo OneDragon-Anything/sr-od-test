@@ -1,7 +1,7 @@
-"""补给屏锁面(决策 / 选项归并读链 / 选卡上报 / 节点推进接线)。
+"""补给屏测试面(决策 / 选项归并读链 / 选卡上报 / 节点推进接线)。
 
 判据正本(持久索引):
-- 决策单帧锁 = docs/develop/sr_od/application/currency_war/strategy-docs/
+- 决策单帧测试 = docs/develop/sr_od/application/currency_war/strategy-docs/
   30_supply_screen.md(3.1 验收凭据①-⑨,判据语义 = §2.5);
 - 选项归并读链 = T-9 过剩经费 design §2.2/§4.1/§4.2(设计正本 =
   .debug/progress/2026-09-23-invest-effects-calc/designs/
@@ -10,9 +10,9 @@
   + T-60 批漏项补齐(零写迁移通道;按动作 key 幂等契约);
 - 节点推进接线 = 补给节点推进接线判据面(去证据门形态,2026-09-21
   用户裁定);kernel 原语语义(门挡/去重/补推)由 test_node_advance
-  承重,本文件只锁接线面。
+  承重,本文件只校验接线面。
 
-测试纪律:零真实副作用;决策/归并断言锁设计语义不锁牌面;归并读链坐标
+测试纪律:零真实副作用;决策/归并断言钉住设计语义不断言牌面;归并读链坐标
 全部为测试自造常量(按归档帧布局实证取值,不读归档帧文件、不跑 OCR)。
 装备配方/价值取自注册表真实数据(火力风暴潮 = 折叠小刀+轮滑鞋,
 cw_equipment_data)。
@@ -166,7 +166,7 @@ def test_endgame_char_card_beats_high_value_equip():
 def test_unlocked_and_demoted_frames_fall_to_equip_axis():
     """凭据③:未锁线/降格帧角色级空转 + 装备级无 key 参照(空转帧装备
     轴退化为通用值定序;get_comp 解析失败帧 = flow 传 None,见 flow
-    接线锁)。锁线帧作对照,证明断言可判别。"""
+    接线测试)。锁线帧作对照,证明断言可判别。"""
     comp = _comp(['飞霄'], key=['火力风暴潮'])
     opts = [_opt(0, char='飞霄', equip='反卫星狙击枪'),
             _opt(1, equip='轮滑鞋')]
@@ -349,11 +349,11 @@ def test_empty_options_frame_returns_no_options():
     assert out.reason == 'no-options'
 
 
-# ==================== flow 接线锁(3.1 改接线)====================
+# ==================== flow 接线测试(3.1 改接线)====================
 
 
 def test_flow_supply_wiring_wraps_actions_and_parses_locked_comp():
-    """flow.decide_supply 接线锁:候选自 gs.supply payload、纯值出口包装
+    """flow.decide_supply 接线测试:候选自 gs.supply payload、纯值出口包装
     动作词表(Pick/Refresh 互斥)、locked_comp 套名经 get_comp 解析三态
     ——锁线 comp 生效 / 伪套名解析失败按未锁口径(凭据③的解析失败帧)/
     刷新建议经 flow 闸内嵌语义直发。"""
@@ -639,7 +639,7 @@ def rows_sink() -> _RowSink:
 
 def test_pick_supply_immediate_char_and_consequence(
         rows_sink: _RowSink) -> None:
-    """补给确认即时单相上报锁(supply-pick design §2.0B):一口写 owned
+    """补给确认即时单相上报测试(supply-pick design §2.0B):一口写 owned
     规范名 + 单位腿(char 入席 1★ + 合成级联)+ 装备后果腿(命中表 →
     送角色腿)——无发射/落地两相,无证据参数。"""
     gs = _make_gs(bench=[('银狼', 1), ('银狼', 1)], equips=[])
@@ -688,7 +688,7 @@ def test_pick_supply_equip_unresolved_flips_source(
 
 def test_pick_supply_char_only_zero_equip_column_no_defect(
         rows_sink: _RowSink) -> None:
-    """char-only 选定锁(T-9 对抗 r1 A1):char 非空 ∧ 装备腿全空 →
+    """char-only 选定测试(T-9 对抗 r1 A1):char 非空 ∧ 装备腿全空 →
     装备域零写(无预测无期望,零翻来源)+ reason 留证、**零缺陷行**
     ——合法无装备读数列(人才储备类 char-only 列/件名全失读列)禁发
     「装备名未解析」伪缺陷。"""
@@ -705,7 +705,7 @@ def test_pick_supply_char_only_zero_equip_column_no_defect(
 
 def test_pick_supply_extra_norm_items_land_all_legs(
         rows_sink: _RowSink) -> None:
-    """附加装备腿锁(T-9):extra_norm_items 两件 → owned 尾追两件
+    """附加装备腿测试(T-9):extra_norm_items 两件 → owned 尾追两件
     (主件 → 附加件画面 y 序)+ 获得后果链逐件(主件分身墨镜送银狼 1★
     合成 2★、附加件分身墨镜Max 送银狼 2★)——世界写入 = 角色 + 随选
     装备组全列。"""
@@ -763,7 +763,7 @@ def _make_match(test_context, monkeypatch, session):
 
 def test_pick_confirm_reports_full_result_immediately(
         test_context, monkeypatch) -> None:
-    """pick 即时上报锁:确认点击后(机械半全桩,零落地相)容器即持
+    """pick 即时上报测试:确认点击后(机械半全桩,零落地相)容器即持
     owned 规范名 + 单位腿(1★入席合成级联)+ 装备后果腿(分身墨镜
     → 送 1★银狼)——一口写,无发射/落地两相。"""
     from sr_od.application.currency_war.operations.cw_op import (
@@ -799,7 +799,7 @@ def test_pick_confirm_reports_full_result_immediately(
 
 def test_chosen_supply_written_before_dispatch_and_no_landing_phase(
         test_context, monkeypatch) -> None:
-    """画面 op 侧锁:chosen_supply 2 元组(角色, 装备名列表;T-9 裁定 2)
+    """画面 op 侧测试:chosen_supply 2 元组(角色, 装备名列表;T-9 裁定 2)
     在动作派发前已写(写点 = 选择点,``op-layer.md`` §2.2);选卡派发即终结
     (_do_action 返回 True);节点完成门 miss(act 分发身份安全网)后零容器写
     (无落地相补写面)。"""
@@ -893,7 +893,7 @@ def _run_pick_supply(test_context, monkeypatch, match):
 def _run_supply_observe(test_context, monkeypatch,
                         pos: tuple[int, int] | None):
     """跑 CwScreenSupplyNode 观察 node:门内 + 选项读/节点条读桩化
-    (节点条返回剧本读数;None = 读不得跳过锁的对照位)。"""
+    (节点条返回剧本读数;None = 读不得跳过测试的对照位)。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_supply_node as sn,
     )

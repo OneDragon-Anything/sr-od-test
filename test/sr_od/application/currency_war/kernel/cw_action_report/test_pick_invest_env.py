@@ -1,7 +1,7 @@
-"""pick_invest_env 上报 rng 条件解析锁(迭代 2026-09-23-invest-effects-calc
+"""pick_invest_env 上报 rng 条件解析测试(迭代 2026-09-23-invest-effects-calc
 T-10 人才引进;镜像 src = kernel/cw_action_report/pick_invest_env.py)。
 
-锁面依据 = 该迭代 designs/T-10-rencai-yinjin.md §2.4/§4 锁 5:
+测试面依据 = 该迭代 designs/T-10-rencai-yinjin.md §2.4/§4 测试 5:
 上报函数仅当**选中环境登记了随机支**(ENV_GIFTS[名].chars_random_immediate
 非空)才经 ``action_sampling_rng('pick_invest_env', rng)`` 解析采样 rng
 (显式传入 > 注入槽 > 自掷);无随机支环境透传 None 零解析。理由:注入槽

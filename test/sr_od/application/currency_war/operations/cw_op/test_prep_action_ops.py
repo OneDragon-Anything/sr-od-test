@@ -1,10 +1,10 @@
-"""CW 备战动作 op 锁面(执行器机械半 + 逻辑态上报 + 发射面装载)。
+"""CW 备战动作 op 测试面(执行器机械半 + 逻辑态上报 + 发射面装载)。
 
 规则正本 = docs/develop/sr_od/application/currency_war/flow/
 action-logic-state.md 与 flow/logic-updates/prep-executor-actions.md;
 op 形态正本 = flow/action_ops.md(动作 op = 机械执行后直调自己的上报
 函数,映射单一源 = kernel/cw_action_report 同名上报函数族,op-layer.md
-§1.2)。锁面三组(全部运行时行为锁,源码扫描测试禁止,AGENTS.md
+§1.2)。测试面三组(全部运行时行为测试,源码扫描测试禁止,AGENTS.md
 §10.4;kernel/执行器级用桩宿主,零真实 IO):
 
 - **执行器机械半**:逐动作点击/拖拽契约(零读屏 / 每帧恰一击 / 单次
@@ -101,7 +101,7 @@ class _RecordingController:
 
 class _NoSleepTime:
     """模块内 ``time`` 替身:机械等待记录不真睡(出战 op 的
-    POST_CLICK_WAIT 弹窗渲染窗;真机等待节奏非本锁辖面)。"""
+    POST_CLICK_WAIT 弹窗渲染窗;真机等待节奏非本测试辖面)。"""
 
     def __init__(self) -> None:
         self.skipped: list[float] = []
@@ -143,7 +143,7 @@ def test_ore_executor_is_mechanical_payload_clicks(monkeypatch):
     """执行器机械半:逐载荷坐标点击,零读屏(读屏选晶矿半随 R4 改形退役,
     旧形态靠 op.screenshot 选晶矿——零 screenshot 调用即机械化证明)。
     (monkeypatch time.sleep = 溢出/动画家族固定等待空等,真机等待节奏
-    非本锁辖面。)"""
+    非本测试辖面。)"""
     monkeypatch.setattr('time.sleep', lambda _s: None)
 
     controller = _RecordingController()
@@ -201,7 +201,7 @@ def _isolate_defect_buffer():
 
 def test_vocab_actions_all_have_logic_state_projection(
         _isolate_defect_buffer):
-    """词表逻辑态覆盖锁(R9;动作 op 重组后宿主 = 上报函数族
+    """词表逻辑态覆盖测试(R9;动作 op 重组后宿主 = 上报函数族
     ``kernel/cw_action_report``,每动作恰一个具名函数——原聚合写口
     ``apply_prep_action_logic`` 随批退役)。
 
@@ -278,7 +278,7 @@ def test_vocab_actions_all_have_logic_state_projection(
 
     # 工具容器写集(tool-gain-report 升格):逐动作重播种「equips 含该
     # 工具 + 目标件/穿戴面 + 前排 1 号位有单位」的相同入场态——前序工具
-    # 动作会消耗件名(炉替换/特权变换/扳手回区)与穿戴面,覆盖锁按同一
+    # 动作会消耗件名(炉替换/特权变换/扳手回区)与穿戴面,覆盖测试按同一
     # 入场态逐个评估写行为;重播种 = 容器域 builder 同写入口(observe)。
     def _reseed_tool_state(tool_name: str, target_unit: Unit) -> None:
         gs.observe(gs.equips, [tool_name, '轮滑鞋'], sig=_sig)
@@ -406,7 +406,7 @@ def test_levelup_logic_state_advances_xp_level_and_gold():
 
 
 def test_deploy_slot_plans_front_guarantee_and_slot_set():
-    """落位策略锁(发射面;原 kernel assign/empty 锁迁 mandate_v1
+    """落位策略测试(发射面;原 kernel assign/empty 测试迁 mandate_v1
     deploy_plan.deploy_slot_plans,断言语义不变):输出覆盖上场集(每件
     恰一 move)、槽位取自容器空槽集、前排保证(pref=back ∧ 前排全空 →
     真 front 先提/无 front 强转)。
@@ -530,7 +530,7 @@ def test_selldeployed_logic_state_clears_slot_and_recounts_board():
 
 
 def test_prep_sell_gold_booked_exactly_once_across_seam_and_projection():
-    """备战卖出金账全链恰一次入账(统一观察对账迭代归因批出口①修模锁):
+    """备战卖出金账全链恰一次入账(统一观察对账迭代归因批出口①修模测试):
     历史形态 live 执行链对同一 CwActionSellBenchParam 先后跑执行缝
     (旧 apply_op_effect)与容器投影,两腿各记一次 +refund → 逻辑金系统
     性虚高,下帧实读倒挂(journal 实证 −2,run_20260915_070645)。修后
@@ -569,7 +569,7 @@ def test_wear_equip_single_mechanical_drag_no_diff_verification(monkeypatch):
     """CwActionWearEquipParam 单次机械拖拽,无补救链重试(用户裁定:动作 op = 机械
     执行,判效/重试禁入动作层):发出即记账(emitted=True),拖后零
     落地判定,拖拽静默不生效由观察侧 reconcile 对账显影。
-    (monkeypatch time.sleep = 拖后固定等待空等,真机等待节奏非本锁辖面。)"""
+    (monkeypatch time.sleep = 拖后固定等待空等,真机等待节奏非本测试辖面。)"""
     monkeypatch.setattr('time.sleep', lambda _s: None)
     from sr_od.application.currency_war import prep_actions as pa
     from sr_od.application.currency_war.obs import cw_equipment
@@ -779,7 +779,7 @@ def test_sellbench_emission_carries_channel_reason():
 
 
 def test_bridge_recheck_context_uses_slot_table_indices(monkeypatch):
-    """桥复检语境坐标锁(「bridge 复检语境容器下标化」行为半):
+    """桥复检语境坐标测试(「bridge 复检语境容器下标化」行为半):
     ``decide_prep_frame`` 供给截断复检的 bench 占用集必须 = **定长槽位表
     下标**(动作参数坐标系,bench_idx 同系,cw_vocab 坐标契约节单一源)
     ——前部有洞帧按紧缩序(bench_entries_of)枚举下标供给会错杀后部
@@ -807,7 +807,7 @@ def test_bridge_recheck_context_uses_slot_table_indices(monkeypatch):
            BenchSlot(kind='unit', unit=Unit(char_id='乙', star=1))]
         + [BenchSlot(kind='empty')] * 4, capacity=9),
         produced_by='T', sig=_SIG)
-    # 正半:引用占用槽表下标 4(乙)必须通过复检照发——错杀即本锁红。
+    # 正半:引用占用槽表下标 4(乙)必须通过复检照发——错杀即本测试红。
     sell = CwActionSellBenchParam(bench_idx=4, reason='interest_prep')
     monkeypatch.setattr(entry, 'emit',
                         lambda *a, **k: [Emitted(sell, True, 'interest_prep')])
@@ -849,7 +849,7 @@ def test_emission_resolves_container_index_fail_closed():
     # fail-closed = 视图子表条目失配;不在场 → None。
     assert mandate._deployed_container_idx(
         gs, Unit(char_id='不在场', star=1)) is None
-    # 生产桥互逆锁(换算函数族退役,动作坐标系工作副本桥 =
+    # 生产桥互逆测试(换算函数族退役,动作坐标系工作副本桥 =
     # deployed_indexed_of_view/deployed_view_of_indexed,保留裁定在案):
     # 视图 → 定长 10 表 → 视图逐位等价(前排原样 + 后排 1-6 位;7-9 扩展
     # 格经 orig 参继承,不截断——工作副本往返不得丢容量)。front 1-4 /
@@ -909,8 +909,8 @@ def test_entry_card_arms_emit_from_bench_kind():
 
 
 def test_entry_box_tome_arms_read_benchview_kind():
-    """回归锁:开箱/开典籍臂与卡片臂同读容器 BenchView.slots kind
-    (占位件三分类 kind 直读,单一形状无换形路)。本锁钉死 box/tome 臂
+    """回归测试:开箱/开典籍臂与卡片臂同读容器 BenchView.slots kind
+    (占位件三分类 kind 直读,单一形状无换形路)。本测试钉死 box/tome 臂
     在真 kind 载荷上照常命中。"""
     out = _emit_with_bench([BenchSlot(kind='supply_box')])
     assert len(out) == 1
@@ -946,7 +946,7 @@ def _sb_patch(monkeypatch) -> None:
     """出战 op 模块桩:area_center 命中表 + 模块内 ``time`` 替身
     (POST_CLICK_WAIT 弹窗渲染窗空等——裸 ``import time`` 直睡,
     fast_sleep() 不传 op 够不着,测试换模块替身;screen_info 坐标解析
-    本身不属本锁面,本锁只锁 op 的决策/点击序列)。"""
+    本身不属本测试面,本测试只校验 op 的决策/点击序列)。"""
     from sr_od.application.currency_war.operations.cw_op import (
         cw_start_battle_action as _sba,
     )
@@ -1066,9 +1066,9 @@ def test_start_battle_click_sequence_and_envelope(monkeypatch):
 
 
 def test_start_battle_skip_substate_reported_not_consumed(monkeypatch):
-    """免战子态上报锁(T-286):出战 miss + 「按钮-跳过」命中 → 点跳过
-    坐标 + env.skip_substate True;递减本体 = op 自上报(行为锁见免战牌
-    递减锁),op 直调层零多余容器写。"""
+    """免战子态上报测试(T-286):出战 miss + 「按钮-跳过」命中 → 点跳过
+    坐标 + env.skip_substate True;递减本体 = op 自上报(行为测试见免战牌
+    递减测试),op 直调层零多余容器写。"""
     from test.harness.fixture_controller import fast_sleep
 
     from sr_od.application.currency_war.operations.cw_op.cw_start_battle_action import (
@@ -1088,7 +1088,7 @@ def test_start_battle_skip_substate_reported_not_consumed(monkeypatch):
 
 
 def test_freeze_card_decrement_via_report_path(monkeypatch):
-    """免战牌递减经 op 自上报锁(T-286;接线):PrepActionExecutor
+    """免战牌递减经 op 自上报测试(T-286;接线):PrepActionExecutor
     .execute(跳过型 CwActionStartBattleParam)→ op 自上报
     report_action_start_battle_param 在 session effects 递减 remaining_uses
     (上报时递减);常规出战零递减;未登记(登记面缺位)零动作不炸。"""

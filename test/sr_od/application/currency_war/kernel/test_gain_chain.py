@@ -1,13 +1,13 @@
-"""获得链(gain-chain)行为锁(链式规范 + 开局种子底座通道规则)。
+"""获得链(gain-chain)行为测试(链式规范 + 开局种子底座通道规则)。
 
-锁面依据(语义正本,changes/ 过程件不引):获得链正本 =
+测试面依据(语义正本,changes/ 过程件不引):获得链正本 =
 docs/develop/sr_od/application/currency_war/game_state/gain-chain.md
 (§2 原语契约/§2.5 单级合成/§6 失败安全);通道规则与种子底座正本 =
-同目录 fields.md §2.6(未锚定 → 随机态、锚定后按形参、失配网生效)。锁面:
+同目录 fields.md §2.6(未锚定 → 随机态、锚定后按形参、失配网生效)。测试面:
 
 - **对拍一致**(§2.1-3):单级合成 ``merge_step_once`` ×N 次终态与
   ``cw_merge_simulate.merge_simulate`` 同池同输入不动点终态一致(禁第二
-  套语义的执行锁);
+  套语义的执行测试);
 - **调用序**(§2.1 固定时序):落位 → 回调 → 升星 → 产物递归;回调补齐
   第三只后再合成;
 - **通道收口双臂**(通道规则「未锚定 → 随机态」):直构未闩容器
@@ -18,7 +18,7 @@ docs/develop/sr_od/application/currency_war/game_state/gain-chain.md
   未观察(直构域)= 拒落档零写、零缺陷发射(两未观察 kind 已随开局
   种子底座与锚定闩批退役);种子容器(缓存单例支,接管局同构)正常
   落账;置闩后失配网原样生效(确定面被观察覆盖产失配行);
-- **欢愉契约条件腿 rider**(条件腿正式模型,锁面 = 银狼策划选择落地相
+- **欢愉契约条件腿 rider**(条件腿正式模型,测试面 = 银狼策划选择落地相
   上报的授予行为):通道语义(授予 rand=True 全通道 logic_rand,rand
   形参优先于锚定闩——未闩/置闩同通道)+ 覆盖校准面 = 观察覆盖落
   logic_rand_outcome 行零失配行;在册判定(active_env 归一 = 欢愉契约)、
@@ -27,7 +27,7 @@ docs/develop/sr_od/application/currency_war/game_state/gain-chain.md
   兜底仍触发且终态兜底 reason = unrouted_leg_zero_write)、授予失败
   调用点级 best-effort(腿型分派照常 + joy_conditional_grant_failed
   留证行)、授予走链固定时序(预置两枚同候选可合成);弱化兜底档退役
-  锁(分类落 unknown/打分两档制)归 test_planner_report.py;
+  测试(分类落 unknown/打分两档制)归 test_planner_report.py;
 - **LV.999 变换窗**(银狼费用档变换,2026-09-18 定谳〔口述·权威〕:
   费用档不同时存在,分组键 (char_id, star) 无跨档歧义):升费腿 2★→1★
   变换三态与级联合并、上阵 3★→1★ 变换窗与恒等搬运对照;
@@ -35,7 +35,7 @@ docs/develop/sr_od/application/currency_war/game_state/gain-chain.md
   骇客效果分派、portal 整支走获得链、表外安静不写;
 - **卖/换动作上报 v2 族契约**(sell bench/deployed + swap deploy:
   出参 applied/reason/income + 域写回 + 未辖域零写;原金样迁移史见
-  git 历史,现锁 = 活上报函数直锁)。
+  git 历史,现测试 = 活上报函数直测)。
 """
 from __future__ import annotations
 
@@ -207,7 +207,7 @@ def _idents(seq: list) -> list:
 def test_merge_step_once_parity_with_merge_simulate(
         bench_spec: list[tuple[str, int]], dep_idx: int | None) -> None:
     """单级×N 终态 == merge_simulate 同池同输入不动点终态(design §2.1-3
-    对拍锁;merge_simulate 是语义权威,期望值即其输出)。"""
+    对拍测试;merge_simulate 是语义权威,期望值即其输出)。"""
     bench: list[BenchSlot | None] = [
         BenchSlot(kind='unit', unit=Unit(char_id=c, star=s)) for c, s in bench_spec]
     bench += [None] * (9 - len(bench))
@@ -246,7 +246,7 @@ def test_merge_step_once_equips_inheritance() -> None:
 
 def test_call_order_place_callback_merge_recurse(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """固定时序锁(§2.1):落位 → 回调 → 升星 → 产物递归;回调补齐第三只
+    """固定时序测试(§2.1):落位 → 回调 → 升星 → 产物递归;回调补齐第三只
     后再合成(用户裁定「先触发回调…回来后再触发 3 合 1 升星判断」)。"""
     gs = _make_gs(bench=[('银狼', 1), ('希儿', 1)])
     # 置闩(测试专口直赋):本测试焦点 = 调用序,置闩使 rand=False 链写
@@ -318,7 +318,7 @@ def test_rand_passthrough_and_channel_by_anchor(
                    producer='T')
     assert gs3.bench.source == 'logic_rand'
 
-    # 采样效果腿翻转子链(机制锁,rand 透传纪律;置闩容器上外链与子链
+    # 采样效果腿翻转子链(机制测试,rand 透传纪律;置闩容器上外链与子链
     # 通道可分辨):确定入口走 write_logic,采样子链走 write_logic_rand,
     # 外链不被子链污染。
     def sampling_cb(gs: GameState, name: str, star: int, *, rand: bool,
@@ -566,7 +566,7 @@ def test_overflow_item_merges_back_as_box_and_clears() -> None:
 
 
 def test_env_gift_random_leg_seeded_roll(rows_sink: _RowSink) -> None:
-    """随机支发放腿(on_env_gained 直构,T-10 设计 §4 锁 3):固定种子
+    """随机支发放腿(on_env_gained 直构,T-10 设计 §4 测试 3):固定种子
     rng → bench 追加 1 张 1★ 且名 ∈ 4 费规格池;效果串
     ``env_gift_random:<名>@1star`` 前缀 + 后缀同断言(采样发放的审计
     对账键);星级 = spec.star(人才引进 = 1 先验)。期望名从同 seed
@@ -584,10 +584,10 @@ def test_env_gift_random_leg_seeded_roll(rows_sink: _RowSink) -> None:
 
 def test_env_gift_random_leg_anchored_rand_channel(
         rows_sink: _RowSink) -> None:
-    """随机支通道语义(T-10 设计 §4 锁 4):锚定容器 + 采样子链
+    """随机支通道语义(T-10 设计 §4 测试 4):锚定容器 + 采样子链
     rand=True → 写值照常生效且不进失配网(随机态语义,gain-chain.md
     §5:采样写走 write_logic_rand,首观察静默覆盖不响安灯);未锚定
-    写生效已由 seeded_roll 锁(直构缺省未锚定)。"""
+    写生效已由 seeded_roll 测试校验(直构缺省未锚定)。"""
     gs = _make_gs(bench=[], equips=[])
     gs.prep_anchored = True
     out = on_env_gained(gs, None, '人才引进', rand=False, sig=_lsig(),
@@ -600,7 +600,7 @@ def test_env_gift_random_leg_anchored_rand_channel(
 
 def test_env_gift_conditional_only_quiet_after_random_leg(
         rows_sink: _RowSink) -> None:
-    """具名支回归(T-10 设计 §4 锁 6):仅条件腿条目(量子同频契约)
+    """具名支回归(T-10 设计 §4 测试 6):仅条件腿条目(量子同频契约)
     在随机支落地后行为逐位不变——零即时发放、零效果串、零容器写
     (随机支为追加分支,前置分支零触碰)。"""
     gs = _make_gs(bench=[], equips=[])
@@ -745,7 +745,7 @@ def test_env_gifts_validation_empty_grant_includes_scheduled(
 
 
 def test_gain_invest_env_invalid_payload_zero_write(rows_sink: _RowSink) -> None:
-    """无效载荷拒绝(env 支步 0,与策略支同形锁同构,gain-chain.md §2.1
+    """无效载荷拒绝(env 支步 0,与策略支同形测试同构,gain-chain.md §2.1
     步 0):归一后空/'?' = 零写 + 缺陷留证(active_env 值不变;无效输入
     拒绝,非防重复保护)。"""
     gs = _make_gs(bench=[], equips=[])
@@ -780,7 +780,7 @@ def test_gain_equipment_consequence_and_quiet() -> None:
 
 
 # (GainOutcome frozen 形状构造断言已删:dataclass 冻结属性为语言级保证,
-#  无可判别的运行故障形态——留证载体行为由各拒落路径测试实锁。)
+#  无可判别的运行故障形态——留证载体行为由各拒落路径测试实际校验。)
 
 
 # ============================================================ 获得投资策略(策略屏迁移批 3.1)
@@ -898,7 +898,7 @@ def test_strategy_box_leg_effect_places_box(
 
 def test_strategy_box_leg_bench_full_overflow_name(
         rows_sink: _RowSink) -> None:
-    """席满行为锁(名字经溢出落位真值暴露——BenchSlot kind 与道具名解耦,
+    """席满行为测试(名字经溢出落位真值暴露——BenchSlot kind 与道具名解耦,
     备战断言发现不了名字漂移):bench 满 9 → pick 箱腿卡 → 溢出落位,
     overflow_card == '进阶武装箱'(BENCH_ITEM_NAMES 判 kind → 身份两分
     正确)。"""
@@ -913,10 +913,10 @@ def test_strategy_box_leg_bench_full_overflow_name(
 
 
 def test_strategy_box_grants_consistency_lock() -> None:
-    """发放名单单一源一致性锁(阻断修订):效果体工厂表
+    """发放名单单一源一致性测试(阻断修订):效果体工厂表
     _STRATEGY_BOX_GRANTS 与登记表 STRATEGY_GRANTS 三卡 items_immediate
-    逐对相等(表集同锁,防工厂表扩员而登记面漏登——两处独立字面量的
-    名字漂移在备战断言不可见,唯此锁 + 席满溢出真值可暴露)。"""
+    逐对相等(表集同校验,防工厂表扩员而登记面漏登——两处独立字面量的
+    名字漂移在备战断言不可见,唯此测试 + 席满溢出真值可暴露)。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
         _STRATEGY_BOX_GRANTS,
     )
@@ -1064,7 +1064,7 @@ def test_joy_rider_registry_gate(rows_sink: _RowSink) -> None:
 
 def test_joy_rider_rng_injection_deterministic_and_reaches_both(
         rows_sink: _RowSink) -> None:
-    """rng 注入(缺省 None = 实机未播种猜测语义,不在此锁面;注入面 =
+    """rng 注入(缺省 None = 实机未播种猜测语义,不在此测试面;注入面 =
     sim 消费契约):同 seed 同单位;两候选均可达(各候选都有使其经完整
     上报路径落位的种子)。"""
     cands = _joy_candidates()
@@ -1152,7 +1152,7 @@ def test_joy_rider_failure_best_effort(
 
 
 def test_joy_rider_grant_chain_timing_merge(rows_sink: _RowSink) -> None:
-    """时序锁:授予走获得链固定时序(落位 → 回调 → 单级合成)——bench
+    """时序测试:授予走获得链固定时序(落位 → 回调 → 单级合成)——bench
     预置两枚同候选单位,rider 授予第三枚 → 3 合 1 合成 2★(4 费单位正常
     参与合成,非旁路直写)。"""
     cands = _joy_candidates()
@@ -1227,7 +1227,7 @@ def test_upgrade_transform_zero_or_unobserved(rows_sink: _RowSink) -> None:
 
 
 def test_upgrade_cascade_lv999_normal_merge(rows_sink: _RowSink) -> None:
-    """涉 LV.999 级联合并正常推演锁(费用档不同时存在——分组键
+    """涉 LV.999 级联合并正常推演测试(费用档不同时存在——分组键
     (char_id, star) 无跨档歧义):变换出的 1★ 凑满同星组 → 与普通单位
     同语义升星(write_logic 逐级落行,零留证行)。"""
     gs = _make_gs(bench=[('银狼LV.999', 2), ('银狼LV.999', 1),
@@ -1281,7 +1281,7 @@ def test_deploy_non_target_identity(rows_sink: _RowSink) -> None:
 
 
 def test_deploy_cascade_lv999_normal_merge(rows_sink: _RowSink) -> None:
-    """上阵级联正常推演锁(同 2026-09-18 定谳,普通单位同语义):变换出的
+    """上阵级联正常推演测试(同 2026-09-18 定谳,普通单位同语义):变换出的
     1★ 落场与备战 2× 1★ 凑满全场同星组 → 合成载体 = 场上那张(场上优先,
     _merge_bench 语义),备战素材被消费腾槽,write_logic 逐级落行。"""
     gs = _make_gs(bench=[('银狼LV.999', 3), ('银狼LV.999', 1),
@@ -1376,7 +1376,7 @@ def test_invest_portal_landing_no_card_pollution(
     """portal 确认(欢愉契约)整支走获得链:active_env 写(选择事实落地
     经 gain_invest_env)+ 银狼LV.999 1★ 入席递归(on_env_gained
     chars_immediate 唯一腿——条件腿临时翻来源闩已撤:零翻面、零
-    provisional 标记行,正式模型 = 银狼策划上报条件腿 rider,锁面 =
+    provisional 标记行,正式模型 = 银狼策划上报条件腿 rider,测试面 =
     本文件 rider 组);禁入 active_strategies(防 portal 卡污染持卡面)。"""
     gs = _make_gs(bench=[('希儿', 1)], equips=['幸运星'], gold=30)
     # 按 idx 取名契约(op-layer.md §1.1 观察标准化门):env 上报自容器
@@ -1387,7 +1387,7 @@ def test_invest_portal_landing_no_card_pollution(
     out = report_action_pick_invest_env_param(
         gs, param, _lsig('CwActionPickInvestOp'))
     assert out.applied is True and out.reason == 'gain_chain_applied'
-    assert gs.active_strategies.value in (None, []), '双屏分流防污染锁'
+    assert gs.active_strategies.value in (None, []), '双屏分流防污染测试'
     assert gs.active_env.value == '欢愉契约', '选择事实落地经获得链写'
     # 投资环境屏同在锚定前(未锚定期):链写改道 logic_rand(通道规则)。
     assert gs.active_env.source == 'logic_rand'
@@ -1423,7 +1423,7 @@ def test_invest_portal_env_gifts_full_access(
 
 def test_invest_unregistered_card_unchanged(
         rows_sink: _RowSink) -> None:
-    """未收录卡行为回归锁:策略屏未收录卡只走第一步(入表零效果);portal
+    """未收录卡行为回归测试:策略屏未收录卡只走第一步(入表零效果);portal
     表外环境 = active_env 选择事实写(经获得链,写时点随选卡上报迁移)+
     效果面安静不写(表外环境零入席)。"""
     gs = _make_gs(bench=[('希儿', 1)], equips=['幸运星'])
@@ -1464,7 +1464,7 @@ def test_grant_channel_consequence_anchor(
         rows_sink: _RowSink) -> None:
     """好运令牌 grant_equip_item 渠道同纳后果链锚(§2.2 全渠道):后果
     函数对表外件零写零行为(令牌推荐四件域恒表外 = 渠道零差);表内件
-    直锁后果应用(送出 1★ 银狼LV.999 进备战席)。"""
+    直测后果应用(送出 1★ 银狼LV.999 进备战席)。"""
     from test.sr_od.application.currency_war._cw_helpers import cw4_session
 
     from sr_od.application.currency_war.kernel.cw_effect_inventory import (
@@ -1488,9 +1488,9 @@ def test_grant_channel_consequence_anchor(
 
 
 # ============================================================ 卖/换动作上报
-# (v2 族契约直锁:出参 applied/reason/income + gold/bench/front_row/
+# (v2 族契约直测:出参 applied/reason/income + gold/bench/front_row/
 #  back_row/board/equips 域写回 + 未辖域零写;历史金样对照已按到期兑现
-#  改活等价锁,初态本地构造经观察写入口。)
+#  改活等价测试,初态本地构造经观察写入口。)
 
 _TR_SIG_OBS = ChannelSig(family='obs', actor='cw_observation', mode='read')
 _TR_SIG_LOGIC = ChannelSig(family='logic_action', actor='MandateV1Strategy',
@@ -1632,7 +1632,7 @@ def test_sell_swap_transfer_v2_contract(
         front_expect: list[tuple[str, int]] | None,
         board_expect: dict[str, int] | None,
         equips_expect: list[str] | None) -> None:
-    """v2 族直锁(案表驱动;断言域 = 平移契约申报表全集):出参契约
+    """v2 族直测(案表驱动;断言域 = 平移契约申报表全集):出参契约
     (applied/reason/income)+ gold/bench/rows/board/equips 域写回 +
     未辖域(hp/level/xp/shop/back_layout)零写。"""
     gs = _tr_gs_with(**init_kw)

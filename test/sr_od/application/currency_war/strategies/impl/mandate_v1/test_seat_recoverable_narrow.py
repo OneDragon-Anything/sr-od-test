@@ -1,4 +1,4 @@
-"""P92 席可落代理收窄锁(详设 IC-1 单源)。
+"""P92 席可落代理收窄测试(详设 IC-1 单源)。
 
 出处:迭代详设「腾席资格面与代理收窄」节。旧装配 =
 ``seat_recoverable=(liquid_refund>0)``(P56 投影金额代理);其申报的
@@ -14,12 +14,12 @@
 行为差方向 = P92 在 T3 活跃帧少拦(差帧 ② 通道真实可达,旧拦为误拦
 ——白刷病灶面不回归:占位件帧两视图同空,拦刷行为不变)。
 
-锁三层(存续面):
+测试三层(存续面):
 - 判定直调真值表(含占位件负腿:仅占位件帧 ⇒ False,收窄判定经
   fuel_sell_candidates 单一源自动继承占位件滤门);
-- 对照锁:同构帧唯一「可腾件」为占位件 → 拦刷 + 分键开火
+- 对照测试:同构帧唯一「可腾件」为占位件 → 拦刷 + 分键开火
   (收窄不复活占位件高估灶面)。
-(T3 活跃垫保正格的直调锁与集成行为差锁已退役——该正格依赖 T3
+(T3 活跃垫保正格的直调测试与集成行为差测试已退役——该正格依赖 T3
 活跃帧构造,现行形态下两视图判据同源,行为差面归 falsifiable 复检。)
 
 fixture 说明:角色名/费档注册表现查(CHARACTERS/refresh_prob),帧
@@ -119,7 +119,7 @@ class TestP92SeatRecoverableDirect:
             current_round=_ROUND, defer_names=frozenset()) is False
 
 
-# ===== 集成行为差锁(P92 门经 decide_shop_screen)=====
+# ===== 集成行为差测试(P92 门经 decide_shop_screen)=====
 
 
 def _p92_frame(extra_bench_last: BenchSlot):
@@ -153,7 +153,7 @@ def _p92_frame(extra_bench_last: BenchSlot):
                 if n not in members and not getattr(c, 'bench_effect', '')
                 and n != last_name)
     fill = BENCH_CAPACITY - 2 - len(bench_rest)
-    assert fill >= 1, '锁前提:线成员过多(席面装不下)'
+    assert fill >= 1, '测试前提:线成员过多(席面装不下)'
     s = _session(comp, plane_lengths=[9, 5, 7])
     bench = [_bc(w, star=1)]
     bench += bench_rest
@@ -169,7 +169,7 @@ def _p92_frame(extra_bench_last: BenchSlot):
 class TestP92AssemblyBehaviorDiff:
 
     def test_placeholder_full_bench_refresh_blocked(self):
-        """对照锁:同构帧唯一「可腾件」为占位件 ⇒ 两视图同空 ⇒ 席不可落
+        """对照测试:同构帧唯一「可腾件」为占位件 ⇒ 两视图同空 ⇒ 席不可落
         ⇒ 全通道死 ⇒ 拦刷 + 分键开火(收窄不复活占位件高估灶面;
         旧代理与收窄判定在该帧同判,零行为差)。"""
         axes, s, _w = _p92_frame(_item(slot=BENCH_CAPACITY))

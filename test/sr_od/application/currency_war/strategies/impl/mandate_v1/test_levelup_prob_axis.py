@@ -1,14 +1,14 @@
-"""CW 升级判据重轴单帧锁(迭代 2026-10-12-prep-shop-workflow-redesign 批 3.4)
+"""CW 升级判据重轴单帧测试(迭代 2026-10-12-prep-shop-workflow-redesign 批 3.4)
 + P2 低血带授权域(fail-closed 落码)。
 
 出处(持久索引):details/line_and_upgrade.md §2(触发五臂/支出形态/
 拦截层处置)与 §2.3 处置表;design.md 条 4(升级判据重轴)。判据本体 =
 strategies/impl/mandate_v1/criteria/levelup.py,发射位 = entry 备战第
-3 步。锁面组:
+3 步。测试面组:
 
 1. 带与停留门(prob_band_of_cost 平顶整段/三支分派/P1 硬锁子局断言);
 2. 概率账(触发/不触发/辖域双条件);
-3. 发射形态(整级预授权 + 变现序列 + 执行帧整批——「买一半」回归锁;
+3. 发射形态(整级预授权 + 变现序列 + 执行帧整批——「买一半」回归测试;
    血本位不足零购买/血足整批发射;金不足攒钱模式;等级帽拒发);
 4. 保留语义(P72(3a) 保底金门/P21 危机带/FM-1 金支出出口);
 5. 【拟】槽与兜底(缺件集聚合口径 provisional 登记;P78-5 兜底豁免
@@ -20,7 +20,7 @@ plane2_started 经 node_hist_pos 直赋 + handle_node_boundary 置位(单调
 
 P2 血带节(原 P2 低血带授权域统一件):单一语义权威 = 生产符号
 (谓词/授权闩 = statefn.predicates,停付面 = criteria/levelup,
-分键写入端 = flow)。锁两类事:①p2_blood_floor 域谓词真值表(信任门/
+分键写入端 = flow)。校验两类事:①p2_blood_floor 域谓词真值表(信任门/
 阈值单一源 = HP_BAND_NEAR_DEATH,位面域互补);②危机带停付面 + 凑息
 拒因键域(血线拒因键退役)。保底金门真值表 = 本文件
 TestRetainedGates::test_guarantee_floor_gate_truth_table 承载,不重复。
@@ -221,7 +221,7 @@ class TestProbAccount:
             provisional.reset('LEVELUP_MISSING_SET_AGG')
 
 
-# ===== 3. 发射形态(整级预授权 + 变现步;「买一半」回归锁)=====
+# ===== 3. 发射形态(整级预授权 + 变现步;「买一半」回归测试)=====
 
 
 class TestBatchEmission:
@@ -244,7 +244,7 @@ class TestBatchEmission:
         assert state_of(s).levelup_preauth is None
 
     def test_blood_insufficient_zero_buy_blood_sufficient_batch(self):
-        """「买一半」缺陷回归锁(血本位局,line_and_upgrade §2.2 血本位
+        """「买一半」缺陷回归测试(血本位局,line_and_upgrade §2.2 血本位
         突变下的支付检查):血余额 < 整级血成本 → 零购买(攒血,不置键
         不发射);血余额 ≥ 整级血成本 → 整批发射(clicks = 门槛表差值
         折击数,一次买齐)。发射粒度整批化后无逐帧重闸复发面。"""
@@ -326,7 +326,7 @@ class TestBatchEmission:
     def test_liquidation_exhausted_key_retained_zero_action(self):
         """变现不足分支(§2.2 失败分支①):键在 ∧ 候选穷尽 ∧ 缺口未
         闭合 → 零动作(键保留至节点末,幂等重评无试错计数;执行帧
-        不发射)——直接预键构造(授权帧后续形态的契约锁)。"""
+        不发射)——直接预键构造(授权帧后续形态的契约测试)。"""
         from sr_od.application.currency_war.kernel.cw_game_state import Unit
         gs, s = _frame(level=7, gold=40, bench=_stay_bench(),
                        front_row=(Unit(char_id='花火', star=1),))
@@ -434,7 +434,7 @@ class TestFundingHoldFallback:
         被放行对象须持有账 ≈ 0(非核心/非④件 ∧ 非种子);funding_
         hold_fallback 兜底池 ⊆ hold 核心集(池条件 = holds ∩ A 排除),
         偏好臂下结构性恒拒(levelup_fallback_leg_reject 分键 + 键
-        保留零动作;review-34 F1:锁两腿分派语义)。"""
+        保留零动作;review-34 F1:校验两腿分派语义)。"""
         from sr_od.application.currency_war.kernel.cw_game_state import Unit
         bench = _stay_bench() + [_bc('三月七', 1)]
         gs, s = _frame(level=7, gold=50, bench=bench,

@@ -1,9 +1,9 @@
-"""备战席溢出门锁面(2026-09-15,R11 用户定案)。
+"""备战席溢出门测试面(2026-09-15,R11 用户定案)。
 
 语义正本 = flow/action-logic-state.md §2.4 溢出条件行 + game_state/fields.md
 §3.2.21;实机建档 = docs/game/screens/currency_war_prep.md 告警/溢出节。
 
-锁的三件事:
+测试的三件事:
 1. 告警在场 → 决策强收窄为单动作 CwActionSellBenchParam(禁发 CwActionStartBattleParam/开店,
    先卖腾位再出战——出战点击此刻被游戏忽略,launch_dead 三连实证);
 2. 告警消失 → 门释放(无强收窄卖出,常规决策接管);
@@ -120,7 +120,7 @@ def test_sellbench_overflow_logic_state_absorbs_card():
     slots = bench_entries_of(gs)
     assert slots[0] is not None and slots[0].unit.char_id == '不死途'
     assert slots[1].unit.char_id == '刃'
-    # 席空数派生不 +1(原 mirror 锁回占腿并入:缺回占 = 假空席绕过席满门)
+    # 席空数派生不 +1(原 mirror 测试回占腿并入:缺回占 = 假空席绕过席满门)
     assert bench_free_slots(gs) == 7
     # 退款 = sell_refund(1★, 2费) = cost 全额 = 2(10 → 12)
     assert gs.gold.value == 12

@@ -1,10 +1,10 @@
-"""出战发射链行为锁(前置发射决策 + 统一执行器)。
+"""出战发射链行为测试(前置发射决策 + 统一执行器)。
 
 两部分(同一条「备战 → 出战」发射链的两半):
 
-- **前置发射位**(mandate_v1 ``bridge._launch_front_check`` 单帧锁,迭代
-  前置发射位判据面 14_p1 §7.2 达标臂锁组 W2 随迁新载体——发射决策宿主
-  = mandate_v1 前置发射位)。锁的语义(零调参纪律:金判定直调 kernel
+- **前置发射位**(mandate_v1 ``bridge._launch_front_check`` 单帧测试,迭代
+  前置发射位判据面 14_p1 §7.2 达标臂测试组 W2 随迁新载体——发射决策宿主
+  = mandate_v1 前置发射位)。测试的语义(零调参纪律:金判定直调 kernel
   单一源,断言经调用记录非手写阈值):
   - armed 绿帧 → CwActionStartBattleParam 终点意图;
   - armed ∧ 溢出段命中(首访) → 受限商店访问意图 CwActionOpenShopParam
@@ -15,7 +15,7 @@
   - 非 armed → None + 段旗复位(非 armed 帧零变化);
   - 质量推迟帧 → None + defer 分键;评估异常帧 → 照常发射 + eval 分键。
 - **出战统一执行器**(``launch_battle_unified`` 直测,迭代统一发射判据面;
-  出战执行路径现存测试锁 = 零(audit-executor.md §2.4 实证),本文件为首批):
+  出战执行路径现存测试 = 零(audit-executor.md §2.4 实证),本文件为首批):
   - armed 全绿 → 事实返回,无调用面私有记账(失败语义分轨);
   - stale(非备战屏) → (False, 'readiness_stale_screen') + 分键;
   - 浮层命中(遭遇 OCR 兜底路径) → (False, 'readiness_overlay_hold:…')
@@ -117,7 +117,7 @@ def test_front_armed_green_emits_start_battle(monkeypatch) -> None:
 def test_front_zone_first_visit_emits_restricted_open_shop(monkeypatch) -> None:
     """armed ∧ 溢出段命中(首访)→ 受限访问意图(普通开店形态)+ 段旗
     置位。受限标记字段随仲裁段退役(详设 §2.10):发射 =
-    普通 OpenShop 动作,访问内消费由策略侧自限接管(锁面 =
+    普通 OpenShop 动作,访问内消费由策略侧自限接管(测试面 =
     test_shop_launch_spend_selflimit)。"""
     session = _mk_session(monkeypatch, decision=_GREEN, zone=True)
     action = _launch_front_check(_launch_host(session))

@@ -1,15 +1,15 @@
-"""CW 覆盖层弹窗/屏上动作 op 锁面(pick 全族 + 专家邀请函 + 刷新零效果
+"""CW 覆盖层弹窗/屏上动作 op 测试面(pick 全族 + 专家邀请函 + 刷新零效果
 对账)。
 
 规则正本 = flow/action_ops.md 与 screens/op-layer.md §1.1「选择坐标
-观察上报」+ §1.3(决策出口守卫)。锁面三组(全部运行时行为锁,源码
+观察上报」+ §1.3(决策出口守卫)。测试面三组(全部运行时行为测试,源码
 扫描测试禁止,AGENTS.md §10.4;桩宿主零真实 IO):
 
 - **pick op 机械行为**(五屏确认链,桩宿主记录点击):确认钮查找
   全族统一(用户裁定 2026-09-22)、选中点击坐标 = 容器单点源
   (``*_opts_xy``/payload,缺/越界 = 守卫断言,禁 env.target 回退、
   禁坐标现算)、轮次结果经 env.round_result 旁路回传、自上报接线;
-- **专家邀请函**(画面 op 入口单一形态 + 决策出口守卫锁组:异常传播/
+- **专家邀请函**(画面 op 入口单一形态 + 决策出口守卫测试组:异常传播/
   返回契约/值域/正路两态/局外无早退支 + report 双写门);
 - **投资环境刷新零效果留证**(证据齐 → 缺陷落台账 + 消费即清)。
 """
@@ -109,7 +109,7 @@ class _NoSleep:
 
 def _screen_loader_none() -> SimpleNamespace:
     """screen_loader 桩:get_screen 恒 None → area_center 走缺失臂
-    (None;供「area 缺失 = 显式失败禁兜底坐标」语义锁)。"""
+    (None;供「area 缺失 = 显式失败禁兜底坐标」语义测试)。"""
     return SimpleNamespace(get_screen=lambda name: None)
 
 
@@ -196,8 +196,8 @@ def test_encounter_pick_op_clicks_card_then_confirm(no_pick_sleep, monkeypatch):
 def test_supply_pick_op_clicks_target_and_confirms(no_pick_sleep):
     """补给确认链:点卡 → 「按钮-确认」area 确认(机械半零判效);
     补给确认无到账登记写边(入栏/后果腿 =
-    ``report_action_pick_supply_param`` 即时单相,行为锁见
-    test_supply);本锁只锁机械点击面。"""
+    ``report_action_pick_supply_param`` 即时单相,行为测试见
+    test_supply);本测试只校验机械点击面。"""
     confirm_calls: list[tuple] = []
     ctrl = _RecordingController()
     op = SimpleNamespace(
@@ -372,7 +372,7 @@ def test_invest_pick_op_clicks_target_confirms_and_self_reports(
     # 即时上报接线(机械链发出后恰一次;param 原样透传;Env param → env 支)。
     assert len(reported) == 1 and reported[0][1].idx == 2
 
-    # 策略 param → strategy 支(类型机械分派锁)。
+    # 策略 param → strategy 支(类型机械分派测试)。
     reported_st: list = []
     monkeypatch.setattr(pick_mod, 'report_action_pick_invest_strategy_param',
                         lambda gs, param, sig, **kw:
@@ -388,7 +388,7 @@ def test_invest_pick_op_clicks_target_confirms_and_self_reports(
 def test_fortune_pick_op_clicks_card_confirms_and_self_reports(
         no_pick_sleep, monkeypatch):
     """命运卜者确认链(坐标随报收敛后):点卡坐标 = 按下标自容器
-    ``fortune_opts_xy`` 读(缺/越界 = 守卫断言,二态见下一锁)→
+    ``fortune_opts_xy`` 读(缺/越界 = 守卫断言,二态见下一测试)→
     「按钮-确认选择」area 查找点击确认(全族统一);轮次结果旁路回传;
     自上报接线。env 停喂 idx/target(已收敛屏)。"""
     import sr_od.application.currency_war.operations.cw_op.cw_pick_fortune_action as pick_mod
@@ -421,7 +421,7 @@ def test_fortune_pick_op_clicks_card_confirms_and_self_reports(
 
 def test_fortune_pick_op_container_guard_rejects_without_click(
         no_pick_sleep, monkeypatch):
-    """命运卜者取点守卫二态锁(坐标随报条款;A 类伴随域无 None 元素,
+    """命运卜者取点守卫二态测试(坐标随报条款;A 类伴随域无 None 元素,
     守卫二态 = 缺域/越界):容器 fortune_opts_xy 缺席/空、param.idx 越界
     → AssertionError 且零点击零上报(禁坐标现算回退)。红 = 现算回退 /
     守卫缺位静默续跑。"""
@@ -460,7 +460,7 @@ def test_fortune_pick_op_container_guard_rejects_without_click(
 def test_wish_trial_pick_op_clicks_card_area_confirms_and_self_reports(
         no_pick_sleep, monkeypatch):
     """祈愿试炼确认链(坐标随报收敛后):点卡坐标 = 按下标自容器
-    ``wish_trial_opts_xy`` 读(缺/越界 = 守卫断言,二态见下一锁)→
+    ``wish_trial_opts_xy`` 读(缺/越界 = 守卫断言,二态见下一测试)→
     「按钮-确认选择」area 查找点击确认(全族统一);轮次结果旁路回传;
     自上报接线。env 停喂 idx/target(已收敛屏)。"""
     import sr_od.application.currency_war.operations.cw_op.cw_pick_wish_trial_action as pick_mod
@@ -499,7 +499,7 @@ def test_wish_trial_pick_op_clicks_card_area_confirms_and_self_reports(
 
 def test_wish_trial_pick_op_container_guard_rejects_without_click(
         no_pick_sleep, monkeypatch):
-    """祈愿试炼取点守卫二态锁(选择坐标观察上报条款;A 类伴随域无 None
+    """祈愿试炼取点守卫二态测试(选择坐标观察上报条款;A 类伴随域无 None
     元素,守卫二态 = 缺域/越界):容器 wish_trial_opts_xy 缺席/空、
     param.idx 越界 → AssertionError 且零点击零上报(禁坐标现算回退)。
     红 = 现算回退 / 守卫缺位静默续跑。"""
@@ -538,7 +538,7 @@ def test_wish_trial_pick_op_container_guard_rejects_without_click(
 
 def test_pick_expert_invite_takes_point_from_container(no_pick_sleep,
                                                        monkeypatch):
-    """专家邀请函选卡取坐标锁(选择坐标观察上报收敛,op-layer.md §1.1):
+    """专家邀请函选卡取坐标测试(选择坐标观察上报收敛,op-layer.md §1.1):
     点击点 = 容器 ``expert_invite`` payload 双源按 param.idx 取——idx=-1 =
     词表特形(现金为王)显式分支消费 ``cash_point``;idx ∈ 0..3 = 消费
     ``card_points[idx]``(坐标单一真相源 = 观察上报;禁回退 env.target、
@@ -600,7 +600,7 @@ def test_pick_expert_invite_takes_point_from_container(no_pick_sleep,
 
 
 def test_pick_star_tome_takes_point_from_container(no_pick_sleep, monkeypatch):
-    """星徽秘典选卡取坐标锁(选择坐标观察上报收敛,op-layer.md §1.1):
+    """星徽秘典选卡取坐标测试(选择坐标观察上报收敛,op-layer.md §1.1):
     点击点 = 容器 ``star_tome_opts_xy[param.idx]``(坐标单一真相源 =
     观察上报;禁回退 env.target、禁坐标现算)→ safe_click + 自上报照发;
     坐标域缺席(gs 缺席)/下标越界 = 守卫断言 AssertionError 响亮暴露
@@ -648,7 +648,7 @@ def test_pick_star_tome_takes_point_from_container(no_pick_sleep, monkeypatch):
 
 
 def test_pick_box_card_takes_point_from_container(no_pick_sleep, monkeypatch):
-    """武装箱选卡取坐标锁(选择坐标观察上报收敛,op-layer.md §1.1):
+    """武装箱选卡取坐标测试(选择坐标观察上报收敛,op-layer.md §1.1):
     点击点 = 容器 ``box_card_names_xy[param.idx]``(坐标单一真相源 =
     观察上报;禁回退 env.target、禁坐标现算)→ 点击 + 自上报照发;
     坐标域缺席(gs 缺席)/下标越界 = 守卫断言 AssertionError 响亮暴露
@@ -741,7 +741,7 @@ def test_expert_invite_entry_select_only(test_context, monkeypatch):
     """收缩为弹窗画面 op:入口门 = 弹窗已开单一形态(两 node 形态观察
     node 承载)——弹窗不在 = fail 交回外循环重识别(外循环按下一帧画面
     重分发自愈;开卡缺位由备战词表 CwActionOpenBookcardParam 链承接)。
-    选卡成功链的行为面由决策出口守卫锁组承重,本锁不重复。"""
+    选卡成功链的行为面由决策出口守卫测试组承重,本测试不重复。"""
     from test.sr_od.application.currency_war._cw_helpers import (
         Area,
         run_node,
@@ -760,7 +760,7 @@ def test_expert_invite_entry_select_only(test_context, monkeypatch):
 
 
 def _expert_guard_harness(test_context, monkeypatch, strategy):
-    """守卫锁组装配:obs 读链桩 + area_center 桩(迁观察链 = 观察上报
+    """守卫测试组装配:obs 读链桩 + area_center 桩(迁观察链 = 观察上报
     坐标域种子,act 决策段零 area_center 可桩)+ 注册表 action_op_for
     派发捕获桩。strategy = decide_expert_invite 注入体(match =
     StrategySession 冷建;strategy=None = 局外无 match 语境)。
@@ -785,7 +785,7 @@ def _expert_guard_harness(test_context, monkeypatch, strategy):
     monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
     op = mod.CwScreenExpertInvite(test_context)
     # 卡羁绊/板面读链桩(观察载体在位:卡-1 = 能量,与板面 {'仙舟': 2}
-    # 无同线;判据语义对锁组无感——决策值全由 strategy 桩给定)。
+    # 无同线;判据语义对测试组无感——决策值全由 strategy 桩给定)。
     monkeypatch.setattr(mod, '_resolve_card_bonds',
                         lambda ctx, screen, a: '能量' if a == '卡-1' else None)
     monkeypatch.setattr(cw_observation, 'read_board',
@@ -795,13 +795,13 @@ def _expert_guard_harness(test_context, monkeypatch, strategy):
     monkeypatch.setattr(op, 'round_by_find_area',
                         lambda s, sc, a, **k: Area(True))
     # 坐标域种子(观察链桩;观察上报经 report 落容器,决策段零坐标现算,
-    # 坐标消费 = 动作 op 容器取点锁)。
+    # 坐标消费 = 动作 op 容器取点测试)。
     _pts = {'卡-1': Point(300, 400), '卡-2': Point(700, 400),
             '卡-3': Point(1100, 400), '卡-4': Point(1500, 400),
             mod.CASH_AREA: Point(500, 900)}
     monkeypatch.setattr(cw_obs_core, 'area_center',
                         lambda ctx, name, screen: _pts.get(name))
-    # 派发捕获桩(机械链行为锁)。
+    # 派发捕获桩(机械链行为测试)。
     dispatches: list = []
 
     class _StubPickOp:
@@ -820,7 +820,7 @@ def _expert_guard_harness(test_context, monkeypatch, strategy):
 
 
 def test_expert_invite_decision_exception_propagates(test_context, monkeypatch):
-    """锁A(异常传播,op-layer §1.1 出口③):策略桩 decide_expert_invite
+    """测试A(异常传播,op-layer §1.1 出口③):策略桩 decide_expert_invite
     抛 RuntimeError → act 异常传播(pytest.raises)、零派发、_pick_pending
     保持 None。原「异常不出 op,落现金为王兜底续跑」降级形态随守卫化退役
     (策略异常 = 错误传播交外循环,流程侧禁任何兜底决策)。红 = 异常被
@@ -843,7 +843,7 @@ def test_expert_invite_decision_exception_propagates(test_context, monkeypatch):
 
 def test_expert_invite_decision_invalid_return_named_fail(test_context,
                                                           monkeypatch):
-    """锁B(返回契约,op-layer §1.1 出口③):策略桩返回 None 与词表外对象
+    """测试B(返回契约,op-layer §1.1 出口③):策略桩返回 None 与词表外对象
     (SimpleNamespace(idx=0))两子态 → act 具名 round_fail(消息含「决策
     无有效输出」与原值 repr)、零派发零点击、_pick_pending None。原
     AttributeError 传播路径收编进具名 fail(诊断面原值 repr 直读)。红 =
@@ -867,9 +867,9 @@ def test_expert_invite_decision_invalid_return_named_fail(test_context,
 
 def test_expert_invite_pick_idx_out_of_domain_asserts(test_context,
                                                       monkeypatch):
-    """锁C(值域,op-layer §1.3):真词表类域外 idx(-2 = 原「<0 静默并入
+    """测试C(值域,op-layer §1.3):真词表类域外 idx(-2 = 原「<0 静默并入
     现金分支」路径 / 4 = 原 IndexError 意外出口)→ AssertionError 传播、
-    零派发零点击、_pick_pending None;idx=-1 不炸(域内现金语义,归锁D)。
+    零派发零点击、_pick_pending None;idx=-1 不炸(域内现金语义,归测试D)。
     红 = 域外并入现金分支 / 越界非守卫断言出口。"""
     from test.harness.fixture_controller import fast_sleep
     from test.sr_od.application.currency_war._cw_helpers import run_node
@@ -891,10 +891,10 @@ def test_expert_invite_pick_idx_out_of_domain_asserts(test_context,
 
 def test_expert_invite_decision_direct_dispatch_two_states(test_context,
                                                            monkeypatch):
-    """锁D(正路两态):真词表类 idx=-1 → 恰一次派发、派发 param 即策略产
+    """测试D(正路两态):真词表类 idx=-1 → 恰一次派发、派发 param 即策略产
     实例(is 比对,零重建构造点)、env.idx == -1 且 env 停喂 target
     (idx-only)、容器坐标域 cash_point 在位(坐标源断言 = 容器值,机械
-    消费归容器取点锁)、round WAIT;idx=1 → env.idx == 1、容器
+    消费归容器取点测试)、round WAIT;idx=1 → env.idx == 1、容器
     card_points[1] 在位、_pick_pending 置位。红 = 重建构造点回潮 / env
     复喂 target / 观察双写断流。"""
     from test.harness.fixture_controller import fast_sleep
@@ -929,11 +929,11 @@ def test_expert_invite_decision_direct_dispatch_two_states(test_context,
 
 def test_expert_invite_no_match_fails_via_normal_chain(test_context,
                                                        monkeypatch):
-    """锁E(局外无早退支,用户裁决 2026-09-22 全族删门,op-layer §1.1):
+    """测试E(局外无早退支,用户裁决 2026-09-22 全族删门,op-layer §1.1):
     cw_match = None(观察链桩照常给 obs)→ act 不设局外早退门,沿正常
     链路因缺上下文自然失败(AttributeError)、零派发零点击、_pick_pending
     保持 None;kernel choose_expert_index 桩零调用(兜底判据支退役的回归
-    锁)。红 = 局外 round_success 早退门回潮 / 局外兜底决策/派发回潮。"""
+    测试)。红 = 局外 round_success 早退门回潮 / 局外兜底决策/派发回潮。"""
     from test.harness.fixture_controller import fast_sleep
     from test.sr_od.application.currency_war._cw_helpers import run_node
 
@@ -959,7 +959,7 @@ def test_expert_invite_no_match_fails_via_normal_chain(test_context,
 
 
 def test_expert_invite_report_dual_domain_write():
-    """report 双写锁(选择坐标观察上报,op-layer §1.1):同一调用同一
+    """report 双写测试(选择坐标观察上报,op-layer §1.1):同一调用同一
     写门写 ``ExpertInvitePayload`` 四字段(card_bonds/board/card_points/
     cash_point);同序等长写端构造守卫——不等长(定长 4)= AssertionError
     响亮暴露零写;坐标域欠供(None)随名字域同门照报(欠账形态同格,

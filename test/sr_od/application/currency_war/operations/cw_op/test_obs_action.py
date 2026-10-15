@@ -1,4 +1,4 @@
-"""重观察动作锁(CwActionObs):策略发射 → 请求新鲜观察,scope 选口径。
+"""重观察动作测试(CwActionObs):策略发射 → 请求新鲜观察,scope 选口径。
 
 出处 = docs/develop/sr_od/application/currency_war/flow/action_exec.md §3
 (备战单动作消费·重观察通道)+ screens/prep.md §4(循环形态·读屏点
@@ -6,9 +6,9 @@
 test_prep_action_ops harness 形状);环级 = 桩策略 + 实例级重观察桩
 (同 test_prep_pipeline 消费端形状)。
 
-锁面清单:
+测试面清单:
 1. 注册表语义:obs 行非终结 + terminal_wait=0(决策环续跑的形状前提;
-   终结集等价锁归 test_action_registry,此处锁 obs 自身行);
+   终结集等价测试归 test_action_registry,此处校验 obs 自身行);
 2. op 行为(in_place 口径):宿主重观察恰一次 + round_success(零点击);
    自上报接线(零写函数被桩捕获);
 3. overlay bail:重观察回执 event_overlay 非空 → CwObsOverlayBail
@@ -130,7 +130,7 @@ def test_obs_op_env_without_capability_loud_fails():
 def test_obs_scope_invalid_value_f3_rejected():
     """F3 值域校验:scope 拼错值 → validate 拒绝(参数非法通道交回留证;
     值域闭集单一源 = OBS_SCOPES)。outer_loop 口径在决策循环 F3 之前拦截,
-    到不了 validate——此处锁的是 in_place 执行路径的拼错值防线。"""
+    到不了 validate——此处校验的是 in_place 执行路径的拼错值防线。"""
     ex = PrepActionExecutor(
         SimpleNamespace(),
         SimpleNamespace(controller=SimpleNamespace(), cw_match=None,

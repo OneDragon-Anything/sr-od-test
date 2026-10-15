@@ -1,23 +1,23 @@
-"""商店会话重排批 3.6 行为锁(判据唯一源 = shop_session.md §1-§5;
+"""商店会话重排批 3.6 行为测试(判据唯一源 = shop_session.md §1-§5;
 迭代 2026-10-12-prep-shop-workflow-redesign)。
 
-锁面(landing 3.6 完成判据):
+测试面(landing 3.6 完成判据):
 
-1. **读数协议锁**(§4.2):失效触发族逐项(选卡/合成/晶矿/升 9 级/
+1. **读数协议测试**(§4.2):失效触发族逐项(选卡/合成/晶矿/升 9 级/
    计数达阈)+ 会话入口再锚定 + 多卖循环第二笔起账面判缺口(禁逐笔
    开店重读)+ 动作伴生入金记账(漏账偏差侦测的账面侧);
-2. **六序承继锁**(§2.2):未锁定期序 1 候选态(贯穿件恒囤)/场况
+2. **六序承继测试**(§2.2):未锁定期序 1 候选态(贯穿件恒囤)/场况
    插件会话累计额度;
 3. **三段式刷新判据 + 停留门**(§2.4):P1 恒零主动付费刷新 / 段边界
    (P2 未锁窗口候选缺件驱动 / 锁定后星级目标)/ 停留门等级 < 带下界
    → 升级优先不刷;
-4. **重开触发锁**(§4.2 解拦复核):席位空出解拦 / 金位解除解拦
+4. **重开触发测试**(§4.2 解拦复核):席位空出解拦 / 金位解除解拦
    (义务件破息豁免形态)/ 读数开门形态;翻转行为差形态(溢余帧升级
    前置截断买入,顺延非丢失)由 test_intention +
-   test_levelup_prob_axis 承载,不双锁;
+   test_levelup_prob_axis 承载,不双测;
 5. **刷新终结语义回归**(§1):刷新(op 级重进)仍属同一会话——
    会话标记与清单不受扰动,收工后置标记;
-6. **商店期动作面形态帧锁**(原 test_cw_shop_action_face_contraction
+6. **商店期动作面形态帧测试**(原 test_cw_shop_action_face_contraction
    并入;2026-09-14 收缩裁定随 3.6 会话重写废止,用户裁定 2026-10-13):
    各形态帧首动作 ∈ 扩展闭集 {买牌, 刷新, 关店, 卖备战席, 购买经验
    整批};席满买入 = 店内置换账/恒买腾位/筹资(「关店→备战卖→重开」
@@ -179,7 +179,7 @@ def _decide_once(sess, cfg=None):
         registry=DEFAULT_REGISTRY)
 
 
-# ============================================================ 读数协议锁
+# ============================================================ 读数协议测试
 
 
 class TestGoldLedgerProtocol:
@@ -317,7 +317,7 @@ class TestGoldLedgerProtocol:
         assert st.gold_ledger == led0 + 3, '双写同步:账面与容器同额入金'
 
 
-# ============================================================ 六序承继锁
+# ============================================================ 六序承继测试
 
 
 class TestOrderInheritance:
@@ -349,7 +349,7 @@ class TestOrderInheritance:
             line_identity_tier,
         )
         # 插件件选择约束:身份 tier 必须无关(序 1 三态成员面与 ④ 转线
-        # 放行臂都不辖——本锁专辖序 2 额度门,不被前序臂掩蔽)。档位
+        # 放行臂都不辖——本测试专辖序 2 额度门,不被前序臂掩蔽)。档位
         # 约束:tier_next > 阈档 3(等级 3 帧的 deploy_cap 采信下限),
         # 使「板面差一人进下一档」与「deployed == deploy_cap(额度 0)」
         # 可以同时成立。
@@ -418,7 +418,7 @@ class TestThreeStageRefresh:
 
     def test_p2_unlocked_gap_drives(self):
         """P2 未锁窗口:候选缺件驱动(候选快照 = 本判据申报输入面,
-        直种锁定语义免耦合评分内核——评分面主题锁在 test_line_select)。
+        直种锁定语义免耦合评分内核——评分面主题测试在 test_line_select)。
 
         - 候选线缺员且等级 ≥ 其概率带下界 → 可刷;
         - 候选线全员持有(缺员 ∅)→ 不刷(fail-closed)。
@@ -479,7 +479,7 @@ def _skip_member(name: str) -> bool:
     return ch is None or not ch.cost
 
 
-# ============================================================ 重开触发锁
+# ============================================================ 重开触发测试
 
 
 class TestReopenTriggers:
@@ -630,7 +630,7 @@ class TestRefreshTerminationSession:
 
 
 # ============================================================
-# 商店期动作面形态帧锁(原 test_cw_shop_action_face_contraction 并入;
+# 商店期动作面形态帧测试(原 test_cw_shop_action_face_contraction 并入;
 # 3.6 重排后的店内动作边界,shop_session §1 能力面)
 # ============================================================
 
@@ -659,7 +659,7 @@ def _frame_session(*, bench_units: list[str], deployed_units: list[str],
                    card_names: list[tuple[str, int]], gold: int,
                    hp: int = 60, node_kind: str = 'prep'):
     """通用最小商店决策帧(bench/上场/店面卡/金/血可参)。deployed_
-    units 非空 = 板空帧语义独立(本锁断言域不辖)。金位账面随种子锚定
+    units 非空 = 板空帧语义独立(本测试断言域不辖)。金位账面随种子锚定
     (读数协议③稳态;失效行为测试显式置 None)。"""
     comp = COMP_LIBRARY[0]
     sess = StrategySession(rng=random.Random('cw-36'))
@@ -753,7 +753,7 @@ def _frame_funding_hold_fallback():
     """筹资穷尽形态:缺员在店 + 金不足 + bench 空仓(活期/兜底池全
     空)→ 候选与兜底双穷尽 → 记录金不足机会清单收工(shop_session
     §2.3;义务类兜底可卖持有件〔腿①〕的形态由卖出面测试辖,本帧
-    锁穷尽边界)。"""
+    校验穷尽边界)。"""
     return _frame_session(
         bench_units=[],
         deployed_units=_fuel_names(1),
@@ -782,7 +782,7 @@ _SELL_FIRST_FORMS = {'m4_missing_vacate', 'm2_stockpile_vacate',
 
 @pytest.mark.parametrize('case', list(_FORM_FRAMES))
 def test_shop_forms_stay_in_reordered_action_face(case: str):
-    """动作面锁(六形态逐一;参数化纪律沿袭):各形态帧首动作 ∈ 扩展
+    """动作面测试(六形态逐一;参数化纪律沿袭):各形态帧首动作 ∈ 扩展
     闭集(买/刷/关/卖备战席/购买经验整批)——2026-09-14 收缩裁定的
     「商店期零卖射零升级射」废止,席满置换/筹资/店内升级为在产形态;
     闭集外类型(部署/卖场上等店内禁做面)发射即红。"""
@@ -797,7 +797,7 @@ def test_shop_forms_stay_in_reordered_action_face(case: str):
 
 @pytest.mark.parametrize('case', sorted(_SELL_FIRST_FORMS))
 def test_bench_blocked_forms_sell_in_shop(case: str):
-    """席满/缺金形态的店内卖出锁:置换账(value 比较)与恒买豁免
+    """席满/缺金形态的店内卖出测试:置换账(value 比较)与恒买豁免
     (c1_make_room)与筹资(session_funding)首动作 = CwActionSellBenchParam,
     「关店→备战卖→重开」腾位链废止——帧内一步完成,不再产生
     wanted 残差跨段状态(S2 机器退役)。"""
@@ -813,10 +813,10 @@ def test_bench_blocked_forms_sell_in_shop(case: str):
 
 
 def test_vacate_chain_reopen_keeps_shop_face_and_buys():
-    """牌面持久契约锁(置换形态;承继 research/economy.md §2.1):同一
+    """牌面持久契约测试(置换形态;承继 research/economy.md §2.1):同一
     session/同一店面 payload 下:席满帧置换卖出(bench 移除一件,
     店面 payload 不动)→ 下帧重判,原缺员件在店且被买入。牌面若被
-    卖出/重开刷新(跨节点语义误用到节点内),缺员件不在店,本锁红。"""
+    卖出/重开刷新(跨节点语义误用到节点内),缺员件不在店,本测试红。"""
     strategy, sess, config = _frame_m4_missing_vacate()
     act1 = strategy.decide_shop_action()
     assert type(act1).__name__ == 'CwActionSellBenchParam'

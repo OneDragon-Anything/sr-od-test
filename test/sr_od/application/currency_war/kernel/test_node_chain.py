@@ -1,4 +1,4 @@
-"""链观察锁面(链观察载体/查询/派生直定 + 过渡屏写端 + 备战帧写端 +
+"""链观察测试面(链观察载体/查询/派生直定 + 过渡屏写端 + 备战帧写端 +
 节点行归位 + 晶矿奖励通道挂接)。
 
 语义正本 = game_state/chain-observation.md §2/§3/§6(载体与两链字段、
@@ -10,7 +10,7 @@
 harness run_node):
 - 现行链载体与查询(kernel 字段语义 + 商店查链派生直定消费面);
 - 过渡屏(``cw_screen_plane_transition._build_transition_chain`` +
-  ``report_screen_plane_transition_obs``;写闸防御锁在
+  ``report_screen_plane_transition_obs``;写闸防御测试在
   test_screen_report_ports 承重,本文件不重复);
 - 备战帧(``cw_screen_prep._write_prep_node_chain``:轮位对齐门/左移
   携带/boss SIFT 禁回落/变异窗/基线回填 + 槽序表/台账/未识别图标采集
@@ -178,7 +178,7 @@ def _seed_watermark(gs, pos_val: tuple[int, int]) -> None:
 
 def test_derivation_shop_panel_targets_observed_node_not_stale_hist():
     """查链目标 = 生效序与观察镜像的最新者(20260918-reconcile 第 11 例
-    事故形态回归锁,run_20260918_074040)。
+    事故形态回归测试,run_20260918_074040)。
 
     病理:镜像已被读链写到 r3(店开帧 votes 读,(1,3,reward),观察源),
     推进水位仍 r2(备战帧未过,备战腿未计数);旧写法按 hist 反解查链
@@ -223,7 +223,7 @@ def test_derivation_shop_panel_popup_advanced_hist_wins_over_stale_mirror():
 
 
 def test_derived_node_type_regression_write_dropped_with_event():
-    """类型直定倒退免疫锁(规则三同簇):目标序 < 镜像序 → 丢弃留证
+    """类型直定倒退免疫测试(规则三同簇):目标序 < 镜像序 → 丢弃留证
     不写(镜像比派生目标鲜活,直定旧节点 = 把新节点回写旧键);镜像值
     保持,arbitrate obs_event 在案。走 BOSS 简报直定路径(类型直定迁移后
     的专属屏直定写端,design §2.5 表,目标 = hist)。"""
@@ -470,7 +470,7 @@ def _hk_slot(idx: int, state: str, node_type: str | None = None,
 
 def _hk_round3_slots() -> list[NodeSlot]:
     """round 3 对齐帧五槽:2 past + current(2)+ upcoming battle + boss 末槽
-    (与备战链锁同形;past/boss 位类型恒 None = 现役识别口径)。"""
+    (与备战链测试同形;past/boss 位类型恒 None = 现役识别口径)。"""
     return [
         _hk_slot(0, 'past'),
         _hk_slot(1, 'past'),
@@ -569,7 +569,7 @@ def test_icon_capture_debounced_300s(monkeypatch, tmp_path):
 
 
 def test_prep_entry_heavy_observation_triggers_writes(test_context, monkeypatch):
-    """备战入口 heavy 观察触发(接线锁):CwScreenPrep._observe heavy 经
+    """备战入口 heavy 观察触发(接线测试):CwScreenPrep._observe heavy 经
     observe_full 回传 slots → 节点行消费位同帧同点落位(槽序表 + 台账)。
     识别零新增:observe_full 桩只回传「现役 read_node_sequence 的产物
     形态」,读链不入桩面。"""

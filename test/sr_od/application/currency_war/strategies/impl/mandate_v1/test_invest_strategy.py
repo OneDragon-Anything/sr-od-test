@@ -16,15 +16,15 @@ currency_war/strategy-docs/29_invest_strategy_screen.md;规格出处 =
 - ⑦ 刷新判据(帧级门与槽级顶级两谓词分立、E-豁免、F2 守卫、对齐保护);
 - ⑨ decide_pick 纯选卡口(同评分基线、永不建议刷);
 - ⑩ LCS 兜底命中即告警(观测锚);
-- ⑪ 环境屏(env)平行锁面(投资环境策略层 invest_env:线价值三口径/
+- ⑪ 环境屏(env)平行测试面(投资环境策略层 invest_env:线价值三口径/
   赠卡分/时代族零值/环境现金分/刷新三态与阈值/自拆台排除/构建校验
   /flow 消费侧接线)——与策略屏同族评分概念的 env 支,两屏生产模块
-  平行,各自直锁。
+  平行,各自直测。
 
 校验「import 即炸」的接线面:直接调校验入口 + monkeypatch 表断言抛错,
 不用 reload/源码扫描。
 
-测试纪律:零真实副作用;断言锁设计语义,数值期望 = 注册表真实数据
+测试纪律:零真实副作用;断言钉住设计语义,数值期望 = 注册表真实数据
 (提交进仓)现算锚定,docstring 记出处。
 """
 from __future__ import annotations
@@ -189,7 +189,7 @@ def test_cash_boss_channel_kind_count():
 
 
 def test_cash_boss_channel_kind_not_geometry():
-    """kind 计数非几何的判别锁:boss 不在位面末槽的场字段序列下,几何
+    """kind 计数非几何的判别测试:boss 不在位面末槽的场字段序列下,几何
     末槽假设与 kind 直查分叉——自当前节点(含)起的真实 boss 计数 = 2
     (P1 r3 boss + P2 全程 1 个;P1 位面末槽假设会漏计 r3 的 boss)。"""
     displaced = {
@@ -298,7 +298,7 @@ def test_grant_advisor_halved():
 
 
 def test_grant_registry_counts_and_closed_set():
-    """底册计数锁(对账记录 = 迭代目录 strategy-grants-reconciliation.md):
+    """底册计数测试(对账记录 = 迭代目录 strategy-grants-reconciliation.md):
     86 条 = 11 顾问 + 68 绑定母体白得 + 4 反扫补网 + 3 箱腿(占席道具
     直读,);顾问档名单在册。"""
     assert len(STRATEGY_GRANTS) == 86
@@ -725,9 +725,9 @@ def test_exact_hit_does_not_warn(caplog):
                    for r in caplog.records)
 
 
-# ==================== ⑪ 环境屏(env)平行锁面 ====================
+# ==================== ⑪ 环境屏(env)平行测试面 ====================
 # 投资环境策略层(与策略屏同族评分概念的 env 支;两屏生产模块平行,
-# 各自直锁)。判据 = ①-⑦ + flow 消费侧接线锁。
+# 各自直测)。判据 = ①-⑦ + flow 消费侧接线测试。
 
 _ENV_SIG_LOGIC = ChannelSig(family='logic_action', actor='cw-invest-env-test',
                             mode='compute')
@@ -795,7 +795,7 @@ def test_env_named_gift_direct_core_scores_high():
 
 def test_env_named_gift_all_evicted_is_zero_not_disqualified():
     """全员集外 → 赠卡分自然 0;整环境失格规则已删,环境其余成分照常
-    计分——锁语义:总分公式仍成立而非整体清零。"""
+    计分——测试语义:总分公式仍成立而非整体清零。"""
     all_comps = frozenset(c.name for c in COMP_LIBRARY)
     assert named_gift_value('战技点契约', all_comps) == 0.0
     gs = _fresh_gs()
@@ -950,7 +950,7 @@ def test_env_all_excluded_frame_falls_back_to_decision():
     """全排除退化帧 + 次数闸关:排除规则失去选择面,落地件对全体候选
     (含被禁)取 argmax 最不负分者返回选卡决策,
     归因串以 all-excluded-fallback 开头——该帧会真发选卡动作,
-    reason 是判读面唯一标识(不锁 idx:位次随阵容库注册值漂移,锁类型 +
+    reason 是判读面唯一标识(不断言 idx:位次随阵容库注册值漂移,校验类型 +
     归因前缀即设计语义)。"""
     gs = _fresh_gs()
     _env_set_refresh_left(gs, 0)
@@ -996,7 +996,7 @@ def test_env_build_validation_orphan_stance_key_raises(monkeypatch):
 
 def test_env_build_validation_coefficient_tables_complete():
     """系数表键完备:线强度档覆盖 COMP_LIBRARY 全部档;赠卡档覆盖四档。
-    (import 已过一遍;显式再验 = 锁校验函数自身行为。)"""
+    (import 已过一遍;显式再验 = 钉住校验函数自身行为。)"""
     invest_env._validate_coefficient_tables()   # 不抛 = 键完备
     from sr_od.application.currency_war.strategies.impl.mandate_v1.gift_value import (
         GIFT_TIER_SCORE,
@@ -1009,7 +1009,7 @@ def test_env_build_validation_coefficient_tables_complete():
 
 
 def test_env_build_validation_coefficient_missing_key_raises(monkeypatch):
-    """系数表缺键即炸(校验逻辑本体拒绝锁):线强度档缺 B 与赠卡档缺
+    """系数表缺键即炸(校验逻辑本体拒绝测试):线强度档缺 B 与赠卡档缺
     transition 两分支各自拒绝。两段用独立 context 隔离——monkeypatch 默认
     测试级还原,同测试内前段篡改会泄漏进后段。"""
     with monkeypatch.context() as m:
@@ -1026,7 +1026,7 @@ def test_env_build_validation_coefficient_missing_key_raises(monkeypatch):
             invest_env._validate_coefficient_tables()
 
 
-# ---- flow 消费侧接线锁 ----
+# ---- flow 消费侧接线测试 ----
 
 
 def _env_wired_strategy(gs: GameState):
@@ -1108,7 +1108,7 @@ def test_env_decide_and_decide_pick_agree():
 
 
 #: 策略轴建议帧(三张精确低分卡:帧级门过、全槽可刷——同帧取自本文件
-#: 刷新判据锁,注册表真实数据)。
+#: 刷新判据测试,注册表真实数据)。
 _STRATEGY_REFRESH_FRAME = ['嘴硬', '二极管', '免费升舱']
 
 
@@ -1137,7 +1137,7 @@ def test_env_flow_strategy_axis_strategy_layer_reason_shape():
 
 def test_env_flow_strategy_frame_memo_three_states():
     """策略轴 memo 三态(同帧去重语义;缺 decide_pick 落选卡口则建议帧
-    三闸全败时 op round_fail 的行为缺口锁):建议帧首调发
+    三闸全败时 op round_fail 的行为缺口测试):建议帧首调发
     CwActionRefreshInvestCardsParam(slots = 策略层动作集)→ 同候选重调落
     选卡 CwActionPickInvestStrategyParam(reason = pick total= 前缀,取数口
     = invest_strategy.decide_pick 同一评分基线)→ 再调恢复首调建议(键清;

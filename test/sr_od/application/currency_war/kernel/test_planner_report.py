@@ -1,8 +1,8 @@
-"""银狼策划上报锁面(腿型判定单源 / 名称归一分层 / 腿应用三态 / 采样池)。
+"""银狼策划上报测试面(腿型判定单源 / 名称归一分层 / 腿应用三态 / 采样池)。
 
 判据正本(持久索引):银狼闭环设计 §2.0/§2.1/§2.4(docs/develop/
 sr_od/application/currency_war/ 迭代详设;单相即时上报契约 §2.0)。
-锁面:
+测试面:
 
 - **腿型判定单源**(§2.1①):装备域优先——破解芯片卡文含「弱化」
   仍判 equip(碰撞治理);longest-match(分身墨镜Max 不被短名截胡);相似
@@ -21,7 +21,7 @@ sr_od/application/currency_war/ 迭代详设;单相即时上报契约 §2.0)。
 - **好运令牌后果链锚**(§2.2 全渠道):apply_equip_acquire_consequence
   对表外件零写零行为、表内件送出单位。
 
-观察收口(等值静默/差异 logic_rand_outcome)= 基座锁
+观察收口(等值静默/差异 logic_rand_outcome)= 基座测试
 test_game_state.py::test_write_logic_rand_and_observe_random_outcome,
 不重复。
 """
@@ -103,7 +103,7 @@ def rows_sink() -> _RowSink:
 
 
 def test_leg_classifier_equip_domain_first_and_longest_match() -> None:
-    """腿型分类锁(design §2.1①):装备域优先——破解芯片卡文含「弱化」
+    """腿型分类测试(design §2.1①):装备域优先——破解芯片卡文含「弱化」
     仍判 equip(决策关键词碰撞治理);longest-match;相似归一;多命中
     = equip+未解析;关键词降级;unknown。"""
     # 破解芯片 = 名字 + 含「弱化」效果文 → 装备域锚先行(碰撞治理;
@@ -132,7 +132,7 @@ def test_leg_classifier_equip_domain_first_and_longest_match() -> None:
 
 
 def test_decide_planner_weaken_tier_retired(rows_sink: _RowSink) -> None:
-    """打分两档制退役锁(升费档 > 装备档):无名弱化卡文零弱化档分——按
+    """打分两档制退役测试(升费档 > 装备档):无名弱化卡文零弱化档分——按
     装备档回落(reason = 装备(...)),不再有 55 分「全场弱化」占优档;
     已知装备小分卡(轮滑鞋 = 4 分)对无名弱化卡文(0 分)胜出(退役前
     55 分弱化档占优)。"""
@@ -213,7 +213,7 @@ def test_unknown_leg_evidenced_zero_write(
 
 def test_planner_report_is_immediate_single_phase(
         rows_sink: _RowSink) -> None:
-    """单相即时上报锁(design §2.0):确认点击后一次上报即应用效果腿
+    """单相即时上报测试(design §2.0):确认点击后一次上报即应用效果腿
     (2★ 源即消费)——无发射相零写窗、无落地证据闩(两相已退役)。"""
     from sr_od.application.currency_war.kernel.cw_action_report.pick_planner import (
         report_action_pick_planner_param,
@@ -273,7 +273,7 @@ def test_registry_norm_multi_hit_refuses() -> None:
 
 
 def test_hacker_mod_pool_v0_no_max() -> None:
-    """采样链 v0 池形状锁(design §2.4):硬编码名单 = 4 费装备排除 Max 件
+    """采样链 v0 池形状测试(design §2.4):硬编码名单 = 4 费装备排除 Max 件
     的显式第二真相源——成员恒 5(专属 10 件的非 Max 件),零 Max 件,种子
     可复现(同种子同序列)。"""
     from sr_od.application.currency_war.data.cw_equipment_wear_rules_data import (

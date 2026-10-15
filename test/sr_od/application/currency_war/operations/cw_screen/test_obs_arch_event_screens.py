@@ -1,17 +1,17 @@
-"""遭遇节点 + 盛会之星 两 node 形态锁()。
+"""遭遇节点 + 盛会之星 两 node 形态测试()。
 
 两屏均已迁移「观察 node → 决策动作 node」直继承 SrOperation 形态(盛会之星
-= 节点循环 overlay 环形;遭遇 = 带分支刷新链的全形态)。锁的语义(测试
-纪律:只锁新形态的核心约定;report 函数级契约由 test_screen_report_ports
+= 节点循环 overlay 环形;遭遇 = 带分支刷新链的全形态)。测试的语义(测试
+纪律:只校验新形态的核心约定;report 函数级契约由 test_screen_report_ports
 承重,本文件不重复):
 
-- **入口门语义锁**(遭遇):画面身份门 miss = round_fail 交回外循环重判,
+- **入口门语义测试**(遭遇):画面身份门 miss = round_fail 交回外循环重判,
   文案沿用现役,且不进读链(obs 不装载);盛会之星 = 节点完成门(overlay
   消失 = 节点完成 success 交还外层)。
-- **观察上报接线锁**(遭遇):观察 node 稳定帧一次读(候选 + 剩余次数)
+- **观察上报接线测试**(遭遇):观察 node 稳定帧一次读(候选 + 剩余次数)
   → report 经屏文件落容器 ``encounter`` + ``encounter_refresh_left``
   (容器终值)+ obs 与刷新文本锚点挂实例属性。
-- **刷新链终结锁**(遭遇,
+- **刷新链终结测试**(遭遇,
   3.3:刷新 = 终结动作,剩余闸 = 观察真值):建议刷新 ∧ 闸放行(容器
   left>0 且锚点在位)→ 文本锚定点圆钮恰一次 + 固定等待 → round_success
   终结交回——无同访问 ``screenshot()`` 重读面、无 report 二次覆盖写、
@@ -19,21 +19,21 @@
   落选卡;重调仍建议刷新(刷新锚读缺面)→ round_fail 交回(计入外循环
   重派上限——防线行为,
   migration §2.5)。
-- **派发即终结锁**(遭遇,
+- **派发即终结测试**(遭遇,
   3.3 扩围):选卡确认链派发后 round_success 终结交回(零重入裁决轮);
   空候选 = 零点击终结交回(禁盲选派发确认——不可逆消耗);闸拒绝
   重调落选卡后同样终结。chosen_encounter 发射即写契约(动作侧 report
   函数级)= test_screen_report_ports 承重,本文件不重复。
-- **决策出口守卫锁**(遭遇):决策无有效输出(decide_encounter 返回
+- **决策出口守卫测试**(遭遇):决策无有效输出(decide_encounter 返回
   词表外/None)= 具名 round_fail 零盲发(op-layer §1.1 出口③);pick
   idx 越界 = 守卫断言 AssertionError(§1.3 禁钳位)——两守卫均派发前
   零点击零派发,直发策略产实例(流程侧零值域改写)。
-- **奖励兑现回调锁**(遭遇,kernel ``claim_encounter_reward``):双证
+- **奖励兑现回调测试**(遭遇,kernel ``claim_encounter_reward``):双证
   判遭遇(node 镜像 token ∧ settlement_ring 尾行 node_type)∧
   progress_delta>0 单判;兑现写 ``encounter_reward_claimed`` 且 chosen
   随即清(单次消费,重触发天然幂等);单腿不合/未达标/删失/无 chosen
   = 不写不清。
-- **盛会之星族锁**(节点循环形态):完成门/懒读保真/防重入旗标/chosen
+- **盛会之星族测试**(节点循环形态):完成门/懒读保真/防重入旗标/chosen
   写端(选择点留守)/局外无早退支(observe 照常读链、act 正常链路失败,
   用户裁决 2026-09-22 全族删门)/观察标准化门
   (双源域命中·转换失败·歧义拒判·LCS 同分取域序首确定性)/决策守卫
@@ -42,13 +42,13 @@
   各卡标签中心 x + 在册卡身线 y 每卡自带,零枚举映射;fixture 全链·
   部分读 xy 自带·SIFT 交叉裁决·reader 失败信号透传 round_fail·
   标准化透传·派发 env idx-only·动作 op 容器取点守卫三臂断言零点击)
-  各一锁,语义见各 docstring。
-- **补给节点锁**(CwScreenSupplyNode,两 node 形态;原 step3 文件并入):
+  各一测试,语义见各 docstring。
+- **补给节点测试**(CwScreenSupplyNode,两 node 形态;原 step3 文件并入):
   chosen_supply 确认即写(真选分支单次逻辑写入 2 元组 + 机械派发照发;
   刷新轮不写 = 真选守卫)与 supply 刷新闸(剩余语义观察真值:剩余 1 →
-  点钮恰一次终结交回;剩余 0/None → 零点击重调落选卡)各一锁;
-  另辖 act 流转形态锁(仍在节点屏 = 恰一动作 + round_wait 不计重试
-  预算;离开节点画面 = success 零动作——原 runnode 等价锁并入)。
+  点钮恰一次终结交回;剩余 0/None → 零点击重调落选卡)各一测试;
+  另辖 act 流转形态测试(仍在节点屏 = 恰一动作 + round_wait 不计重试
+  预算;离开节点画面 = success 零动作——原 runnode 等价测试并入)。
 
 驱动方式 = 真类实例(构造走 __init__)+ 读链/门/机械点击链桩化,节点
 函数直驱(run_node 外壳)。
@@ -155,9 +155,9 @@ def _make_megastar(test_context, monkeypatch, *, in_node: bool,
     """盛会之星真类装配(两 node 形态,):
     门桩 + 候选读链桩(观察 node 读屏函数注入点)+ 动作体调用计数。
     旗标宿主 = 策略器 StrategyState(经 session.strategy_state 通道)。
-    ``pick`` = 策略桩回值(决策守卫锁用;传真实 ``CwActionPickMegastar
+    ``pick`` = 策略桩回值(决策守卫测试用;传真实 ``CwActionPickMegastar
     Param`` = 守卫② 类型收紧后桩须同型);``stub_action=False`` = 不桩
-    ``_do_action``(守卫锁直驱真动作体,经 act 消费),此时第 4 元恒
+    ``_do_action``(守卫测试直驱真动作体,经 act 消费),此时第 4 元恒
     空表(计数桩未挂)。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_megastar as ms,
@@ -189,7 +189,7 @@ def _make_megastar(test_context, monkeypatch, *, in_node: bool,
 
 def test_encounter_observe_gate_fails_off_screen(
         test_context, monkeypatch) -> None:
-    """入口门语义锁:非遭遇屏 → round_fail 早退交回外循环重判(现役首闸
+    """入口门语义测试:非遭遇屏 → round_fail 早退交回外循环重判(现役首闸
     同 status),且不进读链(obs 不装载)。红 = 门失效 / 门早退仍读屏。"""
     op, _match, _session = _make_encounter(
         test_context, monkeypatch, in_screen=False, options=[],
@@ -202,7 +202,7 @@ def test_encounter_observe_gate_fails_off_screen(
 
 def test_encounter_observe_reports_container(
         test_context, monkeypatch) -> None:
-    """观察上报接线锁:观察 node 稳定帧一次读(候选 + 剩余次数)→ report
+    """观察上报接线测试:观察 node 稳定帧一次读(候选 + 剩余次数)→ report
     落容器 ``encounter``(容器终值 = 候选)+ ``encounter_refresh_left``
     (剩余语义摄入;读缺跳写闸在 report 内)+ obs 与刷新文本锚点挂实例
     属性。红 = 接线断流 / 容器终值漂移 / left 未摄入。"""
@@ -226,7 +226,7 @@ def test_encounter_observe_reports_container(
 
 def test_encounter_act_dispatch_terminal(
         test_context, monkeypatch) -> None:
-    """派发即终结锁(迭代 …3.3 扩围):零参决策 → 选卡确认链派发 →
+    """派发即终结测试(迭代 …3.3 扩围):零参决策 → 选卡确认链派发 →
     round_success 终结交回(零重入裁决轮、零刷新点击)。红 = round_wait
     循环回潮(重入裁决复活)/ 派发断流 / 刷新臂误触发。"""
     opts = [EncounterOption(idx=0, difficulty=1, rewards=['金币×2']),
@@ -245,7 +245,7 @@ def test_encounter_act_dispatch_terminal(
 
 def test_encounter_empty_options_zero_click_terminal(
         test_context, monkeypatch) -> None:
-    """空候选零点击终结锁(attack3 X2):候选读缺(obs.options 空)→
+    """空候选零点击终结测试(attack3 X2):候选读缺(obs.options 空)→
     零点击零派发 round_success 终结交回重读。红 = 盲选 idx0 派发确认
     回潮(选卡确认不可逆消耗本节点)。"""
     clicks, dispatches = _refresh_fixture(test_context, monkeypatch)
@@ -262,7 +262,7 @@ def test_encounter_empty_options_zero_click_terminal(
 
 def test_encounter_decision_invalid_named_fail_zero_blindfire(
         test_context, monkeypatch) -> None:
-    """决策无输出守卫锁(规范 = screens/op-layer.md §1.1 出口③「决策无
+    """决策无输出守卫测试(规范 = screens/op-layer.md §1.1 出口③「决策无
     有效输出也走此出口——零盲发」):decide_encounter 返回 None / 词表外
     类型 → 具名 round_fail(消息含策略器原值)零点击零派发。红 = 默认
     idx0 盲选左卡派发回潮(决策失败被静默降级为不可逆的选卡消耗)。"""
@@ -283,7 +283,7 @@ def test_encounter_decision_invalid_named_fail_zero_blindfire(
 
 def test_encounter_out_of_range_idx_asserts_before_click(
         test_context, monkeypatch) -> None:
-    """决策值域守卫锁(规范 = screens/op-layer.md §1.3「非法返回 = 策略器
+    """决策值域守卫测试(规范 = screens/op-layer.md §1.3「非法返回 = 策略器
     bug 响亮暴露,禁静默钳位」):策略器返回越界 idx(真实
     ``CwActionPickEncounterParam(idx=5)``、options 1 元)→ AssertionError
     传播(消息含 idx/len/原值留证)、零点击零派发(守卫在派发前——越界
@@ -319,7 +319,7 @@ def _refresh_fixture(test_context, monkeypatch) -> tuple[list, list]:
 
 def test_encounter_refresh_terminal_click_once_and_success(
         test_context, monkeypatch) -> None:
-    """刷新链终结锁(
+    """刷新链终结测试(
     design §2.0A):建议刷新 ∧ 剩余闸放行(容器 left=1 ∧ 锚点在位)→
     文本锚定点圆钮**恰一次** + 固定等待 → round_success 终结交回;同访问
     零 ``screenshot()`` 重读、零 report 二次覆盖写(容器终值 = 刷前候选)、
@@ -361,7 +361,7 @@ def test_encounter_refresh_terminal_click_once_and_success(
 
 def test_encounter_refresh_gate_rejects_zero_and_none(
         test_context, monkeypatch) -> None:
-    """刷新闸拒绝锁:建议刷新但剩余 0 / None(未观察)→ 零点击不按刷新
+    """刷新闸拒绝测试:建议刷新但剩余 0 / None(未观察)→ 零点击不按刷新
     终结,重调一次决策按原评分选卡(派发即终结交回)。红 = 闸失守重刷 /
     拒绝轮漏选卡。"""
     opts = [EncounterOption(idx=0, difficulty=1, rewards=['金币×2']),
@@ -399,7 +399,7 @@ def test_encounter_refresh_gate_rejects_zero_and_none(
 
 def test_encounter_refresh_gate_mismatch_round_fail_redispatch(
         test_context, monkeypatch) -> None:
-    """刷新锚读缺防线锁(
+    """刷新锚读缺防线测试(
     migration design §2.5):拒绝后重调仍返回刷新建议(刷新锚点读缺面)
     → round_fail 交回——失败计入外循环重派上限
     (``OP_FAIL_REDISPATCH_LIMIT`` 只计连续 fail,零点击 round_success
@@ -423,7 +423,7 @@ def test_encounter_refresh_gate_mismatch_round_fail_redispatch(
 
 def test_claim_encounter_reward_branches(
         test_context, monkeypatch) -> None:
-    """奖励兑现回调锁(迭代 …3.3 扩围 design §2.4,R1 复攻定谳后形态):
+    """奖励兑现回调测试(迭代 …3.3 扩围 design §2.4,R1 复攻定谳后形态):
     判遭遇 = 双证(node 镜像 token 'encounter' ∧ settlement_ring 尾行
     node_type='遭遇')——单腿不满足即拒(ring-mismatch 臂 = 镜像遭遇但
     ring 尾行普通战斗的陈旧镜像防线);达标 = progress_delta>0 单判。
@@ -467,7 +467,7 @@ def test_claim_encounter_reward_branches(
     gs.write_logic(gs.chosen_encounter, (3, '随机4费×3'),
                    produced_by='test', sig=_sig)
     # ① 镜像=encounter 但 ring 尾行=普通战斗:双证第二腿不合 → 拒
-    #    (attack3 R1 陈旧镜像防线;「单证兑现」缺陷形态回归锁)
+    #    (attack3 R1 陈旧镜像防线;「单证兑现」缺陷形态回归测试)
     _set_frame(session, kind='encounter', delta=2, ring_node='普通战斗',
                round_num=7)
     assert claim_encounter_reward(gs) == 'ring-mismatch', 'ring 腿不合拒兑现'
@@ -528,7 +528,7 @@ def test_megastar_observe_gate_completes_off_overlay(
     assert calls == [], '离屏早退 = 不发动作'
     assert game_state_of(session).megastar_opts.value is None, (
         '门早退不进读链,容器零写')
-    # act 顶部裁决腿(并入原 runnode 流转等价锁):门仍 miss = overlay 已
+    # act 顶部裁决腿(并入原 runnode 流转等价测试):门仍 miss = overlay 已
     # 消失 → 决策动作 node 完成裁决 success 交回,完成承诺 = 固定 settle
     # 时长(round_success wait 形参,经包装捕获),零动作。
     # 红 = 完成裁决丢失 / settle 等待承诺漂移 / 完成轮误动作。
@@ -601,9 +601,9 @@ def test_megastar_lazy_read_skipped_on_confirm_visit(
 
 def test_megastar_redispatch_no_reclick_and_gate_reset(
         test_context, monkeypatch) -> None:
-    """巨星防重入行为锁(旗标宿主 = 策略器 StrategyState,执行层经 kernel
+    """巨星防重入行为测试(旗标宿主 = 策略器 StrategyState,执行层经 kernel
     ``strategy_state_of`` None-safe 通道读写;picks-op-unify 批起选中半
-    迁入 ``CwActionPickMegastarOp``,本锁经派发 env.need_select 断言):
+    迁入 ``CwActionPickMegastarOp``,本测试经派发 env.need_select 断言):
     - 同节点二次派发(re-dispatch 重入,门未 miss)→ 已点标记在位,
       再派发 need_select=False(不重触发选中,防 re-click toggle 反选 →
       确认无候选卡死);
@@ -645,8 +645,8 @@ def test_megastar_redispatch_no_reclick_and_gate_reset(
                         lambda ctx, scr: [MegastarOption(idx=0, char_id='花火')])
 
     # 派发桩:捕获每次派发的 need_select(选中半触发标志)与 env.target
-    # (idx-only 断言;选中点击的机械行为锁 = test_overlay_ops
-    # 巨星 pick op 锁,本锁只锁画面 op 的防重入与派发形态)。
+    # (idx-only 断言;选中点击的机械行为测试 = test_overlay_ops
+    # 巨星 pick op 测试,本测试只校验画面 op 的防重入与派发形态)。
     dispatches: list[bool] = []
     env_targets: list[object] = []
 
@@ -704,7 +704,7 @@ def test_megastar_redispatch_no_reclick_and_gate_reset(
 
 def test_megastar_out_of_match_no_early_exit_normal_chain(
         test_context, monkeypatch) -> None:
-    """局外无早退支锁(用户裁决 2026-09-22 全族删门,op-layer.md §1.1):
+    """局外无早退支测试(用户裁决 2026-09-22 全族删门,op-layer.md §1.1):
     无 match / match 无 gs 两态 → observe 照常走读链(读链桩被调、obs
     装载,report 空候选零写不炸)、act 无局外早退门——沿正常链路走候选
     空守卫具名 round_fail,零派发。红 = 局外 round_success 早退门回潮
@@ -753,7 +753,7 @@ def test_megastar_out_of_match_no_early_exit_normal_chain(
 
 def test_megastar_observe_standardizes_options_with_dual_source_domain(
         test_context, monkeypatch) -> None:
-    """观察标准化门·命中锁(规范 = screens/op-layer.md §1.1 观察标准化
+    """观察标准化门·命中测试(规范 = screens/op-layer.md §1.1 观察标准化
     门):选中半候选含可转换名 → 容器存规范名(idx 原值保留)。覆盖三判
     与双源域(用户裁定 2026-09-22:匹配域 = 盛会之星阵营成员 ∪ 场上持
     「盛会之星星徽」角色):
@@ -794,7 +794,7 @@ def test_megastar_observe_standardizes_options_with_dual_source_domain(
 
 def test_megastar_observe_standardize_failure_fails_clean(
         test_context, monkeypatch) -> None:
-    """观察标准化门·失败锁(规范 = screens/op-layer.md §1.1 观察标准化
+    """观察标准化门·失败测试(规范 = screens/op-layer.md §1.1 观察标准化
     门):候选含未注册乱串或域外注册名 → 转换失败 = observe round_fail
     整函数早退,零写容器零上报零点击(禁带病上报),消息含候选原值列表。
     转置例 = 「火花」(星间旅人,既非盛会之星阵营、gs 亦无穿徽记录;与
@@ -820,10 +820,10 @@ def test_megastar_observe_standardize_failure_fails_clean(
 
 def test_megastar_observe_standardize_ambiguity_rejected(
         test_context, monkeypatch) -> None:
-    """观察标准化门·歧义拒判锁(规范 = screens/op-layer.md §1.1 观察
+    """观察标准化门·歧义拒判测试(规范 = screens/op-layer.md §1.1 观察
     标准化门):≥2 候选命中同一规范名(识别质量不足以区分)或单候选
     域内最高/次高分差小于边距 → round_fail 零写零上报。近分腿 = 桩控
-    LCS 分值原语(实机短名域近分形态难自然构造,控分直接锁边距分支)。
+    LCS 分值原语(实机短名域近分形态难自然构造,控分直接校验边距分支)。
     红 = 重复命中放行 / 近分放行(共享词素族跨名借分通道回潮)。"""
     from sr_od.application.currency_war.kernel.cw_events import MegastarOption
 
@@ -856,7 +856,7 @@ def test_megastar_observe_standardize_ambiguity_rejected(
 
 def test_megastar_empty_options_fail_not_blindfire(
         test_context, monkeypatch) -> None:
-    """决策输入守卫锁①b(规范 = screens/op-layer.md §1.1 出口③「空候选
+    """决策输入守卫测试①b(规范 = screens/op-layer.md §1.1 出口③「空候选
     /决策无有效输出零盲发」):选中半访问 + 策略器在位正常 + 候选空
     (读链桩返 [])→ act 具名 round_fail 交回外循环(不计节点重试预算)、
     零派发零点击(守卫在派发前;确认点击不可逆消耗)。红 = 屏内缺省支
@@ -877,7 +877,7 @@ def test_megastar_empty_options_fail_not_blindfire(
 
 def test_megastar_out_of_range_idx_asserts_before_click(
         test_context, monkeypatch) -> None:
-    """决策值域守卫锁②(规范 = screens/op-layer.md §1.3「非法返回 =
+    """决策值域守卫测试②(规范 = screens/op-layer.md §1.3「非法返回 =
     策略器 bug 响亮暴露,禁静默钳位」):策略器返回越界 idx(真实
     ``CwActionPickMegastarParam(idx=5)``、options 1 元,守卫② 同型放行)
     → AssertionError 传播(守卫③断言,消息含 idx/len/pick 留证)、零
@@ -899,9 +899,9 @@ def test_megastar_out_of_range_idx_asserts_before_click(
 
 def test_megastar_lcs_tie_resolves_domain_first(
         test_context, monkeypatch) -> None:
-    """LCS 同分确定性锁(设计钉面 = 标准化门评分循环「固定序,平分取序
+    """LCS 同分确定性测试(设计钉面 = 标准化门评分循环「固定序,平分取序
     首」):桩控域内全员 LCS 同分(最高/次高分差 0)+ 边距常量桩 0 放行
-    (边距拒判本身由歧义锁承重,本锁只锁平分取向的稳定序确定性)→ 转换
+    (边距拒判本身由歧义测试承重,本测试只校验平分取向的稳定序确定性)→ 转换
     放行且取域序首规范名(静态域 = 注册表序)。红 = 平分结果随内部容
     器序漂移(同分不可确定 = 识别结果不稳定)。"""
     import sr_od.application.currency_war.kernel.cw_obs_core as _oc
@@ -961,7 +961,7 @@ def _read_stub_ctx(ocr_map: dict, *, gs: object | None = None) -> SimpleNamespac
 
 
 def test_megastar_read_fixture_full_chain(test_context) -> None:
-    """fixture 全链锁(候选检测重做批;归档 fixture = 本屏在册存档
+    """fixture 全链测试(候选检测重做批;归档 fixture = 本屏在册存档
     「未选择.webp」,双候选:左 = 星期日 / 右 = 花火):标签带限定 OCR
     定卡 + 逐卡立绘 SIFT 交叉验证全链真跑(真 OCR + 真 SIFT 立绘库,
     零桩)→ 2 选项 = 标准名,xy = 各卡标签中心 x + 在册卡身线 y,
@@ -983,7 +983,7 @@ def test_megastar_read_fixture_full_chain(test_context) -> None:
 
 
 def test_megastar_read_partial_hit_uses_own_xy(monkeypatch) -> None:
-    """部分读回归锁(单候选右槽 xy 随卡):桩 OCR 只喂右卡 hit(单候选在右槽
+    """部分读回归测试(单候选右槽 xy 随卡):桩 OCR 只喂右卡 hit(单候选在右槽
     布局)→ 该卡 xy = 右卡标签中心 (1160, 333)。旧「idx 枚举序恒映射
     左右槽」模型此处必错(idx0 → 左槽常量 (822,333) 点到空位——名字
     与点击位错位的实锤缺陷形态),坐标随卡自带后该缺陷类整体灭绝
@@ -1000,7 +1000,7 @@ def test_megastar_read_partial_hit_uses_own_xy(monkeypatch) -> None:
 
 
 def test_megastar_read_sift_cross_validate(monkeypatch) -> None:
-    """SIFT 交叉裁决锁(候选检测重做批模型②,四臂):
+    """SIFT 交叉裁决测试(候选检测重做批模型②,四臂):
     ① SIFT 命中且与 OCR 转换名一致 → 放行;
     ② 不一致 → 置 ``READ_FAILED`` 哨兵,过标准化门判观察失败(识别质量
       不足以区分);
@@ -1032,7 +1032,7 @@ def test_megastar_read_sift_cross_validate(monkeypatch) -> None:
         f'未命中 OCR 承重:{opts3!r}')
 
     # ④ OCR 名域外 → 原值过门判失败(标准化门既有判法;「乱码」域外由
-    #   既有失败锁 test_megastar_observe_standardize_failure_fails_clean
+    #   既有失败测试 test_megastar_observe_standardize_failure_fails_clean
     #   同源)
     ctx4 = _read_stub_ctx({'盛会之星一乱码先生！': _ocr_hit(600)})
     opts4 = mo.read_megastar_options(ctx4, _stub_screen(),
@@ -1045,7 +1045,7 @@ def test_megastar_read_sift_cross_validate(monkeypatch) -> None:
 
 def test_megastar_read_failure_round_fails_clean(
         test_context, monkeypatch) -> None:
-    """reader 失败信号裁决锁:真 read 交叉验证反证失败(真 OCR 定卡 +
+    """reader 失败信号裁决测试:真 read 交叉验证反证失败(真 OCR 定卡 +
     identify 桩注入不一致 → ``READ_FAILED`` 哨兵)经真实 observe node →
     标准化门判失败 → round_fail 零写容器零上报零点击(现役失败机制
     保持、调用方零改;失败信号以列表形态过门,fail 消息构造迭代列表)。
@@ -1082,10 +1082,10 @@ def test_megastar_read_failure_round_fails_clean(
 
 def test_megastar_observe_reports_xy_and_standardize_passthrough(
         test_context, monkeypatch) -> None:
-    """观察上报 xy 透传锁(选择坐标观察上报收敛,规范 = screens/op-layer.md
+    """观察上报 xy 透传测试(选择坐标观察上报收敛,规范 = screens/op-layer.md
     §1.1「选择坐标观察上报」):read 产每卡自带 xy(标签中心 x + 在册
     卡身线 y,候选检测重做批新坐标模型;xy 生产正确性由候选检测重做批
-    各锁承重,本锁不重复),经标准化门转换后 xy 原值透传(转换只动名字,
+    各测试承重,本测试不重复),经标准化门转换后 xy 原值透传(转换只动名字,
     名字与坐标同进退),经真实观察链落容器后 xy 仍在(动作 op 取点输入)。
     红 = 标准化剥坐标 / 观察链容器终值丢 xy。"""
     from sr_od.application.currency_war.kernel.cw_events import MegastarOption
@@ -1114,7 +1114,7 @@ def test_megastar_observe_reports_xy_and_standardize_passthrough(
 
 def test_megastar_pick_op_asserts_container_xy_before_click(
         test_context, monkeypatch) -> None:
-    """动作 op 容器取点守卫锁(action_ops.md §1 增补 5 + op-layer.md §1.3):
+    """动作 op 容器取点守卫测试(action_ops.md §1 增补 5 + op-layer.md §1.3):
     选中半(need_select=True)点击坐标 = 容器 ``megastar_opts[param.idx].xy``
     ——容器缺席/空、下标越界、元素缺 xy 三臂均 AssertionError 响亮暴露
     且零点击(守卫在选中点击与确认点击之前;禁控制流回退、禁 screen_info
@@ -1212,7 +1212,7 @@ def _make_supply(test_context, monkeypatch, *, pick, opts,
                         lambda scr, s, a, **k: _Area(True))
     monkeypatch.setattr(sn, 'read_supply_options', lambda ctx, screen: list(opts))
     monkeypatch.setattr(op, '_read_refresh_anchor', lambda screen: anchor)
-    # 节点条锚定桩(读不得 = 跳过;锚定接线锁归
+    # 节点条锚定桩(读不得 = 跳过;锚定接线测试归
     # test_supply,本文件不重复)
     monkeypatch.setattr(op, '_read_node_bar', lambda screen: None)
 
@@ -1232,7 +1232,7 @@ def _make_supply(test_context, monkeypatch, *, pick, opts,
 
 
 def test_supply_chosen_written_on_confirm_pick(test_context, monkeypatch) -> None:
-    """补给 chosen_supply 确认即写行为锁(选定中转暂存宿主已随执行层状态
+    """补给 chosen_supply 确认即写行为测试(选定中转暂存宿主已随执行层状态
     类目退役,写端 = 选定确认时点;口径分叉申报:supply 直写,chosen_tome
     维持出口验真后写家族口径——差异理由 = supply 的中转暂存宿主已随执行
     层状态类目退役,直写是载体消亡后的唯一形态):
@@ -1242,7 +1242,7 @@ def test_supply_chosen_written_on_confirm_pick(test_context, monkeypatch) -> Non
       选定快照携 ``refresh_left`` 键 = 容器剩余次数现值(可 None)
       + ``extra_equips`` 键 = 列内附加装备;
     - 刷新轮不写 = 真选守卫(闸拒绝零点击路径语义)。
-    OCR 读链/配置/机械派发半桩化,只锁记录面。"""
+    OCR 读链/配置/机械派发半桩化,只校验记录面。"""
     from one_dragon.base.geometry.point import Point
 
     # ① 真选:确认即写(锚读 1 → 容器 left=1 → 快照 refresh_left=1)
@@ -1292,7 +1292,7 @@ def test_supply_chosen_written_on_confirm_pick(test_context, monkeypatch) -> Non
 
 
 def test_supply_refresh_gate_left_semantics(test_context, monkeypatch) -> None:
-    """supply 刷新闸行为锁(剩余语义观察真值,统一刷新判据面 §2.0A/§2.1):
+    """supply 刷新闸行为测试(剩余语义观察真值,统一刷新判据面 §2.0A/§2.1):
     - 剩余 1 → 建议刷新 → 点钮恰一次 + 终结交回(_do_action 返回 True);
     - 剩余 0 / None → 零点击不按刷新终结,重调一次决策后落选卡
       (机械派发半照发,刷新钮零点击)。
@@ -1300,9 +1300,9 @@ def test_supply_refresh_gate_left_semantics(test_context, monkeypatch) -> None:
     decide(``strategies/impl/mandate_v1/supply.py``,仅剩余 ≥1 才可能返
     刷新建议),生产中「建议刷 ∧ 对照闸拒绝」仅剩刷新锚点缺失一种触发面
     ——重调同输入同输出仍建议刷 → 零点击终结交回;「按原评分选卡」为旧
-    kernel 评分叙述,决策本体现 = 策略层三级字典序。本锁以 stub 驱动,
+    kernel 评分叙述,决策本体现 = 策略层三级字典序。本测试以 stub 驱动,
     保留 op 面对照闸的行为断言(闸拒绝零点击、重调链有界)。
-    OCR 读链/机械派发/固定等待桩化,只锁闸面与点击面。"""
+    OCR 读链/机械派发/固定等待桩化,只校验闸面与点击面。"""
     from one_dragon.base.geometry.point import Point
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_supply_node as sn,
@@ -1352,9 +1352,9 @@ def test_supply_refresh_gate_left_semantics(test_context, monkeypatch) -> None:
 
 
 def _make_supply_flow_op(cls, *, in_node: bool, do_action_calls: list):
-    """补给流转形态锁装配(bypass __init__):round_by_find_area 程序化回
-    in_node;``_do_action`` 桩只记调用(原 runnode 等价锁并入,锁 act
-    流转形态而非动作内容——动作内容由上两锁承重)。"""
+    """补给流转形态测试装配(bypass __init__):round_by_find_area 程序化回
+    in_node;``_do_action`` 桩只记调用(原 runnode 等价测试并入,校验 act
+    流转形态而非动作内容——动作内容由上两个测试承重)。"""
 
     class _FakeArea:
         def __init__(self, ok: bool): self.is_success = ok
@@ -1392,11 +1392,11 @@ def _make_supply_flow_op(cls, *, in_node: bool, do_action_calls: list):
 
 
 def test_supply_node_flow_act_wait_then_success() -> None:
-    """补给流转两段形态锁(仍在补给屏 → 决策动作 node 恰一个动作 +
+    """补给流转两段形态测试(仍在补给屏 → 决策动作 node 恰一个动作 +
     round_wait,不计节点重试预算、无防御上限;锚 miss(离开节点画面)
     → success 零动作——验证完成才 success。离开画面的完成门行为在
-    分发身份安全网锁(test_supply)亦有消费面
-    断言;本锁补齐「在屏轮 act 驱动恰一动作 + round_wait 循环推进」半。)"""
+    分发身份安全网测试(test_supply)亦有消费面
+    断言;本测试补齐「在屏轮 act 驱动恰一动作 + round_wait 循环推进」半。)"""
     from sr_od.application.currency_war.operations.cw_screen.cw_screen_supply_node import (
         CwScreenSupplyNode,
     )

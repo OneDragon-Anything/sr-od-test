@@ -1,4 +1,4 @@
-"""死库存对(G-S1)防线行为锁:买入拒真值表 / 消费接线与分键 / 退出
+"""死库存对(G-S1)防线行为测试:买入拒真值表 / 消费接线与分键 / 退出
 通道与获取账。三段同机制归并(原三文件按机制并入,判据规格出处 =
 三合取 + 遥测三键族;数学论证 = proofs P96 帧级支配 + N=3 载体寿命):
 
@@ -6,8 +6,8 @@
    dead_stock_pair_buy_reject_reason``,方向② G-S1 买侧对偶:非定向
    1★ 买入禁制造同名 1★×2 死库存对,拒因键 ``dead_stock_pair``)+
    dominance_buy 席位外部性否决带(ADR-0616 命题 4,bench_free ≤ 1
-   fail-closed,≥ 2 零干涉)。锁资格谓词真值边界,不锁分布数值。
-2. **消费接线**(拒因本体谓词侧由本文件段 1 锁定;本段锁**消费接线**):
+   fail-closed,≥ 2 零干涉)。校验资格谓词真值边界,不断言分布数值。
+2. **消费接线**(拒因本体谓词侧由本文件段 1 锁定;本段校验**消费接线**):
    dominance 臂(zero_overlap 后,落地报告接线点 1)与 dead_gold_press_
    buy 臂 prio2 燃料类(接线点 2)拒成对第二张,计数分键
    ``dominance_dead_stock_pair_blocked`` / ``press_dead_stock_pair_
@@ -16,12 +16,12 @@
    comp 给线;燃料名取注册表 TIER_UNRELATED 现算集(阿格莱雅 = 病灶
    名:sim 实证同名 1★×2 对经 press 臂 R1 形成后被 G-S1 合成素材守卫
    永久锁卖锁席)。
-3. **退出通道行为锁**(判据⑤;载体 = ``sell_gate.
+3. **退出通道行为测试**(判据⑤;载体 = ``sell_gate.
    dead_pair_exit_release`` 单点函数 + 持久获取账 ``register_
-   acquisition``,写端 = shop._emit_buy 发射位):行为锁①-⑤ + N1/N4
-   收编面(N3 = 注释级同参钉死,消费位同参传参由锁①装配路径覆盖;
-   N2 kept_young 分键由锁②辖)。帧构造边界:素材名取注册表
-   TIER_UNRELATED 现算集(与段 2 同款防漂移);锁①②③④ 走备战域
+   acquisition``,写端 = shop._emit_buy 发射位):行为测试①-⑤ + N1/N4
+   收编面(N3 = 注释级同参钉死,消费位同参传参由测试①装配路径覆盖;
+   N2 kept_young 分键由测试②辖)。帧构造边界:素材名取注册表
+   TIER_UNRELATED 现算集(与段 2 同款防漂移);测试①②③④ 走备战域
    ``run_mandate`` M4 腾席臂(设计 flagship 场景 = 死锁帧腾席),判据
    单元直调 ``dead_pair_exit_release``;黑板 node 必写(位面/轮轴 =
    判据 (c) 读源,缺写 = fail-closed 保留 = 释放恒不可达)。
@@ -121,7 +121,7 @@ def _fuel_names(count: int) -> list[str]:
 
 
 def _transition_pair_name() -> str:
-    """④ 放行档名(锁③;非线内,身份段静态持有集成员)。"""
+    """④ 放行档名(测试③;非线内,身份段静态持有集成员)。"""
     out = sorted(n for n in transition_release_names() if n not in _LINE)
     assert out, '④ 放行档非线内名不足'
     return out[0]
@@ -179,14 +179,14 @@ class TestDominanceBuyEligibleSeatBand:
 
     支配论证锚(ADR-0611 换锚重写,mandate.dominance_buy_eligible
     docstring):1★ 全额退净成本 0 的金维支配性与 g*=10×cap_resolved
-    参数化金位门不变,本组只锁席位维带界。
+    参数化金位门不变,本组只校验席位维带界。
     """
 
     def test_seat_band_truth_table(self):
         """席位带真值表(四格并一):金 ≤ g* 恒不可发射(金维门原样,
         与席位维无关);V_slot>0 带(bench_free=1)fail-closed 否决;
         bench_free=0 原物理门语义保留(否决带含边界);bench_free ≥ 2
-        域 P41② 支配论证原样有效零干涉(集成锁留接线段)。"""
+        域 P41② 支配论证原样有效零干涉(集成测试留接线段)。"""
         assert mandate.dominance_buy_eligible(30, 5, cap_resolved=4) is False
         assert mandate.dominance_buy_eligible(80, 1, cap_resolved=4) is False
         assert mandate.dominance_buy_eligible(80, 0, cap_resolved=4) is False
@@ -194,7 +194,7 @@ class TestDominanceBuyEligibleSeatBand:
     @pytest.mark.parametrize('bench_free', [2])
     def test_bench_free_two_plus_untouched(self, bench_free: int):
         """bench_free ≥ 2 域:P41② 支配论证原样有效,零干涉(参数化
-        收敛为带界代表值;带宽语义由谓词本体与集成锁承压)。"""
+        收敛为带界代表值;带宽语义由谓词本体与集成测试承压)。"""
         assert mandate.dominance_buy_eligible(
             80, bench_free, cap_resolved=4) is True
 
@@ -258,7 +258,7 @@ class TestDominanceArmWiring:
         assert counters.get('dominance_dead_stock_pair_blocked') == 1
         assert not (isinstance(action, CwActionBuyCardParam)
                     and action.reason == 'dominance_buy')
-        # C=0 对照:首张照常发射(原对照锁迁并)
+        # C=0 对照:首张照常发射(原对照测试迁并)
         fuels0 = _fuel_names(3)
         strategy0, sess0, config0 = _single_card_session(
             'prep', _DOM_GOLD, fuels0[1:], fuels0[0])
@@ -307,7 +307,7 @@ class TestPressArmWiring:
         assert not counters.get('dominance_band_wait')
         assert not (isinstance(action, CwActionBuyCardParam)
                     and action.reason == 'dead_gold_press_buy')
-        # C=0 对照:首张照常经 prio2 发射(原对照锁迁并)
+        # C=0 对照:首张照常经 prio2 发射(原对照测试迁并)
         fuels0 = _fuel_names(3)
         strategy0, sess0, config0 = _single_card_session(
             'reward', _PRESS_GOLD, fuels0[1:], fuels0[0])
@@ -320,7 +320,7 @@ class TestPressArmWiring:
 
 
 # ============================================================
-# 段 3:退出通道行为锁(判据⑤;锁①-⑤ + 写端 + 判据单元)
+# 段 3:退出通道行为测试(判据⑤;测试①-⑤ + 写端 + 判据单元)
 # ============================================================
 
 
@@ -335,7 +335,7 @@ def _prep_frame(*, pair_ledger_round: int | None,
     燃料资格 ⇒ 对成员是唯一 1★ 候选,卖出对象确定。"""
     sess = StrategySession()
     gs = game_state_of(sess)
-    gs.write_logic(gs.node, NodeKey(plane=1, round_num=_ROUND, kind='reward'),   # 3.6:奖励帧抑制会话内升级(翻转行为差隔离——本锁辖买面登记)
+    gs.write_logic(gs.node, NodeKey(plane=1, round_num=_ROUND, kind='reward'),   # 3.6:奖励帧抑制会话内升级(翻转行为差隔离——本测试辖买面登记)
                    produced_by='cw-t253-test', sig=_LOGIC_SIG)
     gs.write_logic(gs.gold, gold, produced_by='cw-t253-test', sig=_LOGIC_SIG)
     # P4 容器形种子:bench = 占席条目(BenchSlot,槽序),deployed = 行域 Unit
@@ -370,10 +370,10 @@ def _sell_actions(out: list) -> list:
 class TestLock1DeadlockDominance:
 
     def test_aged_pair_member_sold_to_free_seat(self):
-        """行为锁①(2.1.3 死锁帧支配语义):非重买集素材对(账龄 ≥N)+
+        """行为测试①(2.1.3 死锁帧支配语义):非重买集素材对(账龄 ≥N)+
         缺口件死锁帧 → M4 卖对成员腾席。
 
-        锁 2.1.3:B 弱支配 A(帧内持有收益 0 成本 V_slot>0);卖出腿 =
+        校验 2.1.3:B 弱支配 A(帧内持有收益 0 成本 V_slot>0);卖出腿 =
         m4_fuel_sell,释放/卖出两键显影,腾出席位不再耗竭。释放集单点
         函数直读:对成员入集(判据 (a)(b)(c) 合取正例),kept 面零计数。"""
         sess, gs, frame = _prep_frame(pair_ledger_round=2)
@@ -385,7 +385,7 @@ class TestLock1DeadlockDominance:
         assert ct.get('dead_pair_exit_released') == 1
         assert ct.get('dead_pair_exit_sold_m4_fuel') == 1
         assert not ct.get('m2_retry_exhausted')
-        # 释放集单点直读(原单点锁迁并)
+        # 释放集单点直读(原单点测试迁并)
         release = sell_gate.dead_pair_exit_release(
             sess, frame.k_members, frame.bench, frame.deployed, _ROUND,
             counters=state_of(sess).cw4_counters)
@@ -397,7 +397,7 @@ class TestLock1DeadlockDominance:
 class TestLock2AgeLowerBound:
 
     def test_young_and_fresh_pair_kept_and_guard_counts(self):
-        """行为锁②:N 下界(账龄 <N 不卖)两格(锁 N 下界 + ADR-0558
+        """行为测试②:N 下界(账龄 <N 不卖)两格(锁 N 下界 + ADR-0558
         案发回归形态):账龄 1 < N=3 的同构死锁帧 → 不卖(守卫照常拒入
         并按既有键计数);新购对(获取账登记轮 == 当前轮,age 0)被燃料
         臂立即触达 → 守卫照常拒、零卖出(原案不复活;新购 ⇒ 当轮窗/
@@ -425,7 +425,7 @@ class TestLock2AgeLowerBound:
 class TestLock3IdentityAuthority:
 
     def test_transition_pair_released_but_not_sold(self):
-        """行为锁③:身份段权威(③④ 名义对入释放集仍不卖;旁路先、
+        """行为测试③:身份段权威(③④ 名义对入释放集仍不卖;旁路先、
         装配后):④ 名义素材对:过 (a)(b)(c) 入释放集(released 计 1),
         身份段在下游装配排除 → 零卖出(序列断言:旁路在子谓词内先行,
         装配 A 照旧收口)。腾席面空集 → 诚实停摆计数。"""
@@ -442,8 +442,8 @@ class TestLock3IdentityAuthority:
 class TestLock5LedgerLifecycleDecoupling:
 
     def test_entry_survives_all_four_registry_exits(self):
-        """行为锁⑤:获取账与发射登记簿四出口生命周期解耦——发射登记簿
-        四出口销账(轮界/合成/部署/换线)后获取账条目仍在(锁退出判据
+        """行为测试⑤:获取账与发射登记簿四出口生命周期解耦——发射登记簿
+        四出口销账(轮界/合成/部署/换线)后获取账条目仍在(校验退出判据
         读源修法本体:与易失登记簿生命周期解耦)。"""
         sess = StrategySession()
         name = _PAIR
@@ -472,7 +472,7 @@ class TestLock5LedgerLifecycleDecoupling:
 
     def test_ledger_own_closures(self):
         """获取账自身闭合(位面):跨位面条目在下一读点清除、判据
-        fail-closed 不出集(r2 锁面缺口半边:自身闭合行为钉住)。"""
+        fail-closed 不出集(r2 测试面缺口半边:自身闭合行为钉住)。"""
         sess = StrategySession()
         assert sell_gate.register_acquisition(
             sess, _PAIR, plane=1, round_num=_ROUND, star=1)
@@ -494,7 +494,7 @@ class TestWriteEnd:
         ——全因类写端活路径证据(dominance 臂 C=0 首张买入)。"""
         sess = StrategySession(rng=random.Random('cw-t253'))
         gs = game_state_of(sess)
-        gs.write_logic(gs.node, NodeKey(plane=1, round_num=3, kind='reward'),   # 3.6:奖励帧抑制会话内升级(本锁辖买面登记)
+        gs.write_logic(gs.node, NodeKey(plane=1, round_num=3, kind='reward'),   # 3.6:奖励帧抑制会话内升级(本测试辖买面登记)
                        produced_by='cw-t253-test', sig=_LOGIC_SIG)
         gs.write_logic(gs.level, 3, produced_by='cw-t253-test',
                        sig=_LOGIC_SIG)
@@ -612,7 +612,7 @@ class TestCriterionUnits:
             gold, bench, 7, (), gs, merge_guard_release=release)
         sold_names = {mandate._slot_cid(bench[s]) for s in slots}
         assert sold_names == {_PAIR}
-        # 燃料通道旁路对照(原零漂移锁旁路半迁并)
+        # 燃料通道旁路对照(原零漂移测试旁路半迁并)
         sess_f, gs_f, frame_f = _prep_frame(pair_ledger_round=2)
         ct_release: dict = {}
         base_kwargs = {'k_members': frame_f.k_members, 'state': gs_f,

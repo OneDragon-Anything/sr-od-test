@@ -1,12 +1,12 @@
-"""W6波4 商店动作投影直写锁(设计件《商店黑板容器化方案》§4-M1/M5)。
+"""W6波4 商店动作投影直写测试(设计件《商店黑板容器化方案》§4-M1/M5)。
 
-- M1 投影行为直锁:生产上报函数单写(买牌快照三件组与升星腿内聚
+- M1 投影行为直测:生产上报函数单写(买牌快照三件组与升星腿内聚
   ``report_action_buy_card_param`` 函数内)的逐域期望态直断言
   (gold/bench 槽位/shop payload/xp;含满栏多买 −k×单价、升档结转)。
   原对拍基准 = cw_vocab 词表单步动作应用器(纯函数逐动作推进),零
-  生产消费随死代码删除退役,本锁到期改直锁(设计件 M1 行申报「收敛
-  单形态后本锁改钉单形态」兑现)。
-- M5 投影公式语义源锁:None 跳写形态 + 渠道签名纪律(族错显式炸)
+  生产消费随死代码删除退役,本测试到期改直测(设计件 M1 行申报「收敛
+  单形态后本测试改钉单形态」兑现)。
+- M5 投影公式语义源测试:None 跳写形态 + 渠道签名纪律(族错显式炸)
   (收口整删:直写域集封闭/executed 回执字段集两条登记面断言——常量
   字面/字段名复述,红时答不出哪个运行行为坏了;消费面纪律归 review)。
 
@@ -22,7 +22,7 @@ test_funnel_anchor_three_states;observe 覆盖 logic 失配走既有安灯
 扣减写端 produced_by/evidence 断言 + 未观察保守按付费 →
 test_report_free_leg_deducts_field / test_report_unobserved_field_
 conservative_paid;两桥发放写端 produced_by/evidence(None 基 = 0 起算;
-值语义锁在 test_game_state 桥面,此处锁写端调用面元数据)→
+值语义测试在 test_game_state 桥面,此处校验写端调用面元数据)→
 test_grant_bridges_field_write_end;随机态采样(固定种子确定性 +
 write_logic_rand 通道语义:observe 覆盖差异落 logic_rand_outcome 台账、
 不进失配安灯三分流)→ test_report_random_leg_deterministic /
@@ -118,7 +118,7 @@ def _bench_slots(gs):
 
 def _report_action(gs, action, executed=None):
     """商店域动作单次上报(生产同形):买牌快照三件组与升星腿内聚
-    report 函数内,一动作恰一次调用;合计结果的逐域期望态由各案直锁
+    report 函数内,一动作恰一次调用;合计结果的逐域期望态由各案直测
     断言(设计件 §4-M1)。executed 仅对带回执参数的函数透传。"""
     if isinstance(action, CwActionBuyCardParam):
         return report_action_buy_card_param(gs, action, _SIG, executed=executed)
@@ -143,7 +143,7 @@ class TestM5Registration:
     # (收口整删)原 test_projection_domain_set_closed「直写域集封闭八域」
     #  与 test_executed_receipt_field_set「executed 回执字段集登记」删:
     #  常量/字段名复述断言,红时是常量或字段改名而非运行行为坏;消费面
-    #  (M1 逐域比对轴/按字段名取值)由下方 M1 等价锁承重,登记面纪律归
+    #  (M1 逐域比对轴/按字段名取值)由下方 M1 等价测试承重,登记面纪律归
     #  review 与代码规范。
 
     def test_wrong_family_sig_rejected(self):
@@ -156,7 +156,7 @@ class TestM5Registration:
                 sig=ChannelSig(family='obs', actor='CwScreenShop'))
 
 
-# ==================== M1 投影行为直锁 ====================
+# ==================== M1 投影行为直测 ====================
 
 
 class TestM1DirectLock:
@@ -177,14 +177,14 @@ class TestM1DirectLock:
     # (收口整删)原 test_buy_triggers_merge「合成买(2 副本在席 + 买第
     #  3 张)」与 test_full_bench_merge_buy_k「满栏多买(k=2,executed 回执
     #  给定)」删:同一升星腿的摆放已被 test_merge_buy_single_report_
-    #  two_forms 两形态直锁辖住(满栏 k=2 的 executed=None 自算腿经应用
+    #  two_forms 两形态直测辖住(满栏 k=2 的 executed=None 自算腿经应用
     #  机器内部 merge_buy_k 单一源,bought_count==2 断言即承压;executed
     #  给定 k 的扣金腿由 test_buy_simple_placement / test_missing_receipt
     #  的回执路径辖)——第三种摆放 = 子集断言,不留。
 
     def test_merge_buy_single_report_two_forms(self):
-        """合成买单口两形态直锁(升星腿内聚 report_action_buy_card_param 后,
-        原升星腿单写锁随聚合口退役;快照基点正确性 = 两形态 bench 期望
+        """合成买单口两形态直测(升星腿内聚 report_action_buy_card_param 后,
+        原升星腿单写测试随聚合口退役;快照基点正确性 = 两形态 bench 期望
         共辖——基点误取买后容器会重复落位/漏升,shop 视图缺失会漏满栏
         合成):非满栏合成买(2 副本在席买第 3 张 → 落位即合成升 2★)与
         满栏合成买(k=2,3 副本合 1 升 2★ 在席副本槽9)。gold −单价×k 与
@@ -316,7 +316,7 @@ class TestM1DirectLock:
 
     def test_refresh_free_gold_unwritten(self):
         """免费帧(paid=0):gold 不写(fields.md §3.3.4 免费帧不写语义;
-        free 显式喂 True = sim 形态)。Field 扣减语义锁 = 本文件刷新
+        free 显式喂 True = sim 形态)。Field 扣减语义测试 = 本文件刷新
         Field 段(test_report_free_leg_deducts_field)。"""
         gs = _gs_of(gold=30, shop=[_card('希儿')])
         gs.write_logic(gs.free_refresh_left, 2, produced_by='test-bridge',
@@ -337,7 +337,7 @@ class TestM1DirectLock:
 
     def test_missing_receipt_selfcomputes_ideal_execution(self):
         """回执缺字段 = 该动作自算理想执行(单买 k=1)
-        (改写:旧锁「回执缺字段 = 零写」语义已随转移函数
+        (改写:旧测试「回执缺字段 = 零写」语义已随转移函数
         单源化废止——report_action_buy_card_param docstring「k 来源」段申报:
         executed 给定 = 回执 k(live),None = 理想执行自算(简单腿 1,
         满栏从应用机器出);域未读跳写语义独立,归
@@ -374,7 +374,7 @@ class TestM1DirectLock:
     def test_stale_sell_proposal_no_write(self):
         """陈旧卖出提案(空槽/越界):守卫辖面,拒绝 = applied=False 零写。
         (集外动作型零写腿删:上报函数族每动作恰一函数,无按类型聚合的
-        登记面可「静默收编集外型」——闭集性质归命名规约完备锁
+        登记面可「静默收编集外型」——闭集性质归命名规约完备测试
         test_action_report 辖。)"""
         gs = _gs_of(gold=30, shop=[])
         seq0 = gs.write_seq
@@ -394,17 +394,17 @@ class TestM1DirectLock:
         assert gs.gold.value == 30, 'gold: 拒买零写金不动(期望 30)'
 
     # (原 test_legacy_conversion_roundtrip_view 删:转换透传面已被
-    #  test_game_state.py 的 shop_card_mapping 往返锁完整辖住(x 对齐/
+    #  test_game_state.py 的 shop_card_mapping 往返测试完整辖住(x 对齐/
     #  记录字段透传),本测为同函数低强度复述,子集断言不留。)
 
 
 def test_shop_entry_funnel_bench_survives_synthesis() -> None:
-    """商店入口漏斗 bench 写门场景锁(商店画面 op 入口链回归):
+    """商店入口漏斗 bench 写门场景测试(商店画面 op 入口链回归):
     种子对未声明 bench 域整域跳写(bench_unread)——容器 bench 保持
     漏斗真读值,与执行账 tracked 同源不破。回归形态 = 种子把容器 bench
     覆盖成「9 槽全空」假真空(原防御对象 = 旧合成口无门合成,实机
     2026-09-13 商店段循环崩溃 15+ 连发实证;载体随合成口退役改种子
-    域纪律锁:未读域≠真空域,跳写语义在种子层等价存续)。"""
+    域纪律测试:未读域≠真空域,跳写语义在种子层等价存续)。"""
 
     from sr_od.application.currency_war.kernel.cw_game_state import (
         BenchSlot,
@@ -428,7 +428,7 @@ def test_shop_entry_funnel_bench_survives_synthesis() -> None:
         and view.slots[3].unit.char_id == '银枝', \
         '种子后容器 bench 仍为漏斗真读值(未读域跳写,兜底空表不覆盖)'
     # (3.2 单账化:原「执行账 tracked 不受种子影响」断言随第二账退役删,
-    #  容器即唯一账,上式即全量锁面。)
+    #  容器即唯一账,上式即全量测试面。)
 
 
 # ==================== 买牌获取回调腿(计数归上报单点)====================
@@ -557,7 +557,7 @@ def _fresh_gs() -> GameState:
 
 def _spy_write_logic(monkeypatch: pytest.MonkeyPatch) -> list[tuple]:
     """GameState.write_logic 调用面捕获(produced_by 不落 Field,写端
-    produced_by/evidence 断言 = 调用面锁):收 (field, value, produced_by,
+    produced_by/evidence 断言 = 调用面测试):收 (field, value, produced_by,
     evidence) 四元组,调用照常透传。"""
     captured: list[tuple] = []
     real = GameState.write_logic
@@ -616,7 +616,7 @@ def _patch_shop_open_readers(monkeypatch: pytest.MonkeyPatch,
 
 
 def test_funnel_anchor_three_states(monkeypatch: pytest.MonkeyPatch) -> None:
-    """双态锚定三支一锁(零新增读屏,复用现役 read_shop_refresh_button
+    """双态锚定三支一测试(零新增读屏,复用现役 read_shop_refresh_button
     产物):免费态锚次数 / 付费域锚 0(耗尽/灰态,游戏规则 ⇒ 免费余量恒
     0)/ 整帧判不出跳写(宁缺勿造)。"""
     cases = [
@@ -710,7 +710,7 @@ def test_report_unobserved_field_conservative_paid() -> None:
 
 
 def test_grant_bridges_field_write_end(monkeypatch: pytest.MonkeyPatch) -> None:
-    """两桥发放写端元数据(值语义锁 = test_game_state 桥面):burst 桥
+    """两桥发放写端元数据(值语义测试 = test_game_state 桥面):burst 桥
     produced_by 带效果名 + evidence effect_burst@frame;节点桥
     produced_by 带在场条目名 + evidence effect_node@frame;None 基 = 0
     起算(开局无免费次数 = 机制真值,发放即首次落值)。"""

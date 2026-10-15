@@ -1,4 +1,4 @@
-"""货币战争 overlay 生命周期行为锁(选卡判据 / 触发登记 / 消费呈现 /
+"""货币战争 overlay 生命周期行为测试(选卡判据 / 触发登记 / 消费呈现 /
 身份两段式 / 路由清点)。
 
 五个部分(overlay 从「判据 → 登记 → 呈现/消费 → 识别收口 → 残留清理」
@@ -817,7 +817,7 @@ class TestHostHandback:
 
     def test_prep_act_hands_back_on_pending(self, test_context, monkeypatch):
         """备战宿主:非终结动作执行后 pending 非空 → round_success 交回
-        外循环分发(执行器/校验桩化,锁交回判定位)。"""
+        外循环分发(执行器/校验桩化,钉住交回判定位)。"""
         from sr_od.application.currency_war.kernel.cw_vocab import (
             CwActionSellBenchParam,
         )
@@ -891,7 +891,7 @@ def live_loop(test_context, monkeypatch):
 
 
 class TestTwoStageRealImpl:
-    """两段式 + 对账行:锁 ``_resolve_frame_identity`` 真实现。"""
+    """两段式 + 对账行:校验 ``_resolve_frame_identity`` 真实现。"""
 
     def test_pending_first_hit_takes_priority(self, live_loop, monkeypatch):
         """pending 候选屏 is_target_screen 命中 → 取该名(预测优先);
@@ -972,7 +972,7 @@ class TestTwoStageRealImpl:
 
 
 class TestLoopFallbackClear:
-    """CwLoop 兜底清空:锁 ``_fallback_clear_pending`` 真实现(与 kernel
+    """CwLoop 兜底清空:校验 ``_fallback_clear_pending`` 真实现(与 kernel
     ``clear_screen_changes`` 相对:本入口清 pending 不清簿记)。"""
 
     def test_clears_pending_keeps_bookkeeping(self, live_loop):
@@ -1030,7 +1030,7 @@ class TestFortuneNodeWindowM1:
             b._maybe_finish_wait()
             gs = b.gs
             # P1r1(奖励)→ 出战 → 结算;黑天鹅在场使 settle_confirm 登记
-            # fortune(S4 判据)——构造最小形态:直接登记(判据链另有锁)。
+            # fortune(S4 判据)——构造最小形态:直接登记(判据链另有测试)。
             out = report_action_start_battle_param(gs, SimpleNamespace(),
                                                    _sig)
             cw_sim_ports.declare_world(out.world_decl)

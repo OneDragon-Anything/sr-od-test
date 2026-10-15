@@ -1,4 +1,4 @@
-"""CW 意向/方向层锁面(P1 单体系点火渐进通道 + committed 权威判定 +
+"""CW 意向/方向层测试面(P1 单体系点火渐进通道 + committed 权威判定 +
 局23 型帧商店线哨兵)。
 
 两节归并自原两个主题文件(测试函数名全量保留,原文件已删):
@@ -9,9 +9,9 @@
    配方渐进);病灶 = sim 批 ``sim_20260918_072900_000_n320`` 问题 1
    (65.6% 局终态配方锁停在单体系,板面永不向第二体系渐进)。
 2. committed 权威 + 局23 哨兵(原 test_cw_migration_direction_layer.py;
-   该文件系 W628 重构迁移批锁面,迁移对拍半边已随旧判定式退役,现役
-   内容 = 权威序直锁 + 商店线行为直锁,非迁移对照):
-   - D2 缺供给保守 False 直锁在 p1_unarmed 一案;D3 息线 grep 锁(源码
+   该文件系 W628 重构迁移批测试面,迁移对拍半边已随旧判定式退役,现役
+   内容 = 权威序直测 + 商店线行为直测,非迁移对照):
+   - D2 缺供给保守 False 直测在 p1_unarmed 一案;D3 息线 grep 测试(源码
      扫描形态)已删且不恢复,interest_floor 裸属性读禁令归 review 面;
    - 局23 哨兵复活说明:曾以「并入 w633」为名删除,并入目标经核查不存在
      = 指针失真,后按现行商店线决策面复活;息线供给恒等/不死守可辨收敛
@@ -87,11 +87,11 @@ def _ignite_dot_board(train_n: int = 0) -> tuple[list, dict]:
 
 
 def test_ignited_pair_upgrades_to_estimator_argmin_second_seat() -> None:
-    """锁 1+2:渐进填充按估计器 argmin 选向;点火帧 pair 升级两体系且不冻结。
+    """测试 1+2:渐进填充按估计器 argmin 选向;点火帧 pair 升级两体系且不冻结。
 
     构造判别态:板上 2 DOT(点火)+ 1 列车件(进度 1/2,支持 0.5 不入
     Q,chall 空)——列车距离 1 < 仙舟距离 3,估计器应选列车。先直算两
-    候选 E 作判别力守卫(表漂移时此处响亮失败,不锁巧合),再断言:
+    候选 E 作判别力守卫(表漂移时此处响亮失败,不断言巧合),再断言:
     pair 升级为两体系、第二席 = argmin 胜者、无单体系冻结(form_ok 在
     两档 AND 语义下为 False = readiness 对齐 kernel 成型线)。"""
     dep, board = _ignite_dot_board(train_n=1)
@@ -106,18 +106,18 @@ def test_ignited_pair_upgrades_to_estimator_argmin_second_seat() -> None:
     assert len(ist.p1_pair) == 2, '点火帧必须升级两体系目标(渐进通道)'
     assert ist.p1_pair == ('持续伤害', '列车同行'), \
         f'第二席应为估计器 argmin(列车),got {ist.p1_pair}'
-    assert not ist.p1_pair_frozen, '单体系点火不得触发方向冻结(病灶直锁)'
+    assert not ist.p1_pair_frozen, '单体系点火不得触发方向冻结(病灶直测)'
     # readiness 对齐(direction b):单体系齐 ≠ form_ok(两档 AND)
     assert not readiness_form_ok(gs, pair_target_comp(ist.p1_pair))
 
 
 def test_window_closed_keeps_single_pair_and_freezes(monkeypatch) -> None:
-    """锁 3:渐进窗口关闭 → 候选被可行性门拒 → 保持单体系对 + 单体系冻结。
+    """测试 3:渐进窗口关闭 → 候选被可行性门拒 → 保持单体系对 + 单体系冻结。
 
     估计器判不可达(E=inf)经 monkeypatch 注入模块级 ``e_rounds``
     (渐进填充与可行性门共用该单一源名,一 patch 两处同义)——门拒 =
     E > R_rem 的确定性构造。保持单体系冻结 = 旧行为(窗口关了没有可做
-    的渐进,停手战是对的),本锁钉的是「门拒不写 pair」的保守方向。"""
+    的渐进,停手战是对的),本测试钉的是「门拒不写 pair」的保守方向。"""
     dep, board = _ignite_dot_board()
     gs = _seed_gs(deployed=dep, board=board)
     monkeypatch.setattr(intention_mod, 'e_rounds',
@@ -128,11 +128,11 @@ def test_window_closed_keeps_single_pair_and_freezes(monkeypatch) -> None:
     assert ist.p1_pair == ('持续伤害',), '门拒帧保持单体系对(不写 pair)'
     assert ist.p1_pair_frozen, '窗口关闭 → 单体系冻结(停手战,旧行为)'
     # 事件面申报:同帧先 pair_gate:deny 后被 freeze 事件覆写(现有事件
-    # 先序 = freeze 后写获胜,非本批引入;门拒观测归分键/板面态双锁)。
+    # 先序 = freeze 后写获胜,非本批引入;门拒观测归分键/板面态两个测试)。
 
 
 def test_q_challenger_fill_path_unchanged() -> None:
-    """锁 4a:chall 非空支零漂移——满支持挑战者照旧从 Q 直填(无候选对、
+    """测试 4a:chall 非空支零漂移——满支持挑战者照旧从 Q 直填(无候选对、
     不走可行性门),真两体系成型照旧冻结(成型停手语义不变)。"""
     dep = [Unit(char_id='桑博', star=1), Unit(char_id='艾丝妲', star=1), Unit(char_id='三月七', star=1), Unit(char_id='丹恒·饮月', star=1)]
     board = {'持续伤害': 2, '列车同行': 2}
@@ -149,7 +149,7 @@ def test_q_challenger_fill_path_unchanged() -> None:
 
 
 def test_seele_system_never_progressive_pick() -> None:
-    """锁 1(排除腿):零证据态(仅 DOT 点火,无任何第二体系资产)下,
+    """测试 1(排除腿):零证据态(仅 DOT 点火,无任何第二体系资产)下,
     渐进填充不得选出希儿系(E 对它结构性失真:距离恒 0 虚假;carry
     单卡依赖),只在三桥体系内选。"""
     dep, board = _ignite_dot_board()
@@ -162,7 +162,7 @@ def test_seele_system_never_progressive_pick() -> None:
 
 
 def test_empty_window_still_empty() -> None:
-    """锁 4b:空窗支零漂移——零资产帧派生对恒空。"""
+    """测试 4b:空窗支零漂移——零资产帧派生对恒空。"""
     gs = _seed_gs(deployed=[])
     ist = IntentionState()
     update_p1_recipe(gs, ist, None)
@@ -170,7 +170,7 @@ def test_empty_window_still_empty() -> None:
 
 
 # ============================================================
-# 2. committed 权威判定直锁 + 局23 型帧商店线哨兵
+# 2. committed 权威判定直测 + 局23 型帧商店线哨兵
 # ============================================================
 
 _JU23_COMP = next(c for c in COMP_LIBRARY if c.name == '列车同行')
@@ -205,9 +205,9 @@ def test_ju23_star2_stock_card_has_no_refund_backing_no_spend():
 
     stockpile_buy 与 dominance 同以 refund_full_star_ok 为背书门:
     2★ 件两条买面都不可发射,溢余滞留(不放行)而非带病买——
-    锁「背书门在局23 帧端到端成立」,非单位锁复述。
+    断言「背书门在局23 帧端到端成立」,非单位测试复述。
     商店收缩适配 → 3.6 会话重排再翻转:前置升级检查恢复店内溢余段
-    升级消费(次序翻转行为差形态锁)——gold 100 > 息线的帧首动作 =
+    升级消费(次序翻转行为差形态测试)——gold 100 > 息线的帧首动作 =
     CwActionLevelUpShopParam(must_spend 整批授权发射)。
     """
     cfg = SimpleNamespace(ev_arm='full')
@@ -234,8 +234,8 @@ def test_ju23_full_surface_gold_never_breaks_interest_line():
     registry 核心)——原探针花火 ∈ TRANSITION_PACK carry,未锁双轨
     P1 帧会被 ④转线放行臂在息线下买入(1★ 全额退 = 可逆资产,裁定
     408② 的有意取舍);「息线下零支出」不变式对④放行件域已被裁定
-    取代,④例外语义由 test_cw_locked_buy_membership_split 重推锁
-    承载,本锁在真无关件域保持。"""
+    取代,④例外语义由 test_cw_locked_buy_membership_split 重推测试
+    承载,本测试在真无关件域保持。"""
     cfg = SimpleNamespace(ev_arm='full')
     # 扫面收窄(审计判决):连续 0..100 → 息线两侧边界 + 两端代表点
     for gold0 in (0, 49, 50, 51, 100):
@@ -291,7 +291,7 @@ def _gs_state(plane: int, round_num: int):
     ids=['p1-unarmed-conservative', 'locked-committed', 'p1-pair-committed',
          'p2-unlocked-dual-track'])
 def test_committed_authority_semantics(case: str):
-    """committed 权威判定直锁(方向层单一派生源;批 3.7 候选-锁定制
+    """committed 权威判定直测(方向层单一派生源;批 3.7 候选-锁定制
     语义重锚)。
 
     权威序任一成立即 True:①``st.target_comp`` 非空(锁定线槽——定型
@@ -300,7 +300,7 @@ def test_committed_authority_semantics(case: str):
     False——True=已定型=激进侧,攒息门/双轨买门全开(供给点清单 D2)。
     原「plane≥2 恒定型」支已退役(P2 时点兜底锁定替代)——P2 入口至
     兜底锁帧之间的短窗 committed=False(双轨期口径,§1.6 行为差申报,
-    p2_unlocked_dual_track 案锁此短窗)。"""
+    p2_unlocked_dual_track 案校验此短窗)。"""
     if case == 'p1_unarmed_conservative':
         assert committed_authority(_gs_state(1, 3), StrategySession()) is False
         return

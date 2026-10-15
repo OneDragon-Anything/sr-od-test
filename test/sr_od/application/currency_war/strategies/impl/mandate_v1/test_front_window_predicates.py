@@ -1,19 +1,19 @@
-"""前窗两谓词数据源锁(P90 面①;T-3 验收裁缺陷修:前窗/表就绪谓词
+"""前窗两谓词数据源测试(P90 面①;T-3 验收裁缺陷修:前窗/表就绪谓词
 数据源归位 ``gs.node_books`` 单一源)。
 
-病灶形态(本锁防复发):两谓词曾经裸 ``getattr(session, 'plane_node_table
+病灶形态(本测试防复发):两谓词曾经裸 ``getattr(session, 'plane_node_table
 /plane_node_table_plane')`` 读已退役 session 探针族(StrategySession 现值
 仅 rng/performance/strategy_state)→ 恒 None → 谓词恒 False → 生产消费面
 (shop.decide_shop_action 的零成型武装)fail-closed 静默失效。写端唯一 =
 cw_screen_prep.store_plane_table(写 ``gs.node_books``),读端必须同源。
 
-锁面(此前零覆盖):
+测试面(此前零覆盖):
 1. 表在场真路径:node_books 在册(位面锚=1)→ 表就绪 True / 前窗帧
    轮窗(轮 1..首战槽+1)True,出窗 False;
 2. fail-closed 负路径:表缺(裸容器)/ 锚不符(旧表滞留 P2)/ state
    位面非 1 / 脏表(全零战斗词)→ False(前窗行为不发生);
 3. 写入点形状契约:store_plane_table 写入的形状(list[str] 槽序 + 位面
-   锚落 ``gs.node_books``)= 谓词读的形状——写读异源即病灶本身,本锁
+   锚落 ``gs.node_books``)= 谓词读的形状——写读异源即病灶本身,本测试
    单一源对账。
 
 第二部分(原 press_narrow_transition 并入)——锁线转型域收窄:
@@ -27,7 +27,7 @@ kernel ``_swap_transition_domain_of``)。
 (F4 闭集对账正本与 S_spec 辖域腿迁并
  test_sell_window_launch::test_launch_cause_closed_set(15 臂映射段);
  F1 开火/F2/F3 豁免/F5 零漂移/F6 M6 零触碰/F7 单一源/F8 prep 对称/
- F9 wiring 旗位各锁已退役。)
+ F9 wiring 旗位各测试已退役。)
 """
 from __future__ import annotations
 
@@ -169,7 +169,7 @@ def test_dirty_table_frame_silent_false():
 def test_store_plane_table_shape_feeds_predicates():
     """写入点形状契约:store_plane_table 写入(经 session 桥落
     ``gs.node_books``,与生产唯一写端同路)= 谓词读的形状 → 两谓词
-    True。写读异源(session 探针读法)即本缺陷病灶,本锁单一源对账。"""
+    True。写读异源(session 探针读法)即本缺陷病灶,本测试单一源对账。"""
     session = SimpleNamespace()
     gs = game_state_of(session)
     gs.observe(gs.node, NodeKey(plane=1, round_num=2, kind='prep'),
@@ -227,7 +227,7 @@ class TestDominanceNarrowFire:
 
 class TestHubSentinel:
     def test_f9_hub_natural_frame_untouched(self):
-        """锁 F9 控制(空开火面申报的常态面)→ 3.6 乙臂收编改锁:未锁
+        """校验 F9 控制(空开火面申报的常态面)→ 3.6 乙臂收编改校验:未锁
         无目标帧(枢纽件自然辖域)收窄旗恒 False ⇒ 枢纽件经序 1 成员面
         照常发射(m2 买因;hub_option_buy 发射位随乙臂收编退役)、
         哨兵键零显影。"""

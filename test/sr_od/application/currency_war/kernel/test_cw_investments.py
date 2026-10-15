@@ -1,13 +1,13 @@
-"""cw_investments 随机赠卡家族载体锁(RandomCharSpec / random_char_pool /
+"""cw_investments 随机赠卡家族载体测试(RandomCharSpec / random_char_pool /
 构建校验扩展;迭代 2026-09-23-invest-effects-calc T-10 人才引进)。
 
-锁面依据 = 该迭代 designs/T-10-rencai-yinjin.md §2.1-§2.2(定稿):
+测试面依据 = 该迭代 designs/T-10-rencai-yinjin.md §2.1-§2.2(定稿):
 - **载体值域三查**(import 即炸语义,注入 + 直调沿 ENV_GIFTS 校验测试
   惯用法):cost 1-5 / star 1-3 / type_tag ∈ 注册表 char_type 标签闭集,
   bool 显式拒(bool 是 int 子类,True 会被纯 int 判当 1 混过);
 - **空发放集判定并入 chars_random_immediate**(env/策略两表):随机支
   only 条目是合法登记形态,不得被「空发放集」误炸;全空条目照炸
-  (env 侧全空对照 = 既有锁 kernel/test_gain_chain.py
+  (env 侧全空对照 = 既有测试 kernel/test_gain_chain.py
   test_env_gifts_validation_empty_grant_includes_scheduled,不重复);
 - **互斥面**:人才引进 ∩ ENV_ECONOMY = ∅(import 期互斥校验显式半边);
 - **池派生性质**(注册表现算对照,非快照断言):空 type_tag = 费用档
@@ -78,14 +78,14 @@ def test_random_only_grant_not_empty_grant_both_tables(
 
 
 def test_talent_import_not_in_env_economy() -> None:
-    """互斥面(T-10 设计 §4 锁 1 末项):人才引进 ∈ ENV_GIFTS 且 ∉
+    """互斥面(T-10 设计 §4 测试 1 末项):人才引进 ∈ ENV_GIFTS 且 ∉
     ENV_ECONOMY——import 期互斥校验半边的显式断言。"""
     assert '人才引进' in ENV_GIFTS
     assert '人才引进' not in ENV_ECONOMY
 
 
 def test_random_char_pool_derivation_properties() -> None:
-    """池派生性质锁(T-10 设计 §4 锁 2,注册表现算对照):空 type_tag =
+    """池派生性质测试(T-10 设计 §4 测试 2,注册表现算对照):空 type_tag =
     费用档全员旁路(池 = 4 费全档);非空 type_tag = char_type 含标签
     过滤(子集 + 逐名含标签);池名 ⊆ 注册表。池规模 = 注释性快照
     (2026-10 时点 14 名),非断言值(注册表随版本扩充)。"""

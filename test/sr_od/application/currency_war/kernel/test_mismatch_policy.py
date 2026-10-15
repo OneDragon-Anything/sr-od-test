@@ -1,6 +1,6 @@
-"""cw_mismatch_policy 单元锁:豁免注册表三维度查表 + 安灯钩子槽。
+"""cw_mismatch_policy 单元测试:豁免注册表三维度查表 + 安灯钩子槽。
 
-锁面来源 =  §2.4
+测试面来源 =  §2.4
 (落地判据见)。注册表经 monkeypatch 换测试专用
 dict,不污染模块常量(真注册表恒空,扩面走代码 review)。"""
 from __future__ import annotations
@@ -102,7 +102,7 @@ def test_lookup_none_evidence_never_matches_prefix_entry(
 
 def test_andon_hook_slot_default_off_and_best_effort(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """安灯槽缺省关(零副作用)+ best-effort(钩子异常不外抛)两形态一锁。"""
+    """安灯槽缺省关(零副作用)+ best-effort(钩子异常不外抛)两形态一测试。"""
     fired: list[dict] = []
     row = {'field': 'gold'}
 

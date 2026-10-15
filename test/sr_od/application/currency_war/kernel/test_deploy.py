@@ -1,10 +1,10 @@
-"""部署与换人域锁(机制主题文件;部署决策 → 载荷执行 → 写序契约全链)。
+"""部署与换人域测试(机制主题文件;部署决策 → 载荷执行 → 写序契约全链)。
 
-被锁机制(按节;设计出处见各节 docstring):
+被测机制(按节;设计出处见各节 docstring):
 - **部署围栏与占槽物品防线**:占位件(kind ∈ tome/bookcard/supply_box)
   恒 held、拒因 ``item_slot``,先于一切围栏/cap 判定被剔除(benchchar-
   retirement P4 容器槽位 kind 口);
-- **板满门三锁**(事故 match_g_20260918_023823,定谳见
+- **板满门三个测试**(事故 match_g_20260918_023823,定谳见
   .debug/temp/incidents/20260918-reconcile/rootcause-reopen.md 案一):
   部署输入改容器现读 + 显式板满门,拒因 ``deploy_cap_full`` 帧级去重;
 - **落位策略三级排路由**:comp 站位覆盖 > 注册表派生 > back 兜底;
@@ -15,7 +15,7 @@
 - **双轨对锁期换入通道**(2026-09-18 sim 实证:配方对锁局板满帧全
   plan_empty):转型域方向锁前提推广 / 完成件让位 / 发射门轴①读法;
 - **残余补部署守卫**(P24 结构支配定理,零自由参数):dup 剔除 /
-  cap 满停 / 两排皆满停 / cap=None 不设门 + 配方底线门 kernel 直锁;
+  cap 满停 / 两排皆满停 / cap=None 不设门 + 配方底线门 kernel 直测;
 - **载荷与执行语义**(P2 拖拽语义落码):(to_row, to_slot) 直落
   反「首空」、目标槽有人 = 交换(写侧/执行链/sim 三面同源);
 - **动作上报单写写序**(合卷契约):一次语义变更 = 恰一次 deployed 写;
@@ -144,7 +144,7 @@ def test_item_slot_candidate_held_with_item_slot_reason() -> None:
     assert reasons.get(0) != 'item_slot', '普通候选不背 item_slot 拒因'
 
 
-# ============================================================ 板满门三锁(容器现读 + 显式门 + 拒因台账)
+# ============================================================ 板满门三个测试(容器现读 + 显式门 + 拒因台账)
 
 
 def _bs_unit(name: str) -> BenchSlot:
@@ -175,7 +175,7 @@ def _stale_frame(round_num: int = 2):
 
 
 def test_cap_full_stale_frame_emits_nothing():
-    """事故形态锁:容器 3/3 满 + 决策帧黑板 2 人(陈旧)→ 零拖拽发射、放行 False。"""
+    """事故形态测试:容器 3/3 满 + 决策帧黑板 2 人(陈旧)→ 零拖拽发射、放行 False。"""
     session, gs = _full_board_session()
     frame = _stale_frame()
     assert mandate._deployable(frame, session, gs) is False
@@ -185,7 +185,7 @@ def test_cap_full_stale_frame_emits_nothing():
 
 
 def test_cap_roomy_stale_container_still_deploys():
-    """陈旧视图锁:容器 2/3 未满时照常产出部署(换源不改坏正常路径);
+    """陈旧视图测试:容器 2/3 未满时照常产出部署(换源不改坏正常路径);
     容器名单为部署输入真值——板满判定读容器而非帧。"""
     session = cw4_session(cw4_comp())
     gs = cw4_gs(session, deploy_cap=3, bench=[cw4_bc('艾丝妲')],
@@ -199,7 +199,7 @@ def test_cap_roomy_stale_container_still_deploys():
 
 
 def test_cap_full_counter_frame_dedup():
-    """拒因台账锁:板满帧 → cw4_counters['deploy_cap_full'] 计数,同帧
+    """拒因台账测试:板满帧 → cw4_counters['deploy_cap_full'] 计数,同帧
     (plane, round) 去重;跨帧(round 推进)再计。"""
     session, gs = _full_board_session()
     counters = state_of(session).cw4_counters
@@ -241,7 +241,7 @@ def test_comp_position_override_beats_registry_pref() -> None:
 
 def test_registry_front_char_seats_front_when_front_has_room() -> None:
     """注册表前排角色(开拓者·记忆,position_pref='front')在前排有空时
-    被落位策略排到前排——旧链路恒按后排,本锁钉住派生真实生效。"""
+    被落位策略排到前排——旧链路恒按后排,本测试钉住派生真实生效。"""
     gs = game_state_of(None)
     bench = [_bs(1, '开拓者·记忆'),
              _bs(2, '花火')]   # 花火 = 注册表 back(对照组)
@@ -255,7 +255,7 @@ def test_unregistered_name_falls_back_to_back() -> None:
     """③兜底:注册表未登记名(识别对齐缺失形态)按后排处理(fail 向
     后排 = 与旧缺省同侧,不因识别缺失翻到前排)。前排预置占位避开
     前排保证强转(前排全空 → back 件被强转前排,是另一条策略规则的
-    正确行为,不混入本锁)。"""
+    正确行为,不混入本测试)。"""
     assert deploy_row_pref('未注册角色名', None) == 'back'
     gs = game_state_of(None)
     gs.observe(gs.deployed, _dvs([Unit(char_id='砂金', star=1, equips=[])], []),
@@ -282,7 +282,7 @@ def test_back_slots_capped_by_back_layout_baseline() -> None:
 def test_back_layout_extended_value_extends_back_slots() -> None:
     """back_layout 扩展局(宝钻 8):后排空槽随实值到 8 号——执行面/表
     随实值,扩展槽在扩展局可达(上限随实值,非恒 6)。前排占满避开
-    前排保证强转(不混入本锁)。"""
+    前排保证强转(不混入本测试)。"""
     gs = game_state_of(None)
     gs.observe(gs.back_layout, 8, evidence='t', sig=_SIG_OBS)
     gs.observe(gs.deployed, _dvs([Unit(char_id=f'前{i}', star=1, equips=[])
@@ -296,7 +296,7 @@ def test_back_layout_extended_value_extends_back_slots() -> None:
 
 # ============================================================ 必需件语义(首桶序 + 板满换入臂)
 
-# 真实注册表角色(锁语义不锁巧合;registry 真值):
+# 真实注册表角色(断言语义不断言巧合;registry 真值):
 # 桑博 = 贝+持续伤害 / 娜塔莎 = 贝 / 花火 = 量子 / 卡芙卡 = 持续伤害 /
 # 缇宝 = 量子 / 希儿 = 贝+量(required carry)/ 黑天鹅 = 持续伤害 /
 # 三月七 = 列车同行+护盾(fenced,对视野外)。
@@ -333,7 +333,7 @@ def _static_comp():
 def test_required_carry_seats_first_under_cap_competition() -> None:
     """cap 竞争(空位 1,候选 2)下必需件先于普通 target 成员上板。
 
-    反证面:required_names 缺省空集 = 逐位旧序(bench 序先者上),锁
+    反证面:required_names 缺省空集 = 逐位旧序(bench 序先者上),钉住
     「默认路径零漂移」与「新参翻转竞争结果」一对事实。
     """
     bench = [_bc(_SANGBO, 1), _bc(_XIER, 2)]   # 桑博 bench 序在前
@@ -408,7 +408,7 @@ def test_swap_arm_holds_via_or_leg_on_static_comp() -> None:
 
     判据 = 希儿在板 ∧ 量2∨贝2(form_tiers 全被 OR 承接,AND 账为空):
     花火离场 → 量3 ≥2 OR 腿仍在 → 可卖。若按裸 AND 量4 计账会误判破腿
-    (臂过度关闭)——本锁钉住折法单一源(form_progress)的承接规则。
+    (臂过度关闭)——本测试钉住折法单一源(form_progress)的承接规则。
     """
     comp = _static_comp()
     ctx = _ctx(board=[_HUAHUO, _TIBAO, _NATASHA, _SANGBO],
@@ -430,7 +430,7 @@ def test_swap_plan_seats_required_carry_after_sell() -> None:
 
     席位竞争面:bench 序普通 target 成员(缇宝,不在板,无同名去重拦截)
     在前时,必需件仍须先落——旧序会把席位给缇宝 = 卖冗余件白卖形态,
-    本锁行使「首桶序 × 卖后上序」的组合语义。victim 序 = 板槽位扫描序
+    本测试行使「首桶序 × 卖后上序」的组合语义。victim 序 = 板槽位扫描序
     (域外键),首个资格通过者 = 娜塔莎(桑博/卡芙卡破 DOT 腿被拒)。
     """
     ctx = _ctx(board=[_SANGBO, _KAFKA, _NATASHA, _HUAHUO],
@@ -460,14 +460,14 @@ def test_swap_arm_never_opens_protect_extension() -> None:
 
 
 def test_swap_arm_premise_single_required_member() -> None:
-    """换入臂前提锁(现役单 required 成员):假想面板把 required_names
+    """换入臂前提测试(现役单 required 成员):假想面板把 required_names
     全体按「已换入」计(``select_swap_plan`` 检验处),而臂一次只卖一个
     victim、换入一个必需件——该计法仅当 required 成员数 ≤1 时无白卖面
     (≥2 成员且多个不在板时检验通过 ≠ 实际成型,卖一换一仍缺腿)。
     ``required_deployed`` 字段契约允许多成员(``cw_comps.Comp``),
     生产来源全量 = 静态注册表 ``COMP_LIBRARY`` 逐 comp + pair 物化
-    ``pair_target_comp``,本锁逐一断言单成员前提;任一来源出现多成员
-    形态 → 本锁红 = 提示先重审假想面板计法(改按「换入后仍缺数」折算)
+    ``pair_target_comp``,本测试逐一断言单成员前提;任一来源出现多成员
+    形态 → 本测试红 = 提示先重审假想面板计法(改按「换入后仍缺数」折算)
     再上多成员 comp,禁为保绿直接放行。
     """
     multi = [c.name for c in COMP_LIBRARY
@@ -621,7 +621,7 @@ def test_redeploy_gate_membership_unread_fails_closed() -> None:
     ``_redeploy_emission_allowed`` None 分支注)。入面参照
     test_redeploy_gate_pair_period_reads_target_view 的放行构造——若
     None 分支被误删坠回空集缺省读法,本构造经 target 视读法会假放行,
-    锁响。
+    测试红。
     """
     comp = pair_target_comp(_PAIR)
     unread_ctx = SimpleNamespace(
@@ -634,7 +634,7 @@ def test_redeploy_gate_membership_unread_fails_closed() -> None:
         fw_carry=frozenset(),
     )
     # 板面同放行构造口径:花火入板 → 量2 → 轴②严格上升(None 分支
-    # 被删时走空集读法会真放行,保证本锁判别力)。
+    # 被删时走空集读法会真放行,保证本测试判别力)。
     state = SimpleNamespace(board=SimpleNamespace(value={
         '持续伤害': 1, '量子同频': 1, '贝洛伯格': 1}))
     assert not _redeploy_emission_allowed(session=None, state=state,
@@ -710,7 +710,7 @@ def test_fill_row_pref_fallback_and_both_full():
 
 
 def test_fill_floor_gate_direct_kernel():
-    # 配方底线门(kernel 直锁):kernel 留 bench 的列车件
+    # 配方底线门(kernel 直测):kernel 留 bench 的列车件
     # (列车≥2 ∧ 仙舟<3)不得经补部署绕回上板;锁定线豁免语境
     # (∧ 本帧无有效仙舟供给)门让位放行,供给在场时门照拦(供给
     # 保留条款)。holds=True = 该件应被门持有(对 fill 计划即剔除)。
@@ -838,7 +838,7 @@ def _deploy_op_env(session: object, drags: list[dict]):
 
 def test_executor_drag_point_and_main_domain_lands_at_payload_slot(
         monkeypatch: pytest.MonkeyPatch):
-    """执行链同源锁:载荷 (back, 3) → 拖点 = 后排 area 序 3−1;
+    """执行链同源测试:载荷 (back, 3) → 拖点 = 后排 area 序 3−1;
     主域 deployed 落位 = 载荷槽子表下标(与容器写侧同式;
     tracked 同步腿退役,op 自上报单点写主域)。
     后排 1 号已有占位乙(更低位占用不影响),载荷槽 3 空 = 放置。"""
@@ -1051,7 +1051,7 @@ def test_sell_and_swap_deployed_single_write() -> None:
 def test_row_reposition_observed_write_is_single() -> None:
     """换排/重排观察写 = 单次 deployed 写(director 观察合一写;同子表
     纯重排吸收不产生额外 deployed 写;重排吸收台账行为由
-    test_board_derived_and_reorder 行域族锁定)。"""
+    test_board_derived_and_reorder 行域族校验)。"""
     gs = _gs_with(DeployedView(
         front_slots=[_u('佩佩'), _u('黑塔'), _u('万敌'), None],
         back_slots=[None] * 6))

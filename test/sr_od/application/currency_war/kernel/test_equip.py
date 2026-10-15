@@ -1,11 +1,11 @@
-"""装备域锁(机制主题文件;穿戴计划 → 合并继承 → 可穿性门全链)。
+"""装备域测试(机制主题文件;穿戴计划 → 合并继承 → 可穿性门全链)。
 
-被锁机制(按节):
+被测机制(按节):
 - **穿戴计划容器换源**(M7 ``_build_equip_wear_plan`` 输入全面换容器
   game state 读口):黑盒区分(无黑板帧照常产出)+ fail 门方向
-  (owned 未观察保守关)+ **穿戴闭环锁**(穿戴上报落账后已穿槽位
+  (owned 未观察保守关)+ **穿戴闭环测试**(穿戴上报落账后已穿槽位
   输入即反映,已穿件零重派、满装单位零再派——决策环零读屏下的
-  自旋形态锁);
+  自旋形态测试);
 - **merge 装备继承**(语义源 = merge_mechanics):同名同星 3 合 1,
   素材装备按扫描序继承到载体(场上载体优先;载体自有在前),素材槽
   清空——重写容器形状时的不变量哨兵;
@@ -64,7 +64,7 @@ def _observe_equips(session, owned, occupied):
 
 
 def test_m7_reads_container_without_prep_obs():
-    """黑盒区分锁:无黑板帧 + 容器三域在 → M7 正常进入判据链
+    """黑盒区分测试:无黑板帧 + 容器三域在 → M7 正常进入判据链
     (fail_reason 为空 = 四路输入全部读通;旧实现此处 fail 观察帧缺失)。"""
     session = cw4_session(cw4_comp())
     gs = _observe_equips(session, owned=['星币收集器'],
@@ -87,12 +87,12 @@ def test_m7_fail_gate_owned_unobserved():
 
 
 def test_m7_fail_gate_occupied_unobserved():
-    """穿戴闭环锁:穿戴上报落账后,计划构建的已穿槽位输入即反映已穿
+    """穿戴闭环测试:穿戴上报落账后,计划构建的已穿槽位输入即反映已穿
     (输入源 = deployed 视图 ``unit.equips`` 逻辑推导,不读
     ``gs.occupied_equips`` 观察面)——已穿件零重派、满装单位(容量
     EQUIP_CAPACITY)零再派。
 
-    锁的故障形态:零读屏决策环(ADR-0517「期望态投影承载」)内,观察
+    测试的故障形态:零读屏决策环(ADR-0517「期望态投影承载」)内,观察
     面无穿戴写端恒为入口快照 → 分配容量与 kernel 穿戴上限判据
     (unit.equips 活账)双基分裂 → 满装后上报拒绝(零写)→ 同输入
     重派同一动作 → 无限重建计划自旋(sim 首局挂栈实证)。本测试零写
@@ -246,7 +246,7 @@ def test_unregistered_items_unaffected():
 
 
 def test_allocator_excludes_illegal_pair():
-    """事故路径锁:comp=None 兜底轮转也不把分身墨镜Max 发给丹恒·饮月
+    """事故路径测试:comp=None 兜底轮转也不把分身墨镜Max 发给丹恒·饮月
     (run_075416:该对进过穿戴规划 → 拖拽静默不生效 → 安灯停局);同池
     普通件(垃圾袋)照常分配,专属件留 owned。
     载体 = 上阵视图 DeployedView(位置 = 子表下标派生)。"""
@@ -263,7 +263,7 @@ def test_allocator_excludes_illegal_pair():
 
 
 def test_front_only_fallback_excludes_gated_items():
-    """回退帧门锁(fail-closed):身份读失败帧(deployed 空 → front_only
+    """回退帧门测试(fail-closed):身份读失败帧(deployed 空 → front_only
     回退分支)专属件在 owned → 回退计划不含专属件(件滞留 owned,不发
     拖拽);同池无门件照常入计划(行为不变);空栏前置件(worn=[] 无
     信息恒过)也入计划 = 回退帧只补 W3 有效辖域。"""

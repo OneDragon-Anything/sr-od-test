@@ -1,7 +1,7 @@
-"""环境条件发放锁(机制主题文件;kernel 条件矩阵 → live 接线 → 刷新
+"""环境条件发放测试(机制主题文件;kernel 条件矩阵 → live 接线 → 刷新
 次数发放全链;迭代 2026-10-10-env-conditional-grants + T-7 二手市场)。
 
-被锁机制(按节):
+被测机制(按节):
 - **连败/连胜条件发放 kernel 矩阵**(详设 details/env-conditional-grant.md
   §1–§4):触发条件七序短路、随机态发放写行(equips 追加
   write_logic_rand + done 登记 write_logic 同 evidence 相邻)、sig 单
@@ -345,7 +345,7 @@ def test_seed_and_restore_type_roundtrip_no_regrant(
 
 # ============================================================ live 接线
 # (驱动 = 裸实例 + 全桩面走生产链路 _record_round_outcome,先例 =
-#  test_settle 的覆盖度守卫锁。)
+#  test_settle 的覆盖度守卫测试。)
 
 #: live 接线 sig 契约形态(design §2 契约:logic_hook 族,组号
 #: 'battle-wait:env-grant',actor = op 类名;发放两笔 logic 写同组)。
@@ -358,7 +358,7 @@ _LIVE_OBS_SIG = ChannelSig(family='obs', actor='test-obs', mode='read')
 
 def _make_op(test_context, monkeypatch,
              outcomes: list[RoundOutcome]) -> CwScreenBattleWait:
-    """battle_wait 裸实例 + 全桩面(先例 = 覆盖度守卫锁);outcomes =
+    """battle_wait 裸实例 + 全桩面(先例 = 覆盖度守卫测试);outcomes =
     逐次结算的观察桩按序出队——fake 结算路径携带的 streak_after 由这里
     真实给出,走真覆盖写端(_record_round_outcome 直调)。"""
     session = cw4_session()
@@ -423,7 +423,7 @@ def _outcome(streak: int | None) -> RoundOutcome:
 
 def test_env_grant_fires_after_settlement_cover_in_order(
         test_context, monkeypatch) -> None:
-    """接线点次序真锁:5 连胜结算走真覆盖写端(streak 真值落账为可断言
+    """接线点次序真测试:5 连胜结算走真覆盖写端(streak 真值落账为可断言
     前置态)后,条件发放紧随触发——写序 = streak 观察(覆盖写端)→
     equips 随机态写(发放)→ done 登记;发放两笔同组 sig = live 契约
     形态。"""
@@ -441,7 +441,7 @@ def test_env_grant_fires_after_settlement_cover_in_order(
     assert gs.equips.value == ['永动机', _EQUIP]
     assert gs.equips.source == 'logic_rand'
     assert gs.env_grants_done.value == ((_ENV, 'first_streak'),)
-    # 次序真锁:覆盖写端 streak 观察严格先于发放两笔 logic 写
+    # 次序真测试:覆盖写端 streak 观察严格先于发放两笔 logic 写
     assert _idx(writes, 'observe', 'streak') \
         < _idx(writes, 'rand', 'equips') \
         < _idx(writes, 'logic', 'env_grants_done'), \
@@ -724,9 +724,9 @@ def test_refresh_trigger_rejects_obs_sig() -> None:
 
 def test_total_domain_counts_mixed_free_paid_frames(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """计数域锁(用户裁定① = 全量):免费帧与付费帧混排经
+    """计数域测试(用户裁定① = 全量):免费帧与付费帧混排经
     record_refresh 计到 20 → 发放(免费帧若不入账,paid 域恒不可达
-    本锁)。"""
+    本测试)。"""
     gs = _r_make_gs(env=_R_ENV, gold=100, equips=[])
     for i in range(20):
         gs.effects.record_refresh(free=(i % 2 == 0))   # 免费/付费各 10 帧

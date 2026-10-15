@@ -1,6 +1,6 @@
-"""息帽覆写链落码锁(息帽死链修复;单一源 = aggregate 聚合)。
+"""息帽覆写链落码测试(息帽死链修复;单一源 = aggregate 聚合)。
 
-出处(锁纪律:新锁必引设计出处):
+出处(测试纪律:新测试必引设计出处):
 - ADR-0598(息帽死链修复:cap_resolved_of_session 消费
   ``aggregate_economy(session.active_strategies).interest_cap_override``,
   旧 ``MandateState.cw4_cap_override`` 全仓零写点死通道退役);
@@ -9,14 +9,14 @@
 - cw_investments.STRATEGY_ECONOMY 注册表直调(开源节流 9/利息上调 10/
   买断制 0——测试值一律注册表名,禁裸 override 数字)。
 
-锁面(方案审验收 ④-⑤ 编号):
+测试面(方案审验收 ④-⑤ 编号):
 1. ①注册表直调三卡在册 → cap 联动(kernel 链 + 预算面 R* + 换线可负担窗;
    前置锚 = 三卡覆写值在册直调;回落面 = 不在册 → DEFAULT);
-2. ④None/0 区分锁(最高危陷阱):买断制 override=0 不得被 ``or`` 真值
+2. ④None/0 区分测试(最高危陷阱):买断制 override=0 不得被 ``or`` 真值
    折叠回 5——判别只认 None;
-3. ⑤并持 max 语义锁(ADR-0131):开源节流+利息上调 → 10;
+3. ⑤并持 max 语义测试(ADR-0131):开源节流+利息上调 → 10;
    买断制+开源节流 → 9。
-(原 5 墓碑 grep 锁已删:源码扫描形态,README 禁止清单。)
+(原 5 墓碑 grep 测试已删:源码扫描形态,README 禁止清单。)
 """
 from __future__ import annotations
 
@@ -68,17 +68,17 @@ def _sess_with(*names: str) -> StrategySession:
 
 
 def test_three_cap_cards_linkage() -> None:
-    """锁①:注册表直调三卡在册 → cap 联动(resolved 链单点)。前置锚:
-    三卡覆写值直调在册(9/10/0;表缺任一 = 本文件全部按名注入的锁失去
-    锚点,先修注册表再谈锁)。回落面:不在册 → DEFAULT_INTEREST_CAP
+    """测试①:注册表直调三卡在册 → cap 联动(resolved 链单点)。前置锚:
+    三卡覆写值直调在册(9/10/0;表缺任一 = 本文件全部按名注入的测试失去
+    锚点,先修注册表再谈测试)。回落面:不在册 → DEFAULT_INTEREST_CAP
     (裸 session/None/未注册名三形态;回落问题实际形态 = 从未持有,
     append-only)。"""
-    # 前置锚(原可达性锁迁并):三卡覆写值在册直调
+    # 前置锚(原可达性测试迁并):三卡覆写值在册直调
     assert {9: '开源节流', 10: '利息上调', 0: '买断制'}.items() \
         <= _CAP_CARD_BY_VALUE.items()
     for cap, name in _CAP_CARD_BY_VALUE.items():
         assert cap_resolved_of_session(_sess_with(name)) == cap, name
-    # 回落三形态(原回落锁迁并)
+    # 回落三形态(原回落测试迁并)
     assert cap_resolved_of_session(None) == DEFAULT_INTEREST_CAP
     assert cap_resolved_of_session(StrategySession()) == DEFAULT_INTEREST_CAP
     assert cap_resolved_of_session(_sess_with('未注册卡名')) \
@@ -86,9 +86,9 @@ def test_three_cap_cards_linkage() -> None:
 
 
 def test_none_zero_distinction_buyout() -> None:
-    """锁④(最高危):买断制 override=0 是有效覆写,不得被 ``or`` 真值
+    """测试④(最高危):买断制 override=0 是有效覆写,不得被 ``or`` 真值
     折叠回 5(聚合器 caps 非空才 replace,interest_cap_resolved 只认
-    None——三层任一回退,本锁红)。语义出口:g*=0、息恒 0、两溢余域
+    None——三层任一回退,本测试红)。语义出口:g*=0、息恒 0、两溢余域
     任意金位恒 False(§2.1 买断制出辖)。"""
     sess = _sess_with('买断制')
     assert aggregate_economy(['买断制']).interest_cap_override == 0
@@ -101,7 +101,7 @@ def test_none_zero_distinction_buyout() -> None:
 
 
 def test_multi_hold_takes_widest() -> None:
-    """锁⑤:并持取宽 = ADR-0131(游戏取宽值,保守建模取 max 非 min)。
+    """测试⑤:并持取宽 = ADR-0131(游戏取宽值,保守建模取 max 非 min)。
     开源节流(9)+利息上调(10)→ 10;买断制(0)+开源节流(9)→ 9
     ——0 与 None 不同层,并持 0 不折叠。"""
     assert cap_resolved_of_session(_sess_with('开源节流', '利息上调')) == 10
@@ -110,7 +110,7 @@ def test_multi_hold_takes_widest() -> None:
 
 
 def test_budget_face_reserve_floor_linkage() -> None:
-    """锁①预算面随批接线:R* 守息线分量 = resolved 链(ADR-0598)——
+    """测试①预算面随批接线:R* 守息线分量 = resolved 链(ADR-0598)——
     买断制局刷新授权车道不再被 50 金地板压死(囤金车道收口),利息
     上调局守息线抬到 100。registry 旋钮不辖本链(ADR-0516 归一)。"""
     from sr_od.application.currency_war.kernel.cw_economy import reserve_cap
@@ -131,7 +131,7 @@ def test_budget_face_reserve_floor_linkage() -> None:
 
 
 def test_line_switch_affordable_window_linkage() -> None:
-    """锁①换线可负担窗随批接线:e_rounds 的可负担刷数守息线 = resolved
+    """测试①换线可负担窗随批接线:e_rounds 的可负担刷数守息线 = resolved
     链(ADR-0598)——买断制局 affordable 从 (g−50)//刷价 放宽到 (g−0)
     //刷价;session=None 调用形态退注册表派生值(既有桩零漂移)。"""
     from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
@@ -148,7 +148,7 @@ def test_line_switch_affordable_window_linkage() -> None:
     assert e_rounds(comp, _bridge(**axes), session=_sess_with('买断制')) == e_buyout
 
 
-# (原墓碑 grep 锁 test_grep_lock_no_cw4_cap_override_in_src 删:源码扫描
+# (原墓碑 grep 测试 test_grep_lock_no_cw4_cap_override_in_src 删:源码扫描
 #  形态,README 禁止清单无例外——「死通道防回流」归 review 与代码规范;
-#  注入通道唯一合法形态由本文件锁①③⑤行为锁辖。伴随 _mandate_state_
-#  docstring_lines 助手同删,ast/re/Path/_SRC 导入清。头注锁面清单同步。)
+#  注入通道唯一合法形态由本文件测试①③⑤行为测试辖。伴随 _mandate_state_
+#  docstring_lines 助手同删,ast/re/Path/_SRC 导入清。头注测试面清单同步。)

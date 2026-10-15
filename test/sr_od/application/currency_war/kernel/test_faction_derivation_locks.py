@@ -1,6 +1,6 @@
-"""faction 三类注册表派生口径锁(benchchar-retirement design §2.1)
-+ 线知识卡三字段锁(line_and_upgrade §1.2/§1.4/§1.5)
-+ 开拓者形态归一上报锁(§3 不变量 5 哨兵)。
+"""faction 三类注册表派生口径测试(benchchar-retirement design §2.1)
++ 线知识卡三字段测试(line_and_upgrade §1.2/§1.4/§1.5)
++ 开拓者形态归一上报测试(§3 不变量 5 哨兵)。
 
 faction/position_pref 不入容器形状,消费点经注册表按 char_id 派生,三类
 消费口径(§2.1):
@@ -8,7 +8,7 @@ faction/position_pref 不入容器形状,消费点经注册表按 char_id 派生
 - 类3 羁绊(按排聚合 board_by_row):行归属 + 注册表派生,开拓者形态归一
   随迁(前排=记忆/后排=欢愉,design §3 不变量 5 的计数侧承载体)。
 
-锁面:
+测试面:
 ① board_by_row 容器行输入:排归属 = 行入参(前排/后排分桶),多羁绊角色
    每系都计,total = 两行之和;
 ② 开拓者形态按排归一(防御性再归一):前排槽携带后台形态 id 时按前排
@@ -23,7 +23,7 @@ faction/position_pref 不入容器形状,消费点经注册表按 char_id 派生
 知识卡节:①schema 全 20 线三字段非空(角色型 = 唯一恒可判定硬规则
 路径);②名字空间 ⊆ 注册表键(手编建表笔误防线——写错名 = 判定永不
 命中且静默);③ CARRY 锚派生(plaza_carry 直用 + 攻略补全登记)与
-CARRY 档 = 单名锚 ∪ core_chars 合流;④单帧锁(char_lock_hit AND /
+CARRY 档 = 单名锚 ∪ core_chars 合流;④单帧测试(char_lock_hit AND /
 strategy_lock_hit OR + OCR 间隔号形变归一)。
 """
 from __future__ import annotations
@@ -230,7 +230,7 @@ def test_carry_set_union_anchor_and_core():
 
 
 def test_char_lock_hit_and_semantics():
-    """④ 角色型单帧锁:全组合在手命中、缺任一未命中(AND = §1.4「关键角色组合
+    """④ 角色型单帧测试:全组合在手命中、缺任一未命中(AND = §1.4「关键角色组合
     到手」);无关持有不命中(万敌线 3 件组合)。"""
     wandi = next(c for c in COMP_LIBRARY if c.name == '万敌单C')
     combo = wandi.lock_rules['角色型']
@@ -254,7 +254,7 @@ def test_strategy_lock_hit_any_and_ocr_normalization():
 # ============================================================ 开拓者形态归一(上报侧)
 # (换排形态归一归一口唯一:swap 上报与 deploy_move 上报均经同源归一核
 #  cw_exec_state.trailblazer_row_identity → trailblazer_row_unit,换排即
-#  切换前台记忆/后台欢愉形态;计数侧同构锁 = 本文件
+#  切换前台记忆/后台欢愉形态;计数侧同构测试 = 本文件
 #  test_board_by_row_trailblazer_row_normalization。)
 
 _ST_SIG = ChannelSig(family='logic_action', actor='CwScreenPrep')

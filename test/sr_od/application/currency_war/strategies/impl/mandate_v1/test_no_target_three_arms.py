@@ -1,8 +1,8 @@
-"""P86 无目标期三臂·收编对照锁(迭代 2026-10-12-prep-shop-workflow-redesign
+"""P86 无目标期三臂·收编对照测试(迭代 2026-10-12-prep-shop-workflow-redesign
 批 3.6;shop_session §5 承继清单 P86 行)。
 
-原发射面锁(乙臂五前件合取/甲臂强锁门 G>ε 触发闸/丙臂守息缺省三臂
-仲裁)随三臂收编退役——本文件改锁收编后的目标形态(收编完成判据 =
+原发射面测试(乙臂五前件合取/甲臂强锁门 G>ε 触发闸/丙臂守息缺省三臂
+仲裁)随三臂收编退役——本文件改断言收编后的目标形态(收编完成判据 =
 本文件 + 对照表,禁静默失活):
 
 - **甲臂**(方向囤货):触发闸退役(囤货义务化——不依赖期望保证),
@@ -18,11 +18,11 @@
   守息分支键。
 
 kernel 判据本体(cw_intention.no_target_arms/k_empty_window_fallback
-等)保留为空窗回退的单一源——真值表直锁(纯函数面)随批保留。
+等)保留为空窗回退的单一源——真值表直测(纯函数面)随批保留。
 (原 test_refund_backing_face_retained 背书面两行断言删:全额退背书门
 refund_full_star_ok 的 (2,2) 拒 /(1,2) 过真值已由
 test_sell_window_launch::test_hold_registration_qualification_
-conjunction 的资格合取锁完整辖住——子集断言不留。)
+conjunction 的资格合取测试完整辖住——子集断言不留。)
 """
 from __future__ import annotations
 
@@ -82,7 +82,7 @@ def _bc(name: str, star: int = 1) -> BenchSlot:
 def _state(gold: int = 45, level: int = 5, plane: int = 2,
            shop_cards=(), bench=(), deployed=(), hp: int = 60,
            round_num: int = 2, node_kw: str = '') -> dict:
-    """无目标帧(P2+ 位面辖域)通用种子轴(口径沿旧三臂锁:gold=45/
+    """无目标帧(P2+ 位面辖域)通用种子轴(口径沿旧三臂测试:gold=45/
     level=5/round=2;target/ist 皆空 = 空窗),店面/持有按参。
     ``node_kw`` 直填节点 kind('reward' = 升级抑制帧,翻转行为差隔离)。"""
     st = {'gold': gold, 'level': level, 'plane': plane,
@@ -121,7 +121,7 @@ def _ct(sess) -> dict:
     return state_of(sess).cw4_counters
 
 
-# ===== kernel 判据真值面(空窗回退单一源;纯函数直锁)=====
+# ===== kernel 判据真值面(空窗回退单一源;纯函数直测)=====
 
 
 class TestFallbackKernelTruth:
@@ -140,7 +140,7 @@ class TestFallbackKernelTruth:
         assert band
 
 
-# ===== 甲臂收编:方向采购集经回退进序 1(锁:买因 m2)=====
+# ===== 甲臂收编:方向采购集经回退进序 1(断言:买因 m2)=====
 
 
 class TestArmAAdoptedViaFallback:
@@ -181,7 +181,7 @@ class TestArmAAdoptedViaFallback:
             'P1 帧甲臂方向采购越辖(位面辖域字面量守卫失效)'
 
 
-# ===== 乙臂收编:枢纽件经序 1 身份命中(锁:无 hub_option 买因)=====
+# ===== 乙臂收编:枢纽件经序 1 身份命中(断言:无 hub_option 买因)=====
 
 
 class TestHubFoldedIntoOrderOne:
@@ -222,7 +222,7 @@ class TestHubFoldedIntoOrderOne:
     def test_hub_hold_registration_face(self):
         """乙臂持有段(获取 = 免费期权持有语义)的卖面保护随装配 A
         存活:hub_acquired_names_of 并集(identity_exclusions 单一源)。
-        正负锁:登记名入集;未登记名不入。"""
+        正负测试:登记名入集;未登记名不入。"""
         from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
             sell_gate,
         )
@@ -294,7 +294,7 @@ class TestArmCHoldDefault:
             '丙臂守息不得冻结升级既有授权(发展优先不变量,01 §8-2)'
 
 
-# ===== k_members 下游同源(锁 6 承继;换源 = 回退集)=====
+# ===== k_members 下游同源(测试 6 承继;换源 = 回退集)=====
 
 
 class TestKMembersDownstream:

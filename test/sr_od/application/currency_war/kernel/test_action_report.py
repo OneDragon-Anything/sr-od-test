@@ -1,16 +1,16 @@
-"""CW 动作上报与记账链锁面(上报函数族 + 工具写端 + 归一 reason 序列化
+"""CW 动作上报与记账链测试面(上报函数族 + 工具写端 + 归一 reason 序列化
 + 动作 op 发出即记账 + 合并采样步回调)。
 
 五节归并自原五个主题文件(测试函数名全量保留,原文件已删):
 
-1. 上报函数族命名规约完备锁(原 test_cw_action_report_contract.py):
+1. 上报函数族命名规约完备测试(原 test_cw_action_report_contract.py):
    词表类 ``CwActionXxxParam`` 恰有同名上报函数
    ``report_action_<snake>_param``(kernel/cw_action_report 包,每动作
    一文件;工具族落 ``tool_use``,其余零写族落 ``zero_writes``;包级
-   ``__getattr__`` 命名规约解析)。新增动作漏建上报函数/漏建文件 = 本锁红。
+   ``__getattr__`` 命名规约解析)。新增动作漏建上报函数/漏建文件 = 本测试红。
    声明面即命名规约本身,无分发表——分派只允许出现在实机 op 直调与
    sim/回放引擎入口。
-2. 工具上报容器写锁(原 test_cw_tool_use_report.py):逐工具写端/冶金炉
+2. 工具上报容器写测试(原 test_cw_tool_use_report.py):逐工具写端/冶金炉
    采样/投影仪走链/EQUIP_WRITE_SIDES 词表校验;
 3. 动作行归一 reason 键序列化(原 test_cw_action_reason_serialization.py;
    提取键序单一源 = telemetry/schema.py ``ACTION_REASON_SOURCE_KEYS``,
@@ -21,8 +21,8 @@
    观察侧 reconcile 对账);
 5. ``_merge_bench`` 步回调(原 test_cw_merge_step_callback.py):采样链
    逐步写的机械基础(生产消费面 = cw_action_report/collect_ore 与
-   cw_effect_inventory 的 on_step 范式);合成规则本体由既有投影直锁钉住,
-   本节只锁回调机制。
+   cw_effect_inventory 的 on_step 范式);合成规则本体由既有投影直测钉住,
+   本节只校验回调机制。
 """
 from __future__ import annotations
 
@@ -115,7 +115,7 @@ from sr_od.application.currency_war.telemetry.schema import (
 )
 
 # ============================================================
-# 1. 上报函数族命名规约完备锁
+# 1. 上报函数族命名规约完备测试
 # ============================================================
 
 
@@ -149,7 +149,7 @@ def test_every_action_type_has_report_function():
 @pytest.mark.parametrize('t', CW_ACTION_TYPES, ids=lambda t: t.__name__)
 def test_report_function_accepts_param_and_sig(t, _isolate_defect_buffer):
     """逐类冒烟:上报函数以零写/拒绝路径可调用(不要求容器效果,
-    只锁「函数在场且签名可走」——语义正确性归各域直锁)。"""
+    只断言「函数在场且签名可走」——语义正确性归各域直测)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         ChannelSig,
         GameState,
@@ -159,7 +159,7 @@ def test_report_function_accepts_param_and_sig(t, _isolate_defect_buffer):
     sig = ChannelSig(family='logic_action', actor='cw-report-lock',
                      mode='compute')
     fn = getattr(rpt, f'report_action_{_snake(t.__name__)}_param')
-    # 构造最小 param:必填字段给哑值(仅为了走函数入口;写路径按域锁覆盖)
+    # 构造最小 param:必填字段给哑值(仅为了走函数入口;写路径按域测试覆盖)
     import dataclasses
 
     from sr_od.application.currency_war.kernel.cw_vocab import ShopCard
@@ -216,7 +216,7 @@ def test_report_pick_invest_env_container_miss_loud_failure():
 
 
 # ============================================================
-# 2. 工具上报容器写锁(逐工具写端 / 冶金炉采样 / 投影仪走链)
+# 2. 工具上报容器写测试(逐工具写端 / 冶金炉采样 / 投影仪走链)
 # ============================================================
 
 _SIG_OBS = ChannelSig(family='obs', actor='CwToolUseReportSeed')
@@ -368,7 +368,7 @@ def _rng_after(rng: random.Random, item: str) -> random.Random:
 
 
 def test_furnace_sample_same_seed_reproducible() -> None:
-    """采样锁:同种子同产物(可复现;rng 注入槽,同种子同序列)。
+    """采样测试:同种子同产物(可复现;rng 注入槽,同种子同序列)。
     样本限作用域白名单内(简易/进阶;白名单 = 口述·权威 2026-09-21)。
     原对拍腿(旧 sim 私有重掷实现)随 sim 私有动作腿退役删除,
     采样单一源 = 本模块。"""
@@ -395,7 +395,7 @@ def test_furnace_sample_same_seed_reproducible() -> None:
 
 
 def test_furnace_pool_scope_whitelist() -> None:
-    """作用域白名单锁(口述·权威 2026-09-21):冶金炉只作用简易/进阶——
+    """作用域白名单测试(口述·权威 2026-09-21):冶金炉只作用简易/进阶——
     特殊/工具目标池 = None(不可作用);白名单池不含特殊/骇客/专属件。"""
     assert tool_use.furnace_mutate_pool('垃圾袋') is None, '特殊不可作用'
     assert tool_use.furnace_mutate_pool('冶金炉') is None, '工具不可作用'
@@ -496,7 +496,7 @@ def test_precision_wrench_keeps_tool_in_inventory(rows_sink: _RowSink) -> None:
 
 def test_staff_projector_walks_gain_chain_and_merges(
         monkeypatch, rows_sink: _RowSink) -> None:
-    """员工投影仪走链锁:复制进席经 ``gain_character`` 统一时序——
+    """员工投影仪走链测试:复制进席经 ``gain_character`` 统一时序——
     ``on_character_gained`` 回调触发(现役空集安静不写)+ 凑满三连合成
     (升星判断 = 1★×3 → 2★,复制触发三合一 = 口述·权威 2026-09-21);
     equips 消耗腿同落(工具 −1)。"""
@@ -621,7 +621,7 @@ def test_bridge_zero_write_branches_evidenced(rows_sink: _RowSink) -> None:
 
 def test_mutate_faces_do_not_fire_gain_callbacks(monkeypatch,
                                                  rows_sink: _RowSink) -> None:
-    """变异面不走链锁(design §2.0):冶金炉/特权卡 = 原地替换数量不变,
+    """变异面不走链测试(design §2.0):冶金炉/特权卡 = 原地替换数量不变,
     不触发获得回调(on_character_gained/on_equipment_gained 零调用);
     容器写照常发生(非零写)。"""
     char_calls: list = []
@@ -646,7 +646,7 @@ def test_mutate_faces_do_not_fire_gain_callbacks(monkeypatch,
 
 
 def test_equip_write_sides_report_form_final_values() -> None:
-    """EQUIP_WRITE_SIDES 新词表校验锁:工具七行逐行终值(design §2.3 表)
+    """EQUIP_WRITE_SIDES 新词表校验测试:工具七行逐行终值(design §2.3 表)
     + 校验器通过(report: 第五形目标须在 tool_use 在册,import 即炸面
     的直调复验)。"""
     assert EQUIP_WRITE_SIDES['冶金炉'] == \
@@ -753,7 +753,7 @@ def _buy_op_env(monkeypatch: pytest.MonkeyPatch,
 
 
 def test_buy_card_emits_and_books_unconditionally(monkeypatch):
-    """机械执行主锁:恒返回 True + 照常落账(账本/主域 bench 全落)——
+    """机械执行主测试:恒返回 True + 照常落账(账本/主域 bench 全落)——
     零判效的直接证据;落地真值归下一入口观察对账(静默不生效 →
     shop+gold 失配安灯停,按真 bug 修)。"""
     op, env, ledger, gs, clicks = _buy_op_env(monkeypatch)
@@ -772,7 +772,7 @@ def test_buy_card_emits_and_books_unconditionally(monkeypatch):
 
 
 def test_buy_card_missing_slot_point_fails_loudly(monkeypatch):
-    """兜底坐标清除锁:槽号越界(点位缺失同出口)→ 显式 round_fail
+    """兜底坐标清除测试:槽号越界(点位缺失同出口)→ 显式 round_fail
     (错误信息带 area 名,与 level_btn/refresh_btn 同款纪律),零点击
     零记账——禁兜底坐标静默点击(坐标单一真相源)。"""
     op, _env, ledger, _gs, clicks = _buy_op_env(monkeypatch, click_pts=[])
@@ -897,7 +897,7 @@ def _wear_env(monkeypatch: pytest.MonkeyPatch) -> tuple:
 
 
 def test_wear_equip_single_mechanical_drag_emits(monkeypatch):
-    """发出即记账主锁:单次机械拖拽(无补救链重试)+ emitted=True +
+    """发出即记账主测试:单次机械拖拽(无补救链重试)+ emitted=True +
     拖后零读屏(零落地判定);定位落空 = 未发出通道(emitted=False,
     非判效语义保留)。"""
     op, env, drags, screens = _wear_env(monkeypatch)
@@ -918,7 +918,7 @@ def test_wear_equip_single_mechanical_drag_emits(monkeypatch):
 
 
 def test_wear_locate_slot_anchor_over_name_match():
-    """穿戴目标定位锁:计划步恒戳的物理槽位锚优先于名匹配——同名角色
+    """穿戴目标定位测试:计划步恒戳的物理槽位锚优先于名匹配——同名角色
     跨域在场(deployed 空装 + bench 副本穿满)时,旧 bench 先序名匹配
     会把穿戴记到席上副本 → 超限拒单零写 → 决策环同输入重派无限自旋
     (sim 冒烟 seed 20261014 实证);机械拖拽的真实落点 = 槽位 avatar,
@@ -993,7 +993,7 @@ def _deploy_env(session: object | None):
 
 
 def test_deploy_move_tracks_immediately_on_emit(monkeypatch):
-    """发出即记账主锁:拖拽发出即主域记上阵 + bench 摘除(3.2:自上报
+    """发出即记账主测试:拖拽发出即主域记上阵 + bench 摘除(3.2:自上报
     单点写主域);拖后画面零变化(零差帧形态)也不回滚不申报——落地
     判定归观察侧 reconcile(静默不生效 → 账实失配安灯停,按真 bug 修)。"""
     monkeypatch.setattr('time.sleep', lambda _s: None)

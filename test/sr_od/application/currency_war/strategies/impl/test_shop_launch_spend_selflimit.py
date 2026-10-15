@@ -1,9 +1,9 @@
-"""发射帧受限消费·策略侧自限(flow.decide_shop_action 提案后谓词检)单帧锁:
+"""发射帧受限消费·策略侧自限(flow.decide_shop_action 提案后谓词检)单帧测试:
  详设 §2.10(用户裁定:策略的
 事情不进流程框架,规范正本 = flow/README §1 决策控制分层铁律;受限消费
 政策单一面 = 决策入口自限,flow 闸已退役)。
 
-锁的语义(判定数学零复制:armed 核、息线判定、预算闸谓词全部 kernel
+测试的语义(判定数学零复制:armed 核、息线判定、预算闸谓词全部 kernel
 单一源直调,断言走真实判定链非桩值——金位经缺省息帽链派生 g*):
 - 受限会话帧(armed ∧ 金达息线,派生标记每帧现算;恰落线帧 = 受限,
   与 kernel 闸带内拒域对齐)政策内动作 → 提案原样发射,零受阻遥测;
@@ -20,7 +20,7 @@
 并入;详设 §2.10,发射帧仲裁段退役后的行为连续性):①armed ∧ 金超息线
 → 前置发射位发普通开店动作;②普通访问内策略侧自限拒拍 → CloseShop 经
 商店画面 op 统一执行路径真执行收访问;③段内已访 → 前置发射位落
-CwActionStartBattleParam 正常发射。桩模式沿本文件自限锁(armed 判定核
+CwActionStartBattleParam 正常发射。桩模式沿本文件自限测试(armed 判定核
 脚本化,息线/预算闸判定不桩 = 真实单一源判定链)。
 """
 from __future__ import annotations
@@ -59,7 +59,7 @@ _OBS_SIG = ChannelSig(family='obs', actor='TestShopSpendSelfLimit', mode='read')
 _LOGIC_SIG = ChannelSig(family='logic_action', actor='TestShopSpendSelfLimit')
 
 # 真实判定链金位锚(空容器 active_strategies 缺省 → cap_resolved = 缺省息
-# 帽档 = 息封顶金位/10 → g* = 10×cap;值源 = kernel 派生链,断言只锁金位
+# 帽档 = 息封顶金位/10 → g* = 10×cap;值源 = kernel 派生链,断言只校验金位
 # 形态对应的放行/拒拍/带内三域,不引常量进断言式):
 _GOLD_OVER = 60    # 溢出段;3 费买入花后在线上 → 政策内(放行域)
 _GOLD_NEAR = 51    # 溢出段;同动作花后跌破息线 → 政策外(拒拍域)
@@ -86,7 +86,7 @@ def _write_shop_payload(session, gold: int) -> None:
 
 
 def _stub_core(monkeypatch, proposal):
-    """决策核替身(提案发射机;留咨询记录锁「恰咨询一次 = 消费终止非
+    """决策核替身(提案发射机;留咨询记录校验「恰咨询一次 = 消费终止非
     改试次优」)。"""
     from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
         shop as mandate_shop,
@@ -111,7 +111,7 @@ def _strategy(monkeypatch, session, decision: dict):
     strategy = MandateV1Strategy(
         game_state_of(session),
         SimpleNamespace(strategy_seed=None))   # 终态契约:构造注入
-    # 门后内务(方向帧消费/镜像遥测)与本锁无关,桩成 no-op 保单测面窄。
+    # 门后内务(方向帧消费/镜像遥测)与本测试无关,桩成 no-op 保单测面窄。
     monkeypatch.setattr(strategy, '_consume_shop_direction_frame',
                         lambda: None)
     monkeypatch.setattr(strategy, 'write_shop_mirrors',
@@ -275,7 +275,7 @@ def test_restricted_session_normal_path_chain(monkeypatch, tmp_path):
                 shop=[cw4_card('甲', cost=3)])   # 守卫面:提案牌在期望态店中
 
     # 生产策略(mandate_v1 真实自限门);决策核替身 = 提案发射机(留咨询
-    # 记录锁「消费终止非改试次优」)。
+    # 记录校验「消费终止非改试次优」)。
     strategy = MandateV1Strategy(
         game_state_of(session),
         SimpleNamespace(strategy_seed=None))   # 终态契约:构造注入
@@ -293,7 +293,7 @@ def test_restricted_session_normal_path_chain(monkeypatch, tmp_path):
 
     match = CurrencyWarMatch(strategy, session)
     # 会话状态载体归一:session.strategy_state = 构造接线后的同一状态对象
-    # (裸 session 桩的容器附着面不依赖;宿主显式归一,先例 = 未观察流锁
+    # (裸 session 桩的容器附着面不依赖;宿主显式归一,先例 = 未观察流测试
     # 宿主的 strategy_state 显式置位)。
     match.session.strategy_state = state_of(gs)
     state = state_of(game_state_of(session))
@@ -304,7 +304,7 @@ def test_restricted_session_normal_path_chain(monkeypatch, tmp_path):
         '普通开店形态(进出店 = 普通 OpenShop/0n 路径,零受限字段)'
     assert state.cw4_launch_spend_visited is True, '段旗置位(每武装段至多一次)'
 
-    # ② 普通访问内自限生效:商店画面 op 离线宿主(替身面沿未观察流锁
+    # ② 普通访问内自限生效:商店画面 op 离线宿主(替身面沿未观察流测试
     # 宿主同式;关店执行位点击桩化)驱动观察 node + 决策动作 node。
     class _Ctl:
 

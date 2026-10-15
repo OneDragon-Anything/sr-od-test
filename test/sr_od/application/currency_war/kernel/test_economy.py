@@ -3,20 +3,20 @@ R2 息线 floor / D 牌期望边界 / ev_arm 值域(aggregate_economy 分型登�
 视界族场字段门面契约(horizon)/ 预算遥测披露(写读闭环/轮界/spent 累计)。
 
 覆盖面(金钱类按 2026-09-09 编排者裁决收缩:实机结算对账 + sim 段检双层
-已覆盖逐面金钱锁,单位层只留 commit→sim 空窗价值):
+已覆盖逐面金钱测试,单位层只留 commit→sim 空窗价值):
 - budget 拒付(1 代表,归 fail-closed):hp 不可信帧 blood_xp_gate 拒;
-- R2 息线 floor:cap 语境参数化锁(ADR-0598 注入面);
+- R2 息线 floor:cap 语境参数化测试(ADR-0598 注入面);
 - D 牌期望边界:expected_refreshes/refresh_prob 边界一条(p≤0/j≥k/
   查表缺级 → 0;v/a 参数从注册表单一源现算,不手抄常数);
 - ev_arm 值域:aggregate_economy 分型登记表逐字段算子期望(值域表)。
 
-退役面(审计判决删除):金净守恒代表锁(test_gold_net_conserved_buy_sell_
-roundtrip,连 simulate import——锁的 simulate 全仓零生产消费,金钱面
-= 实机结算对账 + gain_chain 活转移函数直锁(test_gain_chain))、利息/streak 真值
+退役面(审计判决删除):金净守恒代表测试(test_gold_net_conserved_buy_sell_
+roundtrip,连 simulate import——其 simulate 全仓零生产消费,金钱面
+= 实机结算对账 + gain_chain 活转移函数直测(test_gain_chain))、利息/streak 真值
 (src 零调用)、区分力非零证明锚(元测试)、refresh_prob 查表
 一致性锚(缺级→0 腿并入 D 牌期望边界)、xp 兜底支钳 0 单测(并入 joy
 真值表一行)、pair 断供驱逐墓碑、ADR-0150 base 层全量计数锚(纯数据计
-数;其「过继锁禁删」声明随审计判决解除,335/83 计数归编 #15
+数;其「过继测试禁删」声明随审计判决解除,335/83 计数归编 #15
 test_cw_data_registry 待承接)。
 
 合并面(第二刀):xp 费用无折扣不变+显示价直通并一;排程触发①②参数化
@@ -25,7 +25,7 @@ test_cw_data_registry 待承接)。
 
 来源:economy_typing(mv 主干)/ investment / r2_interest_floor /
 blood_xp_gate 核 / decisions 之 economy 真值两行(2026-09-09 套件重建批
-A,#4;金钱类收缩随编排者裁决)。其余历史锁已退役(git 可复活)。
+A,#4;金钱类收缩随编排者裁决)。其余历史测试已退役(git 可复活)。
 """
 from __future__ import annotations
 
@@ -263,8 +263,8 @@ def test_half3_distinguish_fixtures(patched_registry) -> None:
         assert ref[fname] == expect
 
 
-# (金净守恒代表锁已删——simulate 零生产消费,审计判决;金钱面 = 实机
-#  结算对账 + test_gain_chain 卖/换上报 v2 族契约节(活转移函数直锁)。)
+# (金净守恒代表测试已删——simulate 零生产消费,审计判决;金钱面 = 实机
+#  结算对账 + test_gain_chain 卖/换上报 v2 族契约节(活转移函数直测)。)
 
 
 # ==================== R2 息线 floor(cap 语境参数化) ====================
@@ -306,9 +306,9 @@ class TestR2InterestFloor:
         return comp, sess
 
     def test_cap_resolved_parameterizes_floor(self):
-        """cap 语境锁(息线表锚):g*=10×cap_resolved 随 session 覆写参数
+        """cap 语境测试(息线表锚):g*=10×cap_resolved 随 session 覆写参数
         化——cap=10(息律投资语境)下金 80 < 100+ρ ⇒ 拒(50 非域常数,
-        息线 floor「拍常数」禁案的判别锁)。
+        息线 floor「拍常数」禁案的判别测试)。
         (金钱类收缩:floor 门过下界/贴线拒刷两行按裁决不搬,git 可复活。)"""
         comp, sess = self._frame(80)
         _seed_actives(sess, ['利息上调'])   # ADR-0598 注入面迁移(容器单源)
@@ -424,7 +424,7 @@ def test_expected_refreshes_boundaries() -> None:
     assert refresh_prob(99, 3) == 0.0, '查表缺级 → 0'
 
 
-# ==================== xp 买费折扣修复锁族(正本 = ADR-0632) ====================
+# ==================== xp 买费折扣修复测试族(正本 = ADR-0632) ====================
 # 规范语义 = strategy-env-impacts.md §2 通用模式 1(2026-09-10 定稿):
 # 观察优先、兜底逻辑——显示价(最近备战帧 OCR,游戏已算好折扣)直通不再减;
 # 观察缺省 → 兜底 = 基准 4 − 折扣(max 0;商业间谍 xp_buy_cost_discount +
@@ -447,14 +447,14 @@ def _xp_state(level: int = 5, strategies: list[str] | None = None,
 
 
 def test_xp_fee_no_discount_invariant_and_display_passthrough() -> None:
-    """xp 费用两形态一锁(合并原 test_xp_fee_no_discount_invariance /
+    """xp 费用两形态一测试(合并原 test_xp_fee_no_discount_invariance /
     test_xp_click_display_price_passthrough,断言腿逐条保留):
 
-    - 无折扣局不变锁:未持任何折扣卡时费用与改前逐位一致(方案审修改
+    - 无折扣局不变测试:未持任何折扣卡时费用与改前逐位一致(方案审修改
       清单④①)——显示价支原值直通、兜底支基价 4、upgrade_plan_fee =
-      击数×同价(击数值来自 cw_plane_table 注册表,非本锁辖值)。改前
-      病理只在持折扣卡时显形,本锁钉住占绝大多数的无间谍局零漂移;
-    - 显示价直通锁:持商业间谍时显示价 3 原样返回(改前双扣 = 2,真值 3)。
+      击数×同价(击数值来自 cw_plane_table 注册表,非本测试辖值)。改前
+      病理只在持折扣卡时显形,本测试钉住占绝大多数的无间谍局零漂移;
+    - 显示价直通测试:持商业间谍时显示价 3 原样返回(改前双扣 = 2,真值 3)。
       依据 = strategy-env-impacts §3 商业间谍条「显示价即折后价,游戏已
       算好」(2026-09-10 用户确认);对已折显示价再减模型折扣 = 双重折扣,
       对等级门折扣同样成立(成长快乐 8 级起,游戏侧显示价已含)。"""
@@ -491,10 +491,10 @@ def test_xp_fee_no_discount_invariant_and_display_passthrough() -> None:
 def test_xp_click_joy_level_gate_truth_table(
         level: int, strategies: list[str], expected: int,
         patch_discount: int | None, monkeypatch: pytest.MonkeyPatch) -> None:
-    """成长的快乐真值表锁(兜底支等级门;方案审关键修改②,关闭
+    """成长的快乐真值表测试(兜底支等级门;方案审关键修改②,关闭
     「登记不消费」豁免口)+ 兜底支下限 0 钳行。
 
-    聚合分型已在册(sum+guarded_min,AGG_FIELDS 两字段在表),本锁钉消费位:
+    聚合分型已在册(sum+guarded_min,AGG_FIELDS 两字段在表),本测试钉消费位:
     折扣合计 = xp_buy_cost_discount + (等级 ≥ xp_click_discount_from_level_at
     时 xp_click_discount_from_level)。sim 恒兜底支(无 OCR),不消费 =
     sim 对该卡局费用恒虚高 1 金/击,恰保留本修复要消灭的 sim/实机分歧。
@@ -512,7 +512,7 @@ def test_xp_click_joy_level_gate_truth_table(
 
 
 def test_upgrade_plan_fee_delegates_discount_aware_pricing() -> None:
-    """upgrade_plan_fee 委托锁:sim 形态(无显示价)持商业间谍时升级总费
+    """upgrade_plan_fee 委托测试:sim 形态(无显示价)持商业间谍时升级总费
     = 击数×3(改前裸字段取价 = 击数×4,反方向单侧错,方案审问题 3-a)。
 
     委托语义 = 击数面零变化(clicks_to_level 只供次数),取价唯一源 =
@@ -530,7 +530,7 @@ def test_upgrade_plan_fee_delegates_discount_aware_pricing() -> None:
 
 
 # (三审整删)原 test_upgrade_plan_fee_no_second_discount_implementation
-# 「结构锁」(getsource 断言函数体内禁第二处取价/折扣实现)——源码扫描形态
+# 「结构测试」(getsource 断言函数体内禁第二处取价/折扣实现)——源码扫描形态
 # (README 禁止清单);委托语义行为半由
 # test_upgrade_plan_fee_delegates_discount_aware_pricing 辖,「同一语义
 # 两处实现」防线归 review 与代码规范。
@@ -543,7 +543,7 @@ def test_upgrade_plan_fee_delegates_discount_aware_pricing() -> None:
 
 
 _REG = DEFAULT_REGISTRY
-# (危机臂关行为锁注入 _REG_CRISIS_OFF 已随 crisis_release_enabled
+# (危机臂关行为测试注入 _REG_CRISIS_OFF 已随 crisis_release_enabled
 # 死旋钮删除——零消费,统一迁移批 commit b94e9cfb,
 # 2026-09-04 用户裁定清理。)
 
@@ -584,7 +584,7 @@ def _sc(name: str, cost: int = 2) -> ShopCard:
 #  统一迁移批 ② MAP B 类;build_round_posture/evaluate_release 随 v2 消亡。)
 
 
-# --- 排程核规则锁(W615 R4;触发①②真值表并一)-----------------------
+# --- 排程核规则测试(W615 R4;触发①②真值表并一)-----------------------
 
 
 def _schedule_rows() -> dict:
@@ -651,8 +651,8 @@ def _ba_locked_4cost_sess() -> StrategySession:
     4 费峰值级 9,L7→8 概率 0.10→0.22 大移位带(期望刷费省 ≈103 金
     > U_L = 13击×4金 = 52 + 息损)⇒ ② 臂检验过——旧「裸峰值级>当前级」
     直觉帧(2 费小移位带,benefit ≈9.9 < U_L 20)按修正①被正确收紧
-    (负向锁 = test_schedule_ul_threshold_negative_small_shift_band),
-    锁随新判据重锚(反例锚=希儿 lv7 省 28 < 升 40,ADR-0516)。"""
+    (负向测试 = test_schedule_ul_threshold_negative_small_shift_band),
+    测试随新判据重锚(反例锚=希儿 lv7 省 28 < 升 40,ADR-0516)。"""
     from sr_od.application.currency_war.data.cw_chars import CHARACTERS
     from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
     from sr_od.application.currency_war.kernel.cw_intention import intention_core
@@ -668,7 +668,7 @@ def _ba_locked_4cost_sess() -> StrategySession:
 
 @pytest.mark.parametrize('case_id', list(_schedule_rows()))
 def test_schedule_triggers_truth_table(case_id: str) -> None:
-    """排程触发真值表一锁(参数化并一;迭代 2026-10-12-prep-shop-
+    """排程触发真值表一测试(参数化并一;迭代 2026-10-12-prep-shop-
     workflow-redesign 批 3.4 后 = 人口位单臂):
     ①人口位[33]:cap 满 ∧ bench 有成型件(2★)→ 排程(最高义务,不受
     可负担前置辖——当轮兑现战力);
@@ -685,17 +685,17 @@ def test_schedule_triggers_truth_table(case_id: str) -> None:
         assert not got, f'{case_id}: 不应排程'
 
 
-# (U_L 阈值检验负向锁 test_schedule_ul_threshold_negative_small_shift_band
+# (U_L 阈值检验负向测试 test_schedule_ul_threshold_negative_small_shift_band
 #  已随 schedule_upgrade ②臂退役消亡——迭代 2026-10-12-prep-shop-
 #  workflow-redesign 批 3.4:检验函数 _upgrade_ul_threshold_ok 随②臂
 #  删除,「小移位带过度升级」的防线由策略层概率主账
 #  criteria/levelup.prob_account_ok 承载〔同一不等式形态,辖域改锁定后
-#  ∧ plane2_started 双条件,负向锁 = test_levelup_prob_axis 的
+#  ∧ plane2_started 双条件,负向测试 = test_levelup_prob_axis 的
 #  概率账不触发形态〕;替代语义考古走 git 历史。)
 
 
 def test_schedule_predictive_even_when_fee_unaffordable() -> None:
-    """预告态契约(W623 D1,判前锁):排程不以当帧可负担为前置——
+    """预告态契约(W623 D1,判前测试):排程不以当帧可负担为前置——
     人口位触发帧(cap 满 ∧ bench 2★ 成型件)gold 30(远不够升级费)
     → 排程照发、R* 计入升级费;「付得起才排」会造 R* 塌缩 → 义务
     花光 → 更排不上的贫穷循环。(重锚申报:原用概率级②帧承载,
@@ -737,7 +737,7 @@ def test_schedule_gold_digger_retires_levelup(monkeypatch) -> None:
     assert not schedule_upgrade(_bsb(**st), StrategySession())
 
 
-# --- 预算核契约锁(W623 D2;值域+合法 0 帧表驱动并一)---------------------
+# --- 预算核契约测试(W623 D2;值域+合法 0 帧表驱动并一)---------------------
 
 
 def _budget_rows() -> dict:
@@ -769,7 +769,7 @@ def _budget_rows() -> dict:
 
 @pytest.mark.parametrize('case_id', list(_budget_rows()))
 def test_budget_value_domain_and_legal_zero_frames(case_id: str) -> None:
-    """预算核契约一锁(值域+合法 0 帧表驱动,合并原
+    """预算核契约一测试(值域+合法 0 帧表驱动,合并原
     test_budget_value_domain_and_legal_zero_frames /
     test_w721_collapse_band_zero_and_fallback_exempt,断言腿逐条保留):
     值域 [0,6](6 刷帽单一源);合法 0 帧三类共存——g≤R* 常态帧(全恒正
@@ -793,7 +793,7 @@ def test_budget_value_domain_and_legal_zero_frames(case_id: str) -> None:
 
 
 def test_pair_materialization_and_drought_reset() -> None:
-    """pair 体系两面一锁(合并原 test_pair_eviction_keeps_target_chain_
+    """pair 体系两面一测试(合并原 test_pair_eviction_keeps_target_chain_
     materialized / test_pair_drought_resets_when_member_visible,断言腿
     逐条保留):
 
@@ -819,19 +819,19 @@ def test_pair_materialization_and_drought_reset() -> None:
 
 
 def test_injection_consistency_single_registry_source() -> None:
-    """注入一致性锁(W636 A):披露函数现算写入的披露字段与显式注入的
+    """注入一致性测试(W636 A):披露函数现算写入的披露字段与显式注入的
     接缝值逐字段一致——禁「部分字段落 DEFAULT」的双源混用(P6 契约)。
     cap 归一(ADR-0516 三源归一 + ADR-0598 随批扩展):
     schedule ② 前置息线与预算面守息线分量(reserve_cap 守息线/
     refresh_ev_budget 溢余面)都随 session
     resolved 链(session.active_strategies 注入面,registry 可达值域
     = 买断制 0/开源节流 9/利息上调 10)移动,registry.interest_cap
-    注入不再移动任何息线。锁语义重推(锁存在性纪律,ADR-0598):旧锁
+    注入不再移动任何息线。测试语义重推(测试存在性纪律,ADR-0598):旧测试
     「注入面 cw4_cap_override=4(registry 不可达值)压过 registry 旋钮」
     随死通道退役重写为「买断制(可达值 0)在排程前置与预算面同帧
     生效,registry 旋钮双臂逐位不动」——判别结构(链动/旋钮不动)
     保形。(②臂随升级判据重轴退役〔批 3.4〕后,排程面的链动腿消亡,
-    预算面的链动腿保形承载本锁。)"""
+    预算面的链动腿保形承载本测试。)"""
     import dataclasses
     reg2 = dataclasses.replace(_REG, interest_cap=4)
     st1 = _ba_state(gold=45, level=7)
@@ -886,7 +886,7 @@ def test_injection_consistency_single_registry_source() -> None:
 
 
 # (原 test_tracking_view_isolated_from_session_writers 随修正裁定
-#  删除:锁主对象 _tracking_view(tracking 优先 + snapshot 静默回退)已按
+#  删除:测试主对象 _tracking_view(tracking 优先 + snapshot 静默回退)已按
 #  裁定退役——滞回职责被对账仲裁批 kernel 锚定取代,回退路径即要消灭的掩盖
 #  面;策略消费只剩 game state。)
 
@@ -896,7 +896,7 @@ def test_injection_consistency_single_registry_source() -> None:
 
 def test_effective_cost_tier_and_registry_routing():
     """当前费用档读口三形态:LV.999 档透传(未观察归约 3)/其余角色注册表
-    值/未注册名 0(与 bench_char_cost 未知→3 退款保守估分野)。锁设计
+    值/未注册名 0(与 bench_char_cost 未知→3 退款保守估分野)。测试设计
     。"""
     from dataclasses import replace
 
@@ -919,16 +919,16 @@ def test_effective_cost_tier_and_registry_routing():
     assert effective_cost(gs, '银狼LV.999') == 5
     # 其余角色 = 注册表静态起始费(档字段不影响非 LV.999 路由)
     assert effective_cost(gs, '希儿') == CHARACTERS['希儿'].cost
-    # 未注册名 → 0(无费用语义;与 bench_char_cost 未知→3 分野锁)
+    # 未注册名 → 0(无费用语义;与 bench_char_cost 未知→3 分野测试)
     assert effective_cost(gs, '不存在角色') == 0
 
 
 # ==================== 视界族场字段门面(horizon)=====================
-# 锁面地图(判据 = 迭代 abolish-node-ordinal details/horizon-cleanup.md
+# 测试面地图(判据 = 迭代 abolish-node-ordinal details/horizon-cleanup.md
 # §3 门面契约 / §6 boss kind 化 / §8 行为变化申报):
 # 门面默认表逐值对拍 / 修饰表封顶 / None 回退 / 位面 ∉ 键集 → 0 /
 # hp_safe 阈 nodes_left 封顶 / total_remaining_nodes 与门面同值。
-# (boss 计数 kind 化的通道级判别锁 = 本文件外
+# (boss 计数 kind 化的通道级判别测试 = 本文件外
 # test_invest_strategy::test_cash_boss_channel_kind_count /
 # test_cash_boss_channel_kind_not_geometry,申报面不再重复。)
 
@@ -1057,7 +1057,7 @@ def _disclose_cur(sess: StrategySession, plane: int, round_num: int,
 def _run_shop_visit_offline_host(monkeypatch: pytest.MonkeyPatch,
                                  tmp_path: Path, disclose_impl) -> tuple[
         list, object, object]:
-    """锁 F 行为腿共用离线宿主(零真实副作用)。替身面 = 观察节点段顶
+    """测试 F 行为腿共用离线宿主(零真实副作用)。替身面 = 观察节点段顶
     消费面(读屏/帧留证/种子读链/决策源/遥测单例全替身)+ 关店执行位
     点击桩化:决策源首动作即 CwActionCloseShopParam 终结,循环只走入口
     观察段一次后经统一执行路径关店收工;入口读屏回执 gold=10 非零
@@ -1209,10 +1209,10 @@ class TestShopOpenFrameDualWrite:
         溢余/义务 >0;开局种子底座后备战帧息帽含排程升级费,构造金取高
         保非退化);同轮重复覆写不清 spent(轮界清零归 prep 键戳
         独占);下轮 prep 关店帧 ⇒ 披露 = 容器现值重算(W6 波 4 语义
-        变更;键戳翻轮清零断言面 = 锁 D 主锁,此处不重复)。"""
+        变更;键戳翻轮清零断言面 = 测试 D 主测试,此处不重复)。"""
         sess = StrategySession()
         # ① prep 关店帧(轮入口披露;种子金(基线 3)低于息帽,溢余 0——
-        # 「金未采/金低」两形态在披露面同值,语义注释见锁 F 首案)
+        # 「金未采/金低」两形态在披露面同值,语义注释见测试 F 首案)
         disclose_budget(game_state_of(sess), sess)
         st = state_of(sess)
         assert st.v3_reserve_overflow == 0
@@ -1232,7 +1232,7 @@ class TestShopOpenFrameDualWrite:
         # ④ 下轮 prep 关店帧(金失读 → 容器 carry 沿用店开金,funnel 同
         # 口径):披露 = 容器现值重算。「陈旧店开溢余复位 0」旧语义随
         # 金源切容器消亡——失读沿用下披露恒按沿用金重算,不存在复位面;
-        # F1 新会话构造测不到「覆写后再披露」面(翻轮清零语义归锁 D)。
+        # F1 新会话构造测不到「覆写后再披露」面(翻轮清零语义归测试 D)。
         cw4_gs(sess, gold_unread=True, level=5, plane=1, round_num=9,
                hp=100, node='prep')
         disclose_budget(game_state_of(sess), sess)
@@ -1335,10 +1335,10 @@ class TestReleaseSpentAccrual:
 
 def test_armed_shortcircuit_frame_writes_no_disclosure(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """armed 短路帧不披露单帧锁:预算披露落点 = 备战决策入口前置发射位
+    """armed 短路帧不披露单帧测试:预算披露落点 = 备战决策入口前置发射位
     判定之后(非 armed 帧才到达),armed 帧在三遍编排前短路 return ⇒
     披露字段零写。发射准入核桩 = armed 单键替身(真 armed 帧需配方完备
-    板面,与本锁无关——锁的是落点位次,非 armed 判据本体);替身返回
+    板面,与本测试无关——校验的是落点位次,非 armed 判据本体);替身返回
     缺 quality/quality_eval_error 键 = 常态发射帧。"""
     import sr_od.application.currency_war.kernel.cw_launch_admission as admit_mod
     import sr_od.application.currency_war.strategies.impl.mandate_v1.bridge as bridge_mod
@@ -1368,7 +1368,7 @@ def test_armed_shortcircuit_frame_writes_no_disclosure(
 
 def test_shop_frame_disclosure_wired_at_shop_entry(
         monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """接线存在锁(店开帧第二写点):spy 计数 = 店开观察帧段顶接线段
+    """接线存在测试(店开帧第二写点):spy 计数 = 店开观察帧段顶接线段
     恰调用一次(接线断裂/漂移即红)+ 循环收工两腿。"""
     seen_calls: list = []
 
@@ -1384,7 +1384,7 @@ def test_shop_frame_disclosure_wired_at_shop_entry(
 
 def test_shop_frame_disclosure_failure_degrades_with_warning(
         monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """行为锁:披露覆写失败 → log.warning 降级留痕、不外抛中断商店循环
+    """行为测试:披露覆写失败 → log.warning 降级留痕、不外抛中断商店循环
     (遥测 best-effort 契约;锚⑤缺陷无声复发防线)。触发法 = 披露写点
     monkeypatch 成抛错,经共用离线宿主驱动观察 node 段顶接线段,断言
     warning 被调且循环正常收工——log 措辞/写法漂移不再假红。"""

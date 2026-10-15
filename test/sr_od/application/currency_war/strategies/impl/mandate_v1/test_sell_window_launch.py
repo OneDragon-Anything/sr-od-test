@@ -1,6 +1,6 @@
-"""卖出通道排除仲裁·窗口段与发射登记(单帧锁;批 3)。
+"""卖出通道排除仲裁·窗口段与发射登记(单帧测试;批 3)。
 
-出处(锁纪律:新锁必引设计出处):
+出处(测试纪律:新增测试必引设计出处):
 - ADR-0585(卖出通道排除仲裁单一源;§2 发射登记载体/LaunchCause 闭集
   映射/兜底池定义,§3 四出口生命周期与五键分键,§6 批 3 行);
 - docs/develop/sr_od/application/currency_war/proofs/math_proofs.md **P78** 行(P78-1 同
@@ -15,14 +15,14 @@
 批 3 辖域声明(方案 v3 §6.1):登记簿合一({名:(买因,轮)})、窗口段
 活跃/过期、发射登记四出口 + 五键分键、类资格断言(W5 登记侧,含硬闸
 合取)、funding 兜底豁免、projection 全资格视图。「任意买因类 × 任意
-卖出通道」全矩阵测试随批 4 落地——本文件只落批 3 声明面的场景锁。
+卖出通道」全矩阵测试随批 4 落地——本文件只落批 3 声明面的场景测试。
 
 红证形态说明:红证均为「同构帧按修复前装配形态直调判据/装配」的机制
 复现(与 test_cw_sell_arbitration 批 2 红证同款),非代码变异测试。
 
-锁面组织(极限合并):闭集三锁(枚举拒/15 臂映射/press-stall 双视图)
-并一;生命周期三锁(τ 同轮/锁线不清登记/四出口)表驱动并一;通道无关
-阻断三锁(funding e2e/M4)参数化并一;投影正证+红证并一;
+测试面组织(极限合并):闭集三个测试(枚举拒/15 臂映射/press-stall 双视图)
+并一;生命周期三个测试(τ 同轮/锁线不清登记/四出口)表驱动并一;通道无关
+阻断三个测试(funding e2e/M4)参数化并一;投影正证+红证并一;
 资格合取与 fallback 发射独立保留。
 
 并段(**轮内新鲜度账容器宿主 + 商店访问账本死字段退役**,原
@@ -32,7 +32,7 @@ fresh_buys``(record_fresh_buy 写 → fresh_buys_of/fresh_buys_sell_face
 读同一容器,写读单口 sim/live 同口;相位失配 = 跨轮整体作废、读取零销
 账;值形状 names = list);商店访问账本的四死基座字段(期望态残留,
 全为写端无读端)不再在场——对象面运行时检查,非源码扫描。(原卖出
-落地锁随商店域 SellBenchOp 退役移除:动作 op 重组批③,备战域卖出由
+落地测试随商店域 SellBenchOp 退役移除:动作 op 重组批③,备战域卖出由
 CwActionSellBenchOp 承接。)
 """
 from __future__ import annotations
@@ -96,7 +96,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.vopt impo
 # ===== 测试基建 =====
 
 #: 非持有线外 1★ 燃料代表(注册表实名,cost=1;穿过判据全部物理谓词,
-#: 红证由各锁自带直调证明)。
+#: 红证由各测试自带直调证明)。
 _FUEL = '青雀'
 #: 静态持有两集代表:registry_core 档(希儿)/transition 档(丹恒·饮月、
 #: 三月七),档位与费用由注册表现算(红证自证,非手抄)。
@@ -140,20 +140,20 @@ def _registry(sess: StrategySession) -> dict:
 
 
 class TestLaunchRegistry:
-    """发射登记 API 锁(P78 §2.2 窗口段载体;ADR-0585 §2/§3)。"""
+    """发射登记 API 测试(P78 §2.2 窗口段载体;ADR-0585 §2/§3)。"""
 
     def test_launch_cause_closed_set(self):
-        """闭集三锁并一:
+        """闭集三个测试并一:
         [枚举拒] LaunchCause 枚举外值拒收(方案 v3 §5.3 防复发
           双闸②;新买入臂必须先归入某因果类才合法);
         [15 臂映射] 15 买入臂全映射 + 值域 ⊆ LaunchCause 闭集 +
           ev_buy→press(M4 修正补漏,方案 v3 §3.1;新买入臂未分类即登记
-          = 红,锁红时该登记的语义 = 把新臂补进映射表并过对抗审,非
+          = 红,测试红时该登记的语义 = 把新臂补进映射表并过对抗审,非
           机械跟绿)。press_buy_deployable = 泄金阶梯档 1 新臂(溢余
           discretionary 面,因果类 press 同 M6/dominance;设计方案 §1.2
           档 1)。P86 重推:+hub_option_buy(乙臂枢纽期权,hold 类,出处
           = p86-proof-batch.md §3.2/§4.2;映射行随批登记)。P88 迁并腿
-          (原锁线转型域 F4 闭集锁):收窄集 S_spec ⊆ 闭集 + 豁免 =
+          (原锁线转型域 F4 闭集测试):收窄集 S_spec ⊆ 闭集 + 豁免 =
           闭集 ∖ S_spec 恰 13 键实名;
         [双视图] 单载体双视图:press 登记入窗口段排除面(active_window),
           垫保登记只入 T3 视图(stall_protect_active → defer 参数)——
@@ -242,7 +242,7 @@ class TestLaunchRegistry:
 
 
 class TestWindowLifecycle:
-    """窗口段生命周期锁(P78-2b τ=同轮;P78-3 轮界过期,W3 修法;
+    """窗口段生命周期测试(P78-2b τ=同轮;P78-3 轮界过期,W3 修法;
     四出口方案 v3 §3.1)——三场景表驱动并一,场景间独立会话互不复用。"""
 
     def test_window_lifecycle_table(self):
@@ -258,7 +258,7 @@ class TestWindowLifecycle:
 
     def _case_press_tau_same_round(self):
         """press τ=同轮:登记轮==当前轮才入排除面,轮进销账(hold 类
-        τ=∞ 留簿,P78-2a;行为面由身份段辖,此处锁登记账本身——轮进后
+        τ=∞ 留簿,P78-2a;行为面由身份段辖,此处校验登记账本身——轮进后
         press 销账、hold 留簿)。current_round=None ⇒ 窗口段失效(V2-09:
         INV 显式例外,方向 = 放行向;轮不可得帧禁据缺读放大禁卖面,T3
         既有语义继承)。"""
@@ -281,7 +281,7 @@ class TestWindowLifecycle:
         assert _registry(sess).get(_TRANS_HOLD) == ('hold', 3)
 
     def _case_locked_frame_keeps_registry(self):
-        """W3 反向锁:F1 锁线清空废除(P78-3:锁线定型不是任何买因类
+        """W3 反向测试:F1 锁线清空废除(P78-3:锁线定型不是任何买因类
         的账闭合事件)——锁线帧登记照常活跃、簿不清空;同 visit 卖回
         由登记轮==当前轮覆盖,过度禁卖上界 ≤1 轮有界可判读。"""
         sess = _sess()
@@ -348,7 +348,7 @@ _W1_CHANNEL_CASES = ('funding-e2e', 'm4-candidates')
 
 
 class TestW1SameVisitBan:
-    """W1 锁:②(b)/dominance 等 press 类买入登记活跃帧(登记轮==
+    """W1 测试:②(b)/dominance 等 press 类买入登记活跃帧(登记轮==
     当前轮),凑息/funding/M4 全通道资格面均不含该件——「拆窗口段时
     该件恰入卖出槽集」的病理形态由红证直调复现。三通道参数化并一
     (通道无关,P78 INV)。"""
@@ -362,7 +362,7 @@ class TestW1SameVisitBan:
         主路径与兜底豁免均不可达(fallback 池减法①语义:非持有名不入
         静态持有集)⇒ CwActionCloseShopParam 收尾,零卖出发射。红证:同构帧按批 2
         形态(仅身份段,无窗口段)装配 ⇒ 该件恰入 funding 卖出槽集
-        (凑息同面)——本锁绿由窗口段承载,非谓词自带拒。"""
+        (凑息同面)——本测试绿由窗口段承载,非谓词自带拒。"""
         sess = _sess()
         sell_gate.register_launch(sess, _FUEL, cause='press', round_num=3)
         act = decide_shop_action(
@@ -400,7 +400,7 @@ class TestW1SameVisitBan:
         assert [mandate._slot_cid(b) for b in cands] == [_FUEL], '红证失效'
 
 
-# (W1 'entry-ev' 消费位锁退役〔2026-10-12 迭代批 3.3〕:entry EV pass 随
+# (W1 'entry-ev' 消费位测试退役〔2026-10-12 迭代批 3.3〕:entry EV pass 随
 #  备战九段全扫重写删除,备战域筹资发射位消亡——press 活跃件不被筹资
 #  卖出的同面语义仍由本文件 funding-e2e(店内 decide_shop_action)与
 #  评估器资格面测试〔test_sell_candidates〕承载;店内筹资消费位
@@ -413,22 +413,22 @@ _W1_CASES = {
 
 # ===== funding 兜底豁免(P78-5 四条件)=====
 
-# (原 TestFundingHoldFallback 店侧五锁随商店期筹资形态收缩退役:
-#  店内兜底变现发射面删除,筹资形态 = 关店交回(锁 =
+# (原 TestFundingHoldFallback 店侧五个测试随商店期筹资形态收缩退役:
+#  店内兜底变现发射面删除,筹资形态 = 关店交回(测试 =
 #  test_shop_session_loop::test_funding_hold_fallback_records_
 #  opportunity,原文件名 test_cw_shop_action_face_contraction 已并入);
-#  原 entry 侧消费位锁〔TestFundingFallbackEntryConsumer,
+#  原 entry 侧消费位测试〔TestFundingFallbackEntryConsumer,
 #  经 entry._criteria_pass 发射〕随 2026-10-12 迭代批 3.3 备战九段全扫
 #  重写退役——EV pass 删除,备战域兜底发射位消亡;兜底池定义单一源
 #  〔sell_gate.funding_hold_fallback〕与达成量化语义由 3.6 会话内筹资
-#  消费循环接线时新锁承载。)
+#  消费循环接线时新测试承载。)
 
 
 # ===== P78-6:projection 视图 = interest 全资格面(含 T3 活跃集)=====
 
 
 class TestProjectionFullFace:
-    """读端同源锁(P78-6/M7):projection 视图 = 身份段 ∪ 窗口段 ∪
+    """读端同源测试(P78-6/M7):projection 视图 = 身份段 ∪ 窗口段 ∪
     T3 活跃集——投影漏 T3 则 liquid_refund 高估 → s_reserve 低估 →
     预留被吃(方向链方案 v3 §2.8)。正证+红证并一。"""
 

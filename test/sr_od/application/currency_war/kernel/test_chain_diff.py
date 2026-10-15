@@ -1,4 +1,4 @@
-"""链 diff 纯函数与触发面锁(语义正本 = action-logic-state.md 增益链节;
+"""链 diff 纯函数与触发面测试(语义正本 = action-logic-state.md 增益链节;
 game_state/chain-observation.md §4/§5)。
 
 chain_diff = 数学单一源(实机与 sim 共用);maybe_emit_chain_diff = 触发面

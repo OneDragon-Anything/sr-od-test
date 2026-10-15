@@ -1,7 +1,7 @@
-"""晶矿域锁(机制主题文件;席自由派生 → 容器逻辑态 → 奖励附着生成 →
+"""晶矿域测试(机制主题文件;席自由派生 → 容器逻辑态 → 奖励附着生成 →
 点矿兑现全链)。
 
-被锁机制(按节;详设出处见各节 docstring):
+被测机制(按节;详设出处见各节 docstring):
 - **席自由槽派生读口**:``_ore_bench_free`` 改容器派生读口
   ``bench_free_slots``(旧黑板独立记账退役)——free 由容器 bench 槽位表
   派生、宝箱/典籍占席经 ``slot_occupies`` 口径自动计入、bench 未观察
@@ -17,8 +17,8 @@
   详设 details/ore-click-consume.md §1/§4):采样器支撑集、附着命中
   零掷骰写序、角色分支 3合1 连锁、席满即止、缺项兜底、None 边界。
 
-(sim 接线锁 = 后端侧测试 test_sim_backend.py;观察收口等值静默/
-差异 logic_rand_outcome = 基座锁
+(sim 接线测试 = 后端侧测试 test_sim_backend.py;观察收口等值静默/
+差异 logic_rand_outcome = 基座测试
 test_game_state.py::test_write_logic_rand_and_observe_random_outcome,
 不重复。)
 """
@@ -186,7 +186,7 @@ def test_collect_ore_stale_payload_zero_write():
 
 
 def test_ore_empty_read_yields_no_targets():
-    """空读上报语义锁:count=0/points=() 空载荷
+    """空读上报语义测试:count=0/points=() 空载荷
     → 读口空列——空读照写语义兑现,防上一帧残留假晶矿坐标喂进点击载荷。"""
     session = cw4_session()
     gs = game_state_of(session)
@@ -702,7 +702,7 @@ def test_gold_branch_write_sequence(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_char_branch_merge_dual_domain(monkeypatch: pytest.MonkeyPatch) -> None:
     """角色分支·载体在场上:bench 素材置 None + 行域载体升星 = 双域变更,
     merge 级受影响域各落一行(evidence 同号)。board 断言 = 增量为零不写
-    (升星不改羁绊标签,派生零差零写;继承机制由 board 专锁)。"""
+    (升星不改羁绊标签,派生零差零写;继承机制由 board 专测)。"""
     gs = _coll_gs(bench=[('A', 1)], front=[Unit(char_id='A', star=1)], board={},
                   ores=[_ore('金', 1, 1)])
     _attach(gs, {'1,1': OreReward(kind='char', char_id='A')})
@@ -784,7 +784,7 @@ def test_multi_point_partial_skip(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_char_reward_preserves_item_slot_kinds(monkeypatch: pytest.MonkeyPatch) -> None:
-    """占位件 kind 保留(回归锁):bench 有典籍/书册卡/箱槽时,角色奖励
+    """占位件 kind 保留(回归测试):bench 有典籍/书册卡/箱槽时,角色奖励
     整表写不得把它们降级 supply_box——降级会让后续 OpenTome/OpenBookcard
     按 kind 找不到槽(真缺陷,不定态随机抽中角色时触发)。"""
     slots = [BenchSlot(kind='unit', unit=Unit(char_id='A', star=1)),
@@ -898,7 +898,7 @@ def test_corner_mixed_batch_missing_level_reason_precedence(
     缺读先跳(彼时席未满),命中角色奖励耗掉最后空位 → 后续点席满跳过
     → 出参 reason 'ore_reward_attach_missing_level'(优先于
     ore_partial_open_skipped 表达具体原因;含席满跳点的混合批同此,
-    锁现状防将来无意翻转)。几何事实:席满判定读 work_bench 现值,
+    钉住现状防将来无意翻转)。几何事实:席满判定读 work_bench 现值,
     批内仅角色奖励落位改变之——两类跳点只能在含命中点的混合批并存。"""
     slots = [BenchSlot(kind='unit',
                        unit=Unit(char_id=f'F{i}', star=1))
@@ -923,7 +923,7 @@ def test_corner_full_bench_masks_missing_level_all_skip(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """全跳批·席满掩蔽:席满守卫先于缺项∧level 判定——席满批内各点
     不达缺项检查(missing_level 恒 0),出参 'bench_full_no_open' 而非
-    'ore_reward_attach_missing_level';零写零掷(锁守卫次序)。"""
+    'ore_reward_attach_missing_level';零写零掷(校验守卫次序)。"""
     gs = _coll_gs(bench=[('A', i + 1) for i in range(9)], level=None,
                   ores=[_ore('金', 1, 1), _ore('金', 2, 2)])
     rolls = _count_collect_rolls(monkeypatch)

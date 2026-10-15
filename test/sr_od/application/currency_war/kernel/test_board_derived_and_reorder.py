@@ -1,4 +1,4 @@
-"""board 派生视图 + 行槽位纯重排吸收 锁面(观察对账族架构收口,20260918-
+"""board 派生视图 + 行槽位纯重排吸收 测试面(观察对账族架构收口,20260918-
 reconcile 第 5 例收口批; 容器合并:行域 = deployed
 单字段视图,断言同步改写)。
 
@@ -7,7 +7,7 @@ reconcile 第 5 例收口批; 容器合并:行域 = deployed
 同单位集 [佩佩,黑塔,万敌] 纯槽位排列不同)+ 迭代目录 projection-audit.md
 (字段完备性审计)。
 
-锁面(全部运行时行为锁,零真实 IO):
+测试面(全部运行时行为测试,零真实 IO):
 - board 派生一致性:deployed 任何逻辑写端(含历史上忘记写
   board 的写端)后 board 自动按单位集合增量重算单一源
   (``GameState._resync_board_delta``);纯重排写 = 零差零写;
@@ -26,8 +26,8 @@ reconcile 第 5 例收口批; 容器合并:行域 = deployed
 - 字段审计完备性:GameState 全部容器字段已在 ``PROJECTION_AUDIT``
   登记且无缺口态(「无写端无规则」恒空)。
 
-单帧锁自足:动作语义复用既有 transfer 契约面(test_gain_chain 卖/换上报契约节),
-本文件不重锁动作域写回,只锁 board 派生与重排吸收两块新契约。
+单帧测试自足:动作语义复用既有 transfer 契约面(test_gain_chain 卖/换上报契约节),
+本文件不重复断言动作域写回,只校验 board 派生与重排吸收两块新契约。
 
 种子纪律(3.1 起):行域 = DeployedView;紧缩行序 → 视图 = 顺延落位
 (deployed_view_sequential,与旧紧凑行域「顺序即占位」口径等价)。
@@ -107,7 +107,7 @@ class _AndonRecorder:
 
 @pytest.fixture(autouse=True)
 def _drain_defect_buffer():
-    """测试卫生:进程级缺陷缓冲前后双清——本文件多条锁断言
+    """测试卫生:进程级缺陷缓冲前后双清——本文件多条测试断言
     ``drained == rows``(缓冲逐位相等),任何先行用例残留的
     logic_rand_outcome 行都会误红;同 test_deploy /
     test_tracked_slot_star_guard 排水纪律。"""
@@ -132,7 +132,7 @@ def andon(monkeypatch: pytest.MonkeyPatch) -> _AndonRecorder:
 
 
 def test_row_write_resyncs_board_and_preserves_observed_base() -> None:
-    """board 派生一致性主锁(5 例回归形态):观察基座 {减益:1}(环境卡
+    """board 派生一致性主测试(5 例回归形态):观察基座 {减益:1}(环境卡
     星徽贡献,容器行未建模)保持不变,行写端新增乱破 → 其注册表标签
     (巡海游侠/击破)自动入 board——历史上忘记写 board 的写端(直接
     write_logic 行域)不再产生「加了单位 board 没跟上」。"""
@@ -146,7 +146,7 @@ def test_row_write_resyncs_board_and_preserves_observed_base() -> None:
 
 
 def test_row_clear_resyncs_board_to_dropped_tags() -> None:
-    """清排写端补锁(EffectLedgerBridge 全场出售清 rows 形态):行写端
+    """清排写端补充测试(EffectLedgerBridge 全场出售清 rows 形态):行写端
     清空后 board 对应标签摘除(减至 0 摘键),不残留幽灵计数。"""
     gs = game_state_of(None)
     gs.observe(gs.deployed, _fv([_luanpo()]), sig=_SIG_OBS)
@@ -232,7 +232,7 @@ def test_resync_skips_when_board_never_observed() -> None:
 
 
 def test_env_badge_wearer_removal_ghost_count_adopts(andon) -> None:
-    """board_derived_adopt 主锁·C1 形态(环境卡星徽佩戴者移除 → 幽灵
+    """board_derived_adopt 主测试·C1 形态(环境卡星徽佩戴者移除 → 幽灵
     计数 → 观察覆盖采新):基座含容器行未建模的星徽贡献(只显于面板),
     佩戴者移出 + 新单位入行的一次行写使派生 board 带着幽灵计数转 logic
     源(增量口径对幽灵无从减除);下一帧面板实读(幽灵已随佩戴者离场)
@@ -265,7 +265,7 @@ def test_env_badge_wearer_removal_ghost_count_adopts(andon) -> None:
 
 
 def test_unknown_identity_row_entry_zero_contribution_adopts(andon) -> None:
-    """board_derived_adopt·C2 形态锁(未知身份入行):注册表外单位(狸狸,
+    """board_derived_adopt·C2 形态测试(未知身份入行):注册表外单位(狸狸,
     角色注册表无此身份)入行,容器派生路径对其**零贡献**——Unit 不存
     阵营(禁注册表双源),禁 faction 兜底(口径单一源 =
     ``cw_bond_equips._recount_board``,faction 字段所在载体);同窗有标签
@@ -297,7 +297,7 @@ def test_unknown_identity_row_entry_zero_contribution_adopts(andon) -> None:
 
 def test_board_adopt_scoped_to_derived_writer_rogue_write_still_stops(
         andon) -> None:
-    """board_derived_adopt·辖域锁:吸收面只辖派生挂钩写端(evidence 前缀
+    """board_derived_adopt·辖域测试:吸收面只辖派生挂钩写端(evidence 前缀
     ``proj_board_resync`` = 唯一合法 board 逻辑写端);独立手写 board
     (越格契约违反,board 字段注「禁独立手写」)的失配照真失配安灯——
     吸收面不得沦为 board 全面赦免,越格写端保留检出力。"""
@@ -356,7 +356,7 @@ def _seed_row_logic(gs: GameState) -> None:
 
 
 def test_pure_slot_reorder_observed_absorbed_with_ledger_row(andon) -> None:
-    """纯重排吸收主锁(5 例后排形态):同单位多重集、仅槽位排列
+    """纯重排吸收主测试(5 例后排形态):同单位多重集、仅槽位排列
     不同 → deploy_slot_reorder 台账行(无告警无停机)+ 采新覆盖,安灯
     不触发(「纯重排」从安灯面移入纠漂面)。"""
     gs = game_state_of(None)
@@ -381,7 +381,7 @@ def test_pure_slot_reorder_observed_absorbed_with_ledger_row(andon) -> None:
 
 
 def test_row_missing_member_is_real_mismatch(andon) -> None:
-    """缺员照停锁:重排形状不成立(实读少一人)→ 真失配缺陷行 + 安灯,
+    """缺员照停测试:重排形状不成立(实读少一人)→ 真失配缺陷行 + 安灯,
     真 bug 不被吸收面吞。"""
     gs = game_state_of(None)
     _seed_row_logic(gs)
@@ -397,7 +397,7 @@ def test_row_missing_member_is_real_mismatch(andon) -> None:
 
 
 def test_row_star_diff_is_real_mismatch(andon) -> None:
-    """星级差照停锁:同身份不同星级 = 非纯重排(合成/漏读等真差异),
+    """星级差照停测试:同身份不同星级 = 非纯重排(合成/漏读等真差异),
     照真失配停。"""
     gs = game_state_of(None)
     _seed_row_logic(gs)
@@ -415,7 +415,7 @@ def test_row_star_diff_is_real_mismatch(andon) -> None:
 
 
 def test_row_equip_diff_is_real_mismatch(andon) -> None:
-    """装备差照停锁:键含装备集——穿戴变化(星徽贡献面)不算纯重排,
+    """装备差照停测试:键含装备集——穿戴变化(星徽贡献面)不算纯重排,
     照真失配停(吸收面不吞穿戴族 bug)。"""
     gs = game_state_of(None)
     _seed_row_logic(gs)
@@ -465,7 +465,7 @@ def _gs_field_names() -> list[str]:
 
 
 def test_projection_audit_table_complete_and_gap_free() -> None:
-    """字段审计完备性抽检锁:①GameState 全部容器字段已登记(防新字段
+    """字段审计完备性抽检测试:①GameState 全部容器字段已登记(防新字段
     静默逃过审计);②表无退役残留键;③状态全在枚举内(「无写端无规则」
     缺口态 = 表内不可表达,可失配面必须落在写端/吸收两态);④已知停局
     家族(20260918 五连停局各域)的收口机制关键词仍在位(防重构悄悄

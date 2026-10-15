@@ -1,4 +1,4 @@
-"""统一观察架构·相位/收尾屏迁移锁(五相位屏 + 收尾屏,原两文件并入)。
+"""统一观察架构·相位/收尾屏迁移测试(五相位屏 + 收尾屏,原两文件并入)。
 
 设计正本 = docs/develop/sr_od/application/currency_war/flow/统一观察架构-画面op基类设计.md
 (下称「架构设计」);迁移粒度/五段形态依据 = );
@@ -10,59 +10,59 @@ CwScreenBattleWait / 简报 CwScreenBriefing / BOSS 简报 CwScreenBossBriefing
 (五相位屏)+ 位面过渡 CwScreenPlaneTransition / 武装箱弹窗
 CwScreenArmoryBox / 未达上限弹窗 CwScreenDeployNotFull / 等待1-1
 CwScreenWaitOneOne(收尾/过渡相位屏,原 obs_arch_closing_screens 并入)。
-位面情报采集 CwScreenPlaneIntel 已重构为 6 node 管线,其行为锁随迁
+位面情报采集 CwScreenPlaneIntel 已重构为 6 node 管线,其行为测试随迁
 test_plane_intel_pipeline.py,本文件不辖。
 
 **sim 腿不适用例外清单(随迁移批逐屏落测试 docstring,总纲 §2.2-3)**:
 
 - 投资环境/投资策略:sim 腿 = 不适用——有 sim 事实来源(``decide_invest``
   注入段,架构设计 §3.2)但 sim 端口适配器未建(归 sim 接线批),本批
-  等价判据主承重 = 实机在册行为锁 + 写入流对拍(实机腿),禁引用 sim 域
+  等价判据主承重 = 实机在册行为测试 + 写入流对拍(实机腿),禁引用 sim 域
   对拍;
 - 战斗等待:sim 腿 = 不适用——sim 事实来源为 coarse 结算产出,非画面段
-  (§3.2 结算行),等价判据主承重 = 实机在册行为锁(B2-③ 主门:在册
-  行为锁经 execute()/wait() 走新路径全绿);
+  (§3.2 结算行),等价判据主承重 = 实机在册行为测试(B2-③ 主门:在册
+  行为测试经 execute()/wait() 走新路径全绿);
 - 简报/BOSS 简报:sim 腿 = 不适用——sim 无对应画面段(过渡相位,§3.2),
-  等价判据主承重 = 实机在册行为锁 + 写入流对拍;
+  等价判据主承重 = 实机在册行为测试 + 写入流对拍;
 - 位面过渡/武装箱弹窗/未达上限弹窗/等待1-1:sim 腿 = 不适用——sim 无
   对应画面段(架构设计 §3.4 过渡相位/中断弹窗行),等价判据主承重 =
-  实机在册行为锁 + 本文件两 node 形态锁,禁引用 sim 域对拍。
+  实机在册行为测试 + 本文件两 node 形态测试,禁引用 sim 域对拍。
 
-锁的语义(测试纪律 7 自检;出处 = landing 阶段一/三判据;行为锁单驱动
+测试的语义(测试纪律 7 自检;出处 = landing 阶段一/三判据;行为测试单驱动
 生产路径):
 
-- **重入裁决归属锁**(单一定谳;简报腿 = ``test_briefing_reentry_
+- **重入裁决归属测试**(单一定谳;简报腿 = ``test_briefing_reentry_
   adjudication_flag_gate_combination``,收尾屏组合腿 =
   ``test_reentry_arbitration_flag_gate_combination``):「已发」旗标裁决
   住决策动作 node 顶部(直驱 act 承重);投资两屏已改派发即终结交回
-  (写时点锁另辖);简报仍为重入裁决形态;BOSS 简报无裁决旗标,横幅
+  (写时点测试另辖);简报仍为重入裁决形态;BOSS 简报无裁决旗标,横幅
   退场裁决 = 外循环重派后的下一次入口门;战斗等待/等待1-1 无裁决旗标。
   红 = 裁决被转录进观察 node。
-- **观察上报接线锁**(两 node 形态屏):观察 node 稳定帧一次读
+- **观察上报接线测试**(两 node 形态屏):观察 node 稳定帧一次读
   → report 经屏文件落容器(容器终值)+ obs 挂实例属性;投资策略入口锚
   复探窗(ADR-0529 有界自愈)语义逐位(复探窗内自愈、超窗 round_retry
   消耗观察 node 预算)。位面过渡 = 实体链写(链容器终值双写);武装箱/
   未达上限/等待1-1 = 占位接线(现役零容器写点,统一形态)。
-- **刷新终结交回锁**(投资策略,两 node 形态):建议刷新 → 闸 1 槽计数
+- **刷新终结交回测试**(投资策略,两 node 形态):建议刷新 → 闸 1 槽计数
   现读 >0 → 点钮恰一次 → 终结交回 round_success(交回外循环重进 = 入口
   重建);刷新计数写端随画面 op 基类退役(记账归动作 op 会话承接),
   闸 2 容器计数读端原样。
-- **写入流对拍锁**:``active_env`` 写时点(gain-chain 3.2 反转:点卡/派发
+- **写入流对拍测试**:``active_env`` 写时点(gain-chain 3.2 反转:点卡/派发
   时点零写,落地相经获得链写;ADR-0598 点卡前写退役)、
   ``active_strategies`` 重入裁决出口 append(值/时点)、
   简报三字段容器写(词缀幂等辖「读+采」/boss 恒覆写/难度仅 None 写)
-  逐位;结算观察半直写(D-94 时序)经战斗等待在册行为锁的轨迹断言承载。
-- **round_wait 语义锁**(收尾屏):循环推进 = round_wait(不烧节点重试
+  逐位;结算观察半直写(D-94 时序)经战斗等待在册行为测试的轨迹断言承载。
+- **round_wait 语义测试**(收尾屏):循环推进 = round_wait(不烧节点重试
   预算);等待1-1 = 轮询 round_wait 自环观察 node(全库唯一观察轮询
   变体)+ 固定超时留证兜底。
-- **判别单一源消费面锁**已随三审整删退役(见文件尾在册注;源码扫描
+- **判别单一源消费面测试**已随三审整删退役(见文件尾在册注;源码扫描
   测试禁令不重建),防线归 review 与代码规范。
-- **收口锁不恢复**(分诊):「cw_screen/ 顶层 op 类必为基类后代」AST
+- **收口测试不恢复**(分诊):「cw_screen/ 顶层 op 类必为基类后代」AST
   全目录扫描形态(AGENTS §10.4.4 禁),摘除不恢复;结构面归 review 与
   代码规范。
 
 驱动方式 = 真类实例(构造走 __init__)+ 读链/点击链桩化,节点函数直驱
-(run_node 外壳);战斗等待 = 生产缺省形态(行为锁
+(run_node 外壳);战斗等待 = 生产缺省形态(行为测试
 主驱动)。
 """
 from __future__ import annotations
@@ -107,7 +107,7 @@ _FRAME = object()   # 稳定帧哨兵(screenshot 桩产物;读链桩只验传递
 _RETRY_RS = OperationRoundResult(OperationRoundResultEnum.RETRY, status='stub-confirm')
 
 
-# ==================== 迁移结构锁 + 重入裁决归属锁 ====================
+# ==================== 迁移结构测试 + 重入裁决归属测试 ====================
 
 
 def _phase_mod(name: str):
@@ -134,7 +134,7 @@ def _phase_mod(name: str):
 
 def test_briefing_reentry_adjudication_flag_gate_combination(test_context,
                                                              monkeypatch) -> None:
-    """简报重入裁决锁(重入裁决现役,归后续批;投资两屏的「派发即终结
+    """简报重入裁决测试(重入裁决现役,归后续批;投资两屏的「派发即终结
     交回 + 派发时点写入」腿由 test_invest_env_active_env_written_at_
     dispatch / test_invest_strategy_written_at_dispatch 承重,不再重复):
     - 简报·落地轮:pending 在位 + 标识已退 → 裁决出口 success,读链不
@@ -178,8 +178,8 @@ def _make_env(test_context, monkeypatch: pytest.MonkeyPatch, *,
 
     桩面 = 画面门/截屏/候选读/策略器/计数读 + 派发动作 op 桩(pick-op-unify
     批起选卡+确认机械链迁入 ``CwActionPickInvestOp``,本文件桩派发捕获
-    (param, env) 断言决策半产物与写端时序;机械链行为锁 =
-    test_overlay_ops 投资 pick op 锁)。派发时点快照 ``active_env``
+    (param, env) 断言决策半产物与写端时序;机械链行为测试 =
+    test_overlay_ops 投资 pick op 测试)。派发时点快照 ``active_env``
     现值(写时点对拍载体 = 点卡/派发时点应零写,写发生在落地相获得链)。
     ``counts`` = 计数读桩回值(缺省 [] = 读缺,obs.refresh=None → report
     跳写 env_refresh_left;走真计数用例传 [(count, x, y), ...])。
@@ -241,13 +241,13 @@ def _make_env(test_context, monkeypatch: pytest.MonkeyPatch, *,
 
 # (原 test_invest_env_dispatch_and_gate「投资环境分流双向 + 段迹形态」删:
 #  装两端口走五段新路径的分流/段迹面随并存窗收口整删(生产端口恒 None);
-#  其唯一跨路径幸存断言「确认发出置 pending」并入下方选卡时点写锁;
-#  离屏门 fail 早退语义由简报/BOSS 简报在册行为锁同形承重。)
+#  其唯一跨路径幸存断言「确认发出置 pending」并入下方选卡时点写测试;
+#  离屏门 fail 早退语义由简报/BOSS 简报在册行为测试同形承重。)
 
 
 def test_invest_env_observe_gate_and_report(test_context,
                                             monkeypatch) -> None:
-    """投资环境观察 node 锁(两 node 形态):入口门 miss = round_fail 早退
+    """投资环境观察 node 测试(两 node 形态):入口门 miss = round_fail 早退
     (现役文案,obs 不装载);门 hit → 稳定帧候选一次读 → report 落容器
     ``invest_env_opts``(容器终值)+ obs 挂实例属性。红 = 门失效 / 接线
     断流 / 容器终值漂移。"""
@@ -271,7 +271,7 @@ def test_invest_env_observe_gate_and_report(test_context,
 
 def test_invest_env_active_env_written_at_dispatch(test_context,
                                                    monkeypatch) -> None:
-    """写入流对拍(即时上报契约,写时点锁):派发确认链时点 = active_env
+    """写入流对拍(即时上报契约,写时点测试):派发确认链时点 = active_env
     已写入(动作 op 点完确认立即上报,gain_invest_env 整链;值 = 决策选中
     名)→ round_success 终结交回。红 = 写时点回退(派发时零写/等重入裁
     决)或 round_wait 循环回潮。"""
@@ -295,7 +295,7 @@ def test_invest_env_active_env_written_at_dispatch(test_context,
 
 def test_invest_env_observe_standardization_gate(test_context,
                                                  monkeypatch) -> None:
-    """观察标准化门锁(op-layer.md §1.1;观察层在观察时把读数转换成标准
+    """观察标准化门测试(op-layer.md §1.1;观察层在观察时把读数转换成标准
     注册数据,容器值域 = 标准注册名):
     - 可转换名(全角冒号形变走归一精确命中;仅 LCS 可命中的单字误读形变)
       → 容器与 obs 存标准名(含「彩虹吋代」3/4 恰达阈值命中 = 拒判不过严
@@ -353,7 +353,7 @@ def test_invest_env_observe_standardization_gate(test_context,
 
 def test_invest_env_refresh_left_observed_write(test_context,
                                                 monkeypatch) -> None:
-    """env_refresh_left 观察写端双腿锁(观察写端缺口补测):计数读得
+    """env_refresh_left 观察写端双腿测试(观察写端缺口补测):计数读得
     → report 落 ``env_refresh_left``(值 = 桩读数首条);读缺(缺省桩恒
     [])→ 跳写(缺省行为不变)。红 = 观察写端断流。"""
     op_hit, _m1, session1, _d1 = _make_env(
@@ -376,7 +376,7 @@ def test_invest_env_refresh_left_observed_write(test_context,
 def test_invest_env_empty_opts_fail_not_blindfire(test_context,
                                                   monkeypatch) -> None:
     """空候选 = round_fail 显式失败(零盲发;op-layer.md §1.1 + action_ops.md
-    §1 增补 2「没有选到就是代码 bug」;策略屏同形锁
+    §1 增补 2「没有选到就是代码 bug」;策略屏同形测试
     test_invest_strategy_empty_opts_fail_not_blindfire 同构)。"""
     op = _phase_mod('cw_screen_invest_env').CwScreenInvestEnv(test_context)
     session = StrategySession()
@@ -401,7 +401,7 @@ def test_invest_env_empty_opts_fail_not_blindfire(test_context,
 
 def test_invest_env_out_of_match_no_early_exit_normal_chain(
         test_context, monkeypatch) -> None:
-    """无 match 局外无早退支锁(用户裁决 2026-09-22 全族删门,op-layer.md
+    """无 match 局外无早退支测试(用户裁决 2026-09-22 全族删门,op-layer.md
     §1.1:画面 op 不支持局外单独调用,不设单跑防御分支):cw_match=None +
     非空候选 obs(区分空候选早退出口)→ act 不设局外早退门,沿正常链路
     因缺上下文自然失败(AttributeError)、零派发零点击。红 = 局外
@@ -413,7 +413,7 @@ def test_invest_env_out_of_match_no_early_exit_normal_chain(
     from sr_od.application.currency_war.kernel.cw_screen_report.invest_env import (
         CwScreenInvestEnvObs as _ObsT,
     )
-    # 非空候选 obs(区分于空候选早退:本锁辖局外无早退支)
+    # 非空候选 obs(区分于空候选早退:本测试辖局外无早退支)
     op._obs = _ObsT(hit=True,
                     options=[('追击概念股', 460), ('彩虹时代', 960),
                              ('头彩', 1460)])
@@ -467,7 +467,7 @@ def _make_strategy(test_context, monkeypatch: pytest.MonkeyPatch,
     桩面 = 入口锚/截屏/候选读/计数读/刷新点击 + 派发动作 op 桩
     (pick-op-unify 批起选卡+确认机械链迁入 ``CwActionPickInvestOp``;
     刷新臂 ``safe_click`` 留守画面 op,经桩记录)。``_ensure_entry_screen``
-    方法级桩(复探窗语义归 ADR-0529 既有锁,本文件不辖)。返回
+    方法级桩(复探窗语义归 ADR-0529 既有测试,本文件不辖)。返回
     ``(op, match, session, clicks, decide_calls, dispatches)``。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_invest_strategy as ism,
@@ -538,16 +538,16 @@ def _opts_of(names: list[str]) -> list[tuple[str, int, int]]:
 
 # (原 test_invest_strategy_dispatch_new_path 删:在屏轮断言面与
 #  test_reentry_arbitration_flag_gate_combination 的 strategy 门命中腿
-#  逐项重叠;独有段迹/单决策断言已并入该锁。)
+#  逐项重叠;独有段迹/单决策断言已并入该测试。)
 
 
 def test_invest_strategy_written_at_dispatch(test_context,
                                              monkeypatch) -> None:
-    """写入流对拍(即时上报契约,写时点锁):派发确认链时点 = 持卡面已
+    """写入流对拍(即时上报契约,写时点测试):派发确认链时点 = 持卡面已
     写入(动作 op 点完确认立即上报,gain_invest_strategy 整链:按名字去重
     追加)→ round_success 终结交回。真上报接线经桩内调用
     report_action_pick_invest_strategy_param 承载(与 _make_strategy 桩
-    同款);本锁辖「决策 → 派发 → 写入 → 终结」全链。
+    同款);本测试辖「决策 → 派发 → 写入 → 终结」全链。
     红 = 写时点回退(派发时零写)或 round_wait 循环回潮。"""
     names = ['赌神·银', '恢复生机', '气氛组']
     book = _FrameBook([object()])
@@ -603,9 +603,9 @@ def test_invest_strategy_empty_opts_fail_not_blindfire(
 
 def test_invest_strategy_out_of_match_no_early_exit_normal_chain(
         test_context, monkeypatch) -> None:
-    """无 match 局外无早退支锁(用户裁决 2026-09-22 全族删门,op-layer.md
+    """无 match 局外无早退支测试(用户裁决 2026-09-22 全族删门,op-layer.md
     §1.1:画面 op 不支持局外单独调用,不设单跑防御分支):cw_match=None +
-    非空候选 obs(区分空候选早退出口;本锁防局外直调 kernel 决策器的
+    非空候选 obs(区分空候选早退出口;本测试防局外直调 kernel 决策器的
     兜底分支回潮)→ act 不设局外早退门,沿正常链路
     因缺上下文自然失败(AttributeError)、零派发零点击。红 = 局外
     round_success 早退门回潮 / 局外 kernel 直调兜底决策回潮。"""
@@ -618,7 +618,7 @@ def test_invest_strategy_out_of_match_no_early_exit_normal_chain(
     from sr_od.application.currency_war.kernel.cw_screen_report.invest_strategy import (
         CwScreenInvestStrategyObs as _ObsT,
     )
-    # 非空候选 obs(区分于空候选早退:本锁辖局外无早退支)
+    # 非空候选 obs(区分于空候选早退:本测试辖局外无早退支)
     op._obs = _ObsT(entry_ok=True,
                     options=_opts_of(['赌神·银', '恢复生机', '气氛组']))
     clicks: list = []
@@ -650,12 +650,12 @@ def test_invest_strategy_out_of_match_no_early_exit_normal_chain(
 
 
 def test_strategy_refresh_terminal_handback(test_context, monkeypatch) -> None:
-    """逐卡刷新终结交回锁(两 node 形态):建议刷新 → 闸 1 槽计数现读 >0 →
+    """逐卡刷新终结交回测试(两 node 形态):建议刷新 → 闸 1 槽计数现读 >0 →
     点钮恰一次(文本锚定)→ 终结交回 = round_success(op 结束,交回外循环
     重进 = 入口重建,重进后重观察重决策;本访问零比对零重决策——刷后不重读
-    不比对不重决策)。观察轮 report 落容器 ``invest_strategy_opts`` 接线随锁
+    不比对不重决策)。观察轮 report 落容器 ``invest_strategy_opts`` 接线归测试
     (容器终值)。刷新计数写端随画面 op 基类退役(记账归动作 op 会话承接,
-    本 op 不写计数——容器计数断言不设,闸 2 读端由下锁承重)。
+    本 op 不写计数——容器计数断言不设,闸 2 读端由下一测试承重)。
     红 = 刷新点击丢失 / 循环内重读重决策回潮 / 终结交回改轮询 / 接线断流。"""
     names = ['赌神·银', '恢复生机', '气氛组']
     book = _FrameBook([object()])
@@ -682,13 +682,13 @@ def test_strategy_refresh_terminal_handback(test_context, monkeypatch) -> None:
 
 # (原 test_strategy_refresh_gate2_reads_container_count 删:剩余语义下
 #  观察写端每访问覆盖容器(与闸 1 obs 同帧同值),「闸 2 独立拦截」形态
-#  不复存在——剩余 ≤0 的拦截由闸 1 现值天然承载;观察写端摄入锁 =
+#  不复存在——剩余 ≤0 的拦截由闸 1 现值天然承载;观察写端摄入测试 =
 #  test_invest_strategy_observe_reprobe_and_report 的 left 终值断言。)
 
 
 def test_invest_strategy_observe_reprobe_and_report(test_context,
                                                     monkeypatch) -> None:
-    """投资策略观察 node 锁(两 node 形态):入口锚复探窗(ADR-0529 有界
+    """投资策略观察 node 测试(两 node 形态):入口锚复探窗(ADR-0529 有界
     自愈)语义逐位——复探窗内自愈、超窗 = round_retry(现役文案,消耗观察
     node 预算的既有 retry 面);在窗 → 一次读全 → report 落容器
     ``invest_strategy_opts``(容器终值)+ 逐卡刷新剩余 ``strategy_refresh_
@@ -724,14 +724,14 @@ def test_invest_strategy_observe_reprobe_and_report(test_context,
         'obs 挂实例属性')
 
 
-# ==================== 豁免留守锁(§2.2/§6.5-6)====================
+# ==================== 豁免留守测试(§2.2/§6.5-6)====================
 
 
 # (三审整删)原 test_write_flow_exempt_surfaces_stay_inline「豁免
-# 留守锁」(getsource ×6:注册表接线恰一处/钩子体与豁免面字面在场/环境屏
+# 留守测试」(getsource ×6:注册表接线恰一处/钩子体与豁免面字面在场/环境屏
 # 零登记件)——源码扫描形态(README 禁止清单,红时是文本变了,答不出哪个
 # 运行行为坏了);豁免面纪律归 review 与代码规范。豁免面的行为面
-# (chosen 写端不入注册表收编)由 event_screens 同名行为锁辖。
+# (chosen 写端不入注册表收编)由 event_screens 同名行为测试辖。
 
 
 # ==================== 简报:三字段写语义 ====================
@@ -784,11 +784,11 @@ def _make_briefing(test_context, monkeypatch: pytest.MonkeyPatch, *,
 #  端口走五段新路径的分流/段迹面随并存窗收口整删;其跨路径幸存断言
 #  (「下一步」发出置 pending / 标识 miss 门 fail 早退零读链)分别由
 #  test_reentry_arbitration_flag_gate_combination 的简报两腿与三字段写
-#  语义锁承重。)
+#  语义测试承重。)
 
 
 def test_briefing_observe_gate_and_report(test_context, monkeypatch) -> None:
-    """简报观察 node 锁(两 node 形态):入口门 miss = round_fail 早退
+    """简报观察 node 测试(两 node 形态):入口门 miss = round_fail 早退
     (现役文案,obs 不装载零读链);门 hit → 三读数一次读 → report 落
     容器(三字段容器终值)+ obs 挂实例属性;「下一步」点击不在观察轮
     (归决策动作 node,点击桩零命中断言)。
@@ -829,7 +829,7 @@ def test_briefing_session_write_semantics_three_fields(test_context,
     读到非空恒覆写(重读自愈首次误读)/ 读空跳过写(读缺=跳过写,
     不擦同局已读真值)。单驱动观察 node(读侧住观察 node,写闸住
     report 屏文件,report 函数级闸面由 test_screen_report_ports
-    承重,本锁辖 op 侧读链接线)。
+    承重,本测试辖 op 侧读链接线)。
     红 = 读链被已读守卫短路 / 覆写或跳写语义漂移。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         ChannelSig as _cs_t,
@@ -887,7 +887,7 @@ def test_briefing_session_write_semantics_three_fields(test_context,
 
 
 def test_briefing_boss_standardize_fail_round_fail_zero_write(test_context, monkeypatch) -> None:
-    """观察标准化门失败语义锁:boss 读数两段转换失败(任一候选未归一
+    """观察标准化门失败语义测试:boss 读数两段转换失败(任一候选未归一
     到规范名)= 观察失败——observe round_fail 早退、容器零写零上报、
     obs 不装载(op-layer.md §1.1 观察标准化门;禁原名透传带病上报)。
     红 = 失败路径回潮为透传照写照报。"""
@@ -904,7 +904,7 @@ def test_briefing_boss_standardize_fail_round_fail_zero_write(test_context, monk
 
 
 def test_clean_boss_names_lcs_ambiguity_rejection_and_unique_pass() -> None:
-    """boss 两段转换·次高分差拒判锁(op-layer.md §1.1;用户裁定
+    """boss 两段转换·次高分差拒判测试(op-layer.md §1.1;用户裁定
     2026-09-22 全族统一,纯函数直测):LCS 阶段最高分未明显高于次高分 =
     歧义 = 转换失败返 None,禁直接取最高分——「造梦互动影业」对造梦
     兄弟影业/造梦互动娱乐同分 4/6 ≈ 0.667(共享词素族跨名借分),旧
@@ -951,7 +951,7 @@ def _make_boss(test_context, monkeypatch: pytest.MonkeyPatch, *,
 # (原 test_boss_briefing_dispatch_both_ways「BOSS 简报分流双向」删:装两
 #  端口走五段新路径的分流/段迹面随并存窗收口整删;其跨路径幸存断言
 #  (横幅在 = 点空白 + success 交回 / 横幅已退 = 零动作早退)由下方误读
-#  接管锁与观察门锁同形承重。)
+#  接管测试与观察门测试同形承重。)
 
 
 def test_boss_briefing_misread_takeover(test_context, monkeypatch) -> None:
@@ -971,7 +971,7 @@ def test_boss_briefing_misread_takeover(test_context, monkeypatch) -> None:
 
 def test_boss_briefing_observe_gate_and_report_wiring(
         test_context, monkeypatch) -> None:
-    """BOSS 简报观察 node 锁(两 node 形态):横幅已退(area 锚 miss +
+    """BOSS 简报观察 node 测试(两 node 形态):横幅已退(area 锚 miss +
     片段判别 miss)→ 早退 success 交回外循环重判(零点击,obs 不装载);
     横幅在 → obs 装载 + report 接线恰一次(match/gs 在场;boss 类型直定,
     目标 = 现 hist)。
@@ -1004,12 +1004,12 @@ def test_boss_briefing_observe_gate_and_report_wiring(
 
 
 # (三审整删)原 test_boss_discrimination_single_source_consumers_
-# unchanged「判别单一源消费面锁」(getsource ×3:消费点计数/import 复制面/
+# unchanged「判别单一源消费面测试」(getsource ×3:消费点计数/import 复制面/
 # token 表扩散断言;且 import 在飞互斥面 cw_loop)——源码扫描形态(README
 # 禁止清单);「判别逻辑禁复制成第二源」防线归 review 与代码规范。
 
 
-# ==================== 战斗等待:B2-③ 主门(在册行为锁·生产路径)====
+# ==================== 战斗等待:B2-③ 主门(在册行为测试·生产路径)====
 
 
 def _make_bwait(test_context, monkeypatch: pytest.MonkeyPatch,
@@ -1056,7 +1056,7 @@ def _make_bwait(test_context, monkeypatch: pytest.MonkeyPatch,
 
 # (原 test_battle_wait_execute_terminal_exit_new_path「B2-③ 主门经
 #  execute() 走新路径:大厅终局锚 → terminal_lobby 早退」删:装端口驱动
-#  的出口门随并存窗收口整删;出口门生产那份由下方完成白名单锁承重。)
+#  的出口门随并存窗收口整删;出口门生产那份由下方完成白名单测试承重。)
 
 
 def test_battle_wait_normal_exits(test_context, monkeypatch) -> None:
@@ -1066,7 +1066,7 @@ def test_battle_wait_normal_exits(test_context, monkeypatch) -> None:
     [结算分支逐位] D-94 读点(结算观察半直写)先于「继续挑战」点击
     (时序红线);C-1 新帧计数。
     (分诊:defer 复位腿摘除——defer_count 载体已在 src 退役
-    (全仓零消费点),生产端无复位语义可锁。)"""
+    (全仓零消费点),生产端无复位语义可校验。)"""
     # [完成白名单出口]
     op = _make_bwait(
         test_context, monkeypatch,
@@ -1087,7 +1087,7 @@ def test_battle_wait_normal_exits(test_context, monkeypatch) -> None:
     monkeypatch.setattr(op, '_record_round_outcome', _rec)
 
     # ②段已改调结算确认动作 op(landing §3.2):桩化子 op 为点击记录器
-    # (M39 长按/证据等待/上报的行为锁迁 test_settle)。
+    # (M39 长按/证据等待/上报的行为测试迁 test_settle)。
     import importlib
 
     settle_confirm_mod = importlib.import_module(
@@ -1117,7 +1117,7 @@ def test_battle_wait_fallback_exits(test_context, monkeypatch) -> None:
     [未知 bail] 未知帧达 UNKNOWN_BAIL_N(10)→ round_fail 交主循环
     兜底链 + op 截图留证(flag 已退役,零真实 .debug 落盘)。
     生产路径逐轮 = 观察门双 miss → 决策循环分支链 miss → 计数。
-    (原 [长按] M39 锁随结算点击/M39 迁入 CwOpSettleConfirm 改住
+    (原 [长按] M39 测试随结算点击/M39 迁入 CwOpSettleConfirm 改住
     test_settle,
     landing §3.2。)"""
     # [未知 bail]
@@ -1149,12 +1149,12 @@ def _stub_controller(test_context, monkeypatch: pytest.MonkeyPatch) -> list:
     return clicks
 
 
-# (继承结构/节点预算门等静态形状锁分诊不恢复,见文件头「收口锁不恢复」。)
+# (继承结构/节点预算门等静态形状测试分诊不恢复,见文件头「收口测试不恢复」。)
 
 
 def test_reentry_arbitration_flag_gate_combination(test_context,
                                                    monkeypatch) -> None:
-    """重入裁决×门组合行为锁(位面过渡/武装箱/未达上限均已迁移两 node
+    """重入裁决×门组合行为测试(位面过渡/武装箱/未达上限均已迁移两 node
     形态,「已发」旗标裁决住决策动作 node 顶部,直驱 act 承重):
     - 位面过渡:门命中 + pending 在位 → 裁决不误判完成(门在 = 动作未
       落地,重点一次机械交回 round_wait);推进体缺坐标的失败轮旗标保持
@@ -1234,7 +1234,7 @@ def test_reentry_arbitration_flag_gate_combination(test_context,
 def _make_plane_transition(test_context, monkeypatch: pytest.MonkeyPatch, *,
                            prompt_hit: bool, blank: object | None = None):
     """位面过渡真类装配(两 node 形态)。桩面 = 提示门/空白点 center/点击
-    记录器;链读链(观察 node)由各锁按需补桩。"""
+    记录器;链读链(观察 node)由各测试按需补桩。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_plane_transition as ptm,
     )
@@ -1251,11 +1251,11 @@ def _make_plane_transition(test_context, monkeypatch: pytest.MonkeyPatch, *,
 
 def test_plane_transition_observe_gate_and_chain_report(
         test_context, monkeypatch) -> None:
-    """位面过渡观察 node 锁(两 node 形态):提示门 miss = round_fail 早退
+    """位面过渡观察 node 测试(两 node 形态):提示门 miss = round_fail 早退
     (现役文案,obs 不装载、零读链);门 hit → 底部行读数构造链值 → report
     落容器(开局链容器终值:node_path + node_path_baseline 双写,链正本
     §3 基线幂等门的写闸面在 report 屏文件,由 test_screen_report_ports
-    承重,本锁辖 op 侧读链→report 接线)→ obs 挂实例属性。
+    承重,本测试辖 op 侧读链→report 接线)→ obs 挂实例属性。
     红 = 门失效 / 读链未接 / 容器终值漂移。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         game_state_of,
@@ -1326,7 +1326,7 @@ def _make_armory(test_context, monkeypatch: pytest.MonkeyPatch, *,
 
 def test_armory_box_two_node_observe_report_and_round_wait(
         test_context, monkeypatch) -> None:
-    """武装箱两 node 形态锁(轻屏统一形态,
+    """武装箱两 node 形态测试(轻屏统一形态,
     report):观察 node = 标识门(miss = round_fail 交编排壳,obs 不装载)+
     obs{on_screen} → 占位 report 接线(gs 缺席跳过不炸;本屏现役零容器
     写点,接口为统一形态占位);决策动作 node = 点 × 关闭机械交回
@@ -1387,7 +1387,7 @@ def _make_deploy_not_full(test_context, monkeypatch: pytest.MonkeyPatch, *,
 
 def test_deploy_not_full_observe_gate_and_placeholder_report(
         test_context, monkeypatch) -> None:
-    """未达上限观察 node 锁(两 node 形态,补齐观察门申报面):
+    """未达上限观察 node 测试(两 node 形态,补齐观察门申报面):
     标识门 miss = round_fail 早退(现役文案,obs 不装载、零 report);
     门 hit + gs 在场 → obs 装载 + 占位 report 接线恰一次;
     cw_match/gs 缺席 → 跳过 report 不炸(obs 仍装载,局外兜底路径)。
@@ -1450,7 +1450,7 @@ def _make_wait_one_one(test_context, monkeypatch: pytest.MonkeyPatch, *,
 
 def test_wait_one_one_anchor_hit_and_poll_round_wait(
         test_context, monkeypatch) -> None:
-    """等待1-1 两 node 形态锁(纯等待型,现役 handle 逐位映射):锚命中 →
+    """等待1-1 两 node 形态测试(纯等待型,现役 handle 逐位映射):锚命中 →
     观察轮 obs 装载 + 占位 report 接线恰一次(现役零容器写点,统一形态
     占位)→ round_success 进决策动作 node → act 零动作 success 交回
     ('1-1 备战就绪' 终态语义同点);锚 miss 且未超时 → 观察轮 round_wait
@@ -1517,5 +1517,5 @@ def test_wait_one_one_timeout_leaves_evidence(test_context,
         '轮询至上界才退出,非首轮放弃')
 
 
-# (位面情报采集两锁——薄转录装帧观察 node / 双节点图边——随 6 node 管线
-#  重构退役,行为锁迁 test_plane_intel_pipeline.py。)
+# (位面情报采集两个测试——薄转录装帧观察 node / 双节点图边——随 6 node 管线
+#  重构退役,行为测试迁 test_plane_intel_pipeline.py。)

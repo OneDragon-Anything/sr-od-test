@@ -1,10 +1,10 @@
-"""CW 屏 op 行为锁面(战斗等待败局闩键门 + 选择伙伴选选流序)。
+"""CW 屏 op 行为测试面(战斗等待败局闩键门 + 选择伙伴选选流序)。
 
 两节归并自原两个主题文件(测试函数名全量保留,原文件已删):
 
 1. 战斗等待 op 败局闩键门(原 test_cw_battle_wait_defeat_latch.py;
    判据面 = 迭代 2026-10-12-abolish-node-ordinal landing §3.3 + 设计
-   §2.11 锁 7):键门 (位面, 轮) >= (2,5) 与旧 9 制序数门 (p-1)*9+r >= 14
+   §2.11 测试 7):键门 (位面, 轮) >= (2,5) 与旧 9 制序数门 (p-1)*9+r >= 14
    在边界值上逐值同判(含修饰局 (1,10) 形态),另两臂语义保持(负分量
    缺席不置闩 / 容器节点读口未观察 fail-closed 不置闩);
 2. 选择伙伴选选流序(原 test_cw_partner_select_confirm_flow.py;事故
@@ -72,7 +72,7 @@ def _make_op(test_context, monkeypatch) -> CwScreenBattleWait:
 @pytest.mark.parametrize('pos', [(1, 10), (2, 1), (2, 4), (2, 5)])
 def test_lock7_defeat_latch_gate_matches_old_t_gate(
         test_context, monkeypatch, pos) -> None:
-    """败局闩键门与旧 t 门逐值对拍(设计 §2.11 锁 7):旧门
+    """败局闩键门与旧 t 门逐值对拍(设计 §2.11 测试 7):旧门
     (p-1)*9+r >= 14 在边界值上的判定 = 新键门 (p,r) >= (2,5) 的实际
     置闩行为,逐值不分叉。"""
     old_t = (pos[0] - 1) * 9 + pos[1]
@@ -125,9 +125,9 @@ class _NoSleep:
 
 def _make_watched_op(test_context, monkeypatch) -> CwScreenPartner:
     """真类 + 桩面装配:cw_match 桩(decide_partner 恒 idx=0;决策质量不在
-    锁范围,守卫面锁 = test_screen_two_node_family 伙伴臂)、SIFT 立绘
+    测试范围,守卫面测试 = test_screen_two_node_family 伙伴臂)、SIFT 立绘
     识别回落 label 名(跳过模板库加载)、模块内 time 不真睡。桩无 ``gs``
-    属性 → chosen 写端经 ``getattr(match, 'gs', None)`` 跳过(两锁零容器
+    属性 → chosen 写端经 ``getattr(match, 'gs', None)`` 跳过(两个测试零容器
     断言不受影响)。"""
 
     class _WatchedPartner(WatchdogOperationMixin, CwScreenPartner):
@@ -145,7 +145,7 @@ def _make_watched_op(test_context, monkeypatch) -> CwScreenPartner:
         op, '_identify_portraits',
         lambda screen, cands: [n for n, _cx, _cy in cands])
     # 统一动作工厂批4:「点选候选 → 确认」脉冲链体迁 pick op 模块——
-    # 模块内 time 替身随体迁移(替身跟随被迁体,锁的「不真睡」意图不变;
+    # 模块内 time 替身随体迁移(替身跟随被迁体,测试的「不真睡」意图不变;
     # partner 模块本体已无直接 sleep)。本测试桩化的伙伴脉冲确认收尾
     # (partner reset 根因链)不读屏,桩面= 记录点击。
     import sr_od.application.currency_war.operations.cw_op.cw_pick_partner_action as pick_mod
@@ -195,10 +195,10 @@ def test_partner_selects_candidate_before_confirm(
     test_context, monkeypatch: pytest.MonkeyPatch,
     fixture_controller: FixtureController,
 ) -> None:
-    """选选流序锁:未选中帧上先点候选卡后点确认;确认后 overlay 关 → success。
+    """选选流序测试:未选中帧上先点候选卡后点确认;确认后 overlay 关 → success。
 
     事故反形:旧 gate 误命中时首个(且唯一)click 落在置灰确认钮上、候选
-    零点击 —— 本锁红 = 流序回退(未选先确认)或完成门失效。
+    零点击 —— 本测试红 = 流序回退(未选先确认)或完成门失效。
     """
     if not test_context.has_screen(_PARTNER_SCREEN, _OVERLAY_FIXTURE):
         pytest.skip(f'存档截图缺失:screens/{_PARTNER_SCREEN}/{_OVERLAY_FIXTURE}.webp')
@@ -242,11 +242,11 @@ def test_partner_confirm_rejected_bounded_retry(
     test_context, monkeypatch: pytest.MonkeyPatch,
     fixture_controller: FixtureController,
 ) -> None:
-    """确认被拒有界重试锁:overlay 恒在(置灰确认被游戏拒)→ 脉冲恰
+    """确认被拒有界重试测试:overlay 恒在(置灰确认被游戏拒)→ 脉冲恰
     CONFIRM_REJECT_MAX 次 → 显式 fail,点击有界、先于节点预算、看门狗零触发。
 
     事故反形:旧实现每执行烧满 10 轮(20 click)且 fail 原因无形态区分,
-    外环无限重派 —— 本锁红 = 有界防线回退或失败语义丢失。
+    外环无限重派 —— 本测试红 = 有界防线回退或失败语义丢失。
     """
     if not test_context.has_screen(_PARTNER_SCREEN, _OVERLAY_FIXTURE):
         pytest.skip(f'存档截图缺失:screens/{_PARTNER_SCREEN}/{_OVERLAY_FIXTURE}.webp')
@@ -278,7 +278,7 @@ def test_partner_confirm_rejected_bounded_retry(
         f'重入轮点位应稳定(决策一次,防跨轮换候选):{card_clicks}')
     # 轮次上限算术(两 node 形态,):
     # 检测游戏窗口 1 + 观察 1 + 脉冲 4 + 守卫 fail 1 = MAX + 3(原单 node
-    # 形态无观察段 = MAX + 2)。锁的语义 = 显式退出先于节点预算耗尽,
+    # 形态无观察段 = MAX + 2)。测试的语义 = 显式退出先于节点预算耗尽,
     # 非轮次精确值。
     assert op._watchdog_round_count <= CwScreenPartner.CONFIRM_REJECT_MAX + 3, (
         f'应在节点预算(10)耗尽前显式退出:{op._watchdog_round_count}')

@@ -1,4 +1,4 @@
-"""商店画面 op(CwScreenShop)与动作 op 执行链行为锁。
+"""商店画面 op(CwScreenShop)与动作 op 执行链行为测试。
 
 主题文件按机制分段(原六文件按机制归并;各段 docstring 保留出处):
 
@@ -135,7 +135,7 @@ class _Ctrl:
 
 
 def _shop_host(monkeypatch: pytest.MonkeyPatch, strategy) -> tuple:
-    """两 node 形态锁共用离线宿主:入口读/决策帧/点位锚定/关店执行位
+    """两 node 形态测试共用离线宿主:入口读/决策帧/点位锚定/关店执行位
     点击全桩化,容器在屏 payload 槽1 = 花火。返回 (op, match, gs,
     读数计数, 决策帧 tag 表, 关店点击记录, 商店动作回执 op 名表)。"""
     from test.sr_od.application.currency_war._cw_helpers import cw4_gs
@@ -177,7 +177,7 @@ def _shop_host(monkeypatch: pytest.MonkeyPatch, strategy) -> tuple:
                         lambda idx: SimpleNamespace(strategy_id='mandate_v1',
                                                     ev_arm=''))
     # 预算披露桩化(真实现经 mandate state_of 对异型状态对象冷建覆写,
-    # 会换掉宿主的 SimpleNamespace 状态载体;与本锁无关)。
+    # 会换掉宿主的 SimpleNamespace 状态载体;与本测试无关)。
     from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
         economy_cycle as economy_cycle_mod,
     )
@@ -298,7 +298,7 @@ _SELL_PT = Point(75, 840)        # 商店画面档出售区桩
 
 def _exec_port_host(monkeypatch: pytest.MonkeyPatch, strategy,
                     bench_entries: list) -> tuple:
-    """端口连通锁共用离线宿主(沿本文件两 node 形态段 _shop_host 同式):
+    """端口连通测试共用离线宿主(沿本文件两 node 形态段 _shop_host 同式):
     入口读/决策帧/点位锚定/关店执行位全桩化;卖出拖拽的坐标解析走真
     实链(row_area_centers/sell_point/DragCwChar.drag_char 逐层捕获参数)。
     返回 (op, match, gs, 拖拽记录, 行读记录, 出售区读记录, 回执 op 名表)。"""
@@ -342,7 +342,7 @@ def _exec_port_host(monkeypatch: pytest.MonkeyPatch, strategy,
                         lambda *a, **k: None)
 
     # 卖出机械链参数捕获:坐标解析走真实 drag_bench_to_sell,area 读与
-    # 拖拽原语逐层桩化记录(锁「执行参数直达机械层 + 域坐标权威画面」)。
+    # 拖拽原语逐层桩化记录(校验「执行参数直达机械层 + 域坐标权威画面」)。
     row_reads: list[tuple[str, str]] = []
     sell_reads: list[str] = []
     drags: list[tuple[Point, Point]] = []
@@ -516,7 +516,7 @@ def _session_with_shop(names: list[str], gold: int | None = 30):
 
 def test_close_shop_click_clears_stale_buy_payload(monkeypatch):
     """点击已发出口:买投影后 payload 在屏 → 关店动作执行体点击发出 →
-    payload 置 None(evidence=left_screen 锁清场写端身份)。"""
+    payload 置 None(evidence=left_screen 校验清场写端身份)。"""
     session, gs = _session_with_shop(['希儿', '花火', '黑塔', '丹恒', '停云'])
     report_action_buy_card_param(
         gs, CwActionBuyCardParam(card=_card('希儿')), _LOGIC_SIG,
@@ -547,7 +547,7 @@ def test_close_shop_idempotent_exit_clears_stale_payload(monkeypatch):
 
 def test_reopen_reshuffle_adopts_new_wave_without_mismatch(monkeypatch):
     """重开重洗采新:上半对照 = 残留 logic payload 遇新波观察 → 失配
-    路由命中(capture 替身,病理形态入锁);下半 = 清场后同观察零失配、
+    路由命中(capture 替身,病理形态入测试);下半 = 清场后同观察零失配、
     采新波。"""
     calls: list[dict] = []
 
@@ -600,7 +600,7 @@ def test_buy_projection_regression_within_visit(monkeypatch):
 
 def _run_observe_node(ctx: SimpleNamespace):
     """观察 node 直驱(薄壳退役承接):构造真类实例跑观察 node,返回
-    轮次结果(防御路径锁只辖观察 node 段,决策循环不入锁面)。"""
+    轮次结果(防御路径测试只辖观察 node 段,决策循环不入测试面)。"""
     op = buy_mod.CwScreenShop(ctx)
     return op.observe()
 

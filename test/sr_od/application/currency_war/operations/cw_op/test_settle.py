@@ -1,35 +1,35 @@
-"""结算域行为锁(确认动作流程 / 观测覆盖度守卫 / 真值收口 / 金面板解析 / hp 直读)。
+"""结算域行为测试(确认动作流程 / 观测覆盖度守卫 / 真值收口 / 金面板解析 / hp 直读)。
 
 五部分(结算屏一个域的各承重面):
 
-- **确认动作 op 流程锁**(``CwOpSettleConfirm``;landing §3.2 判据面,
+- **确认动作 op 流程测试**(``CwOpSettleConfirm``;landing §3.2 判据面,
   去证据门形态 2026-09-21 用户裁定)。判据 ↔ 测试对照:
   结算帧 → op → 点击即上报(logic 态恰一档)→ 按钮离场交回宿主 →
   ``test_click_reports_once_and_returns``;死点击(结算屏恒在)→ 重复
-  点击重复上报被观察态门挡(零推进)+ M39 长按兜底(M39 迁入锁)→
+  点击重复上报被观察态门挡(零推进)+ M39 长按兜底(M39 迁入测试)→
   ``test_dead_click_gate_blocks_and_long_press_retry``;战败分支不进本 op
   (终局路径回归不变)→ ``test_defeat_branch_never_enters_settle_confirm``。
   驱动 = 真帧 fixture + 真 OCR 识别链(FixtureController 剧本推进),容器
   = cw4_session 旁表 + observe_node_anchor 预锚定 observation 态。
-- **观测覆盖度守卫锁**(T-23;2026-09-15 局深检 §8-1 形态根治。病理:
+- **观测覆盖度守卫测试**(T-23;2026-09-15 局深检 §8-1 形态根治。病理:
   长战斗形态整窗零「结算观测」行实锤(run_20260915_054718 深检:488s
   主战 hp 3→0 扣血链零观测,复盘断节不可知)。修 = 战斗链收口守卫面
   (cw_loop ``_on_battle_wait`` 出口归一点)计数留证:窗口单元 success 出口
   + 出战开窗在 + 本窗零结算观测行 → 缺陷台账 L1 行(只计数不停机))。
-  锁三面:守卫判定真值表 / 结算观测行写点刷新窗锚 + 真值传导 /
+  校验三面:守卫判定真值表 / 结算观测行写点刷新窗锚 + 真值传导 /
   cw_loop 战斗分支接线消费守卫。
-- **真值收口锁**(settle_truth):金币战后真值无条件入账。背景(2026-09-18
+- **真值收口测试**(settle_truth):金币战后真值无条件入账。背景(2026-09-18
   回滚批):节点收入由游戏侧在结算屏展示前入账,bot 无逻辑写端,账本与
   结算真值的差 = 预期边界收入而非推算 bug——经 observe 失配链则每场战斗
   必停局(全夜停局病态),吸收窗方案已回滚。现行 = 结算点无条件收口 +
-  差值台账行留证(锁依据 = GameState.settle_truth docstring)。
-- **金面板解析回归锁**(T-42 读端加固批。病理:2026-09-18 两实机局
+  差值台账行留证(测试依据 = GameState.settle_truth docstring)。
+- **金面板解析回归测试**(T-42 读端加固批。病理:2026-09-18 两实机局
   journal+停局截图定谳,胜局结算页金面板「存量 <N>」OCR 读失败率连续
   两局 100%;加固 = 锚词与数值分离 token 兜底;锚词缺失不猜)。
   定点读数(read_settle_gold_opt)= 真值入口主路径:当前版本结算布局
-  无「存量」token,战后金真值挂右上角货币计数;锁其「不猜」契约与
+  无「存量」token,战后金真值挂右上角货币计数;校验其「不猜」契约与
   稳定门取末帧语义。
-- **hp 直读锁**(decision_hp):锚退役后 decision_hp = gs.hp 直读——
+- **hp 直读测试**(decision_hp):锚退役后 decision_hp = gs.hp 直读——
   结算覆盖写端写入 → 读口立即反映;旧锚字段不再影响读口;可信位语义
   (observation/carried 可信,prior/logic fail-closed)。
 
@@ -103,7 +103,7 @@ settle_confirm_mod = importlib.import_module(
 
 _FRAME = object()   # 稳定帧哨兵(桩只验判定流,不断言内容)
 
-# ==================== 确认动作 op 流程锁 ====================
+# ==================== 确认动作 op 流程测试 ====================
 
 _SETTLE_FRAME = ('货币战争-结算', 'win')
 _BOARD_FRAME = ('货币战争-备战', 'deployed_2star')
@@ -156,7 +156,7 @@ def test_click_reports_once_and_returns(
     test_context, monkeypatch: pytest.MonkeyPatch,
     fixture_controller: FixtureController,
 ) -> None:
-    """主链路锁:结算帧 → 点「继续挑战」落位 → **点击即上报**恰一档
+    """主链路测试:结算帧 → 点「继续挑战」落位 → **点击即上报**恰一档
     (logic 态)→ 按钮离场(流转落地)→ op 交回宿主。重入已流转帧:
     按钮不在场零点击零上报,直 success 交回(出口判定归宿主白名单)。"""
     if not test_context.has_screen(*_SETTLE_FRAME):
@@ -203,9 +203,9 @@ def test_dead_click_gate_blocks_and_long_press_retry(
     test_context, monkeypatch: pytest.MonkeyPatch,
     fixture_controller: FixtureController,
 ) -> None:
-    """死点击锁:结算屏恒在(点击不生效)→ 每轮重试点击 + 重复上报被
+    """死点击测试:结算屏恒在(点击不生效)→ 每轮重试点击 + 重复上报被
     观察态门挡(推进恰一档后零推进)+ 第 3 轮停留长按 (960,898)
-    press_time=0.5(M39 迁入锁;去证据门后死点击自愈链靠宿主重分派)。"""
+    press_time=0.5(M39 迁入测试;去证据门后死点击自愈链靠宿主重分派)。"""
     if not test_context.has_screen(*_SETTLE_FRAME):
         pytest.skip(f'存档截图缺失:screens/{_SETTLE_FRAME[0]}/{_SETTLE_FRAME[1]}.webp')
     gs = _anchored_session(test_context, monkeypatch, pos=(1, 1))
@@ -243,7 +243,7 @@ def test_dead_click_gate_blocks_and_long_press_retry(
 def test_defeat_branch_never_enters_settle_confirm(
     test_context, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """战败分支回归锁:失败结算页(1f 分支)不进结算确认 op、不推进
+    """战败分支回归测试:失败结算页(1f 分支)不进结算确认 op、不推进
     (终局流转,节点序止于终局;战败路径回归不变)。"""
     from sr_od.application.currency_war.currency_war_config import (
         CurrencyWarConfig,
@@ -289,11 +289,11 @@ def test_defeat_branch_never_enters_settle_confirm(
         f'战败页按 1f 分支流转(翻页/点空白 round_wait):{rs!r}')
 
 
-# ==================== 观测覆盖度守卫锁 ====================
+# ==================== 观测覆盖度守卫测试 ====================
 
 
 def test_guard_truth_table(monkeypatch) -> None:
-    """锁1 守卫真值表:两 success 出口 + 窗锚失配 → L1 行;bail/已观测/
+    """测试1 守卫真值表:两 success 出口 + 窗锚失配 → L1 行;bail/已观测/
     无窗开锚(battle_ts=None)三静默臂不落行。"""
     calls: list[tuple[tuple, dict]] = []
     monkeypatch.setattr(_defects_mod, 'record_defect',
@@ -327,7 +327,7 @@ def test_guard_truth_table(monkeypatch) -> None:
 
 def test_record_round_outcome_refreshes_window_anchor(
         test_context, monkeypatch) -> None:
-    """锁2 结算观测行写点刷新窗锚 + hp_after 传导:结算屏读点经生产链路
+    """测试2 结算观测行写点刷新窗锚 + hp_after 传导:结算屏读点经生产链路
     (read_round_outcome → performance.record → apply_settlement_cover)
     后,窗锚 = 当前 battle_ts、gs.hp = 结算真值。"""
     session = cw4_session()
@@ -372,7 +372,7 @@ class _BattleWaitStub:
 
 def _make_coverage_loop(test_context, monkeypatch,
                         settle: SettlementState) -> CwLoop:
-    """CwLoop 裸装配 + 全桩面,战斗窗驻留闩置位(先例 = boss 帧排除锁)。"""
+    """CwLoop 裸装配 + 全桩面,战斗窗驻留闩置位(先例 = boss 帧排除测试)。"""
     op = CwLoop.__new__(CwLoop)
     op.ctx = test_context
     op._iter = 3                # 3+1=4:跳过 iter1 预检/焦点检查/首读分支
@@ -400,7 +400,7 @@ def _make_coverage_loop(test_context, monkeypatch,
 
 def test_battle_branch_exit_consumes_coverage_guard(
         test_context, monkeypatch) -> None:
-    """锁3 收口接线:战斗分支 op 返回 back_to_loop → 守卫被消费,零观测窗
+    """测试3 收口接线:战斗分支 op 返回 back_to_loop → 守卫被消费,零观测窗
     落 L1 行;已观测窗(锚匹配)不落行。"""
     calls: list[tuple[tuple, dict]] = []
     monkeypatch.setattr(_defects_mod, 'record_defect',
@@ -425,7 +425,7 @@ def test_battle_branch_exit_consumes_coverage_guard(
     assert calls == [], '已观测窗 exit 不落覆盖度行'
 
 
-# ==================== 真值收口锁(settle_truth)====================
+# ==================== 真值收口测试(settle_truth)====================
 
 
 def _sig():
@@ -480,7 +480,7 @@ def test_observation_source_adopts_silently(monkeypatch) -> None:
     assert kinds == [], '观察→观察采新无失配语义'
 
 
-# ==================== 金面板解析回归锁 ====================
+# ==================== 金面板解析回归测试 ====================
 
 
 def test_same_token_form_regression() -> None:
@@ -548,7 +548,7 @@ def test_settle_gold_reader_gate_takes_last(monkeypatch) -> None:
     assert read_settle_gold_opt(_stub_ctx(['9', '9'], ctl), frame) == 9
 
 
-# ==================== hp 直读锁(decision_hp)====================
+# ==================== hp 直读测试(decision_hp)====================
 
 
 def test_hp_direct_read_after_anchor_retirement():

@@ -1,9 +1,9 @@
-"""泄金阶梯单帧锁(ADR-0604 判据锁;锁清单 = 设计方案 §4.3
+"""泄金阶梯单帧测试(ADR-0604 判据测试;测试清单 = 设计方案 §4.3
 本批归属 L1-L7 + 档 2 轮内新鲜度排除,方案正本指针 = ADR-0604 头注)。
 
-锁清单(§4.3 表存续面):
+测试清单(§4.3 表存续面):
 - LF′ 档 2 轮内新鲜度排除载体相位过期:跨轮/跨位面读数空集(排除
-      上界 ≤1 轮;发射位排除面归写端与消费位锁辖)。
+      上界 ≤1 轮;发射位排除面归写端与消费位测试辖)。
 - L3′ prep 位 M6 摘旗可达性:stop_flag=False(线未齐)∧ gold>g* ∧
       席满帧,M6 prep 块被触达(m6_bench_full 拒因显影——摘旗前该帧
       被 stop_flag 短路、拒因结构性不可见)。
@@ -12,7 +12,7 @@
 
 测试构造声明:候选/帧构造基建(_km/_bc/_card/_off_name/_session_stub/
 _st)保留 = test_front_window_predicates 的候选构造单一源(跨文件
-消费);L1/L1b/L2/L3/L5/LF 发射面锁与档 1 锁线门负腿已退役。
+消费);L1/L1b/L2/L3/L5/LF 发射面测试与档 1 锁线门负腿已退役。
 """
 from types import SimpleNamespace
 from typing import TYPE_CHECKING
@@ -121,7 +121,7 @@ def _off_name(exclude: tuple[str, ...] = (), *, min_cost: int = 1) -> str:
         if tier in (TIER_REGISTRY_CORE, TIER_TRANSITION):
             continue
         return n
-    raise AssertionError('注册表缺少合适线外角色(锁前提失效)')
+    raise AssertionError('注册表缺少合适线外角色(测试前提失效)')
 
 
 def _session_stub(locked: bool = True, target_comp=None) -> SimpleNamespace:
@@ -176,7 +176,7 @@ class TestL3FlagRemoval:
         assert state_of(sess).cw4_counters.get('m6_bench_full', 0) >= 1
 
 
-# (原 L4:P72 拒帧档 1/2 挂起锁随 P72 预算闸/L4 挂起面退役删除
+# (原 L4:P72 拒帧档 1/2 挂起测试随 P72 预算闸/L4 挂起面退役删除
 #  商店期升级决策面收缩——闸写点不存在,挂起分支结构性死路;档 2 同帧
 #  挂起的 TestShopM3M6 承载声明随之失效。)
 
@@ -242,10 +242,10 @@ class TestL7AllInCategoryFilter:
         assert all_in_xp_domain_hit(no_hp, sess,
                                     DEFAULT_REGISTRY) is False
 
-    # (P72 闸 ALL IN 支收窄锁 test_l7_gate_rejects_non_support_xp 已随
+    # (P72 闸 ALL IN 支收窄测试 test_l7_gate_rejects_non_support_xp 已随
     # levelup_budget_gate 量闸本体退役消亡——迭代 2026-10-12-prep-shop-
     # workflow-redesign 批 3.4;line_and_upgrade §2.3 P72(3a) 本体删除
     # 行:量闸整体不再存在,「ALL IN 帧类别白名单拒 XP」的防线语义随
     # 之消亡(ALL IN 帧花光拦截现役载体 = 无——末位面末战保底金门出辖
     # = ALL IN 花光原语义;替代语义考古走 git 历史)。辖域谓词本体
-    # all_in_xp_domain_hit 的锁 = test_l7_domain_predicate_p21。)
+    # all_in_xp_domain_hit 的测试 = test_l7_domain_predicate_p21。)

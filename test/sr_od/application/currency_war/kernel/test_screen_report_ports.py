@@ -1,17 +1,17 @@
-"""画面观察上报端口锁(kernel/cw_screen_report 包;迭代
+"""画面观察上报端口测试(kernel/cw_screen_report 包;迭代
  T-1 kernel 基座)。
 
-三面锁(同动作族 test_action_report 形态;零真实副作用,
+三个测试面(同动作族 test_action_report 形态;零真实副作用,
 纯容器直驱):
 
-1. 完备锁:遍历包内全部 obs 类,断言「非推进型 ↔ report_screen_<snake>_obs
+1. 完备测试:遍历包内全部 obs 类,断言「非推进型 ↔ report_screen_<snake>_obs
    在场;推进型/商店框 ↔ 不在场」+ 统一签名形态 (gs, obs, *, sig=None);
-2. 逐 report 接口写入锁:obs 桩值 → 空白容器(GameState 直构,仓内
+2. 逐 report 接口写入测试:obs 桩值 → 空白容器(GameState 直构,仓内
    惯例)→ 调 report → 断言容器域值与来源;门语义(空不写/恒写空表/
    简报三闸/过渡链防御)单独成测;
-3. 渠道签名锁:缺省 sig 构造逐位沿用现役写点原值(family/actor/screen/
+3. 渠道签名测试:缺省 sig 构造逐位沿用现役写点原值(family/actor/screen/
    mode)——经状态流水捕获行断言(sink/run_id 官方注入槽,monkeypatch
-   测试结束自动还原)的行为锁。
+   测试结束自动还原)的行为测试。
 
 纪律:串行、零识别零点击零真实 IO、不断言容器写入行为以外的东西。
 """
@@ -43,7 +43,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 _PKG = 'sr_od.application.currency_war.kernel.cw_screen_report'
 
 #: 包内全部画面文件(包 ``__init__`` 不暴露模块,项目惯例 → 显式点名;
-#: 新增屏文件必须登记到此处,漏登记 = 完备锁红)。
+#: 新增屏文件必须登记到此处,漏登记 = 完备测试红)。
 _SCREENS = (
     # 含 report 的 22 屏(17 实体写点 + 5 文档化占位)
     'encounter', 'megastar', 'partner', 'planner', 'fortune',
@@ -73,12 +73,12 @@ _NO_REPORT = frozenset({
 
 #: 文档化占位 report(现役零观察容器写点,统一形态占位)。
 #: (prep 已于重型屏迁移批升级为真实写面——可选域字段在场才写,见
-#:  _WRITE_CASES['prep'] 与 prep 专项锁;plane_intel 已于接管域迭代
+#:  _WRITE_CASES['prep'] 与 prep 专项测试;plane_intel 已于接管域迭代
 #:   升级为真实写面——采集真值写门,
-#:  见 _WRITE_CASES['plane_intel'] 与写门专项锁;boss_briefing 已于
+#:  见 _WRITE_CASES['plane_intel'] 与写门专项测试;boss_briefing 已于
 #:   切换批升级为真实写面——BOSS
-#:  类型直定(目标 = 现 hist),写门/直定专项锁归 test_node_chain 与
-#:  test_game_state 节点域锁;shop 保持占位:
+#:  类型直定(目标 = 现 hist),写门/直定专项测试归 test_node_chain 与
+#:  test_game_state 节点域测试;shop 保持占位:
 #:  唯一候选写点 = 段头 gold 救援补写,属入口观察链内纠正补写,勘察
 #:  结论申报在 kernel 屏文件模块头,不收编交后续批裁决。)
 _PLACEHOLDERS = ('armory_box', 'wait_one_one',
@@ -117,11 +117,11 @@ def _report_fn_name(cls_name: str) -> str:
     return f'report_screen_{re.sub(r"(?<!^)(?=[A-Z])", "_", core).lower()}_obs'
 
 
-# ============================================================ 1. 完备锁
+# ============================================================ 1. 完备测试
 
 
 def test_completeness_report_presence_matches_screen_form():
-    """完备锁:非推进型 ↔ report 函数在场;推进型/商店框 ↔ 不在场。"""
+    """完备测试:非推进型 ↔ report 函数在场;推进型/商店框 ↔ 不在场。"""
     names = set()
     for screen in _SCREENS:
         mod = _screen_module(screen)
@@ -157,7 +157,7 @@ def test_report_signature_unified_shape():
         assert params[2].default is None
 
 
-# ============================================================ 2. 逐接口写入锁
+# ============================================================ 2. 逐接口写入测试
 
 
 def _case_encounter(m):
@@ -323,7 +323,7 @@ def test_report_writes_stub_obs_into_container(screen):
 #: 空桩门语义:候选空 = 原「读得才写」早退闸不写(None);原写点无空门
 #: 的屏空表照写([])——防线逐位平移,不加强不减弱。
 _EMPTY_OBS_CASES = {
-    # 摄入序锁( 3.3):
+    # 摄入序测试( 3.3):
     # options 空 = 整函数早退不写含 left——left 读得(3)也不入容器。
     'encounter': (lambda m: m.CwScreenEncounterObs(refresh_left=3),
                   {'encounter': None, 'encounter_refresh_left': None}),
@@ -548,7 +548,7 @@ def test_placeholder_report_is_documented_noop():
         assert gs.write_seq == 0, f'{screen} 占位 report 不得写容器'
 
 
-# ============================================================ 3. 渠道签名锁
+# ============================================================ 3. 渠道签名测试
 
 
 #: 缺省 sig 原值表(逐位沿用各画面现役写点):

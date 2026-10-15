@@ -1,18 +1,18 @@
-"""节点序位与推进锁面(推进/锚定原语 + 场景走查 + 环境修饰序位表)。
+"""节点序位与推进测试面(推进/锚定原语 + 场景走查 + 环境修饰序位表)。
 
 节点序位 = (位面, 轮) 元组键(2026-10-12-abolish-node-ordinal §3.2)。
-三节锁面:
+三节测试面:
 
 - **推进原语判据面**(``advance_node_effective`` /
   ``report_node_advance`` 观察态门 / ``observe_node_anchor`` 锚定处置,
-  landing §3.1 完成判据 + design §2.11 锁 2/3):门挡/首锚定/重复上报
+  landing §3.1 完成判据 + design §2.11 测试 2/3):门挡/首锚定/重复上报
   结构挡/恰一档/等值翻锚/倒退免疫/补推含尾段发放/跨位面/越域丢弃/
   终局事件式;
-- **场景走查锁**(landing §3.6 走查集:快弹窗全型/boss 段/恢复局
+- **场景走查测试**(landing §3.6 走查集:快弹窗全型/boss 段/恢复局
   自愈/结算真值金采样/备战锚定接线;已有判据不重写,本节只收缺口);
 - **环境修饰序位表**(人身意外险 id 107 节点序列环境修饰,设计 §4
   锁 1-11;设计正本 = .debug/progress/2026-09-23-invest-effects-calc/
-  designs/T-8-renshenyiwai-xian.md,锁设计约定不锁实现细节):修饰规则
+  designs/T-8-renshenyiwai-xian.md,钉住设计约定不断言实现细节):修饰规则
   纯函数/场字段生命周期/next_screen 推导/观察读链两位数/白名单归属/
   sim 世界真值/键化消费面/acquired_key 同坐标系/结算读数与单调门。
 """
@@ -96,7 +96,7 @@ def _gs_with_double_pair() -> GameState:
 
 
 def test_gate_blocks_fresh_container() -> None:
-    """value 守卫(攻击 R1 回归锁):新容器 node_pos=(None, 'observation')
+    """value 守卫(攻击 R1 回归测试):新容器 node_pos=(None, 'observation')
     (Field 缺省 source 即 observation)——门必须按 value 在场判定,否则
     开局/恢复局首次终结确认误放行且 candidate 无定义。"""
     gs = _gs_with_double_pair()
@@ -165,7 +165,7 @@ def test_stale_reading_dropped() -> None:
 
 
 def test_repair_advance_ticks_ledger() -> None:
-    """R>v 补推经原语(攻击 F2① 回归锁):漏上报自愈路径同样触发效果
+    """R>v 补推经原语(攻击 F2① 回归测试):漏上报自愈路径同样触发效果
     尾段——账本 advance_node 去重是序位相等判,补推不 tick 即跳档漏发。"""
     gs = _gs_with_double_pair()
     observe_node_anchor(gs, (1, 2), trigger_screen='货币战争-备战', actor=_ACTOR)
@@ -179,7 +179,7 @@ def test_repair_advance_ticks_ledger() -> None:
 
 
 def test_cross_plane_advance() -> None:
-    """跨位面推进(design §2.11 锁 2):P1 位面末 (1,9) 确认 → (2,1)
+    """跨位面推进(design §2.11 测试 2):P1 位面末 (1,9) 确认 → (2,1)
     (后继原语跨位面);跨位面字典序严格性 (1,10) < (2,1) 由锚定倒退
     免疫分支自然严格(修饰局形态同构,默认局锁本位)。"""
     gs = _gs_with_double_pair()
@@ -191,7 +191,7 @@ def test_cross_plane_advance() -> None:
 
 
 def test_out_of_domain_reading_dropped() -> None:
-    """越域读数丢弃(design §2.11 锁 4 位面在表守卫):位面 3 无序列表
+    """越域读数丢弃(design §2.11 测试 4 位面在表守卫):位面 3 无序列表
     (OCR 位面误读形态)→ 不写任何水位 + arbitrate 留证,返回
     out_of_domain_dropped(与 prep suppress 零写入/supply 响亮抛错语义
     等价的 kernel 侧显式处置)。"""
@@ -204,7 +204,7 @@ def test_out_of_domain_reading_dropped() -> None:
 
 
 def test_terminal_match_end_event_style() -> None:
-    """终局事件式(design §2.11 锁 3):P2 末 boss (2,7) 结算确认 →
+    """终局事件式(design §2.11 测试 3):P2 末 boss (2,7) 结算确认 →
     sequence_next = None → applied=True reason='match_end' + 声明
     next_screen='';零写入(node_pos/node_hist_pos 保持锚定态)零效果
     tick(在册效果余期不递减)。applied 语义扩展 = 终结动作落地事实。"""
@@ -222,7 +222,7 @@ def test_terminal_match_end_event_style() -> None:
     assert gs.free_refresh_left.value == 2, '终局零效果 tick(余期不递减)'
 
 
-# ================================================================ 场景走查锁
+# ================================================================ 场景走查测试
 
 def _gs_with(test_context, monkeypatch, spec_name: str) -> GameState:
     """session 旁表容器挂 ctx.cw_match(op 上报口供给面)+ 指定效果在册
@@ -278,7 +278,7 @@ def test_fast_popup_advance_precedes_pick_and_prep_reanchor(
 def test_boss_segment_click_advance_and_cross_plane(
         test_context, monkeypatch,
 ) -> None:
-    """boss 段帧序列锁(landing §3.6 S6/E12/E13;去证据门重述 2026-09-21):
+    """boss 段帧序列测试(landing §3.6 S6/E12/E13;去证据门重述 2026-09-21):
 
     - E12 奖励关结算确认**点击即推进** → boss 节点 (1,9);
     - 简报类型直定目标恒正确:无证据门 ⇒ 上报先于下一节点任何画面渲染
@@ -343,7 +343,7 @@ def test_settle_truth_gold_samples_conditional_grant(
     """结算真值金采样(design §2.7-3):条件族(本金充裕,50/10/3)的
     每节点发放按 **结算真值金** 评估——结算链(apply_settlement_cover →
     settle_truth)先于「继续挑战」点击,推进时点采到的金 = 战后真值,
-    比战前推算金(陈旧金)更准。时序锁:战前推算金低于阈值 → 首锚定
+    比战前推算金(陈旧金)更准。时序测试:战前推算金低于阈值 → 首锚定
     零授予;结算真值 85 落账后确认推进 → 按真值授予 3 次。"""
     gs = _gs_with(test_context, monkeypatch, '本金充裕')
 
@@ -364,14 +364,14 @@ def test_settle_truth_gold_samples_conditional_grant(
     assert effective_node_pos(gs) == (1, 3)
     assert gs.free_refresh_left.value == 3, (
         '推进时点按结算真值 85 评估:超出 35 → 每 10 金 1 次,封顶 3'
-        '(采到陈旧金 40 则为 0——时序锁)')
+        '(采到陈旧金 40 则为 0——时序测试)')
 
 
 def _prep_heavy_harness(test_context, monkeypatch, session):
-    """CwScreenPrep heavy 观察跑壳(锚定写端接线锁共用):observe_full 桩
+    """CwScreenPrep heavy 观察跑壳(锚定写端接线测试共用):observe_full 桩
     按 ``receipt['r']`` 回传读数回执(None = 缺位),其余观察面全桩零;
     返回 (gs, op, receipt)。本缝静默丢失时生产 value 门挡全程卡死,故
-    直锁 wiring 面(与补给屏锚定对称,先例 = test_supply)。"""
+    直测 wiring 面(与补给屏锚定对称,先例 = test_supply)。"""
     from sr_od.application.currency_war.obs import cw_observe_full as ofm
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_prep as pp,
@@ -411,7 +411,7 @@ def _prep_heavy_harness(test_context, monkeypatch, session):
 
 
 def test_prep_heavy_receipt_anchors_node(test_context, monkeypatch) -> None:
-    """备战帧锚定接线锁(design §2.4 写端 1,攻击 F1 定谳):CwScreenPrep
+    """备战帧锚定接线测试(design §2.4 写端 1,攻击 F1 定谳):CwScreenPrep
     heavy 观察回执携带本帧 plane/round → ``observe_node_anchor``(唯一
     生产锚定缝,cw_screen_prep.py::_observe heavy 段)——首帧 first_anchor
     建账含尾段发放、后续读数 advance/reanchor 落账、回执缺位跳过(禁猜)。"""
@@ -491,10 +491,10 @@ def test_lock1_resolve_modified_inserts_supply_before_each_boss() -> None:
         node_sequence_of(3, mod)
 
 
-# (原「正反解互逆」锁整体退役:kernel 正解 node_ordinal_of 与反解
-#  node_pos_of 已随键化删除,无可互逆对象(设计披露 5);后继语义锁 =
+# (原「正反解互逆」测试整体退役:kernel 正解 node_ordinal_of 与反解
+#  node_pos_of 已随键化删除,无可互逆对象(设计披露 5);后继语义测试 =
 #  test_node_pos_primitive.py 的 sequence_next 四态契约 + 本文件
-#  键化消费面各锁。)
+#  键化消费面各测试。)
 
 # ------------------------------------------------------------ 场字段生命周期
 
@@ -681,7 +681,7 @@ def _shop_gs_with_target(mod_target_pos: tuple[int, int],
 def test_lock9_shop_chain_query_key_modified_not_9shift(monkeypatch) -> None:
     """①商店查链:修饰局 P2 r2 店开帧 → 链查询键 = (2,2),非 9 制解码的
     (2,3)(漏改则恒查后一节点,类型查链静默失效);目标即键,直定无反解
-    (旧 _node_key_for_ord 反解锁随表示退役)。"""
+    (旧 _node_key_for_ord 反解测试随表示退役)。"""
     gs = _shop_gs_with_target((2, 2), NodeKey(plane=2, round_num=2, kind=''))
     queried: list[tuple[int, int]] = []
 
@@ -690,7 +690,7 @@ def test_lock9_shop_chain_query_key_modified_not_9shift(monkeypatch) -> None:
         from sr_od.application.currency_war.kernel.cw_game_state import (
             ChainQuery,
         )
-        return ChainQuery(token=None)   # 链缺 = 零写,只锁查询键
+        return ChainQuery(token=None)   # 链缺 = 零写,只校验查询键
 
     monkeypatch.setattr(gs_mod, 'chain_node_type', _fake_chain)
     gs.observe_screen_context('货币战争-备战-开商店', sig=_SIG_OBS)

@@ -1,12 +1,12 @@
-"""统一卖出候选评估器锁(契约 D 单一入口;迭代 2026-10-12-prep-shop-workflow-redesign 批 3.2)。
+"""统一卖出候选评估器测试(契约 D 单一入口;迭代 2026-10-12-prep-shop-workflow-redesign 批 3.2)。
 
 出处 = 迭代总纲 design.md 契约 D(八场景参数表:候选池四族/资格面/
 消费方式)+ line_and_upgrade §4(价值评估函数金当量三项统一口径)+
 prep_pipeline §1 第 2 步(垫件谓词现文口径)与 §1 第 0 步(空板守卫
-as-built 不收窄)。锁语义 = 「价值低先让位」的排序结构与各场景候选池
+as-built 不收窄)。测试语义 = 「价值低先让位」的排序结构与各场景候选池
 差分,非具体牌名。
 
-本批边界:评估器本体锁——生产接线(3.3/3.5/3.6 各发射位)不在本锁面。
+本批边界:评估器本体测试——生产接线(3.3/3.5/3.6 各发射位)不在本测试面。
 
 并段(**凑息/支付变现通道占位件物理门**,原 test_cw_sell_item_slot_
 predicate 并入):缺陷(修复前)= criteria/sell ``sell_for_interest`` /
@@ -104,8 +104,8 @@ def _names(cands) -> list[str]:
 
 def _swap_ctx(gs) -> SwapPlanContext:
     """换血判定语境(测试手装:fenced 义务臂 + 未锁帧 + 空目标视图——
-    现行判据在该语境下对非 core/非 target 件放行,足够锁池族差分;
-    装配链本体(3.3)不在本锁面)。"""
+    现行判据在该语境下对非 core/非 target 件放行,足够校验池族差分;
+    装配链本体(3.3)不在本测试面)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         bench_entries_of,
         deployed_rows_of,
@@ -146,7 +146,7 @@ class TestSceneClosedSet:
 class TestCandidatePoolFamilies:
 
     def _pool_gs(self):
-        """同状态种子:bench = 无关件 + 线内件(索引 0 = 占位件,兼锁 bench
+        """同状态种子:bench = 无关件 + 线内件(索引 0 = 占位件,兼校验 bench
         idx 紧缩占席序坐标系);场上 = 无关件 + 命运圣杯贡献件对;候选快照
         = 列车同行(未锁定期线内身份集 = 候选 top3 线内成员)。"""
         sess, gs = _mk_gs(
@@ -250,7 +250,7 @@ class TestValueOrdering:
     def test_order_single_then_pair_then_high_star(self):
         """让位序 = 金当量升序:零散单张(自身再遇期权)< 差一张对(持有
         更多久窗更长 + 合成进度沉淀)< 2★ 高费(变现价×3 + 高费再遇窗
-        长,持有期权值钱)——三项维度各锁一档。"""
+        长,持有期权值钱)——三项维度各断言一档。"""
         _sess, gs = self._value_gs()
         cands, why = evaluate_sell_candidates(gs, 'self_rescue')
         assert why == ''
@@ -259,7 +259,7 @@ class TestValueOrdering:
     def test_single_value_composition(self):
         """零散单张金当量 = 变现价 + 再遇期权 + 合成进度(单张 = 自身
         再遇期权)——三项构成 + 边际率 1 金/轮 + fail-closed ×1 的量纲
-        锁(期望从注册表单一源现算,非手抄常数)。"""
+        测试(期望从注册表单一源现算,非手抄常数)。"""
         from sr_od.application.currency_war.kernel.cw_economy import (
             bench_char_cost,
             sell_refund,
@@ -453,7 +453,7 @@ def _fuel_pair() -> tuple[str, str]:
     km = set(line_members(get_comp(_COMP)))
     pool = [n for n, c in CHARACTERS.items()
             if n not in km and not getattr(c, 'bench_effect', '') and c.cost]
-    assert len(pool) >= 2, '注册表缺少线外无效果角色(锁前提失效)'
+    assert len(pool) >= 2, '注册表缺少线外无效果角色(测试前提失效)'
     return pool[0], pool[1]
 
 
@@ -491,7 +491,7 @@ class TestInterestItemSlotGate:
             0, bench, 5, _K, state=_bsb(**_gate_state(bench)))
         assert slots == []
         assert key == 'no_tier_gain'
-        # 同判据的反向帧:缺口 1(金 9)即发射(上一条已锁,此处钉
+        # 同判据的反向帧:缺口 1(金 9)即发射(上一条已校验,此处钉
         # 「缺口与退金的 ≥ 关系」边界:退金恰等缺口可行)
         slots3, key3 = sell.sell_for_interest(
             9, [_bc(fuel_a)], 5, _K, state=_bsb(
@@ -499,9 +499,9 @@ class TestInterestItemSlotGate:
         assert key3 == ''
         assert len(slots3) == 1
 
-    # 「门序锁」已删(同燃料通道判):滤门禁用变异下 star=2 占位件
+    # 「门序测试」已删(同燃料通道判):滤门禁用变异下 star=2 占位件
     # 输入仍被星门(criteria/sell.py 内 b.star != 1)同样拒——两门同为纯拒、
-    # 序不可观测,锁零拦截价值;滤门回归由星=1 两锁实际拦截(变异红证)。
+    # 序不可观测,测试零拦截价值;滤门回归由星=1 两个测试实际拦截(变异红证)。
     # 勿以「钉门序」为由重建:无合法可观测形态。
 
 
@@ -525,6 +525,6 @@ class TestFundingItemSlotGate:
         assert slots2 == []
         assert key2 == ''
 
-    # 「门序锁」已删(同凑息通道判):滤门禁用变异下 star=2 占位件
+    # 「门序测试」已删(同凑息通道判):滤门禁用变异下 star=2 占位件
     # 输入仍被星门(criteria/sell.py 内 b.star != 1)同样拒——序不可观测,
-    # 锁零拦截价值;滤门回归由星=1 锁实际拦截(变异红证)。
+    # 测试零拦截价值;滤门回归由星=1 测试实际拦截(变异红证)。

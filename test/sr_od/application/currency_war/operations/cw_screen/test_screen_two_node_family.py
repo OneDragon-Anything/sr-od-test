@@ -1,22 +1,22 @@
-"""节点循环族 8 屏两 node 形态锁()。
+"""节点循环族 8 屏两 node 形态测试()。
 
-锁的语义(测试纪律:只锁新形态的核心约定,先例 = test_obs_arch_event_
-screens.py 盛会之星段;report 函数级契约由 test_screen_report_ports 锁
+测试的语义(测试纪律:只校验新形态的核心约定,先例 = test_obs_arch_event_
+screens.py 盛会之星段;report 函数级契约由 test_screen_report_ports 测试
 承重,本文件不重复):
 
-- **观察上报接线锁**(表驱动;命运卜者双域拆独立锁):观察 node 读链桩化 →
+- **观察上报接线测试**(表驱动;命运卜者双域拆独立测试):观察 node 读链桩化 →
   驱动 observe →
   report 经屏文件落容器(容器终值);盛会之星接线由 obs_arch_event_screens
-  同文件锁承重(懒读保真,不在本表);
-- **入口门语义锁**(带门四屏):门 miss = round_fail 交回外循环重判,
+  同文件测试承重(懒读保真,不在本表);
+- **入口门语义测试**(带门四屏):门 miss = round_fail 交回外循环重判,
   文案沿用现役,且不进读链(obs 不装载);
-- **chosen 写时机锁**(祈愿试炼代表):确认已发 → 标识不在 = 选卡落地
+- **chosen 写时机测试**(祈愿试炼代表):确认已发 → 标识不在 = 选卡落地
   → 此刻才写 chosen_wish + success 交回;标识在 = 未落地 → 不写、重走
   (chosen_* 动作事实边界留守重入裁决点);
-- **决策动作 node 锁**(银狼策划,无门单发型):决策从容器零参读
+- **决策动作 node 测试**(银狼策划,无门单发型):决策从容器零参读
   (决策调用形态不变)→ 组装 equip(腿型载荷 classify_planner_leg)→
   点卡链派发 → 派发即 round_success 终结(零重入裁决轮;即时上报迭代
-  。原装备三选一代表锁
+  。原装备三选一代表测试
   随该屏误判退役删除)。
 
 驱动方式 = 真类实例(构造走 __init__)+ 读链/门/机械点击链桩化,节点
@@ -105,7 +105,7 @@ def _setup_expert(op, monkeypatch) -> None:
                         lambda ctx, name, screen: _pts.get(name))
 
 
-# ==================== 观察上报接线锁(表驱动)====================
+# ==================== 观察上报接线测试(表驱动)====================
 
 # 屏键 → (模块名, 类名, 装配钩子(op, monkeypatch), 期望容器字段, 期望终值)
 _OBS_ROWS = {
@@ -151,7 +151,7 @@ _OBS_ROWS = {
     'partner', 'planner', 'wish_trial', 'expert_invite'])
 def test_observe_reports_container_per_screen(test_context, monkeypatch,
                                               screen_key: str) -> None:
-    """观察上报接线锁(表驱动四屏;命运卜者/星徽秘典双域锁拆独立 = 下两锁):
+    """观察上报接线测试(表驱动四屏;命运卜者/星徽秘典双域测试拆独立 = 下两个测试):
     观察 node 读链桩化 → observe success → report 经屏文件落容器
     (容器终值逐位 = 现役写点转录值)+ obs 挂实例属性。红 = 接线断流 /
     容器终值漂移 / obs 未装载。"""
@@ -163,7 +163,7 @@ def test_observe_reports_container_per_screen(test_context, monkeypatch,
     monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
     if cls_name in ('CwScreenPartner', 'CwScreenWishTrial', 'CwScreenBookcard',
                     'CwScreenExpertInvite'):
-        # 带门屏:门桩放行(门 miss 语义由下一锁承重)
+        # 带门屏:门桩放行(门 miss 语义由下一测试承重)
         monkeypatch.setattr(op, 'round_by_find_area',
                             lambda s, sc, a, **k: _Area(True), raising=False)
     setup(op, monkeypatch)
@@ -181,8 +181,8 @@ def test_observe_reports_container_per_screen(test_context, monkeypatch,
 
 
 def test_fortune_observe_reports_dual_domain(test_context, monkeypatch) -> None:
-    """命运卜者观察上报锁(双域,坐标随报条款):表驱动 5 元组不容双域
-    拆独立锁——观察 node 读链桩化(OCR + area_center 读桩回定值,恒稳
+    """命运卜者观察上报测试(双域,坐标随报条款):表驱动 5 元组不容双域
+    拆独立测试——观察 node 读链桩化(OCR + area_center 读桩回定值,恒稳
     断言不读真实建档)→ observe success → report 双写 fortune_opts /
     fortune_opts_xy(同门同序等长)+ obs 挂实例属性。红 = 接线断流 /
     坐标域未随观察上报 / 双域终值漂移。"""
@@ -215,7 +215,7 @@ def test_fortune_observe_reports_dual_domain(test_context, monkeypatch) -> None:
 
 
 def test_wish_observe_reports_dual_domain(test_context, monkeypatch) -> None:
-    """祈愿试炼观察上报锁(双域,选择坐标观察上报条款):观察 node 读链
+    """祈愿试炼观察上报测试(双域,选择坐标观察上报条款):观察 node 读链
     桩化(OCR 桩 + 门桩放行,恒稳断言不读真实建档)→ observe success →
     report 双写 wish_trial_opts / wish_trial_opts_xy(同门同序等长;坐标
     = CARD_XS 桶锚 + CARD_Y 观察期一次解出,值锚 660/340 槽常量)+
@@ -250,7 +250,7 @@ def test_wish_observe_reports_dual_domain(test_context, monkeypatch) -> None:
 
 
 def test_bookcard_observe_reports_dual_domain(test_context, monkeypatch) -> None:
-    """星徽秘典观察上报锁(双域,选择坐标观察上报条款):观察 node 读链
+    """星徽秘典观察上报测试(双域,选择坐标观察上报条款):观察 node 读链
     桩化(OCR 桩 + 门桩放行 + area_center 读桩回定值,恒稳断言不读真实
     建档)→ 标准化门(「列车同行星徽」→ FACTIONS 精确命中)→ observe
     success → report 双写 star_tome_opts / star_tome_opts_xy(同门同序
@@ -296,7 +296,7 @@ def test_bookcard_observe_reports_dual_domain(test_context, monkeypatch) -> None
 
 def test_bookcard_observe_gate_failures_zero_write(test_context,
                                                    monkeypatch) -> None:
-    """星徽秘典观察失败三态锁(观察标准化门 + 解点失败归宿;名字与坐标
+    """星徽秘典观察失败三态测试(观察标准化门 + 解点失败归宿;名字与坐标
     同进退双域零写零上报):①任一候选转换失败(可转换+乱名混读,两段
     皆不中)/②多候选命中同一注册名(选项互斥屏同判)/③「星徽卡-N」
     建档缺失(area_center 返 None)→ 均 observe round_fail 早退、
@@ -362,7 +362,7 @@ def test_bookcard_observe_gate_failures_zero_write(test_context,
 
 def test_bookcard_lcs_ambiguity_rejection_and_unique_pass(test_context,
                                                           monkeypatch) -> None:
-    """星徽秘典观察标准化门·次高分差拒判锁(op-layer.md §1.1;用户裁定
+    """星徽秘典观察标准化门·次高分差拒判测试(op-layer.md §1.1;用户裁定
     2026-09-22 全族统一):LCS 阶段最高分未明显高于次高分 = 歧义 =
     转换失败,禁直接取最高分——「宙之半神」对昼之/夜之半神同分 3/4 =
     0.75,旧形态取注册表序首个 = 一半概率错配(点卡即选不可逆),现判
@@ -412,7 +412,7 @@ def test_bookcard_lcs_ambiguity_rejection_and_unique_pass(test_context,
         f'坐标同门双写:{gs2.star_tome_opts_xy.value!r}')
 
 
-# ==================== 入口门语义锁(带门四屏)====================
+# ==================== 入口门语义测试(带门四屏)====================
 
 _GATE_ROWS = [
     # (屏键, 门 miss 现役文案)
@@ -426,7 +426,7 @@ _GATE_ROWS = [
 @pytest.mark.parametrize('screen_key, expect_status', _GATE_ROWS)
 def test_entry_gate_miss_fails_round(test_context, monkeypatch, screen_key,
                                      expect_status: str) -> None:
-    """入口门语义锁:门 miss = round_fail 早退(文案沿用现役,交回外循环
+    """入口门语义测试:门 miss = round_fail 早退(文案沿用现役,交回外循环
     重判),且不进读链(obs 不装载)。红 = 门失效 / 文案漂移 / miss 后
     仍读屏装 obs。"""
     import importlib
@@ -450,11 +450,11 @@ def test_entry_gate_miss_fails_round(test_context, monkeypatch, screen_key,
         assert _read_calls == [], '门早退不进读链'
 
 
-# ==================== chosen 写时机锁(祈愿试炼代表)====================
+# ==================== chosen 写时机测试(祈愿试炼代表)====================
 
 def test_wish_chosen_written_at_reentry_adjudication_only(
         test_context, monkeypatch) -> None:
-    """chosen 写时机锁(动作事实边界:chosen_* 值在「确认已落地」重入
+    """chosen 写时机测试(动作事实边界:chosen_* 值在「确认已落地」重入
     观察后才可信,写端留守重入裁决点):
     - 确认已发 + 标识仍在(= 未落地)→ 不写,清标志重走(决策 + 点卡 +
       确认机械交回);
@@ -485,9 +485,9 @@ def test_wish_chosen_written_at_reentry_adjudication_only(
     op._obs = CwScreenWishTrialObs(on_screen=True,
                                    options=['累计刷新10次', ''],
                                    screen=_FRAME)   # obs 注入(观察 node 产物形态)
-    # pick-op-unify:选卡+确认机械链迁入 CwActionPickWishTrialOp;本锁桩
-    # 派发捕获(param/env)断言决策半产物,机械链行为锁 =
-    # test_overlay_ops 祈愿 pick op 锁。
+    # pick-op-unify:选卡+确认机械链迁入 CwActionPickWishTrialOp;本测试桩
+    # 派发捕获(param/env)断言决策半产物,机械链行为测试 =
+    # test_overlay_ops 祈愿 pick op 测试。
     dispatches: list = []
 
     class _StubPickOp:
@@ -531,10 +531,10 @@ def test_wish_chosen_written_at_reentry_adjudication_only(
         'chosen_wish = 重入裁决点留守写端(落地后值才可信)')
 
 
-# ==================== 祈愿试炼决策出口锁(守卫①②③ + 直发)====================
+# ==================== 祈愿试炼决策出口测试(守卫①②③ + 直发)====================
 
 def _setup_wish_act(test_context, monkeypatch, session, decide):
-    """wish act 锁公共装配(fortune 锁同构):match 桩挂零参决策桩
+    """wish act 测试公共装配(fortune 测试同构):match 桩挂零参决策桩
     (decide=None = cw_match None 局外态)+ obs 注入 + 注册表派发捕获。"""
     from sr_od.application.currency_war.kernel.cw_screen_report.wish_trial import (
         CwScreenWishTrialObs,
@@ -587,7 +587,7 @@ def test_wish_act_no_match_fails_via_normal_chain(test_context, monkeypatch):
 def test_wish_act_guard_invalid_decision_fails_without_dispatch(
         test_context, monkeypatch):
     """守卫②(返回契约):decide_wish_trial 返 None/词表外(SimpleNamespace)
-    两子态合一锁 → act 具名 round_fail(消息含「决策无有效输出」,留证
+    两子态合一测试 → act 具名 round_fail(消息含「决策无有效输出」,留证
     原值)、零派发零点击、_confirm_pending 保持未置位。红 = 守卫缺失盲发
     / 钳位回潮 / 策略异常被吞。"""
     for stub in (None, SimpleNamespace(idx=0, reason='stub')):
@@ -650,11 +650,11 @@ def test_wish_act_dispatches_strategy_param_env_op_only(
         '确认已发待重入裁决置位(快照 = 本轮选择)')
 
 
-# ==================== 决策动作 node 锁(银狼策划代表)====================
+# ==================== 决策动作 node 测试(银狼策划代表)====================
 
 def test_planner_act_decides_leg_and_dispatch_terminal(
         test_context, monkeypatch) -> None:
-    """决策动作 node 锁(银狼策划,即时上报
+    """决策动作 node 测试(银狼策划,即时上报
     equip-immediate-report design §2.1):零参决策 → 腿型判定单源
     ``classify_planner_leg`` → env 携腿型载荷 → 选卡确认链派发即
     ``round_success`` 终结(零重入裁决轮、零证据闩存证——效果腿在动作 op
@@ -707,10 +707,10 @@ def test_planner_act_decides_leg_and_dispatch_terminal(
     assert rs.is_success, f'派发即 round_success 终结(零重入裁决轮):{rs!r}'
 
 
-# ==================== 命运卜者决策出口锁(守卫⓪①② + 直发)====================
+# ==================== 命运卜者决策出口测试(守卫⓪①② + 直发)====================
 
 def _setup_fortune_act(test_context, monkeypatch, session, decide):
-    """fortune act 锁公共装配(祈愿锁先例同构):match 桩挂零参决策桩
+    """fortune act 测试公共装配(祈愿测试先例同构):match 桩挂零参决策桩
     (decide=None = cw_match None 局外态)+ obs 注入 + 注册表派发捕获。"""
     from sr_od.application.currency_war.kernel.cw_screen_report.fortune import (
         CwScreenFortuneObs,
@@ -749,8 +749,8 @@ def _setup_fortune_act(test_context, monkeypatch, session, decide):
 
 def test_fortune_act_guard_invalid_decision_fails_without_dispatch(
         test_context, monkeypatch) -> None:
-    """补锁①(返回契约):decide_fortune 返 None/词表外(SimpleNamespace)
-    两子态合一锁 → act 具名 round_fail(消息含「决策无有效输出」,留证
+    """补充测试①(返回契约):decide_fortune 返 None/词表外(SimpleNamespace)
+    两子态合一测试 → act 具名 round_fail(消息含「决策无有效输出」,留证
     原值)、零派发零点击、_confirm_pending 保持未置位。红 = 守卫缺失盲发
     / 钳位回潮 / 策略异常被吞。"""
     for stub in (None, SimpleNamespace(idx=0, reason='stub')):
@@ -767,7 +767,7 @@ def test_fortune_act_guard_invalid_decision_fails_without_dispatch(
 
 def test_fortune_act_guard_idx_out_of_range_asserts(
         test_context, monkeypatch) -> None:
-    """补锁②(值域):真词表类 idx=3(槽数 = 3 越界)→ AssertionError
+    """补充测试②(值域):真词表类 idx=3(槽数 = 3 越界)→ AssertionError
     传播(守卫断言响亮暴露,禁钳位)、零派发零点击。红 = 钳位回潮。"""
     from sr_od.application.currency_war.kernel.cw_vocab import (
         CwActionPickFortuneParam,
@@ -785,7 +785,7 @@ def test_fortune_act_guard_idx_out_of_range_asserts(
 
 def test_fortune_act_dispatches_strategy_param_env_op_only(
         test_context, monkeypatch) -> None:
-    """补锁③(正路形态):真词表类 idx=1 → 恰一次派发且派发 param 即
+    """补充测试③(正路形态):真词表类 idx=1 → 恰一次派发且派发 param 即
     策略产实例(直发零重建,reason 归因不丢)、env 仅携 op(零 target
     零 idx——坐标随报条款,点击坐标 = 动作 op 自容器读)、rs = round_wait、
     _confirm_pending 置位。红 = 派发实例重建 / env 坐标喂回潮。"""
@@ -812,7 +812,7 @@ def test_fortune_act_dispatches_strategy_param_env_op_only(
 
 def test_fortune_act_no_match_fails_via_normal_chain(
         test_context, monkeypatch) -> None:
-    """补锁④(局外无早退支,用户裁决 2026-09-22 全族删门,op-layer.md
+    """补充测试④(局外无早退支,用户裁决 2026-09-22 全族删门,op-layer.md
     §1.1):cw_match=None → act 不设局外早退门,沿正常链路因缺上下文自然
     失败(AttributeError)、零派发零点击、_confirm_pending 保持未置位。
     红 = 局外 round_success 早退门回潮 / 局外兜底决策路径回潮。"""
@@ -825,10 +825,10 @@ def test_fortune_act_no_match_fails_via_normal_chain(
     assert op._confirm_pending is False, '守卫⓪:确认未置位(零点击)'
 
 
-# ==================== 星徽秘典决策出口锁(守卫①a/①b/②③ + 直发)====================
+# ==================== 星徽秘典决策出口测试(守卫①a/①b/②③ + 直发)====================
 
 def _setup_bookcard_act(test_context, monkeypatch, session, decide):
-    """bookcard act 锁公共装配(fortune 锁同构):match 桩挂零参决策桩
+    """bookcard act 测试公共装配(fortune 测试同构):match 桩挂零参决策桩
     (decide=None = cw_match None 局外态)+ 观察产物注入 + 注册表派发
     捕获。"""
     from sr_od.application.currency_war.operations.cw_screen import (
@@ -899,7 +899,7 @@ def test_bookcard_act_empty_candidates_fails_without_dispatch(
 def test_bookcard_act_guard_invalid_decision_fails_without_dispatch(
         test_context, monkeypatch) -> None:
     """守卫②(返回契约):decide_star_tome 返 None/词表外(SimpleNamespace)
-    两子态合一锁 → act 具名 round_fail(消息含「决策无有效输出」,留证
+    两子态合一测试 → act 具名 round_fail(消息含「决策无有效输出」,留证
     原值)、零派发零点击、_pick_pending 保持未置位。红 = 守卫缺失盲发 /
     钳位回潮 / 策略异常被吞。"""
     for stub in (None, SimpleNamespace(idx=0, reason='stub')):
@@ -932,11 +932,11 @@ def test_bookcard_act_guard_idx_out_of_range_asserts(
     assert op._pick_pending is None, '守卫③:pending 未置位(零点击)'
 
 
-# ==================== 选择伙伴决策出口锁(守卫①两臂 + ②③)====================
+# ==================== 选择伙伴决策出口测试(守卫①两臂 + ②③)====================
 
 def _setup_partner_act(test_context, monkeypatch, session, decide,
                        cands: list | None = None):
-    """partner act 锁公共装配(fortune/bookcard 锁同构):match 桩挂零参
+    """partner act 测试公共装配(fortune/bookcard 测试同构):match 桩挂零参
     决策桩(decide=None = cw_match None 局外态)+ 读链桩两元/门桩放行
     (装配同 ``_OBS_ROWS['partner']``,观察 node 先行产出 obs/cands)+
     注册表派发捕获;``cands=[]`` = 候选空臂(读链桩改返空)。"""
@@ -950,7 +950,7 @@ def _setup_partner_act(test_context, monkeypatch, session, decide,
         raising=False)
     op = mod.CwScreenPartner(test_context)
     monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
-    # 门桩放行(入口门/未选中提示两读全部命中;门 miss 语义由既有锁承重)。
+    # 门桩放行(入口门/未选中提示两读全部命中;门 miss 语义由既有测试承重)。
     monkeypatch.setattr(op, 'round_by_find_area',
                         lambda s, sc, a, **k: _Area(True), raising=False)
     monkeypatch.setattr(
@@ -974,7 +974,7 @@ def _setup_partner_act(test_context, monkeypatch, session, decide,
     monkeypatch.setattr(_reg, 'action_op_for',
                         lambda act, ctx, env: _StubPickOp(act, env))
     rs = _run_node(test_context, op, op.observe)
-    assert rs.is_success, f'partner: 观察 success(锁前置):{rs!r}'
+    assert rs.is_success, f'partner: 观察 success(测试前置):{rs!r}'
     return op, dispatches
 
 
@@ -1015,7 +1015,7 @@ def test_partner_act_no_match_fails_via_normal_chain(test_context,
 def test_partner_act_guard_invalid_decision_fails_without_dispatch(
         test_context, monkeypatch) -> None:
     """守卫②(返回契约):decide_partner 返 None/词表外(SimpleNamespace)
-    两子态合一锁 → act 具名 round_fail(消息含「词表外」,留证原值)、
+    两子态合一测试 → act 具名 round_fail(消息含「词表外」,留证原值)、
     零派发零点击、_confirm_pending 保持未置位。红 = 守卫缺失盲发 /
     策略异常被吞。"""
     for stub in (None, SimpleNamespace(idx=0, reason='stub')):

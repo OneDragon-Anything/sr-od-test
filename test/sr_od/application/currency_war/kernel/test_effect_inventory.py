@@ -1,6 +1,6 @@
-"""效果账本域锁(机制主题文件):账本桥·板面重写通道 + 节点边界推进。
+"""效果账本域测试(机制主题文件):账本桥·板面重写通道 + 节点边界推进。
 
-被锁机制(按节):
+被测机制(按节):
 - **apply_board_rewrite 锚定通道行为**(通道择道单一源 =
   ``cw_game_state.anchor_aware_write``;通道规则「未锚定 → 随机态」,
   语义域 = 容器正本 game_state/fields.md「开局种子底座」节):人力
@@ -182,7 +182,7 @@ _M31_SIG_LOGIC = ChannelSig(family='logic_action', actor='MandateV1Strategy',
 
 
 def test_board_rewrite_clear_then_front_deploy_no_crash() -> None:
-    """清盘 → 再买 → 前排部署不崩(交互锁):EffectLedgerBridge 全场出售
+    """清盘 → 再买 → 前排部署不崩(交互测试):EffectLedgerBridge 全场出售
     清空后视图 = 规范形空视图(front_slots 定长 4),后续 deploy_move
     前排直址落位不 IndexError;清盘写本身保持单写。
 
