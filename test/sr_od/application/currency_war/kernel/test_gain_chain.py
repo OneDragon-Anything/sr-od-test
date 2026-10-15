@@ -520,6 +520,24 @@ def test_env_gift_summon_unit_sanxing_peipei(rows_sink: _RowSink) -> None:
     assert rows_sink.kinds() == [], '非 advisor 非道具,零申报行'
 
 
+def test_env_gift_summon_unit_cuxing_peipei(rows_sink: _RowSink) -> None:
+    """ENV_GIFTS 召唤单位支姊妹卡(粗星佩佩,T-17):与三星佩佩同链——
+    佩佩落席,效果串 ``env_gift:佩佩``,正常路径零申报行;星级 1 = 链必填
+    占位(用户裁定佩佩无星级,非先验);双零腿零建模(佩戴 = 穿戴非入栏;
+    掉落 = 概率/时点/件数/池四维全无载)→ equips 与 pending_item_grants
+    零写(防未来误把星徽腿塞进道具/装备/定时通道)。"""
+    gs = _make_gs(bench=[], equips=[])
+    gs.prep_anchored = True
+    out = gain_invest_env(gs, None, '粗星佩佩', rand=False, sig=_lsig())
+    assert out.effects == ('env_gift:佩佩',), '召唤单位支效果串'
+    assert gs.active_env.value == '粗星佩佩', '容器写照常'
+    assert [(u.char_id, u.star) for u in bench_units_of(gs)] == [('佩佩', 1)], \
+        '佩佩落席(星级 1 = 占位值非先验)'
+    assert gs.equips.value == [], '双零腿零建模,equips 零写'
+    assert not gs.pending_item_grants.value, '掉落腿不经定时队列,零入队'
+    assert rows_sink.kinds() == [], '非 advisor 非道具,零申报行'
+
+
 def test_env_gift_item_channel(rows_sink: _RowSink) -> None:
     """ENV_GIFTS 道具通道(§2.3):items_immediate 命中 → 效果串
     ``item_gift:<名>``(数量 = 元素重复次数)+ 落席写入(送卡落席同构,
@@ -1473,6 +1491,26 @@ def test_invest_portal_env_gifts_summon_unit(rows_sink: _RowSink) -> None:
         _lsig('CwActionPickInvestOp'))
     assert out.applied is True and out.reason == 'gain_chain_applied'
     assert gs.active_env.value == '三星佩佩'
+    units = [(u.char_id, u.star) for u in bench_units_of(gs)]
+    assert units == [('佩佩', 1)], '召唤单位经链入席'
+    # 未锚定期(投资环境屏)送卡链写被通道规则改道 logic_rand。
+    assert gs.bench.source == 'logic_rand'
+    assert rows_sink.kinds() == [], '零留证行'
+
+
+def test_invest_portal_env_gifts_summon_unit_cuxing(
+        rows_sink: _RowSink) -> None:
+    """召唤单位环境(粗星佩佩)经落地相可用:portal 确认整支走获得链,
+    佩佩入席(姊妹卡三星佩佩测试同构;T-17 §4 锁 3)。"""
+    gs = _make_gs(bench=[], equips=[])
+    # 按 idx 取名契约(op-layer.md §1.1):上报自容器取标准名,播种承载。
+    gs.write_logic(gs.invest_env_opts, ['粗星佩佩'],
+                   produced_by='test', sig=_lsig('CwScreenYinLang'))
+    out = report_action_pick_invest_env_param(
+        gs, CwActionPickInvestEnvParam(idx=0, norm_name='粗星佩佩'),
+        _lsig('CwActionPickInvestOp'))
+    assert out.applied is True and out.reason == 'gain_chain_applied'
+    assert gs.active_env.value == '粗星佩佩'
     units = [(u.char_id, u.star) for u in bench_units_of(gs)]
     assert units == [('佩佩', 1)], '召唤单位经链入席'
     # 未锚定期(投资环境屏)送卡链写被通道规则改道 logic_rand。
