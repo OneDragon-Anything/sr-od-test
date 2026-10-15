@@ -503,6 +503,23 @@ def test_env_gift_advisor_split_and_quiet(rows_sink: _RowSink) -> None:
     assert rows_sink.kinds() == [DEFECT_ADVISOR_DECL], '表外零留证行'
 
 
+def test_env_gift_summon_unit_sanxing_peipei(rows_sink: _RowSink) -> None:
+    """ENV_GIFTS 召唤单位支首例(三星佩佩,T-16):chars_immediate 具名支
+    与契约族同链——佩佩落席,效果串 ``env_gift:佩佩``,正常路径零申报行;
+    星级 1 = 链必填占位(用户裁定佩佩无星级,非先验);星徽佩戴腿零建模
+    (用户裁定:星徽佩戴在佩佩身上非入栏)→ equips 零写(防未来误把穿戴
+    塞进道具/装备通道)。"""
+    gs = _make_gs(bench=[], equips=[])
+    gs.prep_anchored = True
+    out = gain_invest_env(gs, None, '三星佩佩', rand=False, sig=_lsig())
+    assert out.effects == ('env_gift:佩佩',), '召唤单位支效果串'
+    assert gs.active_env.value == '三星佩佩', '容器写照常'
+    assert [(u.char_id, u.star) for u in bench_units_of(gs)] == [('佩佩', 1)], \
+        '佩佩落席(星级 1 = 占位值非先验)'
+    assert gs.equips.value == [], '佩戴星徽腿零建模,equips 零写'
+    assert rows_sink.kinds() == [], '非 advisor 非道具,零申报行'
+
+
 def test_env_gift_item_channel(rows_sink: _RowSink) -> None:
     """ENV_GIFTS 道具通道(§2.3):items_immediate 命中 → 效果串
     ``item_gift:<名>``(数量 = 元素重复次数)+ 落席写入(送卡落席同构,
@@ -1442,6 +1459,25 @@ def test_invest_portal_env_gifts_full_access(
     # 未锚定期(投资环境屏)送卡链写被通道规则改道 logic_rand。
     assert gs.bench.source == 'logic_rand'
     assert rows_sink.kinds() == [], '非欢愉契约零留证行'
+
+
+def test_invest_portal_env_gifts_summon_unit(rows_sink: _RowSink) -> None:
+    """召唤单位环境(三星佩佩)经落地相可用:portal 确认整支走获得链,
+    佩佩入席(公司契约全量接入测试同构;T-16 §4 锁 3)。"""
+    gs = _make_gs(bench=[], equips=[])
+    # 按 idx 取名契约(op-layer.md §1.1):上报自容器取标准名,播种承载。
+    gs.write_logic(gs.invest_env_opts, ['三星佩佩'],
+                   produced_by='test', sig=_lsig('CwScreenYinLang'))
+    out = report_action_pick_invest_env_param(
+        gs, CwActionPickInvestEnvParam(idx=0, norm_name='三星佩佩'),
+        _lsig('CwActionPickInvestOp'))
+    assert out.applied is True and out.reason == 'gain_chain_applied'
+    assert gs.active_env.value == '三星佩佩'
+    units = [(u.char_id, u.star) for u in bench_units_of(gs)]
+    assert units == [('佩佩', 1)], '召唤单位经链入席'
+    # 未锚定期(投资环境屏)送卡链写被通道规则改道 logic_rand。
+    assert gs.bench.source == 'logic_rand'
+    assert rows_sink.kinds() == [], '零留证行'
 
 
 def test_invest_unregistered_card_unchanged(

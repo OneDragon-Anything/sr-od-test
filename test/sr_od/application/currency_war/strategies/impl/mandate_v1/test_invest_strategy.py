@@ -816,6 +816,14 @@ def test_env_named_gift_advisor_halved():
     assert named_gift_value('特邀专家:桑博', frozenset()) == 25.0
 
 
+def test_env_sanxing_peipei_ruled_zero_total():
+    """三星佩佩 = 用户裁定 0 分(T-16 §8-3,2026-10-15):赠卡 off 档 0
+    (佩佩不在任何候选套的机器结果)+ 立场行 0(召唤填充位,星徽佩戴腿
+    不建模)→ 环境总分 = 0。"""
+    assert named_gift_value('三星佩佩', frozenset()) == 0.0
+    assert invest_env.option_total('三星佩佩', _fresh_gs()) == 0.0
+
+
 def test_env_random_faction_gift_is_member_tier_average():
     """随机阵营赠卡 = 成员档位算术平均(env 无偏口径):
     量子同频注册成员中缇宝/花火/希儿/符玄 core + 银狼 shared →
