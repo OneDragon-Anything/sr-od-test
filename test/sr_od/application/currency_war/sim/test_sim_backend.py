@@ -1,7 +1,7 @@
-"""sim 游戏后端 SimBackend 回归锁(驱动反转迭代;世界本体 + 画面状态机
+"""sim 游戏后端 SimBackend 回归测试(驱动反转迭代;世界本体 + 画面状态机
 + 观察生成 + 装配接缝 + 商店写回)。
 
-锁面 = 迭代设计判据的可执行形态:
+测试面 = 迭代设计判据的可执行形态:
 - 确定性:同 seed 同 RunConfig reset 双跑容器逐位一致(全采样由 seed 派生);
 - 字段收敛:无第二账——节点键/连胜/相位载荷全部落容器;
 - 初始序列(简报 → 环境 → wait_one_one → P1r1)与节点推进序列(收入/
@@ -136,6 +136,7 @@ from sr_od.application.currency_war.sim.cw_sim_battle import (
 )
 from sr_od.application.currency_war.sim.cw_sim_enemy import (
     ENCOUNTER_TIER_BONUS,
+    QUALITY_DIFFICULTY_BONUS,
 )
 from sr_od.application.currency_war.sim.cw_sim_obs_gen import (
     GOLDEN_PATH_SCREEN_NAMES,
@@ -899,7 +900,7 @@ def test_ore_env_plane2_declared_ore_and_expiry_cleanup(
         # 测试侧整理(真策略同构行为:部署腾席 + 奖励面板点击收口):
         # 备战单位移上板 + 清掉未点击面板残留。不清则残留 (10,10)/(20,10)
         # 与声明点跨面板别名继承 → 声明饿死(该角为 ore-reward-channel
-        # §4 在册披露,非本测锁面)。
+        # §4 在册披露,非本测试面)。
         units = [s.unit for s in gs.bench.value.slots
                  if s is not None and s.kind == 'unit' and s.unit is not None]
         gs.observe(gs.deployed, _dvs(units[:4], units[4:]), sig=_SIG_OBS)
@@ -1243,7 +1244,7 @@ def _golden_env_backend(seed: int = 61) -> SimBackend:
 
 
 def test_golden_env_full_walk_offers_all_gold() -> None:
-    """黄金时代 sim 全流程锁(T-12 验收主锁一;品质改写机制 = T-11
+    """黄金时代 sim 全流程测试(T-12 验收测试一;品质改写机制 = T-11
     已落地全改写型判据自动覆盖):开局环境 offer 不进取卡序;此后每次
     策略三选一呈现,候选全金注册名(改写目标品质 '棱彩'→'金' 为两族
     唯一行为差);呈现次数 = 固定日程落在建模域内的槽数(现算,防日程/
@@ -1280,16 +1281,16 @@ def test_golden_env_full_walk_offers_all_gold() -> None:
 
 
 def test_golden_env_difficulty_records_track_selections() -> None:
-    """难度账记录轨迹锁(T-12 验收主锁二;2026-10-14 用户裁定:sim 对
-    选择后的难度做记录更新,胜负建模另批)。两个观察面一起锁:
+    """难度账记录轨迹测试(T-12 验收测试二;2026-10-14 用户裁定:sim 对
+    选择后的难度做记录更新,胜负建模另批)。两个观察面一起校验:
 
-    - **备战旗牌观察面**(``gs.enemy_difficulty``):每次结算屏时点,
+    - **备战画面敌方难度读数观察面**(``gs.enemy_difficulty``):每次结算屏时点,
       值 = 局级输入档 108 + 该时点已选数×金档——选卡落地即时反映
       (0→3→6 移动的可观察形态);写点 = 节点窗开 + 选卡落地。
     - **难度账快照面**(``difficulty_records``):每场战斗结算恰一条
       记录(落账在幂等守卫后,重入无双计),逐条品质分量 = 该结算
       时点已选数×金档;encounter 类遭遇档分量在册表值域内,非遭遇类
-      恒 0;轨迹单调不减;首段 0 + 末段 6 两段齐 = 全链拉通。"""
+      恒 0;轨迹单调不减;首段 0 + 末段两档齐 = 全链拉通。"""
     b = _golden_env_backend(61)
     try:
         picks_at_settle: list[int] = []
@@ -1305,19 +1306,24 @@ def test_golden_env_difficulty_records_track_selections() -> None:
                 continue
             _drive_step(b, 61)
         assert b.done, '黄金局走完到局终'
-        # 备战旗牌观察面(gs.enemy_difficulty,live 生产主源 = 备战旗牌
-        # 管线):值随选择即时更新,= 局级输入档 108 + 该时点已选数×金档;
-        # 节点间基线移动不在 sim 面(U25 基础曲线未采,基线恒 108)。
-        assert flag_at_settle == [108 + p * 3 for p in picks_at_settle], \
+        # 备战画面敌方难度读数观察面(gs.enemy_difficulty,live 生产主源 =
+        # 备战画面敌方难度读数管线):值随选择即时更新,= 局级输入档 108
+        # + 该时点已选数×金档;节点间基线移动不在 sim 面(U25 基础曲线
+        # 未采,基线恒 108)。金档查表,防数值重订时字面量假红(2026-10-15)。
+        assert flag_at_settle == \
+            [108 + p * QUALITY_DIFFICULTY_BONUS['金'] for p in picks_at_settle], \
             (flag_at_settle, picks_at_settle)
-        assert flag_at_settle[-1] == 114, '两次取卡后旗牌 = 108+2×金档'
+        assert flag_at_settle[-1] == \
+            108 + 2 * QUALITY_DIFFICULTY_BONUS['金'], \
+            '两次取卡后敌方难度读数 = 108+2×金档'
         records = b.difficulty_records
         assert len(records) == len(picks_at_settle), \
             (len(records), len(picks_at_settle))
         quality_seq: list[int] = []
         for rec, picks in zip(records, picks_at_settle, strict=True):
             assert rec.breakdown.base is None, 'U25 基础曲线未采恒 None'
-            assert rec.breakdown.quality_bonus == picks * 3, \
+            assert rec.breakdown.quality_bonus \
+                == picks * QUALITY_DIFFICULTY_BONUS['金'], \
                 (rec.plane, rec.round_num, rec.node_kind,
                  rec.breakdown.quality_bonus, picks)
             if rec.node_kind == 'encounter':
@@ -1329,8 +1335,192 @@ def test_golden_env_difficulty_records_track_selections() -> None:
         assert quality_seq == sorted(quality_seq), \
             '轨迹单调不减(选择只增不减)'
         assert quality_seq[0] == 0, '取卡日程前的战斗品质分量为 0'
-        assert quality_seq[-1] == 6, \
+        assert quality_seq[-1] == 2 * QUALITY_DIFFICULTY_BONUS['金'], \
             '建模域两次取卡后(全金)末段记录 = 2×金档'
+    finally:
+        uninstall_backend()
+
+
+# ============================================================ 白银时代局(验收面)
+
+_SILVER_ENV = '白银时代'
+
+#: 节点类型词表 → 注册表难度辖域词映射(与 cw_sim_enemy 难度派生同源
+#: 语义;测试侧独立持有,防期望计算经被测函数自证)。
+_SILVER_NODE_KIND_SCOPE_CN = {'encounter': '遭遇', 'boss': '首领'}
+
+
+def _silver_env_backend(seed: int = 61) -> SimBackend:
+    """开局选白银时代环境的装配后端(调用方负责 uninstall;装配模式 =
+    _golden_env_backend 同款:opts 首位定向 → idx=0 上报 → 声明喂入)。"""
+    b = SimBackend(seed=seed, cfg=RunConfig(
+        selected_difficulty='A8', enemy_difficulty=108, env_present=True))
+    install_backend(b)
+    b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+    assert b.screen_identity() == SCREEN_INVEST_ENV
+    b.gs.write_logic(b.gs.invest_env_opts,
+                     [_SILVER_ENV, '轮岗', '头彩'],
+                     produced_by='Test', evidence='t:opts', sig=_SIG)
+    out = report_action_pick_invest_env_param(
+        b.gs, SimpleNamespace(idx=0), _SIG)
+    assert out.applied
+    cw_sim_ports.declare_world(out.world_decl)
+    return b
+
+
+def _silver_static_delta(names: list[str], node_kind: str) -> int:
+    """白银局难度期望的静态 Δ 现场算(2026-10-15 用户裁定:期望值不写
+    死,按实际拿到的卡在注册表登记的难度修正逐点现算——银池含简单模式
+    −3/难度修改器 −4(遭遇+首领限定),写死 108 会误报)。
+
+    辖域过滤与 cw_sim_enemy 难度派生同一映射(遭遇/首领 ↔
+    encounter/boss),测试侧独立重写,不经被测函数自证。"""
+    scope_cn = _SILVER_NODE_KIND_SCOPE_CN.get(node_kind, '')
+    total = 0
+    for name in names:
+        economy = INVESTMENT_STRATEGIES[name].economy
+        if economy is None or not economy.difficulty_delta:
+            continue
+        scoped = economy.difficulty_node_types
+        if not scoped or scope_cn in scoped:
+            total += economy.difficulty_delta
+    return total
+
+
+def test_silver_env_full_walk_offers_all_silver() -> None:
+    """白银时代 sim 全流程测试(T-13 验收测试一;品质改写机制 = T-11
+    已落地全改写型判据自动覆盖,本测试补 T-11/T-12 未覆盖的白银局
+    验收面):开局环境 offer 不进取卡序;此后每次策略三选一呈现,候选
+    全银注册名;呈现次数 = 固定日程落在建模域内的槽数(现算,防日程/
+    建模域漂移静默失配);局终序数 = 呈现次数;品质改写披露键已随
+    T-11 整体退役,全程无改写申报。seed 61 走满建模域。"""
+    b = _silver_env_backend(61)
+    try:
+        assert b._invest_pick_ordinal == 0, '开局环境 offer 不计数'
+        modelled_slots = [slot for slot in INVEST_OFFER_SCHEDULE
+                          if slot[0] in PLANE_NODE_TABLES]
+        offers_seen = 0
+        for _ in range(4096):
+            if b.done:
+                break
+            if b.screen_identity() == SCREEN_SETTLE:
+                _node_advance_feed(b.gs, trigger='settle_confirm')
+                continue
+            if b.screen_identity() == SCREEN_INVEST_STRATEGY:
+                opts = b.gs.invest_strategy_opts.value
+                assert len(opts) == OFFER_CANDIDATES
+                for name in opts:
+                    assert name in INVESTMENT_STRATEGIES, name
+                    assert INVESTMENT_STRATEGIES[name].rarity == '银', \
+                        f'改写次候选必银: {name}'
+                assert not [k for k in b.disclosures
+                            if k.startswith('invest_quality_rewrite')], \
+                    '品质改写披露键已退役,无改写申报'
+                offers_seen += 1
+            _drive_step(b, 61)
+        assert b.done, '白银局走完到局终'
+        assert offers_seen == len(modelled_slots), \
+            (offers_seen, modelled_slots)
+        assert b._invest_pick_ordinal == offers_seen, \
+            '序数 = 实际呈现次数(呈现一次计一次)'
+    finally:
+        uninstall_backend()
+
+
+def test_silver_env_difficulty_records_track_selections() -> None:
+    """白银局难度账轨迹测试(T-13 验收测试二)。与黄金局的差异 =
+    期望值现场算(2026-10-15 用户裁定):白银局品质分量恒 0,但银池含
+    负静态 Δ 卡(简单模式 −3/难度修改器 −4),读数期望不写死 108,
+    逐点 = 108 + 已选卡注册表难度修正之和(按节点型过滤现算),选到
+    减难度卡测试不误报;品质分量断言只读分量字段,不读 total(total
+    混入策略静态 Δ 会误报)。
+
+    选卡策略 = offer 中有静态 Δ 卡就选它(非 _drive_step 首选),使
+    现场算期望被非平凡行使——seed 18 首槽必中简单模式(−3),写死 108
+    的期望在此局必红。两种观察面一起校验:
+
+    - **备战画面敌方难度读数观察面**(``gs.enemy_difficulty``):每次
+      结算屏时点,值 = 108 + 该时点已选卡静态 Δ 之和(现算);
+    - **难度账快照面**(``difficulty_records``):逐条品质分量恒 0
+      (守 economy.md §9「白银+0」定谳,防已作废的「白银−3」旧说
+      回流)、策略静态 Δ = 按记录节点重建的已选卡注册表现算、特殊
+      加成恒 0(伟大征服棱彩品质,结构性进不了银池)、encounter 类
+      遭遇档在表值域、非遭遇类恒 0。计数口径:结算屏访问数 ≤ 记录数
+      (败局局终/部分节点型结算不呈现结算屏,记录仍逐场落账),故记录
+      以「键严格递增 + 采样节点全覆盖」对账,不做两数全等断言。"""
+    b = _silver_env_backend(18)
+    try:
+        picks_by_slot: dict[tuple[int, int], str] = {}
+        samples: list[tuple[tuple[int, int], str, list[str], int]] = []
+        for _ in range(4096):
+            if b.done:
+                break
+            screen = b.screen_identity()
+            if screen == SCREEN_SETTLE:
+                node = b.gs.node.value
+                samples.append((
+                    (node.plane, node.round_num), node.kind,
+                    list(b.gs.active_strategies.value or []),
+                    int(b.gs.enemy_difficulty.value or 0),
+                ))
+                _node_advance_feed(b.gs, trigger='settle_confirm')
+                continue
+            if screen == SCREEN_INVEST_STRATEGY:
+                opts = b.gs.invest_strategy_opts.value
+                target = next(
+                    (o for o in opts
+                     if _silver_static_delta([o], 'battle') != 0), opts[0])
+                slot = INVEST_OFFER_SCHEDULE[
+                    b._invest_pick_ordinal - 1][:2]
+                out = report_action_pick_invest_strategy_param(
+                    b.gs, SimpleNamespace(norm_name=target), _SIG,
+                    rng=stream_rng(18, 'M11/pick/part'),
+                    session=SimpleNamespace())
+                cw_sim_ports.declare_world(out.world_decl)
+                picks_by_slot[slot] = target
+                continue
+            _drive_step(b, 18)
+        assert b.done, '白银局走完到局终'
+        assert picks_by_slot, '选卡日程至少落地一次'
+        # 读数观察面:期望现场算(用户裁定 2026-10-15),品质分量恒 0,
+        # 静态 Δ 逐点跟随实际拿到的卡;至少一个采样点 Δ 非零,防期望
+        # 退化成常数后测试失去信息量。
+        assert any(_silver_static_delta(names, kind) != 0
+                   for _, kind, names, _ in samples), \
+            '本局没有任何非零 Δ 采样点,现场算期望退化,换 seed'
+        for key, kind, names, flag in samples:
+            assert flag == 108 + _silver_static_delta(names, kind), \
+                (key, kind, names, flag)
+        # 快照面:逐条记录对账。已选卡按槽位键重建(选卡发生在该槽
+        # 节点窗内,槽键 ≤ 记录节点键的选卡全部在场)。
+        records = b.difficulty_records
+        assert len(records) == len({(r.plane, r.round_num)
+                                    for r in records}), '记录键无重复'
+        record_keys = [(r.plane, r.round_num) for r in records]
+        assert record_keys == sorted(record_keys), '记录键严格递增'
+        assert {key for key, _, _, _ in samples} <= set(record_keys), \
+            '结算屏访问过的节点必有记录'
+        assert any(rec.breakdown.strategy_delta != 0 for rec in records), \
+            '本局没有任何非零 Δ 记录,静态 Δ 腿未被行使'
+        assert any(rec.breakdown.strategy_delta == 0 for rec in records), \
+            '本局没有任何零 Δ 记录,零/非零两段轨迹不齐'
+        for rec in records:
+            names = [name for slot, name in sorted(picks_by_slot.items())
+                     if slot <= (rec.plane, rec.round_num)]
+            assert rec.breakdown.base is None, 'U25 基础曲线未采恒 None'
+            assert rec.breakdown.quality_bonus == 0, \
+                '白银局全银,品质分量恒 0(守「白银+0」定谳)'
+            assert rec.breakdown.special_bonus == 0, \
+                '伟大征服棱彩品质进不了银池,连胜项无源'
+            assert rec.breakdown.strategy_delta \
+                == _silver_static_delta(names, rec.node_kind), \
+                (rec.plane, rec.round_num, rec.node_kind,
+                 rec.breakdown.strategy_delta, names)
+            if rec.node_kind == 'encounter':
+                assert rec.breakdown.encounter_tier_bonus \
+                    in ENCOUNTER_TIER_BONUS
+            else:
+                assert rec.breakdown.encounter_tier_bonus == 0
     finally:
         uninstall_backend()
 
@@ -1985,7 +2175,7 @@ def _open_to_first_window(b: SimBackend, *, env_present: bool = False) -> None:
 
 def _obs_step(b: SimBackend) -> None:
     """观察生成器走局单步驱动(按呈现屏分派到对应真实写端;与
-    _drive_step 同形,唯策略选卡不注入 rng —— 生成器锁面与采样值无关)。"""
+    _drive_step 同形,唯策略选卡不注入 rng —— 生成器测试面与采样值无关)。"""
     screen = b.screen_identity()
     gs = b.gs
     if screen == SCREEN_SUPPLY:
