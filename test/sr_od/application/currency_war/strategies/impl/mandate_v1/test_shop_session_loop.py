@@ -41,8 +41,6 @@ import pytest
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel.cw_card_identity import (
     CORE_SINGLE_CARD_REGISTRY,
-    TIER_UNRELATED,
-    line_identity_tier,
 )
 from sr_od.application.currency_war.kernel.cw_comps import (
     COMP_LIBRARY,
@@ -88,6 +86,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
 )
+from sr_od.application.currency_war.strategies.impl.mandate_v1.protection import (
+    four_system_members,
+)
 from sr_od.application.currency_war.strategies.mandate_v1_strategy import (
     MandateV1Live,
 )
@@ -103,13 +104,10 @@ _MEMBER = COMP_LIBRARY[0].core_chars[0]
 
 def _fuel(count: int, exclude: tuple[str, ...] = ()) -> list[str]:
     from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-    from sr_od.application.currency_war.kernel.cw_card_identity import (
-        TIER_UNRELATED,
-        line_identity_tier,
-    )
     out = [n for n in CHARACTERS
            if n not in _LINE and n not in exclude
-           and line_identity_tier(n) == TIER_UNRELATED]
+           and n not in CORE_SINGLE_CARD_REGISTRY
+           and n not in four_system_members()]
     return out[:count]
 
 
@@ -343,22 +341,18 @@ class TestOrderInheritance:
         ——上阵空位非节点内可解除资源)。"""
         from sr_od.application.currency_war.data.cw_chars import CHARACTERS
         from sr_od.application.currency_war.data.cw_factions import FACTIONS
-        from sr_od.application.currency_war.kernel.cw_card_identity import (
-            TIER_TRANSITION,
-            TIER_UNRELATED,
-            line_identity_tier,
-        )
-        # 插件件选择约束:身份 tier 必须无关(序 1 三态成员面与 ④ 转线
-        # 放行臂都不辖——本测试专辖序 2 额度门,不被前序臂掩蔽)。档位
-        # 约束:tier_next > 阈档 3(等级 3 帧的 deploy_cap 采信下限),
-        # 使「板面差一人进下一档」与「deployed == deploy_cap(额度 0)」
+        # 插件件选择约束:身份必须非保护集非核心(序 1 义务面/囤货臂都
+        # 不辖——本测试专辖序 2 额度门,不被前序臂掩蔽)。档位约束:
+        # tier_next > 阈档 3(等级 3 帧的 deploy_cap 采信下限),使
+        # 「板面差一人进下一档」与「deployed == deploy_cap(额度 0)」
         # 可以同时成立。
         pick = None
         for faction_tag, fac in FACTIONS.items():
             members = [n for n, ch in CHARACTERS.items()
                        if faction_tag in getattr(ch, 'factions', ())
                        and ch.cost
-                       and line_identity_tier(n) == TIER_UNRELATED]
+                       and n not in CORE_SINGLE_CARD_REGISTRY
+                       and n not in four_system_members()]
             if len(fac.tiers) and fac.tiers[0] == 3 \
                     and len(members) >= 3:
                 pick = (faction_tag, fac, members)
@@ -385,7 +379,6 @@ class TestOrderInheritance:
         recs = st.shop_opportunities
         assert not [r for r in recs if r.card_name == plugin], \
             '被拦插件不进机会清单(拦因在 {席满,金不足} 闭集外)'
-        assert TIER_UNRELATED != TIER_TRANSITION   # 常量健全性(防退化为同档)
 
 
 # ============================================================ 三段式刷新判据
@@ -641,11 +634,13 @@ _FACE_OBS_SIG = ChannelSig(family='obs', actor='cw-36-test',
 
 
 def _fuel_names(count: int, exclude: tuple[str, ...] = ()) -> list[str]:
-    """TIER_UNRELATED 燃料名(非线内 ∧ 两注册表外;注册表现算防漂移)。"""
+    """非保护非核心燃料名(非线内 ∧ 注册表核心外 ∧ 四体系成员外;
+    注册表现算防漂移,身份单一源 = protection.four_system_members)。"""
     out = [n for n in CHARACTERS
            if n not in _LINE and n not in exclude
-           and line_identity_tier(n) == TIER_UNRELATED]
-    assert len(out) >= count, 'TIER_UNRELATED 燃料名不足'
+           and n not in CORE_SINGLE_CARD_REGISTRY
+           and n not in four_system_members()]
+    assert len(out) >= count, '非保护非核心燃料名不足'
     return out[:count]
 
 

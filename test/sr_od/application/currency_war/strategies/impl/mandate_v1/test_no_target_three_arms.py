@@ -167,7 +167,13 @@ class TestArmAAdoptedViaFallback:
     def test_plane1_fallback_domain_guard(self):
         """位面辖域维持原命题(P86 已证辖域 = 位面 2;宪法第 2 条豁免
         登记):位面 1 空窗帧回退支不触发序 1 甲臂采购(P1 板面恒过渡
-        体系,与方向正交)——序 1 源①候选集构建处的显式辖域守卫。"""
+        体系,与方向正交)——序 1 源①候选集构建处的显式辖域守卫。
+
+        统一保护集迭代(design.md §2.5-3 申报)后,P1 空窗帧的保护集
+        成员经囤货臂按期权级买入(买因 ``protection_hoard``)为设计
+        行为——本断言锚 = 买因归属:fixture 件(希儿量子线成员,全量子
+        系 ∈ 保护集)即使成交也不得落 ``m2_*`` 甲臂义务买因(回退带
+        位面辖域守卫的判读面),成交归囤臂语义承接。"""
         comp = get_comp('希儿量子')
         chars, _eq = cw_intention._line_hoard(comp)
         missing_piece = sorted(m for m in chars
@@ -177,7 +183,8 @@ class TestArmAAdoptedViaFallback:
         sess = _session(IntentionState())
         act = _decide(st, sess)
         assert not (isinstance(act, CwActionBuyCardParam)
-                    and act.card.name == missing_piece), \
+                    and act.card.name == missing_piece
+                    and act.reason.startswith('m2_')), \
             'P1 帧甲臂方向采购越辖(位面辖域字面量守卫失效)'
 
 

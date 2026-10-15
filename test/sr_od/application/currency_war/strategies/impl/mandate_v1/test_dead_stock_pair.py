@@ -13,15 +13,16 @@
    ``dominance_dead_stock_pair_blocked`` / ``press_dead_stock_pair_
    blocked``;prio0(缺口)/prio1(持有档)= 义务通道豁免不接;band 否决
    分键 ``dominance_band_wait``(否决此前静默)。帧构造边界:target_
-   comp 给线;燃料名取注册表 TIER_UNRELATED 现算集(阿格莱雅 = 病灶
+   comp 给线;燃料名取「非保护集非核心」注册表现算集(身份单一源 =
+   ``protection.four_system_members``;阿格莱雅 = 病灶
    名:sim 实证同名 1★×2 对经 press 臂 R1 形成后被 G-S1 合成素材守卫
    永久锁卖锁席)。
 3. **退出通道行为测试**(判据⑤;载体 = ``sell_gate.
    dead_pair_exit_release`` 单点函数 + 持久获取账 ``register_
    acquisition``,写端 = shop._emit_buy 发射位):行为测试①-⑤ + N1/N4
    收编面(N3 = 注释级同参钉死,消费位同参传参由测试①装配路径覆盖;
-   N2 kept_young 分键由测试②辖)。帧构造边界:素材名取注册表
-   TIER_UNRELATED 现算集(与段 2 同款防漂移);测试①②③④ 走备战域
+   N2 kept_young 分键由测试②辖)。帧构造边界:素材名取「非保护集非
+   核心」现算集(与段 2 同款防漂移);测试①②③④ 走备战域
    ``run_mandate`` M4 腾席臂(设计 flagship 场景 = 死锁帧腾席),判据
    单元直调 ``dead_pair_exit_release``;黑板 node 必写(位面/轮轴 =
    判据 (c) 读源,缺写 = fail-closed 保留 = 释放恒不可达)。
@@ -33,9 +34,7 @@ import pytest
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel.cw_card_identity import (
-    TIER_UNRELATED,
-    line_identity_tier,
-    transition_release_names,
+    CORE_SINGLE_CARD_REGISTRY,
 )
 from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
 from sr_od.application.currency_war.kernel.cw_economy import (
@@ -75,6 +74,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate import (
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
 )
+from sr_od.application.currency_war.strategies.impl.mandate_v1.protection import (
+    four_system_members,
+)
 from sr_od.application.currency_war.strategies.mandate_v1_strategy import (
     MandateV1Live,
 )
@@ -96,12 +98,15 @@ _PRESS_GOLD = _G_STAR - 37
 # dominance 帧 gold:溢余带内(_G_STAR 之上)
 _DOM_GOLD = _G_STAR + 10
 
-# TIER_UNRELATED 非线内名(注册表现算防漂移):[0] = 素材对名,[1] = 垫件,
-# [2] = 商店买卡名(写端测试三名互异;排除④放行档转线名)。
+# 非保护非核心非线内名(注册表现算防漂移,身份单一源 = protection.
+# four_system_members):[0] = 素材对名,[1] = 垫件,[2] = 商店买卡名
+# (写端测试三名互异;阿格莱雅 = 病灶名:sim 实证同名 1★×2 对经 press 臂
+# R1 形成后被 G-S1 合成素材守卫永久锁卖锁席)。
 _FUELS = [n for n in sorted(CHARACTERS)
-          if n not in _LINE and n not in transition_release_names()
-          and line_identity_tier(n) == TIER_UNRELATED]
-assert len(_FUELS) >= 3, 'TIER_UNRELATED 燃料名不足'
+          if n not in _LINE
+          and n not in CORE_SINGLE_CARD_REGISTRY
+          and n not in four_system_members()]
+assert len(_FUELS) >= 3, '非保护非核心燃料名不足'
 _PAIR = _FUELS[0]
 _FILLER = _FUELS[1]
 
@@ -113,17 +118,26 @@ def _bench_char(char_id: str, star: int = 1, slot: int = 1) -> BenchSlot:
 
 
 def _fuel_names(count: int) -> list[str]:
-    """TIER_UNRELATED 燃料名(非线内 ∧ 两注册表外;注册表现算防漂移)。"""
+    """非保护非核心燃料名(非线内 ∧ 注册表核心外 ∧ 四体系成员外;
+    注册表现算防漂移)。"""
     out = [n for n in CHARACTERS
-           if n not in _LINE and line_identity_tier(n) == TIER_UNRELATED]
-    assert len(out) >= count, 'TIER_UNRELATED 燃料名不足'
+           if n not in _LINE
+           and n not in CORE_SINGLE_CARD_REGISTRY
+           and n not in four_system_members()]
+    assert len(out) >= count, '非保护非核心燃料名不足'
     return out[:count]
 
 
-def _transition_pair_name() -> str:
-    """④ 放行档名(测试③;非线内,身份段静态持有集成员)。"""
-    out = sorted(n for n in transition_release_names() if n not in _LINE)
-    assert out, '④ 放行档非线内名不足'
+def _identity_hold_name() -> str:
+    """装配 A 身份段成员名(测试③;非线内):身份段成员过 (a)(b)(c)
+    入释放集仍被装配排除——对象面消费装配单一源
+    ``sell_gate.identity_exclusions``(身份面构成随统一保护集迭代迁移,
+    本选取随之稳定,不锚死任一静态集)。"""
+    sess = StrategySession()
+    hold = sell_gate.identity_exclusions(sess, ())
+    out = sorted(n for n in hold
+                 if n not in _LINE and CHARACTERS.get(n))
+    assert out, '身份段非线内名不足'
     return out[0]
 
 
@@ -429,7 +443,7 @@ class TestLock3IdentityAuthority:
         装配后):④ 名义素材对:过 (a)(b)(c) 入释放集(released 计 1),
         身份段在下游装配排除 → 零卖出(序列断言:旁路在子谓词内先行,
         装配 A 照旧收口)。腾席面空集 → 诚实停摆计数。"""
-        tname = _transition_pair_name()
+        tname = _identity_hold_name()
         sess, gs, frame = _prep_frame(pair=tname, pair_ledger_round=2)
         out = run_mandate(frame, sess, state=gs)
         assert not _sell_actions(out)

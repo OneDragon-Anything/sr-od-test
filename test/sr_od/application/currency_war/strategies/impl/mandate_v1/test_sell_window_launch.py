@@ -45,10 +45,8 @@ from test.sr_od.application.currency_war._cw_helpers import (
 )
 from test.sr_od.application.currency_war._cw_helpers import cw4_gs
 
-from sr_od.application.currency_war.kernel.cw_card_identity import (
-    TIER_TRANSITION,
-    line_identity_tier,
-    sell_hold_exclusion_names,
+from sr_od.application.currency_war.kernel.cw_comps import (
+    CORE_SINGLE_CARD_REGISTRY,
 )
 from sr_od.application.currency_war.kernel.cw_deploy_logic import (
     fresh_buys_of,
@@ -86,6 +84,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
 )
+from sr_od.application.currency_war.strategies.impl.mandate_v1.protection import (
+    four_system_members,
+)
 from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
     decide_shop_action,
 )
@@ -95,14 +96,13 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.vopt impo
 
 # ===== 测试基建 =====
 
-#: 非持有线外 1★ 燃料代表(注册表实名,cost=1;穿过判据全部物理谓词,
-#: 红证由各测试自带直调证明)。
-_FUEL = '青雀'
-#: 静态持有两集代表:registry_core 档(希儿)/transition 档(丹恒·饮月、
-#: 三月七),档位与费用由注册表现算(红证自证,非手抄)。
+#: 非持有线外 1★ 燃料代表(注册表实名,cost=1;非保护集非核心 = 新身份
+#: 口径下的真线外件,穿过判据全部物理谓词,红证由各测试自带直调证明)。
+_FUEL = '阿格莱雅'
+#: 登记资格面代表:registry_core 档(希儿)/保护集档(丹恒·饮月,
+#: 仙舟系四体系成员),档位与费用由注册表现算(红证自证,非手抄)。
 _CORE_HOLD = '希儿'
 _TRANS_HOLD = '丹恒·饮月'
-_TRANS_CHEAP = '三月七'
 
 
 def _bc(name: str, star: int = 1) -> BenchSlot:
@@ -170,7 +170,7 @@ class TestLaunchRegistry:
                 'm2_merge_completion', 'dominance_buy', 'm6_stockpile',
                 'press_buy_deployable',
                 'ev_buy', 'core_single_card_buy',
-                'core_single_card_buy:unlocked', 'transition_component_buy',
+                'core_single_card_buy:unlocked', 'protection_hoard',
                 'dead_gold_press_buy', 'fuel_filler_stall',
                 't3_unlocked_hemostat', 'scene_plugin_buy')
         assert set(sell_gate.LAUNCH_CAUSE_BY_ARM) == set(arms)
@@ -192,7 +192,7 @@ class TestLaunchRegistry:
             'm2_line_member', 'm2_locked_member', 'm2_stockpile',
             'm2_merge_completion', 'core_single_card_buy',
             'core_single_card_buy:unlocked', 'm6_stockpile',
-            'press_buy_deployable', 'ev_buy', 'transition_component_buy',
+            'press_buy_deployable', 'ev_buy', 'protection_hoard',
             'dead_gold_press_buy', 'fuel_filler_stall',
             't3_unlocked_hemostat', 'scene_plugin_buy',
         }
@@ -208,30 +208,33 @@ class TestLaunchRegistry:
         assert sell_gate.stall_protect_active(sess, 3) == {'垫件P'}
 
     def test_hold_registration_qualification_conjunction(self):
-        """类资格断言合取两腿(W5/V2-06):名字腿(名 ∈ 静态持有集)
-        ∧ 硬闸腿(transition 层 = refund_full_star_ok;registry_core 层
-        = 恒买无星闸,裁定410)。任一腿缺 = 断言失守:非持有名登记被拒
-        (名字腿红),2★ 转线直出被拒(硬闸腿红——名字腿必过,红对存在
-        性由合取保证,方案 v3 §5.1)。"""
+        """类资格断言合取两腿(W5/V2-06;统一保护集迭代 design.md §2.3
+        hold 腿行 + §2.4 档位表迁移后语义):名字腿(名 ∈ 保护集 ∪
+        registry 核心——hold 类买入 = C1 核心 + protection_hoard 两类的
+        登记资格面)∧ 硬闸腿(保护档 = refund_full_star_ok 1★ 全额退,
+        与囤臂同门;core 档 = 恒买无星闸)。任一腿缺 = 断言失守:非保护
+        非核心名登记被拒(名字腿红),2★ 保护件直出被拒(硬闸腿红——
+        名字腿必过,红对存在性由合取保证)。"""
         sess = _sess()
         ct = state_of(sess).cw4_counters
-        # 硬闸腿红:2★ 转线直出(名字 ∈ TRANSITION_PACK ⊆ 静态持有集)
-        assert _TRANS_HOLD in sell_hold_exclusion_names()
-        assert line_identity_tier(_TRANS_HOLD) == TIER_TRANSITION
+        # 硬闸腿红:2★ 保护件直出(名 ∈ 保护集四体系,protection 档闸拒)
+        assert _TRANS_HOLD in four_system_members()
         assert not refund_full_star_ok(2, 2)
         assert not sell_gate.register_launch(sess, _TRANS_HOLD, cause='hold',
                                              round_num=3, star=2, cost=2)
         assert ct.get('launch_cause_mismatch') == 1
         assert _TRANS_HOLD not in _registry(sess)   # 拒登记(不拦发射归臂)
-        # 名字腿红:线外普通燃料登记 hold 被拒
+        # 名字腿红:非保护非核心普通燃料登记 hold 被拒
+        assert _FUEL not in four_system_members()
+        assert _FUEL not in CORE_SINGLE_CARD_REGISTRY
         assert not sell_gate.register_launch(sess, _FUEL, cause='hold',
                                              round_num=3, star=1, cost=1)
         assert ct.get('launch_cause_mismatch') == 2
-        # 合取双过:1★ 转线件(refund_full_star_ok(1,2)=True)登记落账
+        # 合取双过:1★ 保护件(refund_full_star_ok(1,2)=True)登记落账
         assert sell_gate.register_launch(sess, _TRANS_HOLD, cause='hold',
                                          round_num=3, star=1, cost=2)
         assert _registry(sess)[_TRANS_HOLD] == ('hold', 3)
-        # registry_core 层恒买无星闸:2★ 核心件登记不受星闸拒(裁定410)
+        # core 档恒买无星闸:2★ 核心件登记不受星闸拒
         assert refund_full_star_ok(2, 3) is False
         assert sell_gate.register_launch(sess, _CORE_HOLD, cause='hold',
                                          round_num=3, star=2, cost=3)

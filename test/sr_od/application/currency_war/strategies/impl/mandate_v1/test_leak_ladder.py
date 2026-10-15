@@ -26,9 +26,7 @@ from test.sr_od.application.currency_war._cw_helpers import (
 )
 
 from sr_od.application.currency_war.kernel.cw_card_identity import (
-    TIER_REGISTRY_CORE,
-    TIER_TRANSITION,
-    line_identity_tier,
+    CORE_SINGLE_CARD_REGISTRY,
 )
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
 from sr_od.application.currency_war.kernel.cw_registry import (
@@ -42,6 +40,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.protection import (
+    four_system_members,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import (
     predicates,
@@ -111,14 +112,14 @@ def _card(name: str, cost: int = 2, star: int = 1) -> ShopCard:
 
 
 def _off_name(exclude: tuple[str, ...] = (), *, min_cost: int = 1) -> str:
-    """线外且非核心/转线层的注册表角色名(档 1/档 2 候选;避开 C1/④
-    候选身份,防邻近臂抢发射)。"""
+    """线外且非核心/非保护集的注册表角色名(档 1/档 2 候选;避开 C1/
+    囤货臂候选身份,防邻近臂抢发射——身份单一源 = protection.
+    four_system_members,注册表现算防漂移)。"""
     bad = set(exclude)
     for n, ch in CHARACTERS.items():
         if n in bad or (ch.cost or 0) < min_cost:
             continue
-        tier = line_identity_tier(n)
-        if tier in (TIER_REGISTRY_CORE, TIER_TRANSITION):
+        if n in CORE_SINGLE_CARD_REGISTRY or n in four_system_members():
             continue
         return n
     raise AssertionError('注册表缺少合适线外角色(测试前提失效)')
