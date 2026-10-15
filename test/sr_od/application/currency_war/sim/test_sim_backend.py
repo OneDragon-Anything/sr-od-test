@@ -186,7 +186,7 @@ def _encounter_pick_feed(gs: GameState) -> None:
 # ============================================================ 确定性
 
 def test_reset_deterministic_double_run_container_identical() -> None:
-    """确定性锁(验收判据):同 seed 同 RunConfig reset 双跑,容器逐位
+    """确定性测试(验收判据):同 seed 同 RunConfig reset 双跑,容器逐位
     一致(全采样由 seed 派生;世界真值域 + 新容器 Field 全集对拍)。"""
     b1 = SimBackend(seed=42, cfg=_CFG)
     b2 = SimBackend(seed=42, cfg=_CFG)
@@ -451,7 +451,7 @@ def test_contract_env_pick_sends_cards_to_bench() -> None:
 
 def test_random_env_gift_sim_seeded_roll_to_bench() -> None:
     """随机环境赠卡 sim 全链(迭代 2026-09-23-invest-effects-calc T-10
-    设计 §4 锁 7):播种 invest_env_opts 选人才引进 → 选卡后 bench = 5 张
+    设计 §4 测试 7):播种 invest_env_opts 选人才引进 → 选卡后 bench = 5 张
     (4 张 M01 开局 + 1 张随机 4 费 1★ 赠卡);恰 1 张 4 费(开局手牌
     费用形状 (1,1,1,3)/(1,1,2,2) 无 4 费件,4 费 = 赠卡);同 seed 重放
     确定性(同名同星)——rng 经 install_backend 动作腿提供槽(流键
@@ -552,7 +552,7 @@ def test_strategy_pick_chain_burst_gold() -> None:
     """获得链断言:选 burst 策略卡(加油站)→ 免费刷新发放生效
     (effect burst 桥,容器零私持);即时金通道现役无写端不发生
     (kernel ``apply_effect_burst_grant`` 只载 free_refresh_burst),
-    断言面只锁免费刷新发放。"""
+    断言面只校验免费刷新发放。"""
     b = _backend(7)
     try:
         b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
@@ -700,7 +700,7 @@ def test_reward_node_ore_substate_and_collect_via_report(
         uninstall_backend()
 
 
-# ============================================================ 3.3 声明矿 sim 接线锁
+# ============================================================ 3.3 声明矿 sim 接线测试
 # (迭代 2026-10-10-ore-reward-attach 3.3;详设 details/ore-sim-plane-start.md
 #  §1-§5:节点窗起点分道入队 + 过期清理接线 / 位面开局矿呈现与面板矿
 #  同批合并 / spheres 写端统一过挂接入口 / rng 键装配 / 占位退役与披露。)
@@ -942,7 +942,7 @@ def test_supply_node_window_refresh_and_pick() -> None:
     = 点击源(left 递减 + 选项重掷);pick_supply 走获得链。宝钻腿 =
     chosen_supply (角色, 装备名列表) 按 DIAMOND_EQUIP_NAMES 名单派生
     (T-9 裁定 2)——sim 选项件名恒非钻名 → 派生不发(选项级钻标属
-    呈现面近似,U24 披露在册);含钻名形态的派生锁 =
+    呈现面近似,U24 披露在册);含钻名形态的派生测试 =
     test_supply_diamond_leg_derives_from_chosen_name_list。"""
     b = _backend(1013)
     try:
@@ -1128,17 +1128,17 @@ def _rainbow_env_backend(seed: int = 61) -> SimBackend:
 
 
 def test_rainbow_env_full_walk_offers_all_prism() -> None:
-    """彩虹时代 sim 全流程锁(品质改写接入 sim 三选一;2026-10-14 用户
+    """彩虹时代 sim 全流程测试(品质改写接入 sim 三选一;2026-10-14 用户
     裁定:全改写型 + 取卡全局序):开局环境 offer 走 opening 形态不进
     取卡序(选环境后序数 = 0);此后每次策略三选一呈现,候选全棱彩
     注册名;呈现次数 = 固定日程落在建模域内的槽数(P3 未观测局终,
     第 3 槽 P3r2 不可达;槽数自 PLANE_NODE_TABLES 现算,防日程/建模域
     漂移静默失配);局终序数 = 呈现次数(每呈现恰 +1,overlay 让路/
-    其余节点不计数——单计另锁 overlay 用例);品质改写披露键已退役,
+    其余节点不计数——单计另由 overlay 用例校验);品质改写披露键已退役,
     disclosures 无 invest_quality_rewrite 前缀键。
 
     seed 61 = 走满建模域锚(探针实测全程 min_hp=1 不触发死亡终局,
-    恰好呈现全部建模域槽;改写判据对序数 3 的行为由判据锁与抽样锁
+    恰好呈现全部建模域槽;改写判据对序数 3 的行为由判据测试与抽样测试
     覆盖)。"""
     b = _rainbow_env_backend(61)
     try:
@@ -1174,7 +1174,7 @@ def test_rainbow_env_full_walk_offers_all_prism() -> None:
 
 
 def test_rainbow_env_overlay_detour_offer_counted_once() -> None:
-    """overlay 让路单计锁:offer 槽节点窗起点 overlay 在场 → 让路呈现
+    """overlay 让路单计测试:offer 槽节点窗起点 overlay 在场 → 让路呈现
     planner(此时取卡序数仍 0,让路不进 offer 分支),选定复走 offer
     检查 → 改写次候选全棱彩,序数恰 +1(复走无双计;开局环境 offer
     走 opening 形态不计数 → 首呈现后序数 = 1)。让路序权威 = 旧引擎
@@ -1446,7 +1446,7 @@ def test_silver_env_difficulty_records_track_selections() -> None:
       回流)、策略静态 Δ = 按记录节点重建的已选卡注册表现算、特殊
       加成恒 0(伟大征服棱彩品质,结构性进不了银池)、encounter 类
       遭遇档在表值域、非遭遇类恒 0。计数口径:结算屏访问数 ≤ 记录数
-      (败局局终/部分节点型结算不呈现结算屏,记录仍逐场落账),故记录
+      (败局局终结算不呈现结算屏,记录仍逐场落账),故记录
       以「键严格递增 + 采样节点全覆盖」对账,不做两数全等断言。"""
     b = _silver_env_backend(18)
     try:
@@ -1608,7 +1608,7 @@ def test_node_key_field_convergence() -> None:
         uninstall_backend()
 
 
-# ============================================================ 3.4 联调机制锁
+# ============================================================ 3.4 联调机制测试
 
 def test_node_window_front_section_idempotent_on_click_replay() -> None:
     """窗口前段幂等守卫(3.4 联调裁决①):同节点线性序的窗口收口二次
@@ -1643,10 +1643,10 @@ def test_game_over_presents_lobby_terminal_screen() -> None:
 
 
 def test_expert_screen_presentation_raises_loud_on_observe() -> None:
-    """SCREEN_EXPERT「呈现即响错」语义锁(3.4 联调裁决③):open_bookcard
+    """SCREEN_EXPERT「呈现即响错」语义测试(3.4 联调裁决③):open_bookcard
     声明(纯转移)驱动专家邀请函屏呈现;该屏非金路径 13 档(实机触发
     条件零档,数据缺口族),observe 必 LookupError 具名响错——防未来把
-    响错静默降级成注册屏/空产物(flow-seam §3 未注册屏响错锁的呈现态
+    响错静默降级成注册屏/空产物(flow-seam §3 未注册屏响错测试的呈现态
     配对)。"""
     from sr_od.application.currency_war.sim.cw_sim_backend import (
         SCREEN_EXPERT,
@@ -1680,7 +1680,7 @@ def test_unpresented_overlay_anchor_not_visible_on_prep() -> None:
         uninstall_backend()
 
 
-# ============================================================ 3.3 环境条件发放 sim 接线锁
+# ============================================================ 3.3 环境条件发放 sim 接线测试
 # (迭代 2026-10-10-env-conditional-grants landing 3.3;详设
 #  details/env-conditional-grant.md §4/§5:结算腿触发检查接线于 streak
 #  observe 之后 / 触发函数两写 sig 写死单形态 = logic_sig('sim:env') /
@@ -1820,7 +1820,7 @@ def test_env_grant_fires_at_fifth_streak_with_diamond_callback(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """数值对照(landing 3.3):深井角斗场 sim 局 5 连胜达成结算 →
     装备在库(库尾追加)+ done 标记 + diamond_count +1 + deploy_cap
-    = level+1 + back_layout +1(基线 6 → 7,min9 未触);同时锁写行
+    = level+1 + back_layout +1(基线 6 → 7,min9 未触);同时校验写行
     形态:触发两写 sig 单形态 = logic_action 族 'sim:env',回调三写 =
     observe 渠道 obs 族 'sim:env-diamond'。"""
     b = _env_grant_backend()
@@ -1899,7 +1899,7 @@ def test_supply_diamond_pick_keeps_zero_callback(
         cap_before = gs.deploy_cap.value
         back_before = gs.back_layout.value
         # 红钻 = 三钻之一(避开 _ENV_GRANT_EQUIP=财富宝钻,两腿不混淆:
-        # 本锁只证 supply 钻腿聚合,环境发放仍零发生)
+        # 本测试只证 supply 钻腿聚合,环境发放仍零发生)
         gs.write_logic(gs.chosen_supply,
                        ('', ('红钻',)),
                        produced_by='Test', evidence='t:chosen', sig=_SIG)
@@ -1918,7 +1918,7 @@ def test_supply_diamond_pick_keeps_zero_callback(
 
 
 def test_supply_diamond_leg_derives_from_chosen_name_list() -> None:
-    """sim 宝钻腿列表派生锁(T-9 裁定 2):chosen_supply = (角色,
+    """sim 宝钻腿列表派生测试(T-9 裁定 2):chosen_supply = (角色,
     装备名列表),列表任一件名命中 DIAMOND_EQUIP_NAMES → diamond_count
     +1;不含 → 不发(两态同 backend 直驱;live 写端 = 画面 op 确认即写,
     sim 决策腿未接 = chosen 恒 None 死腿维持)。OCR 误读边(列表名不
@@ -1999,7 +1999,7 @@ def test_env_grant_check_receives_signed_streak_loss_no_grant(
         uninstall_backend()
 
 
-# ============================================================ 3.4 扑满结算统一公式接线锁
+# ============================================================ 3.4 扑满结算统一公式接线测试
 # (T-6 经济过热,2026-10-10 用户裁定:战斗结算收入 = 统一公式「基础+息
 #  +连胜成分,战败无」;扑满胜负接入连胜账 = 胜+1/败清零;收入递延至
 #  结算腿落账,基数 = 窗口开快照即轮初口径。)
@@ -2035,7 +2035,7 @@ def _reward_expect(gold_at_window: int, base: int, streak_in: int,
 
 def test_piggy_win_income_deferred_and_streak_counts(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """扑满胜局:备战帧(开战前)金不含本节点收入(递延锁);结算腿一次
+    """扑满胜局:备战帧(开战前)金不含本节点收入(递延断言);结算腿一次
     落账 = 基础+进轮连胜金+息;连胜账 0→1→2(胜局计数,用户裁定)。"""
     from sr_od.application.currency_war.kernel.cw_economy import (
         REWARD_BASE_GOLD_BY_ROUND,
@@ -2239,7 +2239,7 @@ def test_registry_covers_golden_path_checklist_exactly() -> None:
 
 
 def test_unregistered_screen_raises_named_error() -> None:
-    """状态机呈现未注册屏 = LookupError 具名响错(防静默失真锁):金路径
+    """状态机呈现未注册屏 = LookupError 具名响错(防静默失真测试):金路径
     清单外的档名(如大厅/武装箱弹窗)观察请求必须响亮拒绝,禁产空产物。"""
     b = _backend()
     try:
@@ -2592,7 +2592,7 @@ def test_same_node_second_visit_restores_payload() -> None:
 
 def test_node_switch_new_deal_overrides_record() -> None:
     """节点切换发牌更新:推进到下一节点 → 新发牌覆盖记录 → 再开店写回
-    = 当前节点牌面(非旧节点残值);顺带锁记录与呈现的分界(关店离屏
+    = 当前节点牌面(非旧节点残值);顺带校验记录与呈现的分界(关店离屏
     期间新发牌在屏,记录跟随新值)。"""
     b = _backend(seed=7)
     try:
@@ -2670,7 +2670,7 @@ def test_ports_default_off_and_live_read_chain():
 
 
 def test_install_discipline_duplicate_raises_uninstall_idempotent():
-    """单装配纪律(端口协议锁):重复安装 raise;uninstall 幂等;
+    """单装配纪律(端口协议测试):重复安装 raise;uninstall 幂等;
     卸载后可再装;teardown 卸载复位。"""
     with sim_backend_fixture() as backend:
         assert sim_backend_installed() is True
@@ -2772,7 +2772,7 @@ def test_find_area_leg_visible_query(_sim_ctx):
 
 # (事实事件缺省关测试已随事实事件槽退役删除:
 #  事实事件槽本体与全部广播调用点同批删除,sim 呈现 =
-#  容器登记 + 问询时点懒呈现,锁在本文件懒呈现两测试。)
+#  容器登记 + 问询时点懒呈现,由本文件懒呈现两测试覆盖。)
 
 
 def test_identity_helper_filters_by_screen_list():

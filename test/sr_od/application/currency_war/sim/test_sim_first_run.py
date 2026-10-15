@@ -1,6 +1,6 @@
 """sim 统一 3.4 首局验收(MVP 终局四条尺的可执行形态)。
 
-锁面 = sim 全量局完成判据(确定性双跑/不变式断言四条尺):
+测试面 = sim 全量局完成判据(确定性双跑/不变式断言四条尺):
 
 - 跑完:真策略 mandate_v1 决策 + 真 CwLoop 驱动,SimBackend 从 reset 经
   P1 → P2 boss 到局终,op 执行零失败(成功收口 = 回大厅终局链);
@@ -15,8 +15,8 @@
 
 「多种子首局完备」语义不再在此重复整局覆盖(2026-10-14 裁决:与
 test_sim_smoke_batch 的逐 seed 整局冒烟完全重叠,该文件按预算保留
-2 seed 承接);非验收 seed 活锁回归锚(seed 7/61)的机制锁 =
-test_prep_action_ops 桥复检语境坐标锁。
+2 seed 承接);非验收 seed 活锁回归锚(seed 7/61)的机制测试 =
+test_prep_action_ops 桥复检语境坐标测试。
 
 运行成本:确定性双跑共用两整局(模块夹具只跑一次)→ 慢桶登记
 (slow_marks.txt)。

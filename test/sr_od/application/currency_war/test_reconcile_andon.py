@@ -1,8 +1,8 @@
-"""统一观察对账安灯·装配闭包锁( §2.4;
+"""统一观察对账安灯·装配闭包测试( §2.4;
 2026-09-16 框架化:处置壳 = stop_running 一行,截图归框架,flag/闩退役)。
 
 闭包工厂 = currency_war_app._build_reconcile_andon(ctx);kernel 槽缺省关的
-零副作用面由 test_mismatch_policy.py 锁,本文件只锁生产闭包行为面。
+零副作用面由 test_mismatch_policy.py 校验,本文件只校验生产闭包行为面。
 零真实 IO:不触控制器,框架截图由 stop_running 形参表达。
 """
 from __future__ import annotations

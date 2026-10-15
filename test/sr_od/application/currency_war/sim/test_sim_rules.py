@@ -1,7 +1,7 @@
-"""sim 数值规则件回归锁(战斗结算 M12/M13/M14 / 敌人难度与名单
+"""sim 数值规则件回归测试(战斗结算 M12/M13/M14 / 敌人难度与名单
 M19/M20/M21 / 轮首收入与连胜经济 M04/M15)。
 
-锁面(全部 = 无状态规则函数,入参驱动、不经后端状态机):
+测试面(全部 = 无状态规则函数,入参驱动、不经后端状态机):
 - 战斗结算:U01 随机输出面(胜负 P=0.5 均匀伯努利/扣血均匀区间
   [23,70]/流键可复现)/U03 分项置 None/简化档标记/M14 结构规则(败才
   扣血/首次 0hp 保底剩 1/再次归零局终);
@@ -207,7 +207,7 @@ def test_plane_boss_override_priority_and_pool_membership() -> None:
 
 
 # (planner 升星判据助手测试已随旧评估器退役删除:判据单一源 = 值回调
-#  [S3],每费用档簿记锁在本仓 operations/test_overlay.py。)
+#  [S3],每费用档簿记校验在本仓 operations/test_overlay.py。)
 
 def test_trailblazer_form_routing() -> None:
     """开拓者双形态按排路由(front=记忆/back=欢愉);非开拓者原样。"""

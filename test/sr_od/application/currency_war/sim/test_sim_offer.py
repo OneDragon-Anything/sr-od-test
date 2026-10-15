@@ -1,20 +1,20 @@
-"""sim 采样与候选生成回归锁(投资 offer M02/M11 + 派生池与商店发牌
+"""sim 采样与候选生成回归测试(投资 offer M02/M11 + 派生池与商店发牌
 M06/M05 + 节点选项生成 M16/M17/M18)。
 
-锁面:
+测试面:
 - 投资 offer:U07 固定日程(P1r3/P2r2/P3r2 + 联席决策 2-6 额外槽)/
   U07③ 候选结构(品质→池取样、offer 内去重、全程不重复)/U08 环境
   offer 同构 3 选 1/品质分布显式常量占位。选卡入账腿 = kernel 获得链
-  (锁面迁 test_sim_backend.py,注入核随退役删除);品质改写已接入
-  三选一抽样(判据锁 rewrite_quality_for_pick 只接全改写型 + kernel
-  游戏事实名单一致性锁;「未建模」披露键已退役,名单常量位仍 =
+  (测试面迁 test_sim_backend.py,注入核随退役删除);品质改写已接入
+  三选一抽样(判据测试 rewrite_quality_for_pick 只接全改写型 + kernel
+  游戏事实名单一致性测试;「未建模」披露键已退役,名单常量位仍 =
   kernel cw_investments);
 - 派生池与发牌:副本数真值(27/27/9/9/9)/held 星级派生不变量/≥9 清空
   发牌过滤(U11)与双出口分野/专家入池假设(U10)/5 槽发牌与概率表/
   免费刷先行(M05);
 - 节点选项:U22 遭遇档位结构/扑满替换单一源/U24·T-9 补给 3 选 1 基础件
   放回均匀 + 带钻占位 + 环境每列件数表(ENV_SUPPLY_EQUIP_COUNT)。
-  pick 动作入账腿退役(锁面迁 test_sim_backend.py:选卡走 op → 上报
+  pick 动作入账腿退役(测试面迁 test_sim_backend.py:选卡走 op → 上报
   函数族获得链,与实机同构);遭遇加成真值表归宿 = cw_sim_enemy(难度
   账域)。
 """
@@ -139,12 +139,12 @@ def test_strategy_offer_shape_and_lifelong_dedup() -> None:
 
 def test_strategy_offer_quality_distribution_uniform_placeholder() -> None:
     """品质掷点占位 = 三档均匀(显式常量,候实机回填):n=900 候选下
-    各档频率锁 1/3±6σ 宽带(σ=sqrt(p(1-p)/n),禁卡边);三档品质池均有
+    各档频率断言 1/3±6σ 宽带(σ=sqrt(p(1-p)/n),禁卡边);三档品质池均有
     产出(频率非零 = 池映射无空档)。
 
-    统计面用逐 offer 独立排除集(只锁 offer 内去重):全程去重累计
+    统计面用逐 offer 独立排除集(只校验 offer 内去重):全程去重累计
     集会在 ~111 个 offer 处吃光 335 张注册表 → 采样不足死等;品质掷点
-    分布与排除集大小无关,独立集不影响本锁面(全程去重另测)。
+    分布与排除集大小无关,独立集不影响本测试面(全程去重另测)。
     """
     rng = random.Random(77)
     counts = {'银': 0, '金': 0, '棱彩': 0}
@@ -171,8 +171,8 @@ def test_strategy_offer_forced_quality_targets_pool() -> None:
                    if s.rarity == '棱彩'}
     assert prism_names, '注册表棱彩池非空(建表前提)'
     for seed in range(20):
-        # 排除集取棱彩池头部两名(现算,非手抄名):锁「排除集在
-        # 改写次同样生效」,不锁具体候选值
+        # 排除集取棱彩池头部两名(现算,非手抄名):校验「排除集在
+        # 改写次同样生效」,不断言具体候选值
         banned = set(sorted(prism_names)[:2])
         picks = sample_strategy_offer(random.Random(seed), set(banned),
                                       forced_quality='棱彩')
@@ -252,7 +252,7 @@ def test_rewrite_quality_for_pick_full_rewrite_family_only() -> None:
 
 def test_quality_rewrite_name_list_subset_of_registry() -> None:
     """游戏事实名单 ⊆ 结构化注册表(防双名单漂移:名单新增环境而
-    ENV_POOL_REWRITE 未建条目时,品质改写会静默漏接,本锁红)。"""
+    ENV_POOL_REWRITE 未建条目时,品质改写会静默漏接,本测试红)。"""
     assert set(QUALITY_REWRITE_ENV_NAMES) <= set(ENV_POOL_REWRITE)
 
 
@@ -421,10 +421,10 @@ def test_piggy_env_replacement_single_source() -> None:
 
 def test_supply_options_replacement_sampling_and_env_driven() -> None:
     """U24/T-9:3 选项 = 8 基础件池**逐槽独立均匀有放回**(裁定 3:单纯
-    随机可重复——「随机到一样就一样」;既有 distinct 断言锁旧设计约定,
+    随机可重复——「随机到一样就一样」;既有 distinct 断言钉住旧设计约定,
     随裁定退役)+ 带钻槽 equip 级均匀占位(恰一选项带钻);默认环境每列
     1 件、'过剩经费' 每列 2 件(ENV_SUPPLY_EQUIP_COUNT 查表);char 维
-    恒空(补给 = 装备选)。带钻授予腿 = 后端列表派生(锁面 =
+    恒空(补给 = 装备选)。带钻授予腿 = 后端列表派生(测试面 =
     test_sim_backend.py 补给窗)。同 seed 采样值随采样式变更漂移 =
     分布假设变更(设计披露 9),非回归破坏。"""
     # 默认环境:同 seed 逐值确定(回归可重跑)+ 结构恒定
