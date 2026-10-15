@@ -1021,9 +1021,13 @@ def test_boss_briefing_env_grant_trigger_wiring(
         BenchView,
         GameState,
     )
+    from sr_od.application.currency_war.kernel.cw_node_schedule import (
+        node_sequence_of,
+    )
     _OBS_SIG = ChannelSig(family='obs', actor='CwBossWiringTest')
     _LOGIC_SIG = ChannelSig(family='logic_action', actor='CwBossWiringTest',
                             mode='compute')
+    boss_round = node_sequence_of(1).index('boss') + 1   # 默认表现算 boss 位
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.observe(gs.active_env, '劳务派遣合同', sig=_OBS_SIG)
     slots = [BenchSlot(kind='empty')] * 9
@@ -1031,7 +1035,7 @@ def test_boss_briefing_env_grant_trigger_wiring(
     gs.write_logic(gs.env_grants_done,
                    (('劳务派遣合同', f'{STAR_GRANT_KEY_PREFIX}列车同行星徽'),),
                    produced_by='test-seed', evidence='t:done', sig=_LOGIC_SIG)
-    gs.node_hist_pos = (1, 9)   # settle_confirm 推进后的 boss 坐标(普通属性)
+    gs.node_hist_pos = (1, boss_round)   # settle_confirm 推进后 boss 坐标
     op, _clicks = _make_boss(test_context, monkeypatch, area_hit=True,
                              ocr_texts=[])
     # _make_boss 内部把 cw_match 桩成 None,须在其后注入真 gs
@@ -1041,7 +1045,8 @@ def test_boss_briefing_env_grant_trigger_wiring(
     obs = op._observe_live()
     assert obs.on_screen is True, '观察链照常产出 obs(接线不阻塞)'
     done = gs.env_grants_done.value or ()
-    assert ('劳务派遣合同', f'{BOSS_NODE_KEY_PREFIX}1-9') in done, \
+    assert ('劳务派遣合同',
+            f'{BOSS_NODE_KEY_PREFIX}1-{boss_round}') in done, \
         f'触发发放 done 落 boss 键: {done!r}'
     units = [s.unit.char_id for s in gs.bench.value.slots
              if s is not None and s.kind == 'unit' and s.unit is not None]
