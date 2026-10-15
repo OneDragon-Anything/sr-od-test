@@ -209,3 +209,73 @@ def test_scope_queries_normalize_ocr_variants() -> None:
         strategy_faction_scope('飞光·映月')
     assert env_faction_scope('特邀专家：桑博') == \
         env_faction_scope('特邀专家:桑博')
+
+
+# ==================== 随机装备支 + 首领节点发放白名单 ====================
+# (劳务派遣合同,效果原文「获得随机星徽,每次进入首领节点时,获得对应
+# 羁绊的随机角色」;设计 = 该迭代 designs/T-19-laowu-paiqian-hetong.md
+# §2.1-§2.3/§4.1,定稿。)
+
+
+def test_equips_random_immediate_category_validation(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """随机装备支类别校验(T-19 设计 §2.2 条 1-2,import 即炸语义,注入 +
+    直调沿本文件惯用法):类别名 ∈ EQUIPMENTS category 词集闭集(越界 =
+    采样池必空,构建期拒)。"""
+    bad = dict(ENV_GIFTS)
+    bad['劳务派遣合同'] = cw_investments.GiftGrant(
+        equips_random_immediate=('不存在的类别',))
+    monkeypatch.setattr(cw_investments, 'ENV_GIFTS', bad)
+    with pytest.raises(ValueError, match='随机装备类别名'):
+        cw_investments._validate_env_gifts()
+
+
+def test_star_category_pool_derivation_nonempty() -> None:
+    """'星徽' 类别池(T-19 设计 §2.2 条 4 独立闸 + §2.1 helper 派生性质):
+    equips_by_category 现算 = 注册表 category 过滤(零硬编码第二源),
+    '星徽' 池非空且逐名 category='星徽'(池规模 22 = 注释性快照,非断言值);
+    直调校验器现值表零炸(含独立星徽池闸)。"""
+    pool = cw_investments.equips_by_category('星徽')
+    assert pool, '星徽池非空(首例登记前提)'
+    from sr_od.application.currency_war.data.cw_equipment_data import EQUIPMENTS
+    assert all(EQUIPMENTS[n].category == '星徽' for n in pool)
+    cw_investments._validate_env_gifts()
+
+
+def test_laowu_random_equip_grant_not_empty_grant_both_tables(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """空发放集判定并入 equips_random_immediate(env/策略两表,T-19 设计
+    §2.2 条 3/条 5):随机装备支 only 条目 = 合法登记形态,两表校验均不得
+    炸——未并入时该登记会被「空发放集」误炸(env 侧 import 期即拦)。"""
+    assert ENV_GIFTS['劳务派遣合同'].equips_random_immediate == ('星徽',)
+    cw_investments._validate_env_gifts()
+    # 策略侧:GiftGrant 两表共享,注入随机装备支 only 条目同样通过
+    bad = dict(STRATEGY_GRANTS)
+    bad['佩佩驾到'] = cw_investments.GiftGrant(
+        equips_random_immediate=('星徽',))
+    monkeypatch.setattr(cw_investments, 'STRATEGY_GRANTS', bad)
+    cw_investments._validate_strategy_grants()
+
+
+def test_laowu_not_in_env_economy() -> None:
+    """互斥面 + 白名单同键(T-19 设计 §4.1):劳务派遣合同 ∈ ENV_GIFTS 且
+    ∈ ENV_BOSS_GRANTS(两表同键 = 各表各腿合法形态)且 ∉ ENV_ECONOMY
+    (防错装闸在册——经济域零动作,import 期互斥校验显式半边)。"""
+    assert '劳务派遣合同' in ENV_GIFTS
+    assert '劳务派遣合同' in cw_investments.ENV_BOSS_GRANTS
+    assert '劳务派遣合同' not in ENV_ECONOMY
+
+
+def test_env_boss_grants_registry_and_validation(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """ENV_BOSS_GRANTS 构建校验(T-19 设计 §2.3,import 即炸语义,注入 +
+    直调沿 ENV_STREAK_GRANTS 测试惯用法):孤儿键 → 炸;现表默认通过且
+    与 ENV_GIFTS 同键并存合法(校验器无反例拒绝)。"""
+    assert frozenset({'劳务派遣合同'}) == cw_investments.ENV_BOSS_GRANTS
+    cw_investments._validate_env_boss_grants()
+
+    # 孤儿键(版本更新改名/移除后静默失联 → 构建期炸)
+    bad = frozenset({'不存在环境X'})
+    monkeypatch.setattr(cw_investments, 'ENV_BOSS_GRANTS', bad)
+    with pytest.raises(ValueError, match='ENV_BOSS_GRANTS 孤儿键'):
+        cw_investments._validate_env_boss_grants()

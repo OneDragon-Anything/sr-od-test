@@ -40,6 +40,7 @@ docs/develop/sr_od/application/currency_war/game_state/gain-chain.md
 from __future__ import annotations
 
 import random
+from unittest import mock
 
 import pytest
 
@@ -102,6 +103,7 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     STRATEGY_GRANTS,
     GiftGrant,
     RandomCharSpec,
+    equips_by_category,
     random_char_pool,
 )
 from sr_od.application.currency_war.kernel.cw_merge_simulate import (
@@ -667,6 +669,62 @@ def test_env_gift_conditional_only_quiet_after_random_leg(
     assert out == (), '条件腿不即时发放'
     assert bench_units_of(gs) == []
     assert gs.write_seq == seq_before, '安静不写,零容器写'
+
+
+# ============================================================ 随机装备通道
+# (环境随机装备发放:equips_random_immediate 类别池掷骰 + 绑定腿;首例
+# 劳务派遣合同腿1,设计 = 该迭代 designs/T-19-laowu-paiqian-hetong.md
+# §2.4)
+
+
+def test_env_star_grant_seeded_roll_and_binding(rows_sink: _RowSink) -> None:
+    """随机装备支发放腿(on_env_gained 直构,T-19 设计 §4.2):固定种子
+    rng → equips 尾追 1 件 category='星徽' 装备且名 ∈ 类别池;done 追加
+    ``('劳务派遣合同', 'star_grant#<名>')`` 绑定键;效果串
+    ``env_star_grant:<名>``。期望名同 seed 现算(单一来源,不手抄)。"""
+    gs = _make_gs(bench=[], equips=[])
+    pool = equips_by_category('星徽')
+    expected = random.Random(20261015).choice(pool)
+    out = on_env_gained(gs, None, '劳务派遣合同', rand=False, sig=_lsig(),
+                        rng=random.Random(20261015))
+    assert out == (f'env_star_grant:{expected}',), '效果串前缀 env_star_grant:'
+    assert gs.equips.value == [expected], '库存尾追 1 件星徽'
+    assert gs.env_grants_done.value == (('劳务派遣合同',
+                                         f'star_grant#{expected}'),), \
+        '绑定腿:发放名落 done(腿2 触发依赖)'
+    assert rows_sink.kinds() == [], '正常路径零申报行'
+
+
+def test_env_star_grant_equips_unobserved_zero_write(
+        rows_sink: _RowSink) -> None:
+    """equips 未观察 → 装备与绑定同零写(T-19 设计 §4.2 placed 守卫锁):
+    禁「绑定在而装备未发」残缺态(与腿2 bench None 缓发口径对称);
+    效果串恒登记(与落位成败解耦,items 通道现役惯例)。"""
+    gs = _make_gs(bench=[])   # equips 未写 = None
+    pool = equips_by_category('星徽')
+    expected = random.Random(9).choice(pool)
+    out = on_env_gained(gs, None, '劳务派遣合同', rand=False, sig=_lsig(),
+                        rng=random.Random(9))
+    assert out == (f'env_star_grant:{expected}',), '效果串恒登记'
+    assert gs.equips.value is None, '零写:装备未入栏'
+    assert gs.env_grants_done.value is None, '绑定不落(placed 守卫)'
+
+
+def test_env_star_grant_empty_pool_skip(rows_sink: _RowSink) -> None:
+    """运行期空池防御(T-19 设计 §2.4 log+跳过):注册表漂移态(类别池
+    派生空)→ 零写不炸链(与 chars_random 支空池防御及腿2 池空防御
+    对称);无效果串。"""
+    gs = _make_gs(bench=[], equips=[])
+    seq_before = gs.write_seq
+    with mock.patch.object(cw_gain_chain, 'equips_by_category',
+                           lambda cat: ()):
+        out = on_env_gained(gs, None, '劳务派遣合同', rand=False,
+                            sig=_lsig(), rng=random.Random(3))
+    assert out == (), '空池跳过,无效果串'
+    assert gs.equips.value == [], '零写'
+    assert gs.env_grants_done.value is None, '绑定不落'
+    assert gs.write_seq == seq_before, '零容器写'
+    assert rows_sink.kinds() == [], '防御分支非缺陷(留 log 不留证)'
 
 
 # ============================================================ 定时道具通道

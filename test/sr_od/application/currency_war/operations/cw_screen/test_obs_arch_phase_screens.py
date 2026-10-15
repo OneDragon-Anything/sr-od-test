@@ -1003,6 +1003,56 @@ def test_boss_briefing_observe_gate_and_report_wiring(
         f'report 接线恰一次(统一形态调用):{_reports!r}')
 
 
+def test_boss_briefing_env_grant_trigger_wiring(
+        test_context, monkeypatch) -> None:
+    """live 观察链触发接线(劳务派遣合同腿2 live 半边):_observe_live 在
+    report 之后 best-effort 调 check_env_boss_grants——绑定在册的局观察
+    一帧 → done 追加 boss 键 + bench +1(hist = boss 类型直定目标同源,
+    零双发靠 done 短路);触发路径异常不阻塞观察链(best-effort,观察门
+    测试 ② 的 gs=object() 形态即压住该路径)。红 = live 接线断流 /
+    node_hist_pos 未传。"""
+    from sr_od.application.currency_war.kernel.cw_env_grants import (
+        BOSS_NODE_KEY_PREFIX,
+        STAR_GRANT_KEY_PREFIX,
+    )
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        GAME_STATE_SCHEMA_VERSION,
+        BenchSlot,
+        BenchView,
+        GameState,
+    )
+    _OBS_SIG = ChannelSig(family='obs', actor='CwBossWiringTest')
+    _LOGIC_SIG = ChannelSig(family='logic_action', actor='CwBossWiringTest',
+                            mode='compute')
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    gs.observe(gs.active_env, '劳务派遣合同', sig=_OBS_SIG)
+    slots = [BenchSlot(kind='empty')] * 9
+    gs.observe(gs.bench, BenchView(slots=slots, capacity=9), sig=_OBS_SIG)
+    gs.write_logic(gs.env_grants_done,
+                   (('劳务派遣合同', f'{STAR_GRANT_KEY_PREFIX}列车同行星徽'),),
+                   produced_by='test-seed', evidence='t:done', sig=_LOGIC_SIG)
+    gs.node_hist_pos = (1, 9)   # settle_confirm 推进后的 boss 坐标(普通属性)
+    op, _clicks = _make_boss(test_context, monkeypatch, area_hit=True,
+                             ocr_texts=[])
+    # _make_boss 内部把 cw_match 桩成 None,须在其后注入真 gs
+    monkeypatch.setattr(test_context, 'cw_match',
+                        SimpleNamespace(session=SimpleNamespace(), gs=gs),
+                        raising=False)
+    obs = op._observe_live()
+    assert obs.on_screen is True, '观察链照常产出 obs(接线不阻塞)'
+    done = gs.env_grants_done.value or ()
+    assert ('劳务派遣合同', f'{BOSS_NODE_KEY_PREFIX}1-9') in done, \
+        f'触发发放 done 落 boss 键: {done!r}'
+    units = [s.unit.char_id for s in gs.bench.value.slots
+             if s is not None and s.kind == 'unit' and s.unit is not None]
+    assert len(units) == 1, 'bench +1(腿2 live 半边真发生)'
+    # 重复观察同节点(same hist)= done 短路零双发
+    op._observe_live()
+    assert len([s for s in gs.bench.value.slots
+                if s is not None and s.kind == 'unit'
+                and s.unit is not None]) == 1, '同节点重观察零双发'
+
+
 # (三审整删)原 test_boss_discrimination_single_source_consumers_
 # unchanged「判别单一源消费面测试」(getsource ×3:消费点计数/import 复制面/
 # token 表扩散断言;且 import 在飞互斥面 cw_loop)——源码扫描形态(README

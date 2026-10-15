@@ -41,6 +41,7 @@ from one_dragon.base.operation.operation_round_result import (
 )
 from sr_od.application.currency_war.data.cw_chars import (
     chars_by_cost,
+    chars_by_faction,
 )
 from sr_od.application.currency_war.data.cw_synthesis import (
     CROSS_RECIPES,
@@ -64,7 +65,9 @@ from sr_od.application.currency_war.kernel.cw_action_report.close_shop import (
 )
 from sr_od.application.currency_war.kernel.cw_economy import MAX_PLAYER_LEVEL
 from sr_od.application.currency_war.kernel.cw_env_grants import (
+    BOSS_NODE_KEY_PREFIX,
     FIRST_STREAK_KEY,
+    STAR_GRANT_KEY_PREFIX,
 )
 from sr_od.application.currency_war.kernel.cw_gain_chain import (
     ENV_REROLL_DECL,
@@ -90,6 +93,7 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     ENV_REROLL_NAMES,
     INVESTMENT_ENVS,
     INVESTMENT_STRATEGIES,
+    equips_by_category,
 )
 from sr_od.application.currency_war.kernel.cw_node_schedule import (
     PLANE_NODE_TABLES,
@@ -558,6 +562,80 @@ def test_scheduled_env_gift_discharged_at_plane2_first_window() -> None:
         assert len(boxes) == 1, '特权武装箱落备战席(supply_box 槽件)'
     finally:
         uninstall_backend()
+
+
+def test_laowu_env_star_grant_and_boss_node_legs() -> None:
+    """劳务派遣合同 sim 全链(该迭代 designs/T-19-laowu-paiqian-hetong.md
+    §4.7):选卡后 equips 含 1 件 category='星徽' 装备 + done 有
+    star_grant# 绑定键(腿1,采样 = 注入槽流键世界真值);推进至 P1 boss
+    窗 → bench 恰 +1 个 1★ 绑定羁绊角色 + done 有 boss#<位面>-<轮> 键
+    (腿2,M21 流键);同 seed 重放确定性(equips/bench/done 逐位同)。"""
+
+    def _bench_units(gs: GameState) -> list[tuple[str, int]]:
+        return [(s.unit.char_id, s.unit.star) for s in gs.bench.value.slots
+                if s is not None and s.kind == 'unit'
+                and s.unit is not None]
+
+    def _run_once() -> tuple[tuple[str, ...], tuple, tuple]:
+        b = SimBackend(seed=61, cfg=RunConfig(
+            selected_difficulty='A8', enemy_difficulty=108, env_present=True))
+        install_backend(b)
+        try:
+            b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+            assert b.screen_identity() == SCREEN_INVEST_ENV
+            gs = b.gs
+            gs.write_logic(gs.invest_env_opts,
+                           ['劳务派遣合同', '轮岗', '头彩'],
+                           produced_by='Test', evidence='t:opts', sig=_SIG)
+            env_out = report_action_pick_invest_env_param(
+                gs, SimpleNamespace(idx=0), _SIG)
+            assert env_out.applied
+            assert gs.active_env.value == '劳务派遣合同'
+            cw_sim_ports.declare_world(env_out.world_decl)
+
+            # 腿1:开局选卡即发 —— equips 1 件星徽 + done 绑定键
+            binding = [k for e, k in (gs.env_grants_done.value or ())
+                       if e == '劳务派遣合同'
+                       and k.startswith(STAR_GRANT_KEY_PREFIX)]
+            assert len(binding) == 1, '绑定键恰一枚'
+            assert len(gs.equips.value) == 1, '腿1 发放 1 件星徽入栏'
+            star_name = gs.equips.value[0]
+            assert star_name == binding[0][len(STAR_GRANT_KEY_PREFIX):], \
+                '绑定键值 = 发放星徽名'
+            assert star_name in equips_by_category('星徽'), '发放 ∈ 星徽类别池'
+            pool = {c.name for c in chars_by_faction(star_name[:-2])}
+
+            # 推进至 P1 boss 窗(boss 简报呈现前节点窗已开 → 腿2 已发);
+            # 每个 settle 推进前快照 bench,窗开恰 +1 = 腿2 独占增量
+            prev_units: list[tuple[str, int]] | None = None
+            for _ in range(64):
+                if b.done or b.screen_identity() == '货币战争-BOSS简报':
+                    break
+                if b.screen_identity() == SCREEN_SETTLE:
+                    prev_units = _bench_units(gs)
+                    _node_advance_feed(gs, trigger='settle_confirm')
+                else:
+                    _drive_step(b, 61)
+            assert b.screen_identity() == '货币战争-BOSS简报'
+            boss_round = resolve_plane_node_seqs('劳务派遣合同')[1] \
+                .index('boss') + 1
+            assert ('劳务派遣合同', f'{BOSS_NODE_KEY_PREFIX}1-{boss_round}') \
+                in (gs.env_grants_done.value or ()), 'done 记 boss 节点键'
+            units = _bench_units(gs)
+            assert prev_units is not None and \
+                len(units) == len(prev_units) + 1, \
+                f'boss 窗 bench 恰 +1(腿2 独占): {len(prev_units)}→{len(units)}'
+            name, star = units[-1]
+            assert name in pool, '腿2 角色 ∈ 绑定星徽的羁绊成员池'
+            assert star == 1, '腿2 星级 1★ 先验'
+            return (tuple(gs.equips.value), tuple(units),
+                    gs.env_grants_done.value)
+        finally:
+            uninstall_backend()
+
+    first = _run_once()
+    second = _run_once()
+    assert first == second, '同 seed 重放确定性(equips/bench/done 逐位同)'
 
 
 def test_strategy_pick_chain_burst_gold() -> None:

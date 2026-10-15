@@ -107,3 +107,38 @@ def test_explicit_rng_beats_provider(provider_calls: list[str]) -> None:
     assert out.applied
     assert provider_calls == [], '显式 rng 在场,注入槽不触'
     assert _bench_units(gs) == [(expected, 1)], '落席 = 显式 rng 掷骰'
+
+
+# ==================== 随机装备支解析(劳务派遣合同)====================
+# (设计 = 该迭代 designs/T-19-laowu-paiqian-hetong.md §3 pick_invest_env
+# 条件行改写 + §4.7 前置;条件 = chars_random_immediate 或
+# equips_random_immediate 任一非空)
+
+
+def test_equip_random_leg_env_resolves_rng(provider_calls: list[str]) -> None:
+    """随机装备支正态:选劳务派遣合同(equips_random_immediate only)→
+    恰一次解析(tool 键 = pick_invest_env),星徽采样经注入槽 rng 落 equips
+    + done 绑定键落地(不扩条件行则本卡走回退自掷,sim 腿1 非确定)。"""
+    gs = _make_gs(['劳务派遣合同', '轮岗', '头彩'])
+    gs.write_logic(gs.equips, [], produced_by='T', evidence='t:eq', sig=_SIG)
+    out = report_action_pick_invest_env_param(
+        gs, SimpleNamespace(idx=0), _SIG)
+    assert out.applied
+    assert provider_calls == ['pick_invest_env'], '随机装备支恰一次解析'
+    assert len(gs.equips.value) == 1, '腿1 发放 1 件星徽'
+    binding = [k for e, k in (gs.env_grants_done.value or ())
+               if e == '劳务派遣合同' and k.startswith('star_grant#')]
+    assert binding, '绑定键落地'
+
+
+def test_non_gift_env_pick_no_attrerror_zero_resolution(
+        provider_calls: list[str]) -> None:
+    """非 ENV_GIFTS 环境选卡回归(条件行括号锁):_grant 为 None(经济
+    环境选卡必经)→ 条件短路零解析不炸链——按「追加 or 子句」逐字落实
+    会成 (A and B) or C,对 None 取属性 AttributeError 炸选卡链。"""
+    gs = _make_gs(['火药味', '轮岗', '头彩'])
+    out = report_action_pick_invest_env_param(
+        gs, SimpleNamespace(idx=1), _SIG)   # 轮岗 = 经济环境,不在 ENV_GIFTS
+    assert out.applied
+    assert provider_calls == [], '非随机支环境零解析'
+    assert (gs.active_env.value or '') == '轮岗'
