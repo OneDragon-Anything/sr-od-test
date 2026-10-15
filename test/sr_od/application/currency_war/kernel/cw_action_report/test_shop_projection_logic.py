@@ -69,6 +69,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     set_defect_sink,
 )
 from sr_od.application.currency_war.kernel.cw_investments import STRATEGY_EFFECTS
+from sr_od.application.currency_war.kernel.cw_shop_deal import state_deal_probs
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionBuyCardParam,
     CwActionCloseShopParam,
@@ -822,3 +823,76 @@ def test_report_random_leg_rand_outcome_not_andon(
     assert not any('观察覆盖 logic 失配' in str(w) for w in warns), \
         '无 [cw!] 告警面'
     assert gs.shop.source == 'observation', '观察赢覆盖照常'
+
+
+# ---- 随机态腿采样表(state_deal_probs:轮岗感知采样,投资环境轮岗
+# id 114 建模批接入;锁面出处 = invest_effects.md §2 轮岗行)----
+
+
+def _seed_for_random_leg_at(level: int,
+                            bar: dict[int, float] | None) -> GameState:
+    """随机态腿场景种子(指定等级 + 观测概率条):等级可读(概率表按级
+    索引)+ ``bar`` 非 None 时在屏店(refresh_probs = ``bar``)/ None =
+    店离屏(payload 未观察形态)。"""
+    gs = _fresh_gs()
+    gs.observe(gs.level, level, sig=_OSIG)
+    if bar is not None:
+        gs.observe(gs.shop, ShopPayload(
+            cards=[ShopSlot(kind='empty') for _ in range(5)],
+            refresh_probs=bar), sig=_OSIG)
+    return gs
+
+
+def test_state_deal_probs_falls_back_to_baseline_without_bar() -> None:
+    """无观测条形态零行为变化:店离屏(payload 未观察)与概率条空表两
+    形态下 ``state_deal_probs`` = 基线表逐键相等(键集 = 正概率档)——
+    刷新随机态腿接线对无观测条局的采样分布恒等(出处 =
+    docs/game/currency_war/research/invest_effects.md §2 轮岗行)。"""
+    baseline = {c: p for c, p in REFRESH_PROB[6].items() if p > 0}
+    assert state_deal_probs(_seed_for_random_leg_at(6, None), 6) \
+        == baseline, '店离屏(refresh_probs 不可得)→ 基线表逐键'
+    assert state_deal_probs(_seed_for_random_leg_at(6, {}), 6) \
+        == baseline, '概率条空表 → 逐档退基线表逐键'
+
+
+def test_state_deal_probs_observed_bar_direct_passthrough() -> None:
+    """读屏即真值透传:lv6 1费翻倍观测条(60/22/15/3,实读在案 =
+    ``parse_prob_bar`` docstring)→ 表 = 观测值逐键相等(5费 0% 退基线
+    0 出键——轮岗只翻倍不归零,优先级链单一源承压)。"""
+    bar = {1: 0.60, 2: 0.22, 3: 0.15, 4: 0.03, 5: 0.00}
+    assert state_deal_probs(_seed_for_random_leg_at(6, bar), 6) \
+        == {1: 0.60, 2: 0.22, 3: 0.15, 4: 0.03}, '观测条在场 = 真值直用'
+
+
+def test_state_deal_probs_zero_tier_per_tier_fallback() -> None:
+    """降级链代表形态:观测条含 0 档 → 该档退基线、其余档观测直用
+    (2费档 0 退基线 0.40;优先级链经 helper 透传,既有语义不在本测试
+    复制断言)。"""
+    bar = {1: 0.60, 2: 0.00, 3: 0.15, 4: 0.25, 5: 0.00}
+    assert state_deal_probs(_seed_for_random_leg_at(6, bar), 6) \
+        == {1: 0.60, 2: 0.40, 3: 0.15, 4: 0.25}, '0 档退基线,其余档直用'
+
+
+def test_report_random_leg_uses_observed_boosted_bar() -> None:
+    """上报接线:观测翻倍条在场 → 刷新上报写出的载荷概率条 = 翻倍表
+    (非基线),槽位费用档 ∈ 翻倍表键集;固定种子复跑载荷逐槽相等
+    (采样确定性随轮岗形保持)。"""
+    bar = {1: 0.60, 2: 0.22, 3: 0.15, 4: 0.03, 5: 0.00}
+    boosted_costs = {c for c, p in bar.items() if p > 0}
+    signatures = []
+    for _ in range(2):
+        gs = _seed_for_random_leg_at(6, bar)
+        report_action_refresh_shop_param(
+            gs, CwActionRefreshShopParam(cost=2), _LSIG,
+            rng=random.Random('cw-shop-deal-boosted-seed'))
+        payload = gs.shop.value
+        assert payload is not None
+        assert payload.refresh_probs == {c: p for c, p in bar.items()
+                                         if p > 0}, \
+            '翻倍表随载荷(非基线 30/40/25/5)'
+        for slot in payload.cards:
+            if slot.card is not None:
+                assert slot.card.cost in boosted_costs, \
+                    '槽位费用档 ∈ 翻倍表键集'
+        signatures.append(_slot_signature(payload))
+    assert signatures[0] == signatures[1], '固定种子 → 采样确定性'

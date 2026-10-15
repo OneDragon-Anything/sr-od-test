@@ -37,6 +37,9 @@ from sr_od.application.currency_war.data.cw_shop_odds import (
     REFRESH_PROB,
 )
 from sr_od.application.currency_war.kernel import cw_investments
+from sr_od.application.currency_war.kernel.cw_action_report import (
+    report_action_refresh_shop_param,
+)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
     ChannelSig,
@@ -60,6 +63,9 @@ from sr_od.application.currency_war.kernel.cw_pool import (
     grant_bucket_names,
     held_copies,
     remaining_pool,
+)
+from sr_od.application.currency_war.kernel.cw_vocab import (
+    CwActionRefreshShopParam,
 )
 from sr_od.application.currency_war.sim.cw_sim_backend import (
     INVEST_OFFER_SCHEDULE,
@@ -393,6 +399,33 @@ def test_effective_deal_probs_rotation_toggle() -> None:
     assert abs(sum(rotated.values()) - 1.0) < 1e-6
     assert set(rotated) <= {1, 2, 3, 4, 5}
     assert ROTATION_ASSUMPTION_DISCLOSURE
+
+
+def test_in_stage_refresh_keeps_rotated_probs() -> None:
+    """轮岗局 sim 世界真值阶段内不回退:M05 首刷携带翻倍表
+    (``effective_deal_probs`` → ``deal_shop`` 真值直写)后,阶段内刷新
+    上报(kernel 随机态腿,与生产 op 同段同口)写回载荷的概率条仍 =
+    翻倍表——刷新上报采样表经 ``state_deal_probs`` 轮岗感知接线
+    (出处 = docs/game/currency_war/research/invest_effects.md §2 轮岗行)。"""
+    base = dict(REFRESH_PROB[6])
+    rotated = effective_deal_probs(6, stream_rng(11, 'M05/rotation/1/6'),
+                                   rotation_on=True)
+    assert rotated != base, '前置:lv6 基线档全可行,重掷恒翻倍形'
+    boosted = [c for c, p in rotated.items() if p > base[c]]
+    assert len(boosted) == 1 and rotated[boosted[0]] == 2 * base[boosted[0]], \
+        '翻倍档 = 基线×2(轮岗只翻倍)'
+    gs = _fresh_gs()
+    gs.observe(gs.level, 6, sig=ChannelSig(family='obs',
+                                           actor='TestSigWriter'))
+    deal_shop(gs, stream_rng(12, 'M05/deal/1/6'), level=6, probs=rotated,
+              tag='shop:deal:p1r1')
+    assert gs.shop.value.refresh_probs == rotated, 'M05 首刷携带翻倍表'
+    report_action_refresh_shop_param(
+        gs, CwActionRefreshShopParam(cost=2), _lsig(),
+        rng=random.Random('cw-rotation-instage-refresh'))
+    assert gs.shop.value.refresh_probs == rotated, \
+        '阶段内刷新后仍翻倍形(不被基线污染)'
+    assert gs.shop.source == 'logic_rand', '刷新上报 = 随机态专用通道'
 
 
 # ============================================================ 节点选项生成(M16/M17/M18)
