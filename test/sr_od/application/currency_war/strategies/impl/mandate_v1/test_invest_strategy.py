@@ -19,7 +19,12 @@ currency_war/strategy-docs/29_invest_strategy_screen.md;规格出处 =
 - ⑪ 环境屏(env)平行测试面(投资环境策略层 invest_env:线价值三口径/
   赠卡分/时代族零值/环境现金分/刷新三态与阈值/自拆台排除/构建校验
   /flow 消费侧接线)——与策略屏同族评分概念的 env 支,两屏生产模块
-  平行,各自直测。
+  平行,各自直测;
+- ⑫ 阵容冲突护栏·策略屏(护栏设计 §2.2/§2.3:基准锁定/持有切换/出域
+  排除/全出域回退/刷新交互/reason 文法);
+- ⑬ 阵容冲突护栏·环境屏(env 支,护栏设计 §2.4:出域槽并入 excluded
+  槽位表通道——禁选通道先建议刷新/闸尽落选出域已排除/全出域回退/
+  基准空帧与通用环境零变化)。
 
 校验「import 即炸」的接线面:直接调校验入口 + monkeypatch 表断言抛错,
 不用 reload/源码扫描。
@@ -1316,3 +1321,89 @@ def test_guard_demoted_frame_falls_back_to_holdings_basis():
                        locked_comp='双王圣杯', demoted_endgame=True)
     assert out.idx == 0
     assert out.reason.startswith('off-direction')
+
+
+# ==================== ⑬ 阵容冲突护栏·环境屏(env 支)====================
+# 判据 = changes/2026-10-17-invest-direction-guard/design.md §2.2/§2.4。
+# 出域槽并入 env 屏既有 excluded 槽位表通道(禁选/自拆台同路):闸过先
+# 建议刷新、闸尽落选出域已排除、全出域走既有 all-excluded 回退。期望值
+# 全部注册表现算,持有写入沿 ⑫ 节 _gs_holding helper(观察真值形态)。
+# 候选环境指向集(kernel test_cw_investments 同源事实):仙舟概念股→
+# {仙舟};列车同行概念股→{列车同行};减益概念股→{减益};命运圣杯邀请/
+# 契约→{命运圣杯, 能量};时代族/经济类→∅(通用)。
+
+def test_env_guard_conflict_env_suggests_refresh_via_forbidden_channel():
+    """持有指向帧+冲突环境排除(§4 env 清单):持命运圣杯邀请(基准 =
+    {命运圣杯, 能量}),仙舟概念股({仙舟})与基准零交 = 出域槽 →
+    走既有禁选通道先建议刷新。reason 断言钉死「禁选分支专属归因串」
+    (阈值分支的归因串形态不同)——护栏触发与用户禁选同路同形,
+    零新出口形态(护栏设计 §2.4)。"""
+    gs = _gs_holding(env='命运圣杯邀请')
+    _env_set_refresh_left(gs, 1)
+    out = invest_env.decide(['仙舟概念股', '命运圣杯契约', '黄金时代'],
+                            gs, '', False, frozenset(), _ENV_EMPTY_CONFIG)
+    assert isinstance(out, RefreshSuggestion)
+    assert out.reason == 'refresh: 禁选槽存在'
+
+
+def test_env_guard_gate_exhausted_picks_compatible_excluding_off():
+    """次数闸尽落 pick 时出域已排除(护栏设计 §2.4 闸尽半边):同帧闸 0
+    → 常规选卡,兼容环境(命运圣杯契约,指向集与基准有交)胜出,出域槽
+    (仙舟概念股)不入竞争;decide_pick 同基线零漂移(memo 落选卡口)。"""
+    frame = ['仙舟概念股', '命运圣杯契约', '黄金时代']
+    gs = _gs_holding(env='命运圣杯邀请')
+    _env_set_refresh_left(gs, 0)
+    d1 = invest_env.decide(frame, gs, '', False, frozenset(),
+                           _ENV_EMPTY_CONFIG)
+    d2 = invest_env.decide_pick(frame, gs, '', False, frozenset(),
+                                _ENV_EMPTY_CONFIG)
+    assert isinstance(d1, InvestEnvDecision)
+    assert d1.idx == 1 and d1.reason.startswith('pick total=')
+    assert (d2.idx, d2.reason) == (d1.idx, d1.reason)
+
+
+def test_env_guard_all_off_frame_gate_exhausted_falls_back():
+    """全出域+闸尽回退(§4 env 清单):圣杯基下三概念股全出域(指向集
+    两两异阵营且与基准零交)→ 次数闸尽走既有 all-excluded 回退(对全体
+    候选取 argmax 最不负分者,不制造空选)。"""
+    gs = _gs_holding(env='命运圣杯邀请')
+    _env_set_refresh_left(gs, 0)
+    out = invest_env.decide(['仙舟概念股', '列车同行概念股', '减益概念股'],
+                            gs, '', False, frozenset(), _ENV_EMPTY_CONFIG)
+    assert isinstance(out, InvestEnvDecision)
+    assert out.idx in (0, 1, 2)
+    assert out.reason.startswith('all-excluded-fallback')
+
+
+def test_env_guard_scopeless_holdings_frame_identical():
+    """无指向持有帧零变化(§4 env 清单):只持打捞人才库(策略指向集空)
+    → 基准空 → 护栏不辖,出域风险候选帧与无持有帧逐位一致(§2.3 规则表
+    行 1)。"""
+    frame = ['仙舟概念股', '列车同行概念股', '减益概念股']
+    gs_held = _gs_holding(strategies=('打捞人才库',))
+    _env_set_refresh_left(gs_held, 0)
+    held = invest_env.decide(frame, gs_held, '', False, frozenset(),
+                             _ENV_EMPTY_CONFIG)
+    gs_bare = _fresh_gs()
+    _env_set_refresh_left(gs_bare, 0)
+    bare = invest_env.decide(frame, gs_bare, '', False, frozenset(),
+                             _ENV_EMPTY_CONFIG)
+    assert isinstance(held, InvestEnvDecision)
+    assert (held.idx, held.reason) == (bare.idx, bare.reason)
+
+
+def test_env_guard_universal_envs_normal_with_basis():
+    """通用环境正常(§4 env 清单):基准非空(持命运圣杯邀请)但候选全
+    为通用环境(时代族/经济类,指向集空)→ 无出域,与无持有帧逐位一致
+    (通用卡全帧零变化,§2.3 规则表行 2)。"""
+    frame = ['彩虹时代', '增发货币', '黄金时代']
+    gs_held = _gs_holding(env='命运圣杯邀请')
+    _env_set_refresh_left(gs_held, 0)
+    held = invest_env.decide(frame, gs_held, '', False, frozenset(),
+                             _ENV_EMPTY_CONFIG)
+    gs_bare = _fresh_gs()
+    _env_set_refresh_left(gs_bare, 0)
+    bare = invest_env.decide(frame, gs_bare, '', False, frozenset(),
+                             _ENV_EMPTY_CONFIG)
+    assert isinstance(held, InvestEnvDecision)
+    assert (held.idx, held.reason) == (bare.idx, bare.reason)

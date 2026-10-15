@@ -107,16 +107,14 @@ def test_random_char_pool_derivation_properties() -> None:
 
 # ==================== 阵容指向集(投资选卡阵容冲突护栏 §2.1)====================
 # 判据 = changes/2026-10-17-invest-direction-guard/design.md §2.1 三腿派生
-# (faction/亲和/成员),期望值全部注册表现算(非快照)。设计 §4 测试清单
-# 有两处期望简写与 §2.1 规则的完整推导不一致(黑塔纪元/命运圣杯契约),
-# 在对应测试 docstring 逐条申报,断言以 §2.1 正本规则为准。
+# (faction/亲和/成员),期望值全部注册表现算(非快照),与设计 §4 测试
+# 清单期望逐条对齐。
 
 def test_strategy_scope_defining_card_heita_epoch() -> None:
     """黑塔纪元(绑 ∅ + {大黑塔, 黑塔}):角色腿①(大黑塔/黑塔 factions =
     银河学者)∪ 成员腿②(大黑塔 ∈ 大黑塔银河学者 core,该线 factions 全集
-    = 银河学者+群攻)。设计 §4 简写作 {银河学者}(括注「经大黑塔/黑塔
-    factions」即仅角色腿①的值);成员腿按 §2.1 把群攻随线带入,全集以
-    §2.1 推导为准——申报差异,非实现自由裁量。"""
+    = 银河学者+群攻)→ 全集两阵营(§4 清单:角色腿 + 成员腿带入大黑塔
+    银河学者线 factions 全集)。"""
     assert strategy_faction_scope('黑塔纪元') == frozenset({'银河学者', '群攻'})
 
 
@@ -129,9 +127,8 @@ def test_strategy_scope_char_leg_qiongyu_qingque() -> None:
 def test_env_scope_affinity_leg_grail_invite_and_contract() -> None:
     """命运圣杯邀请/契约(faction 腿命运圣杯;同亲和表 {双王圣杯, 命运圣杯
     红A})→ 亲和腿双王圣杯线 factions 全集(命运圣杯+能量)→
-    {命运圣杯, 能量}(副阵营随线带入,§2.1 例)。设计 §4 对契约简写作
-    {命运圣杯}(仅 faction 腿值);契约与邀请同在 ENV_COMP_AFFINITY,亲和
-    腿照 §2.1 照常生效——申报差异,以 §2.1 为准。"""
+    {命运圣杯, 能量}(副阵营随线带入,§2.1 例;§4 清单:邀请/契约同为
+    亲和腿口径)。"""
     assert env_faction_scope('命运圣杯邀请') == frozenset({'命运圣杯', '能量'})
     assert env_faction_scope('命运圣杯契约') == frozenset({'命运圣杯', '能量'})
 
