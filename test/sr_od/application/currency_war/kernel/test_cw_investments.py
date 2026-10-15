@@ -27,6 +27,8 @@ from sr_od.application.currency_war.kernel import cw_investments
 from sr_od.application.currency_war.kernel.cw_investments import (
     ENV_ECONOMY,
     ENV_GIFTS,
+    ENV_REROLL_NAMES,
+    INVESTMENT_ENVS,
     INVESTMENT_STRATEGIES,
     STRATEGY_BINDINGS,
     STRATEGY_GRANTS,
@@ -86,6 +88,23 @@ def test_talent_import_not_in_env_economy() -> None:
     ENV_ECONOMY——import 期互斥校验半边的显式断言。"""
     assert '人才引进' in ENV_GIFTS
     assert '人才引进' not in ENV_ECONOMY
+
+
+def test_env_reroll_names_member_validation(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """追加随机环境名单成员校验(设计 §4 测试 1):成员 ∉ INVESTMENT_ENVS
+    → 校验炸(防注册表改名/移除后名单静默失联——失联形态 = sim 掷骰永不
+    中、live 永不申报);现役成员(蓝海)在册通过。注入 + 直调沿本文件
+    ENV_GIFTS 校验测试惯用法(import 期调用,重触 = 直调校验函数)。"""
+    # 现役成员:直调现值表零炸 + 全员在册
+    cw_investments._validate_env_reroll_names()
+    assert set(INVESTMENT_ENVS) >= ENV_REROLL_NAMES
+    assert '蓝海' in ENV_REROLL_NAMES
+    # 孤儿键:注入注册表外名字 → ValueError
+    monkeypatch.setattr(cw_investments, 'ENV_REROLL_NAMES',
+                        frozenset({'不存在的环境X'}))
+    with pytest.raises(ValueError, match='ENV_REROLL_NAMES 孤儿键'):
+        cw_investments._validate_env_reroll_names()
 
 
 def test_random_char_pool_derivation_properties() -> None:

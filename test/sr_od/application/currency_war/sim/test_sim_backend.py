@@ -66,6 +66,9 @@ from sr_od.application.currency_war.kernel.cw_economy import MAX_PLAYER_LEVEL
 from sr_od.application.currency_war.kernel.cw_env_grants import (
     FIRST_STREAK_KEY,
 )
+from sr_od.application.currency_war.kernel.cw_gain_chain import (
+    ENV_REROLL_DECL,
+)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
     BenchSlot,
@@ -74,17 +77,23 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     GameState,
     NodeKey,
     Unit,
+    consume_defect_sink,
     deployed_rows_of_view,
     report_node_advance,
+    set_defect_sink,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
     deployed_view_sequential as _dvs,
 )
 from sr_od.application.currency_war.kernel.cw_investments import (
+    ENV_REROLL_ASSUMPTION_POOL,
+    ENV_REROLL_NAMES,
+    INVESTMENT_ENVS,
     INVESTMENT_STRATEGIES,
 )
 from sr_od.application.currency_war.kernel.cw_node_schedule import (
     PLANE_NODE_TABLES,
+    resolve_plane_node_seqs,
 )
 from sr_od.application.currency_war.kernel.cw_ore_reward import (
     OreReward,
@@ -92,6 +101,9 @@ from sr_od.application.currency_war.kernel.cw_ore_reward import (
 from sr_od.application.currency_war.kernel.cw_overlay_register import (
     consume_screen_change,
     register_screen_change,
+)
+from sr_od.application.currency_war.kernel.cw_reward_node import (
+    is_piggy_reward_frame,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionCloseShopParam,
@@ -648,6 +660,206 @@ def test_strategy_pick_chain_box_grant_immediate() -> None:
         assert _box_count() == 1, '选中卡箱腿立即落备战席(supply_box 槽件)'
         assert gs.pending_item_grants.value == [], \
             '获得时点直发,不进入定时队列'
+    finally:
+        uninstall_backend()
+
+
+# ============================================================ 追加随机环境腿(蓝海 id113)
+# 语义正本 = gain-chain.md §3 追加随机环境申报行段 + invest_effects.md
+# 蓝海条:选卡上报完整首链(获得蓝海:active_env + 金 +6 + 申报行)→
+# advance 消费选卡声明 → 后端掷骰二次入链「获得卷中环境」。池掷骰流键
+# 桩 = _stub_env_reroll_roll(恒定下标;卷中随机支 'M02/env-reroll-gift'
+# 透传真流键保同 seed 确定性)。
+
+@pytest.fixture
+def _isolate_defect_buffer():
+    """缺陷台账缓冲隔离(前清防他测残留、后清防本测外泄——全局缓冲被
+    后续测试整池排水对账,残留行即假红;沿 kernel/test_action_report
+    同名 fixture 先例)。"""
+    consume_defect_sink()
+    yield
+    set_defect_sink(None)
+    consume_defect_sink()
+
+
+def _stub_env_reroll_roll(monkeypatch: pytest.MonkeyPatch,
+                          target_env: str) -> None:
+    """桩追加环境池掷骰流键:'M02/env-reroll' 恒返回 target_env 池下标,
+    其余流键透传真实现(卷中环境随机支保持真流键,同 seed 确定性)。"""
+    import sr_od.application.currency_war.sim.cw_sim_backend as backend_mod
+    real = backend_mod.stream_rng
+    pool = sorted(n for n in INVESTMENT_ENVS if n not in ENV_REROLL_NAMES)
+    idx = pool.index(target_env)
+
+    class _FixedRoll:
+        """恒定掷骰桩(只实现追加腿消费面 randrange)。"""
+
+        def randrange(self, n: int) -> int:
+            return idx
+
+    def fake_stream_rng(seed: int, key: str):
+        if key == 'M02/env-reroll':
+            return _FixedRoll()
+        return real(seed, key)
+
+    monkeypatch.setattr(backend_mod, 'stream_rng', fake_stream_rng)
+
+
+def _seed_and_pick_env(b: SimBackend, first_opt: str, *,
+                       feed_decl: bool = True):
+    """推进到投资环境屏 + 播种候选(首项 = first_opt)+ 上报选中首项
+    ——选卡上报完整首链即「获得蓝海」构造口径(金 +6 与申报行都以首链
+    为前提)。feed_decl=True 连做声明喂入(追加获得腿随之触发);
+    False 返回上报出参,由调用方择时喂入(首链中间态断言面)。"""
+    b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+    assert b.screen_identity() == SCREEN_INVEST_ENV
+    b.gs.write_logic(b.gs.invest_env_opts,
+                     [first_opt, '轮岗', '头彩'],
+                     produced_by='Test', evidence='t:opts', sig=_SIG)
+    env_out = report_action_pick_invest_env_param(
+        b.gs, SimpleNamespace(idx=0), _SIG)
+    assert env_out.applied
+    if feed_decl:
+        cw_sim_ports.declare_world(env_out.world_decl)
+    return env_out
+
+
+def _env_pick_backend(seed: int = 7) -> SimBackend:
+    """env_present 后端构造 + 装配(uninstall 责任在调用方 try/finally)。"""
+    b = SimBackend(seed=seed, cfg=RunConfig(
+        selected_difficulty='A8', enemy_difficulty=108, env_present=True))
+    install_backend(b)
+    return b
+
+
+def test_env_reroll_pick_second_gain_leg(_isolate_defect_buffer) -> None:
+    """追加随机环境腿(设计锁面 3):选蓝海完整首链 → 掷骰二次入链——
+    active_env ∈ 全集−追加名单且 ≠ 蓝海(追加非替换)、金净变恰 +6
+    (池无 gold_instant 条目,二次入链零重复发金)、池分布披露键在册、
+    申报行恰一行(首链所产;卷中名 ∉ 名单,二次入链零新增)。"""
+    rows: list[dict] = []
+    set_defect_sink(rows.append)
+    b = _env_pick_backend()
+    try:
+        gold0 = int(b.gs.gold.value or 0)
+        env_out = _seed_and_pick_env(b, '蓝海', feed_decl=False)
+        assert b.gs.active_env.value == '蓝海', '首链选择事实'
+        assert int(b.gs.gold.value) == gold0 + 6, '首链金腿'
+        cw_sim_ports.declare_world(env_out.world_decl)
+        pool = sorted(n for n in INVESTMENT_ENVS
+                      if n not in ENV_REROLL_NAMES)
+        rolled = b.gs.active_env.value
+        assert rolled in pool, (rolled, '卷中名 ∈ 池(全集−追加名单)')
+        assert int(b.gs.gold.value) == gold0 + 6, '二次入链零重复发金'
+        assert ENV_REROLL_ASSUMPTION_POOL in b.disclosures, '池分布披露键在册'
+        kinds = [r['kind'] for r in rows]
+        assert kinds.count(ENV_REROLL_DECL) == 1, kinds
+    finally:
+        uninstall_backend()
+
+
+def test_env_reroll_rng_explicit_stream_deterministic(
+        monkeypatch: pytest.MonkeyPatch,
+        _isolate_defect_buffer) -> None:
+    """rng 确定性锁(设计锁面 4):同 seed 重放同卷中名;桩卷中名 =
+    人才引进(池内唯一随机支环境)时随机赠卡发放逐位一致——锁「追加腿
+    rng 显式传参」:实现漏传则 on_env_gained 缺省回退自掷(random.
+    Random()),同 seed 两跑发放不同即红。"""
+    _stub_env_reroll_roll(monkeypatch, '人才引进')
+
+    def _run() -> list[tuple[str, int]]:
+        b = _env_pick_backend()
+        try:
+            _seed_and_pick_env(b, '蓝海')
+            assert b.gs.active_env.value == '人才引进', '桩下卷中名'
+            return [(s.unit.char_id, s.unit.star)
+                    for s in b.gs.bench.value.slots
+                    if s is not None and s.kind == 'unit'
+                    and s.unit is not None]
+        finally:
+            uninstall_backend()
+
+    first = _run()
+    second = _run()
+    assert first == second, '同 seed 随机赠卡支逐位一致(缺省自掷即红)'
+    cost4 = {c.name for c in chars_by_cost(4)}   # 注册表现算
+    assert len(first) == 5, '4 张 M01 开局 + 1 张赠卡'
+    assert sum(1 for n, _ in first if n in cost4) == 1, \
+        '恰 1 张 4 费(开局形状无 4 费件,4 费 = 赠卡,发放确已落地)'
+
+
+def test_env_reroll_rolled_effects_identical_to_direct_pick(
+        monkeypatch: pytest.MonkeyPatch,
+        _isolate_defect_buffer) -> None:
+    """卷中环境效果完整入链(设计锁面 5):桩卷中名 = 火药味 → 2 个简易
+    武装箱落席 + 节点序列场改写,与直接选火药味逐位一致(active_env/
+    备战席/序列场三域对拍——原语复用零新发放实现)。"""
+    _stub_env_reroll_roll(monkeypatch, '火药味')
+
+    def _run(first_opt: str) -> tuple[str, int, dict[int, tuple[str, ...]]]:
+        b = _env_pick_backend()
+        try:
+            _seed_and_pick_env(b, first_opt)
+            boxes = sum(1 for s in b.gs.bench.value.slots
+                        if s is not None and s.kind == 'supply_box')
+            return (str(b.gs.active_env.value), boxes,
+                    dict(b.gs.node_seq_by_plane.value or {}))
+        finally:
+            uninstall_backend()
+
+    via_reroll = _run('蓝海')
+    direct = _run('火药味')
+    assert via_reroll == direct, '卷中名效果与直接选中逐位一致'
+    assert via_reroll[0] == '火药味'
+    assert via_reroll[1] == 2, '火药味 2 个简易武装箱落席'
+
+
+def test_env_reroll_non_member_regression(_isolate_defect_buffer) -> None:
+    """非名单环境回归(设计锁面 6):选火药味(∈ ENV_GIFTS,∉ 追加名单)
+    → active_env 保持被选名、追加腿零触发(金不变、无池披露键)、申报
+    行零新增;既有环境选卡基线逐位不变由全量回归承载。"""
+    rows: list[dict] = []
+    set_defect_sink(rows.append)
+    b = _env_pick_backend()
+    try:
+        gold0 = int(b.gs.gold.value or 0)
+        _seed_and_pick_env(b, '火药味')
+        assert b.gs.active_env.value == '火药味', '保持被选名'
+        assert int(b.gs.gold.value) == gold0, '追加腿零触发(无即时金)'
+        assert ENV_REROLL_ASSUMPTION_POOL not in b.disclosures, '无池披露键'
+        kinds = [r['kind'] for r in rows]
+        assert kinds.count(ENV_REROLL_DECL) == 0, '零申报行'
+    finally:
+        uninstall_backend()
+
+
+def test_env_reroll_downstream_gates_follow(
+        monkeypatch: pytest.MonkeyPatch,
+        _isolate_defect_buffer) -> None:
+    """门控跟随冒烟(设计锁面 7):卷中名 = 经济过热 → is_piggy 转真
+    (电平读现值自动跟随);卷中名 = 人身意外险 → 节点序列场命中补给
+    修饰(容器序列 = resolve_plane_node_seqs(卷中名),写点唯一,位面 1
+    插入一个补给节点)。全量跟随面归各卡自身批次,本条锁「无新接线」。"""
+    # 经济过热:扑满门控转真
+    _stub_env_reroll_roll(monkeypatch, '经济过热')
+    b = _env_pick_backend()
+    try:
+        _seed_and_pick_env(b, '蓝海')
+        assert b.gs.active_env.value == '经济过热'
+        assert is_piggy_reward_frame(b.gs) is True, '扑满门控读现值转真'
+    finally:
+        uninstall_backend()
+    # 人身意外险:节点序列场命中修饰
+    _stub_env_reroll_roll(monkeypatch, '人身意外险')
+    b2 = _env_pick_backend()
+    try:
+        _seed_and_pick_env(b2, '蓝海')
+        assert b2.gs.active_env.value == '人身意外险'
+        assert b2.gs.node_seq_by_plane.value == \
+            resolve_plane_node_seqs('人身意外险'), '序列场 = 卷中环境修饰表'
+        base = resolve_plane_node_seqs('蓝海')   # 白名单外 = 默认表
+        assert len(b2.gs.node_seq_by_plane.value[1]) == len(base[1]) + 1, \
+            '位面 1 插入一个补给节点(9→10)'
     finally:
         uninstall_backend()
 

@@ -65,6 +65,7 @@ from sr_od.application.currency_war.kernel.cw_effect_inventory import (
 from sr_od.application.currency_war.kernel.cw_gain_chain import (
     DEFECT_ADVISOR_DECL,
     DEFECT_OVERFLOW_TAKEN,
+    ENV_REROLL_DECL,
     PICK_INVEST_INVALID_PAYLOAD,
     discharge_due_item_grants,
     gain_bench_item,
@@ -558,6 +559,28 @@ def test_overflow_item_merges_back_as_box_and_clears() -> None:
         '合成腾槽 → 溢出道具归位备战槽(supply_box 槽件)'
     assert gs.overflow_warning.value is False and gs.overflow_card.value == '', \
         '溢出位腾空,两字段成对清写'
+
+
+def test_env_reroll_declaration_row_member_only(rows_sink: _RowSink) -> None:
+    """追加随机环境申报行(§3,名单成员-only;首例 = 蓝海 id113):名单内
+    环境 = 金腿照常 + 申报行恰一行(kind = ENV_REROLL_DECL,语义申报非
+    缺陷告警;live 不自掷 fail-closed,active_env 写值 = 选择事实,容器
+    写通道与普通环境一致);名单外环境(增发货币,经济表成员)零申报行
+    ——申报只随 ENV_REROLL_NAMES 名单,不随经济表成员身份。"""
+    gs = _make_gs(bench=[], equips=[])
+    gs.prep_anchored = True
+    out = gain_invest_env(gs, None, '蓝海', rand=False, sig=_lsig())
+    assert gs.active_env.value == '蓝海', '选择事实写值'
+    assert gs.active_env.source == 'logic', '容器写通道与普通环境一致'
+    assert gs.gold.value == 6, '金腿照常(+6,ENV_ECONOMY 唯一 gold_instant)'
+    assert out.effects == (), '追加获得非本链职责(世界掷骰归 sim 后端)'
+    assert rows_sink.kinds() == [ENV_REROLL_DECL], '申报行恰一行'
+    # 名单外对照:增发货币零新增申报行
+    gs2 = _make_gs(bench=[], equips=[])
+    gs2.prep_anchored = True
+    gain_invest_env(gs2, None, '增发货币', rand=False, sig=_lsig())
+    assert gs2.active_env.value == '增发货币'
+    assert rows_sink.kinds() == [ENV_REROLL_DECL], '名单外零新增申报行'
 
 
 # ============================================================ 随机角色通道
