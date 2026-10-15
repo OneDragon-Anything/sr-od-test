@@ -11,7 +11,20 @@
   run_complete),两源都算「跑完」;
 - 逐局统计行(复跑加 ``-s`` 可收):seed/终局源/终点/结算轮/驱动步/
   节点写数/末金/末级/hp 低点/耗时——冒烟报告的产出面,不作断言
-  (统计数值随策略正常调整变动,断言即过时)。
+  (统计数值随策略正常调整变动,断言即过时);
+- 3.4 统计面扩展(统一保护集验证批授权,design §2.6 prereg 观察集
+  取数口;同段落不作断言):过渡引擎读数 ``eng``/``p1eng``(点亮率
+  /成型率/位面 1 形态腿的逐局输入,判定单一源 =
+  ``cw_engine_facts.engines_count``)、位面 2 入口 ``p2``、位面 1 出口
+  hp ``hp1``、买卡笔数 ``buys`` 与 M6 压牌库买因笔数 ``m2s``(kernel
+  round_fresh_buys / BuyCard receipts 买因)、卖出笔数 ``sells``、
+  位面 1 升级投入金 ``xp1``、零动作节点数 ``za``(02 §8 命题 A 零
+  动作轮读数输入)、金流量 ``gin``/``gout``(花费率读数输入)、凑息
+  保护档阻断 ``irpb``、凑息发出 ``nies``、囤货臂出口键 ``pho``/``phfail``
+  (protection_hoard_hit / no_fuel+unaffordable)、压牌库臂 ``m6``/``dg``
+  (press_buy_deployable_hit / dead_gold_press_buy_hit)、席满拒买族
+  ``bf``(m6_bench_full 等三键合计,sells/xp1 为 receipts 窗口差分
+  下界,门判定方向安全)。
 
 运行原语 = ``test/harness/sim_backend_runner.py::run_sim_full_match``
 (装配缝单一源:端口槽/容器绑定/时间冻结/journal 内存捕获/留证重定向);
@@ -43,6 +56,217 @@ from test.harness.sim_backend_runner import run_sim_full_match
 SMOKE_SEEDS: tuple[int, ...] = tuple(range(20261012, 20261032))
 
 
+def _transition_scan(journal_rows: list) -> dict:
+    """扫 journal 投影行取过渡引擎/位面/买入读数(3.4 统计面扩展;
+    design §2.6 prereg 观察集逐局取数口,冒烟报告产出面非断言)。
+
+    判定单一源 = ``cw_engine_facts.engines_count``(仙舟3/列车2/持续
+    伤害2 + 希儿系=希儿在场∧放大器≥2);board 域写行的 ``after`` 即
+    kernel 全集口径计数(与 _recount_board 同形,流派/星徽并入),
+    deployed 域写行供希儿系在场判据。字段:``eng_max`` = 局内最大
+    体系达成数(点亮 = ≥1,成型 = ≥2 即两两组合);``p1_eng`` = 位面 1
+    出口帧(末张 P1 板)达成数(形态腿);``lit`` = 达成体系名集;
+    ``p2_entered`` = 是否进过位面 2;``buys`` = 买卡笔数(round_fresh_buys
+    逐轮相位内最大长合计;该域按轮累积、轮间清零,取相位最大防重复计);
+    ``hp1`` = 位面 1 出口 hp(末张 P1 板时刻的 hp 写行值)。
+    """
+    from sr_od.application.currency_war.knowledge.cw_engine_facts import (
+        TRANSITION_TRAITS,
+        engines_count,
+    )
+
+    node: dict | None = None
+    dep_names: frozenset = frozenset()
+    eng_max = 0
+    p1_eng = 0
+    lit: set[str] = set()
+    p2_entered = False
+    fresh_max: dict[tuple, int] = {}
+    hp1: object = None
+    for r in journal_rows:
+        if r.get('row') != 'write':
+            continue
+        field = r.get('field')
+        after = r.get('after')
+        if field == 'node' and isinstance(after, dict):
+            node = after
+            if int(after.get('plane') or 1) >= 2:
+                p2_entered = True
+        elif field == 'deployed' and isinstance(after, dict):
+            names: list[str] = []
+            for zone in ('front_slots', 'back_slots'):
+                for slot in (after.get(zone) or []):
+                    unit = (slot or {}).get('unit') \
+                        if isinstance(slot, dict) else None
+                    cid = (unit or {}).get('char_id') \
+                        if isinstance(unit, dict) else None
+                    if cid:
+                        names.append(str(cid))
+            dep_names = frozenset(names)
+        elif field == 'board' and isinstance(after, dict) and after:
+            n = engines_count(after, dep_names)
+            eng_max = max(eng_max, n)
+            for bond, tier in TRANSITION_TRAITS:
+                if after.get(bond, 0) >= tier:
+                    lit.add(bond)
+            if ('希儿' in dep_names
+                    and (after.get('量子同频', 0) >= 2
+                         or after.get('贝洛伯格', 0) >= 2)):
+                lit.add('希儿系')
+            if node is not None and int(node.get('plane') or 1) <= 1:
+                p1_eng = max(p1_eng, n)
+        elif field == 'round_fresh_buys' and isinstance(after, dict):
+            phase = tuple(after.get('phase') or ())
+            fresh_max[phase] = max(fresh_max.get(phase, 0),
+                                   len(after.get('names') or []))
+        elif field == 'hp' and node is not None \
+                and int(node.get('plane') or 1) <= 1:
+            hp1 = after
+    return {'eng_max': eng_max, 'p1_eng': p1_eng, 'lit': lit,
+            'p2_entered': p2_entered, 'buys': sum(fresh_max.values()),
+            'hp1': hp1}
+
+
+#: 动作类 receipts(零动作节点判定的「有动作」面):策略决策动作族。
+#: 开局/读数开店(CwOpOpenShop)/关店/出战属流程噪声不计。
+_ACTION_OPS: frozenset[str] = frozenset({
+    'CwActionBuyCardParam', 'CwActionSellBenchParam',
+    'CwActionLevelUpParam', 'CwActionLevelUpShopParam',
+    'CwActionDeployMoveParam', 'CwActionWearEquipParam',
+    'CwActionCollectOreParam', 'CwActionRefreshShopParam',
+    'CwActionSellDeployedParam',
+})
+
+
+def _xp_spend_of(item: dict) -> int:
+    """单条升级 receipt 的花金(整批 = detail「花金N」;店内 = cost×clicks)。"""
+    import re
+    op = str(item.get('op') or '')
+    if op == 'CwActionLevelUpParam':
+        m = re.search(r'花金(\d+)', str(item.get('detail') or ''))
+        return int(m.group(1)) if m else 0
+    if op == 'CwActionLevelUpShopParam':
+        act = item.get('action') or {}
+        return int(act.get('cost') or 0) * int(act.get('clicks') or 0)
+    return 0
+
+
+def _action_scan(journal_rows: list) -> dict:
+    """扫 journal 投影行取动作面读数(3.4 统计面扩展;design §2.6 prereg
+    与 02 §8 命题 A 读数的逐局取数口,冒烟报告产出面非断言)。
+
+    receipts 行为窗口累积快照(同形条目跨窗重复),新增量按「逐键计数
+    单调上涨的差值」归属当前节点(journal 行序 = v 序,当前节点 = 最近
+    一条 ``node`` 写行)。字段:``sells`` = SellBench 笔数;``xp1`` =
+    位面 1 升级投入金;``za`` = 零动作节点数(无任何 :data:`_ACTION_OPS`
+    新增量的节点;分母 = 去重节点数,boss 双写行按 (plane,round,kind)
+    去重)。单调口径(计数只增不回退)宁少不重:窗口读侧清空后的重积
+    不再计新,读数可能少量低估、不会虚增。
+    """
+    import json
+
+    node_key: tuple | None = None
+    node_seen: set[tuple] = set()
+    active_nodes: set[tuple] = set()
+    xp1 = 0
+    sells = 0
+    buy_reason: dict[str, int] = {}
+    gin = 0.0
+    gout = 0.0
+    prev_gold: float | None = None
+    cum: dict[str, int] = {}
+    for r in journal_rows:
+        if r.get('row') != 'write':
+            continue
+        field = r.get('field')
+        after = r.get('after')
+        if field == 'node' and isinstance(after, dict):
+            node_key = (int(after.get('plane') or 0),
+                        int(after.get('round_num') or 0),
+                        str(after.get('kind') or ''))
+            node_seen.add(node_key)
+        elif field == 'receipts' and isinstance(after, list):
+            cur: dict[str, dict] = {}
+            for item in after:
+                if not isinstance(item, dict):
+                    continue
+                key = json.dumps(item, sort_keys=True, ensure_ascii=False)
+                slot = cur.get(key)
+                if slot is None:
+                    cur[key] = slot = {'item': item, 'n': 0}
+                slot['n'] += 1
+            for key, slot in cur.items():
+                prev = cum.get(key, 0)
+                if slot['n'] <= prev:
+                    continue
+                new_n = slot['n'] - prev
+                cum[key] = slot['n']
+                item = slot['item']
+                op = str(item.get('op') or '')
+                if node_key is None:
+                    continue
+                if op == 'CwActionSellBenchParam' \
+                        and item.get('applied', True):
+                    sells += new_n
+                if op == 'CwActionBuyCardParam' \
+                        and item.get('applied', True):
+                    reason = str((item.get('action') or {}).get('reason')
+                                 or '(empty)')
+                    buy_reason[reason] = buy_reason.get(reason, 0) + new_n
+                if op in _ACTION_OPS:
+                    active_nodes.add(node_key)
+                if node_key[0] == 1:
+                    xp1 += _xp_spend_of(item) * new_n
+        elif field == 'gold' and isinstance(after, (int, float)):
+            if prev_gold is not None:
+                delta = float(after) - prev_gold
+                if delta > 0:
+                    gin += delta
+                else:
+                    gout -= delta
+            prev_gold = float(after)
+    return {'sells': sells, 'xp1': xp1, 'za': len(node_seen - active_nodes),
+            'node_count': len(node_seen), 'buy_reason': buy_reason,
+            'gin': int(gin), 'gout': int(gout)}
+
+
+def _protection_counters(gs: Any) -> dict:
+    """策略器 cw4_counters 读数(3.4 统计面扩展;键缺失按 0 计)。
+
+    策略器状态附着在局容器上(run.gs.strategy_state),局终存活即现值。
+    ``irpb`` = 凑息保护档阻断观测键(design §2.3,写点 entry.py 节末
+    凑息段);``nies`` = 节末凑息卖出计数(node_end_interest_sell,
+    P56+T1 凑息门改域申报的发出面);``pho`` = 囤货臂命中
+    (protection_hoard_hit);``phfail`` = 囤货臂未成交(no_fuel +
+    unaffordable,design §2.2 出口键);``m6`` = M6 压牌库买入计数
+    (press_buy_deployable_hit,M6 子门读数);``dg`` = ②(b) 死金压牌库
+    命中(dead_gold_press_buy_hit,相邻压牌库臂读数);``bf`` = 席满拒买
+    族计数(m6_bench_full + dead_gold_press_bench_full_gate +
+    press_buy_deployable_bench_full_gate,命题 A bench 满拒买读数)。
+    """
+    from sr_od.application.currency_war.strategies.impl.mandate_v1.entry import (
+        INTEREST_PROTECTED_BLOCK_KEY,
+    )
+    state = getattr(gs, 'strategy_state', None)
+    counters = getattr(state, 'cw4_counters', None)
+    if not isinstance(counters, dict):
+        counters = {}
+
+    def _n(key: str) -> int:
+        return int(counters.get(key) or 0)
+
+    return {'irpb': _n(INTEREST_PROTECTED_BLOCK_KEY),
+            'nies': _n('node_end_interest_sell'),
+            'pho': _n('protection_hoard_hit'),
+            'phfail': _n('protection_hoard_no_fuel')
+                        + _n('protection_hoard_unaffordable'),
+            'm6': _n('press_buy_deployable_hit'),
+            'dg': _n('dead_gold_press_buy_hit'),
+            'bf': _n('m6_bench_full')
+                  + _n('dead_gold_press_bench_full_gate')
+                  + _n('press_buy_deployable_bench_full_gate')}
+
+
 def _stats_line(seed: int, run: Any, duration_s: float) -> str:
     """逐局统计行(冒烟报告产出面;字段取现值快照,不做断言)。
 
@@ -64,13 +288,26 @@ def _stats_line(seed: int, run: Any, duration_s: float) -> str:
     node_writes = sum(1 for r in run.journal_rows
                       if r.get('row') == 'write' and r.get('field') == 'node')
     hp_trail = run.hp_trail or (0,)
+    scan = _transition_scan(run.journal_rows)
+    act = _action_scan(run.journal_rows)
+    prot = _protection_counters(run.gs)
+    lit_tag = ','.join(sorted(scan['lit'])) or '-'
+    hp1 = scan['hp1']
     return (
         f'[smoke] seed={seed} terminal={terminal} '
         f'end=P{node.plane}r{node.round_num}({node.kind}) '
         f'settled={run.loop._settle.rounds_done} steps={run.backend._steps} '
         f'nodes={node_writes} gold={int(run.gs.gold.value or 0)} '
         f'level={int(run.gs.level.value or 0)} hp_min={min(hp_trail)} '
-        f'fail_streak={run.loop._op_fail_streak_n} dur={duration_s:.1f}s')
+        f'fail_streak={run.loop._op_fail_streak_n} dur={duration_s:.1f}s '
+        f'eng={scan["eng_max"]} p1eng={scan["p1_eng"]} lit={lit_tag} '
+        f'p2={int(scan["p2_entered"])} hp1={hp1} buys={scan["buys"]} '
+        f'm2s={act["buy_reason"].get("m2_stockpile", 0)} '
+        f'sells={act["sells"]} xp1={act["xp1"]} za={act["za"]}/{act["node_count"]} '
+        f'gin={act["gin"]} gout={act["gout"]} '
+        f'irpb={prot["irpb"]} nies={prot["nies"]} pho={prot["pho"]} '
+        f'phfail={prot["phfail"]} m6={prot["m6"]} dg={prot["dg"]} '
+        f'bf={prot["bf"]}')
 
 
 @pytest.mark.timeout(300)
