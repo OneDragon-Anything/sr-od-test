@@ -128,7 +128,7 @@ def _transition_scan(journal_rows: list) -> dict:
 
 
 #: 动作类 receipts(零动作节点判定的「有动作」面):策略决策动作族。
-#: 开局/读数开店(CwOpOpenShop)/关店/出战属流程噪声不计。
+#: 开局/读数开店/关店/出战属流程噪声不计。
 _ACTION_OPS: frozenset[str] = frozenset({
     'CwActionBuyCardParam', 'CwActionSellBenchParam',
     'CwActionLevelUpParam', 'CwActionLevelUpShopParam',

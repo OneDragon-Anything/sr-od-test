@@ -51,11 +51,13 @@ _SCREENS = (
     'invest_strategy', 'wish_trial', 'box_pick', 'briefing',
     'plane_transition', 'armory_box', 'boss_briefing', 'wait_one_one',
     'deploy_not_full', 'battle_wait', 'plane_intel', 'prep', 'shop',
-    # 推进型/商店框 12 屏(无 report)
+    # 推进型/商店框 11 屏(无 report;开店 obs 随 CwOpOpenShop 类壳解散
+    # 退役——直调体 open_shop 规范化后无观察面,设计 =
+    # changes/2026-10-16-open-shop-action-spec/design.md §2.2)
     'next_button', 'plane_detail', 'consumable_overlay',
     'emblem_detail_popup', 'item_detail_popup', 'interrupt_dialog',
     'refresh_odds_popup', 'role_detail_overlay', 'shop_card_detail',
-    'prep_locked_return', 'aha_equip_pick', 'open_shop',
+    'prep_locked_return', 'aha_equip_pick',
 )
 
 #: 推进型/商店框(空决策形态,无 report 接口;。
@@ -68,7 +70,7 @@ _NO_REPORT = frozenset({
     'CwScreenItemDetailPopupObs', 'CwScreenInterruptDialogObs',
     'CwScreenRefreshOddsPopupObs', 'CwScreenRoleDetailOverlayObs',
     'CwScreenShopCardDetailPopupObs', 'CwScreenPrepLockedReturnObs',
-    'CwScreenAhaEquipPickObs', 'CwOpOpenShopObs',
+    'CwScreenAhaEquipPickObs',
 })
 
 #: 文档化占位 report(现役零观察容器写点,统一形态占位)。
