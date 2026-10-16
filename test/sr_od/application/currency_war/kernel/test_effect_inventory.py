@@ -15,12 +15,20 @@
 """
 from __future__ import annotations
 
+import random
+from collections.abc import Iterator
+
+import pytest
+
 from sr_od.application.currency_war.kernel.cw_action_report import (
     report_action_deploy_move_param,
+    set_action_rng_provider,
 )
 from sr_od.application.currency_war.kernel.cw_effect_inventory import (
     BOARD_REWRITE_UPGRADE_ALL,
     apply_board_rewrite,
+    grant_bench_unit_cascade,
+    spawn_equip_bench_unit,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
     BENCH_CAPACITY_DEFAULT,
@@ -219,3 +227,71 @@ def test_board_rewrite_clear_then_front_deploy_no_crash() -> None:
     assert gs.deployed.value.front_slots[3].char_id == '甲', \
         '前排 4 号直址落位(清盘后规范形视图上不崩)'
     consume_defect_sink()   # 排水:logic_rand_outcome 行不跨用例泄漏
+
+
+# ============================================================ 合并升星触发发放腿
+# (T-26 量子同频契约:grant_bench_unit_cascade 采集发火 + spawn_equip_
+# bench_unit 拷贝臂反向锁;设计 = 该迭代 designs/T-26-liangzi-tongpin-
+# qiyue.md §2.4 条 2/§4.6 同构腿/§4.8。)
+
+_POOL = ('符玄', '希儿')
+
+
+def _merge_contract_gs(bench_entries: list[Unit]) -> GameState:
+    """量子同频契约激活 + bench 按参组装(直构容器,观察种子)。"""
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    slots: list[BenchSlot | None] = [BenchSlot(kind='unit', unit=u)
+                                     for u in bench_entries]
+    slots += [BenchSlot(kind='empty')] * (BENCH_CAPACITY_DEFAULT
+                                          - len(slots))
+    gs.observe(gs.bench, BenchView(slots=slots,
+                                   capacity=BENCH_CAPACITY_DEFAULT),
+               sig=_SIG_OBS)
+    gs.observe(gs.active_env, '量子同频契约', sig=_SIG_OBS)
+    return gs
+
+
+def _bench_units(gs: GameState) -> list[tuple[str, int]]:
+    return [(s.unit.char_id, s.unit.star) for s in gs.bench.value.slots
+            if s is not None and s.kind == 'unit' and s.unit is not None]
+
+
+def test_grant_bench_unit_cascade_fires_merge_grant(
+        seeded_merge_provider) -> None:
+    """补给单位腿发火时序锁(T-26 设计 §4.6 同构腿):2×1★花火在席,
+    grant_bench_unit_cascade('花火') 补齐三连 → 级联合并 2★ 产物,级联
+    写毕后发火 → bench 终态 = 产物 + 发放角色并存(发放名 = 注入槽
+    种子现算;pick_supply/装备获得后果两消费面同点覆盖)。"""
+    expected = random.Random(20261016).choice(list(_POOL))
+    gs = _merge_contract_gs([_u('花火'), _u('花火')])
+    result = grant_bench_unit_cascade(gs, '花火', 1)
+    assert result.placed and result.merge_steps == 1, \
+        f'入席 + 一级合并: {result}'
+    assert _bench_units(gs) == [('花火', 2), (expected, 1)], \
+        f'合并产物 + 发放角色并存: {_bench_units(gs)}'
+
+
+def test_spawn_equip_bench_unit_no_facts_no_grant(
+        seeded_merge_provider) -> None:
+    """拷贝臂反向锁(T-26 设计 §4.8):银狼族单位经 spawn_equip_bench_unit
+    入席(数据拷贝仪计数臂腿,直写首空槽无级联无事实采集)→ 花火三连
+    进度不被消费、零合并零发放——「无漏发靠穿戴门」前提的回归面
+    (YINLANG_WEAR_ALLOWLIST 扩圈时本锁与披露 6 共同构成最短证伪路径)。"""
+    gs = _merge_contract_gs([_u('花火'), _u('花火')])
+    seq_before = gs.write_seq
+    placed = spawn_equip_bench_unit(gs, '银狼', 1, 0)
+    assert placed is True, '拷贝臂腿入席'
+    assert _bench_units(gs) == [('花火', 1), ('花火', 1), ('银狼', 1)], \
+        '直写落位:无级联合并(花火仍 2 只)、无发放角色'
+    assert gs.write_seq - seq_before == 1, '恰一行入席写,零发放腿'
+
+
+@pytest.fixture
+def seeded_merge_provider() -> Iterator[None]:
+    """注确定 rng 提供槽(固定种子;本模块发放腿场景下防真随机漂移),
+    必达复位。"""
+    set_action_rng_provider(lambda tool: random.Random(20261016))
+    try:
+        yield None
+    finally:
+        set_action_rng_provider(None)

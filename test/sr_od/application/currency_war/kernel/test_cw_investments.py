@@ -356,3 +356,56 @@ def test_weicai_entry_settled_registered() -> None:
     assert entry.rewrite_settled is True
     assert entry.rewrite_picks == (3,)
     assert entry.pending_notes, '定谳记录亦以非空 notes 承载'
+
+
+# ==================== 合并升星触发发放注册表(T-26 量子同频契约)====================
+
+
+def test_env_merge_grants_registry_and_validation(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """ENV_MERGE_GRANTS 构建校验(T-26 设计 §2.1,import 即炸语义,注入 +
+    直调沿 ENV_BOSS_GRANTS 测试惯用法):孤儿键/触发角色集或发放池含
+    CHARACTERS 外名/空元组 → 炸(触发集漂移 = 事件永不命中,发放池漂移
+    = 采出假身份混进席面,登记笔误前置可见);现表直调通过。"""
+    assert cw_investments.ENV_MERGE_GRANTS == {
+        '量子同频契约': (('花火', '缇宝'), ('符玄', '希儿'))}, \
+        '首例登记(id 125 原文直读)'
+    cw_investments._validate_env_merge_grants()
+
+    _orig = dict(cw_investments.ENV_MERGE_GRANTS)
+    _entry = (('花火',), ('符玄',))
+    # 孤儿键(版本更新改名/移除后静默失联 → 构建期炸)
+    bad = dict(_orig)
+    bad['不存在环境X'] = _entry
+    monkeypatch.setattr(cw_investments, 'ENV_MERGE_GRANTS', bad)
+    with pytest.raises(ValueError, match='ENV_MERGE_GRANTS 孤儿键'):
+        cw_investments._validate_env_merge_grants()
+    # 触发角色集漂移(角色注册表外名)
+    bad = dict(_orig)
+    bad['量子同频契约'] = (('花火', '不存在的角色X'), ('符玄',))
+    monkeypatch.setattr(cw_investments, 'ENV_MERGE_GRANTS', bad)
+    with pytest.raises(ValueError, match='触发角色集'):
+        cw_investments._validate_env_merge_grants()
+    # 发放池漂移(角色注册表外名)
+    bad = dict(_orig)
+    bad['量子同频契约'] = (('花火',), ('符玄', '不存在的角色X'))
+    monkeypatch.setattr(cw_investments, 'ENV_MERGE_GRANTS', bad)
+    with pytest.raises(ValueError, match='发放池'):
+        cw_investments._validate_env_merge_grants()
+    # 空触发集 / 空发放池
+    for label, entry in (('触发角色集', ((), ('符玄',))),
+                         ('发放池', (('花火',), ()))):
+        bad = dict(_orig)
+        bad['量子同频契约'] = entry
+        monkeypatch.setattr(cw_investments, 'ENV_MERGE_GRANTS', bad)
+        with pytest.raises(ValueError, match=label):
+            cw_investments._validate_env_merge_grants()
+
+
+def test_merge_contract_coexists_with_estimation_tables() -> None:
+    """表间并存合法(T-26 设计 §2.1 豁免声明显式半边):量子同频契约
+    ∈ ENV_GIFTS(chars_conditional 辖估值域档位)且 ∈ ENV_MERGE_GRANTS
+    (本表辖世界发放触发)且 ∉ ENV_ECONOMY(零金流,经济域无条目)。"""
+    assert '量子同频契约' in ENV_GIFTS
+    assert '量子同频契约' in cw_investments.ENV_MERGE_GRANTS
+    assert '量子同频契约' not in ENV_ECONOMY
