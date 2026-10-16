@@ -394,7 +394,9 @@ def test_obs_rows_not_in_delta_settlement_to_trailing():
     rows = [
         mkrow('t1', 'hp', 80, screen='货币战争-备战'),
         receipts_row('t2', receipt('BuyCard')),
-        mkrow('t3', 'hp', 79, screen='货币战争-备战'),            # obs → 尾注
+        # obs → 尾注(独有字段;entry 键如 hp 的回读已被跳过规则吞掉)
+        mkrow('t3', 'round_fresh_buys', {'phase': [1, 1], 'names': ['翡翠']},
+              screen='货币战争-备战'),
         mkrow('t4', 'node', {'plane': 1, 'round_num': 1, 'kind': 'battle'},
               screen='货币战争-备战', family='logic_hook',
               actor='derive_node_observed'),                     # hook → 变化表
@@ -409,8 +411,9 @@ def test_obs_rows_not_in_delta_settlement_to_trailing():
     prep = screens[0]
     assert [(d.field, d.is_hook) for d in prep.actions[0].deltas] \
         == [('node', True)]
-    assert all(d.field != 'hp' for d in prep.actions[0].deltas)
-    assert any(a.startswith('观察: 血=79') for a in prep.annots)
+    assert all(d.field != 'round_fresh_buys' for d in prep.actions[0].deltas)
+    assert any(a.startswith('观察: round_fresh_buys=')
+               for a in prep.annots)
     # settlement 行(cs=战斗等待)归「画面-战斗」章的章内变化块,不入
     # 动作节 deltas、不入备战章(render-spec §3 战斗章注册行)
     battle = [s for s in screens if s.title == '画面-战斗']
@@ -599,15 +602,16 @@ def test_obs_note_rules_skip_dedup_and_route_keys():
               screen='货币战争-备战'),
         mkrow('t3', 'overflow_card', '', node=(1, 1, 'reward'),
               screen='货币战争-备战'),
-        mkrow('t4', 'equips', ['以太钻头'], node=(1, 1, 'reward'),
+        # 去重样本用非 entry 键字段(entry 键整条跳过,见 entry 键跳过测试)
+        mkrow('t4', 'node_pos', [1, 1], node=(1, 1, 'reward'),
               screen='货币战争-备战'),
-        mkrow('t5', 'equips', ['以太钻头'], node=(1, 1, 'reward'),
+        mkrow('t5', 'node_pos', [1, 1], node=(1, 1, 'reward'),
               screen='货币战争-备战'),
     ]
     _, md = build(rows)
     assert 'prev_screen' not in md
     assert '溢出卡' not in md
-    assert md.count('装备库存=以太钻头') == 1
+    assert md.count('node_pos=[1,1]') == 1
 
 
 def test_delta_cells_human_formats():
@@ -665,3 +669,19 @@ def test_action_payload_brief_and_settlement_battle_chapter():
     assert '"card":' not in md
     assert '### 节点 1-1 奖励 画面-战斗' in md
     assert '胜 血 84 进度 +2' in md
+
+
+def test_obs_note_entry_keys_skipped_unique_fields_kept():
+    """观察尾注跳过已注册画面 0 观察键(注册表并集)——这些字段必在对应画面
+    章 0 观察显影,观察回读是重复显影且时间窗归属会误挂进无关动作;非
+    entry 键(pending_loss 等独有信息)保留。"""
+    rows = [
+        mkrow('t1', 'hp', 80, node=(1, 1, 'reward'), screen='货币战争-备战'),
+        mkrow('t2', 'gold', 15, node=(1, 1, 'reward'), screen='货币战争-备战'),
+        mkrow('t3', 'pending_loss',
+              {'plane': 1, 'round_num': 1, 'node_type': 'battle'},
+              node=(1, 1, 'reward'), screen='货币战争-备战'),
+    ]
+    _, md = build(rows)
+    assert '- 观察: 金=15' not in md
+    assert '- 观察: pending_loss=' in md
