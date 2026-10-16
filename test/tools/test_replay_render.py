@@ -184,6 +184,49 @@ def test_placeholder_screen_when_no_evidence_at_group_head():
     assert '缺口: 画面证据缺失' in md
 
 
+def test_unregistered_screen_actor_gap_annotated_mid_chapter():
+    """未注册画面 op 行(pipeline §4「未注册 actor」+「缺口可见性为设计
+    目标」):不切分,挂当前画面章尾注 + 记缺口;obs 与非 obs 两 family 都
+    显影 actor 名(同章同 actor 聚合一条带计数);非 obs 行禁止静默混入动作
+    状态变化表(一律走尾注);receipts 动作节机制与快照章形态 op
+    (CwScreenPrep 等)/非画面 actor(cw_observation)不受判定影响。"""
+    rows = [
+        mkrow('t1', 'hp', 80, screen='货币战争-备战'),            # 开备战章
+        receipts_row('t2', receipt('BuyCard')),                   # 动作节 1
+        # obs 未注册画面 op:值显影(观察尾注)+ actor 显影(缺口)
+        mkrow('t3', 'new_screen_payload', {'opts': ['x']},
+              screen='货币战争-备战', actor='CwScreenBrandNewPayload'),
+        # 非 obs 未注册画面 op ×2:聚合一条尾注,不入变化表
+        mkrow('t4', 'brand_new_choice', 'opt2', screen='货币战争-备战',
+              family='logic_action', actor='CwScreenBrandNewPayload'),
+        mkrow('t5', 'brand_new_pick', 'opt3', screen='货币战争-备战',
+              family='logic_action', actor='CwScreenBrandNewPayload'),
+        # 未注册画面 op 的 receipts 行仍走动作节机制(不静音)
+        receipts_row('t6', receipt('BrandNewOp'),
+                     actor='CwScreenBrandNewPayload'),
+        mkrow('t7', 'hp', 79, screen='货币战争-备战'),            # 普通 obs 不受影响
+    ]
+    report, md = build(rows)
+    scr = section_of_kind(report, 'node').screens[0]
+    joined = '\n'.join(scr.annots)
+    # actor 名显影:obs ×1 + 非 obs ×2 聚合一条带计数
+    assert '缺口: 未注册写入者 CwScreenBrandNewPayload ×3' in joined
+    assert '- 缺口: 未注册写入者 CwScreenBrandNewPayload ×3' in md
+    # obs family:值仍由观察尾注显影;非 obs family:不走观察尾注
+    assert any(a.startswith('观察: new_screen_payload=') for a in scr.annots)
+    assert not any(a.startswith('观察: brand_new_choice') for a in scr.annots)
+    assert not any(a.startswith('观察: brand_new_pick') for a in scr.annots)
+    # 非 obs 未注册行禁入动作节 deltas 与章内变化块
+    assert all(d.field not in ('brand_new_choice', 'brand_new_pick')
+               for a in scr.actions for d in a.deltas)
+    assert all(d.field not in ('brand_new_choice', 'brand_new_pick')
+               for d in scr.trailing_changes)
+    # 未注册 actor 的 receipts 行仍产动作节;快照形态 op / 非画面 actor 不判
+    assert [a.op for a in scr.actions] == ['BuyCard', 'BrandNewOp']
+    assert '未注册写入者 CwScreenPrep' not in joined
+    assert '未注册写入者 cw_observation' not in joined
+
+
 # ---------------------------------------------------------------------------
 # 动作节(pipeline §5)
 # ---------------------------------------------------------------------------
