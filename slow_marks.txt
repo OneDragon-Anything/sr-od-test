@@ -42,3 +42,5 @@ test/sr_od/application/currency_war/sim/test_sim_smoke_batch.py::test_smoke_matc
 test/sr_od/application/currency_war/sim/test_sim_smoke_batch.py::test_smoke_match_completes[20261029]
 test/sr_od/application/currency_war/sim/test_sim_smoke_batch.py::test_smoke_match_completes[20261030]
 test/sr_od/application/currency_war/sim/test_sim_smoke_batch.py::test_smoke_match_completes[20261031]
+# 2026-10-16 sim-screen-announce T-1:广播逐点断言测试跑满局+raw sink 双装,实测 2.12s
+test/sr_od/application/currency_war/sim/test_sim_backend.py::test_screen_announce_broadcast_points_and_value_exemption
