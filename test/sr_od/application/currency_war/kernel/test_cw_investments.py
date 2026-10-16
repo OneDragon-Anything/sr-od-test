@@ -27,6 +27,7 @@ from sr_od.application.currency_war.kernel import cw_investments
 from sr_od.application.currency_war.kernel.cw_investments import (
     ENV_ECONOMY,
     ENV_GIFTS,
+    ENV_POOL_REWRITE,
     ENV_REROLL_NAMES,
     INVESTMENT_ENVS,
     INVESTMENT_STRATEGIES,
@@ -34,6 +35,7 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     STRATEGY_GRANTS,
     GiftGrant,
     RandomCharSpec,
+    StrategyPoolRewrite,
     env_faction_scope,
     random_char_pool,
     strategy_faction_scope,
@@ -279,3 +281,38 @@ def test_env_boss_grants_registry_and_validation(
     monkeypatch.setattr(cw_investments, 'ENV_BOSS_GRANTS', bad)
     with pytest.raises(ValueError, match='ENV_BOSS_GRANTS 孤儿键'):
         cw_investments._validate_env_boss_grants()
+
+
+# ==================== 联席决策挂点结构闸(T-23)====================
+# (extra_strategy_offer_node 坐标系 = (位面, 轮次) 单点两元各 1 基;
+# 执行消费端 = sim JOINT_DECISION_EXTRA_SLOT 派生。)
+
+def test_env_pool_rewrite_offer_node_gate(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """ENV_POOL_REWRITE 挂点结构闸(T-23 设计 §4.2,import 即炸语义,
+    注入 + 直调沿本文件惯用法):extra_strategy_offer_node 非 None 时
+    位面 ∈ PLANE_NODE_TABLES 且轮次 ≤ 该位面序列长——越界 (2,9)(超
+    P2 序列长 7)与位面不在表 (4,1) 均炸(登记笔误 import 期响,防 sim
+    挂点比对静默恒 False);合法 (3,5) 放行(策略大师同构卡将按此登记);
+    现表直调通过 = 联席决策 (2,6) 在册回归。"""
+    # 现表回归:联席决策 (2,6) 在册,直调零炸
+    cw_investments._validate_env_pool_rewrite()
+    assert ENV_POOL_REWRITE['联席决策'].extra_strategy_offer_node == (2, 6)
+    # 合法挂点放行(P3 序列长 7,3-5 在表内)
+    ok = dict(ENV_POOL_REWRITE)
+    ok['联席决策'] = StrategyPoolRewrite(extra_strategy_offer_node=(3, 5))
+    monkeypatch.setattr(cw_investments, 'ENV_POOL_REWRITE', ok)
+    cw_investments._validate_env_pool_rewrite()
+    # 越界挂点:轮次 9 超 P2 序列长 7 → 炸
+    bad = dict(ENV_POOL_REWRITE)
+    bad['联席决策'] = StrategyPoolRewrite(extra_strategy_offer_node=(2, 9))
+    monkeypatch.setattr(cw_investments, 'ENV_POOL_REWRITE', bad)
+    with pytest.raises(ValueError, match='轮次超位面节点数'):
+        cw_investments._validate_env_pool_rewrite()
+    # 位面不在真值表(现役键 {1,2,3})→ 炸
+    bad_plane = dict(ENV_POOL_REWRITE)
+    bad_plane['联席决策'] = StrategyPoolRewrite(
+        extra_strategy_offer_node=(4, 1))
+    monkeypatch.setattr(cw_investments, 'ENV_POOL_REWRITE', bad_plane)
+    with pytest.raises(ValueError, match='位面不在节点真值表'):
+        cw_investments._validate_env_pool_rewrite()

@@ -72,6 +72,7 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
 from sr_od.application.currency_war.sim.cw_sim_backend import (
     INVEST_OFFER_SCHEDULE,
     JOINT_DECISION_ENV_NAME,
+    JOINT_DECISION_EXTRA_SLOT,
     OFFER_CANDIDATES,
     ROTATION_ASSUMPTION_DISCLOSURE,
     deal_shop,
@@ -123,6 +124,14 @@ def test_joint_decision_extra_slot_env_gated() -> None:
     assert not offer_slots(2, 6, None), '无环境时 2-6 无槽'
     assert not offer_slots(2, 6, '轮岗'), '非联席决策环境无额外槽'
     assert offer_slots(2, 6, JOINT_DECISION_ENV_NAME), '联席决策 2-6 额外槽'
+
+
+def test_joint_decision_extra_slot_derived_from_kernel_registry() -> None:
+    """同值锁(T-23 设计 §4.1):额外槽常量 = kernel ENV_POOL_REWRITE
+    登记值且同一对象——单一源派生,手改回字面量 / 登记缺挂点即红。"""
+    registered = ENV_POOL_REWRITE[JOINT_DECISION_ENV_NAME].extra_strategy_offer_node
+    assert JOINT_DECISION_EXTRA_SLOT == (2, 6)
+    assert JOINT_DECISION_EXTRA_SLOT is registered
 
 
 # ============================================================ 投资 offer:候选生成(U07③)
