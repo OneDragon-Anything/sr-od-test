@@ -1914,7 +1914,8 @@ _A_SEEDED: tuple[str, ...] = (
     'deployed', 'bench', 'equips', 'occupied_equips',
     'spheres', 'gold', 'level', 'xp', 'hp', 'streak', 'back_layout',
     'deploy_cap', 'overflow_warning', 'overflow_card', 'active_env',
-    'active_strategies', 'pending_item_grants', 'enemy_affixes',
+    'active_strategies', 'unlocked_experts', 'pending_item_grants',
+    'enemy_affixes',
     'shop_refresh_cost', 'prev_node_spent',
     'strategy_refresh_left',
     # 晶矿附着奖励与声明通道三域(迭代 2026-10-10-ore-reward-attach:

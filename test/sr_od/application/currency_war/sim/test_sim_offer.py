@@ -266,19 +266,43 @@ def test_quality_rewrite_name_list_subset_of_registry() -> None:
 
 # ============================================================ 派生池(M06)
 
-def test_fixed_pool_copies_truth_and_expert_append() -> None:
-    """副本数真值(1/2 费 27、3/4/5 费 9,V3.7 收案);专家入池 = U10
-    首版假设(同费档追加 9 副本,标注待核);注册表外具名拒收。"""
+def test_fixed_pool_excludes_experts_and_unlock_grants_copies() -> None:
+    """副本数真值(1/2 费 27、3/4/5 费 9,V3.7 收案);专家顾问不入基础
+    牌库(官方机制:初始不参与普通商店招募,economy.md §1),解锁后按名
+    并入 EXPERT_COPIES_ASSUMED 副本(首版假设,标注待核);解锁状态越界
+    名拒收。"""
     pool = fixed_pool()
     assert pool, '固定池非空'
     for name, copies in pool.items():
         assert copies == POOL_COPIES_PER_CARD[CHARACTERS[name].cost], \
             f'{name} 副本数偏离 POOL_COPIES_PER_CARD'
-    any_cost1 = chars_by_cost(1)[0].name
-    boosted = fixed_pool(extra_experts={any_cost1: EXPERT_COPIES_ASSUMED})
-    assert boosted[any_cost1] == pool[any_cost1] + EXPERT_COPIES_ASSUMED
-    with pytest.raises(ValueError, match='注册表'):
-        fixed_pool(extra_experts={'不存在的角色': 9})
+    from sr_od.application.currency_war.data.cw_chars import EXPERT_CHARS
+    assert not (set(pool) & EXPERT_CHARS), '基础池零专家'
+    gs = _fresh_gs()
+    assert '青雀' not in drawable_names(gs, 1), '未解锁专家不可刷'
+    gs.write_logic(gs.unlocked_experts, ('青雀',), produced_by='TestWriter',
+                   sig=_lsig())
+    assert remaining_pool(gs)['青雀'] == EXPERT_COPIES_ASSUMED, \
+        '解锁后按名并入专家副本数'
+    assert '青雀' in drawable_names(gs, 1), '解锁后可进店'
+    assert '青雀' not in grant_bucket_names(gs, 1), \
+        '授予出口维持不含专家(v0 口径)'
+    from sr_od.application.currency_war.kernel.cw_pool import (
+        unlocked_expert_copies,
+    )
+    with pytest.raises(ValueError, match='非专家顾问名'):
+        unlocked_expert_copies(_gs_with_unlocked('青雀子'))
+
+
+def _gs_with_unlocked(name: str):
+    """解锁状态注入容器(闭集闸炸错测试用)。"""
+    gs = _fresh_gs()
+    from sr_od.application.currency_war.kernel.cw_game_state import ChannelSig
+    gs.write_logic_rand(gs.unlocked_experts, (name,), produced_by='TestWriter',
+                        evidence='t',
+                        sig=ChannelSig(family='logic_action',
+                                       actor='TestSigWriter'))
+    return gs
 
 
 def test_held_derived_from_bench_and_deployed_stars() -> None:

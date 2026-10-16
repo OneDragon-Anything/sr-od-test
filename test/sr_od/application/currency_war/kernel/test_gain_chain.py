@@ -64,7 +64,6 @@ from sr_od.application.currency_war.kernel.cw_effect_inventory import (
     SOURCE_STRATEGY,
 )
 from sr_od.application.currency_war.kernel.cw_gain_chain import (
-    DEFECT_ADVISOR_DECL,
     DEFECT_OVERFLOW_TAKEN,
     ENV_REROLL_DECL,
     PICK_INVEST_INVALID_PAYLOAD,
@@ -474,20 +473,24 @@ def test_anchor_gates_mismatch_net() -> None:
 
 
 def test_env_gift_advisor_split_and_quiet(rows_sink: _RowSink) -> None:
-    """ENV_GIFTS 分道(§2.3-1):advisor=True 不入席只申报;advisor=False
-    入席递归(chars_immediate 1★);表外环境查无效果安静不写(裁定④)。
-    session=None = 登记腿跳过、容器写照常(编排语义裁定)。"""
-    # advisor:特邀专家 → 顾问入商店,不入席(置闩保持确定面通道断言;
-    # 本测试焦点 = 分道)
+    """ENV_GIFTS 分道(§2.3-1):advisor=True 不入席,写解锁状态
+    (gs.unlocked_experts,权威容器字段——专家顾问初始不参与普通商店
+    招募,解锁后入池可刷,economy.md §1;原「只申报一行」随权威写道
+    退役);advisor=False 入席递归(chars_immediate 1★);表外环境查无
+    效果安静不写(裁定④)。session=None = 登记腿跳过、容器写照常
+    (编排语义裁定)。"""
+    # advisor:特邀专家 → 解锁入池(置闩保持确定面通道断言;本测试焦点
+    # = 分道)
     gs_a = _make_gs(bench=[], equips=[])
     gs_a.prep_anchored = True
     out_a = gain_invest_env(gs_a, None, '特邀专家:停云', rand=False,
                            sig=_lsig())
-    assert out_a.effects == ('advisor_decl:特邀专家:停云',)
+    assert out_a.effects == ('advisor_unlock:特邀专家:停云:停云',)
+    assert gs_a.unlocked_experts.value == ('停云',), '解锁状态写入'
     assert gs_a.active_env.value == '特邀专家:停云'   # 容器写照常
     assert gs_a.active_env.source == 'logic'
-    assert bench_units_of(gs_a) == [], '不入席(容器无商店池字段,只申报)'
-    assert rows_sink.kinds() == [DEFECT_ADVISOR_DECL]
+    assert bench_units_of(gs_a) == [], '不入席(顾问入商店非送单位)'
+    assert rows_sink.kinds() == [], '权威写道零台账申报行'
     # 契约:直接送卡 → 入席递归
     gs_c = _make_gs(bench=[], equips=[])
     gs_c.prep_anchored = True
@@ -502,7 +505,7 @@ def test_env_gift_advisor_split_and_quiet(rows_sink: _RowSink) -> None:
     out_q = gain_invest_env(gs_q, None, quiet, rand=False, sig=_lsig())
     assert out_q.effects == () and out_q.placed is True
     assert bench_units_of(gs_q) == []
-    assert rows_sink.kinds() == [DEFECT_ADVISOR_DECL], '表外零留证行'
+    assert rows_sink.kinds() == [], '表外零留证行'
 
 
 def test_env_gift_summon_unit_sanxing_peipei(rows_sink: _RowSink) -> None:
@@ -880,11 +883,16 @@ def test_gain_invest_env_invalid_payload_zero_write(rows_sink: _RowSink) -> None
 
 def test_gain_equipment_consequence_and_quiet() -> None:
     """gain_equipment:入栏 + EQUIP_ACQUIRE_CONSEQUENCES 命中送单位递归
-    (2×银狼在手 → 分身墨镜第 3 只合成 2★);表外件查无效果安静不写。"""
+    (2×银狼在手 → 分身墨镜第 3 只合成 2★);分身墨镜卡文「解锁并获得」
+    = 解锁专家入池 + 送单位两腿(官方机制:专家顾问初始不在商店池,
+    economy.md §1);表外件查无效果安静不写。"""
     gs = _make_gs(bench=[('银狼', 1), ('银狼', 1)], equips=[])
     out = gain_equipment(gs, '分身墨镜', rand=False, sig=_lsig(),
                          evidence='g', producer='T')
-    assert out.placed is True and out.effects == ('equip_consequence:银狼',)
+    assert out.placed is True
+    assert out.effects == ('equip_expert_unlock:银狼',
+                           'equip_consequence:银狼'), '解锁 + 送单位两腿'
+    assert gs.unlocked_experts.value == ('银狼',), '解锁状态写入'
     assert gs.equips.value == ['分身墨镜']
     units = [(u.char_id, u.star) for u in bench_units_of(gs)]
     assert units.count(('银狼', 2)) == 1, '送出单位经链入席并可触发合成'
@@ -893,6 +901,7 @@ def test_gain_equipment_consequence_and_quiet() -> None:
                           evidence='g', producer='T')
     assert out2.effects == () and gs2.equips.value == ['轮滑鞋']
     assert bench_units_of(gs2) == [], '表外件无后果声明,零单位写'
+    assert gs2.unlocked_experts.value in (None, ()), '表外件零解锁写'
 
 
 # (GainOutcome frozen 形状构造断言已删:dataclass 冻结属性为语言级保证,
@@ -921,9 +930,10 @@ def test_gain_invest_strategy_register_dedup_and_hacker_chain(
         monkeypatch: pytest.MonkeyPatch, rows_sink: _RowSink) -> None:
     """三段式主链(design §2.4):注册按名字去重追加(裁定⑩持卡列表
     写入语义)→ 登记腿(session=None 跳过)→ on_strategy_gained 分派
-    骇客效果(狼腿经 gain_character 链入席 + 合成;改件经 gain_equipment
-    rand=True 入栏,后果表件经 on_equipment_gained 回调送单位;标记域 =
-    前后值快照比对,gold 永不翻)。"""
+    advisor 解锁腿(银狼入池,官方卡文 = 加入商店非送单位,原入席腿
+    随权威解锁写道退役)+ 骇客效果体(改件经 gain_equipment rand=True
+    入栏,后果表件经 on_equipment_gained 回调送单位;标记域 = 前后值
+    快照比对,gold 永不翻)。"""
     monkeypatch.setattr(random.Random, 'choice',
                         lambda self, seq: '破解芯片')   # 表外件(无后果腿)
     gs = _make_gs(bench=[('银狼', 1), ('银狼', 1)], equips=[])
@@ -935,18 +945,21 @@ def test_gain_invest_strategy_register_dedup_and_hacker_chain(
                          sig=_lsig())
     assert gs.active_strategies.value == ['骇客专家:银狼'], '注册入表'
     assert gs.active_strategies.source == 'logic', '确定面 write_logic'
+    assert gs.unlocked_experts.value == ('银狼',), 'advisor 解锁腿写入'
     units = [(u.char_id, u.star) for u in bench_units_of(gs)]
-    assert units == [('银狼', 2)], '狼腿经链:送出 1★ 与既有合成 → 2★'
+    assert units == [('银狼', 1), ('银狼', 1)], \
+        '顾问入商店非送单位,预置单位保持 1★'
     assert gs.equips.value == ['破解芯片'], '改件入栏(采样值)'
     assert gs.equips.source == 'logic_rand', '采样腿 logic_rand'
     assert gs.write_seq > seq_before, '多步各占写序'
-    assert 'pick_invest_shop_pool_decl' in rows_sink.kinds(), '商店池申报行'
+    assert rows_sink.kinds() == [], '解锁权威写,零台账申报行'
     # 去重:同卡再入 → 持卡面跳写不重复;效果腿照常(裁定⑩语义 = 仅持卡
-    # 列表去重,效果分派零闸)
+    # 列表去重,效果分派零闸;解锁只增去重幂等)
     seq2 = gs.write_seq
     gain_invest_strategy(gs, None, '骇客专家:银狼', rand=False,
                          sig=_lsig())
     assert gs.active_strategies.value == ['骇客专家:银狼'], '持卡面单份'
+    assert gs.unlocked_experts.value == ('银狼',), '解锁幂等(不重复追加)'
     assert gs.write_seq > seq2, '效果腿照走(零幂等闸)'
 
 
@@ -967,6 +980,23 @@ def test_gain_invest_strategy_session_ledger_leg() -> None:
     assert gs2.active_strategies.value == ['固定理财'], '注册照常'
     assert gs2.effects.by_source(SOURCE_STRATEGY) == [], 'session=None 跳过'
     assert gs2.free_refresh_left.value is None, 'burst 零累加(零 Field 行)'
+
+
+def test_on_strategy_gained_advisor_unlock() -> None:
+    """advisor 解锁腿(on_strategy_gained):STRATEGY_GRANTS advisor=True
+    卡(停云顾问)→ 解锁状态写入 + 效果串,不入席;非 advisor 卡不触发
+    解锁;未收录卡零写(test_on_strategy_gained_unregistered_quiet 已锁)。"""
+    gs = _make_gs(bench=[], equips=[])
+    gs.prep_anchored = True
+    effects = on_strategy_gained(gs, '停云顾问', rand=False, sig=_lsig())
+    assert effects == ('advisor_unlock:停云顾问:停云',)
+    assert gs.unlocked_experts.value == ('停云',)
+    assert bench_units_of(gs) == [], '顾问入商店非送单位'
+    # 非 advisor 登记卡(摸个鱼吧II 直接给单位族,现役零效果体)不触发解锁
+    gs2 = _make_gs(bench=[], equips=[])
+    effects2 = on_strategy_gained(gs2, '摸个鱼吧II', rand=False, sig=_lsig())
+    assert effects2 == ()
+    assert gs2.unlocked_experts.value in (None, ()), '非 advisor 零解锁写'
 
 
 def test_on_strategy_gained_unregistered_quiet() -> None:
@@ -1426,9 +1456,9 @@ def test_invest_strategy_landing_hacker_wolf(
         rows_sink: _RowSink) -> None:
     """策略屏选择即时上报:点完即写入 = 注册按名字去重追加
     (active_strategies)+ 登记腿(session=None 跳过)+ 效果分派
-    骇客专家:银狼(经获得链:狼腿 gain_character 入席合成 + 商店池
-    申报行 + 改件 gain_equipment 采样入栏,后果表件经 on_equipment_gained
-    回调送单位);翻来源域集不含 gold(对抗审⑪)。"""
+    骇客专家:银狼(advisor 解锁腿:银狼入池权威写,官方卡文 = 加入
+    商店非送单位,原入席腿退役 + 改件 gain_equipment 采样入栏,后果表件
+    经 on_equipment_gained 回调送单位);翻来源域集不含 gold(对抗审⑪)。"""
     # 场景一:改件采样 = 破解芯片(表外件,链内无后果腿)。
     monkeypatch.setattr(random.Random, 'choice',
                         lambda self, seq: '破解芯片')
@@ -1444,21 +1474,25 @@ def test_invest_strategy_landing_hacker_wolf(
     # heavy)之前,通道规则「未锚定 → 随机态」使确定入口链写改道
     # logic_rand(开局种子底座与锚定闩批行为申报,首观察静默覆盖)。
     assert gs.active_strategies.source == 'logic_rand'
+    assert gs.unlocked_experts.value == ('银狼',), 'advisor 解锁腿写入'
     units = [(u.char_id, u.star) for u in bench_units_of(gs)]
-    assert units == [('银狼', 2)], '狼腿经链:送出 1★银狼与既有合成 → 2★'
+    assert units == [('银狼', 1), ('银狼', 1)], \
+        '顾问入商店非送单位,预置单位保持 1★'
     assert gs.equips.value == ['破解芯片'], '随机改件入栏(采样值)'
     assert gs.equips.source == 'logic_rand', '随机腿 logic_rand'
     assert gs.gold.source == 'observation' and gs.gold.value == 30, \
         'gold 不翻来源(改件链域集裁剪,无噪声行)'
-    assert 'pick_invest_shop_pool_decl' in rows_sink.kinds(), '商店池腿遥测申报行'
+    assert rows_sink.kinds() == [], '解锁权威写,零台账申报行'
     # 去重:同卡二次上报 → 持卡面跳写不重复;效果腿零闸照走(裁定⑩)。
     seq2 = gs.write_seq
     report_action_pick_invest_strategy_param(
         gs, param, _lsig('CwActionPickInvestOp'))
     assert gs.active_strategies.value == ['骇客专家:银狼'], '持卡面单份(去重)'
+    assert gs.unlocked_experts.value == ('银狼',), '解锁幂等(不重复追加)'
     assert gs.write_seq > seq2, '效果腿照走(零幂等闸)'
     # 场景二:改件采样命中后果表三件(Max 件张力形状)→ 回调后果腿
-    #(gain_equipment → on_equipment_gained 回调 → gain_character 送单位)。
+    #(gain_equipment → on_equipment_gained 回调 → gain_character 送单位;
+    # 银狼LV.999 非专家顾问,解锁面零写)。
     monkeypatch.setattr(random.Random, 'choice',
                         lambda self, seq: '数据拷贝仪Max')
     gs3 = _make_gs(bench=[('希儿', 1)], equips=[])
@@ -1468,6 +1502,8 @@ def test_invest_strategy_landing_hacker_wolf(
     assert gs3.equips.value == ['数据拷贝仪Max'], '改件入栏'
     units3 = [(u.char_id, u.star) for u in bench_units_of(gs3)]
     assert ('银狼LV.999', 1) in units3, '回调后果:改件送出 1★ 银狼LV.999'
+    assert '银狼LV.999' not in (gs3.unlocked_experts.value or ()), \
+        '非专家送出单位不触发解锁'
 
 
 def test_invest_strategy_landing_invalid_payload(
