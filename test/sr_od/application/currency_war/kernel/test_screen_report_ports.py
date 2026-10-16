@@ -52,8 +52,8 @@ _SCREENS = (
     'plane_transition', 'armory_box', 'boss_briefing', 'wait_one_one',
     'deploy_not_full', 'battle_wait', 'plane_intel', 'prep', 'shop',
     # 推进型/商店框 11 屏(无 report;开店 obs 随 CwOpOpenShop 类壳解散
-    # 退役——直调体 open_shop 规范化后无观察面,设计 =
-    # changes/2026-10-16-open-shop-action-spec/design.md §2.2)
+    # 退役——直调体 open_shop 规范化后无观察面,正本 =
+    # screens/op-layer.md §3 画面框 op 停用件注)
     'next_button', 'plane_detail', 'consumable_overlay',
     'emblem_detail_popup', 'item_detail_popup', 'interrupt_dialog',
     'refresh_odds_popup', 'role_detail_overlay', 'shop_card_detail',
