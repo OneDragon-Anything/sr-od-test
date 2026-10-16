@@ -618,6 +618,15 @@ def test_env_refresh_grants_registry_and_validation(
         cw_investments._validate_env_refresh_grants()
     monkeypatch.undo()
 
+    # ⑥ 负控:只锁阈值方向——新成本单侧不同(注册表允许)不炸
+    # (校验语义 = 防「sim 翻价时点早于发放」,与发放无关的金额面不在锁面)
+    monkeypatch.setitem(
+        cw_investments.ENV_ECONOMY, '长线利好',
+        cw_investments.EnvEconomyEffect(gold_after_refreshes=(30, 20),
+                                        refresh_cost_after=(30, 2)))
+    cw_investments._validate_env_refresh_grants()   # 零异常
+    monkeypatch.undo()
+
 
 def test_refresh_condition_matrix_short_circuits(
         monkeypatch: pytest.MonkeyPatch) -> None:
