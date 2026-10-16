@@ -384,7 +384,8 @@ def test_conservation_safe_across_tier_transform() -> None:
 
 def test_deal_shop_level1_pure_cost1_payload() -> None:
     """Lv1 概率表纯 1 费 → 5 槽全 1 费注册表名;概率条随载荷落容器
-    (§3.3.2 契约);槽号 1 基连号。"""
+    (§3.3.2 契约);槽号 1 基连号。(裸 gs = 表外环境恒 1★;2★ 直出
+    注册表腿 = ENV_SHOP_TWO_STAR_DEAL_PROB,表外不触发。)"""
     gs = _fresh_gs()
     deal_shop(gs, stream_rng(3, 'M05/deal/1/1'), level=1,
               tag='shop:deal:p1r1')
@@ -402,7 +403,8 @@ def test_deal_shop_level1_pure_cost1_payload() -> None:
 
 def test_deal_shop_level9_domain_and_registered_names() -> None:
     """Lv9 混档发牌:出场费用档 ⊆ 表内正概率档,名集全部注册表在册
-    (M06 抽名约束;直出 2/3 星 = 0,U12)。"""
+    (M06 抽名约束;表外直出 2 星 = 0、3 星 = 0,U12;2★ 注册表腿 =
+    ENV_SHOP_TWO_STAR_DEAL_PROB 表外不触发)。"""
     gs = _fresh_gs()
     deal_shop(gs, stream_rng(4, 'M05/deal/1/9'), level=9)
     payload = gs.shop.value
@@ -410,7 +412,7 @@ def test_deal_shop_level9_domain_and_registered_names() -> None:
     for slot in payload.cards:
         if slot.card is not None:
             assert slot.card.cost in legal_costs
-            assert slot.card.star == 1, 'U12:首版直出概率 0'
+            assert slot.card.star == 1, '表外直出恒 1★(U12 + 注册表腿不触发)'
             assert slot.card.name in CHARACTERS
 
 

@@ -770,7 +770,7 @@ def test_report_random_leg_deterministic() -> None:
         for slot in payload.cards:
             if slot.card is not None:
                 assert slot.card.name in CHARACTERS
-                assert slot.card.star == 1, 'U12:直出 2/3 星概率 0'
+                assert slot.card.star == 1, '表外直出恒 1★(U12 + 注册表腿不触发)'
         assert gs.shop.source == 'logic_rand', '随机态专用通道'
         assert gs.shop.evidence == 'refresh_random_sample'
         signatures.append(_slot_signature(payload))
