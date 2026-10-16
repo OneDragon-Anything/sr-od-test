@@ -57,6 +57,7 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     INVESTMENT_ENVS,
     INVESTMENT_STRATEGIES,
     QUALITY_REWRITE_ENV_NAMES,
+    StrategyPoolRewrite,
 )
 from sr_od.application.currency_war.kernel.cw_pool import (
     EXPERT_COPIES_ASSUMED,
@@ -69,6 +70,7 @@ from sr_od.application.currency_war.kernel.cw_pool import (
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionRefreshShopParam,
 )
+from sr_od.application.currency_war.sim import cw_sim_backend
 from sr_od.application.currency_war.sim.cw_sim_backend import (
     INVEST_OFFER_SCHEDULE,
     JOINT_DECISION_ENV_NAME,
@@ -249,11 +251,12 @@ def test_env_offer_shape_and_registry_membership() -> None:
 def test_rewrite_quality_for_pick_full_rewrite_and_settled() -> None:
     """品质改写判据(全改写型 + settled 定谳型):2026-10-14 用户裁定
     判据形状 = rewrite_picks == (1,2,3) 结构特征,2026-10-16 用户裁定
-    头彩 settled 定谳(offer 级覆盖面)后同判据接入。时代族命中次返回
-    目标品质(彩虹 1/2/3 次 → 棱彩,第 4 次不存在于固定日程但判据仍闭)、
+    头彩/尾彩 settled 定谳(offer 级覆盖面)后同判据接入。时代族命中次
+    返回目标品质(彩虹 1/2/3 次 → 棱彩,第 4 次不存在于固定日程但判据仍闭)、
     黄金/白银同构族自动覆盖;头彩第 1 次 → 棱彩、第 2/3 次 → None
-    (只登记序接入);尾彩 picks=(3,) 部分型未定谳不接入 → None;
-    联席决策无 rewrite_quality → None;None/空/名单外环境恒 None。"""
+    (只登记序接入);尾彩第 3 次 → 棱彩、第 1/2 次 → None(只登记序
+    接入);联席决策无 rewrite_quality → None;None/空/名单外环境恒
+    None。"""
     assert rewrite_quality_for_pick('彩虹时代', 1) == '棱彩'
     assert rewrite_quality_for_pick('彩虹时代', 2) == '棱彩'
     assert rewrite_quality_for_pick('彩虹时代', 3) == '棱彩'
@@ -264,12 +267,31 @@ def test_rewrite_quality_for_pick_full_rewrite_and_settled() -> None:
         'settled 定谳接入第 1 次取卡'
     assert rewrite_quality_for_pick('头彩', 2) is None, '只登记序接入'
     assert rewrite_quality_for_pick('头彩', 3) is None, '只登记序接入'
-    assert rewrite_quality_for_pick('尾彩', 3) is None, \
-        '部分型未定谳不接入语义由尾彩承载,禁连带删除'
+    assert rewrite_quality_for_pick('尾彩', 3) == '棱彩', \
+        'settled 定谳接入第 3 次取卡'
+    assert rewrite_quality_for_pick('尾彩', 1) is None, '只登记序接入'
+    assert rewrite_quality_for_pick('尾彩', 2) is None, '只登记序接入'
     assert rewrite_quality_for_pick('联席决策', 1) is None, \
         '数量通道无 rewrite_quality'
     for env in (None, '', '轮岗', '经济过热'):
         assert rewrite_quality_for_pick(env, 1) is None, env
+
+
+def test_rewrite_quality_for_pick_unsettaled_partial_stays_out(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """未定谳部分型不接入判据的合成载体锁(尾彩 2026-10-16 定谳后,
+    现役 ENV_POOL_REWRITE 不再存在未定谳部分型实体,判据函数的
+    ``not rewrite_settled`` 分支失去实体载体——本锁以合成条目守护该
+    分支不被静默删除:未来新增部分改写型环境未定谳时仍须拒接)。注入
+    副本 + 直调沿 settled 闸锁同函数惯用法(test_cw_investments.py
+    test_env_pool_rewrite_settled_gate 先例);判据函数调用时读 sim 模块
+    命名空间绑定(cw_sim_backend.py import 处),patch 目标 = sim 模块。"""
+    forged = dict(ENV_POOL_REWRITE)
+    forged['合成部分型'] = StrategyPoolRewrite(
+        rewrite_quality='棱彩', rewrite_picks=(1,), rewrite_settled=False)
+    monkeypatch.setattr(cw_sim_backend, 'ENV_POOL_REWRITE', forged)
+    assert rewrite_quality_for_pick('合成部分型', 1) is None, \
+        '未定谳部分型不接入(settled 分支守卫)'
 
 
 def test_quality_rewrite_name_list_subset_of_registry() -> None:

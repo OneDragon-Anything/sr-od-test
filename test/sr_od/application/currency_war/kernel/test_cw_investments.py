@@ -343,3 +343,16 @@ def test_env_pool_rewrite_settled_gate(
     monkeypatch.setattr(cw_investments, 'ENV_POOL_REWRITE', bad)
     with pytest.raises(ValueError, match='settled 定谳闸'):
         cw_investments._validate_env_pool_rewrite()
+
+
+def test_weicai_entry_settled_registered() -> None:
+    """尾彩条目定谳锁(2026-10-16 用户裁定:覆盖面定谳 = offer 级,第 3
+    次取卡机会 3 张候选全棱彩):登记 rewrite_settled=True + rewrite_picks
+    ==(3,)+ 非空 pending_notes(定谳记录)。至此品质覆写族 7 键全部定谳
+    或结构定形,注册表无未定谳部分型实体(「未定谳部分型不接入」语义由
+    合成载体锁承载,test_sim_offer.py
+    test_rewrite_quality_for_pick_unsettaled_partial_stays_out)。"""
+    entry = ENV_POOL_REWRITE['尾彩']
+    assert entry.rewrite_settled is True
+    assert entry.rewrite_picks == (3,)
+    assert entry.pending_notes, '定谳记录亦以非空 notes 承载'
