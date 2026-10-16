@@ -70,12 +70,14 @@ from sr_od.application.currency_war.data.cw_shop_odds import (
 from sr_od.application.currency_war.kernel import cw_investments as inv
 from sr_od.application.currency_war.kernel.cw_economy import (
     HP_SAFE_THRESHOLD,
+    REFRESH_COST_BASE,
     blood_xp_gate,
     blood_xp_gate_for,
     effective_hp_threshold,
     refresh_ev_budget,
     reserve_cap,
     schedule_upgrade,
+    world_shop_refresh_cost,
 )
 from sr_od.application.currency_war.kernel.cw_economy import (
     reserve_cap as kernel_reserve_cap,
@@ -1406,4 +1408,42 @@ def test_shop_frame_disclosure_failure_degrades_with_warning(
     assert warned, '披露覆写失败未走 log.warning 降级(静默 no-op 回归)'
     assert rr is None and ledger is not None, \
         '降级未收工:披露失败不应中断商店循环'
+
+
+# ==================== 刷价改价渲染 helper(T-21 腿 2)====================
+
+
+def test_world_shop_refresh_cost_threshold_flip() -> None:
+    """改价渲染 helper(T-21 锁 8,2026-10-16 用户裁决语义):长线利好
+    refresh_paid < 30 → 基价;≥ 30 → 新价;环境不在册/在册无改价字段 →
+    基价;**付费域**——免费帧累计不推进判定(与 ENV_REFRESH_GRANTS 登记
+    计数同口径,防回退全量域)。数值单一源 = 注册表(ENV_ECONOMY.
+    refresh_cost_after)与基价常量,断言现算不手抄第二源。"""
+    new_price = inv.ENV_ECONOMY['长线利好'].refresh_cost_after[1]
+
+    gs = cw4_gs(active_env='长线利好')
+    assert world_shop_refresh_cost(gs) == REFRESH_COST_BASE, '0 付费未达阈基价'
+    for _ in range(29):
+        gs.effects.record_refresh(free=False)
+    assert world_shop_refresh_cost(gs) == REFRESH_COST_BASE, '29 付费未达阈'
+    gs.effects.record_refresh(free=False)
+    assert world_shop_refresh_cost(gs) == new_price, '达阈翻注册表新价'
+
+    gs_free = cw4_gs(active_env='长线利好')
+    for _ in range(30):
+        gs_free.effects.record_refresh(free=True)
+    assert world_shop_refresh_cost(gs_free) == REFRESH_COST_BASE, \
+        '免费帧累计不推进改价判定(付费域)'
+
+    gs_off = cw4_gs(active_env='蓝海')
+    for _ in range(40):
+        gs_off.effects.record_refresh(free=False)
+    assert world_shop_refresh_cost(gs_off) == REFRESH_COST_BASE, \
+        '环境不在册基价'
+
+    gs_nocost = cw4_gs(active_env='二手市场')
+    for _ in range(40):
+        gs_nocost.effects.record_refresh(free=False)
+    assert world_shop_refresh_cost(gs_nocost) == REFRESH_COST_BASE, \
+        '在册无改价字段(refresh_cost_after=None)基价'
 

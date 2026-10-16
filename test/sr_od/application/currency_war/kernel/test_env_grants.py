@@ -11,9 +11,14 @@
   None 结算跳过;
 - **刷新次数条件发放**(T-7 二手市场,设计 =
   .debug/progress/2026-09-23-invest-effects-calc/designs/T-7-ershichang.md
-  §2):登记表五查、条件矩阵(含 gold/equips 缺读缓发禁半发放)、发放
-  三笔相邻写、计数域全量口径(用户裁定①)、一次性(用户裁定②)、
-  上报函数接线存在性。
+  §2):登记表六查(含 T-21 跨锁失同步)、条件矩阵(含 gold/equips 缺读
+  缓发禁半发放)、发放三笔相邻写、计数域全量口径(用户裁定①)、
+  一次性(用户裁定②)、上报函数接线存在性;
+- **长线利好**(T-21 付费域触发器,设计 =
+  .debug/progress/2026-09-23-invest-effects-calc/designs/T-21-changxian-
+  liaoli.md §4):付费域计数(「花费金币」限定词,防回退全量域)、
+  金-only 两笔发放、一次性、缓发重试、上报接线与刷费价基边界
+  (第 30 刷扣旧价同窗 +20,31 刷扣新价 1)。
 
 sim 接线(3.3)与 supply 采纳边界不在此。
 """
@@ -551,12 +556,13 @@ def _count_refreshes(gs: GameState, n: int, *, free: bool = False) -> None:
 
 def test_env_refresh_grants_registry_and_validation(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """五查构建校验(import 即炸语义,注入 + 直调):孤儿环境键/计数键
-    闭集外/值形(阈值 0 与金 0 两例,C4)/装备名漂移/双源失同步;
-    现表默认通过。"""
-    # 现表(与卡面 id 106 同源):直调校验器零异常
+    """六查构建校验(import 即炸语义,注入 + 直调):孤儿环境键/计数键
+    闭集外/值形(阈值 0 与金 0 两例,C4)/装备名漂移/双源失同步/跨锁
+    失同步(T-21 校验⑥);现表双行全等(加行漏改本测试即红灯)。"""
+    # 现表(与卡面 id 106/120 同源):双行全等 + 直调校验器零异常
     assert cw_investments.ENV_REFRESH_GRANTS == {
-        _R_ENV: (cw_investments.CounterKey.REFRESH_TOTAL, 20, 30, _R_EQUIP)}
+        _R_ENV: (cw_investments.CounterKey.REFRESH_TOTAL, 20, 30, _R_EQUIP),
+        '长线利好': (cw_investments.CounterKey.REFRESH_PAID, 30, 20, None)}
     cw_investments._validate_env_refresh_grants()
 
     # ① 孤儿环境键(版本更新改名/移除后静默失联 → 构建期炸)
@@ -598,6 +604,17 @@ def test_env_refresh_grants_registry_and_validation(
         cw_investments.ENV_ECONOMY, _R_ENV,
         cw_investments.EnvEconomyEffect(gold_after_refreshes=(19, 30)))
     with pytest.raises(ValueError, match='双源失同步'):
+        cw_investments._validate_env_refresh_grants()
+    monkeypatch.undo()
+
+    # ⑥ 跨锁失同步(T-21):改价腿单侧改阈值——发放腿(本表)与改价腿
+    # (ENV_ECONOMY.refresh_cost_after,sim 渲染 helper 读它)同出卡面
+    # 同一句「30 次」,单侧改数静默漂移 = sim 翻价早于发放
+    monkeypatch.setitem(
+        cw_investments.ENV_ECONOMY, '长线利好',
+        cw_investments.EnvEconomyEffect(gold_after_refreshes=(30, 20),
+                                        refresh_cost_after=(29, 1)))
+    with pytest.raises(ValueError, match='跨锁失同步'):
         cw_investments._validate_env_refresh_grants()
     monkeypatch.undo()
 
@@ -761,8 +778,9 @@ def test_exactly_once_in_21_refresh_loop(
 
 def test_report_wiring_grants_on_threshold() -> None:
     """接线存在性:上报函数尾部触发检查在在册环境达阈时发放落地
-    (集成 1 条;矩阵断言归 kernel 级,不在此层重复)。level 不写 =
-    随机态采样腿跳写,窗口内只剩发放三笔。"""
+    (集成 1 条;矩阵断言归 kernel 级,不在此层重复)。窗口内 = 刷费
+    扣金腿(容器直读,T-21 腿 3:免费未观察保守按付费,基价 2)+ 发放
+    三笔;level 不写 = 随机态采样腿跳写。"""
     gs = _r_make_gs(env=_R_ENV, gold=100, equips=['永动机'])
     _count_refreshes(gs, 20)
 
@@ -770,8 +788,152 @@ def test_report_wiring_grants_on_threshold() -> None:
         gs, CwActionRefreshShopParam(cost=2), _R_SIG_LOGIC)
 
     assert outcome.applied is True
-    assert gs.gold.value == 130, '发放腿金 +30 落地'
+    assert gs.gold.value == 128, \
+        '第 21 刷扣基价 2(容器直读)+ 发放腿金 +30 落地(100−2+30)'
     assert gs.equips.value == ['永动机', _R_EQUIP], '发放腿装备尾追落地'
     assert gs.env_grants_done.value == ((_R_ENV, REFRESH_THRESHOLD_KEY),), \
         '发放腿 done 封账落地'
     assert gs.effects.refresh_total == 21, '计数腿先行入账(第 21 刷)'
+
+
+# ============================================================ 长线利好(T-21 付费域 + 金-only)
+
+_L_ENV = '长线利好'
+
+
+def _l_make_gs(*, gold: int | None = None) -> GameState:
+    """长线利好测试容器(金-only 卡:equips 恒保持未观察形态——
+    登记装备腿 None,发放路径不应有任何 equips 承载要求)。"""
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    gs.observe(gs.active_env, _L_ENV, sig=_R_SIG_OBS)
+    if gold is not None:
+        gs.observe(gs.gold, gold, sig=_R_SIG_OBS)
+    return gs
+
+
+def test_paid_domain_counts_only_paid_frames(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """付费域语义(T-21 锁 2;desc「花费金币」限定词直读,防回退全量域):
+    免费帧混排不进阈值——free×29 + paid×1(refresh_total=30 而
+    refresh_paid=1)零发放;付费累计 29 零发放;第 30 次付费发放。"""
+    gs = _l_make_gs(gold=100)
+    for i in range(30):
+        gs.effects.record_refresh(free=(i < 29))
+    assert gs.effects.refresh_total == 30
+    assert gs.effects.refresh_paid == 1, '混排有效:免费帧不进 paid'
+    calls = _record_writes(gs, monkeypatch)
+    assert check_env_refresh_grants(gs, _R_SIG_LOGIC) is None, \
+        '付费域:29 免费 + 1 付费不达阈'
+    assert not calls, f'零发放零写: {calls}'
+
+    gs2 = _l_make_gs(gold=100)
+    _count_refreshes(gs2, 29, free=False)
+    calls2 = _record_writes(gs2, monkeypatch)
+    assert check_env_refresh_grants(gs2, _R_SIG_LOGIC) is None, '付费 29 未达阈'
+    assert not calls2, f'零发放零写: {calls2}'
+
+    gs2.effects.record_refresh(free=False)
+    calls3 = _record_writes(gs2, monkeypatch)
+    assert check_env_refresh_grants(gs2, _R_SIG_LOGIC) is None, \
+        '返回值 = 被发装备名,金-only 发放恒 None'
+    assert [c[0] for c in calls3] == ['gold', 'env_grants_done'], \
+        '第 30 次付费发放(金-only 两笔)'
+
+
+def test_gold_only_grant_two_writes_adjacent(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """金-only 形状(T-21 锁 3):发放恰两笔(gold +20 走 write_logic、
+    done 追加走 write_logic)同 evidence env_grant#长线利好#refresh30
+    相邻,零 equips 笔;equips 未观察也不缓发(装备腿 None 无承载要求,
+    与二手市场装备腿形态互照)。"""
+    gs = _l_make_gs(gold=100)
+    _count_refreshes(gs, 30, free=False)
+    calls = _record_writes(gs, monkeypatch)
+
+    granted = check_env_refresh_grants(gs, _R_SIG_LOGIC)
+
+    assert granted is None, '返回值 = 被发装备名,金-only 恒 None(仅日志面)'
+    assert gs.gold.value == 120, '金 100 + 20'
+    assert gs.gold.source == 'logic', '金 = 登记事实直写'
+    assert gs.equips.value is None, '装备腿 None:零 equips 笔(保持未观察)'
+    assert gs.env_grants_done.value == ((_L_ENV, REFRESH_THRESHOLD_KEY),)
+    assert calls == [
+        ('gold', 'env_grant#长线利好#refresh30', 'logic', _R_SIG_LOGIC),
+        ('env_grants_done', 'env_grant#长线利好#refresh30', 'logic',
+         _R_SIG_LOGIC),
+    ], f'金-only 两笔同 evidence 同 sig 相邻: {calls}'
+
+
+def test_paid_domain_exactly_once_in_31_refresh_loop(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """一次性(T-21 锁 4):31 次付费刷新循环,第 30 次恰发一次,第 31
+    次 done 封账零新增写(60 刷不再发)。"""
+    gs = _l_make_gs(gold=100)
+    calls = _record_writes(gs, monkeypatch)
+    granted_at: list[int] = []
+    for i in range(31):
+        gs.effects.record_refresh(free=False)
+        before = gs.env_grants_done.value
+        check_env_refresh_grants(gs, _R_SIG_LOGIC)
+        if gs.env_grants_done.value != before:
+            granted_at.append(i)
+
+    assert granted_at == [29], f'第 30 次(下标 29)恰发一次: {granted_at}'
+    assert gs.env_grants_done.value == ((_L_ENV, REFRESH_THRESHOLD_KEY),)
+    assert len([c for c in calls if c[0] == 'env_grants_done']) == 1, \
+        'done 只登记一次'
+    assert gs.gold.value == 120, '金只 +20 一次'
+
+
+def test_paid_grant_gold_unobserved_withhold_then_retry(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """缓发重试(T-21 锁 5):gold 缺读 → 零写不标 done(宁缺勿造,
+    刷新高频下次自动重查),喂值后下次调用发放成功(金-only 无装备腿,
+    无第二缓发面)。"""
+    gs = _l_make_gs()   # gold 未写 = None
+    _count_refreshes(gs, 30, free=False)
+    calls = _record_writes(gs, monkeypatch)
+    assert check_env_refresh_grants(gs, _R_SIG_LOGIC) is None
+    assert not calls, f'缺读零写: {calls}'
+    assert gs.env_grants_done.value is None, '缺读不标 done'
+
+    gs.observe(gs.gold, 50, sig=_R_SIG_OBS)
+    calls = _record_writes(gs, monkeypatch)
+    assert check_env_refresh_grants(gs, _R_SIG_LOGIC) is None
+    assert gs.gold.value == 70, '喂值后发放成功(50 + 20)'
+    assert [c[0] for c in calls] == ['gold', 'env_grants_done']
+
+
+def test_report_wiring_paid_grant_price_base_at_threshold() -> None:
+    """接线存在性 + 30 次边界价基(T-21 锁 6/锁 11 前半):第 30 次付费
+    刷新动作窗内,上报函数尾部触发检查发放落地;当窗刷费扣旧价 2
+    (付完才满 30,容器价基假设 desc 直读)+ 发放 +20 = 净 +18。"""
+    gs = _l_make_gs(gold=100)
+    gs.observe(gs.shop_refresh_cost, 2, sig=_R_SIG_OBS)
+    _count_refreshes(gs, 29, free=False)
+
+    outcome = report_action_refresh_shop_param(
+        gs, CwActionRefreshShopParam(cost=2), _R_SIG_LOGIC)
+
+    assert outcome.applied is True
+    assert gs.gold.value == 118, '第 30 刷扣旧价 2 且同窗 +20(净 +18)'
+    assert gs.env_grants_done.value == ((_L_ENV, REFRESH_THRESHOLD_KEY),), \
+        '发放腿 done 封账落地'
+    assert gs.effects.refresh_paid == 30, '付费计数腿先行入账'
+
+
+def test_report_refresh_fee_new_price_after_threshold() -> None:
+    """31 刷新价(T-21 锁 11 后半):第 30 刷后新 visit 入口观察已采
+    新价 1 → 第 31 刷扣 1(降价生效于付完 30 次之后的下一次动作;
+    实机价基对账义务 = T-21 §2.4 第 7 项,失配走停机语义)。"""
+    gs = _l_make_gs(gold=118)
+    gs.observe(gs.shop_refresh_cost, 1, sig=_R_SIG_OBS)
+    gs.write_logic(gs.env_grants_done, ((_L_ENV, REFRESH_THRESHOLD_KEY),),
+                   produced_by='test-seed', sig=_R_SIG_LOGIC)
+
+    outcome = report_action_refresh_shop_param(
+        gs, CwActionRefreshShopParam(cost=1), _R_SIG_LOGIC)
+
+    assert outcome.applied is True
+    assert gs.gold.value == 117, '第 31 刷扣新价 1'
+    assert gs.effects.refresh_total == 1

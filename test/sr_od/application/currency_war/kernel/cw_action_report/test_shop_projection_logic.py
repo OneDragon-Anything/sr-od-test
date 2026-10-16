@@ -300,13 +300,16 @@ class TestM1DirectLock:
         assert gs2.write_seq > seq0, '跳写对 ≠ 整动作零写(gold 仍落)'
 
     def test_refresh_paid_deducts_gold_and_samples_rand_payload(self):
-        """付费刷新:gold −刷新费;payload = 随机态采样(2026-09-21 Field
-        化 supersession:2026-09-18「终结跳写 payload 不写」的 payload 半边
-        收窄为 write_logic_rand 随机态——观察覆盖差异预期内,采样即猜测)。"""
+        """付费刷新:gold −容器刷价(费用单一源 = ``gs.shop_refresh_cost``
+        容器直读,2026-10-16 用户裁决,付费计数语义不变);payload = 随机
+        态采样(2026-09-21 Field 化 supersession:2026-09-18「终结跳写
+        payload 不写」的 payload 半边收窄为 write_logic_rand 随机态——观察
+        覆盖差异预期内,采样即猜测)。"""
         gs = _gs_of(gold=30, shop=[_card('希儿')])
-        _report_action(
-            gs, CwActionRefreshShopParam(cost=2), ShopActionExecuted(refresh_paid=2))
-        assert gs.gold.value == 28, 'gold: 期望 30 −刷新费 2'
+        gs.observe(gs.shop_refresh_cost, 2,
+                   sig=ChannelSig(family='obs', actor='cw_observation'))
+        _report_action(gs, CwActionRefreshShopParam(cost=2))
+        assert gs.gold.value == 28, 'gold: 期望 30 −容器刷价 2'
         assert gs.shop.source == 'logic_rand', \
             'shop payload: 随机态腿采样写(write_logic_rand 专用通道)'
         assert gs.shop.evidence == 'refresh_random_sample', '随机态写端注记'
@@ -316,16 +319,15 @@ class TestM1DirectLock:
             'xp: 刷新腿零写(未读域保持种子初值 None)'
 
     def test_refresh_free_gold_unwritten(self):
-        """免费帧(paid=0):gold 不写(fields.md §3.3.4 免费帧不写语义;
-        free 显式喂 True = sim 形态)。Field 扣减语义测试 = 本文件刷新
-        Field 段(test_report_free_leg_deducts_field)。"""
+        """免费帧:金账扣 0(gold 不写——费用清零集中在上报函数免费腿
+        同一 free 判定,2026-10-16 用户裁决;free 显式喂 True = sim 形态)。
+        Field 扣减语义测试 = 本文件刷新 Field 段
+        (test_report_free_leg_deducts_field)。"""
         gs = _gs_of(gold=30, shop=[_card('希儿')])
         gs.write_logic(gs.free_refresh_left, 2, produced_by='test-bridge',
                        sig=ChannelSig(family='logic_hook', actor='cw4_seed'))
         report_action_refresh_shop_param(gs, CwActionRefreshShopParam(cost=2),
-                                         _SIG,
-                                         executed=ShopActionExecuted(refresh_paid=0),
-                                         free=True)
+                                         _SIG, free=True)
         assert gs.gold.value == 30
         assert gs.effects.refresh_paid == 0, '免费帧禁进付费计数'
 
@@ -545,13 +547,6 @@ _HSIG = ChannelSig(family='logic_hook', actor='CwShopRefreshFieldTest',
 _OSIG = ChannelSig(family='obs', actor='CwShopRefreshFieldTest', mode='read')
 
 
-class _ExecutedStub:
-    """executed 回执桩(仅 refresh_paid 字段面;duck 型,免 import 真类)。"""
-
-    def __init__(self, refresh_paid: int) -> None:
-        self.refresh_paid = refresh_paid
-
-
 def _fresh_gs() -> GameState:
     return GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
 
@@ -683,7 +678,6 @@ def test_report_free_leg_deducts_field(monkeypatch: pytest.MonkeyPatch) -> None:
     captured.clear()
     report_action_refresh_shop_param(
         gs, CwActionRefreshShopParam(cost=2), _LSIG,
-        executed=_ExecutedStub(refresh_paid=0),
         rng=random.Random('cw-shop-field-test'))
     assert gs.free_refresh_left.value == 1, '免费帧 Field 扣减 2→1'
     assert gs.free_refresh_left.source == 'logic'
