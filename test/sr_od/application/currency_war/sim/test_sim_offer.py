@@ -6,9 +6,9 @@ M06/M05 + 节点选项生成 M16/M17/M18)。
   U07③ 候选结构(品质→池取样、offer 内去重、全程不重复)/U08 环境
   offer 同构 3 选 1/品质分布显式常量占位。选卡入账腿 = kernel 获得链
   (测试面迁 test_sim_backend.py,注入核随退役删除);品质改写已接入
-  三选一抽样(判据测试 rewrite_quality_for_pick 只接全改写型 + kernel
-  游戏事实名单一致性测试;「未建模」披露键已退役,名单常量位仍 =
-  kernel cw_investments);
+  三选一抽样(判据测试 rewrite_quality_for_pick 接全改写型 + settled
+  定谳型 + kernel 游戏事实名单一致性测试;「未建模」披露键已退役,名单
+  常量位仍 = kernel cw_investments);
 - 派生池与发牌:副本数真值(27/27/9/9/9)/held 星级派生不变量/≥9 清空
   发牌过滤(U11)与双出口分野/专家入池假设(U10)/5 槽发牌与概率表/
   免费刷先行(M05);
@@ -246,21 +246,26 @@ def test_env_offer_shape_and_registry_membership() -> None:
 
 # ============================================================ 投资 offer:品质改写判据与名单一致性
 
-def test_rewrite_quality_for_pick_full_rewrite_family_only() -> None:
-    """品质改写判据(2026-10-14 用户裁定:只接全改写型,判据 =
-    rewrite_picks == (1,2,3) 结构特征):时代族命中次返回目标品质
-    (彩虹 1/2/3 次 → 棱彩,第 4 次不存在于固定日程但判据仍闭)、
-    黄金/白银同构族自动覆盖;部分改写型(头彩 picks=(1,)/尾彩
-    picks=(3,))offer 覆盖面歧义未定谳不接入 → None;联席决策无
-    rewrite_quality → None;None/空/名单外环境恒 None。"""
+def test_rewrite_quality_for_pick_full_rewrite_and_settled() -> None:
+    """品质改写判据(全改写型 + settled 定谳型):2026-10-14 用户裁定
+    判据形状 = rewrite_picks == (1,2,3) 结构特征,2026-10-16 用户裁定
+    头彩 settled 定谳(offer 级覆盖面)后同判据接入。时代族命中次返回
+    目标品质(彩虹 1/2/3 次 → 棱彩,第 4 次不存在于固定日程但判据仍闭)、
+    黄金/白银同构族自动覆盖;头彩第 1 次 → 棱彩、第 2/3 次 → None
+    (只登记序接入);尾彩 picks=(3,) 部分型未定谳不接入 → None;
+    联席决策无 rewrite_quality → None;None/空/名单外环境恒 None。"""
     assert rewrite_quality_for_pick('彩虹时代', 1) == '棱彩'
     assert rewrite_quality_for_pick('彩虹时代', 2) == '棱彩'
     assert rewrite_quality_for_pick('彩虹时代', 3) == '棱彩'
     assert rewrite_quality_for_pick('彩虹时代', 4) is None
     assert rewrite_quality_for_pick('黄金时代', 2) == '金'
     assert rewrite_quality_for_pick('白银时代', 3) == '银'
-    assert rewrite_quality_for_pick('头彩', 1) is None, '部分改写型不接入'
-    assert rewrite_quality_for_pick('尾彩', 3) is None, '部分改写型不接入'
+    assert rewrite_quality_for_pick('头彩', 1) == '棱彩', \
+        'settled 定谳接入第 1 次取卡'
+    assert rewrite_quality_for_pick('头彩', 2) is None, '只登记序接入'
+    assert rewrite_quality_for_pick('头彩', 3) is None, '只登记序接入'
+    assert rewrite_quality_for_pick('尾彩', 3) is None, \
+        '部分型未定谳不接入语义由尾彩承载,禁连带删除'
     assert rewrite_quality_for_pick('联席决策', 1) is None, \
         '数量通道无 rewrite_quality'
     for env in (None, '', '轮岗', '经济过热'):

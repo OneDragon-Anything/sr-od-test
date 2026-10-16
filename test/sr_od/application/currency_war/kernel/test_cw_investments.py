@@ -316,3 +316,30 @@ def test_env_pool_rewrite_offer_node_gate(
     monkeypatch.setattr(cw_investments, 'ENV_POOL_REWRITE', bad_plane)
     with pytest.raises(ValueError, match='位面不在节点真值表'):
         cw_investments._validate_env_pool_rewrite()
+
+
+# ==================== 头彩定谳接入(rewrite_settled 开关)====================
+
+def test_toucai_entry_settled_registered() -> None:
+    """头彩条目定谳锁(2026-10-16 用户裁定:覆盖面定谳 = offer 级,第 1
+    次取卡机会 3 张候选全棱彩):登记 rewrite_settled=True + rewrite_picks
+    ==(1,)+ 非空 pending_notes(定谳条目仍走 pending 必填闸,notes 记
+    裁定时点与结论,闸字面与语义均满足)。"""
+    entry = ENV_POOL_REWRITE['头彩']
+    assert entry.rewrite_settled is True
+    assert entry.rewrite_picks == (1,)
+    assert entry.pending_notes, '定谳记录亦以非空 notes 承载'
+
+
+def test_env_pool_rewrite_settled_gate(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """settled 定谳闸锁(import 即炸语义,注入 + 直调沿 T-23
+    test_env_pool_rewrite_offer_node_gate 同函数惯用法):rewrite_settled
+    =True 而 rewrite_quality 为空 → 炸(settled 标记只对品质改写型有意
+    义,防登记错位)。现役全表过闸回归 = T-23 同函数在册断言,settled
+    头彩条目随本卡落地被其自动覆盖,不重复立断言。"""
+    bad = dict(ENV_POOL_REWRITE)
+    bad['联席决策'] = StrategyPoolRewrite(rewrite_settled=True)
+    monkeypatch.setattr(cw_investments, 'ENV_POOL_REWRITE', bad)
+    with pytest.raises(ValueError, match='settled 定谳闸'):
+        cw_investments._validate_env_pool_rewrite()

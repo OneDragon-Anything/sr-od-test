@@ -1827,6 +1827,72 @@ def test_silver_env_difficulty_records_track_selections() -> None:
         uninstall_backend()
 
 
+# ============================================================ 头彩局(settled 定谳接入)
+
+_TOUCAI_ENV = '头彩'
+
+
+def _toucai_env_backend(seed: int = 61) -> SimBackend:
+    """开局选头彩环境的装配后端(调用方负责 uninstall;装配模式 =
+    _rainbow_env_backend 同款:opts 首位定向 → idx=0 上报 → 声明喂入)。"""
+    b = SimBackend(seed=seed, cfg=RunConfig(
+        selected_difficulty='A8', enemy_difficulty=108, env_present=True))
+    install_backend(b)
+    b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+    assert b.screen_identity() == SCREEN_INVEST_ENV
+    b.gs.write_logic(b.gs.invest_env_opts,
+                     [_TOUCAI_ENV, '轮岗', '彩虹时代'],
+                     produced_by='Test', evidence='t:opts', sig=_SIG)
+    out = report_action_pick_invest_env_param(
+        b.gs, SimpleNamespace(idx=0), _SIG)
+    assert out.applied
+    cw_sim_ports.declare_world(out.world_decl)
+    return b
+
+
+def test_toucai_env_full_walk_first_offer_all_prism() -> None:
+    """头彩局 sim 全流程测试(部分改写型 settled 定谳接入首例;2026-10-16
+    用户裁定:offer 级覆盖面 = 第 1 次取卡机会 3 张候选全棱彩):开局
+    环境 offer 走 opening 形态不进取卡序;第 1 次策略三选一呈现,候选全
+    棱彩注册名;第 2 次起不设品质断言(单抽不可断言「按默认分布」,恒真
+    空断言不可用,该序语义由判据锁——头彩 2/3 序 → None——与序数对账
+    承担);呈现次数 = 固定日程落在建模域内的槽数(现算,防日程/建模域
+    漂移静默失配);局终序数 = 呈现次数;品质改写披露键已退役,全程无
+    invest_quality_rewrite 前缀键。"""
+    b = _toucai_env_backend(61)
+    try:
+        assert b._invest_pick_ordinal == 0, '开局环境 offer 不计数'
+        modelled_slots = [slot for slot in INVEST_OFFER_SCHEDULE
+                          if slot[0] in PLANE_NODE_TABLES]
+        offers_seen = 0
+        for _ in range(4096):
+            if b.done:
+                break
+            if b.screen_identity() == SCREEN_SETTLE:
+                _node_advance_feed(b.gs, trigger='settle_confirm')
+                continue
+            if b.screen_identity() == SCREEN_INVEST_STRATEGY:
+                opts = b.gs.invest_strategy_opts.value
+                assert len(opts) == OFFER_CANDIDATES
+                if offers_seen == 0:
+                    for name in opts:
+                        assert name in INVESTMENT_STRATEGIES, name
+                        assert INVESTMENT_STRATEGIES[name].rarity == '棱彩', \
+                            f'改写次候选必棱彩: {name}'
+                offers_seen += 1
+            _drive_step(b, 61)
+        assert b.done, '头彩局走完到局终'
+        assert offers_seen == len(modelled_slots), \
+            (offers_seen, modelled_slots)
+        assert b._invest_pick_ordinal == offers_seen, \
+            '序数 = 实际呈现次数(呈现一次计一次)'
+        assert not [k for k in b.disclosures
+                    if k.startswith('invest_quality_rewrite')], \
+            '品质改写披露键已退役'
+    finally:
+        uninstall_backend()
+
+
 # ============================================================ 装备腿(规则件缺口补 kernel)
 
 def _advance_pair() -> tuple[str, str, str]:
