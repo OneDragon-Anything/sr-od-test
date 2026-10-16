@@ -2010,6 +2010,142 @@ def test_game_over_presents_lobby_terminal_screen() -> None:
         uninstall_backend()
 
 
+# ============================================================ 画面广播
+# (迭代 sim-screen-announce §2.1:内部画面状态机 → 容器画面域广播,
+# 渲染复盘的画面章证据面。消费方 = tools/cw/replay_to_md.py 画面章
+# 切分,切章锚 = field='current_screen' 写入行本体。)
+
+def test_screen_announce_broadcast_points_and_value_exemption() -> None:
+    """画面广播逐点断言(sim-screen-announce §2.1):
+    - _announce_screen 写 prev_screen/current_screen 同形对,渠道 =
+      obs 族合成签名(group_id='sim:screen',mode='synthesized' 为
+      obs_sig 内建的渠道级如实标记,evidence 前缀 screen:);
+    - 广播点 = 12 处 ``self._screen`` 赋值点中除 SETTLE/LOBBY 外 10 处:
+      直通 8 点(简报/备战×2/位面过渡/投资策略/补给/遭遇/BOSS简报)
+      + 动态模态呈现/返回 2 点(六 overlay 值经此流动),逐点断
+      current_screen 行值;
+    - 豁免按值不按赋值点:SETTLE/LOBBY 值不广播(结算/大厅复盘事实
+      已有承载位,广播只造未注册空壳章;模态返回位=结算屏的泄漏形态
+      一并封死)。
+
+    基建暗坑:断言 sig/family 须 raw sink 直挂
+    (``set_state_journal_sink(rows.append)``——harness capture_state_
+    journal 是投影捕获无 sig)**并配 ``set_run_id_provider``**(双装,
+    缺一则局外拒写门静默吞全部行;同 harness capture_state_journal
+    双装纪律)。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        set_run_id_provider,
+        set_state_journal_sink,
+    )
+    from sr_od.application.currency_war.kernel.cw_node_schedule import (
+        node_sequence_of,
+    )
+    from sr_od.application.currency_war.sim.cw_sim_backend import (
+        SCREEN_EXPERT,
+        SCREEN_LOBBY,
+    )
+
+    rows: list[dict] = []
+    set_state_journal_sink(rows.append)
+    set_run_id_provider(lambda: 'run_announce')
+    try:
+        b = _backend(7)  # 装配端口槽(出战结算腿走 declare_world 须在装)
+        gs = b.gs
+
+        def assert_broadcast(value: str) -> None:
+            """最近一次广播:current_screen 行值命中,且前一行 =
+            prev_screen(两行一对)。"""
+            hits = [i for i, r in enumerate(rows)
+                    if r.get('field') == 'current_screen']
+            assert hits, '无 current_screen 行'
+            i = hits[-1]
+            assert rows[i]['after'] == value, (rows[i]['after'], value)
+            assert rows[i - 1]['field'] == 'prev_screen', '广播两行一对'
+
+        def cs_values_since(mark: int) -> list[str]:
+            return [r['after'] for r in rows[mark:]
+                    if r.get('field') == 'current_screen']
+
+        # ① 简报(构造即 reset 广播;首对 prev = 容器冷建空串)
+        assert_broadcast(SCREEN_BRIEFING)
+        pair = rows[-2:]
+        assert [r['field'] for r in pair] == ['prev_screen',
+                                              'current_screen']
+        assert pair[0]['after'] == ''
+        for r in pair:
+            assert r['sig']['family'] == 'obs'
+            assert r['sig']['mode'] == 'synthesized'
+            assert r['sig']['group_id'] == 'sim:screen'
+            assert r['state']['prov'][r['field']]['evidence'] == \
+                f'sim:engine:screen:{SCREEN_BRIEFING}'
+
+        # ② 备战(简报下一步;_CFG 无环境支路 → wait_one_one 变体直通点)
+        b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+        assert_broadcast(SCREEN_PREP)
+
+        # ③④ 动态点:六 overlay 值呈现/返回(值词表经此两点流动;
+        #    返回位 = 进入模态前的底层屏)
+        for v in (SCREEN_BOX, SCREEN_EXPERT, SCREEN_MEGASTAR,
+                  SCREEN_PLANNER, SCREEN_INVEST_ENV, SCREEN_SHOP):
+            b._present_modal(v)
+            assert_broadcast(v)
+            b._dismiss_modal()
+            assert_broadcast(SCREEN_PREP)
+
+        # ⑤ 位面过渡(位面首轮直通点)
+        b._enter_node_window((2, 1))
+        assert_broadcast(SCREEN_PLANE_TRANSITION)
+
+        # ⑥ 投资策略(offer 槽直通点;U07 固定日程 P1r3,环境不在场也命中)
+        gs.observe(gs.node, NodeKey(plane=1, round_num=3, kind='battle'),
+                   evidence='t:node', sig=_SIG_OBS)
+        b._present_offer_or_node_screen()
+        assert_broadcast(SCREEN_INVEST_STRATEGY)
+
+        # ⑦⑧⑨ 节点屏三型直通点(补给/遭遇/BOSS 简报;kind 取同一
+        #      序列真值源,禁测试侧硬编码节点类型)
+        for pos, want in (((1, 5), SCREEN_SUPPLY),
+                          ((1, 7), SCREEN_ENCOUNTER),
+                          ((1, 9), SCREEN_BOSS_BRIEFING)):
+            kind = node_sequence_of(pos[0])[pos[1] - 1]
+            gs.observe(gs.node,
+                       NodeKey(plane=pos[0], round_num=pos[1], kind=kind),
+                       evidence='t:node', sig=_SIG_OBS)
+            b._present_node_screen()
+            assert_broadcast(want)
+
+        # ⑩ 备战(battle 型直通点;经真实节点窗收尾 = P1r1 进窗 → 窗口
+        #    前段 → 节点屏呈现,出战结算腿依赖此窗态)
+        b._enter_node_window((1, 1))
+        assert_broadcast(SCREEN_PREP)
+
+        # SETTLE 赋值点(战斗结算腿):赋值发生、广播零行(值豁免)
+        mark = len(rows)
+        _start_battle_feed(gs)
+        assert b.screen_identity() == SCREEN_SETTLE
+        assert cs_values_since(mark) == []
+
+        # 值级豁免直证 + 动态返回位=结算屏泄漏形态封死(B4:豁免按值
+        # 不按赋值点——返回位可为结算屏,点位豁免会泄漏空壳章)
+        mark = len(rows)
+        b._announce_screen(SCREEN_SETTLE)
+        b._announce_screen(SCREEN_LOBBY)
+        b._present_modal(SCREEN_LOBBY)  # 呈现豁免值:赋值发生,广播零行
+        assert b._screen == SCREEN_LOBBY
+        b._dismiss_modal()              # 返回位 = 结算屏:同样零广播
+        assert b._screen == SCREEN_SETTLE
+        assert cs_values_since(mark) == []
+
+        # LOBBY 赋值点(局终):赋值发生、广播零行(值豁免)
+        b._game_over()
+        assert b._screen == SCREEN_LOBBY
+        assert cs_values_since(mark) == []
+    finally:
+        uninstall_backend()
+        set_run_id_provider(None)
+        set_state_journal_sink(None)
+
+
 def test_expert_screen_presentation_raises_loud_on_observe() -> None:
     """SCREEN_EXPERT「呈现即响错」语义测试(3.4 联调裁决③):open_bookcard
     声明(纯转移)驱动专家邀请函屏呈现;该屏非金路径 13 档(实机触发

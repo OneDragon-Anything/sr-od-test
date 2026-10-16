@@ -150,33 +150,39 @@ def test_no_node_rows_three_way_attachment():
 
 
 def test_screen_split_group_base_popup_and_unregistered():
-    """画面章切分四形态:组首行恒开章(基线=组边界);current_screen 同值
-    不开新章;弹层 actor 在该行处开章且后续无证据行挂弹层章;回到底层
-    (值==快照章 id)续开该快照章;未注册 screen id 按原样 id 开章 + 缺口
-    注记(缺口可见性 = 设计目标)。"""
+    """画面章切分四形态:组首行恒开章(基线=组边界);current_screen 广播
+    行同值不开新章;弹层 actor 在该行处开章且后续无证据行挂弹层章;回到底层
+    (广播值==快照章 id)续开该快照章;未注册 screen id 按原样 id 开章 + 缺口
+    注记(缺口可见性 = 设计目标)。开章行 = current_screen 广播行本体
+    (切章证据收窄:快照携带 cs 不再开章,渲染器 _locate_screen 注)。"""
     rows = [
-        mkrow('t1', 'hp', 80, screen='货币战争-备战'),           # 开备战章
-        mkrow('t2', 'hp', 79, screen='货币战争-备战'),           # 同值续章
+        mkrow('t1', 'current_screen', '货币战争-备战',
+              screen='货币战争-备战'),                        # 广播行开备战章
+        mkrow('t2', 'current_screen', '货币战争-备战',
+              screen='货币战争-备战'),                        # 同值续章
         mkrow('t3', 'invest_env_opts', ['a'],
               actor='CwScreenInvestEnv'),                        # 弹层章
         mkrow('t4', 'hp', 78),                                   # 挂弹层章
-        mkrow('t5', 'hp', 77, screen='货币战争-备战'),           # 回底层续章
-        mkrow('t6', 'hp', 76, screen='货币战争-BOSS简报'),       # 未注册 id
+        mkrow('t5', 'current_screen', '货币战争-备战',
+              screen='货币战争-备战'),                        # 回底层续章
+        mkrow('t6', 'current_screen', '货币战争-大厅',
+              screen='货币战争-大厅'),                        # 未注册 id
     ]
     report, md = build(rows)
     sec = section_of_kind(report, 'node')
     titles = [s.title for s in sec.screens]
-    assert titles == ['画面-备战', '画面-投资环境', '货币战争-BOSS简报']
+    assert titles == ['画面-备战', '画面-投资环境', '货币战争-大厅']
     assert len(sec.screens[0].entry) >= 0
-    assert '缺口: 画面「货币战争-BOSS简报」未注册' in md
+    assert '缺口: 画面「货币战争-大厅」未注册' in md
 
 
 def test_placeholder_screen_when_no_evidence_at_group_head():
     """组首行无任何画面证据 → 占位章 + 缺口注记(sim 形态兜底),
-    不静默丢章;后续证据行照常开快照章。"""
+    不静默丢章;后续广播行照常开快照章。"""
     rows = [
         mkrow('t1', 'hp', 80, actor='SimEngineV2'),              # 占位章
-        mkrow('t2', 'hp', 79, screen='货币战争-备战'),           # 快照章
+        mkrow('t2', 'current_screen', '货币战争-备战',
+              screen='货币战争-备战'),                        # 广播行开快照章
     ]
     report, md = build(rows)
     sec = section_of_kind(report, 'node')
@@ -225,6 +231,89 @@ def test_unregistered_screen_actor_gap_annotated_mid_chapter():
     assert [a.op for a in scr.actions] == ['BuyCard', 'BrandNewOp']
     assert '未注册写入者 CwScreenPrep' not in joined
     assert '未注册写入者 cw_observation' not in joined
+
+
+# ---------------------------------------------------------------------------
+# 切章证据收窄与广播形态(渲染器 _locate_screen/SCREEN_REGISTRY 注:
+# 切章锚 = field='current_screen' 写入行本体;相邻合并键 = title)
+# ---------------------------------------------------------------------------
+
+
+def test_stale_snapshot_cs_never_switches_chapter():
+    """切章证据收窄:非广播行携带的快照 cs 只作归属,永不作为切章锚——
+    结算段陈值 cs=备战(sim 广播节拍下两次广播之间的行全带陈值)不重开
+    备战章,挂当前战斗章(幽灵章回归:只看键在场时章数近倍膨胀)。"""
+    rows = [
+        mkrow('t1', 'current_screen', '货币战争-备战',
+              screen='货币战争-备战'),
+        # 战斗章由 settlement 开章证据规则承载(pipeline §4 保留)
+        mkrow('t2', 'settlement', {'hp_after': 84, 'killed': True},
+              node=(1, 1, 'battle'), screen='货币战争-战斗等待',
+              actor='CwScreenBattleWait'),
+        # 结算段陈值 cs 行:挂战斗章,不重开备战章
+        mkrow('t3', 'streak', 1, node=(1, 1, 'battle'),
+              screen='货币战争-备战'),
+        mkrow('t4', 'gold', 31, node=(1, 1, 'battle'),
+              screen='货币战争-备战', family='logic_action',
+              actor='SimEngineV2'),
+    ]
+    report, md = build(rows)
+    titles = [s.title for s in section_of_kind(report, 'node').screens]
+    assert titles == ['画面-备战', '画面-战斗']
+    assert md.count('### 节点 1-1 奖励 画面-备战') == 1
+
+
+def test_overlay_broadcast_and_actor_rows_merge_single_chapter():
+    """overlay 相相邻合并键 = title:cs 广播行先、actor 行后,两者
+    screen_id 异源(画面值 vs actor 名)而 title 相同 → 归一单章;
+    合并沿用先开章规格。"""
+    rows = [
+        mkrow('t1', 'current_screen', '货币战争-备战',
+              screen='货币战争-备战'),
+        mkrow('t2', 'current_screen', '货币战争-备战-武装箱选择',
+              screen='货币战争-备战-武装箱选择'),
+        mkrow('t3', 'box_card_names', ['以太钻头'],
+              screen='货币战争-备战-武装箱选择', actor='CwScreenBoxPick'),
+        mkrow('t4', 'gold', 20, screen='货币战争-备战-武装箱选择'),
+    ]
+    report, _ = build(rows)
+    sec = section_of_kind(report, 'node')
+    assert [s.title for s in sec.screens] == ['画面-备战', '画面-箱子']
+    box = sec.screens[1]
+    assert box.screen_id == '货币战争-备战-武装箱选择'  # 合并沿用先开章
+    assert not any('缺口' in a for a in box.annots)
+
+
+def test_same_value_broadcast_does_not_reopen_chapter():
+    """同值广播不重开章(kernel 写端落 same_value=true 行,渲染路由
+    值==base 续开 base,零副作用)。"""
+    rows = [
+        mkrow('t1', 'current_screen', '货币战争-备战',
+              screen='货币战争-备战'),
+        mkrow('t2', 'current_screen', '货币战争-备战',
+              screen='货币战争-备战', same_value=True),
+        mkrow('t3', 'current_screen', '货币战争-备战',
+              screen='货币战争-备战', same_value=True),
+    ]
+    report, _ = build(rows)
+    assert [s.title for s in section_of_kind(report, 'node').screens] \
+        == ['画面-备战']
+
+
+def test_opening_note_skips_empty_value_rows():
+    """开局注记空值跳过:prev_screen 首行空串(sim 广播首对的实测采集
+    时序形态)不出「字段=—」噪声行;唯一注记被跳过后开局桶整节不渲染。"""
+    rows = [
+        mkrow('t1', 'prev_screen', '', node=None, actor='SimEngineV2'),
+        mkrow('t2', 'current_screen', '货币战争-简报', node=None,
+              screen='货币战争-简报', actor='SimEngineV2'),
+        mkrow('t3', 'gold', 3, node=(1, 1, 'reward'), screen='货币战争-备战'),
+    ]
+    report, md = build(rows)
+    open_sec = section_of_kind(report, 'open')
+    assert open_sec.opening_notes == []
+    assert '开局初始化与基线观察' not in md
+    assert 'prev_screen=—' not in md
 
 
 # ---------------------------------------------------------------------------
@@ -353,9 +442,10 @@ def test_empty_action_screen_keeps_obs_and_eval_only():
     """空动作画面章:只渲染 0 观察 + 章内变化块(若有)+ 策略评价(若决策面);
     非决策面章(战斗)不渲染策略评价节;「复盘者附加」固定空节恒在。"""
     rows = [
-        mkrow('t1', 'hp', 80, screen='货币战争-备战'),
-        mkrow('t2', 'hp', 79, node=(1, 1, 'battle'),
-              screen='货币战争-战斗等待'),
+        mkrow('t1', 'current_screen', '货币战争-备战',
+              screen='货币战争-备战'),
+        mkrow('t2', 'current_screen', '货币战争-战斗等待',
+              node=(1, 1, 'battle'), screen='货币战争-战斗等待'),
     ]
     _, md = build(rows)
     assert '#### 0 观察' in md
@@ -369,15 +459,16 @@ def test_empty_action_screen_keeps_obs_and_eval_only():
 
 def test_shop_entry_table_and_probs():
     """商店快照章 0 观察:牌面表(槽/牌名/阵营/费用/星级,槽三态)+ 概率
-    档→概率串(render-spec §3 商店行)。"""
+    档→概率串(render-spec §3 商店行)。开章行 = 广播行形态。"""
     shop = {'cards': [
         {'kind': 'content', 'card': {'name': '爻光', 'faction': '仙舟',
                                      'cost': 1, 'star': 1}},
         {'kind': 'empty', 'card': None},
         {'kind': 'unknown', 'card': None},
     ], 'refresh_probs': {'1': 1.0, '2': 0.0}}
-    rows = [mkrow('t1', 'shop', shop, node=None,
-                  screen='货币战争-备战-开商店', actor='CwScreenShop',
+    rows = [mkrow('t1', 'current_screen', '货币战争-备战-开商店',
+                  node=None, screen='货币战争-备战-开商店',
+                  actor='CwScreenShop',
                   values_extra={'shop': shop, 'gold': 19})]
     report, md = build(rows)
     scr = section_of_kind(report, 'open').screens[0]
