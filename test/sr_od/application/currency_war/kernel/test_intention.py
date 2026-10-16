@@ -5,7 +5,7 @@
 
 1. 渐进配对(原 test_cw_pair_progressive.py):
    出处链 = kernel 成型线 ``cw_battle_calib._transition_formed``(四体系
-   两两组合 = 成型)+ 玩法判定尺 [20](user_playstyle:过渡 = 两两组合
+   两两组合 = 成型)+ 玩法判定尺 [20](口述条目 20,登记簿已退役:过渡 = 两两组合
    配方渐进);病灶 = sim 批 ``sim_20260918_072900_000_n320`` 问题 1
    (65.6% 局终态配方锁停在单体系,板面永不向第二体系渐进)。
 2. committed 权威 + 局23 哨兵(原 test_cw_migration_direction_layer.py;
