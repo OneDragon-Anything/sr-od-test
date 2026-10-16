@@ -449,3 +449,128 @@ def test_cli_stdout_renders_header(tmp_path: Path, capsys: Any):
     assert '- 策略版本 commit: c0ffee1' in md
     assert '- 终局: stopped 位面 P1-R3 hp 84 金 31 时长 206s' in md
     assert '- 数据完整性: 无' in md
+
+# ---------------------------------------------------------------------------
+# 显示抛光(T-5:渲染同值过滤 / 开局段归属桶 / 观察行规则 / 人读格式)
+# ---------------------------------------------------------------------------
+
+
+def test_same_value_delta_filtered_with_counter_note():
+    """渲染同值行(same_value=False 但格式化后前=后)= 零信息 → 不进变化表,
+    章尾计数注记(§5 修订);真变化照常渲染。"""
+    rows = [
+        mkrow('t1', 'hp', 80, node=(1, 1, 'reward'), screen='货币战争-备战'),
+        mkrow('t2', 'gold', 15, node=(1, 1, 'reward'), screen='货币战争-备战',
+              family='logic_action', actor='SimEngineV2'),
+        mkrow('t3', 'gold', 15, node=(1, 1, 'reward'), screen='货币战争-备战',
+              family='logic_action', actor='SimEngineV2'),
+    ]
+    report, md = build(rows)
+    scr = section_of_kind(report, 'node').screens[0]
+    assert scr._same_skipped == 1
+    assert '| 金 | (起点) → 15 |' in md
+    assert '| 金 | 15 → 15 |' not in md
+    assert '- 同值写入 ×1 略(前=后,零信息)' in md
+
+
+def test_opening_unattributed_rows_bucketed():
+    """开局段无画面归属行(写入者非注册画面 actor 且无 current_screen)→
+    组级注记桶(开局初始化/开局基线观察),不粘进当前画面章的章内变化
+    (§3 修订);注册 actor 行照常开章。"""
+    rows = [
+        mkrow('t1', 'node_path',
+              {'plane': 1, 'seq': [{'token': 'reward'}]},
+              node=None, actor='GsOpeningSeed', family='logic_action'),
+        mkrow('t2', 'board', {'仙舟': 1}, node=None, actor='cw_observation'),
+        mkrow('t3', 'plane_bosses', ['bossA'], node=None,
+              screen='货币战争-BOSS简报', actor='CwScreenBriefing'),
+        mkrow('t4', 'hp', 80, node=(1, 1, 'reward'), screen='货币战争-备战'),
+    ]
+    report, md = build(rows)
+    open_sec = section_of_kind(report, 'open')
+    assert len(open_sec.opening_notes) == 2
+    assert '开局初始化' in open_sec.opening_notes[0]
+    assert 'GsOpeningSeed' in open_sec.opening_notes[0]
+    assert '开局基线观察' in open_sec.opening_notes[1]
+    assert '### 开局初始化与基线观察' in md
+    briefing = open_sec.screens[0]
+    assert briefing.title == '画面-BOSS简报'
+    assert not briefing.trailing_changes  # 种子行不再粘进简报章
+    assert not open_sec.screens[0]._same_skipped
+
+
+def test_obs_note_rules_skip_dedup_and_route_keys():
+    """观察尾注规则(§5 修订):空值不渲染;prev_screen/current_screen 路由
+    键跳过;同章同 (field, 值) 去重。"""
+    rows = [
+        mkrow('t1', 'hp', 80, node=(1, 1, 'reward'), screen='货币战争-备战'),
+        mkrow('t2', 'prev_screen', '货币战争-战斗等待', node=(1, 1, 'reward'),
+              screen='货币战争-备战'),
+        mkrow('t3', 'overflow_card', '', node=(1, 1, 'reward'),
+              screen='货币战争-备战'),
+        mkrow('t4', 'equips', ['以太钻头'], node=(1, 1, 'reward'),
+              screen='货币战争-备战'),
+        mkrow('t5', 'equips', ['以太钻头'], node=(1, 1, 'reward'),
+              screen='货币战争-备战'),
+    ]
+    _, md = build(rows)
+    assert 'prev_screen' not in md
+    assert '溢出卡' not in md
+    assert md.count('装备库存=以太钻头') == 1
+
+
+def test_delta_cells_human_formats():
+    """差分单元格人读格式(§4.3):bench=名★+空×N、spheres=N 座(色×n)、
+    node_path=token 中文链——禁截断 raw JSON。"""
+    bench_before = {'slots': [{'kind': 'unit',
+                               'unit': {'char_id': '爻光', 'star': 1}}]}
+    bench_after = {'slots': [{'kind': 'unit',
+                              'unit': {'char_id': '爻光', 'star': 1}},
+                             {'kind': 'empty', 'unit': None}]}
+    rows = [
+        mkrow('t1', 'bench', bench_before, node=(1, 1, 'reward'),
+              screen='货币战争-备战'),
+        mkrow('t2', 'bench', bench_after, node=(1, 1, 'reward'),
+              screen='货币战争-备战', family='logic_action', actor='SimEngineV2'),
+        mkrow('t3', 'spheres', {'count': 2, 'colors': ['灰', '灰']},
+              node=(1, 1, 'reward'), screen='货币战争-备战'),
+        mkrow('t4', 'spheres', {'count': 1, 'colors': ['灰']},
+              node=(1, 1, 'reward'), screen='货币战争-备战',
+              family='logic_action', actor='SimEngineV2'),
+        mkrow('t5', 'node_path',
+              {'plane': 1, 'seq': [{'token': None}, {'token': 'reward'},
+                                   {'token': 'battle'}]},
+              node=(1, 1, 'reward'), screen='货币战争-备战',
+              family='logic_action', actor='SimEngineV2'),
+    ]
+    _, md = build(rows)
+    assert '爻光1★(空×1)' in md
+    assert '爻光1★' in md
+    assert '2 座(灰×2)' in md
+    assert '1 座(灰×1)' in md
+    assert 'P1: —→奖励→战斗' in md
+    assert '"kind":"unit"' not in md  # raw JSON 不再入单元格
+
+
+def test_action_payload_brief_and_settlement_battle_chapter():
+    """action 载荷人读摘要(§4 动作行,T-5);settlement 写入行 = 战斗章开章
+    证据(sim 无 current_screen 形态,pipeline §4 修订),本体走章内变化块。"""
+    rows = [
+        mkrow('t1', 'gold', 10, node=(1, 1, 'reward'),
+              family='logic_action', actor='SimEngineV2'),
+        receipts_row('t2', receipt(
+            'BuyCard',
+            action={'card': {'name': '翡翠', 'faction': '公司', 'cost': 1,
+                             'slot': 5},
+                    'reason': 'dead_gold_press_buy', 'char_id': '藿藿'}),
+            node=(1, 1, 'reward')),
+        mkrow('t3', 'settlement', {'hp_after': 84, 'killed': True,
+                                   'progress_delta': 2},
+              node=(1, 1, 'battle')),
+    ]
+    _, md = build(rows)
+    assert '翡翠(公司,1金,槽5)' in md
+    assert 'reason=dead_gold_press_buy' in md
+    assert '"card":' not in md
+    assert '### 节点 1-1 奖励 画面-战斗' in md
+    assert '胜 血 84 进度 +2' in md
