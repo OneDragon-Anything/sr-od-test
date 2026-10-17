@@ -219,8 +219,10 @@ def test_unregistered_screen_actor_gap_annotated_mid_chapter():
     # actor 名显影:obs ×1 + 非 obs ×2 聚合一条带计数
     assert '缺口: 未注册写入者 CwScreenBrandNewPayload ×3' in joined
     assert '- 缺口: 未注册写入者 CwScreenBrandNewPayload ×3' in md
-    # obs family:值仍由观察尾注显影;非 obs family:不走观察尾注
-    assert any(a.startswith('观察: new_screen_payload=') for a in scr.annots)
+    # obs family:值显影进 0 观察动态段(非注册键观察写入);非 obs family:不走观察尾注
+    assert '- new_screen_payload {"opts":["x"]}' in md
+    assert not any(a.startswith('观察: new_screen_payload=')
+                   for a in scr.annots)
     assert not any(a.startswith('观察: brand_new_choice') for a in scr.annots)
     assert not any(a.startswith('观察: brand_new_pick') for a in scr.annots)
     # 非 obs 未注册行禁入动作节 deltas 与章内变化块
@@ -520,8 +522,10 @@ def test_obs_rows_not_in_delta_settlement_to_trailing():
     assert [(d.field, d.is_hook) for d in prep.actions[0].deltas] \
         == [('node', True)]
     assert all(d.field != 'round_fresh_buys' for d in prep.actions[0].deltas)
-    assert any(a.startswith('观察: round_fresh_buys=')
-               for a in prep.annots)
+    # obs 回读显影进 0 观察动态段(非注册键观察写入)
+    assert '- round_fresh_buys phase[1, 1]: 翡翠' in md
+    assert not any(a.startswith('观察: round_fresh_buys=')
+                   for a in prep.annots)
     # settlement 行(cs=战斗等待)归「画面-战斗」章的章内变化块,不入
     # 动作节 deltas、不入备战章(render-spec §3 战斗章注册行)
     battle = [s for s in screens if s.title == '画面-战斗']
@@ -702,15 +706,15 @@ def test_opening_unattributed_rows_bucketed():
 
 
 def test_obs_note_rules_skip_dedup_and_route_keys():
-    """观察尾注规则(§5 修订):空值不渲染;prev_screen/current_screen 路由
-    键跳过;同章同 (field, 值) 去重。"""
+    """观察显影规则:空值不渲染;prev_screen/current_screen 路由键跳过;
+    非注册键观察写入进 0 观察动态段(首写定帧值),同值回读不重复显影。"""
     rows = [
         mkrow('t1', 'hp', 80, node=(1, 1, 'reward'), screen='货币战争-备战'),
         mkrow('t2', 'prev_screen', '货币战争-战斗等待', node=(1, 1, 'reward'),
               screen='货币战争-备战'),
         mkrow('t3', 'overflow_card', '', node=(1, 1, 'reward'),
               screen='货币战争-备战'),
-        # 去重样本用非 entry 键字段(entry 键整条跳过,见 entry 键跳过测试)
+        # 动态段样本用非 entry 键字段(entry 键整条跳过,见 entry 键跳过测试)
         mkrow('t4', 'node_pos', [1, 1], node=(1, 1, 'reward'),
               screen='货币战争-备战'),
         mkrow('t5', 'node_pos', [1, 1], node=(1, 1, 'reward'),
@@ -719,7 +723,8 @@ def test_obs_note_rules_skip_dedup_and_route_keys():
     _, md = build(rows)
     assert 'prev_screen' not in md
     assert '溢出卡' not in md
-    assert md.count('node_pos=[1,1]') == 1
+    assert md.count('- 节点序位 [1,1]') == 1  # 首写进 0 观察,同值回读不重复
+    assert '观察: node_pos' not in md
 
 
 def test_delta_cells_human_formats():
@@ -792,4 +797,26 @@ def test_obs_note_entry_keys_skipped_unique_fields_kept():
     ]
     _, md = build(rows)
     assert '- 观察: 金=15' not in md
-    assert '- 观察: pending_loss=' in md
+    assert '- pending_loss P1-R1 (battle)' in md
+
+
+def test_obs_writes_surface_in_screen_observations():
+    """0 观察动态段 = 画面 op 观察到什么本章显什么(出处 =
+    tools/cw/replay_to_md.py 模块头「渲染结构」0 观察规则):非注册键的
+    观察写入(实证形态 = 备战帧节点锚定 node_pos)进本章 0 观察,不再
+    降级成游离章尾注记(旧形态:注记挂在最后一个动作节下,读起来像动作
+    的产物);同值回读不重复,异值回读 → 章尾注记。"""
+    rows = [
+        mkrow('t1', 'current_screen', '货币战争-备战',
+              screen='货币战争-备战'),
+        receipts_row('t2', receipt('CwOpOpenShop',
+                                   screen='货币战争-备战')),
+        mkrow('t3', 'node_pos', [1, 1], screen='货币战争-备战'),
+        mkrow('t4', 'node_pos', [1, 1], screen='货币战争-备战'),
+        mkrow('t5', 'node_pos', [1, 2], screen='货币战争-备战'),
+    ]
+    report, md = build(rows)
+    scr = section_of_kind(report, 'node').screens[0]
+    assert scr._obs_entries == {'node_pos': '[1,1]'}  # 首写定帧值
+    assert '- 节点序位 [1,1]' in md
+    assert scr.annots == ['观察: 节点序位=[1,2]']  # 异值回读 → 章尾注记
