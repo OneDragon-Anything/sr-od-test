@@ -192,7 +192,7 @@ def _shop_host(monkeypatch: pytest.MonkeyPatch, strategy) -> tuple:
     monkeypatch.setattr(CwActionCloseShopOp, 'round_by_find_and_click_area',
                         _fake_close_click)
     # 商店动作回执行捕获(kernel 口 lazy import,每次调用取模块属性)。
-    def _note_action_receipt(gs_, *, op, applied, reason='', screen='',
+    def _note_action_receipt(gs_, *, op, reason='', screen='',
                              actor='', extra=None):
         receipt_ops.append(op)
 
@@ -251,6 +251,50 @@ def test_act_node_round_wait_until_terminal_unified_path(monkeypatch):
     assert receipt_ops == ['CwActionBuyCardParam', 'CwActionCloseShopOp'], \
         ('CwActionCloseShopParam 不入 decisions 行(终结回执由关店动作 op '
          '自身承担);买牌回执簿在册')
+
+
+def test_act_receipt_blocked_reason_code_from_round_fail(monkeypatch):
+    """落地门受阻码(机械早退 round_fail → reason 码化):牌在期望态槽 6
+    (守卫按名放行)而点表桩恒 5 槽 → 买牌 op round_fail 槽号越界 →
+    回执 reason=slot_out_of_range(round result status 前缀闭集映射;
+    正常发出 reason='' 由统一路径测试盖住)。"""
+    card6 = ShopCard(x=6, slot=6, name='卡六', faction='?', cost=3, star=1)
+    cards = [ShopSlot(kind='content', card=_card(f'卡{i + 1}', i + 1))
+             for i in range(5)]
+    cards.append(ShopSlot(kind='content', card=card6))
+    strategy = _ScriptedStrategy([CwActionBuyCardParam(card=card6)])
+    op, match, gs, *_ = _shop_host(monkeypatch, strategy)
+    # 店面换 6 槽 payload(槽号-点表不一致 = 越界受阻形态的可达构造)
+    gs.write_logic(gs.shop, ShopPayload(cards=cards, refresh_probs={}),
+                   produced_by='test', sig=_LOGIC_SIG)
+    reasons: list[tuple[str, str]] = []
+
+    def _capture(gs_, *, op, reason='', screen='', actor='', extra=None):
+        reasons.append((op, reason))
+
+    monkeypatch.setattr(gs_mod, 'note_action_receipt', _capture)
+    assert op.observe().is_success
+
+    rr = op.act()
+
+    assert not rr.is_success, '机械早退 = round_fail(未发出通道)'
+    assert reasons == [('CwActionBuyCardParam', 'slot_out_of_range')], \
+        '受阻回执 reason = 闭集映射码(非自由文本)'
+
+
+def test_visit_block_code_closed_set_mapping():
+    """落地门受阻码闭集映射(单测锁映射面):槽解析失败 → slot_unresolved
+    (守卫后防御面,真路径被 proposal 守卫前置拦截,真路径不可达 → 单测
+    承接);槽号越界 → slot_out_of_range;未登记 status = 原文兜底(受阻
+    事实不静默,兜底显影促词表登记)。"""
+    f = buy_mod._visit_block_code
+    assert f('商店牌槽解析失败:slot_no=None'
+             '(身份未命中 ∧ (name,star) 未命中),禁兜底点击') \
+        == 'slot_unresolved'
+    assert f('商店牌槽号越界/点位缺失:商店牌-6(货币战争-备战-开商店),'
+             'slot=6 click_pts=5(槽号-点表不一致),禁兜底点击') \
+        == 'slot_out_of_range'
+    assert f('未登记的新受阻形态(词表漏登)') == '未登记的新受阻形态(词表漏登)'
 
 
 def test_act_node_unobserved_close_skips_then_executes(monkeypatch):
@@ -375,7 +419,7 @@ def _exec_port_host(monkeypatch: pytest.MonkeyPatch, strategy,
 
     receipt_ops: list = []
 
-    def _note_action_receipt(gs_, *, op, applied, reason='', screen='',
+    def _note_action_receipt(gs_, *, op, reason='', screen='',
                              actor='', extra=None):
         receipt_ops.append(op)
 
@@ -516,7 +560,8 @@ def _session_with_shop(names: list[str], gold: int | None = 30):
 
 def test_close_shop_click_clears_stale_buy_payload(monkeypatch):
     """点击已发出口:买投影后 payload 在屏 → 关店动作执行体点击发出 →
-    payload 置 None(evidence=left_screen 校验清场写端身份)。"""
+    payload 置 None(evidence=left_screen 校验清场写端身份);回执
+    reason=''(已正常发出,真实 kernel 写路径)。"""
     session, gs = _session_with_shop(['希儿', '花火', '黑塔', '丹恒', '停云'])
     report_action_buy_card_param(
         gs, CwActionBuyCardParam(card=_card('希儿')), _LOGIC_SIG,
@@ -531,11 +576,16 @@ def test_close_shop_click_clears_stale_buy_payload(monkeypatch):
     assert gs.shop.value is None, '关店点击后 payload 离屏置 None(跨轮残留根除)'
     assert gs.shop.source == 'observation'
     assert gs.shop.evidence == 'left_screen', '清场写端身份 = leave_screen 口'
+    assert gs.receipts.value == [{'op': 'CwActionCloseShopOp', 'reason': '',
+                                  'screen': SHOP_SCREEN_NAME}], \
+        '已发出出口回执零受阻码(纯动作事实 shape)'
 
 
 def test_close_shop_idempotent_exit_clears_stale_payload(monkeypatch):
     """幂等已关出口:「收起」不在(店已关)+ 残留 payload 同样清——
-    幂等修复回归(已关残留同样陈旧)。"""
+    幂等修复回归(已关残留同样陈旧);round_success 维持(良性簿记事实
+    不进 fail 防线)+ 回执 reason=定位缺失(按钮-收起)(零观察 op 报
+    机械事实不报业务态,真实 kernel 写路径)。"""
     session, gs = _session_with_shop(['黑塔'])
     assert gs.shop.value is not None
 
@@ -543,6 +593,10 @@ def test_close_shop_idempotent_exit_clears_stale_payload(monkeypatch):
 
     assert rr.is_success, '幂等已关 = 无动作可发,回执后终结交回'
     assert gs.shop.value is None, '已关出口同样清残留(幂等修复)'
+    assert gs.receipts.value == [
+        {'op': 'CwActionCloseShopOp', 'reason': '定位缺失(按钮-收起)',
+         'screen': SHOP_SCREEN_NAME}], \
+        '定位缺失出口回执受阻码(每动作 op 恰一条回执行)'
 
 
 def test_reopen_reshuffle_adopts_new_wave_without_mismatch(monkeypatch):

@@ -5,11 +5,11 @@
 docs/develop/sr_od/application/currency_war/changes/
 2026-10-16-open-shop-action-spec/design.md §2.1:
 
-- 实机:is_success = 发出事实;定位缺失 = 唯一合法 applied=false 出口
-  (emitted=False 申报未发出);
+- 实机:is_success = 发出事实;定位缺失 = 唯一受阻出口
+  (回执 reason=定位缺失(按钮-商店) 申报未发出);
 - sim:点击经宿主 round_by_* → 端口 click_answer 受理即已发出(世界推进
   通道);屏门按点击前档名问询的失败是转移后可见性语义,不作发出判读
-  ——恒 applied=true。
+  ——恒按已发出簿记(reason='')。
 
 桩宿主直驱(零真实 IO);回执断言走真实 kernel 写路径
 (``note_action_receipt``),仅 ctx→容器供给口打桩(``game_state_from_ctx``,
@@ -122,16 +122,16 @@ def _gs_with_supply(monkeypatch) -> GameState:
     return gs
 
 
-def _receipts(gs: GameState) -> list[tuple[str, bool, str]]:
-    """回执窗投影 (op, applied, reason)。"""
-    return [(r['op'], r['applied'], r['reason'])
+def _receipts(gs: GameState) -> list[tuple[str, str]]:
+    """回执窗投影 (op, reason)(纯动作事实 shape,无成败布尔)。"""
+    return [(r['op'], r['reason'])
             for r in (gs.receipts.value or [])]
 
 
-def test_real_location_miss_is_the_only_false_exit(monkeypatch, live_io):
-    """实机定位缺失 = 唯一 false 出口:点击未命中 → round_fail + 回执
-    applied=false reason=定位缺失(按钮-商店);零 park 零等待(动作没
-    发出,无后续机械步)。"""
+def test_real_location_miss_is_the_only_blocked_exit(monkeypatch, live_io):
+    """实机定位缺失 = 唯一受阻出口:点击未命中 → round_fail + 回执
+    reason=定位缺失(按钮-商店);零 park 零等待(动作没发出,无后续
+    机械步)。"""
     monkeypatch.setattr(cw_op_open_shop, 'time', _NoSleepTime())
     gs = _gs_with_supply(monkeypatch)
     host = _HostOp(click_ok=False)
@@ -142,11 +142,11 @@ def test_real_location_miss_is_the_only_false_exit(monkeypatch, live_io):
     assert result.is_success is False
     assert host.clicks == [('货币战争-备战', '按钮-商店')]
     assert host.park_calls == 0
-    assert _receipts(gs) == [('CwOpOpenShop', False, '定位缺失(按钮-商店)')]
+    assert _receipts(gs) == [('CwOpOpenShop', '定位缺失(按钮-商店)')]
 
 
 def test_real_click_emits_and_books_success(monkeypatch, live_io):
-    """实机点击已发 = round_success + 回执 applied=true(reason=''),
+    """实机点击已发 = round_success + 回执 reason=''(已正常发出),
     park 一次 + 固定等待 ``SHOP_OPEN_ANIM_S`` 恰一次(等待不是判效)。"""
     fake_time = _NoSleepTime()
     monkeypatch.setattr(cw_op_open_shop, 'time', fake_time)
@@ -160,15 +160,15 @@ def test_real_click_emits_and_books_success(monkeypatch, live_io):
     assert host.park_calls == 1
     assert fake_time.skipped == [SHOP_OPEN_ANIM_S]
     assert gs.receipts.value == [
-        {'op': 'CwOpOpenShop', 'applied': True, 'reason': '',
+        {'op': 'CwOpOpenShop', 'reason': '',
          'screen': SHOP_SCREEN_NAME},
     ]
 
 
-def test_sim_click_accepted_is_always_applied(monkeypatch, sim_installed):
-    """sim 恒 true:点击应答的屏门失败(转移后可见性语义)不作发出判读
-    ——宿主点击腿受理即已发出,round_success + 回执 applied=true;零 park
-    零等待。回归锁:旧形态此处误写 applied=false(复盘 ⚠ 误显根因)。"""
+def test_sim_click_accepted_always_books_emitted(monkeypatch, sim_installed):
+    """sim 恒按已发出簿记:点击应答的屏门失败(转移后可见性语义)不作
+    发出判读——宿主点击腿受理即已发出,round_success + 回执 reason='';
+    零 park 零等待。回归锁:旧形态此处误记受阻(复盘 ⚠ 误显根因)。"""
     monkeypatch.setattr(cw_op_open_shop, 'time', _NoSleepTime())
     gs = _gs_with_supply(monkeypatch)
     host = _HostOp(click_ok=False)
@@ -178,4 +178,4 @@ def test_sim_click_accepted_is_always_applied(monkeypatch, sim_installed):
     assert host.terminal == ('success', '开商店已发')
     assert result.is_success is True
     assert host.park_calls == 0
-    assert _receipts(gs) == [('CwOpOpenShop', True, '')]
+    assert _receipts(gs) == [('CwOpOpenShop', '')]

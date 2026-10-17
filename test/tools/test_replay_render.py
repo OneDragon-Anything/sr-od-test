@@ -61,10 +61,11 @@ def mkrow(ts: str, field: str, after: Any, *, run: str = 'run_t',
     }
 
 
-def receipt(op: str, applied: bool = True, reason: str = '', detail: str = '',
+def receipt(op: str, reason: str = '', detail: str = '',
             screen: str = '', **extra: Any) -> dict[str, Any]:
-    """一条动作回执(载荷结构 = note_action_receipt 写端形态)。"""
-    r: dict[str, Any] = {'op': op, 'applied': applied, 'reason': reason}
+    """一条动作回执(载荷结构 = note_action_receipt 写端形态,纯动作
+    事实:op + reason 受阻码,无成败布尔)。"""
+    r: dict[str, Any] = {'op': op, 'reason': reason}
     if detail:
         r['detail'] = detail
     if screen:
@@ -337,21 +338,42 @@ def test_receipt_same_value_noop_not_an_action():
 
 
 def test_retry_chain_merged_into_one_action():
-    """重试链合并:连续回执同 op 且前条 applied=false → 合并一节,节内
+    """重试链合并:连续回执同 op 且前条 reason 非空 → 合并一节,节内
     逐条列出(实测样例 StartBattle 重发链);异 op 锚仍开新节。"""
     rows = [
-        receipts_row('t1', receipt('StartBattle', applied=False,
-                                   reason='弹窗未关')),
-        receipts_row('t2', receipt('StartBattle', applied=True,
-                                   detail='出战已点击')),
+        receipts_row('t1', receipt('StartBattle', reason='弹窗未关')),
+        receipts_row('t2', receipt('StartBattle', detail='出战已点击')),
         receipts_row('t3', receipt('BuyCard')),
     ]
     report, md = build(rows)
     actions = section_of_kind(report, 'node').screens[0].actions
     assert [a.op for a in actions] == ['StartBattle', 'BuyCard']
     assert len(actions[0].chain) == 2  # 链内逐条
-    assert actions[0].chain[0]['applied'] is False
+    assert actions[0].chain[0]['reason'] == '弹窗未关'  # 合并判据锚 = reason 非空
     assert '#### 1 出战' in md
+    assert '⚠ ' in md and 'applied' not in md  # 受阻样式挂 reason,布尔零显影
+
+
+def test_legacy_applied_key_receipts_render_clean():
+    """旧 journal 兼容(历史批回执含 applied 键):键不读不显(extra 排除
+    表承接,两处排除字面量保留判据),布尔字样零显影;合并判据只看
+    reason(旧受阻条 reason 非空照常并链),重渲染零异常。"""
+    legacy_blocked = {'op': 'StartBattle', 'applied': False,
+                      'reason': '弹窗未关', 'detail': '旧数据'}
+    legacy_ok = {'op': 'BuyCard', 'applied': True, 'reason': '',
+                 'gold_delta': -3}
+    rows = [
+        receipts_row('t1', legacy_blocked),
+        receipts_row('t2', {'op': 'StartBattle', 'applied': True,
+                            'reason': '', 'detail': '出战已点击'}),
+        receipts_row('t3', legacy_ok),
+    ]
+    report, md = build(rows)
+    actions = section_of_kind(report, 'node').screens[0].actions
+    assert [a.op for a in actions] == ['StartBattle', 'BuyCard']
+    assert len(actions[0].chain) == 2  # 旧受阻条 reason 非空 → 照常并链
+    assert 'applied' not in md  # 布尔字样零显影
+    assert '- gold_delta: -3' in md  # extra 键照常显影
 
 
 def test_delta_prev_chain_chapter_attribution_and_trailing():

@@ -206,10 +206,10 @@ def _action_scan(journal_rows: list) -> dict:
                 if node_key is None:
                     continue
                 if op == 'CwActionSellBenchParam' \
-                        and item.get('applied', True):
+                        and not item.get('reason'):
                     sells += new_n
                 if op == 'CwActionBuyCardParam' \
-                        and item.get('applied', True):
+                        and not item.get('reason'):
                     reason = str((item.get('action') or {}).get('reason')
                                  or '(empty)')
                     buy_reason[reason] = buy_reason.get(reason, 0) + new_n
