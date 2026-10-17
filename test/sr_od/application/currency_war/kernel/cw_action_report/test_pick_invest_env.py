@@ -161,3 +161,20 @@ def test_deterministic_equip_env_grants_without_rng(
     boxes = [s for s in gs.bench.value.slots
              if s is not None and s.kind == 'supply_box']
     assert len(boxes) == 1, '箱腿落席 1 个 supply_box 槽件'
+
+
+def test_deterministic_equip_env_grants_without_rng_blue(
+        provider_calls: list[str]) -> None:
+    """确定性装备环境(T-32 设计 §4 锁 5):蓝钻贵族零随机支 → rng 谓词
+    零解析(provider 不触);选卡后 equips 尾追 '蓝钻'、bench +1 箱
+    (supply_box)——上报 → gain_invest_env → on_env_gained 双端同链,
+    live/sim 共用语义一条测试覆盖。"""
+    gs = _make_gs(['蓝钻贵族', '轮岗', '头彩'])
+    out = report_action_pick_invest_env_param(
+        gs, SimpleNamespace(idx=0), _SIG)
+    assert out.applied
+    assert provider_calls == [], '零随机支环境零解析'
+    assert list(gs.equips.value) == ['蓝钻'], '装备腿入栏'
+    boxes = [s for s in gs.bench.value.slots
+             if s is not None and s.kind == 'supply_box']
+    assert len(boxes) == 1, '箱腿落席 1 个 supply_box 槽件'

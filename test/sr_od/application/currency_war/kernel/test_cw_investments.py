@@ -712,3 +712,26 @@ def test_red_diamond_registry_surface() -> None:
     assert '红钻' in EQUIPMENTS
     assert '红钻' not in BENCH_ITEM_NAMES
     assert '简易武装箱' in BENCH_ITEM_NAMES
+
+
+def test_blue_diamond_registry_surface() -> None:
+    """登记面与身份防污染(T-32 设计 §4 锁 1/4):蓝钻贵族 ∈ ENV_GIFTS
+    且 ∉ ENV_ECONOMY;登记形状 = 装备腿('蓝钻',)+ 箱腿('简易武装箱',);
+    蓝钻 ∈ EQUIPMENTS(装备身份)且 ∉ BENCH_ITEM_NAMES,'简易武装箱' ∈
+    BENCH_ITEM_NAMES(派生面只扫 items 两通道,装备不进占席词表;
+    红钻贵族姊妹行同判)。import 过闸 = 模块加载即对全表现值(含本行)
+    跑 _validate_env_gifts ⑧装备名/⑨通道同名/③空发放集/④∩ENV_ECONOMY。"""
+    from sr_od.application.currency_war.data.cw_equipment_data import (
+        EQUIPMENTS,
+    )
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        BENCH_ITEM_NAMES,
+    )
+    assert '蓝钻贵族' in ENV_GIFTS
+    assert '蓝钻贵族' not in ENV_ECONOMY
+    grant = ENV_GIFTS['蓝钻贵族']
+    assert grant.equips_immediate == ('蓝钻',)
+    assert grant.items_immediate == ('简易武装箱',)
+    assert '蓝钻' in EQUIPMENTS
+    assert '蓝钻' not in BENCH_ITEM_NAMES
+    assert '简易武装箱' in BENCH_ITEM_NAMES

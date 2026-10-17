@@ -1924,3 +1924,78 @@ def test_env_gift_channel_selection_both_states(rows_sink: _RowSink) -> None:
         '装备腿锚定仍随机态(rand=True 硬编码,裁定语义)'
     assert gs2.bench.source == 'logic', '箱腿锚定确定面(rand=False 透传)'
     assert rows_sink.kinds() == [], '两态零申报行(不进失配网)'
+
+
+# —— 蓝钻贵族姊妹行(2026-09-23-invest-effects-calc T-32;机制件零改动,
+# 消费锁与 T-31 同构,骑同一 on_env_gained 即时装备支)——
+
+
+def test_env_gift_equip_leg_blue_diamond(rows_sink: _RowSink) -> None:
+    """发放腿(T-32 设计 §4 锁 2,on_env_gained 直构;容器前置同 T-31
+    判例 = 观察/逻辑写组装,equips/bench 非 None 才落):equips 尾追
+    '蓝钻'、bench 落 1 个 supply_box 槽件;效果串两行按卡文序
+    (``equip_gift:蓝钻`` 先、``item_gift:简易武装箱`` 后)。"""
+    gs = _make_gs(bench=[], equips=[])
+    out = on_env_gained(gs, None, '蓝钻贵族', rand=False, sig=_lsig())
+    assert out == ('equip_gift:蓝钻', 'item_gift:简易武装箱'), \
+        '效果串序 = 卡文序(钻先箱后)'
+    assert list(gs.equips.value) == ['蓝钻'], '装备入栏(尾追)'
+    boxes = [s for s in gs.bench.value.slots
+             if s is not None and s.kind == 'supply_box']
+    assert len(boxes) == 1, '箱落 1 个 supply_box 槽件'
+    assert rows_sink.kinds() == [], '正常路径零申报行'
+
+
+def test_env_gift_blue_callback_zero_effect(rows_sink: _RowSink) -> None:
+    """回调零效果(T-32 设计 §4 锁 3):蓝钻 ∈ EQUIP_ACQUIRE_CONSEQUENCES
+    表外 → 获得链零子链;蓝钻非财富宝钻 → 宝钻数值回调族
+    (diamond_count/deploy_cap/back_layout)零变化(on_diamond_acquired
+    非财富宝钻早退在册,红钻贵族同判)。"""
+    gs = _make_gs(bench=[], equips=[])
+    diamond0 = gs.diamond_count.value
+    cap0 = gs.deploy_cap.value
+    back0 = gs.back_layout.value
+    on_env_gained(gs, None, '蓝钻贵族', rand=False, sig=_lsig())
+    assert gs.diamond_count.value == diamond0, '宝钻计数零写'
+    assert gs.deploy_cap.value == cap0, '上阵上限零写'
+    assert gs.back_layout.value == back0, '后排格数零写'
+    assert list(gs.equips.value) == ['蓝钻'], '装备照常入栏(主腿生效)'
+
+
+def test_env_gift_dual_diamond_no_cross_name(rows_sink: _RowSink) -> None:
+    """双钻并存(T-32 设计 §4 锁 7):红钻贵族/蓝钻贵族两姊妹条目各自
+    发放各自具名件互不串名——登记形状互斥(装备腿各含自家钻)+ 行为面
+    两条链各自产出单件自家装备、效果串互不含对方名(环境单值一局一个,
+    并存 = 登记面两行齐备、形状与产出双向不串)。"""
+    assert ENV_GIFTS['红钻贵族'].equips_immediate == ('红钻',)
+    assert ENV_GIFTS['蓝钻贵族'].equips_immediate == ('蓝钻',)
+    gs_r = _make_gs(bench=[], equips=[])
+    out_r = on_env_gained(gs_r, None, '红钻贵族', rand=False, sig=_lsig())
+    gs_b = _make_gs(bench=[], equips=[])
+    out_b = on_env_gained(gs_b, None, '蓝钻贵族', rand=False, sig=_lsig())
+    assert out_r == ('equip_gift:红钻', 'item_gift:简易武装箱'), \
+        '红钻链效果串零串名'
+    assert out_b == ('equip_gift:蓝钻', 'item_gift:简易武装箱'), \
+        '蓝钻链效果串零串名'
+    assert list(gs_r.equips.value) == ['红钻'], '红钻链入栏零串名'
+    assert list(gs_b.equips.value) == ['蓝钻'], '蓝钻链入栏零串名'
+    assert rows_sink.kinds() == [], '双链零申报行'
+
+
+def test_env_gift_blue_channel_selection_both_states(
+        rows_sink: _RowSink) -> None:
+    """写通道择道(T-32 设计 §4 锁 8,蓝钻行骑 T-31 同一代码路径):
+    装备腿 rand=True 硬编码 → 未锚定与锚定两态均 write_logic_rand
+    (equips.source 恒 'logic_rand',随机态语义不进失配网);箱腿
+    rand=False 透传 → 未锚定 'logic_rand'、锚定 'logic' 确定面(对照腿)。"""
+    gs = _make_gs(bench=[], equips=[])
+    on_env_gained(gs, None, '蓝钻贵族', rand=False, sig=_lsig())
+    assert gs.equips.source == 'logic_rand', '装备腿未锚定随机态'
+    assert gs.bench.source == 'logic_rand', '箱腿未锚定随机态'
+    gs2 = _make_gs(bench=[], equips=[])
+    gs2.prep_anchored = True
+    on_env_gained(gs2, None, '蓝钻贵族', rand=False, sig=_lsig())
+    assert gs2.equips.source == 'logic_rand', \
+        '装备腿锚定仍随机态(rand=True 硬编码,裁定语义)'
+    assert gs2.bench.source == 'logic', '箱腿锚定确定面(rand=False 透传)'
+    assert rows_sink.kinds() == [], '两态零申报行(不进失配网)'

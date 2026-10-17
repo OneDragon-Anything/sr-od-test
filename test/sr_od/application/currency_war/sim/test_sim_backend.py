@@ -3505,3 +3505,39 @@ def test_equip_env_pick_sim_full_chain() -> None:
     first = _run()
     second = _run()
     assert first == second, '同 seed 重放确定(装备腿零采样)'
+
+
+def test_equip_env_pick_sim_full_chain_blue_diamond() -> None:
+    """即时装备环境 sim 全链·蓝钻行(T-32 设计 §4 锁 6):播种选蓝钻贵族
+    → equips = ['蓝钻']、bench = 4 开局手牌 + 1 箱(supply_box);开箱链
+    现役承接新箱(箱画面候选 → 选定 → 所得经获得链入栏,equips 2 件);
+    同 seed 重放确定(装备腿零采样,重放确定性不经 rng 注入)。"""
+    def _run() -> list[str]:
+        b = _env_pick_backend()
+        try:
+            _seed_and_pick_env(b, '蓝钻贵族')
+            assert list(b.gs.equips.value) == ['蓝钻'], '选卡后装备入栏'
+            boxes = [s for s in b.gs.bench.value.slots
+                     if s is not None and s.kind == 'supply_box']
+            assert len(boxes) == 1, '4 开局手牌 + 1 箱'
+            # 开箱链现役承接(环境送的箱 = 标准 supply_box,与红钻贵族同形)
+            open_out = report_action_open_box_param(
+                b.gs, CwActionOpenBoxParam(), _SIG)
+            cw_sim_ports.declare_world(open_out.world_decl)
+            assert b.screen_identity() == SCREEN_BOX
+            cands = b.gs.box_card_names.value
+            assert cands is not None and len(cands) == 4
+            b._handle_click_source(SCREEN_BOX, '装备卡-3')
+            pick_out = report_action_pick_box_card_param(
+                b.gs, SimpleNamespace(), _SIG)
+            assert pick_out.applied
+            cw_sim_ports.declare_world(pick_out.world_decl)
+            assert cands[2] in b.gs.equips.value, '开箱所得入栏(获得链)'
+            assert '蓝钻' in b.gs.equips.value, '环境装备仍在栏'
+            return list(b.gs.equips.value)
+        finally:
+            uninstall_backend()
+
+    first = _run()
+    second = _run()
+    assert first == second, '同 seed 重放确定(装备腿零采样)'
