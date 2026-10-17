@@ -493,8 +493,8 @@ def test_delta_causal_flush_and_cross_node_chain():
     assert s12.actions[0].deltas == []
     assert [(d.field, d.before, d.after) for d in s12.trailing_changes] \
         == [('gold', 29, 27)]
-    assert '| 金 | (起点) → 30 |' in md
-    assert '| 金 | 30 → 29 |' in md
+    assert '| 金(gold) | (起点) → 30 |' in md
+    assert '| 金(gold) | 30 → 29 |' in md
 
 
 def test_obs_rows_not_in_delta_settlement_to_trailing():
@@ -523,7 +523,7 @@ def test_obs_rows_not_in_delta_settlement_to_trailing():
         == [('node', True)]
     assert all(d.field != 'round_fresh_buys' for d in prep.actions[0].deltas)
     # obs 回读显影进 0 观察动态段(非注册键观察写入)
-    assert '- round_fresh_buys phase[1, 1]: 翡翠' in md
+    assert '- 本轮新买(round_fresh_buys) phase[1, 1]: 翡翠' in md
     assert not any(a.startswith('观察: round_fresh_buys=')
                    for a in prep.annots)
     # settlement 行(cs=战斗等待)归「画面-战斗」章的章内变化块,不入
@@ -531,7 +531,7 @@ def test_obs_rows_not_in_delta_settlement_to_trailing():
     battle = [s for s in screens if s.title == '画面-战斗']
     assert battle and [d.field for d in battle[0].trailing_changes] \
         == ['settlement']
-    assert '| 结算 | (起点) → 胜 血 84 进度 +2 等级 4 经验 0/6 连胜 0 |' in md
+    assert '| 结算(settlement) | (起点) → 胜 血 84 进度 +2 等级 4 经验 0/6 连胜 0 |' in md
 
 
 # ---------------------------------------------------------------------------
@@ -591,7 +591,7 @@ def test_shop_entry_table_and_probs():
     assert '| 1 | 爻光 | 仙舟 | 1 | 1★ |' in md
     assert '| 2 | 空 |  |  |  |' in md
     assert '| 3 | 识别失败 |  |  |  |' in md
-    assert '- 概率 1→100%、2→0%' in md
+    assert '- 概率(refresh_probs) 1→100%、2→0%' in md
 
 
 # ---------------------------------------------------------------------------
@@ -674,8 +674,8 @@ def test_same_value_delta_filtered_with_counter_note():
     report, md = build(rows)
     scr = section_of_kind(report, 'node').screens[0]
     assert scr._same_skipped == 1
-    assert '| 金 | (起点) → 15 |' in md
-    assert '| 金 | 15 → 15 |' not in md
+    assert '| 金(gold) | (起点) → 15 |' in md
+    assert '| 金(gold) | 15 → 15 |' not in md
     assert '- 同值写入 ×1 略(前=后,零信息)' in md
 
 
@@ -723,7 +723,7 @@ def test_obs_note_rules_skip_dedup_and_route_keys():
     _, md = build(rows)
     assert 'prev_screen' not in md
     assert '溢出卡' not in md
-    assert md.count('- 节点序位 [1,1]') == 1  # 首写进 0 观察,同值回读不重复
+    assert md.count('- 节点序位(node_pos) [1,1]') == 1  # 首写进 0 观察,同值回读不重复
     assert '观察: node_pos' not in md
 
 
@@ -797,7 +797,7 @@ def test_obs_note_entry_keys_skipped_unique_fields_kept():
     ]
     _, md = build(rows)
     assert '- 观察: 金=15' not in md
-    assert '- pending_loss P1-R1 (battle)' in md
+    assert '- 败态登记(pending_loss) P1-R1 (battle)' in md
 
 
 def test_obs_writes_surface_in_screen_observations():
@@ -818,5 +818,5 @@ def test_obs_writes_surface_in_screen_observations():
     report, md = build(rows)
     scr = section_of_kind(report, 'node').screens[0]
     assert scr._obs_entries == {'node_pos': '[1,1]'}  # 首写定帧值
-    assert '- 节点序位 [1,1]' in md
-    assert scr.annots == ['观察: 节点序位=[1,2]']  # 异值回读 → 章尾注记
+    assert '- 节点序位(node_pos) [1,1]' in md
+    assert scr.annots == ['观察: 节点序位(node_pos)=[1,2]']  # 异值回读 → 章尾注记
