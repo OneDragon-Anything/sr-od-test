@@ -65,6 +65,11 @@ def _tome_env(session, clicks: list, monkeypatch):
 
     from sr_od.application.currency_war import prep_actions as pa
     ex = pa.PrepActionExecutor(_Op(), _Op.ctx)
+    # 槽位表种子(screen_loader 桩读不到建档 → 空表):op 内 slot 守卫按
+    # 真执行器形状(备战栏 9)判合法域,空表会让合法槽位误炸——机械
+    # fixture 数据,非断言面。
+    from one_dragon.base.geometry.point import Point
+    ex._bench_pts = [Point(i * 10, i * 10) for i in range(9)]
     env = PrepExecEnv(op=_Op(), match=SimpleNamespace(session=session),
                       executor=ex)
     return env

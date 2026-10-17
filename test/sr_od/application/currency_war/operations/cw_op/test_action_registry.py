@@ -8,8 +8,9 @@
 1. **键粒度**(幂等键消费 = cw_screen_prep 重派/对账去重):行为参数
    入键(变化 → 键变 = 幂等键分裂);发射臂路由标签不入键;容器下标
    字段构成键面;
-2. **执行器 F3 白名单行为**:词表外类型拒(参数非法路径,Director
-   交回外循环留证),在册动作合法域放行;
+2. **词表白名单行为**:词表外类型注册表解析口 AssertionError 响亮暴露,
+   在册动作解析命中(执行器集中式 validate 已退役,守卫单一形态 =
+   守卫断言);
 3. **终结集 ⟺ 注册表 terminal 属性逐一等价**:备战环终结集四类
    terminal=True、备战机械动作全部非终结、terminal_wait 同源比对
    (禁消费点私表);开店注册行 = terminal 承载行,执行抛 AssertionError
@@ -157,32 +158,30 @@ def test_action_key_faces_pinned_per_class():
 
 # ============================================================ 2. F3 白名单行为
 
-def test_prep_f3_rejects_unknown_and_admits_registered():
-    """执行器 F3 白名单 = 统一词表元组的行为半:词表外类型拒(参数非法
-    路径,Director 交回外循环留证),在册动作合法域放行。"""
-    from sr_od.application.currency_war import prep_actions as pa
-    ex = pa.PrepActionExecutor.__new__(pa.PrepActionExecutor)
-    ex._bench_pts = [Point(i * 10, i * 10) for i in range(9)]
-    ex._front_pts = [Point(i * 10, i * 10) for i in range(4)]
-    ex._back_pts = [Point(i * 10, i * 10) for i in range(6)]
-    assert ex.validate(SimpleNamespace()) is not None   # 词表外 → 拒
-    assert ex.validate(CwActionSellBenchParam(bench_idx=0)) is None   # 在册 → 合法
+def test_prep_vocab_rejects_unknown_and_admits_registered():
+    """词表白名单行为半(执行器集中式 validate 退役后,守卫单一形态 =
+    守卫断言):词表外类型在注册表解析口 AssertionError 响亮暴露,在册
+    动作解析命中 op 类。"""
+    with pytest.raises(AssertionError):
+        action_op_class_for(SimpleNamespace())   # 词表外 → 拒
+    assert action_op_class_for(
+        CwActionSellBenchParam(bench_idx=0)) is not None   # 在册 → 命中
 
 
-def test_open_bookcard_registered_and_validated():
-    """CwActionOpenBookcardParam 在统一词表白名单 + F3 静态参数域
-    (漏登记先例 CwActionOpenTomeParam:漏登记时执行面 validate 拒
-    「未知动作类型」,动作从未真正执行);参数域与
-    CwActionOpenBoxParam/CwActionOpenTomeParam 同形(slot=None 或
-    1..备战栏槽位)。"""
+def test_open_bookcard_registered_and_slot_guard():
+    """CwActionOpenBookcardParam 在统一词表(slot 越界防线 =
+    op 内守卫断言,执行器集中式 validate 退役进 op):slot = 画面物理槽
+    1 基(可选参数,None = 首张),越界守卫断言响亮暴露,消息带越界形态。"""
     assert CwActionOpenBookcardParam in CW_ACTION_TYPES
-    from sr_od.application.currency_war import prep_actions as pa
-    ex = pa.PrepActionExecutor.__new__(pa.PrepActionExecutor)
-    ex._bench_pts = [Point(i * 10, i * 10) for i in range(9)]
-    assert ex.validate(CwActionOpenBookcardParam()) is None
-    assert ex.validate(CwActionOpenBookcardParam(slot=9)) is None
-    err = ex.validate(CwActionOpenBookcardParam(slot=10))
-    assert err is not None and '越界' in err
+    from sr_od.application.currency_war.operations.cw_op.cw_open_bookcard_action import (
+        CwActionOpenBookcardOp as _Op,
+    )
+    env = SimpleNamespace(executor=SimpleNamespace(_bench_pts=[
+        Point(i * 10, i * 10) for i in range(9)]))
+    with pytest.raises(AssertionError) as ei:
+        _Op(SimpleNamespace(), CwActionOpenBookcardParam(slot=10),
+            env=env).run()
+    assert '越界' in str(ei.value), '守卫断言消息带越界形态'
 
 
 # ============================================================ 3. 终结集 ⟺ 注册表

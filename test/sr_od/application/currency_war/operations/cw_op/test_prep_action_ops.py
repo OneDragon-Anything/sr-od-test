@@ -133,7 +133,14 @@ def _make_executor(controller: _RecordingController,
                           run_context=None,
                           screen_loader=SimpleNamespace(
                               get_screen=lambda name: None))
-    return pa.PrepActionExecutor(op, ctx)
+    ex = pa.PrepActionExecutor(op, ctx)
+    # 槽位表种子(screen_loader 桩读不到建档 → 空表):op 内参数守卫按
+    # 真执行器形状(备战栏 9 / 前排 4 / 后排 6)判合法域,空表会让一切
+    # 合法槽位误炸——种子 = 机械 fixture 数据,非断言面。
+    ex._bench_pts = [Point(i * 10, i * 10) for i in range(9)]
+    ex._front_pts = [Point(i * 10, i * 10) for i in range(4)]
+    ex._back_pts = [Point(i * 10, i * 10) for i in range(6)]
+    return ex
 
 
 # ============================================================ 执行器机械半:晶矿

@@ -14,7 +14,7 @@ test_prep_action_ops harness 形状);环级 = 桩策略 + 实例级重观察桩
 3. overlay bail:重观察回执 event_overlay 非空 → CwObsOverlayBail
    (tag 透传;自上报已在 bail 前完成 = 发出即记账);
 4. 域能力守卫:env.op 未接线 reobserve_in_visit → AssertionError 响亮;
-   scope 拼错值 → F3 validate 拒绝(值域闭集 OBS_SCOPES);
+   scope 拼错值 → op 内守卫断言(值域闭集 OBS_SCOPES);
 5. 环级接线:桩策略 [Obs(in_place), Obs(outer_loop)] → in_place 经注册表
    派发执行(重观察恰一次 + 帧代次标 full)+ 循环续跑;outer_loop 在 F3
    之前拦截交回外循环(不进执行器,行为 = 原 HoldFrame 收编,
@@ -127,20 +127,16 @@ def test_obs_op_env_without_capability_loud_fails():
         op.run()
 
 
-def test_obs_scope_invalid_value_f3_rejected():
-    """F3 值域校验:scope 拼错值 → validate 拒绝(参数非法通道交回留证;
-    值域闭集单一源 = OBS_SCOPES)。outer_loop 口径在决策循环 F3 之前拦截,
-    到不了 validate——此处校验的是 in_place 执行路径的拼错值防线。"""
-    ex = PrepActionExecutor(
-        SimpleNamespace(),
-        SimpleNamespace(controller=SimpleNamespace(), cw_match=None,
-                        screen_loader=SimpleNamespace(
-                            get_screen=lambda name: None)))
-    err = ex.validate(CwActionObsParam(scope='outter'))
-    assert err is not None and 'OBS_SCOPES' in err
-    assert ex.validate(CwActionObsParam()) is None
-    assert ex.validate(CwActionObsParam(scope='in_place')) is None
-    assert ex.validate(CwActionObsParam(scope='outer_loop')) is None
+def test_obs_scope_invalid_value_guard_assertion():
+    """scope 值域守卫(执行器集中式 validate 退役进 op):拼错值 → op 内
+    守卫断言 AssertionError(值域闭集单一源 = OBS_SCOPES)。outer_loop
+    口径在决策循环入口分支拦截,到不了本 op——此处防线 = 派发路径的
+    拼错值。"""
+    op = CwActionObsOp(SimpleNamespace(), CwActionObsParam(scope='outter'),
+                       env=SimpleNamespace())
+    with pytest.raises(AssertionError) as ei:
+        op.run()
+    assert 'OBS_SCOPES' in str(ei.value), '守卫断言消息带值域单一源'
 
 
 # ===== 5. 环级接线(桩策略 + 实例级重观察桩)=====
