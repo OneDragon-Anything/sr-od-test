@@ -108,3 +108,79 @@ def test_grant_target_star_up_does_not_retrigger() -> None:
                    evidence='t', producer='T')
     assert _bench_units(gs) == [('希儿', 2)], \
         '仅升星产物,零发放'
+
+
+# ============================================================ uid 注入(T-30)
+
+
+def test_uid_param_injected_into_placed_unit() -> None:
+    """uid 尾形参 = 环境发放链注入点(T-30 设计 §2.3 条 7):显式传
+    uid → 落位单位携带该实例号;缺省(既有全部调用点)恒 None。"""
+    gs = _make_gs([])
+    gain_character(gs, '流萤', 1, rand=False, sig=_SIG,
+                   evidence='t', producer='T', uid=7)
+    assert _bench_units(gs) == [('流萤', 1)]
+    placed = [s.unit for s in gs.bench.value.slots
+              if s is not None and s.kind == 'unit' and s.unit is not None]
+    assert placed[0].uid == 7, 'uid 随落位构造注入'
+    gs2 = _make_gs([])
+    gain_character(gs2, '卡芙卡', 1, rand=False, sig=_SIG,
+                   evidence='t', producer='T')
+    placed2 = [s.unit for s in gs2.bench.value.slots
+               if s is not None and s.kind == 'unit' and s.unit is not None]
+    assert placed2[0].uid is None, '缺省恒 None(即时腿/购入形态)'
+
+
+# ============================================================ 合成落场不辖(T-30)
+
+
+def test_merge_consumes_locked_unit_product_free() -> None:
+    """锁件合成消耗自由(设计 §4 锁 9,裁决 6 随裁决 2 收口钉死):被锁
+    流萤(uid=1)作素材的 3 合 1 成功——不炸不拦(锁 = 直部署禁令,
+    合成消耗不在辖域);产物 2★ uid=None(新实体),被锁 uid 随素材
+    摘除消失 = 锁随消耗自愈(锁记录孤悬,守卫不再匹配任何容器单位)。"""
+    slots_units = [Unit(char_id='流萤', star=1),
+                   Unit(char_id='流萤', star=1, uid=1),
+                   Unit(char_id='流萤', star=1)]
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    slots: list[BenchSlot | None] = [BenchSlot(kind='unit', unit=u)
+                                     for u in slots_units]
+    slots += [BenchSlot(kind='empty')] * (9 - len(slots))
+    gs.observe(gs.bench, BenchView(slots=slots, capacity=9), sig=_SIG_OBS)
+    gain_character(gs, '流萤', 1, rand=False, sig=_SIG,
+                   evidence='t', producer='T')
+    # 落位第四只补齐三连:合成 2★ 产物 + 新落位 1★ 并存(扫描序最左
+    # 为载体);被锁 uid=1 张在素材组内被消耗
+    assert _bench_units(gs) == [('流萤', 2), ('流萤', 1)]
+    placed = [s.unit for s in gs.bench.value.slots
+              if s is not None and s.kind == 'unit' and s.unit is not None]
+    assert all(u.uid is None for u in placed), \
+        '产物与新落位只均 uid=None(被锁 uid 已随素材消耗)'
+
+
+def test_board_carrier_merge_product_lands_board_uid_free() -> None:
+    """场上载体优先通道(设计 §4 锁 9 后半):被锁流萤(uid=1)在场上
+    作载体 + bench 1×同名 → 新落位补齐后跨域三连,载体 = 场上那只
+    (引擎 B merge_step_once「场上优先」规则)→ 产物直接落 board 且
+    uid=None,不炸不拦。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        DeployedView,
+    )
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    slots: list[BenchSlot | None] = [BenchSlot(kind='unit', unit=Unit(
+        char_id='流萤', star=1))]
+    slots += [BenchSlot(kind='empty')] * (9 - len(slots))
+    gs.observe(gs.bench, BenchView(slots=slots, capacity=9), sig=_SIG_OBS)
+    gs.observe(gs.deployed,
+               DeployedView(front_slots=[Unit(char_id='流萤', star=1,
+                                              uid=1), None, None, None],
+                            back_slots=[None] * 6), sig=_SIG_OBS)
+    gain_character(gs, '流萤', 1, rand=False, sig=_SIG,
+                   evidence='t', producer='T')
+    front = [u for u in gs.deployed.value.front_slots if u is not None]
+    assert [(u.char_id, u.star) for u in front] == [('流萤', 2)], \
+        '场上载体升星,产物落 board'
+    assert front[0].uid is None, 'board 产物 uid=None'
+    bench_left = [s.unit for s in gs.bench.value.slots
+                  if s is not None and s.kind == 'unit' and s.unit is not None]
+    assert bench_left == [], 'bench 素材两只(存量+新落位)全数被消耗'

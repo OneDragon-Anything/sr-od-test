@@ -1924,6 +1924,9 @@ _A_SEEDED: tuple[str, ...] = (
     # 环境条件发放已发标记(迭代 2026-10-10-env-conditional-grants:
     # 空底座,「本局首次」守卫初始真值 = 空集)
     'env_grants_done',
+    # 环境发放上场锁 + 发号计数器(T-30 星核猎手契约:空/零底座,
+    # 守卫 membership 与发号均零 None 防御)
+    'env_grant_deploy_locks', 'env_grant_uid_seq',
 )
 
 #: B/C 类抽检面(None = 设计语义或无观察源,设计分诊表禁种)。
@@ -1965,6 +1968,8 @@ def test_cold_build_seeds_all_a_fields(monkeypatch) -> None:
     assert gs.ore_declared_pending.value == (), '声明队列冷建空底座'
     assert gs.ore_declared_done.value == (), '声明消费标记冷建空底座'
     assert gs.env_grants_done.value == (), '条件发放标记冷建空底座'
+    assert gs.env_grant_deploy_locks.value == (), '上场锁域冷建空底座'
+    assert gs.env_grant_uid_seq.value == 0, '发号计数器冷建零底座'
     assert gs.gold.value == 3
     assert gs.level.value == 3
     assert gs.xp.value == (0, XP_TO_NEXT_LEVEL[3])
@@ -2215,8 +2220,10 @@ def test_unit_has_no_slot_information_bit() -> None:
                                    back_slots=[None] * 6))
     snap = gs.full_state_snapshot()
     front_raw = snap['values']['deployed']['front_slots']
-    assert front_raw[0] == {'char_id': '甲', 'star': 1, 'equips': []}, \
-        '序列化键集 = 身份/星级/装备(槽位不入 Unit)'
+    assert front_raw[0] == {'char_id': '甲', 'star': 1, 'equips': [],
+                            'uid': None}, \
+        '序列化键集 = 身份/星级/装备/实例号(槽位不入 Unit;uid = T-30 '\
+        '实例粒度上场锁尾字段,units 域版本 3)'
 
 
 def test_deployed_view_of_hits_back_bounds_and_extension() -> None:

@@ -338,3 +338,39 @@ def test_record_ore_open_accumulates_and_rejects_nonpositive() -> None:
         '晶矿开启入账零串账 refresh'
     inv.record_refresh(free=False)
     assert inv.ore_open_total == 3, '刷新入账零串账晶矿开启'
+
+
+# ============================================================ 实例号保真(T-30)
+
+
+def test_worn_transform_keeps_uid_and_guard_still_blocks() -> None:
+    """特权赋予卡换装保 uid(T-30 设计 §4 锁 10,V2-1 修法回归锁):被锁
+    实例(uid=1)经 transform_worn_equip_to_privilege 同实体变换后 uid
+    保持(伪 replace 手动新构造曾清零 uid → sim 守卫提前放行),守卫
+    仍拦其直部署。"""
+    from sr_od.application.currency_war.kernel.cw_effect_inventory import (
+        transform_worn_equip_to_privilege,
+    )
+    from sr_od.application.currency_war.kernel.cw_env_grants import (
+        deploy_lock_block_reason,
+    )
+    _WORN = '遗器耦合器'
+    target = Unit(char_id='流萤', star=1, equips=[_WORN], uid=1)
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    slots = [BenchSlot(kind='unit', unit=target)] + \
+        [BenchSlot(kind='empty')] * 8
+    gs.observe(gs.bench, BenchView(slots=slots, capacity=9), sig=_SIG_OBS)
+    out = transform_worn_equip_to_privilege(gs, target, _WORN)
+    assert out == _WORN + '·特权', '特权名返回(后缀映射)'
+    replaced = [s.unit for s in gs.bench.value.slots
+                if s is not None and s.kind == 'unit' and s.unit is not None]
+    assert replaced[0].equips == [_WORN + '·特权'], '装备已变换'
+    assert replaced[0].uid == 1, '实例号随行(同实体变换)'
+    # 守卫仍拦(锁记录在册 + 生效序位 < 解锁序位)
+    gs.observe(gs.node_pos, (1, 7), sig=_SIG_OBS)
+    gs.write_logic(gs.env_grant_deploy_locks, (('流萤', 1, (1, 9)),),
+                   produced_by='test-seed',
+                   sig=ChannelSig(family='logic_action', actor='test-seed',
+                                  mode='compute'))
+    assert deploy_lock_block_reason(gs, replaced[0]) == \
+        'deploy_locked:流萤#uid1#unlock1-9', '换装后守卫仍拦'

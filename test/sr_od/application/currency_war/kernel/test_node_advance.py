@@ -154,6 +154,68 @@ def test_reanchor_unlocks_next_advance() -> None:
     assert gs.node_pos.value == (1, 4)
 
 
+def test_settle_confirm_wires_battle_grant_once() -> None:
+    """T-30 同战共现条件发放接线(settle_confirm 分支,黑天鹅直登相邻):
+    真推进恰好查一次——三将同战结算后 bench 增 1★流萤带实例号 + 锁记录
+    落账;重复上报(观察态门挡)不重查不重发;再推进 done 短路不重发
+    且黑天鹅占卜屋计数器计数不受发放影响(回归锁);supply_confirm 推进
+    不触发本检查(分支封闭集内仅 settle_confirm 接线)。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        BenchSlot,
+        BenchView,
+        DeployedView,
+        Unit,
+    )
+
+    def _ready_gs() -> GameState:
+        gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+        gs.observe(gs.active_env, '星核猎手契约', sig=_SIG_OBS)
+        trio = [Unit(char_id=c, star=1)
+                for c in ('刃', '卡芙卡', '银狼', '黑天鹅')]
+        gs.observe(gs.deployed,
+                   DeployedView(front_slots=trio + [None],
+                                back_slots=[None] * 6), sig=_SIG_OBS)
+        gs.observe(gs.bench,
+                   BenchView(slots=[BenchSlot(kind='empty')] * 9,
+                             capacity=9), sig=_SIG_OBS)
+        observe_node_anchor(gs, (1, 5), trigger_screen='货币战争-备战',
+                            actor=_ACTOR)
+        return gs
+
+    def _bench_chars(gs_: GameState) -> list[tuple[str, int, int | None]]:
+        return [(s.unit.char_id, s.unit.star, s.unit.uid)
+                for s in gs_.bench.value.slots
+                if s is not None and s.kind == 'unit' and s.unit is not None]
+
+    gs = _ready_gs()
+    out = report_node_advance(gs, trigger='settle_confirm')
+    assert out.applied and gs.node_pos.value == (1, 6), '真推进一档'
+    assert _bench_chars(gs) == [('流萤', 1, 1)], '发放 1★流萤带实例号'
+    assert gs.env_grants_done.value == \
+        (('星核猎手契约', 'battle_co_presence'),), 'done 封账'
+    assert gs.env_grant_deploy_locks.value == (('流萤', 1, (1, 8)),), \
+        '锁记录 = (发放角色, uid, 解锁序位 = 生效序位 (1,6) 步进 2 步)'
+    assert gs.screen_changes.fortune_battles == 1, '黑天鹅计数照走'
+    # 重复上报:观察态门挡(结构性不重查),零重发
+    assert report_node_advance(gs, trigger='settle_confirm').applied is False
+    assert _bench_chars(gs) == [('流萤', 1, 1)], '不重发'
+    assert gs.env_grant_uid_seq.value == 1, 'uid 不再发号'
+    # 翻锚定后第二次真推进:done 短路零写,黑天鹅计数器继续不受影响
+    observe_node_anchor(gs, (1, 6), trigger_screen='货币战争-备战',
+                        actor=_ACTOR)
+    assert report_node_advance(gs, trigger='settle_confirm').applied
+    assert _bench_chars(gs) == [('流萤', 1, 1)], 'done 短路不重发'
+    assert gs.env_grant_uid_seq.value == 1
+    assert gs.screen_changes.fortune_battles == 2, '计数器不受发放影响'
+
+    # supply_confirm 推进不触发本检查(推进照走,零发放零 done)
+    gs2 = _ready_gs()
+    assert report_node_advance(gs2, trigger='supply_confirm').applied
+    assert gs2.node_pos.value == (1, 6)
+    assert _bench_chars(gs2) == [], 'supply_confirm 不触发'
+    assert gs2.env_grants_done.value is None, '零 done'
+
+
 def test_stale_reading_dropped() -> None:
     """R<v 倒退免疫:不写 + 现值保持(logic 或 observation 态同规)。"""
     gs = _gs_with_double_pair()

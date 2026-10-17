@@ -552,3 +552,100 @@ def test_env_ore_open_grants_current_entry_and_coexistence() -> None:
     assert '战技点契约' in ENV_GIFTS
     assert '战技点契约' not in ENV_ECONOMY
     assert '战技点契约' not in cw_investments.ENV_ORE_GRANTS
+
+
+# ============================================================ 同战共现触发发放登记表
+# (T-30 星核猎手契约,设计 = 迭代 2026-09-23-invest-effects-calc designs/
+# T-30-xinghe-lieshou-qiyue.md §2.1 + §4 锁 1;注入 + 直调沿本文件校验测试
+# 惯用法。)
+
+_ORIG_BATTLE = dict(cw_investments.ENV_BATTLE_GRANTS)
+
+
+def _battle_grant(**kw):
+    """现役条目按参变体(缺省 = id 129 原文直读形态)。"""
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        EnvBattleGrant,
+    )
+    base = {'presence_groups': (('刃', '千冶·刃'), ('卡芙卡',),
+                                ('银狼LV.999', '银狼')),
+            'reward_char': '流萤', 'deploy_lock_nodes': 2}
+    base.update(kw)
+    return EnvBattleGrant(**base)
+
+
+def _bad(**kw) -> dict:
+    """星核猎手契约条目按参坏体(其余键保持现役)。"""
+    bad = dict(_ORIG_BATTLE)
+    bad['星核猎手契约'] = _battle_grant(**kw)
+    return bad
+
+
+def test_env_battle_grants_validation_raises(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """五查 import 即炸语义(T-30 设计 §2.1/§4 锁 1):①孤儿键 ②参与组形
+    (空外层 = 条件永真使 done 登记刻即触发;空组 = 永不满足使发放不可达;
+    参与名漂移/空串——锁 data 注册表防版本改名)③发放角色形(空串/漂移)
+    ④锁期形(0/负/bool——解锁序位不后移使锁无消费面)⑤双源失同步
+    (ENV_GIFTS 条件具名集首元 ≠ 本表发放角色,两表同出卡面单侧改动即
+    漂移,两形态 = 估侧改/世界侧改)。"""
+    bad_orphan = dict(_ORIG_BATTLE)
+    bad_orphan['不存在环境X'] = _battle_grant()
+    cases = [
+        ('孤儿键', bad_orphan, '孤儿键'),
+        ('参与组空外层', _bad(presence_groups=()), '参与组形'),
+        ('参与组内空组', _bad(presence_groups=(('刃',), ())), '参与组形'),
+        ('参与名漂移', _bad(presence_groups=(('刃', '不存在的角色X'),
+                                             ('卡芙卡',), ('银狼',))),
+         '参与名漂移'),
+        ('参与名空串', _bad(presence_groups=(('',), ('卡芙卡',),
+                                             ('银狼',))), '参与名形'),
+        ('发放角色空串', _bad(reward_char=''), '发放角色形'),
+        ('发放角色漂移', _bad(reward_char='不存在的角色X'), '发放角色漂移'),
+        ('锁期零', _bad(deploy_lock_nodes=0), '锁期形'),
+        ('锁期负', _bad(deploy_lock_nodes=-2), '锁期形'),
+        ('锁期 bool', _bad(deploy_lock_nodes=True), '锁期形'),
+    ]
+    for _label, bad, match in cases:
+        monkeypatch.setattr(cw_investments, 'ENV_BATTLE_GRANTS', bad)
+        with pytest.raises(ValueError, match=match):
+            cw_investments._validate_env_battle_grants()
+
+    # 双源失同步两形态(沿 interest ⑤ 测试序位纪律:世界侧形态用注册表
+    # 内在册他名,注册表外名会先触角色名漂移)
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        GiftGrant as _GG,
+    )
+    _gifts_orig = dict(ENV_GIFTS)
+    bad_gifts = dict(_gifts_orig)
+    bad_gifts['星核猎手契约'] = _GG(
+        chars_immediate=('卡芙卡',),
+        chars_conditional=(('别的角色', '同战一役后获得'),),
+    )
+    monkeypatch.setattr(cw_investments, 'ENV_GIFTS', bad_gifts)
+    monkeypatch.setattr(cw_investments, 'ENV_BATTLE_GRANTS', _ORIG_BATTLE)
+    with pytest.raises(ValueError, match='双源失同步'):
+        cw_investments._validate_env_battle_grants()
+    bad = dict(_ORIG_BATTLE)
+    bad['星核猎手契约'] = _battle_grant(reward_char='翡翠')
+    monkeypatch.setattr(cw_investments, 'ENV_GIFTS', _gifts_orig)
+    monkeypatch.setattr(cw_investments, 'ENV_BATTLE_GRANTS', bad)
+    with pytest.raises(ValueError, match='双源失同步'):
+        cw_investments._validate_env_battle_grants()
+
+
+def test_env_battle_grants_current_entry_and_coexistence() -> None:
+    """现役条目(T-30 设计 §2.1,id 129 卡面直读)+ 表间并存合法
+    (豁免声明显式半边)+ 现表直调通过(构建校验在 import 期已炸过一遍,
+    直调 = 变体注入后的回归锚):星核猎手契约 = AND-of-ORs 三参与组 +
+    流萤 + 锁期 2;∈ INVESTMENT_ENVS 且 ∈ ENV_GIFTS(条件具名集首元 =
+    流萤,双源同值)且 ∉ ENV_ECONOMY(零金流)。"""
+    grant = cw_investments.ENV_BATTLE_GRANTS['星核猎手契约']
+    assert grant.presence_groups == (('刃', '千冶·刃'), ('卡芙卡',),
+                                     ('银狼LV.999', '银狼'))
+    assert grant.reward_char == '流萤'
+    assert grant.deploy_lock_nodes == 2
+    cw_investments._validate_env_battle_grants()
+    assert '星核猎手契约' in INVESTMENT_ENVS
+    assert ENV_GIFTS['星核猎手契约'].chars_conditional[0][0] == '流萤'
+    assert '星核猎手契约' not in ENV_ECONOMY

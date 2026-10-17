@@ -120,3 +120,19 @@ def test_skill_point_contract_immediate_leg_regression(monkeypatch) -> None:
     assert gs.env_grants_done.value is None, '获得刻零晶矿触发 done'
     assert all('ore_open' not in (c[1] or '') for c in calls), \
         '零 ore_open 写行痕迹(条件腿不随获得刻触发)'
+
+
+def test_stellar_hunter_contract_immediate_leg_regression() -> None:
+    """星核猎手契约即时腿回归(T-30 设计 §4 锁 8):获得环境当刻
+    chars_immediate 确定发放(卡芙卡 1★,desc 无数量/星级词单数缺省)
+    → bench 增卡芙卡 1——现役通道逐位不变;其 **uid 恒 None**(即时腿
+    不传 uid 形参,实例号仅条件腿发放刻赋号)。"""
+    gs = _make_gs()
+    effects = on_env_gained(gs, None, '星核猎手契约', rand=False, sig=_SIG)
+    assert effects == ('env_gift:卡芙卡',), '即时腿效果串'
+    placed = [s.unit for s in gs.bench.value.slots
+              if s is not None and s.kind == 'unit' and s.unit is not None]
+    assert [(u.char_id, u.star, u.uid) for u in placed] == \
+        [('卡芙卡', 1, None)], '1★ 入席且无实例号(锁域零记录)'
+    assert not gs.env_grant_deploy_locks.value, '即时腿零锁记录'
+    assert not gs.env_grant_uid_seq.value, '即时腿零发号'

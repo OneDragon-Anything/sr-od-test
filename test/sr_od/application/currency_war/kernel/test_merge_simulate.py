@@ -88,6 +88,34 @@ def test_on_step_consumer_regression_with_on_merge() -> None:
         f'on_step 每级恰一次且看该级终态: {step_stars}'
 
 
+def test_merge_product_drops_uid_both_carriers() -> None:
+    """引擎 A 合成产物 uid=None(T-30 设计 §4 锁 10,与引擎 B 各一锁):
+    被锁实例(uid=1)作素材/载体的合成照常推进,产物 = 新实体 uid 为
+    None——双载体形状各验一次(bench 包 Unit / 场上裸 Unit);锁随消耗
+    自愈(引擎 A 与容器守卫的实例语义分界)。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        BenchSlot,
+        Unit,
+    )
+    from sr_od.application.currency_war.kernel.cw_merge_simulate import (
+        _bump_carrier,
+    )
+    # bench 载体(BenchSlot 包 Unit):真路径 _merge_bench
+    bench = _bench([
+        _bc('流萤'),
+        BenchSlot(kind='unit', unit=Unit(char_id='流萤', star=1, uid=1)),
+        _bc('流萤'),
+    ])
+    _merge_bench(bench, [])
+    product = [s.unit for s in bench if s is not None and s.kind == 'unit']
+    assert [(u.char_id, u.star) for u in product] == [('流萤', 2)]
+    assert product[0].uid is None, 'bench 载体产物 uid=None'
+    # 场上裸 Unit 载体:_bump_carrier 单元锁
+    bumped = _bump_carrier(Unit(char_id='流萤', star=1, uid=1), 2, ['x'])
+    assert (bumped.char_id, bumped.star) == ('流萤', 2)
+    assert bumped.uid is None, '场上裸 Unit 载体产物 uid=None'
+
+
 def test_full_bench_merge_buy_on_merge_passthrough() -> None:
     """满栏合成买事实透传(T-26 设计 §2.3 条 1 后半):满栏 + 店内 2 张
     同名 → k=2 买入 3 合 1,on_merge 收一条 (希儿, 2);拒买前置
