@@ -26,6 +26,7 @@ from sr_od.application.currency_war.kernel.cw_action_report import (
 )
 from sr_od.application.currency_war.kernel.cw_effect_inventory import (
     BOARD_REWRITE_UPGRADE_ALL,
+    ActiveEffectInventory,
     apply_board_rewrite,
     grant_bench_unit_cascade,
     spawn_equip_bench_unit,
@@ -295,3 +296,24 @@ def seeded_merge_provider() -> Iterator[None]:
         yield None
     finally:
         set_action_rng_provider(None)
+
+
+# ============================================================ 利息累计账
+# (T-27 公司契约条件腿,设计 = 迭代设计稿 T-27-gongsi-qiyue §2.2 + §4.2;
+# 宿主先例 = refresh 两计数 2026-09-18 用户裁定「计数住效果账本」。)
+
+
+def test_record_interest_earned_accumulates_and_rejects_negative() -> None:
+    """利息累计账单口(record_interest_earned,T-27 设计 §4.2):多笔
+    累加单调递增;0 合法(息 0 轮照常过单口,保持「每收入刻必过单口」
+    写端纪律);负数拒收 raise(单调累计账无递减语义,
+    bump_equip_progress 同款防线)。"""
+    inv = ActiveEffectInventory()
+    assert inv.interest_earned == 0, '开局零基线'
+    inv.record_interest_earned(5)
+    inv.record_interest_earned(3)
+    inv.record_interest_earned(0)
+    assert inv.interest_earned == 8, '多笔累加(含 0 增量)'
+    with pytest.raises(ValueError, match='非负'):
+        inv.record_interest_earned(-1)
+    assert inv.interest_earned == 8, '拒收后账面不变'

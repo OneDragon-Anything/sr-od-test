@@ -409,3 +409,77 @@ def test_merge_contract_coexists_with_estimation_tables() -> None:
     assert '量子同频契约' in ENV_GIFTS
     assert '量子同频契约' in cw_investments.ENV_MERGE_GRANTS
     assert '量子同频契约' not in ENV_ECONOMY
+
+
+def test_env_interest_grants_registry_and_validation(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """ENV_INTEREST_GRANTS 构建校验(T-27 设计 §2.1/§4.1,import 即炸
+    语义,注入 + 直调沿 ENV_MERGE_GRANTS 测试惯用法):孤儿键/阈值形
+    (0/负/bool/非 int)/角色名形(空串)/角色名漂移(CHARACTER_ROSTER
+    外——锁 data 注册表防版本改名静默失联,CHARACTERS 是 cw_pool 商店池
+    域另一符号勿混用)/双源失同步(ENV_GIFTS chars_conditional 首元
+    ≠ 发放名,两表同出卡面单侧改动即漂移)→ 炸;现表直调通过。"""
+    assert cw_investments.ENV_INTEREST_GRANTS == {'公司契约': (40, '托帕&账账')}, \
+        '首例登记(id 126 原文直读「累计获得40利息后,获得【托帕&账账】」)'
+    cw_investments._validate_env_interest_grants()
+
+    _orig = dict(cw_investments.ENV_INTEREST_GRANTS)
+    # 孤儿键(版本更新改名/移除后静默失联 → 构建期炸)
+    bad = dict(_orig)
+    bad['不存在环境X'] = (40, '托帕&账账')
+    monkeypatch.setattr(cw_investments, 'ENV_INTEREST_GRANTS', bad)
+    with pytest.raises(ValueError, match='ENV_INTEREST_GRANTS 孤儿键'):
+        cw_investments._validate_env_interest_grants()
+    # 阈值形四态(≤0 = 条件永真使 done 守卫登记刻即触发;bool 是 int
+    # 子类显式拒)
+    for label, threshold in (('阈值形', 0), ('阈值形', -5),
+                             ('阈值形', True), ('阈值形', '40')):
+        bad = dict(_orig)
+        bad['公司契约'] = (threshold, '托帕&账账')
+        monkeypatch.setattr(cw_investments, 'ENV_INTEREST_GRANTS', bad)
+        with pytest.raises(ValueError, match=label):
+            cw_investments._validate_env_interest_grants()
+    # 角色名形(空串 = 发放写出假身份)
+    bad = dict(_orig)
+    bad['公司契约'] = (40, '')
+    monkeypatch.setattr(cw_investments, 'ENV_INTEREST_GRANTS', bad)
+    with pytest.raises(ValueError, match='角色名形'):
+        cw_investments._validate_env_interest_grants()
+    # 角色名漂移(data 注册表外名)
+    bad = dict(_orig)
+    bad['公司契约'] = (40, '不存在的角色X')
+    monkeypatch.setattr(cw_investments, 'ENV_INTEREST_GRANTS', bad)
+    with pytest.raises(ValueError, match='角色名漂移'):
+        cw_investments._validate_env_interest_grants()
+    # 双源失同步(ENV_GIFTS 条件具名集首元 ≠ 本表发放角色;两形态 =
+    # 估侧改 / 世界侧改,单侧改动即漂移;世界侧形态用注册表内在册他名
+    # ——注册表外名会先触角色名漂移,序位即校验③先于④;发放名先复原,
+    # 上形态遗留的漂移登记会抢在双源前触发③)
+    monkeypatch.setattr(cw_investments, 'ENV_INTEREST_GRANTS', _orig)
+    _gifts_orig = dict(ENV_GIFTS)
+    bad_gifts = dict(_gifts_orig)
+    bad_gifts['公司契约'] = GiftGrant(
+        chars_immediate=('翡翠', '砂金'),
+        chars_conditional=(('别的角色', '累计获得40利息后'),),
+    )
+    monkeypatch.setattr(cw_investments, 'ENV_GIFTS', bad_gifts)
+    with pytest.raises(ValueError, match='双源失同步'):
+        cw_investments._validate_env_interest_grants()
+    bad = dict(_orig)
+    bad['公司契约'] = (40, '翡翠')
+    monkeypatch.setattr(cw_investments, 'ENV_GIFTS', _gifts_orig)
+    monkeypatch.setattr(cw_investments, 'ENV_INTEREST_GRANTS', bad)
+    with pytest.raises(ValueError, match='双源失同步'):
+        cw_investments._validate_env_interest_grants()
+
+
+def test_interest_contract_coexists_with_gifts_table() -> None:
+    """表间并存合法(T-27 设计 §2.1 豁免声明显式半边):公司契约
+    ∈ INVESTMENT_ENVS 且 ∈ ENV_GIFTS(chars_conditional 首元 = 托帕&账账,
+    辖估值域档位)且 ∈ ENV_INTEREST_GRANTS(本表辖世界发放触发)且
+    ∉ ENV_ECONOMY(零金流,经济域无条目)。"""
+    assert '公司契约' in INVESTMENT_ENVS
+    assert '公司契约' in ENV_GIFTS
+    assert ENV_GIFTS['公司契约'].chars_conditional[0][0] == '托帕&账账'
+    assert '公司契约' in cw_investments.ENV_INTEREST_GRANTS
+    assert '公司契约' not in ENV_ECONOMY
