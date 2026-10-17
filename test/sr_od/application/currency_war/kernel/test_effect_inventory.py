@@ -317,3 +317,24 @@ def test_record_interest_earned_accumulates_and_rejects_negative() -> None:
     with pytest.raises(ValueError, match='非负'):
         inv.record_interest_earned(-1)
     assert inv.interest_earned == 8, '拒收后账面不变'
+
+
+def test_record_ore_open_accumulates_and_rejects_nonpositive() -> None:
+    """晶矿开启计数单口(record_ore_open,T-29 设计 §2.2 + §4 锁 2):
+    多笔累加单调递增(批内开成点数一次入账);n=0/负数炸(单调计数器
+    无递减语义,bump_equip_progress 同款防线),拒收后账面不变;与
+    refresh 双计数隔离(同族直挂计数器互不串账)。"""
+    inv = ActiveEffectInventory()
+    assert inv.ore_open_total == 0, '开局零基线'
+    inv.record_ore_open(2)
+    inv.record_ore_open(1)
+    assert inv.ore_open_total == 3, '多笔累加'
+    for bad in (0, -1):
+        with pytest.raises(ValueError, match='须为正数'):
+            inv.record_ore_open(bad)
+    assert inv.ore_open_total == 3, '拒收后账面不变'
+    # 与 refresh 隔离(计数载体先例 refresh_total/paid 互不串账)
+    assert inv.refresh_total == 0 and inv.refresh_paid == 0, \
+        '晶矿开启入账零串账 refresh'
+    inv.record_refresh(free=False)
+    assert inv.ore_open_total == 3, '刷新入账零串账晶矿开启'

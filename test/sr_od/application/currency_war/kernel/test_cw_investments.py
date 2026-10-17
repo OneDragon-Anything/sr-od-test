@@ -503,3 +503,52 @@ def test_dot_contract_not_in_any_conditional_grant_table() -> None:
         assert '持续伤害契约' not in table, \
             f'{table_name} 误登记(猜测写+证实型不入条件检查表)'
     assert '持续伤害契约' not in ENV_ECONOMY
+
+
+# ============================================================ 晶矿开启触发发放登记表
+# (T-29 战技点契约,设计 = 迭代 2026-09-23-invest-effects-calc designs/
+# T-29-zhanjidian-qiyue.md §2.1 + §4 锁 1;注入 + 直调沿本文件校验测试
+# 惯用法——import 期调用,重触 = 直调校验函数。)
+
+_ORIG_ORE_OPEN = dict(cw_investments.ENV_ORE_OPEN_GRANTS)
+
+
+def test_env_ore_open_grants_validation_raises(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """四查 import 即炸语义(T-29 设计 §2.1):①孤儿键 ②首阈值/步长
+    非正 int(bool 显式拒,纯 int 判会被 True 当 1 混过)③具名角色
+    ∉ CHARACTER_ROSTER ④随机羁绊池现值空(羁绊名错字 → 采样腿永远
+    发不出,前置可见)。"""
+    def _bad(first=20, step=10, chars=('火花',), faction='战技点',
+             key='战技点契约') -> dict:
+        bad = dict(_ORIG_ORE_OPEN)
+        bad[key] = (first, step, chars, faction)
+        return bad
+
+    cases = [
+        ('孤儿键', _bad(key='不存在的环境X'), '孤儿键'),
+        ('首阈值非正', _bad(first=0), '值形'),
+        ('首阈值 bool', _bad(first=True), '值形'),
+        ('步长非正', _bad(step=0), '值形'),
+        ('步长 bool', _bad(step=True), '值形'),
+        ('具名角色漂移', _bad(chars=('不存在的角色X',)), '角色名漂移'),
+        ('随机羁绊池空', _bad(faction='不存在的羁绊X'), '随机羁绊池空'),
+    ]
+    for _label, bad, match in cases:
+        monkeypatch.setattr(cw_investments, 'ENV_ORE_OPEN_GRANTS', bad)
+        with pytest.raises(ValueError, match=match):
+            cw_investments._validate_env_ore_open_grants()
+
+
+def test_env_ore_open_grants_current_entry_and_coexistence() -> None:
+    """现役条目(T-29 设计 §2.1,id 128 卡面直读)+ 表间并存合法
+    (豁免声明显式半边,沿公司契约并存测试同构):战技点契约 = (首阈值
+    20, 步长 10, 具名 = 火花, 随机羁绊 = 战技点);∈ INVESTMENT_ENVS 且
+    ∈ ENV_GIFTS(估值域档位并存)且 ∉ ENV_ECONOMY(零金流)且 ∉
+    ENV_ORE_GRANTS(彼表 = 发放晶矿,键域无交集)。"""
+    assert cw_investments.ENV_ORE_OPEN_GRANTS['战技点契约'] == \
+        (20, 10, ('火花',), '战技点')
+    assert '战技点契约' in INVESTMENT_ENVS
+    assert '战技点契约' in ENV_GIFTS
+    assert '战技点契约' not in ENV_ECONOMY
+    assert '战技点契约' not in cw_investments.ENV_ORE_GRANTS

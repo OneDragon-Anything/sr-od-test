@@ -103,3 +103,20 @@ def test_anchor_skipped_when_node_not_in_window(monkeypatch) -> None:
     assert not gs.env_grants_done.value, '零锚键(开局形态预期)'
     assert all('dot_anchor' not in (c[1] or '') for c in calls), \
         '无畸形键痕迹(禁 dot_anchor#- 形态)'
+
+
+def test_skill_point_contract_immediate_leg_regression(monkeypatch) -> None:
+    """战技点契约即时腿回归(T-29 设计 §1/§4 锁 8):获得环境当刻
+    chars_immediate 逐名确定发放(1★,desc 无数量/星级词单数缺省)→
+    bench 增丹恒·饮月+花火各 1——现役通道逐位不变,锁不被晶矿开启
+    条件腿批次扰动;获得刻零晶矿触发 done(条件腿归
+    check_env_ore_open_grants,打开晶矿计数达标才发,获得刻零预登记)。"""
+    gs = _make_gs()
+    calls = _record_writes(gs, monkeypatch)
+    effects = on_env_gained(gs, None, '战技点契约', rand=False, sig=_SIG)
+    assert effects == ('env_gift:丹恒·饮月', 'env_gift:花火'), '即时腿效果串'
+    assert _bench_units(gs) == [('丹恒·饮月', 1), ('花火', 1)], \
+        '两名 1★ 入席(确定发放)'
+    assert gs.env_grants_done.value is None, '获得刻零晶矿触发 done'
+    assert all('ore_open' not in (c[1] or '') for c in calls), \
+        '零 ore_open 写行痕迹(条件腿不随获得刻触发)'
