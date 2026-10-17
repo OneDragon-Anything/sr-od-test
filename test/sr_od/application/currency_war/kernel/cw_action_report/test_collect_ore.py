@@ -22,9 +22,11 @@ from sr_od.application.currency_war.kernel.cw_action_report import (
     set_action_rng_provider,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
+    GAME_STATE_SCHEMA_VERSION,
     BenchSlot,
     BenchView,
     ChannelSig,
+    GameState,
     OreSight,
     Unit,
     game_state_of,
@@ -167,6 +169,55 @@ def test_full_bench_skip_points_not_counted() -> None:
     assert not any(k.startswith('ore_open')
                    for _e, k in (gs.env_grants_done.value or ())), \
         '计数未达标零触发零晶矿 done'
+
+
+def test_mixed_batch_missing_level_skip_not_counted(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """缺项∧level 缺读跳点不入账(T-29 设计 §4 锁 5 后半):混合批 =
+    2 开成点(附着命中,不需 level)+ 1 缺项跳点(无附着键 ∧ level
+    缺读,兜底掷不可行)+ 1 席满跳点 → ore_open_total 只计开成点
+    (+2 非 +4),两类跳点均不入账、两矿留 spheres(下帧挂接入口
+    补生成后再点);出参 reason = 缺项跳点具体原因(优先于席满表达,
+    零写跳点的唯一可断言通道)。直构容器(不经种子 session)保 level
+    缺读;种子单位每名至多 2 只防合并腾席(同席满半边锁前提)。"""
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    sig_seed = ChannelSig(family='obs', actor='cw4_seed', mode='synthesized')
+    gs.observe(gs.active_env, _SP_ENV, sig=sig_seed)
+    slots = [BenchSlot(kind='unit', unit=Unit(char_id=c, star=1))
+             for c in ('停云', '停云', '刃', '刃', '桑博', '桑博',
+                       '佩拉', '佩拉')]
+    slots.append(BenchSlot(kind='empty'))
+    gs.observe(gs.bench, BenchView(slots=slots, capacity=9), sig=sig_seed)
+    pts = (('gold', 100, 200, 30), ('gold', 300, 400, 30),
+           ('gold', 500, 600, 30), ('gold', 700, 800, 30))
+    gs.observe(gs.spheres, OreSight(count=4, colors=('gold',), points=pts),
+               sig=sig_seed)
+    # 点 300,400 无附着键 + level 未观察 = 缺项∧level 缺读跳点形态
+    gs.write_logic(gs.ore_rewards,
+                   {'100,200': OreReward(kind='gold', gold=3),
+                    '500,600': OreReward(kind='char', char_id='银狼',
+                                         char_star=1),
+                    '700,800': OreReward(kind='gold', gold=3)},
+                   produced_by='test-seed', sig=_SIG)
+    assert gs.level.value is None, '前置:level 缺读(直构容器无种子)'
+    calls = _sp_record_writes(gs, monkeypatch)
+    out = report_action_collect_ore_param(
+        gs, CwActionCollectOreParam(
+            points=((100, 200), (300, 400), (500, 600), (700, 800))),
+        sig=_SIG)
+    assert out.applied \
+        and out.reason == 'ore_reward_attach_missing_level', \
+        f'缺项跳点 reason 优先表达: {out.reason}'
+    assert gs.effects.ore_open_total == 2, '两类跳点均不入账(只计开成点)'
+    sphere_pts = gs.spheres.value.points if gs.spheres.value else ()
+    assert (('gold', 300, 400, 30) in sphere_pts
+            and ('gold', 700, 800, 30) in sphere_pts), \
+        '缺项跳点与席满跳点矿均留 spheres'
+    assert not any(k.startswith('ore_open')
+                   for _e, k in (gs.env_grants_done.value or ())), \
+        '零触发零晶矿 done'
+    assert not any((c[1] or '').startswith('env_grant#') for c in calls), \
+        '触发腿零写行'
 
 
 def test_window_order_reward_writes_before_trigger_leg(
