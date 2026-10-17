@@ -4,7 +4,7 @@
 (纯动作事实契约,词表暂住 kernel ``note_action_receipt`` docstring 与
 ``prep_actions._PREP_RECEIPT_BLOCK_CODES`` 闭集映射表):
 round 结果成功态 = ``''``;round_fail = status 经闭集映射取受阻码——
-``not_emitted:*``(点击前失败,动作没发出)/ ``no_effect:*``(点后未生效,
+``未执行:*``(点击前失败,动作没发出)/ ``未生效:*``(点后未生效,
 动作已发出但点击序列未完成;StartBattle 弹窗收尾段 = 唯一现役形态,
 已登记例外类 = flow/action_ops.md §2.3)。
 
@@ -97,8 +97,8 @@ def _sb_executor(controller: _RecordingController, stub_op,
     return PrepActionExecutor(stub_op, ctx)
 
 
-def test_receipt_not_emitted_code_on_button_miss(monkeypatch):
-    """点击前失败 → not_emitted:*:两屏查空找不到按钮 = 动作没发出
+def test_receipt_not_executed_code_on_button_miss(monkeypatch):
+    """点击前失败 → 未执行:*:两屏查空找不到按钮 = 动作没发出
     (零点击)→ 回执 reason=not_emitted:定位缺失(按钮-出战),detail =
     round_fail status 原文(机械摘要恒透传)。"""
     _sb_patch(monkeypatch)
@@ -113,14 +113,14 @@ def test_receipt_not_emitted_code_on_button_miss(monkeypatch):
     assert ctl.clicks == [], '点击前失败 = 零点击(动作没发出)'
     assert game_state_of(sess).receipts.value == [{
         'op': 'CwActionStartBattleParam',
-        'reason': 'not_emitted:定位缺失(按钮-出战)',
+        'reason': '未执行:定位缺失(按钮-出战)',
         'detail': '未执行:找不到按钮',
         'screen': SCREEN_NAME,
     }]
 
 
 def test_receipt_no_effect_code_on_postclick_popup_miss(monkeypatch):
-    """点后未生效 → no_effect:*(StartBattle 已登记例外类):主点击已发
+    """点后未生效 → 未生效:*(StartBattle 已登记例外类):主点击已发
     (点击记录在册)后弹窗收尾定位缺失 → round_fail,回执 reason=
     no_effect:弹窗确认未执行(未达上限警告)——点了 ≠ 没点,分族事实码
     不说谎。"""
@@ -136,7 +136,7 @@ def test_receipt_no_effect_code_on_postclick_popup_miss(monkeypatch):
     assert len(ctl.clicks) == 1, '主点击已发出(no_effect 族前提:点了)'
     assert game_state_of(sess).receipts.value == [{
         'op': 'CwActionStartBattleParam',
-        'reason': 'no_effect:弹窗确认未执行(未达上限警告)',
+        'reason': '未生效:弹窗确认未执行(未达上限警告)',
         'detail': ('area 缺失:勾选-本局不再提示'
                    '(货币战争-未达上限警告),禁兜底坐标'),
         'screen': SCREEN_NAME,
