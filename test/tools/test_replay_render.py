@@ -354,6 +354,83 @@ def test_retry_chain_merged_into_one_action():
     assert '⚠ ' in md and 'applied' not in md  # 受阻样式挂 reason,布尔零显影
 
 
+def test_transition_action_attributed_to_issuing_screen():
+    """动作节章归属锚 = 回执 screen(动作发出画面;出处 =
+    tools/cw/replay_to_md.py 模块头「渲染结构」):开商店回执在切屏写入行
+    之后落窗(sim 实测形态:cs 先翻、回执后落),按发出画面回搜归备战章,
+    不按位置落到变更后画面;后续动作(买牌)照常归商店章;开店自身零
+    效果写入,买牌的效果写入因果归买牌节。"""
+    rows = [
+        mkrow('t1', 'current_screen', '货币战争-备战',
+              screen='货币战争-备战'),
+        # 切屏先落盘(开商店的世界推进)
+        mkrow('t2', 'current_screen', '货币战争-备战-开商店',
+              screen='货币战争-备战-开商店'),
+        # 开店回执后落窗,screen = 发出画面(备战)
+        receipts_row('t3', receipt('CwOpOpenShop',
+                                   screen='货币战争-备战')),
+        # 买牌效果写入(切屏后落盘)→ 待认领缓冲
+        mkrow('t4', 'gold', 16, screen='货币战争-备战-开商店',
+              family='logic_action', actor='CwActionBuyCardOp'),
+        receipts_row('t5', receipt('CwActionBuyCardParam',
+                                   screen='货币战争-备战-开商店')),
+    ]
+    report, md = build(rows)
+    screens = section_of_kind(report, 'node').screens
+    assert [s.title for s in screens] == ['画面-备战', '画面-商店']
+    prep, shop = screens[0], screens[1]
+    assert [a.op for a in prep.actions] == ['CwOpOpenShop']
+    assert [a.op for a in shop.actions] == ['CwActionBuyCardParam']
+    assert not prep.actions[0].deltas
+    assert [(d.field, d.before, d.after)
+            for d in shop.actions[0].deltas] == [('gold', None, 16)]
+    assert '#### 1 开店' in md
+    assert md.index('#### 1 开店') < md.index('### 节点 1-1 奖励 画面-商店')
+
+
+def test_legacy_target_screen_receipt_stays_positional():
+    """旧数据回退:历史 journal 的开商店回执 screen=目标画面语义
+    (货币战争-备战-开商店,与回执落窗时的当前章一致)→ 位置归属照旧
+    落商店章,旧局重渲染零回归。"""
+    rows = [
+        mkrow('t1', 'current_screen', '货币战争-备战',
+              screen='货币战争-备战'),
+        mkrow('t2', 'current_screen', '货币战争-备战-开商店',
+              screen='货币战争-备战-开商店'),
+        receipts_row('t3', receipt('CwOpOpenShop',
+                                   screen='货币战争-备战-开商店')),
+    ]
+    report, _ = build(rows)
+    screens = section_of_kind(report, 'node').screens
+    assert [s.title for s in screens] == ['画面-备战', '画面-商店']
+    assert [a.op for a in screens[1].actions] == ['CwOpOpenShop']
+    assert not screens[0].actions
+
+
+def test_retry_chain_across_screen_switch_stays_on_issuing_chapter():
+    """重试链跨切屏:受阻开店回执(备战)→ 切屏 → 重试开店回执(备战,
+    位置落商店章)→ 合并进备战章的单节——链判据 = 组内最近动作(跨章),
+    不再按当前章找链。"""
+    rows = [
+        mkrow('t1', 'current_screen', '货币战争-备战',
+              screen='货币战争-备战'),
+        receipts_row('t2', receipt('CwOpOpenShop',
+                                   reason='定位缺失(按钮-商店)',
+                                   screen='货币战争-备战')),
+        mkrow('t3', 'current_screen', '货币战争-备战-开商店',
+              screen='货币战争-备战-开商店'),
+        receipts_row('t4', receipt('CwOpOpenShop',
+                                   screen='货币战争-备战')),
+    ]
+    report, md = build(rows)
+    screens = section_of_kind(report, 'node').screens
+    assert [s.title for s in screens] == ['画面-备战', '画面-商店']
+    assert [a.op for a in screens[0].actions] == ['CwOpOpenShop']
+    assert len(screens[0].actions[0].chain) == 2
+    assert not screens[1].actions
+    assert '⚠ ' in md  # 受阻样式挂 reason
+
+
 def test_legacy_applied_key_receipts_render_clean():
     """旧 journal 兼容(历史批回执含 applied/gold_delta 双键):两键不读
     不显(extra 排除表承接,两处排除字面量保留判据),布尔与金差字样
@@ -377,18 +454,21 @@ def test_legacy_applied_key_receipts_render_clean():
     assert 'gold_delta' not in md  # 退役金差键零显影(extra 排除表承接)
 
 
-def test_delta_prev_chain_chapter_attribution_and_trailing():
-    """状态差分:前值 = 之前最近同 field 写入行 after(链跨行);无前值行
-    → 章内变化块(无锚前缀写入行);变化行挂自身所在画面章(跨章不串挂);
-    章内变化块在动作锚之前。"""
+def test_delta_causal_flush_and_cross_node_chain():
+    """状态差分因果归属(出处 = tools/cw/replay_to_md.py 模块头「渲染结构」
+    章内差分规则):logic_action 写入行挂其后最近回执的动作节——动作的
+    效果写入先于其回执落盘(journal 实测形态:写 v=N,回执窗更新 v=N+k),
+    修「效果显影滞后一节」;前值 = 之前最近同 field 写入行 after(链跨行);
+    组尾无回执认领的挂起写入 → 组尾扫入章内变化块(防静默丢行)。"""
     rows = [
-        # 节点 1-1:开章行(gold 首写,无前值 → 章内变化块)→ 锚 → 变化
+        # 节点 1-1:gold 首写(无前值)在回执前 → 因果归 BuyCard 节
         mkrow('t1', 'gold', 30, screen='货币战争-备战',
               family='logic_action', actor='PrepActionExecutor'),
         receipts_row('t2', receipt('BuyCard')),
         mkrow('t3', 'gold', 29, screen='货币战争-备战',
               family='logic_action', actor='PrepActionExecutor'),
-        # 节点 1-2:变化行挂自身章,前值跨组接链(29)
+        # 节点 1-2:1-1 组尾的 gold29 无回执认领 → 尾扫 1-1 章内变化块;
+        # 1-2 锚节吸收组内待认领写入,前值跨组接链(29)
         mkrow('t4', 'hp', 78, node=(1, 2, 'reward'), screen='货币战争-备战'),
         receipts_row('t5', receipt('BuyCard'), node=(1, 2, 'reward')),
         mkrow('t6', 'gold', 27, node=(1, 2, 'reward'),
@@ -399,15 +479,20 @@ def test_delta_prev_chain_chapter_attribution_and_trailing():
     secs = [s for s in report.sections if s.kind == 'node']
     s11 = secs[0].screens[0]
     assert len(s11.actions) == 1
+    # t1 的写入因果归 t2 的 BuyCard 节(不再显影滞后为下一动作的效果)
     assert [(d.field, d.before, d.after) for d in s11.actions[0].deltas] \
-        == [('gold', 30, 29)]
-    assert [(d.field, d.before, d.after) for d in s11.trailing_changes] \
         == [('gold', None, 30)]
+    # t3 组尾无回执认领 → 章内变化块
+    assert [(d.field, d.before, d.after) for d in s11.trailing_changes] \
+        == [('gold', 30, 29)]
     s12 = secs[1].screens[0]
-    assert [(d.field, d.before, d.after) for d in s12.actions[0].deltas] \
-        == [('gold', 29, 27)]  # 前值跨组接链;归属在 1-2 章(不串挂 1-1)
-    assert '| 金 | 30 → 29 |' in md
+    # t6 在 1-2 组内位于回执之后、组尾无回执认领 → 章内变化块;
+    # 前值跨组接链(t3 的 29)仍成立,显示随动作节所在章解耦
+    assert s12.actions[0].deltas == []
+    assert [(d.field, d.before, d.after) for d in s12.trailing_changes] \
+        == [('gold', 29, 27)]
     assert '| 金 | (起点) → 30 |' in md
+    assert '| 金 | 30 → 29 |' in md
 
 
 def test_obs_rows_not_in_delta_settlement_to_trailing():

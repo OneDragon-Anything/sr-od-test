@@ -26,7 +26,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
     GameState,
 )
-from sr_od.application.currency_war.kernel.cw_obs_core import SHOP_SCREEN_NAME
+from sr_od.application.currency_war.kernel.cw_obs_core import SCREEN_NAME
 from sr_od.application.currency_war.operations.cw_op import cw_op_open_shop
 from sr_od.application.currency_war.operations.cw_op.cw_op_open_shop import (
     open_shop,
@@ -161,7 +161,7 @@ def test_real_click_emits_and_books_success(monkeypatch, live_io):
     assert fake_time.skipped == [SHOP_OPEN_ANIM_S]
     assert gs.receipts.value == [
         {'op': 'CwOpOpenShop', 'reason': '',
-         'screen': SHOP_SCREEN_NAME},
+         'screen': SCREEN_NAME},
     ]
 
 
