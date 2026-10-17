@@ -110,6 +110,18 @@ class _NoSleepTime:
         self.skipped.append(seconds)
 
 
+class _DerefController(_RecordingController):
+    """坐标解引用消费替身:mouse_move 即刻消费点坐标(真控制器
+    game2win_pos 坐标换算的消费形态)——None 坐标在消费点自然炸
+    (零防御契约「取值直接使用」的自然失败形态,terminal-fail-status)。"""
+
+    def mouse_move(self, p) -> None:
+        self.moves.append((p.x, p.y))
+
+    def click(self, p) -> None:
+        self.clicks.append((p.x, p.y))
+
+
 def _make_executor(controller: _RecordingController,
                    screens: list | None = None):
     from sr_od.application.currency_war import prep_actions as pa
@@ -353,8 +365,9 @@ def test_levelup_executes_single_click_per_frame(monkeypatch):
     金腿翻转 = action.cost 逻辑态直写(唯一写点
     report_action_level_up_param);执行缝金差链已整体退役——执行器
     不再计算/携带金差,回执 extra 无 gold_delta 键。
-    建档纪律(用户裁定 2026-09-22):按钮 area 命中 = 每帧恰一击;
-    缺失 = round_fail 零点击(禁兜底坐标,emitted=False 未发出事实)。"""
+    建档纪律(terminal-fail-status 用户裁定:建档缺失零防御):按钮
+    area 命中 = 每帧恰一击;缺失 = 取值直接使用,点击消费点自然异常
+    (禁兜底坐标)。"""
     import sr_od.application.currency_war.operations.cw_op.cw_prep_level_up_action as lvl_mod
 
     controller = _RecordingController()
@@ -366,14 +379,35 @@ def test_levelup_executes_single_click_per_frame(monkeypatch):
     assert len(controller.clicks) == 1
     ex.execute(CwActionLevelUpParam(cost=4))
     assert len(controller.clicks) == 2   # 第二帧再击
-    # 缺失臂:area 缺失 → round_fail 零点击零移动(禁兜底坐标静默点击)。
-    controller_miss = _RecordingController()
+    # 缺失臂:area 缺失 → 取值直接使用零检查,点击消费点自然异常
+    # (None 坐标解引用即炸;零兜底坐标静默点击)。
+    controller_miss = _DerefController()
     ex_miss = _make_executor(controller_miss)
     monkeypatch.setattr(lvl_mod, 'area_center',
                         lambda ctx, name, screen_name='': None)
-    ex_miss.execute(CwActionLevelUpParam(cost=4))
-    assert controller_miss.clicks == [] and controller_miss.moves == [], \
-        '按钮 area 缺失 = 零点击(禁兜底坐标)'
+    with pytest.raises(AttributeError):
+        ex_miss.execute(CwActionLevelUpParam(cost=4))
+    assert controller_miss.clicks == [], '点击消费点即炸,零点击(禁兜底坐标)'
+
+
+def test_deploymove_slot_out_of_range_guard_assertion(monkeypatch):
+    """DeployMove 落位载荷越界直驱 = op 内守卫断言 AssertionError
+    (terminal-fail-status QD 终裁:参数违法类校验收拢 op 内,消息语义
+    保留;坐标裁定域禁负下标——负值形态不炸判定不在本测构造面)。"""
+    monkeypatch.setattr('time.sleep', lambda _s: None)
+    from sr_od.application.currency_war.operations.cw_op.cw_deploy_move_action import (
+        CwActionDeployMoveOp,
+    )
+
+    controller = _RecordingController()
+    ex = _make_executor(controller)
+    env = SimpleNamespace(executor=ex)
+    action = CwActionDeployMoveParam(bench_idx=0, to_row='back', to_slot=9,
+                                     faction='')
+    with pytest.raises(AssertionError) as ei:
+        CwActionDeployMoveOp(SimpleNamespace(), action, env=env).run()
+    assert '落位载荷越界' in str(ei.value), '守卫断言消息语义保留'
+    assert controller.drags == [], '零拖拽(参数违法不执行)'
 
 
 def test_levelup_logic_state_advances_xp_level_and_gold():

@@ -109,7 +109,7 @@ class _NoSleep:
 
 def _screen_loader_none() -> SimpleNamespace:
     """screen_loader 桩:get_screen 恒 None → area_center 走缺失臂
-    (None;供「area 缺失 = 显式失败禁兜底坐标」语义测试)。"""
+    (None;供「area 缺失 = 取值直接使用自然异常」语义测试)。"""
     return SimpleNamespace(get_screen=lambda name: None)
 
 
@@ -151,8 +151,9 @@ def no_pick_sleep(monkeypatch):
 def test_encounter_pick_op_clicks_card_then_confirm(no_pick_sleep, monkeypatch):
     """遭遇确认链:idx=1 → 建档「遭遇卡-其二」area 取点点选 → 「按钮-选择」
     area 查找点击确认(确认钮查找全族统一,用户裁定 2026-09-22);轮次结果经
-    env.round_result 旁路回传。卡位 area 缺失 = 显式 round_fail 零点击
-    (禁兜底坐标,失败臂)。"""
+    env.round_result 旁路回传。卡位 area 缺失 = 取值直接使用零检查,
+    点卡消费点自然异常(terminal-fail-status 用户裁定:建档缺失零防御,
+    禁兜底坐标)。"""
     import sr_od.application.currency_war.operations.cw_op.cw_pick_encounter_action as pick_mod
 
     rs = SimpleNamespace(sentinel='rs')
@@ -174,11 +175,19 @@ def test_encounter_pick_op_clicks_card_then_confirm(no_pick_sleep, monkeypatch):
                               {'success_wait': 1.0})]
     assert env.round_result is rs
 
-    # 失败臂:卡位 area 缺失(get_screen 恒 None)→ round_fail 零点击
-    # 零确认步(禁兜底坐标静默点击);失败轮次结果经旁路回传。
+    # 失败臂:卡位 area 缺失(get_screen 恒 None)→ 取值直接使用零检查,
+    # 点卡消费点自然异常(None 坐标解引用即炸);零点击、不进确认步。
     monkeypatch.setattr(pick_mod, 'area_center',
                         lambda ctx, name, screen=None: None)
-    ctrl2 = _RecordingController()
+
+    class _DerefCtrl(_RecordingController):
+        """坐标解引用消费替身:mouse_move 即刻消费点坐标(真控制器
+        game2win_pos 坐标换算的消费形态)——None 坐标在消费点自然炸。"""
+
+        def mouse_move(self, p) -> None:
+            self.moves.append((p.x, p.y))
+
+    ctrl2 = _DerefCtrl()
     confirm_calls2: list[tuple] = []
     op2 = SimpleNamespace(
         ctx=SimpleNamespace(controller=ctrl2, screen_loader=_screen_loader_none()),
@@ -186,11 +195,11 @@ def test_encounter_pick_op_clicks_card_then_confirm(no_pick_sleep, monkeypatch):
         round_by_find_and_click_area=lambda shot, s, a, **kw:
             confirm_calls2.append((s, a, kw)) or rs)
     env2 = OverlayPickExecEnv(op=op2)
-    rs2 = CwActionPickEncounterOp(env2.op.ctx, CwActionPickEncounterParam(idx=1), env=env2).run()
-    assert not rs2.is_success, '卡位 area 缺失 = 显式 round_fail(禁兜底坐标)'
-    assert ctrl2.clicks == [] and ctrl2.moves == [], '失败臂零点击零移动'
-    assert confirm_calls2 == [], '失败臂不进确认步'
-    assert env2.round_result is rs2, '失败轮次结果经旁路回传'
+    with pytest.raises(AttributeError):
+        CwActionPickEncounterOp(env2.op.ctx, CwActionPickEncounterParam(idx=1),
+                                env=env2).run()
+    assert ctrl2.clicks == [], '点卡消费点即炸,零点击(禁兜底坐标)'
+    assert confirm_calls2 == [], '不进确认步'
 
 
 def test_supply_pick_op_clicks_target_and_confirms(no_pick_sleep):

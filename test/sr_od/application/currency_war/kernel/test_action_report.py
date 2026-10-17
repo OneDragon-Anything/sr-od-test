@@ -772,15 +772,16 @@ def test_buy_card_emits_and_books_unconditionally(monkeypatch):
 
 
 def test_buy_card_missing_slot_point_fails_loudly(monkeypatch):
-    """兜底坐标清除测试:槽号越界(点位缺失同出口)→ 显式 round_fail
-    (错误信息带 area 名,与 level_btn/refresh_btn 同款纪律),零点击
-    零记账——禁兜底坐标静默点击(坐标单一真相源)。"""
+    """兜底坐标清除测试:槽号越界(点位缺失同出口)→ op 内守卫断言
+    AssertionError(消息带 area 名),零点击零记账——禁兜底坐标静默点击
+    (坐标单一真相源;terminal-fail-status 用户裁定:参数违法由 op 自判,
+    action_ops.md §1 决策侧参数现算契约)。"""
     op, _env, ledger, _gs, clicks = _buy_op_env(monkeypatch, click_pts=[])
 
-    ok = op.run()
+    with pytest.raises(AssertionError) as ei:
+        op.run()
 
-    assert ok.is_success is False, '点位缺失 = 显式失败(非兜底点击)'
-    assert '商店牌-' in (ok.status or ''), '错误信息带 area 名'
+    assert '商店牌-' in str(ei.value), '错误信息带 area 名'
     assert clicks == [], '零点击(禁兜底坐标)'
     assert ledger.total_buy == 0, '零记账(动作未发出)'
 
@@ -816,7 +817,7 @@ def _buy_op_env_ex(monkeypatch: pytest.MonkeyPatch, *, slots: list,
 
 def test_buy_card_unknown_proposal_fails_without_slot_fallback(monkeypatch):
     """B 层·槽解析失败:payload 无此牌(身份同一性 ∧ (name,star) 双未
-    命中)→ round_fail 非 round_success,信息含 slot_no=None 与双未命中
+    命中)→ op 内守卫断言 AssertionError,信息含 slot_no=None 与双未命中
     形态——card.slot 旧档兜底已删,提案数据 bug 响亮暴露(静默错槽
     掩盖 bug 禁);零点击零记账。"""
     in_shop = ShopCard(x=60, slot=2, name='景元', faction='?', cost=4, star=2)
@@ -827,10 +828,10 @@ def test_buy_card_unknown_proposal_fails_without_slot_fallback(monkeypatch):
         + [ShopSlot(kind='empty') for _ in range(4)],
         action_card=ghost, click_pts=[Point(50, 50)] * 5)
 
-    rr = op.run()
+    with pytest.raises(AssertionError) as ei:
+        op.run()
 
-    assert rr.is_success is False, 'payload 无此牌 = round_fail(非恒 success)'
-    status = rr.status or ''
+    status = str(ei.value)
     assert 'slot_no=None' in status, '信息含 slot_no=None 形态'
     assert '身份未命中' in status, '信息含双未命中形态'
     assert clicks == [] and ledger.total_buy == 0, '零点击零记账(未发出事实)'
@@ -839,9 +840,9 @@ def test_buy_card_unknown_proposal_fails_without_slot_fallback(monkeypatch):
 
 
 def test_buy_card_slot_out_of_range_fails(monkeypatch):
-    """B 层·槽号越界:payload 槽号 7 对 5 点表 → round_fail 越界形态
-    (信息含 slot 与点表长,槽号-点表不一致 = 建档/数据漂移上游显影);
-    零点击零记账。"""
+    """B 层·槽号越界:payload 槽号 7 对 5 点表 → op 内守卫断言
+    AssertionError(信息含 slot 与点表长,槽号-点表不一致 = 建档/数据
+    漂移上游显影);零点击零记账。"""
     deep = ShopCard(x=70, slot=7, name='停云', faction='?', cost=2, star=1)
     op, ledger, clicks = _buy_op_env_ex(
         monkeypatch,
@@ -849,10 +850,10 @@ def test_buy_card_slot_out_of_range_fails(monkeypatch):
         + [ShopSlot(kind='content', card=deep)],
         action_card=deep, click_pts=[Point(50, 50)] * 5)
 
-    rr = op.run()
+    with pytest.raises(AssertionError) as ei:
+        op.run()
 
-    assert rr.is_success is False, '槽号越界 = round_fail'
-    status = rr.status or ''
+    status = str(ei.value)
     assert 'slot=7' in status and 'click_pts=5' in status, \
         '信息含槽号与点表长(槽号-点表不一致形态)'
     assert '槽号-点表不一致' in status

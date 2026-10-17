@@ -795,7 +795,8 @@ def test_write_side_lands_at_payload_slot_not_first_empty():
 
 def test_write_side_rejects_invalid_payload_slot_zero_write():
     """载荷槽非法(前排无 5 号 / 后排 7 号越出定长表)= 零写,源槽不摘
-    (陈旧载荷;执行层唯一失败形态 = 拖拽未生效,拒绝面只在载荷静态域)。"""
+    (report 静态域拒绝 = 战斗链边界载体的陈旧化治理;执行层唯一失败
+    形态 = 拖拽未生效,拒绝面只在载荷静态域)。"""
     gs = _gs(bench=[BenchSlot(kind='unit', unit=_unit('甲', 1))],
              front=[_unit('乙', 1)])
     for row, slot in (('front', 5), ('back', 7)):
@@ -896,8 +897,9 @@ def test_executor_occupied_target_swaps_without_rejection(
 
 def test_executor_rejects_slot_beyond_screen_points_no_drag(
         monkeypatch: pytest.MonkeyPatch):
-    """载荷槽越出画面槽位数(back 7 > 6 槽)= 陈旧载荷未发出
-    (round_fail),零拖拽零主域写(观察重派)。"""
+    """载荷槽越出画面槽位数(back 7 > 6 槽)= 参数违法,op 内守卫断言
+    AssertionError(terminal-fail-status QD 终裁;消息语义保留),零拖拽
+    零主域写。"""
     monkeypatch.setattr('time.sleep', lambda _s: None)
     from sr_od.application.currency_war.kernel.cw_strategy_session import (
         StrategySession,
@@ -909,8 +911,10 @@ def test_executor_rejects_slot_beyond_screen_points_no_drag(
     env = _deploy_op_env(session, drags)
     action = CwActionDeployMoveParam(bench_idx=0, to_row='back', to_slot=7,
                                      faction='')
-    ok = CwActionDeployMoveOp(env.op.ctx, action, env=env).run()
-    assert not ok.is_success and drags == [], '越界载荷未发出'
+    with pytest.raises(AssertionError) as ei:
+        CwActionDeployMoveOp(env.op.ctx, action, env=env).run()
+    assert '落位载荷越界' in str(ei.value), '守卫断言消息语义保留'
+    assert drags == [], '零拖拽(参数违法不执行)'
     assert gs.bench.value.slots[0].kind == 'unit', '主域整笔未写'
 
 

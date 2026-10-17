@@ -253,11 +253,11 @@ def test_act_node_round_wait_until_terminal_unified_path(monkeypatch):
          '自身承担);买牌回执簿在册')
 
 
-def test_act_receipt_blocked_reason_code_from_round_fail(monkeypatch):
-    """落地门受阻码(机械早退 round_fail → reason 码化):牌在期望态槽 6
-    (守卫按名放行)而点表桩恒 5 槽 → 买牌 op round_fail 槽号越界 →
-    回执 reason=槽号越界(round result status 前缀闭集映射;
-    正常发出 reason='' 由统一路径测试盖住)。"""
+def test_act_buy_card_slot_out_of_range_raises_no_receipt(monkeypatch):
+    """槽号越界经 act 直驱 = op 内守卫断言 AssertionError 原样上抛
+    (terminal-fail-status:参数违法由 op 自判,商店 visit 环零映射表)
+    + 回执不产行(QA 例外从句:异常终止的分派不产行,回执义务由失败
+    运行整体证据承接)。"""
     card6 = ShopCard(x=6, slot=6, name='卡六', faction='?', cost=3, star=1)
     cards = [ShopSlot(kind='content', card=_card(f'卡{i + 1}', i + 1))
              for i in range(5)]
@@ -275,26 +275,11 @@ def test_act_receipt_blocked_reason_code_from_round_fail(monkeypatch):
     monkeypatch.setattr(gs_mod, 'note_action_receipt', _capture)
     assert op.observe().is_success
 
-    rr = op.act()
+    with pytest.raises(AssertionError) as ei:
+        op.act()
 
-    assert not rr.is_success, '机械早退 = round_fail(未发出通道)'
-    assert reasons == [('CwActionBuyCardParam', '槽号越界')], \
-        '受阻回执 reason = 闭集映射码(非自由文本)'
-
-
-def test_visit_block_code_closed_set_mapping():
-    """落地门受阻码闭集映射(单测锁映射面):槽解析失败 → 槽解析失败
-    (守卫后防御面,真路径被 proposal 守卫前置拦截,真路径不可达 → 单测
-    承接);槽号越界 → 槽号越界;未登记 status = 原文兜底(受阻
-    事实不静默,兜底显影促词表登记)。"""
-    f = buy_mod._visit_block_code
-    assert f('商店牌槽解析失败:slot_no=None'
-             '(身份未命中 ∧ (name,star) 未命中),禁兜底点击') \
-        == '槽解析失败'
-    assert f('商店牌槽号越界/点位缺失:商店牌-6(货币战争-备战-开商店),'
-             'slot=6 click_pts=5(槽号-点表不一致),禁兜底点击') \
-        == '槽号越界'
-    assert f('未登记的新受阻形态(词表漏登)') == '未登记的新受阻形态(词表漏登)'
+    assert '槽号-点表不一致' in str(ei.value), '守卫断言消息透传'
+    assert reasons == [], '异常终止的分派不产行(回执零写)'
 
 
 def test_act_node_unobserved_close_skips_then_executes(monkeypatch):
