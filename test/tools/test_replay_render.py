@@ -355,9 +355,10 @@ def test_retry_chain_merged_into_one_action():
 
 
 def test_legacy_applied_key_receipts_render_clean():
-    """旧 journal 兼容(历史批回执含 applied 键):键不读不显(extra 排除
-    表承接,两处排除字面量保留判据),布尔字样零显影;合并判据只看
-    reason(旧受阻条 reason 非空照常并链),重渲染零异常。"""
+    """旧 journal 兼容(历史批回执含 applied/gold_delta 双键):两键不读
+    不显(extra 排除表承接,两处排除字面量保留判据),布尔与金差字样
+    零显影;合并判据只看 reason(旧受阻条 reason 非空照常并链),重渲染
+    零异常。"""
     legacy_blocked = {'op': 'StartBattle', 'applied': False,
                       'reason': '弹窗未关', 'detail': '旧数据'}
     legacy_ok = {'op': 'BuyCard', 'applied': True, 'reason': '',
@@ -373,7 +374,7 @@ def test_legacy_applied_key_receipts_render_clean():
     assert [a.op for a in actions] == ['StartBattle', 'BuyCard']
     assert len(actions[0].chain) == 2  # 旧受阻条 reason 非空 → 照常并链
     assert 'applied' not in md  # 布尔字样零显影
-    assert '- gold_delta: -3' in md  # extra 键照常显影
+    assert 'gold_delta' not in md  # 退役金差键零显影(extra 排除表承接)
 
 
 def test_delta_prev_chain_chapter_attribution_and_trailing():

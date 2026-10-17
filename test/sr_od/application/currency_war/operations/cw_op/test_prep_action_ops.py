@@ -351,8 +351,8 @@ def test_vocab_actions_all_have_logic_state_projection(
 def test_levelup_executes_single_click_per_frame(monkeypatch):
     """执行器半:一次 execute = 恰一次单击(零授权零循环;升 N 击 = N 帧)。
     金腿翻转 = action.cost 逻辑态直写(唯一写点
-    report_action_level_up_param),执行缝金差退役:执行点 gold_delta 恒 0
-    (不进回执 extra 键、不经 _advance_gold)。
+    report_action_level_up_param);执行缝金差链已整体退役——执行器
+    不再计算/携带金差,回执 extra 无 gold_delta 键。
     建档纪律(用户裁定 2026-09-22):按钮 area 命中 = 每帧恰一击;
     缺失 = round_fail 零点击(禁兜底坐标,emitted=False 未发出事实)。"""
     import sr_od.application.currency_war.operations.cw_op.cw_prep_level_up_action as lvl_mod
@@ -364,7 +364,6 @@ def test_levelup_executes_single_click_per_frame(monkeypatch):
                         lambda ctx, name, screen_name='': Point(296, 860))
     ex.execute(CwActionLevelUpParam(cost=4))
     assert len(controller.clicks) == 1
-    assert ex.last_gold_delta == 0   # 执行缝金差退役(防双记)
     ex.execute(CwActionLevelUpParam(cost=4))
     assert len(controller.clicks) == 2   # 第二帧再击
     # 缺失臂:area 缺失 → round_fail 零点击零移动(禁兜底坐标静默点击)。
@@ -1060,7 +1059,6 @@ def test_start_battle_click_sequence_and_envelope(monkeypatch):
         ex.execute(CwActionStartBattleParam())
     assert ex.last_launch_ok is True
     assert '出战已点击' in ex.last_detail
-    assert ex.last_gold_delta == 0
     # 薄委托替身缝:返回序保持原 (ok, detail)
     assert ex._start_battle()[0] is True
 
