@@ -649,3 +649,66 @@ def test_env_battle_grants_current_entry_and_coexistence() -> None:
     assert '星核猎手契约' in INVESTMENT_ENVS
     assert ENV_GIFTS['星核猎手契约'].chars_conditional[0][0] == '流萤'
     assert '星核猎手契约' not in ENV_ECONOMY
+
+
+# ============================================================ 即时装备通道
+# (环境确定性具名装备发放:equips_immediate;迭代
+# 2026-09-23-invest-effects-calc T-31 红钻贵族)
+
+
+def test_equip_immediate_drift_check_raises(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """装备名漂移(T-31 设计 §4 锁 1 ⑧):equips_immediate 含 EQUIPMENTS
+    外名(武装箱系不在装备注册表)→ 构建校验炸——发放写出库存里不存在的
+    名字 = 假身份混进 equips,import 期拦。"""
+    bad = dict(ENV_GIFTS)
+    bad['红钻贵族'] = GiftGrant(equips_immediate=('简易武装箱',))
+    monkeypatch.setattr(cw_investments, 'ENV_GIFTS', bad)
+    with pytest.raises(ValueError, match='装备名漂移'):
+        cw_investments._validate_env_gifts()
+
+
+def test_equip_item_channel_clash_raises(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """装备/道具通道同名互斥(T-31 设计 §4 锁 1 ⑨):同一 GiftGrant 内
+    equips_immediate 与 items 两通道同名件 → 构建校验炸(身份串行防呆;
+    现值登记 红钻/简易武装箱 异名,天然通过)。"""
+    bad = dict(ENV_GIFTS)
+    bad['红钻贵族'] = GiftGrant(equips_immediate=('红钻',),
+                                items_immediate=('红钻',))
+    monkeypatch.setattr(cw_investments, 'ENV_GIFTS', bad)
+    with pytest.raises(ValueError, match='通道同名'):
+        cw_investments._validate_env_gifts()
+
+
+def test_equip_only_grant_not_empty_grant_both_tables(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """空发放集判定并入 equips_immediate(env/策略两表,T-31 设计 §2.2
+    条 3 + 策略侧家族义务):装备腿 only 条目 = 合法登记,两表校验均不得
+    误炸;全空条目照炸由既有锁承载,不重复。"""
+    cw_investments._validate_env_gifts()  # 现值表(红钻贵族 = 装备+箱)直调
+    bad = dict(STRATEGY_GRANTS)
+    bad['佩佩驾到'] = GiftGrant(equips_immediate=('红钻',))
+    monkeypatch.setattr(cw_investments, 'STRATEGY_GRANTS', bad)
+    cw_investments._validate_strategy_grants()
+
+
+def test_red_diamond_registry_surface() -> None:
+    """登记面与身份防污染(T-31 设计 §4 锁 1/3):红钻贵族 ∈ ENV_GIFTS
+    且 ∉ ENV_ECONOMY;登记形状 = 装备腿('红钻',)+ 箱腿('简易武装箱',);
+    红钻 ∈ EQUIPMENTS(装备身份)且 ∉ BENCH_ITEM_NAMES,'简易武装箱' ∈
+    BENCH_ITEM_NAMES(派生面只扫 items 两通道,装备不进占席词表)。"""
+    from sr_od.application.currency_war.data.cw_equipment_data import (
+        EQUIPMENTS,
+    )
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        BENCH_ITEM_NAMES,
+    )
+    assert '红钻贵族' in ENV_GIFTS
+    assert '红钻贵族' not in ENV_ECONOMY
+    grant = ENV_GIFTS['红钻贵族']
+    assert grant.equips_immediate == ('红钻',)
+    assert grant.items_immediate == ('简易武装箱',)
+    assert '红钻' in EQUIPMENTS
+    assert '红钻' not in BENCH_ITEM_NAMES
+    assert '简易武装箱' in BENCH_ITEM_NAMES

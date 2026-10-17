@@ -42,11 +42,13 @@ _SIG_OBS = ChannelSig(family='obs', actor='PickInvestEnvTest')
 
 
 def _make_gs(opts: list[str]) -> GameState:
-    """直构容器:bench 观察(空席,发放腿可落)+ 选卡槽逻辑写。"""
+    """直构容器:bench/equips 观察(空席空栏,发放双腿可落)+ 选卡槽逻辑写。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.observe(gs.bench,
                BenchView(slots=[BenchSlot(kind='empty')] * 9, capacity=9),
                sig=_SIG_OBS)
+    # equips 一并观察(装备腿发放落栏前置;既有测试零断言 equips,无波及)
+    gs.observe(gs.equips, [], sig=_SIG_OBS)
     gs.write_logic(gs.invest_env_opts, opts, produced_by='T',
                    evidence='t:opts', sig=_SIG)
     return gs
@@ -142,3 +144,20 @@ def test_non_gift_env_pick_no_attrerror_zero_resolution(
     assert out.applied
     assert provider_calls == [], '非随机支环境零解析'
     assert (gs.active_env.value or '') == '轮岗'
+
+
+def test_deterministic_equip_env_grants_without_rng(
+        provider_calls: list[str]) -> None:
+    """确定性装备环境(T-31 设计 §4 锁 5):红钻贵族零随机支 → rng 谓词
+    零解析(provider 不触,确定性装备腿不入谓词);选卡后 equips 尾追
+    '红钻'、bench +1 箱(supply_box)——上报 → gain_invest_env →
+    on_env_gained 双端同链,live/sim 共用语义一条测试覆盖。"""
+    gs = _make_gs(['红钻贵族', '轮岗', '头彩'])
+    out = report_action_pick_invest_env_param(
+        gs, SimpleNamespace(idx=0), _SIG)
+    assert out.applied
+    assert provider_calls == [], '零随机支环境零解析'
+    assert list(gs.equips.value) == ['红钻'], '装备腿入栏'
+    boxes = [s for s in gs.bench.value.slots
+             if s is not None and s.kind == 'supply_box']
+    assert len(boxes) == 1, '箱腿落席 1 个 supply_box 槽件'

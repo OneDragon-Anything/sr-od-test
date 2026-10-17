@@ -1850,3 +1850,77 @@ def test_sell_swap_transfer_v2_contract(
         and gs.xp.value == (4, 20), f'{case_name}: hp/level/xp 零写'
     assert gs.back_layout.value == 6, f'{case_name}: back_layout 零写'
     assert gs.shop.value == _TR_EMPTY_SHOP, f'{case_name}: shop 零写'
+
+
+# ============================================================ 即时装备通道
+# (环境确定性具名装备发放:equips_immediate 装备腿 + items_immediate
+# 箱腿;迭代 2026-09-23-invest-effects-calc T-31 红钻贵族)
+
+
+def test_env_gift_equip_leg_card_text_order(rows_sink: _RowSink) -> None:
+    """发放腿(T-31 设计 §4 锁 2,on_env_gained 直构 + 种子底座):equips
+    尾追 '红钻'、bench 落 1 个 supply_box 槽件;效果串两行按卡文序
+    (``equip_gift:红钻`` 先、``item_gift:简易武装箱`` 后——装备支位于
+    道具支之前,遥测序与卡文对齐)。"""
+    gs = _make_gs(bench=[], equips=[])
+    out = on_env_gained(gs, None, '红钻贵族', rand=False, sig=_lsig())
+    assert out == ('equip_gift:红钻', 'item_gift:简易武装箱'), \
+        '效果串序 = 卡文序(钻先箱后)'
+    assert list(gs.equips.value) == ['红钻'], '装备入栏(尾追)'
+    boxes = [s for s in gs.bench.value.slots
+             if s is not None and s.kind == 'supply_box']
+    assert len(boxes) == 1, '箱落 1 个 supply_box 槽件'
+    assert rows_sink.kinds() == [], '正常路径零申报行'
+
+
+def test_env_gift_equip_leg_callback_zero_effect(
+        rows_sink: _RowSink) -> None:
+    """回调零效果(T-31 设计 §4 锁 4):红钻 ∈ EQUIP_ACQUIRE_CONSEQUENCES
+    表外 → 获得链零子链;红钻非财富宝钻 → 宝钻数值回调族
+    (diamond_count/deploy_cap/back_layout)零变化(on_diamond_acquired
+    非财富宝钻早退在册,且唯一调用点 = sim 深井发放路径,本链不经)。"""
+    gs = _make_gs(bench=[], equips=[])
+    diamond0 = gs.diamond_count.value
+    cap0 = gs.deploy_cap.value
+    back0 = gs.back_layout.value
+    on_env_gained(gs, None, '红钻贵族', rand=False, sig=_lsig())
+    assert gs.diamond_count.value == diamond0, '宝钻计数零写'
+    assert gs.deploy_cap.value == cap0, '上阵上限零写'
+    assert gs.back_layout.value == back0, '后排格数零写'
+    assert list(gs.equips.value) == ['红钻'], '装备照常入栏(主腿生效)'
+
+
+def test_env_gift_box_leg_overflow_equips_unaffected() -> None:
+    """席满溢出(T-31 设计 §4 锁 7):bench 9 席全占时箱走溢出落位两字段
+    (现役 _place_bench_item 语义);装备腿不受席影响(equips 无席概念,
+    照常入栏)。"""
+    gs = _make_gs(bench=[], equips=[],
+                  overflow_card='', overflow_warning=False)
+    gs.observe(gs.bench,
+               BenchView(slots=[BenchSlot(kind='supply_box')] * 9,
+                         capacity=9),
+               sig=_SIG_OBS)
+    out = on_env_gained(gs, None, '红钻贵族', rand=False, sig=_lsig())
+    assert out == ('equip_gift:红钻', 'item_gift:简易武装箱'), \
+        '效果串恒登记(与落位成败解耦)'
+    assert list(gs.equips.value) == ['红钻'], '装备腿不受席影响'
+    assert gs.overflow_warning.value is True, '席满溢出告警置位'
+    assert gs.overflow_card.value == '简易武装箱', '溢出位身份 = 箱名'
+
+
+def test_env_gift_channel_selection_both_states(rows_sink: _RowSink) -> None:
+    """写通道择道(T-31 设计 §4 锁 8):装备腿 rand=True 硬编码 → 未锚定
+    与锚定两态均走 write_logic_rand(equips.source 恒 'logic_rand',
+    猜测语义不进失配网);箱腿 rand=False 透传 → 未锚定 'logic_rand'、
+    锚定 'logic' 确定面(对照腿;T-2 实机定谳纪律)。"""
+    gs = _make_gs(bench=[], equips=[])
+    on_env_gained(gs, None, '红钻贵族', rand=False, sig=_lsig())
+    assert gs.equips.source == 'logic_rand', '装备腿未锚定随机态'
+    assert gs.bench.source == 'logic_rand', '箱腿未锚定随机态'
+    gs2 = _make_gs(bench=[], equips=[])
+    gs2.prep_anchored = True
+    on_env_gained(gs2, None, '红钻贵族', rand=False, sig=_lsig())
+    assert gs2.equips.source == 'logic_rand', \
+        '装备腿锚定仍随机态(rand=True 硬编码,裁定语义)'
+    assert gs2.bench.source == 'logic', '箱腿锚定确定面(rand=False 透传)'
+    assert rows_sink.kinds() == [], '两态零申报行(不进失配网)'

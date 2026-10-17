@@ -3468,3 +3468,40 @@ def test_action_rng_provider_seeded_on_install_reset_on_uninstall():
         uninstall_backend()
     assert first == second, '同 seed 同键序采样必须一致(确定性)'
     assert gen_first == gen_second, 'ore_reward_gen 键同 seed 确定性'
+
+
+def test_equip_env_pick_sim_full_chain() -> None:
+    """即时装备环境 sim 全链(迭代 2026-09-23-invest-effects-calc T-31
+    设计 §4 锁 6):播种选红钻贵族 → equips = ['红钻']、bench = 4 开局
+    手牌 + 1 箱(supply_box);开箱链现役承接新箱(箱画面候选 → 选定 →
+    所得经获得链入栏,equips 2 件);同 seed 重放确定。装备腿零采样,
+    重放确定性不经 rng 注入。"""
+    def _run() -> list[str]:
+        b = _env_pick_backend()
+        try:
+            _seed_and_pick_env(b, '红钻贵族')
+            assert list(b.gs.equips.value) == ['红钻'], '选卡后装备入栏'
+            boxes = [s for s in b.gs.bench.value.slots
+                     if s is not None and s.kind == 'supply_box']
+            assert len(boxes) == 1, '4 开局手牌 + 1 箱'
+            # 开箱链现役承接(环境送的箱 = 标准 supply_box,与火药味同形)
+            open_out = report_action_open_box_param(
+                b.gs, CwActionOpenBoxParam(), _SIG)
+            cw_sim_ports.declare_world(open_out.world_decl)
+            assert b.screen_identity() == SCREEN_BOX
+            cands = b.gs.box_card_names.value
+            assert cands is not None and len(cands) == 4
+            b._handle_click_source(SCREEN_BOX, '装备卡-3')
+            pick_out = report_action_pick_box_card_param(
+                b.gs, SimpleNamespace(), _SIG)
+            assert pick_out.applied
+            cw_sim_ports.declare_world(pick_out.world_decl)
+            assert cands[2] in b.gs.equips.value, '开箱所得入栏(获得链)'
+            assert '红钻' in b.gs.equips.value, '环境装备仍在栏'
+            return list(b.gs.equips.value)
+        finally:
+            uninstall_backend()
+
+    first = _run()
+    second = _run()
+    assert first == second, '同 seed 重放确定(装备腿零采样)'
