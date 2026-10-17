@@ -483,3 +483,23 @@ def test_interest_contract_coexists_with_gifts_table() -> None:
     assert ENV_GIFTS['公司契约'].chars_conditional[0][0] == '托帕&账账'
     assert '公司契约' in cw_investments.ENV_INTEREST_GRANTS
     assert '公司契约' not in ENV_ECONOMY
+
+
+def test_dot_contract_not_in_any_conditional_grant_table() -> None:
+    """五表反向锁(T-28 设计稿 §4.2):持续伤害契约 ∈ ENV_GIFTS(
+    chars_immediate = 椒丘/卡芙卡 + chars_conditional 首元 = 黑天鹅,辖
+    估值域档位)且**不入五张世界发放条件登记表**——本卡建模形状 =
+    猜测写+证实(计数源无世界真值生产点),非条件检查型;误补登记 =
+    双引擎重复发放回归信号(数据断言非源码扫描)。"""
+    assert '持续伤害契约' in INVESTMENT_ENVS
+    assert ENV_GIFTS['持续伤害契约'].chars_immediate == ('椒丘', '卡芙卡')
+    assert ENV_GIFTS['持续伤害契约'].chars_conditional[0][0] == '黑天鹅'
+    for table_name, table in (
+            ('ENV_STREAK_GRANTS', cw_investments.ENV_STREAK_GRANTS),
+            ('ENV_REFRESH_GRANTS', cw_investments.ENV_REFRESH_GRANTS),
+            ('ENV_BOSS_GRANTS', cw_investments.ENV_BOSS_GRANTS),
+            ('ENV_MERGE_GRANTS', cw_investments.ENV_MERGE_GRANTS),
+            ('ENV_INTEREST_GRANTS', cw_investments.ENV_INTEREST_GRANTS)):
+        assert '持续伤害契约' not in table, \
+            f'{table_name} 误登记(猜测写+证实型不入条件检查表)'
+    assert '持续伤害契约' not in ENV_ECONOMY

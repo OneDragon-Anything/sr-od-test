@@ -2456,6 +2456,72 @@ def test_env_grant_same_seed_replay_identical(
     assert snaps[0] == snaps[1], f'同 seed 重放漂移: {snaps}'
 
 
+_DOT_ENV = '持续伤害契约'
+_DOT_CHAR = '黑天鹅'
+
+
+def _dot_env_backend(seed: int = 23) -> SimBackend:
+    """开局选持续伤害契约环境的装配后端(调用方负责 uninstall)。"""
+    b = SimBackend(seed=seed, cfg=RunConfig(
+        selected_difficulty='A8', enemy_difficulty=108, env_present=True))
+    install_backend(b)
+    b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+    assert b.screen_identity() == SCREEN_INVEST_ENV
+    b.gs.write_logic(b.gs.invest_env_opts,
+                     [_DOT_ENV, '轮岗', '头彩'],
+                     produced_by='Test', evidence='t:opts', sig=_SIG)
+    out = report_action_pick_invest_env_param(
+        b.gs, SimpleNamespace(idx=0), _SIG)
+    assert out.applied
+    cw_sim_ports.declare_world(out.world_decl)
+    return b
+
+
+def _bench_char_ids(gs: GameState) -> list[str]:
+    return [s.unit.char_id for s in gs.bench.value.slots
+            if s is not None and s.kind == 'unit' and s.unit is not None]
+
+
+def test_dot_contract_opening_acquisition_confirms_at_eighth_battle(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """开局获取形态主路径锁面(T-28 设计稿 §4.1⑥,防「锚键门控死寂」
+    回归):开局选环境链 node 未进窗(锚键腿不写 = 预期形态)→ 连打战斗
+    结算,active_env 门驱动猜测写 + 进度累计,第 8 个战斗结算证实落地,
+    锚键可缺(纯登记非门控)。P1 序(reward×2/battle×2/supply/battle/
+    encounter/reward/boss)恰 8 个战斗结算节点;补给轮不经结算腿 = 不计数
+    (非战斗轮锁面,设计稿 §2.3);猜测写在结算腿非获得刻(§2.2)。"""
+    b = _dot_env_backend()
+    try:
+        gs = b.gs
+        _force_settle(monkeypatch, won=True)
+        chars = set(_bench_char_ids(gs))
+        assert {'椒丘', '卡芙卡'} <= chars, '即时腿(获得刻,零改动回归)'
+        assert _DOT_CHAR not in chars, '猜测写在结算腿,不在获得刻'
+        assert not [k for _e, k in (gs.env_grants_done.value or ())
+                    if k.startswith('dot_anchor#')], \
+            '开局形态锚键可缺(node 未进窗不写)'
+        # 驱至 P1 补给轮(r5):前 4 个战斗结算已逐笔计数;补给轮非战斗
+        # 不推进计数
+        _drive_until(b, lambda: b.screen_identity() == SCREEN_SUPPLY)
+        keys = [k for e, k in (gs.env_grants_done.value or ())
+                if e == _DOT_ENV and k.startswith('dot_battle#')]
+        assert keys == [f'dot_battle#{i}' for i in range(1, 5)], \
+            f'补给轮前 4 笔进度键: {keys}'
+        assert _DOT_CHAR in _bench_char_ids(gs), '首结算猜测态在席'
+        # 证实落地(第 8 个战斗结算 = P1 boss 结算腿)
+        _drive_until(b, lambda: (_DOT_ENV, 'dot_confirm')
+                     in (gs.env_grants_done.value or ()))
+        keys = [k for e, k in (gs.env_grants_done.value or ())
+                if e == _DOT_ENV and k.startswith('dot_battle#')]
+        assert keys == [f'dot_battle#{i}' for i in range(1, 9)], \
+            f'进度键 1..8 逐笔: {keys}'
+        assert (_DOT_ENV, 'dot_confirm') in (gs.env_grants_done.value or ())
+        assert _bench_char_ids(gs).count(_DOT_CHAR) == 1, \
+            '猜测态恰一只(幂等守卫防叠写)'
+    finally:
+        uninstall_backend()
+
+
 def test_supply_diamond_pick_keeps_zero_callback(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """supply 路径零行为变化(landing 3.3):深井角斗场在册环境下带钻
