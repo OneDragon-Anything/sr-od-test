@@ -735,3 +735,107 @@ def test_blue_diamond_registry_surface() -> None:
     assert '蓝钻' in EQUIPMENTS
     assert '蓝钻' not in BENCH_ITEM_NAMES
     assert '简易武装箱' in BENCH_ITEM_NAMES
+
+
+# ============================================================ 环境「随机赠卡+上场锁」登记表
+# (T-33 英雄登场,设计 = 迭代 2026-09-23-invest-effects-calc designs/
+# T-33-yingxiong-dengchang.md §2.1 + §4 锁 1;注入 + 直调沿本文件校验测试
+# 惯用法。)
+
+_ORIG_DEPLOY_LOCK = dict(cw_investments.ENV_DEPLOY_LOCK_GRANTS)
+
+
+def _deploy_lock_grant(**kw):
+    """现役条目按参变体(缺省 = id 133 原文直读形态)。"""
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        EnvDeployLockGrant,
+    )
+    base = {'spec': RandomCharSpec(cost=5, star=2),
+            'deploy_lock_nodes': 19, 'perfect_win_accel': True}
+    base.update(kw)
+    return EnvDeployLockGrant(**base)
+
+
+def _bad_deploy_lock(**kw) -> dict:
+    """英雄登场条目按参坏体(其余键保持现役)。"""
+    bad = dict(_ORIG_DEPLOY_LOCK)
+    bad['英雄登场'] = _deploy_lock_grant(**kw)
+    return bad
+
+
+def test_env_deploy_lock_grants_validation_raises(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """五查 import 即炸语义(T-33 设计 §2.1/§4 锁 1):①孤儿键 ②spec 值域
+    (cost 0/6、star 0/4、type_tag 词表外——_validate_env_gifts ⑥ 同款判据,
+    bool 显式拒)③规格池空(模拟注册表漂移)④锁期形(0/负/bool——
+    ENV_BATTLE_GRANTS 锁期形④逐字同款)⑤双登记防呆(set ∩ ENV_GIFTS ≠ ∅
+    = 赠卡双发 + 锁记录双写)。"""
+    bad_orphan = dict(_ORIG_DEPLOY_LOCK)
+    bad_orphan['不存在环境X'] = _deploy_lock_grant()
+    bad_pool = _bad_deploy_lock(
+        spec=RandomCharSpec(cost=5, star=2, type_tag='不存在的标签X'))
+    cases = [
+        ('孤儿键', bad_orphan, '孤儿键'),
+        ('cost 0', _bad_deploy_lock(spec=RandomCharSpec(cost=0, star=2)),
+         '费用档'),
+        ('cost 6', _bad_deploy_lock(spec=RandomCharSpec(cost=6, star=2)),
+         '费用档'),
+        ('cost bool', _bad_deploy_lock(spec=RandomCharSpec(cost=True, star=2)),
+         '费用档'),
+        ('star 0', _bad_deploy_lock(spec=RandomCharSpec(cost=5, star=0)),
+         '星级'),
+        ('star 4', _bad_deploy_lock(spec=RandomCharSpec(cost=5, star=4)),
+         '星级'),
+        ('type_tag 词表外', bad_pool, '类型标签'),
+        ('锁期零', _bad_deploy_lock(deploy_lock_nodes=0), '锁期形'),
+        ('锁期负', _bad_deploy_lock(deploy_lock_nodes=-1), '锁期形'),
+        ('锁期 bool', _bad_deploy_lock(deploy_lock_nodes=True), '锁期形'),
+    ]
+    for _label, bad, match in cases:
+        monkeypatch.setattr(cw_investments, 'ENV_DEPLOY_LOCK_GRANTS', bad)
+        with pytest.raises(ValueError, match=match):
+            cw_investments._validate_env_deploy_lock_grants()
+
+    # ③ 池空(模拟注册表漂移:5 费档全量桩空)
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        random_char_pool as _rcp,
+    )
+    monkeypatch.setattr(cw_investments, 'ENV_DEPLOY_LOCK_GRANTS',
+                        _ORIG_DEPLOY_LOCK)
+    monkeypatch.setattr(cw_investments, 'random_char_pool',
+                        lambda spec: [])
+    try:
+        with pytest.raises(ValueError, match='池空'):
+            cw_investments._validate_env_deploy_lock_grants()
+    finally:
+        monkeypatch.setattr(cw_investments, 'random_char_pool', _rcp)
+
+    # ⑤ 双登记防呆(英雄登场同时在两表 = 赠卡双发 + 锁记录双写)
+    bad_gifts = dict(ENV_GIFTS)
+    bad_gifts['英雄登场'] = GiftGrant(
+        chars_random_immediate=(RandomCharSpec(cost=5, star=2),))
+    monkeypatch.setattr(cw_investments, 'ENV_GIFTS', bad_gifts)
+    monkeypatch.setattr(cw_investments, 'ENV_DEPLOY_LOCK_GRANTS',
+                        _ORIG_DEPLOY_LOCK)
+    with pytest.raises(ValueError, match='双表'):
+        cw_investments._validate_env_deploy_lock_grants()
+
+
+def test_env_deploy_lock_grants_current_entry_and_coexistence() -> None:
+    """现役条目(T-33 设计 §2.1,id 133 卡面直读)+ 表间并存合法 + 现表
+    直调通过(import 期已炸过一遍,直调 = 变体注入后的回归锚):英雄登场
+    = RandomCharSpec(5,2) + 锁期 19 + 完胜加速;∈ INVESTMENT_ENVS 且
+    ∉ ENV_GIFTS ∉ ENV_ECONOMY ∉ ENV_BATTLE_GRANTS(各表无本卡条目,
+    单表归属)。"""
+    grant = cw_investments.ENV_DEPLOY_LOCK_GRANTS['英雄登场']
+    assert grant.spec == RandomCharSpec(cost=5, star=2)
+    assert grant.deploy_lock_nodes == 19
+    assert grant.perfect_win_accel is True
+    cw_investments._validate_env_deploy_lock_grants()
+    assert '英雄登场' in INVESTMENT_ENVS
+    assert '英雄登场' not in ENV_GIFTS
+    assert '英雄登场' not in ENV_ECONOMY
+    assert '英雄登场' not in cw_investments.ENV_BATTLE_GRANTS
+    # 5 费全档池非空(注册表现算,池规模作注释性快照非断言值:
+    # 2026-10 时点 9 名)
+    assert len(random_char_pool(grant.spec)) > 0

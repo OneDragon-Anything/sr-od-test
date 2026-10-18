@@ -453,11 +453,14 @@ def test_claim_encounter_reward_branches(
                               xp=(5, 20)),
                    sig=_obs_sig)
         # 结算行入环(与生产同口 = record_settlement_row 单一写端;
-        # outcome 腿只取 killed/progress_fill_ratio,桩最小面)。
+        # outcome 腿只取 killed/progress_fill_ratio/hp_after,桩最小面,
+        # hp_after = None 读缺形态——本文件断言面是双证判遭遇,不消费
+        # hp 差分)。
         # round_num 逐臂递增 = 模拟不同节点(环按 plane+round 去重合并,
         # 同键会合并进首见行,node_type 以首见为准)。
         record_settlement_row(
-            gs, SimpleNamespace(killed=None, progress_fill_ratio=None),
+            gs, SimpleNamespace(killed=None, progress_fill_ratio=None,
+                                hp_after=None),
             plane=1, round_num=round_num, node_type=ring_node,
             difficulty_node=None, encounter_tier=None)
 

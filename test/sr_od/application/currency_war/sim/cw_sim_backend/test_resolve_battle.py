@@ -10,6 +10,11 @@ _resolve_battle 扑满收入落账段;常规轮首接线测试 =
   扑满域 = 扑满环境的奖励节点(is_piggy_node);途经非扑满节点窗开
   即收属现役口径,不辖断言。
 
+追加面 = T-33 英雄登场设计(.debug/progress/2026-09-23-invest-effects-
+calc/designs/T-33-yingxiong-dengchang.md)§2.4 数据面 + §4 锁 8(sim
+半边):结算腿补写环帧(killed = won 语义同口 / hp_after = apply 后
+gs.hp 现值;与 live 同一 ring 读口,sim 节点 kind → 结算行词表)。
+
 复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py(在册超限
 拆分债文件,禁追加,只 import 复用不改;先例 = 本目录
 test_reward_ore_panel.py)。
@@ -18,8 +23,10 @@ from __future__ import annotations
 
 import pytest
 from test.sr_od.application.currency_war.sim.test_sim_backend import (
+    _backend,
     _drive_step,
     _force_settle,
+    _node_advance_feed,
     _piggy_backend,
     _start_battle_feed,
 )
@@ -124,5 +131,58 @@ def test_piggy_loss_leg_interest_same_chain(
         assert gs.effects.interest_earned == counter_at_window + \
             min(gold_at_window // 10, 5), '败局腿息同链(窗口开金口径)'
         assert int(gs.streak.value or 0) == 0, '连胜清零(现役回归锚)'
+    finally:
+        uninstall_backend()
+
+
+# ============================================================ 结算环帧补写
+# (T-33 英雄登场设计 §2.4 数据面 + §4 锁 8 sim 半边:结算腿补写环帧,
+# 与 live 同一 ring 读口;killed = won / hp_after = apply 后 gs.hp。)
+
+def test_resolve_battle_writes_ring_frames(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """结算腿补写环帧(T-33 设计 §4 锁 8 sim 半边):战斗类节点结算
+    恰入一环帧——胜局 killed=True、hp_after = apply 后 hp 现值(恒胜
+    零扣血 = 上一帧值);败局 killed=False、hp_after = 扣血后现值;
+    node_type 走 sim kind → 结算行词表映射(奖励帧 '奖励'/战斗帧
+    '普通战斗';P1 序列 1-1/1-2 = 奖励、1-3 = 战斗)。"""
+    b = _backend(7)
+    try:
+        b._handle_click_source('货币战争-简报', '按钮-下一步')
+        b._maybe_finish_wait()
+        gs = b.gs
+        # 1-1 奖励节点:恒胜白拿 → 环帧 1(killed=True)
+        _force_settle(monkeypatch, won=True)
+        _start_battle_feed(gs)
+        assert len(gs.settlement_ring) == 1, '恰一环帧'
+        frame1 = gs.settlement_ring.last_row()
+        assert (frame1.plane, frame1.round_num, frame1.node_type) == \
+            (1, 1, '奖励'), 'sim kind → 结算行词表'
+        assert frame1.killed is True, 'killed = won(语义同口)'
+        assert frame1.hp_after == int(gs.hp.value or 0), \
+            'hp_after = apply 后 gs.hp 现值'
+        _node_advance_feed(gs, trigger='settle_confirm')
+        # 1-2 奖励节点:强制败局被恒胜白拿改写(won=True)→ 环帧 2;
+        # settle_confirm 推进至 1-3
+        _force_settle(monkeypatch, won=False)
+        _start_battle_feed(gs)
+        assert len(gs.settlement_ring) == 2, '每战斗结算恰一帧'
+        frame2 = gs.settlement_ring.last_row()
+        assert (frame2.plane, frame2.round_num, frame2.node_type) == \
+            (1, 2, '奖励'), '奖励节点恒胜白拿(强制败局被改写)'
+        assert frame2.killed is True, '奖励帧恒胜 killed=True'
+        _node_advance_feed(gs, trigger='settle_confirm')
+        assert (gs.node.value.plane, gs.node.value.round_num) == (1, 3), \
+            '到 1-3 战斗节点(P1 序列 reward/reward/battle)'
+        # 1-3 战斗节点:真败局 → 环帧 3(killed=False,掉血)
+        _start_battle_feed(gs)
+        assert len(gs.settlement_ring) == 3, '每战斗结算恰一帧'
+        frame3 = gs.settlement_ring.last_row()
+        assert (frame3.plane, frame3.round_num, frame3.node_type) == \
+            (1, 3, '普通战斗')
+        assert frame3.killed is False, '败局帧 killed=False'
+        assert frame3.hp_after == int(gs.hp.value or 0), \
+            '败局 hp_after = 扣血后现值'
+        assert frame3.hp_after < frame2.hp_after, '掉血入帧(差分基准数据)'
     finally:
         uninstall_backend()

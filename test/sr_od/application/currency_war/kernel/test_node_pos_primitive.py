@@ -1,4 +1,5 @@
-"""序列模块键原语 NodePos / sequence_next · 测试面(四态契约)。
+"""序列模块键原语 NodePos / sequence_next / sequence_prev · 测试面
+(四态契约)。
 
 设计依据: abolish-node-ordinal 迭代 design.md §2.1(后继原语四态
 契约、``seqs`` 缺省 = 默认表与 ``node_sequence_of`` 同参约定、
@@ -12,7 +13,10 @@ node-derivation.md`` §3.3(键原语)。测试面地图:
 - 两口径:默认表(P1+P2+P3 全在表)+ 场字段修饰表
   (``resolve_plane_node_seqs`` 产物,P1=10/P2=8/P3=8);
 - 直查/后继两口径对照:缺键直查 PlaneSeqMissingError 响亮 vs 后继
-  原语优雅 None(表外位面(≥4)防御形态)。
+  原语优雅 None(表外位面(≥4)防御形态);
+- 前驱原语 sequence_prev(T-33 完胜提前改写消费,与后继逐态镜像):
+  位面内前驱 / 位面首跨前一位面末 / 全序列起点或表外位面 → None
+  (调用方按「无前驱不回退」处理)/ modeled 位面内越界 → ValueError。
 """
 from __future__ import annotations
 
@@ -25,6 +29,7 @@ from sr_od.application.currency_war.kernel.cw_node_schedule import (
     node_sequence_of,
     resolve_plane_node_seqs,
     sequence_next,
+    sequence_prev,
 )
 
 _MODIFIED = resolve_plane_node_seqs('人身意外险')
@@ -82,3 +87,35 @@ def test_sequence_next_out_of_domain_none_and_overrun_raises() -> None:
     with pytest.raises(PlaneSeqMissingError):
         node_sequence_of(4)
     assert node_sequence_of(3) == P3_NODE_SEQUENCE, 'P3 直查已在表'
+
+
+def test_sequence_prev_mirror_walk_and_none() -> None:
+    """前驱原语(T-33 设计 §2.4 改写原语;与后继逐态镜像):默认表
+    (3,4) 逐位前驱到 (2,7) → (2,1);(1,1) = 全序列起点 → None
+    (「无前驱不回退」,完胜改写留原值纯防御);(2,1) 跨位面 =
+    前一位面末 (1,9);表外位面 (4,1) → None;modeled 位面内越界
+    ValueError 两口径同判。"""
+    pos: NodePos = (3, 4)
+    for expected in [(3, 3), (3, 2), (3, 1), (2, 7), (2, 6)]:
+        pos = sequence_prev(pos)
+        assert pos == expected, f'前驱链 {expected}'
+    assert sequence_prev((2, 1)) == (1, 9), '位面首跨前一位面末'
+    assert sequence_prev((1, 2)) == (1, 1), '位面内前驱至 (1,1)'
+    assert sequence_prev((1, 1)) is None, '全序列起点无前驱 → 不回退'
+    assert sequence_prev((4, 1)) is None, '表外位面 → None'
+    with pytest.raises(ValueError):
+        sequence_prev((1, 11))
+    with pytest.raises(ValueError):
+        sequence_prev((1, 11), _MODIFIED)
+
+
+def test_sequence_prev_modified_table_follows_field_lengths() -> None:
+    """修饰表(场字段现值)前驱:(2,1) 前驱 = (1,10)(修饰 P1 长 10,
+    取当前 seqs 现值——解锁序位按发放刻日程写入、前驱按改写刻日程回退,
+    长度差 = 已申报的修饰日程后到偏差);(1,10) → (1,9) 位面内;
+    (1,1) 起点恒 None;默认表口径下 (2,1) 前驱 = (1,9) 同位对照。"""
+    mod = _MODIFIED
+    assert sequence_prev((2, 1), mod) == (1, 10), '修饰 P1 末 = 前一位面末'
+    assert sequence_prev((1, 10), mod) == (1, 9)
+    assert sequence_prev((1, 1), mod) is None
+    assert sequence_prev((2, 1)) == (1, 9), '默认表口径(长度差对照)'
