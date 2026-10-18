@@ -53,7 +53,7 @@ from sr_od.application.currency_war.data.cw_shop_odds import REFRESH_PROB
 from sr_od.application.currency_war.kernel.cw_action_report import (
     report_action_buy_card_param,
     report_action_close_shop_param,
-    report_action_level_up_shop_param,
+    report_action_level_up_param,
     report_action_refresh_shop_param,
     report_action_sell_bench_param,
 )
@@ -73,7 +73,7 @@ from sr_od.application.currency_war.kernel.cw_shop_deal import state_deal_probs
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionBuyCardParam,
     CwActionCloseShopParam,
-    CwActionLevelUpShopParam,
+    CwActionLevelUpParam,
     CwActionRefreshShopParam,
     CwActionSellBenchParam,
 )
@@ -123,9 +123,9 @@ def _report_action(gs, action, executed=None):
     断言(设计件 §4-M1)。executed 仅对带回执参数的函数透传。"""
     if isinstance(action, CwActionBuyCardParam):
         return report_action_buy_card_param(gs, action, _SIG, executed=executed)
-    if isinstance(action, CwActionLevelUpShopParam):
-        return report_action_level_up_shop_param(gs, action, _SIG,
-                                                 executed=executed)
+    if isinstance(action, CwActionLevelUpParam):
+        return report_action_level_up_param(gs, action, _SIG,
+                                            executed=executed)
     if isinstance(action, CwActionRefreshShopParam):
         return report_action_refresh_shop_param(gs, action, _SIG,
                                                 executed=executed)
@@ -233,7 +233,7 @@ class TestM1DirectLock:
         面);满级腿(并入):lv10 购买无效,零金零经验零写。"""
         gs = _gs_of(gold=30, shop=[], level=3, xp=(2, 6))
         _report_action(
-            gs, CwActionLevelUpShopParam(cost=4), ShopActionExecuted(levelup_clicks=1))
+            gs, CwActionLevelUpParam(cost=4), ShopActionExecuted(levelup_clicks=1))
         assert gs.gold.value == 26, 'gold: 期望 30 −单击价 4×1 击 = 26'
         assert _content_of(gs) == [], \
             'shop payload: 期望空(离屏零写透传)'
@@ -248,7 +248,7 @@ class TestM1DirectLock:
         # 满级腿(并入,原 test_levelup_full_cap_noop):零金零经验零写
         gs_cap = _gs_of(gold=30, shop=[], level=10, xp=(0, 4))
         _report_action(
-            gs_cap, CwActionLevelUpShopParam(cost=4),
+            gs_cap, CwActionLevelUpParam(cost=4),
             ShopActionExecuted(levelup_clicks=1))
         assert gs_cap.gold.value == 30, 'gold: 满级购买零金(购买无效)'
         assert _content_of(gs_cap) == [], \
@@ -268,7 +268,7 @@ class TestM1DirectLock:
         gs = _gs_of(gold=30, shop=[], level=5, xp=(18, 20))
         assert max_units_of(gs) == 5, '前置:cap 地板 = 滞留级 5'
         _report_action(
-            gs, CwActionLevelUpShopParam(cost=4), ShopActionExecuted(levelup_clicks=2))
+            gs, CwActionLevelUpParam(cost=4), ShopActionExecuted(levelup_clicks=2))
         # 18+8=26 ≥ lv5 门槛 20 → 升 lv6 余 6;6 < lv6 门槛 40 → 停。
         assert gs.level.value == 6, 'level: 连跳直写 5→6(跨级不滞留)'
         assert gs.xp.value == (6, 40), 'xp: 溢出结转 (6, lv6 门槛 40)'
@@ -282,15 +282,15 @@ class TestM1DirectLock:
         独立照写。"""
         gs = _gs_of(gold=30, shop=[], level=5, xp=(15, 20))
         _report_action(
-            gs, CwActionLevelUpShopParam(cost=4), ShopActionExecuted(levelup_clicks=1))
+            gs, CwActionLevelUpParam(cost=4), ShopActionExecuted(levelup_clicks=1))
         assert gs.level.value == 5, 'level: 15+4=19 < 门槛 20 零跨档不写'
         assert gs.xp.value == (19, 20), 'xp: 推进到位 (19, 20)'
         # 域级跳写对:level 未读(level_unread 种子缺席)+ xp 已读
         gs2 = _gs_of(gold=30, shop=[], xp=(15, 20), level_unread=True)
         assert gs2.level.value is None and gs2.xp.value == (15, 20)
         seq0 = gs2.write_seq
-        report_action_level_up_shop_param(
-            gs2, CwActionLevelUpShopParam(cost=4),
+        report_action_level_up_param(
+            gs2, CwActionLevelUpParam(cost=4),
             _SIG, executed=ShopActionExecuted(levelup_clicks=1))
         assert gs2.level.value is None, 'level 未读保持未读'
         assert gs2.xp.value == (15, 20) and gs2.xp.source == 'observation', \

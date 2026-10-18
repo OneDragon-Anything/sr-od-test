@@ -61,7 +61,6 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionBuyCardParam,
     CwActionCloseShopParam,
-    CwActionLevelUpShopParam,
     CwActionRefreshShopParam,
     CwActionSellBenchParam,
     ShopCard,
@@ -442,34 +441,6 @@ def test_shop_sell_bench_executes_via_port(monkeypatch):
     _slots = gs.bench.value.slots
     assert _slots[0].kind == 'empty', '容器上报对账:卖出槽位置空'
     assert 'CwActionSellBenchParam' in receipt_ops, '商店动作回执簿在册'
-
-    assert op.act().is_success, '后续关店终结照常'
-
-
-def test_shop_level_up_executes_batch_clicks(monkeypatch):
-    """商店域发射 CwActionLevelUpShopParam(clicks 整批):端口连通执行
-    落地——连点击数 = clicks(整批接口店内可发),金按上报口径 −cost×
-    clicks,访问账计数,非终结 round_wait 续循环。"""
-    strategy = _ScriptedStrategy([
-        CwActionLevelUpShopParam(cost=4, clicks=3),
-        CwActionCloseShopParam(),
-    ])
-    op, match, gs, drags, _row_reads, _sell_reads, receipt_ops = \
-        _exec_port_host(monkeypatch, strategy, bench_entries=[])
-    assert op.observe().is_success
-
-    rr = op.act()
-
-    assert not rr.is_success and rr.status is None, \
-        '买经验非终结 → round_wait(帧不消费)'
-    assert op.ctx.controller.clicks == [_LEVEL_BTN_PT] * 3, \
-        '连点击数 = clicks(决策帧零介入的整批形态)'
-    assert op.ctx.controller.moves, '连点前光标 settle(mouse_move)已发'
-    assert op.ledger.total_xp_buy == 3, '访问账经验击数计数(发出即记账)'
-    assert gs.gold.value == 30 - 4 * 3, \
-        '容器上报对账:金 −cost×clicks(上报函数单点)'
-    assert 'CwActionLevelUpShopParam' in receipt_ops, '商店动作回执簿在册'
-    assert drags == [], '买经验不涉拖拽'
 
     assert op.act().is_success, '后续关店终结照常'
 

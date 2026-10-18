@@ -8,7 +8,8 @@ strategies/impl/mandate_v1/criteria/levelup.py,发射位 = entry 备战第
 
 1. 带与停留门(prob_band_of_cost 平顶整段/三支分派/P1 硬锁子局断言);
 2. 概率账(触发/不触发/辖域双条件);
-3. 发射形态(整级预授权 + 变现序列 + 执行帧整批——「买一半」回归测试;
+3. 发射形态(凑金一卖 → 下一帧整批——「买一半」由发射原子性消解,
+   2026-10-17 迭代 design §2.2;授权不跨帧携带,键已退役;
    血本位不足零购买/血足整批发射;金不足攒钱模式;等级帽拒发);
 4. 保留语义(P72(3a) 保底金门/P21 危机带/FM-1 金支出出口);
 5. 【拟】槽与兜底(缺件集聚合口径 provisional 登记;P78-5 兜底豁免
@@ -54,7 +55,6 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
     levelup,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
-    LevelUpPreAuth,
     state_of,
 )
 
@@ -221,14 +221,14 @@ class TestProbAccount:
             provisional.reset('LEVELUP_MISSING_SET_AGG')
 
 
-# ===== 3. 发射形态(整级预授权 + 变现步;「买一半」回归测试)=====
+# ===== 3. 发射形态(单帧原子发射;「买一半」回归测试)=====
 
 
 class TestBatchEmission:
     def test_gold_short_full_batch_no_partial_buy(self):
         """金不足整批不买(line_and_upgrade §2.2 攒批资金口径):触发帧
         裸金与活期合计 < 整级批成本 + 花后金下界 → 一击不买(攒钱模式,
-        零升级动作、键不置)——禁按闸值截断击数的部分买(P48 整买
+        零升级动作)——禁按闸值截断击数的部分买(P48 整买
         (1) 辖域,「买一半」的对面断言)。"""
         gs, s = _frame(level=5, gold=12, bench=_stay_bench())
         _mark_handled(gs)
@@ -241,7 +241,6 @@ class TestBatchEmission:
         # (levelup_reserve_line_defer——攒批目标 = 整级成本 + 息线差额,
         # 保守侧);义务臂语境对照 = FM-1 溢余帧照发
         assert ct.get('levelup_reserve_line_defer') == 1
-        assert state_of(s).levelup_preauth is None
 
     def test_blood_insufficient_zero_buy_blood_sufficient_batch(self):
         """「买一半」缺陷回归测试(血本位局,line_and_upgrade §2.2 血本位
@@ -256,7 +255,6 @@ class TestBatchEmission:
         assert not [e for e in out
                     if isinstance(e.action, CwActionLevelUpParam)], \
             '血本位局血不足整级:零购买([40]② 血闸)'
-        assert state_of(s).levelup_preauth is None
         # 血足:整批发射
         gs2, s2 = _frame(level=5, gold=30, hp=100, bench=_stay_bench(),
                          actives=('奋斗协议',))
@@ -264,9 +262,7 @@ class TestBatchEmission:
         out2 = entry.emit(s2, None)
         ups = [e for e in out2 if isinstance(e.action, CwActionLevelUpParam)]
         assert ups and ups[0].action.clicks >= 1, \
-            '血足整级:整批发射(实付上界 = 授权血成本)'
-        assert state_of(s2).levelup_preauth is None, \
-            '血本位局无变现步:授权帧即执行帧'
+            '血足整级:整批发射(实付上界 = 发射时血成本;无变现步,授权帧即执行帧)'
 
     def test_level_cap_rejects(self):
         """等级帽拒发(注册表 level_max 单一源):满级帧零购买 +
@@ -284,8 +280,7 @@ class TestBatchEmission:
         实付上界 = 发射时授权值):帧 1(命中 ∧ 资金门金量不足,花后
         下界已过)→ 凑金每帧一卖(评估器升级凑金场景首位);帧 2(裸金
         足)→ 整批发射 + 清 handled 标记(发射完成重开通道,design
-        §2.2 第 1 条)。预授权键全程不签发(写端已退役,键读 T-4 清)。
-        三帧各一动作(单动作循环),帧间零商店域外金动作。"""
+        §2.2 第 1 条)。三帧各一动作(单动作循环),帧间零商店域外金动作。"""
         # lv7 整级批 = ⌈52/4⌉×4 = 52 金;裸金 51(< 52)+ 活期散件
         # ×4(c0/c1/c2/c4 各退 3,注册表外散件按保守估——不同名互不
         # 构成合成素材)→ 攒批 63 ≥ 52;花后 11 ≥ 保底金门 10;
@@ -302,7 +297,6 @@ class TestBatchEmission:
                                                  'CwActionSellDeployedParam')]
         assert sells1 and sells1[0].action.reason == 'levelup_liquidate', \
             '凑金帧:裸金不足 → 每帧一卖(评估器升级凑金场景)'
-        assert state_of(s).levelup_preauth is None, '授权不跨帧携带(键不签发)'
         # 帧 2(发射帧):缺口闭合(退金 3 → 54 ≥ 52)→ 单帧原子整批
         if isinstance(sells1[0].action, CwActionSellBenchParam):
             from sr_od.application.currency_war.kernel.cw_action_report.sell_bench import (
@@ -322,27 +316,8 @@ class TestBatchEmission:
         ups = [e for e in out2 if isinstance(e.action, CwActionLevelUpParam)]
         assert ups and ups[0].action.clicks == 13, \
             '发射帧:缺口闭合 → 购买经验整批(13 击 = ⌈52/4⌉,单帧原子)'
-        assert state_of(s).levelup_preauth is None, '授权不跨帧携带'
         assert state_of(s).shop_handled is None, \
             '发射完成清 handled 标记(升级后概率档已变,找牌/刷新需重评)'
-
-    def test_liquidation_exhausted_key_retained_zero_action(self):
-        """变现不足分支(§2.2 失败分支①):键在 ∧ 候选穷尽 ∧ 缺口未
-        闭合 → 零动作(键保留至节点末,幂等重评无试错计数;执行帧
-        不发射)——直接预键构造(授权帧后续形态的契约测试)。"""
-        from sr_od.application.currency_war.kernel.cw_game_state import Unit
-        gs, s = _frame(level=7, gold=40, bench=_stay_bench(),
-                       front_row=(Unit(char_id='花火', star=1),))
-        _mark_handled(gs)
-        state_of(s).levelup_preauth = LevelUpPreAuth(gold_cost=52,
-                                                     blood_cost=0)
-        out = entry.emit(s, None)
-        assert not [e for e in out
-                    if isinstance(e.action, (CwActionLevelUpParam,
-                                             CwActionSellBenchParam))], \
-            '候选穷尽(线内件不可变现):第 3 步零动作交回全扫'
-        assert state_of(s).levelup_preauth is not None, \
-            '键保留至节点末(失效出口 = 节点边界重置)'
 
 
 # ===== 4. 保留语义(P72(3a) floor / P21 / FM-1)=====
@@ -400,7 +375,26 @@ class TestRetainedGates:
             '停留门臂:花后金 < 息线差额保留 → 整批推迟(保守侧)'
         assert state_of(s).cw4_counters.get(
             'levelup_reserve_line_defer') == 1
-        assert state_of(s).levelup_preauth is None
+
+    def test_guarantee_floor_defer_counter(self):
+        """花后下界 defer 分键(义务臂 = 保底金门口径;七道资格门拒因
+        计数补全,2026-10-17 迭代 T-4):富余段臂命中 ∧ 花后金 < 保底
+        → defer 在册(levelup_guarantee_floor_defer,与优化臂的
+        levelup_reserve_line_defer 分键区分)。判定函数直测(计数写点 =
+        判定函数;emit 级同帧会被部署步发射截断,非本断言面)。"""
+        from sr_od.application.currency_war.kernel.cw_game_state import Unit
+        # must_spend 臂(51 > 息线 50);lv7 批 52,活期 3 件退 9 →
+        # 花后 51+9−52 = 8 < 10 → 保底金门拒。
+        bench = [_bc('c0', 1), _bc('c1', 1), _bc('c2', 1)]
+        gs, s = _frame(level=7, gold=51, bench=bench,
+                       front_row=(Unit(char_id='花火', star=1),))
+        verdict, arm, _clicks, _cost = levelup.upgrade_gate_verdict(
+            gs, s, counters=state_of(s).cw4_counters)
+        assert verdict == levelup.GATE_DEFER
+        assert state_of(s).cw4_counters.get('levelup_trigger_must_spend') \
+            == 1, '富余段臂触发在册(defer 元组不携臂,臂经触发计数证)'
+        assert state_of(s).cw4_counters.get(
+            'levelup_guarantee_floor_defer') == 1, '保底金门分键在册'
 
 
 # ===== 5. P78-5 兜底豁免消费循环拼装(design 契约 D 升级变现行)=====
@@ -415,7 +409,7 @@ class TestFundingHoldFallback:
         fallback_sell 分键;单一源 = sell_gate.funding_hold_fallback,
         消费循环只拼装)。design 契约 D 升级变现行豁免构成 = 义务账 ∨
         对象无损;义务账腿候选 = 人口位/arm0 骨架义务血统(review-34
-        F1 落码)。臂身份 = 本帧资格门判定臂(T-2 起不经预授权键携带)。"""
+        F1 落码)。臂身份 = 本帧资格门判定臂(键退役后无跨帧携带)。"""
         from sr_od.application.currency_war.kernel.cw_game_state import Unit
         # arm0 构帧:level 3 < deploy_cap 5 ∧ 上阵需求 5 > 3(部署 1 希儿
         # + 备战 4 线内未上);lv3 批 = 4 金,裸金 3 < 4;合成对 ×2(各退
@@ -434,7 +428,6 @@ class TestFundingHoldFallback:
             '腿①:义务臂兜底全量(主路径尽 → 核心件放行)'
         assert state_of(s).cw4_counters.get(
             'levelup_funding_fallback_sell') == 1
-        assert state_of(s).levelup_preauth is None, '授权不跨帧携带'
 
     def test_fallback_leg2_preference_arm_rejects_core(self):
         """P78-5′ 腿②(对象级无损维,验对象非验触发臂):偏好账臂
@@ -445,8 +438,8 @@ class TestFundingHoldFallback:
         偏好臂下结构性恒拒(levelup_fallback_leg_reject 分键 + 零动作;
         review-34 F1:校验两腿分派语义)。凑金语境构帧 = must_spend 臂
         (偏好账):溢余段触发 ∧ 裸金差一口 ∧ 合成对撑花后下界且主路径
-        尽。臂分派真值表经判定函数直测补全(臂身份 = 本帧判定臂,T-2 起
-        不经预授权键携带;stay/prob 臂的金量不足域受息线差额保留结构性
+        尽。臂分派真值表经判定函数直测补全(臂身份 = 本帧判定臂,键退役
+        后无跨帧携带;stay/prob 臂的金量不足域受息线差额保留结构性
         收窄,emit 级构帧不可达,直测承载)。"""
         from sr_od.application.currency_war.kernel.cw_game_state import Unit
         # must_spend 臂:lv7 批 52,裸金 51(> 息线 50 触发富余段臂);
@@ -463,7 +456,6 @@ class TestFundingHoldFallback:
             '腿②:偏好臂兜底核心件被拒(零动作)'
         assert state_of(s).cw4_counters.get('levelup_fallback_leg_reject') \
             == 1, '腿拒分键'
-        assert state_of(s).levelup_preauth is None, '授权不跨帧携带'
         # 两腿分派真值表(判定函数直测;义务臂全量 / 偏好账与缺省保守侧
         # 对 hold 核心恒拒):
         for arm, ok in ((levelup.ARM_POPULATION, True),

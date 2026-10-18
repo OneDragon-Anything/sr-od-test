@@ -209,7 +209,7 @@ def test_ju23_star2_stock_card_has_no_refund_backing_no_spend():
     商店收缩适配 → 3.6 会话重排再翻转 → 升级转场(迭代
     2026-10-17-levelup-shop-transition T-1,design §2.1):溢余帧
     (gold 100 > 息线)前置升级检查命中且可发射 → 首动作 = 关店
-    (升级转场,不置 handled 标记),店内不再发 CwActionLevelUpShopParam
+    (升级转场,不置 handled 标记),店内不再发升级动作
     (升级执行位迁备战画面);端到端零支出语义保持(转场关店零花费)。
     """
     cfg = SimpleNamespace(ev_arm='full')
@@ -231,7 +231,7 @@ def test_ju23_full_surface_gold_never_breaks_interest_line():
     = 50);息线下(≤50)整访问零支出(无误清);每访问都以 CwActionCloseShopParam
     收束且有界迭代(无死守环)。溢余帧(>50)经升级意图出口转场关店
     收束(2026-10-17 迭代 T-1,design §2.1——店内升级发射退役,
-    CwActionLevelUpShopParam 不再出现在动作面;若复现即 else 分支响亮红)。
+    升级动作不再出现在店内动作面;若复现即 else 分支响亮红)。
     恒买腾席适配(ADR-0580):店卡改用真无关件(局23杂件,非④放行集/
     registry 核心)——原探针花火 ∈ TRANSITION_PACK carry,未锁双轨
     P1 帧会被 ④转线放行臂在息线下买入(1★ 全额退 = 可逆资产,裁定

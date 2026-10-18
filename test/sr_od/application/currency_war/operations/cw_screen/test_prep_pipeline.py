@@ -457,7 +457,7 @@ class TestStep2Ore:
 
 
 class TestStep3LevelUp:
-    """第 3 步升级测试(line_and_upgrade §2:五臂判据 + 整级预授权——
+    """第 3 步升级测试(line_and_upgrade §2:五臂判据 + 单帧原子发射——
     判据单帧测试主文件 = test_levelup_prob_axis.py,本类只校验工序接线
     形态)。"""
 

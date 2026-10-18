@@ -131,7 +131,7 @@ def _transition_scan(journal_rows: list) -> dict:
 #: 开局/读数开店/关店/出战属流程噪声不计。
 _ACTION_OPS: frozenset[str] = frozenset({
     'CwActionBuyCardParam', 'CwActionSellBenchParam',
-    'CwActionLevelUpParam', 'CwActionLevelUpShopParam',
+    'CwActionLevelUpParam',
     'CwActionDeployMoveParam', 'CwActionWearEquipParam',
     'CwActionCollectOreParam', 'CwActionRefreshShopParam',
     'CwActionSellDeployedParam',
@@ -139,15 +139,12 @@ _ACTION_OPS: frozenset[str] = frozenset({
 
 
 def _xp_spend_of(item: dict) -> int:
-    """单条升级 receipt 的花金(整批 = detail「花金N」;店内 = cost×clicks)。"""
+    """单条升级 receipt 的花金(整批 = detail「花金N」)。"""
     import re
     op = str(item.get('op') or '')
     if op == 'CwActionLevelUpParam':
         m = re.search(r'花金(\d+)', str(item.get('detail') or ''))
         return int(m.group(1)) if m else 0
-    if op == 'CwActionLevelUpShopParam':
-        act = item.get('action') or {}
-        return int(act.get('cost') or 0) * int(act.get('clicks') or 0)
     return 0
 
 

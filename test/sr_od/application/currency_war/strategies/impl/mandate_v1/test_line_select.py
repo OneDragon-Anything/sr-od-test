@@ -58,7 +58,6 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
     MandateV1Strategy,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
-    LevelUpPreAuth,
     ShopOpportunity,
     state_of,
 )
@@ -525,7 +524,7 @@ def _sess_with_node(plane: int, round_num: int):
 class TestNodeBoundaryReset:
 
     def test_boundary_resets_registered_keys_then_dedupes(self):
-        """清单四项重置键在节点号变化时按表复位;同节点号重复调用不
+        """清单重置键在节点号变化时按表复位;同节点号重复调用不
         重复执行(哨兵存活 = 判重跳过);节点号再变 → 再次执行。"""
         sess, gs = _sess_with_node(1, 2)
         st = state_of(gs)
@@ -533,13 +532,11 @@ class TestNodeBoundaryReset:
         st.shop_opportunities = (ShopOpportunity(
             card_name='x', blocked_by='bench_full', price=1,
             order_class='seq1'),)
-        st.levelup_preauth = LevelUpPreAuth(gold_cost=10, blood_cost=0)
         st.line_eval_signature = ('stale',)
         handle_node_boundary(gs)
         assert st.shop_handled is None          # ①标记清值
         assert st.shop_opportunities == ()      # ②清单清空
-        assert st.levelup_preauth is None       # ③预授权键清零
-        assert st.line_eval_signature is None   # ④签名置失效
+        assert st.line_eval_signature is None   # ③签名置失效
         assert st.node_boundary_last_pos == (1, 2)
         # 判重:同节点号重复调用不重复执行
         st.shop_handled = (1, 2)
@@ -672,20 +669,19 @@ class TestLineRefreshSkeleton:
 class TestLineLockSkeleton:
 
     def test_write_lock_side_effects_and_readonly(self):
-        """锁定写入联动三件(清预授权键/清商店标记/候选快照清空并停算)
-        + 锁后只读(重复写入不改锁定线)。"""
+        """锁定写入联动两件(清商店标记/候选快照清空并停算)
+        + 锁后只读(重复写入不改锁定线)。
+        (旧预授权键连带清键随 2026-10-17 迭代 T-4 键退役删除。)"""
         sess = StrategySession()
         gs = cw4_gs(sess, plane=1, round_num=2, node='prep')
         st = state_of(gs)
         comp = cw4_comp()
-        st.levelup_preauth = LevelUpPreAuth(gold_cost=10, blood_cost=0)
         st.shop_handled = (1, 2)
         st.line_candidates = ('候选态',)   # 锁定前的非空候选态
         write_line_lock(gs, comp.name)
         assert st.target_comp is comp           # 锁定线槽写入(解析产物)
-        assert st.levelup_preauth is None   # ①清升级预授权键
-        assert st.shop_handled is None      # ②清商店会话标记
-        assert st.line_candidates == ()     # ③候选快照清空
+        assert st.shop_handled is None      # ①清商店会话标记
+        assert st.line_candidates == ()     # ②候选快照清空
         # 停算:签名变化后重算不再写入快照(恒空)
         gs.node_hist_pos = (1, 3)
         refresh_line_if_needed(gs)

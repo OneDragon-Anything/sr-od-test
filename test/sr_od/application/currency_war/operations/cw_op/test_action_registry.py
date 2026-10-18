@@ -33,7 +33,6 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionDeployMoveParam,
     CwActionFurnaceUseParam,
     CwActionLevelUpParam,
-    CwActionLevelUpShopParam,
     CwActionLuckyTokenUseParam,
     CwActionObsParam,
     CwActionOpenBookcardParam,
@@ -218,7 +217,6 @@ def test_prep_terminal_set_matches_registry_terminal_attrs():
         CwActionCollectOreParam(points=((1, 2),)),
         CwActionOpenTomeParam(),
         CwActionLevelUpParam(cost=4),
-        CwActionLevelUpShopParam(cost=4),
         CwActionFurnaceUseParam(target_kind='char', row='front', slot=1),
         CwActionWrenchUseParam(row='front', slot=1),
         CwActionLuckyTokenUseParam(row='front', slot=1),
@@ -287,10 +285,9 @@ def test_pick_rows_resolve_class_and_instance_consistently():
 
 
 def test_class_level_isa_fallback_matches_instance_query():
-    """is-a 兜底语义同注册表:CwActionLevelUpShopParam is-a
-    CwActionLevelUpParam,类级首中 CwActionLevelUpParam 行 →
-    PrepLevelUpOp,与实例级查询一致。"""
-    assert action_op_class_for_type(CwActionLevelUpShopParam) is CwActionLevelUpOp
+    """类级解析与实例级查询同 op(CwActionLevelUpParam 行 →
+    CwActionLevelUpOp;双类型 is-a 兜底形态已随词表退役,本测试锁
+    单类型类级/实例级一致性)。"""
     assert action_op_class_for_type(CwActionLevelUpParam) is CwActionLevelUpOp
 
 

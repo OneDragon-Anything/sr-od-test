@@ -158,12 +158,12 @@ class TestCandidatePoolFamilies:
         return sess, gs
 
     def test_bench_only_scenes_exclude_field_zone(self):
-        """腾槽族/店内族 = 仅备战席:场上件不入池(即使无关),备战席内
+        """腾槽族 = 仅备战席:场上件不入池(即使无关),备战席内
         线内件(瓦尔特)被常规面线内排除;bench idx = 紧缩占席序(占位件
         占 0 号下标)。"""
         _sess, gs = self._pool_gs()
         for scene in ('ore_make_room', 'shop_swap', 'session_funding',
-                      'c1_make_room', 'levelup_liquidate_shop'):
+                      'c1_make_room'):
             cands, why = evaluate_sell_candidates(gs, scene)
             assert why == ''
             assert _names(cands) == ['刻律德菈'], scene
@@ -397,14 +397,14 @@ class TestEmptyBoardGuard:
 class TestChannelRemap:
 
     def test_scene_table_covers_legacy_channels(self):
-        """通道重映射行完整性:凑息→节末凑息 / 筹资→会话内筹资+升级变现
-        两域 / m4_fuel→晶矿;line_switch→退役不接(无场景消费该通道,
+        """通道重映射行完整性:凑息→节末凑息 / 筹资→会话内筹资+备战升级
+        凑金 / m4_fuel→晶矿;line_switch→退役不接(无场景消费该通道,
         部署换血 legacy_channel=None 走现行 swap 判据);projection→
-        保留不动(不进评估器场景表)。"""
+        保留不动(不进评估器场景表)。店内侧升级变现场景已随 2026-10-17
+        迭代 T-4 退役删除(筹资通道场景集随单域收窄)。"""
         assert SCENE_SPECS['node_end_interest'].legacy_channel == 'interest'
         assert SCENE_SPECS['session_funding'].legacy_channel == 'funding'
         assert SCENE_SPECS['levelup_liquidate_prep'].legacy_channel == 'funding'
-        assert SCENE_SPECS['levelup_liquidate_shop'].legacy_channel == 'funding'
         assert SCENE_SPECS['ore_make_room'].legacy_channel == 'm4_fuel'
         assert SCENE_SPECS['deploy_swap'].legacy_channel is None
         assert 'line_switch' not in {s.legacy_channel for s in
@@ -418,7 +418,7 @@ class TestChannelRemap:
         for spec in SCENE_SPECS.values():
             if spec.legacy_channel is not None:
                 assert spec.legacy_channel in SELL_CHANNELS
-        assert len(SELL_SCENARIOS) == 9   # 八场景(升级变现分域两行)
+        assert len(SELL_SCENARIOS) == 8   # 八场景(店内侧变现行已退役)
 
 
 # ============================================================

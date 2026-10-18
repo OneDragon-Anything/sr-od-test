@@ -737,6 +737,55 @@ class TestPrepRandomizedReopen:
         assert gs.shop_randomized_pending is False, '节点边界清信号'
 
 
+# ============================================================ 刷新整级预留保护
+# (迭代 2026-10-17-levelup-shop-transition T-4,design §2.5③:载体从
+# 预授权键读迁移为升级资格门判据现值同帧重评——判据命中且资金门金量
+# 不足〔攒批等待帧〕时 reserve 含整级差额,刷新不烧升级资金。键载体
+# 时代该保护在 T-2 后实质失活,本用例 = 失活窗口收口的直接证据。)
+
+
+class TestLevelupReserveGuard:
+
+    def test_stockpile_wait_frame_refresh_blocked_by_reserve(self):
+        """攒批等待帧刷新被整级预留拦下(双断言:花后下界过 + 整级差额
+        翻转预算门):lv8 批 72,金 56——花后 56+27−72 = 11 ≥ 保底 10
+        (资格门过到资金门)∧ 裸金 56 < 72(攒批等待)→ reserve = g* 50
+        + ρ 2 + 整级差额 16 = 68 > 金 56 → r2 预算门拒(基线 reserve 52
+        时 56−52 = 4 ≥ 刷价 2 本可通过——拦下归因整级预留,非基线门)。
+        对照帧(活期抽干 → 花后下界不过 → 非攒批等待帧)同金位照常刷新。
+        """
+        # 攒批等待帧:合成对 ×4 + 单件 c4 = 9 件活期(退 27),线上仅
+        # 部署 1 花火 → must_spend 臂(56 > 息线 50),主路径尽。
+        bench = [(n, 1) for n in ('c0', 'c0', 'c1', 'c1', 'c2', 'c2',
+                                  'c3', 'c3', 'c4')]
+        live, sess, gs, st = _frame(level=8, gold=56, plane=2, hist=(2, 1),
+                                    node_kind='battle',
+                                    bench=bench, deployed=['花火'],
+                                    shop_cards=[])
+        act = live.decide_shop_action()
+        assert isinstance(act, CwActionCloseShopParam), act
+        assert st.cw4_counters.get('levelup_stockpile_wait') == 1, \
+            '花后下界已过(资格门走到资金门金量不足 = 攒批等待)'
+        assert st.cw4_counters.get('must_spend_r1_budget_fail') == 1, \
+            '整级差额翻转 r2 预算门(基线可通过,拦下归因预留)'
+        assert not isinstance(act, CwActionRefreshShopParam)
+        # 对照帧:同金位同等级,活期换线内/保护件(退 0)→ 花后 56−72
+        # = −16 < 保底 10 → 资格门先拒(非攒批等待)→ 无预留 → 基线
+        # 预算门过 → 刷新照常发出(花火 1★×2 全局面合成对撑 P92 通道)。
+        bench2 = [(n, 1) for n in ('花火', '花火', '瓦尔特', '符玄', '缇宝',
+                                   '刻律德菈', '三月七', '姬子·启行',
+                                   '千冶·刃')]
+        live2, sess2, gs2, st2 = _frame(level=8, gold=56, plane=2,
+                                        hist=(2, 1), node_kind='battle',
+                                        bench=bench2, deployed=['瓦尔特'],
+                                        shop_cards=[])
+        act2 = live2.decide_shop_action()
+        assert isinstance(act2, CwActionRefreshShopParam), \
+            f'非攒批帧无预留:刷新照常(基线预算门过)={act2!r}'
+        assert act2.reason == 'star_target'
+        assert st2.cw4_counters.get('levelup_stockpile_wait', 0) == 0
+
+
 # ============================================================ 刷新终结语义回归
 
 
