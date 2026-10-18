@@ -110,9 +110,10 @@ def _fuel(count: int, exclude: tuple[str, ...] = ()) -> list[str]:
 
 def _frame(*, gold: int = 60, bench=(), deployed=(), shop_cards=(),
            level: int = 3, plane: int = 1, round_num: int = 3,
-           node_kind: str = 'reward', comp=None, hist=None):
+           node_kind: str = 'reward', comp=None, hist=None,
+           hp: int = 60, actives: tuple = (), xp: tuple | None = None):
     """商店决策帧(直构;金位账面/边界判重随种子稳态钉位;hist 直赋
-    node_hist_pos 位面水位线)。"""
+    node_hist_pos 位面水位线;hp/actives/xp 供资格门逐道用例构帧)。"""
     sess = StrategySession(rng=random.Random('cw-36-loop'))
     st = state_of(sess)
     st.cw4_counters = {}
@@ -126,12 +127,18 @@ def _frame(*, gold: int = 60, bench=(), deployed=(), shop_cards=(),
     from sr_od.application.currency_war.kernel.cw_economy import (
         XP_TO_NEXT_LEVEL,
     )
-    if level in XP_TO_NEXT_LEVEL:
+    if xp is not None:
+        gs.write_logic(gs.xp, xp, produced_by='cw-36-loop',
+                       sig=_LOGIC_SIG)
+    elif level in XP_TO_NEXT_LEVEL:
         gs.write_logic(gs.xp, (0, XP_TO_NEXT_LEVEL[level]),
                        produced_by='cw-36-loop', sig=_LOGIC_SIG)
     gs.write_logic(gs.gold, gold, produced_by='cw-36-loop',
                    sig=_LOGIC_SIG)
-    gs.observe(gs.hp, 60, evidence='cw-36-loop', sig=_OBS_SIG)
+    gs.observe(gs.hp, hp, evidence='cw-36-loop', sig=_OBS_SIG)
+    if actives:
+        gs.observe(gs.active_strategies, list(actives),
+                   evidence='cw-36-loop', sig=_OBS_SIG)
     slots = [BenchSlot(kind='unit', unit=Unit(char_id=n, star=s))
              for n, s in bench]
     gs.write_logic(gs.bench, BenchView(slots=slots, capacity=9),
@@ -578,11 +585,13 @@ class TestReopenTriggers:
 
 class TestUpgradeIntentExit:
 
-    def _stay_frame(self, *, gold: int, level: int = 5):
+    def _stay_frame(self, *, gold: int, level: int = 5,
+                    hp: int = 60, actives: tuple = (),
+                    xp: tuple | None = None):
         """停留门构帧:锁定线(列车同行)+ 辅助达标(三月七 2★/瓦尔特
         1★/花火 2★),唯一未完成星级目标 = 姬子·启行(3 费,概率带
         (7,7))——level 5 < 带下界 → 停留门升级优先臂确定触发
-        (非奖励帧,资格门①不拦)。"""
+        (非奖励帧,资格门①不拦)。hp/actives/xp 供资格门④⑥⑦构帧。"""
         comp = COMP_LIBRARY[0]
         carry = comp.core_chars[0]
         aux = [m for m in sorted(_LINE) if m != carry]
@@ -591,7 +600,7 @@ class TestUpgradeIntentExit:
                       node_kind='battle', comp=comp,
                       bench=[(m, need.get(m, 1)) for m in aux],
                       deployed=[aux[0]],
-                      shop_cards=[])
+                      shop_cards=[], hp=hp, actives=actives, xp=xp)
 
     def test_hit_emissible_transition_close_without_mark(self):
         """命中 ∧ 可发射 → 关店转场且不置 handled 标记(design §2.1
@@ -645,6 +654,87 @@ class TestUpgradeIntentExit:
         assert st.cw4_counters.get('levelup_transition_close', 0) == 0
         assert isinstance(act, CwActionCloseShopParam)
         assert st.shop_handled is not None
+
+    def test_gate_p21_crisis_frame_defers(self):
+        """资格门④P21 危机带帧:命中(停留门臂)∧ 濒死带(hp 10)∧
+        富余段域外 → 停付让位(拒因在册),会话照常收工置标记。"""
+        live, sess, gs, st = self._stay_frame(gold=30, hp=10)
+        act = live.decide_shop_action()
+        assert st.cw4_counters.get('levelup_trigger_stay_gate') == 1
+        assert st.cw4_counters.get('levelup_crisis_defer') == 1
+        assert st.cw4_counters.get('levelup_transition_close', 0) == 0
+        assert isinstance(act, CwActionCloseShopParam)
+        assert st.shop_handled is not None
+
+    def test_gate_blood_gate_frame_defers_and_control(self):
+        """资格门⑥血本位局血闸:血本位局(奋斗协议)∧ 血余额 < 整级
+        血成本 → 不发射(拒因在册);对照血足帧 → 可发射转场关店。"""
+        live, sess, gs, st = self._stay_frame(gold=80, hp=10,
+                                              actives=('奋斗协议',))
+        live.decide_shop_action()
+        assert st.cw4_counters.get('levelup_blood_gate_defer') == 1
+        assert st.cw4_counters.get('levelup_transition_close', 0) == 0
+        assert st.shop_handled is not None
+        # 对照:血余额足 → 全链通过 → 转场关店(不置标记)。
+        live2, sess2, gs2, st2 = self._stay_frame(gold=80, hp=100,
+                                                  actives=('奋斗协议',))
+        act2 = live2.decide_shop_action()
+        assert isinstance(act2, CwActionCloseShopParam), act2
+        assert st2.cw4_counters.get('levelup_transition_close') == 1
+        assert st2.shop_handled is None
+
+    def test_gate_zero_clicks_frame_defers(self):
+        """资格门⑦击数 > 0:XP 已满当前级(击数 0)→ 无批可发(拒因
+        在册),会话照常收工置标记。"""
+        live, sess, gs, st = self._stay_frame(gold=80, xp=(20, 20))
+        act = live.decide_shop_action()
+        assert st.cw4_counters.get('levelup_zero_clicks_defer') == 1
+        assert st.cw4_counters.get('levelup_transition_close', 0) == 0
+        assert isinstance(act, CwActionCloseShopParam)
+        assert st.shop_handled is not None
+
+
+# ============================================================ 备战随机态重开位
+# (迭代 2026-10-17-levelup-shop-transition design §2.2 第 1 步/§2.4:
+# 信号宿主 = GameState 簿记槽 shop_randomized_pending;写端 = T-3 商业
+# 间谍升级回调,本阶段恒 False = 零行为,读端 + 清位先行。)
+
+
+class TestPrepRandomizedReopen:
+
+    def test_signal_reopens_shop_clearing_mark_and_signal(self):
+        """信号在 → 清 handled 标记 + 开店进店 + 清信号(第 1 步重开位,
+        置于溢出自救之后、资源动作之前);无信号帧零重开行为(不截胡
+        工序,开店仍由第 5 步商店会话承接)。"""
+        live, sess, gs, st = _frame(gold=60, node_kind='reward',
+                                    shop_cards=[])
+        # 无信号:零重开行为(首段 emit 无重开位开店铺)。
+        out0 = entry.emit(sess, None)
+        assert not [e for e in out0
+                    if e.reason == 'step1_shop_randomized_reopen'], out0
+        # 信号在(测试直种;生产写端 = T-3 商业间谍升级回调):重开位消费。
+        session_scope.mark_shop_handled(gs)
+        assert session_scope.shop_handled_for_current_node(gs)
+        gs.shop_randomized_pending = True
+        out = entry.emit(sess, None)
+        assert out and out[0].reason == 'step1_shop_randomized_reopen', out
+        assert isinstance(out[0].action, CwActionOpenShopParam)
+        assert st.shop_handled is None, '重开位清 handled 标记'
+        assert gs.shop_randomized_pending is False, '重开位消费后清信号'
+
+    def test_node_boundary_sweeps_signal(self):
+        """节点边界清扫:信号残留跨节点 = 旧牌面语义死亡,边界函数清位
+        (design §2.4 清位两出口之二)。"""
+        _live, _sess, gs, _st = _frame(gold=60, node_kind='reward',
+                                       shop_cards=[])
+        gs.shop_randomized_pending = True
+        gs.write_logic(gs.node, NodeKey(plane=1, round_num=4,
+                                        kind='reward'),
+                       produced_by='cw-36-loop', sig=_LOGIC_SIG)
+        gs.observe(gs.node_pos, (1, 4), evidence='cw-36-loop',
+                   sig=_OBS_SIG)
+        session_scope.handle_node_boundary(gs)
+        assert gs.shop_randomized_pending is False, '节点边界清信号'
 
 
 # ============================================================ 刷新终结语义回归

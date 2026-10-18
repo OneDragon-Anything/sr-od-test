@@ -279,30 +279,31 @@ class TestBatchEmission:
         assert state_of(s).cw4_counters.get('levelup_reject_level_cap') == 1
 
     def test_authorize_liquidate_then_execute_batch(self):
-        """整级预授权 + 变现序列 + 执行帧整批(§2.2 跨帧两阶段):
-        授权帧(裸金 < 批成本 ≤ 裸金+活期)→ 置键 + 首卖(非线内 1★
-        活期,让位序);变现帧逐笔卖出至缺口闭合;执行帧发购买经验
-        整批(实付上界 = 授权值)→ 清键。三帧各一动作(单动作循环),
-        帧间零商店域外金动作。"""
+        """凑金一卖 → 下一帧整批发射(2026-10-17 迭代 T-2 单帧原子形态,
+        design §2.2:授权不再跨帧携带——「买一半」由发射原子性消解,
+        实付上界 = 发射时授权值):帧 1(命中 ∧ 资金门金量不足,花后
+        下界已过)→ 凑金每帧一卖(评估器升级凑金场景首位);帧 2(裸金
+        足)→ 整批发射 + 清 handled 标记(发射完成重开通道,design
+        §2.2 第 1 条)。预授权键全程不签发(写端已退役,键读 T-4 清)。
+        三帧各一动作(单动作循环),帧间零商店域外金动作。"""
         # lv7 整级批 = ⌈52/4⌉×4 = 52 金;裸金 51(< 52)+ 活期散件
         # ×4(c0/c1/c2/c4 各退 3,注册表外散件按保守估——不同名互不
-        # 构成合成素材)→ 攒批 63 ≥ 52;花后 11 ≥ 保底金门 10;义务臂
-        # (溢余段 51 > 息线 50)辖。
+        # 构成合成素材)→ 攒批 63 ≥ 52;花后 11 ≥ 保底金门 10;
+        # 溢余段 51 > 息线 50 → must_spend 臂辖。
         from sr_od.application.currency_war.kernel.cw_game_state import Unit
         bench = _stay_bench() + [_bc(n, 1) for n in ('c0', 'c1', 'c2', 'c4')]
         gs, s = _frame(level=7, gold=51, bench=bench,
                        front_row=(Unit(char_id='板上件锚', star=1),))
         _mark_handled(gs)
-        # 帧 1(授权帧):置键 + 首卖(评估器升级变现场景,让位序首件)
+        # 帧 1(凑金帧):命中 ∧ 裸金不足 → 一卖(评估器升级凑金场景)
         out1 = entry.emit(s, None)
         sells1 = [e for e in out1
                   if type(e.action).__name__ in ('CwActionSellBenchParam',
                                                  'CwActionSellDeployedParam')]
         assert sells1 and sells1[0].action.reason == 'levelup_liquidate', \
-            '授权帧:裸金不足 → 置键 + 变现序列首卖(让位序首件)'
-        pre = state_of(s).levelup_preauth
-        assert pre is not None and pre.gold_cost == 52, '授权批成本 = 整级'
-        # 帧 2(变现帧):缺口闭合(退金 3 → 54 ≥ 52)→ 执行帧整批 + 清键
+            '凑金帧:裸金不足 → 每帧一卖(评估器升级凑金场景)'
+        assert state_of(s).levelup_preauth is None, '授权不跨帧携带(键不签发)'
+        # 帧 2(发射帧):缺口闭合(退金 3 → 54 ≥ 52)→ 单帧原子整批
         if isinstance(sells1[0].action, CwActionSellBenchParam):
             from sr_od.application.currency_war.kernel.cw_action_report.sell_bench import (
                 report_action_sell_bench_param,
@@ -320,8 +321,10 @@ class TestBatchEmission:
         out2 = entry.emit(s, None)
         ups = [e for e in out2 if isinstance(e.action, CwActionLevelUpParam)]
         assert ups and ups[0].action.clicks == 13, \
-            '执行帧:缺口闭合 → 购买经验整批(13 击 = ⌈52/4⌉)'
-        assert state_of(s).levelup_preauth is None, '执行帧发射后清键'
+            '发射帧:缺口闭合 → 购买经验整批(13 击 = ⌈52/4⌉,单帧原子)'
+        assert state_of(s).levelup_preauth is None, '授权不跨帧携带'
+        assert state_of(s).shop_handled is None, \
+            '发射完成清 handled 标记(升级后概率档已变,找牌/刷新需重评)'
 
     def test_liquidation_exhausted_key_retained_zero_action(self):
         """变现不足分支(§2.2 失败分支①):键在 ∧ 候选穷尽 ∧ 缺口未
@@ -406,19 +409,24 @@ class TestRetainedGates:
 class TestFundingHoldFallback:
     def test_fallback_leg1_duty_arm_emits_core(self):
         """P78-5′ 腿①(义务血统臂,验臂):arm0 触发的升级,兜底全量
-        消费——主路径尽 ∧ 缺口未闭合时 hold 核心件(三月七,非锁定线
-        成员)经 funding_hold_fallback 放行、单笔即止(levelup_funding_
+        消费——凑金语境(命中 ∧ 金量不足,花后下界已过)下主路径尽
+        (线内/保护/合成对全排除)∧ hold 核心件(三月七,非锁定线成员)
+        经 funding_hold_fallback 放行、单笔即止(levelup_funding_
         fallback_sell 分键;单一源 = sell_gate.funding_hold_fallback,
         消费循环只拼装)。design 契约 D 升级变现行豁免构成 = 义务账 ∨
         对象无损;义务账腿候选 = 人口位/arm0 骨架义务血统(review-34
-        F1 落码)。"""
+        F1 落码)。臂身份 = 本帧资格门判定臂(T-2 起不经预授权键携带)。"""
         from sr_od.application.currency_war.kernel.cw_game_state import Unit
-        bench = _stay_bench() + [_bc('三月七', 1)]   # hold 核心,非线内
-        gs, s = _frame(level=7, gold=50, bench=bench,
-                       front_row=(Unit(char_id='花火', star=1),))
+        # arm0 构帧:level 3 < deploy_cap 5 ∧ 上阵需求 5 > 3(部署 1 希儿
+        # + 备战 4 线内未上);lv3 批 = 4 金,裸金 3 < 4;合成对 ×2(各退
+        # 3)供花后下界(3+12−4 = 11 ≥ 10)且被素材守卫逐出主路径 →
+        # 主路径尽,兜底池唯三月七(贯穿件,腿①义务臂全量放行)。
+        bench = [_bc(n, 1) for n in ('花火', '符玄', '缇宝', '刻律德菈')]
+        bench += [_bc('三月七', 1), _bc('c0', 1), _bc('c0', 1),
+                  _bc('c1', 1), _bc('c1', 1)]
+        gs, s = _frame(level=3, gold=3, deploy_cap=5, bench=bench,
+                       front_row=(Unit(char_id='希儿', star=1),))
         _mark_handled(gs)
-        state_of(s).levelup_preauth = LevelUpPreAuth(
-            gold_cost=51, blood_cost=0, source_arm=levelup.ARM_ARM0)
         out = entry.emit(s, None)
         sells = [e for e in out
                  if isinstance(e.action, CwActionSellBenchParam)]
@@ -426,6 +434,7 @@ class TestFundingHoldFallback:
             '腿①:义务臂兜底全量(主路径尽 → 核心件放行)'
         assert state_of(s).cw4_counters.get(
             'levelup_funding_fallback_sell') == 1
+        assert state_of(s).levelup_preauth is None, '授权不跨帧携带'
 
     def test_fallback_leg2_preference_arm_rejects_core(self):
         """P78-5′ 腿②(对象级无损维,验对象非验触发臂):偏好账臂
@@ -433,26 +442,37 @@ class TestFundingHoldFallback:
         「不做会输」= 偏好账)触发的升级,兜底变卖核心/④件被拒——
         被放行对象须持有账 ≈ 0(非核心/非④件 ∧ 非种子);funding_
         hold_fallback 兜底池 ⊆ hold 核心集(池条件 = holds ∩ A 排除),
-        偏好臂下结构性恒拒(levelup_fallback_leg_reject 分键 + 键
-        保留零动作;review-34 F1:校验两腿分派语义)。"""
+        偏好臂下结构性恒拒(levelup_fallback_leg_reject 分键 + 零动作;
+        review-34 F1:校验两腿分派语义)。凑金语境构帧 = must_spend 臂
+        (偏好账):溢余段触发 ∧ 裸金差一口 ∧ 合成对撑花后下界且主路径
+        尽。臂分派真值表经判定函数直测补全(臂身份 = 本帧判定臂,T-2 起
+        不经预授权键携带;stay/prob 臂的金量不足域受息线差额保留结构性
+        收窄,emit 级构帧不可达,直测承载)。"""
         from sr_od.application.currency_war.kernel.cw_game_state import Unit
-        bench = _stay_bench() + [_bc('三月七', 1)]
-        gs, s = _frame(level=7, gold=50, bench=bench,
+        # must_spend 臂:lv7 批 52,裸金 51(> 息线 50 触发富余段臂);
+        # 合成对 ×3(退 18)撑花后 51+18−52 = 17 ≥ 10 且被逐出主路径;
+        # 兜底池唯三月七(贯穿件)→ 腿②拒(持有账 > 0)。
+        bench = [_bc('三月七', 1), _bc('c0', 1), _bc('c0', 1),
+                 _bc('c1', 1), _bc('c1', 1), _bc('c2', 1), _bc('c2', 1)]
+        gs, s = _frame(level=7, gold=51, bench=bench,
                        front_row=(Unit(char_id='花火', star=1),))
         _mark_handled(gs)
-        for arm in (levelup.ARM_STAY_GATE, levelup.ARM_PROB_ACCOUNT,
-                    levelup.ARM_MUST_SPEND, ''):
-            st2 = state_of(s)
-            st2.levelup_preauth = LevelUpPreAuth(
-                gold_cost=51, blood_cost=0, source_arm=arm)
-            out = entry.emit(s, None)
-            assert not [e for e in out
-                        if isinstance(e.action, CwActionSellBenchParam)], \
-                f'腿②:{arm or "无臂身份(保守侧)"} 臂兜底核心件被拒'
-            assert st2.cw4_counters.get('levelup_fallback_leg_reject') \
-                == (1 if arm else 1), f'{arm}:腿拒分键'
-            st2.cw4_counters.clear()
-            st2.levelup_preauth = None
+        out = entry.emit(s, None)
+        assert not [e for e in out
+                    if isinstance(e.action, CwActionSellBenchParam)], \
+            '腿②:偏好臂兜底核心件被拒(零动作)'
+        assert state_of(s).cw4_counters.get('levelup_fallback_leg_reject') \
+            == 1, '腿拒分键'
+        assert state_of(s).levelup_preauth is None, '授权不跨帧携带'
+        # 两腿分派真值表(判定函数直测;义务臂全量 / 偏好账与缺省保守侧
+        # 对 hold 核心恒拒):
+        for arm, ok in ((levelup.ARM_POPULATION, True),
+                        (levelup.ARM_ARM0, True),
+                        (levelup.ARM_MUST_SPEND, False),
+                        (levelup.ARM_STAY_GATE, False),
+                        (levelup.ARM_PROB_ACCOUNT, False),
+                        ('', False)):
+            assert entry._fallback_legs_ok(s, gs, arm, '三月七') is ok, arm
 
 
     def test_population_arm_triggers(self):

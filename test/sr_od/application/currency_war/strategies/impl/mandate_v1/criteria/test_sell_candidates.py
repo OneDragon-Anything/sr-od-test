@@ -533,3 +533,118 @@ class TestFundingItemSlotGate:
     # 「门序测试」已删(同凑息通道判):滤门禁用变异下 star=2 占位件
     # 输入仍被星门(criteria/sell.py 内 b.star != 1)同样拒——序不可观测,
     # 测试零拦截价值;滤门回归由星=1 测试实际拦截(变异红证)。
+
+
+# ===== 升级凑金排序键①②③(2026-10-17 迭代 design §2.2 场景级覆盖) =====
+
+
+class TestLevelupPrepSortKeys:
+
+    def _pick(self, cost: int, taken: set[str]) -> str:
+        """按费用档选干净凑金候选名(非锁定线/非贯穿件/非核心/非四体系/
+        非引擎/无挂后台效果;注册表现算防漂移)。"""
+        from sr_od.application.currency_war.kernel.cw_card_identity import (
+            is_engine_piece,
+        )
+        from sr_od.application.currency_war.kernel.cw_comps import (
+            CORE_SINGLE_CARD_REGISTRY,
+        )
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.protection import (
+            CROSS_LINE_KEEP_NAMES,
+            four_system_members,
+        )
+        _line = {'姬子·启行', '三月七', '花火', '瓦尔特'}
+        for name, ch in CHARACTERS.items():
+            if ch.cost != cost or name in taken:
+                continue
+            if (name in _line or name in CROSS_LINE_KEEP_NAMES
+                    or name in CORE_SINGLE_CARD_REGISTRY
+                    or name in four_system_members()
+                    or is_engine_piece(name)
+                    or getattr(ch, 'bench_effect', '')):
+                continue
+            return name
+        raise AssertionError(f'注册表缺 {cost} 费干净候选名(选名锚失效)')
+
+    def _prep_frame(self, lock: bool):
+        """P2 凑金构帧(锁定帧 = 便宜目标持有达标,唯一未完成星级目标 =
+        姬子·启行 3 费 → 排序键①目标费用 = 3;无锁帧 = 无停留目标 →
+        ①键不分组,且不携带线内持有——非贯穿件线内件在无锁定语境会
+        入池污染序断言)。候选名注册表现算,返回 (sess, gs, names)。"""
+        from sr_od.application.currency_war.strategies.impl.mandate_v1.session_scope import (
+            handle_node_boundary,
+            write_line_lock,
+        )
+        taken: set[str] = set()
+
+        def _pick2(cost: int) -> str:
+            name = self._pick(cost, taken | {'姬子·启行'})
+            taken.add(name)
+            return name
+
+        a = _pick2(1)
+        b = _pick2(5)
+        c = _pick2(3)
+        bench = [cw4_bc(a), cw4_bc(a, 2), cw4_bc(b), cw4_bc(c), cw4_bc(c, 2)]
+        if lock:
+            # 便宜目标持有达标(2★/2★/1★ = 各自 need_star)→ 唯一未完成
+            # 星级目标 = 姬子·启行;三件线内(锁定线名单)不入候选池。
+            bench = [cw4_bc('三月七', 2), cw4_bc('花火', 2),
+                     cw4_bc('瓦尔特', 1)] + bench
+        front = '姬子·启行' if lock else '万敌'
+        sess = StrategySession()
+        gs = cw4_gs(sess, plane=2, round_num=2, node='prep', level=LV,
+                    bench=bench, front_row=[_fu(front)])
+        gs.node_hist_pos = (2, 1)
+        handle_node_boundary(gs)
+        if lock:
+            write_line_lock(gs, '列车同行')
+        return sess, gs, (a, b, c)
+
+    def test_band_out_then_star_then_gold_with_stay_target(self):
+        """排序键①②③按序(费用带外→低星→金当量;design §2.2,用户
+        裁定 2026-10-17):带外组(费用 ≠ 停留目标 3 费)整组先于带内组
+        (①支配③:带内金当量再低也殿后);组内低星先(②支配③:带外
+        2★ 排同组 1★ 后);组内同星金当量升序(③);任意星级可卖
+        (one_star_refund_only False:2★ 件入池)。金当量随费用档非单调
+        (再遇窗项主导),序断言用候选自带 star/gold_value 字段钉结构。"""
+        from sr_od.application.currency_war.kernel.cw_economy import (
+            bench_char_cost,
+        )
+        _sess, gs, (a, b, c) = self._prep_frame(lock=True)
+        cands, why = evaluate_sell_candidates(gs, 'levelup_liquidate_prep')
+        assert why == ''
+        assert _names(cands) == [a, b, a, c, c], \
+            '①带外组(1★ 金当量序 → 2★)整组先于带内组(3费 1★ → 2★)'
+        stars = [cand.star for cand in cands]
+        assert stars[:3] == [1, 1, 2] and stars[3:] == [1, 2], \
+            '②组内低星先(带外 2★ 殿后于同组 1★,①支配③)'
+        golds = [cand.gold_value for cand in cands]
+        assert golds[0] <= golds[1], '③同组同星金当量升序'
+        assert golds[3] <= golds[4], '③带内组同款'
+        costs = [int(bench_char_cost(cand.unit, gs) or 0) for cand in cands]
+        assert all(x != 3 for x in costs[:3]), '①带外组先行'
+        assert all(x == 3 for x in costs[3:]), '①带内组(目标费用档)殿后'
+
+    def test_no_stay_target_no_band_grouping(self):
+        """无停留目标帧(未锁定)①键不分组(design §2.2 排序键①括注):
+        序退化为 (低星, 金当量)——费用档不参与分组,3 费 1★ 按金当量
+        落 1★ 组内自然序而非殿后(与有目标帧的带内殿后形态对照)。"""
+        from sr_od.application.currency_war.kernel.cw_economy import (
+            bench_char_cost,
+        )
+        _sess, gs, (a, b, c) = self._prep_frame(lock=False)
+        cands, why = evaluate_sell_candidates(gs, 'levelup_liquidate_prep')
+        assert why == ''
+        stars = [cand.star for cand in cands]
+        assert stars == sorted(stars), '②低星先仍生效'
+        golds = [cand.gold_value for cand in cands]
+        one_star_golds = [g for s, g in zip(stars, golds, strict=True)
+                          if s == 1]
+        assert one_star_golds == sorted(one_star_golds), \
+            '③1★ 组内金当量升序'
+        seq = [int(bench_char_cost(cand.unit, gs) or 0)
+               for cand in cands if cand.star == 1]
+        assert 3 in seq and any(x != 3 for x in seq), '构帧自检(双费用档在场)'
+        assert seq != [x for x in seq if x != 3] + [x for x in seq if x == 3], \
+            '①不分组:3 费 1★ 未被殿后(按金当量自然落位)'
