@@ -44,3 +44,7 @@ test/sr_od/application/currency_war/sim/test_sim_smoke_batch.py::test_smoke_matc
 test/sr_od/application/currency_war/sim/test_sim_smoke_batch.py::test_smoke_match_completes[20261031]
 # 2026-10-16 sim-screen-announce T-1:广播逐点断言测试跑满局+raw sink 双装,实测 2.12s
 test/sr_od/application/currency_war/sim/test_sim_backend.py::test_screen_announce_broadcast_points_and_value_exemption
+# 2026-10-17-levelup-shop-transition T-5:§2.6 预注册判据批跑(冒烟 20 连号
+# 全量 ~2 分钟,五判据数字对照产出面)+ 间谍供奉全跑闭环变体(~12s)
+test/sr_od/application/currency_war/sim/test_sim_levelup_cycle.py::test_prereg_upgrade_cycle_batch
+test/sr_od/application/currency_war/sim/test_sim_levelup_cycle.py::test_prereg_spy_closure_full_match

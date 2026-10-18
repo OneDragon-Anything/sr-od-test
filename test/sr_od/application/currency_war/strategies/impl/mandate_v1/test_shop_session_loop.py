@@ -721,6 +721,8 @@ class TestPrepRandomizedReopen:
         assert isinstance(out[0].action, CwActionOpenShopParam)
         assert st.shop_handled is None, '重开位清 handled 标记'
         assert gs.shop_randomized_pending is False, '重开位消费后清信号'
+        assert st.cw4_counters.get('shop_randomized_reopen') == 1, \
+            '重开触发计数键在册(§2.6③ 随机态闭环取数口)'
 
     def test_node_boundary_sweeps_signal(self):
         """节点边界清扫:信号残留跨节点 = 旧牌面语义死亡,边界函数清位

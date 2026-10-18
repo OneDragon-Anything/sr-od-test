@@ -456,6 +456,8 @@ class TestFundingHoldFallback:
             '腿②:偏好臂兜底核心件被拒(零动作)'
         assert state_of(s).cw4_counters.get('levelup_fallback_leg_reject') \
             == 1, '腿拒分键'
+        assert state_of(s).cw4_counters.get('levelup_liquidate_exhausted') \
+            == 1, '候选穷尽分键(腿拒后凑金穷尽,零动作等节点收入)'
         # 两腿分派真值表(判定函数直测;义务臂全量 / 偏好账与缺省保守侧
         # 对 hold 核心恒拒):
         for arm, ok in ((levelup.ARM_POPULATION, True),
