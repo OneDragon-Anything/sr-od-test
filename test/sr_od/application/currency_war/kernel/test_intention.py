@@ -206,21 +206,21 @@ def test_ju23_star2_stock_card_has_no_refund_backing_no_spend():
     stockpile_buy 与 dominance 同以 refund_full_star_ok 为背书门:
     2★ 件两条买面都不可发射,溢余滞留(不放行)而非带病买——
     断言「背书门在局23 帧端到端成立」,非单位测试复述。
-    商店收缩适配 → 3.6 会话重排再翻转:前置升级检查恢复店内溢余段
-    升级消费(次序翻转行为差形态测试)——gold 100 > 息线的帧首动作 =
-    CwActionLevelUpShopParam(must_spend 整批授权发射)。
+    商店收缩适配 → 3.6 会话重排再翻转 → 升级转场(迭代
+    2026-10-17-levelup-shop-transition T-1,design §2.1):溢余帧
+    (gold 100 > 息线)前置升级检查命中且可发射 → 首动作 = 关店
+    (升级转场,不置 handled 标记),店内不再发 CwActionLevelUpShopParam
+    (升级执行位迁备战画面);端到端零支出语义保持(转场关店零花费)。
     """
     cfg = SimpleNamespace(ev_arm='full')
     sess = _ju23_session()
     act = decide_shop_action(cw4_gs(sess, **_ju23_axes(
         100, [_sc('花火', star=2)])), sess, cfg)
     assert not isinstance(act, (CwActionBuyCardParam, CwActionRefreshShopParam))
-    from sr_od.application.currency_war.kernel.cw_vocab import (
-        CwActionLevelUpShopParam,
-    )
-    assert isinstance(act, CwActionLevelUpShopParam), (
-        f'溢余帧应前置升级(翻转行为差): {act!r}')
-    assert act.auth_basis == 'must_spend'
+    assert isinstance(act, CwActionCloseShopParam), (
+        f'溢余帧应升级转场关店: {act!r}')
+    assert state_of(sess).shop_handled is None, '转场关店不置 handled 标记'
+    assert state_of(sess).cw4_counters.get('levelup_transition_close') == 1
 
 
 def test_ju23_full_surface_gold_never_breaks_interest_line():
@@ -229,7 +229,9 @@ def test_ju23_full_surface_gold_never_breaks_interest_line():
     每个起始金位完整走一次店内访问(动作后真值回写再判,ADR-0517
     §8.1 口径):任一 CwActionBuyCardParam/CwActionRefreshShopParam 花后金 ≥ s_reserve(本帧形状
     = 50);息线下(≤50)整访问零支出(无误清);每访问都以 CwActionCloseShopParam
-    收束且有界迭代(无死守环)。
+    收束且有界迭代(无死守环)。溢余帧(>50)经升级意图出口转场关店
+    收束(2026-10-17 迭代 T-1,design §2.1——店内升级发射退役,
+    CwActionLevelUpShopParam 不再出现在动作面;若复现即 else 分支响亮红)。
     恒买腾席适配(ADR-0580):店卡改用真无关件(局23杂件,非④放行集/
     registry 核心)——原探针花火 ∈ TRANSITION_PACK carry,未锁双轨
     P1 帧会被 ④转线放行臂在息线下买入(1★ 全额退 = 可逆资产,裁定
@@ -253,13 +255,6 @@ def test_ju23_full_surface_gold_never_breaks_interest_line():
                 if gold0 <= 50:
                     assert st['gold'] - act.cost >= 50, (gold0, st['gold'])
                 st['gold'] -= act.cost
-            elif type(act).__name__ == 'CwActionLevelUpShopParam':
-                # 3.6 前置升级(翻转行为差):溢余段整批消费,花后 ≥ 保底
-                # 金门(义务臂不受守 50 辖;升级即收工下一帧关店)。
-                spend = act.cost * act.clicks
-                assert st['gold'] - spend >= 10, (gold0, st['gold'], spend)
-                st['gold'] -= spend
-                st['level'] = st.get('level', 5) + 1
             elif isinstance(act, CwActionCloseShopParam):
                 break
             else:

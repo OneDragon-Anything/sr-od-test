@@ -12,24 +12,23 @@
    (P2 未锁窗口候选缺件驱动 / 锁定后星级目标)/ 停留门等级 < 带下界
    → 升级优先不刷;
 4. **重开触发测试**(§4.2 解拦复核):席位空出解拦 / 金位解除解拦
-   (义务件破息豁免形态)/ 读数开门形态;翻转行为差形态(溢余帧升级
-   前置截断买入,顺延非丢失)由 test_intention +
+   (义务件破息豁免形态)/ 读数开门形态;升级意图出口形态(转场关店
+   不置标记/待付窗返回 None 会话继续/资格门逐道拒因)由本文件
+   TestUpgradeIntentExit 承载,翻转行为差对照由 test_intention +
    test_levelup_prob_axis 承载,不双测;
 5. **刷新终结语义回归**(§1):刷新(op 级重进)仍属同一会话——
    会话标记与清单不受扰动,收工后置标记;
 6. **商店期动作面形态帧测试**(原 test_cw_shop_action_face_contraction
    并入;2026-09-14 收缩裁定随 3.6 会话重写废止,用户裁定 2026-10-13):
-   各形态帧首动作 ∈ 扩展闭集 {买牌, 刷新, 关店, 卖备战席, 购买经验
-   整批};席满买入 = 店内置换账/恒买腾位/筹资(「关店→备战卖→重开」
-   腾位链废止);牌面持久契约(节点内卖出腾位 → 买入原在店件,牌面
-   不因店内卖出/重开刷新,research/economy.md §2.1);筹资兜底穷尽
-   机会清单。
+   各形态帧首动作 ∈ 闭集 {买牌, 刷新, 关店, 卖备战席};席满买入 =
+   店内置换账/恒买腾位/筹资(「关店→备战卖→重开」腾位链废止);牌面
+   持久契约(节点内卖出腾位 → 买入原在店件,牌面不因店内卖出/重开
+   刷新,research/economy.md §2.1);筹资兜底穷尽机会清单。
 
-实机观察点登记(3.5 风险传递 + 升级限界,实机首跑 reconcile 显影):
+实机观察点登记(3.5 风险传递,实机首跑 reconcile 显影):
 - 出售区拖拽落点(R1 显隐成因;R2 拖拽高亮 (108,786) 亮团是否激活
   证据)——拖拽 no-op 时按 no_method 坐标区直接 MCP 改 rect;
-- 升级后同节点找牌收益放弃(升级即收工限界)与账面-实读偏差
-  (漏账侦测信号)。
+- 账面-实读偏差(漏账侦测信号)。
 """
 from __future__ import annotations
 
@@ -571,6 +570,83 @@ class TestReopenTriggers:
         assert st2.shop_handled is not None
 
 
+# ============================================================ 升级意图出口
+# (迭代 2026-10-17-levelup-shop-transition design §2.1 三分支:商店
+# 会话不再执行店内升级——命中 ∧ 可发射 → 关店转场不置标记;命中 ∧
+# 待付窗 / 未命中 → None 会话继续;资格门逐道拒因在册。)
+
+
+class TestUpgradeIntentExit:
+
+    def _stay_frame(self, *, gold: int, level: int = 5):
+        """停留门构帧:锁定线(列车同行)+ 辅助达标(三月七 2★/瓦尔特
+        1★/花火 2★),唯一未完成星级目标 = 姬子·启行(3 费,概率带
+        (7,7))——level 5 < 带下界 → 停留门升级优先臂确定触发
+        (非奖励帧,资格门①不拦)。"""
+        comp = COMP_LIBRARY[0]
+        carry = comp.core_chars[0]
+        aux = [m for m in sorted(_LINE) if m != carry]
+        need = comp.need_star or {}
+        return _frame(level=level, gold=gold, plane=2, hist=(2, 1),
+                      node_kind='battle', comp=comp,
+                      bench=[(m, need.get(m, 1)) for m in aux],
+                      deployed=[aux[0]],
+                      shop_cards=[])
+
+    def test_hit_emissible_transition_close_without_mark(self):
+        """命中 ∧ 可发射 → 关店转场且不置 handled 标记(design §2.1
+        分支一):溢余帧(gold 80 > 息线 50,must_spend 臂)资格门全链
+        通过 → 首动作 = 关店;标记未置(转场帧的后继 = 备战升级执行,
+        商店未「事情办完」);转场计数在册;零店内卖出/店内升级发射。"""
+        live, sess, gs, st = self._stay_frame(gold=80)
+        act = live.decide_shop_action()
+        assert isinstance(act, CwActionCloseShopParam), act
+        assert st.shop_handled is None, '转场关店不置 handled 标记'
+        ct = st.cw4_counters
+        assert ct.get('levelup_transition_close') == 1
+        assert ct.get('levelup_trigger_must_spend') == 1
+        assert not [k for k in ct if k.startswith('levelup_liquidate')], \
+            '店内侧变现场景消费点已退役(凑金归备战侧)'
+
+    def test_hit_gold_short_returns_none_session_continues(self):
+        """命中 ∧ 不可发射(待付窗)→ 检查返回 None,会话照常继续
+        (design §2.1 分支二):停留门臂触发 ∧ 金不足(花后金 < 息线
+        差额)→ 资格门拒因在册;会话走 §2.5 正常收工置标记(「等节点
+        收入」形态成立),非转场关店。"""
+        live, sess, gs, st = self._stay_frame(gold=30)
+        act = live.decide_shop_action()
+        ct = st.cw4_counters
+        assert ct.get('levelup_trigger_stay_gate') == 1
+        assert ct.get('levelup_reserve_line_defer') == 1, \
+            '金不足帧资格门拒因在册(优化臂息线差额保留)'
+        assert ct.get('levelup_transition_close', 0) == 0, '待付窗不转场'
+        assert isinstance(act, CwActionCloseShopParam), act
+        assert st.shop_handled is not None, \
+            '待付窗会话经正常收工置标记(出店→战斗→节点收入→备战凑金)'
+
+    def test_gate_level_cap_frame_rejects(self):
+        """资格门②等级帽帧:满级帧判据不发射(拒因在册),会话照常
+        收工置标记(正常收工,非转场)。"""
+        live, sess, gs, st = _frame(gold=100, level=10, plane=1,
+                                    node_kind='battle', shop_cards=[])
+        act = live.decide_shop_action()
+        assert st.cw4_counters.get('levelup_reject_level_cap') == 1
+        assert st.cw4_counters.get('levelup_transition_close', 0) == 0
+        assert isinstance(act, CwActionCloseShopParam)
+        assert st.shop_handled is not None
+
+    def test_gate_reward_frame_defers(self):
+        """资格门①奖励帧抑制:奖励帧(非扑满环境)不发射(拒因在册,
+        抑制先于触发判定),会话照常收工置标记。"""
+        live, sess, gs, st = _frame(gold=100, level=5, plane=1,
+                                    node_kind='reward', shop_cards=[])
+        act = live.decide_shop_action()
+        assert st.cw4_counters.get('levelup_reward_node_defer') == 1
+        assert st.cw4_counters.get('levelup_transition_close', 0) == 0
+        assert isinstance(act, CwActionCloseShopParam)
+        assert st.shop_handled is not None
+
+
 # ============================================================ 刷新终结语义回归
 
 
@@ -762,11 +838,11 @@ _FORM_FRAMES = {
     'funding_hold_fallback': _frame_funding_hold_fallback,
 }
 
-#: 3.6 重排后的商店域动作面闭集(店内卖备战席与购买经验整批启用,
+#: 3.6 重排后的商店域动作面闭集(店内卖备战席启用;购买经验整批随
+#: 升级转场退役——2026-10-17 迭代 T-1,升级执行位迁备战画面,
 #: shop_session §1 店内动作边界)。
 _SHOP_ACTION_FACE = {'CwActionBuyCardParam', 'CwActionRefreshShopParam',
-                     'CwActionCloseShopParam', 'CwActionSellBenchParam',
-                     'CwActionLevelUpShopParam'}
+                     'CwActionCloseShopParam', 'CwActionSellBenchParam'}
 
 #: 席满买入三形态(置换账/恒买腾位/筹资)的首动作 = 店内卖出。
 _SELL_FIRST_FORMS = {'m4_missing_vacate', 'm2_stockpile_vacate',
@@ -775,10 +851,10 @@ _SELL_FIRST_FORMS = {'m4_missing_vacate', 'm2_stockpile_vacate',
 
 @pytest.mark.parametrize('case', list(_FORM_FRAMES))
 def test_shop_forms_stay_in_reordered_action_face(case: str):
-    """动作面测试(六形态逐一;参数化纪律沿袭):各形态帧首动作 ∈ 扩展
-    闭集(买/刷/关/卖备战席/购买经验整批)——2026-09-14 收缩裁定的
-    「商店期零卖射零升级射」废止,席满置换/筹资/店内升级为在产形态;
-    闭集外类型(部署/卖场上等店内禁做面)发射即红。"""
+    """动作面测试(六形态逐一;参数化纪律沿袭):各形态帧首动作 ∈
+    闭集(买/刷/关/卖备战席)——席满置换/筹资为在产形态;店内购买
+    经验整批已随升级转场退役(2026-10-17 迭代 T-1,发射位迁备战);
+    闭集外类型(部署/卖场上/购买经验等店内禁做面)发射即红。"""
     strategy, sess, config = _FORM_FRAMES[case]()
     action = strategy.decide_shop_action()
     name = type(action).__name__
