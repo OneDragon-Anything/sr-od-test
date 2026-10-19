@@ -457,25 +457,30 @@ class TestStep2Ore:
 
 
 class TestStep3LevelUp:
-    """第 3 步升级测试(line_and_upgrade §2:五臂判据 + 单帧原子发射——
+    """第 4 步升级测试(11 号稿 §2:触发单判据三分派 + 单帧原子发射——
     判据单帧测试主文件 = test_levelup_prob_axis.py,本类只校验工序接线
     形态)。"""
 
     def test_upgrade_friendly_state_emits_batch(self):
-        """升级友好形态(金充裕 + 板满 + 线内候补在席)发射升级整批:
-        溢余段臂(gold 100 > 息线 50,「金这么多都是要花的」)触发,
-        裸金足 → 同帧执行帧一次买齐(P48 整买;先前空段期透传测试已随
-        新判据落码终结,替代语义 = 本形态测试)。"""
-        sess = cw4_session(cw4_comp('列车同行'))
-        cw4_gs(sess, gold=100, level=4, round_num=2, node='战斗',
-               bench=[_bc('c0')] * 9,
-               front_row=_units(('三月七', '瓦尔特', '丹恒·饮月', '姬子')),
-               back_row=())
+        """升级友好形态(带滞后 + 金充裕)发射升级整批:锁定线唯一
+        未完成星级目标(希儿 3 费)带下界 7 > 等级 4 → stay_gate 触发,
+        现金 − 批 ≥ 利息线 → 同帧执行帧一次买齐(P48 整买;先前空段期
+        透传测试已随新判据落码终结,替代语义 = 本形态测试)。"""
+        sess = cw4_session(cw4_comp('希儿量子'))
+        cw4_gs(sess, gold=80, level=4, round_num=2, node='战斗', plane=2,
+               bench=[_bc(n, 1) for n in ('花火', '符玄', '缇宝', '刻律德菈')]
+                     + [_bc('希儿', 1)],
+               front_row=(), back_row=())
+        _gs = game_state_of(sess)
+        _gs.strategy_state = state_of(sess)   # 宿主归一(session_scope 函数族经 gs 取态)
+        _gs.node_hist_pos = (2, 1)   # P2 水位(窗口谓词置位输入)
+        session_scope.handle_node_boundary(_gs)
+        state_of(sess).gold_ledger = 80   # 边界复位清账面后重锚(种子稳态)
         _mark_handled(sess)
         out = _emit(sess)
         ups = [e for e in out
                if isinstance(e.action, CwActionLevelUpParam)]
-        assert ups, '升级友好形态:溢余段臂触发升级发射'
+        assert ups, '升级友好形态:带滞后触发升级发射'
         assert ups[0].action.clicks >= 1
 
 

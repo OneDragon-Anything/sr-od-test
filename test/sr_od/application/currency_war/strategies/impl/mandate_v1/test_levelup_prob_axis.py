@@ -1,19 +1,15 @@
-"""CW 升级判据重轴单帧测试(迭代 2026-10-12-prep-shop-workflow-redesign 批 3.4)
-+ P2 低血带授权域(fail-closed 落码)。
+"""CW 升级判据单帧测试(触发单判据三分派 + 资金线门 + 单帧原子发射)。
 
-出处(持久索引):details/line_and_upgrade.md §2(触发五臂/支出形态/
-拦截层处置)与 §2.3 处置表;design.md 条 4(升级判据重轴)。判据本体 =
-strategies/impl/mandate_v1/criteria/levelup.py,发射位 = entry 备战第
-3 步。测试面组:
+出处(持久索引):判据正本锚 = strategy-docs/11_shop_decisions.md §2
+(升级触发单判据三分派/资金线门/拦截层处置)。判据本体 =
+strategies/impl/mandate_v1/criteria/levelup.py,发射位 = entry 备战
+第 4 步。测试面组:
 
-1. 带与停留门(prob_band_of_cost 平顶整段/三支分派/P1 硬锁子局断言);
-2. 概率账(触发/不触发/辖域双条件);
-3. 发射形态(凑金一卖 → 下一帧整批——「买一半」由发射原子性消解,
-   2026-10-17 迭代 design §2.2;授权不跨帧携带,键已退役;
-   血本位不足零购买/血足整批发射;金不足攒钱模式;等级帽拒发);
-4. 保留语义(P72(3a) 保底金门/P21 危机带/FM-1 金支出出口);
-5. 【拟】槽与兜底(缺件集聚合口径 provisional 登记;P78-5 兜底豁免
-   消费循环拼装对拍)。
+1. 带与三分派(prob_band_of_cost 平顶整段/stay_gate-natural 两键/
+   P1 与未锁定期零主动升级/板满等待件带内不升——人口位臂删除行为锁);
+2. 发射形态(资金线 defer 零购买/血本位不足零购买/血足整批发射/
+   等级帽拒发/凑金一卖 → 下一帧整批);
+3. 保留语义(资金线门真值表/P21 危机带/金支出出口/凑金域分派)。
 
 构帧纪律:锁定线经 session_scope.write_line_lock(3.1 键,同帧种子后写);
 plane2_started 经 node_hist_pos 直赋 + handle_node_boundary 置位(单调
@@ -23,8 +19,7 @@ P2 血带节(原 P2 低血带授权域统一件):单一语义权威 = 生产符�
 (谓词/授权闩 = statefn.predicates,停付面 = criteria/levelup,
 分键写入端 = flow)。校验两类事:①p2_blood_floor 域谓词真值表(信任门/
 阈值单一源 = HP_BAND_NEAR_DEATH,位面域互补);②危机带停付面 + 凑息
-拒因键域(血线拒因键退役)。保底金门真值表 = 本文件
-TestRetainedGates::test_guarantee_floor_gate_truth_table 承载,不重复。
+拒因键域(血线拒因键退役;P21 现为全域判定——危机带帧无论金位一律拦)。
 """
 from __future__ import annotations
 
@@ -63,8 +58,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 #: 的最小线(唯一 3★ 目标 = 希儿)。
 _LOCK_LINE = '希儿量子'
 #: 辅助达标集(need_star=1 持有即完成;构帧排除辅助缺件对停留目标的
-#: 低费干扰——停留目标 = 未完成目标中费用档最低者,line_and_upgrade
-#: §2.1)。
+#: 低费干扰——停留目标 = 未完成目标中费用档最低者,11 号稿 §2)。
 _AUX_DONE = ('花火', '符玄', '缇宝', '刻律德菈')
 
 
@@ -102,7 +96,7 @@ def _stay_bench(xili_star: int = 1) -> list:
 
 
 def _mark_handled(gs) -> None:
-    """商店会话标记(帧直达第 3 步后不被第 4 步开店截胡)。"""
+    """商店会话标记(帧直达第 4 步后不被第 5 步开店截胡)。"""
     node = gs.node.value
     gs.observe(gs.node_pos,
                (int(node.plane), int(node.round_num)) if node else (2, 2),
@@ -111,7 +105,7 @@ def _mark_handled(gs) -> None:
     _ss.mark_shop_handled(gs)
 
 
-# ===== 1. 带与停留门(line_and_upgrade §2.1)=====
+# ===== 1. 带与三分派(11 号稿 §2 单判据)=====
 
 
 class TestProbBand:
@@ -138,113 +132,80 @@ class TestProbBand:
                     f'{cost} 费带成员 lv{lv} 非峰值(带成员由 REFRESH_PROB 直算)'
 
 
-class TestStayGate:
+class TestTriggerDispatch:
     def test_three_way_dispatch(self):
-        """停留门三支分派(①②③同一等级轴上互斥完备;shop_session
-        §2.4 主式 = ②∨③ 支为真时停留刷新,①支 = 升级优先):
-        ①等级 < 带下界(lv5 < 7)→ 升级臂触发(升到带内去刷);
-        ②等级 ∈ 带(lv7)→ 停留刷新,升级臂不触发;
+        """升级触发单判据三分派(11 号稿 §2;①②③同一等级轴上互斥
+        完备):①等级 < 带下界(lv5 < 7)→ 升级触发键 stay_gate(升到
+        带内去刷);②等级 ∈ 带(lv7)→ 停留刷新,无键不触发;
         ③等级 > 带上界(lv8 被推过,单调不可降,当前即剩余可达最优)
-        → 照样停留刷新,升级臂不触发。停留目标 = 未完成星级目标中
-        费用档最低者(构造 = 辅助达标后唯一目标希儿 3 费)。"""
+        → 照样停留,无键不触发。停留目标 = 未完成星级目标中费用档
+        最低者(构造 = 辅助达标后唯一目标希儿 3 费)。"""
         gs, s = _frame(level=5, gold=30, bench=_stay_bench())
-        assert levelup.stay_gate_upgrade_first(gs, s) is True
-        assert levelup.upgrade_trigger(gs, s) == (True, levelup.ARM_STAY_GATE)
+        assert levelup.upgrade_trigger(gs, s) == (True, 'stay_gate')
         gs7, s7 = _frame(level=7, gold=30, bench=_stay_bench())
-        assert levelup.stay_gate_upgrade_first(gs7, s7) is False, \
-            '等级 ∈ 带:停留刷新,延迟升级'
+        assert levelup.upgrade_trigger(gs7, s7) == (False, ''), \
+            '等级 ∈ 带:停留刷新,无键不触发'
         gs8, s8 = _frame(level=8, gold=30, bench=_stay_bench())
-        assert levelup.stay_gate_upgrade_first(gs8, s8) is False, \
-            '等级被硬需求推过带上界:当前即剩余可达最优,照样停留刷'
+        assert levelup.upgrade_trigger(gs8, s8) == (False, ''), \
+            '等级被推过带上界:当前即剩余可达最优,照样停留'
 
-    def test_p1_hard_lock_subgame_zero_rush(self):
-        """P1 硬规则锁定子局断言(line_and_upgrade §2.1 双条件判据位):
-        锁定 ∧ plane2 未启动(P1)∧ 星级目标存在(希儿 3★ 未完成)∧
-        带下界 7 > 等级 5——停留门臂与概率账均**不触发**(P1 不冲级:
-        概率账收益 = P2 起未来刷新期望改善,P1 视界内不消费;升级侧
-        排除全靠判据位,非刷新层拦截)。金位 < 息线排除溢余臂干扰。"""
+    def test_natural_upgrade_without_target(self):
+        """分派 ③:无未完成星级目标(全部追完)→ 自然升级不停留,
+        键 natural(触发键闭集 = stay_gate/natural 两键,分派 2 无键)。"""
+        gs, s = _frame(level=5, gold=30, bench=_stay_bench(xili_star=3))
+        assert levelup.unfinished_star_targets(gs) == []
+        assert levelup.upgrade_trigger(gs, s) == (True, 'natural')
+
+    def test_p1_and_unlocked_zero_active_upgrade(self):
+        """辖域锁(P1 与未锁定期零主动升级,阶段保护):P1 锁定子局
+        星级目标存在 ∧ 带下界 7 > 等级 5 → 不触发(P1 不冲级);未锁定
+        期(锁定线槽空)同不触发。升级侧排除全靠判据辖域,非刷新层
+        拦截。金位 < 息线排除富余语义干扰(旧富余段臂已删,此处只锁
+        辖域)。"""
         gs, s = _frame(level=5, gold=30, plane=1, hist=(1, 5),
                        bench=_stay_bench())
-        assert levelup.stay_gate_upgrade_first(gs, s) is False
-        assert levelup.prob_account_ok(gs, s) is False
         assert levelup.upgrade_trigger(gs, s) == (False, '')
+        gs2, s2 = _frame(level=5, gold=30, locked=False,
+                         bench=_stay_bench())
+        assert levelup.upgrade_trigger(gs2, s2) == (False, '')
 
-    def test_unlocked_or_done_targets_inert(self):
-        """辖域负控:未锁定期(锁定线槽空)停留门/概率账不辖(双条件
-        判据位);锁定后停留目标全部完成(need_star 达标)→ 停留刷
-        完成,升级臂不触发(停刷存钱升下一目标或人口位)。"""
-        gs, s = _frame(level=5, gold=30, locked=False, bench=_stay_bench())
-        assert levelup.stay_gate_upgrade_first(gs, s) is False
-        assert levelup.prob_account_ok(gs, s) is False
-        gs2, s2 = _frame(level=7, gold=30,
-                         bench=_stay_bench(xili_star=3))
-        assert levelup.unfinished_star_targets(gs2) == []
-        assert levelup.stay_gate_upgrade_first(gs2, s2) is False
-
-
-# ===== 2. 概率账(line_and_upgrade §2.1 主判据)=====
-
-
-class TestProbAccount:
-    def test_trigger_and_non_trigger(self):
-        """概率账触发/不触发:锁定后 ∧ plane2 ∧ 单核代表(希儿 3 费,
-        lv5→6 概率 0.20→0.25 上行,E 下降量 × c_eff > 整级成本+息损)
-        → True;等级 ∈ 峰值带(lv7→8 概率 0.40→0.32 回落,benefit ≤ 0)
-        → False。缺件集聚合 = 单核代表【拟】(provisional 槽
-        LEVELUP_MISSING_SET_AGG,None = 单核;求和/瓶颈切换候选未决前
-        一律单核,line_and_upgrade §2.1/§4 两处同口径)。"""
-        gs, s = _frame(level=5, gold=30, bench=_stay_bench())
-        assert levelup.prob_account_ok(gs, s) is True
-        gs7, s7 = _frame(level=7, gold=30, bench=_stay_bench())
-        assert levelup.prob_account_ok(gs7, s7) is False, \
-            '带内回落段无收益面(benefit ≤ 0 拒)'
-
-    def test_missing_set_agg_slot_registered(self):
-        """缺件集聚合口径【拟】槽登记对拍(audit/provisional.py):
-        LEVELUP_MISSING_SET_AGG 在槽位表(fail-closed None = 单核代表
-        在产保守形态);切换口径未落消费面——注入非单核值时判据回单核
-        (fail-closed 禁未决口径混用)。"""
-        from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import (
-            provisional,
-        )
-        from sr_od.application.currency_war.strategies.impl.mandate_v1.audit.provisional import (
-            CalibValue,
-        )
-        assert 'LEVELUP_MISSING_SET_AGG' in provisional.slot_names()
-        gs, s = _frame(level=5, gold=30, bench=_stay_bench())
-        try:
-            provisional.inject('LEVELUP_MISSING_SET_AGG',
-                               CalibValue(value=1.0, injected_form=True))
-            assert levelup.prob_account_ok(gs, s) is True, \
-                '切换口径未落消费:fail-closed 回单核代表,判据不变'
-        finally:
-            provisional.reset('LEVELUP_MISSING_SET_AGG')
+    def test_full_board_waiting_piece_in_band_no_upgrade(self):
+        """人口位臂删除的行为锁(板满战力义务触发删除,用户裁定
+        2026-10-18):板满(cap 2 全占)∧ 备战席同羁绊等待件(知更鸟)
+        ∧ 等级 ∈ 带(lv7)→ 仍不升,停留刷新——等待件滞留至带突破为
+        接受代价(设计 §3 取舍申报面)。"""
+        from sr_od.application.currency_war.kernel.cw_game_state import Unit
+        board = (Unit(char_id='知更鸟', star=1),
+                 Unit(char_id='那刻夏', star=1))
+        gs, s = _frame(level=7, gold=30,
+                       bench=(_bc('知更鸟', 1),),
+                       front_row=board, deploy_cap=2)
+        assert levelup.upgrade_trigger(gs, s) == (False, ''), \
+            '板满 ∧ 等待件 ∧ 带内:人口位臂已删,仍不升'
 
 
-# ===== 3. 发射形态(单帧原子发射;「买一半」回归测试)=====
+# ===== 2. 发射形态(单帧原子发射;资金线门)=====
 
 
 class TestBatchEmission:
-    def test_gold_short_full_batch_no_partial_buy(self):
-        """金不足整批不买(line_and_upgrade §2.2 攒批资金口径):触发帧
-        裸金与活期合计 < 整级批成本 + 花后金下界 → 一击不买(攒钱模式,
-        零升级动作)——禁按闸值截断击数的部分买(P48 整买
-        (1) 辖域,「买一半」的对面断言)。"""
+    def test_fund_line_defer_no_partial_buy(self):
+        """资金线 defer 零购买(现金口径单门,11 号稿 §2):触发帧
+        现金 − 整批 < 利息线 ∧ 凑金不可达(无活期可变现)→ 整批推迟
+        零动作(levelup_fund_line_defer 拒因键)——禁按闸值截断击数的
+        部分买(P48 整买(1) 辖域,「买一半」的对面断言)。"""
         gs, s = _frame(level=5, gold=12, bench=_stay_bench())
         _mark_handled(gs)
         out = entry.emit(s, None)
         assert not [e for e in out
                     if isinstance(e.action, CwActionLevelUpParam)], \
-            '攒批不足:零购买(攒钱模式)'
+            '凑金不可达:整批推迟零动作(不部分买)'
         ct = state_of(s).cw4_counters
-        # 优化臂(stay_gate)语境:攒批不足先撞息线差额保留
-        # (levelup_reserve_line_defer——攒批目标 = 整级成本 + 息线差额,
-        # 保守侧);义务臂语境对照 = FM-1 溢余帧照发
-        assert ct.get('levelup_reserve_line_defer') == 1
+        # 资金面拒因统一键(旧 reserve_line/guarantee_floor 分键退役)
+        assert ct.get('levelup_fund_line_defer') == 1
 
     def test_blood_insufficient_zero_buy_blood_sufficient_batch(self):
-        """「买一半」缺陷回归测试(血本位局,line_and_upgrade §2.2 血本位
-        突变下的支付检查):血余额 < 整级血成本 → 零购买(攒血,不置键
+        """「买一半」缺陷回归测试(血本位局,11 号稿 §2 血本位突变下
+        的支付检查):血余额 < 整级血成本 → 零购买(攒血,不置键
         不发射);血余额 ≥ 整级血成本 → 整批发射(clicks = 门槛表差值
         折击数,一次买齐)。发射粒度整批化后无逐帧重闸复发面。"""
         # 血不足:奋斗协议(每击血价注册表)∧ hp 低于整级血成本
@@ -274,30 +235,30 @@ class TestBatchEmission:
                     if isinstance(e.action, CwActionLevelUpParam)]
         assert state_of(s).cw4_counters.get('levelup_reject_level_cap') == 1
 
-    def test_authorize_liquidate_then_execute_batch(self):
-        """凑金一卖 → 下一帧整批发射(2026-10-17 迭代 T-2 单帧原子形态,
-        design §2.2:授权不再跨帧携带——「买一半」由发射原子性消解,
-        实付上界 = 发射时授权值):帧 1(命中 ∧ 资金门金量不足,花后
-        下界已过)→ 凑金每帧一卖(评估器升级凑金场景首位);帧 2(裸金
-        足)→ 整批发射 + 清 handled 标记(发射完成重开通道,design
-        §2.2 第 1 条)。三帧各一动作(单动作循环),帧间零商店域外金动作。"""
-        # lv7 整级批 = ⌈52/4⌉×4 = 52 金;裸金 51(< 52)+ 活期散件
-        # ×4(c0/c1/c2/c4 各退 3,注册表外散件按保守估——不同名互不
-        # 构成合成素材)→ 攒批 63 ≥ 52;花后 11 ≥ 保底金门 10;
-        # 溢余段 51 > 息线 50 → must_spend 臂辖。
+    def test_fundraise_sell_then_execute_batch(self):
+        """凑金一卖 → 下一帧整批发射(单帧原子形态:授权不跨帧携带
+        ——「买一半」由发射原子性消解,实付上界 = 发射时授权值):
+        帧 1(凑金域:花后破线 ∧ 活期可补)→ 凑金每帧一卖(评估器
+        升级凑金场景首位);帧 2(现金 − 批 ≥ 线)→ 整批发射 + 清
+        handled 标记(发射完成重开通道)。三帧各一动作(单动作循环),
+        帧间零商店域外金动作。"""
         from sr_od.application.currency_war.kernel.cw_game_state import Unit
+        # lv5 整级批 20 金;现金 68(花后 48 < 线 50)∧ 活期 4 件
+        # (c0/c1/c2/c4 各退 3,注册表外散件按保守估——不同名互不构成
+        # 合成素材)→ 凑金可达域(68+12−20 = 60 ≥ 50)。
         bench = _stay_bench() + [_bc(n, 1) for n in ('c0', 'c1', 'c2', 'c4')]
-        gs, s = _frame(level=7, gold=51, bench=bench,
+        gs, s = _frame(level=5, gold=68, bench=bench,
                        front_row=(Unit(char_id='板上件锚', star=1),))
         _mark_handled(gs)
-        # 帧 1(凑金帧):命中 ∧ 裸金不足 → 一卖(评估器升级凑金场景)
+        # 帧 1(凑金帧):凑金域 → 一卖(评估器升级凑金场景)
         out1 = entry.emit(s, None)
         sells1 = [e for e in out1
                   if type(e.action).__name__ in ('CwActionSellBenchParam',
                                                  'CwActionSellDeployedParam')]
         assert sells1 and sells1[0].action.reason == 'levelup_liquidate', \
-            '凑金帧:裸金不足 → 每帧一卖(评估器升级凑金场景)'
-        # 帧 2(发射帧):缺口闭合(退金 3 → 54 ≥ 52)→ 单帧原子整批
+            '凑金帧:花后破线 ∧ 活期可补 → 每帧一卖'
+        # 帧 2(发射帧):缺口闭合(退金 3 → 71−20 = 51 ≥ 50)→ 单帧
+        # 原子整批
         if isinstance(sells1[0].action, CwActionSellBenchParam):
             from sr_od.application.currency_war.kernel.cw_action_report.sell_bench import (
                 report_action_sell_bench_param,
@@ -314,179 +275,91 @@ class TestBatchEmission:
                 sig=ChannelSig(family='logic_action', actor='CwScreenPrep'))
         out2 = entry.emit(s, None)
         ups = [e for e in out2 if isinstance(e.action, CwActionLevelUpParam)]
-        assert ups and ups[0].action.clicks == 13, \
-            '发射帧:缺口闭合 → 购买经验整批(13 击 = ⌈52/4⌉,单帧原子)'
+        assert ups and ups[0].action.clicks >= 1, \
+            '发射帧:缺口闭合 → 购买经验整批(单帧原子)'
+        assert ups[0].action.auth_basis == 'stay_gate', \
+            '触发键随发射装载(资金面拒因与触发键域更新后)'
         assert state_of(s).shop_handled is None, \
             '发射完成清 handled 标记(升级后概率档已变,找牌/刷新需重评)'
 
 
-# ===== 4. 保留语义(P72(3a) floor / P21 / FM-1)=====
+# ===== 3. 保留语义(资金线门 / P21 / FM-1 / 凑金域分派)=====
 
 
 class TestRetainedGates:
-    def test_guarantee_floor_gate_truth_table(self):
-        """P72(3a) 内保底金门保留(line_and_upgrade §2.3 单一裁决):
-        花后金 ≥ 1 息档(boss_floor)→ 放行;< → 拒;出辖两支(终局域
-        末战 ALL IN / 买断制)→ 不设下界。血线让位支已随血线地板删除
-        链退役(hp 不再豁免下界)。"""
+    def test_fund_gate_truth_table(self):
+        """升级资金线门真值表(现金口径单门,11 号稿 §2):花后金 =
+        现金 − 批 ≥ saturation_line(cap_resolved) → 放行;< → 拒;
+        出辖两支:终局域末战 ALL IN(判据体内豁免)/ 买断制 cap=0 ⇒
+        下界 0 ⇒ 门恒过(无特判分支——下界随 resolved 链自动消解,
+        裸金不足批仍拒,凑金分派在资格门层)。"""
         sess = SimpleNamespace(node_type_current='normal')
         gs, _ = _frame(level=5, gold=30)
-        # 花后 30-4 = 26 ≥ 10 → 放行;花后 5-4 = 1 < 10 → 拒
-        assert levelup.guarantee_floor_gate(gs, sess, 30, 1, 4, 5) is True
-        assert levelup.guarantee_floor_gate(gs, sess, 5, 1, 4, 5) is False
-        # hp 不可再豁免(血线让位支退役)
-        gs_hp, _ = _frame(level=5, gold=5, hp=1)
-        assert levelup.guarantee_floor_gate(gs_hp, sess, 5, 1, 4, 5) is False
-        # 买断制(cap=0)出辖
-        assert levelup.guarantee_floor_gate(gs, sess, 1, 1, 4, 0) is True
+        # 花后 80-4 = 76 ≥ 50 → 放行;花后 40-4 = 36 < 50 → 拒
+        assert levelup.levelup_fund_gate(gs, sess, 80, 1, 4, 5) is True
+        assert levelup.levelup_fund_gate(gs, sess, 40, 1, 4, 5) is False
+        # 买断制(cap=0)下界 0:花后 5-4 = 1 ≥ 0 → 过(下界消解,
+        # 非显式豁免支);花后 3-4 = −1 < 0 → 拒(裸金不够批,归凑金域)
+        assert levelup.levelup_fund_gate(gs, sess, 5, 1, 4, 0) is True
+        assert levelup.levelup_fund_gate(gs, sess, 3, 1, 4, 0) is False
 
     def test_p21_crisis_band_retained(self):
-        """P21 血预算线保留(§2.3 保留件):危机带(hp ≤ p2_crisis_band
-        ≈41)域外帧停付;血线地板解锁让位支已退役(死亡线帧照常停付
+        """P21 血预算线保留(拦截层保留件):危机带(hp ≤ p2_crisis_band
+        ≈41)帧停付;血线地板解锁让位支已退役(死亡线帧照常停付
         ——濒死响应 = 修经济/阵容本身)。"""
         gs, _ = _frame(level=5, gold=30, hp=10)
         sess = SimpleNamespace(node_type_current='normal')
         assert levelup.level_spend_blocked(gs, sess) is True, \
-            'P2 濒死帧(hp 10 ⊂ 危机带 41):停付照常(血线让位支退役)'
+            'P2 濒死帧(hp 10 ⊂ 危机带 41):停付照常'
 
-    def test_fm1_gold_exit_open_in_surplus(self):
+    def test_rich_band_lag_frame_emits_gold_exit_open(self):
         """FM-1 金支出出口核对(11 §5 金支出出口要求——持金至死死型
-        防线):溢余帧(gold 100 > 息线 50)升级通道可达——拦截层删净
-        后金支出出口不灭(溢余段-L3 臂触发 + 整批发射;守息门/量闸
-        已删,金位单调段不闷死)。"""
+        防线):金充裕带滞后帧(现金 − 批 ≥ 线)升级通道可达——拦截层
+        删净后金支出出口不灭(带驱动触发 + 资金门自然命中;触发键 =
+        stay_gate,富余金不再是独立触发源)。"""
         gs, s = _frame(level=5, gold=100, bench=_stay_bench())
         _mark_handled(gs)
         out = entry.emit(s, None)
         ups = [e for e in out if isinstance(e.action, CwActionLevelUpParam)]
-        assert ups, 'FM-1:溢余金帧升级通道开放(金支出出口)'
-        assert ups[0].action.auth_basis == levelup.ARM_MUST_SPEND
+        assert ups, 'FM-1:金充裕帧升级通道开放(金支出出口)'
+        assert ups[0].action.auth_basis == 'stay_gate'
 
-    def test_optimization_arm_reserve_line_defer(self):
-        """优化臂息线差额保留(差分节确认前 fail 态):停留门臂触发 ∧
-        花后金 < 息线(保守侧,「花完仍守 50」)→ 整批推迟零动作
-        (levelup_reserve_line_defer 分键;义务臂不受攒息约束对照 =
-        上例溢余帧照发)。"""
+    def test_fund_line_defer_emit_level(self):
+        """资金线 defer(emit 级):触发命中 ∧ 花后破线 ∧ 凑金不可达
+        → 整批推迟零动作(levelup_fund_line_defer 分键;资金面拒因
+        统一键)。"""
         gs, s = _frame(level=5, gold=30, bench=_stay_bench())
-        # lv5 批 = ⌈20/4⌉×4 = 20;花后 30+0-20 = 10 < 息线 50 → 推迟
+        # lv5 批 = 20;花后 30−20 = 10 < 息线 50;活期 0 → 不可达
         _mark_handled(gs)
         out = entry.emit(s, None)
         assert not [e for e in out
                     if isinstance(e.action, CwActionLevelUpParam)], \
-            '停留门臂:花后金 < 息线差额保留 → 整批推迟(保守侧)'
-        assert state_of(s).cw4_counters.get(
-            'levelup_reserve_line_defer') == 1
+            '花后破线 ∧ 凑金不可达 → 整批推迟零动作'
+        assert state_of(s).cw4_counters.get('levelup_fund_line_defer') == 1
 
-    def test_guarantee_floor_defer_counter(self):
-        """花后下界 defer 分键(义务臂 = 保底金门口径;七道资格门拒因
-        计数补全,2026-10-17 迭代 T-4):富余段臂命中 ∧ 花后金 < 保底
-        → defer 在册(levelup_guarantee_floor_defer,与优化臂的
-        levelup_reserve_line_defer 分键区分)。判定函数直测(计数写点 =
-        判定函数;emit 级同帧会被部署步发射截断,非本断言面)。"""
+    def test_gold_short_domain_direct(self):
+        """凑金可达域直测(判定函数级):花后破线 ∧ 现金 + bench 活期
+        − 批 ≥ 线 → GATE_GOLD_SHORT(凑金域,备战侧每帧一卖收敛);
+        不可达变体 → GATE_DEFER + levelup_fund_line_defer 在册(触发
+        键经计数证:defer 元组不携键)。"""
         from sr_od.application.currency_war.kernel.cw_game_state import Unit
-        # must_spend 臂(51 > 息线 50);lv7 批 52,活期 3 件退 9 →
-        # 花后 51+9−52 = 8 < 10 → 保底金门拒。
-        bench = [_bc('c0', 1), _bc('c1', 1), _bc('c2', 1)]
-        gs, s = _frame(level=7, gold=51, bench=bench,
+        # 凑金可达帧:lv5 批 20,现金 68,活期 4 件退 12
+        bench = _stay_bench() + [_bc(n, 1) for n in ('c0', 'c1', 'c2', 'c4')]
+        gs, s = _frame(level=5, gold=68, bench=bench,
                        front_row=(Unit(char_id='花火', star=1),))
-        verdict, arm, _clicks, _cost = levelup.upgrade_gate_verdict(
+        verdict, _arm, _clicks, _cost = levelup.upgrade_gate_verdict(
             gs, s, counters=state_of(s).cw4_counters)
-        assert verdict == levelup.GATE_DEFER
-        assert state_of(s).cw4_counters.get('levelup_trigger_must_spend') \
-            == 1, '富余段臂触发在册(defer 元组不携臂,臂经触发计数证)'
-        assert state_of(s).cw4_counters.get(
-            'levelup_guarantee_floor_defer') == 1, '保底金门分键在册'
+        assert verdict == levelup.GATE_GOLD_SHORT
+        assert state_of(s).cw4_counters.get('levelup_trigger_stay_gate') == 1
+        # 不可达变体:同触发 ∧ 无活期 → defer 分键
+        gs2, s2 = _frame(level=5, gold=30, bench=_stay_bench())
+        verdict2, _a2, _c2, _cc2 = levelup.upgrade_gate_verdict(
+            gs2, s2, counters=state_of(s2).cw4_counters)
+        assert verdict2 == levelup.GATE_DEFER
+        assert state_of(s2).cw4_counters.get('levelup_fund_line_defer') == 1
 
 
-# ===== 5. P78-5 兜底豁免消费循环拼装(design 契约 D 升级变现行)=====
-
-
-class TestFundingHoldFallback:
-    def test_fallback_leg1_duty_arm_emits_core(self):
-        """P78-5′ 腿①(义务血统臂,验臂):arm0 触发的升级,兜底全量
-        消费——凑金语境(命中 ∧ 金量不足,花后下界已过)下主路径尽
-        (线内/保护/合成对全排除)∧ hold 核心件(三月七,非锁定线成员)
-        经 funding_hold_fallback 放行、单笔即止(levelup_funding_
-        fallback_sell 分键;单一源 = sell_gate.funding_hold_fallback,
-        消费循环只拼装)。design 契约 D 升级变现行豁免构成 = 义务账 ∨
-        对象无损;义务账腿候选 = 人口位/arm0 骨架义务血统(review-34
-        F1 落码)。臂身份 = 本帧资格门判定臂(键退役后无跨帧携带)。"""
-        from sr_od.application.currency_war.kernel.cw_game_state import Unit
-        # arm0 构帧:level 3 < deploy_cap 5 ∧ 上阵需求 5 > 3(部署 1 希儿
-        # + 备战 4 线内未上);lv3 批 = 4 金,裸金 3 < 4;合成对 ×2(各退
-        # 3)供花后下界(3+12−4 = 11 ≥ 10)且被素材守卫逐出主路径 →
-        # 主路径尽,兜底池唯三月七(贯穿件,腿①义务臂全量放行)。
-        bench = [_bc(n, 1) for n in ('花火', '符玄', '缇宝', '刻律德菈')]
-        bench += [_bc('三月七', 1), _bc('c0', 1), _bc('c0', 1),
-                  _bc('c1', 1), _bc('c1', 1)]
-        gs, s = _frame(level=3, gold=3, deploy_cap=5, bench=bench,
-                       front_row=(Unit(char_id='希儿', star=1),))
-        _mark_handled(gs)
-        out = entry.emit(s, None)
-        sells = [e for e in out
-                 if isinstance(e.action, CwActionSellBenchParam)]
-        assert sells and sells[0].action.reason == 'levelup_liquidate', \
-            '腿①:义务臂兜底全量(主路径尽 → 核心件放行)'
-        assert state_of(s).cw4_counters.get(
-            'levelup_funding_fallback_sell') == 1
-
-    def test_fallback_leg2_preference_arm_rejects_core(self):
-        """P78-5′ 腿②(对象级无损维,验对象非验触发臂):偏好账臂
-        (停留门/概率账/溢余段-L3——P78-5′ 账性判别上零息损不构成
-        「不做会输」= 偏好账)触发的升级,兜底变卖核心/④件被拒——
-        被放行对象须持有账 ≈ 0(非核心/非④件 ∧ 非种子);funding_
-        hold_fallback 兜底池 ⊆ hold 核心集(池条件 = holds ∩ A 排除),
-        偏好臂下结构性恒拒(levelup_fallback_leg_reject 分键 + 零动作;
-        review-34 F1:校验两腿分派语义)。凑金语境构帧 = must_spend 臂
-        (偏好账):溢余段触发 ∧ 裸金差一口 ∧ 合成对撑花后下界且主路径
-        尽。臂分派真值表经判定函数直测补全(臂身份 = 本帧判定臂,键退役
-        后无跨帧携带;stay/prob 臂的金量不足域受息线差额保留结构性
-        收窄,emit 级构帧不可达,直测承载)。"""
-        from sr_od.application.currency_war.kernel.cw_game_state import Unit
-        # must_spend 臂:lv7 批 52,裸金 51(> 息线 50 触发富余段臂);
-        # 合成对 ×3(退 18)撑花后 51+18−52 = 17 ≥ 10 且被逐出主路径;
-        # 兜底池唯三月七(贯穿件)→ 腿②拒(持有账 > 0)。
-        bench = [_bc('三月七', 1), _bc('c0', 1), _bc('c0', 1),
-                 _bc('c1', 1), _bc('c1', 1), _bc('c2', 1), _bc('c2', 1)]
-        gs, s = _frame(level=7, gold=51, bench=bench,
-                       front_row=(Unit(char_id='花火', star=1),))
-        _mark_handled(gs)
-        out = entry.emit(s, None)
-        assert not [e for e in out
-                    if isinstance(e.action, CwActionSellBenchParam)], \
-            '腿②:偏好臂兜底核心件被拒(零动作)'
-        assert state_of(s).cw4_counters.get('levelup_fallback_leg_reject') \
-            == 1, '腿拒分键'
-        assert state_of(s).cw4_counters.get('levelup_liquidate_exhausted') \
-            == 1, '候选穷尽分键(腿拒后凑金穷尽,零动作等节点收入)'
-        # 两腿分派真值表(判定函数直测;义务臂全量 / 偏好账与缺省保守侧
-        # 对 hold 核心恒拒):
-        for arm, ok in ((levelup.ARM_POPULATION, True),
-                        (levelup.ARM_ARM0, True),
-                        (levelup.ARM_MUST_SPEND, False),
-                        (levelup.ARM_STAY_GATE, False),
-                        (levelup.ARM_PROB_ACCOUNT, False),
-                        ('', False)):
-            assert entry._fallback_legs_ok(s, gs, arm, '三月七') is ok, arm
-
-
-    def test_population_arm_triggers(self):
-        """人口位三元触发(line_and_upgrade §2.1 三元谓词完整保留:
-        板满 ∧ 阵营相关等待件不限星级 ∧ 边际贡献 > 0 由结构承载):
-        cap 满帧 + bench 同羁绊等待件 → pop_slot 臂触发。"""
-        from sr_od.application.currency_war.kernel.cw_game_state import Unit
-        # 板满构帧:cap 2 = 板上两人;bench 等待件与板共享羁绊(知更鸟/
-        # 那刻夏同属追击系,阵营经注册表派生)
-        board = (Unit(char_id='知更鸟', star=1),
-                 Unit(char_id='那刻夏', star=1))
-        gs, s = _frame(level=1, gold=30,
-                       bench=(_bc('知更鸟', 1),),
-                       front_row=board, deploy_cap=2)
-        trig, key = levelup.upgrade_trigger(gs, s)
-        assert trig and key == levelup.ARM_POPULATION, \
-            '板满 ∧ 同羁绊等待件:人口位三元触发'
-
-
-# ===== 6. P2 低血带授权域(谓词 + 危机带停付面)=====
+# ===== 4. P2 低血带授权域(谓词 + 危机带停付面)=====
 
 
 class TestP2BloodBand:
@@ -541,11 +414,10 @@ class TestP2BloodBand:
         assert preds.p2_blood_floor(_bsb(**st3)) is True
 
     def test_crisis_band_blocks_spend_and_interest_key_domain(self):
-        """危机带停付面:产线在产 p2_crisis_band 对 P2 濒死帧全额管辖——
-        停付照常(P2/P1 域同判);凑息不受血线辖(凑息禁令位已随血线地板
-        删除链退役:两域帧的拒因键族里血线键不复存在——空板守卫等金位/
-        板面键照常)。(保底金门真值表含出辖两支 =
-        TestRetainedGates::test_guarantee_floor_gate_truth_table,不重复。)"""
+        """危机带停付面:产线在产 p2_crisis_band 对 P2 濒死帧全额管辖
+        (P21 全域判定——危机带 ∧ 任意现金位帧均判定,富余段域内让位
+        已消亡);凑息不受血线辖(凑息禁令位已随血线地板删除链退役:
+        两域帧的拒因键族里血线键不复存在——空板守卫等金位/板面键照常)。"""
         from sr_od.application.currency_war.kernel.cw_registry import (
             DEFAULT_REGISTRY,
         )

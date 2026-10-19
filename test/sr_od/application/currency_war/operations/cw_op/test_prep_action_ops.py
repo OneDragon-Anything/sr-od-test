@@ -728,9 +728,9 @@ def test_levelup_emission_carries_cost_and_auth_basis():
     """发射面装载(CwActionLevelUpParam 粒度定案③口径,持久索引见模块头):cost = kernel
     xp_click_cost 现算(gs.level_up_cost 缺读时函数内回退
     XP_CLICK_COST_FALLBACK 折扣支,发射位零本地回退分支);auth_basis =
-    发射臂放行名分键(五臂封闭集:pop_slot/arm0/must_spend/stay_gate/
-    prob_account——prep-shop-workflow-redesign 重轴,发射位 = entry
-    备战第 3 步);route_tag 沿 Emitted.reason 透传
+    触发键闭集('stay_gate'=带滞后升级 / 'natural'=无未完成目标自然
+    升级——升级触发单判据三分派,11 号稿 §2,发射位 = entry
+    备战第 4 步);route_tag 沿 Emitted.reason 透传
     (step3_levelup_batch:<tag>;动作对象 route_tag 由桥伴在
     decide_prep_frame 装载,发射位直跑不经桥 → reason 承载)。"""
     from test.sr_od.application.currency_war._cw_helpers import cw4_box
@@ -748,7 +748,7 @@ def test_levelup_emission_carries_cost_and_auth_basis():
         session_scope as _ss,
     )
 
-    st = {'gold': 80, 'level': 4, 'hp': 30, 'plane': 2, 'round_num': 2,
+    st = {'gold': 80, 'level': 4, 'hp': 80, 'plane': 2, 'round_num': 2,
           'deploy_cap': 4, 'node': 'battle',
           'bench': [BenchSlot(kind='unit', unit=Unit(
               char_id='注册表外散件A', star=1))],
@@ -760,20 +760,21 @@ def test_levelup_emission_carries_cost_and_auth_basis():
     gs = cw4_box(sess, **st)   # 挂 sess:emit 经 game_state_of(session) 解析同容器
     gs.observe(gs.node_pos, (2, 2), sig=ChannelSig(
         family='obs', actor='cw4_seed', mode='synthesized'))
-    _ss.mark_shop_handled(gs)   # 跳过第 4 步,帧直达第 3 步升级检查
+    gs.node_hist_pos = (2, 1)
+    _ss.handle_node_boundary(gs)   # plane2_started 置位(node_hist_pos 水位驱动)
+    _ss.write_line_lock(gs, '希儿量子')   # 锁定线:未持有缺件 → 希儿 1★ 目标(3 费,带 (7,7))
     from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
         state_of as _state_of,
     )
     _state_of(gs).gold_ledger = 80   # 金位账面锚定(3.6 读数门:桥族种子不自带钉位)
     out = entry.emit(sess, None)
     lv = [e for e in out if isinstance(e.action, CwActionLevelUpParam)]
-    assert lv, '构帧须命中升级溢余段臂(gold 80 > 息线 50)'
+    assert lv, '构帧须命中带滞后触发(lv4 < 带下界 7)∧ 现金足(花后 ≥ 线)'
     gs_cost_view = cw4_box(gold=80, level=4, hp=30, plane=2,
                            round_num=2, level_up_cost=4)
     a = lv[0].action
     assert a.cost == xp_click_cost(gs_cost_view)   # 现算单一源(含回退支)
-    assert a.auth_basis in ('pop_slot', 'arm0', 'must_spend',
-                            'stay_gate', 'prob_account')
+    assert a.auth_basis in ('stay_gate', 'natural')
     assert lv[0].reason.startswith('step3_levelup_batch:')
     # 整批击数字段随授权装载(一次买齐;批大小 = 门槛表差值折击数)
     assert a.clicks >= 1

@@ -45,6 +45,7 @@ from sr_od.application.currency_war.kernel.cw_line_switch import e_rounds
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionBuyCardParam,
     CwActionCloseShopParam,
+    CwActionLevelUpParam,
     CwActionRefreshShopParam,
     ShopCard,
 )
@@ -201,26 +202,38 @@ def _ju23_session() -> StrategySession:
 
 
 def test_ju23_star2_stock_card_has_no_refund_backing_no_spend():
-    """局23 帧 2★ 压库件:无全额可退背书 ⇒ 端到端零支出。
+    """局23 帧 2★ 压库件:无全额可退背书 ⇒ 不经背书门辖的两臂买入。
 
     stockpile_buy 与 dominance 同以 refund_full_star_ok 为背书门:
-    2★ 件两条买面都不可发射,溢余滞留(不放行)而非带病买——
-    断言「背书门在局23 帧端到端成立」,非单位测试复述。
-    商店收缩适配 → 3.6 会话重排再翻转 → 升级转场(迭代
-    2026-10-17-levelup-shop-transition T-1,design §2.1):溢余帧
-    (gold 100 > 息线)前置升级检查命中且可发射 → 首动作 = 关店
-    (升级转场,不置 handled 标记),店内不再发升级动作
-    (升级执行位迁备战画面);端到端零支出语义保持(转场关店零花费)。
+    2★ 件两条买面都不可发射(断言面 = 逐动作 reason 闭集,非单位测试
+    复述)。出口形态沿革:商店收缩适配 → 3.6 会话重排 → 升级转场
+    (2026-10-17 迭代)→ 升级触发统一批(P1 零主动升级,触发辖域 =
+    锁定后 ∧ plane2_started——溢余帧的转场出口消失,会话自然走到
+    买面:序 2 场况插件 = 义务通道不走背书门([41]),花火 2★ 若被
+    其买入属现行买面语义,非背书门破口;stockpile/dominance 仍被
+    背书门拦)。店内升级动作退役(升级执行位迁备战画面)。
     """
     cfg = SimpleNamespace(ev_arm='full')
     sess = _ju23_session()
-    act = decide_shop_action(cw4_gs(sess, **_ju23_axes(
-        100, [_sc('花火', star=2)])), sess, cfg)
-    assert not isinstance(act, (CwActionBuyCardParam, CwActionRefreshShopParam))
-    assert isinstance(act, CwActionCloseShopParam), (
-        f'溢余帧应升级转场关店: {act!r}')
-    assert state_of(sess).shop_handled is None, '转场关店不置 handled 标记'
-    assert state_of(sess).cw4_counters.get('levelup_transition_close') == 1
+    st = _ju23_axes(100, [_sc('花火', star=2)])
+    reasons: list[str] = []
+    act = None
+    for _ in range(8):
+        act = decide_shop_action(cw4_gs(sess, **st), sess, cfg)
+        assert not isinstance(act, CwActionLevelUpParam), \
+            '店内升级动作已退役(升级执行位迁备战画面)'
+        reasons.append(getattr(act, 'reason', '') or type(act).__name__)
+        if isinstance(act, CwActionBuyCardParam):
+            st['gold'] -= act.card.cost if act.card.cost else 3
+            st['shop'] = [c for c in st['shop'] if c is not act.card]
+        elif isinstance(act, CwActionCloseShopParam):
+            break
+    assert isinstance(act, CwActionCloseShopParam), \
+        f'决策有界收束(死守嫌疑): {reasons!r}'
+    assert not ({'m2_stockpile', 'dominance_buy'} & set(reasons)), \
+        f'2★ 无背书件不经背书门辖的两臂买入: {reasons!r}'
+    assert state_of(sess).cw4_counters.get('levelup_transition_close', 0) == 0, \
+        'P1 帧零主动升级(触发辖域 = 锁定后 ∧ plane2_started)'
 
 
 def test_ju23_full_surface_gold_never_breaks_interest_line():
@@ -229,9 +242,10 @@ def test_ju23_full_surface_gold_never_breaks_interest_line():
     每个起始金位完整走一次店内访问(动作后真值回写再判,ADR-0517
     §8.1 口径):任一 CwActionBuyCardParam/CwActionRefreshShopParam 花后金 ≥ s_reserve(本帧形状
     = 50);息线下(≤50)整访问零支出(无误清);每访问都以 CwActionCloseShopParam
-    收束且有界迭代(无死守环)。溢余帧(>50)经升级意图出口转场关店
-    收束(2026-10-17 迭代 T-1,design §2.1——店内升级发射退役,
-    升级动作不再出现在店内动作面;若复现即 else 分支响亮红)。
+    收束且有界迭代(无死守环)。P1 帧升级意图出口不命中(触发辖域 =
+    锁定后 ∧ plane2_started,升级触发统一批),溢余帧经正常收工关店
+    收束;店内升级发射已退役(2026-10-17 迭代 T-1,升级动作不在店内
+    动作面;若复现即 else 分支响亮红)。
     恒买腾席适配(ADR-0580):店卡改用真无关件(局23杂件,非④放行集/
     registry 核心)——原探针花火 ∈ TRANSITION_PACK carry,未锁双轨
     P1 帧会被 ④转线放行臂在息线下买入(1★ 全额退 = 可逆资产,裁定

@@ -76,7 +76,6 @@ from sr_od.application.currency_war.kernel.cw_economy import (
     effective_hp_threshold,
     refresh_ev_budget,
     reserve_cap,
-    schedule_upgrade,
     world_shop_refresh_cost,
 )
 from sr_od.application.currency_war.kernel.cw_economy import (
@@ -454,28 +453,20 @@ def test_xp_fee_no_discount_invariant_and_display_passthrough() -> None:
     test_xp_click_display_price_passthrough,断言腿逐条保留):
 
     - 无折扣局不变测试:未持任何折扣卡时费用与改前逐位一致(方案审修改
-      清单④①)——显示价支原值直通、兜底支基价 4、upgrade_plan_fee =
-      击数×同价(击数值来自 cw_plane_table 注册表,非本测试辖值)。改前
-      病理只在持折扣卡时显形,本测试钉住占绝大多数的无间谍局零漂移;
+      清单④①)——显示价支原值直通、兜底支基价 4(击数值来自
+      cw_plane_table 注册表,非本测试辖值)。改前病理只在持折扣卡时
+      显形,本测试钉住占绝大多数的无间谍局零漂移;
     - 显示价直通测试:持商业间谍时显示价 3 原样返回(改前双扣 = 2,真值 3)。
       依据 = strategy-env-impacts §3 商业间谍条「显示价即折后价,游戏已
       算好」(2026-09-10 用户确认);对已折显示价再减模型折扣 = 双重折扣,
       对等级门折扣同样成立(成长快乐 8 级起,游戏侧显示价已含)。"""
     from sr_od.application.currency_war.kernel.cw_economy import (
-        upgrade_plan_fee,
         xp_click_cost,
     )
-    from sr_od.application.currency_war.kernel.cw_plane_table import (
-        clicks_to_level,
-    )
-    # 无折扣局不变(显示价支/兜底支/upgrade_plan_fee 两支)
+    # 无折扣局不变(显示价支/兜底支)
     assert xp_click_cost(_xp_state(display=3)) == 3     # 显示价支:原样
     assert xp_click_cost(_xp_state(display=5)) == 5
     assert xp_click_cost(_xp_state(display=None)) == 4  # 兜底支:基价
-    assert upgrade_plan_fee(_xp_state(level=5, display=3)) \
-        == clicks_to_level(5) * 3
-    assert upgrade_plan_fee(_xp_state(level=5, display=None)) \
-        == clicks_to_level(5) * 4
     # 显示价直通(持折扣卡;改前双扣,等级门同理)
     assert xp_click_cost(_xp_state(strategies=[_JUST_SPY], display=3)) == 3
     assert xp_click_cost(_xp_state(level=8, strategies=[_JUST_JOY],
@@ -514,29 +505,12 @@ def test_xp_click_joy_level_gate_truth_table(
         _xp_state(level=level, strategies=strategies)) == expected
 
 
-def test_upgrade_plan_fee_delegates_discount_aware_pricing() -> None:
-    """upgrade_plan_fee 委托测试:sim 形态(无显示价)持商业间谍时升级总费
-    = 击数×3(改前裸字段取价 = 击数×4,反方向单侧错,方案审问题 3-a)。
-
-    委托语义 = 击数面零变化(clicks_to_level 只供次数),取价唯一源 =
-    xp_click_cost;显示价支委托后与直通同源(改前碰巧对 → 委托后结构性对)。"""
-    from sr_od.application.currency_war.kernel.cw_economy import (
-        upgrade_plan_fee,
-    )
-    from sr_od.application.currency_war.kernel.cw_plane_table import (
-        clicks_to_level,
-    )
-    fallback = _xp_state(level=5, strategies=[_JUST_SPY], display=None)
-    assert upgrade_plan_fee(fallback) == clicks_to_level(5) * 3
-    observed = _xp_state(level=5, strategies=[_JUST_SPY], display=3)
-    assert upgrade_plan_fee(observed) == clicks_to_level(5) * 3
-
-
-# (三审整删)原 test_upgrade_plan_fee_no_second_discount_implementation
-# 「结构测试」(getsource 断言函数体内禁第二处取价/折扣实现)——源码扫描形态
-# (README 禁止清单);委托语义行为半由
-# test_upgrade_plan_fee_delegates_discount_aware_pricing 辖,「同一语义
-# 两处实现」防线归 review 与代码规范。
+# (test_upgrade_plan_fee_delegates_discount_aware_pricing 已随
+#  upgrade_plan_fee 删除消亡——升级排程接缝删除(升级触发统一批)后
+#  取价消费位归零,函数级联删除;xp_click_cost 取价语义由上测承载。
+#  (三审整删)原 test_upgrade_plan_fee_no_second_discount_implementation
+#  「结构测试」(getsource 断言函数体内禁第二处取价/折扣实现)——源码扫描形态
+#  (README 禁止清单),更早退役,考古走 git 历史。)
 
 
 # ==================== 预算核/排程核/断供驱逐(自 migration_budget_authority 归并) ====================
@@ -587,62 +561,7 @@ def _sc(name: str, cost: int = 2) -> ShopCard:
 #  统一迁移批 ② MAP B 类;build_round_posture/evaluate_release 随 v2 消亡。)
 
 
-# --- 排程核规则测试(W615 R4;触发①②真值表并一)-----------------------
-
-
-def _schedule_rows() -> dict:
-    """排程触发①②表行构造器(种子轴构造延迟调用,保各触发前置差异;
-    断言腿逐条 = 原 test_schedule_pop_slot_trigger /
-    test_schedule_probability_trigger_requires_engine)。"""
-    from sr_od.application.currency_war.kernel.cw_game_state import (
-        max_units_of,
-    )
-
-    def _formed_bench() -> list:
-        # 2★ 成型件九连(注册表前排角色名;阵营经注册表派生,名字表达纪律)
-        return [_bc('阿格莱雅', star=2)
-                for i in range(BENCH_CAPACITY)]
-
-    def pop_not_full():
-        # ①负腿:bench 满 2★ 成型件 ∧ 未部署(有空位)→ 人口位不触发
-        #(gold 30<息线:禁升②不触发——双负前置种子)
-        st = _ba_state(gold=30, level=6, round_num=9, bench=_formed_bench())
-        assert not st.get('front_row') and not st.get('back_row')   # 有空位
-        return st, _ba_sess_of(st)
-
-    def pop_cap_full():
-        # ①正腿:cap 满(上场 6 人 = lv6 席位上限,前排 4 + 后排 2)
-        #→ 人口位触发(最高义务);'杂{i}' = 注册表外名(未知阵营占位)
-        front = [Unit(char_id=f'杂{i}', star=1) for i in range(4)]
-        back = [Unit(char_id=f'杂{i}', star=1) for i in range(4, 6)]
-        st = _ba_state(gold=30, level=6, round_num=9, bench=_formed_bench(),
-                       front_row=front, back_row=back)
-        assert len(front) + len(back) >= max_units_of(_bsb(**st))
-        return st, _ba_sess_of(st)
-
-    def prob_engine_live():
-        # ②臂退役后的排程面(迭代 2026-10-12-prep-shop-workflow-
-        # redesign 批 3.4;line_and_upgrade §2.3 升级②臂行):概率改善
-        # 排程语义已迁策略层概率主账(criteria/levelup.prob_account_ok,
-        # 锁定后 ∧ plane2_started 双条件),本函数人口位单臂——此类帧
-        # (息引擎已立 + 峰值在前 + 金 60)不再排程
-        return _ba_state(gold=60, level=7), _ba_locked_4cost_sess()
-
-    def prob_engine_missing():
-        # ②退役帧对照:金 49<息线(旧②负腿形态)——同样不排程
-        return _ba_state(gold=49, level=7), _ba_locked_4cost_sess()
-
-    def prob_peak_reached():
-        # ②退役帧对照:峰值已达——不排程
-        return _ba_state(gold=60, level=9), _ba_locked_4cost_sess()
-
-    return {
-        'pop-slot-bench-formed-not-full': (pop_not_full, False),
-        'pop-slot-cap-full': (pop_cap_full, True),
-        'probability-engine-live-peak-ahead': (prob_engine_live, False),
-        'probability-engine-missing': (prob_engine_missing, False),
-        'probability-peak-reached': (prob_peak_reached, False),
-    }
+# --- R* 储备核测试(排程升级分量删除后的语义锁)-----------------------
 
 
 def _ba_sess_of(state: dict) -> StrategySession:
@@ -650,12 +569,8 @@ def _ba_sess_of(state: dict) -> StrategySession:
 
 
 def _ba_locked_4cost_sess() -> StrategySession:
-    """锁定 4 费核意向的 session(ADR-0516 U_L 阈值检验重锚帧):
-    4 费峰值级 9,L7→8 概率 0.10→0.22 大移位带(期望刷费省 ≈103 金
-    > U_L = 13击×4金 = 52 + 息损)⇒ ② 臂检验过——旧「裸峰值级>当前级」
-    直觉帧(2 费小移位带,benefit ≈9.9 < U_L 20)按修正①被正确收紧
-    (负向测试 = test_schedule_ul_threshold_negative_small_shift_band),
-    测试随新判据重锚(反例锚=希儿 lv7 省 28 < 升 40,ADR-0516)。"""
+    """锁定 4 费核意向的 session(预算核概率校准分量的锁定核解析帧):
+    4 费峰值级 9(单一源 = cw_plane_table.peak_refresh_level)。"""
     from sr_od.application.currency_war.data.cw_chars import CHARACTERS
     from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
     from sr_od.application.currency_war.kernel.cw_intention import intention_core
@@ -669,75 +584,23 @@ def _ba_locked_4cost_sess() -> StrategySession:
     return sess
 
 
-@pytest.mark.parametrize('case_id', list(_schedule_rows()))
-def test_schedule_triggers_truth_table(case_id: str) -> None:
-    """排程触发真值表一测试(参数化并一;迭代 2026-10-12-prep-shop-
-    workflow-redesign 批 3.4 后 = 人口位单臂):
-    ①人口位[33]:cap 满 ∧ bench 有成型件(2★)→ 排程(最高义务,不受
-    可负担前置辖——当轮兑现战力);
-    ②概率级已随升级判据重轴退役(「概率改善才升」语义迁策略层概率
-    主账,criteria/levelup.prob_account_ok——锁定后 ∧ plane2_started
-    双条件消费,line_and_upgrade §2.3 升级②臂行):旧②三形态帧
-    (引擎已立/未立/峰值已达)在本函数一律不排程。"""
-    build, expect_scheduled = _schedule_rows()[case_id]
-    st, sess = build()
-    got = schedule_upgrade(_bsb(**st), sess)
-    if expect_scheduled:
-        assert got, f'{case_id}: 应排程'
-    else:
-        assert not got, f'{case_id}: 不应排程'
-
-
-# (U_L 阈值检验负向测试 test_schedule_ul_threshold_negative_small_shift_band
-#  已随 schedule_upgrade ②臂退役消亡——迭代 2026-10-12-prep-shop-
-#  workflow-redesign 批 3.4:检验函数 _upgrade_ul_threshold_ok 随②臂
-#  删除,「小移位带过度升级」的防线由策略层概率主账
-#  criteria/levelup.prob_account_ok 承载〔同一不等式形态,辖域改锁定后
-#  ∧ plane2_started 双条件,负向测试 = test_levelup_prob_axis 的
-#  概率账不触发形态〕;替代语义考古走 git 历史。)
-
-
-def test_schedule_predictive_even_when_fee_unaffordable() -> None:
-    """预告态契约(W623 D1,判前测试):排程不以当帧可负担为前置——
-    人口位触发帧(cap 满 ∧ bench 2★ 成型件)gold 30(远不够升级费)
-    → 排程照发、R* 计入升级费;「付得起才排」会造 R* 塌缩 → 义务
-    花光 → 更排不上的贫穷循环。(重锚申报:原用概率级②帧承载,
-    ②臂随升级判据重轴退役〔迭代 2026-10-12-prep-shop-workflow-
-    redesign 批 3.4〕后改人口位帧,契约语义不变。)"""
-    from sr_od.application.currency_war.kernel.cw_game_state import (
-        max_units_of,
+def test_reserve_cap_pure_interest_line_no_upgrade_component() -> None:
+    """R* = 保利利息线单分量(升级排程分量恒 0 的行为锁,11 号稿 §3
+    金前提行):排程升级接缝删除后,R* 在任意板面形态(含「板满 ∧
+    bench 2★ 成型件等上场」的旧人口位排程帧)恒 = saturation_line
+    (session resolved 链)——升级攒批资金保护由刷新侧整级预留承载,
+    预算层不再为升级储蓄。"""
+    from sr_od.application.currency_war.kernel.cw_economy import (
+        cap_resolved_of_session,
+        saturation_line,
     )
     front = [Unit(char_id=f'杂{i}', star=1) for i in range(4)]
     back = [Unit(char_id=f'杂{i}', star=1) for i in range(4, 6)]
-    bench = [_bc('阿格莱雅', star=2) for i in range(BENCH_CAPACITY)]
+    bench = [_bc('阿格莱雅', star=2) for _ in range(BENCH_CAPACITY)]
     st = _ba_state(gold=30, level=6, round_num=5, bench=bench,
                    front_row=front, back_row=back)
-    assert len(front) + len(back) >= max_units_of(_bsb(**st))
-    assert schedule_upgrade(_bsb(**st), StrategySession())
-    assert reserve_cap(_bsb(**st), StrategySession()) > 50
-
-
-def test_schedule_gold_digger_retires_levelup(monkeypatch) -> None:
-    """淘金客姿态:升级通道退役(W621:CwActionLevelUpParam 退役是刷驱姿态主驱动;
-    谓词单一址=cw_investments.refresh_invest_active,授权链同址关闭)。
-    (重锚申报:原前置用概率级②帧,②臂随升级判据重轴退役〔迭代
-    2026-10-12-prep-shop-workflow-redesign 批 3.4〕后改人口位帧,
-    淘金客停机语义不变。)"""
-    from sr_od.application.currency_war.kernel.cw_game_state import (
-        max_units_of,
-    )
-    front = [Unit(char_id=f'杂{i}', star=1) for i in range(4)]
-    back = [Unit(char_id=f'杂{i}', star=1) for i in range(4, 6)]
-    bench = [_bc('阿格莱雅', star=2) for i in range(BENCH_CAPACITY)]
-    st = _ba_state(gold=100, level=6, round_num=5, bench=bench,
-                   front_row=front, back_row=back)
-    assert len(front) + len(back) >= max_units_of(_bsb(**st))
-    assert schedule_upgrade(_bsb(**st), StrategySession())   # 前置:常态帧排程成立
-    monkeypatch.setattr(
-        'sr_od.application.currency_war.kernel.cw_investments.STRATEGY_ECONOMY',
-        {'淘金客': EconomyEffect(xp_per_refresh=2)})
-    st['active_strategies'] = ['淘金客']   # 持卡后:升级通道退役,不排程
-    assert not schedule_upgrade(_bsb(**st), StrategySession())
+    assert reserve_cap(_bsb(**st), StrategySession()) \
+        == saturation_line(cap_resolved_of_session(None))
 
 
 # --- 预算核契约测试(W623 D2;值域+合法 0 帧表驱动并一)---------------------
@@ -831,27 +694,21 @@ def test_injection_consistency_single_registry_source() -> None:
     = 买断制 0/开源节流 9/利息上调 10)移动,registry.interest_cap
     注入不再移动任何息线。测试语义重推(测试存在性纪律,ADR-0598):旧测试
     「注入面 cw4_cap_override=4(registry 不可达值)压过 registry 旋钮」
-    随死通道退役重写为「买断制(可达值 0)在排程前置与预算面同帧
-    生效,registry 旋钮双臂逐位不动」——判别结构(链动/旋钮不动)
-    保形。(②臂随升级判据重轴退役〔批 3.4〕后,排程面的链动腿消亡,
-    预算面的链动腿保形承载本测试。)"""
+    随死通道退役重写为「买断制(可达值 0)在预算面同帧
+    生效,registry 旋钮逐位不动」——判别结构(链动/旋钮不动)
+    保形。(排程面已随升级触发统一批删除——R* = 保利利息线单分量,
+    resolved 链动腿由预算面本测承载。)"""
     import dataclasses
     reg2 = dataclasses.replace(_REG, interest_cap=4)
     st1 = _ba_state(gold=45, level=7)
     sess = _ba_locked_4cost_sess()
-    # 排程面:②臂已随升级判据重轴退役(批 3.4),本帧(无人口位触发)
-    # 两 registry 下同 False——registry 旋钮不动排程的判别结构保形;
-    # 概率改善排程的 resolved 链语义已迁策略层概率主账
-    assert not schedule_upgrade(_bsb(**st1), sess, _REG)
-    assert not schedule_upgrade(_bsb(**st1), sess, reg2)   # registry 旋钮不动 resolved 链
-    sess_ov = _ba_locked_4cost_sess()
-    _seed_actives(sess_ov, ['买断制'])   # 注册表可达覆写 cap=0 → 息线 0
-    assert not schedule_upgrade(_bsb(**st1), sess_ov)   # ②退役:买断制帧同不排程
     assert refresh_ev_budget(_bsb(**st1), sess, reg2) == \
         refresh_ev_budget(_bsb(**st1), sess, _REG)   # registry 旋钮对预算逐位惰性(ADR-0598 归一)
+    sess_ov = _ba_locked_4cost_sess()
+    _seed_actives(sess_ov, ['买断制'])   # 注册表可达覆写 cap=0 → 息线 0
     # 预算面同链:R* 守息线分量随 resolved cap 动(买断制 floor=0
-    # < 默认 50),registry 旋钮不动;②臂退役后无排程帧 R* = 守息线
-    # 单分量:gold 45 ≤ 默认 50 → 零预算;买断制 0 → 正预算
+    # < 默认 50),registry 旋钮不动;R* = 守息线单分量(升级排程分量
+    # 已随升级触发统一批删除):gold 45 ≤ 默认 50 → 零预算;买断制 0 → 正预算
     st2 = _ba_state(gold=45, level=7)
     assert reserve_cap(_bsb(**st2), sess_ov) < reserve_cap(
         _bsb(**st2), sess)

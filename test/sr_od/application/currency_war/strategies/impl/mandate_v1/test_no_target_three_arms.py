@@ -274,8 +274,13 @@ class TestArmCHoldDefault:
             'R1 判据键随路径总账退役'
 
     def test_upgrade_not_frozen_by_hold_default(self):
-        """升级不冻结面(辖域切分腿承继):k_members 空帧升级既有授权
-        照常发射——空窗帧不因丙臂缺省冻结发展。"""
+        """空窗帧升级语义(升级触发统一批重锚,11 号稿 §2):未锁定期
+        零主动升级——触发辖域 = 锁定后 ∧ plane2_started,升级授权本体
+        在空窗帧不存在(非守息冻结形态;原「板满等战力义务触发」臂
+        已删,用户裁定 2026-10-18)。发展优先不变量的升级面载体 =
+        锁定后无目标帧自然升级(键 natural,行为锁 =
+        test_levelup_prob_axis::TestTriggerDispatch::
+        test_natural_upgrade_without_target)。"""
         from sr_od.application.currency_war.kernel.cw_vocab import (
             CwActionLevelUpParam,
         )
@@ -297,8 +302,9 @@ class TestArmCHoldDefault:
                            mode='synthesized'))
         _ss3.mark_shop_handled(cw4_gs(sess_m3))
         out = entry.emit(sess_m3, None)
-        assert [e for e in out if isinstance(e.action, CwActionLevelUpParam)], \
-            '丙臂守息不得冻结升级既有授权(发展优先不变量,01 §8-2)'
+        assert not [e for e in out
+                    if isinstance(e.action, CwActionLevelUpParam)], \
+            '未锁定期零主动升级(板满等战力义务触发删除,非守息冻结)'
 
 
 # ===== k_members 下游同源(测试 6 承继;换源 = 回退集)=====

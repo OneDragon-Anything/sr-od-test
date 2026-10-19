@@ -604,8 +604,8 @@ class TestUpgradeIntentExit:
 
     def test_hit_emissible_transition_close_without_mark(self):
         """命中 ∧ 可发射 → 关店转场且不置 handled 标记(design §2.1
-        分支一):溢余帧(gold 80 > 息线 50,must_spend 臂)资格门全链
-        通过 → 首动作 = 关店;标记未置(转场帧的后继 = 备战升级执行,
+        分支一):金充裕带滞后帧(等级 < 带下界,现金 − 批 ≥ 线)资格门
+        全链通过 → 首动作 = 关店;标记未置(转场帧的后继 = 备战升级执行,
         商店未「事情办完」);转场计数在册;零店内卖出/店内升级发射。"""
         live, sess, gs, st = self._stay_frame(gold=80)
         act = live.decide_shop_action()
@@ -613,21 +613,21 @@ class TestUpgradeIntentExit:
         assert st.shop_handled is None, '转场关店不置 handled 标记'
         ct = st.cw4_counters
         assert ct.get('levelup_transition_close') == 1
-        assert ct.get('levelup_trigger_must_spend') == 1
+        assert ct.get('levelup_trigger_stay_gate') == 1
         assert not [k for k in ct if k.startswith('levelup_liquidate')], \
             '店内侧变现场景消费点已退役(凑金归备战侧)'
 
     def test_hit_gold_short_returns_none_session_continues(self):
-        """命中 ∧ 不可发射(待付窗)→ 检查返回 None,会话照常继续
-        (design §2.1 分支二):停留门臂触发 ∧ 金不足(花后金 < 息线
-        差额)→ 资格门拒因在册;会话走 §2.5 正常收工置标记(「等节点
-        收入」形态成立),非转场关店。"""
+        """命中 ∧ 不可发射(待付窗)→ 检查返回 None,会话照常继续:
+        停留门触发 ∧ 花后破线 ∧ 凑金不可达(无活期可变现)→ 资金线
+        defer 拒因在册(资金面拒因统一键);会话走 §2.5 正常收工置标记
+        (「等节点收入」形态成立),非转场关店。"""
         live, sess, gs, st = self._stay_frame(gold=30)
         act = live.decide_shop_action()
         ct = st.cw4_counters
         assert ct.get('levelup_trigger_stay_gate') == 1
-        assert ct.get('levelup_reserve_line_defer') == 1, \
-            '金不足帧资格门拒因在册(优化臂息线差额保留)'
+        assert ct.get('levelup_fund_line_defer') == 1, \
+            '金不足帧资格门拒因在册(资金线 defer 统一键)'
         assert ct.get('levelup_transition_close', 0) == 0, '待付窗不转场'
         assert isinstance(act, CwActionCloseShopParam), act
         assert st.shop_handled is not None, \
@@ -656,8 +656,9 @@ class TestUpgradeIntentExit:
         assert st.shop_handled is not None
 
     def test_gate_p21_crisis_frame_defers(self):
-        """资格门④P21 危机带帧:命中(停留门臂)∧ 濒死带(hp 10)∧
-        富余段域外 → 停付让位(拒因在册),会话照常收工置标记。"""
+        """资格门④P21 危机带帧:命中(带滞后)∧ 濒死带(hp 10)→
+        停付让位(拒因在册;P21 全域判定——危机带 ∧ 任意现金位帧均拦,
+        富余段域内让位已消亡),会话照常收工置标记。"""
         live, sess, gs, st = self._stay_frame(gold=30, hp=10)
         act = live.decide_shop_action()
         assert st.cw4_counters.get('levelup_trigger_stay_gate') == 1
@@ -667,16 +668,19 @@ class TestUpgradeIntentExit:
         assert st.shop_handled is not None
 
     def test_gate_blood_gate_frame_defers_and_control(self):
-        """资格门⑥血本位局血闸:血本位局(奋斗协议)∧ 血余额 < 整级
-        血成本 → 不发射(拒因在册);对照血足帧 → 可发射转场关店。"""
-        live, sess, gs, st = self._stay_frame(gold=80, hp=10,
+        """资格门⑥血本位局血闸:血本位局(奋斗协议,6 血/击)∧ 血余额
+        < 整级血成本 → 不发射(拒因在册);对照血足帧 → 可发射转场
+        关店。构帧注:lv6 血批 = 10 击 × 6 = 60,hp 45 在 P21 危机带
+        (≤41)外 ∧ 不足血批——P21 全域判定后血闸 defer 的可达构帧域
+        (hp < 血批 ⊂ 危机带的帧由门④先拦)。"""
+        live, sess, gs, st = self._stay_frame(level=6, gold=80, hp=45,
                                               actives=('奋斗协议',))
         live.decide_shop_action()
         assert st.cw4_counters.get('levelup_blood_gate_defer') == 1
         assert st.cw4_counters.get('levelup_transition_close', 0) == 0
         assert st.shop_handled is not None
         # 对照:血余额足 → 全链通过 → 转场关店(不置标记)。
-        live2, sess2, gs2, st2 = self._stay_frame(gold=80, hp=100,
+        live2, sess2, gs2, st2 = self._stay_frame(level=6, gold=80, hp=100,
                                                   actives=('奋斗协议',))
         act2 = live2.decide_shop_action()
         assert isinstance(act2, CwActionCloseShopParam), act2
@@ -739,53 +743,55 @@ class TestPrepRandomizedReopen:
         assert gs.shop_randomized_pending is False, '节点边界清信号'
 
 
-# ============================================================ 刷新整级预留保护
-# (迭代 2026-10-17-levelup-shop-transition T-4,design §2.5③:载体从
-# 预授权键读迁移为升级资格门判据现值同帧重评——判据命中且资金门金量
-# 不足〔攒批等待帧〕时 reserve 含整级差额,刷新不烧升级资金。键载体
-# 时代该保护在 T-2 后实质失活,本用例 = 失活窗口收口的直接证据。)
+# ============================================================ 凑金等待帧刷新让位
+# (载体 = 升级资格门判据现值同帧复用:凑金可达域帧的 reserve 含整级批
+# 全量,刷新不烧升级凑金;升级触发统一批后,触发判据(带下界 > 等级)
+# 与刷新判据(等级 ≥ 带下界)带互斥——凑金等待帧的刷新让位由主判据
+# 天然承载,整级预留守卫保留为防御层。)
 
 
 class TestLevelupReserveGuard:
 
-    def test_stockpile_wait_frame_refresh_blocked_by_reserve(self):
-        """攒批等待帧刷新被整级预留拦下(双断言:花后下界过 + 整级差额
-        翻转预算门):lv8 批 72,金 56——花后 56+27−72 = 11 ≥ 保底 10
-        (资格门过到资金门)∧ 裸金 56 < 72(攒批等待)→ reserve = g* 50
-        + ρ 2 + 整级差额 16 = 68 > 金 56 → r2 预算门拒(基线 reserve 52
-        时 56−52 = 4 ≥ 刷价 2 本可通过——拦下归因整级预留,非基线门)。
-        对照帧(活期抽干 → 花后下界不过 → 非攒批等待帧)同金位照常刷新。
-        """
-        # 攒批等待帧:合成对 ×4 + 单件 c4 = 9 件活期(退 27),线上仅
-        # 部署 1 花火 → must_spend 臂(56 > 息线 50),主路径尽。
-        bench = [(n, 1) for n in ('c0', 'c0', 'c1', 'c1', 'c2', 'c2',
-                                  'c3', 'c3', 'c4')]
-        live, sess, gs, st = _frame(level=8, gold=56, plane=2, hist=(2, 1),
-                                    node_kind='battle',
-                                    bench=bench, deployed=['花火'],
-                                    shop_cards=[])
+    def test_gold_short_wait_frame_no_refresh(self):
+        """凑金等待帧零刷新(升级资金不被刷新烧):带滞后触发 ∧ 花后
+        破线 ∧ 活期可补(凑金可达域)→ 资格门 gold_short 在册;刷新
+        判据带互斥不批(等级 < 带下界)→ 零刷新动作,会话正常收工置
+        标记(「等节点收入/备战凑金」形态成立)。"""
+        comp = COMP_LIBRARY[0]
+        carry = comp.core_chars[0]
+        aux = [m for m in sorted(_LINE) if m != carry][:2]
+        need = comp.need_star or {}
+        bench = [(m, need.get(m, 1)) for m in aux] \
+            + [(n, 1) for n in _fuel(4)]
+        live, sess, gs, st = _frame(
+            level=5, gold=68, plane=2, hist=(2, 1), node_kind='battle',
+            comp=comp, bench=bench, deployed=[aux[0]], shop_cards=[])
         act = live.decide_shop_action()
         assert isinstance(act, CwActionCloseShopParam), act
         assert st.cw4_counters.get('levelup_stockpile_wait') == 1, \
-            '花后下界已过(资格门走到资金门金量不足 = 攒批等待)'
-        assert st.cw4_counters.get('must_spend_r1_budget_fail') == 1, \
-            '整级差额翻转 r2 预算门(基线可通过,拦下归因预留)'
-        assert not isinstance(act, CwActionRefreshShopParam)
-        # 对照帧:同金位同等级,活期换线内/保护件(退 0)→ 花后 56−72
-        # = −16 < 保底 10 → 资格门先拒(非攒批等待)→ 无预留 → 基线
-        # 预算门过 → 刷新照常发出(花火 1★×2 全局面合成对撑 P92 通道)。
-        bench2 = [(n, 1) for n in ('花火', '花火', '瓦尔特', '符玄', '缇宝',
+            '凑金可达域帧在册(花后破线 ∧ 活期可补,待付窗)'
+        assert st.cw4_counters.get('levelup_fund_line_defer', 0) == 0
+        assert not isinstance(act, CwActionRefreshShopParam), \
+            '凑金等待帧零刷新(升级资金完整性优先)'
+        assert st.shop_handled is not None, \
+            '凑金等待帧经正常收工置标记(备战侧每帧一卖收敛发射)'
+
+    def test_in_band_frame_refresh_proceeds(self):
+        """带内对照帧:等级 ∈ 带(升级判据不触发,verdict MISS 无预留)
+        → 刷新照常发出(基线预算门过,reason star_target)——升级-刷新
+        判据带互斥的行为面对照。"""
+        bench = [(n, 1) for n in ('花火', '花火', '瓦尔特', '符玄', '缇宝',
                                    '刻律德菈', '三月七', '姬子·启行',
                                    '千冶·刃')]
-        live2, sess2, gs2, st2 = _frame(level=8, gold=56, plane=2,
-                                        hist=(2, 1), node_kind='battle',
-                                        bench=bench2, deployed=['瓦尔特'],
-                                        shop_cards=[])
-        act2 = live2.decide_shop_action()
-        assert isinstance(act2, CwActionRefreshShopParam), \
-            f'非攒批帧无预留:刷新照常(基线预算门过)={act2!r}'
-        assert act2.reason == 'star_target'
-        assert st2.cw4_counters.get('levelup_stockpile_wait', 0) == 0
+        live, sess, gs, st = _frame(level=8, gold=56, plane=2, hist=(2, 1),
+                                    node_kind='battle',
+                                    bench=bench, deployed=['瓦尔特'],
+                                    shop_cards=[])
+        act = live.decide_shop_action()
+        assert isinstance(act, CwActionRefreshShopParam), \
+            f'带内帧(升级不触发)刷新照常(基线预算门过): {act!r}'
+        assert act.reason == 'star_target'
+        assert st.cw4_counters.get('levelup_stockpile_wait', 0) == 0
 
 
 # ============================================================ 刷新终结语义回归
