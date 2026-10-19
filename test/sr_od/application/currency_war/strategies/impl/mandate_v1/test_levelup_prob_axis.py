@@ -35,6 +35,7 @@ from test.sr_od.application.currency_war._cw_helpers import cw4_gs
 
 from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
+    gold_of,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionLevelUpParam,
@@ -65,14 +66,17 @@ _AUX_DONE = ('花火', '符玄', '缇宝', '刻律德菈')
 def _frame(*, level: int, gold: int = 30, plane: int = 2,
            hist: tuple[int, int] | None = (2, 1), bench: tuple = (),
            front_row: tuple = (), hp: int = 60, locked: bool = True,
-           actives: tuple = (), deploy_cap: int | None = None) -> tuple:
+           actives: tuple = (), deploy_cap: int | None = None,
+           round_num: int = 2, node: str = '战斗') -> tuple:
     """判据帧构造(单容器直构 + 锁定键/窗口谓词按 3.1 口径落位)。
 
     ``hist`` = node_hist_pos 直赋值(None = 不赋——P1 未置位形态经
     (1, n) 表达);返回 (gs, session)——session = gs 同容器实例
     (生产链 emit 的 session 形参即容器,state_of 动态挂载同宿主)。
+    ``round_num``/``node`` = 节点轴覆盖(缺省战斗 r2;位面末 boss 帧等
+    判据面经此构帧)。
     """
-    gs = cw4_gs(None, gold=gold, level=level, round_num=2, node='战斗',
+    gs = cw4_gs(None, gold=gold, level=level, round_num=round_num, node=node,
                 hp=hp, plane=plane, bench=list(bench),
                 front_row=list(front_row), active_strategies=list(actives),
                 deploy_cap=deploy_cap)
@@ -85,7 +89,7 @@ def _frame(*, level: int, gold: int = 30, plane: int = 2,
     # 边界后稳态,重新锚定账面并钉位判重键(失效行为测试显式置 None)。
     _st = state_of(gs)
     _st.gold_ledger = int(gold)
-    _st.node_boundary_last_pos = (int(plane), 2)
+    _st.node_boundary_last_pos = (int(plane), int(round_num))
     return gs, gs
 
 
@@ -438,3 +442,141 @@ class TestP2BloodBand:
             assert slots_k == []
             assert key_k not in ('blood_floor', 'p2_blood_floor'), (
                 '血线拒因键已随凑息禁令位退役')
+
+
+# ===== 5. 资金门终态行为固化(2026-10-18-levelup-band-gate design §2.7
+# ===== 单帧清单 ⑥-⑩ 的 emit 级/域内变体补面;①-⑤ 由本文件上方各类
+# ===== 承载,映射见交付报告)=====
+
+
+class TestFundLineEmissionPins:
+    """资金线门发射终态(design §2.7 ⑥⑦⑧⑨⑩)。
+
+    出处(持久索引)= 2026-10-18-levelup-band-gate design.md §2.7 单帧
+    清单 / §2.2 资金门统一 / §5.2 边界申报;断言锁语义不锁数值巧合,
+    花后金语义断言的线与批成本一律从单一源现算
+    (:func:`saturation_line` / 动作装载的 cost×clicks)。
+    """
+
+    def test_buyout_cap_zero_gate_auto_passes_emit(self):
+        """design §2.7⑥ 买断制 → 门自动过(emit 级):持买断制
+        (interest_cap_override=0 注册表派生)⇒ cap_resolved=0 ⇒ 下界
+        saturation_line(0)=0 ⇒ 门恒过——现金 25(旧口径线 50 下花后
+        5 必 defer 的帧)整批发射;下界随 resolved 链消解,无特判分支。
+        锁的是 cap 链接线(active_strategies → cap_resolved_of_session
+        → 门),真值表直测(test_fund_gate_truth_table)不覆盖该接线。"""
+        from sr_od.application.currency_war.kernel.cw_economy import (
+            cap_resolved_of_session,
+            saturation_line,
+        )
+        gs, s = _frame(level=5, gold=25, bench=_stay_bench(),
+                       actives=('买断制',))
+        _mark_handled(gs)
+        out = entry.emit(s, None)
+        ups = [e for e in out if isinstance(e.action, CwActionLevelUpParam)]
+        assert ups and ups[0].action.auth_basis == 'stay_gate', \
+            '买断制帧:门自动过,整批发射(§2.2 下界消解)'
+        batch = ups[0].action.cost * ups[0].action.clicks
+        assert gold_of(gs) - batch >= saturation_line(
+            cap_resolved_of_session(s)), '发射帧花后金 ≥ 买断制下界(0)'
+
+    def test_terminal_all_in_spends_through(self):
+        """design §2.7⑦ 位面末 ALL IN → 花光放行(§2.2 豁免):末位面
+        末战(P3 r7 boss,r_remaining=1)金 30 < 线+批(旧口径必 defer
+        的帧)仍发射——末战后金无任何消费场景,守线前提失效,ALL IN
+        维持花光原语义(terminal_all_in 单一源豁免支)。"""
+        gs, s = _frame(level=5, gold=30, plane=3, hist=(3, 7),
+                       round_num=7, node='boss', bench=_stay_bench())
+        # P3 位面长真值(默认表 7 槽;plane_last_battle 判定输入)
+        gs.node_books.plane_node_table = [object()] * 7
+        gs.node_books.plane_node_table_plane = 3
+        _mark_handled(gs)
+        out = entry.emit(s, None)
+        ups = [e for e in out if isinstance(e.action, CwActionLevelUpParam)]
+        assert ups and ups[0].action.auth_basis == 'stay_gate', \
+            'ALL IN 帧:花后必破线仍发射(豁免支,非资金门管辖)'
+
+    def test_crisis_band_blocks_even_with_gold_above_line(self):
+        """design §2.7⑧ 域内变体行为锁:危机带 ∧ 现金 > 线 → 仍拦
+        (富余段域内让位已随出口三层删除消亡,P21 全域判定——拦截在
+        资格门④,先于资金门,无论金位)。emit 级 levelup_crisis_defer
+        分键 + 判定函数直测同帧真值双锚。"""
+        from sr_od.application.currency_war.kernel.cw_registry import (
+            DEFAULT_REGISTRY,
+        )
+        gs, s = _frame(level=5, gold=100, hp=10, bench=_stay_bench())
+        assert levelup.level_spend_blocked(gs, s, DEFAULT_REGISTRY) is True, \
+            '危机带帧(hp 10)直测:域内变体金 100(> 线 50)仍判拦'
+        _mark_handled(gs)
+        out = entry.emit(s, None)
+        assert not [e for e in out
+                    if isinstance(e.action, CwActionLevelUpParam)], \
+            '危机带 ∧ 现金 > 线:发射链零动作(全域判定)'
+        assert state_of(s).cw4_counters.get('levelup_crisis_defer') == 1
+
+    def test_interest_saving_band_never_emits(self):
+        """design §2.7⑨ 攒息期行为锁(§5.2 申报:攒息期升级-刷新双滞
+        为预期健康态):金 30-60 攒息期带驱动帧(现金 < 线+批)零发射
+        ——推迟(凑金穷尽)与凑金(每帧一卖)两处置都不得在该帧发射。
+        金 30 支由 test_fund_line_defer_emit_level 承载,本测试扫中高段
+        55/65 与凑金可达变体。"""
+        # 推迟处置:中高段金位无活期(线内 bench 不可卖)→ defer 零发射
+        for gold in (55, 65):
+            gs, s = _frame(level=5, gold=gold, bench=_stay_bench())
+            _mark_handled(gs)
+            out = entry.emit(s, None)
+            assert not [e for e in out
+                        if isinstance(e.action, CwActionLevelUpParam)], \
+                f'攒息带金 {gold}:该帧不发射(整批推迟)'
+            assert state_of(s).cw4_counters.get(
+                'levelup_fund_line_defer') == 1, \
+                f'攒息带金 {gold}:推迟拒因在册'
+        # 凑金处置:金 55 + 活期 5 件(退 15,凑金可达域)→ 每帧一卖,
+        # 卖出帧零发射(凑至缺口闭合,发射在后续帧——单帧原子不跨帧)。
+        # 板上件锚:评估器空板守卫(empty_board_sell_blocked)要求板非空
+        # 才出卖出候选(与 test_fundraise_sell_then_execute_batch 同款)。
+        from sr_od.application.currency_war.kernel.cw_game_state import Unit
+        bench = _stay_bench() + [_bc(n, 1)
+                                 for n in ('c0', 'c1', 'c2', 'c4', 'c5')]
+        gs2, s2 = _frame(level=5, gold=55, bench=bench,
+                         front_row=(Unit(char_id='板上件锚', star=1),))
+        _mark_handled(gs2)
+        out2 = entry.emit(s2, None)
+        assert not [e for e in out2
+                    if isinstance(e.action, CwActionLevelUpParam)], \
+            '攒息带凑金帧:一卖处置,零发射'
+        sells = [e for e in out2
+                 if isinstance(e.action, CwActionSellBenchParam)]
+        assert sells and sells[0].action.reason == 'levelup_liquidate', \
+            '凑金可达:走升级凑金场景(非 defer 非发射)'
+
+    def test_natural_upgrade_fund_gate_end_to_end(self):
+        """design §2.7⑩ 自然升级 × 资金门端到端:无未完成星级目标 →
+        natural 键触发,资金门对 natural 同参管辖——金足帧整批发射
+        (花后 ≥ 线,触发键随发射装载),金不足帧推迟零动作(触发计数
+        与资金 defer 计数同帧在册,证两链同帧串接)。"""
+        from sr_od.application.currency_war.kernel.cw_economy import (
+            cap_resolved_of_session,
+            saturation_line,
+        )
+        # 金不足:花后 30−批 < 线 ∧ 无活期 → defer(natural 触发在册)
+        gs, s = _frame(level=5, gold=30, bench=_stay_bench(xili_star=3))
+        assert levelup.unfinished_star_targets(gs) == []
+        _mark_handled(gs)
+        out = entry.emit(s, None)
+        assert not [e for e in out
+                    if isinstance(e.action, CwActionLevelUpParam)], \
+            '金不足自然升级帧:推迟零动作'
+        ct = state_of(s).cw4_counters
+        assert ct.get('levelup_trigger_natural') == 1, 'natural 触发在册'
+        assert ct.get('levelup_fund_line_defer') == 1, '资金 defer 同帧在册'
+        # 金足:花后 ≥ 线 → 整批发射,auth_basis = natural
+        gs2, s2 = _frame(level=5, gold=100, bench=_stay_bench(xili_star=3))
+        _mark_handled(gs2)
+        out2 = entry.emit(s2, None)
+        ups = [e for e in out2 if isinstance(e.action, CwActionLevelUpParam)]
+        assert ups and ups[0].action.auth_basis == 'natural', \
+            '金足自然升级帧:整批发射,触发键随发射装载'
+        batch = ups[0].action.cost * ups[0].action.clicks
+        assert gold_of(gs2) - batch >= saturation_line(
+            cap_resolved_of_session(s2)), '发射帧花后金 ≥ 线(端到端语义)'
