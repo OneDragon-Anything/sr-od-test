@@ -3541,3 +3541,94 @@ def test_equip_env_pick_sim_full_chain_blue_diamond() -> None:
     first = _run()
     second = _run()
     assert first == second, '同 seed 重放确定(装备腿零采样)'
+
+
+def test_delayed_item_open_window_discharge_grants_coexist_replay_safe(
+        ) -> None:
+    """倒计时件开盒 sim 收口(T-34 命运礼物设计 §2.4/§4 锁 6,迭代
+    2026-09-23-invest-effects-calc):选命运礼物 → 队列登记 (2,4) 解锁位
+    (登记零席位写);(1,x) 节点窗与位面过渡屏呈现期未到点条目不弹除;
+    (2,1) 节点窗打开 → 到点条目弹除且与定时道具发放同窗并存零互扰
+    (特权武装箱照常落备战席,开盒通道零 supply_box 落位 = 零席位写
+    集成面);位面过渡点空白点击重放 → 窗口幂等守卫住,零双弹零双落。
+    断言面 = 不变量非中间态:完胜回退腿在 sim 长驱中真实生效(奖励关
+    白拿帧等 → 解锁位逐帧回退),弹除时点随 seed 漂移是设计行为,故
+    只锁「保留集全部未到点(unlock > 当前窗)」与总量守恒,不锁队列
+    中间值。seed 61 通道沿定时发放用例:局必经 P1r9 与位面过渡。"""
+    b = SimBackend(seed=61, cfg=RunConfig(
+        selected_difficulty='A8', enemy_difficulty=108, env_present=True))
+    install_backend(b)
+    try:
+        b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+        assert b.screen_identity() == SCREEN_INVEST_ENV
+        gs = b.gs
+        gs.write_logic(gs.invest_env_opts,
+                       ['命运礼物', '轮岗', '头彩'],
+                       produced_by='Test', evidence='t:opts', sig=_SIG)
+        env_out = report_action_pick_invest_env_param(
+            gs, SimpleNamespace(idx=0), _SIG)
+        assert env_out.applied
+        assert gs.active_env.value == '命运礼物'
+        cw_sim_ports.declare_world(env_out.world_decl)
+        assert gs.pending_item_opens.value == (('惊喜盒', (2, 4)),), \
+            '到手腿入队 (1,1)+12 步,零席位写(无 supply_box 落位)'
+        # 播种早到条目 (1,2)(下一窗即到点,挂点真触发证据)+ 定时道具
+        # (2,1) 发放项(同窗并存输入;opens 播种 = 全表覆盖写,保留
+        # (2,4) 条目)
+        gs.write_logic(gs.pending_item_opens,
+                       (('惊喜盒', (1, 2)), ('惊喜盒', (2, 4))),
+                       produced_by='Test', evidence='t:queue', sig=_SIG)
+        grants_queued = [{'env': '特权阶级', 'plane': 2, 'round_num': 1,
+                          'item': '特权武装箱'}]
+        gs.write_logic(gs.pending_item_grants, grants_queued,
+                       produced_by='Test', evidence='t:grants', sig=_SIG)
+        b._maybe_finish_wait()
+        assert (gs.node.value.plane, gs.node.value.round_num) == (1, 1)
+        assert len(gs.pending_item_opens.value) == 2, '(1,1) 窗未到点零弹'
+        # 先行推进一节点:(1,2) 窗收口弹除到点条目(挂点真触发),
+        # 零席位落位
+        _start_battle_feed(gs)
+        _node_advance_feed(gs, trigger='settle_confirm')
+        assert (gs.node.value.plane, gs.node.value.round_num) == (1, 2)
+        assert len(gs.pending_item_opens.value) == 1, \
+            '(1,2) 窗弹除到点条目((1,2) 早到项),未到点保留'
+        boxes_early = [s for s in gs.bench.value.slots
+                       if s is not None and s.kind == 'supply_box']
+        assert boxes_early == [], '开盒零席位写(无 supply_box 落位)'
+        # 推进至 P1r9 BOSS 简报 → 结算 → (2,1) 位面过渡
+        for _ in range(64):
+            if b.done or b.screen_identity() == '货币战争-BOSS简报':
+                break
+            if b.screen_identity() == SCREEN_SETTLE:
+                _node_advance_feed(gs, trigger='settle_confirm')
+            else:
+                _drive_step(b, 61)
+        assert b.screen_identity() == '货币战争-BOSS简报'
+        b._handle_click_source('货币战争-BOSS简报', '区域-空白点击')
+        assert b.screen_identity() == SCREEN_SETTLE
+        _node_advance_feed(gs, trigger='settle_confirm')
+        assert (gs.node.value.plane, gs.node.value.round_num) == (2, 1)
+        assert b.screen_identity() == '货币战争-位面过渡'
+        queue_at_transition = gs.pending_item_opens.value
+        b._handle_click_source('货币战争-位面过渡', '区域-空白点击')
+        assert b.screen_identity() == SCREEN_PREP
+        queue_after = gs.pending_item_opens.value
+        assert all(unlock > (2, 1) for _n, unlock in queue_after), \
+            '不变量:(2,1) 窗后保留集全部未到点(到了及以后都算的反面)'
+        assert len(queue_after) <= len(queue_at_transition), \
+            '(2,1) 窗只弹不加(总量守恒半边)'
+        assert gs.pending_item_grants.value == [], \
+            '定时道具发放照常(同窗并存零互扰,既有通道回归)'
+        boxes = [s for s in gs.bench.value.slots
+                 if s is not None and s.kind == 'supply_box']
+        assert len(boxes) == 1, \
+            '恰 1 箱落席(定时道具通道);开盒通道零席位写'
+        assert gs.overflow_card.value in ('', None), '开盒零溢出写'
+        # 位面过渡点空白点击重放(窗口幂等守卫):零双弹零双落
+        b._handle_click_source('货币战争-位面过渡', '区域-空白点击')
+        assert gs.pending_item_opens.value == queue_after, '重放零双弹'
+        boxes2 = [s for s in gs.bench.value.slots
+                  if s is not None and s.kind == 'supply_box']
+        assert len(boxes2) == 1, '重放零双落'
+    finally:
+        uninstall_backend()

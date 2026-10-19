@@ -290,3 +290,80 @@ def test_non_registered_env_stays_quiet(monkeypatch) -> None:
     assert effects == (), '表外环境效果串恒空(() 逐位不变)'
     assert not calls, f'零容器写: {calls}'
     assert gs.write_seq == seq_before, '安静不写'
+
+
+# ============================================================ 延迟道具支线
+# (环境「战利品区倒计时件」获得腿;迭代 2026-09-23-invest-effects-calc
+# T-34 命运礼物设计 §2.3 + §4 锁 2/3/9。解锁位数学:获得刻生效序位 (1,1)
+# 沿默认表步进 12 步 = (2,4)(计数起点 = 获得节点计入,设计裁决点 3)。)
+
+_DELAYED_ENV = '命运礼物'
+
+
+def test_delayed_item_grant_leg_enqueues_zero_seat_write(
+        monkeypatch) -> None:
+    """到手腿入队(T-34 设计 §4 锁 2):获得命运礼物 → 队列 =
+    (('惊喜盒', (2, 4)),)((1,1) 步进 12)+ 效果串 item_open_scheduled:
+    惊喜盒@2-4 + done 含 (命运礼物, delayed_open_accel);**零席位写**
+    (占席证伪锁:bench/overflow/equips 任何字段零写,惊喜盒 = 战利品区
+    浮动件非占席)——容器写恰两笔:队列(rand 通道,链收口)+ done
+    (logic 直写,登记事实)。"""
+    gs = _make_gs_node_pos((1, 1))
+    calls = _record_writes(gs, monkeypatch)
+    bench_before = gs.bench.value
+    effects = on_env_gained(gs, None, _DELAYED_ENV, rand=False, sig=_SIG)
+    assert effects == ('item_open_scheduled:惊喜盒@2-4',), '效果串单行'
+    assert gs.pending_item_opens.value == (('惊喜盒', (2, 4)),), \
+        '队列登记 = (件名, (1,1)+12 步)'
+    assert gs.env_grants_done.value == \
+        ((_DELAYED_ENV, 'delayed_open_accel'),), '完胜加速作用域键落 done'
+    assert gs.bench.value == bench_before, 'bench 逐位不变(零席位写)'
+    assert gs.overflow_card.value is None, 'overflow 零写'
+    assert gs.equips.value is None, 'equips 零写'
+    assert [(c[0], c[1], c[2], c[4]) for c in calls] == [
+        ('pending_item_opens', f'on_env_gained:{_DELAYED_ENV}#open_queue',
+         'rand', GAIN_CHAIN_PRODUCER),
+        ('env_grants_done', f'on_env_gained:{_DELAYED_ENV}#accel_scope',
+         'logic', GAIN_CHAIN_PRODUCER),
+    ], f'容器写恰两笔(队列链收口 + done 直写): {calls}'
+    assert all(c[3] == _SIG for c in calls), '同 sig(同窗相邻)'
+
+
+def test_delayed_item_grant_leg_modified_schedule_and_terminal_hold(
+        ) -> None:
+    """解锁位修饰局与局终停留(T-34 设计 §4 锁 3):人身意外险规则
+    (P1=10,resolve_plane_node_seqs 注册表现算单一源)下 (1,1) 步进
+    12 步 = (2,3)——序差不随位面长度预测漂移;日程过短((3,3) 后无
+    后继)→ 步进遇 None 停留最后合法值 (3,3)。"""
+    from sr_od.application.currency_war.kernel.cw_node_schedule import (
+        resolve_plane_node_seqs,
+    )
+    gs = _make_gs_node_pos((1, 1))
+    gs.write_logic(gs.node_seq_by_plane,
+                   resolve_plane_node_seqs('人身意外险'),
+                   produced_by='seed', evidence='t:seqs', sig=_SIG)
+    effects = on_env_gained(gs, None, _DELAYED_ENV, rand=False, sig=_SIG)
+    assert gs.pending_item_opens.value == (('惊喜盒', (2, 3)),), \
+        '修饰局 (1,1)+12 步 = (2,3)'
+    assert effects == ('item_open_scheduled:惊喜盒@2-3',)
+    gs2 = _make_gs_node_pos((1, 1))
+    gs2.write_logic(gs2.node_seq_by_plane,
+                    {1: ('battle',) * 3, 2: ('battle',) * 3,
+                     3: ('battle',) * 3},
+                    produced_by='seed', evidence='t:seqs', sig=_SIG)
+    on_env_gained(gs2, None, _DELAYED_ENV, rand=False, sig=_SIG)
+    assert gs2.pending_item_opens.value == (('惊喜盒', (3, 3)),), \
+        '局终方向无后继:停留最后合法值'
+
+
+def test_delayed_item_grant_leg_repeat_gain_two_entries_scope_once(
+        ) -> None:
+    """重复获得(T-34 设计 §4 锁 9 入队半边):结构性可达的重复获得 →
+    队列两条独立条目(弹除/回退各自独立),done 加速键幂等只写一次。"""
+    gs = _make_gs_node_pos((1, 1))
+    on_env_gained(gs, None, _DELAYED_ENV, rand=False, sig=_SIG)
+    on_env_gained(gs, None, _DELAYED_ENV, rand=False, sig=_SIG)
+    assert gs.pending_item_opens.value == \
+        (('惊喜盒', (2, 4)), ('惊喜盒', (2, 4))), '队列两条独立条目'
+    assert gs.env_grants_done.value == \
+        ((_DELAYED_ENV, 'delayed_open_accel'),), 'done 幂等不重写'

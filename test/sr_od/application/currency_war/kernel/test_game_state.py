@@ -2169,6 +2169,44 @@ def test_new_schema_snapshot_round_trip_no_legacy_keys() -> None:
     assert gs2.deployed.value == gs.deployed.value, '往返逐位等价'
 
 
+def test_pending_item_opens_snapshot_round_trip() -> None:
+    """倒计时件开盒队列快照存续(T-34 命运礼物设计 §4 锁 7,迭代
+    2026-09-23-invest-effects-calc;rebuild 登记在位为前提——未登记域
+    恢复面拿 list-of-lists 静默类型漂移,T-30 对抗 F5 义务同款):
+    ①带队列快照 → restore 往返逐位相等(解锁序位嵌套元组重建);
+    ②空队列快照往返 = ();③快照无该键(无快照接管局,披露 4 形态)
+    → 恢复域值 None = 未写形态,开盒原语按空队列零写处理。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        restore_state_snapshot,
+    )
+    sig = ChannelSig(family='logic_action', actor='test-seed',
+                     mode='compute')
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    queue = (('惊喜盒', (2, 4)), ('惊喜盒', (3, 1)))
+    gs.write_logic(gs.pending_item_opens, queue,
+                   produced_by='test-seed', evidence='t:queue', sig=sig)
+    snap = gs.full_state_snapshot()
+    assert 'pending_item_opens' in snap['values'], '队列进快照'
+
+    gs2 = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    restore_state_snapshot(gs2, snap)
+    assert gs2.pending_item_opens.value == queue, '往返逐位相等'
+
+    gs3 = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    gs3.write_logic(gs3.pending_item_opens, (), produced_by='test-seed',
+                    evidence='t:queue', sig=sig)
+    snap3 = gs3.full_state_snapshot()
+    gs4 = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    restore_state_snapshot(gs4, snap3)
+    assert gs4.pending_item_opens.value == (), '空队列往返 = ()'
+
+    snap_no_key = {'values': {}, 'prov': {}}
+    gs5 = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    restore_state_snapshot(gs5, snap_no_key)
+    assert gs5.pending_item_opens.value is None, \
+        '快照无键 → 未写形态(接管局队列空,开盒/回退零触发)'
+
+
 def test_indexed_bridge_round_trip_within_back_capacity() -> None:
     """两桥往返等价:视图 → 定长 10 表 → 视图(后排容量 6 内逐位
     等价;7-9 扩展格截断 = 旧 tracked 表硬上限语义,续辖)。"""

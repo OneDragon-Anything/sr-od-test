@@ -25,6 +25,7 @@ from sr_od.application.currency_war.data.cw_chars import (
 )
 from sr_od.application.currency_war.kernel import cw_investments
 from sr_od.application.currency_war.kernel.cw_investments import (
+    BENCH_ITEM_NAMES,
     ENV_ECONOMY,
     ENV_GIFTS,
     ENV_POOL_REWRITE,
@@ -839,3 +840,82 @@ def test_env_deploy_lock_grants_current_entry_and_coexistence() -> None:
     # 5 费全档池非空(注册表现算,池规模作注释性快照非断言值:
     # 2026-10 时点 9 名)
     assert len(random_char_pool(grant.spec)) > 0
+
+
+# ============================================================ 环境「战利品区
+# 倒计时件+节点倒计时开盒」登记表(T-34 命运礼物,设计 = 迭代
+# 2026-09-23-invest-effects-calc designs/T-34-mingyun-liwu.md §2.1 +
+# §4 锁 1/锁 10 词表半边;注入 + 直调沿 deploy_lock 校验测试惯用法。)
+
+_ORIG_DELAYED = dict(cw_investments.ENV_DELAYED_ITEM_GRANTS)
+
+
+def _delayed_grant(**kw):
+    """现役条目按参变体(缺省 = id 134 原文直读形态)。"""
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        EnvDelayedItemGrant,
+    )
+    base = {'item': '惊喜盒', 'open_delay_nodes': 12,
+            'perfect_win_accel': True}
+    base.update(kw)
+    return EnvDelayedItemGrant(**base)
+
+
+def _bad_delayed(**kw) -> dict:
+    """命运礼物条目按参坏体(其余键保持现役)。"""
+    bad = dict(_ORIG_DELAYED)
+    bad['命运礼物'] = _delayed_grant(**kw)
+    return bad
+
+
+def test_env_delayed_item_grants_validation_raises(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """五查 import 即炸语义(T-34 设计 §2.1/§4 锁 1):①孤儿键 ②件名形
+    (空 str / ∈ CHARACTER_ROSTER——道具/角色通道串行防呆,_validate_
+    env_gifts 定时道具名同款判据)③倒计时形(0/负/bool 显式拒——
+    ENV_DEPLOY_LOCK_GRANTS 锁期形逐字同款)④双登记防呆(命运礼物同时
+    进 ENV_GIFTS = 占席落位 + 队列登记双发放)⑤加速旗形非 bool。"""
+    bad_orphan = dict(_ORIG_DELAYED)
+    bad_orphan['不存在环境X'] = _delayed_grant()
+    cases = [
+        ('孤儿键', bad_orphan, '孤儿键'),
+        ('件名空', _bad_delayed(item=''), '件名形'),
+        ('件名混角色', _bad_delayed(item='希儿'), '件名漂移'),
+        ('倒计时零', _bad_delayed(open_delay_nodes=0), '倒计时形'),
+        ('倒计时负', _bad_delayed(open_delay_nodes=-1), '倒计时形'),
+        ('倒计时 bool', _bad_delayed(open_delay_nodes=True), '倒计时形'),
+        ('加速旗非 bool', _bad_delayed(perfect_win_accel=1), '加速旗形'),
+    ]
+    for _label, bad, match in cases:
+        monkeypatch.setattr(cw_investments, 'ENV_DELAYED_ITEM_GRANTS', bad)
+        with pytest.raises(ValueError, match=match):
+            cw_investments._validate_env_delayed_item_grants()
+
+    # ④ 双登记防呆(命运礼物同时进两表 = 道具双发)
+    bad_gifts = dict(ENV_GIFTS)
+    bad_gifts['命运礼物'] = GiftGrant(items_immediate=('惊喜盒',))
+    monkeypatch.setattr(cw_investments, 'ENV_DELAYED_ITEM_GRANTS',
+                        _ORIG_DELAYED)
+    monkeypatch.setattr(cw_investments, 'ENV_GIFTS', bad_gifts)
+    with pytest.raises(ValueError, match='双表'):
+        cw_investments._validate_env_delayed_item_grants()
+
+
+def test_env_delayed_item_grants_current_entry_and_wordlist_untouched(
+        ) -> None:
+    """现役条目(T-34 设计 §2.1,id 134 卡面直读)+ 单表归属 + 词表零扩
+    (T-34 设计 §4 锁 10 反向锁:惊喜盒 = 战利品区浮动件非占席,若实现批
+    按 v1 占席惯性把件名加进 BENCH_ITEM_NAMES 派生词表,此断言红);
+    现表直调通过(import 期已炸过一遍,直调 = 变体注入后的回归锚)。"""
+    grant = cw_investments.ENV_DELAYED_ITEM_GRANTS['命运礼物']
+    assert grant.item == '惊喜盒'
+    assert grant.open_delay_nodes == 12
+    assert grant.perfect_win_accel is True
+    cw_investments._validate_env_delayed_item_grants()
+    assert '命运礼物' in INVESTMENT_ENVS
+    assert '命运礼物' not in ENV_GIFTS
+    assert '命运礼物' not in cw_investments.ENV_DEPLOY_LOCK_GRANTS
+    assert '惊喜盒' not in BENCH_ITEM_NAMES, \
+        '倒计时件非占席,禁进占席道具词表(战利品区件锁)'
+    assert '惊喜盒' not in CHARACTER_ROSTER, \
+        '道具/角色通道串行防呆(校验②的注册表前提)'

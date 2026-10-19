@@ -84,6 +84,22 @@ def test_no_random_leg_env_skips_rng_resolution(provider_calls: list[str]) -> No
     assert provider_calls == [], '无随机支环境零解析'
 
 
+def test_delayed_item_env_skips_rng_resolution(
+        provider_calls: list[str]) -> None:
+    """条件解析负态·倒计时件(T-34 命运礼物设计 §4 锁 10 采样半边,
+    迭代 2026-09-23-invest-effects-calc):命运礼物 = 全链零采样(到手
+    确定件名、解锁位确定推算、开盒确定事件,不在 ENV_GIFTS 也不在
+    ENV_DEPLOY_LOCK_GRANTS)→ provider 零调用(注入槽序号不推,后继
+    动作采样流键零位移)。"""
+    gs = _make_gs(['命运礼物', '轮岗', '头彩'])
+    out = report_action_pick_invest_env_param(
+        gs, SimpleNamespace(idx=0), _SIG)
+    assert out.applied
+    assert provider_calls == [], '零采样环境零解析'
+    assert gs.pending_item_opens.value == (('惊喜盒', (2, 4)),), \
+        '队列登记照常(零解析不影响发放腿)'
+
+
 def test_random_leg_env_resolves_rng_exactly_once(
         provider_calls: list[str]) -> None:
     """条件解析正态:选人才引进 → 恰一次解析(tool 键 = pick_invest_env),
