@@ -1927,6 +1927,9 @@ _A_SEEDED: tuple[str, ...] = (
     # 环境发放上场锁 + 发号计数器(T-30 星核猎手契约:空/零底座,
     # 守卫 membership 与发号均零 None 防御)
     'env_grant_deploy_locks', 'env_grant_uid_seq',
+    # 环境倒计时件开盒队列(T-34 命运礼物:空底座,到点弹除比较判定
+    # 零 None 防御)
+    'pending_item_opens',
 )
 
 #: B/C 类抽检面(None = 设计语义或无观察源,设计分诊表禁种)。
@@ -1970,6 +1973,7 @@ def test_cold_build_seeds_all_a_fields(monkeypatch) -> None:
     assert gs.env_grants_done.value == (), '条件发放标记冷建空底座'
     assert gs.env_grant_deploy_locks.value == (), '上场锁域冷建空底座'
     assert gs.env_grant_uid_seq.value == 0, '发号计数器冷建零底座'
+    assert gs.pending_item_opens.value == (), '开盒队列冷建空底座'
     assert gs.gold.value == 3
     assert gs.level.value == 3
     assert gs.xp.value == (0, XP_TO_NEXT_LEVEL[3])
