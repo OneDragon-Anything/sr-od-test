@@ -32,6 +32,7 @@ from sr_od.application.currency_war.obs.cw_settlement_obs import (
     estimate_node_interest,
     parse_settle_coin_overview,
     parse_settle_interest,
+    read_settle_gold_opt,
     read_settle_interest_panel,
 )
 
@@ -112,3 +113,47 @@ def test_estimate_node_interest_formula() -> None:
                       active_strategies=('利息上调',))
     assert estimate_node_interest(gs_rich, 100) == 10, \
         '利息上调 resolved cap 10'
+
+
+def test_settle_merged_areas_real_frames(test_context, monkeypatch) -> None:
+    """结算屏退役合并后迁入 3 area 的真帧对拍(fixture = screens/货币战争-
+    结算/ended+win 整帧,与 test_id_mark 同一存档通道)。
+
+    锁面 = 战斗结算屏退役合并(同画面双登记 id_mark 撞车销案)的对拍验收:
+    currency_war_battle_settle 退役、3 个消费 area 迁入 currency_war_settlement
+    后,经生产读链(真实 screen_info 通道)在两真帧上读数与迁移前一致——
+    右上金币存量 73(ended)/60(win);金币总览面板带含 基础奖励/利息/连胜
+    词面;利息行含「利息」。yml 坐标与 cw_settlement_obs 常量改名不一致时
+    本测立刻红(迁移一致性网)。controller 置 None 走离线单帧读
+    (read_settle_gold_opt 声明的单测行为,不进稳定门)。fixture 缺失 skip
+    不 error。真值来源:两帧人工视觉核对(73 位于右上计数区、win 帧面板
+    另有掉落晶矿行不碍词面存在性)。"""
+    if not (test_context.has_screen('货币战争-结算', 'ended')
+            and test_context.has_screen('货币战争-结算', 'win')):
+        pytest.skip('结算 ended/win 真帧 fixture 缺失')
+    monkeypatch.setattr(test_context, 'controller', None)
+
+    ended = test_context.load_screen('货币战争-结算', 'ended')
+    win = test_context.load_screen('货币战争-结算', 'win')
+
+    # 右上金币存量(生产读链:迁入 area 裁剪 + 3x 放大 OCR)
+    assert read_settle_gold_opt(test_context, ended) == 73, 'ended 帧右上金币存量'
+    assert read_settle_gold_opt(test_context, win) == 60, 'win 帧右上金币存量'
+
+    for name, img in (('ended', ended), ('win', win)):
+        # 金币总览面板带(生产读链:迁入 area 裁剪 + 2x 放大 OCR)词面。
+        # 子串判断:连胜带 ×N 次数修饰粘连成单 token(实测「连胜×0」),
+        # 词面存在性按子序列会误杀,与既有锚断言同款子串。
+        items = read_settle_interest_panel(test_context, img)
+        texts = [getattr(it, 'data', '') or '' for it in items]
+        for word in ('基础奖励', '利息', '连胜'):
+            assert any(word in t for t in texts), \
+                f'{name} 帧面板带缺词面「{word}」(可读集: {texts})'
+        # 利息行(迁入 area 直读:screen_info 坐标 + 裁剪 OCR)
+        area = test_context.screen_loader.get_area('货币战争-结算', '结算-利息行')
+        assert area is not None, '结算-利息行 area 已随迁在档'
+        r = area.pc_rect
+        row_items = test_context.ocr_service.get_ocr_result_list(
+            image=img[r.y1:r.y2, r.x1:r.x2])
+        assert any('利息' in (getattr(it, 'data', '') or '')
+                   for it in row_items), f'{name} 帧利息行缺「利息」词面'
