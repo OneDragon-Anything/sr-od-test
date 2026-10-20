@@ -2013,6 +2013,42 @@ def test_cold_build_seeds_all_a_fields(monkeypatch) -> None:
     assert prep_anchored_of(gs) is False
 
 
+def test_giftbox_sight_domain_registration() -> None:
+    """giftbox_sight 域五件套:schema 独立键版本 1(不并入任何域 bump)
+    + 快照 rebuild 往返(_json_safe 落 list,rebuild 还原 tuple 不漂移)
+    + 投影审计行 observation_only。种子底座锁 =
+    test_cold_build_seeds_all_a_fields(同文件,不重复)。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        DEFAULT_GS_SCHEMA,
+        restore_state_snapshot,
+        seed_opening_state,
+    )
+    from sr_od.application.currency_war.kernel.cw_projection_audit import (
+        AUDIT_OBSERVATION_ONLY,
+        PROJECTION_AUDIT,
+    )
+
+    assert DEFAULT_GS_SCHEMA['giftbox_sight'] == 1, \
+        '独立键版本 1(不并入任何域版本 bump)'
+
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    seed_opening_state(gs)
+    assert gs.giftbox_sight.value == ()
+    gs.observe(gs.giftbox_sight, (12, 9), evidence='t', sig=_OBS_SIG)
+    snap = gs.full_state_snapshot()
+
+    restored = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    restore_state_snapshot(restored, snap)
+    assert restored.giftbox_sight.value == (12, 9), '读数往返无损'
+    assert isinstance(restored.giftbox_sight.value, tuple), \
+        'tuple 不漂移为 list'
+
+    row = PROJECTION_AUDIT.get('giftbox_sight')
+    assert row is not None, '审计表登记在册(完备性双向锁另一半)'
+    assert row.status == AUDIT_OBSERVATION_ONLY, \
+        '观察读端 + 零逻辑写端(纯旁路证据域)'
+
+
 def test_none_session_and_direct_construct_not_seeded() -> None:
     """session=None 一次性支与直构 GameState 不种(种子只挂两个缓存单例
     建支;测试/sim 直构域依赖未写形态)。"""

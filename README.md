@@ -27,6 +27,7 @@ uv run pytest sr-od-test/ -q --durations=300 --durations-min=1.0   # 按耗时�
 ```
 sr-od-test/
 ├── slow_marks.txt                      # 慢桶名单（逐行一条 nodeid 后缀）
+├── templates/                          # 识别模板 fixture（镜像主仓 assets/template 相对路径，与生产同源字节；测试直载校验模板/检测行为用）
 ├── test/
 │   ├── conftest.py                     # 全部公共设施：夹具与隔离守卫 + 慢桶标记、收集期守卫（见下）
 │   ├── harness/fixture_controller.py   # op 流程测试 harness（见下）
