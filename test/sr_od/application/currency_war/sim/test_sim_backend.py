@@ -124,6 +124,7 @@ from sr_od.application.currency_war.sim import cw_sim_ports
 from sr_od.application.currency_war.sim.cw_sim_backend import (
     DISCLOSURE_RUN_COMPLETE,
     INVEST_OFFER_SCHEDULE,
+    JOINT_DECISION_EXTRA_SLOT,
     NODE_XP_BY_TYPE,
     OFFER_CANDIDATES,
     ORE_PLANE_START_PENDING,
@@ -2108,6 +2109,103 @@ def test_env_screen_refresh_world_leg_group_reroll() -> None:
             b.gs, SimpleNamespace(slots=(0, 1, 2)), _SIG)
         cw_sim_ports.declare_world(out.world_decl)
         assert list(b.gs.invest_env_opts.value) == opts2
+    finally:
+        uninstall_backend()
+
+
+def test_no_env_match_refresh_routes_strategy_leg() -> None:
+    """无环境局刷新路由锁(T-427 验收 F-1 回归):env_present 缺省 False
+    = 合法无环境支路配置,该局 active_env 恒空 + env_refresh_left 未写
+    (None)→ 刷新声明推导必须走策略屏逐卡腿(旧单一 active_env 依据会
+    误派 env 腿 → env_refresh_left=None 静默无操作 → 计数不减 → 活锁);
+    世界腿照常重掷扣减(基准 1 次)。"""
+    b = _backend()
+    try:
+        _open_to_first_window(b)
+        b._maybe_finish_wait()
+        _walk_to(b, 1, 3)
+        assert b.screen_identity() == SCREEN_INVEST_STRATEGY
+        assert (b.gs.active_env.value or '') == '', '无环境局前提'
+        assert b.gs.env_refresh_left.value is None, '环境屏未呈现前提'
+        opts = list(b.gs.invest_strategy_opts.value)
+        assert b.gs.strategy_refresh_left.value == {n: 1 for n in opts}
+        out = report_action_refresh_invest_cards_param(
+            b.gs, SimpleNamespace(slots=(0,)), _SIG)
+        assert out.world_decl.trigger == 'refresh_invest_strategy', \
+            '无环境局刷新走策略腿(env 腿会静默无操作活锁)'
+        assert out.world_decl.next_screen == SCREEN_INVEST_STRATEGY
+        cw_sim_ports.declare_world(out.world_decl)
+        new_first = list(b.gs.invest_strategy_opts.value)[0]
+        assert new_first != opts[0], '重掷换卡'
+        assert b.gs.strategy_refresh_left.value[new_first] == 0, '计数 1→0'
+    finally:
+        uninstall_backend()
+
+
+def test_refresh_multi_slot_decl_no_duplicate_names() -> None:
+    """多槽声明同窗重掷去重锁(T-427 验收 F-2):同向量环境(头彩,三槽
+    同棱彩池)直喂 slots=(0,1) 声明 → 两刷新槽新名互异且不撞未刷槽
+    (offer「全程不重复」契约;生产单槽链行为不变)。"""
+    b = _toucai_env_backend(61)
+    try:
+        b._maybe_finish_wait()
+        for _ in range(64):
+            if b.screen_identity() == SCREEN_INVEST_STRATEGY:
+                break
+            _drive_step(b, 61)
+        assert b.screen_identity() == SCREEN_INVEST_STRATEGY
+        out = report_action_refresh_invest_cards_param(
+            b.gs, SimpleNamespace(slots=(0, 1)), _SIG)
+        cw_sim_ports.declare_world(out.world_decl)
+        opts = list(b.gs.invest_strategy_opts.value)
+        assert len(set(opts)) == OFFER_CANDIDATES, f'重掷后仍三卡互异: {opts}'
+        for name in opts[:2]:
+            assert INVESTMENT_STRATEGIES[name].rarity == '棱彩', \
+                f'两刷新槽仍落头彩棱彩池: {name}'
+    finally:
+        uninstall_backend()
+
+
+def _joint_env_backend(seed: int = 61) -> SimBackend:
+    """开局选联席决策环境的装配后端(调用方负责 uninstall;装配模式 =
+    _toucai_env_backend 同款)。"""
+    b = SimBackend(seed=seed, cfg=RunConfig(
+        selected_difficulty='A8', enemy_difficulty=108, env_present=True))
+    install_backend(b)
+    b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+    assert b.screen_identity() == SCREEN_INVEST_ENV
+    b.gs.write_logic(b.gs.invest_env_opts,
+                     ['联席决策', '轮岗', '彩虹时代'],
+                     produced_by='Test', evidence='t:opts', sig=_SIG)
+    out = report_action_pick_invest_env_param(
+        b.gs, SimpleNamespace(idx=0), _SIG)
+    assert out.applied
+    cw_sim_ports.declare_world(out.world_decl)
+    return b
+
+
+def test_joint_extra_slot_presents_no_refresh() -> None:
+    """联席额外槽不呈现刷新锁(T-427 验收 F-3):联席决策局 walk 到 2-6
+    额外三选一 → 授权簿记 False + refresh_slots 空(op 闸无授权失败
+    安全,保守缺位);对照 = 固定日程槽照常呈现逐卡计数。"""
+    b = _joint_env_backend(61)
+    try:
+        b._maybe_finish_wait()
+        hit = False
+        for _ in range(4096):
+            if b.done:
+                break
+            if b.screen_identity() == SCREEN_INVEST_STRATEGY:
+                if b._node_pos() == JOINT_DECISION_EXTRA_SLOT:
+                    hit = True
+                    break
+            if b.screen_identity() == SCREEN_SETTLE:
+                _node_advance_feed(b.gs, trigger='settle_confirm')
+                continue
+            _drive_step(b, 61)
+        assert hit, '走到 2-6 额外三选一(联席挂点)'
+        assert b._offer_refreshable is False, '额外槽无刷新授权(保守缺位)'
+        assert b.observe(SCREEN_INVEST_STRATEGY).refresh_slots == []
     finally:
         uninstall_backend()
 

@@ -110,11 +110,16 @@ def test_world_decl_shape_lock():
 
 
 def test_refresh_invest_decl_trigger_derivation():
-    """投资刷新声明对照测试(2026-10-19 用户裁定批):active_env 空 =
-    (投资环境屏, refresh_invest_env)整组;非空 = (投资策略屏,
-    refresh_invest_strategy)逐卡;slots 自 param 原样透传。容器零写
-    (刷新真值归重入观察覆盖)。"""
+    """投资刷新声明对照测试(2026-10-19 用户裁定批;T-427 验收 F-1 修正
+    后三状态全 Sound):active_env 非空 = 策略屏逐卡;active_env 空 ∧
+    env_refresh_left 非 None(环境屏已呈现,该字段唯一写端 = 环境屏呈现
+    写点)= 环境屏整组;active_env 空 ∧ None(无环境局,env_present 缺省
+    False 的合法配置)= 策略屏逐卡——旧单一 active_env 依据在该局误派
+    env 腿造成静默活锁,本分支即回归锁;slots 自 param 原样透传。容器
+    零写(刷新真值归重入观察覆盖)。"""
     gs_open = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    gs_open.write_logic(gs_open.env_refresh_left, 1,
+                        produced_by='WorldDeclTest', sig=_SIG)
     out_env = report_action_refresh_invest_cards_param(
         gs_open, SimpleNamespace(slots=(0, 1, 2)), _SIG)
     assert out_env.applied
@@ -130,6 +135,13 @@ def test_refresh_invest_decl_trigger_derivation():
     assert out_strat.world_decl == WorldDecl(
         next_screen='货币战争-投资策略', trigger='refresh_invest_strategy',
         slots=(1,))
+    gs_noenv = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    out_noenv = report_action_refresh_invest_cards_param(
+        gs_noenv, SimpleNamespace(slots=(2,)), _SIG)
+    assert out_noenv.applied
+    assert out_noenv.world_decl == WorldDecl(
+        next_screen='货币战争-投资策略', trigger='refresh_invest_strategy',
+        slots=(2,)), '无环境局(active_env 空 + 计数未写)走策略腿'
 
 
 def test_logic_outcome_world_decl_default_compat():
