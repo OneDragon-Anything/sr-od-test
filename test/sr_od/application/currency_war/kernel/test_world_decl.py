@@ -58,6 +58,7 @@ from sr_od.application.currency_war.kernel.cw_action_report.zero_writes import (
     report_action_pick_partner_param,
     report_action_pick_star_tome_param,
     report_action_pick_wish_trial_param,
+    report_action_refresh_invest_cards_param,
 )
 from sr_od.application.currency_war.kernel.cw_events import EncounterOption
 from sr_od.application.currency_war.kernel.cw_game_state import (
@@ -96,13 +97,39 @@ _NODE_ADVANCE_SCREEN_TABLE: tuple[tuple[tuple[int, int], str], ...] = (
 
 def test_world_decl_shape_lock():
     """WorldDecl 形状测试(契约 1):冻结 dataclass;字段面 = next_screen/
-    trigger 且 next_screen 在前(18 个上报构造点与 backend 消费端按此
-    位置契约解析;字段增删/换序/可变性漂移 = 声明契约破坏)。"""
+    trigger/slots 且 next_screen 在前(全部上报构造点与 backend 消费端按
+    此位置契约解析;字段增删/换序/可变性漂移 = 声明契约破坏)。slots =
+    2026-10-19 用户裁定批新增(参数化动作槽位载荷,坐标系 = 动作参数类
+    slots 同源),缺省空 = 既有构造点零改动兼容。"""
     assert [f.name for f in dataclasses.fields(WorldDecl)] == [
-        'next_screen', 'trigger']
+        'next_screen', 'trigger', 'slots']
     decl = WorldDecl(next_screen='货币战争-备战', trigger='')
+    assert decl.slots == (), '载荷缺省空(既有构造点零改动兼容)'
     with pytest.raises(dataclasses.FrozenInstanceError):
         decl.next_screen = 'x'  # type: ignore[misc]
+
+
+def test_refresh_invest_decl_trigger_derivation():
+    """投资刷新声明对照测试(2026-10-19 用户裁定批):active_env 空 =
+    (投资环境屏, refresh_invest_env)整组;非空 = (投资策略屏,
+    refresh_invest_strategy)逐卡;slots 自 param 原样透传。容器零写
+    (刷新真值归重入观察覆盖)。"""
+    gs_open = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    out_env = report_action_refresh_invest_cards_param(
+        gs_open, SimpleNamespace(slots=(0, 1, 2)), _SIG)
+    assert out_env.applied
+    assert out_env.world_decl == WorldDecl(
+        next_screen='货币战争-投资环境', trigger='refresh_invest_env',
+        slots=(0, 1, 2))
+    gs_strat = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    gs_strat.write_logic(gs_strat.active_env, '火药味',
+                         produced_by='WorldDeclTest', sig=_SIG)
+    out_strat = report_action_refresh_invest_cards_param(
+        gs_strat, SimpleNamespace(slots=(1,)), _SIG)
+    assert out_strat.applied
+    assert out_strat.world_decl == WorldDecl(
+        next_screen='货币战争-投资策略', trigger='refresh_invest_strategy',
+        slots=(1,))
 
 
 def test_logic_outcome_world_decl_default_compat():

@@ -57,6 +57,7 @@ from sr_od.application.currency_war.kernel.cw_action_report import (
     report_action_pick_megastar_param,
     report_action_pick_planner_param,
     report_action_pick_supply_param,
+    report_action_refresh_invest_cards_param,
     report_action_start_battle_param,
     report_action_wear_equip_param,
 )
@@ -1962,6 +1963,155 @@ def test_weicai_env_full_walk_third_offer_all_prism() -> None:
         uninstall_backend()
 
 
+# ============================================================ 银·金·彩局(槽位向量型·卡面即真值)
+
+_YINJINCAI_ENV = '银·金·彩'
+
+
+def _yinjincai_env_backend(seed: int = 61) -> SimBackend:
+    """开局选银·金·彩环境的装配后端(调用方负责 uninstall;装配模式 =
+    _toucai_env_backend 同款:opts 首位定向 → idx=0 上报 → 声明喂入)。"""
+    b = SimBackend(seed=seed, cfg=RunConfig(
+        selected_difficulty='A8', enemy_difficulty=108, env_present=True))
+    install_backend(b)
+    b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+    assert b.screen_identity() == SCREEN_INVEST_ENV
+    b.gs.write_logic(b.gs.invest_env_opts,
+                     [_YINJINCAI_ENV, '轮岗', '彩虹时代'],
+                     produced_by='Test', evidence='t:opts', sig=_SIG)
+    out = report_action_pick_invest_env_param(
+        b.gs, SimpleNamespace(idx=0), _SIG)
+    assert out.applied
+    cw_sim_ports.declare_world(out.world_decl)
+    return b
+
+
+def test_yinjincai_env_full_walk_slot_qualities() -> None:
+    """银·金·彩局 sim 全流程测试(槽位向量型接入,2026-10-19 用户裁定:
+    卡面即真值 = 左银中金右彩,旧「实测金重仓」观察记录作废):每次固定
+    取卡 offer 三槽品质按位 = (银,金,棱彩)(判据锁承担逐序语义,本锁锁
+    局级可观察面);逐卡刷新计数 = 基准 1 + 增量 2 = 3(extra_pick_
+    refreshes 消费端);呈现次数 = 固定日程建模域槽数(现算);局终序数
+    = 呈现次数。"""
+    b = _yinjincai_env_backend(61)
+    try:
+        modelled_slots = [slot for slot in INVEST_OFFER_SCHEDULE
+                          if slot[0] in PLANE_NODE_TABLES]
+        offers_seen = 0
+        for _ in range(4096):
+            if b.done:
+                break
+            if b.screen_identity() == SCREEN_SETTLE:
+                _node_advance_feed(b.gs, trigger='settle_confirm')
+                continue
+            if b.screen_identity() == SCREEN_INVEST_STRATEGY:
+                opts = b.gs.invest_strategy_opts.value
+                assert len(opts) == OFFER_CANDIDATES
+                for slot, (name, quality) in enumerate(
+                        zip(opts, ('银', '金', '棱彩'))):
+                    assert name in INVESTMENT_STRATEGIES, name
+                    assert INVESTMENT_STRATEGIES[name].rarity == quality, \
+                        f'槽{slot}候选必 {quality}: {name}'
+                left = b.gs.strategy_refresh_left.value
+                assert all(left.get(n) == 3 for n in opts), \
+                    f'逐卡计数 = 基准1+增量2: {left}'
+                offers_seen += 1
+            _drive_step(b, 61)
+        assert b.done, '银·金·彩局走完到局终'
+        assert offers_seen == len(modelled_slots), \
+            (offers_seen, modelled_slots)
+        assert b._invest_pick_ordinal == offers_seen, \
+            '序数 = 实际呈现次数(呈现一次计一次)'
+    finally:
+        uninstall_backend()
+
+
+def test_yinjincai_env_refresh_world_leg_slot_quality_persists() -> None:
+    """银·金·彩局刷新世界腿(2026-10-19 用户裁定「sim 与实机一致提供
+    刷新次数」批):首次 offer 逐卡计数 3 → 刷新声明喂入(槽 0,生产同形
+    = 上报函数取声明 + declare_world 喂入)→ 该槽重掷新银卡(槽位品质
+    承诺跨刷新保持)、计数 3→2、未刷槽不动 → 重复刷新至计数尽 → 尽后
+    再喂声明 = 静默无操作(容器剩余闸防线)。"""
+    b = _yinjincai_env_backend(61)
+    try:
+        b._maybe_finish_wait()
+        for _ in range(64):
+            if b.screen_identity() == SCREEN_INVEST_STRATEGY:
+                break
+            _drive_step(b, 61)
+        assert b.screen_identity() == SCREEN_INVEST_STRATEGY, '首次 offer 呈现'
+        opts = list(b.gs.invest_strategy_opts.value)
+        assert [INVESTMENT_STRATEGIES[n].rarity for n in opts] \
+            == ['银', '金', '棱彩']
+        # 刷新槽 0
+        out = report_action_refresh_invest_cards_param(
+            b.gs, SimpleNamespace(slots=(0,)), _SIG)
+        assert out.applied
+        assert out.world_decl.trigger == 'refresh_invest_strategy'
+        assert out.world_decl.next_screen == SCREEN_INVEST_STRATEGY
+        assert out.world_decl.slots == (0,)
+        cw_sim_ports.declare_world(out.world_decl)
+        opts2 = list(b.gs.invest_strategy_opts.value)
+        assert opts2[0] != opts[0], '刷新槽重掷换卡'
+        assert opts2[1:] == opts[1:], '未刷槽不动'
+        assert INVESTMENT_STRATEGIES[opts2[0]].rarity == '银', \
+            '槽位品质承诺跨刷新保持'
+        left = b.gs.strategy_refresh_left.value
+        assert left[opts2[0]] == 2, '计数 3→2 随新卡呈现'
+        assert left[opts[1]] == 3 and left[opts[2]] == 3, '未刷槽计数不动'
+        # 重复刷新至计数耗尽
+        for _ in range(2):
+            out = report_action_refresh_invest_cards_param(
+                b.gs, SimpleNamespace(slots=(0,)), _SIG)
+            cw_sim_ports.declare_world(out.world_decl)
+        slot0_now = list(b.gs.invest_strategy_opts.value)[0]
+        assert b.gs.strategy_refresh_left.value[slot0_now] == 0, \
+            '首槽三卡各刷 1 次 = 3 次预算耗尽(逐卡通道)'
+        # 尽后再喂声明 = 静默无操作
+        last = list(b.gs.invest_strategy_opts.value)
+        out = report_action_refresh_invest_cards_param(
+            b.gs, SimpleNamespace(slots=(0,)), _SIG)
+        cw_sim_ports.declare_world(out.world_decl)
+        assert list(b.gs.invest_strategy_opts.value) == last, \
+            '计数尽 → 刷新无操作'
+    finally:
+        uninstall_backend()
+
+
+def test_env_screen_refresh_world_leg_group_reroll() -> None:
+    """环境屏整组刷新世界腿(2026-10-19 用户裁定批):开局环境屏呈现
+    refresh=(1,...)(基准 1 次,呈现写点落容器)→ 整组刷新声明喂入
+    (active_env 空 → 触发词 refresh_invest_env)→ 候选整组重掷(组内
+    全换)+ 计数落 0 → 尽后再喂声明 = 静默无操作。"""
+    b = SimBackend(seed=11, cfg=RunConfig(
+        selected_difficulty='A8', enemy_difficulty=108, env_present=True))
+    install_backend(b)
+    try:
+        b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+        assert b.screen_identity() == SCREEN_INVEST_ENV
+        opts = list(b.gs.invest_env_opts.value)
+        assert b.gs.env_refresh_left.value == 1, '呈现写点落基准 1'
+        assert b.observe(SCREEN_INVEST_ENV).refresh == (1, 10, 20), \
+            '生成器自容器现读整组剩余'
+        out = report_action_refresh_invest_cards_param(
+            b.gs, SimpleNamespace(slots=(0, 1, 2)), _SIG)
+        assert out.applied
+        assert out.world_decl.trigger == 'refresh_invest_env'
+        assert out.world_decl.next_screen == SCREEN_INVEST_ENV
+        cw_sim_ports.declare_world(out.world_decl)
+        opts2 = list(b.gs.invest_env_opts.value)
+        assert set(opts2).isdisjoint(opts), '整组重掷组内全换'
+        assert b.gs.env_refresh_left.value == 0, '计数扣减'
+        assert b.observe(SCREEN_INVEST_ENV).refresh == (0, 10, 20)
+        # 尽后再喂声明 = 静默无操作
+        out = report_action_refresh_invest_cards_param(
+            b.gs, SimpleNamespace(slots=(0, 1, 2)), _SIG)
+        cw_sim_ports.declare_world(out.world_decl)
+        assert list(b.gs.invest_env_opts.value) == opts2
+    finally:
+        uninstall_backend()
+
+
 # ============================================================ 装备腿(规则件缺口补 kernel)
 
 def _advance_pair() -> tuple[str, str, str]:
@@ -3023,7 +3173,8 @@ def test_gen_supply_options_and_refresh_left() -> None:
 
 def test_gen_invest_strategy_candidates_at_offer_window() -> None:
     """投资策略生成器:P1r3 = U07 固定 offer 日程 → 策略屏呈现,候选名
-    自容器 opts 槽回读;refresh_slots 空 → report 逐槽跳写。"""
+    自容器 opts 槽回读;逐卡刷新计数自容器按槽名现读(默认局呈现写点
+    落基准每卡 1 次,2026-10-19 用户裁定批接入呈现)。"""
     b = _backend()
     try:
         _open_to_first_window(b)
@@ -3035,7 +3186,10 @@ def test_gen_invest_strategy_candidates_at_offer_window() -> None:
         obs = b.observe(SCREEN_INVEST_STRATEGY)
         assert obs.entry_ok is True
         assert [n for n, _x, _y in obs.options] == opts_before
-        assert obs.refresh_slots == []
+        assert obs.refresh_slots == [(1, 10, 20), (1, 20, 20), (1, 30, 20)], \
+            '默认局逐卡基准 1 次(呈现写点 → 容器 → 生成器现读)'
+        assert b.gs.strategy_refresh_left.value == {n: 1 for n in opts_before}, \
+            '观察写端逐卡计数落容器'
         assert b.gs.invest_strategy_opts.value == opts_before
     finally:
         uninstall_backend()

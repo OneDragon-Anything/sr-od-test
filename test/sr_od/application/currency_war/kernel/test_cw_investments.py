@@ -352,11 +352,84 @@ def test_weicai_entry_settled_registered() -> None:
     ==(3,)+ 非空 pending_notes(定谳记录)。至此品质覆写族 7 键全部定谳
     或结构定形,注册表无未定谳部分型实体(「未定谳部分型不接入」语义由
     合成载体锁承载,test_sim_offer.py
-    test_rewrite_quality_for_pick_unsettaled_partial_stays_out)。"""
+    test_rewrite_slot_qualities_unsettaled_partial_stays_out)。"""
     entry = ENV_POOL_REWRITE['尾彩']
     assert entry.rewrite_settled is True
     assert entry.rewrite_picks == (3,)
     assert entry.pending_notes, '定谳记录亦以非空 notes 承载'
+
+
+# ==================== 银·金·彩槽位向量定谳接入(2026-10-19 用户裁定批)====================
+
+def test_yinjincai_entry_slot_qualities_registered() -> None:
+    """银·金·彩条目定谳锁(2026-10-19 用户裁定:卡面直读即真值 = 左银
+    中金右彩,旧「实测 offer 金重仓」观察记录同裁定作废):登记
+    slot_qualities = ('银','金','棱彩')(坐标系 = 投资界面卡槽物理排位
+    左→右 0..2)+ offer_structure 结构标记 + extra_pick_refreshes = 2
+    (sim 策略屏刷新呈现与世界腿消费端)+ rewrite_quality 空(槽位向量型
+    与品质改写型互斥)+ 非空 pending_notes(定谳记录)。"""
+    entry = ENV_POOL_REWRITE['银·金·彩']
+    assert entry.slot_qualities == ('银', '金', '棱彩')
+    assert entry.offer_structure == 'silver_gold_prism_slots'
+    assert entry.extra_pick_refreshes == 2
+    assert entry.rewrite_quality == ''
+    assert entry.rewrite_picks == ()
+    assert entry.pending_notes, '定谳记录亦以非空 notes 承载'
+    cw_investments._validate_env_pool_rewrite()
+
+
+def test_env_pool_rewrite_slot_qualities_gates(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """槽位向量建表闸锁(import 即炸语义,注入 + 直调沿本文件惯用法):
+    ① 结构标记与槽位数据同有同无(offer_structure 有 slot_qualities 无 =
+    判据不可算,反向同炸);② 槽位向量长度恒 3(卡面「左、中、右」三槽);
+    ③ 槽位品质 ∈ 策略品质词集(注册表漂移防呆);④ 槽位向量型与品质
+    改写型互斥(rewrite_quality 非空共存 = 双型语义冲突)。现表直调通过 =
+    银·金·彩在册回归。"""
+    cw_investments._validate_env_pool_rewrite()
+    # ① 结构标记有、槽位数据无 → 炸;反向同炸
+    bad = dict(ENV_POOL_REWRITE)
+    bad['银·金·彩'] = StrategyPoolRewrite(
+        offer_structure='silver_gold_prism_slots', extra_pick_refreshes=2,
+        pending_notes='x')
+    monkeypatch.setattr(cw_investments, 'ENV_POOL_REWRITE', bad)
+    with pytest.raises(ValueError, match='须同有同无'):
+        cw_investments._validate_env_pool_rewrite()
+    bad_rev = dict(ENV_POOL_REWRITE)
+    bad_rev['银·金·彩'] = StrategyPoolRewrite(
+        slot_qualities=('银', '金', '棱彩'), extra_pick_refreshes=2,
+        pending_notes='x')
+    monkeypatch.setattr(cw_investments, 'ENV_POOL_REWRITE', bad_rev)
+    with pytest.raises(ValueError, match='须同有同无'):
+        cw_investments._validate_env_pool_rewrite()
+    # ② 长度非 3 → 炸
+    bad_len = dict(ENV_POOL_REWRITE)
+    bad_len['银·金·彩'] = StrategyPoolRewrite(
+        offer_structure='silver_gold_prism_slots',
+        slot_qualities=('银', '金'), extra_pick_refreshes=2,
+        pending_notes='x')
+    monkeypatch.setattr(cw_investments, 'ENV_POOL_REWRITE', bad_len)
+    with pytest.raises(ValueError, match='须恒 3'):
+        cw_investments._validate_env_pool_rewrite()
+    # ③ 品质不在词集 → 炸
+    bad_vocab = dict(ENV_POOL_REWRITE)
+    bad_vocab['银·金·彩'] = StrategyPoolRewrite(
+        offer_structure='silver_gold_prism_slots',
+        slot_qualities=('银', '金', '彩虹'), extra_pick_refreshes=2,
+        pending_notes='x')
+    monkeypatch.setattr(cw_investments, 'ENV_POOL_REWRITE', bad_vocab)
+    with pytest.raises(ValueError, match='槽位品质漂移'):
+        cw_investments._validate_env_pool_rewrite()
+    # ④ 与品质改写型共存 → 炸
+    bad_dual = dict(ENV_POOL_REWRITE)
+    bad_dual['银·金·彩'] = StrategyPoolRewrite(
+        rewrite_quality='棱彩', rewrite_picks=(1, 2, 3),
+        offer_structure='silver_gold_prism_slots',
+        slot_qualities=('银', '金', '棱彩'), extra_pick_refreshes=2,
+        pending_notes='x')
+    monkeypatch.setattr(cw_investments, 'ENV_POOL_REWRITE', bad_dual)
+    with pytest.raises(ValueError, match='双型互斥'):
+        cw_investments._validate_env_pool_rewrite()
 
 
 # ==================== 合并升星触发发放注册表(T-26 量子同频契约)====================

@@ -6,9 +6,10 @@ M06/M05 + 节点选项生成 M16/M17/M18)。
   U07③ 候选结构(品质→池取样、offer 内去重、全程不重复)/U08 环境
   offer 同构 3 选 1/品质分布显式常量占位。选卡入账腿 = kernel 获得链
   (测试面迁 test_sim_backend.py,注入核随退役删除);品质改写已接入
-  三选一抽样(判据测试 rewrite_quality_for_pick 接全改写型 + settled
-  定谳型 + kernel 游戏事实名单一致性测试;「未建模」披露键已退役,名单
-  常量位仍 = kernel cw_investments);
+  三选一抽样(判据测试 rewrite_slot_qualities_for_pick 槽位向量形接
+  全改写型 + settled 定谳型 + 银·金·彩槽位向量型 + kernel 游戏事实
+  名单一致性测试;「未建模」披露键已退役,名单常量位仍 = kernel
+  cw_investments;刷新重掷单卡腿同契约);
 - 派生池与发牌:副本数真值(27/27/9/9/9)/held 星级派生不变量/≥9 清空
   发牌过滤(U11)与双出口分野/专家入池假设(U10)/5 槽发牌与概率表/
   免费刷先行(M05);
@@ -82,8 +83,9 @@ from sr_od.application.currency_war.sim.cw_sim_backend import (
     encounter_options,
     is_piggy_node,
     offer_slots,
-    rewrite_quality_for_pick,
+    rewrite_slot_qualities_for_pick,
     sample_env_offer,
+    sample_strategy_card,
     sample_strategy_offer,
     supply_options,
 )
@@ -180,11 +182,12 @@ def test_strategy_offer_quality_distribution_uniform_placeholder() -> None:
         assert abs(p - 1.0 / 3.0) < 6 * sigma, (quality, p)
 
 
-# ============================================================ 投资 offer:品质改写次抽样(forced_quality)
+# ============================================================ 投资 offer:品质改写次抽样(forced_slots)
 
 def test_strategy_offer_forced_quality_targets_pool() -> None:
     """品质改写次抽样(2026-10-14 用户裁定:固定目标品质后照常抽
-    3 张):forced_quality='棱彩' → 候选全棱彩注册名 + offer 内去重;
+    3 张;2026-10-19 用户裁定批判据泛化为槽位向量,单品质 = 三槽同向量
+    特例):forced_slots=('棱彩',)*3 → 候选全棱彩注册名 + offer 内去重;
     预置排除集生效(排除名不再出现);多 seed 扫。"""
     prism_names = {n for n, s in INVESTMENT_STRATEGIES.items()
                    if s.rarity == '棱彩'}
@@ -194,13 +197,30 @@ def test_strategy_offer_forced_quality_targets_pool() -> None:
         # 改写次同样生效」,不断言具体候选值
         banned = set(sorted(prism_names)[:2])
         picks = sample_strategy_offer(random.Random(seed), set(banned),
-                                      forced_quality='棱彩')
+                                      forced_slots=('棱彩',) * 3)
         assert len(picks) == OFFER_CANDIDATES
         assert len(set(picks)) == OFFER_CANDIDATES, 'offer 内去重'
         for name in picks:
             assert name in INVESTMENT_STRATEGIES and \
                 INVESTMENT_STRATEGIES[name].rarity == '棱彩', name
             assert name not in banned, '排除集生效'
+
+
+def test_strategy_offer_slot_vector_per_slot_pool() -> None:
+    """槽位向量抽样(银·金·彩建模核心,2026-10-19 用户裁定卡面即真值):
+    forced_slots=('银','金','棱彩') → 逐槽候选各落其槽位品质池(左银/
+    中金/右棱彩),offer 内去重;多 seed 扫。"""
+    pools = {q: {n for n, s in INVESTMENT_STRATEGIES.items()
+                 if s.rarity == q} for q in ('银', '金', '棱彩')}
+    assert all(pools.values()), '三档品质池非空(建表前提)'
+    for seed in range(20):
+        picks = sample_strategy_offer(random.Random(seed), set(),
+                                      forced_slots=('银', '金', '棱彩'))
+        assert len(picks) == OFFER_CANDIDATES
+        assert len(set(picks)) == OFFER_CANDIDATES, 'offer 内去重'
+        for slot, (name, quality) in enumerate(zip(picks, ('银', '金', '棱彩'))):
+            assert name in pools[quality], \
+                f'槽{slot}候选 {name} 必落 {quality} 池'
 
 
 def test_strategy_offer_forced_quality_pool_exhausted_falls_back() -> None:
@@ -210,7 +230,7 @@ def test_strategy_offer_forced_quality_pool_exhausted_falls_back() -> None:
     prism_names = {n for n, s in INVESTMENT_STRATEGIES.items()
                    if s.rarity == '棱彩'}
     picks = sample_strategy_offer(random.Random(7), set(prism_names),
-                                  forced_quality='棱彩')
+                                  forced_slots=('棱彩',) * 3)
     assert len(picks) == OFFER_CANDIDATES, '池吃光回退全池,如实少发不触发'
     for name in picks:
         assert name in INVESTMENT_STRATEGIES
@@ -218,14 +238,34 @@ def test_strategy_offer_forced_quality_pool_exhausted_falls_back() -> None:
 
 
 def test_strategy_offer_default_regression_forced_empty() -> None:
-    """默认局回归:forced_quality='' 与不传参逐值同(同 seed 同排除集
+    """默认局回归:forced_slots=() 与不传参逐值同(同 seed 同排除集
     对拍)——默认局抽样路径零变化。"""
     for seed in range(12):
         ex: set[str] = set(sorted(INVESTMENT_STRATEGIES)[:seed * 3])
         a = sample_strategy_offer(random.Random(seed), set(ex))
         b = sample_strategy_offer(random.Random(seed), set(ex),
-                                  forced_quality='')
+                                  forced_slots=())
         assert a == b, seed
+
+
+def test_strategy_card_refresh_resample_same_contract() -> None:
+    """刷新重掷单卡腿(2026-10-19 用户裁定批):forced_quality 槽位品质
+    直取该品质池(银·金·彩槽位品质承诺跨刷新保持);'' = 默认掷点;
+    排除集生效;池吃光回退全池、全池亦空返回 ''(防御性)。"""
+    silver_names = {n for n, s in INVESTMENT_STRATEGIES.items()
+                    if s.rarity == '银'}
+    assert silver_names, '注册表银池非空(建表前提)'
+    banned = set(sorted(silver_names)[:1])
+    for seed in range(12):
+        name = sample_strategy_card(random.Random(seed), set(banned),
+                                    forced_quality='银')
+        assert name in silver_names and name not in banned
+    # 默认掷点 = 品质在注册表词集
+    name = sample_strategy_card(random.Random(3), set())
+    assert name in INVESTMENT_STRATEGIES
+    # 全池吃光(排除集 = 全注册表)→ 防御性空串
+    assert sample_strategy_card(random.Random(3),
+                                set(INVESTMENT_STRATEGIES)) == ''
 
 
 def test_env_offer_shape_and_registry_membership() -> None:
@@ -248,36 +288,44 @@ def test_env_offer_shape_and_registry_membership() -> None:
 
 # ============================================================ 投资 offer:品质改写判据与名单一致性
 
-def test_rewrite_quality_for_pick_full_rewrite_and_settled() -> None:
-    """品质改写判据(全改写型 + settled 定谳型):2026-10-14 用户裁定
-    判据形状 = rewrite_picks == (1,2,3) 结构特征,2026-10-16 用户裁定
-    头彩/尾彩 settled 定谳(offer 级覆盖面)后同判据接入。时代族命中次
-    返回目标品质(彩虹 1/2/3 次 → 棱彩,第 4 次不存在于固定日程但判据仍闭)、
-    黄金/白银同构族自动覆盖;头彩第 1 次 → 棱彩、第 2/3 次 → None
-    (只登记序接入);尾彩第 3 次 → 棱彩、第 1/2 次 → None(只登记序
-    接入);联席决策无 rewrite_quality → None;None/空/名单外环境恒
-    None。"""
-    assert rewrite_quality_for_pick('彩虹时代', 1) == '棱彩'
-    assert rewrite_quality_for_pick('彩虹时代', 2) == '棱彩'
-    assert rewrite_quality_for_pick('彩虹时代', 3) == '棱彩'
-    assert rewrite_quality_for_pick('彩虹时代', 4) is None
-    assert rewrite_quality_for_pick('黄金时代', 2) == '金'
-    assert rewrite_quality_for_pick('白银时代', 3) == '银'
-    assert rewrite_quality_for_pick('头彩', 1) == '棱彩', \
+def test_rewrite_slot_qualities_full_rewrite_and_settled() -> None:
+    """品质改写判据(槽位向量形,2026-10-19 用户裁定批自单品质形泛化,
+    原型语义等价 = 单品质 = 三槽同向量特例):2026-10-14 用户裁定判据
+    形状 = rewrite_picks == (1,2,3) 结构特征,2026-10-16 用户裁定头彩/
+    尾彩 settled 定谳(offer 级覆盖面)后同判据接入;2026-10-19 用户裁定
+    银·金·彩槽位向量(卡面即真值)恒接入固定日程取卡。时代族命中次
+    返回 (q,)*3(彩虹 1/2/3 次 → 棱彩,第 4 次不存在于固定日程但判据
+    仍闭)、黄金/白银同构族自动覆盖;头彩第 1 次 → (棱彩,)*3、第 2/3 次
+    → None(只登记序接入);尾彩第 3 次 → (棱彩,)*3、第 1/2 次 → None
+    (只登记序接入);银·金·彩任意序 → ('银','金','棱彩')(卡面三槽
+    品质按位,无序数条件);联席决策(数量通道)恒 None;None/空/名单外
+    环境恒 None。"""
+    assert rewrite_slot_qualities_for_pick('彩虹时代', 1) == ('棱彩',) * 3
+    assert rewrite_slot_qualities_for_pick('彩虹时代', 2) == ('棱彩',) * 3
+    assert rewrite_slot_qualities_for_pick('彩虹时代', 3) == ('棱彩',) * 3
+    assert rewrite_slot_qualities_for_pick('彩虹时代', 4) is None
+    assert rewrite_slot_qualities_for_pick('黄金时代', 2) == ('金',) * 3
+    assert rewrite_slot_qualities_for_pick('白银时代', 3) == ('银',) * 3
+    assert rewrite_slot_qualities_for_pick('头彩', 1) == ('棱彩',) * 3, \
         'settled 定谳接入第 1 次取卡'
-    assert rewrite_quality_for_pick('头彩', 2) is None, '只登记序接入'
-    assert rewrite_quality_for_pick('头彩', 3) is None, '只登记序接入'
-    assert rewrite_quality_for_pick('尾彩', 3) == '棱彩', \
+    assert rewrite_slot_qualities_for_pick('头彩', 2) is None, '只登记序接入'
+    assert rewrite_slot_qualities_for_pick('头彩', 3) is None, '只登记序接入'
+    assert rewrite_slot_qualities_for_pick('尾彩', 3) == ('棱彩',) * 3, \
         'settled 定谳接入第 3 次取卡'
-    assert rewrite_quality_for_pick('尾彩', 1) is None, '只登记序接入'
-    assert rewrite_quality_for_pick('尾彩', 2) is None, '只登记序接入'
-    assert rewrite_quality_for_pick('联席决策', 1) is None, \
-        '数量通道无 rewrite_quality'
+    assert rewrite_slot_qualities_for_pick('尾彩', 1) is None, '只登记序接入'
+    assert rewrite_slot_qualities_for_pick('尾彩', 2) is None, '只登记序接入'
+    _slot_vec = ('银', '金', '棱彩')
+    for ordinal in (1, 2, 3, 4):
+        assert rewrite_slot_qualities_for_pick('银·金·彩', ordinal) \
+            == _slot_vec, \
+            '槽位向量型无序数条件(品质承诺对每个固定取卡节点成立)'
+    assert rewrite_slot_qualities_for_pick('联席决策', 1) is None, \
+        '数量通道无槽位向量'
     for env in (None, '', '轮岗', '经济过热'):
-        assert rewrite_quality_for_pick(env, 1) is None, env
+        assert rewrite_slot_qualities_for_pick(env, 1) is None, env
 
 
-def test_rewrite_quality_for_pick_unsettaled_partial_stays_out(
+def test_rewrite_slot_qualities_unsettaled_partial_stays_out(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """未定谳部分型不接入判据的合成载体锁(尾彩 2026-10-16 定谳后,
     现役 ENV_POOL_REWRITE 不再存在未定谳部分型实体,判据函数的
@@ -290,7 +338,7 @@ def test_rewrite_quality_for_pick_unsettaled_partial_stays_out(
     forged['合成部分型'] = StrategyPoolRewrite(
         rewrite_quality='棱彩', rewrite_picks=(1,), rewrite_settled=False)
     monkeypatch.setattr(cw_sim_backend, 'ENV_POOL_REWRITE', forged)
-    assert rewrite_quality_for_pick('合成部分型', 1) is None, \
+    assert rewrite_slot_qualities_for_pick('合成部分型', 1) is None, \
         '未定谳部分型不接入(settled 分支守卫)'
 
 
