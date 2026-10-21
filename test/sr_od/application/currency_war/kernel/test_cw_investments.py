@@ -110,6 +110,23 @@ def test_zhanli_tisheng_registration_and_typed_pool() -> None:
     assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
 
 
+def test_zhanli_biaosheng_registration_and_full_cost_pool() -> None:
+    """战力飙升登记不变量(T-37 设计 §4 锁 1/2):∈ ENV_GIFTS 且 ∉
+    ENV_ECONOMY(import 期互斥校验半边显式断言);登记规格 = 卡面直读
+    (2 费/2★/无类型词 → type_tag 空);池 = 2 费全档注册表现算双射——
+    池名 ⊆ 注册表;爻光费用勘误 2→1(注册表在册)自动不入池(勘误件
+    防呆断言);池规模 = 注释性快照(2026-10 时点 15 名),非断言值。"""
+    assert '战力飙升' in ENV_GIFTS
+    assert '战力飙升' not in ENV_ECONOMY
+    spec = ENV_GIFTS['战力飙升'].chars_random_immediate[0]
+    assert spec == RandomCharSpec(cost=2, star=2)
+    pool = set(random_char_pool(spec))
+    assert pool == {c.name for c in chars_by_cost(2)}, \
+        '无类型词 → 池 = 费用档全档(注册表现算)'
+    assert pool <= CHARACTER_ROSTER
+    assert '爻光' not in pool, '爻光费用勘误 2→1,不入 2 费池(勘误件防呆)'
+
+
 def test_env_reroll_names_member_validation(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """追加随机环境名单成员校验(设计 §4 测试 1):成员 ∉ INVESTMENT_ENVS

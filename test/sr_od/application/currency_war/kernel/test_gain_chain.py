@@ -687,6 +687,46 @@ def test_env_gift_random_leg_star2_merge_boundary(
         '1★×2 与赠 2★ 星级不同,不合并'
 
 
+def test_env_gift_random_leg_cost2_star2_seeded(rows_sink: _RowSink) -> None:
+    """战力飙升(2 费无类型词)发放腿(on_env_gained 直构,T-37 设计 §4
+    锁 3/9):固定种子 rng → bench 追加 1 张 2★(名 ∈ 2 费全档池);
+    效果串 'env_gift_random:<名>@2star';获得链写序 = 仅 bench 一笔写——
+    属性加成腿不建模的零写端钉死。期望名从同 seed 现算(单一来源,不手抄)。"""
+    gs = _make_gs(bench=[], equips=[])
+    seq_before = gs.write_seq
+    pool = random_char_pool(RandomCharSpec(cost=2, star=2))
+    expected = random.Random(20261022).choice(pool)
+    out = on_env_gained(gs, None, '战力飙升', rand=False, sig=_lsig(),
+                        rng=random.Random(20261022))
+    assert out == (f'env_gift_random:{expected}@2star',)
+    units = [(u.char_id, u.star) for u in bench_units_of(gs)]
+    assert units == [(expected, 2)], '落席 1 张,星级 = spec.star 2'
+    assert gs.write_seq - seq_before == 1, \
+        '获得链仅 bench 一笔写(零计数器/持久域追加)'
+    assert rows_sink.kinds() == [], '正常路径零申报行'
+
+
+def test_env_gift_random_leg_star2_merge_cost2_boundary(
+        rows_sink: _RowSink) -> None:
+    """战力飙升 2★ 赠卡合成边界(T-37 设计 §4 锁 5,开局形状 (1,1,2,2)
+    同名态为本卡天然边界):预置两枚同名 1★ 2 费件 → 赠 2★ 星级失配
+    不合并(席面三件并存,(char_id, star) 二元组识别);预置两枚同名 2★
+    → 同星 3 合 1 升 3★。期望名从同 seed 现算。"""
+    pool = random_char_pool(RandomCharSpec(cost=2, star=2))
+    name = random.Random(20261022).choice(pool)
+    gs1 = _make_gs(bench=[(name, 1), (name, 1)], equips=[])
+    on_env_gained(gs1, None, '战力飙升', rand=False, sig=_lsig(),
+                  rng=random.Random(20261022))
+    no_merge = sorted((u.char_id, u.star) for u in bench_units_of(gs1))
+    assert no_merge == [(name, 1), (name, 1), (name, 2)], \
+        '1★×2 与赠 2★ 星级不同,不合并(开局同名边界)'
+    gs = _make_gs(bench=[(name, 2), (name, 2)], equips=[])
+    on_env_gained(gs, None, '战力飙升', rand=False, sig=_lsig(),
+                  rng=random.Random(20261022))
+    merged = [(u.char_id, u.star) for u in bench_units_of(gs)]
+    assert merged == [(name, 3)], '两枚 2★ + 赠 2★ → 3★(同星 3 合 1)'
+
+
 def test_env_gift_random_leg_anchored_rand_channel(
         rows_sink: _RowSink) -> None:
     """随机支通道语义(T-10 设计 §4 测试 4):锚定容器 + 采样子链

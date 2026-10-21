@@ -547,6 +547,45 @@ def test_typed_random_env_gift_sim_seeded_roll_to_bench() -> None:
     assert first == second, '同 seed 重放确定性(同名同星)'
 
 
+def test_cost2_random_env_gift_sim_seeded_roll_to_bench() -> None:
+    """战力飙升(2 费无类型词)sim 全链(T-37 设计 §4 锁 8):播种
+    invest_env_opts 选战力飙升 → 选卡后 bench = 5 张(4 张 M01 开局全 1★
+    + 1 张 2★ 赠卡;星级 2 = 赠卡唯一判据,开局手牌无 2★);赠卡名 ∈
+    2 费全档池(注册表现算);同 seed 重放确定性(同名同星)——rng 经
+    install_backend 动作腿提供槽(流键 action/pick_invest_env/0)注入。"""
+    def _pick_once() -> list[tuple[str, int]]:
+        b = SimBackend(seed=7, cfg=RunConfig(
+            selected_difficulty='A8', enemy_difficulty=108, env_present=True))
+        install_backend(b)
+        try:
+            b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+            assert b.screen_identity() == SCREEN_INVEST_ENV
+            b.gs.write_logic(b.gs.invest_env_opts,
+                             ['战力飙升', '轮岗', '头彩'],
+                             produced_by='Test', evidence='t:opts', sig=_SIG)
+            env_out = report_action_pick_invest_env_param(
+                b.gs, SimpleNamespace(idx=0), _SIG)
+            assert env_out.applied
+            cw_sim_ports.declare_world(env_out.world_decl)
+            units = [(s.unit.char_id, s.unit.star)
+                     for s in b.gs.bench.value.slots
+                     if s is not None and s.kind == 'unit'
+                     and s.unit is not None]
+            assert len(units) == 5, '4 张 M01 开局 + 1 张随机赠卡'
+            pool = set(random_char_pool(
+                ENV_GIFTS['战力飙升'].chars_random_immediate[0]))
+            star2 = [(n, st) for n, st in units if st == 2]
+            assert len(star2) == 1 and star2[0][0] in pool, \
+                '恰 1 张 2★ 赠卡且名 ∈ 2 费全档池'
+            return units
+        finally:
+            uninstall_backend()
+
+    first = _pick_once()
+    second = _pick_once()
+    assert first == second, '同 seed 重放确定性(同名同星)'
+
+
 def test_scheduled_env_gift_discharged_at_plane2_first_window() -> None:
     """定时环境发放 sim 收口:选特权阶级 → 队列登记 (2,1) 发放项(登记
     不落席);(1,x) 各节点窗开启与位面过渡屏呈现期队列原样(未到点不
