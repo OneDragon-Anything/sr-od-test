@@ -645,6 +645,48 @@ def test_env_gift_random_leg_seeded_roll(rows_sink: _RowSink) -> None:
     assert rows_sink.kinds() == [], '正常路径零申报行'
 
 
+def test_env_gift_random_leg_typed_pool_star2_seeded(
+        rows_sink: _RowSink) -> None:
+    """类型过滤随机支发放腿(on_env_gained 直构,T-36 设计 §4 锁 3/9):
+    固定种子 rng → bench 追加 1 张 2★(spec.star 直传,类型过滤池 =
+    1 费「输出」件)且名 ∈ 规格池;效果串 'env_gift_random:<名>@2star'
+    (星级后缀随 spec,卡面明写非先验);获得链写序 = 仅 bench 一笔写——
+    属性加成腿不建模的零写端钉死(锁 9 收窄形:节点推进无本卡挂点,
+    差分重放不稳定不设)。期望名从同 seed 现算(单一来源,不手抄)。"""
+    gs = _make_gs(bench=[], equips=[])
+    seq_before = gs.write_seq
+    pool = random_char_pool(RandomCharSpec(cost=1, star=2, type_tag='输出'))
+    expected = random.Random(20261021).choice(pool)
+    out = on_env_gained(gs, None, '战力提升', rand=False, sig=_lsig(),
+                        rng=random.Random(20261021))
+    assert out == (f'env_gift_random:{expected}@2star',)
+    units = [(u.char_id, u.star) for u in bench_units_of(gs)]
+    assert units == [(expected, 2)], '落席 1 张,星级 = spec.star 2'
+    assert gs.write_seq - seq_before == 1, \
+        '获得链仅 bench 一笔写(零计数器/持久域追加)'
+    assert rows_sink.kinds() == [], '正常路径零申报行'
+
+
+def test_env_gift_random_leg_star2_merge_boundary(
+        rows_sink: _RowSink) -> None:
+    """2★ 赠卡合成边界(T-36 设计 §4 锁 5):预置两枚同名 2★ → 赠 2★
+    同星 3 合 1 升 3★((char_id, star) 二元组识别,星级感知);预置两枚
+    同名 1★ → 赠 2★ 星级不同不合并。期望名从同 seed 现算。"""
+    pool = random_char_pool(RandomCharSpec(cost=1, star=2, type_tag='输出'))
+    name = random.Random(20261021).choice(pool)
+    gs = _make_gs(bench=[(name, 2), (name, 2)], equips=[])
+    on_env_gained(gs, None, '战力提升', rand=False, sig=_lsig(),
+                  rng=random.Random(20261021))
+    merged = [(u.char_id, u.star) for u in bench_units_of(gs)]
+    assert merged == [(name, 3)], '两枚 2★ + 赠 2★ → 3★(同星 3 合 1)'
+    gs1 = _make_gs(bench=[(name, 1), (name, 1)], equips=[])
+    on_env_gained(gs1, None, '战力提升', rand=False, sig=_lsig(),
+                  rng=random.Random(20261021))
+    no_merge = sorted((u.char_id, u.star) for u in bench_units_of(gs1))
+    assert no_merge == [(name, 1), (name, 1), (name, 2)], \
+        '1★×2 与赠 2★ 星级不同,不合并'
+
+
 def test_env_gift_random_leg_anchored_rand_channel(
         rows_sink: _RowSink) -> None:
     """随机支通道语义(T-10 设计 §4 测试 4):锚定容器 + 采样子链

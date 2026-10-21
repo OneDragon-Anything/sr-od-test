@@ -93,6 +93,23 @@ def test_talent_import_not_in_env_economy() -> None:
     assert '人才引进' not in ENV_ECONOMY
 
 
+def test_zhanli_tisheng_registration_and_typed_pool() -> None:
+    """战力提升登记不变量(T-36 设计 §4 锁 1/2):∈ ENV_GIFTS 且 ∉
+    ENV_ECONOMY(import 期互斥校验半边显式断言);登记规格 = 卡面直读
+    (1 费/2★/类型标签「输出」);规格过滤池 = 注册表现算双射——每名
+    1 费且 char_type 含「输出」标签(多标签计入,用户裁定 2026-10-21),
+    池名 ⊆ 注册表。池规模 = 注释性快照(2026-10 时点 12 名),非断言值。"""
+    assert '战力提升' in ENV_GIFTS
+    assert '战力提升' not in ENV_ECONOMY
+    spec = ENV_GIFTS['战力提升'].chars_random_immediate[0]
+    assert spec == RandomCharSpec(cost=1, star=2, type_tag='输出')
+    expected = {c.name for c in chars_by_cost(1)
+                if '输出' in c.char_type.split('、')}
+    assert set(random_char_pool(spec)) == expected, \
+        '规格过滤池 = 费用档 × 类型含标签 双射(注册表现算)'
+    assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
+
+
 def test_env_reroll_names_member_validation(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """追加随机环境名单成员校验(设计 §4 测试 1):成员 ∉ INVESTMENT_ENVS
