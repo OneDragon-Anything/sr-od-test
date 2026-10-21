@@ -207,7 +207,13 @@ def test_window_grant_matrix_and_repeat_tick() -> None:
         _advance(gs, pos)
         assert gs.xp.value == xp_want, f'{pos} 推进对'
         assert _granted(entry) == n_want, f'{pos} 已发放计数'
-    # 同拍重复 tick 零双发
+        if n_want == 1:
+            # 窗口中段同拍重复 tick 零双发(真锁 advanced 位闸——耗尽态
+            # 的剩余检查单独即可阻断,中段才隔离「双发放」本身)
+            tick_effect_boundary(gs)
+            assert _granted(entry) == 1 and gs.xp.value == (12, 72), \
+                '窗口中段重复 tick 零双发(advanced 位闸)'
+    # 同拍重复 tick 零双发(耗尽态)
     tick_effect_boundary(gs)
     assert _granted(entry) == 3 and gs.xp.value == (36, 72), \
         '同拍重复 tick 零双发(advanced 位闸)'
@@ -255,15 +261,19 @@ def test_below_threshold_zero_world_behavior() -> None:
 
 def test_level_cap_window_burns_zero_advance() -> None:
     """level=10:窗口照耗(XP_GRANTED 单调递增至 3、条目留置),
-    grant_xp 满级门零推进(level/xp 值不变)。"""
-    gs = _seed_gs(10, 0)
+    grant_xp 满级门零推进且零写行(level/xp 值完全不变——设计 §4 锁 6
+    字面,算子零变化跳写,分母不被归一改写)。"""
+    lv_seed = 10
+    xp_seed = (0, XP_TO_NEXT_LEVEL.get(lv_seed, 4))
+    gs = _seed_gs(lv_seed, 0)
     _advance(gs, (1, 1))
     entry = gs.effects.first(_ENV_ID)
     for pos, n_want in zip([(1, 2), (1, 3), (1, 4)], [1, 2, 3],
                            strict=True):
         _advance(gs, pos)
         assert _granted(entry) == n_want, f'{pos} 窗口照耗'
-    assert (gs.level.value, gs.xp.value) == (10, (0, 0)), '满级零推进'
+    assert (gs.level.value, gs.xp.value) == (lv_seed, xp_seed), \
+        '满级零推进(值完全不变,零写行)'
     assert entry in gs.effects.entries, '条目留置'
     _advance(gs, (1, 5))
     assert _granted(entry) == 3, '耗尽后零发放'
