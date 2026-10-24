@@ -367,3 +367,39 @@ def test_delayed_item_grant_leg_repeat_gain_two_entries_scope_once(
         (('惊喜盒', (2, 4)), ('惊喜盒', (2, 4))), '队列两条独立条目'
     assert gs.env_grants_done.value == \
         ((_DELAYED_ENV, 'delayed_open_accel'),), 'done 幂等不重写'
+
+
+# ============================================================ 专家研讨会
+# (环境道具双件发放 = bookcard 槽件发放首例;迭代 2026-09-23-invest-effects-
+# calc T-39 专家研讨会设计 §2.1/§2.4 + §4 锁 2。卡文序 = 邀请函先箱后。)
+
+_EXPERT_ENV = '专家研讨会'
+
+
+def _make_gs_seeded() -> GameState:
+    """直构 + 开局种子底座(设计锁 2 前置:直构不种底座 = bench 未观察
+    拒落零写;种子底座单一源 = seed_opening_state)。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        seed_opening_state,
+    )
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    seed_opening_state(gs)
+    return gs
+
+
+def test_expert_seminar_dual_item_grants_card_text_order(
+        monkeypatch) -> None:
+    """发放腿(T-39 设计 §2.1/§2.4 + §4 锁 2):种子底座直构 → 选专家
+    研讨会 → bench 落两槽,kind 序 = ['bookcard', 'supply_box'] 且 item 名
+    逐槽 = ['专家邀请函', '简易武装箱'](卡文序);效果串两行
+    ``item_gift:<名>`` 顺序同卡文(发放事实恒登记)。"""
+    gs = _make_gs_seeded()
+    _record_writes(gs, monkeypatch)
+    effects = on_env_gained(gs, None, _EXPERT_ENV, rand=False, sig=_SIG)
+    assert effects == ('item_gift:专家邀请函', 'item_gift:简易武装箱'), \
+        '效果串两行顺序同卡文'
+    placed = [(s.kind, s.item) for s in gs.bench.value.slots
+              if s is not None and s.kind != 'empty']
+    assert placed == [('bookcard', '专家邀请函'),
+                      ('supply_box', '简易武装箱')], \
+        f'两槽卡文序落席(kind+item 逐槽): {placed}'

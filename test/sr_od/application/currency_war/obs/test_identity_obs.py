@@ -142,3 +142,46 @@ def test_giftbox_badge_reading_confusion_repair() -> None:
     assert obs._giftbox_badge_reading('0') is None, '越下界作废'
     assert obs._giftbox_badge_reading('') is None, '空读作废'
     assert obs._giftbox_badge_reading('⏳') is None, '只有徽记无数字 → 作废'
+
+
+# ============================================================ 占席道具带名观察写端
+# (迭代 2026-09-23-invest-effects-calc T-39 专家研讨会设计 §2.5/§2.7 +
+# §4 锁 9/10。fixture = 真实截图纪律:银灰箱在备战栏 3 号槽实拍帧〔源 =
+# .debug/currency_war/evidence/20260912_t15_t13_t18/ 拖卖留证帧,
+# webp 无损入库,真值人工确认:3 号槽 = 简易武装箱带开启钮,1/2 号槽 =
+# 角色〕;金/彩箱无实拍帧不测,帧到手随模板任务补。)
+
+def test_bench_item_named_slot_from_real_frame(test_context) -> None:
+    """观察写端带名(T-39 设计 §2.5 + §4 锁 9):真实帧备战栏 3 号槽银灰箱
+    → 识别期细分命中 ('supply_box', '简易武装箱')(银灰单模板命中即钉名),
+    经 _bench_view_of 构造带名槽(kind+item 逐位),其余槽 item 恒 None;
+    发放内核写端 = 身份权威源,识别钉名 = 观察域覆盖面。"""
+    if not test_context.has_screen('货币战争-备战',
+                                   'box_sell_drag_ineffective_box_remains'):
+        pytest.skip('存档截图缺失:screens/货币战争-备战/'
+                    'box_sell_drag_ineffective_box_remains.webp')
+    frame = test_context.load_screen('货币战争-备战',
+                                     'box_sell_drag_ineffective_box_remains')
+    named = obs._bench_item_kind_by_slot(test_context, frame)
+    assert named == {3: ('supply_box', '简易武装箱')}, \
+        f'银灰箱 3 号槽钉名(kind+品名): {named}'
+    view = obs._bench_view_of([], named)
+    assert view is not None
+    slot = view.slots[2]
+    assert (slot.kind, slot.item) == ('supply_box', '简易武装箱'), \
+        '观察写端构造带名槽'
+    assert all(s.item is None for i, s in enumerate(view.slots) if i != 2), \
+        '非道具槽 item 恒 None'
+
+
+def test_pinned_names_cross_check_with_bridge(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """一致性互检(T-39 设计 §2.7 + §4 锁 10):观察端钉名对照(银灰箱/
+    邀请函)与 BENCH_ITEM_KINDS import 期互检——现值直调零炸;两表漂移
+    注入 → ValueError(启动即炸;tome 豁免不在检域)。"""
+    obs._validate_pinned_names_match_bridge()   # 现值零炸
+    drifted = dict(obs.BENCH_ITEM_KINDS)
+    drifted['简易武装箱'] = 'bookcard'
+    monkeypatch.setattr(obs, 'BENCH_ITEM_KINDS', drifted)
+    with pytest.raises(ValueError, match='漂移'):
+        obs._validate_pinned_names_match_bridge()

@@ -194,3 +194,26 @@ def test_deterministic_equip_env_grants_without_rng_blue(
     boxes = [s for s in gs.bench.value.slots
              if s is not None and s.kind == 'supply_box']
     assert len(boxes) == 1, '箱腿落席 1 个 supply_box 槽件'
+
+
+# ==================== 环境道具双件(专家研讨会)====================
+# (设计 = 迭代 2026-09-23-invest-effects-calc T-39 专家研讨会设计 §4 锁 7)
+
+
+def test_expert_seminar_pick_grants_two_item_slots_no_rng(
+        provider_calls: list[str]) -> None:
+    """双端同链(T-39 设计 §4 锁 7):report_action_pick_invest_env_param
+    ('专家研讨会') → gain_invest_env → on_env_gained 道具通道 → bench 落
+    两槽,kind 序 = ['bookcard', 'supply_box'] 且 item 逐槽 = 卡文名
+    (live/sim 共用语义一条覆盖);零随机支 → rng 谓词零解析(条件行锁,
+    默认环境局 rng 消耗序列逐位不变)。"""
+    gs = _make_gs(['专家研讨会', '轮岗', '头彩'])
+    out = report_action_pick_invest_env_param(
+        gs, SimpleNamespace(idx=0), _SIG)
+    assert out.applied
+    assert provider_calls == [], '零随机支环境零解析'
+    assert (gs.active_env.value or '') == '专家研讨会', '选择事实写值'
+    slots = [(s.kind, s.item) for s in gs.bench.value.slots
+             if s is not None and s.kind != 'empty']
+    assert slots == [('bookcard', '专家邀请函'),
+                     ('supply_box', '简易武装箱')], f'两槽卡文序: {slots}'

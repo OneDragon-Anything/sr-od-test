@@ -1479,8 +1479,8 @@ def test_bench_read_empty_is_miss_not_full(monkeypatch) -> None:
     全空——读链直产(P6,原观察写端值构造器空集守卫移驻读链)零占用返
     None(调用方走 carried,§2.2 处置①;宁缺勿造),禁把「9 槽全空」当
     observation 入记录(席空数派生误报 free=9/挂起合成升星预期被空视图
-    误清);非空 = 槽位保序视图 + 占位件 kind 识别期细分 + SIFT 身份胜出;
-    越界条目丢弃(读链漂移)。"""
+    误清);非空 = 槽位保序视图 + 占位件 (kind, 品名) 识别期细分(带名
+    槽件,T-39 设计 §2.5)+ SIFT 身份胜出;越界条目丢弃(读链漂移)。"""
     from sr_od.application.currency_war.obs import cw_identity_obs as obs
     # 空读:零命中 + 零占槽物品 → None(禁合成全空视图)
     monkeypatch.setattr(obs, 'identify_slots', lambda *a, **k: [])
@@ -1489,16 +1489,18 @@ def test_bench_read_empty_is_miss_not_full(monkeypatch) -> None:
                         lambda ctx, screen: {})
     assert obs.read_bench_view(object(), object(), object()) is None, \
         '空集 = 失读,禁合成全空视图'
-    # 非空 = 槽位保序视图;越界条目不落槽;占位物品 kind 细分,SIFT 身份胜出
+    # 非空 = 槽位保序视图;越界条目不落槽;占位物品 (kind, 品名) 细分带名,
+    # SIFT 身份胜出
     from sr_od.application.currency_war.kernel.cw_game_state import Unit
     view = obs._bench_view_of(
         [(2, Unit(char_id='花火', star=2)),
          (10, Unit(char_id='越界角色', star=1)),    # 越界:丢弃
          (0, Unit(char_id='越界角色2', star=1))],  # 越界:丢弃
-        {1: 'tome', 2: 'supply_box'})
+        {1: ('tome', '星徽秘典'), 2: ('supply_box', '简易武装箱')})
     assert view is not None
-    assert [s.kind for s in view.slots] == ['tome', 'unit'] + ['empty'] * 7, \
-        '槽位保序(物理槽 1=典籍,2=角色);越界条目不落槽;占槽物品只填空槽'
+    assert [(s.kind, s.item) for s in view.slots] == \
+        [('tome', '星徽秘典'), ('unit', None)] + [('empty', None)] * 7, \
+        '槽位保序(物理槽 1=典籍带名,2=角色);越界条目不落槽;占槽物品只填空槽'
     assert view.slots[1].unit is not None and view.slots[1].unit.star == 2
 
 
