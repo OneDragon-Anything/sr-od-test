@@ -173,7 +173,9 @@ def test_prereg_spy_closure_full_match(test_context: Any,
     单帧证据 = T-3 sim 闭环用例;本测试补全跑域的真实闭环实例。"""
     from sr_od.application.currency_war.sim import cw_sim_backend
 
-    def _forced_spy_offer(rng, excluded, forced_quality=''):
+    def _forced_spy_offer(rng, excluded, forced_quality='', forced_slots=()):
+        # forced_slots = 生产调用点(质量改写槽位)形参,本桩语义 = 单候选
+        # 间谍强制,忽略之(T-427/T-35 批加参时本桩漏更,补形参消 TypeError)。
         return ('商业间谍',)
 
     monkeypatch.setattr(cw_sim_backend, 'sample_strategy_offer',
