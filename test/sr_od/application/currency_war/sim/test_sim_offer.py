@@ -389,6 +389,34 @@ def _gs_with_unlocked(name: str):
     return gs
 
 
+def test_expert_wolf_conditional_env_deal_pool_lifecycle() -> None:
+    """特邀专家:银狼条件触发局锁(T-42 设计 §4 锁 6,消费面行为回归):
+    触发前 deal 候选永不含银狼(未解锁隔离);开局种子起手(bench 已含
+    银狼LV.999)经环境获得时点在场判定(挂点④)解锁后,4 费档 deal 候选
+    含银狼(expert-pool-unlock 池派生消费面);银狼持有后 held/剩余池守恒
+    (EXPERT_COPIES_ASSUMED − held,获得链落席与购买渠道对池数学等价)。"""
+    gs = _fresh_gs()
+    sig_obs = ChannelSig(family='obs', actor='TestSigWriter')
+    gs.observe(gs.bench, cw4_bview([cw4_bc('银狼LV.999')]), sig=sig_obs)
+    from sr_od.application.currency_war.kernel.cw_gain_chain import (
+        gain_character,
+        gain_invest_env,
+    )
+    assert '银狼' not in drawable_names(gs, 4), '触发前未解锁隔离(不可刷)'
+    out = gain_invest_env(gs, None, '特邀专家:银狼', rand=False, sig=_lsig())
+    assert out.effects == ('advisor_unlock:特邀专家:银狼:银狼',), \
+        f'挂点④在场判定命中: {out.effects}'
+    assert gs.unlocked_experts.value == ('银狼',), '解锁写入'
+    assert '银狼' in drawable_names(gs, 4), '解锁后 4 费档可进店'
+    gain_character(gs, '银狼', 1, rand=False, sig=_lsig(), evidence='buy',
+                   producer='TestWriter')
+    held = held_copies(gs)
+    assert held.get('银狼') == 1, 'held 计数 = 持有 1 副本'
+    remaining = remaining_pool(gs)
+    assert remaining['银狼'] == EXPERT_COPIES_ASSUMED - held['银狼'], \
+        f'剩余池守恒(9 − held): {remaining["银狼"]}'
+
+
 def test_held_derived_from_bench_and_deployed_stars() -> None:
     """held = Σ 3^(star−1)(容器 bench/deployed 派生;合成不销毁口径:
     2★ 计 3 张);剩余 = 固定 − held 不变量。"""

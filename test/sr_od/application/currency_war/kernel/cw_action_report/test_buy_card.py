@@ -1,11 +1,14 @@
-"""buy_card 上报合并升星触发发放腿测试(镜像 src =
-kernel/cw_action_report/buy_card.py)。
+"""buy_card 上报测试(镜像 src = kernel/cw_action_report/buy_card.py)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
 T-26-liangzi-tongpin-qiyue.md(定稿)§2.4 条 1 + §4.6:买牌上报内采集
 升星事实(引擎 A),在升星腿整表写毕后收尾发火——**发火时序锁**:bench
 终态 = 合并产物 + 发放角色并存(若发火先于升星腿整表写,发放写会被
 覆盖,终态缺发放角色 = 本锁红)。
+
+追加面 = T-42 设计(designs/T-42-teyao-zhuanjia-yinlang.md)§4 锁 3
+(购买渠道,条件形态专家触发):购买回调腿段判据一次——买银狼LV.999
+解锁 / 买其他 3 费角色不触发 / 拒买( applied=False 早退)不触发。
 """
 from __future__ import annotations
 
@@ -69,3 +72,58 @@ def test_buy_merge_fires_grant_after_starup_leg(seeded_provider) -> None:
     assert out.applied and out.bought_count == 1, '买牌上报成功'
     assert _bench_units(gs) == [('花火', 2), (expected, 1)], \
         f'合并产物 + 发放角色并存(升星腿不覆盖发放写): {_bench_units(gs)}'
+
+
+# ============================================================ 条件形态专家触发(T-42 §4 锁 3)
+
+_ENV_YINLANG = '特邀专家:银狼'
+
+
+def test_buy_lv999_unlocks_expert_with_trigger_evidence() -> None:
+    """购买渠道主腿(设计 §4 锁 3 条 1):本卡局买银狼LV.999 → 解锁
+    银狼入商店;write 行 evidence = buy_card:expert_trigger#expert_unlock
+    (购买/桥渠道效果串面以 write 行为准,evidence 可见,设计 §2.5)。"""
+    gs = cw4_gs(bench=[], shop=[_card('银狼LV.999', cost=3, x=0)],
+                gold_unread=True, active_env=_ENV_YINLANG)
+    from sr_od.application.currency_war.kernel.cw_vocab import (
+        CwActionBuyCardParam,
+    )
+    out = report_action_buy_card_param(
+        gs, CwActionBuyCardParam(card=_card('银狼LV.999', cost=3, x=0)),
+        _SIG)
+    assert out.applied, '购买成功'
+    assert gs.unlocked_experts.value == ('银狼',), '解锁写入'
+    assert gs.unlocked_experts.evidence == \
+        'buy_card:expert_trigger#expert_unlock', '触发腿 evidence 可见'
+
+
+def test_buy_other_3cost_no_trigger() -> None:
+    """非目标名不触发(设计 §4 锁 3 条 2):本卡局买其他 3 费角色
+    (希儿)→ 判据条件①名不命中,零解锁写。"""
+    gs = cw4_gs(bench=[], shop=[_card('希儿', cost=3, x=0)],
+                gold_unread=True, active_env=_ENV_YINLANG)
+    from sr_od.application.currency_war.kernel.cw_vocab import (
+        CwActionBuyCardParam,
+    )
+    out = report_action_buy_card_param(
+        gs, CwActionBuyCardParam(card=_card('希儿', cost=3, x=0)), _SIG)
+    assert out.applied, '购买成功'
+    assert gs.unlocked_experts.value in (None, ()), '零解锁写'
+
+
+def test_buy_rejected_bench_full_no_trigger() -> None:
+    """拒买不触发(设计 §4 锁 3 条 3):满栏且合成不可达 = applied=False
+    早退(reason='bench_full'),早退路径不经购买回调腿 → 零解锁写
+    (触发点在回调腿的时序含义锁)。"""
+    full_bench = [_bc(n) for n in ('希儿', '符玄', '花火', '停云', '刃',
+                                   '杰帕德', '娜塔莎', '丹恒', '三月七')]
+    gs = cw4_gs(bench=full_bench, shop=[_card('银狼LV.999', cost=3, x=0)],
+                gold_unread=True, active_env=_ENV_YINLANG)
+    from sr_od.application.currency_war.kernel.cw_vocab import (
+        CwActionBuyCardParam,
+    )
+    out = report_action_buy_card_param(
+        gs, CwActionBuyCardParam(card=_card('银狼LV.999', cost=3, x=0)),
+        _SIG)
+    assert out.applied is False and out.reason == 'bench_full', '拒买早退'
+    assert gs.unlocked_experts.value in (None, ()), '零解锁写(早退不经触发腿)'

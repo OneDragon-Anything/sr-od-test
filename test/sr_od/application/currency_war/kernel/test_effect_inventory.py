@@ -374,3 +374,67 @@ def test_worn_transform_keeps_uid_and_guard_still_blocks() -> None:
                                   mode='compute'))
     assert deploy_lock_block_reason(gs, replaced[0]) == \
         'deploy_locked:流萤#uid1#unlock1-9', '换装后守卫仍拦'
+
+
+# ============================================================ 条件形态专家触发
+# (T-42 特邀专家:银狼,设计 = 迭代 2026-09-23-invest-effects-calc
+# designs/T-42-teyao-zhuanjia-yinlang.md §4 锁 4:平行桥渠道——入席 +
+# 级联 + 触发发放腿全毕后判据一次,桥尾追加;数据拷贝仪Max 确定性通道
+# 送 1★银狼LV.999 即现役可达获得。)
+
+_ENV_YINLANG = '特邀专家:银狼'
+
+
+def _expert_env_gs(bench_entries: list[Unit]) -> GameState:
+    """特邀专家:银狼局容器(bench 按参组装 + active_env 观察种子)。"""
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    slots: list[BenchSlot | None] = [BenchSlot(kind='unit', unit=u)
+                                     for u in bench_entries]
+    slots += [BenchSlot(kind='empty')] * (BENCH_CAPACITY_DEFAULT
+                                          - len(slots))
+    gs.observe(gs.bench, BenchView(slots=slots,
+                                   capacity=BENCH_CAPACITY_DEFAULT),
+               sig=_SIG_OBS)
+    gs.observe(gs.active_env, _ENV_YINLANG, sig=_SIG_OBS)
+    return gs
+
+
+def test_equip_consequence_lv999_unlocks_expert() -> None:
+    """装备获得后果确定性通道(设计 §4 锁 4 条 1):数据拷贝仪Max →
+    1★银狼LV.999 入席(获得事实)+ 桥尾判据解锁银狼入商店;解锁 write
+    行 evidence = 入席 evidence 族后缀(获得 provenance 可辨)。"""
+    from sr_od.application.currency_war.kernel.cw_effect_inventory import (
+        apply_equip_acquire_consequence,
+    )
+    gs = _expert_env_gs([])
+    report = apply_equip_acquire_consequence(gs, '数据拷贝仪Max')
+    assert report.performed and report.granted == '银狼LV.999', \
+        f'银狼LV.999 入席: {report}'
+    assert _bench_units(gs) == [('银狼LV.999', 1)], '获得事实入席'
+    assert gs.unlocked_experts.value == ('银狼',), '桥尾判据解锁'
+    assert gs.unlocked_experts.evidence == 'equip_acquire#expert_unlock', \
+        'evidence 族后缀(入席 evidence 派生)'
+
+
+def test_grant_bench_unit_cascade_lv999_unlocks_expert() -> None:
+    """桥直调(设计 §4 锁 4 条 2):grant_bench_unit_cascade('银狼LV.999')
+    → 入席 + 解锁(桥尾判据与后果通道同点,任意发放面一律承接)。"""
+    gs = _expert_env_gs([])
+    result = grant_bench_unit_cascade(gs, '银狼LV.999', 1)
+    assert result.placed, '入席成功'
+    assert _bench_units(gs) == [('银狼LV.999', 1)]
+    assert gs.unlocked_experts.value == ('银狼',), '解锁写入'
+
+
+def test_bridge_reject_no_trigger() -> None:
+    """席满拒落不触发(设计 §4 锁 4 条 3):bench 满(无空槽)→
+    placed=False 早退,早退路径不经桥尾判据 → 零解锁写。"""
+    full_bench = [_u(n) for n in ('希儿', '符玄', '花火', '停云', '刃',
+                                  '杰帕德', '娜塔莎', '丹恒', '三月七')]
+    gs = _expert_env_gs(full_bench)
+    seq_before = gs.write_seq
+    result = grant_bench_unit_cascade(gs, '银狼LV.999', 1)
+    assert result.placed is False and result.detail == 'bench_full', \
+        f'席满拒落: {result}'
+    assert gs.unlocked_experts.value in (None, ()), '零解锁写(早退不经判据)'
+    assert gs.write_seq == seq_before, '拒落零写'

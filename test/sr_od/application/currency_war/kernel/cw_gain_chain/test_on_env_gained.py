@@ -15,16 +15,24 @@ designs/T-28-chixu-shanghai-qiyue.md)§2.1/§2.4 + §4.3:
 calc/designs/T-33-yingxiong-dengchang.md)§2.3 + §4 锁 2/3/4/9/11:
 随机赠卡锁腿(采样发卡 + 发号 + 锁域写 + 完胜作用域键 done,四笔同窗)
 / 未锚定窗防御基准 / rng 链确定性 / 溢出解耦 / 表外环境安静。
+
+再追加面 = T-42 特邀专家:银狼设计(designs/T-42-teyao-zhuanjia-yinlang.md)
+§4 锁 5(advisor 分道条件形态支,挂点④):种子起手在场判定解锁(裁定④,
+防误改回「种子不解锁」)/ 种子无目标名 → 空尾效果串维持 / bench 未观察
+fail-closed 零写 + 缺陷行 / 在场判定覆盖 deployed 与溢出位。
 """
 from __future__ import annotations
 
 import random
+
+import pytest
 
 from sr_od.application.currency_war.kernel.cw_env_grants import (
     DOT_CONTRACT_ENV,
 )
 from sr_od.application.currency_war.kernel.cw_gain_chain import (
     GAIN_CHAIN_PRODUCER,
+    gain_invest_env,
     on_env_gained,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
@@ -35,6 +43,9 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     GameState,
     NodeKey,
     Unit,
+    consume_defect_sink,
+    deployed_view_sequential,
+    set_defect_sink,
 )
 
 _ENV = DOT_CONTRACT_ENV
@@ -403,3 +414,114 @@ def test_expert_seminar_dual_item_grants_card_text_order(
     assert placed == [('bookcard', '专家邀请函'),
                       ('supply_box', '简易武装箱')], \
         f'两槽卡文序落席(kind+item 逐槽): {placed}'
+
+
+# ============================================================ 条件形态挂点④
+# (advisor 分道条件形态支,首例 = 特邀专家:银狼;T-42 设计 §2.4 + §4 锁 5。
+# 环境获得时刻在场判定 = 备战 ∪ 上阵 ∪ 溢出位;开局获得形态 deployed 恒空,
+# 中途获得形态 deployed 现读是判定域组成部分——两臂都锁。)
+
+_ENV_EXPERT_WOLF = '特邀专家:银狼'
+
+
+class _RowSink:
+    """缺陷台账行收集(set_defect_sink 缺省关,fixture 装配 + 必达收尾;
+    先例 = kernel/test_gain_chain.py 同族 fixture)。"""
+
+    def __init__(self) -> None:
+        self.rows: list[dict] = []
+        set_defect_sink(self.rows.append)
+
+    def close(self) -> None:
+        set_defect_sink(None)
+        consume_defect_sink()
+
+    def kinds(self) -> list[str]:
+        return [r['kind'] for r in self.rows]
+
+
+@pytest.fixture
+def rows_sink() -> _RowSink:
+    s = _RowSink()
+    try:
+        yield s
+    finally:
+        s.close()
+
+
+def _make_conditional_gs(*, bench: list[tuple[str, int]] | None = (),
+                         front: list[Unit] | None = None,
+                         overflow_card: str | None = None) -> GameState:
+    """条件形态局容器(bench None = 保持未观察,供 fail-closed 臂)。"""
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    if bench is not None:
+        slots = [BenchSlot(kind='unit', unit=Unit(char_id=c, star=s))
+                 for c, s in bench]
+        slots += [BenchSlot(kind='empty')] * (9 - len(slots))
+        gs.observe(gs.bench, BenchView(slots=slots, capacity=9), sig=_SIG_OBS)
+    if front is not None:
+        gs.observe(gs.deployed, deployed_view_sequential(front, [],
+                                                        back_capacity=6),
+                   sig=_SIG_OBS)
+    if overflow_card is not None:
+        gs.observe(gs.overflow_card, overflow_card, sig=_SIG_OBS)
+        gs.observe(gs.overflow_warning, True, sig=_SIG_OBS)
+    return gs
+
+
+def test_seed_start_lv999_unlocks_on_env_gain(rows_sink: _RowSink) -> None:
+    """种子起手解锁(设计 §4 锁 5 主腿,锁裁定④防误改回「种子不解锁」):
+    开局 bench 已含银狼LV.999,获得环境特邀专家:银狼 → 挂点④在场判定
+    解锁,效果串 advisor_unlock:特邀专家:银狼:银狼(与即时形态同形);
+    解锁 evidence = 环境获得族后缀(provenance 由环境名可辨)。"""
+    gs = _make_conditional_gs(bench=[('银狼LV.999', 1)])
+    out = gain_invest_env(gs, None, _ENV_EXPERT_WOLF, rand=False, sig=_SIG)
+    assert out.effects == (f'advisor_unlock:{_ENV_EXPERT_WOLF}:银狼',), \
+        f'命中效果串: {out.effects}'
+    assert gs.unlocked_experts.value == ('银狼',), '解锁写入'
+    assert gs.unlocked_experts.evidence == \
+        f'on_env_gained:{_ENV_EXPERT_WOLF}#expert_unlock', 'evidence 族后缀'
+    assert rows_sink.kinds() == [], '命中路径零缺陷行'
+
+
+def test_seed_without_lv999_keeps_empty_tail(rows_sink: _RowSink) -> None:
+    """种子无目标名不解锁(设计 §4 锁 5 条 2):在场判定未命中 → 零写,
+    效果串维持现值空尾(事实申报,空尾即「条件形态未触发」的自然读法);
+    环境获得后的首次获得走三渠道(两挂点无缝衔接,此处只锁未命中形态)。"""
+    gs = _make_conditional_gs(bench=[('火花', 1)])
+    out = gain_invest_env(gs, None, _ENV_EXPERT_WOLF, rand=False, sig=_SIG)
+    assert out.effects == (f'advisor_unlock:{_ENV_EXPERT_WOLF}:',), \
+        '空尾效果串维持'
+    assert gs.unlocked_experts.value in (None, ()), '零解锁写'
+    assert rows_sink.kinds() == [], '未命中非缺陷,零台账行'
+
+
+def test_bench_unobserved_fails_closed_with_defect(
+        rows_sink: _RowSink) -> None:
+    """bench 未观察 fail-closed(设计 §4 锁 5 条 3):不判零写 + 缺陷
+    保留证据行(新 kind gain_chain_cond_bench_unobserved);种子底座下
+    生产双端不可达(开局种子恒种 bench),直构/测试形态防御。"""
+    gs = _make_conditional_gs(bench=None)
+    out = gain_invest_env(gs, None, _ENV_EXPERT_WOLF, rand=False, sig=_SIG)
+    assert out.effects == (f'advisor_unlock:{_ENV_EXPERT_WOLF}:',), \
+        'fail-closed 维持空尾效果串'
+    assert gs.unlocked_experts.value in (None, ()), '零解锁写'
+    assert rows_sink.kinds() == ['gain_chain_cond_bench_unobserved'], \
+        f'缺陷行分键: {rows_sink.kinds()}'
+
+
+def test_presence_covers_deployed_and_overflow(rows_sink: _RowSink) -> None:
+    """在场判定三域(设计 §4 锁 5 条 4):deployed 持有(中途获得形态)
+    与溢出位持有(席满溢出)均计入判定域 → 环境获得即解锁。"""
+    gs_dep = _make_conditional_gs(bench=[], front=[Unit(char_id='银狼LV.999',
+                                                        star=1)])
+    out_dep = gain_invest_env(gs_dep, None, _ENV_EXPERT_WOLF, rand=False,
+                              sig=_SIG)
+    assert out_dep.effects == (f'advisor_unlock:{_ENV_EXPERT_WOLF}:银狼',)
+    assert gs_dep.unlocked_experts.value == ('银狼',), 'deployed 在场命中'
+    gs_ovf = _make_conditional_gs(bench=[], overflow_card='银狼LV.999')
+    out_ovf = gain_invest_env(gs_ovf, None, _ENV_EXPERT_WOLF, rand=False,
+                              sig=_SIG)
+    assert out_ovf.effects == (f'advisor_unlock:{_ENV_EXPERT_WOLF}:银狼',)
+    assert gs_ovf.unlocked_experts.value == ('银狼',), '溢出位在场命中'
+    assert rows_sink.kinds() == [], '命中路径零缺陷行'
