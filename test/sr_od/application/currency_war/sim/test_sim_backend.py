@@ -586,6 +586,71 @@ def test_cost2_random_env_gift_sim_seeded_roll_to_bench() -> None:
     assert first == second, '同 seed 重放确定性(同名同星)'
 
 
+def test_opening_replace_env_sim_replaces_m01_hand() -> None:
+    """开局替换 sim 全链(T-43 设计 §4 锁 6):播种 invest_env_opts 选
+    人才储备 → 选卡后 bench = 恰 3 张(替换语义,M01 预写的 4 张被清席支
+    纠回,非 4+3=7 叠加;选卡前无消费者,瞬态不可见);每张 1★ 且名 ∈
+    3 费全档池(注册表现算);同 seed 重放确定性(同名同星)——rng 经
+    install_backend 动作腿提供槽(流键 action/pick_invest_env/0)注入 =
+    采样即世界真值。"""
+    def _pick_once() -> list[tuple[str, int]]:
+        b = SimBackend(seed=7, cfg=RunConfig(
+            selected_difficulty='A8', enemy_difficulty=108, env_present=True))
+        install_backend(b)
+        try:
+            b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+            assert b.screen_identity() == SCREEN_INVEST_ENV
+            b.gs.write_logic(b.gs.invest_env_opts,
+                             ['人才储备', '轮岗', '头彩'],
+                             produced_by='Test', evidence='t:opts', sig=_SIG)
+            env_out = report_action_pick_invest_env_param(
+                b.gs, SimpleNamespace(idx=0), _SIG)
+            assert env_out.applied
+            cw_sim_ports.declare_world(env_out.world_decl)
+            units = [(s.unit.char_id, s.unit.star)
+                     for s in b.gs.bench.value.slots
+                     if s is not None and s.kind == 'unit'
+                     and s.unit is not None]
+            assert len(units) == 3, '替换后恰 3 张(M01 4 张被纠回)'
+            pool = set(random_char_pool(
+                ENV_GIFTS['人才储备'].chars_random_immediate[0]))
+            assert all(n in pool and st == 1 for n, st in units), \
+                '全 3 费 1★(星级先验 1)'
+            return units
+        finally:
+            uninstall_backend()
+
+    first = _pick_once()
+    second = _pick_once()
+    assert first == second, '同 seed 重放确定性(同名同星)'
+
+
+def test_default_env_sim_bench_untouched_by_replace_leg() -> None:
+    """默认环境局回归(T-43 设计 §4 锁 6 末项):选无替换标记环境(轮岗)
+    → bench = 4 张 M01 原样(清席支缺省 False 零行为差——「默认环境局
+    rng 消耗序列不变」的登记面行为锁)。"""
+    b = SimBackend(seed=7, cfg=RunConfig(
+        selected_difficulty='A8', enemy_difficulty=108, env_present=True))
+    install_backend(b)
+    try:
+        b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+        assert b.screen_identity() == SCREEN_INVEST_ENV
+        b.gs.write_logic(b.gs.invest_env_opts,
+                         ['轮岗', '人才储备', '头彩'],
+                         produced_by='Test', evidence='t:opts', sig=_SIG)
+        env_out = report_action_pick_invest_env_param(
+            b.gs, SimpleNamespace(idx=0), _SIG)
+        assert env_out.applied
+        cw_sim_ports.declare_world(env_out.world_decl)
+        units = [(s.unit.char_id, s.unit.star)
+                 for s in b.gs.bench.value.slots
+                 if s is not None and s.kind == 'unit'
+                 and s.unit is not None]
+        assert len(units) == 4, 'M01 开局 4 张原样,替换腿零误伤'
+    finally:
+        uninstall_backend()
+
+
 def test_scheduled_env_gift_discharged_at_plane2_first_window() -> None:
     """定时环境发放 sim 收口:选特权阶级 → 队列登记 (2,1) 发放项(登记
     不落席);(1,x) 各节点窗开启与位面过渡屏呈现期队列原样(未到点不

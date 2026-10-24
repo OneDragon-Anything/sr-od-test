@@ -217,3 +217,24 @@ def test_expert_seminar_pick_grants_two_item_slots_no_rng(
              if s is not None and s.kind != 'empty']
     assert slots == [('bookcard', '专家邀请函'),
                      ('supply_box', '简易武装箱')], f'两槽卡文序: {slots}'
+
+
+# ==================== 开局替换型赠卡(人才储备)====================
+# (设计 = 迭代 2026-09-23-invest-effects-calc T-43 设计 §4 锁 5)
+
+
+def test_opening_replace_env_pick_bench_three_not_seven(
+        provider_calls: list[str]) -> None:
+    """双端同链替换语义分界锁(T-43 设计 §4 锁 5):上报选人才储备 →
+    bench 恰 3 只 3 费 1★(替换语义分界:发放结果即终态,非 4+3=7 叠加
+    ——T-10/T-36 追加语义与本卡替换语义的分界);恰一次 rng 解析(随机支
+    在册,pick_invest_env 条件行命中)。"""
+    gs = _make_gs(['人才储备', '轮岗', '头彩'])
+    out = report_action_pick_invest_env_param(
+        gs, SimpleNamespace(idx=0), _SIG)
+    assert out.applied
+    assert provider_calls == ['pick_invest_env'], '随机支恰一次解析'
+    units = _bench_units(gs)
+    pool = random_char_pool(RandomCharSpec(cost=3, star=1))
+    assert len(units) == 3, '替换后恰 3 只(非叠加 7 只)'
+    assert all(n in pool and st == 1 for n, st in units), '全 3 费 1★'

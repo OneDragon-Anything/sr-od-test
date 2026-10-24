@@ -127,6 +127,47 @@ def test_zhanli_biaosheng_registration_and_full_cost_pool() -> None:
     assert '爻光' not in pool, '爻光费用勘误 2→1,不入 2 费池(勘误件防呆)'
 
 
+def test_talent_reserve_registration_and_replace_flag() -> None:
+    """人才储备登记不变量(T-43 设计 §4 锁 1):∈ ENV_GIFTS 且 ∉
+    ENV_ECONOMY(import 期互斥校验半边显式断言);登记 = 三元素
+    RandomCharSpec(3 费/1★ 先验)× 3 + replaces_opening_supply=True
+    (开局替换首例);池 = 3 费全档注册表现算双射(无类型词),
+    池名 ⊆ 注册表;池规模 = 注释性快照(2026-10 时点 14 名),非断言值。"""
+    assert '人才储备' in ENV_GIFTS
+    assert '人才储备' not in ENV_ECONOMY
+    grant = ENV_GIFTS['人才储备']
+    assert grant.replaces_opening_supply is True
+    assert grant.chars_random_immediate == (
+        RandomCharSpec(cost=3, star=1),
+        RandomCharSpec(cost=3, star=1),
+        RandomCharSpec(cost=3, star=1),
+    )
+    pool = set(random_char_pool(RandomCharSpec(cost=3, star=1)))
+    assert pool == {c.name for c in chars_by_cost(3)}, \
+        '无类型词 → 池 = 费用档全档(注册表现算)'
+    assert pool <= CHARACTER_ROSTER
+
+
+def test_replaces_opening_supply_unique_to_talent_reserve() -> None:
+    """开局替换标记唯一性(T-43 设计 §4 锁 8 登记形态):replace 标记
+    现值全表仅人才储备一卡,其余全部条目缺省 False——「前置支零行为差」
+    的登记面前提钉死,防并行批误开。"""
+    flagged = [n for n, g in ENV_GIFTS.items() if g.replaces_opening_supply]
+    assert flagged == ['人才储备']
+
+
+def test_replaces_opening_supply_without_char_legs_raises(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """开局替换防呆(T-43 设计 §2.2/§4 锁 1):replaces_opening_supply=True
+    而角色支全空 → 校验炸(「清空开局不发」怪卡 = 登记残缺;开局补给物
+    = 角色,道具/装备支不算替代者)。注入 + 直调沿本文件校验测试惯用法。"""
+    bad = dict(ENV_GIFTS)
+    bad['人才储备'] = GiftGrant(replaces_opening_supply=True)
+    monkeypatch.setattr(cw_investments, 'ENV_GIFTS', bad)
+    with pytest.raises(ValueError, match='开局替换无产出'):
+        cw_investments._validate_env_gifts()
+
+
 def test_env_reroll_names_member_validation(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """追加随机环境名单成员校验(设计 §4 测试 1):成员 ∉ INVESTMENT_ENVS

@@ -743,6 +743,92 @@ def test_env_gift_random_leg_anchored_rand_channel(
     assert rows_sink.kinds() == [], '随机态写不进失配网,零缺陷行'
 
 
+# ============================================================ 开局替换清席支
+# (replaces_opening_supply;迭代 2026-09-23-invest-effects-calc T-43 人才储备)
+
+
+class _FixedSeqRng:
+    """固定抽序桩 rng(choice 按序弹出自备序列):合成边界锁锁「抽形」
+    (三同名 / 两同一异)而非具体名——注册表漂移不改抽形,比寻实种子稳。"""
+
+    def __init__(self, names: list[str]) -> None:
+        self._names = list(names)
+
+    def choice(self, seq: list) -> str:
+        return self._names.pop(0)
+
+
+def test_opening_replace_leg_clear_and_grant(rows_sink: _RowSink) -> None:
+    """清+发直构核心锁(T-43 设计 §4 锁 2/7):预置 4 只任意 1★ + 固定
+    种子 rng → on_env_gained 后 bench 恰 3 只,每只 1★ 且名 ∈ 3 费规格池
+    (= chars_by_cost(3) 全档,type_tag 空);效果串 = env_opening_replace:4
+    + env_gift_random:<名>@1star ×3;获得链全部写面 = 清席 1 + 落席 3
+    恰 4 笔(腿 2 不建模的零写端钉死:升星/节点/战斗无本卡挂点,零顺手
+    计数器);容量随原观察保持。期望名从同 seed 现算(单一来源,不手抄)。"""
+    gs = _make_gs(bench=[('希儿', 1)] * 4, equips=[])
+    seq_before = gs.write_seq
+    pool = random_char_pool(RandomCharSpec(cost=3, star=1))
+    r = random.Random(20261025)
+    expected = [r.choice(pool) for _ in range(3)]
+    assert len(set(expected)) > 1, '种子抽形两同一异(非全同名,预登记)'
+    out = on_env_gained(gs, None, '人才储备', rand=False, sig=_lsig(),
+                        rng=random.Random(20261025))
+    assert out == ('env_opening_replace:4',
+                   *(f'env_gift_random:{n}@1star' for n in expected))
+    units = [(u.char_id, u.star) for u in bench_units_of(gs)]
+    assert sorted(units) == sorted((n, 1) for n in expected), \
+        '恰 3 只 1★(4 张开局被替换,非叠加 7 只)'
+    assert gs.write_seq - seq_before == 4, \
+        '写面 = 清席 1 + 落席 3(零计数器/持久域追加)'
+    assert gs.bench.value.capacity == 9, '容量随原观察保持'
+    assert rows_sink.kinds() == [], '正常路径零申报行'
+
+
+def test_opening_replace_leg_zero_unit_zero_write(rows_sink: _RowSink) -> None:
+    """零 unit 零写(T-43 设计 §4 锁 3):空 bench 直构(live 空底座形态)
+    → 清席腿零写,只留效果串 env_opening_replace:0 申报替换事实;写面 =
+    落席 3 笔(赠卡照常落,替换语义对 live = 无开局可清,发放不受影响)。"""
+    gs = _make_gs(bench=[], equips=[])
+    seq_before = gs.write_seq
+    pool = random_char_pool(RandomCharSpec(cost=3, star=1))
+    r = random.Random(20261025)
+    expected = [r.choice(pool) for _ in range(3)]
+    out = on_env_gained(gs, None, '人才储备', rand=False, sig=_lsig(),
+                        rng=random.Random(20261025))
+    assert out == ('env_opening_replace:0',
+                   *(f'env_gift_random:{n}@1star' for n in expected))
+    units = [(u.char_id, u.star) for u in bench_units_of(gs)]
+    assert sorted(units) == sorted((n, 1) for n in expected)
+    assert gs.write_seq - seq_before == 3, '清席腿零写,写面 = 落席 3 笔'
+
+
+def test_opening_replace_leg_three_same_merge_to_2star() -> None:
+    """三同名合成边界(T-43 设计 §4 锁 4a,裁决点 3 可重口径):桩 rng
+    三抽同名 → 3 合 1 升 2★(获得链自然结果,零新逻辑);效果串星级后缀
+    = spec.star 1(采样发放星级,非合成产物星级)。"""
+    pool = random_char_pool(RandomCharSpec(cost=3, star=1))
+    name = pool[0]
+    gs = _make_gs(bench=[], equips=[])
+    out = on_env_gained(gs, None, '人才储备', rand=False, sig=_lsig(),
+                        rng=_FixedSeqRng([name, name, name]))
+    assert out == ('env_opening_replace:0',
+                   *(f'env_gift_random:{name}@1star',) * 3)
+    units = [(u.char_id, u.star) for u in bench_units_of(gs)]
+    assert units == [(name, 2)], '三同名 1★ 链内合成一只 2★'
+
+
+def test_opening_replace_leg_two_same_one_diff_no_merge() -> None:
+    """两同一异不合并(T-43 设计 §4 锁 4b):桩 rng [X, X, Y] → 3 只 1★
+    并存(同星 3 合 1 需三只,两只不触发)。"""
+    pool = random_char_pool(RandomCharSpec(cost=3, star=1))
+    x, y = pool[0], pool[1]
+    gs = _make_gs(bench=[], equips=[])
+    on_env_gained(gs, None, '人才储备', rand=False, sig=_lsig(),
+                  rng=_FixedSeqRng([x, x, y]))
+    units = sorted((u.char_id, u.star) for u in bench_units_of(gs))
+    assert units == sorted([(x, 1), (x, 1), (y, 1)]), '两同一异 3 只并存'
+
+
 def test_env_gift_conditional_only_quiet_after_random_leg(
         rows_sink: _RowSink) -> None:
     """具名支回归(T-10 设计 §4 测试 6):仅条件腿条目(量子同频契约)
