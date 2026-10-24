@@ -594,6 +594,61 @@ def test_shop_entry_table_and_probs():
     assert '- 概率(refresh_probs) 1→100%、2→0%' in md
 
 
+def test_prep_deployed_entry_table_before_bench():
+    """备战章 0 观察:deployed 表格化(上阵表:行标签 前排/后排,null → 空,
+    列数 = max(前后排槽数),前排不足列补 —),位置紧贴备战席表前,散列
+    前排/后排两行不再出现(上阵跟备战席同款表格化)。"""
+    deployed = {'front_slots': [{'char_id': '绯英', 'star': 1},
+                                None, None, None],
+                'back_slots': [{'char_id': '爻光', 'star': 1},
+                               None, None, None, None, None]}
+    bench = {'slots': [{'kind': 'unit', 'unit': {'char_id': '桑博', 'star': 1}},
+                       {'kind': 'empty', 'unit': None}]}
+    rows = [
+        mkrow('t1', 'current_screen', '货币战争-备战', node=(1, 2, 'reward'),
+              screen='货币战争-备战',
+              values_extra={'deployed': deployed, 'bench': bench}),
+    ]
+    _, md = build(rows)
+    assert '**上阵(deployed)**' in md
+    assert '| 排 | 1 | 2 | 3 | 4 | 5 | 6 |' in md
+    assert '| 前排 | 绯英1★ | 空 | 空 | 空 | — | — |' in md
+    assert '| 后排 | 爻光1★ | 空 | 空 | 空 | 空 | 空 |' in md
+    assert '- 前排(front_slots)' not in md
+    assert '- 后排(back_slots)' not in md
+    assert md.index('**上阵(deployed)**') < md.index('**备战席(bench)**')
+
+
+def test_prep_deployed_table_all_empty_opening_frame():
+    """开局帧前后排全 null 也照常出全「空」上阵表(结构稳定),不回落散列行。"""
+    deployed = {'front_slots': [None] * 4, 'back_slots': [None] * 6}
+    rows = [
+        mkrow('t1', 'current_screen', '货币战争-备战',
+              screen='货币战争-备战', values_extra={'deployed': deployed}),
+    ]
+    _, md = build(rows)
+    assert '| 前排 | 空 | 空 | 空 | 空 | — | — |' in md
+    assert '| 后排 | 空 | 空 | 空 | 空 | 空 | 空 |' in md
+    assert '- 前排(front_slots)' not in md
+
+
+def test_battle_chapter_deployed_keeps_bullets():
+    """战斗章快照虽含 deployed(其注册键集含此键),上阵不表格化——
+    非备战章维持散列行现状,上阵表只在与备战席表同章的画面生效。"""
+    deployed = {'front_slots': [{'char_id': '绯英', 'star': 1},
+                                None, None, None],
+                'back_slots': [None] * 6}
+    rows = [
+        mkrow('t1', 'current_screen', '货币战争-战斗等待',
+              node=(1, 1, 'battle'), screen='货币战争-战斗等待',
+              values_extra={'deployed': deployed}),
+    ]
+    _, md = build(rows)
+    assert '**上阵(deployed)**' not in md
+    assert '- 前排(front_slots) 绯英1★' in md
+    assert '- 后排(back_slots) (空)' in md
+
+
 # ---------------------------------------------------------------------------
 # 行加载与 CLI(pipeline §1/§7)
 # ---------------------------------------------------------------------------
