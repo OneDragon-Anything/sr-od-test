@@ -1026,3 +1026,26 @@ def test_env_delayed_item_grants_current_entry_and_wordlist_untouched(
         '倒计时件非占席,禁进占席道具词表(战利品区件锁)'
     assert '惊喜盒' not in CHARACTER_ROSTER, \
         '道具/角色通道串行防呆(校验②的注册表前提)'
+
+
+def test_expert_set_matches_advisor_grant_char_union() -> None:
+    """专家名单 ↔ advisor 解锁卡发放角色并集对拍(economy.md §1:专家顾问
+    初始不参与普通商店招募,经投资环境/投资策略等通道解锁后本局入池——
+    不变量「每个专家都有解锁卡、每张 advisor 卡的目标都是专家」;2026-10-24
+    用户裁定按测试规范落对拍,替代 import 期对拍闸)。任一侧版本漂移即红:
+    新专家角色入册而无解锁卡 / advisor 条目引用非专家名或漏发已置位角色,
+    均不再静默。"""
+    grant_chars = {
+        name
+        for grant in (*ENV_GIFTS.values(), *STRATEGY_GRANTS.values())
+        if grant.advisor
+        for name in (*grant.chars_immediate,
+                     *(c[0] for c in grant.chars_conditional))
+        # chars_conditional 元素形状 = (角色名, 条件描述) 二元组
+        # (登记表禁第二形状),取 [0] 即发放角色名。
+    }
+    experts = {n for n, ch in CHARACTERS.items() if ch.is_expert}
+    assert grant_chars == experts, \
+        (f'专家名单与 advisor 解锁卡并集失配:'
+         f'仅名单有={sorted(experts - grant_chars)},'
+         f'仅解锁卡有={sorted(grant_chars - experts)}')
