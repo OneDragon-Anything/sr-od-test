@@ -30,30 +30,31 @@
 (装配缝单一源:端口槽/容器绑定/时间冻结/journal 内存捕获/留证重定向);
 崩点上下文(node/画面/步数)由运行原语以异常 note 注入。
 
-种子集 = :data:`SMOKE_SEEDS` = 2026-10-12 起 20 连号(3.8 设计判据全量;
-编排者裁决扩回——中间态曾缩 2 seed 子集,依据 = 修复前带病树同 20 seed
+种子集 = :data:`BATCH_SEEDS`(sim/conftest.py)= 2026-10-12 起 20 连号的
+8 个代表号(2026-10-24 用户裁定:全量测试压到 ~3 分钟;选号跨全程均匀
+取样)。20 连号全量普查不进常跑——修复批后普查时临时把 BATCH_SEEDS
+换成 FULL_SWEEP_SEEDS(同文件,用完还原),依据 = 带病树同 20 seed
 普查 13 崩(补给/备战节点 op 异常或 fail 重派触限)3 挂(备战决策环
-自旋,pytest-timeout 不可杀),修复后同批 20/20 实测全跑通)。与首局
+自旋,pytest-timeout 不可杀),修复后同批 20/20 实测全跑通。与首局
 验收在册固定 seed〔20260923/7/61〕零重叠。**失败重派环分支放弃整局
 覆盖**(普查中带重派环的局全部触限失败,无一整局跑通),该分支由
 test_loop.py「op-fail 重派防线上限」测试单独承压。
 
-运行成本:健康树单跑整批 20 局实测约 2 分钟;整批慢桶登记
-(slow_marks.txt 逐 seed 条目),不进快集(``-m "not slow"`` 排除)。
+整局批跑住 sim/conftest.py 共享夹具(会话级一次,与预注册判据批共用
+产物,贵计算只算一次);崩溃局异常按 seed 留档、各参数用例自行
+re-raise,保逐 seed 失败隔离。
+
+运行成本:健康树整批 8 局实测约 1 分钟(会话内只跑一次);整批慢桶
+登记(slow_marks.txt 逐 seed 条目),不进快集(``-m "not slow"`` 排除)。
 复跑带 ``-s`` 可收逐局统计行;单条 timeout 放宽 300s(看门狗 1200 轮
 触顶局需要余量,真挂死仍被兜住)。
 """
 from __future__ import annotations
 
-import time
 from typing import Any
 
 import pytest
-from test.harness.sim_backend_runner import run_sim_full_match
-
-#: 冒烟批种子集(2026-10-12 起 20 连号,内置常量;完成判据 = 全部跑通),
-#: 与首局验收在册固定 seed〔20260923/7/61〕零重叠。
-SMOKE_SEEDS: tuple[int, ...] = tuple(range(20261012, 20261032))
+from test.sr_od.application.currency_war.sim.conftest import BATCH_SEEDS
 
 
 def _transition_scan(journal_rows: list) -> dict:
@@ -308,39 +309,25 @@ def _stats_line(seed: int, run: Any, duration_s: float) -> str:
 
 
 @pytest.mark.timeout(300)
-@pytest.mark.parametrize('seed', SMOKE_SEEDS)
-def test_smoke_match_completes(seed: int, test_context: Any,
-                               monkeypatch: pytest.MonkeyPatch,
-                               tmp_path: Any) -> None:
+@pytest.mark.parametrize('seed', BATCH_SEEDS)
+def test_smoke_match_completes(seed: int,
+                               sim_batch_runs: dict[int, Any]) -> None:
     """冒烟判据:该 seed 一整局跑完——收口成功 ∧ 局终位 ∧ 无 op fail
     连发 ∧ 真打过仗(结算轮 ≥ 1)。
 
-    失败形态三源各自可见:崩溃 = 异常传播(traceback + 运行原语注入的
-    崩点 note〔node/画面/步数〕);死循环 = 看门狗轮限使 execute 收口
-    失败;未到局终 = done 假。op fail streak 触限虽被框架重派掩盖,也
-    以计数暴露(连续 fail 达限即软死循环)。
+    整局由 sim/conftest.py 共享夹具会话级跑一次;本测试只消费该 seed 的
+    记录做断言。失败形态三源各自可见:崩溃 = 夹具留档异常在此 re-raise
+    (traceback + 运行原语注入的崩点 note〔node/画面/步数〕);死循环 =
+    看门狗轮限使 execute 收口失败;未到局终 = done 假。op fail streak
+    触限虽被框架重派掩盖,也以计数暴露(连续 fail 达限即软死循环)。
     """
-    started = time.perf_counter()
-    # 实机采集停机钩子不进 sim:``_spec_invest_shop_stop_hook`` = 用户裁定
-    # 2026-09-16 的临时人工采集装置(停实机局留现场帧供 MCP 补帧);sim
-    # 世界无实机画面可采,钩子语义不适用——策略分值随真值表联动变化选中
-    # 名单策略即假停整局。桩掉 = sim 局语义澄清,非绕过验证面。
-    from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
-        CwScreenPrep,
-    )
-    monkeypatch.setattr(CwScreenPrep, '_spec_invest_shop_stop_hook',
-                        lambda self: None)
-    try:
-        run = run_sim_full_match(test_context, monkeypatch, tmp_path,
-                                 seed=seed, strategy_seed=seed)
-    except Exception:
-        # 崩溃局统计行(异常传播前留批档证据;崩点上下文由运行原语注入
-        # 异常 note,原 traceback 承载「哪动作」)。
+    entry = sim_batch_runs[seed]
+    if entry.error is not None:
         print(f'[smoke] seed={seed} terminal=CRASH-exc '
-              f'dur={time.perf_counter() - started:.1f}s')
-        raise
-    duration_s = time.perf_counter() - started
-    print(_stats_line(seed, run, duration_s))
+              f'dur={entry.duration_s:.1f}s')
+        raise entry.error
+    run = entry.run
+    print(_stats_line(seed, run, entry.duration_s))
     assert run.result is not None and run.result.success, \
         f'execute 未成功收口: {getattr(run.result, "status", "")!r}'
     assert run.backend.done, '后端局终位未置(done)'

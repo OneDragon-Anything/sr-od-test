@@ -19,29 +19,19 @@ test_back_to_normal_world_plus.py::TestCwLobbyResidualBranch::test_residual_lobb
 test/sr_od/application/currency_war/sim/test_sim_first_run.py::test_first_match_runs_to_game_over_without_op_fail
 test/sr_od/application/currency_war/sim/test_sim_first_run.py::test_first_match_deterministic_double_run_identical
 test/sr_od/application/currency_war/sim/test_sim_first_run.py::test_first_match_container_invariants
-# sim 冒烟批:20 连号全量(land-38-fix 修复批扩回——修复前带病树 20 seed
-# 普查 13 崩 3 挂曾缩 2 seed,修复后 20/20 实测全跑通 ~2 分钟;冒烟批整批
-# 慢桶,不进快集);逐 seed 一整局 sim(健康树 ~6s/seed),复跑带 -s 收统计行
-test/sr_od/application/currency_war/sim/test_sim_smoke_batch.py::test_smoke_match_completes[20261012]
-test/sr_od/application/currency_war/sim/test_sim_smoke_batch.py::test_smoke_match_completes[20261013]
-test/sr_od/application/currency_war/sim/test_sim_smoke_batch.py::test_smoke_match_completes[20261014]
-test/sr_od/application/currency_war/sim/test_sim_smoke_batch.py::test_smoke_match_completes[20261015]
-test/sr_od/application/currency_war/sim/test_sim_smoke_batch.py::test_smoke_match_completes[20261016]
-test/sr_od/application/currency_war/sim/test_sim_smoke_batch.py::test_smoke_match_completes[20261017]
-test/sr_od/application/currency_war/sim/test_sim_smoke_batch.py::test_smoke_match_completes[20261018]
-test/sr_od/application/currency_war/sim/test_sim_smoke_batch.py::test_smoke_match_completes[20261019]
-test/sr_od/application/currency_war/sim/test_sim_smoke_batch.py::test_smoke_match_completes[20261020]
-test/sr_od/application/currency_war/sim/test_sim_smoke_batch.py::test_smoke_match_completes[20261021]
-test/sr_od/application/currency_war/sim/test_sim_smoke_batch.py::test_smoke_match_completes[20261022]
-test/sr_od/application/currency_war/sim/test_sim_smoke_batch.py::test_smoke_match_completes[20261023]
-test/sr_od/application/currency_war/sim/test_sim_smoke_batch.py::test_smoke_match_completes[20261024]
-test/sr_od/application/currency_war/sim/test_sim_smoke_batch.py::test_smoke_match_completes[20261025]
-test/sr_od/application/currency_war/sim/test_sim_smoke_batch.py::test_smoke_match_completes[20261026]
-test/sr_od/application/currency_war/sim/test_sim_smoke_batch.py::test_smoke_match_completes[20261027]
-test/sr_od/application/currency_war/sim/test_sim_smoke_batch.py::test_smoke_match_completes[20261028]
-test/sr_od/application/currency_war/sim/test_sim_smoke_batch.py::test_smoke_match_completes[20261029]
-test/sr_od/application/currency_war/sim/test_sim_smoke_batch.py::test_smoke_match_completes[20261030]
-test/sr_od/application/currency_war/sim/test_sim_smoke_batch.py::test_smoke_match_completes[20261031]
+# sim 冒烟批:默认 8 代表号(2026-10-24 压缩裁定:全量压到 ~3 分钟,
+# 整局批跑与预注册判据批共享 sim/conftest.py 夹具,20 连号全量普查改
+# 临时换 FULL_SWEEP_SEEDS;2026-10-13 land-38-fix 修复批曾扩回 20 seed,
+# 修复后 20/20 全跑通 ~2 分钟);逐 seed 一整局 sim(健康树 ~7s/seed),
+# 复跑带 -s 收统计行
+test_sim_smoke_batch.py::test_smoke_match_completes[20261012]
+test_sim_smoke_batch.py::test_smoke_match_completes[20261014]
+test_sim_smoke_batch.py::test_smoke_match_completes[20261015]
+test_sim_smoke_batch.py::test_smoke_match_completes[20261018]
+test_sim_smoke_batch.py::test_smoke_match_completes[20261021]
+test_sim_smoke_batch.py::test_smoke_match_completes[20261024]
+test_sim_smoke_batch.py::test_smoke_match_completes[20261027]
+test_sim_smoke_batch.py::test_smoke_match_completes[20261031]
 # 2026-10-16 sim-screen-announce T-1:广播逐点断言测试跑满局+raw sink 双装,实测 2.12s
 test/sr_od/application/currency_war/sim/test_sim_backend.py::test_screen_announce_broadcast_points_and_value_exemption
 # 2026-10-17-levelup-shop-transition T-5:§2.6 预注册判据批跑(冒烟 20 连号

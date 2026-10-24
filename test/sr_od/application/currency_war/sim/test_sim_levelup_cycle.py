@@ -21,10 +21,12 @@ T-5-r1.md,由本测试 ``-s`` 输出收割):
   ``test_sim_first_run.py::test_first_match_deterministic_double_run_
   identical`` 承载(全跑快照对拍,本批不重复建设)。
 
-驱动 = 现役运行原语 ``run_sim_full_match``(冒烟批同款装配缝;实机采集
-停机钩子桩掉语义同冒烟批)。种子集 = 冒烟 20 连号(20261012..20261031,
-与冒烟批同源零重叠成本——本测试独立跑,不复用冒烟产物)。运行成本
-健康树 ~2-3 分钟,慢桶登记(slow_marks.txt)。
+驱动 = 现役运行原语 ``run_sim_full_match`` 的共享批跑夹具(sim/conftest.py,
+与冒烟批同款装配缝、同种子集,会话级只跑一次——2026-10-24 用户裁定全量
+压到 ~3 分钟,此前两批各跑一遍属重复计算;实机采集停机钩子桩掉语义同
+冒烟批)。种子集 = BATCH_SEEDS 8 个代表号(全量普查临时换
+FULL_SWEEP_SEEDS,见 conftest)。运行成本:批跑产物由冒烟批共享,本文件
+自身只做断言,秒级;慢桶登记(slow_marks.txt)。
 """
 from __future__ import annotations
 
@@ -32,9 +34,7 @@ from typing import Any
 
 import pytest
 from test.harness.sim_backend_runner import run_sim_full_match
-
-#: 批跑种子集(冒烟 20 连号同源;世界后端与策略器共用 seed)。
-PREREG_SEEDS: tuple[int, ...] = tuple(range(20261012, 20261032))
+from test.sr_od.application.currency_war.sim.conftest import BATCH_SEEDS
 
 #: 刷新判据可达的显式拒因键族(计数在册 = 判据运行到拒;除 receipts 外
 #: 的第二可达证据面)。
@@ -84,30 +84,25 @@ def _level_trail_monotonic(journal_rows: list) -> tuple[bool, list[int]]:
 
 
 @pytest.mark.timeout(1200)
-def test_prereg_upgrade_cycle_batch(test_context: Any,
-                                    monkeypatch: pytest.MonkeyPatch,
-                                    tmp_path: Any) -> None:
-    """五判据批跑(逐 seed 一整局;数字对照落批跑报告)。
+def test_prereg_upgrade_cycle_batch(
+        sim_batch_runs: dict[int, Any]) -> None:
+    """五判据批跑(逐 seed 断言;数字对照落批跑报告)。
+
+    整局由 sim/conftest.py 共享夹具会话级跑一次,本测试逐 seed 取记录做
+    断言(某 seed 崩溃时 re-raise 夹具留档异常)。种子集内逐局断言:
 
     断言面:①转场局升级批落地 ∧ 刷新可达;②等级轨迹单调(全 seed);
     ③间谍升级次数 = 重开次数 ∧ 入席+溢出 = 3×升级数;批级:转场形态
     在种子集内至少一局出现(①的可达性前提在批内有实例)。
     """
-    from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
-        CwScreenPrep,
-    )
-    monkeypatch.setattr(CwScreenPrep, '_spec_invest_shop_stop_hook',
-                        lambda self: None)
     total_transitions = 0
     total_upgrades = 0
     total_spy_deals = 0
-    for seed in PREREG_SEEDS:
-        mp = pytest.MonkeyPatch()
-        try:
-            run = run_sim_full_match(test_context, mp, tmp_path,
-                                     seed=seed, strategy_seed=seed)
-        finally:
-            mp.undo()
+    for seed in BATCH_SEEDS:
+        entry = sim_batch_runs[seed]
+        if entry.error is not None:
+            raise entry.error
+        run = entry.run
         counters = getattr(run.gs, 'strategy_state', None)
         counters = getattr(counters, 'cw4_counters', None) or {}
         disc = run.backend.disclosures
@@ -156,7 +151,7 @@ def test_prereg_upgrade_cycle_batch(test_context: Any,
     assert total_transitions > 0, '批内零升级转场(①无实例,换种子集)'
     assert total_upgrades >= total_transitions, \
         f'全批守恒破: 转场 {total_transitions} > 发射 {total_upgrades}'
-    print(f'[prereg] TOTAL seeds={len(PREREG_SEEDS)} '
+    print(f'[prereg] TOTAL seeds={len(BATCH_SEEDS)} '
           f'trans={total_transitions} up={total_upgrades} '
           f'spy_deals={total_spy_deals}')
 

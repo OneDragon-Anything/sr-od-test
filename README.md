@@ -9,10 +9,12 @@ StarRail-OneDragon 主仓的**独立测试仓**（主仓 gitignore，单独提�
 从**主仓根目录**运行（测试内的 `sys.path` 定位依赖仓根相对关系）：
 
 ```shell
-uv run pytest sr-od-test/ -m "not slow"    # 标准全量（串行，排除慢桶）
-uv run pytest sr-od-test/                  # 含慢桶（慢桶不可丢，定期跑）
+uv run pytest sr-od-test/ -m "not slow"    # 标准全量（串行，排除慢桶，~1 分钟）
+uv run pytest sr-od-test/                  # 含慢桶（慢桶不可丢，定期跑；~3 分钟）
 uv run pytest sr-od-test/test/sr_od/backend/test_mcp_app.py   # 单文件示例
 ```
+
+**sim 整局批跑**（冒烟批 + 预注册判据批）默认 8 个代表 seed、会话级只跑一次（sim/conftest.py 共享夹具）；修复批后的 20 连号全量普查不进常跑——临时把该文件 `BATCH_SEEDS` 换成 `FULL_SWEEP_SEEDS` 跑一轮，用完还原。
 
 **慢桶**：单条实测 ≥2s 的用例，把 nodeid 后缀（`文件名::类::测试`）登记进 `slow_marks.txt`，conftest 自动打 slow 标记。维护命令：
 
