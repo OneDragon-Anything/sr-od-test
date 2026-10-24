@@ -95,6 +95,26 @@ else:
 framework_log.setLevel(logging.WARNING)
 
 
+# --------------------------------------------------------------------------- #
+# 测试进程降优先级(conftest 导入期生效,早于任何测试/ctx 初始化)
+# --------------------------------------------------------------------------- #
+# 跑测试常与游戏/实机局同机:pytest 进程(xdist worker 各自 import conftest,
+# 全部覆盖)整体降到 BELOW_NORMAL —— 机器空闲时几乎零成本(空闲核不受
+# 优先级影响),同机有游戏在跑时调度器自动把 CPU 让给游戏线程。实测全量
+# 快速集平均仅 ~1.3 核,此改动针对的是正常优先级下 16 线程 ORT 推理突发
+# 对游戏线程的挤压。逃生口:基准对比时设 SR_TEST_NORMAL_PRIORITY=1。
+if not os.environ.get('SR_TEST_NORMAL_PRIORITY'):
+    try:
+        import psutil
+
+        try:
+            psutil.Process().nice(psutil.BELOW_NORMAL_PRIORITY_CLASS)
+        except AttributeError:
+            psutil.Process().nice(10)  # 非 Windows:BELOW_NORMAL 常量不存在
+    except Exception:
+        pass  # 受限环境降不了优先级,不阻塞测试
+
+
 class MockController(ControllerBase):
     """测试用假控制器。
 
@@ -148,6 +168,13 @@ class SrTestContext(SrContext):
 
     def __init__(self) -> None:
         SrContext.__init__(self)
+        # 生产 __init__ 启动 pynput 全局 mouse/keyboard 监听(Windows = 低级输入
+        # 钩子:全系统每个输入事件都先过本进程的钩子线程)。测试进程 GIL 一忙
+        # (sim 整局 / 模板匹配 / OCR 后处理),钩子线程被饿 → 全系统鼠标键盘
+        # 冻结而画面正常(2026-10-24 实机事故:跑测试时游戏内鼠标不可操作,
+        # CPU/GPU 均未打满)。测试进程用不到停机热键,构造后立即摘钩;
+        # 回归锁 = test/test_sr_test_context_no_input_hooks.py。
+        self.btn_listener.stop()
         self.controller: MockController | None = None
 
     @cached_property
@@ -421,10 +448,12 @@ def test_context(request: pytest.FixtureRequest) -> SrTestContext:
 
     ctx.load_instance_config()
 
-    # OCR 设备统一:有 DirectML 就用(实测快 ~27%:553 vs 759ms/张;两种设备
-    # 文本集一致、DML 自洽,详见 sr-od-test/README「运行速度」);无 DML(如 CI)
-    # 维持 CPU。显式覆盖本地配置,避免测试速度取决于开发机的 model.yml。
-    # 坏驱动护栏:DML 初始化失败则回退 CPU 重载,不让整批 OCR 测试静默空结果。
+    # OCR 设备:有 DirectML 就用(实测快 ~27%:553 vs 759ms/张;两种设备
+    # 文本集一致、DML 自洽);无 DML(如 CI)维持 CPU。显式覆盖本地配置,
+    # 避免测试速度取决于开发机的 model.yml。memo 键含 provider 标志,切换
+    # 设备后旧缓存自动失效重算,不串果。坏驱动护栏:DML 初始化失败则回退
+    # CPU 重载,不让整批 OCR 测试静默空结果。(CPU EP 不作默认:冷跑全量
+    # 实测 ~10 核均值,同机游戏时体验更差;热缓存量级下设备差异可忽略。)
     _switched_to_dml = False
     try:
         import onnxruntime as _ort

@@ -49,6 +49,7 @@ sr-od-test/
 - 外连阻断：测试进程的外部连接被统一拦截，不发真实网络请求；新增触网链路无需各自 mock。
 - 落盘重定向：`debug_utils.save_debug_image` 一律重定向到 `tmp_path`，测试不写真实 `.debug/`。
 - OCR 结果缓存：同一张图（内容哈希键控）只推理一次，结果跨测试文件复用，另有磁盘层（pytest cache 目录）跨会话复用；`pytest --cache-clear` 一键清。
+- 游戏友好默认：①pytest 进程（含 xdist worker）整体降到 BELOW_NORMAL 优先级——机器空闲时零成本，同机有游戏/实机局时调度器自动让路（基准对比用 `SR_TEST_NORMAL_PRIORITY=1` 退出）；②测试 ctx 构造后立即摘除 pynput 全局输入钩子——生产 `OneDragonContext` 会装，而钩子线程被测试进程的 GIL 忙段饿住时，全系统鼠标/键盘冻结而游戏画面正常（2026-10-24 实机事故；回归锁 `test/test_sr_test_context_no_input_hooks.py`）。
 - 日志隔离：测试进程默认不写日志文件（避免与并行进程的日志轮转竞态）。要看框架日志排查时，设 `SR_TEST_LOG_FILE=1` 走旧路径，并临时把 conftest 里的日志级别改回 INFO。
 - 其他隔离：窗口互斥锁目录、停机 flag 通道等重定向到临时位置，测试间互不残留。
 
@@ -153,6 +154,6 @@ src/foo/bar.py  ->  sr-od-test/test/foo/test_bar.py
 
 ## 运行机制备忘
 
-- OCR 推理设备跟随本地 `config/model.yml` 的 `ocr_use_gpu`：本机开 DirectML 更快；无 GPU 的环境自动回退纯 CPU。注意开 GPU 时与同机其他 DML 进程（实机局 / MCP server）互相争用。
+- OCR 推理设备跟随本地 `config/model.yml` 的 `ocr_use_gpu`：本机开 DirectML 更快；无 GPU 的环境自动回退纯 CPU。注意开 GPU 时与同机其他 DML 进程（实机局 / MCP server）互相争用。CPU EP 不作测试默认：冷跑全量实测 ~10 核均值，同机游戏时体验更差。
 - 排查某个测试要看完整框架日志：设 `SR_TEST_LOG_FILE=1`（见「测试基础设施」）。
 - `--durations` 里**第一条测试的 setup 约 2s 是全会话一次性启动成本**（session 级 `test_context`：构造 ctx + 注册全部应用工厂 ~0.6s + OCR 初始化 ~1.0s），只是恰好记在收集顺序第一条的测试头上——不是该测试自身的问题，勿据此排查。
