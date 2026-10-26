@@ -725,6 +725,28 @@ def _isolate_state_journal(
 
 
 # --------------------------------------------------------------------------- #
+# CW 决策上下文槽复位(模块级单例槽跨测试残留防线)
+# --------------------------------------------------------------------------- #
+# 背景:cw_decision_ctx._DTAG 是进程级单例槽(策略决策帧 → 动作回执的
+# 关联锚;读取端 = note_action_receipt take 读后清)。「decide 置槽但本
+# 测试不产回执」的路径(纯策略单测的常态)会把 dtag 泄漏给后续测试的
+# 回执断言(陈旧 dtag 搭上无关节:精确 shape 断言假红 / 关联断言假绿)。
+# 复位面与 state 流水装配槽(_isolate_state_journal)同款:autouse
+# teardown 复位,测试无须各自关心。回归锁 = kernel/test_cw_decision_ctx.py
+# 跨测试残留断言对(留脏 + 进场查空)。
+
+
+@pytest.fixture(autouse=True)
+def _reset_cw_decision_tag() -> Iterator[None]:
+    """每测试后复位 CW 决策上下文槽(防跨测试 dtag 残留,见上注释)。"""
+    yield
+    from sr_od.application.currency_war.kernel.cw_decision_ctx import (
+        reset_decision_tag,
+    )
+    reset_decision_tag()
+
+
+# --------------------------------------------------------------------------- #
 # 慢桶标记与收集期守卫(原仓根 conftest,并本文件:全部测试都在 test/ 下,
 # 钩子覆盖面不变)
 # --------------------------------------------------------------------------- #
