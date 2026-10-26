@@ -16,9 +16,12 @@
 4. **entry 编排测试**:真值跳过门(容器已有位面真值 → 零点击直通成功,
    防手动调起白开白关详情屏)/ 画面不合法 fail + 存证 / 备战进详情 →
    委派 → 关闭全链(委派子 op 桩化,编排责任面单测)。
-5. **prep 触发委派测试**:触发谓词 = 容器无位面真值;半开帧(节点条
-   不可读)不委派、等下轮免费重判;委派结果透传(失败 = round_fail
-   交外循环失败链,不自旋)。
+5. **prep 触发委派测试**:触发谓词两支(T-45 扩面)= 容器无位面真值 ∨
+   词缀随机态;半开帧:第一支(boss 面)现役 return None 不变、双支同真
+   按第一支,仅词缀随机态支命中时封死为 round_wait 等待态(决策延后一拍,
+   零随机态消费);委派结果透传(失败 = round_fail 交外循环失败链,
+   不自旋);gate 扩面两态(位面真值已有 ∧ 词缀随机态 → 放行;词缀非
+   随机态 → 跳过)。
 6. **点开转移证据测试**:详情条联动判据(节点编号 OCR 位面段 = 目标位面;
    读不出 = 未联动)。
 
@@ -213,7 +216,9 @@ def test_plane_intel_six_node_pipeline_flow(test_context, monkeypatch) -> None:
     # 上报写门落容器(§2.3 定死写门经 3.1 端口测试;此处校验全链贯通)
     gs = game_state_of(sess)
     assert gs.plane_bosses.value == _BOSS_NAMES and gs.plane_bosses.source == 'logic'
-    assert gs.enemy_affixes.value == ['灼热轰炸'] and gs.enemy_affixes.source == 'logic'
+    # 词缀:容器为开局种子随机态(logic_rand)→ T-45 写门随机态分支走
+    # observe 覆盖转正(来源翻 observation,非简报链的 logic 直写)
+    assert gs.enemy_affixes.value == ['灼热轰炸'] and gs.enemy_affixes.source == 'observation'
     # 附属机制②:台账 plane_detail 源 + boss 位回填
     ledger = get_node_ledger(sess)
     assert ledger.seq_by_plane == {1: ['battle', 'reward', 'boss'],
@@ -310,13 +315,15 @@ def test_plane_intel_select_plane_evidence(test_context, monkeypatch) -> None:
 
 
 def test_entry_truth_skip_gate_zero_click(test_context, monkeypatch) -> None:
-    """真值跳过门:容器已有位面真值 → 零点击直通成功(防手动调起
-    白开白关详情屏)。"""
+    """真值跳过门:位面真值已有 ∧ 词缀非随机态 → 零点击直通成功(防手动
+    调起白开白关详情屏;T-45 扩面——跳过须词缀非随机态,种子随机态容器
+    会放行补观察,故本测补种简报已供真值形态)。"""
     if not test_context.has_screen(*_PREP_FRAME):
         pytest.skip(f'存档截图缺失:screens/{_PREP_FRAME[0]}/{_PREP_FRAME[1]}.webp')
 
     sess = _install_session(test_context, monkeypatch)
-    cw4_gs(sess, plane_bosses=['简报boss', None, None])
+    cw4_gs(sess, plane_bosses=['简报boss', None, None],
+           enemy_affixes=['灼热轰炸'])
     ctrl = _fixture_controller(test_context, monkeypatch, [{'frame': _PREP_FRAME}])
 
     from sr_od.application.currency_war.operations.cw_entry.cw_entry_plane_intel import (
@@ -351,6 +358,28 @@ def test_entry_gate_wrong_screen_fails(test_context, monkeypatch) -> None:
     assert rs.result == OperationRoundResultEnum.FAIL and '不在货币战争对局画面' in (rs.status or ''), (
         f'错屏应 fail:{rs!r}')
     assert saved == [1], '错屏 fail 必存证截图'
+
+
+def test_entry_gate_rand_affixes_passes_skip_gate(test_context, monkeypatch) -> None:
+    """gate 扩面放行态(T-45 §4 锁 4):位面真值已有 ∧ 词缀随机态 →
+    不跳过、放行进委派(防旧门把「正常局 boss 真值已在 + 词缀随机态
+    待转正」拦在委派之外;词缀非随机态跳过半边由真值跳过门测试辖)。"""
+    sess = _install_session(test_context, monkeypatch)
+    cw4_gs(sess, plane_bosses=['简报boss', None, None])   # 词缀保持种子随机态
+
+    from sr_od.application.currency_war.operations.cw_entry.cw_entry_plane_intel import (
+        _GATE_PASS_STATUS,
+        CwEntryPlaneIntel,
+    )
+
+    op = CwEntryPlaneIntel(test_context)
+    monkeypatch.setattr(op, 'round_by_find_area',
+                        lambda *a, **k: _Area(True))
+
+    rs = _run_node(test_context, op, op.gate)
+
+    assert rs.result == OperationRoundResultEnum.SUCCESS \
+        and rs.status == _GATE_PASS_STATUS, f'词缀随机态应放行:{rs!r}'
 
 
 def test_entry_full_orchestration_open_delegate_close(
@@ -430,10 +459,12 @@ def _make_prep(test_context, monkeypatch, sess, *, node_bar_readable: bool):
 
 
 def test_prep_delegate_trigger_predicate(test_context, monkeypatch) -> None:
-    """prep 触发谓词:容器无位面真值 + 节点条可读 → 委派;已有真值或
-    半开帧 → 不委派(None,交回主链)。"""
+    """prep 触发谓词(T-45 扩面后两支;设计 §4 锁 4):①容器无位面真值
+    + 节点条可读 → 委派;②位面真值已有 ∧ 词缀随机态 → 仍委派(补观察
+    转正——种子随机态容器在本帧命中第二支);③词缀转正后 → 不委派
+    (谓词自然收敛,零重复委派)。"""
     sess = _install_session(test_context, monkeypatch)
-    cw4_gs(sess)   # 无位面真值
+    cw4_gs(sess)   # 无位面真值(种子词缀 = logic_rand 空名单,双支同真)
     op = _make_prep(test_context, monkeypatch, sess, node_bar_readable=True)
 
     entry_runs: list = []
@@ -455,7 +486,48 @@ def test_prep_delegate_trigger_predicate(test_context, monkeypatch) -> None:
 
     assert rs is not None and rs.is_success and entry_runs == [1], (
         f'无真值 + 可读帧应委派:{rs!r} runs={entry_runs}')
-    # 已有真值 → 不委派
+    # 位面真值已有 ∧ 词缀随机态(种子空名单未转正)→ 第二支命中仍委派
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        ChannelSig,
+    )
+    gs = game_state_of(sess)
+    sig = ChannelSig(family='logic_action', actor='TestSigWriter',
+                     mode='compute')
+    gs.write_logic(gs.plane_bosses, ['简报boss', None, None],
+                   produced_by='TestSigWriter', sig=sig)
+    entry_runs.clear()
+    rs2 = op._delegate_plane_intel_if_needed(sess)
+    assert rs2 is not None and rs2.is_success and entry_runs == [1], (
+        f'词缀随机态应放行补观察委派:{rs2!r} runs={entry_runs}')
+    # 词缀转正(observe 采新)→ 谓词解除,零重复委派
+    gs.observe(gs.enemy_affixes, ['灼热轰炸'],
+               sig=ChannelSig(family='obs', actor='TestSigWriter'))
+    rs3 = op._delegate_plane_intel_if_needed(sess)
+    assert rs3 is None and entry_runs == [1], '转正后不再委派(自然收敛)'
+
+
+def test_prep_delegate_skips_on_unreadable_frame(test_context, monkeypatch) -> None:
+    """半开帧守卫·第一支(接管局 boss 面)现役零变更(T-45 §4 锁 4):
+    节点条不可读 → 不委派(None,等下轮免费重判,不烧失败链)。本态 =
+    双支同真(boss 真值缺 ∧ 词缀随机态种子),按第一支现役处理
+    (attack-v2 轮 3 N7 钉死读法:boss 面行为零变更)。"""
+    sess = _install_session(test_context, monkeypatch)
+    cw4_gs(sess)
+    op = _make_prep(test_context, monkeypatch, sess, node_bar_readable=False)
+
+    rs = op._delegate_plane_intel_if_needed(sess)
+    assert rs is None, f'半开帧不应委派:{rs!r}'
+
+
+def test_prep_delegate_freezes_decision_on_half_open_rand_affixes(
+        test_context, monkeypatch) -> None:
+    """半开帧封死态(T-45 §4 锁 4,接线 1 默认案):位面真值已有 ∧ 词缀
+    随机态(仅第二支命中)∧ 节点条不可读 → round_wait 等待态不放行决策
+    (静默放行会让决策消费随机态值,违反「先转正后消费」不变量);零
+    委派零决策消费,非重试等待态不烧 node 重试预算。"""
+    sess = _install_session(test_context, monkeypatch)
+    cw4_gs(sess)
+    op = _make_prep(test_context, monkeypatch, sess, node_bar_readable=False)
     from sr_od.application.currency_war.kernel.cw_game_state import (
         ChannelSig,
     )
@@ -464,19 +536,27 @@ def test_prep_delegate_trigger_predicate(test_context, monkeypatch) -> None:
                    produced_by='TestSigWriter',
                    sig=ChannelSig(family='logic_action',
                                   actor='TestSigWriter', mode='compute'))
-    entry_runs.clear()
-    rs2 = op._delegate_plane_intel_if_needed(sess)
-    assert rs2 is None and entry_runs == [], '已有真值不应委派'
 
+    entry_runs: list = []
 
-def test_prep_delegate_skips_on_unreadable_frame(test_context, monkeypatch) -> None:
-    """半开帧守卫:节点条不可读 → 不委派(None,等下轮免费重判,不烧失败链)。"""
-    sess = _install_session(test_context, monkeypatch)
-    cw4_gs(sess)
-    op = _make_prep(test_context, monkeypatch, sess, node_bar_readable=False)
+    class _FakeEntry:
+        def __init__(self, ctx) -> None:
+            pass
+
+        def execute(self):
+            entry_runs.append(1)
+            return SimpleNamespace(success=True, status='委派成功', data=None)
+
+    from sr_od.application.currency_war.operations.cw_entry import (
+        cw_entry_plane_intel as eim,
+    )
+    monkeypatch.setattr(eim, 'CwEntryPlaneIntel', _FakeEntry)
 
     rs = op._delegate_plane_intel_if_needed(sess)
-    assert rs is None, f'半开帧不应委派:{rs!r}'
+
+    assert rs is not None and rs.result == OperationRoundResultEnum.WAIT, (
+        f'词缀随机态 ∧ 半开帧应封死为等待态:{rs!r}')
+    assert entry_runs == [], '封死态零委派(决策延后一拍)'
 
 
 def test_prep_delegate_propagates_failure(test_context, monkeypatch) -> None:

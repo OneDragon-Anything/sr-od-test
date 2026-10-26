@@ -20,6 +20,13 @@ calc/designs/T-33-yingxiong-dengchang.md)§2.3 + §4 锁 2/3/4/9/11:
 §4 锁 5(advisor 分道条件形态支,挂点④):种子起手在场判定解锁(裁定④,
 防误改回「种子不解锁」)/ 种子无目标名 → 空尾效果串维持 / bench 未观察
 fail-closed 零写 + 缺陷行 / 在场判定覆盖 deployed 与溢出位。
+
+再追加面 = T-45 敌后破坏设计(designs/T-45-dihou-pohuai.md)§4 锁 1/2/6:
+词缀失效删除腿(均匀随机删 1 → 随机态写回四断言)/ 空容器零写 + 申报行 /
+装备佩戴豁免跟随解除。锁面 5(HP 词缀回调)归 kernel/test_cw_opening_hp.py
+(回调宿主镜像);锁面 7(sim 追加链)归 sim/cw_sim_backend/(流程级镜像);
+锁面 3/4(写门三分支/触发链)归 operations/cw_screen/test_plane_intel_pipeline.py
+与 kernel/cw_screen_report/test_plane_intel.py。
 """
 from __future__ import annotations
 
@@ -31,6 +38,8 @@ from sr_od.application.currency_war.kernel.cw_env_grants import (
     DOT_CONTRACT_ENV,
 )
 from sr_od.application.currency_war.kernel.cw_gain_chain import (
+    ENV_AFFIX_DISABLE_ENV,
+    ENV_AFFIX_DISABLE_RNG_TOOL,
     GAIN_CHAIN_PRODUCER,
     gain_invest_env,
     on_env_gained,
@@ -525,3 +534,132 @@ def test_presence_covers_deployed_and_overflow(rows_sink: _RowSink) -> None:
     assert out_ovf.effects == (f'advisor_unlock:{_ENV_EXPERT_WOLF}:银狼',)
     assert gs_ovf.unlocked_experts.value == ('银狼',), '溢出位在场命中'
     assert rows_sink.kinds() == [], '命中路径零缺陷行'
+
+
+# ============================================================ 词缀失效删除腿
+# (敌后破坏 id 146;T-45 设计稿(.debug/progress/2026-09-23-invest-effects-
+# calc/designs/T-45-dihou-pohuai.md)§2.1 + §4 锁 1/2/6:删除式建模——
+# 词缀名单非空时均匀随机删 1、剩余列表整条替换写回(经 _select_write
+# 择道,rand=True 双保险声明采样链);空容器零写 + 申报行;装备佩戴豁免
+# 跟随删除后值。HP 先验跟随锁面归 kernel/test_cw_opening_hp.py(回调
+# 宿主镜像),sim 追加链锁面归 sim/cw_sim_backend/(流程级镜像)。)
+
+_AFFIX_ENV = ENV_AFFIX_DISABLE_ENV
+
+
+def _make_affix_gs(affixes: list[str] | None) -> GameState:
+    """词缀名单直写容器(logic 直写;old=None 首写,HP 回调种子档零触发)。"""
+    gs = _make_gs()
+    if affixes is not None:
+        gs.write_logic(gs.enemy_affixes, list(affixes), produced_by='seed',
+                       evidence='t:affix', sig=_SIG)
+    return gs
+
+
+def _with_slot_rng(seed: int):
+    """动作腿采样注入槽临时装配(上下文管理器,退出即关;
+    删除腿经 action_sampling_rng('env_affix_disable', None) 取槽)。"""
+    from sr_od.application.currency_war.kernel.cw_action_report import (
+        set_action_rng_provider,
+    )
+
+    class _Slot:
+        def __enter__(self) -> None:
+            set_action_rng_provider(lambda tool: random.Random(seed))
+
+        def __exit__(self, *exc) -> None:
+            set_action_rng_provider(None)
+
+    return _Slot()
+
+
+def test_affix_disable_deletion_leg_random_state_write(monkeypatch) -> None:
+    """删除采样腿四断言(T-45 设计 §4 锁 1):rng 注入定值下选敌后破坏 →
+    ①enemy_affixes 长度 -1(采样命中名整条移除,剩余整条替换);②来源
+    logic_rand(rand=True 声明采样链);③logic_rand_fields() 含
+    enemy_affixes(补观察谓词消费口);④效果串 env_affix_disable:<名>
+    在账。期望名从同 seed 现算(单一来源,不手抄)。"""
+    affixes = ['开局不利', '库藏生锈', '灼热轰炸']
+    expected_removed = random.Random(7).choice(affixes)
+    gs = _make_affix_gs(affixes)
+    calls = _record_writes(gs, monkeypatch)
+    with _with_slot_rng(7):
+        effects = on_env_gained(gs, None, _AFFIX_ENV, rand=False, sig=_SIG)
+    assert effects == (f'env_affix_disable:{expected_removed}',), '④效果串'
+    kept = list(affixes)
+    kept.remove(expected_removed)
+    assert gs.enemy_affixes.value == kept, '①长度 -1 且整条替换'
+    assert gs.enemy_affixes.source == 'logic_rand', '②来源 logic_rand'
+    assert 'enemy_affixes' in gs.logic_rand_fields(), '③随机态字段在册'
+    rows = [(c[0], c[1], c[2], c[4]) for c in calls
+            if c[0] == 'enemy_affixes']
+    assert rows == [('enemy_affixes',
+                     f'on_env_gained:{_AFFIX_ENV}#affix_disable',
+                     'rand', GAIN_CHAIN_PRODUCER)], f'写行形态: {rows}'
+
+
+def test_affix_disable_slot_scoped_to_hit(monkeypatch) -> None:
+    """采样腿具名流键命中前置(T-45 设计 §2.1 仿 env_merge_grant 形态):
+    注入槽只在敌后破坏命中时取一次且键名精确;他环境(表外轮岗)零取槽
+    ——不扰他局流键序。"""
+    from sr_od.application.currency_war.kernel.cw_action_report import (
+        set_action_rng_provider,
+    )
+    taken: list[str] = []
+
+    def _spy(tool: str):
+        taken.append(tool)
+        return random.Random(0)
+
+    set_action_rng_provider(_spy)
+    try:
+        on_env_gained(_make_affix_gs(['开局不利']), None, '轮岗',
+                      rand=False, sig=_SIG)
+        assert taken == [], '表外环境零取槽'
+        on_env_gained(_make_affix_gs(['开局不利']), None, _AFFIX_ENV,
+                      rand=False, sig=_SIG)
+        assert taken == [ENV_AFFIX_DISABLE_RNG_TOOL], \
+            f'命中恰取一次且键精确: {taken}'
+    finally:
+        set_action_rng_provider(None)
+
+
+def test_affix_disable_empty_container_zero_write_with_decl(
+        monkeypatch, rows_sink: _RowSink) -> None:
+    """空容器边界(T-45 设计 §4 锁 2):容器空(直构未写)时选敌后破坏 →
+    零容器写 + 申报行在册(kind = env_affix_disable_empty_container,
+    实机已失效而模型未删的偏差申报),零效果串。"""
+    gs = _make_affix_gs(None)
+    calls = _record_writes(gs, monkeypatch)
+    seq_before = gs.write_seq
+    effects = on_env_gained(gs, None, _AFFIX_ENV, rand=False, sig=_SIG)
+    assert effects == (), '零效果串(未发生删除)'
+    assert not calls, f'零容器写: {calls}'
+    assert gs.write_seq == seq_before, '安静不写'
+    assert rows_sink.kinds() == ['env_affix_disable_empty_container'], \
+        f'申报行分键: {rows_sink.kinds()}'
+
+
+def test_affix_disable_rust_release_unfollows() -> None:
+    """豁免跟随(T-45 设计 §4 锁 6):删除「库藏生锈」→ 装备佩戴豁免
+    解除——消费面 = build_equip_env_signals 全量读容器自动跟随,rust
+    豁免判据(row4)删除前在场/删除后解除。seed 经现算取命中名(探针:
+    s ∈ [0,100) 内存在 choice(['库藏生锈','灼热轰炸'])=='库藏生锈' 的
+    seed,循环现算不手抄)。"""
+    from sr_od.application.currency_war.kernel.cw_equip_env import (
+        build_equip_env_signals,
+        rust_release_active,
+    )
+    affixes = ['库藏生锈', '灼热轰炸']
+    seed = next(s for s in range(100)
+                if random.Random(s).choice(affixes) == '库藏生锈')
+    gs = _make_affix_gs(affixes)
+    before = rust_release_active(
+        sorted(build_equip_env_signals(gs).enemy_affixes), True)
+    assert before is True, '删除前:生锈在场 → hold 豁免生效'
+    with _with_slot_rng(seed):
+        effects = on_env_gained(gs, None, _AFFIX_ENV, rand=False, sig=_SIG)
+    assert effects == ('env_affix_disable:库藏生锈',), '删除命中生锈'
+    after = rust_release_active(
+        sorted(build_equip_env_signals(gs).enemy_affixes), True)
+    assert after is False, '删除后:豁免解除(名单自动跟随)'
