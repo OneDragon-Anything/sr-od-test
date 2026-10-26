@@ -10,6 +10,9 @@
   §4 画面章切分 / §5 动作节切分与状态差分 / §7 CLI)
 - 同目录 details/render-spec.md(§1 骨架 / §2 局头 / §3 画面注册表 /
   §4 动作节显示 / §5 特殊情况)
+- docs/develop/sr_od/application/currency_war/changes/2026-10-24-strategy-telemetry/
+  details/render-assembly.md(§1 发现加载 / §2 章级挂载表 / §3 两级 join
+  与报告块 / §4 局头;capture-store.md §2 dtag 语义与回执覆盖面)
 
 fixture journal 全部自造、只写 pytest tmp_path,零真实副作用(不连真游戏、
 不读本机易失产物;真实 journal 只用于人工验收,不进测试断言)。
@@ -875,3 +878,325 @@ def test_obs_writes_surface_in_screen_observations():
     assert scr._obs_entries == {'node_pos': '[1,1]'}  # 首写定帧值
     assert '- 节点序位(node_pos) [1,1]' in md
     assert scr.annots == ['观察: 节点序位(node_pos)=[1,2]']  # 异值回读 → 章尾注记
+
+
+# ---------------------------------------------------------------------------
+# 策略遥测装配(render-assembly §1-§4;策略遥测迭代 T-5)
+# ---------------------------------------------------------------------------
+
+
+def mkrec(dtag: str, entry: str, *, op: str = 'CwActionObsParam',
+          node: tuple[int, int] | None = (1, 1), payload: dict[str, Any] | None = None,
+          strategy_id: str = 'probe', reason: str = '', route_tag: str = '',
+          run_id: str = 'run_t') -> dict[str, Any]:
+    """一条策略决策记录行(sink 落盘形态:envelope+payload;信封键闭集 =
+    capture-store §2,sink 补 run_id)。"""
+    env: dict[str, Any] = {
+        'strategy_id': strategy_id, 'schema_version': 1,
+        'dseq': int(dtag.rsplit(':', 1)[-1]),
+        'dtag': dtag, 'entry': entry,
+        'node': None if node is None else
+                {'plane': node[0], 'round_num': node[1], 'kind': 'reward'},
+        'ts': '2026-10-24T19:16:33',
+        'emitted': [{'op': op, 'reason': reason, 'route_tag': route_tag}],
+        'run_id': run_id,
+    }
+    return {'envelope': env, 'payload': payload if payload is not None else {}}
+
+
+def write_strategy(tmp_path: Path, recs: list[dict[str, Any]], *,
+                   name: str = 'probe_run_t.jsonl') -> Path:
+    """决策记录 → tmp_path/strategy/*.jsonl(sink 同构落点)。"""
+    d = tmp_path / 'strategy'
+    d.mkdir(exist_ok=True)
+    f = d / name
+    f.write_text(
+        '\n'.join(json.dumps(r, ensure_ascii=False) for r in recs) + '\n',
+        encoding='utf-8')
+    return d
+
+
+def build_t(rows: list[dict[str, Any]], recs: list[dict[str, Any]],
+            tmp_path: Path):
+    """行 + 决策记录 → (report, md)(真实加载器 + build_report 两级 join)。"""
+    tele = None
+    if recs:
+        tele = mod.load_strategy_telemetry(write_strategy(tmp_path, recs),
+                                           {'run_t'})
+    report = mod.build_report(rows, mod.JournalReadStats(), game_id='fixture',
+                              strategy=tele)
+    return report, mod.render_markdown(report)
+
+
+def test_entry_screen_map_closed_set_14_rows():
+    """章级挂载表 = render-assembly §2 的 14 行闭集直译(entry → 渲染章键,
+    禁漂移;行 1-2 动作级 join、行 3-14 章级挂载)。"""
+    assert mod.ENTRY_SCREEN_MAP == {
+        'decide_prep_screen': '画面-备战',
+        'decide_shop_action': '画面-商店',
+        'decide_invest_env': '画面-投资环境',
+        'decide_invest_strategy': '画面-投资策略',
+        'decide_supply': '画面-补给',
+        'decide_encounter': '画面-遭遇',
+        'decide_megastar': '画面-巨星',
+        'decide_partner': '画面-伙伴',
+        'decide_planner': '画面-银狼策划',
+        'decide_fortune': '画面-命运卜者',
+        'decide_wish_trial': '画面-祈愿试炼',
+        'decide_box_card': '画面-箱子',
+        'decide_expert_invite': '画面-专家邀请',
+        'decide_star_tome': '画面-书卡',
+    }
+
+
+def test_star_tome_registry_fix_and_box_unchanged():
+    """零差异例外清单(landing §3.4 配套修订):SCREEN_REGISTRY 补星徽秘典
+    弹窗广播行(→ 画面-书卡/star_tome_opts);CwScreenBookcard 键集修复
+    (box_card_names → star_tome_opts 存量错行);武装箱两行
+    (box_card_names)不动。广播行开「画面-书卡」章无缺口注记,0 观察显影
+    star_tome_opts;CwScreenBoxPick 章仍「画面-箱子」。"""
+    assert mod.SCREEN_REGISTRY['货币战争-星徽秘典弹窗'].title == '画面-书卡'
+    assert mod.SCREEN_REGISTRY['货币战争-星徽秘典弹窗'].entry_fields \
+        == ('star_tome_opts',)
+    assert mod.ACTOR_REGISTRY['CwScreenBookcard'].entry_fields \
+        == ('star_tome_opts',)
+    assert mod.ACTOR_REGISTRY['CwScreenBoxPick'].entry_fields \
+        == ('box_card_names',)
+    assert mod.SCREEN_REGISTRY['货币战争-备战-武装箱选择'].entry_fields \
+        == ('box_card_names',)
+    rows = [
+        mkrow('t1', 'current_screen', '货币战争-星徽秘典弹窗',
+              screen='货币战争-星徽秘典弹窗',
+              values_extra={'star_tome_opts': ['仙舟', '公司']}),
+        mkrow('t2', 'current_screen', '货币战争-备战-武装箱选择',
+              screen='货币战争-备战-武装箱选择',
+              values_extra={'box_card_names': ['以太钻头']}),
+    ]
+    report, md = build(rows)
+    screens = section_of_kind(report, 'node').screens
+    assert [s.title for s in screens] == ['画面-书卡', '画面-箱子']
+    assert screens[0].entry == [('star_tome_opts', ['仙舟', '公司'])]
+    assert screens[1].entry == [('box_card_names', ['以太钻头'])]
+    assert '缺口' not in md   # 星徽秘典弹窗已成注册键,不再原样开章
+    assert '- 星徽秘典候选(star_tome_opts) ["仙舟","公司"]' in md
+
+
+def test_strategy_feature_off_zero_diff(tmp_path: Path):
+    """功能关闭态(render-assembly §1):journal 同根无 strategy/(或目录
+    空)→ 路径解析 None;记录全被 run 过滤 → 同关闭态;两种形态报告与
+    无遥测渲染逐字节一致(局头无策略遥测行、无策略依据块);显式路径
+    不存在 = 用法错。"""
+    rows = [
+        mkrow('t1', 'current_screen', '货币战争-备战', screen='货币战争-备战'),
+        receipts_row('t2', receipt('CwActionWearEquipParam', dtag='probe:1')),
+    ]
+    assert mod.strategy_telemetry_path(None, tmp_path) is None
+    (tmp_path / 'strategy').mkdir()
+    assert mod.strategy_telemetry_path(None, tmp_path) is None   # 空目录
+    report = mod.build_report(rows, mod.JournalReadStats(), game_id='x')
+    md_off = mod.render_markdown(report)
+    assert '策略遥测' not in md_off
+    assert '策略依据' not in md_off
+    other = mod.load_strategy_telemetry(write_strategy(
+        tmp_path, [mkrec('probe:1', 'decide_prep_screen', run_id='run_z')]),
+        {'run_t'})
+    assert other.records == []   # run 过滤全滤出
+    report2 = mod.build_report(rows, mod.JournalReadStats(), game_id='x',
+                               strategy=other)
+    assert mod.render_markdown(report2) == md_off   # 零记录 = 关闭态零差异
+    try:
+        mod.strategy_telemetry_path(str(tmp_path / 'nope'), None)
+        raise AssertionError('应抛 _UsageError')
+    except mod._UsageError:
+        pass
+
+
+def test_loader_tolerates_bad_lines_and_filters_run(tmp_path: Path):
+    """加载(render-assembly §1):非法行(坏 JSON/非对象/缺 envelope/缺
+    dtag)逐行跳过不致命;envelope.run_id ∉ 本局运行段过滤丢弃;重复
+    dtag 首现优先(dseq 唯一)。"""
+    d = tmp_path / 'strategy'
+    d.mkdir()
+    good1 = json.dumps(mkrec('probe:1', 'decide_supply',
+                             payload={'k': 1}), ensure_ascii=False)
+    good2 = json.dumps(mkrec('probe:2', 'decide_supply'), ensure_ascii=False)
+    dup = json.dumps(mkrec('probe:1', 'decide_box_card'), ensure_ascii=False)
+    other = json.dumps(mkrec('probe:9', 'decide_supply', run_id='run_z'),
+                       ensure_ascii=False)
+    (d / 'probe_run_t.jsonl').write_text(
+        '\n'.join(['{"v": 1, 截断半行', '[1, 2]', '"just a string"',
+                   '{"no": "envelope"}', good1, good2, dup, other]),
+        encoding='utf-8')
+    tele = mod.load_strategy_telemetry(d, {'run_t'})
+    assert [r.dtag for r in tele.records] == ['probe:1', 'probe:2']
+    assert tele.by_dtag['probe:1'].entry == 'decide_supply'   # 首现优先
+    assert tele.records[0].payload == {'k': 1}
+    assert ('decide_supply', 1, 1) in tele.by_chapter
+
+
+def test_action_join_basis_block_position_and_payload(tmp_path: Path):
+    """动作级 join(render-assembly §3 行 1-2):回执 dtag → 信封 dtag;
+    依据块嵌入动作节(标题行下、动作行与状态变化表前);payload 通用
+    键值渲染(嵌套紧凑 JSON,不解释语义),空 payload 单行占位。"""
+    rows = [
+        mkrow('t1', 'current_screen', '货币战争-备战', screen='货币战争-备战'),
+        mkrow('t2', 'gold', 30, screen='货币战争-备战',
+              family='logic_action', actor='PrepActionExecutor'),
+        receipts_row('t3', receipt('CwActionWearEquipParam',
+                                   screen='货币战争-备战', dtag='probe:1')),
+    ]
+    recs = [
+        mkrec('probe:1', 'decide_prep_screen', op='CwActionWearEquipParam',
+              payload={'direction': {'locked': True},
+                       'k_members': ['爻光']}),
+        mkrec('probe:2', 'decide_prep_screen', op='CwActionWearEquipParam',
+              payload={}),
+    ]
+    report, md = build_t(rows, recs, tmp_path)
+    scr = section_of_kind(report, 'node').screens[0]
+    assert [r.dtag for r in scr.actions[0].basis] == ['probe:1']
+    assert '- 策略依据: probe:1(entry=decide_prep_screen, ' \
+           'op=CwActionWearEquipParam)' in md
+    assert '    - direction: {"locked":true}' in md
+    assert '    - k_members: ["爻光"]' in md
+    i_title = md.index('#### 1 穿装备')
+    i_basis = md.index('- 策略依据: probe:1')
+    i_action = md.index('- 动作:')
+    i_table = md.index('| 字段 |')
+    assert i_title < i_basis < i_action < i_table   # 标题下、变化表前
+    # probe:2 无回执匹配 → 锚章「策略决策未落地」注记(不落章级小节)
+    assert '- 策略决策未落地: probe:2(CwActionWearEquipParam)' in md
+    assert '- 策略遥测: probe (2 条)' in md
+
+
+def test_action_join_op_normalize_and_mismatch_note(tmp_path: Path):
+    """指纹一致性校验(render-assembly §3):回执 op 经归一映射后与信封
+    emitted.op 比对——CwOpOpenShop → CwActionOpenShopParam 命中正常挂
+    依据;失配(陈旧 dtag 搭错)→ 回执按无依据处理 + 章尾「策略 dtag
+    失配」注记。"""
+    rows = [
+        mkrow('t1', 'current_screen', '货币战争-备战', screen='货币战争-备战'),
+        receipts_row('t2', receipt('CwOpOpenShop', screen='货币战争-备战',
+                                   dtag='probe:1')),
+        receipts_row('t3', receipt('CwActionBuyCardParam', dtag='probe:2')),
+    ]
+    recs = [
+        mkrec('probe:1', 'decide_prep_screen', op='CwActionOpenShopParam'),
+        mkrec('probe:2', 'decide_prep_screen', op='CwActionWearEquipParam'),
+    ]
+    report, md = build_t(rows, recs, tmp_path)
+    prep = section_of_kind(report, 'node').screens[0]
+    assert [a.op for a in prep.actions] == ['CwOpOpenShop',
+                                            'CwActionBuyCardParam']
+    assert [r.dtag for r in prep.actions[0].basis] == ['probe:1']  # 归一命中
+    assert prep.actions[1].basis == []   # 失配 = 按无依据
+    assert '- 策略 dtag 失配: probe:2(CwActionBuyCardParam)' in md
+    assert not report.strategy.unattached   # 失配记录已消费,不再计未归属
+
+
+def test_retry_chain_multi_basis_in_receipt_order(tmp_path: Path):
+    """重试链一节多回执(render-assembly §3):依据块按回执顺序逐条列出,
+    每条标各自 dtag;链内无 dtag 回执跳过。"""
+    rows = [
+        receipts_row('t1', receipt('CwActionStartBattleParam',
+                                   reason='弹窗未关', dtag='probe:1')),
+        receipts_row('t2', receipt('CwActionStartBattleParam',
+                                   reason='定位缺失', dtag='probe:2')),
+        receipts_row('t3', receipt('CwActionStartBattleParam')),  # 无 dtag → 跳过
+    ]
+    recs = [
+        mkrec('probe:1', 'decide_prep_screen', op='CwActionStartBattleParam'),
+        mkrec('probe:2', 'decide_prep_screen', op='CwActionStartBattleParam'),
+    ]
+    report, md = build_t(rows, recs, tmp_path)
+    act = section_of_kind(report, 'node').screens[0].actions[0]
+    assert len(act.chain) == 3   # 三条回执合并一节
+    assert [r.dtag for r in act.basis] == ['probe:1', 'probe:2']
+    assert md.index('策略依据: probe:1') < md.index('策略依据: probe:2')
+
+
+def test_chapter_level_fifo_and_section_position(tmp_path: Path):
+    """章级挂载(render-assembly §3 行 3-14):(entry, node) 匹配 + 同键
+    多章 FIFO(records dseq 序对章首现序分配);依据 = 0 观察后独立小节
+    「#### 策略依据」,不破坏「0 观察 → 动作×N → 策略评价」结构。"""
+    rows = [
+        mkrow('t1', 'current_screen', '货币战争-补给', node=(1, 1, 'supply'),
+              screen='货币战争-补给'),
+        mkrow('t2', 'current_screen', '货币战争-备战', node=(1, 1, 'supply'),
+              screen='货币战争-备战'),
+        mkrow('t3', 'current_screen', '货币战争-补给', node=(1, 1, 'supply'),
+              screen='货币战争-补给'),
+    ]
+    recs = [
+        mkrec('probe:1', 'decide_supply', node=(1, 1), payload={}),
+        mkrec('probe:2', 'decide_supply', node=(1, 1),
+              payload={'window': {'爻光': {'open': True}}}),
+    ]
+    report, md = build_t(rows, recs, tmp_path)
+    screens = section_of_kind(report, 'node').screens
+    assert [s.title for s in screens] == ['画面-补给', '画面-备战', '画面-补给']
+    assert [r.dtag for r in screens[0].strategy_records] == ['probe:1']
+    assert [r.dtag for r in screens[2].strategy_records] == ['probe:2']
+    assert '- probe:1(entry=decide_supply, op=CwActionObsParam)' in md
+    assert '- payload: (本帧无策略载荷)' in md
+    assert '- window: {"爻光":{"open":true}}' in md   # 嵌套紧凑 JSON
+    i_obs = md.index('#### 0 观察')
+    i_basis = md.index('#### 策略依据')
+    i_next = md.index('### 节点 1-1 补给 画面-备战')
+    assert i_obs < i_basis < i_next   # 0 观察后、下一章前
+    assert not report.strategy.unattached
+
+
+def test_header_three_states_and_unattached_counts(tmp_path: Path):
+    """局头策略遥测行三态(render-assembly §4):无遥测整行省略;全归属 =
+    「- 策略遥测: <sid> (N 条)」;未归属(node=null 帧 / 无锚章)> 0 →
+    行尾追加 (未归属 M 条) 且不逐条展开。"""
+    rows = [
+        mkrow('t1', 'current_screen', '货币战争-备战', screen='货币战争-备战'),
+        receipts_row('t2', receipt('CwActionWearEquipParam', dtag='probe:1')),
+    ]
+    recs_ok = [mkrec('probe:1', 'decide_prep_screen',
+                     op='CwActionWearEquipParam')]
+    _, md_ok = build_t(rows, recs_ok, tmp_path)
+    assert '- 策略遥测: probe (1 条)' in md_ok
+    assert '未归属' not in md_ok
+    recs_null = recs_ok + [
+        mkrec('probe:2', 'decide_partner', node=None,
+              op='CwActionPickPartnerParam'),   # node=null → 不入章级
+        mkrec('probe:3', 'decide_supply', node=(5, 5)),   # 无锚章
+    ]
+    report_n, md_n = build_t(rows, recs_null, tmp_path)
+    assert '- 策略遥测: probe (3 条)(未归属 2 条)' in md_n
+    assert 'probe:2' not in md_n   # 未归属不逐条展开
+    assert 'probe:3' not in md_n
+    assert report_n.strategy.unattached and len(report_n.strategy.unattached) == 2
+
+
+def test_cli_strategy_telemetry_end_to_end(tmp_path: Path, capsys: Any):
+    """CLI 集成(render-assembly §1):journal 同根 strategy/ 缺省发现生效
+    (--stdout 报告含局头行与章级依据节);无 strategy/ 目录时零差异
+    (无策略遥测行);显式路径不存在 = 用法错退出 2。"""
+    rows = [
+        mkrow('t1', 'current_screen', '货币战争-补给', node=(1, 1, 'supply'),
+              screen='货币战争-补给'),
+    ]
+    f = _write_journal(tmp_path, [json.dumps(r, ensure_ascii=False)
+                                  for r in rows])
+    argv = ['--journal', str(f), '--game-id', 'cli_t', '--stdout']
+    assert mod.main(argv) == 0
+    assert '策略遥测' not in capsys.readouterr().out   # 无 strategy/ → 关闭态
+    rec = mkrec('probe:1', 'decide_supply', node=(1, 1),
+                payload={'k_members': ['爻光']})
+    d = tmp_path / 'strategy'
+    d.mkdir()
+    (d / 'probe_run_t.jsonl').write_text(
+        json.dumps(rec, ensure_ascii=False), encoding='utf-8')
+    assert mod.main(argv) == 0
+    md = capsys.readouterr().out
+    assert '- 策略遥测: probe (1 条)' in md
+    assert '#### 策略依据' in md   # 章级 = 独立小节(非动作级前缀形态)
+    assert '- 策略依据: ' not in md
+    assert '- probe:1(entry=decide_supply, op=CwActionObsParam)' in md
+    assert '    - k_members: ["爻光"]' in md
+    assert mod.main(argv + ['--strategy-telemetry',
+                            str(tmp_path / 'nope')]) == 2   # 显式缺路径 = 用法错
