@@ -103,7 +103,7 @@ def _names(cands) -> list[str]:
 
 
 def _swap_ctx(gs) -> SwapPlanContext:
-    """换血判定语境(测试手装:fenced 义务臂 + 未锁帧 + 空目标视图——
+    """换人判定语境(测试手装:fenced 义务臂 + 未锁帧 + 空目标视图——
     现行判据在该语境下对非 core/非 target 件放行,足够校验池族差分;
     装配链本体(3.3)不在本测试面)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
@@ -132,7 +132,7 @@ class TestSceneClosedSet:
             evaluate_sell_candidates(gs, 'bogus_scene')
 
     def test_deploy_swap_without_ctx_fail_closed(self):
-        """换血场景缺判定语境 ⇒ 拒评估(现行判据 ctx=None 返回全放行是
+        """换人场景缺判定语境 ⇒ 拒评估(现行判据 ctx=None 返回全放行是
         fail-open 形态,评估器侧拒收——资格判据禁缺语境放行)。"""
         _sess, gs = _mk_gs(bench=[cw4_bc('万敌')], front_row=[_fu('三月七')])
         cands, why = evaluate_sell_candidates(gs, 'deploy_swap')
@@ -183,8 +183,8 @@ class TestCandidatePoolFamilies:
             assert zones['万敌'] == 'deployed', scene
 
     def test_deploy_swap_field_and_bench_pool(self):
-        """部署换血 = 场上 ∪ 备战席(场上锁定线成员/羁绊件的唯一卖出
-        场景):场上三件与备战席两件(含线内件瓦尔特——换血资格走现行
+        """部署换人 = 场上 ∪ 备战席(场上锁定线成员/羁绊件的唯一卖出
+        场景):场上三件与备战席两件(含线内件瓦尔特——换人资格走现行
         swap 判据,不走装配 A 的线内排除)全部入池。"""
         _sess, gs = self._pool_gs()
         cands, why = evaluate_sell_candidates(gs, 'deploy_swap',
@@ -399,7 +399,7 @@ class TestChannelRemap:
     def test_scene_table_covers_legacy_channels(self):
         """通道重映射行完整性:凑息→节末凑息 / 筹资→会话内筹资+备战升级
         凑金 / m4_fuel→晶矿;line_switch→退役不接(无场景消费该通道,
-        部署换血 legacy_channel=None 走现行 swap 判据);projection→
+        部署换人 legacy_channel=None 走现行 swap 判据);projection→
         保留不动(不进评估器场景表)。店内侧升级变现场景已随 2026-10-17
         迭代 T-4 退役删除(筹资通道场景集随单域收窄)。"""
         assert SCENE_SPECS['node_end_interest'].legacy_channel == 'interest'
