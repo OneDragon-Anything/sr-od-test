@@ -16,6 +16,10 @@ kernel/test_cw_investments.py 随机赠卡家族段〔超限只读复用〕)。
   现算比对(非快照,不手抄名单);
 - **cost 轴回归**:既有条目(人才引进/英雄登场)登记形状与校验不受
   cost/star 可选化影响。
+
+族展开续写面 = 概念股族展开卡登记约定(燃血概念股 id 1002,族内第二实例,
+与追击登记行同构仅值异;正本 = fields.md §5.2 效果缺口与载体登记):
+登记形状锁 + 燃血域校验与池派生现算比对。
 """
 from __future__ import annotations
 
@@ -122,3 +126,35 @@ def test_cost_axis_existing_entries_regression() -> None:
     assert set(random_char_pool(RandomCharSpec(cost=4))) == \
         {c.name for c in chars_by_cost(4)}, \
         'cost 轴池 = 费用档全档(可选化后缺省星级行为不变)'
+
+
+def test_ranxue_concept_stock_entry_shape() -> None:
+    """燃血概念股登记形状锁(概念股族展开卡登记约定,正本 = fields.md
+    §5.2 效果缺口与载体登记):∈ ENV_GIFTS 且 ∉ ENV_ECONOMY(import 期
+    互斥校验半边显式断言);阵营轴 spec = faction '燃血'(desc【燃血】
+    直读,流派名非角色名,与卡名剥「概念股」后缀的 ENV_FACTION 派生值
+    双源同值)+ star 1(先验,desc 未标星);随机装备 = ('简易',)
+    (desc「初始简易装备」类别明文,单数叙述默认 1 件)。族内第二实例,
+    与追击登记行同构仅值异。"""
+    assert '燃血概念股' in ENV_GIFTS
+    assert '燃血概念股' not in ENV_ECONOMY
+    grant = ENV_GIFTS['燃血概念股']
+    assert grant.chars_random_immediate == \
+        (RandomCharSpec(faction='燃血', star=1),)
+    assert grant.equips_random_immediate == ('简易',)
+
+
+def test_ranxue_faction_pool_matches_registry_and_validates() -> None:
+    """燃血域登记校验 + 池派生(概念股族展开卡登记约定;gain-chain.md
+    §3 随机支段:阵营轴 = chars_by_faction 默认含流派匹配):燃血概念股
+    过 _validate_env_gifts 现行全套(含 _validate_random_char_spec 阵营轴
+    分支——轴互斥/星级域/池非空,「燃血」流派域非空天然通过);
+    random_char_pool 阵营 spec 现值 = chars_by_faction('燃血') 名集现算
+    双射(注册表派生,非快照不手抄;池规模只记注释不做断言值——现值
+    8 名含纯 flows 成员布洛妮娅,随版本正常变动)。"""
+    cw_investments._validate_env_gifts()
+    spec = ENV_GIFTS['燃血概念股'].chars_random_immediate[0]
+    expected = {c.name for c in chars_by_faction('燃血')}
+    assert set(random_char_pool(spec)) == expected, \
+        '阵营轴池 = chars_by_faction 全域(注册表现算双射)'
+    assert set(random_char_pool(spec)) <= CHARACTER_ROSTER

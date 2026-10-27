@@ -20,3 +20,12 @@ def test_named_gift_value_concept_stock_is_zero() -> None:
     → 具名口径恒 0;随机阵营成员的价值由 random_faction_gift_value 随机
     口径承载,具名口径不重复计分(零双重计分锁)。"""
     assert named_gift_value('追击概念股', frozenset()) == 0.0
+
+
+def test_named_gift_value_ranxue_concept_stock_is_zero() -> None:
+    """燃血概念股具名赠卡分 = 0(fields.md §5.2 效果缺口与载体登记,
+    概念股族展开卡登记约定,追击首例同锁第二实例):赠卡档恒 off
+    (off 档映射 0 分)→ 具名口径恒 0;随机阵营成员的价值由
+    random_faction_gift_value 随机口径承载,具名口径不重复计分(零双重
+    计分锁)。"""
+    assert named_gift_value('燃血概念股', frozenset()) == 0.0
