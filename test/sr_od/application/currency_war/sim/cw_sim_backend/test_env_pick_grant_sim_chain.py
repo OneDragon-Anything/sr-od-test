@@ -20,12 +20,14 @@ T-46-celue-dashi.md(定稿)§4 锁 5(§2.2(e) 落地形态):
 
 再追加面 = 概念股族展开卡(燃血概念股 id 1002 族内第二实例/能量概念股
 id 1003 第三实例/列车同行概念股 id 1004 第四实例/银河学者概念股
-id 1005 第五实例/贝洛伯格概念股 id 1006 第六实例,概念股族展开卡登记
+id 1005 第五实例/贝洛伯格概念股 id 1006 第六实例/星间旅人概念股
+id 1007 第七实例,概念股族展开卡登记
 约定,正本同上):与追击全链同构
 仅值异——期望名改从对应阵营池/简易池现算(列车同行域 = 开拓者双形态
 按角色位合并后 7 名池,采样即发放名恒欢愉;银河学者域无开拓者条目,
 合并对本域零作用,池 = 原始域;贝洛伯格域 = 布洛妮娅双羁绊注册表修正
-后 6 名池,独立单位照发),选卡助手按环境名参数化(追击调用点
+后 6 名池,独立单位照发;星间旅人域无开拓者条目,合并对本域零作用,
+池 = 原始域 7 名),选卡助手按环境名参数化(追击调用点
 缺省值不变)。
 """
 from __future__ import annotations
@@ -492,6 +494,48 @@ def test_beluoboge_concept_stock_env_pick_grant_sim_chain(
         f'赠卡恰一张且 1★(spec 先验): {granted}'
     assert granted[0][0] in faction_names, \
         f'赠卡名 ∈ 贝洛伯格阵营池现算集: {granted[0][0]}'
+    assert len(equips) == 1, f'equips 计数 +1: {equips}'
+    assert equips[0] in simple_names, \
+        f'装备名 ∈ 简易类别池现算集: {equips[0]}'
+    before2, after2, equips2 = _run(7)
+    assert (before, after, equips) == (before2, after2, equips2), \
+        '同 seed 重放确定性'
+
+
+_XINGJIANLVREN_ENV = '星间旅人概念股'
+
+
+def test_xingjianlvren_concept_stock_env_pick_grant_sim_chain(
+        _isolate_defect_buffer) -> None:
+    """sim 选卡全链第七实例(gain-chain.md §3 随机支/随机装备支段:sim
+    世界真值 = 流键 rng,族展开登记经 kernel 获得链自动生效,零 sim 新
+    代码;概念股族展开卡登记约定):选星间旅人概念股 → bench = 开局 4 +
+    星间旅人阵营域 1★ 一张(星级 = spec 先验;成员名 ∈ chars_by_faction
+    ('星间旅人') 现算集,不手抄;域 7 名全档覆盖,双阵营成员桑博/真理
+    医生/瓦尔特按 factions 轴在池,域内无开拓者条目,合并对本域零作用)、
+    equips 计数 +1 且名 ∈ equips_by_category('简易') 现算集(装备身份
+    零先验,economy.md 四卡线索名单不含星间旅人);同 seed 重放确定性
+    (世界发放可重放)。"""
+    from collections import Counter
+    faction_names = {c.name for c in chars_by_faction('星间旅人')}
+    simple_names = set(equips_by_category('简易'))
+
+    def _run(seed: int) -> tuple[list, list, list]:
+        b, bench_before, bench_after = _pick_concept_stock_backend(
+            seed, _XINGJIANLVREN_ENV)
+        try:
+            return bench_before, bench_after, list(b.gs.equips.value or [])
+        finally:
+            uninstall_backend()
+
+    before, after, equips = _run(7)
+    granted = list((Counter(after) - Counter(before)).elements())
+    assert len(after) == len(before) + 1, \
+        f'bench 增恰一张(M01 4 + 赠卡 1): {before} -> {after}'
+    assert granted and granted[0][1] == 1, \
+        f'赠卡恰一张且 1★(spec 先验): {granted}'
+    assert granted[0][0] in faction_names, \
+        f'赠卡名 ∈ 星间旅人阵营池现算集: {granted[0][0]}'
     assert len(equips) == 1, f'equips 计数 +1: {equips}'
     assert equips[0] in simple_names, \
         f'装备名 ∈ 简易类别池现算集: {equips[0]}'

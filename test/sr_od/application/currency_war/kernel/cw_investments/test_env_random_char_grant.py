@@ -343,3 +343,42 @@ def test_beluoboge_faction_pool_matches_registry_and_validates() -> None:
     assert '布洛妮娅' in random_char_pool(spec), \
         '双羁绊修正新增成员在池照发(独立单位照发定谳)'
     assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
+
+
+def test_xingjianlvren_concept_stock_entry_shape() -> None:
+    """星间旅人概念股登记形状锁(概念股族展开卡登记约定,正本 = fields.md
+    §5.2 效果缺口与载体登记):∈ ENV_GIFTS 且 ∉ ENV_ECONOMY(import 期
+    互斥校验半边显式断言);阵营轴 spec = faction '星间旅人'(desc
+    【星间旅人】直读,阵营羁绊名非角色名,与卡名剥「概念股」后缀的
+    ENV_FACTION 派生值双源同值)+ star 1(先验,desc 未标星);随机装备
+    = ('简易',)(desc「初始简易装备」类别明文,单数叙述默认 1 件,
+    装备身份零先验——economy.md「概念股送装备件」四卡线索名单不含星间
+    旅人,均匀 v0 + 按卡固定假说随家族披露键待校准)。族内第七实例,
+    与追击/燃血/能量/列车同行/银河学者/贝洛伯格登记行同构仅值异。"""
+    assert '星间旅人概念股' in ENV_GIFTS
+    assert '星间旅人概念股' not in ENV_ECONOMY
+    grant = ENV_GIFTS['星间旅人概念股']
+    assert grant.chars_random_immediate == \
+        (RandomCharSpec(faction='星间旅人', star=1),)
+    assert grant.equips_random_immediate == ('简易',)
+
+
+def test_xingjianlvren_faction_pool_matches_registry_and_validates() -> None:
+    """星间旅人域登记校验 + 池派生(概念股族展开卡登记约定;gain-chain.md
+    §3 随机支段:阵营轴 = 规格过滤池):星间旅人概念股过 _validate_env_
+    gifts 现行全套(含 _validate_random_char_spec 阵营轴分支——轴互斥/
+    星级域/池非空,「星间旅人」阵营域非空天然通过);random_char_pool
+    阵营 spec 现值 = chars_by_faction('星间旅人') 名集现算比对(注册表
+    派生非快照不手抄;口径 = 合并后角色位即 random_char_pool 值,本域
+    无开拓者条目故与域原集同值;池规模只记注释零断言值——现值 7 名,
+    随版本正常变动);显式断言'真理医生' ∈ 池(双阵营成员「银河学者、
+    星间旅人」按 factions 轴在池照发,镜像银河学者批同款定谳断言式;
+    本域无开拓者条目,双形态合并对本域零作用,池 = 原始域)。"""
+    cw_investments._validate_env_gifts()
+    spec = ENV_GIFTS['星间旅人概念股'].chars_random_immediate[0]
+    expected = {c.name for c in chars_by_faction('星间旅人')}
+    assert set(random_char_pool(spec)) == expected, \
+        '阵营轴池 = chars_by_faction 全域(注册表现算双射)'
+    assert '真理医生' in random_char_pool(spec), \
+        '双阵营成员在池照发(实机知识定谳)'
+    assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
