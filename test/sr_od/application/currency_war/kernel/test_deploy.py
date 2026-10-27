@@ -353,7 +353,8 @@ def test_required_carry_seats_first_under_cap_competition() -> None:
 def _ctx(*, board: list[str], bench: list[str], cap: int,
          comp=None, required=frozenset()) -> SwapPlanContext:
     """直构 SwapPlanContext(1★ 单元格;target 键 = pair 真值;
-    required 缺省按「bench 有希儿 ∧ 板上无」派生,可显式覆写)。"""
+    required 缺省按「bench 有希儿 ∧ 板上无」派生,可显式覆写;
+    locked=False = 域外帧——转型域帧见 test_select_swap_group_plan)。"""
     return SwapPlanContext(
         target_factions=frozenset({'持续伤害', '量子同频', '贝洛伯格'}),
         target_cores=frozenset((*board, *bench)),
@@ -376,7 +377,6 @@ def _ctx(*, board: list[str], bench: list[str], cap: int,
         recipe_floor_lock_exempt=False,
         target_comp=comp if comp is not None else _pair_comp(),
         evolution_swap_armed=False,
-        transition_domain=False,
         required_names=frozenset(required)
         if required else (
             frozenset({_XIER})
@@ -483,10 +483,11 @@ def test_swap_arm_premise_single_required_member() -> None:
 
 
 def _swap_ctx(*, board: list[str], bench: list[str], cap: int,
-              fp: float, locked: bool, domain: bool,
+              fp: float, locked: bool,
               required: frozenset[str] = frozenset()) -> SwapPlanContext:
-    """直构 SwapPlanContext(1★ 单元格;pair 真值键面;域快照随 locked
-    一致传入——装配点两字段同点同值)。"""
+    """直构 SwapPlanContext(1★ 单元格;pair 真值键面;locked = 混轨方向锁
+    ——pair 帧腿②在效;``locked_core`` 腿①恒 False(pair 帧不进转型域,
+    design §2.0),bond_gate 键/名单随 pair comp 装配)。"""
     comp = pair_target_comp(_PAIR)
     return SwapPlanContext(
         target_factions=frozenset(comp.all_factions),
@@ -508,11 +509,14 @@ def _swap_ctx(*, board: list[str], bench: list[str], cap: int,
         fenced_on=False,
         fp=fp,
         locked=locked,
+        locked_core=False,
+        bond_gate_keys=frozenset(comp.form_tiers),
+        k_members=frozenset(dict.fromkeys(
+            [*comp.core_chars, *comp.shared_chars])),
         board_full=len(board) >= cap,
         recipe_floor_lock_exempt=False,
         target_comp=comp,
         evolution_swap_armed=False,
-        transition_domain=domain,
         required_names=frozenset(required) or frozenset(comp.required_deployed),
     )
 
@@ -526,10 +530,10 @@ def test_pair_locked_domain_releases_fenced_offline_victim() -> None:
     """
     board = [_KAFKA, _XIER, _HUAHUO, _SANYUEQI]
     ctx_open = _swap_ctx(board=board, bench=[_HEITIANQUE], cap=4,
-                         fp=0.833, locked=True, domain=True)
+                         fp=0.833, locked=True)
     assert swap_sell_exclusion_reason(_SANYUEQI, ctx_open) == ''
     ctx_closed = _swap_ctx(board=board, bench=[_HEITIANQUE], cap=4,
-                           fp=0.833, locked=False, domain=False)
+                           fp=0.833, locked=False)
     assert swap_sell_exclusion_reason(_SANYUEQI, ctx_closed) \
         == 'fenced_arm_closed'
 
@@ -547,7 +551,7 @@ def test_completion_member_yields_target_seat() -> None:
     """
     ctx = _swap_ctx(board=[_KAFKA, _XIER, _HUAHUO, _NATASHA],
                     bench=[_HEITIANQUE], cap=4,
-                    fp=0.833, locked=True, domain=True)
+                    fp=0.833, locked=True)
     assert required_swap_arm_pending(ctx)   # 完成分支武装(希儿在板)
     assert swap_sell_exclusion_reason(_HUAHUO, ctx) == ''
     assert swap_sell_exclusion_reason(_NATASHA, ctx) == ''
@@ -555,6 +559,9 @@ def test_completion_member_yields_target_seat() -> None:
     plan = select_swap_plan(ctx, select_up=select_deployments_reasoned)
     assert plan.nonempty
     assert plan.sell_names == [_HUAHUO]
+    assert plan.arm == 'transition', \
+        '双轨域完成件通道 arm 标注照旧(转型分支退役不波及 pair 帧,' \
+        'design 2026-10-26-swap-channel-unified §2.3.1)'
     # (P4 容器形:bench 身份经解包口读)
     assert {_slot_cid_of(ctx.bench[i]) for i in plan.up_bench} \
         == {_HEITIANQUE}
@@ -570,13 +577,13 @@ def test_completion_channel_gates() -> None:
     board = [_KAFKA, _XIER, _HUAHUO, _NATASHA]
     assert not required_swap_arm_pending(_swap_ctx(
         board=board, bench=[_HEITIANQUE], cap=4,
-        fp=1.0, locked=True, domain=True))
+        fp=1.0, locked=True))
     assert not required_swap_arm_pending(_swap_ctx(
         board=board, bench=['万敌'], cap=4,
-        fp=0.833, locked=True, domain=True))
+        fp=0.833, locked=True))
     assert not required_swap_arm_pending(_swap_ctx(
         board=board, bench=[_HEITIANQUE], cap=4,
-        fp=0.833, locked=False, domain=False))
+        fp=0.833, locked=False))
 
 
 def test_redeploy_gate_pair_period_reads_target_view() -> None:

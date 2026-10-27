@@ -23,7 +23,8 @@ proofs/p88.md(§0 辖域/§1 调和引理/§3 解封方向式;收窄集 S_spec =
 ∖ S_spec 闭集单一源);落码 = shop.py 两 S_spec 发射位辖域前置
 (分键 press_narrowed_transition_domain / press_narrowed_transition_
 domain_hub)+ mandate.swap_transition_narrow_frame(域谓词单一源 =
-kernel ``_swap_transition_domain_of``)。
+ kernel ``swap_bond_gate_domain_of`` 转型域判别子全合取,design
+ 2026-10-26-swap-channel-unified §2.3.1 谓词源迁移)。
 (F4 闭集对账正本与 S_spec 辖域腿迁并
  test_sell_window_launch::test_launch_cause_closed_set(15 臂映射段);
  F1 开火/F2/F3 豁免/F5 零漂移/F6 M6 零触碰/F7 单一源/F8 prep 对称/
