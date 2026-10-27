@@ -132,6 +132,34 @@ def test_case_c_group_growth_two_pairs_completion() -> None:
         assert ok is False, f'单对 {v}->{u} 不得单独过门 1(组生长前提)'
 
 
+def test_inner_victim_retry_gate1_fail_then_completion() -> None:
+    """内层 victim 回退(design §2.7 组构造遍历序钉死面「先换 victim
+    (内层耗尽)→ 再换 up」):当前 up 首个 victim 过全部前置闸但门 1
+    不中时,内层按 victim 辅序继续重试(试组不并入前缀),后续 victim
+    可达 ④ → 字典序第一可行组发射——「首 victim 挡道」不得遮蔽后续
+    可行组。
+
+    复现形态 = 下帧续发场景(3.2 交付报告):板上 required 件(瓦尔特)
+    占 victim 首扫描位,残余 up(杰帕德)与首扫描位的横换 = required
+    对调 no-op(④ 不中/② 持平),回退后 (希儿→杰帕德) ④ 成型可达。
+    """
+    comp = Comp(name='C组生长测', factions=[], core_chars=[
+        '瓦尔特', '杰帕德', '停云', '希儿', '符玄'],
+        form_tiers={}, strength='A', form_difficulty='easy',
+        early_power='中', required_deployed=('瓦尔特', '杰帕德'))
+    ctx = _gate_ctx(board=['瓦尔特', '希儿', '符玄'], bench=['杰帕德'],
+                    cap=3, comp=comp, fp=0.5)
+    plan = _plan(ctx)
+    assert plan.nonempty, f'内层回退须找到可行组:reasons={plan.reasons} ' \
+                          f'reject={plan.bond_gate_reject}'
+    assert plan.sell_names == ['希儿'], \
+        f'首 victim(瓦尔特)门 1 不中 → 内层回退至次序 victim,实得 {plan.sell_names}'
+    assert _up_names(plan, ctx) == ['杰帕德']
+    assert plan.bond_gate_leg == 'completion', \
+        '回退组 ④ 首达(required 全在板成型)'
+    assert plan.victim_tier == '名单末位'
+
+
 def test_case_d_same_star_horizontal_swap_3a() -> None:
     """D 情形:板上 1★ Saber、备战席 2★ Saber——同名升星横换(③ +
     §2.2.1 让位通道 3(a));名单成员让位末位语义 = 一级 victim 被同名

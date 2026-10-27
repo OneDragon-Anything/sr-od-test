@@ -258,6 +258,12 @@ def _apply(gs, act) -> None:
     assert out.applied, f'逻辑态直写被拒(陈旧提案?): {out.reason}'
 
 
+def _board_names(gs) -> set[str]:
+    front, back = deployed_rows_of(gs)
+    return {d.char_id for d in (*front, *back)
+            if d is not None and d.char_id}
+
+
 def test_bond_gate_recalc_allowed_truth_values() -> None:
     """复算统一门判据本体真值(design §2.5;kernel ``swap_bond_gate_
     benefit`` 同一函数消费):锚组(爻光→Saber,圣杯 2→3 tier 激活)现读
@@ -358,22 +364,17 @@ def test_emit_bond_gate_pair_stall_on_unresolvable(monkeypatch) -> None:
 
 
 def test_step5_pair_atomic_order_and_fresh_rederive() -> None:
-    """同帧逐对原子序·生产部署面(决策环逻辑态续算形态,design §2.7
-    执行形态):组计划首对 = sell(停云) 发出后,空槽由下一决策调用的 M1
-    残余补部署先行落位换入 deploy(瓦尔特)——对间原子序 sell→deploy
-    结构性成立(下单动作循环取首项);其后决策调用对**换后现读板面**
-    重新现算(计划无跨帧状态)。
-
-    注册发现(2026-10-26-swap-channel-unified 3.2 交付报告,不属本批
-    修):多对组的下帧续发在「残余补部署落名单件占首扫描位」形态受
-    kernel 组贪心遍历(``_select_swap_group_plan`` gate-1 失败即弃内层,
-    cw_deploy_logic.py break 点)截断——设计 §2.7「字典序第一个可行组/
-    全耗尽 = 零动作」的穷尽面待 3.1 裁定,本测试不断言该截断为设计
-    行为,只锁本批属面的首对原子序与重算新鲜度。"""
+    """同帧逐对原子序·生产部署面全序(决策环逻辑态续算形态,design §2.7
+    执行形态):两对组经连续决策调用展开为 sell(停云) → deploy(瓦尔特)
+    → sell(希儿) → deploy(杰帕德)——sell 仅在板满帧发射、空槽由 M1
+    残余补部署先行落位换入,对间原子序结构性成立;下帧对**换后现读板面**
+    重新现算(计划无跨帧状态),剩余对经内层 victim 回退可达(组贪心
+    遍历序补钉,design §2.7「先换 victim(内层耗尽)」);终板 = 成型
+    (required 全在板)——design §2.7「部分完成态…由下帧续发闭合」的全序。"""
     session, st = _locked_c_session()
     gs = _seed_c_board(session)
     fired: list[str] = []
-    for _ in range(6):   # 防御上界(决策环不收敛 = 实现缺陷,不得静默)
+    for _ in range(8):   # 防御上界(决策环不收敛 = 实现缺陷,不得静默)
         out = _drive_step5(session, gs)
         if not out:
             break
@@ -394,14 +395,15 @@ def test_step5_pair_atomic_order_and_fresh_rederive() -> None:
             fired.append(f'其他动作 {type(act).__name__}(部署面被截断)')
             break
         _apply(gs, act)
-    assert fired[:2] == ['sell:停云', 'deploy:瓦尔特'], \
-        f'首对原子序(sell→deploy 相邻),实得 {fired}'
+    assert fired == ['sell:停云', 'deploy:瓦尔特',
+                     'sell:希儿', 'deploy:杰帕德'], \
+        f'逐对原子序全序(sell→deploy→sell→deploy),实得 {fired}'
+    assert _board_names(gs) == {'瓦尔特', '杰帕德', '符玄'}, \
+        '终板 = 全组落位(required 全在板成型)'
     counters = st.cw4_counters
-    assert counters.get('m1p_fired') == 1, '组计划发射帧计一次'
-    assert counters.get('bond_gate_completion') == 1, \
-        '首达腿 ④(C 形态累积组)'
-    # 重算新鲜度:发射帧后无 sell 重放(陈旧计划不跨帧携带,计划载荷
-    # 帧级复位)——m1p_fired 恒 1 即为证(重放会二次计数)。
+    assert counters.get('m1p_fired') == 2, '两对各自计发射(帧级)'
+    assert counters.get('bond_gate_completion') == 2, \
+        '两对均 ④ 首达(第二对在 pair1 落位后按现读板态重评仍成型达标)'
 
 
 def test_step5_race_occupied_board_rejudged() -> None:
@@ -409,7 +411,8 @@ def test_step5_race_occupied_board_rejudged() -> None:
     被同帧残余补部署先行占位(合成竞速结果 = 非名单件椒丘占位——M1
     裁判视野含域外件,竞速落点不保证组内)→ 下一决策调用按**占位后
     板面**重评:重算计划 = (椒丘→瓦尔特)② 支撑增,发射续发——发射对
-    ≠ 陈旧计划的剩余对(希儿→杰帕德),组按现读重评,无强推陈旧对。"""
+    ≠ 陈旧计划的剩余对(希儿→杰帕德),组按现读重评,无强推陈旧对;
+    其后逐对原子序续发至终局收益腿兑现(「部分完成态…由下帧续发闭合」)。"""
     session, st = _locked_c_session()
     gs = _seed_c_board(session, bench=("瓦尔特", "杰帕德", "椒丘"))
     out1 = _drive_step5(session, gs)
@@ -434,6 +437,37 @@ def test_step5_race_occupied_board_rejudged() -> None:
         '重评换入 = 占位后板面裁判胜出者(非陈旧计划的杰帕德)'
     assert st.cw4_counters.get('bond_gate_support') == 1, \
         '重评组 ② 首达(支撑数严格增)'
+    _apply(gs, act2)   # sell:椒丘 → vacancy=1,组剩余续发
+    # 占位件椒丘入板后即成重评组的一级 victim:先被换出(② 支撑增),
+    # 原剩余对(希儿→杰帕德)按换后板面重评仍 ④ 达成 → 逐对原子序续发
+    # 至组闭合(design §2.7「部分完成态…由下帧续发闭合」全序)。
+    fired: list[str] = ['sell:停云', 'sell:椒丘']
+    for _ in range(6):   # 防御上界(决策环不收敛 = 实现缺陷,不得静默)
+        out = _drive_step5(session, gs)
+        if not out:
+            break
+        act = out[0].action
+        if isinstance(act, CwActionSellDeployedParam):
+            front, _back = deployed_rows_of(gs)
+            fired.append(f"sell:{front[act.deployed_idx].char_id}")
+        elif isinstance(act, CwActionDeployMoveParam):
+            from sr_od.application.currency_war.kernel.cw_exec_state import (
+                bench_slot_unit,
+            )
+            from sr_od.application.currency_war.kernel.cw_game_state import (
+                bench_view_slots_of,
+            )
+            _u = bench_slot_unit(bench_view_slots_of(gs)[act.bench_idx])
+            fired.append(f"deploy:{getattr(_u, 'char_id', '')}")
+        else:
+            fired.append(f'其他动作 {type(act).__name__}(部署面被截断)')
+            break
+        _apply(gs, act)
+    assert fired == ['sell:停云', 'sell:椒丘', 'deploy:瓦尔特',
+                     'sell:希儿', 'deploy:杰帕德'], \
+        f'占位重评后续发至组闭合,实得 {fired}'
+    assert _board_names(gs) == {'瓦尔特', '杰帕德', '符玄'}, \
+        '终板 = 全组落位(required 全在板成型)'
 
 
 def test_emit_bond_gate_bench_exhausted_novictim_no_forcing() -> None:
