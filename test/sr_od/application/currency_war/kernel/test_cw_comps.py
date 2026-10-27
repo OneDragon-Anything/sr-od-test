@@ -80,6 +80,16 @@ def test_xingjianlvren_concept_stock_gift_tier_off() -> None:
     fields.md §5.2 效果缺口与载体登记,追击首例同锁第七实例):随机规格
     (阵营轴)/随机装备条目不入档位机器估值域 → 恒 off——族展开登记
     不产生策略层双重计分,与 random_faction_gift_value 随机阵营路径
-    正交(域含专家顾问桑博 = 采样零过滤既定口径的随机路径传导,
-    本档零扰动)。"""
+    正交(域成员构成随注册表传导〔采样域牌库时点过滤见 cw_pool
+    grant_char_pool,2026-10-28 用户裁定〕,本档零扰动)。"""
     assert gift_hit_tier(ENV_GIFTS['星间旅人概念股']) == 'off'
+
+
+def test_xianzhou_concept_stock_gift_tier_off() -> None:
+    """仙舟概念股估值档恒 'off'(概念股族展开卡登记约定,正本 =
+    fields.md §5.2 效果缺口与载体登记,追击首例同锁第八实例):随机规格
+    (阵营轴)/随机装备条目不入档位机器估值域 → 恒 off——族展开登记
+    不产生策略层双重计分,与 random_faction_gift_value 随机阵营路径
+    正交(域 9 名含专家青雀/停云 = 随机路径注册表传导,估值分母与流程
+    采样域的牌库时点分叉系范围外申报,本档零扰动)。"""
+    assert gift_hit_tier(ENV_GIFTS['仙舟概念股']) == 'off'

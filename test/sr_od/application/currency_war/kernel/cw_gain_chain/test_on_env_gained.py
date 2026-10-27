@@ -700,19 +700,17 @@ def _make_gs_with_equips() -> GameState:
 
 
 def test_concept_stock_faxis_char_grant_leg(rows_sink: _RowSink) -> None:
-    """阵营支发放腿(gain-chain.md §3 随机支段:阵营轴 = 规格过滤池掷骰,
+    """阵营支发放腿(gain-chain.md §3 随机支段:阵营轴 = 牌库时点池掷骰,
     两族同一循环同一前缀):固定种子 rng 直构 → bench 追加 1 张 1★ 且名
-    ∈ 阵营池现算集(random_char_pool 阵营 spec = chars_by_faction('追击')
-    注册表派生,不手抄);效果串 ``env_gift_random:<名>@1star``(星级 =
-    spec.star 先验);锚定容器 + 采样子链 rand=True → 写照常生效且不进
-    失配网(随机态语义,首观察静默覆盖)。期望名从同 seed 现算(单一
-    来源,不手抄)。"""
-    from sr_od.application.currency_war.kernel.cw_investments import (
-        random_char_pool,
-    )
+    ∈ 阵营池现算集(grant_char_pool 阵营 spec = 规格域 ∩ 当时牌库,未解锁
+    专家剔除,注册表派生不手抄);效果串 ``env_gift_random:<名>@1star``
+    (星级 = spec.star 先验);锚定容器 + 采样子链 rand=True → 写照常生效
+    且不进失配网(随机态语义,首观察静默覆盖)。期望名从同 seed 现算
+    (单一来源,不手抄)。"""
+    from sr_od.application.currency_war.kernel.cw_pool import grant_char_pool
     gs = _make_gs_with_equips()
     gs.prep_anchored = True
-    pool = random_char_pool(ENV_GIFTS[_CONCEPT_ENV].chars_random_immediate[0])
+    pool = grant_char_pool(gs, ENV_GIFTS[_CONCEPT_ENV].chars_random_immediate[0])
     expected = random.Random(20261027).choice(pool)
     out = on_env_gained(gs, None, _CONCEPT_ENV, rand=False, sig=_SIG,
                         rng=random.Random(20261027))
@@ -732,12 +730,12 @@ def test_concept_stock_random_equip_leg_unbound_no_done(
     seed 现算(字符腿先掷、装备腿同 rng 续掷,与生产消费序一致)。"""
     from sr_od.application.currency_war.kernel.cw_investments import (
         equips_by_category,
-        random_char_pool,
     )
+    from sr_od.application.currency_war.kernel.cw_pool import grant_char_pool
     gs = _make_gs_with_equips()
     r = random.Random(20261027)
-    expected_char = r.choice(random_char_pool(
-        ENV_GIFTS[_CONCEPT_ENV].chars_random_immediate[0]))
+    expected_char = r.choice(grant_char_pool(
+        gs, ENV_GIFTS[_CONCEPT_ENV].chars_random_immediate[0]))
     expected_eq = r.choice(equips_by_category('简易'))
     out = on_env_gained(gs, None, _CONCEPT_ENV, rand=False, sig=_SIG,
                         rng=random.Random(20261027))
@@ -759,20 +757,18 @@ _RANXUE_ENV = '燃血概念股'
 
 def test_ranxue_concept_stock_faction_char_grant_leg(
         rows_sink: _RowSink) -> None:
-    """燃血域随机支发放腿(gain-chain.md §3 随机支段:阵营轴 = 规格过滤池
-    掷骰,两族同一循环同一前缀;概念股族展开卡登记约定):固定种子 rng
-    直构 → bench 追加 1 张 1★ 且名 ∈ 阵营池现算集(random_char_pool 阵营
-    spec = chars_by_faction('燃血') 注册表派生,不手抄);效果串
+    """燃血域随机支发放腿(gain-chain.md §3 随机支段:阵营轴 = 牌库时点
+    池掷骰,两族同一循环同一前缀;概念股族展开卡登记约定):固定种子 rng
+    直构 → bench 追加 1 张 1★ 且名 ∈ 阵营池现算集(grant_char_pool 阵营
+    spec = 规格域 ∩ 当时牌库,未解锁专家剔除,注册表派生不手抄);效果串
     ``env_gift_random:<名>@1star``(星级 = spec.star 先验);锚定容器 +
     采样子链 rand=True → 写照常生效且不进失配网(随机态语义,首观察
     静默覆盖)。期望名从同 seed 现算(单一来源,不手抄)。"""
-    from sr_od.application.currency_war.kernel.cw_investments import (
-        random_char_pool,
-    )
+    from sr_od.application.currency_war.kernel.cw_pool import grant_char_pool
     gs = _make_gs_with_equips()
     gs.prep_anchored = True
-    pool = random_char_pool(
-        ENV_GIFTS[_RANXUE_ENV].chars_random_immediate[0])
+    pool = grant_char_pool(
+        gs, ENV_GIFTS[_RANXUE_ENV].chars_random_immediate[0])
     expected = random.Random(20261027).choice(pool)
     out = on_env_gained(gs, None, _RANXUE_ENV, rand=False, sig=_SIG,
                         rng=random.Random(20261027))
@@ -793,12 +789,12 @@ def test_ranxue_concept_stock_random_equip_leg_unbound_no_done(
     与生产消费序一致)。"""
     from sr_od.application.currency_war.kernel.cw_investments import (
         equips_by_category,
-        random_char_pool,
     )
+    from sr_od.application.currency_war.kernel.cw_pool import grant_char_pool
     gs = _make_gs_with_equips()
     r = random.Random(20261027)
-    expected_char = r.choice(random_char_pool(
-        ENV_GIFTS[_RANXUE_ENV].chars_random_immediate[0]))
+    expected_char = r.choice(grant_char_pool(
+        gs, ENV_GIFTS[_RANXUE_ENV].chars_random_immediate[0]))
     expected_eq = r.choice(equips_by_category('简易'))
     out = on_env_gained(gs, None, _RANXUE_ENV, rand=False, sig=_SIG,
                         rng=random.Random(20261027))

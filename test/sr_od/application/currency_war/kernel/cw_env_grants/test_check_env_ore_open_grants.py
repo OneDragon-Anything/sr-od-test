@@ -27,7 +27,6 @@ from collections.abc import Iterator
 
 import pytest
 
-from sr_od.application.currency_war.data.cw_chars import chars_by_faction
 from sr_od.application.currency_war.kernel import cw_env_grants
 from sr_od.application.currency_war.kernel.cw_action_report import (
     action_sampling_rng,
@@ -46,13 +45,20 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     GameState,
     Unit,
 )
+from sr_od.application.currency_war.kernel.cw_investments import RandomCharSpec
+from sr_od.application.currency_war.kernel.cw_pool import grant_char_pool
 
 _ENV = '战技点契约'
 _NAMED = '火花'
 _FACTION = '战技点'
 _FIRST, _STEP = 20, 10
 
-_POOL = tuple(c.name for c in chars_by_faction(_FACTION))
+# 生产池镜像(战技点契约开箱窗 = 空解锁态直构):grant_char_pool = 规格域
+# ∩ 当时牌库(未解锁专家剔除,用户裁定 2026-10-28)——与 check_env_ore_
+# open_grants 采样源同源,种子钉名/成员断言共用本镜像。
+_POOL = grant_char_pool(
+    GameState(schema_version=GAME_STATE_SCHEMA_VERSION),
+    RandomCharSpec(faction=_FACTION, star=1))
 
 _SIG = ChannelSig(family='logic_action', actor='CwScreenPrep',
                   group_id='act:CwScreenPrep@1')
@@ -215,12 +221,12 @@ def test_threshold_sequence_reach_gap_and_multi(
     21-29 计数推进零发(无新阈值达标);30 达标再发(ore_open#30);
     done 已含 20 缺 30、计数 31 → 只发 30 档(断档续发);单批跨多阈值
     (直构计数器一笔 39,20/30 达标、40 未达)loop 逐阈值发放。
-    局部种子 1(两掷均非火花且互异)——随机腿抽中火花会与具名腿叠加
-    触发 3合1 连锁(裁决点 2 合法形态,归链域既有锁),本锁只验
-    loop 逐阈值发放形状,种子避开合并形态保持写行数确定。"""
-    set_action_rng_provider(lambda tool: random.Random(1))
+    局部种子 4(两掷均非火花且互异,池 = 过滤后镜像 _POOL)——随机腿抽中
+    火花会与具名腿叠加触发 3合1 连锁(裁决点 2 合法形态,归链域既有锁),
+    本锁只验 loop 逐阈值发放形状,种子避开合并形态保持写行数确定。"""
+    set_action_rng_provider(lambda tool: random.Random(4))
     try:
-        seq_rng = random.Random(1)
+        seq_rng = random.Random(4)
         rand_throw1 = seq_rng.choice(list(_POOL))
         rand_throw2 = seq_rng.choice(list(_POOL))
         assert rand_throw1 != _NAMED and rand_throw2 != _NAMED \
@@ -310,11 +316,11 @@ def test_empty_pool_guard_blocks_then_recovers(
         monkeypatch: pytest.MonkeyPatch, seeded_provider) -> None:
     """池空守卫(设计 §2.3 条件 6,不可达防御语义钉死):注册表漂移态
     (monkeypatch 直构池空,patch 目标 = 生产端池派生单一源
-    ``cw_env_grants.random_char_pool``——晶矿随机腿池与随机赠卡家族同源
+    ``cw_env_grants.grant_char_pool``——晶矿随机腿池与随机赠卡家族同源
     取池)→ 达标阈值零发放、done 零追加(整体缓发,禁「具名腿已发、
     done 未封」半发放态);恢复后同计数下批正常发放——防未来注册表/校验
     重构把守卫无声删改时无红灯。"""
-    monkeypatch.setattr(cw_env_grants, 'random_char_pool', lambda spec: [])
+    monkeypatch.setattr(cw_env_grants, 'grant_char_pool', lambda gs, spec: [])
     gs = _make_gs(bench=[], ore_open_total=_FIRST)
     calls = _record_writes(gs, monkeypatch)
     assert check_env_ore_open_grants(gs, _SIG) == (), '池空整体缓发'

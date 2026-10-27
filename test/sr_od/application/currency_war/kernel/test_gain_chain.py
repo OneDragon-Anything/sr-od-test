@@ -111,6 +111,7 @@ from sr_od.application.currency_war.kernel.cw_merge_simulate import (
 from sr_od.application.currency_war.kernel.cw_node_schedule import (
     PLANE_NODE_TABLES,
 )
+from sr_od.application.currency_war.kernel.cw_pool import grant_char_pool
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
@@ -635,7 +636,7 @@ def test_env_gift_random_leg_seeded_roll(rows_sink: _RowSink) -> None:
     对账键);星级 = spec.star(人才引进 = 1 先验)。期望名从同 seed
     现算(单一来源,不手抄)。"""
     gs = _make_gs(bench=[], equips=[])
-    pool = random_char_pool(RandomCharSpec(cost=4, star=1))
+    pool = grant_char_pool(gs, RandomCharSpec(cost=4, star=1))
     expected = random.Random(20261014).choice(pool)
     out = on_env_gained(gs, None, '人才引进', rand=False, sig=_lsig(),
                         rng=random.Random(20261014))
@@ -655,7 +656,7 @@ def test_env_gift_random_leg_typed_pool_star2_seeded(
     差分重放不稳定不设)。期望名从同 seed 现算(单一来源,不手抄)。"""
     gs = _make_gs(bench=[], equips=[])
     seq_before = gs.write_seq
-    pool = random_char_pool(RandomCharSpec(cost=1, star=2, type_tag='输出'))
+    pool = grant_char_pool(gs, RandomCharSpec(cost=1, star=2, type_tag='输出'))
     expected = random.Random(20261021).choice(pool)
     out = on_env_gained(gs, None, '战力提升', rand=False, sig=_lsig(),
                         rng=random.Random(20261021))
@@ -672,7 +673,8 @@ def test_env_gift_random_leg_star2_merge_boundary(
     """2★ 赠卡合成边界(T-36 设计 §4 锁 5):预置两枚同名 2★ → 赠 2★
     同星 3 合 1 升 3★((char_id, star) 二元组识别,星级感知);预置两枚
     同名 1★ → 赠 2★ 星级不同不合并。期望名从同 seed 现算。"""
-    pool = random_char_pool(RandomCharSpec(cost=1, star=2, type_tag='输出'))
+    pool = grant_char_pool(_make_gs(bench=[], equips=[]),
+                           RandomCharSpec(cost=1, star=2, type_tag='输出'))
     name = random.Random(20261021).choice(pool)
     gs = _make_gs(bench=[(name, 2), (name, 2)], equips=[])
     on_env_gained(gs, None, '战力提升', rand=False, sig=_lsig(),
@@ -694,7 +696,7 @@ def test_env_gift_random_leg_cost2_star2_seeded(rows_sink: _RowSink) -> None:
     属性加成腿不建模的零写端钉死。期望名从同 seed 现算(单一来源,不手抄)。"""
     gs = _make_gs(bench=[], equips=[])
     seq_before = gs.write_seq
-    pool = random_char_pool(RandomCharSpec(cost=2, star=2))
+    pool = grant_char_pool(gs, RandomCharSpec(cost=2, star=2))
     expected = random.Random(20261022).choice(pool)
     out = on_env_gained(gs, None, '战力飙升', rand=False, sig=_lsig(),
                         rng=random.Random(20261022))
@@ -712,7 +714,8 @@ def test_env_gift_random_leg_star2_merge_cost2_boundary(
     同名态为本卡天然边界):预置两枚同名 1★ 2 费件 → 赠 2★ 星级失配
     不合并(席面三件并存,(char_id, star) 二元组识别);预置两枚同名 2★
     → 同星 3 合 1 升 3★。期望名从同 seed 现算。"""
-    pool = random_char_pool(RandomCharSpec(cost=2, star=2))
+    pool = grant_char_pool(_make_gs(bench=[], equips=[]),
+                           RandomCharSpec(cost=2, star=2))
     name = random.Random(20261022).choice(pool)
     gs1 = _make_gs(bench=[(name, 1), (name, 1)], equips=[])
     on_env_gained(gs1, None, '战力飙升', rand=False, sig=_lsig(),
@@ -767,7 +770,7 @@ def test_opening_replace_leg_clear_and_grant(rows_sink: _RowSink) -> None:
     计数器);容量随原观察保持。期望名从同 seed 现算(单一来源,不手抄)。"""
     gs = _make_gs(bench=[('希儿', 1)] * 4, equips=[])
     seq_before = gs.write_seq
-    pool = random_char_pool(RandomCharSpec(cost=3, star=1))
+    pool = grant_char_pool(gs, RandomCharSpec(cost=3, star=1))
     r = random.Random(20261025)
     expected = [r.choice(pool) for _ in range(3)]
     assert len(set(expected)) > 1, '种子抽形两同一异(非全同名,预登记)'
@@ -790,7 +793,7 @@ def test_opening_replace_leg_zero_unit_zero_write(rows_sink: _RowSink) -> None:
     落席 3 笔(赠卡照常落,替换语义对 live = 无开局可清,发放不受影响)。"""
     gs = _make_gs(bench=[], equips=[])
     seq_before = gs.write_seq
-    pool = random_char_pool(RandomCharSpec(cost=3, star=1))
+    pool = grant_char_pool(gs, RandomCharSpec(cost=3, star=1))
     r = random.Random(20261025)
     expected = [r.choice(pool) for _ in range(3)]
     out = on_env_gained(gs, None, '人才储备', rand=False, sig=_lsig(),

@@ -273,3 +273,49 @@ def test_binding_pool_consistent_with_registry() -> None:
         assert faction, f'{star} 后缀剥离后羁绊名非空'
         assert chars_by_faction(faction), \
             f'{star} → {faction} 成员池非空(构建期闸同源)'
+
+
+# ============================================================ 牌库时点池
+# (用户裁定 2026-10-28「授予候选 = 当时牌库里存在的角色」,economy.md §8:
+# 腿2 采样源 = cw_pool.grant_char_pool,未解锁专家剔除/已解锁专家入候选;
+# 示范专家 = 姬子——列车同行域唯一专家成员,factions 轴在域。)
+
+
+def _gs_with_unlocked(names: tuple[str, ...]) -> GameState:
+    """解锁态容器(在 _make_gs 基础上单口直写 unlocked_experts)。"""
+    gs = _make_gs(bench=[], done=_seed_done())
+    gs.write_logic(gs.unlocked_experts, names, produced_by='test-seed',
+                   evidence='test:unlock', sig=_SIG_SIM)
+    return gs
+
+
+def test_boss_leg_deck_time_pool_unlock_expert_reaches_candidates(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """boss 腿2 牌库时点池(economy.md §8 用户裁定 2026-10-28):解锁
+    姬子(列车同行域唯一专家)→ seed 9 掷中姬子并落席;同 seed 未解锁
+    容器掷星期日(姬子不在候选)——两态对照钉死「已解锁专家 ∈ 授予候选,
+    未解锁专家 ∉」。示范专家必须取目标域内专家:停云 ∈ 仙舟/能量不属
+    本域,示范不可用(攻击轮 1 F2 防复发约束)。"""
+    from sr_od.application.currency_war.kernel.cw_pool import grant_char_pool
+    spec = cw_investments.RandomCharSpec(faction=_FACTION, star=1)
+    pos = (1, _boss_round(1))
+    gs_unlocked = _gs_with_unlocked(('姬子',))
+    expected_unlocked = random.Random(9).choice(
+        grant_char_pool(gs_unlocked, spec))
+    assert expected_unlocked == '姬子', '种子前提:解锁态掷中示范专家'
+    calls = _record_writes(gs_unlocked, monkeypatch)
+    granted = check_env_boss_grants(gs_unlocked, node_pos=pos,
+                                    rng=random.Random(9), sig=_SIG_SIM)
+    assert granted == '姬子', '已解锁专家进入腿2候选并被掷中'
+    assert _bench_units(gs_unlocked) == [('姬子', 1)], '落席 1★'
+    assert calls, '发放有写行'
+    monkeypatch.undo()
+
+    gs_locked = _make_gs(bench=[], done=_seed_done())
+    expected_locked = random.Random(9).choice(
+        grant_char_pool(gs_locked, spec))
+    assert expected_locked != '姬子', '种子前提:未解锁态同 seed 掷他名'
+    granted_locked = check_env_boss_grants(gs_locked, node_pos=pos,
+                                           rng=random.Random(9),
+                                           sig=_SIG_SIM)
+    assert granted_locked == expected_locked, '未解锁态候选不含专家'

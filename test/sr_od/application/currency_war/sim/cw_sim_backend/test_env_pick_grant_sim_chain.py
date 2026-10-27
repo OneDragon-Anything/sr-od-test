@@ -542,3 +542,50 @@ def test_xingjianlvren_concept_stock_env_pick_grant_sim_chain(
     before2, after2, equips2 = _run(7)
     assert (before, after, equips) == (before2, after2, equips2), \
         '同 seed 重放确定性'
+
+
+_XIANZHOU_ENV = '仙舟概念股'
+
+
+def test_xianzhou_concept_stock_env_pick_grant_sim_chain(
+        _isolate_defect_buffer) -> None:
+    """sim 选卡全链第八实例(gain-chain.md §3 随机支/随机装备支段:sim
+    世界真值 = 流键 rng,族展开登记经 kernel 获得链自动生效,零 sim 新
+    代码;概念股族展开卡登记约定):选仙舟概念股 → bench = 开局 4 +
+    仙舟阵营域 1★ 一张(星级 = spec 先验;成员名 ∈ chars_by_faction
+    ('仙舟') 现算集,不手抄;域 9 名中青雀/停云为专家,牌库时点池过滤后
+    7 名候选——环境注册时点解锁恒空,economy.md §8 用户裁定 2026-10-28;
+    赠卡名显式 ∉ EXPERT_CHARS 钉专家剔除生效;双阵营成员丹恒·饮月/彦卿
+    按 factions 轴在池)、equips 计数 +1 且名 ∈ equips_by_category('简易')
+    现算集(装备线索含仙舟→折叠小刀,economy.md:92 随家族键在册,零新增
+    申报);同 seed 重放确定性(世界发放可重放)。"""
+    from collections import Counter
+
+    from sr_od.application.currency_war.data.cw_chars import EXPERT_CHARS
+    faction_names = {c.name for c in chars_by_faction('仙舟')}
+    simple_names = set(equips_by_category('简易'))
+
+    def _run(seed: int) -> tuple[list, list, list]:
+        b, bench_before, bench_after = _pick_concept_stock_backend(
+            seed, _XIANZHOU_ENV)
+        try:
+            return bench_before, bench_after, list(b.gs.equips.value or [])
+        finally:
+            uninstall_backend()
+
+    before, after, equips = _run(7)
+    granted = list((Counter(after) - Counter(before)).elements())
+    assert len(after) == len(before) + 1, \
+        f'bench 增恰一张(M01 4 + 赠卡 1): {before} -> {after}'
+    assert granted and granted[0][1] == 1, \
+        f'赠卡恰一张且 1★(spec 先验): {granted}'
+    assert granted[0][0] in faction_names, \
+        f'赠卡名 ∈ 仙舟阵营池现算集: {granted[0][0]}'
+    assert granted[0][0] not in EXPERT_CHARS, \
+        f'赠卡名非专家(牌库时点过滤生效): {granted[0][0]}'
+    assert len(equips) == 1, f'equips 计数 +1: {equips}'
+    assert equips[0] in simple_names, \
+        f'装备名 ∈ 简易类别池现算集: {equips[0]}'
+    before2, after2, equips2 = _run(7)
+    assert (before, after, equips) == (before2, after2, equips2), \
+        '同 seed 重放确定性'

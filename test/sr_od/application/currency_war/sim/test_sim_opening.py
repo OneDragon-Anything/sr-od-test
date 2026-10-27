@@ -125,6 +125,20 @@ def test_opening_hand_u28_domain_over_seeds() -> None:
         f'形状比 {ratio:.3f} 偏离 U28 定案 2:1(宽带 ±9σ)'
 
 
+def test_opening_hand_fixed_deck_pool_no_experts() -> None:
+    """开局手牌固定牌库口径(economy.md §8 用户裁定 2026-10-28「授予/
+    发放候选 = 当时牌库里存在的角色」):多 seed 全量核 4 张卡名均 ∉
+    EXPERT_CHARS——抽名源 = fixed_pool 成员(同函数 docstring「M06 固定
+    牌库该费档名集」既有申报的代码归位,消 chars_by_cost 含专家的代码-
+    文档相悖);成员断言走注册表现算不手抄。"""
+    from sr_od.application.currency_war.data.cw_chars import EXPERT_CHARS
+    for seed in range(120):
+        chars = opening_bench_chars(stream_rng(seed, 'M01/opening_hand'))
+        names = [c.unit.char_id for c in chars]
+        assert not (set(names) & EXPERT_CHARS), \
+            f'seed={seed} 开局手牌混入专家: {names}'
+
+
 def test_apply_opening_writes_container_opening_state() -> None:
     """开局态写入容器(obs 渠道;u07u28 §③:金 3/等级 3/cap 3;
     M06 首个写端 = 开局备战席先于商店发牌)。"""

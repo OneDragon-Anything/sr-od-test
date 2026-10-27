@@ -35,6 +35,7 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     RandomCharSpec,
     random_char_pool,
 )
+from sr_od.application.currency_war.kernel.cw_pool import grant_char_pool
 
 _SIG = ChannelSig(family='logic_action', actor='PickInvestEnvTest',
                   mode='compute')
@@ -116,10 +117,10 @@ def test_random_leg_env_resolves_rng_exactly_once(
 def test_explicit_rng_beats_provider(provider_calls: list[str]) -> None:
     """显式传入优先于注入槽(action_sampling_rng 解析序):装 provider 下
     显式传 rng → provider 零调用,落席名 = 显式 rng 的掷骰结果(同 seed
-    现算期望,不手抄)。"""
-    pool = random_char_pool(RandomCharSpec(cost=4, star=1))
-    expected = random.Random(20261014).choice(pool)
+    现算期望,不手抄;期望源 = 生产同源牌库时点池 grant_char_pool)。"""
     gs = _make_gs(['人才引进', '轮岗', '头彩'])
+    pool = grant_char_pool(gs, RandomCharSpec(cost=4, star=1))
+    expected = random.Random(20261014).choice(pool)
     out = report_action_pick_invest_env_param(
         gs, SimpleNamespace(idx=0), _SIG, rng=random.Random(20261014))
     assert out.applied

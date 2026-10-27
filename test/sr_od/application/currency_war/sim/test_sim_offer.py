@@ -218,7 +218,8 @@ def test_strategy_offer_slot_vector_per_slot_pool() -> None:
                                       forced_slots=('银', '金', '棱彩'))
         assert len(picks) == OFFER_CANDIDATES
         assert len(set(picks)) == OFFER_CANDIDATES, 'offer 内去重'
-        for slot, (name, quality) in enumerate(zip(picks, ('银', '金', '棱彩'))):
+        for slot, (name, quality) in enumerate(zip(picks, ('银', '金', '棱彩'),
+                                                   strict=False)):
             assert name in pools[quality], \
                 f'槽{slot}候选 {name} 必落 {quality} 池'
 
@@ -369,8 +370,8 @@ def test_fixed_pool_excludes_experts_and_unlock_grants_copies() -> None:
     assert remaining_pool(gs)['青雀'] == EXPERT_COPIES_ASSUMED, \
         '解锁后按名并入专家副本数'
     assert '青雀' in drawable_names(gs, 1), '解锁后可进店'
-    assert '青雀' not in grant_bucket_names(gs, 1), \
-        '授予出口维持不含专家(v0 口径)'
+    assert '青雀' in grant_bucket_names(gs, 1), \
+        '授予出口随裁定入候选(解锁专家 ∈ 当时牌库,用户裁定 2026-10-28)'
     from sr_od.application.currency_war.kernel.cw_pool import (
         unlocked_expert_copies,
     )

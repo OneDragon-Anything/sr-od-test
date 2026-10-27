@@ -382,3 +382,61 @@ def test_xingjianlvren_faction_pool_matches_registry_and_validates() -> None:
     assert '真理医生' in random_char_pool(spec), \
         '双阵营成员在池照发(实机知识定谳)'
     assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
+
+
+# 族展开第八实例(仙舟概念股 id 1008;概念股族展开卡登记约定,正本 =
+# fields.md §5.2 效果缺口与载体登记 + economy.md §8 专家候选口径:本域
+# 9 名中青雀/停云为专家,牌库时点过滤在 cw_pool.grant_char_pool 层——
+# 本文件的池锁锁静态基底面 random_char_pool,过滤语义锁 = cw_pool 镜像
+# test_grant_char_pool.py。)
+
+
+def test_xianzhou_concept_stock_entry_shape() -> None:
+    """仙舟概念股登记形状锁(概念股族展开卡登记约定,正本 = fields.md
+    §5.2 效果缺口与载体登记):∈ ENV_GIFTS 且 ∉ ENV_ECONOMY(import 期
+    互斥校验半边显式断言);阵营轴 spec = faction '仙舟'(desc【仙舟】
+    直读,阵营羁绊名非角色名,与卡名剥「概念股」后缀的 ENV_FACTION 派生
+    值双源同值)+ star 1(先验,desc 未标星);随机装备 = ('简易',)
+    (desc「初始简易装备」类别明文,单数叙述默认 1 件;economy.md「概念股
+    送装备件」四卡线索名单含仙舟→折叠小刀,先验随 fixed_hypothesis 家族
+    键在册,登记行零新增申报)。族内第八实例,与追击/燃血/能量/列车同行/
+    银河学者/贝洛伯格/星间旅人登记行同构仅值异;odds 键 env_1008 随批
+    追加进家族常量。"""
+    assert '仙舟概念股' in ENV_GIFTS
+    assert '仙舟概念股' not in ENV_ECONOMY
+    grant = ENV_GIFTS['仙舟概念股']
+    assert grant.chars_random_immediate == \
+        (RandomCharSpec(faction='仙舟', star=1),)
+    assert grant.equips_random_immediate == ('简易',)
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        ENV_FACTION_REFRESH_ODDS_UNMODELED_KEYS,
+    )
+    assert 'env_1008_faction_refresh_odds_unmodeled' in \
+        ENV_FACTION_REFRESH_ODDS_UNMODELED_KEYS, \
+        'odds 失真键随批追加(家族常量收 env_1001..env_1008)'
+
+
+def test_xianzhou_faction_pool_matches_registry_and_validates() -> None:
+    """仙舟域登记校验 + 静态基底池(概念股族展开卡登记约定;gain-chain.md
+    §3 随机支段:静态基底 = 注册表派生,牌库时点过滤在 grant_char_pool
+    层):仙舟概念股过 _validate_env_gifts 现行全套(含 _validate_random_
+    char_spec 阵营轴分支——轴互斥/星级域/池非空,「仙舟」阵营域非空天然
+    通过);random_char_pool 阵营 spec 现值 = chars_by_faction('仙舟')
+    名集现算比对(注册表派生非快照不手抄;本域无开拓者条目,双形态合并
+    对本域零作用;池规模只记注释零断言值——现值 9 名,随版本正常变动);
+    显式断言专家成员'青雀'/'停云' ∈ 静态基底池(基底 = 注册表全域,专家
+    剔除只发生在 grant_char_pool 牌库时点层——分层职责锁,防两层语义
+    混写);双阵营成员'丹恒·饮月'/'彦卿' ∈ 池照发(列车同行/狼狩域
+    共享成员,各卡采样域独立派生)。"""
+    cw_investments._validate_env_gifts()
+    spec = ENV_GIFTS['仙舟概念股'].chars_random_immediate[0]
+    expected = {c.name for c in chars_by_faction('仙舟')}
+    assert set(random_char_pool(spec)) == expected, \
+        '静态基底池 = chars_by_faction 全域(注册表现算双射)'
+    assert '青雀' in random_char_pool(spec) \
+        and '停云' in random_char_pool(spec), \
+        '专家在静态基底池(过滤归 grant_char_pool 层,分层职责)'
+    assert '丹恒·饮月' in random_char_pool(spec) \
+        and '彦卿' in random_char_pool(spec), \
+        '双阵营共享成员在池照发'
+    assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
