@@ -18,12 +18,15 @@ kernel/test_cw_investments.py 随机赠卡家族段〔超限只读复用〕)。
   cost/star 可选化影响。
 
 族展开续写面 = 概念股族展开卡登记约定(燃血概念股 id 1002 族内第二实例/
-能量概念股 id 1003 第三实例/列车同行概念股 id 1004 第四实例,均与追击
-登记行同构仅值异;正本 = fields.md §5.2 效果缺口与载体登记):登记形状锁
+能量概念股 id 1003 第三实例/列车同行概念股 id 1004 第四实例/银河学者
+概念股 id 1005 第五实例,均与追击登记行同构仅值异;正本 = fields.md
+§5.2 效果缺口与载体登记):登记形状锁
 + 域校验与池派生现算比对。列车同行批随行落地「开拓者双形态角色位合并
 约定」(牌库中开拓者占单一角色位,random_char_pool 尾部剔除键侧条目,
 采样即发放名 = 值侧形态恒欢愉;economy.md §8):合并机制锁 + 既有 cost
-轴/能量域锁的池期望值同步按合并后口径现算。
+轴/能量域锁的池期望值同步按合并后口径现算。银河学者域现值无开拓者
+条目、无独立单位成员,合并对本域零作用,池 = 原始域(双阵营成员真理
+医生照发,「姬子·启行」定谳同案)。
 """
 from __future__ import annotations
 
@@ -259,3 +262,41 @@ def test_dual_form_merge_pool_construction() -> None:
         - {'开拓者·记忆'}
     assert set(random_char_pool(RandomCharSpec(faction='能量'))) == \
         energy_expected, '能量域直构 spec 同收口(剔除开拓者·记忆)'
+
+
+def test_yinhe_concept_stock_entry_shape() -> None:
+    """银河学者概念股登记形状锁(概念股族展开卡登记约定,正本 = fields.md
+    §5.2 效果缺口与载体登记):∈ ENV_GIFTS 且 ∉ ENV_ECONOMY(import 期
+    互斥校验半边显式断言);阵营轴 spec = faction '银河学者'(desc
+    【银河学者】直读,阵营羁绊名非角色名,与卡名剥「概念股」后缀的
+    ENV_FACTION 派生值双源同值)+ star 1(先验,desc 未标星);随机装备
+    = ('简易',)(desc「初始简易装备」类别明文,单数叙述默认 1 件,
+    装备身份零先验——economy.md「概念股送装备件」四卡线索名单不含银河
+    学者,均匀 v0 + 按卡固定假说随家族披露键待校准)。族内第五实例,
+    与追击/燃血/能量/列车同行登记行同构仅值异。"""
+    assert '银河学者概念股' in ENV_GIFTS
+    assert '银河学者概念股' not in ENV_ECONOMY
+    grant = ENV_GIFTS['银河学者概念股']
+    assert grant.chars_random_immediate == \
+        (RandomCharSpec(faction='银河学者', star=1),)
+    assert grant.equips_random_immediate == ('简易',)
+
+
+def test_yinhe_faction_pool_matches_registry_and_validates() -> None:
+    """银河学者域登记校验 + 池派生(概念股族展开卡登记约定;gain-chain.md
+    §3 随机支段:阵营轴 = 规格过滤池):银河学者概念股过 _validate_env_
+    gifts 现行全套(含 _validate_random_char_spec 阵营轴分支——轴互斥/
+    星级域/池非空,「银河学者」阵营域非空天然通过);random_char_pool
+    阵营 spec 现值 = chars_by_faction('银河学者') 名集现算比对(注册表
+    派生非快照不手抄,池规模只记注释零断言值——现值 5 名,随版本正常
+    变动);显式断言'真理医生' ∈ 池(双阵营成员「银河学者、星间旅人」
+    按 factions 轴在池照发,镜像列车同行批'姬子·启行'的定谳断言式;
+    本域无开拓者条目,双形态合并对本域零作用,池 = 原始域)。"""
+    cw_investments._validate_env_gifts()
+    spec = ENV_GIFTS['银河学者概念股'].chars_random_immediate[0]
+    expected = {c.name for c in chars_by_faction('银河学者')}
+    assert set(random_char_pool(spec)) == expected, \
+        '阵营轴池 = chars_by_faction 全域(注册表现算双射,合并对本域零作用)'
+    assert '真理医生' in random_char_pool(spec), \
+        '双阵营成员在池照发(实机知识定谳)'
+    assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
