@@ -438,3 +438,41 @@ def test_bridge_reject_no_trigger() -> None:
         f'席满拒落: {result}'
     assert gs.unlocked_experts.value in (None, ()), '零解锁写(早退不经判据)'
     assert gs.write_seq == seq_before, '拒落零写'
+
+
+# ============================================================ 占位注记渲染器
+# (G 组摘要 = GiftGrant 发放形状字段全量渲染,10 字段中 9 渲染 +
+# sell_value_note 显式排除;正本 = game_state/fields.md §5.2 效果缺口与
+# 载体登记,语义 = 「概念股族模式卡登记约定」——在册裸「GiftGrant」
+# 标记债(非渲染字段条目只露裸标记)同批清偿,裸标记回归 = 红。)
+
+
+def test_portal_placeholder_grant_shape_full_fields() -> None:
+    """占位注记全字段段锁(fields.md §5.2 效果缺口与载体登记:渲染
+    登记形状静态值,不渲染运行期采样身份):在册代表卡逐段断言——
+    追击概念股 随机[阵营追击@1星]+随机装备[简易](阵营轴首例,渲染
+    格 = 阵营<名>@<星>星)/ 火药味 道具段(数量 = 元素重复逐元素)/
+    红钻贵族 即时装备段 / 人才引进 随机[4费@1星] 段(费用轴渲染格)/
+    特权阶级 定时道具段(件@节点键)/ 人才储备 开局替换段——任一卡
+    退化为裸「GiftGrant」标记 = 本锁红(裸标记债回归)。"""
+    from sr_od.application.currency_war.kernel.cw_effect_inventory import (
+        _portal_placeholder_spec,
+    )
+    cases = {
+        '追击概念股': ('随机[阵营追击@1星]', '随机装备[简易]'),
+        '火药味': ('道具[简易武装箱、简易武装箱]',),
+        '红钻贵族': ('即时装备[红钻]', '道具[简易武装箱]'),
+        '人才引进': ('随机[4费@1星]',),
+        '特权阶级': ('定时道具[特权武装箱@2-1]',),
+        '人才储备': ('随机[3费@1星;3费@1星;3费@1星]', '开局替换'),
+    }
+    for env_name, segments in cases.items():
+        spec = _portal_placeholder_spec(env_name)
+        assert spec is not None
+        assert '未入模占位' in spec.notes, f'{env_name} 占位形保留'
+        for seg in segments:
+            assert seg in spec.notes, \
+                f'{env_name} notes 缺段 {seg!r}: {spec.notes}'
+        # 裸标记回归:段列表必须随渲染字段出现(登记形状可见)
+        body = spec.notes.split('GiftGrant', 1)[1]
+        assert body.strip(' ;'), f'{env_name} 裸 GiftGrant 标记(段缺失)'

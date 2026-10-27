@@ -27,6 +27,14 @@ fail-closed 零写 + 缺陷行 / 在场判定覆盖 deployed 与溢出位。
 (回调宿主镜像);锁面 7(sim 追加链)归 sim/cw_sim_backend/(流程级镜像);
 锁面 3/4(写门三分支/触发链)归 operations/cw_screen/test_plane_intel_pipeline.py
 与 kernel/cw_screen_report/test_plane_intel.py。
+
+再追加面 = 概念股族模式卡(阵营随机赠卡 + 随机简易装备;正本 =
+game_state/gain-chain.md §3 随机支/随机装备支段 + fields.md §5.2 效果缺口
+与载体登记,语义 = 「概念股族模式卡登记约定」):阵营支发放(阵营池
+现算比对 + 采样子链不进失配网)与绑定门非绑定态(零 done 键 +
+``env_equip_random:`` 前缀);绑定态回归面 = 存量
+kernel/test_gain_chain.py 随机装备通道段三锁(超限文件,禁追加,跑绿
+即回归判据)。
 """
 from __future__ import annotations
 
@@ -55,6 +63,9 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     consume_defect_sink,
     deployed_view_sequential,
     set_defect_sink,
+)
+from sr_od.application.currency_war.kernel.cw_investments import (
+    ENV_GIFTS,
 )
 
 _ENV = DOT_CONTRACT_ENV
@@ -663,3 +674,71 @@ def test_affix_disable_rust_release_unfollows() -> None:
     after = rust_release_active(
         sorted(build_equip_env_signals(gs).enemy_affixes), True)
     assert after is False, '删除后:豁免解除(名单自动跟随)'
+
+
+# ============================================================ 概念股族
+# (阵营随机赠卡 + 随机简易装备;正本 = game_state/gain-chain.md §3 随机支
+# /随机装备支段 + fields.md §5.2 效果缺口与载体登记,语义 = 「概念股族
+# 模式卡登记约定」。绑定门:ENV_BOSS_GRANTS 成员(劳务派遣合同)绑定态
+# 行为逐位不变 = 存量 kernel/test_gain_chain.py 随机装备通道段三锁辖域,
+# 此处只锁非绑定态(追击概念股)。)
+
+_CONCEPT_ENV = '追击概念股'
+
+
+def _make_gs_with_equips() -> GameState:
+    """直构容器(bench 9 空槽 + equips 空库):装备腿接收面。"""
+    gs = _make_gs()
+    gs.observe(gs.equips, [], sig=_SIG_OBS)
+    return gs
+
+
+def test_concept_stock_faxis_char_grant_leg(rows_sink: _RowSink) -> None:
+    """阵营支发放腿(gain-chain.md §3 随机支段:阵营轴 = 规格过滤池掷骰,
+    两族同一循环同一前缀):固定种子 rng 直构 → bench 追加 1 张 1★ 且名
+    ∈ 阵营池现算集(random_char_pool 阵营 spec = chars_by_faction('追击')
+    注册表派生,不手抄);效果串 ``env_gift_random:<名>@1star``(星级 =
+    spec.star 先验);锚定容器 + 采样子链 rand=True → 写照常生效且不进
+    失配网(随机态语义,首观察静默覆盖)。期望名从同 seed 现算(单一
+    来源,不手抄)。"""
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        random_char_pool,
+    )
+    gs = _make_gs_with_equips()
+    gs.prep_anchored = True
+    pool = random_char_pool(ENV_GIFTS[_CONCEPT_ENV].chars_random_immediate[0])
+    expected = random.Random(20261027).choice(pool)
+    out = on_env_gained(gs, None, _CONCEPT_ENV, rand=False, sig=_SIG,
+                        rng=random.Random(20261027))
+    assert out[0] == f'env_gift_random:{expected}@1star', '效果串前缀+星级'
+    assert _bench_units(gs) == [(expected, 1)], '落席 1 张,星级 = 先验 1'
+    assert rows_sink.kinds() == [], '随机态写不进失配网,零缺陷行'
+
+
+def test_concept_stock_random_equip_leg_unbound_no_done(
+        rows_sink: _RowSink) -> None:
+    """绑定门非绑定态(gain-chain.md §3 随机装备支段:非 ENV_BOSS_GRANTS
+    成员零绑定):追击概念股(非成员)随机装备腿 → 效果串
+    ``env_equip_random:<名>`` 前缀(与绑定态 ``env_star_grant:`` 分域)、
+    env_grants_done 无 star_grant# 键(非成员零绑定写,治「无条件绑定
+    等第二个消费者」缺陷);装备照常入栏且名 ∈ 类别池现算集
+    (equips_by_category('简易') 注册表派生,不手抄)。两腿期望值从同
+    seed 现算(字符腿先掷、装备腿同 rng 续掷,与生产消费序一致)。"""
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        equips_by_category,
+        random_char_pool,
+    )
+    gs = _make_gs_with_equips()
+    r = random.Random(20261027)
+    expected_char = r.choice(random_char_pool(
+        ENV_GIFTS[_CONCEPT_ENV].chars_random_immediate[0]))
+    expected_eq = r.choice(equips_by_category('简易'))
+    out = on_env_gained(gs, None, _CONCEPT_ENV, rand=False, sig=_SIG,
+                        rng=random.Random(20261027))
+    assert out == (f'env_gift_random:{expected_char}@1star',
+                   f'env_equip_random:{expected_eq}'), \
+        '两腿效果串:非绑定前缀 env_equip_random:'
+    assert gs.equips.value == [expected_eq], '装备入栏(类别池现算)'
+    assert gs.env_grants_done.value is None, \
+        '非绑定态零 done 键(无 star_grant# 绑定)'
+    assert rows_sink.kinds() == [], '正常路径零申报行'
