@@ -51,6 +51,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
     sell,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.sell_candidates import (
+    FACE_REGULAR,
     INTEREST_MARGIN_PER_ROUND,
     MERGE_PROGRESS_X2_SLOT,
     REJECT_NO_CANDIDATES,
@@ -419,6 +420,109 @@ class TestChannelRemap:
             if spec.legacy_channel is not None:
                 assert spec.legacy_channel in SELL_CHANNELS
         assert len(SELL_SCENARIOS) == 8   # 八场景(店内侧变现行已退役)
+
+
+# ============================================================
+# 终局键集标签命中件来金资格增补(design 2026-10-26-swap-channel-unified
+# §2.8 堵回降口二;排除落点 = 装配 A 身份段,机制面锚另见
+# test_sell_window_launch.py)
+# ============================================================
+
+#: 泄露样本帧锚(万敌单C 锁定截断帧):义务基座 hoard(19)> cap_hold
+#: (lv5 = 14),非名单标签件(布洛妮娅,燃血/夜之半神标签)按费用序被
+#: 裁出基座保护面——身份段增补前该件可经全部来金通道换金(增补前候选
+#: 现读实证);佩拉 = 零标签对照件(同一帧在池)。
+_SWDC = '万敌单C'
+_BLN = '布洛妮娅'
+_PEL = '佩拉'
+
+
+class TestTerminalKeyLabelExclusion:
+
+    def _truncation_gs(self, *, bench, front=('万敌',),
+                       back=('三月七',)):
+        """万敌单C 锁定截断帧(plane2 保护域,锁线名单 = 万敌单C
+        core∪shared):cap_hold 由容器派生链现算,义务基座截断使标签件
+        不经既有基座排除 = 增补排除谓词的真实泄露面。"""
+        sess = StrategySession()
+        gs = cw4_gs(sess, plane=2, round_num=6, node='prep', level=5,
+                    bench=[cw4_bc(n) for n in bench],
+                    front_row=[_fu(n) for n in front],
+                    back_row=[_fu(n) for n in back])
+        state_of(gs).plane2_started = True
+        write_line_lock(gs, _SWDC)
+        return gs
+
+    def test_face_regular_channel_closure_anchor_list(self):
+        """通道闭集锚:FACE_REGULAR 通道逐一点名(SCENE_SPECS 闭集派生)
+        ——新增常规面通道会撑破本清单,防「装配 A 身份段追加即逐通道
+        自动覆盖」的声明静默失守(通道闭集单一源 = SCENE_SPECS)。"""
+        regular = {s for s, spec in SCENE_SPECS.items()
+                   if spec.face == FACE_REGULAR}
+        assert regular == {'ore_make_room', 'shop_swap', 'c1_make_room',
+                           'session_funding', 'node_end_interest',
+                           'levelup_liquidate_prep'}
+
+    @pytest.mark.parametrize('scene', ['ore_make_room', 'shop_swap',
+                                       'c1_make_room', 'session_funding',
+                                       'node_end_interest',
+                                       'levelup_liquidate_prep'])
+    def test_label_hit_bench_piece_excluded_per_channel(self, scene):
+        """六通道逐一点名锚:bench 标签命中件(布洛妮娅,燃血无已达成
+        档 = 真实泄露形态)在各通道候选中被排除;零标签对照件(佩拉)
+        同帧在池——排除面 = 标签命中,非通道空转(design §2.8 堵回降口
+        二,bench 侧含内)。"""
+        gs = self._truncation_gs(bench=[_BLN, _PEL])
+        cands, why = evaluate_sell_candidates(gs, scene)
+        assert why == ''
+        assert _BLN not in _names(cands), \
+            f'{scene}: bench 标签命中件禁换金(身份段增补排除)'
+        assert _PEL in _names(cands), \
+            f'{scene}: 零标签件不受排除影响(纯过渡件放行锚)'
+
+    @pytest.mark.parametrize('scene', ['node_end_interest',
+                                       'levelup_liquidate_prep'])
+    def test_label_hit_field_piece_income_pool_excluded(self, scene):
+        """来金族场上支:无已达成档的标签命中件(布洛妮娅在场,燃血
+        0 档)不入候选池——现行 ``is_field_irrelevant_unit`` 仅资格级
+        覆盖「有已达成档」件,真实泄露 = 无档标签件,由装配 A 身份段
+        增补排除承接(design §2.8;bench 对照件佩拉同帧在池)。"""
+        gs = self._truncation_gs(bench=[_PEL], front=(_BLN, '万敌'))
+        cands, why = evaluate_sell_candidates(gs, scene)
+        assert why == ''
+        assert _BLN not in _names(cands), \
+            f'{scene}: 场上无档标签件不入来金候选池(泄露面闭合)'
+        assert _PEL in _names(cands), f'{scene}: bench 零标签件放行'
+
+    def test_tier_carrier_bench_label_piece_also_rejected(self):
+        """有档标签件同样拒(谓词不看激活档位的另一面:已承载档位不
+        豁免换金):锁定双王圣杯帧 bench 远坂凛(圣杯标签,板面圣杯 2 人
+        一档已激活)不入晶矿腾位候选;纯过渡件(爻光,键集零命中)同帧
+        在池(design §2.8 排除谓词语义 + 教义「哪怕下远坂凛都不能拆
+        能量」)。"""
+        sess = StrategySession()
+        gs = cw4_gs(sess, plane=2, round_num=6, node='prep', level=5,
+                    bench=[cw4_bc('远坂凛'), cw4_bc('爻光')],
+                    front_row=[_fu('吉尔伽美什'), _fu('Saber'), _fu('停云')],
+                    back_row=[_fu('藿藿')])
+        state_of(gs).plane2_started = True
+        write_line_lock(gs, '双王圣杯')
+        cands, why = evaluate_sell_candidates(gs, 'ore_make_room')
+        assert why == ''
+        assert '远坂凛' not in _names(cands), \
+            '有档标签件同拒(排除不看激活档位,承载档不豁免)'
+        assert '爻光' in _names(cands), '纯过渡件放行(排除不越标签命中面)'
+
+    def test_self_rescue_exemption_preserved(self):
+        """自救豁免保留(design §2.8 自救豁免申报):FACE_SELF_RESCUE
+        不经装配 A 身份段、不受排除面约束——bench 标签件(布洛妮娅)经
+        自救仍可卖(经济安全阀豁免;bench 件不在板上,不影响板面恢复
+        路径,板上标签件离场仅经换血对)。"""
+        gs = self._truncation_gs(bench=[_BLN, _PEL])
+        cands, why = evaluate_sell_candidates(gs, 'self_rescue')
+        assert why == ''
+        assert {_BLN, _PEL} <= set(_names(cands)), \
+            '自救真全量面豁免标签排除(FACE_SELF_RESCUE 直通)'
 
 
 # ============================================================

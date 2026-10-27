@@ -344,6 +344,43 @@ class TestWindowLifecycle:
         assert ct.get('close_on_switch') == 1
 
 
+# ===== 装配 A 身份段·终局键集标签命中腿(design 2026-10-26-swap-channel-
+# unified §2.8 堵回降口二,落点钉死 = identity_exclusions)=====
+
+
+class TestIdentityLabelOverlay:
+    """终局键集标签命中腿机制面:锁定帧键集标签件入身份段(不看激活
+    档位),未锁定帧键集空 = 谓词零面(候选面行为锚另见 criteria/
+    test_sell_candidates.py 六通道逐一点名)。"""
+
+    def test_overlay_present_when_locked_absent_when_unlocked(self):
+        """落点钉死锚:锁定双王圣杯(键集 = form_tiers 键{命运圣杯,
+        能量})帧,键标签件(停云/远坂凛)入 ``identity_exclusions``——
+        经 sell_exclusions 为全部常规通道共用;未锁定帧(P2 无锁态,
+        保护集不含键标签件)同件不入集 = 排除谓词零面(无终局键集即无
+        保护对象,§2.8 谓词辖域随锁定态)。"""
+        from sr_od.application.currency_war.kernel.cw_comps import get_comp
+        comp = get_comp('双王圣杯')
+        locked = StrategySession()
+        st = state_of(locked)
+        st.cw4_counters = {}
+        st.target_comp = comp
+        st.v3_intention = IntentionState(locked_comp=comp.name)
+        # 保护集域轴挂容器宿主态(session_scope.plane2_started_of 读域);
+        # P2 域关闭四体系全体腿,键标签件(停云=仙舟)不被保护集掩蔽。
+        state_of(game_state_of(locked)).plane2_started = True
+        excl = sell_gate.identity_exclusions(locked, ())
+        assert {'停云', '远坂凛'} <= excl, \
+            '锁定帧键集标签件入身份段(不看激活档位,bench 侧含内)'
+        unlocked = StrategySession()
+        st2 = state_of(unlocked)
+        st2.cw4_counters = {}
+        state_of(game_state_of(unlocked)).plane2_started = True
+        excl2 = sell_gate.identity_exclusions(unlocked, ())
+        assert '停云' not in excl2 and '远坂凛' not in excl2, \
+            '未锁定帧无终局键集 = 标签排除零面(不越辖域保护)'
+
+
 # ===== W1:同 visit 卖回全通道被禁(P78-1;shop_sell 报告 W1)=====
 
 

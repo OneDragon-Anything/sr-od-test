@@ -45,6 +45,7 @@ from sr_od.application.currency_war.kernel.cw_intention import (
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionDeployMoveParam,
+    CwActionSellBenchParam,
     CwActionSellDeployedParam,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
@@ -483,6 +484,46 @@ def test_emit_bond_gate_bench_exhausted_novictim_no_forcing() -> None:
                    for e in out), '无可行组 = 零动作(无强推)'
     assert st.cw4_counters.get('bond_gate_reject_novictim') == 1, \
         f'拒绝侧闭集 novictim(换入候选耗尽),实得 {st.cw4_counters}'
+
+
+def test_emit_bond_gate_label_victim_pair_form_p60_observer() -> None:
+    """义务集豁免×P60 换手病理交互观测锚(design 2026-10-26-swap-channel-
+    unified §2.8):二级标签件(停云,能量标签,非名单)换血发射形态 =
+    **换血伴随同帧换入**——发射面只产对内首对 SellDeployed、零
+    SellBenchParam(无单独卖出标签件的发射形态;bench 侧标签件换金面
+    已由装配 A 身份段封死,来金侧单帧锚见 test_sell_candidates 六通道
+    逐一点名),载荷保留对骨架(sell=[停云] ↔ up=[Saber] 1:1);观测键
+    = bond_gate_tier(accept 首达腿)+ bond_gate_victim_tier_二级
+    (换人对计数,3.5 预测表逐帧对照可检出异常换手频次);组级支撑数
+    净非降由配对骨架承保(§2.8 段一)。"""
+    session, st = _locked_session('双王圣杯')
+    bench = [_SBR]
+    front = [_GIL, _RIN, _HUO]
+    back = [_FUX, _TING]
+    gs = cw4_gs(session, deploy_cap=5, level=5,
+                bench=[cw4_bc(n) for n in bench],
+                front_row=[Unit(char_id=n, star=1) for n in front],
+                back_row=[Unit(char_id=n, star=1) for n in back])
+    frame = mandate.MandateFrame(
+        gold=30, level=5, bench=[cw4_bc(n) for n in bench],
+        deployed=[Unit(char_id=n, star=1) for n in (*front, *back)],
+        deploy_cap=5, node_type=None, stop_flag=False,
+        k_members=(), round_num=2)
+    out = mandate.emit_swap_redeploy(frame, session, gs)
+    sells = [e.action for e in out
+             if isinstance(e.action, CwActionSellDeployedParam)]
+    assert len(sells) == 1 and not any(
+        isinstance(e.action, CwActionSellBenchParam) for e in out), \
+        '发射形态 = 仅对内首对换人卖出,零 bench 卖出' \
+        '(标签件无单独卖出形态,P60 换手面无金损耗循环入口)'
+    payload = st.cw4_m1p_plan_pending
+    assert payload['sell'] == [_TING] and payload['up'] == [_SBR], \
+        f'对骨架载荷(sell↔up 1:1,换血伴随换入;victim = 二级标签件),实得 {payload}'
+    counters = st.cw4_counters
+    assert counters.get('bond_gate_tier') == 1, \
+        f'accept 首达腿分键(圣杯 2→3 二阶激活),实得 {counters}'
+    assert counters.get('bond_gate_victim_tier_二级') == 1, \
+        'victim 层来源分键(换人对计数观测面)'
 
 
 def test_entry_emit_writes_seam_flag() -> None:
