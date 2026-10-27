@@ -92,24 +92,19 @@ def test_zhuiji_concept_stock_entry_shape() -> None:
 def test_random_char_pool_faction_axis_matches_registry() -> None:
     """池派生阵营支(gain-chain.md §3 随机支段:阵营轴 = chars_by_faction
     默认含流派匹配):random_char_pool 阵营 spec 现值 = chars_by_faction
-    ('追击') 名集现算双射(注册表派生,非快照不手抄);池名 ⊆ 注册表;
-    池规模 = 注释性快照(2026-10 时点 8 名),非断言值。"""
+    ('追击') 名集现算双射(注册表派生,非快照不手抄);池名 ⊆ 注册表。"""
     spec = ENV_GIFTS['追击概念股'].chars_random_immediate[0]
     expected = {c.name for c in chars_by_faction('追击')}
     assert set(random_char_pool(spec)) == expected, \
         '阵营轴池 = chars_by_faction 全域(注册表现算双射)'
     assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
-    assert len(expected) == 8, '注释性快照(漂移即提示,非行为断言)'
 
 
 def test_simple_category_equip_pool_nonempty() -> None:
     """简易装备类别池非空(gain-chain.md §3 随机装备支段:类别池 =
     equips_by_category 注册表派生单源):登记类别 '简易' 现值池非空
-    (构建期类别闭集 + 池非空校验已闸,显式断言登记类别可采样);池规模
-    = 注释性快照(2026-10 时点 8 件),非断言值。"""
-    pool = equips_by_category('简易')
-    assert pool, '登记类别池非空(采样腿可达)'
-    assert len(pool) == 8, '注释性快照(漂移即提示,非行为断言)'
+    (构建期类别闭集 + 池非空校验已闸,显式断言登记类别可采样)。"""
+    assert equips_by_category('简易'), '登记类别池非空(采样腿可达)'
 
 
 def test_cost_axis_existing_entries_regression() -> None:
