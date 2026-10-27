@@ -18,8 +18,12 @@ kernel/test_cw_investments.py 随机赠卡家族段〔超限只读复用〕)。
   cost/star 可选化影响。
 
 族展开续写面 = 概念股族展开卡登记约定(燃血概念股 id 1002 族内第二实例/
-能量概念股 id 1003 第三实例,均与追击登记行同构仅值异;正本 = fields.md
-§5.2 效果缺口与载体登记):登记形状锁 + 域校验与池派生现算比对。
+能量概念股 id 1003 第三实例/列车同行概念股 id 1004 第四实例,均与追击
+登记行同构仅值异;正本 = fields.md §5.2 效果缺口与载体登记):登记形状锁
++ 域校验与池派生现算比对。列车同行批随行落地「开拓者双形态角色位合并
+约定」(牌库中开拓者占单一角色位,random_char_pool 尾部剔除键侧条目,
+采样即发放名 = 值侧形态恒欢愉;economy.md §8):合并机制锁 + 既有 cost
+轴/能量域锁的池期望值同步按合并后口径现算。
 """
 from __future__ import annotations
 
@@ -124,8 +128,9 @@ def test_cost_axis_existing_entries_regression() -> None:
     cw_investments._validate_env_gifts()
     cw_investments._validate_env_deploy_lock_grants()
     assert set(random_char_pool(RandomCharSpec(cost=4))) == \
-        {c.name for c in chars_by_cost(4)}, \
-        'cost 轴池 = 费用档全档(可选化后缺省星级行为不变)'
+        {c.name for c in chars_by_cost(4)} - {'开拓者·记忆'}, \
+        'cost 轴池 = 费用档全档剔除开拓者·记忆(可选化缺省星级行为不变,' \
+        '开拓者双形态按角色位合并)'
 
 
 def test_ranxue_concept_stock_entry_shape() -> None:
@@ -181,12 +186,76 @@ def test_nengliang_faction_pool_matches_registry_and_validates() -> None:
     §3 随机支段:阵营轴 = chars_by_faction 默认含流派匹配):能量概念股
     过 _validate_env_gifts 现行全套(含 _validate_random_char_spec 阵营轴
     分支——轴互斥/星级域/池非空,「能量」流派域非空天然通过);
-    random_char_pool 阵营 spec 现值 = chars_by_faction('能量') 名集现算
-    双射(注册表派生,非快照不手抄;池规模只记注释不做断言值——现值
-    9 名含开拓者·欢愉/开拓者·记忆双形态条目,随版本正常变动)。"""
+    random_char_pool 阵营 spec 现值 = chars_by_faction('能量') 名集剔除
+    '开拓者·记忆' 现算比对(开拓者双形态按角色位合并约定,采样域即发放
+    域恒发欢愉;注册表派生非快照不手抄,池规模只记注释零断言值——现值
+    8 名,随版本正常变动)。"""
     cw_investments._validate_env_gifts()
     spec = ENV_GIFTS['能量概念股'].chars_random_immediate[0]
-    expected = {c.name for c in chars_by_faction('能量')}
+    expected = {c.name for c in chars_by_faction('能量')} - {'开拓者·记忆'}
     assert set(random_char_pool(spec)) == expected, \
-        '阵营轴池 = chars_by_faction 全域(注册表现算双射)'
+        '阵营轴池 = chars_by_faction 全域剔除开拓者·记忆(双形态合并现算)'
     assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
+
+
+def test_lieche_concept_stock_entry_shape() -> None:
+    """列车同行概念股登记形状锁(概念股族展开卡登记约定,正本 = fields.md
+    §5.2 效果缺口与载体登记):∈ ENV_GIFTS 且 ∉ ENV_ECONOMY(import 期
+    互斥校验半边显式断言);阵营轴 spec = faction '列车同行'(desc
+    【列车同行】直读,阵容羁绊名非角色名,与卡名剥「概念股」后缀的
+    ENV_FACTION 派生值双源同值)+ star 1(先验,desc 未标星);随机装备
+    = ('简易',)(desc「初始简易装备」类别明文,单数叙述默认 1 件)。
+    族内第四实例,与追击/燃血/能量登记行同构仅值异。"""
+    assert '列车同行概念股' in ENV_GIFTS
+    assert '列车同行概念股' not in ENV_ECONOMY
+    grant = ENV_GIFTS['列车同行概念股']
+    assert grant.chars_random_immediate == \
+        (RandomCharSpec(faction='列车同行', star=1),)
+    assert grant.equips_random_immediate == ('简易',)
+
+
+def test_lieche_faction_pool_matches_registry_and_validates() -> None:
+    """列车同行域登记校验 + 池派生(概念股族展开卡登记约定 + 开拓者双
+    形态角色位合并约定;gain-chain.md §3 随机支段:阵营轴 = 规格过滤池):
+    列车同行概念股过 _validate_env_gifts 现行全套(含
+    _validate_random_char_spec 阵营轴分支——轴互斥/星级域/池非空,
+    「列车同行」阵营域非空天然通过);random_char_pool 阵营 spec 现值 =
+    chars_by_faction('列车同行') 名集剔除'开拓者·记忆' 现算比对(合并
+    修正主锁:开拓者双形态按角色位合并,采样即发放名恒欢愉;注册表派生
+    非快照不手抄,池规模只记注释零断言值——现值 7 名,随版本正常变动);
+    显式断言'开拓者·欢愉' ∈ 池(发放恒欢愉形态)、'开拓者·记忆' ∉ 池
+    (键侧剔除)、'姬子·启行' ∈ 池(独立单位照发定谳)。"""
+    cw_investments._validate_env_gifts()
+    spec = ENV_GIFTS['列车同行概念股'].chars_random_immediate[0]
+    expected = {c.name for c in chars_by_faction('列车同行')} \
+        - {'开拓者·记忆'}
+    assert set(random_char_pool(spec)) == expected, \
+        '阵营轴池 = chars_by_faction 全域剔除开拓者·记忆(双形态合并现算)'
+    assert '开拓者·欢愉' in random_char_pool(spec), \
+        '发放恒欢愉形态(采样即发放名)'
+    assert '开拓者·记忆' not in random_char_pool(spec), \
+        '键侧条目剔除(牌库单一角色位)'
+    assert '姬子·启行' in random_char_pool(spec), \
+        '独立单位在候选内照发(实机知识定谳)'
+    assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
+
+
+def test_dual_form_merge_pool_construction() -> None:
+    """开拓者双形态按角色位合并机制锁(开拓者双形态角色位合并约定,
+    正本 = fields.md §5.2 效果缺口与载体登记 + economy.md §8:键侧条目
+    剔除在 type_tag 过滤之后,消费 = random_char_pool 尾部统一收口):
+    4 费档池 = chars_by_cost(4) 剔除'开拓者·记忆'现算(人才引进采样
+    概率随合并向实机真值收敛);3 费档无开拓者条目 = chars_by_cost(3)
+    全档回归(合并对无双形态档零扰);能量域直构 spec 池 = chars_by_
+    faction('能量') 剔除'开拓者·记忆'现算(已落地能量概念股登记条目随
+    合并自动收敛)。池规模只记注释零断言值(现值 13/14/8,随版本变动)。"""
+    assert set(random_char_pool(RandomCharSpec(cost=4))) == \
+        {c.name for c in chars_by_cost(4)} - {'开拓者·记忆'}, \
+        '4 费档剔除开拓者·记忆(双形态合并)'
+    assert set(random_char_pool(RandomCharSpec(cost=3))) == \
+        {c.name for c in chars_by_cost(3)}, \
+        '3 费档无开拓者 = 全档回归(合并零扰)'
+    energy_expected = {c.name for c in chars_by_faction('能量')} \
+        - {'开拓者·记忆'}
+    assert set(random_char_pool(RandomCharSpec(faction='能量'))) == \
+        energy_expected, '能量域直构 spec 同收口(剔除开拓者·记忆)'

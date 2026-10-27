@@ -45,3 +45,12 @@ def test_nengliang_concept_stock_gift_tier_off() -> None:
     不产生策略层双重计分,与 random_faction_gift_value 随机阵营路径
     正交。"""
     assert gift_hit_tier(ENV_GIFTS['能量概念股']) == 'off'
+
+
+def test_lieche_concept_stock_gift_tier_off() -> None:
+    """列车同行概念股估值档恒 'off'(概念股族展开卡登记约定,正本 =
+    fields.md §5.2 效果缺口与载体登记,追击首例同锁第四实例):随机规格
+    (阵营轴)/随机装备条目不入档位机器估值域 → 恒 off——族展开登记
+    不产生策略层双重计分,与 random_faction_gift_value 随机阵营路径
+    正交。"""
+    assert gift_hit_tier(ENV_GIFTS['列车同行概念股']) == 'off'

@@ -309,11 +309,12 @@ def test_resolver_explicit_rng_beats_provider(seeded_provider) -> None:
 def test_empty_pool_guard_blocks_then_recovers(
         monkeypatch: pytest.MonkeyPatch, seeded_provider) -> None:
     """池空守卫(设计 §2.3 条件 6,不可达防御语义钉死):注册表漂移态
-    (monkeypatch 直构池空)→ 达标阈值零发放、done 零追加(整体缓发,
-    禁「具名腿已发、done 未封」半发放态);恢复后同计数下批正常发放
-    ——防未来注册表/校验重构把守卫无声删改时无红灯。"""
-    monkeypatch.setattr(cw_env_grants, 'chars_by_faction',
-                        lambda faction, include_flows=True: [])
+    (monkeypatch 直构池空,patch 目标 = 生产端池派生单一源
+    ``cw_env_grants.random_char_pool``——晶矿随机腿池与随机赠卡家族同源
+    取池)→ 达标阈值零发放、done 零追加(整体缓发,禁「具名腿已发、
+    done 未封」半发放态);恢复后同计数下批正常发放——防未来注册表/校验
+    重构把守卫无声删改时无红灯。"""
+    monkeypatch.setattr(cw_env_grants, 'random_char_pool', lambda spec: [])
     gs = _make_gs(bench=[], ore_open_total=_FIRST)
     calls = _record_writes(gs, monkeypatch)
     assert check_env_ore_open_grants(gs, _SIG) == (), '池空整体缓发'

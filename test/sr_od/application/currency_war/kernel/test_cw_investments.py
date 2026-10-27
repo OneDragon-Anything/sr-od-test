@@ -186,13 +186,16 @@ def test_env_reroll_names_member_validation(
 
 
 def test_random_char_pool_derivation_properties() -> None:
-    """池派生性质测试(T-10 设计 §4 测试 2,注册表现算对照):空 type_tag =
-    费用档全员旁路(池 = 4 费全档);非空 type_tag = char_type 含标签
-    过滤(子集 + 逐名含标签);池名 ⊆ 注册表。池规模 = 注释性快照
-    (2026-10 时点 14 名),非断言值(注册表随版本扩充)。"""
+    """池派生性质测试(T-10 设计 §4 测试 2,注册表现算对照):空 type_tag
+    = 费用档全员旁路,唯开拓者双形态按角色位合并收口(池 = 4 费档剔除
+    '开拓者·记忆'——牌库中开拓者占单一角色位,采样即发放名恒欢愉,
+    economy.md §8);非空 type_tag = char_type 含标签过滤(子集 + 逐名含
+    标签);池名 ⊆ 注册表。池规模 = 注释性快照(2026-10 时点合并后
+    13 名),非断言值(注册表随版本扩充)。"""
     pool_all = random_char_pool(RandomCharSpec(cost=4, star=1))
-    assert set(pool_all) == {c.name for c in chars_by_cost(4)}, \
-        'type_tag 空 = 全档旁路'
+    assert set(pool_all) == {c.name for c in chars_by_cost(4)} \
+        - {'开拓者·记忆'}, \
+        'type_tag 空 = 全档旁路(开拓者双形态按角色位合并剔除键侧)'
     assert set(pool_all) <= CHARACTER_ROSTER
     pool_tag = random_char_pool(RandomCharSpec(cost=4, star=1,
                                                type_tag='输出'))

@@ -166,11 +166,14 @@ def test_bench_unobserved_withhold_no_done(
 def test_grant_seeded_roll_two_writes_same_evidence_sig(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """达标发放(T-19 设计 §2.3 条 8):注确定 rng → bench 追加 1 个 1★
-    角色且名 ∈ 绑定羁绊成员池(期望名同 seed 现算,不手抄);两段写同
-    evidence 同 sig 相邻(角色链在前,done boss 键收尾)。"""
+    角色且名 ∈ 绑定羁绊采样池(期望名同 seed 现算,不手抄;池 = 生产端
+    同源 random_char_pool 现算——腿2 池派生与随机赠卡家族单一源,开拓者
+    双形态按角色位合并,采样即发放名恒欢愉);两段写同 evidence 同 sig
+    相邻(角色链在前,done boss 键收尾)。"""
     gs = _make_gs(bench=[], done=_seed_done())
     pos = (1, _boss_round(1))
-    pool = [c.name for c in chars_by_faction(_FACTION)]
+    pool = cw_investments.random_char_pool(
+        cw_investments.RandomCharSpec(faction=_FACTION, star=1))
     expected = random.Random(20261015).choice(pool)
     calls = _record_writes(gs, monkeypatch)
 

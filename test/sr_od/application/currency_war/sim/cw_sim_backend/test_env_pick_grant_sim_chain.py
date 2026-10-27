@@ -19,9 +19,10 @@ T-46-celue-dashi.md(定稿)§4 锁 5(§2.2(e) 落地形态):
 简易类别一件;同 seed 重放确定性。
 
 再追加面 = 概念股族展开卡(燃血概念股 id 1002 族内第二实例/能量概念股
-id 1003 第三实例,概念股族展开卡登记约定,正本同上):与追击全链同构
-仅值异——期望名改从对应阵营池/简易池现算,选卡助手按环境名参数化
-(追击调用点缺省值不变)。
+id 1003 第三实例/列车同行概念股 id 1004 第四实例,概念股族展开卡登记
+约定,正本同上):与追击全链同构仅值异——期望名改从对应阵营池/简易池
+现算(列车同行域 = 开拓者双形态按角色位合并后 7 名池,采样即发放名
+恒欢愉),选卡助手按环境名参数化(追击调用点缺省值不变)。
 """
 from __future__ import annotations
 
@@ -362,6 +363,49 @@ def test_nengliang_concept_stock_env_pick_grant_sim_chain(
         f'赠卡恰一张且 1★(spec 先验): {granted}'
     assert granted[0][0] in faction_names, \
         f'赠卡名 ∈ 能量阵营池现算集: {granted[0][0]}'
+    assert len(equips) == 1, f'equips 计数 +1: {equips}'
+    assert equips[0] in simple_names, \
+        f'装备名 ∈ 简易类别池现算集: {equips[0]}'
+    before2, after2, equips2 = _run(7)
+    assert (before, after, equips) == (before2, after2, equips2), \
+        '同 seed 重放确定性'
+
+
+_LIECHE_ENV = '列车同行概念股'
+
+
+def test_lieche_concept_stock_env_pick_grant_sim_chain(
+        _isolate_defect_buffer) -> None:
+    """sim 选卡全链第四实例(gain-chain.md §3 随机支/随机装备支段:sim
+    世界真值 = 流键 rng,族展开登记经 kernel 获得链自动生效,零 sim 新
+    代码;概念股族展开卡登记约定 + 开拓者双形态角色位合并约定):选列车
+    同行概念股 → bench = 开局 4 + 列车同行域 1★ 一张(星级 = spec 先验;
+    成员名 ∈ 合并后池现算 = chars_by_faction('列车同行') 剔除
+    '开拓者·记忆',采样即发放名恒欢愉,不手抄)、equips 计数 +1 且名 ∈
+    equips_by_category('简易') 现算集;同 seed 重放确定性(世界发放可
+    重放)。"""
+    from collections import Counter
+    faction_names = {c.name for c in chars_by_faction('列车同行')} \
+        - {'开拓者·记忆'}
+    simple_names = set(equips_by_category('简易'))
+
+    def _run(seed: int) -> tuple[list, list, list]:
+        b, bench_before, bench_after = _pick_concept_stock_backend(
+            seed, _LIECHE_ENV)
+        try:
+            return bench_before, bench_after, list(b.gs.equips.value or [])
+        finally:
+            uninstall_backend()
+
+    before, after, equips = _run(7)
+    granted = list((Counter(after) - Counter(before)).elements())
+    assert len(after) == len(before) + 1, \
+        f'bench 增恰一张(M01 4 + 赠卡 1): {before} -> {after}'
+    assert granted and granted[0][1] == 1, \
+        f'赠卡恰一张且 1★(spec 先验): {granted}'
+    assert granted[0][0] in faction_names, \
+        f'赠卡名 ∈ 列车同行合并池现算集: {granted[0][0]}'
+    assert granted[0][0] != '开拓者·记忆', '发放恒欢愉形态(键侧剔除)'
     assert len(equips) == 1, f'equips 计数 +1: {equips}'
     assert equips[0] in simple_names, \
         f'装备名 ∈ 简易类别池现算集: {equips[0]}'
