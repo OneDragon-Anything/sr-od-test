@@ -222,3 +222,33 @@ def test_qungong_faction_pool_identity_instance() -> None:
     assert set(pool) <= CHARACTER_ROSTER
     assert set(random_char_pool(spec)) == expected, \
         '静态基底同值(两层面在本域重合)'
+
+
+def test_jianyi_faction_pool_expert_filter_instance() -> None:
+    """减益域专家过滤实例锁(牌库时点池约定,概念股族展开卡登记约定,
+    沿狼狩/击破域锁同款三分层断言形态;本域 = 专家域 1 名,域 7 名过滤后
+    6 名):①空解锁容器 → 减益域候选 = chars_by_faction('减益') 名集
+    − {'佩拉'} 现算比对(注册表派生非快照不手抄;池规模只记注释零断言值
+    ——现值 6 名,随版本正常变动;选投资环境在开局、彼时专家结构性未激活
+    [解锁通道全部晚于环境选择,economy.md:96 用户裁定 2026-10-28],过滤后
+    费用 1-5 全档仍覆盖);②解锁 {'佩拉'} → 7 名回归(专家入池时机与商店
+    同源,economy.md §1);③静态基底 random_char_pool 仍含佩拉(专家剔除
+    只发生在 grant_char_pool 层,两层语义不混写);④显式断言'椒丘' ∈ 池
+    (「持续伤害契约」具名发放对象双事实锚——具名 vs 随机字段不相交,
+    具名契约不改变随机池成员资格,沿昼之半神/夜之半神锁'昔涟'/群攻锁
+    '翡翠'显式成员断言先例)。"""
+    spec = RandomCharSpec(faction='减益', star=1)
+    pool = grant_char_pool(_fresh_gs(), spec)
+    expected = {c.name for c in chars_by_faction('减益')} - {'佩拉'}
+    assert set(pool) == expected, \
+        '减益域候选 = 全域剔除未解锁专家(牌库时点过滤)'
+    assert '佩拉' not in pool, \
+        '专家未解锁不入候选(用户裁定 2026-10-28)'
+    assert set(pool) <= CHARACTER_ROSTER
+    unlocked = grant_char_pool(_unlocked_gs(('佩拉',)), spec)
+    assert set(unlocked) == {c.name for c in chars_by_faction('减益')}, \
+        '已解锁专家回到候选(牌库时点口径)'
+    assert '佩拉' in random_char_pool(spec), \
+        '静态基底含全部注册成员(过滤归 grant_char_pool 层,分层职责)'
+    assert '椒丘' in pool, \
+        '具名契约不改随机池成员资格(双事实锚定谳)'

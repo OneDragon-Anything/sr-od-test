@@ -724,3 +724,62 @@ def test_qungong_faction_pool_matches_registry_and_validates() -> None:
     assert '缇宝' in random_char_pool(spec), \
         '双羁绊成员在池照发(flows 双边在册定谳,量子同频零联动)'
     assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
+
+
+# 族展开第十四实例(减益概念股 id 1014;概念股族展开卡登记约定,正本 =
+# fields.md §5.2 效果缺口与载体登记:本域 7 名中佩拉 is_expert=True =
+# 专家域,牌库时点过滤在 cw_pool.grant_char_pool 层开局恒排佩拉——
+# 本文件的池锁锁静态基底面 random_char_pool,过滤语义锁 = cw_pool 镜像
+# test_grant_char_pool.py;域 = flows 轴纯流派域,椒丘为「持续伤害契约」
+# 具名发放对象(具名 vs 随机字段不相交)、千冶·刃 flows「燃血、减益」
+# 双羁绊且 ≠ 专家「刃」,两事实零登记面影响,勿混淆。)
+
+
+def test_jianyi_concept_stock_entry_shape() -> None:
+    """减益概念股登记形状锁(概念股族展开卡登记约定,正本 = fields.md
+    §5.2 效果缺口与载体登记):∈ ENV_GIFTS 且 ∉ ENV_ECONOMY(import 期
+    互斥校验半边显式断言);阵营轴 spec = faction '减益'(desc【减益】
+    直读,流派羁绊名非角色名,与卡名剥「概念股」后缀的 ENV_FACTION 派生
+    值双源同值)+ star 1(先验,desc 未标星);随机装备 = ('简易',)
+    (desc「初始简易装备」类别明文,单数叙述默认 1 件;economy.md 四卡
+    线索名单不含减益 = 装备身份零先验,均匀 v0 + 按卡固定假说随家族披露
+    键待校准,登记行零新增申报)。族内第十四实例,与追击/燃血/能量/列车
+    同行/银河学者/贝洛伯格/星间旅人/仙舟/狼狩/昼之半神/夜之半神/击破/
+    群攻登记行同构仅值异;odds 键 env_1014 随批追加进家族常量。"""
+    assert '减益概念股' in ENV_GIFTS
+    assert '减益概念股' not in ENV_ECONOMY
+    grant = ENV_GIFTS['减益概念股']
+    assert grant.chars_random_immediate == \
+        (RandomCharSpec(faction='减益', star=1),)
+    assert grant.equips_random_immediate == ('简易',)
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        ENV_FACTION_REFRESH_ODDS_UNMODELED_KEYS,
+    )
+    assert 'env_1014_faction_refresh_odds_unmodeled' in \
+        ENV_FACTION_REFRESH_ODDS_UNMODELED_KEYS, \
+        'odds 失真键随批追加(家族常量收 env_1001..env_1014)'
+
+
+def test_jianyi_faction_pool_matches_registry_and_validates() -> None:
+    """减益域登记校验 + 静态基底池(概念股族展开卡登记约定;gain-chain.md
+    §3 随机支段:静态基底 = 注册表派生,牌库时点过滤在 grant_char_pool
+    层):减益概念股过 _validate_env_gifts 现行全套(含 _validate_random_
+    char_spec 流派轴分支——轴互斥/星级域/池非空,「减益」流派域非空天然
+    通过);random_char_pool 阵营 spec 现值 = chars_by_faction('减益')
+    名集现算比对(注册表派生非快照不手抄;本域无开拓者条目,双形态合并
+    对本域零作用;池规模只记注释零断言值——现值 7 名,随版本正常变动;
+    本域为专家域(佩拉 1 名),静态基底含专家 = 仙舟/狼狩/击破型分层
+    职责断言,过滤归 cw_pool 层由镜像授予池锁承载;7 名全部经 flows 轴
+    命中、factions 轴零命中,沿追击/燃血/击破纯流派域锁先例形态);显式
+    断言'千冶·刃' ∈ 静态基底池(flows='燃血、减益' 双羁绊成员照发——
+    镜银河学者锁'真理医生'/群攻锁'缇宝'定谳断言式)。"""
+    cw_investments._validate_env_gifts()
+    spec = ENV_GIFTS['减益概念股'].chars_random_immediate[0]
+    expected = {c.name for c in chars_by_faction('减益')}
+    assert set(random_char_pool(spec)) == expected, \
+        '静态基底池 = chars_by_faction 全域(注册表现算双射)'
+    assert '佩拉' in random_char_pool(spec), \
+        '专家在静态基底池(过滤归 grant_char_pool 层,分层职责)'
+    assert '千冶·刃' in random_char_pool(spec), \
+        '双羁绊成员在池照发(flows 双边在册定谳)'
+    assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
