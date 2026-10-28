@@ -9,17 +9,18 @@ strategies/impl/mandate_v1/criteria/levelup.py,发射位 = entry 备战
    P1 与未锁定期零主动升级/板满等待件带内不升——人口位臂删除行为锁);
 2. 发射形态(资金线 defer 零购买/血本位不足零购买/血足整批发射/
    等级帽拒发/凑金一卖 → 下一帧整批);
-3. 保留语义(资金线门真值表/P21 危机带/金支出出口/凑金域分派)。
+3. 保留语义(资金线门真值表/「无 hp 支」负向守卫/金支出出口/凑金域分派)。
 
 构帧纪律:锁定线经 session_scope.write_line_lock(3.1 键,同帧种子后写);
 plane2_started 经 node_hist_pos 直赋 + handle_node_boundary 置位(单调
 水位驱动,3.1 口径)。
 
 P2 血带节(原 P2 低血带授权域统一件):单一语义权威 = 生产符号
-(谓词/授权闩 = statefn.predicates,停付面 = criteria/levelup,
-分键写入端 = flow)。校验两类事:①p2_blood_floor 域谓词真值表(信任门/
-阈值单一源 = HP_BAND_NEAR_DEATH,位面域互补);②危机带停付面 + 凑息
-拒因键域(血线拒因键退役;P21 现为全域判定——危机带帧无论金位一律拦)。
+(谓词 = statefn.predicates,分键写入端 = flow)。校验两类事:
+①p2_blood_floor 域谓词真值表(信任门/阈值单一源 = HP_BAND_NEAR_DEATH,
+位面域互补——R-7 保留的纯观测面);②凑息拒因键域(血线拒因键退役;
+hp 判据面已随 hp-purge 迭代 3.1 删除——危机帧不再拦升级,升级发射
+门序 6 道、无 hp 支,语义锚 = changes/2026-10-28-hp-purge-refresh-reform/design.md)。
 """
 from __future__ import annotations
 
@@ -208,10 +209,11 @@ class TestBatchEmission:
         assert ct.get('levelup_fund_line_defer') == 1
 
     def test_blood_insufficient_zero_buy_blood_sufficient_batch(self):
-        """「买一半」缺陷回归测试(血本位局,11 号稿 §2 血本位突变下
-        的支付检查):血余额 < 整级血成本 → 零购买(攒血,不置键
-        不发射);血余额 ≥ 整级血成本 → 整批发射(clicks = 门槛表差值
-        折击数,一次买齐)。发射粒度整批化后无逐帧重闸复发面。"""
+        """「买一半」缺陷回归测试(血本位局,R-1 经验批支付门——币种
+        通式:支付币余额 ≥ 整批成本 = 支付能力检查,非 hp 判据):
+        血余额 < 整级血成本 → 零购买(攒血,不置键不发射);血余额 ≥
+        整级血成本 → 整批发射(clicks = 门槛表差值折击数,一次买齐)。
+        发射粒度整批化后无逐帧重闸复发面。"""
         # 血不足:奋斗协议(每击血价注册表)∧ hp 低于整级血成本
         gs, s = _frame(level=5, gold=30, hp=5, bench=_stay_bench(),
                        actives=('奋斗协议',))
@@ -219,7 +221,7 @@ class TestBatchEmission:
         out = entry.emit(s, None)
         assert not [e for e in out
                     if isinstance(e.action, CwActionLevelUpParam)], \
-            '血本位局血不足整级:零购买([40]② 血闸)'
+            '血本位局血不足整级:零购买(经验批支付门 defer)'
         # 血足:整批发射
         gs2, s2 = _frame(level=5, gold=30, hp=100, bench=_stay_bench(),
                          actives=('奋斗协议',))
@@ -287,7 +289,7 @@ class TestBatchEmission:
             '发射完成清 handled 标记(升级后概率档已变,找牌/刷新需重评)'
 
 
-# ===== 3. 保留语义(资金线门 / P21 / FM-1 / 凑金域分派)=====
+# ===== 3. 保留语义(资金线门 / 无 hp 支负向守卫 / FM-1 / 凑金域分派)=====
 
 
 class TestRetainedGates:
@@ -307,14 +309,36 @@ class TestRetainedGates:
         assert levelup.levelup_fund_gate(gs, sess, 5, 1, 4, 0) is True
         assert levelup.levelup_fund_gate(gs, sess, 3, 1, 4, 0) is False
 
-    def test_p21_crisis_band_retained(self):
-        """P21 血预算线保留(拦截层保留件):危机带(hp ≤ p2_crisis_band
-        ≈41)帧停付;血线地板解锁让位支已退役(死亡线帧照常停付
-        ——濒死响应 = 修经济/阵容本身)。"""
-        gs, _ = _frame(level=5, gold=30, hp=10)
-        sess = SimpleNamespace(node_type_current='normal')
-        assert levelup.level_spend_blocked(gs, sess) is True, \
-            'P2 濒死帧(hp 10 ⊂ 危机带 41):停付照常'
+    def test_crisis_frame_no_hp_block_negative_guard(self):
+        """「无 hp 支」负向守卫(hp-purge 迭代 3.1;hp 是对局结果不是
+        决策输入,2026-10-28 用户裁定):P2 濒死帧(hp 10,原危机带域内)
+        升级判据不再有 hp 拦截支——该帧 defer 唯一来源 = 资金线门
+        (金 30 花后破线 ∧ 凑金不可达),拒因键域闭集断言(键域 =
+        触发 + 资金线 defer;发射门序 6 道无 hp 支)。判定函数级直测 +
+        emit 级双锚。"""
+        from sr_od.application.currency_war.kernel.cw_registry import (
+            DEFAULT_REGISTRY,
+        )
+        # 判定函数级:P2 濒死帧 defer 拒因键域闭集(hp 族键已删,不得复现)
+        gs0, s0 = _frame(level=5, gold=30, hp=10, bench=_stay_bench())
+        verdict0, _arm0, _c0, _cc0 = levelup.upgrade_gate_verdict(
+            gs0, s0, registry=DEFAULT_REGISTRY,
+            counters=state_of(s0).cw4_counters)
+        assert verdict0 == levelup.GATE_DEFER
+        ct0 = state_of(s0).cw4_counters
+        assert ct0.get('levelup_trigger_stay_gate') == 1
+        assert set(ct0) == {'levelup_trigger_stay_gate',
+                            'levelup_fund_line_defer'}, \
+            f'濒死帧拒因键域闭集(无 hp 支,门序 6 道):{sorted(ct0)}'
+        # emit 级:同帧走备战发射链,拒因同源零外溢。
+        gs, s = _frame(level=5, gold=30, hp=10, bench=_stay_bench())
+        _mark_handled(gs)
+        out = entry.emit(s, None)
+        assert not [e for e in out
+                    if isinstance(e.action, CwActionLevelUpParam)]
+        ct = state_of(s).cw4_counters
+        assert ct.get('levelup_trigger_stay_gate') == 1
+        assert ct.get('levelup_fund_line_defer') == 1
 
     def test_rich_band_lag_frame_emits_gold_exit_open(self):
         """FM-1 金支出出口核对(11 §5 金支出出口要求——持金至死死型
@@ -363,7 +387,7 @@ class TestRetainedGates:
         assert state_of(s2).cw4_counters.get('levelup_fund_line_defer') == 1
 
 
-# ===== 4. P2 低血带授权域(谓词 + 危机带停付面)=====
+# ===== 4. P2 低血带观测域(谓词真值表 + 凑息键域)=====
 
 
 class TestP2BloodBand:
@@ -417,25 +441,13 @@ class TestP2BloodBand:
         st3 = self._st2(hp=10, plane=3)
         assert preds.p2_blood_floor(_bsb(**st3)) is True
 
-    def test_crisis_band_blocks_spend_and_interest_key_domain(self):
-        """危机带停付面:产线在产 p2_crisis_band 对 P2 濒死帧全额管辖
-        (P21 全域判定——危机带 ∧ 任意现金位帧均判定,富余段域内让位
-        已消亡);凑息不受血线辖(凑息禁令位已随血线地板删除链退役:
-        两域帧的拒因键族里血线键不复存在——空板守卫等金位/板面键照常)。"""
-        from sr_od.application.currency_war.kernel.cw_registry import (
-            DEFAULT_REGISTRY,
-        )
-        from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.levelup import (
-            level_spend_blocked,
-        )
+    def test_interest_reject_key_domain_no_blood_keys(self):
+        """凑息拒因键域(血线键退役):两域帧(濒死带/域外)凑息判定
+        同判——拒因键族里血线键不复存在(空板守卫等金位/板面键照常;
+        hp 判据面删除后观测/判读面零血线键)。"""
         from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.sell import (
             sell_for_interest,
         )
-        sess = SimpleNamespace(node_type_current='normal')
-        assert level_spend_blocked(_bsb(**self._st2(hp=10)), sess,
-                                   DEFAULT_REGISTRY) is True, (
-            'P2 濒死帧停付照常(危机带管辖)')
-        # 凑息不受血线辖(血线拒因键退役:两域帧同判)
         for _st in (self._st2(hp=10), self._st2(hp=10, plane=1)):
             slots_k, key_k = sell_for_interest(
                 30, [], 4, (), state=_bsb(**_st))
@@ -496,23 +508,24 @@ class TestFundLineEmissionPins:
         assert ups and ups[0].action.auth_basis == 'stay_gate', \
             'ALL IN 帧:花后必破线仍发射(豁免支,非资金门管辖)'
 
-    def test_crisis_band_blocks_even_with_gold_above_line(self):
-        """design §2.7⑧ 域内变体行为锁:危机带 ∧ 现金 > 线 → 仍拦
-        (富余段域内让位已随出口三层删除消亡,P21 全域判定——拦截在
-        资格门④,先于资金门,无论金位)。emit 级 levelup_crisis_defer
-        分键 + 判定函数直测同帧真值双锚。"""
-        from sr_od.application.currency_war.kernel.cw_registry import (
-            DEFAULT_REGISTRY,
-        )
+    def test_crisis_band_frame_emits_with_gold_above_line(self):
+        """「无 hp 支」emit 级固化(原 §2.7⑧ 域内变体的负向重锚;hp-purge
+        迭代 3.1):濒死帧(hp 10)∧ 现金 > 线 → 正常发射——危机带拦截门
+        已删,发射门序 6 道无 hp 支,金充裕濒死帧升级通道开放(FM-1
+        金支出出口同语义)。发射帧拒因键域闭集 = 触发键(全链通过,
+        零门拒零 hp 族键)。"""
         gs, s = _frame(level=5, gold=100, hp=10, bench=_stay_bench())
-        assert levelup.level_spend_blocked(gs, s, DEFAULT_REGISTRY) is True, \
-            '危机带帧(hp 10)直测:域内变体金 100(> 线 50)仍判拦'
         _mark_handled(gs)
         out = entry.emit(s, None)
-        assert not [e for e in out
-                    if isinstance(e.action, CwActionLevelUpParam)], \
-            '危机带 ∧ 现金 > 线:发射链零动作(全域判定)'
-        assert state_of(s).cw4_counters.get('levelup_crisis_defer') == 1
+        ups = [e for e in out if isinstance(e.action, CwActionLevelUpParam)]
+        assert ups, '濒死帧金充裕:hp 拦截支已删,正常发射'
+        assert ups[0].action.auth_basis == 'stay_gate'
+        ct = state_of(s).cw4_counters
+        _lv_keys = {k for k in ct if k.startswith('levelup_')}
+        assert ct.get('levelup_trigger_stay_gate') == 1
+        assert _lv_keys == {'levelup_trigger_stay_gate',
+                            'levelup_batch_emitted'}, \
+            f'发射帧 levelup 键域闭集(全链通过,无 hp 支):{sorted(_lv_keys)}'
 
     def test_interest_saving_band_never_emits(self):
         """design §2.7⑨ 攒息期行为锁(§5.2 申报:攒息期升级-刷新双滞

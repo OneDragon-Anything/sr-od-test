@@ -591,7 +591,7 @@ class TestUpgradeIntentExit:
         """停留门构帧:锁定线(列车同行)+ 辅助达标(三月七 2★/瓦尔特
         1★/花火 2★),唯一未完成星级目标 = 姬子·启行(3 费,概率带
         (7,7))——level 5 < 带下界 → 停留门升级优先臂确定触发
-        (非奖励帧,资格门①不拦)。hp/actives/xp 供资格门④⑥⑦构帧。"""
+        (非奖励帧,资格门①不拦)。hp/actives/xp 供资格门④⑤⑥构帧(击数/支付门/资金线门)。"""
         comp = COMP_LIBRARY[0]
         carry = comp.core_chars[0]
         aux = [m for m in sorted(_LINE) if m != carry]
@@ -655,28 +655,32 @@ class TestUpgradeIntentExit:
         assert isinstance(act, CwActionCloseShopParam)
         assert st.shop_handled is not None
 
-    def test_gate_p21_crisis_frame_defers(self):
-        """资格门④P21 危机带帧:命中(带滞后)∧ 濒死带(hp 10)→
-        停付让位(拒因在册;P21 全域判定——危机带 ∧ 任意现金位帧均拦,
-        富余段域内让位已消亡),会话照常收工置标记。"""
+    def test_gate_crisis_frame_no_hp_defer_negative_guard(self):
+        """「无 hp 支」负向守卫(hp-purge 迭代 3.1):命中 ∧ 濒死带
+        (hp 10)帧零 hp 拒因键——危机带拦截门已删(门序 7→6),该帧
+        defer 归资金线门(金 30 花后破线 ∧ 凑金不可达),拒因键域闭集
+        断言(键域 = 触发 + 资金线 defer);会话照常收工置标记。"""
         live, sess, gs, st = self._stay_frame(gold=30, hp=10)
         act = live.decide_shop_action()
-        assert st.cw4_counters.get('levelup_trigger_stay_gate') == 1
-        assert st.cw4_counters.get('levelup_crisis_defer') == 1
-        assert st.cw4_counters.get('levelup_transition_close', 0) == 0
+        ct = st.cw4_counters
+        assert ct.get('levelup_trigger_stay_gate') == 1
+        _lv_keys = {k for k in ct if k.startswith('levelup_')}
+        assert _lv_keys == {'levelup_trigger_stay_gate',
+                            'levelup_fund_line_defer'}, \
+            f'濒死帧 levelup 键域闭集(无 hp 支,门序 6 道):{sorted(_lv_keys)}'
         assert isinstance(act, CwActionCloseShopParam)
         assert st.shop_handled is not None
 
-    def test_gate_blood_gate_frame_defers_and_control(self):
-        """资格门⑥血本位局血闸:血本位局(奋斗协议,6 血/击)∧ 血余额
-        < 整级血成本 → 不发射(拒因在册);对照血足帧 → 可发射转场
-        关店。构帧注:lv6 血批 = 10 击 × 6 = 60,hp 45 在 P21 危机带
-        (≤41)外 ∧ 不足血批——P21 全域判定后血闸 defer 的可达构帧域
-        (hp < 血批 ⊂ 危机带的帧由门④先拦)。"""
+    def test_gate_xp_batch_payment_frame_defers_and_control(self):
+        """资格门⑤经验批支付门(R-1 币种通式):血本位局(奋斗协议,
+        6 血/击)∧ 血余额 < 整级血成本 → 不发射(xp_batch_payment_defer
+        拒因在册);对照血足帧 → 可发射转场关店。构帧注:lv6 血批 =
+        10 击 × 6 = 60,hp 45 不足血批(支付能力检查——币种余额 ≥
+        整批成本;金本位局本门直通,金侧归资金线门)。"""
         live, sess, gs, st = self._stay_frame(level=6, gold=80, hp=45,
                                               actives=('奋斗协议',))
         live.decide_shop_action()
-        assert st.cw4_counters.get('levelup_blood_gate_defer') == 1
+        assert st.cw4_counters.get('xp_batch_payment_defer') == 1
         assert st.cw4_counters.get('levelup_transition_close', 0) == 0
         assert st.shop_handled is not None
         # 对照:血余额足 → 全链通过 → 转场关店(不置标记)。
@@ -688,7 +692,7 @@ class TestUpgradeIntentExit:
         assert st2.shop_handled is None
 
     def test_gate_zero_clicks_frame_defers(self):
-        """资格门⑦击数 > 0:XP 已满当前级(击数 0)→ 无批可发(拒因
+        """资格门④击数 > 0:XP 已满当前级(击数 0)→ 无批可发(拒因
         在册),会话照常收工置标记。"""
         live, sess, gs, st = self._stay_frame(gold=80, xp=(20, 20))
         act = live.decide_shop_action()

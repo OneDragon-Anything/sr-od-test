@@ -7,8 +7,8 @@
 - L3′ prep 位 M6 摘旗可达性:stop_flag=False(线未齐)∧ gold>g* ∧
       席满帧,M6 prep 块被触达(m6_bench_full 拒因显影——摘旗前该帧
       被 stop_flag 短路、拒因结构性不可见)。
-- L7  ALL IN 类别过滤:P21 域(kernel all_in_xp_domain_hit)内非支A XP
-      经 P72 闸拒;支A 形态/域外帧放行(指标 G=0 的判据面)。
+(原 L7 ALL IN 类别过滤面已随域辖谓词删除退役——hp-purge
+      迭代 3.1 A-6,见文末退役注。)
 
 测试构造声明:候选/帧构造基建(_km/_bc/_card/_off_name/_session_stub/
 _st)保留 = test_front_window_predicates 的候选构造单一源(跨文件
@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 
 if TYPE_CHECKING:
-    from sr_od.application.currency_war.kernel.cw_game_state import GameState
+    pass
 from test.sr_od.application.currency_war._cw_helpers import (
     cw4_box as _bsb,
 )
@@ -28,9 +28,6 @@ from test.sr_od.application.currency_war._cw_helpers import (
 from sr_od.application.currency_war.kernel.cw_comps import (
     CORE_SINGLE_CARD_REGISTRY,
     get_comp,
-)
-from sr_od.application.currency_war.kernel.cw_registry import (
-    DEFAULT_REGISTRY,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     ShopCard,
@@ -182,71 +179,11 @@ class TestL3FlagRemoval:
 #  挂起的 TestShopM3M6 承载声明随之失效。)
 
 
-# ===== L7:ALL IN 类别过滤(P21 域辖;XP 仅支A 合法)=====
-
-
-class TestL7AllInCategoryFilter:
-
-    def _allin_state(self, hp: int) -> dict:
-        """ALL IN 闸场景种子轴(闸内一次性装箱;P2r7 boss 帧)。"""
-        return {'gold': 30, 'level': 5, 'round_num': 7, 'node': 'boss',
-                'hp': hp, 'plane': 2}
-
-    def _allin_gs(self, hp: int | None, *, source: str = 'observation'
-                  ) -> 'GameState':
-        """P21 域判据容器帧(波 2 起门输入 = GameState):P2r7 boss 帧,
-        来源三态 = 旧两位语义的容器形态(observation=真读/prior=不可信)。"""
-        from sr_od.application.currency_war.kernel.cw_game_state import (
-            GAME_STATE_SCHEMA_VERSION,
-            ChannelSig,
-            GameState,
-            NodeKey,
-        )
-        sig = ChannelSig(family='obs', actor='cw_observation', mode='read')
-        gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
-        if hp is not None:
-            if source == 'observation':
-                gs.observe(gs.hp, hp, sig=sig)
-            elif source == 'prior':
-                gs.write_prior(gs.hp, hp, evidence='prior:adr-0559', sig=sig)
-            else:
-                raise ValueError(f'未知 source {source!r}')
-        gs.observe(gs.node, NodeKey(plane=2, round_num=7, kind='boss'),
-                   sig=sig)
-        # 终态契约 §A′:探针宿主 = 流经 gs 本体(P2 真长 7,语料实证)。
-        gs.node_books.plane_node_table = [object()] * 7
-        return gs
-
-    def _allin_session(self) -> SimpleNamespace:
-        s = SimpleNamespace()
-        s.node_type_current = 'boss'
-        from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
-        game_state_of(s).node_books.plane_node_table = [object()] * 7   # P2 真长 7(语料实证;§A′)
-        return s
-
-    def test_l7_domain_predicate_p21(self):
-        """辖域判据(kernel 单一源):ALL IN boss 末轮 ∧ hp 真值可信
-        ∧ 门后 hp ≤ 停升级线 → 域内;域外/不可信/None 帧不过滤(§7.4 域外
-        不动 + [18] 豁免在不可信帧仍生效)。"""
-        from sr_od.application.currency_war.kernel.cw_discipline_rules import (
-            all_in_xp_domain_hit,
-        )
-        sess = self._allin_session()
-        assert all_in_xp_domain_hit(self._allin_gs(10), sess,
-                                    DEFAULT_REGISTRY) is True
-        assert all_in_xp_domain_hit(self._allin_gs(100), sess,
-                                    DEFAULT_REGISTRY) is False
-        # 不可信帧(prior 支,旧两位皆 False 的容器形态)不过滤
-        assert all_in_xp_domain_hit(self._allin_gs(10, source='prior'),
-                                    sess, DEFAULT_REGISTRY) is False
-        no_hp = self._allin_gs(None)
-        assert all_in_xp_domain_hit(no_hp, sess,
-                                    DEFAULT_REGISTRY) is False
-
-    # (P72 闸 ALL IN 支收窄测试 test_l7_gate_rejects_non_support_xp 已随
-    # levelup_budget_gate 量闸本体退役消亡——迭代 2026-10-12-prep-shop-
-    # workflow-redesign 批 3.4;line_and_upgrade §2.3 P72(3a) 本体删除
-    # 行:量闸整体不再存在,「ALL IN 帧类别白名单拒 XP」的防线语义随
-    # 之消亡(ALL IN 帧花光拦截现役载体 = 无——末位面末战保底金门出辖
-    # = ALL IN 花光原语义;替代语义考古走 git 历史)。辖域谓词本体
-    # all_in_xp_domain_hit 的测试 = test_l7_domain_predicate_p21。)
+# (原 L7 ALL IN 类别过滤域谓词测试已随辖域谓词本体删除退役
+# ——hp-purge 迭代 3.1 A-6 挂空死码删除;P72 闸 ALL IN 支收窄测试
+# test_l7_gate_rejects_non_support_xp 已随 levelup_budget_gate 量闸本体
+# 退役消亡(迭代 2026-10-12-prep-shop-workflow-redesign 批 3.4;
+# line_and_upgrade §2.3 P72(3a) 本体删除行:量闸整体不再存在,
+# 「ALL IN 帧类别白名单拒 XP」的防线语义随之消亡——ALL IN 帧花光拦截
+# 现役载体 = 无,末位面末战保底金门出辖 = ALL IN 花光原语义;替代语义
+# 考古走 git 历史)。)

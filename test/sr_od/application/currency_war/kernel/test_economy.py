@@ -4,7 +4,7 @@ R2 息线 floor / D 牌期望边界 / ev_arm 值域(aggregate_economy 分型登�
 
 覆盖面(金钱类按 2026-09-09 编排者裁决收缩:实机结算对账 + sim 段检双层
 已覆盖逐面金钱测试,单位层只留 commit→sim 空窗价值):
-- budget 拒付(1 代表,归 fail-closed):hp 不可信帧 blood_xp_gate 拒;
+- budget 拒付(1 代表,归 fail-closed):支付币不可信帧 xp_batch_payment_gate 拒;
 - R2 息线 floor:cap 语境参数化测试(ADR-0598 注入面);
 - D 牌期望边界:expected_refreshes/refresh_prob 边界一条(p≤0/j≥k/
   查表缺级 → 0;v/a 参数从注册表单一源现算,不手抄常数);
@@ -24,7 +24,7 @@ test_cw_data_registry 待承接)。
 断供清零并一。
 
 来源:economy_typing(mv 主干)/ investment / r2_interest_floor /
-blood_xp_gate 核 / decisions 之 economy 真值两行(2026-09-09 套件重建批
+经验批支付门核 / decisions 之 economy 真值两行(2026-09-09 套件重建批
 A,#4;金钱类收缩随编排者裁决)。其余历史测试已退役(git 可复活)。
 """
 from __future__ import annotations
@@ -69,21 +69,15 @@ from sr_od.application.currency_war.data.cw_shop_odds import (
 )
 from sr_od.application.currency_war.kernel import cw_investments as inv
 from sr_od.application.currency_war.kernel.cw_economy import (
-    HP_SAFE_THRESHOLD,
     REFRESH_COST_BASE,
-    blood_xp_gate,
-    blood_xp_gate_for,
-    effective_hp_threshold,
     refresh_ev_budget,
     reserve_cap,
     world_shop_refresh_cost,
+    xp_batch_payment_gate,
+    xp_batch_payment_gate_for,
 )
 from sr_od.application.currency_war.kernel.cw_economy import (
     reserve_cap as kernel_reserve_cap,
-)
-from sr_od.application.currency_war.kernel.cw_first_passage import (
-    board_tier_of,
-    plane_hp_ratio,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
@@ -92,7 +86,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     Unit,
     game_state_of,
     gold_of,
-    level_of,
 )
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
@@ -318,7 +311,7 @@ class TestR2InterestFloor:
         assert not [a for a in acts if isinstance(a, CwActionRefreshShopParam)]
 
 
-# ==================== budget 拒付单代表(归 fail-closed;自 test_cw_blood_xp_gate 并入) ====================
+# ==================== budget 拒付单代表(归 fail-closed;原支付闸测试并入面) ====================
 # (金钱类收缩:T6 阈值边界逐点红证按裁决不搬,git 可复活。)
 
 
@@ -336,7 +329,7 @@ def _seed_actives(sess, names: list[str]) -> None:
 
 
 def _blood_session(active: list[str] | None = None, **state_kw) -> SimpleNamespace:
-    """血闸消费面依赖桩(容器单源播种;其余无关)。"""
+    """经验批支付门消费面依赖桩(容器单源播种;其余无关)。"""
     s = SimpleNamespace()
     _seed_actives(s, list(active or ['奋斗协议']))
     return s
@@ -344,7 +337,7 @@ def _blood_session(active: list[str] | None = None, **state_kw) -> SimpleNamespa
 
 def _blood_gs(hp: int | None, *, source: str = 'observation',
               level: int | None = None) -> GameState:
-    """血闸容器帧构造器(波 2 起闸输入 = GameState;来源三态即旧两位
+    """支付门容器帧构造器(波 2 起门输入 = GameState;来源三态即旧两位
     语义的容器形态:observation=真读/prior=不可信 fail-closed)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         GAME_STATE_SCHEMA_VERSION,
@@ -365,21 +358,21 @@ def _blood_gs(hp: int | None, *, source: str = 'observation',
     return gs
 
 
-def test_blood_xp_gate_untrusted_hp_fail_closed() -> None:
-    """T7 hp 不可信帧 fail-closed(P21 blood_budget_levelup_blocked 同面同论证:
-    误放=血线内追级、误拦=少升一级,非对称);消费面 gs 缺席同向;
-    金本位(无 active 血本位卡)恒 True 直通(零改动面)。"""
-    assert blood_xp_gate(None, True, 3, 6) is False    # hp 无真值
-    assert blood_xp_gate(100, False, 3, 6) is False    # 可信位 False
-    assert blood_xp_gate(None, False, 3, 6) is False
+def test_xp_batch_payment_gate_untrusted_balance_fail_closed() -> None:
+    """支付币不可信帧 fail-closed(R-1 经验批支付门:误放=买不起的购买、
+    误拦=少买一批,取拒侧);消费面 gs 缺席同向;
+    金本位(无 active 血本位卡)恒 True 直通(金侧由资金线门管辖)。"""
+    assert xp_batch_payment_gate(None, True, 3, 6) is False    # 无真值
+    assert xp_batch_payment_gate(100, False, 3, 6) is False    # 可信位 False
+    assert xp_batch_payment_gate(None, False, 3, 6) is False
     # 消费适配面:gs 缺席 fail-closed;金本位直通
-    assert blood_xp_gate_for(None, _blood_session()) is False
-    assert blood_xp_gate_for(_blood_gs(100),
-                             SimpleNamespace(active_strategies=[])) is True
+    assert xp_batch_payment_gate_for(None, _blood_session()) is False
+    assert xp_batch_payment_gate_for(_blood_gs(100),
+                                     SimpleNamespace(active_strategies=[])) is True
     # 不可信帧经消费适配面同样拒(兜底 100 帧语义 = ADR-0282:两位皆 False,
     # 容器形态 = prior 支来源,prior/logic 支 fail-closed)
     st_ghost = _blood_gs(100, source='prior', level=3)
-    assert blood_xp_gate_for(st_ghost, _blood_session()) is False
+    assert xp_batch_payment_gate_for(st_ghost, _blood_session()) is False
 
 
 # ==================== 下一利息档线(凑息止盈目标单一源) ====================
@@ -864,30 +857,8 @@ def test_facade_plane_outside_key_set_returns_zero():
         assert r_remaining(gs, 4, 2) == 0
 
 
-def test_hp_safe_nodes_left_capped_at_modeled_planes():
-    """hp_safe 阈对拍:默认局 P2R1 nodes_left = 场字段求和 14(P3 行
-    入表后含 P3 段;期望值用生产 plane_hp_ratio 按 14 重算,单测对象 =
-    nodes_left 接线,非生存模型;帧取 lv7 = 板强档 2——该档 14/18 节点
-    两口径比值分叉 1.838 vs 1.851,接线错接旧闭式即红);P1 分支同式
-    不变(直接返 base);P3 帧(lv7)nodes_left = 7 → 按 P3 曲线比值
-    现场算(不再落 0 余量)。"""
-    p2r1 = _hz_gs_at(2, 1)
-    p2r1.observe(p2r1.level, 7, evidence='test', sig=_HZ_SIG_OBS)
-    tier = board_tier_of(level_of(p2r1))
-    assert tier == 2, '前置:该档下 nodes_left 两口径可判别'
-    assert plane_hp_ratio(tier, 14, plane=2) != plane_hp_ratio(tier, 18,
-                                                               plane=2)
-    expect = min(100, int(HP_SAFE_THRESHOLD * plane_hp_ratio(tier, 14,
-                                                             plane=2)))
-    assert effective_hp_threshold(p2r1) == expect
-    # P1 分支:plane <= 1 直接返 base(difficulty 缺省 → HP_SAFE_THRESHOLD)
-    assert effective_hp_threshold(_hz_gs_at(1, 5)) == HP_SAFE_THRESHOLD
-    # P3 帧:lv7 → nodes_left = 7,期望按生产曲线现场算(P3 档比值 ≠ 1)
-    p3r1 = _hz_gs_at(3, 1)
-    p3r1.observe(p3r1.level, 7, evidence='test', sig=_HZ_SIG_OBS)
-    p3_expect = min(100, int(HP_SAFE_THRESHOLD * plane_hp_ratio(
-        board_tier_of(level_of(p3r1)), 7, plane=3)))
-    assert effective_hp_threshold(p3r1) == p3_expect
+# (test_hp_safe_nodes_left_capped_at_modeled_planes 已随保血阈值面删除
+#  退役——hp-purge 迭代 3.1 B-8;被测对象即被删函数。)
 
 
 def test_total_remaining_nodes_matches_facade_in_modeled_planes():
