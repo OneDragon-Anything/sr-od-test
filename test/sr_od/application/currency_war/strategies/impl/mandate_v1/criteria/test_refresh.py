@@ -157,8 +157,10 @@ class TestRefreshChainSingleFrame:
         assert crit_refresh.r2_card_reserve(gs2) == 0, '未锁窗口 ρ = 0'
 
     def test_3_full_bench_merge_pair_emits(self):
-        """③席满 + 可合成 → 发射(合成腿:恰 2 张全 1★ 现役谓词语义;
-        买第 3 张即合成净释放 1 席,满栏不阻断)。"""
+        """③席满 + 可合成 → 发射(合成腿消费机制全集谓词
+        ``_merge_pair_names`` 的 1★ 档计数 == 2 子形态——本帧无同名 2★,
+        与旧「恰 2 张全 1★」口径同判;扩展形态〔场上 2★ + 备战 1★×2〕
+        随谓词全集重写生效,单帧见 shop 域买面改革测试)。"""
         level = 7
         _assert_band_premise(int(CHARACTERS['花火'].cost), level)
         fill = _fillers(5)

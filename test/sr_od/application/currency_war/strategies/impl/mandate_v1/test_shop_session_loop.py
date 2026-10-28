@@ -811,7 +811,8 @@ class TestRefreshTerminationSession:
                                     bench=[(n, 1) for n in _fuel(2)],
                                     deployed=[_fuel(3)[0]],
                                     shop_cards=[])   # 空面隔离买面
-        # 免费刷新在册 → 刷新发射(免费不受判据辖)。
+        # 免费刷新在册 → 刷新发射(免费腿同过目标可买检查——金线不适用;
+        # 本帧有空位腿,目标可买为真,刷新照发)。
         gs.write_logic(gs.free_refresh_left, 2, produced_by='cw-36-loop',
                        sig=_LOGIC_SIG)
         a1 = live.decide_shop_action()
