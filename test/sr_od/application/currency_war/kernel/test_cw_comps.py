@@ -113,3 +113,13 @@ def test_zhouzhibanshen_concept_stock_gift_tier_off() -> None:
     正交(域 6 名 is_expert 全空 = 非专家域,随机路径期望域与流程过滤域
     同集,无仙舟/狼狩型分叉申报,本档零扰动)。"""
     assert gift_hit_tier(ENV_GIFTS['昼之半神概念股']) == 'off'
+
+
+def test_yezhibanshen_concept_stock_gift_tier_off() -> None:
+    """夜之半神概念股估值档恒 'off'(概念股族展开卡登记约定,正本 =
+    fields.md §5.2 效果缺口与载体登记,追击首例同锁第十一实例):随机规格
+    (阵营轴)/随机装备条目不入档位机器估值域 → 恒 off——族展开登记
+    不产生策略层双重计分,与 random_faction_gift_value 随机阵营路径
+    正交(域 7 名 is_expert 全空 = 非专家域,随机路径期望域与流程过滤域
+    同集,无仙舟/狼狩型分叉申报,本档零扰动)。"""
+    assert gift_hit_tier(ENV_GIFTS['夜之半神概念股']) == 'off'
