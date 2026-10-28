@@ -102,7 +102,7 @@ def _bench_units(gs: GameState) -> list[tuple[str, int]]:
 
 
 def _seed_done() -> tuple[tuple[str, str], ...]:
-    """腿1 绑定态 done 种子(发放名 = 列车同行星徽)。"""
+    """分支1 绑定态 done 种子(发放名 = 列车同行星徽)。"""
     return ((_ENV, f'{STAR_GRANT_KEY_PREFIX}{_BIND_STAR}'),)
 
 
@@ -167,7 +167,7 @@ def test_grant_seeded_roll_two_writes_same_evidence_sig(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """达标发放(T-19 设计 §2.3 条 8):注确定 rng → bench 追加 1 个 1★
     角色且名 ∈ 绑定羁绊采样池(期望名同 seed 现算,不手抄;池 = 生产端
-    同源 random_char_pool 现算——腿2 池派生与随机赠卡家族单一源,开拓者
+    同源 random_char_pool 现算——分支2 池派生与随机赠卡家族单一源,开拓者
     双形态按角色位合并,采样即发放名恒欢愉);两段写同 evidence 同 sig
     相邻(角色链在前,done boss 键收尾)。"""
     gs = _make_gs(bench=[], done=_seed_done())
@@ -277,7 +277,7 @@ def test_binding_pool_consistent_with_registry() -> None:
 
 # ============================================================ 牌库时点池
 # (用户裁定 2026-10-28「授予候选 = 当时牌库里存在的角色」,economy.md §8:
-# 腿2 采样源 = cw_pool.grant_char_pool,未解锁专家剔除/已解锁专家入候选;
+# 分支2 采样源 = cw_pool.grant_char_pool,未解锁专家剔除/已解锁专家入候选;
 # 示范专家 = 姬子——列车同行域唯一专家成员,factions 轴在域。)
 
 
@@ -291,7 +291,7 @@ def _gs_with_unlocked(names: tuple[str, ...]) -> GameState:
 
 def test_boss_leg_deck_time_pool_unlock_expert_reaches_candidates(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """boss 腿2 牌库时点池(economy.md §8 用户裁定 2026-10-28):解锁
+    """boss 分支2 牌库时点池(economy.md §8 用户裁定 2026-10-28):解锁
     姬子(列车同行域唯一专家)→ seed 9 掷中姬子并落席;同 seed 未解锁
     容器掷星期日(姬子不在候选)——两态对照钉死「已解锁专家 ∈ 授予候选,
     未解锁专家 ∉」。示范专家必须取目标域内专家:停云 ∈ 仙舟/能量不属
@@ -306,7 +306,7 @@ def test_boss_leg_deck_time_pool_unlock_expert_reaches_candidates(
     calls = _record_writes(gs_unlocked, monkeypatch)
     granted = check_env_boss_grants(gs_unlocked, node_pos=pos,
                                     rng=random.Random(9), sig=_SIG_SIM)
-    assert granted == '姬子', '已解锁专家进入腿2候选并被掷中'
+    assert granted == '姬子', '已解锁专家进入分支2候选并被掷中'
     assert _bench_units(gs_unlocked) == [('姬子', 1)], '落席 1★'
     assert calls, '发放有写行'
     monkeypatch.undo()

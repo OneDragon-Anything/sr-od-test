@@ -31,7 +31,7 @@
 - **奖励兑现回调测试**(遭遇,kernel ``claim_encounter_reward``):双证
   判遭遇(node 镜像 token ∧ settlement_ring 尾行 node_type)∧
   progress_delta>0 单判;兑现写 ``encounter_reward_claimed`` 且 chosen
-  随即清(单次消费,重触发天然幂等);单腿不合/未达标/删失/无 chosen
+  随即清(单次消费,重触发天然幂等);单分支不合/未达标/删失/无 chosen
   = 不写不清。
 - **盛会之星族测试**(节点循环形态):完成门/懒读保真/防重入旗标/chosen
   写端(选择点留守)/局外无早退支(observe 照常读链、act 正常链路失败,
@@ -425,11 +425,11 @@ def test_claim_encounter_reward_branches(
         test_context, monkeypatch) -> None:
     """奖励兑现回调测试(迭代 …3.3 扩围 design §2.4,R1 复攻定谳后形态):
     判遭遇 = 双证(node 镜像 token 'encounter' ∧ settlement_ring 尾行
-    node_type='遭遇')——单腿不满足即拒(ring-mismatch 臂 = 镜像遭遇但
+    node_type='遭遇')——单分支不满足即拒(ring-mismatch 臂 = 镜像遭遇但
     ring 尾行普通战斗的陈旧镜像防线);达标 = progress_delta>0 单判。
     达标双证 → 写 encounter_reward_claimed 且 chosen 随即清(单次消费),
     重触发 = no-chosen 天然幂等;非遭遇/删失/无 chosen = 不写不清。
-    红 = 单证兑现回潮(note 腿静默删除旧形态)/ 陈旧镜像误兑现 /
+    红 = 单证兑现回潮(note 分支静默删除旧形态)/ 陈旧镜像误兑现 /
     消费后 chosen 不清(重兑现面)。"""
     from sr_od.application.currency_war.kernel.cw_encounter_selection import (
         claim_encounter_reward,
@@ -453,7 +453,7 @@ def test_claim_encounter_reward_branches(
                               xp=(5, 20)),
                    sig=_obs_sig)
         # 结算行入环(与生产同口 = record_settlement_row 单一写端;
-        # outcome 腿只取 killed/progress_fill_ratio/hp_after,桩最小面,
+        # outcome 分支只取 killed/progress_fill_ratio/hp_after,桩最小面,
         # hp_after = None 读缺形态——本文件断言面是双证判遭遇,不消费
         # hp 差分)。
         # round_num 逐臂递增 = 模拟不同节点(环按 plane+round 去重合并,
@@ -469,14 +469,14 @@ def test_claim_encounter_reward_branches(
     _sig = ChannelSig(family='logic_action', actor='test', mode='compute')
     gs.write_logic(gs.chosen_encounter, (3, '随机4费×3'),
                    produced_by='test', sig=_sig)
-    # ① 镜像=encounter 但 ring 尾行=普通战斗:双证第二腿不合 → 拒
+    # ① 镜像=encounter 但 ring 尾行=普通战斗:双证第二分支不合 → 拒
     #    (attack3 R1 陈旧镜像防线;「单证兑现」缺陷形态回归测试)
     _set_frame(session, kind='encounter', delta=2, ring_node='普通战斗',
                round_num=7)
-    assert claim_encounter_reward(gs) == 'ring-mismatch', 'ring 腿不合拒兑现'
-    assert gs.encounter_reward_claimed.value is None, 'ring 腿不合零写'
-    assert gs.chosen_encounter.value == (3, '随机4费×3'), 'ring 腿不合不清'
-    # ② 镜像非遭遇(镜像腿独立防面):拒
+    assert claim_encounter_reward(gs) == 'ring-mismatch', 'ring 分支不合拒兑现'
+    assert gs.encounter_reward_claimed.value is None, 'ring 分支不合零写'
+    assert gs.chosen_encounter.value == (3, '随机4费×3'), 'ring 分支不合不清'
+    # ② 镜像非遭遇(镜像分支独立防面):拒
     _set_frame(session, kind='battle', delta=2, ring_node='遭遇',
                round_num=8)
     assert claim_encounter_reward(gs) == 'not-encounter', '非遭遇拒兑现'
@@ -531,7 +531,7 @@ def test_megastar_observe_gate_completes_off_overlay(
     assert calls == [], '离屏早退 = 不发动作'
     assert game_state_of(session).megastar_opts.value is None, (
         '门早退不进读链,容器零写')
-    # act 顶部裁决腿(并入原 runnode 流转等价测试):门仍 miss = overlay 已
+    # act 顶部裁决分支(并入原 runnode 流转等价测试):门仍 miss = overlay 已
     # 消失 → 决策动作 node 完成裁决 success 交回,完成承诺 = 固定 settle
     # 时长(round_success wait 形参,经包装捕获),零动作。
     # 红 = 完成裁决丢失 / settle 等待承诺漂移 / 完成轮误动作。
@@ -825,7 +825,7 @@ def test_megastar_observe_standardize_ambiguity_rejected(
         test_context, monkeypatch) -> None:
     """观察标准化门·歧义拒判测试(规范 = screens/op-layer.md §1.1 观察
     标准化门):≥2 候选命中同一规范名(识别质量不足以区分)或单候选
-    域内最高/次高分差小于边距 → round_fail 零写零上报。近分腿 = 桩控
+    域内最高/次高分差小于边距 → round_fail 零写零上报。近分分支 = 桩控
     LCS 分值原语(实机短名域近分形态难自然构造,控分直接校验边距分支)。
     红 = 重复命中放行 / 近分放行(共享词素族跨名借分通道回潮)。"""
     from sr_od.application.currency_war.kernel.cw_events import MegastarOption

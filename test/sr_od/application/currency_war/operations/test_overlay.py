@@ -416,7 +416,7 @@ class TestPlannerStarTrigger:
         assert _pending_kinds(gs) == [], '同费用档(3)已弹过'
 
     def test_merge_on_field_carrier_fires_via_buy_report(self):
-        """合成落场上(序贯 A:买腿三合进场上载体)经值回调链弹——
+        """合成落场上(序贯 A:买分支三合进场上载体)经值回调链弹——
         获得链递归中间层语义完整:buy 报文的 deployed 写即触发回调。"""
         from sr_od.application.currency_war.kernel.cw_action_report import (
             report_action_buy_card_param,
@@ -460,7 +460,7 @@ class TestPlannerStarTrigger:
         _write_dep(gs, _view(front=[_u('银狼LV.999', star=3)]))
         assert _pending_kinds(gs) == ['planner'], '无→3 按弹'
         consume_screen_change(gs, 'planner')
-        # 费用档升至 4(deploy_move 升费腿/pick_planner 写 lv999_cost_tier)
+        # 费用档升至 4(deploy_move 升费分支/pick_planner 写 lv999_cost_tier)
         gs.write_logic(gs.lv999_cost_tier, 4, produced_by='test',
                        evidence='t', sig=_SIG)
         _write_dep(gs, _view())
@@ -472,7 +472,7 @@ class TestPlannerStarTrigger:
 class TestFortuneBattleCount:
     def test_fortune_every_two_settles(self):
         """黑天鹅在场每 2 场战斗结算登记一次(计数跨节点累积);不在场
-        不计数。上报点直登(settle_confirm 腿)。"""
+        不计数。上报点直登(settle_confirm 分支)。"""
         from sr_od.application.currency_war.kernel.cw_game_state import (
             report_node_advance,
         )
@@ -520,7 +520,7 @@ class TestDirectRegisters:
         assert _pending_kinds(gs) == ['box_card']
 
     def test_open_bookcard_registers_on_success_only(self):
-        """S6:open_bookcard 成功腿登记(kind = expert_invite);槽失配
+        """S6:open_bookcard 成功分支登记(kind = expert_invite);槽失配
         applied=False 零登记。"""
         from sr_od.application.currency_war.kernel.cw_action_report import (
             report_action_open_bookcard_param,
@@ -538,7 +538,7 @@ class TestDirectRegisters:
         assert _pending_kinds(gs) == []
 
     def test_open_tome_registers_on_success_only(self):
-        """S6:open_tome 成功腿登记(kind = star_tome);槽失配零登记。"""
+        """S6:open_tome 成功分支登记(kind = star_tome);槽失配零登记。"""
         from sr_od.application.currency_war.kernel.cw_action_report import (
             report_action_open_tome_param,
         )
@@ -635,8 +635,8 @@ class TestPickReportsConsume:
             left = [p.kind for p in gs.screen_changes.pending]
             assert kind not in left, f'{kind} 上报消费同 kind'
             assert len(left) == len(calls) - i - 1, '消费不误伤他条目'
-        # planner 上报:效果腿拒出口(未路由腿型)也先 consume(消费先于
-        # 腿型分派——弹窗处理事实与选择内容独立)。
+        # planner 上报:效果分支拒出口(未路由分支类型)也先 consume(消费先于
+        # 分支类型分派——弹窗处理事实与选择内容独立)。
         gs_p = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
         register_screen_change(gs_p, 'planner',
                                KIND_SCREEN_NAMES['planner'], 't')
@@ -672,7 +672,7 @@ class TestSimPresentationFromPending:
             uninstall_backend()
 
     def test_partner_consumed_with_disclosure(self):
-        """partner 无 sim 观察腿(呈现即卡 observe 重试)→ 消费 + 披露;
+        """partner 无 sim 观察分支(呈现即卡 observe 重试)→ 消费 + 披露;
         判据登记链经逻辑写自动触发(姬子·启行 + 三月七 上场)。"""
         b = _backend()
         try:
@@ -853,7 +853,7 @@ class TestHostHandback:
 
 
 class TestPrepBaseFallbackClear:
-    """kernel 兜底清空(识别回备战底屏,overlay 生命周期契约兜底清空腿):
+    """kernel 兜底清空(识别回备战底屏,overlay 生命周期契约兜底清空分支):
     清 pending 连簿记,生命周期 = 局。"""
 
     def test_clear_drops_all_pending(self):

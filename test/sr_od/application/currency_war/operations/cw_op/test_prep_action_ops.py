@@ -319,8 +319,8 @@ def test_vocab_actions_all_have_logic_state_projection(
         before = _seq()
         _report(gs, action)
         assert _seq() > before, f'{type(action).__name__} 应产生容器写'
-    # 供数容器重播种(工具循环的消耗/置换不复原;穿戴腿依赖
-    # owned 在册、卖出腿依赖前排 1 号位有单位)。
+    # 供数容器重播种(工具循环的消耗/置换不复原;穿戴分支依赖
+    # owned 在册、卖出分支依赖前排 1 号位有单位)。
     gs.observe(gs.equips, ['轮滑鞋'], sig=_sig)
     gs.observe(gs.deployed, _dvs([Unit(char_id='丙', star=1, equips=[])], []), sig=_sig)
 
@@ -346,15 +346,15 @@ def test_vocab_actions_all_have_logic_state_projection(
         before = _seq()
         _report(gs, action)
         assert _seq() == before, f'{type(action).__name__} 应合法零写'
-    # 穿戴腿单独重播种(布尔契约前置:owned 在册 + 目标角色在册——前序
-    # 卖出腿已消耗前排;与工具循环同款入场态纪律)。
+    # 穿戴分支单独重播种(布尔契约前置:owned 在册 + 目标角色在册——前序
+    # 卖出分支已消耗前排;与工具循环同款入场态纪律)。
     gs.observe(gs.equips, ['轮滑鞋'], sig=_sig)
     gs.observe(gs.deployed, _dvs([Unit(char_id='丙', star=1, equips=['轮滑鞋'])], []), sig=_sig)
     before = _seq()
     _report(gs, CwActionWearEquipParam(item_name='轮滑鞋', char_name='丙',
                                        row='front', slot=1))
     assert _seq() > before, 'CwActionWearEquipParam 应产生容器写'
-    # 词表覆盖完备性:三集并集(含独立重播种的穿戴腿)覆盖 CW_ACTION_TYPES
+    # 词表覆盖完备性:三集并集(含独立重播种的穿戴分支)覆盖 CW_ACTION_TYPES
     # 中非转场/非组合壳成员
     names = {c.__name__ for c in CW_ACTION_TYPES}
     covered = ({type(a).__name__ for a, _t in tools_written}
@@ -369,7 +369,7 @@ def test_vocab_actions_all_have_logic_state_projection(
 
 def test_levelup_executes_single_click_per_frame(monkeypatch):
     """执行器半:一次 execute = 恰一次单击(零授权零循环;升 N 击 = N 帧)。
-    金腿翻转 = action.cost 逻辑态直写(唯一写点
+    金分支翻转 = action.cost 逻辑态直写(唯一写点
     report_action_level_up_param);执行缝金差链已整体退役——执行器
     不再计算/携带金差,回执 extra 无 gold_delta 键。
     建档纪律(terminal-fail-status 用户裁定:建档缺失零防御):按钮
@@ -419,7 +419,7 @@ def test_deploymove_slot_out_of_range_guard_assertion(monkeypatch):
 
 def test_levelup_logic_state_advances_xp_level_and_gold():
     """逻辑态半:xp/level 跨门槛推进(推进算子单一源 = xp_apply_clicks,
-    单击步长)+ 金腿 action.cost 直写(唯一写点,执行缝金差退役防双记)。
+    单击步长)+ 金分支 action.cost 直写(唯一写点,执行缝金差退役防双记)。
     gold 未观察 = 域级跳写(值留观察)。"""
     gs = game_state_of(None)
     gs.observe(gs.level, 3, evidence='t', sig=_SIG_OBS)
@@ -429,7 +429,7 @@ def test_levelup_logic_state_advances_xp_level_and_gold():
     exp_level, exp_cur = xp_apply_clicks(3, 10, 1)
     assert gs.level.value == exp_level
     assert gs.xp.value[0] == exp_cur
-    assert gs.gold.value == 96   # 金腿直写:-action.cost
+    assert gs.gold.value == 96   # 金分支直写:-action.cost
     # 缺读跳写:level/xp 未观察帧零写不炸
     bs2 = game_state_of(None)
     report_action_level_up_param(bs2, CwActionLevelUpParam(cost=4), sig=_SIG)
@@ -572,10 +572,10 @@ def test_selldeployed_logic_state_clears_slot_and_recounts_board():
 def test_prep_sell_gold_booked_exactly_once_across_seam_and_projection():
     """备战卖出金账全链恰一次入账(统一观察对账迭代归因批出口①修模测试):
     历史形态 live 执行链对同一 CwActionSellBenchParam 先后跑执行缝
-    (旧 apply_op_effect)与容器投影,两腿各记一次 +refund → 逻辑金系统
+    (旧 apply_op_effect)与容器投影,两条分支各记一次 +refund → 逻辑金系统
     性虚高,下帧实读倒挂(journal 实证 −2,run_20260915_070645)。修后
     容器唯一写点 = 卖出上报函数,确认口(apply_confirm_effect,dict 确认
-    族专用)对动作参数零入账(复返即红:确认口若再收编动作分支即双腿
+    族专用)对动作参数零入账(复返即红:确认口若再收编动作分支即两条分支
     双记)。"""
     from sr_od.application.currency_war.kernel.cw_economy import (
         bench_char_cost,
@@ -592,14 +592,14 @@ def test_prep_sell_gold_booked_exactly_once_across_seam_and_projection():
     gs.observe(gs.gold, 10, evidence='t', sig=_SIG_OBS)
     gs.observe(gs.bench, cw4_bview(slots), evidence='t',
                sig=_SIG_OBS)
-    # (旧执行缝腿数据源 tracked 第二账已退役;确认口零入账判据由
+    # (旧执行缝分支数据源 tracked 第二账已退役;确认口零入账判据由
     #  「动作参数零入账」本身承载,主域 bench 即唯一账。)
     refund = sell_refund(1, bench_char_cost(bc.unit))
     action = CwActionSellBenchParam(bench_idx=0)
     apply_confirm_effect(session, action)   # 确认口:动作参数零入账
     report_action_sell_bench_param(gs, action, sig=_SIG)
     assert gs.gold.value == 10 + refund, \
-        f'卖出回金恰一次 +{refund}(双腿双记 = 台账 −N 倒挂病灶)'
+        f'卖出回金恰一次 +{refund}(两条分支双记 = 台账 −N 倒挂病灶)'
 
 
 # ============================================================ 执行器机械半:穿戴 / 开卡 / 武装箱
@@ -1011,7 +1011,7 @@ def _sb_stub_op(hits: set[tuple[str, str]]):
 
 def _sb_executor(controller: _RecordingController, stub_op,
                  cw_match=None):
-    """执行器桩宿主(出战 op 专用:分派包络腿需真 executor 容纳
+    """执行器桩宿主(出战 op 专用:分派包络分支需真 executor 容纳
     last_launch_ok/last_detail 旁路写点)。"""
     from sr_od.application.currency_war.prep_actions import PrepActionExecutor
     ctx = SimpleNamespace(controller=controller, cw_match=cw_match,
@@ -1028,7 +1028,7 @@ def _sb_env(ex):
 
 
 def test_start_battle_click_sequence_and_envelope(monkeypatch):
-    """在册例外(点击序列语义)+ 三条弹窗路径 + 包络腿:
+    """在册例外(点击序列语义)+ 三条弹窗路径 + 包络分支:
 
     - 常规帧:出战一次单击 → True(detail = 已点击无弹窗);零验证
       (无轮询/重试面,单击即完成交回);
@@ -1036,7 +1036,7 @@ def test_start_battle_click_sequence_and_envelope(monkeypatch):
     - 前台无角色帧:确认一击后完成;
     - 找不到按钮:两屏查空 → False + 「未执行:找不到按钮」上报 + 零点击
       (交回外循环重判,不炸);
-    - 包络腿:经注册表分派写 ``executor.last_launch_ok`` 旁路(点击序列
+    - 包络分支:经注册表分派写 ``executor.last_launch_ok`` 旁路(点击序列
       已执行语义)与机械摘要 ``last_detail``,执行缝金差恒 0,薄委托
       替身缝返回序保持原 (ok, detail)。"""
     from test.harness.fixture_controller import fast_sleep
@@ -1054,7 +1054,7 @@ def test_start_battle_click_sequence_and_envelope(monkeypatch):
     ex = _sb_executor(ctl, _sb_stub_op({_HIT_BTN}))
     op, env = _make(ex)
     # 常规帧:无弹窗(直调路径 status 走 round 结果;last_detail 是 runner
-    # 包装写点,包络腿段另验)
+    # 包装写点,包络分支段另验)
     with fast_sleep():
         result = op.run()
     assert result.is_success is True
@@ -1094,7 +1094,7 @@ def test_start_battle_click_sequence_and_envelope(monkeypatch):
     assert result.is_success is False
     assert result.status == '未执行:找不到按钮'
     assert ctl.clicks == []
-    # 包络腿:注册表分派路径的旁路写点(点击序列已执行语义)
+    # 包络分支:注册表分派路径的旁路写点(点击序列已执行语义)
     ctl = _RecordingController()
     ex = _sb_executor(ctl, _sb_stub_op({_HIT_BTN}))
     with fast_sleep():

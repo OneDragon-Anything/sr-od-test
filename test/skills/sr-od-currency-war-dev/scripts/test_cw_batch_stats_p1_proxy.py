@@ -119,10 +119,10 @@ class TestCompDoneP1Proxy:
         翻正;反向快照未物化压制镜像 True。锁两件事:
         1. 轮末快照可算时覆盖镜像(④/② 同源走 _row_form_ok);
         2. 快照缺输入的行回退镜像读数(旧行/档案行零漂移,既有矩阵
-           测试即回退腿)。"""
+           测试即回退分支)。"""
         pair = ('仙舟', '列车同行')
         snap = _materialized_snapshot(pair)
-        # 翻正腿:镜像 False(stale),轮末板面已物化 → 判真
+        # 翻正分支:镜像 False(stale),轮末板面已物化 → 判真
         row_ok = _row(p1_pair=pair, form_ok=False)
         row_ok['state_board_factions'] = snap['board_factions']
         row_ok['state_deployed'] = snap['deployed']
@@ -130,7 +130,7 @@ class TestCompDoneP1Proxy:
         assert m_ok['exit_form_ok'] is True
         assert m_ok['comp_done'] == 1
         assert m_ok['comp_proxy'] is True
-        # 压制腿:镜像 True(stale),轮末板面未物化 → 判假
+        # 压制分支:镜像 True(stale),轮末板面未物化 → 判假
         row_ng = _row(p1_pair=pair, form_ok=True)
         row_ng['state_board_factions'] = {}
         row_ng['state_deployed'] = []
@@ -139,7 +139,7 @@ class TestCompDoneP1Proxy:
         assert m_ng['comp_done'] == 0
 
     def test_game_metrics_falls_back_to_mirror_without_snapshot(self):
-        """回退腿显式锁:行缺轮末快照两键(旧批/档案形状)→ 判定 =
+        """回退分支显式锁:行缺轮末快照两键(旧批/档案形状)→ 判定 =
         form_ok 镜像读数,与既有口径逐位等价(禁静默改历史读数)。"""
         pair = ('仙舟', '列车同行')
         m = _gs.game_metrics(_game(

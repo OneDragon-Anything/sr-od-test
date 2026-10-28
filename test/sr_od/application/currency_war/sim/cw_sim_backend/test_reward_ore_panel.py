@@ -8,8 +8,8 @@
 - 面板矿点数三档(**现算形期望**):装配单点真消费注册表——普通 =
   锚 8 / 经济过热 = 12 / 经济严重过热 = 16;增量灰矿续接面板序,与
   位面开局声明矿的续接位互不撞键;
-- 后端装配 + 扑满链三腿变体冒烟(两卡谓词同构,参数化双环境):备战帧
-  金对开局种子值直断(递延锐度)/胜局结算腿一次落账 + 连胜 0→1 /
+- 后端装配 + 扑满链三条分支变体冒烟(两卡谓词同构,参数化双环境):备战帧
+  金对开局种子值直断(递延锐度)/胜局结算分支一次落账 + 连胜 0→1 /
   败局基础+息 + 连胜清零 + 不掉血,super 局同样生效;
 - 占位披露回归:``PIGGY_ORE_PANEL_BONUS_PLACEHOLDER`` 随局披露在册
   (先例 = ORE_PLANE_START_PENDING 直断,sim/test_sim_backend.py),
@@ -80,10 +80,10 @@ def test_reward_ore_panel_points_count_and_continuation() -> None:
 @pytest.mark.parametrize('piggy_env', _PIGGY_ENVS)
 def test_piggy_super_panel_and_income_legs(
         piggy_env: str, monkeypatch: pytest.MonkeyPatch) -> None:
-    """后端装配单点接线 + 扑满链三腿变体冒烟(递延/连胜例外/不掉血):
+    """后端装配单点接线 + 扑满链三条分支变体冒烟(递延/连胜例外/不掉血):
     备战帧 spheres 点数 = 锚 + 注册表增量(现算形,装配点未消费注册表
     即红);备战帧金 = 开局种子值(kernel ``seed_opening_state`` 金种子,
-    T-6 验收锐度建议的直断);胜局结算腿一次落账 = 基础+息+连胜、连胜
+    T-6 验收锐度建议的直断);胜局结算分支一次落账 = 基础+息+连胜、连胜
     0→1;败局 = 基础+息、连胜清零、hp 不动。期望收入现算自统一公式
     单一源(kernel cw_economy,与既有扑满锁同式)。"""
     monkeypatch.setattr(piggy_helpers, '_PIGGY_ENV', piggy_env)
@@ -101,15 +101,15 @@ def test_piggy_super_panel_and_income_legs(
             '增量灰矿续接面板序'
         assert int(gs.gold.value or 0) == 3, \
             '备战帧金 = 开局种子值(递延生效,窗开不落账)'
-        # 胜局腿:递延基数 3,结算腿一次落账
+        # 胜局分支:递延基数 3,结算分支一次落账
         _force_settle(monkeypatch, won=True)
         _start_battle_feed(gs)
         expect1 = 3 + _reward_expect(
             3, REWARD_BASE_GOLD_BY_ROUND[1], 0, won=True)
         assert int(gs.gold.value or 0) == expect1, \
-            '结算腿一次落账 = 基础+息+进轮连胜'
+            '结算分支一次落账 = 基础+息+进轮连胜'
         assert int(gs.streak.value or 0) == 1, '扑满胜局连胜 +1'
-        # 败局腿:基础+息、连胜清零、不掉血
+        # 败局分支:基础+息、连胜清零、不掉血
         _node_advance_feed(gs, trigger='settle_confirm')
         assert b.screen_identity() == SCREEN_PREP
         hp_before = int(gs.hp.value or 0)

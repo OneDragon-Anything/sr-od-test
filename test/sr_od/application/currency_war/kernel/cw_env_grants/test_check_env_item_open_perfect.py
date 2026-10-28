@@ -194,7 +194,7 @@ def test_settle_rollback_then_window_discharge_same_pos() -> None:
     """跨挂点时序(T-34 设计 §4 锁 6 集成半边):settle_confirm 完胜
     回退先于 sim 进节点收口——回退把解锁位 (1,4) 压到生效序位 (1,3)
     持平后,同窗开盒原语正常命中弹除(回退与开盒零互扰;开盒零席位写
-    = 队列弹除零消耗腿)。"""
+    = 队列弹除零消耗分支)。"""
     gs = _make_gs(node_pos=(1, 3),
                   queue=(('惊喜盒', (1, 4)),),
                   done=(('命运礼物', 'delayed_open_accel'),))

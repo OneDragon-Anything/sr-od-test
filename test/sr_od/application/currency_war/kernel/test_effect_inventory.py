@@ -230,10 +230,10 @@ def test_board_rewrite_clear_then_front_deploy_no_crash() -> None:
     consume_defect_sink()   # 排水:logic_rand_outcome 行不跨用例泄漏
 
 
-# ============================================================ 合并升星触发发放腿
+# ============================================================ 合并升星触发发放分支
 # (T-26 量子同频契约:grant_bench_unit_cascade 采集发火 + spawn_equip_
 # bench_unit 拷贝臂反向锁;设计 = 该迭代 designs/T-26-liangzi-tongpin-
-# qiyue.md §2.4 条 2/§4.6 同构腿/§4.8。)
+# qiyue.md §2.4 条 2/§4.6 同构分支/§4.8。)
 
 _POOL = ('符玄', '希儿')
 
@@ -259,7 +259,7 @@ def _bench_units(gs: GameState) -> list[tuple[str, int]]:
 
 def test_grant_bench_unit_cascade_fires_merge_grant(
         seeded_merge_provider) -> None:
-    """补给单位腿发火时序锁(T-26 设计 §4.6 同构腿):2×1★花火在席,
+    """补给单位入账分支发火时序锁(T-26 设计 §4.6 同构分支):2×1★花火在席,
     grant_bench_unit_cascade('花火') 补齐三连 → 级联合并 2★ 产物,级联
     写毕后发火 → bench 终态 = 产物 + 发放角色并存(发放名 = 注入槽
     种子现算;pick_supply/装备获得后果两消费面同点覆盖)。"""
@@ -275,21 +275,21 @@ def test_grant_bench_unit_cascade_fires_merge_grant(
 def test_spawn_equip_bench_unit_no_facts_no_grant(
         seeded_merge_provider) -> None:
     """拷贝臂反向锁(T-26 设计 §4.8):银狼族单位经 spawn_equip_bench_unit
-    入席(数据拷贝仪计数臂腿,直写首空槽无级联无事实采集)→ 花火三连
+    入席(数据拷贝仪计数臂分支,直写首空槽无级联无事实采集)→ 花火三连
     进度不被消费、零合并零发放——「无漏发靠穿戴门」前提的回归面
     (YINLANG_WEAR_ALLOWLIST 扩圈时本锁与披露 6 共同构成最短证伪路径)。"""
     gs = _merge_contract_gs([_u('花火'), _u('花火')])
     seq_before = gs.write_seq
     placed = spawn_equip_bench_unit(gs, '银狼', 1, 0)
-    assert placed is True, '拷贝臂腿入席'
+    assert placed is True, '拷贝臂分支入席'
     assert _bench_units(gs) == [('花火', 1), ('花火', 1), ('银狼', 1)], \
         '直写落位:无级联合并(花火仍 2 只)、无发放角色'
-    assert gs.write_seq - seq_before == 1, '恰一行入席写,零发放腿'
+    assert gs.write_seq - seq_before == 1, '恰一行入席写,零发放分支'
 
 
 @pytest.fixture
 def seeded_merge_provider() -> Iterator[None]:
-    """注确定 rng 提供槽(固定种子;本模块发放腿场景下防真随机漂移),
+    """注确定 rng 提供槽(固定种子;本模块发放分支场景下防真随机漂移),
     必达复位。"""
     set_action_rng_provider(lambda tool: random.Random(20261016))
     try:
@@ -299,7 +299,7 @@ def seeded_merge_provider() -> Iterator[None]:
 
 
 # ============================================================ 利息累计账
-# (T-27 公司契约条件腿,设计 = 迭代设计稿 T-27-gongsi-qiyue §2.2 + §4.2;
+# (T-27 公司契约条件分支,设计 = 迭代设计稿 T-27-gongsi-qiyue §2.2 + §4.2;
 # 宿主先例 = refresh 两计数 2026-09-18 用户裁定「计数住效果账本」。)
 
 
@@ -379,7 +379,7 @@ def test_worn_transform_keeps_uid_and_guard_still_blocks() -> None:
 # ============================================================ 条件形态专家触发
 # (T-42 特邀专家:银狼,设计 = 迭代 2026-09-23-invest-effects-calc
 # designs/T-42-teyao-zhuanjia-yinlang.md §4 锁 4:平行桥渠道——入席 +
-# 级联 + 触发发放腿全毕后判据一次,桥尾追加;数据拷贝仪Max 确定性通道
+# 级联 + 触发发放分支全毕后判据一次,桥尾追加;数据拷贝仪Max 确定性通道
 # 送 1★银狼LV.999 即现役可达获得。)
 
 _ENV_YINLANG = '特邀专家:银狼'

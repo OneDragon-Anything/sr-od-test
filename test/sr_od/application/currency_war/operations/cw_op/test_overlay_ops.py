@@ -114,7 +114,7 @@ def _screen_loader_none() -> SimpleNamespace:
 
 
 def _stub_supply_reports(monkeypatch, reported: list, advances: list) -> None:
-    """补给动作 op 上报函数桩(效果腿行为测试归 test_supply;回执/机械
+    """补给动作 op 上报函数桩(效果分支行为测试归 test_supply;回执/机械
     面测试只锁接线形态):自上报与节点推进零容器写,调用入列供断言。"""
     import sr_od.application.currency_war.operations.cw_op.cw_pick_supply_action as pick_mod
     monkeypatch.setattr(pick_mod, 'report_action_pick_supply_param',
@@ -218,7 +218,7 @@ def test_supply_pick_op_clicks_target_and_confirms(no_pick_sleep, monkeypatch):
     """补给确认链:点卡 → 「按钮-确认」area 确认(机械半零判效);动作
     回执行恰一条(发出形态 reason='' + op/screen/actor 硬编码 + detail
     = idx+内容摘要,词表见 kernel ``note_action_receipt`` docstring);
-    补给确认无直连到账写边(入栏/后果腿唯一写边 = 上报函数,本测试
+    补给确认无直连到账写边(入栏/后果分支唯一写边 = 上报函数,本测试
     已桩,行为测试见 test_supply)。"""
     confirm_calls: list[tuple] = []
     reported: list = []
@@ -308,7 +308,7 @@ def test_supply_pick_op_confirm_missing_receipts_block_code(
 
 def test_supply_pick_op_sim_accepted_receipts_empty_reason(
         no_pick_sleep, monkeypatch):
-    """sim 受理形态:装配态(mechanical_io_allowed False)机械腿静默
+    """sim 受理形态:装配态(mechanical_io_allowed False)机械执行分支静默
     零直连点击,点击经端口受理恒按已发出簿记 reason=''(不读 confirm
     结果判读——stub 给失败态仍恒 '';形态先例 = cw_op_open_shop sim
     分支同名语义);detail 携内容摘要。"""
@@ -326,12 +326,12 @@ def test_supply_pick_op_sim_accepted_receipts_empty_reason(
         round_by_find_and_click_area=lambda shot, s, a, **kw: rs)
     _stub_supply_reports(monkeypatch, reported, advances)
     monkeypatch.setattr(cw_sim_ports, '_BACKEND', object())
-    env = OverlayPickExecEnv(op=op)   # sim:target None,机械腿零消费
+    env = OverlayPickExecEnv(op=op)   # sim:target None,机械执行分支零消费
     assert CwActionPickSupplyOp(env.op.ctx,
                                 CwActionPickSupplyParam(idx=0,
                                                         char_name='希儿'),
                                 env=env).run().is_success
-    assert ctrl.clicks == [] and ctrl.moves == [], 'sim 机械腿静默'
+    assert ctrl.clicks == [] and ctrl.moves == [], 'sim 机械执行分支静默'
     receipts = game_state_of(session).receipts.value
     assert len(receipts) == 1, f'恰一条回执行:{receipts!r}'
     assert receipts[0]['reason'] == ''

@@ -213,7 +213,7 @@ def test_bench_full_overflow_occupied_zero_write(
 
 
 def test_rng_fallback_without_provider(seeded_provider) -> None:
-    """回退自掷腿的反向对照(T-26 设计 §4.5):未装 provider(= live
+    """回退自掷分支的反向对照(T-26 设计 §4.5):未装 provider(= live
     缺省)→ 回退自掷仍产出,名 ∈ 发放池(采样是猜测口径,不因缺装配
     而零发放)。"""
     set_action_rng_provider(None)
@@ -240,7 +240,7 @@ def test_rng_provider_deterministic_replay(seeded_provider) -> None:
 
 
 def test_resolver_explicit_rng_beats_provider(seeded_provider) -> None:
-    """解析口显式优先(T-26 设计 §4.5 末腿,action_sampling_rng 解析序
+    """解析口显式优先(T-26 设计 §4.5 末分支,action_sampling_rng 解析序
     「显式传入 > 注入槽」在本工具键解析点钉住):装 provider 下显式 rng
     在场则原样返回该实例(provider 不触)。"""
     explicit = random.Random(7)

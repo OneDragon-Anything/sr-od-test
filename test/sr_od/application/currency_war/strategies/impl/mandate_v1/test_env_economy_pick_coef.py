@@ -1,4 +1,4 @@
-"""策略大师金币腿估值口径(通道 4 公式)测试(镜像 src =
+"""策略大师金币分支估值口径(通道 4 公式)测试(镜像 src =
 strategies/impl/mandate_v1/env_economy.py 的通道 4;按被测面拆文件落位,
 先例 = 同目录 test_invest_strategy.py〔在册超限文件,只读复用不追加〕
 ④现金分组)。

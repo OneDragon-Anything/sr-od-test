@@ -1144,7 +1144,7 @@ def test_lock5_sim_modified_game_full_chain(monkeypatch) -> None:
         assert out.applied
         assert (b.gs.active_env.value or '') == '人身意外险'
         assert b.gs.node_seq_by_plane.value == _modified(), \
-            '环境注册即落修饰表(获得链写腿,sim 与 live 同链)'
+            '环境注册即落修饰表(获得链写分支,sim 与 live 同链)'
         cw_sim_ports.declare_world(out.world_decl)
         b._maybe_finish_wait()
 
@@ -1232,7 +1232,7 @@ def test_lock5_sim_modified_supply_income_keeps_streak() -> None:
 
 
 def test_lock8_sim_default_game_regression() -> None:
-    """默认局回归:无环境局全链一次,局终 = 走进位面 3 后 hp 归零死亡腿
+    """默认局回归:无环境局全链一次,局终 = 走进位面 3 后 hp 归零死亡分支
     (seed 61 探针锚:前 16 节点与现役基线逐值同,3-5 遭遇战死,保底已用;
     默认环境零修饰行为不变),零 DECL_SCREEN_DRIFT;败局无 run_complete
     披露(胜负判别单一源在披露集)。"""
@@ -1257,7 +1257,7 @@ def test_lock8_sim_default_game_regression() -> None:
             'hp 归零败局不经胜利分支'
         assert DECL_SCREEN_DRIFT not in b.disclosures
         assert (b.gs.node.value.plane, b.gs.node.value.round_num) == (3, 5), \
-            '默认局 seed 61 终点 = P3 r5(死亡腿,基线轮次探针实测)'
+            '默认局 seed 61 终点 = P3 r5(死亡分支,基线轮次探针实测)'
         assert int(b.gs.hp.value or 0) == 0, 'hp 归零'
         assert bool(b.gs.hp_floor_triggered.value) is True, '保底已用'
     finally:

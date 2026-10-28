@@ -595,7 +595,7 @@ def _lsig(actor: str) -> ChannelSig:
 
 def _make_gs(*, bench: list[tuple[str, int]] | None = None,
              equips: list[str] | None = None) -> GameState:
-    """上报帧观测面按参组装(None = 保持未观察,供 None 边界腿)。"""
+    """上报帧观测面按参组装(None = 保持未观察,供 None 边界分支)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if bench is not None:
         slots = [BenchSlot(kind='unit',
@@ -640,8 +640,8 @@ def rows_sink() -> _RowSink:
 def test_pick_supply_immediate_char_and_consequence(
         rows_sink: _RowSink) -> None:
     """补给确认即时单相上报测试(supply-pick design §2.0B):一口写 owned
-    规范名 + 单位腿(char 入席 1★ + 合成级联)+ 装备后果腿(命中表 →
-    送角色腿)——无发射/落地两相,无证据参数。"""
+    规范名 + 单位入账分支(char 入席 1★ + 合成级联)+ 装备后果分支(命中表 →
+    送角色入账分支)——无发射/落地两相,无证据参数。"""
     gs = _make_gs(bench=[('银狼', 1), ('银狼', 1)], equips=[])
     out = report_action_pick_supply_param(
         gs, CwActionPickSupplyParam(idx=0, char_name='银狼',
@@ -650,8 +650,8 @@ def test_pick_supply_immediate_char_and_consequence(
     assert out.applied is True
     units = _units(gs)
     assert ('银狼', 2) in units and ('银狼', 1) in units, \
-        '单位腿 1★入席合成 2★ + 后果腿送出 1★(购买同语义)'
-    assert gs.bench.source == 'logic', '双腿同源 write_logic'
+        '单位入账分支 1★入席合成 2★ + 后果分支送出 1★(购买同语义)'
+    assert gs.bench.source == 'logic', '两条分支同源 write_logic'
     assert gs.equips.value == ['分身墨镜'], 'owned += 规范名(即时入栏)'
     assert gs.equips.source == 'logic', '入栏 write_logic(单相一口写)'
 
@@ -666,10 +666,10 @@ def test_pick_channels_payload_fields_excluded_from_action_key() -> None:
 
 def test_pick_supply_equip_unresolved_flips_source(
         rows_sink: _RowSink) -> None:
-    """补给装备名未解析(逐件 fail-closed,T-9 列表式装备腿):未解析件
+    """补给装备名未解析(逐件 fail-closed,T-9 列表式装备入账分支):未解析件
     禁猜——equips 值不变翻来源 + 留证行;已解析件照常入账(不整批弃)。
-    形态 = 装备腿集合内含 '' 件(norm_item=''+附加件非空,或附加件
-    归一未解析);``char≠'' ∧ 全部腿空`` 已改走零装备名分支(见
+    形态 = 装备入账分支集合内含 '' 件(norm_item=''+附加件非空,或附加件
+    归一未解析);``char≠'' ∧ 全部分支空`` 已改走零装备名分支(见
     test_pick_supply_char_only_zero_equip_column,旧「主件空 = 未解析」
     归因随 T-9 退役)。"""
     gs = _make_gs(bench=[('希儿', 1)], equips=['折叠小刀'])
@@ -679,7 +679,7 @@ def test_pick_supply_equip_unresolved_flips_source(
                                     extra_norm_items=('',)),
         _lsig('CwScreenSupplyNode'))
     assert out.applied is True
-    assert ('希儿', 1) in _units(gs), '单位腿不受装备名未解析影响'
+    assert ('希儿', 1) in _units(gs), '单位入账分支不受装备名未解析影响'
     assert gs.equips.value == ['折叠小刀', '量产型装甲'], \
         '已解析件照常入账(fail-closed 不整批弃)'
     assert gs.equips.source == 'logic_rand', '未解析件值不变翻来源'
@@ -688,7 +688,7 @@ def test_pick_supply_equip_unresolved_flips_source(
 
 def test_pick_supply_char_only_zero_equip_column_no_defect(
         rows_sink: _RowSink) -> None:
-    """char-only 选定测试(T-9 对抗 r1 A1):char 非空 ∧ 装备腿全空 →
+    """char-only 选定测试(T-9 对抗 r1 A1):char 非空 ∧ 装备入账分支全空 →
     装备域零写(无预测无期望,零翻来源)+ reason 留证、**零缺陷行**
     ——合法无装备读数列(人才储备类 char-only 列/件名全失读列)禁发
     「装备名未解析」伪缺陷。"""
@@ -705,7 +705,7 @@ def test_pick_supply_char_only_zero_equip_column_no_defect(
 
 def test_pick_supply_extra_norm_items_land_all_legs(
         rows_sink: _RowSink) -> None:
-    """附加装备腿测试(T-9):extra_norm_items 两件 → owned 尾追两件
+    """附加装备入账分支测试(T-9):extra_norm_items 两件 → owned 尾追两件
     (主件 → 附加件画面 y 序)+ 获得后果链逐件(主件分身墨镜送银狼 1★
     合成 2★、附加件分身墨镜Max 送银狼 2★)——世界写入 = 角色 + 随选
     装备组全列。"""
@@ -717,7 +717,7 @@ def test_pick_supply_extra_norm_items_land_all_legs(
         _lsig('CwActionPickSupplyOp'))
     assert out.applied is True
     assert gs.equips.value == ['分身墨镜', '分身墨镜Max'], \
-        '装备腿 0..n 件按画面 y 序全列入栏'
+        '装备入账分支 0..n 件按画面 y 序全列入栏'
     units = _units(gs)
     assert units.count(('银狼', 2)) == 2, \
         '后果链逐件:主件合成 2★ + 附加件 Max 直送 2★'
@@ -744,7 +744,7 @@ def test_pick_supply_content_unknown_flips_domains(
 
 
 def _seeded_gs():
-    """剧本容器:bench 两枚 1★银狼 + equips 空读(后果腿合成级联素材)。"""
+    """剧本容器:bench 两枚 1★银狼 + equips 空读(后果分支合成级联素材)。"""
     session = StrategySession()
     gs = game_state_of(session)
     slots = [BenchSlot(kind='unit', unit=Unit(char_id='银狼', star=1))
@@ -764,7 +764,7 @@ def _make_match(test_context, monkeypatch, session):
 def test_pick_confirm_reports_full_result_immediately(
         test_context, monkeypatch) -> None:
     """pick 即时上报测试:确认点击后(机械半全桩,零落地相)容器即持
-    owned 规范名 + 单位腿(1★入席合成级联)+ 装备后果腿(分身墨镜
+    owned 规范名 + 单位入账分支(1★入席合成级联)+ 装备后果分支(分身墨镜
     → 送 1★银狼)——一口写,无发射/落地两相。"""
     from sr_od.application.currency_war.operations.cw_op import (
         cw_pick_supply_action as pa,
@@ -794,7 +794,7 @@ def test_pick_confirm_reports_full_result_immediately(
     assert gs.equips.source == 'logic', '入栏 write_logic'
     units = _units(gs)
     assert ('银狼', 2) in units and ('银狼', 1) in units, \
-        '单位腿 1★入席合成 2★ + 后果腿送出 1★'
+        '单位入账分支 1★入席合成 2★ + 后果分支送出 1★'
 
 
 def test_chosen_supply_written_before_dispatch_and_no_landing_phase(

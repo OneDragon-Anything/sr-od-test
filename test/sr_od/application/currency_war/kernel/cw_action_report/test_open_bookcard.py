@@ -40,7 +40,7 @@ def _make_gs(slots: list[BenchSlot]) -> GameState:
 
 
 def test_open_bookcard_applies_frees_slot_and_registers() -> None:
-    """正腿(设计 §4 锁 4):bookcard 槽(带名)在册 → slot=None 自动定位
+    """正分支(设计 §4 锁 4):bookcard 槽(带名)在册 → slot=None 自动定位
     上报 applied=True,该槽腾空(empty),expert_invite 登记在册。"""
     slots = [BenchSlot(kind='empty'),
              BenchSlot(kind='bookcard', item='专家邀请函'),
@@ -57,7 +57,7 @@ def test_open_bookcard_applies_frees_slot_and_registers() -> None:
 
 
 def test_open_bookcard_supply_box_slot_rejected_zero_write() -> None:
-    """反腿(设计 §4 锁 4):仅 supply_box 身份槽 → applied=False
+    """反分支(设计 §4 锁 4):仅 supply_box 身份槽 → applied=False
     bookcard_slot_missing,bench 零写、零登记(kind 硬门 = 开启链前置)。"""
     slots = [BenchSlot(kind='supply_box', item='简易武装箱')] \
         + [BenchSlot(kind='empty')] * 8

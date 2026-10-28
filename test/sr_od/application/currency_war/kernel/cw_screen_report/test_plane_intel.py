@@ -62,7 +62,7 @@ def rows_sink() -> _RowSink:
 
 
 def _rand_affix_gs(value: list[str]) -> GameState:
-    """随机态词缀容器(删除腿猜测名单形态:logic_rand 来源直写)。"""
+    """随机态词缀容器(删除分支猜测名单形态:logic_rand 来源直写)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.write_logic_rand(gs.enemy_affixes, list(value), produced_by='Test',
                         evidence='t:rand', sig=_SIG_LA)
@@ -71,7 +71,7 @@ def _rand_affix_gs(value: list[str]) -> GameState:
 
 def test_rand_container_nonempty_reading_observes_through(
         rows_sink: _RowSink) -> None:
-    """随机态容器 + 非空读数 → observe 覆盖转正(设计 §4 锁 3 主腿):
+    """随机态容器 + 非空读数 → observe 覆盖转正(设计 §4 锁 3 主分支):
     来源翻 observation(谓词解除)、差异落 logic_rand_outcome 台账
     (随机效果落地预期内,无告警无停机)。"""
     gs = _rand_affix_gs(['开局不利', '库藏生锈'])

@@ -174,7 +174,7 @@ def test_resync_board_inherits_row_rand_source() -> None:
     """board 派生写继承行域写入来源(逻辑随机态采样链,logic-rand-
     sampling 迭代):行域 write_logic_rand → board 派生行同标
     logic_rand(行域真值形态随采样奖励而变,board 为其派生,污染沿
-    派生链传递);行域 write_logic 回归腿 → board 仍 logic。"""
+    派生链传递);行域 write_logic 回归分支 → board 仍 logic。"""
     gs = game_state_of(None)
     gs.observe(gs.deployed, _bv([_heita()]), sig=_SIG_OBS)
     gs.observe(gs.board, {'银河学者': 1, '群攻': 1}, sig=_SIG_OBS)
@@ -188,7 +188,7 @@ def test_resync_board_inherits_row_rand_source() -> None:
     gs2.observe(gs2.board, {'银河学者': 1, '群攻': 1}, sig=_SIG_OBS)
     gs2.write_logic(gs2.deployed, _bv([_heita(), _wandi()]),
                     produced_by='T', sig=_SIG)
-    assert gs2.board.source == 'logic', '回归腿:确定行写 board 仍 logic'
+    assert gs2.board.source == 'logic', '回归分支:确定行写 board 仍 logic'
 
 
 def test_pure_reorder_logic_write_yields_zero_board_delta() -> None:
@@ -206,7 +206,7 @@ def test_pure_reorder_logic_write_yields_zero_board_delta() -> None:
 
 
 def test_selldeployed_updates_board_via_derived_resync() -> None:
-    """投影写端走同一派生口:CwActionSellDeployedParam 容器腿(旧 board 全量重算写端
+    """投影写端走同一派生口:CwActionSellDeployedParam 容器分支(旧 board 全量重算写端
     已退役)卖出场上单位后 board 经 resync 摘除其标签。"""
     gs = game_state_of(None)
     gs.observe(gs.deployed, _fv([_luanpo()]), sig=_SIG_OBS)

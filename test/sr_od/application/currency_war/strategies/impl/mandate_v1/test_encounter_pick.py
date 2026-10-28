@@ -55,7 +55,7 @@ def _opt(idx: int, difficulty: int,
 def _row(gs: GameState, plane: int, round_num: int, node_type: str,
          killed: bool | None, encounter_tier: int | None = None,
          fill: float | None = None) -> None:
-    """结算行入环(生产单一写端;outcome 腿桩最小面,hp_after = None
+    """结算行入环(生产单一写端;outcome 分支桩最小面,hp_after = None
     读缺形态——本文件断言面是窗口/经验读口,不消费 hp 差分)。"""
     record_settlement_row(
         gs, SimpleNamespace(killed=killed, progress_fill_ratio=fill,

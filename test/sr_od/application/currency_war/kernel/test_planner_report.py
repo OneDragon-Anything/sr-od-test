@@ -1,17 +1,17 @@
-"""银狼策划上报测试面(腿型判定单源 / 名称归一分层 / 腿应用三态 / 采样池)。
+"""银狼策划上报测试面(分支类型判定单源 / 名称归一分层 / 分支应用三态 / 采样池)。
 
 判据正本(持久索引):银狼闭环设计 §2.0/§2.1/§2.4(docs/develop/
 sr_od/application/currency_war/ 迭代详设;单相即时上报契约 §2.0)。
 测试面:
 
-- **腿型判定单源**(§2.1①):装备域优先——破解芯片卡文含「弱化」
+- **分支类型判定单源**(§2.1①):装备域优先——破解芯片卡文含「弱化」
   仍判 equip(碰撞治理);longest-match(分身墨镜Max 不被短名截胡);相似
   归一唯一命中;多命中 = equip 且件名未解析(禁猜);升费关键词/unknown
   (弱化兜底档已退役:含弱化词未知名卡文落 unknown);
 - **打分两档制**(升费档 > 装备档):无名弱化卡文零弱化档分,按装备档回落;
-- **装备腿**(§2.1②):归一命中 → 入栏 + 获得后果链;未解析 → 值不变
+- **装备入账分支**(§2.1②):归一命中 → 入栏 + 获得后果链;未解析 → 值不变
   翻来源 + 留证;unknown = 零记账 + 留证(含弱化词未知名卡文退役后落此档);
-- **即时单相上报**(§2.0):确认点击后一次上报即应用完整效果腿,无发射/
+- **即时单相上报**(§2.0):确认点击后一次上报即应用完整效果分支,无发射/
   落地两相、无证据闩;
 - **注册表级装备名分层归一**(``normalize_registry_equip_name``):互撞族
   精确快道恒命中 / OCR 形变救援(containment + LCS 唯一命中)/ 多命中
@@ -62,7 +62,7 @@ def _lsig(actor: str = 'CwScreenYinLang') -> ChannelSig:
 
 def _make_gs(*, bench: list[tuple[str, int]] | None = None,
              equips: list[str] | None = None) -> GameState:
-    """观测面按参组装(None = 保持未观察,供 None 边界腿)。"""
+    """观测面按参组装(None = 保持未观察,供 None 边界分支)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if bench is not None:
         slots = [BenchSlot(kind='unit',
@@ -99,11 +99,11 @@ def rows_sink() -> _RowSink:
         s.close()
 
 
-# ============================================================ 腿型判定单源
+# ============================================================ 分支类型判定单源
 
 
 def test_leg_classifier_equip_domain_first_and_longest_match() -> None:
-    """腿型分类测试(design §2.1①):装备域优先——破解芯片卡文含「弱化」
+    """分支类型分类测试(design §2.1①):装备域优先——破解芯片卡文含「弱化」
     仍判 equip(决策关键词碰撞治理);longest-match;相似归一;多命中
     = equip+未解析;关键词降级;unknown。"""
     # 破解芯片 = 名字 + 含「弱化」效果文 → 装备域锚先行(碰撞治理;
@@ -149,12 +149,12 @@ def test_decide_planner_weaken_tier_retired(rows_sink: _RowSink) -> None:
     assert '全场弱化' not in pick2.reason, '弱化档 reason 词已不存在'
 
 
-# ============================================================ 装备腿与 unknown 腿
+# ============================================================ 装备入账分支与 unknown 分支
 
 
 def test_equip_leg_gain_with_consequence_chain(
         rows_sink: _RowSink) -> None:
-    """装备腿(design §2.1②/§2.2):入栏 + 获得后果链(分身墨镜送 1★银狼
+    """装备入账分支(design §2.1②/§2.2):入栏 + 获得后果链(分身墨镜送 1★银狼
     进备战席,与 2× 既有 1★ 银狼合成升星——效果同商店购买)。"""
     gs = _make_gs(bench=[('银狼', 1), ('银狼', 1)], equips=['幸运星'])
     from sr_od.application.currency_war.kernel.cw_action_report.pick_planner import (
@@ -190,7 +190,7 @@ def test_equip_leg_unresolved_flips_source(
 def test_unknown_leg_evidenced_zero_write(
         rows_sink: _RowSink) -> None:
     """unknown = 零记账 + 留证证未识别事实(含弱化词未知名卡文退役后落
-    此档——静默零记账变响亮申报;原 weaken 派发分支已删,未路由腿型 =
+    此档——静默零记账变响亮申报;原 weaken 派发分支已删,未路由分支类型 =
     终态兜底零写)。"""
     from sr_od.application.currency_war.kernel.cw_action_report.pick_planner import (
         report_action_pick_planner_param,
@@ -213,7 +213,7 @@ def test_unknown_leg_evidenced_zero_write(
 
 def test_planner_report_is_immediate_single_phase(
         rows_sink: _RowSink) -> None:
-    """单相即时上报测试(design §2.0):确认点击后一次上报即应用效果腿
+    """单相即时上报测试(design §2.0):确认点击后一次上报即应用效果分支
     (2★ 源即消费)——无发射相零写窗、无落地证据闩(两相已退役)。"""
     from sr_od.application.currency_war.kernel.cw_action_report.pick_planner import (
         report_action_pick_planner_param,

@@ -61,7 +61,7 @@ def rows_sink() -> Iterator[_RowSink]:
 
 
 def _make_gs(*, env: str | None = _ENV, gold: int | None = 30) -> GameState:
-    """观察面按参组装(gold None = 未观察形态,供缺陷留证腿)。"""
+    """观察面按参组装(gold None = 未观察形态,供缺陷留证分支)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if env is not None:
         gs.observe(gs.active_env, env, sig=_SIG_OBS)

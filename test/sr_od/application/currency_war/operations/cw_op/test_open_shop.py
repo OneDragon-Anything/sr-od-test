@@ -94,7 +94,7 @@ class _SimBackendStub:
 
     def click_answer(self, op: object, screen_name: str, area_name: str,
                      until_find_all: object, until_not_find_all: object):
-        raise AssertionError('open_shop 点击腿在宿主 round_by_*,不经直调触后端')
+        raise AssertionError('open_shop 点击分支在宿主 round_by_*,不经直调触后端')
 
     def advance(self, decl: object) -> None:
         raise AssertionError('open_shop 非转移集成员,无声明喂入')
@@ -167,7 +167,7 @@ def test_real_click_emits_and_books_success(monkeypatch, live_io):
 
 def test_sim_click_accepted_always_books_emitted(monkeypatch, sim_installed):
     """sim 恒按已发出簿记:点击应答的屏门失败(转移后可见性语义)不作
-    发出判读——宿主点击腿受理即已发出,round_success + 回执 reason='';
+    发出判读——宿主点击分支受理即已发出,round_success + 回执 reason='';
     零 park 零等待。回归锁:旧形态此处误记受阻(复盘 ⚠ 误显根因)。"""
     monkeypatch.setattr(cw_op_open_shop, 'time', _NoSleepTime())
     gs = _gs_with_supply(monkeypatch)

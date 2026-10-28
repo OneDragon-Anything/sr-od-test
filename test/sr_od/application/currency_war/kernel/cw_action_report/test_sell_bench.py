@@ -1,4 +1,4 @@
-"""sell_bench 溢出腿入位身份守恒测试(镜像 src =
+"""sell_bench 溢出分支入位身份守恒测试(镜像 src =
 kernel/cw_action_report/sell_bench.py;同 src 兄弟测试 =
 kernel/test_gain_chain.py 卖牌段〔在册超限文件,只读复用不追加〕)。
 
@@ -6,7 +6,7 @@ kernel/test_gain_chain.py 卖牌段〔在册超限文件,只读复用不追加�
 effects-calc/designs/T-39-zhuanjia-yantaohui.md)§2.4.3 + §4 锁 5:
 溢出往返身份守恒——overflow_warning + overflow_card='专家邀请函' → 卖牌
 腾槽入位 = bookcard 带名槽件;='简易武装箱' → supply_box 带名(回归);
-角色名 → unit 腿(回归)。入位构造 = 词表守卫保留 + 查映射带名槽件
+角色名 → unit 分支(回归)。入位构造 = 词表守卫保留 + 查映射带名槽件
 (身份守恒闭环:发放带名落席 → 溢出字符串(名字本身)→ 入位槽带名)。
 """
 from __future__ import annotations
@@ -73,7 +73,7 @@ def test_sell_absorbs_overflow_box_named_slot_regression() -> None:
 
 
 def test_sell_absorbs_overflow_char_unit_leg_regression() -> None:
-    """角色腿回归(设计 §4 锁 5):溢出位 = 角色名(词表外)→ 入位 unit
+    """角色入账分支回归(设计 §4 锁 5):溢出位 = 角色名(词表外)→ 入位 unit
     槽件星级 1 兜底;item 恒 None(词表守卫保留,行为不变)。"""
     gs = _make_gs_full_bench()
     gs.observe(gs.overflow_card, '银狼', sig=_SIG_OBS)

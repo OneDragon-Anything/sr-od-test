@@ -607,7 +607,7 @@ def test_env_refresh_grants_registry_and_validation(
         cw_investments._validate_env_refresh_grants()
     monkeypatch.undo()
 
-    # ⑥ 跨锁失同步(T-21):改价腿单侧改阈值——发放腿(本表)与改价腿
+    # ⑥ 跨锁失同步(T-21):改价分支单侧改阈值——发放分支(本表)与改价分支
     # (ENV_ECONOMY.refresh_cost_after,sim 渲染 helper 读它)同出卡面
     # 同一句「30 次」,单侧改数静默漂移 = sim 翻价早于发放
     monkeypatch.setitem(
@@ -738,7 +738,7 @@ def test_refresh_grant_three_writes_same_evidence_adjacent(
 
 
 def test_refresh_trigger_rejects_obs_sig() -> None:
-    """sig 单形态契约:obs 族进触发函数即炸渠道族校验(首笔金腿即拦;
+    """sig 单形态契约:obs 族进触发函数即炸渠道族校验(首笔金收入分支即拦;
     唯一调用方 = 上报函数 _grp_sig,logic_action 族,天然满足)。"""
     gs = _r_make_gs(env=_R_ENV, gold=100, equips=[])
     _count_refreshes(gs, 20)
@@ -788,8 +788,8 @@ def test_exactly_once_in_21_refresh_loop(
 def test_report_wiring_grants_on_threshold() -> None:
     """接线存在性:上报函数尾部触发检查在在册环境达阈时发放落地
     (集成 1 条;矩阵断言归 kernel 级,不在此层重复)。窗口内 = 刷费
-    扣金腿(容器直读,T-21 腿 3:免费未观察保守按付费,基价 2)+ 发放
-    三笔;level 不写 = 随机态采样腿跳写。"""
+    扣金分支(容器直读,T-21 分支 3:免费未观察保守按付费,基价 2)+ 发放
+    三笔;level 不写 = 随机态采样分支跳写。"""
     gs = _r_make_gs(env=_R_ENV, gold=100, equips=['永动机'])
     _count_refreshes(gs, 20)
 
@@ -798,11 +798,11 @@ def test_report_wiring_grants_on_threshold() -> None:
 
     assert outcome.applied is True
     assert gs.gold.value == 128, \
-        '第 21 刷扣基价 2(容器直读)+ 发放腿金 +30 落地(100−2+30)'
-    assert gs.equips.value == ['永动机', _R_EQUIP], '发放腿装备尾追落地'
+        '第 21 刷扣基价 2(容器直读)+ 发放分支金 +30 落地(100−2+30)'
+    assert gs.equips.value == ['永动机', _R_EQUIP], '发放分支装备尾追落地'
     assert gs.env_grants_done.value == ((_R_ENV, REFRESH_THRESHOLD_KEY),), \
-        '发放腿 done 封账落地'
-    assert gs.effects.refresh_total == 21, '计数腿先行入账(第 21 刷)'
+        '发放分支 done 封账落地'
+    assert gs.effects.refresh_total == 21, '计数分支先行入账(第 21 刷)'
 
 
 # ============================================================ 长线利好(T-21 付费域 + 金-only)
@@ -812,7 +812,7 @@ _L_ENV = '长线利好'
 
 def _l_make_gs(*, gold: int | None = None) -> GameState:
     """长线利好测试容器(金-only 卡:equips 恒保持未观察形态——
-    登记装备腿 None,发放路径不应有任何 equips 承载要求)。"""
+    登记装备入账分支 None,发放路径不应有任何 equips 承载要求)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.observe(gs.active_env, _L_ENV, sig=_R_SIG_OBS)
     if gold is not None:
@@ -853,8 +853,8 @@ def test_gold_only_grant_two_writes_adjacent(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """金-only 形状(T-21 锁 3):发放恰两笔(gold +20 走 write_logic、
     done 追加走 write_logic)同 evidence env_grant#长线利好#refresh30
-    相邻,零 equips 笔;equips 未观察也不缓发(装备腿 None 无承载要求,
-    与二手市场装备腿形态互照)。"""
+    相邻,零 equips 笔;equips 未观察也不缓发(装备入账分支 None 无承载要求,
+    与二手市场装备入账分支形态互照)。"""
     gs = _l_make_gs(gold=100)
     _count_refreshes(gs, 30, free=False)
     calls = _record_writes(gs, monkeypatch)
@@ -864,7 +864,7 @@ def test_gold_only_grant_two_writes_adjacent(
     assert granted is None, '返回值 = 被发装备名,金-only 恒 None(仅日志面)'
     assert gs.gold.value == 120, '金 100 + 20'
     assert gs.gold.source == 'logic', '金 = 登记事实直写'
-    assert gs.equips.value is None, '装备腿 None:零 equips 笔(保持未观察)'
+    assert gs.equips.value is None, '装备入账分支 None:零 equips 笔(保持未观察)'
     assert gs.env_grants_done.value == ((_L_ENV, REFRESH_THRESHOLD_KEY),)
     assert calls == [
         ('gold', 'env_grant#长线利好#refresh30', 'logic', _R_SIG_LOGIC),
@@ -897,7 +897,7 @@ def test_paid_domain_exactly_once_in_31_refresh_loop(
 def test_paid_grant_gold_unobserved_withhold_then_retry(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """缓发重试(T-21 锁 5):gold 缺读 → 零写不标 done(宁缺勿造,
-    刷新高频下次自动重查),喂值后下次调用发放成功(金-only 无装备腿,
+    刷新高频下次自动重查),喂值后下次调用发放成功(金-only 无装备入账分支,
     无第二缓发面)。"""
     gs = _l_make_gs()   # gold 未写 = None
     _count_refreshes(gs, 30, free=False)
@@ -927,8 +927,8 @@ def test_report_wiring_paid_grant_price_base_at_threshold() -> None:
     assert outcome.applied is True
     assert gs.gold.value == 118, '第 30 刷扣旧价 2 且同窗 +20(净 +18)'
     assert gs.env_grants_done.value == ((_L_ENV, REFRESH_THRESHOLD_KEY),), \
-        '发放腿 done 封账落地'
-    assert gs.effects.refresh_paid == 30, '付费计数腿先行入账'
+        '发放分支 done 封账落地'
+    assert gs.effects.refresh_paid == 30, '付费计数分支先行入账'
 
 
 def test_report_refresh_fee_new_price_after_threshold() -> None:

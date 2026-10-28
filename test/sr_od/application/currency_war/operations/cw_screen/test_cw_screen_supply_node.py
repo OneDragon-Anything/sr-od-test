@@ -17,11 +17,11 @@
     禁钳位,均派发前零点击(§2.3);
   - 对照闸拒绝防线:重调仍建议刷 → 实机 round_fail(计入外循环重派
     上限)/ sim 零点击终结零派发(§2.2,桩驱动);
-  - sim 两态:刷新腿 = area 点击端口触发后端 ``_supply_refresh``
+  - sim 两态:刷新分支 = area 点击端口触发后端 ``_supply_refresh``
     (left−1 + 选项重掷落容器);pick 流 = 真 SimBackend + 真策略装配
     (装配缝 = test/harness/sim_backend_runner.run_sim_full_match 同源)
-    → decide_supply 被调、owned 内容腿入账写行、chosen_supply 写行、
-    节点推进(journal 断言;占位池 char 恒空 → 单位腿结构性零写,
+    → decide_supply 被调、owned 内容载荷分支入账写行、chosen_supply 写行、
+    节点推进(journal 断言;占位池 char 恒空 → 单位入账分支结构性零写,
     design §2.2 申报)。
 
 测试纪律:不连真游戏(fixture harness + fast_sleep 包 op 执行)、零真实
@@ -321,9 +321,9 @@ def _feed_node_advance(gs, *, trigger: str) -> None:
 @contextmanager
 def _sim_supply_world(test_context, monkeypatch, *, seed: int = 61):
     """sim 补给节点世界装配缝(run_sim_full_match 装配段同源,不另发明):
-    SimBackend(A8/108 标准局)+ 端口槽/事件钩子/动作腿 rng 提供槽
+    SimBackend(A8/108 标准局)+ 端口槽/事件钩子/动作分支 rng 提供槽
     (``install_backend`` 单点)+ controller 桩(任何真实 IO 触碰即炸 =
-    机械腿零触碰的响亮证明)+ obs 读口纯钩子半部 + 世界驱动简报→P1r5
+    机械执行分支零触碰的响亮证明)+ obs 读口纯钩子半部 + 世界驱动简报→P1r5
     补给节点窗(入口呈现 3 选项 + 免费刷新 left=1)。yield backend;
     teardown 必卸(端口槽进程全局,残留会把后续测试静默切进 sim 模式)。"""
     from sr_od.application.currency_war.kernel.cw_reconcile import (
@@ -390,18 +390,18 @@ def _sim_match(test_context, monkeypatch, backend,
 
 def test_supply_sim_refresh_leg_area_click_backend_refresh(
         test_context, monkeypatch) -> None:
-    """刷新腿·sim 两态测试(§2.6 新增④ sim 半):sim 态(锚点分量恒过)
+    """刷新分支·sim 两态测试(§2.6 新增④ sim 半):sim 态(锚点分量恒过)
     建议刷 → 「文本-剩余次数」area 点击(基类 sim 改道 → 后端
     ``_supply_refresh``)→ left−1 + 选项重掷落容器,本访问终结交回;
-    决策恰一次(零重调)。controller 桩在装 = 机械腿零触碰的结构性证明
-    (刷新世界腿全走点击源端口)。"""
+    决策恰一次(零重调)。controller 桩在装 = 机械执行分支零触碰的结构性证明
+    (刷新世界分支全走点击源端口)。"""
     with _sim_supply_world(test_context, monkeypatch, seed=53) as b:
         _match, strategy = _sim_match(test_context, monkeypatch, b)
         gs = b.gs
         assert gs.supply_refresh_left.value == 1, '前置:入口 left=1'
         _before = [(o.equip, o.extra_equips)
                    for o in gs.supply.value.options]
-        # 桩驱动刷新建议(占位池可能含钻 → 真实 decide 会落选卡,刷新腿
+        # 桩驱动刷新建议(占位池可能含钻 → 真实 decide 会落选卡,刷新分支
         # 触发面需确定性注入;决策调用计数保留)。
         _decide_calls: list = []
 
@@ -416,10 +416,10 @@ def test_supply_sim_refresh_leg_area_click_backend_refresh(
         rs = _run_node(test_context, op, op.act)
         assert rs.is_success and '终结交回' in (rs.status or ''), (
             f'刷新后终结交回:{rs!r}')
-        assert gs.supply_refresh_left.value == 0, '刷新腿:left−1'
+        assert gs.supply_refresh_left.value == 0, '刷新分支:left−1'
         _after = [(o.equip, o.extra_equips)
                   for o in gs.supply.value.options]
-        assert _after != _before, '刷新腿:选项重掷落容器'
+        assert _after != _before, '刷新分支:选项重掷落容器'
         assert len(_decide_calls) == 1, f'决策恰一次(零重调):{_decide_calls!r}'
         assert gs.chosen_supply.value is None, '刷新轮零派发(chosen 零写)'
 
@@ -433,7 +433,7 @@ def test_supply_sim_gate_rejection_redecide_zero_click_terminal(
     with _sim_supply_world(test_context, monkeypatch, seed=53) as b:
         _match, strategy = _sim_match(test_context, monkeypatch, b)
         gs = b.gs
-        # 预刷尽:left 1→0(后端刷新腿,剩余闸内嵌再验)。
+        # 预刷尽:left 1→0(后端刷新分支,剩余闸内嵌再验)。
         b._handle_click_source(SCREEN_SUPPLY, '文本-剩余次数')
         assert gs.supply_refresh_left.value == 0, '前置:left 刷尽'
         _before = [(o.equip, o.extra_equips)
@@ -462,13 +462,13 @@ def test_supply_sim_gate_rejection_redecide_zero_click_terminal(
 
 def test_supply_sim_two_state_pick_flow(test_context, monkeypatch) -> None:
     """sim 两态 pick 流测试(§2.6 新增①):装 SimBackend 跑补给节点画面
-    op——决策腿接线(``decide_supply`` 被调,历史 sim 局结构性不可达面)、
-    owned 内容腿入账写行、``chosen_supply`` 写行、节点推进(journal
+    op——决策链接线(``decide_supply`` 被调,历史 sim 局结构性不可达面)、
+    owned 内容载荷分支入账写行、``chosen_supply`` 写行、节点推进(journal
     断言)。装配缝 = run_sim_full_match 同源(真策略 MandateV1Strategy;
     left 预刷尽使真实 decide 恒落选卡——次数闸内嵌,刷新建议不可能,
-    决策确定性由 seed 承载)。动作 op 走真注册表派发:机械腿端口检查
-    跳过,世界反应 = 上报声明链(内容腿 owned += 规范名)。占位池
-    char 恒空 → 单位腿结构性零写(design §2.2 申报;bench 腿对占位池
+    决策确定性由 seed 承载)。动作 op 走真注册表派发:机械执行分支端口检查
+    跳过,世界反应 = 上报声明链(内容载荷分支 owned += 规范名)。占位池
+    char 恒空 → 单位入账分支结构性零写(design §2.2 申报;bench 分支对占位池
     不可达,不在断言面)。journal 走内存 sink(零落盘),run 态测试复位。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         SupplyPayload,
@@ -517,12 +517,12 @@ def test_supply_sim_two_state_pick_flow(test_context, monkeypatch) -> None:
             equip = chosen[1][0]
             assert equip in (o.equip for o in gs.supply.value.options), (
                 '选定 = 在场选项内容(决策输入 = obs 载体)')
-            # owned 内容腿入账(装备腿 owned += 规范名;上报声明链驱动)
-            assert equip in (gs.equips.value or []), 'owned 内容腿入账'
+            # owned 内容载荷分支入账(装备入账分支 owned += 规范名;上报声明链驱动)
+            assert equip in (gs.equips.value or []), 'owned 内容载荷分支入账'
             # 节点推进(supply_confirm 声明链 → 下节点窗)
             assert gs.node.value.round_num == 6, (
                 f'节点推进(P1r5 → r6):{gs.node.value!r}')
-            # journal 断言:chosen_supply 写行 + owned 装备腿写行 + 节点推进行
+            # journal 断言:chosen_supply 写行 + owned 装备入账分支写行 + 节点推进行
             # (journal after 经 _json_safe 序列化:tuple → list,node → dict)
             _chosen_json = [chosen[0], list(chosen[1])]
             assert any(r['field'] == 'chosen_supply'
@@ -532,14 +532,14 @@ def test_supply_sim_two_state_pick_flow(test_context, monkeypatch) -> None:
             assert any(r['field'] == 'equips'
                        and isinstance(r['after'], list)
                        and equip in r['after'] for r in rows), (
-                f'journal:owned 装备腿写行(equip={equip!r})')
+                f'journal:owned 装备入账分支写行(equip={equip!r})')
             assert any(r['field'] == 'node'
                        and r['after'].get('round_num') == 6 for r in rows), (
                 'journal:节点推进行(r6)')
-            # 单位腿结构性零写(design §2.2 申报面):占位池 char 恒空 →
-            # 上报走装备腿分支,备战席零改动。
+            # 单位入账分支结构性零写(design §2.2 申报面):占位池 char 恒空 →
+            # 上报走装备入账分支分支,备战席零改动。
             assert gs.bench.value == _bench_before, (
-                '单位腿零写(占位池 char 恒空)')
+                '单位入账分支零写(占位池 char 恒空)')
             assert isinstance(gs.supply.value, SupplyPayload)
     finally:
         tel_state.reset_run_state()   # run 态簇复位(测试复位正规入口)

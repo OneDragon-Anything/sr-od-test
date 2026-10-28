@@ -9,7 +9,7 @@ calc/designs/T-38-chenggong-jingyan.md)§2.6 双端语义 + §4 锁 10(sim 半):
 - **sim = 世界真值**:节点边界发放经 kernel tick 段 write_logic 写
   gs.xp/gs.level → sim 世界等级随白送经验真实推进(8→9 跨级例证),
   零额外接线;
-- **兜底检测晚一拍**:推 8 走基础经验腿(跳过主挂点)时,检出拍 = 下
+- **兜底检测晚一拍**:推 8 走基础经验分支(跳过主挂点)时,检出拍 = 下
   一节点边界,达成当拍不发放(披露键 env_xp_window_late_detect 形态);
 - **同 seed 重放**:发放序列逐位一致(发放链零 rng 消费的结构判据);
 - **披露键族在册**:ENV_XP_WINDOW_DISCLOSURES 整表并入 sim 披露集。
@@ -77,7 +77,7 @@ def _pick_xp_env(seed: int) -> SimBackend:
     b.gs.write_logic(b.gs.invest_env_opts,
                      ['成功经验', '轮岗', '头彩'],
                      produced_by='Test', evidence='t:opts', sig=_SIG)
-    # session 绑定后端容器(portal 登记腿消费;session=None = 登记腿跳过)
+    # session 绑定后端容器(portal 登记分支消费;session=None = 登记分支跳过)
     out = report_action_pick_invest_env_param(
         b.gs, SimpleNamespace(idx=0), _SIG, session=_bound_session(b.gs))
     assert out.applied

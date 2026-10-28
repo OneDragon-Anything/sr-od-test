@@ -592,7 +592,7 @@ def _coll_gs(*, bench: list[tuple[str, int]] | None = None,
              level: int | None = 5,
              ores: list[tuple[str, int, int, int]] | None = None,
              board: dict | None = None) -> GameState:
-    """点矿兑现测试容器(观测面按参组装,None = 保持未观察,供 None 边界腿)。"""
+    """点矿兑现测试容器(观测面按参组装,None = 保持未观察,供 None 边界分支)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if ores is not None:
         gs.observe(gs.spheres, OreSight(

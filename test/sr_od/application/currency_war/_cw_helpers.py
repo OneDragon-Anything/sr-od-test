@@ -179,7 +179,7 @@ class Area:
 
 def _seed_slot(entry: BenchSlot | None, idx: int) -> BenchSlot:
     """备战席条目归一:占位件 kind 直种原样;unit 条目按 ``槽位 = 下标+1``
-    归一(原合成口「下标权威」口径;Unit 无槽位信息位——位置 = 表下标派生,归一腿为占位件 kind 直通)。"""
+    归一(原合成口「下标权威」口径;Unit 无槽位信息位——位置 = 表下标派生,归一分支为占位件 kind 直通)。"""
     if entry is None:
         return BenchSlot(kind='empty')
     return entry

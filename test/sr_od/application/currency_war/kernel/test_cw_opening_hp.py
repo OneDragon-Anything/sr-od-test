@@ -81,7 +81,7 @@ def _make_gs(affixes: list[str] | None, *, difficulty: str = 'A8',
 
 
 def test_delete_hp_delta_affix_resyncs_prior() -> None:
-    """删除「开局不利」→ HP 经 write_prior 重算(设计 §4 锁 5 主腿):
+    """删除「开局不利」→ HP 经 write_prior 重算(设计 §4 锁 5 主分支):
     prior 来源、evidence prior: 前缀、值 = 无修正基线(不含 -20;
     期望从 OPENING_HP_BASE 现算不手抄);先验永不过可信位(fail-closed)。"""
     gs = _make_gs(['开局不利', '库藏生锈'])
@@ -117,7 +117,7 @@ def test_delete_non_delta_affix_zero_hp_write() -> None:
 def test_observe_overwrite_no_callback(rows_sink: _RowSink) -> None:
     """observe 覆盖不触发回调(设计 §4 锁 5 改判锁,必红形态):observe
     覆盖随机态词缀名单使「开局不利」消失 → HP 零写——观察写零回调契约
-    (deployed 同款;被覆盖对象 = 删除腿猜测名单,差异落
+    (deployed 同款;被覆盖对象 = 删除分支猜测名单,差异落
     logic_rand_outcome 台账预期内,零 HP 失配类行)。"""
     gs = _make_gs(None)
     gs.write_logic_rand(gs.enemy_affixes, ['开局不利', '库藏生锈'],

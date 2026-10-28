@@ -99,7 +99,7 @@ def test_find_giftbox_sight_fixtures(test_context) -> None:
     """检测纯函数三 fixtures:盒帧命中读 12;球帧/空面板零误报。
 
     一图一测聚合断言(识别贵):三帧各检测一次;负例在段1 模板匹配即
-    返回空、不触 OCR,成本单腿 = 盒帧一次徽章 OCR(conftest 内容哈希
+    返回空、不触 OCR,成本单分支 = 盒帧一次徽章 OCR(conftest 内容哈希
     memo 跨测试复用)。区域 rect 经 test_context 真实 screen_info 通道
     (「区域-奖励」现役建档),模板 = 仓内生产资产同源 fixture。
     """

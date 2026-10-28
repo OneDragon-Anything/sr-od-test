@@ -1,16 +1,16 @@
-"""check_env_dot_grants 持续伤害契约条件腿(猜测写+证实)测试(镜像 src =
+"""check_env_dot_grants 持续伤害契约条件分支(猜测写+证实)测试(镜像 src =
 kernel/cw_env_grants.py 的该被测函数;同模块兄弟触发函数测试 =
 kernel/test_env_grants.py〔超限只读复用〕与本目录按被测方法拆分文件,
 本文件按拆目录规范落位)。
 
 测试面依据 = T-28 设计稿(迭代 2026-09-23-invest-effects-calc,
 designs/T-28-chixu-shanghai-qiyue.md)§2.2/§2.3 + §4.1:
-- **结算窗腿条件矩阵**(顺序短路):env 非本卡/已证实/幂等守卫(全视图
+- **结算窗分支条件矩阵**(顺序短路):env 非本卡/已证实/幂等守卫(全视图
   含黑天鹅)→ 零写;否则猜测写(rand 通道,evidence ``env_dot_speculate``
   可辨);
-- **进度腿**(count_battle=True,sim 专用):逐结算追加进度键
+- **进度分支**(count_battle=True,sim 专用):逐结算追加进度键
   dot_battle#<k>,第 ENV_DOT_CONFIRM_BATTLES 笔同窗证实,live 调用零进度;
-- **观察证实腿**:观察含黑天鹅 → done 封账(不区分来源),观察无 → 零写;
+- **观察证实分支**:观察含黑天鹅 → done 封账(不区分来源),观察无 → 零写;
 - **观察擦除自愈**:猜测态被观察覆盖契约抹除后,下次结算重写。
 """
 from __future__ import annotations
@@ -115,7 +115,7 @@ def _bench_units(gs: GameState) -> list[tuple[str, int]]:
 def test_condition_matrix_short_circuits(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """零写分支逐序(T-28 设计稿 §2.3 条件矩阵):env 空链/非本卡环境/
-    已证实(done 封账)→ 返回 None 且容器零写行;env 门对进度腿同样生效
+    已证实(done 封账)→ 返回 None 且容器零写行;env 门对进度分支同样生效
     (count_battle=True 零计数)。"""
     # ① env 未激活(None/空链)
     gs = _make_gs(env=None, bench=[])
@@ -127,7 +127,7 @@ def test_condition_matrix_short_circuits(
     calls = _record_writes(gs, monkeypatch)
     assert check_env_dot_grants(gs, sig=_SIG_HOOK, count_battle=True) is None
     assert not calls, f'非本卡环境零写: {calls}'
-    # ③ 已证实(一次性封账:结算窗与观察窗双腿同门)
+    # ③ 已证实(一次性封账:结算窗与观察窗两条分支同门)
     gs = _make_gs(bench=[], done=((_ENV, DOT_CONFIRM_KEY),))
     calls = _record_writes(gs, monkeypatch)
     assert check_env_dot_grants(gs, sig=_SIG_HOOK, count_battle=True) is None
@@ -136,7 +136,7 @@ def test_condition_matrix_short_circuits(
         bench_observation=BenchView(
             slots=[BenchSlot(kind='unit', unit=Unit(char_id=_CHAR, star=1))],
             capacity=9)) is None
-    assert not calls, f'已证实双腿零写: {calls}'
+    assert not calls, f'已证实两条分支零写: {calls}'
 
 
 def test_speculate_write_first_settlement(
@@ -186,9 +186,9 @@ def test_idempotent_full_view_guard(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_observation_confirm_then_no_speculate(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """观察证实(设计稿 §2.2 证实腿 + §4.1③):结算猜测写后,备战观察含
+    """观察证实(设计稿 §2.2 证实分支 + §4.1③):结算猜测写后,备战观察含
     黑天鹅 → done 封账(evidence ``env_dot_confirm#obs``,不区分来源);
-    此后结算窗/观察窗双腿零写(证实短路猜测写)。"""
+    此后结算窗/观察窗两条分支零写(证实短路猜测写)。"""
     gs = _make_gs(bench=[])
     check_env_dot_grants(gs, sig=_SIG_HOOK)
     calls = _record_writes(gs, monkeypatch)
@@ -202,7 +202,7 @@ def test_observation_confirm_then_no_speculate(
     assert [(c[0], c[1]) for c in calls] == [('env_grants_done',
                                               'env_dot_confirm#obs')], \
         f'证实单笔 logic 写: {calls}'
-    # 证实后双腿零写
+    # 证实后两条分支零写
     calls = _record_writes(gs, monkeypatch)
     assert check_env_dot_grants(gs, sig=_SIG_HOOK) is None
     assert check_env_dot_grants(gs, sig=_SIG_HOOK,
@@ -212,13 +212,13 @@ def test_observation_confirm_then_no_speculate(
 
 def test_observation_erase_then_rewrite(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """观察擦除自愈(设计稿 §2.2 证实腿 + §4.1④):备战观察无黑天鹅 →
+    """观察擦除自愈(设计稿 §2.2 证实分支 + §4.1④):备战观察无黑天鹅 →
     零写(不误证);观察覆盖契约抹除猜测态(bench 回空)后,下次结算
     重写猜测态。"""
     gs = _make_gs(bench=[])
     check_env_dot_grants(gs, sig=_SIG_HOOK)
     assert _bench_units(gs) == [(_CHAR, 1)]
-    # 备战观察无黑天鹅:证实腿零写 + 整表观察同步抹除猜测态(观察覆盖
+    # 备战观察无黑天鹅:证实分支零写 + 整表观察同步抹除猜测态(观察覆盖
     # 契约:首观察静默覆盖)
     calls = _record_writes(gs, monkeypatch)
     assert check_env_dot_grants(gs, sig=_SIG_HOOK,
@@ -235,7 +235,7 @@ def test_observation_erase_then_rewrite(
     assert len(calls) == 1 and calls[0][0] == 'bench'
 
 
-# ============================================================ sim 进度腿
+# ============================================================ sim 进度分支
 
 
 def test_sim_battle_counting_progress_and_confirm(

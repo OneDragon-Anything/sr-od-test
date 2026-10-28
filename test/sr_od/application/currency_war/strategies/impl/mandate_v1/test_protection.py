@@ -132,16 +132,16 @@ class TestProtectionMembership:
     def test_transition_domain_covers_four_systems(self):
         """过渡域(plane2_started = 假):四体系全体成员为候选集——
         三羁绊系与希儿系代表成员、贯穿件全体在集;非四体系且非贯穿件
-        不在集(帧无锁定/候选,锁与候选腿为空)。design §2.1。"""
+        不在集(帧无锁定/候选,锁与候选分支为空)。design §2.1。"""
         sess = StrategySession()
         gs = cw4_gs(sess, plane=1, round_num=2, node='prep')
         st = state_of(gs)
         members = protection_membership(gs, st)
         assert '青雀' in members         # 仙舟系
-        assert '桑博' in members         # 持续伤害系(流派腿)
+        assert '桑博' in members         # 持续伤害系(流派分支)
         assert '姬子·启行' in members    # 列车同行系
         assert '希儿' in members         # 希儿系单卡
-        assert '花火' in members         # 希儿系放大器(流派腿)
+        assert '花火' in members         # 希儿系放大器(流派分支)
         assert members >= CROSS_LINE_KEEP_NAMES
         assert '阿格莱雅' not in members
 
@@ -160,7 +160,7 @@ class TestProtectionMembership:
         assert '青雀' not in members     # 仙舟成员,不在锁定线/候选/贯穿件
         assert '桑博' not in members     # 持续伤害成员,同上
         assert '丹恒·饮月' not in members  # 四体系成员,尚无线籍
-        # 候选快照命中线:成员经候选腿入集(锁定线清单不变)
+        # 候选快照命中线:成员经候选分支入集(锁定线清单不变)
         st.line_candidates = ('龙丹战技点',)
         members = protection_membership(gs, st)
         assert '丹恒·饮月' in members

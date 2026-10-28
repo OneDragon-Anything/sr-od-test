@@ -7,7 +7,7 @@
 test_select_swap_group_plan.py):
 
 - **accept 侧新键族**:bond_gate_{leg}(leg ∈ tier/support/star/
-  completion,首达腿)+ bond_gate_victim_tier_{tier}(值域 =
+  completion,首达分支)+ bond_gate_victim_tier_{tier}(值域 =
   一级/二级/名单末位);``cw4_m1p_arm_pending`` 载体保留;
 - **拒绝侧分键闭集**:bond_gate_reject_nogain / conservation / novictim
   (3.5 预测表依赖闭集);
@@ -69,7 +69,7 @@ _JI = '开拓者·记忆'
 
 
 def _locked_session(comp_name: str) -> tuple:
-    """终局锁定 session 桩(target_comp 直种 + ist 腿① + seam 开闸 +
+    """终局锁定 session 桩(target_comp 直种 + ist 分支① + seam 开闸 +
     计数器清零;装配源 = cw4_session/cw4_gs 容器域)。"""
     session = cw4_session(get_comp(comp_name))
     st = state_of(session)
@@ -80,7 +80,7 @@ def _locked_session(comp_name: str) -> tuple:
 
 
 def _pair_session() -> tuple:
-    """配方对锁 session 桩(p1_pair 腿② + pair 伪阵容;双轨域)。"""
+    """配方对锁 session 桩(p1_pair 分支② + pair 伪阵容;双轨域)。"""
     from sr_od.application.currency_war.kernel.cw_intention import (
         pair_target_comp,
     )
@@ -95,7 +95,7 @@ def _pair_session() -> tuple:
 def _emit(session, st, *, bench: list[str], front: list[str],
           back: list[str], deploy_cap: int = 5, level: int = 5):
     """emit 直驱(A 锚帧形态;deployed = front+back 行域,bench = 占席;
-    level 与 deploy_cap 联动定 max_units——板满腿按容器派生链现算)。"""
+    level 与 deploy_cap 联动定 max_units——板满分支按容器派生链现算)。"""
     gs = cw4_gs(session, deploy_cap=deploy_cap, level=level,
                 bench=[cw4_bc(n) for n in bench],
                 front_row=[Unit(char_id=n, star=1) for n in front],
@@ -112,7 +112,7 @@ def _emit(session, st, *, bench: list[str], front: list[str],
 
 def test_emit_bond_gate_accept_key_family() -> None:
     """accept 侧新键族写入断言(锚帧 A):组计划发射 → bond_gate_tier
-    (首达腿)+ bond_gate_victim_tier_一级 + m1p_fired;arm 载体 =
+    (首达分支)+ bond_gate_victim_tier_一级 + m1p_fired;arm 载体 =
     'bond_gate';不经 P79-3(redeploy_cost_gate_defer 零显影);载荷
     域事实键 = arm(旧 trans_domain 退役)。"""
     session, st = _locked_session('双王圣杯')
@@ -120,7 +120,7 @@ def test_emit_bond_gate_accept_key_family() -> None:
                           front=[_GIL, _RIN, _QING, _TING], back=[_YAO])
     assert counters.get('m1p_fired') == 1, '组计划发射'
     assert counters.get('bond_gate_tier') == 1, \
-        f"accept 分键 bond_gate_tier(首达腿),实得 {counters}"
+        f"accept 分键 bond_gate_tier(首达分支),实得 {counters}"
     assert counters.get('bond_gate_victim_tier_一级') == 1, \
         'victim 层来源分键(值域一级)'
     assert counters.get('redeploy_cost_gate_defer') is None, \
@@ -137,19 +137,19 @@ def test_emit_bond_gate_accept_key_family() -> None:
 
 
 def test_emit_bond_gate_reject_key_closed_set() -> None:
-    """拒绝侧分键闭集写入断言:二级持平帧四腿全不中 → bond_gate_reject_
+    """拒绝侧分键闭集写入断言:二级持平帧四条分支全不中 → bond_gate_reject_
     nogain(+ m1p_plan_empty 照旧);arm 载体复位 None。"""
     session, st = _locked_session('双王圣杯')
     _out, counters = _emit(session, st, bench=[_JI],
                            front=[_GIL, _TING, _HUO, _WALT], back=[_FUX])
     assert counters.get('m1p_plan_empty') == 1, '计划空照旧计数'
     assert counters.get('bond_gate_reject_nogain') == 1, \
-        f'拒绝侧闭集 nogain(四腿全不中),实得 {counters}'
+        f'拒绝侧闭集 nogain(四条分支全不中),实得 {counters}'
     assert st.cw4_m1p_arm_pending is None, '无发出帧 arm 载体复位'
 
 
 def test_emit_pair_frame_transition_gate_unchanged() -> None:
-    """:1495 路由双轨域照旧:pair 帧(腿②)完成品计划 arm='transition'
+    """:1495 路由双轨域照旧:pair 帧(分支②)完成品计划 arm='transition'
     照旧**经 P79-3 放行门**(现行三轴在容器 bench 形状下的现行为 =
     帧级 defer,与改前逐帧等价——本函数零触碰;P79-3 废弃/复算接线 =
     后续阶段,届时本断言随废弃面改写);bond_gate 键族零显影(域切分,
@@ -204,7 +204,7 @@ _ACT_SIG = ChannelSig(family='logic_action', actor='test_emit_swap',
 
 
 def _locked_c_session() -> tuple:
-    """C 形态组生长 session 桩(自定义 Comp 直种 + ist 腿① + seam 开闸)。"""
+    """C 形态组生长 session 桩(自定义 Comp 直种 + ist 分支① + seam 开闸)。"""
     session = cw4_session(_C_COMP)
     st = state_of(session)
     st.v3_intention = IntentionState(locked_comp=_C_COMP.name)
@@ -279,7 +279,7 @@ def test_bond_gate_recalc_allowed_truth_values() -> None:
     assert _bond_gate_recalc_allowed(
         ctx, SwapPlan(sell_names=[_YAO], up_bench=[0], arm='bond_gate'))
     # 不通过面:键集/支撑/成型全持平横换(椒丘零标签,爻光零标签,
-    # 支撑持平、非同名)——门 1 四腿全不中
+    # 支撑持平、非同名)——门 1 四条分支全不中
     ctx2 = _gate_ctx(board=[_GIL, _RIN, _QING, _TING, _YAO],
                      bench=['椒丘'], cap=5)
     assert not _bond_gate_recalc_allowed(
@@ -291,7 +291,7 @@ def test_bond_gate_recalc_allowed_truth_values() -> None:
 
 def test_emit_bond_gate_recalc_withdraw_on_divergence(monkeypatch) -> None:
     """分叉撤计划面(design §2.5 语义钉死):计划快照与现读板态分叉
-    (计划声称的收益组在现读板面上四腿全不中)→ 复算门拦下,发射面
+    (计划声称的收益组在现读板面上四条分支全不中)→ 复算门拦下,发射面
     计划撤(bond_gate_recalc_withdraw 分键 + 零动作 + pending 复位)。
     计划注入 = monkeypatch kernel 计划谓词返回陈旧提案(同帧架构下
     计划⇔发射同 ctx,分叉面只可经桩构造——本测试锁发射面的撤计划契约)。"""
@@ -336,7 +336,7 @@ def test_emit_bond_gate_head_pair_per_call() -> None:
     assert payload['arm'] == 'bond_gate'
     counters = st.cw4_counters
     assert counters.get('bond_gate_completion') == 1, \
-        'C 形态首达腿 = ④(累积组成型)'
+        'C 形态首达分支 = ④(累积组成型)'
     assert counters.get('bond_gate_recalc_withdraw') is None, \
         '复算门通过帧零撤计划(§2.5 通过面)'
 
@@ -413,7 +413,7 @@ def test_step5_race_occupied_board_rejudged() -> None:
     裁判视野含域外件,竞速落点不保证组内)→ 下一决策调用按**占位后
     板面**重评:重算计划 = (椒丘→瓦尔特)② 支撑增,发射续发——发射对
     ≠ 陈旧计划的剩余对(希儿→杰帕德),组按现读重评,无强推陈旧对;
-    其后逐对原子序续发至终局收益腿兑现(「部分完成态…由下帧续发闭合」)。"""
+    其后逐对原子序续发至终局收益分支兑现(「部分完成态…由下帧续发闭合」)。"""
     session, st = _locked_c_session()
     gs = _seed_c_board(session, bench=("瓦尔特", "杰帕德", "椒丘"))
     out1 = _drive_step5(session, gs)
@@ -493,7 +493,7 @@ def test_emit_bond_gate_label_victim_pair_form_p60_observer() -> None:
     SellBenchParam(无单独卖出标签件的发射形态;bench 侧标签件换金面
     已由装配 A 身份段封死,来金侧单帧锚见 test_sell_candidates 六通道
     逐一点名),载荷保留对骨架(sell=[停云] ↔ up=[Saber] 1:1);观测键
-    = bond_gate_tier(accept 首达腿)+ bond_gate_victim_tier_二级
+    = bond_gate_tier(accept 首达分支)+ bond_gate_victim_tier_二级
     (换人对计数,3.5 预测表逐帧对照可检出异常换手频次);组级支撑数
     净非降由配对骨架承保(§2.8 段一)。"""
     session, st = _locked_session('双王圣杯')
@@ -521,7 +521,7 @@ def test_emit_bond_gate_label_victim_pair_form_p60_observer() -> None:
         f'对骨架载荷(sell↔up 1:1,换血伴随换入;victim = 二级标签件),实得 {payload}'
     counters = st.cw4_counters
     assert counters.get('bond_gate_tier') == 1, \
-        f'accept 首达腿分键(圣杯 2→3 二阶激活),实得 {counters}'
+        f'accept 首达分支分键(圣杯 2→3 二阶激活),实得 {counters}'
     assert counters.get('bond_gate_victim_tier_二级') == 1, \
         'victim 层来源分键(换人对计数观测面)'
 

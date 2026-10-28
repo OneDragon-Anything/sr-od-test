@@ -12,7 +12,7 @@
 
 测试构造声明:候选/帧构造基建(_km/_bc/_card/_off_name/_session_stub/
 _st)保留 = test_front_window_predicates 的候选构造单一源(跨文件
-消费);L1/L1b/L2/L3/L5/LF 发射面测试与档 1 锁线门负腿已退役。
+消费);L1/L1b/L2/L3/L5/LF 发射面测试与档 1 锁线门负分支已退役。
 """
 from types import SimpleNamespace
 from typing import TYPE_CHECKING

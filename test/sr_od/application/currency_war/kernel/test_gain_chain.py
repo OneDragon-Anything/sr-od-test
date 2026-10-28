@@ -13,23 +13,23 @@ docs/develop/sr_od/application/currency_war/game_state/gain-chain.md
 - **通道收口双臂**(通道规则「未锚定 → 随机态」):直构未闩容器
   rand=False 链写被改道 write_logic_rand;置闩(测试专口直赋)后
   rand=False 恢复 write_logic;rand=True 恒 write_logic_rand;采样
-  效果腿对子链的通道翻转只及子链;
+  效果分支对子链的通道翻转只及子链;
 - **失败安全**(§2.7):溢出落位/归位/溢出位被占留证;bench/equips
   未观察(直构域)= 拒落档零写、零缺陷发射(两未观察 kind 已随开局
   种子底座与锚定闩批退役);种子容器(缓存单例支,接管局同构)正常
   落账;置闩后失配网原样生效(确定面被观察覆盖产失配行);
-- **欢愉契约条件腿 rider**(条件腿正式模型,测试面 = 银狼策划选择落地相
+- **欢愉契约条件分支 rider**(条件分支正式模型,测试面 = 银狼策划选择落地相
   上报的授予行为):通道语义(授予 rand=True 全通道 logic_rand,rand
   形参优先于锚定闩——未闩/置闩同通道)+ 覆盖校准面 = 观察覆盖落
   logic_rand_outcome 行零失配行;在册判定(active_env 归一 = 欢愉契约)、
   rng 注入确定性(同 seed 同单位,两候选均可达)、触发计数封闭清单
   (落地相 equip/upgrade/unknown 各恰一次,发射相零授予,leg_type=''
   兜底仍触发且终态兜底 reason = unrouted_leg_zero_write)、授予失败
-  调用点级 best-effort(腿型分派照常 + joy_conditional_grant_failed
+  调用点级 best-effort(分支类型分派照常 + joy_conditional_grant_failed
   留证行)、授予走链固定时序(预置两枚同候选可合成);弱化兜底档退役
   测试(分类落 unknown/打分两档制)归 test_planner_report.py;
 - **LV.999 变换窗**(银狼费用档变换,2026-09-18 定谳〔口述·权威〕:
-  费用档不同时存在,分组键 (char_id, star) 无跨档歧义):升费腿 2★→1★
+  费用档不同时存在,分组键 (char_id, star) 无跨档歧义):升费分支 2★→1★
   变换三态与级联合并、上阵 3★→1★ 变换窗与恒等搬运对照;
 - **选卡上报落地**(投资策略屏/portal 经获得链):策略屏注册去重 +
   骇客效果分派、portal 整支走获得链、表外安静不写;
@@ -137,7 +137,7 @@ def _make_gs(*, bench: list[tuple[str, int]] | None = None,
              gold: int | None = None,
              overflow_card: str | None = None,
              overflow_warning: bool | None = None) -> GameState:
-    """观测面按参组装(None = 保持未观察,供未观察边界腿)。"""
+    """观测面按参组装(None = 保持未观察,供未观察边界分支)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if bench is not None:
         slots = [BenchSlot(kind='unit',
@@ -300,7 +300,7 @@ def test_rand_passthrough_and_channel_by_anchor(
     """通道收口双臂 + rand 透传(通道规则「未锚定 → 随机态」):直构
     未闩容器 rand=False 链写被改道 write_logic_rand(未验证推算,首观察
     静默覆盖);置闩(测试专口直赋)后 rand=False 恢复 write_logic;
-    rand=True 恒 write_logic_rand;采样效果腿对子链的通道翻转只及子链。"""
+    rand=True 恒 write_logic_rand;采样效果分支对子链的通道翻转只及子链。"""
     # 臂 1:直构未闩 + rand=False → 通道改道 logic_rand
     gs = _make_gs(bench=[])
     assert gs.prep_anchored is False
@@ -321,7 +321,7 @@ def test_rand_passthrough_and_channel_by_anchor(
                    producer='T')
     assert gs3.bench.source == 'logic_rand'
 
-    # 采样效果腿翻转子链(机制测试,rand 透传纪律;置闩容器上外链与子链
+    # 采样效果分支翻转子链(机制测试,rand 透传纪律;置闩容器上外链与子链
     # 通道可分辨):确定入口走 write_logic,采样子链走 write_logic_rand,
     # 外链不被子链污染。
     def sampling_cb(gs: GameState, name: str, star: int, *, rand: bool,
@@ -478,7 +478,7 @@ def test_env_gift_advisor_split_and_quiet(rows_sink: _RowSink) -> None:
     (gs.unlocked_experts,权威容器字段——专家顾问初始不参与普通商店
     招募,解锁后入池可刷,economy.md §1;原「只申报一行」随权威写道
     退役);advisor=False 入席递归(chars_immediate 1★);表外环境查无
-    效果安静不写(裁定④)。session=None = 登记腿跳过、容器写照常
+    效果安静不写(裁定④)。session=None = 登记分支跳过、容器写照常
     (编排语义裁定)。"""
     # advisor:特邀专家 → 解锁入池(置闩保持确定面通道断言;本测试焦点
     # = 分道)
@@ -512,7 +512,7 @@ def test_env_gift_advisor_split_and_quiet(rows_sink: _RowSink) -> None:
 def test_env_gift_summon_unit_sanxing_peipei(rows_sink: _RowSink) -> None:
     """ENV_GIFTS 召唤单位支首例(三星佩佩,T-16):chars_immediate 具名支
     与契约族同链——佩佩落席,效果串 ``env_gift:佩佩``,正常路径零申报行;
-    星级 1 = 链必填占位(用户裁定佩佩无星级,非先验);星徽佩戴腿零建模
+    星级 1 = 链必填占位(用户裁定佩佩无星级,非先验);星徽佩戴分支零建模
     (用户裁定:星徽佩戴在佩佩身上非入栏)→ equips 零写(防未来误把穿戴
     塞进道具/装备通道)。"""
     gs = _make_gs(bench=[], equips=[])
@@ -522,16 +522,16 @@ def test_env_gift_summon_unit_sanxing_peipei(rows_sink: _RowSink) -> None:
     assert gs.active_env.value == '三星佩佩', '容器写照常'
     assert [(u.char_id, u.star) for u in bench_units_of(gs)] == [('佩佩', 1)], \
         '佩佩落席(星级 1 = 占位值非先验)'
-    assert gs.equips.value == [], '佩戴星徽腿零建模,equips 零写'
+    assert gs.equips.value == [], '佩戴星徽分支零建模,equips 零写'
     assert rows_sink.kinds() == [], '非 advisor 非道具,零申报行'
 
 
 def test_env_gift_summon_unit_cuxing_peipei(rows_sink: _RowSink) -> None:
     """ENV_GIFTS 召唤单位支姊妹卡(粗星佩佩,T-17):与三星佩佩同链——
     佩佩落席,效果串 ``env_gift:佩佩``,正常路径零申报行;星级 1 = 链必填
-    占位(用户裁定佩佩无星级,非先验);双零腿零建模(佩戴 = 穿戴非入栏;
+    占位(用户裁定佩佩无星级,非先验);双零分支零建模(佩戴 = 穿戴非入栏;
     掉落 = 概率/时点/件数/池四维全无载)→ equips 与 pending_item_grants
-    零写(防未来误把星徽腿塞进道具/装备/定时通道)。"""
+    零写(防未来误把星徽分支塞进道具/装备/定时通道)。"""
     gs = _make_gs(bench=[], equips=[])
     gs.prep_anchored = True
     out = gain_invest_env(gs, None, '粗星佩佩', rand=False, sig=_lsig())
@@ -539,8 +539,8 @@ def test_env_gift_summon_unit_cuxing_peipei(rows_sink: _RowSink) -> None:
     assert gs.active_env.value == '粗星佩佩', '容器写照常'
     assert [(u.char_id, u.star) for u in bench_units_of(gs)] == [('佩佩', 1)], \
         '佩佩落席(星级 1 = 占位值非先验)'
-    assert gs.equips.value == [], '双零腿零建模,equips 零写'
-    assert not gs.pending_item_grants.value, '掉落腿不经定时队列,零入队'
+    assert gs.equips.value == [], '双零分支零建模,equips 零写'
+    assert not gs.pending_item_grants.value, '掉落分支不经定时队列,零入队'
     assert rows_sink.kinds() == [], '非 advisor 非道具,零申报行'
 
 
@@ -604,7 +604,7 @@ def test_overflow_item_merges_back_as_box_and_clears() -> None:
 
 def test_env_reroll_declaration_row_member_only(rows_sink: _RowSink) -> None:
     """追加随机环境申报行(§3,名单成员-only;首例 = 蓝海 id113):名单内
-    环境 = 金腿照常 + 申报行恰一行(kind = ENV_REROLL_DECL,语义申报非
+    环境 = 金收入分支照常 + 申报行恰一行(kind = ENV_REROLL_DECL,语义申报非
     缺陷告警;live 不自掷 fail-closed,active_env 写值 = 选择事实,容器
     写通道与普通环境一致);名单外环境(增发货币,经济表成员)零申报行
     ——申报只随 ENV_REROLL_NAMES 名单,不随经济表成员身份。"""
@@ -613,7 +613,7 @@ def test_env_reroll_declaration_row_member_only(rows_sink: _RowSink) -> None:
     out = gain_invest_env(gs, None, '蓝海', rand=False, sig=_lsig())
     assert gs.active_env.value == '蓝海', '选择事实写值'
     assert gs.active_env.source == 'logic', '容器写通道与普通环境一致'
-    assert gs.gold.value == 6, '金腿照常(+6,ENV_ECONOMY 唯一 gold_instant)'
+    assert gs.gold.value == 6, '金收入分支照常(+6,ENV_ECONOMY 唯一 gold_instant)'
     assert out.effects == (), '追加获得非本链职责(世界掷骰归 sim 后端)'
     assert rows_sink.kinds() == [ENV_REROLL_DECL], '申报行恰一行'
     # 名单外对照:增发货币零新增申报行
@@ -630,7 +630,7 @@ def test_env_reroll_declaration_row_member_only(rows_sink: _RowSink) -> None:
 
 
 def test_env_gift_random_leg_seeded_roll(rows_sink: _RowSink) -> None:
-    """随机支发放腿(on_env_gained 直构,T-10 设计 §4 测试 3):固定种子
+    """随机支发放分支(on_env_gained 直构,T-10 设计 §4 测试 3):固定种子
     rng → bench 追加 1 张 1★ 且名 ∈ 4 费规格池;效果串
     ``env_gift_random:<名>@1star`` 前缀 + 后缀同断言(采样发放的审计
     对账键);星级 = spec.star(人才引进 = 1 先验)。期望名从同 seed
@@ -648,11 +648,11 @@ def test_env_gift_random_leg_seeded_roll(rows_sink: _RowSink) -> None:
 
 def test_env_gift_random_leg_typed_pool_star2_seeded(
         rows_sink: _RowSink) -> None:
-    """类型过滤随机支发放腿(on_env_gained 直构,T-36 设计 §4 锁 3/9):
+    """类型过滤随机支发放分支(on_env_gained 直构,T-36 设计 §4 锁 3/9):
     固定种子 rng → bench 追加 1 张 2★(spec.star 直传,类型过滤池 =
     1 费「输出」件)且名 ∈ 规格池;效果串 'env_gift_random:<名>@2star'
     (星级后缀随 spec,卡面明写非先验);获得链写序 = 仅 bench 一笔写——
-    属性加成腿不建模的零写端钉死(锁 9 收窄形:节点推进无本卡挂点,
+    属性加成分支不建模的零写端钉死(锁 9 收窄形:节点推进无本卡挂点,
     差分重放不稳定不设)。期望名从同 seed 现算(单一来源,不手抄)。"""
     gs = _make_gs(bench=[], equips=[])
     seq_before = gs.write_seq
@@ -690,10 +690,10 @@ def test_env_gift_random_leg_star2_merge_boundary(
 
 
 def test_env_gift_random_leg_cost2_star2_seeded(rows_sink: _RowSink) -> None:
-    """战力飙升(2 费无类型词)发放腿(on_env_gained 直构,T-37 设计 §4
+    """战力飙升(2 费无类型词)发放分支(on_env_gained 直构,T-37 设计 §4
     锁 3/9):固定种子 rng → bench 追加 1 张 2★(名 ∈ 2 费全档池);
     效果串 'env_gift_random:<名>@2star';获得链写序 = 仅 bench 一笔写——
-    属性加成腿不建模的零写端钉死。期望名从同 seed 现算(单一来源,不手抄)。"""
+    属性加成分支不建模的零写端钉死。期望名从同 seed 现算(单一来源,不手抄)。"""
     gs = _make_gs(bench=[], equips=[])
     seq_before = gs.write_seq
     pool = grant_char_pool(gs, RandomCharSpec(cost=2, star=2))
@@ -766,7 +766,7 @@ def test_opening_replace_leg_clear_and_grant(rows_sink: _RowSink) -> None:
     种子 rng → on_env_gained 后 bench 恰 3 只,每只 1★ 且名 ∈ 3 费规格池
     (= chars_by_cost(3) 全档,type_tag 空);效果串 = env_opening_replace:4
     + env_gift_random:<名>@1star ×3;获得链全部写面 = 清席 1 + 落席 3
-    恰 4 笔(腿 2 不建模的零写端钉死:升星/节点/战斗无本卡挂点,零顺手
+    恰 4 笔(分支 2 不建模的零写端钉死:升星/节点/战斗无本卡挂点,零顺手
     计数器);容量随原观察保持。期望名从同 seed 现算(单一来源,不手抄)。"""
     gs = _make_gs(bench=[('希儿', 1)] * 4, equips=[])
     seq_before = gs.write_seq
@@ -789,7 +789,7 @@ def test_opening_replace_leg_clear_and_grant(rows_sink: _RowSink) -> None:
 
 def test_opening_replace_leg_zero_unit_zero_write(rows_sink: _RowSink) -> None:
     """零 unit 零写(T-43 设计 §4 锁 3):空 bench 直构(live 空底座形态)
-    → 清席腿零写,只留效果串 env_opening_replace:0 申报替换事实;写面 =
+    → 清席分支零写,只留效果串 env_opening_replace:0 申报替换事实;写面 =
     落席 3 笔(赠卡照常落,替换语义对 live = 无开局可清,发放不受影响)。"""
     gs = _make_gs(bench=[], equips=[])
     seq_before = gs.write_seq
@@ -802,7 +802,7 @@ def test_opening_replace_leg_zero_unit_zero_write(rows_sink: _RowSink) -> None:
                    *(f'env_gift_random:{n}@1star' for n in expected))
     units = [(u.char_id, u.star) for u in bench_units_of(gs)]
     assert sorted(units) == sorted((n, 1) for n in expected)
-    assert gs.write_seq - seq_before == 3, '清席腿零写,写面 = 落席 3 笔'
+    assert gs.write_seq - seq_before == 3, '清席分支零写,写面 = 落席 3 笔'
 
 
 def test_opening_replace_leg_three_same_merge_to_2star() -> None:
@@ -834,25 +834,25 @@ def test_opening_replace_leg_two_same_one_diff_no_merge() -> None:
 
 def test_env_gift_conditional_only_quiet_after_random_leg(
         rows_sink: _RowSink) -> None:
-    """具名支回归(T-10 设计 §4 测试 6):仅条件腿条目(量子同频契约)
+    """具名支回归(T-10 设计 §4 测试 6):仅条件分支条目(量子同频契约)
     在随机支落地后行为逐位不变——零即时发放、零效果串、零容器写
     (随机支为追加分支,前置分支零触碰)。"""
     gs = _make_gs(bench=[], equips=[])
     seq_before = gs.write_seq
     out = on_env_gained(gs, None, '量子同频契约', rand=False, sig=_lsig())
-    assert out == (), '条件腿不即时发放'
+    assert out == (), '条件分支不即时发放'
     assert bench_units_of(gs) == []
     assert gs.write_seq == seq_before, '安静不写,零容器写'
 
 
 # ============================================================ 随机装备通道
-# (环境随机装备发放:equips_random_immediate 类别池掷骰 + 绑定腿;首例
-# 劳务派遣合同腿1,设计 = 该迭代 designs/T-19-laowu-paiqian-hetong.md
+# (环境随机装备发放:equips_random_immediate 类别池掷骰 + 绑定分支;首例
+# 劳务派遣合同分支1,设计 = 该迭代 designs/T-19-laowu-paiqian-hetong.md
 # §2.4)
 
 
 def test_env_star_grant_seeded_roll_and_binding(rows_sink: _RowSink) -> None:
-    """随机装备支发放腿(on_env_gained 直构,T-19 设计 §4.2):固定种子
+    """随机装备支发放分支(on_env_gained 直构,T-19 设计 §4.2):固定种子
     rng → equips 尾追 1 件 category='星徽' 装备且名 ∈ 类别池;done 追加
     ``('劳务派遣合同', 'star_grant#<名>')`` 绑定键;效果串
     ``env_star_grant:<名>``。期望名同 seed 现算(单一来源,不手抄)。"""
@@ -865,14 +865,14 @@ def test_env_star_grant_seeded_roll_and_binding(rows_sink: _RowSink) -> None:
     assert gs.equips.value == [expected], '库存尾追 1 件星徽'
     assert gs.env_grants_done.value == (('劳务派遣合同',
                                          f'star_grant#{expected}'),), \
-        '绑定腿:发放名落 done(腿2 触发依赖)'
+        '绑定分支:发放名落 done(分支2 触发依赖)'
     assert rows_sink.kinds() == [], '正常路径零申报行'
 
 
 def test_env_star_grant_equips_unobserved_zero_write(
         rows_sink: _RowSink) -> None:
     """equips 未观察 → 装备与绑定同零写(T-19 设计 §4.2 placed 守卫锁):
-    禁「绑定在而装备未发」残缺态(与腿2 bench None 缓发口径对称);
+    禁「绑定在而装备未发」残缺态(与分支2 bench None 缓发口径对称);
     效果串恒登记(与落位成败解耦,items 通道现役惯例)。"""
     gs = _make_gs(bench=[])   # equips 未写 = None
     pool = equips_by_category('星徽')
@@ -886,7 +886,7 @@ def test_env_star_grant_equips_unobserved_zero_write(
 
 def test_env_star_grant_empty_pool_skip(rows_sink: _RowSink) -> None:
     """运行期空池防御(T-19 设计 §2.4 log+跳过):注册表漂移态(类别池
-    派生空)→ 零写不炸链(与 chars_random 支空池防御及腿2 池空防御
+    派生空)→ 零写不炸链(与 chars_random 支空池防御及分支2 池空防御
     对称);无效果串。"""
     gs = _make_gs(bench=[], equips=[])
     seq_before = gs.write_seq
@@ -956,7 +956,7 @@ def test_discharge_due_item_grants_place_and_drain(rows_sink: _RowSink) -> None:
 
 def test_discharge_overflow_semantics_reused(rows_sink: _RowSink) -> None:
     """落位语义复用(design §2.3 ②):席满 → 溢出落位两字段(身份 = 道具名,
-    角色腿同款);溢出位再被占 → 该项零写留证(DEFECT_OVERFLOW_TAKEN);
+    角色入账分支同款);溢出位再被占 → 该项零写留证(DEFECT_OVERFLOW_TAKEN);
     队列回写只看命中非空,与落位成败解耦。"""
     gs = _make_gs(bench=[('希儿', 1)] * 9, equips=[])
     gs.prep_anchored = True
@@ -983,11 +983,11 @@ def test_discharge_overflow_semantics_reused(rows_sink: _RowSink) -> None:
 def test_bench_item_names_cover_scheduled_channel() -> None:
     """占席道具词表派生面:BENCH_ITEM_NAMES 并入 items_scheduled 道具名
     (定时道具同为占席道具,溢出位身份 kind 判定同面——缺派生会把箱当
-    角色,假身份进合成素材组);策略箱腿登记同样自动派生覆盖(design
+    角色,假身份进合成素材组);策略箱分支登记同样自动派生覆盖(design
     §2.1 断言:登记即入词表,进阶武装箱首例)。"""
     assert '特权武装箱' in BENCH_ITEM_NAMES, 'scheduled 派生覆盖'
     assert '简易武装箱' in BENCH_ITEM_NAMES, 'immediate 派生保持'
-    assert '进阶武装箱' in BENCH_ITEM_NAMES, '策略箱腿登记即派生覆盖'
+    assert '进阶武装箱' in BENCH_ITEM_NAMES, '策略箱分支登记即派生覆盖'
 
 
 def test_pending_item_grants_audit_row_declared() -> None:
@@ -1055,14 +1055,14 @@ def test_gain_invest_env_invalid_payload_zero_write(rows_sink: _RowSink) -> None
 def test_gain_equipment_consequence_and_quiet() -> None:
     """gain_equipment:入栏 + EQUIP_ACQUIRE_CONSEQUENCES 命中送单位递归
     (2×银狼在手 → 分身墨镜第 3 只合成 2★);分身墨镜卡文「解锁并获得」
-    = 解锁专家入池 + 送单位两腿(官方机制:专家顾问初始不在商店池,
+    = 解锁专家入池 + 送单位两条分支(官方机制:专家顾问初始不在商店池,
     economy.md §1);表外件查无效果安静不写。"""
     gs = _make_gs(bench=[('银狼', 1), ('银狼', 1)], equips=[])
     out = gain_equipment(gs, '分身墨镜', rand=False, sig=_lsig(),
                          evidence='g', producer='T')
     assert out.placed is True
     assert out.effects == ('equip_expert_unlock:银狼',
-                           'equip_consequence:银狼'), '解锁 + 送单位两腿'
+                           'equip_consequence:银狼'), '解锁 + 送单位两条分支'
     assert gs.unlocked_experts.value == ('银狼',), '解锁状态写入'
     assert gs.equips.value == ['分身墨镜']
     units = [(u.char_id, u.star) for u in bench_units_of(gs)]
@@ -1100,44 +1100,44 @@ def test_gain_invest_strategy_invalid_payload_zero_write(
 def test_gain_invest_strategy_register_dedup_and_hacker_chain(
         monkeypatch: pytest.MonkeyPatch, rows_sink: _RowSink) -> None:
     """三段式主链(design §2.4):注册按名字去重追加(裁定⑩持卡列表
-    写入语义)→ 登记腿(session=None 跳过)→ on_strategy_gained 分派
-    advisor 解锁腿(银狼入池,官方卡文 = 加入商店非送单位,原入席腿
+    写入语义)→ 登记分支(session=None 跳过)→ on_strategy_gained 分派
+    advisor 解锁分支(银狼入池,官方卡文 = 加入商店非送单位,原入席分支
     随权威解锁写道退役)+ 骇客效果体(改件经 gain_equipment rand=True
     入栏,后果表件经 on_equipment_gained 回调送单位;标记域 = 前后值
     快照比对,gold 永不翻)。"""
     monkeypatch.setattr(random.Random, 'choice',
-                        lambda self, seq: '破解芯片')   # 表外件(无后果腿)
+                        lambda self, seq: '破解芯片')   # 表外件(无后果分支)
     gs = _make_gs(bench=[('银狼', 1), ('银狼', 1)], equips=[])
-    # 置闩(测试专口直赋):注册腿确定面通道断言(source == 'logic')以
-    # 通道规则前置;采样腿 rand=True 恒 logic_rand 不受影响。
+    # 置闩(测试专口直赋):注册分支确定面通道断言(source == 'logic')以
+    # 通道规则前置;采样分支 rand=True 恒 logic_rand 不受影响。
     gs.prep_anchored = True
     seq_before = gs.write_seq
     gain_invest_strategy(gs, None, '骇客专家:银狼', rand=False,
                          sig=_lsig())
     assert gs.active_strategies.value == ['骇客专家:银狼'], '注册入表'
     assert gs.active_strategies.source == 'logic', '确定面 write_logic'
-    assert gs.unlocked_experts.value == ('银狼',), 'advisor 解锁腿写入'
+    assert gs.unlocked_experts.value == ('银狼',), 'advisor 解锁分支写入'
     units = [(u.char_id, u.star) for u in bench_units_of(gs)]
     assert units == [('银狼', 1), ('银狼', 1)], \
         '顾问入商店非送单位,预置单位保持 1★'
     assert gs.equips.value == ['破解芯片'], '改件入栏(采样值)'
-    assert gs.equips.source == 'logic_rand', '采样腿 logic_rand'
+    assert gs.equips.source == 'logic_rand', '采样分支 logic_rand'
     assert gs.write_seq > seq_before, '多步各占写序'
     assert rows_sink.kinds() == [], '解锁权威写,零台账申报行'
-    # 去重:同卡再入 → 持卡面跳写不重复;效果腿照常(裁定⑩语义 = 仅持卡
+    # 去重:同卡再入 → 持卡面跳写不重复;效果分支照常(裁定⑩语义 = 仅持卡
     # 列表去重,效果分派零闸;解锁只增去重幂等)
     seq2 = gs.write_seq
     gain_invest_strategy(gs, None, '骇客专家:银狼', rand=False,
                          sig=_lsig())
     assert gs.active_strategies.value == ['骇客专家:银狼'], '持卡面单份'
     assert gs.unlocked_experts.value == ('银狼',), '解锁幂等(不重复追加)'
-    assert gs.write_seq > seq2, '效果腿照走(零幂等闸)'
+    assert gs.write_seq > seq2, '效果分支照走(零幂等闸)'
 
 
 def test_gain_invest_strategy_session_ledger_leg() -> None:
-    """登记腿(design §2.4-2):session 在场 + STRATEGY_EFFECTS 命中 →
+    """登记分支(design §2.4-2):session 在场 + STRATEGY_EFFECTS 命中 →
     register_strategy 入册 + burst 桥累加免费刷新余额;session=None =
-    登记腿跳过、注册照常;未收录卡登记腿零动作。(选卡 = 固定理财:
+    登记分支跳过、注册照常;未收录卡登记分支零动作。(选卡 = 固定理财:
     STRATEGY_EFFECTS 在册条目且 payload.free_refresh_burst=2,桥 docstring
     背书;市场干预仅在经济聚合表 STRATEGY_ECONOMY,不入本表。)"""
     gs = _make_gs(bench=[], equips=[])
@@ -1154,7 +1154,7 @@ def test_gain_invest_strategy_session_ledger_leg() -> None:
 
 
 def test_on_strategy_gained_advisor_unlock() -> None:
-    """advisor 解锁腿(on_strategy_gained):STRATEGY_GRANTS advisor=True
+    """advisor 解锁分支(on_strategy_gained):STRATEGY_GRANTS advisor=True
     卡(停云顾问)→ 解锁状态写入 + 效果串,不入席;非 advisor 卡不触发
     解锁;未收录卡零写(test_on_strategy_gained_unregistered_quiet 已锁)。"""
     gs = _make_gs(bench=[], equips=[])
@@ -1172,7 +1172,7 @@ def test_on_strategy_gained_advisor_unlock() -> None:
 
 def test_on_strategy_gained_unregistered_quiet() -> None:
     """未收录卡:查无效果安静不写(gain-chain §3 裁定④);效果表键集 =
-    骇客单行 + 三箱腿卡(箱腿由工厂自 _STRATEGY_BOX_GRANTS 生成,
+    骇客单行 + 三箱分支卡(开箱分支由工厂自 _STRATEGY_BOX_GRANTS 生成,
     )。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
         PICK_INVEST_EFFECTS,
@@ -1187,7 +1187,7 @@ def test_on_strategy_gained_unregistered_quiet() -> None:
     assert gs.write_seq == seq_before, '零写'
 
 
-# ============================================================ 策略箱腿效果
+# ============================================================ 策略箱分支效果
 # (策略卡获得时点占席道具发放,进阶武装箱首例;迭代
 #  design §2.3)
 
@@ -1195,7 +1195,7 @@ def test_on_strategy_gained_unregistered_quiet() -> None:
 @pytest.mark.parametrize('card', ['战术义眼++', '保守派', '快请专家·彩'])
 def test_strategy_box_leg_effect_places_box(
         card: str, rows_sink: _RowSink) -> None:
-    """三箱腿卡效果体(on_strategy_gained 分派):备战空槽 supply_box×1 +
+    """三箱分支卡效果体(on_strategy_gained 分派):备战空槽 supply_box×1 +
     步串 ``box_grant:进阶武装箱(placed=True)``(沿骇客卡 steps 形态);
     确定发放(rand=False 走确定面,rng 不消费);道具非角色,单位域不变;
     正常路径零留证。"""
@@ -1216,7 +1216,7 @@ def test_strategy_box_leg_effect_places_box(
 def test_strategy_box_leg_bench_full_overflow_name(
         rows_sink: _RowSink) -> None:
     """席满行为测试(名字经溢出落位真值暴露——BenchSlot kind 与道具名解耦,
-    备战断言发现不了名字漂移):bench 满 9 → pick 箱腿卡 → 溢出落位,
+    备战断言发现不了名字漂移):bench 满 9 → pick 开箱分支卡 → 溢出落位,
     overflow_card == '进阶武装箱'(BENCH_ITEM_NAMES 判 kind → 身份两分
     正确)。"""
     gs = _make_gs(bench=[('希儿', 1)] * 9)
@@ -1273,7 +1273,7 @@ def test_gain_bench_item_three_landings(
                            evidence='t') is True
     assert gs2.overflow_card.value == '进阶武装箱', '溢出位身份 = 道具名'
     assert gs2.overflow_warning.value is True
-    # 态 3:溢出位被占 → False + 零写 + 留证(角色腿同款)
+    # 态 3:溢出位被占 → False + 零写 + 留证(角色入账分支同款)
     gs3 = _make_gs(bench=[('希儿', 1)] * 9,
                    overflow_card='简易武装箱', overflow_warning=True)
     gs3.prep_anchored = True
@@ -1284,12 +1284,12 @@ def test_gain_bench_item_three_landings(
     assert rows_sink.kinds() == [DEFECT_OVERFLOW_TAKEN], '零写一留证'
 
 
-# ============================================================ 欢愉契约条件腿
+# ============================================================ 欢愉契约条件分支
 # ============================================================ rider(银狼策划落地相正式模型)
 
 
 def _joy_candidates() -> list[str]:
-    """条件腿候选名集单一源(结构化在册数据,禁测试内第二抄本)。"""
+    """条件分支候选名集单一源(结构化在册数据,禁测试内第二抄本)。"""
     return [name for name, _text in ENV_GIFTS['欢愉契约'].chars_conditional]
 
 
@@ -1347,7 +1347,7 @@ def test_joy_rider_grant_channel_rand_anchor_and_coverage(
 
 def test_joy_rider_registry_gate(rows_sink: _RowSink) -> None:
     """在册判定:active_env 空(种子初值)/其他环境 → 零授予零写;欢愉
-    契约在册 → 恰一次授予(正常授予零留证行,unknown 腿载荷各留一行)。"""
+    契约在册 → 恰一次授予(正常授予零留证行,unknown 分支载荷各留一行)。"""
     cands = _joy_candidates()
     seed = _joy_seed_for(cands[0])
     gs = _joy_seeded_gs('')          # 空 = 种子初值
@@ -1373,9 +1373,9 @@ def test_joy_rider_registry_gate(rows_sink: _RowSink) -> None:
     granted = [u.char_id for u in bench_units_of(gs) if u.char_id in cands]
     assert granted == [cands[0]], '欢愉契约在册恰一次授予'
     kinds = rows_sink.kinds()
-    # 台账除三腿载荷行外,仅「观察覆盖种子('' → 公司契约)」的 outcome
+    # 台账除三条分支载荷行外,仅「观察覆盖种子('' → 公司契约)」的 outcome
     # 行(随机态覆盖预期内,与授予无关);授予自身零留证。
-    assert kinds.count('planner_leg_unknown') == 3, 'unknown 腿载荷恰各一行'
+    assert kinds.count('planner_leg_unknown') == 3, 'unknown 分支载荷恰各一行'
     assert 'joy_conditional_grant_failed' not in kinds, '正常授予零授予失败留证'
 
 
@@ -1402,8 +1402,8 @@ def test_joy_rider_rng_injection_deterministic_and_reaches_both(
 def test_joy_rider_fires_once_per_report_call(
         rows_sink: _RowSink) -> None:
     """触发计数封闭清单(单相即时上报,
-    equip-immediate-report):一次上报 equip/upgrade/unknown 三腿各恰一次
-    授予(rider 在腿型分派前,与腿型无关);leg_type='' 直调 rider 仍触发
+    equip-immediate-report):一次上报 equip/upgrade/unknown 三条分支各恰一次
+    授予(rider 在分支类型分派前,与分支类型无关);leg_type='' 直调 rider 仍触发
     (兜底形态)且走终态兜底零写(reason = unrouted_leg_zero_write)。"""
     cands = _joy_candidates()
     seed = _joy_seed_for(cands[0])
@@ -1412,7 +1412,7 @@ def test_joy_rider_fires_once_per_report_call(
                     ('upgrade', {}), ('unknown', {})):
         gs = _joy_seeded_gs()
         if leg == 'upgrade':
-            # 升费腿前置:恰一枚 2★银狼LV.999(rider 候选与其无身份交叠)。
+            # 升费分支前置:恰一枚 2★银狼LV.999(rider 候选与其无身份交叠)。
             slots = [BenchSlot(kind='unit',
                                unit=Unit(char_id='银狼LV.999', star=2))]
             slots += [BenchSlot(kind='empty')] * 8
@@ -1424,7 +1424,7 @@ def test_joy_rider_fires_once_per_report_call(
         assert out.applied is True
         granted = [u.char_id for u in bench_units_of(gs)
                    if u.char_id in cands]
-        assert granted == expect, f'{leg} 腿 rider 恰一次'
+        assert granted == expect, f'{leg} 分支 rider 恰一次'
     # leg_type='' 直调落地相(兜底形态):rider 仍触发 + 终态兜底零写。
     gs4 = _joy_seeded_gs()
     out4 = report_action_pick_planner_param(
@@ -1441,7 +1441,7 @@ def test_joy_rider_failure_best_effort(
         monkeypatch: pytest.MonkeyPatch, rows_sink: _RowSink) -> None:
     """授予失败语义(调用点级 best-effort,链零吞错纪律的显式例外):
     gain_character 注入异常 → 恰一行 joy_conditional_grant_failed 留证
-    (expected/actual/evidence 对齐),腿型分派照常执行(升费变换仍应用)
+    (expected/actual/evidence 对齐),分支类型分派照常执行(升费变换仍应用)
     ——授予与选项应用两条独立因果,授予失败不拖垮选项应用。"""
     import sr_od.application.currency_war.kernel.cw_action_report.\
         pick_planner as pp_mod
@@ -1458,12 +1458,12 @@ def test_joy_rider_failure_best_effort(
     assert out.applied is True
     units = [(u.char_id, u.star) for u in bench_units_of(gs)]
     assert ('银狼LV.999', 1) in units and ('银狼LV.999', 2) not in units, \
-        '腿型分派照常执行(升费变换仍应用)'
+        '分支类型分派照常执行(升费变换仍应用)'
     fails = [r for r in rows_sink.rows
              if r['kind'] == 'joy_conditional_grant_failed']
     assert len(fails) == 1, '恰一行授予失败留证'
     row = fails[0]
-    assert row['expected'] == '条件腿授予成功'
+    assert row['expected'] == '条件分支授予成功'
     assert '授予通道注入异常' in str(row['actual']), 'actual = 异常摘要'
     assert str(row['observed_evidence']).startswith('joy_conditional:')
 
@@ -1478,7 +1478,7 @@ def test_joy_rider_grant_chain_timing_merge(rows_sink: _RowSink) -> None:
     gs.observe(gs.active_env, '欢愉契约', sig=_SIG_OBS)
     report_action_pick_planner_param(
         gs, None, _lsig('CwScreenYinLang'), leg_type='equip',
-        norm_item='破解芯片',   # 表外件(无后果腿)→ 台账零留证行,焦点留给授予时序
+        norm_item='破解芯片',   # 表外件(无后果分支)→ 台账零留证行,焦点留给授予时序
         rng=random.Random(seed))
     units = [(u.char_id, u.star) for u in bench_units_of(gs)]
     assert units == [(cands[0], 2)], '三枚合成 2★(链固定时序,非旁路直写)'
@@ -1486,7 +1486,7 @@ def test_joy_rider_grant_chain_timing_merge(rows_sink: _RowSink) -> None:
 
 
 # ============================================================ LV.999 变换窗
-# (银狼费用档变换;升费腿经 pick_planner 上报、上阵腿经 deploy_move 上报,
+# (银狼费用档变换;升费分支经 pick_planner 上报、上阵分支经 deploy_move 上报,
 #  2026-09-18 定谳〔口述·权威〕:费用档不同时存在,分组键 (char_id, star)
 #  无跨档歧义)
 
@@ -1626,11 +1626,11 @@ def test_invest_strategy_landing_hacker_wolf(
         monkeypatch: pytest.MonkeyPatch,
         rows_sink: _RowSink) -> None:
     """策略屏选择即时上报:点完即写入 = 注册按名字去重追加
-    (active_strategies)+ 登记腿(session=None 跳过)+ 效果分派
-    骇客专家:银狼(advisor 解锁腿:银狼入池权威写,官方卡文 = 加入
-    商店非送单位,原入席腿退役 + 改件 gain_equipment 采样入栏,后果表件
+    (active_strategies)+ 登记分支(session=None 跳过)+ 效果分派
+    骇客专家:银狼(advisor 解锁分支:银狼入池权威写,官方卡文 = 加入
+    商店非送单位,原入席分支退役 + 改件 gain_equipment 采样入栏,后果表件
     经 on_equipment_gained 回调送单位);翻来源域集不含 gold(对抗审⑪)。"""
-    # 场景一:改件采样 = 破解芯片(表外件,链内无后果腿)。
+    # 场景一:改件采样 = 破解芯片(表外件,链内无后果分支)。
     monkeypatch.setattr(random.Random, 'choice',
                         lambda self, seq: '破解芯片')
     gs = _make_gs(bench=[('银狼', 1), ('银狼', 1)], equips=[], gold=30)
@@ -1645,23 +1645,23 @@ def test_invest_strategy_landing_hacker_wolf(
     # heavy)之前,通道规则「未锚定 → 随机态」使确定入口链写改道
     # logic_rand(开局种子底座与锚定闩批行为申报,首观察静默覆盖)。
     assert gs.active_strategies.source == 'logic_rand'
-    assert gs.unlocked_experts.value == ('银狼',), 'advisor 解锁腿写入'
+    assert gs.unlocked_experts.value == ('银狼',), 'advisor 解锁分支写入'
     units = [(u.char_id, u.star) for u in bench_units_of(gs)]
     assert units == [('银狼', 1), ('银狼', 1)], \
         '顾问入商店非送单位,预置单位保持 1★'
     assert gs.equips.value == ['破解芯片'], '随机改件入栏(采样值)'
-    assert gs.equips.source == 'logic_rand', '随机腿 logic_rand'
+    assert gs.equips.source == 'logic_rand', '随机分支 logic_rand'
     assert gs.gold.source == 'observation' and gs.gold.value == 30, \
         'gold 不翻来源(改件链域集裁剪,无噪声行)'
     assert rows_sink.kinds() == [], '解锁权威写,零台账申报行'
-    # 去重:同卡二次上报 → 持卡面跳写不重复;效果腿零闸照走(裁定⑩)。
+    # 去重:同卡二次上报 → 持卡面跳写不重复;效果分支零闸照走(裁定⑩)。
     seq2 = gs.write_seq
     report_action_pick_invest_strategy_param(
         gs, param, _lsig('CwActionPickInvestOp'))
     assert gs.active_strategies.value == ['骇客专家:银狼'], '持卡面单份(去重)'
     assert gs.unlocked_experts.value == ('银狼',), '解锁幂等(不重复追加)'
-    assert gs.write_seq > seq2, '效果腿照走(零幂等闸)'
-    # 场景二:改件采样命中后果表三件(Max 件张力形状)→ 回调后果腿
+    assert gs.write_seq > seq2, '效果分支照走(零幂等闸)'
+    # 场景二:改件采样命中后果表三件(Max 件张力形状)→ 回调后果分支
     #(gain_equipment → on_equipment_gained 回调 → gain_character 送单位;
     # 银狼LV.999 非专家顾问,解锁面零写)。
     monkeypatch.setattr(random.Random, 'choice',
@@ -1698,8 +1698,8 @@ def test_invest_portal_landing_no_card_pollution(
         rows_sink: _RowSink) -> None:
     """portal 确认(欢愉契约)整支走获得链:active_env 写(选择事实落地
     经 gain_invest_env)+ 银狼LV.999 1★ 入席递归(on_env_gained
-    chars_immediate 唯一腿——条件腿临时翻来源闩已撤:零翻面、零
-    provisional 标记行,正式模型 = 银狼策划上报条件腿 rider,测试面 =
+    chars_immediate 唯一分支——条件分支临时翻来源闩已撤:零翻面、零
+    provisional 标记行,正式模型 = 银狼策划上报条件分支 rider,测试面 =
     本文件 rider 组);禁入 active_strategies(防 portal 卡污染持卡面)。"""
     gs = _make_gs(bench=[('希儿', 1)], equips=['幸运星'], gold=30)
     # 按 idx 取名契约(op-layer.md §1.1 观察标准化门):env 上报自容器
@@ -1716,7 +1716,7 @@ def test_invest_portal_landing_no_card_pollution(
     assert gs.active_env.source == 'logic_rand'
     units = [(u.char_id, u.star) for u in bench_units_of(gs)]
     assert units == [('希儿', 1), ('银狼LV.999', 1)], \
-        'immediate 腿唯一(撤闩后 on_env_gained 仅 chars_immediate)'
+        'immediate 分支唯一(撤闩后 on_env_gained 仅 chars_immediate)'
     assert gs.bench.source == 'logic_rand', '送卡链写未锚定期改道随机态'
     assert gs.equips.source == 'observation' \
         and gs.equips.value == ['幸运星'], '零翻面(equips 值与来源均不动)'
@@ -1725,7 +1725,7 @@ def test_invest_portal_landing_no_card_pollution(
 
 def test_invest_portal_env_gifts_full_access(
         rows_sink: _RowSink) -> None:
-    """ENV_GIFTS 全量即时发放经落地相可用(此前仅欢愉契约有容器写腿,
+    """ENV_GIFTS 全量即时发放经落地相可用(此前仅欢愉契约有容器写分支,
     现契约类 chars_immediate 全部经链生效;表外环境安静不写)。
     公司契约 = 翡翠/砂金 逐个 1★ 入席递归。"""
     gs = _make_gs(bench=[], equips=[])
@@ -1796,7 +1796,7 @@ def test_invest_unregistered_card_unchanged(
     assert out.applied is True
     assert gs.active_strategies.value == ['随便一张未收录卡'], \
         '未收录策略只走第一步'
-    assert gs.write_seq == seq_before + 1, '恰一行遥测(持卡面),零效果腿'
+    assert gs.write_seq == seq_before + 1, '恰一行遥测(持卡面),零效果分支'
     # portal 表外环境 = 选择事实写 + 零效果。
     gs2 = _make_gs(bench=[('希儿', 1)], equips=['幸运星'])
     # 按 idx 取名契约(op-layer.md §1.1):上报自容器取标准名,播种承载。
@@ -1812,7 +1812,7 @@ def test_invest_unregistered_card_unchanged(
     # 注册尾段恒两行:active_env 选择事实 + node_seq_by_plane 场字段
     #(表外环境落默认表,字段恒全量无半态;写点唯一 = 获得链尾段)。
     assert gs2.write_seq == seq2_before + 2, \
-        '恰 active_env + node_seq_by_plane 两行(零其他效果腿)'
+        '恰 active_env + node_seq_by_plane 两行(零其他效果分支)'
     assert gs2.node_seq_by_plane.value == dict(PLANE_NODE_TABLES), \
         '表外环境场字段落默认表'
     assert bench_units_of(gs2) and \
@@ -2016,7 +2016,7 @@ def test_sell_swap_transfer_v2_contract(
     if equips_expect is not None:
         assert gs.equips.value == equips_expect, \
             f'{case_name}: equips(回收进 owned 池尾)'
-    # —— 未辖域零写(域封闭腿;初态常量即期望)——
+    # —— 未辖域零写(域封闭分支;初态常量即期望)——
     assert gs.hp.value == 80 and gs.level.value == 5 \
         and gs.xp.value == (4, 20), f'{case_name}: hp/level/xp 零写'
     assert gs.back_layout.value == 6, f'{case_name}: back_layout 零写'
@@ -2024,12 +2024,12 @@ def test_sell_swap_transfer_v2_contract(
 
 
 # ============================================================ 即时装备通道
-# (环境确定性具名装备发放:equips_immediate 装备腿 + items_immediate
-# 箱腿;迭代 2026-09-23-invest-effects-calc T-31 红钻贵族)
+# (环境确定性具名装备发放:equips_immediate 装备入账分支 + items_immediate
+# 开箱分支;迭代 2026-09-23-invest-effects-calc T-31 红钻贵族)
 
 
 def test_env_gift_equip_leg_card_text_order(rows_sink: _RowSink) -> None:
-    """发放腿(T-31 设计 §4 锁 2,on_env_gained 直构 + 种子底座):equips
+    """发放分支(T-31 设计 §4 锁 2,on_env_gained 直构 + 种子底座):equips
     尾追 '红钻'、bench 落 1 个 supply_box 槽件;效果串两行按卡文序
     (``equip_gift:红钻`` 先、``item_gift:简易武装箱`` 后——装备支位于
     道具支之前,遥测序与卡文对齐)。"""
@@ -2058,12 +2058,12 @@ def test_env_gift_equip_leg_callback_zero_effect(
     assert gs.diamond_count.value == diamond0, '宝钻计数零写'
     assert gs.deploy_cap.value == cap0, '上阵上限零写'
     assert gs.back_layout.value == back0, '后排格数零写'
-    assert list(gs.equips.value) == ['红钻'], '装备照常入栏(主腿生效)'
+    assert list(gs.equips.value) == ['红钻'], '装备照常入栏(主分支生效)'
 
 
 def test_env_gift_box_leg_overflow_equips_unaffected() -> None:
     """席满溢出(T-31 设计 §4 锁 7):bench 9 席全占时箱走溢出落位两字段
-    (现役 _place_bench_item 语义);装备腿不受席影响(equips 无席概念,
+    (现役 _place_bench_item 语义);装备入账分支不受席影响(equips 无席概念,
     照常入栏)。"""
     gs = _make_gs(bench=[], equips=[],
                   overflow_card='', overflow_warning=False)
@@ -2074,26 +2074,26 @@ def test_env_gift_box_leg_overflow_equips_unaffected() -> None:
     out = on_env_gained(gs, None, '红钻贵族', rand=False, sig=_lsig())
     assert out == ('equip_gift:红钻', 'item_gift:简易武装箱'), \
         '效果串恒登记(与落位成败解耦)'
-    assert list(gs.equips.value) == ['红钻'], '装备腿不受席影响'
+    assert list(gs.equips.value) == ['红钻'], '装备入账分支不受席影响'
     assert gs.overflow_warning.value is True, '席满溢出告警置位'
     assert gs.overflow_card.value == '简易武装箱', '溢出位身份 = 箱名'
 
 
 def test_env_gift_channel_selection_both_states(rows_sink: _RowSink) -> None:
-    """写通道择道(T-31 设计 §4 锁 8):装备腿 rand=True 硬编码 → 未锚定
+    """写通道择道(T-31 设计 §4 锁 8):装备入账分支 rand=True 硬编码 → 未锚定
     与锚定两态均走 write_logic_rand(equips.source 恒 'logic_rand',
-    猜测语义不进失配网);箱腿 rand=False 透传 → 未锚定 'logic_rand'、
-    锚定 'logic' 确定面(对照腿;T-2 实机定谳纪律)。"""
+    猜测语义不进失配网);开箱分支 rand=False 透传 → 未锚定 'logic_rand'、
+    锚定 'logic' 确定面(对照分支;T-2 实机定谳纪律)。"""
     gs = _make_gs(bench=[], equips=[])
     on_env_gained(gs, None, '红钻贵族', rand=False, sig=_lsig())
-    assert gs.equips.source == 'logic_rand', '装备腿未锚定随机态'
-    assert gs.bench.source == 'logic_rand', '箱腿未锚定随机态'
+    assert gs.equips.source == 'logic_rand', '装备入账分支未锚定随机态'
+    assert gs.bench.source == 'logic_rand', '开箱分支未锚定随机态'
     gs2 = _make_gs(bench=[], equips=[])
     gs2.prep_anchored = True
     on_env_gained(gs2, None, '红钻贵族', rand=False, sig=_lsig())
     assert gs2.equips.source == 'logic_rand', \
-        '装备腿锚定仍随机态(rand=True 硬编码,裁定语义)'
-    assert gs2.bench.source == 'logic', '箱腿锚定确定面(rand=False 透传)'
+        '装备入账分支锚定仍随机态(rand=True 硬编码,裁定语义)'
+    assert gs2.bench.source == 'logic', '开箱分支锚定确定面(rand=False 透传)'
     assert rows_sink.kinds() == [], '两态零申报行(不进失配网)'
 
 
@@ -2102,7 +2102,7 @@ def test_env_gift_channel_selection_both_states(rows_sink: _RowSink) -> None:
 
 
 def test_env_gift_equip_leg_blue_diamond(rows_sink: _RowSink) -> None:
-    """发放腿(T-32 设计 §4 锁 2,on_env_gained 直构;容器前置同 T-31
+    """发放分支(T-32 设计 §4 锁 2,on_env_gained 直构;容器前置同 T-31
     判例 = 观察/逻辑写组装,equips/bench 非 None 才落):equips 尾追
     '蓝钻'、bench 落 1 个 supply_box 槽件;效果串两行按卡文序
     (``equip_gift:蓝钻`` 先、``item_gift:简易武装箱`` 后)。"""
@@ -2130,12 +2130,12 @@ def test_env_gift_blue_callback_zero_effect(rows_sink: _RowSink) -> None:
     assert gs.diamond_count.value == diamond0, '宝钻计数零写'
     assert gs.deploy_cap.value == cap0, '上阵上限零写'
     assert gs.back_layout.value == back0, '后排格数零写'
-    assert list(gs.equips.value) == ['蓝钻'], '装备照常入栏(主腿生效)'
+    assert list(gs.equips.value) == ['蓝钻'], '装备照常入栏(主分支生效)'
 
 
 def test_env_gift_dual_diamond_no_cross_name(rows_sink: _RowSink) -> None:
     """双钻并存(T-32 设计 §4 锁 7):红钻贵族/蓝钻贵族两姊妹条目各自
-    发放各自具名件互不串名——登记形状互斥(装备腿各含自家钻)+ 行为面
+    发放各自具名件互不串名——登记形状互斥(装备入账分支各含自家钻)+ 行为面
     两条链各自产出单件自家装备、效果串互不含对方名(环境单值一局一个,
     并存 = 登记面两行齐备、形状与产出双向不串)。"""
     assert ENV_GIFTS['红钻贵族'].equips_immediate == ('红钻',)
@@ -2156,17 +2156,17 @@ def test_env_gift_dual_diamond_no_cross_name(rows_sink: _RowSink) -> None:
 def test_env_gift_blue_channel_selection_both_states(
         rows_sink: _RowSink) -> None:
     """写通道择道(T-32 设计 §4 锁 8,蓝钻行骑 T-31 同一代码路径):
-    装备腿 rand=True 硬编码 → 未锚定与锚定两态均 write_logic_rand
-    (equips.source 恒 'logic_rand',随机态语义不进失配网);箱腿
-    rand=False 透传 → 未锚定 'logic_rand'、锚定 'logic' 确定面(对照腿)。"""
+    装备入账分支 rand=True 硬编码 → 未锚定与锚定两态均 write_logic_rand
+    (equips.source 恒 'logic_rand',随机态语义不进失配网);开箱分支
+    rand=False 透传 → 未锚定 'logic_rand'、锚定 'logic' 确定面(对照分支)。"""
     gs = _make_gs(bench=[], equips=[])
     on_env_gained(gs, None, '蓝钻贵族', rand=False, sig=_lsig())
-    assert gs.equips.source == 'logic_rand', '装备腿未锚定随机态'
-    assert gs.bench.source == 'logic_rand', '箱腿未锚定随机态'
+    assert gs.equips.source == 'logic_rand', '装备入账分支未锚定随机态'
+    assert gs.bench.source == 'logic_rand', '开箱分支未锚定随机态'
     gs2 = _make_gs(bench=[], equips=[])
     gs2.prep_anchored = True
     on_env_gained(gs2, None, '蓝钻贵族', rand=False, sig=_lsig())
     assert gs2.equips.source == 'logic_rand', \
-        '装备腿锚定仍随机态(rand=True 硬编码,裁定语义)'
-    assert gs2.bench.source == 'logic', '箱腿锚定确定面(rand=False 透传)'
+        '装备入账分支锚定仍随机态(rand=True 硬编码,裁定语义)'
+    assert gs2.bench.source == 'logic', '开箱分支锚定确定面(rand=False 透传)'
     assert rows_sink.kinds() == [], '两态零申报行(不进失配网)'

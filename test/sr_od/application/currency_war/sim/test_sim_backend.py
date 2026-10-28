@@ -6,16 +6,16 @@
 - 字段收敛:无第二账——节点键/连胜/相位载荷全部落容器;
 - 初始序列(简报 → 环境 → wait_one_one → P1r1)与节点推进序列(收入/
   经验/环境金/发牌/offer 日程)平移语义零改;
-- 转移声明重入幂等 + 选卡腿接获得链(契约送卡/burst 免费刷新/板面重写/
+- 转移声明重入幂等 + 选卡分支接获得链(契约送卡/burst 免费刷新/板面重写/
   骇客改件,对齐 cw_gain_chain 现役语义);
-- 装备腿:穿着即合成住 kernel 穿装备上报(规则件缺口补 kernel,sim 与
-  实机动作腿同构);
+- 装备入账分支:穿着即合成住 kernel 穿装备上报(规则件缺口补 kernel,sim 与
+  实机动作分支同构);
 - 观察生成(sim 统一 3.3):金路径 13 档名注册表与清单零差零冗余,逐档
   生成器经 backend.observe 生产路径落容器;未注册屏 LookupError 具名
   响错(防静默失真);
 - 装配接缝(flow-seam §1/§2):端口槽缺省关 + 单装配纪律;sim 模式
-  CwOperation 三条腿(哨兵帧不触 controller/点击腿机械镜/find_area
-  visible 应答);controller 桩触碰即炸;动作腿 rng 提供槽装卸复位;
+  CwOperation 三条分支(哨兵帧不触 controller/点击分支机械镜/find_area
+  visible 应答);controller 桩触碰即炸;动作分支 rng 提供槽装卸复位;
 - 商店牌面(2026-10-17 用户裁定):牌面 = 节点级持久事实(发牌时定),
   开店呈现写回/关店清呈现不清记录/节点切换新发牌覆盖。
 
@@ -443,7 +443,7 @@ def test_node_window_overlay_detour_reruns_offer_check() -> None:
         uninstall_backend()
 
 
-# ============================================================ 选卡腿获得链
+# ============================================================ 选卡分支获得链
 
 def test_contract_env_pick_sends_cards_to_bench() -> None:
     """获得链断言(验收判据):选契约环境(公司契约)送卡入席——
@@ -474,7 +474,7 @@ def test_random_env_gift_sim_seeded_roll_to_bench() -> None:
     设计 §4 测试 7):播种 invest_env_opts 选人才引进 → 选卡后 bench = 5 张
     (4 张 M01 开局 + 1 张随机 4 费 1★ 赠卡);恰 1 张 4 费(开局手牌
     费用形状 (1,1,1,3)/(1,1,2,2) 无 4 费件,4 费 = 赠卡);同 seed 重放
-    确定性(同名同星)——rng 经 install_backend 动作腿提供槽(流键
+    确定性(同名同星)——rng 经 install_backend 动作分支提供槽(流键
     action/pick_invest_env/0)注入 = 采样即世界真值。"""
     def _pick_once() -> list[tuple[str, int]]:
         b = SimBackend(seed=7, cfg=RunConfig(
@@ -512,7 +512,7 @@ def test_typed_random_env_gift_sim_seeded_roll_to_bench() -> None:
     """类型过滤随机赠卡 sim 全链(T-36 设计 §4 锁 8):播种 invest_env_opts
     选战力提升 → 选卡后 bench = 5 张(4 张 M01 开局全 1★ + 1 张 2★ 赠卡;
     星级 2 = 赠卡唯一判据,开局手牌无 2★);赠卡名 ∈ 规格过滤池(注册表
-    现算);同 seed 重放确定性(同名同星)——rng 经 install_backend 动作腿
+    现算);同 seed 重放确定性(同名同星)——rng 经 install_backend 动作分支
     提供槽(流键 action/pick_invest_env/0)注入 = 采样即世界真值。"""
     def _pick_once() -> list[tuple[str, int]]:
         b = SimBackend(seed=7, cfg=RunConfig(
@@ -552,7 +552,7 @@ def test_cost2_random_env_gift_sim_seeded_roll_to_bench() -> None:
     invest_env_opts 选战力飙升 → 选卡后 bench = 5 张(4 张 M01 开局全 1★
     + 1 张 2★ 赠卡;星级 2 = 赠卡唯一判据,开局手牌无 2★);赠卡名 ∈
     2 费全档池(注册表现算);同 seed 重放确定性(同名同星)——rng 经
-    install_backend 动作腿提供槽(流键 action/pick_invest_env/0)注入。"""
+    install_backend 动作分支提供槽(流键 action/pick_invest_env/0)注入。"""
     def _pick_once() -> list[tuple[str, int]]:
         b = SimBackend(seed=7, cfg=RunConfig(
             selected_difficulty='A8', enemy_difficulty=108, env_present=True))
@@ -591,7 +591,7 @@ def test_opening_replace_env_sim_replaces_m01_hand() -> None:
     人才储备 → 选卡后 bench = 恰 3 张(替换语义,M01 预写的 4 张被清席支
     纠回,非 4+3=7 叠加;选卡前无消费者,瞬态不可见);每张 1★ 且名 ∈
     3 费全档池(注册表现算);同 seed 重放确定性(同名同星)——rng 经
-    install_backend 动作腿提供槽(流键 action/pick_invest_env/0)注入 =
+    install_backend 动作分支提供槽(流键 action/pick_invest_env/0)注入 =
     采样即世界真值。"""
     def _pick_once() -> list[tuple[str, int]]:
         b = SimBackend(seed=7, cfg=RunConfig(
@@ -646,7 +646,7 @@ def test_default_env_sim_bench_untouched_by_replace_leg() -> None:
                  for s in b.gs.bench.value.slots
                  if s is not None and s.kind == 'unit'
                  and s.unit is not None]
-        assert len(units) == 4, 'M01 开局 4 张原样,替换腿零误伤'
+        assert len(units) == 4, 'M01 开局 4 张原样,替换分支零误伤'
     finally:
         uninstall_backend()
 
@@ -714,9 +714,9 @@ def test_scheduled_env_gift_discharged_at_plane2_first_window() -> None:
 def test_laowu_env_star_grant_and_boss_node_legs() -> None:
     """劳务派遣合同 sim 全链(该迭代 designs/T-19-laowu-paiqian-hetong.md
     §4.7):选卡后 equips 含 1 件 category='星徽' 装备 + done 有
-    star_grant# 绑定键(腿1,采样 = 注入槽流键世界真值);推进至 P1 boss
+    star_grant# 绑定键(分支1,采样 = 注入槽流键世界真值);推进至 P1 boss
     窗 → bench 恰 +1 个 1★ 绑定羁绊角色 + done 有 boss#<位面>-<轮> 键
-    (腿2,M21 流键);同 seed 重放确定性(equips/bench/done 逐位同)。"""
+    (分支2,M21 流键);同 seed 重放确定性(equips/bench/done 逐位同)。"""
 
     def _bench_units(gs: GameState) -> list[tuple[str, int]]:
         return [(s.unit.char_id, s.unit.star) for s in gs.bench.value.slots
@@ -740,20 +740,20 @@ def test_laowu_env_star_grant_and_boss_node_legs() -> None:
             assert gs.active_env.value == '劳务派遣合同'
             cw_sim_ports.declare_world(env_out.world_decl)
 
-            # 腿1:开局选卡即发 —— equips 1 件星徽 + done 绑定键
+            # 分支1:开局选卡即发 —— equips 1 件星徽 + done 绑定键
             binding = [k for e, k in (gs.env_grants_done.value or ())
                        if e == '劳务派遣合同'
                        and k.startswith(STAR_GRANT_KEY_PREFIX)]
             assert len(binding) == 1, '绑定键恰一枚'
-            assert len(gs.equips.value) == 1, '腿1 发放 1 件星徽入栏'
+            assert len(gs.equips.value) == 1, '分支1 发放 1 件星徽入栏'
             star_name = gs.equips.value[0]
             assert star_name == binding[0][len(STAR_GRANT_KEY_PREFIX):], \
                 '绑定键值 = 发放星徽名'
             assert star_name in equips_by_category('星徽'), '发放 ∈ 星徽类别池'
             pool = {c.name for c in chars_by_faction(star_name[:-2])}
 
-            # 推进至 P1 boss 窗(boss 简报呈现前节点窗已开 → 腿2 已发);
-            # 每个 settle 推进前快照 bench,窗开恰 +1 = 腿2 独占增量
+            # 推进至 P1 boss 窗(boss 简报呈现前节点窗已开 → 分支2 已发);
+            # 每个 settle 推进前快照 bench,窗开恰 +1 = 分支2 独占增量
             prev_units: list[tuple[str, int]] | None = None
             for _ in range(64):
                 if b.done or b.screen_identity() == '货币战争-BOSS简报':
@@ -771,10 +771,10 @@ def test_laowu_env_star_grant_and_boss_node_legs() -> None:
             units = _bench_units(gs)
             assert prev_units is not None and \
                 len(units) == len(prev_units) + 1, \
-                f'boss 窗 bench 恰 +1(腿2 独占): {len(prev_units)}→{len(units)}'
+                f'boss 窗 bench 恰 +1(分支2 独占): {len(prev_units)}→{len(units)}'
             name, star = units[-1]
-            assert name in pool, '腿2 角色 ∈ 绑定星徽的羁绊成员池'
-            assert star == 1, '腿2 星级 1★ 先验'
+            assert name in pool, '分支2 角色 ∈ 绑定星徽的羁绊成员池'
+            assert star == 1, '分支2 星级 1★ 先验'
             return (tuple(gs.equips.value), tuple(units),
                     gs.env_grants_done.value)
         finally:
@@ -851,14 +851,14 @@ def test_strategy_pick_chain_hacker_part_grant() -> None:
         assert out.applied
         chars = {s.unit.char_id for s in gs.bench.value.slots
                  if s is not None and s.kind == 'unit' and s.unit is not None}
-        assert '银狼' in chars, 'bench 腿(确定性)'
-        assert gs.equips.value, '改件腿(采样)入栏'
+        assert '银狼' in chars, 'bench 分支(确定性)'
+        assert gs.equips.value, '改件分支(采样)入栏'
     finally:
         uninstall_backend()
 
 
 def test_strategy_pick_chain_box_grant_immediate() -> None:
-    """获得链断言:选进阶武装箱腿策略卡(三卡 offer 一次注入、pick
+    """获得链断言:选进阶武装箱分支策略卡(三卡 offer 一次注入、pick
     战术义眼++)→ 进阶武装箱获得时点立即落备战席(supply_box 槽件;
     仅选中卡效果体分派——另两卡若误分派席上会多出箱,恰 1 = 唯一分派
     证据)+ pending_item_grants 不受扰(直发不经定时队列,与特权阶级
@@ -882,14 +882,14 @@ def test_strategy_pick_chain_box_grant_immediate() -> None:
             session=SimpleNamespace())
         assert out.applied
         assert '战术义眼++' in gs.active_strategies.value
-        assert _box_count() == 1, '选中卡箱腿立即落备战席(supply_box 槽件)'
+        assert _box_count() == 1, '选中卡箱分支立即落备战席(supply_box 槽件)'
         assert gs.pending_item_grants.value == [], \
             '获得时点直发,不进入定时队列'
     finally:
         uninstall_backend()
 
 
-# ============================================================ 追加随机环境腿(蓝海 id113)
+# ============================================================ 追加随机环境分支(蓝海 id113)
 # 语义正本 = gain-chain.md §3 追加随机环境申报行段 + invest_effects.md
 # 蓝海条:选卡上报完整首链(获得蓝海:active_env + 金 +6 + 申报行)→
 # advance 消费选卡声明 → 后端掷骰二次入链「获得卷中环境」。池掷骰流键
@@ -917,7 +917,7 @@ def _stub_env_reroll_roll(monkeypatch: pytest.MonkeyPatch,
     idx = pool.index(target_env)
 
     class _FixedRoll:
-        """恒定掷骰桩(只实现追加腿消费面 randrange)。"""
+        """恒定掷骰桩(只实现追加分支消费面 randrange)。"""
 
         def randrange(self, n: int) -> int:
             return idx
@@ -934,7 +934,7 @@ def _seed_and_pick_env(b: SimBackend, first_opt: str, *,
                        feed_decl: bool = True):
     """推进到投资环境屏 + 播种候选(首项 = first_opt)+ 上报选中首项
     ——选卡上报完整首链即「获得蓝海」构造口径(金 +6 与申报行都以首链
-    为前提)。feed_decl=True 连做声明喂入(追加获得腿随之触发);
+    为前提)。feed_decl=True 连做声明喂入(追加获得分支随之触发);
     False 返回上报出参,由调用方择时喂入(首链中间态断言面)。"""
     b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
     assert b.screen_identity() == SCREEN_INVEST_ENV
@@ -958,7 +958,7 @@ def _env_pick_backend(seed: int = 7) -> SimBackend:
 
 
 def test_env_reroll_pick_second_gain_leg(_isolate_defect_buffer) -> None:
-    """追加随机环境腿(设计锁面 3):选蓝海完整首链 → 掷骰二次入链——
+    """追加随机环境分支(设计锁面 3):选蓝海完整首链 → 掷骰二次入链——
     active_env ∈ 全集−追加名单且 ≠ 蓝海(追加非替换)、金净变恰 +6
     (池无 gold_instant 条目,二次入链零重复发金)、池分布披露键在册、
     申报行恰一行(首链所产;卷中名 ∉ 名单,二次入链零新增)。"""
@@ -969,7 +969,7 @@ def test_env_reroll_pick_second_gain_leg(_isolate_defect_buffer) -> None:
         gold0 = int(b.gs.gold.value or 0)
         env_out = _seed_and_pick_env(b, '蓝海', feed_decl=False)
         assert b.gs.active_env.value == '蓝海', '首链选择事实'
-        assert int(b.gs.gold.value) == gold0 + 6, '首链金腿'
+        assert int(b.gs.gold.value) == gold0 + 6, '首链金收入分支'
         cw_sim_ports.declare_world(env_out.world_decl)
         pool = sorted(n for n in INVESTMENT_ENVS
                       if n not in ENV_REROLL_NAMES)
@@ -987,7 +987,7 @@ def test_env_reroll_rng_explicit_stream_deterministic(
         monkeypatch: pytest.MonkeyPatch,
         _isolate_defect_buffer) -> None:
     """rng 确定性锁(设计锁面 4):同 seed 重放同卷中名;桩卷中名 =
-    人才引进(池内唯一随机支环境)时随机赠卡发放逐位一致——锁「追加腿
+    人才引进(池内唯一随机支环境)时随机赠卡发放逐位一致——锁「追加分支
     rng 显式传参」:实现漏传则 on_env_gained 缺省回退自掷(random.
     Random()),同 seed 两跑发放不同即红。"""
     _stub_env_reroll_roll(monkeypatch, '人才引进')
@@ -1041,7 +1041,7 @@ def test_env_reroll_rolled_effects_identical_to_direct_pick(
 
 def test_env_reroll_non_member_regression(_isolate_defect_buffer) -> None:
     """非名单环境回归(设计锁面 6):选火药味(∈ ENV_GIFTS,∉ 追加名单)
-    → active_env 保持被选名、追加腿零触发(金不变、无池披露键)、申报
+    → active_env 保持被选名、追加分支零触发(金不变、无池披露键)、申报
     行零新增;既有环境选卡基线逐位不变由全量回归承载。"""
     rows: list[dict] = []
     set_defect_sink(rows.append)
@@ -1050,7 +1050,7 @@ def test_env_reroll_non_member_regression(_isolate_defect_buffer) -> None:
         gold0 = int(b.gs.gold.value or 0)
         _seed_and_pick_env(b, '火药味')
         assert b.gs.active_env.value == '火药味', '保持被选名'
-        assert int(b.gs.gold.value) == gold0, '追加腿零触发(无即时金)'
+        assert int(b.gs.gold.value) == gold0, '追加分支零触发(无即时金)'
         assert ENV_REROLL_ASSUMPTION_POOL not in b.disclosures, '无池披露键'
         kinds = [r['kind'] for r in rows]
         assert kinds.count(ENV_REROLL_DECL) == 0, '零申报行'
@@ -1238,7 +1238,7 @@ def test_ore_env_plane1_declare_instead_of_direct_gold(
 def test_ore_env_generation_deterministic_same_seed() -> None:
     """掷序确定性(详设 §4):同 seed 同调用序 → 声明矿附着逐位一致
     (rng 键 'ore_reward_gen' 随 action_sampling_rng 首调自动生效,装配方
-    零改动;键序确定性责任在调用序,先例 = 现动作腿键)。"""
+    零改动;键序确定性责任在调用序,先例 = 现动作分支键)。"""
     rewards = []
     for _ in range(2):
         b = _ore_env_backend(61)
@@ -1263,7 +1263,7 @@ def test_non_ore_env_keeps_direct_plane_gold_channel(
         b._maybe_finish_wait()
         gs = b.gs
         assert gs.gold.value == 13, \
-            '直发腿生效(开局 3 + 轮首收入 4 + 位面开局金 6)'
+            '直发分支生效(开局 3 + 轮首收入 4 + 位面开局金 6)'
         assert gs.ore_declared_pending.value == () \
             and gs.ore_declared_done.value == (), '零声明域写'
         assert len(gs.spheres.value.points) == 8, '无声明矿点(纯面板)'
@@ -1376,7 +1376,7 @@ def test_ore_env_plane2_declared_ore_and_expiry_cleanup(
 
 def test_supply_node_window_refresh_and_pick() -> None:
     """补给节点窗:呈现补给屏(3 选项写容器 + 免费刷新 left=1);刷新
-    = 点击源(left 递减 + 选项重掷);pick_supply 走获得链。宝钻腿 =
+    = 点击源(left 递减 + 选项重掷);pick_supply 走获得链。宝钻发放分支 =
     chosen_supply (角色, 装备名列表) 按 DIAMOND_EQUIP_NAMES 名单派生
     (T-9 裁定 2)——sim 选项件名恒非钻名 → 派生不发(选项级钻标属
     呈现面近似,U24 披露在册);含钻名形态的派生测试 =
@@ -1406,11 +1406,11 @@ def test_supply_node_window_refresh_and_pick() -> None:
             b.gs, SimpleNamespace(idx=0, char_name='', norm_item=pick.equip),
             _SIG)
         assert out.applied
-        assert pick.equip in b.gs.equips.value, '装备腿入栏'
+        assert pick.equip in b.gs.equips.value, '装备入账分支入栏'
         cw_sim_ports.declare_world(out.world_decl)
         _node_advance_feed(b.gs, trigger='supply_confirm')
         assert b.gs.diamond_count.value == 0, \
-            'sim 选项名单不含钻名 → 列表派生零宝钻腿(fail-visible 边)'
+            'sim 选项名单不含钻名 → 列表派生零宝钻发放分支(fail-visible 边)'
     finally:
         uninstall_backend()
 
@@ -1418,7 +1418,7 @@ def test_supply_node_window_refresh_and_pick() -> None:
 def test_box_open_pick_grant_via_gain_chain() -> None:
     """开箱动作落地 → 武装箱画面(候选写容器);装备卡点击记录 + 选定
     落地 → 选中装备经获得链入栏;模态交回备战。上报 + 声明喂入单轨
-    (open_box / pick_box_card 两腿,动作 op 同形)。"""
+    (open_box / pick_box_card 两条分支,动作 op 同形)。"""
     b = _backend(7)
     try:
         b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
@@ -1760,11 +1760,11 @@ def test_golden_env_difficulty_records_track_selections() -> None:
             '三个日程槽(P1r3/P2r2/P3r2)全部取卡后敌方难度读数 = 108+3×金档'
         records = b.difficulty_records
         # 死亡收口形态(seed 61 死于 3-5):死亡节点在结算起点已落记录、
-        # 死亡腿不经结算屏 → 记录数 = 结算读数 + 1(末条无对应结算读数)。
+        # 死亡分支不经结算屏 → 记录数 = 结算读数 + 1(末条无对应结算读数)。
         assert len(records) == len(picks_at_settle) + 1, \
             (len(records), len(picks_at_settle))
         assert (records[-1].plane, records[-1].round_num) == (3, 5), \
-            '末条记录 = 死亡节点(战斗类结算起点落账,死亡腿不删)'
+            '末条记录 = 死亡节点(战斗类结算起点落账,死亡分支不删)'
         assert records[-1].breakdown.quality_bonus \
             == 3 * QUALITY_DIFFICULTY_BONUS['金'], \
             '死亡节点记录品质分量 = 终局已选数'
@@ -1950,7 +1950,7 @@ def test_silver_env_difficulty_records_track_selections() -> None:
         assert {key for key, _, _, _ in samples} <= set(record_keys), \
             '结算屏访问过的节点必有记录'
         assert any(rec.breakdown.strategy_delta != 0 for rec in records), \
-            '本局没有任何非零 Δ 记录,静态 Δ 腿未被行使'
+            '本局没有任何非零 Δ 记录,静态 Δ 分支未被行使'
         assert any(rec.breakdown.strategy_delta == 0 for rec in records), \
             '本局没有任何零 Δ 记录,零/非零两段轨迹不齐'
         for rec in records:
@@ -2173,7 +2173,7 @@ def test_yinjincai_env_full_walk_slot_qualities() -> None:
 
 
 def test_yinjincai_env_refresh_world_leg_slot_quality_persists() -> None:
-    """银·金·彩局刷新世界腿(2026-10-19 用户裁定「sim 与实机一致提供
+    """银·金·彩局刷新世界分支(2026-10-19 用户裁定「sim 与实机一致提供
     刷新次数」批):首次 offer 逐卡计数 3 → 刷新声明喂入(槽 0,生产同形
     = 上报函数取声明 + declare_world 喂入)→ 该槽重掷新银卡(槽位品质
     承诺跨刷新保持)、计数 3→2、未刷槽不动 → 重复刷新至计数尽 → 尽后
@@ -2225,7 +2225,7 @@ def test_yinjincai_env_refresh_world_leg_slot_quality_persists() -> None:
 
 
 def test_env_screen_refresh_world_leg_group_reroll() -> None:
-    """环境屏整组刷新世界腿(2026-10-19 用户裁定批):开局环境屏呈现
+    """环境屏整组刷新世界分支(2026-10-19 用户裁定批):开局环境屏呈现
     refresh=(1,...)(基准 1 次,呈现写点落容器)→ 整组刷新声明喂入
     (active_env 空 → 触发词 refresh_invest_env)→ 候选整组重掷(组内
     全换)+ 计数落 0 → 尽后再喂声明 = 静默无操作。"""
@@ -2261,9 +2261,9 @@ def test_env_screen_refresh_world_leg_group_reroll() -> None:
 def test_no_env_match_refresh_routes_strategy_leg() -> None:
     """无环境局刷新路由锁(T-427 验收 F-1 回归):env_present 缺省 False
     = 合法无环境支路配置,该局 active_env 恒空 + env_refresh_left 未写
-    (None)→ 刷新声明推导必须走策略屏逐卡腿(旧单一 active_env 依据会
-    误派 env 腿 → env_refresh_left=None 静默无操作 → 计数不减 → 活锁);
-    世界腿照常重掷扣减(基准 1 次)。"""
+    (None)→ 刷新声明推导必须走策略屏逐卡分支(旧单一 active_env 依据会
+    误派 env 分支 → env_refresh_left=None 静默无操作 → 计数不减 → 活锁);
+    世界分支照常重掷扣减(基准 1 次)。"""
     b = _backend()
     try:
         _open_to_first_window(b)
@@ -2277,7 +2277,7 @@ def test_no_env_match_refresh_routes_strategy_leg() -> None:
         out = report_action_refresh_invest_cards_param(
             b.gs, SimpleNamespace(slots=(0,)), _SIG)
         assert out.world_decl.trigger == 'refresh_invest_strategy', \
-            '无环境局刷新走策略腿(env 腿会静默无操作活锁)'
+            '无环境局刷新走策略分支(env 分支会静默无操作活锁)'
         assert out.world_decl.next_screen == SCREEN_INVEST_STRATEGY
         cw_sim_ports.declare_world(out.world_decl)
         new_first = list(b.gs.invest_strategy_opts.value)[0]
@@ -2355,7 +2355,7 @@ def test_joint_extra_slot_presents_no_refresh() -> None:
         uninstall_backend()
 
 
-# ============================================================ 装备腿(规则件缺口补 kernel)
+# ============================================================ 装备入账分支(规则件缺口补 kernel)
 
 def _advance_pair() -> tuple[str, str, str]:
     """取一对真配方(组件A, 组件B, 进阶产物)(注册表单一源取用)。"""
@@ -2511,7 +2511,7 @@ def test_screen_announce_broadcast_points_and_value_exemption() -> None:
     set_state_journal_sink(rows.append)
     set_run_id_provider(lambda: 'run_announce')
     try:
-        b = _backend(7)  # 装配端口槽(出战结算腿走 declare_world 须在装)
+        b = _backend(7)  # 装配端口槽(出战结算分支走 declare_world 须在装)
         gs = b.gs
 
         def assert_broadcast(value: str) -> None:
@@ -2577,11 +2577,11 @@ def test_screen_announce_broadcast_points_and_value_exemption() -> None:
             assert_broadcast(want)
 
         # ⑩ 备战(battle 型直通点;经真实节点窗收尾 = P1r1 进窗 → 窗口
-        #    前段 → 节点屏呈现,出战结算腿依赖此窗态)
+        #    前段 → 节点屏呈现,出战结算分支依赖此窗态)
         b._enter_node_window((1, 1))
         assert_broadcast(SCREEN_PREP)
 
-        # SETTLE 赋值点(战斗结算腿):赋值发生、广播零行(值豁免)
+        # SETTLE 赋值点(战斗结算分支):赋值发生、广播零行(值豁免)
         mark = len(rows)
         _start_battle_feed(gs)
         assert b.screen_identity() == SCREEN_SETTLE
@@ -2648,7 +2648,7 @@ def test_unpresented_overlay_anchor_not_visible_on_prep() -> None:
 
 # ============================================================ 3.3 环境条件发放 sim 接线测试
 # (迭代 2026-10-10-env-conditional-grants landing 3.3;详设
-#  details/env-conditional-grant.md §4/§5:结算腿触发检查接线于 streak
+#  details/env-conditional-grant.md §4/§5:结算分支触发检查接线于 streak
 #  observe 之后 / 触发函数两写 sig 写死单形态 = logic_sig('sim:env') /
 #  宝钻回调内构 obs 族 sig 三写 / 带钻补给零改动不采纳回调。)
 
@@ -2796,7 +2796,7 @@ def test_env_grant_fires_at_fifth_streak_with_diamond_callback(
         _force_settle(monkeypatch, won=True)
         _drive_until(b, lambda: int(gs.streak.value or 0) >= 5)
         # P1 战斗类节点恰 5 个(r3/r4/r6/r7/r9):全胜 → 5 连胜达成于
-        # r9 boss 结算腿,断言面即触发局现值
+        # r9 boss 结算分支,断言面即触发局现值
         assert int(gs.streak.value or 0) == 5
         assert gs.equips.value[-1] == _ENV_GRANT_EQUIP, '装备在库(库尾追加)'
         assert gs.env_grants_done.value == ((_ENV_GRANT_ENV,
@@ -2878,18 +2878,18 @@ def _bench_char_ids(gs: GameState) -> list[str]:
 def test_dot_contract_opening_acquisition_confirms_at_eighth_battle(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """开局获取形态主路径锁面(T-28 设计稿 §4.1⑥,防「锚键门控死寂」
-    回归):开局选环境链 node 未进窗(锚键腿不写 = 预期形态)→ 连打战斗
+    回归):开局选环境链 node 未进窗(锚键分支不写 = 预期形态)→ 连打战斗
     结算,active_env 门驱动猜测写 + 进度累计,第 8 个战斗结算证实落地,
     锚键可缺(纯登记非门控)。P1 序(reward×2/battle×2/supply/battle/
-    encounter/reward/boss)恰 8 个战斗结算节点;补给轮不经结算腿 = 不计数
-    (非战斗轮锁面,设计稿 §2.3);猜测写在结算腿非获得刻(§2.2)。"""
+    encounter/reward/boss)恰 8 个战斗结算节点;补给轮不经结算分支 = 不计数
+    (非战斗轮锁面,设计稿 §2.3);猜测写在结算分支非获得刻(§2.2)。"""
     b = _dot_env_backend()
     try:
         gs = b.gs
         _force_settle(monkeypatch, won=True)
         chars = set(_bench_char_ids(gs))
-        assert {'椒丘', '卡芙卡'} <= chars, '即时腿(获得刻,零改动回归)'
-        assert _DOT_CHAR not in chars, '猜测写在结算腿,不在获得刻'
+        assert {'椒丘', '卡芙卡'} <= chars, '即时分支(获得刻,零改动回归)'
+        assert _DOT_CHAR not in chars, '猜测写在结算分支,不在获得刻'
         assert not [k for _e, k in (gs.env_grants_done.value or ())
                     if k.startswith('dot_anchor#')], \
             '开局形态锚键可缺(node 未进窗不写)'
@@ -2901,7 +2901,7 @@ def test_dot_contract_opening_acquisition_confirms_at_eighth_battle(
         assert keys == [f'dot_battle#{i}' for i in range(1, 5)], \
             f'补给轮前 4 笔进度键: {keys}'
         assert _DOT_CHAR in _bench_char_ids(gs), '首结算猜测态在席'
-        # 证实落地(第 8 个战斗结算 = P1 boss 结算腿)
+        # 证实落地(第 8 个战斗结算 = P1 boss 结算分支)
         _drive_until(b, lambda: (_DOT_ENV, 'dot_confirm')
                      in (gs.env_grants_done.value or ()))
         keys = [k for e, k in (gs.env_grants_done.value or ())
@@ -2930,8 +2930,8 @@ def test_supply_diamond_pick_keeps_zero_callback(
         assert int(gs.streak.value or 0) == 2, 'r3/r4 两胜,补给轮前 <5'
         cap_before = gs.deploy_cap.value
         back_before = gs.back_layout.value
-        # 红钻 = 三钻之一(避开 _ENV_GRANT_EQUIP=财富宝钻,两腿不混淆:
-        # 本测试只证 supply 钻腿聚合,环境发放仍零发生)
+        # 红钻 = 三钻之一(避开 _ENV_GRANT_EQUIP=财富宝钻,两条分支不混淆:
+        # 本测试只证 supply 钻分支聚合,环境发放仍零发生)
         gs.write_logic(gs.chosen_supply,
                        ('', ('红钻',)),
                        produced_by='Test', evidence='t:chosen', sig=_SIG)
@@ -2950,10 +2950,10 @@ def test_supply_diamond_pick_keeps_zero_callback(
 
 
 def test_supply_diamond_leg_derives_from_chosen_name_list() -> None:
-    """sim 宝钻腿列表派生测试(T-9 裁定 2):chosen_supply = (角色,
+    """sim 宝钻发放分支列表派生测试(T-9 裁定 2):chosen_supply = (角色,
     装备名列表),列表任一件名命中 DIAMOND_EQUIP_NAMES → diamond_count
     +1;不含 → 不发(两态同 backend 直驱;live 写端 = 画面 op 确认即写,
-    sim 决策腿未接 = chosen 恒 None 死腿维持)。OCR 误读边(列表名不
+    sim 决策链未接 = chosen 恒 None 死分支维持)。OCR 误读边(列表名不
     匹配漏发)= fail-visible,装备/钻数观察下一帧暴露,披露 4 在册。"""
     b = _backend(5)
     try:
@@ -2961,7 +2961,7 @@ def test_supply_diamond_leg_derives_from_chosen_name_list() -> None:
         gs.write_logic(gs.chosen_supply, ('', ('折叠小刀', '财富宝钻')),
                        produced_by='Test', evidence='t:chosen', sig=_SIG)
         b._on_supply_picked()
-        assert gs.diamond_count.value == 1, '列表含钻名 → 宝钻腿 +1'
+        assert gs.diamond_count.value == 1, '列表含钻名 → 宝钻发放分支 +1'
         gs.write_logic(gs.chosen_supply, ('', ('折叠小刀', '垃圾袋')),
                        produced_by='Test', evidence='t:chosen', sig=_SIG)
         b._on_supply_picked()
@@ -2997,7 +2997,7 @@ def test_env_grant_non_diamond_equip_skips_callback(
 
 def test_env_grant_check_receives_signed_streak_loss_no_grant(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """败向口径:结算腿以带符号 streak 调触发检查(败 −1 传入,kernel
+    """败向口径:结算分支以带符号 streak 调触发检查(败 −1 传入,kernel
     ≤0 短路)→ 零发放零回调;调用边界 sig = logic_action 'sim:env'
     单形态。"""
     b = _env_grant_backend()
@@ -3016,7 +3016,7 @@ def test_env_grant_check_receives_signed_streak_loss_no_grant(
         calls = _record_all_writes(gs, monkeypatch)
         _force_settle(monkeypatch, won=False)
         _drive_until(b, lambda: int(gs.streak.value or 0) < 0)
-        assert seen, '触发检查在结算腿被调用'
+        assert seen, '触发检查在结算分支被调用'
         last_streak, last_sig = seen[-1]
         assert last_streak == -1, '带符号口径(败向 −1 传入)'
         assert last_sig.family == 'logic_action' \
@@ -3034,7 +3034,7 @@ def test_env_grant_check_receives_signed_streak_loss_no_grant(
 # ============================================================ 3.4 扑满结算统一公式接线测试
 # (T-6 经济过热,2026-10-10 用户裁定:战斗结算收入 = 统一公式「基础+息
 #  +连胜成分,战败无」;扑满胜负接入连胜账 = 胜+1/败清零;收入递延至
-#  结算腿落账,基数 = 窗口开快照即轮初口径。)
+#  结算分支落账,基数 = 窗口开快照即轮初口径。)
 
 _PIGGY_ENV = '经济过热'
 
@@ -3067,7 +3067,7 @@ def _reward_expect(gold_at_window: int, base: int, streak_in: int,
 
 def test_piggy_win_income_deferred_and_streak_counts(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """扑满胜局:备战帧(开战前)金不含本节点收入(递延断言);结算腿一次
+    """扑满胜局:备战帧(开战前)金不含本节点收入(递延断言);结算分支一次
     落账 = 基础+进轮连胜金+息;连胜账 0→1→2(胜局计数,用户裁定)。"""
     from sr_od.application.currency_war.kernel.cw_economy import (
         REWARD_BASE_GOLD_BY_ROUND,
@@ -3162,7 +3162,7 @@ def test_non_piggy_reward_always_wins_no_hp_loss(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """普通奖励关恒胜白拿(奖励关不需要战力 = 用户账本 408 行裁定,
     单一源 = kernel cw_reward_node.py 裁定权威行):强制败局结算输出
-    (−23)也被结算腿改写为胜——hp 不掉、败态不登记 pending_loss、
+    (−23)也被结算分支改写为胜——hp 不掉、败态不登记 pending_loss、
     连胜账不动(奖励关不计连胜);扑满局不受本改写(掷点语义保留,
     见 test_piggy_loss_base_interest_only_and_streak_reset)。"""
     b = SimBackend(seed=35, cfg=RunConfig(
@@ -3295,7 +3295,7 @@ def test_gen_briefing_round_trips_three_readings() -> None:
         assert obs.enemy_affixes == list(gs.enemy_affixes.value)
         assert obs.plane_bosses == list(gs.plane_bosses.value)
         assert obs.enemy_difficulty == gs.enemy_difficulty.value
-        # report 腿容器断言:同值覆写后容器与 obs 逐位一致(生成器 →
+        # report 分支容器断言:同值覆写后容器与 obs 逐位一致(生成器 →
         # report → 容器全链走通)。
         assert gs.enemy_affixes.value == obs.enemy_affixes
     finally:
@@ -3303,7 +3303,7 @@ def test_gen_briefing_round_trips_three_readings() -> None:
 
 
 def test_gen_invest_env_candidates_from_container_slot() -> None:
-    """投资环境生成器:候选名自容器 opts 槽(M02 采样写点),report 腿
+    """投资环境生成器:候选名自容器 opts 槽(M02 采样写点),report 分支
     同值回写幂等;x = 下标派生合成值(身份键,无画面语义)。"""
     b = _backend(seed=11, cfg=RunConfig(
         selected_difficulty='A8', enemy_difficulty=108, env_present=True))
@@ -3315,7 +3315,7 @@ def test_gen_invest_env_candidates_from_container_slot() -> None:
         obs = b.observe(SCREEN_INVEST_ENV)
         assert [n for n, _x in obs.options] == opts_before
         assert [x for _n, x in obs.options] == [10, 20, 30]
-        assert b.gs.invest_env_opts.value == opts_before, 'report 腿同值回写'
+        assert b.gs.invest_env_opts.value == opts_before, 'report 分支同值回写'
     finally:
         uninstall_backend()
 
@@ -3397,7 +3397,7 @@ def test_gen_battle_wait_on_screen_at_settle_window() -> None:
 
 def test_gen_supply_options_and_refresh_left() -> None:
     """补给生成器:选项载荷自容器呈现写点回读,refresh_left = 容器剩余
-    语义观察真值(入口 left=1);report 腿同值回写幂等。"""
+    语义观察真值(入口 left=1);report 分支同值回写幂等。"""
     b = _backend(seed=1013)
     try:
         _open_to_first_window(b)
@@ -3409,7 +3409,7 @@ def test_gen_supply_options_and_refresh_left() -> None:
         assert obs.in_node is True
         assert obs.options == list(gs.supply.value.options)
         assert obs.refresh_left == gs.supply_refresh_left.value == 1
-        assert gs.supply.value.options == obs.options, 'report 腿同值回写'
+        assert gs.supply.value.options == obs.options, 'report 分支同值回写'
     finally:
         uninstall_backend()
 
@@ -3475,7 +3475,7 @@ def test_gen_plane_transition_chain_absent_honest() -> None:
 
 
 def test_gen_encounter_tier_options_from_container() -> None:
-    """遭遇生成器:档位候选自容器呈现写点回读(四档集);report 腿同值
+    """遭遇生成器:档位候选自容器呈现写点回读(四档集);report 分支同值
     回写幂等。"""
     b = _backend()
     try:
@@ -3493,7 +3493,7 @@ def test_gen_encounter_tier_options_from_container() -> None:
 
 def test_gen_box_candidates_and_points_same_order() -> None:
     """开箱生成器(武装箱选择档):候选名 + 点击点自容器呈现写点回读,
-    同序等长(report 写端守卫同契约);选定腿消费面 = 动作 op 按 idx 取
+    同序等长(report 写端守卫同契约);选定分支消费面 = 动作 op 按 idx 取
     xy(合成坐标,身份键)。"""
     b = _backend()
     try:
@@ -3663,12 +3663,12 @@ def test_node_switch_new_deal_overrides_record() -> None:
 # ============================================================ 装配接缝
 # (sim 端口接口契约 + CwOperation 覆写面 + controller 桩,flow-seam
 #  §1/§2:端口槽缺省关(不装后端 = 纯实机,读屏改道 helper 走原读链);
-#  单装配纪律;sim 模式 CwOperation 三条腿;controller 桩直连真实 IO
+#  单装配纪律;sim 模式 CwOperation 三条分支;controller 桩直连真实 IO
 #  触碰即 AssertionError(双保险兜底)。)
 
 #: 哨兵帧形状(1080p 基准,area 裁剪不崩、识别恒空 = 双保险第一线)
 _SENTINEL_SHAPE = (1080, 1920, 3)
-#: 真实建档(screen_info currency_war_battle_prep.yml):点击腿测试用
+#: 真实建档(screen_info currency_war_battle_prep.yml):点击分支测试用
 _PREP_SCREEN = '货币战争-备战'
 
 
@@ -3748,9 +3748,9 @@ def test_direct_controller_access_raises(_sim_ctx):
 
 
 def test_click_leg_archive_point_and_until_polling(_sim_ctx):
-    """sim 点击腿(机械镜契约):无 until = 档案点位直成功(node_clicked
+    """sim 点击分支(机械镜契约):无 until = 档案点位直成功(node_clicked
     置位);带 until = 先点击后 round_wait,转移证据可见后下一轮
-    round_success;轮询重入不重复进后端 click_answer(点击腿不重发);
+    round_success;轮询重入不重复进后端 click_answer(点击分支不重发);
     屏门 = 问询屏区域可见才点得着(实机「本帧找到才点得着」对偶,防
     越屏偷跑推进);区域未建档 = round_fail 响亮。"""
     click_area = '按钮-商店'
@@ -3766,13 +3766,13 @@ def test_click_leg_archive_point_and_until_polling(_sim_ctx):
         assert r1.result is OperationRoundResultEnum.SUCCESS
         assert op.node_clicked is True
         assert backend.clicked == [click_target]
-        # ② until 未满足:round_wait 轮询,且不重复进后端(点击腿已成功)
+        # ② until 未满足:round_wait 轮询,且不重复进后端(点击分支已成功)
         r2 = op.round_by_find_and_click_area(
             screen_name=_PREP_SCREEN, area_name=click_area,
             until_find_all=[until_target])
         assert r2.result is OperationRoundResultEnum.WAIT
         assert backend.clicked == [click_target]
-        # ③ 转移证据可见:下一轮 round_success(轮询腿直接问 visible)
+        # ③ 转移证据可见:下一轮 round_success(轮询分支直接问 visible)
         backend.visible_areas.add(until_target)
         r3 = op.round_by_find_and_click_area(
             screen_name=_PREP_SCREEN, area_name=click_area,
@@ -3794,7 +3794,7 @@ def test_click_leg_archive_point_and_until_polling(_sim_ctx):
 
 
 def test_find_area_leg_visible_query(_sim_ctx):
-    """sim find_area 腿:端口 visible 应答(可见 = success,不可见 =
+    """sim find_area 分支:端口 visible 应答(可见 = success,不可见 =
     retry),不触截图识别链。"""
     area = (_PREP_SCREEN, '按钮-商店')
     with sim_backend_fixture() as backend:
@@ -3826,8 +3826,8 @@ def test_identity_helper_filters_by_screen_list():
 
 
 def test_mechanical_io_allowed_default_true_sim_false():
-    """机械 IO 腿检查口(直连旁路 port 检查的共用判定,flow-seam §2):
-    实机(未装配)= True 零行为变化;sim 装配后 = False(机械腿静默
+    """机械 IO 分支检查口(直连旁路 port 检查的共用判定,flow-seam §2):
+    实机(未装配)= True 零行为变化;sim 装配后 = False(机械执行分支静默
     跳过,自上报照走)。"""
     assert cw_sim_ports.mechanical_io_allowed() is True
     with sim_backend_fixture():
@@ -3836,10 +3836,10 @@ def test_mechanical_io_allowed_default_true_sim_false():
 
 
 def test_action_rng_provider_seeded_on_install_reset_on_uninstall():
-    """动作腿采样 rng 注入槽(T-2 偏差申报的归属点接线):SimBackend
+    """动作分支采样 rng 注入槽(T-2 偏差申报的归属点接线):SimBackend
     install_backend 接通提供槽(流键 rng,同 seed 同调用序确定性);
     uninstall_backend 复位 = 实机未播种口径零变化。断言键面含
-    'ore_reward_gen'(挂接生成腿键随 action_sampling_rng 首调自动生效,
+    'ore_reward_gen'(挂接生成分支键随 action_sampling_rng 首调自动生效,
     装配方零改动)。"""
     from sr_od.application.currency_war.kernel.cw_action_report import (
         provided_action_rng,
@@ -3871,7 +3871,7 @@ def test_equip_env_pick_sim_full_chain() -> None:
     """即时装备环境 sim 全链(迭代 2026-09-23-invest-effects-calc T-31
     设计 §4 锁 6):播种选红钻贵族 → equips = ['红钻']、bench = 4 开局
     手牌 + 1 箱(supply_box);开箱链现役承接新箱(箱画面候选 → 选定 →
-    所得经获得链入栏,equips 2 件);同 seed 重放确定。装备腿零采样,
+    所得经获得链入栏,equips 2 件);同 seed 重放确定。装备入账分支零采样,
     重放确定性不经 rng 注入。"""
     def _run() -> list[str]:
         b = _env_pick_backend()
@@ -3901,14 +3901,14 @@ def test_equip_env_pick_sim_full_chain() -> None:
 
     first = _run()
     second = _run()
-    assert first == second, '同 seed 重放确定(装备腿零采样)'
+    assert first == second, '同 seed 重放确定(装备入账分支零采样)'
 
 
 def test_equip_env_pick_sim_full_chain_blue_diamond() -> None:
     """即时装备环境 sim 全链·蓝钻行(T-32 设计 §4 锁 6):播种选蓝钻贵族
     → equips = ['蓝钻']、bench = 4 开局手牌 + 1 箱(supply_box);开箱链
     现役承接新箱(箱画面候选 → 选定 → 所得经获得链入栏,equips 2 件);
-    同 seed 重放确定(装备腿零采样,重放确定性不经 rng 注入)。"""
+    同 seed 重放确定(装备入账分支零采样,重放确定性不经 rng 注入)。"""
     def _run() -> list[str]:
         b = _env_pick_backend()
         try:
@@ -3937,7 +3937,7 @@ def test_equip_env_pick_sim_full_chain_blue_diamond() -> None:
 
     first = _run()
     second = _run()
-    assert first == second, '同 seed 重放确定(装备腿零采样)'
+    assert first == second, '同 seed 重放确定(装备入账分支零采样)'
 
 
 def test_delayed_item_open_window_discharge_grants_coexist_replay_safe(
@@ -3948,7 +3948,7 @@ def test_delayed_item_open_window_discharge_grants_coexist_replay_safe(
     (2,1) 节点窗打开 → 到点条目弹除且与定时道具发放同窗并存零互扰
     (特权武装箱照常落备战席,开盒通道零 supply_box 落位 = 零席位写
     集成面);位面过渡点空白点击重放 → 窗口幂等守卫住,零双弹零双落。
-    断言面 = 不变量非中间态:完胜回退腿在 sim 长驱中真实生效(奖励关
+    断言面 = 不变量非中间态:完胜回退分支在 sim 长驱中真实生效(奖励关
     白拿帧等 → 解锁位逐帧回退),弹除时点随 seed 漂移是设计行为,故
     只锁「保留集全部未到点(unlock > 当前窗)」与总量守恒,不锁队列
     中间值。seed 61 通道沿定时发放用例:局必经 P1r9 与位面过渡。"""
@@ -3968,7 +3968,7 @@ def test_delayed_item_open_window_discharge_grants_coexist_replay_safe(
         assert gs.active_env.value == '命运礼物'
         cw_sim_ports.declare_world(env_out.world_decl)
         assert gs.pending_item_opens.value == (('惊喜盒', (2, 4)),), \
-            '到手腿入队 (1,1)+12 步,零席位写(无 supply_box 落位)'
+            '到手分支入队 (1,1)+12 步,零席位写(无 supply_box 落位)'
         # 播种早到条目 (1,2)(下一窗即到点,挂点真触发证据)+ 定时道具
         # (2,1) 发放项(同窗并存输入;opens 播种 = 全表覆盖写,保留
         # (2,4) 条目)

@@ -25,7 +25,7 @@ proofs/p88.md(§0 辖域/§1 调和引理/§3 解封方向式;收窄集 S_spec =
 domain_hub)+ mandate.swap_transition_narrow_frame(域谓词单一源 =
  kernel ``swap_bond_gate_domain_of`` 转型域判别子全合取,design
  2026-10-26-swap-channel-unified §2.3.1 谓词源迁移)。
-(F4 闭集对账正本与 S_spec 辖域腿迁并
+(F4 闭集对账正本与 S_spec 辖域分支迁并
  test_sell_window_launch::test_launch_cause_closed_set(15 臂映射段);
  F1 开火/F2/F3 豁免/F5 零漂移/F6 M6 零触碰/F7 单一源/F8 prep 对称/
  F9 wiring 旗位各测试已退役。)

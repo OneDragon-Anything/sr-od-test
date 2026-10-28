@@ -152,7 +152,7 @@ class TestLaunchRegistry:
           机械跟绿)。press_buy_deployable = 泄金阶梯档 1 新臂(溢余
           discretionary 面,因果类 press 同 M6/dominance;设计方案 §1.2
           档 1)。P86 重推:+hub_option_buy(乙臂枢纽期权,hold 类,出处
-          = p86-proof-batch.md §3.2/§4.2;映射行随批登记)。P88 迁并腿
+          = p86-proof-batch.md §3.2/§4.2;映射行随批登记)。P88 迁并分支
           (原锁线转型域 F4 闭集测试):收窄集 S_spec ⊆ 闭集 + 豁免 =
           闭集 ∖ S_spec 恰 13 键实名;
         [双视图] 单载体双视图:press 登记入窗口段排除面(active_window),
@@ -179,7 +179,7 @@ class TestLaunchRegistry:
         assert sell_gate.launch_cause_of('ev_buy') == 'press'
         assert sell_gate.launch_cause_of('scene_plugin_buy') == 'press'
         assert sell_gate.launch_cause_of('不存在的臂') is None
-        # P88 迁并腿:收窄集 ⊆ 闭集;豁免集恰 13 键——新买入臂入映射表
+        # P88 迁并分支:收窄集 ⊆ 闭集;豁免集恰 13 键——新买入臂入映射表
         # 即红(强制分类进收窄/豁免,防绕辖域前置的第五臂;对账符号 =
         # mandate.PRESS_NARROWED_ARMS)
         assert set(sell_gate.LAUNCH_CAUSE_BY_ARM) \
@@ -208,23 +208,23 @@ class TestLaunchRegistry:
         assert sell_gate.stall_protect_active(sess, 3) == {'垫件P'}
 
     def test_hold_registration_qualification_conjunction(self):
-        """类资格断言合取两腿(W5/V2-06;统一保护集迭代 design.md §2.3
-        hold 腿行 + §2.4 档位表迁移后语义):名字腿(名 ∈ 保护集 ∪
+        """类资格断言合取两条分支(W5/V2-06;统一保护集迭代 design.md §2.3
+        hold 分支行 + §2.4 档位表迁移后语义):名字分支(名 ∈ 保护集 ∪
         registry 核心——hold 类买入 = C1 核心 + protection_hoard 两类的
-        登记资格面)∧ 硬闸腿(保护档 = refund_full_star_ok 1★ 全额退,
-        与囤臂同门;core 档 = 恒买无星闸)。任一腿缺 = 断言失守:非保护
-        非核心名登记被拒(名字腿红),2★ 保护件直出被拒(硬闸腿红——
-        名字腿必过,红对存在性由合取保证)。"""
+        登记资格面)∧ 硬闸分支(保护档 = refund_full_star_ok 1★ 全额退,
+        与囤臂同门;core 档 = 恒买无星闸)。任一分支缺 = 断言失守:非保护
+        非核心名登记被拒(名字分支红),2★ 保护件直出被拒(硬闸分支红——
+        名字分支必过,红对存在性由合取保证)。"""
         sess = _sess()
         ct = state_of(sess).cw4_counters
-        # 硬闸腿红:2★ 保护件直出(名 ∈ 保护集四体系,protection 档闸拒)
+        # 硬闸分支红:2★ 保护件直出(名 ∈ 保护集四体系,protection 档闸拒)
         assert _TRANS_HOLD in four_system_members()
         assert not refund_full_star_ok(2, 2)
         assert not sell_gate.register_launch(sess, _TRANS_HOLD, cause='hold',
                                              round_num=3, star=2, cost=2)
         assert ct.get('launch_cause_mismatch') == 1
         assert _TRANS_HOLD not in _registry(sess)   # 拒登记(不拦发射归臂)
-        # 名字腿红:非保护非核心普通燃料登记 hold 被拒
+        # 名字分支红:非保护非核心普通燃料登记 hold 被拒
         assert _FUEL not in four_system_members()
         assert _FUEL not in CORE_SINGLE_CARD_REGISTRY
         assert not sell_gate.register_launch(sess, _FUEL, cause='hold',
@@ -344,12 +344,12 @@ class TestWindowLifecycle:
         assert ct.get('close_on_switch') == 1
 
 
-# ===== 装配 A 身份段·终局键集标签命中腿(design 2026-10-26-swap-channel-
+# ===== 装配 A 身份段·终局键集标签命中分支(design 2026-10-26-swap-channel-
 # unified §2.8 堵回降口二,落点钉死 = identity_exclusions)=====
 
 
 class TestIdentityLabelOverlay:
-    """终局键集标签命中腿机制面:锁定帧键集标签件入身份段(不看激活
+    """终局键集标签命中分支机制面:锁定帧键集标签件入身份段(不看激活
     档位),未锁定帧键集空 = 谓词零面(候选面行为锚另见 criteria/
     test_sell_candidates.py 六通道逐一点名)。"""
 
@@ -367,7 +367,7 @@ class TestIdentityLabelOverlay:
         st.target_comp = comp
         st.v3_intention = IntentionState(locked_comp=comp.name)
         # 保护集域轴挂容器宿主态(session_scope.plane2_started_of 读域);
-        # P2 域关闭四体系全体腿,键标签件(停云=仙舟)不被保护集掩蔽。
+        # P2 域关闭四体系全体分支,键标签件(停云=仙舟)不被保护集掩蔽。
         state_of(game_state_of(locked)).plane2_started = True
         excl = sell_gate.identity_exclusions(locked, ())
         assert {'停云', '远坂凛'} <= excl, \
@@ -481,7 +481,7 @@ class TestProtectionIdentityMigration:
         口径(档位过滤)由保护集全域取代的直接验证。"""
         excl = sell_gate.identity_exclusions(_sess(), ())
         assert '椒丘' in excl, '保护集成员未入身份段(常规通道禁卖失守)'
-        assert '银狼LV.999' in excl, 'registry 核心保留腿失守'
+        assert '银狼LV.999' in excl, 'registry 核心保留分支失守'
         assert '希儿' in excl
         assert _FUEL not in excl, \
             '非保护非核心件被误排除(身份段超扩,凑息燃料面被掏空)'
@@ -489,8 +489,8 @@ class TestProtectionIdentityMigration:
     def test_funding_fallback_pool_admits_protection_member(self):
         """兜底对账断言(landing 3.3):全场保护档帧(椒丘构造),P78-5
         兜底池 = 「保护集 ∪ registry 核心」的直接验证——①椒丘(旧静态
-        集 drop 档外)入兜底池可放行(退金 ≥ 缺口,达成量化腿);②
-        银狼LV.999 经核心腿入池(非四体系仍受兜底辖);③万敌(非保护
+        集 drop 档外)入兜底池可放行(退金 ≥ 缺口,达成量化分支);②
+        银狼LV.999 经核心分支入池(非四体系仍受兜底辖);③万敌(非保护
         非核心)不入池(兜底 = 持有件最后手段,非一般燃料通道)。"""
         # ①椒丘:1★ 1费 退 1 ≥ 缺口 1(gold 9 / need 10)
         sess = _sess()

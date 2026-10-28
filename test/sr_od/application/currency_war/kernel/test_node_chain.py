@@ -170,7 +170,7 @@ _HOOK_SIG = ChannelSig(family='logic_hook', actor='TestChainWriter',
 
 
 def _seed_watermark(gs, pos_val: tuple[int, int]) -> None:
-    """推进水位播种(备战腿等价形态:node_pos 逻辑层 + hist 双写)。"""
+    """推进水位播种(备战分支等价形态:node_pos 逻辑层 + hist 双写)。"""
     gs.write_logic(gs.node_pos, pos_val, produced_by='TestChainWriter',
                    sig=_HOOK_SIG)
     gs.node_hist_pos = pos_val
@@ -181,7 +181,7 @@ def test_derivation_shop_panel_targets_observed_node_not_stale_hist():
     事故形态回归测试,run_20260918_074040)。
 
     病理:镜像已被读链写到 r3(店开帧 votes 读,(1,3,reward),观察源),
-    推进水位仍 r2(备战帧未过,备战腿未计数);旧写法按 hist 反解查链
+    推进水位仍 r2(备战帧未过,备战分支未计数);旧写法按 hist 反解查链
     (1,2) 并把 logic 回写 (1,2,reward)——后续备战帧真读 (1,3,battle)
     对 logic 旧键类型失配 → 统一观察对账安灯停局。修法:目标取
     max(生效序, 镜像序) = r3,查链 (1,3) 直定 battle,失配不发生。"""
@@ -203,7 +203,7 @@ def test_derivation_shop_panel_targets_observed_node_not_stale_hist():
 
 
 def test_derivation_shop_panel_popup_advanced_hist_wins_over_stale_mirror():
-    """max 取向的推进优先腿:弹窗腿先推进(hist=3)而镜像仍滞留 r2 时,
+    """max 取向的推进优先分支:弹窗分支先推进(hist=3)而镜像仍滞留 r2 时,
     查链目标 = hist(shop 弹在刚进入的节点上,与旧 hist 单源行为一致)。"""
     session = SimpleNamespace()
     gs = game_state_of(session)
@@ -219,7 +219,7 @@ def test_derivation_shop_panel_popup_advanced_hist_wins_over_stale_mirror():
 
     assert (gs.node.value.plane, gs.node.value.round_num,
             gs.node.value.kind) == (1, 3, 'battle'), \
-        '镜像滞留时目标 = 推进水位 r3(推进腿已计数的新节点)'
+        '镜像滞留时目标 = 推进水位 r3(推进分支已计数的新节点)'
 
 
 def test_derived_node_type_regression_write_dropped_with_event():
@@ -678,7 +678,7 @@ def _run_prep_heavy_with_fakes(test_context, monkeypatch, session, *,
 def _record_logic_writes(gs, monkeypatch) -> list[tuple[str, str | None, int]]:
     """包装 write_logic 记录声明域写行 ``(字段名, evidence, 条数增量)``——
     入队与消费移除写行同样无 evidence,靠条数增量分向(入队 = 增量 > 0);
-    同构 test_ore._record_gen_writes 的 logic 腿。"""
+    同构 test_ore._record_gen_writes 的 logic 分支。"""
     calls: list[tuple[str, str | None, int]] = []
     real = gs.write_logic
 

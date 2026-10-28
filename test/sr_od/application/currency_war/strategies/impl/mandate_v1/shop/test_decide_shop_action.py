@@ -125,7 +125,7 @@ class TestProtectionHoardArm:
 
     def test_unaffordable_records_exit_and_opportunity(self):
         """金不可负担帧:期权级无筹资特权(design §2.2/§2.5-2——囤臂
-        门序 = 1★ 全额退 → 金可负担,无筹资腿)→ ``protection_hoard_
+        门序 = 1★ 全额退 → 金可负担,无筹资分支)→ ``protection_hoard_
         unaffordable`` 计数 + 牌进机会清单(拦因 gold_short),不发出
         筹资卖出、零买入。(面 = 单卡爻光:隔离序 2 场况插件支,使
         断言域 = 囤臂出口键本身。)"""

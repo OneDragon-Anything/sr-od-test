@@ -150,7 +150,7 @@ def test_q_challenger_fill_path_unchanged() -> None:
 
 
 def test_seele_system_never_progressive_pick() -> None:
-    """测试 1(排除腿):零证据态(仅 DOT 点火,无任何第二体系资产)下,
+    """测试 1(排除分支):零证据态(仅 DOT 点火,无任何第二体系资产)下,
     渐进填充不得选出希儿系(E 对它结构性失真:距离恒 0 虚假;carry
     单卡依赖),只在三桥体系内选。"""
     dep, board = _ignite_dot_board()

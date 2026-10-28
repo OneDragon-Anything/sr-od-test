@@ -9,7 +9,7 @@ effects-calc/designs/T-39-zhuanjia-yantaohui.md)§2.4 + §4 锁 3/锁 5 占位
 - 落席 kind 直查:映射外道具名直调公开口 → KeyError 响亮(构造式 =
   ``BENCH_ITEM_KINDS[item]`` 直查非 .get,键缺 = 代码 bug,禁静默兜底);
 - 溢出占位身份两分:溢出位道具串 → 惰性槽件带名查映射(kind/item 逐位 =
-  映射表值),角色串 → unit 腿(回归),溢出空 → 零占位。
+  映射表值),角色串 → unit 分支(回归),溢出空 → 零占位。
 """
 from __future__ import annotations
 
@@ -47,7 +47,7 @@ def test_place_bench_item_unknown_name_key_error() -> None:
 
 def test_build_pool_overflow_item_named_slot_by_mapping() -> None:
     """溢出占位身份两分(设计 §2.4.2 + §4 锁 5 占位半边):溢出位道具串 →
-    惰性槽件带名查映射(kind/item 逐位);角色串 → unit 腿(回归);
+    惰性槽件带名查映射(kind/item 逐位);角色串 → unit 分支(回归);
     溢出空 → 零占位。"""
     gs = _make_gs_seeded()
     gs.observe(gs.overflow_card, '专家邀请函', sig=_SIG_OBS)
@@ -71,7 +71,7 @@ def test_build_pool_overflow_item_named_slot_by_mapping() -> None:
     assert pool3 is not None and len(pool3.ovf) == 1
     assert pool3.ovf[0].kind == 'unit' \
         and pool3.ovf[0].unit is not None \
-        and pool3.ovf[0].unit.char_id == '希儿', '角色串 → unit 腿(回归)'
+        and pool3.ovf[0].unit.char_id == '希儿', '角色串 → unit 分支(回归)'
 
     gs4 = _make_gs_seeded()
     pool4 = _build_pool(gs4, None)

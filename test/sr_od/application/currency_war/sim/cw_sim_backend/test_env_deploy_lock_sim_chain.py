@@ -1,4 +1,4 @@
-"""sim 全链赠卡锁腿轻量局测试(镜像 src 主断言对象 = kernel 赠卡锁腿经
+"""sim 全链赠卡锁分支轻量局测试(镜像 src 主断言对象 = kernel 赠卡锁分支经
 sim 后端全链;按流程级测试落位本目录,引擎驱动助手 import 自
 sim/test_sim_backend.py〔在册超限拆分债文件,禁追加,只 import 复用不改;
 先例 = 本目录 test_resolve_battle.py〕)。
@@ -10,7 +10,7 @@ invest-effects-calc/designs/T-33-yingxiong-dengchang.md)§2.3/§2.5 +
   4 张 1★ + 1 张随机 2★5 费赠卡;开局费用形状无 5 费件,2★ = 赠卡),
   uid 随行;锁记录 = (名, uid, (3,4))(默认表 (1,1) 步进 19),done
   含 deploy_lock_uid#<uid>;
-- **完胜提前链**:sim 结算腿补写环帧后,完胜帧 settle_confirm 推进 →
+- **完胜提前链**:sim 结算分支补写环帧后,完胜帧 settle_confirm 推进 →
   unlock 逐帧递减(1-1 首帧宁缺勿造不判定,1-2/1-3 各回退一步);
 - **确定性**:sim 采样走流键 rng(上报函数条件解析注入 = 世界真值),
   同 seed 重放逐位确定。
@@ -129,7 +129,7 @@ def test_full_chain_grant_lock_and_perfect_rewind(
 
 def test_full_chain_same_seed_replay_deterministic(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """同 seed 重放确定(设计 §4 锁 12;赠卡腿采样走流键 rng = 世界
+    """同 seed 重放确定(设计 §4 锁 12;赠卡分支采样走流键 rng = 世界
     真值,§2.5):双跑同 seed 同配置,赠卡名/实例号/锁序列逐位一致。"""
     def _run() -> tuple[str, int, tuple]:
         b = _pick_hero_env(42)

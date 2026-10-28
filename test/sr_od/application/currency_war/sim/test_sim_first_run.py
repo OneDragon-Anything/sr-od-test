@@ -82,7 +82,7 @@ def test_first_match_deterministic_double_run_identical(two_runs: tuple) -> None
     """确定性判据:同 seed 同 RunConfig 双跑,容器逐位一致(diff 为空)。
 
     对拍载体 = 容器逐域值快照(全部 Field 域,冻结为纯数据);任何域
-    值漂移(采样链/动作腿 rng/策略 rng 注入缺口)都会在此显形。"""
+    值漂移(采样链/动作分支 rng/策略 rng 注入缺口)都会在此显形。"""
     run_a, run_b = two_runs
     diff = {k: (run_a.snapshot.get(k), run_b.snapshot.get(k))
             for k in set(run_a.snapshot) | set(run_b.snapshot)

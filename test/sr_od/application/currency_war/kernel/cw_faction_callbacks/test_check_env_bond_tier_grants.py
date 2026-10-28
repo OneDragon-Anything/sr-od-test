@@ -1,4 +1,4 @@
-"""羁绊档位条件发放判据测试(T-41 特邀专家:加拉赫击破档腿;镜像 src =
+"""羁绊档位条件发放判据测试(T-41 特邀专家:加拉赫击破档分支;镜像 src =
 kernel/cw_faction_callbacks.py)。
 
 被测面 = T-41 设计稿 §4.2 判据矩阵(经生产写路径 write_logic(deployed)
@@ -172,7 +172,7 @@ def test_equips_none_withhold_then_board_write_retry(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """equips None 跳过(宁缺勿造,零写零 done)后,不改任何 watched 集
     的板面写(卖非在册阵营场上件,击破计数不动)重试补发——sets-changed
-    门辖不到的写,门外必查腿兜住(判据挂点锁,接回门内本测试即红)。"""
+    门辖不到的写,门外必查分支兜住(判据挂点锁,接回门内本测试即红)。"""
     gs = _gs(env=_ENV)   # equips 未写 = None
     _write_dep(gs, [_u('乱破'), _u('大丽花'), _u('希儿')])
     assert gs.equips.value is None, '缺读零写(宁缺勿造)'

@@ -14,7 +14,7 @@
   (统计数值随策略正常调整变动,断言即过时);
 - 3.4 统计面扩展(统一保护集验证批授权,design §2.6 prereg 观察集
   取数口;同段落不作断言):过渡引擎读数 ``eng``/``p1eng``(点亮率
-  /成型率/位面 1 形态腿的逐局输入,判定单一源 =
+  /成型率/位面 1 形态分支的逐局输入,判定单一源 =
   ``cw_engine_facts.engines_count``)、位面 2 入口 ``p2``、位面 1 出口
   hp ``hp1``、买卡笔数 ``buys`` 与 M6 压牌库买因笔数 ``m2s``(kernel
   round_fresh_buys / BuyCard receipts 买因)、卖出笔数 ``sells``、
@@ -66,7 +66,7 @@ def _transition_scan(journal_rows: list) -> dict:
     kernel 全集口径计数(与 _recount_board 同形,流派/星徽并入),
     deployed 域写行供希儿系在场判据。字段:``eng_max`` = 局内最大
     体系达成数(点亮 = ≥1,成型 = ≥2 即两两组合);``p1_eng`` = 位面 1
-    出口帧(末张 P1 板)达成数(形态腿);``lit`` = 达成体系名集;
+    出口帧(末张 P1 板)达成数(形态分支);``lit`` = 达成体系名集;
     ``p2_entered`` = 是否进过位面 2;``buys`` = 买卡笔数(round_fresh_buys
     逐轮相位内最大长合计;该域按轮累积、轮间清零,取相位最大防重复计);
     ``hp1`` = 位面 1 出口 hp(末张 P1 板时刻的 hp 写行值)。

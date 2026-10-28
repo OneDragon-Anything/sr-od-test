@@ -1,4 +1,4 @@
-"""cw_shop_deal 发牌采样器测试(2★ 直出腿,T-22 人才下沉)。
+"""cw_shop_deal 发牌采样器测试(2★ 直出分支,T-22 人才下沉)。
 
 锁面(设计 = .debug/progress/2026-09-23-invest-effects-calc/designs/
 T-22-rencai-xiachen.md §4;过程件引用寿命 = 迭代,语义以测试本体为准):
@@ -93,14 +93,14 @@ def test_off_env_no_two_star() -> None:
 def test_rng_zero_perturbation() -> None:
     """rng 零扰动锁(计数形态):计数桩下每次抽签(费用档/抽名/翻星)
     恰 1 发 random()——表外局消耗 = 槽数 + 非空槽数(翻星掷点零发生,
-    即与无翻星腿实现同式);命中局 = 槽数 + 2×非空槽数(每非空槽恰 +1
+    即与无翻星分支实现同式);命中局 = 槽数 + 2×非空槽数(每非空槽恰 +1
     次翻星掷点)。注:翻星掷点与费用档/抽名共用同一流,命中局后续槽位
     抽牌结果随翻星分叉属预期,零扰动性质由计数恒等式承载。"""
     base_payload, base_rng = _deal(cw4_gs(active_env=''))
     base_content = sum(1 for s in base_payload.cards if s.card is not None)
     assert base_rng.random_calls \
         == len(base_payload.cards) + base_content, \
-        '表外 = 槽数 + 非空槽数(翻星掷点零发生 = 无翻星腿同式)'
+        '表外 = 槽数 + 非空槽数(翻星掷点零发生 = 无翻星分支同式)'
 
     env_payload, env_rng = _deal(cw4_gs(active_env='人才下沉'))
     env_content = sum(1 for s in env_payload.cards if s.card is not None)

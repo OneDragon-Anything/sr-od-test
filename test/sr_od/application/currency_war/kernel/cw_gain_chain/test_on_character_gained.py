@@ -65,7 +65,7 @@ def _bench_units(gs: GameState) -> list[tuple[str, int]]:
 
 
 def test_gain_lv999_unlocks_expert(monkeypatch) -> None:
-    """收敛点行为锁(设计 §4 锁 2 主腿):本卡局获得银狼LV.999 → 解锁
+    """收敛点行为锁(设计 §4 锁 2 主分支):本卡局获得银狼LV.999 → 解锁
     银狼入商店 + 效果串 expert_unlock:银狼(经 GainOutcome.effects 对外);
     解锁写恰一行。"""
     gs = _make_gs(bench=[])

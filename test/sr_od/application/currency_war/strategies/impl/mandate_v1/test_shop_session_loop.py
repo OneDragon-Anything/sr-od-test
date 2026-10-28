@@ -553,7 +553,7 @@ class TestReopenTriggers:
         assert st.shop_handled is not None
         assert entry._step4_shop_session_pending(sess, gs) is True
         assert st.shop_read_intent is True   # 读数会话意图标记
-        assert st.shop_handled is not None   # 读数腿不清标记
+        assert st.shop_handled is not None   # 读数分支不清标记
 
     def test_read_session_close_without_processing_no_mark(self):
         """读数会话零处理收工不置标记(§1 路径③:同节点后续真实会话
@@ -928,7 +928,7 @@ def _frame_m4_missing_vacate():
 
 
 def _frame_m2_stockpile_vacate():
-    """囤腿遇席满:成员持有恰 1 张,店刷同员 1★ 第二张 → 置换账卖燃料。"""
+    """囤分支遇席满:成员持有恰 1 张,店刷同员 1★ 第二张 → 置换账卖燃料。"""
     fuels = _fuel_names(8)
     return _frame_session(
         bench_units=[_MEMBER] + fuels,
@@ -968,7 +968,7 @@ def _frame_funding_support_sell():
 def _frame_funding_hold_fallback():
     """筹资穷尽形态:缺员在店 + 金不足 + bench 空仓(活期/兜底池全
     空)→ 候选与兜底双穷尽 → 记录金不足机会清单收工(shop_session
-    §2.3;义务类兜底可卖持有件〔腿①〕的形态由卖出面测试辖,本帧
+    §2.3;义务类兜底可卖持有件〔分支①〕的形态由卖出面测试辖,本帧
     校验穷尽边界)。"""
     return _frame_session(
         bench_units=[],
@@ -1044,7 +1044,7 @@ def test_vacate_chain_reopen_keeps_shop_face_and_buys():
     slots[kept_idx] = BenchSlot(kind='empty')
     gs.write_logic(gs.bench, BenchView(slots=slots, capacity=9),
                    produced_by='cw-36-test', sig=_FACE_LOGIC_SIG)
-    # 卖出上报(筹资/置换卖出腿的容器投影;回金入账面)
+    # 卖出上报(筹资/置换卖出分支的容器投影;回金入账面)
     gs.write_logic(gs.gold, gs.gold.value + (action_income(act1) or 0),
                    produced_by='cw-36-test', sig=_FACE_LOGIC_SIG)
     state_of(sess).gold_ledger = gs.gold.value
@@ -1063,7 +1063,7 @@ def action_income(act) -> int:
 
 
 def test_funding_hold_fallback_records_opportunity():
-    """筹资兜底腿②拒形态:核心件持有账 > 0 → 不卖;该牌进未消费机会
+    """筹资兜底分支②拒形态:核心件持有账 > 0 → 不卖;该牌进未消费机会
     清单(拦因 = 金不足),收工关店(读数协议 §4.2 清单闭环)。"""
     strategy, sess, config = _frame_funding_hold_fallback()
     action = strategy.decide_shop_action()
@@ -1071,7 +1071,7 @@ def test_funding_hold_fallback_records_opportunity():
     st = state_of(sess)
     ct = st.cw4_counters
     assert ct.get('session_funding_exhausted', 0) >= 1, \
-        '筹资候选穷尽分键缺席(兜底腿②拒后应记录)'
+        '筹资候选穷尽分键缺席(兜底分支②拒后应记录)'
     recs = st.shop_opportunities
     assert any(r.card_name == _MEMBER and r.blocked_by == 'gold_short'
                for r in recs), \

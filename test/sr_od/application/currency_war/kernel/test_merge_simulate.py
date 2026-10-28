@@ -37,7 +37,7 @@ def _bench(entries: list) -> list:
 
 def test_on_merge_cascade_two_levels_in_order() -> None:
     """级联两级事实(T-26 设计 §4.2):预置 2×1★花火 + 2×2★花火,推演进
-    一只 1★(模拟买牌腿后调引擎)→ on_merge 依次收 (花火, 2)、(花火, 3)
+    一只 1★(模拟买牌分支后调引擎)→ on_merge 依次收 (花火, 2)、(花火, 3)
     ——逐级触发判例:每完成一级 3 合 1 各一条事实,顺序 = 合成推进序。"""
     bench = _bench([_bc('花火'), _bc('花火'),
                     _bc('花火', star=2), _bc('花火', star=2)])

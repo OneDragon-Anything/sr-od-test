@@ -922,7 +922,7 @@ def test_refresh_fee_observed_value_is_used(monkeypatch):
 
 
 def test_refresh_fee_ledger_equals_gold_deduction(monkeypatch):
-    """T-21 腿 3 锁 10 等值断言:上报已进的帧内,op 花销账累加值 ≡ 金账
+    """T-21 分支 3 锁 10 等值断言:上报已进的帧内,op 花销账累加值 ≡ 金账
     扣减值——两侧同式同源(容器刷价 ``or`` 基价 + 同一 free_refresh_left
     谓词),镜像漂移在本断言显影(spend 3 ≡ 30−27)。"""
     monkeypatch.setattr('time.sleep', lambda _s: None)   # 点击后固定等待
@@ -943,7 +943,7 @@ def test_refresh_fee_ledger_equals_gold_deduction(monkeypatch):
 
 
 def test_refresh_free_frame_zero_both_sides(monkeypatch):
-    """T-21 腿 3 锁 11 op 半边:免费帧(free_refresh_left > 0)花销账
+    """T-21 分支 3 锁 11 op 半边:免费帧(free_refresh_left > 0)花销账
     累加 0 且金账零扣——两侧同谓词恒等,无例外(修复免费帧花销虚记
     既有缺陷:旧形态无条件累加容器价,免费刷实扣 0)。"""
     monkeypatch.setattr('time.sleep', lambda _s: None)   # 点击后固定等待
@@ -962,4 +962,4 @@ def test_refresh_free_frame_zero_both_sides(monkeypatch):
 
     assert ledger.spend_executed == 0, '免费帧花销账累加 0'
     assert state.gold.value == 30, '免费帧金账零扣'
-    assert state.free_refresh_left.value == 0, '免费腿扣减照常(1→0)'
+    assert state.free_refresh_left.value == 0, '免费分支扣减照常(1→0)'

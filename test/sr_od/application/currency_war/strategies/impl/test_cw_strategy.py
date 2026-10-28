@@ -103,7 +103,7 @@ class _SuperChainStrategy(_ProbeStrategy):
 
 
 class _PayloadBoomStrategy(_ProbeStrategy):
-    """payload 钩子必抛场景(异常降级 {} 的降级腿)。"""
+    """payload 钩子必抛场景(异常降级 {} 的降级分支)。"""
 
     def decision_payload(self) -> dict:
         raise RuntimeError('payload boom')

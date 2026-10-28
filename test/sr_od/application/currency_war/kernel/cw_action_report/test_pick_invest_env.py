@@ -43,12 +43,12 @@ _SIG_OBS = ChannelSig(family='obs', actor='PickInvestEnvTest')
 
 
 def _make_gs(opts: list[str]) -> GameState:
-    """直构容器:bench/equips 观察(空席空栏,发放双腿可落)+ 选卡槽逻辑写。"""
+    """直构容器:bench/equips 观察(空席空栏,发放两条分支可落)+ 选卡槽逻辑写。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.observe(gs.bench,
                BenchView(slots=[BenchSlot(kind='empty')] * 9, capacity=9),
                sig=_SIG_OBS)
-    # equips 一并观察(装备腿发放落栏前置;既有测试零断言 equips,无波及)
+    # equips 一并观察(装备入账分支发放落栏前置;既有测试零断言 equips,无波及)
     gs.observe(gs.equips, [], sig=_SIG_OBS)
     gs.write_logic(gs.invest_env_opts, opts, produced_by='T',
                    evidence='t:opts', sig=_SIG)
@@ -98,7 +98,7 @@ def test_delayed_item_env_skips_rng_resolution(
     assert out.applied
     assert provider_calls == [], '零采样环境零解析'
     assert gs.pending_item_opens.value == (('惊喜盒', (2, 4)),), \
-        '队列登记照常(零解析不影响发放腿)'
+        '队列登记照常(零解析不影响发放分支)'
 
 
 def test_random_leg_env_resolves_rng_exactly_once(
@@ -137,14 +137,14 @@ def test_explicit_rng_beats_provider(provider_calls: list[str]) -> None:
 def test_equip_random_leg_env_resolves_rng(provider_calls: list[str]) -> None:
     """随机装备支正态:选劳务派遣合同(equips_random_immediate only)→
     恰一次解析(tool 键 = pick_invest_env),星徽采样经注入槽 rng 落 equips
-    + done 绑定键落地(不扩条件行则本卡走回退自掷,sim 腿1 非确定)。"""
+    + done 绑定键落地(不扩条件行则本卡走回退自掷,sim 分支1 非确定)。"""
     gs = _make_gs(['劳务派遣合同', '轮岗', '头彩'])
     gs.write_logic(gs.equips, [], produced_by='T', evidence='t:eq', sig=_SIG)
     out = report_action_pick_invest_env_param(
         gs, SimpleNamespace(idx=0), _SIG)
     assert out.applied
     assert provider_calls == ['pick_invest_env'], '随机装备支恰一次解析'
-    assert len(gs.equips.value) == 1, '腿1 发放 1 件星徽'
+    assert len(gs.equips.value) == 1, '分支1 发放 1 件星徽'
     binding = [k for e, k in (gs.env_grants_done.value or ())
                if e == '劳务派遣合同' and k.startswith('star_grant#')]
     assert binding, '绑定键落地'
@@ -166,7 +166,7 @@ def test_non_gift_env_pick_no_attrerror_zero_resolution(
 def test_deterministic_equip_env_grants_without_rng(
         provider_calls: list[str]) -> None:
     """确定性装备环境(T-31 设计 §4 锁 5):红钻贵族零随机支 → rng 谓词
-    零解析(provider 不触,确定性装备腿不入谓词);选卡后 equips 尾追
+    零解析(provider 不触,确定性装备入账分支不入谓词);选卡后 equips 尾追
     '红钻'、bench +1 箱(supply_box)——上报 → gain_invest_env →
     on_env_gained 双端同链,live/sim 共用语义一条测试覆盖。"""
     gs = _make_gs(['红钻贵族', '轮岗', '头彩'])
@@ -174,10 +174,10 @@ def test_deterministic_equip_env_grants_without_rng(
         gs, SimpleNamespace(idx=0), _SIG)
     assert out.applied
     assert provider_calls == [], '零随机支环境零解析'
-    assert list(gs.equips.value) == ['红钻'], '装备腿入栏'
+    assert list(gs.equips.value) == ['红钻'], '装备入账分支入栏'
     boxes = [s for s in gs.bench.value.slots
              if s is not None and s.kind == 'supply_box']
-    assert len(boxes) == 1, '箱腿落席 1 个 supply_box 槽件'
+    assert len(boxes) == 1, '开箱分支落席 1 个 supply_box 槽件'
 
 
 def test_deterministic_equip_env_grants_without_rng_blue(
@@ -191,10 +191,10 @@ def test_deterministic_equip_env_grants_without_rng_blue(
         gs, SimpleNamespace(idx=0), _SIG)
     assert out.applied
     assert provider_calls == [], '零随机支环境零解析'
-    assert list(gs.equips.value) == ['蓝钻'], '装备腿入栏'
+    assert list(gs.equips.value) == ['蓝钻'], '装备入账分支入栏'
     boxes = [s for s in gs.bench.value.slots
              if s is not None and s.kind == 'supply_box']
-    assert len(boxes) == 1, '箱腿落席 1 个 supply_box 槽件'
+    assert len(boxes) == 1, '开箱分支落席 1 个 supply_box 槽件'
 
 
 # ==================== 环境道具双件(专家研讨会)====================

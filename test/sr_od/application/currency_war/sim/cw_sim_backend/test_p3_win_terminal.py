@@ -8,7 +8,7 @@
 - 胜利终局:默认局全链走完位面 3(seed 37 探针锚)→ done ∧
   `DISCLOSURE_RUN_COMPLETE` 披露 ∧ 退役键 `DISCLOSURE_P3_UNOBSERVED`
   不再现 ∧ 终点 (3,7) ∧ hp > 0;
-- 败局:结算恒败桩 → hp 归零死亡腿 → done ∧ 无 run_complete(胜负
+- 败局:结算恒败桩 → hp 归零死亡分支 → done ∧ 无 run_complete(胜负
   判别单一源 = 披露集);
 - 对拍(设计裁决点 2 主锁):战争边疆局 vs 默认局同 seed——P1/P2 节点
   kind 与 hp 轨迹逐值同、P3 仅 3-1/3-2/3-4 分化为遭遇、双方零
@@ -172,7 +172,7 @@ def test_full_walk_p3_survive_is_win_terminal() -> None:
 
 
 def test_hp_zero_death_is_loss_without_win_disclosure(monkeypatch) -> None:
-    """败局:结算恒败桩 → hp 归零死亡腿收口,无 run_complete(胜负
+    """败局:结算恒败桩 → hp 归零死亡分支收口,无 run_complete(胜负
     判别单一源在披露集;hp 归零败局语义不变)。"""
     import sr_od.application.currency_war.sim.cw_sim_backend as sb
 
@@ -184,7 +184,7 @@ def test_hp_zero_death_is_loss_without_win_disclosure(monkeypatch) -> None:
     monkeypatch.setattr(sb, 'settle_battle', _always_lose)
     r = _run_full(_AB_SEED)
     assert r['hp'] == 0, 'hp 归零死亡'
-    assert not r['win'], '死亡腿不经胜利分支'
+    assert not r['win'], '死亡分支不经胜利分支'
     assert r['floor_used'], '保底已用后归零'
 
 

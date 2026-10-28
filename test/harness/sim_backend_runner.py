@@ -280,7 +280,7 @@ def run_sim_full_match(test_context: Any,
     """真流程 × sim 世界跑一整局(3.4 首局验收的运行原语)。
 
     装配(flow-seam §4):真 screen_loader + controller 桩(就绪探针放行,
-    其余触碰即炸)+ SimBackend(端口槽 + 事件钩子 + 动作腿 rng 提供槽)
+    其余触碰即炸)+ SimBackend(端口槽 + 事件钩子 + 动作分支 rng 提供槽)
     + 真 mandate_v1 策略器(构造注入 SimpleNamespace(strategy_seed))
     + 容器单例绑定(后端容器 = 流程唯一世界)+ 真 CwLoop(看门狗轮数
     上限)。obs 读口装配点接通纯钩子半部(缓存清理 + 合成特效帧门;

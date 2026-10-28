@@ -3,8 +3,8 @@
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
 T-26-liangzi-tongpin-qiyue.md(定稿)§4.7:量子同频契约经获得链整入口
-落地 → 无即时发放(效果无即时腿,「获得环境当刻不发任何东西」现状
-逐位不变;触发腿只在合并升星事件时序上,env-gain 时点零消费)。
+落地 → 无即时发放(效果无即时分支,「获得环境当刻不发任何东西」现状
+逐位不变;触发分支只在合并升星事件时序上,env-gain 时点零消费)。
 """
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ _SIG = ChannelSig(family='logic_action', actor='CwGainChainTest',
 
 def test_merge_contract_env_gain_no_immediate_grant() -> None:
     """契约族整入口回归(T-26 设计 §4.7):gain_invest_env('量子同频契约')
-    → active_env 注册照常,bench 零新增(无即时腿,登记表世界发放通道
+    → active_env 注册照常,bench 零新增(无即时分支,登记表世界发放通道
     chars_immediate 空——随本迭代触发注册表新增,获得时点行为逐位不变;
     on_env_gained 直调负态 = kernel/test_gain_chain.py
     test_env_gift_conditional_only_quiet_after_random_leg,不重复)。"""

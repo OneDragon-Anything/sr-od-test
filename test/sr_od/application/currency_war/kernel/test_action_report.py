@@ -174,7 +174,7 @@ def test_report_function_accepts_param_and_sig(t, _isolate_defect_buffer):
         # 按 idx 取名契约(op-layer.md §1.1 观察标准化门):env 上报从容器
         # invest_env_opts 取标准名直传链,容器缺读 = 响亮失败——冒烟播种
         # 容器承载该路径(裸容器直调会被正当拒绝)。播种名 = 环境注册表
-        # 真名(含半角冒号,兼覆盖链内归一幂等路径;ENV_GIFTS 仅条件腿,
+        # 真名(含半角冒号,兼覆盖链内归一幂等路径;ENV_GIFTS 仅条件分支,
         # 效果面安静零写)。
         gs.write_logic(gs.invest_env_opts, ['特邀专家:银狼'],
                        produced_by='test', sig=sig)
@@ -184,7 +184,7 @@ def test_report_function_accepts_param_and_sig(t, _isolate_defect_buffer):
 
 
 def test_report_pick_invest_env_container_miss_loud_failure():
-    """env 上报「按 idx 取名」契约拒绝腿(op-layer.md §1.1;即时上报契约:
+    """env 上报「按 idx 取名」契约拒绝分支(op-layer.md §1.1;即时上报契约:
     选卡链发生时观察必然已完成,容器缺读/idx 越界 = 代码 bug = 响亮失败,
     异常上抛禁吞)。红 = 静默零写 noop 回潮 / 非法索引穿透。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
@@ -253,7 +253,7 @@ def _record_equip_calls(calls: list):
 def _make_gs(*, bench: list[tuple[str, int]] | None = None,
              front: list[Unit] | None = None,
              equips: list[str] | None = None) -> GameState:
-    """观测面按参组装(None = 保持未观察,供 bug 面零写腿)。"""
+    """观测面按参组装(None = 保持未观察,供 bug 面零写分支)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if bench is not None:
         slots = [BenchSlot(kind='unit',
@@ -314,7 +314,7 @@ def test_furnace_equip_merged_single_rand_write(rows_sink: _RowSink) -> None:
 def test_furnace_char_legs_equips_rand_and_row_logic(
         rows_sink: _RowSink) -> None:
     """炉·拖角色:①equips 单笔 rand 合并写(移除工具 ∧ 移除穿戴 ∧ 追加各
-    采样替换);②目标角色行域 write_logic(穿戴清空);两腿各落一行
+    采样替换);②目标角色行域 write_logic(穿戴清空);两条分支各落一行
     (design §2.2 表 rand/logic 分面)。"""
     gs = _make_gs(front=[Unit(char_id='丙', star=1,
                               equips=['轮滑鞋', '幸运星'])],
@@ -324,7 +324,7 @@ def test_furnace_char_legs_equips_rand_and_row_logic(
         gs, CwActionFurnaceUseParam(target_kind='char', row='front', slot=1),
         _lsig(), rng=random.Random(7))
     assert out.applied is True
-    assert gs.write_seq - seq0 == 2, '两腿各一行(equips + 行域)'
+    assert gs.write_seq - seq0 == 2, '两条分支各一行(equips + 行域)'
     r_shoes = tool_use.furnace_mutate_sample(random.Random(7), '轮滑鞋')
     r_star = tool_use.furnace_mutate_sample(
         _rng_after(random.Random(7), '轮滑鞋'), '幸运星')
@@ -333,7 +333,7 @@ def test_furnace_char_legs_equips_rand_and_row_logic(
         '工具与穿戴件已移除、各采样替换追加'
     unit = gs.deployed.value.front_slots[0]
     assert unit.char_id == '丙' and unit.equips == [], '行域穿戴清空'
-    assert gs.deployed.source == 'logic', '行域腿 = 确定面'
+    assert gs.deployed.source == 'logic', '行域分支 = 确定面'
 
 
 def test_furnace_char_leg_mixed_worn_keeps_out_of_scope(
@@ -370,7 +370,7 @@ def _rng_after(rng: random.Random, item: str) -> random.Random:
 def test_furnace_sample_same_seed_reproducible() -> None:
     """采样测试:同种子同产物(可复现;rng 注入槽,同种子同序列)。
     样本限作用域白名单内(简易/进阶;白名单 = 口述·权威 2026-09-21)。
-    原对拍腿(旧 sim 私有重掷实现)随 sim 私有动作腿退役删除,
+    原对拍分支(旧 sim 私有重掷实现)随 sim 私有动作分支退役删除,
     采样单一源 = 本模块。"""
     for item in ('轮滑鞋', '反重力皮靴'):
         pool = tool_use.furnace_mutate_pool(item)
@@ -432,7 +432,7 @@ def test_furnace_equip_leg_target_out_of_scope_fail_closed(
 
 def test_privilege_equip_merged_single_logic_write(
         rows_sink: _RowSink) -> None:
-    """特权卡·库存腿:单笔 write_logic 合并写 = 移除工具 ∧ 目标件名 →
+    """特权卡·库存分支:单笔 write_logic 合并写 = 移除工具 ∧ 目标件名 →
     privilege_counterpart 替换同笔(design §2.2;禁拆两笔)。"""
     gs = _make_gs(equips=['特权赋予卡', '反重力皮靴', '幸运星'])
     seq0 = gs.write_seq
@@ -448,7 +448,7 @@ def test_privilege_equip_merged_single_logic_write(
 
 
 def test_privilege_char_leg_fail_closed(rows_sink: _RowSink) -> None:
-    """特权卡·拖角色腿 fail-closed(用户裁定 2026-09-21 按不能拖角色处理):
+    """特权卡·拖角色入账分支 fail-closed(用户裁定 2026-09-21 按不能拖角色处理):
     零写 + 留证行(kind=tool_privilege_worn_unsupported)。"""
     gs = _make_gs(front=[Unit(char_id='丙', star=1,
                               equips=['反重力皮靴'])],
@@ -499,7 +499,7 @@ def test_staff_projector_walks_gain_chain_and_merges(
     """员工投影仪走链测试:复制进席经 ``gain_character`` 统一时序——
     ``on_character_gained`` 回调触发(现役空集安静不写)+ 凑满三连合成
     (升星判断 = 1★×3 → 2★,复制触发三合一 = 口述·权威 2026-09-21);
-    equips 消耗腿同落(工具 −1)。"""
+    equips 消耗分支同落(工具 −1)。"""
     calls: list[tuple[str, int]] = []
     monkeypatch.setattr(cw_gain_chain, 'on_character_gained',
                         _record_char_calls(calls))
@@ -514,7 +514,7 @@ def test_staff_projector_walks_gain_chain_and_merges(
     bench_units = [(s.unit.char_id, s.unit.star) for s in gs.bench.value.slots
                    if s.kind == 'unit' and s.unit is not None]
     assert (_COST3_CHAR, 2) in bench_units, '凑满三连合成 2★(链升星判断)'
-    assert gs.equips.value == [], '工具消耗移除(独立腿)'
+    assert gs.equips.value == [], '工具消耗移除(独立分支)'
 
 
 def test_staff_projector_cost_gate_defense(rows_sink: _RowSink) -> None:
@@ -656,7 +656,7 @@ def test_equip_write_sides_report_form_final_values() -> None:
     assert EQUIP_WRITE_SIDES['完美投影仪'] == \
         'report:report_action_perfect_projector_use_param'
     assert EQUIP_WRITE_SIDES['特权赋予卡'] == \
-        'bridge:transform_equip_to_privilege', '库存腿桥继续消费'
+        'bridge:transform_equip_to_privilege', '库存分支桥继续消费'
     assert EQUIP_WRITE_SIDES['拆装扳手'] == \
         'report:report_action_wrench_use_param'
     assert EQUIP_WRITE_SIDES['精密拆装扳手'] == \

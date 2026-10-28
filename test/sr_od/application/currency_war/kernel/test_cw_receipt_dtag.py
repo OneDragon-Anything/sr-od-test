@@ -35,12 +35,12 @@ from sr_od.application.currency_war.strategies.impl.cw_strategy import (
 
 
 def _probe_action() -> CwActionPickPartnerParam:
-    """探针动作(带归因字段;非空动作形态 = wrapper 盖槽腿)。"""
+    """探针动作(带归因字段;非空动作形态 = wrapper 盖槽分支)。"""
     return CwActionPickPartnerParam(idx=0, reason='probe', route_tag='probe_tag')
 
 
 class _ReceiptProbeStrategy(CwStrategy):
-    """最小具现探针:14 入口全部返回同一探针动作(空动作清槽腿已由
+    """最小具现探针:14 入口全部返回同一探针动作(空动作清槽分支已由
     test_cw_strategy.py 锁定,此处不复写);包裹面在类创建时挂上。"""
 
     STRATEGY_ID = 'probe'

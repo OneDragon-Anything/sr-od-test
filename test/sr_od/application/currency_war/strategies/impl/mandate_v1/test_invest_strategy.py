@@ -145,11 +145,11 @@ def test_cash_instant_gold_face_value():
 
 
 def test_cash_gold_next_nodes_r_minus_1_truncation():
-    """分期金 =「现在」腿 + count 腿按 R−1 截断(design §2.3;
+    """分期金 =「现在」分支 + count 分支按 R−1 截断(design §2.3;
     「接下来」不含当前节点)。开局帧 R=23:长期主义 = 7×(1+min(3,22))
-    = 28(count 腿 3 封顶,R 变不越帽——勿读 instant_gold,长期主义该
-    字段 = 0,误读即漏现在腿);表外位面帧(4,1)(位面 ∉ 序列表键集
-    → R=0,horizon §3 契约):count 腿截断为 0 → 仅「现在」腿 7。"""
+    = 28(count 分支 3 封顶,R 变不越帽——勿读 instant_gold,长期主义该
+    字段 = 0,误读即漏现在分支);表外位面帧(4,1)(位面 ∉ 序列表键集
+    → R=0,horizon §3 契约):count 分支截断为 0 → 仅「现在」分支 7。"""
     assert strategy_economy_value('长期主义', _fresh_gs()) == (28.0, True)
     assert strategy_economy_value('长期主义+', _fresh_gs()) == (36.0, True)
     assert strategy_economy_value('长期主义', _gs_at(4, 1)) == (7.0, True)
@@ -157,7 +157,7 @@ def test_cash_gold_next_nodes_r_minus_1_truncation():
 
 def test_cash_per_node_interest_xp_channels():
     """per-node 流/固定息/XP 双通道(值 = 注册表【注】× R 查表):
-    定期福利 = 4 + 2×23;狸财经狸息腿 = 2×23(活计分腿,取款/存款腿
+    定期福利 = 4 + 2×23;狸财经狸息分支 = 2×23(活计分分支,取款/存款分支
     待建模不关门——design 申报 7);伟大征服 xp_instant = 12;
     买断制 = 15 + 4×23(xp_per_node 流);XP_GOLD_RATE = 1.0。
     (R 开局 16→23 = P3 行入真值表,2026-10-15 用户裁定联动。)"""
@@ -215,7 +215,7 @@ def test_cash_missing_node_degrades_to_opening_frame():
 
 
 def test_cash_pending_modeling_card_failclosed():
-    """纯待建模腿卡 fail-closed = 0:固定理财(唯一挂值字段
+    """纯待建模分支卡 fail-closed = 0:固定理财(唯一挂值字段
     free_refresh_burst 系刷新族待建模)、孪生素数(全默认)。"""
     assert strategy_economy_value('固定理财', _fresh_gs()) == (0.0, False)
     assert strategy_economy_value('孪生素数', _fresh_gs()) == (0.0, False)
@@ -249,7 +249,7 @@ def test_direction_locked_frame_uses_locked_line_union():
 
 def test_direction_evicted_line_death_drops_to_zero():
     """线排除像 = 阵营线全体成员 comp ∈ evicted ⇔ 线排除(design §2.9-2):
-    evicted = 全体列车同行线成员 → 阵营腿整线退场,角色腿唯一命中
+    evicted = 全体列车同行线成员 → 阵营分支整线退场,角色入账分支唯一命中
     (龙丹战技点)同被逐 → 方向 0(evicted 收窄后线退场)。"""
     dead = frozenset(c.name for c in COMP_LIBRARY
                      if '列车同行' in c.factions)
@@ -280,7 +280,7 @@ def test_grant_immediate_highest_tier():
 
 
 def test_grant_conditional_downgraded():
-    """条件集降一档:迷之旅人双腿均条件(黄泉 core → shared 20)。"""
+    """条件集降一档:迷之旅人两条分支均条件(黄泉 core → shared 20)。"""
     assert grant_gift_value(STRATEGY_GRANTS['迷之旅人'], frozenset()) == 20.0
 
 
@@ -304,7 +304,7 @@ def test_grant_advisor_halved():
 
 def test_grant_registry_counts_and_closed_set():
     """底册计数测试(对账记录 = 迭代目录 strategy-grants-reconciliation.md):
-    86 条 = 11 顾问 + 68 绑定母体白得 + 4 反扫补网 + 3 箱腿(占席道具
+    86 条 = 11 顾问 + 68 绑定母体白得 + 4 反扫补网 + 3 开箱分支(占席道具
     直读,);顾问档名单在册。"""
     assert len(STRATEGY_GRANTS) == 86
     advisors = {n for n, g in STRATEGY_GRANTS.items() if g.advisor}
@@ -344,12 +344,12 @@ def test_grants_validation_empty_grant_raises(monkeypatch):
 
 
 def test_grants_box_legs_items_only_pass_validation(monkeypatch):
-    """箱腿条目(占席道具直读)通过构建校验(③ 四通道扩法:chars 两通道
-    空 + items_immediate 非空 = 合法,登记面先例 = 三张棱彩箱腿卡);
+    """开箱分支条目(占席道具直读)通过构建校验(③ 四通道扩法:chars 两通道
+    空 + items_immediate 非空 = 合法,登记面先例 = 三张棱彩箱分支卡);
     箱条目经消费口恒 off → 0 分(design 取舍 3,占席道具不进打分零改动)。"""
     for name in ('战术义眼++', '保守派', '快请专家·彩'):
         grant = STRATEGY_GRANTS[name]
-        assert grant.items_immediate == ('进阶武装箱',), '箱腿直读登记'
+        assert grant.items_immediate == ('进阶武装箱',), '开箱分支直读登记'
         assert grant.chars_immediate == () and grant.chars_conditional == ()
         assert grant.advisor is False
     assert grant_gift_value(STRATEGY_GRANTS['保守派'], frozenset()) == 0.0
@@ -818,7 +818,7 @@ def test_env_named_gift_advisor_halved():
 
 def test_env_sanxing_peipei_ruled_zero_total():
     """三星佩佩 = 用户裁定 0 分(T-16 §8-3,2026-10-15):赠卡 off 档 0
-    (佩佩不在任何候选套的机器结果)+ 立场行 0(召唤填充位,星徽佩戴腿
+    (佩佩不在任何候选套的机器结果)+ 立场行 0(召唤填充位,星徽佩戴分支
     不建模)→ 环境总分 = 0。"""
     assert named_gift_value('三星佩佩', frozenset()) == 0.0
     assert invest_env.option_total('三星佩佩', _fresh_gs()) == 0.0

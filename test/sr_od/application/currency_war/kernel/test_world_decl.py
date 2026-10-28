@@ -115,7 +115,7 @@ def test_refresh_invest_decl_trigger_derivation():
     env_refresh_left 非 None(环境屏已呈现,该字段唯一写端 = 环境屏呈现
     写点)= 环境屏整组;active_env 空 ∧ None(无环境局,env_present 缺省
     False 的合法配置)= 策略屏逐卡——旧单一 active_env 依据在该局误派
-    env 腿造成静默活锁,本分支即回归锁;slots 自 param 原样透传。容器
+    env 分支造成静默活锁,本分支即回归锁;slots 自 param 原样透传。容器
     零写(刷新真值归重入观察覆盖)。"""
     gs_open = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs_open.write_logic(gs_open.env_refresh_left, 1,
@@ -141,7 +141,7 @@ def test_refresh_invest_decl_trigger_derivation():
     assert out_noenv.applied
     assert out_noenv.world_decl == WorldDecl(
         next_screen='货币战争-投资策略', trigger='refresh_invest_strategy',
-        slots=(2,)), '无环境局(active_env 空 + 计数未写)走策略腿'
+        slots=(2,)), '无环境局(active_env 空 + 计数未写)走策略分支'
 
 
 def test_logic_outcome_world_decl_default_compat():
@@ -166,7 +166,7 @@ def test_declare_world_port_default_off_and_forwarding():
     declare_world(None)
 
     class _RecordingBackend(MinimalSimBackend):
-        """advance 调用记录桩(喂入转发的观测面;其余端口腿继承最小实现)。"""
+        """advance 调用记录桩(喂入转发的观测面;其余端口分支继承最小实现)。"""
 
         def __init__(self) -> None:
             super().__init__()
@@ -371,8 +371,8 @@ def test_zero_write_transition_family_decl_rows_5_9_10_13_17():
 
 
 def test_pick_supply_decl_row12_both_applied_exits():
-    """表 #12 对照测试:补给选卡上报两个 applied 出口(内容未知翻来源腿/
-    装备落地腿)声明同形 = (补给屏, pick_supply)——选卡后画面本瞬间
+    """表 #12 对照测试:补给选卡上报两个 applied 出口(内容未知翻来源分支/
+    装备落地分支)声明同形 = (补给屏, pick_supply)——选卡后画面本瞬间
     不变,随后到的 node_advance 声明才切走。装备名 = 注册表真名
     (垃圾袋);留证行经 consume_defect_sink 前清后清隔离。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
@@ -397,7 +397,7 @@ def test_pick_supply_decl_row12_both_applied_exits():
         assert out_landing.applied
         assert out_landing.world_decl == expected
         assert '垃圾袋' in (gs_landing.equips.value or []), \
-            '装备腿照常落账(声明不改上报写语义)'
+            '装备入账分支照常落账(声明不改上报写语义)'
     finally:
         consume_defect_sink()
 
@@ -431,7 +431,7 @@ def test_pick_invest_strategy_decl_row8():
 
 
 def test_pick_planner_decl_row11_applied_and_reject():
-    """表 #11 对照测试:银狼策划上报未路由腿(终态兜底零写)applied 出口
+    """表 #11 对照测试:银狼策划上报未路由分支(终态兜底零写)applied 出口
     声明 = (备战, pick_planner);升费前置硬校验拒出口 applied=False →
     声明 None(留证行经 consume_defect_sink 前清后清隔离)。"""
     from sr_od.application.currency_war.kernel.cw_events import (

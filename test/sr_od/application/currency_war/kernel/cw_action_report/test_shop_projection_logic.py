@@ -1,6 +1,6 @@
 """W6波4 商店动作投影直写测试(设计件《商店黑板容器化方案》§4-M1/M5)。
 
-- M1 投影行为直测:生产上报函数单写(买牌快照三件组与升星腿内聚
+- M1 投影行为直测:生产上报函数单写(买牌快照三件组与升星分支内聚
   ``report_action_buy_card_param`` 函数内)的逐域期望态直断言
   (gold/bench 槽位/shop payload/xp;含满栏多买 −k×单价、升档结转)。
   原对拍基准 = cw_vocab 词表单步动作应用器(纯函数逐动作推进),零
@@ -118,7 +118,7 @@ def _bench_slots(gs):
 
 
 def _report_action(gs, action, executed=None):
-    """商店域动作单次上报(生产同形):买牌快照三件组与升星腿内聚
+    """商店域动作单次上报(生产同形):买牌快照三件组与升星分支内聚
     report 函数内,一动作恰一次调用;合计结果的逐域期望态由各案直测
     断言(设计件 §4-M1)。executed 仅对带回执参数的函数透传。"""
     if isinstance(action, CwActionBuyCardParam):
@@ -173,23 +173,23 @@ class TestM1DirectLock:
             'shop payload: 期望全空(所购槽置 empty,5 槽无货)'
         assert _bench_slots(gs) == [(0, '希儿', 1)], \
             'bench: 期望落位首空槽(槽1,1★希儿)'
-        assert gs.xp.value is None, 'xp: 买腿零写(未读域保持种子初值 None)'
+        assert gs.xp.value is None, 'xp: 买分支零写(未读域保持种子初值 None)'
 
     # (收口整删)原 test_buy_triggers_merge「合成买(2 副本在席 + 买第
     #  3 张)」与 test_full_bench_merge_buy_k「满栏多买(k=2,executed 回执
-    #  给定)」删:同一升星腿的摆放已被 test_merge_buy_single_report_
-    #  two_forms 两形态直测辖住(满栏 k=2 的 executed=None 自算腿经应用
+    #  给定)」删:同一升星分支的摆放已被 test_merge_buy_single_report_
+    #  two_forms 两形态直测辖住(满栏 k=2 的 executed=None 自算分支经应用
     #  机器内部 merge_buy_k 单一源,bought_count==2 断言即承压;executed
-    #  给定 k 的扣金腿由 test_buy_simple_placement / test_missing_receipt
+    #  给定 k 的扣金分支由 test_buy_simple_placement / test_missing_receipt
     #  的回执路径辖)——第三种摆放 = 子集断言,不留。
 
     def test_merge_buy_single_report_two_forms(self):
-        """合成买单口两形态直测(升星腿内聚 report_action_buy_card_param 后,
-        原升星腿单写测试随聚合口退役;快照基点正确性 = 两形态 bench 期望
+        """合成买单口两形态直测(升星分支内聚 report_action_buy_card_param 后,
+        原升星分支单写测试随聚合口退役;快照基点正确性 = 两形态 bench 期望
         共辖——基点误取买后容器会重复落位/漏升,shop 视图缺失会漏满栏
         合成):非满栏合成买(2 副本在席买第 3 张 → 落位即合成升 2★)与
         满栏合成买(k=2,3 副本合 1 升 2★ 在席副本槽9)。gold −单价×k 与
-        payload −k 由同一单口携带(原「腿零写」申报随两写合一消亡)。"""
+        payload −k 由同一单口携带(原「分支零写」申报随两写合一消亡)。"""
         for title, axes, act, k, bench_expect in (
             ('非满栏合成买',
              {'gold': 30, 'shop': [_card('希儿', cost=3)],
@@ -214,7 +214,7 @@ class TestM1DirectLock:
                 f'{title}: bench 槽位期望 {bench_expect}'
             assert gs.gold.value == axes['gold'] - 3 * k, f'{title}: gold −单价×k'
             assert _content_of(gs) == [], f'{title}: payload −k 张'
-            assert gs.write_seq > seq0, f'{title}: 升星腿整表直写'
+            assert gs.write_seq > seq0, f'{title}: 升星分支整表直写'
 
     def test_sell_bench_refund(self):
         """卖备战席:bench −该牌 + gold +退款(sell_refund 锚)。"""
@@ -225,27 +225,27 @@ class TestM1DirectLock:
         assert _content_of(gs) == [], \
             'shop payload: 期望空(shop 空表帧 = 离屏,零写透传)'
         assert _bench_slots(gs) == [], 'bench: 期望卖出槽置空(9 槽全空)'
-        assert gs.xp.value is None, 'xp: 卖腿零写(未读域保持种子初值 None)'
+        assert gs.xp.value is None, 'xp: 卖分支零写(未读域保持种子初值 None)'
 
     def test_levelup_clicks_and_level_cross(self):
         """升级:击数×单击价扣金 + xp/level 推进(跨档结转 + level 跨档
-        直写,与 prep 腿同款;域集扩申报 = SHOP_PROJECTION_DOMAINS 登记
-        面);满级腿(并入):lv10 购买无效,零金零经验零写。"""
+        直写,与 prep 分支同款;域集扩申报 = SHOP_PROJECTION_DOMAINS 登记
+        面);满级分支(并入):lv10 购买无效,零金零经验零写。"""
         gs = _gs_of(gold=30, shop=[], level=3, xp=(2, 6))
         _report_action(
             gs, CwActionLevelUpParam(cost=4), ShopActionExecuted(levelup_clicks=1))
         assert gs.gold.value == 26, 'gold: 期望 30 −单击价 4×1 击 = 26'
         assert _content_of(gs) == [], \
             'shop payload: 期望空(离屏零写透传)'
-        assert _bench_slots(gs) == [], 'bench: 升级腿零写(保持全空)'
+        assert _bench_slots(gs) == [], 'bench: 升级分支零写(保持全空)'
         # 2+4=6 ≥ lv3 门槛 4 → 升 lv4,溢出结转 cur=2,cap=lv4 门槛 6;
-        # 数值与初值 (2, 6) 巧合相同(跨档结转非零写,升级腿实写 xp 域)。
+        # 数值与初值 (2, 6) 巧合相同(跨档结转非零写,升级分支实写 xp 域)。
         assert gs.xp.value == (2, 6), \
             'xp: 期望单击 +4 跨档结转 (2, lv4 门槛 6)'
         assert gs.level.value == 4, \
             'level: 跨档直写 3→4(xp_apply_clicks 单一源;等级滞留会让' \
             '下一击按旧级重算 = 花金零等级推进)'
-        # 满级腿(并入,原 test_levelup_full_cap_noop):零金零经验零写
+        # 满级分支(并入,原 test_levelup_full_cap_noop):零金零经验零写
         gs_cap = _gs_of(gold=30, shop=[], level=10, xp=(0, 4))
         _report_action(
             gs_cap, CwActionLevelUpParam(cost=4),
@@ -311,15 +311,15 @@ class TestM1DirectLock:
         _report_action(gs, CwActionRefreshShopParam(cost=2))
         assert gs.gold.value == 28, 'gold: 期望 30 −容器刷价 2'
         assert gs.shop.source == 'logic_rand', \
-            'shop payload: 随机态腿采样写(write_logic_rand 专用通道)'
+            'shop payload: 随机态分支采样写(write_logic_rand 专用通道)'
         assert gs.shop.evidence == 'refresh_random_sample', '随机态写端注记'
         assert len(gs.shop.value.cards) == 5, '采样 payload = 定长 5 槽'
-        assert _bench_slots(gs) == [], 'bench: 刷新腿零写(保持全空)'
+        assert _bench_slots(gs) == [], 'bench: 刷新分支零写(保持全空)'
         assert gs.xp.value is None, \
-            'xp: 刷新腿零写(未读域保持种子初值 None)'
+            'xp: 刷新分支零写(未读域保持种子初值 None)'
 
     def test_refresh_free_gold_unwritten(self):
-        """免费帧:金账扣 0(gold 不写——费用清零集中在上报函数免费腿
+        """免费帧:金账扣 0(gold 不写——费用清零集中在上报函数免费分支
         同一 free 判定,2026-10-16 用户裁决;free 显式喂 True = sim 形态)。
         Field 扣减语义测试 = 本文件刷新 Field 段
         (test_report_free_leg_deducts_field)。"""
@@ -342,7 +342,7 @@ class TestM1DirectLock:
         """回执缺字段 = 该动作自算理想执行(单买 k=1)
         (改写:旧测试「回执缺字段 = 零写」语义已随转移函数
         单源化废止——report_action_buy_card_param docstring「k 来源」段申报:
-        executed 给定 = 回执 k(live),None = 理想执行自算(简单腿 1,
+        executed 给定 = 回执 k(live),None = 理想执行自算(简单分支 1,
         满栏从应用机器出);域未读跳写语义独立,归
         test_none_gold_domain_skip 辖。)"""
         from sr_od.application.currency_war.kernel.cw_game_state import (
@@ -376,7 +376,7 @@ class TestM1DirectLock:
 
     def test_stale_sell_proposal_no_write(self):
         """陈旧卖出提案(空槽/越界):守卫辖面,拒绝 = applied=False 零写。
-        (集外动作型零写腿删:上报函数族每动作恰一函数,无按类型聚合的
+        (集外动作型零写分支删:上报函数族每动作恰一函数,无按类型聚合的
         登记面可「静默收编集外型」——闭集性质归命名规约完备测试
         test_action_report 辖。)"""
         gs = _gs_of(gold=30, shop=[])
@@ -434,7 +434,7 @@ def test_shop_entry_funnel_bench_survives_synthesis() -> None:
     #  容器即唯一账,上式即全量测试面。)
 
 
-# ==================== 买牌获取回调腿(计数归上报单点)====================
+# ==================== 买牌获取回调分支(计数归上报单点)====================
 
 
 class _SpyEffects:
@@ -452,9 +452,9 @@ class _SpyEffects:
 
 
 def test_on_buy_fires_after_acquisition_compute(monkeypatch):
-    """购买回调腿(k 计数 + 时点):回调 = 获取计算完(落位 + 合成连锁 +
-    升星腿全毕)后恰一次——满栏一击多买按实际张数 k 计 k 次(k = 上报
-    executed);回调可见购买后的席面/升星事实(升星腿已毕)。"""
+    """购买回调分支(k 计数 + 时点):回调 = 获取计算完(落位 + 合成连锁 +
+    升星分支全毕)后恰一次——满栏一击多买按实际张数 k 计 k 次(k = 上报
+    executed);回调可见购买后的席面/升星事实(升星分支已毕)。"""
     bench = [_bc(f'c{i}', star=1) for i in range(8)]
     bench.append(_bc('希儿', star=1))
     gs = _gs_of(gold=60,
@@ -472,7 +472,7 @@ def test_on_buy_fires_after_acquisition_compute(monkeypatch):
         '回调恰一次,k = executed 张数(满栏计 k 次)'
     assert _bench_slots(gs) == (
         [(i, f'c{i}', 1) for i in range(8)] + [(8, '希儿', 2)]), \
-        '回调时点 = 升星腿已毕(3 副本合 1 升 2★ 在席副本)'
+        '回调时点 = 升星分支已毕(3 副本合 1 升 2★ 在席副本)'
 
 
 def test_on_buy_not_fired_on_rejected_buy(monkeypatch):
@@ -668,7 +668,7 @@ def test_anchor_covers_logic_mismatch_fires_andon(
 
 
 def test_report_free_leg_deducts_field(monkeypatch: pytest.MonkeyPatch) -> None:
-    """免费腿扣减:Field 值 > 0 → 免费帧——Field write_logic 扣减(下限 0)
+    """免费分支扣减:Field 值 > 0 → 免费帧——Field write_logic 扣减(下限 0)
     + 付费计数不动 + 写端 produced_by/evidence 断言。"""
     captured = _spy_write_logic(monkeypatch)
     gs = _fresh_gs()
@@ -689,7 +689,7 @@ def test_report_free_leg_deducts_field(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_report_unobserved_field_conservative_paid() -> None:
     """未观察(None)→ 保守按付费:计数进 paid,零 Field 扣减行(次数是
-    记账面非决策闸);level 同帧缺读 → 随机态腿跳写(概率表按级索引)→
+    记账面非决策闸);level 同帧缺读 → 随机态分支跳写(概率表按级索引)→
     容器整拍零写。"""
     gs = _fresh_gs()
     seq0 = gs.write_seq
@@ -698,7 +698,7 @@ def test_report_unobserved_field_conservative_paid() -> None:
     assert gs.free_refresh_left.value is None, '未观察 = 不扣减(零 Field 行)'
     assert gs.effects.refresh_paid == 1, '保守按付费计数'
     assert gs.effects.refresh_total == 1
-    assert gs.write_seq == seq0, 'level 缺读随机态腿跳写 → 容器零写'
+    assert gs.write_seq == seq0, 'level 缺读随机态分支跳写 → 容器零写'
 
 
 # ---- 两桥发放(写端元数据)----
@@ -731,11 +731,11 @@ def test_grant_bridges_field_write_end(monkeypatch: pytest.MonkeyPatch) -> None:
                             'effect_node@p1-r6'), '节点桥写端元数据'
 
 
-# ---- 刷新随机态腿(kernel 采样器)----
+# ---- 刷新随机态分支(kernel 采样器)----
 
 
 def _seed_for_random_leg() -> GameState:
-    """随机态腿场景种子:等级可读(概率表索引)+ 在屏空店(覆盖面在册)。"""
+    """随机态分支场景种子:等级可读(概率表索引)+ 在屏空店(覆盖面在册)。"""
     gs = _fresh_gs()
     gs.observe(gs.level, 1, sig=_OSIG)
     gs.observe(gs.shop, ShopPayload(cards=[ShopSlot(kind='empty')
@@ -752,7 +752,7 @@ def _slot_signature(payload: ShopPayload) -> list:
 
 
 def test_report_random_leg_deterministic() -> None:
-    """随机态腿 = kernel 采样器(sample_shop_deal,与 sim deal_shop 同源):
+    """随机态分支 = kernel 采样器(sample_shop_deal,与 sim deal_shop 同源):
     固定种子两次独立容器采样逐槽一致(确定性);payload 形态 = 定长 5 槽
     content/1★/注册表名 + 基线概率条;写通道 = write_logic_rand 专用通道
     (source=logic_rand + evidence 注记)。"""
@@ -770,7 +770,7 @@ def test_report_random_leg_deterministic() -> None:
         for slot in payload.cards:
             if slot.card is not None:
                 assert slot.card.name in CHARACTERS
-                assert slot.card.star == 1, '表外直出恒 1★(U12 + 注册表腿不触发)'
+                assert slot.card.star == 1, '表外直出恒 1★(U12 + 注册表分支不触发)'
         assert gs.shop.source == 'logic_rand', '随机态专用通道'
         assert gs.shop.evidence == 'refresh_random_sample'
         signatures.append(_slot_signature(payload))
@@ -819,13 +819,13 @@ def test_report_random_leg_rand_outcome_not_andon(
     assert gs.shop.source == 'observation', '观察赢覆盖照常'
 
 
-# ---- 随机态腿采样表(state_deal_probs:轮岗感知采样,投资环境轮岗
+# ---- 随机态分支采样表(state_deal_probs:轮岗感知采样,投资环境轮岗
 # id 114 建模批接入;锁面出处 = invest_effects.md §2 轮岗行)----
 
 
 def _seed_for_random_leg_at(level: int,
                             bar: dict[int, float] | None) -> GameState:
-    """随机态腿场景种子(指定等级 + 观测概率条):等级可读(概率表按级
+    """随机态分支场景种子(指定等级 + 观测概率条):等级可读(概率表按级
     索引)+ ``bar`` 非 None 时在屏店(refresh_probs = ``bar``)/ None =
     店离屏(payload 未观察形态)。"""
     gs = _fresh_gs()
@@ -840,7 +840,7 @@ def _seed_for_random_leg_at(level: int,
 def test_state_deal_probs_falls_back_to_baseline_without_bar() -> None:
     """无观测条形态零行为变化:店离屏(payload 未观察)与概率条空表两
     形态下 ``state_deal_probs`` = 基线表逐键相等(键集 = 正概率档)——
-    刷新随机态腿接线对无观测条局的采样分布恒等(出处 =
+    刷新随机态分支接线对无观测条局的采样分布恒等(出处 =
     docs/game/currency_war/research/invest_effects.md §2 轮岗行)。"""
     baseline = {c: p for c, p in REFRESH_PROB[6].items() if p > 0}
     assert state_deal_probs(_seed_for_random_leg_at(6, None), 6) \

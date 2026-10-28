@@ -1,5 +1,5 @@
 """羁绊档位条件发放 sim 全链轻量局测试(镜像 src 主断言对象 = T-41
-特邀专家:加拉赫击破档腿经 sim 后端全链;按流程级测试落位本目录,引擎
+特邀专家:加拉赫击破档分支经 sim 后端全链;按流程级测试落位本目录,引擎
 驱动助手 import 自 sim/test_sim_backend.py〔在册超限拆分债文件,禁追加,
 只 import 复用不改;先例 = 本目录 test_env_expert_invite_sim_chain.py〕)。
 
@@ -62,7 +62,7 @@ def _deploy_pair(gs) -> None:
 
 def test_bond_tier_grant_fires_in_sim(_isolate_defect_buffer) -> None:
     """目标局(T-41 设计 §4 锁 4):选特邀专家:加拉赫 → 击破部署过
-    2 档 → equips 出现以太钻头 + done 封账(发放腿与世界事实同容器,
+    2 档 → equips 出现以太钻头 + done 封账(发放分支与世界事实同容器,
     live/sim 同链)。"""
     b = _env_pick_backend(7)
     try:

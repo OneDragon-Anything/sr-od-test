@@ -128,7 +128,7 @@ def test_uid_param_injected_into_placed_unit() -> None:
                    evidence='t', producer='T')
     placed2 = [s.unit for s in gs2.bench.value.slots
                if s is not None and s.kind == 'unit' and s.unit is not None]
-    assert placed2[0].uid is None, '缺省恒 None(即时腿/购入形态)'
+    assert placed2[0].uid is None, '缺省恒 None(即时分支/购入形态)'
 
 
 # ============================================================ 合成落场不辖(T-30)

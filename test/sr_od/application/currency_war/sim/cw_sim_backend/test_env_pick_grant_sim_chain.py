@@ -6,7 +6,7 @@ import 复用不改;先例 = 本目录 test_env_bond_tier_sim_chain.py〕)。
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
 T-46-celue-dashi.md(定稿)§4 锁 5(§2.2(e) 落地形态):
 - 定向策略大师推进至 P3r5 → 无选卡屏、active_strategies +1(随机新策略,
-  排除已拥有)、发放行金额 = 2×直发后持有数(直发本身触发金币腿的耦合锁,
+  排除已拥有)、发放行金额 = 2×直发后持有数(直发本身触发金币分支的耦合锁,
   金额对账 = 发放行值 − 同窗轮首收入行值,与收入数值解耦);
 - 直发后 excluded_invest 含到手名(全程去重契约锁);
 - 窗口重放不双发(幂等守卫族语义锁,boss 先例同款断言位);
@@ -135,7 +135,7 @@ def _record_write_values(gs, monkeypatch: pytest.MonkeyPatch
 
 def _grant_gold_rows(rows: list[tuple[str, str, str | None, object]]
                      ) -> list[tuple[str, str, str | None, object]]:
-    """直发金币腿写行(evidence = env_grant#<环境>#pick<k> 的 gold 行)。"""
+    """直发金币分支写行(evidence = env_grant#<环境>#pick<k> 的 gold 行)。"""
     return [r for r in rows if r[0] == 'logic' and r[1] == 'gold'
             and r[2] and r[2].startswith('env_grant#策略大师#pick')]
 
@@ -144,8 +144,8 @@ def test_direct_grant_fires_at_p3r5_no_offer_screen(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """主锁(T-46 设计 §4 锁 5):策略大师局推进至 P3r5 窗口 → 直发恰
     一张(随机新策略,排除已拥有)、无选卡屏(窗后直落节点屏)、发放行
-    金额 = 2×直发后持有数(直发经获得链自动触发金币腿)、到手名并入
-    excluded_invest。结算恒胜桩保全程存活(死亡腿与本测无关)。
+    金额 = 2×直发后持有数(直发经获得链自动触发金币分支)、到手名并入
+    excluded_invest。结算恒胜桩保全程存活(死亡分支与本测无关)。
     非挂点节点不发:r4 窗开时点已入快照基线——若误挂 (3,4),直发卡已在
     held_before 内、r5 段零新发放行,本组断言即红(最近邻非挂点窗负例;
     表外环境负例另测)。"""
@@ -167,9 +167,9 @@ def test_direct_grant_fires_at_p3r5_no_offer_screen(
             f'r5 窗直发恰一张: {held_before} -> {held_after}'
         name = held_after[-1]
         assert name not in held_before, '随机新策略(排除已拥有)'
-        # 直发本身触发金币腿(耦合锁):r4→r5 段恰一行新发放写,
+        # 直发本身触发金币分支(耦合锁):r4→r5 段恰一行新发放写,
         # 金额 = 2×直发后持有数(与同窗轮首收入解耦的差分;
-        # 前段既有行 = offer 取卡腿各行,同 evidence 形态属预期)
+        # 前段既有行 = offer 取卡分支各行,同 evidence 形态属预期)
         grants_after = _grant_gold_rows(rows)
         assert len(grants_after) == grants_before + 1, \
             f'r5 段恰一行新发放写: {grants_before} -> {len(grants_after)}'

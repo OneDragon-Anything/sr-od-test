@@ -13,26 +13,26 @@ CwScreenWaitOneOne(收尾/过渡相位屏,原 obs_arch_closing_screens 并入)�
 位面情报采集 CwScreenPlaneIntel 已重构为 6 node 管线,其行为测试随迁
 test_plane_intel_pipeline.py,本文件不辖。
 
-**sim 腿不适用例外清单(随迁移批逐屏落测试 docstring,总纲 §2.2-3)**:
+**sim 分支不适用例外清单(随迁移批逐屏落测试 docstring,总纲 §2.2-3)**:
 
-- 投资环境/投资策略:sim 腿 = 不适用——有 sim 事实来源(``decide_invest``
+- 投资环境/投资策略:sim 分支 = 不适用——有 sim 事实来源(``decide_invest``
   注入段,架构设计 §3.2)但 sim 端口适配器未建(归 sim 接线批),本批
-  等价判据主承重 = 实机在册行为测试 + 写入流对拍(实机腿),禁引用 sim 域
+  等价判据主承重 = 实机在册行为测试 + 写入流对拍(实机分支),禁引用 sim 域
   对拍;
-- 战斗等待:sim 腿 = 不适用——sim 事实来源为 coarse 结算产出,非画面段
+- 战斗等待:sim 分支 = 不适用——sim 事实来源为 coarse 结算产出,非画面段
   (§3.2 结算行),等价判据主承重 = 实机在册行为测试(B2-③ 主门:在册
   行为测试经 execute()/wait() 走新路径全绿);
-- 简报/BOSS 简报:sim 腿 = 不适用——sim 无对应画面段(过渡相位,§3.2),
+- 简报/BOSS 简报:sim 分支 = 不适用——sim 无对应画面段(过渡相位,§3.2),
   等价判据主承重 = 实机在册行为测试 + 写入流对拍;
-- 位面过渡/武装箱弹窗/未达上限弹窗/等待1-1:sim 腿 = 不适用——sim 无
+- 位面过渡/武装箱弹窗/未达上限弹窗/等待1-1:sim 分支 = 不适用——sim 无
   对应画面段(架构设计 §3.4 过渡相位/中断弹窗行),等价判据主承重 =
   实机在册行为测试 + 本文件两 node 形态测试,禁引用 sim 域对拍。
 
 测试的语义(测试纪律 7 自检;出处 = landing 阶段一/三判据;行为测试单驱动
 生产路径):
 
-- **重入裁决归属测试**(单一定谳;简报腿 = ``test_briefing_reentry_
-  adjudication_flag_gate_combination``,收尾屏组合腿 =
+- **重入裁决归属测试**(单一定谳;简报分支 = ``test_briefing_reentry_
+  adjudication_flag_gate_combination``,收尾屏组合分支 =
   ``test_reentry_arbitration_flag_gate_combination``):「已发」旗标裁决
   住决策动作 node 顶部(直驱 act 承重);投资两屏已改派发即终结交回
   (写时点测试另辖);简报仍为重入裁决形态;BOSS 简报无裁决旗标,横幅
@@ -135,7 +135,7 @@ def _phase_mod(name: str):
 def test_briefing_reentry_adjudication_flag_gate_combination(test_context,
                                                              monkeypatch) -> None:
     """简报重入裁决测试(重入裁决现役,归后续批;投资两屏的「派发即终结
-    交回 + 派发时点写入」腿由 test_invest_env_active_env_written_at_
+    交回 + 派发时点写入」分支由 test_invest_env_active_env_written_at_
     dispatch / test_invest_strategy_written_at_dispatch 承重,不再重复):
     - 简报·落地轮:pending 在位 + 标识已退 → 裁决出口 success,读链不
       发生(裁决住决策动作 node 顶部,act 零读链);
@@ -353,7 +353,7 @@ def test_invest_env_observe_standardization_gate(test_context,
 
 def test_invest_env_refresh_left_observed_write(test_context,
                                                 monkeypatch) -> None:
-    """env_refresh_left 观察写端双腿测试(观察写端缺口补测):计数读得
+    """env_refresh_left 观察写端两条分支测试(观察写端缺口补测):计数读得
     → report 落 ``env_refresh_left``(值 = 桩读数首条);读缺(缺省桩恒
     [])→ 跳写(缺省行为不变)。红 = 观察写端断流。"""
     op_hit, _m1, session1, _d1 = _make_env(
@@ -537,7 +537,7 @@ def _opts_of(names: list[str]) -> list[tuple[str, int, int]]:
 
 
 # (原 test_invest_strategy_dispatch_new_path 删:在屏轮断言面与
-#  test_reentry_arbitration_flag_gate_combination 的 strategy 门命中腿
+#  test_reentry_arbitration_flag_gate_combination 的 strategy 门命中分支
 #  逐项重叠;独有段迹/单决策断言已并入该测试。)
 
 
@@ -783,7 +783,7 @@ def _make_briefing(test_context, monkeypatch: pytest.MonkeyPatch, *,
 # (原 test_briefing_dispatch_and_session_writes「简报分流双向」删:装两
 #  端口走五段新路径的分流/段迹面随并存窗收口整删;其跨路径幸存断言
 #  (「下一步」发出置 pending / 标识 miss 门 fail 早退零读链)分别由
-#  test_reentry_arbitration_flag_gate_combination 的简报两腿与三字段写
+#  test_reentry_arbitration_flag_gate_combination 的简报两条分支与三字段写
 #  语义测试承重。)
 
 
@@ -1005,7 +1005,7 @@ def test_boss_briefing_observe_gate_and_report_wiring(
 
 def test_boss_briefing_env_grant_trigger_wiring(
         test_context, monkeypatch) -> None:
-    """live 观察链触发接线(劳务派遣合同腿2 live 半边):_observe_live 在
+    """live 观察链触发接线(劳务派遣合同分支2 live 半边):_observe_live 在
     report 之后 best-effort 调 check_env_boss_grants——绑定在册的局观察
     一帧 → done 追加 boss 键 + bench +1(hist = boss 类型直定目标同源,
     零双发靠 done 短路);触发路径异常不阻塞观察链(best-effort,观察门
@@ -1050,7 +1050,7 @@ def test_boss_briefing_env_grant_trigger_wiring(
         f'触发发放 done 落 boss 键: {done!r}'
     units = [s.unit.char_id for s in gs.bench.value.slots
              if s is not None and s.kind == 'unit' and s.unit is not None]
-    assert len(units) == 1, 'bench +1(腿2 live 半边真发生)'
+    assert len(units) == 1, 'bench +1(分支2 live 半边真发生)'
     # 重复观察同节点(same hist)= done 短路零双发
     op._observe_live()
     assert len([s for s in gs.bench.value.slots
@@ -1120,7 +1120,7 @@ def test_battle_wait_normal_exits(test_context, monkeypatch) -> None:
     back_to_loop 交回循环分发(装配点分流随基类退役,wait() 单路径直驱)。
     [结算分支逐位] D-94 读点(结算观察半直写)先于「继续挑战」点击
     (时序红线);C-1 新帧计数。
-    (分诊:defer 复位腿摘除——defer_count 载体已在 src 退役
+    (分诊:defer 复位分支摘除——defer_count 载体已在 src 退役
     (全仓零消费点),生产端无复位语义可校验。)"""
     # [完成白名单出口]
     op = _make_bwait(

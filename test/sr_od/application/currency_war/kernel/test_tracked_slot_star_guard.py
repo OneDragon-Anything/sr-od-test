@@ -16,8 +16,8 @@ run_20260915_054718 §5/§8 候选2 实锤「回退即采新」让同名多星�
 写主域——本文件 _recon 辅助 = 生产 director 环路的测试镜像
 (reconcile → 门后视图 observe 落主域,两帧间账面与生产同源)。
 
-测试 2(原 tracked 槽号守卫/摘除腿保洞)随 tracked 第二账退役整删:
-同步腿删除后无测试面对象;主域侧「摘槽不移位/落位正确」语义由动作上报
+测试 2(原 tracked 槽号守卫/摘除分支保洞)随 tracked 第二账退役整删:
+同步分支删除后无测试面对象;主域侧「摘槽不移位/落位正确」语义由动作上报
 测试族(test_prep_action_ops、test_gain_chain)承载。
 """
 from __future__ import annotations

@@ -8,10 +8,10 @@ test_emit_swap_bond_gate.py):
 
 - **枚举表全情形**(§2.2,锚数值按 §2.1 档位梯直调):
   A/A′/B/C/D/G/E/F;
-- **C 情形单帧构造**(§2.7 组生长语义):两对各自不达腿、累积组过门 1④;
+- **C 情形单帧构造**(§2.7 组生长语义):两对各自不达分支、累积组过门 1④;
 - **两级 victim 序 + 换入序全序**(§2.7 序参数 ports 注入,tie-break 钉死);
 - **无可行组零动作稳态**(§2.7)与拒绝侧分键来源三态;
-- **双轨域照旧**:pair 帧(腿②)单对形态 + arm='transition'
+- **双轨域照旧**:pair 帧(分支②)单对形态 + arm='transition'
   (design §2.3.1 pair 路由钉死)。
 """
 from __future__ import annotations
@@ -104,11 +104,11 @@ def test_case_b_external_bond_filler_swap_in() -> None:
 
 
 def test_case_c_group_growth_two_pairs_completion() -> None:
-    """C 情形单帧构造(判据 1;§2.7 组生长语义):两对各自不达任何腿、
+    """C 情形单帧构造(判据 1;§2.7 组生长语义):两对各自不达任何分支、
     累积组过门 1④(单对只试不生长会使此形态不可达)。
 
     阵容 = 纯 required 形态(键集空 → ① 恒不中;全名单支撑 → ② 持平;
-    异名 → ③ 不中):pair1 (瓦尔特→停云) 只补 1/2 必需腿,pair2
+    异名 → ③ 不中):pair1 (瓦尔特→停云) 只补 1/2 必需分支,pair2
     (杰帕德→希儿) 补满 → fp ✗→✓ 归因 ④。"""
     comp = Comp(name='C组生长测', factions=[], core_chars=[
         '瓦尔特', '杰帕德', '停云', '希儿', '符玄'],
@@ -124,7 +124,7 @@ def test_case_c_group_growth_two_pairs_completion() -> None:
     assert _up_names(plan, ctx) == ['瓦尔特', '杰帕德']
     assert plan.arm == 'bond_gate' and plan.bond_gate_leg == 'completion', \
         '累积组过门 1④(组生长语义)'
-    # 反证面:单对各自不达任何腿(若单对可行,搜索不会长成两对)
+    # 反证面:单对各自不达任何分支(若单对可行,搜索不会长成两对)
     for v, u in ((['停云'], ['瓦尔特']), (['希儿'], ['杰帕德'])):
         ok, _leg = swap_bond_gate_benefit(ctx, victims=v, ups=u,
                                           pairs=[(v[0], u[0])],
@@ -178,7 +178,7 @@ def test_case_d_same_star_horizontal_swap_3a() -> None:
 
 def test_case_g_or_carry_completion_swap_in() -> None:
     """G 情形(完成判据 3):希儿量子静态套完成品换入经门 1④ 放行——
-    希儿入板(required 腿 + SEELE_OR_LEGS 全承接),fp ✗→✓ 不跨档位梯
+    希儿入板(required 分支 + SEELE_OR_LEGS 全承接),fp ✗→✓ 不跨档位梯
     (①不中)。"""
     comp = get_comp('希儿量子')
     ctx = _gate_ctx(board=['花火', '缇宝', '娜塔莎', '杰帕德', '佩拉'],
@@ -213,14 +213,14 @@ def test_case_e_gate1_reject_second_tier_par_frame() -> None:
     """二级持平换人帧(design §2.2 E 行补测):开拓者·记忆(能量)换停云
     (能量)——键集计数全持平(圣杯 1 持平、能量 3 持平,能量梯 tier1
     已达成不新增)、支撑持平(同标签同数)、非同名、成型不达成——
-    门 1 四腿全不中 → 零动作,拒绝侧分键 = nogain。"""
+    门 1 四条分支全不中 → 零动作,拒绝侧分键 = nogain。"""
     ctx = _gate_ctx(board=[_GIL, _TING, _HUO, _WALT, _FUX],
                     bench=[_JI], cap=5)
     plan = _plan(ctx)
-    assert not plan.nonempty, '二级持平帧四腿全不中 = 零动作'
+    assert not plan.nonempty, '二级持平帧四条分支全不中 = 零动作'
     assert plan.arm == 'bond_gate'
     assert plan.bond_gate_reject == 'nogain', \
-        f'拒绝侧分键 nogain(四腿全不中),实得 {plan.bond_gate_reject}'
+        f'拒绝侧分键 nogain(四条分支全不中),实得 {plan.bond_gate_reject}'
 
 
 def test_case_f_roster_tier_carrier_protected() -> None:
@@ -253,7 +253,7 @@ def test_conservation_reject_key_on_tier_drop() -> None:
 
 def test_no_feasible_group_zero_action_steady_state() -> None:
     """无可行组 = 零动作合法稳态(§2.7):victim 池空(2★ star_guard 全拒)
-    → novictim;victim 存在但无换入候选 → novictim;四腿全不中 → nogain。"""
+    → novictim;victim 存在但无换入候选 → novictim;四条分支全不中 → nogain。"""
     # victim 池空:全 2★ 板(star_guard 恒拒,演进未武装)
     ctx = _gate_ctx(board=[_GIL, _RIN, _QING, _TING, _YAO],
                     bench=[_SBR], cap=5,
@@ -339,7 +339,7 @@ def test_up_order_label_hits_desc_tie_break() -> None:
 # ============================================================
 
 def test_pair_frame_plan_stays_single_pair_transition_arm() -> None:
-    """pair 双轨帧(腿②)计划形态逐位照旧:单对计划 + arm='transition'
+    """pair 双轨帧(分支②)计划形态逐位照旧:单对计划 + arm='transition'
     (转型分支机器退役后双轨域标注保留,design §2.3.1 发出闸路由申报);
     判别子排除 pair 后双轨域不进组形态。"""
     from test.sr_od.application.currency_war.kernel.test_deploy import (

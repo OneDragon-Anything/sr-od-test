@@ -1,4 +1,4 @@
-"""on_env_gained 概念股族(狼狩概念股/昼之半神概念股)发放腿测试(镜像 src =
+"""on_env_gained 概念股族(狼狩概念股/昼之半神概念股)发放分支测试(镜像 src =
 kernel/cw_gain_chain.py 的被测函数 on_env_gained;概念股族段测试原落位
 父目录 test_on_env_gained.py 已超 800 行追加冻结线禁追加,新锁按被测
 方法拆目录规范落位本目录,同函数兄弟测试 = 父目录 test_on_env_gained.py
@@ -10,12 +10,12 @@ test_sim_backend.py import 形态;fixture 不可跨文件 import,rows_sink
 测试面依据 = gain-chain.md §3 随机支/随机装备支段 + fields.md §5.2
 效果缺口与载体登记,语义 = 「概念股族展开卡登记约定」(狼狩概念股
 id 1009 族内第九实例/昼之半神概念股 id 1010 第十实例/夜之半神概念股
-id 1011 第十一实例,与父目录追击/燃血腿锁同构仅值异):
-- **阵营支发放腿**:固定 seed 直构 → bench 追加 1 张 1★ 且名 ∈
+id 1011 第十一实例,与父目录追击/燃血分支锁同构仅值异):
+- **阵营支发放分支**:固定 seed 直构 → bench 追加 1 张 1★ 且名 ∈
   grant_char_pool 现算集(牌库时点池 = 规格域 ∩ 当时牌库,未解锁专家
   貊泽剔除,6 名)且 ∉ EXPERT_CHARS;效果串 ``env_gift_random:<名>@1star``
   (星级 = spec.star 先验);
-- **随机装备腿非绑定态**:概念股非 ENV_BOSS_GRANTS 成员 → 效果串
+- **随机装备入账分支非绑定态**:概念股非 ENV_BOSS_GRANTS 成员 → 效果串
   ``env_equip_random:<名>`` 前缀、env_grants_done 零 star_grant# 绑定键。
 """
 from __future__ import annotations
@@ -72,7 +72,7 @@ _ENV_11 = '夜之半神概念股'
 
 def test_langshou_concept_stock_faction_char_grant_leg(
         rows_sink: _RowSink) -> None:
-    """狼狩域随机支发放腿(gain-chain.md §3 随机支段:阵营轴 = 牌库时点
+    """狼狩域随机支发放分支(gain-chain.md §3 随机支段:阵营轴 = 牌库时点
     池掷骰,两族同一循环同一前缀;概念股族展开卡登记约定):固定种子 rng
     直构 → bench 追加 1 张 1★ 且名 ∈ grant_char_pool 现算集(grant_char_
     pool 阵营 spec = 规格域 ∩ 当时牌库,未解锁专家貊泽剔除——注册表派生
@@ -99,12 +99,12 @@ def test_langshou_concept_stock_faction_char_grant_leg(
 def test_langshou_concept_stock_random_equip_leg_unbound_no_done(
         rows_sink: _RowSink) -> None:
     """绑定门非绑定态(gain-chain.md §3 随机装备支段:非 ENV_BOSS_GRANTS
-    成员零绑定;概念股族展开卡登记约定):狼狩概念股(非成员)随机装备腿
+    成员零绑定;概念股族展开卡登记约定):狼狩概念股(非成员)随机装备入账分支
     → 效果串 ``env_equip_random:<名>`` 前缀(与绑定态 ``env_star_grant:``
     分域)、env_grants_done 零 star_grant# 绑定键(非成员零绑定写,治
     「无条件绑定等第二个消费者」缺陷);装备照常入栏且名 ∈ 类别池现算集
-    (equips_by_category('简易') 注册表派生,不手抄)。两腿期望值从同
-    seed 现算(字符腿先掷、装备腿同 rng 续掷,与生产消费序一致)。"""
+    (equips_by_category('简易') 注册表派生,不手抄)。两条分支期望值从同
+    seed 现算(字符分支先掷、装备入账分支同 rng 续掷,与生产消费序一致)。"""
     from sr_od.application.currency_war.kernel.cw_investments import (
         equips_by_category,
     )
@@ -118,7 +118,7 @@ def test_langshou_concept_stock_random_equip_leg_unbound_no_done(
                         rng=random.Random(20261027))
     assert out == (f'env_gift_random:{expected_char}@1star',
                    f'env_equip_random:{expected_eq}'), \
-        '两腿效果串:非绑定前缀 env_equip_random:'
+        '两条分支效果串:非绑定前缀 env_equip_random:'
     assert gs.equips.value == [expected_eq], '装备入栏(类别池现算)'
     assert gs.env_grants_done.value is None, \
         '非绑定态零 done 键(无 star_grant# 绑定)'
@@ -127,7 +127,7 @@ def test_langshou_concept_stock_random_equip_leg_unbound_no_done(
 
 def test_zhouzhibanshen_concept_stock_faction_char_grant_leg(
         rows_sink: _RowSink) -> None:
-    """昼之半神域随机支发放腿(gain-chain.md §3 随机支段:阵营轴 = 牌库
+    """昼之半神域随机支发放分支(gain-chain.md §3 随机支段:阵营轴 = 牌库
     时点池掷骰,两族同一循环同一前缀;概念股族展开卡登记约定):固定种子
     rng 直构 → bench 追加 1 张 1★ 且名 ∈ grant_char_pool 现算集(本域
     6 名 is_expert 全空 = 全员非专家,牌库时点过滤恒等零收窄——注册表
@@ -153,12 +153,12 @@ def test_zhouzhibanshen_concept_stock_random_equip_leg_unbound_no_done(
         rows_sink: _RowSink) -> None:
     """绑定门非绑定态(gain-chain.md §3 随机装备支段:非 ENV_BOSS_GRANTS
     成员零绑定;概念股族展开卡登记约定):昼之半神概念股(非成员)随机
-    装备腿 → 效果串 ``env_equip_random:<名>`` 前缀(与绑定态
+    装备入账分支 → 效果串 ``env_equip_random:<名>`` 前缀(与绑定态
     ``env_star_grant:`` 分域)、env_grants_done 零 star_grant# 绑定键
     (非成员零绑定写,治「无条件绑定等第二个消费者」缺陷);装备照常入栏
     且名 ∈ 类别池现算集(equips_by_category('简易') 注册表派生,不手抄;
     装备先验「昼神送轮滑鞋」随 fixed_hypothesis 家族键在册,零卡级申报)。
-    两腿期望值从同 seed 现算(字符腿先掷、装备腿同 rng 续掷,与生产消费
+    两条分支期望值从同 seed 现算(字符分支先掷、装备入账分支同 rng 续掷,与生产消费
     序一致)。"""
     from sr_od.application.currency_war.kernel.cw_investments import (
         equips_by_category,
@@ -173,7 +173,7 @@ def test_zhouzhibanshen_concept_stock_random_equip_leg_unbound_no_done(
                         rng=random.Random(20261027))
     assert out == (f'env_gift_random:{expected_char}@1star',
                    f'env_equip_random:{expected_eq}'), \
-        '两腿效果串:非绑定前缀 env_equip_random:'
+        '两条分支效果串:非绑定前缀 env_equip_random:'
     assert gs.equips.value == [expected_eq], '装备入栏(类别池现算)'
     assert gs.env_grants_done.value is None, \
         '非绑定态零 done 键(无 star_grant# 绑定)'
@@ -182,7 +182,7 @@ def test_zhouzhibanshen_concept_stock_random_equip_leg_unbound_no_done(
 
 def test_yezhibanshen_concept_stock_faction_char_grant_leg(
         rows_sink: _RowSink) -> None:
-    """夜之半神域随机支发放腿(gain-chain.md §3 随机支段:阵营轴 = 牌库
+    """夜之半神域随机支发放分支(gain-chain.md §3 随机支段:阵营轴 = 牌库
     时点池掷骰,两族同一循环同一前缀;概念股族展开卡登记约定):固定种子
     rng 直构 → bench 追加 1 张 1★ 且名 ∈ grant_char_pool 现算集(本域
     7 名 is_expert 全空 = 全员非专家,牌库时点过滤恒等零收窄——注册表
@@ -208,13 +208,13 @@ def test_yezhibanshen_concept_stock_random_equip_leg_unbound_no_done(
         rows_sink: _RowSink) -> None:
     """绑定门非绑定态(gain-chain.md §3 随机装备支段:非 ENV_BOSS_GRANTS
     成员零绑定;概念股族展开卡登记约定):夜之半神概念股(非成员)随机
-    装备腿 → 效果串 ``env_equip_random:<名>`` 前缀(与绑定态
+    装备入账分支 → 效果串 ``env_equip_random:<名>`` 前缀(与绑定态
     ``env_star_grant:`` 分域)、env_grants_done 零 star_grant# 绑定键
     (非成员零绑定写,治「无条件绑定等第二个消费者」缺陷);装备照常入栏
     且名 ∈ 类别池现算集(equips_by_category('简易') 注册表派生,不手抄;
     economy.md 四卡线索名单不含夜之半神 = 装备身份零先验,均匀 v0 + 按
-    卡固定假说待校准随 fixed_hypothesis 家族键在册,零卡级申报)。两腿
-    期望值从同 seed 现算(字符腿先掷、装备腿同 rng 续掷,与生产消费
+    卡固定假说待校准随 fixed_hypothesis 家族键在册,零卡级申报)。两条分支
+    期望值从同 seed 现算(字符分支先掷、装备入账分支同 rng 续掷,与生产消费
     序一致)。"""
     from sr_od.application.currency_war.kernel.cw_investments import (
         equips_by_category,
@@ -229,7 +229,7 @@ def test_yezhibanshen_concept_stock_random_equip_leg_unbound_no_done(
                         rng=random.Random(20261027))
     assert out == (f'env_gift_random:{expected_char}@1star',
                    f'env_equip_random:{expected_eq}'), \
-        '两腿效果串:非绑定前缀 env_equip_random:'
+        '两条分支效果串:非绑定前缀 env_equip_random:'
     assert gs.equips.value == [expected_eq], '装备入栏(类别池现算)'
     assert gs.env_grants_done.value is None, \
         '非绑定态零 done 键(无 star_grant# 绑定)'

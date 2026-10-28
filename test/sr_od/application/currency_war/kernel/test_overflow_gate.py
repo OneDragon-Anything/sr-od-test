@@ -9,7 +9,7 @@
 2. 告警消失 → 门释放(无强收窄卖出,常规决策接管);
 3. 溢出态 CwActionSellBenchParam 逻辑态 = 摘卖件 + 溢出卡入自由槽 + 旗标/身份消亡;
    身份缺读('')= 跳过入位(槽留空等观察),卖出本体不受阻;
-4. 溢出腿吸收与镜像语义(原 test_cw_overflow_tracked_sync.py 与
+4. 溢出分支吸收与镜像语义(原 test_cw_overflow_tracked_sync.py 与
    test_cw_overflow_mirror_frame.py 全文件先后迁并,均已删):入位卡回占
    被卖槽(席空数派生不 +1,缺回占 = 决策面假空席,席满拒落类门被假象
    绕过)+ 陈旧提案(卖出槽容器已空)写口零写、旗标不清(镜像不误发)。
@@ -122,7 +122,7 @@ def test_sellbench_overflow_logic_state_absorbs_card():
     slots = bench_entries_of(gs)
     assert slots[0] is not None and slots[0].unit.char_id == '不死途'
     assert slots[1].unit.char_id == '刃'
-    # 席空数派生不 +1(原 mirror 测试回占腿并入:缺回占 = 假空席绕过席满门)
+    # 席空数派生不 +1(原 mirror 测试回占分支并入:缺回占 = 假空席绕过席满门)
     assert bench_free_slots(gs) == 7
     # 退款 = sell_refund(1★, 2费) = cost 全额 = 2(10 → 12)
     assert gs.gold.value == 12
@@ -175,7 +175,7 @@ def test_sellbench_lv999_tiered_refund():
 
 def test_sellbench_overflow_missing_identity_skips_absorb():
     """身份缺读(''):容器跳过入位(槽留空等观察覆盖),卖出/退款本体照常;
-    溢出态未消费留观察覆盖(单账断言;原 tracked 对称腿随 3.2 退役删)。"""
+    溢出态未消费留观察覆盖(单账断言;原 tracked 对称分支随 3.2 退役删)。"""
     session = StrategySession()
     gs = game_state_of(session)
     gs.write_logic(gs.bench, cw4_bview(
@@ -196,12 +196,12 @@ def test_sellbench_overflow_missing_identity_skips_absorb():
     assert gs.overflow_card.value == ''
 
 
-# ===== 溢出腿吸收/镜像补遗(原 test_cw_overflow_mirror_frame.py 迁并)=====
+# ===== 溢出分支吸收/镜像补遗(原 test_cw_overflow_mirror_frame.py 迁并)=====
 
 
 def test_sellbench_stale_proposal_zero_write_flag_kept():
     """镜像不误发:陈旧提案(卖出槽容器已空)→ 写口零写、旗标不清 →
-    席空数派生不变(零写即零变化;原黑板帧镜像腿随黑板退役,镜像语义
+    席空数派生不变(零写即零变化;原黑板帧镜像分支随黑板退役,镜像语义
     由卖备战上报函数溢出分支单点承载)。"""
     session = StrategySession()
     gs = game_state_of(session)

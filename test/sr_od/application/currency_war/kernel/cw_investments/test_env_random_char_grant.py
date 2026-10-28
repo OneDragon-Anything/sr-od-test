@@ -77,7 +77,7 @@ def test_axis_exclusivity_both_empty_and_both_filled_raise(
 def test_faction_domain_empty_raises(monkeypatch: pytest.MonkeyPatch) -> None:
     """阵营域空防呆(共享助手池非空查):误登角色名('飞霄' = 角色名非
     阵营名)与笔误阵营名 → chars_by_faction 域空 → 校验炸(import 期
-    拦截——错名发放 = 采样腿永发不出的静默残缺,登记笔误前置可见)。"""
+    拦截——错名发放 = 采样分支永发不出的静默残缺,登记笔误前置可见)。"""
     for bad_faction in ('飞霄', '追姬'):
         bad = dict(ENV_GIFTS)
         bad['追击概念股'] = GiftGrant(
@@ -117,7 +117,7 @@ def test_simple_category_equip_pool_nonempty() -> None:
     """简易装备类别池非空(gain-chain.md §3 随机装备支段:类别池 =
     equips_by_category 注册表派生单源):登记类别 '简易' 现值池非空
     (构建期类别闭集 + 池非空校验已闸,显式断言登记类别可采样)。"""
-    assert equips_by_category('简易'), '登记类别池非空(采样腿可达)'
+    assert equips_by_category('简易'), '登记类别池非空(采样分支可达)'
 
 
 def test_cost_axis_existing_entries_regression() -> None:

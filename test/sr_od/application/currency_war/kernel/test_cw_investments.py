@@ -206,36 +206,36 @@ def test_random_char_pool_derivation_properties() -> None:
 
 
 # ==================== 阵容指向集(投资选卡阵容冲突护栏 §2.1)====================
-# 判据 = changes/2026-10-17-invest-direction-guard/design.md §2.1 三腿派生
+# 判据 = changes/2026-10-17-invest-direction-guard/design.md §2.1 三条分支派生
 # (faction/亲和/成员),期望值全部注册表现算(非快照),与设计 §4 测试
 # 清单期望逐条对齐。
 
 def test_strategy_scope_defining_card_heita_epoch() -> None:
-    """黑塔纪元(绑 ∅ + {大黑塔, 黑塔}):角色腿①(大黑塔/黑塔 factions =
-    银河学者)∪ 成员腿②(大黑塔 ∈ 大黑塔银河学者 core,该线 factions 全集
-    = 银河学者+群攻)→ 全集两阵营(§4 清单:角色腿 + 成员腿带入大黑塔
+    """黑塔纪元(绑 ∅ + {大黑塔, 黑塔}):角色入账分支①(大黑塔/黑塔 factions =
+    银河学者)∪ 成员分支②(大黑塔 ∈ 大黑塔银河学者 core,该线 factions 全集
+    = 银河学者+群攻)→ 全集两阵营(§4 清单:角色入账分支 + 成员分支带入大黑塔
     银河学者线 factions 全集)。"""
     assert strategy_faction_scope('黑塔纪元') == frozenset({'银河学者', '群攻'})
 
 
 def test_strategy_scope_char_leg_qiongyu_qingque() -> None:
     """琼玉专家:青雀(绑 ∅ + {青雀})→ {仙舟}:青雀 factions = (仙舟,)
-    且不在任何线 core/shared(成员腿零命中)→ 精确单阵营(§4 清单)。"""
+    且不在任何线 core/shared(成员分支零命中)→ 精确单阵营(§4 清单)。"""
     assert strategy_faction_scope('琼玉专家:青雀') == frozenset({'仙舟'})
 
 
 def test_env_scope_affinity_leg_grail_invite_and_contract() -> None:
-    """命运圣杯邀请/契约(faction 腿命运圣杯;同亲和表 {双王圣杯, 命运圣杯
-    红A})→ 亲和腿双王圣杯线 factions 全集(命运圣杯+能量)→
+    """命运圣杯邀请/契约(faction 分支命运圣杯;同亲和表 {双王圣杯, 命运圣杯
+    红A})→ 亲和分支双王圣杯线 factions 全集(命运圣杯+能量)→
     {命运圣杯, 能量}(副阵营随线带入,§2.1 例;§4 清单:邀请/契约同为
-    亲和腿口径)。"""
+    亲和分支口径)。"""
     assert env_faction_scope('命运圣杯邀请') == frozenset({'命运圣杯', '能量'})
     assert env_faction_scope('命运圣杯契约') == frozenset({'命运圣杯', '能量'})
 
 
 def test_env_scope_sampo_affinity_leg() -> None:
-    """特邀专家:桑博 faction 腿空但亲和专家桑博DOT(1.0)→ 指向集 = 该线
-    factions 全集 {持续伤害, 贝洛伯格}(单 faction 腿会误判通用,§4 清单)。"""
+    """特邀专家:桑博 faction 分支空但亲和专家桑博DOT(1.0)→ 指向集 = 该线
+    factions 全集 {持续伤害, 贝洛伯格}(单 faction 分支会误判通用,§4 清单)。"""
     assert env_faction_scope('特邀专家:桑博') == frozenset(
         {'持续伤害', '贝洛伯格'})
 
@@ -247,8 +247,8 @@ def test_env_scope_gallagher_faction_exception() -> None:
 
 
 def test_strategy_scope_membership_leg_equipfan_contains_pursuit() -> None:
-    """成员腿(§4 清单):装备党绑飞霄,飞霄 ∈ 追击飞霄线 core → 该线
-    factions {追击} 入集;阵营腿狼狩照常在集。"""
+    """成员分支(§4 清单):装备党绑飞霄,飞霄 ∈ 追击飞霄线 core → 该线
+    factions {追击} 入集;阵营分支狼狩照常在集。"""
     scope = strategy_faction_scope('装备党')
     assert '追击' in scope
     assert '狼狩' in scope
@@ -271,8 +271,8 @@ def test_scope_unbound_and_unregistered_empty() -> None:
 
 def test_strategy_scope_unregistered_char_skipped(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """绑定角色不在 CHARACTERS → 跳过不炸(§4 清单;角色腿①收窄宁放行,
-    注册表外名字不落任何线名单,成员腿同跳)。注入含未注册角色的绑定
+    """绑定角色不在 CHARACTERS → 跳过不炸(§4 清单;角色入账分支①收窄宁放行,
+    注册表外名字不落任何线名单,成员分支同跳)。注入含未注册角色的绑定
     条目验证(表注入沿本文件 ENV_GIFTS 校验测试惯用法)。"""
     fake = dict(STRATEGY_BINDINGS)
     fake['测试卡(不存在角色)'] = (
@@ -340,7 +340,7 @@ def test_laowu_random_equip_grant_not_empty_grant_both_tables(
 
 def test_laowu_not_in_env_economy() -> None:
     """互斥面 + 白名单同键(T-19 设计 §4.1):劳务派遣合同 ∈ ENV_GIFTS 且
-    ∈ ENV_BOSS_GRANTS(两表同键 = 各表各腿合法形态)且 ∉ ENV_ECONOMY
+    ∈ ENV_BOSS_GRANTS(两表同键 = 各表各分支合法形态)且 ∉ ENV_ECONOMY
     (防错装闸在册——经济域零动作,import 期互斥校验显式半边)。"""
     assert '劳务派遣合同' in ENV_GIFTS
     assert '劳务派遣合同' in cw_investments.ENV_BOSS_GRANTS
@@ -444,7 +444,7 @@ def test_yinjincai_entry_slot_qualities_registered() -> None:
     中金右彩,旧「实测 offer 金重仓」观察记录同裁定作废):登记
     slot_qualities = ('银','金','棱彩')(坐标系 = 投资界面卡槽物理排位
     左→右 0..2)+ offer_structure 结构标记 + extra_pick_refreshes = 2
-    (sim 策略屏刷新呈现与世界腿消费端)+ rewrite_quality 空(槽位向量型
+    (sim 策略屏刷新呈现与世界分支消费端)+ rewrite_quality 空(槽位向量型
     与品质改写型互斥)+ 非空 pending_notes(定谳记录)。"""
     entry = ENV_POOL_REWRITE['银·金·彩']
     assert entry.slot_qualities == ('银', '金', '棱彩')
@@ -669,7 +669,7 @@ def test_env_ore_open_grants_validation_raises(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """四查 import 即炸语义(T-29 设计 §2.1):①孤儿键 ②首阈值/步长
     非正 int(bool 显式拒,纯 int 判会被 True 当 1 混过)③具名角色
-    ∉ CHARACTER_ROSTER ④随机羁绊池现值空(羁绊名错字 → 采样腿永远
+    ∉ CHARACTER_ROSTER ④随机羁绊池现值空(羁绊名错字 → 采样分支永远
     发不出,前置可见)。"""
     def _bad(first=20, step=10, chars=('火花',), faction='战技点',
              key='战技点契约') -> dict:
@@ -836,7 +836,7 @@ def test_equip_item_channel_clash_raises(
 def test_equip_only_grant_not_empty_grant_both_tables(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """空发放集判定并入 equips_immediate(env/策略两表,T-31 设计 §2.2
-    条 3 + 策略侧家族义务):装备腿 only 条目 = 合法登记,两表校验均不得
+    条 3 + 策略侧家族义务):装备入账分支 only 条目 = 合法登记,两表校验均不得
     误炸;全空条目照炸由既有锁承载,不重复。"""
     cw_investments._validate_env_gifts()  # 现值表(红钻贵族 = 装备+箱)直调
     bad = dict(STRATEGY_GRANTS)
@@ -847,7 +847,7 @@ def test_equip_only_grant_not_empty_grant_both_tables(
 
 def test_red_diamond_registry_surface() -> None:
     """登记面与身份防污染(T-31 设计 §4 锁 1/3):红钻贵族 ∈ ENV_GIFTS
-    且 ∉ ENV_ECONOMY;登记形状 = 装备腿('红钻',)+ 箱腿('简易武装箱',);
+    且 ∉ ENV_ECONOMY;登记形状 = 装备入账分支('红钻',)+ 开箱分支('简易武装箱',);
     红钻 ∈ EQUIPMENTS(装备身份)且 ∉ BENCH_ITEM_NAMES,'简易武装箱' ∈
     BENCH_ITEM_NAMES(派生面只扫 items 两通道,装备不进占席词表)。"""
     from sr_od.application.currency_war.data.cw_equipment_data import (
@@ -868,7 +868,7 @@ def test_red_diamond_registry_surface() -> None:
 
 def test_blue_diamond_registry_surface() -> None:
     """登记面与身份防污染(T-32 设计 §4 锁 1/4):蓝钻贵族 ∈ ENV_GIFTS
-    且 ∉ ENV_ECONOMY;登记形状 = 装备腿('蓝钻',)+ 箱腿('简易武装箱',);
+    且 ∉ ENV_ECONOMY;登记形状 = 装备入账分支('蓝钻',)+ 开箱分支('简易武装箱',);
     蓝钻 ∈ EQUIPMENTS(装备身份)且 ∉ BENCH_ITEM_NAMES,'简易武装箱' ∈
     BENCH_ITEM_NAMES(派生面只扫 items 两通道,装备不进占席词表;
     红钻贵族姊妹行同判)。import 过闸 = 模块加载即对全表现值(含本行)

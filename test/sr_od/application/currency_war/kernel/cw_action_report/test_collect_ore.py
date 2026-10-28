@@ -1,10 +1,10 @@
-"""collect_ore 上报合并升星触发发放腿测试(镜像 src =
+"""collect_ore 上报合并升星触发发放分支测试(镜像 src =
 kernel/cw_action_report/collect_ore.py;晶矿域存量测试 =
 kernel/test_ore.py 已超行限,本文件按镜像规范落新位)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
-T-26-liangzi-tongpin-qiyue.md(定稿)§2.4 条 3 + §4.6:晶矿角色腿的
-inline 级联采集升星事实,整批全部写毕后收尾发火(发火时序与买牌腿
+T-26-liangzi-tongpin-qiyue.md(定稿)§2.4 条 3 + §4.6:晶矿角色入账分支的
+inline 级联采集升星事实,整批全部写毕后收尾发火(发火时序与买牌分支
 同构)——bench 终态 = 合并产物 + 发放角色并存。
 """
 from __future__ import annotations
@@ -58,7 +58,7 @@ def seeded_provider() -> Iterator[None]:
 
 
 def _make_gs():
-    """晶矿角色腿场景:1 颗晶矿(附着角色奖励 = 1★花火,零掷骰兑现)+
+    """晶矿角色入账分支场景:1 颗晶矿(附着角色奖励 = 1★花火,零掷骰兑现)+
     2×1★花火在席 + 量子同频契约激活(附着眼 = 逻辑写种子)。"""
     gs = game_state_of(cw4_session())
     gs.observe(gs.spheres, OreSight(count=1, colors=('gold',),
@@ -78,7 +78,7 @@ def _make_gs():
 
 
 def test_collect_ore_char_reward_fires_grant(seeded_provider) -> None:
-    """晶矿角色腿发火时序锁(T-26 设计 §4.6 同构腿):角色奖励补齐三连
+    """晶矿角色入账分支发火时序锁(T-26 设计 §4.6 同构分支):角色奖励补齐三连
     → 级联合并 2★ 产物;整批写毕后发火 → bench 终态 = 产物 + 发放角色
     并存(发放名 = 注入槽种子现算;spheres 摘除与附着键移除照常)。"""
     expected = random.Random(20261016).choice(list(_POOL))
@@ -94,10 +94,10 @@ def test_collect_ore_char_reward_fires_grant(seeded_provider) -> None:
         '开成即附着键移除(既有语义不变)'
 
 
-# ============================================================ 晶矿开启计数腿 + 战技点契约触发腿
+# ============================================================ 晶矿开启计数分支 + 战技点契约触发分支
 # (T-29 战技点契约,设计 = 迭代 2026-09-23-invest-effects-calc designs/
 # T-29-zhanjidian-qiyue.md §2.4 + §4 锁 5/锁 7:计数先入账后检查、
-# 「点开才计数」、窗序 = 矿奖励 → 计数 → 触发腿。)
+# 「点开才计数」、窗序 = 矿奖励 → 计数 → 触发分支。)
 
 _SP_ENV = '战技点契约'
 
@@ -217,13 +217,13 @@ def test_mixed_batch_missing_level_skip_not_counted(
                    for _e, k in (gs.env_grants_done.value or ())), \
         '零触发零晶矿 done'
     assert not any((c[1] or '').startswith('env_grant#') for c in calls), \
-        '触发腿零写行'
+        '触发分支零写行'
 
 
 def test_window_order_reward_writes_before_trigger_leg(
         monkeypatch: pytest.MonkeyPatch, seeded_provider) -> None:
     """窗序与计数先入账(T-29 设计 §2.4/§4 锁 7):矿奖励写(金)先于
-    战技点契约触发腿写(台账序锁);计数入账后检查时现值含本批
+    战技点契约触发分支写(台账序锁);计数入账后检查时现值含本批
     (20+1=21 达标 20 档),done 封账 ``ore_open#20``。"""
     gs = _make_sp_gs(bench_units=[], ore_open_total=20)
     calls = _sp_record_writes(gs, monkeypatch)
@@ -232,17 +232,17 @@ def test_window_order_reward_writes_before_trigger_leg(
     assert out.applied, f'开成: {out.reason}'
     assert gs.effects.ore_open_total == 21, '计数先入账(含本批)'
     assert gs.env_grants_done.value == \
-        ((_SP_ENV, 'ore_open#20'),), '触发腿 done 封账'
+        ((_SP_ENV, 'ore_open#20'),), '触发分支 done 封账'
     evidence = f'env_grant#{_SP_ENV}#ore_open20'
     gold_idx = next(i for i, c in enumerate(calls)
                     if c[1] == 'proj_ore_reward_gold#ore1')
     trigger_idx = next(i for i, c in enumerate(calls)
                        if (c[1] or '').startswith(evidence))
-    assert gold_idx < trigger_idx, '矿奖励写先于触发腿写'
+    assert gold_idx < trigger_idx, '矿奖励写先于触发分支写'
     bench_evs = [c[1] for c in calls if c[0] == 'bench'
                  and (c[1] or '').startswith(evidence)]
     assert bench_evs == [evidence + '#place'] * 2, \
-        f'触发腿两腿 bench 写(具名+随机): {bench_evs}'
+        f'触发分支 bench 写两条分支(具名+随机): {bench_evs}'
 
 
 def test_zero_open_early_return_no_count_no_trigger(

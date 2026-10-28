@@ -14,7 +14,7 @@ R2 息线 floor / D 牌期望边界 / ev_arm 值域(aggregate_economy 分型登�
 roundtrip,连 simulate import——其 simulate 全仓零生产消费,金钱面
 = 实机结算对账 + gain_chain 活转移函数直测(test_gain_chain))、利息/streak 真值
 (src 零调用)、区分力非零证明锚(元测试)、refresh_prob 查表
-一致性锚(缺级→0 腿并入 D 牌期望边界)、xp 兜底支钳 0 单测(并入 joy
+一致性锚(缺级→0 分支并入 D 牌期望边界)、xp 兜底支钳 0 单测(并入 joy
 真值表一行)、pair 断供驱逐墓碑、ADR-0150 base 层全量计数锚(纯数据计
 数;其「过继测试禁删」声明随审计判决解除,335/83 计数归编 #15
 test_cw_data_registry 待承接)。
@@ -450,7 +450,7 @@ def _xp_state(level: int = 5, strategies: list[str] | None = None,
 
 def test_xp_fee_no_discount_invariant_and_display_passthrough() -> None:
     """xp 费用两形态一测试(合并原 test_xp_fee_no_discount_invariance /
-    test_xp_click_display_price_passthrough,断言腿逐条保留):
+    test_xp_click_display_price_passthrough,断言分支逐条保留):
 
     - 无折扣局不变测试:未持任何折扣卡时费用与改前逐位一致(方案审修改
       清单④①)——显示价支原值直通、兜底支基价 4(击数值来自
@@ -623,7 +623,7 @@ def _budget_rows() -> dict:
         # 合法 0 帧:溢余 1<刷价(准入门辖域)
         'legal-zero-below-threshold': (lambda: (_ba_state(gold=51, level=6),
                                                 StrategySession()), 0),
-        # 塌缩带归零(合法 0 帧第三类;原 test_w721_collapse_band 零帧腿,
+        # 塌缩带归零(合法 0 帧第三类;原 test_w721_collapse_band 零帧分支,
         # 独家覆盖——原主题文件 test_cw_w721_overlay_b_budget 已消亡)
         'collapse-band-locked-4cost-lv5': (
             lambda: (_collapse_frame(), _ba_locked_4cost_sess()), 0),
@@ -637,7 +637,7 @@ def _budget_rows() -> dict:
 def test_budget_value_domain_and_legal_zero_frames(case_id: str) -> None:
     """预算核契约一测试(值域+合法 0 帧表驱动,合并原
     test_budget_value_domain_and_legal_zero_frames /
-    test_w721_collapse_band_zero_and_fallback_exempt,断言腿逐条保留):
+    test_w721_collapse_band_zero_and_fallback_exempt,断言分支逐条保留):
     值域 [0,6](6 刷帽单一源);合法 0 帧三类共存——g≤R* 常态帧(全恒正
     = 契约未实现)、准入门辖域帧、塌缩带归零帧(ADR-0475;归零帧再多
     一类 max 合并结构不变);塌缩同形态的未锁定帧(兜底链)不归零——
@@ -660,7 +660,7 @@ def test_budget_value_domain_and_legal_zero_frames(case_id: str) -> None:
 
 def test_pair_materialization_and_drought_reset() -> None:
     """pair 体系两面一测试(合并原 test_pair_eviction_keeps_target_chain_
-    materialized / test_pair_drought_resets_when_member_visible,断言腿
+    materialized / test_pair_drought_resets_when_member_visible,断言分支
     逐条保留):
 
     - 物化面(W578 代理门):pair 物化 → pair_target_comp(新 pair)非空
@@ -697,7 +697,7 @@ def test_injection_consistency_single_registry_source() -> None:
     随死通道退役重写为「买断制(可达值 0)在预算面同帧
     生效,registry 旋钮逐位不动」——判别结构(链动/旋钮不动)
     保形。(排程面已随升级触发统一批删除——R* = 保利利息线单分量,
-    resolved 链动腿由预算面本测承载。)"""
+    resolved 链动分支由预算面本测承载。)"""
     import dataclasses
     reg2 = dataclasses.replace(_REG, interest_cap=4)
     st1 = _ba_state(gold=45, level=7)
@@ -771,7 +771,7 @@ def test_effective_cost_tier_and_registry_routing():
     assert gs.lv999_cost_tier.value is None
     # 未观察 = 未触发任何变换 → 开局档 3(读口 None 归约)
     assert effective_cost(gs, '银狼LV.999') == 3
-    # 升费腿/上阵变费腿写档后透传(值域 {3,4,5};Field frozen,写 = 换帧,
+    # 升费分支/上阵变费分支写档后透传(值域 {3,4,5};Field frozen,写 = 换帧,
     # 测试以 replace 构造等价帧)
     gs = replace(gs, lv999_cost_tier=Field(value=4, source='logic'))
     assert effective_cost(gs, '银狼LV.999') == 4
@@ -925,7 +925,7 @@ def _disclose_cur(sess: StrategySession, plane: int, round_num: int,
 def _run_shop_visit_offline_host(monkeypatch: pytest.MonkeyPatch,
                                  tmp_path: Path, disclose_impl) -> tuple[
         list, object, object]:
-    """测试 F 行为腿共用离线宿主(零真实副作用)。替身面 = 观察节点段顶
+    """测试 F 行为分支共用离线宿主(零真实副作用)。替身面 = 观察节点段顶
     消费面(读屏/帧留证/种子读链/决策源/遥测单例全替身)+ 关店执行位
     点击桩化:决策源首动作即 CwActionCloseShopParam 终结,循环只走入口
     观察段一次后经统一执行路径关店收工;入口读屏回执 gold=10 非零
@@ -1030,7 +1030,7 @@ class TestBudgetDisclosureWriteRead:
 
     def test_state_fields_equal_same_frame_computed_values(self):
         """披露后状态四字段 == 同帧独立现算值(R*/溢余/义务)。红证 =
-        现码恒 0(52 行全零实证);本腿断的是「值对」,非「非零」。
+        现码恒 0(52 行全零实证);本分支断的是「值对」,非「非零」。
         W6 波 4:预算接缝读 session 容器单例,种子先于披露(生产同路 =
         观察漏斗,测试同路 = cw4_gs 容器域种子)。"""
         sess = StrategySession()
@@ -1237,7 +1237,7 @@ def test_armed_shortcircuit_frame_writes_no_disclosure(
 def test_shop_frame_disclosure_wired_at_shop_entry(
         monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """接线存在测试(店开帧第二写点):spy 计数 = 店开观察帧段顶接线段
-    恰调用一次(接线断裂/漂移即红)+ 循环收工两腿。"""
+    恰调用一次(接线断裂/漂移即红)+ 循环收工两条分支。"""
     seen_calls: list = []
 
     def _spy(state, session, registry=None) -> None:
@@ -1267,7 +1267,7 @@ def test_shop_frame_disclosure_failure_degrades_with_warning(
         '降级未收工:披露失败不应中断商店循环'
 
 
-# ==================== 刷价改价渲染 helper(T-21 腿 2)====================
+# ==================== 刷价改价渲染 helper(T-21 分支 2)====================
 
 
 def test_world_shop_refresh_cost_threshold_flip() -> None:

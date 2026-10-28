@@ -223,7 +223,7 @@ def _bs(slot: int, char_id: str) -> BenchSlot:
 def test_comp_position_override_beats_registry_pref() -> None:
     """comp char_positions 覆盖注册表:万敌注册表 flex(派生 back),
     「万敌单C」覆盖为 front → 落位排 = front(逐件路由直接断言 +
-    落位计划端到端各一腿)。"""
+    落位计划端到端各一分支)。"""
     comp = get_comp('万敌单C')
     assert comp is not None and comp.char_positions.get('万敌') == 'front', \
         '注册表前置自检:万敌单C 带 char_positions 覆盖'
@@ -309,7 +309,7 @@ _XIER = '希儿'
 _HEITIANQUE = '黑天鹅'
 _SANYUEQI = '三月七'
 
-# 持续伤害+希儿系 pair 的判据腿(真实 pair 键;fallback 分支产物 =
+# 持续伤害+希儿系 pair 的判据分支(真实 pair 键;fallback 分支产物 =
 # form_tiers {持续伤害:2} + or_legs 量2∨贝2 + required 希儿;单一源 =
 # pair_target_comp)。
 _PAIR = ('持续伤害', '希儿系')
@@ -407,7 +407,7 @@ def test_swap_arm_holds_via_or_leg_on_static_comp() -> None:
     """静态套「希儿量子」(OR 承接形态):量4+贝2 板卖一量件判据仍满。
 
     判据 = 希儿在板 ∧ 量2∨贝2(form_tiers 全被 OR 承接,AND 账为空):
-    花火离场 → 量3 ≥2 OR 腿仍在 → 可卖。若按裸 AND 量4 计账会误判破腿
+    花火离场 → 量3 ≥2 OR 分支仍在 → 可卖。若按裸 AND 量4 计账会误判破分支
     (臂过度关闭)——本测试钉住折法单一源(form_progress)的承接规则。
     """
     comp = _static_comp()
@@ -431,7 +431,7 @@ def test_swap_plan_seats_required_carry_after_sell() -> None:
     席位竞争面:bench 序普通 target 成员(缇宝,不在板,无同名去重拦截)
     在前时,必需件仍须先落——旧序会把席位给缇宝 = 卖冗余件白卖形态,
     本测试行使「首桶序 × 卖后上序」的组合语义。victim 序 = 板槽位扫描序
-    (域外键),首个资格通过者 = 娜塔莎(桑博/卡芙卡破 DOT 腿被拒)。
+    (域外键),首个资格通过者 = 娜塔莎(桑博/卡芙卡破 DOT 分支被拒)。
     """
     ctx = _ctx(board=[_SANGBO, _KAFKA, _NATASHA, _HUAHUO],
                bench=[_TIBAO, _XIER], cap=4)
@@ -447,7 +447,7 @@ def test_swap_arm_never_opens_protect_extension() -> None:
     换入臂解除(P41② + 替班=不卖字段契约):armed 帧照旧 target_keep。
 
     构造:target_cores 不含该件(保护域扩展 = 板上「万敌」占位形态),
-    腿保持与否无关紧要——护栏先于臂判定。
+    分支保持与否无关紧要——护栏先于臂判定。
     """
     comp = _pair_comp()
     ctx = _ctx(board=[_SANGBO, _KAFKA, _NATASHA, _HUAHUO],
@@ -463,7 +463,7 @@ def test_swap_arm_premise_single_required_member() -> None:
     """换入臂前提测试(现役单 required 成员):假想面板把 required_names
     全体按「已换入」计(``select_swap_plan`` 检验处),而臂一次只卖一个
     victim、换入一个必需件——该计法仅当 required 成员数 ≤1 时无白卖面
-    (≥2 成员且多个不在板时检验通过 ≠ 实际成型,卖一换一仍缺腿)。
+    (≥2 成员且多个不在板时检验通过 ≠ 实际成型,卖一换一仍缺分支)。
     ``required_deployed`` 字段契约允许多成员(``cw_comps.Comp``),
     生产来源全量 = 静态注册表 ``COMP_LIBRARY`` 逐 comp + pair 物化
     ``pair_target_comp``,本测试逐一断言单成员前提;任一来源出现多成员
@@ -486,7 +486,7 @@ def _swap_ctx(*, board: list[str], bench: list[str], cap: int,
               fp: float, locked: bool,
               required: frozenset[str] = frozenset()) -> SwapPlanContext:
     """直构 SwapPlanContext(1★ 单元格;pair 真值键面;locked = 混轨方向锁
-    ——pair 帧腿②在效;``locked_core`` 腿①恒 False(pair 帧不进转型域,
+    ——pair 帧分支②在效;``locked_core`` 分支①恒 False(pair 帧不进转型域,
     design §2.0),bond_gate 键/名单随 pair comp 装配)。"""
     comp = pair_target_comp(_PAIR)
     return SwapPlanContext(
@@ -525,7 +525,7 @@ def test_pair_locked_domain_releases_fenced_offline_victim() -> None:
     """配方对锁帧转型域开:fenced 离线件经资格族可卖;未对锁帧照旧拒。
 
     板 = 卡芙卡(DOT1)+希儿+花火(量2)+三月七(围栏件,对视野外):
-    判据缺 DOT 腿(fp 0.833 <1)∧ 板满 → 对锁帧三月七经守恒门(列车/
+    判据缺 DOT 分支(fp 0.833 <1)∧ 板满 → 对锁帧三月七经守恒门(列车/
     护盾 0 档不掉)放行;同板未对锁帧 = fenced_arm_closed(前提分野)。
     """
     board = [_KAFKA, _XIER, _HUAHUO, _SANYUEQI]
@@ -540,11 +540,11 @@ def test_pair_locked_domain_releases_fenced_offline_victim() -> None:
 
 def test_completion_member_yields_target_seat() -> None:
     """完成件滞留通道:希儿在板(required 臂关)∧ bench 有入板即成型件,
-    多余腿 target 板件让位可卖;破腿件照旧 target_keep;计划真换入完成件。
+    多余分支 target 板件让位可卖;破分支件照旧 target_keep;计划真换入完成件。
 
-    板 = 卡芙卡(DOT1)+希儿+花火(量2)+娜塔莎(贝1):判据缺 DOT 腿;
+    板 = 卡芙卡(DOT1)+希儿+花火(量2)+娜塔莎(贝1):判据缺 DOT 分支;
     黑天鹅入板 → DOT2 → fp=1.0(完成件)。花火/娜塔莎离场(量2 或贝2 有
-    另一腿承住)+黑天鹅入板 → 判据满 → 让位;卡芙卡离场 → DOT 归零破腿
+    另一分支承住)+黑天鹅入板 → 判据满 → 让位;卡芙卡离场 → DOT 归零破分支
     → 照旧保。旧语义下必需件臂只辖 required(希儿在板 = 臂关),完成件
     压席无解形态(sim 实证主桶)。victim 序 = 让渡序(贡献并列 1
     → 扫描序,花火在前);卖后板面 = DOT2∧贝2∧希儿在板,成型。
@@ -603,7 +603,7 @@ def test_redeploy_gate_pair_period_reads_target_view() -> None:
         target_cores=frozenset(comp.core_chars),
         fw_carry=frozenset(),
     )
-    # 板 = DOT1 + 量1 + 希儿在板口径(fp 0.833):花火入板 → 量2 → OR 腿
+    # 板 = DOT1 + 量1 + 希儿在板口径(fp 0.833):花火入板 → 量2 → OR 分支
     # 0.5→1.0 严格上升(轴②)。
     state = SimpleNamespace(board=SimpleNamespace(value={
         '持续伤害': 1, '量子同频': 1, '贝洛伯格': 1}))
@@ -848,7 +848,7 @@ def test_executor_drag_point_and_main_domain_lands_at_payload_slot(
         monkeypatch: pytest.MonkeyPatch):
     """执行链同源测试:载荷 (back, 3) → 拖点 = 后排 area 序 3−1;
     主域 deployed 落位 = 载荷槽子表下标(与容器写侧同式;
-    tracked 同步腿退役,op 自上报单点写主域)。
+    tracked 同步分支退役,op 自上报单点写主域)。
     后排 1 号已有占位乙(更低位占用不影响),载荷槽 3 空 = 放置。"""
     monkeypatch.setattr('time.sleep', lambda _s: None)
     from sr_od.application.currency_war.kernel.cw_strategy_session import (
@@ -926,7 +926,7 @@ def test_executor_rejects_slot_beyond_screen_points_no_drag(
 
 
 def test_sim_applies_occupied_target_as_swap():
-    """部署上报(动作腿单一源)对「目标槽有人」按交换建模:上场者落
+    """部署上报(动作分支单一源)对「目标槽有人」按交换建模:上场者落
     载荷槽、被占位角色回发射者源 bench 槽(经上报函数,零私有占位规则)。"""
     gs = _gs(bench=[BenchSlot(kind='unit', unit=_unit('甲', 1))],
              front=[_unit('乙', 1)])
@@ -941,7 +941,7 @@ def test_sim_applies_occupied_target_as_swap():
 
 
 def test_sim_applies_empty_target_as_place():
-    """对照腿:载荷槽空 = 放置(上报函数与写侧同一转移函数)。"""
+    """对照分支:载荷槽空 = 放置(上报函数与写侧同一转移函数)。"""
     gs = _gs(bench=[BenchSlot(kind='unit', unit=_unit('甲', 1))],
              front=[], back=[])
     report_action_deploy_move_param(

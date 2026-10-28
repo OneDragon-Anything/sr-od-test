@@ -13,7 +13,7 @@ effects-calc/designs/T-39-zhuanjia-yantaohui.md)§2.1/§2.4 + §4 锁 8:
   容器零写契约〔zero_writes.py〕,``chosen_expert`` 容器写 = live 画面 op
   落地复查点、由 kernel 侧既有锁面承重——本链断言消费与转移面);
 - 武装箱开箱链独立正常(箱画面候选 → 选定 → 所得经获得链入栏);
-- 同 seed 重放确定(环境道具腿零采样)。
+- 同 seed 重放确定(环境道具分支零采样)。
 """
 from __future__ import annotations
 
@@ -124,7 +124,7 @@ def test_expert_invite_env_sim_full_chain(
 
 def test_expert_invite_env_sim_replay_deterministic(
         _isolate_defect_buffer) -> None:
-    """同 seed 重放确定(T-39 设计 §4 锁 8 确定性面):环境道具腿零采样,
+    """同 seed 重放确定(T-39 设计 §4 锁 8 确定性面):环境道具分支零采样,
     两跑槽位快照与 equips 终态逐位一致。"""
     first = _run_expert_chain(7)
     second = _run_expert_chain(7)

@@ -5,18 +5,18 @@ kernel/cw_env_grants.py 的该被测函数;同模块兄弟触发函数测试住�
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
 T-29-zhanjidian-qiyue.md(定稿 v2.1)§2.3 + §4:
 - **条件矩阵**:env 空链/不在册 → 零写;bench 未观察 → 缓发不标 done
-  (宁缺勿造);未达标 → 零写;达标 → bench 增火花(1★)+ 随机腿 1 名;
-- **两腿随机态**:两腿 gain_character 一律 rand=True(通道定级硬语义,
+  (宁缺勿造);未达标 → 零写;达标 → bench 增火花(1★)+ 随机分支 1 名;
+- **两条分支随机态**:两条分支 gain_character 一律 rand=True(通道定级硬语义,
   用户裁定 2026-10-17:触发前提 = 晶矿开启计数为未验证推演,发放按
   随机态定级走台账纠偏+观察覆盖)→ bench 写通道均随机态;rng 消耗仅
-  随机腿一笔,具名腿零消耗(采样解析恰一次);
+  随机分支一笔,具名分支零消耗(采样解析恰一次);
 - **done 封账**:``ore_open#<阈值>`` write_logic 簿记(非随机态面),
   同 evidence 同 sig;
 - **阈值序列**:首阈值 20 达标发一次 / 已封账段推进零发 / 30 达标再发 /
   断档续发(done 缺档按计数现值补发)/ 单批跨多阈值 loop 逐阈值发放
   (直构计数器形态);
 - **rng 双端**:未装配 provider → 回退自掷仍产出;装 provider 后同动作
-  序列两次重放随机腿结果一致;解析口显式传入优先于注入槽;
+  序列两次重放随机分支结果一致;解析口显式传入优先于注入槽;
 - **池空守卫**(不可达防御语义钉死):注册表/校验重构若把守卫无声删改,
   本锁红灯——池空 = 零发放零 done,恢复后同计数下批正常发放。
 """
@@ -77,7 +77,7 @@ def seeded_provider() -> Iterator[None]:
 
 
 def _expected_random_name() -> str:
-    """随机腿期望名现算(provider 固定种子 ⟹ 单笔掷名结果确定;
+    """随机分支期望名现算(provider 固定种子 ⟹ 单笔掷名结果确定;
     注册表现算对照,非手抄)。"""
     return random.Random(_SEED).choice(list(_POOL))
 
@@ -162,38 +162,38 @@ def test_bench_unobserved_defer_without_done(
 
 def test_grant_two_legs_rand_channel_and_done(
         monkeypatch: pytest.MonkeyPatch, seeded_provider) -> None:
-    """达标发放(设计 §2.3 条件 7):bench 增火花(1★,具名腿)+ 随机腿
-    1 名(1★),done 追加 ``ore_open#20``。两腿 bench 写通道均随机态
+    """达标发放(设计 §2.3 条件 7):bench 增火花(1★,具名分支)+ 随机分支
+    1 名(1★),done 追加 ``ore_open#20``。两条分支 bench 写通道均随机态
     (rand=True 通道定级硬语义)且同 evidence 同 sig 同 produced_by
-    相邻;done = write_logic 簿记(非随机态面);随机腿名 ∈ 战技点池
+    相邻;done = write_logic 簿记(非随机态面);随机分支名 ∈ 战技点池
     (注册表现算对照)。"""
     expected = _expected_random_name()
     gs = _make_gs(bench=[], ore_open_total=_FIRST)
     calls = _record_writes(gs, monkeypatch)
     granted = check_env_ore_open_grants(gs, _SIG)
     assert granted == (_NAMED, expected), \
-        f'具名腿先、随机腿后: {granted}'
-    assert _bench_units(gs) == [(_NAMED, 1), (expected, 1)], '两腿 1★ 入席'
+        f'具名分支先、随机分支后: {granted}'
+    assert _bench_units(gs) == [(_NAMED, 1), (expected, 1)], '两条分支 1★ 入席'
     assert gs.env_grants_done.value == \
         ((_ENV, f'{ORE_OPEN_THRESHOLD_KEY_PREFIX}{_FIRST}'),), 'done 封账'
     assert [c[0] for c in calls] == ['bench', 'bench', 'env_grants_done'], \
-        f'两腿链写 + done 相邻: {calls}'
+        f'两条分支链写 + done 相邻: {calls}'
     assert calls[0][2] == calls[1][2] == 'rand', \
-        '两腿 bench 写通道均随机态(rand=True 硬语义)'
+        '两条分支 bench 写通道均随机态(rand=True 硬语义)'
     assert calls[2][2] == 'logic', 'done 封账 = write_logic 簿记'
     evidence = f'env_grant#{_ENV}#ore_open{_FIRST}'
-    assert calls[0][1] == evidence + '#place', '具名腿链写 evidence'
-    assert calls[1][1] == evidence + '#place', '随机腿链写 evidence(同基串)'
+    assert calls[0][1] == evidence + '#place', '具名分支链写 evidence'
+    assert calls[1][1] == evidence + '#place', '随机分支链写 evidence(同基串)'
     assert calls[2][1] == evidence, 'done evidence = 基串'
     assert calls[0][3] == calls[1][3] == calls[2][3] == _SIG, '同 sig'
     assert calls[0][4] == calls[1][4] == calls[2][4] == \
         'env_conditional_grant', '同 produced_by'
-    assert expected in _POOL, '随机腿名 ∈ chars_by_faction(战技点)'
+    assert expected in _POOL, '随机分支名 ∈ chars_by_faction(战技点)'
 
 
 def test_named_leg_consumes_no_rng(seeded_provider) -> None:
     """rng 消耗面(设计 §2.3 rng 语义):达标发放全程采样解析恰一次
-    (随机腿掷名一笔)——具名腿名字确定零 rng 消耗;若具名腿也走采样,
+    (随机分支掷名一笔)——具名分支名字确定零 rng 消耗;若具名分支也走采样,
     解析次数会翻倍红灯。"""
     calls = {'n': 0}
 
@@ -208,7 +208,7 @@ def test_named_leg_consumes_no_rng(seeded_provider) -> None:
         assert granted == (_NAMED, _expected_random_name()), \
             f'发放照常: {granted}'
         assert calls['n'] == 1, \
-            f'采样解析恰一次(具名腿零消耗): {calls["n"]}'
+            f'采样解析恰一次(具名分支零消耗): {calls["n"]}'
     finally:
         set_action_rng_provider(None)
 
@@ -221,8 +221,8 @@ def test_threshold_sequence_reach_gap_and_multi(
     21-29 计数推进零发(无新阈值达标);30 达标再发(ore_open#30);
     done 已含 20 缺 30、计数 31 → 只发 30 档(断档续发);单批跨多阈值
     (直构计数器一笔 39,20/30 达标、40 未达)loop 逐阈值发放。
-    局部种子 4(两掷均非火花且互异,池 = 过滤后镜像 _POOL)——随机腿抽中
-    火花会与具名腿叠加触发 3合1 连锁(裁决点 2 合法形态,归链域既有锁),
+    局部种子 4(两掷均非火花且互异,池 = 过滤后镜像 _POOL)——随机分支抽中
+    火花会与具名分支叠加触发 3合1 连锁(裁决点 2 合法形态,归链域既有锁),
     本锁只验 loop 逐阈值发放形状,种子避开合并形态保持写行数确定。"""
     set_action_rng_provider(lambda tool: random.Random(4))
     try:
@@ -258,9 +258,9 @@ def test_threshold_sequence_reach_gap_and_multi(
             ((_ENV, f'{key}{_FIRST}'), (_ENV, f'{key}{_FIRST + _STEP}'),)
         assert [c[1] for c in calls_gap].count(
             f'env_grant#{_ENV}#ore_open{_FIRST + _STEP}#place') == 2, \
-            '两腿 evidence 均挂 30 档(不发已封账的 20 档)'
+            '两条分支 evidence 均挂 30 档(不发已封账的 20 档)'
         # 单批跨多阈值:两档逐阈值发放(单窗内 roll_rng 解析一次后
-        # loop 复用,两档随机腿 = 同一 rng 实例顺序两掷,期望按序现算)
+        # loop 复用,两档随机分支 = 同一 rng 实例顺序两掷,期望按序现算)
         gs_multi = _make_gs(bench=[], ore_open_total=2 * _FIRST - 1)
         calls_multi = _record_writes(gs_multi, monkeypatch)
         granted_multi = check_env_ore_open_grants(gs_multi, _SIG)
@@ -270,7 +270,7 @@ def test_threshold_sequence_reach_gap_and_multi(
         assert gs_multi.env_grants_done.value == \
             ((_ENV, f'{key}{_FIRST}'), (_ENV, f'{key}{_FIRST + _STEP}'),)
         assert len(calls_multi) == 6, \
-            f'两档 × (两腿 + done): {len(calls_multi)}'
+            f'两档 × (两条分支 + done): {len(calls_multi)}'
     finally:
         set_action_rng_provider(None)
 
@@ -279,7 +279,7 @@ def test_threshold_sequence_reach_gap_and_multi(
 
 def test_rng_fallback_without_provider() -> None:
     """回退自掷(设计 §2.3 rng 语义):未装配 provider(= live 缺省)
-    → 回退自掷仍产出,随机腿名 ∈ 池(采样是猜测口径,不因缺装配而
+    → 回退自掷仍产出,随机分支名 ∈ 池(采样是猜测口径,不因缺装配而
     零发放)。"""
     set_action_rng_provider(None)
     gs = _make_gs(bench=[], ore_open_total=_FIRST)
@@ -290,7 +290,7 @@ def test_rng_fallback_without_provider() -> None:
 
 def test_rng_provider_deterministic_replay(seeded_provider) -> None:
     """注入槽确定性(设计 §2.5):装 provider 后同动作序列两次重放
-    (各自全新 gs)随机腿结果一致——sim 世界真值 + 动作序列确定性
+    (各自全新 gs)随机分支结果一致——sim 世界真值 + 动作序列确定性
     ⟹ 采样链确定性。"""
     results = []
     for _ in range(2):
@@ -316,8 +316,8 @@ def test_empty_pool_guard_blocks_then_recovers(
         monkeypatch: pytest.MonkeyPatch, seeded_provider) -> None:
     """池空守卫(设计 §2.3 条件 6,不可达防御语义钉死):注册表漂移态
     (monkeypatch 直构池空,patch 目标 = 生产端池派生单一源
-    ``cw_env_grants.grant_char_pool``——晶矿随机腿池与随机赠卡家族同源
-    取池)→ 达标阈值零发放、done 零追加(整体缓发,禁「具名腿已发、
+    ``cw_env_grants.grant_char_pool``——晶矿随机分支池与随机赠卡家族同源
+    取池)→ 达标阈值零发放、done 零追加(整体缓发,禁「具名分支已发、
     done 未封」半发放态);恢复后同计数下批正常发放——防未来注册表/校验
     重构把守卫无声删改时无红灯。"""
     monkeypatch.setattr(cw_env_grants, 'grant_char_pool', lambda gs, spec: [])

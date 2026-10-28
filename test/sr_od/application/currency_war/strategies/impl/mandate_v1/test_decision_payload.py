@@ -1,4 +1,4 @@
-"""mandate_v1 决策载荷锁面(三键组与直算一致 + 回退腿两态 + wrapper 降级)。
+"""mandate_v1 决策载荷锁面(三键组与直算一致 + 回退分支两态 + wrapper 降级)。
 
 被测 = src/sr_od/application/currency_war/strategies/impl/mandate_v1/
 decision_payload.py(build_decision_payload)与 bridge.MandateV1Strategy.
@@ -103,7 +103,7 @@ def _assert_window_matches_direct(gs: GameState, payload: dict,
 
 def test_locked_frame_three_keys_and_window_consistent() -> None:
     """锁定帧三键直算一致:direction(锁定/线名/候选清空)+ k_members
-    (锁定线名单)+ k_fallback(腿未运行)+ window(结论与 sig 同查表序);
+    (锁定线名单)+ k_fallback(分支未运行)+ window(结论与 sig 同查表序);
     另锁 payload 可 JSON 序列化(sink json.dumps 前置契约)。"""
     gs = cw4_gs(None, plane=1, round_num=2, node='prep',
                 bench=[cw4_bc('花火')])
@@ -153,8 +153,8 @@ def test_unlocked_recipe_frame_window_set_boundary() -> None:
 
 
 def test_k_fallback_hit_and_miss_states() -> None:
-    """回退腿两态与 cw_intention 直调一致:方向缺 ∧ 意向缺帧 = 腿未
-    运行(hit=False/band='');方向缺 ∧ 意向在场 = 腿运行,带名与成员集
+    """回退分支两态与 cw_intention 直调一致:方向缺 ∧ 意向缺帧 = 分支未
+    运行(hit=False/band='');方向缺 ∧ 意向在场 = 分支运行,带名与成员集
     与 k_empty_window_fallback 同参直调一致(空板面 P1 = p1_gap 带)。"""
     # 未命中态:无方向、无意向载体(保守侧不回退)
     gs_miss = cw4_gs(None, plane=1, round_num=2, node='prep')
@@ -169,7 +169,7 @@ def test_k_fallback_hit_and_miss_states() -> None:
     members, band = cw_intention.k_empty_window_fallback(
         gs_hit, state_of(gs_hit).v3_intention,
         session=gs_hit, registry=DEFAULT_REGISTRY)
-    assert members, '前置:测试场景回退腿应产出非空成员集'
+    assert members, '前置:测试场景回退分支应产出非空成员集'
     assert payload_hit['k_fallback'] == {'hit': True, 'band': band}
     assert payload_hit['k_members'] == sorted(members)
 
@@ -179,7 +179,7 @@ def test_payload_hook_exception_degrades_via_wrapper() -> None:
     wrapper,决策返回值不受影响;sink = 内存假闭包,teardown 摘除)。"""
 
     class _PayloadBoomStrategy(MandateV1Strategy):
-        """mandate 实类 + payload 必抛(降级腿场景)。"""
+        """mandate 实类 + payload 必抛(降级分支场景)。"""
 
         def decide_partner(self) -> CwActionPickPartnerParam:
             return CwActionPickPartnerParam(idx=0, reason='probe')

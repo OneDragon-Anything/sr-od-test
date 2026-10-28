@@ -317,8 +317,8 @@ class TestOrePadPredicate:
 
     def test_pad_predicate_matrix(self):
         """合取六项逐项否决:1★ / 非线内 / 非合成素材 / 非通用插件 /
-        非保护集(统一保护集 design §2.3 垫件腿迁移——registry 核心
-        〔希儿〕与四体系件〔卡芙卡〕同被保护身份腿排除)/ 非引擎件
+        非保护集(统一保护集 design §2.3 垫件分支迁移——registry 核心
+        〔希儿〕与四体系件〔卡芙卡〕同被保护身份分支排除)/ 非引擎件
         (种子身份层);全过 = 纯垫件。"""
         _sess, gs = _mk_gs(bench=[cw4_bc('万敌')],
                            front_row=[_fu('三月七')])
@@ -337,7 +337,7 @@ class TestOrePadPredicate:
     def test_ore_consumption_pads_filter_not_pool_head(self):
         """晶矿消费 = 垫件谓词过滤后取价值最小(非全池排序首位判断——
         价值函数无垫件身份维):通用插件件刻律德菈(3费 1★,非垫件——
-        插件腿,非保护身份)按金当量排首位,垫件过滤后取到的是高费纯垫件
+        插件分支,非保护身份)按金当量排首位,垫件过滤后取到的是高费纯垫件
         Archer(对照件须在保护集身份段外的常规面在池;统一保护集
         changes/2026-10-15-unified-protection-set design.md §2.3——原
         引擎件卡芙卡样本已属保护档,常规面禁卖,不再在池)。"""

@@ -387,7 +387,7 @@ class TestLock1DeadlockDominance:
         """行为测试①(2.1.3 死锁帧支配语义):非重买集素材对(账龄 ≥N)+
         缺口件死锁帧 → M4 卖对成员腾席。
 
-        校验 2.1.3:B 弱支配 A(帧内持有收益 0 成本 V_slot>0);卖出腿 =
+        校验 2.1.3:B 弱支配 A(帧内持有收益 0 成本 V_slot>0);卖出分支 =
         m4_fuel_sell,释放/卖出两键显影,腾出席位不再耗竭。释放集单点
         函数直读:对成员入集(判据 (a)(b)(c) 合取正例),kept 面零计数。"""
         sess, gs, frame = _prep_frame(pair_ledger_round=2)
@@ -560,7 +560,7 @@ class TestCriterionUnits:
         deployed-only 判读 = 漏保护向);(b) 基准 = 义务重买集:线内名
         (未锁态 base = k_members)对 → kept_k,不入释放集(买家空集
         论证辖域外)。"""
-        # N4:bench 侧 2★ 链腿
+        # N4:bench 侧 2★ 链分支
         sess = StrategySession()
         gs = game_state_of(sess)
         gs.write_logic(gs.node, NodeKey(plane=1, round_num=_ROUND,
@@ -574,7 +574,7 @@ class TestCriterionUnits:
         release = sell_gate.dead_pair_exit_release(
             sess, (), bench, [], _ROUND,
             counters=state_of(sess).cw4_counters)
-        assert release == frozenset(), 'bench 侧 2★ 链腿未被保留(N4 漏保护)'
+        assert release == frozenset(), 'bench 侧 2★ 链分支未被保留(N4 漏保护)'
         assert state_of(sess).cw4_counters.get(
             'dead_pair_exit_guard_kept_chain') == 1
         # (b):线内名对 → kept_k

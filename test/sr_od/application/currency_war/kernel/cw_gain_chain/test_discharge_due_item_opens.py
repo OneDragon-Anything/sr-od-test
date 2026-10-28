@@ -7,8 +7,8 @@ invest-effects-calc/designs/T-34-mingyun-liwu.md)§2.4 + §4 锁 4/5/9:
 - **到点矩阵**:eff < unlock 零写零弹;eff = unlock 弹除;eff > unlock
   照常命中(「到了及以后都算」,错过不悬空);eff None 零写;命中集空
   零写;
-- **零席位写**(战利品区件锁):开盒 = 队列弹除零消耗腿,bench/
-  overflow/equips 逐位不变——防实现批按 v1 占席惯性加消耗腿;
+- **零席位写**(战利品区件锁):开盒 = 队列弹除零消耗分支,bench/
+  overflow/equips 逐位不变——防实现批按 v1 占席惯性加消耗分支;
 - **独立弹除**:重复获得的两条队列条目按各自解锁位独立命中。
 """
 from __future__ import annotations
@@ -101,7 +101,7 @@ def test_due_at_and_after_unlock_discharges(monkeypatch) -> None:
 
 def test_discharge_zero_seat_write_and_independent_entries(
         monkeypatch) -> None:
-    """零消耗腿 + 独立弹除(T-34 设计 §4 锁 5 + 锁 9 弹除半边):开盒
+    """零消耗分支 + 独立弹除(T-34 设计 §4 锁 5 + 锁 9 弹除半边):开盒
     前后 bench/overflow/equips 逐位不变(战利品区件锁——无席位槽可消耗,
     开出的奖励若落席由现役观察自然捕捉);重复获得两条条目按各自解锁位
     独立命中,未到点条目保留。"""
@@ -113,7 +113,7 @@ def test_discharge_zero_seat_write_and_independent_entries(
     assert effects == ('item_opened:惊喜盒',), '仅到点条目命中'
     assert gs.pending_item_opens.value == (('惊喜盒', (2, 4)),), \
         '未到点条目保留(独立弹除)'
-    assert gs.bench.value == bench_before, 'bench 逐位不变(零消耗腿)'
+    assert gs.bench.value == bench_before, 'bench 逐位不变(零消耗分支)'
     assert gs.overflow_warning.value is None, 'overflow_warning 零写'
     assert gs.overflow_card.value is None, 'overflow_card 零写'
     assert gs.equips.value == [], 'equips 逐位不变'

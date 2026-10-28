@@ -136,7 +136,7 @@ def test_action_key_faces_pinned_per_class():
     - 行为参数入键(变化 → 键变 = 幂等键分裂);
     - 发射臂路由标签不入键(同槽不同 tag = 同一动作实例);
     - 容器下标字段(bench_idx/deployed_idx)构成键面(替换物理槽位字段)。
-    (原「键串 = 归一前族A 形态逐字」腿降规格:逐字 repr 校验的是 Python
+    (原「键串 = 归一前族A 形态逐字」分支降规格:逐字 repr 校验的是 Python
     repr 格式,过度规格,消费面只需键稳定性与粒度。)"""
     # CwActionSellBenchParam:行为参数分裂幂等键;route_tag(发射臂路由标签)不入键
     assert action_key(CwActionSellBenchParam(bench_idx=3)) != \

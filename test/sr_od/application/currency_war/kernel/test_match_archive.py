@@ -222,7 +222,7 @@ def _seed_wrong_archive(md: Path, gid: str, seg_rids: list[str],
 def test_assemble_converges_double_counted_segment(tmp_path: Path):
     """装配收尾守卫收敛双计段:正确归属档案持有、错误档案摘除、核验归零;
     错误档案按当前口径整体重装配收敛(段集摘除续段,重装配路径不产生
-    剪枝记录——「不产剪枝记录」腿原属 rebuild 测试,并入)。"""
+    剪枝记录——「不产剪枝记录」分支原属 rebuild 测试,并入)。"""
     rd = tmp_path / 'live'
     md = ma.matches_dir(rd)
     b_rows = [_row(_R_B, '2026-09-08T12:00:00', 2, 6),
@@ -241,7 +241,7 @@ def test_assemble_converges_double_counted_segment(tmp_path: Path):
     for rows in _read_archive(md, _G_C).get('slices', {}).values():
         assert all(r.get('run_id') != _R_B for r in rows)
     assert ma.find_cross_archive_segment_dups(rd) == []
-    # 收敛形态(并入腿):C 档段集摘除 B(按当前口径只剩本局段),且
+    # 收敛形态(并入分支):C 档段集摘除 B(按当前口径只剩本局段),且
     # 整体重装配路径不产生剪枝记录(pruned_segments 仅定向剪枝路径显影)
     arch_c = _read_archive(md, _G_C)
     assert _seg_rids(arch_c) == [_R_C]
@@ -435,7 +435,7 @@ def test_assemble_rebuilds_derived_columns_from_legacy_streams(tmp_path: Path):
     assert rounds[0]['shop_snapshots'] and rounds[0]['outcome']['hp_after'] == 80
     assert [r['terminal_closure'] for r in rounds] == \
         ['start_battle', 'start_battle', 'start_battle']
-    # 败场节点:v9 步进链(两结算腿)+ 终局腿(result=loss 兜底)
+    # 败场节点:v9 步进链(两结算分支)+ 终局分支(result=loss 兜底)
     assert arch['loss_nodes'] == [
         {'plane': 1, 'round': 2, 'node_type': 'battle', 'hp': 60,
          'delta': -20, 'hp_source': 'settlement', 'outcome_source': '',
@@ -583,8 +583,8 @@ def _final_rows() -> list[dict]:
 #  判读/档案消费面无人读 gs_schema['match_final'] 键——write 系测试红时
 #  同故障,子集断言不留。)
 # (收口整删)原 test_match_final_closed_vocab「终局类型词表封闭集」:
-#  集外炸错腿并入下方原子行测试(常量字面断言不留);原
-#  test_match_final_version_stamps「版本戳」:载荷戳腿并入原子行测试,
+#  集外炸错分支并入下方原子行测试(常量字面断言不留);原
+#  test_match_final_version_stamps「版本戳」:载荷戳分支并入原子行测试,
 #  解析器等值对拍半(kernel 复刻 vs telemetry 单一源双实现等值)随该测试退役
 #  ——src 侧 cw_game_state.py 常量段注释仍指针本文件对拍,收口申报见报告。
 # 原 test_write_match_final_default_duration_segment_level「duration_s
@@ -707,7 +707,7 @@ def test_match_final_listener_fires_unarmed_and_offmatch(tmp_path) -> None:
 
 
 # (收口整删)原 test_obs_event_vocab_closed_set「obs_event 事件词表封闭
-#  集(硬约束 2)」删:常量字面断言 + 炸错腿 = 事实源在 cw_vocab 词表定义,
+#  集(硬约束 2)」删:常量字面断言 + 炸错分支 = 事实源在 cw_vocab 词表定义,
 #  集外炸错由 pytest.raises 形态与封闭集测试同构面承重不成立——如实申报:
 #  note_obs_event 集外炸错行为现无独立测试,词表漂移归 kernel 既有测试与
 #  review 面(覆盖缺口随收口申报)。
@@ -856,7 +856,7 @@ def test_match_final_payload_carries_cw4_aggregate(journal, run_id) -> None:
     """载荷聚合测试:write_match_final(cw4_counters=…) → 载荷原样落账;
     写口浅拷贝(传入容器后写不串账)。None = 无策略载体诚实缺省;聚合键
     进 journal 局终行 after 载荷,行行自足可读(判读直接读行,零重放;
-    原 cw4_aggregate_in_journal_row 行可见性腿并入)。"""
+    原 cw4_aggregate_in_journal_row 行可见性分支并入)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     counters = {'shop_churn_pair_buy': 3, 'launch_frame_idle_gold': 120}
     assert write_match_final(gs, final_type='loss',
@@ -866,7 +866,7 @@ def test_match_final_payload_carries_cw4_aggregate(journal, run_id) -> None:
     assert payload.cw4_counters is not counters, '载荷持快照副本非容器引用'
     counters['shop_churn_pair_buy'] = 99
     assert payload.cw4_counters['shop_churn_pair_buy'] == 3, '后写不串'
-    # 行可见性腿(并入):journal 局终行 after 携带聚合键(快照态,不受
+    # 行可见性分支(并入):journal 局终行 after 携带聚合键(快照态,不受
     # 后写串改)
     rows = _final_rows()
     assert rows and rows[0]['after']['cw4_counters'] == {

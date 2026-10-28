@@ -1,19 +1,19 @@
-"""on_env_gained 持续伤害契约分支测试:即时腿回归 + 锚键腿(镜像 src =
+"""on_env_gained 持续伤害契约分支测试:即时分支回归 + 锚键分支(镜像 src =
 kernel/cw_gain_chain.py 的该被测函数,按拆目录规范落位;同函数兄弟测试 =
 kernel/test_gain_chain.py ENV_GIFTS 分道段〔超限只读复用〕)。
 
 测试面依据 = T-28 设计稿(迭代 2026-09-23-invest-effects-calc,
 designs/T-28-chixu-shanghai-qiyue.md)§2.1/§2.4 + §4.3:
-- **即时腿回归**:获得环境当刻 gain_character 发椒丘+卡芙卡(desc 无
+- **即时分支回归**:获得环境当刻 gain_character 发椒丘+卡芙卡(desc 无
   数量/星级词,单数缺省 1★ 先验族)——本批零改动,回归锁;
-- **锚键腿**:'dot_anchor#<位面>-<轮>' 纯登记件非门控,获得刻与即时腿
+- **锚键分支**:'dot_anchor#<位面>-<轮>' 纯登记件非门控,获得刻与即时分支
   同窗相邻 write_logic 直写(同 evidence 同 sig);节点未知不写且须显式
   判 node——``_node_frame`` 未观察返回空串,照抄会产出 'dot_anchor#-'
   畸形键;开局三选一获取时 sim 节点未进窗 → 缺锚 = 预期形态。
 
 追加面 = T-33 英雄登场设计(.debug/progress/2026-09-23-invest-effects-
 calc/designs/T-33-yingxiong-dengchang.md)§2.3 + §4 锁 2/3/4/9/11:
-随机赠卡锁腿(采样发卡 + 发号 + 锁域写 + 完胜作用域键 done,四笔同窗)
+随机赠卡锁分支(采样发卡 + 发号 + 锁域写 + 完胜作用域键 done,四笔同窗)
 / 未锚定窗防御基准 / rng 链确定性 / 溢出解耦 / 表外环境安静。
 
 再追加面 = T-42 特邀专家:银狼设计(designs/T-42-teyao-zhuanjia-yinlang.md)
@@ -22,7 +22,7 @@ calc/designs/T-33-yingxiong-dengchang.md)§2.3 + §4 锁 2/3/4/9/11:
 fail-closed 零写 + 缺陷行 / 在场判定覆盖 deployed 与溢出位。
 
 再追加面 = T-45 敌后破坏设计(designs/T-45-dihou-pohuai.md)§4 锁 1/2/6:
-词缀失效删除腿(均匀随机删 1 → 随机态写回四断言)/ 空容器零写 + 申报行 /
+词缀失效删除分支(均匀随机删 1 → 随机态写回四断言)/ 空容器零写 + 申报行 /
 装备佩戴豁免跟随解除。锁面 5(HP 词缀回调)归 kernel/test_cw_opening_hp.py
 (回调宿主镜像);锁面 7(sim 追加链)归 sim/cw_sim_backend/(流程级镜像);
 锁面 3/4(写门三分支/触发链)归 operations/cw_screen/test_plane_intel_pipeline.py
@@ -39,7 +39,7 @@ kernel/test_gain_chain.py 随机装备通道段三锁(超限文件,禁追加,跑
 再追加面 = 概念股族展开卡(燃血概念股 id 1002,T-49;概念股族展开卡
 登记约定,正本 = fields.md §5.2 效果缺口与载体登记 + gain-chain.md §3
 随机支/随机装备支段):族内第二实例,与追击测试同构仅值异——燃血域
-随机支发放腿 + 绑定门非绑定态(seed 消耗序同构,期望名改从燃血池/
+随机支发放分支 + 绑定门非绑定态(seed 消耗序同构,期望名改从燃血池/
 简易池现算)。
 """
 from __future__ import annotations
@@ -118,14 +118,14 @@ def _record_writes(gs: GameState,
 
 def test_immediate_leg_and_anchor_same_window(
         monkeypatch) -> None:
-    """即时腿 + 锚键腿同窗(设计稿 §2.4/§2.1):节点窗已开时获得环境 →
-    bench 增椒丘+卡芙卡(1★ 确定发放,即时腿零改动回归)+ done 追加锚键
-    'dot_anchor#1-3'(纯登记非门控,与即时腿同 evidence 同 sig 相邻,
+    """即时分支 + 锚键分支同窗(设计稿 §2.4/§2.1):节点窗已开时获得环境 →
+    bench 增椒丘+卡芙卡(1★ 确定发放,即时分支零改动回归)+ done 追加锚键
+    'dot_anchor#1-3'(纯登记非门控,与即时分支同 evidence 同 sig 相邻,
     write_logic 直写登记事实)。"""
     gs = _make_gs(node=True)
     calls = _record_writes(gs, monkeypatch)
     effects = on_env_gained(gs, None, _ENV, rand=False, sig=_SIG)
-    assert effects == ('env_gift:椒丘', 'env_gift:卡芙卡'), '即时腿效果串'
+    assert effects == ('env_gift:椒丘', 'env_gift:卡芙卡'), '即时分支效果串'
     assert _bench_units(gs) == [('椒丘', 1), ('卡芙卡', 1)], '两名 1★ 入席'
     assert gs.env_grants_done.value == ((_ENV, 'dot_anchor#1-3'),), \
         '锚键纯登记(帧 = 位面-轮)'
@@ -133,58 +133,58 @@ def test_immediate_leg_and_anchor_same_window(
                  if c[0] == 'env_grants_done']
     assert done_rows == [('env_grants_done', _EVIDENCE, 'logic',
                           GAIN_CHAIN_PRODUCER)], f'锚键单笔直写: {done_rows}'
-    assert calls[-1][3] == _SIG, '锚键与即时腿同 sig(同窗相邻)'
+    assert calls[-1][3] == _SIG, '锚键与即时分支同 sig(同窗相邻)'
 
 
 def test_anchor_skipped_when_node_not_in_window(monkeypatch) -> None:
     """节点未知不写(设计稿 §2.1 显式判 node + §4.1⑥ 缺锚形态):开局
-    三选一获取时 sim 节点尚未进窗(node None)→ 即时腿照常、零锚键零
+    三选一获取时 sim 节点尚未进窗(node None)→ 即时分支照常、零锚键零
     畸形键(缺锚不影响猜测写/计数/证实,check_env_dot_grants 门控 =
     active_env)。"""
     gs = _make_gs(node=False)
     calls = _record_writes(gs, monkeypatch)
     effects = on_env_gained(gs, None, _ENV, rand=False, sig=_SIG)
-    assert effects == ('env_gift:椒丘', 'env_gift:卡芙卡'), '即时腿照常'
+    assert effects == ('env_gift:椒丘', 'env_gift:卡芙卡'), '即时分支照常'
     assert not gs.env_grants_done.value, '零锚键(开局形态预期)'
     assert all('dot_anchor' not in (c[1] or '') for c in calls), \
         '无畸形键痕迹(禁 dot_anchor#- 形态)'
 
 
 def test_skill_point_contract_immediate_leg_regression(monkeypatch) -> None:
-    """战技点契约即时腿回归(T-29 设计 §1/§4 锁 8):获得环境当刻
+    """战技点契约即时分支回归(T-29 设计 §1/§4 锁 8):获得环境当刻
     chars_immediate 逐名确定发放(1★,desc 无数量/星级词单数缺省)→
     bench 增丹恒·饮月+花火各 1——现役通道逐位不变,锁不被晶矿开启
-    条件腿批次扰动;获得刻零晶矿触发 done(条件腿归
+    条件分支批次扰动;获得刻零晶矿触发 done(条件分支归
     check_env_ore_open_grants,打开晶矿计数达标才发,获得刻零预登记)。"""
     gs = _make_gs()
     calls = _record_writes(gs, monkeypatch)
     effects = on_env_gained(gs, None, '战技点契约', rand=False, sig=_SIG)
-    assert effects == ('env_gift:丹恒·饮月', 'env_gift:花火'), '即时腿效果串'
+    assert effects == ('env_gift:丹恒·饮月', 'env_gift:花火'), '即时分支效果串'
     assert _bench_units(gs) == [('丹恒·饮月', 1), ('花火', 1)], \
         '两名 1★ 入席(确定发放)'
     assert gs.env_grants_done.value is None, '获得刻零晶矿触发 done'
     assert all('ore_open' not in (c[1] or '') for c in calls), \
-        '零 ore_open 写行痕迹(条件腿不随获得刻触发)'
+        '零 ore_open 写行痕迹(条件分支不随获得刻触发)'
 
 
 def test_stellar_hunter_contract_immediate_leg_regression() -> None:
-    """星核猎手契约即时腿回归(T-30 设计 §4 锁 8):获得环境当刻
+    """星核猎手契约即时分支回归(T-30 设计 §4 锁 8):获得环境当刻
     chars_immediate 确定发放(卡芙卡 1★,desc 无数量/星级词单数缺省)
-    → bench 增卡芙卡 1——现役通道逐位不变;其 **uid 恒 None**(即时腿
-    不传 uid 形参,实例号仅条件腿发放刻赋号)。"""
+    → bench 增卡芙卡 1——现役通道逐位不变;其 **uid 恒 None**(即时分支
+    不传 uid 形参,实例号仅条件分支发放刻赋号)。"""
     gs = _make_gs()
     effects = on_env_gained(gs, None, '星核猎手契约', rand=False, sig=_SIG)
-    assert effects == ('env_gift:卡芙卡',), '即时腿效果串'
+    assert effects == ('env_gift:卡芙卡',), '即时分支效果串'
     placed = [s.unit for s in gs.bench.value.slots
               if s is not None and s.kind == 'unit' and s.unit is not None]
     assert [(u.char_id, u.star, u.uid) for u in placed] == \
         [('卡芙卡', 1, None)], '1★ 入席且无实例号(锁域零记录)'
-    assert not gs.env_grant_deploy_locks.value, '即时腿零锁记录'
-    assert not gs.env_grant_uid_seq.value, '即时腿零发号'
+    assert not gs.env_grant_deploy_locks.value, '即时分支零锁记录'
+    assert not gs.env_grant_uid_seq.value, '即时分支零发号'
 
 
-# ============================================================ 随机赠卡锁腿
-# (环境「随机赠卡+上场锁」登记表发放腿;迭代 2026-09-23-invest-effects-
+# ============================================================ 随机赠卡锁分支
+# (环境「随机赠卡+上场锁」登记表发放分支;迭代 2026-09-23-invest-effects-
 # calc T-33 英雄登场设计 §2.3 + §4 锁 2/3/4/9/11。解锁位数学:获得刻生效
 # 序位 (1,1) 沿默认表步进 19 步 = (3,4)(序 20)。)
 
@@ -202,7 +202,7 @@ def _make_gs_node_pos(node_pos: tuple[int, int] | None) -> GameState:
 
 def test_deploy_lock_grant_leg_seeded_roll_full_writes(
         monkeypatch) -> None:
-    """赠卡锁腿四笔同窗写(T-33 设计 §4 锁 2):固定种子 → bench 追加
+    """赠卡锁分支四笔同窗写(T-33 设计 §4 锁 2):固定种子 → bench 追加
     1 张 2★ 且名 ∈ 5 费规格池、uid 非空(发号 0→1);锁记录 =
     ((名, uid, (3,4)),)(默认表,(1,1) 步进 19);done 含
     deploy_lock_uid#<uid>;效果串两行(env_gift_random:/env_deploy_lock:
@@ -319,7 +319,7 @@ def test_deploy_lock_grant_leg_overflow_decoupled(monkeypatch) -> None:
 def test_non_registered_env_stays_quiet(monkeypatch) -> None:
     """表外环境安静不写(T-33 设计 §4 锁 11;早退出口改形回归半边):
     INVESTMENT_ENVS 在册但零登记表命中(轮岗)→ 效果串恒空逐位不变
-    (() 形态)、零容器写——赠卡锁腿为表外环境零写径。"""
+    (() 形态)、零容器写——赠卡锁分支为表外环境零写径。"""
     gs = _make_gs_node_pos((1, 1))
     calls = _record_writes(gs, monkeypatch)
     seq_before = gs.write_seq
@@ -330,7 +330,7 @@ def test_non_registered_env_stays_quiet(monkeypatch) -> None:
 
 
 # ============================================================ 延迟道具支线
-# (环境「战利品区倒计时件」获得腿;迭代 2026-09-23-invest-effects-calc
+# (环境「战利品区倒计时件」获得分支;迭代 2026-09-23-invest-effects-calc
 # T-34 命运礼物设计 §2.3 + §4 锁 2/3/9。解锁位数学:获得刻生效序位 (1,1)
 # 沿默认表步进 12 步 = (2,4)(计数起点 = 获得节点计入,设计裁决点 3)。)
 
@@ -339,7 +339,7 @@ _DELAYED_ENV = '命运礼物'
 
 def test_delayed_item_grant_leg_enqueues_zero_seat_write(
         monkeypatch) -> None:
-    """到手腿入队(T-34 设计 §4 锁 2):获得命运礼物 → 队列 =
+    """到手分支入队(T-34 设计 §4 锁 2):获得命运礼物 → 队列 =
     (('惊喜盒', (2, 4)),)((1,1) 步进 12)+ 效果串 item_open_scheduled:
     惊喜盒@2-4 + done 含 (命运礼物, delayed_open_accel);**零席位写**
     (占席证伪锁:bench/overflow/equips 任何字段零写,惊喜盒 = 战利品区
@@ -426,7 +426,7 @@ def _make_gs_seeded() -> GameState:
 
 def test_expert_seminar_dual_item_grants_card_text_order(
         monkeypatch) -> None:
-    """发放腿(T-39 设计 §2.1/§2.4 + §4 锁 2):种子底座直构 → 选专家
+    """发放分支(T-39 设计 §2.1/§2.4 + §4 锁 2):种子底座直构 → 选专家
     研讨会 → bench 落两槽,kind 序 = ['bookcard', 'supply_box'] 且 item 名
     逐槽 = ['专家邀请函', '简易武装箱'](卡文序);效果串两行
     ``item_gift:<名>`` 顺序同卡文(发放事实恒登记)。"""
@@ -496,7 +496,7 @@ def _make_conditional_gs(*, bench: list[tuple[str, int]] | None = (),
 
 
 def test_seed_start_lv999_unlocks_on_env_gain(rows_sink: _RowSink) -> None:
-    """种子起手解锁(设计 §4 锁 5 主腿,锁裁定④防误改回「种子不解锁」):
+    """种子起手解锁(设计 §4 锁 5 主分支,锁裁定④防误改回「种子不解锁」):
     开局 bench 已含银狼LV.999,获得环境特邀专家:银狼 → 挂点④在场判定
     解锁,效果串 advisor_unlock:特邀专家:银狼:银狼(与即时形态同形);
     解锁 evidence = 环境获得族后缀(provenance 由环境名可辨)。"""
@@ -553,7 +553,7 @@ def test_presence_covers_deployed_and_overflow(rows_sink: _RowSink) -> None:
     assert rows_sink.kinds() == [], '命中路径零缺陷行'
 
 
-# ============================================================ 词缀失效删除腿
+# ============================================================ 词缀失效删除分支
 # (敌后破坏 id 146;T-45 设计稿(.debug/progress/2026-09-23-invest-effects-
 # calc/designs/T-45-dihou-pohuai.md)§2.1 + §4 锁 1/2/6:删除式建模——
 # 词缀名单非空时均匀随机删 1、剩余列表整条替换写回(经 _select_write
@@ -574,8 +574,8 @@ def _make_affix_gs(affixes: list[str] | None) -> GameState:
 
 
 def _with_slot_rng(seed: int):
-    """动作腿采样注入槽临时装配(上下文管理器,退出即关;
-    删除腿经 action_sampling_rng('env_affix_disable', None) 取槽)。"""
+    """动作分支采样注入槽临时装配(上下文管理器,退出即关;
+    删除分支经 action_sampling_rng('env_affix_disable', None) 取槽)。"""
     from sr_od.application.currency_war.kernel.cw_action_report import (
         set_action_rng_provider,
     )
@@ -591,7 +591,7 @@ def _with_slot_rng(seed: int):
 
 
 def test_affix_disable_deletion_leg_random_state_write(monkeypatch) -> None:
-    """删除采样腿四断言(T-45 设计 §4 锁 1):rng 注入定值下选敌后破坏 →
+    """删除采样分支四断言(T-45 设计 §4 锁 1):rng 注入定值下选敌后破坏 →
     ①enemy_affixes 长度 -1(采样命中名整条移除,剩余整条替换);②来源
     logic_rand(rand=True 声明采样链);③logic_rand_fields() 含
     enemy_affixes(补观察谓词消费口);④效果串 env_affix_disable:<名>
@@ -616,7 +616,7 @@ def test_affix_disable_deletion_leg_random_state_write(monkeypatch) -> None:
 
 
 def test_affix_disable_slot_scoped_to_hit(monkeypatch) -> None:
-    """采样腿具名流键命中前置(T-45 设计 §2.1 仿 env_merge_grant 形态):
+    """采样分支具名流键命中前置(T-45 设计 §2.1 仿 env_merge_grant 形态):
     注入槽只在敌后破坏命中时取一次且键名精确;他环境(表外轮岗)零取槽
     ——不扰他局流键序。"""
     from sr_od.application.currency_war.kernel.cw_action_report import (
@@ -693,14 +693,14 @@ _CONCEPT_ENV = '追击概念股'
 
 
 def _make_gs_with_equips() -> GameState:
-    """直构容器(bench 9 空槽 + equips 空库):装备腿接收面。"""
+    """直构容器(bench 9 空槽 + equips 空库):装备入账分支接收面。"""
     gs = _make_gs()
     gs.observe(gs.equips, [], sig=_SIG_OBS)
     return gs
 
 
 def test_concept_stock_faxis_char_grant_leg(rows_sink: _RowSink) -> None:
-    """阵营支发放腿(gain-chain.md §3 随机支段:阵营轴 = 牌库时点池掷骰,
+    """阵营支发放分支(gain-chain.md §3 随机支段:阵营轴 = 牌库时点池掷骰,
     两族同一循环同一前缀):固定种子 rng 直构 → bench 追加 1 张 1★ 且名
     ∈ 阵营池现算集(grant_char_pool 阵营 spec = 规格域 ∩ 当时牌库,未解锁
     专家剔除,注册表派生不手抄);效果串 ``env_gift_random:<名>@1star``
@@ -722,12 +722,12 @@ def test_concept_stock_faxis_char_grant_leg(rows_sink: _RowSink) -> None:
 def test_concept_stock_random_equip_leg_unbound_no_done(
         rows_sink: _RowSink) -> None:
     """绑定门非绑定态(gain-chain.md §3 随机装备支段:非 ENV_BOSS_GRANTS
-    成员零绑定):追击概念股(非成员)随机装备腿 → 效果串
+    成员零绑定):追击概念股(非成员)随机装备入账分支 → 效果串
     ``env_equip_random:<名>`` 前缀(与绑定态 ``env_star_grant:`` 分域)、
     env_grants_done 无 star_grant# 键(非成员零绑定写,治「无条件绑定
     等第二个消费者」缺陷);装备照常入栏且名 ∈ 类别池现算集
-    (equips_by_category('简易') 注册表派生,不手抄)。两腿期望值从同
-    seed 现算(字符腿先掷、装备腿同 rng 续掷,与生产消费序一致)。"""
+    (equips_by_category('简易') 注册表派生,不手抄)。两条分支期望值从同
+    seed 现算(字符分支先掷、装备入账分支同 rng 续掷,与生产消费序一致)。"""
     from sr_od.application.currency_war.kernel.cw_investments import (
         equips_by_category,
     )
@@ -741,7 +741,7 @@ def test_concept_stock_random_equip_leg_unbound_no_done(
                         rng=random.Random(20261027))
     assert out == (f'env_gift_random:{expected_char}@1star',
                    f'env_equip_random:{expected_eq}'), \
-        '两腿效果串:非绑定前缀 env_equip_random:'
+        '两条分支效果串:非绑定前缀 env_equip_random:'
     assert gs.equips.value == [expected_eq], '装备入栏(类别池现算)'
     assert gs.env_grants_done.value is None, \
         '非绑定态零 done 键(无 star_grant# 绑定)'
@@ -757,7 +757,7 @@ _RANXUE_ENV = '燃血概念股'
 
 def test_ranxue_concept_stock_faction_char_grant_leg(
         rows_sink: _RowSink) -> None:
-    """燃血域随机支发放腿(gain-chain.md §3 随机支段:阵营轴 = 牌库时点
+    """燃血域随机支发放分支(gain-chain.md §3 随机支段:阵营轴 = 牌库时点
     池掷骰,两族同一循环同一前缀;概念股族展开卡登记约定):固定种子 rng
     直构 → bench 追加 1 张 1★ 且名 ∈ 阵营池现算集(grant_char_pool 阵营
     spec = 规格域 ∩ 当时牌库,未解锁专家剔除,注册表派生不手抄);效果串
@@ -781,11 +781,11 @@ def test_ranxue_concept_stock_random_equip_leg_unbound_no_done(
         rows_sink: _RowSink) -> None:
     """绑定门非绑定态第二实例(gain-chain.md §3 随机装备支段:非
     ENV_BOSS_GRANTS 成员零绑定;概念股族展开卡登记约定):燃血概念股
-    (非成员)随机装备腿 → 效果串 ``env_equip_random:<名>`` 前缀(与
+    (非成员)随机装备入账分支 → 效果串 ``env_equip_random:<名>`` 前缀(与
     绑定态 ``env_star_grant:`` 分域)、env_grants_done 无 star_grant#
     键(非成员零绑定写,治「无条件绑定等第二个消费者」缺陷);装备
     照常入栏且名 ∈ 类别池现算集(equips_by_category('简易') 注册表派生,
-    不手抄)。两腿期望值从同 seed 现算(字符腿先掷、装备腿同 rng 续掷,
+    不手抄)。两条分支期望值从同 seed 现算(字符分支先掷、装备入账分支同 rng 续掷,
     与生产消费序一致)。"""
     from sr_od.application.currency_war.kernel.cw_investments import (
         equips_by_category,
@@ -800,7 +800,7 @@ def test_ranxue_concept_stock_random_equip_leg_unbound_no_done(
                         rng=random.Random(20261027))
     assert out == (f'env_gift_random:{expected_char}@1star',
                    f'env_equip_random:{expected_eq}'), \
-        '两腿效果串:非绑定前缀 env_equip_random:'
+        '两条分支效果串:非绑定前缀 env_equip_random:'
     assert gs.equips.value == [expected_eq], '装备入栏(类别池现算)'
     assert gs.env_grants_done.value is None, \
         '非绑定态零 done 键(无 star_grant# 绑定)'

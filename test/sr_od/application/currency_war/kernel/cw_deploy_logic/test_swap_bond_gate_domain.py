@@ -1,4 +1,4 @@
-"""转型域双门核判据测试(判别子三合取/fenced 域腿/门 1 四腿/守恒/
+"""转型域双门核判据测试(判别子三合取/fenced 域分支/门 1 四条分支/守恒/
 资格面收窄/narrow_frame 迁移/完成品域参数化)。
 
 被测 = ``kernel/cw_deploy_logic.py`` 转型域判据族(design 2026-10-26-
@@ -6,19 +6,19 @@ swap-channel-unified §2.0/§2.1/§2.2/§2.2.1/§2.3/§2.3.1;组贪心计划形�
 另见同目录 test_select_swap_group_plan.py,mandate 发出分键见
 strategies 侧 test_emit_swap_bond_gate.py):
 
-- **判别子三合取**(§2.0):腿①终局阵容锁定(显式排除 p1_pair 腿②)
-  ∧ fp<1.00 ∧ 板满;三腿全继承现行语义;
+- **判别子三合取**(§2.0):分支①终局阵容锁定(显式排除 p1_pair 分支②)
+  ∧ fp<1.00 ∧ 板满;三条分支全继承现行语义;
 - **narrow_frame 谓词源迁移**(§2.3.1):``swap_transition_narrow_frame``
-  改挂新判别子全合取,终局锁定域语义逐帧对照现行(回滚常量腿缺省开,
-  等价 = 去腿),pair 帧不倒转进域;
-- **fenced 关门分支域腿钉死**(§2.3.1):混轨 locked(腿①∨腿②)∧
-  fp<1.00 ∧ 板满,无回滚常量腿,四行真值表逐帧;
-- **门 1 四腿 + 守恒**(§2.2/§2.3):成品腿/tier/support/star;守恒 =
+  改挂新判别子全合取,终局锁定域语义逐帧对照现行(回滚常量分支缺省开,
+  等价 = 去分支),pair 帧不倒转进域;
+- **fenced 关门分支域分支钉死**(§2.3.1):混轨 locked(分支①∨分支②)∧
+  fp<1.00 ∧ 板满,无回滚常量分支,四行真值表逐帧;
+- **门 1 四条分支 + 守恒**(§2.2/§2.3):成品分支/tier/support/star;守恒 =
   终局档位非降(与门 1① 同一计数函数);
 - **target_keep 口径收窄 + 让位白名单 + 义务集豁免**(§2.2/§2.2.1);
 - **完成品分支域参数化**(§2.3):双轨域 fp✗→✓ 照旧,转型域门 1④
   同源折法(同一 ``_completion_swap_ins`` 单点门);
-- **evolution 触发谓词域腿不迁移**(§2.3.1 钉死,零行为差);
+- **evolution 触发谓词域分支不迁移**(§2.3.1 钉死,零行为差);
 - **k_members 装配单一源对账**:core∪shared 与
   ``predicates.line_members`` 全注册表等价(装配注释声明的等价性测试)。
 """
@@ -100,7 +100,7 @@ def _gate_ctx(*, board: list[str], bench: list[str], cap: int,
               protect_names: frozenset[str] | None = None,
               ) -> SwapPlanContext:
     """转型域 ctx 直构(1★ 单元格缺省;locked = 混轨方向锁,
-    locked_core 随同 = 腿①在效;pair 帧(腿②)构造见
+    locked_core 随同 = 分支①在效;pair 帧(分支②)构造见
     ``locked=False`` + 外部覆写或 test_deploy._swap_ctx)。"""
     comp_obj = get_comp(comp) if isinstance(comp, str) else comp
     stars = stars or {}
@@ -145,24 +145,24 @@ def _gate_ctx(*, board: list[str], bench: list[str], cap: int,
 # ============================================================
 
 def test_bond_gate_domain_discriminator_truth_table() -> None:
-    """转型域判别子三合取逐帧:腿① ∧ fp<1.00 ∧ 板满,三腿全继承现行语义;
-    pair 腿②(locked_core=False)帧不进本域;fp 缺读 = 域外(fail-closed)。"""
+    """转型域判别子三合取逐帧:分支① ∧ fp<1.00 ∧ 板满,三条分支全继承现行语义;
+    pair 分支②(locked_core=False)帧不进本域;fp 缺读 = 域外(fail-closed)。"""
     assert swap_bond_gate_domain_of(True, 0.5, True) is True
-    assert swap_bond_gate_domain_of(False, 0.5, True) is False, '腿①缺 = 域外'
+    assert swap_bond_gate_domain_of(False, 0.5, True) is False, '分支①缺 = 域外'
     assert swap_bond_gate_domain_of(True, 1.0, True) is False, '成型帧不进域'
     assert swap_bond_gate_domain_of(True, None, True) is False, 'fp 缺读 fail-closed'
     assert swap_bond_gate_domain_of(True, 0.5, False) is False, '板不满不进域'
 
-    # ctx 形态:腿①在效帧进域;pair 帧(腿②混轨 locked=True 而
+    # ctx 形态:分支①在效帧进域;pair 帧(分支②混轨 locked=True 而
     # locked_core=False)不进本域(design §2.0 显式排除)。
     ctx = _gate_ctx(board=[_GIL, _RIN, _QING, _TING, _YAO],
                     bench=[_SBR], cap=5)
     assert swap_bond_gate_domain(ctx) is True
     pair_ctx = _gate_ctx(board=[_GIL, _RIN, _QING, _TING, _YAO],
                          bench=[_SBR], cap=5)
-    pair_ctx.locked_core = False   # 配方对锁帧:混轨 locked 在而腿①不在
+    pair_ctx.locked_core = False   # 配方对锁帧:混轨 locked 在而分支①不在
     assert swap_bond_gate_domain(pair_ctx) is False, \
-        'pair 腿②帧不进转型域(判别子显式排除,design §2.0)'
+        'pair 分支②帧不进转型域(判别子显式排除,design §2.0)'
     assert swap_bond_gate_domain(None) is False
 
 
@@ -181,8 +181,8 @@ def test_k_members_assembly_matches_line_members() -> None:
 # ============================================================
 
 def test_narrow_frame_predicate_source_truth_table_equivalence() -> None:
-    """narrow_frame 迁移真值表等价:新判别子(去回滚常量腿)与现行语义
-    (常量恒 True ⇒ 腿① ∧ fp<1.00 ∧ 板满)逐帧等价——终局锁定域语义
+    """narrow_frame 迁移真值表等价:新判别子(去回滚常量分支)与现行语义
+    (常量恒 True ⇒ 分支① ∧ fp<1.00 ∧ 板满)逐帧等价——终局锁定域语义
     逐帧对照,禁静默分叉(design §2.3.1 谓词源迁移钉死)。"""
     for locked in (False, True):
         for fp in (None, 0.5, 1.0):
@@ -205,8 +205,8 @@ def test_narrow_frame_pair_domain_not_inverted() -> None:
     sess = _lad_session(locked=True)
     gs = cw4_gs(sess, **st)
     assert mandate.swap_transition_narrow_frame(gs, sess) is True, \
-        '终局锁定 D 帧收窄旗 = 判别子同值(腿① ∧ fp<1.00 ∧ 板满)'
-    # 配方对锁帧:locked_comp 空 = 腿①不在,恒 False(不收窄 = 保守侧)
+        '终局锁定 D 帧收窄旗 = 判别子同值(分支① ∧ fp<1.00 ∧ 板满)'
+    # 配方对锁帧:locked_comp 空 = 分支①不在,恒 False(不收窄 = 保守侧)
     comp = get_comp('列车同行')
     pair_sess = cw4_session(comp)
     state_of(pair_sess).v3_intention = IntentionState(p1_pair=('仙舟', '持续伤害'))
@@ -220,11 +220,11 @@ def test_narrow_frame_pair_domain_not_inverted() -> None:
 
 
 # ============================================================
-# fenced 关门分支域腿(design §2.3.1 四行真值表)
+# fenced 关门分支域分支(design §2.3.1 四行真值表)
 # ============================================================
 
 def test_fenced_gate_open_truth_table() -> None:
-    """fenced 关门分支域腿四行真值表(混轨,无回滚常量腿):
+    """fenced 关门分支域分支四行真值表(混轨,无回滚常量分支):
     未锁关门 / 锁定 pre-form 开门 / 成型帧关门 / fp 缺读关门(fail-closed)。"""
     assert fenced_swap_gate_open(False, 0.5, True) is False   # 未锁关门
     assert fenced_swap_gate_open(True, 0.5, True) is True     # 锁定 pre-form 开门
@@ -235,11 +235,11 @@ def test_fenced_gate_open_truth_table() -> None:
 
 def test_fenced_piece_per_frame_reject_keys() -> None:
     """fenced 件逐帧拒因(域外现行机器逐位照旧;pair 双轨帧经 p1_pair
-    腿②构造 = 混轨 locked):开门帧落资格族放行 / 成型帧与未锁帧
+    分支②构造 = 混轨 locked):开门帧落资格族放行 / 成型帧与未锁帧
     fenced_arm_closed / fp 缺读 fp_unreadable——`fenced_arm_closed` 拒因键
     保留(design §2.3.1)。"""
     board = ['卡芙卡', _XIER_G, '花火', _SANYUE]
-    # pair 帧(腿②):locked=True/locked_core=False,pair 真值键面
+    # pair 帧(分支②):locked=True/locked_core=False,pair 真值键面
     from test.sr_od.application.currency_war.kernel.test_deploy import (
         _swap_ctx,
     )
@@ -266,12 +266,12 @@ _SANYUE = '三月七'
 
 
 # ============================================================
-# 门 1 四腿 + 守恒(design §2.2/§2.3)
+# 门 1 四条分支 + 守恒(design §2.2/§2.3)
 # ============================================================
 
 def test_bond_gate_leg_completion_and_tier_and_support() -> None:
-    """门 1 首达腿检查序 ④→①→②(design §2.2 枚举表 C/G 行归因 ④;
-    A 行 ①② 同中归因 ①):成品腿(④,同源折法 form_progress)优先于
+    """门 1 首达分支检查序 ④→①→②(design §2.2 枚举表 C/G 行归因 ④;
+    A 行 ①② 同中归因 ①):成品分支(④,同源折法 form_progress)优先于
     tier;tier 优先于 support。"""
     ctx = _gate_ctx(board=[_GIL, _RIN, _QING, _TING, _YAO],
                     bench=[_SBR], cap=5)
@@ -370,15 +370,15 @@ def test_target_keep_narrowed_whitelist_channels() -> None:
 
 
 def test_membership_waived_in_bond_gate_only() -> None:
-    """义务集面域切分(design §2.2):``locked_buy_membership`` 拒卖腿在
+    """义务集面域切分(design §2.2):``locked_buy_membership`` 拒卖分支在
     转型域换人让位路径整体豁免(白名单三通道全免);域外(pair 帧)照旧
     buy_membership 拒。membership 缺读(None)弃权两侧保留在前。"""
     hoard = frozenset({_YAO, _QING, _TING, _RIN, _GIL})
     gate_ctx = _gate_ctx(board=[_GIL, _RIN, _QING, _TING, _YAO],
                          bench=[_SBR], cap=5, membership=hoard)
     assert swap_sell_exclusion_reason(_YAO, gate_ctx) == '', \
-        '转型域:义务集成员经让位白名单豁免拒卖腿(路径域豁免)'
-    # 域外 pair 帧(腿②):义务集拒照旧
+        '转型域:义务集成员经让位白名单豁免拒卖分支(路径域豁免)'
+    # 域外 pair 帧(分支②):义务集拒照旧
     from test.sr_od.application.currency_war.kernel.test_deploy import (
         _swap_ctx,
     )
@@ -424,7 +424,7 @@ def test_roster_channel_3a_and_3b_availability() -> None:
 
 def test_completion_branch_dual_domain_same_source() -> None:
     """完成品分支判据域参数化:双轨域(pair 帧)fp✗→✓ 照旧 + 转型域
-    (腿①)门 1④ 同源折法——同一 ``_completion_swap_ins`` 单点门两域
+    (分支①)门 1④ 同源折法——同一 ``_completion_swap_ins`` 单点门两域
     各自适用范围,禁复制第二实现(候选集同吃,三消费位零签名)。"""
     # 双轨域:pair 对锁帧完成件(现行 test_deploy 完成通道帧面)
     from test.sr_od.application.currency_war.kernel.test_deploy import (
@@ -448,14 +448,14 @@ def test_completion_branch_dual_domain_same_source() -> None:
 
 
 def test_evolution_arm_trigger_domain_legs_unchanged() -> None:
-    """evolution_swap_arm_trigger 域腿对账(design §2.3.1 钉死):维持
-    现行混轨语义不迁移——准入三元含 pair 帧,与 fenced 关门分支域腿同形
+    """evolution_swap_arm_trigger 域分支对账(design §2.3.1 钉死):维持
+    现行混轨语义不迁移——准入三元含 pair 帧,与 fenced 关门分支域分支同形
     并存,零行为差(禁静默分叉)。"""
     bench_member = [cw4_bc('希儿')]
     hoard = frozenset({'希儿'})
     assert evolution_swap_arm_trigger(
         hoard, bench_member, locked=True, fp=0.5, board_full=True) is True, \
-        '混轨 locked(pair 腿②帧同值)准入照旧'
+        '混轨 locked(pair 分支②帧同值)准入照旧'
     assert evolution_swap_arm_trigger(
         hoard, bench_member, locked=False, fp=0.5, board_full=True) is False
     assert evolution_swap_arm_trigger(

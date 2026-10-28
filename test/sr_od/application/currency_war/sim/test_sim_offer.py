@@ -4,19 +4,19 @@ M06/M05 + 节点选项生成 M16/M17/M18)。
 测试面:
 - 投资 offer:U07 固定日程(P1r3/P2r2/P3r2 + 联席决策 2-6 额外槽)/
   U07③ 候选结构(品质→池取样、offer 内去重、全程不重复)/U08 环境
-  offer 同构 3 选 1/品质分布显式常量占位。选卡入账腿 = kernel 获得链
+  offer 同构 3 选 1/品质分布显式常量占位。选卡入账分支 = kernel 获得链
   (测试面迁 test_sim_backend.py,注入核随退役删除);品质改写已接入
   三选一抽样(判据测试 rewrite_slot_qualities_for_pick 槽位向量形接
   全改写型 + settled 定谳型 + 银·金·彩槽位向量型 + kernel 游戏事实
   名单一致性测试;「未建模」披露键已退役,名单常量位仍 = kernel
-  cw_investments;刷新重掷单卡腿同契约);
+  cw_investments;刷新重掷单卡分支同契约);
 - 派生池与发牌:副本数真值(27/27/9/9/9)/held 星级派生不变量/≥9 清空
   发牌过滤(U11)与双出口分野/专家入池假设(U10)/5 槽发牌与概率表/
   免费刷先行(M05);
 - 节点选项:U22 遭遇档位结构/扑满替换单一源(两卡同构参数化)+ 面板矿
   占位增量登记闸(ENV_ORE_PANEL_BONUS 手抄锁值)/U24·T-9 补给 3 选 1
   基础件放回均匀 + 带钻占位 + 环境每列件数表(ENV_SUPPLY_EQUIP_COUNT)。
-  pick 动作入账腿退役(测试面迁 test_sim_backend.py:选卡走 op → 上报
+  pick 动作入账分支退役(测试面迁 test_sim_backend.py:选卡走 op → 上报
   函数族获得链,与实机同构);遭遇加成真值表归宿 = cw_sim_enemy(难度
   账域)。
 """
@@ -250,7 +250,7 @@ def test_strategy_offer_default_regression_forced_empty() -> None:
 
 
 def test_strategy_card_refresh_resample_same_contract() -> None:
-    """刷新重掷单卡腿(2026-10-19 用户裁定批):forced_quality 槽位品质
+    """刷新重掷单卡分支(2026-10-19 用户裁定批):forced_quality 槽位品质
     直取该品质池(银·金·彩槽位品质承诺跨刷新保持);'' = 默认掷点;
     排除集生效;池吃光回退全池、全池亦空返回 ''(防御性)。"""
     silver_names = {n for n, s in INVESTMENT_STRATEGIES.items()
@@ -458,7 +458,7 @@ def test_drawable_names_nine_copy_clearance() -> None:
 
 
 def test_drawable_names_tier_aware_bucket() -> None:
-    """档感知:档 = 4(写点先例 = pick_planner 升费腿 write_logic 档行)
+    """档感知:档 = 4(写点先例 = pick_planner 升费分支 write_logic 档行)
     → drawable_names(4) 含银狼LV.999、drawable_names(3) 不含;档未
     观察(None)→ 归约 3 费桶(起始档语义默认)。授予出口同享档过滤。"""
     gs = _fresh_gs()
@@ -475,7 +475,7 @@ def test_drawable_names_tier_aware_bucket() -> None:
 
 
 def test_conservation_safe_across_tier_transform() -> None:
-    """守恒跨档安全:升费变换 2★→1★(升费腿形态,held 3 份→1 份)不炸
+    """守恒跨档安全:升费变换 2★→1★(升费分支形态,held 3 份→1 份)不炸
     守恒、旧档桶账面不出负值;副本数按名计与档无关(3/4/5 费同 9,
     升费只换桶归属)。"""
     sw = '银狼LV.999'
@@ -498,7 +498,7 @@ def test_conservation_safe_across_tier_transform() -> None:
 def test_deal_shop_level1_pure_cost1_payload() -> None:
     """Lv1 概率表纯 1 费 → 5 槽全 1 费注册表名;概率条随载荷落容器
     (§3.3.2 契约);槽号 1 基连号。(裸 gs = 表外环境恒 1★;2★ 直出
-    注册表腿 = ENV_SHOP_TWO_STAR_DEAL_PROB,表外不触发。)"""
+    注册表分支 = ENV_SHOP_TWO_STAR_DEAL_PROB,表外不触发。)"""
     gs = _fresh_gs()
     deal_shop(gs, stream_rng(3, 'M05/deal/1/1'), level=1,
               tag='shop:deal:p1r1')
@@ -516,7 +516,7 @@ def test_deal_shop_level1_pure_cost1_payload() -> None:
 
 def test_deal_shop_level9_domain_and_registered_names() -> None:
     """Lv9 混档发牌:出场费用档 ⊆ 表内正概率档,名集全部注册表在册
-    (M06 抽名约束;表外直出 2 星 = 0、3 星 = 0,U12;2★ 注册表腿 =
+    (M06 抽名约束;表外直出 2 星 = 0、3 星 = 0,U12;2★ 注册表分支 =
     ENV_SHOP_TWO_STAR_DEAL_PROB 表外不触发)。"""
     gs = _fresh_gs()
     deal_shop(gs, stream_rng(4, 'M05/deal/1/9'), level=9)
@@ -525,7 +525,7 @@ def test_deal_shop_level9_domain_and_registered_names() -> None:
     for slot in payload.cards:
         if slot.card is not None:
             assert slot.card.cost in legal_costs
-            assert slot.card.star == 1, '表外直出恒 1★(U12 + 注册表腿不触发)'
+            assert slot.card.star == 1, '表外直出恒 1★(U12 + 注册表分支不触发)'
             assert slot.card.name in CHARACTERS
 
 
@@ -545,7 +545,7 @@ def test_effective_deal_probs_rotation_toggle() -> None:
 def test_in_stage_refresh_keeps_rotated_probs() -> None:
     """轮岗局 sim 世界真值阶段内不回退:M05 首刷携带翻倍表
     (``effective_deal_probs`` → ``deal_shop`` 真值直写)后,阶段内刷新
-    上报(kernel 随机态腿,与生产 op 同段同口)写回载荷的概率条仍 =
+    上报(kernel 随机态分支,与生产 op 同段同口)写回载荷的概率条仍 =
     翻倍表——刷新上报采样表经 ``state_deal_probs`` 轮岗感知接线
     (出处 = docs/game/currency_war/research/invest_effects.md §2 轮岗行)。"""
     base = dict(REFRESH_PROB[6])
@@ -612,7 +612,7 @@ def test_supply_options_replacement_sampling_and_env_driven() -> None:
     随机可重复——「随机到一样就一样」;既有 distinct 断言钉住旧设计约定,
     随裁定退役)+ 带钻槽 equip 级均匀占位(恰一选项带钻);默认环境每列
     1 件、'过剩经费' 每列 2 件(ENV_SUPPLY_EQUIP_COUNT 查表);char 维
-    恒空(补给 = 装备选)。带钻授予腿 = 后端列表派生(测试面 =
+    恒空(补给 = 装备选)。带钻授予分支 = 后端列表派生(测试面 =
     test_sim_backend.py 补给窗)。同 seed 采样值随采样式变更漂移 =
     分布假设变更(设计披露 9),非回归破坏。"""
     # 默认环境:同 seed 逐值确定(回归可重跑)+ 结构恒定
