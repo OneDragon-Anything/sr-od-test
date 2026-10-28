@@ -284,8 +284,9 @@ def test_callback_non_rich_diamond_early_return() -> None:
 
 def test_env_streak_grants_registry_and_validation(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """三条构建校验(import 即炸语义,注入 + 直调,沿 ENV_ORE_GRANTS
-    测试惯用法):孤儿环境键 / 装备名漂移 / 阈值形;现表默认通过。"""
+    """构建校验(import 即炸语义,注入 + 直调,沿 ENV_ORE_GRANTS 测试
+    惯用法;2026-10-28 治理后只留漂移哨,阈值形随删):孤儿环境键 /
+    装备名漂移;现表默认通过。"""
     # 现表(与卡面 id 104 同源):直调校验器零异常
     assert cw_investments.ENV_STREAK_GRANTS == {_ENV: (5, _EQUIP)}
     cw_investments._validate_env_streak_grants()
@@ -305,15 +306,6 @@ def test_env_streak_grants_registry_and_validation(
     with pytest.raises(ValueError, match='装备名漂移'):
         cw_investments._validate_env_streak_grants()
     monkeypatch.undo()
-
-    # ③ 阈值形(≤0 = 条件永真,一次性守卫失真)
-    for bad_threshold in (0, -1):
-        bad = dict(cw_investments.ENV_STREAK_GRANTS)
-        bad[_ENV] = (bad_threshold, _EQUIP)
-        monkeypatch.setattr(cw_investments, 'ENV_STREAK_GRANTS', bad)
-        with pytest.raises(ValueError, match='阈值形'):
-            cw_investments._validate_env_streak_grants()
-        monkeypatch.undo()
 
 
 # ============================================================ 种子与快照恢复
@@ -556,9 +548,9 @@ def _count_refreshes(gs: GameState, n: int, *, free: bool = False) -> None:
 
 def test_env_refresh_grants_registry_and_validation(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """六查构建校验(import 即炸语义,注入 + 直调):孤儿环境键/计数键
-    闭集外/值形(阈值 0 与金 0 两例,C4)/装备名漂移/双源失同步/跨锁
-    失同步(T-21 校验⑥);现表双行全等(加行漏改本测试即红灯)。"""
+    """构建校验(import 即炸语义,注入 + 直调;2026-10-28 治理后只留
+    漂移哨,计数键闭集/值形/双源/跨锁随删):孤儿环境键/装备名漂移;
+    现表双行全等(加行漏改本测试即红灯)。"""
     # 现表(与卡面 id 106/120 同源):双行全等 + 直调校验器零异常
     assert cw_investments.ENV_REFRESH_GRANTS == {
         _R_ENV: (cw_investments.CounterKey.REFRESH_TOTAL, 20, 30, _R_EQUIP),
@@ -573,58 +565,12 @@ def test_env_refresh_grants_registry_and_validation(
         cw_investments._validate_env_refresh_grants()
     monkeypatch.undo()
 
-    # ② 计数键闭集外(计数读取按键分支,闭集外无读口)
-    bad = dict(cw_investments.ENV_REFRESH_GRANTS)
-    bad[_R_ENV] = ('no_such_counter', 20, 30, None)
-    monkeypatch.setattr(cw_investments, 'ENV_REFRESH_GRANTS', bad)
-    with pytest.raises(ValueError, match='计数键闭集外'):
-        cw_investments._validate_env_refresh_grants()
-    monkeypatch.undo()
-
-    # ③ 值形两例(C4):阈值 0(条件永真,一次性守卫失真)/ 金 0
-    for _label, threshold, gold in (('阈值0', 0, 30), ('金0', 20, 0)):
-        bad = dict(cw_investments.ENV_REFRESH_GRANTS)
-        bad[_R_ENV] = (cw_investments.CounterKey.REFRESH_TOTAL, threshold, gold,
-                       None)
-        monkeypatch.setattr(cw_investments, 'ENV_REFRESH_GRANTS', bad)
-        with pytest.raises(ValueError, match='值形'):
-            cw_investments._validate_env_refresh_grants()
-        monkeypatch.undo()
-
-    # ④ 装备名漂移(发放写出库存里不存在的名字 = 假身份)
+    # ② 装备名漂移(发放写出库存里不存在的名字 = 假身份)
     bad = dict(cw_investments.ENV_REFRESH_GRANTS)
     bad[_R_ENV] = (cw_investments.CounterKey.REFRESH_TOTAL, 20, 30, '不存在的装备')
     monkeypatch.setattr(cw_investments, 'ENV_REFRESH_GRANTS', bad)
     with pytest.raises(ValueError, match='装备名漂移'):
         cw_investments._validate_env_refresh_grants()
-    monkeypatch.undo()
-
-    # ⑤ 双源失同步(估值面单侧改数:世界面与估值面同出卡面)
-    monkeypatch.setitem(
-        cw_investments.ENV_ECONOMY, _R_ENV,
-        cw_investments.EnvEconomyEffect(gold_after_refreshes=(19, 30)))
-    with pytest.raises(ValueError, match='双源失同步'):
-        cw_investments._validate_env_refresh_grants()
-    monkeypatch.undo()
-
-    # ⑥ 跨锁失同步(T-21):改价分支单侧改阈值——发放分支(本表)与改价分支
-    # (ENV_ECONOMY.refresh_cost_after,sim 渲染 helper 读它)同出卡面
-    # 同一句「30 次」,单侧改数静默漂移 = sim 翻价早于发放
-    monkeypatch.setitem(
-        cw_investments.ENV_ECONOMY, '长线利好',
-        cw_investments.EnvEconomyEffect(gold_after_refreshes=(30, 20),
-                                        refresh_cost_after=(29, 1)))
-    with pytest.raises(ValueError, match='跨锁失同步'):
-        cw_investments._validate_env_refresh_grants()
-    monkeypatch.undo()
-
-    # ⑥ 负控:只锁阈值方向——新成本单侧不同(注册表允许)不炸
-    # (校验语义 = 防「sim 翻价时点早于发放」,与发放无关的金额面不在锁面)
-    monkeypatch.setitem(
-        cw_investments.ENV_ECONOMY, '长线利好',
-        cw_investments.EnvEconomyEffect(gold_after_refreshes=(30, 20),
-                                        refresh_cost_after=(30, 2)))
-    cw_investments._validate_env_refresh_grants()   # 零异常
     monkeypatch.undo()
 
 

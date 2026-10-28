@@ -292,8 +292,9 @@ def test_generate_guards_raise() -> None:
 
 def test_env_ore_grants_registry_and_validation(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """三条构建校验(import 即炸语义,注入 + 直调,沿 ENV_GIFTS 测试惯用法):
-    孤儿键 / 值形 / 双源同值(改一处金额即炸);现表默认通过。"""
+    """构建校验(import 即炸语义,注入 + 直调,沿 ENV_GIFTS 测试惯用法;
+    2026-10-28 治理后只留漂移哨,值形/双源同值随删):孤儿键;
+    现表默认通过。"""
     # 现表(与 ENV_ECONOMY 同出卡面 id 103):直调校验器零异常
     assert cw_investments.ENV_ORE_GRANTS == {_ENV: (6, 8, 12)}
     cw_investments._validate_env_ore_grants()
@@ -304,28 +305,6 @@ def test_env_ore_grants_registry_and_validation(
     with pytest.raises(ValueError, match='孤儿键'):
         cw_investments._validate_env_ore_grants()
     monkeypatch.undo()
-
-    for bad_value in ((6, 8), (6, 0, 12), [6, 8, 12]):
-        bad = dict(cw_investments.ENV_ORE_GRANTS)
-        bad[_ENV] = bad_value
-        monkeypatch.setattr(cw_investments, 'ENV_ORE_GRANTS', bad)
-        with pytest.raises(ValueError, match='值形'):
-            cw_investments._validate_env_ore_grants()
-        monkeypatch.undo()
-
-    # 双源同值:ENV_ECONOMY 侧改一处金额(6,8,12)→(6,8,11)即炸
-    drifted = dict(cw_investments.ENV_ECONOMY)
-    from dataclasses import replace as _dc_replace
-    drifted[_ENV] = _dc_replace(drifted[_ENV], gold_per_plane_start=(6, 8, 11))
-    monkeypatch.setattr(cw_investments, 'ENV_ECONOMY', drifted)
-    with pytest.raises(ValueError, match='双源失同步'):
-        cw_investments._validate_env_ore_grants()
-    monkeypatch.undo()
-
-    # 双源同值检查辖「非空 gold_per_plane_start」:估值面无该通道则不比对
-    no_econ = {k: v for k, v in drifted.items() if k != _ENV}
-    monkeypatch.setattr(cw_investments, 'ENV_ECONOMY', no_econ)
-    cw_investments._validate_env_ore_grants()
 
 
 def test_pairing_hit_no_reroll_declared_gold_survives(

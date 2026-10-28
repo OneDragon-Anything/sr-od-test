@@ -329,26 +329,11 @@ def test_env_pool_rewrite_offer_node_gate(
 def test_toucai_entry_settled_registered() -> None:
     """头彩条目定谳锁(2026-10-16 用户裁定:覆盖面定谳 = offer 级,第 1
     次取卡机会 3 张候选全棱彩):登记 rewrite_settled=True + rewrite_picks
-    ==(1,)+ 非空 pending_notes(定谳条目仍走 pending 必填闸,notes 记
-    裁定时点与结论,闸字面与语义均满足)。"""
+    ==(1,)+ 非空 pending_notes(notes 记裁定时点与结论)。"""
     entry = ENV_POOL_REWRITE['头彩']
     assert entry.rewrite_settled is True
     assert entry.rewrite_picks == (1,)
     assert entry.pending_notes, '定谳记录亦以非空 notes 承载'
-
-
-def test_env_pool_rewrite_settled_gate(
-        monkeypatch: pytest.MonkeyPatch) -> None:
-    """settled 定谳闸锁(import 即炸语义,注入 + 直调沿 T-23
-    test_env_pool_rewrite_offer_node_gate 同函数惯用法):rewrite_settled
-    =True 而 rewrite_quality 为空 → 炸(settled 标记只对品质改写型有意
-    义,防登记错位)。现役全表过闸回归 = T-23 同函数在册断言,settled
-    头彩条目随本卡落地被其自动覆盖,不重复立断言。"""
-    bad = dict(ENV_POOL_REWRITE)
-    bad['联席决策'] = StrategyPoolRewrite(rewrite_settled=True)
-    monkeypatch.setattr(cw_investments, 'ENV_POOL_REWRITE', bad)
-    with pytest.raises(ValueError, match='settled 定谳闸'):
-        cw_investments._validate_env_pool_rewrite()
 
 
 def test_weicai_entry_settled_registered() -> None:
@@ -385,38 +370,12 @@ def test_yinjincai_entry_slot_qualities_registered() -> None:
 
 def test_env_pool_rewrite_slot_qualities_gates(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """槽位向量建表闸锁(import 即炸语义,注入 + 直调沿本文件惯用法):
-    ① 结构标记与槽位数据同有同无(offer_structure 有 slot_qualities 无 =
-    判据不可算,反向同炸);② 槽位向量长度恒 3(卡面「左、中、右」三槽);
-    ③ 槽位品质 ∈ 策略品质词集(注册表漂移防呆);④ 槽位向量型与品质
-    改写型互斥(rewrite_quality 非空共存 = 双型语义冲突)。现表直调通过 =
-    银·金·彩在册回归。"""
+    """槽位品质词集哨锁(import 即炸语义,注入 + 直调沿本文件惯用法;
+    2026-10-28 治理后形态:同有同无/长度恒 3/双型互斥属防登记笔误类,
+    校验随删——词集哨留,错字与版本增删品质都表现为词集外)。现表直调
+    通过 = 银·金·彩在册回归。"""
     cw_investments._validate_env_pool_rewrite()
-    # ① 结构标记有、槽位数据无 → 炸;反向同炸
-    bad = dict(ENV_POOL_REWRITE)
-    bad['银·金·彩'] = StrategyPoolRewrite(
-        offer_structure='silver_gold_prism_slots', extra_pick_refreshes=2,
-        pending_notes='x')
-    monkeypatch.setattr(cw_investments, 'ENV_POOL_REWRITE', bad)
-    with pytest.raises(ValueError, match='须同有同无'):
-        cw_investments._validate_env_pool_rewrite()
-    bad_rev = dict(ENV_POOL_REWRITE)
-    bad_rev['银·金·彩'] = StrategyPoolRewrite(
-        slot_qualities=('银', '金', '棱彩'), extra_pick_refreshes=2,
-        pending_notes='x')
-    monkeypatch.setattr(cw_investments, 'ENV_POOL_REWRITE', bad_rev)
-    with pytest.raises(ValueError, match='须同有同无'):
-        cw_investments._validate_env_pool_rewrite()
-    # ② 长度非 3 → 炸
-    bad_len = dict(ENV_POOL_REWRITE)
-    bad_len['银·金·彩'] = StrategyPoolRewrite(
-        offer_structure='silver_gold_prism_slots',
-        slot_qualities=('银', '金'), extra_pick_refreshes=2,
-        pending_notes='x')
-    monkeypatch.setattr(cw_investments, 'ENV_POOL_REWRITE', bad_len)
-    with pytest.raises(ValueError, match='须恒 3'):
-        cw_investments._validate_env_pool_rewrite()
-    # ③ 品质不在词集 → 炸
+    # 品质不在词集 → 炸
     bad_vocab = dict(ENV_POOL_REWRITE)
     bad_vocab['银·金·彩'] = StrategyPoolRewrite(
         offer_structure='silver_gold_prism_slots',
@@ -424,16 +383,6 @@ def test_env_pool_rewrite_slot_qualities_gates(
         pending_notes='x')
     monkeypatch.setattr(cw_investments, 'ENV_POOL_REWRITE', bad_vocab)
     with pytest.raises(ValueError, match='槽位品质漂移'):
-        cw_investments._validate_env_pool_rewrite()
-    # ④ 与品质改写型共存 → 炸
-    bad_dual = dict(ENV_POOL_REWRITE)
-    bad_dual['银·金·彩'] = StrategyPoolRewrite(
-        rewrite_quality='棱彩', rewrite_picks=(1, 2, 3),
-        offer_structure='silver_gold_prism_slots',
-        slot_qualities=('银', '金', '棱彩'), extra_pick_refreshes=2,
-        pending_notes='x')
-    monkeypatch.setattr(cw_investments, 'ENV_POOL_REWRITE', bad_dual)
-    with pytest.raises(ValueError, match='双型互斥'):
         cw_investments._validate_env_pool_rewrite()
 
 
@@ -443,9 +392,9 @@ def test_env_pool_rewrite_slot_qualities_gates(
 def test_env_merge_grants_registry_and_validation(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """ENV_MERGE_GRANTS 构建校验(T-26 设计 §2.1,import 即炸语义,注入 +
-    直调沿 ENV_BOSS_GRANTS 测试惯用法):孤儿键/触发角色集或发放池含
-    CHARACTERS 外名/空元组 → 炸(触发集漂移 = 事件永不命中,发放池漂移
-    = 采出假身份混进席面,登记笔误前置可见);现表直调通过。"""
+    直调沿 ENV_BOSS_GRANTS 测试惯用法;2026-10-28 治理后只留漂移哨):
+    孤儿键/触发角色集或发放池含 CHARACTERS 外名 → 炸;空元组值形随治理
+    删。现表直调通过。"""
     assert cw_investments.ENV_MERGE_GRANTS == {
         '量子同频契约': (('花火', '缇宝'), ('符玄', '希儿'))}, \
         '首例登记(id 125 原文直读)'
@@ -471,14 +420,6 @@ def test_env_merge_grants_registry_and_validation(
     monkeypatch.setattr(cw_investments, 'ENV_MERGE_GRANTS', bad)
     with pytest.raises(ValueError, match='发放池'):
         cw_investments._validate_env_merge_grants()
-    # 空触发集 / 空发放池
-    for label, entry in (('触发角色集', ((), ('符玄',))),
-                         ('发放池', (('花火',), ()))):
-        bad = dict(_orig)
-        bad['量子同频契约'] = entry
-        monkeypatch.setattr(cw_investments, 'ENV_MERGE_GRANTS', bad)
-        with pytest.raises(ValueError, match=label):
-            cw_investments._validate_env_merge_grants()
 
 
 def test_merge_contract_coexists_with_estimation_tables() -> None:
@@ -493,11 +434,9 @@ def test_merge_contract_coexists_with_estimation_tables() -> None:
 def test_env_interest_grants_registry_and_validation(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """ENV_INTEREST_GRANTS 构建校验(T-27 设计 §2.1/§4.1,import 即炸
-    语义,注入 + 直调沿 ENV_MERGE_GRANTS 测试惯用法):孤儿键/阈值形
-    (0/负/bool/非 int)/角色名形(空串)/角色名漂移(CHARACTER_ROSTER
-    外——锁 data 注册表防版本改名静默失联,CHARACTERS 是 cw_pool 商店池
-    域另一符号勿混用)/双源失同步(ENV_GIFTS chars_conditional 首元
-    ≠ 发放名,两表同出卡面单侧改动即漂移)→ 炸;现表直调通过。"""
+    语义,注入 + 直调沿 ENV_MERGE_GRANTS 测试惯用法;2026-10-28 治理后
+    只留漂移哨):孤儿键/角色名漂移(CHARACTER_ROSTER 外——版本改名
+    静默失联即红)/双源失同步随治理删。现表直调通过。"""
     assert cw_investments.ENV_INTEREST_GRANTS == {'公司契约': (40, '托帕&账账')}, \
         '首例登记(id 126 原文直读「累计获得40利息后,获得【托帕&账账】」)'
     cw_investments._validate_env_interest_grants()
@@ -509,46 +448,11 @@ def test_env_interest_grants_registry_and_validation(
     monkeypatch.setattr(cw_investments, 'ENV_INTEREST_GRANTS', bad)
     with pytest.raises(ValueError, match='ENV_INTEREST_GRANTS 孤儿键'):
         cw_investments._validate_env_interest_grants()
-    # 阈值形四态(≤0 = 条件永真使 done 守卫登记刻即触发;bool 是 int
-    # 子类显式拒)
-    for label, threshold in (('阈值形', 0), ('阈值形', -5),
-                             ('阈值形', True), ('阈值形', '40')):
-        bad = dict(_orig)
-        bad['公司契约'] = (threshold, '托帕&账账')
-        monkeypatch.setattr(cw_investments, 'ENV_INTEREST_GRANTS', bad)
-        with pytest.raises(ValueError, match=label):
-            cw_investments._validate_env_interest_grants()
-    # 角色名形(空串 = 发放写出假身份)
-    bad = dict(_orig)
-    bad['公司契约'] = (40, '')
-    monkeypatch.setattr(cw_investments, 'ENV_INTEREST_GRANTS', bad)
-    with pytest.raises(ValueError, match='角色名形'):
-        cw_investments._validate_env_interest_grants()
     # 角色名漂移(data 注册表外名)
     bad = dict(_orig)
     bad['公司契约'] = (40, '不存在的角色X')
     monkeypatch.setattr(cw_investments, 'ENV_INTEREST_GRANTS', bad)
     with pytest.raises(ValueError, match='角色名漂移'):
-        cw_investments._validate_env_interest_grants()
-    # 双源失同步(ENV_GIFTS 条件具名集首元 ≠ 本表发放角色;两形态 =
-    # 估侧改 / 世界侧改,单侧改动即漂移;世界侧形态用注册表内在册他名
-    # ——注册表外名会先触角色名漂移,序位即校验③先于④;发放名先复原,
-    # 上形态遗留的漂移登记会抢在双源前触发③)
-    monkeypatch.setattr(cw_investments, 'ENV_INTEREST_GRANTS', _orig)
-    _gifts_orig = dict(ENV_GIFTS)
-    bad_gifts = dict(_gifts_orig)
-    bad_gifts['公司契约'] = GiftGrant(
-        chars_immediate=('翡翠', '砂金'),
-        chars_conditional=(('别的角色', '累计获得40利息后'),),
-    )
-    monkeypatch.setattr(cw_investments, 'ENV_GIFTS', bad_gifts)
-    with pytest.raises(ValueError, match='双源失同步'):
-        cw_investments._validate_env_interest_grants()
-    bad = dict(_orig)
-    bad['公司契约'] = (40, '翡翠')
-    monkeypatch.setattr(cw_investments, 'ENV_GIFTS', _gifts_orig)
-    monkeypatch.setattr(cw_investments, 'ENV_INTEREST_GRANTS', bad)
-    with pytest.raises(ValueError, match='双源失同步'):
         cw_investments._validate_env_interest_grants()
 
 
@@ -594,10 +498,9 @@ _ORIG_ORE_OPEN = dict(cw_investments.ENV_ORE_OPEN_GRANTS)
 
 def test_env_ore_open_grants_validation_raises(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """四查 import 即炸语义(T-29 设计 §2.1):①孤儿键 ②首阈值/步长
-    非正 int(bool 显式拒,纯 int 判会被 True 当 1 混过)③具名角色
-    ∉ CHARACTER_ROSTER ④随机羁绊池现值空(羁绊名错字 → 采样分支永远
-    发不出,前置可见)。"""
+    """三查 import 即炸语义(T-29 设计 §2.1;2026-10-28 治理后只留漂移
+    哨,值形随删):①孤儿键 ②具名角色 ∉ CHARACTER_ROSTER ③随机羁绊池
+    现值空(羁绊名错字 → 采样分支永远发不出)。"""
     def _bad(first=20, step=10, chars=('火花',), faction='战技点',
              key='战技点契约') -> dict:
         bad = dict(_ORIG_ORE_OPEN)
@@ -606,10 +509,6 @@ def test_env_ore_open_grants_validation_raises(
 
     cases = [
         ('孤儿键', _bad(key='不存在的环境X'), '孤儿键'),
-        ('首阈值非正', _bad(first=0), '值形'),
-        ('首阈值 bool', _bad(first=True), '值形'),
-        ('步长非正', _bad(step=0), '值形'),
-        ('步长 bool', _bad(step=True), '值形'),
         ('具名角色漂移', _bad(chars=('不存在的角色X',)), '角色名漂移'),
         ('随机羁绊池空', _bad(faction='不存在的羁绊X'), '随机羁绊池空'),
     ]
@@ -662,55 +561,22 @@ def _bad(**kw) -> dict:
 
 def test_env_battle_grants_validation_raises(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """五查 import 即炸语义(T-30 设计 §2.1/§4 锁 1):①孤儿键 ②参与组形
-    (空外层 = 条件永真使 done 登记刻即触发;空组 = 永不满足使发放不可达;
-    参与名漂移/空串——锁 data 注册表防版本改名)③发放角色形(空串/漂移)
-    ④锁期形(0/负/bool——解锁序位不后移使锁无消费面)⑤双源失同步
-    (ENV_GIFTS 条件具名集首元 ≠ 本表发放角色,两表同出卡面单侧改动即
-    漂移,两形态 = 估侧改/世界侧改)。"""
+    """三查 import 即炸语义(T-30 设计 §2.1/§4 锁 1;2026-10-28 治理后
+    只留漂移哨,组形/名形/锁期形/双源随删):①孤儿键 ②参与名漂移
+    ③发放角色漂移。"""
     bad_orphan = dict(_ORIG_BATTLE)
     bad_orphan['不存在环境X'] = _battle_grant()
     cases = [
         ('孤儿键', bad_orphan, '孤儿键'),
-        ('参与组空外层', _bad(presence_groups=()), '参与组形'),
-        ('参与组内空组', _bad(presence_groups=(('刃',), ())), '参与组形'),
         ('参与名漂移', _bad(presence_groups=(('刃', '不存在的角色X'),
                                              ('卡芙卡',), ('银狼',))),
          '参与名漂移'),
-        ('参与名空串', _bad(presence_groups=(('',), ('卡芙卡',),
-                                             ('银狼',))), '参与名形'),
-        ('发放角色空串', _bad(reward_char=''), '发放角色形'),
         ('发放角色漂移', _bad(reward_char='不存在的角色X'), '发放角色漂移'),
-        ('锁期零', _bad(deploy_lock_nodes=0), '锁期形'),
-        ('锁期负', _bad(deploy_lock_nodes=-2), '锁期形'),
-        ('锁期 bool', _bad(deploy_lock_nodes=True), '锁期形'),
     ]
     for _label, bad, match in cases:
         monkeypatch.setattr(cw_investments, 'ENV_BATTLE_GRANTS', bad)
         with pytest.raises(ValueError, match=match):
             cw_investments._validate_env_battle_grants()
-
-    # 双源失同步两形态(沿 interest ⑤ 测试序位纪律:世界侧形态用注册表
-    # 内在册他名,注册表外名会先触角色名漂移)
-    from sr_od.application.currency_war.kernel.cw_investments import (
-        GiftGrant as _GG,
-    )
-    _gifts_orig = dict(ENV_GIFTS)
-    bad_gifts = dict(_gifts_orig)
-    bad_gifts['星核猎手契约'] = _GG(
-        chars_immediate=('卡芙卡',),
-        chars_conditional=(('别的角色', '同战一役后获得'),),
-    )
-    monkeypatch.setattr(cw_investments, 'ENV_GIFTS', bad_gifts)
-    monkeypatch.setattr(cw_investments, 'ENV_BATTLE_GRANTS', _ORIG_BATTLE)
-    with pytest.raises(ValueError, match='双源失同步'):
-        cw_investments._validate_env_battle_grants()
-    bad = dict(_ORIG_BATTLE)
-    bad['星核猎手契约'] = _battle_grant(reward_char='翡翠')
-    monkeypatch.setattr(cw_investments, 'ENV_GIFTS', _gifts_orig)
-    monkeypatch.setattr(cw_investments, 'ENV_BATTLE_GRANTS', bad)
-    with pytest.raises(ValueError, match='双源失同步'):
-        cw_investments._validate_env_battle_grants()
 
 
 def test_env_battle_grants_current_entry_and_coexistence() -> None:
@@ -842,25 +708,20 @@ def _bad_deploy_lock(**kw) -> dict:
 
 def test_env_deploy_lock_grants_validation_raises(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """四查 import 即炸语义(T-33 设计 §2.1/§4 锁 1,2026-10-28 治理后
-    形态:spec 值域四查随共享助手收窄,只留池空单一哨):①孤儿键
-    ②规格池空(模拟注册表漂移)③锁期形(0/负/bool——
-    ENV_BATTLE_GRANTS 锁期形④逐字同款)④双登记防呆(set ∩ ENV_GIFTS ≠ ∅
-    = 赠卡双发 + 锁记录双写)。"""
+    """两查 import 即炸语义(T-33 设计 §2.1/§4 锁 1;2026-10-28 治理后
+    只留漂移哨,锁期形/双登记防呆随删):①孤儿键 ②规格池空(模拟注册表
+    漂移)。"""
     bad_orphan = dict(_ORIG_DEPLOY_LOCK)
     bad_orphan['不存在环境X'] = _deploy_lock_grant()
     cases = [
         ('孤儿键', bad_orphan, '孤儿键'),
-        ('锁期零', _bad_deploy_lock(deploy_lock_nodes=0), '锁期形'),
-        ('锁期负', _bad_deploy_lock(deploy_lock_nodes=-1), '锁期形'),
-        ('锁期 bool', _bad_deploy_lock(deploy_lock_nodes=True), '锁期形'),
     ]
     for _label, bad, match in cases:
         monkeypatch.setattr(cw_investments, 'ENV_DEPLOY_LOCK_GRANTS', bad)
         with pytest.raises(ValueError, match=match):
             cw_investments._validate_env_deploy_lock_grants()
 
-    # ③ 池空(模拟注册表漂移:5 费档全量桩空)
+    # ② 池空(模拟注册表漂移:5 费档全量桩空)
     from sr_od.application.currency_war.kernel.cw_investments import (
         random_char_pool as _rcp,
     )
@@ -873,16 +734,6 @@ def test_env_deploy_lock_grants_validation_raises(
             cw_investments._validate_env_deploy_lock_grants()
     finally:
         monkeypatch.setattr(cw_investments, 'random_char_pool', _rcp)
-
-    # ⑤ 双登记防呆(英雄登场同时在两表 = 赠卡双发 + 锁记录双写)
-    bad_gifts = dict(ENV_GIFTS)
-    bad_gifts['英雄登场'] = GiftGrant(
-        chars_random_immediate=(RandomCharSpec(cost=5, star=2),))
-    monkeypatch.setattr(cw_investments, 'ENV_GIFTS', bad_gifts)
-    monkeypatch.setattr(cw_investments, 'ENV_DEPLOY_LOCK_GRANTS',
-                        _ORIG_DEPLOY_LOCK)
-    with pytest.raises(ValueError, match='双表'):
-        cw_investments._validate_env_deploy_lock_grants()
 
 
 def test_env_deploy_lock_grants_current_entry_and_coexistence() -> None:
@@ -933,34 +784,12 @@ def _bad_delayed(**kw) -> dict:
 
 def test_env_delayed_item_grants_validation_raises(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """五查 import 即炸语义(T-34 设计 §2.1/§4 锁 1):①孤儿键 ②件名形
-    (空 str / ∈ CHARACTER_ROSTER——道具/角色通道串行防呆,_validate_
-    env_gifts 定时道具名同款判据)③倒计时形(0/负/bool 显式拒——
-    ENV_DEPLOY_LOCK_GRANTS 锁期形逐字同款)④双登记防呆(命运礼物同时
-    进 ENV_GIFTS = 占席落位 + 队列登记双发放)⑤加速旗形非 bool。"""
+    """孤儿键 import 即炸语义(T-34 设计 §2.1/§4 锁 1;2026-10-28 治理后
+    只留漂移哨,件名形/倒计时形/双登记/加速旗形随删)。"""
     bad_orphan = dict(_ORIG_DELAYED)
     bad_orphan['不存在环境X'] = _delayed_grant()
-    cases = [
-        ('孤儿键', bad_orphan, '孤儿键'),
-        ('件名空', _bad_delayed(item=''), '件名形'),
-        ('件名混角色', _bad_delayed(item='希儿'), '件名漂移'),
-        ('倒计时零', _bad_delayed(open_delay_nodes=0), '倒计时形'),
-        ('倒计时负', _bad_delayed(open_delay_nodes=-1), '倒计时形'),
-        ('倒计时 bool', _bad_delayed(open_delay_nodes=True), '倒计时形'),
-        ('加速旗非 bool', _bad_delayed(perfect_win_accel=1), '加速旗形'),
-    ]
-    for _label, bad, match in cases:
-        monkeypatch.setattr(cw_investments, 'ENV_DELAYED_ITEM_GRANTS', bad)
-        with pytest.raises(ValueError, match=match):
-            cw_investments._validate_env_delayed_item_grants()
-
-    # ④ 双登记防呆(命运礼物同时进两表 = 道具双发)
-    bad_gifts = dict(ENV_GIFTS)
-    bad_gifts['命运礼物'] = GiftGrant(items_immediate=('惊喜盒',))
-    monkeypatch.setattr(cw_investments, 'ENV_DELAYED_ITEM_GRANTS',
-                        _ORIG_DELAYED)
-    monkeypatch.setattr(cw_investments, 'ENV_GIFTS', bad_gifts)
-    with pytest.raises(ValueError, match='双表'):
+    monkeypatch.setattr(cw_investments, 'ENV_DELAYED_ITEM_GRANTS', bad_orphan)
+    with pytest.raises(ValueError, match='孤儿键'):
         cw_investments._validate_env_delayed_item_grants()
 
 
@@ -981,7 +810,7 @@ def test_env_delayed_item_grants_current_entry_and_wordlist_untouched(
     assert '惊喜盒' not in BENCH_ITEM_NAMES, \
         '倒计时件非占席,禁进占席道具词表(战利品区件锁)'
     assert '惊喜盒' not in CHARACTER_ROSTER, \
-        '道具/角色通道串行防呆(校验②的注册表前提)'
+        '道具/角色域天然无交集(登记面不变量)'
 
 
 def test_expert_set_matches_advisor_grant_char_union() -> None:

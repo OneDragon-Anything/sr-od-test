@@ -652,9 +652,8 @@ def test_supply_options_replacement_sampling_and_env_driven() -> None:
 def test_env_supply_equip_count_registry_and_validation(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """ENV_SUPPLY_EQUIP_COUNT 登记表构建校验(import 即炸语义,注入 +
-    直调,沿 ENV_STREAK_GRANTS 测试惯用法):孤儿环境键 / 值形(<2 或
-    非 int 与默认 1 件无差 = 登记笔误);现表默认通过(与卡面 id 108
-    同源)。"""
+    直调,沿 ENV_STREAK_GRANTS 测试惯用法;2026-10-28 治理后只留漂移哨,
+    值形随删):孤儿环境键;现表默认通过(与卡面 id 108 同源)。"""
     assert cw_investments.ENV_SUPPLY_EQUIP_COUNT == {'过剩经费': 2}
     cw_investments._validate_env_supply_equip_count()
 
@@ -665,12 +664,3 @@ def test_env_supply_equip_count_registry_and_validation(
     with pytest.raises(ValueError, match='孤儿键'):
         cw_investments._validate_env_supply_equip_count()
     monkeypatch.undo()
-
-    # ② 值形:<2 与默认 1 件无差 / 非 int(bool 排除)/ 0 = 登记笔误
-    for bad_val in (1, 0, -1, True, 1.5):
-        bad = dict(cw_investments.ENV_SUPPLY_EQUIP_COUNT)
-        bad['过剩经费'] = bad_val
-        monkeypatch.setattr(cw_investments, 'ENV_SUPPLY_EQUIP_COUNT', bad)
-        with pytest.raises(ValueError, match='值形'):
-            cw_investments._validate_env_supply_equip_count()
-        monkeypatch.undo()
