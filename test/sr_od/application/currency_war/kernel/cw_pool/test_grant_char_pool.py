@@ -128,3 +128,25 @@ def test_langshou_faction_pool_expert_filter_instance() -> None:
         '已解锁专家回到候选(牌库时点口径)'
     assert '貊泽' in random_char_pool(spec), \
         '静态基底含全部注册成员(过滤归 grant_char_pool 层,分层职责)'
+
+
+def test_zhouzhibanshen_faction_pool_identity_instance() -> None:
+    """昼之半神域授予池恒等锁(牌库时点池约定,概念股族展开卡登记约定,
+    本域与狼狩相反型 = 6 名 is_expert 全空):空解锁容器 → 昼之半神域
+    候选 = chars_by_faction('昼之半神') 名集现算比对(过滤恒等 = 域无
+    专家的事实锚,注册表派生非快照不手抄;池规模只记注释零断言值——现值
+    6 名,随版本正常变动;选投资环境在开局,本域无专家故无 T-56 型避让
+    约束);显式断言'昔涟' ∈ 池(独立单位「挚爱之人」照发 + 双阵营成员
+    「昼之半神、夜之半神」照发双事实锚,族级口径 economy.md:94);静态
+    基底 random_char_pool 同值(两层面在本域重合,沿银河学者非专家域锁
+    同款形态)。"""
+    spec = RandomCharSpec(faction='昼之半神', star=1)
+    pool = grant_char_pool(_fresh_gs(), spec)
+    expected = {c.name for c in chars_by_faction('昼之半神')}
+    assert set(pool) == expected, \
+        '昼之半神域候选 = 全域(域无专家,牌库时点过滤恒等)'
+    assert '昔涟' in pool, \
+        '独立单位照发 + 双阵营成员照发(族级口径定谳)'
+    assert set(pool) <= CHARACTER_ROSTER
+    assert set(random_char_pool(spec)) == expected, \
+        '静态基底同值(两层面在本域重合)'
