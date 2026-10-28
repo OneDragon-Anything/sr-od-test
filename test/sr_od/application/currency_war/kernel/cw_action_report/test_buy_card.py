@@ -55,7 +55,7 @@ def _bench_units(gs) -> list[tuple[str, int]]:
             if s is not None and s.kind == 'unit' and s.unit is not None]
 
 
-def test_buy_merge_fires_grant_after_starup_leg(seeded_provider) -> None:
+def test_buy_merge_fires_grant_after_starup_branch(seeded_provider) -> None:
     """买牌发火时序锁(T-26 设计 §4.6 主分支):2×1★花火在席,买第 3 张
     1★花火 → 合并 2★ 产物;升星分支整表写毕后发火 → bench 终态 = 产物 +
     发放角色并存(发放名 = 注入槽种子现算;gold 未读买分支跳写,场景

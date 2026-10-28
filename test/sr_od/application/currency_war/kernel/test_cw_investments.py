@@ -233,7 +233,7 @@ def test_env_scope_affinity_leg_grail_invite_and_contract() -> None:
     assert env_faction_scope('命运圣杯契约') == frozenset({'命运圣杯', '能量'})
 
 
-def test_env_scope_sampo_affinity_leg() -> None:
+def test_env_scope_sampo_affinity_branch() -> None:
     """特邀专家:桑博 faction 分支空但亲和专家桑博DOT(1.0)→ 指向集 = 该线
     factions 全集 {持续伤害, 贝洛伯格}(单 faction 分支会误判通用,§4 清单)。"""
     assert env_faction_scope('特邀专家:桑博') == frozenset(

@@ -23,7 +23,7 @@ docs/develop/sr_od/application/currency_war/game_state/gain-chain.md
   形参优先于锚定闩——未闩/置闩同通道)+ 覆盖校准面 = 观察覆盖落
   logic_rand_outcome 行零失配行;在册判定(active_env 归一 = 欢愉契约)、
   rng 注入确定性(同 seed 同单位,两候选均可达)、触发计数封闭清单
-  (落地相 equip/upgrade/unknown 各恰一次,发射相零授予,leg_type=''
+  (落地相 equip/upgrade/unknown 各恰一次,发射相零授予,branch_type=''
   兜底仍触发且终态兜底 reason = unrouted_leg_zero_write)、授予失败
   调用点级 best-effort(分支类型分派照常 + joy_conditional_grant_failed
   留证行)、授予走链固定时序(预置两枚同候选可合成);弱化兜底档退役
@@ -646,7 +646,7 @@ def test_env_gift_random_leg_seeded_roll(rows_sink: _RowSink) -> None:
     assert rows_sink.kinds() == [], '正常路径零申报行'
 
 
-def test_env_gift_random_leg_typed_pool_star2_seeded(
+def test_env_gift_random_branch_typed_pool_star2_seeded(
         rows_sink: _RowSink) -> None:
     """类型过滤随机支发放分支(on_env_gained 直构,T-36 设计 §4 锁 3/9):
     固定种子 rng → bench 追加 1 张 2★(spec.star 直传,类型过滤池 =
@@ -832,7 +832,7 @@ def test_opening_replace_leg_two_same_one_diff_no_merge() -> None:
     assert units == sorted([(x, 1), (x, 1), (y, 1)]), '两同一异 3 只并存'
 
 
-def test_env_gift_conditional_only_quiet_after_random_leg(
+def test_env_gift_conditional_only_quiet_after_random_branch(
         rows_sink: _RowSink) -> None:
     """具名支回归(T-10 设计 §4 测试 6):仅条件分支条目(量子同频契约)
     在随机支落地后行为逐位不变——零即时发放、零效果串、零容器写
@@ -1134,7 +1134,7 @@ def test_gain_invest_strategy_register_dedup_and_hacker_chain(
     assert gs.write_seq > seq2, '效果分支照走(零幂等闸)'
 
 
-def test_gain_invest_strategy_session_ledger_leg() -> None:
+def test_gain_invest_strategy_session_ledger_branch() -> None:
     """登记分支(design §2.4-2):session 在场 + STRATEGY_EFFECTS 命中 →
     register_strategy 入册 + burst 桥累加免费刷新余额;session=None =
     登记分支跳过、注册照常;未收录卡登记分支零动作。(选卡 = 固定理财:
@@ -1322,7 +1322,7 @@ def test_joy_rider_grant_channel_rand_anchor_and_coverage(
     # 臂 1:未闩(种子底座窗)。
     gs = _joy_seeded_gs()
     out = report_action_pick_planner_param(
-        gs, None, _lsig('CwScreenYinLang'), leg_type='unknown',
+        gs, None, _lsig('CwScreenYinLang'), branch_type='unknown',
         rng=random.Random(seed))
     assert out.applied is True
     granted = [u.char_id for u in bench_units_of(gs) if u.char_id in cands]
@@ -1340,7 +1340,7 @@ def test_joy_rider_grant_channel_rand_anchor_and_coverage(
     gs2 = _joy_seeded_gs()
     gs2.prep_anchored = True
     report_action_pick_planner_param(
-        gs2, None, _lsig('CwScreenYinLang'), leg_type='unknown',
+        gs2, None, _lsig('CwScreenYinLang'), branch_type='unknown',
         rng=random.Random(seed))
     assert gs2.bench.source == 'logic_rand', '锚定后授予仍 logic_rand(采样面)'
 
@@ -1353,7 +1353,7 @@ def test_joy_rider_registry_gate(rows_sink: _RowSink) -> None:
     gs = _joy_seeded_gs('')          # 空 = 种子初值
     seq = gs.write_seq
     report_action_pick_planner_param(
-        gs, None, _lsig('CwScreenYinLang'), leg_type='unknown',
+        gs, None, _lsig('CwScreenYinLang'), branch_type='unknown',
         rng=random.Random(seed))
     assert [u for u in bench_units_of(gs) if u.char_id in cands] == [], \
         '空环境零授予'
@@ -1361,14 +1361,14 @@ def test_joy_rider_registry_gate(rows_sink: _RowSink) -> None:
     gs.observe(gs.active_env, '公司契约', sig=_SIG_OBS)
     seq2 = gs.write_seq
     report_action_pick_planner_param(
-        gs, None, _lsig('CwScreenYinLang'), leg_type='unknown',
+        gs, None, _lsig('CwScreenYinLang'), branch_type='unknown',
         rng=random.Random(seed))
     assert [u for u in bench_units_of(gs) if u.char_id in cands] == [], \
         '其他环境零授予'
     assert gs.write_seq == seq2, '其他环境零容器写'
     gs.observe(gs.active_env, '欢愉契约', sig=_SIG_OBS)
     report_action_pick_planner_param(
-        gs, None, _lsig('CwScreenYinLang'), leg_type='unknown',
+        gs, None, _lsig('CwScreenYinLang'), branch_type='unknown',
         rng=random.Random(seed))
     granted = [u.char_id for u in bench_units_of(gs) if u.char_id in cands]
     assert granted == [cands[0]], '欢愉契约在册恰一次授予'
@@ -1391,7 +1391,7 @@ def test_joy_rider_rng_injection_deterministic_and_reaches_both(
         for _ in range(2):
             gs = _joy_seeded_gs()
             report_action_pick_planner_param(
-                gs, None, _lsig('CwScreenYinLang'), leg_type='unknown',
+                gs, None, _lsig('CwScreenYinLang'), branch_type='unknown',
                 rng=random.Random(seed))
             units_by_container += [u.char_id for u in bench_units_of(gs)
                                    if u.char_id in cands]
@@ -1403,15 +1403,15 @@ def test_joy_rider_fires_once_per_report_call(
         rows_sink: _RowSink) -> None:
     """触发计数封闭清单(单相即时上报,
     equip-immediate-report):一次上报 equip/upgrade/unknown 三条分支各恰一次
-    授予(rider 在分支类型分派前,与分支类型无关);leg_type='' 直调 rider 仍触发
+    授予(rider 在分支类型分派前,与分支类型无关);branch_type='' 直调 rider 仍触发
     (兜底形态)且走终态兜底零写(reason = unrouted_leg_zero_write)。"""
     cands = _joy_candidates()
     seed = _joy_seed_for(cands[0])
     expect = [random.Random(seed).choice(cands)]
-    for leg, kw in (('equip', {'norm_item': '破解芯片'}),
+    for branch, kw in (('equip', {'norm_item': '破解芯片'}),
                     ('upgrade', {}), ('unknown', {})):
         gs = _joy_seeded_gs()
-        if leg == 'upgrade':
+        if branch == 'upgrade':
             # 升费分支前置:恰一枚 2★银狼LV.999(rider 候选与其无身份交叠)。
             slots = [BenchSlot(kind='unit',
                                unit=Unit(char_id='银狼LV.999', star=2))]
@@ -1419,13 +1419,13 @@ def test_joy_rider_fires_once_per_report_call(
             gs.observe(gs.bench, BenchView(slots=slots, capacity=9),
                        sig=_SIG_OBS)
         out = report_action_pick_planner_param(
-            gs, None, _lsig('CwScreenYinLang'), leg_type=leg,
+            gs, None, _lsig('CwScreenYinLang'), branch_type=branch,
             rng=random.Random(seed), **kw)
         assert out.applied is True
         granted = [u.char_id for u in bench_units_of(gs)
                    if u.char_id in cands]
-        assert granted == expect, f'{leg} 分支 rider 恰一次'
-    # leg_type='' 直调落地相(兜底形态):rider 仍触发 + 终态兜底零写。
+        assert granted == expect, f'{branch} 分支 rider 恰一次'
+    # branch_type='' 直调落地相(兜底形态):rider 仍触发 + 终态兜底零写。
     gs4 = _joy_seeded_gs()
     out4 = report_action_pick_planner_param(
         gs4, None, _lsig('CwScreenYinLang'),
@@ -1453,7 +1453,7 @@ def test_joy_rider_failure_best_effort(
 
     monkeypatch.setattr(pp_mod, 'gain_character', _boom)
     out = report_action_pick_planner_param(
-        gs, None, _lsig('CwScreenYinLang'), leg_type='upgrade',
+        gs, None, _lsig('CwScreenYinLang'), branch_type='upgrade',
         rng=random.Random(0))
     assert out.applied is True
     units = [(u.char_id, u.star) for u in bench_units_of(gs)]
@@ -1477,7 +1477,7 @@ def test_joy_rider_grant_chain_timing_merge(rows_sink: _RowSink) -> None:
     gs = _make_gs(bench=[(cands[0], 1), (cands[0], 1)], equips=[])
     gs.observe(gs.active_env, '欢愉契约', sig=_SIG_OBS)
     report_action_pick_planner_param(
-        gs, None, _lsig('CwScreenYinLang'), leg_type='equip',
+        gs, None, _lsig('CwScreenYinLang'), branch_type='equip',
         norm_item='破解芯片',   # 表外件(无后果分支)→ 台账零留证行,焦点留给授予时序
         rng=random.Random(seed))
     units = [(u.char_id, u.star) for u in bench_units_of(gs)]
@@ -1494,7 +1494,7 @@ def test_joy_rider_grant_chain_timing_merge(rows_sink: _RowSink) -> None:
 def test_upgrade_transform_exactly_one(rows_sink: _RowSink) -> None:
     """恰一枚 2★银狼LV.999 → 工作副本变换(2★→1★,身份保持),write_logic。"""
     gs = _make_gs(bench=[('希儿', 1), ('银狼LV.999', 2)], equips=[])
-    out = report_action_pick_planner_param(gs, None, leg_type='upgrade',
+    out = report_action_pick_planner_param(gs, None, branch_type='upgrade',
                                            norm_item='',
                                            sig=_lsig('CwScreenYinLang'))
     assert out.applied is True
@@ -1510,7 +1510,7 @@ def test_upgrade_transform_multiple_flips_source(rows_sink: _RowSink) -> None:
     """多枚(二次升费现实可发)→ 禁猜:值不变翻来源 + 留证自愈。"""
     gs = _make_gs(bench=[('银狼LV.999', 2), ('银狼LV.999', 2)], equips=[])
     seq_before = gs.write_seq
-    out = report_action_pick_planner_param(gs, None, leg_type='upgrade',
+    out = report_action_pick_planner_param(gs, None, branch_type='upgrade',
                                            norm_item='',
                                            sig=_lsig('CwScreenYinLang'))
     assert out.applied is True
@@ -1527,7 +1527,7 @@ def test_upgrade_transform_zero_or_unobserved(rows_sink: _RowSink) -> None:
     # 零枚(已观察但无 2★ 源)。
     gs = _make_gs(bench=[('银狼LV.999', 1)], equips=[])
     seq_before = gs.write_seq
-    out = report_action_pick_planner_param(gs, None, leg_type='upgrade',
+    out = report_action_pick_planner_param(gs, None, branch_type='upgrade',
                                            norm_item='',
                                            sig=_lsig('CwScreenYinLang'))
     assert out.applied is False and out.reason == 'upgrade_source_missing'
@@ -1535,7 +1535,7 @@ def test_upgrade_transform_zero_or_unobserved(rows_sink: _RowSink) -> None:
     assert rows_sink.kinds() == ['planner_upgrade_source_missing']
     # 未观察(三容器全 None)同态。
     gs2 = _make_gs()
-    out2 = report_action_pick_planner_param(gs2, None, leg_type='upgrade',
+    out2 = report_action_pick_planner_param(gs2, None, branch_type='upgrade',
                                             norm_item='',
                                             sig=_lsig('CwScreenYinLang'))
     assert out2.applied is False and out2.reason == 'upgrade_source_unobserved'
@@ -1549,7 +1549,7 @@ def test_upgrade_cascade_lv999_normal_merge(rows_sink: _RowSink) -> None:
     同语义升星(write_logic 逐级落行,零留证行)。"""
     gs = _make_gs(bench=[('银狼LV.999', 2), ('银狼LV.999', 1),
                          ('银狼LV.999', 1)], equips=[])
-    out = report_action_pick_planner_param(gs, None, leg_type='upgrade',
+    out = report_action_pick_planner_param(gs, None, branch_type='upgrade',
                                            norm_item='',
                                            sig=_lsig('CwScreenYinLang'))
     assert out.applied is True

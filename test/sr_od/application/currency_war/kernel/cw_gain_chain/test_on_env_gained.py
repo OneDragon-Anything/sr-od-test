@@ -699,7 +699,7 @@ def _make_gs_with_equips() -> GameState:
     return gs
 
 
-def test_concept_stock_faxis_char_grant_leg(rows_sink: _RowSink) -> None:
+def test_concept_stock_faxis_char_grant_branch(rows_sink: _RowSink) -> None:
     """阵营支发放分支(gain-chain.md §3 随机支段:阵营轴 = 牌库时点池掷骰,
     两族同一循环同一前缀):固定种子 rng 直构 → bench 追加 1 张 1★ 且名
     ∈ 阵营池现算集(grant_char_pool 阵营 spec = 规格域 ∩ 当时牌库,未解锁
@@ -755,7 +755,7 @@ def test_concept_stock_random_equip_leg_unbound_no_done(
 _RANXUE_ENV = '燃血概念股'
 
 
-def test_ranxue_concept_stock_faction_char_grant_leg(
+def test_ranxue_concept_stock_faction_char_grant_branch(
         rows_sink: _RowSink) -> None:
     """燃血域随机支发放分支(gain-chain.md §3 随机支段:阵营轴 = 牌库时点
     池掷骰,两族同一循环同一前缀;概念股族展开卡登记约定):固定种子 rng

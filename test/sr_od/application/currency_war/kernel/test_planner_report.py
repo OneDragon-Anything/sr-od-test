@@ -33,7 +33,7 @@ import pytest
 
 from sr_od.application.currency_war.kernel.cw_events import (
     PlannerOption,
-    classify_planner_leg,
+    classify_planner_branch,
     decide_planner,
     normalize_equip_name,
     normalize_registry_equip_name,
@@ -108,27 +108,27 @@ def test_leg_classifier_equip_domain_first_and_longest_match() -> None:
     = equip+未解析;关键词降级;unknown。"""
     # 破解芯片 = 名字 + 含「弱化」效果文 → 装备域锚先行(碰撞治理;
     # 含弱化词未知名卡文退役后落 unknown)。
-    assert classify_planner_leg(
+    assert classify_planner_branch(
         '破解芯片 前台强度 30% 首次穿戴该装备时，会使多个节点变为弱化状'
         '态：敌人的生命上限降低10%，伤害降低 20%') == ('equip', '破解芯片')
     # longest-match:分身墨镜Max 不被短名「分身墨镜」截胡。
-    assert classify_planner_leg(
+    assert classify_planner_branch(
         '分身墨镜Max 获得时解锁并获得2星专家【银狼】') == ('equip', '分身墨镜Max')
-    assert classify_planner_leg(
+    assert classify_planner_branch(
         '分身墨镜 获得时解锁并获得1星专家【银狼】') == ('equip', '分身墨镜')
     # 相似归一:OCR 形变(基础名破坏)唯一命中。
     assert normalize_equip_name('破解 芯片!') == '破解芯片'
-    assert classify_planner_leg('破解 芯片!') == ('equip', '破解芯片')
+    assert classify_planner_branch('破解 芯片!') == ('equip', '破解芯片')
     # 多命中(锚未中,注册表多件同时高相似)= 装备信号成立、件名未解析
     # (禁猜——繁体形变使「数据拷贝仪」基础名锚不中,Max 与基础名同时高相似)。
     assert normalize_equip_name('数據拷贝仪Max') == ''
-    assert classify_planner_leg('数據拷贝仪Max') == ('equip', '')
+    assert classify_planner_branch('数據拷贝仪Max') == ('equip', '')
     # 关键词(锚/相似均未中才轮到;弱化兜底档退役后含弱化词未知名卡文同落 unknown)。
-    assert classify_planner_leg(
+    assert classify_planner_branch(
         '提升费用至4费,变为1星银狼LV.999') == ('upgrade', '')
-    assert classify_planner_leg('使后续节点【弱化】') == ('unknown', '')
-    assert classify_planner_leg('随便什么不认识的卡') == ('unknown', '')
-    assert classify_planner_leg('') == ('unknown', '')
+    assert classify_planner_branch('使后续节点【弱化】') == ('unknown', '')
+    assert classify_planner_branch('随便什么不认识的卡') == ('unknown', '')
+    assert classify_planner_branch('') == ('unknown', '')
 
 
 def test_decide_planner_weaken_tier_retired(rows_sink: _RowSink) -> None:
@@ -160,7 +160,7 @@ def test_equip_leg_gain_with_consequence_chain(
     from sr_od.application.currency_war.kernel.cw_action_report.pick_planner import (
         report_action_pick_planner_param,
     )
-    out = report_action_pick_planner_param(gs, None, leg_type='equip',
+    out = report_action_pick_planner_param(gs, None, branch_type='equip',
                                            norm_item='分身墨镜', sig=_lsig())
     assert out.applied is True
     assert gs.equips.value == ['幸运星', '分身墨镜'], '装备入栏'
@@ -178,7 +178,7 @@ def test_equip_leg_unresolved_flips_source(
         report_action_pick_planner_param,
     )
     gs = _make_gs(bench=[('希儿', 1)], equips=['幸运星'])
-    out = report_action_pick_planner_param(gs, None, leg_type='equip',
+    out = report_action_pick_planner_param(gs, None, branch_type='equip',
                                            norm_item='', sig=_lsig())
     assert out.applied is True
     assert gs.equips.value == ['幸运星'], '值不变'
@@ -197,11 +197,11 @@ def test_unknown_leg_evidenced_zero_write(
     )
     gs = _make_gs(bench=[('希儿', 1)], equips=[])
     seq_before = gs.write_seq
-    out = report_action_pick_planner_param(gs, None, leg_type='unknown',
+    out = report_action_pick_planner_param(gs, None, branch_type='unknown',
                                            norm_item='', sig=_lsig())
     assert out.applied is True and gs.write_seq == seq_before, '零容器写'
     assert rows_sink.kinds() == ['planner_leg_unknown']
-    out2 = report_action_pick_planner_param(gs, None, leg_type='',
+    out2 = report_action_pick_planner_param(gs, None, branch_type='',
                                             norm_item='', sig=_lsig())
     assert out2.applied is True and gs.write_seq == seq_before
     assert out2.reason == 'unrouted_leg_zero_write', '终态兜底 reason 更名'
@@ -221,7 +221,7 @@ def test_planner_report_is_immediate_single_phase(
     gs = _make_gs(bench=[('银狼LV.999', 2)], equips=['幸运星'])
     param = CwActionPickInvestStrategyParam(idx=1, norm_name='骇客专家:银狼')
     out1 = report_action_pick_planner_param(gs, param, _lsig('CwActionPickPlannerOp'),
-                                            leg_type='upgrade')
+                                            branch_type='upgrade')
     assert out1.applied is True
     assert gs.bench.value.slots[0].unit.star == 1, '一次上报即变换(无证据闩)'
     assert gs.active_strategies.value in (None, []), '持卡面未被 planner 上报触碰'

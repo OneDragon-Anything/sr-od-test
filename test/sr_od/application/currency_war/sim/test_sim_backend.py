@@ -625,7 +625,7 @@ def test_opening_replace_env_sim_replaces_m01_hand() -> None:
     assert first == second, '同 seed 重放确定性(同名同星)'
 
 
-def test_default_env_sim_bench_untouched_by_replace_leg() -> None:
+def test_default_env_sim_bench_untouched_by_replace_branch() -> None:
     """默认环境局回归(T-43 设计 §4 锁 6 末项):选无替换标记环境(轮岗)
     → bench = 4 张 M01 原样(清席支缺省 False 零行为差——「默认环境局
     rng 消耗序列不变」的登记面行为锁)。"""
@@ -957,7 +957,7 @@ def _env_pick_backend(seed: int = 7) -> SimBackend:
     return b
 
 
-def test_env_reroll_pick_second_gain_leg(_isolate_defect_buffer) -> None:
+def test_env_reroll_pick_second_gain_branch(_isolate_defect_buffer) -> None:
     """追加随机环境分支(设计锁面 3):选蓝海完整首链 → 掷骰二次入链——
     active_env ∈ 全集−追加名单且 ≠ 蓝海(追加非替换)、金净变恰 +6
     (池无 gold_instant 条目,二次入链零重复发金)、池分布披露键在册、
@@ -2258,7 +2258,7 @@ def test_env_screen_refresh_world_leg_group_reroll() -> None:
         uninstall_backend()
 
 
-def test_no_env_match_refresh_routes_strategy_leg() -> None:
+def test_no_env_match_refresh_routes_strategy_branch() -> None:
     """无环境局刷新路由锁(T-427 验收 F-1 回归):env_present 缺省 False
     = 合法无环境支路配置,该局 active_env 恒空 + env_refresh_left 未写
     (None)→ 刷新声明推导必须走策略屏逐卡分支(旧单一 active_env 依据会
@@ -2363,7 +2363,7 @@ def _advance_pair() -> tuple[str, str, str]:
     return a, b, advance
 
 
-def test_wear_report_synthesis_leg() -> None:
+def test_wear_report_synthesis_branch() -> None:
     """穿着即合成(世界规则,单一源 = kernel 穿装备上报):穿第二件
     基础件 → worn 内立即合成进阶件;owned 扣减;上限按合成后计。"""
     a, b, advance = _advance_pair()

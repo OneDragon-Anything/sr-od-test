@@ -25,7 +25,7 @@ from sr_od.application.currency_war.sim.cw_sim_backend import (
 )
 
 _DEAL_TIMES = 100
-_SEED = 'cw-shop-two-star-leg'
+_SEED = 'cw-shop-two-star-branch'
 
 
 class _CountingRandom(random.Random):

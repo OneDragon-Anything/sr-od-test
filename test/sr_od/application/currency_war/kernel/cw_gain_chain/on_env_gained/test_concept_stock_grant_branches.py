@@ -70,7 +70,7 @@ _ENV_10 = '昼之半神概念股'
 _ENV_11 = '夜之半神概念股'
 
 
-def test_langshou_concept_stock_faction_char_grant_leg(
+def test_langshou_concept_stock_faction_char_grant_branch(
         rows_sink: _RowSink) -> None:
     """狼狩域随机支发放分支(gain-chain.md §3 随机支段:阵营轴 = 牌库时点
     池掷骰,两族同一循环同一前缀;概念股族展开卡登记约定):固定种子 rng
@@ -125,7 +125,7 @@ def test_langshou_concept_stock_random_equip_leg_unbound_no_done(
     assert rows_sink.kinds() == [], '正常路径零申报行'
 
 
-def test_zhouzhibanshen_concept_stock_faction_char_grant_leg(
+def test_zhouzhibanshen_concept_stock_faction_char_grant_branch(
         rows_sink: _RowSink) -> None:
     """昼之半神域随机支发放分支(gain-chain.md §3 随机支段:阵营轴 = 牌库
     时点池掷骰,两族同一循环同一前缀;概念股族展开卡登记约定):固定种子
@@ -180,7 +180,7 @@ def test_zhouzhibanshen_concept_stock_random_equip_leg_unbound_no_done(
     assert rows_sink.kinds() == [], '正常路径零申报行'
 
 
-def test_yezhibanshen_concept_stock_faction_char_grant_leg(
+def test_yezhibanshen_concept_stock_faction_char_grant_branch(
         rows_sink: _RowSink) -> None:
     """夜之半神域随机支发放分支(gain-chain.md §3 随机支段:阵营轴 = 牌库
     时点池掷骰,两族同一循环同一前缀;概念股族展开卡登记约定):固定种子

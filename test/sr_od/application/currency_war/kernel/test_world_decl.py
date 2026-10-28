@@ -442,7 +442,7 @@ def test_pick_planner_decl_row11_applied_and_reject():
     )
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     out = report_action_pick_planner_param(gs, SimpleNamespace(), _SIG,
-                                           leg_type='')
+                                           branch_type='')
     assert out.applied
     assert out.world_decl == WorldDecl(next_screen='货币战争-备战',
                                        trigger='pick_planner')
@@ -451,7 +451,7 @@ def test_pick_planner_decl_row11_applied_and_reject():
         gs_unobserved = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
         out_rej = report_action_pick_planner_param(
             gs_unobserved, SimpleNamespace(), _SIG,
-            leg_type=PLANNER_LEG_UPGRADE)
+            branch_type=PLANNER_LEG_UPGRADE)
         assert out_rej.applied is False
         assert out_rej.world_decl is None
     finally:

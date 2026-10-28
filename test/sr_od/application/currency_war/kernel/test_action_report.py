@@ -311,7 +311,7 @@ def test_furnace_equip_merged_single_rand_write(rows_sink: _RowSink) -> None:
     assert gs.equips.value[0] in pool, '替换件属同类别池(注册表现算)'
 
 
-def test_furnace_char_legs_equips_rand_and_row_logic(
+def test_furnace_char_branchs_equips_rand_and_row_logic(
         rows_sink: _RowSink) -> None:
     """炉·拖角色:①equips 单笔 rand 合并写(移除工具 ∧ 移除穿戴 ∧ 追加各
     采样替换);②目标角色行域 write_logic(穿戴清空);两条分支各落一行
@@ -336,7 +336,7 @@ def test_furnace_char_legs_equips_rand_and_row_logic(
     assert gs.deployed.source == 'logic', '行域分支 = 确定面'
 
 
-def test_furnace_char_leg_mixed_worn_keeps_out_of_scope(
+def test_furnace_char_branch_mixed_worn_keeps_out_of_scope(
         rows_sink: _RowSink) -> None:
     """炉·拖角色作用域白名单(口述·权威 2026-09-21):混合穿戴(简易 +
     非白名单)下白名单件采样替换、越白名单件保留原样 + 聚合留证行
@@ -416,7 +416,7 @@ def test_furnace_pool_scope_whitelist() -> None:
             f'{name} 池含后果表成员(结构性不触发面)'
 
 
-def test_furnace_equip_leg_target_out_of_scope_fail_closed(
+def test_furnace_equip_branch_target_out_of_scope_fail_closed(
         rows_sink: _RowSink) -> None:
     """炉·目标越白名单(特殊)= fail-closed 零写 + 留证(禁猜;容器含
     工具与目标件原样)。"""

@@ -641,7 +641,7 @@ class TestPickReportsConsume:
         register_screen_change(gs_p, 'planner',
                                KIND_SCREEN_NAMES['planner'], 't')
         report_action_pick_planner_param(
-            gs_p, SimpleNamespace(leg_type=''), _SIG)
+            gs_p, SimpleNamespace(branch_type=''), _SIG)
         assert gs_p.screen_changes.pending == [], 'planner 上报消费同 kind'
 
 

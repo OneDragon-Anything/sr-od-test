@@ -147,11 +147,11 @@ def test_label_piece_board_exit_via_paired_swap_support_non_decreasing() \
                                        after)
     assert n_after == n_before, \
         f'边界 = 净零(损失标签件与换入支撑件相抵),实得 {n_before}->{n_after}'
-    ok, leg = swap_bond_gate_benefit(ctx, victims=[_TING], ups=[_SBR],
+    ok, branch = swap_bond_gate_benefit(ctx, victims=[_TING], ups=[_SBR],
                                      pairs=[(_TING, _SBR)],
                                      up_stars={_SBR: 1})
-    assert ok is True and leg == 'tier', \
-        f'A′ 帧:停云换 Saber 圣杯 2→3 二阶激活归因 ①,实得 {(ok, leg)}'
+    assert ok is True and branch == 'tier', \
+        f'A′ 帧:停云换 Saber 圣杯 2→3 二阶激活归因 ①,实得 {(ok, branch)}'
     assert swap_bond_gate_conservation(ctx, victims=[_TING],
                                        ups=[_SBR]) is True, \
         '守恒:终局档位非降(能量持平、圣杯升档)'

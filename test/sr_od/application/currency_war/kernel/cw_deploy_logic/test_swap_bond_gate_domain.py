@@ -269,17 +269,17 @@ _SANYUE = '三月七'
 # 门 1 四条分支 + 守恒(design §2.2/§2.3)
 # ============================================================
 
-def test_bond_gate_leg_completion_and_tier_and_support() -> None:
+def test_bond_gate_branch_completion_and_tier_and_support() -> None:
     """门 1 首达分支检查序 ④→①→②(design §2.2 枚举表 C/G 行归因 ④;
     A 行 ①② 同中归因 ①):成品分支(④,同源折法 form_progress)优先于
     tier;tier 优先于 support。"""
     ctx = _gate_ctx(board=[_GIL, _RIN, _QING, _TING, _YAO],
                     bench=[_SBR], cap=5)
     # A 帧:Saber 换爻光 → 圣杯 2→3(二阶)∧ 能量 2→3(一阶)双激活
-    ok, leg = swap_bond_gate_benefit(ctx, victims=[_YAO], ups=[_SBR],
+    ok, branch = swap_bond_gate_benefit(ctx, victims=[_YAO], ups=[_SBR],
                                      pairs=[(_YAO, _SBR)],
                                      up_stars={_SBR: 1})
-    assert ok is True and leg == 'tier', f'A 帧归因 ①,实得 {leg}'
+    assert ok is True and branch == 'tier', f'A 帧归因 ①,实得 {branch}'
     # ④ 优先帧:组换后成型(Saber+停云组 → 圣杯 3 ∧ 能量 4 仍 ✗;
     # 用 required 阵容构造纯 ④ 形态见 test_completion_branch_domain_
     # parameterized 的希儿量子帧)。此处钉 ①>②:支撑数增但档位持平帧
@@ -294,17 +294,17 @@ def test_bond_gate_leg_completion_and_tier_and_support() -> None:
         'B 帧:外部凑档件使能量 2→3 新档,归因 ①(tier 优先于 support)'
 
 
-def test_bond_gate_leg_star_requires_same_name() -> None:
+def test_bond_gate_branch_star_requires_same_name() -> None:
     """门 1③ 谓词钉死(完成判据 2 前半):同名必要——异名星级升换不构成
     ③(键集/支撑全持平帧 (False, ''));同名升星换对 ③ 成立。"""
     # 同名:Saber 2★ 换板上 Saber 1★(键集计数同名相抵、支撑同名相抵)
     ctx = _gate_ctx(board=[_SBR, _GIL, _TING, _YAO, '椒丘'],
                     bench=[f'{_SBR}2'], cap=5, k_members=frozenset({_SBR}))
     # (bench 名用占位防同名去重干扰单测判定;pairs/星级直接喂参数)
-    ok, leg = swap_bond_gate_benefit(
+    ok, branch = swap_bond_gate_benefit(
         ctx, victims=[_SBR], ups=[_SBR], pairs=[(_SBR, _SBR)],
         up_stars={_SBR: 2})
-    assert ok is True and leg == 'star', f'同名升星换归因 ③,实得 {leg}'
+    assert ok is True and branch == 'star', f'同名升星换归因 ③,实得 {branch}'
     # 异名:星级升但不同名 → ③ 不成立(两件都计入名单 → 支撑持平;
     # 键集零命中 → 档位持平;target_comp 成型不达成态)
     ok2, leg2 = swap_bond_gate_benefit(
@@ -440,10 +440,10 @@ def test_completion_branch_dual_domain_same_source() -> None:
                          bench=['希儿'], cap=5, comp=comp)
     assert _completion_swap_ins(gate_ctx) == {'希儿'}, \
         '转型域:完成品候选同吃单点门(门 1④ 同源折法)'
-    ok, leg = swap_bond_gate_benefit(gate_ctx, victims=['娜塔莎'],
+    ok, branch = swap_bond_gate_benefit(gate_ctx, victims=['娜塔莎'],
                                      ups=['希儿'], pairs=[('娜塔莎', '希儿')],
                                      up_stars={'希儿': 1})
-    assert ok is True and leg == 'completion', \
+    assert ok is True and branch == 'completion', \
         '转型域完成品换入经门 1④ 放行(G 情形;不跨档位梯)'
 
 

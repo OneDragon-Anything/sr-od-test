@@ -14,7 +14,7 @@ screens.py 盛会之星段;report 函数级契约由 test_screen_report_ports �
   → 此刻才写 chosen_wish + success 交回;标识在 = 未落地 → 不写、重走
   (chosen_* 动作事实边界留守重入裁决点);
 - **决策动作 node 测试**(银狼策划,无门单发型):决策从容器零参读
-  (决策调用形态不变)→ 组装 equip(分支类型载荷 classify_planner_leg)→
+  (决策调用形态不变)→ 组装 equip(分支类型载荷 classify_planner_branch)→
   点卡链派发 → 派发即 round_success 终结(零重入裁决轮;即时上报迭代
   。原装备三选一代表测试
   随该屏误判退役删除)。
@@ -656,7 +656,7 @@ def test_planner_act_decides_leg_and_dispatch_terminal(
         test_context, monkeypatch) -> None:
     """决策动作 node 测试(银狼策划,即时上报
     equip-immediate-report design §2.1):零参决策 → 分支类型判定单源
-    ``classify_planner_leg`` → env 携分支类型载荷 → 选卡确认链派发即
+    ``classify_planner_branch`` → env 携分支类型载荷 → 选卡确认链派发即
     ``round_success`` 终结(零重入裁决轮、零证据闩存证——效果分支在动作 op
     确认点击后即时上报)。
     红 = 分支类型载荷断流 / 派发后回退 wait(重入裁决回潮)/ 存证闩回潮。"""
@@ -700,8 +700,8 @@ def test_planner_act_decides_leg_and_dispatch_terminal(
     assert _decide_calls == [1], f'零参决策恰一次:{_decide_calls!r}'
     assert len(dispatches) == 1 and dispatches[0].param.idx == 1, (
         f'选卡确认链恰一次派发,param 携真实 idx:{dispatches!r}')
-    assert dispatches[0].env.leg_type == 'equip', (
-        'env 携分支类型载荷(classify_planner_leg 单源)')
+    assert dispatches[0].env.branch_type == 'equip', (
+        'env 携分支类型载荷(classify_planner_branch 单源)')
     assert dispatches[0].env.norm_item == '破解芯片', '归一件名随 env 透传'
     assert dispatches[0].env.target is not None, '点卡定位点经 env 传入'
     assert rs.is_success, f'派发即 round_success 终结(零重入裁决轮):{rs!r}'

@@ -310,7 +310,7 @@ _HEITIANQUE = '黑天鹅'
 _SANYUEQI = '三月七'
 
 # 持续伤害+希儿系 pair 的判据分支(真实 pair 键;fallback 分支产物 =
-# form_tiers {持续伤害:2} + or_legs 量2∨贝2 + required 希儿;单一源 =
+# form_tiers {持续伤害:2} + or_reqs 量2∨贝2 + required 希儿;单一源 =
 # pair_target_comp)。
 _PAIR = ('持续伤害', '希儿系')
 

@@ -220,7 +220,7 @@ def test_mixed_batch_missing_level_skip_not_counted(
         '触发分支零写行'
 
 
-def test_window_order_reward_writes_before_trigger_leg(
+def test_window_order_reward_writes_before_trigger_branch(
         monkeypatch: pytest.MonkeyPatch, seeded_provider) -> None:
     """窗序与计数先入账(T-29 设计 §2.4/§4 锁 7):矿奖励写(金)先于
     战技点契约触发分支写(台账序锁);计数入账后检查时现值含本批

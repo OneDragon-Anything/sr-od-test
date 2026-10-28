@@ -156,7 +156,7 @@ def _materialized_snapshot(pair: tuple) -> dict:
     )
     comp = pair_target_comp(tuple(pair))
     board = {f: t for f, t in comp.form_tiers.items() if t > 0}
-    for f, t in getattr(comp, 'or_legs', None) or []:
+    for f, t in getattr(comp, 'or_reqs', None) or []:
         board[f] = max(board.get(f, 0), t)
     deployed = [{'char_id': n}
                 for n in getattr(comp, 'required_deployed', None) or ()]
