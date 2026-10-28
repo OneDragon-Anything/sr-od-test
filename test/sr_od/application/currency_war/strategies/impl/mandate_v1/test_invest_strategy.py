@@ -334,19 +334,10 @@ def test_grants_validation_char_drift_raises(monkeypatch):
         cw_investments._validate_strategy_grants()
 
 
-def test_grants_validation_empty_grant_raises(monkeypatch):
-    """空发放集即炸(③ 四通道全空判定,沿 _validate_env_gifts 先例)。"""
-    bad = dict(STRATEGY_GRANTS)
-    bad['借力打力'] = GiftGrant()
-    _patch_grants(monkeypatch, bad)
-    with pytest.raises(ValueError, match='空发放集'):
-        cw_investments._validate_strategy_grants()
-
-
 def test_grants_box_legs_items_only_pass_validation(monkeypatch):
-    """开箱分支条目(占席道具直读)通过构建校验(③ 四通道扩法:chars 两通道
-    空 + items_immediate 非空 = 合法,登记面先例 = 三张棱彩箱分支卡);
-    箱条目经消费口恒 off → 0 分(design 取舍 3,占席道具不进打分零改动)。"""
+    """开箱分支条目(占席道具直读)登记形状(chars 两通道空 + items_immediate
+    非空 = 合法,登记面先例 = 三张棱彩箱分支卡);箱条目经消费口恒 off →
+    0 分(design 取舍 3,占席道具不进打分零改动)。"""
     for name in ('战术义眼++', '保守派', '快请专家·彩'):
         grant = STRATEGY_GRANTS[name]
         assert grant.items_immediate == ('进阶武装箱',), '开箱分支直读登记'

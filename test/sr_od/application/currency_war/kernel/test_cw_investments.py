@@ -1,18 +1,13 @@
 """cw_investments 随机赠卡家族载体测试(RandomCharSpec / random_char_pool /
-构建校验扩展;迭代 2026-09-23-invest-effects-calc T-10 人才引进)。
+构建校验;迭代 2026-09-23-invest-effects-calc T-10 人才引进起,随批续建)。
 
-测试面依据 = 该迭代 designs/T-10-rencai-yinjin.md §2.1-§2.2(定稿):
-- **载体值域三查**(import 即炸语义,注入 + 直调沿 ENV_GIFTS 校验测试
-  惯用法):cost 1-5 / star 1-3 / type_tag ∈ 注册表 char_type 标签闭集,
-  bool 显式拒(bool 是 int 子类,True 会被纯 int 判当 1 混过);
-- **空发放集判定并入 chars_random_immediate**(env/策略两表):随机支
-  only 条目是合法登记形态,不得被「空发放集」误炸;全空条目照炸
-  (env 侧全空对照 = 既有测试 kernel/test_gain_chain.py
-  test_env_gifts_validation_empty_grant_includes_scheduled,不重复);
-- **互斥面**:人才引进 ∩ ENV_ECONOMY = ∅(import 期互斥校验显式半边);
-- **池派生性质**(注册表现算对照,非快照断言):空 type_tag = 费用档
-  全员旁路、非空 = char_type 含标签过滤;池规模作注释性快照(2026-10
-  时点 4 费 14 名)非断言值。
+校验治理口径 = 用户裁定 2026-10-28:防登记笔误的值域/互斥类 import 校验
+全部移除且不再新增(判据 = 只能由写表人笔误触发 vs 能被游戏版本变更独立
+触发);本文件相应锁随删,存留锁只打「漂移哨」行为与登记数据性质:
+- **漂移哨锁**:规格过滤池空 / 随机装备池空 / 孤儿键等版本漂移形态照炸;
+- **登记数据性质**(非快照断言):各卡 ∈ ENV_GIFTS 且 ∉ ENV_ECONOMY、
+  池派生 = 注册表现算双射(空 type_tag = 费用档全员旁路、非空 = 含标签
+  过滤);池规模作注释性快照非断言值。
 """
 from __future__ import annotations
 
@@ -41,49 +36,6 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     random_char_pool,
     strategy_faction_scope,
 )
-
-
-def test_random_char_spec_value_domain_raises(
-        monkeypatch: pytest.MonkeyPatch) -> None:
-    """RandomCharSpec 值域三查(T-10 设计 §2.2 条 1):cost 1-5、star
-    1-3(Unit.star 值域)、type_tag ∈ 注册表标签闭集(错字致池空静默);
-    cost/star 拒 bool(True 是 int 子类,纯 int 判会当 1 混过)。"""
-    bad_specs = [
-        RandomCharSpec(cost=0, star=1),      # 费用档下界外
-        RandomCharSpec(cost=6, star=1),      # 费用档上界外
-        RandomCharSpec(cost=True, star=1),   # bool 拒
-        RandomCharSpec(cost=4, star=0),      # 星级下界外
-        RandomCharSpec(cost=4, star=4),      # 星级上界外
-        RandomCharSpec(cost=4, star=True),   # bool 拒
-        RandomCharSpec(cost=4, star=1, type_tag='輸出'),  # 闭集外(错字)
-    ]
-    for spec in bad_specs:
-        bad = dict(ENV_GIFTS)
-        bad['人才引进'] = GiftGrant(chars_random_immediate=(spec,))
-        monkeypatch.setattr(cw_investments, 'ENV_GIFTS', bad)
-        with pytest.raises(ValueError):
-            cw_investments._validate_env_gifts()
-
-
-def test_random_only_grant_not_empty_grant_both_tables(
-        monkeypatch: pytest.MonkeyPatch) -> None:
-    """空发放集判定并入新字段(env/策略两表,T-10 设计 §2.2 条 3/4):
-    chars_random_immediate-only 条目 = 合法登记,两表校验均不得炸——
-    未并入时随机支登记会被「空发放集」误炸(import 期即拦)。"""
-    # env 侧:现值表(人才引进 = 随机支 only)直调通过
-    cw_investments._validate_env_gifts()
-    # 策略侧:GiftGrant 两表共享,注入随机支 only 条目同样通过
-    bad = dict(STRATEGY_GRANTS)
-    bad['佩佩驾到'] = GiftGrant(
-        chars_random_immediate=(RandomCharSpec(cost=2, star=1),))
-    monkeypatch.setattr(cw_investments, 'STRATEGY_GRANTS', bad)
-    cw_investments._validate_strategy_grants()
-    # 对照:全空条目在策略侧照炸(判定仍在,只是并入新通道)
-    bad2 = dict(STRATEGY_GRANTS)
-    bad2['佩佩驾到'] = GiftGrant()
-    monkeypatch.setattr(cw_investments, 'STRATEGY_GRANTS', bad2)
-    with pytest.raises(ValueError, match='空发放集'):
-        cw_investments._validate_strategy_grants()
 
 
 def test_talent_import_not_in_env_economy() -> None:
@@ -154,18 +106,6 @@ def test_replaces_opening_supply_unique_to_talent_reserve() -> None:
     的登记面前提钉死,防并行批误开。"""
     flagged = [n for n, g in ENV_GIFTS.items() if g.replaces_opening_supply]
     assert flagged == ['人才储备']
-
-
-def test_replaces_opening_supply_without_char_legs_raises(
-        monkeypatch: pytest.MonkeyPatch) -> None:
-    """开局替换防呆(T-43 设计 §2.2/§4 锁 1):replaces_opening_supply=True
-    而角色支全空 → 校验炸(「清空开局不发」怪卡 = 登记残缺;开局补给物
-    = 角色,道具/装备支不算替代者)。注入 + 直调沿本文件校验测试惯用法。"""
-    bad = dict(ENV_GIFTS)
-    bad['人才储备'] = GiftGrant(replaces_opening_supply=True)
-    monkeypatch.setattr(cw_investments, 'ENV_GIFTS', bad)
-    with pytest.raises(ValueError, match='开局替换无产出'):
-        cw_investments._validate_env_gifts()
 
 
 def test_env_reroll_names_member_validation(
@@ -298,16 +238,16 @@ def test_scope_queries_normalize_ocr_variants() -> None:
 # §2.1-§2.3/§4.1,定稿。)
 
 
-def test_equips_random_immediate_category_validation(
+def test_equips_random_immediate_pool_empty_raises(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """随机装备支类别校验(T-19 设计 §2.2 条 1-2,import 即炸语义,注入 +
-    直调沿本文件惯用法):类别名 ∈ EQUIPMENTS category 词集闭集(越界 =
-    采样池必空,构建期拒)。"""
+    """随机装备支池空哨(T-19 设计 §2.2 条 1-2 现行形态,2026-10-28 治理
+    后类别闭集并入池空单一哨;import 即炸语义,注入 + 直调沿本文件惯用法):
+    类别名错字/版本改名都表现为过滤池空 → 构建期拒。"""
     bad = dict(ENV_GIFTS)
     bad['劳务派遣合同'] = cw_investments.GiftGrant(
         equips_random_immediate=('不存在的类别',))
     monkeypatch.setattr(cw_investments, 'ENV_GIFTS', bad)
-    with pytest.raises(ValueError, match='随机装备类别名'):
+    with pytest.raises(ValueError, match='随机装备池空'):
         cw_investments._validate_env_gifts()
 
 
@@ -323,28 +263,15 @@ def test_star_category_pool_derivation_nonempty() -> None:
     cw_investments._validate_env_gifts()
 
 
-def test_laowu_random_equip_grant_not_empty_grant_both_tables(
-        monkeypatch: pytest.MonkeyPatch) -> None:
-    """空发放集判定并入 equips_random_immediate(env/策略两表,T-19 设计
-    §2.2 条 3/条 5):随机装备支 only 条目 = 合法登记形态,两表校验均不得
-    炸——未并入时该登记会被「空发放集」误炸(env 侧 import 期即拦)。"""
-    assert ENV_GIFTS['劳务派遣合同'].equips_random_immediate == ('星徽',)
-    cw_investments._validate_env_gifts()
-    # 策略侧:GiftGrant 两表共享,注入随机装备支 only 条目同样通过
-    bad = dict(STRATEGY_GRANTS)
-    bad['佩佩驾到'] = cw_investments.GiftGrant(
-        equips_random_immediate=('星徽',))
-    monkeypatch.setattr(cw_investments, 'STRATEGY_GRANTS', bad)
-    cw_investments._validate_strategy_grants()
-
-
-def test_laowu_not_in_env_economy() -> None:
-    """互斥面 + 白名单同键(T-19 设计 §4.1):劳务派遣合同 ∈ ENV_GIFTS 且
-    ∈ ENV_BOSS_GRANTS(两表同键 = 各表各分支合法形态)且 ∉ ENV_ECONOMY
-    (防错装闸在册——经济域零动作,import 期互斥校验显式半边)。"""
+def test_laowu_registry_surface() -> None:
+    """登记面 + 白名单同键(T-19 设计 §4.1,2026-10-28 治理后形态):
+    劳务派遣合同 ∈ ENV_GIFTS 且 ∈ ENV_BOSS_GRANTS(两表同键 = 各表各
+    分支合法形态)且 ∉ ENV_ECONOMY(经济域零动作);登记形状 = 随机装备
+    支 only(``('星徽',)``)。"""
     assert '劳务派遣合同' in ENV_GIFTS
     assert '劳务派遣合同' in cw_investments.ENV_BOSS_GRANTS
     assert '劳务派遣合同' not in ENV_ECONOMY
+    assert ENV_GIFTS['劳务派遣合同'].equips_random_immediate == ('星徽',)
 
 
 def test_env_boss_grants_registry_and_validation(
@@ -820,31 +747,6 @@ def test_equip_immediate_drift_check_raises(
         cw_investments._validate_env_gifts()
 
 
-def test_equip_item_channel_clash_raises(
-        monkeypatch: pytest.MonkeyPatch) -> None:
-    """装备/道具通道同名互斥(T-31 设计 §4 锁 1 ⑨):同一 GiftGrant 内
-    equips_immediate 与 items 两通道同名件 → 构建校验炸(身份串行防呆;
-    现值登记 红钻/简易武装箱 异名,天然通过)。"""
-    bad = dict(ENV_GIFTS)
-    bad['红钻贵族'] = GiftGrant(equips_immediate=('红钻',),
-                                items_immediate=('红钻',))
-    monkeypatch.setattr(cw_investments, 'ENV_GIFTS', bad)
-    with pytest.raises(ValueError, match='通道同名'):
-        cw_investments._validate_env_gifts()
-
-
-def test_equip_only_grant_not_empty_grant_both_tables(
-        monkeypatch: pytest.MonkeyPatch) -> None:
-    """空发放集判定并入 equips_immediate(env/策略两表,T-31 设计 §2.2
-    条 3 + 策略侧家族义务):装备入账分支 only 条目 = 合法登记,两表校验均不得
-    误炸;全空条目照炸由既有锁承载,不重复。"""
-    cw_investments._validate_env_gifts()  # 现值表(红钻贵族 = 装备+箱)直调
-    bad = dict(STRATEGY_GRANTS)
-    bad['佩佩驾到'] = GiftGrant(equips_immediate=('红钻',))
-    monkeypatch.setattr(cw_investments, 'STRATEGY_GRANTS', bad)
-    cw_investments._validate_strategy_grants()
-
-
 def test_red_diamond_registry_surface() -> None:
     """登记面与身份防污染(T-31 设计 §4 锁 1/3):红钻贵族 ∈ ENV_GIFTS
     且 ∉ ENV_ECONOMY;登记形状 = 装备入账分支('红钻',)+ 开箱分支('简易武装箱',);
@@ -871,8 +773,7 @@ def test_blue_diamond_registry_surface() -> None:
     且 ∉ ENV_ECONOMY;登记形状 = 装备入账分支('蓝钻',)+ 开箱分支('简易武装箱',);
     蓝钻 ∈ EQUIPMENTS(装备身份)且 ∉ BENCH_ITEM_NAMES,'简易武装箱' ∈
     BENCH_ITEM_NAMES(派生面只扫 items 两通道,装备不进占席词表;
-    红钻贵族姊妹行同判)。import 过闸 = 模块加载即对全表现值(含本行)
-    跑 _validate_env_gifts ⑧装备名/⑨通道同名/③空发放集/④∩ENV_ECONOMY。"""
+    红钻贵族姊妹行同判)。"""
     from sr_od.application.currency_war.data.cw_equipment_data import (
         EQUIPMENTS,
     )
@@ -887,6 +788,30 @@ def test_blue_diamond_registry_surface() -> None:
     assert '蓝钻' in EQUIPMENTS
     assert '蓝钻' not in BENCH_ITEM_NAMES
     assert '简易武装箱' in BENCH_ITEM_NAMES
+
+
+def test_lieche_invite_registry_surface() -> None:
+    """登记面(T-63 设计 §4 锁 1,2026-10-28 治理后形态):列车同行邀请
+    ∈ ENV_GIFTS 且 ∉ ENV_ECONOMY;登记形状 = 具名装备单通道
+    ``equips_immediate=('列车同行星徽',)``,角色/道具/替换旗全空(装备
+    only = 邀请族「获得一个【X星徽】」的唯一发放形态);星徽 ∈ EQUIPMENTS
+    (装备身份)且 ∉ BENCH_ITEM_NAMES(派生面只扫 items 两通道,装备不进
+    占席词表;红钻贵族姊妹行同判)。"""
+    from sr_od.application.currency_war.data.cw_equipment_data import (
+        EQUIPMENTS,
+    )
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        BENCH_ITEM_NAMES,
+    )
+    assert '列车同行邀请' in ENV_GIFTS
+    assert '列车同行邀请' not in ENV_ECONOMY
+    grant = ENV_GIFTS['列车同行邀请']
+    assert grant.equips_immediate == ('列车同行星徽',)
+    assert not grant.chars_immediate
+    assert not grant.items_immediate
+    assert grant.replaces_opening_supply is False
+    assert '列车同行星徽' in EQUIPMENTS
+    assert '列车同行星徽' not in BENCH_ITEM_NAMES
 
 
 # ============================================================ 环境「随机赠卡+上场锁」登记表
@@ -917,28 +842,15 @@ def _bad_deploy_lock(**kw) -> dict:
 
 def test_env_deploy_lock_grants_validation_raises(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """五查 import 即炸语义(T-33 设计 §2.1/§4 锁 1):①孤儿键 ②spec 值域
-    (cost 0/6、star 0/4、type_tag 词表外——_validate_env_gifts ⑥ 同款判据,
-    bool 显式拒)③规格池空(模拟注册表漂移)④锁期形(0/负/bool——
-    ENV_BATTLE_GRANTS 锁期形④逐字同款)⑤双登记防呆(set ∩ ENV_GIFTS ≠ ∅
+    """四查 import 即炸语义(T-33 设计 §2.1/§4 锁 1,2026-10-28 治理后
+    形态:spec 值域四查随共享助手收窄,只留池空单一哨):①孤儿键
+    ②规格池空(模拟注册表漂移)③锁期形(0/负/bool——
+    ENV_BATTLE_GRANTS 锁期形④逐字同款)④双登记防呆(set ∩ ENV_GIFTS ≠ ∅
     = 赠卡双发 + 锁记录双写)。"""
     bad_orphan = dict(_ORIG_DEPLOY_LOCK)
     bad_orphan['不存在环境X'] = _deploy_lock_grant()
-    bad_pool = _bad_deploy_lock(
-        spec=RandomCharSpec(cost=5, star=2, type_tag='不存在的标签X'))
     cases = [
         ('孤儿键', bad_orphan, '孤儿键'),
-        ('cost 0', _bad_deploy_lock(spec=RandomCharSpec(cost=0, star=2)),
-         '费用档'),
-        ('cost 6', _bad_deploy_lock(spec=RandomCharSpec(cost=6, star=2)),
-         '费用档'),
-        ('cost bool', _bad_deploy_lock(spec=RandomCharSpec(cost=True, star=2)),
-         '费用档'),
-        ('star 0', _bad_deploy_lock(spec=RandomCharSpec(cost=5, star=0)),
-         '星级'),
-        ('star 4', _bad_deploy_lock(spec=RandomCharSpec(cost=5, star=4)),
-         '星级'),
-        ('type_tag 词表外', bad_pool, '类型标签'),
         ('锁期零', _bad_deploy_lock(deploy_lock_nodes=0), '锁期形'),
         ('锁期负', _bad_deploy_lock(deploy_lock_nodes=-1), '锁期形'),
         ('锁期 bool', _bad_deploy_lock(deploy_lock_nodes=True), '锁期形'),

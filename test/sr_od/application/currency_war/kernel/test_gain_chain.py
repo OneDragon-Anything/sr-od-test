@@ -44,7 +44,7 @@ from unittest import mock
 
 import pytest
 
-from sr_od.application.currency_war.kernel import cw_gain_chain, cw_investments
+from sr_od.application.currency_war.kernel import cw_gain_chain
 from sr_od.application.currency_war.kernel.cw_action_report import (
     report_action_deploy_move_param,
     report_action_pick_invest_env_param,
@@ -100,7 +100,6 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     ENV_GIFTS,
     INVESTMENT_ENVS,
     STRATEGY_GRANTS,
-    GiftGrant,
     RandomCharSpec,
     equips_by_category,
     random_char_pool,
@@ -1000,38 +999,6 @@ def test_pending_item_grants_audit_row_declared() -> None:
     row = PROJECTION_AUDIT.get('pending_item_grants')
     assert row is not None, '登记行在册'
     assert row.status == AUDIT_PROCESS_ONLY, '无观察读端 → process_only'
-
-
-def test_env_gifts_validation_bad_node_key_raises(
-        monkeypatch: pytest.MonkeyPatch) -> None:
-    """定时节点键格式(注入 + 直调,沿孤儿键测试惯用法):非 '位-轮' 形
-    即炸。"""
-    bad = dict(ENV_GIFTS)
-    bad['特权阶级'] = GiftGrant(items_scheduled=(('10-1', '特权武装箱'),))
-    monkeypatch.setattr(cw_investments, 'ENV_GIFTS', bad)
-    with pytest.raises(ValueError, match='节点键格式'):
-        cw_investments._validate_env_gifts()
-
-
-def test_env_gifts_validation_item_char_clash_raises(
-        monkeypatch: pytest.MonkeyPatch) -> None:
-    """定时道具名禁 ∈ CHARACTER_ROSTER(道具/角色通道串行防呆)。"""
-    bad = dict(ENV_GIFTS)
-    bad['特权阶级'] = GiftGrant(items_scheduled=(('2-1', '希儿'),))
-    monkeypatch.setattr(cw_investments, 'ENV_GIFTS', bad)
-    with pytest.raises(ValueError, match='定时道具'):
-        cw_investments._validate_env_gifts()
-
-
-def test_env_gifts_validation_empty_grant_includes_scheduled(
-        monkeypatch: pytest.MonkeyPatch) -> None:
-    """空发放集判定并入 items_scheduled:即时角色/条件角色/即时道具/定时
-    道具全空 = 数据残缺,即炸。"""
-    bad = dict(ENV_GIFTS)
-    bad['火药味'] = GiftGrant()
-    monkeypatch.setattr(cw_investments, 'ENV_GIFTS', bad)
-    with pytest.raises(ValueError, match='空发放集'):
-        cw_investments._validate_env_gifts()
 
 
 def test_gain_invest_env_invalid_payload_zero_write(rows_sink: _RowSink) -> None:
@@ -2170,3 +2137,22 @@ def test_env_gift_blue_channel_selection_both_states(
         '装备入账分支锚定仍随机态(rand=True 硬编码,裁定语义)'
     assert gs2.bench.source == 'logic', '开箱分支锚定确定面(rand=False 透传)'
     assert rows_sink.kinds() == [], '两态零申报行(不进失配网)'
+
+
+# —— 列车同行邀请(2026-09-23-invest-effects-calc T-63;邀请族首例模式卡,
+# 机制件零新增,骑同一 on_env_gained 即时装备支)——
+
+
+def test_env_gift_equip_leg_lieche_invite(rows_sink: _RowSink) -> None:
+    """发放分支(T-63 设计 §4 锁 3,on_env_gained 直构):选列车同行邀请 →
+    equips 尾追 '列车同行星徽'、bench 零落位(装备 only,无开箱腿);
+    效果串单行 ``equip_gift:列车同行星徽``。星徽 ∈ EQUIP_ACQUIRE_
+    CONSEQUENCES 表外 → 零子链(申报行空为证)。"""
+    gs = _make_gs(bench=[], equips=[])
+    out = on_env_gained(gs, None, '列车同行邀请', rand=False, sig=_lsig())
+    assert out == ('equip_gift:列车同行星徽',), '效果串 = 具名装备单行'
+    assert list(gs.equips.value) == ['列车同行星徽'], '装备入栏(尾追)'
+    boxes = [s for s in gs.bench.value.slots
+             if s is not None and s.kind == 'supply_box']
+    assert boxes == [], '零道具落位(装备 only)'
+    assert rows_sink.kinds() == [], '正常路径零申报行(零子链)'

@@ -4,12 +4,9 @@ kernel/test_cw_investments.py 随机赠卡家族段〔超限只读复用〕)。
 
 测试面依据 = gain-chain.md §3 随机支段(阵营轴采样域语义)+ fields.md
 §5.2 效果缺口与载体登记(披露键组)+ 语义描述「概念股族模式卡登记约定」:
-- **轴互斥**:cost 与 faction 恰好一轴非空(双空 = 全角色池,几乎必为
-  登记笔误,拒收;双填 = 轴语义不明,拒收)——ENV_GIFTS 与
-  ENV_DEPLOY_LOCK_GRANTS 两表共享同一校验助手;
-- **阵营域空防呆**:误登角色名/笔误阵营名 → chars_by_faction 域空 →
-  校验炸(误登角色名本会进 chars_immediate 具名检查域,误入阵营轴 =
-  域空天然拦截);
+- **阵营域空防呆**(池空单一哨,2026-10-28 治理后形态:值域四查〔轴互斥/
+  费用域/星级域/类型标签〕随防登记笔误校验移除,池空哨兼顾错字与版本
+  漂移):误登角色名/笔误阵营名 → chars_by_faction 域空 → 校验炸;
 - **概念股条目形状锁**:登记 = 阵营轴 spec(faction='追击', star=1 先验)
   + equips_random_immediate=('简易',);
 - **池派生阵营支**:random_char_pool 阵营轴 = chars_by_faction 注册表
@@ -49,29 +46,6 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     equips_by_category,
     random_char_pool,
 )
-
-
-def test_axis_exclusivity_both_empty_and_both_filled_raise(
-        monkeypatch: pytest.MonkeyPatch) -> None:
-    """采样轴互斥(概念股族登记约定;两表共享助手单一源):双空
-    (RandomCharSpec() = 全角色池)与双填(cost+faction 同填)注入
-    ENV_GIFTS 与 ENV_DEPLOY_LOCK_GRANTS 均校验炸——互斥检查住共享助手,
-    两表同享,防登记笔误静默放行。"""
-    for bad_spec in (RandomCharSpec(),                       # 双空
-                     RandomCharSpec(cost=4, faction='追击'),  # 双填
-                     RandomCharSpec(faction='追击', cost=1, star=2)):
-        bad_gifts = dict(ENV_GIFTS)
-        bad_gifts['人才引进'] = GiftGrant(chars_random_immediate=(bad_spec,))
-        monkeypatch.setattr(cw_investments, 'ENV_GIFTS', bad_gifts)
-        with pytest.raises(ValueError, match='采样轴'):
-            cw_investments._validate_env_gifts()
-        bad_locks = dict(ENV_DEPLOY_LOCK_GRANTS)
-        bad_locks['英雄登场'] = cw_investments.EnvDeployLockGrant(
-            spec=bad_spec, deploy_lock_nodes=19, perfect_win_accel=True)
-        monkeypatch.setattr(cw_investments, 'ENV_DEPLOY_LOCK_GRANTS',
-                            bad_locks)
-        with pytest.raises(ValueError, match='采样轴'):
-            cw_investments._validate_env_deploy_lock_grants()
 
 
 def test_faction_domain_empty_raises(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -158,7 +132,7 @@ def test_ranxue_faction_pool_matches_registry_and_validates() -> None:
     """燃血域登记校验 + 池派生(概念股族展开卡登记约定;gain-chain.md
     §3 随机支段:阵营轴 = chars_by_faction 默认含流派匹配):燃血概念股
     过 _validate_env_gifts 现行全套(含 _validate_random_char_spec 阵营轴
-    分支——轴互斥/星级域/池非空,「燃血」流派域非空天然通过);
+    分支——池非空单一哨(值域四查已随 2026-10-28 治理移除),「燃血」流派域非空天然通过);
     random_char_pool 阵营 spec 现值 = chars_by_faction('燃血') 名集现算
     双射(注册表派生,非快照不手抄;池规模只记注释不做断言值——现值
     8 名含双羁绊成员布洛妮娅〔flows 命中,注册表已双边登记〕,随版本
@@ -191,7 +165,7 @@ def test_nengliang_faction_pool_matches_registry_and_validates() -> None:
     """能量域登记校验 + 池派生(概念股族展开卡登记约定;gain-chain.md
     §3 随机支段:阵营轴 = chars_by_faction 默认含流派匹配):能量概念股
     过 _validate_env_gifts 现行全套(含 _validate_random_char_spec 阵营轴
-    分支——轴互斥/星级域/池非空,「能量」流派域非空天然通过);
+    分支——池非空单一哨(值域四查已随 2026-10-28 治理移除),「能量」流派域非空天然通过);
     random_char_pool 阵营 spec 现值 = chars_by_faction('能量') 名集剔除
     '开拓者·记忆' 现算比对(开拓者双形态按角色位合并约定,采样域即发放
     域恒发欢愉;注册表派生非快照不手抄,池规模只记注释零断言值——现值
@@ -224,7 +198,7 @@ def test_lieche_faction_pool_matches_registry_and_validates() -> None:
     """列车同行域登记校验 + 池派生(概念股族展开卡登记约定 + 开拓者双
     形态角色位合并约定;gain-chain.md §3 随机支段:阵营轴 = 规格过滤池):
     列车同行概念股过 _validate_env_gifts 现行全套(含
-    _validate_random_char_spec 阵营轴分支——轴互斥/星级域/池非空,
+    _validate_random_char_spec 阵营轴分支——池非空单一哨(值域四查已随 2026-10-28 治理移除),
     「列车同行」阵营域非空天然通过);random_char_pool 阵营 spec 现值 =
     chars_by_faction('列车同行') 名集剔除'开拓者·记忆' 现算比对(合并
     修正主锁:开拓者双形态按角色位合并,采样即发放名恒欢愉;注册表派生
@@ -420,7 +394,7 @@ def test_xianzhou_faction_pool_matches_registry_and_validates() -> None:
     """仙舟域登记校验 + 静态基底池(概念股族展开卡登记约定;gain-chain.md
     §3 随机支段:静态基底 = 注册表派生,牌库时点过滤在 grant_char_pool
     层):仙舟概念股过 _validate_env_gifts 现行全套(含 _validate_random_
-    char_spec 阵营轴分支——轴互斥/星级域/池非空,「仙舟」阵营域非空天然
+    char_spec 阵营轴分支——池非空单一哨(值域四查已随 2026-10-28 治理移除),「仙舟」阵营域非空天然
     通过);random_char_pool 阵营 spec 现值 = chars_by_faction('仙舟')
     名集现算比对(注册表派生非快照不手抄;本域无开拓者条目,双形态合并
     对本域零作用;池规模只记注释零断言值——现值 9 名,随版本正常变动);
@@ -478,7 +452,7 @@ def test_langshou_faction_pool_matches_registry_and_validates() -> None:
     """狼狩域登记校验 + 静态基底池(概念股族展开卡登记约定;gain-chain.md
     §3 随机支段:静态基底 = 注册表派生,牌库时点过滤在 grant_char_pool
     层):狼狩概念股过 _validate_env_gifts 现行全套(含 _validate_random_
-    char_spec 阵营轴分支——轴互斥/星级域/池非空,「狼狩」阵营域非空天然
+    char_spec 阵营轴分支——池非空单一哨(值域四查已随 2026-10-28 治理移除),「狼狩」阵营域非空天然
     通过);random_char_pool 阵营 spec 现值 = chars_by_faction('狼狩')
     名集现算比对(注册表派生非快照不手抄;本域无开拓者条目,双形态合并
     对本域零作用;池规模只记注释零断言值——现值 7 名,随版本正常变动);
@@ -534,7 +508,7 @@ def test_zhouzhibanshen_faction_pool_matches_registry_and_validates() -> None:
     """昼之半神域登记校验 + 静态基底池(概念股族展开卡登记约定;gain-chain.md
     §3 随机支段:静态基底 = 注册表派生,牌库时点过滤在 grant_char_pool
     层):昼之半神概念股过 _validate_env_gifts 现行全套(含 _validate_random_
-    char_spec 阵营轴分支——轴互斥/星级域/池非空,「昼之半神」阵营域非空
+    char_spec 阵营轴分支——池非空单一哨(值域四查已随 2026-10-28 治理移除),「昼之半神」阵营域非空
     天然通过);random_char_pool 阵营 spec 现值 = chars_by_faction('昼之
     半神') 名集现算比对(注册表派生非快照不手抄;本域无开拓者条目,双形态
     合并对本域零作用;池规模只记注释零断言值——现值 6 名,随版本正常
@@ -590,7 +564,7 @@ def test_yezhibanshen_faction_pool_matches_registry_and_validates() -> None:
     """夜之半神域登记校验 + 静态基底池(概念股族展开卡登记约定;gain-chain.md
     §3 随机支段:静态基底 = 注册表派生,牌库时点过滤在 grant_char_pool
     层):夜之半神概念股过 _validate_env_gifts 现行全套(含 _validate_random_
-    char_spec 阵营轴分支——轴互斥/星级域/池非空,「夜之半神」阵营域非空
+    char_spec 阵营轴分支——池非空单一哨(值域四查已随 2026-10-28 治理移除),「夜之半神」阵营域非空
     天然通过);random_char_pool 阵营 spec 现值 = chars_by_faction('夜之
     半神') 名集现算比对(注册表派生非快照不手抄;本域无开拓者条目,双形态
     合并对本域零作用;池规模只记注释零断言值——现值 7 名,随版本正常
@@ -646,7 +620,7 @@ def test_jipo_faction_pool_matches_registry_and_validates() -> None:
     """击破域登记校验 + 静态基底池(概念股族展开卡登记约定;gain-chain.md
     §3 随机支段:静态基底 = 注册表派生,牌库时点过滤在 grant_char_pool
     层):击破概念股过 _validate_env_gifts 现行全套(含 _validate_random_
-    char_spec 阵营轴分支——轴互斥/星级域/池非空,「击破」流派域非空天然
+    char_spec 阵营轴分支——池非空单一哨(值域四查已随 2026-10-28 治理移除),「击破」流派域非空天然
     通过);random_char_pool 阵营 spec 现值 = chars_by_faction('击破')
     名集现算比对(注册表派生非快照不手抄;本域无开拓者条目,双形态合并
     对本域零作用;池规模只记注释零断言值——现值 9 名,随版本正常变动;
@@ -707,7 +681,7 @@ def test_qungong_faction_pool_matches_registry_and_validates() -> None:
     """群攻域登记校验 + 静态基底池(概念股族展开卡登记约定;gain-chain.md
     §3 随机支段:静态基底 = 注册表派生,牌库时点过滤在 grant_char_pool
     层):群攻概念股过 _validate_env_gifts 现行全套(含 _validate_random_
-    char_spec 流派轴分支——轴互斥/星级域/池非空,「群攻」流派域非空天然
+    char_spec 流派轴分支——池非空单一哨(值域四查已随 2026-10-28 治理移除),「群攻」流派域非空天然
     通过);random_char_pool 阵营 spec 现值 = chars_by_faction('群攻')
     名集现算比对(注册表派生非快照不手抄;本域无开拓者条目,双形态合并
     对本域零作用;池规模只记注释零断言值——现值 7 名,随版本正常变动;
@@ -764,7 +738,7 @@ def test_jianyi_faction_pool_matches_registry_and_validates() -> None:
     """减益域登记校验 + 静态基底池(概念股族展开卡登记约定;gain-chain.md
     §3 随机支段:静态基底 = 注册表派生,牌库时点过滤在 grant_char_pool
     层):减益概念股过 _validate_env_gifts 现行全套(含 _validate_random_
-    char_spec 流派轴分支——轴互斥/星级域/池非空,「减益」流派域非空天然
+    char_spec 流派轴分支——池非空单一哨(值域四查已随 2026-10-28 治理移除),「减益」流派域非空天然
     通过);random_char_pool 阵营 spec 现值 = chars_by_faction('减益')
     名集现算比对(注册表派生非快照不手抄;本域无开拓者条目,双形态合并
     对本域零作用;池规模只记注释零断言值——现值 7 名,随版本正常变动;
