@@ -105,3 +105,26 @@ def test_static_base_pool_still_contains_experts() -> None:
     filtered = grant_char_pool(_fresh_gs(), spec)
     assert len(filtered) < len(random_char_pool(spec)), \
         '过滤层严格收窄(基底 ⊃ 牌库时点池)'
+
+
+def test_langshou_faction_pool_expert_filter_instance() -> None:
+    """狼狩域专家过滤实例锁(牌库时点池约定,概念股族展开卡登记约定,
+    沿仙舟域锁同款三分层断言形态):①空解锁容器 → 狼狩域候选 =
+    chars_by_faction('狼狩') 名集 − {'貊泽'} 现算比对(注册表派生非
+    快照不手抄;池规模只记注释零断言值——现值 6 名,随版本正常变动;
+    选投资环境在开局、彼时专家结构性未激活);②解锁 {'貊泽'} → 7 名
+    回归(专家入池时机与商店同源,economy.md §1);③静态基底
+    random_char_pool 仍含貊泽(专家剔除只发生在 grant_char_pool 层,
+    两层语义不混写)。"""
+    spec = RandomCharSpec(faction='狼狩', star=1)
+    pool = grant_char_pool(_fresh_gs(), spec)
+    expected = {c.name for c in chars_by_faction('狼狩')} - {'貊泽'}
+    assert set(pool) == expected, \
+        '狼狩域候选 = 全域剔除未解锁专家(牌库时点过滤)'
+    assert '貊泽' not in pool, '专家未解锁不入候选(用户裁定 2026-10-28)'
+    assert set(pool) <= CHARACTER_ROSTER
+    unlocked = grant_char_pool(_unlocked_gs(('貊泽',)), spec)
+    assert set(unlocked) == {c.name for c in chars_by_faction('狼狩')}, \
+        '已解锁专家回到候选(牌库时点口径)'
+    assert '貊泽' in random_char_pool(spec), \
+        '静态基底含全部注册成员(过滤归 grant_char_pool 层,分层职责)'

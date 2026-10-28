@@ -93,3 +93,13 @@ def test_xianzhou_concept_stock_gift_tier_off() -> None:
     正交(域 9 名含专家青雀/停云 = 随机路径注册表传导,估值分母与流程
     采样域的牌库时点分叉系范围外申报,本档零扰动)。"""
     assert gift_hit_tier(ENV_GIFTS['仙舟概念股']) == 'off'
+
+
+def test_langshou_concept_stock_gift_tier_off() -> None:
+    """狼狩概念股估值档恒 'off'(概念股族展开卡登记约定,正本 =
+    fields.md §5.2 效果缺口与载体登记,追击首例同锁第九实例):随机规格
+    (阵营轴)/随机装备条目不入档位机器估值域 → 恒 off——族展开登记
+    不产生策略层双重计分,与 random_faction_gift_value 随机阵营路径
+    正交(域 7 名含专家貊泽 = 随机路径注册表传导,估值分母与流程采样域
+    的牌库时点分叉系范围外申报沿仙舟实例同指针,本档零扰动)。"""
+    assert gift_hit_tier(ENV_GIFTS['狼狩概念股']) == 'off'
