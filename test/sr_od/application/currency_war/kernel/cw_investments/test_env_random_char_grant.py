@@ -262,8 +262,7 @@ def test_yinhe_concept_stock_entry_shape() -> None:
 def test_yinhe_faction_pool_matches_registry_and_validates() -> None:
     """银河学者域登记校验 + 池派生(概念股族展开卡登记约定;gain-chain.md
     §3 随机支段:阵营轴 = 规格过滤池):银河学者概念股过 _validate_env_
-    gifts 现行全套(含 _validate_random_char_spec 阵营轴分支——轴互斥/
-    星级域/池非空,「银河学者」阵营域非空天然通过);random_char_pool
+    gifts 现行全套(含 _validate_random_char_spec 阵营轴分支——池非空单一哨(值域四查已随 2026-10-28 治理移除),「银河学者」阵营域非空天然通过);random_char_pool
     阵营 spec 现值 = chars_by_faction('银河学者') 名集现算比对(注册表
     派生非快照不手抄,池规模只记注释零断言值——现值 5 名,随版本正常
     变动);显式断言'真理医生' ∈ 池(双阵营成员「银河学者、星间旅人」
@@ -300,8 +299,7 @@ def test_beluoboge_concept_stock_entry_shape() -> None:
 def test_beluoboge_faction_pool_matches_registry_and_validates() -> None:
     """贝洛伯格域登记校验 + 池派生(概念股族展开卡登记约定;gain-chain.md
     §3 随机支段:阵营轴 = 规格过滤池):贝洛伯格概念股过 _validate_env_
-    gifts 现行全套(含 _validate_random_char_spec 阵营轴分支——轴互斥/
-    星级域/池非空,「贝洛伯格」阵营域非空天然通过);random_char_pool
+    gifts 现行全套(含 _validate_random_char_spec 阵营轴分支——池非空单一哨(值域四查已随 2026-10-28 治理移除),「贝洛伯格」阵营域非空天然通过);random_char_pool
     阵营 spec 现值 = chars_by_faction('贝洛伯格') 名集现算比对(注册表
     派生非快照不手抄,池规模只记注释零断言值——现值 6 名,随版本正常
     变动);显式断言'布洛妮娅' ∈ 池(双羁绊注册表修正新增成员:她
@@ -340,8 +338,7 @@ def test_xingjianlvren_concept_stock_entry_shape() -> None:
 def test_xingjianlvren_faction_pool_matches_registry_and_validates() -> None:
     """星间旅人域登记校验 + 池派生(概念股族展开卡登记约定;gain-chain.md
     §3 随机支段:阵营轴 = 规格过滤池):星间旅人概念股过 _validate_env_
-    gifts 现行全套(含 _validate_random_char_spec 阵营轴分支——轴互斥/
-    星级域/池非空,「星间旅人」阵营域非空天然通过);random_char_pool
+    gifts 现行全套(含 _validate_random_char_spec 阵营轴分支——池非空单一哨(值域四查已随 2026-10-28 治理移除),「星间旅人」阵营域非空天然通过);random_char_pool
     阵营 spec 现值 = chars_by_faction('星间旅人') 名集现算比对(注册表
     派生非快照不手抄;口径 = 合并后角色位即 random_char_pool 值,本域
     无开拓者条目故与域原集同值;池规模只记注释零断言值——现值 7 名,
@@ -756,4 +753,65 @@ def test_jianyi_faction_pool_matches_registry_and_validates() -> None:
         '专家在静态基底池(过滤归 grant_char_pool 层,分层职责)'
     assert '千冶·刃' in random_char_pool(spec), \
         '双羁绊成员在池照发(flows 双边在册定谳)'
+    assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
+
+
+# 族展开第十五实例(战技点概念股 id 1016,族收官;概念股族展开卡登记约定,
+# 正本 = fields.md §5.2 效果缺口与载体登记:本域 7 名中青雀 is_expert=True
+# = 专家域,牌库时点过滤在 cw_pool.grant_char_pool 层开局恒排青雀——
+# 本文件的池锁锁静态基底面 random_char_pool,过滤语义锁 = cw_pool 镜像
+# test_grant_char_pool.py;域 = flows 轴纯流派域,独立单位成员 Archer
+# (independent='魔术师')照发族级定谳〔economy.md:94 点名战技点(Archer)〕;
+# 花火(2费,flows 战技点、量子同频)≠ 火花(4费,flows 战技点、欢愉)两名
+# 形近成员,量子同频/欢愉均无概念股卡,零登记面影响,勿混淆。)
+
+
+def test_zhanjidian_concept_stock_entry_shape() -> None:
+    """战技点概念股登记形状锁(概念股族展开卡登记约定,正本 = fields.md
+    §5.2 效果缺口与载体登记):∈ ENV_GIFTS 且 ∉ ENV_ECONOMY(import 期
+    互斥校验已随治理口径移除,本断言为该性质的测试侧唯一防线);阵营轴
+    spec = faction '战技点'(desc【战技点】直读,流派羁绊名非角色名,与
+    卡名剥「概念股」后缀的 ENV_FACTION 派生值双源同值)+ star 1(先验,
+    desc 未标星);随机装备 = ('简易',)(desc「初始简易装备」类别明文,
+    单数叙述默认 1 件;economy.md 四卡线索名单不含战技点 = 装备身份零
+    先验,均匀 v0 + 按卡固定假说随家族披露键待校准,登记行零新增申报)。
+    族内第十五实例(族收官),与追击/燃血/能量/列车同行/银河学者/贝洛
+    伯格/星间旅人/仙舟/狼狩/昼之半神/夜之半神/击破/群攻/减益登记行同构
+    仅值异;odds 键 env_1016 随批追加进家族常量(族收官 15/15 齐)。"""
+    assert '战技点概念股' in ENV_GIFTS
+    assert '战技点概念股' not in ENV_ECONOMY
+    grant = ENV_GIFTS['战技点概念股']
+    assert grant.chars_random_immediate == \
+        (RandomCharSpec(faction='战技点', star=1),)
+    assert grant.equips_random_immediate == ('简易',)
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        ENV_FACTION_REFRESH_ODDS_UNMODELED_KEYS,
+    )
+    assert 'env_1016_faction_refresh_odds_unmodeled' in \
+        ENV_FACTION_REFRESH_ODDS_UNMODELED_KEYS, \
+        'odds 失真键随批追加(家族常量族收官 env_1001..env_1014+env_1016)'
+
+
+def test_zhanjidian_faction_pool_matches_registry_and_validates() -> None:
+    """战技点域登记校验 + 静态基底池(概念股族展开卡登记约定;gain-chain.md
+    §3 随机支段:静态基底 = 注册表派生,牌库时点过滤在 grant_char_pool
+    层):战技点概念股过 _validate_env_gifts 现行全套(T-63 治理后漂移哨:
+    孤儿键/角色名漂移/规格池非空[经 _validate_random_char_spec 单一哨]/
+    随机装备类别池非空/装备名漂移/星徽类别池闸);random_char_pool 阵营
+    spec 现值 = chars_by_faction('战技点') 名集现算比对(注册表派生非快照
+    不手抄;本域无开拓者条目,双形态合并对本域零作用;池规模只记注释零
+    断言值——现值 7 名,随版本正常变动;本域为专家域(青雀 1 名),静态
+    基底含专家 = 仙舟/狼狩/减益型分层职责断言,过滤归 cw_pool 层由镜像
+    授予池锁承载;7 名全部经 flows 轴命中、factions 轴零命中,沿击破/减益
+    纯流派域锁先例形态);显式断言'Archer' ∈ 静态基底池(独立单位成员
+    照发,economy.md:94 族级定谳点名战技点(Archer))。"""
+    cw_investments._validate_env_gifts()
+    spec = ENV_GIFTS['战技点概念股'].chars_random_immediate[0]
+    expected = {c.name for c in chars_by_faction('战技点')}
+    assert set(random_char_pool(spec)) == expected, \
+        '静态基底池 = chars_by_faction 全域(注册表现算双射)'
+    assert '青雀' in random_char_pool(spec), \
+        '专家在静态基底池(过滤归 grant_char_pool 层,分层职责)'
+    assert 'Archer' in random_char_pool(spec), \
+        '独立单位成员照发(economy.md:94 族级定谳)'
     assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
