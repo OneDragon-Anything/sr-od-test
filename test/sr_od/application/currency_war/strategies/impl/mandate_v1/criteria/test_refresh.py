@@ -1,0 +1,232 @@
+"""刷新链三组件单帧测试固化(迭代 ``2026-10-28-hp-purge-refresh-reform``;
+design.md §2.0 第 2/3 条 + details/refresh-chain.md §5 清单)。
+
+清单对照(七条,docstring 引本迭代 design.md):
+
+- ① 带内 + 金够 + 席可腾 → 发射(付费,reason ``star_target``);
+- ② 已 2★ 追 3★ 目标帧 ρ = 其卡价(实费档;锁定支单一源
+  ``r2_card_reserve``,未锁窗口恒 0);
+- ③ 席满 + 可合成 → 发射(合成腿消费现役 ``_merge_pair_names``
+  「恰 2 张全 1★」语义——机制全集重写归买面改革批,本批锁现役口径);
+- ④ 席满 + 零燃料 + 不可合成 → 拒(关店,拒因 ``target_unbuyable``);
+- ⑤ 升级推迟帧刷新维持拒绝(资金序 = 升级优先于刷新,判据①支无
+  解锁支);
+- ⑥ 免费腿零收获不刷(免费刷新同过目标可买检查,金线不适用);
+- ⑦ 死码符号零残留——按本测试仓纪律(源码扫描测试禁写,退役符号
+  墓碑不设 pytest)以执行侧残留扫描承载,记录归迭代报告。
+
+帧构造 = 列车同行注册表线(need_star:姬子·启行 3/三月七 2/花火 2/
+瓦尔特 1;费档 3/1/2/5 注册表现查),席位腿/合成腿帧均上阵行非空
+(空板止损守卫 = 燃料资格面前置门)。
+"""
+from __future__ import annotations
+
+from test.sr_od.application.currency_war._cw_helpers import (
+    cw4_bc as _bc,
+)
+from test.sr_od.application.currency_war._cw_helpers import (
+    cw4_comp as _comp_of,
+)
+from test.sr_od.application.currency_war._cw_helpers import (
+    cw4_decide as _decide,
+)
+from test.sr_od.application.currency_war._cw_helpers import (
+    cw4_gs,
+)
+from test.sr_od.application.currency_war._cw_helpers import (
+    cw4_members as _members,
+)
+from test.sr_od.application.currency_war._cw_helpers import (
+    cw4_session as _session,
+)
+
+from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+from sr_od.application.currency_war.kernel.cw_comps import (
+    CORE_SINGLE_CARD_REGISTRY,
+)
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    ChannelSig,
+    Unit,
+)
+from sr_od.application.currency_war.kernel.cw_vocab import (
+    BENCH_CAPACITY,
+    CwActionRefreshShopParam,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+    session_scope,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
+    levelup as crit_levelup,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
+    refresh as crit_refresh,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.protection import (
+    four_system_members,
+)
+
+_COMP_NAME = '列车同行'
+_LINE = tuple(_members(_comp_of(_COMP_NAME)))
+_TARGET = '姬子·启行'   # need_star 3(唯一 3★ 追到底目标)
+_LOGIC_SIG = ChannelSig(family='logic_action', actor='cw-refresh-chain',
+                        mode='compute')
+
+
+def _fillers(count: int, exclude: tuple[str, ...] = ()) -> list[str]:
+    """非线非保护非核心燃料名(注册表现算防漂移;席位腿测试帧填充)。"""
+    out = [n for n in CHARACTERS
+           if n not in _LINE and n not in exclude
+           and n not in CORE_SINGLE_CARD_REGISTRY
+           and n not in set(four_system_members())
+           and not getattr(CHARACTERS[n], 'bench_effect', '')]
+    assert len(out) >= count, '测试前提:填充名不足'
+    return out[:count]
+
+
+def _locked_frame(*, bench, deployed, gold: int, level: int,
+                  round_num: int = 2, node: str = 'reward'):
+    """锁定线决策帧(cw4 种子家族 + 状态归一挂载 + 位面 2 边界执行;
+    直调判据与 decide 驱动共用同一宿主形态)。"""
+    s = _session(_comp_of(_COMP_NAME), plane_lengths=[9, 5, 7])
+    axes = {'gold': gold, 'level': level, 'plane': 2,
+            'round_num': round_num, 'node': node, 'hp': 100,
+            'bench': list(bench), 'front_row': list(deployed)}
+    gs = cw4_gs(s, **axes)
+    st = state_of(s)
+    gs.strategy_state = st   # 宿主归一:判据读口(session_scope 族)同源
+    gs.node_hist_pos = (2, 1)
+    session_scope.handle_node_boundary(gs)
+    st.gold_ledger = gold
+    return s, gs, st
+
+
+def _line_bench_base() -> list:
+    """列车同行达标底座(三月七/花火 2★ 达标、瓦尔特 1★ 达标——
+    未完成目标收敛到姬子·启行)。"""
+    return [_bc('三月七', star=2), _bc('花火', star=2)]
+
+
+def _assert_band_premise(cost: int, level: int) -> None:
+    """带前提守卫(level ∈ 带或被推过;带 = 注册表概率表现算)。"""
+    lo, _hi = crit_levelup.prob_band_of_cost(cost)
+    assert level >= lo, f'测试前提:level {level} < {cost} 费带下界 {lo}'
+
+
+class TestRefreshChainSingleFrame:
+    """七条清单(⑦ = 执行侧扫描,见模块 docstring)。"""
+
+    def test_1_in_band_gold_enough_seat_free_emits(self):
+        """①带内 + 金够 + 席可腾(空位腿)→ 付费刷新发射。"""
+        level = 7
+        _assert_band_premise(int(CHARACTERS[_TARGET].cost), level)
+        bench = [_bc(_TARGET, star=2)] + _line_bench_base() \
+            + [_bc(_fillers(2)[0], star=2)]
+        deployed = [Unit(char_id='瓦尔特', star=1)]
+        s, gs, _st = _locked_frame(bench=bench, deployed=deployed,
+                                   gold=100, level=level)
+        acts = _decide(s)
+        refreshes = [a for a in acts
+                     if isinstance(a, CwActionRefreshShopParam)]
+        assert refreshes, f'带内金够帧刷新应发射: {acts!r}'
+        assert refreshes[0].reason == 'star_target'
+        assert refreshes[0].cost > 0, '付费刷新(免费腿未在册)'
+
+    def test_2_rho_stay_target_effective_cost(self):
+        """②已 2★ 追 3★ 目标帧 ρ = 其卡价(实费档);未锁窗口恒 0。
+
+        旧「合格集最低费卡价」口径被「无 2★ 成型」过滤排除该目标 →
+        漏留卡价;新口径按实费档预留(行为差申报的锁定面)。"""
+        bench = [_bc(_TARGET, star=2)] + _line_bench_base()
+        deployed = [Unit(char_id='瓦尔特', star=1)]
+        s, gs, _st = _locked_frame(bench=bench, deployed=deployed,
+                                   gold=50, level=7)
+        target = crit_levelup.stay_target_of(gs)
+        assert target is not None and target[0] == _TARGET, \
+            '测试前提:停留目标 = 姬子·启行'
+        assert crit_refresh.r2_card_reserve(gs) \
+            == int(CHARACTERS[_TARGET].cost), 'ρ = 停留目标实费档'
+        # 未锁窗口分支口径:stay_target 恒空 → ρ = 0。
+        s2 = _session(None, plane_lengths=[9, 5, 7])
+        gs2 = cw4_gs(s2, gold=50, level=7, plane=2, round_num=2,
+                     node='reward', hp=100,
+                     bench=[_bc('瓦尔特', star=1)],
+                     front_row=[Unit(char_id=_fillers(1)[0], star=2)])
+        assert crit_refresh.r2_card_reserve(gs2) == 0, '未锁窗口 ρ = 0'
+
+    def test_3_full_bench_merge_pair_emits(self):
+        """③席满 + 可合成 → 发射(合成腿:恰 2 张全 1★ 现役谓词语义;
+        买第 3 张即合成净释放 1 席,满栏不阻断)。"""
+        level = 7
+        _assert_band_premise(int(CHARACTERS['花火'].cost), level)
+        fill = _fillers(5)
+        # 花火仅 1★×2(无 2★ 副本——need 2 未完成,停留目标 = 花火);
+        # 姬子·启行 3★/三月七 2★/瓦尔特 2★ 达标。
+        bench = [_bc('花火', star=1), _bc('花火', star=1),
+                 _bc(_TARGET, star=3), _bc('三月七', star=2),
+                 _bc('瓦尔特', star=2)] \
+            + [_bc(n, star=2) for n in fill[:4]]
+        assert len(bench) == BENCH_CAPACITY
+        deployed = [Unit(char_id=fill[4], star=2)]
+        s, gs, _st = _locked_frame(bench=bench, deployed=deployed,
+                                   gold=100, level=level)
+        acts = _decide(s)
+        refreshes = [a for a in acts
+                     if isinstance(a, CwActionRefreshShopParam)]
+        assert refreshes, f'席满可合成帧刷新应发射: {acts!r}'
+        assert refreshes[0].cost > 0
+
+    def test_4_full_bench_no_legs_reject_close(self):
+        """④席满 + 零燃料 + 不可合成 → 拒(关店;拒因
+        ``target_unbuyable`` 计数在册)。"""
+        level = 7
+        _assert_band_premise(int(CHARACTERS[_TARGET].cost), level)
+        fill = _fillers(6)
+        bench = [_bc(_TARGET, star=2), _bc('三月七', star=2),
+                 _bc('花火', star=2), _bc('瓦尔特', star=2)] \
+            + [_bc(n, star=2) for n in fill[:5]]
+        assert len(bench) == BENCH_CAPACITY
+        deployed = [Unit(char_id=fill[5], star=2)]
+        s, gs, st = _locked_frame(bench=bench, deployed=deployed,
+                                  gold=100, level=level)
+        acts = _decide(s)
+        # 驱动器契约:关店为收尾终结动作不入序列,拒因计数 = 拒绝
+        # 路径在册证据。
+        assert not [a for a in acts
+                    if isinstance(a, CwActionRefreshShopParam)], acts
+        assert st.cw4_counters.get('shop_refresh_target_unbuyable', 0) >= 1
+
+    def test_5_upgrade_defer_frame_refresh_stays_rejected(self):
+        """⑤升级推迟帧刷新维持拒绝(资金序 = 升级优先于刷新;判据①支
+        无解锁支——凑金在途帧不放行刷,防「刷新烧凑金 → 升级永久
+        defer」饿死环)。"""
+        bench = [_bc(_TARGET, star=2)] + _line_bench_base()
+        deployed = [Unit(char_id='瓦尔特', star=1)]
+        s, gs, _st = _locked_frame(bench=bench, deployed=deployed,
+                                   gold=20, level=4)   # 4 < 3 费带下界
+        ok, key = crit_refresh.refresh_warranted(gs, s)
+        assert (ok, key) == (False, 'stay_gate_upgrade_first'), \
+            '升级推迟期刷新维持拒绝(资金序,无解锁支)'
+
+    def test_6_free_refresh_zero_gain_no_refresh(self):
+        """⑥免费腿零收获不刷(免费刷新同过目标可买检查——三腿全无帧
+        免费腿亦拒,白给刷无界循环消灭)。"""
+        level = 7
+        _assert_band_premise(int(CHARACTERS[_TARGET].cost), level)
+        fill = _fillers(6)
+        bench = [_bc(_TARGET, star=2), _bc('三月七', star=2),
+                 _bc('花火', star=2), _bc('瓦尔特', star=2)] \
+            + [_bc(n, star=2) for n in fill[:5]]
+        assert len(bench) == BENCH_CAPACITY
+        deployed = [Unit(char_id=fill[5], star=2)]
+        s, gs, st = _locked_frame(bench=bench, deployed=deployed,
+                                  gold=100, level=level)
+        gs.write_logic(gs.free_refresh_left, 2, produced_by='cw-refresh-chain',
+                       sig=_LOGIC_SIG)
+        acts = _decide(s)
+        assert not [a for a in acts
+                    if isinstance(a, CwActionRefreshShopParam)], \
+            f'免费腿零收获帧零刷新(含免费): {acts!r}'
+        assert st.cw4_counters.get('shop_refresh_target_unbuyable', 0) >= 1
