@@ -154,3 +154,14 @@ def test_jianyi_concept_stock_gift_tier_off() -> None:
     的牌库时点分叉系范围外申报沿仙舟/狼狩/击破实例同指针;本域双口径
     探针现值零偏差 37.5/37.5,本档零扰动)。"""
     assert gift_hit_tier(ENV_GIFTS['减益概念股']) == 'off'
+
+
+def test_zhanjidian_concept_stock_gift_tier_off() -> None:
+    """战技点概念股估值档恒 'off'(概念股族展开卡登记约定,正本 =
+    fields.md §5.2 效果缺口与载体登记,追击首例同锁第十五实例):随机规格
+    (阵营轴)/随机装备条目不入档位机器估值域 → 恒 off——族展开登记
+    不产生策略层双重计分,与 random_faction_gift_value 随机阵营路径
+    正交(域 7 名含专家青雀 = 随机路径注册表传导,估值分母与流程采样域
+    的牌库时点分叉系范围外申报沿仙舟/狼狩/击破/减益实例同指针;本域双
+    口径探针现值零偏差 50.0/50.0,本档零扰动)。"""
+    assert gift_hit_tier(ENV_GIFTS['战技点概念股']) == 'off'

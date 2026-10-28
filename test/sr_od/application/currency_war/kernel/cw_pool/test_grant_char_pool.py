@@ -252,3 +252,34 @@ def test_jianyi_faction_pool_expert_filter_instance() -> None:
         '静态基底含全部注册成员(过滤归 grant_char_pool 层,分层职责)'
     assert '椒丘' in pool, \
         '具名契约不改随机池成员资格(双事实锚定谳)'
+
+
+def test_zhanjidian_faction_pool_expert_filter_instance() -> None:
+    """战技点域专家过滤实例锁(牌库时点池约定,概念股族展开卡登记约定,
+    沿狼狩/击破/减益域锁同款三分层断言形态;本域 = 专家域 1 名,域 7 名
+    过滤后 6 名):①空解锁容器 → 战技点域候选 = chars_by_faction('战技点')
+    名集 − {'青雀'} 现算比对(注册表派生非快照不手抄;池规模只记注释零
+    断言值——现值 6 名,随版本正常变动;选投资环境在开局、彼时专家结构性
+    未激活[解锁通道全部晚于环境选择,economy.md:96 用户裁定 2026-10-28],
+    过滤后费用 1-5 全档仍覆盖);②解锁 {'青雀'} → 7 名回归(专家入池时机
+    与商店同源,economy.md §1);③静态基底 random_char_pool 仍含青雀
+    (专家剔除只发生在 grant_char_pool 层,两层语义不混写);④显式断言
+    'Archer' ∈ 池(独立单位成员照发[economy.md:94 族级定谳点名
+    战技点(Archer)] + 「命运圣杯契约」条件发放对象不改随机池成员资格的
+    双事实锚——具名 vs 随机字段不相交,沿昼之半神/夜之半神锁'昔涟'/群攻锁
+    '翡翠'/减益锁'椒丘'显式成员断言先例)。"""
+    spec = RandomCharSpec(faction='战技点', star=1)
+    pool = grant_char_pool(_fresh_gs(), spec)
+    expected = {c.name for c in chars_by_faction('战技点')} - {'青雀'}
+    assert set(pool) == expected, \
+        '战技点域候选 = 全域剔除未解锁专家(牌库时点过滤)'
+    assert '青雀' not in pool, \
+        '专家未解锁不入候选(用户裁定 2026-10-28)'
+    assert set(pool) <= CHARACTER_ROSTER
+    unlocked = grant_char_pool(_unlocked_gs(('青雀',)), spec)
+    assert set(unlocked) == {c.name for c in chars_by_faction('战技点')}, \
+        '已解锁专家回到候选(牌库时点口径)'
+    assert '青雀' in random_char_pool(spec), \
+        '静态基底含全部注册成员(过滤归 grant_char_pool 层,分层职责)'
+    assert 'Archer' in pool, \
+        '独立单位照发 + 具名契约不改随机池成员资格(双事实锚定谳)'
