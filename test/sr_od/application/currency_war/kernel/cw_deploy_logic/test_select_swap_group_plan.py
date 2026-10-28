@@ -74,7 +74,7 @@ def test_case_a_anchor_saber_swaps_yao_guang() -> None:
     assert plan.sell_names == [_YAO], f'锚① = Saber 换爻光,实得 {plan.sell_names}'
     assert _up_names(plan, ctx) == [_SBR]
     assert plan.arm == 'bond_gate'
-    assert plan.bond_gate_leg == 'tier'
+    assert plan.bond_gate_branch == 'tier'
     assert plan.victim_tier == '一级'
 
 
@@ -87,7 +87,7 @@ def test_case_a2_second_tier_victim_ting_yun() -> None:
     assert plan.nonempty
     assert plan.sell_names == [_TING], \
         f'二级 victim 首选停云(贡献 0 < 远坂凛),实得 {plan.sell_names}'
-    assert plan.arm == 'bond_gate' and plan.bond_gate_leg == 'tier'
+    assert plan.arm == 'bond_gate' and plan.bond_gate_branch == 'tier'
     assert plan.victim_tier == '二级'
 
 
@@ -100,7 +100,7 @@ def test_case_b_external_bond_filler_swap_in() -> None:
     assert plan.nonempty
     assert plan.sell_names == [_QING], '一级 victim 首选(贡献并列 0 → 扫描序)'
     assert _up_names(plan, ctx) == [_TING], '外部支撑件换入(up∩名单=∅ 形态)'
-    assert plan.bond_gate_leg == 'tier'
+    assert plan.bond_gate_branch == 'tier'
 
 
 def test_case_c_group_growth_two_pairs_completion() -> None:
@@ -122,11 +122,11 @@ def test_case_c_group_growth_two_pairs_completion() -> None:
     assert plan.sell_names == ['停云', '希儿'], \
         f'累积两对定稿(换入主序 × victim 辅序字典序),实得 {plan.sell_names}'
     assert _up_names(plan, ctx) == ['瓦尔特', '杰帕德']
-    assert plan.arm == 'bond_gate' and plan.bond_gate_leg == 'completion', \
+    assert plan.arm == 'bond_gate' and plan.bond_gate_branch == 'completion', \
         '累积组过门 1④(组生长语义)'
     # 反证面:单对各自不达任何分支(若单对可行,搜索不会长成两对)
     for v, u in ((['停云'], ['瓦尔特']), (['希儿'], ['杰帕德'])):
-        ok, _leg = swap_bond_gate_benefit(ctx, victims=v, ups=u,
+        ok, _branch = swap_bond_gate_benefit(ctx, victims=v, ups=u,
                                           pairs=[(v[0], u[0])],
                                           up_stars={u[0]: 1})
         assert ok is False, f'单对 {v}->{u} 不得单独过门 1(组生长前提)'
@@ -155,7 +155,7 @@ def test_inner_victim_retry_gate1_fail_then_completion() -> None:
     assert plan.sell_names == ['希儿'], \
         f'首 victim(瓦尔特)门 1 不中 → 内层回退至次序 victim,实得 {plan.sell_names}'
     assert _up_names(plan, ctx) == ['杰帕德']
-    assert plan.bond_gate_leg == 'completion', \
+    assert plan.bond_gate_branch == 'completion', \
         '回退组 ④ 首达(required 全在板成型)'
     assert plan.victim_tier == '名单末位'
 
@@ -170,7 +170,7 @@ def test_case_d_same_star_horizontal_swap_3a() -> None:
     assert plan.nonempty
     assert plan.sell_names == [_SBR] and _up_names(plan, ctx) == [_SBR], \
         '同名升星横换(1★ → 2★,该名仍在板)'
-    assert plan.arm == 'bond_gate' and plan.bond_gate_leg == 'star', \
+    assert plan.arm == 'bond_gate' and plan.bond_gate_branch == 'star', \
         '键集/支撑/成型全持平,唯一收益 = 星级升(③)'
     assert plan.victim_tier == '名单末位', \
         '名单成员让位通道 3(a):victim 层来源 = 名单末位'
@@ -178,7 +178,7 @@ def test_case_d_same_star_horizontal_swap_3a() -> None:
 
 def test_case_g_or_carry_completion_swap_in() -> None:
     """G 情形(完成判据 3):希儿量子静态套完成品换入经门 1④ 放行——
-    希儿入板(required 分支 + SEELE_OR_LEGS 全承接),fp ✗→✓ 不跨档位梯
+    希儿入板(required 分支 + SEELE_OR_REQS 全承接),fp ✗→✓ 不跨档位梯
     (①不中)。"""
     comp = get_comp('希儿量子')
     ctx = _gate_ctx(board=['花火', '缇宝', '娜塔莎', '杰帕德', '佩拉'],
@@ -188,7 +188,7 @@ def test_case_g_or_carry_completion_swap_in() -> None:
     assert plan.sell_names == ['娜塔莎'], \
         'victim 二级(贝标签)首选(名单成员让位沉末位桶)'
     assert _up_names(plan, ctx) == ['希儿'], '完成品换入'
-    assert plan.arm == 'bond_gate' and plan.bond_gate_leg == 'completion', \
+    assert plan.arm == 'bond_gate' and plan.bond_gate_branch == 'completion', \
         'OR 承接阵容成型归因 ④(不跨档位梯)'
 
 
@@ -352,7 +352,7 @@ def test_pair_frame_plan_stays_single_pair_transition_arm() -> None:
     assert plan.sell_names == ['花火'], '双轨域 victim 序/让位照旧(P79-4)'
     assert plan.arm == 'transition', \
         '双轨域 arm 标注照旧(转型分支退役不波及 pair 帧)'
-    assert plan.bond_gate_leg == '' and plan.bond_gate_reject == '', \
+    assert plan.bond_gate_branch == '' and plan.bond_gate_reject == '', \
         '双轨域不产 bond_gate 分键字段'
 
 

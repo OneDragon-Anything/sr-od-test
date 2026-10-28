@@ -6,7 +6,7 @@
 §2.3.1 arm 分键归宿;判据层计划形态另见 kernel 侧
 test_select_swap_group_plan.py):
 
-- **accept 侧新键族**:bond_gate_{leg}(leg ∈ tier/support/star/
+- **accept 侧新键族**:bond_gate_{branch}(branch ∈ tier/support/star/
   completion,首达分支)+ bond_gate_victim_tier_{tier}(值域 =
   一级/二级/名单末位);``cw4_m1p_arm_pending`` 载体保留;
 - **拒绝侧分键闭集**:bond_gate_reject_nogain / conservation / novictim
@@ -299,7 +299,7 @@ def test_emit_bond_gate_recalc_withdraw_on_divergence(monkeypatch) -> None:
 
     session, st = _locked_session('双王圣杯')
     stale = SwapPlan(sell_names=['椒丘'], up_bench=[0], arm='bond_gate',
-                     bond_gate_leg='tier', victim_tier='一级')
+                     bond_gate_branch='tier', victim_tier='一级')
     monkeypatch.setattr(cdl, 'select_swap_plan',
                         lambda *a, **k: stale, raising=True)
     out, counters = _emit(session, st, bench=['椒丘'],
@@ -352,7 +352,7 @@ def test_emit_bond_gate_pair_stall_on_unresolvable(monkeypatch) -> None:
     session, st = _locked_c_session()
     gs = _seed_c_board(session)
     stale = SwapPlan(sell_names=['注册表外幻影件'], up_bench=[0],
-                     arm='bond_gate', bond_gate_leg='support',
+                     arm='bond_gate', bond_gate_branch='support',
                      victim_tier='一级')
     monkeypatch.setattr(cdl, 'select_swap_plan',
                         lambda *a, **k: stale, raising=True)
