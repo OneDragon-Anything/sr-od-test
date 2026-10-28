@@ -930,7 +930,7 @@ def build_t(rows: list[dict[str, Any]], recs: list[dict[str, Any]],
 
 def test_entry_screen_map_closed_set_14_rows():
     """章级挂载表 = render-assembly §2 的 14 行闭集直译(entry → 渲染章键,
-    禁漂移;行 1-2 动作级 join、行 3-14 章级挂载)。"""
+    禁漂移;prep/shop/supply 动作级 join、其余 11 选择族章级挂载)。"""
     assert mod.ENTRY_SCREEN_MAP == {
         'decide_prep_screen': '画面-备战',
         'decide_shop_action': '画面-商店',
@@ -1035,7 +1035,7 @@ def test_loader_tolerates_bad_lines_and_filters_run(tmp_path: Path):
 
 
 def test_action_join_basis_block_position_and_payload(tmp_path: Path):
-    """动作级 join(render-assembly §3 行 1-2):回执 dtag → 信封 dtag;
+    """动作级 join(render-assembly §3 适用集):回执 dtag → 信封 dtag;
     依据块嵌入动作节(标题行下、动作行与状态变化表前);payload 通用
     键值渲染(嵌套紧凑 JSON,不解释语义),空 payload 单行占位。"""
     rows = [
@@ -1116,35 +1116,61 @@ def test_retry_chain_multi_basis_in_receipt_order(tmp_path: Path):
 
 
 def test_chapter_level_fifo_and_section_position(tmp_path: Path):
-    """章级挂载(render-assembly §3 行 3-14):(entry, node) 匹配 + 同键
+    """章级挂载(render-assembly §3;章级族 fixture 取遭遇——补给已迁动作
+    级 join,不再作章级 fixture):(entry, node) 匹配 + 同键
     多章 FIFO(records dseq 序对章首现序分配);依据 = 0 观察后独立小节
     「#### 策略依据」,不破坏「0 观察 → 动作×N → 策略评价」结构。"""
     rows = [
-        mkrow('t1', 'current_screen', '货币战争-补给', node=(1, 1, 'supply'),
-              screen='货币战争-补给'),
-        mkrow('t2', 'current_screen', '货币战争-备战', node=(1, 1, 'supply'),
+        mkrow('t1', 'current_screen', '货币战争-遭遇节点',
+              node=(1, 1, 'encounter'), screen='货币战争-遭遇节点'),
+        mkrow('t2', 'current_screen', '货币战争-备战', node=(1, 1, 'encounter'),
               screen='货币战争-备战'),
-        mkrow('t3', 'current_screen', '货币战争-补给', node=(1, 1, 'supply'),
-              screen='货币战争-补给'),
+        mkrow('t3', 'current_screen', '货币战争-遭遇节点',
+              node=(1, 1, 'encounter'), screen='货币战争-遭遇节点'),
     ]
     recs = [
-        mkrec('probe:1', 'decide_supply', node=(1, 1), payload={}),
-        mkrec('probe:2', 'decide_supply', node=(1, 1),
+        mkrec('probe:1', 'decide_encounter', node=(1, 1), payload={}),
+        mkrec('probe:2', 'decide_encounter', node=(1, 1),
               payload={'window': {'爻光': {'open': True}}}),
     ]
     report, md = build_t(rows, recs, tmp_path)
     screens = section_of_kind(report, 'node').screens
-    assert [s.title for s in screens] == ['画面-补给', '画面-备战', '画面-补给']
+    assert [s.title for s in screens] == ['画面-遭遇', '画面-备战', '画面-遭遇']
     assert [r.dtag for r in screens[0].strategy_records] == ['probe:1']
     assert [r.dtag for r in screens[2].strategy_records] == ['probe:2']
-    assert '- probe:1(entry=decide_supply, op=CwActionObsParam)' in md
+    assert '- probe:1(entry=decide_encounter, op=CwActionObsParam)' in md
     assert '- payload: (本帧无策略载荷)' in md
     assert '- window: {"爻光":{"open":true}}' in md   # 嵌套紧凑 JSON
     i_obs = md.index('#### 0 观察')
     i_basis = md.index('#### 策略依据')
-    i_next = md.index('### 节点 1-1 补给 画面-备战')
+    i_next = md.index('### 节点 1-1 遭遇 画面-备战')
     assert i_obs < i_basis < i_next   # 0 观察后、下一章前
     assert not report.strategy.unattached
+
+
+def test_supply_action_join_and_chapter_skip(tmp_path: Path):
+    """补给迁动作级 join(补给决策链接线批):decide_supply ∈ 动作级适用
+    集——回执 CwActionPickSupplyOp 经归一映射对 CwActionPickSupplyParam,
+    依据块挂动作节;章级小节对适用集入口关闭(两级互斥);无回执匹配的
+    补给记录 → 锚章「策略决策未落地」注记(与 prep/shop 同待遇)。"""
+    rows = [
+        mkrow('t1', 'current_screen', '货币战争-补给', node=(1, 1, 'supply'),
+              screen='货币战争-补给'),
+        receipts_row('t2', receipt('CwActionPickSupplyOp',
+                                   screen='货币战争-补给', dtag='probe:1')),
+    ]
+    recs = [
+        mkrec('probe:1', 'decide_supply', op='CwActionPickSupplyParam'),
+        mkrec('probe:2', 'decide_supply', op='CwActionPickSupplyParam'),
+    ]
+    report, md = build_t(rows, recs, tmp_path)
+    scr = section_of_kind(report, 'node').screens[0]
+    assert [r.dtag for r in scr.actions[0].basis] == ['probe:1']
+    assert '- 策略依据: probe:1(entry=decide_supply, ' \
+           'op=CwActionPickSupplyParam)' in md
+    assert not scr.strategy_records   # 章级小节对适用集入口关闭
+    assert '#### 策略依据' not in md
+    assert '- 策略决策未落地: probe:2(CwActionPickSupplyParam)' in md
 
 
 def test_header_three_states_and_unattached_counts(tmp_path: Path):
@@ -1174,18 +1200,19 @@ def test_header_three_states_and_unattached_counts(tmp_path: Path):
 
 def test_cli_strategy_telemetry_end_to_end(tmp_path: Path, capsys: Any):
     """CLI 集成(render-assembly §1):journal 同根 strategy/ 缺省发现生效
-    (--stdout 报告含局头行与章级依据节);无 strategy/ 目录时零差异
-    (无策略遥测行);显式路径不存在 = 用法错退出 2。"""
+    (--stdout 报告含局头行与章级依据节;章级族 fixture 取遭遇——补给已迁
+    动作级 join);无 strategy/ 目录时零差异(无策略遥测行);显式路径不
+    存在 = 用法错退出 2。"""
     rows = [
-        mkrow('t1', 'current_screen', '货币战争-补给', node=(1, 1, 'supply'),
-              screen='货币战争-补给'),
+        mkrow('t1', 'current_screen', '货币战争-遭遇节点',
+              node=(1, 1, 'encounter'), screen='货币战争-遭遇节点'),
     ]
     f = _write_journal(tmp_path, [json.dumps(r, ensure_ascii=False)
                                   for r in rows])
     argv = ['--journal', str(f), '--game-id', 'cli_t', '--stdout']
     assert mod.main(argv) == 0
     assert '策略遥测' not in capsys.readouterr().out   # 无 strategy/ → 关闭态
-    rec = mkrec('probe:1', 'decide_supply', node=(1, 1),
+    rec = mkrec('probe:1', 'decide_encounter', node=(1, 1),
                 payload={'k_members': ['爻光']})
     d = tmp_path / 'strategy'
     d.mkdir()
@@ -1196,7 +1223,7 @@ def test_cli_strategy_telemetry_end_to_end(tmp_path: Path, capsys: Any):
     assert '- 策略遥测: probe (1 条)' in md
     assert '#### 策略依据' in md   # 章级 = 独立小节(非动作级前缀形态)
     assert '- 策略依据: ' not in md
-    assert '- probe:1(entry=decide_supply, op=CwActionObsParam)' in md
+    assert '- probe:1(entry=decide_encounter, op=CwActionObsParam)' in md
     assert '    - k_members: ["爻光"]' in md
     assert mod.main(argv + ['--strategy-telemetry',
                             str(tmp_path / 'nope')]) == 2   # 显式缺路径 = 用法错
