@@ -801,7 +801,8 @@ def test_chosen_supply_written_before_dispatch_and_no_landing_phase(
         test_context, monkeypatch) -> None:
     """画面 op 侧测试:chosen_supply 2 元组(角色, 装备名列表;T-9 裁定 2)
     在动作派发前已写(写点 = 选择点,``op-layer.md`` §2.2);选卡派发即终结
-    (_do_action 返回 True);节点完成门 miss(act 分发身份安全网)后零容器写
+    (动作体自产 round_success 终结交回,决策链接线迭代起 ``_do_action``
+    返回轮次结果);节点完成门 miss(act 分发身份安全网)后零容器写
     (无落地相补写面)。"""
     from sr_od.application.currency_war.operations.cw_op import (
         cw_action_registry,
@@ -838,7 +839,9 @@ def test_chosen_supply_written_before_dispatch_and_no_landing_phase(
     monkeypatch.setattr(cw_action_registry, 'action_op_for',
                         lambda act, ctx, env: _ProbeStubOp())
     _run_node(test_context, op, op.observe)   # 观察 node 装载 obs(report 落容器)
-    assert op._do_action() is True, '选卡派发即终结(终结交回)'
+    rs = op._do_action()
+    assert rs.is_success and '终结交回' in (rs.status or ''), \
+        f'选卡派发即终结(终结交回):{rs!r}'
     assert chosen_at_dispatch == [('希儿', ('星币收集器', '垃圾袋'))], \
         'chosen_supply 2 元组在派发前已写(写点 = 选择点,携全列装备)'
     write_seq_after_dispatch = gs.write_seq
