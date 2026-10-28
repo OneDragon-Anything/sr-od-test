@@ -172,3 +172,30 @@ def test_yezhibanshen_faction_pool_identity_instance() -> None:
     assert set(pool) <= CHARACTER_ROSTER
     assert set(random_char_pool(spec)) == expected, \
         '静态基底同值(两层面在本域重合)'
+
+
+def test_jipo_faction_pool_expert_filter_instance() -> None:
+    """击破域专家过滤实例锁(牌库时点池约定,概念股族展开卡登记约定,
+    沿狼狩域锁同款三分层断言形态;本域 = 专家域 2 名,域 9 名过滤后
+    7 名):①空解锁容器 → 击破域候选 = chars_by_faction('击破') 名集
+    − {'加拉赫','姬子'} 现算比对(注册表派生非快照不手抄;池规模只记
+    注释零断言值——现值 7 名,随版本正常变动;选投资环境在开局、彼时
+    专家结构性未激活,过滤后费用 1-5 全档仍覆盖);②解锁 {'加拉赫',
+    '姬子'} → 9 名回归(专家入池时机与商店同源,economy.md §1;双专家
+    域须两名齐解锁方回全域);③静态基底 random_char_pool 仍含加拉赫/
+    姬子(专家剔除只发生在 grant_char_pool 层,两层语义不混写)。"""
+    spec = RandomCharSpec(faction='击破', star=1)
+    pool = grant_char_pool(_fresh_gs(), spec)
+    expected = {c.name for c in chars_by_faction('击破')} \
+        - {'加拉赫', '姬子'}
+    assert set(pool) == expected, \
+        '击破域候选 = 全域剔除未解锁专家(牌库时点过滤)'
+    assert '加拉赫' not in pool and '姬子' not in pool, \
+        '专家未解锁不入候选(用户裁定 2026-10-28)'
+    assert set(pool) <= CHARACTER_ROSTER
+    unlocked = grant_char_pool(_unlocked_gs(('加拉赫', '姬子')), spec)
+    assert set(unlocked) == {c.name for c in chars_by_faction('击破')}, \
+        '已解锁专家回到候选(牌库时点口径)'
+    assert '加拉赫' in random_char_pool(spec) \
+        and '姬子' in random_char_pool(spec), \
+        '静态基底含全部注册成员(过滤归 grant_char_pool 层,分层职责)'
