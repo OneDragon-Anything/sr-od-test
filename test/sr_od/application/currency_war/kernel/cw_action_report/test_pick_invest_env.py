@@ -305,6 +305,24 @@ def test_deterministic_equip_env_grants_without_rng_langshou(
     assert boxes == [], '装备 only 环境零开箱腿'
 
 
+def test_deterministic_equip_env_grants_without_rng_shenghui_zhixing(
+        provider_calls: list[str]) -> None:
+    """确定性装备环境(T-69 设计 §4 锁 5,治理后形态):盛会之星邀请
+    (邀请族展开卡,equips_immediate only)零随机支 → rng 谓词零解析
+    (provider 不触);选卡后 equips 尾追 '盛会之星星徽'、bench 零落位
+    (无开箱腿)——上报 → gain_invest_env → on_env_gained 双端同链,
+    live/sim 共用语义一条测试覆盖。"""
+    gs = _make_gs(['盛会之星邀请', '轮岗', '头彩'])
+    out = report_action_pick_invest_env_param(
+        gs, SimpleNamespace(idx=0), _SIG)
+    assert out.applied
+    assert provider_calls == [], '零随机支环境零解析'
+    assert list(gs.equips.value) == ['盛会之星星徽'], '装备入账分支入栏'
+    boxes = [s for s in gs.bench.value.slots
+             if s is not None and s.kind == 'supply_box']
+    assert boxes == [], '装备 only 环境零开箱腿'
+
+
 # ==================== 环境道具双件(专家研讨会)====================
 # (设计 = 迭代 2026-09-23-invest-effects-calc T-39 专家研讨会设计 §4 锁 7)
 
