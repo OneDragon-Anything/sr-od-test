@@ -1120,6 +1120,26 @@ def test_gain_invest_strategy_session_ledger_branch() -> None:
     assert gs2.free_refresh_left.value is None, 'burst 零累加(零 Field 行)'
 
 
+def test_gain_invest_strategy_xp_instant_live_zero_write() -> None:
+    """live 链零写回归:xp_instant 卡(经验到账)走获得链(session=None
+    直调形态)→ xp/level 值与来源域零变化。经验「选牌当场」= 观察覆盖
+    豁免(伟大征服口径,fields.md §3.2.10);即时经验世界腿 = sim 自持
+    账域(sim 后端落地拍),链内加经验写会连带 live——本锁防后续实现者
+    把腿误挂进双端链。"""
+    gs = _make_gs(bench=[], equips=[])
+    gs.observe(gs.level, 3, sig=_SIG_OBS)
+    gs.observe(gs.xp, (0, 4), sig=_SIG_OBS)
+    xp_before = gs.xp.value
+    level_before = gs.level.value
+    xp_ev = gs.xp.evidence
+    out = gain_invest_strategy(gs, None, '经验到账', rand=False, sig=_lsig())
+    assert out.placed, f'注册应落位: {out}'
+    assert gs.active_strategies.value == ['经验到账']
+    assert gs.xp.value == xp_before and gs.level.value == level_before, \
+        f'获得链出现经验写: {gs.xp.value} / {gs.level.value}'
+    assert gs.xp.evidence == xp_ev, f'xp 来源域漂移: {gs.xp.evidence}'
+
+
 def test_on_strategy_gained_advisor_unlock() -> None:
     """advisor 解锁分支(on_strategy_gained):STRATEGY_GRANTS advisor=True
     卡(停云顾问)→ 解锁状态写入 + 效果串,不入席;非 advisor 卡不触发
