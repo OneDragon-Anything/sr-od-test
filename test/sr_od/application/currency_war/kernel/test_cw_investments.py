@@ -944,6 +944,30 @@ def test_qungong_invite_registry_surface() -> None:
     assert '群攻星徽' not in BENCH_ITEM_NAMES
 
 
+def test_nengliang_invite_registry_surface() -> None:
+    """登记面(T-75 设计 §4 锁 1+2,治理后形态):能量邀请 ∈ ENV_GIFTS
+    且 ∉ ENV_ECONOMY(∩ 断言 = T-63 治理后唯一防线,沿 T-62 批先例保留);
+    登记形状 = 具名装备单通道 ``equips_immediate=('能量星徽',)``,
+    角色/道具/替换旗全空(装备 only = 邀请族「获得一个【X星徽】」的唯一
+    发放形态);星徽 ∈ EQUIPMENTS(装备身份;装备名漂移哨同判据)且 ∉
+    BENCH_ITEM_NAMES(装备不进占席词表;群攻邀请姊妹行同判)。"""
+    from sr_od.application.currency_war.data.cw_equipment_data import (
+        EQUIPMENTS,
+    )
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        BENCH_ITEM_NAMES,
+    )
+    assert '能量邀请' in ENV_GIFTS
+    assert '能量邀请' not in ENV_ECONOMY
+    grant = ENV_GIFTS['能量邀请']
+    assert grant.equips_immediate == ('能量星徽',)
+    assert not grant.chars_immediate
+    assert not grant.items_immediate
+    assert grant.replaces_opening_supply is False
+    assert '能量星徽' in EQUIPMENTS
+    assert '能量星徽' not in BENCH_ITEM_NAMES
+
+
 # ============================================================ 环境「随机赠卡+上场锁」登记表
 # (T-33 英雄登场,设计 = 迭代 2026-09-23-invest-effects-calc designs/
 # T-33-yingxiong-dengchang.md §2.1 + §4 锁 1;注入 + 直调沿本文件校验测试
