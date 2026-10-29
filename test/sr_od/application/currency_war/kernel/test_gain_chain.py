@@ -1190,13 +1190,14 @@ def test_on_strategy_gained_advisor_unlock() -> None:
 
 def test_on_strategy_gained_unregistered_quiet() -> None:
     """未收录卡:查无效果安静不写(gain-chain §3 裁定④);效果表键集 =
-    骇客单行 + 三箱分支卡 + 援军族模式卡(箱腿/援军条目由工厂自各自
+    骇客单行 + 三箱分支卡 + 援军族(箱腿/援军条目由工厂自各自
     生成表生成,键集断言 = 现役注册全集,新卡注册随批 +键)。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
         PICK_INVEST_EFFECTS,
     )
     assert set(PICK_INVEST_EFFECTS) == {
-        '骇客专家:银狼', '战术义眼++', '保守派', '快请专家·彩', '二费援军'}
+        '骇客专家:银狼', '战术义眼++', '保守派', '快请专家·彩', '二费援军',
+        '三费援军'}
     gs = _make_gs(bench=[('希儿', 1)], equips=[])
     seq_before = gs.write_seq
     effects = on_strategy_gained(gs, '随便一张未收录卡', rand=False,
