@@ -113,15 +113,14 @@ def _screen_loader_none() -> SimpleNamespace:
     return SimpleNamespace(get_screen=lambda name: None)
 
 
-def _stub_supply_reports(monkeypatch, reported: list, advances: list) -> None:
+def _stub_supply_reports(monkeypatch, reported: list) -> None:
     """补给动作 op 上报函数桩(效果分支行为测试归 test_supply;回执/机械
-    面测试只锁接线形态):自上报与节点推进零容器写,调用入列供断言。"""
+    面测试只锁接线形态):自上报零容器写,调用入列供断言。2026-10-29
+    流程模型对齐:动作 op 无节点推进上报面(选完回备战弹店,推进归出战
+    动作 supply_finish),推进桩随之退役。"""
     import sr_od.application.currency_war.operations.cw_op.cw_pick_supply_action as pick_mod
     monkeypatch.setattr(pick_mod, 'report_action_pick_supply_param',
                         lambda gs_, param, sig, _r=reported: _r.append(param)
-                        or SimpleNamespace(world_decl=None))
-    monkeypatch.setattr(pick_mod, 'report_node_advance',
-                        lambda gs_, trigger, _r=advances: _r.append(trigger)
                         or SimpleNamespace(world_decl=None))
 
 
@@ -219,10 +218,10 @@ def test_supply_pick_op_clicks_target_and_confirms(no_pick_sleep, monkeypatch):
     回执行恰一条(发出形态 reason='' + op/screen/actor 硬编码 + detail
     = idx+内容摘要,词表见 kernel ``note_action_receipt`` docstring);
     补给确认无直连到账写边(入栏/后果分支唯一写边 = 上报函数,本测试
-    已桩,行为测试见 test_supply)。"""
+    已桩,行为测试见 test_supply);确认零节点推进(2026-10-29 流程模型
+    对齐:选完关模态回备战自动弹店,节点推进归出战动作 supply_finish)。"""
     confirm_calls: list[tuple] = []
     reported: list = []
-    advances: list = []
     ctrl = _RecordingController()
     session = StrategySession()
     rs = SimpleNamespace(sentinel='rs', is_success=True)
@@ -232,7 +231,7 @@ def test_supply_pick_op_clicks_target_and_confirms(no_pick_sleep, monkeypatch):
         screenshot=lambda: 'shot',
         round_by_find_and_click_area=lambda shot, s, a, **kw:
             confirm_calls.append((s, a, kw)) or rs)
-    _stub_supply_reports(monkeypatch, reported, advances)
+    _stub_supply_reports(monkeypatch, reported)
     gs = game_state_of(session)
     # actor 断言面 = 回执写入的渠道签名(行字典零 actor 键,op 名硬编码
     # 进行内 + actor 走 sig,journal 落盘经 sig.to_json——契约单一源 =
@@ -268,10 +267,9 @@ def test_supply_pick_op_clicks_target_and_confirms(no_pick_sleep, monkeypatch):
     # 补给确认无直连到账写边(上报桩零效果;equips 保持开局种子 [],
     # 未混入选中装备名)。
     assert game_state_of(session).equips.value == []
-    # 即时上报接线照旧:机械链发出后恰一次,param 原样透传;确认命中
-    # → 节点推进上报恰一次。
+    # 即时上报接线照旧:机械链发出后恰一次,param 原样透传;确认零节点
+    # 推进(推进归出战动作,本 op 无推进上报面)。
     assert len(reported) == 1 and reported[0] is param
-    assert advances == ['supply_confirm']
 
 
 def test_supply_pick_op_confirm_missing_receipts_block_code(
@@ -280,11 +278,9 @@ def test_supply_pick_op_confirm_missing_receipts_block_code(
     回执行 reason=定位缺失(按钮-确认)(动作没发出的机械事实簿记,
     词表见 kernel ``note_action_receipt`` docstring);选卡机械点击照发,
     轮次仍 success(发出即职责完成,overlay 残留由外循环重识别重派);
-    确认未命中 = 节点推进不发生;detail 可空串场景照实(内容全空只携
-    idx)。"""
+    detail 可空串场景照实(内容全空只携 idx)。"""
     confirm_calls: list[tuple] = []
     reported: list = []
-    advances: list = []
     ctrl = _RecordingController()
     session = StrategySession()
     rs_miss = SimpleNamespace(sentinel='miss', is_success=False)
@@ -294,7 +290,7 @@ def test_supply_pick_op_confirm_missing_receipts_block_code(
         screenshot=lambda: 'shot',
         round_by_find_and_click_area=lambda shot, s, a, **kw:
             confirm_calls.append((s, a, kw)) or rs_miss)
-    _stub_supply_reports(monkeypatch, reported, advances)
+    _stub_supply_reports(monkeypatch, reported)
     env = OverlayPickExecEnv(op=op, target=Point(500, 400))
     assert CwActionPickSupplyOp(env.op.ctx, CwActionPickSupplyParam(idx=0),
                                 env=env).run().is_success
@@ -303,7 +299,6 @@ def test_supply_pick_op_confirm_missing_receipts_block_code(
     assert len(receipts) == 1, f'受阻动作也恰一条回执行:{receipts!r}'
     assert receipts[0]['reason'] == '定位缺失(按钮-确认)'
     assert receipts[0]['detail'] == 'idx=0'
-    assert advances == [], '确认未命中 = 节点推进不发生'
 
 
 def test_supply_pick_op_sim_accepted_receipts_empty_reason(
@@ -315,7 +310,6 @@ def test_supply_pick_op_sim_accepted_receipts_empty_reason(
     from sr_od.application.currency_war.sim import cw_sim_ports
 
     reported: list = []
-    advances: list = []
     ctrl = _RecordingController()
     session = StrategySession()
     rs = SimpleNamespace(sentinel='rs', is_success=False)
@@ -324,7 +318,7 @@ def test_supply_pick_op_sim_accepted_receipts_empty_reason(
                             cw_match=SimpleNamespace(session=session)),
         screenshot=lambda: 'shot',
         round_by_find_and_click_area=lambda shot, s, a, **kw: rs)
-    _stub_supply_reports(monkeypatch, reported, advances)
+    _stub_supply_reports(monkeypatch, reported)
     monkeypatch.setattr(cw_sim_ports, '_BACKEND', object())
     env = OverlayPickExecEnv(op=op)   # sim:target None,机械执行分支零消费
     assert CwActionPickSupplyOp(env.op.ctx,
@@ -336,7 +330,6 @@ def test_supply_pick_op_sim_accepted_receipts_empty_reason(
     assert len(receipts) == 1, f'恰一条回执行:{receipts!r}'
     assert receipts[0]['reason'] == ''
     assert receipts[0]['detail'] == 'idx=0 char=希儿'
-    assert advances == [], 'confirm 结果失败态 = 节点推进不发生'
 
 
 def test_megastar_pick_op_clicks_confirm_once(no_pick_sleep):

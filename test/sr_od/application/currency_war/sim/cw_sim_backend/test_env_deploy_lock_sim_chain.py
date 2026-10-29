@@ -21,6 +21,7 @@ from types import SimpleNamespace
 
 import pytest
 from test.sr_od.application.currency_war.sim.test_sim_backend import (
+    _close_shop_feed,
     _force_settle,
     _node_advance_feed,
     _start_battle_feed,
@@ -114,14 +115,19 @@ def test_full_chain_grant_lock_and_perfect_rewind(
         assert (frame1.round_num, frame1.node_type, frame1.killed) == \
             (1, '奖励', True), 'sim kind → 结算行词表(奖励)'
         # 1-2(奖励):帧 2 完胜(killed=True ∧ hp 持平)→ 回退一步
+        #((1,2) 窗收尾自动弹店,2026-10-29 流程模型对齐:关店回备战再出战)
+        _close_shop_feed(b)
         _settle_node_win(b, monkeypatch)
         assert gs.env_grant_deploy_locks.value[0][2] == (3, 3), '完胜回退 1'
-        # 1-3(普通战斗):帧 3 完胜 → 再回退一步
+        # 1-3(普通战斗):帧 3 完胜 → 再回退一步;P1r3 = U07 offer 槽,
+        # 窗后停在投资策略屏(offer 决策面非本测辖域,直接出战结算)
         _settle_node_win(b, monkeypatch)
         assert gs.env_grant_deploy_locks.value[0][2] == (3, 2), '完胜回退 2'
         frame3 = gs.settlement_ring.last_row()
         assert (frame3.round_num, frame3.node_type) == (3, '普通战斗'), \
             '战斗帧词表'
+        # (1,4) 窗收尾自动弹店 → 关店回备战(可操作主窗口)
+        _close_shop_feed(b)
         assert b.screen_identity() == SCREEN_PREP
     finally:
         uninstall_backend()

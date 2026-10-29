@@ -8,8 +8,10 @@
   T-9-guoshengjingfei.md);
 - 选卡上报(pick_supply 通道)= supply-pick design §2.0B/§3 验收锚 1
   + T-60 批漏项补齐(零写迁移通道;按动作 key 幂等契约);
-- 节点推进接线 = 补给节点推进接线判据面(去证据门形态,2026-09-21
-  用户裁定);kernel 原语语义(门挡/去重/补推)由 test_node_advance
+- 节点推进接线 = 补给节点**零推进**接线判据面(2026-10-29 流程模型
+  对齐:补给选完关模态回备战自动弹店,推进归出战动作 supply_finish,
+  旧「确认即 supply_confirm 推进」接线随「确认即推节点」废止);
+  kernel 原语语义(门挡/去重/补推)由 test_node_advance
   承重,本文件只校验接线面。
 
 测试纪律:零真实副作用;决策/归并断言钉住设计语义不断言牌面;归并读链坐标
@@ -911,11 +913,13 @@ def _run_supply_observe(test_context, monkeypatch,
     _run_node(test_context, op, op.observe)
 
 
-def test_auto_popup_supply_advances_once(test_context, monkeypatch) -> None:
+def test_auto_popup_supply_pick_does_not_advance(
+        test_context, monkeypatch) -> None:
     """自动弹形态剧本:结算确认直接弹补给屏(无备战帧锚定,容器 v=None)
-    → 补给屏观察 node 节点条读数首锚定(1-5 → 5)→ 选补给确认点击即
-    supply_confirm 推进恰一次(5 → 6);重复上报被观察态门结构挡
-    (推进后 source=logic)。"""
+    → 补给屏观察 node 节点条读数首锚定(1-5 → 5)→ 选补给确认点击
+    **零节点推进**(2026-10-29 流程模型对齐:选完关模态回备战自动弹店,
+    节点推进归出战动作 supply_finish;旧「确认即 supply_confirm 推进恰
+    一次」随「确认即推节点」废止)。"""
     match = _make_match_with_gs(test_context, monkeypatch)
     gs = match.gs
     _run_supply_observe(test_context, monkeypatch, _POS_1_5)
@@ -923,15 +927,16 @@ def test_auto_popup_supply_advances_once(test_context, monkeypatch) -> None:
         '自动弹形态:补给屏观察 node 完成首锚定(v=None 行)'
     assert gs.node_pos.source == 'observation'
     _run_pick_supply(test_context, monkeypatch, match)
-    assert gs.node_pos.value == (1, 6), \
-        '确认点击即推进恰一档(点击即上报,无证据门)'
-    assert gs.node_pos.source == 'logic', '动作推进 = 推进未确认态'
+    assert gs.node_pos.value == _POS_1_5 \
+        and gs.node_pos.source == 'observation', \
+        '补给确认零节点推进(选完回备战弹店,推进归出战 supply_finish)'
 
 
-def test_divert_form_supply_advances_once(test_context, monkeypatch) -> None:
+def test_divert_form_supply_pick_does_not_advance(
+        test_context, monkeypatch) -> None:
     """divert 形态剧本:备战帧已锚(CwScreenPrep 写端形态,此处直接锚)
-    → 补给屏(备战的 divert 分支)观察 node 等值 reanchor → 确认点击即
-    supply_confirm 推进恰一次(5 → 6)。"""
+    → 补给屏(备战的 divert 分支)观察 node 等值 reanchor → 确认点击
+    **零节点推进**(2026-10-29 流程模型对齐,同自动弹形态)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         observe_node_anchor,
     )
@@ -943,4 +948,6 @@ def test_divert_form_supply_advances_once(test_context, monkeypatch) -> None:
     _run_supply_observe(test_context, monkeypatch, _POS_1_5)
     assert gs.node_pos.source == 'observation', 'divert 形态:等值 reanchor'
     _run_pick_supply(test_context, monkeypatch, match)
-    assert gs.node_pos.value == (1, 6), 'divert 形态:推进恰一档'
+    assert gs.node_pos.value == _POS_1_5 \
+        and gs.node_pos.source == 'observation', \
+        'divert 形态:补给确认零节点推进(推进归出战 supply_finish)'

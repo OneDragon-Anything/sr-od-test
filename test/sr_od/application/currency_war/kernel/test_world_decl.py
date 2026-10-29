@@ -63,6 +63,7 @@ from sr_od.application.currency_war.kernel.cw_action_report.zero_writes import (
 from sr_od.application.currency_war.kernel.cw_events import EncounterOption
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
+    SCREEN_SHOP_PANEL,
     BenchSlot,
     BenchView,
     ChannelSig,
@@ -81,13 +82,17 @@ _SIG_OBS = ChannelSig(family='obs', actor='WorldDeclTest')
 
 #: 桩 gs 节点键 → 预期 next_screen(推导规则逐分支对照;键 = 推进后
 #: 新序位,总长 = P1(9) + P2(7) + P3(7) = 23,P3 末无后继 = 局终 '')。
+#: 2026-10-29 流程模型对齐:node_advance 稳态落点 = 新节点窗呈现屏
+#: ——弹窗型节点(supply/encounter/boss)= 备战底层上的节点弹窗模态、
+#: battle/reward = 回备战自动弹店 = 商店档、1-1 = 备战档(不弹店)、
+#: 位面首 = 位面过渡、超序列 = 局终 '')。
 _NODE_ADVANCE_SCREEN_TABLE: tuple[tuple[tuple[int, int], str], ...] = (
-    ((1, 1), '货币战争-备战'),          # →P1r2 battle
-    ((1, 4), '货币战争-补给'),          # →P1r5 supply
-    ((1, 6), '货币战争-遭遇节点'),      # →P1r7 encounter
-    ((1, 8), '货币战争-BOSS简报'),      # →P1r9 boss
+    ((1, 1), SCREEN_SHOP_PANEL),        # →P1r2 battle(1-1 例外外 → 弹店)
+    ((1, 4), '货币战争-补给'),          # →P1r5 supply(节点弹窗模态)
+    ((1, 6), '货币战争-遭遇节点'),      # →P1r7 encounter(节点弹窗模态)
+    ((1, 8), '货币战争-BOSS简报'),      # →P1r9 boss(节点弹窗模态)
     ((1, 9), '货币战争-位面过渡'),      # →P2r1 位面切换优先
-    ((2, 1), '货币战争-备战'),          # →P2r2 battle
+    ((2, 1), SCREEN_SHOP_PANEL),        # →P2r2 battle(非 1-1 → 弹店)
     ((2, 6), '货币战争-BOSS简报'),      # →P2r7 boss
     ((2, 7), '货币战争-位面过渡'),      # →P3r1 位面切换优先(P3 在表)
     ((3, 6), '货币战争-BOSS简报'),      # →P3r7 boss(真值表末节点)
@@ -206,20 +211,24 @@ def test_advance_trigger_out_of_set_raises():
 
 
 # ============================================================ 表 #1/#2 对照测试
-# (settle_confirm / supply_confirm → report_node_advance;声明归一 =
-#  trigger 'node_advance',next_screen 按推导规则)
+# (settle_confirm / supply_finish → report_node_advance;声明归一 =
+#  trigger 'node_advance',next_screen 按推导规则;2026-10-29 流程模型
+#  对齐:supply_confirm 随「确认即推节点」废止,出战完成 = supply_finish)
 
 def test_node_advance_decl_normalizes_both_triggers():
-    """表 #1/#2 归一语义测试:settle_confirm 与 supply_confirm 两触发
+    """表 #1/#2 归一语义测试:settle_confirm 与 supply_finish 两触发
     上报的声明同形(trigger 恒 'node_advance',next_screen 同按推导
-    ——归一不改推进/去重逻辑,详设 world-decl.md §2 表 #1/#2)。"""
-    for trigger in ('settle_confirm', 'supply_confirm'):
+    ——归一不改推进/去重逻辑,详设 world-decl.md §2 表 #1/#2;
+    supply_finish = 补给节点出战完成语义,2026-10-29 流程模型对齐:
+    补给选完回备战弹店零推进,出战动作才完成节点)。桩 gs 锚 (1,1)
+    → 推进 (1,2) reward 节点:非 1-1 → 商店档(回备战自动弹店)。"""
+    for trigger in ('settle_confirm', 'supply_finish'):
         gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
         observe_node_anchor(gs, (1, 1), trigger_screen='货币战争-备战',
                             actor='WorldDeclTest')
         out = report_node_advance(gs, trigger=trigger)
         assert out.applied
-        assert out.world_decl == WorldDecl(next_screen='货币战争-备战',
+        assert out.world_decl == WorldDecl(next_screen=SCREEN_SHOP_PANEL,
                                            trigger='node_advance'), \
             f'trigger={trigger} 声明与表 #1/#2 不一致'
 
@@ -227,7 +236,8 @@ def test_node_advance_decl_normalizes_both_triggers():
 def test_node_advance_decl_next_screen_derivation_table():
     """表 #1/#2 next_screen 推导规则测试(详设 §2 推导规则逐分支):
     桩 gs 锚定节点键 → 上报推进 → 新键按「无后继局终事件式 → 位面切换
-    优先 → kind 映射」断言单值(权威源 = kernel 节点日程真值表
+    优先 → 节点窗呈现屏(弹窗型节点 = 节点模态/battle-reward = 商店档/
+    1-1 = 备战档)」断言单值(权威源 = kernel 节点日程真值表
     cw_node_schedule + effective_node_pos,禁读 gs.node 镜像)。"""
     for anchor_pos, expected_screen in _NODE_ADVANCE_SCREEN_TABLE:
         gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
@@ -252,7 +262,9 @@ def test_node_advance_decl_none_on_gate_blocked():
 
 
 # ============================================================ 表 #3/#4 对照测试
-# (start_battle / pick_encounter → battle_resolve + 结算屏)
+# (start_battle → battle_resolve + 结算屏;pick_encounter → 商店档 +
+#  pick_encounter——2026-10-29 流程模型对齐:遭遇选完关模态回备战自动
+#  弹店,遭遇战改由出战动作开打,旧「选完即结算」声明废止)
 
 def test_start_battle_decl_table_row3():
     """表 #3 对照测试:出战上报 applied 出口声明 = (结算屏,
@@ -300,13 +312,16 @@ def _gs_with_encounter_payload() -> GameState:
 
 def test_pick_encounter_decl_table_row4():
     """表 #4 对照测试:遭遇选档上报(派发即终结)applied 出口声明 =
-    (结算屏, battle_resolve);选值照常落 chosen_encounter。"""
+    (商店档, pick_encounter)——遭遇选完关遭遇模态回备战并自动弹店,
+    遭遇战由出战动作开打(2026-10-29 流程模型对齐,旧「选档落地即该
+    遭遇战结算」battle_resolve 直达声明废止);选值照常落 chosen_encounter
+    (结算时点后移,消费语义不改)。"""
     gs = _gs_with_encounter_payload()
     out = report_action_pick_encounter_param(gs, SimpleNamespace(idx=0), _SIG)
     assert out.applied
     assert gs.chosen_encounter.value is not None, '选值照常落账(发射即写)'
-    assert out.world_decl == WorldDecl(next_screen='货币战争-结算',
-                                       trigger='battle_resolve')
+    assert out.world_decl == WorldDecl(next_screen=SCREEN_SHOP_PANEL,
+                                       trigger='pick_encounter')
 
 
 def test_pick_encounter_decl_none_on_unresolved():
@@ -372,13 +387,15 @@ def test_zero_write_transition_family_decl_rows_5_9_10_13_17():
 
 def test_pick_supply_decl_row12_both_applied_exits():
     """表 #12 对照测试:补给选卡上报两个 applied 出口(内容未知翻来源分支/
-    装备落地分支)声明同形 = (补给屏, pick_supply)——选卡后画面本瞬间
-    不变,随后到的 node_advance 声明才切走。装备名 = 注册表真名
-    (垃圾袋);留证行经 consume_defect_sink 前清后清隔离。"""
+    装备落地分支)声明同形 = (商店档, pick_supply)——补给选完关模态回
+    备战并自动弹店(2026-10-29 流程模型对齐,「确认即推节点」的
+    supply_confirm 推进随声明废止,出战动作才完成节点);选卡后画面本
+    瞬间不变,弹店由 sim 世界承接。装备名 = 注册表真名(垃圾袋);留证行
+    经 consume_defect_sink 前清后清隔离。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         consume_defect_sink,
     )
-    expected = WorldDecl(next_screen='货币战争-补给', trigger='pick_supply')
+    expected = WorldDecl(next_screen=SCREEN_SHOP_PANEL, trigger='pick_supply')
     consume_defect_sink()
     try:
         gs_unknown = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
@@ -500,12 +517,14 @@ def test_close_shop_decl_row18():
 
 
 def test_bottom_screen_decl_family_derives_at_encounter_slot():
-    """「返回节点屏」声明族按当前生效节点推导(统一节点改写批修根):
-    生效序位锚在遭遇槽(战争边疆替换使固定 offer 槽 P3-2 变遭遇)→
-    上报声明 next_screen = 遭遇节点档——历史硬编码备战与节点窗底层屏
-    失真,对局必现 DECL_SCREEN_DRIFT;本测试钉「声明 = 当前节点屏」
-    逐族(pick_invest_strategy / pick_megastar / 纯转移选卡),全链
-    零漂移对拍面 = sim/cw_sim_backend/test_p3_win_terminal。"""
+    """「返回节点屏」声明族按当前生效节点推导(统一节点改写批修根,
+    推导单一源 = ``node_screen_now``):生效序位锚在遭遇槽(战争边疆
+    替换使固定 offer 槽 P3-2 变遭遇)→ 上报声明 next_screen = 备战档
+    ——2026-10-29 呈现改造后节点弹窗(补给/遭遇/BOSS 简报)都是备战
+    底层上的模态,「返回节点屏」类动作(关店/选卡/开卡)稳态落点恒
+    备战档,旧「遭遇节点屏」类型化映射废止;推导机制保留(位面首例外
+    = 位面过渡屏,本文件尾部判别位)。全链零漂移对拍面 =
+    sim/cw_sim_backend/test_p3_win_terminal。"""
     from sr_od.application.currency_war.kernel.cw_node_schedule import (
         resolve_plane_node_seqs,
     )
@@ -519,12 +538,28 @@ def test_bottom_screen_decl_family_derives_at_encounter_slot():
     out = report_action_pick_invest_strategy_param(
         gs, SimpleNamespace(norm_name='加油站'), _SIG, session=None)
     assert out.applied
-    assert out.world_decl == WorldDecl(next_screen='货币战争-遭遇节点',
+    assert out.world_decl == WorldDecl(next_screen='货币战争-备战',
                                        trigger='pick_invest_strategy'), \
-        'offer 选卡结束返回遭遇节点屏(非硬编码备战)'
+        'offer 选卡结束返回备战档(节点弹窗 = 备战底层模态,类型化映射废止)'
     out = report_action_pick_megastar_param(gs, SimpleNamespace(), _SIG)
-    assert out.world_decl == WorldDecl(next_screen='货币战争-遭遇节点',
+    assert out.world_decl == WorldDecl(next_screen='货币战争-备战',
                                        trigger='pick_megastar')
     out = report_action_pick_fortune_param(gs, SimpleNamespace(), _SIG)
-    assert out.world_decl == WorldDecl(next_screen='货币战争-遭遇节点',
-                                       trigger=''), '纯转移同归当前节点屏'
+    assert out.world_decl == WorldDecl(next_screen='货币战争-备战',
+                                       trigger=''), '纯转移同归备战档'
+    # 位面首例外 = 推导机制保留的判别位(硬编码备战在此必红):「返回
+    # 节点屏」声明族经 node_screen_now 推导,位面首窗起点 = 位面过渡屏。
+    gs_first = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    gs_first.write_logic(gs_first.node_seq_by_plane,
+                         resolve_plane_node_seqs('战争边疆'),
+                         produced_by='WorldDeclTest', evidence='node_seq:env',
+                         sig=_SIG)
+    observe_node_anchor(gs_first, (3, 1),
+                        trigger_screen='货币战争-位面过渡',
+                        actor='WorldDeclTest')
+    out = report_action_pick_invest_strategy_param(
+        gs_first, SimpleNamespace(norm_name='加油站'), _SIG, session=None)
+    assert out.applied
+    assert out.world_decl == WorldDecl(next_screen='货币战争-位面过渡',
+                                       trigger='pick_invest_strategy'), \
+        '位面首「返回节点屏」推导 = 位面过渡屏(非硬编码备战)'

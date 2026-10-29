@@ -1018,7 +1018,6 @@ class TestFortuneNodeWindowM1:
         from sr_od.application.currency_war.sim import cw_sim_ports
         from sr_od.application.currency_war.sim.cw_sim_backend import (
             SCREEN_BRIEFING,
-            SCREEN_PREP,
             SCREEN_SETTLE,
         )
         _sig = ChannelSig(family='logic_action', actor='t', mode='compute')
@@ -1040,12 +1039,13 @@ class TestFortuneNodeWindowM1:
                 gs, 'fortune', KIND_SCREEN_NAMES['fortune'],
                 's4_battle_count@settle_confirm')
             # settle_confirm 推进 → P1r2(battle)节点窗起点:先落底层
-            #(battle → 备战档)再查呈现门 → fortune 收口消费,节点屏不被吞。
+            #(battle → 备战档)再查呈现门 → fortune 收口消费;窗收尾自动
+            # 弹店(2026-10-29 流程模型对齐),节点屏不被吞。
             adv = report_node_advance(gs, trigger='settle_confirm')
             assert adv.applied
             cw_sim_ports.declare_world(adv.world_decl)
-            assert b.screen_identity() == SCREEN_PREP, \
-                '节点窗底层照常呈现(battle → 备战),不被 fortune 门吞'
+            assert b.screen_identity() == '货币战争-备战-开商店', \
+                '节点窗底层照常呈现(battle → 备战 → 自动弹店),不被 fortune 门吞'
             assert gs.screen_changes.pending == [], \
                 'fortune 在备战底层收口消费(逐 kind 呈现门)'
             assert any('fortune' in str(k) and 'unmodeled' in str(v)

@@ -24,6 +24,7 @@ from __future__ import annotations
 import pytest
 from test.sr_od.application.currency_war.sim.test_sim_backend import (
     _backend,
+    _close_shop_feed,
     _drive_step,
     _force_settle,
     _node_advance_feed,
@@ -37,6 +38,7 @@ from sr_od.application.currency_war.sim.cw_sim_backend import (
     SCREEN_INVEST_STRATEGY,
     SCREEN_PREP,
     SCREEN_SETTLE,
+    SCREEN_SHOP,
     SCREEN_SUPPLY,
     SimBackend,
     is_piggy_node,
@@ -45,7 +47,8 @@ from sr_od.application.currency_war.sim.cw_sim_backend import (
 
 _PLANE_TRANSITION = '货币战争-位面过渡'
 _TRANSIT_SCREENS = (SCREEN_SETTLE, _PLANE_TRANSITION, SCREEN_INVEST_STRATEGY,
-                    SCREEN_SUPPLY, SCREEN_ENCOUNTER, SCREEN_BOSS_BRIEFING)
+                    SCREEN_SUPPLY, SCREEN_ENCOUNTER, SCREEN_BOSS_BRIEFING,
+                    SCREEN_SHOP)
 
 
 def _drive_to_interest_band_piggy_window(
@@ -54,9 +57,13 @@ def _drive_to_interest_band_piggy_window(
     """自当前扑满窗起逐扑满窗推进至窗口开金 ≥ ``min_gold``(停在窗,
     未结算);返回 (窗口开金, 到窗息账)。每个途经扑满窗:结算分支一次
     入账 = 窗口开金口径息(逐窗对账);途经非扑满节点(战斗类全胜强制/
-    补给·遭遇·首领走真写端)窗开即收属现役口径,不辖断言。"""
+    补给·遭遇·首领走真写端)窗开即收属现役口径,不辖断言。
+    2026-10-29 流程模型对齐:节点窗收尾/节点弹窗关闭回备战即自动弹店
+    (商店档),关店回备战后才是可操作备战帧。"""
     gs = b.gs
     for _ in range(16):
+        if b.screen_identity() == SCREEN_SHOP:
+            _close_shop_feed(b)   # 窗收尾自动弹店 → 关店回备战
         assert b.screen_identity() == SCREEN_PREP and is_piggy_node(gs), \
             '应停在扑满节点备战窗'
         counter_at_window = gs.effects.interest_earned
@@ -67,7 +74,7 @@ def _drive_to_interest_band_piggy_window(
             counter_at_window + min(gold_at_window // 10, 5), \
             '结算分支一次入账 = 窗口开金口径息(递延生效)'
         reached = False
-        for _ in range(16):
+        for _ in range(48):
             screen = b.screen_identity()
             if screen == SCREEN_PREP:
                 if is_piggy_node(gs):
@@ -81,7 +88,7 @@ def _drive_to_interest_band_piggy_window(
                 _drive_step(b, 7)   # 中间屏(含补给/遭遇/首领窗)真写端消费
                 continue
             raise AssertionError(f'推进途遇未预期屏 {screen}')
-        assert reached, '16 步未遇扑满窗(节点序列漂移?)'
+        assert reached, '48 步未遇扑满窗(节点序列漂移?)'
         if int(gs.gold.value or 0) >= min_gold:
             return int(gs.gold.value or 0), gs.effects.interest_earned
     raise AssertionError('16 窗未达息档扑满窗(经济序列漂移?)')

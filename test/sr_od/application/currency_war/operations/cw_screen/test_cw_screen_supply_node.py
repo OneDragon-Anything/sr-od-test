@@ -21,8 +21,8 @@
     (left−1 + 选项重掷落容器);pick 流 = 真 SimBackend + 真策略装配
     (装配缝 = test/harness/sim_backend_runner.run_sim_full_match 同源)
     → decide_supply 被调、owned 内容载荷分支入账写行、chosen_supply 写行、
-    节点推进(journal 断言;占位池 char 恒空 → 单位入账分支结构性零写,
-    design §2.2 申报)。
+    零节点推进(选完回备战弹店,推进归出战;占位池 char 恒空 → 单位入账
+    分支结构性零写,design §2.2 申报)。
 
 测试纪律:不连真游戏(fixture harness + fast_sleep 包 op 执行)、零真实
 副作用(journal 走内存 sink,telemetry run 态测试复位)、共享对象改属性
@@ -78,6 +78,7 @@ from sr_od.application.currency_war.sim import cw_sim_ports
 from sr_od.application.currency_war.sim.cw_sim_backend import (
     SCREEN_BRIEFING,
     SCREEN_SETTLE,
+    SCREEN_SHOP,
     SCREEN_SUPPLY,
     SimBackend,
     install_backend,
@@ -463,13 +464,15 @@ def test_supply_sim_gate_rejection_redecide_zero_click_terminal(
 def test_supply_sim_two_state_pick_flow(test_context, monkeypatch) -> None:
     """sim 两态 pick 流测试(§2.6 新增①):装 SimBackend 跑补给节点画面
     op——决策链接线(``decide_supply`` 被调,历史 sim 局结构性不可达面)、
-    owned 内容载荷分支入账写行、``chosen_supply`` 写行、节点推进(journal
-    断言)。装配缝 = run_sim_full_match 同源(真策略 MandateV1Strategy;
-    left 预刷尽使真实 decide 恒落选卡——次数闸内嵌,刷新建议不可能,
-    决策确定性由 seed 承载)。动作 op 走真注册表派发:机械执行分支端口检查
-    跳过,世界反应 = 上报声明链(内容载荷分支 owned += 规范名)。占位池
-    char 恒空 → 单位入账分支结构性零写(design §2.2 申报;bench 分支对占位池
-    不可达,不在断言面)。journal 走内存 sink(零落盘),run 态测试复位。"""
+    owned 内容载荷分支入账写行、``chosen_supply`` 写行、零节点推进
+    (2026-10-29 流程模型对齐:选完关模态回备战自动弹店,推进归出战动作
+    supply_finish)。装配缝 = run_sim_full_match 同源(真策略
+    MandateV1Strategy;left 预刷尽使真实 decide 恒落选卡——次数闸内嵌,
+    刷新建议不可能,决策确定性由 seed 承载)。动作 op 走真注册表派发:
+    机械执行分支端口检查跳过,世界反应 = 上报声明链(内容载荷分支
+    owned += 规范名)。占位池 char 恒空 → 单位入账分支结构性零写
+    (design §2.2 申报;bench 分支对占位池不可达,不在断言面)。journal
+    走内存 sink(零落盘),run 态测试复位。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         SupplyPayload,
     )
@@ -519,11 +522,14 @@ def test_supply_sim_two_state_pick_flow(test_context, monkeypatch) -> None:
                 '选定 = 在场选项内容(决策输入 = obs 载体)')
             # owned 内容载荷分支入账(装备入账分支 owned += 规范名;上报声明链驱动)
             assert equip in (gs.equips.value or []), 'owned 内容载荷分支入账'
-            # 节点推进(supply_confirm 声明链 → 下节点窗)
-            assert gs.node.value.round_num == 6, (
-                f'节点推进(P1r5 → r6):{gs.node.value!r}')
-            # journal 断言:chosen_supply 写行 + owned 装备入账分支写行 + 节点推进行
-            # (journal after 经 _json_safe 序列化:tuple → list,node → dict)
+            # 零节点推进(2026-10-29 流程模型对齐):选完关模态回备战并
+            # 自动弹店,节点推进归出战动作 supply_finish
+            assert gs.node.value.round_num == 5, (
+                f'补给确认零节点推进:{gs.node.value!r}')
+            assert b.screen_identity() == SCREEN_SHOP, (
+                f'补给选完回备战自动弹店:{b.screen_identity()!r}')
+            # journal 断言:chosen_supply 写行 + owned 装备入账分支写行
+            #(journal after 经 _json_safe 序列化:tuple → list,node → dict)
             _chosen_json = [chosen[0], list(chosen[1])]
             assert any(r['field'] == 'chosen_supply'
                        and r['after'] == _chosen_json for r in rows), (
@@ -533,9 +539,8 @@ def test_supply_sim_two_state_pick_flow(test_context, monkeypatch) -> None:
                        and isinstance(r['after'], list)
                        and equip in r['after'] for r in rows), (
                 f'journal:owned 装备入账分支写行(equip={equip!r})')
-            assert any(r['field'] == 'node'
-                       and r['after'].get('round_num') == 6 for r in rows), (
-                'journal:节点推进行(r6)')
+            assert not any(r['field'] == 'node' for r in rows), (
+                'journal:零节点推进行(补给确认不再推节点)')
             # 单位入账分支结构性零写(design §2.2 申报面):占位池 char 恒空 →
             # 上报走装备入账分支分支,备战席零改动。
             assert gs.bench.value == _bench_before, (

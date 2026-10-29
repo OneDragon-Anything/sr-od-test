@@ -8,6 +8,12 @@
   经验/环境金/发牌/offer 日程)平移语义零改;
 - 转移声明重入幂等 + 选卡分支接获得链(契约送卡/burst 免费刷新/板面重写/
   骇客改件,对齐 cw_gain_chain 现役语义);
+- 呈现流程(2026-10-29 流程模型对齐,单一源 =
+  docs/game/currency_war/research/screen_flow_timing.md 口述流程模型节):
+  节点窗起点 = 备战底层 + 节点弹窗模态(补给/遭遇/BOSS 简报),battle/
+  reward 节点与节点弹窗关闭后自动弹店(1-1 例外不弹),关店回备战 =
+  策略器主窗口;战斗统一由出战动作触发(supply 节点 = supply_finish
+  完成节点,无战斗无结算屏,'supply_confirm' 随「确认即推节点」废止);
 - 装备入账分支:穿着即合成住 kernel 穿装备上报(规则件缺口补 kernel,sim 与
   实机动作分支同构);
 - 观察生成(sim 统一 3.3):金路径 13 档名注册表与清单零差零冗余,逐档
@@ -280,8 +286,8 @@ def test_affix_override_bypasses_sampling() -> None:
 
 def test_node_advance_sequence_income_streak_and_next_window() -> None:
     """节点推进序列平移:终结动作上报 → 经验入账(被离开节点)→ 下一
-    节点窗口(轮首收入/发牌)→ 备战呈现;声明重放(同一 node_advance
-    声明重入)不二次推进(后端线性序守卫)。"""
+    节点窗口(轮首收入/发牌)→ 备战呈现 + 自动弹店(1-1 例外外,#14);
+    声明重放(同一 node_advance 声明重入)不二次推进(后端线性序守卫)。"""
     b = _backend(7)
     try:
         b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
@@ -296,12 +302,13 @@ def test_node_advance_sequence_income_streak_and_next_window() -> None:
         assert (gs.node.value.plane, gs.node.value.round_num) == (1, 2)
         assert gs.xp.value[0] == xp_before[0] + NODE_XP_BY_TYPE['reward'], \
             '节点经验在推进时入账(奖励节点 +2)'
-        assert b.screen_identity() == SCREEN_PREP
+        assert b.screen_identity() == SCREEN_SHOP, \
+            '节点窗收尾自动弹店(备战过渡帧被弹店覆盖,稳态 = 开商店)'
         assert gs.shop.value is not None, '节点切换自动全刷'
         # 重入幂等:同一 node_advance 声明重放(无新 kernel 推进)→
         # 窗口不重入、收入不重发
         gold_before = gs.gold.value
-        cw_sim_ports.declare_world(WorldDecl(next_screen=SCREEN_PREP,
+        cw_sim_ports.declare_world(WorldDecl(next_screen=SCREEN_SHOP,
                                              trigger='node_advance'))
         assert (gs.node.value.round_num) == 2
         assert gs.gold.value == gold_before, '收入不重发'
@@ -329,7 +336,11 @@ def test_start_battle_reentry_idempotent() -> None:
 
 def _drive_step(b: SimBackend, rng_seed: int) -> None:
     """单步驱动(backend 直驱测试共用;按呈现屏分派到对应真实写端;
-    18 动作全量单轨 = 上报 + 声明喂入,动作 op 同形)。"""
+    18 动作全量单轨 = 上报 + 声明喂入,动作 op 同形)。
+
+    2026-10-29 流程模型对齐:补给确认零推进(选完关模态回备战自动弹店,
+    节点推进归出战动作 supply_finish);商店档(自动弹店态)走关店动作
+    单轨回备战——策略器主窗口 = 关店后的可操作备战帧。"""
     screen = b.screen_identity()
     gs = b.gs
     if screen == SCREEN_SUPPLY:
@@ -341,7 +352,8 @@ def _drive_step(b: SimBackend, rng_seed: int) -> None:
             gs, SimpleNamespace(idx=0, char_name='', norm_item=opts[0].equip),
             _SIG)
         cw_sim_ports.declare_world(out.world_decl)
-        _node_advance_feed(gs, trigger='supply_confirm')
+    elif screen == SCREEN_SHOP:
+        _close_shop_feed(b)
     elif screen == SCREEN_INVEST_STRATEGY:
         opts = gs.invest_strategy_opts.value
         out = report_action_pick_invest_strategy_param(
@@ -369,10 +381,12 @@ def _drive_step(b: SimBackend, rng_seed: int) -> None:
         raise AssertionError(f'未知呈现屏 {screen}')
 
 
-def test_boss_briefing_click_resolves_battle() -> None:
-    """boss 节点:BOSS 简报呈现于节点窗;点空白(点击源)→ coarse 结算
-    → 结算页;settle_confirm 推进(位面末 → 位面过渡)。
-    seed 61 = 走完通道锚(局终于 P2,必经 P1r9 boss 窗)。"""
+def test_boss_briefing_click_returns_to_prep_with_auto_shop() -> None:
+    """boss 节点:BOSS 简报呈现于节点窗(备战底层 + 模态);点空白(点击
+    源)→ 关简报模态回备战并自动弹店(2026-10-29 流程模型对齐:不再直接
+    结算,boss 战由出战动作触发);关店 → 出战(battle_resolve)→ 结算页
+    → settle_confirm 推进(位面末 → 位面过渡);P2r1 窗收尾自动弹店
+    (1-1 例外外)。seed 61 = 走完通道锚(局终于 P2,必经 P1r9 boss 窗)。"""
     b = _backend(61)
     try:
         b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
@@ -385,13 +399,18 @@ def test_boss_briefing_click_resolves_battle() -> None:
             else:
                 _drive_step(b, 61)
         assert b.screen_identity() == '货币战争-BOSS简报'
-        b._handle_click_source('货币战争-BOSS简报', '区域-空白点击')
-        assert b.screen_identity() == SCREEN_SETTLE
+        b._handle_click_source(SCREEN_BOSS_BRIEFING, '区域-空白点击')
+        assert b.screen_identity() == SCREEN_SHOP, \
+            '简报点空白关模态回备战自动弹店(不结算)'
+        _close_shop_feed(b)
+        assert b.screen_identity() == SCREEN_PREP, '关店回备战(可操作主窗口)'
+        _start_battle_feed(b.gs)
+        assert b.screen_identity() == SCREEN_SETTLE, 'boss 战由出战动作触发'
         _node_advance_feed(b.gs, trigger='settle_confirm')
         assert (b.gs.node.value.plane, b.gs.node.value.round_num) == (2, 1)
         assert b.screen_identity() == '货币战争-位面过渡', 'P2 首轮位面过渡'
         b._handle_click_source('货币战争-位面过渡', '区域-空白点击')
-        assert b.screen_identity() == SCREEN_PREP
+        assert b.screen_identity() == SCREEN_SHOP, 'P2r1 窗收尾自动弹店'
     finally:
         uninstall_backend()
 
@@ -438,7 +457,8 @@ def test_node_window_overlay_detour_reruns_offer_check() -> None:
             session=SimpleNamespace())
         assert invest_out.applied
         cw_sim_ports.declare_world(invest_out.world_decl)
-        assert b.screen_identity() == SCREEN_PREP, 'offer 选定 → 节点屏'
+        assert b.screen_identity() == SCREEN_SHOP, \
+            'offer 选定 → 节点窗收尾自动弹店(battle 节点无弹窗)'
     finally:
         uninstall_backend()
 
@@ -685,7 +705,7 @@ def test_scheduled_env_gift_discharged_at_plane2_first_window() -> None:
         _node_advance_feed(gs, trigger='settle_confirm')
         assert (gs.node.value.plane, gs.node.value.round_num) == (1, 2)
         assert gs.pending_item_grants.value == queued, '(1,2) 窗口队列原样'
-        # 推进至 P1r9 BOSS 简报 → 结算 → (2,1) 位面过渡
+        # 推进至 P1r9 BOSS 简报 → 出战结算 → (2,1) 位面过渡
         for _ in range(64):
             if b.done or b.screen_identity() == '货币战争-BOSS简报':
                 break
@@ -695,14 +715,18 @@ def test_scheduled_env_gift_discharged_at_plane2_first_window() -> None:
                 _drive_step(b, 61)
         assert b.screen_identity() == '货币战争-BOSS简报'
         b._handle_click_source('货币战争-BOSS简报', '区域-空白点击')
-        assert b.screen_identity() == SCREEN_SETTLE
+        assert b.screen_identity() == SCREEN_SHOP, \
+            '简报点空白关模态回备战自动弹店(不结算)'
+        _close_shop_feed(b)
+        _start_battle_feed(gs)
+        assert b.screen_identity() == SCREEN_SETTLE, 'boss 战由出战动作触发'
         _node_advance_feed(gs, trigger='settle_confirm')
         assert (gs.node.value.plane, gs.node.value.round_num) == (2, 1)
         assert b.screen_identity() == '货币战争-位面过渡'
         assert gs.pending_item_grants.value == queued, \
             '位面过渡屏呈现时队列未消费(发放收口在点空白后的节点窗)'
         b._handle_click_source('货币战争-位面过渡', '区域-空白点击')
-        assert b.screen_identity() == SCREEN_PREP
+        assert b.screen_identity() == SCREEN_SHOP, '(2,1) 节点窗收尾自动弹店'
         assert gs.pending_item_grants.value == [], '到点发放队列回写空'
         boxes = [s for s in gs.bench.value.slots
                  if s is not None and s.kind == 'supply_box']
@@ -1288,20 +1312,26 @@ def test_battle_prep_empty_spheres_write_cleans_stale_identities() -> None:
         _start_battle_feed(gs)
         _node_advance_feed(gs, trigger='settle_confirm')
         assert (gs.node.value.plane, gs.node.value.round_num) == (1, 2)
-        assert b.screen_identity() == SCREEN_PREP and b._sub == 'ore'
+        assert b.screen_identity() == SCREEN_SHOP and b._sub == 'ore', \
+            '奖励节点窗收尾自动弹店(晶矿子态随 _return_sub 跨商店模态存续)'
+        _drive_step(b, 7)   # 关店回备战
+        assert b.screen_identity() == SCREEN_PREP
         assert gs.ore_rewards.value == attached, \
             'P1r2 同坐标面板重呈现:配对命中继承(零重掷零清洗)'
         _start_battle_feed(gs)
         _node_advance_feed(gs, trigger='settle_confirm')
         assert (gs.node.value.plane, gs.node.value.round_num) == (1, 3)
         # P1r3 = U07 offer 槽(固定日程生效于本节点备战窗口前):选卡后
-        # 直出节点屏
+        # 直出节点窗收尾
         assert b.screen_identity() == SCREEN_INVEST_STRATEGY
         out = report_action_pick_invest_strategy_param(
             gs, SimpleNamespace(norm_name=gs.invest_strategy_opts.value[0]),
             _SIG, session=SimpleNamespace())
         assert out.applied
         cw_sim_ports.declare_world(out.world_decl)
+        assert b.screen_identity() == SCREEN_SHOP, \
+            'offer 选定 → 节点窗收尾自动弹店(battle 节点无面板无弹窗)'
+        _drive_step(b, 7)   # 关店回备战
         assert b.screen_identity() == SCREEN_PREP and b._sub == '', \
             '战斗节点无面板无声明 → 常规备战子态'
         assert gs.spheres.value.count == 0, '空读照写 count=0'
@@ -1332,6 +1362,11 @@ def test_ore_env_plane2_declared_ore_and_expiry_cleanup(
                 _drive_step(b, 61)
         assert b.screen_identity() == SCREEN_BOSS_BRIEFING
         b._handle_click_source(SCREEN_BOSS_BRIEFING, '区域-空白点击')
+        assert b.screen_identity() == SCREEN_SHOP, \
+            '简报点空白关模态回备战自动弹店(不结算)'
+        _close_shop_feed(b)
+        _start_battle_feed(gs)
+        assert b.screen_identity() == SCREEN_SETTLE, 'boss 战由出战动作触发'
         _node_advance_feed(gs, trigger='settle_confirm')
         assert b.screen_identity() == '货币战争-位面过渡'
         # 测试侧整理(真策略同构行为:部署腾席 + 奖励面板点击收口):
@@ -1352,8 +1387,10 @@ def test_ore_env_plane2_declared_ore_and_expiry_cleanup(
         calls = _record_logic_writes(gs, monkeypatch)
         # 位面过渡点空白 → (2,1) 节点窗(声明入队 + 过期清理 + 呈现)
         b._handle_click_source('货币战争-位面过渡', '区域-空白点击')
-        assert b.screen_identity() == SCREEN_PREP and b._sub == 'ore', \
-            '战斗节点备战档呈现声明矿(面板在场语义复用 PREP_SUB_ORE)'
+        assert b.screen_identity() == SCREEN_SHOP and b._sub == 'ore', \
+            '战斗节点窗收尾自动弹店(声明矿子态随 _return_sub 跨商店模态存续)'
+        _drive_step(b, 61)   # 关店回备战
+        assert b.screen_identity() == SCREEN_PREP
         assert gs.spheres.value.points == (('金', 10, 10, 10),), \
             'P2 首节点(战斗)声明矿单独呈现(面板序续接首点)'
         assert gs.ore_declared_pending.value == (), '呈现消费(出队即消费)'
@@ -1376,19 +1413,17 @@ def test_ore_env_plane2_declared_ore_and_expiry_cleanup(
 
 def test_supply_node_window_refresh_and_pick() -> None:
     """补给节点窗:呈现补给屏(3 选项写容器 + 免费刷新 left=1);刷新
-    = 点击源(left 递减 + 选项重掷);pick_supply 走获得链。宝钻发放分支 =
-    chosen_supply (角色, 装备名列表) 按 DIAMOND_EQUIP_NAMES 名单派生
-    (T-9 裁定 2)——sim 选项件名恒非钻名 → 派生不发(选项级钻标属
-    呈现面近似,U24 披露在册);含钻名形态的派生测试 =
-    test_supply_diamond_leg_derives_from_chosen_name_list。"""
+    = 点击源(left 递减 + 选项重掷);pick_supply 走获得链,选完关模态
+    回备战自动弹店、节点不推进(2026-10-29 流程模型对齐:推进归出战动作
+    supply_finish)。宝钻发放分支 = chosen_supply (角色, 装备名列表) 按
+    DIAMOND_EQUIP_NAMES 名单派生(T-9 裁定 2)——sim 选项件名恒非钻名 →
+    派生不发(选项级钻标属呈现面近似,U24 披露在册);含钻名形态的派生
+    测试 = test_supply_diamond_leg_derives_from_chosen_name_list。"""
     b = _backend(1013)
     try:
         b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
         b._maybe_finish_wait()
-        while b.gs.node.value.round_num < 5:
-            _start_battle_feed(b.gs)
-            if b.screen_identity() == SCREEN_SETTLE:
-                _node_advance_feed(b.gs, trigger='settle_confirm')
+        _walk_to(b, 1, 5)
         assert b.screen_identity() == SCREEN_SUPPLY
         assert b.gs.supply_refresh_left.value == 1, '节点入口初始 left=1'
         opts_before = [(o.equip, o.extra_equips)
@@ -1408,7 +1443,10 @@ def test_supply_node_window_refresh_and_pick() -> None:
         assert out.applied
         assert pick.equip in b.gs.equips.value, '装备入账分支入栏'
         cw_sim_ports.declare_world(out.world_decl)
-        _node_advance_feed(b.gs, trigger='supply_confirm')
+        assert b.screen_identity() == SCREEN_SHOP, \
+            '补给选完关模态回备战自动弹店(不再确认即推节点)'
+        assert b.gs.node.value.round_num == 5, \
+            '补给确认零节点推进(推进归出战动作 supply_finish)'
         assert b.gs.diamond_count.value == 0, \
             'sim 选项名单不含钻名 → 列表派生零宝钻发放分支(fail-visible 边)'
     finally:
@@ -1631,6 +1669,7 @@ def test_rainbow_env_overlay_detour_offer_counted_once() -> None:
         assert b.screen_identity() == SCREEN_SETTLE
         _node_advance_feed(gs, trigger='settle_confirm')
         assert (gs.node.value.plane, gs.node.value.round_num) == (1, 2)
+        _close_shop_feed(b)   # (1,2) 窗收尾自动弹店 → 关店回备战
         # P1r3(U07 offer 槽)窗口起点 overlay 在场 = 让路前提
         register_screen_change(
             gs, 'planner', '货币战争-银狼升星', source='test')
@@ -1656,7 +1695,8 @@ def test_rainbow_env_overlay_detour_offer_counted_once() -> None:
             session=SimpleNamespace())
         assert invest_out.applied
         cw_sim_ports.declare_world(invest_out.world_decl)
-        assert b.screen_identity() == SCREEN_PREP, 'offer 选定 → 节点屏'
+        assert b.screen_identity() == SCREEN_SHOP, \
+            'offer 选定 → 节点窗收尾自动弹店(battle 节点无弹窗)'
     finally:
         uninstall_backend()
 
@@ -2718,7 +2758,8 @@ def _record_all_writes(gs: GameState,
 def _drive_env_grant_step(b: SimBackend) -> None:
     """深井局单步驱动(补给恒选无钻选项,保触发局 diamond_count 基线
     干净;带钻补给归专项用例;策略定卡加油站 = 零判读域写,断言与
-    seed 采样解耦)。"""
+    seed 采样解耦)。2026-10-29 流程模型对齐:补给确认零推进(选完
+    回备战自动弹店,推进归出战);商店档 = 关店动作单轨回备战。"""
     screen = b.screen_identity()
     gs = b.gs
     if screen == SCREEN_SETTLE:
@@ -2733,7 +2774,8 @@ def _drive_env_grant_step(b: SimBackend) -> None:
             gs, SimpleNamespace(idx=opts.index(pick), char_name='',
                                 norm_item=pick.equip), _SIG)
         cw_sim_ports.declare_world(out.world_decl)
-        _node_advance_feed(gs, trigger='supply_confirm')
+    elif screen == SCREEN_SHOP:
+        _close_shop_feed(b)
     elif screen == SCREEN_INVEST_STRATEGY:
         gs.write_logic(gs.invest_strategy_opts,
                        ['加油站', '躺平', '淘金客'],
@@ -3085,9 +3127,10 @@ def test_piggy_win_income_deferred_and_streak_counts(
                                          0, won=True)
         assert int(gs.gold.value or 0) == expect1, 'r1 收入 = 基础+连胜+息'
         assert int(gs.streak.value or 0) == 1, '扑满胜局 +1'
-        # r2 备战:r2 收入同样递延(金停在 r1 落账值)
+        # r2 备战:r2 收入同样递延(金停在 r1 落账值);窗收尾自动弹店
         _node_advance_feed(gs, trigger='settle_confirm')
-        assert b.screen_identity() == SCREEN_PREP
+        assert b.screen_identity() == SCREEN_SHOP, '(1,2) 窗收尾自动弹店'
+        _close_shop_feed(b)
         assert int(gs.gold.value or 0) == expect1, 'r2 收入未提前落账'
         _start_battle_feed(gs)
         expect2 = expect1 + _reward_expect(expect1,
@@ -3116,7 +3159,8 @@ def test_piggy_loss_base_interest_only_and_streak_reset(
         assert int(gs.streak.value or 0) == 1
         hp_before = int(gs.hp.value or 0)
         _node_advance_feed(gs, trigger='settle_confirm')
-        assert b.screen_identity() == SCREEN_PREP
+        assert b.screen_identity() == SCREEN_SHOP, '(1,2) 窗收尾自动弹店'
+        _close_shop_feed(b)
         _force_settle(monkeypatch, won=False)
         _start_battle_feed(gs)
         assert int(gs.gold.value or 0) == gold1 + _reward_expect(
@@ -3219,7 +3263,8 @@ def _obs_step(b: SimBackend) -> None:
             gs, SimpleNamespace(idx=0, char_name='', norm_item=opts[0].equip),
             _SIG)
         cw_sim_ports.declare_world(out.world_decl)
-        _node_advance_feed(gs, trigger='supply_confirm')
+    elif screen == SCREEN_SHOP:
+        _close_shop_feed(b)
     elif screen == SCREEN_INVEST_STRATEGY:
         opts = gs.invest_strategy_opts.value
         out = report_action_pick_invest_strategy_param(
@@ -3649,7 +3694,7 @@ def test_node_switch_new_deal_overrides_record() -> None:
         second = gs.shop.value
         assert second is not None, '前置:节点切换自动全刷新发牌'
         assert second != first, '前置:新旧节点发牌分形(记录覆盖可判)'
-        assert b.screen_identity() == SCREEN_PREP, 'P1r2 备战呈现'
+        assert b.screen_identity() == SCREEN_SHOP, 'P1r2 窗收尾自动弹店'
 
         _close_shop_feed(b)
         assert gs.shop.value is None
@@ -3992,7 +4037,7 @@ def test_delayed_item_open_window_discharge_grants_coexist_replay_safe(
         boxes_early = [s for s in gs.bench.value.slots
                        if s is not None and s.kind == 'supply_box']
         assert boxes_early == [], '开盒零席位写(无 supply_box 落位)'
-        # 推进至 P1r9 BOSS 简报 → 结算 → (2,1) 位面过渡
+        # 推进至 P1r9 BOSS 简报 → 出战结算 → (2,1) 位面过渡
         for _ in range(64):
             if b.done or b.screen_identity() == '货币战争-BOSS简报':
                 break
@@ -4002,12 +4047,18 @@ def test_delayed_item_open_window_discharge_grants_coexist_replay_safe(
                 _drive_step(b, 61)
         assert b.screen_identity() == '货币战争-BOSS简报'
         b._handle_click_source('货币战争-BOSS简报', '区域-空白点击')
-        assert b.screen_identity() == SCREEN_SETTLE
+        assert b.screen_identity() == SCREEN_SHOP, \
+            '简报点空白关模态回备战自动弹店(不结算)'
+        _close_shop_feed(b)
+        _start_battle_feed(gs)
+        assert b.screen_identity() == SCREEN_SETTLE, 'boss 战由出战动作触发'
         _node_advance_feed(gs, trigger='settle_confirm')
         assert (gs.node.value.plane, gs.node.value.round_num) == (2, 1)
         assert b.screen_identity() == '货币战争-位面过渡'
         queue_at_transition = gs.pending_item_opens.value
         b._handle_click_source('货币战争-位面过渡', '区域-空白点击')
+        assert b.screen_identity() == SCREEN_SHOP, '(2,1) 节点窗收尾自动弹店'
+        _close_shop_feed(b)
         assert b.screen_identity() == SCREEN_PREP
         queue_after = gs.pending_item_opens.value
         assert all(unlock > (2, 1) for _n, unlock in queue_after), \

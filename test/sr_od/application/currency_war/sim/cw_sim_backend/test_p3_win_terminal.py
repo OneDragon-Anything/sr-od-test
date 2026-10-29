@@ -30,8 +30,14 @@ from sr_od.application.currency_war.kernel.cw_action_report import (
     report_action_pick_supply_param,
     report_action_start_battle_param,
 )
+from sr_od.application.currency_war.kernel.cw_action_report.close_shop import (
+    report_action_close_shop_param,
+)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     report_node_advance,
+)
+from sr_od.application.currency_war.kernel.cw_vocab import (
+    CwActionCloseShopParam,
 )
 from sr_od.application.currency_war.sim import cw_sim_ports
 from sr_od.application.currency_war.sim.cw_sim_backend import (
@@ -44,6 +50,7 @@ from sr_od.application.currency_war.sim.cw_sim_backend import (
     SCREEN_INVEST_STRATEGY,
     SCREEN_PREP,
     SCREEN_SETTLE,
+    SCREEN_SHOP,
     SCREEN_SUPPLY,
     SimBackend,
     install_backend,
@@ -66,7 +73,9 @@ _AB_SEED: int = 37
 
 def _drive_step(b: SimBackend, rng_seed: int) -> None:
     """单步驱动(backend 直驱;按呈现屏分派到对应真实写端,动作 op 同形
-    = 上报 + 声明喂入;先例 = test_sim_backend._drive_step)。"""
+    = 上报 + 声明喂入;先例 = test_sim_backend._drive_step)。
+    2026-10-29 流程模型对齐:补给确认零推进(选完关模态回备战自动弹店,
+    节点推进归出战动作 supply_finish);商店档 = 关店动作单轨回备战。"""
     screen = b.screen_identity()
     gs = b.gs
     if screen == SCREEN_SUPPLY:
@@ -78,9 +87,11 @@ def _drive_step(b: SimBackend, rng_seed: int) -> None:
             gs, SimpleNamespace(idx=0, char_name='', norm_item=opts[0].equip),
             _SIG)
         cw_sim_ports.declare_world(out.world_decl)
-        out2 = report_node_advance(gs, trigger='supply_confirm')
-        assert out2.applied, out2.reason
-        cw_sim_ports.declare_world(out2.world_decl)
+    elif screen == SCREEN_SHOP:
+        out = report_action_close_shop_param(gs, CwActionCloseShopParam(),
+                                             _SIG)
+        assert out.applied, out.reason
+        cw_sim_ports.declare_world(out.world_decl)
     elif screen == SCREEN_INVEST_STRATEGY:
         opts = gs.invest_strategy_opts.value
         out = report_action_pick_invest_strategy_param(

@@ -25,6 +25,7 @@ from __future__ import annotations
 import pytest
 import test.sr_od.application.currency_war.sim.test_sim_backend as piggy_helpers
 from test.sr_od.application.currency_war.sim.test_sim_backend import (
+    _close_shop_feed,
     _force_settle,
     _node_advance_feed,
     _piggy_backend,
@@ -42,6 +43,7 @@ from sr_od.application.currency_war.sim.cw_sim_backend import (
     PIGGY_ORE_PANEL_BONUS_PLACEHOLDER,
     REWARD_ORE_PANEL_ANCHOR,
     SCREEN_PREP,
+    SCREEN_SHOP,
     SimBackend,
     reward_ore_panel_points,
     uninstall_backend,
@@ -109,8 +111,11 @@ def test_piggy_super_panel_and_income_legs(
         assert int(gs.gold.value or 0) == expect1, \
             '结算分支一次落账 = 基础+息+进轮连胜'
         assert int(gs.streak.value or 0) == 1, '扑满胜局连胜 +1'
-        # 败局分支:基础+息、连胜清零、不掉血
+        # 败局分支:基础+息、连胜清零、不掉血;推进进 (1,2) 窗收尾自动弹店
+        #(2026-10-29 流程模型对齐),关店回备战后再出战
         _node_advance_feed(gs, trigger='settle_confirm')
+        assert b.screen_identity() == SCREEN_SHOP, '(1,2) 窗收尾自动弹店'
+        _close_shop_feed(b)
         assert b.screen_identity() == SCREEN_PREP
         hp_before = int(gs.hp.value or 0)
         _force_settle(monkeypatch, won=False)

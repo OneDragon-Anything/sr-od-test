@@ -158,7 +158,7 @@ def test_settle_confirm_wires_battle_grant_once() -> None:
     """T-30 同战共现条件发放接线(settle_confirm 分支,黑天鹅直登相邻):
     真推进恰好查一次——三将同战结算后 bench 增 1★流萤带实例号 + 锁记录
     落账;重复上报(观察态门挡)不重查不重发;再推进 done 短路不重发
-    且黑天鹅占卜屋计数器计数不受发放影响(回归锁);supply_confirm 推进
+    且黑天鹅占卜屋计数器计数不受发放影响(回归锁);supply_finish 推进
     不触发本检查(分支封闭集内仅 settle_confirm 接线)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         BenchSlot,
@@ -208,11 +208,11 @@ def test_settle_confirm_wires_battle_grant_once() -> None:
     assert gs.env_grant_uid_seq.value == 1
     assert gs.screen_changes.fortune_battles == 2, '计数器不受发放影响'
 
-    # supply_confirm 推进不触发本检查(推进照走,零发放零 done)
+    # supply_finish 推进不触发本检查(推进照走,零发放零 done)
     gs2 = _ready_gs()
-    assert report_node_advance(gs2, trigger='supply_confirm').applied
+    assert report_node_advance(gs2, trigger='supply_finish').applied
     assert gs2.node_pos.value == (1, 6)
-    assert _bench_chars(gs2) == [], 'supply_confirm 不触发'
+    assert _bench_chars(gs2) == [], 'supply_finish 不触发'
     assert gs2.env_grants_done.value is None, '零 done'
 
 
@@ -614,7 +614,10 @@ def test_lock3_snapshot_restore_carries_field() -> None:
 def test_lock4_next_screen_modified_regime() -> None:
     """修饰制推进声明:P1 r8→r9 = 补给、r9→r10 = boss 简报、跨位面 =
     位面过渡、P2 r7→r8 = boss 简报、P2 r8 → 位面过渡(P3 在表)、
-    P3 r7→r8 = boss 简报(插入尾槽)、P3 r8 后无后继 = 局终声明事件式。"""
+    P3 r7→r8 = boss 简报(插入尾槽)、P3 r8 后无后继 = 局终声明事件式。
+    2026-10-29 流程模型对齐口径:node_advance 稳态落点 = 新节点窗的
+    呈现屏(弹窗型节点 = 备战底层上的节点弹窗模态,battle/reward =
+    开商店档,位面首 = 位面过渡),修饰局插入位随表自动适用。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         SCREEN_BOSS_BRIEFING,
     )
@@ -1036,8 +1039,14 @@ def _drive_step(b, rng_seed: int) -> None:
         report_action_pick_planner_param,
         report_action_pick_supply_param,
     )
+    from sr_od.application.currency_war.kernel.cw_action_report.close_shop import (
+        report_action_close_shop_param,
+    )
     from sr_od.application.currency_war.kernel.cw_game_state import (
         report_node_advance,
+    )
+    from sr_od.application.currency_war.kernel.cw_vocab import (
+        CwActionCloseShopParam,
     )
     from sr_od.application.currency_war.sim import cw_sim_ports
     from sr_od.application.currency_war.sim.cw_sim_backend import (
@@ -1045,6 +1054,7 @@ def _drive_step(b, rng_seed: int) -> None:
         SCREEN_INVEST_STRATEGY,
         SCREEN_PREP,
         SCREEN_SETTLE,
+        SCREEN_SHOP,
         SCREEN_SUPPLY,
         stream_rng,
     )
@@ -1061,9 +1071,13 @@ def _drive_step(b, rng_seed: int) -> None:
             gs, SimpleNamespace(idx=0, char_name='', norm_item=opts[0].equip),
             _logic_sig('Test'))
         cw_sim_ports.declare_world(out.world_decl)
-        out2 = report_node_advance(gs, trigger='supply_confirm')
-        assert out2.applied
-        cw_sim_ports.declare_world(out2.world_decl)
+        # 2026-10-29 流程模型对齐:补给确认零推进(选完关模态回备战自动
+        # 弹店),节点推进归出战动作(start_battle 对 supply 走 supply_finish)。
+    elif screen == SCREEN_SHOP:
+        out = report_action_close_shop_param(gs, CwActionCloseShopParam(),
+                                             _logic_sig('Test'))
+        assert out.applied
+        cw_sim_ports.declare_world(out.world_decl)
     elif screen == SCREEN_INVEST_STRATEGY:
         opts = gs.invest_strategy_opts.value
         from sr_od.application.currency_war.kernel.cw_action_report import (
@@ -1217,13 +1231,16 @@ def test_lock5_sim_modified_supply_income_keeps_streak() -> None:
                 break
             _drive_step(b, 61)
         assert (b.gs.node.value.plane, b.gs.node.value.round_num) == (1, 8)
+        _drive_step(b, 61)   # (1,8) 窗收尾自动弹店 → 关店回备战
         _drive_step(b, 61)   # 奖励轮出战 → 结算页(连胜不动,奖励轮非战斗类)
         _drive_step(b, 61)   # settle_confirm → 推进进 r9 插入补给窗
         assert b.screen_identity() == SCREEN_SUPPLY
         assert (b.gs.node.value.plane, b.gs.node.value.round_num) == (1, 9)
         streak_at_supply = int(b.gs.streak.value or 0)
         assert streak_at_supply >= 1, '前置非零连胜已建立(r3/r4 战斗轮)'
-        _drive_step(b, 61)   # 补给选卡 + supply_confirm → r10
+        _drive_step(b, 61)   # 补给选卡 → 回备战自动弹店(确认零推进)
+        _drive_step(b, 61)   # 关店回备战
+        _drive_step(b, 61)   # 出战 = 补给节点完成(supply_finish) → r10
         assert (b.gs.node.value.plane, b.gs.node.value.round_num) == (1, 10)
         assert int(b.gs.streak.value or 0) == streak_at_supply, \
             '补给轮连胜不动(收入 supply 分支/连胜转移战斗结算后)'
