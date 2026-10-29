@@ -2451,3 +2451,23 @@ def test_env_gift_equip_leg_chixu_shanghai_invite(
              if s is not None and s.kind == 'supply_box']
     assert boxes == [], '零道具落位(装备 only)'
     assert rows_sink.kinds() == [], '正常路径零申报行(零子链)'
+
+
+# —— 量子同频邀请(2026-09-23-invest-effects-calc T-79;邀请族展开卡,
+# 纯数据行,骑同一 on_env_gained 即时装备支)——
+
+
+def test_env_gift_equip_leg_liangzi_tongpin_invite(
+        rows_sink: _RowSink) -> None:
+    """发放分支(T-79 设计 §4 锁 3,治理后形态,on_env_gained 直构):选
+    量子同频邀请 → equips 尾追 '量子同频星徽'、bench 零落位(装备 only,
+    无开箱腿);效果串单行 ``equip_gift:量子同频星徽``。星徽 ∈ EQUIP_
+    ACQUIRE_CONSEQUENCES 表外 → 零子链(申报行空为证)。"""
+    gs = _make_gs(bench=[], equips=[])
+    out = on_env_gained(gs, None, '量子同频邀请', rand=False, sig=_lsig())
+    assert out == ('equip_gift:量子同频星徽',), '效果串 = 具名装备单行'
+    assert list(gs.equips.value) == ['量子同频星徽'], '装备入栏(尾追)'
+    boxes = [s for s in gs.bench.value.slots
+             if s is not None and s.kind == 'supply_box']
+    assert boxes == [], '零道具落位(装备 only)'
+    assert rows_sink.kinds() == [], '正常路径零申报行(零子链)'
