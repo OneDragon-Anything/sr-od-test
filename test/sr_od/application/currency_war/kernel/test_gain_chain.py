@@ -1120,6 +1120,36 @@ def test_gain_invest_strategy_session_ledger_branch() -> None:
     assert gs2.free_refresh_left.value is None, 'burst 零累加(零 Field 行)'
 
 
+def test_gain_invest_strategy_free_lunch_burst_grant(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """免费午餐登记腿(T-88 设计 §4 锁 1):session 在场选免费午餐 →
+    burst 桥把 payload.free_refresh_burst=11 一次性累加进免费刷新余额
+    (None 基 = 0 起算)。写端形态 = write_logic 逻辑直写、
+    evidence=effect_burst[@frame]、produced_by 带卡名——produced_by 不落
+    Field,断言 = write_logic 调用面捕获(先例 =
+    cw_action_report 测试 _spy_write_logic 同款,捕获照常透传)。"""
+    captured: list[tuple] = []
+    real_write = GameState.write_logic
+
+    def _spy(self: GameState, target, value, **kw):
+        captured.append((self._field_name(target), value,
+                         kw.get('produced_by'), kw.get('evidence')))
+        return real_write(self, target, value, **kw)
+
+    monkeypatch.setattr(GameState, 'write_logic', _spy)
+    gs = _make_gs(bench=[], equips=[])
+    gain_invest_strategy(gs, object(), '免费午餐', rand=False, sig=_lsig())
+    assert gs.active_strategies.value == ['免费午餐'], '注册入表'
+    assert [e.spec.name for e in gs.effects.by_source(SOURCE_STRATEGY)] \
+        == ['免费午餐'], 'register_strategy 入册'
+    assert gs.free_refresh_left.value == 11, 'None 基 = 0 起算,一次 +11'
+    assert gs.free_refresh_left.source == 'logic', 'write_logic 逻辑直写'
+    assert (gs.free_refresh_left.evidence or '').startswith('effect_burst'), \
+        'burst 桥 evidence(effect_burst[@frame])'
+    assert captured[-1][2] == 'EffectLedgerBridge:免费午餐', \
+        f'produced_by 带卡名: {captured[-1]}'
+
+
 def test_gain_invest_strategy_xp_instant_live_zero_write() -> None:
     """live 链零写回归:xp_instant 卡(经验到账)走获得链(session=None
     直调形态)→ xp/level 值与来源域零变化。经验「选牌当场」= 观察覆盖

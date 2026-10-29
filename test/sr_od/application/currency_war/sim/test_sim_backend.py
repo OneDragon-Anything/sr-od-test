@@ -64,6 +64,7 @@ from sr_od.application.currency_war.kernel.cw_action_report import (
     report_action_pick_planner_param,
     report_action_pick_supply_param,
     report_action_refresh_invest_cards_param,
+    report_action_refresh_shop_param,
     report_action_start_battle_param,
     report_action_wear_equip_param,
 )
@@ -122,6 +123,7 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionCloseShopParam,
     CwActionCollectOreParam,
     CwActionOpenBoxParam,
+    CwActionRefreshShopParam,
     CwActionWearEquipParam,
 )
 from sr_od.application.currency_war.kernel.cw_world_decl import WorldDecl
@@ -830,6 +832,41 @@ def test_strategy_pick_chain_burst_gold() -> None:
         assert (gs.free_refresh_left.value or 0) == free_before + 1, \
             'burst 免费刷新发放(effect burst 桥)'
         assert '加油站' in gs.active_strategies.value
+    finally:
+        uninstall_backend()
+
+
+def test_strategy_pick_chain_free_lunch_burst() -> None:
+    """获得链断言:选免费午餐 → burst 桥一次 +11 入世界免费刷新余额,
+    后续一次商店刷新判免费(Field 扣减 + 免费帧禁进付费计数;T-88 设计
+    §4 锁 4,形态 = test_strategy_pick_chain_burst_gold 同构)。免费判
+    单一源 = ``gs.free_refresh_left``,选卡前 sim 世界未发放(None 基)。"""
+    b = _backend(7)
+    try:
+        b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+        b._maybe_finish_wait()
+        gs = b.gs
+        assert gs.free_refresh_left.value is None, '前置:未发放(None 基)'
+        gs.write_logic(gs.invest_strategy_opts,
+                       ['免费午餐', '躺平', '淘金客'],
+                       produced_by='Test', evidence='t:opts', sig=_SIG)
+        out = report_action_pick_invest_strategy_param(
+            gs, SimpleNamespace(norm_name='免费午餐'), _SIG,
+            session=SimpleNamespace())
+        assert out.applied
+        assert (gs.free_refresh_left.value or 0) == 11, \
+            'burst 免费刷新一次 +11(effect burst 桥)'
+        assert '免费午餐' in gs.active_strategies.value
+        # 后续一次商店刷新判免费:免费分支扣减 11→10,付费计数不动
+        paid_before = gs.effects.refresh_paid
+        total_before = gs.effects.refresh_total
+        refresh_out = report_action_refresh_shop_param(
+            gs, CwActionRefreshShopParam(cost=2), _SIG)
+        assert refresh_out.applied
+        assert gs.free_refresh_left.value == 10, \
+            '免费帧 Field 扣减(免费判单一源 = free_refresh_left)'
+        assert gs.effects.refresh_paid == paid_before, '免费帧禁进付费计数'
+        assert gs.effects.refresh_total == total_before + 1, '全量计数含免费'
     finally:
         uninstall_backend()
 

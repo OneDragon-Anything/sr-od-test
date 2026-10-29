@@ -28,6 +28,8 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     INVESTMENT_ENVS,
     INVESTMENT_STRATEGIES,
     STRATEGY_BINDINGS,
+    STRATEGY_ECONOMY,
+    STRATEGY_EFFECTS,
     STRATEGY_GRANTS,
     GiftGrant,
     RandomCharSpec,
@@ -1298,3 +1300,14 @@ def test_expert_set_matches_advisor_grant_char_union() -> None:
         (f'专家名单与 advisor 解锁卡并集失配:'
          f'仅名单有={sorted(experts - grant_chars)},'
          f'仅解锁卡有={sorted(grant_chars - experts)}')
+
+
+# ==================== 策略效果规格 overlay(T-88 免费午餐起,随批续建)====================
+
+def test_free_lunch_overlay_single_source_payload() -> None:
+    """免费午餐 overlay 条目单一源锁(T-88 设计 §4 锁 3):payload 引
+    STRATEGY_ECONOMY 同一实例(非复制品——经济聚合侧改值经同一对象向
+    效果账本透传;现役条目逐条如此)。id 匹配由 import 期孤儿键/id 双查
+    (_validate_strategy_effects)担,不重复锁。"""
+    assert STRATEGY_EFFECTS['免费午餐'].payload \
+        is STRATEGY_ECONOMY['免费午餐']

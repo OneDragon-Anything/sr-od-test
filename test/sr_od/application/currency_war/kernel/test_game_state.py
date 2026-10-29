@@ -1021,6 +1021,21 @@ def test_per_node_family_without_now_clause_no_pick_grant() -> None:
     assert gs.free_refresh_left.value == 2, '首发放 = 下一节点 +2'
 
 
+def test_free_lunch_ledger_zero_per_node_grant() -> None:
+    """免费午餐 per_node 负向(T-88 设计 §4 锁 2):仅持免费午餐的账本
+    节点边界零授予——EconomyEffect 纯 burst 单腿(free_refresh_per_node/
+    条件三元组/BattlefieldEffect 载体字段全缺省 0,桥鸭子读缺省),桥零
+    授予跳写,free_refresh_left 保持未写(None 基零行);burst 腿归登记
+    挂点,与本桥无关。"""
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    gs.effects.register_strategy(STRATEGY_EFFECTS['免费午餐'],
+                                 acquired_key=(1, 2))
+    adv, _ex = gs.effects.advance_node((1, 3))
+    assert adv is True
+    grant_effect_node_refresh_balance(gs, frame='p1-r3')
+    assert gs.free_refresh_left.value is None, '纯 burst 卡节点边界零授予(零行)'
+
+
 def test_capacity_projection_activates_and_recovers() -> None:
     """桥·容量投影(§3.2.5):在册容量声明 payload.capacity_limit=3 → bench
     容量投影 3;条目到期移除 → 回默认 9;bench 未观察(None)= 无容器跳过;
