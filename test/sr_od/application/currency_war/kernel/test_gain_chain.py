@@ -44,6 +44,7 @@ from unittest import mock
 
 import pytest
 
+from sr_od.application.currency_war.data.cw_chars import chars_by_cost
 from sr_od.application.currency_war.kernel import cw_gain_chain
 from sr_od.application.currency_war.kernel.cw_action_report import (
     report_action_deploy_move_param,
@@ -1189,13 +1190,13 @@ def test_on_strategy_gained_advisor_unlock() -> None:
 
 def test_on_strategy_gained_unregistered_quiet() -> None:
     """未收录卡:查无效果安静不写(gain-chain §3 裁定④);效果表键集 =
-    骇客单行 + 三箱分支卡(开箱分支由工厂自 _STRATEGY_BOX_GRANTS 生成,
-    )。"""
+    骇客单行 + 三箱分支卡 + 援军族模式卡(箱腿/援军条目由工厂自各自
+    生成表生成,键集断言 = 现役注册全集,新卡注册随批 +键)。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
         PICK_INVEST_EFFECTS,
     )
     assert set(PICK_INVEST_EFFECTS) == {
-        '骇客专家:银狼', '战术义眼++', '保守派', '快请专家·彩'}
+        '骇客专家:银狼', '战术义眼++', '保守派', '快请专家·彩', '二费援军'}
     gs = _make_gs(bench=[('希儿', 1)], equips=[])
     seq_before = gs.write_seq
     effects = on_strategy_gained(gs, '随便一张未收录卡', rand=False,
@@ -1259,6 +1260,142 @@ def test_strategy_box_grants_consistency_lock() -> None:
     for name, item in _STRATEGY_BOX_GRANTS.items():
         assert STRATEGY_GRANTS[name].items_immediate == (item,), \
             f'{name} 效果体发放名与登记表 items_immediate 漂移'
+
+
+# ============================================================ 援军族效果
+# (策略卡获得时点随机同费角色群发:费用档注册池内均匀掷骰 4 名 1★ →
+# 逐名 gain_character(rand=True) 入席;采样池 = 随机赠卡家族载体
+# random_char_pool 派生,值域断言禁手抄清单)
+
+
+def test_reinforcement_sampler_pool_and_domain_guard() -> None:
+    """采样纯函数:固定种子 4 抽全部 ∈ 载体派生池(单一源派生集,禁手抄
+    清单);cost ∉ 1..5 → ValueError——cost=0 档系统单位(狸猫对/佩佩
+    族召唤)在册非空,「池非空」哨防不住误传 0,值域限定是系统单位不入
+    随机发放池的唯一保证。"""
+    from sr_od.application.currency_war.kernel.cw_gain_effects import (
+        roll_reinforcement_names,
+    )
+    pool = set(random_char_pool(RandomCharSpec(cost=2, star=1)))
+    names = roll_reinforcement_names(random.Random(20261014), 2, 4)
+    assert len(names) == 4
+    assert len(set(names)) == 4, '预验证:本种子 4 抽互异(失配 = 换种子)'
+    assert set(names) <= pool, '采样值域 ⊆ 载体派生池'
+    with pytest.raises(ValueError):
+        roll_reinforcement_names(random.Random(0), 0, 4)
+
+
+def test_reinforcement_chain_grants_distinct(rows_sink: _RowSink) -> None:
+    """链发放真值(互异形态):gain_invest_strategy 确定入口(rand=False)
+    + 固定 rng 注入 → bench 恰 +4 槽全 1★、名 ∈ 载体派生池;效果串恰
+    4 条 ``strategy_gift_random:<名>@1star`` 且顺序 = 采样序(前缀 +
+    @ 后缀同断言,@ 后缀 = 随机态校准数据归组键,只断前缀会漏)。"""
+    from sr_od.application.currency_war.kernel.cw_gain_effects import (
+        roll_reinforcement_names,
+    )
+    picks = roll_reinforcement_names(random.Random(20261014), 2, 4)
+    assert len(set(picks)) == 4, '预验证:互异形态(放回 ≥3 同名归级联锁)'
+    pool = set(random_char_pool(RandomCharSpec(cost=2, star=1)))
+    gs = _make_gs(bench=[])
+    gs.prep_anchored = True
+    out = gain_invest_strategy(gs, None, '二费援军', rand=False, sig=_lsig(),
+                               rng=random.Random(20261014))
+    assert out.placed
+    assert gs.active_strategies.value == ['二费援军'], '注册入表'
+    units = sorted((u.char_id, u.star) for u in bench_units_of(gs))
+    assert units == sorted((n, 1) for n in picks), 'bench 恰 +4 槽全 1★'
+    assert {n for n, _ in units} <= pool, '名 ∈ 载体派生池'
+    assert out.effects == tuple(
+        f'strategy_gift_random:{n}@1star' for n in picks), \
+        '效果串前缀+@后缀同断言,顺序 = 采样序'
+    assert rows_sink.kinds() == [], '正常路径零申报行'
+
+
+def test_reinforcement_sampling_channel_rand_subchain(
+        rows_sink: _RowSink) -> None:
+    """采样语义 rand=True(通道翻转只及子链):锚定容器上发放 → 入口注册
+    走确定面,采样子链恒 write_logic_rand(rand 优先于锚定闩);覆盖观察
+    差异落 logic_rand_outcome 行、零失配行(随机态不触发失配网,校准面
+    = outcome 行)。"""
+    from sr_od.application.currency_war.kernel.cw_gain_effects import (
+        roll_reinforcement_names,
+    )
+    picks = roll_reinforcement_names(random.Random(20261014), 2, 4)
+    assert len(set(picks)) == 4, '预验证:互异形态'
+    gs = _make_gs(bench=[])
+    gs.prep_anchored = True
+    gain_invest_strategy(gs, None, '二费援军', rand=False, sig=_lsig(),
+                         rng=random.Random(20261014))
+    assert gs.active_strategies.source == 'logic', '入口确定面(锚定后)'
+    assert gs.bench.source == 'logic_rand', '采样子链恒随机态(翻转只及子链)'
+    other = BenchView(slots=[BenchSlot(kind='empty')] * 9, capacity=9)
+    consume_defect_sink()
+    gs.observe(gs.bench, other, sig=_SIG_OBS)
+    kinds = [r['kind'] for r in consume_defect_sink()]
+    assert 'observe_vs_logic_mismatch' not in kinds, '随机态覆盖零失配行'
+    assert 'logic_rand_outcome' in kinds, '校准面 = outcome 行'
+
+
+def test_reinforcement_batch_same_name_merges_once(rows_sink: _RowSink) -> None:
+    """升星级联(批内 4 同名形态,种子预验证):单级 3 合 1 → 终态 =
+    1×2★ + 1×1★;批内 4 只恒不可达 3★(级联产物不重掷,采样集 = 4 次
+    独立掷,4 同名只够一次三合一)。"""
+    from sr_od.application.currency_war.kernel.cw_gain_effects import (
+        roll_reinforcement_names,
+    )
+    picks = roll_reinforcement_names(random.Random(3587), 2, 4)
+    assert picks == ['卡芙卡'] * 4, '预验证:批内 4 同名种子(失配 = 换种子)'
+    gs = _make_gs(bench=[])
+    gs.prep_anchored = True
+    out = gain_invest_strategy(gs, None, '二费援军', rand=False, sig=_lsig(),
+                               rng=random.Random(3587))
+    assert out.placed
+    units = sorted((u.char_id, u.star) for u in bench_units_of(gs))
+    assert units == [('卡芙卡', 1), ('卡芙卡', 2)], \
+        '批内 4 同名终态 = 1×2★ + 1×1★(不可达 3★)'
+    assert sum(1 for e in out.effects if e.endswith('@1star')) == 4, \
+        '效果串恒 4 条(发放事实与落位/合成解耦)'
+
+
+def test_reinforcement_bench_full_overflow_decoupled(
+        rows_sink: _RowSink) -> None:
+    """席满溢出解耦:bench 满 9(预置互异 1★——合成池全池扫描,预置
+    三连同名同星会触发链外合并,故取 3 费档前 9 名,与 2 费发放池零
+    交集)→ 第 1 名溢出落位、第 2 名起溢出位被占:各零写一留证;bench
+    预置零扰动;效果串恒 4 条(发放事实与落位成败解耦)。"""
+    from sr_od.application.currency_war.kernel.cw_gain_effects import (
+        roll_reinforcement_names,
+    )
+    picks = roll_reinforcement_names(random.Random(20261014), 2, 4)
+    assert len(set(picks)) == 4, '预验证:互异形态'
+    preset = [(n, 1) for n in
+              sorted(c.name for c in chars_by_cost(3))[:9]]
+    gs = _make_gs(bench=preset)
+    gs.prep_anchored = True
+    out = gain_invest_strategy(gs, None, '二费援军', rand=False, sig=_lsig(),
+                               rng=random.Random(20261014))
+    assert out.placed
+    assert gs.overflow_warning.value is True, '第 1 名席满溢出落位(告警在场)'
+    assert gs.overflow_card.value == picks[0], '溢出位身份 = 第 1 名'
+    assert rows_sink.kinds() == [DEFECT_OVERFLOW_TAKEN] * 3, \
+        '第 2 名起溢出位被占:各零写一留证'
+    assert sorted(u.char_id for u in bench_units_of(gs)) == \
+        sorted(n for n, _ in preset), 'bench 预置零扰动(满席拒落)'
+    assert sum(1 for e in out.effects
+               if e.startswith('strategy_gift_random:')
+               and e.endswith('@1star')) == 4, '效果串恒 4 条(解耦)'
+
+
+def test_reinforcement_charter_not_in_named_grants() -> None:
+    """宪章回归:「随机发放不入具名登记表」——STRATEGY_GRANTS 登记判据 =
+    「获得…角色名/占席道具」具名直读,随机发放不入册;本卡注册只落
+    PICK_INVEST_EFFECTS 效果体,构建校验(孤儿键/角色名漂移/反扫闭集)
+    通过。防后续实现者把本卡误登记进具名表。"""
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        _validate_strategy_grants,
+    )
+    assert '二费援军' not in STRATEGY_GRANTS, '随机发放不入具名登记表'
+    _validate_strategy_grants()   # import 期已跑;显式调用 = 宪章回归语义
 
 
 def test_gain_bench_item_three_landings(

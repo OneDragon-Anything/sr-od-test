@@ -950,6 +950,57 @@ def test_strategy_pick_chain_box_grant_immediate() -> None:
         uninstall_backend()
 
 
+def test_strategy_pick_chain_reinforcement_grant() -> None:
+    """获得链断言:选二费援军 → 费用档注册池内 4 名 1★ 入席(采样效果
+    子链;rng 注入流键,sim 采样即世界真值);同 seed 同流键重放 bench
+    逐位一致(掷序 = 批内同 rng 实例顺序推进)。"""
+    from collections import Counter
+
+    from sr_od.application.currency_war.kernel.cw_gain_effects import (
+        roll_reinforcement_names,
+    )
+    stream_key = 'M11/pick/reinforce'
+
+    def _run_once() -> tuple:
+        b = _backend(7)
+        try:
+            b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+            b._maybe_finish_wait()
+            gs = b.gs
+
+            def _units() -> list:
+                return [(s.unit.char_id, s.unit.star)
+                        for s in gs.bench.value.slots
+                        if s is not None and s.kind == 'unit'
+                        and s.unit is not None]
+
+            before = _units()
+            picks = roll_reinforcement_names(
+                stream_rng(7, stream_key), 2, 4)
+            # 预验证:4 抽互异且与开局手牌无 (名, 1★) 三连(否则触发链外
+            # 合成,+4 形态破——失配换流键,禁在测试里写第二套合并语义)
+            opening_1star = Counter(n for n, s in before if s == 1)
+            assert len(set(picks)) == 4 and all(
+                opening_1star[n] + picks.count(n) < 3 for n in set(picks)), \
+                f'预验证失配: before={before} picks={picks}'
+            gs.write_logic(gs.invest_strategy_opts,
+                           ['二费援军', '躺平', '淘金客'],
+                           produced_by='Test', evidence='t:opts', sig=_SIG)
+            out = report_action_pick_invest_strategy_param(
+                gs, SimpleNamespace(norm_name='二费援军'), _SIG,
+                rng=stream_rng(7, stream_key))
+            assert out.applied
+            assert '二费援军' in gs.active_strategies.value
+            delta = Counter(_units()) - Counter(before)
+            assert delta == Counter((n, 1) for n in picks), \
+                f'bench 恰 +4 全 1★ 且名 = 流键采样值: {dict(delta)} vs {picks}'
+            return tuple(sorted(_units()))
+        finally:
+            uninstall_backend()
+
+    assert _run_once() == _run_once(), '同 seed 重放确定性(bench 逐位同)'
+
+
 # ============================================================ 追加随机环境分支(蓝海 id113)
 # 语义正本 = gain-chain.md §3 追加随机环境申报行段 + invest_effects.md
 # 蓝海条:选卡上报完整首链(获得蓝海:active_env + 金 +6 + 申报行)→
