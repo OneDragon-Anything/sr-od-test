@@ -517,13 +517,13 @@ def test_close_shop_decl_row18():
 
 
 def test_bottom_screen_decl_family_derives_at_encounter_slot():
-    """「返回节点屏」声明族按当前生效节点推导(统一节点改写批修根,
-    推导单一源 = ``node_screen_now``):生效序位锚在遭遇槽(战争边疆
-    替换使固定 offer 槽 P3-2 变遭遇)→ 上报声明 next_screen = 备战档
-    ——2026-10-29 呈现改造后节点弹窗(补给/遭遇/BOSS 简报)都是备战
-    底层上的模态,「返回节点屏」类动作(关店/选卡/开卡)稳态落点恒
-    备战档,旧「遭遇节点屏」类型化映射废止;推导机制保留(位面首例外
-    = 位面过渡屏,本文件尾部判别位)。全链零漂移对拍面 =
+    """「返回节点屏」声明族 + offer 选卡声明按当前生效节点推导(统一节点
+    改写批修根,推导单一源分家:关店/巨星/命运卜者等「返回底层」族 =
+    ``node_screen_now``(改造后恒备战/位面首过渡);投资策略选卡 =
+    ``window_stable_screen_now`` 窗稳态预测——offer 选完世界落到节点窗
+    稳态,遭遇槽(战争边疆替换使固定 offer 槽 P3-2 变遭遇)落点 = 接着
+    呈现的遭遇模态屏,battle 型槽 = 商店档(#14 自动弹店))。
+    位面首例外 = 推导机制保留的判别位(本文件尾部)。全链零漂移对拍面 =
     sim/cw_sim_backend/test_p3_win_terminal。"""
     from sr_od.application.currency_war.kernel.cw_node_schedule import (
         resolve_plane_node_seqs,
@@ -538,17 +538,17 @@ def test_bottom_screen_decl_family_derives_at_encounter_slot():
     out = report_action_pick_invest_strategy_param(
         gs, SimpleNamespace(norm_name='加油站'), _SIG, session=None)
     assert out.applied
-    assert out.world_decl == WorldDecl(next_screen='货币战争-备战',
+    assert out.world_decl == WorldDecl(next_screen='货币战争-遭遇节点',
                                        trigger='pick_invest_strategy'), \
-        'offer 选卡结束返回备战档(节点弹窗 = 备战底层模态,类型化映射废止)'
+        'offer 选卡结束落节点窗稳态(遭遇槽 = 遭遇模态屏;单一源 = window_stable_screen_now)'
     out = report_action_pick_megastar_param(gs, SimpleNamespace(), _SIG)
     assert out.world_decl == WorldDecl(next_screen='货币战争-备战',
                                        trigger='pick_megastar')
     out = report_action_pick_fortune_param(gs, SimpleNamespace(), _SIG)
     assert out.world_decl == WorldDecl(next_screen='货币战争-备战',
                                        trigger=''), '纯转移同归备战档'
-    # 位面首例外 = 推导机制保留的判别位(硬编码备战在此必红):「返回
-    # 节点屏」声明族经 node_screen_now 推导,位面首窗起点 = 位面过渡屏。
+    # 位面首例外 = 推导机制保留的判别位(硬编码备战在此必红):两个推导
+    # 在位面首都返回位面过渡屏(窗起点 = 位面过渡)。
     gs_first = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs_first.write_logic(gs_first.node_seq_by_plane,
                          resolve_plane_node_seqs('战争边疆'),
@@ -562,4 +562,4 @@ def test_bottom_screen_decl_family_derives_at_encounter_slot():
     assert out.applied
     assert out.world_decl == WorldDecl(next_screen='货币战争-位面过渡',
                                        trigger='pick_invest_strategy'), \
-        '位面首「返回节点屏」推导 = 位面过渡屏(非硬编码备战)'
+        '位面首 offer 选卡落点 = 位面过渡屏(窗起点,非硬编码备战)'
