@@ -689,8 +689,9 @@ def test_report_free_leg_deducts_field(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_report_unobserved_field_conservative_paid() -> None:
     """未观察(None)→ 保守按付费:计数进 paid,零 Field 扣减行(次数是
-    记账面非决策闸);level 同帧缺读 → 随机态分支跳写(概率表按级索引)→
-    容器整拍零写。"""
+    记账面非决策闸);level 同帧缺读 → 随机态分支跳写(概率表按级索引)。
+    唯一容器写 = 金币花费置位(T-92:非免费帧与账本 refresh_paid +1 同
+    条件置位——「未观察保守按付费」的保守性一并继承到花费口径)。"""
     gs = _fresh_gs()
     seq0 = gs.write_seq
     report_action_refresh_shop_param(gs, CwActionRefreshShopParam(cost=2),
@@ -698,7 +699,10 @@ def test_report_unobserved_field_conservative_paid() -> None:
     assert gs.free_refresh_left.value is None, '未观察 = 不扣减(零 Field 行)'
     assert gs.effects.refresh_paid == 1, '保守按付费计数'
     assert gs.effects.refresh_total == 1
-    assert gs.write_seq == seq0, 'level 缺读随机态分支跳写 → 容器零写'
+    assert gs.prev_node_spent.value is True, \
+        '非免费帧置位(保守按付费一并计花费,T-92)'
+    assert gs.write_seq == seq0 + 1, \
+        '唯一容器写 = 花费置位行(扣减/随机态两分支跳写不变)'
 
 
 # ---- 两桥发放(写端元数据)----

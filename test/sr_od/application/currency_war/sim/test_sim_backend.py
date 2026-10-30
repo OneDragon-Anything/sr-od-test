@@ -71,6 +71,9 @@ from sr_od.application.currency_war.kernel.cw_action_report import (
 from sr_od.application.currency_war.kernel.cw_action_report.close_shop import (
     report_action_close_shop_param,
 )
+from sr_od.application.currency_war.kernel.cw_action_report.level_up import (
+    report_action_level_up_param,
+)
 from sr_od.application.currency_war.kernel.cw_economy import MAX_PLAYER_LEVEL
 from sr_od.application.currency_war.kernel.cw_env_grants import (
     BOSS_NODE_KEY_PREFIX,
@@ -832,6 +835,53 @@ def test_strategy_pick_chain_burst_gold() -> None:
         assert (gs.free_refresh_left.value or 0) == free_before + 1, \
             'burst 免费刷新发放(effect burst 桥)'
         assert '加油站' in gs.active_strategies.value
+    finally:
+        uninstall_backend()
+
+
+def test_strategy_pick_chain_deposit_return_conditional() -> None:
+    """获得链断言(T-92 设计 §4 锁 5,sim 世界同链):选存款回报 →
+    零买牌节点进下一节点桥 +2;对拍:有花费节点(购经验 cost>0 置位)
+    不发放;两拍滚位均复位 False(世界真值闭环:置位→桥评估→滚位,
+    sim 节点推进走 kernel 同链)。"""
+    b = _backend(7)
+    try:
+        b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+        b._maybe_finish_wait()
+        gs = b.gs
+        assert gs.prev_node_spent.value is False, 'sim 开局种子 False(前置)'
+        gs.write_logic(gs.invest_strategy_opts,
+                       ['存款回报', '躺平', '淘金客'],
+                       produced_by='Test', evidence='t:opts', sig=_SIG)
+        out = report_action_pick_invest_strategy_param(
+            gs, SimpleNamespace(norm_name='存款回报'), _SIG,
+            session=SimpleNamespace())
+        assert out.applied
+        assert gs.free_refresh_left.value is None, \
+            '无立即腿 = 登记期零发放(burst 桥零额度 no-op)'
+        cw_sim_ports.declare_world(out.world_decl)
+        b._maybe_finish_wait()
+        # (1,1) 零买牌节点 → 推进 (1,2):桥条件腿 +2,滚位判等跳写
+        if b.screen_identity() == SCREEN_SHOP:
+            _close_shop_feed(b)
+        _start_battle_feed(gs)
+        _node_advance_feed(gs, trigger='settle_confirm')
+        assert gs.node.value.round_num == 2
+        assert (gs.free_refresh_left.value or 0) == 2, \
+            '零买牌节点边界 +2(上节点未花费)'
+        assert gs.prev_node_spent.value is False
+        # 对拍节点 (1,2):购经验上报置位(花费通道,cost=2>0)→ 推进 (1,3) 不发放
+        lv_out = report_action_level_up_param(
+            gs, SimpleNamespace(cost=2), _SIG)
+        assert lv_out.applied, '购经验上报成功'
+        assert gs.prev_node_spent.value is True, '花费事件置位'
+        _close_shop_feed(b)   # (1,2) 窗收尾自动弹店 → 关店回备战
+        _start_battle_feed(gs)
+        _node_advance_feed(gs, trigger='settle_confirm')
+        assert gs.node.value.round_num == 3
+        assert (gs.free_refresh_left.value or 0) == 2, \
+            '有花费节点不发放(True 不授予)'
+        assert gs.prev_node_spent.value is False, '滚位照常复位 False'
     finally:
         uninstall_backend()
 

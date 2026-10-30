@@ -26,6 +26,7 @@ from test.sr_od.application.currency_war._cw_helpers import (
     cw4_gs,
 )
 
+from sr_od.application.currency_war.kernel import cw_game_state as gs_mod
 from sr_od.application.currency_war.kernel.cw_action_report import (
     report_action_buy_card_param,
     set_action_rng_provider,
@@ -127,3 +128,48 @@ def test_buy_rejected_bench_full_no_trigger() -> None:
         _SIG)
     assert out.applied is False and out.reason == 'bench_full', '拒买早退'
     assert gs.unlocked_experts.value in (None, ()), '零解锁写(早退不经触发分支)'
+
+
+# ============================================================ 金币花费置位(T-92 §4 锁 1)
+
+def _spent_rows(rows: list[dict]) -> list[dict]:
+    return [r for r in rows if r['field'] == 'prev_node_spent']
+
+
+def test_buy_report_marks_prev_node_spent(monkeypatch) -> None:
+    """置位正锁(T-92 设计 §4 锁 1):买牌上报 applied → prev_node_spent
+    True;第二笔同节点判等跳写(值仍 True + journal 零新行,write_logic
+    无同值去重、省行靠调用方早退);拒买(bench_full)零置位零写。
+    cw4 一次性载体不跑种子 → 起点 None,非 True 即写(种子载体 False
+    起点同语义,开局种子锁 = test_game_state 现址辖)。"""
+    rows: list[dict] = []
+    monkeypatch.setattr(gs_mod, '_STATE_JOURNAL_SINK', rows.append)
+    monkeypatch.setattr(gs_mod, '_RUN_ID_PROVIDER', lambda: 't92-l1')
+    from sr_od.application.currency_war.kernel.cw_vocab import (
+        CwActionBuyCardParam,
+    )
+    gs = cw4_gs(bench=[], shop=[_card('希儿', cost=3, x=0)],
+                gold_unread=True)
+    assert gs.prev_node_spent.value is None, '一次性载体不跑种子(前置)'
+    out = report_action_buy_card_param(
+        gs, CwActionBuyCardParam(card=_card('希儿', cost=3, x=0)), _SIG)
+    assert out.applied, '买牌上报成功'
+    assert gs.prev_node_spent.value is True, '花费事件置位 True'
+    assert gs.prev_node_spent.evidence == 'gold_spent_flag'
+    assert len(_spent_rows(rows)) == 1, '置位恰一行'
+    # 第二笔同节点:判等跳写(值仍 True,journal 零新行)
+    out2 = report_action_buy_card_param(
+        gs, CwActionBuyCardParam(card=_card('符玄', cost=2, x=1)), _SIG)
+    assert out2.applied, '第二笔上报成功'
+    assert gs.prev_node_spent.value is True, '值仍 True'
+    assert len(_spent_rows(rows)) == 1, '判等跳写:同节点多笔只落一行'
+    # 拒买(bench_full):零置位零写
+    full_bench = [_bc(n) for n in ('希儿', '符玄', '花火', '停云', '刃',
+                                   '杰帕德', '娜塔莎', '丹恒', '三月七')]
+    gs2 = cw4_gs(bench=full_bench, shop=[_card('银狼LV.999', cost=3, x=0)],
+                 gold_unread=True)
+    out3 = report_action_buy_card_param(
+        gs2, CwActionBuyCardParam(card=_card('银狼LV.999', cost=3, x=0)),
+        _SIG)
+    assert out3.applied is False and out3.reason == 'bench_full', '拒买早退'
+    assert gs2.prev_node_spent.value is None, '拒买零置位(不变)'

@@ -1311,3 +1311,16 @@ def test_free_lunch_overlay_single_source_payload() -> None:
     (_validate_strategy_effects)担,不重复锁。"""
     assert STRATEGY_EFFECTS['免费午餐'].payload \
         is STRATEGY_ECONOMY['免费午餐']
+
+
+def test_deposit_return_overlay_single_source_payload() -> None:
+    """存款回报 overlay 条目单一源锁(T-92 设计 §4 锁 4):payload 引
+    STRATEGY_ECONOMY 同一实例;条件值 = 2(卡面「获得2次免费刷新」);
+    触发/持续语义 = NODE_ENTER/WHILE_HELD(节点桥发放形态声明,与本金
+    充裕同型)。id 匹配由 import 期孤儿键/id 双查担,不重复锁。"""
+    assert STRATEGY_EFFECTS['存款回报'].payload \
+        is STRATEGY_ECONOMY['存款回报']
+    assert STRATEGY_ECONOMY['存款回报'] \
+        .free_refresh_cond_prev_node_unspent == 2
+    assert STRATEGY_EFFECTS['存款回报'].trigger.value == 'node_enter'
+    assert STRATEGY_EFFECTS['存款回报'].duration.value == 'while_held'

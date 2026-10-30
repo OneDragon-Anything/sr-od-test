@@ -1036,6 +1036,20 @@ def test_free_lunch_ledger_zero_per_node_grant() -> None:
     assert gs.free_refresh_left.value is None, '纯 burst 卡节点边界零授予(零行)'
 
 
+def test_deposit_return_none_conditional_zero_grant() -> None:
+    """存款回报保守零授予(T-92 设计 §4 锁 3):直构容器不跑种子
+    (prev_node_spent 未写 = None)→ 桥对存款回报条目零授予——禁猜口径
+    (本金充裕金 None 同款;None = 条件不可评估,非「未花费」)。"""
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    assert gs.prev_node_spent.value is None, '直构容器不跑种子(前置)'
+    gs.effects.register_strategy(STRATEGY_EFFECTS['存款回报'],
+                                 acquired_key=(1, 2))
+    adv, _ex = gs.effects.advance_node((1, 3))
+    assert adv is True
+    grant_effect_node_refresh_balance(gs, frame='p1-r3')
+    assert gs.free_refresh_left.value is None, 'None = 保守零授予(零行)'
+
+
 def test_capacity_projection_activates_and_recovers() -> None:
     """桥·容量投影(§3.2.5):在册容量声明 payload.capacity_limit=3 → bench
     容量投影 3;条目到期移除 → 回默认 9;bench 未观察(None)= 无容器跳过;

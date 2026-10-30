@@ -472,6 +472,63 @@ def _prep_heavy_harness(test_context, monkeypatch, session):
     return gs, op, _receipt
 
 
+def test_deposit_return_conditional_grant_and_roll(
+        test_context, monkeypatch,
+) -> None:
+    """存款回报条件发放+滚位(T-92 设计 §4 锁 2,核心;全链 =
+    observe/report 原语经 advance_node_effective 尾段桥+滚位同闸):
+    - 未花费进边界 tick:桥 +2 且滚位判等跳写(False 保持,零滚位行);
+    - 节点内买牌上报置 True → 下一边界:True 不授予但滚回 False;
+    - 再一未花费边界:+2 照常,连续未花费 journal 零滚位新行。"""
+    rows: list[dict] = []
+    monkeypatch.setattr(gs_mod, '_STATE_JOURNAL_SINK', rows.append)
+    monkeypatch.setattr(gs_mod, '_RUN_ID_PROVIDER', lambda: 't92-l2')
+    from test.sr_od.application.currency_war._cw_helpers import (
+        cw4_card as _card,
+    )
+
+    from sr_od.application.currency_war.kernel.cw_action_report.buy_card import (
+        report_action_buy_card_param,
+    )
+    from sr_od.application.currency_war.kernel.cw_vocab import (
+        CwActionBuyCardParam,
+    )
+
+    gs = _gs_with(test_context, monkeypatch, '存款回报')
+    assert gs.prev_node_spent.value is False, '开局种子 False(前置)'
+    observe_node_anchor(gs, (1, 2), trigger_screen='货币战争-备战',
+                        actor=_ACTOR)
+    assert gs.free_refresh_left.value == 2, '未花费首边界 +2(桥条件腿)'
+    assert gs.prev_node_spent.value is False, '滚位判等跳写(False 保持)'
+
+    # 节点 (1,2) 内买牌上报(置位通道 1)
+    out = report_action_buy_card_param(
+        gs, CwActionBuyCardParam(card=_card('希儿', cost=3)),
+        _logic_sig('CwScreenShop'))
+    assert out.applied, '买牌上报成功'
+    assert gs.prev_node_spent.value is True, '花费事件置位'
+
+    # 推进 (1,3):True 不授予,评估毕滚位复位 False
+    assert report_node_advance(gs, trigger='settle_confirm').applied
+    assert effective_node_pos(gs) == (1, 3)
+    assert gs.free_refresh_left.value == 2, '上节点已花费 → 不授予'
+    assert gs.prev_node_spent.value is False, '评估毕滚位复位'
+    assert gs.prev_node_spent.evidence == 'prev_node_spent_roll@1-3'
+
+    # 再一未花费边界 (1,4):+2 照常,滚位判等零新行
+    observe_node_anchor(gs, (1, 3), trigger_screen='货币战争-备战',
+                        actor=_ACTOR)   # 等值 reanchor 解锁下一推进
+    assert report_node_advance(gs, trigger='settle_confirm').applied
+    assert effective_node_pos(gs) == (1, 4)
+    assert gs.free_refresh_left.value == 4, '未花费边界再 +2'
+    assert gs.prev_node_spent.value is False, '判等跳写(False 保持)'
+
+    roll_rows = [r for r in rows if r['field'] == 'prev_node_spent'
+                 and r['sig']['actor'] == 'EffectLedgerBridge']
+    assert len(roll_rows) == 1, \
+        '连续未花费边界判等跳写:滚位行恰 1(仅 1-3;1-2/1-4 零行)'
+
+
 def test_prep_heavy_receipt_anchors_node(test_context, monkeypatch) -> None:
     """备战帧锚定接线测试(design §2.4 写端 1,攻击 F1 定谳):CwScreenPrep
     heavy 观察回执携带本帧 plane/round → ``observe_node_anchor``(唯一
