@@ -943,6 +943,38 @@ def test_strategy_pick_chain_board_rewrite() -> None:
         uninstall_backend()
 
 
+def test_strategy_pick_chain_named_equip_grant() -> None:
+    """获得链断言:选全员晋升 → equips 恰 +2 拆装扳手(具名装备授予腿,
+    双端同链,sim 世界写入即容器写)+ bench/deployed 零变化(板面重写面
+    零建模 = 既有边界申报,sim-design §8.2 板面重写族行)。"""
+    b = _backend(7)
+    try:
+        b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+        b._maybe_finish_wait()
+        gs = b.gs
+        gs.write_logic(gs.invest_strategy_opts,
+                       ['全员晋升', '躺平', '淘金客'],
+                       produced_by='Test', evidence='t:opts', sig=_SIG)
+
+        def _bench_ids() -> list:
+            return [s.unit.char_id if s is not None and s.kind == 'unit'
+                    else None for s in gs.bench.value.slots]
+
+        bench_before = _bench_ids()
+        deployed_before = gs.deployed.value
+        out = report_action_pick_invest_strategy_param(
+            gs, SimpleNamespace(norm_name='全员晋升'), _SIG,
+            session=SimpleNamespace())
+        assert out.applied
+        assert gs.equips.value == ['拆装扳手', '拆装扳手'], \
+            '装备腿恰 2 件入栏(sim 世界真值)'
+        assert _bench_ids() == bench_before, 'bench 零变化(板面零建模)'
+        assert gs.deployed.value == deployed_before, \
+            'deployed 零变化(板面零建模)'
+    finally:
+        uninstall_backend()
+
+
 def test_strategy_pick_chain_hacker_part_grant() -> None:
     """获得链断言:选骇客改件卡(骇客专家:银狼)→ 银狼入席 + 随机
     改件入栏(采样效果子链;rng 注入流键,sim 采样即世界真值)。"""
