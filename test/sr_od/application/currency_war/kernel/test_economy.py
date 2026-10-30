@@ -142,6 +142,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.horizon i
 #   sum/max/guarded_min/or/prob/filter_max(语义见 _fold)。
 AGG_FIELDS: dict[str, dict] = {
     'instant_gold': {'op': 'sum'},
+    'gold_at_final_supply': {'op': 'sum'},
     'gold_per_node': {'op': 'sum'},
     'free_refresh_per_node': {'op': 'sum'},
     'free_refresh_burst': {'op': 'sum'},
@@ -247,6 +248,7 @@ def test_half3_distinguish_fixtures(patched_registry) -> None:
         ('xp_click_discount_from_level', (1, 2), 3),
         ('xp_click_discount_from_level_at', (8, 6), 6),
         ('refresh_shop_rewrite_every_3cost', (0, 4), 4),
+        ('gold_at_final_supply', (30, 50), 80),
     ]
     for fname, (va, vb), expect in cases:
         names = patched_registry(
@@ -256,6 +258,20 @@ def test_half3_distinguish_fixtures(patched_registry) -> None:
         ref = _reference_aggregate([EconomyEffect(**{fname: va}),
                                     EconomyEffect(**{fname: vb})])
         assert ref[fname] == expect
+
+
+def test_weikuan_migration_registry_and_aggregate() -> None:
+    """尾款交付等值迁移锁(注册表 + 聚合,真表直断):条目
+    ``gold_at_final_supply == 30`` 且 ``instant_gold == 0``(迁移完整性
+    ——防「双登记」回潮:双登记下未来 instant_gold 世界腿建模时本卡
+    30 双发,需排除集特判 = 弃案埋雷);聚合单一源对真表求和 == 30;
+    分型表含新字段 sum 行(聚合语义机器可读单一源同步)。"""
+    eff = inv.STRATEGY_ECONOMY['尾款交付']
+    assert eff.gold_at_final_supply == 30 and eff.instant_gold == 0, \
+        f'迁移完整性破: gold_at_final_supply={eff.gold_at_final_supply}, ' \
+        f'instant_gold={eff.instant_gold}'
+    assert aggregate_economy(['尾款交付']).gold_at_final_supply == 30
+    assert AGG_FIELDS['gold_at_final_supply'] == {'op': 'sum'}
 
 
 # (金净守恒代表测试已删——simulate 零生产消费,审计判决;金钱面 = 实机
