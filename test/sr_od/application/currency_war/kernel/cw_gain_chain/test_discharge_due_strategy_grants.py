@@ -6,13 +6,16 @@ discharge_due_strategy_grants)。
 默认案。直构形态先例 = 同目录 test_check_strategy_battle_grants.py:
 - 未到点(remaining > 0)零发放零写;
 - 到点(remaining <= 0)→ 装备腿入栏 + 弹除 + 效果串
-  delayed_grant:<item>(placed=…)+ 队列回写 evidence strategy_grant_due;
+  delayed_grant:<item>(placed=…)+ 队列回写 evidence strategy_grant_due
+  (姊妹双卡参数化:人才激励 / 人才激励+,T-107 批扩面);
 - 分道判据(monkeypatch 临时占席道具条目)→ gain_bench_item 落席;
 - 发放拒落(equips 未观察)→ 零写 + 条目仍弹除(到期即消费)+ 回写行
   留存证据;
 - 注册表漂移防御(队列卡名查行失败)→ 零发放 + 条目保留。
 """
 from __future__ import annotations
+
+import pytest
 
 from sr_od.application.currency_war.kernel import cw_gain_chain
 from sr_od.application.currency_war.kernel.cw_gain_chain import (
@@ -66,11 +69,13 @@ def test_not_due_zero_grant_zero_write() -> None:
     assert gs.write_seq == seq_before, '未到点出现写行'
 
 
-def test_due_grants_equipment_ejects_entry() -> None:
-    """到点发放真值:remaining = 0 → 装备腿尾追入栏 + 条目弹除 + 效果串
-    delayed_grant:<item>(placed=True)+ 队列回写 evidence
-    strategy_grant_due(确定面)。"""
-    gs = _gs(equips=[], bench_slots=None, queue=((_CARD, 0),))
+@pytest.mark.parametrize('card', [_CARD, '人才激励+'])
+def test_due_grants_equipment_ejects_entry(card: str) -> None:
+    """到点发放真值(姊妹双卡参数化,逐名经真实注册表查行):remaining
+    = 0 → 装备腿尾追入栏 + 条目弹除 + 效果串 delayed_grant:<item>
+    (placed=True)+ 队列回写 evidence strategy_grant_due(确定面),
+    evidence 值含触发卡名(同款发放物经卡名可分)。"""
+    gs = _gs(equips=[], bench_slots=None, queue=((card, 0),))
     effects = discharge_due_strategy_grants(gs, rand=False, sig=_LSIG)
     assert effects == (f'delayed_grant:{_ITEM}(placed=True)',), \
         f'效果串: {effects}'
@@ -80,7 +85,7 @@ def test_due_grants_equipment_ejects_entry() -> None:
         and gs.pending_strategy_grants.source == 'logic', '确定发放走确定面'
     assert gs.pending_strategy_grants.evidence == 'strategy_grant_due', \
         f'队列回写 evidence: {gs.pending_strategy_grants.evidence}'
-    assert gs.equips.evidence == f'strategy_grant_due:{_CARD}#equip', \
+    assert gs.equips.evidence == f'strategy_grant_due:{card}#equip', \
         f'发放 evidence: {gs.equips.evidence}'
 
 

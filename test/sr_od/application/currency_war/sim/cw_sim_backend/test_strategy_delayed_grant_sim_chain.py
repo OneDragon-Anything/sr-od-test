@@ -4,10 +4,11 @@ kernel/cw_gain_chain/test_discharge_due_strategy_grants.py,本文件锁
 sim 窗口接线与世界真值落地面)。
 
 测试面依据 = 迭代设计 designs/T-106-rencai-jili.md §4 锁 4(sim 端到端
-形态)与锁 5 同源幂等申报:
+形态)与锁 5 同源幂等申报 + T-107 展开卡批(designs/T-107-rencai-jili-plus.md
+§4 锁 3 参数化 +本卡变体):
 - 到点(本 advance 递减到 0)同窗发放:装备栏 +1 员工投影仪 + 队列弹除
-  + 到点留证披露键(值 = 触发卡@frame:发放物)+ 发放写行 sig 组
-  'sim:strategy_grant';
+  + 到点留证披露键(值 = 触发卡@frame:发放物,姊妹双卡参数化:人才
+  激励 / 人才激励+)+ 发放写行 sig 组 'sim:strategy_grant';
 - 未到点零发放(队列悬置递减,装备栏零动,披露键缺席);
 - 同节点窗重放(_window_begun_pos 守卫)整段跳过不双发。
 
@@ -51,24 +52,27 @@ def _seed_queue(b, queue: tuple) -> None:
                      produced_by='test-seed', evidence='t:queue', sig=_SIG)
 
 
+@pytest.mark.parametrize('card', [_CARD, '人才激励+'])
 def test_due_grants_equipment_in_window(
-        _prep_backend, monkeypatch: pytest.MonkeyPatch) -> None:
-    """到点同窗发放(锁 4 sim 端到端):种子队列 remaining=1 → 进 (1,2)
-    窗(锚定补推先递减 1→0,再开窗)→ 装备栏 +1 员工投影仪 + 队列弹除
-    + 披露键 人才激励@1-2:员工投影仪 + 发放写行 sig 组
-    'sim:strategy_grant'(与环境 'sim:env' 分组)。"""
+        _prep_backend, monkeypatch: pytest.MonkeyPatch,
+        card: str) -> None:
+    """到点同窗发放(锁 4 sim 端到端,姊妹双卡参数化:种子队列按卡名
+    经真实注册表查行):种子队列 remaining=1 → 进 (1,2) 窗(锚定补推
+    先递减 1→0,再开窗)→ 装备栏 +1 员工投影仪 + 队列弹除 + 披露键
+    <卡名>@1-2:员工投影仪 + 发放写行 sig 组 'sim:strategy_grant'
+    (与环境 'sim:env' 分组)。"""
     b = _prep_backend
     try:
         gs = b.gs
         equips_before = list(gs.equips.value or [])
-        _seed_queue(b, ((_CARD, 1),))
+        _seed_queue(b, ((card, 1),))
         calls = _record_all_writes(gs, monkeypatch)
         b._enter_node_window((1, 2))
         assert gs.equips.value == equips_before + [_ITEM], \
             f'装备栏: {gs.equips.value}'
         assert gs.pending_strategy_grants.value == (), '到期条目未弹除'
         assert b.disclosures[STRATEGY_DELAYED_GRANT_FIRED] \
-            == f'{_CARD}@1-2:{_ITEM}', f'留证披露: {b.disclosures}'
+            == f'{card}@1-2:{_ITEM}', f'留证披露: {b.disclosures}'
         rows = [c for c in calls
                 if c[2] is not None and c[2].startswith(_EVIDENCE_PREFIX)]
         fields = sorted({c[1] for c in rows})

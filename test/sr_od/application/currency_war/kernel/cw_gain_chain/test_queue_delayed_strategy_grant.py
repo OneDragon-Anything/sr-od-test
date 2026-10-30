@@ -4,9 +4,12 @@ _make_delayed_grant_effect 派生条目)。
 
 测试面依据 = 迭代设计 designs/T-106-rencai-jili.md §4 锁 2(登记腿
 2+2 条)+ 锁 5(live 链登记;发放原语无 live 调用点由模块边界承担——
-kernel 不 import sim,不设静态扫描锁):
+kernel 不 import sim,不设静态扫描锁)+ T-107 展开卡批(designs/
+T-107-rencai-jili-plus.md §4 锁 2:人才激励+ 登记腿 @3 直断,原
+monkeypatch 形态测随真注册转直测):
 - 拿卡人才激励 → equips 尾部 +1 员工投影仪 ∧ 队列 (('人才激励', 4),)
-  ∧ 双效果串(equip_grant:strategy_grant_scheduled);
+  ∧ 双效果串(equip_grant:strategy_grant_scheduled);人才激励+ 同构
+  @3(姊妹双卡逐名独立构造);
 - equips 未观察 → 即时腿拒落零写 placed=False、入队腿照写;
 - 未登记策略卡(表外名 + 在册无腿卡)零写;
 - live 落地形态(gain_invest_strategy 同函数,session=None 直构)队列
@@ -16,7 +19,6 @@ from __future__ import annotations
 
 import random
 
-from sr_od.application.currency_war.kernel import cw_gain_chain
 from sr_od.application.currency_war.kernel.cw_gain_chain import (
     gain_invest_strategy,
     on_strategy_gained,
@@ -107,27 +109,20 @@ def test_live_gain_chain_queues_grant_zero_world_grant_action() -> None:
     assert gs.equips.value == ['员工投影仪'], '即时腿 live 照写'
 
 
-def test_recursive_requeue_after_ejection_shape(
-        monkeypatch) -> None:
-    """递归形态(锁机制非交付行为):注册表临时加展卡行 + 效果表同步
-    派生条目 → 拿卡展卡链式入队,登记值按临时行——handler 按注册表
-    驱动,族批注册落地后即真行为,零新增机制件(queue_delayed_invest_
-    offer 递归形态同款镜像)。"""
-    from sr_od.application.currency_war.kernel.cw_gain_effects import (
-        _make_delayed_grant_effect,
-    )
-    from sr_od.application.currency_war.kernel.cw_investments import (
-        StrategyDelayedGrant,
-    )
-    monkeypatch.setitem(
-        cw_gain_chain.STRATEGY_DELAYED_GRANTS, '人才激励+',
-        StrategyDelayedGrant(id='101602', delay_nodes=3,
-                             item='员工投影仪'))
-    monkeypatch.setitem(cw_gain_chain.PICK_INVEST_EFFECTS, '人才激励+',
-                        _make_delayed_grant_effect('人才激励+'))
+def test_pick_rencai_jili_plus_direct_registry_chain() -> None:
+    """人才激励+ 登记腿直断(原「注册表临时行 + 效果表同步派生」
+    monkeypatch 形态测,随该卡真注册落地转直测——handler 按注册表
+    驱动,零新增机制件):拿卡人才激励+ → equips 尾部 +1 员工投影仪
+    ∧ 队列恰 (('人才激励+', 3),) ∧ 双效果串 equip_grant(placed=
+    True)/ strategy_grant_scheduled:员工投影仪@3。@3 字面直断防姊妹
+    卡键序错位(两卡唯一可见差异);逐名独立构造,姊妹卡登记腿主条
+    (test_pick_rencai_jili_instant_equip_and_queue)不受影响。"""
     gs = _gs(equips=[])
     effects = on_strategy_gained(gs, '人才激励+', rand=False,
                                  sig=_lsig(), rng=random.Random(0))
     assert effects == ('equip_grant:员工投影仪(placed=True)',
-                       'strategy_grant_scheduled:员工投影仪@3')
-    assert gs.pending_strategy_grants.value == (('人才激励+', 3),)
+                       'strategy_grant_scheduled:员工投影仪@3'), \
+        f'效果串: {effects}'
+    assert gs.equips.value == ['员工投影仪'], f'装备栏: {gs.equips.value}'
+    assert gs.pending_strategy_grants.value == (('人才激励+', 3),), \
+        f'队列值: {gs.pending_strategy_grants.value}'
