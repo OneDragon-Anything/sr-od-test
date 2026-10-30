@@ -226,7 +226,8 @@ def test_tier_keys_and_sell_direction() -> None:
 
 
 def test_held_unit_effective_cost_for_variable_cost_card() -> None:
-    """手持变费卡实费档(HeldUnit.cost 治本载体;审查发现 F6 残差闭合)。
+    """手持变费卡实费档(HeldUnit.cost 治本载体;修「变费卡升费后仍按
+    注册表起始费误判档位」的档 4 匹配/档 8 概率分档残差)。
 
     银狼LV.999 升费后(现档 4/5)由装配方按 effective_cost 现值供给
     ``HeldUnit.cost``:档 8 概率分档与档 4 匹配按供给值判,不再按
