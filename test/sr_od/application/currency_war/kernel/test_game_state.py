@@ -1963,6 +1963,8 @@ _A_SEEDED: tuple[str, ...] = (
     'pending_item_opens',
     # 策略延时 offer 倒计时队列(空底座,递减/到点判定零 None 防御)
     'pending_strategy_offers',
+    # 策略延时发放倒计时队列(空底座,递减/到点判定零 None 防御)
+    'pending_strategy_grants',
     # 策略卡条件发放已发标记(空底座,检查腿跳过判定零 None 防御)
     'strategy_conditional_done',
     # 惊喜盒板件 ⏳N 读数观察域(迭代 2026-10-19-giftbox-piece-obs:
@@ -2013,6 +2015,7 @@ def test_cold_build_seeds_all_a_fields(monkeypatch) -> None:
     assert gs.env_grant_uid_seq.value == 0, '发号计数器冷建零底座'
     assert gs.pending_item_opens.value == (), '开盒队列冷建空底座'
     assert gs.pending_strategy_offers.value == (), '延时 offer 队列冷建空底座'
+    assert gs.pending_strategy_grants.value == (), '延时发放队列冷建空底座'
     assert gs.strategy_conditional_done.value == (), '条件发放标记冷建空底座'
     assert gs.giftbox_sight.value == (), '板件读数域冷建空底座'
     assert gs.gold.value == 3
