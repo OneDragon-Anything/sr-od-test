@@ -225,6 +225,24 @@ def test_tier_keys_and_sell_direction() -> None:
     assert k_mar[:2] == (6, -1) and k_hua[:2] == (6, -2) and k_hua < k_mar
 
 
+def test_held_unit_effective_cost_for_variable_cost_card() -> None:
+    """手持变费卡实费档(HeldUnit.cost 治本载体;审查发现 F6 残差闭合)。
+
+    银狼LV.999 升费后(现档 4/5)由装配方按 effective_cost 现值供给
+    ``HeldUnit.cost``:档 8 概率分档与档 4 匹配按供给值判,不再按
+    注册表起始费 3 档误判;缺省(非变费卡/未供给)回退注册表起始费。"""
+    _LV999 = '银狼LV.999'
+    ctx = _ctx(level=7, copies={_LV999: [1]})
+    k_upgraded = sort_key(HeldUnit(_LV999, 1, 0, False, cost=4), ctx)
+    k_baseline = sort_key(HeldUnit(_LV999, 1, 1, False), ctx)
+    assert k_upgraded[1] == refresh_prob(7, 4), '档 8 按供给实费档现查'
+    assert k_baseline[1] == refresh_prob(7, get_char(_LV999).cost), \
+        '缺省回退 = 注册表起始费'
+    # 档 4 匹配同吃供给值:升费 4 费 == 目标实费档 → 入档 4。
+    ctx_t4 = _ctx(stay=('目标', 3, 4), copies={_LV999: [1]})
+    assert sort_key(HeldUnit(_LV999, 1, 0, False, cost=4), ctx_t4)[0] == 4
+
+
 def test_in_hand_flag_and_random_tail() -> None:
     """在手旗标与随机尾键(priority-model §4)。
 
