@@ -1235,7 +1235,7 @@ def test_on_strategy_gained_advisor_unlock() -> None:
 
 def test_on_strategy_gained_unregistered_quiet() -> None:
     """未收录卡:查无效果安静不写(gain-chain §3 裁定④);效果表键集 =
-    骇客单行 + 四箱分支卡 + 援军族 + 随机简易装备族 + 策略延时 offer 族
+    骇客单行 + 五箱分支卡 + 援军族 + 随机简易装备族 + 策略延时 offer 族
     (箱腿/援军/随机简易装备条目由工厂自各自生成表生成,延时 offer 条目
     由工厂自 STRATEGY_DELAYED_OFFERS 派生;键集断言 = 现役注册全集,
     新卡注册随批 +键)。"""
@@ -1245,7 +1245,7 @@ def test_on_strategy_gained_unregistered_quiet() -> None:
     assert set(PICK_INVEST_EFFECTS) == {
         '骇客专家:银狼', '战术义眼++', '保守派', '快请专家·彩', '二费援军',
         '三费援军', '四费援军', '打捞人才库+', '黄金期货', '黄金期货+',
-        '军火贸易'}
+        '军火贸易', '军火贸易+'}
     gs = _make_gs(bench=[('希儿', 1)], equips=[])
     seq_before = gs.write_seq
     effects = on_strategy_gained(gs, '随便一张未收录卡', rand=False,
@@ -1264,6 +1264,7 @@ def test_on_strategy_gained_unregistered_quiet() -> None:
     ('保守派', '进阶武装箱'),
     ('快请专家·彩', '进阶武装箱'),
     ('军火贸易', '简易武装箱'),
+    ('军火贸易+', '简易武装箱'),
 ])
 def test_strategy_box_leg_effect_places_box(
         card: str, item: str, rows_sink: _RowSink) -> None:
@@ -1288,6 +1289,7 @@ def test_strategy_box_leg_effect_places_box(
 @pytest.mark.parametrize(('card', 'item'), [
     ('保守派', '进阶武装箱'),
     ('军火贸易', '简易武装箱'),
+    ('军火贸易+', '简易武装箱'),
 ])
 def test_strategy_box_leg_bench_full_overflow_name(
         card: str, item: str, rows_sink: _RowSink) -> None:
@@ -1307,14 +1309,14 @@ def test_strategy_box_leg_bench_full_overflow_name(
 
 def test_strategy_box_grants_consistency_lock() -> None:
     """发放名单单一源一致性测试(阻断修订):效果体工厂表
-    _STRATEGY_BOX_GRANTS 与登记表 STRATEGY_GRANTS 四卡 items_immediate
+    _STRATEGY_BOX_GRANTS 与登记表 STRATEGY_GRANTS 五卡 items_immediate
     逐对相等(表集同校验,防工厂表扩员而登记面漏登——两处独立字面量的
     名字漂移在备战断言不可见,唯此测试 + 席满溢出真值可暴露)。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
         _STRATEGY_BOX_GRANTS,
     )
     assert set(_STRATEGY_BOX_GRANTS) == {
-        '战术义眼++', '保守派', '快请专家·彩', '军火贸易'}
+        '战术义眼++', '保守派', '快请专家·彩', '军火贸易', '军火贸易+'}
     for name, item in _STRATEGY_BOX_GRANTS.items():
         assert STRATEGY_GRANTS[name].items_immediate == (item,), \
             f'{name} 效果体发放名与登记表 items_immediate 漂移'
