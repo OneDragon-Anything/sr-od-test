@@ -4,8 +4,9 @@ StrategyDelayedOffer + STRATEGY_DELAYED_OFFERS + 构建校验)。
 测试面依据 = 迭代设计 designs/T-98-huangjin-qihuo.md §4(锁 1 经硬裁定
 收缩:防登记笔误类校验「delay_nodes int/quality 越域」不落校验不落锁,
 2026-10-28 治理口径同源——只留漂移哨):
-- 登记单一源:黄金期货行值 = 卡面效果原文直读(id 101101/5 节点/金),
-  表键集闭单一卡;
+- 登记单一源:行值 = 卡面效果原文直读(黄金期货 id 101101/5 节点/金;
+  黄金期货+ id 101102/4 节点/金),表键集闭族现役卡(展开卡各自独立
+  批领取,禁顺手代登记);
 - 构建校验 2 条(漂移哨,import 即炸语义经直调校验函数锁定):孤儿键 /
   id 双匹配(改名且 id 仍在的漂移也炸)。
 """
@@ -25,14 +26,27 @@ from sr_od.application.currency_war.kernel.cw_investments import (
 def test_gold_futures_registry_row_single_source() -> None:
     """登记单一源:黄金期货行 = 卡面效果原文直读(「5个节点后」→ 5 拍,
     「黄金投资策略三选一」→ 候选品质金;「不能刷新」不立字段 = 呈现恒空
-    刷新授权承载);键集闭 = 单卡(族展开卡各自独立批,禁顺手代登记);
-    base 溯源 id 对拍(id 101101 ↔ plaza:101101)。"""
-    assert set(STRATEGY_DELAYED_OFFERS) == {'黄金期货'}, \
-        '注册面 = 仅黄金期货一行(族展开禁顺手代登记)'
+    刷新授权承载);键集闭 = 族现役卡(族展开卡各自独立批领取,禁顺手
+    代登记);base 溯源 id 对拍(id 101101 ↔ plaza:101101)。"""
+    assert set(STRATEGY_DELAYED_OFFERS) == {'黄金期货', '黄金期货+'}, \
+        '注册面 = 族现役两卡(展开卡各自独立批,禁顺手代登记)'
     row = STRATEGY_DELAYED_OFFERS['黄金期货']
     assert row == StrategyDelayedOffer(id='101101', delay_nodes=5,
                                        offer_quality='金')
     base = INVESTMENT_STRATEGIES['黄金期货']
+    assert base.source == f"plaza:{row.id}", \
+        f'溯源 id 对拍失同步: {base.source}'
+
+
+def test_gold_futures_plus_registry_row_values() -> None:
+    """行值直测:黄金期货+ 行 = 卡面效果原文直读(「4个节点后」→ 4 拍,
+    「黄金投资策略三选一」→ 候选品质金;卡品质银是另一层次,与 offer
+    候选品质无涉);base 溯源 id 对拍(id 101102 ↔ plaza:101102),
+    结构镜像黄金期货行锁。"""
+    row = STRATEGY_DELAYED_OFFERS['黄金期货+']
+    assert row == StrategyDelayedOffer(id='101102', delay_nodes=4,
+                                       offer_quality='金')
+    base = INVESTMENT_STRATEGIES['黄金期货+']
     assert base.source == f"plaza:{row.id}", \
         f'溯源 id 对拍失同步: {base.source}'
 

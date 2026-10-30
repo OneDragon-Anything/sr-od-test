@@ -1244,7 +1244,7 @@ def test_on_strategy_gained_unregistered_quiet() -> None:
     )
     assert set(PICK_INVEST_EFFECTS) == {
         '骇客专家:银狼', '战术义眼++', '保守派', '快请专家·彩', '二费援军',
-        '三费援军', '四费援军', '打捞人才库+', '黄金期货'}
+        '三费援军', '四费援军', '打捞人才库+', '黄金期货', '黄金期货+'}
     gs = _make_gs(bench=[('希儿', 1)], equips=[])
     seq_before = gs.write_seq
     effects = on_strategy_gained(gs, '随便一张未收录卡', rand=False,
