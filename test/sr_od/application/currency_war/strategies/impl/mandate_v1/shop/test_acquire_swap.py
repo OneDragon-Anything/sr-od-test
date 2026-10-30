@@ -32,7 +32,6 @@ from test.sr_od.application.currency_war._cw_helpers import (
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel.cw_comps import (
-    CORE_SINGLE_CARD_REGISTRY,
     get_comp,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
@@ -67,15 +66,16 @@ _OBS_SIG = ChannelSig(family='obs', actor='cw-acquire-swap',
 
 def _clean_fillers(count: int, exclude: set[str], *, min_cost: int = 2
                    ) -> list[str]:
-    """互异高费干净名(注册表现查防漂移):非万金油/非保护/非 registry
-    核心/非 exclude/费用 ≥ min_cost(Lv3+ 帧概率 0 = 让位序靠后)。"""
+    """互异高费干净名(注册表现查防漂移):非万金油/非 exclude/费用
+    ≥ min_cost(Lv3+ 帧概率 0 = 让位序靠后;registry 核心规避面已随
+    统一让位优先级迭代 3.4 退役——C1 支删除)。"""
     out: list[str] = []
     for n, c in CHARACTERS.items():
         if len(out) >= count:
             break
         if n in exclude or (c.cost or 0) < min_cost:
             continue
-        if n in CORE_SINGLE_CARD_REGISTRY or n in CROSS_LINE_KEEP_NAMES:
+        if n in CROSS_LINE_KEEP_NAMES:
             continue
         out.append(n)
     assert len(out) >= count, f'测试前提:干净填充名不足({len(out)})'
@@ -142,42 +142,43 @@ class TestAcquireSwapSixStep:
         assert not ct.get('acquire_swap_declined')
 
     def test_tail_is_new_card_declines_buy(self):
-        """末位 = 新牌放弃帧:席满持牌全为高优先级(双候选线 1★ 成员,
-        档 2/5)+ 候选 = 万金油星期日(档 6,同费概率域键最大 = 序列
-        末位 = 新牌自己)→ 放弃买入零动作,记录改「优先级不足」拦因,
-        收工关店。"""
-        bench = [('姬子·启行', 1), ('花火', 1), ('瓦尔特', 1),
-                 ('三月七', 1), ('万敌', 1), ('长夜月', 1),
-                 ('刻律德菈', 1), ('缇宝', 1), ('风堇', 1)]
+        """末位 = 新牌放弃帧(M6 臂承载;统一让位优先级迭代 3.4 后语义):
+        席满持牌全为缺口成员(档 2)+ 压牌库候选 = 档 4 追费件(优先级
+        低于全部档 2 持牌 = 虚拟序列末位 = 新牌自己)→ 放弃买入零动作,
+        记录「优先级不足」拦因,收工关店。(原万金油星期日帧已随万金油
+        退出义务买入面退役——总纲 §2.7 申报②:序 1 不再评估万金油,
+        拒绝语义改由 M6 臂 order_4 通道承载。)"""
+        bench = [('姬子·启行', 1), ('姬子·启行', 1), ('三月七', 1),
+                 ('三月七', 1), ('花火', 1), ('万敌', 1),
+                 ('千冶·刃', 1), ('卡芙卡', 1), ('桑博', 1)]
         gs, sess, cfg = _frame(
             bench=bench,
-            shop_cards=[('星期日', 3, 1)],
-            candidates=('列车同行', '万敌单C'),
-            gold=30)
+            shop_cards=[('希儿', 3, 1)],
+            candidates=('列车同行', '万敌单C', '专家桑博DOT'),
+            gold=100)
         act = decide_shop_action(gs, sess, cfg)
         assert isinstance(act, CwActionCloseShopParam), f'非收工: {act!r}'
         ct = state_of(sess).cw4_counters
-        # 序 1(万金油义务面)与囤货臂(保护集)各自过六步评估同一张牌,
-        # 拒绝计数逐臂累计(≥1 = 拒绝语义在册)。
         assert ct.get('acquire_swap_declined', 0) >= 1
         assert not ct.get('acquire_swap_sell'), \
             '末位 = 新牌帧不得发出卖旧(拒绝语义)'
-        assert any(r.card_name == '星期日'
+        assert any(r.card_name == '希儿'
                    and r.blocked_by == 'priority_insufficient'
                    for r in state_of(sess).shop_opportunities), \
             f'优先级不足机会清单缺席: {state_of(sess).shop_opportunities}'
 
     def test_priority_insufficient_unblocks_on_seat_freed(self):
         """优先级不足拦因 = 席满语境拦阻:席位空出后买入不再经六步
-        (正常买入路径无优先级门)→ 解拦复核同席满类放行。"""
-        bench = [('姬子·启行', 1), ('花火', 1), ('瓦尔特', 1),
-                 ('三月七', 1), ('万敌', 1), ('长夜月', 1),
-                 ('刻律德菈', 1), ('缇宝', 1), ('风堇', 1)]
+        (正常买入路径无优先级门)→ 解拦复核同席满类放行。(帧构造同
+        上,M6 臂 order_4 通道承载拒绝语义。)"""
+        bench = [('姬子·启行', 1), ('姬子·启行', 1), ('三月七', 1),
+                 ('三月七', 1), ('花火', 1), ('万敌', 1),
+                 ('千冶·刃', 1), ('卡芙卡', 1), ('桑博', 1)]
         gs, sess, cfg = _frame(
             bench=bench,
-            shop_cards=[('星期日', 3, 1)],
-            candidates=('列车同行', '万敌单C'),
-            gold=30)
+            shop_cards=[('希儿', 3, 1)],
+            candidates=('列车同行', '万敌单C', '专家桑博DOT'),
+            gold=100)
         act = decide_shop_action(gs, sess, cfg)
         assert isinstance(act, CwActionCloseShopParam)
         assert state_of(sess).shop_handled is not None

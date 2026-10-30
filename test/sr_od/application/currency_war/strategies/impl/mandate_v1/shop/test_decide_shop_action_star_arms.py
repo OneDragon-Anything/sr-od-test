@@ -54,9 +54,6 @@ from test.sr_od.application.currency_war._cw_helpers import (
 )
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.kernel.cw_comps import (
-    CORE_SINGLE_CARD_REGISTRY,
-)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     Unit,
 )
@@ -75,9 +72,6 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
 )
-from sr_od.application.currency_war.strategies.impl.mandate_v1.protection import (
-    four_system_members,
-)
 
 _COMP_NAME = '列车同行'
 _LINE = tuple(_members(_comp_of(_COMP_NAME)))
@@ -86,12 +80,10 @@ _DEPLOY_ANCHOR = '白厄'   # 零阵营流派(板面标签空集锚;注册表现
 
 
 def _fillers(count: int, exclude: tuple[str, ...] = ()) -> list[str]:
-    """非线非保护非核心燃料名(注册表现算防漂移;填充席位/在售候选)。"""
+    """非线燃料名(注册表现算防漂移;填充席位/在售候选——核心/保护
+    身份规避面已随统一让位优先级迭代 3.4 退役,非线内即可)。"""
     out = [n for n in CHARACTERS
-           if n not in _LINE and n not in exclude
-           and n not in CORE_SINGLE_CARD_REGISTRY
-           and n not in set(four_system_members())
-           and not getattr(CHARACTERS[n], 'bench_effect', '')]
+           if n not in _LINE and n not in exclude]
     assert len(out) >= count, '测试前提:填充名不足'
     return out[:count]
 
@@ -414,7 +406,7 @@ class TestW11RefreshNegativeMemory:
             f'金变化清标记后刷新提案恢复(付费): {acts2!r}'
         assert st.refresh_blocked is None, '标记已清'
 
-    def test_extended_merge_form_target_buyable_at_full_bench(self):
+    def test_extended_merge_form_refresh_at_full_bench(self):
         """合成腿扩面单帧:席满 + 零燃料 + 场上 2★ + 备战 1★×2 → 目标
         可买为真(旧「恰 2 张全 1★」口径该帧三腿全无误拦追星刷新)。"""
         fill = _fillers(4)

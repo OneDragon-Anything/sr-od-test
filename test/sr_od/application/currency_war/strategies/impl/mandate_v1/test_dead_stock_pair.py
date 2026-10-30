@@ -11,10 +11,10 @@
    dominance 臂(zero_overlap 后,落地报告接线点 1)与 dead_gold_press_
    buy 臂 prio2 燃料类(接线点 2)拒成对第二张,计数分键
    ``dominance_dead_stock_pair_blocked`` / ``press_dead_stock_pair_
-   blocked``;prio0(缺口)/prio1(持有档)= 义务通道豁免不接;band 否决
    分键 ``dominance_band_wait``(否决此前静默)。帧构造边界:target_
-   comp 给线;燃料名取「非保护集非核心」注册表现算集(身份单一源 =
-   ``protection.four_system_members``;阿格莱雅 = 病灶
+   comp 给线;燃料名取非线内注册表现算集(核心/保护身份规避面已随
+   统一让位优先级迭代 3.4 退役;阿格莱雅 = 病灶
+   名:sim 实证同名 1★×2 对经 press 臂 R1 形成后被 G-S1 合成素材守卫
    名:sim 实证同名 1★×2 对经 press 臂 R1 形成后被 G-S1 合成素材守卫
    永久锁卖锁席)。
 3. **退出通道行为测试**(判据⑤;载体 = ``sell_gate.
@@ -35,7 +35,6 @@ import pytest
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel.cw_comps import (
     COMP_LIBRARY,
-    CORE_SINGLE_CARD_REGISTRY,
 )
 from sr_od.application.currency_war.kernel.cw_economy import (
     XP_TO_NEXT_LEVEL,
@@ -74,9 +73,6 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate import (
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
 )
-from sr_od.application.currency_war.strategies.impl.mandate_v1.protection import (
-    four_system_members,
-)
 from sr_od.application.currency_war.strategies.mandate_v1_strategy import (
     MandateV1Live,
 )
@@ -98,15 +94,13 @@ _PRESS_GOLD = _G_STAR - 37
 # dominance 帧 gold:溢余带内(_G_STAR 之上)
 _DOM_GOLD = _G_STAR + 10
 
-# 非保护非核心非线内名(注册表现算防漂移,身份单一源 = protection.
-# four_system_members):[0] = 素材对名,[1] = 垫件,[2] = 商店买卡名
+# 非线内名(注册表现算防漂移;核心/保护身份规避面已随统一让位优先级
+# 迭代 3.4 退役):[0] = 素材对名,[1] = 垫件,[2] = 商店买卡名
 # (写端测试三名互异;阿格莱雅 = 病灶名:sim 实证同名 1★×2 对经 press 臂
 # R1 形成后被 G-S1 合成素材守卫永久锁卖锁席)。
 _FUELS = [n for n in sorted(CHARACTERS)
-          if n not in _LINE
-          and n not in CORE_SINGLE_CARD_REGISTRY
-          and n not in four_system_members()]
-assert len(_FUELS) >= 3, '非保护非核心燃料名不足'
+          if n not in _LINE]
+assert len(_FUELS) >= 3, '非线内燃料名不足'
 _PAIR = _FUELS[0]
 _FILLER = _FUELS[1]
 
@@ -118,27 +112,16 @@ def _bench_char(char_id: str, star: int = 1, slot: int = 1) -> BenchSlot:
 
 
 def _fuel_names(count: int) -> list[str]:
-    """非保护非核心燃料名(非线内 ∧ 注册表核心外 ∧ 四体系成员外;
-    注册表现算防漂移)。"""
+    """非线内燃料名(注册表现算防漂移;身份规避面已随 3.4 退役)。"""
     out = [n for n in CHARACTERS
-           if n not in _LINE
-           and n not in CORE_SINGLE_CARD_REGISTRY
-           and n not in four_system_members()]
-    assert len(out) >= count, '非保护非核心燃料名不足'
+           if n not in _LINE]
+    assert len(out) >= count, '非线内燃料名不足'
     return out[:count]
 
 
-def _identity_hold_name() -> str:
-    """装配 A 身份段成员名(测试③;非线内):身份段成员过 (a)(b)(c)
-    入释放集仍被装配排除——对象面消费装配单一源
-    ``sell_gate.identity_exclusions``(身份面构成随统一保护集迭代迁移,
-    本选取随之稳定,不锚死任一静态集)。"""
-    sess = StrategySession()
-    hold = sell_gate.identity_exclusions(sess, ())
-    out = sorted(n for n in hold
-                 if n not in _LINE and CHARACTERS.get(n))
-    assert out, '身份段非线内名不足'
-    return out[0]
+# (_identity_hold_name 助手与 TestLock3IdentityAuthority 已随装配 A
+#  身份段退役删除——统一让位优先级迭代 3.4:③④ 名义对入释放集后可被
+#  腾席卖出〔身份排除消失〕,kept_identity 保留因分键同批退役。)
 
 
 # ============================================================
@@ -412,45 +395,42 @@ class TestLock2AgeLowerBound:
 
     def test_young_and_fresh_pair_kept_and_guard_counts(self):
         """行为测试②:N 下界(账龄 <N 不卖)两格(锁 N 下界 + ADR-0558
-        案发回归形态):账龄 1 < N=3 的同构死锁帧 → 不卖(守卫照常拒入
-        并按既有键计数);新购对(获取账登记轮 == 当前轮,age 0)被燃料
-        臂立即触达 → 守卫照常拒、零卖出(原案不复活;新购 ⇒ 当轮窗/
-        获取账合取保持)。"""
+        案发回归形态):账龄 1 < N=3 的同构死锁帧 → 对成员不卖(守卫照常
+        拒入并按既有键计数);新购对(获取账登记轮 == 当前轮,age 0)被
+        燃料臂立即触达 → 守卫照常拒、对成员零卖出。(一星门已随统一让位
+        优先级迭代 3.4 拆除——2★ 垫件同为合法燃料,M4 腾席改由垫件承载;
+        原「腾席面空集 → m2_retry_exhausted」前提随之消亡。)"""
         # 账龄 1 < N
         sess, gs, frame = _prep_frame(pair_ledger_round=4)
         out = run_mandate(frame, sess, state=gs)
-        assert not _sell_actions(out)
+        sells = _sell_actions(out)
+        # 对成员不被腾席卖出(守卫拒入燃料面;首笔卖出对象按初始帧槽位
+        # 解析——候选按 slot 升序,对成员槽在守卫拒入后永不为首笔)
+        assert all(s.action.bench_idx is None
+                   or mandate._slot_cid(frame.bench[s.action.bench_idx])
+                   not in (_PAIR,) for s in sells[:1]) or sells == [], \
+            '对成员被腾席卖出(守卫失效)'
         ct = state_of(sess).cw4_counters
         # N2 拆分:真窗内保留走 kept_young(非 kept_no_entry)
         assert ct.get('dead_pair_exit_guard_kept_young') == 1
         assert ct.get('merge_material_guard_blocked') == 1
         assert not ct.get('dead_pair_exit_released')
-        assert ct.get('m2_retry_exhausted') == 1
         # 新购对 age 0 立即触达仍拒
         sess2, bs2, frame2 = _prep_frame(pair_ledger_round=_ROUND)
         out2 = run_mandate(frame2, sess2, state=bs2)
-        assert not _sell_actions(out2)
+        sells2 = _sell_actions(out2)
+        assert all(s.action.bench_idx is None
+                   or mandate._slot_cid(frame2.bench[s.action.bench_idx])
+                   not in (_PAIR,) for s in sells2[:1]) or sells2 == []
         ct2 = state_of(sess2).cw4_counters
         assert ct2.get('merge_material_guard_blocked') == 1
         assert ct2.get('dead_pair_exit_guard_kept_young') == 1
         assert not ct2.get('dead_pair_exit_released')
 
 
-class TestLock3IdentityAuthority:
-
-    def test_transition_pair_released_but_not_sold(self):
-        """行为测试③:身份段权威(③④ 名义对入释放集仍不卖;旁路先、
-        装配后):④ 名义素材对:过 (a)(b)(c) 入释放集(released 计 1),
-        身份段在下游装配排除 → 零卖出(序列断言:旁路在子谓词内先行,
-        装配 A 照旧收口)。腾席面空集 → 诚实停摆计数。"""
-        tname = _identity_hold_name()
-        sess, gs, frame = _prep_frame(pair=tname, pair_ledger_round=2)
-        out = run_mandate(frame, sess, state=gs)
-        assert not _sell_actions(out)
-        ct = state_of(sess).cw4_counters
-        assert ct.get('dead_pair_exit_released') == 1
-        assert ct.get('dead_pair_exit_guard_kept_identity') == 1
-        assert ct.get('m2_retry_exhausted') == 1
+# (TestLock3IdentityAuthority 已随装配 A 身份段退役删除——统一让位
+#  优先级迭代 3.4:③④ 名义对入释放集后可被腾席卖出,身份排除消失,
+#  kept_identity 保留因分键同批退役。)
 
 
 class TestLock5LedgerLifecycleDecoupling:
@@ -468,7 +448,8 @@ class TestLock5LedgerLifecycleDecoupling:
         # 出口②′ 合成销
         assert sell_gate.consume_on_merge(sess, name) == 1
         # 出口② 部署销(先重开账再销,保持「登记簿有账」前提;press 类
-        # 无资格断言,hold 类须静态持有集成员故不适用)
+        # 无资格断言;hold 类已随 C1/囤货臂退役删除——统一让位优先级
+        # 迭代 3.4)
         assert sell_gate.register_launch(
             sess, name, cause='press', round_num=_ROUND)
         assert sell_gate.prune_on_deploy(sess, [name]) == 1
@@ -626,7 +607,8 @@ class TestCriterionUnits:
             gold, bench, 7, (), gs, merge_guard_release=release)
         sold_names = {mandate._slot_cid(bench[s]) for s in slots}
         assert sold_names == {_PAIR}
-        # 燃料通道旁路对照(原零漂移测试旁路半迁并)
+        # 燃料通道旁路对照(原零漂移测试旁路半迁并;1★ 资格门已随统一
+        # 让位优先级迭代 3.4 拆除——2★ 垫件同为候选,断言改集合面)
         sess_f, gs_f, frame_f = _prep_frame(pair_ledger_round=2)
         ct_release: dict = {}
         base_kwargs = {'k_members': frame_f.k_members, 'state': gs_f,
@@ -634,5 +616,6 @@ class TestCriterionUnits:
         cands = mandate.fuel_sell_candidates(
             frame_f.bench, counters=ct_release, dedup_names=set(),
             merge_guard_release=frozenset({_PAIR}), **base_kwargs)
-        assert [mandate._slot_cid(b) for b in cands] == [_PAIR, _PAIR]
+        assert {mandate._slot_cid(b) for b in cands} == {_PAIR, _FILLER}, \
+            '燃料候选面漂移(对成员 + 2★ 垫件应同入无星门候选集)'
         assert not ct_release.get('merge_material_guard_blocked')

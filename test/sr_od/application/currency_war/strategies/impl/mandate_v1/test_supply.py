@@ -320,22 +320,18 @@ def test_full_bench_junk_char_eliminated_by_virtual_assessment():
     )
 
     from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-    from sr_od.application.currency_war.kernel.cw_comps import (
-        CORE_SINGLE_CARD_REGISTRY,
-    )
     from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
         state_of,
     )
     from sr_od.application.currency_war.strategies.impl.mandate_v1.protection import (
         CROSS_LINE_KEEP_NAMES,
-        protection_membership,
     )
     state_of(gs).line_candidates = ('列车同行',)
     km = set(_members(_comp_of('列车同行')))
+    # 干净名 = 非线内非万金油(身份保护规避面已随统一让位优先级迭代
+    # 3.4 退役,虚拟评估的淘汰语义由档位结构承载)。
     pool = [n for n, c in CHARACTERS.items()
             if n not in km and n not in CROSS_LINE_KEEP_NAMES
-            and n not in CORE_SINGLE_CARD_REGISTRY
-            and n not in set(protection_membership(gs, state_of(gs)))
             and (c.cost or 0) >= 2]
     assert len(pool) >= 6, '测试前提:互异高费干净名不足'
     _set_bench_units(gs, [Unit(char_id='花火', star=1),

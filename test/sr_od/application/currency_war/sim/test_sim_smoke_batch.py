@@ -20,8 +20,8 @@
   round_fresh_buys / BuyCard receipts 买因)、卖出笔数 ``sells``、
   位面 1 升级投入金 ``xp1``、零动作节点数 ``za``(02 §8 命题 A 零
   动作轮读数输入)、金流量 ``gin``/``gout``(花费率读数输入)、凑息
-  保护档阻断 ``irpb``、凑息发出 ``nies``、囤货臂出口键 ``pho``/``phfail``
-  (protection_hoard_hit / no_fuel+unaffordable)、压牌库臂 ``m6``/``dg``
+  凑息发出 ``nies``(凑息保护档阻断 irpb 与囤货臂出口键 pho/phfail
+  已随 3.4 身份面退役删除)、压牌库臂 ``m6``/``dg``
   (press_buy_deployable_hit / dead_gold_press_buy_hit)、席满拒买族
   ``bf``(m6_bench_full 等三键合计,sells/xp1 为 receipts 窗口差分
   下界,门判定方向安全)。
@@ -232,19 +232,15 @@ def _protection_counters(gs: Any) -> dict:
     """策略器 cw4_counters 读数(3.4 统计面扩展;键缺失按 0 计)。
 
     策略器状态附着在局容器上(run.gs.strategy_state),局终存活即现值。
-    ``irpb`` = 凑息保护档阻断观测键(design §2.3,写点 entry.py 节末
-    凑息段);``nies`` = 节末凑息卖出计数(node_end_interest_sell,
-    P56+T1 凑息门改域申报的发出面);``pho`` = 囤货臂命中
-    (protection_hoard_hit);``phfail`` = 囤货臂未成交(no_fuel +
-    unaffordable,design §2.2 出口键);``m6`` = M6 压牌库买入计数
+    ``nies`` = 节末凑息卖出计数(node_end_interest_sell,P56+T1 凑息门
+    改域申报的发出面;凑息保护档阻断观测键 irpb 已随身份保护判据退役
+    删除——统一让位优先级迭代 3.4);``m6`` = M6 压牌库买入计数
     (press_buy_deployable_hit,M6 子门读数);``dg`` = ②(b) 死金压牌库
     命中(dead_gold_press_buy_hit,相邻压牌库臂读数);``bf`` = 席满拒买
     族计数(m6_bench_full + dead_gold_press_bench_full_gate +
     press_buy_deployable_bench_full_gate,命题 A bench 满拒买读数)。
+    (囤货臂键族 pho/phfail 已随囤货臂退役删除——3.4。)
     """
-    from sr_od.application.currency_war.strategies.impl.mandate_v1.entry import (
-        INTEREST_PROTECTED_BLOCK_KEY,
-    )
     state = getattr(gs, 'strategy_state', None)
     counters = getattr(state, 'cw4_counters', None)
     if not isinstance(counters, dict):
@@ -253,11 +249,7 @@ def _protection_counters(gs: Any) -> dict:
     def _n(key: str) -> int:
         return int(counters.get(key) or 0)
 
-    return {'irpb': _n(INTEREST_PROTECTED_BLOCK_KEY),
-            'nies': _n('node_end_interest_sell'),
-            'pho': _n('protection_hoard_hit'),
-            'phfail': _n('protection_hoard_no_fuel')
-                        + _n('protection_hoard_unaffordable'),
+    return {'nies': _n('node_end_interest_sell'),
             'm6': _n('press_buy_deployable_hit'),
             'dg': _n('dead_gold_press_buy_hit'),
             'bf': _n('m6_bench_full')
@@ -303,8 +295,7 @@ def _stats_line(seed: int, run: Any, duration_s: float) -> str:
         f'm2s={act["buy_reason"].get("m2_stockpile", 0)} '
         f'sells={act["sells"]} xp1={act["xp1"]} za={act["za"]}/{act["node_count"]} '
         f'gin={act["gin"]} gout={act["gout"]} '
-        f'irpb={prot["irpb"]} nies={prot["nies"]} pho={prot["pho"]} '
-        f'phfail={prot["phfail"]} m6={prot["m6"]} dg={prot["dg"]} '
+            f'nies={prot["nies"]} m6={prot["m6"]} dg={prot["dg"]} '
         f'bf={prot["bf"]}')
 
 

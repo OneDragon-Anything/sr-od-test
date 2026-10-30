@@ -1,13 +1,13 @@
-"""统一保护集 kernel 批单帧测试(过渡锁定状态槽 + 保护集成员函数)。
+"""过渡锁定状态槽 kernel 批单帧测试(写入端 + 清空点接线)。
 
 被测 = ``src/sr_od/application/currency_war/strategies/impl/mandate_v1/
-protection.py``(:func:`refresh_transition_locked_systems` /
-:func:`protection_membership`)与写点/清空点接线(bridge 两决策入口前置
-段 / flow 进 P2 分支)。
+protection.py``(:func:`refresh_transition_locked_systems`)与写点/清空点
+接线(bridge 两决策入口前置段 / flow 进 P2 分支)。
 
 出处 = ``docs/develop/sr_od/application/currency_war/changes/2026-10-15-
-unified-protection-set/design.md`` §2.1(方向状态模型:点亮判定 = 持有
-域支持度链达标;保护集域分派表)/ §2.6(单帧验证设计:点亮锁定判据)
+unified-protection-set/design.md`` §2.1(点亮判定 = 持有域支持度链达标;
+保护集判据件已随统一让位优先级迭代 3.4 退役,本文件保留面 = 过渡锁定
+状态槽写端,原域分派表作历史锚)/ §2.6(单帧验证设计:点亮锁定判据)
 与同目录 ``landing.md`` 3.1 完成判据。
 
 成员代表锚(注册表 cw_chars 事实,机械重推):
@@ -24,7 +24,6 @@ from types import SimpleNamespace
 
 from test.sr_od.application.currency_war._cw_helpers import cw4_bc, cw4_gs
 
-from sr_od.application.currency_war.kernel.cw_comps import get_comp
 from sr_od.application.currency_war.kernel.cw_intention import IntentionState
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
@@ -39,8 +38,6 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
     state_of,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.protection import (
-    CROSS_LINE_KEEP_NAMES,
-    protection_membership,
     refresh_transition_locked_systems,
 )
 
@@ -126,42 +123,8 @@ class TestTransitionLockedSystems:
         assert st.transition_locked_systems == frozenset()
 
 
-class TestProtectionMembership:
-    """保护集成员函数(design §2.1 域分派表)。"""
-
-    def test_transition_domain_covers_four_systems(self):
-        """过渡域(plane2_started = 假):四体系全体成员为候选集——
-        三羁绊系与希儿系代表成员、贯穿件全体在集;非四体系且非贯穿件
-        不在集(帧无锁定/候选,锁与候选分支为空)。design §2.1。"""
-        sess = StrategySession()
-        gs = cw4_gs(sess, plane=1, round_num=2, node='prep')
-        st = state_of(gs)
-        members = protection_membership(gs, st)
-        assert '青雀' in members         # 仙舟系
-        assert '桑博' in members         # 持续伤害系(流派分支)
-        assert '姬子·启行' in members    # 列车同行系
-        assert '希儿' in members         # 希儿系单卡
-        assert '花火' in members         # 希儿系放大器(流派分支)
-        assert members >= CROSS_LINE_KEEP_NAMES
-        assert '阿格莱雅' not in members
-
-    def test_terminal_domain_switch_drops_transition_members(self):
-        """终局域(plane2_started = 真):保护 = 锁定线名单 ∪ 候选 top3
-        线成员 ∪ 贯穿件——过渡域全体关闭,非线四体系成员跌出;候选
-        快照命中线成员入集。design §2.1 域切换。"""
-        sess = StrategySession()
-        gs = cw4_gs(sess, plane=2, round_num=1, node='prep')
-        st = state_of(gs)
-        st.plane2_started = True
-        st.target_comp = get_comp('列车同行')
-        members = protection_membership(gs, st)
-        assert '姬子·启行' in members    # 锁定线 core
-        assert members >= CROSS_LINE_KEEP_NAMES
-        assert '青雀' not in members     # 仙舟成员,不在锁定线/候选/贯穿件
-        assert '桑博' not in members     # 持续伤害成员,同上
-        assert '丹恒·饮月' not in members  # 四体系成员,尚无线籍
-        # 候选快照命中线:成员经候选分支入集(锁定线清单不变)
-        st.line_candidates = ('龙丹战技点',)
-        members = protection_membership(gs, st)
-        assert '丹恒·饮月' in members
-        assert '青雀' not in members
+# (TestProtectionMembership 保护集成员函数测试已随 protection_membership
+#  退役删除——统一让位优先级迭代 3.4:静态不许卖名单与买面囤货判据
+#  整批退役,保护集「自己人」概念消亡;本文件保留面 = 过渡锁定状态槽
+#  写端(TestTransitionLockedSystems)与 CROSS_LINE_KEEP_NAMES 数据源
+#  (消费 = criteria/priority.py 档 6)。)

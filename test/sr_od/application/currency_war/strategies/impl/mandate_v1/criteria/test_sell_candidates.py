@@ -1,4 +1,5 @@
-"""统一卖出候选评估器测试(三触发卖出判据件;统一让位优先级迭代 3.2 重写)。
+"""统一卖出候选评估器测试(三触发卖出判据件;统一让位优先级迭代 3.2 重写、
+3.4 旧判据拆除收敛)。
 
 规格单一源 = changes/2026-10-29-unified-priority/details/acquisition-
 and-sell.md §3(三触发)+ priority-model §5(卖出取用形态):
@@ -7,18 +8,19 @@ and-sell.md §3(三触发)+ priority-model §5(卖出取用形态):
   (部署重排定型后的全局面序列,末位起取用);无场景专属池子【拍】;
 - **身份过滤退役**(场景级:垫件谓词/仅一星过滤删除)+ **循环防线
   保留**(窗口段/L1 同轮禁卖/种子豁免经 sell_exclusions 装配——身份段
-  收缩归 3.4,收敛前随装配照读;合成素材守卫;空板止损守卫);
+  已随 3.4 整段退役,装配自动收缩;合成素材守卫;空板止损守卫);
 - **溢出全资格豁免保留**;**跨档止盈**保留为节末凑息场景参数;
-- deploy_swap = 冻结遗留路径(部署换人域不动;价值函数/羁绊谓词仅剩
-  该路径消费,生产零消费面)。
+- 3.4 退役面:shop_swap 场景行(3.2 六步流程替换)、c1_make_room
+  场景行(C1 支拆除)、deploy_swap 冻结遗留路径与旧价值函数
+  (sell_gold_equivalent/MERGE_PROGRESS_X2)/羁绊排序谓词/场上无关
+  角色谓词——对应测试随批删除,退役语义以负断言锁存。
 
 构帧纪律:统一序列以「部署重排定型」为前置——测试帧一律**板满**
 (上阵数 = cap),否则 M1 空槽补位会把备战位件收进部署定型(档 1)、
 候选池被部署需要面掏空,测不到让位序本体。
 
 并段(**凑息/支付变现通道占位件物理门**,原 test_cw_sell_item_slot_
-predicate 并入)与 **冻结遗留路径测试**(价值函数构成/provisional 槽/
-deploy_swap 羁绊规则项)保留;判据单一源 = ``predicates.item_slot_
+predicate 并入)保留;判据单一源 = ``predicates.item_slot_
 unsellable`` 跨通道共享谓词。
 """
 from __future__ import annotations
@@ -33,13 +35,7 @@ from test.sr_od.application.currency_war._cw_helpers import (
 )
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.data.cw_shop_odds import (
-    reencounter_window_frames,
-)
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
-from sr_od.application.currency_war.kernel.cw_deploy_logic import (
-    SwapPlanContext,
-)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     BenchSlot,
     Unit,
@@ -48,21 +44,15 @@ from sr_od.application.currency_war.kernel.cw_intention import IntentionState
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
-from sr_od.application.currency_war.strategies.impl.mandate_v1.audit import provisional
 from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
     sell,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.sell_candidates import (
     FACE_REGULAR,
-    INTEREST_MARGIN_PER_ROUND,
-    MERGE_PROGRESS_X2_SLOT,
     REJECT_NO_CANDIDATES,
-    REJECT_SWAP_CTX_MISSING,
     SCENE_SPECS,
     SELL_SCENARIOS,
     evaluate_sell_candidates,
-    is_field_irrelevant_unit,
-    sell_gold_equivalent,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
@@ -124,23 +114,6 @@ def _board_full_gs(bench, *, level: int = 3, gold: int = 30,
     return sess, gs
 
 
-def _swap_ctx(gs) -> SwapPlanContext:
-    """换人判定语境(测试手装:fenced 义务臂 + 未锁帧 + 空目标视图——
-    现行判据在该语境下对非 core/非 target 件放行;装配链本体不在本
-    测试面)。"""
-    from sr_od.application.currency_war.kernel.cw_game_state import (
-        bench_entries_of,
-        deployed_rows_of,
-    )
-    front, back = deployed_rows_of(gs)
-    return SwapPlanContext(
-        target_factions=frozenset(), target_cores=frozenset(),
-        fw_carry=frozenset(), locked_factions=frozenset(),
-        protect_names=frozenset(), membership=frozenset(),
-        fresh_buys=frozenset(), board={}, deployed=[*front, *back],
-        bench=bench_entries_of(gs), cap=10, fenced_on=True, locked=False)
-
-
 # ===== 场景闭集与 fail-closed 输入面 =====
 
 
@@ -153,20 +126,14 @@ class TestSceneClosedSet:
         with pytest.raises(ValueError, match='未知卖出场景'):
             evaluate_sell_candidates(gs, 'bogus_scene')
 
-    def test_shop_swap_scene_retired_with_six_step_flow(self):
-        """shop_swap 场景行随席满置换账被六步流程整段替换退役(3.2,
-        dismantle §2——六步流程直通 priority.sell_order,不经本评估器);
-        c1_make_room 消费位归 3.4 C1 支拆除,收敛前保留。"""
-        assert 'shop_swap' not in SCENE_SPECS
-        assert 'c1_make_room' in SCENE_SPECS
-
-    def test_deploy_swap_without_ctx_fail_closed(self):
-        """换人场景缺判定语境 ⇒ 拒评估(现行判据 ctx=None 返回全放行是
-        fail-open 形态,评估器侧拒收——资格判据禁缺语境放行)。"""
-        sess, gs = _board_full_gs([cw4_bc('停云')])
-        cands, why = evaluate_sell_candidates(gs, 'deploy_swap')
-        assert cands == ()
-        assert why == REJECT_SWAP_CTX_MISSING
+    def test_retired_scene_rows_absent(self):
+        """退役场景行零残留(3.2/3.4):shop_swap 随席满置换账被六步流程
+        整段替换退役(3.2,dismantle §2);c1_make_room 随 C1 支拆除
+        (3.4,dismantle §2 场景死行);deploy_swap 冻结遗留路径随旧价值
+        函数退役(3.4——部署换人域判据本体 = kernel 直接消费,不经本
+        评估器,生产零消费面)。"""
+        for scene in ('shop_swap', 'c1_make_room', 'deploy_swap'):
+            assert scene not in SCENE_SPECS, scene
 
 
 # ===== 统一序列消费(无场景专属池子;全局面;板满帧)=====
@@ -188,32 +155,37 @@ class TestUnifiedSequence:
         部署定型内(填充件)= 档 1 不进输出,备战位件按统一序列让位。"""
         sess, gs = self._pool_gs()
         for scene in ('ore_make_room', 'session_funding',
-                      'levelup_liquidate_prep', 'node_end_interest',
-                      'c1_make_room'):
+                      'levelup_liquidate_prep', 'node_end_interest'):
             cands, why = evaluate_sell_candidates(gs, scene)
             assert why == '', scene
-            # 常规面身份段(义务基座 = 候选成员,3.4 收缩前照读)排除
-            # 瓦尔特;场上件 = 档 1 不进输出 → 候选 = 万敌单件。
-            assert _names(cands) == ['万敌'], scene
+            # 身份段已随 3.4 退役:候选成员瓦尔特不再被义务基座排除,
+            # 按统一序列落位(档 3 未获取成员 = 序列高位 = 让位序末);
+            # 场上件 = 档 1 不进输出 → 候选 = 万敌+瓦尔特(万敌先让)。
+            assert set(_names(cands)) == {'万敌', '瓦尔特'}, scene
             assert cands[0].zone == 'bench'
+            assert cands[0].char_id == '万敌', \
+                '档 8 干净件先让(成员件殿后)'
 
     def test_self_rescue_full_board_pool(self):
-        """溢出豁免面 = 真全量:身份段排除件(候选成员瓦尔特/registry
-        核心希儿/保护档卡芙卡)全部在池,按统一序列落位——成员件受
-        档 5 保护排让位序末位(最不该卖),身份排除件按档 8 概率先让。"""
+        """溢出豁免面 = 真全量:全池可见,按统一序列落位——成员件受
+        档 5 保护排让位序末位(最不该卖);身份段退役后常规面不再排除
+        成员/registry/保护档件(3.4:常规面 = 自救面的序列差消失,
+        差异仅剩循环防线装配)。"""
         sess, gs = _board_full_gs(
             [cw4_bc('希儿'), cw4_bc('卡芙卡'), cw4_bc('瓦尔特')],
             level=5)
         state_of(gs).line_candidates = ('列车同行',)
-        # 常规面(晶矿):身份段三通道排除全生效 → 空候选
+        # 常规面(晶矿):身份段退役,全池按统一序列。
         cands, why = evaluate_sell_candidates(gs, 'ore_make_room')
-        assert (cands, why) == ((), REJECT_NO_CANDIDATES)
-        # 自救:真全量 + 统一序列(成员档 5 殿后 = 最不该卖)。
-        cands, why = evaluate_sell_candidates(gs, 'self_rescue')
         assert why == ''
         assert set(_names(cands)) == {'希儿', '卡芙卡', '瓦尔特'}
         assert cands[-1].char_id == '瓦尔特', \
             '统一序列:阵容成员(档 5)排让位序末位(永不先卖)'
+        # 自救:真全量 + 统一序列(同构)。
+        cands2, why2 = evaluate_sell_candidates(gs, 'self_rescue')
+        assert why2 == ''
+        assert set(_names(cands2)) == {'希儿', '卡芙卡', '瓦尔特'}
+        assert cands2[-1].char_id == '瓦尔特'
 
     def test_priority_order_tiers_descend_in_yield_order(self):
         """让位序 = 统一序列反转(key 大者先卖):档 8(1 费概率正)
@@ -225,11 +197,9 @@ class TestUnifiedSequence:
         assert _names(cands) == ['停云', '黄泉', '星期日'], \
             '档 8 → 档 7 → 档 6(让位序 = 优先级降序)'
 
-    def test_guarded_scene_priority_order_excluding_identity_segment(self):
-        """常规面序列 = 身份段过滤后的统一序列(身份段收缩归 3.4):
-        档 8(1 费概率正先让)→ 档 7;万金油(星期日)∈ 保护集,常规面
-        身份段排除(仅自救面在池,见 :meth:`test_priority_order_tiers_
-        descend_in_yield_order`)。"""
+    def test_guarded_scene_priority_order(self):
+        """常规面序列 = 统一序列(身份段已随 3.4 退役,无排除面):
+        档 8(1 费概率正先让)→ 档 7。"""
         sess, gs = _board_full_gs([cw4_bc('万敌'), cw4_bc('黄泉')], level=5)
         cands, why = evaluate_sell_candidates(gs, 'ore_make_room')
         assert why == ''
@@ -269,102 +239,53 @@ class TestInterestCrossTier:
         assert _names(cands) == ['万敌'], '2★ 件退金跨档入池(无仅一星门)'
 
 
-# ===== 冻结遗留路径(deploy_swap;价值函数/羁绊谓词的现役消费面)=====
+# (冻结遗留路径类 TestLegacyDeploySwapPath 与场上无关角色谓词类
+#  TestFieldIrrelevantPredicate 已随 3.4 旧价值函数/deploy_swap 遗留
+#  路径/is_field_irrelevant_unit 退役删除——锁定退役语义的负断言见
+#  TestSceneClosedSet.test_retired_scene_rows_absent 与
+#  TestIdentitySegmentRetired。)
 
 
-class TestLegacyDeploySwapPath:
+# ===== 身份段退役负断言(3.4)=====
 
-    def test_deploy_swap_field_and_bench_pool(self):
-        """部署换人 = 场上 ∪ 备战席(冻结遗留:现行 swap 判据,不走
-        装配 A 的线内排除;判据与排序逐位同 3.2 前)。"""
-        sess, gs = _board_full_gs([cw4_bc('停云'), cw4_bc('瓦尔特')],
-                                  level=5)
-        state_of(gs).line_candidates = ('列车同行',)
-        cands, why = evaluate_sell_candidates(gs, 'deploy_swap',
-                                              swap_ctx=_swap_ctx(gs))
+
+class TestIdentitySegmentRetired:
+    """装配 A 身份段退役后的序列承载形态(dismantle §3 卖侧):
+    标签命中件/registry 核心/保护档件不再被身份排除,统一按档位结构
+    排序——候选线成员/骨架件由档 2/3/5/7 天然殿后,非成员标签件按
+    档 8 概率先让(万敌单C 锁定帧,布洛妮娅 = 燃血标签件)。"""
+
+    def _locked_gs(self, bench):
+        sess = StrategySession()
+        gs = cw4_gs(sess, plane=2, round_num=6, node='prep', level=5,
+                    gold=38,
+                    bench=[cw4_bc(n) for n in bench],
+                    front_row=[_fu('万敌'), _fu(_LV8_FILL[0]),
+                               _fu(_LV8_FILL[1]), _fu('停云')],
+                    back_row=[_fu('三月七')])
+        st = state_of(gs)
+        st.plane2_started = True
+        st.v3_intention = IntentionState(locked_comp='万敌单C')
+        return gs
+
+    def test_label_hit_piece_no_longer_excluded(self):
+        """身份段退役申报:bench 标签命中件(布洛妮娅,燃血无已达成档)
+        入池(不再被终局键集标签分支排除),按档 8 排序;零标签对照件
+        (佩拉)同帧在池。"""
+        gs = self._locked_gs(['布洛妮娅', '佩拉'])
+        cands, why = evaluate_sell_candidates(gs, 'ore_make_room')
         assert why == ''
-        assert sorted(_names(cands)) == sorted(
-            ['停云', '瓦尔特'] + ['镜流', 'Saber', 'Archer', '杰帕德',
-                                  '镜流']), \
-            '冻结遗留路径:场上 ∪ 备战席全池(判据排序逐位同 3.2 前)'
+        assert '布洛妮娅' in _names(cands), \
+            '标签命中件仍被身份段排除(3.4 退役失效)'
+        assert '佩拉' in _names(cands)
 
-    def test_bond_drop_rule_orders_after_non_drop(self):
-        """羁绊排序规则项(不折金;冻结遗留):卖后掉当前羁绊档的场上件
-        排在全部不掉档件之后——命运圣杯 2 人恰在 2 档(卖一掉档)整体
-        置后于无关件万敌(不掉档)。"""
-        sess = StrategySession()
-        gs = cw4_gs(sess, plane=1, round_num=2, node='prep', level=5,
-                    bench=[], front_row=[_fu('万敌')],
-                    back_row=[_fu('远坂凛'), _fu('Saber')])
-        cands, why = evaluate_sell_candidates(gs, 'deploy_swap',
-                                              swap_ctx=_swap_ctx(gs))
+    def test_registry_core_no_longer_excluded(self):
+        """registry 核心件(希儿)入常规面候选(身份段退役——核心件
+        保护改由档位结构承载:锁定线成员 = 档 2/3/5 殿后)。"""
+        gs = self._locked_gs(['希儿', '佩拉'])
+        cands, why = evaluate_sell_candidates(gs, 'session_funding')
         assert why == ''
-        assert cands[0].char_id == '万敌'
-        assert cands[0].bond_drop is False
-        assert {c.char_id for c in cands[1:]} == {'远坂凛', 'Saber'}
-        assert all(c.bond_drop is True for c in cands[1:])
-
-    def test_value_function_composition_frozen(self):
-        """价值函数构成(冻结遗留路径专用;五场景已切统一序列,函数
-        生产零消费面,3.4 拆除):金当量 = 变现价 + 再遇期权 + 合成进度
-        (单张 = 自身再遇期权),量纲期望从注册表单一源现算。"""
-        from sr_od.application.currency_war.kernel.cw_economy import (
-            bench_char_cost,
-            sell_refund,
-        )
-        sess = StrategySession()
-        gs = cw4_gs(sess, plane=1, round_num=2, node='prep', level=5,
-                    bench=[cw4_bc('远坂凛')], front_row=[_fu('万敌')])
-        unit = cw4_bc('远坂凛').unit
-        expected = (
-            sell_refund(1, bench_char_cost(unit, gs))
-            + reencounter_window_frames(5, 1, 1) * INTEREST_MARGIN_PER_ROUND
-            + reencounter_window_frames(5, 1, 1) * INTEREST_MARGIN_PER_ROUND)
-        assert sell_gold_equivalent(gs, unit) == pytest.approx(expected)
-
-    def test_merge_pair_multiplier_slot(self):
-        """合成进度 ×2 系数走 provisional 槽(冻结遗留路径专用):
-        缺省 ×1(fail-closed 线性)→ 注入 2.0 后差一张对价值增量恰为
-        一个再遇期权;值域守卫拒绝 [1,2] 外注入。"""
-        sess = StrategySession()
-        gs = cw4_gs(sess, plane=1, round_num=2, node='prep', level=5,
-                    bench=[cw4_bc('万敌'), cw4_bc('万敌')],
-                    front_row=[_fu('停云')])
-        unit = cw4_bc('万敌').unit
-        before = sell_gold_equivalent(gs, unit)
-        window = reencounter_window_frames(5, 1, 2) * INTEREST_MARGIN_PER_ROUND
-        try:
-            provisional.inject(MERGE_PROGRESS_X2_SLOT,
-                               provisional.CalibValue(value=2.0))
-            assert sell_gold_equivalent(gs, unit) == pytest.approx(before + window)
-            with pytest.raises(ValueError):
-                provisional.inject(MERGE_PROGRESS_X2_SLOT,
-                                   provisional.CalibValue(value=3.0))
-        finally:
-            provisional.reset(MERGE_PROGRESS_X2_SLOT)
-
-
-# ===== 场上无关角色谓词(节末凑息观测键反事实支的现役消费)=====
-
-
-class TestFieldIrrelevantPredicate:
-
-    def test_irrelevant_vs_contributor_vs_line_member(self):
-        """无关 = 非线内 ∧ 非有效羁绊贡献件:单挂万敌无关;命运圣杯
-        2 人(激活 2 档)为贡献件;线内件(锁定线/候选成员)非无关。"""
-        sess = StrategySession()
-        gs = cw4_gs(sess, plane=1, round_num=2, node='prep', level=5,
-                    bench=[], front_row=[_fu('万敌'), _fu('远坂凛')],
-                    back_row=[_fu('Saber')])
-        state_of(gs).line_candidates = ('列车同行',)
-        assert is_field_irrelevant_unit(gs, cw4_bc('万敌').unit, 'front') is True
-        assert is_field_irrelevant_unit(gs, cw4_bc('远坂凛').unit, 'front') is False
-        assert is_field_irrelevant_unit(gs, cw4_bc('Saber').unit, 'back') is False
-        # 线内件(三月七 ∈ 列车同行名单)非无关——即使羁绊不激活
-        _s2, gs2 = _mk_gs(bench=[], front_row=[_fu('三月七')])
-        state_of(gs2).line_candidates = ('列车同行',)
-        assert is_field_irrelevant_unit(gs2, cw4_bc('三月七').unit,
-                                        'front') is False
+        assert '希儿' in _names(cands)
 
 
 # ===== 空板守卫(as-built 收编;全场景)=====
@@ -376,10 +297,9 @@ class TestEmptyBoardGuard:
         """deployed = 0 帧全部卖出场景哑火(prep_pipeline §1 第 0 步
         as-built 申报:守卫语义不收窄;拒因键与 sell_gate 单一源同键)。"""
         sess, gs = _mk_gs(bench=[cw4_bc('停云'), cw4_bc('卡芙卡')])
-        for scene in ('self_rescue', 'ore_make_room', 'deploy_swap'):
-            cands, why = evaluate_sell_candidates(
-                gs, scene, swap_ctx=_swap_ctx(gs) if scene == 'deploy_swap'
-                else None)
+        for scene in ('self_rescue', 'ore_make_room', 'session_funding',
+                      'node_end_interest', 'levelup_liquidate_prep'):
+            cands, why = evaluate_sell_candidates(gs, scene)
             assert cands == (), scene
             assert why == EMPTY_BOARD_SELL_GUARD_KEY, scene
 
@@ -391,13 +311,12 @@ class TestSceneTableParams:
 
     def test_scene_table_covers_legacy_channels(self):
         """通道谱系行完整性:凑息→节末凑息 / 筹资→会话内筹资+备战升级
-        凑金+C1 / m4_fuel→晶矿;line_switch/projection 不进评估器场景表;
-        shop_swap 行已随置换账替换退役(3.2)。"""
+        凑金 / m4_fuel→晶矿;line_switch/projection 不进评估器场景表;
+        shop_swap(3.2)/c1_make_room、deploy_swap(3.4)已随退役删除。"""
         assert SCENE_SPECS['node_end_interest'].legacy_channel == 'interest'
         assert SCENE_SPECS['session_funding'].legacy_channel == 'funding'
         assert SCENE_SPECS['levelup_liquidate_prep'].legacy_channel == 'funding'
         assert SCENE_SPECS['ore_make_room'].legacy_channel == 'm4_fuel'
-        assert SCENE_SPECS['deploy_swap'].legacy_channel is None
         assert 'line_switch' not in {s.legacy_channel for s in
                                      SCENE_SPECS.values()}
         assert 'projection' not in {s.legacy_channel for s in
@@ -409,7 +328,7 @@ class TestSceneTableParams:
         for spec in SCENE_SPECS.values():
             if spec.legacy_channel is not None:
                 assert spec.legacy_channel in SELL_CHANNELS
-        assert len(SELL_SCENARIOS) == 7   # 五场景 + deploy_swap + c1
+        assert len(SELL_SCENARIOS) == 5   # 三触发五场景(3.4 收敛后)
 
     def test_interest_scene_carries_cross_tier_param(self):
         """跨档止盈 = 节末凑息独有场景参数(acquisition §3 表):其余
@@ -421,111 +340,13 @@ class TestSceneTableParams:
 
     def test_face_regular_channel_closure_anchor_list(self):
         """通道闭集锚:FACE_REGULAR 通道逐一点名(SCENE_SPECS 闭集派生)
-        ——新增常规面通道会撑破本清单(shop_swap 已随置换账替换退役)。"""
+        ——新增常规面通道会撑破本清单(shop_swap 已随置换账替换退役
+        〔3.2〕;c1_make_room/deploy_swap 已随身份段/旧价值函数退役
+        删除〔3.4〕)。"""
         regular = {s for s, spec in SCENE_SPECS.items()
                    if spec.face == FACE_REGULAR}
-        assert regular == {'ore_make_room', 'c1_make_room',
-                           'session_funding', 'node_end_interest',
-                           'levelup_liquidate_prep'}
-
-
-# ============================================================
-# 终局键集标签命中件排除(装配 A 身份段;3.4 身份段收缩前随装配照读)
-# ============================================================
-
-#: 泄露样本帧锚(万敌单C 锁定截断帧):非名单标签件(布洛妮娅,燃血/
-#: 夜之半神标签)不在基座保护面;佩拉 = 零标签对照件(同一帧在池)。
-_SWDC = '万敌单C'
-_BLN = '布洛妮娅'
-_PEL = '佩拉'
-
-
-class TestTerminalKeyLabelExclusion:
-
-    def _truncation_gs(self, *, bench, front=('万敌', _LV8_FILL[0],
-                                              _LV8_FILL[1], '停云'),
-                       back=('三月七',), gold: int = 30):
-        """万敌单C 锁定截断帧(plane2 保护域,锁线名单 = 万敌单C
-        core∪shared):**板满**(cap = level 5,front 4 + back 1)——
-        统一序列前置 = 部署重排定型,非板满帧备战位件会被 M1 补位收进
-        部署需要面(档 1)而整体 sheltered,测不到排除面本体。"""
-        sess = StrategySession()
-        gs = cw4_gs(sess, plane=2, round_num=6, node='prep', level=5,
-                    gold=gold,
-                    bench=[cw4_bc(n) for n in bench],
-                    front_row=[_fu(n) for n in front],
-                    back_row=[_fu(n) for n in back])
-        # 锁定语境 = IntentionState 直锁(ist.locked_comp):标签排除与
-        # 义务基座的读源 = 意向面锁定,不经完整锁定写入——避免整锁激活
-        # M1″ 换阵计划把 fence 命中的 bench 件收进部署定型(档 1)而
-        # 掩盖排除面本体(部署需要面保护 = 统一序列的正交语义,另有
-        # self_rescue 全量面测试覆盖)。
-        st = state_of(gs)
-        st.plane2_started = True
-        st.v3_intention = IntentionState(locked_comp=_SWDC)
-        return gs
-
-    @pytest.mark.parametrize('scene', ['ore_make_room', 'c1_make_room',
-                                       'session_funding',
-                                       'node_end_interest',
-                                       'levelup_liquidate_prep'])
-    def test_label_hit_bench_piece_excluded_per_channel(self, scene):
-        """五通道逐一点名锚:bench 标签命中件(布洛妮娅,燃血无已达成
-        档 = 真实泄露形态)在各通道候选中被排除;零标签对照件(佩拉)
-        同帧在池——排除面 = 标签命中,非通道空转(design 2026-10-26-
-        swap-channel-unified §2.8 堵回降口二,bench 侧含内)。"""
-        gs = self._truncation_gs(bench=[_BLN, _PEL], gold=38)
-        cands, why = evaluate_sell_candidates(gs, scene)
-        assert why == '', scene
-        assert _BLN not in _names(cands), \
-            f'{scene}: bench 标签命中件禁换金(身份段增补排除)'
-        assert _PEL in _names(cands), \
-            f'{scene}: 零标签件不受排除影响(纯过渡件放行锚)'
-
-    def test_label_hit_field_piece_pool_excluded(self, ):
-        """场上标签命中件(布洛妮娅在场,燃血 0 档)不入候选池——统一
-        序列全局面池下场上件按自身档位排序,身份段排除照常覆盖(设计
-        §2.8;bench 对照件佩拉同帧在池)。"""
-        gs = self._truncation_gs(bench=[_PEL], gold=38,
-                                 front=(_BLN, _LV8_FILL[0], _LV8_FILL[1],
-                                        '停云', '镜流'), back=())
-        cands, why = evaluate_sell_candidates(gs, 'node_end_interest')
-        assert why == ''
-        assert _BLN not in _names(cands), \
-            '场上无档标签件不入候选池(泄露面闭合)'
-        assert _PEL in _names(cands), 'bench 零标签件放行'
-
-    def test_tier_carrier_bench_label_piece_also_rejected(self):
-        """有档标签件同样拒(谓词不看激活档位的另一面:已承载档位不
-        豁免换金):锁定双王圣杯帧 bench 远坂凛(圣杯标签,板面圣杯 2 人
-        一档已激活)不入晶矿腾位候选;纯过渡件(爻光,键集零命中)同帧
-        在池(design §2.8 排除谓词语义 + 教义「哪怕下远坂凛都不能拆
-        能量」)。"""
-        sess = StrategySession()
-        gs = cw4_gs(sess, plane=2, round_num=6, node='prep', level=5,
-                    bench=[cw4_bc('远坂凛'), cw4_bc('爻光')],
-                    front_row=[_fu('吉尔伽美什'), _fu('Saber'), _fu('停云'),
-                               _fu('镜流'), _fu('杰帕德')],
-                    back_row=[])
-        st = state_of(gs)
-        st.plane2_started = True
-        st.v3_intention = IntentionState(locked_comp='双王圣杯')
-        cands, why = evaluate_sell_candidates(gs, 'ore_make_room')
-        assert why == ''
-        assert '远坂凛' not in _names(cands), \
-            '有档标签件同拒(排除不看激活档位,承载档不豁免)'
-        assert '爻光' in _names(cands), '纯过渡件放行(排除不越标签命中面)'
-
-    def test_self_rescue_exemption_preserved(self):
-        """自救豁免保留(design §2.8 自救豁免申报):FACE_SELF_RESCUE
-        不经装配 A 身份段、不受排除面约束——bench 标签件(布洛妮娅)经
-        自救仍可卖(经济安全阀豁免;bench 件不在板上,不影响板面恢复
-        路径,板上标签件离场仅经换血对)。"""
-        gs = self._truncation_gs(bench=[_BLN, _PEL])
-        cands, why = evaluate_sell_candidates(gs, 'self_rescue')
-        assert why == ''
-        assert {_BLN, _PEL} <= set(_names(cands)), \
-            '自救真全量面豁免标签排除(FACE_SELF_RESCUE 直通)'
+        assert regular == {'ore_make_room', 'session_funding',
+                           'node_end_interest', 'levelup_liquidate_prep'}
 
 
 # ============================================================

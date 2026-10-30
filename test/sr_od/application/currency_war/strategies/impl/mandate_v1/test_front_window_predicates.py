@@ -19,14 +19,14 @@ cw_screen_prep.store_plane_table(写 ``gs.node_books``),读端必须同源。
 第二部分(原 press_narrow_transition 并入)——锁线转型域收窄:
 出处(单一源):命题正本 = docs/develop/sr_od/application/currency_war/
 proofs/p88.md(§0 辖域/§1 调和引理/§3 解封方向式;收窄集 S_spec =
-{dominance_buy, hub_option_buy},豁免 ⇔ reason ∈ LAUNCH_CAUSE_BY_ARM
-∖ S_spec 闭集单一源);落码 = shop.py 两 S_spec 发射位辖域前置
-(分键 press_narrowed_transition_domain / press_narrowed_transition_
-domain_hub)+ mandate.swap_transition_narrow_frame(域谓词单一源 =
- kernel ``swap_bond_gate_domain_of`` 转型域判别子全合取,design
- 2026-10-26-swap-channel-unified §2.3.1 谓词源迁移)。
+{dominance_buy}——hub_option_buy 行已随乙臂退役删除,统一让位优先级
+迭代 3.4,豁免 ⇔ reason ∈ LAUNCH_CAUSE_BY_ARM
+∖ S_spec 闭集单一源);落码 = shop.py S_spec 发射位辖域前置
+(分键 press_narrowed_transition_domain)+ mandate.swap_transition_narrow_frame
+(域谓词单一源 = kernel ``swap_bond_gate_domain_of`` 转型域判别子全合取,
+design 2026-10-26-swap-channel-unified §2.3.1 谓词源迁移)。
 (F4 闭集对账正本与 S_spec 辖域分支迁并
- test_sell_window_launch::test_launch_cause_closed_set(15 臂映射段);
+ test_sell_window_launch::test_launch_cause_closed_set(12 臂映射段);
  F1 开火/F2/F3 豁免/F5 零漂移/F6 M6 零触碰/F7 单一源/F8 prep 对称/
  F9 wiring 旗位各测试已退役。)
 """
@@ -226,19 +226,20 @@ class TestDominanceNarrowFire:
             '无可发射笔帧分键照计 = 口径漂移(帧内无将发射笔)'
 
 
-class TestHubSentinel:
-    def test_f9_hub_natural_frame_untouched(self):
-        """校验 F9 控制(空开火面申报的常态面)→ 3.6 乙臂收编改校验:未锁
-        无目标帧(枢纽件自然辖域)收窄旗恒 False ⇒ 枢纽件经序 1 成员面
-        照常发射(m2 买因;hub_option_buy 发射位随乙臂收编退役)、
-        哨兵键零显影。"""
+class TestUnlockedFrameUntouched:
+    def test_f9_unlocked_frame_untouched(self):
+        """未锁无目标帧收窄旗恒 False;万金油件(花火)不再经序 1 义务面
+        自动买入(万金油退出义务买入面【拍,总纲 §2.7 申报②】,统一让位
+        优先级迭代 3.4——原乙臂收编形态〔枢纽件经序 1 成员面照常发射〕
+        随万金油项删除废止)、hub_option 买因与收窄哨兵键零显影。"""
         st = _hub_state(shop_cards=[_hub_card('花火', cost=2)])
         sess = _hub_session(IntentionState())
         assert mandate.swap_transition_narrow_frame(_bridge(**st), sess) is False
         act = _hub_decide(st, sess)
-        assert isinstance(act, CwActionBuyCardParam), act
-        assert act.card.name == '花火'
-        assert act.reason.startswith('m2_'), act.reason
+        assert not (isinstance(act, CwActionBuyCardParam)
+                    and act.card.name == '花火'
+                    and act.reason.startswith('m2_')), \
+            f'万金油件经义务面买入(3.4 申报②失效): {act!r}'
         ct = _hub_ct(sess)
         assert 'hub_option_buy_hit' not in ct
         assert _NARROW_HUB_KEY not in ct

@@ -40,7 +40,6 @@ import pytest
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel.cw_comps import (
     COMP_LIBRARY,
-    CORE_SINGLE_CARD_REGISTRY,
 )
 from sr_od.application.currency_war.kernel.cw_economy import (
     XP_TO_NEXT_LEVEL,
@@ -83,9 +82,6 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
 )
-from sr_od.application.currency_war.strategies.impl.mandate_v1.protection import (
-    four_system_members,
-)
 from sr_od.application.currency_war.strategies.mandate_v1_strategy import (
     MandateV1Live,
 )
@@ -102,9 +98,7 @@ _MEMBER = COMP_LIBRARY[0].core_chars[0]
 def _fuel(count: int, exclude: tuple[str, ...] = ()) -> list[str]:
     from sr_od.application.currency_war.data.cw_chars import CHARACTERS
     out = [n for n in CHARACTERS
-           if n not in _LINE and n not in exclude
-           and n not in CORE_SINGLE_CARD_REGISTRY
-           and n not in four_system_members()]
+           if n not in _LINE and n not in exclude]
     return out[:count]
 
 
@@ -331,10 +325,12 @@ class TestGoldLedgerProtocol:
 
 class TestOrderInheritance:
 
-    def test_unlocked_cross_line_keep_buys(self):
-        """未锁定期序 1 候选态:贯穿件恒囤层(全线路通用贯穿件,
-        stage_transitions Q1 真贯穿层)在店 → 序 1 买入(m2 买因),
-        无锁定/候选也命中。"""
+    def test_unlocked_cross_line_keep_not_in_obligation_face(self):
+        """万金油退出义务买入面(统一让位优先级迭代 3.4,总纲 §2.7 申报②;
+        原「贯穿件恒囤层序 1 买入」测试随万金油项删除改判):空窗帧的
+        万金油件(三月七)不走序 1 义务买(m2_* 买因不复现)——手里持有
+        的未到两星前受档 6 保护、无自动补货通道;若被其他结构臂
+        (序 4 垫件补位等)买入,买因为非义务臂。"""
         live, sess, gs, st = _frame(
             gold=60, node_kind='reward', comp=None,
             bench=[(n, 1) for n in _fuel(2)],
@@ -342,9 +338,9 @@ class TestOrderInheritance:
             shop_cards=[('三月七', 5, 1)])
         st.target_comp = None   # 空窗:候选空
         act = live.decide_shop_action()
-        assert isinstance(act, CwActionBuyCardParam), act
-        assert act.card.name == '三月七'
-        assert act.reason.startswith('m2_'), act.reason
+        if isinstance(act, CwActionBuyCardParam) and act.card.name == '三月七':
+            assert not act.reason.startswith('m2_'), \
+                f'万金油件经义务面买入(3.4 申报②失效): {act.reason}'
 
     def test_scene_plugin_budget_cap(self):
         """场况插件会话累计额度(§2.2 序 2):额度 = 会话开始帧
@@ -352,8 +348,9 @@ class TestOrderInheritance:
         ——上阵空位非节点内可解除资源)。"""
         from sr_od.application.currency_war.data.cw_chars import CHARACTERS
         from sr_od.application.currency_war.data.cw_factions import FACTIONS
-        # 插件件选择约束:身份必须非保护集非核心(序 1 义务面/囤货臂都
-        # 不辖——本测试专辖序 2 额度门,不被前序臂掩蔽)。档位约束:
+        # 插件件选择约束:身份必须非线内(序 1 义务面不辖——本测试专辖
+        # 序 2 额度门,不被前序臂掩蔽;核心/保护身份规避面已随统一让位
+        # 优先级迭代 3.4 退役)。档位约束:
         # tier_next > 阈档 3(等级 3 帧的 deploy_cap 采信下限),使
         # 「板面差一人进下一档」与「deployed == deploy_cap(额度 0)」
         # 可以同时成立。
@@ -362,8 +359,7 @@ class TestOrderInheritance:
             members = [n for n, ch in CHARACTERS.items()
                        if faction_tag in getattr(ch, 'factions', ())
                        and ch.cost
-                       and n not in CORE_SINGLE_CARD_REGISTRY
-                       and n not in four_system_members()]
+                       and n not in _LINE]
             if len(fac.tiers) and fac.tiers[0] == 3 \
                     and len(members) >= 3:
                 pick = (faction_tag, fac, members)
@@ -840,20 +836,12 @@ _FACE_OBS_SIG = ChannelSig(family='obs', actor='cw-36-test',
 
 
 def _fuel_names(count: int, exclude: tuple[str, ...] = ()) -> list[str]:
-    """非保护非核心燃料名(非线内 ∧ 注册表核心外 ∧ 四体系成员外;
-    注册表现算防漂移,身份单一源 = protection.four_system_members)。"""
+    """非线内燃料名(注册表现算防漂移;核心/保护身份规避面已随统一让位
+    优先级迭代 3.4 退役,非线内即可)。"""
     out = [n for n in CHARACTERS
-           if n not in _LINE and n not in exclude
-           and n not in CORE_SINGLE_CARD_REGISTRY
-           and n not in four_system_members()]
-    assert len(out) >= count, '非保护非核心燃料名不足'
+           if n not in _LINE and n not in exclude]
+    assert len(out) >= count, '非线内燃料名不足'
     return out[:count]
-
-
-def _core_out_of_line() -> str:
-    """线外 registry_core 名(C1 恒买夹具;现算防漂移)。"""
-    return next(n for n in CORE_SINGLE_CARD_REGISTRY
-                if n not in _LINE and CHARACTERS.get(n))
 
 
 def _frame_session(*, bench_units: list[str], deployed_units: list[str],
@@ -921,14 +909,8 @@ def _frame_m2_stockpile_vacate():
         card_names=[(_MEMBER, 3)], gold=60, node_kind='reward')
 
 
-def _frame_core_unlocked_vacate():
-    """C1 恒买遇席满:店刷线外 registry_core 名,金可足、席满 → 恒买
-    豁免价值比较(c1_make_room 直接卖首位让位候选)。"""
-    fuels = _fuel_names(8)
-    return _frame_session(
-        bench_units=[_MEMBER] + fuels,
-        deployed_units=list(COMP_LIBRARY[0].core_chars[1:4]),
-        card_names=[(_core_out_of_line(), 3)], gold=45, node_kind='reward')
+# (_frame_core_unlocked_vacate 恒买腾位形态帧已随 C1 支退役删除——
+#  统一让位优先级迭代 3.4,C1 单卡核心囤积规则作废,dismantle §2。)
 
 
 def _frame_interest_sell():
@@ -950,11 +932,11 @@ def _frame_funding_support_sell():
         card_names=[(_MEMBER, 3)], gold=1, hp=10)
 
 
-def _frame_funding_hold_fallback():
-    """筹资穷尽形态:缺员在店 + 金不足 + bench 空仓(活期/兜底池全
-    空)→ 候选与兜底双穷尽 → 记录金不足机会清单收工(shop_session
-    §2.3;义务类兜底可卖持有件〔分支①〕的形态由卖出面测试辖,本帧
-    校验穷尽边界)。"""
+def _frame_funding_exhausted():
+    """筹资穷尽形态:缺员在店 + 金不足 + bench 空仓(活期件全空)→
+    候选穷尽 → 记录金不足机会清单收工(shop_session §2.3;P78-5 兜底
+    豁免通道已随身份段退役删除——统一让位优先级迭代 3.4,本帧校验
+    穷尽边界)。"""
     return _frame_session(
         bench_units=[],
         deployed_units=_fuel_names(1),
@@ -964,10 +946,9 @@ def _frame_funding_hold_fallback():
 _FORM_FRAMES = {
     'm4_missing_vacate': _frame_m4_missing_vacate,
     'm2_stockpile_vacate': _frame_m2_stockpile_vacate,
-    'core_unlocked_vacate': _frame_core_unlocked_vacate,
     'interest_pullback': _frame_interest_sell,
     'funding_support': _frame_funding_support_sell,
-    'funding_hold_fallback': _frame_funding_hold_fallback,
+    'funding_exhausted': _frame_funding_exhausted,
 }
 
 #: 3.6 重排后的商店域动作面闭集(店内卖备战席启用;购买经验整批随
@@ -976,9 +957,9 @@ _FORM_FRAMES = {
 _SHOP_ACTION_FACE = {'CwActionBuyCardParam', 'CwActionRefreshShopParam',
                      'CwActionCloseShopParam', 'CwActionSellBenchParam'}
 
-#: 席满买入三形态(置换账/恒买腾位/筹资)的首动作 = 店内卖出。
+#: 席满买入两形态(席满六步流程置换/筹资)的首动作 = 店内卖出。
 _SELL_FIRST_FORMS = {'m4_missing_vacate', 'm2_stockpile_vacate',
-                     'core_unlocked_vacate', 'funding_support'}
+                     'funding_support'}
 
 
 @pytest.mark.parametrize('case', list(_FORM_FRAMES))
@@ -998,16 +979,16 @@ def test_shop_forms_stay_in_reordered_action_face(case: str):
 
 @pytest.mark.parametrize('case', sorted(_SELL_FIRST_FORMS))
 def test_bench_blocked_forms_sell_in_shop(case: str):
-    """席满/缺金形态的店内卖出测试:置换账(value 比较)与恒买豁免
-    (c1_make_room)与筹资(session_funding)首动作 = CwActionSellBenchParam,
+    """席满/缺金形态的店内卖出测试:席满六步流程置换(优先级末位让路)
+    与筹资(session_funding)首动作 = CwActionSellBenchParam,
     「关店→备战卖→重开」腾位链废止——帧内一步完成,不再产生
     wanted 残差跨段状态(S2 机器退役)。"""
     strategy, sess, config = _FORM_FRAMES[case]()
     action = strategy.decide_shop_action()
     assert type(action).__name__ == 'CwActionSellBenchParam', (
         f'{case} 席满/缺金形态首动作 {type(action).__name__} 非店内卖出'
-        '(置换账/筹资/恒买腾位未接产)')
-    assert action.reason in ('shop_swap', 'session_funding', 'c1_make_room'), \
+        '(六步流程置换/筹资未接产)')
+    assert action.reason in ('shop_swap', 'session_funding'), \
         action.reason
     # (原 wanted 残差断言已随 S2 字段族退役删除——批 3.7 死码清理,
     #  会话循环无跨段残差形态。)
@@ -1047,16 +1028,17 @@ def action_income(act) -> int:
     return int(getattr(act, 'income', 0) or 0)
 
 
-def test_funding_hold_fallback_records_opportunity():
-    """筹资兜底分支②拒形态:核心件持有账 > 0 → 不卖;该牌进未消费机会
-    清单(拦因 = 金不足),收工关店(读数协议 §4.2 清单闭环)。"""
-    strategy, sess, config = _frame_funding_hold_fallback()
+def test_funding_exhausted_records_opportunity():
+    """筹资穷尽形态:缺员在店 + 金不足 + bench 空仓 → 候选穷尽,该牌进
+    未消费机会清单(拦因 = 金不足),收工关店(读数协议 §4.2 清单闭环;
+    P78-5 兜底豁免已随身份段退役删除,穷尽 = 诚实停摆)。"""
+    strategy, sess, config = _frame_funding_exhausted()
     action = strategy.decide_shop_action()
     assert type(action).__name__ == 'CwActionCloseShopParam'
     st = state_of(sess)
     ct = st.cw4_counters
     assert ct.get('session_funding_exhausted', 0) >= 1, \
-        '筹资候选穷尽分键缺席(兜底分支②拒后应记录)'
+        '筹资候选穷尽分键缺席(穷尽后应记录)'
     recs = st.shop_opportunities
     assert any(r.card_name == _MEMBER and r.blocked_by == 'gold_short'
                for r in recs), \

@@ -399,11 +399,11 @@ class TestStep2Ore:
         # c0(唯一 1★,紧缩位 2 → 容器槽 2)= 序列末位被卖
         assert sells[0].bench_idx == 2
 
-    def test_full_seat_identity_excluded_all_yields_ore(self):
-        """席满 ∧ 全池被常规面身份段排除(保护档铺席)→ 本节点放弃晶矿
-        (部署外候选真空 = 空输出,不向身份面借牌)——不发射晶矿动作
-        也不卖,透传到后续步骤(第 4 步开店;ore_yield_no_pad 计数键
-        语义 = 无可行件,键退役归属 3.5)。"""
+    def test_full_seat_yields_via_sequence_tail(self):
+        """席满点晶矿 → 统一序列末位让路卖一件腾位(身份段已随统一让位
+        优先级迭代 3.4 退役——原「全池身份排除 → 放弃晶矿」形态废止:
+        万金油铺席件按档 6/8 落序列,序列真空才放弃晶矿;单动作契约 =
+        先卖,下帧席位空出后采晶)。"""
         sess = cw4_session()
         cw4_gs(sess, gold=30, level=6, round_num=2, node='战斗',
                bench=[_bc('三月七', star=2)] * 9,
@@ -411,12 +411,14 @@ class TestStep2Ore:
                back_row=())
         _write_ores(game_state_of(sess), (('gold', 100, 200, 30),))
         out = _emit(sess)
+        sells = [e.action for e in out
+                 if isinstance(e.action, CwActionSellBenchParam)]
+        assert sells, f'身份段退役后席满帧应序列让路卖出: {out!r}'
+        assert sells[0].reason == 'ore_make_room', \
+            f'让路卖出场景 = 采晶矿前空位: {sells[0]!r}'
         assert not [e for e in out
-                    if isinstance(e.action, (CwActionCollectOreParam,
-                                             CwActionSellBenchParam))]
-        assert isinstance(out[0].action, CwActionOpenShopParam), \
-            '晶矿放弃后透传,扫描继续(第 4 步开店命中)'
-        assert state_of(sess).cw4_counters.get('ore_yield_no_pad') == 1
+                    if isinstance(e.action, CwActionCollectOreParam)], \
+            '单动作契约:腾位卖出帧不并发采晶(下帧席位空再采)'
 
     def test_rescan_collects_after_seat_freed(self):
         """回扫语义测试:席满卖序列末位腾位(上报后席 8)→ 下帧全扫
@@ -649,28 +651,20 @@ class TestStep7NodeEndInterest:
         assert not [e for e in out
                     if isinstance(e.action, CwActionSellBenchParam)]
 
-    def test_all_protected_pool_blocks_interest_with_counter(self):
-        """凑息保护档阻断观测键(统一保护集 changes/2026-10-15-unified-
-        protection-set design.md §2.3 凑息语义):缺口 > 0 + 常规合格集
-        空(bench 全保护档,卡芙卡 = 持续伤害系保护档被身份段排除)+ 被排
-        除保护成员存在退金 ≥ 缺口者(卡芙卡 1★ 退 2 ≥ 缺口 2,反事实支
-        = 「若无保护本可跨档」)→ 零卖出 + ``interest_round_protected_
-        block`` 计 1;对照帧:保护成员退金 < 缺口(青雀 1 费退 1 < 缺口
-        2,第三合取不成立)→ 不计数(与「无可行件本就不卖」的常态帧
-        分键)。"""
+    def test_protected_member_now_sellable_per_sequence(self):
+        """身份段退役后的节末凑息形态(统一让位优先级迭代 3.4:凑息 =
+        部署重排后全局面序列取用,无身份排除;原「凑息保护档阻断观测键
+        interest_round_protected_block」随身份保护判据退役——键停止
+        生产):保护档成员(卡芙卡,1★ 退 2 ≥ 缺口 2)按统一序列取用 →
+        凑息卖出发生。"""
         sess = self._frame(48, [_bc('卡芙卡')])
         out = _emit(sess)
-        assert not [e for e in out
-                    if isinstance(e.action, CwActionSellBenchParam)], \
-            '全保护档帧零卖出(常规通道绝对禁卖)'
-        ct = state_of(sess).cw4_counters
-        assert ct.get('interest_round_protected_block') == 1
-        # 对照:退金不足缺口的保护档帧 = 普通无可行件,不落本键
-        sess2 = self._frame(48, [_bc('青雀')])
-        _emit(sess2)
-        assert not state_of(sess2).cw4_counters.get(
+        sells = [e for e in out
+                 if isinstance(e.action, CwActionSellBenchParam)]
+        assert sells, f'身份段退役后凑息应卖出可跨档件: {out!r}'
+        assert not state_of(sess).cw4_counters.get(
             'interest_round_protected_block'), \
-            '反事实支(退金 ≥ 缺口)不成立帧不得计数'
+            '退役键不得复现'
 
 
 # ============================================================ 上线窗口信号表(数据地基)

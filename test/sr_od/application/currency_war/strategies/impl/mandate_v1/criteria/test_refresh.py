@@ -8,8 +8,10 @@ design.md §2.0 第 2/3 条 + details/refresh-chain.md §5 清单)。
   ``r2_card_reserve``,未锁窗口恒 0);
 - ③ 席满 + 可合成 → 发射(合成腿消费现役 ``_merge_pair_names``
   「恰 2 张全 1★」语义——机制全集重写归买面改革批,本批锁现役口径);
-- ④ 席满 + 零燃料 + 不可合成 → 付费腿拒(关店,拒因 ``target_unbuyable``
-  ——付费预测门拆除归 3.4,收敛前拒因照落);
+- ④ 席满 + 零燃料 + 不可合成 → **付费刷新发射**(统一让位优先级迭代
+  3.4:预测门整拆——旧「目标可买三腿」判据删除,拒因
+  ``target_unbuyable`` 退役;「刷出后能否买到」不可预测,刷新时点
+  信息最少,design §2.10 单帧断言 1 = 2-4 开店帧应触发刷新);
 - ⑤ 升级推迟帧刷新维持拒绝(资金序 = 升级优先于刷新,判据①支无
   解锁支);
 - ⑥ 免费次数在册即刷(统一让位优先级迭代 3.2:design §2.2 无条件刷
@@ -18,7 +20,7 @@ design.md §2.0 第 2/3 条 + details/refresh-chain.md §5 清单)。
   墓碑不设 pytest)以执行侧残留扫描承载,记录归迭代报告。
 
 帧构造 = 列车同行注册表线(need_star:姬子·启行 3/三月七 2/花火 2/
-瓦尔特 1;费档 3/1/2/5 注册表现查),席位腿/合成腿帧均上阵行非空
+瓦尔特 1;费档 3/1/2/5 注册表现查),合成腿/拒发射帧均上阵行非空
 (空板止损守卫 = 燃料资格面前置门)。
 """
 from __future__ import annotations
@@ -43,9 +45,6 @@ from test.sr_od.application.currency_war._cw_helpers import (
 )
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-from sr_od.application.currency_war.kernel.cw_comps import (
-    CORE_SINGLE_CARD_REGISTRY,
-)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     Unit,
@@ -66,9 +65,6 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
 )
-from sr_od.application.currency_war.strategies.impl.mandate_v1.protection import (
-    four_system_members,
-)
 
 _COMP_NAME = '列车同行'
 _LINE = tuple(_members(_comp_of(_COMP_NAME)))
@@ -78,12 +74,10 @@ _LOGIC_SIG = ChannelSig(family='logic_action', actor='cw-refresh-chain',
 
 
 def _fillers(count: int, exclude: tuple[str, ...] = ()) -> list[str]:
-    """非线非保护非核心燃料名(注册表现算防漂移;席位腿测试帧填充)。"""
+    """非线燃料名(注册表现算防漂移;席位腿测试帧填充——身份保护/
+    C1 核心规避面已随统一让位优先级迭代 3.4 退役,非线内即可)。"""
     out = [n for n in CHARACTERS
-           if n not in _LINE and n not in exclude
-           and n not in CORE_SINGLE_CARD_REGISTRY
-           and n not in set(four_system_members())
-           and not getattr(CHARACTERS[n], 'bench_effect', '')]
+           if n not in _LINE and n not in exclude]
     assert len(out) >= count, '测试前提:填充名不足'
     return out[:count]
 
@@ -182,9 +176,11 @@ class TestRefreshChainSingleFrame:
         assert refreshes, f'席满可合成帧刷新应发射: {acts!r}'
         assert refreshes[0].cost > 0
 
-    def test_4_full_bench_no_legs_reject_close(self):
-        """④席满 + 零燃料 + 不可合成 → 拒(关店;拒因
-        ``target_unbuyable`` 计数在册)。"""
+    def test_4_full_bench_no_legs_emits(self):
+        """④席满 + 零燃料 + 不可合成 → 付费刷新发射(统一让位优先级
+        迭代 3.4 预测门整拆:旧「目标可买三腿」判据删除,拒因
+        ``target_unbuyable`` 退役——刷新时点预测不可算,买不买得到归
+        刷出后帧裁决;design §2.10 单帧断言 1)。"""
         level = 7
         _assert_band_premise(int(CHARACTERS[_TARGET].cost), level)
         fill = _fillers(6)
@@ -196,11 +192,12 @@ class TestRefreshChainSingleFrame:
         s, gs, st = _locked_frame(bench=bench, deployed=deployed,
                                   gold=100, level=level)
         acts = _decide(s)
-        # 驱动器契约:关店为收尾终结动作不入序列,拒因计数 = 拒绝
-        # 路径在册证据。
-        assert not [a for a in acts
-                    if isinstance(a, CwActionRefreshShopParam)], acts
-        assert st.cw4_counters.get('shop_refresh_target_unbuyable', 0) >= 1
+        refreshes = [a for a in acts
+                     if isinstance(a, CwActionRefreshShopParam)]
+        assert refreshes, f'预测门拆除后席满帧应触发刷新: {acts!r}'
+        assert refreshes[0].cost > 0
+        assert st.cw4_counters.get('shop_refresh_target_unbuyable', 0) == 0, \
+            'target_unbuyable 拒因键已退役,不得复现'
 
     def test_5_upgrade_defer_frame_refresh_stays_rejected(self):
         """⑤升级推迟帧刷新维持拒绝(资金序 = 升级优先于刷新;判据①支

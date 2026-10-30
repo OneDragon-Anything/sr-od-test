@@ -1,28 +1,20 @@
-"""P86 无目标期三臂·收编对照测试(迭代 2026-10-12-prep-shop-workflow-redesign
-批 3.6;shop_session §5 承继清单 P86 行)。
+"""P86 无目标期判据退役对照测试(统一让位优先级迭代 3.4;总纲 §2.7)。
 
-原发射面测试(乙臂五前件合取/甲臂强锁门 G>ε 触发闸/丙臂守息缺省三臂
-仲裁)随三臂收编退役——本文件改断言收编后的目标形态(收编完成判据 =
-本文件 + 对照表,禁静默失活):
+三臂判据的甲臂(方向囤货)与乙臂(枢纽期权)已随本迭代退役——本文件
+改断言退役后的目标形态(退役完成判据 = 本文件,禁静默失活/复活):
 
-- **甲臂**(方向囤货):触发闸退役(囤货义务化——不依赖期望保证),
-  方向采购集经 K 空窗回退(语义保留、判定源切换 = 候选空,
-  line_and_upgrade §1.6)进序 1 成员面 → M2 义务买因;位面辖域维持
-  原命题(位面 2,P86 已证辖域字面量);
-- **乙臂**(枢纽件跨线期权):发射位收编进序 1 候选集——多线骨架件
-  ∈ 候选线骨架身份自然命中;贯穿件恒囤层直接命中;跨线覆盖数期权不
-  再单独计分(偏差申报:覆盖信息由 3.7 选线函数候选体系承载);hub_
-  option_buy 买因与 hub_option_* 拒因族不得复现;
-- **丙臂**(无目标期守息缺省):并入统一金约束门——无候选帧零买入
-  零付费刷新(三段式刷新判据在无合格缺口帧 fail-closed),不设独立
-  守息分支键。
-
-kernel 判据本体(cw_intention.no_target_arms/k_empty_window_fallback
-等)保留为空窗回退的单一源——真值表直测(纯函数面)随批保留。
-(原 test_refund_backing_face_retained 背书面两行断言删:全额退背书门
-refund_full_star_ok 的 (2,2) 拒 /(1,2) 过真值已由
-test_sell_window_launch::test_hold_registration_qualification_
-conjunction 的资格合取测试完整辖住——子集断言不留。)
+- **甲臂**(方向囤货):kernel 判活路径退役(``no_target_arms`` 判据件
+  整删),K 目标未锁期源切换 = 策略层「候选快照三线成员并集 ∪ 配方
+  成员」(R5-01 方向②)——候选线成员经序 1 义务面照常买入(m2_* 买因),
+  机器判活方向不再兜底;行为申报(收窄侧)= 弱势局未锁无目标帧从
+  「按机器方向囤」变「保利息缺省」;
+- **乙臂**(枢纽期权):发射位已并入序 1 候选集(12 号篇 §4 收编),
+  hub_option_buy 买因与 hub_option_* 拒因族不得复现;持有段
+  (hub_acquired_names_of)随装配 A 身份段退役删除;
+- **丙臂**(无目标期守息缺省):p2plus 带唯一形态——kernel
+  ``k_empty_window_fallback`` 该带恒合法空集(保利息缺省,零买入零
+  付费刷新),p1 两带(p1_gap/p1_lock_band)回退保留(在役,防
+  「K 空→零买入→支持度永不涨」死锁环)。
 """
 from __future__ import annotations
 
@@ -93,16 +85,19 @@ def _state(gold: int = 45, level: int = 5, plane: int = 2,
     return st
 
 
-def _session(ist=None) -> StrategySession:
+def _session(ist=None, candidates: tuple[str, ...] = ()) -> StrategySession:
     sess = StrategySession()
-    state_of(sess).cw4_counters = {}
+    st = state_of(sess)
+    st.cw4_counters = {}
     if ist is not None:
-        state_of(sess).v3_intention = ist
+        st.v3_intention = ist
+    if candidates:
+        st.line_candidates = candidates
     return sess
 
 
 def _decide(st: dict, sess: StrategySession):
-    """商店单动作决策直调(3.6 会话循环;账面稳态钉位随种子 +
+    """商店单动作决策直调(会话循环;账面稳态钉位随种子 +
     node_hist_pos 位面水位线按种子平面落位——plane2_started 窗口谓词
     的单调历史输入,P2+ 帧须显式置位)。"""
     gs = cw4_gs(sess, **st)
@@ -125,30 +120,55 @@ def _ct(sess) -> dict:
 
 
 class TestFallbackKernelTruth:
-    def test_k_empty_window_fallback_bands(self):
-        """空窗回退三带真值(单一源 = cw_intention;序 1 成员面的空窗
-        供给):未锁 ist 的空窗帧按带回退非空(甲臂方向采购集承接),
-        带归属键可辨。"""
+    def test_p2plus_band_interest_default_empty(self):
+        """p2plus 带保利息缺省(丙臂在役唯一形态;3.4 退役申报):未锁
+        空窗帧回退集恒空 + 带归属可辨——机器判活方向不再兜底。"""
+        gs = _kbridge(**_state(hp=100))
+        sess = _session(IntentionState())
+        fb, band = k_empty_window_fallback(gs, state_of(sess).v3_intention)
+        assert fb == frozenset(), \
+            'p2plus 带回退集应为空(保利息缺省,甲臂判活路径退役)'
+        assert band == 'p2plus'
+
+    def test_p1_bands_retained_nonempty(self):
+        """p1 两带回退保留(在役;防「K 空→零买入→支持度永不涨」死锁环):
+        位面 1 空窗帧回退集注册表派生构造性非空。"""
         comp = get_comp('希儿量子')
-        st = _state(hp=100,
+        st = _state(plane=1, hp=100,
                     bench=[_bc(m) for m in comp.core_chars],
                     deployed=[Unit(char_id='板上件锚', star=1)])
         gs = _kbridge(**st)
         sess = _session(IntentionState())
         fb, band = k_empty_window_fallback(gs, state_of(sess).v3_intention)
-        assert fb, '空窗帧回退集为空(序 1 成员面失去供给)'
-        assert band
+        assert fb, 'p1 空窗帧回退集为空(p1 带在役面失效)'
+        assert band in ('p1_gap', 'p1_lock_band')
 
 
-# ===== 甲臂收编:方向采购集经回退进序 1(断言:买因 m2)=====
+# ===== K 源切换(R5-01 方向②):候选快照三线并集承载序 1 =====
 
 
-class TestArmAAdoptedViaFallback:
+class TestKSourceCandidateUnion:
+    def test_candidate_union_reaches_m2(self):
+        """候选线成员在店 → 序 1 义务买(m2_* 买因):未锁无目标帧的
+        K 源 = 候选快照三线成员并集 ∪ 配方成员——与优先级档 2/3/5
+        名单同源(core∪shared),买面与优先级面统一(行为申报:宽放侧)。"""
+        comp = get_comp('希儿量子')
+        held = sorted(comp.core_chars)[:-1]
+        missing_piece = sorted(set(comp.core_chars) - set(held))[0]
+        st = _state(hp=100, shop_cards=[_card(missing_piece, cost=1)])
+        st['bench'] = [_bc(m) for m in held]
+        st['front_row'] = [Unit(char_id='板上件锚', star=1)]
+        sess = _session(IntentionState(), candidates=('希儿量子',))
+        act = _decide(st, sess)
+        assert isinstance(act, CwActionBuyCardParam), \
+            f'候选线成员未买: {act!r}'
+        assert act.reason.startswith('m2_'), act.reason
+        assert act.card.name == missing_piece
 
-    def test_fallback_members_reach_m2(self):
-        """甲臂判活帧:回退方向成员在店 → 序 1 义务买(m2_line_member/
-        m2_locked_member 买因;旧 shop_no_target_arm_a_adopted 计数键
-        随触发闸退役不得复现)。"""
+    def test_machine_direction_no_longer_hoarded(self):
+        """甲臂退役申报(收窄侧):无候选帧(候选快照空)的未锁无目标
+        帧不再按机器判活方向囤货——缺失的机器方向成员不买,收工关店
+        (保利息缺省;旧 fallback 方向采购集承接行为退役)。"""
         comp = get_comp('希儿量子')
         chars, _eq = cw_intention._line_hoard(comp)
         missing_piece = sorted(m for m in chars
@@ -156,65 +176,35 @@ class TestArmAAdoptedViaFallback:
         st = _state(hp=100, shop_cards=[_card(missing_piece, cost=1)])
         st['bench'] = [_bc(m) for m in comp.core_chars]
         st['front_row'] = [Unit(char_id='板上件锚', star=1)]
-        sess = _session(IntentionState())
-        act = _decide(st, sess)
-        assert isinstance(act, CwActionBuyCardParam), f'甲臂成员未买: {act!r}'
-        assert act.reason in ('m2_line_member', 'm2_locked_member')
-        assert act.card.name == missing_piece
-        assert 'shop_no_target_arm_a_adopted' not in _ct(sess), \
-            '甲臂采用计数键已随触发闸退役(收编)'
-
-    def test_plane1_fallback_domain_guard(self):
-        """位面辖域维持原命题(P86 已证辖域 = 位面 2;宪法第 2 条豁免
-        登记):位面 1 空窗帧回退支不触发序 1 甲臂采购(P1 板面恒过渡
-        体系,与方向正交)——序 1 源①候选集构建处的显式辖域守卫。
-
-        统一保护集迭代(design.md §2.5-3 申报)后,P1 空窗帧的保护集
-        成员经囤货臂按期权级买入(买因 ``protection_hoard``)为设计
-        行为——本断言锚 = 买因归属:fixture 件(希儿量子线成员,全量子
-        系 ∈ 保护集)即使成交也不得落 ``m2_*`` 甲臂义务买因(回退带
-        位面辖域守卫的判读面),成交归囤臂语义承接。"""
-        comp = get_comp('希儿量子')
-        chars, _eq = cw_intention._line_hoard(comp)
-        missing_piece = sorted(m for m in chars
-                               if m not in comp.core_chars)[0]
-        st = _state(plane=1, hp=100,
-                    shop_cards=[_card(missing_piece, cost=1)])
-        sess = _session(IntentionState())
+        sess = _session(IntentionState(), candidates=())   # 候选快照空
         act = _decide(st, sess)
         assert not (isinstance(act, CwActionBuyCardParam)
-                    and act.card.name == missing_piece
-                    and act.reason.startswith('m2_')), \
-            'P1 帧甲臂方向采购越辖(位面辖域字面量守卫失效)'
+                    and act.card.name == missing_piece), \
+            '无候选帧按机器方向囤货(甲臂退役失效)'
 
 
-# ===== 乙臂收编:枢纽件经序 1 身份命中(断言:无 hub_option 买因)=====
+# ===== 乙臂退役:hub 死链与买因/拒因族不复现 =====
 
 
-class TestHubFoldedIntoOrderOne:
-
-    def test_hub_piece_bought_via_membership(self):
-        """枢纽自然帧(花火 1★ 在店,空窗):贯穿件恒囤层/候选骨架
-        身份命中序 1 → m2 买因发射;hub_option_buy 买因与 hub_option_*
-        拒因族不得复现(乙臂发射位收编申报)。"""
+class TestHubRetired:
+    def test_wildcard_no_auto_buy(self):
+        """万金油退出义务买入面(总纲 §2.7 申报②;3.4):空窗帧的万金油
+        件(花火,非候选线成员)不买——手里持有的未到两星前受档 6 保护,
+        无自动补货通道;hub_option_buy 买因不得复现。"""
         st = _state(gold=60, plane=2, node_kw='reward',
                     shop_cards=[_card('花火', cost=2)])
         sess = _session(IntentionState())
         act = _decide(st, sess)
-        assert isinstance(act, CwActionBuyCardParam), \
-            f'枢纽件未经序 1 命中: {act!r}'
-        assert act.card.name == '花火'
-        assert act.reason.startswith('m2_'), act.reason
-        ct = _ct(sess)
-        assert not [k for k in ct if k.startswith('hub_option_')], \
-            '乙臂发射位已收编,hub_option_* 键族不得复现'
+        assert not (isinstance(act, CwActionBuyCardParam)
+                    and act.card.name == '花火'
+                    and act.reason.startswith('m2_')), \
+            '万金油件经义务面买入(万金油退出义务买入面失效)'
+        assert not [k for k in _ct(sess) if k.startswith('hub_option_')], \
+            'hub_option_* 键族不得复现(乙臂退役)'
 
     def test_hub_reject_family_retired_not_silent(self):
-        """乙臂拒因族(merge_material/seats/interest/unaffordable)收编
-        后由序 1 自身门序承载(席→置换账/金→筹资/素材对→M2b 合成完成
-        与 G-S1 守卫)——拒因不再以 hub_option_* 分键显影,席位/金不足
-        形态照常拦截(非静默放行)。"""
-        # 席满(9 占位)帧:非合成素材、无让位候选 → 不买。
+        """乙臂拒因族退役后,席位/金不足形态照常拦截(非静默放行):
+        席满帧非义务面件不买,拒因不再以 hub_option_* 分键显影。"""
         st = _state(gold=60, plane=2, shop_cards=[_card('花火', cost=2)],
                     bench=[_bc(f'注册表外高价值件{i}', star=2)
                            for i in range(BENCH_CAPACITY)],
@@ -222,30 +212,9 @@ class TestHubFoldedIntoOrderOne:
         sess = _session(IntentionState())
         act = _decide(st, sess)
         assert not isinstance(act, CwActionBuyCardParam) or act.card.name \
-            != '花火' or _ct(sess).get('shop_swap_sell_hit', 0) >= 1, \
-            '席满帧应经置换账(价值比较拒)或合成通道,不得无门放行'
+            != '花火', \
+            '席满帧非义务面件不得无门放行'
         assert not [k for k in _ct(sess) if k.startswith('hub_option_')]
-
-    def test_hub_hold_registration_face(self):
-        """乙臂持有段(获取 = 免费期权持有语义)的卖面保护随装配 A
-        存活:hub_acquired_names_of 并集(identity_exclusions 单一源)。
-        正负测试:登记名入集;未登记名不入。"""
-        from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
-            sell_gate,
-        )
-        from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
-            state_of,
-        )
-        sess = _session(IntentionState())
-        # 写点载体 = StrategyState 属性(sell_gate.HUB_ACQUIRED_ATTR
-        # duck-typed 契约;发射位原写点已随乙臂收编退役,持有段读面
-        # 仍消费本属性——收编后的写者 = 3.7 候选体系持有登记,过渡期
-        # 由测试直写载体验证读面)。
-        setattr(state_of(sess), sell_gate.HUB_ACQUIRED_ATTR, ['花火'])
-        assert '花火' in sell_gate.hub_acquired_names_of(sess)
-        assert '三月七' not in sell_gate.hub_acquired_names_of(sess)
-        # 排除集消费位(装配 A 单一源):登记名入 identity 排除并集。
-        assert '花火' in sell_gate.identity_exclusions(sess, ())
 
 
 # ===== 丙臂收编:守息缺省并入统一金约束门 =====
@@ -254,12 +223,9 @@ class TestHubFoldedIntoOrderOne:
 class TestArmCHoldDefault:
 
     def test_no_candidate_frame_zero_buy_zero_paid_refresh(self):
-        """丙臂守息缺省(合并原三面):甲乙候选皆空帧(p2plus 无目标、
-        店面无资格件)零买入 + 零付费刷新(三段式刷新判据在无合格缺口
-        帧 fail-closed;旧 R1 no_chaseable_member 键随判据面退役);
-        收工关店(合法空帧)。"""
-        # 金 45 < 息线 50:②(b) 奖励帧死金压库不辖(非奖励节点)、
-        # 溢余段不辖——丙臂缺省守息面(零买入零付费刷新)。
+        """丙臂守息缺省:无候选帧(p2plus 无目标、店面无资格件)零买入
+        + 零付费刷新(三段式刷新判据在无合格缺口帧 fail-closed);收工
+        关店(合法空帧)。"""
         st = _state(gold=45, plane=2,
                     shop_cards=[_card('注册表外散件Z', cost=1)])
         sess = _session(IntentionState())
@@ -305,39 +271,3 @@ class TestArmCHoldDefault:
         assert not [e for e in out
                     if isinstance(e.action, CwActionLevelUpParam)], \
             '未锁定期零主动升级(板满等战力义务触发删除,非守息冻结)'
-
-
-# ===== k_members 下游同源(测试 6 承继;换源 = 回退集)=====
-
-
-class TestKMembersDownstream:
-
-    def test_fallback_members_reach_m2_and_rejects(self):
-        """换源申报承继:回退方向成员整体进 k_members——M2 义务买缺员
-        成员;线外件维持 non_line 拒因;卖免面:燃料候选排除回退成员
-        (zero_overlap 排除集换源,成员在 bench 不出燃料候选)。"""
-        comp = get_comp('希儿量子')
-        chars, _eq = cw_intention._line_hoard(comp)
-        missing_piece = sorted(m for m in chars
-                               if m not in comp.core_chars)[0]
-        st = _state(hp=100, shop_cards=[_card(missing_piece, cost=1),
-                                        _card('注册表外散件Z', cost=1,
-                                              x=1)])
-        st['bench'] = [_bc(m) for m in comp.core_chars]
-        st['front_row'] = [Unit(char_id='板上件锚', star=1)]
-        sess = _session(IntentionState())
-        act = _decide(st, sess)
-        assert isinstance(act, CwActionBuyCardParam) \
-            and act.reason.startswith('m2_')
-        rejects = getattr(state_of(sess), 'cw4_shop_rejects', {})
-        assert str(rejects.get('注册表外散件Z', '')).startswith('non_line')
-        from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
-            mandate as m,
-        )
-        gs = cw4_gs(sess)
-        k_members = tuple(sorted(set(chars)))
-        fuel = m.fuel_sell_candidates(
-            st['bench'], k_members, state=gs, counters={}, dedup_names=set())
-        for c in fuel:
-            assert m._slot_cid(c) not in k_members, \
-                '回退成员不得入燃料候选(卖免面换源失效)'
