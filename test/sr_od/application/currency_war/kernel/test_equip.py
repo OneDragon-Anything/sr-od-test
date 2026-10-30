@@ -19,6 +19,7 @@
 from __future__ import annotations
 
 from test.sr_od.application.currency_war._cw_helpers import (
+    cw4_bview,
     cw4_comp,
     cw4_session,
 )
@@ -27,6 +28,10 @@ from sr_od.application.currency_war.data.cw_equipment_wear_rules_data import (
     ITEM_WEAR_GATES,
     YINLANG_WEAR_ALLOWLIST,
     check_equipment_wear_rule_coverage,
+)
+from sr_od.application.currency_war.data.cw_synthesis import (
+    CROSS_RECIPES,
+    synthesize_target,
 )
 from sr_od.application.currency_war.kernel.cw_comps import (
     _wearable_gate_ok,
@@ -40,11 +45,18 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     BenchSlot,
     ChannelSig,
     GameState,
+    LogicOutcome,
     Unit,
     game_state_of,
 )
+from sr_od.application.currency_war.kernel.cw_investments import (
+    STRATEGY_EFFECTS,
+)
 from sr_od.application.currency_war.kernel.cw_merge_simulate import (
     _merge_bench,
+)
+from sr_od.application.currency_war.kernel.cw_vocab import (
+    CwActionWearEquipParam,
 )
 
 _SIG = ChannelSig(family='obs', actor='cw4_seed', mode='synthesized')
@@ -296,3 +308,95 @@ def test_orphan_gate_entry_and_bad_char_warned(monkeypatch):
     warnings = check_equipment_wear_rule_coverage()
     assert any('幽灵装备' in w and '孤儿条目' in w for w in warnings)
     assert any('银狼不存在' in w for w in warnings)
+
+
+# ============================================================ 合成事件发放腿(穿戴 applied 出口)
+
+
+def _wear_grant_gs(*, unit_equips: list[str], owned: list[str],
+                   register: bool = True) -> GameState:
+    """合成事件发放腿场景种子:bench 槽 1 单位带已穿装备 + owned 库存
+    (deployed 保持未观察 → 上报定位走 bench 名匹配回退,与 sim 动作
+    注入同形态);register=True 时账本登记武力刷新(与选卡登记腿同形
+    register_strategy,登记腿缺位负向由 register=False 承载)。"""
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    slots: list[BenchSlot | None] = [None] * 9
+    slots[0] = BenchSlot(kind='unit',
+                         unit=Unit(char_id='淘金客', star=1,
+                                   equips=list(unit_equips)))
+    gs.observe(gs.bench, cw4_bview(slots), sig=_SIG)
+    gs.observe(gs.equips, list(owned), sig=_SIG)
+    if register:
+        gs.effects.register_strategy(STRATEGY_EFFECTS['武力刷新'],
+                                     acquired_key=(1, 1))
+    return gs
+
+
+def _wear_item(gs: GameState, item_name: str) -> LogicOutcome:
+    """对 bench 槽 1 单位穿戴一件(上报函数 = 合成事件发放腿挂点宿主)。"""
+    from sr_od.application.currency_war.kernel.cw_action_report.wear_equip import (
+        report_action_wear_equip_param,
+    )
+    return report_action_wear_equip_param(
+        gs, CwActionWearEquipParam(item_name=item_name, char_name='淘金客',
+                                   row='front', slot=1),
+        ChannelSig(family='logic_action', actor='test', mode='compute'))
+
+
+def test_wear_synthesis_grants_free_refresh(monkeypatch):
+    """合成事件发放正锁(卡面「合成装备时，获得2次刷新」):账本持
+    武力刷新 + 穿第二件可配对简易 → 穿着即合成恰 1 次,free_refresh_left
+    +2(None 基 = 0 起算);写 = write_logic 逻辑直写、evidence =
+    effect_on_merge@wear、produced_by 带卡名,容器写恰三行(目标域重建 +
+    owned 扣减 + 发放登记,零多余写)。"""
+    advance, (a, b) = next(iter(CROSS_RECIPES.items()))
+    assert synthesize_target(a, b) == advance
+    gs = _wear_grant_gs(unit_equips=[a], owned=[b])
+    captured: list[tuple] = []
+    real_write = GameState.write_logic
+
+    def _spy(self: GameState, target, value, **kw):
+        captured.append((self._field_name(target), value,
+                         kw.get('produced_by'), kw.get('evidence')))
+        return real_write(self, target, value, **kw)
+
+    monkeypatch.setattr(GameState, 'write_logic', _spy)
+    seq0 = gs.write_seq
+    out = _wear_item(gs, b)
+    assert out.applied, '穿戴受理(穿着即合成 1 次)'
+    assert gs.bench.value.slots[0].unit.equips == [advance], \
+        f'穿着即合成:{a}+{b} → {advance}'
+    assert gs.free_refresh_left.value == 2, 'None 基 = 0 起算,一次合成 +2'
+    assert gs.free_refresh_left.source == 'logic', 'write_logic 逻辑直写'
+    assert gs.free_refresh_left.evidence == 'effect_on_merge@wear'
+    assert captured[-1] == ('free_refresh_left', 2,
+                            'EffectLedgerBridge:武力刷新',
+                            'effect_on_merge@wear'), '发放登记写端元数据'
+    assert gs.write_seq - seq0 == 3, \
+        f'恰三行穿戴写+发放行,实得 {gs.write_seq - seq0}'
+
+
+def test_wear_without_synthesis_zero_grant():
+    """零合成负向:已穿 1 件进阶再穿另一独立进阶(进阶终品互不配方,
+    先例载荷 = 满装闭环测试)→ applied=True 但零合成,发放零动作
+    (free_refresh_left 保持未观察,容器写恰两行穿戴写、零 Field 发放行)。"""
+    items = ['物质分解液', '冷笑话引擎']
+    gs = _wear_grant_gs(unit_equips=[items[0]], owned=[items[1]])
+    seq0 = gs.write_seq
+    out = _wear_item(gs, items[1])
+    assert out.applied
+    assert gs.bench.value.slots[0].unit.equips == items, '零合成(两件并存)'
+    assert gs.free_refresh_left.value is None, '零合成零发放'
+    assert gs.write_seq - seq0 == 2, \
+        f'恰两行穿戴写(零发放行),实得 {gs.write_seq - seq0}'
+
+
+def test_wear_synthesis_without_card_zero_grant():
+    """无持卡负向:账本无条目(登记腿缺位局)→ 合成照常发生但保守零动作,
+    零 Field 发放行(登记接入点纪律:登记缺位不虚构发放)。"""
+    advance, (a, b) = next(iter(CROSS_RECIPES.items()))
+    gs = _wear_grant_gs(unit_equips=[a], owned=[b], register=False)
+    out = _wear_item(gs, b)
+    assert out.applied
+    assert gs.bench.value.slots[0].unit.equips == [advance], '合成照常'
+    assert gs.free_refresh_left.value is None, '无条目零发放'

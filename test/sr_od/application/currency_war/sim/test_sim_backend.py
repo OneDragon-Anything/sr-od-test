@@ -105,6 +105,7 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     ENV_REROLL_NAMES,
     INVESTMENT_ENVS,
     INVESTMENT_STRATEGIES,
+    STRATEGY_EFFECTS,
     equips_by_category,
     random_char_pool,
 )
@@ -2371,7 +2372,7 @@ def test_yinjincai_env_full_walk_slot_qualities() -> None:
                 opts = b.gs.invest_strategy_opts.value
                 assert len(opts) == OFFER_CANDIDATES
                 for slot, (name, quality) in enumerate(
-                        zip(opts, ('银', '金', '棱彩'))):
+                        zip(opts, ('银', '金', '棱彩'), strict=False)):
                     assert name in INVESTMENT_STRATEGIES, name
                     assert INVESTMENT_STRATEGIES[name].rarity == quality, \
                         f'槽{slot}候选必 {quality}: {name}'
@@ -2490,7 +2491,7 @@ def test_no_env_match_refresh_routes_strategy_branch() -> None:
         assert (b.gs.active_env.value or '') == '', '无环境局前提'
         assert b.gs.env_refresh_left.value is None, '环境屏未呈现前提'
         opts = list(b.gs.invest_strategy_opts.value)
-        assert b.gs.strategy_refresh_left.value == {n: 1 for n in opts}
+        assert b.gs.strategy_refresh_left.value == dict.fromkeys(opts, 1)
         out = report_action_refresh_invest_cards_param(
             b.gs, SimpleNamespace(slots=(0,)), _SIG)
         assert out.world_decl.trigger == 'refresh_invest_strategy', \
@@ -2610,6 +2611,27 @@ def test_wear_report_synthesis_branch() -> None:
                                    row='front', slot=1), _SIG)
     assert not out_miss.applied
     assert out_miss.reason == 'wear_target_unit_missing'
+
+
+def test_wear_report_synthesis_grant_world_truth() -> None:
+    """sim 世界真值同口:动作注入穿戴合成与 live 同一上报函数单口,
+    账本持卡 → 合成发放自动生效(free_refresh_left +2,sim 世界容器
+    与 live 同格)——发放腿住上报函数内,sim 穿戴批未来接线零返工。
+    sim 自主局零穿戴 = 零触发(装备域 sim 未建模既有边界,不设负锁)。"""
+    advance, (a, b) = next(iter(CROSS_RECIPES.items()))
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    slots: list[BenchSlot | None] = [None] * 9
+    slots[0] = BenchSlot(kind='unit', unit=Unit(char_id='淘金客', star=1,
+                                                equips=[a]))
+    gs.observe(gs.bench, cw4_bview(slots), sig=_SIG_OBS)
+    gs.observe(gs.equips, [b], sig=_SIG_OBS)
+    gs.effects.register_strategy(STRATEGY_EFFECTS['武力刷新'],
+                                 acquired_key=(1, 1))
+    out = report_action_wear_equip_param(
+        gs, CwActionWearEquipParam(item_name=b, char_name='淘金客',
+                                   row='front', slot=1), _SIG)
+    assert out.applied
+    assert gs.free_refresh_left.value == 2, '世界真值同口:合成 +2 到账'
 
 
 # ============================================================ 经验账本(平移)
@@ -3653,7 +3675,7 @@ def test_gen_invest_strategy_candidates_at_offer_window() -> None:
         assert [n for n, _x, _y in obs.options] == opts_before
         assert obs.refresh_slots == [(1, 10, 20), (1, 20, 20), (1, 30, 20)], \
             '默认局逐卡基准 1 次(呈现写点 → 容器 → 生成器现读)'
-        assert b.gs.strategy_refresh_left.value == {n: 1 for n in opts_before}, \
+        assert b.gs.strategy_refresh_left.value == dict.fromkeys(opts_before, 1), \
             '观察写端逐卡计数落容器'
         assert b.gs.invest_strategy_opts.value == opts_before
     finally:

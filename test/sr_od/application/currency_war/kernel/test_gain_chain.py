@@ -1155,6 +1155,18 @@ def test_gain_invest_strategy_free_lunch_burst_grant(
         f'produced_by 带卡名: {captured[-1]}'
 
 
+def test_gain_invest_strategy_force_refresh_register_noop_grants() -> None:
+    """武力刷新登记腿:session 在场选卡 → register_strategy 入册
+    (effects.first 按 id 非空);burst 桥零额度、板面重写桥非战场
+    payload 返回 None(登记期零 Field 行,零即时发放——发放面全归
+    穿戴合成事件腿)。"""
+    gs = _make_gs(bench=[], equips=[])
+    gain_invest_strategy(gs, object(), '武力刷新', rand=False, sig=_lsig())
+    assert gs.active_strategies.value == ['武力刷新'], '注册入表'
+    assert gs.effects.first('101801') is not None, '账本登记非空'
+    assert gs.free_refresh_left.value is None, 'burst 零额度零 Field 行'
+
+
 def test_gain_invest_strategy_team_hope_unit_buff_zero_response() -> None:
     """全队的希望 登记链锁 + 消费面负锁(T-97 设计 §4 锁 2):策略源
     UNIT_BUFF 首条,登记腿既有链自动入册(register_strategy),payload=

@@ -25,11 +25,16 @@ from sr_od.application.currency_war.kernel.cw_action_report import (
     report_action_deploy_move_param,
     set_action_rng_provider,
 )
+from sr_od.application.currency_war.kernel.cw_affix_effects import (
+    AFFIX_EFFECT_SPECS,
+)
 from sr_od.application.currency_war.kernel.cw_effect_inventory import (
     BOARD_REWRITE_UPGRADE_ALL,
+    STRATEGY_ON_MERGE_LIVE_UNVERIFIED,
     STRATEGY_SALVAGE_ASSUMPTION_KEYS,
     ActiveEffectInventory,
     apply_board_rewrite,
+    apply_on_merge_refresh_grant,
     check_strategy_supply_salvage,
     grant_bench_unit_cascade,
     spawn_equip_bench_unit,
@@ -49,6 +54,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     apply_effect_burst_grant,
     consume_defect_sink,
     game_state_of,
+    grant_effect_node_refresh_balance,
     tick_effect_boundary,
 )
 from sr_od.application.currency_war.kernel.cw_investments import (
@@ -730,3 +736,54 @@ def test_salvage_dual_hold_single_grant() -> None:
     seq = gs.write_seq
     check_strategy_supply_salvage(gs, _SALV_SIG)
     assert gs.write_seq == seq, '二次调用零写(重入幂等不因双持改变)'
+
+
+# ============================================================ 合成事件发放腿(穿戴 applied 出口)
+
+
+def test_on_merge_grant_linear_in_merges() -> None:
+    """发放倍数口径(合成次数线性):merges=2 → +4;多次触发按
+    write_logic 累加(与 burst/节点两桥同形);frame 缺省 evidence
+    无 @ 后缀。"""
+    gs = _seeded_gs()
+    gs.effects.register_strategy(STRATEGY_EFFECTS['武力刷新'], (1, 1))
+    apply_on_merge_refresh_grant(gs, merges=2, frame='wear')
+    assert gs.free_refresh_left.value == 4, 'None 基 = 0 起算,2×2 = 4'
+    apply_on_merge_refresh_grant(gs, merges=1)
+    assert gs.free_refresh_left.value == 6, '累加:4 + 1×2 = 6'
+    assert gs.free_refresh_left.evidence == 'effect_on_merge', \
+        'frame 缺省 evidence 无 @ 后缀'
+
+
+def test_on_merge_card_bridges_noop() -> None:
+    """桥零扰动负向:仅持武力刷新的账本过 burst 桥/节点桥 →
+    free_refresh_left 零变化(两桥 payload 读面 = free_refresh_burst 与
+    per_node 族字段,本卡字段鸭子缺省 0 零授予——发放面全归合成事件腿,
+    无双发)。"""
+    gs = _seeded_gs()
+    gs.effects.register_strategy(STRATEGY_EFFECTS['武力刷新'], (1, 1))
+    apply_effect_burst_grant(gs, STRATEGY_EFFECTS['武力刷新'], frame='p1-r1')
+    assert gs.free_refresh_left.value is None, 'burst 桥零额度 no-op'
+    gs.effects.advance_node((1, 2))
+    grant_effect_node_refresh_balance(gs, frame='p1-r2')
+    assert gs.free_refresh_left.value is None, '节点桥零授予'
+
+
+def test_on_merge_grant_affix_isolated() -> None:
+    """词缀隔离:同触发面词缀条目(变宝为废,BATTLEFIELD 载体)在账时
+    发放腿零命中零写(名单钉卡非触发面匹配——断言保留,防未来合表后
+    字段过滤回归把 BATTLEFIELD 卷进经济发放)。"""
+    gs = _seeded_gs()
+    gs.effects.register_affix(AFFIX_EFFECT_SPECS['变宝为废'], (1, 1))
+    seq0 = gs.write_seq
+    apply_on_merge_refresh_grant(gs, merges=1, frame='wear')
+    assert gs.write_seq == seq0, '词缀条目零命中零写'
+
+
+def test_on_merge_assumption_keys_registered() -> None:
+    """披露键静态常量在册断言(两键全集:实机到账时点与数值真值 /
+    垃圾化分支是否照发;STRATEGY_SALVAGE_ASSUMPTION_KEYS 同形)。"""
+    assert STRATEGY_ON_MERGE_LIVE_UNVERIFIED == (
+        'strategy_on_merge_live_timing_and_value',
+        'strategy_on_merge_junked_still_grants',
+    )

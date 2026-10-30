@@ -1339,6 +1339,19 @@ def test_deposit_return_overlay_single_source_payload() -> None:
     assert STRATEGY_EFFECTS['存款回报'].duration.value == 'while_held'
 
 
+def test_force_refresh_overlay_single_source_payload() -> None:
+    """武力刷新 overlay 条目单一源锁:payload 引 STRATEGY_ECONOMY 同一
+    实例;触发/持续/类型 = ON_MERGE/WHILE_HELD/ECONOMY(策略源 ON_MERGE
+    首条,合成事件发放腿的账本匹配面);数值 = 2(卡面「获得2次刷新」)。
+    id 匹配由 import 期孤儿键/id 双查担,不重复锁。"""
+    assert STRATEGY_EFFECTS['武力刷新'].payload \
+        is STRATEGY_ECONOMY['武力刷新']
+    assert STRATEGY_EFFECTS['武力刷新'].trigger.value == 'on_merge'
+    assert STRATEGY_EFFECTS['武力刷新'].duration.value == 'while_held'
+    assert STRATEGY_EFFECTS['武力刷新'].category.value == 'economy'
+    assert STRATEGY_ECONOMY['武力刷新'].refresh_per_compose == 2
+
+
 def test_salvage_registration_surface() -> None:
     """打捞人才库登记面锁(BATTLEFIELD 载体 + SUPPLY_PHASE 触发首个在册
     条目 + pending 保守支;构建校验孤儿键/id 双匹配 import 期已过——
