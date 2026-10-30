@@ -167,6 +167,19 @@ def test_cash_per_node_interest_xp_channels():
     assert strategy_economy_value('买断制', _fresh_gs()) == (107.0, True)
 
 
+def test_streak_set_pending_classification_and_zero_value_drift():
+    """胜利,还是胜利 置位腿策略侧锁(T-96 设计 §4 锁 7):
+    ``streak_set`` ∈ ``_PENDING_MODELING_FIELDS``(置位金流变化轨迹依赖
+    未建模,import 期字段分类校验的硬义务面——显式断言防后人误移);
+    估值零漂移 = 现金分仍恰为 instant_gold=4 面值(置位腿不入任何通道
+    公式,新字段不进现金分)。"""
+    from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+        strategy_economy,
+    )
+    assert 'streak_set' in strategy_economy._PENDING_MODELING_FIELDS
+    assert strategy_economy_value('胜利,还是胜利', _fresh_gs()) == (4.0, True)
+
+
 def test_cash_schedule_truth_lookup():
     """剩余口径按节点序列场字段真值(None 回退默认表;修饰表进字段
     自适应;单一源 = statefn/horizon 门面场字段自算):

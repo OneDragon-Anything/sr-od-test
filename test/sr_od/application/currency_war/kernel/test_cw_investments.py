@@ -1387,3 +1387,16 @@ def test_gold_at_final_supply_in_engine_excluded_set() -> None:
     引擎通道使 is_economy_engine 对持卡局误判真)。"""
     assert 'gold_at_final_supply' \
         in cw_investments._ENGINE_CHANNEL_EXCLUDED_FIELDS
+
+
+def test_streak_set_registration_surface() -> None:
+    """胜利,还是胜利 注册面锁(T-96 设计 §4 锁 7):条目双字段并存
+    (streak_set=4 置位腿与 instant_gold=4 金腿不互斥,经济面零漂移);
+    ``streak_set`` ∈ ``_ENGINE_CHANNEL_EXCLUDED_FIELDS``(一次性状态
+    置位,非持续通道——「使当前连胜数变为N」选卡当场绝对赋值,防误入
+    引擎判定使 is_economy_engine 对持卡局误判真;尾款金字段同款防误移)。"""
+    eff = STRATEGY_ECONOMY['胜利,还是胜利']
+    assert eff.streak_set == 4 and eff.instant_gold == 4, \
+        f'双字段并存破: streak_set={eff.streak_set}, ' \
+        f'instant_gold={eff.instant_gold}'
+    assert 'streak_set' in cw_investments._ENGINE_CHANNEL_EXCLUDED_FIELDS
