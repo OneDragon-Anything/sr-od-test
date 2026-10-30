@@ -47,6 +47,9 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionCloseShopParam,
     CwActionSellBenchParam,
 )
+from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.priority import (
+    TIER7_BOND_NAMES,
+)
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
 )
@@ -79,6 +82,24 @@ def _clean_fillers(count: int, exclude: set[str], *, min_cost: int = 2
             continue
         out.append(n)
     assert len(out) >= count, f'测试前提:干净填充名不足({len(out)})'
+    return out
+
+
+def _same_cost_fillers(count: int, cost: int) -> list[str]:
+    """互异同费干净名(同档帧构取;注册表现查防漂移):费用恰 = cost
+    (同概率域同档,排序键仅差在手旗标)、非万金油/非档 7 羁绊——防
+    跨档(档 6/7 键小于档 8,会让「末位 = 新牌」退化成跨档结论)。"""
+    out: list[str] = []
+    for n, c in CHARACTERS.items():
+        if len(out) >= count:
+            break
+        if (c.cost or 0) != cost or n in CROSS_LINE_KEEP_NAMES:
+            continue
+        ch = CHARACTERS[n]
+        if (set(ch.factions) | set(ch.flows)) & TIER7_BOND_NAMES:
+            continue
+        out.append(n)
+    assert len(out) >= count, f'测试前提:同费干净名不足({len(out)})'
     return out
 
 
@@ -170,6 +191,31 @@ class TestAcquireSwapSixStep:
         assert not ct.get('acquire_swap_sell'), \
             '末位 = 新牌帧不得发出卖旧(拒绝语义)'
         assert any(r.card_name == '希儿'
+                   and r.blocked_by == 'priority_insufficient'
+                   for r in state_of(sess).shop_opportunities), \
+            f'优先级不足机会清单缺席: {state_of(sess).shop_opportunities}'
+
+    def test_same_tier_stock_card_declines_in_hand_priority(self):
+        """同档压库牌不换手帧(总纲 §2.10 第三断言:让位对象正确 =
+        在手优先维度生效):席满持牌与店内压库候选同费同星(全池落档 8
+        同概率域,排序键仅差在手旗标)→ 新牌 = 序列末位 → 放弃买入
+        (同优先级不换手,priority-model §4)。跨档拒绝由上一测试承载,
+        本帧把拒绝归因收窄到在手旗标单一维度——旗标缺失时等价牌群键
+        前缀全同,随机尾键会随机换手(卖旧买同档 = 纯损耗)。"""
+        junk = _same_cost_fillers(10, 1)
+        gs, sess, cfg = _frame(
+            bench=[(n, 1) for n in junk[:9]],
+            shop_cards=[(junk[9], 1, 1)],
+            gold=100)
+        act = decide_shop_action(gs, sess, cfg)
+        assert isinstance(act, CwActionCloseShopParam), f'非收工: {act!r}'
+        ct = state_of(sess).cw4_counters
+        assert ct.get('acquire_swap_declined', 0) >= 1
+        assert not ct.get('acquire_swap_sell'), \
+            '同档在手优先帧不得发出卖旧(不换手)'
+        assert not ct.get('acquire_swap_sell_rng_tail_hit'), \
+            '店牌已被在手旗标区分出等价牌群,随机尾键不参与末位判定'
+        assert any(r.card_name == junk[9]
                    and r.blocked_by == 'priority_insufficient'
                    for r in state_of(sess).shop_opportunities), \
             f'优先级不足机会清单缺席: {state_of(sess).shop_opportunities}'
