@@ -185,3 +185,60 @@ def test_pinned_names_cross_check_with_bridge(
     monkeypatch.setattr(obs, 'BENCH_ITEM_KINDS', drifted)
     with pytest.raises(ValueError, match='漂移'):
         obs._validate_pinned_names_match_bridge()
+
+
+# ============================================================ 观察构造器容量感知
+
+def test_bench_view_of_capacity_aware(monkeypatch) -> None:
+    """观察构造器容量感知(首批容量条目同批义务):capacity 入参 = 活跃
+    容量单一源(kernel active_capacity_limit,与容量逻辑态桥同源);容量 3
+    → 3 长槽表 capacity=3;容量外命中(槽号 > capacity)丢弃 + log 留证;
+    缺省路径恒 9 长(行为逐位不变,存量直调零改兼容)。"""
+    logs: list[str] = []
+    monkeypatch.setattr(obs.log, 'warning',
+                        lambda msg, *a: logs.append(msg % a if a else str(msg)))
+    hits = [(1, Unit(char_id='甲', star=1)),
+            (2, Unit(char_id='乙', star=1)),
+            (5, Unit(char_id='越容量', star=1))]
+    view = obs._bench_view_of(hits, {}, capacity=3)
+    assert view.capacity == 3 and len(view.slots) == 3, '槽表按活跃容量建'
+    assert [s.kind for s in view.slots] == ['unit', 'unit', 'empty'], \
+        '容量内命中落槽、容量外命中不落槽'
+    assert any('越界丢弃' in m for m in logs), '容量外命中丢弃留证'
+    view9 = obs._bench_view_of([(9, Unit(char_id='丙', star=1))], {})
+    assert view9.capacity == 9 and len(view9.slots) == 9, \
+        '缺省路径恒 9 长(逐位不变)'
+
+
+def test_bench_read_call_sites_follow_active_capacity(monkeypatch) -> None:
+    """双调用点全量接线(只改一处则另一路径残存 9 容量混合态):活跃容量 3
+    (ctx.cw_match.gs 在册容量条目)→ read_bench_view 与
+    read_bench_view_tiered 均直产 3 长 capacity=3 观察视图——观察覆盖
+    logic 容量值的缺陷形态不再存在。"""
+    from types import SimpleNamespace as _NS
+
+    from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        STRATEGY_EFFECTS,
+    )
+    from sr_od.application.currency_war.kernel.cw_strategy_session import (
+        StrategySession,
+    )
+
+    gs = game_state_of(StrategySession())
+    gs.effects.register_strategy(STRATEGY_EFFECTS['节省工位'],
+                                 acquired_key=(1, 1))
+    ctx = _NS(cw_match=_NS(gs=gs))
+    sent_hits = [(1, Unit(char_id='甲', star=1))]
+    monkeypatch.setattr(obs, 'identify_slots', lambda *a, **k: list(sent_hits))
+    monkeypatch.setattr(obs, 'identify_slots_tiered',
+                        lambda *a, **k: list(sent_hits))
+    monkeypatch.setattr(obs, '_ctx_slots', lambda _ctx, prefix, count: [])
+    monkeypatch.setattr(obs, '_summon_unknown_hook', lambda *a: None)
+    monkeypatch.setattr(obs, '_bench_item_kind_by_slot', lambda *a: {})
+    plain = obs.read_bench_view(ctx, object(), object())
+    tiered = obs.read_bench_view_tiered(_NS(), ctx, object(), object())
+    for view in (plain, tiered):
+        assert view.capacity == 3 and len(view.slots) == 3, \
+            '两路径均随活跃容量(观察/logic 同源)'
+        assert view.slots[0].kind == 'unit'

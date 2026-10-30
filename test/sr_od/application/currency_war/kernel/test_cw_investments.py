@@ -1455,3 +1455,61 @@ def test_team_hope_unit_buff_registration_surface() -> None:
     gs = game_state_of(SimpleNamespace())
     assert strategy_economy_value('全队的希望', gs) == (0.0, False), \
         '已注册名无 economy → 现金 fail-closed 0(战力类不进经济模型)'
+
+
+# ==================== 容量时限族(T-110 节省工位起,随批续建)====================
+
+def test_bench_capacity_registration_surface() -> None:
+    """节省工位 登记面锁:条目四元组 = CONDITIONAL/N_NODES/BATTLEFIELD(容量 =
+    备战/板面域,BattlefieldEffect↔BATTLEFIELD);duration_nodes = 3(卡面
+    「在接下来3个节点」);payload 双字段 = capacity_limit=3(容量桥声明契约)
+    + expiry_simple_equips=3(到期发放腿件数);duties 只 track(容量消费端
+    读容器派生,无预知/无姿态);pending=True 必带保守支 notes(「3 件」随机性
+    v0 未实采,家族判据「二义未实采不拍死」);id 双匹配过校验(import 期已
+    过——本测试存活即证,直调 = 复跑回归锚)。"""
+    spec = STRATEGY_EFFECTS['节省工位']
+    cw_investments._validate_strategy_effects()   # 构建校验复跑不炸
+    assert spec.id == '101901'
+    assert spec.name == '节省工位'
+    assert spec.trigger is TriggerKind.CONDITIONAL
+    assert spec.duration is DurationKind.N_NODES
+    assert spec.duration_nodes == 3
+    assert spec.category is EffectKind.BATTLEFIELD
+    assert isinstance(spec.payload, BattlefieldEffect)
+    assert spec.payload.capacity_limit == 3, '激活期容量(容量桥声明契约)'
+    assert spec.payload.expiry_simple_equips == 3, '到期简易装备件数'
+    assert (spec.duties.track, spec.duties.predict, spec.duties.respond) \
+        == (True, False, False), 'duties 只 track(余期追踪)'
+    assert spec.pending is True
+    for key in ('strategy_capacity_window_node_reading',
+                'strategy_expiry_grant_simple_pool_uniform',
+                'bench_capacity_shrink_overflow_unmodeled'):
+        assert key in (spec.notes or ''), f'pending 保守支须申报披露键 {key}'
+
+
+def test_strategy_effects_validator_drift_sentries_raise(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """构建校验两漂移哨照炸(2026-10-28 治理后现值只两查;坏例 = 版本漂移
+    形态非手抄笔误):①孤儿键(name ∉ base 注册表)②id 双匹配(spec.id ≠
+    plaza 溯源 id——改名且 id 仍在的漂移也炸)。坏例注入经 monkeypatch
+    setitem 桩面,import 期已跑过一遍现役全绿。"""
+    from sr_od.application.currency_war.kernel.cw_effect_inventory import (
+        EffectSpec,
+    )
+    orphan = EffectSpec(id='101901', name='不存在的卡X',
+                        trigger=TriggerKind.CONDITIONAL,
+                        duration=DurationKind.N_NODES,
+                        category=EffectKind.BATTLEFIELD,
+                        payload=BattlefieldEffect())
+    monkeypatch.setitem(STRATEGY_EFFECTS, '不存在的卡X', orphan)
+    with pytest.raises(ValueError, match='孤儿键'):
+        cw_investments._validate_strategy_effects()
+    monkeypatch.undo()
+    drifted = EffectSpec(id='101999', name='节省工位',
+                         trigger=TriggerKind.CONDITIONAL,
+                         duration=DurationKind.N_NODES,
+                         category=EffectKind.BATTLEFIELD,
+                         payload=BattlefieldEffect())
+    monkeypatch.setitem(STRATEGY_EFFECTS, '节省工位', drifted)
+    with pytest.raises(ValueError, match='id 漂移'):
+        cw_investments._validate_strategy_effects()

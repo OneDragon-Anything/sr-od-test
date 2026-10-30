@@ -30,10 +30,13 @@ from sr_od.application.currency_war.kernel.cw_affix_effects import (
 )
 from sr_od.application.currency_war.kernel.cw_effect_inventory import (
     BOARD_REWRITE_UPGRADE_ALL,
+    STRATEGY_CAPACITY_EXPIRY_ASSUMPTION_KEYS,
     STRATEGY_ON_MERGE_LIVE_UNVERIFIED,
     STRATEGY_SALVAGE_ASSUMPTION_KEYS,
+    ActiveEffect,
     ActiveEffectInventory,
     apply_board_rewrite,
+    apply_effect_expiry_grants,
     apply_on_merge_refresh_grant,
     check_strategy_supply_salvage,
     grant_bench_unit_cascade,
@@ -786,4 +789,107 @@ def test_on_merge_assumption_keys_registered() -> None:
     assert STRATEGY_ON_MERGE_LIVE_UNVERIFIED == (
         'strategy_on_merge_live_timing_and_value',
         'strategy_on_merge_junked_still_grants',
+    )
+
+
+# ============================================================ 到期发放腿(tick 到期段)
+
+def test_capacity_window_arithmetic_current_reading() -> None:
+    """窗口算术现值钉子(锁即申报现役读法):登记于 N、remaining=3 → 后继
+    1/2 次推进后存活(remaining 2→1),第 3 次推进拍移除+到期——advance_node
+    现役「后继 N 节点」读法(kernel 全族待实采旗,躺平同旗;实采证伪改守卫时
+    本锁随单点同改)。"""
+    inv = ActiveEffectInventory()
+    inv.register_strategy(STRATEGY_EFFECTS['节省工位'], acquired_key=(1, 1))
+    adv, expired = inv.advance_node((1, 2))
+    assert adv is True and expired == [], '后继 1 号节点存活(登记当节点不推进)'
+    assert inv.first('101901').remaining_nodes == 2
+    adv, expired = inv.advance_node((1, 3))
+    assert adv is True and expired == [], '后继 2 号节点存活'
+    assert inv.first('101901').remaining_nodes == 1
+    adv, expired = inv.advance_node((1, 4))
+    assert adv is True and [e.spec.name for e in expired] == ['节省工位'], \
+        '第 3 次推进拍移除+到期'
+    assert inv.first('101901') is None, '条目离场(到期发放一次性由构造保证)'
+
+
+def test_expiry_grant_leg_gains_three_simple_equips(monkeypatch) -> None:
+    """到期腿正锁(tick 集成形态——红验靶):节省工位选卡登记 → 三次节点
+    推进,前两拍存活零发放、容量桥同拍激活(bench 归一 capacity 3),第 3 拍
+    到期 → tick 到期腿逐件采样 → equips 恰 +3、全部 ∈ 简易池、rand 通道、
+    evidence ``strategy_grant_expiry:`` 前缀、归因 = EffectLedgerBridge
+    (journal 行 actor,Field 不存 producer——salvage 归因锁同形态);
+    第 4 拍到期列表空 → 零追加发放(构造性一次性,无重入面不设闩)。"""
+    from sr_od.application.currency_war.kernel.cw_effect_inventory import (
+        _EXPIRY_SIMPLE_EQUIP_POOL,
+    )
+    gs = _seeded_gs()
+    gs.effects.register_strategy(STRATEGY_EFFECTS['节省工位'],
+                                 acquired_key=(1, 1))
+    rows: list[dict] = []
+    monkeypatch.setattr(gs_mod, '_STATE_JOURNAL_SINK', rows.append)
+    monkeypatch.setattr(gs_mod, '_RUN_ID_PROVIDER', lambda: 'test-run')
+    gs.node_hist_pos = (1, 2)
+    tick_effect_boundary(gs)
+    assert gs.equips.value == [], '未到期零发放'
+    assert gs.bench.value.capacity == 3, '同拍容量桥激活(容量窗全链)'
+    gs.node_hist_pos = (1, 3)
+    tick_effect_boundary(gs)
+    assert gs.equips.value == [], '后继 2 号节点仍零发放'
+    gs.node_hist_pos = (1, 4)
+    tick_effect_boundary(gs)
+    equips = gs.equips.value
+    assert len(equips) == 3, '到期拍恰 +3(卡面「获得3件简易装备」)'
+    assert all(n in _EXPIRY_SIMPLE_EQUIP_POOL for n in equips), \
+        '发放物 ∈ 简易池(断言按成员资格非具名——内容 = v0 假设)'
+    assert gs.equips.source == 'logic_rand', '随机态通道写入'
+    assert gs.equips.evidence.startswith('strategy_grant_expiry:'), \
+        'evidence 前缀(校准归组面)'
+    equip_rows = [r for r in rows
+                  if r['row'] == 'write' and r['field'] == 'equips']
+    assert len(equip_rows) == 3, '发放写行恰 3(journal)'
+    assert all(r['sig']['actor'] == 'EffectLedgerBridge'
+               for r in equip_rows), \
+        f'归因 = EffectLedgerBridge: {[r["sig"]["actor"] for r in equip_rows]}'
+    seq = gs.write_seq
+    gs.node_hist_pos = (1, 5)
+    tick_effect_boundary(gs)
+    assert gs.write_seq == seq and len(gs.equips.value) == 3, \
+        '第 4 拍零追加(条目已离场,到期列表构造性至多一次)'
+
+
+def test_expiry_grant_bridge_negative_and_rng_injection() -> None:
+    """桥函数负向 + rng 注入:①无字段条目到期(躺平,payload 无
+    expiry_simple_equips → 鸭子 0)零写;②rng 注入形参同 seed 双容器发放
+    序列逐位一致(可控源——断言按序列一致非具名,内容 = v0 假设)。"""
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    inv = gs.effects
+    inv.register_strategy(STRATEGY_EFFECTS['躺平'], acquired_key=(1, 1))
+    inv.advance_node((1, 2))
+    inv.advance_node((1, 3))
+    _adv, expired = inv.advance_node((1, 4))
+    assert [e.spec.name for e in expired] == ['躺平'], '前置:躺平到期入列'
+    seq0 = gs.write_seq
+    apply_effect_expiry_grants(gs, expired, frame='probe')
+    assert gs.write_seq == seq0, '无字段条目到期零写(鸭子缺省 0)'
+    # rng 注入:同 seed 双容器序列一致
+    runs = []
+    for _ in range(2):
+        g = _seeded_gs()
+        fake = ActiveEffect(spec=STRATEGY_EFFECTS['节省工位'],
+                            source='strategy', acquired_key=(1, 1),
+                            remaining_nodes=0, remaining_uses=None)
+        apply_effect_expiry_grants(g, [fake], frame='t', rng=random.Random(7))
+        runs.append(list(g.equips.value))
+    assert runs[0] == runs[1] and len(runs[0]) == 3, \
+        'rng 注入同 seed → 发放序列逐位一致(可控源)'
+
+
+def test_capacity_expiry_assumption_keys_registered() -> None:
+    """披露键静态常量在册断言(三键全集:窗口读法待实采旗/到期发放随机性
+    v0/进窗占席压缩未建模;STRATEGY_SALVAGE_ASSUMPTION_KEYS 同形)。"""
+    assert STRATEGY_CAPACITY_EXPIRY_ASSUMPTION_KEYS == (
+        'strategy_capacity_window_node_reading',
+        'strategy_expiry_grant_simple_pool_uniform',
+        'bench_capacity_shrink_overflow_unmodeled',
     )

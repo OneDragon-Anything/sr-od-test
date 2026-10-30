@@ -1479,10 +1479,14 @@ def test_reinforcement_charter_not_in_named_grants() -> None:
 
 def test_random_simple_equip_sampler_pool_and_ore_pool_lock() -> None:
     """采样纯函数锁:固定种子返回名 ∈ 本模块池且种子可复现;池 = 简易
-    类别全集字母序(注册表现算,禁手抄清单);池与晶矿 _SIMPLE_EQUIP_POOL
-    同集断言(互指语义锁——两池独立定义,口径漂移唯此测试可暴露)。"""
+    类别全集字母序(注册表现算,禁手抄清单);池与晶矿 _SIMPLE_EQUIP_POOL、
+    到期发放腿 _EXPIRY_SIMPLE_EQUIP_POOL 同集断言(互指语义锁——三池独立
+    定义,口径漂移唯此测试可暴露)。"""
     from sr_od.application.currency_war.data.cw_equipment_data import (
         EQUIPMENTS,
+    )
+    from sr_od.application.currency_war.kernel.cw_effect_inventory import (
+        _EXPIRY_SIMPLE_EQUIP_POOL,
     )
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
         _RANDOM_SIMPLE_EQUIP_POOL,
@@ -1496,6 +1500,8 @@ def test_random_simple_equip_sampler_pool_and_ore_pool_lock() -> None:
     assert expected == _RANDOM_SIMPLE_EQUIP_POOL, '池 = 简易类别全集字母序'
     assert set(_RANDOM_SIMPLE_EQUIP_POOL) == set(_SIMPLE_EQUIP_POOL), \
         '与晶矿简易池同集(互指语义锁)'
+    assert set(_RANDOM_SIMPLE_EQUIP_POOL) == set(_EXPIRY_SIMPLE_EQUIP_POOL), \
+        '与到期发放腿简易池同集(三池互指语义锁)'
     names = [roll_random_simple_equip(random.Random(7)) for _ in range(8)]
     assert all(n in _RANDOM_SIMPLE_EQUIP_POOL for n in names), '采样值域 ⊆ 池'
     assert names == [roll_random_simple_equip(random.Random(7))

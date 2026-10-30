@@ -78,12 +78,14 @@ def _session_with(comp):
 
 def test_e_rounds_rolls_follow_bench_capacity():
     """capacity 8(空位 2)vs 9(空位 3):affordable 充裕帧 rolls = 空位
-    数,E_rounds 闭式比值 = 4/3(同 comp 同帧面,唯 bench capacity 差)。"""
+    数,E_rounds 闭式比值 = 4/3(同 comp 同帧面,唯 bench capacity 差)。
+    容量 3 帧复跑(容量时限族首例建模后的存量跟随锁扩面:2 占席 → 空位 1,
+    e3/e9 = (1+3)/(1+1) = 2.0)——派生口对任意容量档跟随,非只 8/9 两档。"""
     comp = _pair_comp()
     names = _filler_names(6)
     sess = _session_with(comp)
 
-    def _e(capacity: int) -> float:
+    def _e(capacity: int, occupied: int) -> float:
         gs = game_state_of(sess)
         gs.write_logic(gs.node,
                        NodeKey(plane=1, round_num=2, kind='prep'),
@@ -91,14 +93,14 @@ def test_e_rounds_rolls_follow_bench_capacity():
         gs.write_logic(gs.level, 5, produced_by='t17', sig=_SIG)
         gs.write_logic(gs.gold, 100000, produced_by='t17', sig=_SIG)
         gs.write_logic(gs.bench,
-                       _slots([(n, 1) for n in names], capacity),
+                       _slots([(n, 1) for n in names[:occupied]], capacity),
                        produced_by='t17', sig=_SIG)
         return e_rounds(comp, gs)
 
-    e8, e9 = _e(8), _e(9)
-    assert math.isfinite(e8) and math.isfinite(e9), '测试前提:双帧 E 有限'
+    e8, e9, e3 = _e(8, 6), _e(9, 6), _e(3, 2)
+    assert math.isfinite(e8) and math.isfinite(e9) and math.isfinite(e3), \
+        '测试前提:三帧 E 有限'
     assert abs(e8 / e9 - 4.0 / 3.0) < 1e-6, \
         f'席空数未跟随 capacity(E8/E9={e8 / e9!r},期望 4/3)'
-
-
-# ===== 测试 2:proof c_sat 席位压力项跟随 capacity =====
+    assert abs(e3 / e9 - 2.0) < 1e-6, \
+        f'容量 3 帧未跟随(E3/E9={e3 / e9!r},期望 2.0——容量时限族首例扩面)'

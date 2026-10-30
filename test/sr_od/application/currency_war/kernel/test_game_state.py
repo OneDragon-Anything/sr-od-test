@@ -1053,9 +1053,9 @@ def test_deposit_return_none_conditional_zero_grant() -> None:
 def test_capacity_projection_activates_and_recovers() -> None:
     """桥·容量投影(§3.2.5):在册容量声明 payload.capacity_limit=3 → bench
     容量投影 3;条目到期移除 → 回默认 9;bench 未观察(None)= 无容器跳过;
-    零声明条目 → 恒默认 9(幂等,当前注册表活载体为零,行为与接线前
-    逐位一致)。声明契约 = payload 鸭子属性 capacity_limit(注册表建模批
-    候选,§5.2 缺口;测试以鸭子桩承载声明,机制先于数据)。"""
+    零声明条目 → 恒默认 9(幂等)。声明契约 = payload 鸭子属性
+    capacity_limit(机制先于数据,鸭子桩承载)。槽表归一(容量条目入册同批
+    义务):9 长全尾空表随投影截断到容量长(容量外全空 = 无损)。"""
     from types import SimpleNamespace as _NS
 
     from sr_od.application.currency_war.kernel.cw_effect_inventory import (
@@ -1076,12 +1076,13 @@ def test_capacity_projection_activates_and_recovers() -> None:
         duration_nodes=2), acquired_key=(1, 5))
     project_effect_capacity(gs)
     assert gs.bench.value is None, 'bench 未观察 = 无容器,不造帧'
-    # 观察(默认容量 9)→ 投影 3
+    # 观察(默认容量 9)→ 投影 3,槽表随尾空截断归一到 3 长
     slots = [BenchSlot(kind='unit')] + [BenchSlot(kind='empty')] * 8
     gs.observe(gs.bench, BenchView(slots=slots, capacity=BENCH_CAPACITY_DEFAULT), sig=_sig())
     project_effect_capacity(gs)
     assert gs.bench.value.capacity == 3, '激活期容量 = 声明值'
-    assert gs.bench.value.slots[0].kind == 'unit', '槽位表原样保留'
+    assert len(gs.bench.value.slots) == 3, '槽表尾空截断归一(9 长全尾空 → 3)'
+    assert gs.bench.value.slots[0].kind == 'unit', '容量内槽位无损保留'
     assert gs.bench.source == 'logic' \
         and gs.bench.evidence == 'capacity_project'
     # 条目到期(N_NODES=2,两次推进)→ 移除后投影回默认 9
@@ -1090,6 +1091,81 @@ def test_capacity_projection_activates_and_recovers() -> None:
     project_effect_capacity(gs)
     assert gs.bench.value.capacity == BENCH_CAPACITY_DEFAULT == 9, \
         '到期自动回 9(§3.2.5)'
+
+
+def test_capacity_projection_slot_overflow_keeps_truth(monkeypatch) -> None:
+    """槽表归一边界(进窗占席 >3 判据,裁决点 4 默认案钉子):容量外存在
+    占席槽 → **不截断**(禁丢真值)+ log 缺陷级留证 + 容量字段照写;容量外
+    真值下毒由拒落兜底防(bench_place 按表长,不读 capacity)。"""
+    from types import SimpleNamespace as _NS
+
+    from sr_od.application.currency_war.kernel.cw_effect_inventory import (
+        DurationKind,
+        DutyFlags,
+        EffectKind,
+        EffectSpec,
+        TriggerKind,
+    )
+
+    logs: list[str] = []
+    monkeypatch.setattr(gs_mod.log, 'warning',
+                        lambda msg, *a: logs.append(msg % a if a else str(msg)))
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    gs.effects.register_strategy(EffectSpec(
+        id='test_cap2', name='容量测试桩2', trigger=TriggerKind.CONDITIONAL,
+        duration=DurationKind.N_NODES, category=EffectKind.ECONOMY,
+        payload=_NS(capacity_limit=3), duties=DutyFlags(track=True),
+        duration_nodes=2), acquired_key=(1, 5))
+    slots = ([BenchSlot(kind='empty')] * 4
+             + [BenchSlot(kind='unit', unit=Unit(char_id='花火', star=1))]
+             + [BenchSlot(kind='empty')] * 4)
+    gs.observe(gs.bench, BenchView(slots=slots,
+                                   capacity=BENCH_CAPACITY_DEFAULT),
+               sig=_sig())
+    project_effect_capacity(gs)
+    view = gs.bench.value
+    assert view.capacity == 3, '容量字段照写(激活期 = 声明值)'
+    assert len(view.slots) == 9, '容量外有占席 → 不截断(禁丢真值)'
+    assert view.slots[4].kind == 'unit', '容量外占席槽位原样保留'
+    assert any('容量外占席' in m for m in logs), '缺陷级留证(log)'
+
+
+def test_capacity_projection_multi_entry_min_and_noop() -> None:
+    """limits 推导单一源(active_capacity_limit):两条目在册取 min(叠加
+    收紧向);零条目 + 表已归一 → 全视图相等零写(no-op 逐位,防回归
+    冗余行)。"""
+    from types import SimpleNamespace as _NS
+
+    from sr_od.application.currency_war.kernel.cw_effect_inventory import (
+        DurationKind,
+        DutyFlags,
+        EffectKind,
+        EffectSpec,
+        TriggerKind,
+    )
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        active_capacity_limit,
+    )
+
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    assert active_capacity_limit(gs) == BENCH_CAPACITY_DEFAULT, \
+        '零条目 = 默认 9'
+    gs.effects.register_strategy(EffectSpec(
+        id='test_cap3', name='容量测试桩3', trigger=TriggerKind.CONDITIONAL,
+        duration=DurationKind.N_NODES, category=EffectKind.ECONOMY,
+        payload=_NS(capacity_limit=5), duties=DutyFlags(track=True),
+        duration_nodes=9), acquired_key=(1, 5))
+    gs.effects.register_strategy(EffectSpec(
+        id='test_cap4', name='容量测试桩4', trigger=TriggerKind.CONDITIONAL,
+        duration=DurationKind.N_NODES, category=EffectKind.ECONOMY,
+        payload=_NS(capacity_limit=3), duties=DutyFlags(track=True),
+        duration_nodes=9), acquired_key=(1, 5))
+    assert active_capacity_limit(gs) == 3, '多声明取 min(叠加收紧向)'
+    slots = [BenchSlot(kind='empty')] * 3
+    gs.observe(gs.bench, BenchView(slots=slots, capacity=3), sig=_sig())
+    seq = gs.write_seq
+    project_effect_capacity(gs)
+    assert gs.write_seq == seq, '表已归一(3 长 capacity 3)→ 全视图相等零写'
 
 
 def test_consume_use_decrements_removes_and_tolerates_missing() -> None:
