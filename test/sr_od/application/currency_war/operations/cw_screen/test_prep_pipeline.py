@@ -274,6 +274,13 @@ class TestStep0SelfRescue:
         assert len(sells) == 1
         assert sells[0].reason == 'self_rescue_sell'
         assert sells[0].bench_idx == 0, '价值最低散件让位,线内件置末层'
+        # 取用观测键(统一让位优先级迭代 3.5;键表 = telemetry/schema.py
+        # 键表节):c0/c1/c2 = 注册表外测试名(实费缺读按中费 3 保守估,
+        # 非成员非羁绊)= 同键等价牌群 → 档 8 档位分布落账 ∧ 随机尾键
+        # 命中落账(取用件在等价群内由尾键定序,命中哨兵语义)。
+        ct = state_of(sess).cw4_counters
+        assert ct.get('self_rescue_sell_tier_8') == 1
+        assert ct.get('self_rescue_sell_rng_tail_hit') == 1
 
     def test_state3_full_pool_exemptions_reach_line_member(self):
         """真全量豁免测试:候选只剩线内核心件(常规面恒拒)时自救仍可卖

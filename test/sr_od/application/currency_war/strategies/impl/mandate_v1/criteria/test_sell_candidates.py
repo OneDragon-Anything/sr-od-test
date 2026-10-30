@@ -207,6 +207,41 @@ class TestUnifiedSequence:
             '档 8 → 档 7(让位序 = 优先级降序)'
 
 
+# ===== 取用观测载荷(统一让位优先级迭代 3.5;acquisition §6)=====
+
+
+class TestTakeObservationPayload:
+    """候选行观测载荷(tier/rng_tail_hit):取用观测键(档位分布/随机
+    尾键命中)的数据源,键表 = telemetry/schema.py 键表节;判据零消费
+    ——载荷失真只伤观测不伤行为,但键值 = sort_key 输出须逐位同源。"""
+
+    def test_tier_attached_distinct_keys_no_tail_hit(self):
+        """档位分量随键回填:让位序首位 = 档 8 干净件(万敌),末位 =
+        成员持有件(瓦尔特,need 1 已持有未到两星 = 档 5);全池键互异
+        → 随机尾键命中恒假(命中判定域 = 排序池,等价牌群才可能撞键)。"""
+        sess, gs = _board_full_gs([cw4_bc('万敌'), cw4_bc('瓦尔特')],
+                                  gold=49)
+        state_of(gs).line_candidates = ('列车同行',)
+        cands, why = evaluate_sell_candidates(gs, 'ore_make_room')
+        assert why == ''
+        assert [(c.char_id, c.tier) for c in cands] == \
+            [('万敌', 8), ('瓦尔特', 5)]
+        assert not any(c.rng_tail_hit for c in cands)
+
+    def test_tail_hit_true_within_equivalent_group(self):
+        """随机尾键命中 = 全部子键同(仅随机尾键可分)的等价牌群内部
+        定序实际生效:万敌/远坂凛 = 注册表 1 费档 8 干净件(同费同星
+        同档 → 键除尾全同;异名不触合成素材守卫)→ 池内键去尾互撞,
+        取用件命中为真(命中哨兵语义,非等价件命中 = 键构造异常)。"""
+        sess, gs = _board_full_gs([cw4_bc('万敌'), cw4_bc('远坂凛')],
+                                  gold=49)
+        cands, why = evaluate_sell_candidates(gs, 'ore_make_room')
+        assert why == ''
+        assert len(cands) == 2
+        assert all(c.tier == 8 for c in cands)
+        assert all(c.rng_tail_hit for c in cands)
+
+
 # ===== 跨档止盈(节末凑息场景参数;design §2.4 保留行)=====
 
 

@@ -139,6 +139,13 @@ class TestAcquireSwapSixStep:
             f'让位件非存量杂件: {act.expect!r}'
         ct = state_of(sess).cw4_counters
         assert ct.get('acquire_swap_sell') == 1
+        # 取用观测键(统一让位优先级迭代 3.5;键表 = telemetry/schema.py
+        # 键表节):档位分布恰一落账(尾牌 = 干净杂件,档 7/8 由注册表
+        # 羁绊归属定——断言计数和,不钉死注册表事实的档号);键互异帧
+        # 随机尾键命中不落账。
+        assert sum(v for k, v in ct.items()
+                   if k.startswith('acquire_swap_sell_tier_')) == 1
+        assert not ct.get('acquire_swap_sell_rng_tail_hit')
         assert not ct.get('acquire_swap_declined')
 
     def test_tail_is_new_card_declines_buy(self):
