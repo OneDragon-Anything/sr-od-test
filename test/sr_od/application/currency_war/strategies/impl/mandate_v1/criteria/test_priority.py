@@ -26,6 +26,8 @@ from test.sr_od.application.currency_war._cw_helpers import (
     cw4_session,
 )
 
+from sr_od.application.currency_war.data.cw_chars import get_char
+from sr_od.application.currency_war.data.cw_shop_odds import refresh_prob
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
 from sr_od.application.currency_war.kernel.cw_game_state import Unit
 from sr_od.application.currency_war.kernel.cw_intention import (
@@ -195,17 +197,22 @@ def test_tier_keys_and_sell_direction() -> None:
     k4_1 = sort_key(HeldUnit(_HUANG, 1, 0, False), ctx_t4)
     k4_2 = sort_key(HeldUnit(_HUANG, 2, 1, False), ctx_t4)
     assert k4_2 < k4_1 and k4_1[0] == 4
-    # 档 8 概率分档:概率高者先卖(Lv7 3 费 0.40 > 4 费 0.10)。
+    # 档 8 概率分档:概率高者先卖(Lv7 3 费 vs 4 费,期望值 = 概率表现查)。
     ctx_t8 = _ctx(level=7, copies={_JING: [1], _BO: [1]})
     k_jing = sort_key(HeldUnit(_JING, 1, 0, False), ctx_t8)
     k_bo = sort_key(HeldUnit(_BO, 1, 1, False), ctx_t8)
-    assert k_jing[0] == 8 and k_jing[1] == 0.40 and k_bo[1] == 0.10
+    assert k_jing[0] == 8
+    assert k_jing[1] == refresh_prob(7, get_char(_JING).cost)
+    assert k_bo[1] == refresh_prob(7, get_char(_BO).cost)
     assert k_jing > k_bo, '3 费(高概率)先卖'
-    # 档 8 概率同值并入同档 + 低费先卖稳定序(Lv4 4/5 费概率全 0)。
+    # 档 8 概率同值并入同档 + 低费先卖稳定序(Lv4 4/5 费概率同值,
+    # 同值前提 = 概率表现查,版本随表自动传导)。
     ctx_tie = _ctx(level=4, copies={_BO: [1], _LIU: [1]})
     k4c = sort_key(HeldUnit(_BO, 1, 0, False), ctx_tie)
     k5c = sort_key(HeldUnit(_LIU, 1, 1, False), ctx_tie)
-    assert k4c[1] == k5c[1] == 0.0, '概率同值并入同档'
+    assert refresh_prob(4, get_char(_BO).cost) \
+        == refresh_prob(4, get_char(_LIU).cost), '撞值前提(注册表现查)'
+    assert k4c[1] == k5c[1], '概率同值并入同档'
     assert k4c[2] == -4 and k5c[2] == -5 and k4c > k5c, '低费先卖'
     # 档 8 星级键(同费用):高星后卖。
     ctx_star = _ctx(level=7, copies={_TING: [1, 2]})
@@ -283,13 +290,17 @@ def test_locked_frame_need_star_from_unfinished_targets() -> None:
         session, gs, deployed_names=frozenset({_TING}))
     assert ctx.line_view.locked and _SABER in ctx.line_view.members
     # 表 = unfinished_star_targets 全量输出(未达标成员,含未持的
-    # need=1 行——判定端 need ≥ 2 门使该行惰性,档 3/5 语义不变)。
-    assert ctx.need_star_by_member.get(_SABER) == 3
-    assert ctx.need_star_by_member.get(_GIL) == 1
+    # need=1 行——判定端 need ≥ 2 门使该行惰性,档 3/5 语义不变;
+    # 期望值 = 锁定线知识卡 need_star 注册表现查)。
+    _comp = get_comp('双王圣杯')
+    assert ctx.need_star_by_member.get(_SABER) == _comp.need_star[_SABER]
+    assert ctx.need_star_by_member.get(_GIL) == _comp.need_star.get(_GIL, 1)
     # 升星目标 = 未完成目标中费用档最低者(现读单一源 stay_target_of
-    # 的多目标停留顺序;未持的藿藿 1 费先于 Saber 3 费)。
+    # 的多目标停留顺序;未持的 1 费辅助先于 3 费 Saber——目标名 =
+    # 探测记录,实费档 = 注册表现查)。
     assert ctx.stay_target is not None and ctx.stay_target[0] == '藿藿'
-    assert ctx.stay_target[2] == 1, '实费档 resolved 口径'
+    assert ctx.stay_target[2] == get_char('藿藿').cost, \
+        '实费档 resolved 口径'
     # 锁定帧名单 = 锁定线成员(经 line_view 承载;候选快照字段照读口
     # 真值冻结为空集——锁定写入连带清空停算),配方支空集。
     assert _GIL in ctx.member_rank
@@ -315,9 +326,11 @@ def test_unlocked_frame_candidates_union_and_recipe_members() -> None:
     ctx = assemble_priority_context(
         session, gs, deployed_names=frozenset())
     assert not ctx.line_view.locked
-    # 候选两线的 need_star 跨线取最大:花火 ∈ 列车同行(2)∧ 火金星间
-    # 旅人(3)→ 3(注册表现查,探测记录 = 2026-10-29 注册表扫描)。
-    assert ctx.need_star_by_member.get(_HUA) == 3
+    # 候选两线的 need_star 跨线取最大:花火 ∈ 列车同行 ∧ 火金星间
+    # 旅人,期望 = 命中各线知识卡取最大(规则现算,值 = 注册表现查)。
+    expected_hua = max(get_comp('列车同行').need_star[_HUA],
+                       get_comp('火花星间旅人').need_star[_HUA])
+    assert ctx.need_star_by_member.get(_HUA) == expected_hua
     # 过渡配方对成员并入名单(配方支)。
     assert ctx.recipe_members, 'P1 配方对成员非空'
     union = ctx.candidate_members | ctx.recipe_members

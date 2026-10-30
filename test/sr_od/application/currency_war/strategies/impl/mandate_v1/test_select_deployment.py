@@ -182,3 +182,44 @@ def test_step5_capfull_swap_first_pair_unchanged() -> None:
     front, _back = deployed_rows_of(gs)
     assert front[out[0].action.deployed_idx].char_id == '停云', \
         '首对 victim = 组贪心字典序首(现行发射序不变)'
+
+
+def _locked_session(comp_name: str) -> tuple:
+    """终局锁定 session 桩(target_comp 直种 + ist 分支① + seam 开闸;
+    装配源 = test_emit_swap_bond_gate 同款)。"""
+    from sr_od.application.currency_war.kernel.cw_comps import get_comp
+    session = cw4_session(get_comp(comp_name))
+    st = state_of(session)
+    st.v3_intention = IntentionState(locked_comp=comp_name)
+    st.cw4_m1p_seam_verified = True
+    st.cw4_counters = {}
+    return session, st
+
+
+def test_same_name_starup_pair_not_swallowed() -> None:
+    """同名升星对不被名集目标态吞没(对抗审查实锤形态的回归锁)。
+
+    板满帧换出换入同名不同星(吉尔伽美什 1★ 在板 ↔ 2★ 在 bench,
+    kernel bond_gate star 分支一等设计通道):select_deployment 的
+    名集目标态对该形状恒 == 现板(名集相等、星级不等)——_step5_deploy
+    的定型判定不得据此早退,板满帧一律落现行 M1″ 发射器:首动作 =
+    同名低星 victim 的 SellDeployed,2★ 由下帧 M1 空槽补位接管。"""
+    session, st = _locked_session('双王圣杯')
+    gs = cw4_gs(session, deploy_cap=3, level=3,
+                bench=[cw4_bc('吉尔伽美什', star=2)],
+                front_row=[Unit(char_id='吉尔伽美什', star=1),
+                           Unit(char_id='Saber', star=2),
+                           Unit(char_id='符玄', star=2)])
+    frame = _frame(gs)
+    target = select_deployment(frame, assemble_prep_context(
+        session, gs, frame))
+    current = {d.char_id for d in frame.deployed
+               if d is not None and d.char_id}
+    assert target == current, '名集目标态对同名升星对形状不敏感(契约口径)'
+    out = entry._step5_deploy(session, gs, frame, [])
+    assert out and isinstance(out[0].action, CwActionSellDeployedParam), \
+        f'同名升星对照旧发射(不定型早退),实得 {out}'
+    front, _back = deployed_rows_of(gs)
+    victim = front[out[0].action.deployed_idx]
+    assert victim.char_id == '吉尔伽美什' and (victim.star or 1) == 1, \
+        'victim = 板上同名低星件(star 分支换血)'
