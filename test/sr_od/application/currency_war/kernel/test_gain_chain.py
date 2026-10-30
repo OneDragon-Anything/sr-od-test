@@ -62,7 +62,11 @@ from sr_od.application.currency_war.kernel.cw_economy import (
     sell_refund,
 )
 from sr_od.application.currency_war.kernel.cw_effect_inventory import (
+    BENCH_REROLL_RIGHT3,
     SOURCE_STRATEGY,
+    DurationKind,
+    EffectKind,
+    TriggerKind,
     apply_board_rewrite,
 )
 from sr_od.application.currency_war.kernel.cw_gain_chain import (
@@ -1206,6 +1210,48 @@ def test_gain_invest_strategy_team_hope_unit_buff_zero_response() -> None:
     gain_invest_strategy(gs2, None, '全队的希望', rand=False, sig=_lsig())
     assert gs2.active_strategies.value == ['全队的希望'], '注册照常'
     assert gs2.effects.by_source(SOURCE_STRATEGY) == [], 'session=None 跳过'
+
+
+def test_gain_invest_strategy_bench_reroll_register_shape() -> None:
+    """公司人才流动 登记形态锁(T-112,bench_reroll 族模式卡):session 选入 →
+    账本条目形态 = NODE_ENTER / WHILE_HELD / BATTLEFIELD +
+    payload.bench_reroll 词表值(防裸串漂移与载体误配)+ duties.track 置位
+    (账本可见性,无 predict/respond 消费面)。经济面 instant_gold=2 选卡
+    当场 = STRATEGY_ECONOMY 在册零动,不属本锁辖域。"""
+    gs = _make_gs(bench=[], equips=[])
+    gain_invest_strategy(gs, object(), '公司人才流动', rand=False, sig=_lsig())
+    assert gs.active_strategies.value == ['公司人才流动'], '注册入表'
+    entry = gs.effects.first('102101')
+    assert entry is not None, '账本登记非空'
+    spec = entry.spec
+    assert spec.trigger == TriggerKind.NODE_ENTER, '触发 = 节点进入'
+    assert spec.duration == DurationKind.WHILE_HELD, '持续期 = 持有绑定'
+    assert spec.category == EffectKind.BATTLEFIELD, '类别 = 战场改变'
+    assert spec.payload.bench_reroll == BENCH_REROLL_RIGHT3, \
+        '词表值单一源(禁裸串漂移)'
+    assert spec.duties.track, 'duties.track 置位'
+
+
+def test_gain_invest_strategy_bench_reroll_bridges_noop() -> None:
+    """公司人才流动 随机面零执行端负断言锁(T-112;限定当前 spec 形态 =
+    NODE_ENTER / WHILE_HELD / BATTLEFIELD + bench_reroll-only payload):
+    三桥逐一调全 no-op——burst 桥零 Field 行 / 板面重写桥返回 None /
+    节点边界桥免费余额零增。桥 no-op 本质 = 桥 docstring 契约(payload 无
+    对应字段或缺省零,先例 = test_effect_inventory 板面重写 None 断言),
+    本锁增量 = 本条目形态哨;族扩展批(乱成一锅粥/+)若合法给 bench_reroll
+    接执行桥,须随批改本锁。"""
+    gs = _make_gs(bench=[], equips=[])
+    gain_invest_strategy(gs, object(), '公司人才流动', rand=False, sig=_lsig())
+    spec = gs.effects.first('102101').spec
+    seq_after_gain = gs.write_seq
+    apply_effect_burst_grant(gs, spec)
+    assert gs.free_refresh_left.value is None \
+        and gs.write_seq == seq_after_gain, 'burst 桥 no-op(零 Field 行)'
+    assert apply_board_rewrite(gs, spec) is None, '板面重写桥 no-op'
+    assert gs.write_seq == seq_after_gain, '板面重写桥零写'
+    grant_effect_node_refresh_balance(gs)
+    assert gs.free_refresh_left.value is None \
+        and gs.write_seq == seq_after_gain, '节点边界桥零授予(免费余额零增)'
 
 
 def test_gain_invest_strategy_xp_instant_live_zero_write() -> None:
