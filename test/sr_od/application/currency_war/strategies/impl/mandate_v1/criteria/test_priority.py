@@ -14,7 +14,10 @@ priority/details/priority-model.md`` §1-§5(总纲 = 同目录 design.md §2.1)
 - sell_order 取用形态(升序 = 从最不该卖到最先让路,末位最先让路);
 - PriorityContext 生产装配(锁定帧 need_star 表源 = unfinished_star_
   targets / 未锁帧 = 候选三线并集 + need_star 跨线取最大 + 过渡配方
-  成员回落 opening_recipe_comp)。
+  成员回落 opening_recipe_comp);
+- member_rank 装配切换回归(3.3 阵容内优先级字段迁移):知识卡
+  ``member_priority`` 字段直读 + 空表回退两档派生、跨线取最高、配方
+  成员低优先级、迁移前后序数表逐成员等价(档内排序不变性)。
 """
 from __future__ import annotations
 
@@ -357,5 +360,111 @@ def test_unlocked_frame_candidates_union_and_recipe_members() -> None:
     # 序数:候选 core 高优先级、候选 shared 低优先级、配方成员统一低档。
     assert ctx.member_rank.get(_HUA) == 0, '花火 = 火金星间旅人 core'
     assert ctx.member_rank.get('银狼') == 1, '银狼 = 候选 shared'
-    recipe_core = next(iter(ctx.recipe_members))
-    assert ctx.member_rank.get(recipe_core, 1) == 1, '配方成员统一低档'
+    # 配方成员统一低档:取纯配方支(候选 ∩ 配方交集成员按候选线字段
+    # 取值——花火类交集 core 为 0 是合法形态);旧写法 next(iter(
+    # recipe_members)) 受 PYTHONHASHSEED 迭代序影响,交集成员命中
+    # 首元素时假红(实证 seed=24),集合差取样按断言本意收窄。
+    recipe_only = ctx.recipe_members - ctx.candidate_members
+    assert recipe_only, '纯配方支非空'
+    assert all(ctx.member_rank.get(n, 1) == 1 for n in recipe_only), \
+        '配方成员统一低档'
+
+
+def test_member_rank_field_direct_read_cross_line_highest() -> None:
+    """装配·字段直读 + 跨线取最高(priority-model §3 档 2 ①键取值规则):
+    序数表 = 各候选线知识卡 ``member_priority`` 字段直读合成,跨线成员
+    取各线最小序数(序数小 = 优先级高,core 优先于非 core)。
+
+    判别例(注册表现查):符玄 = 双王圣杯 core(0) ∧ 火花星间旅人
+    shared(1) → 取 0;银狼仅火花单线 shared → 维持 1(非 core 不因
+    跨线抬升);花火双线皆 core → 恒 0。"""
+    session = cw4_session()
+    gs = cw4_gs(session, level=7, bench=[])
+    st = state_of(gs)
+    st.line_candidates = ('火花星间旅人', '双王圣杯')
+    ctx = assemble_priority_context(session, gs, deployed_names=frozenset())
+    assert ctx.member_rank['符玄'] == 0, '跨线取最高:任一线 core 命中即 0'
+    assert ctx.member_rank['银狼'] == 1, '单线 shared 维持低档'
+    assert ctx.member_rank['花火'] == 0, '双线 core 同为高档'
+
+
+def test_recipe_members_stay_low_priority() -> None:
+    """装配·配方成员低优先级保持(priority-model §3 配方支):过渡配方
+    成员不入字段直读面 → 序数恒低档——配方伪阵容(pair_target_comp)
+    把成员全列 core_chars(全员 core 形态),若被直读即全员高档,装配
+    禁读其字段。两态分断:
+
+    - 未锁帧:纯配方成员(不在候选线)= 1;候选 ∩ 配方交集成员按候选
+      线字段取值(候选身份优先,不被配方低档覆盖);
+    - 配方伪锁帧(target_comp = 伪阵容,锁名不在 COMP_LIBRARY):
+      序数表不建,全员经判定端缺省走 1。"""
+    session = cw4_session()
+    gs = cw4_gs(session, level=7, bench=[])
+    st = state_of(gs)
+    st.line_candidates = ('火花星间旅人', '双王圣杯')
+    rc = pair_target_comp(('持续伤害', '希儿系'))
+    st.opening_recipe_comp = rc
+    ctx = assemble_priority_context(session, gs, deployed_names=frozenset())
+    recipe_only = ctx.recipe_members - ctx.candidate_members
+    assert recipe_only, '纯配方支非空(卡芙卡/希儿类,前置)'
+    assert all(ctx.member_rank.get(n, 1) == 1 for n in recipe_only), \
+        '纯配方成员统一低档'
+    overlap = ctx.recipe_members & ctx.candidate_members
+    assert {'花火', '银狼', '符玄'} <= overlap, '交集前置(注册表现查)'
+    assert ctx.member_rank['花火'] == 0 and ctx.member_rank['符玄'] == 0, \
+        '交集成员按候选线字段取值(core 不被配方低档覆盖)'
+    assert ctx.member_rank['银狼'] == 1
+    # 配方伪锁帧:全员低档(直读伪阵容字段即全员 0,本断言防回归)。
+    state_of(gs).target_comp = rc
+    ctx_locked = assemble_priority_context(
+        session, gs, deployed_names=frozenset())
+    assert ctx_locked.line_view.locked
+    assert ctx_locked.line_view.comp_name.startswith('过渡配方')
+    assert ctx_locked.member_rank \
+        and all(v == 1 for v in ctx_locked.member_rank.values()), \
+        '配方伪锁帧全员低档'
+
+
+def test_member_rank_migration_equivalence() -> None:
+    """消费面切换回归(档内排序不变性):迁移前后 member_rank 输出等价。
+
+    旧装配 = core_chars 并集推导(0 if n in cores else 1);新装配 =
+    ``member_priority`` 字段直读 + 跨线最小序数合成。迁移期两档形态下
+    两者必须逐成员相等——档 2/3/5 ①键是 sort_key 对 ``member_rank``
+    的纯表查(``member_rank.get(name, 1)``),表等价即档内排序不变;
+    末段抽样实证序数值确实落到档 2/5 的①键位。"""
+    session = cw4_session()
+    gs = cw4_gs(session, level=7, bench=[])
+    st = state_of(gs)
+    st.line_candidates = ('列车同行', '火花星间旅人', '双王圣杯')
+    ctx = assemble_priority_context(session, gs, deployed_names=frozenset())
+    members: set[str] = set()
+    cores: set[str] = set()
+    for line_name in st.line_candidates:
+        c = get_comp(line_name)
+        members |= set(c.core_chars) | set(c.shared_chars)
+        cores |= set(c.core_chars)
+    legacy = {n: (0 if n in cores else 1) for n in members}
+    assert ctx.member_rank == legacy, '未锁帧:字段直读 ≡ 旧集合并集推导'
+    # 锁定帧同构等价。
+    state_of(gs).target_comp = get_comp('双王圣杯')
+    ctx_locked = assemble_priority_context(
+        session, gs, deployed_names=frozenset())
+    lock = get_comp('双王圣杯')
+    lock_members = set(lock.core_chars) | set(lock.shared_chars)
+    assert ctx_locked.member_rank == {
+        n: (0 if n in lock.core_chars else 1) for n in lock_members}, \
+        '锁定帧:字段直读 ≡ 旧推导'
+    # 序数落键抽样:花火(core,need 3,持 1★)档 2 ①键 = 0;银狼
+    # (shared,need 缺省 1,持 1★)档 5 ①键 = 1。独立 session(状态
+    # 宿主 = 会话容器,与前段锁定写入隔离)。
+    session2 = cw4_session()
+    gs2 = cw4_gs(session2, level=7,
+                 bench=[cw4_bc('花火'), cw4_bc('银狼')])
+    state_of(gs2).line_candidates = ('火花星间旅人',)
+    ctx_rank = assemble_priority_context(session2, gs2,
+                                         deployed_names=frozenset())
+    k_hua = sort_key(HeldUnit('花火', 1, 0, False), ctx_rank)
+    k_yin = sort_key(HeldUnit('银狼', 1, 1, False), ctx_rank)
+    assert k_hua[0] == 2 and k_hua[1] == ctx_rank.member_rank['花火'] == 0
+    assert k_yin[0] == 5 and k_yin[1] == ctx_rank.member_rank['银狼'] == 1

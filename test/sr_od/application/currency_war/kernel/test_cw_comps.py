@@ -7,7 +7,14 @@
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.kernel.cw_comps import gift_hit_tier
+from sr_od.application.currency_war.kernel.cw_comps import (
+    COMP_LIBRARY,
+    Comp,
+    derive_member_priority,
+    get_comp,
+    gift_hit_tier,
+    member_rank_of,
+)
 from sr_od.application.currency_war.kernel.cw_investments import ENV_GIFTS
 
 
@@ -165,3 +172,39 @@ def test_zhanjidian_concept_stock_gift_tier_off() -> None:
     的牌库时点分叉系范围外申报沿仙舟/狼狩/击破/减益实例同指针;本域双
     口径探针现值零偏差 50.0/50.0,本档零扰动)。"""
     assert gift_hit_tier(ENV_GIFTS['战技点概念股']) == 'off'
+
+
+def test_member_priority_field_migration_default() -> None:
+    """知识卡成员优先级字段迁移默认(统一让位优先级迭代 design §2.1.1):
+    ``member_priority`` 建库默认 = core_chars 两档派生(core 0/其余 1)
+    ——「隐式两档 → 显式字段」的数据迁移本体,全库守卫。
+
+    - 全库:每套字段覆盖 core ∪ shared 且取值与两档派生式一致
+      (消费面档 2/3/5 ①键迁移前后等价的数据前提);
+    - 同名双列(core ∩ shared,列车同行三月七类)core 优先;
+    - 手构 Comp 空表落成即派生(__post_init__;pair_target_comp 配方
+      伪阵容同路径),显式登记原样保留(逐角色精调迭代的填值载体);
+    - 旧数据回退:空表经 ``member_rank_of`` 读口回退两档派生
+      (消费端无感字段新旧,向后兼容)。"""
+    for comp in COMP_LIBRARY:
+        expected = {n: (0 if n in comp.core_chars else 1)
+                    for n in set(comp.core_chars) | set(comp.shared_chars)}
+        assert comp.member_priority == expected, f'{comp.name} 迁移默认'
+        assert member_rank_of(comp) == expected
+    assert get_comp('列车同行').member_priority['三月七'] == 0, \
+        '同名双列 core 优先'
+    hand = Comp(name='手构线', factions=[], core_chars=['甲', '乙'],
+                form_tiers={}, strength='A', form_difficulty='easy',
+                shared_chars=['乙', '丙'])
+    assert hand.member_priority == {'甲': 0, '乙': 0, '丙': 1}, \
+        '空表落成即派生'
+    tuned = Comp(name='精调线', factions=[], core_chars=['甲'],
+                 form_tiers={}, strength='A', form_difficulty='easy',
+                 member_priority={'甲': 1, '乙': 0})
+    assert tuned.member_priority == {'甲': 1, '乙': 0}, '显式登记不覆写'
+    legacy = Comp(name='旧数据线', factions=[], core_chars=['甲'],
+                  form_tiers={}, strength='A', form_difficulty='easy',
+                  shared_chars=['乙'])
+    legacy.member_priority = {}
+    assert member_rank_of(legacy) == {'甲': 0, '乙': 1}, '空表回退两档派生'
+    assert derive_member_priority(legacy) == {'甲': 0, '乙': 1}
