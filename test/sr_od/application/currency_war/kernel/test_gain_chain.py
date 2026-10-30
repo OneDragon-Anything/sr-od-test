@@ -63,6 +63,7 @@ from sr_od.application.currency_war.kernel.cw_economy import (
 )
 from sr_od.application.currency_war.kernel.cw_effect_inventory import (
     SOURCE_STRATEGY,
+    apply_board_rewrite,
 )
 from sr_od.application.currency_war.kernel.cw_gain_chain import (
     DEFECT_OVERFLOW_TAKEN,
@@ -88,9 +89,12 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     ShopPayload,
     ShopSlot,
     Unit,
+    apply_effect_burst_grant,
     bench_units_of,
     consume_defect_sink,
     game_state_of,
+    grant_effect_node_refresh_balance,
+    project_effect_capacity,
     set_defect_sink,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
@@ -1149,6 +1153,47 @@ def test_gain_invest_strategy_free_lunch_burst_grant(
         'burst 桥 evidence(effect_burst[@frame])'
     assert captured[-1][2] == 'EffectLedgerBridge:免费午餐', \
         f'produced_by 带卡名: {captured[-1]}'
+
+
+def test_gain_invest_strategy_team_hope_unit_buff_zero_response() -> None:
+    """全队的希望 登记链锁 + 消费面负锁(T-97 设计 §4 锁 2):策略源
+    UNIT_BUFF 首条,登记腿既有链自动入册(register_strategy),payload=
+    UnitBuffRef 无任何世界写入字段 → 四桥鸭子读全量缺省守卫 no-op
+    (burst 桥 free_refresh_burst 缺省 0 / 板面重写桥 board_rewrite 缺省
+    '' → None / 节点边界桥 per_node 族缺省 0 / 容量直写桥 capacity_limit
+    缺省 0 → target=默认 → 早退),bot 零响应(游戏侧自算战果)。
+    session=None 支登记跳过、注册照常(登记分支同型)。"""
+    gs = _make_gs(bench=[], equips=[])
+    gain_invest_strategy(gs, object(), '全队的希望', rand=False, sig=_lsig())
+    assert gs.active_strategies.value == ['全队的希望'], '注册入表'
+    entries = gs.effects.by_source(SOURCE_STRATEGY)
+    assert [e.spec.name for e in entries] == ['全队的希望'], \
+        'register_strategy 入册(获得链登记腿既有链,零新代码)'
+    assert entries[0].spec.category.value == 'unit_buff'
+    # burst 桥负锁:UnitBuffRef 无 free_refresh_burst → 缺省 0 no-op 零 Field 行
+    # (登记腿内部已调,free_refresh_left 保持 None 即证;显式补调一次同证幂等)
+    assert gs.free_refresh_left.value is None, 'burst 桥 no-op(零 Field 行)'
+    seq_after_gain = gs.write_seq   # 入册本身占账本写;四桥零写以此为基
+    spec = entries[0].spec
+    apply_effect_burst_grant(gs, spec)
+    assert gs.free_refresh_left.value is None \
+        and gs.write_seq == seq_after_gain, 'burst 桥显式调用零写'
+    # 板面重写桥负锁:board_rewrite 缺省 '' → None
+    assert apply_board_rewrite(gs, spec) is None, '板面重写桥 no-op'
+    assert gs.write_seq == seq_after_gain
+    # 节点边界桥负锁:free_refresh_per_node/on_node_enter 族缺省 0 → 零授予
+    grant_effect_node_refresh_balance(gs)
+    assert gs.free_refresh_left.value is None \
+        and gs.write_seq == seq_after_gain, '节点边界桥 no-op'
+    # 容量直写桥负锁:capacity_limit 缺省 0 → target=默认 9,bench 容量原值早退
+    project_effect_capacity(gs)
+    assert gs.write_seq == seq_after_gain, '容量直写桥 no-op'
+    assert gs.bench.value.capacity == 9, '容量默认值未被改写'
+    # session=None 支:登记跳过、注册照常(登记分支同型断言)
+    gs2 = _make_gs(bench=[], equips=[])
+    gain_invest_strategy(gs2, None, '全队的希望', rand=False, sig=_lsig())
+    assert gs2.active_strategies.value == ['全队的希望'], '注册照常'
+    assert gs2.effects.by_source(SOURCE_STRATEGY) == [], 'session=None 跳过'
 
 
 def test_gain_invest_strategy_xp_instant_live_zero_write() -> None:

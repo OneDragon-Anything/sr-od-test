@@ -11,6 +11,8 @@
 """
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 
 from sr_od.application.currency_war.data.cw_chars import (
@@ -21,9 +23,12 @@ from sr_od.application.currency_war.data.cw_chars import (
 from sr_od.application.currency_war.kernel import cw_investments
 from sr_od.application.currency_war.kernel.cw_effect_inventory import (
     BattlefieldEffect,
+    DurationKind,
     EffectKind,
     TriggerKind,
+    UnitBuffRef,
 )
+from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
 from sr_od.application.currency_war.kernel.cw_investments import (
     BENCH_ITEM_NAMES,
     ENV_ECONOMY,
@@ -42,6 +47,9 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     env_faction_scope,
     random_char_pool,
     strategy_faction_scope,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.strategy_economy import (
+    strategy_economy_value,
 )
 
 
@@ -1400,3 +1408,37 @@ def test_streak_set_registration_surface() -> None:
         f'双字段并存破: streak_set={eff.streak_set}, ' \
         f'instant_gold={eff.instant_gold}'
     assert 'streak_set' in cw_investments._ENGINE_CHANNEL_EXCLUDED_FIELDS
+
+
+# ==================== 战力类零响应族(T-97 全队的希望起,随批续建)====================
+
+def test_team_hope_unit_buff_registration_surface() -> None:
+    """全队的希望 登记面锁(T-97 设计 §4 锁 1):策略源 UNIT_BUFF 首条
+    (~155 战力类后继登记形态的模式卡)。条目五元组:PLANE_START 占位形
+    (无离散触发事件,对齐 _portal_placeholder_spec 环境源先例)×
+    WHILE_HELD(策略卡缺省)× UNIT_BUFF × UnitBuffRef(官方效果原文)×
+    duties 三位全 False(零计数器/零预知/零姿态);pending=False(数值/
+    位置/对象全在 desc 明文,无二义);effect_text 与 base 注册表 .effect
+    单一源对拍(防表达式被改字面量后漂移——条目经 PLAZA_AUGMENTS 数据面
+    表达式引官方原文);现金分支 = 已注册名无 economy → (0.0, False)
+    (战力类不进经济模型,防未来误加 STRATEGY_ECONOMY 条目或通道误开);
+    构建校验(孤儿键/id 双匹配)import 期已过——本测试存活即证。"""
+    spec = STRATEGY_EFFECTS['全队的希望']
+    cw_investments._validate_strategy_effects()   # 构建校验复跑不炸
+    assert spec.id == '101001'
+    assert spec.name == '全队的希望'
+    assert spec.trigger is TriggerKind.PLANE_START
+    assert spec.duration is DurationKind.WHILE_HELD
+    assert spec.category is EffectKind.UNIT_BUFF
+    assert isinstance(spec.payload, UnitBuffRef)
+    assert spec.payload.effect_text \
+        == INVESTMENT_STRATEGIES['全队的希望'].effect, \
+        'effect_text 单一源对拍(= base 注册表 .effect)'
+    assert (spec.duties.track, spec.duties.predict, spec.duties.respond) \
+        == (False, False, False), '零 duties(零响应登记)'
+    assert spec.pending is False
+    assert spec.duration_nodes == 0 and spec.duration_uses == 0, \
+        'WHILE_HELD 无余期计数器(_seed_progress 双 None)'
+    gs = game_state_of(SimpleNamespace())
+    assert strategy_economy_value('全队的希望', gs) == (0.0, False), \
+        '已注册名无 economy → 现金 fail-closed 0(战力类不进经济模型)'
