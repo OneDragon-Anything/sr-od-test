@@ -1353,6 +1353,31 @@ def test_salvage_registration_surface() -> None:
     assert '打捞人才库' not in STRATEGY_ECONOMY, '基础卡无经济腿'
 
 
+def test_salvage_plus_registration_surface() -> None:
+    """打捞人才库+ 登记面锁(展开卡姊妹条目,T-95):id 100702 双匹配
+    过校验(import 期已过——本测试存活即证);主腿与基础卡条目同值
+    (同 payload 同 trigger 双条目一致性——机制单一源 = 基础卡+检查函数,
+    本条目纯登记零新设计);pending=True 带 notes 三面拆分声明(主腿
+    R-entry 沿基础卡 / 句2 装备腿归 PICK_INVEST_EFFECTS 时点保守支
+    R-instant / 句2 金腿 instant_gold=4 在册零动,发放端缺口族级待办);
+    经济腿在册零动(STRATEGY_ECONOMY instant_gold=4)。"""
+    spec = STRATEGY_EFFECTS['打捞人才库+']
+    base = STRATEGY_EFFECTS['打捞人才库']
+    cw_investments._validate_strategy_effects()   # 构建校验复跑不炸
+    assert spec.id == '100702'
+    assert isinstance(spec.payload, BattlefieldEffect)
+    assert spec.payload == base.payload, '主腿 payload 与基础卡条目同值'
+    assert spec.category is EffectKind.BATTLEFIELD
+    assert spec.trigger is TriggerKind.SUPPLY_PHASE
+    assert spec.trigger is base.trigger and spec.duration is base.duration
+    assert spec.pending is True
+    assert 'R-entry' in (spec.notes or ''), '主腿保守支声明'
+    assert 'R-instant' in (spec.notes or ''), '句2 装备腿时点保守支声明'
+    assert 'instant_gold' in (spec.notes or ''), '句2 金腿缺口申报'
+    assert STRATEGY_ECONOMY['打捞人才库+'].instant_gold == 4, \
+        '经济腿在册零动'
+
+
 # ==================== 引擎判别排除集(T-93 尾款交付起,随批续建)====================
 
 def test_gold_at_final_supply_in_engine_excluded_set() -> None:

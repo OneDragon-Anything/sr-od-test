@@ -704,3 +704,29 @@ def test_salvage_assumption_keys_registered() -> None:
         'strategy_salvage_star_prior',
         'strategy_salvage_sim_failclosed_decision_leg',
     )
+
+
+def test_salvage_plus_card_held_triggers() -> None:
+    """判据集合锁(T-95 +卡接线):持 + 卡(不持基础卡)→ 检查正常触发
+    发放(名单集任一成员 ∈ active_strategies 即持卡);两卡均不持臂 =
+    门序锁 card=False 臂现值语义(集合双名下未持 = 两卡均不持)。"""
+    gs = _salvage_gs(card=False)
+    gs.observe(gs.active_strategies, ['打捞人才库+'], sig=_SIG_OBS)
+    _salvage_run(gs, 1)   # Random(1) → 列 0
+    assert _salvage_bench(gs) == [('希儿', 1)], '+卡持局主腿照发'
+    assert gs.equips.value == ['光能电池', '垃圾袋'], '装备腿照发'
+    assert gs.unchosen_supply.value is None, '消费即清'
+
+
+def test_salvage_dual_hold_single_grant() -> None:
+    """双持语义锁:基础卡与 + 卡同持 → 每触发单份发放(集合命中即查,
+    非逐名发放——消费即清单字段架构自然语义,一次触发消费一次)。"""
+    gs = _salvage_gs(card=False)
+    gs.observe(gs.active_strategies, ['打捞人才库', '打捞人才库+'],
+               sig=_SIG_OBS)
+    _salvage_run(gs, 1)
+    assert _salvage_bench(gs) == [('希儿', 1)], '双持恰单份(1 列)'
+    assert gs.unchosen_supply.value is None, '消费即清'
+    seq = gs.write_seq
+    check_strategy_supply_salvage(gs, _SALV_SIG)
+    assert gs.write_seq == seq, '二次调用零写(重入幂等不因双持改变)'

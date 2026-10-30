@@ -1048,6 +1048,45 @@ def test_strategy_pick_chain_reinforcement_grant() -> None:
     assert _run_once() == _run_once(), '同 seed 重放确定性(bench 逐位同)'
 
 
+def test_strategy_pick_chain_random_equip_grant() -> None:
+    """获得链断言:选打捞人才库+ → 简易池均匀采样 1 件入栏(采样效果子链;
+    rng 注入流键,sim 采样即世界真值);同 seed 同流键重放 equips 逐位一致;
+    主腿 unchosen_supply 恒 None(sim 局不种本域 → 检查恒第 2 门早退 =
+    fail-closed 零发放,沿打捞族 T-94 键族语义)。"""
+    from sr_od.application.currency_war.kernel.cw_gain_effects import (
+        _RANDOM_SIMPLE_EQUIP_POOL,
+        roll_random_simple_equip,
+    )
+    stream_key = 'M11/pick/random-equip'
+
+    def _run_once() -> tuple:
+        b = _backend(7)
+        try:
+            b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+            b._maybe_finish_wait()
+            gs = b.gs
+            before = list(gs.equips.value or [])
+            pick = roll_random_simple_equip(stream_rng(7, stream_key))
+            gs.write_logic(gs.invest_strategy_opts,
+                           ['打捞人才库+', '躺平', '淘金客'],
+                           produced_by='Test', evidence='t:opts', sig=_SIG)
+            out = report_action_pick_invest_strategy_param(
+                gs, SimpleNamespace(norm_name='打捞人才库+'), _SIG,
+                rng=stream_rng(7, stream_key))
+            assert out.applied
+            assert '打捞人才库+' in gs.active_strategies.value
+            assert pick in _RANDOM_SIMPLE_EQUIP_POOL, '预验证:采样值 ∈ 池'
+            assert list(gs.equips.value) == before + [pick], \
+                f'equips 恰 +1 且名 = 流键采样值: {gs.equips.value} vs {pick}'
+            assert gs.unchosen_supply.value is None, \
+                '主腿 unchosen_supply 恒 None(sim fail-closed 继承)'
+            return tuple(gs.equips.value)
+        finally:
+            uninstall_backend()
+
+    assert _run_once() == _run_once(), '同 seed 重放确定性(equips 逐位同)'
+
+
 # ============================================================ 追加随机环境分支(蓝海 id113)
 # 语义正本 = gain-chain.md §3 追加随机环境申报行段 + invest_effects.md
 # 蓝海条:选卡上报完整首链(获得蓝海:active_env + 金 +6 + 申报行)→

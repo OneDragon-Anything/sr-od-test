@@ -1190,14 +1190,15 @@ def test_on_strategy_gained_advisor_unlock() -> None:
 
 def test_on_strategy_gained_unregistered_quiet() -> None:
     """未收录卡:查无效果安静不写(gain-chain §3 裁定④);效果表键集 =
-    骇客单行 + 三箱分支卡 + 援军族(箱腿/援军条目由工厂自各自
-    生成表生成,键集断言 = 现役注册全集,新卡注册随批 +键)。"""
+    骇客单行 + 三箱分支卡 + 援军族 + 随机简易装备族(箱腿/援军/随机
+    简易装备条目由工厂自各自生成表生成,键集断言 = 现役注册全集,新卡
+    注册随批 +键)。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
         PICK_INVEST_EFFECTS,
     )
     assert set(PICK_INVEST_EFFECTS) == {
         '骇客专家:银狼', '战术义眼++', '保守派', '快请专家·彩', '二费援军',
-        '三费援军', '四费援军'}
+        '三费援军', '四费援军', '打捞人才库+'}
     gs = _make_gs(bench=[('希儿', 1)], equips=[])
     seq_before = gs.write_seq
     effects = on_strategy_gained(gs, '随便一张未收录卡', rand=False,
@@ -1397,6 +1398,95 @@ def test_reinforcement_charter_not_in_named_grants() -> None:
     )
     assert '二费援军' not in STRATEGY_GRANTS, '随机发放不入具名登记表'
     _validate_strategy_grants()   # import 期已跑;显式调用 = 宪章回归语义
+
+
+# ============================================================ 随机简易装备族效果
+# (策略卡获得时点随机简易装备发放,打捞人才库+ 首例:简易池均匀 v0 掷骰
+#  count 件 → 逐件 gain_equipment(rand=True) 入栏;装备无星级,效果串
+#  不带 @ 后缀。)
+
+
+def test_random_simple_equip_sampler_pool_and_ore_pool_lock() -> None:
+    """采样纯函数锁:固定种子返回名 ∈ 本模块池且种子可复现;池 = 简易
+    类别全集字母序(注册表现算,禁手抄清单);池与晶矿 _SIMPLE_EQUIP_POOL
+    同集断言(互指语义锁——两池独立定义,口径漂移唯此测试可暴露)。"""
+    from sr_od.application.currency_war.data.cw_equipment_data import (
+        EQUIPMENTS,
+    )
+    from sr_od.application.currency_war.kernel.cw_gain_effects import (
+        _RANDOM_SIMPLE_EQUIP_POOL,
+        roll_random_simple_equip,
+    )
+    from sr_od.application.currency_war.kernel.cw_ore_reward import (
+        _SIMPLE_EQUIP_POOL,
+    )
+    expected = tuple(sorted(
+        name for name, eq in EQUIPMENTS.items() if eq.category == '简易'))
+    assert expected == _RANDOM_SIMPLE_EQUIP_POOL, '池 = 简易类别全集字母序'
+    assert set(_RANDOM_SIMPLE_EQUIP_POOL) == set(_SIMPLE_EQUIP_POOL), \
+        '与晶矿简易池同集(互指语义锁)'
+    names = [roll_random_simple_equip(random.Random(7)) for _ in range(8)]
+    assert all(n in _RANDOM_SIMPLE_EQUIP_POOL for n in names), '采样值域 ⊆ 池'
+    assert names == [roll_random_simple_equip(random.Random(7))
+                     for _ in range(8)], '种子可复现'
+
+
+def test_random_equip_leg_chain_places_one(rows_sink: _RowSink) -> None:
+    """链发放真值:gain_invest_strategy 确定入口(rand=False)+ 固定 rng
+    注入 → equips 恰 +1、名 ∈ 池且 = 采样值、效果串恰 1 条
+    ``strategy_random_equip:<名>``(装备无星级,串不带 @ 后缀);正常
+    路径零申报行。"""
+    from sr_od.application.currency_war.kernel.cw_gain_effects import (
+        _RANDOM_SIMPLE_EQUIP_POOL,
+        roll_random_simple_equip,
+    )
+    pick = roll_random_simple_equip(random.Random(20261030))
+    gs = _make_gs(bench=[], equips=[])
+    gs.prep_anchored = True
+    out = gain_invest_strategy(gs, None, '打捞人才库+', rand=False,
+                               sig=_lsig(), rng=random.Random(20261030))
+    assert out.placed
+    assert gs.active_strategies.value == ['打捞人才库+'], '注册入表'
+    assert pick in _RANDOM_SIMPLE_EQUIP_POOL, '采样名 ∈ 池'
+    assert gs.equips.value == [pick], 'equips 恰 +1 且名 = 采样值'
+    assert out.effects == (f'strategy_random_equip:{pick}',), '效果串恰 1 条'
+    assert rows_sink.kinds() == [], '正常路径零申报行'
+
+
+def test_random_equip_leg_equips_unobserved_skip_decoupled() -> None:
+    """equips 未观察形态锁:拒落跳写(原语 detail='equips_unobserved'
+    现役语义,零写零缺陷)、效果串恒登记 ``strategy_random_equip:<名>
+    (skipped)``(发放事实与落位成败解耦,骇客 mod_sampled 两形态同构)。"""
+    from sr_od.application.currency_war.kernel.cw_gain_effects import (
+        roll_random_simple_equip,
+    )
+    pick = roll_random_simple_equip(random.Random(20261030))
+    gs = _make_gs(bench=[])   # equips 不种 = 域未观察
+    gs.prep_anchored = True
+    out = gain_invest_strategy(gs, None, '打捞人才库+', rand=False,
+                               sig=_lsig(), rng=random.Random(20261030))
+    assert out.placed
+    assert gs.equips.value is None, '未观察域零写'
+    assert out.effects == (f'strategy_random_equip:{pick}(skipped)',), \
+        '效果串恒登记(skipped 形态)'
+
+
+def test_random_equip_leg_rand_channel_subchain(rows_sink: _RowSink) -> None:
+    """采样语义 rand=True(通道翻转只及子链):锚定容器上发放 → 入口注册
+    走确定面,采样子链恒 write_logic_rand;覆盖观察差异落
+    logic_rand_outcome 行、零失配行(随机态不触发失配网,校准面 =
+    outcome 行)。"""
+    gs = _make_gs(bench=[], equips=[])
+    gs.prep_anchored = True
+    gain_invest_strategy(gs, None, '打捞人才库+', rand=False, sig=_lsig(),
+                         rng=random.Random(20261030))
+    assert gs.active_strategies.source == 'logic', '入口确定面(锚定后)'
+    assert gs.equips.source == 'logic_rand', '采样子链恒随机态(翻转只及子链)'
+    consume_defect_sink()
+    gs.observe(gs.equips, [], sig=_SIG_OBS)   # 与已写值必异(写值恰 1 件)
+    kinds = [r['kind'] for r in consume_defect_sink()]
+    assert 'observe_vs_logic_mismatch' not in kinds, '随机态覆盖零失配行'
+    assert 'logic_rand_outcome' in kinds, '校准面 = outcome 行'
 
 
 def test_gain_bench_item_three_landings(
