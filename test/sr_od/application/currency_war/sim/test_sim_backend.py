@@ -119,9 +119,6 @@ from sr_od.application.currency_war.kernel.cw_overlay_register import (
     consume_screen_change,
     register_screen_change,
 )
-from sr_od.application.currency_war.kernel.cw_reward_node import (
-    is_piggy_reward_frame,
-)
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionCloseShopParam,
     CwActionCollectOreParam,
@@ -1223,17 +1220,16 @@ def test_env_reroll_non_member_regression(_isolate_defect_buffer) -> None:
 def test_env_reroll_downstream_gates_follow(
         monkeypatch: pytest.MonkeyPatch,
         _isolate_defect_buffer) -> None:
-    """门控跟随冒烟(设计锁面 7):卷中名 = 经济过热 → is_piggy 转真
-    (电平读现值自动跟随);卷中名 = 人身意外险 → 节点序列场命中补给
+    """门控跟随冒烟(设计锁面 7):卷中名 = 经济过热 → 环境场读现值
+    自动跟随(active_env 电平);卷中名 = 人身意外险 → 节点序列场命中补给
     修饰(容器序列 = resolve_plane_node_seqs(卷中名),写点唯一,位面 1
     插入一个补给节点)。全量跟随面归各卡自身批次,本条锁「无新接线」。"""
-    # 经济过热:扑满门控转真
+    # 经济过热:环境场读现值跟随(原扑满门控断言已随 P8 废弃删除)
     _stub_env_reroll_roll(monkeypatch, '经济过热')
     b = _env_pick_backend()
     try:
         _seed_and_pick_env(b, '蓝海')
         assert b.gs.active_env.value == '经济过热'
-        assert is_piggy_reward_frame(b.gs) is True, '扑满门控读现值转真'
     finally:
         uninstall_backend()
     # 人身意外险:节点序列场命中修饰
