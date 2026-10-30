@@ -68,7 +68,10 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     game_state_of,
     set_defect_sink,
 )
-from sr_od.application.currency_war.kernel.cw_investments import STRATEGY_EFFECTS
+from sr_od.application.currency_war.kernel.cw_investments import (
+    STRATEGY_ECONOMY,
+    STRATEGY_EFFECTS,
+)
 from sr_od.application.currency_war.kernel.cw_shop_deal import state_deal_probs
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionBuyCardParam,
@@ -682,6 +685,34 @@ def test_report_free_leg_deducts_field(monkeypatch: pytest.MonkeyPatch) -> None:
     assert gs.free_refresh_left.value == 1, '免费帧 Field 扣减 2→1'
     assert gs.free_refresh_left.source == 'logic'
     assert captured == [('free_refresh_left', 1, 'CwActionRefreshShopParam',
+                         'proj_refresh_free_left')], '写端调用面元数据'
+    assert gs.effects.refresh_paid == 0, '免费帧禁进付费计数'
+    assert gs.effects.refresh_total == 1, '全量计数含免费'
+
+
+def test_market_intervention_burst_then_free_leg_consumes(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """市场干预免费帧消费闭环(T-113 设计 §4 锁 4,轻集成):burst 形态
+    写端先置免费余额(常量源 = STRATEGY_ECONOMY['市场干预'].
+    free_refresh_burst 直读禁写死)→ 刷新上报一次 → Field 扣减
+    burst→burst-1 + 免费帧断言(免费判定走 Field;消费链现役零新消费
+    端——先例 = test_report_free_leg_deducts_field 同窗形)。"""
+    captured = _spy_write_logic(monkeypatch)
+    gs = _fresh_gs()
+    gs.observe(gs.level, 3, sig=_OSIG)
+    burst = STRATEGY_ECONOMY['市场干预'].free_refresh_burst
+    gs.write_logic(gs.free_refresh_left, burst,
+                   produced_by='EffectLedgerBridge:市场干预',
+                   evidence='effect_burst@p1-r2', sig=_HSIG)
+    captured.clear()
+    report_action_refresh_shop_param(
+        gs, CwActionRefreshShopParam(cost=2), _LSIG,
+        rng=random.Random('cw-shop-field-test'))
+    assert gs.free_refresh_left.value == burst - 1, \
+        f'免费帧 Field 扣减 {burst}->{burst - 1}'
+    assert gs.free_refresh_left.source == 'logic'
+    assert captured == [('free_refresh_left', burst - 1,
+                         'CwActionRefreshShopParam',
                          'proj_refresh_free_left')], '写端调用面元数据'
     assert gs.effects.refresh_paid == 0, '免费帧禁进付费计数'
     assert gs.effects.refresh_total == 1, '全量计数含免费'

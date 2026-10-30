@@ -108,6 +108,8 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     BENCH_ITEM_NAMES,
     ENV_GIFTS,
     INVESTMENT_ENVS,
+    STRATEGY_ECONOMY,
+    STRATEGY_EFFECTS,
     STRATEGY_GRANTS,
     RandomCharSpec,
     equips_by_category,
@@ -1115,7 +1117,8 @@ def test_gain_invest_strategy_session_ledger_branch() -> None:
     register_strategy 入册 + burst 桥累加免费刷新余额;session=None =
     登记分支跳过、注册照常;未收录卡登记分支零动作。(选卡 = 固定理财:
     STRATEGY_EFFECTS 在册条目且 payload.free_refresh_burst=2,桥 docstring
-    背书;市场干预仅在经济聚合表 STRATEGY_ECONOMY,不入本表。)"""
+    背书;市场干预已入册本表,payload 引 STRATEGY_ECONOMY 同一实例,
+    burst 腿锁 = test_gain_invest_strategy_market_intervention_burst_grant。)"""
     gs = _make_gs(bench=[], equips=[])
     gain_invest_strategy(gs, object(), '固定理财', rand=False, sig=_lsig())
     assert gs.active_strategies.value == ['固定理财']
@@ -1157,6 +1160,47 @@ def test_gain_invest_strategy_free_lunch_burst_grant(
         'burst 桥 evidence(effect_burst[@frame])'
     assert captured[-1][2] == 'EffectLedgerBridge:免费午餐', \
         f'produced_by 带卡名: {captured[-1]}'
+
+
+def test_gain_invest_strategy_market_intervention_burst_grant(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """市场干预登记腿(T-113 设计 §4 锁 1):session 在场选市场干预 →
+    burst 桥把 payload.free_refresh_burst 一次性累加进免费刷新余额
+    (常量源 = STRATEGY_ECONOMY['市场干预'].free_refresh_burst 直读禁
+    写死;None 基 = 0 起算)。写端形态 = write_logic 逻辑直写、
+    evidence=effect_burst[@frame]、produced_by 带卡名——断言形 =
+    免费午餐 burst 锁同款 write_logic spy(捕获照常透传)。"""
+    captured: list[tuple] = []
+    real_write = GameState.write_logic
+
+    def _spy(self: GameState, target, value, **kw):
+        captured.append((self._field_name(target), value,
+                         kw.get('produced_by'), kw.get('evidence')))
+        return real_write(self, target, value, **kw)
+
+    monkeypatch.setattr(GameState, 'write_logic', _spy)
+    gs = _make_gs(bench=[], equips=[])
+    gain_invest_strategy(gs, object(), '市场干预', rand=False, sig=_lsig())
+    assert gs.active_strategies.value == ['市场干预'], '注册入表'
+    assert [e.spec.name for e in gs.effects.by_source(SOURCE_STRATEGY)] \
+        == ['市场干预'], 'register_strategy 入册'
+    burst = STRATEGY_ECONOMY['市场干预'].free_refresh_burst
+    assert gs.free_refresh_left.value == burst, 'None 基 = 0 起算,一次 +burst'
+    assert gs.free_refresh_left.source == 'logic', 'write_logic 逻辑直写'
+    assert (gs.free_refresh_left.evidence or '').startswith('effect_burst'), \
+        'burst 桥 evidence(effect_burst[@frame])'
+    assert captured[-1][2] == 'EffectLedgerBridge:市场干预', \
+        f'produced_by 带卡名: {captured[-1]}'
+
+
+def test_market_intervention_spec_single_source_identity() -> None:
+    """市场干预单一源同实例(T-113 设计 §4 锁 2):STRATEGY_EFFECTS 条目
+    payload 必须 is STRATEGY_ECONOMY 注册行同一实例(误复制实例即红;
+    成长基金登记腿可见性锁同型),plaza id 对拍。"""
+    spec = STRATEGY_EFFECTS['市场干预']
+    assert spec.payload is STRATEGY_ECONOMY['市场干预'], \
+        'payload 必须为注册行同一实例(单一源)'
+    assert spec.id == '102201', 'plaza id 对拍'
 
 
 def test_gain_invest_strategy_force_refresh_register_noop_grants() -> None:

@@ -1194,6 +1194,18 @@ def test_bump_key_advances_only_tracked_entries() -> None:
         '未声明记账义务的条目不被推进'
 
 
+def test_market_intervention_track_counts_refreshes() -> None:
+    """市场干预计数面生效(T-113 设计 §4 锁 3,窄化只证本卡新事实):
+    duties.track=True 声明生效——登记后一次刷新推进本卡 REFRESH 计数。
+    bump 只辖 track 条目与 (spec_id, key) 隔离两语义 = 存量锁
+    test_bump_key_advances_only_tracked_entries 已辖,本锁不重复建。"""
+    inv = ActiveEffectInventory()
+    inv.register_strategy(STRATEGY_EFFECTS['市场干预'], acquired_key=None)
+    inv.record_refresh(free=False)
+    assert inv.counter('102201', CounterKey.REFRESH) == 1, \
+        '登记后一次刷新推进本卡计数(track 声明生效)'
+
+
 def test_on_buy_bumps_buy_key_by_k() -> None:
     """购买回调计数面(形态镜像 on_level_up;挂点 = 买牌上报函数获取
     计算完时点):满栏合成一击多买按实际张数 k 计 k 次(返利族「每购
