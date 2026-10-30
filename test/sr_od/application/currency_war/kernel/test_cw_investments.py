@@ -19,6 +19,11 @@ from sr_od.application.currency_war.data.cw_chars import (
     chars_by_cost,
 )
 from sr_od.application.currency_war.kernel import cw_investments
+from sr_od.application.currency_war.kernel.cw_effect_inventory import (
+    BattlefieldEffect,
+    EffectKind,
+    TriggerKind,
+)
 from sr_od.application.currency_war.kernel.cw_investments import (
     BENCH_ITEM_NAMES,
     ENV_ECONOMY,
@@ -1324,6 +1329,28 @@ def test_deposit_return_overlay_single_source_payload() -> None:
         .free_refresh_cond_prev_node_unspent == 2
     assert STRATEGY_EFFECTS['存款回报'].trigger.value == 'node_enter'
     assert STRATEGY_EFFECTS['存款回报'].duration.value == 'while_held'
+
+
+def test_salvage_registration_surface() -> None:
+    """打捞人才库登记面锁(BATTLEFIELD 载体 + SUPPLY_PHASE 触发首个在册
+    条目 + pending 保守支;构建校验孤儿键/id 双匹配 import 期已过——
+    本测试存活即证):payload = BattlefieldEffect 专字段(不入 Economy,
+    避开经济三分类闭集义务)∧ category 同族;pending=True 必带 notes
+    保守支声明(R-entry 读法);SUPPLY_PHASE 枚举成员在册引用(防静默
+    移除——该枚举值全仓唯一在册条目即本卡);基础卡无经济腿
+    (STRATEGY_ECONOMY 零条目,发放物 = 世界既有列非经济流)。"""
+    spec = STRATEGY_EFFECTS['打捞人才库']
+    cw_investments._validate_strategy_effects()   # 构建校验复跑不炸
+    assert spec.id == '100701'
+    assert isinstance(spec.payload, BattlefieldEffect)
+    assert spec.payload.salvage_unchosen_supply is True
+    assert spec.category is EffectKind.BATTLEFIELD
+    assert spec.trigger is TriggerKind.SUPPLY_PHASE
+    assert spec.trigger.value == 'supply_phase'
+    assert spec.duration.value == 'while_held'
+    assert spec.pending is True
+    assert 'R-entry' in (spec.notes or ''), 'pending 必带保守支声明'
+    assert '打捞人才库' not in STRATEGY_ECONOMY, '基础卡无经济腿'
 
 
 # ==================== 引擎判别排除集(T-93 尾款交付起,随批续建)====================

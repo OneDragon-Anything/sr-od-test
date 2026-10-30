@@ -50,6 +50,7 @@ from test.sr_od.application.currency_war._cw_helpers import (
     run_node as _run_node,
 )
 
+from sr_od.application.currency_war.kernel import cw_game_state as gs_mod
 from sr_od.application.currency_war.kernel.cw_action_report import (
     report_action_start_battle_param,
 )
@@ -57,12 +58,19 @@ from sr_od.application.currency_war.kernel.cw_economy import (
     DEFAULT_INTEREST_CAP,
     interest,
 )
+from sr_od.application.currency_war.kernel.cw_events import (
+    SupplyOption,
+)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     BenchSlot,
     BenchView,
     ChannelSig,
     game_state_of,
     report_node_advance,
+)
+from sr_od.application.currency_war.kernel.cw_screen_report.supply_node import (
+    CwScreenSupplyNodeObs,
+    report_screen_supply_node_obs,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
@@ -548,3 +556,128 @@ def test_supply_sim_two_state_pick_flow(test_context, monkeypatch) -> None:
             assert isinstance(gs.supply.value, SupplyPayload)
     finally:
         tel_state.reset_run_state()   # run 态簇复位(测试复位正规入口)
+
+
+# ==================== 未选集快照写点(打捞人才库族发源域)====================
+
+_LIVE_OPTS = [
+    (SupplyOption(idx=0, char='希儿', equip='光能电池'),
+     SimpleNamespace(x=500, y=550)),
+    (SupplyOption(idx=1, char='停云', equip='折叠小刀'),
+     SimpleNamespace(x=900, y=550)),
+    (SupplyOption(idx=2, char='三月七', equip='垃圾袋'),
+     SimpleNamespace(x=1300, y=550)),
+]
+
+
+def test_supply_live_pick_writes_unchosen_same_window(
+        test_context, monkeypatch) -> None:
+    """未选集写点测试·live(真选分支确认即写同窗):真选确认 →
+    ``unchosen_supply`` = 终屏列 − 选定列(按列身份消账——实例同一性
+    断言,重复列形下按内容消账有歧义);与 ``chosen_supply`` 同 sig 同窗
+    相邻(journal 行 = 同一确认动作原子面)。机械执行态限定写本测试即
+    live 形态(无 sim 后端在装)。"""
+    op, _m, session, stub, _envs, clicks = _make_supply_live(
+        test_context, monkeypatch,
+        pick=CwActionPickSupplyParam(idx=1, reason='stub'), opts=_LIVE_OPTS)
+    assert _run_node(test_context, op, op.observe).is_success, (
+        '前置:观察 success(候选 3 元)')
+    rows: list[dict] = []
+    monkeypatch.setattr(gs_mod, '_STATE_JOURNAL_SINK', rows.append)
+    monkeypatch.setattr(gs_mod, '_RUN_ID_PROVIDER', lambda: 'test-run')
+    try:
+        rs = _run_node(test_context, op, op.act)
+    finally:
+        monkeypatch.setattr(gs_mod, '_STATE_JOURNAL_SINK', None)
+        monkeypatch.setattr(gs_mod, '_RUN_ID_PROVIDER', lambda: None)
+    assert rs.is_success and stub.executed == 1, f'选卡派发:{rs!r}'
+    gs = game_state_of(session)
+    unchosen = gs.unchosen_supply.value
+    assert unchosen is not None and len(unchosen) == 2, f'余列快照: {unchosen!r}'
+    assert unchosen[0] is _LIVE_OPTS[0][0] and unchosen[1] is _LIVE_OPTS[2][0], \
+        '按列身份消账(选定 idx=1 之外两列,实例同一)'
+    write_rows = [r for r in rows if r['row'] == 'write'
+                  and r['field'] in ('chosen_supply', 'unchosen_supply')]
+    assert [r['field'] for r in write_rows] == ['chosen_supply',
+                                                'unchosen_supply'], \
+        f'同窗相邻两行: {[r["field"] for r in write_rows]}'
+    assert (write_rows[0]['sig']['family'], write_rows[0]['sig']['actor'],
+            write_rows[0]['sig']['mode']) \
+        == (write_rows[1]['sig']['family'], write_rows[1]['sig']['actor'],
+            write_rows[1]['sig']['mode']) \
+        == ('logic_action', 'CwScreenSupplyNode', 'compute'), \
+        '两写行同 sig(logic_action/CwScreenSupplyNode/compute)'
+
+
+def test_supply_non_pick_rounds_do_not_seed_unchosen(
+        test_context, monkeypatch) -> None:
+    """非真选轮零写测试(同 chosen_supply 真选守卫口径):刷新轮(对照闸
+    放行,点钮终结)与对照闸拒绝轮(重调仍建议刷)与空候选轮 →
+    ``unchosen_supply`` 恒零写(真选分支不可达 = 无写点)。"""
+    from one_dragon.base.geometry.point import Point
+
+    # 刷新轮:锚在位 + left=1 → 对照闸放行,点钮终结。
+    op, _m, session, _stub, _envs, clicks = _make_supply_live(
+        test_context, monkeypatch,
+        pick=CwActionRefreshSupplyParam(reason='stub'),
+        opts=_LIVE_OPTS, anchor=(1, Point(1414, 982)), seed_left=1)
+    assert _run_node(test_context, op, op.observe).is_success
+    rs = _run_node(test_context, op, op.act)
+    assert rs.is_success and '终结交回' in (rs.status or ''), f'刷新轮:{rs!r}'
+    assert game_state_of(session).unchosen_supply.value is None, '刷新轮零写'
+
+    # 对照闸拒绝轮:锚缺 + 残值 → 重调仍建议刷 → round_fail。
+    op2, _m2, session2, _stub2, _envs2, _clicks2 = _make_supply_live(
+        test_context, monkeypatch,
+        pick=CwActionRefreshSupplyParam(reason='stub-again'),
+        opts=_LIVE_OPTS, anchor=None, seed_left=1)
+    assert _run_node(test_context, op2, op2.observe).is_success
+    rs2 = _run_node(test_context, op2, op2.act)
+    assert not rs2.is_success, f'拒绝轮 round_fail:{rs2!r}'
+    assert game_state_of(session2).unchosen_supply.value is None, '拒绝轮零写'
+
+    # 空候选轮:零点击终结。
+    op3, _m3, session3, _stub3, _envs3, _clicks3 = _make_supply_live(
+        test_context, monkeypatch,
+        pick=CwActionPickSupplyParam(idx=0, reason='stub'), opts=[])
+    assert _run_node(test_context, op3, op3.observe).is_success
+    rs3 = _run_node(test_context, op3, op3.act)
+    assert rs3.is_success and '零点击' in (rs3.status or ''), f'空候选:{rs3!r}'
+    assert game_state_of(session3).unchosen_supply.value is None, '空候选零写'
+
+
+def test_supply_sim_pick_flow_unchosen_fail_closed(
+        test_context, monkeypatch) -> None:
+    """sim 形态未选集写点锁 + fail-closed 回归:sim 局决策分支可达真选
+    写点(决策链接线后两态同链),但未选集域限机械执行态不种——
+    ``unchosen_supply`` 恒 None → 检查函数恒第 2 门早退零发放(防未来
+    误接线静默改 sim 行为):真选后 chosen 写行而 unchosen 恒 None;
+    持卡局下一次成功观察帧过检查,bench/equips 零打捞增量。"""
+    with _sim_supply_world(test_context, monkeypatch, seed=61) as b:
+        _match, strategy = _sim_match(test_context, monkeypatch, b)
+        gs = b.gs
+        gs.observe(gs.active_strategies, ['打捞人才库'],
+                   evidence='test:hold', sig=_SIG_OBS)
+        # 预刷尽:left 1→0 → 真实 decide 恒落选卡(次数闸内嵌,先例 =
+        # sim 两态 pick 流测试)。
+        b._handle_click_source(SCREEN_SUPPLY, '文本-剩余次数')
+        assert gs.supply_refresh_left.value == 0, '前置:left 刷尽'
+        op = CwScreenSupplyNode(test_context)
+        assert _run_node(test_context, op, op.observe).is_success, (
+            '前置:sim 观察 success')
+        rs = _run_node(test_context, op, op.act)
+        assert rs.is_success and '终结交回' in (rs.status or ''), (
+            f'sim 选卡派发:{rs!r}')
+        assert gs.chosen_supply.value is not None, '前置:chosen 写行(sim 真选可达)'
+        assert gs.unchosen_supply.value is None, (
+            '未选集域 sim 恒 None(机械执行态限定写,fail-closed 载体面)')
+        bench_after = gs.bench.value
+        equips_after = list(gs.equips.value or [])
+        # 持卡局下一次成功观察帧(sim 呈现链同函数):检查恒第 2 门早退,
+        # 零打捞增量(真值对齐归 sim 补给真值专项,本卡零 sim 接线)。
+        report_screen_supply_node_obs(
+            gs, CwScreenSupplyNodeObs(
+                in_node=True,
+                options=list(gs.supply.value.options or [])))
+        assert gs.bench.value == bench_after, '检查零发放:bench 不变'
+        assert gs.equips.value == equips_after, '检查零发放:equips 不变'

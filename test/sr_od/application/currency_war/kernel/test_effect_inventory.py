@@ -20,16 +20,22 @@ from collections.abc import Iterator
 
 import pytest
 
+from sr_od.application.currency_war.kernel import cw_game_state as gs_mod
 from sr_od.application.currency_war.kernel.cw_action_report import (
     report_action_deploy_move_param,
     set_action_rng_provider,
 )
 from sr_od.application.currency_war.kernel.cw_effect_inventory import (
     BOARD_REWRITE_UPGRADE_ALL,
+    STRATEGY_SALVAGE_ASSUMPTION_KEYS,
     ActiveEffectInventory,
     apply_board_rewrite,
+    check_strategy_supply_salvage,
     grant_bench_unit_cascade,
     spawn_equip_bench_unit,
+)
+from sr_od.application.currency_war.kernel.cw_events import (
+    SupplyOption,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
     BENCH_CAPACITY_DEFAULT,
@@ -522,3 +528,179 @@ def test_portal_placeholder_grant_shape_full_fields() -> None:
         # 裸标记回归:段列表必须随渲染字段出现(登记形状可见)
         body = spec.notes.split('GiftGrant', 1)[1]
         assert body.strip(' ;'), f'{env_name} 裸 GiftGrant 标记(段缺失)'
+
+
+# ============================================================ 打捞人才库族检查
+# (进入补给阶段时点检查函数 check_strategy_supply_salvage:门序/列内容
+#  形态/rand 通道与归因/消费即清幂等。语义正本 = 卡面 id 100701 官方原文
+#  「每次进入补给阶段后，随机获得一个未被选择的角色及其携带的装备」。
+#  固定种子 = 注入槽确定性,种子→列映射(同序元组 choice 坐标系):
+#  Random(1)→列 0 / Random(7)→列 1 / Random(5)→列 2。)
+
+_SALV_SIG = ChannelSig(family='logic_action', actor='CwScreenSupplyNode',
+                       mode='compute')
+
+_SALV_COLS = (
+    SupplyOption(idx=0, char='希儿', equip='光能电池',
+                 extra_equips=('垃圾袋',)),
+    SupplyOption(idx=1, char='停云', equip='乱码装备XYZ', extra_equips=()),
+    SupplyOption(idx=2, char='', equip='折叠小刀', extra_equips=()),
+)
+
+
+def _salvage_gs(*, bench_entries: list[Unit] | None = None,
+                bench_unobserved: bool = False, card: bool = True,
+                unchosen: tuple[SupplyOption, ...] | None = _SALV_COLS,
+                equips_read: bool = True) -> GameState:
+    """打捞检查直构容器(bench/equips/持卡/未选集按参;bench_unobserved/
+    equips_read=False = 域未观察形态构造;unchosen None = 无未选定案)。"""
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    if not bench_unobserved:
+        slots = [BenchSlot(kind='unit', unit=u) for u in (bench_entries or ())]
+        slots += [BenchSlot(kind='empty')] * (BENCH_CAPACITY_DEFAULT
+                                              - len(slots))
+        gs.observe(gs.bench, BenchView(slots=slots,
+                                       capacity=BENCH_CAPACITY_DEFAULT),
+                   sig=_SIG_OBS)
+    if equips_read:
+        gs.observe(gs.equips, [], sig=_SIG_OBS)
+    if card:
+        gs.observe(gs.active_strategies, ['打捞人才库'], sig=_SIG_OBS)
+    if unchosen is not None:
+        gs.write_logic(gs.unchosen_supply, unchosen, produced_by='test-seed',
+                       sig=_SALV_SIG)
+    return gs
+
+
+def _salvage_run(gs: GameState, seed: int) -> None:
+    """注入槽确定性采样运行(必达复位,先例 = seeded_merge_provider)。"""
+    set_action_rng_provider(lambda tool: random.Random(seed))
+    try:
+        check_strategy_supply_salvage(gs, _SALV_SIG)
+    finally:
+        set_action_rng_provider(None)
+
+
+def _salvage_bench(gs: GameState) -> list[tuple[str, int]]:
+    return [(s.unit.char_id, s.unit.star) for s in gs.bench.value.slots
+            if s is not None and s.kind == 'unit' and s.unit is not None]
+
+
+def test_salvage_gate_order_zero_write_arms() -> None:
+    """门序锁·零写臂(前两门早退):未持卡 → 零写;持卡 ∧ 未选集 None/
+    空元组 → 零写(None = 未记录/已消费/兜底轮共型;sim 局恒此门早退 =
+    fail-closed 零发放的门语义本体)。"""
+    for kwargs in ({'card': False}, {'unchosen': None}, {'unchosen': ()}):
+        gs = _salvage_gs(**kwargs)
+        seq = gs.write_seq
+        check_strategy_supply_salvage(gs, _SALV_SIG)
+        assert gs.write_seq == seq, f'门序零写({kwargs})'
+
+
+def test_salvage_full_column_grant_and_consume_clear() -> None:
+    """门序锁·发放臂(列 0 = 角色+双装备)+ 消费即清幂等:固定种子恰
+    1 列发放——char 腿入席 1★ + 装备腿按列内容 y 序入账(owned 恒规范
+    名);char 腿写 evidence 串 = ``strategy_salvage:<名>@1star``(效果
+    串落点 = 随机写 evidence 本身);字段被清 + 二次调用零写(同阶段
+    观察上报多次第 2 次起零发)。"""
+    gs = _salvage_gs()
+    _salvage_run(gs, 1)   # Random(1) → 列 0
+    assert _salvage_bench(gs) == [('希儿', 1)], 'char 腿入席 1★'
+    assert gs.equips.value == ['光能电池', '垃圾袋'], \
+        f'装备腿按列内容 y 序入账: {gs.equips.value}'
+    assert gs.bench.evidence == 'strategy_salvage:希儿@1star', \
+        f'char 腿 evidence 串: {gs.bench.evidence}'
+    assert gs.unchosen_supply.value is None, '消费即清'
+    seq = gs.write_seq
+    check_strategy_supply_salvage(gs, _SALV_SIG)
+    assert gs.write_seq == seq, '二次调用零写(消费即清幂等)'
+
+
+def test_salvage_unresolved_name_fail_closed_char_leg_survives() -> None:
+    """列内容形态锁(列 1 = 角色在 + 装备名归一失败):char 腿照常发放
+    (腿间独立,失败件不阻断角色腿),件名不可辨禁猜 → equips 值不变
+    翻来源留存证据(fail-closed)+ 缺陷行 kind=
+    ``strategy_salvage_name_unresolved``(错名不入账,观察覆盖自愈)。"""
+    gs = _salvage_gs()
+    _salvage_run(gs, 7)   # Random(7) → 列 1
+    assert _salvage_bench(gs) == [('停云', 1)], 'char 腿照发'
+    assert gs.equips.value == [], '归一失败件不入账'
+    kinds = [r['kind'] for r in consume_defect_sink()]
+    assert 'strategy_salvage_name_unresolved' in kinds, f'缺陷留证: {kinds}'
+    assert gs.unchosen_supply.value is None
+
+
+def test_salvage_orphan_cluster_equip_only_column() -> None:
+    """列内容形态锁(列 2 = 孤儿簇列 char=''):仅装备腿零角色写,装备件
+    OCR 原文经归一两段式入账(owned 恒规范名断言)。"""
+    gs = _salvage_gs()
+    _salvage_run(gs, 5)   # Random(5) → 列 2
+    assert _salvage_bench(gs) == [], 'char 空 = 零角色腿'
+    assert gs.equips.value == ['折叠小刀'], '装备腿照发(归一命中规范名)'
+
+
+def test_salvage_char_only_column_zero_equip_writes() -> None:
+    """列内容形态锁(char-only 列 = 人才储备类合法形态):仅角色腿,装备
+    域零写零缺陷(补给选定上报零装备名分支同构——件名全失读子况的失配
+    由 equips 观察覆盖暴露,不发缺陷)。"""
+    col = (SupplyOption(idx=0, char='希儿', equip='', extra_equips=()),)
+    gs = _salvage_gs(unchosen=col)
+    _salvage_run(gs, 1)
+    assert _salvage_bench(gs) == [('希儿', 1)], '仅角色腿'
+    assert gs.equips.value == [], '装备域零写'
+    assert consume_defect_sink() == [], 'char-only 合法形态零缺陷'
+    assert gs.unchosen_supply.value is None, '消费即清'
+
+
+def test_salvage_bench_full_rejects_char_leg_equip_leg_still() -> None:
+    """席满形态锁(拒落语义):bench 满 9 → 角色腿拒落零写(bench 不变,
+    detail='bench_full' 语义,无溢出概念)且装备腿照发(腿间独立)。"""
+    full = [Unit(char_id=n, star=1) for n in
+            ('希儿', '符玄', '花火', '停云', '刃', '杰帕德', '娜塔莎',
+             '丹恒', '三月七')]
+    gs = _salvage_gs(bench_entries=full)
+    _salvage_run(gs, 1)   # 列 0:希儿 + 双装备
+    assert _salvage_bench(gs) == [(u.char_id, 1) for u in full], '席满拒落零写'
+    assert gs.equips.value == ['光能电池', '垃圾袋'], '装备腿照发'
+
+
+def test_salvage_bench_unobserved_rejects_char_leg() -> None:
+    """席未观察形态锁:bench 域 None → 角色腿拒落零写(bench 保持
+    None,detail='bench_unobserved' 语义),装备腿照发。"""
+    gs = _salvage_gs(bench_unobserved=True)
+    _salvage_run(gs, 1)
+    assert gs.bench.value is None, '席未观察零写'
+    assert gs.equips.value == ['光能电池', '垃圾袋'], '装备腿照发'
+
+
+def test_salvage_rand_channel_and_producer_attribution(monkeypatch) -> None:
+    """rand 语义锁:live 形态发放写 = 随机态通道(bench/equips 全部打捞
+    写行 source=logic_rand,观察覆盖差异预期内不触发失配网);producer
+    归因断言 = 'CwScreenSupplyNode'(journal 行 actor,观察上报同写端
+    归属值,防缺省归因混淆)。捕获窗 = 种子容器建毕后挂 sink(发放写行
+    独占窗,种子写行不入捕获)。"""
+    gs = _salvage_gs()
+    rows: list[dict] = []
+    monkeypatch.setattr(gs_mod, '_STATE_JOURNAL_SINK', rows.append)
+    monkeypatch.setattr(gs_mod, '_RUN_ID_PROVIDER', lambda: 'test-run')
+    _salvage_run(gs, 1)   # 列 0:char 腿 + 双装备腿
+    assert gs.bench.source == 'logic_rand', 'char 腿随机态通道'
+    assert gs.equips.source == 'logic_rand', '装备腿随机态通道'
+    assert gs.unchosen_supply.source == 'logic', '消费即清 = 逻辑态'
+    write_rows = [r for r in rows if r['row'] == 'write'
+                  and r['field'] in ('bench', 'equips', 'unchosen_supply')]
+    assert write_rows, '打捞写行在册'
+    assert all(r['sig']['actor'] == 'CwScreenSupplyNode'
+               for r in write_rows), \
+        f'归因 = CwScreenSupplyNode: {[r["sig"]["actor"] for r in write_rows]}'
+
+
+def test_salvage_assumption_keys_registered() -> None:
+    """披露键静态常量在册断言(无运行时 setdefault 动作,四键全集:
+    R-entry 触发读法 / 未选列均匀 / 星级先验 / sim fail-closed)。"""
+    assert STRATEGY_SALVAGE_ASSUMPTION_KEYS == (
+        'strategy_salvage_trigger_entry_reading',
+        'strategy_salvage_uniform_over_unchosen',
+        'strategy_salvage_star_prior',
+        'strategy_salvage_sim_failclosed_decision_leg',
+    )
