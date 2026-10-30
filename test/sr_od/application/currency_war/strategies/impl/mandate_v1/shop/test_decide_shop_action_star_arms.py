@@ -19,8 +19,9 @@ T-3;设计 = details/shop-buy-reform.md §1-§3,镜像 = mandate_v1/shop.py
     ``star_goal_met``) |
 - **W4 停留刷窗口让位**:窗口内(``refresh_warranted`` 真)M6 压牌库
   囤货臂零发射;非窗口 M6 照常回归。
-- **W11 刷新负结果记忆**:拒绝态关店置标记;重入无状态变化跳过刷新
-  提案(免费腿同约束、免费次数不耗);状态变化清标记后提案恢复。
+- **W11 刷新负结果记忆**(3.2 后记忆面 = 金线腿):拒绝态关店置标记;
+  重入无状态变化跳过刷新提案;状态变化清标记后提案恢复(付费腿);
+  「目标不可买」置位分支随预测门退役(design §2.2,免费腿无条件刷)。
 - 合成腿谓词机制全集直调形态表(恰 2 张 1★ / 2×1★+2★ / 2×2★)。
 
 帧构造 = 列车同行注册表线(need_star:姬子·启行 3/三月七 2/花火 2/
@@ -57,7 +58,6 @@ from sr_od.application.currency_war.kernel.cw_comps import (
     CORE_SINGLE_CARD_REGISTRY,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
-    ChannelSig,
     Unit,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
@@ -83,8 +83,6 @@ _COMP_NAME = '列车同行'
 _LINE = tuple(_members(_comp_of(_COMP_NAME)))
 _TARGET = '姬子·启行'   # need_star 3(唯一 3★ 追到底目标)
 _DEPLOY_ANCHOR = '白厄'   # 零阵营流派(板面标签空集锚;注册表现查)
-_LOGIC_SIG = ChannelSig(family='logic_action', actor='cw-shop-buy-reform',
-                        mode='compute')
 
 
 def _fillers(count: int, exclude: tuple[str, ...] = ()) -> list[str]:
@@ -356,38 +354,36 @@ class TestW4StayWindowYield:
 
 
 class TestW11RefreshNegativeMemory:
-    """刷新负结果记忆(轻量形态)。"""
-
-    def _seed_free(self, gs, count: int = 2) -> None:
-        gs.write_logic(gs.free_refresh_left, count,
-                       produced_by='cw-shop-buy-reform', sig=_LOGIC_SIG)
+    """刷新负结果记忆(轻量形态;统一让位优先级迭代 3.2 后记忆面 =
+    金线腿——「目标不可买」置位分支随预测门退役,design §2.2;免费腿
+    无条件刷,不再进入拒绝面)。"""
 
     def test_reject_close_sets_marker(self):
-        """拒绝态关店:席满 + 零燃料 + 不可合成帧(免费腿在册)刷新提案
-        被拒 → 置会话标记(节点, 金, 席位, 星级目标键)+ 照常收店
-        (驱动器契约:关店为收尾终结动作不入序列,空序列 = 纯关店帧)。"""
-        s, gs, st = _locked_frame(bench=_full_line_bench(jizi_star=2),
+        """拒绝态关店(金线腿):带内可刷帧金不足(r2_budget 拒)→ 置
+        会话标记(节点, 金, 席位, 星级目标键)+ 照常收店(驱动器契约:
+        关店为收尾终结动作不入序列,空序列 = 纯关店帧)。"""
+        bench = [_bc(_TARGET, star=2)] + _full_line_bench(jizi_star=2)[1:8]
+        s, gs, st = _locked_frame(bench=bench,
                                   deployed=[Unit(char_id=_fillers(6)[5], star=2)],
-                                  gold=100, level=7, cards=())
-        self._seed_free(gs)
+                                  gold=10, level=7, cards=())
         acts = _decide(s)
         assert acts == [], f'拒绝帧照常收店(零处理动作): {acts!r}'
         assert st.refresh_blocked is not None, '负结果记忆标记置位'
         assert st.refresh_blocked[0] == (2, 1), \
             '键分量 = 生效节点序位(种子 node_pos 字段缺席,effective = hist 水位)'
-        assert st.refresh_blocked[1] == 100, '键分量 = 金'
-        assert st.refresh_blocked[2] == BENCH_CAPACITY, '键分量 = 席位快照'
+        assert st.refresh_blocked[1] == 10, '键分量 = 金'
         assert st.refresh_blocked[3] == ((_TARGET, 3),), \
             '键分量 = 星级目标键(星级目标完成即键变)'
-        assert st.cw4_counters.get('shop_refresh_target_unbuyable', 0) == 1
+        assert st.cw4_counters.get('shop_refresh_target_unbuyable', 0) == 0, \
+            '金线腿置位:目标可买拒因不在场(免费腿无条件刷已脱离拒绝面)'
 
-    def test_reentry_same_state_skips_refresh_proposal_free_included(self):
+    def test_reentry_same_state_skips_refresh_proposal(self):
         """拒绝态重入(无状态变化,解拦复核清 handled 重开形态):刷新
-        提案跳过(免费腿同约束,免费次数保留不耗),按六序/关店走。"""
-        s, gs, st = _locked_frame(bench=_full_line_bench(jizi_star=2),
+        提案跳过,按六序/关店走。"""
+        bench = [_bc(_TARGET, star=2)] + _full_line_bench(jizi_star=2)[1:8]
+        s, gs, st = _locked_frame(bench=bench,
                                   deployed=[Unit(char_id=_fillers(6)[5], star=2)],
-                                  gold=100, level=7, cards=())
-        self._seed_free(gs)
+                                  gold=10, level=7, cards=())
         _decide(s)
         assert st.refresh_blocked is not None
         # 重入 = visit 序号 +1 + 解拦复核清 handled 重开(生产重进形态)。
@@ -395,30 +391,27 @@ class TestW11RefreshNegativeMemory:
         st.shop_handled = None
         acts2 = _decide(s)
         assert acts2 == [], \
-            f'无状态变化重入帧零刷新提案(含免费腿),按六序/关店走: {acts2!r}'
+            f'无状态变化重入帧零刷新提案,按六序/关店走: {acts2!r}'
         assert st.cw4_counters.get(
             'shop_refresh_blocked_memory_skip', 0) == 1, '跳过观测键在册'
-        assert int(gs.free_refresh_left.value or 0) == 2, \
-            '免费次数保留不耗(标记约束下白给刷不发生)'
 
     def test_state_change_clears_marker_and_proposal_recovers(self):
-        """状态变化清标记:席位变化(腾出一席 → 目标可买翻转)后重入,
-        标记清除,免费刷新提案恢复发射。"""
-        s, gs, st = _locked_frame(bench=_full_line_bench(jizi_star=2),
+        """状态变化清标记:金变化(键分量比对)后重入,标记清除,刷新
+        提案恢复发射(付费——金线闸放行腿)。"""
+        bench = [_bc(_TARGET, star=2)] + _full_line_bench(jizi_star=2)[1:8]
+        s, gs, st = _locked_frame(bench=bench,
                                   deployed=[Unit(char_id=_fillers(6)[5], star=2)],
-                                  gold=100, level=7, cards=())
-        self._seed_free(gs)
+                                  gold=10, level=7, cards=())
         _decide(s)
         assert st.refresh_blocked is not None
         st.cw4_segment_serial += 1
         st.shop_handled = None
-        cw4_gs(s, bench=_full_line_bench(jizi_star=2)[:8])   # 腾出一席
+        cw4_gs(s, gold=200)   # 金变化 → 比对键失配清标记
         acts2 = _decide(s)
         refreshes = [a for a in acts2
                      if isinstance(a, CwActionRefreshShopParam)]
-        assert refreshes and refreshes[0].cost == 0 \
-            and refreshes[0].reason == 'free_refresh', \
-            f'席位变化清标记后免费刷新提案恢复: {acts2!r}'
+        assert refreshes and refreshes[0].cost > 0, \
+            f'金变化清标记后刷新提案恢复(付费): {acts2!r}'
         assert st.refresh_blocked is None, '标记已清'
 
     def test_extended_merge_form_target_buyable_at_full_bench(self):

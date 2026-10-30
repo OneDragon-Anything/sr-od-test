@@ -111,13 +111,17 @@ def _fuel(count: int, exclude: tuple[str, ...] = ()) -> list[str]:
 def _frame(*, gold: int = 60, bench=(), deployed=(), shop_cards=(),
            level: int = 3, plane: int = 1, round_num: int = 3,
            node_kind: str = 'reward', comp=None, hist=None,
-           hp: int = 60, actives: tuple = (), xp: tuple | None = None):
+           hp: int = 60, actives: tuple = (), xp: tuple | None = None,
+           candidates: tuple = (), direction: bool = True):
     """商店决策帧(直构;金位账面/边界判重随种子稳态钉位;hist 直赋
-    node_hist_pos 位面水位线;hp/actives/xp 供资格门逐道用例构帧)。"""
+    node_hist_pos 位面水位线;hp/actives/xp 供资格门逐道用例构帧;
+    candidates = 候选快照线名;direction=False = 无方向帧,未锁口径)。"""
     sess = StrategySession(rng=random.Random('cw-36-loop'))
     st = state_of(sess)
     st.cw4_counters = {}
-    st.target_comp = comp if comp is not None else COMP_LIBRARY[0]
+    st.target_comp = (COMP_LIBRARY[0] if comp is None and direction
+                      else comp)
+    st.line_candidates = tuple(candidates)
     gs = game_state_of(sess)
     gs.write_logic(gs.node, NodeKey(plane=plane, round_num=round_num,
                                     kind=node_kind),
@@ -243,11 +247,14 @@ class TestGoldLedgerProtocol:
 
     def test_multisell_gap_uses_ledger_no_reopen(self):
         """多卖循环第二笔起账面判缺口(§4.2 协议④):筹资序列逐笔卖出
-        期间零开店动作(禁逐笔重读;session_funding 卖到缺口闭合)。"""
-        fuels = _fuel(3)
+        期间零开店动作(禁逐笔重读;session_funding 卖到缺口闭合)。
+        构帧 = 板满(场前排 3 件铺满 cap):备战位燃料件全部为部署外
+        (统一序列前置 = 部署重排定型,空位帧备战件会被 M1 补位收进
+        部署需要面而整体 sheltered,筹资无候选)。"""
+        pool = _fuel(6)
         live, sess, gs, st = _frame(gold=1, node_kind='reward',
-                                    bench=[(n, 1) for n in fuels],
-                                    deployed=[fuels[0]],
+                                    bench=[(n, 1) for n in pool[3:]],
+                                    deployed=pool[:3],
                                     shop_cards=[(_MEMBER, 3, 1)])
         acts = []
         for _ in range(6):
@@ -492,36 +499,10 @@ class TestReopenTriggers:
         assert st.shop_handled is not None
         return act
 
-    def _close_with_bench_full(self, live, sess, gs, st, *, name):
-        """席满收工:bench 全持有件(置换无可让位候选)+ 缺员件在店 →
-        记录 bench_full 机会清单 + 收工关店。"""
-        act = live.decide_shop_action()
-        assert isinstance(act, CwActionCloseShopParam), act
-        assert any(r.card_name == name and r.blocked_by == 'bench_full'
-                   for r in st.shop_opportunities), \
-            f'席满机会清单记录缺席: {st.shop_opportunities}'
-        return act
-
-    def test_seat_freed_reopens_session(self):
-        """席位空出解拦:席满记录 → 备战腾出一席 → 第 4 步入口复核
-        解拦(清标记开店);未解拦时第 4 步按标记跳过。"""
-        aux = [m for m in sorted(_LINE) if m != _MEMBER]
-        holds = (aux * 3)[:9]   # 2★ 线内达标件铺满(置换价值比较拒)
-        live, sess, gs, st = _frame(gold=60, node_kind='reward',
-                                    bench=[(n, 2) for n in holds],
-                                    deployed=[holds[0]],
-                                    shop_cards=[(_MEMBER, 3, 1)])
-        self._close_with_bench_full(live, sess, gs, st, name=_MEMBER)
-        assert st.shop_handled is not None   # 收工置标记
-        # 席位未空出:复核不解拦,第 4 步跳过(标记辖)。
-        assert entry._step4_shop_session_pending(sess, gs) is False
-        # 备战腾席(bench 移除一件):
-        slots = list(gs.bench.value.slots)
-        slots[0] = BenchSlot(kind='empty')
-        gs.write_logic(gs.bench, BenchView(slots=slots, capacity=9),
-                       produced_by='cw-36-loop', sig=_LOGIC_SIG)
-        assert entry._step4_shop_session_pending(sess, gs) is True
-        assert st.shop_handled is None   # 解拦清标记
+    # (席位空出解拦的六步流程形态测试 = shop/test_acquire_swap.py 的
+    # test_priority_insufficient_unblocks_on_seat_freed——bench_full 拦因
+    # 写端已随置换账替换退役(3.2),新拦因 priority_insufficient 的
+    # 解拦复核分支在该专测承载;本类保留金位解除/读数开门两形态。)
 
     def test_gold_released_reopens_session(self):
         """金位解除解拦(义务件破息豁免形态):金不足记录 + 账面达

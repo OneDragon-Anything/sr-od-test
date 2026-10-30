@@ -162,28 +162,26 @@ def test_endgame_char_card_beats_high_value_equip():
     assert out.idx == 0
 
 
-# ==================== ③ 角色级空转帧 ====================
+# ==================== ③ 角色级(虚拟全局评估;3.2 形态)====================
 
 
-def test_unlocked_and_demoted_frames_fall_to_equip_axis():
-    """凭据③:未锁线/降格帧角色级空转 + 装备级无 key 参照(空转帧装备
-    轴退化为通用值定序;get_comp 解析失败帧 = flow 传 None,见 flow
-    接线测试)。锁线帧作对照,证明断言可判别。"""
+def test_unlocked_frames_evaluate_chars_via_virtual_assessment():
+    """凭据③(3.2 重写):「是否终局角色」布尔门退役(总纲 §2.6 消费点
+    映射)——未锁定/降格帧角色候选同样过虚拟全局评估,幸存者(备战位
+    有空位 = 无让路对象,不经淘汰判定)按第 2 级胜出;装备轴仅在角色级
+    无幸存时承接。"""
     comp = _comp(['飞霄'], key=['火力风暴潮'])
     opts = [_opt(0, char='飞霄', equip='反卫星狙击枪'),
             _opt(1, equip='轮滑鞋')]
-    # 未锁线:角色级空转 → 轮滑鞋(4)> 反卫星狙击枪(2)
+    # 未锁定帧:飞霄虚拟置入(空备战位 = 无位移)幸存 → 角色卡胜出。
     out = supply.decide(opts, _fresh_gs(), None, False)
     assert isinstance(out, SupplyDecision)
-    assert out.idx == 1
-    # 降格帧:锁线在但 demoted_endgame=True → 同未锁口径(防御位)
+    assert out.idx == 0
+    # 降格帧:同未锁口径(布尔门已退役,降格位对角色级零作用)。
     out = supply.decide(opts, _fresh_gs(), comp, True)
     assert isinstance(out, SupplyDecision)
-    assert out.idx == 1
-    # 对照:锁线激活帧角色级生效 → 成员卡胜出
-    out = supply.decide(opts, _fresh_gs(), comp, False)
-    assert isinstance(out, SupplyDecision)
     assert out.idx == 0
+    # 角色级无幸存(候选全被虚拟阵容淘汰,席满帧构造见凭据⑦)→ 装备轴。
 
 
 # ==================== ④ 需求计数与两账口径 ====================
@@ -232,13 +230,15 @@ def test_demand_counting_and_component_upgrades_two_accounts():
 
 
 def test_refresh_gate_all_three_empty_and_fail_closed():
-    """凭据⑤:建议刷 = 且仅 = 三级全空 ∧ 次数闸放行;left 缺(None)/
-    尽(0)不刷且不阻塞落选卡(闸内嵌 decide,fail-closed)。"""
+    """凭据⑤:建议刷 = 且仅 = 三级全空(无钻 ∧ 角色级无幸存 ∧ 装备全
+    tier 0)∧ 次数闸放行;left 缺(None)/尽(0)不刷且不阻塞落选卡
+    (闸内嵌 decide,fail-closed)。角色级「无幸存」两形态:无角色选项/
+    候选被虚拟阵容淘汰(席满帧末位 = 自己,见凭据⑦构帧)。"""
     comp = _comp(['飞霄'], key=['火力风暴潮'])
-    # 三级全空(非终局成员 char 不算角色候选;装备全 tier 0)+ left=1 → 刷
+    # 三级全空形态一(无角色选项,装备全 tier 0)+ left=1 → 刷
     gs = _fresh_gs()
     _set_left(gs, 1)
-    opts = [_opt(0, char='三月七', equip='绝对热量'),
+    opts = [_opt(0, equip='绝对热量'),
             _opt(1, equip='生命之环')]
     assert isinstance(supply.decide(opts, gs, comp, False),
                       SupplyRefreshSuggestion)
@@ -247,7 +247,7 @@ def test_refresh_gate_all_three_empty_and_fail_closed():
     _set_left(gs_hi, 1)
     assert isinstance(supply.decide([_opt(0, equip='火力风暴潮')], gs_hi,
                                     None, False), SupplyRefreshSuggestion)
-    # 角色级有候选 → 不刷(锁线帧终局成员在)→ 落选卡
+    # 角色级有幸存候选 → 不刷(空备战位帧角色卡不经淘汰)→ 落选卡
     gs_char = _fresh_gs()
     _set_left(gs_char, 1)
     out = supply.decide([_opt(0, char='飞霄', equip='绝对热量')], gs_char,
@@ -258,7 +258,7 @@ def test_refresh_gate_all_three_empty_and_fail_closed():
                         False)
     assert isinstance(out, SupplyDecision) and out.idx == 0
     # 带钻帧永不建议刷(「无带钻」合取支):多钻帧才到达闸面(单钻经
-    # 第 1 级早退不经闸)——两钻均非终局成员/非 key 件(装备全 tier 0)
+    # 第 1 级早退不经闸)——两钻均非幸存角色/非 key 件(装备全 tier 0)
     # + left=1,现实现钻内细分落选卡;凭据①的多钻帧未构造次数闸读数,
     # 测不出该支
     gs_dia = _fresh_gs()
@@ -282,16 +282,75 @@ def test_refresh_gate_all_three_empty_and_fail_closed():
 
 
 def test_full_bench_still_normal_pick():
-    """凭据⑥:席满帧选角色卡照常胜出(溢出席语义 = 正常选卡,无特殊
-    分支;记账失真申报 = 溢入单位不入 gs,凑星漏计归观察/记账批)。"""
-    comp = _comp(['飞霄'])
+    """凭据⑥(3.2 形态):席满帧选卡 = 虚拟全局评估照常判定,无溢出
+    特殊分支——成员候选(档 2,键小于同费垫牌)幸存照选(记账失真申报 =
+    溢入单位不入 gs,凑星漏计归观察/记账批)。"""
+    comp = _comp(['花火'])
     gs = _fresh_gs()
+    from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+        state_of,
+    )
+    state_of(gs).line_candidates = ('列车同行',)
     _set_bench_units(gs, [Unit(char_id=f'杂鱼{i}', star=1)
                           for i in range(9)])
-    opts = [_opt(0, char='飞霄', equip=''), _opt(1, equip='轮滑鞋')]
+    opts = [_opt(0, char='花火', equip=''), _opt(1, equip='轮滑鞋')]
     out = supply.decide(opts, gs, comp, False)
     assert isinstance(out, SupplyDecision)
     assert out.idx == 0
+
+
+# ==================== ⑥' 席满帧虚拟淘汰(3.2 形态)====================
+
+
+def test_full_bench_junk_char_eliminated_by_virtual_assessment():
+    """3.2 淘汰语义:席满帧候选经虚拟置入排序定位——排序末位 = 自己
+    (最易让路 = 统一序列键最大)的被虚拟阵容淘汰,角色级空转落装备轴;
+    高优先级候选(成员件)同帧幸存照选。构帧纪律:垫牌互异(同名凑三
+    会触发合成净释放 → 无位移 → 候选不经淘汰,淘汰分支测空)。"""
+    # 构帧:候选快照 = 列车同行(持牌花火/瓦尔特 = 档 2/5 成员件)+
+    # 万金油三月七(档 6);持牌垫 = 互异高费档 8 件(2-5 费,Lv3 概率
+    # 0 = 难再遇 = 序列靠后);候选 = 万敌(1费,概率满 = 最易再遇 =
+    # 统一序列末位)→ 虚拟排序末位 = 万敌自己 → 淘汰 → 装备轴。
+    gs = _fresh_gs()
+    from test.sr_od.application.currency_war._cw_helpers import (
+        cw4_comp as _comp_of,
+    )
+    from test.sr_od.application.currency_war._cw_helpers import (
+        cw4_members as _members,
+    )
+
+    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+    from sr_od.application.currency_war.kernel.cw_comps import (
+        CORE_SINGLE_CARD_REGISTRY,
+    )
+    from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+        state_of,
+    )
+    from sr_od.application.currency_war.strategies.impl.mandate_v1.protection import (
+        CROSS_LINE_KEEP_NAMES,
+        protection_membership,
+    )
+    state_of(gs).line_candidates = ('列车同行',)
+    km = set(_members(_comp_of('列车同行')))
+    pool = [n for n, c in CHARACTERS.items()
+            if n not in km and n not in CROSS_LINE_KEEP_NAMES
+            and n not in CORE_SINGLE_CARD_REGISTRY
+            and n not in set(protection_membership(gs, state_of(gs)))
+            and (c.cost or 0) >= 2]
+    assert len(pool) >= 6, '测试前提:互异高费干净名不足'
+    _set_bench_units(gs, [Unit(char_id='花火', star=1),
+                          Unit(char_id='瓦尔特', star=1),
+                          Unit(char_id='三月七', star=1)]
+                     + [Unit(char_id=n, star=1) for n in pool[:6]])
+    opts = [_opt(0, char='万敌', equip=''), _opt(1, equip='轮滑鞋')]
+    out = supply.decide(opts, gs, None, False)
+    assert isinstance(out, SupplyDecision)
+    assert out.idx == 1, '席满帧最易让位候选被虚拟阵容淘汰 → 装备轴承接'
+    # 同帧高优先级候选(成员花火)幸存 → 角色卡胜出。
+    opts_member = [_opt(0, char='花火', equip=''), _opt(1, equip='轮滑鞋')]
+    out = supply.decide(opts_member, gs, None, False)
+    assert isinstance(out, SupplyDecision)
+    assert out.idx == 0, '席满帧成员候选幸存(档 2 保护)→ 角色卡胜出'
 
 
 # ==================== ⑦ 凑星 tiebreak ====================
@@ -397,8 +456,8 @@ def test_flow_supply_wiring_wraps_actions_and_parses_locked_comp():
     out = _wired(gs2).decide_supply()
     assert isinstance(out, CwActionRefreshSupplyParam)
 
-    # 解析失败帧:伪套名 → get_comp None → 未锁口径(char 卡不提权,
-    # 装备定序轮滑鞋胜出)
+    # 解析失败帧:伪套名 → get_comp None → 按未锁口径(3.2 后角色级
+    # 无终局布尔门——花火虚拟置入(空备战位 = 无位移)幸存,仍压装备轴)
     gs3 = _fresh_gs()
     gs3.write_logic(gs3.supply, SupplyPayload(options=[
         _opt(0, char='花火', equip='反卫星狙击枪'),
@@ -407,7 +466,7 @@ def test_flow_supply_wiring_wraps_actions_and_parses_locked_comp():
     strategy3.state.v3_intention = IntentionState(locked_comp='不存在的套名')
     out = strategy3.decide_supply()
     assert isinstance(out, CwActionPickSupplyParam)
-    assert out.idx == 1
+    assert out.idx == 0
 
 
 # ==================== 选项归并读链(纯函数)====================

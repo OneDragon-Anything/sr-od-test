@@ -352,18 +352,25 @@ class TestStep1Consumable:
 
 
 class TestStep2Ore:
-    """晶矿测试(prep_pipeline §1 第 2 步:席未满点全部;席满垫件谓词
-    过滤后取价值最小,无试错计数;ore_defer 键族退役)。"""
+    """晶矿测试(prep_pipeline §1 第 2 步:席未满点全部;席满 = 统一序列
+    末位让位一张,3.2 改造 = 垫件谓词过滤退役【拍,总纲 §2.7 无场景
+    专属池子/身份过滤退役】——部署重排定型后的全局面序列,末位即让位
+    对象;无任何可卖件 → 放弃晶矿保留;ore_defer 键族退役)。
+
+    构帧纪律:统一序列前置 = 部署重排定型——场前排铺满 cap(空位帧
+    备战位件会被 M1 补位收进部署需要面而整体 sheltered,测不到让位序)。
+    """
 
     @staticmethod
     def _full_bench_frame():
-        # deployed 非空(绕空板守卫:评估器 as-built 收编语义,deployed=0
-        # 帧卖出哑火);9 席满
+        # deployed 非空且铺满 cap(level 6 → 6 件,绕空板守卫 + 板满
+        # 前置);9 席满
         sess = cw4_session()
         cw4_gs(sess, gold=30, level=6, round_num=2, node='战斗',
                bench=[_bc('c1', star=2), _bc('c2', star=2), _bc('c0')]
                + [_bc('c3', star=2)] * 6,
-               front_row=_units(('三月七',)), back_row=())
+               front_row=_units(('d1', 'd2', 'd3', 'd4', 'd5', 'd6')),
+               back_row=())
         return sess
 
     def test_free_seat_collects_all(self):
@@ -379,27 +386,29 @@ class TestStep2Ore:
         assert len(out) == 1 and isinstance(out[0].action, CwActionCollectOreParam)
         assert out[0].action.points
 
-    def test_full_seat_sells_pad_not_first_value(self):
-        """席满 → 垫件谓词过滤后取价值最小:垫件被卖、非垫件(2★)
-        不被卖——「过滤后取最小」非「全池排序首位判断」(价值函数无
-        垫件身份维,prep_pipeline 第 2 步消费声明)。"""
+    def test_full_seat_sells_sequence_tail(self):
+        """席满 → 统一序列末位让位一张:1★ 件(同费档同概率域键更大)
+        先于 2★ 件让位——「序列末位」非「垫件身份过滤」(垫件谓词退役,
+        3.2;星级让位代价由档位结构承载)。"""
         sess = self._full_bench_frame()
         _write_ores(game_state_of(sess), (('gold', 100, 200, 30),))
         out = _emit(sess)
         sells = [e.action for e in out
                  if isinstance(e.action, CwActionSellBenchParam)]
         assert len(sells) == 1 and sells[0].reason == 'ore_make_room'
-        # c0(唯一 1★ 垫件,紧缩位 2 → 容器槽 2)被卖;2★ 非垫件不动
+        # c0(唯一 1★,紧缩位 2 → 容器槽 2)= 序列末位被卖
         assert sells[0].bench_idx == 2
 
-    def test_full_seat_no_pad_yields_ore(self):
-        """席满 ∧ 无垫件(全 2★)→ 本节点放弃晶矿(确定的
-        高价值持有不换随机产出)——不发射晶矿动作也不卖,透传到后续
-        步骤(第 4 步开店)。"""
+    def test_full_seat_identity_excluded_all_yields_ore(self):
+        """席满 ∧ 全池被常规面身份段排除(保护档铺席)→ 本节点放弃晶矿
+        (部署外候选真空 = 空输出,不向身份面借牌)——不发射晶矿动作
+        也不卖,透传到后续步骤(第 4 步开店;ore_yield_no_pad 计数键
+        语义 = 无可行件,键退役归属 3.5)。"""
         sess = cw4_session()
         cw4_gs(sess, gold=30, level=6, round_num=2, node='战斗',
-               bench=[_bc(f'c{i}', star=2) for i in range(9)],
-               front_row=_units(('三月七',)), back_row=())
+               bench=[_bc('三月七', star=2)] * 9,
+               front_row=_units(('d1', 'd2', 'd3', 'd4', 'd5', 'd6')),
+               back_row=())
         _write_ores(game_state_of(sess), (('gold', 100, 200, 30),))
         out = _emit(sess)
         assert not [e for e in out
@@ -410,8 +419,8 @@ class TestStep2Ore:
         assert state_of(sess).cw4_counters.get('ore_yield_no_pad') == 1
 
     def test_rescan_collects_after_seat_freed(self):
-        """回扫语义测试:席满卖垫件腾位(上报后席 8)→ 下帧全扫回到第 2
-        步 → 点晶矿(腾位后回头点晶矿的回跳在全扫下自然表达)。"""
+        """回扫语义测试:席满卖序列末位腾位(上报后席 8)→ 下帧全扫
+        回到第 2 步 → 点晶矿(腾位后回头点晶矿的回跳在全扫下自然表达)。"""
         sess = self._full_bench_frame()
         _write_ores(game_state_of(sess), (('gold', 100, 200, 30),))
         out1 = _emit(sess)
@@ -424,33 +433,10 @@ class TestStep2Ore:
         assert len(out2) == 1 \
             and isinstance(out2[0].action, CwActionCollectOreParam)
 
-    def test_pad_filter_dominates_global_value_order(self):
-        """垫件过滤优先于全局价值排序(对抗差分态):垫件(5费 1★
-        流萤——该等级刷不出 ⇒ 再遇窗 inf,价值排全池末位)∧ 全池价值
-        最小件为非垫件(1费 2★ 万敌)时,仍取垫件——校验「垫件谓词
-        过滤后取价值最小」非「全池排序首位」(价值函数无垫件身份维,
-        prep_pipeline 第 2 步消费声明;防未来回归成全池取最小)。
-        万敌 = 非四体系:对照件须穿过保护集身份段(统一保护集
-        changes/2026-10-15-unified-protection-set design.md §2.3;原
-        艾丝妲属持续伤害系保护档,常规面禁卖,不再在池)。"""
-        sess = cw4_session()
-        cw4_gs(sess, gold=30, level=6, round_num=2, node='战斗',
-               bench=[_bc('万敌', star=2), _bc('流萤')]
-               + [_bc('c3', star=2)] * 7,
-               front_row=_units(('三月七',)), back_row=())
-        _write_ores(game_state_of(sess), (('gold', 100, 200, 30),))
-        # 全池序首位 = 万敌(非垫件,价值更低)——全池取最小会卖它
-        gs = game_state_of(sess)
-        from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.sell_candidates import (
-            evaluate_sell_candidates,
-        )
-        cands, _why = evaluate_sell_candidates(gs, 'ore_make_room')
-        assert cands[0].char_id == '万敌' and cands[0].star == 2
-        out = _emit(sess)
-        sells = [e.action for e in out
-                 if isinstance(e.action, CwActionSellBenchParam)]
-        assert len(sells) == 1 and sells[0].bench_idx == 1, \
-            '垫件过滤优先:卖流萤(垫件)而非全池价值最小的艾丝妲'
+    # (「垫件过滤优先于全局价值排序」差分测试已随垫件谓词退役删除
+    # (3.2,总纲 §2.7 身份过滤退役)——统一序列的取用语义断言由
+    # strategies/impl/mandate_v1/criteria/test_sell_candidates.py
+    # TestUnifiedSequence 承载。)
 
 
 # ============================================================ 第 3 步:升级检查

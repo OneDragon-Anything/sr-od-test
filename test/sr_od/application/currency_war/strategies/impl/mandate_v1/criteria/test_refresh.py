@@ -8,10 +8,12 @@ design.md §2.0 第 2/3 条 + details/refresh-chain.md §5 清单)。
   ``r2_card_reserve``,未锁窗口恒 0);
 - ③ 席满 + 可合成 → 发射(合成腿消费现役 ``_merge_pair_names``
   「恰 2 张全 1★」语义——机制全集重写归买面改革批,本批锁现役口径);
-- ④ 席满 + 零燃料 + 不可合成 → 拒(关店,拒因 ``target_unbuyable``);
+- ④ 席满 + 零燃料 + 不可合成 → 付费腿拒(关店,拒因 ``target_unbuyable``
+  ——付费预测门拆除归 3.4,收敛前拒因照落);
 - ⑤ 升级推迟帧刷新维持拒绝(资金序 = 升级优先于刷新,判据①支无
   解锁支);
-- ⑥ 免费腿零收获不刷(免费刷新同过目标可买检查,金线不适用);
+- ⑥ 免费次数在册即刷(统一让位优先级迭代 3.2:design §2.2 无条件刷
+  【拍】,外层负结果记忆闸照旧);
 - ⑦ 死码符号零残留——按本测试仓纪律(源码扫描测试禁写,退役符号
   墓碑不设 pytest)以执行侧残留扫描承载,记录归迭代报告。
 
@@ -212,9 +214,11 @@ class TestRefreshChainSingleFrame:
         assert (ok, key) == (False, 'stay_gate_upgrade_first'), \
             '升级推迟期刷新维持拒绝(资金序,无解锁支)'
 
-    def test_6_free_refresh_zero_gain_no_refresh(self):
-        """⑥免费腿零收获不刷(免费刷新同过目标可买检查——三腿全无帧
-        免费腿亦拒,白给刷无界循环消灭)。"""
+    def test_6_free_refresh_unconditional_when_counted(self):
+        """⑥免费次数在册即刷(统一让位优先级迭代 3.2;design §2.2 免费
+        刷新行为声明:分支内零判据门——行为申报 = 唯一变化「目标可买」
+        门删除,目标不可买(备战位满)帧从「拦下不耗次数」变「照刷耗
+        次数」,免费不耗金、次数每节点重置/概率补给,低价值接受)。"""
         level = 7
         _assert_band_premise(int(CHARACTERS[_TARGET].cost), level)
         fill = _fillers(6)
@@ -228,7 +232,11 @@ class TestRefreshChainSingleFrame:
         gs.write_logic(gs.free_refresh_left, 2, produced_by='cw-refresh-chain',
                        sig=_LOGIC_SIG)
         acts = _decide(s)
-        assert not [a for a in acts
-                    if isinstance(a, CwActionRefreshShopParam)], \
-            f'免费腿零收获帧零刷新(含免费): {acts!r}'
-        assert st.cw4_counters.get('shop_refresh_target_unbuyable', 0) >= 1
+        refreshes = [a for a in acts
+                     if isinstance(a, CwActionRefreshShopParam)]
+        assert refreshes, f'免费次数在册帧无条件刷: {acts!r}'
+        assert refreshes[0].cost == 0 \
+            and refreshes[0].reason == 'free_refresh', refreshes[0]
+        # 外层负结果记忆闸照旧(design §2.2:免费与付费同闸)——记忆
+        # 置位帧免费腿同跳,本帧零标记(免费分支不再置位)。
+        assert st.refresh_blocked is None
