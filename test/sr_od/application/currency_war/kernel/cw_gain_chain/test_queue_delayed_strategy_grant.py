@@ -19,6 +19,12 @@ monkeypatch 形态测随真注册转直测):
   好运令牌@3(物名载体直断)∧ 零即时腿;equips 未观察域效果串仍单枚
   (两腿工厂同域会多枚 equip_grant placed=False 串,反证载体分流)+
   两腿成员集负成员断言(T-146 批扩面);
+- 是钻石总会发光 = 延时-only 单腿展开卡 + 族内首个随机发放行(designs/
+  T-148-shizuanshi-zonghui-faguang.md §4 锁 2):队列恰 (('是钻石总会
+  发光', 2),) ∧ 效果串单枚 choice-set 形 strategy_grant_scheduled:
+  红钻|蓝钻@2(封闭集竖线连接直断)∧ 零即时腿 ∧ 登记 rng 零消耗
+  (拿卡前后 rng 状态逐位相等,预掷被否的行为证据)∧ equips 未观察域
+  载体分流直断 + 两腿成员集负成员(T-148 批扩面);
 - equips 未观察 → 即时腿拒落零写 placed=False、入队腿照写;
 - 未登记策略卡(表外名 + 在册无腿卡)零写;
 - live 落地形态(gain_invest_strategy 同函数,session=None 直构)队列
@@ -223,4 +229,53 @@ def test_pick_haoyun_lingpai_yin_unobserved_still_single_scheduled() -> None:
         f'效果串(未观察域仍单枚): {effects}'
     assert gs.equips.value is None, '未观察域出现装备栏写'
     assert gs.pending_strategy_grants.value == (('好运令牌·银', 3),), \
+        f'队列值: {gs.pending_strategy_grants.value}'
+
+
+def test_pick_shizuanshi_choice_set_schedule_zero_rng() -> None:
+    """是钻石总会发光 登记腿直断(卡文「2个节点后，获得【红钻】或
+    【蓝钻】。」纯延时单句,零即时腿;族内首个随机发放行,掷骰时点 =
+    到点发放时现掷):拿卡 → 队列恰 (('是钻石总会发光', 2),) ∧ 效果串
+    单枚 choice-set 形 strategy_grant_scheduled:红钻|蓝钻@2(封闭集
+    竖线连接直断,连接字面 ∉ EQUIPMENTS 防伪物名)∧ 零即时腿 ∧
+    登记 rng 零消耗(拿卡前后 rng.getstate 逐位相等——预掷被否的行为
+    证据,锁裁决点 2)∧ 入队腿外零额外写行;逐名独立构造,族内既有
+    锁不受影响。"""
+    gs = _gs(equips=[])
+    rng = random.Random(2026)
+    state_before = rng.getstate()
+    seq_before = gs.write_seq
+    effects = on_strategy_gained(gs, '是钻石总会发光', rand=False,
+                                 sig=_lsig(), rng=rng)
+    assert effects == ('strategy_grant_scheduled:红钻|蓝钻@2',), \
+        f'效果串(单枚,choice-set 形): {effects}'
+    assert gs.equips.value == [], f'即时腿误写装备栏: {gs.equips.value}'
+    assert gs.pending_strategy_grants.value == (('是钻石总会发光', 2),), \
+        f'队列值: {gs.pending_strategy_grants.value}'
+    assert gs.write_seq == seq_before + 1, \
+        f'入队腿外出现额外写行(seq={gs.write_seq})'
+    assert rng.getstate() == state_before, \
+        '登记腿消费 rng(预掷被否面被破坏)'
+
+
+def test_pick_shizuanshi_unobserved_still_choice_set_scheduled() -> None:
+    """是钻石总会发光 equips 未观察域载体分流直断(防伪锁,与主条逐名
+    独立构造):两腿工厂在同域会多发 equip_grant placed=False 串,延时-
+    only 载体效果串仍恰单枚 strategy_grant_scheduled:红钻|蓝钻@2 ∧
+    equips 保持未观察零写 ∧ 两腿成员集负成员(误入集 = 分派语义漂移
+    在行为锁不可见,成员断言直锁)。"""
+    from sr_od.application.currency_war.kernel.cw_gain_effects import (
+        _STRATEGY_DELAYED_TWO_LEG_GRANTS,
+        PICK_INVEST_EFFECTS,
+    )
+    assert '是钻石总会发光' not in _STRATEGY_DELAYED_TWO_LEG_GRANTS, \
+        '误入两腿成员集(入集 = 拿卡错发即时装备腿的分派面)'
+    assert '是钻石总会发光' in PICK_INVEST_EFFECTS, '显式单行登记条缺位'
+    gs = _gs(equips=None)
+    effects = on_strategy_gained(gs, '是钻石总会发光', rand=False,
+                                 sig=_lsig(), rng=random.Random(0))
+    assert effects == ('strategy_grant_scheduled:红钻|蓝钻@2',), \
+        f'效果串(未观察域仍单枚): {effects}'
+    assert gs.equips.value is None, '未观察域出现装备栏写'
+    assert gs.pending_strategy_grants.value == (('是钻石总会发光', 2),), \
         f'队列值: {gs.pending_strategy_grants.value}'

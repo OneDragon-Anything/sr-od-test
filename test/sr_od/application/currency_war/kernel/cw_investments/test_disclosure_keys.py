@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 from sr_od.application.currency_war.kernel.cw_investments import (
+    STRATEGY_DELAYED_RANDOM_CHOICE_ASSUMPTION_KEYS,
     STRATEGY_HIRING_LETTER_UNMODELED_ASSUMPTION_KEYS,
 )
 
@@ -18,4 +19,14 @@ def test_hiring_letter_unmodeled_keys_registered() -> None:
     assert STRATEGY_HIRING_LETTER_UNMODELED_ASSUMPTION_KEYS == (
         '招聘资金',
         '招聘资金+',
+    )
+
+
+def test_strategy_delayed_random_choice_keys_registered() -> None:
+    """披露键静态常量在册断言(策略延时发放随机 choice-set 行均匀 v0
+    假设申报,是钻石总会发光首例):desc 对「或」无概率载,红/蓝各半
+    为建模假设非游戏真值;后继随机发放行随批扩元组,本断言随批扩员
+    ——申报面扩员即红一次,批内顺手更新即绿。"""
+    assert STRATEGY_DELAYED_RANDOM_CHOICE_ASSUMPTION_KEYS == (
+        'strategy_delayed_choice_uniform_v0',
     )

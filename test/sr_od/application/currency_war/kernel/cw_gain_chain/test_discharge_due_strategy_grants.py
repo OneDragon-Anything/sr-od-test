@@ -16,9 +16,16 @@ discharge_due_strategy_grants)。
   拒落零写 + 条目仍弹除 + 回写行留存证据);
 - 发放拒落(equips 未观察)→ 零写 + 条目仍弹除(到期即消费)+ 回写行
   留存证据;
-- 注册表漂移防御(队列卡名查行失败)→ 零发放 + 条目保留。
+- 注册表漂移防御(队列卡名查行失败)→ 零发放 + 条目保留;
+- 确定行零扰动(是钻石总会发光扩形批 T-148:锁「扩形不越权」)→ 既有
+  五确定行发放路径 rng 前后状态零变;
+- 是钻石总会发光 = 随机 choice-set 采样行首例(sim 直构注入固定 rng):
+  两 seed 分别命中红钻/蓝钻、队列弹除、效果串随选中物、发放子链
+  rand=True 随机态通道 + 队列弹除行确定面 + 同 seed 重跑逐位一致。
 """
 from __future__ import annotations
+
+import random
 
 import pytest
 
@@ -49,6 +56,8 @@ _XUNUO_ITEM = '特权武装箱'
 
 _XIANKUI = '先亏后盈'
 _XIANKUI_ITEM = '简易武装箱'
+
+_SHIZUAN = '是钻石总会发光'
 
 
 class _RowSink:
@@ -102,7 +111,8 @@ def test_not_due_zero_grant_zero_write() -> None:
     """未到点:remaining 全 > 0 → 零发放零写(队列原值,装备栏零动)。"""
     gs = _gs(equips=[], bench_slots=None, queue=((_CARD, 2),))
     seq_before = gs.write_seq
-    assert discharge_due_strategy_grants(gs, rand=False, sig=_LSIG) == ()
+    assert discharge_due_strategy_grants(
+        gs, rand=False, rng=random.Random(0), sig=_LSIG) == ()
     assert gs.pending_strategy_grants.value == ((_CARD, 2),), '未到点被弹除'
     assert gs.equips.value == [], '未到点误入栏'
     assert gs.write_seq == seq_before, '未到点出现写行'
@@ -121,7 +131,8 @@ def test_due_grants_equipment_ejects_entry(card: str, item: str) -> None:
     evidence 值含触发卡名(同款发放物经卡名可分;好运令牌·银 = 卡名
     与发放物异名,效果串按物名/evidence 按卡名各归其位)。"""
     gs = _gs(equips=[], bench_slots=None, queue=((card, 0),))
-    effects = discharge_due_strategy_grants(gs, rand=False, sig=_LSIG)
+    effects = discharge_due_strategy_grants(
+        gs, rand=False, rng=random.Random(0), sig=_LSIG)
     assert effects == (f'delayed_grant:{item}(placed=True)',), \
         f'效果串: {effects}'
     assert gs.equips.value == [item], f'装备栏: {gs.equips.value}'
@@ -146,7 +157,8 @@ def test_due_routing_bench_item_branch(monkeypatch) -> None:
                              item='简易武装箱'))
     gs = _gs(equips=[], bench_slots=_empty_slots(),
              queue=(('占席测试卡', 0),))
-    effects = discharge_due_strategy_grants(gs, rand=False, sig=_LSIG)
+    effects = discharge_due_strategy_grants(
+        gs, rand=False, rng=random.Random(0), sig=_LSIG)
     assert effects == ('delayed_grant:简易武装箱(placed=True)',), \
         f'效果串: {effects}'
     assert gs.equips.value == [], '占席道具误入装备栏'
@@ -161,7 +173,8 @@ def test_grant_rejected_zero_write_entry_still_ejected() -> None:
     裁决点 4 默认案 = 环境通道弹除语义同构)+ 回写行留存证据(世界偏穷
     有界:每条至多 1 件)。"""
     gs = _gs(equips=None, bench_slots=None, queue=((_CARD, 0),))
-    effects = discharge_due_strategy_grants(gs, rand=False, sig=_LSIG)
+    effects = discharge_due_strategy_grants(
+        gs, rand=False, rng=random.Random(0), sig=_LSIG)
     assert effects == (f'delayed_grant:{_ITEM}(placed=False)',), \
         f'效果串: {effects}'
     assert gs.equips.value is None, '拒落域出现写'
@@ -178,7 +191,8 @@ def test_due_haoyun_equips_unobserved_reject_ejected_with_evidence() -> None:
     发放物异名,查行键 = 队列卡名),拒落语义与机制锁(上方通用锁)
     同构,本锁证新实成员在该分支零特例。"""
     gs = _gs(equips=None, bench_slots=None, queue=(('好运令牌·银', 0),))
-    effects = discharge_due_strategy_grants(gs, rand=False, sig=_LSIG)
+    effects = discharge_due_strategy_grants(
+        gs, rand=False, rng=random.Random(0), sig=_LSIG)
     assert effects == ('delayed_grant:好运令牌(placed=False)',), \
         f'效果串: {effects}'
     assert gs.equips.value is None, '拒落域出现写'
@@ -192,7 +206,8 @@ def test_registry_miss_defense_retains_entry() -> None:
     条目保留不弹除(零写,队列原值)。"""
     gs = _gs(equips=[], bench_slots=None, queue=(('未注册的卡', 0),))
     seq_before = gs.write_seq
-    effects = discharge_due_strategy_grants(gs, rand=False, sig=_LSIG)
+    effects = discharge_due_strategy_grants(
+        gs, rand=False, rng=random.Random(0), sig=_LSIG)
     assert effects == (), '漂移条目误发放'
     assert gs.pending_strategy_grants.value == (('未注册的卡', 0),), \
         '漂移条目被弹除'
@@ -214,7 +229,8 @@ def test_due_bench_item_real_member_places_bench(
     分道锁只证机制不证真成员词表归属)。"""
     gs = _gs(equips=[], bench_slots=_empty_slots(),
              queue=((_XUNUO, 0),))
-    effects = discharge_due_strategy_grants(gs, rand=False, sig=_LSIG)
+    effects = discharge_due_strategy_grants(
+        gs, rand=False, rng=random.Random(0), sig=_LSIG)
     assert effects == (f'delayed_grant:{_XUNUO_ITEM}(placed=True)',), \
         f'效果串: {effects}'
     slots = gs.bench.value.slots
@@ -240,7 +256,8 @@ def test_due_bench_item_real_member_bench_full_overflow(
                                     unit=Unit(char_id=f'填席{i}', star=1))
                           for i in range(9)],
              queue=((_XUNUO, 0),))
-    effects = discharge_due_strategy_grants(gs, rand=False, sig=_LSIG)
+    effects = discharge_due_strategy_grants(
+        gs, rand=False, rng=random.Random(0), sig=_LSIG)
     assert effects == (f'delayed_grant:{_XUNUO_ITEM}(placed=True)',), \
         f'效果串: {effects}'
     assert gs.overflow_warning.value is True, '席满溢出告警未写'
@@ -267,7 +284,8 @@ def test_due_bench_item_real_member_overflow_taken(
                    evidence='t:ovf', sig=_LSIG)
     gs.write_logic(gs.overflow_card, '先到的道具', produced_by='test-seed',
                    evidence='t:ovf', sig=_LSIG)
-    effects = discharge_due_strategy_grants(gs, rand=False, sig=_LSIG)
+    effects = discharge_due_strategy_grants(
+        gs, rand=False, rng=random.Random(0), sig=_LSIG)
     assert effects == (f'delayed_grant:{_XUNUO_ITEM}(placed=False)',), \
         f'效果串: {effects}'
     assert gs.overflow_card.value == '先到的道具', '溢出位被覆写'
@@ -289,7 +307,8 @@ def test_due_count2_places_two_boxes_same_window(
     ∧ 弹除 ×2(队列清空)∧ 效果串恰两条 placed=True。"""
     gs = _gs(equips=[], bench_slots=_empty_slots(),
              queue=((_XIANKUI, 0), (_XIANKUI, 0)))
-    effects = discharge_due_strategy_grants(gs, rand=False, sig=_LSIG)
+    effects = discharge_due_strategy_grants(
+        gs, rand=False, rng=random.Random(0), sig=_LSIG)
     assert effects == (f'delayed_grant:{_XIANKUI_ITEM}(placed=True)',
                        f'delayed_grant:{_XIANKUI_ITEM}(placed=True)'), \
         f'效果串(两件): {effects}'
@@ -314,7 +333,8 @@ def test_due_count2_full_bench_overflow_then_overflow_taken(
                                     unit=Unit(char_id=f'填席{i}', star=1))
                           for i in range(9)],
              queue=((_XIANKUI, 0), (_XIANKUI, 0)))
-    effects = discharge_due_strategy_grants(gs, rand=False, sig=_LSIG)
+    effects = discharge_due_strategy_grants(
+        gs, rand=False, rng=random.Random(0), sig=_LSIG)
     assert effects == (f'delayed_grant:{_XIANKUI_ITEM}(placed=True)',
                        f'delayed_grant:{_XIANKUI_ITEM}(placed=False)'), \
         f'效果串(溢出+丢失两态): {effects}'
@@ -326,3 +346,72 @@ def test_due_count2_full_bench_overflow_then_overflow_taken(
     assert gs.pending_strategy_grants.value == (), '到期条目未全弹除'
     assert rows_sink.kinds() == [DEFECT_OVERFLOW_TAKEN], \
         f'溢出位占零写留证行: {rows_sink.kinds()}'
+
+
+# ============================================================ 随机 choice-set
+# 采样行(是钻石总会发光,族内首个随机发放行,T-148 批)+ 确定行零扰动
+# 回归(扩形不越权)
+
+
+@pytest.mark.parametrize('card', [
+    '人才激励', '人才激励+', '许诺特权', '先亏后盈', '好运令牌·银',
+])
+def test_deterministic_rows_rng_untouched(card: str) -> None:
+    """确定行零扰动回归(锁「扩形不越权」):族内既有全部确定行到点
+    发放路径不消费 rng——发放前后 rng.getstate 逐位相等,同 seed 下
+    既有卡行为与 rng 消耗序列零变(本卡扩形只辖 choice-set 行,签名
+    +rng 必传对确定行是零语义形参)。"""
+    if card == '许诺特权' or card == '先亏后盈':
+        gs = _gs(equips=[], bench_slots=_empty_slots(), queue=((card, 0),))
+    else:
+        gs = _gs(equips=[], bench_slots=None, queue=((card, 0),))
+    rng = random.Random(7)
+    state_before = rng.getstate()
+    discharge_due_strategy_grants(
+        gs, rand=False, rng=rng, sig=_LSIG)
+    assert rng.getstate() == state_before, \
+        f'{card} 确定行消费 rng(扩形越权)'
+
+
+def test_due_choice_set_samples_both_diamonds_by_seed() -> None:
+    """是钻石总会发光 到点采样发放(sim 直构注入固定 rng,随机 choice-set
+    行首例):两固定 seed 分别命中红钻/蓝钻(seed 按实际 rng 流定向选取,
+    ``rng.choice`` 序列均匀语义,禁值漂移断言)→ equips 尾追选中件 ∧
+    队列弹除 ∧ 效果串 delayed_grant:<选中物>(placed=True)∧ 发放行走
+    随机态面(采样行内部 rand=True,效果体含采样纪律)∧ 队列弹除行走
+    确定面(队列只载卡名随调用方 rand 透传)∧ 同 seed 重跑逐位一致
+    (同 seed 确定性)。"""
+    for seed, expected in ((1, '红钻'), (0, '蓝钻')):
+        assert random.Random(seed).choice(('红钻', '蓝钻')) == expected, \
+            f'seed={seed} 定向失效(禁值漂移断言,须换 seed)'
+        gs = _gs(equips=[], bench_slots=None, queue=((_SHIZUAN, 0),))
+        effects = discharge_due_strategy_grants(
+            gs, rand=False, rng=random.Random(seed), sig=_LSIG)
+        assert effects == (f'delayed_grant:{expected}(placed=True)',), \
+            f'seed={seed} 效果串: {effects}'
+        assert gs.equips.value == [expected], \
+            f'seed={seed} 装备栏: {gs.equips.value}'
+        assert gs.equips.source == 'logic_rand', \
+            f'seed={seed} 发放腿未走随机态面(采样行 rand=True 覆盖失效)'
+        assert gs.pending_strategy_grants.value == (), '到期条目未弹除'
+        assert gs.pending_strategy_grants.source == 'logic', \
+            '队列弹除行未走确定面(只载卡名应随调用方 rand 透传)'
+        assert gs.pending_strategy_grants.evidence == 'strategy_grant_due', \
+            f'队列回写 evidence: {gs.pending_strategy_grants.evidence}'
+        assert gs.equips.evidence == \
+            f'strategy_grant_due:{_SHIZUAN}#equip', \
+            f'发放 evidence: {gs.equips.evidence}'
+
+
+def test_due_choice_set_same_seed_bitwise_reproducible() -> None:
+    """是钻石总会发光 同 seed 重跑逐位一致(sim 世界真值确定性):
+    两个独立构造的同构局,同 seed 各自发放 → 效果串/装备栏/队列终态
+    逐位相等(采样在窗口内现掷,同 seed 重放同结果)。"""
+    finals = []
+    for _run in range(2):
+        gs = _gs(equips=[], bench_slots=None, queue=((_SHIZUAN, 0),))
+        effects = discharge_due_strategy_grants(
+            gs, rand=False, rng=random.Random(0), sig=_LSIG)
+        finals.append((effects, gs.equips.value,
+                       gs.pending_strategy_grants.value))
+    assert finals[0] == finals[1], f'同 seed 重跑漂移: {finals}'

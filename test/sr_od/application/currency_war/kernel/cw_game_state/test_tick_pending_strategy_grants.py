@@ -21,6 +21,8 @@ tick_effect_boundary);先消耗拿卡节点复现「登记在窗内、递减在�
 advance」的真实时序。"""
 from __future__ import annotations
 
+import random
+
 import pytest
 
 from sr_od.application.currency_war.kernel.cw_gain_chain import (
@@ -142,7 +144,8 @@ def test_dual_cards_plus_fires_third_window_sister_suspended() -> None:
     assert gs.pending_strategy_grants.value \
         == ((_CARD, 1), (_CARD_PLUS, 0)), \
         f'第 3 后继窗队列: {gs.pending_strategy_grants.value}'
-    effects = discharge_due_strategy_grants(gs, rand=False, sig=_LSIG)
+    effects = discharge_due_strategy_grants(
+        gs, rand=False, rng=random.Random(0), sig=_LSIG)
     assert effects == ('delayed_grant:员工投影仪(placed=True)',), \
         f'到点发放: {effects}'
     assert gs.equips.value == ['员工投影仪'], f'装备栏: {gs.equips.value}'
@@ -157,10 +160,12 @@ def test_dual_cards_sister_fires_fourth_window_after_plus() -> None:
     gs = _gs_with_queue(1, 1, ((_CARD, 4), (_CARD_PLUS, 3)), equips=[])
     for _r in range(2, 5):
         _advance(gs, 1, _r)
-    discharge_due_strategy_grants(gs, rand=False, sig=_LSIG)
+    discharge_due_strategy_grants(
+        gs, rand=False, rng=random.Random(0), sig=_LSIG)
     _advance(gs, 1, 5)
     assert gs.pending_strategy_grants.value == ((_CARD, 0),)
-    effects = discharge_due_strategy_grants(gs, rand=False, sig=_LSIG)
+    effects = discharge_due_strategy_grants(
+        gs, rand=False, rng=random.Random(0), sig=_LSIG)
     assert effects == ('delayed_grant:员工投影仪(placed=True)',), \
         f'姊妹窗发放: {effects}'
     assert gs.equips.value == ['员工投影仪', '员工投影仪'], \

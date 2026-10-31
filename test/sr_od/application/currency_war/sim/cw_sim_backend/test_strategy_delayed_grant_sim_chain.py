@@ -10,7 +10,11 @@ sim 窗口接线与世界真值落地面)。
   + 到点留证披露键(值 = 触发卡@frame:发放物,姊妹双卡参数化:人才
   激励 / 人才激励+)+ 发放写行 sig 组 'sim:strategy_grant';
 - 未到点零发放(队列悬置递减,装备栏零动,披露键缺席);
-- 同节点窗重放(_window_begun_pos 守卫)整段跳过不双发。
+- 同节点窗重放(_window_begun_pos 守卫)整段跳过不双发;
+- 是钻石总会发光 = 随机 choice-set 行 sim 端到端(T-148 批):到点窗
+  现掷入栏一枚钻 ∧ 披露值 = 卡名@frame:选中物(选中物从发放效果串
+  解析,与装备栏尾件一致;掷点归 M26 独立命名流,具体中哪枚禁值漂移
+  断言只锁一致性)。
 
 驱动形态 = _enter_node_window 直通点(锚定补推路径真形态:观察锚定 →
 推进 tick 递减 → 返回后开窗,递减先于发放的时序由真实路径承载);
@@ -118,5 +122,32 @@ def test_window_replay_guard_no_double_grant(
         b._begin_node_window()   # 同节点窗重放(直构)
         assert gs.equips.value.count(_ITEM) == 1, '窗重放双发'
         assert calls == [], '窗重放出现新增写行'
+    finally:
+        uninstall_backend()
+
+
+def test_due_choice_set_sim_chain_discloses_chosen(
+        _prep_backend) -> None:
+    """是钻石总会发光 sim 端到端(随机 choice-set 行,族内首个随机发放
+    行,T-148 批):种子队列 remaining=1 → 进 (1,2) 窗 → 到点窗现掷
+    (rng = 独立命名流 M26/strategy-grant/p1/r2)→ 装备栏尾追一枚钻
+    (红钻/蓝钻二选一,掷点结果禁值漂移断言)∧ 队列弹除 ∧ 披露值 =
+    卡名@frame:选中物——选中物与装备栏尾件一致(披露从发放效果串
+    解析,现值读登记物 item='' 的旧形会披露空值,本锁钉住采样值形态)。"""
+    b = _prep_backend
+    try:
+        gs = b.gs
+        equips_before = list(gs.equips.value or [])
+        _seed_queue(b, (('是钻石总会发光', 1),))
+        b._enter_node_window((1, 2))
+        equips_after = list(gs.equips.value or [])
+        assert len(equips_after) == len(equips_before) + 1, \
+            f'装备栏: {equips_after}'
+        chosen = equips_after[-1]
+        assert chosen in ('红钻', '蓝钻'), f'采样值域漂移: {chosen!r}'
+        assert gs.pending_strategy_grants.value == (), '到期条目未弹除'
+        assert b.disclosures[STRATEGY_DELAYED_GRANT_FIRED] \
+            == f'是钻石总会发光@1-2:{chosen}', \
+            f'留证披露(选中物形态): {b.disclosures}'
     finally:
         uninstall_backend()

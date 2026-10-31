@@ -9,15 +9,20 @@ StrategyDelayedGrant + STRATEGY_DELAYED_GRANTS + 构建校验)。
 (designs/T-144-xiankui-houying.md §4 锁 1:count 字段首例 + 伴随损血
 腿 STRATEGY_ECONOMY 行)+ 好运令牌·银随批扩面(designs/
 T-146-haoyun-lingpai-yin.md §4 锁 1:卡名与发放物异名首例,物名断言
-防卡名当物名笔误):
+防卡名当物名笔误)+ 是钻石总会发光随批扩面(designs/
+T-148-shizuanshi-zonghui-faguang.md §4 锁 1/锁 4:随机 choice-set 行
+首例,item='' 占位走 item_choices;item 与 item_choices 恰一 = 防登记
+笔误类按治理口径不入 import 校验,对账归表域恰一锁):
 - 登记单一源:行值 = 卡面效果原文直读(人才激励 id 101601/4 节点、
   人才激励+ id 101602/3 节点,两卡唯一差异 = 倒计时 4→3,发放物同
   员工投影仪;许诺特权 id 130201/7 节点/发放物特权武装箱;先亏后盈
   id 130701/4 节点/发放物简易武装箱/数量 2 = 族内首例 >1;好运令牌·
-  银 id 130901/3 节点/发放物好运令牌 = EQUIPMENTS 工具类装备),
+  银 id 130901/3 节点/发放物好运令牌 = EQUIPMENTS 工具类装备;是钻石
+  总会发光 id 131101/2 节点/发放物 = 红钻/蓝钻具名二元封闭集),
   表键集闭族现役卡(展开卡各自独立批领取,禁顺手代登记);
-- 构建校验 3 条(漂移哨,import 即炸语义经直调校验函数锁定):孤儿键 /
-  id 双匹配(改名且 id 仍在的漂移也炸)/ 发放物名双域皆非。
+- 构建校验 4 条(漂移哨,import 即炸语义经直调校验函数锁定):孤儿键 /
+  id 双匹配(改名且 id 仍在的漂移也炸)/ 发放物名双域皆非(确定行)
+  / choice-set 元素漂移(逐元素双域皆非)。
 """
 from __future__ import annotations
 
@@ -34,32 +39,39 @@ from sr_od.application.currency_war.kernel.cw_investments import (
 )
 
 
-@pytest.mark.parametrize(('card', 'gid', 'delay', 'item', 'count'), [
-    ('人才激励', '101601', 4, '员工投影仪', 1),
-    ('人才激励+', '101602', 3, '员工投影仪', 1),
-    ('许诺特权', '130201', 7, '特权武装箱', 1),
-    ('先亏后盈', '130701', 4, '简易武装箱', 2),
-    ('好运令牌·银', '130901', 3, '好运令牌', 1),
+@pytest.mark.parametrize(('card', 'gid', 'delay', 'item', 'count',
+                          'choices'), [
+    ('人才激励', '101601', 4, '员工投影仪', 1, ()),
+    ('人才激励+', '101602', 3, '员工投影仪', 1, ()),
+    ('许诺特权', '130201', 7, '特权武装箱', 1, ()),
+    ('先亏后盈', '130701', 4, '简易武装箱', 2, ()),
+    ('好运令牌·银', '130901', 3, '好运令牌', 1, ()),
+    ('是钻石总会发光', '131101', 2, '', 1, ('红钻', '蓝钻')),
 ])
 def test_rencai_jili_registry_row_single_source(
-        card: str, gid: str, delay: int, item: str, count: int) -> None:
-    """登记单一源(姊妹双卡 + 许诺特权 + 先亏后盈 + 好运令牌·银参数化):
-    行值 = 卡面
+        card: str, gid: str, delay: int, item: str, count: int,
+        choices: tuple) -> None:
+    """登记单一源(姊妹双卡 + 许诺特权 + 先亏后盈 + 好运令牌·银 +
+    是钻石总会发光参数化):行值 = 卡面
     效果原文直读(「N个节点后」→ N 拍,「获得1个【X】」→ 发放物 X;
     人才激励系即时腿「获得1个【员工投影仪】」由 PICK_INVEST_EFFECTS
     工厂承载不入本表,许诺特权卡文纯延时单句零即时腿,登记腿 = 延时-
     only 单腿载体;先亏后盈卡文延时腿「获得2个」→ count=2 族内首例
     >1,伴随损血腿不入本表走 STRATEGY_ECONOMY hp 通道;好运令牌·银
     卡文纯延时单句零即时腿同延时-only 载体,发放物与卡名异名——item
-    断言为物名「好运令牌」非卡名,防拿卡名当物名笔误);
-    base 溯源 id 对拍(id ↔ plaza:<id>)。表键集闭族现役五卡(未注册
+    断言为物名「好运令牌」非卡名,防拿卡名当物名笔误;是钻石总会发光
+    卡文「获得【红钻】或【蓝钻】」→ item='' 占位(空串断言锁二元集行
+    不携确定件)+ item_choices 封闭集直读,掷骰时点 = 到点发放窗);
+    base 溯源 id 对拍(id ↔ plaza:<id>)。表键集闭族现役六卡(未注册
     展开卡安静不写,禁顺手代登记)。"""
     assert set(STRATEGY_DELAYED_GRANTS) == {
-        '人才激励', '人才激励+', '许诺特权', '先亏后盈', '好运令牌·银'}, \
-        '注册面 = 族现役五卡(未注册展开卡安静不写,禁顺手代登记)'
+        '人才激励', '人才激励+', '许诺特权', '先亏后盈', '好运令牌·银',
+        '是钻石总会发光'}, \
+        '注册面 = 族现役六卡(未注册展开卡安静不写,禁顺手代登记)'
     row = STRATEGY_DELAYED_GRANTS[card]
     assert row == StrategyDelayedGrant(id=gid, delay_nodes=delay,
-                                       item=item, count=count), \
+                                       item=item, count=count,
+                                       item_choices=choices), \
         f'行值漂移: {row!r}'
     base = INVESTMENT_STRATEGIES[card]
     assert base.source == f"plaza:{row.id}", \
@@ -72,7 +84,9 @@ def test_grant_item_not_in_bench_wordlist() -> None:
     即被当占席道具——溢出腿假道具,该形态钉死);许诺特权发放物特权
     武装箱 = 占席词表在册 ∧ 装备表无条目(占席分道判据前提);好运
     令牌·银发放物好运令牌 = 装备表在册 ∧ 占席词表负成员(装备分道
-    判据前提,负成员申报 = 入 items 会错派占席身份,禁入占席通道)。"""
+    判据前提,负成员申报 = 入 items 会错派占席身份,禁入占席通道);
+    是钻石总会发光 choice-set 两元素红钻/蓝钻 = 装备表在册 ∧ 占席词表
+    负成员(采样行同走装备分道,钻石禁入占席通道)。"""
     from sr_od.application.currency_war.data.cw_equipment_data import (
         EQUIPMENTS,
     )
@@ -90,6 +104,11 @@ def test_grant_item_not_in_bench_wordlist() -> None:
         '好运令牌不在装备表(装备分道判据前提被破坏)'
     assert haoyun.item not in BENCH_ITEM_NAMES, \
         '好运令牌误入占席词表(负成员申报被破坏,入 items 错派占席身份)'
+    shizuanshi = STRATEGY_DELAYED_GRANTS['是钻石总会发光']
+    assert all(c in EQUIPMENTS for c in shizuanshi.item_choices), \
+        '红钻/蓝钻不在装备表(采样行装备分道判据前提被破坏)'
+    assert all(c not in BENCH_ITEM_NAMES for c in shizuanshi.item_choices), \
+        '红钻/蓝钻误入占席词表(负成员申报被破坏,禁入占席通道)'
 
 
 def test_xiankui_hp_instant_negative_row() -> None:
@@ -142,3 +161,26 @@ def test_validator_item_unknown_raises(monkeypatch) -> None:
                              item='不存在的发放物'))
     with pytest.raises(ValueError, match='发放物名漂移'):
         _validate_strategy_delayed_grants()
+
+
+def test_validator_choice_element_unknown_raises(monkeypatch) -> None:
+    """构建校验④(choice-set 元素漂移哨):非空 item_choices 逐元素
+    双域皆非(装备表/占席词表均无)→ ValueError(版本改名/未知名,
+    采样行发放腿无从分道;镜像③形态)。"""
+    monkeypatch.setitem(
+        cw_investments.STRATEGY_DELAYED_GRANTS, '是钻石总会发光',
+        StrategyDelayedGrant(id='131101', delay_nodes=2, item='',
+                             item_choices=('红钻', '不存在的发放物')))
+    with pytest.raises(ValueError, match='发放物元素漂移'):
+        _validate_strategy_delayed_grants()
+
+
+def test_registry_item_xor_choices_exactly_one() -> None:
+    """表域恰一纪律锁(item 与 item_choices 恰一有效;治理口径 =
+    2026-10-28「防登记笔误校验不加」,对账归表域测试,同 count/
+    delay_nodes 处置):注册全集逐行 item 非空串 XOR item_choices 非空
+    元组,双填/双空均红——双填 = 分道判据静默走 item 丢随机集,双空 =
+    发放腿双域皆非防御支条目永久滞留,两形态都越 import 哨不可见。"""
+    for name, row in STRATEGY_DELAYED_GRANTS.items():
+        assert bool(row.item) != bool(row.item_choices), \
+            f'{name} item 与 item_choices 恰一被破坏: {row!r}'
