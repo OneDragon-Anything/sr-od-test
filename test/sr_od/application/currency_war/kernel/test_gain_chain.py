@@ -1344,7 +1344,8 @@ def test_on_strategy_gained_unregistered_quiet() -> None:
     直书登记行由组合子组合双腿,具名装备授予直书登记行由具名装备工厂生成
     闭包,延时 offer 条目由工厂自 STRATEGY_DELAYED_OFFERS 派生,延时发放
     族按卡文句式分流:带即时短句的成员经两腿成员集走两腿工厂派生,纯延时
-    单句卡许诺特权/先亏后盈显式单行登记延时-only 载体;键集断言 = 现役
+    单句卡许诺特权/先亏后盈/好运令牌·银显式单行登记延时-only 载体;键集
+    断言 = 现役
     注册全集,新卡注册随批 +键)。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
         PICK_INVEST_EFFECTS,
@@ -1356,7 +1357,8 @@ def test_on_strategy_gained_unregistered_quiet() -> None:
         '精密拆装·银',
         '全员晋升', '无伤通关', '星星相印', '赌神·银', '黄金期货',
         '黄金期货+', '军火贸易', '军火贸易+', '人才激励', '人才激励+',
-        '许诺特权', '先亏后盈', '溜佩佩', '溜佩佩+', '招财狗'}
+        '许诺特权', '先亏后盈', '好运令牌·银', '溜佩佩', '溜佩佩+',
+        '招财狗'}
     gs = _make_gs(bench=[('希儿', 1)], equips=[])
     seq_before = gs.write_seq
     effects = on_strategy_gained(gs, '随便一张未收录卡', rand=False,

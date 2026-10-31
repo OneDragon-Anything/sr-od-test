@@ -7,12 +7,15 @@ StrategyDelayedGrant + STRATEGY_DELAYED_GRANTS + 构建校验)。
 (designs/T-107-rencai-jili-plus.md §4 锁 1 同型)+ 许诺特权随批扩面
 (designs/T-139-xunuo-tequan.md §4 锁 1 同型)+ 先亏后盈随批扩面
 (designs/T-144-xiankui-houying.md §4 锁 1:count 字段首例 + 伴随损血
-腿 STRATEGY_ECONOMY 行):
+腿 STRATEGY_ECONOMY 行)+ 好运令牌·银随批扩面(designs/
+T-146-haoyun-lingpai-yin.md §4 锁 1:卡名与发放物异名首例,物名断言
+防卡名当物名笔误):
 - 登记单一源:行值 = 卡面效果原文直读(人才激励 id 101601/4 节点、
   人才激励+ id 101602/3 节点,两卡唯一差异 = 倒计时 4→3,发放物同
   员工投影仪;许诺特权 id 130201/7 节点/发放物特权武装箱;先亏后盈
-  id 130701/4 节点/发放物简易武装箱/数量 2 = 族内首例 >1),表键集
-  闭族现役卡(展开卡各自独立批领取,禁顺手代登记);
+  id 130701/4 节点/发放物简易武装箱/数量 2 = 族内首例 >1;好运令牌·
+  银 id 130901/3 节点/发放物好运令牌 = EQUIPMENTS 工具类装备),
+  表键集闭族现役卡(展开卡各自独立批领取,禁顺手代登记);
 - 构建校验 3 条(漂移哨,import 即炸语义经直调校验函数锁定):孤儿键 /
   id 双匹配(改名且 id 仍在的漂移也炸)/ 发放物名双域皆非。
 """
@@ -36,20 +39,24 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     ('人才激励+', '101602', 3, '员工投影仪', 1),
     ('许诺特权', '130201', 7, '特权武装箱', 1),
     ('先亏后盈', '130701', 4, '简易武装箱', 2),
+    ('好运令牌·银', '130901', 3, '好运令牌', 1),
 ])
 def test_rencai_jili_registry_row_single_source(
         card: str, gid: str, delay: int, item: str, count: int) -> None:
-    """登记单一源(姊妹双卡 + 许诺特权 + 先亏后盈参数化):行值 = 卡面
+    """登记单一源(姊妹双卡 + 许诺特权 + 先亏后盈 + 好运令牌·银参数化):
+    行值 = 卡面
     效果原文直读(「N个节点后」→ N 拍,「获得1个【X】」→ 发放物 X;
     人才激励系即时腿「获得1个【员工投影仪】」由 PICK_INVEST_EFFECTS
     工厂承载不入本表,许诺特权卡文纯延时单句零即时腿,登记腿 = 延时-
     only 单腿载体;先亏后盈卡文延时腿「获得2个」→ count=2 族内首例
-    >1,伴随损血腿不入本表走 STRATEGY_ECONOMY hp 通道);
-    base 溯源 id 对拍(id ↔ plaza:<id>)。表键集闭族现役四卡(未注册
+    >1,伴随损血腿不入本表走 STRATEGY_ECONOMY hp 通道;好运令牌·银
+    卡文纯延时单句零即时腿同延时-only 载体,发放物与卡名异名——item
+    断言为物名「好运令牌」非卡名,防拿卡名当物名笔误);
+    base 溯源 id 对拍(id ↔ plaza:<id>)。表键集闭族现役五卡(未注册
     展开卡安静不写,禁顺手代登记)。"""
     assert set(STRATEGY_DELAYED_GRANTS) == {
-        '人才激励', '人才激励+', '许诺特权', '先亏后盈'}, \
-        '注册面 = 族现役四卡(未注册展开卡安静不写,禁顺手代登记)'
+        '人才激励', '人才激励+', '许诺特权', '先亏后盈', '好运令牌·银'}, \
+        '注册面 = 族现役五卡(未注册展开卡安静不写,禁顺手代登记)'
     row = STRATEGY_DELAYED_GRANTS[card]
     assert row == StrategyDelayedGrant(id=gid, delay_nodes=delay,
                                        item=item, count=count), \
@@ -63,7 +70,9 @@ def test_grant_item_not_in_bench_wordlist() -> None:
     """发放物分道词表归属对拍(分道判据前提,注册表逐行锁):装备名
     不入占席词表(本专表不接入 BENCH_ITEM_NAMES 派生,装备名误入词表
     即被当占席道具——溢出腿假道具,该形态钉死);许诺特权发放物特权
-    武装箱 = 占席词表在册 ∧ 装备表无条目(占席分道判据前提)。"""
+    武装箱 = 占席词表在册 ∧ 装备表无条目(占席分道判据前提);好运
+    令牌·银发放物好运令牌 = 装备表在册 ∧ 占席词表负成员(装备分道
+    判据前提,负成员申报 = 入 items 会错派占席身份,禁入占席通道)。"""
     from sr_od.application.currency_war.data.cw_equipment_data import (
         EQUIPMENTS,
     )
@@ -76,6 +85,11 @@ def test_grant_item_not_in_bench_wordlist() -> None:
         '特权武装箱不在占席词表(占席分道判据前提被破坏)'
     assert xunuo.item not in EQUIPMENTS, \
         '占席道具误入装备表(分道双归属)'
+    haoyun = STRATEGY_DELAYED_GRANTS['好运令牌·银']
+    assert haoyun.item in EQUIPMENTS, \
+        '好运令牌不在装备表(装备分道判据前提被破坏)'
+    assert haoyun.item not in BENCH_ITEM_NAMES, \
+        '好运令牌误入占席词表(负成员申报被破坏,入 items 错派占席身份)'
 
 
 def test_xiankui_hp_instant_negative_row() -> None:

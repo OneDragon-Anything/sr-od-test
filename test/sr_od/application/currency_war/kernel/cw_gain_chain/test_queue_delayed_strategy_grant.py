@@ -14,6 +14,11 @@ monkeypatch 形态测随真注册转直测):
   strategy_grant_scheduled,零即时腿(反向锁错发形态);
 - 先亏后盈 = count 循环入队(数量 2 首例):队列双条目 + 效果串两枚
   + kernel 侧零 hp 写(T-144 批扩面);
+- 好运令牌·银 = 延时-only 单腿展开卡(发放物与卡名异名首例):队列
+  恰 (('好运令牌·银', 3),) ∧ 效果串单枚 strategy_grant_scheduled:
+  好运令牌@3(物名载体直断)∧ 零即时腿;equips 未观察域效果串仍单枚
+  (两腿工厂同域会多枚 equip_grant placed=False 串,反证载体分流)+
+  两腿成员集负成员断言(T-146 批扩面);
 - equips 未观察 → 即时腿拒落零写 placed=False、入队腿照写;
 - 未登记策略卡(表外名 + 在册无腿卡)零写;
 - live 落地形态(gain_invest_strategy 同函数,session=None 直构)队列
@@ -173,3 +178,49 @@ def test_pick_xunuo_tequan_delayed_only_single_leg() -> None:
         f'队列值: {gs.pending_strategy_grants.value}'
     assert gs.write_seq == seq_before + 1, \
         f'入队腿外出现额外写行(seq={gs.write_seq})'
+
+
+def test_pick_haoyun_lingpai_yin_delayed_only_single_leg() -> None:
+    """好运令牌·银 延时-only 登记腿直断(卡文「进入3个节点后，获得
+    1个【好运令牌】。」纯延时单句,零即时腿):拿卡 → 队列恰
+    (('好运令牌·银', 3),) ∧ 效果串单枚 strategy_grant_scheduled:
+    好运令牌@3(物名载体直断,@3 字面防族键序错位)∧ 零即时腿
+    (equips 零写、效果串无 equip_grant/box_grant 字样;bench 域零涉;
+    发放物与卡名异名,效果串/队列各按物名/卡名各归其位)。
+    反向锁死「延时-only 卡直用两腿工厂派生」的错发形态(错发即时
+    好运令牌 = 行为级错误);逐名独立构造,族内既有锁不受影响。"""
+    gs = _gs(equips=[])
+    seq_before = gs.write_seq
+    effects = on_strategy_gained(gs, '好运令牌·银', rand=False,
+                                 sig=_lsig(), rng=random.Random(0))
+    assert effects == ('strategy_grant_scheduled:好运令牌@3',), \
+        f'效果串(单枚,零即时腿): {effects}'
+    assert gs.equips.value == [], f'即时腿误写装备栏: {gs.equips.value}'
+    assert gs.pending_strategy_grants.value == (('好运令牌·银', 3),), \
+        f'队列值: {gs.pending_strategy_grants.value}'
+    assert gs.write_seq == seq_before + 1, \
+        f'入队腿外出现额外写行(seq={gs.write_seq})'
+
+
+def test_pick_haoyun_lingpai_yin_unobserved_still_single_scheduled() -> None:
+    """好运令牌·银 equips 未观察域载体分流直断(防伪锁,与主条逐名
+    独立构造):两腿工厂在同域会多发 equip_grant placed=False 串,延时-
+    only 载体效果串仍恰单枚 strategy_grant_scheduled(登记 = 队列
+    通道非装备通道)∧ equips 保持未观察零写 ∧ 两腿成员集负成员
+    (登记分流声明面,误入集 = 分派语义漂移在行为锁不可见,成员断言
+    直锁)。"""
+    from sr_od.application.currency_war.kernel.cw_gain_effects import (
+        _STRATEGY_DELAYED_TWO_LEG_GRANTS,
+        PICK_INVEST_EFFECTS,
+    )
+    assert '好运令牌·银' not in _STRATEGY_DELAYED_TWO_LEG_GRANTS, \
+        '误入两腿成员集(入集 = 拿卡错发即时装备腿的分派面)'
+    assert '好运令牌·银' in PICK_INVEST_EFFECTS, '显式单行登记条缺位'
+    gs = _gs(equips=None)
+    effects = on_strategy_gained(gs, '好运令牌·银', rand=False,
+                                 sig=_lsig(), rng=random.Random(0))
+    assert effects == ('strategy_grant_scheduled:好运令牌@3',), \
+        f'效果串(未观察域仍单枚): {effects}'
+    assert gs.equips.value is None, '未观察域出现装备栏写'
+    assert gs.pending_strategy_grants.value == (('好运令牌·银', 3),), \
+        f'队列值: {gs.pending_strategy_grants.value}'

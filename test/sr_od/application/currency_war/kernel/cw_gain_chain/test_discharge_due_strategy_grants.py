@@ -11,6 +11,9 @@ discharge_due_strategy_grants)。
 - 分道判据(monkeypatch 临时占席道具条目)→ gain_bench_item 落席;
 - 许诺特权 = 占席分道首个真实注册条目(真成员回归锁:备战落位/席满
   溢出落位/溢出位被占零写留证,三态全真成员直测);
+- 好运令牌·银 = 装备分道真成员回归锁(延时-only 载体下装备分道首例,
+  T-146 批:到点 equips 追加好运令牌 + 弹除 + 效果串;栏未观察 →
+  拒落零写 + 条目仍弹除 + 回写行留存证据);
 - 发放拒落(equips 未观察)→ 零写 + 条目仍弹除(到期即消费)+ 回写行
   留存证据;
 - 注册表漂移防御(队列卡名查行失败)→ 零发放 + 条目保留。
@@ -105,17 +108,23 @@ def test_not_due_zero_grant_zero_write() -> None:
     assert gs.write_seq == seq_before, '未到点出现写行'
 
 
-@pytest.mark.parametrize('card', [_CARD, '人才激励+'])
-def test_due_grants_equipment_ejects_entry(card: str) -> None:
-    """到点发放真值(姊妹双卡参数化,逐名经真实注册表查行):remaining
+@pytest.mark.parametrize(('card', 'item'), [
+    (_CARD, _ITEM),
+    ('人才激励+', _ITEM),
+    ('好运令牌·银', '好运令牌'),
+])
+def test_due_grants_equipment_ejects_entry(card: str, item: str) -> None:
+    """到点发放真值(真注册装备分道成员参数化,逐名经真实注册表查行):
+    remaining
     = 0 → 装备腿尾追入栏 + 条目弹除 + 效果串 delayed_grant:<item>
     (placed=True)+ 队列回写 evidence strategy_grant_due(确定面),
-    evidence 值含触发卡名(同款发放物经卡名可分)。"""
+    evidence 值含触发卡名(同款发放物经卡名可分;好运令牌·银 = 卡名
+    与发放物异名,效果串按物名/evidence 按卡名各归其位)。"""
     gs = _gs(equips=[], bench_slots=None, queue=((card, 0),))
     effects = discharge_due_strategy_grants(gs, rand=False, sig=_LSIG)
-    assert effects == (f'delayed_grant:{_ITEM}(placed=True)',), \
+    assert effects == (f'delayed_grant:{item}(placed=True)',), \
         f'效果串: {effects}'
-    assert gs.equips.value == [_ITEM], f'装备栏: {gs.equips.value}'
+    assert gs.equips.value == [item], f'装备栏: {gs.equips.value}'
     assert gs.pending_strategy_grants.value == (), '到期条目未弹除'
     assert gs.equips.source == 'logic' \
         and gs.pending_strategy_grants.source == 'logic', '确定发放走确定面'
@@ -154,6 +163,23 @@ def test_grant_rejected_zero_write_entry_still_ejected() -> None:
     gs = _gs(equips=None, bench_slots=None, queue=((_CARD, 0),))
     effects = discharge_due_strategy_grants(gs, rand=False, sig=_LSIG)
     assert effects == (f'delayed_grant:{_ITEM}(placed=False)',), \
+        f'效果串: {effects}'
+    assert gs.equips.value is None, '拒落域出现写'
+    assert gs.pending_strategy_grants.value == (), '拒落条目未弹除'
+    assert gs.pending_strategy_grants.evidence == 'strategy_grant_due', \
+        '弹除回写行缺留存证据'
+
+
+def test_due_haoyun_equips_unobserved_reject_ejected_with_evidence() -> None:
+    """好运令牌·银 栏未观察拒落(装备分道新实成员的 placed=False 面,
+    T-146 批):equips 未观察直构 → 零写(装备栏保持未观察)∧ 条目仍
+    弹除(到期即消费)∧ 效果串 delayed_grant:好运令牌(placed=False)
+    ∧ 弹除回写行留存 evidence——真成员查行经注册表 item 值(卡名与
+    发放物异名,查行键 = 队列卡名),拒落语义与机制锁(上方通用锁)
+    同构,本锁证新实成员在该分支零特例。"""
+    gs = _gs(equips=None, bench_slots=None, queue=(('好运令牌·银', 0),))
+    effects = discharge_due_strategy_grants(gs, rand=False, sig=_LSIG)
+    assert effects == ('delayed_grant:好运令牌(placed=False)',), \
         f'效果串: {effects}'
     assert gs.equips.value is None, '拒落域出现写'
     assert gs.pending_strategy_grants.value == (), '拒落条目未弹除'
