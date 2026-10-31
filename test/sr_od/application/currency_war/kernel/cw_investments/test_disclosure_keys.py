@@ -17,4 +17,5 @@ def test_hiring_letter_unmodeled_keys_registered() -> None:
     批内顺手更新即绿。"""
     assert STRATEGY_HIRING_LETTER_UNMODELED_ASSUMPTION_KEYS == (
         '招聘资金',
+        '招聘资金+',
     )
