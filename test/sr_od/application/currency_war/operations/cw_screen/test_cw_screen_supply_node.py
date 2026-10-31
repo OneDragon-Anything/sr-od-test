@@ -681,3 +681,36 @@ def test_supply_sim_pick_flow_unchosen_fail_closed(
                 options=list(gs.supply.value.options or [])))
         assert gs.bench.value == bench_after, '检查零发放:bench 不变'
         assert gs.equips.value == equips_after, '检查零发放:equips 不变'
+
+
+def test_supply_sim_pick_take_all_fail_closed_latch_bookkeeping(
+        test_context, monkeypatch) -> None:
+    """全都要·银·sim pick 流 fail-closed 锁(选卡时点检查挂点,真注册表
+    派发链全通):sim 局未选集恒 None(机械执行态限定写)→ 持卡局选卡
+    派发后发放侧零写(bench/equips 不变),事件消耗闩照设 = 一笔无害簿记写
+    (A 案,sim 闩笔申报形态);防未来误接线静默改变 sim 行为。"""
+    with _sim_supply_world(test_context, monkeypatch, seed=61) as b:
+        _match, _strategy = _sim_match(test_context, monkeypatch, b)
+        gs = b.gs
+        gs.observe(gs.active_strategies, ['全都要·银'],
+                   evidence='test:hold', sig=_SIG_OBS)
+        # 预刷尽:left 1→0 → 真实 decide 恒落选卡(次数闸内嵌)。
+        b._handle_click_source(SCREEN_SUPPLY, '文本-剩余次数')
+        assert gs.supply_refresh_left.value == 0, '前置:left 刷尽'
+        bench_before = gs.bench.value
+        equips_before = list(gs.equips.value or [])
+        op = CwScreenSupplyNode(test_context)
+        assert _run_node(test_context, op, op.observe).is_success, (
+            '前置:sim 观察 success')
+        rs = _run_node(test_context, op, op.act)
+        assert rs.is_success and '终结交回' in (rs.status or ''), (
+            f'sim 选卡派发:{rs!r}')
+        assert gs.chosen_supply.value is not None, '前置:选卡确认已落地'
+        assert gs.unchosen_supply.value is None, (
+            '未选集域 sim 恒 None(fail-closed 载体面)')
+        assert gs.strategy_conditional_done.value == ('全都要·银',), (
+            '事件消耗闩照设(A 案 sim 簿记 = 一笔 done 键写,零世界效果)')
+        assert gs.bench.value == bench_before, '发放侧零写:bench 不变'
+        assert list(gs.equips.value) == \
+            equips_before + [gs.chosen_supply.value[1][0]], (
+            'equips 增量恰 = 选卡载荷自身入账(占位池单件),零全捞发放增量')
