@@ -318,16 +318,31 @@ def test_grant_advisor_halved():
     assert grant_gift_value(STRATEGY_GRANTS['锻冶专家:刃'], frozenset()) == 10.0
 
 
+def test_char_grant_cards_gift_value_off_zero():
+    """转正卡赠卡分 0(佩佩 = cost0 系统召唤单位,COMP_LIBRARY 无档 →
+    off 档机器事实):注册进估值读端后策略估值零行为变化(off 恒 0.0;
+    若未来 COMP_LIBRARY 收编佩佩本锁显影,归立场重拍批)。"""
+    for n in ('溜佩佩', '溜佩佩+'):
+        assert grant_gift_value(STRATEGY_GRANTS[n], frozenset()) == 0.0
+
+
 def test_grant_registry_counts_and_closed_set():
     """底册计数测试(对账记录 = 迭代目录 strategy-grants-reconciliation.md):
-    88 条 = 11 顾问 + 68 绑定母体白得 + 4 反扫补网 + 5 开箱分支(占席道具
-    直读);顾问档名单在册。"""
-    assert len(STRATEGY_GRANTS) == 88
+    90 条 = 11 顾问 + 68 绑定母体白得 + 4 反扫补网 + 5 开箱分支(占席道具
+    直读)+ 2 非直读人工转正(佩佩逛街句,反扫白名单同批退役);顾问档名单
+    在册。"""
+    assert len(STRATEGY_GRANTS) == 90
     advisors = {n for n, g in STRATEGY_GRANTS.items() if g.advisor}
     assert len(advisors) == 11
     assert {'停云顾问', '加拉赫顾问', '摸个鱼吧I'} <= advisors
     for n in ('龙虎兄弟狸', '佩佩驾到', '艾丝妲的猛犬！', '招财狗'):
         assert n in STRATEGY_GRANTS
+    # 非直读人工转正 2 条(溜佩佩/溜佩佩+):注册存在 + 发放对象 = 佩佩
+    for n in ('溜佩佩', '溜佩佩+'):
+        assert n in STRATEGY_GRANTS, '转正卡注册在册'
+        assert STRATEGY_GRANTS[n].chars_immediate == ('佩佩',), \
+            '转正登记发放对象 = 佩佩'
+        assert STRATEGY_GRANTS[n].advisor is False, '转正卡非顾问型'
 
 
 def _patch_grants(monkeypatch, table: dict[str, GiftGrant]) -> None:
@@ -380,6 +395,15 @@ def test_grants_validation_scan_closure_breach_raises(monkeypatch):
     _patch_grants(monkeypatch, trimmed)
     with pytest.raises(ValueError, match='反扫闭集破口'):
         cw_investments._validate_strategy_grants()
+
+
+def test_char_grant_cards_retired_from_scan_exclusions():
+    """非直读转正卡不在反扫排除白名单(注册后排除因「未登记」失真,两键
+    随注册退役;候选闭集由注册表覆盖——防线负向回归由
+    test_grants_validation_scan_closure_breach_raises 承担,本锁只钉退役
+    事实防误加回)。"""
+    assert '溜佩佩' not in cw_investments._STRATEGY_GRANTS_SCAN_EXCLUSIONS
+    assert '溜佩佩+' not in cw_investments._STRATEGY_GRANTS_SCAN_EXCLUSIONS
 
 
 # ==================== ④ 结构分区(design §2.7)====================
