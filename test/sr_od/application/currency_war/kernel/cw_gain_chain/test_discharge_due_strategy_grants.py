@@ -9,6 +9,8 @@ discharge_due_strategy_grants)。
   delayed_grant:<item>(placed=…)+ 队列回写 evidence strategy_grant_due
   (姊妹双卡参数化:人才激励 / 人才激励+,T-107 批扩面);
 - 分道判据(monkeypatch 临时占席道具条目)→ gain_bench_item 落席;
+- 许诺特权 = 占席分道首个真实注册条目(真成员回归锁:备战落位/席满
+  溢出落位/溢出位被占零写留证,三态全真成员直测);
 - 发放拒落(equips 未观察)→ 零写 + 条目仍弹除(到期即消费)+ 回写行
   留存证据;
 - 注册表漂移防御(队列卡名查行失败)→ 零发放 + 条目保留。
@@ -19,6 +21,7 @@ import pytest
 
 from sr_od.application.currency_war.kernel import cw_gain_chain
 from sr_od.application.currency_war.kernel.cw_gain_chain import (
+    DEFECT_OVERFLOW_TAKEN,
     discharge_due_strategy_grants,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
@@ -27,6 +30,9 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     BenchView,
     ChannelSig,
     GameState,
+    Unit,
+    consume_defect_sink,
+    set_defect_sink,
 )
 
 _SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep')
@@ -34,6 +40,33 @@ _LSIG = ChannelSig(family='logic_action', actor='TestDriver', mode='compute')
 
 _CARD = '人才激励'
 _ITEM = '员工投影仪'
+
+_XUNUO = '许诺特权'
+_XUNUO_ITEM = '特权武装箱'
+
+
+class _RowSink:
+    """缺陷台账行收集(镜像 test_gain_chain 同名 fixture,装配 + 必达收尾)。"""
+
+    def __init__(self) -> None:
+        self.rows: list[dict] = []
+        set_defect_sink(self.rows.append)
+
+    def close(self) -> None:
+        set_defect_sink(None)
+        consume_defect_sink()
+
+    def kinds(self) -> list[str]:
+        return [r['kind'] for r in self.rows]
+
+
+@pytest.fixture
+def rows_sink() -> _RowSink:
+    s = _RowSink()
+    try:
+        yield s
+    finally:
+        s.close()
 
 
 def _empty_slots(n: int = 9) -> list[BenchSlot]:
@@ -135,3 +168,82 @@ def test_registry_miss_defense_retains_entry() -> None:
     assert gs.pending_strategy_grants.value == (('未注册的卡', 0),), \
         '漂移条目被弹除'
     assert gs.write_seq == seq_before, '漂移分支出现写行'
+
+
+# ============================================================ 占席分道
+# 真成员回归锁(许诺特权 = BENCH_ITEM_NAMES 分道首个真实注册条目;
+# 上方 test_due_routing_bench_item_branch 仅以 monkeypatch 假想条目
+# 锁过分道机制,真成员占席道具全落位三态由下方三锁直测)
+
+
+def test_due_bench_item_real_member_places_bench(
+        rows_sink: _RowSink) -> None:
+    """许诺特权到点 → 备战空槽落位(真成员主态):supply_box 槽件带名
+    落席 ∧ 条目弹除 ∧ 效果串 delayed_grant:特权武装箱(placed=True)
+    ∧ 确定发放走确定面 ∧ 落位写 evidence = strategy_grant_due:许诺
+    特权#place ∧ 正常路径零留证。真成员直测锁分道真值(monkeypatch
+    分道锁只证机制不证真成员词表归属)。"""
+    gs = _gs(equips=[], bench_slots=_empty_slots(),
+             queue=((_XUNUO, 0),))
+    effects = discharge_due_strategy_grants(gs, rand=False, sig=_LSIG)
+    assert effects == (f'delayed_grant:{_XUNUO_ITEM}(placed=True)',), \
+        f'效果串: {effects}'
+    slots = gs.bench.value.slots
+    landed = [s for s in slots if s is not None and s.kind == 'supply_box']
+    assert len(landed) == 1 and landed[0].item == _XUNUO_ITEM, \
+        f'特权武装箱未落席: {slots}'
+    assert gs.equips.value == [], '占席道具误入装备栏'
+    assert gs.pending_strategy_grants.value == (), '到期条目未弹除'
+    assert gs.bench.source == 'logic', '确定发放走确定面'
+    assert gs.bench.evidence == f'strategy_grant_due:{_XUNUO}#place', \
+        f'落位 evidence: {gs.bench.evidence}'
+    assert rows_sink.kinds() == [], '正常落位零留证'
+
+
+def test_due_bench_item_real_member_bench_full_overflow(
+        rows_sink: _RowSink) -> None:
+    """许诺特权到点席满 → 溢出落位两字段(道具与角色同款溢出语义,
+    2026-09-24 实机真值):overflow_warning=True ∧ overflow_card =
+    特权武装箱(身份 = 道具名)∧ 备战席零变动 ∧ 效果串 placed=True
+    ∧ 零留证(既定语义)。"""
+    gs = _gs(equips=[],
+             bench_slots=[BenchSlot(kind='unit',
+                                    unit=Unit(char_id=f'填席{i}', star=1))
+                          for i in range(9)],
+             queue=((_XUNUO, 0),))
+    effects = discharge_due_strategy_grants(gs, rand=False, sig=_LSIG)
+    assert effects == (f'delayed_grant:{_XUNUO_ITEM}(placed=True)',), \
+        f'效果串: {effects}'
+    assert gs.overflow_warning.value is True, '席满溢出告警未写'
+    assert gs.overflow_card.value == _XUNUO_ITEM, \
+        f'溢出位身份应为道具名: {gs.overflow_card.value!r}'
+    slots = gs.bench.value.slots
+    assert all(s is not None and s.kind == 'unit' for s in slots), \
+        '备战席零变动(道具落溢出位非备战槽)'
+    assert gs.pending_strategy_grants.value == (), '到期条目未弹除'
+    assert rows_sink.kinds() == [], '席满溢出落位是既定语义,零留证'
+
+
+def test_due_bench_item_real_member_overflow_taken(
+        rows_sink: _RowSink) -> None:
+    """许诺特权到点席满 ∧ 溢出位已被占 → 零写 + 留证(DEFECT_OVERFLOW_
+    TAKEN)+ 条目仍弹除(到期即消费,该件世界性丢失留证于 defect 行):
+    bench/overflow 两域零写、效果串 placed=False。"""
+    gs = _gs(equips=[],
+             bench_slots=[BenchSlot(kind='unit',
+                                    unit=Unit(char_id=f'填席{i}', star=1))
+                          for i in range(9)],
+             queue=((_XUNUO, 0),))
+    gs.write_logic(gs.overflow_warning, True, produced_by='test-seed',
+                   evidence='t:ovf', sig=_LSIG)
+    gs.write_logic(gs.overflow_card, '先到的道具', produced_by='test-seed',
+                   evidence='t:ovf', sig=_LSIG)
+    effects = discharge_due_strategy_grants(gs, rand=False, sig=_LSIG)
+    assert effects == (f'delayed_grant:{_XUNUO_ITEM}(placed=False)',), \
+        f'效果串: {effects}'
+    assert gs.overflow_card.value == '先到的道具', '溢出位被覆写'
+    assert all(s is not None and s.kind == 'unit'
+               for s in gs.bench.value.slots), '备战席出现写'
+    assert gs.pending_strategy_grants.value == (), '到期条目未弹除'
+    assert rows_sink.kinds() == [DEFECT_OVERFLOW_TAKEN], \
+        f'零写留证行: {rows_sink.kinds()}'

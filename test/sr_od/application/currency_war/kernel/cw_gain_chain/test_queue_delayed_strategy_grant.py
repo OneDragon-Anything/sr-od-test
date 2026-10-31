@@ -10,6 +10,8 @@ monkeypatch 形态测随真注册转直测):
 - 拿卡人才激励 → equips 尾部 +1 员工投影仪 ∧ 队列 (('人才激励', 4),)
   ∧ 双效果串(equip_grant:strategy_grant_scheduled);人才激励+ 同构
   @3(姊妹双卡逐名独立构造);
+- 许诺特权 = 延时-only 单腿登记腿(卡文纯延时单句):效果串单枚
+  strategy_grant_scheduled,零即时腿(反向锁错发形态);
 - equips 未观察 → 即时腿拒落零写 placed=False、入队腿照写;
 - 未登记策略卡(表外名 + 在册无腿卡)零写;
 - live 落地形态(gain_invest_strategy 同函数,session=None 直构)队列
@@ -126,3 +128,24 @@ def test_pick_rencai_jili_plus_direct_registry_chain() -> None:
     assert gs.equips.value == ['员工投影仪'], f'装备栏: {gs.equips.value}'
     assert gs.pending_strategy_grants.value == (('人才激励+', 3),), \
         f'队列值: {gs.pending_strategy_grants.value}'
+
+
+def test_pick_xunuo_tequan_delayed_only_single_leg() -> None:
+    """许诺特权 延时-only 登记腿直断(卡文「在进入7个节点后，获得
+    1个【特权武装箱】。」纯延时单句,零即时腿):拿卡 → 队列恰
+    (('许诺特权', 7),) ∧ 效果串单枚 strategy_grant_scheduled:
+    特权武装箱@7 ∧ 零即时腿(equips 零写、无 equip_grant 字样;bench
+    域零涉)。反向锁死「延时-only 卡直用两腿工厂派生」的错发形态
+    (错发即时特权武装箱 = 行为级错误);@7 字面直断防族键序错位;
+    逐名独立构造,姊妹双卡两腿锁不受影响。"""
+    gs = _gs(equips=[])
+    seq_before = gs.write_seq
+    effects = on_strategy_gained(gs, '许诺特权', rand=False,
+                                 sig=_lsig(), rng=random.Random(0))
+    assert effects == ('strategy_grant_scheduled:特权武装箱@7',), \
+        f'效果串(单枚,零即时腿): {effects}'
+    assert gs.equips.value == [], f'即时腿误写装备栏: {gs.equips.value}'
+    assert gs.pending_strategy_grants.value == (('许诺特权', 7),), \
+        f'队列值: {gs.pending_strategy_grants.value}'
+    assert gs.write_seq == seq_before + 1, \
+        f'入队腿外出现额外写行(seq={gs.write_seq})'
