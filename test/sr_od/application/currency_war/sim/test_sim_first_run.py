@@ -28,12 +28,31 @@ from typing import Any
 import pytest
 from test.harness.sim_backend_runner import run_sim_full_match
 
+from sr_od.application.currency_war.kernel.cw_investments import (
+    STRATEGY_ECONOMY,
+)
+from sr_od.application.currency_war.sim.cw_sim_opening import (
+    opening_hp_or_raise,
+)
+from sr_od.application.currency_war.sim.cw_sim_run_config import RunConfig
+
 #: 验收局种子(世界后端与策略器共用;经种子扫描选定 = 该 seed 下真
 #: 策略能从 P1 打到 P2 boss 局终,确定性双跑与种子值解耦)。
 ACCEPT_SEED: int = 20260923
 
 #: 种子扫描终局下限:验收局至少到达第二位面(P2 boss 辖域)。
 _EXPECT_MIN_PLANE: int = 2
+
+#: hp 轨迹上界(推导值非拍值):开局查表值 + 注册表 hp_instant 正部合计。
+#: 选卡即时腿 +N 直加不 clip(sim 扣血绝对值制零上限消费,hp_max 字段
+#: 缺位),固定 100 上界已随该腿过期;按正部合计而非全表合计——负成员
+#: (先亏后盈 −20 注册态)入表后全表合计会低估上界产生假红,直加不可
+#: 抬出「每卡至多各加一次」的真值上界。开局查表与验收局运行器同参
+#: (A8/难度108 实证档),证据单一源 = cw_opening_hp 实证局档。
+_HP_TRAIL_BOUND: int = (
+    opening_hp_or_raise(RunConfig(selected_difficulty='A8',
+                                  enemy_difficulty=108))
+    + sum(max(0, eff.hp_instant) for eff in STRATEGY_ECONOMY.values()))
 
 
 @pytest.fixture(scope='module')
@@ -123,8 +142,9 @@ def test_first_match_container_invariants(two_runs: tuple) -> None:
     assert run.gs.gold.value == gold_rows[-1]['after'], \
         'gold 终值与末条写行不一致'
 
-    # —— ② hp 轨迹不变式(hp 写行每战斗结算恰一条;轨迹首条 = reset
-    #      开局,先于 journal 捕获,故对拍域 = 写流全序 vs 轨迹[1:]) ——
+    # —— ② hp 轨迹不变式(hp 写行 = 每战斗结算恰一条 + 选卡即时腿逐笔;
+    #      轨迹首条 = reset 开局,先于 journal 捕获,故对拍域 = 写流全序
+    #      vs 轨迹[1:]) ——
     hp_rows = _write_rows(run, 'hp')
     assert hp_rows, '零 hp 写行(journal 捕获失效,断言无凭据)'
     written = [r['after'] for r in hp_rows]
@@ -132,7 +152,9 @@ def test_first_match_container_invariants(two_runs: tuple) -> None:
         f'hp 写流 {written} != 轨迹[1:] {list(run.hp_trail)[1:]}'
     # 终值 0 = 死亡局终的合法终态(出口 hp 遥测含死亡局);非终值 0 =
     # 结算中途回 0 会被 apply_hp_outcome 保底/局终逻辑挡住,不可达。
-    assert all(0 <= h <= 100 for h in run.hp_trail), 'hp 轨迹出界'
+    assert all(0 <= h <= _HP_TRAIL_BOUND for h in run.hp_trail), \
+        f'hp 轨迹出界(上界 = 开局查表 + hp_instant 正部合计 ' \
+        f'{_HP_TRAIL_BOUND})'
     assert run.gs.hp.value == run.hp_trail[-1], 'hp 终值与轨迹末条不一致'
 
     # —— ③ 经验等级不变式(升级逐级 +1 不越上限;carry 恒 0 ≤ cur < need;
