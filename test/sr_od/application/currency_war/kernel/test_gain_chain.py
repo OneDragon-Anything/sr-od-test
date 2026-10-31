@@ -47,12 +47,11 @@ import pytest
 from sr_od.application.currency_war.data.cw_chars import chars_by_cost
 from sr_od.application.currency_war.kernel import cw_gain_chain
 from sr_od.application.currency_war.kernel.cw_action_report import (
-    report_action_deploy_move_param,
+    report_action_move_unit_param,
     report_action_pick_invest_env_param,
     report_action_pick_invest_strategy_param,
     report_action_sell_bench_param,
     report_action_sell_deployed_param,
-    report_action_swap_deploy_param,
 )
 from sr_od.application.currency_war.kernel.cw_action_report.pick_planner import (
     report_action_pick_planner_param,
@@ -126,12 +125,11 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
-    CwActionDeployMoveParam,
+    CwActionMoveUnitParam,
     CwActionPickInvestEnvParam,
     CwActionPickInvestStrategyParam,
     CwActionSellBenchParam,
     CwActionSellDeployedParam,
-    CwActionSwapDeployParam,
 )
 
 _SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep')
@@ -2033,7 +2031,7 @@ def test_joy_rider_grant_chain_timing_merge(rows_sink: _RowSink) -> None:
 
 
 # ============================================================ LV.999 变换窗
-# (银狼费用档变换;升费分支经 pick_planner 上报、上阵分支经 deploy_move 上报,
+# (银狼费用档变换;升费分支经 pick_planner 上报、上阵分支经 move_unit 统一拖动上报,
 #  2026-09-18 定谳〔口述·权威〕:费用档不同时存在,分组键 (char_id, star)
 #  无跨档歧义)
 
@@ -2111,10 +2109,10 @@ def test_deploy_transform_window_3star_lv999(rows_sink: _RowSink) -> None:
     原样)+ bench 摘除源;级联无组可合 → 零额外行。"""
     gs = _make_gs(bench=[('银狼LV.999', 3), ('希儿', 1)],
                   front=[Unit(char_id='黑塔', star=1)], equips=[])
-    out = report_action_deploy_move_param(
-        gs, CwActionDeployMoveParam(bench_idx=0, to_row='front', to_slot=2,
-                                    faction=''),
-        _lsig('CwActionDeployMoveOp'))
+    out = report_action_move_unit_param(
+        gs, CwActionMoveUnitParam(src_domain='bench', src_slot=0,
+                                  dst_domain='front', dst_slot=2),
+        _lsig('CwActionMoveUnitOp'))
     assert out.applied is True
     assert gs.deployed.value.front_slots[1].char_id == '银狼LV.999', '落场'
     assert gs.deployed.value.front_slots[1].star == 1, '变换窗:落场写 1★(下一费用档)'
@@ -2132,10 +2130,10 @@ def test_deploy_non_target_identity(rows_sink: _RowSink) -> None:
             ([('银狼LV.999', 2), ('希儿', 3)], 1),   # 3★ 非目标角色
             ([('银狼LV.999', 3), ('银狼LV.999', 2)], 1)):  # 2★ 目标名
         gs = _make_gs(bench=bench_units, front=[], equips=[])
-        out = report_action_deploy_move_param(
-            gs, CwActionDeployMoveParam(bench_idx=idx, to_row='back',
-                                        to_slot=1, faction=''),
-            _lsig('CwActionDeployMoveOp'))
+        out = report_action_move_unit_param(
+            gs, CwActionMoveUnitParam(src_domain='bench', src_slot=idx,
+                                      dst_domain='back', dst_slot=1),
+            _lsig('CwActionMoveUnitOp'))
         assert out.applied is True
         moved = gs.deployed.value.back_slots[0]
         assert moved.star == bench_units[idx][1], \
@@ -2150,10 +2148,10 @@ def test_deploy_cascade_lv999_normal_merge(rows_sink: _RowSink) -> None:
     _merge_bench 语义),备战素材被消费腾槽,write_logic 逐级落行。"""
     gs = _make_gs(bench=[('银狼LV.999', 3), ('银狼LV.999', 1),
                          ('银狼LV.999', 1)], front=[], equips=[])
-    out = report_action_deploy_move_param(
-        gs, CwActionDeployMoveParam(bench_idx=0, to_row='front', to_slot=1,
-                                    faction=''),
-        _lsig('CwActionDeployMoveOp'))
+    out = report_action_move_unit_param(
+        gs, CwActionMoveUnitParam(src_domain='bench', src_slot=0,
+                                  dst_domain='front', dst_slot=1),
+        _lsig('CwActionMoveUnitOp'))
     assert out.applied is True
     assert gs.deployed.value.front_slots[0].star == 2, '级联正常推演:场上载体 1★→2★'
     assert gs.lv999_cost_tier.value == 4, '上阵变费档行(级联同批落)'
@@ -2498,23 +2496,25 @@ _TR_CASES = [
         [], [('银枝', 1)], {'星间旅人': 1, '群攻': 1}, None,
         id='selldeployed-stale-reject'),
     pytest.param(
-        'swapdeploy_apply',
-        lambda: CwActionSwapDeployParam(deployed_idx=0, bench_idx=0, reason='test'),
+        'moveunit_swap_apply',
+        lambda: CwActionMoveUnitParam(src_domain='bench', src_slot=0,
+                                     dst_domain='front', dst_slot=1),
         {'bench': [_tr_unit('爻光', 1), _tr_unit('停云', 2)],
          'front': [_tr_unit('银枝', 1)],
          'board': {'星间旅人': 1, '群攻': 1}},
-        True, 'test', None, 10,
+        True, '', None, 10,
         [(0, '银枝'), (1, '停云')], [('爻光', 1)],
         {'仙舟': 1, '欢愉': 1}, None,
-        id='swapdeploy-apply'),
+        id='moveunit-swap-apply'),
     pytest.param(
-        'swapdeploy_idx_reject',
-        lambda: CwActionSwapDeployParam(deployed_idx=5, bench_idx=0, reason='test'),
+        'moveunit_src_invalid_reject',
+        lambda: CwActionMoveUnitParam(src_domain='bench', src_slot=9,
+                                     dst_domain='front', dst_slot=1),
         {'bench': [_tr_unit('爻光', 1)], 'front': [_tr_unit('银枝', 1)],
          'board': {'星间旅人': 1, '群攻': 1}},
-        False, 'idx_out_of_range:d5/b0', None, 10,
+        False, 'move_slot_invalid:bench9->front1', None, 10,
         [(0, '爻光')], [('银枝', 1)], {'星间旅人': 1, '群攻': 1}, None,
-        id='swapdeploy-idx-reject'),
+        id='moveunit-src-invalid-reject'),
 ]
 
 
@@ -2524,8 +2524,8 @@ def _tr_report(gs: GameState, action) -> object:
         return report_action_sell_bench_param(gs, action, sig=_TR_SIG_LOGIC)
     if isinstance(action, CwActionSellDeployedParam):
         return report_action_sell_deployed_param(gs, action, sig=_TR_SIG_LOGIC)
-    if isinstance(action, CwActionSwapDeployParam):
-        return report_action_swap_deploy_param(gs, action, sig=_TR_SIG_LOGIC)
+    if isinstance(action, CwActionMoveUnitParam):
+        return report_action_move_unit_param(gs, action, sig=_TR_SIG_LOGIC)
     raise AssertionError(f'未覆盖的动作类型:{type(action).__name__}')
 
 
@@ -3111,3 +3111,6 @@ def test_env_gift_equip_leg_mingyun_shengbei_invite(
              if s is not None and s.kind == 'supply_box']
     assert boxes == [], '零道具落位(装备 only)'
     assert rows_sink.kinds() == [], '正常路径零申报行(零子链)'
+
+
+

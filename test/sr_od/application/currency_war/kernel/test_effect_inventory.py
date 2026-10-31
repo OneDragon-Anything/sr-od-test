@@ -22,7 +22,7 @@ import pytest
 
 from sr_od.application.currency_war.kernel import cw_game_state as gs_mod
 from sr_od.application.currency_war.kernel.cw_action_report import (
-    report_action_deploy_move_param,
+    report_action_move_unit_param,
     set_action_rng_provider,
 )
 from sr_od.application.currency_war.kernel.cw_affix_effects import (
@@ -67,7 +67,7 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
-    CwActionDeployMoveParam,
+    CwActionMoveUnitParam,
 )
 
 _SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep', mode='read')
@@ -236,9 +236,9 @@ def test_board_rewrite_clear_then_front_deploy_no_crash() -> None:
         slots=[BenchSlot(kind='unit', unit=_u('甲'))]
         + [BenchSlot(kind='empty')] * 8,
         capacity=BENCH_CAPACITY_DEFAULT), sig=_SIG_OBS)
-    report_action_deploy_move_param(
-        gs, CwActionDeployMoveParam(bench_idx=0, to_row='front',
-                                    to_slot=4, faction=''),
+    report_action_move_unit_param(
+        gs, CwActionMoveUnitParam(src_domain='bench', src_slot=0,
+                                  dst_domain='front', dst_slot=4),
         _M31_SIG_LOGIC)
     assert gs.deployed.value.front_slots[3].char_id == '甲', \
         '前排 4 号直址落位(清盘后规范形视图上不崩)'
@@ -893,3 +893,4 @@ def test_capacity_expiry_assumption_keys_registered() -> None:
         'strategy_expiry_grant_simple_pool_uniform',
         'bench_capacity_shrink_overflow_unmodeled',
     )
+

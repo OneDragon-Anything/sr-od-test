@@ -91,6 +91,29 @@ def test_or_group_takes_best_branch() -> None:
     assert {'希儿', '佩拉', '杰帕德'} <= set(out), 'OR 组最优支(贝 2)入选'
 
 
+def test_dp_fill_captures_multi_group_tier_mix() -> None:
+    """段 2 分组背包 DP 的跨组增益捕获(unified-deploy-order §2 段 2
+    设计基线;贪心近似的覆盖缺口反例):锁定命运圣杯线(线内件不在手 →
+    空骨架),K=4,手牌 = 持续伤害 2(卡芙卡/黑天鹅,首标签持续伤害,
+    档 1 需 2 人)+ 列车同行 2(三月七/姬子·启行,首标签列车同行,
+    档 1 需 2 人)+ 零值扰动件(停云,首标签仙舟,档 1 需 3 人独件
+    不可达;名字序最早)。
+
+    贪心全局序按名字取前 4(三月七/停云/卡芙卡/姬子)→ 挤掉黑天鹅 →
+    持续伤害组不成档(L3 = 1 档);单组变体只保一组(各 1 档)。DP
+    联合分配取「持续伤害 2 + 列车 2」→ 双组成档(L3 = 2 档)——
+    段 3 全量终评按实测 L3 选 DP 板(锁定窗保板相位两组同为过渡
+    系 ×4,同 L1=0 同 L2 无 sub,跨组增量即决胜差)。"""
+    comp = get_comp('命运圣杯红A')
+    units = [_u('卡芙卡'), _u('黑天鹅'),      # 持续伤害组(档 1 = 2 人)
+             _u('三月七'), _u('姬子·启行'),  # 列车同行组(档 1 = 2 人)
+             _u('停云')]                     # 仙舟组独件(零值扰动)
+    panel = _panel(units, locked=True, locked_comp=comp, plane1=False, k=4)
+    out = ds.search_deploy_target(panel)
+    assert set(out) == {'卡芙卡', '黑天鹅', '三月七', '姬子·启行'}, \
+        f'DP 联合分配捕获双组凑档(扰动件出局),实际 {sorted(out)}'
+
+
 def test_required_deployed_missing_zeroes_l1() -> None:
     """required 逐名折条(希儿不在场 → 希儿量子线 L1 = 0):无希儿的
     量子板不成型,过渡/散件板竞争胜出。"""

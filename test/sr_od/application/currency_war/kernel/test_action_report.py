@@ -83,7 +83,6 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CW_ACTION_TYPES,
     CwActionBuyCardParam,
-    CwActionDeployMoveParam,
     CwActionFurnaceUseParam,
     CwActionLevelUpParam,
     CwActionLuckyTokenUseParam,
@@ -98,9 +97,6 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
 )
 from sr_od.application.currency_war.operations.cw_op.cw_buy_card_action import (
     CwActionBuyCardOp,
-)
-from sr_od.application.currency_war.operations.cw_op.cw_deploy_move_action import (
-    CwActionDeployMoveOp,
 )
 from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
     ShopExecEnv,
@@ -993,31 +989,9 @@ def _deploy_env(session: object | None):
     return env
 
 
-def test_deploy_move_tracks_immediately_on_emit(monkeypatch):
-    """发出即记账主测试:拖拽发出即主域记上阵 + bench 摘除(3.2:自上报
-    单点写主域);拖后画面零变化(零差帧形态)也不回滚不申报——落地
-    判定归观察侧 reconcile(静默不生效 → 账实失配安灯停,按真 bug 修)。"""
-    monkeypatch.setattr('time.sleep', lambda _s: None)
-    session = StrategySession()
-    gs = game_state_of(session)
-    _slots = [BenchSlot(kind='empty'), BenchSlot(kind='unit', unit=Unit(
-        char_id='甲', star=1))] + [BenchSlot(kind='empty')] * 7
-    gs.observe(gs.bench, BenchView(slots=_slots, capacity=9),
-               sig=ChannelSig(family='obs', actor='t', mode='read'))
-
-    env = _deploy_env(session)
-    action = CwActionDeployMoveParam(bench_idx=1, to_row='front', to_slot=1,
-                                     faction='')
-    ok = CwActionDeployMoveOp(env.op.ctx, action, env=env).run()
-
-    assert ok.is_success, '机械发出即职责完成(round 成功态)'
-    assert '发出即记账' in (ok.status or '')
-    moved = [u for u in (gs.deployed.value.front_slots or [])
-             if u is not None and u.char_id == '甲']
-    assert moved, '主域记上阵(拖后零变化也照记 = 零判效)'
-    assert all(s.kind != 'unit' or s.unit is None
-               or s.unit.char_id != '甲'
-               for s in (gs.bench.value.slots or [])), 'bench 侧摘除照旧'
+# (test_deploy_move_tracks_immediately_on_emit 已随 CwActionDeployMoveOp 戊批收编删除:
+#  发出即记账语义 = move_unit 统一拖动上报,镜像测试见 cw_action_report/
+#  test_move_unit.py。)
 
 
 # ============================================================
@@ -1075,3 +1049,4 @@ def test_on_step_dual_domain_level_fires_once() -> None:
     assert b_snap[0] is None, 'bench 侧素材已置 None'
     upgraded = [d for d in d_snap if d is not None and d.star == 2]
     assert len(upgraded) == 1, 'deployed 侧载体已升 2★'
+

@@ -28,8 +28,8 @@ from test.sr_od.application.currency_war._cw_helpers import cw4_bview
 from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war.kernel.cw_action_report import (
     report_action_collect_ore_param,
-    report_action_deploy_move_param,
     report_action_level_up_param,
+    report_action_move_unit_param,
     report_action_open_bookcard_param,
     report_action_sell_bench_param,
     report_action_sell_deployed_param,
@@ -59,8 +59,8 @@ from sr_od.application.currency_war.kernel.cw_prep_actions import (
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CW_ACTION_TYPES,
     CwActionCollectOreParam,
-    CwActionDeployMoveParam,
     CwActionLevelUpParam,
+    CwActionMoveUnitParam,
     CwActionOpenBookcardParam,
     CwActionOpenBoxParam,
     CwActionOpenTomeParam,
@@ -227,7 +227,7 @@ def test_vocab_actions_all_have_logic_state_projection(
     覆盖面三集(登记面申报 = 函数族 docstring:有容器写动作一动作
     一文件,零写族集中 ``zero_writes``):
     - **容器写集**:CwActionSellBenchParam/CwActionSellDeployedParam/
-      CwActionDeployMoveParam/CwActionLevelUpParam/CwActionCollectOreParam/
+      CwActionMoveUnitParam/CwActionLevelUpParam/CwActionCollectOreParam/
       CwActionOpenTomeParam/CwActionOpenBookcardParam/CwActionWearEquipParam
       ——供数容器上逐动作必产生容器写(write_seq 推进);
     - **工具容器写集**(tool-gain-report 迭代自零写族升格,机械执行直接
@@ -327,8 +327,8 @@ def test_vocab_actions_all_have_logic_state_projection(
     written: list = [
         CwActionSellBenchParam(bench_idx=0),
         CwActionSellDeployedParam(deployed_idx=0),
-        CwActionDeployMoveParam(bench_idx=1, to_row='front', to_slot=2,
-                                faction=''),
+        CwActionMoveUnitParam(src_domain='bench', src_slot=1,
+                              dst_domain='front', dst_slot=2),
         CwActionLevelUpParam(cost=0),
         CwActionCollectOreParam(points=((1, 2),)),
         CwActionOpenTomeParam(slot=None),
@@ -397,23 +397,23 @@ def test_levelup_executes_single_click_per_frame(monkeypatch):
     assert controller_miss.clicks == [], '点击消费点即炸,零点击(禁兜底坐标)'
 
 
-def test_deploymove_slot_out_of_range_guard_assertion(monkeypatch):
-    """DeployMove 落位载荷越界直驱 = op 内守卫断言 AssertionError
-    (terminal-fail-status QD 终裁:参数违法类校验收拢 op 内,消息语义
-    保留;坐标裁定域禁负下标——负值形态不炸判定不在本测构造面)。"""
+def test_moveunit_slot_out_of_range_guard_assertion(monkeypatch):
+    """MoveUnit 落位载荷越界直驱 = op 内守卫断言 AssertionError
+    (terminal-fail-status QD 终裁:参数违法类校验收拢 op 内;旧
+    DeployMove op 守卫随戊批收编,等价面 = 统一拖动 op 同款守卫)。"""
     monkeypatch.setattr('time.sleep', lambda _s: None)
-    from sr_od.application.currency_war.operations.cw_op.cw_deploy_move_action import (
-        CwActionDeployMoveOp,
+    from sr_od.application.currency_war.operations.cw_op.cw_move_unit_action import (
+        CwActionMoveUnitOp,
     )
 
     controller = _RecordingController()
     ex = _make_executor(controller)
     env = SimpleNamespace(executor=ex)
-    action = CwActionDeployMoveParam(bench_idx=0, to_row='back', to_slot=9,
-                                     faction='')
+    action = CwActionMoveUnitParam(src_domain='bench', src_slot=0,
+                                   dst_domain='back', dst_slot=9)
     with pytest.raises(AssertionError) as ei:
-        CwActionDeployMoveOp(SimpleNamespace(), action, env=env).run()
-    assert '落位载荷越界' in str(ei.value), '守卫断言消息语义保留'
+        CwActionMoveUnitOp(SimpleNamespace(), action, env=env).run()
+    assert '越界' in str(ei.value), '守卫断言消息语义保留'
     assert controller.drags == [], '零拖拽(参数违法不执行)'
 
 
@@ -479,7 +479,7 @@ def test_deploy_slot_plans_front_guarantee_and_slot_set():
 
 
 def test_deploymove_logic_state_moves_unit_and_increments_board():
-    """CwActionDeployMoveParam 容器逻辑态(落位载荷契约):bench 摘槽 +
+    """CwActionMoveUnitParam 容器逻辑态(统一拖动落位载荷契约):bench 摘槽 +
     deployed 按载荷 (to_row, to_slot) 直落——目标槽有人 = 交换交互
     (被占位角色回源 bench 槽,其余占位不受波及,与换位动作同语义);
     载荷槽空 = 放置;源槽空 / 载荷槽跨排非法 = 陈旧提案零写。(docstring
@@ -489,11 +489,12 @@ def test_deploymove_logic_state_moves_unit_and_increments_board():
     slots: list[BenchSlot | None] = [None] * 9
     slots[2] = bc
     gs.observe(gs.bench, cw4_bview(slots), evidence='t', sig=_SIG_OBS)
-    report_action_deploy_move_param(gs, CwActionDeployMoveParam(bench_idx=2,
-                                                   to_row='front',
-                                                   to_slot=1,
-                                                   faction=''),
-                                    sig=_SIG)
+    # move_unit 上报 fail-closed 面:deployed 未观察(视图 None)= 零写
+    # 陈旧提案——与旧 deploy_move 口差异,本测先种子空板视图。
+    gs.observe(gs.deployed, _dvs([], []), evidence='t', sig=_SIG_OBS)
+    report_action_move_unit_param(gs, CwActionMoveUnitParam(src_domain='bench', src_slot=2,
+                                  dst_domain='front', dst_slot=1),
+                                 sig=_SIG)
     bench_after = bench_view_slots_of(gs)
     assert bench_after[2] is None or bench_after[2].kind == 'empty'
     dep = deployed_indexed_of_view(gs.deployed.value)
@@ -506,11 +507,9 @@ def test_deploymove_logic_state_moves_unit_and_increments_board():
                _dvs([Unit(char_id=f'乙{i}', star=1, equips=[]) for i in range(4)],
                     [Unit(char_id=f'丙{i}', star=1, equips=[]) for i in range(6)]),
                evidence='t', sig=_SIG_OBS)
-    report_action_deploy_move_param(gs, CwActionDeployMoveParam(bench_idx=2,
-                                                   to_row='front',
-                                                   to_slot=1,
-                                                   faction=''),
-                                    sig=_SIG)
+    report_action_move_unit_param(gs, CwActionMoveUnitParam(src_domain='bench', src_slot=2,
+                                  dst_domain='front', dst_slot=1),
+                                 sig=_SIG)
     dep = deployed_indexed_of_view(gs.deployed.value)
     assert dep[0] is not None and dep[0].char_id == '甲', \
         '交换语义:上场者落被占位的目标槽'
@@ -524,30 +523,24 @@ def test_deploymove_logic_state_moves_unit_and_increments_board():
     gs.observe(gs.bench, cw4_bview(list(slots)), evidence='t', sig=_SIG_OBS)
     gs.observe(gs.deployed, _dvs([Unit(char_id='乙', star=1, equips=[])], []),
                evidence='t', sig=_SIG_OBS)
-    report_action_deploy_move_param(gs, CwActionDeployMoveParam(bench_idx=2,
-                                                   to_row='front',
-                                                   to_slot=2,
-                                                   faction=''),
-                                    sig=_SIG)
+    report_action_move_unit_param(gs, CwActionMoveUnitParam(src_domain='bench', src_slot=2,
+                                  dst_domain='front', dst_slot=2),
+                                 sig=_SIG)
     dep = deployed_indexed_of_view(gs.deployed.value)
     assert dep[1] is not None and dep[1].char_id == '甲'   # 载荷槽 = 表 1 位
     assert dep[0].char_id == '乙', '占位槽不受放置波及'
     # 源槽无件(bench_idx 越界空槽)= 陈旧提案,本口零写
     before = gs.write_seq
-    report_action_deploy_move_param(gs, CwActionDeployMoveParam(bench_idx=5,
-                                                   to_row='front',
-                                                   to_slot=2,
-                                                   faction=''),
-                                    sig=_SIG)
+    report_action_move_unit_param(gs, CwActionMoveUnitParam(src_domain='bench', src_slot=5,
+                                  dst_domain='front', dst_slot=2),
+                                 sig=_SIG)
     assert gs.write_seq == before
     # 载荷槽跨排非法(前排无 5 号,front 5 号换算落表后段不符)= 零写
     # (源槽不摘,整笔零写)
     gs.observe(gs.bench, cw4_bview(list(slots)), evidence='t', sig=_SIG_OBS)
-    report_action_deploy_move_param(gs, CwActionDeployMoveParam(bench_idx=2,
-                                                   to_row='front',
-                                                   to_slot=5,
-                                                   faction=''),
-                                    sig=_SIG)
+    report_action_move_unit_param(gs, CwActionMoveUnitParam(src_domain='bench', src_slot=2,
+                                  dst_domain='front', dst_slot=5),
+                                 sig=_SIG)
     _src2 = bench_view_slots_of(gs)[2]
     assert _src2 is not None and _src2.kind == 'unit' \
         and _src2.unit.char_id == '甲', '载荷槽非法也零写:源槽不摘'

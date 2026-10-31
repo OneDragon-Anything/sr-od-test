@@ -39,8 +39,7 @@ from sr_od.application.currency_war.data.cw_invest_data import (
     PLAZA_PORTALS,
 )
 from sr_od.application.currency_war.kernel.cw_action_report import (
-    report_action_deploy_move_param,
-    report_action_swap_deploy_param,
+    report_action_move_unit_param,
 )
 from sr_od.application.currency_war.kernel.cw_board_by_row import (
     board_by_row,
@@ -67,8 +66,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     deployed_view_sequential as _dvs,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
-    CwActionDeployMoveParam,
-    CwActionSwapDeployParam,
+    CwActionMoveUnitParam,
 )
 
 
@@ -270,34 +268,36 @@ def _gs_with_bench_trailblazer(deployed_taken: bool):
                                                 star=4))
     gs.observe(gs.bench, cw4_bview(slots),
                evidence='t', sig=_ST_SIG_OBS)
-    if deployed_taken:
-        gs.observe(gs.deployed, _dvs([Unit(char_id='甲', star=1, equips=[])], []),
-                   evidence='t', sig=_ST_SIG_OBS)
+    gs.observe(gs.deployed, _dvs([Unit(char_id='甲', star=1, equips=[])]
+               if deployed_taken else [], []),
+               evidence='t', sig=_ST_SIG_OBS)
     return gs
 
 
-def test_swap_report_normalizes_trailblazer_form_to_target_row() -> None:
-    """swap 上报有归一:开拓者换排上场 → char_id 切换目标排形态。"""
-    gs = _gs_with_bench_trailblazer(deployed_taken=True)
-    out = report_action_swap_deploy_param(
-        gs, CwActionSwapDeployParam(deployed_idx=0, bench_idx=0), sig=_ST_SIG)
-    assert out.applied, f'swap 应成功,实得 {out.reason!r}'
-    front, _ = deployed_rows_of(gs)
-    assert front and front[0].char_id == '开拓者·记忆', \
-        f'换到前排 → 记忆形态,实得 {front[0].char_id!r}'   # 排归属 = 前排行成员
-
-
-def test_deploy_move_report_normalizes_trailblazer_form_to_target_row() -> None:
-    """deploy_move 上报与 swap 同源归一(benchchar-retirement P3 缺陷修复
-    申报面,design §3 不变量 5):开拓者拖上场 → 排变、形态(char_id)
-    同步切目标排。"""
+def test_move_unit_report_normalizes_trailblazer_form_to_target_row() -> None:
+    """``move_unit`` 统一拖动上报有归一(benchchar-retirement P3 缺陷修复
+    申报面,design §3 不变量 5;旧 swap/deploy_move 两上报同源归一,随
+    戊批收编并入 move_unit):开拓者拖上场 → 排变、形态(char_id)
+    同步切目标排;占槽目标 = 交换形态下归一同源。"""
+    # 空槽直落形态
     gs = _gs_with_bench_trailblazer(deployed_taken=False)
-    out = report_action_deploy_move_param(
-        gs, CwActionDeployMoveParam(bench_idx=0, to_row='front',
-                                    to_slot=1, faction=''),
+    out = report_action_move_unit_param(
+        gs, CwActionMoveUnitParam(src_domain='bench', src_slot=0,
+                                  dst_domain='front', dst_slot=1),
         sig=_ST_SIG)
     assert out.applied, f'部署应成功,实得 {out.reason!r}'
     front, _ = deployed_rows_of(gs)
     assert front and front[0].char_id == '开拓者·记忆', \
-        f'换到前排 → 记忆形态(与 swap 同源归一),实得 {front[0].char_id!r}'
+        f'换到前排 → 记忆形态(空槽直落),实得 {front[0].char_id!r}'
+    # 占槽交换形态(交换对象回 bench 源槽,归一同源)
+    gs2 = _gs_with_bench_trailblazer(deployed_taken=True)
+    out2 = report_action_move_unit_param(
+        gs2, CwActionMoveUnitParam(src_domain='bench', src_slot=0,
+                                   dst_domain='front', dst_slot=1),
+        sig=_ST_SIG)
+    assert out2.applied, f'交换应成功,实得 {out2.reason!r}'
+    front2, _ = deployed_rows_of(gs2)
+    assert front2 and front2[0].char_id == '开拓者·记忆', \
+        f'换到前排 → 记忆形态(占槽交换),实得 {front2[0].char_id!r}'
     # 排归属 = 容器行域承载(前排行成员)
+

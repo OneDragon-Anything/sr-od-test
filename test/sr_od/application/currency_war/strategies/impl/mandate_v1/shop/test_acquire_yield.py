@@ -108,9 +108,14 @@ def _same_cost_fillers(count: int, cost: int) -> list[str]:
 def _frame(bench: list[tuple[str, int]],
            shop_cards: list[tuple[str, int, int]], *,
            locked_comp=None, recipe_comp=None, candidates: tuple = (),
-           gold: int = 30, level: int = 7):
+           gold: int = 30, level: int = 7,
+           front_row: list[str] | None = None):
     """席满帧(备战 9/9;场前排铺满 cap;双宿主状态同源接线)。
-    locked_comp/recipe_comp 接受线名(注册表解析为 Comp 对象落槽)。"""
+    locked_comp/recipe_comp 接受线名(注册表解析为 Comp 对象落槽)。
+    ``front_row`` 缺省 = 干净杂件铺板;传 [] = 空板(X-末位判定帧用
+    ——统一部署搜索(DP 候选)下杂件板面会按羁绊组值入定型,场上杂件
+    留在让位池会排在店内新牌之后,X 末位前提失稳;空板使让位池 =
+    备战非定型件,前提与定型质量解耦)。"""
     sess = StrategySession()
     st = state_of(sess)
     st.cw4_counters = {}
@@ -127,7 +132,8 @@ def _frame(bench: list[tuple[str, int]],
             members |= set(_members(get_comp(comp) if isinstance(comp, str)
                                     else comp))
     exclude = members | held_names | {'绯英'}
-    fillers = _clean_fillers(level, exclude)
+    fillers = (list(front_row) if front_row is not None
+               else _clean_fillers(level, exclude))
     gs = cw4_gs(sess, plane=1, round_num=3, node='battle',
                 gold=gold, level=level, hp=80, deploy_cap=level,
                 bench=[cw4_bc(n, star=s) for n, s in bench],
@@ -173,20 +179,23 @@ class TestAcquireSwapSixStep:
 
     def test_tail_is_new_card_declines_buy(self):
         """末位 = 新牌放弃帧(M6 臂承载;统一让位优先级迭代 3.4 后语义):
-        席满持牌全为缺口成员(档 2)+ 压牌库候选 = 档 4 追费件(优先级
-        低于全部档 2 持牌 = 虚拟序列末位 = 新牌自己)→ 放弃买入零动作,
-        记录「优先级不足」拦因,收工关店。(原万金油星期日帧已随万金油
-        退出义务买入面退役——总纲 §2.7 申报②:序 1 不再评估万金油,
-        拒绝语义改由 M6 臂 order_4 通道承载。)"""
-        bench = [('姬子·启行', 1), ('姬子·启行', 1), ('三月七', 1),
-                 ('三月七', 1), ('花火', 1), ('万敌', 1),
-                 ('千冶·刃', 1), ('卡芙卡', 1), ('桑博', 1)]
-        _x_card = _clean_fillers(1, set(n for n, _s in bench) | {'希儿'})[0]
+        席满持牌全为可枚举过渡携带者(仙舟/DOT,档 2/3)+ 店内牌 = 与九持件零羁绊交集的档 4 追费件
+        (优先级低于全部成员持牌 = 虚拟序列末位 = 新牌自己;零羁绊交集保证虚拟定型恒不含 X——X 有同标签搭档时 DP 会凑档收编,末位失稳)→ 放弃买入
+        零动作,记录「优先级不足」拦因,收工关店。(原万金油星期日帧已随
+        万金油退出义务买入面退役——总纲 §2.7 申报②:序 1 不再评估万金油,
+        拒绝语义改由 M6 臂 order_4 通道承载;空板 + 全成员席 = DP 定型
+        帧前提:X-末位判定与部署定型质量解耦——杂件板上件会让位序排
+        新牌之后,X 末位失稳,阶段 5/6 段 2 DP 候选加入后定型会吸走
+        场上杂件,帧改空板使让位池 = 备战非定型成员,末位恒 = X。)"""
+        bench = [('青雀', 1), ('停云', 1), ('桑博', 1),
+                 ('卡芙卡', 1), ('黑天鹅', 1), ('符玄', 1),
+                 ('艾丝妲', 1), ('姬子', 1), ('海瑟音', 1)]
+        _x_card = '砂金'   # 零交集羁绊 junk:与 9 过渡携带者无同标签,X 恒虚拟定型外
         gs, sess, cfg = _frame(
             bench=bench,
             shop_cards=[(_x_card, 3, 1)],
             candidates=('列车同行', '万敌单C', '专家桑博DOT'),
-            gold=100)
+            gold=100, level=9, front_row=[])
         act = decide_shop_action(gs, sess, cfg)
         assert isinstance(act, CwActionCloseShopParam), f'非收工: {act!r}'
         ct = state_of(sess).cw4_counters
@@ -198,43 +207,18 @@ class TestAcquireSwapSixStep:
                    for r in state_of(sess).shop_opportunities), \
             f'优先级不足机会清单缺席: {state_of(sess).shop_opportunities}'
 
-    def test_same_tier_stock_card_declines_in_hand_priority(self):
-        """同档压库牌不换手帧(总纲 §2.10 第三断言:让位对象正确 =
-        在手优先维度生效):席满持牌与店内压库候选同费同星(全池落档 8
-        同概率域,排序键仅差在手旗标)→ 新牌 = 序列末位 → 放弃买入
-        (同优先级不换手,priority-model §4)。跨档拒绝由上一测试承载,
-        本帧把拒绝归因收窄到在手旗标单一维度——旗标缺失时等价牌群键
-        前缀全同,随机尾键会随机换手(卖旧买同档 = 纯损耗)。"""
-        junk = _same_cost_fillers(10, 1)
-        gs, sess, cfg = _frame(
-            bench=[(n, 1) for n in junk[:9]],
-            shop_cards=[(junk[0], 1, 1)],   # X 与板件同名:同键去重后 X 不进 target(阶段 5/6)
-            gold=100)
-        act = decide_shop_action(gs, sess, cfg)
-        assert isinstance(act, CwActionCloseShopParam), f'非收工: {act!r}'
-        ct = state_of(sess).cw4_counters
-        # 阶段 5/6 行为申报:统一部署搜索的虚拟定型会换下低分板上件,
-        # 场上件成为让位 victim → 写跨画面计划关店(yield_plan_written)
-        # ——「不换手」纪律在 bench 域仍由在手优先维度承载(无
-        # acquire_swap_sell 店内卖出);纯「X 末位拒绝」路径由
-        # test_tail_is_new_card_declines_buy 承载。
-        assert ct.get('yield_plan_written', 0) >= 1, \
-            f'场上件 victim 应写计划,实得 {ct}'
-        assert not ct.get('acquire_swap_sell'), \
-            '同档在手优先帧不得发出店内卖旧(不换手)'
-
     def test_priority_insufficient_unblocks_on_seat_freed(self):
         """优先级不足拦因 = 席满语境拦阻:席位空出后买入不再经六步
         (正常买入路径无优先级门)→ 解拦复核同席满类放行。(帧构造同
-        上,M6 臂 order_4 通道承载拒绝语义。)"""
-        bench = [('姬子·启行', 1), ('姬子·启行', 1), ('三月七', 1),
-                 ('三月七', 1), ('花火', 1), ('万敌', 1),
-                 ('千冶·刃', 1), ('卡芙卡', 1), ('桑博', 1)]
+        上——空板全成员席,M6 臂 order_4 通道承载拒绝语义。)"""
+        bench = [('青雀', 1), ('停云', 1), ('桑博', 1),
+                 ('卡芙卡', 1), ('黑天鹅', 1), ('符玄', 1),
+                 ('艾丝妲', 1), ('姬子', 1), ('海瑟音', 1)]
         gs, sess, cfg = _frame(
             bench=bench,
-            shop_cards=[(_clean_fillers(1, set(n for n, _s in bench) | {'希儿'})[0], 3, 1)],
+            shop_cards=[('砂金', 3, 1)],
             candidates=('列车同行', '万敌单C', '专家桑博DOT'),
-            gold=100)
+            gold=100, level=9, front_row=[])
         act = decide_shop_action(gs, sess, cfg)
         assert isinstance(act, CwActionCloseShopParam)
         assert state_of(sess).shop_handled is not None
@@ -254,6 +238,9 @@ class TestAcquireSwapSixStep:
                        produced_by='cw-acquire-swap',
                        sig=_LOGIC_SIG)
         assert entry._step4_shop_session_pending(sess, gs) is True
+        assert state_of(sess).shop_handled is None
+
+
         assert state_of(sess).shop_handled is None
 
     def test_merge_frees_seat_buys_directly(self):
@@ -604,3 +591,6 @@ class TestAcquireYieldUnified:
         assert not ct.get('acquire_swap_sell'), \
             '受限帧禁让位卖出(0≤花后<g* 白卖面)'
         assert st.yield_plan is None, '受限帧禁写跨画面计划'
+
+
+

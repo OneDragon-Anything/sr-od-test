@@ -30,10 +30,10 @@ from one_dragon.base.geometry.point import Point
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CW_ACTION_TYPES,
     CwActionCollectOreParam,
-    CwActionDeployMoveParam,
     CwActionFurnaceUseParam,
     CwActionLevelUpParam,
     CwActionLuckyTokenUseParam,
+    CwActionMoveUnitParam,
     CwActionObsParam,
     CwActionOpenBookcardParam,
     CwActionOpenBoxParam,
@@ -149,9 +149,8 @@ def test_action_key_faces_pinned_per_class():
     assert action_key(CwActionLevelUpParam(cost=4, auth_basis='arm1')) != \
         action_key(CwActionLevelUpParam(cost=4))
     assert 'cost' in action_key(CwActionLevelUpParam(cost=4))
-    # CwActionDeployMoveParam/CwActionSellDeployedParam:容器下标字段替换物理槽位字段,键形态同构
-    assert 'bench_idx' in action_key(CwActionDeployMoveParam(bench_idx=1, to_row='front',
-                                                to_slot=1, faction=''))
+    # CwActionSellBenchParam/CwActionSellDeployedParam:容器下标字段替换物理槽位字段,键形态同构\r
+    assert 'bench_idx' in action_key(CwActionSellBenchParam(bench_idx=1))
     assert 'deployed_idx' in action_key(CwActionSellDeployedParam(deployed_idx=0))
 
 
@@ -211,8 +210,8 @@ def test_prep_terminal_set_matches_registry_terminal_attrs():
     mechanical_cases = [
         CwActionSellBenchParam(bench_idx=0),
         CwActionSellDeployedParam(deployed_idx=0),
-        CwActionDeployMoveParam(bench_idx=0, to_row='front', to_slot=1,
-                                faction=''),
+        CwActionMoveUnitParam(src_domain='bench', src_slot=0,
+                              dst_domain='front', dst_slot=1),
         CwActionWearEquipParam(item_name='轮滑鞋', char_name='刃', row='front', slot=1),
         CwActionCollectOreParam(points=((1, 2),)),
         CwActionOpenTomeParam(),
@@ -300,3 +299,4 @@ def test_unknown_type_loud_at_class_level():
 
     with pytest.raises(AssertionError):
         action_op_class_for_type(_NotVocab)
+
