@@ -555,9 +555,10 @@ class TestReopenTriggers:
 
 
 # ============================================================ 升级意图出口
-# (迭代 2026-10-17-levelup-shop-transition design §2.1 三分支:商店
-# 会话不再执行店内升级——命中 ∧ 可发射 → 关店转场不置标记;命中 ∧
-# 待付窗 / 未命中 → None 会话继续;资格门逐道拒因在册。)
+# (迭代 2026-10-17-levelup-shop-transition design §2.1 出口 + 凑金链
+# 整删收敛:商店会话不执行店内升级——命中 ∧ 可发射 → 关店转场不置
+# 标记;金不足(恒 defer)/未命中 → None 会话继续;资格门逐道拒因
+# 在册。)
 
 
 class TestUpgradeIntentExit:
@@ -591,24 +592,23 @@ class TestUpgradeIntentExit:
         ct = st.cw4_counters
         assert ct.get('levelup_transition_close') == 1
         assert ct.get('levelup_trigger_stay_gate') == 1
-        assert not [k for k in ct if k.startswith('levelup_liquidate')], \
-            '店内侧变现场景消费点已退役(凑金归备战侧)'
 
     def test_hit_gold_short_returns_none_session_continues(self):
-        """命中 ∧ 不可发射(待付窗)→ 检查返回 None,会话照常继续:
-        停留门触发 ∧ 花后破线 ∧ 凑金不可达(无活期可变现)→ 资金线
-        defer 拒因在册(资金面拒因统一键);会话走 §2.5 正常收工置标记
-        (「等节点收入」形态成立),非转场关店。"""
+        """命中 ∧ 金不足(花后破线恒 defer)→ 检查返回 None,会话照常
+        继续:停留门触发 ∧ 花后破线 → 资金线 defer 拒因在册(资金面
+        拒因统一键);会话走 §2.5 正常收工置标记(「等节点收入」形态
+        成立),非转场关店。凑金链已整删(用户裁定 2026-10-30:不
+        存在升级卖牌凑金,保持最大压牌库,钱够了再升)。"""
         live, sess, gs, st = self._stay_frame(gold=30)
         act = live.decide_shop_action()
         ct = st.cw4_counters
         assert ct.get('levelup_trigger_stay_gate') == 1
         assert ct.get('levelup_fund_line_defer') == 1, \
             '金不足帧资格门拒因在册(资金线 defer 统一键)'
-        assert ct.get('levelup_transition_close', 0) == 0, '待付窗不转场'
+        assert ct.get('levelup_transition_close', 0) == 0, '金不足不转场'
         assert isinstance(act, CwActionCloseShopParam), act
         assert st.shop_handled is not None, \
-            '待付窗会话经正常收工置标记(出店→战斗→节点收入→备战凑金)'
+            '金不足帧会话经正常收工置标记(出店→战斗→节点收入→资金线自然过线)'
 
     def test_gate_level_cap_frame_rejects(self):
         """资格门②等级帽帧:满级帧判据不发射(拒因在册),会话照常
@@ -724,19 +724,23 @@ class TestPrepRandomizedReopen:
         assert gs.shop_randomized_pending is False, '节点边界清信号'
 
 
-# ============================================================ 凑金等待帧刷新让位
-# (资金序 = 升级优先于刷新:凑金等待帧的刷新让位由判据①支「升级优先」
+# ============================================================ 等钱帧刷新让位
+# (资金序 = 升级优先于刷新:金不足帧的刷新让位由判据①支「升级优先」
 # 直接承载——带互斥下升级触发态与刷新放行态天然分离;整级预留防御层已
-# 随刷新链三组件批删除,本节测试 = 资金序声明的行为面锁定。)
+# 随刷新链三组件批删除,凑金待付窗分支已随凑金链整删〔用户裁定
+# 2026-10-30:不存在升级卖牌凑金,钱够了再升〕,本节测试 = 资金序
+# 声明的行为面锁定。)
 
 
 class TestLevelupReserveGuard:
 
     def test_gold_short_wait_frame_no_refresh(self):
-        """凑金等待帧零刷新(升级资金不被刷新烧):带滞后触发 ∧ 花后
-        破线 ∧ 活期可补(凑金可达域)→ 资格门 gold_short 在册;刷新
-        判据带互斥不批(等级 < 带下界)→ 零刷新动作,会话正常收工置
-        标记(「等节点收入/备战凑金」形态成立)。"""
+        """等钱帧零刷新(升级资金不被刷新烧):带滞后触发 ∧ 花后破线
+        (金 68,批 20,花后 48 < 线 50;bench 活期充足——原凑金可达域
+        形态)→ 资格门 defer 在册(levelup_fund_line_defer 统一键,
+        待付窗分键 levelup_stockpile_wait 已停产);刷新判据带互斥
+        不批(等级 < 带下界)→ 零刷新动作,会话正常收工置标记
+        (「等节点收入」形态成立)。"""
         comp = COMP_LIBRARY[0]
         carry = comp.core_chars[0]
         aux = [m for m in sorted(_LINE) if m != carry][:2]
@@ -748,13 +752,12 @@ class TestLevelupReserveGuard:
             comp=comp, bench=bench, deployed=[aux[0]], shop_cards=[])
         act = live.decide_shop_action()
         assert isinstance(act, CwActionCloseShopParam), act
-        assert st.cw4_counters.get('levelup_stockpile_wait') == 1, \
-            '凑金可达域帧在册(花后破线 ∧ 活期可补,待付窗)'
-        assert st.cw4_counters.get('levelup_fund_line_defer', 0) == 0
+        assert st.cw4_counters.get('levelup_fund_line_defer') == 1, \
+            '花后破线帧 defer 在册(资金面统一键——原凑金可达帧同形)'
         assert not isinstance(act, CwActionRefreshShopParam), \
-            '凑金等待帧零刷新(升级资金完整性优先)'
+            '等钱帧零刷新(升级资金完整性优先)'
         assert st.shop_handled is not None, \
-            '凑金等待帧经正常收工置标记(备战侧每帧一卖收敛发射)'
+            '等钱帧经正常收工置标记(资金线自然过线再发射)'
 
     def test_in_band_frame_refresh_proceeds(self):
         """带内对照帧:等级 ∈ 带(升级判据不触发,verdict MISS 无预留)
@@ -771,7 +774,8 @@ class TestLevelupReserveGuard:
         assert isinstance(act, CwActionRefreshShopParam), \
             f'带内帧(升级不触发)刷新照常(基线预算门过): {act!r}'
         assert act.reason == 'star_target'
-        assert st.cw4_counters.get('levelup_stockpile_wait', 0) == 0
+        assert st.cw4_counters.get('levelup_fund_line_defer', 0) == 0, \
+            '带内帧无资金面拒因(verdict MISS 不经资金线门)'
 
 
 # ============================================================ 刷新终结语义回归

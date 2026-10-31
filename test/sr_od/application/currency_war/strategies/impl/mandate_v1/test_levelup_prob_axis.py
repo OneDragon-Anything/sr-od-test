@@ -8,8 +8,12 @@ strategies/impl/mandate_v1/criteria/levelup.py,发射位 = entry 备战
 1. 带与三分派(prob_band_of_cost 平顶整段/stay_gate-natural 两键/
    P1 与未锁定期零主动升级/板满等待件带内不升——人口位臂删除行为锁);
 2. 发射形态(资金线 defer 零购买/血本位不足零购买/血足整批发射/
-   等级帽拒发/凑金一卖 → 下一帧整批);
-3. 保留语义(资金线门真值表/「无 hp 支」负向守卫/金支出出口/凑金域分派)。
+   等级帽拒发/金不足帧恒 defer 零卖出——凑金链整删,用户裁定
+   2026-10-30:不存在升级卖牌凑金,保持最大压牌库,钱够了再升);
+3. 保留语义(资金线门真值表/「无 hp 支」负向守卫/金支出出口/
+   花后破线恒 defer——原凑金可达域与不可达域同形)；
+4. 升级不发射帧的节末凑息恢复运行(凑息抑制谓词已随凑金链整删——
+   用户裁定 2026-10-30 选 A:等钱帧凑息照常)。
 
 构帧纪律:锁定线经 session_scope.write_line_lock(3.1 键,同帧种子后写);
 plane2_started 经 node_hist_pos 直赋 + handle_node_boundary 置位(单调
@@ -195,9 +199,10 @@ class TestTriggerDispatch:
 class TestBatchEmission:
     def test_fund_line_defer_no_partial_buy(self):
         """资金线 defer 零购买(现金口径单门,11 号稿 §2):触发帧
-        现金 − 整批 < 利息线 ∧ 凑金不可达(无活期可变现)→ 整批推迟
-        零动作(levelup_fund_line_defer 拒因键)——禁按闸值截断击数的
-        部分买(P48 整买(1) 辖域,「买一半」的对面断言)。"""
+        现金 − 整批 < 利息线 → 整批推迟零动作(levelup_fund_line_defer
+        拒因键)——禁按闸值截断击数的部分买(P48 整买(1) 辖域,
+        「买一半」的对面断言;凑金链已整删,活期资产不进推迟/发射
+        任何一侧的算术)。"""
         gs, s = _frame(level=5, gold=12, bench=_stay_bench())
         _mark_handled(gs)
         out = entry.emit(s, None)
@@ -241,52 +246,38 @@ class TestBatchEmission:
                     if isinstance(e.action, CwActionLevelUpParam)]
         assert state_of(s).cw4_counters.get('levelup_reject_level_cap') == 1
 
-    def test_fundraise_sell_then_execute_batch(self):
-        """凑金一卖 → 下一帧整批发射(单帧原子形态:授权不跨帧携带
-        ——「买一半」由发射原子性消解,实付上界 = 发射时授权值):
-        帧 1(凑金域:花后破线 ∧ 活期可补)→ 凑金每帧一卖(评估器
-        升级凑金场景首位);帧 2(现金 − 批 ≥ 线)→ 整批发射 + 清
-        handled 标记(发射完成重开通道)。三帧各一动作(单动作循环),
-        帧间零商店域外金动作。"""
+    def test_gold_short_frame_defers_zero_sell(self):
+        """金不足帧恒 defer 零卖出(凑金链整删行为锁,用户裁定
+        2026-10-30:不存在升级卖牌凑金——保持最大压牌库,钱够了再升):
+        花后破线 ∧ 备战席活期充足(原「凑金可达域」形态:68+12−20 =
+        60 ≥ 线 50)→ 不再卖牌凑金——零卖出动作、零升级发射,整批
+        推迟拒因键 levelup_fund_line_defer 在册;对照金位升至线+批
+        (现金 80:80−20 = 60 ≥ 50)→ 整批发射(「钱够了再升」的
+        正向锚:发射只由资金线支配,不由变现加速)。"""
         from sr_od.application.currency_war.kernel.cw_game_state import Unit
         # lv5 整级批 20 金;现金 68(花后 48 < 线 50)∧ 活期 4 件
         # (c0/c1/c2/c4 各退 3,注册表外散件按保守估——不同名互不构成
-        # 合成素材)→ 凑金可达域(68+12−20 = 60 ≥ 50)。
+        # 合成素材)——修复前 = 凑金可达域(gold_short),现在恒 defer。
         bench = _stay_bench() + [_bc(n, 1) for n in ('c0', 'c1', 'c2', 'c4')]
         gs, s = _frame(level=5, gold=68, bench=bench,
                        front_row=(Unit(char_id='板上件锚', star=1),))
         _mark_handled(gs)
-        # 帧 1(凑金帧):凑金域 → 一卖(评估器升级凑金场景)
-        out1 = entry.emit(s, None)
-        sells1 = [e for e in out1
-                  if type(e.action).__name__ in ('CwActionSellBenchParam',
-                                                 'CwActionSellDeployedParam')]
-        assert sells1 and sells1[0].action.reason == 'levelup_liquidate', \
-            '凑金帧:花后破线 ∧ 活期可补 → 每帧一卖'
-        # 帧 2(发射帧):缺口闭合(退金 3 → 71−20 = 51 ≥ 50)→ 单帧
-        # 原子整批
-        if isinstance(sells1[0].action, CwActionSellBenchParam):
-            from sr_od.application.currency_war.kernel.cw_action_report.sell_bench import (
-                report_action_sell_bench_param,
-            )
-            report_action_sell_bench_param(
-                gs, sells1[0].action,
-                sig=ChannelSig(family='logic_action', actor='CwScreenPrep'))
-        else:
-            from sr_od.application.currency_war.kernel.cw_action_report.sell_deployed import (
-                report_action_sell_deployed_param,
-            )
-            report_action_sell_deployed_param(
-                gs, sells1[0].action,
-                sig=ChannelSig(family='logic_action', actor='CwScreenPrep'))
-        out2 = entry.emit(s, None)
+        out = entry.emit(s, None)
+        assert not [e for e in out
+                    if type(e.action).__name__ in ('CwActionSellBenchParam',
+                                                   'CwActionSellDeployedParam')], \
+            '金不足帧零卖出动作(凑金链已整删,活期资产不再被升级变现回抽)'
+        assert not [e for e in out
+                    if isinstance(e.action, CwActionLevelUpParam)]
+        assert state_of(s).cw4_counters.get('levelup_fund_line_defer') == 1, \
+            '整批推迟拒因键在册(原凑金可达帧与不可达帧同键同形)'
+        # 对照:金位 ≥ 线+批(现金 80,花后 60 ≥ 50)→ 整批发射。
+        gs2, s2 = _frame(level=5, gold=80, bench=_stay_bench())
+        _mark_handled(gs2)
+        out2 = entry.emit(s2, None)
         ups = [e for e in out2 if isinstance(e.action, CwActionLevelUpParam)]
-        assert ups and ups[0].action.clicks >= 1, \
-            '发射帧:缺口闭合 → 购买经验整批(单帧原子)'
-        assert ups[0].action.auth_basis == 'stay_gate', \
-            '触发键随发射装载(资金面拒因与触发键域更新后)'
-        assert state_of(s).shop_handled is None, \
-            '发射完成清 handled 标记(升级后概率档已变,找牌/刷新需重评)'
+        assert ups and ups[0].action.auth_basis == 'stay_gate', \
+            '金够帧整批发射(发射只由资金线支配,不由变现加速)'
 
 
 # ===== 3. 保留语义(资金线门 / 无 hp 支负向守卫 / FM-1 / 凑金域分派)=====
@@ -313,7 +304,7 @@ class TestRetainedGates:
         """「无 hp 支」负向守卫(hp-purge 迭代 3.1;hp 是对局结果不是
         决策输入,2026-10-28 用户裁定):P2 濒死帧(hp 10,原危机带域内)
         升级判据不再有 hp 拦截支——该帧 defer 唯一来源 = 资金线门
-        (金 30 花后破线 ∧ 凑金不可达),拒因键域闭集断言(键域 =
+        (金 30 花后破线,恒 defer 等钱),拒因键域闭集断言(键域 =
         触发 + 资金线 defer;发射门序 6 道无 hp 支)。判定函数级直测 +
         emit 级双锚。"""
         from sr_od.application.currency_war.kernel.cw_registry import (
@@ -353,38 +344,120 @@ class TestRetainedGates:
         assert ups[0].action.auth_basis == 'stay_gate'
 
     def test_fund_line_defer_emit_level(self):
-        """资金线 defer(emit 级):触发命中 ∧ 花后破线 ∧ 凑金不可达
-        → 整批推迟零动作(levelup_fund_line_defer 分键;资金面拒因
-        统一键)。"""
+        """资金线 defer(emit 级):触发命中 ∧ 花后破线 → 整批推迟
+        零动作零卖出(levelup_fund_line_defer 分键;资金面拒因统一键
+        ——凑金链整删后金不足帧恒此形态)。"""
         gs, s = _frame(level=5, gold=30, bench=_stay_bench())
-        # lv5 批 = 20;花后 30−20 = 10 < 息线 50;活期 0 → 不可达
+        # lv5 批 = 20;花后 30−20 = 10 < 息线 50
         _mark_handled(gs)
         out = entry.emit(s, None)
         assert not [e for e in out
                     if isinstance(e.action, CwActionLevelUpParam)], \
-            '花后破线 ∧ 凑金不可达 → 整批推迟零动作'
+            '花后破线 → 整批推迟零动作'
+        assert not [e for e in out
+                    if isinstance(e.action, CwActionSellBenchParam)], \
+            '金不足帧零卖出(凑金链已整删)'
         assert state_of(s).cw4_counters.get('levelup_fund_line_defer') == 1
 
-    def test_gold_short_domain_direct(self):
-        """凑金可达域直测(判定函数级):花后破线 ∧ 现金 + bench 活期
-        − 批 ≥ 线 → GATE_GOLD_SHORT(凑金域,备战侧每帧一卖收敛);
-        不可达变体 → GATE_DEFER + levelup_fund_line_defer 在册(触发
-        键经计数证:defer 元组不携键)。"""
+    def test_fund_line_break_always_defers(self):
+        """花后破线恒 defer(判定函数级;凑金域分派臂整删行为锁):
+        原凑金可达帧(花后破线 ∧ 现金 + bench 活期 − 批 ≥ 线)与
+        凑金不可达帧(宽池可卖也守不住线)verdict 同形 GATE_DEFER
+        ——值域闭集 = miss/defer/emit 三值,金不足帧拒因键
+        levelup_fund_line_defer 在册(触发键经计数证:defer 元组不
+        携键)。"""
         from sr_od.application.currency_war.kernel.cw_game_state import Unit
-        # 凑金可达帧:lv5 批 20,现金 68,活期 4 件退 12
+        # 原凑金可达帧:lv5 批 20,现金 68,活期 4 件退 12(68+12−20
+        # = 60 ≥ 50)→ 现与不可达帧同形 defer。
         bench = _stay_bench() + [_bc(n, 1) for n in ('c0', 'c1', 'c2', 'c4')]
         gs, s = _frame(level=5, gold=68, bench=bench,
                        front_row=(Unit(char_id='花火', star=1),))
         verdict, _arm, _clicks, _cost = levelup.upgrade_gate_verdict(
             gs, s, counters=state_of(s).cw4_counters)
-        assert verdict == levelup.GATE_GOLD_SHORT
-        assert state_of(s).cw4_counters.get('levelup_trigger_stay_gate') == 1
-        # 不可达变体:同触发 ∧ 无活期 → defer 分键
+        assert verdict == levelup.GATE_DEFER
+        ct = state_of(s).cw4_counters
+        assert ct.get('levelup_trigger_stay_gate') == 1
+        assert ct.get('levelup_fund_line_defer') == 1
+        # 不可达变体:同触发 ∧ 无活期 → 同键同形 defer。
         gs2, s2 = _frame(level=5, gold=30, bench=_stay_bench())
         verdict2, _a2, _c2, _cc2 = levelup.upgrade_gate_verdict(
             gs2, s2, counters=state_of(s2).cw4_counters)
         assert verdict2 == levelup.GATE_DEFER
         assert state_of(s2).cw4_counters.get('levelup_fund_line_defer') == 1
+
+
+# ===== 3b. 升级不发射帧节末凑息恢复运行(凑息抑制谓词随凑金链整删)=====
+
+
+class TestDeferFrameInterestRuns:
+    """升级不发射帧(等钱/等级帽/奖励)的节末凑息恢复运行(用户裁定
+    2026-10-30 选 A:等钱帧凑息照常——卖垫牌跨档增金正助「钱够了再
+    升」)。修复前形态 = 升级判据命中帧(verdict ≠ miss)节末凑息步
+    零发出(同池候选竞争凑金优先);凑金链整删后凑息触发不再咨询升级
+    判据,三类 defer 帧同形恢复凑息。"""
+
+    _AUX = _AUX_DONE   # 板上辅助达标件(need 1 持有即完成)
+
+    def _defer_frame(self, *, level: int, gold: int, node: str = '战斗',
+                     fillers: tuple = (), deploy_cap: int | None = None):
+        """defer 形态帧:板上 = 辅助达标件 + 希儿(need 3 唯一未完成
+        目标)+ 等级帽变体的中性填充;bench = c0 散件(1★ 退 3 ≥
+        凑息缺口 2 的跨档候选);gold 48 → 下一利息档缺口 2。node 取
+        值 = NodeKey kind 词表('战斗'/'reward'/'boss')。"""
+        from sr_od.application.currency_war.kernel.cw_game_state import Unit
+        front = tuple(Unit(char_id=n, star=1) for n in self._AUX) \
+            + (Unit(char_id='希儿', star=1),) + tuple(
+                Unit(char_id=n, star=1) for n in fillers)
+        bench = [_bc('c0', 1)]
+        return _frame(level=level, gold=gold, node=node, bench=bench,
+                      front_row=front, deploy_cap=deploy_cap)
+
+    def test_fund_defer_frame_interest_runs(self):
+        """等钱帧(触发命中 ∧ 花后破线 → levelup_fund_line_defer):
+        lv5 批 20,金 48 花后 28 < 线 50 → 第 4 步整批推迟零动作;
+        凑息缺口 2(gold 48 → 下一档 50)∧ bench 散件退 3 跨档 →
+        第 8 步照常卖出(interest_prep)——同帧双键在册(资金 defer +
+        凑息取用),证明两步互不抑制。"""
+        gs, s = self._defer_frame(level=5, gold=48, deploy_cap=5)
+        _mark_handled(gs)
+        out = entry.emit(s, None)
+        ct = state_of(s).cw4_counters
+        assert ct.get('levelup_fund_line_defer') == 1
+        sells = [e.action for e in out
+                 if isinstance(e.action, CwActionSellBenchParam)]
+        assert sells and sells[0].reason == 'interest_prep', \
+            '等钱帧节末凑息照常(裁定 A:抑制谓词已随凑金链整删)'
+        assert ct.get('node_end_interest_sell') == 1
+
+    def test_level_cap_defer_frame_interest_runs(self):
+        """等级帽帧(levelup_reject_level_cap):满级帧第 4 步拒发
+        零动作;同帧节末凑息照常(修复前等级帽帧属判据命中帧,凑息被
+        抑制)。板满 10/10(辅助 + 希儿 + 5 中性填充),凑息缺口 2。"""
+        fillers = ('镜流', 'Saber', 'Archer', '杰帕德', '停云')
+        gs, s = self._defer_frame(level=10, gold=48, fillers=fillers,
+                                  deploy_cap=10)
+        _mark_handled(gs)
+        out = entry.emit(s, None)
+        ct = state_of(s).cw4_counters
+        assert ct.get('levelup_reject_level_cap') == 1
+        sells = [e.action for e in out
+                 if isinstance(e.action, CwActionSellBenchParam)]
+        assert sells and sells[0].reason == 'interest_prep', \
+            '等级帽帧节末凑息照常(升级不发射帧不再抑制凑息)'
+
+    def test_reward_frame_interest_runs(self):
+        """奖励帧(levelup_reward_node_defer,抑制先于触发判定):
+        第 4 步拒发零动作;同帧节末凑息照常。"""
+        gs, s = self._defer_frame(level=5, gold=48, node='reward',
+                                  deploy_cap=5)
+        _mark_handled(gs)
+        out = entry.emit(s, None)
+        ct = state_of(s).cw4_counters
+        assert ct.get('levelup_reward_node_defer') == 1
+        sells = [e.action for e in out
+                 if isinstance(e.action, CwActionSellBenchParam)]
+        assert sells and sells[0].reason == 'interest_prep', \
+            '奖励帧节末凑息照常(升级不发射帧不再抑制凑息)'
 
 
 # ===== 4. P2 低血带观测域(谓词真值表 + 凑息键域)=====
@@ -530,10 +603,10 @@ class TestFundLineEmissionPins:
     def test_interest_saving_band_never_emits(self):
         """design §2.7⑨ 攒息期行为锁(§5.2 申报:攒息期升级-刷新双滞
         为预期健康态):金 30-60 攒息期带驱动帧(现金 < 线+批)零发射
-        ——推迟(凑金穷尽)与凑金(每帧一卖)两处置都不得在该帧发射。
+        ——整批推迟(凑金链整删后的唯一处置,零卖出)不得在该帧发射。
         金 30 支由 test_fund_line_defer_emit_level 承载,本测试扫中高段
-        55/65 与凑金可达变体。"""
-        # 推迟处置:中高段金位无活期(线内 bench 不可卖)→ defer 零发射
+        55/65 与活期充足变体(原凑金可达帧)。"""
+        # 整批推迟:中高段金位无活期(线内 bench 不可卖)→ defer 零发射
         for gold in (55, 65):
             gs, s = _frame(level=5, gold=gold, bench=_stay_bench())
             _mark_handled(gs)
@@ -544,10 +617,9 @@ class TestFundLineEmissionPins:
             assert state_of(s).cw4_counters.get(
                 'levelup_fund_line_defer') == 1, \
                 f'攒息带金 {gold}:推迟拒因在册'
-        # 凑金处置:金 55 + 活期 5 件(退 15,凑金可达域)→ 每帧一卖,
-        # 卖出帧零发射(凑至缺口闭合,发射在后续帧——单帧原子不跨帧)。
-        # 板上件锚:评估器空板守卫(empty_board_sell_blocked)要求板非空
-        # 才出卖出候选(与 test_fundraise_sell_then_execute_batch 同款)。
+        # 活期充足变体:金 55 + 活期 5 件(退 15,原凑金可达域)→ 恒
+        # defer,零发射零卖出(压牌库资产不再被升级变现回抽——用户
+        # 裁定 2026-10-30:不存在升级卖牌凑金,钱够了再升)。
         from sr_od.application.currency_war.kernel.cw_game_state import Unit
         bench = _stay_bench() + [_bc(n, 1)
                                  for n in ('c0', 'c1', 'c2', 'c4', 'c5')]
@@ -557,11 +629,12 @@ class TestFundLineEmissionPins:
         out2 = entry.emit(s2, None)
         assert not [e for e in out2
                     if isinstance(e.action, CwActionLevelUpParam)], \
-            '攒息带凑金帧:一卖处置,零发射'
-        sells = [e for e in out2
-                 if isinstance(e.action, CwActionSellBenchParam)]
-        assert sells and sells[0].action.reason == 'levelup_liquidate', \
-            '凑金可达:走升级凑金场景(非 defer 非发射)'
+            '攒息带活期充足帧:恒 defer,零发射'
+        assert not [e for e in out2
+                    if isinstance(e.action, CwActionSellBenchParam)], \
+            '活期充足金不足帧零卖出(凑金链已整删)'
+        assert state_of(s2).cw4_counters.get(
+            'levelup_fund_line_defer') == 1, '推迟拒因在册'
 
     def test_natural_upgrade_fund_gate_end_to_end(self):
         """design §2.7⑩ 自然升级 × 资金门端到端:无未完成星级目标 →

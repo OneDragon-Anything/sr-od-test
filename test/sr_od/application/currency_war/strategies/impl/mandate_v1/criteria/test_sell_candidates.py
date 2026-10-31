@@ -160,7 +160,7 @@ class TestUnifiedSequence:
         部署定型内(填充件)= 档 1 不进输出,备战位件按统一序列让位。"""
         sess, gs = self._pool_gs()
         for scene in ('ore_make_room', 'session_funding',
-                      'levelup_liquidate_prep', 'node_end_interest'):
+                      'node_end_interest'):
             cands, why = evaluate_sell_candidates(gs, scene)
             assert why == '', scene
             # 身份段已随 3.4 退役:候选成员瓦尔特不再被义务基座排除,
@@ -408,7 +408,7 @@ class TestEmptyBoardGuard:
         as-built 申报:守卫语义不收窄;拒因键与 sell_gate 单一源同键)。"""
         sess, gs = _mk_gs(bench=[cw4_bc('停云'), cw4_bc('卡芙卡')])
         for scene in ('self_rescue', 'ore_make_room', 'session_funding',
-                      'node_end_interest', 'levelup_liquidate_prep'):
+                      'node_end_interest'):
             cands, why = evaluate_sell_candidates(gs, scene)
             assert cands == (), scene
             assert why == EMPTY_BOARD_SELL_GUARD_KEY, scene
@@ -420,12 +420,13 @@ class TestEmptyBoardGuard:
 class TestSceneTableParams:
 
     def test_scene_table_covers_legacy_channels(self):
-        """通道谱系行完整性:凑息→节末凑息 / 筹资→会话内筹资+备战升级
-        凑金 / m4_fuel→晶矿;line_switch/projection 不进评估器场景表;
-        shop_swap(3.2)/c1_make_room、deploy_swap(3.4)已随退役删除。"""
+        """通道谱系行完整性:凑息→节末凑息 / 筹资→会话内筹资 / m4_fuel
+        →晶矿;line_switch/projection 不进评估器场景表;shop_swap(3.2)/
+        c1_make_room、deploy_swap(3.4)已随退役删除;levelup_liquidate_prep
+        已随凑金链整删退役(用户裁定 2026-10-30:不存在升级卖牌凑金,
+        保持最大压牌库,钱够了再升——金不足帧恒 defer 零卖出)。"""
         assert SCENE_SPECS['node_end_interest'].legacy_channel == 'interest'
         assert SCENE_SPECS['session_funding'].legacy_channel == 'funding'
-        assert SCENE_SPECS['levelup_liquidate_prep'].legacy_channel == 'funding'
         assert SCENE_SPECS['ore_make_room'].legacy_channel == 'm4_fuel'
         assert 'line_switch' not in {s.legacy_channel for s in
                                      SCENE_SPECS.values()}
@@ -438,7 +439,7 @@ class TestSceneTableParams:
         for spec in SCENE_SPECS.values():
             if spec.legacy_channel is not None:
                 assert spec.legacy_channel in SELL_CHANNELS
-        assert len(SELL_SCENARIOS) == 5   # 三触发五场景(3.4 收敛后)
+        assert len(SELL_SCENARIOS) == 4   # 三触发四场景(凑金行整删后)
 
     def test_interest_scene_carries_cross_tier_param(self):
         """跨档止盈 = 节末凑息独有场景参数(acquisition §3 表):其余
@@ -452,11 +453,11 @@ class TestSceneTableParams:
         """通道闭集锚:FACE_REGULAR 通道逐一点名(SCENE_SPECS 闭集派生)
         ——新增常规面通道会撑破本清单(shop_swap 已随置换账替换退役
         〔3.2〕;c1_make_room/deploy_swap 已随身份段/旧价值函数退役
-        删除〔3.4〕)。"""
+        删除〔3.4〕;levelup_liquidate_prep 已随凑金链整删退役)。"""
         regular = {s for s, spec in SCENE_SPECS.items()
                    if spec.face == FACE_REGULAR}
         assert regular == {'ore_make_room', 'session_funding',
-                           'node_end_interest', 'levelup_liquidate_prep'}
+                           'node_end_interest'}
 
 
 # ============================================================
