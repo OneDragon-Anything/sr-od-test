@@ -44,6 +44,7 @@ from sr_od.application.currency_war.sim.cw_sim_backend import (
     income_modifiers_of,
     install_backend,
     strategy_final_supply_gold_of,
+    strategy_invest_node_gold_of,
     uninstall_backend,
 )
 from sr_od.application.currency_war.sim.cw_sim_run_config import RunConfig
@@ -122,11 +123,17 @@ def test_final_supply_gold_leg_via_engine_window() -> None:
             f'锚点窗独立笔缺或来源漂移: {gs.gold.evidence}'
         s3 = max(int(gs.streak.value or 0), 0)
         mult, flat, cap = income_modifiers_of(gs)
+        # 本局途中经获得链到手的每节点金卡(如按劳分配,固定 seed 采样
+        # 池现值)使窗开先落一笔 invest 分量(腿骑聚合,收入段最前)——
+        # 收入面息基数 = 窗开金 = g2 + invest(g2 捕获于上一窗后,窗间
+        # 无其他金写),invest 程序化现算非硬编码
+        invest = strategy_invest_node_gold_of(gs)
         income = round_start_income(
-            3, 3, 'supply', g2, s3, win_reward_mult=mult,
+            3, 3, 'supply', g2 + invest, s3, win_reward_mult=mult,
             interest_flat=flat, interest_cap=cap).total
-        assert gs.gold.value == g2 + income + 30, \
-            f'窗金增量 ≠ 收入面+30: {g2}+{income}+30 vs {gs.gold.value}'
+        assert gs.gold.value == g2 + income + invest + 30, \
+            f'窗金增量 ≠ invest+收入面+30: ' \
+            f'{g2}+{invest}+{income}+30 vs {gs.gold.value}'
         # 锁 7 幂等回归:同节点窗重放,守卫住整段收口零双发
         gold_at_anchor = gs.gold.value
         b._begin_node_window()
