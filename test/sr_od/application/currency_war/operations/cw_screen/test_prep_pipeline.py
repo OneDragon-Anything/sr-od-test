@@ -78,6 +78,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
     entry,
     session_scope,
 )
+from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.sell_candidates import (
+    INTEREST_EXEMPT_DEPLETED_KEY,
+)
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
 )
@@ -648,6 +651,27 @@ class TestStep7NodeEndInterest:
                     if isinstance(e.action, CwActionSellBenchParam)], \
             '缺口闭合即止:金位 ≥ 息线后零卖出'
         assert isinstance(out2[0].action, CwActionStartBattleParam)
+
+    def test_exempt_depleted_frame_zero_action_with_counter(self):
+        """凑息豁免剔光帧(第 8 步集成面):唯一可行件为线内未达标成员
+        → 零卖出动作 + 剔光观测键落**生产** counters(roster-plane1-
+        union design §2.2 第 5 项;观测键接线 = 第 8 步传 cw4_counters
+        ——删该传参则行为不变而键永不落账,本测试锁生产写点)。金 2 →
+        缺口 8:姬子·启行 2★(列车同行 need 3 未达标)退金 3×3−1 = 8
+        恰跨档,布洛妮娅 1★ 退金 5 < 8 不可行——无豁免时本帧卖出在建
+        阵容件,豁免后零动作。板上三月七/瓦尔特 = 部署定型内档 1,
+        不入卖出池。候选线种在容器宿主状态(state_of(gs)——cw4_session
+        桩与容器惰建态在此构造路径下非同对象,判据读口走容器侧)。"""
+        sess = self._frame(2, [_bc('姬子·启行', 2), _bc('布洛妮娅')])
+        st = state_of(game_state_of(sess))
+        st.line_candidates = ('列车同行',)
+        out = _emit(sess)
+        sells = [e.action for e in out
+                 if isinstance(e.action, CwActionSellBenchParam)]
+        assert not sells, '豁免剔光帧凑息零卖出'
+        assert st.cw4_counters.get(
+            INTEREST_EXEMPT_DEPLETED_KEY) == 1, \
+            '剔光帧观测键须落生产 counters(第 8 步接线)'
 
     def test_above_line_no_sell(self):
         """金 ≥ 息线 → 本步零动作(透传到出战;50 = 恰在溢余带外,

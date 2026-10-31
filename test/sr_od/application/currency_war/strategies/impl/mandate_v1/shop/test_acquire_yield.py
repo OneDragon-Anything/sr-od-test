@@ -389,6 +389,32 @@ class TestAcquireYieldUnified:
         assert rec.gold_snapshot == 1 and rec.gold_gap == 2
         assert rec.shelf_signature == (_FUX,)
 
+    def test_unmet_member_tail_sold_no_interest_exemption(self):
+        """凑息豁免不适用被迫类(design §2.2 第 5 项动机二分/§3 凑息
+        豁免测试第四用例):获取让位帧(金不足触发;与席满同一评估,
+        §2.2 第 4 项「两类受阻走同一评估,不分流」)线内未达标成员排
+        统一序末位 → 照卖。瓦尔特 = 列车同行候选线成员(need 1,持有
+        1★ 未到两星 = 档 5 形态,凑息场景不可卖件;未锁帧部署不拉
+        候选成员上场 → 瓦尔特部署外在池);X = 姬子·启行(need 3 未
+        持有 = 档 2,优先级高于瓦尔特)→ victim = 瓦尔特(虚拟金币
+        1 − 3 + 5 = 3 ≥ 0)——获取动机让位全员参与统一序列,无豁免。"""
+        bench = [('瓦尔特', 1)]
+        gs, sess, cfg = _frame(
+            bench=bench,
+            shop_cards=[('姬子·启行', 3, 1)],
+            candidates=('列车同行',),
+            gold=1, level=5)
+        act = decide_shop_action(gs, sess, cfg)
+        assert isinstance(act, CwActionSellBenchParam), \
+            f'被迫类让位帧应照卖线内未达标成员: {act!r}'
+        assert act.reason == 'shop_swap'
+        assert act.expect == '瓦尔特', \
+            'victim = 统一序末位(线内未达标成员),豁免只挂利息动机场景'
+        ct = state_of(sess).cw4_counters
+        assert ct.get('acquire_swap_sell') == 1
+        assert ct.get('acquire_swap_sell_tier_5') == 1, \
+            'victim 档位观测键 = 档 5(未达标成员形态)'
+
     def test_prefix_pool_exhausted_records_gold_short(self):
         """池穷尽不可足 → 机会清单拦因 gold_short(design §2.2 第 4 项
         步 6 末行):让位序低于 X 的存量件全部入前缀仍不可足(虚拟后

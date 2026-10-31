@@ -10,6 +10,10 @@ and-sell.md §3(三触发)+ priority-model §5(卖出取用形态):
   保留**(窗口段/L1 同轮禁卖/种子豁免经 sell_exclusions 装配——身份段
   已随 3.4 整段退役,装配自动收缩;合成素材守卫;空板止损守卫);
 - **溢出全资格豁免保留**;**跨档止盈**保留为节末凑息场景参数;
+  **凑息豁免**(roster-plane1-union design §2.2 第 5 项)同为节末
+  凑息场景参数——候选池剔除线内未达标成员(为利息绝对不可卖,非
+  排序后移;池空零动作 + 剔光帧观测键),被迫类场景不适用(动机
+  二分);
 - 3.4 退役面:shop_swap 场景行(3.2 六步流程替换)、c1_make_room
   场景行(C1 支拆除)、deploy_swap 冻结遗留路径与旧价值函数
   (sell_gold_equivalent/MERGE_PROGRESS_X2)/羁绊排序谓词/场上无关
@@ -53,6 +57,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria import (
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.sell_candidates import (
     FACE_REGULAR,
+    INTEREST_EXEMPT_DEPLETED_KEY,
     REJECT_NO_CANDIDATES,
     SCENE_SPECS,
     SELL_SCENARIOS,
@@ -159,19 +164,30 @@ class TestUnifiedSequence:
         return sess, gs
 
     def test_full_board_pool_shared_by_guarded_scenes(self):
-        """无场景专属池子【拍】:常规面各场景同帧同池,场景间无池差分;
-        部署定型内(填充件)= 档 1 不进输出,备战位件按统一序列让位。"""
+        """无场景专属池子【拍】(利息动机例外):常规面各场景同帧同池,
+        场景间无池差分;部署定型内(填充件)= 档 1 不进输出,备战位件
+        按统一序列让位。节末凑息另叠加凑息豁免池过滤(roster-plane1-
+        union design §2.2 第 5 项,用户裁定 2026-10-30 推翻旧「无场景
+        专属池子」全称):线内未达标成员(瓦尔特,need 1 持有 1★ = 档 5
+        形态)彻底退出凑息池——为利息绝对不可卖,非排序后移。"""
         sess, gs = self._pool_gs()
-        for scene in ('ore_make_room', 'node_end_interest'):
-            cands, why = evaluate_sell_candidates(gs, scene)
-            assert why == '', scene
-            # 身份段已随 3.4 退役:候选成员瓦尔特不再被义务基座排除,
-            # 按统一序列落位(档 3 未获取成员 = 序列高位 = 让位序末);
-            # 场上件 = 档 1 不进输出 → 候选 = 万敌+瓦尔特(万敌先让)。
-            assert set(_names(cands)) == {'万敌', '瓦尔特'}, scene
-            assert cands[0].zone == 'bench'
-            assert cands[0].char_id == '万敌', \
-                '档 8 干净件先让(成员件殿后)'
+        # 晶矿(被迫类):无豁免,同帧同池。
+        cands, why = evaluate_sell_candidates(gs, 'ore_make_room')
+        assert why == ''
+        # 身份段已随 3.4 退役:候选成员瓦尔特不再被义务基座排除,
+        # 按统一序列落位(档 5 阵容强度——成员已持有未到两星 = 序列
+        # 高位 = 让位序末);
+        # 场上件 = 档 1 不进输出 → 候选 = 万敌+瓦尔特(万敌先让)。
+        assert set(_names(cands)) == {'万敌', '瓦尔特'}
+        assert cands[0].zone == 'bench'
+        assert cands[0].char_id == '万敌', \
+            '档 8 干净件先让(成员件殿后)'
+        # 节末凑息(利息动机):豁免剔除线内未达标成员,池只剩垫件
+        # (gold 49 缺口 1,万敌 1 费退金 1 恰跨档,跨档止盈不排空)。
+        cands_i, why_i = evaluate_sell_candidates(gs, 'node_end_interest')
+        assert why_i == ''
+        assert _names(cands_i) == ['万敌'], \
+            '凑息豁免:线内未达标成员(瓦尔特)退出凑息池'
 
     def test_self_rescue_full_board_pool(self):
         """溢出豁免面 = 真全量:全池可见,按统一序列落位——成员件受
@@ -279,6 +295,105 @@ class TestInterestCrossTier:
         cands, why = evaluate_sell_candidates(gs, 'node_end_interest')
         assert why == ''
         assert _names(cands) == ['万敌'], '2★ 件退金跨档入池(无仅一星门)'
+
+
+# ===== 凑息豁免(阶段 4:roster-plane1-union design §2.2 第 5 项/§3 四用例)=====
+
+
+class TestInterestMemberExemption:
+    """凑息卖出豁免(design §3「凑息豁免测试」行):线内未达标成员
+    (现行排序形态 = 档 2 升星主线/档 5 阵容强度)为利息绝对不可卖
+    ——候选池剔除,非排序后移;达标线内件(≥ 目标星,掉档 8 已完成
+    资产)与非线内件照常参与;被迫类卖出(溢出/晶矿/获取让位)零豁免
+    (动机二分:因席位/金币被迫按优先级让位的无豁免)。
+
+    注册表事实锚:姬子·启行 = 列车同行 need 3(2★ 未达标 = 档 2 形态,
+    3 费 2★ 退金 8)/花火 = need 2(2★ 达标 = 档 8,2 费 2★ 退金 5)/
+    瓦尔特 = need 1(1★ 未达标 = 档 5 形态,5 费 1★ 退金 5);布洛妮娅
+    (5 费)/万敌(1 费)= 非线内垫件。无覆写局利息帽 =
+    ``cw_economy.DEFAULT_INTEREST_CAP`` 5(与等级无关),gold 2/5/9 →
+    下一档线 10,缺口 8/5/1;level=5 只定板满 cap(min(level,10))
+    与概率表键。
+    """
+
+    def _candidate_gs(self, bench, *, gold: int):
+        """板满 + 未锁候选帧(列车同行;豁免集口径 = 候选 ∪ 配方 ∪
+        锁定线,§2.1 名单一致——本类用候选支承载)。"""
+        sess, gs = _board_full_gs(bench, level=5, gold=gold)
+        state_of(gs).line_candidates = ('列车同行',)
+        return sess, gs
+
+    def test_only_feasible_is_unmet_member_zero_action(self):
+        """用例 1(豁免剔光):凑息帧唯一可行件为线内未达标成员 →
+        零动作(跨档止盈不再命中)+ 剔光观测键计数。金 2 → 缺口 8:
+        姬子·启行 2★(need 3 未达标)退金 3×3−1 = 8 恰跨档,布洛妮娅
+        1★ 退金 5 < 8 不入可行池——无豁免时本帧卖出在建阵容核心
+        (design §1.1 症状:2★ 退金跨档判定命中线内件)。"""
+        sess, gs = self._candidate_gs(
+            [cw4_bc('姬子·启行', 2), cw4_bc('布洛妮娅')], gold=2)
+        ct: dict = {}
+        cands, why = evaluate_sell_candidates(
+            gs, 'node_end_interest', counters=ct)
+        assert cands == ()
+        assert why == REJECT_NO_CANDIDATES
+        assert ct.get(INTEREST_EXEMPT_DEPLETED_KEY) == 1, \
+            '豁免剔光帧(唯一可行件 = 线内未达标成员)须落观测键'
+        # 对照:被迫类场景同帧零豁免,成员照常在池(动机二分)。
+        cands_ore, why_ore = evaluate_sell_candidates(gs, 'ore_make_room')
+        assert why_ore == ''
+        assert '姬子·启行' in _names(cands_ore), '被迫类(晶矿)不受豁免'
+        cands_rescue, _why_r = evaluate_sell_candidates(gs, 'self_rescue')
+        assert '姬子·启行' in _names(cands_rescue), '溢出自救不受豁免'
+
+    def test_non_member_pad_sold_when_member_exempted(self):
+        """用例 2(卖垫件):同帧存在非线内垫件 → 卖垫件;线内未达标
+        成员彻底退出凑息池(非排序后移)。金 5 → 缺口 5:布洛妮娅 1★
+        退金 5 与姬子 2★ 退金 8 双双跨档可行,豁免后可行池只剩垫件。"""
+        sess, gs = self._candidate_gs(
+            [cw4_bc('姬子·启行', 2), cw4_bc('布洛妮娅')], gold=5)
+        cands, why = evaluate_sell_candidates(gs, 'node_end_interest')
+        assert why == ''
+        assert _names(cands) == ['布洛妮娅'], \
+            '凑息池剔除线内未达标成员,垫件照卖'
+        # 对照:晶矿场景(被迫类)同帧同池含成员(无池过滤)。
+        cands_ore, _why = evaluate_sell_candidates(gs, 'ore_make_room')
+        assert set(_names(cands_ore)) == {'布洛妮娅', '姬子·启行'}
+
+    def test_met_member_participates(self):
+        """用例 3(达标件照常):线内达标件(花火 need 2,2★ = 目标星,
+        掉档 8 已完成资产)照常参与凑息——豁免只辖在建未达标件。金 5 →
+        缺口 5:花火 2★ 退金 2×3−1 = 5 恰跨档(唯一可行件照卖),
+        万敌 1★ 退金 1 不可行。"""
+        sess, gs = self._candidate_gs(
+            [cw4_bc('花火', 2), cw4_bc('万敌')], gold=5)
+        cands, why = evaluate_sell_candidates(gs, 'node_end_interest')
+        assert why == ''
+        assert _names(cands) == ['花火'], \
+            '达标成员照常参与凑息(不豁免)——已完成资产可为利息变现'
+
+    def test_cross_tier_empty_frame_not_counted_depleted(self):
+        """剔光键边界:可行池本空的帧(跨档止盈已剔空)零动作与豁免
+        无关——不落观测键(键只计豁免真正翻转卖出→零动作的帧,
+        design §2.2 第 3 项观测键登记点判读口径)。金 9 → 缺口 1:布洛
+        妮娅与未达标成员瓦尔特双双可行——豁免剔瓦尔特后垫件在池,亦
+        非剔光帧。"""
+        sess, gs = self._candidate_gs(
+            [cw4_bc('瓦尔特'), cw4_bc('布洛妮娅')], gold=9)
+        ct: dict = {}
+        # 跨档止盈剔空对照帧:全部候选退金 < 缺口(金 2 → 缺口 8,
+        # 瓦尔特退 5/布洛妮娅退 5 均 < 8)→ 提前返回,豁免不评估。
+        gs2_sess, gs2 = self._candidate_gs(
+            [cw4_bc('瓦尔特'), cw4_bc('布洛妮娅')], gold=2)
+        cands2, why2 = evaluate_sell_candidates(
+            gs2, 'node_end_interest', counters=ct)
+        assert cands2 == () and why2 == REJECT_NO_CANDIDATES
+        assert INTEREST_EXEMPT_DEPLETED_KEY not in ct, \
+            '可行池本空帧不落剔光键(豁免未翻转行为)'
+        # 非剔光帧(豁免剔件后池仍非空)同样不落键。
+        cands, why = evaluate_sell_candidates(
+            gs, 'node_end_interest', counters=ct)
+        assert why == '' and _names(cands) == ['布洛妮娅']
+        assert INTEREST_EXEMPT_DEPLETED_KEY not in ct
 
 
 # (冻结遗留路径类 TestLegacyDeploySwapPath 与场上无关角色谓词类
@@ -454,6 +569,15 @@ class TestSceneTableParams:
         for name, spec in SCENE_SPECS.items():
             if name != 'node_end_interest':
                 assert spec.cross_tier_only is False, name
+
+    def test_interest_scene_carries_member_exemption_param(self):
+        """凑息豁免 = 节末凑息独有场景参数(roster-plane1-union design
+        §2.2 第 5 项):仅利息动机场景声明池过滤;被迫类(溢出/晶矿)
+        恒 False——动机二分,豁免只挂「为利息」类。"""
+        assert SCENE_SPECS['node_end_interest'].exempt_unmet_members is True
+        for name, spec in SCENE_SPECS.items():
+            if name != 'node_end_interest':
+                assert spec.exempt_unmet_members is False, name
 
     def test_face_regular_channel_closure_anchor_list(self):
         """通道闭集锚:FACE_REGULAR 通道逐一点名(SCENE_SPECS 闭集派生)
