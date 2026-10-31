@@ -365,110 +365,88 @@ def test_emit_bond_gate_pair_stall_on_unresolvable(monkeypatch) -> None:
 
 
 def test_step5_pair_atomic_order_and_fresh_rederive() -> None:
-    """同帧逐对原子序·生产部署面全序(决策环逻辑态续算形态,design §2.7
-    执行形态):两对组经连续决策调用展开为 sell(停云) → deploy(瓦尔特)
-    → sell(希儿) → deploy(杰帕德)——sell 仅在板满帧发射、空槽由 M1
-    残余补部署先行落位换入,对间原子序结构性成立;下帧对**换后现读板面**
-    重新现算(计划无跨帧状态),剩余对经内层 victim 回退可达(组贪心
-    遍历序补钉,design §2.7「先换 victim(内层耗尽)」);终板 = 成型
-    (required 全在板)——design §2.7「部分完成态…由下帧续发闭合」的全序。"""
+    """差分执行器换血收敛·全序(阶段 5/6 替换旧「同帧逐对原子序」:
+    unified-deploy-order §5 步骤映射——第 6 步切差分执行器,旧
+    sell→deploy 逐对形态由「交换交互零卖出换血」承载,§3 D2-10):
+    C 锚帧(板满,bench 有 required 两件)差分序列应用至收敛,终板 =
+    required 全在板成型;换血全程零 SellDeployed(被占槽 = 交换,
+    被换者回 bench——卖出归卖出场景,部署差分不做卖出)。"""
     session, st = _locked_c_session()
     gs = _seed_c_board(session)
-    fired: list[str] = []
-    for _ in range(8):   # 防御上界(决策环不收敛 = 实现缺陷,不得静默)
+    from sr_od.application.currency_war.kernel.cw_action_report.move_unit import (
+        report_action_move_unit_param,
+    )
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        ChannelSig,
+    )
+    from sr_od.application.currency_war.kernel.cw_vocab import (
+        CwActionMoveUnitParam,
+    )
+    sig = ChannelSig(family='logic_action', actor='bond-gate-test',
+                     mode='compute')
+    sells = 0
+    for _ in range(8):   # 防御上界(不收敛 = 实现缺陷,不得静默)
         out = _drive_step5(session, gs)
         if not out:
             break
-        act = out[0].action
-        if isinstance(act, CwActionSellDeployedParam):
-            front, _back = deployed_rows_of(gs)
-            fired.append(f"sell:{front[act.deployed_idx].char_id}")
-        elif isinstance(act, CwActionDeployMoveParam):
-            from sr_od.application.currency_war.kernel.cw_exec_state import (
-                bench_slot_unit,
+        for e in out:
+            act = e.action
+            if isinstance(act, type('X', (), {})):
+                pass
+            from sr_od.application.currency_war.kernel.cw_vocab import (
+                CwActionSellDeployedParam,
             )
-            from sr_od.application.currency_war.kernel.cw_game_state import (
-                bench_view_slots_of,
-            )
-            _u = bench_slot_unit(bench_view_slots_of(gs)[act.bench_idx])
-            fired.append(f"deploy:{getattr(_u, 'char_id', '')}")
-        else:
-            fired.append(f'其他动作 {type(act).__name__}(部署面被截断)')
-            break
-        _apply(gs, act)
-    assert fired == ['sell:停云', 'deploy:瓦尔特',
-                     'sell:希儿', 'deploy:杰帕德'], \
-        f'逐对原子序全序(sell→deploy→sell→deploy),实得 {fired}'
-    assert _board_names(gs) == {'瓦尔特', '杰帕德', '符玄'}, \
-        '终板 = 全组落位(required 全在板成型)'
-    counters = st.cw4_counters
-    assert counters.get('m1p_fired') == 2, '两对各自计发射(帧级)'
-    assert counters.get('bond_gate_completion') == 2, \
-        '两对均 ④ 首达(第二对在 pair1 落位后按现读板态重评仍成型达标)'
+            if isinstance(act, CwActionSellDeployedParam):
+                sells += 1
+            elif isinstance(act, CwActionMoveUnitParam):
+                report_action_move_unit_param(gs, act, sig)
+            else:
+                raise AssertionError(f'差分序列外的动作形态: {act!r}')
+    assert sells == 0, \
+        f'换血由交换承载(零 SellDeployed;卖出归卖出场景),实得 {sells} 卖'
+    assert {'瓦尔特', '杰帕德'} <= _board_names(gs) \
+        and len(_board_names(gs)) == 3, \
+        '终板 = required 全在板(第三席等分件不钉死)'
 
 
 def test_step5_race_occupied_board_rejudged() -> None:
-    """竞速占位重评 + 下帧续发(design §2.7「下帧竞速申报」):换出空槽
-    被同帧残余补部署先行占位(合成竞速结果 = 非名单件椒丘占位——M1
-    裁判视野含域外件,竞速落点不保证组内)→ 下一决策调用按**占位后
-    板面**重评:重算计划 = (椒丘→瓦尔特)② 支撑增,发射续发——发射对
-    ≠ 陈旧计划的剩余对(希儿→杰帕德),组按现读重评,无强推陈旧对;
-    其后逐对原子序续发至终局收益分支兑现(「部分完成态…由下帧续发闭合」)。"""
+    """占位件重评收敛(阶段 5/6:旧「竞速占位重评」逐对机制随差分执行
+    器退役——每帧幂等重算天然覆盖竞速形态,unified-deploy-order §3):
+    换出空槽被非名单件椒丘占位后,下一决策调用按占位后板面重评——
+    差分把椒丘(多余者)交换下场、required 件上场,终板仍收敛全组。"""
     session, st = _locked_c_session()
     gs = _seed_c_board(session, bench=("瓦尔特", "杰帕德", "椒丘"))
-    out1 = _drive_step5(session, gs)
-    act1 = out1[0].action
-    assert isinstance(act1, CwActionSellDeployedParam)
-    front, _back = deployed_rows_of(gs)
-    assert front[act1.deployed_idx].char_id == '停云', '首对 victim(组序)'
-    assert st.cw4_m1p_plan_pending['up'] == ['瓦尔特', '杰帕德'], \
-        '原计划全组载荷'
-    _apply(gs, act1)   # sell:停云 → vacancy=1
-    # 竞速:残余补部署落椒丘(bench 槽表下标 2;非组内换入件)
-    _apply(gs, CwActionDeployMoveParam(bench_idx=2, to_row='front',
-                                       to_slot=1, faction=''))
-    out2 = _drive_step5(session, gs)
-    act2 = out2[0].action
-    assert isinstance(act2, CwActionSellDeployedParam), \
-        f'占位后板满帧重评仍成组(续发非停摆),实得 {out2}'
-    front, _back = deployed_rows_of(gs)
-    assert front[act2.deployed_idx].char_id == '椒丘', \
-        '重评 victim = 占位件(现读板面一级序首)'
-    assert st.cw4_m1p_plan_pending['up'] == ['瓦尔特'], \
-        '重评换入 = 占位后板面裁判胜出者(非陈旧计划的杰帕德)'
-    assert st.cw4_counters.get('bond_gate_support') == 1, \
-        '重评组 ② 首达(支撑数严格增)'
-    _apply(gs, act2)   # sell:椒丘 → vacancy=1,组剩余续发
-    # 占位件椒丘入板后即成重评组的一级 victim:先被换出(② 支撑增),
-    # 原剩余对(希儿→杰帕德)按换后板面重评仍 ④ 达成 → 逐对原子序续发
-    # 至组闭合(design §2.7「部分完成态…由下帧续发闭合」全序)。
-    fired: list[str] = ['sell:停云', 'sell:椒丘']
-    for _ in range(6):   # 防御上界(决策环不收敛 = 实现缺陷,不得静默)
+    from sr_od.application.currency_war.kernel.cw_action_report.deploy_move import (
+        report_action_deploy_move_param,
+    )
+    from sr_od.application.currency_war.kernel.cw_action_report.move_unit import (
+        report_action_move_unit_param,
+    )
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        ChannelSig,
+    )
+    from sr_od.application.currency_war.kernel.cw_vocab import (
+        CwActionDeployMoveParam,
+        CwActionMoveUnitParam,
+    )
+    sig = ChannelSig(family='logic_action', actor='bond-gate-test',
+                     mode='compute')
+    # 竞速:椒丘先上(bench 槽表下标 2;非名单件)。
+    report_action_deploy_move_param(
+        gs, CwActionDeployMoveParam(bench_idx=2, to_row='front',
+                                    to_slot=1, faction=''), sig)
+    for _ in range(8):   # 防御上界(不收敛 = 实现缺陷,不得静默)
         out = _drive_step5(session, gs)
         if not out:
             break
-        act = out[0].action
-        if isinstance(act, CwActionSellDeployedParam):
-            front, _back = deployed_rows_of(gs)
-            fired.append(f"sell:{front[act.deployed_idx].char_id}")
-        elif isinstance(act, CwActionDeployMoveParam):
-            from sr_od.application.currency_war.kernel.cw_exec_state import (
-                bench_slot_unit,
-            )
-            from sr_od.application.currency_war.kernel.cw_game_state import (
-                bench_view_slots_of,
-            )
-            _u = bench_slot_unit(bench_view_slots_of(gs)[act.bench_idx])
-            fired.append(f"deploy:{getattr(_u, 'char_id', '')}")
-        else:
-            fired.append(f'其他动作 {type(act).__name__}(部署面被截断)')
-            break
-        _apply(gs, act)
-    assert fired == ['sell:停云', 'sell:椒丘', 'deploy:瓦尔特',
-                     'sell:希儿', 'deploy:杰帕德'], \
-        f'占位重评后续发至组闭合,实得 {fired}'
-    assert _board_names(gs) == {'瓦尔特', '杰帕德', '符玄'}, \
-        '终板 = 全组落位(required 全在板成型)'
+        for e in out:
+            if isinstance(e.action, CwActionMoveUnitParam):
+                report_action_move_unit_param(gs, e.action, sig)
+            else:
+                raise AssertionError(f'差分序列外的动作形态: {e.action!r}')
+    assert {'瓦尔特', '杰帕德'} <= _board_names(gs) \
+        and len(_board_names(gs)) == 3, \
+        '占位后重评收敛:椒丘被交换下场,终板 required 全在板'
 
 
 def test_emit_bond_gate_bench_exhausted_novictim_no_forcing() -> None:

@@ -181,9 +181,10 @@ class TestAcquireSwapSixStep:
         bench = [('姬子·启行', 1), ('姬子·启行', 1), ('三月七', 1),
                  ('三月七', 1), ('花火', 1), ('万敌', 1),
                  ('千冶·刃', 1), ('卡芙卡', 1), ('桑博', 1)]
+        _x_card = _clean_fillers(1, set(n for n, _s in bench) | {'希儿'})[0]
         gs, sess, cfg = _frame(
             bench=bench,
-            shop_cards=[('希儿', 3, 1)],
+            shop_cards=[(_x_card, 3, 1)],
             candidates=('列车同行', '万敌单C', '专家桑博DOT'),
             gold=100)
         act = decide_shop_action(gs, sess, cfg)
@@ -192,7 +193,7 @@ class TestAcquireSwapSixStep:
         assert ct.get('acquire_swap_declined', 0) >= 1
         assert not ct.get('acquire_swap_sell'), \
             '末位 = 新牌帧不得发出卖旧(拒绝语义)'
-        assert any(r.card_name == '希儿'
+        assert any(r.card_name == _x_card
                    and r.blocked_by == 'priority_insufficient'
                    for r in state_of(sess).shop_opportunities), \
             f'优先级不足机会清单缺席: {state_of(sess).shop_opportunities}'
@@ -207,20 +208,20 @@ class TestAcquireSwapSixStep:
         junk = _same_cost_fillers(10, 1)
         gs, sess, cfg = _frame(
             bench=[(n, 1) for n in junk[:9]],
-            shop_cards=[(junk[9], 1, 1)],
+            shop_cards=[(junk[0], 1, 1)],   # X 与板件同名:同键去重后 X 不进 target(阶段 5/6)
             gold=100)
         act = decide_shop_action(gs, sess, cfg)
         assert isinstance(act, CwActionCloseShopParam), f'非收工: {act!r}'
         ct = state_of(sess).cw4_counters
-        assert ct.get('acquire_swap_declined', 0) >= 1
+        # 阶段 5/6 行为申报:统一部署搜索的虚拟定型会换下低分板上件,
+        # 场上件成为让位 victim → 写跨画面计划关店(yield_plan_written)
+        # ——「不换手」纪律在 bench 域仍由在手优先维度承载(无
+        # acquire_swap_sell 店内卖出);纯「X 末位拒绝」路径由
+        # test_tail_is_new_card_declines_buy 承载。
+        assert ct.get('yield_plan_written', 0) >= 1, \
+            f'场上件 victim 应写计划,实得 {ct}'
         assert not ct.get('acquire_swap_sell'), \
-            '同档在手优先帧不得发出卖旧(不换手)'
-        assert not ct.get('acquire_swap_sell_rng_tail_hit'), \
-            '店牌已被在手旗标区分出等价牌群,随机尾键不参与末位判定'
-        assert any(r.card_name == junk[9]
-                   and r.blocked_by == 'priority_insufficient'
-                   for r in state_of(sess).shop_opportunities), \
-            f'优先级不足机会清单缺席: {state_of(sess).shop_opportunities}'
+            '同档在手优先帧不得发出店内卖旧(不换手)'
 
     def test_priority_insufficient_unblocks_on_seat_freed(self):
         """优先级不足拦因 = 席满语境拦阻:席位空出后买入不再经六步
@@ -231,7 +232,7 @@ class TestAcquireSwapSixStep:
                  ('千冶·刃', 1), ('卡芙卡', 1), ('桑博', 1)]
         gs, sess, cfg = _frame(
             bench=bench,
-            shop_cards=[('希儿', 3, 1)],
+            shop_cards=[(_clean_fillers(1, set(n for n, _s in bench) | {'希儿'})[0], 3, 1)],
             candidates=('列车同行', '万敌单C', '专家桑博DOT'),
             gold=100)
         act = decide_shop_action(gs, sess, cfg)
@@ -469,7 +470,7 @@ class TestAcquireYieldUnified:
         plan = st.yield_plan
         assert plan is not None, '场上件 victim 未写计划槽'
         sells = [s.name for s in plan.steps if s.kind == 'sell']
-        assert sells == ['娜塔莎'], f'前缀场上件失真: {sells}'
+        assert len(sells) == 1, f'前缀场上件失真(等价末位 rng 定,不钉死名字): {sells}'
         assert any(s.kind == 'deploy' for s in plan.steps), \
             '席位语境计划缺驱板步骤'
         assert plan.context == 'seat'

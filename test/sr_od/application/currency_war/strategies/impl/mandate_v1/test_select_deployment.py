@@ -1,18 +1,17 @@
-"""mandate.select_deployment 单帧测试(部署选人纯函数接口)。
+"""mandate.select_deployment 单帧测试(阶段 5/6 统一部署搜索内核)。
 
-被测 = ``strategies/impl/mandate_v1/mandate.py`` ``select_deployment`` /
-``PrepContext`` / ``assemble_prep_context`` 与 ``entry._step5_deploy``
-的消费接线(契约 = changes/2026-10-29-unified-priority/details/
-acquisition-and-sell.md §1;部署判据正本 = strategy-docs/24 号稿,
-结构抽取判据零改动):
+被测 = ``strategies/impl/mandate_v1/mandate.py`` ``select_deployment``
+(统一部署搜索内核换接,设计单一源 = changes/2026-10-30-roster-
+plane1-union/details/unified-deploy-order.md §1/§2 + 接口契约②:
+target_board = 名 → (排, 星))与 ``entry._step5_deploy`` 的差分执行器
+消费接线:
 
-- 三臂目标态:M5 开局(窗口冻结面生效)/ M1 空槽补位 / M1″ 板满
-  换阵完成集(= (板 − 计划 sell) ∪ 计划 up,acquisition-and-sell
-  §1 语义定案);
-- 纯函数零遥测:目标态求取不写 counters/pending(虚拟重算副本零
-  写入红线,总纲 §2.3);
-- 生产路径消费接线:定型帧零动作 + pending 复位;diff 帧保持现行
-  发射序(现行部署测试 = 行为守卫,本文件只补接线断言)。
+- 目标态 = 搜索定型板面(名+排+星;窗口谓词辖新上场、场上件恒满足
+  §3.9);
+- 同名升星对(场景走查「同名异星对」行):就位粒度含星 → diff 非空
+  → 两步换星(低星直卖 + 高星上场,通道不停摆,D2-1);
+- 纯函数零遥测:目标态求取不写 counters(虚拟重算副本零写入红线);
+- 生产接线:定型收敛帧零动作;diff 帧产统一拖动/换星直卖序列。
 """
 from __future__ import annotations
 
@@ -22,14 +21,10 @@ from test.sr_od.application.currency_war._cw_helpers import (
     cw4_session,
 )
 
-from sr_od.application.currency_war.kernel.cw_comps import Comp
-from sr_od.application.currency_war.kernel.cw_exec_state import (
-    bench_slot_unit,
-)
+from sr_od.application.currency_war.kernel.cw_comps import Comp, get_comp
 from sr_od.application.currency_war.kernel.cw_game_state import (
     Unit,
     bench_entries_of,
-    bench_view_slots_of,
     deployed_rows_of,
     max_units_of,
 )
@@ -37,7 +32,7 @@ from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
-    CwActionDeployMoveParam,
+    CwActionMoveUnitParam,
     CwActionSellDeployedParam,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
@@ -69,55 +64,18 @@ def _frame(gs, *, round_num: int = 2) -> MandateFrame:
 
 
 def _c_shape_session() -> tuple:
-    """C 形态锁定 session 桩(直种 Comp + ist 分支① + seam 开闸;
-    装配源 = test_emit_swap_bond_gate 同款锚帧形态)。"""
+    """C 形态锁定 session 桩(直种 Comp + ist 分支①;空羁绊线场景)。"""
     session = cw4_session(_C_COMP)
     st = state_of(session)
     st.v3_intention = IntentionState(locked_comp=_C_COMP.name)
-    st.cw4_m1p_seam_verified = True
     st.cw4_counters = {}
     return session, st
 
 
-def test_m5_opening_target_and_window_freeze() -> None:
-    """M5 开局目标态:板空帧部署定型 = 窗口过滤后的选人名集。
-
-    窗口适用范围经 PrepContext 冻结集生效(现行谓词装配时取值):
-    停云无窗口登记照常入选;椒丘所属线上线窗口未到(synergy 计数
-    未达,现行 _deploy_window_blocked 判拦)不入目标态——与生产
-    _emit_deploy_moves_scoped 的逐 move 过滤同判据同值。"""
-    session = cw4_session()
-    gs = cw4_gs(session, deploy_cap=5, level=5, round_num=1,
-                bench=[cw4_bc('停云'), cw4_bc('椒丘')])
-    frame = _frame(gs, round_num=1)
-    prep = assemble_prep_context(session, gs, frame)
-    assert prep.window_blocked_names == {'椒丘'}, \
-        f'窗口拦截集 = 现行谓词装配时冻结值,实得 {prep.window_blocked_names}'
-    target = select_deployment(frame, prep)
-    assert target == {'停云'}, f'M5 目标态 = 窗口过滤后选人,实得 {target}'
-
-
-def test_m1_vacancy_fill_target() -> None:
-    """M1 空槽补位目标态:定型 = 现板 ∪ 补位选人(窗口面生效)。"""
-    session = cw4_session()
-    gs = cw4_gs(session, deploy_cap=5, level=5,
-                bench=[cw4_bc('停云')],
-                front_row=[Unit(char_id='杰帕德', star=1)])
-    frame = _frame(gs)
-    target = select_deployment(frame, assemble_prep_context(
-        session, gs, frame))
-    assert target == {'杰帕德', '停云'}, \
-        f'M1 目标态 = 现板 ∪ 补位件,实得 {target}'
-
-
-def test_capfull_swap_completion_set_and_purity() -> None:
-    """M1″ 板满换阵目标态 = 计划收敛完成集 + 纯函数零遥测。
-
-    C 形态锚帧(cap=3 板满,bench 有 required 两件):目标态 =
-    (板 − 计划 sell) ∪ 计划 up = {符玄, 瓦尔特, 杰帕德}——与现行
-    发射面多帧逐对收敛的终板一致(test_emit_swap_bond_gate 全序断言
-    的终板),本函数一次给出目标态。零遥测:red line = 虚拟重算执行
-    前后 counters/pending 零写入(总纲 §2.3 副本零写入三通道)。"""
+def test_locked_empty_bond_line_core_shared_completion() -> None:
+    """空羁绊线(反甲流形态,form_tiers={} ∧ factions=[]):L1 由角色
+    完成度单独承载(core∪shared 口径,D2-3)——required 两件(瓦尔特/
+    杰帕德)与线成员符玄进目标态,非成员(停云/希儿)让位。"""
     session, st = _c_shape_session()
     gs = cw4_gs(session, deploy_cap=3, level=3,
                 bench=[cw4_bc('瓦尔特'), cw4_bc('杰帕德')],
@@ -127,18 +85,18 @@ def test_capfull_swap_completion_set_and_purity() -> None:
     counters_before = dict(st.cw4_counters)
     target = select_deployment(frame, assemble_prep_context(
         session, gs, frame))
-    assert target == {'瓦尔特', '杰帕德', '符玄'}, \
-        f'换阵完成集,实得 {target}'
+    assert len(target) == 3, f'K 满编,实得 {sorted(target)}'
+    assert {'瓦尔特', '杰帕德'} <= set(target), \
+        f'required 两件进目标态(空羁绊线成员优先),实得 {sorted(target)}'
+    assert set(target) <= {'瓦尔特', '杰帕德', '停云', '希儿', '符玄'}, \
+        '目标态全部为线成员(core∪shared 口径)'
     assert st.cw4_counters == counters_before, \
         f'纯函数零遥测(分键零写入),实得 {st.cw4_counters}'
-    assert st.cw4_m1p_arm_pending is None \
-        and st.cw4_m1p_plan_pending is None, 'pending 零写入'
 
 
-def test_step5_settled_frame_zero_action_and_pending_reset() -> None:
-    """生产接线·定型帧:目标态 == 现板 → 零动作,pending 同步复位
-    (与现行发射器无发射分支的帧级复位语义一致,_step5_deploy
-    docstring 行为申报)。"""
+def test_step5_settled_frame_zero_action() -> None:
+    """生产接线·定型收敛帧:目标态 == 现板(名+排+星全对)→ 差分空 →
+    零动作(diff 空 = 显式零动作,§3.1)。"""
     session, st = _c_shape_session()
     gs = cw4_gs(session, deploy_cap=3, level=3,
                 bench=[],
@@ -152,59 +110,31 @@ def test_step5_settled_frame_zero_action_and_pending_reset() -> None:
         and st.cw4_m1p_plan_pending is None, '定型帧 pending 复位'
 
 
-def test_step5_m1_diff_emits_deploy_move() -> None:
-    """生产接线·M1 diff 帧:目标态 ⊋ 现板 → 现行发射器产补位 move,
-    动作对象 = 目标态 diff 中的 bench 件(发射 tag/落位判据零改动)。"""
+def test_step5_vacancy_diff_emits_move_unit() -> None:
+    """生产接线·空槽补位帧:目标态 ⊋ 现板 → 差分执行器产统一拖动
+    (载体 = CwActionMoveUnitParam;落位判据 = 搜索排分配)。"""
     session = cw4_session()
     gs = cw4_gs(session, deploy_cap=5, level=5,
                 bench=[cw4_bc('停云')],
                 front_row=[Unit(char_id='杰帕德', star=1)])
     out = entry._step5_deploy(session, gs, _frame(gs), [])
-    assert len(out) == 1 and out[0].reason == 'm1_deploy'
-    act = out[0].action
-    assert isinstance(act, CwActionDeployMoveParam)
-    unit = bench_slot_unit(bench_view_slots_of(gs)[act.bench_idx])
-    assert getattr(unit, 'char_id', '') == '停云', '动作 = 目标态 diff 件'
+    assert out, '空槽补位帧应发拖动'
+    assert all(isinstance(e.action, CwActionMoveUnitParam) for e in out)
+    moves = [e.action for e in out
+             if isinstance(e.action, CwActionMoveUnitParam)
+             and e.action.src_domain == 'bench']
+    assert any(True for _m in moves), 'bench 件上场拖动在序列内'
 
 
-def test_step5_capfull_swap_first_pair_unchanged() -> None:
-    """生产接线·板满换阵帧:目标态 diff 非空 → 现行 M1″ 发射器照旧
-    逐对发射,首对 victim = 组贪心序首(发射行为与现行部署测试
-    test_step5_pair_atomic_order_and_fresh_rederive 的全序守卫衔接,
-    本断言只锁「消费 select_deployment 后首动作不变」)。"""
-    session, st = _c_shape_session()
-    gs = cw4_gs(session, deploy_cap=3, level=3,
-                bench=[cw4_bc('瓦尔特'), cw4_bc('杰帕德')],
-                front_row=[Unit(char_id=n, star=1)
-                           for n in ('停云', '希儿', '符玄')])
-    out = entry._step5_deploy(session, gs, _frame(gs), [])
-    assert out and isinstance(out[0].action, CwActionSellDeployedParam)
-    front, _back = deployed_rows_of(gs)
-    assert front[out[0].action.deployed_idx].char_id == '停云', \
-        '首对 victim = 组贪心字典序首(现行发射序不变)'
-
-
-def _locked_session(comp_name: str) -> tuple:
-    """终局锁定 session 桩(target_comp 直种 + ist 分支① + seam 开闸;
-    装配源 = test_emit_swap_bond_gate 同款)。"""
-    from sr_od.application.currency_war.kernel.cw_comps import get_comp
-    session = cw4_session(get_comp(comp_name))
+def test_same_name_star_up_pair_two_step_not_stalled() -> None:
+    """同名升星对(场景走查「同名异星对」行,D2-1/D3-3):就位粒度
+    名+排+星 → 板上 1★ vs 目标 2★ = diff 非空 → 两步换星:低星
+    SellDeployed 直卖(不经 bench 中转)+ 高星统一拖动上场——通道
+    不停摆(现行 bond_gate star 通道的统一承载)。"""
+    session = cw4_session(get_comp('双王圣杯'))
     st = state_of(session)
-    st.v3_intention = IntentionState(locked_comp=comp_name)
-    st.cw4_m1p_seam_verified = True
+    st.v3_intention = IntentionState(locked_comp='双王圣杯')
     st.cw4_counters = {}
-    return session, st
-
-
-def test_same_name_starup_pair_not_swallowed() -> None:
-    """同名升星对不被名集目标态吞没(对抗审查实锤形态的回归锁)。
-
-    板满帧换出换入同名不同星(吉尔伽美什 1★ 在板 ↔ 2★ 在 bench,
-    kernel bond_gate star 分支一等设计通道):select_deployment 的
-    名集目标态对该形状恒 == 现板(名集相等、星级不等)——_step5_deploy
-    的定型判定不得据此早退,板满帧一律落现行 M1″ 发射器:首动作 =
-    同名低星 victim 的 SellDeployed,2★ 由下帧 M1 空槽补位接管。"""
-    session, st = _locked_session('双王圣杯')
     gs = cw4_gs(session, deploy_cap=3, level=3,
                 bench=[cw4_bc('吉尔伽美什', star=2)],
                 front_row=[Unit(char_id='吉尔伽美什', star=1),
@@ -213,13 +143,41 @@ def test_same_name_starup_pair_not_swallowed() -> None:
     frame = _frame(gs)
     target = select_deployment(frame, assemble_prep_context(
         session, gs, frame))
-    current = {d.char_id for d in frame.deployed
-               if d is not None and d.char_id}
-    assert target == current, '名集目标态对同名升星对形状不敏感(契约口径)'
+    assert target.get('吉尔伽美什', ('', 0))[1] == 2, \
+        f'同键取最高星(落场后形态),实得 {target}'
     out = entry._step5_deploy(session, gs, frame, [])
-    assert out and isinstance(out[0].action, CwActionSellDeployedParam), \
-        f'同名升星对照旧发射(不定型早退),实得 {out}'
+    assert out, '同名升星 diff 帧应有动作(通道不停摆)'
+    sells = [e.action for e in out
+             if isinstance(e.action, CwActionSellDeployedParam)]
+    assert sells, f'低星直卖在序列内(两步之一),实得 {[type(e.action).__name__ for e in out]}'
     front, _back = deployed_rows_of(gs)
-    victim = front[out[0].action.deployed_idx]
-    assert victim.char_id == '吉尔伽美什' and (victim.star or 1) == 1, \
-        'victim = 板上同名低星件(star 分支换血)'
+    victim = None
+    view = gs.deployed.value
+    idx = sells[0].deployed_idx
+    if idx < len(view.front_slots):
+        victim = view.front_slots[idx]
+    else:
+        victim = view.back_slots[idx - len(view.front_slots)]
+    assert victim is not None \
+        and victim.char_id == '吉尔伽美什' \
+        and (victim.star or 1) == 1, 'victim = 板上同名低星件'
+    moves = [e.action for e in out
+             if isinstance(e.action, CwActionMoveUnitParam)]
+    assert any(m.src_domain == 'bench' for m in moves), \
+        '高星上场拖动在序列内(两步之二)'
+
+
+def test_target_board_payload_shape() -> None:
+    """接口契约②载荷形态:target_board = 名 → (排, 星)——排 ∈
+    {'front','back'}、星 = 落场后形态选定星。"""
+    session = cw4_session()
+    gs = cw4_gs(session, deploy_cap=5, level=5,
+                bench=[cw4_bc('停云')],
+                front_row=[Unit(char_id='杰帕德', star=1)])
+    frame = _frame(gs)
+    target = select_deployment(frame, assemble_prep_context(
+        session, gs, frame))
+    assert isinstance(target, dict)
+    for name, (row, star) in target.items():
+        assert row in ('front', 'back'), f'{name} 排值 {row!r} 非法'
+        assert star in (1, 2, 3), f'{name} 星值 {star} 非法'

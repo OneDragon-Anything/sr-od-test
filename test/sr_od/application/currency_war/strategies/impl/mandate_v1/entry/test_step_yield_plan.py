@@ -1,13 +1,15 @@
-"""计划游标前置步测试(阶段 3;roster-plane1-union design §2.2 第 4 项
-执行端 + 用户裁定补录「跨画面计划变量终版」——商店决策一次定型,备战
-照单执行零重验;镜像 = mandate_v1/entry.py ``_step_yield_plan``)。
+"""计划游标前置步测试(阶段 3 落地、阶段 5/6 升级为差分执行器驱动:
+roster-plane1-union design §2.2 第 4 项执行端 + 用户裁定补录「跨画面
+计划变量终版」+ unified-deploy-order §3.5 拖动/重观察交替;镜像 =
+mandate_v1/entry.py ``_step_yield_plan``)。
 
 验收锚 = design §3「计划变量测试」行:步骤序列写入(shop 侧承载,
 shop/test_acquire_yield)/前置步逐帧消化(卖 V₁..Vₙ → 驱板面至 T)→
 序列空清槽 → 开店(第 5 步常规机制发,SF-10)/零重验断言(备战执行零
 搜索调用)/执行失败三态(V 不在场/卖失败/卡死)→ 清槽 + X 路径失败
 标记 + 按计划语境记键/节点边界槽与标记清零/前置步挡第 1-9 步(含
-出战)。
+出战)。阶段 5/6:T = 名→(排,星) 板面(就位粒度名+排+星);驱板
+= 统一拖动 + in_place 重观察交替(§3.5 D8-1)。
 """
 from __future__ import annotations
 
@@ -30,7 +32,7 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
-    CwActionDeployMoveParam,
+    CwActionMoveUnitParam,
     CwActionSellDeployedParam,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
@@ -53,6 +55,12 @@ _GIL, _SBR, _FUX = '吉尔伽美什', 'Saber', '符玄'
 _F3 = ('娜塔莎', '姬子·启行', '刻律德菈', '镜流')
 _B5 = ('流萤', '昔涟', '布洛妮娅', '云璃', '景元',
        '托帕&账账', 'Archer', '大黑塔')
+
+
+def _tb(*names, row: str = 'back') -> dict[str, tuple[str, int]]:
+    """T 板面构造(名 → (排, 星);排缺省 back,星 1——就位粒度
+    名+排+星,阶段 5/6 接口契约②)。"""
+    return {n: (row, 1) for n in names}
 
 
 def _plan_frame(*, bench=(), front=(), back=(), gold=30, level=5,
@@ -97,8 +105,9 @@ def _remove_from_board(gs, name):
                    produced_by='cw-yield-plan-test', sig=_LOGIC_SIG)
 
 
-def _deploy_to_board(gs, name):
-    """上场落地投影:bench 首个同名件 → 场上首个空槽。"""
+def _deploy_to_board(gs, name, row: str = 'back'):
+    """上场落地投影:bench 首个同名件 → 指定排首个空槽(缺省后排,
+    与 _tb 的排缺省一致)。"""
     view = gs.deployed.value
     front = list(view.front_slots)
     back = list(view.back_slots)
@@ -109,13 +118,11 @@ def _deploy_to_board(gs, name):
             slots[i] = BenchSlot(kind='empty')
             break
     target = None
-    for lst in (front, back):
-        for j, u in enumerate(lst):
-            if u is None:
-                lst[j] = Unit(char_id=name, star=1)
-                target = (lst, j)
-                break
-        if target is not None:
+    lst = front if row == 'front' else back
+    for j, u in enumerate(lst):
+        if u is None:
+            lst[j] = Unit(char_id=name, star=1)
+            target = (lst, j)
             break
     assert target is not None, '上场投影无空槽'
     from sr_od.application.currency_war.kernel.cw_game_state import (
@@ -131,9 +138,10 @@ def _deploy_to_board(gs, name):
 class TestYieldPlanCursor:
 
     def test_digest_sells_deploys_clears_then_reopens_shop(self):
-        """逐帧消化主链:卖 V(SellDeployed)→ 驱板(缺位者上场)→ 序列
-        空 → 清槽(yield_plan_completed)→ 第 5 步常规机制发开店
-        (SF-10:开店 = 非序列步骤)。"""
+        """逐帧消化主链:卖 V(SellDeployed)→ 驱板(统一拖动上场 →
+        in_place 重观察交替,§3.5 D8-1)→ T 就位 → 序列空 → 清槽
+        (yield_plan_completed)→ 第 5 步常规机制发开店(SF-10:开店 =
+        非序列步骤)。"""
         bench = [_SBR] + list(_B5)
         front = [_GIL, *_F3[:3]]
         back = [_F3[3]]
@@ -143,21 +151,28 @@ class TestYieldPlanCursor:
         # test_field_victim_writes_plan 同款帧与计划)。
         st.yield_plan = _plan(
             [('sell', '娜塔莎'), ('deploy', '')],
-            target_board=frozenset({_GIL, '姬子·启行', '刻律德菈',
-                                    '镜流', _SBR}))
+            target_board={
+                _GIL: ('front', 1), _F3[1]: ('front', 1),
+                _F3[2]: ('front', 1), _F3[3]: ('back', 1),
+                _SBR: ('back', 1)})
         # 帧 1:卖场上件 V。
         acts = entry.emit(sess, cfg)
         assert len(acts) == 1 \
             and isinstance(acts[0].action, CwActionSellDeployedParam)
         assert st.yield_plan.steps[0].issued is True
-        # 卖出落地 → 帧 2:对账通过,驱板缺位者(Saber)上场。
+        # 卖出落地 → 帧 2:对账通过,驱板缺位者(Saber)统一拖动上场。
         _remove_from_board(gs, '娜塔莎')
         acts = entry.emit(sess, cfg)
         assert len(acts) == 1 \
-            and isinstance(acts[0].action, CwActionDeployMoveParam)
-        assert acts[0].action.to_row in ('front', 'back')
-        # 上场落地 → 帧 3:T 覆盖完成 → 序列空 → 清槽 → 扫描继续 →
-        # 第 5 步开店(shop_handled 未置)。
+            and isinstance(acts[0].action, CwActionMoveUnitParam)
+        assert acts[0].action.dst_domain == 'back'
+        assert st.yield_plan.pending_reobserve is True, '拖动后应挂交替位'
+        # 帧 3:交替重观察(in_place 环内对账)。
+        acts = entry.emit(sess, cfg)
+        assert type(acts[0].action).__name__ == 'CwActionObsParam'
+        assert st.yield_plan.pending_reobserve is False
+        # 上场落地 → 帧 4:T 就位(名+排+星)→ 序列空 → 清槽 → 扫描
+        # 继续 → 第 5 步开店(shop_handled 未置)。
         _deploy_to_board(gs, _SBR)
         acts = entry.emit(sess, cfg)
         kinds = [type(a.action).__name__ for a in acts]
@@ -177,8 +192,10 @@ class TestYieldPlanCursor:
         st = state_of(gs)
         st.yield_plan = _plan(
             [('sell', '娜塔莎'), ('deploy', '')],
-            target_board=frozenset({_GIL, '姬子·启行', '刻律德菈',
-                                    '镜流', _SBR}))
+            target_board={
+                _GIL: ('front', 1), _F3[1]: ('front', 1),
+                _F3[2]: ('front', 1), _F3[3]: ('back', 1),
+                _SBR: ('back', 1)})
 
         def _no_search(*_a, **_k):
             raise AssertionError('备战计划执行禁部署搜索(零重验)')
@@ -189,7 +206,7 @@ class TestYieldPlanCursor:
         assert isinstance(acts[0].action, CwActionSellDeployedParam)
         _remove_from_board(gs, '娜塔莎')
         acts = entry.emit(sess, cfg)
-        assert isinstance(acts[0].action, CwActionDeployMoveParam)
+        assert isinstance(acts[0].action, CwActionMoveUnitParam)
 
     def test_fail_v_missing_clears_and_marks_by_context(self):
         """执行失败三态之一(V 不在场):游标指向卖步骤但目标已不在
@@ -204,7 +221,7 @@ class TestYieldPlanCursor:
         st = state_of(gs)
         st.yield_plan = _plan(
             [('sell', '娜塔莎'), ('deploy', '')],
-            target_board=frozenset({_GIL}))
+            target_board=_tb(_GIL))
         acts = entry.emit(sess, cfg)
         assert st.yield_plan is None, 'V 不在场未清槽'
         assert st.x_path_failed is True
@@ -247,7 +264,7 @@ class TestYieldPlanCursor:
         st = state_of(gs)
         st.yield_plan = _plan(
             [('deploy', '')],
-            target_board=frozenset({_GIL, _F3[1], _F3[2], '镜流'}))
+            target_board=_tb(_GIL, _F3[1], _F3[2], '镜流', row='front'))
         act1 = entry.emit(sess, cfg)   # 帧 1:基线观察(covered 3)
         assert type(act1[0].action).__name__ == 'CwActionObsParam', \
             f'无动作帧应 in_place 重观察: {act1[0].action!r}'
@@ -286,17 +303,18 @@ class TestYieldPlanCursor:
 
     def test_plan_slot_blocks_steps_and_battle(self):
         """槽在期间前置步优先于第 1-9 全部步(含第 9 步出战):无动作
-        可发帧返回 CwActionObsParam(in_place 重观察)而非出战;bridge
+        可发帧(差分空动作:缺位者不在 bench ∧ 多余者无 bench 空槽可下)
+        返回 CwActionObsParam(in_place 重观察)而非出战;bridge
         前置动作发出点让位(计划槽非空谓词 → 让位于十段扫描)。"""
-        bench = list(_B5)
-        sess, gs, cfg = _plan_frame(bench=bench, front=[_GIL, *_F3[:3]],
-                                    back=(_F3[3],), gold=60)
+        bench = list(_B5) + ['花火']   # 9 件满席:多余者无空槽可下
+        sess, gs, cfg = _plan_frame(bench=bench, front=[_GIL],
+                                    back=(), gold=60)
         st = state_of(gs)
-        # deploy 步骤 + T 含既不在板也不在 bench 的缺位者 → 无动作
-        # 可发帧(卡死计数在案)→ in_place 重观察挡扫描。
+        # deploy 步骤 + T 含既不在板也不在 bench 的缺位者(符玄),
+        # 板上唯一件已就位 → 差分无动作 → in_place 重观察挡扫描。
         st.yield_plan = _plan(
             [('deploy', '')],
-            target_board=frozenset({_GIL, _FUX}))
+            target_board={_GIL: ('front', 1), _FUX: ('front', 1)})
         acts = entry.emit(sess, cfg)
         assert type(acts[0].action).__name__ == 'CwActionObsParam', \
             f'计划期无动作帧禁出战/禁后续步: {acts[0].action!r}'

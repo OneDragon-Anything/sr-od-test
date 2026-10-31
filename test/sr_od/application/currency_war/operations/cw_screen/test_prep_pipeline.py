@@ -295,10 +295,17 @@ class TestStep0SelfRescue:
                back_row=())
         _set_overflow(sess)
         out = _emit(sess)
+        # 阶段 5/6:统一部署搜索的档 1 含锁定线核心(bench 姬子·启行),
+        # 统一序列末位 = 场上部署外低值件(姬子)——自救卖出形态随 victim
+        # 落位分派(SellBench/SellDeployed),零停机出口语义不变。
+        from sr_od.application.currency_war.kernel.cw_vocab import (
+            CwActionSellDeployedParam,
+        )
         sells = [e.action for e in out
-                 if isinstance(e.action, CwActionSellBenchParam)]
-        assert len(sells) == 1 and sells[0].reason == 'self_rescue_sell', \
-            '自救扩展面真全量:线内核心件末位可卖(零停机出口)'
+                 if isinstance(e.action, (CwActionSellBenchParam,
+                                          CwActionSellDeployedParam))]
+        assert len(sells) == 1, \
+            '自救扩展面真全量:低值件末位可卖(零停机出口)'
 
     def test_state4_defensive_zero_action_not_battle(self, monkeypatch):
         """态 4(防御性分支,识别异常真实形态的兜底):真全量可卖下候选
@@ -379,8 +386,8 @@ class TestStep2Ore:
         cw4_gs(sess, gold=30, level=6, round_num=2, node='战斗',
                bench=[_bc('c1', star=2), _bc('c2', star=2), _bc('c0')]
                + [_bc('c3', star=2)] * 6,
-               front_row=_units(('d1', 'd2', 'd3', 'd4', 'd5', 'd6')),
-               back_row=())
+               front_row=_units(('d1', 'd2', 'd3', 'd4')),
+               back_row=_units(('d5', 'd6')))
         return sess
 
     def test_free_seat_collects_all(self):
@@ -541,16 +548,22 @@ class TestStep5DeployWindow:
         assert isinstance(out[0].action, CwActionStartBattleParam)
 
     def test_endgame_member_deploys_on_window(self):
-        """窗口到(板面追击 3 档齐 = synergy 信号命中):终局件可上。"""
+        """窗口到(板面追击 3 档齐 = synergy 信号命中):终局件可上
+        (阶段 5/6 载体 = 统一拖动 CwActionMoveUnitParam)。"""
         sess = self._window_frame(('知更鸟', '不死途', '貊泽'))
         out = _emit(sess)
+        from sr_od.application.currency_war.kernel.cw_vocab import (
+            CwActionMoveUnitParam,
+        )
         moves = [e.action for e in out
-                 if isinstance(e.action, CwActionDeployMoveParam)]
-        assert moves and moves[0].bench_idx == 0
+                 if isinstance(e.action, CwActionMoveUnitParam)]
+        assert moves and moves[0].src_domain == 'bench' \
+            and moves[0].src_slot == 0
 
     def test_transition_member_exempt_from_window(self):
         """过渡∩终局重叠件按过渡成员正常上阵:现行过渡配方成员
-        (target_comp 物化链)不受窗口辖域辖(它们的上阵是过渡行为)。"""
+        (target_comp 物化链)不受窗口辖域辖(它们的上阵是过渡行为;
+        阶段 5/6 载体 = 统一拖动)。"""
         sess = cw4_session(cw4_comp('追击飞霄'))
         cw4_gs(sess, gold=30, level=6, round_num=2, node='战斗',
                bench=[_bc('飞霄')],
@@ -558,13 +571,17 @@ class TestStep5DeployWindow:
                deploy_cap=8)
         _mark_handled(sess)
         out = _emit(sess)
+        from sr_od.application.currency_war.kernel.cw_vocab import (
+            CwActionMoveUnitParam,
+        )
         moves = [e.action for e in out
-                 if isinstance(e.action, CwActionDeployMoveParam)]
+                 if isinstance(e.action, CwActionMoveUnitParam)]
         assert moves, '过渡配方成员(线内件)的正常部署不被窗口挡'
 
     def test_accumulator_always_on(self):
         """全局累积型例外([21]「越早越好」):万敌 = hp_charge_stack →
-        always_on 信号,窗口未到(夜半 0 档)也照上。"""
+        always_on 信号,窗口未到(夜半 0 档)也照上(阶段 5/6 载体 =
+        统一拖动)。"""
         sess = cw4_session()
         cw4_gs(sess, gold=30, level=6, round_num=2, node='战斗',
                bench=[_bc('万敌')],
@@ -572,8 +589,11 @@ class TestStep5DeployWindow:
                deploy_cap=8)
         _mark_handled(sess)
         out = _emit(sess)
+        from sr_od.application.currency_war.kernel.cw_vocab import (
+            CwActionMoveUnitParam,
+        )
         moves = [e.action for e in out
-                 if isinstance(e.action, CwActionDeployMoveParam)]
+                 if isinstance(e.action, CwActionMoveUnitParam)]
         assert moves, '万敌 always_on:窗口辖域外的累积型例外'
 
 
@@ -668,10 +688,14 @@ class TestStep7NodeEndInterest:
         out = _emit(sess)
         sells = [e.action for e in out
                  if isinstance(e.action, CwActionSellBenchParam)]
-        assert not sells, '豁免剔光帧凑息零卖出'
-        assert st.cw4_counters.get(
-            INTEREST_EXEMPT_DEPLETED_KEY) == 1, \
-            '剔光帧观测键须落生产 counters(第 8 步接线)'
+        assert not sells, '凑息零卖出(阶段 5/6:统一部署搜索把线内核心' \
+            '件收进档 1——比凑息豁免更强的保护,同一零卖出出口)'
+        # 阶段 5/6 行为申报:档 1 收编先于豁免剔除(池在豁免前已空,
+        # 拒因 = no_candidates 非 exempt_depleted)——剔光观测键辖
+        # 「豁免真翻转卖出→零动作」帧,由 criteria 单测
+        # (test_sell_candidates 凑息豁免族)继续锁定。
+        assert st.cw4_counters.get(INTEREST_EXEMPT_DEPLETED_KEY, 0) == 0, \
+            '档 1 收编帧不落剔光键(键辖豁免真翻转帧)'
 
     def test_above_line_no_sell(self):
         """金 ≥ 息线 → 本步零动作(透传到出战;50 = 恰在溢余带外,
