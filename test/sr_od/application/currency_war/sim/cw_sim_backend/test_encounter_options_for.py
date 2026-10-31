@@ -23,6 +23,8 @@ encounter_options_for helper + encounter 呈现写点 + STRATEGY_ECONOMY
 """
 from __future__ import annotations
 
+import random
+
 from test.sr_od.application.currency_war.sim.test_sim_backend import (
     _SIG_OBS,
     _backend,
@@ -152,17 +154,19 @@ def test_registration_row_direct_three_legs() -> None:
 def test_hp_leg_direct_call_grants_exact_and_offtable_zero_write() -> None:
     """hp 腿直调真值 + 表外卡零写(apply_strategy_pick_hp 通用腿直调,
     T-127 test_strategy_pick_hp.py 形态):在册卡入账恰 +10 恰一笔
-    (独立 evidence 笔),表外名零笔零写(hp/evidence 双不动)。"""
+    (独立 evidence 笔),表外名零笔零写(hp/evidence 双不动)。rng
+    形参 = 负值支扩挂点随批加入(正部成员不消费采样,传独立实例形)。"""
     b = _backend(seed=52)
     try:
         gs = b.gs
         hp0 = int(gs.hp.value)
-        assert apply_strategy_pick_hp(gs, [_CARD]) == 1
+        assert apply_strategy_pick_hp(gs, [_CARD], random.Random(7)) == 1
         assert gs.hp.value == hp0 + 10, f'hp 恰 +10: {gs.hp.value}'
         assert gs.hp.evidence == _HP_EV_PREFIX + _CARD, \
             f'独立笔缺失或来源漂移: {gs.hp.evidence}'
         hp1, ev1 = int(gs.hp.value), gs.hp.evidence
-        assert apply_strategy_pick_hp(gs, ['不在册卡名']) == 0
+        assert apply_strategy_pick_hp(gs, ['不在册卡名'],
+                                      random.Random(7)) == 0
         assert gs.hp.value == hp1 and gs.hp.evidence == ev1, \
             f'表外卡出现写: {gs.hp.value} / {gs.hp.evidence}'
     finally:

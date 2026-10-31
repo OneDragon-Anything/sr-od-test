@@ -54,6 +54,14 @@ _HP_TRAIL_BOUND: int = (
                                   enemy_difficulty=108))
     + sum(max(0, eff.hp_instant) for eff in STRATEGY_ECONOMY.values()))
 
+#: hp 轨迹下界(与上界同构的 Σ负部参数化):负成员选卡损血 −N 直加不
+#: clip(下界无消费端语义,镜像上界裁决),hp 可写负值;按负部合计而
+#: 非固定 0——全负部单卡局可写出「最小持血 + Σ负部」以下的值不会被
+#: 直加造出,轨迹不会低于该推导下界(固定 0 在负成员注册后已过期,
+#: 选卡损血 −5 = 合法轨迹值)。
+_HP_TRAIL_FLOOR: int = sum(min(0, eff.hp_instant)
+                           for eff in STRATEGY_ECONOMY.values())
+
 
 @pytest.fixture(scope='module')
 def two_runs(test_context: Any, tmp_path_factory: Any) -> tuple:
@@ -150,11 +158,14 @@ def test_first_match_container_invariants(two_runs: tuple) -> None:
     written = [r['after'] for r in hp_rows]
     assert written == list(run.hp_trail)[1:], \
         f'hp 写流 {written} != 轨迹[1:] {list(run.hp_trail)[1:]}'
-    # 终值 0 = 死亡局终的合法终态(出口 hp 遥测含死亡局);非终值 0 =
-    # 结算中途回 0 会被 apply_hp_outcome 保底/局终逻辑挡住,不可达。
-    assert all(0 <= h <= _HP_TRAIL_BOUND for h in run.hp_trail), \
-        f'hp 轨迹出界(上界 = 开局查表 + hp_instant 正部合计 ' \
-        f'{_HP_TRAIL_BOUND})'
+    # 终值 0 = 死亡局终的合法终态(出口 hp 遥测含死亡局);中途回 0/负
+    # 亦可合法出现——选卡即时损血腿(先亏后盈 −20)直加不 clip,hp 写负
+    # 值后下一败局才由 apply_hp_outcome 保底/局终逻辑接管(上下界双端
+    # = Σ正部/Σ负部参数化,单一源 = 注册表现值)。
+    assert all(_HP_TRAIL_FLOOR <= h <= _HP_TRAIL_BOUND
+               for h in run.hp_trail), \
+        f'hp 轨迹出界(界 = [{_HP_TRAIL_FLOOR}, 开局查表 + hp_instant ' \
+        f'正部合计 {_HP_TRAIL_BOUND}])'
     assert run.gs.hp.value == run.hp_trail[-1], 'hp 终值与轨迹末条不一致'
 
     # —— ③ 经验等级不变式(升级逐级 +1 不越上限;carry 恒 0 ≤ cur < need;

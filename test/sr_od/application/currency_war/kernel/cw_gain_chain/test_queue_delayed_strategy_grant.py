@@ -12,6 +12,8 @@ monkeypatch 形态测随真注册转直测):
   @3(姊妹双卡逐名独立构造);
 - 许诺特权 = 延时-only 单腿登记腿(卡文纯延时单句):效果串单枚
   strategy_grant_scheduled,零即时腿(反向锁错发形态);
+- 先亏后盈 = count 循环入队(数量 2 首例):队列双条目 + 效果串两枚
+  + kernel 侧零 hp 写(T-144 批扩面);
 - equips 未观察 → 即时腿拒落零写 placed=False、入队腿照写;
 - 未登记策略卡(表外名 + 在册无腿卡)零写;
 - live 落地形态(gain_invest_strategy 同函数,session=None 直构)队列
@@ -128,6 +130,28 @@ def test_pick_rencai_jili_plus_direct_registry_chain() -> None:
     assert gs.equips.value == ['员工投影仪'], f'装备栏: {gs.equips.value}'
     assert gs.pending_strategy_grants.value == (('人才激励+', 3),), \
         f'队列值: {gs.pending_strategy_grants.value}'
+
+
+def test_pick_xiankui_count_loop_double_entry() -> None:
+    """先亏后盈 count 循环入队(数量 2 = 族内首例 >1,卡文「获得2个」):
+    拿卡 → 队列恰 (('先亏后盈', 4), ('先亏后盈', 4))(count 循环两条
+    同卡条目,逐条独立倒计时)∧ 效果串两枚 strategy_grant_scheduled:
+    简易武装箱@4 ∧ 零即时腿 ∧ kernel 侧零 hp 写(登记腿写行恰 2 笔全
+    为队列通道——损血腿结构性不入登记效果体,防将来误把损血腿塞进
+    登记腿的回归锁;写流↔轨迹同构的 kernel 半边由本锁钉死)。"""
+    gs = _gs(equips=[])
+    seq_before = gs.write_seq
+    effects = on_strategy_gained(gs, '先亏后盈', rand=False,
+                                 sig=_lsig(), rng=random.Random(0))
+    assert effects == ('strategy_grant_scheduled:简易武装箱@4',
+                       'strategy_grant_scheduled:简易武装箱@4'), \
+        f'效果串(count 枚): {effects}'
+    assert gs.equips.value == [], f'即时腿误写装备栏: {gs.equips.value}'
+    assert gs.pending_strategy_grants.value == \
+        (('先亏后盈', 4), ('先亏后盈', 4)), \
+        f'队列值(count 双条目): {gs.pending_strategy_grants.value}'
+    assert gs.write_seq == seq_before + 2, \
+        f'写行数漂移(恰 2 笔队列写,零 hp 写): {gs.write_seq}'
 
 
 def test_pick_xunuo_tequan_delayed_only_single_leg() -> None:

@@ -44,6 +44,9 @@ _ITEM = '员工投影仪'
 _XUNUO = '许诺特权'
 _XUNUO_ITEM = '特权武装箱'
 
+_XIANKUI = '先亏后盈'
+_XIANKUI_ITEM = '简易武装箱'
+
 
 class _RowSink:
     """缺陷台账行收集(镜像 test_gain_chain 同名 fixture,装配 + 必达收尾)。"""
@@ -247,3 +250,53 @@ def test_due_bench_item_real_member_overflow_taken(
     assert gs.pending_strategy_grants.value == (), '到期条目未弹除'
     assert rows_sink.kinds() == [DEFECT_OVERFLOW_TAKEN], \
         f'零写留证行: {rows_sink.kinds()}'
+
+
+# ============================================================ count 循环
+# 真成员回归锁(先亏后盈 count=2 = 数量 >1 首例:同拍队列双条目,到点
+# 逐条独立发放/独立席满判定——上面三态锁均为单条目,本区锁 count>1 形)
+
+
+def test_due_count2_places_two_boxes_same_window(
+        rows_sink: _RowSink) -> None:
+    """先亏后盈同窗双条目同拍发放 2 件(备战空席):两箱各落一槽
+    ∧ 弹除 ×2(队列清空)∧ 效果串恰两条 placed=True。"""
+    gs = _gs(equips=[], bench_slots=_empty_slots(),
+             queue=((_XIANKUI, 0), (_XIANKUI, 0)))
+    effects = discharge_due_strategy_grants(gs, rand=False, sig=_LSIG)
+    assert effects == (f'delayed_grant:{_XIANKUI_ITEM}(placed=True)',
+                       f'delayed_grant:{_XIANKUI_ITEM}(placed=True)'), \
+        f'效果串(两件): {effects}'
+    landed = [s for s in gs.bench.value.slots
+              if s is not None and s.kind == 'supply_box']
+    assert len(landed) == 2, f'两箱未齐落: {gs.bench.value.slots}'
+    assert all(s.item == _XIANKUI_ITEM for s in landed), '落位身份漂移'
+    assert gs.equips.value == [], '占席道具误入装备栏'
+    assert gs.pending_strategy_grants.value == (), '到期条目未全弹除'
+    assert rows_sink.kinds() == [], '正常落位零留证'
+
+
+def test_due_count2_full_bench_overflow_then_overflow_taken(
+        rows_sink: _RowSink) -> None:
+    """先亏后盈双条目席满两态(逐条独立判定):首条溢出落位(两字段,
+    overflow_card = 简易武装箱)、次条溢出位已被占 → 零写留证
+    (DEFECT_OVERFLOW_TAKEN);两条目同拍全弹除(到期即消费),效果串
+    placed=True + placed=False 各一条——占席语义天然支持「一箱溢出
+    一箱丢失」的分条异态。"""
+    gs = _gs(equips=[],
+             bench_slots=[BenchSlot(kind='unit',
+                                    unit=Unit(char_id=f'填席{i}', star=1))
+                          for i in range(9)],
+             queue=((_XIANKUI, 0), (_XIANKUI, 0)))
+    effects = discharge_due_strategy_grants(gs, rand=False, sig=_LSIG)
+    assert effects == (f'delayed_grant:{_XIANKUI_ITEM}(placed=True)',
+                       f'delayed_grant:{_XIANKUI_ITEM}(placed=False)'), \
+        f'效果串(溢出+丢失两态): {effects}'
+    assert gs.overflow_warning.value is True, '席满溢出告警未写'
+    assert gs.overflow_card.value == _XIANKUI_ITEM, \
+        f'溢出位身份应为道具名: {gs.overflow_card.value!r}'
+    assert all(s is not None and s.kind == 'unit'
+               for s in gs.bench.value.slots), '备战席出现写'
+    assert gs.pending_strategy_grants.value == (), '到期条目未全弹除'
+    assert rows_sink.kinds() == [DEFECT_OVERFLOW_TAKEN], \
+        f'溢出位占零写留证行: {rows_sink.kinds()}'
