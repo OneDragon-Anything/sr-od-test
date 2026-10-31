@@ -975,6 +975,45 @@ def test_strategy_pick_chain_named_equip_grant() -> None:
         uninstall_backend()
 
 
+def test_strategy_pick_chain_named_equip_grant_wuhai_laji() -> None:
+    """获得链断言:选无害垃圾 → equips 恰 +1 垃圾袋(具名装备授予腿,
+    具名确定发放零采样,同 seed 重放确定不经 rng 注入)+ bench/deployed
+    零变化(板面重写面零建模 = 既有边界申报);金腿 8 金 = instant_gold
+    在册计分、发放写端 = 族级缺口(sim 金面锁不住,维持观察)。"""
+    def _run_once() -> tuple:
+        b = _backend(7)
+        try:
+            b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+            b._maybe_finish_wait()
+            gs = b.gs
+            equips_before = list(gs.equips.value or [])
+
+            def _bench_ids() -> list:
+                return [s.unit.char_id if s is not None and s.kind == 'unit'
+                        else None for s in gs.bench.value.slots]
+
+            bench_before = _bench_ids()
+            deployed_before = gs.deployed.value
+            gs.write_logic(gs.invest_strategy_opts,
+                           ['无害垃圾', '躺平', '淘金客'],
+                           produced_by='Test', evidence='t:opts', sig=_SIG)
+            out = report_action_pick_invest_strategy_param(
+                gs, SimpleNamespace(norm_name='无害垃圾'), _SIG,
+                session=SimpleNamespace())
+            assert out.applied
+            assert '无害垃圾' in gs.active_strategies.value
+            assert list(gs.equips.value) == equips_before + ['垃圾袋'], \
+                f'装备腿恰 1 件入栏(sim 世界真值): {gs.equips.value}'
+            assert _bench_ids() == bench_before, 'bench 零变化(板面零建模)'
+            assert gs.deployed.value == deployed_before, \
+                'deployed 零变化(板面零建模)'
+            return tuple(gs.equips.value)
+        finally:
+            uninstall_backend()
+
+    assert _run_once() == _run_once(), '同 seed 重放确定性(equips 逐位同)'
+
+
 def test_strategy_pick_chain_hacker_part_grant() -> None:
     """获得链断言:选骇客改件卡(骇客专家:银狼)→ 银狼入席 + 随机
     改件入栏(采样效果子链;rng 注入流键,sim 采样即世界真值)。"""
