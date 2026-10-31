@@ -29,6 +29,7 @@ import pytest
 from test.sr_od.application.currency_war._cw_helpers import (
     cw4_bc,
     cw4_gs,
+    cw4_members,
 )
 from test.sr_od.application.currency_war._cw_helpers import (
     cw4_box as _bsb,
@@ -40,7 +41,10 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     BenchSlot,
     Unit,
 )
-from sr_od.application.currency_war.kernel.cw_intention import IntentionState
+from sr_od.application.currency_war.kernel.cw_intention import (
+    IntentionState,
+    pair_target_comp,
+)
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
 )
@@ -53,6 +57,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.sell_can
     SCENE_SPECS,
     SELL_SCENARIOS,
     evaluate_sell_candidates,
+    sell_line_membership,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
@@ -321,6 +326,76 @@ class TestIdentitySegmentRetired:
         cands, why = evaluate_sell_candidates(gs, 'session_funding')
         assert why == ''
         assert '希儿' in _names(cands)
+
+
+# ===== 线内身份集单一准入(阶段 1:roster-plane1-union design §2.1/§3)=====
+
+
+class TestSellLineMembershipSingleAdmission:
+    """sell_line_membership 三景(名单单一准入):配方支 = 槽位直读 +
+    读前判窗(plane2_started_of),锁定不是退出条件——P1 锁定局 =
+    锁定线 ∪ 配方并集;P2 配方支退出;未锁定 = 候选并集 ∪ 配方。"""
+
+    def _recipe_comp(self):
+        comp = pair_target_comp(('持续伤害', '希儿系'))
+        assert comp is not None
+        return comp
+
+    def test_locked_p1_union_locked_line_and_recipe(self):
+        """P1 锁定局:身份集 = 锁定线名单 ∪ 配方成员(修复前锁定分支
+        只有锁定线——配方成员被排出线内集,防线/投影口径漏自己人)。"""
+        sess, gs = _mk_gs()
+        st = state_of(gs)
+        st.target_comp = get_comp('双王圣杯')
+        st.opening_recipe_comp = self._recipe_comp()
+        expected = set(cw4_members(get_comp('双王圣杯'))) \
+            | set(cw4_members(st.opening_recipe_comp))
+        assert sell_line_membership(gs) == frozenset(expected)
+        assert '卡芙卡' in sell_line_membership(gs), \
+            '纯配方成员入线内集(注册表现查:卡芙卡 ∉ 双王圣杯)'
+
+    def test_p2_recipe_branch_exits(self):
+        """P2(plane2_started=True):配方支恒空集——槽位残留不消费
+        (判窗在直读之前);身份集退回锁定线单源。"""
+        sess, gs = _mk_gs()
+        st = state_of(gs)
+        st.target_comp = get_comp('双王圣杯')
+        st.opening_recipe_comp = self._recipe_comp()
+        st.plane2_started = True
+        assert sell_line_membership(gs) \
+            == frozenset(cw4_members(get_comp('双王圣杯')))
+        assert '卡芙卡' not in sell_line_membership(gs), \
+            '进位面 2 配方残留不入线内集'
+
+    def test_unlocked_union_candidates_and_recipe(self):
+        """未锁定:身份集 = 候选 top3 三线成员并集 ∪ 配方成员(修复前
+        未锁定分支只有候选并集,缺配方支)。"""
+        sess, gs = _mk_gs()
+        st = state_of(gs)
+        st.line_candidates = ('列车同行',)
+        st.opening_recipe_comp = self._recipe_comp()
+        expected = set(cw4_members(get_comp('列车同行'))) \
+            | set(cw4_members(st.opening_recipe_comp))
+        assert sell_line_membership(gs) == frozenset(expected)
+        assert '瓦尔特' in sell_line_membership(gs), '候选支(列车同行)'
+        assert '卡芙卡' in sell_line_membership(gs), '配方支'
+
+
+class TestP1LockedSellPoolNarrowing:
+    """行为申报用例(design §2.5 P1 锁定局行):配方成员从「最先让路」
+    收窄为「殿后保护」——修复前配方成员不在锁定帧名单,落档 8 兜底
+    最先卖;修复后落档 5(成员保护),同帧万金油垫件(档 6)先让。"""
+
+    def test_recipe_member_protected_in_locked_frame(self):
+        sess, gs = _board_full_gs(
+            [cw4_bc('卡芙卡'), cw4_bc('星期日')], level=5)
+        st = state_of(gs)
+        st.target_comp = get_comp('列车同行')
+        st.opening_recipe_comp = pair_target_comp(('持续伤害', '希儿系'))
+        cands, why = evaluate_sell_candidates(gs, 'ore_make_room')
+        assert why == ''
+        assert _names(cands) == ['星期日', '卡芙卡'], \
+            '配方成员(档 5)殿后,万金油垫件(档 6)先让——不再误卖自己人'
 
 
 # ===== 空板守卫(as-built 收编;全场景)=====

@@ -14,7 +14,11 @@ priority/details/priority-model.md`` §1-§5(总纲 = 同目录 design.md §2.1)
 - sell_order 取用形态(升序 = 从最不该卖到最先让路,末位最先让路);
 - PriorityContext 生产装配(锁定帧 need_star 表源 = unfinished_star_
   targets / 未锁帧 = 候选三线并集 + need_star 跨线取最大 + 过渡配方
-  成员回落 opening_recipe_comp);
+  成员回落 opening_recipe_comp;P1 锁定局配方支照收 = 名单单一准入
+  三景之一,changes/2026-10-30-roster-plane1-union design §2.1/§3);
+- 档内并列金币 tie-break(用户裁定三,同上 design §2.2 第 1 项):
+  现行档内键全并列后退金损失最小者优先让路(1★ 全额退损失 0 >
+  2★ 折价损失 1;cost=1 exempt);
 - member_rank 装配切换回归(3.3 阵容内优先级字段迁移):知识卡
   ``member_priority`` 字段直读 + 空表回退两档派生、跨线取最高、配方
   成员低优先级、迁移前后序数表逐成员等价(档内排序不变性)。
@@ -26,6 +30,7 @@ import random
 from test.sr_od.application.currency_war._cw_helpers import (
     cw4_bc,
     cw4_gs,
+    cw4_members,
     cw4_session,
 )
 
@@ -324,7 +329,9 @@ def test_locked_frame_need_star_from_unfinished_targets() -> None:
     assert ctx.stay_target[2] == get_char('藿藿').cost, \
         '实费档 resolved 口径'
     # 锁定帧名单 = 锁定线成员(经 line_view 承载;候选快照字段照读口
-    # 真值冻结为空集——锁定写入连带清空停算),配方支空集。
+    # 真值冻结为空集——锁定写入连带清空停算),配方支空集——本帧
+    # 配方槽未种(P1 锁定局配方照收的并集形态见
+    # test_locked_p1_frame_recipe_members_join_roster)。
     assert _GIL in ctx.member_rank
     assert ctx.candidate_members == frozenset()
     assert ctx.recipe_members == frozenset()
@@ -468,3 +475,85 @@ def test_member_rank_migration_equivalence() -> None:
     k_yin = sort_key(HeldUnit('银狼', 1, 1, False), ctx_rank)
     assert k_hua[0] == 2 and k_hua[1] == ctx_rank.member_rank['花火'] == 0
     assert k_yin[0] == 5 and k_yin[1] == ctx_rank.member_rank['银狼'] == 1
+
+
+def _p1_locked_recipe_gs():
+    """P1 锁定局种子(三景共用):锁定线 = 双王圣杯,配方对 = 持续伤害
+    ×希儿系(注册表事实:卡芙卡/希儿 ∈ 配方对 ∉ 锁定线,符玄两侧交集);
+    bench 持卡芙卡 1★,场上镜流中性件。plane2_started 缺省 False。"""
+    session = cw4_session()
+    gs = cw4_gs(session, level=7, bench=[cw4_bc('卡芙卡')],
+                front_row=[Unit(char_id='镜流', star=1)])
+    st = state_of(gs)
+    st.target_comp = get_comp('双王圣杯')
+    st.opening_recipe_comp = pair_target_comp(('持续伤害', '希儿系'))
+    return session, gs
+
+
+def test_locked_p1_frame_recipe_members_join_roster() -> None:
+    """装配·P1 锁定局(名单单一准入三景之一,roster-plane1-union
+    design §2.1/§3):配方支 = 槽位直读 + 读前判窗,锁定不是退出条件
+    ——锁定帧 recipe_members 照收非空;纯配方成员(不在锁定线)入
+    档 2/3/5 名单:已持未两星落档 5、未持商店牌落档 3(修复前锁定帧
+    配方支恒空集,配方成员落档 8 最先让路);序数不入锁定线字段直读
+    面 → 判定端缺省 1(配方成员统一低档,§1.3 不变)。"""
+    session, gs = _p1_locked_recipe_gs()
+    ctx = assemble_priority_context(
+        session, gs, deployed_names=frozenset({'镜流'}))
+    assert ctx.line_view.locked
+    expected_recipe = set(cw4_members(state_of(gs).opening_recipe_comp))
+    assert ctx.recipe_members == frozenset(expected_recipe), \
+        'P1 锁定局配方支照收(槽位直读全集)'
+    recipe_only = expected_recipe - set(ctx.line_view.members)
+    assert {'卡芙卡', '希儿'} <= recipe_only, \
+        '纯配方支前置(注册表现查:两者均不在双王圣杯)'
+    # 纯配方成员已持 1★(need 缺省 1,未到两星)→ 档 5(阵容强度)。
+    k_held = sort_key(HeldUnit('卡芙卡', 1, 0, False), ctx)
+    assert k_held[0] == 5, '已持纯配方成员落档 5(修复前 = 档 8)'
+    assert k_held[1] == 1, '序数缺省 1(不入锁定线字段直读面)'
+    # 纯配方成员未持(商店牌形态)→ 档 3(成员未获取)。
+    k_shop = sort_key(ShopUnit('希儿', 1, 3), ctx)
+    assert k_shop[0] == 3, '未持纯配方成员落档 3(修复前 = 档 8)'
+
+
+def test_p2_started_frame_recipe_branch_stays_empty() -> None:
+    """装配·P2(名单单一准入三景之二):plane2_started=True → 配方支
+    恒空集(判窗在槽位直读之前,槽位残留不消费);锁定帧名单退回
+    锁定线单源,纯配方成员退出档 2/3/5 名单。"""
+    session, gs = _p1_locked_recipe_gs()
+    state_of(gs).plane2_started = True
+    ctx = assemble_priority_context(
+        session, gs, deployed_names=frozenset({'镜流'}))
+    assert ctx.recipe_members == frozenset(), \
+        '进位面 2 配方支恒空集(槽位残留不消费)'
+    # 已持纯配方成员(卡芙卡 1★)退出成员名单 → 落非成员档(≥6,
+    # 具体档随羁绊/万金油身份,断言收敛为「不在档 2/3/5」)。
+    assert sort_key(HeldUnit('卡芙卡', 1, 0, False), ctx)[0] > 5
+
+
+def test_tier_tie_refund_loss_tiebreak() -> None:
+    """档内并列金币 tie-break(用户裁定 2026-10-30 三;roster-
+    plane1-union design §2.2 第 1 项/金币核查表):现行档内键全并列
+    → 退金损失最小者优先让路(键内取负,损失大 = 后卖)。
+
+    档 3 商店牌同序数并列三组:①同名跨星 1★(全额退,损失 0)先让于
+    2★(折价,损失 1)——同价值档内选不亏的卖;②cost=1 exempt:1 费
+    2★ 退金无手续费(损失 0)先让于 3 费 2★(损失 1);③序数现行键
+    不删:非 core(序数 1,损失 0)仍先让于 core(序数 0,损失 1)
+    ——退金损失只在现行档内键之后参与定序。"""
+    ctx = _ctx(candidates=frozenset({_SABER, _WALT, _GIL}),
+               cores=frozenset({_SABER}), copies={})
+    k_walt_1 = sort_key(ShopUnit(_WALT, 1, 3), ctx)
+    k_walt_2 = sort_key(ShopUnit(_WALT, 2, 3), ctx)
+    assert k_walt_1[:4] == (3, 1, 0, 1), \
+        '档 3 键形 = (档, 序数, -退金损失, 在手旗标)'
+    assert k_walt_2[:4] == (3, 1, -1, 1)
+    assert k_walt_1 > k_walt_2, '同档并列:1★ 全额退(损失 0)先让'
+    # cost=1 exempt(2★ 1 费退金 = cost×3 无手续费 → 损失 0)。
+    k_gil_2c1 = sort_key(ShopUnit(_GIL, 2, 1), ctx)
+    assert k_gil_2c1[:3] == (3, 1, 0)
+    assert k_gil_2c1 > k_walt_2, '1 费 2★ 全额退先让于 3 费 2★ 折价'
+    # 序数(现行档内键)先于退金损失:非 core 1★ 先让于 core 2★。
+    k_saber_2 = sort_key(ShopUnit(_SABER, 2, 3), ctx)
+    assert k_saber_2[:3] == (3, 0, -1)
+    assert k_walt_1 > k_saber_2, '序数键先判(core 后让,损失键不越位)'

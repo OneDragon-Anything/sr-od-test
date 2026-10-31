@@ -103,8 +103,9 @@ def _assert_window_matches_direct(gs: GameState, payload: dict,
 
 def test_locked_frame_three_keys_and_window_consistent() -> None:
     """锁定帧三键直算一致:direction(锁定/线名/候选清空)+ k_members
-    (锁定线名单)+ k_fallback(分支未运行)+ window(结论与 sig 同查表序);
-    另锁 payload 可 JSON 序列化(sink json.dumps 前置契约)。"""
+    (锁定线名单,统一线内名单读口——排序序,非注册表序;配方槽空集
+    时 = 锁定线单源)+ k_fallback(分支未运行)+ window(结论与 sig 同
+    查表序);另锁 payload 可 JSON 序列化(sink json.dumps 前置契约)。"""
     gs = cw4_gs(None, plane=1, round_num=2, node='prep',
                 bench=[cw4_bc('花火')])
     strat = _make(gs)
@@ -120,7 +121,7 @@ def test_locked_frame_three_keys_and_window_consistent() -> None:
     assert payload['direction'] == {
         'locked': True, 'comp': '黄泉减益', 'candidates': [],
     }
-    assert payload['k_members'] == k_members
+    assert payload['k_members'] == sorted(k_members)
     assert payload['k_fallback'] == {'hit': False, 'band': ''}
     _assert_window_matches_direct(gs, payload, [comp])
     json.dumps(payload)   # 行行自足:载荷可整体序列化落盘
@@ -145,7 +146,9 @@ def test_unlocked_recipe_frame_window_set_boundary() -> None:
         'locked': False, 'comp': comp.name,
         'candidates': ['线一', '线二', '线三'],
     }
-    assert payload['k_members'] == cw4_members(comp)
+    # 未锁帧统一线内名单 = 候选并集(假线名解析失败跳过)∪ 配方成员
+    # = 配方成员集;排序序(读口 = sell_line_membership)。
+    assert payload['k_members'] == sorted(cw4_members(comp))
     assert payload['k_fallback'] == {'hit': False, 'band': ''}
     assert '花火' in payload['window']
     assert '杂1' not in payload['window']   # 终局库外持有件不入窗口键集
