@@ -281,3 +281,127 @@ def test_three_sources_one_count_per_node(test_context, monkeypatch) -> None:
     assert gs.effects.interest_earned == 3 + interest(100, DEFAULT_INTEREST_CAP) \
         + interest(100, DEFAULT_INTEREST_CAP), 'r3 = 来源 C 推算(现算期望)'
     assert gs.env_grants_done.value == (), '阈值内纯累计(无发放混入)'
+
+
+# ==================================================== 策略卡到级装备腿
+
+#: live 接线 sig 契约形态(logic_hook 族,组号按触发名区分,同窗多触发
+#: 各归各组台账可对账;src = 结算覆盖段策略卡到级装备腿调用)。
+_SIG_STRAT = ChannelSig(family='logic_hook', actor='CwScreenBattleWait',
+                        group_id='battle-wait:strategy-level-grant')
+
+_LATCH_EV = 'strategy_level_grant:钻石商人'
+
+
+def _stub_settlement_assets(monkeypatch, level: int | None) -> None:
+    """结算资产读数桩(纯函数面直桩;gold 恒有值 = 跳过定点补读支)。"""
+    from sr_od.application.currency_war.obs import cw_settlement_obs as _so
+    monkeypatch.setattr(_so, 'parse_settlement_assets',
+                        lambda texts: {'gold': 10, 'level': level,
+                                       'xp_cur': None, 'xp_next': None})
+
+
+def _record_strategy_writes(gs, monkeypatch) -> list[tuple]:
+    """包装容器写入口记录 (通道, 字段名, evidence, sig, produced_by)
+    (透传真实现;observe 扩展先例 = kernel/test_env_grants
+    _live_record_writes,扩 produced_by 轴)。"""
+    calls: list[tuple] = []
+
+    def _wrap_logic(real, channel):
+        def rec(target, value, **kw):
+            calls.append((channel, gs._field_name(target), kw.get('evidence'),
+                          kw.get('sig'), kw.get('produced_by')))
+            return real(target, value, **kw)
+        return rec
+
+    def _wrap_obs(real):
+        def rec(target, value, **kw):
+            calls.append(('observe', gs._field_name(target),
+                          kw.get('evidence'), kw.get('sig'), None))
+            return real(target, value, **kw)
+        return rec
+
+    monkeypatch.setattr(gs, 'write_logic', _wrap_logic(gs.write_logic, 'logic'))
+    monkeypatch.setattr(gs, 'write_logic_rand',
+                        _wrap_logic(gs.write_logic_rand, 'rand'))
+    monkeypatch.setattr(gs, 'observe', _wrap_obs(gs.observe))
+    return calls
+
+
+def test_strategy_level_grant_fires_on_settlement_level_asset(
+        test_context, monkeypatch) -> None:
+    """live 接线锁(结算覆盖位):持卡 + 结算 level 资产 9 → 覆盖写端
+    level 真值落账后 equips 写 + 闩(确定面 logic 写,evidence 基串/
+    基串+#equip,同 sig = logic_hook 族组 battle-wait:strategy-level-
+    grant);live 零回调 = 三联动域(diamond_count/deploy_cap/back_layout)
+    零写零观察。"""
+    op = _make_op(test_context, monkeypatch, [_outcome(killed=True)])
+    gs = game_state_of(test_context.cw_match.session)
+    gs.prep_anchored = True   # 置闩:达标发放 = 确定事件,锁确定面写通道
+    gs.observe(gs.active_strategies, ['钻石商人'], sig=_SIG_OBS)
+    gs.observe(gs.equips, [], sig=_SIG_OBS)
+    _stub_settlement_assets(monkeypatch, level=9)
+    monkeypatch.setattr(bw_mod, 'read_settle_interest_panel',
+                        lambda ctx, screen: [])
+    coupling_before = (gs.diamond_count.value, gs.deploy_cap.value,
+                       gs.back_layout.value)
+    calls = _record_strategy_writes(gs, monkeypatch)
+
+    op._record_round_outcome(_FRAME)
+
+    # 防假绿锚:fake 结算路径真实携带 level 真值且走了真覆盖写端
+    assert gs.level.value == 9 and gs.level.source == 'observation', \
+        '结算覆盖写端必须真实落账(前置态缺失 = 断言恒绿假形态)'
+    assert gs.equips.value == ['财富宝钻'], f'未发放: {gs.equips.value!r}'
+    assert gs.equips.source == 'logic', '确定事件应走确定面写'
+    assert gs.strategy_conditional_done.value == ('钻石商人',), '闩未落'
+    pair = [c for c in calls
+            if c[1] in ('equips', 'strategy_conditional_done')]
+    assert [c[1] for c in pair] == ['equips', 'strategy_conditional_done'], \
+        f'发放两笔相邻写: {[c[:3] for c in calls]}'
+    assert pair[0][2] == f'{_LATCH_EV}#equip', '发放 evidence(#equip 链)'
+    assert pair[1][2] == _LATCH_EV, '闩 evidence(基串)'
+    assert all(c[3] == _SIG_STRAT for c in pair), '同 sig(logic_hook 族)'
+    assert all(c[4] == 'strategy_level_equip_grant' for c in pair), \
+        'producer 专名(家族纪律)'
+    # 次序:level 观察(覆盖写端)严格先于发放两笔
+    idx_level = next(i for i, c in enumerate(calls) if c[1] == 'level')
+    assert idx_level < calls.index(pair[0]), \
+        f'接线次序漂移(发放必须在结算覆盖后): {calls}'
+    # live 零回调(锁 8 live 半):三联动域零写零观察(逻辑侧禁写,
+    # 联动归观察域识别器;底座种子值调用前后零变化)
+    touched = [c for c in calls if c[1] in ('diamond_count', 'deploy_cap',
+                                            'back_layout')]
+    assert touched == [], f'live 出现联动域写: {touched}'
+    assert (gs.diamond_count.value, gs.deploy_cap.value, gs.back_layout.value) \
+        == coupling_before, 'live 联动域值漂移(应零回调)'
+
+
+def test_strategy_level_grant_skipped_when_level_asset_none(
+        test_context, monkeypatch) -> None:
+    """门控锁:结算 level 资产 None(覆盖写端跳过 level 观察口径)→ 不调
+    不写——门控与覆盖写端同口径,防「读不到硬判」误发。流达证明 =
+    同段持续伤害检查(dot)被调到(门控位前最后一段),kernel 检查腿
+    记录器零调用。"""
+    op = _make_op(test_context, monkeypatch, [_outcome(killed=True)])
+    gs = game_state_of(test_context.cw_match.session)
+    gs.observe(gs.active_strategies, ['钻石商人'], sig=_SIG_OBS)
+    gs.observe(gs.equips, [], sig=_SIG_OBS)
+    _stub_settlement_assets(monkeypatch, level=None)
+    monkeypatch.setattr(bw_mod, 'read_settle_interest_panel',
+                        lambda ctx, screen: [])
+    from sr_od.application.currency_war.kernel import cw_env_grants as _grants
+    from sr_od.application.currency_war.kernel import cw_gain_chain as _gc
+    reached: list[str] = []
+    monkeypatch.setattr(_grants, 'check_env_dot_grants',
+                        lambda *a, **k: reached.append('dot'))
+    kernel_calls: list = []
+    monkeypatch.setattr(_gc, 'check_strategy_level_equip_grants',
+                        lambda gs_, sig: kernel_calls.append(sig))
+
+    op._record_round_outcome(_FRAME)
+
+    assert reached == ['dot'], '前置:结算覆盖段未走到装备腿门控位(块中断)'
+    assert kernel_calls == [], 'level 资产 None 门控失效(误调检查腿)'
+    assert gs.equips.value == [], '门控窗误发放'
+    assert gs.strategy_conditional_done.value in (None, ()), '门控窗误闩'
