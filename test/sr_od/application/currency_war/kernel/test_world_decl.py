@@ -207,6 +207,9 @@ def test_advance_trigger_out_of_set_raises():
         backend.advance(WorldDecl(next_screen='货币战争-备战',
                                   trigger='box_pick'))
     assert '' in ADVANCE_TRIGGER_KINDS
+    # battle_skip = 免战跳过声明键(免战牌建模批;封闭集扩展,对账机制
+    # 免费覆盖,键集漂移即本断言红)
+    assert 'battle_skip' in ADVANCE_TRIGGER_KINDS
     backend.advance(WorldDecl(next_screen='货币战争-备战', trigger=''))
 
 
@@ -278,24 +281,83 @@ def test_start_battle_decl_table_row3():
 
 
 def test_start_battle_decl_skip_substate_exit():
-    """表 #3 免战跳过出口测试:skip_substate 上报(递减出口)声明与常规
-    出口逐位一致(构造义务覆盖全部 applied 出口,详设 world-decl.md
-    §1)。"""
+    """表 #3 免战跳过出口测试(免战牌建模批):skip_substate 上报声明 =
+    (跳过后下一节点窗稳态屏, battle_skip)——推导逐分支对照(生效序位 →
+    后继序位 → 窗稳态屏,规则族 = window_stable_screen_now 对后继求值):
+    (1,3)→(1,4) 战斗 = 开商店档;(1,4)→(1,5) 补给 = 补给档;(3,7) 真值
+    表末 = 局终事件式 ''。递减出口随声明携带(session 在场且已登记,次数
+    2→1);声明分支按 op 点击事实、不随递减簿记成败回改——无 session
+    (递减缺席)同声明,防 sim 照打战斗与实机分叉。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         game_state_of,
     )
     from sr_od.application.currency_war.kernel.cw_investments import (
         STRATEGY_EFFECTS,
     )
-    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     session = SimpleNamespace()
     game_state_of(session).effects.register_strategy(
         STRATEGY_EFFECTS['免战牌'], acquired_key=None)
+    # 递减出口(仅首 case 带 session,次数 2→1):锚 (1,3) → 后继 (1,4)
+    # 战斗 → 开商店档
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    observe_node_anchor(gs, (1, 3), trigger_screen='货币战争-备战',
+                        actor='WorldDeclTest')
     out = report_action_start_battle_param(
         gs, SimpleNamespace(), _SIG, session=session, skip_substate=True)
     assert out.applied
-    assert out.world_decl == WorldDecl(next_screen='货币战争-结算',
-                                       trigger='battle_resolve')
+    assert out.world_decl == WorldDecl(next_screen=SCREEN_SHOP_PANEL,
+                                       trigger='battle_skip')
+    entry = game_state_of(session).effects.first(
+        STRATEGY_EFFECTS['免战牌'].id)
+    assert entry is not None and entry.remaining_uses == 1, \
+        '递减未随跳过声明出口发生(2→1)'
+    # 推导其余分支(不带 session,零递减):(1,4)→(1,5) 补给 = 补给档;
+    # (3,7) 真值表末 = 局终事件式 ''
+    for anchor_pos, expected_screen in (
+            ((1, 4), '货币战争-补给'),
+            ((3, 7), ''),
+    ):
+        gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+        observe_node_anchor(gs, anchor_pos, trigger_screen='货币战争-备战',
+                            actor='WorldDeclTest')
+        out = report_action_start_battle_param(
+            gs, SimpleNamespace(), _SIG, skip_substate=True)
+        assert out.applied
+        assert out.world_decl == WorldDecl(next_screen=expected_screen,
+                                           trigger='battle_skip'), \
+            f'anchor={anchor_pos} 跳过声明漂移: {out.world_decl}'
+    # 递减簿记缺席(session=None)同声明:跳过事实按点击事实上报
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    observe_node_anchor(gs, (1, 3), trigger_screen='货币战争-备战',
+                        actor='WorldDeclTest')
+    out = report_action_start_battle_param(
+        gs, SimpleNamespace(), _SIG, skip_substate=True)
+    assert out.applied
+    assert out.world_decl == WorldDecl(next_screen=SCREEN_SHOP_PANEL,
+                                       trigger='battle_skip')
+
+
+def test_start_battle_decl_skip_plane_first_synthetic():
+    """免战跳过声明位面首特例(合成序列单测形态):真实序列下不可达
+    ——后继为位面首 ⇔ 被跳节点是前位面末节点 = boss,跳过辖域不含
+    boss(三位面均 boss 收尾)。合成位面 1 = 单战斗节点收尾后,(1,1)
+    战斗的后继 = (2,1) 位面首 → 声明 = 位面过渡屏(与 node_advance
+    推导同族,禁 SETTLE 类回退)。"""
+    from sr_od.application.currency_war.kernel.cw_node_schedule import (
+        resolve_plane_node_seqs,
+    )
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    seqs = resolve_plane_node_seqs('')
+    seqs[1] = ('battle',)
+    gs.write_logic(gs.node_seq_by_plane, seqs, produced_by='WorldDeclTest',
+                   sig=_SIG)
+    observe_node_anchor(gs, (1, 1), trigger_screen='货币战争-备战',
+                        actor='WorldDeclTest')
+    out = report_action_start_battle_param(
+        gs, SimpleNamespace(), _SIG, skip_substate=True)
+    assert out.applied
+    assert out.world_decl == WorldDecl(next_screen='货币战争-位面过渡',
+                                       trigger='battle_skip')
 
 
 def _gs_with_encounter_payload() -> GameState:

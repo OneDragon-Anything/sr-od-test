@@ -12,9 +12,9 @@ _on_node_advance / _on_node_advance_terminal 双点接线段;kernel 检查腿
   财富宝钻数 / back_layout +1(on_diamond_acquired 经 sim 接线调用);
 - 休眠边界(锁 9,数值口径):节点经验合计 70 固化(NODE_XP_BY_TYPE ×
   PLANE_NODE_TABLES)+ 即时腿注册面上界 < 3→9 级累计门槛 194、封顶
-  7 级——常量/注册行变更使 9 级可达时本锁先红 = 触发边界重申报;
+  8 级——常量/注册行变更使 9 级可达时本锁先红 = 触发边界重申报;
   即时腿键集显式扩集制(新增即时腿 = 红 → 休眠上界随批重申报;
-  免战牌 +30 经 STRATEGY_EFFECTS 通道在注册面外,合计 134 仍 < 194)。
+  免战牌 +30 入注册面随批重申报,合计 134 仍 < 194)。
 
 驱动形态复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py 与
 同目录 test_p3_win_terminal.py(在册先例,禁追加只 import;整局驱动
@@ -212,9 +212,9 @@ def test_dormant_boundary_numeric() -> None:
     """休眠边界数值锁(锁 9):节点经验合计 70 固化(NODE_XP_BY_TYPE ×
     PLANE_NODE_TABLES 全三位面)+ 即时腿注册面(STRATEGY_ECONOMY
     xp_instant>0,键集显式扩集制)上界 < 3→9 级累计门槛 194、派生封顶
-    恰 7 级——常量/注册行变更使上界 ≥ 门槛时本锁先红 = 触发边界重申报
-    (防静默激活;免战牌 +30 经 STRATEGY_EFFECTS 通道在注册面外,合计
-    134 仍 < 194,余量见断言消息)。"""
+    恰 8 级——常量/注册行变更使上界 ≥ 门槛时本锁先红 = 触发边界重申报
+    (防静默激活;免战牌 +30 入注册面随批重申报,合计 134 仍 < 194,
+    余量见断言消息)。"""
     node_xp_total = sum(NODE_XP_BY_TYPE[k]
                         for seq in PLANE_NODE_TABLES.values() for k in seq)
     assert node_xp_total == 70, \
@@ -224,7 +224,7 @@ def test_dormant_boundary_numeric() -> None:
                for name, eff in STRATEGY_ECONOMY.items()
                if eff.xp_instant > 0}
     assert instant == {'伟大征服': 12, '成长的快乐': 4, '经验到账': 10,
-                       '气氛组+': 8}, \
+                       '气氛组+': 8, '免战牌': 30}, \
         f'即时腿注册面扩集: {instant} —— 新即时腿 = 休眠上界随批重申报'
     bound = node_xp_total + sum(instant.values())
     threshold_9 = sum(XP_TO_NEXT_LEVEL[lv] for lv in range(3, 9))
@@ -241,6 +241,6 @@ def test_dormant_boundary_numeric() -> None:
             reach = lv + 1
         else:
             break
-    assert reach == 7, \
-        f'封顶等级漂移: {reach} != 7 —— 上界 {bound} 可达 {reach} 级,' \
+    assert reach == 8, \
+        f'封顶等级漂移: {reach} != 8 —— 上界 {bound} 可达 {reach} 级,' \
         f'休眠口径重申报'

@@ -214,6 +214,24 @@ def test_great_conquest_single_pick_grant_12() -> None:
         uninstall_backend()
 
 
+def test_mianzhanpai_single_pick_grant_30() -> None:
+    """免战牌单选(锁 5 辖域成员,+30;免战牌建模批):xp_instant 注册行
+    落地后字段分派通用腿自动覆盖(非单卡特判),独立 evidence 笔——
+    同时锁条目 payload 与 STRATEGY_ECONOMY 注册行同实例(改回内联或
+    换值即红)。30 > 5 级门槛 20 → 跨级结转形态(level 6,余 10)。"""
+    b = _backend(seed=38)
+    try:
+        gs = b.gs
+        _drive_to_offer(b)
+        _seed_level_xp(gs, 5, 0)
+        _pick(b, '免战牌', ['免战牌', '躺平', '淘金客'])
+        assert gs.level.value == 6
+        assert gs.xp.value == (10, XP_TO_NEXT_LEVEL[6])
+        assert gs.xp.evidence == _XP_EV_PREFIX + '免战牌'
+    finally:
+        uninstall_backend()
+
+
 def test_replay_advance_zero_double_grant() -> None:
     """重放防双发(锁 6):同 offer 落地 advance 重放一次 → 第二次零写
     (呈现闩已消费;无新呈现不再置位)。"""
