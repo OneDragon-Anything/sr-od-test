@@ -1338,11 +1338,11 @@ def test_on_strategy_gained_advisor_unlock() -> None:
 def test_on_strategy_gained_unregistered_quiet() -> None:
     """未收录卡:查无效果安静不写(gain-chain §3 裁定④);效果表键集 =
     骇客单行 + 五箱分支卡 + 援军族 + 随机简易装备族 + 组合卡(武装支援/
-    武装支援+) + 具名装备授予族(全员晋升/无伤通关) + 具名角色发放族
-    (溜佩佩/溜佩佩+/招财狗) + 策略延时 offer 族 + 策略延时发放族(箱腿/援军/
-    随机简易装备/具名角色条目由工厂自各自生成表生成,组合卡直书登记行由
-    组合子组合双腿,具名装备授予直书登记行由具名装备工厂生成闭包,延时
-    offer/延时发放条目由工厂自 STRATEGY_DELAYED_OFFERS/
+    武装支援+) + 具名装备授予族(全员晋升/无伤通关/星星相印) + 具名角色
+    发放族(溜佩佩/溜佩佩+/招财狗) + 策略延时 offer 族 + 策略延时发放族
+    (箱腿/援军/随机简易装备/具名角色条目由工厂自各自生成表生成,组合卡
+    直书登记行由组合子组合双腿,具名装备授予直书登记行由具名装备工厂生成
+    闭包,延时 offer/延时发放条目由工厂自 STRATEGY_DELAYED_OFFERS/
     STRATEGY_DELAYED_GRANTS 派生;键集断言 = 现役注册全集,新卡注册随批
     +键)。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
@@ -1351,8 +1351,8 @@ def test_on_strategy_gained_unregistered_quiet() -> None:
     assert set(PICK_INVEST_EFFECTS) == {
         '骇客专家:银狼', '战术义眼++', '保守派', '快请专家·彩', '二费援军',
         '三费援军', '四费援军', '扩充团队', '打捞人才库+', '武装支援',
-        '武装支援+', '全员晋升', '无伤通关', '黄金期货', '黄金期货+',
-        '军火贸易', '军火贸易+', '人才激励', '人才激励+',
+        '武装支援+', '全员晋升', '无伤通关', '星星相印', '黄金期货',
+        '黄金期货+', '军火贸易', '军火贸易+', '人才激励', '人才激励+',
         '溜佩佩', '溜佩佩+', '招财狗'}
     gs = _make_gs(bench=[('希儿', 1)], equips=[])
     seq_before = gs.write_seq
