@@ -227,11 +227,11 @@ class TestWindowLifecycle:
         sess = _sess()
         sell_gate.register_launch(sess, _FUEL, cause='press', round_num=3)
         assert _FUEL in sell_gate.sell_exclusions(
-            sess, (), channel='funding', current_round=3)
+            sess, (), channel='m4_fuel', current_round=3)
         assert _FUEL in sell_gate.sell_exclusions(
             sess, (), channel='interest', current_round=3)
         assert _FUEL not in sell_gate.sell_exclusions(
-            sess, (), channel='funding', current_round=4)
+            sess, (), channel='m4_fuel', current_round=4)
         # current_round=None ⇒ 窗口段失效(放行向;身份段退役后排除面
         # = 空集——本帧无 fresh/seed 登记,自治读面恒空)
         assert sell_gate.sell_exclusions(

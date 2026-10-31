@@ -132,12 +132,15 @@ class TestSceneClosedSet:
             evaluate_sell_candidates(gs, 'bogus_scene')
 
     def test_retired_scene_rows_absent(self):
-        """退役场景行零残留(3.2/3.4):shop_swap 随席满置换账被六步流程
-        整段替换退役(3.2,dismantle §2);c1_make_room 随 C1 支拆除
-        (3.4,dismantle §2 场景死行);deploy_swap 冻结遗留路径随旧价值
-        函数退役(3.4——部署换人域判据本体 = kernel 直接消费,不经本
-        评估器,生产零消费面)。"""
-        for scene in ('shop_swap', 'c1_make_room', 'deploy_swap'):
+        """退役场景行零残留(3.2/3.4/阶段 3):shop_swap 随席满置换账被
+        统一获取让位评估整段替换退役(3.2,dismantle §2);c1_make_room
+        随 C1 支拆除(3.4,dismantle §2 场景死行);deploy_swap 冻结遗留
+        路径随旧价值函数退役(3.4——部署换人域判据本体 = kernel 直接
+        消费,不经本评估器,生产零消费面);session_funding 随统一获取
+        让位评估收编退役(roster-plane1-union design §2.2 第 4 项:
+        金不足与席满同一评估,禁再立筹资/凑金/腾位类场景)。"""
+        for scene in ('shop_swap', 'c1_make_room', 'deploy_swap',
+                      'session_funding', 'levelup_liquidate_prep'):
             assert scene not in SCENE_SPECS, scene
 
 
@@ -159,8 +162,7 @@ class TestUnifiedSequence:
         """无场景专属池子【拍】:常规面各场景同帧同池,场景间无池差分;
         部署定型内(填充件)= 档 1 不进输出,备战位件按统一序列让位。"""
         sess, gs = self._pool_gs()
-        for scene in ('ore_make_room', 'session_funding',
-                      'node_end_interest'):
+        for scene in ('ore_make_room', 'node_end_interest'):
             cands, why = evaluate_sell_candidates(gs, scene)
             assert why == '', scene
             # 身份段已随 3.4 退役:候选成员瓦尔特不再被义务基座排除,
@@ -323,7 +325,7 @@ class TestIdentitySegmentRetired:
         """registry 核心件(希儿)入常规面候选(身份段退役——核心件
         保护改由档位结构承载:锁定线成员 = 档 2/3/5 殿后)。"""
         gs = self._locked_gs(['希儿', '佩拉'])
-        cands, why = evaluate_sell_candidates(gs, 'session_funding')
+        cands, why = evaluate_sell_candidates(gs, 'ore_make_room')
         assert why == ''
         assert '希儿' in _names(cands)
 
@@ -407,7 +409,7 @@ class TestEmptyBoardGuard:
         """deployed = 0 帧全部卖出场景哑火(prep_pipeline §1 第 0 步
         as-built 申报:守卫语义不收窄;拒因键与 sell_gate 单一源同键)。"""
         sess, gs = _mk_gs(bench=[cw4_bc('停云'), cw4_bc('卡芙卡')])
-        for scene in ('self_rescue', 'ore_make_room', 'session_funding',
+        for scene in ('self_rescue', 'ore_make_room',
                       'node_end_interest'):
             cands, why = evaluate_sell_candidates(gs, scene)
             assert cands == (), scene
@@ -420,13 +422,15 @@ class TestEmptyBoardGuard:
 class TestSceneTableParams:
 
     def test_scene_table_covers_legacy_channels(self):
-        """通道谱系行完整性:凑息→节末凑息 / 筹资→会话内筹资 / m4_fuel
-        →晶矿;line_switch/projection 不进评估器场景表;shop_swap(3.2)/
+        """通道谱系行完整性:凑息→节末凑息 / m4_fuel→晶矿;
+        line_switch/projection 不进评估器场景表;shop_swap(3.2)/
         c1_make_room、deploy_swap(3.4)已随退役删除;levelup_liquidate_prep
         已随凑金链整删退役(用户裁定 2026-10-30:不存在升级卖牌凑金,
-        保持最大压牌库,钱够了再升——金不足帧恒 defer 零卖出)。"""
+        保持最大压牌库,钱够了再升——金不足帧恒 defer 零卖出);
+        session_funding 与 funding 通道已随统一获取让位评估收编退役
+        (roster-plane1-union design §2.2 第 4 项:金不足与席满同一
+        评估,场景/通道/专属计数整链删除)。"""
         assert SCENE_SPECS['node_end_interest'].legacy_channel == 'interest'
-        assert SCENE_SPECS['session_funding'].legacy_channel == 'funding'
         assert SCENE_SPECS['ore_make_room'].legacy_channel == 'm4_fuel'
         assert 'line_switch' not in {s.legacy_channel for s in
                                      SCENE_SPECS.values()}
@@ -439,7 +443,9 @@ class TestSceneTableParams:
         for spec in SCENE_SPECS.values():
             if spec.legacy_channel is not None:
                 assert spec.legacy_channel in SELL_CHANNELS
-        assert len(SELL_SCENARIOS) == 4   # 三触发四场景(凑金行整删后)
+        assert 'funding' not in SELL_CHANNELS, \
+            'funding 通道随筹资场景退役,闭集零残留'
+        assert len(SELL_SCENARIOS) == 3   # 三触发三场景(闭集 5→3 收口)
 
     def test_interest_scene_carries_cross_tier_param(self):
         """跨档止盈 = 节末凑息独有场景参数(acquisition §3 表):其余
@@ -453,11 +459,12 @@ class TestSceneTableParams:
         """通道闭集锚:FACE_REGULAR 通道逐一点名(SCENE_SPECS 闭集派生)
         ——新增常规面通道会撑破本清单(shop_swap 已随置换账替换退役
         〔3.2〕;c1_make_room/deploy_swap 已随身份段/旧价值函数退役
-        删除〔3.4〕;levelup_liquidate_prep 已随凑金链整删退役)。"""
+        删除〔3.4〕;levelup_liquidate_prep 已随凑金链整删退役;
+        session_funding 已随统一获取让位评估收编退役〔roster-plane1-
+        union design §2.2 第 4 项〕)。"""
         regular = {s for s, spec in SCENE_SPECS.items()
                    if spec.face == FACE_REGULAR}
-        assert regular == {'ore_make_room', 'session_funding',
-                           'node_end_interest'}
+        assert regular == {'ore_make_room', 'node_end_interest'}
 
 
 # ============================================================

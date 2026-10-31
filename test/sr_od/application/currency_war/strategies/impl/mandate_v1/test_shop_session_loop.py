@@ -240,8 +240,10 @@ class TestGoldLedgerProtocol:
         assert st.gold_ledger == 58
 
     def test_multisell_gap_uses_ledger_no_reopen(self):
-        """多卖循环第二笔起账面判缺口(§4.2 协议④):筹资序列逐笔卖出
-        期间零开店动作(禁逐笔重读;session_funding 卖到缺口闭合)。
+        """多卖循环第二笔起账面判缺口(§4.2 协议④):让位序列逐笔卖出
+        期间零开店动作(禁逐笔重读;统一获取让位卖到缺口闭合——阶段 3
+        起原 session_funding 取用并入 acquire_swap 键族,reason 同款
+        统一为 'shop_swap')。
         构帧 = 板满(场前排 3 件铺满 cap):备战位燃料件全部为部署外
         (统一序列前置 = 部署重排定型,空位帧备战件会被 M1 补位收进
         部署需要面而整体 sheltered,筹资无候选)。"""
@@ -272,7 +274,9 @@ class TestGoldLedgerProtocol:
             '会话内筹资序列禁逐笔开店重读'
         sells = [a for a in acts if isinstance(a, CwActionSellBenchParam)]
         buys = [a for a in acts if isinstance(a, CwActionBuyCardParam)]
-        assert len(sells) >= 2 and sells[0].reason == 'session_funding'
+        assert len(sells) >= 2 and sells[0].reason == 'shop_swap', \
+            '统一获取让位收编后取用 reason = shop_swap(旧 session_' \
+            'funding 键停产)'
         assert buys and buys[0].card.name == _MEMBER, \
             '凑够即买(缺口闭合后下一帧买入接手)'
 
@@ -485,41 +489,54 @@ def _skip_member(name: str) -> bool:
 class TestReopenTriggers:
 
     def _close_with_gold_short(self, live, sess, gs, st, *, name, price):
-        """金不足收工:金 < 价 ∧ bench 空仓(筹资无候选)→ 记录
-        gold_short 机会清单 + 收工关店(§4.2 清单闭环的写入端)。"""
+        """金不足收工(阶段 3 分键后形态):金 < 价 ∧ 让位池无可行件
+        (板上件 ∈ 部署定型档 1 不入池,X 自己 = 排序末位)→ 记录
+        priority_insufficient_gold 机会清单(带三字段解拦载荷)+ 收工
+        关店(§4.2 清单闭环的写入端;roster-plane1-union design §2.2
+        第 4 项步 6 分键)。"""
         act = live.decide_shop_action()
         assert isinstance(act, CwActionCloseShopParam), act
-        assert any(r.card_name == name and r.blocked_by == 'gold_short'
-                   for r in st.shop_opportunities), \
-            f'金不足机会清单记录缺席: {st.shop_opportunities}'
+        rec = next((r for r in st.shop_opportunities
+                    if r.card_name == name), None)
+        assert rec is not None and \
+            rec.blocked_by == 'priority_insufficient_gold', \
+            f'金不足机会清单记录缺席/分键失真: {st.shop_opportunities}'
+        assert rec.gold_snapshot is not None and rec.gold_gap is not None \
+            and rec.shelf_signature is not None, '解拦分轴三字段缺失'
         assert st.shop_handled is not None
         return act
 
     # (席位空出解拦的六步流程形态测试 = shop/test_acquire_swap.py 的
     # test_priority_insufficient_unblocks_on_seat_freed——bench_full 拦因
     # 写端已随置换账替换退役(3.2),新拦因 priority_insufficient 的
-    # 解拦复核分支在该专测承载;本类保留金位解除/读数开门两形态。)
+    # 解拦复核分支在该专测承载;本类保留金位解除/读数开门两形态——
+    # 阶段 3 起金不足语境记录 priority_insufficient_gold,解拦轴 =
+    # 金位增量 ≥ 缺口绝对值,同帧内验证。)
 
     def test_gold_released_reopens_session(self):
-        """金位解除解拦(义务件破息豁免形态):金不足记录 + 账面达
-        解除线 → 解拦(义务类金不足入清单合法,解拦购买允许破息)。"""
+        """金位解除解拦(义务件破息豁免形态):金不足记录 + 账面相对
+        记录快照增量 ≥ 缺口绝对值 → 解拦(义务类金不足入清单合法,
+        解拦购买允许破息;阶段 3 分轴 = priority_insufficient_gold
+        的金位增量轴)。"""
         live, sess, gs, st = _frame(gold=1, node_kind='reward',
                                     bench=[],
                                     deployed=[_fuel(3)[0]],
                                     shop_cards=[(_MEMBER, 3, 1)])
         self._close_with_gold_short(live, sess, gs, st,
                                     name=_MEMBER, price=3)
-        # 账面不足:不解拦。
+        # 账面增量 1(2 − 1) < 缺口 2:不解拦。
+        st.gold_ledger = 2
         assert entry._step4_shop_session_pending(sess, gs) is False
-        # 节点收入进账(账面 5 ≥ 价 3):解拦。
-        st.gold_ledger = 5
-        gs.write_logic(gs.gold, 5, produced_by='cw-36-loop',
+        # 节点收入进账(账面 4:增量 3 ≥ 缺口 2):解拦。
+        st.gold_ledger = 4
+        gs.write_logic(gs.gold, 4, produced_by='cw-36-loop',
                        sig=_LOGIC_SIG)
         assert entry._step4_shop_session_pending(sess, gs) is True
 
     def test_gold_short_stale_ledger_read_opens(self):
-        """读数开门形态(路径③):金不足记录在场 ∧ 账面失效 → 第 4 步
-        开店读金(标记不动——锚定后标记门即关,下帧复核继续)。"""
+        """读数开门形态(路径③):金不足类记录在场 ∧ 账面失效 → 第 4 步
+        开店读金(标记不动——锚定后标记门即关,下帧复核继续;
+        priority_insufficient_gold 与 gold_short 同走 need_gold_read)。"""
         live, sess, gs, st = _frame(gold=1, node_kind='reward',
                                     bench=[],
                                     deployed=[_fuel(3)[0]],
@@ -552,6 +569,37 @@ class TestReopenTriggers:
         act2 = live2.decide_shop_action()
         assert isinstance(act2, CwActionCloseShopParam)
         assert st2.shop_handled is not None
+
+    def test_signature_axis_drops_on_new_face(self):
+        """签名轴(阶段 3 重开店帧首评;S7-5——关门态读不到货架,签名
+        对比在开店后首帧):priority_insufficient_gold 记录的货架签名
+        ≠ 当前牌面(刷新/换货架)→ 记录销项(新货架必重评,买入臂照常
+        自评);签名相同 → 记录保持。"""
+        live, sess, gs, st = _frame(gold=1, node_kind='reward',
+                                    bench=[],
+                                    deployed=[_fuel(3)[0]],
+                                    shop_cards=[(_MEMBER, 3, 1)])
+        self._close_with_gold_short(live, sess, gs, st,
+                                    name=_MEMBER, price=3)
+        # 同货架重进(刷新重进/读数重开形态):签名相同 → 记录保持。
+        st.cw4_segment_serial += 1
+        live.decide_shop_action()
+        assert any(r.card_name == _MEMBER
+                   and r.blocked_by == 'priority_insufficient_gold'
+                   for r in st.shop_opportunities), \
+            '同货架帧签名轴不得销项'
+        # 新货架形态(节点边界后新牌面;此处以签名字段不等模拟换货架
+        # ——轴语义 = 签名对比现读):记录销项。
+        from dataclasses import replace
+        _kept = tuple(
+            replace(r, shelf_signature=('别的牌面',))
+            if r.blocked_by == 'priority_insufficient_gold' else r
+            for r in st.shop_opportunities)
+        st.shop_opportunities = _kept
+        dropped = shop_sess.shop_recheck_face_signature(gs)
+        assert dropped >= 1, f'新货架签名轴应销项: {dropped}'
+        assert not [r for r in st.shop_opportunities
+                    if r.blocked_by == 'priority_insufficient_gold']
 
 
 # ============================================================ 升级意图出口
@@ -927,8 +975,10 @@ def _frame_interest_sell():
 
 
 def _frame_funding_support_sell():
-    """筹资形态(主路径):缺员在店 + 金不足 + bench 活期件在场 →
-    会话内筹资卖出(session_funding;凑够即买下一帧接手)。"""
+    """金不足让位形态(主路径;阶段 3 语义):缺员在店 + 金不足 +
+    bench 活期件在场 → 统一获取让位卖出(reason = shop_swap;凑够
+    即买下一帧接手——原 session_funding 取用已并入 acquire_swap
+    键族)。"""
     fuels = _fuel_names(8, exclude=(_fuel_names(1)[0],))
     return _frame_session(
         bench_units=fuels,
@@ -983,17 +1033,16 @@ def test_shop_forms_stay_in_reordered_action_face(case: str):
 
 @pytest.mark.parametrize('case', sorted(_SELL_FIRST_FORMS))
 def test_bench_blocked_forms_sell_in_shop(case: str):
-    """席满/缺金形态的店内卖出测试:席满六步流程置换(优先级末位让路)
-    与筹资(session_funding)首动作 = CwActionSellBenchParam,
-    「关店→备战卖→重开」腾位链废止——帧内一步完成,不再产生
-    wanted 残差跨段状态(S2 机器退役)。"""
+    """席满/缺金形态的店内卖出测试:席满置换(优先级末位让路)与
+    金不足让位首动作 = CwActionSellBenchParam,「关店→备战卖→重开」
+    腾位链废止——帧内一步完成,不再产生 wanted 残差跨段状态(S2 机器
+    退役;阶段 3 起两形态取用 reason 统一 = shop_swap)。"""
     strategy, sess, config = _FORM_FRAMES[case]()
     action = strategy.decide_shop_action()
     assert type(action).__name__ == 'CwActionSellBenchParam', (
         f'{case} 席满/缺金形态首动作 {type(action).__name__} 非店内卖出'
-        '(六步流程置换/筹资未接产)')
-    assert action.reason in ('shop_swap', 'session_funding'), \
-        action.reason
+        '(统一获取让位未接产)')
+    assert action.reason == 'shop_swap', action.reason
     # (原 wanted 残差断言已随 S2 字段族退役删除——批 3.7 死码清理,
     #  会话循环无跨段残差形态。)
 
@@ -1033,17 +1082,22 @@ def action_income(act) -> int:
 
 
 def test_funding_exhausted_records_opportunity():
-    """筹资穷尽形态:缺员在店 + 金不足 + bench 空仓 → 候选穷尽,该牌进
-    未消费机会清单(拦因 = 金不足),收工关店(读数协议 §4.2 清单闭环;
-    P78-5 兜底豁免已随身份段退役删除,穷尽 = 诚实停摆)。"""
+    """金不足穷尽形态(阶段 3 分键后语义):缺员在店 + 金不足 + 让位池
+    无可行件(bench 空仓,板上件 ∈ 部署定型档 1 不入池 → X 自己 =
+    排序末位)→ 放弃买入,该牌进未消费机会清单(拦因 =
+    priority_insufficient_gold,带三字段解拦载荷),收工关店(读数协议
+    §4.2 清单闭环;roster-plane1-union design §2.2 第 4 项步 6——旧
+    session_funding 键族停产,池穷尽不可足的 gold_short 分键由
+    shop/test_acquire_yield 的池穷尽用例承载)。"""
     strategy, sess, config = _frame_funding_exhausted()
     action = strategy.decide_shop_action()
     assert type(action).__name__ == 'CwActionCloseShopParam'
     st = state_of(sess)
     ct = st.cw4_counters
-    assert ct.get('session_funding_exhausted', 0) >= 1, \
-        '筹资候选穷尽分键缺席(穷尽后应记录)'
+    assert ct.get('acquire_swap_declined', 0) >= 1, \
+        '末位 = X 放弃分键缺席(统一获取让位拒绝应记录)'
     recs = st.shop_opportunities
-    assert any(r.card_name == _MEMBER and r.blocked_by == 'gold_short'
+    assert any(r.card_name == _MEMBER
+               and r.blocked_by == 'priority_insufficient_gold'
                for r in recs), \
         f'金不足机会清单记录缺席:实际 {recs}'
