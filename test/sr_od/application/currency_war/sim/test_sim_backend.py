@@ -1086,13 +1086,16 @@ def test_strategy_pick_chain_reinforcement_grant() -> None:
 
 
 def test_strategy_pick_chain_random_equip_grant() -> None:
-    """获得链断言:选打捞人才库+ → 简易池均匀采样 1 件入栏(采样效果子链;
-    rng 注入流键,sim 采样即世界真值);同 seed 同流键重放 equips 逐位一致;
-    主腿 unchosen_supply 恒 None(sim 局不种本域 → 检查恒第 2 门早退 =
-    fail-closed 零发放,沿打捞族 T-94 键族语义)。"""
+    """获得链断言(打捞人才库+ 迁移回归重锚):选打捞人才库+ → 简易池均匀
+    采样 1 件入栏(采样效果子链;rng 注入流键,sim 采样即世界真值);同
+    seed 同流键重放 equips 逐位一致;主腿 unchosen_supply 恒 None(sim 局
+    不种本域 → 检查恒第 2 门早退 = fail-closed 零发放,沿打捞族 T-94 键族
+    语义)。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
-        _RANDOM_SIMPLE_EQUIP_POOL,
-        roll_random_simple_equip,
+        roll_random_equip,
+    )
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        equips_by_category,
     )
     stream_key = 'M11/pick/random-equip'
 
@@ -1103,7 +1106,7 @@ def test_strategy_pick_chain_random_equip_grant() -> None:
             b._maybe_finish_wait()
             gs = b.gs
             before = list(gs.equips.value or [])
-            pick = roll_random_simple_equip(stream_rng(7, stream_key))
+            pick = roll_random_equip(stream_rng(7, stream_key), '简易')
             gs.write_logic(gs.invest_strategy_opts,
                            ['打捞人才库+', '躺平', '淘金客'],
                            produced_by='Test', evidence='t:opts', sig=_SIG)
@@ -1112,11 +1115,51 @@ def test_strategy_pick_chain_random_equip_grant() -> None:
                 rng=stream_rng(7, stream_key))
             assert out.applied
             assert '打捞人才库+' in gs.active_strategies.value
-            assert pick in _RANDOM_SIMPLE_EQUIP_POOL, '预验证:采样值 ∈ 池'
+            assert pick in equips_by_category('简易'), '预验证:采样值 ∈ 池'
             assert list(gs.equips.value) == before + [pick], \
                 f'equips 恰 +1 且名 = 流键采样值: {gs.equips.value} vs {pick}'
             assert gs.unchosen_supply.value is None, \
                 '主腿 unchosen_supply 恒 None(sim fail-closed 继承)'
+            return tuple(gs.equips.value)
+        finally:
+            uninstall_backend()
+
+    assert _run_once() == _run_once(), '同 seed 重放确定性(equips 逐位同)'
+
+
+def test_strategy_pick_chain_random_star_equip_grant() -> None:
+    """获得链断言(买彩票,星徽行):选买彩票 → 星徽池均匀采样 1 件入栏
+    (采样效果子链;rng 注入流键,sim 采样即世界真值);同 seed 同流键
+    重放 equips 逐位一致。与打捞人才库+ 锁同构——泛化表 (category, count)
+    两行走同一工厂路径,本锁辖星徽行的 sim 全链接线(零特殊接线申报,
+    双端同链)。"""
+    from sr_od.application.currency_war.kernel.cw_gain_effects import (
+        roll_random_equip,
+    )
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        equips_by_category,
+    )
+    stream_key = 'M11/pick/random-star-equip'
+
+    def _run_once() -> tuple:
+        b = _backend(7)
+        try:
+            b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+            b._maybe_finish_wait()
+            gs = b.gs
+            before = list(gs.equips.value or [])
+            pick = roll_random_equip(stream_rng(7, stream_key), '星徽')
+            gs.write_logic(gs.invest_strategy_opts,
+                           ['买彩票', '躺平', '淘金客'],
+                           produced_by='Test', evidence='t:opts', sig=_SIG)
+            out = report_action_pick_invest_strategy_param(
+                gs, SimpleNamespace(norm_name='买彩票'), _SIG,
+                rng=stream_rng(7, stream_key))
+            assert out.applied
+            assert '买彩票' in gs.active_strategies.value
+            assert pick in equips_by_category('星徽'), '预验证:采样值 ∈ 池'
+            assert list(gs.equips.value) == before + [pick], \
+                f'equips 恰 +1 且名 = 流键采样值: {gs.equips.value} vs {pick}'
             return tuple(gs.equips.value)
         finally:
             uninstall_backend()

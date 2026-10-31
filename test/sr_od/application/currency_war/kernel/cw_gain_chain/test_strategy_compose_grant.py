@@ -6,10 +6,10 @@
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
 T-116-wuzhuang-zhiyuan.md(定稿)§4 锁 1 + REVIEW-T116 六裁决点默认案:
 - 组合登记 = ``PICK_INVEST_EFFECTS['武装支援'] = _compose_grant_legs(
-  _make_random_equip_effect(1), _make_reinforcement_effect(((3, 2),)))``
+  _make_random_equip_effect('简易', 1), _make_reinforcement_effect(((3, 2),)))``
   (腿序 = 卡文语序装备腿先/角色腿后;腿参数登记行单次出现,单一源);
 - 固定 rng 注入链发放真值:rng 消费序 3 抽 = 第 1 抽装备
-  (``roll_random_simple_equip``)+ 第 2/3 抽角色
+  (``roll_random_equip`` 简易池)+ 第 2/3 抽角色
   (``roll_reinforcement_names`` 3 费池放回)——腿序改排即采样名漂移,
   被顺序断言捕获;效果串恰 3 条且顺序固定;
 - 前提守卫:「效果串恒 3 条」前提 = 简易池 ∩ ``EQUIP_ACQUIRE_CONSEQUENCES``
@@ -29,8 +29,7 @@ from sr_od.application.currency_war.kernel.cw_gain_chain import (
     gain_invest_strategy,
 )
 from sr_od.application.currency_war.kernel.cw_gain_effects import (
-    _RANDOM_SIMPLE_EQUIP_POOL,
-    roll_random_simple_equip,
+    roll_random_equip,
     roll_reinforcement_names,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
@@ -46,6 +45,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 )
 from sr_od.application.currency_war.kernel.cw_investments import (
     RandomCharSpec,
+    equips_by_category,
     random_char_pool,
 )
 
@@ -109,17 +109,17 @@ def test_wuzhuang_zhiyuan_compose_legs_chain_in_order(
     # 预采样(独立 rng 实例按消费序 3 抽):与实际注入的 rng 同种子同序,
     # 腿序改排 = 采样名互换,顺序断言必红(改序 = 掷序漂移)。
     rng = random.Random(_COMPOSE_SEED)
-    equip_pick = roll_random_simple_equip(rng)
+    equip_pick = roll_random_equip(rng, '简易')
     char_picks = roll_reinforcement_names(rng, 3, 2)
     # 前提守卫(设计 §4 锁 1 前提注记):破前提时装备获得后果链追加串,
     # 「效果串恒 3 条」失效——守卫先红,勿盲改断言数。
-    assert set(_RANDOM_SIMPLE_EQUIP_POOL) & \
+    assert set(equips_by_category('简易')) & \
         set(EQUIP_ACQUIRE_CONSEQUENCES) == set(), \
         '简易池 ∩ 后果表须为空(效果串恒 3 条前提)'
     assert len(set(char_picks)) == 2, '预验证:本种子 2 抽互异(失配 = 换种子)'
     assert set(char_picks) <= set(random_char_pool(
         RandomCharSpec(cost=3, star=1))), '预验证:角色采样 ⊆ 3 费载体派生池'
-    assert equip_pick in _RANDOM_SIMPLE_EQUIP_POOL, '预验证:装备采样 ∈ 简易池'
+    assert equip_pick in equips_by_category('简易'), '预验证:装备采样 ∈ 简易池'
 
     gs = _make_gs(bench=[], equips=[])
     gs.prep_anchored = True
