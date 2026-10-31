@@ -1,4 +1,4 @@
-"""溜佩佩/溜佩佩+(id 103401/103402)具名角色发放腿锁(镜像 src =
+"""溜佩佩/溜佩佩+/招财狗(id 103401/103402/103501)具名角色发放腿锁(镜像 src =
 kernel/cw_gain_effects.py 的 ``_STRATEGY_CHAR_GRANTS`` + ``_make_char_grant_
 effect`` + ``PICK_INVEST_EFFECTS`` 推导;按被测方法拆目录规范落位——
 test_gain_chain.py 超线冻结禁追加,新增测试落新镜像,先例 = 同目录姊妹
@@ -13,7 +13,7 @@ T-128-liu-peipei.md(定稿)§4 锁 2/3 + REVIEW-T128 七裁决点默认案:
   留证,前缀独立分域可过滤审计);
 - 落位/升星/席满溢出语义全沿链现役:备战空槽落位、席满溢出落位并阻断
   出战(溢出位身份 = 角色名),零新增链为;
-- 名单单一源:``_STRATEGY_CHAR_GRANTS`` 与登记表 STRATEGY_GRANTS 两卡
+- 名单单一源:``_STRATEGY_CHAR_GRANTS`` 与登记表 STRATEGY_GRANTS 三卡
   chars_immediate 逐对相等(两处独立字面量的漂移在备战断言不可见,唯
   此锁 + 落位真值可暴露,箱腿一致性锁同构)。
 """
@@ -83,7 +83,7 @@ def rows_sink() -> _RowSink:
         s.close()
 
 
-@pytest.mark.parametrize('card', ['溜佩佩', '溜佩佩+'])
+@pytest.mark.parametrize('card', ['溜佩佩', '溜佩佩+', '招财狗'])
 def test_char_grant_leg_places_peipei(
         card: str, rows_sink: _RowSink) -> None:
     """腿行为主锁(设计 §4 锁 3):on_strategy_gained 直构(rand=False)
@@ -107,7 +107,7 @@ def test_char_grant_leg_places_peipei(
     assert rows_sink.kinds() == [], '正常路径零申报行'
 
 
-@pytest.mark.parametrize('card', ['溜佩佩', '溜佩佩+'])
+@pytest.mark.parametrize('card', ['溜佩佩', '溜佩佩+', '招财狗'])
 def test_char_grant_leg_bench_full_overflow(
         card: str, rows_sink: _RowSink) -> None:
     """席满分支(链现役语义,角色与道具同款溢出落位):bench 满 9 →
@@ -132,11 +132,11 @@ def test_char_grant_leg_bench_full_overflow(
 
 def test_strategy_char_grants_consistency_lock() -> None:
     """发放名单单一源一致性测试(箱腿 _STRATEGY_BOX_GRANTS 同构):效果体
-    工厂表 _STRATEGY_CHAR_GRANTS 与登记表 STRATEGY_GRANTS 两卡
+    工厂表 _STRATEGY_CHAR_GRANTS 与登记表 STRATEGY_GRANTS 三卡
     chars_immediate 逐对相等(表集同校验,防工厂表扩员而登记面漏登——
     两处独立字面量的名字漂移在备战断言不可见,唯此测试 + 落位真值可
     暴露)。"""
-    assert set(_STRATEGY_CHAR_GRANTS) == {'溜佩佩', '溜佩佩+'}
+    assert set(_STRATEGY_CHAR_GRANTS) == {'溜佩佩', '溜佩佩+', '招财狗'}
     for name, char in _STRATEGY_CHAR_GRANTS.items():
         assert STRATEGY_GRANTS[name].chars_immediate == (char,), \
             f'{name} 效果体发放名与登记表 chars_immediate 漂移'
