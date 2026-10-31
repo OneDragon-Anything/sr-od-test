@@ -158,12 +158,15 @@ def test_cash_gold_next_nodes_r_minus_1_truncation():
 def test_cash_per_node_interest_xp_channels():
     """per-node 流/固定息/XP 双通道(值 = 注册表【注】× R 查表):
     定期福利 = 4 + 2×23;狸财经狸息分支 = 2×23(活计分分支,取款/存款分支
-    待建模不关门——design 申报 7);伟大征服 xp_instant = 12;
+    待建模不关门——design 申报 7);伟大征服 xp_instant = 12;气氛组+ =
+    8(注册行形状一并锁,即时腿骑 apply_strategy_pick_xp 字段分派通道);
     买断制 = 15 + 4×23(xp_per_node 流);XP_GOLD_RATE = 1.0。
     (R 开局 16→23 = P3 行入真值表,2026-10-15 用户裁定联动。)"""
     assert strategy_economy_value('定期福利', _fresh_gs()) == (50.0, True)
     assert strategy_economy_value('狸财经狸', _fresh_gs()) == (46.0, True)
     assert strategy_economy_value('伟大征服', _fresh_gs()) == (12.0, True)
+    assert strategy_economy_value('气氛组+', _fresh_gs()) == (8.0, True)
+    assert STRATEGY_ECONOMY['气氛组+'] == cw_investments.EconomyEffect(xp_instant=8)
     assert strategy_economy_value('买断制', _fresh_gs()) == (107.0, True)
 
 
@@ -532,7 +535,8 @@ def test_field_classification_double_membership_raises(monkeypatch):
 def test_pending_modeling_registry_shape():
     """卡级待建模在册正面形状:5 张辖域派生闭集卡必在册(固定理财/+
     孪生素数/狸财经狸/超发货币,landing ⑥)+ 注册表外经济语义代表例
-    (被动收入/招财狗,design §2.3 处置口径);孪生素数 = 全默认 economy
+    (被动收入/招财狗/气氛组/气氛组+,design §2.3 处置口径——气氛组系
+    条件腿零建模是有意登记非漏登记);孪生素数 = 全默认 economy
     在册条目(③断言的真实对象)。"""
     from sr_od.application.currency_war.kernel.cw_investments import (
         EconomyEffect,
@@ -542,6 +546,8 @@ def test_pending_modeling_registry_shape():
     assert STRATEGY_ECONOMY['孪生素数'] == EconomyEffect()
     assert '被动收入' in strategy_economy.STRATEGY_ECONOMY_PENDING_MODELING
     assert '招财狗' in strategy_economy.STRATEGY_ECONOMY_PENDING_MODELING
+    assert '气氛组' in strategy_economy.STRATEGY_ECONOMY_PENDING_MODELING
+    assert '气氛组+' in strategy_economy.STRATEGY_ECONOMY_PENDING_MODELING
 
 
 def test_pending_modeling_orphan_and_empty_raises(monkeypatch):
