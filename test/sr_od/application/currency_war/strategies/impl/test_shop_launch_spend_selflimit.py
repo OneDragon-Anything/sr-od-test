@@ -118,7 +118,7 @@ def _strategy(monkeypatch, session, decision: dict):
                         lambda gs, state: None)
     monkeypatch.setattr(cw_launch_admission, 'readiness_launch_decision',
                         lambda gs_, comp, *, line_members,
-                        deploy_plan_available_fn: decision)
+                        deploy_pending_fn: decision)
     return strategy
 
 
@@ -267,7 +267,7 @@ def test_restricted_session_normal_path_chain(monkeypatch, tmp_path):
     # armed 判定核脚本化(本文件桩模式;息线/闸判定不桩 = 真实链)。
     monkeypatch.setattr(cw_launch_admission, 'readiness_launch_decision',
                         lambda gs_, comp, *, line_members,
-                        deploy_plan_available_fn: _GREEN)
+                        deploy_pending_fn: _GREEN)
 
     session = StrategySession()
     proposal = CwActionBuyCardParam(card=cw4_card('甲', cost=3))
@@ -363,3 +363,4 @@ def test_restricted_session_normal_path_chain(monkeypatch, tmp_path):
     assert isinstance(act2, CwActionStartBattleParam), \
         '段内已访 → StartBattle 正常发射(旧「访问后照发」跨帧等价)'
     assert state.cw4_launch_spend_visited is True, '段旗保持(失武装才复位)'
+

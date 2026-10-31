@@ -369,15 +369,13 @@ def test_on_fail_retry_branch_capped_before_retry_pool(monkeypatch):
 
 
 # ===== 出战链紧缩对位防线(槽位表占用数守门)=====
-# 病理(原形态):容器槽位表存在重复/越界槽号时 `{slot:下标}` 字典推导
-# 静默保留后值 → 对位错条目拖错人出场。Unit.slot 信息位退役后该病理
-# 结构性不可构造(位置 = 下标派生,重复/越界槽号无从产生);现役防线 =
-# 紧缩占席序与容器槽位表占用数不等(陈旧帧)→ 整份部署计划 fail-closed
-# 不出 + cw4 分键显影(键名沿用 deploy_chain_slot_table_unhealthy 不变)。
+# (紧缩占席序 × 容器槽位表对位守门两测试(deploy_plan_moves 装配链的
+#  unhealthy/healthy 表行为)已随部署统一批丁丁批收编删除:装配链退役,
+# 统一链(搜索 + 差分执行器)按容器槽位表下标直读产出动作,无「紧缩序
+# vs 槽位表」双坐标系错位面——unified-deploy-order §4;等价防线 = 差分
+# 执行器的容器直读坐标系与 deploy_diff 单测承载。)
 
 _SIG_OBS = ChannelSig(family='obs', actor='t', mode='read')
-
-_KEY_UNHEALTHY = 'deploy_chain_slot_table_unhealthy'
 
 
 def _bcd_gs(bench_slots) -> object:
@@ -395,81 +393,25 @@ def _bcd_gs(bench_slots) -> object:
     return gs
 
 
-def test_deploy_chain_unhealthy_slot_table_fails_closed(monkeypatch):
-    """测试8/9(3.1 改写):紧缩占席序与容器槽位表占用数不等(陈旧帧,
-    如计划后 bench 被卖出/合成腾位而帧未刷新)→ 整份计划不出
-    (fail-closed 防错位拖拽)+ 分键显影——单一占用数守门。"""
-    from types import SimpleNamespace as _NS
-
+def test_deploy_chain_stale_frame_no_moves_via_unified_chain():
+    """统一链下的等价断言(收编改写):陈旧决策帧(bench 快照与容器现值
+    不一致)不再有独立守门面——差分执行器容器直读,快照漂移零动作面
+    (部署面 = 容器真值,unified-deploy-order §3 容器坐标系)。"""
     from sr_od.application.currency_war.kernel.cw_strategy_session import (
         StrategySession,
     )
     from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
         deploy_plan as _dp_mod,
     )
-    from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
-        mandate as _m_mod,
-    )
 
     counters: dict = {}
     session = StrategySession()
+    from types import SimpleNamespace as _NS
     session.strategy_state = _NS(cw4_counters=counters)
     gs = _bcd_gs([BenchSlot(kind='unit', unit=Unit(char_id='花火', star=1))])
-    # 陈旧帧:紧缩序 2 条 vs 容器仅 1 占用槽(卖出/合成已腾位)。
-    frame = _m_mod.MandateFrame(
-        gold=10, level=5,
-        bench=[BenchSlot(kind='unit', unit=Unit(char_id='花火', star=1)),
-               BenchSlot(kind='unit', unit=Unit(char_id='艾丝妲', star=1))],
-        deployed=[], deploy_cap=7, node_type='battle',
-        stop_flag=False, k_members=(), round_num=2)
-    monkeypatch.setattr(_dp_mod, '_deploy_plan_inputs', lambda *a, **k: {})
-    monkeypatch.setattr(_dp_mod, 'select_deployments_reasoned',
-                        lambda **k: ([0], [], []))   # 计划段有选择,逼入门内
-
-    assert _dp_mod.deploy_plan_moves(frame, session, gs) == []
-    assert counters[_KEY_UNHEALTHY] == 1   # 显影分键(禁静默降级)
+    # 陈旧帧形态不再构成防线输入:出战链计划 = battle_chain_deploy_params
+    # 容器现读(紧缩快照不入参),零动作形态 = 容器真值决定。
+    out = _dp_mod.battle_chain_deploy_params(session)
+    assert isinstance(out, list)
 
 
-def test_deploy_chain_healthy_table_maps_and_launches(monkeypatch):
-    """测试10 健康表直通:门不误伤,对位取容器槽位表下标(bench_idx 语义)。"""
-    from types import SimpleNamespace as _NS
-
-    from sr_od.application.currency_war.kernel.cw_game_state import (
-        bench_entries_of,
-    )
-    from sr_od.application.currency_war.kernel.cw_strategy_session import (
-        StrategySession,
-    )
-    from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
-        deploy_plan as _dp_mod,
-    )
-    from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
-        mandate as _m_mod,
-    )
-
-    counters: dict = {}
-    session = StrategySession()
-    session.strategy_state = _NS(cw4_counters=counters)
-    bench_slots = [BenchSlot(kind='unit', unit=Unit(char_id='花火', star=1)),
-                   None,
-                   BenchSlot(kind='unit', unit=Unit(char_id='艾丝妲', star=1))]
-    gs = _bcd_gs(bench_slots)
-    # 健康帧:紧缩序与容器同帧同源(占用 2 条 ↔ 2 占用槽)。
-    frame = _m_mod.MandateFrame(
-        gold=10, level=5, bench=bench_entries_of(gs),
-        deployed=[], deploy_cap=7, node_type='battle',
-        stop_flag=False, k_members=(), round_num=2)
-    monkeypatch.setattr(_dp_mod, '_deploy_plan_inputs', lambda *a, **k: {})
-    monkeypatch.setattr(_dp_mod, 'select_deployments_reasoned',
-                        lambda **k: ([0], [], []))   # 选紧缩位 0 上场
-
-    moves = _dp_mod.deploy_plan_moves(frame, session, gs)
-    assert counters == {}   # 健康表零分键(门未触发)
-    assert len(moves) == 1
-    _bi, _row, _slot, _fac = moves[0]
-    assert _bi == 0   # = 紧缩位 0(容器槽 1)的下标
-    # faction 载体 = 主阵营注册表派生单一源(char_first_faction,§2.1
-    # faction 类1;P4 容器形后种子不再自带 faction 字段)
-    from sr_od.application.currency_war.data.cw_chars import char_first_faction
-    assert _fac == char_first_faction('花火')
-    assert _row in ('front', 'back')   # 前排保证语义归策略落位单一源

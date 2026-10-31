@@ -10,20 +10,20 @@
 - **落位策略三级排路由**:comp 站位覆盖 > 注册表派生 > back 兜底;
   后排槽位上限 = back_layout 现值(P2 遗留分歧消除);
 - **必需件语义**(判据必要条件支配论证;sim n1000 s91700 两失败局):
-  required 成员 cap 竞争首桶序 + 板满换入臂(成型折法单一源 =
-  ``form_progress``,OR 组承接);
-- **双轨对锁期换入通道**(2026-09-18 sim 实证:配方对锁局板满帧全
-  plan_empty):转型域方向锁前提推广 / 完成件让位 / 发射门轴①读法;
+  required 成员 cap 竞争首桶序;
 - **残余补部署守卫**(P24 结构支配定理,零自由参数):dup 剔除 /
   cap 满停 / 两排皆满停 / cap=None 不设门 + 配方底线门 kernel 直测;
 - **载荷与执行语义**(P2 拖拽语义落码):(to_row, to_slot) 直落
   反「首空」、目标槽有人 = 交换(写侧/执行链/sim 三面同源);
 - **动作上报单写写序**(合卷契约):一次语义变更 = 恰一次 deployed 写;
   动态容量布局真值辖载荷校验。
+
+(换入臂/双轨对锁期换入通道/发射门三轴测试节已随部署统一批丁丁收编删除:
+kernel swap 机器与三轴门退役,场上去留 = 统一部署搜索定型单属——
+unified-deploy-order §2.7/§4;残余补部署/配方底线门测试随七桶选人
+退役批次处置。)
 """
 from __future__ import annotations
-
-from types import SimpleNamespace
 
 import pytest
 from test.sr_od.application.currency_war._cw_helpers import (
@@ -40,17 +40,7 @@ from sr_od.application.currency_war.kernel.cw_action_report import (
     report_action_swap_deploy_param,
 )
 from sr_od.application.currency_war.kernel.cw_comps import (
-    COMP_LIBRARY,
     get_comp,
-)
-from sr_od.application.currency_war.kernel.cw_deploy_logic import (
-    SwapPlanContext,
-    recipe_floor_holds,
-    required_swap_arm_pending,
-    residual_fill_plan,
-    select_swap_plan,
-    swap_sell_exclusion_reason,
-    xianzhou_supply_exists,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
     BENCH_CAPACITY_DEFAULT,
@@ -68,9 +58,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 from sr_od.application.currency_war.kernel.cw_game_state import (
     deployed_view_sequential as _dvs,
 )
-from sr_od.application.currency_war.kernel.cw_intention import (
-    pair_target_comp,
-)
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionDeployMoveParam,
     CwActionSellDeployedParam,
@@ -80,22 +67,11 @@ from sr_od.application.currency_war.operations.cw_op.cw_deploy_move_action impor
     CwActionDeployMoveOp,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
-    deploy_plan as dp,
-)
-from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
     mandate,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.deploy_plan import (
     deploy_row_pref,
     deploy_slot_plans,
-    select_deployments,
-    select_deployments_reasoned,
-)
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate import (
-    _redeploy_emission_allowed,
-)
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate import (
-    _slot_cid as _slot_cid_of,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
@@ -119,100 +95,12 @@ def _drain_defect_buffer():
     consume_defect_sink()
 
 
-# ============================================================ 部署围栏与占槽物品防线
-
-
-def _unit_slot(slot: int, char_id: str, star: int = 1) -> BenchSlot:
-    """占席单位槽(``slot`` 参数保留签名兼容,位置 = 列表下标)。"""
-    return BenchSlot(kind='unit', unit=Unit(char_id=char_id, star=star))
-
-
-def test_item_slot_candidate_held_with_item_slot_reason() -> None:
-    """占位件候选:不上场、进留置、拒因 item_slot;普通候选不受防线
-    误伤(防线只剔占位件候选,不背 item_slot 拒因)。"""
-    bench = [_unit_slot(1, '甲'),
-             BenchSlot(kind='supply_box', unit=None)]
-    reasons: dict[int, str] = {}
-    up, rest = select_deployments(
-        bench, deployed_cids=set(), deployed_fac={}, board={}, cap=10,
-        reasons_out=reasons)
-    assert 1 not in up, '占槽物品永不进上场集'
-    assert 1 in rest, '占槽物品恒留置(常驻占席)'
-    assert reasons.get(1) == 'item_slot', \
-        f'拒因 = item_slot,实得 {reasons.get(1)!r}'
-    assert 0 in up, '普通候选照常上场'
-    assert reasons.get(0) != 'item_slot', '普通候选不背 item_slot 拒因'
-
-
-# ============================================================ 板满门三个测试(容器现读 + 显式门 + 拒因台账)
-
-
-def _bs_unit(name: str) -> BenchSlot:
-    """容器占席条目(P4 载体迁移:MandateFrame 直构面)。"""
-    return BenchSlot(kind='unit', unit=Unit(char_id=name, star=1))
-
-
-def _full_board_session():
-    """容器 3/3 满板(上阵前 3 人)+ 备战席候选;返回 (session, gs)。"""
-    session = cw4_session(cw4_comp())
-    gs = cw4_gs(session, deploy_cap=3, bench=[cw4_bc('艾丝妲')],
-                front_row=[Unit(char_id='丹恒·饮月', star=1),
-                           Unit(char_id='卡芙卡', star=1),
-                           Unit(char_id='杰帕德', star=1)])
-    return session, gs
-
-
-def _stale_frame(round_num: int = 2):
-    """陈旧决策帧:黑板名单仍是 2 人(缺刚上场的第 3 人)——事故帧形态。
-    P4 容器形:bench = 占席条目,deployed = 行域 Unit。"""
-    return mandate.MandateFrame(
-        gold=10, level=3,
-        bench=[_bs_unit('艾丝妲')],
-        deployed=[Unit(char_id='丹恒·饮月', star=1),
-                  Unit(char_id='卡芙卡', star=1)],
-        deploy_cap=3, node_type=None, stop_flag=False,
-        k_members=(), round_num=round_num)
-
-
-def test_cap_full_stale_frame_emits_nothing():
-    """事故形态测试:容器 3/3 满 + 决策帧黑板 2 人(陈旧)→ 零拖拽发射、放行 False。"""
-    session, gs = _full_board_session()
-    frame = _stale_frame()
-    assert mandate._deployable(frame, session, gs) is False
-    out: list = []
-    mandate._emit_deploy_moves(out, frame, session, gs, 'm1_test')
-    assert out == []
-
-
-def test_cap_roomy_stale_container_still_deploys():
-    """陈旧视图测试:容器 2/3 未满时照常产出部署(换源不改坏正常路径);
-    容器名单为部署输入真值——板满判定读容器而非帧。"""
-    session = cw4_session(cw4_comp())
-    gs = cw4_gs(session, deploy_cap=3, bench=[cw4_bc('艾丝妲')],
-                front_row=[Unit(char_id='丹恒·饮月', star=1),
-                           Unit(char_id='卡芙卡', star=1)])
-    stale = _stale_frame()
-    assert mandate._deployable(stale, session, gs) is True
-    out: list = []
-    mandate._emit_deploy_moves(out, stale, session, gs, 'm1_test')
-    assert len(out) == 1
-
-
-def test_cap_full_counter_frame_dedup():
-    """拒因台账测试:板满帧 → cw4_counters['deploy_cap_full'] 计数,同帧
-    (plane, round) 去重;跨帧(round 推进)再计。"""
-    session, gs = _full_board_session()
-    counters = state_of(session).cw4_counters
-    assert mandate._deploy_cap_full_gate(session, gs, _stale_frame()) is True
-    assert counters.get('deploy_cap_full') == 1
-    # 同帧重复判定(同次备战访问内 M1/M5/wanted 臂多次过门)不再计数
-    assert mandate._deploy_cap_full_gate(session, gs, _stale_frame()) is True
-    assert counters.get('deploy_cap_full') == 1
-    # 轮次推进 = 新帧,再计
-    assert mandate._deploy_cap_full_gate(session, gs, _stale_frame(round_num=3)) is True
-    assert counters.get('deploy_cap_full') == 2
-
-
+# (围栏与占槽物品防线/板满门/必需件 cap 竞争测试节已随部署统一批丁丁批
+#  收编删除:七桶选人族(select_deployments)与 _deployable/_emit_
+#  deploy_moves/_deploy_cap_full_gate 随选人退役,拒因闭集
+#  (item_slot/deploy_cap_full/deploy_emit_held_*)停产——unified-
+#  deploy-order §2/§4;占位件不入目标板 = 搜索段 0 剔除,板满帧部署
+#  由差分执行器交换交互承载,覆盖面归 test_deploy_search.py。)
 # ============================================================ 落位策略三级排路由 + back_layout 槽上限
 
 
@@ -294,446 +182,11 @@ def test_back_layout_extended_value_extends_back_slots() -> None:
         f'扩展局后排空槽达 8 号,实得 {back_slots!r}'
 
 
-# ============================================================ 必需件语义(首桶序 + 板满换入臂)
-
-# 真实注册表角色(断言语义不断言巧合;registry 真值):
-# 桑博 = 贝+持续伤害 / 娜塔莎 = 贝 / 花火 = 量子 / 卡芙卡 = 持续伤害 /
-# 缇宝 = 量子 / 希儿 = 贝+量(required carry)/ 黑天鹅 = 持续伤害 /
-# 三月七 = 列车同行+护盾(fenced,对视野外)。
-_SANGBO = '桑博'
-_NATASHA = '娜塔莎'
-_HUAHUO = '花火'
-_KAFKA = '卡芙卡'
-_TIBAO = '缇宝'
-_XIER = '希儿'
-_HEITIANQUE = '黑天鹅'
-_SANYUEQI = '三月七'
-
-# 持续伤害+希儿系 pair 的判据分支(真实 pair 键;fallback 分支产物 =
-# form_tiers {持续伤害:2} + or_reqs 量2∨贝2 + required 希儿;单一源 =
-# pair_target_comp)。
-_PAIR = ('持续伤害', '希儿系')
-
-
-def _bc(name: str, idx: int) -> BenchSlot:
-    """bench 件(容器占席条目;slot = 1 基物理槽,idx 供唯一 slot)。"""
-    return BenchSlot(kind='unit', unit=Unit(char_id=name, star=1))
-
-
-def _pair_comp():
-    return pair_target_comp(_PAIR)
-
-
-def _static_comp():
-    """静态套「希儿量子」(P2+ 锁线路径;form_tiers 全被 OR 承接的
-    ADR-0621 形态——换入臂折法单一源的本形态验证面)。"""
-    return get_comp('希儿量子')
-
-
-def test_required_carry_seats_first_under_cap_competition() -> None:
-    """cap 竞争(空位 1,候选 2)下必需件先于普通 target 成员上板。
-
-    反证面:required_names 缺省空集 = 逐位旧序(bench 序先者上),钉住
-    「默认路径零漂移」与「新参翻转竞争结果」一对事实。
-    """
-    bench = [_bc(_SANGBO, 1), _bc(_XIER, 2)]   # 桑博 bench 序在前
-    up, _held = select_deployments(
-        bench, deployed_cids=set(), deployed_fac={}, board={},
-        cap=1, target_factions={'贝洛伯格', '持续伤害'},
-        target_cores={_SANGBO, _XIER}, required_names={_XIER})
-    assert [dp._slot_cid(bench[i]) for i in up] == [_XIER]
-
-    up_old, _held = select_deployments(
-        bench, deployed_cids=set(), deployed_fac={}, board={},
-        cap=1, target_factions={'贝洛伯格', '持续伤害'},
-        target_cores={_SANGBO, _XIER})
-    assert [dp._slot_cid(bench[i]) for i in up_old] == [_SANGBO]
-
-
-def _ctx(*, board: list[str], bench: list[str], cap: int,
-         comp=None, required=frozenset()) -> SwapPlanContext:
-    """直构 SwapPlanContext(1★ 单元格;target 键 = pair 真值;
-    required 缺省按「bench 有希儿 ∧ 板上无」派生,可显式覆写;
-    locked=False = 域外帧——转型域帧见 test_select_swap_group_plan)。"""
-    return SwapPlanContext(
-        target_factions=frozenset({'持续伤害', '量子同频', '贝洛伯格'}),
-        target_cores=frozenset((*board, *bench)),
-        fw_carry=frozenset(),
-        locked_factions=frozenset(),
-        protect_names=frozenset(),
-        membership=frozenset(),
-        fresh_buys=frozenset(),
-        board={},
-        deployed=[Unit(char_id=n, star=1)
-                  for i, n in enumerate(board)],
-        bench=[_bc(n, i + 1) for i, n in enumerate(bench)],
-        cap=cap,
-        front_slots=4,
-        back_slots=6,
-        fenced_on=False,
-        fp=0.0,
-        locked=False,
-        board_full=len(board) >= cap,
-        recipe_floor_lock_exempt=False,
-        target_comp=comp if comp is not None else _pair_comp(),
-        evolution_swap_armed=False,
-        required_names=frozenset(required)
-        if required else (
-            frozenset({_XIER})
-            if _XIER in bench and _XIER not in board else frozenset()),
-    )
-
-
-def test_swap_arm_sellable_only_when_completion_holds() -> None:
-    """换入臂资格分野:假想面板(离场+必需件按已换入计)下判据满的可卖;
-    破判据的照旧 target_keep。
-
-    板 = 桑博(贝+DOT)+卡芙卡(DOT)+娜塔莎(贝)+花火(量),pair
-    判据 = DOT2 ∧ (量2∨贝2) ∧ 希儿在板:花火/娜塔莎离场 → DOT2 ✓ 且
-    (量2:花火+希儿 / 贝2)判据满 → 让位可卖(1★ 单元格资格族余守卫全
-    过);桑博离场 → DOT1 = AND 破;卡芙卡离场 → DOT1 同破——均
-    target_keep。
-    """
-    ctx = _ctx(board=[_SANGBO, _KAFKA, _NATASHA, _HUAHUO],
-               bench=[_XIER], cap=4)
-    assert required_swap_arm_pending(ctx)
-    assert swap_sell_exclusion_reason(_HUAHUO, ctx) == ''
-    assert swap_sell_exclusion_reason(_NATASHA, ctx) == ''
-    assert swap_sell_exclusion_reason(_SANGBO, ctx) == 'target_keep'
-    assert swap_sell_exclusion_reason(_KAFKA, ctx) == 'target_keep'
-
-
-def test_swap_arm_holds_via_or_leg_on_static_comp() -> None:
-    """静态套「希儿量子」(OR 承接形态):量4+贝2 板卖一量件判据仍满。
-
-    判据 = 希儿在板 ∧ 量2∨贝2(form_tiers 全被 OR 承接,AND 账为空):
-    花火离场 → 量3 ≥2 OR 分支仍在 → 可卖。若按裸 AND 量4 计账会误判破分支
-    (臂过度关闭)——本测试钉住折法单一源(form_progress)的承接规则。
-    """
-    comp = _static_comp()
-    ctx = _ctx(board=[_HUAHUO, _TIBAO, _NATASHA, _SANGBO],
-               bench=[_XIER], cap=4, comp=comp)
-    assert required_swap_arm_pending(ctx)
-    assert swap_sell_exclusion_reason(_HUAHUO, ctx) == ''
-
-
-def test_swap_arm_closed_when_carry_already_on_board() -> None:
-    """必需件在板 = 臂关(无换入需求),target 保护原样。"""
-    ctx = _ctx(board=[_SANGBO, _KAFKA, _NATASHA, _HUAHUO, _XIER],
-               bench=[_HUAHUO], cap=5)
-    assert not required_swap_arm_pending(ctx)
-
-
-def test_swap_plan_seats_required_carry_after_sell() -> None:
-    """卖后上序正形:卖冗余件后空位落必需件(sell = 扫描序首个可让位件,
-    up = 希儿)。
-
-    席位竞争面:bench 序普通 target 成员(缇宝,不在板,无同名去重拦截)
-    在前时,必需件仍须先落——旧序会把席位给缇宝 = 卖冗余件白卖形态,
-    本测试行使「首桶序 × 卖后上序」的组合语义。victim 序 = 板槽位扫描序
-    (域外键),首个资格通过者 = 娜塔莎(桑博/卡芙卡破 DOT 分支被拒)。
-    """
-    ctx = _ctx(board=[_SANGBO, _KAFKA, _NATASHA, _HUAHUO],
-               bench=[_TIBAO, _XIER], cap=4)
-    plan = select_swap_plan(ctx, select_up=select_deployments_reasoned)
-    assert plan.nonempty
-    assert plan.sell_names == [_NATASHA]
-    up_names = {dp._slot_cid(ctx.bench[i]) for i in plan.up_bench}
-    assert up_names == {_XIER}
-
-
-def test_swap_arm_never_opens_protect_extension() -> None:
-    """保护域扩展集(shared ∪ 替班,protect_names − target_cores)不因
-    换入臂解除(P41② + 替班=不卖字段契约):armed 帧照旧 target_keep。
-
-    构造:target_cores 不含该件(保护域扩展 = 板上「万敌」占位形态),
-    分支保持与否无关紧要——护栏先于臂判定。
-    """
-    comp = _pair_comp()
-    ctx = _ctx(board=[_SANGBO, _KAFKA, _NATASHA, _HUAHUO],
-               bench=[_XIER], cap=4, comp=comp)
-    ctx.protect_names = frozenset({'万敌'})
-    ctx.deployed = list(ctx.deployed) + [Unit(char_id='万敌', star=1)]
-    ctx.cap = 5
-    ctx.board_full = True
-    assert swap_sell_exclusion_reason('万敌', ctx) == 'target_keep'
-
-
-def test_swap_arm_premise_single_required_member() -> None:
-    """换入臂前提测试(现役单 required 成员):假想面板把 required_names
-    全体按「已换入」计(``select_swap_plan`` 检验处),而臂一次只卖一个
-    victim、换入一个必需件——该计法仅当 required 成员数 ≤1 时无白卖面
-    (≥2 成员且多个不在板时检验通过 ≠ 实际成型,卖一换一仍缺分支)。
-    ``required_deployed`` 字段契约允许多成员(``cw_comps.Comp``),
-    生产来源全量 = 静态注册表 ``COMP_LIBRARY`` 逐 comp + pair 物化
-    ``pair_target_comp``,本测试逐一断言单成员前提;任一来源出现多成员
-    形态 → 本测试红 = 提示先重审假想面板计法(改按「换入后仍缺数」折算)
-    再上多成员 comp,禁为保绿直接放行。
-    """
-    multi = [c.name for c in COMP_LIBRARY
-             if len(c.required_deployed) > 1]
-    assert not multi, \
-        f'多 required 成员 comp 已注册,换入臂假想面板计法前提破: {multi}'
-    pair = _pair_comp()
-    assert pair is not None and len(pair.required_deployed) <= 1, \
-        'pair 物化 required 多成员形态激活,同上重审假想面板计法'
-
-
-# ============================================================ 双轨对锁期换入通道
-
-
-def _swap_ctx(*, board: list[str], bench: list[str], cap: int,
-              fp: float, locked: bool,
-              required: frozenset[str] = frozenset()) -> SwapPlanContext:
-    """直构 SwapPlanContext(1★ 单元格;pair 真值键面;locked = 混轨方向锁
-    ——pair 帧分支②在效;``locked_core`` 分支①恒 False(pair 帧不进转型域,
-    design §2.0),bond_gate 键/名单随 pair comp 装配)。"""
-    comp = pair_target_comp(_PAIR)
-    return SwapPlanContext(
-        target_factions=frozenset(comp.all_factions),
-        target_cores=frozenset(comp.core_chars),
-        fw_carry=frozenset(),
-        locked_factions=frozenset(),
-        protect_names=frozenset(),
-        membership=frozenset(),
-        fresh_buys=frozenset(),
-        board={},
-        deployed=[Unit(char_id=n, star=1)
-                  for i, n in enumerate(board)],
-        bench=[BenchSlot(kind='unit',
-                         unit=Unit(char_id=n, star=1))
-               for i, n in enumerate(bench)],
-        cap=cap,
-        front_slots=4,
-        back_slots=6,
-        fenced_on=False,
-        fp=fp,
-        locked=locked,
-        locked_core=False,
-        bond_gate_keys=frozenset(comp.form_tiers),
-        k_members=frozenset(dict.fromkeys(
-            [*comp.core_chars, *comp.shared_chars])),
-        board_full=len(board) >= cap,
-        recipe_floor_lock_exempt=False,
-        target_comp=comp,
-        evolution_swap_armed=False,
-        required_names=frozenset(required) or frozenset(comp.required_deployed),
-    )
-
-
-def test_pair_locked_domain_releases_fenced_offline_victim() -> None:
-    """配方对锁帧转型域开:fenced 离线件经资格族可卖;未对锁帧照旧拒。
-
-    板 = 卡芙卡(DOT1)+希儿+花火(量2)+三月七(围栏件,对视野外):
-    判据缺 DOT 分支(fp 0.833 <1)∧ 板满 → 对锁帧三月七经守恒门(列车/
-    护盾 0 档不掉)放行;同板未对锁帧 = fenced_arm_closed(前提分野)。
-    """
-    board = [_KAFKA, _XIER, _HUAHUO, _SANYUEQI]
-    ctx_open = _swap_ctx(board=board, bench=[_HEITIANQUE], cap=4,
-                         fp=0.833, locked=True)
-    assert swap_sell_exclusion_reason(_SANYUEQI, ctx_open) == ''
-    ctx_closed = _swap_ctx(board=board, bench=[_HEITIANQUE], cap=4,
-                           fp=0.833, locked=False)
-    assert swap_sell_exclusion_reason(_SANYUEQI, ctx_closed) \
-        == 'fenced_arm_closed'
-
-
-def test_completion_member_yields_target_seat() -> None:
-    """完成件滞留通道:希儿在板(required 臂关)∧ bench 有入板即成型件,
-    多余分支 target 板件让位可卖;破分支件照旧 target_keep;计划真换入完成件。
-
-    板 = 卡芙卡(DOT1)+希儿+花火(量2)+娜塔莎(贝1):判据缺 DOT 分支;
-    黑天鹅入板 → DOT2 → fp=1.0(完成件)。花火/娜塔莎离场(量2 或贝2 有
-    另一分支承住)+黑天鹅入板 → 判据满 → 让位;卡芙卡离场 → DOT 归零破分支
-    → 照旧保。旧语义下必需件臂只辖 required(希儿在板 = 臂关),完成件
-    压席无解形态(sim 实证主桶)。victim 序 = 让渡序(贡献并列 1
-    → 扫描序,花火在前);卖后板面 = DOT2∧贝2∧希儿在板,成型。
-    """
-    ctx = _swap_ctx(board=[_KAFKA, _XIER, _HUAHUO, _NATASHA],
-                    bench=[_HEITIANQUE], cap=4,
-                    fp=0.833, locked=True)
-    assert required_swap_arm_pending(ctx)   # 完成分支武装(希儿在板)
-    assert swap_sell_exclusion_reason(_HUAHUO, ctx) == ''
-    assert swap_sell_exclusion_reason(_NATASHA, ctx) == ''
-    assert swap_sell_exclusion_reason(_KAFKA, ctx) == 'target_keep'
-    plan = select_swap_plan(ctx, select_up=select_deployments_reasoned)
-    assert plan.nonempty
-    assert plan.sell_names == [_HUAHUO]
-    assert plan.arm == 'transition', \
-        '双轨域完成件通道 arm 标注照旧(转型分支退役不波及 pair 帧,' \
-        'design 2026-10-26-swap-channel-unified §2.3.1)'
-    # (P4 容器形:bench 身份经解包口读)
-    assert {_slot_cid_of(ctx.bench[i]) for i in plan.up_bench} \
-        == {_HEITIANQUE}
-
-
-def test_completion_channel_gates() -> None:
-    """完成通道三闭门:成型帧关 / bench 无完成件关 / 未对锁帧关。
-
-    板面同 test_completion_member_yields_target_seat,仅翻转前提——
-    fp≥1.0(已成型,无完成缺口)、bench 无完成件(黑天鹅换万敌)、
-    locked=False(未对锁,方向锁前提不在)三者 pending 均 False。
-    """
-    board = [_KAFKA, _XIER, _HUAHUO, _NATASHA]
-    assert not required_swap_arm_pending(_swap_ctx(
-        board=board, bench=[_HEITIANQUE], cap=4,
-        fp=1.0, locked=True))
-    assert not required_swap_arm_pending(_swap_ctx(
-        board=board, bench=['万敌'], cap=4,
-        fp=0.833, locked=True))
-    assert not required_swap_arm_pending(_swap_ctx(
-        board=board, bench=[_HEITIANQUE], cap=4,
-        fp=0.833, locked=False))
-
-
-def test_redeploy_gate_pair_period_reads_target_view() -> None:
-    """发射门轴①对锁期读法:membership 空集帧压席成员轴退 target 视图。
-
-    bench = 花火(视图内,入板即成型)+万敌(视图外):空 membership 帧
-    花火撑起轴①,轴②(入板推进成型度,严格上升)真 → 放行;bench 全
-    视图外 → defer。轴①锁线分支(membership 非空)不辖本读法。
-    """
-    comp = pair_target_comp(_PAIR)
-    gate_ctx = SimpleNamespace(
-        membership=frozenset(),
-        bench=[SimpleNamespace(char_id=_HUAHUO),
-               SimpleNamespace(char_id='万敌')],
-        target_comp=comp,
-        target_factions=frozenset(comp.all_factions),
-        target_cores=frozenset(comp.core_chars),
-        fw_carry=frozenset(),
-    )
-    # 板 = DOT1 + 量1 + 希儿在板口径(fp 0.833):花火入板 → 量2 → OR 分支
-    # 0.5→1.0 严格上升(轴②)。
-    state = SimpleNamespace(board=SimpleNamespace(value={
-        '持续伤害': 1, '量子同频': 1, '贝洛伯格': 1}))
-    assert _redeploy_emission_allowed(session=None, state=state,
-                                      ctx=gate_ctx)
-    off_ctx = SimpleNamespace(
-        membership=frozenset(),
-        bench=[SimpleNamespace(char_id='万敌')],
-        target_comp=comp,
-        target_factions=frozenset(comp.all_factions),
-        target_cores=frozenset(comp.core_chars),
-        fw_carry=frozenset(),
-    )
-    assert not _redeploy_emission_allowed(session=None, state=state,
-                                          ctx=off_ctx)
-
-
-def test_redeploy_gate_membership_unread_fails_closed() -> None:
-    """发射门 membership 缺读弃权:None = 缺读,不放行(fail-closed)。
-
-    契约边界 = None 缺读 ≠ 空集缺省,禁坠对锁期回退放宽(出处 =
-    ``_redeploy_emission_allowed`` None 分支注)。入面参照
-    test_redeploy_gate_pair_period_reads_target_view 的放行构造——若
-    None 分支被误删坠回空集缺省读法,本构造经 target 视读法会假放行,
-    测试红。
-    """
-    comp = pair_target_comp(_PAIR)
-    unread_ctx = SimpleNamespace(
-        membership=None,
-        bench=[SimpleNamespace(char_id=_HUAHUO),
-               SimpleNamespace(char_id='万敌')],
-        target_comp=comp,
-        target_factions=frozenset(comp.all_factions),
-        target_cores=frozenset(comp.core_chars),
-        fw_carry=frozenset(),
-    )
-    # 板面同放行构造口径:花火入板 → 量2 → 轴②严格上升(None 分支
-    # 被删时走空集读法会真放行,保证本测试判别力)。
-    state = SimpleNamespace(board=SimpleNamespace(value={
-        '持续伤害': 1, '量子同频': 1, '贝洛伯格': 1}))
-    assert not _redeploy_emission_allowed(session=None, state=state,
-                                          ctx=unread_ctx)
-
-
-# ============================================================ 残余补部署守卫(P24)
-
-
-def test_fill_legal_held_on_empty_slot():
-    # 合法散牌 + 空槽 → 逐件补上(P24 ΔEV≥0 = 补);slot_idx 取自
-    # 对应排空槽列表原值(0 基,row_pts[slot_idx] 取拖点)。
-    plan = residual_fill_plan(
-        held=[5, 6], front_empty=[1], back_empty=[3, 4],
-        bench_pos={5: 'front', 6: 'back'},
-        bench_cid={5: '飞霄', 6: '停云'},
-        deployed_cids=set(), cap=4, deployed_count=2)
-    assert plan == [(5, 'front', 1), (6, 'back', 3)]
-
-
-def test_fill_dup_name_stays_bench():
-    # 同名禁双(5.1.7):dup 是 3合1 素材,游戏拒收同名 → 留 bench 不补。
-    plan = residual_fill_plan(
-        held=[2], front_empty=[0, 1], back_empty=[0, 1, 2, 3, 4, 5],
-        bench_pos={2: 'front'}, bench_cid={2: '藿藿'},
-        deployed_cids={'藿藿'}, cap=6, deployed_count=1)
-    assert plan == []
-
-
-def test_fill_stops_at_cap():
-    # cap 满不补;半满 → 只补到 cap 截断。
-    rows = {'front_empty': [0, 1], 'back_empty': [0, 1, 2, 3, 4, 5]}
-    plan = residual_fill_plan(
-        held=[3, 4], bench_pos={3: 'back', 4: 'back'},
-        bench_cid={3: '停云', 4: '青雀'},
-        deployed_cids=set(), cap=3, deployed_count=3, **rows)
-    assert plan == []   # 已达 cap → 一件不补
-    plan = residual_fill_plan(
-        held=[3, 4], bench_pos={3: 'back', 4: 'back'},
-        bench_cid={3: '停云', 4: '青雀'},
-        deployed_cids=set(), cap=4, deployed_count=3, **rows)
-    assert [p[0] for p in plan] == [3]   # 只补 1 件到 cap
-
-
-def test_fill_cap_none_means_no_gate():
-    # cap=None 不设门(拖到游戏拒即真值,同主循环 5.1.8 口径)。
-    plan = residual_fill_plan(
-        held=[3, 4], front_empty=[], back_empty=[0, 1, 2, 3, 4, 5],
-        bench_pos={3: 'back', 4: 'back'},
-        bench_cid={3: '停云', 4: '青雀'},
-        deployed_cids=set(), cap=None, deployed_count=10)
-    assert [p[0] for p in plan] == [3, 4]
-
-
-def test_fill_row_pref_fallback_and_both_full():
-    # 首选排满 fallback 另一排;两排皆满停;position_pref 缺读默认
-    # back(后排槽多,安全缺省)。
-    plan = residual_fill_plan(
-        held=[7], front_empty=[], back_empty=[2],
-        bench_pos={7: 'front'}, bench_cid={7: '飞霄'},
-        deployed_cids=set(), cap=8, deployed_count=3)
-    assert plan == [(7, 'back', 2)]
-    plan = residual_fill_plan(
-        held=[7], front_empty=[], back_empty=[],
-        bench_pos={7: 'front'}, bench_cid={7: '飞霄'},
-        deployed_cids=set(), cap=8, deployed_count=3)
-    assert plan == []   # 两排皆满
-    plan = residual_fill_plan(
-        held=[0], front_empty=[0], back_empty=[1],
-        bench_pos={}, bench_cid={0: '飞霄'},
-        deployed_cids=set(), cap=8, deployed_count=3)
-    assert plan == [(0, 'back', 1)]
-
-
-def test_fill_floor_gate_direct_kernel():
-    # 配方底线门(kernel 直测):kernel 留 bench 的列车件
-    # (列车≥2 ∧ 仙舟<3)不得经补部署绕回上板;锁定线豁免语境
-    # (∧ 本帧无有效仙舟供给)门让位放行,供给在场时门照拦(供给
-    # 保留条款)。holds=True = 该件应被门持有(对 fill 计划即剔除)。
-    # 常规语境:门拦
-    assert recipe_floor_holds('列车同行', 2, 0, False, False)
-    # 锁定线豁免 + 本帧无仙舟供给:门让位 → 放行
-    assert not recipe_floor_holds('列车同行', 2, 0, True, False)
-    # 豁免武装但 bench 有有效仙舟供给(停云:仙舟羁绊非列车主阵营)
-    # → 门照拦
-    assert recipe_floor_holds(
-        '列车同行', 2, 0, True,
-        xianzhou_supply_exists(
-            [BenchSlot(kind='unit',
-                       unit=Unit(char_id='停云', star=1))], set()))
-
-
+# (残余补部署守卫(P24)与配方底线门/仙舟供给谓词测试节已随部署统一
+#  批丁丁批收编删除:七桶选人族与 recipe_floor_holds/xianzhou_supply_
+#  exists/residual_fill_plan 随选人退役——unified-deploy-order §2/§4;
+#  空槽补位/围栏语义由统一部署搜索 + 差分执行器单测承载
+#  (test_deploy_search.py/test_deploy_diff.py)。)
 # ============================================================ 载荷与执行语义(P2 拖拽语义落码)
 
 

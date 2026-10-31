@@ -96,18 +96,16 @@ def test_locked_empty_bond_line_core_shared_completion() -> None:
 
 def test_step5_settled_frame_zero_action() -> None:
     """生产接线·定型收敛帧:目标态 == 现板(名+排+星全对)→ 差分空 →
-    零动作(diff 空 = 显式零动作,§3.1)。"""
+    零动作(diff 空 = 显式零动作,§3.1;旧 m1p pending 复位断言随
+    kernel swap 机器收编删除——载体字段已随部署统一批丁退役,unified-
+    deploy-order §2.7/§4)。"""
     session, st = _c_shape_session()
     gs = cw4_gs(session, deploy_cap=3, level=3,
                 bench=[],
                 front_row=[Unit(char_id=n, star=1)
                            for n in ('瓦尔特', '杰帕德', '符玄')])
-    st.cw4_m1p_arm_pending = 'bond_gate'          # 上位帧残留载荷
-    st.cw4_m1p_plan_pending = {'sell': ['停云']}
     out = entry._step5_deploy(session, gs, _frame(gs), [])
     assert out == [], '部署定型帧零动作'
-    assert st.cw4_m1p_arm_pending is None \
-        and st.cw4_m1p_plan_pending is None, '定型帧 pending 复位'
 
 
 def test_step5_vacancy_diff_emits_move_unit() -> None:

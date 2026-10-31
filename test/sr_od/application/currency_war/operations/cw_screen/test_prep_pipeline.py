@@ -56,8 +56,8 @@ from sr_od.application.currency_war.kernel.cw_strategy_session import (
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwAction,
     CwActionCollectOreParam,
-    CwActionDeployMoveParam,
     CwActionLevelUpParam,
+    CwActionMoveUnitParam,
     CwActionObsParam,
     CwActionOpenBoxParam,
     CwActionOpenShopParam,
@@ -231,19 +231,23 @@ class TestStep0SelfRescue:
         """态 1(上阵安置,免费腾位):cap 有空位 ∧ 备战席有可上阵单位 →
         拖上阵;**告警帧豁免窗口辖域**——同一帧无告警时被第 5 步窗口
         辖域挡下的纯终局件,告警帧照上(上阵纯为腾槽保命,豁免行 =
-        prep_pipeline 第 0 步态 1)。"""
+        prep_pipeline 第 0 步态 1)。载体 = 统一拖动(阶段 5/6 丁:
+        态 1 专用执行路径切 CwActionMoveUnitParam,选人 = bench 扫描序
+        腾槽语义——unified-deploy-order §4 entry 备战工序部署面行 D3-4)。"""
         sess = self._rescue_frame()
         _set_overflow(sess)
         out = _emit(sess)
         moves = [e.action for e in out
-                 if isinstance(e.action, CwActionDeployMoveParam)]
-        assert moves and moves[0].bench_idx == 0
+                 if isinstance(e.action, CwActionMoveUnitParam)]
+        assert moves and moves[0].src_domain == 'bench' \
+            and moves[0].src_slot == 0, \
+            f'统一拖动从 bench 槽 0 腾位,实得 {moves!r}'
         # 对照:同帧无告警(打标)→ 第 5 步窗口辖域挡下,无部署
         sess2 = self._rescue_frame()
         _mark_handled(sess2)
         out2 = _emit(sess2)
         assert not [e for e in out2
-                    if isinstance(e.action, CwActionDeployMoveParam)], \
+                    if isinstance(e.action, CwActionMoveUnitParam)], \
             '无告警帧:窗口未到的纯终局件只囤不上'
 
     def test_state2_open_consumable_when_no_seats(self):
@@ -540,11 +544,11 @@ class TestStep5DeployWindow:
 
     def test_endgame_member_blocked_before_window(self):
         """窗口未到(板面追击 1 < 3):纯终局件只囤不上——部署计划被
-        窗口辖域过滤,无 DeployMove(透传到出战)。"""
+        窗口辖域过滤(搜索段 0 枚举硬约束),无统一拖动(透传到出战)。"""
         sess = self._window_frame(('知更鸟', '那刻夏'))
         out = _emit(sess)
         assert not [e for e in out
-                    if isinstance(e.action, CwActionDeployMoveParam)]
+                    if isinstance(e.action, CwActionMoveUnitParam)]
         assert isinstance(out[0].action, CwActionStartBattleParam)
 
     def test_endgame_member_deploys_on_window(self):

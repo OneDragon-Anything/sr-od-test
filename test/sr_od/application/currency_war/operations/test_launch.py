@@ -80,7 +80,7 @@ def _mk_session(monkeypatch, *, decision: dict, zone: bool) -> SimpleNamespace:
     gs.observe(gs.gold, 50, sig=_sig())
     monkeypatch.setattr(cw_launch_admission, 'readiness_launch_decision',
                         lambda gs_, comp, *, line_members,
-                        deploy_plan_available_fn: decision)
+                        deploy_pending_fn: decision)
     zone_calls: list[int] = []
 
     def _zone(gold: int, session_) -> bool:
@@ -104,7 +104,7 @@ def test_front_armed_green_emits_start_battle(monkeypatch) -> None:
     zone_calls: list[int] = []
     monkeypatch.setattr(cw_launch_admission, 'readiness_launch_decision',
                         lambda gs_, comp, *, line_members,
-                        deploy_plan_available_fn: _GREEN)
+                        deploy_pending_fn: _GREEN)
     monkeypatch.setattr(cw_economy, 'in_launch_spend_zone',
                         lambda gold, session_: zone_calls.append(gold) or False)
     session = _mk_session_base()
@@ -293,3 +293,4 @@ def test_unified_invalid_face_rejected(launch_env) -> None:
     """非法 face = 参数错误拒绝(禁静默兜底成某一面)。"""
     with pytest.raises(ValueError):
         launch_battle_unified(_StubOp([_Frame()]), launch_env.ctx, face='x')
+
