@@ -214,7 +214,7 @@ def test_dormant_boundary_numeric() -> None:
     xp_instant>0,键集显式扩集制)上界 < 3→9 级累计门槛 194、派生封顶
     恰 8 级——常量/注册行变更使上界 ≥ 门槛时本锁先红 = 触发边界重申报
     (防静默激活;免战牌 +30、固定理财 +4、固定理财+ +6 各随批重申报,
-    合计 140 仍 < 194,余量见断言消息)。"""
+    合计 144 仍 < 194,余量见断言消息)。"""
     node_xp_total = sum(NODE_XP_BY_TYPE[k]
                         for seq in PLANE_NODE_TABLES.values() for k in seq)
     assert node_xp_total == 70, \
