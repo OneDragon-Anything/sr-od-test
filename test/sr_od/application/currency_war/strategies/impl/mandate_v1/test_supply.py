@@ -350,28 +350,10 @@ def test_full_bench_junk_char_eliminated_by_virtual_assessment():
 
 
 # ==================== ⑦ 凑星 tiebreak ====================
-
-
-def test_merge_star_tiebreak_spans_bench_and_rows():
-    """凭据⑦:同名 1★ 恰 2 张的终局成员候选先于不凑星终局成员;2 张分跨
-    备战席/上阵行域(1 bench + 1 front_row)——钉死 deployed 展平,实现
-    漏计上阵域(如二元组直传被身份协议静默跳过)时该帧必红。"""
-    comp = _comp(['飞霄', '希儿'], key=[])
-    # 分跨域凑星:1×飞霄 备战席 + 1×飞霄 前排 → 凑星,压过不凑星的高装备候选
-    gs = _fresh_gs()
-    _set_rows(gs, [Unit(char_id='飞霄', star=1)], [])
-    _set_bench_units(gs, [Unit(char_id='飞霄', star=1)])
-    opts = [_opt(0, char='飞霄', equip=''),              # 凑星,装备 0 值
-            _opt(1, char='希儿', equip='火力风暴潮')]    # 不凑星,通用值 6
-    out = supply.decide(opts, gs, comp, False)
-    assert isinstance(out, SupplyDecision)
-    assert out.idx == 0, '凑星成员先于不凑星终局成员(装备值更高也不让位)'
-    # 阴性对照:同名仅 1 张(count 1 ≠ 2)→ 不凑星 → 装备比 → 希儿胜
-    gs_single = _fresh_gs()
-    _set_bench_units(gs_single, [Unit(char_id='飞霄', star=1)])
-    out = supply.decide(opts, gs_single, comp, False)
-    assert isinstance(out, SupplyDecision)
-    assert out.idx == 1
+# 旧凭据⑦用例(test_merge_star_tiebreak_spans_bench_and_rows)已删除:
+# 「同名凑星候选优先」域特例随裁定五(2026-11-01)退役,现行判据 =
+# 候选按卡面八档定序、凑星价值经档 2 承载——翻转锁与档 2 承载用例
+# 迁入 supply/test_decide.py(镜像拆分落位;30 号篇 §2.1 统一语义)。
 
 
 # ==================== ⑧ P1 配方锁帧 ====================
