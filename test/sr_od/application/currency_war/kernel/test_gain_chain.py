@@ -1362,7 +1362,7 @@ def test_on_strategy_gained_unregistered_quiet() -> None:
         '五百强',
         '人才激励',
         '人才激励+', '许诺特权', '先亏后盈', '好运令牌·银', '溜佩佩',
-        '溜佩佩+', '招财狗', '是钻石总会发光', '价值投资·金'}
+        '溜佩佩+', '招财狗', '是钻石总会发光', '价值投资·金', '大扩招'}
     gs = _make_gs(bench=[('希儿', 1)], equips=[])
     seq_before = gs.write_seq
     effects = on_strategy_gained(gs, '随便一张未收录卡', rand=False,
