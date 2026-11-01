@@ -2055,6 +2055,9 @@ _A_SEEDED: tuple[str, ...] = (
     'pending_strategy_grants',
     # 策略卡条件发放已发标记(空底座,检查腿跳过判定零 None 防御)
     'strategy_conditional_done',
+    # 绑定型随机角色授予名字绑定域(空 dict 底座,复制发放腿键查判定
+    # 零 None 防御;空 = 未持绑定卡的正常态)
+    'strategy_char_grant_bindings',
     # 损血档位触发累积器(零底座,触发函数累加取模零 None 防御;
     # 0 = 无累积语义中性,种 0 不伪装已触发)
     'strategy_hp_loss_accum',
@@ -2108,6 +2111,8 @@ def test_cold_build_seeds_all_a_fields(monkeypatch) -> None:
     assert gs.pending_strategy_offers.value == (), '延时 offer 队列冷建空底座'
     assert gs.pending_strategy_grants.value == (), '延时发放队列冷建空底座'
     assert gs.strategy_conditional_done.value == (), '条件发放标记冷建空底座'
+    assert gs.strategy_char_grant_bindings.value == {}, \
+        '绑定域冷建空底座'
     assert gs.strategy_hp_loss_accum.value == 0, '损血累积器冷建零底座'
     assert gs.giftbox_sight.value == (), '板件读数域冷建空底座'
     assert gs.gold.value == 3
