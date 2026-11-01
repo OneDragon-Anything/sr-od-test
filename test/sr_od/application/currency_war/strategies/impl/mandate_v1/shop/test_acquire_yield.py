@@ -91,8 +91,9 @@ def _clean_fillers(count: int, exclude: set[str], *, min_cost: int = 2
 
 def _same_cost_fillers(count: int, cost: int) -> list[str]:
     """互异同费干净名(同档帧构取;注册表现查防漂移):费用恰 = cost
-    (同概率域同档,排序键仅差在手旗标)、非万金油/非档 7 羁绊——防
-    跨档(档 6/7 键小于档 8,会让「末位 = 新牌」退化成跨档结论)。"""
+    (同概率域同档,排序键仅差在手旗标)、非万金油/非档 9 羁绊——防
+    跨档(万金油档 8/羁绊档 9 键小于兜底档 10,会让「末位 = 新牌」
+    退化成跨档结论;十档口径 = 完成品保护迭代 design §2.2)。"""
     out: list[str] = []
     for n, c in CHARACTERS.items():
         if len(out) >= count:
@@ -110,11 +111,14 @@ def _same_cost_fillers(count: int, cost: int) -> list[str]:
 def _frame(bench: list[tuple[str, int]],
            shop_cards: list[tuple[str, int, int]], *,
            locked_comp=None, recipe_comp=None, candidates: tuple = (),
-           gold: int = 30, level: int = 7):
+           gold: int = 30, level: int = 7, filler_min_cost: int = 2):
     """席满帧(备战 9/9;场前排铺满 cap;双宿主状态同源接线)。
     locked_comp/recipe_comp 接受线名(注册表解析为 Comp 对象落槽)。
     铺板杂件排除店内 X 名(bench/field/shop 三域名字互异——同名会被
-    部署需要面一并保护,同帧多机制耦合会稀释被测分支)。"""
+    部署需要面一并保护,同帧多机制耦合会稀释被测分支)。
+    filler_min_cost = 场外填充件费用下限(默认 2;兜底域概率键对部署
+    换血敏感的帧用它抬高杂件费用、压低其概率上界——部署外杂件概率
+    必须严格小于被测候选才会让「末位 = 候选」判定稳健)。"""
     sess = StrategySession()
     st = state_of(sess)
     st.cw4_counters = {}
@@ -132,7 +136,7 @@ def _frame(bench: list[tuple[str, int]],
                                     else comp))
     exclude = (members | held_names | {'绯英'}
                | {n for n, _c, _s in shop_cards})
-    fillers = _clean_fillers(level, exclude)
+    fillers = _clean_fillers(level, exclude, min_cost=filler_min_cost)
     gs = cw4_gs(sess, plane=1, round_num=3, node='battle',
                 gold=gold, level=level, hp=80, deploy_cap=level,
                 bench=[cw4_bc(n, star=s) for n, s in bench],
@@ -148,15 +152,16 @@ def _frame(bench: list[tuple[str, int]],
 
 
 def _x_junk_card(candidates: tuple) -> str:
-    """X-末位帧的 X:显式钉名 + 前置断言(非候选线成员 → 落档 8;
-    注册表 3 费 → level 7 概率 0.40 全池最高)。断言防注册表演进
+    """X-末位帧的 X:显式钉名 + 前置断言(非候选线成员 → 落兜底档 10,
+    十档口径 design §2.2;注册表 3 费 → level 7 概率 0.40 全池最高)。
+    断言防注册表演进
     (新成员录入/费用调整)使帧前提静默失效后失败信息不指向根因。"""
     _x = '娜塔莎'
     members: set[str] = set()
     for cn in candidates:
         members |= set(_members(get_comp(cn)))
     assert _x not in members, \
-        f'帧前提失守:{_x} 已入候选线成员(X 应落档 8,现落档 2/3)'
+        f'帧前提失守:{_x} 已入候选线成员(X 应落兜底档 10,入线则落成员档族 2/3/4/5/7)'
     assert (CHARACTERS[_x].cost or 0) == 3, \
         f'帧前提失守:{_x} 注册表费用漂移(level 7 概率 0.40 前提失效)'
     return _x
@@ -168,7 +173,8 @@ class TestAcquireSwapSixStep:
     def test_missing_member_sells_tail_junk(self):
         """置换成功帧:席满 + 方向缺件绯英在店 → 六步流程卖序列末位
         存量牌(卖旧 → 下帧重入买入,单动作契约);绯英 = 未持有配方
-        成员(档 3,序列保护面)永不入让位末位。"""
+        成员(未持有档 5,旧八档档 3 位移,十档口径 design §2.2;序列
+        保护面)永不入让位末位。"""
         recipe = get_comp('绯英欢愉')
         junk = _clean_fillers(9, {'绯英'})
         gs, sess, cfg = _frame(
@@ -183,8 +189,9 @@ class TestAcquireSwapSixStep:
         ct = state_of(sess).cw4_counters
         assert ct.get('acquire_swap_sell') == 1
         # 取用观测键(统一让位优先级迭代 3.5;键表 = telemetry/schema.py
-        # 键表节):档位分布恰一落账(尾牌 = 干净杂件,档 7/8 由注册表
-        # 羁绊归属定——断言计数和,不钉死注册表事实的档号);键互异帧
+        # 键表节):档位分布恰一落账(尾牌 = 干净杂件,兜底档 10/羁绊
+        # 档 9 由注册表羁绊归属定〔旧八档档 8/7 位移,十档口径 design
+        # §2.2〕——断言计数和,不钉死注册表事实的档号);键互异帧
         # 随机尾键命中不落账。
         assert sum(v for k, v in ct.items()
                    if k.startswith('acquire_swap_sell_tier_')) == 1
@@ -193,8 +200,9 @@ class TestAcquireSwapSixStep:
 
     def test_tail_is_new_card_declines_buy(self):
         """末位 = 新牌放弃帧(拒绝语义由 M6 臂 order_4 通道承载,总纲
-        §2.7 申报②):席满持牌全为缺口成员(档 2/3)+ 店内牌 = 干净
-        杂件 X(非候选成员落档 8;3 费 level 7 概率 0.40 = 全池最高 →
+        §2.7 申报②):席满持牌全为缺口成员(档 3 升星主线/档 7 凑两星,
+        十档口径 design §2.2)+ 店内牌 = 干净
+        杂件 X(非候选成员落兜底档 10;3 费 level 7 概率 0.40 = 全池最高 →
         优先级低于全部成员持牌 = 序列末位 = 新牌自己)→ 放弃买入零
         动作,记录「优先级不足」拦因,收工关店。X 与持件桑博共享贝洛
         伯格标签(可参与虚拟定型竞争的组成)——评估侧 X 不进档 1 保护
@@ -217,6 +225,45 @@ class TestAcquireSwapSixStep:
         assert not ct.get('acquire_swap_sell'), \
             '末位 = 新牌帧不得发出卖旧(拒绝语义)'
         assert any(r.card_name == _x_card
+                   and r.blocked_by == 'priority_insufficient'
+                   for r in state_of(sess).shop_opportunities), \
+            f'优先级不足机会清单缺席: {state_of(sess).shop_opportunities}'
+
+    def test_two_star_direct_member_card_declines_buy(self):
+        """2★ 直出成员候选帧「末位 = X → 放弃」可达(完成品保护迭代
+        design §2.5-6 显式申报 / §2.3-5:2★ 直出 X 落兜底档 10;§2.1
+        身份域:ShopUnit 恒非保留张):X = 花火 2★ 直出(列车同行
+        need 2 达标、名下无持有副本——若候选可为保留张,X 将以「名下
+        唯一最高星」自入档 2,获取决策从「可能 decline」翻转为「必买」
+        并开启卖成员完成品凑 X 的牺牲链,禁);身份域下 X 落兜底档 10、
+        键大于全部缺口成员持牌(档 3/7)→ 统一序末位 = X → 放弃买入
+        零动作。帧纪律:level 5 + 场外填充 ≥3 费——X(2 费概率 0.33)
+        严格支配一切可能部署外杂件(3/4/5 费概率 0.20/0.02/0),末位
+        判定对虚拟部署换血稳健(场外杂件入池也压不过 X)。帧前提断言
+        花火 ∈ 候选线成员(X 非成员则退化为杂件 X
+        平凡帧,test_tail_is_new_card_declines_buy 已辖,不证身份域
+        语义)。"""
+        candidates = ('列车同行', '万敌单C', '专家桑博DOT')
+        members: set[str] = set()
+        for cn in candidates:
+            members |= set(_members(get_comp(cn)))
+        assert '花火' in members, \
+            '帧前提失守:花火已非候选线成员(2★ 直出 X 身份域语义帧失效)'
+        bench = [('姬子·启行', 1), ('姬子·启行', 1), ('三月七', 1),
+                 ('三月七', 1), ('瓦尔特', 1), ('瓦尔特', 1),
+                 ('万敌', 1), ('千冶·刃', 1), ('卡芙卡', 1)]
+        gs, sess, cfg = _frame(
+            bench=bench,
+            shop_cards=[('花火', 2, 2)],
+            candidates=candidates,
+            gold=100, level=5, filler_min_cost=3)
+        act = decide_shop_action(gs, sess, cfg)
+        assert isinstance(act, CwActionCloseShopParam), f'非收工: {act!r}'
+        ct = state_of(sess).cw4_counters
+        assert ct.get('acquire_swap_declined', 0) >= 1
+        assert not ct.get('acquire_swap_sell'), \
+            '末位 = X 帧禁发出卖旧(2★ 直出候选恒非保留张,design §2.5-6)'
+        assert any(r.card_name == '花火'
                    and r.blocked_by == 'priority_insufficient'
                    for r in state_of(sess).shop_opportunities), \
             f'优先级不足机会清单缺席: {state_of(sess).shop_opportunities}'
@@ -283,12 +330,12 @@ class TestAcquireSwapSixStep:
 # ============================================================
 
 _GIL, _SBR, _FUX = '吉尔伽美什', 'Saber', '符玄'
-#: 场上 3 费杂件(档 8 内概率 0.2 > bench 件 → 场上件稳定让位序末位)。
+#: 场上 3 费杂件(兜底档 10 内概率 0.2 > bench 件 → 场上件稳定让位序末位)。
 _F3 = ('娜塔莎', '姬子·启行', '刻律德菈', '镜流')
-#: bench 杂件(5 费 ×7 + 4 费 ×1;档 8 概率 0/0.02 均低于场上 3 费)。
+#: bench 杂件(5 费 ×7 + 4 费 ×1;兜底档 10 概率 0/0.02 均低于场上 3 费)。
 _B5 = ('流萤', '昔涟', '布洛妮娅', '云璃', '景元',
        '托帕&账账', 'Archer', '大黑塔')
-#: 4 费垫件(≠ 升星目标实费档 → 落档 8;饱和线/池穷尽帧的让位垫件)。
+#: 4 费垫件(≠ 升星目标实费档 → 落兜底档 10;饱和线/池穷尽帧的让位垫件)。
 _B4 = ('海瑟音', '火花', '长夜月', '波提欧', '大黑塔', '遐蝶')
 #: 窗口关的跨线成员(锁定双王圣杯帧的上阵窗口适用范围全部挡——
 #: 非锁定线成员 ∧ 终局库成员 ∧ 锁定线信号表无行 = 窗口未开)。
@@ -331,7 +378,7 @@ class TestAcquireYieldUnified:
     @staticmethod
     def _field_victim_frame(gold: int = 30, bench_extra=None):
         """席满 + 板满(场上杂件部署外)+ 缺件符玄在店:4 费场上杂件 =
-        统一序末位(档 8 内概率 0.02 > bench 5 费件 0.0)→ victim =
+        统一序末位(兜底档 10 内概率 0.02 > bench 5 费件 0.0)→ victim =
         场上件 → 跨画面计划 + 关店。"""
         bench = [cw4_bc(_SBR, star=3)] \
             + [cw4_bc(n) for n in (bench_extra or _B5)]
@@ -343,7 +390,7 @@ class TestAcquireYieldUnified:
         """金不足 ∧ X 高于末位 → 卖垫件、下帧买 X(design §3 获取让位
         评估行第一断言;席位空 → 纯金让位,虚拟金币 = gold − cost +
         前缀退金 ≥ 0 判定)。"""
-        pad = _clean_fillers(4, {_FUX})   # 档 8 垫件(退金 ≥ 缺口)
+        pad = _clean_fillers(4, {_FUX})   # 兜底档 10 垫件(退金 ≥ 缺口)
         from sr_od.application.currency_war.kernel.cw_game_state import (
             BenchSlot,
             BenchView,
@@ -402,7 +449,8 @@ class TestAcquireYieldUnified:
 
         锁定帧(双王圣杯)X = 娜塔莎(非锁定线成员,锁定线外囤件放行
         进部署枚举;与 bench 佩拉共享贝洛伯格标签;3 费 level 7 概率
-        0.40 = 全池最高 → 档 8 末位)。帧前提断言 X ∈ 虚拟定型名集
+        0.40 = 全池最高 → 兜底档 10 末位,十档口径 design §2.2)。帧前提
+        断言 X ∈ 虚拟定型名集
         (收编形态在场;定型漂移使 X 出 target 时本帧退化为平凡末位
         帧,前置断言让退化响亮暴露)。"""
         bench = [('佩拉', 1), ('知更鸟', 1), ('银枝', 1),
@@ -442,9 +490,11 @@ class TestAcquireYieldUnified:
         豁免测试第四用例):获取让位帧(金不足触发;与席满同一评估,
         §2.2 第 4 项「两类受阻走同一评估,不分流」)线内未达标成员排
         统一序末位 → 照卖。瓦尔特 = 列车同行候选线成员(need 1,持有
-        1★ 未到两星 = 档 5 形态,凑息场景不可卖件;未锁帧部署不拉
+        1★ 未到两星 = 凑两星过程保护档 7 形态〔旧八档档 5 位移,十档
+        口径 design §2.2〕,凑息场景不可卖件;未锁帧部署不拉
         候选成员上场 → 瓦尔特部署外在池);X = 姬子·启行(need 3 未
-        持有 = 档 2,优先级高于瓦尔特)→ victim = 瓦尔特(虚拟金币
+        持有 = 未持有档 5〔旧档 3 位移〕,保留优先级高于瓦尔特)→
+        victim = 瓦尔特(虚拟金币
         1 − 3 + 5 = 3 ≥ 0)——获取动机让位全员参与统一序列,无豁免。"""
         bench = [('瓦尔特', 1)]
         gs, sess, cfg = _frame(
@@ -460,8 +510,9 @@ class TestAcquireYieldUnified:
             'victim = 统一序末位(线内未达标成员),豁免只挂利息动机场景'
         ct = state_of(sess).cw4_counters
         assert ct.get('acquire_swap_sell') == 1
-        assert ct.get('acquire_swap_sell_tier_5') == 1, \
-            'victim 档位观测键 = 档 5(未达标成员形态)'
+        assert ct.get('acquire_swap_sell_tier_7') == 1, \
+            'victim 档位观测键 = 档 7(凑两星过程保护形态,十档口径 ' \
+            'design §2.2;旧八档档 5 位移)'
 
     def test_prefix_pool_exhausted_records_gold_short(self):
         """池穷尽不可足 → 机会清单拦因 gold_short(design §2.2 第 4 项
@@ -479,7 +530,7 @@ class TestAcquireYieldUnified:
         st.cw4_counters = {}
         st.v3_intention = IntentionState(locked_comp='命运圣杯红A')
         st.target_comp = get_comp('命运圣杯红A')
-        pads = _B4[:6]   # 4 费垫件 ×6(档 8;退金合计 24 < 饱和线缺口)
+        pads = _B4[:6]   # 4 费垫件 ×6(兜底档 10;退金合计 24 < 饱和线缺口)
         gs = cw4_gs(sess, plane=1, round_num=3, node='battle',
                     gold=1, level=3, hp=80, deploy_cap=3,
                     bench=[cw4_bc(n) for n in pads],

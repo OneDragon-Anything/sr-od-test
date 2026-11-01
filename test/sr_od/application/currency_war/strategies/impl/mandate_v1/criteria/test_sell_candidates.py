@@ -74,13 +74,14 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicate
     line_members,
 )
 
-# 注册表事实锚(测试种子选名依据,别换名后不解注册表):
-# - 万敌(1费,夜之半神+燃血)/远坂凛(1费)= 档 8 干净件(保护集外);
-# - 黄泉(3费,减益)= 档 7 羁绊成员(保护集外);星期日 = 万金油(档 6,
-#   常规面身份段排除件——仅自救面在池);停云 = 档 8 干净件(自救面);
-# - 花火/瓦尔特/三月七 = 列车同行候选成员(花火 need 2 档 2、瓦尔特
-#   need 1 档 5);希儿(registry 核心)/卡芙卡(持续伤害系保护档)=
-#   常规面身份段排除件(3.4 身份段收缩前随装配照读);
+# 注册表事实锚(测试种子选名依据,别换名后不解注册表;档号 = 十档口径,
+# 完成品保护迭代 design §2.2):
+# - 万敌(1费,夜之半神+燃血)/远坂凛(1费)= 兜底档 10 干净件(保护集外);
+# - 黄泉(3费,减益)= 档 9 羁绊成员(保护集外);星期日 = 万金油(档 8,
+#   常规面身份段排除件——仅自救面在池);停云 = 兜底档 10 干净件(自救面);
+# - 花火/瓦尔特/三月七 = 列车同行候选成员(花火 need 2 未达标档 3、瓦尔特
+#   need 1 已持有未到两星档 7);希儿(registry 核心)/卡芙卡(持续伤害系
+#   保护档)= 常规面身份段排除件(3.4 身份段收缩前随装配照读);
 # - 场上填充件族(镜流/Saber/Archer/杰帕德)= 档 1 部署定型面,统一
 #   序列不进输出;备战位件与填充件**禁同名**(档 1 按角色名命中,
 #   同名备战件会被部署需要面一并保护)。
@@ -159,7 +160,7 @@ class TestSceneClosedSet:
 class TestUnifiedSequence:
 
     def _pool_gs(self):
-        """板满 + 未锁候选帧:bench = 干净档 8 件(万敌)+ 候选成员
+        """板满 + 未锁候选帧:bench = 干净兜底档 10 件(万敌)+ 候选成员
         (瓦尔特);场上 = 中性填充三件(板满,cap = level 3)。gold 49 =
         凑息缺口 1(万敌 1 费退金 1 恰跨档,跨档止盈不排空本帧)。"""
         sess, gs = _board_full_gs([cw4_bc('万敌'), cw4_bc('瓦尔特')],
@@ -182,7 +183,7 @@ class TestUnifiedSequence:
         assert set(_names(cands)) == {'万敌', '瓦尔特'}
         assert cands[0].zone == 'bench'
         assert cands[0].char_id == '万敌', \
-            '档 8 干净件先让(成员件殿后)'
+            '兜底档 10 干净件先让(成员件殿后)'
         # 节末凑息(利息动机):豁免剔除线内未达标成员(瓦尔特),
         # 池只剩垫件(gold 49 缺口 1,万敌 1 费退金 1 恰跨档)。
         cands_i, why_i = evaluate_sell_candidates(gs, 'node_end_interest')
@@ -192,7 +193,8 @@ class TestUnifiedSequence:
 
     def test_self_rescue_full_board_pool(self):
         """溢出豁免面 = 真全量:全池可见,按统一序列落位——成员件受
-        档 5 保护排让位序末位(最不该卖);身份段退役后常规面不再排除
+        凑两星过程保护档 7 排让位序末位(最不该卖;旧八档档 5 位移,
+        design §2.2);身份段退役后常规面不再排除
         成员/registry/保护档件(3.4:常规面 = 自救面的序列差消失,
         差异仅剩循环防线装配)。"""
         sess, gs = _board_full_gs(
@@ -204,7 +206,7 @@ class TestUnifiedSequence:
         assert why == ''
         assert set(_names(cands)) == {'希儿', '卡芙卡', '瓦尔特'}
         assert cands[-1].char_id == '瓦尔特', \
-            '统一序列:阵容成员(档 5)排让位序末位(永不先卖)'
+            '统一序列:阵容成员(档 7)排让位序末位(永不先卖)'
         # 自救:真全量 + 统一序列(同构)。
         cands2, why2 = evaluate_sell_candidates(gs, 'self_rescue')
         assert why2 == ''
@@ -212,27 +214,29 @@ class TestUnifiedSequence:
         assert cands2[-1].char_id == '瓦尔特'
 
     def test_priority_order_tiers_descend_in_yield_order(self):
-        """让位序 = 统一序列反转(key 大者先卖):档 8(1 费概率正)
-        → 档 7(羁绊)。自救豁免面全池可见。
+        """让位序 = 统一序列反转(key 大者先卖):兜底档 10(1 费概率正)
+        → 档 9(羁绊;十档口径,design §2.2)。自救豁免面全池可见。
 
-        阶段 5/6 行为申报:万金油(星期日,旧档 6)被统一部署搜索定型
-        收编(L3 按件 ×2 → 必上场 → 档 1 保护)——比旧档 6 让位更强
-        的保护面;档 6 档位模型本身仍由 test_priority 纯档位测试辖。"""
+        阶段 5/6 行为申报:万金油(星期日,万金油层 = 现行档 8、旧八档
+        档 6)被统一部署搜索定型收编(L3 按件 ×2 → 必上场 → 档 1 保护)
+        ——比万金油层让位更强的保护面;万金油档位模型本身仍由
+        test_priority 纯档位测试辖。"""
         sess, gs = _board_full_gs(
             [cw4_bc('停云'), cw4_bc('黄泉'), cw4_bc('星期日')], level=5)
         cands, why = evaluate_sell_candidates(gs, 'self_rescue')
         assert why == ''
         assert _names(cands) == ['停云', '杂板5', '黄泉'], \
-            '档 8 → 档 8(被换下垫件)→ 档 7(星期日 = 万金油档 1 收编不在池)'
+            '兜底档 10 → 档 10(被换下垫件)→ 档 9' \
+            '(星期日 = 万金油档 1 收编不在池)'
 
     def test_guarded_scene_priority_order(self):
         """常规面序列 = 统一序列(身份段已随 3.4 退役,无排除面):
-        档 8(1 费概率正先让)→ 档 7。"""
+        兜底档 10(1 费概率正先让)→ 档 9(design §2.2 十档口径)。"""
         sess, gs = _board_full_gs([cw4_bc('万敌'), cw4_bc('黄泉')], level=5)
         cands, why = evaluate_sell_candidates(gs, 'ore_make_room')
         assert why == ''
         assert _names(cands) == ['万敌', '黄泉'], \
-            '档 8 → 档 7(让位序 = 优先级降序)'
+            '兜底档 10 → 档 9(让位序 = 优先级降序)'
 
 
 # ===== 取用观测载荷(统一让位优先级迭代 3.5;acquisition §6)=====
@@ -244,8 +248,10 @@ class TestTakeObservationPayload:
     ——载荷失真只伤观测不伤行为,但键值 = sort_key 输出须逐位同源。"""
 
     def test_tier_attached_distinct_keys_no_tail_hit(self):
-        """档位分量随键回填:让位序首位 = 档 8 干净件(万敌),末位 =
-        成员持有件(瓦尔特,need 1 已持有未到两星 = 档 5);全池键互异
+        """档位分量随键回填(十档口径 = 完成品保护迭代 design §2.2):
+        让位序首位 = 兜底档 10 干净件(万敌,旧八档档 8 位移),末位 =
+        成员持有件(瓦尔特,need 1 已持有未到两星 = 凑两星过程保护
+        档 7,旧八档档 5 位移);全池键互异
         → 随机尾键命中恒假(命中判定域 = 排序池,等价牌群才可能撞键)。"""
         sess, gs = _board_full_gs([cw4_bc('万敌'), cw4_bc('瓦尔特')],
                                   gold=49)
@@ -253,20 +259,20 @@ class TestTakeObservationPayload:
         cands, why = evaluate_sell_candidates(gs, 'ore_make_room')
         assert why == ''
         assert [(c.char_id, c.tier) for c in cands] == \
-            [('万敌', 8), ('瓦尔特', 5)]
+            [('万敌', 10), ('瓦尔特', 7)]
         assert not any(c.rng_tail_hit for c in cands)
 
     def test_tail_hit_true_within_equivalent_group(self):
         """随机尾键命中 = 全部子键同(仅随机尾键可分)的等价牌群内部
-        定序实际生效:万敌/远坂凛 = 注册表 1 费档 8 干净件(同费同星
-        同档 → 键除尾全同;异名不触合成素材守卫)→ 池内键去尾互撞,
+        定序实际生效:万敌/远坂凛 = 注册表 1 费兜底档 10 干净件(同费
+        同星同档 → 键除尾全同;异名不触合成素材守卫)→ 池内键去尾互撞,
         取用件命中为真(命中哨兵语义,非等价件命中 = 键构造异常)。"""
         sess, gs = _board_full_gs([cw4_bc('万敌'), cw4_bc('远坂凛')],
                                   gold=49)
         cands, why = evaluate_sell_candidates(gs, 'ore_make_room')
         assert why == ''
         assert len(cands) == 2
-        assert all(c.tier == 8 for c in cands)
+        assert all(c.tier == 10 for c in cands)
         assert all(c.rng_tail_hit for c in cands)
 
 
@@ -307,14 +313,16 @@ class TestInterestCrossTier:
 
 class TestInterestMemberExemption:
     """凑息卖出豁免(design §3「凑息豁免测试」行):线内未达标成员
-    (现行排序形态 = 档 2 升星主线/档 5 阵容强度)为利息绝对不可卖
-    ——候选池剔除,非排序后移;达标线内件(≥ 目标星,掉档 8 已完成
-    资产)与非线内件照常参与;被迫类卖出(溢出/晶矿/获取让位)零豁免
-    (动机二分:因席位/金币被迫按优先级让位的无豁免)。
+    (现行排序形态 = 档 3 升星主线/档 7 阵容强度,十档口径 design §2.2)
+    为利息绝对不可卖——候选池剔除,非排序后移;达标线内件(≥ 目标星,
+    完成品保护档 2/4 殿后,design §2.5-1/2)与非线内件照常参与;被迫类
+    卖出(溢出/晶矿/获取让位)零豁免(动机二分:因席位/金币被迫按
+    优先级让位的无豁免)。
 
-    注册表事实锚:姬子·启行 = 列车同行 need 3(2★ 未达标 = 档 2 形态,
-    3 费 2★ 退金 8)/花火 = need 2(2★ 达标 = 档 8,2 费 2★ 退金 5)/
-    瓦尔特 = need 1(1★ 未达标 = 档 5 形态,5 费 1★ 退金 5);布洛妮娅
+    注册表事实锚:姬子·启行 = 列车同行 need 3(2★ 未达标 = 档 3 形态,
+    3 费 2★ 退金 8)/花火 = need 2(2★ 达标 = 完成品保护档 2,2 费 2★
+    退金 5)/瓦尔特 = need 1(1★ 未到两星 = 档 7 形态,5 费 1★ 退金 5);
+    布洛妮娅
     (5 费)/万敌(1 费)= 非线内垫件。无覆写局利息帽 =
     ``cw_economy.DEFAULT_INTEREST_CAP`` 5(与等级无关),gold 2/5/9 →
     下一档线 10,缺口 8/5/1;level=5 只定板满 cap(min(level,10))
@@ -366,7 +374,8 @@ class TestInterestMemberExemption:
 
     def test_met_member_participates(self):
         """用例 3(达标件照常):线内达标件(花火 need 2,2★ = 目标星,
-        掉档 8 已完成资产)照常参与凑息——豁免只辖在建未达标件。金 5 →
+        完成品保护档 2 殿后,design §2.5-1)照常参与凑息——豁免只辖
+        在建未达标件(凑息豁免谓词逻辑不动,design §2.4)。金 5 →
         缺口 5:花火 2★ 退金 2×3−1 = 5 恰跨档(唯一可行件照卖),
         万敌 1★ 退金 1 不可行。"""
         sess, gs = self._candidate_gs(
@@ -414,8 +423,9 @@ class TestInterestMemberExemption:
 class TestIdentitySegmentRetired:
     """装配 A 身份段退役后的序列承载形态(dismantle §3 卖侧):
     标签命中件/registry 核心/保护档件不再被身份排除,统一按档位结构
-    排序——候选线成员/骨架件由档 2/3/5/7 天然殿后,非成员标签件按
-    档 8 概率先让(万敌单C 锁定帧,布洛妮娅 = 燃血标签件)。"""
+    排序——候选线成员/骨架件由成员档族档 2/3/4/5/7 天然殿后(十档
+    口径 design §2.2),非成员标签件按兜底档 10 概率先让
+    (万敌单C 锁定帧,布洛妮娅 = 燃血标签件)。"""
 
     def _locked_gs(self, bench):
         sess = StrategySession()
@@ -432,7 +442,8 @@ class TestIdentitySegmentRetired:
 
     def test_label_hit_piece_no_longer_excluded(self):
         """身份段退役申报:bench 标签命中件(布洛妮娅,燃血无已达成档)
-        入池(不再被终局键集标签分支排除),按档 8 排序;零标签对照件
+        入池(不再被终局键集标签分支排除),按兜底档 10 排序(十档
+        口径 design §2.2);零标签对照件
         (佩拉)同帧在池。"""
         gs = self._locked_gs(['布洛妮娅', '佩拉'])
         cands, why = evaluate_sell_candidates(gs, 'ore_make_room')
@@ -443,7 +454,8 @@ class TestIdentitySegmentRetired:
 
     def test_registry_core_no_longer_excluded(self):
         """registry 核心件(希儿)入常规面候选(身份段退役——核心件
-        保护改由档位结构承载:锁定线成员 = 档 2/3/5 殿后)。"""
+        保护改由档位结构承载:锁定线成员 = 成员档族档 2/3/4/5/7 殿后,
+        十档口径 design §2.2)。"""
         gs = self._locked_gs(['希儿', '佩拉'])
         cands, why = evaluate_sell_candidates(gs, 'ore_make_room')
         assert why == ''
@@ -505,11 +517,14 @@ class TestSellLineMembershipSingleAdmission:
 
 class TestP1LockedSellPoolNarrowing:
     """行为申报用例(design §2.5 P1 锁定局行):配方成员从「最先让路」
-    收窄为「殿后保护」——修复前配方成员不在锁定帧名单,落档 8 兜底
-    最先卖;修复后落档 5(成员保护),同帧万金油垫件(档 6)先让。"""
+    收窄为「殿后保护」——修复前配方成员不在锁定帧名单,落兜底档
+    最先卖;修复后落凑两星过程保护档,同帧万金油垫件先让
+    (档号 = 十档口径:兜底档 10〔旧八档档 8〕/凑两星档 7〔旧档 5〕/
+    万金油档 8〔旧档 6〕,design §2.2)。"""
 
     def test_recipe_member_protected_in_locked_frame(self):
-        """配方成员(档 5)殿后保护:板构造(阶段 5/6)同 test_priority_
+        """配方成员(凑两星过程保护档 7)殿后保护:板构造(阶段 5/6)
+        同 test_priority_
         order——万金油满配挡位使 bench 星期日结构性部署外,卡芙卡
         (配方成员)滞回保板外的换血面零,池 = bench 全件。"""
         sess, gs = _board_full_gs(
@@ -520,8 +535,8 @@ class TestP1LockedSellPoolNarrowing:
         cands, why = evaluate_sell_candidates(gs, 'ore_make_room')
         assert why == ''
         assert _names(cands) == ['杂板5', '卡芙卡'], \
-            '配方成员(档 5)殿后,被换下垫件(档 8)先让——不误卖自己人' \
-            '(星期日 = 万金油档 1 收编不在池)'
+            '配方成员(档 7)殿后,被换下垫件(兜底档 10)先让——' \
+            '不误卖自己人(星期日 = 万金油档 1 收编不在池)'
 
 
 # ===== 空板守卫(as-built 收编;全场景)=====

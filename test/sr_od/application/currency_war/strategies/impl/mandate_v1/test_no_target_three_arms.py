@@ -150,8 +150,10 @@ class TestFallbackKernelTruth:
 class TestKSourceCandidateUnion:
     def test_candidate_union_reaches_m2(self):
         """候选线成员在店 → 序 1 义务买(m2_* 买因):未锁无目标帧的
-        K 源 = 候选快照三线成员并集 ∪ 配方成员——与优先级档 2/3/5
-        名单同源(core∪shared),买面与优先级面统一(行为申报:宽放侧)。"""
+        K 源 = 候选快照三线成员并集 ∪ 配方成员——与优先级成员档族档
+        2/3/4/5/7 名单同源(core∪shared;旧八档档 2/3/5 口径,十档 =
+        完成品保护迭代 design §2.2),买面与优先级面统一(行为申报:
+        宽放侧)。"""
         comp = get_comp('希儿量子')
         held = sorted(comp.core_chars)[:-1]
         missing_piece = sorted(set(comp.core_chars) - set(held))[0]
@@ -189,7 +191,8 @@ class TestKSourceCandidateUnion:
 class TestHubRetired:
     def test_wildcard_no_auto_buy(self):
         """万金油退出义务买入面(总纲 §2.7 申报②;3.4):空窗帧的万金油
-        件(花火,非候选线成员)不买——手里持有的未到两星前受档 6 保护,
+        件(花火,非候选线成员)不买——手里持有的未到两星前受万金油层
+        档 8 保护(旧八档档 6,十档口径 design §2.2),
         无自动补货通道;hub_option_buy 买因不得复现。"""
         st = _state(gold=60, plane=2, node_kw='reward',
                     shop_cards=[_card('花火', cost=2)])

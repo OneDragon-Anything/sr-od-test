@@ -283,7 +283,8 @@ def test_refresh_gate_all_three_empty_and_fail_closed():
 
 def test_full_bench_still_normal_pick():
     """凭据⑥(3.2 形态):席满帧选卡 = 虚拟全局评估照常判定,无溢出
-    特殊分支——成员候选(档 2,键小于同费垫牌)幸存照选(记账失真申报 =
+    特殊分支——成员候选(档 3 升星主线,键小于同费垫牌;旧八档档 2
+    位移,十档口径 design §2.2)幸存照选(记账失真申报 =
     溢入单位不入 gs,凑星漏计归观察/记账批)。"""
     comp = _comp(['花火'])
     gs = _fresh_gs()
@@ -307,10 +308,12 @@ def test_full_bench_junk_char_eliminated_by_virtual_assessment():
     (最易让路 = 统一序列键最大)的被虚拟阵容淘汰,角色级空转落装备轴;
     高优先级候选(成员件)同帧幸存照选。构帧纪律:垫牌互异(同名凑三
     会触发合成净释放 → 无位移 → 候选不经淘汰,淘汰分支测空)。"""
-    # 构帧:候选快照 = 列车同行(持牌花火/瓦尔特 = 档 2/5 成员件)+
-    # 万金油三月七(档 6);持牌垫 = 互异高费档 8 件(2-5 费,Lv3 概率
+    # 构帧:候选快照 = 列车同行(持牌花火/瓦尔特 = 档 3/7 成员件,旧八
+    # 档档 2/5 位移)+ 万金油三月七(档 8,旧档 6 位移);持牌垫 = 互异
+    # 高费兜底档 10 件(2-5 费,Lv3 概率
     # 0 = 难再遇 = 序列靠后);候选 = 万敌(1费,概率满 = 最易再遇 =
     # 统一序列末位)→ 虚拟排序末位 = 万敌自己 → 淘汰 → 装备轴。
+    # (档号全部按十档口径,完成品保护迭代 design §2.2。)
     gs = _fresh_gs()
     from test.sr_od.application.currency_war._cw_helpers import (
         cw4_comp as _comp_of,
@@ -346,13 +349,14 @@ def test_full_bench_junk_char_eliminated_by_virtual_assessment():
     opts_member = [_opt(0, char='花火', equip=''), _opt(1, equip='轮滑鞋')]
     out = supply.decide(opts_member, gs, None, False)
     assert isinstance(out, SupplyDecision)
-    assert out.idx == 0, '席满帧成员候选幸存(档 2 保护)→ 角色卡胜出'
+    assert out.idx == 0, '席满帧成员候选幸存(档 3 升星主线保护)→ 角色卡胜出'
 
 
 # ==================== ⑦ 凑星 tiebreak ====================
 # 旧凭据⑦用例(test_merge_star_tiebreak_spans_bench_and_rows)已删除:
 # 「同名凑星候选优先」域特例随裁定五(2026-11-01)退役,现行判据 =
-# 候选按卡面八档定序、凑星价值经档 2 承载——翻转锁与档 2 承载用例
+# 候选按卡面十档定序、凑星价值经档 3 承载(旧八档档 2 升星主线位移,
+# 完成品保护迭代 design §2.2)——翻转锁与档 3 承载用例
 # 迁入 supply/test_decide.py(镜像拆分落位;30 号篇 §2.1 统一语义)。
 
 

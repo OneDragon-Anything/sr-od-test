@@ -180,7 +180,8 @@ def test_member_priority_field_migration_default() -> None:
     ——「隐式两档 → 显式字段」的数据迁移本体,全库守卫。
 
     - 全库:每套字段覆盖 core ∪ shared 且取值与两档派生式一致
-      (消费面档 2/3/5 ①键迁移前后等价的数据前提);
+      (消费面成员档族档 2/3/4/5/7 ①键迁移前后等价的数据前提;旧八档
+      档 2/3/5 口径,十档 = 完成品保护迭代 design §2.2);
     - 同名双列(core ∩ shared,列车同行三月七类)core 优先;
     - 手构 Comp 空表落成即派生(__post_init__;pair_target_comp 配方
       伪阵容同路径),显式登记原样保留(逐角色精调迭代的填值载体);

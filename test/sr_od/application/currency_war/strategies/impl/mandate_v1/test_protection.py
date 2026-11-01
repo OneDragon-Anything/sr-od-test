@@ -127,4 +127,5 @@ class TestTransitionLockedSystems:
 #  退役删除——统一让位优先级迭代 3.4:静态不许卖名单与买面囤货判据
 #  整批退役,保护集「自己人」概念消亡;本文件保留面 = 过渡锁定状态槽
 #  写端(TestTransitionLockedSystems)与 CROSS_LINE_KEEP_NAMES 数据源
-#  (消费 = criteria/priority.py 档 6)。)
+#  (消费 = criteria/priority.py 档 8 万金油层,旧八档档 6,十档口径
+#  = 完成品保护迭代 design §2.2)。)

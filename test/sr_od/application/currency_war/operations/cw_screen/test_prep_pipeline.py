@@ -282,11 +282,13 @@ class TestStep0SelfRescue:
         assert sells[0].reason == 'self_rescue_sell'
         assert sells[0].bench_idx == 0, '价值最低散件让位,线内件置末层'
         # 取用观测键(统一让位优先级迭代 3.5;键表 = telemetry/schema.py
-        # 键表节):c0/c1/c2 = 注册表外测试名(实费缺读按中费 3 保守估,
-        # 非成员非羁绊)= 同键等价牌群 → 档 8 档位分布落账 ∧ 随机尾键
-        # 命中落账(取用件在等价群内由尾键定序,命中哨兵语义)。
+        # 键表节;键域 1..10 = 完成品保护迭代 design §2.5-7):c0/c1/c2 =
+        # 注册表外测试名(实费缺读按中费 3 保守估,非成员非羁绊)= 同键
+        # 等价牌群 → 兜底档 10 档位分布落账 ∧ 随机尾键命中落账(取用件
+        # 在等价群内由尾键定序,命中哨兵语义;兜底档号 8→10 位移 =
+        # design §2.2 十档判定表)。
         ct = state_of(sess).cw4_counters
-        assert ct.get('self_rescue_sell_tier_8') == 1
+        assert ct.get('self_rescue_sell_tier_10') == 1
         assert ct.get('self_rescue_sell_rng_tail_hit') == 1
 
     def test_state3_full_pool_exemptions_reach_line_member(self):
@@ -423,7 +425,9 @@ class TestStep2Ore:
     def test_full_seat_yields_via_sequence_tail(self):
         """席满点晶矿 → 统一序列末位让路卖一件腾位(身份段已随统一让位
         优先级迭代 3.4 退役——原「全池身份排除 → 放弃晶矿」形态废止:
-        万金油铺席件按档 6/8 落序列,序列真空才放弃晶矿;单动作契约 =
+        万金油铺席件按档 8/10 落序列(万金油层 = 档 8、到两星掉兜底
+        档 10,旧八档档 6/8 位移,design §2.2/§2.3-4 十档口径),序列
+        真空才放弃晶矿;单动作契约 =
         先卖,下帧席位空出后采晶)。"""
         sess = cw4_session()
         cw4_gs(sess, gold=30, level=6, round_num=2, node='战斗',
