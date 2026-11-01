@@ -213,8 +213,8 @@ def test_dormant_boundary_numeric() -> None:
     PLANE_NODE_TABLES 全三位面)+ 即时腿注册面(STRATEGY_ECONOMY
     xp_instant>0,键集显式扩集制)上界 < 3→9 级累计门槛 194、派生封顶
     恰 8 级——常量/注册行变更使上界 ≥ 门槛时本锁先红 = 触发边界重申报
-    (防静默激活;免战牌 +30、固定理财 +4 各随批重申报,合计 138 仍
-    < 194,余量见断言消息)。"""
+    (防静默激活;免战牌 +30、固定理财 +4、固定理财+ +6 各随批重申报,
+    合计 140 仍 < 194,余量见断言消息)。"""
     node_xp_total = sum(NODE_XP_BY_TYPE[k]
                         for seq in PLANE_NODE_TABLES.values() for k in seq)
     assert node_xp_total == 70, \
@@ -224,7 +224,8 @@ def test_dormant_boundary_numeric() -> None:
                for name, eff in STRATEGY_ECONOMY.items()
                if eff.xp_instant > 0}
     assert instant == {'伟大征服': 12, '成长的快乐': 4, '固定理财': 4,
-                       '经验到账': 10, '气氛组+': 8, '免战牌': 30}, \
+                       '固定理财+': 6, '经验到账': 10, '气氛组+': 8,
+                       '免战牌': 30}, \
         f'即时腿注册面扩集: {instant} —— 新即时腿 = 休眠上界随批重申报'
     bound = node_xp_total + sum(instant.values())
     threshold_9 = sum(XP_TO_NEXT_LEVEL[lv] for lv in range(3, 9))

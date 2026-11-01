@@ -10,8 +10,8 @@ registry.py)。
 
 - 注册行锁(锁 1):四字段现值 xp_instant=4 / xp_per_plane=4 /
   free_refresh_burst=2 / free_refresh_per_plane=2 + xp_per_node 缺省
-  (0;显式零占位已删);姊妹行 free_refresh_burst=3 其余缺省(T-183
-  前冻结);
+  (0;显式零占位已删);姊妹行四字段现值 6/6/3/3(展开批落地后逐批
+  显式扩面改写,原冻结断言 T-183 批随批解除);
 - EffectSpec 条目锁(锁 2):trigger=PLANE_START / duration=PERMANENT /
   category=STATE / payload is STRATEGY_ECONOMY['固定理财'](同一实例)
   / pending=False(二义经用户裁定拍定补发,定谳非冻结,notes 记裁定,
@@ -54,18 +54,19 @@ _SISTER = '固定理财+'
 
 
 def test_gudinglicai_registration_row_four_fields() -> None:
-    """注册行锁(锁 1):四字段现值 + xp_per_node 缺省 0;姊妹行冻结面
-    (burst=3 其余缺省,T-183 前不得漂移)。"""
+    """注册行锁(锁 1):四字段现值 + xp_per_node 缺省 0;姊妹行四字段
+    现值(6/6/3/3,展开批落地后逐批显式扩面改写,键集/行锁 +1 家族
+    先例同型)。"""
     cw_investments._validate_strategy_effects()   # 构建校验复跑不炸
     eff = STRATEGY_ECONOMY[_CARD]
     assert (eff.xp_instant, eff.xp_per_plane,
             eff.free_refresh_burst, eff.free_refresh_per_plane) == (4, 4, 2, 2)
     assert eff.xp_per_node == 0, 'xp_per_node 显式零占位已删,缺省即 0'
     sister = STRATEGY_ECONOMY[_SISTER]
-    assert sister.free_refresh_burst == 3
-    assert sister.xp_instant == 0 and sister.xp_per_plane == 0 \
-        and sister.free_refresh_per_plane == 0, \
-        '姊妹位面段 6/3 归 T-183,本批冻结'
+    assert (sister.xp_instant, sister.xp_per_plane,
+            sister.free_refresh_burst, sister.free_refresh_per_plane) \
+        == (6, 6, 3, 3), '姊妹展开批落地四字段现值'
+    assert sister.xp_per_node == 0, '姊妹行无显式零占位,缺省即 0'
 
 
 def test_gudinglicai_effect_spec_entry() -> None:
@@ -99,7 +100,8 @@ def test_gudinglicai_pending_modeling_rows() -> None:
     for name in (_CARD, _SISTER):
         assert name in STRATEGY_ECONOMY_PENDING_MODELING, name
         assert STRATEGY_ECONOMY_PENDING_MODELING[name], f'{name} 描述非空'
-    assert '估值通道未建' in STRATEGY_ECONOMY_PENDING_MODELING[_CARD]
+        assert '估值通道未建' in STRATEGY_ECONOMY_PENDING_MODELING[name], \
+            f'{name} 行描述改写为建模落地后形态(位面段腿已建,估值未建)'
 
 
 def test_gudinglicai_cash_score_instant_active() -> None:
