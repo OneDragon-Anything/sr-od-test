@@ -151,7 +151,9 @@ def test_pick_then_three_windows_pay_seven_fourth_stops(
         for r, left in ((4, 2), (5, 1), (6, 0)):
             _drive_until(b, lambda r=r: b._node_pos() == (1, r))
             gold_now = int(gs.gold.value or 0)
-            income = _window_income(gs, 1, r, gold_now - 7)
+            # 息基数 = 窗前金 + 7(窗开先落账分期金后的窗开金;窗前捕获式,
+            # 禁以窗后金反推——利息 g//10 量化桶会遮蔽基数取错)
+            income = _window_income(gs, 1, r, prev_gold + 7)
             assert gold_now - prev_gold == 7 + income, \
                 f'r{r} 窗增量 ≠ 7+收入面: ' \
                 f'{gold_now - prev_gold} vs 7+{income}'
