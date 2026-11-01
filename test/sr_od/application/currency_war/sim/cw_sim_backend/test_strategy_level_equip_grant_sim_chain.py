@@ -224,8 +224,8 @@ def test_dormant_boundary_numeric() -> None:
                for name, eff in STRATEGY_ECONOMY.items()
                if eff.xp_instant > 0}
     assert instant == {'伟大征服': 12, '成长的快乐': 4, '固定理财': 4,
-                       '固定理财+': 6, '经验到账': 10, '气氛组+': 8,
-                       '免战牌': 30}, \
+                         '固定理财+': 6, '空仓+': 10, '经验到账': 10, '气氛组+': 8,
+                         '免战牌': 30}, \
         f'即时腿注册面扩集: {instant} —— 新即时腿 = 休眠上界随批重申报'
     bound = node_xp_total + sum(instant.values())
     threshold_9 = sum(XP_TO_NEXT_LEVEL[lv] for lv in range(3, 9))

@@ -33,8 +33,8 @@ def test_registry_row_single_source() -> None:
     """登记单一源(锁 2):键集 = 族现役首例;行值 = 卡面直读 2;键 ∈ 策略
     注册表且 id 对拍(防改名/换 id 后静默错挂)。行值精确断言 = 值形防线的
     合规承载(治理裁定:登记笔误类对账归评审与测试,import 期形查不加)。"""
-    assert set(STRATEGY_EMPTY_EQUIP_XP_GRANTS) == {_CARD}, \
-        '注册面 = 族现役首例(同族后继卡各自独立批,禁顺手代登记)'
+    assert set(STRATEGY_EMPTY_EQUIP_XP_GRANTS) == {_CARD, '空仓+'}, \
+        '注册面 = 族现役两卡(同族后继卡各自独立批,禁顺手代登记)'
     assert STRATEGY_EMPTY_EQUIP_XP_GRANTS[_CARD] == _XP, \
         f'行值漂移: {STRATEGY_EMPTY_EQUIP_XP_GRANTS!r}'
     assert _CARD in INVESTMENT_STRATEGIES, '键必须在策略注册表'
