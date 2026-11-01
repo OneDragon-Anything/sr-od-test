@@ -5,7 +5,8 @@ StrategyDelayedOffer + STRATEGY_DELAYED_OFFERS + 构建校验)。
 收缩:防登记笔误类校验「delay_nodes int/quality 越域」不落校验不落锁,
 2026-10-28 治理口径同源——只留漂移哨):
 - 登记单一源:行值 = 卡面效果原文直读(黄金期货 id 101101/5 节点/金;
-  黄金期货+ id 101102/4 节点/金;彩虹期货 id 201101/5 节点/棱彩),
+  黄金期货+ id 101102/4 节点/金;彩虹期货 id 201101/5 节点/棱彩;
+  彩虹期货+ id 201102/4 节点/棱彩),
   表键集闭族现役卡(展开卡各自独立批领取,禁顺手代登记);
 - 构建校验 2 条(漂移哨,import 即炸语义经直调校验函数锁定):孤儿键 /
   id 双匹配(改名且 id 仍在的漂移也炸)。
@@ -29,8 +30,8 @@ def test_gold_futures_registry_row_single_source() -> None:
     刷新授权承载);键集闭 = 族现役卡(族展开卡各自独立批领取,禁顺手
     代登记);base 溯源 id 对拍(id 101101 ↔ plaza:101101)。"""
     assert set(STRATEGY_DELAYED_OFFERS) == {'黄金期货', '黄金期货+',
-                                            '彩虹期货'}, \
-        '注册面 = 族现役三卡(展开卡各自独立批,禁顺手代登记)'
+                                            '彩虹期货', '彩虹期货+'}, \
+        '注册面 = 族现役四卡(展开卡各自独立批,禁顺手代登记)'
     row = STRATEGY_DELAYED_OFFERS['黄金期货']
     assert row == StrategyDelayedOffer(id='101101', delay_nodes=5,
                                        offer_quality='金')
@@ -61,6 +62,19 @@ def test_rainbow_futures_registry_row_values() -> None:
     assert row == StrategyDelayedOffer(id='201101', delay_nodes=5,
                                        offer_quality='棱彩')
     base = INVESTMENT_STRATEGIES['彩虹期货']
+    assert base.source == f"plaza:{row.id}", \
+        f'溯源 id 对拍失同步: {base.source}'
+
+
+def test_rainbow_futures_plus_registry_row_values() -> None:
+    """行值直测:彩虹期货+ 行 = 卡面效果原文直读(「4个节点后」→ 4 拍,
+    「棱彩投资策略三选一」→ 候选品质棱彩);与彩虹期货仅倒计时数值不同,
+    机制全量继承;base 溯源 id 对拍(id 201102 ↔ plaza:201102),结构
+    镜像彩虹期货行锁。"""
+    row = STRATEGY_DELAYED_OFFERS['彩虹期货+']
+    assert row == StrategyDelayedOffer(id='201102', delay_nodes=4,
+                                       offer_quality='棱彩')
+    base = INVESTMENT_STRATEGIES['彩虹期货+']
     assert base.source == f"plaza:{row.id}", \
         f'溯源 id 对拍失同步: {base.source}'
 
