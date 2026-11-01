@@ -66,6 +66,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
     strategy_economy,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.env_economy import (
+    XP_GOLD_RATE,
     env_economy_value,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.gift_value import (
@@ -231,9 +232,12 @@ def test_cash_missing_node_degrades_to_opening_frame():
 
 
 def test_cash_pending_modeling_card_failclosed():
-    """纯待建模分支卡 fail-closed = 0:固定理财(唯一挂值字段
-    free_refresh_burst 系刷新族待建模)、孪生素数(全默认)。"""
-    assert strategy_economy_value('固定理财', _fresh_gs()) == (0.0, False)
+    """计分通道矩阵:固定理财 = xp_instant=4 现金计分在册分类字段,注册
+    挂值即通道自动生效(4×XP_GOLD_RATE;位面段两字段待建模塌 0,估值
+    面不重复计——2026-11-01 建模批);孪生素数全默认 = 纯无字段分支
+    fail-closed 0。"""
+    assert strategy_economy_value('固定理财', _fresh_gs()) \
+        == (4.0 * XP_GOLD_RATE, True)
     assert strategy_economy_value('孪生素数', _fresh_gs()) == (0.0, False)
 
 
