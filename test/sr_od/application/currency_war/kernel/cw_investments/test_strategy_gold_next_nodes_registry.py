@@ -1,0 +1,41 @@
+"""长期主义注册面测试(cw_investments 分目录镜像;登记锁先例 =
+同目录 test_strategy_dingqi_fuli_registry.py)。
+
+测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-177-changqi-
+zhuyi.md §4 锁 1(REVIEW-T177 §4.3 同面)。卡面官方原文
+(cw_invest_data.py):「现在及接下来3次进入新节点时，每次获得7金币。」
+
+- 注册面锁:STRATEGY_ECONOMY['长期主义'] 条目以 frozen dataclass 值相等
+  形态锁分期金双字段 = gold_next_nodes_amount=7 ∧ gold_next_nodes_count=3
+  (数值 = 卡面 desc 逐字;值相等形态 = 任何其他字段的意外污染同样红,
+  姊妹行「长期主义+」9/3 随 T-178 批,本卡批零涉);
+- 分期族键空间负锁:卡无 STRATEGY_EFFECTS(EffectSpec)条目——economy-only
+  注册(战场段零登记),入集 = 越约。
+"""
+from __future__ import annotations
+
+from sr_od.application.currency_war.kernel.cw_investments import (
+    INVESTMENT_STRATEGIES,
+    STRATEGY_ECONOMY,
+    STRATEGY_EFFECTS,
+    EconomyEffect,
+)
+
+_CARD = '长期主义'
+
+
+def test_changqi_zhuyi_economy_registration_surface() -> None:
+    """长期主义 注册面锁(锁 1):分期金双字段 frozen dataclass 值相等
+    (amount=7「每次获得7金币」/count=3「接下来3次进入新节点」;本测试
+    存活同时证明构建校验通过——注册表孤儿键/双匹配闸在 import 期)。"""
+    assert STRATEGY_ECONOMY[_CARD] == EconomyEffect(
+        gold_next_nodes_amount=7, gold_next_nodes_count=3), \
+        '分期金注册行 = 卡面 desc 逐字(7/3;值相等形态,任何额外字段污染同红)'
+    assert _CARD in INVESTMENT_STRATEGIES, '策略名入 base 注册表'
+
+
+def test_changqi_zhuyi_no_effect_spec_entry() -> None:
+    """分期族键空间负锁:卡无 STRATEGY_EFFECTS 条目(economy-only 注册,
+    无战场段登记腿;入集 = 越约——分期金唯一新增机制件住 sim 世界腿,
+    不走 effects 自动递减通道,T-191 r1-F2 同证口径)。"""
+    assert _CARD not in STRATEGY_EFFECTS, 'economy-only 注册零 EffectSpec 条目'

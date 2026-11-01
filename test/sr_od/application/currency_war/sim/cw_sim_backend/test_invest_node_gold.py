@@ -21,9 +21,13 @@ test_strategy_boss_gold.py)。
 """
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 from test.sr_od.application.currency_war._cw_helpers import cw4_box
 from test.sr_od.application.currency_war.sim.test_sim_backend import (
+    _PIGGY_ENV,
+    _SIG,
     _SIG_OBS,
     _close_shop_feed,
     _drive_step,
@@ -33,13 +37,19 @@ from test.sr_od.application.currency_war.sim.test_sim_backend import (
     _start_battle_feed,
 )
 
+from sr_od.application.currency_war.kernel.cw_action_report import (
+    report_action_pick_invest_env_param,
+)
 from sr_od.application.currency_war.kernel.cw_economy import (
     interest,
     round_start_income,
 )
+from sr_od.application.currency_war.sim import cw_sim_ports
 from sr_od.application.currency_war.sim.cw_sim_backend import (
     SCREEN_BOSS_BRIEFING,
+    SCREEN_BRIEFING,
     SCREEN_ENCOUNTER,
+    SCREEN_INVEST_ENV,
     SCREEN_INVEST_STRATEGY,
     SCREEN_LOBBY,
     SCREEN_PREP,
@@ -57,6 +67,8 @@ from sr_od.application.currency_war.sim.cw_sim_run_config import RunConfig
 
 _CARD = '定期福利'
 _SISTER_FLAT = '剩余价值'
+#: 分期金参数化扩名用卡(T-177 长期主义;注册值 7/3,与 +2 版锁同构)。
+_CARD_INSTALLMENT = '长期主义'
 
 #: 每节点金独立笔 evidence(sim 写统一前缀 + 写点 tag,单一源 =
 #: sim_evidence;写点形态 = strategy:invest_node_gold:p{位面}r{轮})。
@@ -235,5 +247,82 @@ def test_no_invest_node_gold_without_card() -> None:
         _drive_until(b, lambda: b._node_pos() == (1, 9))
         assert gs.gold.evidence == 'sim:engine:income:p1r9', \
             f'未持卡局出现策略笔: {gs.gold.evidence}'
+    finally:
+        uninstall_backend()
+
+
+# —— 分期金腿参数化扩名(T-177;存量为 T-162 批锁,禁动,只追加) ——
+
+#: 分期金独立笔 evidence 前缀(与 test_invest_installment_gold 同源字面;
+#: 本地重复声明 = 跨文件常量零共享的既有目录纪律)。
+_INSTALLMENT_EV_PREFIX = 'sim:engine:strategy:installment:'
+
+
+def _piggy_backend_card_held_before_first_window(card: str) -> SimBackend:
+    """扑满局装配 + 首窗开前持卡直种(展开 _piggy_backend 流程,种卡位
+    插在构造后、简报点击前——r1 窗开时已持卡,分期腿在首窗即发;
+    _piggy_backend 无种子钩子且债文件禁追加,故本地展开,装配序与其
+    逐行同构)。"""
+    b = SimBackend(seed=31, cfg=RunConfig(
+        selected_difficulty='A8', enemy_difficulty=108, env_present=True))
+    install_backend(b)
+    # 首窗开前持卡(观察直种先例 = _hold;r1 窗开于环境选卡推进内,
+    # 此刻尚未发生)。分期金窗腿判递减容器非持卡面——容器同步种注册值
+    # count = 拿卡落地拍状态的直种表达(初始化写端的真身路径归
+    # test_invest_installment_gold 引擎链锁,此处直种合法)。
+    b.gs.observe(b.gs.active_strategies, [card],
+                 evidence='test:hold', sig=_SIG_OBS)
+    b.gs.write_logic(b.gs.strategy_gold_next_nodes_left, {card: 3},
+                     produced_by='Test', evidence='t:hold_container',
+                     sig=_SIG)
+    b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
+    assert b.screen_identity() == SCREEN_INVEST_ENV
+    b.gs.write_logic(b.gs.invest_env_opts,
+                     [_PIGGY_ENV, '轮岗', '头彩'],
+                     produced_by='Test', evidence='t:opts', sig=_SIG)
+    out = report_action_pick_invest_env_param(
+        b.gs, SimpleNamespace(idx=0), _SIG)
+    assert out.applied
+    cw_sim_ports.declare_world(out.world_decl)
+    # wait_one_one 惰性完成显式化(环境选卡推进落 wait_one_one 变体,
+    # r1 窗开挂下次问询;不问询则窗未开、分期腿未跑——+2 版测试由搜索
+    # 器 assert screen_identity() 问询隐式触发,本形态无搜索器,显式调)
+    b._maybe_finish_wait()
+    assert b.screen_identity() == SCREEN_PREP
+    return b
+
+
+def test_piggy_window_installment_pays_first_and_interest_base_contains_it(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """扑满局分期金腿窗开即付 + 利息基数序(锁 4 分期参数化扩名,
+    裁决点 5 默认案 T-177 腿侧;+2 版同名锁的分期 +7 变体):种卡前置于
+    装配 → r1 扑满首窗窗开金 = 种子 3 + 分期 7 = 10,evidence = 分期腿
+    独立笔(窗内唯一金写——聚合腿未持零写、快照不写金);息差非平凡
+    (interest(10) − interest(3) = 1,首窗低金段帽界内,**确定命中**非
+    搜索——+7 版若搜后期窗,金 ≥50 息帽恒吞差,息断言不可判,首窗
+    形态绕开);结算息 = interest(窗开金)(kernel 公式现算期望)——若
+    分期腿挂点后置于递延快照,快照金 3、息恰少 1,本断言红(基数序
+    回归防线)。"""
+    b = _piggy_backend_card_held_before_first_window(_CARD_INSTALLMENT)
+    try:
+        gs = b.gs
+        assert b._node_pos() == (1, 1), '应停在 r1 扑满首窗备战'
+        gold_at_window = int(gs.gold.value or 0)
+        assert gold_at_window == 10, \
+            f'窗开金 = 种子 3 + 分期首窗 7: {gold_at_window}'
+        assert gs.gold.evidence \
+            == _INSTALLMENT_EV_PREFIX + f'{_CARD_INSTALLMENT}:p1r1', \
+            f'扑满窗开 evidence 非分期腿独立笔: {gs.gold.evidence}'
+        counter_at_window = gs.effects.interest_earned
+        assert interest(gold_at_window) \
+            - interest(gold_at_window - 7) == 1, \
+            '息差非平凡前提(息帽/进位漂移 = 断言退化)'
+        _force_settle(monkeypatch, won=True)
+        _start_battle_feed(gs)
+        assert gs.effects.interest_earned \
+            == counter_at_window + interest(gold_at_window), \
+            f'结算息 ≠ 窗开快照金口径息: 期望 ' \
+            f'{counter_at_window + interest(gold_at_window)} vs ' \
+            f'{gs.effects.interest_earned}(基数含分期腿 +7)'
     finally:
         uninstall_backend()
