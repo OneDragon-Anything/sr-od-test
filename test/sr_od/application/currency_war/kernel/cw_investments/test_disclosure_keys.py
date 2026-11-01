@@ -7,8 +7,8 @@ from __future__ import annotations
 
 from sr_od.application.currency_war.kernel.cw_investments import (
     STRATEGY_DELAYED_RANDOM_CHOICE_ASSUMPTION_KEYS,
+    STRATEGY_DESC_UNMODELED_KEYS,
     STRATEGY_HIRING_LETTER_UNMODELED_ASSUMPTION_KEYS,
-    STRATEGY_WORN_EQUIP_UNMODELED_KEYS,
 )
 
 
@@ -34,11 +34,14 @@ def test_strategy_delayed_random_choice_keys_registered() -> None:
         'strategy_delayed_choice_uniform_v0',
     )
 
-def test_worn_equip_unmodeled_keys_registered() -> None:
-    """披露键静态常量在册断言(佩佩穿戴面零建模申报,T-16 §8-1 用户裁定
-    同源):家族随族卡实现批追加,本断言随批扩员——申报面扩员即红一次,
-    批内顺手更新即绿。"""
-    assert STRATEGY_WORN_EQUIP_UNMODELED_KEYS == (
+def test_desc_unmodeled_keys_registered() -> None:
+    """披露键静态常量在册断言(策略卡「desc 有载但刻意零建模」家族双键):
+    键1 佩佩穿戴面零建模申报(用户裁定 2026-10-15 环境侧同源),键2 召唤
+    单位周期离场零建模申报(离场原语缺/留装备指涉物死/触发锚歧义/周期
+    形状缺四缺口);家族随族卡实现批追加消费方与键,本断言随批扩员——
+    申报面扩员即红一次,批内顺手更新即绿。"""
+    assert STRATEGY_DESC_UNMODELED_KEYS == (
         'strategy_worn_equip_unmodeled',
+        'strategy_periodic_unit_leave_unmodeled',
     )
 

@@ -1,21 +1,25 @@
-"""溜佩佩/溜佩佩+/招财狗(id 103401/103402/103501)具名角色发放腿锁(镜像 src =
-kernel/cw_gain_effects.py 的 ``_STRATEGY_CHAR_GRANTS`` + ``_make_char_grant_
-effect`` + ``PICK_INVEST_EFFECTS`` 推导;按被测方法拆目录规范落位——
+"""溜佩佩/溜佩佩+/招财狗/艾丝妲的猛犬!(id 103401/103402/103501/203801)
+具名角色发放腿锁(镜像 src = kernel/cw_gain_effects.py 的
+``_STRATEGY_CHAR_GRANTS`` + ``_make_char_grant_effect`` +
+``PICK_INVEST_EFFECTS`` 推导;按被测方法拆目录规范落位——
 test_gain_chain.py 超线冻结禁追加,新增测试落新镜像,先例 = 同目录姊妹
-镜像文件)。
+镜像文件;本文件辖名单值 (角色, 只数) 中只数 = 1 的单发成员,只数 > 1
+成员(狸职手续×3)世界腿真值归同目录 test_strategy_lizhi_shouxu_grants.py)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
 T-128-liu-peipei.md(定稿)§4 锁 2/3 + REVIEW-T128 七裁决点默认案:
 - 腿语义 = 卡面「佩佩会在你的后排逛街」句(非「获得」直读,人工转正
-  登记):具名确定发放 ``gain_character(rand=False)``,星级实参 1 =
-  占位非先验(佩佩 = cost0 系统召唤单位无星级,环境侧佩佩发放同判);
-  效果串 ``char_grant:佩佩(placed=True,merge=0)``(placed/merge 随串
+  登记)与「获得一个穿戴…的【佩佩】」句(猛犬,佩戴腿零建模):具名
+  确定发放 ``gain_character(rand=False)``,星级实参 1 = 占位非先验
+  (佩佩 = cost0 系统召唤单位无星级,环境侧佩佩发放同判);效果串
+  ``char_grant:佩佩(placed=True,merge=0)``(placed/merge 随串
   留证,前缀独立分域可过滤审计);
 - 落位/升星/席满溢出语义全沿链现役:备战空槽落位、席满溢出落位并阻断
   出战(溢出位身份 = 角色名),零新增链为;
-- 名单单一源:``_STRATEGY_CHAR_GRANTS`` 与登记表 STRATEGY_GRANTS 三卡
-  chars_immediate 逐对相等(两处独立字面量的漂移在备战断言不可见,唯
-  此锁 + 落位真值可暴露,箱腿一致性锁同构)。
+- 名单单一源:``_STRATEGY_CHAR_GRANTS``(值形 = (发放角色, 发放只数),
+  只数不进登记表)与登记表 STRATEGY_GRANTS 各卡 chars_immediate 逐对
+  相等(两处独立字面量的漂移在备战断言不可见,唯此锁 + 落位真值可
+  暴露,箱腿一致性锁同构)。
 """
 from __future__ import annotations
 
@@ -132,11 +136,14 @@ def test_char_grant_leg_bench_full_overflow(
 
 def test_strategy_char_grants_consistency_lock() -> None:
     """发放名单单一源一致性测试(箱腿 _STRATEGY_BOX_GRANTS 同构):效果体
-    工厂表 _STRATEGY_CHAR_GRANTS 与登记表 STRATEGY_GRANTS 三卡
-    chars_immediate 逐对相等(表集同校验,防工厂表扩员而登记面漏登——
-    两处独立字面量的名字漂移在备战断言不可见,唯此测试 + 落位真值可
-    暴露)。"""
-    assert set(_STRATEGY_CHAR_GRANTS) == {'溜佩佩', '溜佩佩+', '招财狗', '艾丝妲的猛犬！'}
-    for name, char in _STRATEGY_CHAR_GRANTS.items():
+    工厂表 _STRATEGY_CHAR_GRANTS(值形 = (发放角色, 发放只数))与登记表
+    STRATEGY_GRANTS 各卡 chars_immediate 逐对相等——只数不进登记表(估值
+    档位与只数无关),只数 > 1 成员(狸职手续×3)的只数真值归
+    test_strategy_lizhi_shouxu_grants.py 行值直测(防工厂表扩员而登记面
+    漏登——两处独立字面量的名字漂移在备战断言不可见,唯此测试 + 落位
+    真值可暴露)。"""
+    assert set(_STRATEGY_CHAR_GRANTS) == {'溜佩佩', '溜佩佩+', '招财狗',
+                                          '艾丝妲的猛犬！', '狸职手续'}
+    for name, (char, _count) in _STRATEGY_CHAR_GRANTS.items():
         assert STRATEGY_GRANTS[name].chars_immediate == (char,), \
             f'{name} 效果体发放名与登记表 chars_immediate 漂移'
