@@ -83,7 +83,7 @@ def rows_sink() -> _RowSink:
         s.close()
 
 
-@pytest.mark.parametrize('card', ['溜佩佩', '溜佩佩+', '招财狗'])
+@pytest.mark.parametrize('card', ['溜佩佩', '溜佩佩+', '招财狗', '艾丝妲的猛犬！'])
 def test_char_grant_leg_places_peipei(
         card: str, rows_sink: _RowSink) -> None:
     """腿行为主锁(设计 §4 锁 3):on_strategy_gained 直构(rand=False)
@@ -107,7 +107,7 @@ def test_char_grant_leg_places_peipei(
     assert rows_sink.kinds() == [], '正常路径零申报行'
 
 
-@pytest.mark.parametrize('card', ['溜佩佩', '溜佩佩+', '招财狗'])
+@pytest.mark.parametrize('card', ['溜佩佩', '溜佩佩+', '招财狗', '艾丝妲的猛犬！'])
 def test_char_grant_leg_bench_full_overflow(
         card: str, rows_sink: _RowSink) -> None:
     """席满分支(链现役语义,角色与道具同款溢出落位):bench 满 9 →
@@ -136,7 +136,7 @@ def test_strategy_char_grants_consistency_lock() -> None:
     chars_immediate 逐对相等(表集同校验,防工厂表扩员而登记面漏登——
     两处独立字面量的名字漂移在备战断言不可见,唯此测试 + 落位真值可
     暴露)。"""
-    assert set(_STRATEGY_CHAR_GRANTS) == {'溜佩佩', '溜佩佩+', '招财狗'}
+    assert set(_STRATEGY_CHAR_GRANTS) == {'溜佩佩', '溜佩佩+', '招财狗', '艾丝妲的猛犬！'}
     for name, char in _STRATEGY_CHAR_GRANTS.items():
         assert STRATEGY_GRANTS[name].chars_immediate == (char,), \
             f'{name} 效果体发放名与登记表 chars_immediate 漂移'

@@ -8,6 +8,7 @@ from __future__ import annotations
 from sr_od.application.currency_war.kernel.cw_investments import (
     STRATEGY_DELAYED_RANDOM_CHOICE_ASSUMPTION_KEYS,
     STRATEGY_HIRING_LETTER_UNMODELED_ASSUMPTION_KEYS,
+    STRATEGY_WORN_EQUIP_UNMODELED_KEYS,
 )
 
 
@@ -32,3 +33,12 @@ def test_strategy_delayed_random_choice_keys_registered() -> None:
     assert STRATEGY_DELAYED_RANDOM_CHOICE_ASSUMPTION_KEYS == (
         'strategy_delayed_choice_uniform_v0',
     )
+
+def test_worn_equip_unmodeled_keys_registered() -> None:
+    """披露键静态常量在册断言(佩佩穿戴面零建模申报,T-16 §8-1 用户裁定
+    同源):家族随族卡实现批追加,本断言随批扩员——申报面扩员即红一次,
+    批内顺手更新即绿。"""
+    assert STRATEGY_WORN_EQUIP_UNMODELED_KEYS == (
+        'strategy_worn_equip_unmodeled',
+    )
+
