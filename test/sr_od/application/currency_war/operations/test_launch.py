@@ -294,3 +294,23 @@ def test_unified_invalid_face_rejected(launch_env) -> None:
     with pytest.raises(ValueError):
         launch_battle_unified(_StubOp([_Frame()]), launch_env.ctx, face='x')
 
+
+def test_prep_anchors_skip_substate_form() -> None:
+    """免战子态备战帧,穿透底图双锚仍命中(第二锚 = 出战∨跳过双形态)。
+
+    「免战牌」激活的战斗节点,备战出战按钮被「跳过」替换(单一源 =
+    docs/game/screens/currency_war_prep.md「跳过(N/N)」按钮替换节;sim 侧
+    同形态 = 后端 visible 按钮对真值)。锚只认出战会把免战备战帧判非备战,
+    出战前屏态复验恒 stale——真实故障形态:sim 冒烟种子 20261015 免战激活
+    后关店回备战,连续 15 帧未识别触顶整局 abandoned(本修复批的回归钉)。
+    """
+    op = _StubOp([_Frame()])   # helper 只走 find_area 应答,帧本体不被消费
+    normal = _Frame(hits={('货币战争-备战', '备战标识-购买经验'),
+                          ('货币战争-备战', '按钮-出战')})
+    assert cw_loop._prep_anchors_hit(op, normal), '常规备战帧双锚命中'
+    skip = _Frame(hits={('货币战争-备战', '备战标识-购买经验'),
+                        ('货币战争-备战', '按钮-跳过')})
+    assert cw_loop._prep_anchors_hit(op, skip), '免战替换帧(出战不可见)仍命中'
+    bare = _Frame(hits={('货币战争-备战', '按钮-跳过')})
+    assert not cw_loop._prep_anchors_hit(op, bare), '第一锚缺 = 非备战帧不命中'
+
