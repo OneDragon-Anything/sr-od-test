@@ -123,15 +123,17 @@ class _DerefController(_RecordingController):
 
 
 def _make_executor(controller: _RecordingController,
-                   screens: list | None = None):
+                   screens: list | None = None,
+                   cw_match=None,
+                   screen_loader=None):
     from sr_od.application.currency_war import prep_actions as pa
     op = SimpleNamespace(park_cursor=lambda **kw: None,
                          screenshot=lambda: (screens.append(1) if
                                              screens is not None else None)
                          or np.zeros((4, 4), dtype='uint8'))
-    ctx = SimpleNamespace(controller=controller, cw_match=None,
+    ctx = SimpleNamespace(controller=controller, cw_match=cw_match,
                           run_context=None,
-                          screen_loader=SimpleNamespace(
+                          screen_loader=screen_loader or SimpleNamespace(
                               get_screen=lambda name: None))
     ex = pa.PrepActionExecutor(op, ctx)
     # 槽位表种子(screen_loader 桩读不到建档 → 空表):op 内参数守卫按
@@ -632,34 +634,69 @@ def test_wear_equip_single_mechanical_drag_no_diff_verification(monkeypatch):
 
 
 def test_open_bookcard_executor_mechanical(monkeypatch):
-    """书册卡机械半:`find_bookcards` 识别 → 首张槽中心单击 → 固定动画
-    等待;slot 对位不中 / 识别空 = 未发出零点击(与
-    CwActionOpenBoxParam/CwActionOpenTomeParam 同形)。动画等待值家族
-    单一源(_OVERLAY_ANIM_WAIT_S;判效交下一帧观察)。"""
-    from sr_od.application.currency_war.obs import cw_identity_obs
-    monkeypatch.setattr(cw_identity_obs, 'find_bookcards',
-                        lambda screen, slots: [(2, Point(123, 456))])
-    monkeypatch.setattr(cw_identity_obs, '_ctx_slots',
-                        lambda ctx, name, n: [])
+    """书册卡机械半(容器槽位直点形态,open-actions-mechanical-pure
+    design §2.1/§2.5 重推):槽号解析(None = gs 容器现算首件槽,双出口
+    守卫)→ 备战栏-N 建档坐标单击 → 固定动画等待(等待家族单一源
+    _OVERLAY_ANIM_WAIT_S;判效交下一帧观察)。识别读门随直点形态拆除
+    ——旧「slot 对位不中/识别空 = 未发出」失败分支不复存在(容器陈旧
+    「件不在」的治理归观察对账域);gs 装配 = 新守卫 slot=None 现算需要
+    (design §2.5 既有用例补装条)。"""
+    from test.sr_od.application.currency_war._cw_helpers import cw4_session
+
+    from one_dragon.base.geometry.rectangle import Rect
+
     monkeypatch.setattr(time, 'sleep', lambda s: None)   # 动画等待桩(零真实等待)
+
+    class _Screen:
+        area_list = [SimpleNamespace(
+            area_name=f'备战栏-{i}',
+            pc_rect=Rect(100 + i * 10, 845, 150 + i * 10, 979))
+            for i in range(1, 10)]
+
+    loader = SimpleNamespace(get_screen=lambda name: _Screen())
+    session = cw4_session()
+    gs = game_state_of(session)
+    _sig = ChannelSig(family='obs', actor='cw4_seed', mode='synthesized')
+    gs.observe(gs.bench, BenchView(
+        slots=[BenchSlot(kind='empty'), BenchSlot(kind='bookcard')]
+        + [BenchSlot(kind='empty')] * 7, capacity=9), sig=_sig)
+    cw_match = SimpleNamespace(session=session)
+
+    # None 现算:容器首个 bookcard 槽(下标+1 = 槽2)→ 建档坐标单击。
     controller = _RecordingController()
-    ex = _make_executor(controller, [])
+    ex = _make_executor(controller, [], cw_match=cw_match,
+                        screen_loader=loader)
     detail, emitted = ex._open_bookcard(CwActionOpenBookcardParam())
-    assert emitted and '槽2' in detail
-    assert [(p.x, p.y) for p in controller.clicks] == [(123, 456)]
+    assert emitted and '槽2' in detail, '现算首件槽显影显式槽号'
+    assert [(p.x, p.y) for p in controller.clicks] == [(145, 912)], \
+        '单击落备战栏建档坐标中心'
     assert len(controller.moves) == 1   # bug#1 缓解口径:先移后点
-    # slot 指定但实读无该槽 → 未发出零点击(对位语义同 _open_box)
+    assert gs.bench.value.slots[1].kind == 'empty', '开卡腾席落账'
+    # 显式 slot:直驱建档坐标(点槽本体中心)。
     controller2 = _RecordingController()
-    ex2 = _make_executor(controller2, [])
+    ex2 = _make_executor(controller2, [], cw_match=cw_match,
+                         screen_loader=loader)
     detail2, emitted2 = ex2._open_bookcard(CwActionOpenBookcardParam(slot=5))
-    assert not emitted2 and controller2.clicks == []
-    # 识别空 → 未发出(交回外循环重观察重派)
-    monkeypatch.setattr(cw_identity_obs, 'find_bookcards',
-                        lambda screen, slots: [])
+    assert emitted2 and '槽5' in detail2
+    assert [(p.x, p.y) for p in controller2.clicks] == [(175, 912)]
+    # None 现算双出口守卫(design §2.5):gs 缺席 / 容器无 bookcard 首槽
+    # → 守卫断言响亮暴露零点击(参数面,非识别失败)。
     controller3 = _RecordingController()
-    ex3 = _make_executor(controller3, [])
-    detail3, emitted3 = ex3._open_bookcard(CwActionOpenBookcardParam())
-    assert not emitted3 and controller3.clicks == []
+    ex3 = _make_executor(controller3, [])   # cw_match=None → gs 缺席
+    with pytest.raises(AssertionError):
+        ex3._open_bookcard(CwActionOpenBookcardParam())
+    assert controller3.clicks == [], '零点击(gs 缺席出口)'
+    session4 = cw4_session()
+    gs4 = game_state_of(session4)
+    gs4.observe(gs4.bench, BenchView(
+        slots=[BenchSlot(kind='empty')] * 9, capacity=9), sig=_sig)
+    controller4 = _RecordingController()
+    ex4 = _make_executor(controller4, [],
+                         cw_match=SimpleNamespace(session=session4),
+                         screen_loader=loader)
+    with pytest.raises(AssertionError):
+        ex4._open_bookcard(CwActionOpenBookcardParam())
+    assert controller4.clicks == [], '零点击(容器无首件槽出口)'
 
 
 def test_open_bookcard_logic_state_frees_slot():
