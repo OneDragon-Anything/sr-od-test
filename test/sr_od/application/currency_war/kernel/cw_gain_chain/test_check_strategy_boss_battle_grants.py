@@ -14,11 +14,17 @@ REVIEW-T166(直构形态先例 = 同目录 test_check_strategy_hp_loss_grants.py
   调用方节点键幂等守卫);
 - rng 缺省回退自掷路径与显式传参路径**写语义同构**(零写计数/evidence
   形态/发放件数一致;非结果等价——自掷路径采样值不可复现,断言只锁
-  写面形态与名 ∈ 池,设计稿 §4 锁 7 收窄口径)。
+  写面形态与名 ∈ 池,设计稿 §4 锁 7 收窄口径);
+- 跨卡双持独立各发(本卡特有锁,T-167 展开卡 designs/
+  T-167-qiang-zaishou-plus.md §4 锁 3):枪在手 + 枪在手+ 同局 boss
+  结算各发 1 件,两笔 evidence 各归卡名互不吞并——触发函数逐持卡独立
+  查表发放,无跨卡判重闸。
 """
 from __future__ import annotations
 
 import random
+
+import pytest
 
 from sr_od.application.currency_war.kernel.cw_gain_chain import (
     check_strategy_boss_battle_grants,
@@ -37,6 +43,7 @@ _SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep')
 _LSIG = ChannelSig(family='logic_action', actor='TestDriver', mode='compute')
 
 _CARD = '枪在手'
+_CARD_PLUS = '枪在手+'
 
 #: 固定种子(采样名失配 = 换种子,禁手抄池清单)。
 _EQ_SEED = 20261102
@@ -130,3 +137,43 @@ def test_default_rng_path_write_semantics_isomorphic() -> None:
     assert gs.equips.source == 'logic_rand', '自掷路径通道漂移'
     assert gs.equips.evidence == f'strategy_boss_battle#{_CARD}#equip', \
         '自掷路径 evidence 形态漂移'
+
+
+def test_dual_hold_independent_grants_per_card(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """跨卡双持独立各发(T-167 §4 锁 3,本卡特有):枪在手 + 枪在手+
+    同局 boss 结算 → equips 恰 +2,两笔 evidence 各归卡名
+    (strategy_boss_battle#<卡名>#equip 前缀匹配,记录经 write 包装——
+    字段级 evidence 只示末笔,双笔归属须记写序)互不吞并——触发函数
+    逐持卡独立查表发放,无跨卡判重闸(卡面两行独立直读;同卡双持不可能
+    = active_strategies 按名去重,跨卡双持可能;发放序 = 持卡登记序,
+    前笔模式卡/后笔展开卡)。边界注记:同局持自由市场时本腿发放经转换腿
+    改写物种,断言改按转换后(简易武装箱)——族语义 T-143 批已锁,
+    不按卡重复立锁。"""
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    gs.observe(gs.equips, [], sig=_SIG_OBS)
+    gs.write_logic(gs.active_strategies, [_CARD, _CARD_PLUS],
+                   produced_by='test-seed', evidence='t:cards', sig=_LSIG)
+    evidences: list[str] = []
+    real = gs.write_logic_rand
+
+    def _rec(target, value, **kw):
+        if gs._field_name(target) == 'equips':
+            evidences.append(str(kw.get('evidence')))
+        return real(target, value, **kw)
+
+    monkeypatch.setattr(gs, 'write_logic_rand', _rec)
+    out = check_strategy_boss_battle_grants(gs, 'boss', _LSIG,
+                                            rng=random.Random(_EQ_SEED))
+    assert len(out) == 2, f'双持应各发 1 件共 2 件: {out!r}'
+    pool = set(equips_by_category('简易'))
+    assert all(n in pool for n in out), '发放名出池'
+    assert gs.equips.value == list(out), 'equips 恰 +2 且序 = 发放序'
+    assert len(evidences) == 2, f'装备写笔数漂移: {evidences!r}'
+    assert evidences[0].startswith(f'strategy_boss_battle#{_CARD}#equip') \
+        and evidences[0].endswith('#equip'), \
+        f'前笔 evidence 应归 {_CARD}: {evidences[0]!r}'
+    assert evidences[1].startswith(f'strategy_boss_battle#{_CARD_PLUS}'
+                                   f'#equip'), \
+        f'后笔 evidence 应归 {_CARD_PLUS}: {evidences[1]!r}'
+    assert evidences[0] != evidences[1], '两笔 evidence 互不吞并'

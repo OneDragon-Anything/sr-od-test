@@ -63,6 +63,9 @@ from sr_od.application.currency_war.sim.cw_sim_backend import (
 )
 
 _CARD = '枪在手'
+#: T-167 展开卡参数化扩名(designs/T-167-qiang-zaishou-plus.md §4 锁 2
+#: +1 名;战后腿与模式卡逐字同句,端到端行身份 = evidence 前缀分卡)。
+_CARD_PLUS = '枪在手+'
 _MOD_ENV = '人身意外险'
 _PLANE_TRANSITION = '货币战争-位面过渡'
 _TRANSIT_SCREENS = (SCREEN_SETTLE, _PLANE_TRANSITION, SCREEN_INVEST_STRATEGY,
@@ -153,9 +156,9 @@ def _record_world_writes(gs, monkeypatch: pytest.MonkeyPatch) -> list[tuple]:
     return calls
 
 
-def _hold_card(gs) -> None:
+def _hold_card(gs, *, card: str = _CARD) -> None:
     """持卡直置(注册容器直写 = 持卡事实单一源;不经 pick 链)。"""
-    gs.write_logic(gs.active_strategies, [_CARD],
+    gs.write_logic(gs.active_strategies, [card],
                    produced_by='test-seed', evidence='t:card', sig=_SIG)
 
 
@@ -192,16 +195,20 @@ def _grant_rows(calls: list[tuple]) -> list[tuple]:
             and str(c[2] or '').startswith(_EVIDENCE_PREFIX)]
 
 
+@pytest.mark.parametrize('card', [_CARD, _CARD_PLUS])
 def test_boss_settle_grants_random_equip(
-        monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
-    """锁 2(sim 端到端发放真值):持卡局 boss 节点战斗结算后 equips 恰
-    +1(采样名 ∈ 简易池派生集,禁手抄清单)+ strategy_boss_battle#
-    <卡名> 前缀 evidence 笔(随机态通道),sig 单形态 = logic_action 族
+        card: str, monkeypatch: pytest.MonkeyPatch,
+        _isolate_defect_buffer) -> None:
+    """锁 2(sim 端到端发放真值;T-167 展开卡参数化 +1 名):持卡局 boss
+    节点战斗结算后 equips 恰 +1(采样名 ∈ 简易池派生集,禁手抄清单)+
+    strategy_boss_battle#<卡名> 前缀 evidence 笔(随机态通道,**前缀匹配
+    禁精确匹配**——原语内追加 #equip 后缀;前缀带卡名段分卡归属,
+    「枪在手」前缀不吞「枪在手+」笔),sig 单形态 = logic_action 族
     'sim:strategy' 组。"""
     b = _prep_backend(71)
     try:
         gs = b.gs
-        _hold_card(gs)
+        _hold_card(gs, card=card)
         _drive_to_kind_prep(monkeypatch, b, target_kind='boss')
         equips_before = list(gs.equips.value or [])
         calls = _record_world_writes(gs, monkeypatch)
@@ -215,6 +222,8 @@ def test_boss_settle_grants_random_equip(
         assert row[4][-1] in pool, f'装备名出池: {row[4]!r}'
         assert row[4] == equips_before + [row[4][-1]], 'equips 应恰 +1'
         assert row[0] == 'rand', f'采样发放应走随机态通道: {row[0]}'
+        assert str(row[2]).startswith(f'strategy_boss_battle#{card}'), \
+            f'evidence 前缀未归 {card}: {row[2]}'
         assert str(row[2]).endswith('#equip'), f'evidence 漂移: {row[2]}'
         assert row[3].family == 'logic_action' \
             and row[3].group_id == 'sim:strategy', f'sig 组漂移: {row[3]}'

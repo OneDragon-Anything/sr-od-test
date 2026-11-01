@@ -5,10 +5,14 @@ cw_investments.py 的 STRATEGY_BOSS_BATTLE_GRANTS + 构建校验)。
 REVIEW-T166(校验面按 2026-10-28 治理判据分诊 + T-163 R1 判例同形:
 「只能由写表人笔误触发的校验删」——类别词/件数值形手抄笔误类不落校验;
 「能被游戏版本变更独立触发的漂移哨留」——孤儿键一哨全落;直构形态先例 =
-同目录 test_strategy_encounter_battle_grants.py):
+同目录 test_strategy_encounter_battle_grants.py);T-167 展开卡扩名沿
+designs/T-167-qiang-zaishou-plus.md §4 锁 5(构建校验参数化确认:
+新行过孤儿键哨 = 闭集对拍 + 逐行 ∈ 策略注册表,值形/件数对账归本表
+逐行参数化,治理后形零新增校验):
 - 登记单一源:行值 = 卡面效果原文直读(枪在手 id 200501:首领战后 1 件
-  随机简易装备;同卡「立刻获得」即时腿 = cw_gain_effects 泛化随机装备表
-  行,两腿触发时点异构分表);表只收「首领战后随机装备采样」触发器形状,
+  随机简易装备;枪在手+ id 200502 战后腿与模式卡逐字同句同值,即时腿
+  「立刻获得2件」另入 cw_gain_effects 泛化随机装备表行,两腿触发时点
+  异构分表);表只收「首领战后随机装备采样」触发器形状,
   与 STRATEGY_ENCOUNTER_BATTLE_GRANTS(占席道具确定发放)形状异构不共表
   (扩形状各建各表),族内后续卡各建各批;
 - 构建校验 1 条(漂移哨,import 即炸语义经直调校验函数锁定):孤儿键
@@ -26,21 +30,34 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     equips_by_category,
 )
 
-_CARD = '枪在手'
+#: 族现役成员闭集(卡名 → 行值):枪在手(200501 模式卡)+ 枪在手+
+#: (200502 展开卡,战后腿与模式卡逐字同句同值;同族后续卡各自独立批)。
+_CARD_ROWS: dict[str, tuple[str, int]] = {
+    '枪在手': ('简易', 1),
+    '枪在手+': ('简易', 1),
+}
 _CAT = '简易'
 
 
-def test_registry_row_single_source() -> None:
-    """登记单一源:枪在手行 = 卡面效果原文直读(「首领战后,获得1件随机
-    简易装备」→ (装备类别词, 件数) 扁平二元组单档);类别池非空(数据
-    性质锁,池派生单一源 = equips_by_category 注册表派生);键 ∈ 策略
-    注册表(孤儿哨现值通过 = import 过闸即证,显式对拍防静默漂移)。"""
-    assert set(STRATEGY_BOSS_BATTLE_GRANTS) == {_CARD}, \
-        '注册面 = 族现役首例(同族后续卡各自独立批,禁顺手代登记)'
-    assert STRATEGY_BOSS_BATTLE_GRANTS[_CARD] == (_CAT, 1), \
+def test_registry_rows_closed_set() -> None:
+    """登记面闭集:族现役两成员(禁顺手代登记,同族后续卡各自独立批,
+    扩名随批申报)。"""
+    assert set(STRATEGY_BOSS_BATTLE_GRANTS) == set(_CARD_ROWS), \
+        f'注册面漂移: {sorted(STRATEGY_BOSS_BATTLE_GRANTS)!r}'
+
+
+@pytest.mark.parametrize(('card', 'row'), sorted(_CARD_ROWS.items()))
+def test_registry_row_single_source(card: str,
+                                    row: tuple[str, int]) -> None:
+    """登记单一源(逐行参数化):行值 = 卡面效果原文直读(「首领战后,
+    获得1件随机简易装备」→ (装备类别词, 件数) 扁平二元组单档);类别池
+    非空(数据性质锁,池派生单一源 = equips_by_category 注册表派生);
+    键 ∈ 策略注册表(孤儿哨现值通过 = import 过闸即证,显式对拍防静默
+    漂移——T-167 §4 锁 5 构建校验参数化确认)。"""
+    assert STRATEGY_BOSS_BATTLE_GRANTS[card] == row, \
         f'行值漂移: {STRATEGY_BOSS_BATTLE_GRANTS!r}'
     assert len(equips_by_category(_CAT)) > 0, '类别池必须非空(数据性质)'
-    assert _CARD in INVESTMENT_STRATEGIES, '键必须在策略注册表'
+    assert card in INVESTMENT_STRATEGIES, '键必须在策略注册表'
 
 
 def test_validator_orphan_key_raises(monkeypatch) -> None:
