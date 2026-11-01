@@ -708,8 +708,9 @@ def test_supply_sim_pick_take_all_fail_closed_latch_bookkeeping(
         assert gs.chosen_supply.value is not None, '前置:选卡确认已落地'
         assert gs.unchosen_supply.value is None, (
             '未选集域 sim 恒 None(fail-closed 载体面)')
-        assert gs.strategy_conditional_done.value == ('全都要·银',), (
-            '事件消耗闩照设(A 案 sim 簿记 = 一笔 done 键写,零世界效果)')
+        assert gs.strategy_conditional_done.value == \
+            ('take_all#全都要·银#1',), (
+            '事件消耗照耗(A 案 sim 簿记 = 一笔计数复合键 done 写,零世界效果)')
         assert gs.bench.value == bench_before, '发放侧零写:bench 不变'
         assert list(gs.equips.value) == \
             equips_before + [gs.chosen_supply.value[1][0]], (

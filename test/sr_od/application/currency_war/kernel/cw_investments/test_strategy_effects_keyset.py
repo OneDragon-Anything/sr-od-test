@@ -18,7 +18,8 @@ from sr_od.application.currency_war.kernel.cw_investments import (
 )
 
 #: 键集闭集基线 = 活体 46 名(2026-11 实现批 T-182~T-190 后现值)+
-#: 超发货币(T-191)= 47;扩员 = 新卡实现批随批显式并入。
+#: 超发货币(T-191)= 47 + 全都要·金双腿两键(2026-11-02)= 49;
+#: 扩员 = 新卡实现批随批显式并入。
 _EXPECTED_KEYS: frozenset[str] = frozenset({
     '淘金客', '固定理财', '固定理财+', '经验就是财富', '商业间谍',
     '双手狸开键盘！', '采购专员·金', '采购专员·彩', '全员晋升', '人力重组',
@@ -26,7 +27,8 @@ _EXPECTED_KEYS: frozenset[str] = frozenset({
     '加油站', '免费午餐', '存款回报', '打捞人才库', '打捞人才库+',
     '全队的希望', '成长基金', '武力刷新', '星星相印', '节省工位',
     '公司人才流动', '公司军火更新·银', '市场干预', '合并同类项', '溜佩佩',
-    '溜佩佩+', '全都要·银', '全都要·银#supply_delta', '团队力量·银',
+    '溜佩佩+', '全都要·银', '全都要·银#supply_delta', '全都要·金',
+    '全都要·金#supply_delta', '团队力量·银',
     '应援团', '正能量', '完美开局', '效率员工奖', '基层贡献',
     '榜样的力量·银', '当头一棒', '幸运喷雾', '延迟收益', '星级压制', '星变',
     '超发货币',
@@ -40,11 +42,11 @@ def test_strategy_effects_keyset_closed() -> None:
         'STRATEGY_EFFECTS 键集漂移:\n'
         f'  缺员: {sorted(set(_EXPECTED_KEYS) - set(STRATEGY_EFFECTS))}\n'
         f'  多员: {sorted(set(STRATEGY_EFFECTS) - set(_EXPECTED_KEYS))}')
-    assert len(STRATEGY_EFFECTS) == 47, '基数申报对账(effect-domain §5)'
+    assert len(STRATEGY_EFFECTS) == 49, '基数申报对账(effect-domain §5)'
 
 
 def test_strategy_effects_keys_unique_ids() -> None:
-    """伴生锁:规范键条目 id 唯一(同卡双腿申报键除外——全都要·银#
+    """伴生锁:规范键条目 id 唯一(同卡双腿申报键除外——全都要·银/金#
     supply_delta 与 canon 键同 id 系在册申报形态,非漂移)。"""
     ids: dict[str, str] = {}
     for key, spec in STRATEGY_EFFECTS.items():
