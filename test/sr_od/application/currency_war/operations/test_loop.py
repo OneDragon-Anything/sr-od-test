@@ -56,7 +56,11 @@ from sr_od.application.currency_war.operations.cw_screen import (
 # 1. 分发身份语料回归(两阶段身份分发的语料纪律可执行测试)
 # ============================================================
 
-_SCREENS_DIR = Path(__file__).parents[4] / 'screens'
+# sr-od-test 根(screens/ 语料帧所在):test_loop.py 上溯 6 级 =
+# operations→currency_war→application→sr_od→test→sr-od-test。此前
+# parents[4] 误指 test/screens(不存在),语料帧恒「缺失」静默 skip,
+# 实帧锁从未生效(SA-4 落地时实证)。
+_SCREENS_DIR = Path(__file__).parents[5] / 'screens'
 
 #: 阶段一身份清单语料(True 向):帧 → 期望屏名
 IDENTITY_CASES: list[tuple[str, str]] = [
@@ -67,6 +71,9 @@ IDENTITY_CASES: list[tuple[str, str]] = [
     ('货币战争-备战-角色详情/char_detail_equipped.webp', '货币战争-备战-角色详情'),
     ('货币战争-备战-专家邀请函/弹窗.webp', '货币战争-备战-专家邀请函'),
     ('货币战争-备战-武装箱选择/box_open.webp', '货币战争-备战-武装箱选择'),
+    # 免战×商店叠加态:免战只替换出战按钮,不替换商店控件——开商店 id_mark
+    # 仍全中,叠加帧由阶段一身份分发接住,不依赖备战穿透双锁认领。
+    ('货币战争-备战-开商店/免战叠加态.webp', '货币战争-备战-开商店'),
 ]
 
 #: 阶段二默认分支语料:阶段一必须 miss(返回 None)+ 双锚必须命中
@@ -113,6 +120,52 @@ def _read(path: Path):
     screen = cv2_utils.read_image(str(path))
     assert screen is not None, f'语料帧读取失败: {path}'
     return screen
+
+
+def test_prep_skip_substate_real_frame_anchor_lock(
+        test_context: SrTestContext) -> None:
+    """免战子态实拍帧锚真值锁(实帧面,钉 screen_info 建档可命中)。
+
+    判定逻辑钉 = test_launch.py::test_prep_anchors_skip_substate_form
+    (stub 帧,锁 ``_prep_anchors_hit`` 的 or 双形态)——但 stub 不触
+    OCR:跳过锚 rect/lcs 在 screen_info 漂移时 stub 恒绿,实机侧静默
+    回到双锚失配形态(免战激活后连续 15 帧未识别整局 abandoned,sim
+    冒烟种子 20261015 事故)。本条用归档实拍帧走生产识别链
+    ``find_area_in_screen``,锚漂移即红。免战形态单一源 =
+    docs/game/screens/currency_war_prep.md「跳过(N/N)」按钮替换节。
+
+    - 免战纯帧(货币战争-备战-免战/跳过态.webp):阶段一身份 miss
+      (免战屏不在 CW_DISPATCH_SCREENS)→ 双锚认领形态成立 = 购买
+      经验命中 ∧ 出战 miss ∧ 跳过命中(修复前该帧双锚失配);
+    - 常规帧(货币战争-备战/shop_closed.webp):跳过锚 miss,常规帧
+      无双形态误命中(出战/购买经验两锚已由
+      test_dispatch_corpus_prep_default_direction 辖住,不重复)。
+    """
+    skip_frame = _SCREENS_DIR / '货币战争-备战-免战' / '跳过态.webp'
+    if not skip_frame.exists():
+        pytest.skip('实拍帧缺失: 货币战争-备战-免战/跳过态.webp')
+    screen = _read(skip_frame)
+    name = get_match_screen_name(
+        test_context, screen,
+        screen_name_list=_prep_excluded_dispatch_names(test_context))
+    assert name is None, \
+        f'免战纯帧阶段一误命中 {name!r}(免战屏不在分发清单,应 miss 走阶段二认领)'
+    for _area, _hit in (('备战标识-购买经验', True), ('按钮-出战', False),
+                        ('按钮-跳过', True)):
+        area = test_context.screen_loader.get_area('货币战争-备战', _area)
+        r = find_area_in_screen(test_context, screen, area, crop_first=False)
+        assert r == (FindAreaResultEnum.TRUE if _hit
+                     else FindAreaResultEnum.FALSE), \
+            f'免战帧备战锚「{_area}」期望命中={_hit},实际 {r.name}'
+
+    normal_frame = _SCREENS_DIR / '货币战争-备战' / 'shop_closed.webp'
+    if not normal_frame.exists():
+        pytest.skip('实拍帧缺失: 货币战争-备战/shop_closed.webp')
+    area = test_context.screen_loader.get_area('货币战争-备战', '按钮-跳过')
+    r = find_area_in_screen(test_context, _read(normal_frame), area,
+                            crop_first=False)
+    assert r == FindAreaResultEnum.FALSE, \
+        f'常规帧跳过锚应 miss(免战无双形态误命中面),实际 {r.name}'
 
 
 def _prep_excluded_dispatch_names(test_context: SrTestContext) -> list[str]:
