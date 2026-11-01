@@ -116,3 +116,69 @@ def test_pure_read_zero_container_writes() -> None:
     seq0 = gs.write_seq
     assert check_strategy_bench_count_xp(gs) == _XP
     assert gs.write_seq == seq0, '判定零写'
+
+
+# ── 姊妹人才济济(202701,'ge' 行)谓词锁(模式卡预留「ge 行为归 T-193 批」履约)──
+_CARD2 = '人才济济'
+
+
+def _gs2(*, card: str | None = _CARD2,
+         bench: list[BenchSlot] | None = None) -> GameState:
+    """姊妹持卡直构(复用本文件 _unit;card=None = 未持卡)。"""
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    if card is not None:
+        gs.write_logic(gs.active_strategies, [card],
+                       produced_by='test-seed', evidence='t:card2',
+                       sig=_SIG_LOGIC)
+    if bench is not None:
+        slots = list(bench) + [BenchSlot(kind='empty')] * (9 - len(bench))
+        gs.observe(gs.bench, BenchView(slots=slots, capacity=9),
+                   sig=_SIG_OBS)
+    return gs
+
+
+def test_ge_exactly_eight_grants() -> None:
+    """ge 恰 8(锁:边界含端点):持卡+恰 8 units → 3(「大于等于8名」)。"""
+    gs = _gs2(bench=[_unit() for _ in range(8)])
+    assert check_strategy_bench_count_xp(gs) == _XP
+
+
+def test_ge_seven_zero() -> None:
+    """ge 7 不足(锁):7 units → 0(<8 不满足 ≥8)。"""
+    gs = _gs2(bench=[_unit() for _ in range(7)])
+    assert check_strategy_bench_count_xp(gs) == 0
+
+
+def test_ge_nine_full_grants() -> None:
+    """ge 9 满席(锁):9 units → 3(容量 9 上界)。"""
+    gs = _gs2(bench=[_unit() for _ in range(9)])
+    assert check_strategy_bench_count_xp(gs) == _XP
+
+
+def test_ge_placeholder_only_zero() -> None:
+    """ge 仅占位件槽零命中(锁:计数口径 A——supply_box/bookcard 两 kind
+    各建一例,占位件不计入单位数,8 个占位件 ≠ 满足 ≥8)。"""
+    for kind in ('supply_box', 'bookcard'):
+        gs = _gs2(bench=[BenchSlot(kind=kind) for _ in range(8)])
+        assert check_strategy_bench_count_xp(gs) == 0, f'{kind}: 占位件不计'
+
+
+def test_ge_bench_unobserved_fail_closed() -> None:
+    """ge bench 未观察防御(锁):fail-closed → 0(缺省 [] 误判恒满足的
+    显式拦截,同姊妹记因)。"""
+    gs = _gs2(card=_CARD2, bench=None)
+    assert check_strategy_bench_count_xp(gs) == 0
+
+
+def test_ge_strategies_unobserved_fail_closed() -> None:
+    """ge 策略集未观察防御(锁):fail-closed → 0。"""
+    gs = _gs2(card=None)
+    gs.observe(gs.bench, BenchView(slots=[BenchSlot(kind='empty')] * 9,
+                                   capacity=9), sig=_SIG_OBS)
+    assert check_strategy_bench_count_xp(gs) == 0
+
+
+def test_ge_no_card_zero() -> None:
+    """ge 未持卡零命中(锁):满席也零发放。"""
+    gs = _gs2(card=None, bench=[_unit() for _ in range(9)])
+    assert check_strategy_bench_count_xp(gs) == 0

@@ -214,3 +214,53 @@ def test_no_card_zero_write(monkeypatch: pytest.MonkeyPatch) -> None:
         assert gs.xp.value == xp0, 'xp 零增量'
     finally:
         uninstall_backend()
+
+
+# ── 姊妹人才济济(202701,'ge' 行)sim 世界锁(T-193 批:机制件零新,
+# 谓词 ge 分支在码,通道级 evidence 同笔族)──
+_CARD2 = '人才济济'
+
+
+def test_ge_eight_units_window_write(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """姊妹持卡+席 ≥8(锁):观察通道覆盖席视图为 8 单位 → 节点窗 XP +3
+    世界写走全链(evidence 通道级 ``xp:bench_count`` 勿假设带卡名)。"""
+    b = _setup()
+    try:
+        gs = b.gs
+        gs.write_logic(gs.active_strategies, [_CARD2],
+                       produced_by='test-seed', evidence='t:card2',
+                       sig=_SIG)
+        gs.observe(gs.bench, _bench_view(8), evidence='t:seed:bench8',
+                   sig=_SIG_OBS)
+        before_lv = int(gs.level.value)
+        before_xp = gs.xp.value
+        b._enter_node_window((1, 2))
+        want_lv, want_cur = xp_apply_amount(before_lv, int(before_xp[0]), 3)
+        assert gs.level.value == want_lv, 'level 按结转式推进'
+        assert gs.xp.value == (want_cur, XP_TO_NEXT_LEVEL.get(
+            want_lv, before_xp[1])), f'xp 恰 +3: {gs.xp.value}'
+        assert gs.xp.evidence == _XP_EV, 'evidence 通道级笔'
+    finally:
+        uninstall_backend()
+
+
+def test_ge_seven_units_zero_write(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """姊妹席不足零写(锁 3 反向):7 单位 → 谓词失败窗推进零 xp 写。"""
+    b = _setup()
+    try:
+        gs = b.gs
+        gs.write_logic(gs.active_strategies, [_CARD2],
+                       produced_by='test-seed', evidence='t:card2',
+                       sig=_SIG)
+        gs.observe(gs.bench, _bench_view(7), evidence='t:seed:bench7',
+                   sig=_SIG_OBS)
+        xp0 = gs.xp.value
+        calls = _record_all_writes(gs, monkeypatch)
+        b._enter_node_window((1, 2))
+        assert [c for c in calls if c[1] in ('level', 'xp')] == [], \
+            '席 <8 窗零 xp 域写'
+        assert gs.xp.value == xp0, 'xp 零增量'
+    finally:
+        uninstall_backend()

@@ -30,14 +30,20 @@ def test_registry_row_single_source() -> None:
     """登记单一源(锁 1):键集 = 族现役首例;行值 = 卡面直读三元组
     (≤4 名/每次 +3);键 ∈ 策略注册表且 id 对拍(防改名/换 id 后静默
     错挂)。姊妹人才济济(202701,'ge' 行)归其后继批,禁顺手代登记。"""
-    assert set(STRATEGY_BENCH_COUNT_XP_GRANTS) == {_CARD}, \
-        '注册面 = 族现役首例(同族后继卡独立批,禁顺手代登记)'
+    assert set(STRATEGY_BENCH_COUNT_XP_GRANTS) == {_CARD, '人才济济'}, \
+        '注册面 = 族现役两卡(同族后继卡独立批,禁顺手代登记)'
     assert STRATEGY_BENCH_COUNT_XP_GRANTS[_CARD] == _ROW, \
         f'行值漂移: {STRATEGY_BENCH_COUNT_XP_GRANTS!r}'
     assert _CARD in INVESTMENT_STRATEGIES, '键必须在策略注册表'
     assert INVESTMENT_STRATEGIES[_CARD].source == 'plaza:202601', \
         '注册行 id 对拍(202601,改名/换 id 漂移哨现值通过)'
     assert INVESTMENT_STRATEGIES[_CARD].name == _CARD, '名字键对拍'
+
+    assert STRATEGY_BENCH_COUNT_XP_GRANTS['人才济济'] == ('ge', 8, 3), \
+        f"姊妹行值漂移: {STRATEGY_BENCH_COUNT_XP_GRANTS['人才济济']!r}"
+    assert INVESTMENT_STRATEGIES['人才济济'].source == 'plaza:202701', \
+        '姊妹注册行 id 对拍(202701,改名/换 id 漂移哨现值通过)'
+    assert INVESTMENT_STRATEGIES['人才济济'].name == '人才济济', '姊妹名字键对拍'
 
 
 def test_validator_orphan_key_raises(monkeypatch) -> None:
