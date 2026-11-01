@@ -20,6 +20,7 @@ def test_hiring_letter_unmodeled_keys_registered() -> None:
         '招聘资金',
         '招聘资金+',
         '专家招募',
+        '专家招募+',
     )
 
 
