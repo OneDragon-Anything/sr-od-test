@@ -50,7 +50,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 _C_COMP = Comp(name='C组生长测', factions=[], core_chars=[
     '瓦尔特', '杰帕德', '停云', '希儿', '符玄'],
     form_tiers={}, strength='A', form_difficulty='easy',
-    early_power='中', required_deployed=('瓦尔特', '杰帕德'))
+    required_deployed=('瓦尔特', '杰帕德'))
 
 
 def _frame(gs, *, round_num: int = 2) -> MandateFrame:
