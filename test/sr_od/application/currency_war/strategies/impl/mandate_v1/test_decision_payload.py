@@ -130,7 +130,12 @@ def test_locked_frame_three_keys_and_window_consistent() -> None:
 def test_unlocked_recipe_frame_window_set_boundary() -> None:
     """P1 未锁配方帧:direction 回落配方键(locked=False/候选透传);
     window 角色集边界 = k_members ∪ 持有域终局库成员——备战席终局件
-    入集(被窗口挡住的判域主体),持有域注册表外名字不入集。"""
+    入集(被窗口挡住的判域主体),持有域注册表外名字不入集。
+
+    k_members 口径(过渡支 = dual-layer-candidates design §2.4-5):
+    候选并集(假线名解析失败跳过)∪ 过渡候选成员 = 过渡并集
+    (transition_candidates 槽展开;direction 配方键仍读
+    opening_recipe_comp,两槽种植相互独立)。"""
     gs = cw4_gs(None, plane=1, round_num=1, node='prep',
                 bench=[cw4_bc('花火'), cw4_bc('杂1')])
     strat = _make(gs)
@@ -139,6 +144,7 @@ def test_unlocked_recipe_frame_window_set_boundary() -> None:
     assert comp is not None
     st.opening_recipe_comp = comp
     st.line_candidates = ('线一', '线二', '线三')
+    st.transition_candidates = (('持续伤害', '希儿系'),)
 
     payload = strat.decision_payload()
 
@@ -146,9 +152,10 @@ def test_unlocked_recipe_frame_window_set_boundary() -> None:
         'locked': False, 'comp': comp.name,
         'candidates': ['线一', '线二', '线三'],
     }
-    # 未锁帧统一线内名单 = 候选并集(假线名解析失败跳过)∪ 配方成员
-    # = 配方成员集;排序序(读口 = sell_line_membership)。
-    assert payload['k_members'] == sorted(cw4_members(comp))
+    # 未锁帧统一线内名单 = 候选并集(假线名解析失败跳过)∪ 过渡候选
+    # 成员 = 过渡并集;排序序(读口 = sell_line_membership)。
+    assert payload['k_members'] == sorted(
+        cw_intention._pair_members(('持续伤害', '希儿系')))
     assert payload['k_fallback'] == {'hit': False, 'band': ''}
     assert '花火' in payload['window']
     assert '杂1' not in payload['window']   # 终局库外持有件不入窗口键集

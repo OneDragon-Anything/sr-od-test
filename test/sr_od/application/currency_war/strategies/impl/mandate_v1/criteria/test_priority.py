@@ -20,16 +20,23 @@ priority-model §1/§3/§4/§5(总纲 = 同目录 design.md §2.1):
 - sell_order 取用形态(升序 = 从最不该卖到最先让路,末位最先让路)+
   旋转门同型帧(达标 2★ 完成品在席满让位帧不做 victim);
 - PriorityContext 生产装配(锁定帧 need_star 表 = 锁定线知识卡全量
-  照录〔design §2.5-1 装配补全〕/ 未锁帧 = 候选三线并集 + need_star
-  跨线取最大 + 过渡配方成员回落 opening_recipe_comp;P1 锁定局配方
-  支照收 = 名单单一准入三景之一,changes/2026-10-30-roster-plane1-
-  union design §2.1/§3);
+  照录〔design §2.5-1 装配补全〕/ 未锁帧 = 实候选三线并集 + need_star
+  跨线取最大 + 过渡候选成员随 transition_candidates 槽并入;P1 锁定局
+  过渡支照收 = 名单景之一,dual-layer-candidates design §2.4-2);
+- member_rank 二元组族(§2.4-3):双层名单/同档垫底(过渡 (1,r)
+  键恒大于终局 (0,r),先让路)/缺省值 (1, CANDIDATE_TOP_N)/跨对
+  最小位次/重叠归终元(装配序承载,零特判)/过渡完成品层内档 4;
 - 档内并列金币 tie-break(用户裁定三,上一迭代 design §2.2 第 1 项)
   与 member_rank 装配切换回归(承继未变)。
 
 旧八档断言过期缘由(改写记录):统一序列排序单位从「角色名」改为
 「单张牌」,原档 2 升星主线拆出完成品保护档 2、原档 5 拆出档 4,
 原档 3/4/5/6/7/8 依次位移为 5/6/7/8/9/10(design §2.2 十档判定表)。
+旧 rank 整数断言过期缘由:member_rank 键改 (层, 位次) 二元组
+(dual-layer-candidates design §2.4-3)——终局 (0, 线内序数)/过渡
+(1, 候选位次),字典序承载「同档占位、档内垫底」,键域/十档结构
+零改动。旧配方支塞槽(opening_recipe_comp)过期缘由:过渡半边
+名单源从物化单对改过渡候选槽并集(§2.4-2)。
 """
 from __future__ import annotations
 
@@ -38,7 +45,6 @@ import random
 from test.sr_od.application.currency_war._cw_helpers import (
     cw4_bc,
     cw4_gs,
-    cw4_members,
     cw4_session,
 )
 
@@ -47,16 +53,22 @@ from sr_od.application.currency_war.data.cw_shop_odds import refresh_prob
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
 from sr_od.application.currency_war.kernel.cw_game_state import Unit
 from sr_od.application.currency_war.kernel.cw_intention import (
+    _pair_members,
     pair_target_comp,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.priority import (
+    RANK_TRANSITION_BOTTOM,
     HeldUnit,
     PriorityContext,
     ShopUnit,
     assemble_priority_context,
     held_copies_of,
+    interest_exempt_member,
     sell_order,
     sort_key,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.line_select import (
+    CANDIDATE_TOP_N,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
     state_of,
@@ -98,16 +110,19 @@ def _ctx(*, candidates: frozenset[str] = frozenset(),
          level: int = 7,
          locked_members: tuple[str, ...] | None = None,
          seed: int = 42) -> PriorityContext:
-    """测试上下文(两态名单面:locked_members = 锁定线名单,缺省 =
-    候选并集 + 配方成员的未锁形态;rank = core 0/其余 1 迁移期映射)。"""
+    """测试上下文(双层名单面:locked_members = 锁定线名单,缺省 =
+    实候选并集 + 过渡成员的未锁形态;rank 二元组 = 终局 (0, core 0/
+    其余 1)迁移期映射,过渡成员 (1, 位次 1),重叠取终局——与生产
+    装配序同构;位次精调用装配测试(塞真槽)承载)。"""
     if locked_members is not None:
         view = LineMembersView(locked=True, comp_name='测试线',
                                members=locked_members)
-        members: set[str] = set(locked_members)
     else:
         view = LineMembersView(locked=False, comp_name=None, members=())
-        members = set(candidates) | set(recipe)
     core_set = set(cores)
+    rank_map: dict[str, tuple[int, int]] = dict.fromkeys(recipe, (1, 1))
+    rank_map.update({n: (0, 0) if n in core_set else (0, 1)
+                     for n in candidates})
     return PriorityContext(
         held_copies=dict(copies or {}),
         deployed_names=frozenset(deployed),
@@ -116,7 +131,7 @@ def _ctx(*, candidates: frozenset[str] = frozenset(),
         recipe_members=frozenset(recipe),
         stay_target=stay,
         need_star_by_member=dict(need_star or {}),
-        member_rank={n: (0 if n in core_set else 1) for n in members},
+        member_rank=rank_map,
         level=level,
         rng=random.Random(seed),
     )
@@ -343,14 +358,15 @@ def test_tier_keys_and_sell_direction() -> None:
     - 档 6 星级键高者后卖;档 8/9 总星级数键多副本者后卖;档 10
       概率高者先卖、概率同值并入同档按费用号稳定序低费先卖(Lv4 的
       4/5 费概率全 0 撞值对)、同费用星级高者后卖。"""
-    # 档 3 ①序数:同 need 成员 core(0) 先于非 core(1) 卖出序。
+    # 档 3 ①序数:同 need 成员 core((0,0)) 先于非 core((0,1)) 卖出序
+    # (终局层二元组,§2.4-3)。
     ctx_rank = _ctx(candidates=frozenset({_SABER, _WALT}),
                     cores=frozenset({_SABER}),
                     need_star={_SABER: 3, _WALT: 3},
                     copies={_SABER: [1], _WALT: [1]})
     k_core = sort_key(HeldUnit(_SABER, 1, 0, False), ctx_rank)
     k_other = sort_key(HeldUnit(_WALT, 1, 1, False), ctx_rank)
-    assert k_core[:2] == (3, 0) and k_other[:2] == (3, 1)
+    assert k_core[:2] == (3, (0, 0)) and k_other[:2] == (3, (0, 1))
     # 档 3 ②③:同成员跨星副本,总星级数同值,单卡星级高者键小(后卖)
     # ——1★ 副本先让路。
     ctx_cross = _ctx(candidates=frozenset({_SABER}),
@@ -521,29 +537,30 @@ def test_locked_frame_need_star_full_transcription() -> None:
     assert ctx.stay_target[2] == get_char('藿藿').cost, \
         '实费档 resolved 口径'
     # 锁定帧名单 = 锁定线成员(经 line_view 承载;候选快照字段照读口
-    # 真值冻结为空集——锁定写入连带清空停算),配方支空集——本帧
-    # 配方槽未种(P1 锁定局配方支照收的并集形态见
+    # 真值冻结为空集——锁定写入连带清空停算),过渡支空集——本帧
+    # 过渡候选槽未种(P1 锁定局过渡支照收的并集形态见
     # test_locked_p1_frame_recipe_members_join_roster)。
     assert _GIL in ctx.member_rank
     assert ctx.candidate_members == frozenset()
     assert ctx.recipe_members == frozenset()
-    assert ctx.member_rank[_SABER] == 0, 'core 迁移期高优先级'
-    assert all(v == 0 for v in ctx.member_rank.values()), \
+    assert ctx.member_rank[_SABER] == (0, 0), 'core 迁移期高优先级'
+    assert all(v == (0, 0) for v in ctx.member_rank.values()), \
         '双王圣杯锁定线 shared ⊆ core,全员 core 形态'
     assert held_copies_of(gs) == {_SABER: [3], _TING: [1]}, \
         '持牌全量快照 = 备战位 ∪ 前后台'
 
 
 def test_unlocked_frame_candidates_union_and_recipe_members() -> None:
-    """装配·未锁定帧:成员档(2/3/4/5/7)名单 = 候选三线成员并集 ∪
-    过渡配方对成员;need_star 命中各线取最大值(保守方向);配方成员
-    读口 = direction_comp_of 未锁定回落 opening_recipe_comp(P2 守卫
-    由读口承载);序数迁移期 = core 0/其余 1,配方成员统一低档。"""
+    """装配·未锁定帧(双层名单,§2.4-2/§2.4-3):成员档(2/3/4/5/7)
+    名单 = 实候选三线成员并集 ∪ 过渡候选成员(transition_candidates
+    槽展开);need_star 命中各线取最大值(保守方向),过渡成员不入表
+    (缺省 1);rank 二元组 = 终局 (0, 线内序数)/过渡 (1, 槽位次),
+    重叠成员取终局值(装配序承载)。"""
     session = cw4_session()
     gs = cw4_gs(session, level=7, bench=[])
     st = state_of(gs)
     st.line_candidates = ('列车同行', '火花星间旅人')
-    st.opening_recipe_comp = pair_target_comp(('持续伤害', '希儿系'))
+    st.transition_candidates = (('持续伤害', '希儿系'),)
     ctx = assemble_priority_context(
         session, gs, deployed_names=frozenset())
     assert not ctx.line_view.locked
@@ -552,21 +569,21 @@ def test_unlocked_frame_candidates_union_and_recipe_members() -> None:
     expected_hua = max(get_comp('列车同行').need_star[_HUA],
                        get_comp('火花星间旅人').need_star[_HUA])
     assert ctx.need_star_by_member.get(_HUA) == expected_hua
-    # 过渡配方对成员并入名单(配方支)。
-    assert ctx.recipe_members, 'P1 配方对成员非空'
-    union = ctx.candidate_members | ctx.recipe_members
-    assert all(m in union for m in ctx.recipe_members)
-    # 序数:候选 core 高优先级、候选 shared 低优先级、配方成员统一低档。
-    assert ctx.member_rank.get(_HUA) == 0, '花火 = 火金星间旅人 core'
-    assert ctx.member_rank.get('银狼') == 1, '银狼 = 候选 shared'
-    # 配方成员统一低档:取纯配方支(候选 ∩ 配方交集成员按候选线字段
-    # 取值——花火类交集 core 为 0 是合法形态);旧写法 next(iter(
-    # recipe_members)) 受 PYTHONHASHSEED 迭代序影响,交集成员命中
-    # 首元素时假红(实证 seed=24),集合差取样按断言本意收窄。
+    # 过渡候选成员并入名单(过渡支 = 槽展开并集)。
+    expected_recipe = _pair_members(('持续伤害', '希儿系'))
+    assert ctx.recipe_members == frozenset(expected_recipe), \
+        'P1 过渡候选成员非空(槽展开并集)'
+    # 序数二元组:候选 core (0,0) 高优先级、候选 shared (0,1) 低档;
+    # 重叠成员(过渡 ∩ 候选——花火/银狼均量子同频 ∈ 希儿系放大器池)
+    # 取终局值(零特判)。
+    assert ctx.member_rank.get(_HUA) == (0, 0), '重叠归终元:花火 = 候选 core'
+    assert ctx.member_rank.get('银狼') == (0, 1), \
+        '重叠归终元:银狼 = 候选 shared'
+    # 纯过渡成员统一 (1, 槽位次):位 1 对 = 持续伤害×希儿系。
     recipe_only = ctx.recipe_members - ctx.candidate_members
-    assert recipe_only, '纯配方支非空'
-    assert all(ctx.member_rank.get(n, 1) == 1 for n in recipe_only), \
-        '配方成员统一低档'
+    assert recipe_only, '纯过渡支非空'
+    assert all(ctx.member_rank.get(n) == (1, 1) for n in recipe_only), \
+        '纯过渡成员 = (1, 位次 1)'
 
 
 def test_member_rank_field_direct_read_cross_line_highest() -> None:
@@ -575,64 +592,70 @@ def test_member_rank_field_direct_read_cross_line_highest() -> None:
     ``member_priority`` 字段直读合成,跨线成员取各线最小序数(序数小
     = 优先级高,core 优先于非 core)。
 
-    判别例(注册表现查):符玄 = 双王圣杯 core(0) ∧ 火花星间旅人
-    shared(1) → 取 0;银狼仅火花单线 shared → 维持 1(非 core 不因
-    跨线抬升);花火双线皆 core → 恒 0。"""
+    判别例(注册表现查):符玄 = 双王圣杯 core((0, 0)) ∧ 火花星间旅人
+    shared((0, 1)) → 取 (0, 0);银狼仅火花单线 shared → 维持 (0, 1)
+    (非 core 不因跨线抬升);花火双线皆 core → 恒 (0, 0)。"""
     session = cw4_session()
     gs = cw4_gs(session, level=7, bench=[])
     st = state_of(gs)
     st.line_candidates = ('火花星间旅人', '双王圣杯')
     ctx = assemble_priority_context(session, gs, deployed_names=frozenset())
-    assert ctx.member_rank['符玄'] == 0, '跨线取最高:任一线 core 命中即 0'
-    assert ctx.member_rank['银狼'] == 1, '单线 shared 维持低档'
-    assert ctx.member_rank['花火'] == 0, '双线 core 同为高档'
+    assert ctx.member_rank['符玄'] == (0, 0), \
+        '跨线取最高:任一线 core 命中即 (0, 0)'
+    assert ctx.member_rank['银狼'] == (0, 1), '单线 shared 维持低档'
+    assert ctx.member_rank['花火'] == (0, 0), '双线 core 同为高档'
 
 
 def test_recipe_members_stay_low_priority() -> None:
-    """装配·配方成员低优先级保持(priority-model §3 配方支):过渡配方
-    成员不入字段直读面 → 序数恒低档——配方伪阵容(pair_target_comp)
-    把成员全列 core_chars(全员 core 形态),若被直读即全员高档,装配
-    禁读其字段。两态分断:
+    """装配·过渡成员垫底保持(priority-model §3 配方支 → §2.4-3
+    过渡支):过渡候选成员不入终局字段直读面 → rank 恒 (1, 位次)——
+    过渡候选对成员若被物化伪阵容(pair_target_comp)字段直读即全员
+    (0, 0) 高档,装配禁读物化单对字段。两态分断:
 
-    - 未锁帧:纯配方成员(不在候选线)= 1;候选 ∩ 配方交集成员按候选
-      线字段取值(候选身份优先,不被配方低档覆盖);
+    - 未锁帧:纯过渡成员(不在实候选)= (1, 位次);过渡 ∩ 实候选
+      交集成员按候选线字段取值(终局身份优先,不被过渡层覆盖);
     - 配方伪锁帧(target_comp = 伪阵容,锁名不在 COMP_LIBRARY):
-      序数表不建,全员经判定端缺省走 1。"""
+      序数表不建,锁定线名单全员经装配补缺走 (0, 1) 终局层低档。
+    """
     session = cw4_session()
     gs = cw4_gs(session, level=7, bench=[])
     st = state_of(gs)
     st.line_candidates = ('火花星间旅人', '双王圣杯')
     rc = pair_target_comp(('持续伤害', '希儿系'))
-    st.opening_recipe_comp = rc
+    assert rc is not None
+    st.transition_candidates = (('持续伤害', '希儿系'),)
     ctx = assemble_priority_context(session, gs, deployed_names=frozenset())
     recipe_only = ctx.recipe_members - ctx.candidate_members
-    assert recipe_only, '纯配方支非空(卡芙卡/希儿类,前置)'
-    assert all(ctx.member_rank.get(n, 1) == 1 for n in recipe_only), \
-        '纯配方成员统一低档'
+    assert recipe_only, '纯过渡支非空(卡芙卡/希儿类,前置)'
+    assert all(ctx.member_rank.get(n) == (1, 1) for n in recipe_only), \
+        '纯过渡成员统一 (1, 位次 1)'
     overlap = ctx.recipe_members & ctx.candidate_members
     assert {'花火', '银狼', '符玄'} <= overlap, '交集前置(注册表现查)'
-    assert ctx.member_rank['花火'] == 0 and ctx.member_rank['符玄'] == 0, \
-        '交集成员按候选线字段取值(core 不被配方低档覆盖)'
-    assert ctx.member_rank['银狼'] == 1
-    # 配方伪锁帧:全员低档(直读伪阵容字段即全员 0,本断言防回归)。
+    assert ctx.member_rank['花火'] == (0, 0) \
+        and ctx.member_rank['符玄'] == (0, 0), \
+        '交集成员按候选线字段取值(core 不被过渡层覆盖)'
+    assert ctx.member_rank['银狼'] == (0, 1)
+    # 配方伪锁帧:全员终局层低档(直读物化伪阵容字段即全员 (0,0),
+    # 本断言防回归)。
     state_of(gs).target_comp = rc
     ctx_locked = assemble_priority_context(
         session, gs, deployed_names=frozenset())
     assert ctx_locked.line_view.locked
     assert ctx_locked.line_view.comp_name.startswith('过渡配方')
     assert ctx_locked.member_rank \
-        and all(v == 1 for v in ctx_locked.member_rank.values()), \
-        '配方伪锁帧全员低档'
+        and all(v == (0, 1) for v in ctx_locked.member_rank.values()), \
+        '配方伪锁帧全员 (0, 1)(补缺承载,不入字段直读面)'
 
 
 def test_member_rank_migration_equivalence() -> None:
-    """消费面切换回归(档内排序不变性):迁移前后 member_rank 输出等价。
+    """消费面切换回归(档内排序不变性;§2.4-3 二元组化):迁移前后
+    member_rank 输出等价。
 
-    旧装配 = core_chars 并集推导(0 if n in cores else 1);新装配 =
-    ``member_priority`` 字段直读 + 跨线最小序数合成。迁移期两档形态下
-    两者必须逐成员相等——成员档(2/3/4/5/7)①键是 sort_key 对
-    ``member_rank`` 的纯表查(``member_rank.get(name, 1)``),表等价即
-    档内排序不变;末段抽样实证序数值确实落到成员档的①键位。"""
+    旧装配 = core_chars 并集推导((0, 0 if n in cores else 1));新装配 =
+    ``member_priority`` 字段直读 + 跨线最小序数合成 + 包 (0, ·) 终局层。
+    迁移期两档形态下两者必须逐成员相等——成员档(2/3/4/5/7)①键是
+    sort_key 对 ``member_rank`` 的纯表查,表等价即档内排序不变;末段
+    抽样实证序数值确实落到成员档的①键位。"""
     session = cw4_session()
     gs = cw4_gs(session, level=7, bench=[])
     st = state_of(gs)
@@ -644,7 +667,7 @@ def test_member_rank_migration_equivalence() -> None:
         c = get_comp(line_name)
         members |= set(c.core_chars) | set(c.shared_chars)
         cores |= set(c.core_chars)
-    legacy = {n: (0 if n in cores else 1) for n in members}
+    legacy = {n: (0, 0 if n in cores else 1) for n in members}
     assert ctx.member_rank == legacy, '未锁帧:字段直读 ≡ 旧集合并集推导'
     # 锁定帧同构等价。
     state_of(gs).target_comp = get_comp('双王圣杯')
@@ -653,10 +676,10 @@ def test_member_rank_migration_equivalence() -> None:
     lock = get_comp('双王圣杯')
     lock_members = set(lock.core_chars) | set(lock.shared_chars)
     assert ctx_locked.member_rank == {
-        n: (0 if n in lock.core_chars else 1) for n in lock_members}, \
+        n: (0, 0 if n in lock.core_chars else 1) for n in lock_members}, \
         '锁定帧:字段直读 ≡ 旧推导'
-    # 序数落键抽样:花火(core,need 3,持 1★)档 3 ①键 = 0;银狼
-    # (shared,need 缺省 1,持 1★)档 7 ①键 = 1。独立 session(状态
+    # 序数落键抽样:花火(core,need 3,持 1★)档 3 ①键 = (0, 0);银狼
+    # (shared,need 缺省 1,持 1★)档 7 ①键 = (0, 1)。独立 session(状态
     # 宿主 = 会话容器,与前段锁定写入隔离)。
     session2 = cw4_session()
     gs2 = cw4_gs(session2, level=7,
@@ -666,60 +689,61 @@ def test_member_rank_migration_equivalence() -> None:
                                          deployed_names=frozenset())
     k_hua = sort_key(HeldUnit('花火', 1, 0, False), ctx_rank)
     k_yin = sort_key(HeldUnit('银狼', 1, 1, False), ctx_rank)
-    assert k_hua[0] == 3 and k_hua[1] == ctx_rank.member_rank['花火'] == 0
-    assert k_yin[0] == 7 and k_yin[1] == ctx_rank.member_rank['银狼'] == 1
+    assert k_hua[0] == 3 \
+        and k_hua[1] == ctx_rank.member_rank['花火'] == (0, 0)
+    assert k_yin[0] == 7 \
+        and k_yin[1] == ctx_rank.member_rank['银狼'] == (0, 1)
 
 
 def _p1_locked_recipe_gs():
-    """P1 锁定局种子(三景共用):锁定线 = 双王圣杯,配方对 = 持续伤害
-    ×希儿系(注册表事实:卡芙卡/希儿 ∈ 配方对 ∉ 锁定线,符玄两侧交集);
+    """P1 锁定局种子(三景共用):锁定线 = 双王圣杯,过渡候选 = 持续伤害
+    ×希儿系(注册表事实:卡芙卡/希儿 ∈ 过渡对 ∉ 锁定线,符玄两侧交集);
     bench 持卡芙卡 1★,场上镜流中性件。plane2_started 缺省 False。"""
     session = cw4_session()
     gs = cw4_gs(session, level=7, bench=[cw4_bc('卡芙卡')],
                 front_row=[Unit(char_id='镜流', star=1)])
     st = state_of(gs)
     st.target_comp = get_comp('双王圣杯')
-    st.opening_recipe_comp = pair_target_comp(('持续伤害', '希儿系'))
+    st.transition_candidates = (('持续伤害', '希儿系'),)
     return session, gs
 
 
 def test_locked_p1_frame_recipe_members_join_roster() -> None:
-    """装配·P1 锁定局(名单单一准入三景之一,roster-plane1-union
-    design §2.1/§3):配方支 = 槽位直读 + 读前判窗,锁定不是退出条件
-    ——锁定帧 recipe_members 照收非空;纯配方成员(不在锁定线)入
-    成员档名单:已持未两星落档 7、未持商店牌落档 5(修复前锁定帧
-    配方支恒空集,配方成员落兜底档);序数不入锁定线字段直读
-    面 → 判定端缺省 1(配方成员统一低档,§1.3 不变)。"""
+    """装配·P1 锁定局(双层名单景之一,§2.4-2):过渡支 = 槽展开 +
+    读前判窗,锁定不是退出条件——锁定帧 recipe_members 照收非空;
+    纯过渡成员(不在锁定线)入成员档名单:已持未两星落档 7、未持商店牌
+    落档 5(修复前锁定帧过渡支恒空集,过渡成员落兜底档);rank 不入
+    锁定线字段直读面 → (1, 位次)(§2.4-3 过渡层)。"""
     session, gs = _p1_locked_recipe_gs()
     ctx = assemble_priority_context(
         session, gs, deployed_names=frozenset({'镜流'}))
     assert ctx.line_view.locked
-    expected_recipe = set(cw4_members(state_of(gs).opening_recipe_comp))
+    expected_recipe = _pair_members(('持续伤害', '希儿系'))
     assert ctx.recipe_members == frozenset(expected_recipe), \
-        'P1 锁定局配方支照收(槽位直读全集)'
+        'P1 锁定局过渡支照收(槽展开并集)'
     recipe_only = expected_recipe - set(ctx.line_view.members)
     assert {'卡芙卡', '希儿'} <= recipe_only, \
-        '纯配方支前置(注册表现查:两者均不在双王圣杯)'
-    # 纯配方成员已持 1★(need 缺省 1,未到两星)→ 档 7(阵容强度)。
+        '纯过渡支前置(注册表现查:两者均不在双王圣杯)'
+    # 纯过渡成员已持 1★(need 缺省 1,未到两星)→ 档 7(阵容强度)。
     k_held = sort_key(HeldUnit('卡芙卡', 1, 0, False), ctx)
-    assert k_held[0] == 7, '已持纯配方成员落档 7(修复前 = 兜底档)'
-    assert k_held[1] == 1, '序数缺省 1(不入锁定线字段直读面)'
-    # 纯配方成员未持(商店牌形态)→ 档 5(成员未获取)。
+    assert k_held[0] == 7, '已持纯过渡成员落档 7(修复前 = 兜底档)'
+    assert k_held[1] == (1, 1), 'rank = (1, 位次 1)(过渡层二元组)'
+    # 纯过渡成员未持(商店牌形态)→ 档 5(成员未获取)。
     k_shop = sort_key(ShopUnit('希儿', 1, 3), ctx)
-    assert k_shop[0] == 5, '未持纯配方成员落档 5(修复前 = 兜底档)'
+    assert k_shop[0] == 5, '未持纯过渡成员落档 5(修复前 = 兜底档)'
 
 
 def test_p2_started_frame_recipe_branch_stays_empty() -> None:
-    """装配·P2(名单单一准入三景之二):plane2_started=True → 配方支
-    恒空集(判窗在槽位直读之前,槽位残留不消费);锁定帧名单退回
-    锁定线单源,纯配方成员退出成员档(2/3/4/5/7)名单。"""
+    """装配·P2(双层名单景之二):plane2_started=True → 过渡支恒空集
+    (判窗在槽直读之前,槽位残留不消费);锁定帧名单退回锁定线单源,
+    纯过渡成员退出成员档(2/3/4/5/7)名单。"""
     session, gs = _p1_locked_recipe_gs()
     state_of(gs).plane2_started = True
     ctx = assemble_priority_context(
         session, gs, deployed_names=frozenset({'镜流'}))
     assert ctx.recipe_members == frozenset(), \
-        '进位面 2 配方支恒空集(槽位残留不消费)'
-    # 已持纯配方成员(卡芙卡 1★)退出成员名单 → 落非成员档(≥8,
+        '进位面 2 过渡支恒空集(槽位残留不消费)'
+    # 已持纯过渡成员(卡芙卡 1★)退出成员名单 → 落非成员档(≥8,
     # 具体档随羁绊/万金油身份,断言收敛为「不在成员档 2/3/4/5/7」)。
     assert sort_key(HeldUnit('卡芙卡', 1, 0, False), ctx)[0] > 7
 
@@ -732,21 +756,159 @@ def test_tier_tie_refund_loss_tiebreak() -> None:
     档 5 商店牌同序数并列三组:①同名跨星 1★(全额退,损失 0)先让于
     2★(折价,损失 1)——同价值档内选不亏的卖;②cost=1 exempt:1 费
     2★ 退金无手续费(损失 0)先让于 3 费 2★(损失 1);③序数现行键
-    不删:非 core(序数 1,损失 0)仍先让于 core(序数 0,损失 1)
+    不删:非 core(终局层低档)仍先让于 core(终局层高档)
     ——退金损失只在现行档内键之后参与定序。"""
     ctx = _ctx(candidates=frozenset({_SABER, _WALT, _GIL}),
                cores=frozenset({_SABER}), copies={})
     k_walt_1 = sort_key(ShopUnit(_WALT, 1, 3), ctx)
     k_walt_2 = sort_key(ShopUnit(_WALT, 2, 3), ctx)
-    assert k_walt_1[:4] == (5, 1, 0, 1), \
-        '档 5 键形 = (档, 序数, -退金损失, 在手旗标)'
-    assert k_walt_2[:4] == (5, 1, -1, 1)
+    assert k_walt_1[:4] == (5, (0, 1), 0, 1), \
+        '档 5 键形 = (档, 序数二元组, -退金损失, 在手旗标)'
+    assert k_walt_2[:4] == (5, (0, 1), -1, 1)
     assert k_walt_1 > k_walt_2, '同档并列:1★ 全额退(损失 0)先让'
     # cost=1 exempt(2★ 1 费退金 = cost×3 无手续费 → 损失 0)。
     k_gil_2c1 = sort_key(ShopUnit(_GIL, 2, 1), ctx)
-    assert k_gil_2c1[:3] == (5, 1, 0)
+    assert k_gil_2c1[:3] == (5, (0, 1), 0)
     assert k_gil_2c1 > k_walt_2, '1 费 2★ 全额退先让于 3 费 2★ 折价'
     # 序数(现行档内键)先于退金损失:非 core 1★ 先让于 core 2★。
     k_saber_2 = sort_key(ShopUnit(_SABER, 2, 3), ctx)
-    assert k_saber_2[:3] == (5, 0, -1)
+    assert k_saber_2[:3] == (5, (0, 0), -1)
     assert k_walt_1 > k_saber_2, '序数键先判(core 后让,损失键不越位)'
+
+
+# ===== member_rank 二元组族(dual-layer-candidates design §2.4-3)=====
+
+def test_transition_rank_dual_layer_and_min_position() -> None:
+    """装配·双层 rank 合成(§2.4-3):过渡成员 = (1, 候选位次),跨多
+    候选对成员取最小位次(槽序升序首见即最小);重叠成员归终元(rank
+    取终局值,装配序承载零特判);过渡成员不入 need_star 表(缺省 1,
+    §2.3-5)。
+
+    种槽:位 1 = 仙舟×列车同行,位 2 = 仙舟×持续伤害(仙舟成员跨
+    位 1/2 → (1, 1);持续伤害成员跨位 2/3 → (1, 2)),位 3 = 持续
+    伤害×希儿系(符玄 = 量子同频 ∈ 希儿系放大器池 ∧ 双王圣杯候选
+    core → 归终元 (0, 0);希儿仅位 3 → (1, 3))。"""
+    session = cw4_session()
+    gs = cw4_gs(session, level=7, bench=[])
+    st = state_of(gs)
+    st.line_candidates = ('双王圣杯',)
+    st.transition_candidates = (
+        ('仙舟', '列车同行'),
+        ('仙舟', '持续伤害'),
+        ('持续伤害', '希儿系'),
+    )
+    ctx = assemble_priority_context(session, gs, deployed_names=frozenset())
+    # 跨对最小位次:仙舟成员 ∈ 位 1 ∧ 位 2 → (1, 1)(非 (1, 2))。
+    xianzhou = _pair_members(('仙舟',))
+    assert xianzhou
+    assert all(ctx.member_rank[n] == (1, 1) for n in xianzhou
+               if n not in ctx.candidate_members), \
+        '跨对成员取最小位次(首见位次)'
+    # 持续伤害成员 ∈ 位 2 ∧ 位 3 → (1, 2)。
+    dot = _pair_members(('持续伤害',))
+    assert '卡芙卡' in dot
+    assert ctx.member_rank['卡芙卡'] == (1, 2), \
+        '持续伤害成员跨位 2/3,最小位次 = 2'
+    # 希儿仅位 3 → (1, 3)(与缺省并列,后续键判别)。
+    assert ctx.member_rank['希儿'] == (1, 3)
+    # 重叠归终元:符玄 = 过渡并集 ∧ 实候选(双王圣杯 core)→ (0, 0)。
+    assert '符玄' in ctx.recipe_members and '符玄' in ctx.candidate_members
+    assert ctx.member_rank['符玄'] == (0, 0), \
+        '重叠成员 rank 取终局值(零特判)'
+    # 过渡成员不入 need_star 表(统一缺省 1)。
+    assert '卡芙卡' not in ctx.need_star_by_member, \
+        '纯过渡成员不入 need_star 表'
+    assert '符玄' in ctx.need_star_by_member, \
+        '终局成员照入(候选线知识卡)'
+
+
+def test_transition_member_bottom_in_same_tier() -> None:
+    """同档垫底(§2.4-3 字典序承载;用户裁定「和终局阵容一样的位置,
+    比终局阵容的低」):同档(档 7 凑两星)内过渡 (1, 1) 键恒大于终局
+    (0, 1)——统一序列末位(最先让路) = 过渡成员,终局成员殿后。"""
+    session = cw4_session()
+    gs = cw4_gs(session, level=7,
+                bench=[cw4_bc('瓦尔特'), cw4_bc('卡芙卡')])
+    st = state_of(gs)
+    st.line_candidates = ('列车同行',)
+    st.transition_candidates = (('持续伤害', '希儿系'),)
+    ctx = assemble_priority_context(session, gs, deployed_names=frozenset())
+    k_walt = sort_key(HeldUnit('瓦尔特', 1, 0, False), ctx)
+    k_kafka = sort_key(HeldUnit('卡芙卡', 1, 1, False), ctx)
+    assert k_walt[0] == k_kafka[0] == 7, \
+        '两者均档 7(need 1 持 1★ 未到两星,谓词同构)'
+    assert ctx.member_rank['瓦尔特'][0] == 0, '终局成员层 0'
+    assert ctx.member_rank['卡芙卡'] == (1, 1), '过渡成员 (1, 位次 1)'
+    assert k_walt < k_kafka, \
+        '同档内终局 (0,r) 键小后卖、过渡 (1,r) 键大先让(垫底)'
+    pool: list[HeldUnit | ShopUnit] = [
+        HeldUnit('瓦尔特', 1, 0, False),
+        HeldUnit('卡芙卡', 1, 1, False),
+    ]
+    assert sell_order(pool, ctx)[-1] is pool[1], \
+        '统一序列末位 = 过渡成员(同档垫底)'
+
+
+def test_unlisted_member_rank_defaults_transition_bottom() -> None:
+    """缺省值(§2.4-3):表外/非候选成员的判定端缺省 = (1,
+    CANDIDATE_TOP_N)——与第三候选并列垫底,由后续键判别;防 int vs
+    tuple 混型(五读点 ``.get`` 缺省二元组化,同档内同型比较)。"""
+    ctx = _ctx(candidates=frozenset({_TING}), copies={_TING: [1]})
+    ctx.member_rank.pop(_TING)   # 名单内但表缺行 = 缺省消费形态
+    k = sort_key(HeldUnit(_TING, 1, 0, False), ctx)
+    assert k[0] == 7
+    assert k[1] == RANK_TRANSITION_BOTTOM == (1, CANDIDATE_TOP_N), \
+        '缺省 = (1, 3):与第三候选并列,不抛混型比较'
+
+
+def test_transition_completed_unit_tier4_same_predicates() -> None:
+    """过渡完成品层内档 4(§2.4-2 谓词同构/§2.3-5「2★ 完成品按成员
+    档 4 同构受保」):过渡成员 need 缺省 1,底线两星口径——2★ 保留张
+    档 4、1★ 凑两星中间态档 7、未持商店牌档 5、等价群 [2,2] 双双落
+    兜底档 10(保留张谓词与等价群自愈随档复制,零例外)。"""
+    session = cw4_session()
+    gs = cw4_gs(session, level=7, bench=[cw4_bc('卡芙卡', star=2)])
+    state_of(gs).transition_candidates = (('持续伤害', '希儿系'),)
+    ctx = assemble_priority_context(session, gs, deployed_names=frozenset())
+    assert sort_key(HeldUnit('卡芙卡', 2, 0, False), ctx)[0] == 4, \
+        '过渡 2★ 保留张同构进档 4'
+    assert sort_key(ShopUnit('希儿', 1, 3), ctx)[0] == 5, \
+        '未持过渡成员商店牌档 5'
+    # 1★ 中间态与等价群:手造 copies 形态(装配快照 = bench 现读,
+    # 等价群 [2,2] 经 bench 两张 2★ 种入)。
+    session2 = cw4_session()
+    gs2 = cw4_gs(session2, level=7, bench=[cw4_bc('卡芙卡')])
+    state_of(gs2).transition_candidates = (('持续伤害', '希儿系'),)
+    ctx1 = assemble_priority_context(session2, gs2,
+                                     deployed_names=frozenset())
+    assert sort_key(HeldUnit('卡芙卡', 1, 0, False), ctx1)[0] == 7, \
+        '过渡 1★ 未到两星档 7(过程保护同构)'
+    session3 = cw4_session()
+    gs3 = cw4_gs(session3, level=7,
+                 bench=[cw4_bc('卡芙卡', star=2), cw4_bc('卡芙卡', star=2)])
+    state_of(gs3).transition_candidates = (('持续伤害', '希儿系'),)
+    ctx2 = assemble_priority_context(session3, gs3,
+                                     deployed_names=frozenset())
+    assert sort_key(HeldUnit('卡芙卡', 2, 0, False), ctx2)[0] == 10, \
+        '过渡等价群 [2,2] 双双落兜底(自愈同构)'
+
+
+def test_interest_exempt_covers_transition_members() -> None:
+    """凑息豁免域含过渡在建件(§2.4-5 豁免语义对过渡成员同构生效):
+    过渡成员 need 缺省 1 → 底线两星——未满两星(1★)为利息绝对不可
+    卖;达标(2★ 完成品)不豁免(可为利息变现,完成品档 4 殿后仍照
+    常参与凑息池)。名单源 = _member_names 双层并集,装配改后自动
+    跟随。"""
+    session = cw4_session()
+    gs = cw4_gs(session, level=7, bench=[cw4_bc('卡芙卡')])
+    state_of(gs).transition_candidates = (('持续伤害', '希儿系'),)
+    ctx = assemble_priority_context(session, gs, deployed_names=frozenset())
+    assert interest_exempt_member('卡芙卡', ctx), \
+        '过渡在建件(1★ 未到两星)受凑息豁免'
+    session2 = cw4_session()
+    gs2 = cw4_gs(session2, level=7, bench=[cw4_bc('卡芙卡', star=2)])
+    state_of(gs2).transition_candidates = (('持续伤害', '希儿系'),)
+    ctx2 = assemble_priority_context(session2, gs2,
+                                     deployed_names=frozenset())
+    assert not interest_exempt_member('卡芙卡', ctx2), \
+        '过渡完成品(2★ 达标)不豁免,可为利息变现'

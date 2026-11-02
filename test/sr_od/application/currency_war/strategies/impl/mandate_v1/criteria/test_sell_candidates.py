@@ -13,7 +13,9 @@ and-sell.md §3(三触发)+ priority-model §5(卖出取用形态):
   **凑息豁免**(roster-plane1-union design §2.2 第 5 项)同为节末
   凑息场景参数——候选池剔除线内未达标成员(为利息绝对不可卖,非
   排序后移;池空零动作 + 剔光帧观测键),被迫类场景不适用(动机
-  二分);
+  二分);**线内身份集双层名单**(dual-layer-candidates design
+  §2.4-5):过渡支 = transition_candidates 槽展开(与买面同源),
+  豁免名单随 _member_names 装配改后自动覆盖过渡在建件;
 - 3.4 退役面:shop_swap 场景行(3.2 六步流程替换)、c1_make_room
   场景行(C1 支拆除)、deploy_swap 冻结遗留路径与旧价值函数
   (sell_gold_equivalent/MERGE_PROGRESS_X2)/羁绊排序谓词/场上无关
@@ -47,7 +49,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 )
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
-    pair_target_comp,
+    _pair_members,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
@@ -466,76 +468,76 @@ class TestIdentitySegmentRetired:
 
 
 class TestSellLineMembershipSingleAdmission:
-    """sell_line_membership 三景(名单单一准入):配方支 = 槽位直读 +
-    读前判窗(plane2_started_of),锁定不是退出条件——P1 锁定局 =
-    锁定线 ∪ 配方并集;P2 配方支退出;未锁定 = 候选并集 ∪ 配方。"""
+    """sell_line_membership 三景(双层名单口径 = dual-layer-candidates
+    design §2.4-5):过渡支 = transition_candidates 槽展开 + 读前判窗
+    (plane2_started_of),锁定不是退出条件——P1 锁定局 = 锁定线 ∪
+    过渡候选成员;P2 过渡支退出;未锁定 = 实候选并集 ∪ 过渡候选成员。
+    过渡支与买面同源(同一槽 _pair_members 展开)。"""
 
-    def _recipe_comp(self):
-        comp = pair_target_comp(('持续伤害', '希儿系'))
-        assert comp is not None
-        return comp
+    _PAIRS = (('持续伤害', '希儿系'),)
 
     def test_locked_p1_union_locked_line_and_recipe(self):
-        """P1 锁定局:身份集 = 锁定线名单 ∪ 配方成员(修复前锁定分支
-        只有锁定线——配方成员被排出线内集,防线/投影口径漏自己人)。"""
+        """P1 锁定局:身份集 = 锁定线名单 ∪ 过渡候选成员(修复前锁定
+        分支只有锁定线——过渡成员被排出线内集,防线/投影口径漏自己人)。"""
         sess, gs = _mk_gs()
         st = state_of(gs)
         st.target_comp = get_comp('双王圣杯')
-        st.opening_recipe_comp = self._recipe_comp()
+        st.transition_candidates = self._PAIRS
         expected = set(cw4_members(get_comp('双王圣杯'))) \
-            | set(cw4_members(st.opening_recipe_comp))
+            | _pair_members(self._PAIRS[0])
         assert sell_line_membership(gs) == frozenset(expected)
         assert '卡芙卡' in sell_line_membership(gs), \
-            '纯配方成员入线内集(注册表现查:卡芙卡 ∉ 双王圣杯)'
+            '纯过渡成员入线内集(注册表现查:卡芙卡 ∉ 双王圣杯)'
 
     def test_p2_recipe_branch_exits(self):
-        """P2(plane2_started=True):配方支恒空集——槽位残留不消费
+        """P2(plane2_started=True):过渡支恒空集——槽位残留不消费
         (判窗在直读之前);身份集退回锁定线单源。"""
         sess, gs = _mk_gs()
         st = state_of(gs)
         st.target_comp = get_comp('双王圣杯')
-        st.opening_recipe_comp = self._recipe_comp()
+        st.transition_candidates = self._PAIRS
         st.plane2_started = True
         assert sell_line_membership(gs) \
             == frozenset(cw4_members(get_comp('双王圣杯')))
         assert '卡芙卡' not in sell_line_membership(gs), \
-            '进位面 2 配方残留不入线内集'
+            '进位面 2 过渡槽残留不入线内集'
 
     def test_unlocked_union_candidates_and_recipe(self):
-        """未锁定:身份集 = 候选 top3 三线成员并集 ∪ 配方成员(修复前
-        未锁定分支只有候选并集,缺配方支)。"""
+        """未锁定:身份集 = 实候选三线成员并集 ∪ 过渡候选成员(修复前
+        未锁定分支只有候选并集,缺过渡支)。"""
         sess, gs = _mk_gs()
         st = state_of(gs)
         st.line_candidates = ('列车同行',)
-        st.opening_recipe_comp = self._recipe_comp()
+        st.transition_candidates = self._PAIRS
         expected = set(cw4_members(get_comp('列车同行'))) \
-            | set(cw4_members(st.opening_recipe_comp))
+            | _pair_members(self._PAIRS[0])
         assert sell_line_membership(gs) == frozenset(expected)
         assert '瓦尔特' in sell_line_membership(gs), '候选支(列车同行)'
-        assert '卡芙卡' in sell_line_membership(gs), '配方支'
+        assert '卡芙卡' in sell_line_membership(gs), '过渡支'
 
 
 class TestP1LockedSellPoolNarrowing:
-    """行为申报用例(design §2.5 P1 锁定局行):配方成员从「最先让路」
-    收窄为「殿后保护」——修复前配方成员不在锁定帧名单,落兜底档
-    最先卖;修复后落凑两星过程保护档,同帧万金油垫件先让
-    (档号 = 十档口径:兜底档 10〔旧八档档 8〕/凑两星档 7〔旧档 5〕/
-    万金油档 8〔旧档 6〕,design §2.2)。"""
+    """行为申报用例(design §2.5 P1 锁定局行;过渡支口径 = dual-layer-
+    candidates §2.4-5):过渡成员从「最先让路」收窄为「殿后保护」——
+    修复前过渡成员不在锁定帧名单,落兜底档最先卖;修复后落凑两星
+    过程保护档,同帧万金油垫件先让(档号 = 十档口径:兜底档 10〔旧
+    八档档 8〕/凑两星档 7〔旧档 5〕/万金油档 8〔旧档 6〕,design
+    §2.2)。"""
 
     def test_recipe_member_protected_in_locked_frame(self):
-        """配方成员(凑两星过程保护档 7)殿后保护:板构造(阶段 5/6)
-        同 test_priority_
-        order——万金油满配挡位使 bench 星期日结构性部署外,卡芙卡
-        (配方成员)滞回保板外的换血面零,池 = bench 全件。"""
+        """过渡成员(凑两星过程保护档 7)殿后保护:板构造(阶段 5/6)
+        同 test_priority_order——万金油满配挡位使 bench 星期日结构性
+        部署外,卡芙卡(过渡候选成员)滞回保板外的换血面零,池 = bench
+        全件。"""
         sess, gs = _board_full_gs(
             [cw4_bc('卡芙卡'), cw4_bc('星期日')], level=5)
         st = state_of(gs)
         st.target_comp = get_comp('列车同行')
-        st.opening_recipe_comp = pair_target_comp(('持续伤害', '希儿系'))
+        st.transition_candidates = (('持续伤害', '希儿系'),)
         cands, why = evaluate_sell_candidates(gs, 'ore_make_room')
         assert why == ''
         assert _names(cands) == ['杂板5', '卡芙卡'], \
-            '配方成员(档 7)殿后,被换下垫件(兜底档 10)先让——' \
+            '过渡成员(档 7)殿后,被换下垫件(兜底档 10)先让——' \
             '不误卖自己人(星期日 = 万金油档 1 收编不在池)'
 
 
