@@ -1384,7 +1384,7 @@ def test_on_strategy_gained_unregistered_quiet() -> None:
         '战技点星徽',
         '幸运星祝福', '折叠小刀祝福', '和平手枪祝福',
         '生命之花祝福', '量产型装甲祝福', '公司军火更新·金',
-        '回收计划', '回收计划+', '秘密典籍',
+        '回收计划', '回收计划+', '秘密典籍', '秘密典籍+',
         '步狸村之谜', '阿哈大悦',
         '人才激励',
         '人才激励+', '许诺特权', '先亏后盈', '好运令牌·银', '溜佩佩',
@@ -1412,6 +1412,7 @@ def test_on_strategy_gained_unregistered_quiet() -> None:
     ('步狸村之谜', '简易武装箱'),
     ('阿哈大悦', '简易武装箱'),
     ('秘密典籍', '星徽秘典'),
+    ('秘密典籍+', '进阶武装箱'),
 ])
 def test_strategy_box_leg_effect_places_box(
         card: str, item: str, rows_sink: _RowSink) -> None:
@@ -1447,6 +1448,7 @@ def test_strategy_box_leg_effect_places_box(
     ('步狸村之谜', '简易武装箱'),
     ('阿哈大悦', '简易武装箱'),
     ('秘密典籍', '星徽秘典'),
+    ('秘密典籍+', '进阶武装箱'),
 ])
 def test_strategy_box_leg_bench_full_overflow_name(
         card: str, item: str, rows_sink: _RowSink) -> None:
@@ -1474,7 +1476,7 @@ def test_strategy_box_grants_consistency_lock() -> None:
     )
     assert set(_STRATEGY_BOX_GRANTS) == {
         '战术义眼++', '保守派', '快请专家·彩', '军火贸易', '军火贸易+',
-        '步狸村之谜', '阿哈大悦', '秘密典籍'}
+        '步狸村之谜', '阿哈大悦', '秘密典籍', '秘密典籍+'}
     for name, item in _STRATEGY_BOX_GRANTS.items():
         assert STRATEGY_GRANTS[name].items_immediate == (item,), \
             f'{name} 效果体发放名与登记表 items_immediate 漂移'
