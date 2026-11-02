@@ -14,7 +14,10 @@ sim 窗口接线与世界真值落地面)。
 - 是钻石总会发光 = 随机 choice-set 行 sim 端到端(T-148 批):到点窗
   现掷入栏一枚钻 ∧ 披露值 = 卡名@frame:选中物(选中物从发放效果串
   解析,与装备栏尾件一致;掷点归 M26 独立命名流,具体中哪枚禁值漂移
-  断言只锁一致性)。
+  断言只锁一致性);
+- 回收计划 = 随机类别池行 sim 端到端(designs/T-237-huishou-jihua.md
+  §4 锁 3,T-148 批扩形同构):到点窗现掷入栏一件 ∈ 简易池派生集
+  (禁手抄清单)∧ 披露值同形态。
 
 驱动形态 = _enter_node_window 直通点(锚定补推路径真形态:观察锚定 →
 推进 tick 递减 → 返回后开窗,递减先于发放的时序由真实路径承载);
@@ -148,6 +151,36 @@ def test_due_choice_set_sim_chain_discloses_chosen(
         assert gs.pending_strategy_grants.value == (), '到期条目未弹除'
         assert b.disclosures[STRATEGY_DELAYED_GRANT_FIRED] \
             == f'是钻石总会发光@1-2:{chosen}', \
+            f'留证披露(选中物形态): {b.disclosures}'
+    finally:
+        uninstall_backend()
+
+
+def test_due_category_pool_sim_chain_discloses_chosen(
+        _prep_backend) -> None:
+    """回收计划 sim 端到端(随机类别池行首例,T-237 批,T-148 批扩形
+    同构):种子队列 remaining=1 → 进 (1,2) 窗 → 到点窗现掷(rng =
+    独立命名流 M26/strategy-grant/p1/r2)→ 装备栏尾追一件 ∈ 简易池
+    派生集(equips_by_category 派生禁手抄清单,具体中哪枚禁值漂移断言)
+    ∧ 队列弹除 ∧ 披露值 = 卡名@frame:选中物。"""
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        equips_by_category,
+    )
+    pool = equips_by_category('简易')
+    b = _prep_backend
+    try:
+        gs = b.gs
+        equips_before = list(gs.equips.value or [])
+        _seed_queue(b, (('回收计划', 1),))
+        b._enter_node_window((1, 2))
+        equips_after = list(gs.equips.value or [])
+        assert len(equips_after) == len(equips_before) + 1, \
+            f'装备栏: {equips_after}'
+        chosen = equips_after[-1]
+        assert chosen in pool, f'采样值域漂移: {chosen!r}'
+        assert gs.pending_strategy_grants.value == (), '到期条目未弹除'
+        assert b.disclosures[STRATEGY_DELAYED_GRANT_FIRED] \
+            == f'回收计划@1-2:{chosen}', \
             f'留证披露(选中物形态): {b.disclosures}'
     finally:
         uninstall_backend()

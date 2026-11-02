@@ -27,6 +27,8 @@ monkeypatch 形态测随真注册转直测):
   载体分流直断 + 两腿成员集负成员(T-148 批扩面);
 - equips 未观察 → 即时腿拒落零写 placed=False、入队腿照写;
 - 未登记策略卡(表外名 + 在册无腿卡)零写;
+- 回收计划 = 组合登记行入队腿(designs/T-237-huishou-jihua.md §4 锁 6:
+  随机腿×延时入队腿,类别池效果串池标记形直断 + rng 恰 1 次同序对拍);
 - live 落地形态(gain_invest_strategy 同函数,session=None 直构)队列
   照写,零世界发放动作。
 """
@@ -279,3 +281,39 @@ def test_pick_shizuanshi_unobserved_still_choice_set_scheduled() -> None:
     assert gs.equips.value is None, '未观察域出现装备栏写'
     assert gs.pending_strategy_grants.value == (('是钻石总会发光', 2),), \
         f'队列值: {gs.pending_strategy_grants.value}'
+
+
+def test_pick_huishou_combined_legs_schedule_category_pool() -> None:
+    """回收计划 组合登记行登记腿直断(卡文「获得1件进阶装备，并在5个
+    节点后获得1件随机简易装备。」,随机腿×延时入队腿双族交叉,PICK
+    组合登记行,不入泛化表防同名键覆盖丢即时腿):拿卡 → 效果串恰
+    2 条且腿序 = 卡文语序(即时随机腿 strategy_random_equip 在前/入队
+    腿在后),入队腿效果串类别池形 strategy_grant_scheduled:随机简易
+    (类别池)@5(池标记字形直断,构造点 = 入队原语发放物段单一构造点,
+    连接字面 ∉ EQUIPMENTS 防伪物名)∧ 队列恰 (('回收计划', 5),) ∧
+    rng 恰消费 1 次(同序预采样对拍 = 即时腿第 1 抽,入队腿零采样面,
+    腿序改排/入队腿预掷均使采样名漂移即红)∧ 写行恰 2 笔(即时腿入栏
+    + 队列登记);逐名独立构造,族内既有锁不受影响。"""
+    from sr_od.application.currency_war.kernel.cw_gain_effects import (
+        roll_random_equip,
+    )
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        equips_by_category,
+    )
+    # 预采样(独立 rng 实例按消费序恰 1 抽进阶池):与实际注入的 rng
+    # 同种子同序——腿序改排(入队腿先)不改变首抽仍为进阶池采样,但
+    # 「入队腿另掷一枚」会使实际首抽名漂移,同序对拍即红(掷序契约)。
+    pick = roll_random_equip(random.Random(2026), '进阶')
+    assert pick in equips_by_category('进阶'), '预验证:采样 ∈ 进阶池'
+    gs = _gs(equips=[])
+    seq_before = gs.write_seq
+    effects = on_strategy_gained(gs, '回收计划', rand=False,
+                                 sig=_lsig(), rng=random.Random(2026))
+    assert effects == (f'strategy_random_equip:{pick}',
+                       'strategy_grant_scheduled:随机简易(类别池)@5'), \
+        f'效果串(腿序 = 卡文语序): {effects}'
+    assert gs.equips.value == [pick], f'即时腿入栏: {gs.equips.value}'
+    assert gs.pending_strategy_grants.value == (('回收计划', 5),), \
+        f'队列值: {gs.pending_strategy_grants.value}'
+    assert gs.write_seq == seq_before + 2, \
+        f'写行数漂移(即时腿+入队腿恰 2 笔): {gs.write_seq}'

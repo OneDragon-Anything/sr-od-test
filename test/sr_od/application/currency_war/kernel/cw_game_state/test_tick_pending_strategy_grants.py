@@ -173,6 +173,34 @@ def test_dual_cards_sister_fires_fourth_window_after_plus() -> None:
     assert gs.pending_strategy_grants.value == (), '姊妹条目未弹除'
 
 
+def test_huishou_countdown_zero_sampling_then_due_category_sample() -> None:
+    """回收计划 @5 全链(随机类别池行,T-237 批):登记 5 拍 → 递减 5
+    窗减到 0(第 N 后继窗口径对既有行同源)且递减全程 rng 零采样(随机
+    值不预掷:倒计时 = 确定推算,掷骰时点 = 到点发放窗——rng.getstate
+    跨 5 次 advance 逐位相等的行为证据)→ 到点窗发放采样 ∈ 简易池派生
+    集(禁值漂移断言)+ 弹除。"""
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        equips_by_category,
+    )
+    pool = equips_by_category('简易')
+    gs = _gs_with_queue(1, 1, (('回收计划', 5),), equips=[])
+    rng = random.Random(7)
+    state_after_queue = rng.getstate()
+    for _r in range(2, 7):
+        _advance(gs, 1, _r)
+    assert gs.pending_strategy_grants.value == (('回收计划', 0),), \
+        f'第 5 后继窗应减到 0: {gs.pending_strategy_grants.value}'
+    assert rng.getstate() == state_after_queue, \
+        '递减全程消费 rng(随机值预掷,掷骰时点漂移)'
+    effects = discharge_due_strategy_grants(
+        gs, rand=False, rng=rng, sig=_LSIG)
+    chosen = random.Random(7).choice(pool)
+    assert effects == (f'delayed_grant:{chosen}(placed=True)',), \
+        f'到点发放: {effects}'
+    assert gs.equips.value == [chosen], f'装备栏: {gs.equips.value}'
+    assert gs.pending_strategy_grants.value == (), '到期条目未弹除'
+
+
 def test_p2_end_freeze_no_grant_no_eject() -> None:
     """锁 9(P2 末冻结直构):P2 末节点后继 = None(P3 未观测,场字段
     未注册第 3 位面)→ 终局上报零效果 tick——倒计时跨 P2 末的条目冻结

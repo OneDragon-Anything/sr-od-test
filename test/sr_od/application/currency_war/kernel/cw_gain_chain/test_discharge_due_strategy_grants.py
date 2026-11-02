@@ -21,7 +21,12 @@ discharge_due_strategy_grants)。
   五确定行发放路径 rng 前后状态零变;
 - 是钻石总会发光 = 随机 choice-set 采样行首例(sim 直构注入固定 rng):
   两 seed 分别命中红钻/蓝钻、队列弹除、效果串随选中物、发放子链
-  rand=True 随机态通道 + 队列弹除行确定面 + 同 seed 重跑逐位一致。
+  rand=True 随机态通道 + 队列弹除行确定面 + 同 seed 重跑逐位一致;
+- 回收计划 = 随机类别池行首例(designs/T-237-huishou-jihua.md §4 锁 3,
+  T-148 批扩形同构):两固定 seed 分别命中不同简易件、采样 ∈ 简易池
+  派生集禁手抄清单、发放子链 rand=True 随机态通道 + 队列弹除行确定面
+  + 同 seed 重跑逐位一致;类别池空 = 注册表漂移防御(池随注册表传导,
+  import 期哨在先,运行期兜底)→ 零发放 + 条目保留。
 """
 from __future__ import annotations
 
@@ -58,6 +63,8 @@ _XIANKUI = '先亏后盈'
 _XIANKUI_ITEM = '简易武装箱'
 
 _SHIZUAN = '是钻石总会发光'
+
+_HUISHOU = '回收计划'
 
 
 class _RowSink:
@@ -415,3 +422,70 @@ def test_due_choice_set_same_seed_bitwise_reproducible() -> None:
         finals.append((effects, gs.equips.value,
                        gs.pending_strategy_grants.value))
     assert finals[0] == finals[1], f'同 seed 重跑漂移: {finals}'
+
+
+# ============================================================ 随机类别池
+# 采样行(回收计划,族内首个类别池发放行,T-237 批;直构形态 = 上方
+# choice-set 采样锁同构,差异 = 池源 equips_by_category 注册表派生)
+
+
+def test_due_category_pool_samples_by_seed() -> None:
+    """回收计划 到点采样发放(随机类别池行首例,sim 直构注入固定 rng):
+    两固定 seed 分别命中不同简易件(seed 按实际 rng 流定向选取,
+    ``rng.choice`` 序列均匀语义,禁值漂移断言)→ equips 尾追选中件 ∧
+    队列弹除 ∧ 效果串随选中物 ∧ 发放行走随机态面(类别池行内部
+    rand=True,效果体含采样纪律)∧ 队列弹除行走确定面(队列只载卡名
+    随调用方 rand 透传)∧ 同 seed 重跑逐位一致。"""
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        equips_by_category,
+    )
+    pool = equips_by_category('简易')
+    for seed in (1, 0):
+        expected = random.Random(seed).choice(pool)
+        gs = _gs(equips=[], bench_slots=None, queue=((_HUISHOU, 0),))
+        effects = discharge_due_strategy_grants(
+            gs, rand=False, rng=random.Random(seed), sig=_LSIG)
+        assert effects == (f'delayed_grant:{expected}(placed=True)',), \
+            f'seed={seed} 效果串: {effects}'
+        assert gs.equips.value == [expected], \
+            f'seed={seed} 装备栏: {gs.equips.value}'
+        assert gs.equips.source == 'logic_rand', \
+            f'seed={seed} 发放腿未走随机态面(类别池行 rand=True 失效)'
+        assert gs.pending_strategy_grants.value == (), '到期条目未弹除'
+        assert gs.pending_strategy_grants.source == 'logic', \
+            '队列弹除行未走确定面(只载卡名应随调用方 rand 透传)'
+        assert gs.equips.evidence == \
+            f'strategy_grant_due:{_HUISHOU}#equip', \
+            f'发放 evidence: {gs.equips.evidence}'
+    # 两 seed 异件(采样值域覆盖 8 件池 ≥2 成员的直接证据,禁值漂移)。
+    assert random.Random(1).choice(pool) != random.Random(0).choice(pool), \
+        'seed 定向失效(两 seed 同件,须换 seed)'
+
+
+def test_due_category_pool_same_seed_bitwise_reproducible() -> None:
+    """回收计划 同 seed 重跑逐位一致(类别池行世界真值确定性,与
+    choice-set 行同构面)。"""
+    finals = []
+    for _run in range(2):
+        gs = _gs(equips=[], bench_slots=None, queue=((_HUISHOU, 0),))
+        effects = discharge_due_strategy_grants(
+            gs, rand=False, rng=random.Random(1), sig=_LSIG)
+        finals.append((effects, gs.equips.value,
+                       gs.pending_strategy_grants.value))
+    assert finals[0] == finals[1], f'同 seed 重跑漂移: {finals}'
+
+
+def test_due_category_pool_empty_defense_retains_entry(monkeypatch) -> None:
+    """类别池空防御(注册表漂移运行期兜底,import 期哨在先,正常不可达):
+    池 = equips_by_category(注册表 category 等值过滤)空 → 零发放 +
+    log + 条目保留不弹除(查行失败防御同形,零写)。"""
+    monkeypatch.setattr(cw_gain_chain, 'equips_by_category',
+                        lambda category: ())
+    gs = _gs(equips=[], bench_slots=None, queue=((_HUISHOU, 0),))
+    seq_before = gs.write_seq
+    effects = discharge_due_strategy_grants(
+        gs, rand=False, rng=random.Random(0), sig=_LSIG)
+    assert effects == (), '池空条目误发放'
+    assert gs.pending_strategy_grants.value == ((_HUISHOU, 0),), \
+        '池空条目被弹除'
+    assert gs.write_seq == seq_before, '池空分支出现写行'

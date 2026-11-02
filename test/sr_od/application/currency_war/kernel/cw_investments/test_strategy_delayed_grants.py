@@ -12,17 +12,22 @@ T-146-haoyun-lingpai-yin.md §4 锁 1:卡名与发放物异名首例,物名断�
 防卡名当物名笔误)+ 是钻石总会发光随批扩面(designs/
 T-148-shizuanshi-zonghui-faguang.md §4 锁 1/锁 4:随机 choice-set 行
 首例,item='' 占位走 item_choices;item 与 item_choices 恰一 = 防登记
-笔误类按治理口径不入 import 校验,对账归表域恰一锁):
+笔误类按治理口径不入 import 校验,对账归表域恰一锁)+ 回收计划随批扩面
+(designs/T-237-huishou-jihua.md §4 锁 2:item_category 类别池行首例,
+item='' 占位走类别池,值域词表由池派生承载):
 - 登记单一源:行值 = 卡面效果原文直读(人才激励 id 101601/4 节点、
   人才激励+ id 101602/3 节点,两卡唯一差异 = 倒计时 4→3,发放物同
   员工投影仪;许诺特权 id 130201/7 节点/发放物特权武装箱;先亏后盈
   id 130701/4 节点/发放物简易武装箱/数量 2 = 族内首例 >1;好运令牌·
   银 id 130901/3 节点/发放物好运令牌 = EQUIPMENTS 工具类装备;是钻石
-  总会发光 id 131101/2 节点/发放物 = 红钻/蓝钻具名二元封闭集),
+  总会发光 id 131101/2 节点/发放物 = 红钻/蓝钻具名二元封闭集;回收
+  计划 id 230701/5 节点/发放物 = 「随机简易装备」类别池
+  item_category='简易',item='' 占位),
   表键集闭族现役卡(展开卡各自独立批领取,禁顺手代登记);
-- 构建校验 4 条(漂移哨,import 即炸语义经直调校验函数锁定):孤儿键 /
+- 构建校验 5 条(漂移哨,import 即炸语义经直调校验函数锁定):孤儿键 /
   id 双匹配(改名且 id 仍在的漂移也炸)/ 发放物名双域皆非(确定行)
-  / choice-set 元素漂移(逐元素双域皆非)。
+  / choice-set 元素漂移(逐元素双域皆非)/ 类别池漂移(池 = 注册表
+  category 等值过滤,表外类别名与类别清空两触发路径同哨)。
 """
 from __future__ import annotations
 
@@ -40,19 +45,20 @@ from sr_od.application.currency_war.kernel.cw_investments import (
 
 
 @pytest.mark.parametrize(('card', 'gid', 'delay', 'item', 'count',
-                          'choices'), [
-    ('人才激励', '101601', 4, '员工投影仪', 1, ()),
-    ('人才激励+', '101602', 3, '员工投影仪', 1, ()),
-    ('许诺特权', '130201', 7, '特权武装箱', 1, ()),
-    ('先亏后盈', '130701', 4, '简易武装箱', 2, ()),
-    ('好运令牌·银', '130901', 3, '好运令牌', 1, ()),
-    ('是钻石总会发光', '131101', 2, '', 1, ('红钻', '蓝钻')),
+                          'choices', 'category'), [
+    ('人才激励', '101601', 4, '员工投影仪', 1, (), ''),
+    ('人才激励+', '101602', 3, '员工投影仪', 1, (), ''),
+    ('许诺特权', '130201', 7, '特权武装箱', 1, (), ''),
+    ('先亏后盈', '130701', 4, '简易武装箱', 2, (), ''),
+    ('好运令牌·银', '130901', 3, '好运令牌', 1, (), ''),
+    ('是钻石总会发光', '131101', 2, '', 1, ('红钻', '蓝钻'), ''),
+    ('回收计划', '230701', 5, '', 1, (), '简易'),
 ])
 def test_rencai_jili_registry_row_single_source(
         card: str, gid: str, delay: int, item: str, count: int,
-        choices: tuple) -> None:
+        choices: tuple, category: str) -> None:
     """登记单一源(姊妹双卡 + 许诺特权 + 先亏后盈 + 好运令牌·银 +
-    是钻石总会发光参数化):行值 = 卡面
+    是钻石总会发光 + 回收计划参数化):行值 = 卡面
     效果原文直读(「N个节点后」→ N 拍,「获得1个【X】」→ 发放物 X;
     人才激励系即时腿「获得1个【员工投影仪】」由 PICK_INVEST_EFFECTS
     工厂承载不入本表,许诺特权卡文纯延时单句零即时腿,登记腿 = 延时-
@@ -61,17 +67,21 @@ def test_rencai_jili_registry_row_single_source(
     卡文纯延时单句零即时腿同延时-only 载体,发放物与卡名异名——item
     断言为物名「好运令牌」非卡名,防拿卡名当物名笔误;是钻石总会发光
     卡文「获得【红钻】或【蓝钻】」→ item='' 占位(空串断言锁二元集行
-    不携确定件)+ item_choices 封闭集直读,掷骰时点 = 到点发放窗);
-    base 溯源 id 对拍(id ↔ plaza:<id>)。表键集闭族现役六卡(未注册
+    不携确定件)+ item_choices 封闭集直读,掷骰时点 = 到点发放窗;回收
+    计划卡文「获得1件随机简易装备」→ 类别池形 item_category='简易'
+    直读(族内类别池行首例),item='' 占位,同卡即时腿「获得1件进阶
+    装备」由 PICK_INVEST_EFFECTS 组合登记行承载不入本表);
+    base 溯源 id 对拍(id ↔ plaza:<id>)。表键集闭族现役七卡(未注册
     展开卡安静不写,禁顺手代登记)。"""
     assert set(STRATEGY_DELAYED_GRANTS) == {
         '人才激励', '人才激励+', '许诺特权', '先亏后盈', '好运令牌·银',
-        '是钻石总会发光'}, \
-        '注册面 = 族现役六卡(未注册展开卡安静不写,禁顺手代登记)'
+        '是钻石总会发光', '回收计划'}, \
+        '注册面 = 族现役七卡(未注册展开卡安静不写,禁顺手代登记)'
     row = STRATEGY_DELAYED_GRANTS[card]
     assert row == StrategyDelayedGrant(id=gid, delay_nodes=delay,
                                        item=item, count=count,
-                                       item_choices=choices), \
+                                       item_choices=choices,
+                                       item_category=category), \
         f'行值漂移: {row!r}'
     base = INVESTMENT_STRATEGIES[card]
     assert base.source == f"plaza:{row.id}", \
@@ -175,12 +185,58 @@ def test_validator_choice_element_unknown_raises(monkeypatch) -> None:
         _validate_strategy_delayed_grants()
 
 
-def test_registry_item_xor_choices_exactly_one() -> None:
-    """表域恰一纪律锁(item 与 item_choices 恰一有效;治理口径 =
-    2026-10-28「防登记笔误校验不加」,对账归表域测试,同 count/
-    delay_nodes 处置):注册全集逐行 item 非空串 XOR item_choices 非空
-    元组,双填/双空均红——双填 = 分道判据静默走 item 丢随机集,双空 =
-    发放腿双域皆非防御支条目永久滞留,两形态都越 import 哨不可见。"""
+def test_registry_triplet_exactly_one() -> None:
+    """表域三方恰一纪律锁(item / item_choices / item_category 三选一
+    登记;治理口径 = 2026-10-28「防登记笔误校验不加」,对账归表域测试,
+    同 count/delay_nodes 处置):注册全集逐行三形恰一非空,双填/多填/
+    全空均红——双填 = 分道判据静默走 item 丢随机集,全空 = 发放腿双域
+    皆非防御支条目永久滞留,两形态都越 import 哨不可见(回收计划批由
+    二方恰一扩为三方恰一)。"""
     for name, row in STRATEGY_DELAYED_GRANTS.items():
-        assert bool(row.item) != bool(row.item_choices), \
-            f'{name} item 与 item_choices 恰一被破坏: {row!r}'
+        assert sum((bool(row.item), bool(row.item_choices),
+                    bool(row.item_category))) == 1, \
+            f'{name} 三形恰一被破坏: {row!r}'
+
+
+def test_huishou_category_pool_membership() -> None:
+    """回收计划类别池成员锁(「随机简易装备」目标全集 = 注册表简易 8
+    件派生,派生集禁手抄清单):item_category='简易' 池 = equips_by_
+    category('简易') 非空 8 件,逐件 ∈ EQUIPMENTS ∧ ∉ BENCH_ITEM_NAMES
+    (装备分道判据前提,采样件禁入占席通道);注册表扩员(新简易件)时
+    池派生自动跟随,本锁只锚「类别池行发放走注册表派生全集」语义。"""
+    from sr_od.application.currency_war.data.cw_equipment_data import (
+        EQUIPMENTS,
+    )
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        equips_by_category,
+    )
+    row = STRATEGY_DELAYED_GRANTS['回收计划']
+    pool = equips_by_category(row.item_category)
+    assert len(pool) == 8, f'简易池规模漂移: {len(pool)}'
+    assert all(p in EQUIPMENTS for p in pool), '池成员 ∉ 装备表(分道破)'
+    assert all(p not in BENCH_ITEM_NAMES for p in pool), \
+        '池成员误入占席词表(负成员申报被破坏)'
+
+
+def test_validator_item_category_unknown_raises(monkeypatch) -> None:
+    """构建校验⑤(类别漂移哨·表外类别名):非空 item_category 注册表
+    category 无此值(池空)→ ValueError(版本类别词表改名可独立触发,
+    镜像③④形态;值域词表由池派生承载,零第二字面量)。"""
+    monkeypatch.setitem(
+        cw_investments.STRATEGY_DELAYED_GRANTS, '回收计划',
+        StrategyDelayedGrant(id='230701', delay_nodes=5, item='',
+                             item_category='不存在的类别'))
+    with pytest.raises(ValueError, match='类别漂移'):
+        _validate_strategy_delayed_grants()
+
+
+def test_validator_item_category_pool_empty_raises(
+        monkeypatch) -> None:
+    """构建校验⑤(类别漂移哨·类别清空路径):类别名合法但注册表该类
+    清零(游戏版本数据漂移可独立触发)→ 同哨 ValueError——哨按池派生
+    表达,两触发路径(改名/清空)同响,import 期把拦截面前移到构建期
+    (运行期实况 = 发放腿类别池查空防御 log + 条目保留)。"""
+    monkeypatch.setattr(cw_investments, 'equips_by_category',
+                        lambda category: ())
+    with pytest.raises(ValueError, match='类别漂移'):
+        _validate_strategy_delayed_grants()
