@@ -35,7 +35,7 @@ def test_gold_futures_registry_row_single_source() -> None:
     领取,禁顺手代登记);base 溯源 id 对拍(id 101101 ↔ plaza:101101)。"""
     assert set(STRATEGY_DELAYED_OFFERS) == {'黄金期货', '黄金期货+',
                                             '彩虹期货', '彩虹期货+',
-                                            '白银投资'}, \
+                                            '白银投资', '摸个鱼吧I'}, \
         '注册面 = 族现役五卡(展开卡各自独立批,禁顺手代登记)'
     row, = STRATEGY_DELAYED_OFFERS['黄金期货']
     assert row == StrategyDelayedOffer(id='101101', delay_nodes=5,
