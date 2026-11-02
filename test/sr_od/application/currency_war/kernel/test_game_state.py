@@ -2064,6 +2064,9 @@ _A_SEEDED: tuple[str, ...] = (
     # 策略卡羁绊档位条件发放已发档位闩(空 tuple 底座,检查腿 membership
     # 判定零 None 防御;空 = 无档已发的正常态)
     'strategy_bond_tier_fired',
+    # 策略卡赠礼条件双腿已发标记(空 tuple 底座,检查腿 membership 判定
+    # 零 None 防御;空 = 无腿已发的正常态)
+    'strategy_grants_done',
     # 损血档位触发累积器(零底座,触发函数累加取模零 None 防御;
     # 0 = 无累积语义中性,种 0 不伪装已触发)
     'strategy_hp_loss_accum',
