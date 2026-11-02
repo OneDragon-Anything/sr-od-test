@@ -4,12 +4,15 @@ _make_delayed_offer_effect 派生条目)。
 
 测试面依据 = 迭代设计 designs/T-98-huangjin-qihuo.md §4(锁 2 登记腿
 3+1 条 / 锁 6 live 链登记;live 无呈现动作由模块边界承担——kernel 不
-import sim,不设静态扫描锁):
+import sim,不设静态扫描锁)+ designs/T-198-baiyin-touzi.md §4(锁 3
+登记腿双腿形,用户裁定 2026-11-02 完整包复刻):
 - 拿卡黄金期货 → 队列 (('黄金期货', 5),) + 效果串
   strategy_offer_scheduled:金@5;
+- 拿卡白银投资(族首张双腿卡)→ 队列 (('白银投资', 0), ('白银投资', 3))
+  登记序 = 腿序 + 效果串两条 @0/@3;
 - 未登记策略卡(表外名 + 在册无腿卡)零写;
 - 递归形态(monkeypatch 临时加彩虹期货行)→ 链式再入队(锁「handler
-  按注册表驱动」机制,非本批交付行为——现役注册面仅黄金期货);
+  按注册表驱动」机制,非本批交付行为);
 - live 落地形态(gain_invest_strategy 同函数,session=None 直构)队列
   照写,零世界呈现动作。
 """
@@ -53,6 +56,25 @@ def test_pick_gold_futures_queues_delayed_offer() -> None:
     assert gs.pending_strategy_offers.source == 'logic', '登记走确定面'
 
 
+def test_pick_silver_invest_queues_two_legs_registration_order() -> None:
+    """登记腿双腿形(白银投资批锁 3):拿卡白银投资(族首张双腿卡)→
+    队列恰 (('白银投资', 0), ('白银投资', 3))(登记序 = 表内腿序,
+    确定性;一次 write 回写 = 单一登记写端)+ 效果串两条
+    @0/@3(每腿一枚,同序)。「3个节点后再获得一个」= 完整包复刻
+    (用户裁定 2026-11-02,案 A:延时腿复刻立刻腿品质+刷新授权,
+    效果串只载品质@节拍,授权面在登记表)。"""
+    gs = _gs()
+    effects = on_strategy_gained(gs, '白银投资', rand=False, sig=_lsig(),
+                                 rng=random.Random(0))
+    assert effects == ('strategy_offer_scheduled:银@0',
+                       'strategy_offer_scheduled:银@3'), \
+        f'效果串: {effects!r}'
+    assert gs.pending_strategy_offers.value == \
+        (('白银投资', 0), ('白银投资', 3)), \
+        f'队列值: {gs.pending_strategy_offers.value}'
+    assert gs.pending_strategy_offers.source == 'logic', '登记走确定面'
+
+
 def test_unregistered_cards_zero_write() -> None:
     """未登记卡零写(两形):表外名(查无效果安静不写)与在册无腿卡
     (躺平,注册表有卡但无登记行)均 → 零效果串 + 队列零写。"""
@@ -79,8 +101,8 @@ def test_recursive_form_chained_requeue(monkeypatch) -> None:
     )
     monkeypatch.setitem(
         cw_gain_chain.STRATEGY_DELAYED_OFFERS, '彩虹期货',
-        StrategyDelayedOffer(id='201101', delay_nodes=5,
-                             offer_quality='棱彩'))
+        (StrategyDelayedOffer(id='201101', delay_nodes=5,
+                              offer_quality='棱彩'),))
     monkeypatch.setitem(cw_gain_chain.PICK_INVEST_EFFECTS, '彩虹期货',
                         _make_delayed_offer_effect('彩虹期货'))
     gs = _gs()

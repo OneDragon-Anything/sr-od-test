@@ -10,6 +10,13 @@ _present_due_extra_offer + _present_offer_or_node_screen 尾部挂点)。
 - 多期货同窗恰 1 次、余者悬置顺延(window_cap 披露,同直构);
 - 呈现即消费:呈现后队列即空,重复进窗不二次呈现。
 
+白银投资批追加(designs/T-198-baiyin-touzi.md §4 锁 5,可刷系首例):
+- 窗首到期腿呈现带逐卡刷新授权 3(登记 refresh_count 单一源,授权
+  写容器 = report 摄入,品质承诺槽向量簿记取登记品质);
+- 递减链(拿卡当拍不递减,3 次推进归零)kernel tick 直构 → 窗首呈现;
+- 联席路径拿卡 (2,6) → 3 后继窗 = (3,2) 撞固定日程槽 → 顺延 (3,3)
+  + 披露键(自然可达冲突首例,(3,2) 钉窗直构)。
+
 直构形态先例 = 同目录 test_strategy_pick_xp.py(_backend 装配 +
 install/uninstall 端口槽纪律)。"""
 from __future__ import annotations
@@ -21,6 +28,7 @@ from test.sr_od.application.currency_war.sim.test_sim_backend import (
 
 from sr_od.application.currency_war.kernel.cw_game_state import (
     NodeKey,
+    _tick_pending_strategy_offers,
 )
 from sr_od.application.currency_war.kernel.cw_investments import (
     INVESTMENT_STRATEGIES,
@@ -147,5 +155,81 @@ def test_present_consumes_eject_atomic_no_double_present() -> None:
         assert b.screen_identity() != SCREEN_INVEST_STRATEGY, '二次呈现'
         assert b._invest_pick_ordinal == ordinal_after_present, \
             '二次呈现序位计数'
+    finally:
+        uninstall_backend()
+
+
+def test_silver_leg_presents_with_per_card_refresh_auth() -> None:
+    """白银窗首腿授权呈现(白银批锁 5):到点呈现 = 候选全银池 +
+    逐卡刷新授权 3(refresh_slots [(3,x,20)]×3,授权数值单一源 = 登记
+    refresh_count)+ 授权写容器(逐卡 3)+ 品质承诺槽向量簿记 =
+    ('银','银','银')(重掷品质跨刷新保持)+ 呈现留证键 + 队列弹除
+    + 序位计数照增。"""
+    b = _backend()
+    try:
+        _seed_queue(b, (('白银投资', 0),))
+        b._present_offer_or_node_screen()
+        assert b.screen_identity() == SCREEN_INVEST_STRATEGY, '到点未呈现'
+        opts = list(b.gs.invest_strategy_opts.value or [])
+        assert len(opts) == 3, f'候选数: {opts}'
+        assert all(INVESTMENT_STRATEGIES[n].rarity == '银' for n in opts), \
+            f'候选混入非银池: {opts}'
+        assert b.gs.pending_strategy_offers.value == (), '队列未弹除'
+        assert b._invest_pick_ordinal == 1, '序位计数照增'
+        assert b.disclosures[STRATEGY_DELAYED_OFFER_FIRED] \
+            == '白银投资@1-1', f'呈现留证: {b.disclosures}'
+        assert b._offer_refreshable is True, '可刷系授权在位'
+        assert b._offer_forced_slots == ('银', '银', '银'), \
+            f'品质承诺簿记: {b._offer_forced_slots!r}'
+        assert b._offer_refresh_seq == 0, '刷新流水号归零'
+        left_map = dict(b.gs.strategy_refresh_left.value or {})
+        assert all(left_map.get(n) == 3 for n in opts), \
+            f'授权容器逐卡 3: {left_map!r}'
+    finally:
+        uninstall_backend()
+
+
+def test_silver_leg_decrement_chain_via_kernel_tick() -> None:
+    """递减链(白银批锁 5):登记节拍 3 → 拿卡当拍不递减 → 3 次节点
+    边界推进归零(0 悬置不越减)→ 窗首呈现(kernel tick 直构递减段,
+    呈现段走同窗检查口)。"""
+    b = _backend()
+    try:
+        _seed_queue(b, (('白银投资', 3),))
+        _tick_pending_strategy_offers(b.gs)
+        assert b.gs.pending_strategy_offers.value == (('白银投资', 2),)
+        _tick_pending_strategy_offers(b.gs)
+        assert b.gs.pending_strategy_offers.value == (('白银投资', 1),)
+        _tick_pending_strategy_offers(b.gs)
+        assert b.gs.pending_strategy_offers.value == (('白银投资', 0),), \
+            '第 3 后继窗应减到 0'
+        _tick_pending_strategy_offers(b.gs)
+        assert b.gs.pending_strategy_offers.value == (('白银投资', 0),), \
+            '到点条目被越减'
+        b._present_offer_or_node_screen()
+        assert b.screen_identity() == SCREEN_INVEST_STRATEGY, '归零未呈现'
+        assert b.gs.pending_strategy_offers.value == (), '呈现未弹除'
+    finally:
+        uninstall_backend()
+
+
+def test_joint_decision_path_conflict_defers_at_3_2() -> None:
+    """联席路径撞槽顺延(白银批锁 5,自然可达冲突直构):联席拿卡
+    (2,6) → 3 后继窗 = (3,2) 恰为固定日程槽,延时腿到点 → 日程先
+    呈现、条目悬置顺延下一窗(scheduled_slot_occupied 披露)——
+    (3,2) 钉窗 + 联席环境在场直构,披露键由结构性守卫转真值留证。"""
+    b = _backend()
+    try:
+        _seed_queue(b, (('白银投资', 0),))
+        b.gs.observe(b.gs.node,
+                     NodeKey(plane=3, round_num=2, kind='reward'),
+                     sig=_SIG_OBS)   # 钉到固定日程末槽 (3,2)
+        b.gs.observe(b.gs.active_env, '联席决策', sig=_SIG_OBS)
+        b._present_offer_or_node_screen()
+        assert b.screen_identity() == SCREEN_INVEST_STRATEGY, '日程槽未呈现'
+        assert b.gs.pending_strategy_offers.value == (('白银投资', 0),), \
+            f'同窗冲突未顺延: {b.gs.pending_strategy_offers.value}'
+        assert b.disclosures[STRATEGY_DELAYED_OFFER_DEFERRED] \
+            == 'scheduled_slot_occupied@1', f'顺延留证: {b.disclosures}'
     finally:
         uninstall_backend()
