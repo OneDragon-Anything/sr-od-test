@@ -22,8 +22,8 @@ priority-model §1/§3/§4/§5(总纲 = 同目录 design.md §2.1):
 - PriorityContext 生产装配(锁定帧 need_star 表 = 锁定线知识卡全量
   照录〔design §2.5-1 装配补全〕/ 未锁帧 = 实候选三线并集 + need_star
   跨线取最大 + 过渡候选成员随 transition_candidates 槽并入;P1 锁定局
-  过渡支照收 = 名单景之一,dual-layer-candidates design §2.4-2);
-- member_rank 二元组族(§2.4-3):双层名单/同档垫底(过渡 (1,r)
+  过渡支照收 = 名单景之一,32 号稿 §2 双层名单);
+- member_rank 二元组族(32 号稿 §2):双层名单/同档垫底(过渡 (1,r)
   键恒大于终局 (0,r),先让路)/缺省值 (1, CANDIDATE_TOP_N)/跨对
   最小位次/重叠归终元(装配序承载,零特判)/过渡完成品层内档 4;
 - 档内并列金币 tie-break(用户裁定三,上一迭代 design §2.2 第 1 项)
@@ -33,10 +33,10 @@ priority-model §1/§3/§4/§5(总纲 = 同目录 design.md §2.1):
 「单张牌」,原档 2 升星主线拆出完成品保护档 2、原档 5 拆出档 4,
 原档 3/4/5/6/7/8 依次位移为 5/6/7/8/9/10(design §2.2 十档判定表)。
 旧 rank 整数断言过期缘由:member_rank 键改 (层, 位次) 二元组
-(dual-layer-candidates design §2.4-3)——终局 (0, 线内序数)/过渡
+(32 号稿 §2)——终局 (0, 线内序数)/过渡
 (1, 候选位次),字典序承载「同档占位、档内垫底」,键域/十档结构
 零改动。旧配方支塞槽(opening_recipe_comp)过期缘由:过渡半边
-名单源从物化单对改过渡候选槽并集(§2.4-2)。
+名单源从物化单对改过渡候选槽并集(32 号稿 §2)。
 """
 from __future__ import annotations
 
@@ -776,10 +776,10 @@ def test_tier_tie_refund_loss_tiebreak() -> None:
     assert k_walt_1 > k_saber_2, '序数键先判(core 后让,损失键不越位)'
 
 
-# ===== member_rank 二元组族(dual-layer-candidates design §2.4-3)=====
+# ===== member_rank 二元组族(32 号稿 §2)=====
 
 def test_transition_rank_dual_layer_and_min_position() -> None:
-    """装配·双层 rank 合成(§2.4-3):过渡成员 = (1, 候选位次),跨多
+    """装配·双层 rank 合成(32 号稿 §2):过渡成员 = (1, 候选位次),跨多
     候选对成员取最小位次(槽序升序首见即最小);重叠成员归终元(rank
     取终局值,装配序承载零特判);过渡成员不入 need_star 表(缺省 1,
     §2.3-5)。

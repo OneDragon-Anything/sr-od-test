@@ -176,7 +176,7 @@ class TestAcquireSwapSixStep:
         成员(未持有档 5,旧八档档 3 位移,十档口径 design §2.2;序列
         保护面)永不入让位末位。
 
-        买面名单源改写(dual-layer-candidates 3.2):配方半边 = 过渡
+        买面名单源改写(12 号篇 §1.2):配方半边 = 过渡
         候选/实候选并集,opening_recipe_comp 不再进买面——种子从
         recipe_comp 直种改为 line_candidates 直种(锁定语义免耦合评分
         内核,与 test_shop_session_loop._frame 同款)。"""

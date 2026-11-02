@@ -139,7 +139,7 @@ def test_unlocked_recipe_frame_window_set_boundary() -> None:
     window 角色集边界 = k_members ∪ 持有域终局库成员——备战席终局件
     入集(被窗口挡住的判域主体),持有域注册表外名字不入集。
 
-    k_members 口径(过渡支 = dual-layer-candidates design §2.4-5):
+    k_members 口径(过渡支 = 32 号稿 §2 双层名单):
     候选并集(假线名解析失败跳过)∪ 过渡候选成员 = 过渡并集
     (transition_candidates 槽展开;direction 配方键仍读
     opening_recipe_comp,两槽种植相互独立)。"""

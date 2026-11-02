@@ -1,6 +1,5 @@
 """mandate 骨架帧装配测试(k_members 换源面;阶段 1 = roster-plane1-
-union design §2.6 换源不消亡;过渡支口径 = dual-layer-candidates
-design §2.4-5)。
+union design §2.6 换源不消亡;过渡支口径 = 32 号稿 §2)。
 
 被测 = ``strategies/impl/mandate_v1/mandate.py`` 的 ``snapshot_frame``
 与 ``cheapest_member_cost``:k_members 装配读口从

@@ -1,9 +1,9 @@
-"""CW 过渡层体系对候选机器测试面(dual-layer-candidates 迭代 3.1)。
+"""CW 过渡层体系对候选机器测试面。
 
-出处 = 迭代设计 ``docs/develop/sr_od/application/currency_war/changes/
-2026-11-01-dual-layer-candidates/design.md`` §2.3(候选空间/对级 min 聚合/
-门控候选首位/双体系对冻结域/超窗解冻/希儿系门槛)与 §2.6-6/7/9(判据族
-换维/物化链/冻结域收窄行为申报);被测对象 = ``kernel/cw_intention.py``
+判据正本 = ``docs/develop/sr_od/application/currency_war/strategy-docs/
+12_line_and_intention.md`` §3(候选空间/对级 min 聚合/
+门控候选首位/双体系对冻结域/超窗解冻/希儿系门槛;稳定性/冻结域收窄
+行为申报);被测对象 = ``kernel/cw_intention.py``
 的候选机器族(``p1_pair_candidates_of``/``update_p1_recipe`` 槽写端/
 ``clear_p1_recipe``)。committed 等价验证与五测语义面在
 ``test_intention.py``,本文件不重复。

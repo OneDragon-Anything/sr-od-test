@@ -150,7 +150,7 @@ class TestCandidates:
                 held, frozenset()), _REG_INDEX[n])))
 
 
-# ===== 证据门(dual-layer-candidates design §2.1-1/§2.2-1) =====
+# ===== 证据门(12 号篇 §1.2 候选入选证据门) =====
 
 
 class TestEvidenceGate:
@@ -295,7 +295,7 @@ class TestFallbackAndEvaluate:
         assert got == '列车同行'
 
     def test_fallback_empty_candidates_locks_full_order_head(self):
-        """时点兜底空候选分支(dual-layer-candidates design §2.2-9:
+        """时点兜底空候选分支(12 号篇 §1.3:
         证据门下空候选可达,兜底为真规则):候选空 → 锁全 20 线全序
         首名——零证据帧全序首名 = 热度首线(现行全序的退化情形)。"""
         got = line_select.evaluate_lock(
@@ -415,10 +415,10 @@ class TestP2WindowRecipeRetirement:
         direction_comp_of 返回 None——shop 序 1 未锁分支/k 空窗回退/
         形态⑥观测的消费输入面统一恢复(review-37 P1 三消费端)。
 
-        §2.6-12 新语义(dual-layer-candidates design):空板面(无羁绊
+        无羁绊开局新语义(12 号篇 §3):空板面(无羁绊
         开局)→ 过渡候选空 → 物化 **None**(旧制种 p1_pair 即物化的形态
         随 3.1 物化源切槽消亡)→ K 空窗回退承接——「P1 空窗期恒有方向」
-        只对有羁绊开局成立,无羁绊开局 = 冷启动臂域(§2.3-8)。"""
+        只对有羁绊开局成立,无羁绊开局 = 冷启动臂域(11 号稿 §1)。"""
         from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
             session_scope,
         )
@@ -721,7 +721,7 @@ class TestLineRefreshSkeleton:
         refresh_line_if_needed(gs)
         assert st.line_candidates == ('sentinel',)
         # 签名变化(节点号推进)→ 重算发生(哨兵被覆写为证据门版候选——
-        # 零持有帧证据门下 = 空候选,dual-layer-candidates design §2.1-1:
+        # 零持有帧证据门下 = 空候选,12 号篇 §1.2:
         # 热度不再是入选理由)
         gs.node_hist_pos = (1, 3)
         refresh_line_if_needed(gs)

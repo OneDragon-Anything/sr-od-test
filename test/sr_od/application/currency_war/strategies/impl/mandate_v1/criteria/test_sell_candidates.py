@@ -13,8 +13,8 @@ and-sell.md §3(三触发)+ priority-model §5(卖出取用形态):
   **凑息豁免**(roster-plane1-union design §2.2 第 5 项)同为节末
   凑息场景参数——候选池剔除线内未达标成员(为利息绝对不可卖,非
   排序后移;池空零动作 + 剔光帧观测键),被迫类场景不适用(动机
-  二分);**线内身份集双层名单**(dual-layer-candidates design
-  §2.4-5):过渡支 = transition_candidates 槽展开(与买面同源),
+  二分);**线内身份集双层名单**(32 号稿 §2):
+  过渡支 = transition_candidates 槽展开(与买面同源),
   豁免名单随 _member_names 装配改后自动覆盖过渡在建件;
 - 3.4 退役面:shop_swap 场景行(3.2 六步流程替换)、c1_make_room
   场景行(C1 支拆除)、deploy_swap 冻结遗留路径与旧价值函数
@@ -468,8 +468,8 @@ class TestIdentitySegmentRetired:
 
 
 class TestSellLineMembershipSingleAdmission:
-    """sell_line_membership 三景(双层名单口径 = dual-layer-candidates
-    design §2.4-5):过渡支 = transition_candidates 槽展开 + 读前判窗
+    """sell_line_membership 三景(双层名单口径 = 32 号稿 §2):
+    过渡支 = transition_candidates 槽展开 + 读前判窗
     (plane2_started_of),锁定不是退出条件——P1 锁定局 = 锁定线 ∪
     过渡候选成员;P2 过渡支退出;未锁定 = 实候选并集 ∪ 过渡候选成员。
     过渡支与买面同源(同一槽 _pair_members 展开)。"""
@@ -517,8 +517,8 @@ class TestSellLineMembershipSingleAdmission:
 
 
 class TestP1LockedSellPoolNarrowing:
-    """行为申报用例(design §2.5 P1 锁定局行;过渡支口径 = dual-layer-
-    candidates §2.4-5):过渡成员从「最先让路」收窄为「殿后保护」——
+    """行为申报用例(32 号稿 §2 P1 锁定局行为申报;过渡支口径 = 32 号稿
+    §2):过渡成员从「最先让路」收窄为「殿后保护」——
     修复前过渡成员不在锁定帧名单,落兜底档最先卖;修复后落凑两星
     过程保护档,同帧万金油垫件先让(档号 = 十档口径:兜底档 10〔旧
     八档档 8〕/凑两星档 7〔旧档 5〕/万金油档 8〔旧档 6〕,design

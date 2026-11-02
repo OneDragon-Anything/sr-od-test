@@ -157,9 +157,8 @@ class TestLaunchRegistry:
         with pytest.raises(ValueError):
             sell_gate.register_launch(_sess(), _FUEL, cause='hold',
                                       round_num=3)
-        # [14 臂映射](dual-layer-candidates 迭代 3.2 注册序 1 扩展臂
-        # ×2:shelf_qualify_buy/cold_start_buy,义务类——design §2.2-3/
-        # §2.3-8)
+        # [14 臂映射](11 号稿 §1 序 1 扩展臂注册
+        # ×2:shelf_qualify_buy/cold_start_buy,义务类)
         arms = ('m2_line_member', 'm2_locked_member', 'm2_stockpile',
                 'm2_merge_completion', 'shelf_qualify_buy',
                 'cold_start_buy', 'dominance_buy', 'm6_stockpile',
