@@ -1,14 +1,15 @@
-"""mandate_v1 决策载荷锁面(三键组与直算一致 + 回退分支两态 + wrapper 降级)。
+"""mandate_v1 决策载荷锁面(键组与直算一致 + 回退分支两态 + wrapper 降级)。
 
 被测 = src/sr_od/application/currency_war/strategies/impl/mandate_v1/
 decision_payload.py(build_decision_payload)与 bridge.MandateV1Strategy.
 decision_payload 覆写;
 设计出处 = strategy-docs/strategy-telemetry.md(payload 键表正本)+
 changes/2026-10-24-strategy-telemetry/details/capture-store.md §3。
-判据:payload 三键与 gs/state 现读直算一致;window 结论与
+判据:payload 各键与 gs/state 现读直算一致;window 结论与
 ``entry._entry_window_open`` 直调一致;k_fallback 与
 ``cw_intention.k_empty_window_fallback`` 直调一致;锁定帧 candidates=[];
-覆写后的钩子异常仍由基类 wrapper 降级 {}。
+过渡候选槽照录、member_rank 二元组与统一优先级装配同源(终局 (0, 线内
+序数)/过渡 (1, 候选位次));覆写后的钩子异常仍由基类 wrapper 降级 {}。
 """
 
 from __future__ import annotations
@@ -26,6 +27,7 @@ from sr_od.application.currency_war.kernel import cw_intention
 from sr_od.application.currency_war.kernel.cw_comps import (
     COMP_LIBRARY,
     get_comp,
+    member_rank_of,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
@@ -123,6 +125,11 @@ def test_locked_frame_three_keys_and_window_consistent() -> None:
     }
     assert payload['k_members'] == sorted(k_members)
     assert payload['k_fallback'] == {'hit': False, 'band': ''}
+    # 过渡候选槽未种植 = 空槽照录;锁定帧 member_rank = 锁定线知识卡
+    # 序数表包 (0, 线内序数)(过渡支无候选,终局半边单源)。
+    assert payload['transition_candidates'] == []
+    assert payload['member_rank'] == {
+        n: (0, p) for n, p in member_rank_of(comp).items()}
     _assert_window_matches_direct(gs, payload, [comp])
     json.dumps(payload)   # 行行自足:载荷可整体序列化落盘
 
@@ -157,6 +164,12 @@ def test_unlocked_recipe_frame_window_set_boundary() -> None:
     assert payload['k_members'] == sorted(
         cw_intention._pair_members(('持续伤害', '希儿系')))
     assert payload['k_fallback'] == {'hit': False, 'band': ''}
+    # 过渡候选槽照录(嵌套 list 序列化形态);member_rank 二元组 = 过渡
+    # 半边全 (1, 候选位次)(假线名解析失败 → 终局半边空,唯一候选 →
+    # 位次 1,键集与过渡候选成员并集同集)。
+    assert payload['transition_candidates'] == [['持续伤害', '希儿系']]
+    assert payload['member_rank'] == dict.fromkeys(
+        cw_intention._pair_members(('持续伤害', '希儿系')), (1, 1))
     assert '花火' in payload['window']
     assert '杂1' not in payload['window']   # 终局库外持有件不入窗口键集
     _assert_window_matches_direct(gs, payload, list(COMP_LIBRARY))

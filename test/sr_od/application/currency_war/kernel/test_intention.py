@@ -3,9 +3,9 @@
 
 两节归并自原两个主题文件(测试函数名全量保留,原文件已删):
 
-1. 过渡候选机器(原 test_cw_pair_progressive.py;dual-layer-candidates
-   迭代 3.1 候选化改写——四层谓词族[在任优先单席易手/排序维选席/argmin
-   e_rounds 渐进/换席可行性门]整体退役,design §2.6-6):出处链 =
+1. 过渡候选机器(原 test_cw_pair_progressive.py;旧四层谓词族已随
+   候选化退役——退役登记 = math_proofs P-T166 行,现行判据 = 候选
+   排序键((对级支持度, 声明序))):出处链 =
    kernel 成型线 ``cw_battle_calib._transition_formed``(四体系两两
    组合 = 成型)+ 设计 §2.3(候选空间/对级 min 聚合/门控候选首位/
    双体系对冻结域);旧病灶史 = sim 批 ``sim_20260918_072900_000_n320``
