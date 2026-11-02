@@ -71,12 +71,12 @@ def test_rencai_jili_registry_row_single_source(
     计划卡文「获得1件随机简易装备」→ 类别池形 item_category='简易'
     直读(族内类别池行首例),item='' 占位,同卡即时腿「获得1件进阶
     装备」由 PICK_INVEST_EFFECTS 组合登记行承载不入本表);
-    base 溯源 id 对拍(id ↔ plaza:<id>)。表键集闭族现役七卡(未注册
+    base 溯源 id 对拍(id ↔ plaza:<id>)。表键集闭族现役八卡(未注册
     展开卡安静不写,禁顺手代登记)。"""
     assert set(STRATEGY_DELAYED_GRANTS) == {
         '人才激励', '人才激励+', '许诺特权', '先亏后盈', '好运令牌·银',
-        '是钻石总会发光', '回收计划'}, \
-        '注册面 = 族现役七卡(未注册展开卡安静不写,禁顺手代登记)'
+        '是钻石总会发光', '回收计划', '回收计划+'}, \
+        '注册面 = 族现役八卡(未注册展开卡安静不写,禁顺手代登记)'
     row = STRATEGY_DELAYED_GRANTS[card]
     assert row == StrategyDelayedGrant(id=gid, delay_nodes=delay,
                                        item=item, count=count,
