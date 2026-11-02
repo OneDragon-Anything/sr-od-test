@@ -2061,6 +2061,9 @@ _A_SEEDED: tuple[str, ...] = (
     # 分期金剩余腿数容器(空 dict 底座,节点窗腿键查判定零 None 防御;
     # 空 = 未持分期卡的正常态,T-177 长期主义首例)
     'strategy_gold_next_nodes_left',
+    # 策略卡羁绊档位条件发放已发档位闩(空 tuple 底座,检查腿 membership
+    # 判定零 None 防御;空 = 无档已发的正常态)
+    'strategy_bond_tier_fired',
     # 损血档位触发累积器(零底座,触发函数累加取模零 None 防御;
     # 0 = 无累积语义中性,种 0 不伪装已触发)
     'strategy_hp_loss_accum',
@@ -2118,6 +2121,8 @@ def test_cold_build_seeds_all_a_fields(monkeypatch) -> None:
         '绑定域冷建空底座'
     assert gs.strategy_gold_next_nodes_left.value == {}, \
         '分期金剩余腿数容器冷建空底座'
+    assert gs.strategy_bond_tier_fired.value == (), \
+        '羁绊档位闩冷建空底座'
     assert gs.strategy_hp_loss_accum.value == 0, '损血累积器冷建零底座'
     assert gs.giftbox_sight.value == (), '板件读数域冷建空底座'
     assert gs.gold.value == 3
