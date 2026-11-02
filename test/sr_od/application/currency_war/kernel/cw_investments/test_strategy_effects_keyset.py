@@ -53,6 +53,7 @@ _EXPECTED_KEYS: frozenset[str] = frozenset({
     '榜样的力量·金',
     'OOTD·金',
     '打人就打脸·金',
+    '团队力量·金',
     '现金为王',
 })
 
@@ -64,7 +65,7 @@ def test_strategy_effects_keyset_closed() -> None:
         'STRATEGY_EFFECTS 键集漂移:\n'
         f'  缺员: {sorted(set(_EXPECTED_KEYS) - set(STRATEGY_EFFECTS))}\n'
         f'  多员: {sorted(set(STRATEGY_EFFECTS) - set(_EXPECTED_KEYS))}')
-    assert len(STRATEGY_EFFECTS) == 69, '基数申报对账(effect-domain §5)'
+    assert len(STRATEGY_EFFECTS) == 70, '基数申报对账(effect-domain §5)'
 
 
 def test_strategy_effects_keys_unique_ids() -> None:
