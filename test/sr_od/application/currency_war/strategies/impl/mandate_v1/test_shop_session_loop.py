@@ -1102,3 +1102,232 @@ def test_funding_exhausted_records_opportunity():
                and r.blocked_by == 'priority_insufficient_gold'
                for r in recs), \
         f'金不足机会清单记录缺席:实际 {recs}'
+
+
+# ============================================================
+# 货架资格臂 + 冷启动臂(dual-layer-candidates design §2.2-2/§2.3-8;
+# 迭代 3.2 落地批):序 1 层内扩展臂——资格判据(CARRY/骨架级 ∧ 虚拟
+# top3)/义务类管线/子序(missing 后、冷启动次之、资格臂殿后)/双空窗
+# 完备性(1 费三羁绊见即买,会话内现算退出)。
+#
+# 构帧纪律:未锁 + line_candidates/transition_candidates 双空(资格
+# 判据的虚拟评估只作资格器,零持久化);货架件身份注册表现算防漂移
+# (飞霄 = 追击飞霄 CARRY〔1 费非三羁绊〕;丹恒·饮月 = 列车同行骨架
+# 〔2 费三羁绊〕;刃 = 黄泉减益插件级〔1 费非三羁绊〕;艾丝妲 = 纯
+# 过渡件〔1 费持续伤害,不在任何终局线〕;三月七 = 列车 CARRY ∩
+# 骨架〔1 费列车同行〕)。
+# ============================================================
+
+
+class TestShelfQualifyArm:
+    """货架资格臂(单张买入估值;§2.2-2:虚拟评估作资格器,买入转实
+    后整线跟进)。"""
+
+    def test_carry_card_on_shelf_qualifies(self):
+        """CARRY 触发:零持有开局 + 货架飞霄(追击飞霄 CARRY,1 费非
+        三羁绊——冷启动域外)→ 虚拟评估(在手∪货架)追击飞霄证据非零
+        进虚拟 top3 → 资格买入,reason = shelf_qualify_buy(义务类)。"""
+        from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+            sell_gate,
+        )
+        live, sess, gs, st = _frame(
+            gold=60, node_kind='reward', direction=False,
+            shop_cards=[('飞霄', 1, 1)])
+        act = live.decide_shop_action()
+        assert isinstance(act, CwActionBuyCardParam), f'非资格买入: {act!r}'
+        assert act.card.name == '飞霄'
+        assert act.reason == 'shelf_qualify_buy'
+        assert sell_gate.launch_cause_of(act.reason) == 'obligation', \
+            '资格臂 = 义务类(τ=∞ 义务账,§2.2-3)'
+
+    def test_skeleton_card_on_shelf_qualifies(self):
+        """骨架触发 + 1 费档冷启动限定(双证帧):货架丹恒·饮月(列车
+        同行骨架非 CARRY,2 费三羁绊)→ 冷启动 1 费门不收;列车同行经
+        丹恒·饮月虚拟持有(skeleton=1)进虚拟 top3 → 骨架级资格买入。"""
+        live, sess, gs, st = _frame(
+            gold=60, node_kind='reward', direction=False,
+            shop_cards=[('丹恒·饮月', 2, 1)])
+        act = live.decide_shop_action()
+        assert isinstance(act, CwActionBuyCardParam), f'非资格买入: {act!r}'
+        assert act.card.name == '丹恒·饮月'
+        assert act.reason == 'shelf_qualify_buy', \
+            '骨架级货架件经资格臂买入(冷启动 1 费门不收 2 费件)'
+
+    def test_plugin_card_on_shelf_does_not_qualify(self):
+        """插件不触发(同帧对照):货架 [刃(槽1,黄泉减益插件级),
+        黄泉(槽2,黄泉减益 CARRY)]——黄泉减益经货架虚拟证据进虚拟
+        top3,但刃只是插件级(members − CARRY − 骨架)不入资格域 →
+        槽序在前的刃被跳过,首资格件 = 黄泉(CARRY 触发)。"""
+        live, sess, gs, st = _frame(
+            gold=60, node_kind='reward', direction=False,
+            shop_cards=[('刃', 1, 1), ('黄泉', 5, 1)])
+        act = live.decide_shop_action()
+        assert isinstance(act, CwActionBuyCardParam), f'非资格买入: {act!r}'
+        assert act.card.name == '黄泉', \
+            f'插件级刃(槽序在前)须被跳过,首资格件 = CARRY 黄泉: {act!r}'
+        assert act.reason == 'shelf_qualify_buy'
+
+    def test_line_outside_virtual_top3_does_not_qualify(self):
+        """虚拟 top3 资格(线外不触发):货架四件(黑塔 = 大黑塔银河学者
+        CARRY / 姬子·启行 = 列车 CARRY / 符玄 = 希儿量子 CARRY /
+        花火 = 希儿量子 CARRY)——虚拟评估(在手∅∪货架)的跨线证据聚合
+        下 top3 = 希儿量子/千冶减益/双王圣杯(现算前置断言钉死),
+        大黑塔银河学者与列车同行落榜 → 黑塔(槽1)/姬子·启行(槽2)
+        均无资格被跳过,首动作 = 槽序内首个在榜资格件符玄(希儿量子
+        CARRY)。前置断言 = 注册表演进使帧前提失守时响亮暴露。"""
+        from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+            line_select,
+        )
+        _face = {'黑塔', '姬子·启行', '符玄', '花火'}
+        _virt = line_select.compute_candidates(frozenset(_face), frozenset())
+        assert '大黑塔银河学者' not in _virt and '列车同行' not in _virt, \
+            f'帧前提失守:挤出线意外入虚拟 top3: {_virt!r}'
+        live, sess, gs, st = _frame(
+            gold=60, node_kind='reward', direction=False,
+            shop_cards=[('黑塔', 1, 1), ('姬子·启行', 3, 1),
+                        ('符玄', 4, 1), ('花火', 2, 1)])
+        act = live.decide_shop_action()
+        assert isinstance(act, CwActionBuyCardParam), f'非资格买入: {act!r}'
+        assert act.card.name == '符玄', \
+            f'虚拟 top3 外线的货架件(黑塔/姬子·启行)须被跳过: {act!r}'
+        assert act.reason == 'shelf_qualify_buy'
+
+    def test_missing_loop_precedes_qualify_arm(self):
+        """子序(序 1 层内 missing 循环之后、资格臂殿后):实候选直种
+        列车同行 + 持有部分成员(证据点亮)+ 货架 [花火(列车 CARRY,
+        missing 件), 飞霄(资格件)] → 缺件循环先买花火
+        (m2_line_member),资格件飞霄殿后不抢序。"""
+        live, sess, gs, st = _frame(
+            gold=60, node_kind='reward', direction=False,
+            bench=[('姬子·启行', 1)], deployed=[],
+            shop_cards=[('花火', 2, 1), ('飞霄', 1, 1)],
+            candidates=('列车同行',))
+        act = live.decide_shop_action()
+        assert isinstance(act, CwActionBuyCardParam), f'非买入: {act!r}'
+        assert act.card.name == '花火', \
+            f'missing 缺件(列车 CARRY 花火)须先于资格臂: {act!r}'
+        assert act.reason.startswith('m2_'), \
+            f'缺件循环通道(m2 族)先于资格臂殿后: {act.reason}'
+
+    def test_qualify_buy_lights_real_candidates_next_frame(self):
+        """买入转实链路(§2.2-2 闭环):资格买入飞霄 → 持有写入 → 方向
+        签名变 → refresh 重算 → 实候选经证据门点亮追击飞霄 → 义务面
+        跟进(下一帧货架追击骨架件知更鸟经 m2 义务通道买入)。"""
+        live, sess, gs, st = _frame(
+            gold=60, node_kind='reward', direction=False,
+            shop_cards=[('飞霄', 1, 1)])
+        act1 = live.decide_shop_action()
+        assert act1.reason == 'shelf_qualify_buy'
+        # 落地投影:买入写持有(bench 紧凑条目追加),签名变
+        from sr_od.application.currency_war.kernel.cw_game_state import (
+            BenchSlot,
+            BenchView,
+        )
+        slots = list(gs.bench.value.slots) \
+            + [BenchSlot(kind='unit', unit=Unit(char_id='飞霄', star=1))]
+        gs.write_logic(gs.bench, BenchView(slots=slots, capacity=9),
+                       produced_by='cw-36-loop', sig=_LOGIC_SIG)
+        session_scope.refresh_line_if_needed(gs)
+        assert '追击飞霄' in st.line_candidates, \
+            '资格买入写持有 → 签名变 → 实候选经证据门点亮(§2.1-1 闭环)'
+        # 下一帧:追击飞霄骨架件知更鸟在货架 → 义务面跟进(m2 通道)
+        cards = [ShopSlot(kind='content',
+                          card=ShopCard(name='知更鸟', faction='', cost=4,
+                                        star=1, slot=1))]
+        cards += [ShopSlot(kind='empty')] * 4
+        gs.write_logic(gs.shop, ShopPayload(cards=cards, refresh_probs={}),
+                       produced_by='cw-36-loop', sig=_LOGIC_SIG)
+        st.cw4_segment_serial += 1
+        st.shop_handled = None
+        act2 = live.decide_shop_action()
+        assert isinstance(act2, CwActionBuyCardParam), f'非义务买入: {act2!r}'
+        assert act2.card.name == '知更鸟'
+        assert act2.reason.startswith('m2_'), \
+            '实候选点亮后整线义务面跟进(m2 义务通道;资格臂只作首件资格器)'
+
+    def test_empty_shelf_degrades_to_close(self):
+        """货架消失退化:空货架帧资格臂零对象(虚拟评估无货架面)→
+        正常收工(无买入无异常)。"""
+        live, sess, gs, st = _frame(
+            gold=60, node_kind='reward', direction=False, shop_cards=[])
+        act = live.decide_shop_action()
+        assert isinstance(act, CwActionCloseShopParam), act
+
+
+class TestColdStartArm:
+    """冷启动臂(双空窗完备性;§2.3-8:三羁绊 1 费 1★ 见即买,会话内
+    现算 _p1_system_support 退出——任一三羁绊支持度 >0 即停,希儿系
+    不算;序位 = missing 后、资格臂前)。"""
+
+    def test_dual_empty_window_buys_three_bond_one_cost(self):
+        """双空窗触发:实候选空 ∧ 过渡候选空 ∧ 三羁绊现算全 0 + 货架
+        艾丝妲(1 费 1★,持续伤害标签纯过渡件)→ 见即买,reason =
+        cold_start_buy(义务类)。"""
+        from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+            sell_gate,
+        )
+        live, sess, gs, st = _frame(
+            gold=60, node_kind='reward', direction=False,
+            shop_cards=[('艾丝妲', 1, 1)])
+        assert st.transition_candidates == ()   # 双空窗前置(未种槽)
+        act = live.decide_shop_action()
+        assert isinstance(act, CwActionBuyCardParam), f'非冷启动买入: {act!r}'
+        assert act.card.name == '艾丝妲'
+        assert act.reason == 'cold_start_buy'
+        assert sell_gate.launch_cause_of(act.reason) == 'obligation'
+
+    def test_support_recompute_stops_arm_within_session(self):
+        """会话内现算即停(§2.3-8 退出判据):持有艾丝妲(纯过渡件——
+        不点亮任何终局线,实候选仍空)→ 三羁绊支持度现算 DOT > 0 →
+        冷启动停(不依赖槽位轮粒度);货架三月七(1 费三羁绊,冷启动
+        域内件)不被冷启动买入——同帧它经资格臂(列车 CARRY + 虚拟
+        top3)买入,reason 通道分离即退出判据生效证据。"""
+        live, sess, gs, st = _frame(
+            gold=60, node_kind='reward', direction=False,
+            bench=[('艾丝妲', 1)], deployed=[],
+            shop_cards=[('三月七', 1, 1)])
+        act = live.decide_shop_action()
+        assert isinstance(act, CwActionBuyCardParam), f'非买入: {act!r}'
+        assert act.reason != 'cold_start_buy', \
+            '三羁绊现算 >0(艾丝妲 DOT 0.5)即停冷启动——槽位空不是触发条件'
+
+    def test_cold_start_precedes_qualify_arm_in_order(self):
+        """序位(missing 后、资格臂前):货架 [飞霄(槽1,资格件),
+        艾丝妲(槽2,冷启动件)] 双空窗 → 冷启动先触发(序位在资格臂
+        前),首动作买艾丝妲而非槽序在前的资格件飞霄。"""
+        live, sess, gs, st = _frame(
+            gold=60, node_kind='reward', direction=False,
+            shop_cards=[('飞霄', 1, 1), ('艾丝妲', 1, 1)])
+        act = live.decide_shop_action()
+        assert isinstance(act, CwActionBuyCardParam), f'非买入: {act!r}'
+        assert act.card.name == '艾丝妲', \
+            f'冷启动臂须先于资格臂(槽序在前的飞霄不抢序): {act!r}'
+        assert act.reason == 'cold_start_buy'
+
+    def test_non_three_bond_card_not_bought_by_cold_start(self):
+        """三羁绊限定:货架乱破(1 费非三羁绊——黄泉减益/巡海击破
+        CARRY)→ 冷启动域外;乱破经其线虚拟 top3 资格(资格臂)买入,
+        reason 通道分离即三羁绊限定证据(护盾/希儿系件同域外)。"""
+        live, sess, gs, st = _frame(
+            gold=60, node_kind='reward', direction=False,
+            shop_cards=[('乱破', 1, 1)])
+        act = live.decide_shop_action()
+        assert isinstance(act, CwActionBuyCardParam), f'非买入: {act!r}'
+        assert act.reason == 'shelf_qualify_buy', \
+            '非三羁绊 1 费件不走冷启动(经资格臂通道=限定证据)'
+
+
+def test_opening_empty_buy_face_zero_m2_buys():
+    """开局空买面(§2.6-1:零信号期义务面收窄):零持有双空窗 + 货架
+    遐蝶(万敌单C 插件级——虚拟 top3 线在但插件级不获资格)→ 义务面
+    空,序 1 全臂(missing/stockpile/m2b/冷启动/资格)零买入;若任何
+    买入发生,reason 不得是义务/资格/冷启动通道。"""
+    live, sess, gs, st = _frame(
+        gold=60, node_kind='reward', direction=False,
+        shop_cards=[('遐蝶', 4, 1)])
+    act = live.decide_shop_action()
+    if isinstance(act, CwActionBuyCardParam):
+        assert not act.reason.startswith('m2_'), \
+            f'空买面帧义务通道不得买入: {act.reason}'
+        assert act.reason not in ('shelf_qualify_buy', 'cold_start_buy'), \
+            f'插件级货架件不获资格/冷启动: {act.reason}'

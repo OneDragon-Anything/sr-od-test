@@ -211,6 +211,15 @@ def _ju23_axes(gold: int, shop: list[ShopCard] | None = None) -> dict:
 def _ju23_session() -> StrategySession:
     sess = StrategySession()
     state_of(sess).target_comp = _JU23_COMP
+    # 宿主归一接线(锁定局意图成立的前提):decide_shop_action 内
+    # line_members_view(gs) 读 gs 侧状态,生产接线 = cw_strategy.py 的
+    # state setter;未接线时 gs 侧冷建未锁态,货架资格臂(dual-layer-
+    # candidates 3.2)按未锁评估货架——旧未锁分支空买面无行为面,
+    # 接线缺陷随资格臂显形。
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        game_state_of,
+    )
+    game_state_of(sess).strategy_state = state_of(sess)
     return sess
 
 

@@ -150,6 +150,78 @@ class TestCandidates:
                 held, frozenset()), _REG_INDEX[n])))
 
 
+# ===== 证据门(dual-layer-candidates design §2.1-1/§2.2-1) =====
+
+
+class TestEvidenceGate:
+    """证据门参数(候选快照消费开启版;缺省关闭 = 现行全量口径):
+
+    - 线入选 ⟺ 证据维非零(CARRY/骨架/插件任一持有 ∨ 环境分级命中);
+    - 零证据线不入候选——热度只作有证据线间的排序,不再是入选理由;
+    - 开局零持有零环境 = 空候选(合法形态;时点兜底空候选分支承接)。
+    """
+
+    def test_zero_evidence_yields_empty_candidates(self):
+        """零持有零环境 → 空候选(开局「无阵容入选」;缺省版对照 =
+        热度前三常驻,TestCandidates.test_empty_state 辖)。"""
+        assert line_select.compute_candidates(
+            frozenset(), frozenset(), evidence_gate=True) == ()
+
+    def test_carry_evidence_lights_line(self):
+        """CARRY 在手点亮该线(持有证据首维):飞霄 = 追击飞霄 CARRY
+        档(carry_set 合流口径)——唯一证据线即唯一候选。"""
+        got = line_select.compute_candidates(
+            frozenset({'飞霄'}), frozenset(), evidence_gate=True)
+        assert got == ('追击飞霄',)
+
+    def test_skeleton_evidence_lights_line(self):
+        """骨架件持有(≥1)点亮该线:key_items 成员在手 = 骨架计数维
+        非零(CARRY 维零也入选)。"""
+        from sr_od.application.currency_war.kernel.cw_comps import (
+            carry_set,
+        )
+        comp = next(c for c in COMP_LIBRARY
+                    if c.key_items
+                    and any(n not in carry_set(c) for n in c.key_items))
+        skel = next(n for n in comp.key_items if n not in carry_set(comp))
+        got = line_select.compute_candidates(
+            frozenset({skel}), frozenset(), evidence_gate=True)
+        assert comp.name in got, (
+            f'骨架件 {skel} 在手须点亮 {comp.name}(骨架计数维)')
+
+    def test_env_tier_evidence_lights_line(self):
+        """环境分级命中(策略型强关联)点亮该线——零持有也入选。"""
+        got = line_select.compute_candidates(
+            frozenset(), frozenset({'黑塔纪元'}), evidence_gate=True)
+        assert '大黑塔银河学者' in got
+
+    def test_heat_ranks_only_within_evidenced_lines(self):
+        """热度降为有证据线间的排序:候选 ⊆ 持有点亮线域且按线分数
+        全序(证据级字典序 → 热度);零证据高热度线(命运圣杯红A 118 >
+        追击飞霄 40)不入——热度不再是入选理由。姬子·启行跨线点亮
+        (反甲白厄/列车同行)为注册表事实,点亮域按现算取。"""
+        held = frozenset({'姬子·启行', '飞霄'})
+        got = line_select.compute_candidates(
+            held, frozenset(), evidence_gate=True)
+        lit = {c.name for c in COMP_LIBRARY
+               if any(v != 0 for v in
+                      line_select.line_score_key(c, held, frozenset())[:4])}
+        assert lit and set(got) <= lit, '候选 ⊆ 证据点亮线域'
+        assert '命运圣杯红A' not in got, '零证据高热度线不入'
+        order = sorted(lit, key=lambda n: (
+            *line_select.line_score_key(
+                next(c for c in COMP_LIBRARY if c.name == n),
+                held, frozenset()), _REG_INDEX[n]))
+        assert list(got) == order[:line_select.CANDIDATE_TOP_N], \
+            '候选序 = 全序在点亮域上的受限投影'
+
+    def test_default_off_keeps_full_ranking(self):
+        """缺省关闭 = 现行全量版(其余调用方现行口径不变):零证据帧
+        仍返回热度前三。"""
+        assert line_select.compute_candidates(
+            frozenset(), frozenset()) == ('列车同行', '命运圣杯红A', '双王圣杯')
+
+
 # ===== 硬规则锁定(策略型/角色型;同帧多命中裁决) =====
 
 
@@ -221,6 +293,20 @@ class TestFallbackAndEvaluate:
             frozenset(), frozenset(),
             plane2_started=True, p2_strategy_pick_done=True)
         assert got == '列车同行'
+
+    def test_fallback_empty_candidates_locks_full_order_head(self):
+        """时点兜底空候选分支(dual-layer-candidates design §2.2-9:
+        证据门下空候选可达,兜底为真规则):候选空 → 锁全 20 线全序
+        首名——零证据帧全序首名 = 热度首线(现行全序的退化情形)。"""
+        got = line_select.evaluate_lock(
+            (), frozenset(), frozenset(),
+            plane2_started=True, p2_strategy_pick_done=True)
+        assert got == '列车同行'
+        # 触发前置不满足时(选卡未完成)空候选仍不锁
+        got2 = line_select.evaluate_lock(
+            (), frozenset(), frozenset(),
+            plane2_started=True, p2_strategy_pick_done=False)
+        assert got2 is None
 
     def test_hard_rule_beats_fallback_same_frame(self):
         """同帧硬规则与兜底齐备 → 硬规则线胜(先到先锁的判据序)。"""
@@ -324,10 +410,15 @@ class TestP2WindowRecipeRetirement:
         return MandateV1Strategy(gs, SimpleNamespace(strategy_seed=None))
 
     def test_p2_entry_clears_recipe_and_direction_reads_none(self):
-        """端到端:P1 帧配方物化(开局面键非空)→ 进 P2(窗口谓词置位)
-        首个贵段清配方锁 + 开局面键同点清空 → 未锁窗 direction_comp_of
-        返回 None——shop 序 1 未锁分支/k 空窗回退/形态⑥观测的消费输入
-        面统一恢复(review-37 P1 三消费端)。"""
+        """端到端:P1 帧配方物化(过渡候选槽首位物化)→ 进 P2(窗口谓词
+        置位)首个贵段清配方锁 + 开局面键/过渡候选槽同点清空 → 未锁窗
+        direction_comp_of 返回 None——shop 序 1 未锁分支/k 空窗回退/
+        形态⑥观测的消费输入面统一恢复(review-37 P1 三消费端)。
+
+        §2.6-12 新语义(dual-layer-candidates design):空板面(无羁绊
+        开局)→ 过渡候选空 → 物化 **None**(旧制种 p1_pair 即物化的形态
+        随 3.1 物化源切槽消亡)→ K 空窗回退承接——「P1 空窗期恒有方向」
+        只对有羁绊开局成立,无羁绊开局 = 冷启动臂域(§2.3-8)。"""
         from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
             session_scope,
         )
@@ -339,9 +430,18 @@ class TestP2WindowRecipeRetirement:
         from sr_od.application.currency_war.kernel.cw_intention import (
             IntentionState,
         )
-        st.v3_intention = IntentionState(p1_pair=('仙舟', '持续伤害'))
+        st.v3_intention = IntentionState()
+        # 空板面:配方链贵段重算 → 过渡候选空 → 物化 None(§2.6-12)
         strat._refresh_direction(gs, st)
-        assert st.opening_recipe_comp is not None, 'P1 帧配方物化前置'
+        assert st.transition_candidates == (), '无羁绊开局候选空(§2.3-2)'
+        assert st.opening_recipe_comp is None, \
+            '空板面候选空 → 物化 None(§2.6-12 新语义)'
+        assert session_scope.direction_comp_of(gs) is None, \
+            '空板面无方向 → K 空窗回退域(冷启动臂承接,§2.3-8)'
+        # 有羁绊开局对照:槽非空 → 物化 = 候选首位伪阵容(便宜段物化链)
+        st.transition_candidates = (('仙舟', '持续伤害'),)
+        strat._refresh_direction_views(gs, st)
+        assert st.opening_recipe_comp is not None, '槽首位物化前置'
         assert session_scope.direction_comp_of(gs) is st.opening_recipe_comp
         # 进 P2:边界置窗口谓词 + 贵段清配方(写端)+ 读口守卫(双保险)
         cw4_gs(sess, plane=2, round_num=1, node='prep')
@@ -350,6 +450,7 @@ class TestP2WindowRecipeRetirement:
         strat._refresh_direction(gs, st)
         assert st.v3_intention.p1_pair == (), '配方锁退场'
         assert st.opening_recipe_comp is None, '开局面键同点清空(写端)'
+        assert st.transition_candidates == (), '过渡候选槽同点清空'
         assert st.target_comp is None, '未锁窗(P2 首帧未选卡)'
         assert session_scope.direction_comp_of(gs) is None, (
             'P2 未锁窗 direction 读口 = None(两键都空契约)')
@@ -619,11 +720,13 @@ class TestLineRefreshSkeleton:
         st.line_candidates = ('sentinel',)
         refresh_line_if_needed(gs)
         assert st.line_candidates == ('sentinel',)
-        # 签名变化(节点号推进)→ 重算发生(哨兵被覆写为 top3 候选)
+        # 签名变化(节点号推进)→ 重算发生(哨兵被覆写为证据门版候选——
+        # 零持有帧证据门下 = 空候选,dual-layer-candidates design §2.1-1:
+        # 热度不再是入选理由)
         gs.node_hist_pos = (1, 3)
         refresh_line_if_needed(gs)
-        assert st.line_candidates != ('sentinel',)
-        assert len(st.line_candidates) == 3   # 未锁定 → top3 候选快照
+        assert st.line_candidates == (), \
+            '零持有帧证据门版候选空(哨兵被覆写 = 重算发生)'
         assert st.target_comp is None         # 无硬规则/未到时点 → 未锁
 
     def test_level_dimension_change_triggers_recompute(self):

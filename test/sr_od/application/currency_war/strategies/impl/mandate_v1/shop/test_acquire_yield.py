@@ -174,13 +174,17 @@ class TestAcquireSwapSixStep:
         """置换成功帧:席满 + 方向缺件绯英在店 → 六步流程卖序列末位
         存量牌(卖旧 → 下帧重入买入,单动作契约);绯英 = 未持有配方
         成员(未持有档 5,旧八档档 3 位移,十档口径 design §2.2;序列
-        保护面)永不入让位末位。"""
-        recipe = get_comp('绯英欢愉')
+        保护面)永不入让位末位。
+
+        买面名单源改写(dual-layer-candidates 3.2):配方半边 = 过渡
+        候选/实候选并集,opening_recipe_comp 不再进买面——种子从
+        recipe_comp 直种改为 line_candidates 直种(锁定语义免耦合评分
+        内核,与 test_shop_session_loop._frame 同款)。"""
         junk = _clean_fillers(9, {'绯英'})
         gs, sess, cfg = _frame(
             bench=[(n, 1) for n in junk],
             shop_cards=[('绯英', 2, 1)],
-            recipe_comp=recipe)
+            candidates=('绯英欢愉',))
         act = decide_shop_action(gs, sess, cfg)
         assert isinstance(act, CwActionSellBenchParam), f'非卖旧动作: {act!r}'
         assert act.reason == 'shop_swap'
