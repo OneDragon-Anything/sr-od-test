@@ -21,7 +21,8 @@ from sr_od.application.currency_war.kernel.cw_investments import (
 #: 超发货币(T-191)= 47 + 全都要·金双腿两键(2026-11-02)= 49 + 幸运星祝福(2026-11-03)= 50;
 #: 扩员 = 新卡实现批随批显式并入。
 #: 后续:折叠小刀/和平手枪/生命之花/量产型装甲祝福 + 公司军火更新·金/人海战术/打通上下游·金;
-#: 现金为王(2026-11-02)= 59 键;赞美太阳(装备计数 XP 族首例,2026-11-03)= 74 键现值。
+#: 现金为王(2026-11-02)= 59 键;赞美太阳(装备计数 XP 族首例,2026-11-03)= 74 键;
+#: 星魂升华(策略源 UNIT_BUFF 族,前台星魂 +1 阶零响应登记)= 75 键现值。
 _EXPECTED_KEYS: frozenset[str] = frozenset({
     '淘金客', '固定理财', '固定理财+', '经验就是财富', '商业间谍',
     '双手狸开键盘！', '采购专员·金', '采购专员·彩', '全员晋升', '人力重组',
@@ -59,6 +60,7 @@ _EXPECTED_KEYS: frozenset[str] = frozenset({
     '装备党',
     '赞美太阳',
     '现金为王',
+    '星魂升华',
 })
 
 
@@ -69,7 +71,7 @@ def test_strategy_effects_keyset_closed() -> None:
         'STRATEGY_EFFECTS 键集漂移:\n'
         f'  缺员: {sorted(set(_EXPECTED_KEYS) - set(STRATEGY_EFFECTS))}\n'
         f'  多员: {sorted(set(STRATEGY_EFFECTS) - set(_EXPECTED_KEYS))}')
-    assert len(STRATEGY_EFFECTS) == 74, '基数申报对账(effect-domain §5)'
+    assert len(STRATEGY_EFFECTS) == 75, '基数申报对账(effect-domain §5)'
 
 
 def test_strategy_effects_keys_unique_ids() -> None:
