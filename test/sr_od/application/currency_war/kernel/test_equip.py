@@ -400,3 +400,48 @@ def test_wear_synthesis_without_card_zero_grant():
     assert out.applied
     assert gs.bench.value.slots[0].unit.equips == [advance], '合成照常'
     assert gs.free_refresh_left.value is None, '无条目零发放'
+
+
+# ============================================================ 穿着即合成 × 获得转换预测感知
+
+
+def test_wear_synthesis_converted_by_strategy_card():
+    """穿着即合成产物转换感知(designs/T-248-haoyunlai.md §2.2 A 案):
+    持「合成与获得进阶装备时，改为获得一个【好运令牌】」卡局穿第二件可
+    配对简易 → 合成产物预测经转换判定替换,worn 集产物 = 令牌(非进阶
+    件)——预测与 live 游戏自算转换同形,对账不失真;判定单源 =
+    cw_gain_chain 转换登记表预测面(禁第二份类别谓词)。登记目标工具类
+    不参与配方,循环终止性不变。"""
+    advance, (a, b) = next(iter(CROSS_RECIPES.items()))
+    gs = _wear_grant_gs(unit_equips=[a], owned=[b], register=False)
+    gs.write_logic(gs.active_strategies, ['好运来'], produced_by='test-seed',
+                   evidence='t:card',
+                   sig=ChannelSig(family='logic_action', actor='test',
+                                  mode='compute'))
+    seq0 = gs.write_seq
+    out = _wear_item(gs, b)
+    assert out.applied
+    assert gs.bench.value.slots[0].unit.equips == ['好运令牌'], \
+        f'合成产物经转换替换:{a}+{b} → 令牌(非 {advance})'
+    assert gs.free_refresh_left.value is None, \
+        '登记缺位零发放(发放腿与转换面互不干涉)'
+    assert gs.write_seq - seq0 == 2, \
+        f'恰两行穿戴写(零发放行),实得 {gs.write_seq - seq0}'
+
+
+def test_wear_advanced_no_conversion_without_synthesis():
+    """持卡局零合成穿戴照常(边界):穿独立进阶件(进阶终品互不配方,零
+    合成)→ worn 集照常并存零转换——卡面辖「合成与获得进阶装备」事件
+    (获得链获得 + 合成产物),不辖既有装备的穿戴动作本身,转换判定只
+    注入合成产物面。"""
+    items = ['物质分解液', '冷笑话引擎']
+    gs = _wear_grant_gs(unit_equips=[items[0]], owned=[items[1]],
+                        register=False)
+    gs.write_logic(gs.active_strategies, ['好运来'], produced_by='test-seed',
+                   evidence='t:card',
+                   sig=ChannelSig(family='logic_action', actor='test',
+                                  mode='compute'))
+    out = _wear_item(gs, items[1])
+    assert out.applied
+    assert gs.bench.value.slots[0].unit.equips == items, \
+        '零合成穿戴照常并存(零转换)'
