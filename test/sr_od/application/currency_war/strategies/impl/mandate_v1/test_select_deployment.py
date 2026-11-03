@@ -37,6 +37,7 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
     entry,
+    mandate,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate import (
     MandateFrame,
@@ -180,3 +181,66 @@ def test_target_board_payload_shape() -> None:
         assert row in ('front', 'back'), f'{name} 排值 {row!r} 非法'
         assert star in (1, 2, 3), f'{name} 星值 {star!r} 非法'
         assert slot is None or slot >= 1, f'{name} 槽位值 {slot!r} 非法'
+
+
+# ==================== 次名分量遥测(pick-margin-telemetry design §2.1
+# ====================  私有槽通道:出参透传 + _step5 写槽形态)====================
+
+def test_step5_writes_deploy_margin_slot_diff_forms() -> None:
+    """生产接线·写槽形态(design §2.1:写入点 = deploy_diff 计算后):
+    diff 非空帧 → top-2 键形三键;diff 空收敛帧 → {"diff_empty": True}
+    形态(写入时点在真实出口,无第二实现)。"""
+    session, st = _c_shape_session()
+    # diff 非空帧:required 两件在备战席,定型含上场拖动。
+    gs = cw4_gs(session, deploy_cap=3, level=3,
+                bench=[cw4_bc('瓦尔特'), cw4_bc('杰帕德')],
+                front_row=[Unit(char_id='符玄', star=1)])
+    out = entry._step5_deploy(session, gs, _frame(gs), [])
+    assert out, '前置:空槽补位帧有动作'
+    assert st.deploy_margin is not None
+    assert set(st.deploy_margin) == {'runner_up', 'first_diff_layer',
+                                     'layer_gap'}, \
+        f'diff 非空 → top-2 键形,实际 {st.deploy_margin}'
+    # diff 空收敛帧:现板已 = 目标态。
+    session2, st2 = _c_shape_session()
+    gs2 = cw4_gs(session2, deploy_cap=3, level=3, bench=[],
+                 front_row=[Unit(char_id=n, star=1)
+                            for n in ('瓦尔特', '杰帕德', '符玄')])
+    out2 = entry._step5_deploy(session2, gs2, _frame(gs2), [])
+    assert out2 == []
+    assert st2.deploy_margin == {'diff_empty': True}, \
+        f'diff 空 → diff_empty 形态,实际 {st2.deploy_margin}'
+
+
+def test_step5_no_margin_when_search_returns_empty(monkeypatch) -> None:
+    """搜索返 {} 不落键(design §2.2-3 边界值表):select_deployment
+    返回空 dict(容量矛盾防御路径行为)→ 收集出参为空 → 槽保持 None
+    (不误落 null 形态)。"""
+    session, st = _c_shape_session()
+    gs = cw4_gs(session, deploy_cap=3, level=3,
+                bench=[cw4_bc('瓦尔特'), cw4_bc('杰帕德')],
+                front_row=[Unit(char_id='符玄', star=1)])
+    monkeypatch.setattr(mandate, 'select_deployment',
+                        lambda frame, prep, **kw: {})
+    out = entry._step5_deploy(session, gs, _frame(gs), [])
+    assert out == []
+    assert st.deploy_margin is None, '搜索失败帧不写遥测槽'
+
+
+def test_select_deployment_margin_out_passthrough() -> None:
+    """出参透传:真实路径传 margin_out → 收集段 3 键形(与
+    search_deploy_target 同源);不传(虚拟 4 调用点形态)照常返回。"""
+    session, st = _c_shape_session()
+    gs = cw4_gs(session, deploy_cap=3, level=3,
+                bench=[cw4_bc('瓦尔特'), cw4_bc('杰帕德')],
+                front_row=[Unit(char_id='符玄', star=1)])
+    frame = _frame(gs)
+    margin: dict = {}
+    target = select_deployment(frame, assemble_prep_context(
+        session, gs, frame), margin_out=margin)
+    assert target, '前置:搜索成功'
+    assert set(margin) == {'runner_up', 'first_diff_layer', 'layer_gap'}
+    assert st.cw4_counters == {}, '纯函数零状态写(收集不落计数)'
+    plain = select_deployment(frame, assemble_prep_context(
+        session, gs, frame))
+    assert plain == target, '收集开关不改定型结果'

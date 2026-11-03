@@ -259,3 +259,23 @@ def test_pure_unit_zero_file_side_effect(tmp_path) -> None:
     finally:
         set_recorder_replay_dir(None)
         reset_run_state()
+
+
+def test_legacy_signature_payload_override_degrades(
+        capture_sink: list[dict]) -> None:
+    """钩子兼容形(pick-margin-telemetry design §2.1):wrapper 传
+    result 调钩子,第三方**旧签名覆写**(无 result 形参)收到多余实参
+    TypeError → 走既有异常降级 {} 通道,决策返回值零毒化、不炸——
+    基类缺省参兼容形把破坏面收窄到「载荷降级」而非「决策崩溃」。"""
+
+    class _LegacyOverrideStrategy(_ProbeStrategy):
+        """旧签名覆写(返回非空 dict,证明降级非异常测试副产物)。"""
+
+        def decision_payload(self) -> dict:
+            return {'legacy': True}
+
+    strat = _make(_LegacyOverrideStrategy)
+    result = strat.decide_partner()
+    assert isinstance(result, CwActionPickPartnerParam)
+    assert capture_sink[0]['payload'] == {}, \
+        '旧签名覆写 → TypeError → 降级 {}(不误吞覆写值,也不毒化决策)'

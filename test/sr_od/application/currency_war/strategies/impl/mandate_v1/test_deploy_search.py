@@ -234,3 +234,74 @@ def test_bronya_side_pick_single_edge() -> None:
     # 布洛妮娅选边(贝 3 基数 > 燃血 0 → 贝)后只出单侧标签。
     assert counts.get('贝洛伯格', 0) == 4 and counts.get('燃血', 0) == 0, \
         f'选边后单边(贝 4 / 燃血 0),实际 {counts}'
+
+
+# ==================== 次名分量收集出参(pick-margin-telemetry
+# ====================  design §2.1/§2.2-3;纯观测,搜索行为零变)====================
+
+def test_margin_out_layered_form_and_no_challenger() -> None:
+    """段 3 收集分层记法(design §2.2-3):键形 = {runner_up(挑战者
+    板签名 = 排序名列表), first_diff_layer(首异层 1-3), layer_gap};
+    胜者 = 锁定线一档成型板(既有场景),挑战者(成员集与胜者不同的
+    最高板)首异层 = 1(L1 层隔离的结构性质,gap > 0 不锁具体值);
+    dedup 后仅一可行板 → 三键 null(与尾键决胜 0/0 区分)。"""
+    comp = get_comp('列车同行')
+    units = [_u('姬子·启行'), _u('丹恒·饮月'), _u('三月七'), _u('星期日'),
+             _u('青雀'), _u('停云'), _u('藿藿')]
+    margin: dict = {}
+    out = ds.search_deploy_target(
+        _panel(units, locked=True, locked_comp=comp, plane1=True, k=4),
+        margin_out=margin)
+    assert out, '前置:搜索成功定型'
+    assert set(margin) == {'runner_up', 'first_diff_layer', 'layer_gap'}
+    assert margin['runner_up'] == sorted(margin['runner_up']), \
+        '板签名 = 排序名列表'
+    assert margin['runner_up'] != sorted(out), \
+        '挑战者成员集与胜者不同'
+    assert margin['first_diff_layer'] == 1, \
+        f'锁定线一档成型 vs 替补板首异层 = L1,实际 {margin}'
+    assert margin['layer_gap'] > 0
+    # 无挑战者:单单位面板(dedup 后仅一可行板)→ 三键 null 形态。
+    m_single: dict = {}
+    ds.search_deploy_target(_panel([_u('青雀')], k=4), margin_out=m_single)
+    assert m_single == {'runner_up': None, 'first_diff_layer': None,
+                        'layer_gap': None}
+
+
+def test_margin_out_all_layers_tie_decided_by_tail_key() -> None:
+    """三层全同尾键决胜形态(design §2.2-3 边界值表):K=1 两张互无
+    羁绊的散件,两板 L1/L2/L3 全同 → first_diff_layer = 0, layer_gap
+    = 0(pos/stable/rng 尾键决胜,与无挑战者 null 形态区分)。"""
+    margin: dict = {}
+    out = ds.search_deploy_target(_panel([_u('佩拉'), _u('娜塔莎')], k=1),
+                                  margin_out=margin)
+    assert len(out) == 1, '前置:K=1 单件定型'
+    assert margin == {'runner_up': ['佩拉'], 'first_diff_layer': 0,
+                      'layer_gap': 0}, \
+        f'三层全同 → 首异层 0/层差 0,实际 {margin}'
+
+
+def test_margin_out_not_written_when_search_returns_empty() -> None:
+    """搜索返 {}(候选全不可排防御路径,§2 接口契约)→ 不落键:
+    margin_out 保持空(零容量面板 = 结构不可达形态)。"""
+    panel = ds.DeploySearchPanel(
+        units=(_u('青雀'), _u('艾丝妲')), k_budget=4, front_capacity=0,
+        back_capacity=0, locked=False, locked_comp=None,
+        candidate_comps=(), p1_pair=(), plane1=True, current_board={})
+    margin: dict = {}
+    out = ds.search_deploy_target(panel, margin_out=margin)
+    assert out == {}, '前置:容量矛盾 → 搜索返空 dict'
+    assert margin == {}, '搜索返 {} 不落键(design §2.2-3 边界值表)'
+
+
+def test_margin_out_default_none_no_collect_same_target() -> None:
+    """缺省不收集(虚拟定型调用点形态,design §2.1):不传 margin_out
+    照常返回、与传入收集时同 target(收集面零行为变化;虚拟 4 调用
+    点不传即零写入由缺省 None 的结构性质承载)。"""
+    units = [_u('青雀'), _u('停云'), _u('藿藿'), _u('彦卿'), _u('艾丝妲')]
+    panel = _panel(units, k=4)
+    plain = ds.search_deploy_target(panel)
+    with_margin: dict = {}
+    collected = ds.search_deploy_target(panel, margin_out=with_margin)
+    assert plain == collected, '收集开关不改定型结果(纯观测)'
+    assert with_margin, '前置:该板面应有挑战者分量'

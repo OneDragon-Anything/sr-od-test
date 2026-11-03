@@ -58,3 +58,24 @@ def test_emit_fallback_runs_on_true_empty_roster() -> None:
     keys = _fallback_keys(gs)
     assert keys and all(k.endswith(('p1_gap', 'p1_lock_band'))
                         for k in keys), '真·空窗帧回退带在案'
+
+
+def test_prep_entry_clears_deploy_margin_slot() -> None:
+    """部署私有槽入口清(pick-margin-telemetry design §2.1 帧定界
+    双保险之一):prep 入口清空陈旧槽——上一帧写槽后 emit 段/truncate
+    抛异常的残留(决策入口异常不调 payload 钩子)由本清兜底,非部署
+    帧读到恒空。状态归一 = cw4_decide 先例(策略器状态 = 会话播种
+    对象,构造重接线后显式归位)。"""
+    from types import SimpleNamespace
+
+    from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
+        MandateV1Strategy,
+    )
+    gs = _emit_gs(candidates=('列车同行',))
+    st = state_of(gs)
+    strat = MandateV1Strategy(gs, SimpleNamespace(strategy_seed=None))
+    strat.state = st   # 状态归一(cw4_decide 先例)
+    st.deploy_margin = {'runner_up': ['陈旧残留'], 'first_diff_layer': 1,
+                        'layer_gap': 1.0}
+    strat.decide_prep_screen()
+    assert st.deploy_margin is None, '入口清:跨帧陈旧槽被清空'

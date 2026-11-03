@@ -234,3 +234,64 @@ def test_payload_pure_read_no_state_mutation() -> None:
     second = strat.decision_payload()
     assert first == second
     assert state_of(gs).cw4_counters == counters_before
+
+
+# ==================== 产物透传键(pick-margin-telemetry design §2.2;
+# ====================  键闭集 8 = 现读 6 + 产物透传 2)====================
+
+def test_payload_eight_key_closed_set() -> None:
+    """payload 键闭集 = 8 键(现读 6 + 产物透传 2;strategy-telemetry.md
+    键表口径统一——缺省形态下产物透传两键恒 None 但键恒在)。"""
+    gs = cw4_gs(None, plane=1, round_num=2, node='prep')
+    payload = build_decision_payload(gs, DEFAULT_REGISTRY)
+    assert set(payload) == {
+        'direction', 'k_members', 'k_fallback', 'window',
+        'transition_candidates', 'member_rank',
+        'pick_margin', 'deploy_margin',
+    }
+
+
+def test_pick_margin_key_from_action_result() -> None:
+    """pick_margin = 词表动作字段透传(design §2.1):带 margin 的选卡
+    动作实例 → 键值原样;无该字段的动作 → None(非选卡帧不落值)。
+    直调 build 传 result 与 bridge 覆写经钩子传入同源。"""
+    from sr_od.application.currency_war.kernel.cw_vocab import (
+        CwActionPickInvestEnvParam,
+        CwActionPickPartnerParam,
+    )
+    margin = {'runner_up': '彩虹时代', 'runner_up_total': 0.0,
+              'margin': 10.0}
+    action = CwActionPickInvestEnvParam(idx=0, reason='probe',
+                                        margin=margin)
+    gs = cw4_gs(None, plane=1, round_num=2, node='prep')
+    payload = build_decision_payload(gs, DEFAULT_REGISTRY, result=action)
+    assert payload['pick_margin'] == margin
+    # 无 margin 字段的动作(非投资选卡帧)→ None。
+    plain = build_decision_payload(
+        gs, DEFAULT_REGISTRY,
+        result=CwActionPickPartnerParam(idx=0, reason='probe'))
+    assert plain['pick_margin'] is None
+    # bridge 覆写经钩子消费同源(wrapper 传 result 的通道终点)。
+    strat = _make(gs)
+    assert strat.decision_payload(action)['pick_margin'] == margin
+    assert strat.decision_payload()['pick_margin'] is None
+
+
+def test_deploy_margin_slot_read_once_and_clear() -> None:
+    """deploy_margin 私有槽帧定界(design §2.1 读后清):槽种值 →
+    钩子读到原值 + 读后即清(一次性消费,第二次读 = None);槽空帧
+    键值 None。清槽挂 bridge 覆写,build 直调不清(模块零写纪律)。"""
+    gs = cw4_gs(None, plane=1, round_num=2, node='prep')
+    strat = _make(gs)
+    st = state_of(gs)
+    assert strat.decision_payload()['deploy_margin'] is None   # 槽空帧
+    st.deploy_margin = {'diff_empty': True}
+    first = strat.decision_payload()
+    assert first['deploy_margin'] == {'diff_empty': True}
+    assert st.deploy_margin is None, '读后清:槽即清(一次性消费)'
+    assert strat.decision_payload()['deploy_margin'] is None
+    # build 直调只读不清(零写纪律:清槽不入 decision_payload 模块)。
+    st.deploy_margin = {'diff_empty': True}
+    assert build_decision_payload(gs, DEFAULT_REGISTRY)[
+        'deploy_margin'] == {'diff_empty': True}
+    assert st.deploy_margin == {'diff_empty': True}

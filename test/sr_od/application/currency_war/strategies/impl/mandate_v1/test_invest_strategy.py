@@ -1365,3 +1365,119 @@ def test_env_guard_universal_envs_normal_with_basis():
                              _ENV_EMPTY_CONFIG)
     assert isinstance(held, InvestEnvDecision)
     assert (held.idx, held.reason) == (bare.idx, bare.reason)
+
+
+# ==================== ⑩ 次名分量遥测 margin(pick-margin-telemetry
+# ====================  design §2.2-1/§2.2-2;纯观测,决策面零消费)====================
+
+def test_env_margin_value_order_and_excluded_not_in_domain():
+    """env 值序与排除域(design §2.2-1):margin 键形 =
+    {runner_up, runner_up_total, margin},次名 = 竞争域内除胜者外首个
+    最高分(平分取先,与 argmax 同款语义);被禁槽不入竞争域——即使
+    分高也不入次名。"""
+    # 火药味(立场 10)胜;彩虹时代/头彩同 0 分 → 次名取先 = 彩虹时代。
+    gs = _fresh_gs()
+    out = invest_env.decide_pick(['火药味', '彩虹时代', '头彩'], gs, '',
+                                 False, frozenset(), _ENV_EMPTY_CONFIG)
+    assert out.idx == 0
+    assert out.margin == {'runner_up': '彩虹时代', 'runner_up_total': 0.0,
+                          'margin': 10.0}
+    # 被禁槽不入域:禁火药味(最高分)→ 竞争域 = 彩虹/头彩,胜者彩虹
+    #(平分取先),次名头彩;火药味 10 分不进 margin。
+    cfg = SimpleNamespace(env_priority=[], env_forbid=['火药味'])
+    out2 = invest_env.decide_pick(['火药味', '彩虹时代', '头彩'], gs, '',
+                                  False, frozenset(), cfg)
+    assert out2.idx == 1
+    assert out2.margin == {'runner_up': '头彩', 'runner_up_total': 0.0,
+                           'margin': 0.0}
+
+
+def test_env_margin_boundary_three_forms():
+    """env 边界值表三形态(design §2.2-1):竞争域仅 1 候选 → 三键
+    null;全排除退化帧 → 按全体域取次名(reason tag 已携退化标记供
+    判读);空候选帧 → 不落值 None。"""
+    gs = _fresh_gs()
+    # 形态一:竞争域仅 1 候选(两禁一活)→ 无次名。
+    cfg1 = SimpleNamespace(env_priority=[],
+                           env_forbid=['彩虹时代', '头彩'])
+    out1 = invest_env.decide_pick(['火药味', '彩虹时代', '头彩'], gs, '',
+                                  False, frozenset(), cfg1)
+    assert out1.margin == {'runner_up': None, 'runner_up_total': None,
+                           'margin': None}
+    # 形态二:全排除退化帧 → 全体域次名(与胜者同域,含被禁候选)。
+    cfg2 = SimpleNamespace(env_priority=[],
+                           env_forbid=['火药味', '彩虹时代', '头彩'])
+    out2 = invest_env.decide_pick(['火药味', '彩虹时代', '头彩'], gs, '',
+                                  False, frozenset(), cfg2)
+    assert out2.reason.startswith('all-excluded-fallback')
+    assert out2.margin == {'runner_up': '彩虹时代', 'runner_up_total': 0.0,
+                           'margin': 10.0}
+    # 形态三:空候选帧(入口防御退化)→ 不落值。
+    out3 = invest_env.decide_pick([], gs, '', False, frozenset(),
+                                  _ENV_EMPTY_CONFIG)
+    assert out3.margin is None
+
+
+def test_strategy_margin_value_and_domain():
+    """策略面值序与竞争域(design §2.2-2):次名 = 结构分区竞争域内
+    除胜者外按同一平分裁决键的最高者(藏一手 80 金胜,嘴硬 6 分次);
+    被禁槽不入域(80 分的藏一手被禁后不进 margin)。"""
+    gs = _fresh_gs()
+    out = _decide_pick(['藏一手', '嘴硬', '二极管'], gs)
+    assert out.margin == {'runner_up': '嘴硬', 'runner_up_total': 6.0,
+                          'margin': 74.0}
+    cfg = SimpleNamespace(strategy_priority=[], strategy_forbid=['藏一手'])
+    out2 = invest_strategy.decide_pick(['藏一手', '嘴硬', '二极管'], gs,
+                                       '', False, frozenset(), cfg)
+    # 嘴硬/二极管同为 6 分(现金分真值):胜者嘴硬(平分裁决键取先),
+    # 次名二极管 margin = 0;藏一手 80 分被禁不入域。
+    assert out2.margin == {'runner_up': '二极管', 'runner_up_total': 6.0,
+                           'margin': 0.0}
+
+
+def test_strategy_margin_single_domain_null_and_empty_frame():
+    """策略面边界(design §2.2-2 同款边界值表):竞争域仅 1 候选 →
+    三键 null;空候选帧不进评分帧(入口防御)→ margin None。"""
+    gs = _fresh_gs()
+    cfg = SimpleNamespace(strategy_priority=[], strategy_forbid=['二极管'])
+    out = invest_strategy.decide_pick(['嘴硬', '二极管'], gs, '', False,
+                                      frozenset(), cfg)
+    assert out.margin == {'runner_up': None, 'runner_up_total': None,
+                          'margin': None}
+    empty = invest_strategy.decide_pick([], gs, '', False, frozenset(),
+                                        _EMPTY_CONFIG)
+    assert empty.margin is None
+
+
+def test_flow_pick_actions_carry_margin():
+    """词表通道拷入(design §2.1):flow 选卡动作实例携带决策产物
+    margin(经词表动作字段 margin 到达 payload 组装面,不入动作实例键);
+    建议帧动作无该载荷(getattr → None,不误落)。值序恒等式:
+    runner_up_total + margin == 胜者总分(reason 的 pick total)。"""
+    from sr_od.application.currency_war.kernel.cw_vocab import (
+        CwActionPickInvestEnvParam,
+        CwActionPickInvestStrategyParam,
+    )
+    # env 选卡帧(高分帧不触发刷新建议)。
+    gs = _fresh_gs()
+    _env_write_frame(gs, ['仙舟概念股', '列车同行概念股', '减益概念股'], 1)
+    out = _env_wired_strategy(gs).decide_invest_env()
+    assert isinstance(out, CwActionPickInvestEnvParam)
+    assert out.margin is not None
+    assert out.margin['runner_up'] == '列车同行概念股'
+    assert out.margin['runner_up_total'] + out.margin['margin'] == 50.0, \
+        '次名总分 + 差值 = 胜者总分(值序恒等式,胜者 gift 50)'
+    # 策略轴选卡帧(候选 2 张,帧级门失败不刷)。
+    gs2 = _fresh_gs()
+    gs2.write_logic(gs2.invest_strategy_opts, ['远见', '利息上调'],
+                    produced_by='cw-invest-env-test', sig=_ENV_SIG_LOGIC)
+    out2 = _env_wired_strategy(gs2).decide_invest_strategy()
+    assert isinstance(out2, CwActionPickInvestStrategyParam)
+    assert out2.margin == {'runner_up': '远见', 'runner_up_total': 15.0,
+                           'margin': 10.0}
+    # 建议帧(低分发刷新):动作不带 margin 载荷。
+    gs_low = _fresh_gs()
+    _env_write_frame(gs_low, ['彩虹时代', '黄金时代', '白银时代'], 1)
+    out_low = _env_wired_strategy(gs_low).decide_invest_env()
+    assert not isinstance(out_low, CwActionPickInvestEnvParam)
+    assert getattr(out_low, 'margin', None) is None
