@@ -69,7 +69,10 @@ from sr_od.application.currency_war.data.cw_shop_odds import (
 )
 from sr_od.application.currency_war.kernel import cw_investments as inv
 from sr_od.application.currency_war.kernel.cw_economy import (
+    MAX_PLAYER_LEVEL,
     REFRESH_COST_BASE,
+    level_cap_of,
+    level_cap_resolved,
     refresh_ev_budget,
     reserve_cap,
     world_shop_refresh_cost,
@@ -139,7 +142,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.horizon i
 # 分型表(测试位常量表)= 聚合语义机器可读单一源(§E6 裁决:代码即载体,
 # 禁文档表与测试硬编码双源)。
 # 算子词表(非封闭;实现出现词表外形态=登记缺口):
-#   sum/max/guarded_min/or/prob/filter_max(语义见 _fold)。
+#   sum/max/guarded_min/or/prob/filter_max/filter_min(语义见 _fold)。
 AGG_FIELDS: dict[str, dict] = {
     'instant_gold': {'op': 'sum'},
     'gold_at_final_supply': {'op': 'sum'},
@@ -149,6 +152,7 @@ AGG_FIELDS: dict[str, dict] = {
     'refresh_surprise_every': {'op': 'guarded_min'},
     'gold_per_three_5cost': {'op': 'sum'},
     'interest_cap_override': {'op': 'filter_max', 'keep': lambda v: v is not None},
+    'level_cap_override': {'op': 'filter_min', 'keep': lambda v: v is not None},
     'xp_per_refresh': {'op': 'sum'},
     'xp_per_node': {'op': 'sum'},
     'xp_buy_cost_discount': {'op': 'sum'},
@@ -185,8 +189,8 @@ def _fold(op: str, a, b):
         return a or b
     if op == 'prob':
         return 1.0 - (1.0 - a) * (1.0 - b)
-    if op == 'filter_max':
-        raise ValueError('filter_max 走过滤后置通道,不经二元 fold')
+    if op in ('filter_max', 'filter_min'):
+        raise ValueError(f'{op} 走过滤后置通道,不经二元 fold')
     raise ValueError(f'分型表词表外算子: {op}(登记缺口,须补齐算子规约)')
 
 
@@ -199,11 +203,16 @@ def _reference_aggregate(effects: list[EconomyEffect],
     table = AGG_FIELDS if table is None else table
     out: dict[str, object] = {}
     for fname, spec in table.items():
-        if spec['op'] == 'filter_max':
-            # 过滤谓词 + 后置取宽:过滤入集、循环外 max(不经二元 fold)
+        if spec['op'] in ('filter_max', 'filter_min'):
+            # 过滤谓词 + 后置取宽/取严:过滤入集、循环外 max/min(不经二元 fold)
             kept = [getattr(e, fname) for e in effects
                     if spec['keep'](getattr(e, fname))]
-            out[fname] = max(kept) if kept else getattr(EconomyEffect(), fname)
+            if not kept:
+                out[fname] = getattr(EconomyEffect(), fname)
+            elif spec['op'] == 'filter_max':
+                out[fname] = max(kept)
+            else:
+                out[fname] = min(kept)
             continue
         acc = getattr(EconomyEffect(), fname)   # 初值=字段默认(恒等元)
         for e in effects:
@@ -240,6 +249,7 @@ def test_half3_distinguish_fixtures(patched_registry) -> None:
         ('gold_next_nodes_count', (2, 5), 5),
         ('win_reward_mult', (1.5, 2.0), 2.0),
         ('interest_cap_override', (3, 7), 7),
+        ('level_cap_override', (7, 9), 7),
         ('interest_flat_per_node', (2, 3), 5),
         ('gold_at_node', (70, 30), 100),
         ('gold_at_node_offset', (5, 3), 3),
@@ -272,6 +282,35 @@ def test_weikuan_migration_registry_and_aggregate() -> None:
         f'instant_gold={eff.instant_gold}'
     assert aggregate_economy(['尾款交付']).gold_at_final_supply == 30
     assert AGG_FIELDS['gold_at_final_supply'] == {'op': 'sum'}
+
+
+def test_level_cap_resolved_and_level_cap_of() -> None:
+    """帽改写族解析-聚合锁(等级帽覆写,与 interest_cap_override 同构
+    第三段形):resolved 单点归一(None 回默认/覆写直读/归一层 min 收窄
+    防提升形卡越 10)+ level_cap_of 现读链(持卡 7/无卡 10/非帽卡 10)
+    + 聚合取严真表断言(控制规模单成员;多成员 min 语义由分型表区分力
+    fixture 锁)。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        GAME_STATE_SCHEMA_VERSION,
+    )
+    assert level_cap_resolved(None) == MAX_PLAYER_LEVEL == 10
+    assert level_cap_resolved(7) == 7
+    assert level_cap_resolved(12) == 10, \
+        '归一层收窄:覆写>10 防「提升至N」形卡越界(合法收窄单向)'
+    assert level_cap_resolved(0) == 1, '下界收 1:等级轴禁冻结'
+    assert aggregate_economy(['控制规模']).level_cap_override == 7
+    sig = ChannelSig(family='logic_action', actor='CwLoop',
+                     screen='', mode='compute')
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    gs.write_logic(gs.active_strategies, ['控制规模'],
+                   produced_by='test', evidence='t:cap', sig=sig)
+    assert level_cap_of(gs) == 7
+    gs.write_logic(gs.active_strategies, [],
+                   produced_by='test', evidence='t:cap-clear', sig=sig)
+    assert level_cap_of(gs) == MAX_PLAYER_LEVEL
+    gs.write_logic(gs.active_strategies, ['利息上调'],
+                   produced_by='test', evidence='t:cap-other', sig=sig)
+    assert level_cap_of(gs) == MAX_PLAYER_LEVEL, '非帽卡不收窄'
 
 
 # (金净守恒代表测试已删——simulate 零生产消费,审计判决;金钱面 = 实机

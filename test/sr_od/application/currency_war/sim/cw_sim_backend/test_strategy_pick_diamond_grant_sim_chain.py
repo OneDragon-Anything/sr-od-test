@@ -14,9 +14,11 @@ _on_invest_picked 宝钻腿 + 呈现闩 _strategy_pick_diamond_latch;kernel
   判据,T-141 到级腿 placed 门同构)→ 宝钻腿拒落 + 回调零发 → 三写零发
   (防 back_layout/diamond_count 伪 +1);sim 种子底座 equips=[] 下门恒
   开,本锁以容器替身构造拒落形态(门系形态级卫生面)。
-驱动形态复用声明:引擎驱动助手 import 自同目录 test_p3_win_terminal.py
-(在册先例,禁追加只 import);_backend/_pick 直调形态先例 =
-同目录 test_strategy_pick_hp.py(选卡落地拍腿族)。
+控制规模扩展(designs/T-324-kongzhi-guimo.md §4 锁 5,拿卡触发第二卡
+随批归一同支):拿卡 → 宝钻入栏 + 世界三写同构(无佩佩腿,单位数零变);
+发放落地门负验同构。驱动形态复用声明:引擎驱动助手 import 自同目录
+test_p3_win_terminal.py(在册先例,禁追加只 import);_backend/_pick
+直调形态先例 = 同目录 test_strategy_pick_hp.py(选卡落地拍腿族)。
 """
 from __future__ import annotations
 
@@ -49,6 +51,7 @@ from sr_od.application.currency_war.sim.cw_sim_backend import (
 from sr_od.application.currency_war.sim.cw_sim_run_config import RunConfig
 
 _CARD = '这么大的钻石'
+_CARD_KONGZHI = '控制规模'
 _EQUIP = '财富宝钻'
 
 #: 回调三写 evidence 统一基串(on_diamond_acquired 内构)。
@@ -205,6 +208,69 @@ def test_equips_unobserved_gate_blocks_coupling() -> None:
         assert gs.back_layout.value == back_before, '伪 back_layout 写'
         assert equips_before == list(gs.equips.value or []) or True, \
             '替身形态自证(equips 读点经替身)'
+    finally:
+        mp.undo()
+        uninstall_backend()
+
+
+def test_pick_kongzhi_grants_diamond_world_coupling() -> None:
+    """控制规模拿卡世界联动主链(T-324 锁 5 正面):拿卡即发宝钻腿入栏 +
+    拿卡腿回调三写(diamond_count +1 / deploy_cap = level + 1 /
+    back_layout +1 封顶 9),三笔 env_diamond evidence;本卡无佩佩腿,
+    备战单位数零变(与这么大的钻石双卡分野自证)。"""
+    b = _backend()
+    mp = pytest.MonkeyPatch()
+    try:
+        gs = b.gs
+        _drive_to_offer(b)
+        equip_before = list(gs.equips.value or [])
+        units_before = len(bench_units_of(gs))
+        back_before = int(gs.back_layout.value)
+        count_before = gs.diamond_count.value
+        evs = _record_observe_ev(gs, mp)
+        _pick(b, _CARD_KONGZHI, [_CARD_KONGZHI, '躺平', '淘金客'])
+        equips_after = list(gs.equips.value or [])
+        assert equips_after[:len(equip_before)] == equip_before \
+            and equips_after[len(equip_before):] == [_EQUIP], \
+            f'宝钻应恰在库尾 +1: {equips_after}'
+        assert len(bench_units_of(gs)) == units_before, \
+            '控制规模无佩佩腿,单位数零变'
+        assert int(gs.diamond_count.value) == (int(count_before or 0) + 1), \
+            f'diamond_count 未 +1: {gs.diamond_count.value!r}'
+        assert int(gs.deploy_cap.value) == int(gs.level.value) + 1, \
+            f'deploy_cap 漂移: {gs.deploy_cap.value!r} != ' \
+            f'level {gs.level.value!r} + 宝钻 1'
+        assert int(gs.back_layout.value) == min(9, back_before + 1), \
+            f'back_layout 未 +1: {back_before} -> {gs.back_layout.value!r}'
+        diamond_pens = [e for e in evs if _DIAMOND_EV in (e or '')]
+        assert len(diamond_pens) == 3, \
+            f'世界联动应恰三笔 env_diamond 写: {diamond_pens}'
+    finally:
+        mp.undo()
+        uninstall_backend()
+
+
+def test_equips_unobserved_gate_blocks_kongzhi_coupling() -> None:
+    """控制规模发放落地门负验(T-324 锁 5 负面):equips 未观察形态
+    (容器替身 value None)→ 宝钻腿拒落 + 拿卡腿门拦回调 → 三写零发
+    (三域值零变化、零 env_diamond 笔;与这么大的钻石门语义同闸)。"""
+    b = _backend(seed=54)
+    mp = pytest.MonkeyPatch()
+    try:
+        gs = b.gs
+        _drive_to_offer(b)
+        count_before = gs.diamond_count.value
+        cap_before = gs.deploy_cap.value
+        back_before = gs.back_layout.value
+        mp.setattr(gs, 'equips', SimpleNamespace(value=None))
+        evs = _record_observe_ev(gs, mp)
+        _pick(b, _CARD_KONGZHI, [_CARD_KONGZHI, '躺平', '淘金客'])
+        diamond_pens = [e for e in evs if _DIAMOND_EV in (e or '')]
+        assert diamond_pens == [], \
+            f'拒落形态下回调应零发: {diamond_pens}'
+        assert gs.diamond_count.value == count_before, '伪 diamond_count 写'
+        assert gs.deploy_cap.value == cap_before, '伪 deploy_cap 写'
+        assert gs.back_layout.value == back_before, '伪 back_layout 写'
     finally:
         mp.undo()
         uninstall_backend()
