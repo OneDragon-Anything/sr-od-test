@@ -615,7 +615,7 @@ class TestUpgradeIntentExit:
     def _stay_frame(self, *, gold: int, level: int = 5,
                     hp: int = 60, actives: tuple = (),
                     xp: tuple | None = None):
-        """停留门构帧:锁定线(列车同行)+ 辅助达标(三月七 2★/瓦尔特
+        """停留门构帧:锁定线(列车同行·反震)+ 辅助达标(三月七 2★/瓦尔特
         1★/花火 2★),唯一未完成星级目标 = 姬子·启行(3 费,概率带
         (7,7))——level 5 < 带下界 → 停留门升级优先臂确定触发
         (非奖励帧,资格门①不拦)。hp/actives/xp 供资格门④⑤⑥构帧(击数/支付门/资金线门)。"""

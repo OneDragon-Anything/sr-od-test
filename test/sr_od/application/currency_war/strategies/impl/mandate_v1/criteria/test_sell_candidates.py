@@ -512,7 +512,7 @@ class TestSellLineMembershipSingleAdmission:
         expected = set(cw4_members(get_comp('列车同行·反震'))) \
             | _pair_members(self._PAIRS[0])
         assert sell_line_membership(gs) == frozenset(expected)
-        assert '瓦尔特' in sell_line_membership(gs), '候选支(列车同行)'
+        assert '瓦尔特' in sell_line_membership(gs), '候选支(列车同行·反震)'
         assert '卡芙卡' in sell_line_membership(gs), '过渡支'
 
 
