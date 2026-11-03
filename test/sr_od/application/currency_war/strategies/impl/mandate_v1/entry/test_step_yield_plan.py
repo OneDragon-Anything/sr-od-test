@@ -57,10 +57,10 @@ _B5 = ('流萤', '昔涟', '布洛妮娅', '云璃', '景元',
        '托帕&账账', 'Archer', '大黑塔')
 
 
-def _tb(*names, row: str = 'back') -> dict[str, tuple[str, int]]:
-    """T 板面构造(名 → (排, 星);排缺省 back,星 1——就位粒度
-    名+排+星,阶段 5/6 接口契约②)。"""
-    return {n: (row, 1) for n in names}
+def _tb(*names, row: str = 'back') -> dict[str, tuple[str, int, int | None]]:
+    """T 板面构造(名 → (排, 星, 槽位);排缺省 back,星 1,槽位 None
+    (自适应)——就位粒度名+排+星+槽位维,阶段 5/6 接口契约②)。"""
+    return {n: (row, 1, None) for n in names}
 
 
 def _plan_frame(*, bench=(), front=(), back=(), gold=30, level=5,
@@ -152,9 +152,9 @@ class TestYieldPlanCursor:
         st.yield_plan = _plan(
             [('sell', '娜塔莎'), ('deploy', '')],
             target_board={
-                _GIL: ('front', 1), _F3[1]: ('front', 1),
-                _F3[2]: ('front', 1), _F3[3]: ('back', 1),
-                _SBR: ('back', 1)})
+                _GIL: ('front', 1, None), _F3[1]: ('front', 1, None),
+                _F3[2]: ('front', 1, None), _F3[3]: ('back', 1, None),
+                _SBR: ('back', 1, None)})
         # 帧 1:卖场上件 V。
         acts = entry.emit(sess, cfg)
         assert len(acts) == 1 \
@@ -193,9 +193,9 @@ class TestYieldPlanCursor:
         st.yield_plan = _plan(
             [('sell', '娜塔莎'), ('deploy', '')],
             target_board={
-                _GIL: ('front', 1), _F3[1]: ('front', 1),
-                _F3[2]: ('front', 1), _F3[3]: ('back', 1),
-                _SBR: ('back', 1)})
+                _GIL: ('front', 1, None), _F3[1]: ('front', 1, None),
+                _F3[2]: ('front', 1, None), _F3[3]: ('back', 1, None),
+                _SBR: ('back', 1, None)})
 
         def _no_search(*_a, **_k):
             raise AssertionError('备战计划执行禁部署搜索(零重验)')
@@ -314,7 +314,7 @@ class TestYieldPlanCursor:
         # 板上唯一件已就位 → 差分无动作 → in_place 重观察挡扫描。
         st.yield_plan = _plan(
             [('deploy', '')],
-            target_board={_GIL: ('front', 1), _FUX: ('front', 1)})
+            target_board={_GIL: ('front', 1, None), _FUX: ('front', 1, None)})
         acts = entry.emit(sess, cfg)
         assert type(acts[0].action).__name__ == 'CwActionObsParam', \
             f'计划期无动作帧禁出战/禁后续步: {acts[0].action!r}'

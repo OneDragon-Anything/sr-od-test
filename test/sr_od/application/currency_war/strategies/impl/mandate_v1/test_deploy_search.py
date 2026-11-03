@@ -153,7 +153,7 @@ def test_same_name_highest_star_wins() -> None:
              _u('青雀', star=2, origin='bench'),
              _u('停云'), _u('藿藿')]
     out = ds.search_deploy_target(_panel(units, k=4))
-    assert out.get('青雀') == ('front', 2), '最高星副本承载目标'
+    assert out.get('青雀') == ('front', 2, None), '最高星副本承载目标'
 
 
 def test_silverwolf_lands_as_1star() -> None:
@@ -206,7 +206,7 @@ def test_front_capacity_and_row_assign() -> None:
     units = [_u('青雀'), _u('停云'), _u('藿藿'), _u('符玄'),
              _u('彦卿'), _u('忘归人')]
     out = ds.search_deploy_target(_panel(units, k=6))
-    rows = [r for _n, (r, _s) in out.items()]
+    rows = [r for _n, (r, _s, _slot) in out.items()]
     assert 'front' in rows, '前排保证:至少一名前排'
 
 

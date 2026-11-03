@@ -77,11 +77,11 @@ def _bs(slot: int, char_id: str) -> BenchSlot:
 
 def test_comp_position_override_beats_registry_pref() -> None:
     """comp char_positions 覆盖注册表:万敌注册表 common(派生 back),
-    「万敌单C」覆盖为 front → 落位排 = front(逐件路由直接断言 +
-    落位计划端到端各一分支)。"""
+    「万敌单C」覆盖为 front@0(槽位级,攻略硬约束) → 落位排 = front
+    (逐件路由直接断言 + 落位计划端到端各一分支)。"""
     comp = get_comp('万敌单C')
-    assert comp is not None and comp.char_positions.get('万敌') == 'front', \
-        '注册表前置自检:万敌单C 带 char_positions 覆盖'
+    assert comp is not None and comp.char_positions.get('万敌') == 'front@0', \
+        '注册表前置自检:万敌单C 带 char_positions 槽位级覆盖'
     assert deploy_row_pref('万敌', None) == 'back', \
         '无 comp 覆盖时:common 派生 back(③兜底前先走②注册表)'
     assert deploy_row_pref('万敌', comp) == 'front', \
@@ -161,4 +161,71 @@ def test_back_layout_extended_value_extends_back_slots() -> None:
 #  unified-deploy-order §2.7/§4;写侧单写契约/交换语义/越界拒绝/动态
 #  后排容量覆盖面归 cw_action_report/test_move_unit.py 与
 #  test_deploy_diff.py(差分执行器)。)
+# ============================================================ 槽位级 char_positions(排级超集)
+
+
+def test_parse_char_position_domains() -> None:
+    """char_positions 值解析:排级直通/槽位级坐标转换(board_index 全局
+    → 排内 1 基)/非法值拒绝(建库期校验的解析面)。"""
+    from sr_od.application.currency_war.kernel.cw_comps import (
+        parse_char_position,
+    )
+    assert parse_char_position('front') == ('front', None)
+    assert parse_char_position('back') == ('back', None)
+    assert parse_char_position('front@0') == ('front', 1)   # 前排 1 号位
+    assert parse_char_position('front@3') == ('front', 4)
+    assert parse_char_position('back@4') == ('back', 1)     # @4 = 后排槽 1
+    assert parse_char_position('back@5') == ('back', 2)     # 三月七中段
+    assert parse_char_position('back@9') == ('back', 6)
+    with pytest.raises(ValueError):
+        parse_char_position('front@4')   # 前排只有 0-3
+    with pytest.raises(ValueError):
+        parse_char_position('back@3')    # 后排从 4 起
+    with pytest.raises(ValueError):
+        parse_char_position('middle')
+
+
+def test_comp_rejects_invalid_char_position_value() -> None:
+    """Comp 构造期校验:非法站位值即时抛(数据错误早暴露,不静默降级)。"""
+    from sr_od.application.currency_war.kernel.cw_comps import Comp
+    with pytest.raises(ValueError, match='char_positions'):
+        Comp(name='x', factions=['燃血'], core_chars=['万敌'],
+             form_tiers={'燃血': 2}, char_positions={'万敌': 'middle'})
+
+
+def test_slot_level_position_lands_preferred_slot() -> None:
+    """槽位级登记优先于最低空槽自适应:三月七 back@5 → 后排全空时
+    落 5 号槽而非 1 号(攻略「中段=护盾相邻覆盖最大化」的落位载体)。
+    前排预置一人避开前排保证强转(前排非空 → back 件不被转前排,
+    该规则另有语义不混入本测试)。"""
+    comp = get_comp('列车同行')
+    assert comp is not None \
+        and comp.char_positions.get('三月七') == 'back@5'
+    gs = game_state_of(None)
+    gs.observe(gs.deployed, _dvs([Unit(char_id='姬子·启行', star=1,
+                                       equips=[])], []),
+               evidence='t', sig=_SIG_OBS)
+    bench = [_bs(1, '三月七'), _bs(2, '花火')]
+    moves = deploy_slot_plans(bench, [0, 1], comp, gs)
+    assert moves[0] == (0, 'back', 2), \
+        f'槽位级登记落指定槽(back@5 → 排内 1 基槽 2),实得 {moves[0]!r}'
+    assert moves[1] == (1, 'back', 1), '无登记件照旧最低空槽自适应'
+
+
+def test_diff_target_slot_prefer_and_fallback() -> None:
+    """diff 执行层 D-4 槽位优先分支:指定槽空 → 优先;被已就位者占
+    (名+排皆对)→ 回退空槽序(禁占);prefer 超排容量 → 回退。"""
+    from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+        deploy_diff as dd,
+    )
+    target = {'花火': ('back', 1, 5), '三月七': ('back', 1, None)}
+    assert dd._target_slot_for('back', [None] * 6, target,
+                               prefer=5) == 5, '空槽优先占指定槽'
+    assert dd._target_slot_for('back', [None] * 6, target) == 1, \
+        '无 prefer 时空槽最优先'
+    seated = [('三月七', 1)] + [None] * 5   # 槽 1 = 已就位者(名+排皆对)
+    assert dd._target_slot_for('back', seated, target,
+                               prefer=1) == 2, '已就位者槽禁占,回退空槽'
+    assert dd._target_slot_for('back', [None] * 6, target,
+                               prefer=9) == 1, '超排容量回退自适应序'
 

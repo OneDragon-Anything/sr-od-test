@@ -176,6 +176,7 @@ def test_target_board_payload_shape() -> None:
     target = select_deployment(frame, assemble_prep_context(
         session, gs, frame))
     assert isinstance(target, dict)
-    for name, (row, star) in target.items():
+    for name, (row, star, slot) in target.items():
         assert row in ('front', 'back'), f'{name} 排值 {row!r} 非法'
-        assert star in (1, 2, 3), f'{name} 星值 {star} 非法'
+        assert star in (1, 2, 3), f'{name} 星值 {star!r} 非法'
+        assert slot is None or slot >= 1, f'{name} 槽位值 {slot!r} 非法'
