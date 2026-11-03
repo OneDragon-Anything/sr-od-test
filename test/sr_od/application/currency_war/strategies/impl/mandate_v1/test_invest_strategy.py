@@ -83,9 +83,6 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.invest_strategy i
     StanceRow,
     StrategyRefreshSuggestion,
 )
-from sr_od.application.currency_war.strategies.impl.mandate_v1.line_value import (
-    line_value,
-)
 from sr_od.application.currency_war.strategies.impl.mandate_v1.strategy_economy import (
     strategy_economy_value,
 )
@@ -246,52 +243,6 @@ def test_cash_pending_modeling_card_failclosed():
 def test_cash_unregistered_name_failclosed():
     """未入册卡名 → (0, False),不炸(消费端按无现金处理)。"""
     assert strategy_economy_value('不存在的卡名', _fresh_gs()) == (0.0, False)
-
-
-# ==================== ② 方向分(design §2.4)====================
-# 真值锚(注册表直调):列车同行星徽绑定 (列车同行阵营, 丹恒·饮月);
-# 列车同行阵营线成员 = {列车同行(S), 龙丹战技点(A)};丹恒·饮月 core 仅在
-# 龙丹战技点。
-
-def test_direction_unlocked_takes_touched_max():
-    """未锁线帧:触线集全体取 max 线价值 → 列车同行星徽 = 100(S 线)。"""
-    out = _decide_pick(['列车同行星徽', '嘴硬', '二极管'], _fresh_gs())
-    assert out.components[1] == 100.0
-
-
-def test_direction_locked_frame_uses_locked_line_union():
-    """锁线帧:触线 ∩ 锁线阵营线成员并集(comp 空间像,design §2.4)。
-    锁线 = 龙丹战技点(A):其阵营线 = {列车同行, 龙丹战技点} → 方向仍
-    100(锁线阵营族展开含 S 成员);锁线不含卡绑定阵营的对照见
-    test_direction_char_binding_narrow_hit。"""
-    out = _decide_pick(['列车同行星徽', '嘴硬', '二极管'], _fresh_gs(),
-                       locked_comp='龙丹战技点')
-    assert out.components[1] == 100.0
-
-
-def test_direction_evicted_line_death_drops_to_zero():
-    """线排除像 = 阵营线全体成员 comp ∈ evicted ⇔ 线排除(design §2.9-2):
-    evicted = 全体列车同行线成员 → 阵营分支整线退场,角色入账分支唯一命中
-    (龙丹战技点)同被逐 → 方向 0(evicted 收窄后线退场)。"""
-    dead = frozenset(c.name for c in COMP_LIBRARY
-                     if '列车同行' in c.factions)
-    out = _decide_pick(['列车同行星徽', '嘴硬', '二极管'], _fresh_gs(),
-                       evicted=dead)
-    assert out.components[1] == 0.0
-
-
-def test_direction_demoted_frame_uses_unlocked_scale():
-    """降格帧按未锁线口径(design §2.4 口径 3):demoted=True 忽略锁线。"""
-    out = _decide_pick(['列车同行星徽', '嘴硬', '二极管'], _fresh_gs(),
-                       locked_comp='嘴硬非阵容', demoted_endgame=True)
-    assert out.components[1] == 100.0
-
-
-def test_direction_char_binding_narrow_hit():
-    """角色绑定窄口径(core_chars 命中,design §2.4-1):本姑娘就是罗刹
-    绑定 (∅,{三月七,罗刹}),三月七 core ∈ 列车同行(S) → 触线 100。"""
-    out = _decide_pick(['本姑娘就是罗刹', '嘴硬', '二极管'], _fresh_gs())
-    assert out.components[1] == 100.0
 
 
 # ==================== ③ 赠卡分(design §2.5)====================
@@ -491,11 +442,10 @@ def test_blood_forced_l2_domain():
 
 def test_defining_zone_shrinks_and_component_argmax():
     """定义型分区:竞争域收缩为定义型子集(支配无条件化,design §2.7-4);
-    并列定义型按组件总分裁决:黑塔纪元 110 < 本姑娘就是罗刹 150
-    (组件直调:dir 100 + gift 50)→ 后者胜,尽管藏一手现金 80 在场。"""
+    方向分链下线后两定义型组件并列(黑塔纪元 gift 50 = 本姑娘就是罗刹
+    gift 50),tie-break 槽序裁决取 idx 0,尽管藏一手现金 80 在场。"""
     out = _decide_pick(['黑塔纪元', '本姑娘就是罗刹', '藏一手'], _fresh_gs())
-    assert out.idx == 1 and out.total == 150.0
-
+    assert out.idx == 0 and out.total == 50.0
 
 # ==================== ⑤ 平分裁决(design §2.8)====================
 
@@ -702,15 +652,6 @@ def test_refresh_f2_unique_l1_guard():
     assert out.slots == (0, 1)
 
 
-def test_refresh_unlocked_sa_slot_protection():
-    """未锁线帧槽级对齐保护 = 非血 ∧ 触 S/A 档线(方向分 ≥ A 档,无新
-    常数):列车同行星徽触 S 线(100)受保护不入动作集,余槽可刷。"""
-    out = invest_strategy.decide(['列车同行星徽', '嘴硬', '二极管'],
-                                 _fresh_gs(), '', False, frozenset(),
-                                 _EMPTY_CONFIG)
-    assert isinstance(out, StrategyRefreshSuggestion)
-    assert out.slots == (1, 2)
-
 
 def test_refresh_demoted_frame_uses_unlocked_scale():
     """降格帧按未锁线口径:无 max_N 门(design §2.9-2),锁线参不生效
@@ -799,44 +740,6 @@ def _env_set_refresh_left(gs: GameState, left: int) -> None:
     """写环境刷新剩余次数(容器观察真值形态;次数闸 = ≥1)。"""
     gs.write_logic(gs.env_refresh_left, left,
                    produced_by='cw-invest-env-test', sig=_ENV_SIG_LOGIC)
-
-
-# ---- ① 方向分序 ----
-
-
-def test_env_direction_score_ordering_over_registry():
-    """注册表真实数据三口径序:列车同行(S 线阵营)> 减益(A)> 仙舟(B)。"""
-    assert line_value('列车同行', '', False, frozenset()) == 100.0
-    assert line_value('减益', '', False, frozenset()) == 60.0
-    assert line_value('仙舟', '', False, frozenset()) == 30.0
-
-
-def test_env_direction_locked_comp_without_faction_is_zero():
-    """锁线不含该阵营 → 0(env §2.4 口径 2);锁线命中 → 锁线档分。"""
-    # 锁线列车同行(无仙舟阵营)→ 仙舟方向分 0
-    assert line_value('仙舟', '列车同行', False, frozenset()) == 0.0
-    # 锁线命中该阵营 → 取锁线档(非先验 max)
-    assert line_value('列车同行', '列车同行', False, frozenset()) == 100.0
-    assert line_value('仙舟', '景元仙舟', False, frozenset()) == 30.0
-
-
-def test_env_direction_demoted_frame_ignores_lock():
-    """降格帧按未锁线口径(忽略锁线;env 口径 3)。"""
-    assert line_value('仙舟', '列车同行', True, frozenset()) == 30.0
-
-
-def test_env_direction_evicted_narrowing_kills_line():
-    """evicted 收窄后线退场 → 0:唯一仙舟线(景元仙舟)被排除。"""
-    assert line_value('仙舟', '', False, frozenset({'景元仙舟'})) == 0.0
-
-
-def test_env_decide_picks_strongest_direction_over_frame():
-    """决策面方向序:三概念股同帧,列车同行概念股(S)胜出。"""
-    out = invest_env.decide(
-        ['仙舟概念股', '列车同行概念股', '减益概念股'],
-        _fresh_gs(), '', False, frozenset(), _ENV_EMPTY_CONFIG)
-    assert isinstance(out, InvestEnvDecision)
-    assert out.idx == 1
 
 
 # ---- ② 赠卡分 ----
@@ -1064,30 +967,20 @@ def test_env_build_validation_orphan_stance_key_raises(monkeypatch):
         invest_env._validate_stance_coverage()
 
 
+
 def test_env_build_validation_coefficient_tables_complete():
-    """系数表键完备:线强度档覆盖 COMP_LIBRARY 全部档;赠卡档覆盖四档。
-    (import 已过一遍;显式再验 = 钉住校验函数自身行为。)"""
+    """系数表键完备:赠卡档覆盖四档。(import 已过一遍;显式再验 = 钉住
+    校验函数自身行为。线强度档校验已随 strength/方向分链下线移除。)"""
     invest_env._validate_coefficient_tables()   # 不抛 = 键完备
     from sr_od.application.currency_war.strategies.impl.mandate_v1.gift_value import (
         GIFT_TIER_SCORE,
     )
-    from sr_od.application.currency_war.strategies.impl.mandate_v1.line_value import (
-        LINE_STRENGTH_SCORE,
-    )
     assert {'core', 'shared', 'transition', 'off'} <= set(GIFT_TIER_SCORE)
-    assert {'S', 'A', 'B'} <= set(LINE_STRENGTH_SCORE)
 
 
 def test_env_build_validation_coefficient_missing_key_raises(monkeypatch):
-    """系数表缺键即炸(校验逻辑本体拒绝测试):线强度档缺 B 与赠卡档缺
-    transition 两分支各自拒绝。两段用独立 context 隔离——monkeypatch 默认
-    测试级还原,同测试内前段篡改会泄漏进后段。"""
-    with monkeypatch.context() as m:
-        m.setattr(invest_env, 'LINE_STRENGTH_SCORE',
-                  {k: v for k, v in invest_env.LINE_STRENGTH_SCORE.items()
-                   if k != 'B'})
-        with pytest.raises(ValueError, match='线强度档分缺键'):
-            invest_env._validate_coefficient_tables()
+    """系数表缺键即炸(校验逻辑本体拒绝测试):赠卡档缺 transition 拒绝。
+    (线强度缺键分支已随 strength/方向分链下线移除。)"""
     with monkeypatch.context() as m:
         m.setattr(invest_env, 'GIFT_TIER_SCORE',
                   {k: v for k, v in invest_env.GIFT_TIER_SCORE.items()
@@ -1128,7 +1021,7 @@ def test_env_flow_frame_routes_and_wraps_actions():
     _env_write_frame(gs, ['仙舟概念股', '列车同行概念股', '减益概念股'], 1)
     out = _env_wired_strategy(gs).decide_invest_env()
     assert isinstance(out, CwActionPickInvestEnvParam)
-    assert out.idx == 1   # 列车同行概念股(S 线方向分胜出)
+    assert out.idx == 0   # 仙舟概念股(方向分下线后按赠卡分胜出,gift 50)
     gs_low = _fresh_gs()
     _env_write_frame(gs_low, ['彩虹时代', '黄金时代', '白银时代'], 1)
     out_low = _env_wired_strategy(gs_low).decide_invest_env()
@@ -1292,7 +1185,7 @@ def test_guard_scopeless_holdings_defining_pick_unchanged():
     空)→ 基准空 → 护栏不辖,定义型分区秒选照旧(§2.3 规则表行 1)。"""
     out = _decide_pick(['黑塔纪元', '本姑娘就是罗刹', '藏一手'],
                        _gs_holding(strategies=('打捞人才库',)))
-    assert out.idx == 1 and out.total == 150.0
+    assert out.idx == 0 and out.total == 50.0
     assert out.reason.startswith('defining-zone')
 
 
@@ -1384,7 +1277,7 @@ def test_guard_demoted_frame_falls_back_to_holdings_basis():
     gs = _gs_holding(strategies=('黑塔纪元',))
     out = _decide_pick(['银河学者星徽', '命运圣杯星徽', '嘴硬'], gs,
                        locked_comp='双王圣杯', demoted_endgame=True)
-    assert out.idx == 0
+    assert out.idx == 2
     assert out.reason.startswith('off-direction')
 
 

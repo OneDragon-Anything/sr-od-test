@@ -563,7 +563,7 @@ def _fw_gs(*, plane: int = 1) -> GameState:
 def _fw_target_comp() -> Comp:
     """终局哨兵线(合成 Comp,身份断言用;值域无关)。"""
     return Comp(name='测试·终局哨兵', factions=['追击'], core_chars=['飞霄'],
-                form_tiers={'追击': 3}, strength='S', form_difficulty='easy')
+                form_tiers={'追击': 3})
 
 
 def _fw_session(framework: str, target_comp: Comp | None) -> StrategySession:

@@ -195,16 +195,16 @@ def test_member_priority_field_migration_default() -> None:
     assert get_comp('列车同行').member_priority['三月七'] == 0, \
         '同名双列 core 优先'
     hand = Comp(name='手构线', factions=[], core_chars=['甲', '乙'],
-                form_tiers={}, strength='A', form_difficulty='easy',
+                form_tiers={},
                 shared_chars=['乙', '丙'])
     assert hand.member_priority == {'甲': 0, '乙': 0, '丙': 1}, \
         '空表落成即派生'
     tuned = Comp(name='精调线', factions=[], core_chars=['甲'],
-                 form_tiers={}, strength='A', form_difficulty='easy',
+                 form_tiers={},
                  member_priority={'甲': 1, '乙': 0})
     assert tuned.member_priority == {'甲': 1, '乙': 0}, '显式登记不覆写'
     legacy = Comp(name='旧数据线', factions=[], core_chars=['甲'],
-                  form_tiers={}, strength='A', form_difficulty='easy',
+                  form_tiers={},
                   shared_chars=['乙'])
     legacy.member_priority = {}
     assert member_rank_of(legacy) == {'甲': 0, '乙': 1}, '空表回退两档派生'
