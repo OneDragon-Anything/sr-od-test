@@ -6,6 +6,8 @@
 - x-rpc-aigis 双层解析（data 字符串 / 对象双 fixture 均解出 challenge）；
 - 回传头字节级组装：``{session_id};{base64(JSON(票据))}``，v4 补 captcha_id +
   userInfo，gt3 三元组原值无 |jordan（research §4.2/§10.4-5）；
+- 重发原样逐字节断言：body 与 login 首轮留存的 body 相等、请求头 = 首轮
+  全部键值仅多 x-rpc-aigis 一项、DS 重新生成（research §4.1 拦截器语义）；
 - complete_verification 六剧本：重发 0 → ok + save_session_full 落盘无
   expired 键；重发 -3101/aigis 非空 → 新挑战；-3102/-3202 携带新挑战 → 新
   挑战；-3102/-3202 未携带 → 补发一次裸登录取新挑战；-3208/-3235/未知码 →
@@ -311,6 +313,41 @@ def test_complete_verification_resend_header_byte_composition(
     # 原样重发口径：不带 Cookie 头（与首轮一致），DS 重新生成（三段式在场）
     assert 'Cookie' not in resend_headers
     assert len(resend_headers['ds'].split(',')) == 3
+
+
+def test_complete_verification_resend_replays_first_round_body_and_headers(
+    client: MysClient, send: _ScriptedHttpSend
+) -> None:
+    """原样重发逐字节断言（research §4.1：官方前端拦截器「config 原样重发」）：
+    重发 body 与 login 首轮留存的 body 逐字节相等（防误换新加密产物）；
+    请求头与首轮全部键值一致，仅新增 x-rpc-aigis 一项；DS 与首轮不同
+    （重新生成，r 每次随机）。"""
+    challenge = _prime_verification_flow(client, send)
+    send.add_route(
+        (
+            LOGIN_URL,
+            _json_result(
+                {'retcode': 0, 'message': 'OK'},
+                set_cookie_lines=[f'{k}={v}; Path=/' for k, v in LOGIN_SET_COOKIES.items()],
+            ),
+        )
+    )
+    result = client.complete_verification(challenge, dict(_V4_TICKET))
+    assert result.status == 'ok'
+
+    login_calls = send.calls_for(LOGIN_URL)
+    assert len(login_calls) == 2  # login 首轮 + 带票据重发恰一次（单轮语义）
+    (_, _first_method, first_headers, first_body) = login_calls[0]
+    (_, _resend_method, resend_headers, resend_body) = login_calls[1]
+    assert resend_body == first_body  # body 逐字节相等（bytes 全量比对）
+
+    # 头集合 = 首轮 ∪ {x-rpc-aigis}（仅多一项）；除 ds 外其余键值与首轮一致
+    # （登录十件套 + 设备头三件原样复用；首轮无 Cookie，重发也不得引入）
+    assert set(resend_headers) == set(first_headers) | {'x-rpc-aigis'}
+    for name, value in first_headers.items():
+        if name != 'ds':
+            assert resend_headers[name] == value
+    assert resend_headers['ds'] != first_headers['ds']  # DS 重新生成（r 随机）
 
 
 # ---- complete_verification 分诊剧本 ----

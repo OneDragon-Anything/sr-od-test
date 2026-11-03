@@ -8,11 +8,15 @@ landing §3.4 完成判据逐条排布：
   会话落盘（save_session_full 形态）+ get_characters 成功；
 - 验证循环上限：票据被拒下发新挑战 → 同端口换题 attempt 递增；attempt≥3 →
   idle + verifier 关闭 + 留档错误在下次调用体现一次；
+- 票据回传触发 complete_verification 抛 MysApiError（-3208 密码错误过多）→
+  idle + verifier 关闭 + 错误留档下次调用体现一次 + 不落盘不清文件；
 - cancelled → idle + verifier 关闭 + 重登走全新验证轮（新 verifier 实例）；
 - awaiting 期二次 login：复用现存 URL，新账密即弃（无第二次登录请求）；
 - awaiting 期 get_characters：verification_required 信封，不裸打请求；
 - awaiting 期 logout：清会话 + idle + verifier 关闭，迟到票据被丢弃（不静默
   重建会话）；
+- awaiting 期错配 session_id 回传：配对闸（verifier 层 409 之外的第二道闸）
+  独立触发——状态保持 awaiting、attempt 不消耗、不触发 complete_verification；
 - 过期标记序列：session_expired → 只打标记（session.json/role.json 保留）→
   标记后 login 不再 already_logged_in → 登录失败（-3208）旧文件原样保留 →
   登录成功整体覆盖、标记消失；
@@ -294,6 +298,43 @@ def test_verification_loop_capped_at_three_then_error_lingers(
     assert controller.get_characters()['status'] == 'session_expired'
 
 
+def test_ticket_delivery_error_resets_and_leaves_files_untouched(
+    controller: MysAccessController, session_dir: Path, send: _ScriptedHttpSend,
+    verifiers: list[_FakeVerifier],
+) -> None:
+    """验证循环异常路径：awaiting 期票据回传触发 complete_verification 抛
+    MysApiError(-3208)（密码错误过多）→ 状态回 idle + verifier 关闭 + 错误
+    留档在下次调用体现一次（-3208 与服务端文案透传）+ 不落盘不清文件
+    （design.md §2.4 验证循环处置：无「失败清罐」路径）。"""
+    # 预置会话（带过期标记——否则 login 走 already_logged_in 不进验证轮）
+    # 与角色缓存：异常处置不得动它们
+    controller.store.save_session_full({'ltoken_v2': 'keep-t4'})
+    controller.store.mark_expired()
+    controller.store.save_role({'role_id': '7', 'server': 'prod_gf_cn'})
+
+    send.add_route((LOGIN_URL, _need_verification_result('s-1')))
+    controller.login(_USERNAME, _PASSWORD)
+    snapshot = {p.name: p.read_bytes() for p in session_dir.iterdir() if p.is_file()}
+
+    send.add_route((LOGIN_URL, _json_result(
+        {'retcode': -3208, 'message': '密码错误次数过多，请稍后再试'})))
+    verifiers[0].deliver({'session_id': 's-1', 'ticket': _ticket()})
+    assert verifiers[0].closed is True  # verifier 关闭
+    assert len(send.calls_for(LOGIN_URL)) == 2  # 带票据重发恰一次，不补发
+    files_after = {p.name: p.read_bytes() for p in session_dir.iterdir() if p.is_file()}
+    assert files_after == snapshot  # 零落盘零改动（含 device.json）
+
+    # 状态回 idle：错误留档在下次调用体现一次（若仍在 awaiting，会先撞状态闸
+    # 返回 verification_required，看不到 error）
+    env_err = controller.get_characters()
+    assert env_err['status'] == 'error'
+    assert '人机验证失败(retcode=-3208)' in env_err['message']
+    assert '密码错误次数过多' in env_err['message']
+
+    # 消费即清除：下次调用走正常业务路径（预置会话带过期标记 → 过期短路信封）
+    assert controller.get_characters()['status'] == 'session_expired'
+
+
 def test_cancelled_resets_then_new_login_builds_new_verifier(
     controller: MysAccessController, send: _ScriptedHttpSend, verifiers: list[_FakeVerifier],
 ) -> None:
@@ -382,6 +423,45 @@ def test_logout_while_awaiting_cancels_and_drops_late_ticket(
     send.add_route(_roles_ok_route())
     send.add_route((GAME_RECORD_BASE_URL + 'hkrpg/api/index', _code_result(10001)))
     assert controller.get_characters()['status'] == 'session_expired'
+
+
+def test_ticket_session_id_mismatch_while_awaiting_discarded(
+    controller: MysAccessController, session_dir: Path, send: _ScriptedHttpSend,
+    verifiers: list[_FakeVerifier],
+) -> None:
+    """awaiting 期错配回传独立触发配对闸（verifier 层 409 之外的第二道闸，
+    design.md §2.4 迟到票据双重防护）：payload.session_id 与当前挑战不一致 →
+    丢弃——状态保持 awaiting、不触发 complete_verification、attempt 不消耗
+    （后续换题不受错配挤占）。"""
+    send.add_route((LOGIN_URL, _need_verification_result('s-1')))
+    controller.login(_USERNAME, _PASSWORD)
+
+    # 错配回传携带合法形态票据：若配对闸失效会触发重发，断言锁的才是
+    # 「配对闸」而非「无票据兜底」；错配两次，把 attempt 挤占放大到可观测
+    send.add_route((LOGIN_URL, _login_ok_result()))
+    verifiers[0].deliver({'session_id': 's-wrong-1', 'ticket': _ticket()})
+    verifiers[0].deliver({'session_id': 's-wrong-2', 'ticket': _ticket()})
+    assert len(send.calls_for(LOGIN_URL)) == 1  # 未触发 complete_verification
+    assert verifiers[0].closed is False  # 验证轮未被打断
+    assert [c.session_id for c in verifiers[0].started] == ['s-1']  # 未换题
+    env = controller.get_characters()
+    assert env['status'] == 'verification_required'  # 状态保持 awaiting
+    assert env['data']['url'] == verifiers[0].url
+
+    # attempt 未被错配消耗：正确票据被拒换题仍走「未达上限」分支——若错配
+    # 各消耗一次，attempt 已 ≥3，此处会直接放弃而不开新题 s-2
+    send.add_route((LOGIN_URL, _need_verification_result('s-2')))
+    verifiers[0].deliver({'session_id': 's-1', 'ticket': _ticket()})
+    assert [c.session_id for c in verifiers[0].started] == ['s-1', 's-2']
+    assert verifiers[0].closed is False
+
+    # 换题后正确票据照常收口（丢弃路径未污染状态机）
+    send.add_route((LOGIN_URL, _login_ok_result()))
+    verifiers[0].deliver({'session_id': 's-2', 'ticket': _ticket()})
+    assert verifiers[0].closed is True
+    assert len(send.calls_for(LOGIN_URL)) == 3  # 首轮 + 被拒重发 + 成功重发
+    saved = json.loads((session_dir / SESSION_FILE_NAME).read_bytes().decode('utf-8'))
+    assert saved['cookies'] == _LOGIN_COOKIES
 
 
 def test_logout_idempotent_without_session(controller: MysAccessController) -> None:
