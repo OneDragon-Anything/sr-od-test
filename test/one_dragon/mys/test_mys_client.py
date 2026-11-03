@@ -446,6 +446,30 @@ def test_request_rolling_keeps_expired_mark(
     assert store.is_expired() is True
 
 
+def test_request_rolls_cookies_on_non_2xx_response(
+    store: SessionStore, tmp_path: Path, client: MysClient, send: _ScriptedHttpSend
+) -> None:
+    """非 2xx 响应同样滚动收取（miyoushe-api-flow.md §4.4「无论成败都收取」）：
+    滚动收取在业务分诊之前，服务端滚动下发不因业务失败而中断。"""
+    send.add_route(
+        (
+            GAME_RECORD_BASE_URL + 'hkrpg/api/index',
+            HttpSendResult(
+                status=502,
+                headers=[('Set-Cookie', 'acw_tc=roll-on-error; Path=/')],
+                body=b'bad gateway',
+            ),
+        )
+    )
+    with pytest.raises(MysApiError) as error_info:
+        client.request('hkrpg/api/index', {'role_id': '1001', 'server': 'prod_gf_cn'})
+    assert error_info.value.code == 502
+
+    saved = json.loads((tmp_path / SESSION_FILE_NAME).read_bytes().decode('utf-8'))
+    assert saved['cookies'] == {'acw_tc': 'roll-on-error'}  # 失败响应的滚动件已入罐落盘
+    assert store.load_cookies() == {'acw_tc': 'roll-on-error'}
+
+
 # ---- logout ----
 
 
