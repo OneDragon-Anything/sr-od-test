@@ -1487,6 +1487,19 @@ def test_strategy_box_grants_consistency_lock() -> None:
             f'{name} 效果体发放名与登记表 items_immediate 漂移'
 
 
+def test_levelup_companion_gold_consistency_lock() -> None:
+    """节节高升金腿双字面量一致性锁(BOX 表先例同域):经济注册行
+    gold_per_level_up 与 live 伴生常量 LEVELUP_COMPANION_GOLD 逐值相等
+    ——伴生不读注册表,两处独立字面量漂移即 live 记账与注册表/聚合间
+    静默分叉,且在备战断言不可见,唯此测试可暴露(纯锁零生产行为)。"""
+    from sr_od.application.currency_war.strategies.impl.mandate_v1.criteria.shop_session import (
+        LEVELUP_COMPANION_GOLD,
+    )
+    assert STRATEGY_ECONOMY['节节高升'].gold_per_level_up \
+        == LEVELUP_COMPANION_GOLD, \
+        '金腿注册行与 live 伴生常量漂移(live 记账与聚合将静默分叉)'
+
+
 # ============================================================ 援军族效果
 # (策略卡获得时点随机角色群发:发放表值 = (费用档, 名数) 对序列,工厂
 # 按表内对序循环、同 rng 实例逐档掷骰 → 逐名 gain_character(rand=True)
