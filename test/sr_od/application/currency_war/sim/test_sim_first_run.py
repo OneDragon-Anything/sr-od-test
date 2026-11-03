@@ -31,6 +31,12 @@ from test.harness.sim_backend_runner import run_sim_full_match
 from sr_od.application.currency_war.kernel.cw_investments import (
     STRATEGY_ECONOMY,
 )
+from sr_od.application.currency_war.kernel.cw_node_schedule import (
+    PLANE_NODE_TABLES,
+)
+from sr_od.application.currency_war.sim.cw_sim_backend import (
+    COMBAT_NODE_TYPES,
+)
 from sr_od.application.currency_war.sim.cw_sim_opening import (
     opening_hp_or_raise,
 )
@@ -43,16 +49,31 @@ ACCEPT_SEED: int = 20260923
 #: 种子扫描终局下限:验收局至少到达第二位面(P2 boss 辖域)。
 _EXPECT_MIN_PLANE: int = 2
 
-#: hp 轨迹上界(推导值非拍值):开局查表值 + 注册表 hp_instant 正部合计。
-#: 选卡即时腿 +N 直加不 clip(sim 扣血绝对值制零上限消费,hp_max 字段
-#: 缺位),固定 100 上界已随该腿过期;按正部合计而非全表合计——负成员
-#: (先亏后盈 −20 注册态)入表后全表合计会低估上界产生假红,直加不可
-#: 抬出「每卡至多各加一次」的真值上界。开局查表与验收局运行器同参
-#: (A8/难度108 实证档),证据单一源 = cw_opening_hp 实证局档。
+#: hp 轨迹上界(推导值非拍值):开局查表值 + 注册表 hp_instant 正部合计
+#: + 结算型回血族正部 × 日程结算计次。选卡即时腿 +N 直加不 clip(sim 扣
+#: 血绝对值制零上限消费,hp_max 字段缺位),固定 100 上界已随该腿过期;
+#: 按正部合计而非全表合计——负成员(先亏后盈 −20 注册态)入表后全表
+#: 合计会低估上界产生假红,直加不可抬出「每卡至多各加一次」的真值上界。
+#: 结算型回血两腿(首领战支 boss_end_heal_hp / 全战斗域支 battle_end_
+#: heal_hp)每战斗结算直加不 clip,计次单一源 = 日程真值表(战斗类节点
+#: 数与首领位数;节点改写规则只插 supply/换 kind,战斗类计数不变),
+#: 战斗类词表单一源 = sim COMBAT_NODE_TYPES(与结算腿门同一常量),
+#: 金额单一源 = 注册表正部合计(Σ 全表 = 「全卡同持」上包络,松界只
+#: 损灵敏度不生假红假绿)。开局查表与验收局运行器同参(A8/难度108
+#: 实证档),证据单一源 = cw_opening_hp 实证局档。
+_BOSS_NODE_COUNT: int = sum(seq.count('boss')
+                            for seq in PLANE_NODE_TABLES.values())
+_COMBAT_NODE_COUNT: int = sum(
+    1 for seq in PLANE_NODE_TABLES.values() for k in seq
+    if k in COMBAT_NODE_TYPES)
 _HP_TRAIL_BOUND: int = (
     opening_hp_or_raise(RunConfig(selected_difficulty='A8',
                                   enemy_difficulty=108))
-    + sum(max(0, eff.hp_instant) for eff in STRATEGY_ECONOMY.values()))
+    + sum(max(0, eff.hp_instant) for eff in STRATEGY_ECONOMY.values())
+    + _BOSS_NODE_COUNT * sum(max(0, eff.boss_end_heal_hp)
+                             for eff in STRATEGY_ECONOMY.values())
+    + _COMBAT_NODE_COUNT * sum(max(0, eff.battle_end_heal_hp)
+                               for eff in STRATEGY_ECONOMY.values()))
 
 #: hp 轨迹下界(与上界同构的 Σ负部参数化):负成员选卡损血 −N 直加不
 #: clip(下界无消费端语义,镜像上界裁决),hp 可写负值;按负部合计而
@@ -150,7 +171,8 @@ def test_first_match_container_invariants(two_runs: tuple) -> None:
     assert run.gs.gold.value == gold_rows[-1]['after'], \
         'gold 终值与末条写行不一致'
 
-    # —— ② hp 轨迹不变式(hp 写行 = 每战斗结算恰一条 + 选卡即时腿逐笔;
+    # —— ② hp 轨迹不变式(hp 写行 = 每战斗结算恰一条 + 选卡即时腿逐笔
+    #      + 持卡首领战/战斗结束回血腿逐笔;
     #      轨迹首条 = reset 开局,先于 journal 捕获,故对拍域 = 写流全序
     #      vs 轨迹[1:]) ——
     hp_rows = _write_rows(run, 'hp')
@@ -165,7 +187,7 @@ def test_first_match_container_invariants(two_runs: tuple) -> None:
     assert all(_HP_TRAIL_FLOOR <= h <= _HP_TRAIL_BOUND
                for h in run.hp_trail), \
         f'hp 轨迹出界(界 = [{_HP_TRAIL_FLOOR}, 开局查表 + hp_instant ' \
-        f'正部合计 {_HP_TRAIL_BOUND}])'
+        f'+ 回血族正部×日程计次 {_HP_TRAIL_BOUND}])'
     assert run.gs.hp.value == run.hp_trail[-1], 'hp 终值与轨迹末条不一致'
 
     # —— ③ 经验等级不变式(升级逐级 +1 不越上限;carry 恒 0 ≤ cur < need;
