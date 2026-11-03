@@ -53,6 +53,7 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     ('好运令牌·银', '130901', 3, '好运令牌', 1, (), ''),
     ('是钻石总会发光', '131101', 2, '', 1, ('红钻', '蓝钻'), ''),
     ('回收计划', '230701', 5, '', 1, (), '简易'),
+    ('快请专家·金', '260401', 4, '员工投影仪', 2, (), ''),
 ])
 def test_rencai_jili_registry_row_single_source(
         card: str, gid: str, delay: int, item: str, count: int,
@@ -75,7 +76,8 @@ def test_rencai_jili_registry_row_single_source(
     展开卡安静不写,禁顺手代登记)。"""
     assert set(STRATEGY_DELAYED_GRANTS) == {
         '人才激励', '人才激励+', '许诺特权', '先亏后盈', '好运令牌·银',
-        '是钻石总会发光', '回收计划', '回收计划+', '红钻闪耀', '蓝钻闪耀'}, \
+        '是钻石总会发光', '回收计划', '回收计划+', '红钻闪耀', '蓝钻闪耀',
+        '快请专家·金'}, \
         '注册面 = 族现役十卡(未注册展开卡安静不写,禁顺手代登记)'
     row = STRATEGY_DELAYED_GRANTS[card]
     assert row == StrategyDelayedGrant(id=gid, delay_nodes=delay,
