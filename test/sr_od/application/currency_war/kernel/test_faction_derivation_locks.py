@@ -20,11 +20,13 @@ faction/position_pref 不入容器形状,消费点经注册表按 char_id 派生
 ⑤ char_first_faction 派生式(主阵营单一源):命中 → factions[0],
    注册但无阵营 = '',未注册/空名 = '?'。
 
-知识卡节:①schema 全 20 线三字段非空(角色型 = 唯一恒可判定硬规则
-路径);②名字空间 ⊆ 注册表键(手编建表笔误防线——写错名 = 判定永不
-命中且静默);③ CARRY 锚派生(plaza_carry 直用 + 攻略补全登记)与
-CARRY 档 = 单名锚 ∪ core_chars 合流;④单帧测试(char_lock_hit AND /
-strategy_lock_hit OR + OCR 间隔号形变归一)。
+知识卡节(统一阵容评分迭代重写,2026-11-03):①schema 全 20 线
+need_star/key_items 非空;②名字空间 ⊆ 注册表键(手编建表笔误防线
+——写错名 = 分值静默失效);③ CARRY 锚派生(plaza_carry 直用 +
+攻略补全登记)与 CARRY 档 = 单名锚 ∪ core_chars 合流;④旧
+lock_rules 字段/char_lock_hit/strategy_lock_hit 已随「全部即时锁退役」
+整字段退役——替代机制断言 = 投资通道派生(OCR 间隔号形变归一在
+cw_invest_channels 查询口承载)。
 """
 from __future__ import annotations
 
@@ -33,10 +35,6 @@ from test.sr_od.application.currency_war._cw_helpers import cw4_bview
 from sr_od.application.currency_war.data.cw_chars import (
     CHARACTERS,
     char_first_faction,
-)
-from sr_od.application.currency_war.data.cw_invest_data import (
-    PLAZA_AUGMENTS,
-    PLAZA_PORTALS,
 )
 from sr_od.application.currency_war.kernel.cw_action_report import (
     report_action_move_unit_param,
@@ -50,8 +48,6 @@ from sr_od.application.currency_war.kernel.cw_comps import (
     COMP_LIBRARY,
     carry_anchor,
     carry_set,
-    char_lock_hit,
-    strategy_lock_hit,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
@@ -178,26 +174,22 @@ def test_board_by_row_of_reads_container_rows():
 
 
 def test_knowledge_card_schema_nonempty_all_lines():
-    """① 三字段全 20 线非空;角色型每线在册(判据「lock_rules 角色型按持有状态
-    可判定」的前提 = 每线有可判定的角色组合);策略型两键齐(值可空表)。"""
+    """① 知识卡字段全 20 线非空(need_star 星级目标/key_items 骨架名单
+    ——持有证据分与星级目标的机器前提);旧 lock_rules 字段已整字段退役
+    (统一阵容评分迭代:全部即时锁退役),不再断言。"""
     assert len(COMP_LIBRARY) == 20
     for comp in COMP_LIBRARY:
-        assert comp.lock_rules, comp.name
-        assert comp.lock_rules.get('角色型'), comp.name
-        assert '策略型' in comp.lock_rules, comp.name
+        assert not hasattr(comp, 'lock_rules'), \
+            f'{comp.name}: lock_rules 字段已整字段退役,禁复活'
         assert comp.need_star, comp.name
         assert comp.key_items, comp.name
 
 
 def test_knowledge_card_names_in_registries():
-    """② 名单/键全落注册表键空间:角色名 ⊆ CHARACTERS、策略型名 ⊆ 投资注册表
-    (augment+portal 并集)。建表是手编数据,名字写错 = 锁定判定永不命中。"""
-    invest_names = ({a.name for a in PLAZA_AUGMENTS}
-                    | {p.name for p in PLAZA_PORTALS})
+    """② 名单/键全落注册表键空间:角色名 ⊆ CHARACTERS。建表是手编数据,
+    名字写错 = 证据分/星级目标静默失效。"""
     for comp in COMP_LIBRARY:
-        for rule in comp.lock_rules['策略型']:
-            assert rule in invest_names, (comp.name, rule)
-        for name in (*comp.lock_rules['角色型'], *comp.need_star, *comp.key_items):
+        for name in (*comp.need_star, *comp.key_items):
             assert name in CHARACTERS, (comp.name, name)
 
 
@@ -227,26 +219,28 @@ def test_carry_set_union_anchor_and_core():
         assert carry_anchor(comp) in cs, comp.name
 
 
-def test_char_lock_hit_and_semantics():
-    """④ 角色型单帧测试:全组合在手命中、缺任一未命中(AND = §1.4「关键角色组合
-    到手」);无关持有不命中(万敌线 3 件组合)。"""
-    wandi = next(c for c in COMP_LIBRARY if c.name == '万敌单C')
-    combo = wandi.lock_rules['角色型']
-    assert len(combo) == 3   # 万敌+千冶·刃+刻律德菈
-    assert char_lock_hit(wandi, set(combo))
-    for missing in combo:
-        assert not char_lock_hit(wandi, set(combo) - {missing})
-    assert not char_lock_hit(wandi, {'希儿', '花火'})
-
-
-def test_strategy_lock_hit_any_and_ocr_normalization():
-    """④ 策略型任一命中(OR = §1.4「策略定义线」);OCR 间隔号形变(•→·)
-    经归一仍命中(run_20260826_004527 缺陷链同型防线)。"""
-    jing = next(c for c in COMP_LIBRARY if c.name == '景元仙舟')
-    assert strategy_lock_hit(jing, {'飞光·映月'})
-    assert strategy_lock_hit(jing, {'嘴硬', '飞光·传剑'})   # 多持有任一命中
-    assert not strategy_lock_hit(jing, {'嘴硬'})
-    assert strategy_lock_hit(jing, {'飞光•映月'})   # OCR bullet 形变归一命中
+def test_lock_rule_machinery_retired_replaced_by_channels():
+    """④ 旧锁定机器退役断言(统一阵容评分迭代):lock_rules 字段/
+    char_lock_hit/strategy_lock_hit 符号不存在于 kernel——替代 = 投资通道
+    派生(策略到手的线关联,`cw_invest_channels.strategy_line_bonus`),
+    OCR 间隔号形变归一在通道派生查询口承载(旧 strategy_lock_hit 防线
+    同型:形变名经 normalize_invest_name 照常命中)。"""
+    import sr_od.application.currency_war.kernel.cw_comps as cw_comps
+    assert not hasattr(cw_comps, 'char_lock_hit')
+    assert not hasattr(cw_comps, 'strategy_lock_hit')
+    assert not hasattr(cw_comps, 'ENV_COMP_AFFINITY')
+    assert not hasattr(cw_comps, 'AUGMENT_COMP_AFFINITY')
+    assert not hasattr(cw_comps, 'augment_affinity')
+    # 替代机制正面锚:旧策略型登记语义(飞光→景元仙舟/黑塔纪元→大黑塔)
+    # 由定义卡通道承载;OCR 形变(•→·)归一命中。
+    from sr_od.application.currency_war.kernel.cw_comps import get_comp
+    from sr_od.application.currency_war.kernel.cw_invest_channels import (
+        strategy_line_bonus,
+    )
+    jing = get_comp('景元仙舟')
+    assert strategy_line_bonus('飞光·映月', jing) \
+        == strategy_line_bonus('飞光•映月', jing) == 500
+    assert strategy_line_bonus('黑塔纪元', get_comp('大黑塔银河学者')) == 500
 
 
 # ============================================================ 开拓者形态归一(上报侧)
