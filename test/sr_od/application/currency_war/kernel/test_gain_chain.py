@@ -1323,7 +1323,9 @@ def test_on_strategy_gained_advisor_unlock() -> None:
     gs = _make_gs(bench=[], equips=[])
     gs.prep_anchored = True
     effects = on_strategy_gained(gs, '停云顾问', rand=False, sig=_lsig())
-    assert effects == ('advisor_unlock:停云顾问:停云',)
+    assert effects == ('advisor_unlock:停云顾问:停云',
+                       'named_equip_grant:光能电池(placed=True)'), \
+        f'停云顾问全链(解锁+授予): {effects}'
     assert gs.unlocked_experts.value == ('停云',)
     assert bench_units_of(gs) == [], '顾问入商店非送单位'
     # 非 advisor 登记卡(摸个鱼吧II 直接给单位族,现役零效果体)不触发解锁
@@ -1385,7 +1387,7 @@ def test_on_strategy_gained_unregistered_quiet() -> None:
         '战技点星徽',
         '幸运星祝福', '折叠小刀祝福', '和平手枪祝福',
         '生命之花祝福', '量产型装甲祝福', '公司军火更新·金',
-        '回收计划', '回收计划+', '秘密典籍', '秘密典籍+', '全武行', '红钻闪耀', '蓝钻闪耀', '精密拆装·金', '好运令牌·金', '黄金垃圾', '钻石恒永久', '双人舞', '读博深造', '钢铁美学', '人在旅途', '装备党', '借力打力', '量子力学', '摸个鱼吧I', '摸个鱼吧II', '加拉赫顾问', '快请专家·金',
+        '回收计划', '回收计划+', '秘密典籍', '秘密典籍+', '全武行', '红钻闪耀', '蓝钻闪耀', '精密拆装·金', '好运令牌·金', '黄金垃圾', '钻石恒永久', '双人舞', '读博深造', '钢铁美学', '人在旅途', '装备党', '借力打力', '量子力学', '摸个鱼吧I', '摸个鱼吧II', '加拉赫顾问', '快请专家·金', '停云顾问',
         '梦境大舞台',
         '这么大的钻石',
         '步狸村之谜', '阿哈大悦',
