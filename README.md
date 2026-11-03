@@ -102,6 +102,7 @@ src/foo/bar.py  ->  sr-od-test/test/foo/test_bar.py
 - 测试基建（conftest / harness / fixtures）不参与镜像，住 `test/` 根的约定位置。
 - 批次 / 轮次 / review 编号只许进 docstring 出处，**禁入文件名与目录名**（写时自检、评审删）。
 - 过渡：存量平铺目录暂按现状保留；**新测试文件一律按本规则落位**，存量文件因行为变更被改动时顺手迁入同源路径。
+- **新建测试子目录不带 `__init__.py`**（pytest rootdir 导入不依赖包标记；先例 `test/one_dragon/mys/`、`test/sr_od/mys/`、`test/sr_od/backend/mcp/`，2026-11-04 定案）；既有带 `__init__.py` 的目录保持现状不回改。
 
 ### 写测试
 
