@@ -325,6 +325,35 @@ class TestWandiFuelBottom:
             > line_select.line_score_key(wandi, full_ev, no_fuel_ctx)
 
 
+# ===== sim 场景⑤⑥ 批 2 形态(单帧锁定;批跑通道候补中无法定向注入
+# 开局持有面——design §6 场景⑤⑥的 sim 对照待批跑工具恢复后补,
+# 语义面以下列单帧断言承载)=====
+
+
+class TestSimScenariosFiveSix:
+    def test_quantum_emblem_family_drives_seele_rank(self):
+        """⑤量子星徽局希儿排位(实证升档验证):零持有 + 持量子星徽×3
+        (邀请〔env〕+星徽+套组〔策略〕各 +750)→ 希儿量子线分居首
+        (0.9 近硬绑实证覆盖通道默认,README A3)。"""
+        got = line_select.compute_candidates(
+            frozenset(),
+            line_select.OpeningCtx(held_invest=frozenset(
+                {'量子同频邀请', '量子同频星徽', '量子同频星徽套组'})))
+        assert got[0] == '希儿量子'
+
+    def test_concept_stock_core_vs_flex_contrast(self):
+        """⑥概念股×核心线 vs ×flex 线对照:同概念股(击破)对核心线
+        (巡海击破,击破 ∈ form_tiers)全档 +300 vs flex 线(黄泉减益,
+        击破 ∈ flex)软档 +30——通道加分目标线分档(design §3.1)。"""
+        core = next(c for c in COMP_LIBRARY if c.name == '巡海击破')
+        flex = next(c for c in COMP_LIBRARY if c.name == '黄泉减益')
+        ctx = line_select.OpeningCtx(held_invest=frozenset({'击破概念股'}))
+        bd_core = line_select.line_score_breakdown(core, frozenset(), ctx)
+        bd_flex = line_select.line_score_breakdown(flex, frozenset(), ctx)
+        assert bd_core.invest == 300
+        assert bd_flex.invest == 30
+
+
 # ===== P1 无锁(硬规则/即时锁全退役;sim 场景①) =====
 
 
