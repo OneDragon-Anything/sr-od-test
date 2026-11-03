@@ -1,0 +1,52 @@
+{
+  "_source": "hkrpg/api/index 实测响应结构快照。出处：2026-11-03 密码登录会话实测（teyvat-resin-planner trace.log hkrpg index 条目，全部 retcode 0；全量 64 角色中取代表性条目两条：带光锥/未装备光锥各一），结构固化依据 changes/mys-account-mcp/design.md §2.3（HsrCharacter 冻结字段集）与 miyoushe-api-flow.md §8.1。avatar_list 条目实测键集：id/level/name/element/icon/rarity/rank/is_chosen/equip/base_type/figure_path/element_id；equip 为 dict（id/level/rank/name/desc/icon/rarity）或 null（未装备光锥，实测 64 例中 7 例）。",
+  "retcode": 0,
+  "message": "OK",
+  "data": {
+    "avatar_list": [
+      {
+        "id": 1217,
+        "level": 60,
+        "name": "藿藿",
+        "element": "wind",
+        "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/17e024b801e2376cc0c3995a729ce195.png",
+        "rarity": 5,
+        "rank": 1,
+        "is_chosen": false,
+        "equip": {
+          "id": 23017,
+          "level": 50,
+          "rank": 1,
+          "name": "惊魂夜",
+          "desc": "少女躲在门后，不敢再靠前一步。\n或许是因为今夜的目标就在眼前，她反而有些心跳加速。\n「不怕不怕，我不怕……」\n黑暗中，沉默放声尖叫。\n\n少女颤抖着，捏紧了手里的「武器」，却依然不敢靠近「目标」。\n「没什么好害怕…好…好害怕！」\n\n身后的尾巴终于忍受不住，骤然亮起。\n「快点啊，你就是拿个快递而已！」",
+          "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/48dd41bc2545fa7b97655a700f5235f9.png",
+          "rarity": 5
+        },
+        "base_type": 7,
+        "figure_path": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/538248dd51bb83cf6f06b8e720fbdc10.png",
+        "element_id": 16
+      },
+      {
+        "id": 1312,
+        "level": 80,
+        "name": "米沙",
+        "element": "ice",
+        "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/45936d37b81c74d7097091016cb06bd4.png",
+        "rarity": 4,
+        "rank": 6,
+        "is_chosen": false,
+        "equip": null,
+        "base_type": 1,
+        "figure_path": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/5ea5955c3d9533504aea263ed05fca48.png",
+        "element_id": 4
+      }
+    ],
+    "stats": {
+      "active_days": 1218,
+      "avatar_num": 64,
+      "achievement_num": 1502,
+      "chest_num": 1755,
+      "abyss_process": ""
+    }
+  }
+}
