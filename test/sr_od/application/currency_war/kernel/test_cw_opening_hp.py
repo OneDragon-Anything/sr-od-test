@@ -15,6 +15,12 @@ calc/designs/T-45-dihou-pohuai.md)§2.3 + §4 锁 5(对抗轮 2 N1/N2 修法甲
 - 非命中词缀/非实证难度档 → 零 HP 写;先验永不过可信位
   (hp_decision_trusted_of fail-closed);真值帧覆盖 prior 静默采新零告警
   (先验非 logic 来源,不进失配三分流)。
+
+追加面 = 退化(策略卡)mid-run 跳写守卫(策略链词缀失效分支复用本
+回调;生效方案 = designs/REVIEW-T291.md §3,守卫 = 节点窗在动跳写):
+mid-run(node 锚定)时当期 hp 真值在场 → 回调零 HP 写(真值不踩,
+开局先验通道 mid-run 停用);T-45 §4 锁 5 原「退化 mid-run logic 触发
+→ 同走 prior」形态随守卫现值化(真值帧覆盖 prior 静默采新不变)。
 """
 from __future__ import annotations
 
@@ -24,6 +30,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
     ChannelSig,
     GameState,
+    NodeKey,
     consume_defect_sink,
     set_defect_sink,
 )
@@ -157,8 +164,8 @@ def test_unsampled_difficulty_skips_resync() -> None:
 
 def test_true_read_overrides_prior_without_alarm(rows_sink: _RowSink) -> None:
     """真值帧覆盖先验静默采新零告警(设计 §4 锁 5:先验非 logic 来源,
-    不进失配三分流;logic 触发形态〔姊妹卡退化 mid-run〕同走 prior,
-    真值帧到达即覆盖且零台账行)。"""
+    不进失配三分流;姊妹卡退化 mid-run 形态已由 mid-run 跳写守卫承接
+    ——见本文件守卫锁,真值帧覆盖 prior 静默采新零告警不变)。"""
     gs = _make_gs(['开局不利', '库藏生锈'])
     on_enemy_affixes_logic_write(gs, ['开局不利', '库藏生锈'],
                                  ['库藏生锈'], source='Test')
@@ -167,3 +174,20 @@ def test_true_read_overrides_prior_without_alarm(rows_sink: _RowSink) -> None:
     assert gs.hp.value == 100 and gs.hp.source == 'observation', '真值采新'
     assert hp_decision_trusted_of(gs) is True, '真读恢复可信位'
     assert rows_sink.kinds() == [], f'覆盖零台账行: {rows_sink.kinds()}'
+
+
+def test_mid_run_node_window_skips_resync() -> None:
+    """mid-run 节点窗在动 → 跳写(退化批守卫):策略卡退化可中途获得,
+    其词缀删除写触发本回调时,当期 hp 已有战斗真值——开局先验重算只有
+    「静默踩踏」一个效果,守卫跳写(真值不踩)。开局窗形态(node 未锚)
+    照旧重算 = 既有各锁辖域。"""
+    gs = _make_gs(['开局不利', '库藏生锈'])
+    gs.observe(gs.node, NodeKey(plane=1, round_num=3, kind='prep'),
+               sig=_SIG_OBS)
+    gs.observe(gs.hp, 57, evidence='t:battle_truth', sig=_SIG_OBS)
+    seq_before = gs.write_seq
+    on_enemy_affixes_logic_write(gs, ['开局不利', '库藏生锈'],
+                                 ['库藏生锈'], source='Test')
+    assert gs.hp.value == 57 and gs.hp.source == 'observation', \
+        'mid-run 真值不踩(守卫跳写)'
+    assert gs.write_seq == seq_before, '零 HP 写'
