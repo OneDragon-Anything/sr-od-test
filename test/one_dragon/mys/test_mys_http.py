@@ -131,3 +131,9 @@ def test_requests_http_send_timeout_uses_module_constant(
     send = RequestsHttpSend()
     with pytest.raises(requests.exceptions.Timeout):
         send(f'http://127.0.0.1:{server.server_address[1]}/slow', 'GET', {}, None)
+
+
+def test_request_timeout_seconds_value_locked() -> None:
+    """超时常量真值锁定 25 秒（miyoushe-api-flow.md §4.2 口径；防误改回退——
+    上一条的收紧验证依赖「常量默认 25、monkeypatch 收紧」的分层不被破坏）。"""
+    assert mys_http.REQUEST_TIMEOUT_SECONDS == 25.0
