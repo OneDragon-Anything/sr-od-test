@@ -756,11 +756,10 @@ class TestEntrySignalsTable:
 
     def test_synergy_threshold_matches_form_tiers(self):
         """synergy 阈值 = 该线主羁绊成型档(查表对拍:阈值 ⇔ form_tiers
-        取键的档位——主羁绊键 = bond_signal 或 form_tiers 首键)。"""
+        取键的档位——主羁绊键 = form_tiers 首键,bond_signal 已退役)。"""
         from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
         for comp in COMP_LIBRARY:
-            key = comp.bond_signal or (
-                comp.form_tiers and next(iter(comp.form_tiers)))
+            key = comp.form_tiers and next(iter(comp.form_tiers))
             want = comp.form_tiers.get(key) if key else None
             for name, (kind, threshold) in comp.entry_signals.items():
                 if kind == 'synergy':
