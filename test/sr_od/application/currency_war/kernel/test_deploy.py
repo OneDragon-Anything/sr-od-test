@@ -189,7 +189,7 @@ def test_comp_rejects_invalid_char_position_value() -> None:
     """Comp 构造期校验:非法站位值即时抛(数据错误早暴露,不静默降级)。"""
     from sr_od.application.currency_war.kernel.cw_comps import Comp
     with pytest.raises(ValueError, match='char_positions'):
-        Comp(name='x', factions=['燃血'], core_chars=['万敌'],
+        Comp(name='x', core_chars=['万敌'],
              form_tiers={'燃血': 2}, char_positions={'万敌': 'middle'})
 
 

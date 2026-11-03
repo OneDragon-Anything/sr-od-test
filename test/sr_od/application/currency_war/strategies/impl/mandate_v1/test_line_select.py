@@ -562,7 +562,7 @@ def _fw_gs(*, plane: int = 1) -> GameState:
 
 def _fw_target_comp() -> Comp:
     """终局哨兵线(合成 Comp,身份断言用;值域无关)。"""
-    return Comp(name='测试·终局哨兵', factions=['追击'], core_chars=['飞霄'],
+    return Comp(name='测试·终局哨兵', core_chars=['飞霄'],
                 form_tiers={'追击': 3})
 
 
@@ -589,7 +589,8 @@ def test_decision_target_recipe_in_dual_track() -> None:
     got = decision_target(_fw_session('仙舟', None), _fw_gs())
     assert got is rc
     assert got.name == '过渡·仙舟配方'
-    assert got.factions == ['仙舟', '持续伤害']
+    assert got.factions == ['仙舟'], \
+        'factions = form_tiers 键派生(核心语义;持续伤害是弹性面非核心)'
     assert got.form_tiers == {'仙舟': 3}
     assert got.char_positions == {'爻光': 'back'}
     assert decision_target(_fw_session('', None), _fw_gs()) is None
