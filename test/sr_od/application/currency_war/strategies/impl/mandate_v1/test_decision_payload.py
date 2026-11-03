@@ -5,8 +5,7 @@ decision_payload.py(build_decision_payload)与 bridge.MandateV1Strategy.
 decision_payload 覆写;
 设计出处 = strategy-docs/strategy-telemetry.md(payload 键表正本)+
 changes/2026-10-24-strategy-telemetry/details/capture-store.md §3。
-判据:payload 各键与 gs/state 现读直算一致;window 结论与
-``entry._entry_window_open`` 直调一致;k_fallback 与
+判据:payload 各键与 gs/state 现读直算一致;k_fallback 与
 ``cw_intention.k_empty_window_fallback`` 直调一致;锁定帧 candidates=[];
 过渡候选槽照录、member_rank 二元组与统一优先级装配同源(终局 (0, 线内
 序数)/过渡 (1, 候选位次));覆写后的钩子异常仍由基类 wrapper 降级 {}。
@@ -25,7 +24,6 @@ from test.sr_od.application.currency_war._cw_helpers import (
 
 from sr_od.application.currency_war.kernel import cw_intention
 from sr_od.application.currency_war.kernel.cw_comps import (
-    COMP_LIBRARY,
     get_comp,
     member_rank_of,
 )
@@ -41,7 +39,6 @@ from sr_od.application.currency_war.strategies.impl.cw_strategy import (
     set_decision_sink,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
-    entry,
     session_scope,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
@@ -62,52 +59,11 @@ def _make(gs: GameState) -> MandateV1Strategy:
     return MandateV1Strategy(gs, _CFG)
 
 
-def _held_names(gs: GameState) -> set[str]:
-    """持有域名字集(bench ∪ deployed;与被测读口同源派生,供期望集计算)。"""
-    from sr_od.application.currency_war.kernel.cw_game_state import (
-        bench_units_of,
-        deployed_rows_of,
-    )
-    front, back = deployed_rows_of(gs)
-    return {str(getattr(u, 'char_id', '') or '')
-            for u in (*bench_units_of(gs), *front, *back) if u is not None}
-
-
-def _expected_window(gs: GameState, k_members: list[str],
-                     comps: list) -> dict:
-    """window 键期望值直算(与被测同一数据源,逐键独立重推):
-    键集 = k_members ∪ 持有域 ∩ 终局库成员;open = 判定核直调;
-    sig = 查表序 comps 内首个信号行。"""
-    expected: dict[str, dict] = {}
-    for char in sorted(set(k_members)
-                       | (_held_names(gs) & entry._ENDGAME_LIBRARY_MEMBERS)):
-        sig = None
-        for comp in comps:
-            row = comp.entry_signals.get(char)
-            if row is not None:
-                sig = [row[0], row[1]]
-                break
-        expected[char] = {
-            'open': entry._entry_window_open(gs, char),
-            'sig': sig,
-        }
-    return expected
-
-
-def _assert_window_matches_direct(gs: GameState, payload: dict,
-                                  comps: list) -> None:
-    """window 键值与判定核/信号行直调一致(完成判据项;逐键直调对照)。"""
-    window = payload['window']
-    for char, cell in window.items():
-        assert cell['open'] == entry._entry_window_open(gs, char), char
-    assert window == _expected_window(gs, payload['k_members'], comps)
-
-
 def test_locked_frame_three_keys_and_window_consistent() -> None:
     """锁定帧三键直算一致:direction(锁定/线名/候选清空)+ k_members
     (锁定线名单,统一线内名单读口——排序序,非注册表序;配方槽空集
-    时 = 锁定线单源)+ k_fallback(分支未运行)+ window(结论与 sig 同
-    查表序);另锁 payload 可 JSON 序列化(sink json.dumps 前置契约)。"""
+    时 = 锁定线单源)+ k_fallback(分支未运行);另锁 payload 可 JSON
+    序列化(sink json.dumps 前置契约)。"""
     gs = cw4_gs(None, plane=1, round_num=2, node='prep',
                 bench=[cw4_bc('花火')])
     strat = _make(gs)
@@ -130,14 +86,11 @@ def test_locked_frame_three_keys_and_window_consistent() -> None:
     assert payload['transition_candidates'] == []
     assert payload['member_rank'] == {
         n: (0, p) for n, p in member_rank_of(comp).items()}
-    _assert_window_matches_direct(gs, payload, [comp])
     json.dumps(payload)   # 行行自足:载荷可整体序列化落盘
 
 
-def test_unlocked_recipe_frame_window_set_boundary() -> None:
-    """P1 未锁配方帧:direction 回落配方键(locked=False/候选透传);
-    window 角色集边界 = k_members ∪ 持有域终局库成员——备战席终局件
-    入集(被窗口挡住的判域主体),持有域注册表外名字不入集。
+def test_unlocked_recipe_frame_direction_and_members() -> None:
+    """P1 未锁配方帧:direction 回落配方键(locked=False/候选透传)。
 
     k_members 口径(过渡支 = 32 号稿 §2 双层名单):
     候选并集(假线名解析失败跳过)∪ 过渡候选成员 = 过渡并集
@@ -170,9 +123,6 @@ def test_unlocked_recipe_frame_window_set_boundary() -> None:
     assert payload['transition_candidates'] == [['持续伤害', '希儿系']]
     assert payload['member_rank'] == dict.fromkeys(
         cw_intention._pair_members(('持续伤害', '希儿系')), (1, 1))
-    assert '花火' in payload['window']
-    assert '杂1' not in payload['window']   # 终局库外持有件不入窗口键集
-    _assert_window_matches_direct(gs, payload, list(COMP_LIBRARY))
 
 
 def test_k_fallback_hit_and_miss_states() -> None:
@@ -237,15 +187,17 @@ def test_payload_pure_read_no_state_mutation() -> None:
 
 
 # ==================== 产物透传键(pick-margin-telemetry design §2.2;
-# ====================  键闭集 8 = 现读 6 + 产物透传 2)====================
+# ====================  键闭集 7 = 现读 5 + 产物透传 2;window 键已随
+# ====================  entry_signals 整体退役)====================
 
-def test_payload_eight_key_closed_set() -> None:
-    """payload 键闭集 = 8 键(现读 6 + 产物透传 2;strategy-telemetry.md
-    键表口径统一——缺省形态下产物透传两键恒 None 但键恒在)。"""
+def test_payload_seven_key_closed_set() -> None:
+    """payload 键闭集 = 7 键(现读 5 + 产物透传 2;strategy-telemetry.md
+    键表口径统一——缺省形态下产物透传两键恒 None 但键恒在;window 键
+    已随 entry_signals 整体退役不再产出)。"""
     gs = cw4_gs(None, plane=1, round_num=2, node='prep')
     payload = build_decision_payload(gs, DEFAULT_REGISTRY)
     assert set(payload) == {
-        'direction', 'k_members', 'k_fallback', 'window',
+        'direction', 'k_members', 'k_fallback',
         'transition_candidates', 'member_rank',
         'pick_margin', 'deploy_margin',
     }

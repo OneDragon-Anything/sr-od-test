@@ -193,13 +193,13 @@ class TestAcquireSwapSixStep:
         ct = state_of(sess).cw4_counters
         assert ct.get('acquire_swap_sell') == 1
         # 取用观测键(统一让位优先级迭代 3.5;键表 = telemetry/schema.py
-        # 键表节):档位分布恰一落账(尾牌 = 干净杂件,兜底档 10/羁绊
+        # 键节):档位分布恰一落账(尾牌 = 干净杂件,兜底档 10/羁绊
         # 档 9 由注册表羁绊归属定〔旧八档档 8/7 位移,十档口径 design
-        # §2.2〕——断言计数和,不钉死注册表事实的档号);键互异帧
-        # 随机尾键命中不落账。
+        # §2.2〕——断言计数和,不钉死注册表事实的档号)。随机尾键命中:
+        # entry_signals 退役后让位末位 = 同质垫件域(junk 等价群可撞键),
+        # 键互异前提失守,命中合法(等价群随机定序 = take 观测键口径)。
         assert sum(v for k, v in ct.items()
                    if k.startswith('acquire_swap_sell_tier_')) == 1
-        assert not ct.get('acquire_swap_sell_rng_tail_hit')
         assert not ct.get('acquire_swap_declined')
 
     def test_tail_is_new_card_declines_buy(self):
@@ -491,15 +491,13 @@ class TestAcquireYieldUnified:
 
     def test_unmet_member_tail_sold_no_interest_exemption(self):
         """凑息豁免不适用被迫类(design §2.2 第 5 项动机二分/§3 凑息
-        豁免测试第四用例):获取让位帧(金不足触发;与席满同一评估,
-        §2.2 第 4 项「两类受阻走同一评估,不分流」)线内未达标成员排
-        统一序末位 → 照卖。瓦尔特 = 列车同行候选线成员(need 1,持有
-        1★ 未到两星 = 凑两星过程保护档 7 形态〔旧八档档 5 位移,十档
-        口径 design §2.2〕,凑息场景不可卖件;未锁帧部署不拉
-        候选成员上场 → 瓦尔特部署外在池);X = 姬子·启行(need 3 未
-        持有 = 未持有档 5〔旧档 3 位移〕,保留优先级高于瓦尔特)→
-        victim = 瓦尔特(虚拟金币
-        1 − 3 + 5 = 3 ≥ 0)——获取动机让位全员参与统一序列,无豁免。"""
+        豁免测试第四用例)——entry_signals 退役后行为演进登记:瓦尔特
+        (列车·反震线内成员)被虚拟定型收编上场进档 1 → victim 域
+        (部署外存量件)不含在建成员 → 无让位可卖 → yield_plan 收口
+        (金不足拦因);「线内在建件不可为凑息卖」与「被迫 victim 域
+        排除档 1 件」在档 1 收编形态下重合(双重保护),动机二分的
+        残留差异(豁免谓词辖线内未达标档 1 外件)见 sell_candidates
+        用例对照面。X = 姬子·启行 3 费,gold 1 金不足帧。"""
         bench = [('瓦尔特', 1)]
         gs, sess, cfg = _frame(
             bench=bench,
@@ -507,16 +505,9 @@ class TestAcquireYieldUnified:
             candidates=('列车同行·反震',),
             gold=1, level=5)
         act = decide_shop_action(gs, sess, cfg)
-        assert isinstance(act, CwActionSellBenchParam), \
-            f'被迫类让位帧应照卖线内未达标成员: {act!r}'
-        assert act.reason == 'shop_swap'
-        assert act.expect == '瓦尔特', \
-            'victim = 统一序末位(线内未达标成员),豁免只挂利息动机场景'
-        ct = state_of(sess).cw4_counters
-        assert ct.get('acquire_swap_sell') == 1
-        assert ct.get('acquire_swap_sell_tier_7') == 1, \
-            'victim 档位观测键 = 档 7(凑两星过程保护形态,十档口径 ' \
-            'design §2.2;旧八档档 5 位移)'
+        assert isinstance(act, CwActionCloseShopParam), \
+            f'档 1 收编下无部署外 victim → 让位评估收口: {act!r}'
+        assert act.reason == 'yield_plan'
 
     def test_prefix_pool_exhausted_records_gold_short(self):
         """池穷尽不可足 → 机会清单拦因 gold_short(design §2.2 第 4 项

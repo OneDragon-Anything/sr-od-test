@@ -218,7 +218,7 @@ class TestStep0SelfRescue:
 
     @staticmethod
     def _rescue_frame():
-        # 板面追击 1(窗口未到:追击 3 档差二)+ 飞霄(追击线终局件)在席;
+        # 板面追击 1 + 飞霄(追击线终局件)在席;
         # cap 8 → 态 1 有空位可上
         sess = cw4_session()
         cw4_gs(sess, gold=30, level=6, round_num=2, node='战斗',
@@ -229,11 +229,11 @@ class TestStep0SelfRescue:
 
     def test_state1_deploy_free_and_window_exempt(self):
         """态 1(上阵安置,免费腾位):cap 有空位 ∧ 备战席有可上阵单位 →
-        拖上阵;**告警帧豁免窗口辖域**——同一帧无告警时被第 5 步窗口
-        辖域挡下的纯终局件,告警帧照上(上阵纯为腾槽保命,豁免行 =
-        prep_pipeline 第 0 步态 1)。载体 = 统一拖动(阶段 5/6 丁:
+        拖上阵(载体 = 统一拖动,阶段 5/6 丁:
         态 1 专用执行路径切 CwActionMoveUnitParam,选人 = bench 扫描序
-        腾槽语义——unified-deploy-order §4 entry 备战工序部署面行 D3-4)。"""
+        腾槽语义——unified-deploy-order §4 entry 备战工序部署面行 D3-4;
+        原告警帧豁免窗口辖域语义已随 entry_signals 退役消隐——无窗口
+        约束后告警帧与常规帧同态)。"""
         sess = self._rescue_frame()
         _set_overflow(sess)
         out = _emit(sess)
@@ -242,13 +242,6 @@ class TestStep0SelfRescue:
         assert moves and moves[0].src_domain == 'bench' \
             and moves[0].src_slot == 0, \
             f'统一拖动从 bench 槽 0 腾位,实得 {moves!r}'
-        # 对照:同帧无告警(打标)→ 第 5 步窗口辖域挡下,无部署
-        sess2 = self._rescue_frame()
-        _mark_handled(sess2)
-        out2 = _emit(sess2)
-        assert not [e for e in out2
-                    if isinstance(e.action, CwActionMoveUnitParam)], \
-            '无告警帧:窗口未到的纯终局件只囤不上'
 
     def test_state2_open_consumable_when_no_seats(self):
         """态 2(点开消耗品,免费腾位):无 cap 空位 ∧ 备战席有占席物品
@@ -428,7 +421,10 @@ class TestStep2Ore:
         万金油铺席件按档 8/10 落序列(万金油层 = 档 8、到两星掉兜底
         档 10,旧八档档 6/8 位移,design §2.2/§2.3-4 十档口径),序列
         真空才放弃晶矿;单动作契约 =
-        先卖,下帧席位空出后采晶)。"""
+        先卖,下帧席位空出后采晶)。让位支接受 bench/场上两支:本构局
+        (bench 三月七可上场 + 场上未识别件)部署定型后让位末位 = 场上
+        未识别件——卖场上件腾位同样合法(entry_signals 退役后三月七
+        可上场,部署定型参与让位序)。"""
         sess = cw4_session()
         cw4_gs(sess, gold=30, level=6, round_num=2, node='战斗',
                bench=[_bc('三月七', star=2)] * 9,
@@ -436,11 +432,15 @@ class TestStep2Ore:
                back_row=())
         _write_ores(game_state_of(sess), (('gold', 100, 200, 30),))
         out = _emit(sess)
-        sells = [e.action for e in out
-                 if isinstance(e.action, CwActionSellBenchParam)]
-        assert sells, f'身份段退役后席满帧应序列让路卖出: {out!r}'
-        assert sells[0].reason == 'ore_make_room', \
-            f'让路卖出场景 = 采晶矿前空位: {sells[0]!r}'
+        from sr_od.application.currency_war.kernel.cw_vocab import (
+            CwActionSellDeployedParam,
+        )
+        sells = [e for e in out
+                 if isinstance(e.action, (CwActionSellBenchParam,
+                                          CwActionSellDeployedParam))]
+        assert sells, f'席满帧应序列让路卖出(bench/场上支): {out!r}'
+        assert sells[0].reason.startswith('ore_make_room'), \
+            f'让路卖出场景 = 采晶矿前空位: {sells[0].action!r}(场景键 {sells[0].reason})'
         assert not [e for e in out
                     if isinstance(e.action, CwActionCollectOreParam)], \
             '单动作契约:腾位卖出帧不并发采晶(下帧席位空再采)'
@@ -531,33 +531,42 @@ class TestStep4ShopSession:
 
 
 class TestStep5DeployWindow:
-    """部署窗口辖域测试(用户裁定 2026-10-12:终局成员在其上线窗口前
-    不上阵;纯终局件谓词 = 终局库成员 ∧ 非现行过渡配方成员;窗口到 =
-    entry_signals 信号命中——追击飞霄线 synergy 3 = 板面追击 3 档)。"""
+    """部署上场时机测试(entry_signals 整体退役后行为面登记,2026-11
+    用户终裁「可退役」:无上阵窗口硬约束——上场时机 = 部署搜索骨架/L1
+    完成度自适应,终局件不再被窗口挡;万敌 1 条/白厄 3 条知识真空接受
+    损失,退化观测挂 sim)。"""
 
     @staticmethod
-    def _window_frame(front: tuple[str, ...]):
+    def _window_frame(front: tuple[str, ...], *, level: int = 6,
+                      deploy_cap: int | None = 8):
         # gold 50 = 恰在两金带外(不 > 息线 ⇒ 第 3 步溢余臂不触发;不 <
-        # 息线 ⇒ 第 7 步凑息不触发)——窗口辖域测试只校验第 5 步部署
+        # 息线 ⇒ 第 7 步凑息不触发)——上场时机测试只校验第 5 步部署。
         sess = cw4_session()
-        cw4_gs(sess, gold=50, level=6, round_num=2, node='战斗',
+        cw4_gs(sess, gold=50, level=level, round_num=2, node='战斗',
                bench=[_bc('飞霄')],
-               front_row=_units(front), back_row=(), deploy_cap=8)
+               front_row=_units(front), back_row=(),
+               deploy_cap=deploy_cap)
         _mark_handled(sess)
         return sess
 
-    def test_endgame_member_blocked_before_window(self):
-        """窗口未到(板面追击 1 < 3):纯终局件只囤不上——部署计划被
-        窗口辖域过滤(搜索段 0 枚举硬约束),无统一拖动(透传到出战)。"""
+    def test_endgame_member_deploys_without_window(self):
+        """无窗口约束(行为翻转登记):追击仅 1 档(原「窗口未到」帧)纯
+        终局件飞霄照上——L3 计数自然填位,退役前该帧被窗口辖域过滤不上
+        (emit 无部署动作透传到出战)。"""
         sess = self._window_frame(('知更鸟', '那刻夏'))
         out = _emit(sess)
-        assert not [e for e in out
-                    if isinstance(e.action, CwActionMoveUnitParam)]
-        assert isinstance(out[0].action, CwActionStartBattleParam)
+        from sr_od.application.currency_war.kernel.cw_vocab import (
+            CwActionMoveUnitParam,
+        )
+        moves = [e.action for e in out
+                 if isinstance(e.action, CwActionMoveUnitParam)]
+        assert moves and moves[0].src_domain == 'bench' \
+            and moves[0].src_slot == 0, \
+            '终局件无窗口约束:飞霄按 L3 填位上场'
 
-    def test_endgame_member_deploys_on_window(self):
-        """窗口到(板面追击 3 档齐 = synergy 信号命中):终局件可上
-        (阶段 5/6 载体 = 统一拖动 CwActionMoveUnitParam)。"""
+    def test_endgame_member_deploys_on_full_synergy(self):
+        """档齐帧照上(行为方向与退役前一致):板面追击 3 档齐 = 候选线
+        L1 增量主载,飞霄上场(阶段 5/6 载体 = 统一拖动)。"""
         sess = self._window_frame(('知更鸟', '不死途', '貊泽'))
         out = _emit(sess)
         from sr_od.application.currency_war.kernel.cw_vocab import (
@@ -568,10 +577,10 @@ class TestStep5DeployWindow:
         assert moves and moves[0].src_domain == 'bench' \
             and moves[0].src_slot == 0
 
-    def test_transition_member_exempt_from_window(self):
-        """过渡∩终局重叠件按过渡成员正常上阵:现行过渡配方成员
-        (target_comp 物化链)不受窗口辖域辖(它们的上阵是过渡行为;
-        阶段 5/6 载体 = 统一拖动)。"""
+    def test_transition_member_exempt(self):
+        """过渡∩终局重叠件按过渡成员正常上阵(线内件优先占席,与窗口
+        退役无关的既有语义):现行过渡配方成员(锁定线物化链)的部署由
+        L1/L2 完成度承载。"""
         sess = cw4_session(cw4_comp('追击飞霄'))
         cw4_gs(sess, gold=30, level=6, round_num=2, node='战斗',
                bench=[_bc('飞霄')],
@@ -584,12 +593,12 @@ class TestStep5DeployWindow:
         )
         moves = [e.action for e in out
                  if isinstance(e.action, CwActionMoveUnitParam)]
-        assert moves, '过渡配方成员(线内件)的正常部署不被窗口挡'
+        assert moves, '线内件的正常部署不被挡'
 
-    def test_accumulator_always_on(self):
-        """全局累积型例外([21]「越早越好」):万敌 = hp_charge_stack →
-        always_on 信号,窗口未到(夜半 0 档)也照上(阶段 5/6 载体 =
-        统一拖动)。"""
+    def test_wandi_deploys_without_signal(self):
+        """万敌上场不再依赖 always_on 信号(信号表已退役;L3 单位序承载
+        ——退役前万敌靠 always_on 例外放行,退役后同帧行为不变,登记
+        口径从「窗口例外」改「计数填位」)。"""
         sess = cw4_session()
         cw4_gs(sess, gold=30, level=6, round_num=2, node='战斗',
                bench=[_bc('万敌')],
@@ -602,7 +611,7 @@ class TestStep5DeployWindow:
         )
         moves = [e.action for e in out
                  if isinstance(e.action, CwActionMoveUnitParam)]
-        assert moves, '万敌 always_on:窗口辖域外的累积型例外'
+        assert moves, '万敌按 L3 计数填位上场(无信号依赖)'
 
 
 # ============================================================ 第 6 步:装备与工具
@@ -730,39 +739,109 @@ class TestStep7NodeEndInterest:
             '退役键不得复现'
 
 
-# ============================================================ 上线窗口信号表(数据地基)
+# ============================================================
+# 部署自适应 6 场景(entry_signals 整体退役后的行为登记锚;审查设计——
+# 知识真空线〔万敌 1 条/白厄 3 条〕的退化面显式登记,退化明显再议的
+# 对照基线;sim A/B 挂批跑工具恢复,欠账登记 = .debug/progress/
+# unified-line-scoring-sim-debt.md)
+# ============================================================
 
 
-class TestEntrySignalsTable:
-    """上线窗口信号表建表测试(landing:COMP_LIBRARY 扩 entry_signals
-    字段并建表——20 线全登记、值域合法、键 ⊆ 线终局成员;fail 读法 =
-    缺行 → 窗口谓词恒假,数据地基由完备性保证不静默)。"""
+class TestDeployAdaptiveAfterEntryRetirement:
+    """退役时点部署自适应行为面(单帧构局):无窗口硬约束下终局件
+    上场时机全由 L1/L3 完成度与单位序承载。"""
 
-    _KINDS = ('level', 'synergy', 'plane_end', 'always_on')
+    @staticmethod
+    def _frame(*, front=(), bench=(), level=6, deploy_cap=None,
+               lock_pair=None, target_comp=None, gold=50):
+        sess = cw4_session(cw4_comp(target_comp) if target_comp else None)
+        cw4_gs(sess, gold=gold, level=level, round_num=2, node='战斗',
+               bench=list(bench), front_row=_units(tuple(front)),
+               back_row=(), **({'deploy_cap': deploy_cap}
+                               if deploy_cap is not None else {}))
+        st = state_of(sess)
+        if lock_pair is not None:
+            from sr_od.application.currency_war.kernel.cw_intention import (
+                IntentionState,
+            )
+            ist = IntentionState()
+            ist.p1_pair = lock_pair
+            st.v3_intention = ist
+        if target_comp is not None:
+            from sr_od.application.currency_war.kernel.cw_comps import get_comp
+            st.target_comp = get_comp(target_comp)
+        _mark_handled(sess)
+        return sess
 
-    def test_all_lines_registered_and_value_domain(self):
-        from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
-        assert len(COMP_LIBRARY) >= 20
-        for comp in COMP_LIBRARY:
-            assert comp.entry_signals, f'{comp.name}:entry_signals 缺表'
-            members = set(comp.core_chars) | set(comp.shared_chars or ())
-            for name, sig in comp.entry_signals.items():
-                assert name in members, \
-                    f'{comp.name}:{name} 非线终局成员(core ∪ shared)'
-                assert isinstance(sig, tuple) and len(sig) == 2
-                kind, threshold = sig
-                assert kind in self._KINDS, f'{comp.name}:{name} 信号类 {kind}'
-                assert isinstance(threshold, int)
+    @staticmethod
+    def _moves(sess):
+        from sr_od.application.currency_war.kernel.cw_vocab import (
+            CwActionMoveUnitParam,
+        )
+        out = _emit(sess)
+        return [e.action for e in out
+                if isinstance(e.action, CwActionMoveUnitParam)]
 
-    def test_synergy_threshold_matches_form_tiers(self):
-        """synergy 阈值 = 该线主羁绊成型档(查表对拍:阈值 ⇔ form_tiers
-        取键的档位——主羁绊键 = form_tiers 首键,bond_signal 已退役)。"""
-        from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
-        for comp in COMP_LIBRARY:
-            key = comp.form_tiers and next(iter(comp.form_tiers))
-            want = comp.form_tiers.get(key) if key else None
-            for name, (kind, threshold) in comp.entry_signals.items():
-                if kind == 'synergy':
-                    assert threshold == want, (
-                        f'{comp.name}:{name} synergy 阈值 {threshold}'
-                        f' ≠ 主羁绊 {key} 成型档 {want}')
+    def test_baie_k_rich_both_fill(self):
+        """①a 白厄未成型局 K 富余(level 6 人口宽裕):P1 配方锁(DOT)
+        +bench 白厄三月七——三月七(列车体系件)与白厄(纯终局件)双上,
+        L3 计数自然填位(退役前白厄被 plane_end 窗口挡,三月七被列车
+        synergy 窗口挡)。"""
+        sess = self._frame(front=('桑博', '艾丝妲'),
+                           bench=[_bc('白厄'), _bc('三月七')],
+                           lock_pair=('持续伤害',))
+        assert len(self._moves(sess)) >= 2, 'K 富余:双件 L3 填位'
+
+    def test_baie_k_tight_march7_only(self):
+        """①b K 紧张(level 3 空位 1):体系侧三月七优先上位(列车体系
+        件单位序),白厄留 bench——垫件分级 = L3 单位序自适应,无窗口
+        也不过量上终局件。"""
+        sess = self._frame(front=('桑博', '艾丝妲'),
+                           bench=[_bc('白厄'), _bc('三月七')],
+                           level=3, lock_pair=('持续伤害',))
+        moves = self._moves(sess)
+        assert len(moves) == 1 and moves[0].src_slot == 1, \
+            'K 紧张:仅三月七(bench 槽 1)上位,白厄留席'
+
+    def test_wandi_k_states_both_deploy(self):
+        """② 万敌单卡局(P1 DOT 配方,K 两态):万敌退役前靠 always_on
+        例外放行;退役后 K 富余/紧张(空 1)两态均上场——万敌 L3 单位序
+        压过同帧竞争垫件(「越早越好」语义由计数序承接,sim 血线观测)。"""
+        for level in (3, 6):
+            sess = self._frame(front=('桑博', '艾丝妲'),
+                               bench=[_bc('万敌')], level=level,
+                               lock_pair=('持续伤害',))
+            moves = self._moves(sess)
+            assert moves and moves[0].src_slot == 0, \
+                f'万敌 K {"紧张" if level == 3 else "富余"}态照上'
+
+    def test_daheita_solo_l1_progressive(self):
+        """③ 大黑塔单挂局(P2 未锁,候选含大黑塔线):bench 大黑塔+黑塔
+        双上——候选线 L1 完成度渐进收件(无窗口也按线骨架收,退役前后
+        行为一致——大黑塔 synergy 档未齐同帧行为)。"""
+        sess = self._frame(bench=[_bc('大黑塔'), _bc('黑塔')], level=8)
+        assert len(self._moves(sess)) >= 2, '候选线骨架渐进收件(双上)'
+
+    def test_dot_mix_transition_skeleton(self):
+        """④ DOT 混过渡局(P1 无配方锁):bench 卡芙卡+黑天鹅——持续
+        伤害过渡体系骨架自然收(体系激活 L1 驱动,与窗口无关的既有
+        语义登记)。"""
+        sess = self._frame(front=('三月七', '瓦尔特'),
+                           bench=[_bc('卡芙卡'), _bc('黑天鹅')])
+        assert len(self._moves(sess)) >= 2, '过渡体系骨架自然收'
+
+    def test_locked_daheita_regression_anchor(self):
+        """⑤ 锁定大黑塔线回归锚:锁定帧上场行为与未锁候选帧一致
+        (③ 对照)——退役前锁定帧窗口谓词结构性恒 False(两条豁免分支
+        全覆盖),退役后零变化。"""
+        sess = self._frame(bench=[_bc('大黑塔'), _bc('黑塔')], level=8,
+                           target_comp='大黑塔银河学者')
+        assert len(self._moves(sess)) >= 2, '锁定线骨架照常上场(零变化)'
+
+    def test_locked_baie_regression_anchor(self):
+        """⑥ 锁定白厄线回归锚:锁定线 L1 骨架(白厄空羁绊线 = 角色完成
+        度单独承载)照常上场——退役前白厄线锁定帧本就豁免窗口,退役后
+        零变化(白厄 3 条 plane_end 知识真空只影响未锁囤积期)。"""
+        sess = self._frame(bench=[_bc('白厄'), _bc('三月七')],
+                           target_comp='反甲白厄')
+        assert len(self._moves(sess)) >= 2, '锁定白厄线照常上场(零变化)'
