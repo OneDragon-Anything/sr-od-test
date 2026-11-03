@@ -1394,6 +1394,7 @@ def test_on_strategy_gained_unregistered_quiet() -> None:
         '人才激励',
         '人才激励+', '许诺特权', '先亏后盈', '好运令牌·银', '溜佩佩',
         '溜佩佩+', '招财狗', '狸职手续', '是钻石总会发光', '价值投资·金',
+        '黄晶矿工',
         '大扩招'}
     gs = _make_gs(bench=[('希儿', 1)], equips=[])
     seq_before = gs.write_seq
