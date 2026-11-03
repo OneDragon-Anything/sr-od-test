@@ -662,3 +662,200 @@ def test_app_server_mounts_mys_tools() -> None:
     """create_mcp_server 挂载三工具（app.py 装配点）。"""
     mcp = create_mcp_server(MagicMock(name='SrBackendContext'))
     assert {'mys_login', 'mys_logout', 'mys_get_characters'} <= set(mcp._tool_manager._tools.keys())
+
+
+# ---- mys_get_roster_detail（changes/mys-roster-detail design.md §2 契约 5：
+# 信封五态与 mys_get_characters 完全一致 + detail 序列化载荷形态 + 脱敏）----
+
+#: index 全量明细自造样例（T-2 交付 fixture：结构对照 2026-11-03 实测快照，
+#: id/名值自造不绑真账号；甲全量形态 / 乙无光锥无遗器 / 丙遗器缺件三形态）
+DETAIL_SAMPLE_PATH: Path = (
+    Path(__file__).resolve().parents[3] / 'fixtures' / 'mys' / 'hkrpg_index_detail_sample.json'
+)
+
+#: 新工具 description 的定死开头段（任务书原文，锁「描述文案定死」）
+ROSTER_DETAIL_DESC_OPENING: str = (
+    '获取崩坏:星穹铁道全角色名册明细（每名角色的遗器六件套词条明细/位面饰品/'
+    '星魂/行迹/属性面板，词条与面板属性均为中文名）。数据量较大（64 角色全量）。'
+    '会话过期时返回 session_expired 并提示重新登录，不清除任何本机数据'
+)
+
+
+def _detail_sample_route() -> tuple[str, HttpSendResult]:
+    snapshot = json.loads(DETAIL_SAMPLE_PATH.read_bytes().decode('utf-8'))
+    return (
+        GAME_RECORD_BASE_URL + 'hkrpg/api/index',
+        _json_result({'retcode': 0, 'message': 'OK', 'data': snapshot['data']}),
+    )
+
+
+def test_get_roster_detail_success_payload_shape(
+    controller: MysAccessController, send: _ScriptedHttpSend,
+) -> None:
+    """success：detail 序列化载荷形态断言（契约 3/4 冻结字段集经
+    character_to_dict 逐层展开）——顶层十字段+五组明细、子结构字段名集合、
+    中文字段随载荷、times 透传；乙无光锥无遗器形态照常出载荷。"""
+    controller.store.save_role({'role_id': '1', 'server': 'prod_gf_cn'})
+    send.add_route(_detail_sample_route())
+
+    env = controller.get_roster_detail()
+
+    _assert_envelope_shape(env)
+    assert env['status'] == 'success'
+    assert env['message'] == '共获取 3 名角色明细'
+    data = env['data']
+    assert isinstance(data, list) and len(data) == 3
+    assert [item['name'] for item in data] == ['样例角色甲', '样例角色乙', '样例角色丙']
+
+    # 甲（全量形态）：顶层冻结字段集 + 轻口径中文字段 + 光锥摘要
+    first = data[0]
+    assert set(first.keys()) == {
+        'id', 'name', 'level', 'rarity', 'rank', 'element', 'element_cn',
+        'base_type', 'base_type_cn', 'equip', 'relics', 'ornaments', 'ranks',
+        'skills', 'properties',
+    }
+    assert first['element_cn'] == '火'
+    assert first['base_type_cn'] == '巡猎'
+    assert first['equip'] == {'name': '样例光锥・晨昏线', 'level': 80, 'rank': 1, 'rarity': 5}
+
+    # 遗器六件套：pos_cn 部位查表、main/subs 词条三元组（times 透传）
+    relic = first['relics'][0]
+    assert set(relic.keys()) == {'name', 'pos', 'pos_cn', 'rarity', 'level', 'main', 'subs'}
+    assert relic['pos_cn'] == '头部'
+    assert relic['main'] == {'name_cn': '生命值', 'value': '705', 'times': 0}
+    assert relic['subs'][0] == {'name_cn': '防御力', 'value': '59', 'times': 3}
+    # 位面饰品与遗器同构映射
+    assert first['ornaments'][0]['pos_cn'] == '位面球'
+    assert first['ornaments'][0]['main'] == {'name_cn': '生命值', 'value': '43.2%', 'times': 0}
+    # 星魂：全量透传解锁状态，无 pos_cn（星魂 pos 是星魂序号，禁查部位表）
+    assert set(first['ranks'][0].keys()) == {'pos', 'name', 'desc', 'is_unlocked'}
+    assert [r['is_unlocked'] for r in first['ranks']] == [True, True, False, False, False, False]
+    # 行迹：name 取 remake 标签，终结技两段分段文案
+    skill = first['skills'][2]
+    assert set(skill.keys()) == {'name', 'level', 'is_activated', 'stages'}
+    assert skill['name'] == '终结技'
+    assert len(skill['stages']) == 2
+    assert set(skill['stages'][0].keys()) == {'name', 'desc', 'level'}
+    # 面板属性行：name_cn 查表 + base/add/final 字符串透传
+    assert set(first['properties'][0].keys()) == {'name_cn', 'base', 'add', 'final'}
+    assert first['properties'][0] == {
+        'name_cn': '生命值', 'base': '2406', 'add': '2005', 'final': '4411',
+    }
+
+    # 乙（无光锥无遗器形态）：equip=None + 空明细数组照常出载荷
+    second = data[1]
+    assert second['equip'] is None
+    assert second['relics'] == []
+    assert second['ornaments'] == []
+
+
+def test_get_roster_detail_while_awaiting_does_not_fire_requests(
+    controller: MysAccessController, send: _ScriptedHttpSend, verifiers: list[_FakeVerifier],
+) -> None:
+    """awaiting 期 get_roster_detail：verification_required 信封（附现存 URL），
+    不裸打任何数据/发现请求（契约 5：信封语义与 mys_get_characters 完全一致）。"""
+    send.add_route((LOGIN_URL, _need_verification_result('s-rd-1')))
+    controller.login(_USERNAME, _PASSWORD)
+
+    env = controller.get_roster_detail()
+    _assert_envelope_shape(env)
+    assert env['status'] == 'verification_required'
+    assert env['data']['url'] == verifiers[0].url
+    assert send.calls_for(GAME_RECORD_BASE_URL) == []
+    assert send.calls_for(ROLE_LIST_URL) == []
+
+
+def test_get_roster_detail_expired_and_risk_control_states(
+    controller: MysAccessController, session_dir: Path, send: _ScriptedHttpSend,
+) -> None:
+    """session_expired（过期标记写入文件，旧文件原样保留）+ 1034 专属文案 +
+    通用业务码透传（契约 5：三态语义与 mys_get_characters 完全一致）。"""
+    controller.store.save_session_full({'ltoken_v2': 'keep-t4'})
+    controller.store.save_role({'role_id': '1', 'server': 'prod_gf_cn'})
+
+    # 服务端会话失效码 → session_expired 信封 + 过期标记落盘 + 文件保留
+    send.add_route((GAME_RECORD_BASE_URL + 'hkrpg/api/index', _code_result(10001)))
+    env = controller.get_roster_detail()
+    _assert_envelope_shape(env)
+    assert env['status'] == 'session_expired'
+    assert env['message'] == SESSION_EXPIRED_MESSAGE
+    saved = json.loads((session_dir / SESSION_FILE_NAME).read_bytes().decode('utf-8'))
+    assert saved['expired'] is True
+    assert saved['cookies'] == {'ltoken_v2': 'keep-t4'}
+    assert (session_dir / ROLE_FILE_NAME).exists()
+
+    # 标记后调用：本地过期短路直接信封返回，零新增请求（calls_for 含首调用那次）
+    env_short = controller.get_roster_detail()
+    assert env_short['status'] == 'session_expired'
+    assert len(send.calls_for(GAME_RECORD_BASE_URL)) == 1
+
+    # 整体覆盖清除标记（登录成功同款路径）→ 1034 专属文案
+    controller.store.save_session_full({'ok': 'v'})
+    send.add_route((GAME_RECORD_BASE_URL + 'hkrpg/api/index',
+                    _json_result({'retcode': 1034, 'message': '请求遇到验证码'})))
+    env_1034 = controller.get_roster_detail()
+    assert env_1034['status'] == 'error'
+    assert env_1034['message'] == mys_tools.RISK_CONTROL_1034_MESSAGE
+
+    # 通用业务码 → error 透传 retcode
+    send.add_route((GAME_RECORD_BASE_URL + 'hkrpg/api/index', _code_result(-1)))
+    env_err = controller.get_roster_detail()
+    assert env_err['status'] == 'error'
+    assert '获取角色明细失败(retcode=-1)' in env_err['message']
+
+
+def test_get_roster_detail_envelopes_never_contain_credentials(
+    controller: MysAccessController, session_dir: Path, send: _ScriptedHttpSend,
+    verifiers: list[_FakeVerifier],
+) -> None:
+    """信封脱敏（沿用 landing §3.4 判据）：detail 序列化载荷与全部信封的
+    序列化文本不含账号/密码/cookie 值/票据内容。"""
+    collected: list[dict] = []
+
+    # success：会话带机密 cookie，明细载荷（fixture 自造名值）不得携带它们
+    controller.store.save_session_full({'ltoken_v2': 'ltv2-secret-t4', 'account_mid_v2': 'mid-secret-t4'})
+    controller.store.save_role({'role_id': '1', 'server': 'prod_gf_cn'})
+    send.add_route(_detail_sample_route())
+    collected.append(controller.get_roster_detail())
+    assert collected[-1]['status'] == 'success'
+
+    # session_expired：本地短路（零新增请求，calls_for 含 success 那一次）
+    controller.store.mark_expired()
+    collected.append(controller.get_roster_detail())
+    assert collected[-1]['status'] == 'session_expired'
+    assert len(send.calls_for(GAME_RECORD_BASE_URL)) == 1
+
+    # verification_required（过期态 login 进验证轮）+ awaiting 期复用
+    send.add_route((LOGIN_URL, _need_verification_result('s-rd-2')))
+    collected.append(controller.login(_USERNAME, _PASSWORD))
+    collected.append(controller.login(_OTHER_USER, _OTHER_PASSWORD))
+    verifiers[0].deliver({'session_id': 's-rd-2', 'cancelled': True})  # 回 idle
+    controller.logout()  # 清文件回干净态
+
+    # error（1034 专属文案）：重置会话后打风险码
+    controller.store.save_session_full({'ok': 'v'})
+    controller.store.save_role({'role_id': '1', 'server': 'prod_gf_cn'})
+    send.add_route((GAME_RECORD_BASE_URL + 'hkrpg/api/index',
+                    _json_result({'retcode': 1034, 'message': '请求遇到验证码'})))
+    collected.append(controller.get_roster_detail())
+
+    assert len(collected) == 5
+    for envelope in collected:
+        _assert_envelope_shape(envelope)
+        text = json.dumps(envelope, ensure_ascii=False)
+        for secret in _SECRET_SAMPLES:
+            assert secret not in text, f'信封泄露机密样本: {secret}'
+
+
+def test_roster_detail_tool_description_and_registration() -> None:
+    """mys_get_roster_detail 注册 + description 含定死文案关键句（经注册函数取
+    description 文本断言）。注册期不构建控制器（MagicMock backend 零副作用）。"""
+    mcp = FastMCP('t3-roster-detail-tools')
+    register_mys_tools(mcp, MagicMock(name='SrBackendContext'))
+
+    assert 'mys_get_roster_detail' in set(mcp._tool_manager._tools.keys())
+
+    desc = mcp._tool_manager._tools['mys_get_roster_detail'].description
+    assert desc.startswith(ROSTER_DETAIL_DESC_OPENING)
+    assert '遗器' in desc
+    assert '不清除任何本机数据' in desc
