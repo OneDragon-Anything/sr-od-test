@@ -201,8 +201,8 @@ def test_dual_hold_grants_independent_fail_closed(
     两形态:①现役形(彩未注册获得腿 = 绑定表外卡)→ 金侧照发、彩侧
     表外卡静默零写;②彩注册后形(monkeypatch 表加彩行,绑定双键并存)
     → 各按绑定独立判定发放,数量互不挤占。"""
-    # ① 现役形:彩 = 绑定表外卡(获得腿未注册 → 绑定恒缺,表外卡短路
-    # 零写;持卡未绑定的 defect 分支只辖表内卡,已在独立负锁覆盖)
+    # ① 现役形:彩 = 绑定表内卡[T-321 展开卡批注册]但绑定缺 → 持卡未
+    # 绑定 defect 分支申报一行(bind_missing),金侧行为不受扰
     gs = _make_gs(bench=[], cards=[_CARD, '价值投资·彩'],
                   bindings={_CARD: _BOUND})
     granted = check_strategy_node_char_grants(gs, prev_kind='supply',
@@ -212,9 +212,12 @@ def test_dual_hold_grants_independent_fail_closed(
     assert all(u.char_id == _BOUND for u in units) \
         and sum(3 ** (u.star - 1) for u in units) == 3, \
         '共发面 = 金侧绑定名 3 份副本质量(升星级联保质量;彩侧零写)'
-    assert rows_sink.kinds() == [], '彩侧表外卡短路 = 零申报行(金侧零扰动)'
-    # ② 彩注册后形(表驱动前瞻:姊妹彩注册其腿 1 后同函数自动跟随,
-    # 零改函数——数据驱动形态的结构锁):表加彩行 + 绑定双键并存
+    assert rows_sink.kinds() == ['gain_chain_strategy_char_bind_missing'], \
+        '彩侧表内卡绑定缺 = defect 申报一行(金侧零扰动)'
+
+    # ② 彩注册后形[T-321 展开卡批注册已兑现,monkeypatch 冗余无害]:
+    # 表加彩行 + 绑定双键并存;先清形①申报行(sink 同测试内累积)
+    rows_sink.rows.clear()
     from sr_od.application.currency_war.kernel import cw_gain_chain
     monkeypatch.setitem(cw_gain_chain._STRATEGY_CHAR_GRANT_BINDINGS,
                         '价值投资·彩', (2, 1, 2))

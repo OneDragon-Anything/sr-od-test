@@ -134,8 +134,9 @@ def test_bound_char_grant_table_and_registration() -> None:
     (2星1费 ×1 名);效果体条目由工厂从表生成进注册表(表驱动生成式,
     禁两处字面量);家族披露键 = 在册两键收编(与援军族三键常量取交集
     = 全集——零新增键内容,键禁双源另立)。"""
-    assert _STRATEGY_CHAR_GRANT_BINDINGS == {_CARD: (1, 1, 2)}, \
-        '表值 = 卡面「2星1费」结构值(费用档 1, 名数 1, 到手星级 2)'
+    assert _STRATEGY_CHAR_GRANT_BINDINGS == {_CARD: (1, 1, 2),
+                                             '价值投资·彩': (2, 1, 2)}, \
+        '表值 = 卡面结构值(金: 2星1费×1;彩: 2星2费×1[T-321 展开卡批])'
     entry = PICK_INVEST_EFFECTS.get(_CARD)
     assert entry is not None, '注册面在册(生成式)'
     assert callable(entry), '值 = 工厂生成效果体'
