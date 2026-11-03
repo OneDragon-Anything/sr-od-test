@@ -13,9 +13,12 @@
   ``HsrCharacter`` v2（v1 八字段 + element_cn/base_type_cn，mys-roster-detail
   design.md §2 契约 2）——字段集增删即本文件失败，icon 等大字段不透传，
   equip 缺失（null）映射 None；
-- 明细富映射（get_characters_detail，同端点单次请求）：CharacterDetail 及
-  六个子结构冻结字段集逐字对账（契约 3/4，增删即失败）；词条/面板 name_cn
-  两路解析（fixture 动态词典 + 快照兜底）；主词条部位校验哨兵 warning
+- 明细富映射（get_characters_detail，avatar/info 端点）：剧本按 URL 分流
+  （index → v1 轻剧本不动；avatar/info → detail 剧本，detail 栈不注册 index
+  路由——端点回归回 index 即响亮失败）；detail 请求 URL 含 avatar/info 与
+  need_wiki=true（端点切换存在性锁）；CharacterDetail 及六个子结构冻结字段
+  集逐字对账（契约 3/4，增删即失败）；词条/面板 name_cn 两路解析（fixture
+  动态词典 + 快照兜底 + 占位符/空名实测形态）；主词条部位校验哨兵 warning
   （畸形数据不中断映射）；空遗器/无光锥/缺件/星魂未解锁等形态透传。
 """
 
@@ -61,10 +64,16 @@ INDEX_SNAPSHOT_PATH: Path = (
     Path(__file__).resolve().parents[2] / 'fixtures' / 'mys' / 'hkrpg_index_snapshot.json'
 )
 
-#: index 全量明细自造样例（结构对照 2026-11-03 实测快照，id/名值自造不绑真账号）
+#: avatar/info 全量明细真实样本（2026-11-04 实测响应加工：抽 3 角色 + 词典
+#: 14 键，见 fixture _source 注记；结构依据 mys-roster-detail design.md §1
+#: 端点勘误 / §2 契约 3/4）
 DETAIL_SAMPLE_PATH: Path = (
-    Path(__file__).resolve().parents[2] / 'fixtures' / 'mys' / 'hkrpg_index_detail_sample.json'
+    Path(__file__).resolve().parents[2] / 'fixtures' / 'mys' / 'hkrpg_avatar_info_detail_sample.json'
 )
+
+#: detail 端点（avatar/info）与 v1 index 的 RECORD 基座前缀（剧本按 URL 分流）
+_AVATAR_INFO_PREFIX: str = GAME_RECORD_BASE_URL + 'hkrpg/api/avatar/info'
+_INDEX_PREFIX: str = GAME_RECORD_BASE_URL + 'hkrpg/api/index'
 
 _VALID_FP = 'abcdef123456'
 
@@ -349,22 +358,36 @@ def test_session_file_survives_expired_short_circuit(
     assert (tmp_path / ROLE_FILE_NAME).exists()
 
 
-# ---- 明细富映射（get_characters_detail，同端点契约 3/4）----
+# ---- 明细富映射（get_characters_detail，avatar/info 端点契约 3/4）----
 
 
 def _fixture_detail_data() -> dict:
-    """读明细自造样例 fixture 的 data 字段（结构对照实测快照，id/名值自造）。"""
+    """读 avatar/info 真实样本 fixture 的 data 字段（2026-11-04 实测响应加工，
+    抽样三形态见 fixture _source 注记）。"""
     sample = json.loads(DETAIL_SAMPLE_PATH.read_bytes().decode('utf-8'))
     return sample['data']
 
 
-def _detail_client(tmp_path: Path) -> tuple[HsrMysClient, MagicMock]:
-    """明细样例直灌的 mock 客户端（role.json 缓存命中，零发现请求）。"""
-    mock_client = MagicMock(spec=MysClient)
-    mock_client.request.return_value = _fixture_detail_data()
+def _stack_with_routes(
+    tmp_path: Path, *routes: tuple[str, HttpSendResult]
+) -> tuple[HsrMysClient, _ScriptedHttpSend]:
+    """任意剧本路由的完整客户端栈（role.json 缓存命中，零角色发现请求）。"""
+    send = _ScriptedHttpSend((GET_FP_URL, _fp_ok_result()), *routes)
     store = SessionStore(tmp_path, threading.Lock())
     store.save_role({'role_id': '1', 'server': 'prod_gf_cn'})
-    return HsrMysClient(mock_client, store), mock_client
+    device = DeviceIdentity(store, send)
+    return HsrMysClient(MysClient(store, device, send), store), send
+
+
+def _detail_stack(tmp_path: Path, data: dict | None = None) -> tuple[HsrMysClient, _ScriptedHttpSend]:
+    """avatar/info 剧本直灌的 detail 栈：只注册 detail 端点路由——端点回归回
+    index 会撞「剧本外请求」响亮失败（URL 分流的 fail-closed 语义）；v1 index
+    路由只在显式需要的对账测试按 URL 分流追加。"""
+    return _stack_with_routes(
+        tmp_path,
+        (_AVATAR_INFO_PREFIX, _json_result(
+            {'retcode': 0, 'message': 'OK', 'data': data if data is not None else _fixture_detail_data()})),
+    )
 
 
 def test_detail_expired_short_circuit_raises_without_any_request(
@@ -385,7 +408,7 @@ def test_detail_frozen_field_sets_locked(tmp_path: Path) -> None:
     字段名集合，任何增删即失败；HsrRank 不设 pos_cn（星魂 pos 是星魂序号，
     与遗器部位码撞值域——结构性防混淆）；序列化面 = 冻结字段集（icon/desc/
     figure_path/point_id 等不透传字段不出现在载荷）。"""
-    hsr, _ = _detail_client(tmp_path)
+    hsr, _ = _detail_stack(tmp_path)
     details = hsr.get_characters_detail()
 
     assert {f.name for f in fields(CharacterDetail)} == {
@@ -415,185 +438,253 @@ def test_detail_frozen_field_sets_locked(tmp_path: Path) -> None:
 
 
 def test_detail_mapping_full_form(tmp_path: Path) -> None:
-    """甲（带光锥+4 遗器+2 饰品+星魂 2）逐字段整体对账：轻口径 10 字段与 v1
-    同语义（中文字段查表填充）、遗器/饰品同构映射（pos_cn 部位查表）、星魂
-    全量透传（未解锁层在列）、行迹取 remake 与分段文案、面板字符串数值透传；
-    一次调用恰一次 index 请求（复用 v1 定位管线，不重复打接口）。"""
-    hsr, mock_client = _detail_client(tmp_path)
+    """甲（丹恒•饮月：带光锥+4 遗器+2 饰品+星魂 2/6 混合解锁+普攻四段行迹）
+    逐组对账：轻口径 10 字段与 v1 同语义（中文字段查表填充）、遗器/饰品同构
+    映射（pos_cn 部位查表）、星魂全量透传（未解锁层在列）、行迹取 remake 与
+    分段文案（普攻四段一条以上）、面板字符串数值透传；一次调用恰一次
+    avatar/info 请求（复用 v1 定位管线，不重复打接口）。
+
+    真实样本行迹有 18 条（含 10 条属性加成），分段 desc 全文数百字——行迹按
+    「全量元组（remake/level/is_activated/分段名与级）+ 抽样 desc 全文」对账，
+    其余五组仍整体深对账（行迹 desc 逐字段映射由冻结字段集测试锁结构、本测试
+    抽样锁值）。
+    """
+    hsr, send = _detail_stack(tmp_path)
 
     details = hsr.get_characters_detail()
 
     assert len(details) == 3
-    assert details[0] == CharacterDetail(
-        id=8001, name='样例角色甲', level=80, rarity=5, rank=2,
-        element='fire', element_cn='火', base_type=2, base_type_cn='巡猎',
-        equip=ConeSummary(name='样例光锥・晨昏线', level=80, rank=1, rarity=5),
-        relics=[
-            HsrRelic(
-                name='样例遗器・甲一头盔', pos=1, pos_cn='头部', rarity=5, level=15,
-                main=HsrPropertyEntry(name_cn='生命值', value='705', times=0),
-                subs=[
-                    HsrPropertyEntry(name_cn='防御力', value='59', times=3),
-                    HsrPropertyEntry(name_cn='自造词条甲', value='5.2%', times=2),
-                ],
-            ),
-            HsrRelic(
-                name='样例遗器・甲二手套', pos=2, pos_cn='手部', rarity=5, level=12,
-                main=HsrPropertyEntry(name_cn='攻击力', value='352', times=0),
-                subs=[
-                    HsrPropertyEntry(name_cn='暴击伤害', value='22.4%', times=4),
-                    HsrPropertyEntry(name_cn='速度', value='9', times=2),
-                ],
-            ),
-            HsrRelic(
-                name='样例遗器・甲三胸甲', pos=3, pos_cn='躯干', rarity=5, level=15,
-                main=HsrPropertyEntry(name_cn='暴击率', value='32.4%', times=0),
-                subs=[HsrPropertyEntry(name_cn='治疗量加成', value='12.5%', times=1)],
-            ),
-            HsrRelic(
-                name='样例遗器・甲四护靴', pos=4, pos_cn='脚部', rarity=5, level=15,
-                main=HsrPropertyEntry(name_cn='速度', value='25', times=0),
-                subs=[HsrPropertyEntry(name_cn='攻击力', value='14.3%', times=2)],
-            ),
-        ],
-        ornaments=[
-            HsrRelic(
-                name='样例饰品・甲一位面球', pos=5, pos_cn='位面球', rarity=5, level=15,
-                main=HsrPropertyEntry(name_cn='生命值', value='43.2%', times=0),
-                subs=[HsrPropertyEntry(name_cn='防御力', value='42', times=3)],
-            ),
-            HsrRelic(
-                name='样例饰品・甲二连结绳', pos=6, pos_cn='连结绳', rarity=5, level=15,
-                main=HsrPropertyEntry(name_cn='击破特攻', value='64.8%', times=0),
-                subs=[HsrPropertyEntry(name_cn='未知属性(pt=99)', value='3.1%', times=1)],
-            ),
-        ],
-        ranks=[
-            HsrRank(pos=1, name='样例星魂一', desc='样例星魂一描述。', is_unlocked=True),
-            HsrRank(pos=2, name='样例星魂二', desc='样例星魂二描述。', is_unlocked=True),
-            HsrRank(pos=3, name='样例星魂三', desc='样例星魂三描述。', is_unlocked=False),
-            HsrRank(pos=4, name='样例星魂四', desc='样例星魂四描述。', is_unlocked=False),
-            HsrRank(pos=5, name='样例星魂五', desc='样例星魂五描述。', is_unlocked=False),
-            HsrRank(pos=6, name='样例星魂六', desc='样例星魂六描述。', is_unlocked=False),
-        ],
-        skills=[
-            HsrSkill(
-                name='普攻', level=7, is_activated=True,
-                stages=[HsrSkillStage(name='样例普攻', desc='样例普攻描述。', level=7)],
-            ),
-            HsrSkill(
-                name='战技', level=12, is_activated=True,
-                stages=[HsrSkillStage(name='样例战技', desc='样例战技描述。', level=12)],
-            ),
-            HsrSkill(
-                name='终结技', level=12, is_activated=True,
-                stages=[
-                    HsrSkillStage(name='样例终结技上段', desc='样例终结技上段描述。', level=12),
-                    HsrSkillStage(name='样例终结技下段', desc='样例终结技下段描述。', level=12),
-                ],
-            ),
-            HsrSkill(
-                name='额外能力', level=1, is_activated=True,
-                stages=[HsrSkillStage(name='样例额外能力', desc='样例额外能力描述。', level=1)],
-            ),
-        ],
-        properties=[
-            HsrPanelProperty(name_cn='生命值', base='2406', add='2005', final='4411'),
-            HsrPanelProperty(name_cn='攻击力', base='1111', add='597', final='1708'),
-            HsrPanelProperty(name_cn='防御力', base='996', add='349', final='1346'),
-            HsrPanelProperty(name_cn='速度', base='99', add='42', final='141'),
-            HsrPanelProperty(name_cn='暴击率', base='10.8%', add='0.0%', final='10.8%'),
-            HsrPanelProperty(name_cn='暴击伤害', base='223.0%', add='0.0%', final='223.0%'),
-            HsrPanelProperty(name_cn='火属性伤害提高', base='32.4%', add='0.0%', final='32.4%'),
-            HsrPanelProperty(name_cn='击破特攻', base='16.8%', add='0.0%', final='16.8%'),
-            HsrPanelProperty(name_cn='欢愉度', base='0.0%', add='0.0%', final='0.0%'),
-            HsrPanelProperty(name_cn='治疗量加成', base='0.0%', add='0.0%', final='0.0%'),
-            HsrPanelProperty(name_cn='能量恢复效率', base='134.4%', add='0.0%', final='134.4%'),
-            HsrPanelProperty(name_cn='效果命中', base='0.0%', add='0.0%', final='0.0%'),
-            HsrPanelProperty(name_cn='效果抵抗', base='10.0%', add='0.0%', final='10.0%'),
-        ],
+    assert [d.name for d in details] == ['丹恒•饮月', '米沙', '素裳']
+
+    first = details[0]
+    assert (first.id, first.name, first.level, first.rarity, first.rank) == (
+        1213, '丹恒•饮月', 80, 5, 2,
     )
-    mock_client.request.assert_called_once_with(
-        'hkrpg/api/index', {'role_id': '1', 'server': 'prod_gf_cn'}
+    assert (first.element, first.element_cn, first.base_type, first.base_type_cn) == (
+        'imaginary', '虚数', 1, '毁灭',
     )
+    assert first.equip == ConeSummary(name='比阳光更明亮的', level=80, rank=1, rarity=5)
+    assert first.relics == [
+        HsrRelic(
+            name='快枪手的野穗毡帽', pos=1, pos_cn='头部', rarity=5, level=15,
+            main=HsrPropertyEntry(name_cn='生命值', value='705', times=0),
+            subs=[
+                HsrPropertyEntry(name_cn='生命值', value='3.4%', times=1),
+                HsrPropertyEntry(name_cn='暴击率', value='5.5%', times=2),
+                HsrPropertyEntry(name_cn='暴击伤害', value='17.4%', times=3),
+                HsrPropertyEntry(name_cn='效果抵抗', value='6.9%', times=2),
+            ],
+        ),
+        HsrRelic(
+            name='快枪手的粗革手套', pos=2, pos_cn='手部', rarity=5, level=15,
+            main=HsrPropertyEntry(name_cn='攻击力', value='352', times=0),
+            subs=[
+                HsrPropertyEntry(name_cn='生命值', value='42', times=1),
+                HsrPropertyEntry(name_cn='暴击伤害', value='22.0%', times=4),
+                HsrPropertyEntry(name_cn='效果命中', value='3.8%', times=1),
+                HsrPropertyEntry(name_cn='击破特攻', value='12.9%', times=2),
+            ],
+        ),
+        HsrRelic(
+            name='勇烈的飞翎瓷甲', pos=3, pos_cn='躯干', rarity=5, level=15,
+            main=HsrPropertyEntry(name_cn='暴击伤害', value='64.8%', times=0),
+            subs=[
+                HsrPropertyEntry(name_cn='防御力', value='9.7%', times=2),
+                HsrPropertyEntry(name_cn='暴击率', value='5.5%', times=2),
+                HsrPropertyEntry(name_cn='效果抵抗', value='8.2%', times=2),
+                HsrPropertyEntry(name_cn='击破特攻', value='18.7%', times=3),
+            ],
+        ),
+        HsrRelic(
+            name='勇烈的逐猎腿甲', pos=4, pos_cn='脚部', rarity=5, level=15,
+            main=HsrPropertyEntry(name_cn='攻击力', value='43.2%', times=0),
+            subs=[
+                HsrPropertyEntry(name_cn='生命值', value='80', times=2),
+                HsrPropertyEntry(name_cn='防御力', value='42', times=2),
+                HsrPropertyEntry(name_cn='暴击率', value='3.2%', times=1),
+                HsrPropertyEntry(name_cn='暴击伤害', value='16.8%', times=3),
+            ],
+        ),
+    ]
+    assert first.ornaments == [
+        HsrRelic(
+            name='泰科铵的镭射球场', pos=5, pos_cn='位面球', rarity=5, level=15,
+            main=HsrPropertyEntry(name_cn='虚数属性伤害提高', value='38.8%', times=0),
+            subs=[
+                HsrPropertyEntry(name_cn='生命值', value='3.8%', times=1),
+                HsrPropertyEntry(name_cn='攻击力', value='7.3%', times=2),
+                HsrPropertyEntry(name_cn='暴击率', value='8.4%', times=3),
+                HsrPropertyEntry(name_cn='效果抵抗', value='7.7%', times=2),
+            ],
+        ),
+        HsrRelic(
+            name='泰科铵的弧光赛道', pos=6, pos_cn='连结绳', rarity=5, level=15,
+            main=HsrPropertyEntry(name_cn='攻击力', value='43.2%', times=0),
+            subs=[
+                HsrPropertyEntry(name_cn='攻击力', value='21', times=1),
+                HsrPropertyEntry(name_cn='防御力', value='16', times=1),
+                HsrPropertyEntry(name_cn='暴击率', value='5.8%', times=2),
+                HsrPropertyEntry(name_cn='暴击伤害', value='23.3%', times=4),
+            ],
+        ),
+    ]
+    assert first.ranks == [
+        HsrRank(pos=1, name='萦天', desc='使【亢心】的可叠加层数增加4层。且每段攻击额外获得1层【亢心】。',
+                is_unlocked=True),
+        HsrRank(pos=2, name='九斿', desc='施放终结技后丹恒•饮月行动提前100%，并且会额外获得1个【逆鳞】。',
+                is_unlocked=True),
+        HsrRank(pos=3, name='云旂', desc='战技等级+2，最多不超过15级；普攻等级+1，最多不超过10级。',
+                is_unlocked=False),
+        HsrRank(pos=4, name='嘲风', desc='【叱咤】的增益效果会持续到下一个自身回合结束。', is_unlocked=False),
+        HsrRank(pos=5, name='偃蹇', desc='终结技等级+2，最多不超过15级；天赋等级+2，最多不超过15级。',
+                is_unlocked=False),
+        HsrRank(pos=6, name='见谯',
+                desc='我方其他角色施放终结技后，丹恒•饮月下一次施放【盘拏耀跃】时虚数属性抗性穿透提高20%，'
+                     '该效果最多叠加3层。',
+                is_unlocked=False),
+    ]
+    assert len(first.skills) == 18
+    assert [(s.name, s.level, s.is_activated, [(st.name, st.level) for st in s.stages]) for s in first.skills] == [
+        ('普攻', 6, True, [('泽芝', 6), ('瞬华', 6), ('天矢阴', 6), ('盘拏耀跃', 6)]),
+        ('战技', 10, True, [('龙力自在', 10)]),
+        ('终结技', 10, True, [('苍龙傲睨，劫水濯世', 10)]),
+        ('天赋', 10, True, [('亢心', 10)]),
+        ('秘技', 1, True, [('掣空如虹', 1)]),
+        ('额外能力', 1, True, [('伏辰', 1)]),
+        ('额外能力', 1, True, [('修禹', 1)]),
+        ('额外能力', 1, True, [('起蛰', 1)]),
+        ('属性加成', 1, True, [('伤害强化•虚数', 1)]),
+        ('属性加成', 1, True, [('伤害强化•虚数', 1)]),
+        ('属性加成', 1, True, [('伤害强化•虚数', 1)]),
+        ('属性加成', 1, True, [('伤害强化•虚数', 1)]),
+        ('属性加成', 1, True, [('伤害强化•虚数', 1)]),
+        ('属性加成', 1, True, [('暴击率强化', 1)]),
+        ('属性加成', 1, True, [('暴击率强化', 1)]),
+        ('属性加成', 1, True, [('暴击率强化', 1)]),
+        ('属性加成', 1, True, [('生命强化', 1)]),
+        ('属性加成', 1, True, [('生命强化', 1)]),
+    ]
+    # 分段 desc 全文抽样：普攻首末段 + 额外能力（多段列表逐条映射的证据）
+    assert first.skills[0].stages[0].desc == (
+        '施放2段攻击对指定敌方单体造成等同于丹恒•饮月100%攻击力的虚数属性伤害。'
+    )
+    assert first.skills[0].stages[3].desc == (
+        '施放7段攻击对指定敌方单体造成等同于丹恒•饮月500%攻击力的虚数属性伤害。'
+        '从第4段攻击开始同时对其相邻目标造成等同于丹恒•饮月180%攻击力的虚数属性伤害。'
+    )
+    assert first.skills[5].stages[0].desc == '战斗开始时，立即恢复15点能量。'
+    assert first.properties == [
+        HsrPanelProperty(name_cn='生命值', base='2300', add='1227', final='3527'),
+        HsrPanelProperty(name_cn='攻击力', base='1333', add='1944', final='3277'),
+        HsrPanelProperty(name_cn='防御力', base='760', add='133', final='893'),
+        HsrPanelProperty(name_cn='速度', base='102', add='0', final='102'),
+        HsrPanelProperty(name_cn='暴击率', base='71.5%', add='0.0%', final='71.5%'),
+        HsrPanelProperty(name_cn='暴击伤害', base='194.5%', add='0.0%', final='194.5%'),
+        HsrPanelProperty(name_cn='虚数属性伤害提高', base='61.2%', add='0.0%', final='61.2%'),
+        HsrPanelProperty(name_cn='击破特攻', base='31.7%', add='0.0%', final='31.7%'),
+        HsrPanelProperty(name_cn='欢愉度', base='0.0%', add='0.0%', final='0.0%'),
+        HsrPanelProperty(name_cn='治疗量加成', base='0.0%', add='0.0%', final='0.0%'),
+        HsrPanelProperty(name_cn='能量恢复效率', base='100.0%', add='0.0%', final='100.0%'),
+        HsrPanelProperty(name_cn='效果命中', base='3.8%', add='0.0%', final='3.8%'),
+        HsrPanelProperty(name_cn='效果抵抗', base='22.8%', add='0.0%', final='22.8%'),
+    ]
+    # 一次调用恰一次 avatar/info 请求（index 路由未注册——回归即响亮失败）
+    assert len(send.calls_for(_AVATAR_INFO_PREFIX)) == 1
 
 
 def test_detail_property_name_cn_dynamic_dict_and_snapshot_paths(tmp_path: Path) -> None:
-    """词条/面板 name_cn 两路解析（design §3）：词典路——pt=98 快照无此码只
-    可能来自 fixture 动态词典、pt=36 词典 name 带占位符经 property_name_relic
-    规避；快照路——词典子集未收录的 53/57 直落硬编码快照；空名形态自造变体
-    （pt=99 词典两字段全空）落「未知属性(pt=N)」终兜底；面板行同名规则。"""
-    hsr, _ = _detail_client(tmp_path)
+    """词条/面板 name_cn 两路解析（design §3）：词典路——pt=57 在 fixture 词典
+    命中；pt=36 词典 name 带占位符经 property_name_relic 规避；快照路——词典
+    子集未收录的 52/24 直落硬编码快照（快照全集 56 码与词典同域，键缺即归因
+    依据）；空名形态（实测 pt=8 词典两字段全空 + 快照如实标注空）落
+    「未知属性(pt=N)」终兜底。真实 avatar/info 样本中 pt=36/8 无词条引用
+    （raw 64 角色全量扫描实证），本测试对甲的副词条定点改写触发这两个实测
+    词典形态，其余断言全部来自未改写的真实数据。"""
+    fixture = _fixture_detail_data()
+    fixture_keys = set(fixture['property_info'].keys())
+    assert {'57', '36', '8'} <= fixture_keys  # 词典路归因前提
+    assert '52' not in fixture_keys and '24' not in fixture_keys  # 快照路归因前提
+    fixture['avatar_list'][0]['relics'][0]['properties'][0]['property_type'] = 36  # 实测占位符形态
+    fixture['avatar_list'][0]['relics'][1]['properties'][0]['property_type'] = 8  # 实测空名形态
+    hsr, _ = _detail_stack(tmp_path, fixture)
     first, _, third = hsr.get_characters_detail()
 
-    # 词典路：pt=98 只存在于 fixture 词典（快照无此码，词典名优先命中）
-    assert first.relics[0].subs[1] == HsrPropertyEntry(name_cn='自造词条甲', value='5.2%', times=2)
+    # 词典路：pt=57 词典命中（甲头部副词条）
+    assert first.relics[0].subs[3] == HsrPropertyEntry(name_cn='效果抵抗', value='6.9%', times=2)
     # 词典路占位符规避：pt=36 词典 name='受治疗量提高#1[f1]%'，显示名取干净 relic 字段
-    assert first.relics[2].subs[0] == HsrPropertyEntry(name_cn='治疗量加成', value='12.5%', times=1)
-    # 快照路：fixture 词典子集未收录 53/57（键缺），直落硬编码快照
-    assert first.relics[1].subs[0] == HsrPropertyEntry(name_cn='暴击伤害', value='22.4%', times=4)
-    assert third.relics[0].subs[0] == HsrPropertyEntry(name_cn='效果抵抗', value='8.4%', times=2)
-    # 空名形态自造变体：词典词条两字段全空 → 快照也无 → 终兜底文案
-    assert first.ornaments[1].subs[0] == HsrPropertyEntry(
-        name_cn='未知属性(pt=99)', value='3.1%', times=1
+    assert first.relics[0].subs[0] == HsrPropertyEntry(name_cn='治疗量加成', value='3.4%', times=1)
+    # 快照路：词典子集未收录 52（键缺），直落硬编码快照
+    assert first.relics[0].subs[1] == HsrPropertyEntry(name_cn='暴击率', value='5.5%', times=2)
+    assert first.ornaments[0].main == HsrPropertyEntry(
+        name_cn='虚数属性伤害提高', value='38.8%', times=0
     )
-    # 面板行同规则：pt=14 词典命中、pt=58 词典未收录走快照、丙面板 pt=98 词典命中
+    # 空名形态（实测 pt=8）：词典词条两字段全空、快照也空 → 终兜底文案
+    assert first.relics[1].subs[0] == HsrPropertyEntry(name_cn='未知属性(pt=8)', value='42', times=1)
+    # 面板行同规则：pt=24 词典未收录走快照、pt=7 词典命中
     assert first.properties[6] == HsrPanelProperty(
-        name_cn='火属性伤害提高', base='32.4%', add='0.0%', final='32.4%'
+        name_cn='虚数属性伤害提高', base='61.2%', add='0.0%', final='61.2%'
     )
-    assert first.properties[7] == HsrPanelProperty(
-        name_cn='击破特攻', base='16.8%', add='0.0%', final='16.8%'
+    assert first.properties[9] == HsrPanelProperty(
+        name_cn='治疗量加成', base='0.0%', add='0.0%', final='0.0%'
     )
-    assert third.properties[3] == HsrPanelProperty(
-        name_cn='自造词条甲', base='12.0%', add='0.0%', final='12.0%'
-    )
+    # 丙侧词典路：素裳头部副词条 pt=57 照常词典命中
+    assert third.relics[0].subs[2] == HsrPropertyEntry(name_cn='效果抵抗', value='4.3%', times=1)
 
 
 def test_detail_mapping_degenerate_forms(tmp_path: Path) -> None:
-    """乙（equip=null + 零遗器零饰品 + 星魂 0）与丙（缺件共 4 件）形态：
-    equip None、relics/ornaments 空列表；缺件角色按实际件数映射；星魂 6 条
-    全量透传（rank=0 全未解锁也照常在列，不做 is_unlocked 过滤）；未激活
-    行迹与空副词条列表照常透传。"""
-    hsr, _ = _detail_client(tmp_path)
+    """乙（米沙：equip=null + 零遗器零饰品 + 星魂 6/6 全解锁 + 4 星角色）与
+    丙（素裳：缺件共 3 件 + 未激活行迹 + 4 星光锥）形态：equip None、
+    relics/ornaments 空列表；缺件角色按实际件数映射；星魂 6 条全量透传
+    （解锁状态不做过滤——全解锁〔乙〕与混合解锁〔甲 2/6〕两形态都在列）；
+    未激活行迹与空副词条列表照常透传（真实样本无空副词条件——raw 64 角色
+    全量扫描实证，丙侧删键触发缺键退空列表契约）。"""
+    data = _fixture_detail_data()
+    del data['avatar_list'][2]['ornaments'][1]['properties']  # 空副词条形态
+    hsr, _ = _detail_stack(tmp_path, data)
     _, second, third = hsr.get_characters_detail()
 
-    assert second.id == 8002
-    assert second.name == '样例角色乙'
+    assert second.id == 1312
+    assert second.name == '米沙'
     assert second.equip is None
     assert second.relics == []
     assert second.ornaments == []
+    assert second.rarity == 4
     assert second.element_cn == '冰'
     assert second.base_type_cn == '毁灭'
     assert [r.pos for r in second.ranks] == [1, 2, 3, 4, 5, 6]
-    assert all(r.is_unlocked is False for r in second.ranks)
+    assert all(r.is_unlocked is True for r in second.ranks)
 
-    # 丙：缺件 4 件（2 遗器 + 2 饰品），pos 是唯一部位键
-    assert len(third.relics) == 2
+    # 丙：缺件 3 件（1 遗器 + 2 饰品），pos 是唯一部位键；4 星光锥摘要
+    assert third.rarity == 4
+    assert len(third.relics) == 1
     assert len(third.ornaments) == 2
-    assert [r.pos for r in third.relics + third.ornaments] == [1, 3, 5, 6]
+    assert [r.pos for r in third.relics + third.ornaments] == [1, 5, 6]
     assert third.ornaments[1].subs == []  # 空副词条列表照常映射
-    assert third.equip == ConeSummary(name='样例光锥・晚风哨', level=40, rank=1, rarity=5)
-    assert third.skills[1].name == '额外能力'
-    assert third.skills[1].is_activated is False  # 未激活行迹状态透传
-    assert third.element_cn == '风'
-    assert third.base_type_cn == '同谐'
+    assert third.equip == ConeSummary(name='春水初生', level=40, rank=5, rarity=4)
+    assert third.skills[5].name == '额外能力'
+    assert third.skills[5].is_activated is False  # 未激活行迹状态透传
+    assert third.element_cn == '物理'
+    assert third.base_type_cn == '巡猎'
 
 
 def test_detail_malformed_main_affix_warns_but_mapping_continues(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """数据异常哨兵：丙头部主词条 pt=52（pos=1 配置集只认 27）→ warning 哨兵
-    但映射继续，该件仍随明细返回（name_cn 照常查表）；全 fixture 恰此一条
-    主词条告警（其余 9 件部位-词条组合均合法，不产生哨兵）。"""
+    """数据异常哨兵：甲头部主词条定点改写为 pt=52（pos=1 配置集只认 27）→
+    warning 哨兵但映射继续，该件仍随明细返回（name_cn 照常查表）；全 fixture
+    恰此一条主词条告警（真实样本 9 件主词条全部合法——raw 64 角色全量扫描
+    零违规实证，本测试定点改写触发畸形形态）。"""
     fake_log = MagicMock()
     monkeypatch.setattr(hsr_mys_client, 'log', fake_log)
-    hsr, _ = _detail_client(tmp_path)
+    data = _fixture_detail_data()
+    data['avatar_list'][0]['relics'][0]['main_property']['property_type'] = 52
+    hsr, _ = _detail_stack(tmp_path, data)
 
     details = hsr.get_characters_detail()
 
-    third = details[2]
-    assert third.relics[0].pos == 1
-    assert third.relics[0].main == HsrPropertyEntry(name_cn='暴击率', value='18.0%', times=0)
+    first = details[0]
+    assert first.relics[0].pos == 1
+    assert first.relics[0].main == HsrPropertyEntry(name_cn='暴击率', value='705', times=0)
     warning_texts = [str(call.args[0]) for call in fake_log.warning.call_args_list]
     affix_warnings = [text for text in warning_texts if '主词条校验未通过' in text]
     assert len(affix_warnings) == 1
@@ -601,38 +692,49 @@ def test_detail_malformed_main_affix_warns_but_mapping_continues(
     assert 'pt=52' in affix_warnings[0]
 
 
-# ---- 防御分支（avatar_list 缺失上抛 / 词典局部脏词条 / 数组键缺失退空）----
+# ---- 防御分支（端点存在性锁 / avatar_list 缺失上抛 / 词典局部脏词条 / 数组键缺失退空）----
 
 
-def _detail_client_with_payload(tmp_path: Path, data: dict) -> tuple[HsrMysClient, MagicMock]:
-    """自定义 data 载荷直灌的 mock 客户端（防御分支剧本用变体构造，装配与
-    _detail_client 相同：role.json 缓存命中，零角色发现请求）。"""
-    mock_client = MagicMock(spec=MysClient)
-    mock_client.request.return_value = data
-    store = SessionStore(tmp_path, threading.Lock())
-    store.save_role({'role_id': '1', 'server': 'prod_gf_cn'})
-    return HsrMysClient(mock_client, store), mock_client
+def test_detail_request_hits_avatar_info_with_need_wiki(tmp_path: Path) -> None:
+    """端点切换存在性锁（防回归回 index）：detail 数据请求 URL = RECORD 基座
+    + avatar/info，query 带 need_wiki=true（property_info 等五词典来源开关，
+    design.md §1 端点勘误）与 role_id/server 定位参数（与 v1 同源，取自
+    role.json 缓存）。"""
+    hsr, send = _detail_stack(tmp_path)
+
+    hsr.get_characters_detail()
+
+    assert len(send.calls_for(_AVATAR_INFO_PREFIX)) == 1
+    assert send.calls_for(_AVATAR_INFO_PREFIX)[0][0] == (
+        GAME_RECORD_BASE_URL + 'hkrpg/api/avatar/info?need_wiki=true&role_id=1&server=prod_gf_cn'
+    )
 
 
 def test_detail_missing_avatar_list_raises_as_protocol_error(tmp_path: Path) -> None:
-    """index 响应缺 avatar_list（其余字段在场）→ MysApiError 协议错误上抛，
-    不静默返回空列表掩盖响应形态漂移；同一坏剧本下 v1 get_characters 与
-    v2 get_characters_detail 同判（同一防线两口径一致）。"""
+    """avatar/info 响应缺 avatar_list（其余字段在场）→ MysApiError 协议错误
+    上抛，不静默返回空列表掩盖响应形态漂移；同一形态漂移下 v1 index 剧本
+    同判（按 URL 分流双路由，同一防线两口径一致）。"""
     data = _fixture_detail_data()
     del data['avatar_list']
-    hsr, mock_client = _detail_client_with_payload(tmp_path, data)
+    hsr, send = _stack_with_routes(
+        tmp_path,
+        (_AVATAR_INFO_PREFIX, _json_result({'retcode': 0, 'message': 'OK', 'data': data})),
+        (_INDEX_PREFIX, _json_result({'retcode': 0, 'message': 'OK', 'data': {}})),
+    )
 
     with pytest.raises(MysApiError, match='avatar_list'):
         hsr.get_characters_detail()
     with pytest.raises(MysApiError, match='avatar_list'):
         hsr.get_characters()
-    assert mock_client.request.called  # 上抛发生在 index 请求之后，非短路误报
+    # 上抛发生在各自端点的数据请求之后，非短路误报
+    assert len(send.calls_for(_AVATAR_INFO_PREFIX)) == 1
+    assert len(send.calls_for(_INDEX_PREFIX)) == 1
 
 
 def test_detail_dirty_property_info_entries_skipped_mapping_continues(tmp_path: Path) -> None:
     """响应词典混入局部脏词条（值非 dict / 键非可归一整型）→ 归一时跳过而非
     抛错（_normalize_property_info 契约），整份明细照常映射：被脏词条占位的码
-    查表自动退快照层（pt=7 → 治疗量加成），合法词典词条不受牵连（pt=98 照常
+    查表自动退快照层（pt=7 → 治疗量加成），合法词典词条不受牵连（pt=59 照常
     命中）——词典局部异常既不中断映射也不污染其余码的三层查表。"""
     data = _fixture_detail_data()
     data['property_info']['7'] = '垃圾'  # 脏词条①：键可归一但值非 dict
@@ -640,7 +742,7 @@ def test_detail_dirty_property_info_entries_skipped_mapping_continues(tmp_path: 
         'name': '不应出现的脏名',
         'property_name_relic': '不应出现的脏名',
     }
-    hsr, _ = _detail_client_with_payload(tmp_path, data)
+    hsr, _ = _detail_stack(tmp_path, data)
 
     details = hsr.get_characters_detail()  # 不抛异常是第一判据
 
@@ -650,9 +752,9 @@ def test_detail_dirty_property_info_entries_skipped_mapping_continues(tmp_path: 
     assert details[0].properties[9] == HsrPanelProperty(
         name_cn='治疗量加成', base='0.0%', add='0.0%', final='0.0%'
     )
-    # ② "abc" 被跳过 → 动态词典照常生效，pt=98 仍走词典路命中
-    assert details[0].relics[0].subs[1] == HsrPropertyEntry(
-        name_cn='自造词条甲', value='5.2%', times=2
+    # ② "abc" 被跳过 → 动态词典照常生效，pt=59（丙头部副词条）仍走词典路命中
+    assert details[2].relics[0].subs[3] == HsrPropertyEntry(
+        name_cn='击破特攻', value='6.4%', times=1
     )
 
 
@@ -663,7 +765,7 @@ def test_detail_missing_array_keys_fall_back_to_empty_lists(tmp_path: Path) -> N
     data = _fixture_detail_data()
     del data['avatar_list'][0]['relics']  # 甲缺 relics 键
     del data['avatar_list'][2]['ornaments']  # 丙缺 ornaments 键
-    hsr, _ = _detail_client_with_payload(tmp_path, data)
+    hsr, _ = _detail_stack(tmp_path, data)
 
     details = hsr.get_characters_detail()
 
@@ -671,4 +773,4 @@ def test_detail_missing_array_keys_fall_back_to_empty_lists(tmp_path: Path) -> N
     assert first.relics == []
     assert len(first.ornaments) == 2  # 甲饰品不受键缺失牵连
     assert third.ornaments == []
-    assert [r.pos for r in third.relics] == [1, 3]  # 丙遗器不受键缺失牵连
+    assert [r.pos for r in third.relics] == [1]  # 丙遗器不受键缺失牵连

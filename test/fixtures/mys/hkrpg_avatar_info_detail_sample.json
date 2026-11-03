@@ -1,0 +1,2757 @@
+{
+ "_source": "2026-11-04 真实 avatar/info 响应（need_wiki=true）加工。原始易失件 .debug/temp/mys-roster-detail/raw_avatar_info_sample.json（64 角色全量）抽样固化三条真实角色：甲=丹恒•饮月(1213)=带光锥+4 遗器+2 饰品+星魂 2/6 混合解锁+普攻四段行迹；乙=米沙(1312)=未装备光锥(equip=null)+零遗器零饰品+星魂 6/6 全解锁形态；丙=素裳(1206)=遗器缺件(1+2 共 3 件)+未激活行迹+4 星光锥形态。角色条目与词典词条逐字段保真（含实测在场的非消费字段 icon/desc/figure_path/element_id/servant_detail/special_skills 等，用于锁「映射对其免疫」）。property_info 为实测 56 键词典抽 14 键（字符串键形态保真）：8/61=实测空名形态（锁空名落「未知属性」终兜底）、36=实测占位符形态（name 带 \"#1[f1]%\"、property_name_relic 干净，锁占位符规避）；未入子集的码（27/29/52/53 等）由词条引用时走硬编码快照路（快照全集 56 码与词典同域）。equip_wiki/relic_wiki/recommend_property/relic_properties 为映射不消费的响应伴随词典，加工时省略。端点依据：changes/mys-roster-detail/design.md §1 端点勘误 / §2 契约 3/4。",
+ "retcode": 0,
+ "message": "OK",
+ "data": {
+  "avatar_list": [
+   {
+    "id": 1213,
+    "level": 80,
+    "name": "丹恒•饮月",
+    "element": "imaginary",
+    "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/d8e271d190d9b9b69accdebd17af5006.png",
+    "rarity": 5,
+    "rank": 2,
+    "image": "https://act-webstatic.mihoyo.com/game_record/hkrpg/custom/avatar_image/1213@2x.png",
+    "equip": {
+     "id": 23015,
+     "level": 80,
+     "rank": 1,
+     "name": "比阳光更明亮的",
+     "desc": "自他生时，眼前便只有无光的地牢，\n无关的罪孽将他缚于此地，无关的记忆将他浸没。\n他挣扎着，尽其所能地呼吸，\n试图在无边的海洋中抓住一束光的缝隙。\n\n直到将军进入这不见天日的牢时，\n他看到比阳光更明亮的，是少年的眼神。",
+     "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/6f2346e4639d5bc58a038b035eaf2d45.png",
+     "rarity": 5
+    },
+    "relics": [
+     {
+      "id": 61021,
+      "level": 15,
+      "pos": 1,
+      "name": "快枪手的野穗毡帽",
+      "desc": "一顶绑着野生麦穗的牛仔毡帽，传奇枪手奥克莱的标志。",
+      "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/ad142cfc41559d1a9cb1c556025d0c1b.png",
+      "rarity": 5,
+      "main_property": {
+       "property_type": 27,
+       "value": "705",
+       "times": 0,
+       "is_preview": false
+      },
+      "properties": [
+       {
+        "property_type": 32,
+        "value": "3.4%",
+        "times": 1,
+        "is_preview": false
+       },
+       {
+        "property_type": 52,
+        "value": "5.5%",
+        "times": 2,
+        "is_preview": false
+       },
+       {
+        "property_type": 53,
+        "value": "17.4%",
+        "times": 3,
+        "is_preview": false
+       },
+       {
+        "property_type": 57,
+        "value": "6.9%",
+        "times": 2,
+        "is_preview": false
+       }
+      ]
+     },
+     {
+      "id": 61022,
+      "level": 15,
+      "pos": 2,
+      "name": "快枪手的粗革手套",
+      "desc": "表面已经部分开裂的皮革手套，握枪处磨损尤其严重。",
+      "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/4da7fa86ba9382dab78864258680bb48.png",
+      "rarity": 5,
+      "main_property": {
+       "property_type": 29,
+       "value": "352",
+       "times": 0,
+       "is_preview": false
+      },
+      "properties": [
+       {
+        "property_type": 27,
+        "value": "42",
+        "times": 1,
+        "is_preview": false
+       },
+       {
+        "property_type": 53,
+        "value": "22.0%",
+        "times": 4,
+        "is_preview": false
+       },
+       {
+        "property_type": 56,
+        "value": "3.8%",
+        "times": 1,
+        "is_preview": false
+       },
+       {
+        "property_type": 59,
+        "value": "12.9%",
+        "times": 2,
+        "is_preview": false
+       }
+      ]
+     },
+     {
+      "id": 61203,
+      "level": 15,
+      "pos": 3,
+      "name": "勇烈的飞翎瓷甲",
+      "desc": "身如凛风，翱翔群狼仰首处，猎物与猎人终将易位而处。",
+      "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/e6cf12561a6ff4b555317044488145c6.png",
+      "rarity": 5,
+      "main_property": {
+       "property_type": 53,
+       "value": "64.8%",
+       "times": 0,
+       "is_preview": false
+      },
+      "properties": [
+       {
+        "property_type": 34,
+        "value": "9.7%",
+        "times": 2,
+        "is_preview": false
+       },
+       {
+        "property_type": 52,
+        "value": "5.5%",
+        "times": 2,
+        "is_preview": false
+       },
+       {
+        "property_type": 57,
+        "value": "8.2%",
+        "times": 2,
+        "is_preview": false
+       },
+       {
+        "property_type": 59,
+        "value": "18.7%",
+        "times": 3,
+        "is_preview": false
+       }
+      ]
+     },
+     {
+      "id": 61204,
+      "level": 15,
+      "pos": 4,
+      "name": "勇烈的逐猎腿甲",
+      "desc": "禽爪制式的战靴，着装之人迅疾如风地奔袭战场，轻易踏行于荆棘坎坷。",
+      "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/a10c9d5eaf9aaaef1473cbe0fe8c4329.png",
+      "rarity": 5,
+      "main_property": {
+       "property_type": 33,
+       "value": "43.2%",
+       "times": 0,
+       "is_preview": false
+      },
+      "properties": [
+       {
+        "property_type": 27,
+        "value": "80",
+        "times": 2,
+        "is_preview": false
+       },
+       {
+        "property_type": 31,
+        "value": "42",
+        "times": 2,
+        "is_preview": false
+       },
+       {
+        "property_type": 52,
+        "value": "3.2%",
+        "times": 1,
+        "is_preview": false
+       },
+       {
+        "property_type": 53,
+        "value": "16.8%",
+        "times": 3,
+        "is_preview": false
+       }
+      ]
+     }
+    ],
+    "ornaments": [
+     {
+      "id": 63095,
+      "level": 15,
+      "pos": 5,
+      "name": "泰科铵的镭射球场",
+      "desc": "位面封装的泰科铵星规格最高的竞技场——泰科铵大球馆。球馆内外人声鼎沸，彩旗展动…激动人心的机动球竞技比赛将在万众瞩目中盛大开幕。",
+      "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/6366c06b980d197f36385dc797c3b619.png",
+      "rarity": 5,
+      "main_property": {
+       "property_type": 24,
+       "value": "38.8%",
+       "times": 0,
+       "is_preview": false
+      },
+      "properties": [
+       {
+        "property_type": 32,
+        "value": "3.8%",
+        "times": 1,
+        "is_preview": false
+       },
+       {
+        "property_type": 33,
+        "value": "7.3%",
+        "times": 2,
+        "is_preview": false
+       },
+       {
+        "property_type": 52,
+        "value": "8.4%",
+        "times": 3,
+        "is_preview": false
+       },
+       {
+        "property_type": 57,
+        "value": "7.7%",
+        "times": 2,
+        "is_preview": false
+       }
+      ]
+     },
+     {
+      "id": 63096,
+      "level": 15,
+      "pos": 6,
+      "name": "泰科铵的弧光赛道",
+      "desc": "泰科铵大球馆的标准赛道通常为金属结构外覆光滑混凝土与原木地板。为了让场内观众清晰观赛，大量透明聚碳酸酯材料被投入球馆，战况一览无余。",
+      "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/b4f585bf11061cf5045984b1dca30b08.png",
+      "rarity": 5,
+      "main_property": {
+       "property_type": 33,
+       "value": "43.2%",
+       "times": 0,
+       "is_preview": false
+      },
+      "properties": [
+       {
+        "property_type": 29,
+        "value": "21",
+        "times": 1,
+        "is_preview": false
+       },
+       {
+        "property_type": 31,
+        "value": "16",
+        "times": 1,
+        "is_preview": false
+       },
+       {
+        "property_type": 52,
+        "value": "5.8%",
+        "times": 2,
+        "is_preview": false
+       },
+       {
+        "property_type": 53,
+        "value": "23.3%",
+        "times": 4,
+        "is_preview": false
+       }
+      ]
+     }
+    ],
+    "ranks": [
+     {
+      "id": 121301,
+      "pos": 1,
+      "name": "萦天",
+      "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/4431564171b8ae288861f6d3f8625c93.png",
+      "desc": "使【亢心】的可叠加层数增加4层。且每段攻击额外获得1层【亢心】。",
+      "is_unlocked": true
+     },
+     {
+      "id": 121302,
+      "pos": 2,
+      "name": "九斿",
+      "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/030c1067b67b4f5d46d1e4fac8f815f8.png",
+      "desc": "施放终结技后丹恒•饮月行动提前100%，并且会额外获得1个【逆鳞】。",
+      "is_unlocked": true
+     },
+     {
+      "id": 121303,
+      "pos": 3,
+      "name": "云旂",
+      "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/708d7b788e2e4258985978c5eb03f7ae.png",
+      "desc": "战技等级+2，最多不超过15级；普攻等级+1，最多不超过10级。",
+      "is_unlocked": false
+     },
+     {
+      "id": 121304,
+      "pos": 4,
+      "name": "嘲风",
+      "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/335c8bb8eb5e7a28950e86199b4e4c42.png",
+      "desc": "【叱咤】的增益效果会持续到下一个自身回合结束。",
+      "is_unlocked": false
+     },
+     {
+      "id": 121305,
+      "pos": 5,
+      "name": "偃蹇",
+      "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/5369b6b6c00890fa60959c94e228dac8.png",
+      "desc": "终结技等级+2，最多不超过15级；天赋等级+2，最多不超过15级。",
+      "is_unlocked": false
+     },
+     {
+      "id": 121306,
+      "pos": 6,
+      "name": "见谯",
+      "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/617362e88de19cafbea5808fe21add59.png",
+      "desc": "我方其他角色施放终结技后，丹恒•饮月下一次施放【盘拏耀跃】时虚数属性抗性穿透提高20%，该效果最多叠加3层。",
+      "is_unlocked": false
+     }
+    ],
+    "properties": [
+     {
+      "property_type": 1,
+      "base": "2300",
+      "add": "1227",
+      "final": "3527"
+     },
+     {
+      "property_type": 2,
+      "base": "1333",
+      "add": "1944",
+      "final": "3277"
+     },
+     {
+      "property_type": 3,
+      "base": "760",
+      "add": "133",
+      "final": "893"
+     },
+     {
+      "property_type": 4,
+      "base": "102",
+      "add": "0",
+      "final": "102"
+     },
+     {
+      "property_type": 5,
+      "base": "71.5%",
+      "add": "0.0%",
+      "final": "71.5%"
+     },
+     {
+      "property_type": 6,
+      "base": "194.5%",
+      "add": "0.0%",
+      "final": "194.5%"
+     },
+     {
+      "property_type": 24,
+      "base": "61.2%",
+      "add": "0.0%",
+      "final": "61.2%"
+     },
+     {
+      "property_type": 58,
+      "base": "31.7%",
+      "add": "0.0%",
+      "final": "31.7%"
+     },
+     {
+      "property_type": 71,
+      "base": "0.0%",
+      "add": "0.0%",
+      "final": "0.0%"
+     },
+     {
+      "property_type": 7,
+      "base": "0.0%",
+      "add": "0.0%",
+      "final": "0.0%"
+     },
+     {
+      "property_type": 9,
+      "base": "100.0%",
+      "add": "0.0%",
+      "final": "100.0%"
+     },
+     {
+      "property_type": 10,
+      "base": "3.8%",
+      "add": "0.0%",
+      "final": "3.8%"
+     },
+     {
+      "property_type": 11,
+      "base": "22.8%",
+      "add": "0.0%",
+      "final": "22.8%"
+     }
+    ],
+    "skills": [
+     {
+      "point_id": "1213001",
+      "point_type": 2,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/6c8e67cdee5c7075854ff5a32a546717.png",
+      "level": 6,
+      "is_activated": true,
+      "is_rank_work": false,
+      "pre_point": "0",
+      "anchor": "Point01",
+      "remake": "普攻",
+      "skill_stages": [
+       {
+        "desc": "施放2段攻击对指定敌方单体造成等同于丹恒•饮月100%攻击力的虚数属性伤害。",
+        "name": "泽芝",
+        "level": 6,
+        "remake": "普攻",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/97eb078f8a13721dcde81d46cc5a31e1.png",
+        "is_activated": true,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "121301",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       },
+       {
+        "desc": "施放3段攻击对指定敌方单体造成等同于丹恒•饮月260%攻击力的虚数属性伤害。",
+        "name": "瞬华",
+        "level": 6,
+        "remake": "普攻",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/cbfa12d194c9365f3a3f7b10c2ed2008.png",
+        "is_activated": true,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "121308",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       },
+       {
+        "desc": "施放5段攻击对指定敌方单体造成等同于丹恒•饮月380%攻击力的虚数属性伤害。从第4段攻击开始同时对其相邻目标造成等同于丹恒•饮月60%攻击力的虚数属性伤害。",
+        "name": "天矢阴",
+        "level": 6,
+        "remake": "普攻",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/b496575a2b1b035e432f787a49116d30.png",
+        "is_activated": true,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "121310",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       },
+       {
+        "desc": "施放7段攻击对指定敌方单体造成等同于丹恒•饮月500%攻击力的虚数属性伤害。从第4段攻击开始同时对其相邻目标造成等同于丹恒•饮月180%攻击力的虚数属性伤害。",
+        "name": "盘拏耀跃",
+        "level": 6,
+        "remake": "普攻",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/8a84eb6a8ba8d90d003e18b03df906d4.png",
+        "is_activated": true,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "121312",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1213002",
+      "point_type": 2,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/f7b8b2042091826464e0433f36df82b0.png",
+      "level": 10,
+      "is_activated": true,
+      "is_rank_work": false,
+      "pre_point": "0",
+      "anchor": "Point02",
+      "remake": "战技",
+      "skill_stages": [
+       {
+        "desc": "使普攻的效果得到强化，最多可连续强化3次，施放本技能不消耗战技点且不视为使用战技。\n强化1次，【泽芝】变为【瞬华】。\n强化2次，【泽芝】变为【天矢阴】。\n强化3次，【泽芝】变为【盘拏耀跃】。\n施放【天矢阴】或【盘拏耀跃】时，从第4段攻击开始每段攻击前获得1层【叱咤】，使丹恒•饮月的暴击伤害提高12.0%，该效果最多叠加4层，持续至自身回合结束。",
+        "name": "龙力自在",
+        "level": 10,
+        "remake": "战技",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/1f0851e41de6ddfb620dd7b94a3651ad.png",
+        "is_activated": true,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "121302",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1213003",
+      "point_type": 2,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/91434f4583a92326b912eafe45ce7fce.png",
+      "level": 10,
+      "is_activated": true,
+      "is_rank_work": false,
+      "pre_point": "0",
+      "anchor": "Point03",
+      "remake": "终结技",
+      "skill_stages": [
+       {
+        "desc": "施放3段攻击对指定敌方单体造成等同于丹恒•饮月300%攻击力的虚数属性伤害，同时对其相邻目标造成等同于丹恒•饮月140%攻击力的虚数属性伤害。并使自身获得2个【逆鳞】。\n【逆鳞】最多持有3个，可用来抵扣丹恒•饮月的战技点消耗。消耗【逆鳞】视为消耗战技点。",
+        "name": "苍龙傲睨，劫水濯世",
+        "level": 10,
+        "remake": "终结技",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/c4adadbf0db9950eb7d5fa616a07001a.png",
+        "is_activated": true,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "121303",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1213004",
+      "point_type": 2,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/ac89af5a6b6997ff9582a3592480dc34.png",
+      "level": 10,
+      "is_activated": true,
+      "is_rank_work": false,
+      "pre_point": "0",
+      "anchor": "Point04",
+      "remake": "天赋",
+      "skill_stages": [
+       {
+        "desc": "丹恒•饮月施放每段攻击后获得1层【亢心】，使自身造成的伤害提高10.0%，该效果可以叠加6层，持续至自身回合结束。",
+        "name": "亢心",
+        "level": 10,
+        "remake": "天赋",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/3cee7e99d15e58133f6e6cf1598821a2.png",
+        "is_activated": true,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "121304",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1213007",
+      "point_type": 2,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/81eba2f3f811c27168e622b97ac96295.png",
+      "level": 1,
+      "is_activated": true,
+      "is_rank_work": false,
+      "pre_point": "0",
+      "anchor": "Point05",
+      "remake": "秘技",
+      "skill_stages": [
+       {
+        "desc": "使用秘技后进入持续20秒的【蟠跃】状态。【蟠跃】状态下使用攻击会快速向前移动一段距离并攻击接触到的敌人，在快速移动的过程中可抵挡敌人的所有攻击。【蟠跃】状态下主动攻击敌人进入战斗后，对敌方全体造成等同于丹恒•饮月120%攻击力的虚数属性伤害，并使自身获得1个【逆鳞】。",
+        "name": "掣空如虹",
+        "level": 1,
+        "remake": "秘技",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/e7557663531c582985a40ec4e12b04a1.png",
+        "is_activated": true,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "121307",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1213101",
+      "point_type": 3,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/17c3df3c08ab48e84f457ea453277205.png",
+      "level": 1,
+      "is_activated": true,
+      "is_rank_work": false,
+      "pre_point": "0",
+      "anchor": "Point06",
+      "remake": "额外能力",
+      "skill_stages": [
+       {
+        "desc": "战斗开始时，立即恢复15点能量。",
+        "name": "伏辰",
+        "level": 1,
+        "remake": "额外能力",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/17c3df3c08ab48e84f457ea453277205.png",
+        "is_activated": true,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1213102",
+      "point_type": 3,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/cfb451791a8d16e72c080eb363145039.png",
+      "level": 1,
+      "is_activated": true,
+      "is_rank_work": false,
+      "pre_point": "0",
+      "anchor": "Point07",
+      "remake": "额外能力",
+      "skill_stages": [
+       {
+        "desc": "抵抗控制类负面状态的概率提高35%。",
+        "name": "修禹",
+        "level": 1,
+        "remake": "额外能力",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/cfb451791a8d16e72c080eb363145039.png",
+        "is_activated": true,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1213103",
+      "point_type": 3,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/fc389593bc5e26a9467a0417e9918c77.png",
+      "level": 1,
+      "is_activated": true,
+      "is_rank_work": false,
+      "pre_point": "0",
+      "anchor": "Point08",
+      "remake": "额外能力",
+      "skill_stages": [
+       {
+        "desc": "对拥有虚数属性弱点的敌方目标造成伤害时，暴击伤害提高24%。",
+        "name": "起蛰",
+        "level": 1,
+        "remake": "额外能力",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/fc389593bc5e26a9467a0417e9918c77.png",
+        "is_activated": true,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1213201",
+      "point_type": 1,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/2385ddfd32308f68c3ea32db019a02f4.png",
+      "level": 1,
+      "is_activated": true,
+      "is_rank_work": false,
+      "pre_point": "0",
+      "anchor": "Point09",
+      "remake": "属性加成",
+      "skill_stages": [
+       {
+        "desc": "",
+        "name": "伤害强化•虚数",
+        "level": 1,
+        "remake": "属性加成",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/2385ddfd32308f68c3ea32db019a02f4.png",
+        "is_activated": true,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1213203",
+      "point_type": 1,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/2385ddfd32308f68c3ea32db019a02f4.png",
+      "level": 1,
+      "is_activated": true,
+      "is_rank_work": false,
+      "pre_point": "1213202",
+      "anchor": "Point11",
+      "remake": "属性加成",
+      "skill_stages": [
+       {
+        "desc": "",
+        "name": "伤害强化•虚数",
+        "level": 1,
+        "remake": "属性加成",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/2385ddfd32308f68c3ea32db019a02f4.png",
+        "is_activated": true,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1213205",
+      "point_type": 1,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/2385ddfd32308f68c3ea32db019a02f4.png",
+      "level": 1,
+      "is_activated": true,
+      "is_rank_work": false,
+      "pre_point": "1213102",
+      "anchor": "Point13",
+      "remake": "属性加成",
+      "skill_stages": [
+       {
+        "desc": "",
+        "name": "伤害强化•虚数",
+        "level": 1,
+        "remake": "属性加成",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/2385ddfd32308f68c3ea32db019a02f4.png",
+        "is_activated": true,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1213207",
+      "point_type": 1,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/2385ddfd32308f68c3ea32db019a02f4.png",
+      "level": 1,
+      "is_activated": true,
+      "is_rank_work": false,
+      "pre_point": "1213206",
+      "anchor": "Point15",
+      "remake": "属性加成",
+      "skill_stages": [
+       {
+        "desc": "",
+        "name": "伤害强化•虚数",
+        "level": 1,
+        "remake": "属性加成",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/2385ddfd32308f68c3ea32db019a02f4.png",
+        "is_activated": true,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1213210",
+      "point_type": 1,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/2385ddfd32308f68c3ea32db019a02f4.png",
+      "level": 1,
+      "is_activated": true,
+      "is_rank_work": false,
+      "pre_point": "1213208",
+      "anchor": "Point18",
+      "remake": "属性加成",
+      "skill_stages": [
+       {
+        "desc": "",
+        "name": "伤害强化•虚数",
+        "level": 1,
+        "remake": "属性加成",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/2385ddfd32308f68c3ea32db019a02f4.png",
+        "is_activated": true,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1213202",
+      "point_type": 1,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/a3c9ce19a44ee571c46459acc329fc17.png",
+      "level": 1,
+      "is_activated": true,
+      "is_rank_work": false,
+      "pre_point": "1213101",
+      "anchor": "Point10",
+      "remake": "属性加成",
+      "skill_stages": [
+       {
+        "desc": "",
+        "name": "暴击率强化",
+        "level": 1,
+        "remake": "属性加成",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/a3c9ce19a44ee571c46459acc329fc17.png",
+        "is_activated": true,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1213206",
+      "point_type": 1,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/a3c9ce19a44ee571c46459acc329fc17.png",
+      "level": 1,
+      "is_activated": true,
+      "is_rank_work": false,
+      "pre_point": "1213205",
+      "anchor": "Point14",
+      "remake": "属性加成",
+      "skill_stages": [
+       {
+        "desc": "",
+        "name": "暴击率强化",
+        "level": 1,
+        "remake": "属性加成",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/a3c9ce19a44ee571c46459acc329fc17.png",
+        "is_activated": true,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1213209",
+      "point_type": 1,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/a3c9ce19a44ee571c46459acc329fc17.png",
+      "level": 1,
+      "is_activated": true,
+      "is_rank_work": false,
+      "pre_point": "1213208",
+      "anchor": "Point17",
+      "remake": "属性加成",
+      "skill_stages": [
+       {
+        "desc": "",
+        "name": "暴击率强化",
+        "level": 1,
+        "remake": "属性加成",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/a3c9ce19a44ee571c46459acc329fc17.png",
+        "is_activated": true,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1213204",
+      "point_type": 1,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/411f04cba004bfc40f91bccb8b8f4a7e.png",
+      "level": 1,
+      "is_activated": true,
+      "is_rank_work": false,
+      "pre_point": "1213203",
+      "anchor": "Point12",
+      "remake": "属性加成",
+      "skill_stages": [
+       {
+        "desc": "",
+        "name": "生命强化",
+        "level": 1,
+        "remake": "属性加成",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/411f04cba004bfc40f91bccb8b8f4a7e.png",
+        "is_activated": true,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1213208",
+      "point_type": 1,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/411f04cba004bfc40f91bccb8b8f4a7e.png",
+      "level": 1,
+      "is_activated": true,
+      "is_rank_work": false,
+      "pre_point": "1213103",
+      "anchor": "Point16",
+      "remake": "属性加成",
+      "skill_stages": [
+       {
+        "desc": "",
+        "name": "生命强化",
+        "level": 1,
+        "remake": "属性加成",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/411f04cba004bfc40f91bccb8b8f4a7e.png",
+        "is_activated": true,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     }
+    ],
+    "base_type": 1,
+    "figure_path": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/4d2f94c0843afcbd22746a0705cbb483.png",
+    "element_id": 64,
+    "servant_detail": {
+     "servant_id": "0",
+     "servant_name": "",
+     "servant_icon": "",
+     "servant_properties": [],
+     "servant_skills": [],
+     "is_health_secret": false
+    },
+    "avatar_ld_type": "AvatarLDTypeNone",
+    "cur_enhanced_id": 0,
+    "special_skills": []
+   },
+   {
+    "id": 1312,
+    "level": 80,
+    "name": "米沙",
+    "element": "ice",
+    "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/45936d37b81c74d7097091016cb06bd4.png",
+    "rarity": 4,
+    "rank": 6,
+    "image": "https://act-webstatic.mihoyo.com/game_record/hkrpg/custom/avatar_image/1312@2x.png",
+    "equip": null,
+    "relics": [],
+    "ornaments": [],
+    "ranks": [
+     {
+      "id": 131201,
+      "pos": 1,
+      "name": "飘忽的幻影",
+      "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/732b23d0dc9ac50b0601050d196ff751.png",
+      "desc": "施放终结技时，场上每有1个敌方目标，本次终结技的攻击段数额外增加1段，最多额外增加5段。",
+      "is_unlocked": true
+     },
+     {
+      "id": 131202,
+      "pos": 2,
+      "name": "青春的怅望",
+      "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/a65703c77a0002f5954268ea703c6fcc.png",
+      "desc": "终结技每段攻击前，有24%的基础概率使目标防御力降低16%，持续3回合。",
+      "is_unlocked": true
+     },
+     {
+      "id": 131203,
+      "pos": 3,
+      "name": "欢乐年光的影子",
+      "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/f5f305cc859d6a4ccddd78ac56a9ebb5.png",
+      "desc": "终结技等级+2，最多不超过15级；普攻等级+1，最多不超过10级。",
+      "is_unlocked": true
+     },
+     {
+      "id": 131204,
+      "pos": 4,
+      "name": "亲挚的音容",
+      "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/77c51eb5a5a5f8a1c00a44ed8c0de990.png",
+      "desc": "终结技每段攻击的伤害倍率提高6%。",
+      "is_unlocked": true
+     },
+     {
+      "id": 131205,
+      "pos": 5,
+      "name": "最初的爱与友谊",
+      "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/22308d5f343ca0791d3602b91cce8cbd.png",
+      "desc": "战技等级+2，最多不超过15级；天赋等级+2，最多不超过15级。",
+      "is_unlocked": true
+     },
+     {
+      "id": 131206,
+      "pos": 6,
+      "name": "久已生疏的憧憬",
+      "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/227dcbe53ef9edc796bae6bf729d48c3.png",
+      "desc": "施放终结技时，使自身造成的伤害提高30%，持续至自身回合结束，且下一次施放战技后为我方恢复1个战技点。",
+      "is_unlocked": true
+     }
+    ],
+    "properties": [
+     {
+      "property_type": 1,
+      "base": "1270",
+      "add": "0",
+      "final": "1270"
+     },
+     {
+      "property_type": 2,
+      "base": "599",
+      "add": "0",
+      "final": "599"
+     },
+     {
+      "property_type": 3,
+      "base": "396",
+      "add": "0",
+      "final": "396"
+     },
+     {
+      "property_type": 4,
+      "base": "96",
+      "add": "0",
+      "final": "96"
+     },
+     {
+      "property_type": 5,
+      "base": "5.0%",
+      "add": "0.0%",
+      "final": "5.0%"
+     },
+     {
+      "property_type": 6,
+      "base": "50.0%",
+      "add": "0.0%",
+      "final": "50.0%"
+     },
+     {
+      "property_type": 16,
+      "base": "0.0%",
+      "add": "0.0%",
+      "final": "0.0%"
+     },
+     {
+      "property_type": 58,
+      "base": "0.0%",
+      "add": "0.0%",
+      "final": "0.0%"
+     },
+     {
+      "property_type": 71,
+      "base": "0.0%",
+      "add": "0.0%",
+      "final": "0.0%"
+     },
+     {
+      "property_type": 7,
+      "base": "0.0%",
+      "add": "0.0%",
+      "final": "0.0%"
+     },
+     {
+      "property_type": 9,
+      "base": "100.0%",
+      "add": "0.0%",
+      "final": "100.0%"
+     },
+     {
+      "property_type": 10,
+      "base": "0.0%",
+      "add": "0.0%",
+      "final": "0.0%"
+     },
+     {
+      "property_type": 11,
+      "base": "0.0%",
+      "add": "0.0%",
+      "final": "0.0%"
+     }
+    ],
+    "skills": [
+     {
+      "point_id": "1312001",
+      "point_type": 2,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/b77e6b7d6340e4143e09af208eed496a.png",
+      "level": 2,
+      "is_activated": true,
+      "is_rank_work": true,
+      "pre_point": "0",
+      "anchor": "Point01",
+      "remake": "普攻",
+      "skill_stages": [
+       {
+        "desc": "对指定敌方单体造成等同于米沙60%攻击力的冰属性伤害。",
+        "name": "请…请让一下！",
+        "level": 2,
+        "remake": "普攻",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/beefb7f4eca26fce66f0c48244539095.png",
+        "is_activated": true,
+        "is_rank_work": true,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "131201",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1312002",
+      "point_type": 2,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/d11f99a7ed03aa2f6e7c8e4bd3e3994b.png",
+      "level": 3,
+      "is_activated": true,
+      "is_rank_work": true,
+      "pre_point": "0",
+      "anchor": "Point02",
+      "remake": "战技",
+      "skill_stages": [
+       {
+        "desc": "增加1段米沙下一次终结技的攻击段数。对指定敌方单体造成等同于米沙120%攻击力的冰属性伤害，并对其相邻目标造成等同于米沙48%攻击力的冰属性伤害。",
+        "name": "客…客房服务！",
+        "level": 3,
+        "remake": "战技",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/5d8d0362fc6bcf2b7d3d2b55ae7b4b37.png",
+        "is_activated": true,
+        "is_rank_work": true,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "131202",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1312003",
+      "point_type": 2,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/9c4b5c5dfad62adef55b9f064cfb3fdd.png",
+      "level": 3,
+      "is_activated": true,
+      "is_rank_work": true,
+      "pre_point": "0",
+      "anchor": "Point03",
+      "remake": "终结技",
+      "skill_stages": [
+       {
+        "desc": "初始拥有3段攻击段数。首先施放1段攻击对指定敌方单体造成等同于米沙40%攻击力的冰属性伤害，其余每段攻击对敌方随机单体造成等同于米沙40%攻击力的冰属性伤害。每段攻击前有13.6%的基础概率使目标陷入冻结状态，持续1回合。\n冻结状态下，敌方目标不能行动，同时每回合开始时受到等同于米沙20%攻击力的冰属性附加伤害。\n终结技最多累计10段攻击段数，施放终结技后攻击段数恢复至初始状态。",
+        "name": "要…要迟到了！",
+        "level": 3,
+        "remake": "终结技",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/267e1602ed62c54909c5ca159a5062c3.png",
+        "is_activated": true,
+        "is_rank_work": true,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "131203",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1312004",
+      "point_type": 2,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/ee25653d475cdf9b9cf0e510d8ddf63e.png",
+      "level": 3,
+      "is_activated": true,
+      "is_rank_work": true,
+      "pre_point": "0",
+      "anchor": "Point04",
+      "remake": "天赋",
+      "skill_stages": [
+       {
+        "desc": "我方全体每消耗1个战技点，增加1段米沙下一次终结技的攻击段数，同时米沙恢复1.2点能量。",
+        "name": "擒纵机构",
+        "level": 3,
+        "remake": "天赋",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/cd92156081712b2d5060f4fec7241e4d.png",
+        "is_activated": true,
+        "is_rank_work": true,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "131204",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1312007",
+      "point_type": 2,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/84cce0afe1fdd37bdcf468d1ea1a2174.png",
+      "level": 1,
+      "is_activated": true,
+      "is_rank_work": false,
+      "pre_point": "0",
+      "anchor": "Point05",
+      "remake": "秘技",
+      "skill_stages": [
+       {
+        "desc": "使用秘技后，制造1片持续15秒的特殊领域。处于特殊领域内的敌人陷入【梦境监牢】状态。【梦境监牢】状态下的敌人会停止所有行动。与处于【梦境监牢】状态下的敌人进入战斗后，增加2段米沙下一次终结技的攻击段数。我方制造的领域效果最多存在1个。",
+        "name": "停一停吧，你真美丽！",
+        "level": 1,
+        "remake": "秘技",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/ee1391521b240440ea34b2e11bde6d14.png",
+        "is_activated": true,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "131207",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1312101",
+      "point_type": 3,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/8fa8c07db68661e8852b7ad0c415240f.png",
+      "level": 1,
+      "is_activated": false,
+      "is_rank_work": false,
+      "pre_point": "0",
+      "anchor": "Point06",
+      "remake": "额外能力",
+      "skill_stages": [
+       {
+        "desc": "终结技首段攻击前，使目标陷入冻结状态的基础概率提高80%。",
+        "name": "释放",
+        "level": 1,
+        "remake": "额外能力",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/8fa8c07db68661e8852b7ad0c415240f.png",
+        "is_activated": false,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1312102",
+      "point_type": 3,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/b9041d33a3202828f64844e5a4bf02f5.png",
+      "level": 1,
+      "is_activated": false,
+      "is_rank_work": false,
+      "pre_point": "0",
+      "anchor": "Point07",
+      "remake": "额外能力",
+      "skill_stages": [
+       {
+        "desc": "施放终结技时，效果命中提高60%，持续至本次终结技行动结束。",
+        "name": "锁接",
+        "level": 1,
+        "remake": "额外能力",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/b9041d33a3202828f64844e5a4bf02f5.png",
+        "is_activated": false,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1312103",
+      "point_type": 3,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/511e2adf4056b8fa98020bc5a91cac8d.png",
+      "level": 1,
+      "is_activated": false,
+      "is_rank_work": false,
+      "pre_point": "0",
+      "anchor": "Point08",
+      "remake": "额外能力",
+      "skill_stages": [
+       {
+        "desc": "对陷入冻结状态的敌方目标造成伤害时，暴击伤害提升30%。",
+        "name": "传冲",
+        "level": 1,
+        "remake": "额外能力",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/511e2adf4056b8fa98020bc5a91cac8d.png",
+        "is_activated": false,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1312201",
+      "point_type": 1,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/73dc67dcc8272e15d75812f7b0ed63d1.png",
+      "level": 1,
+      "is_activated": false,
+      "is_rank_work": false,
+      "pre_point": "0",
+      "anchor": "Point09",
+      "remake": "属性加成",
+      "skill_stages": [
+       {
+        "desc": "",
+        "name": "伤害强化•冰",
+        "level": 1,
+        "remake": "属性加成",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/73dc67dcc8272e15d75812f7b0ed63d1.png",
+        "is_activated": false,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1312203",
+      "point_type": 1,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/73dc67dcc8272e15d75812f7b0ed63d1.png",
+      "level": 1,
+      "is_activated": false,
+      "is_rank_work": false,
+      "pre_point": "1312202",
+      "anchor": "Point11",
+      "remake": "属性加成",
+      "skill_stages": [
+       {
+        "desc": "",
+        "name": "伤害强化•冰",
+        "level": 1,
+        "remake": "属性加成",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/73dc67dcc8272e15d75812f7b0ed63d1.png",
+        "is_activated": false,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1312205",
+      "point_type": 1,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/73dc67dcc8272e15d75812f7b0ed63d1.png",
+      "level": 1,
+      "is_activated": false,
+      "is_rank_work": false,
+      "pre_point": "1312102",
+      "anchor": "Point13",
+      "remake": "属性加成",
+      "skill_stages": [
+       {
+        "desc": "",
+        "name": "伤害强化•冰",
+        "level": 1,
+        "remake": "属性加成",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/73dc67dcc8272e15d75812f7b0ed63d1.png",
+        "is_activated": false,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1312207",
+      "point_type": 1,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/73dc67dcc8272e15d75812f7b0ed63d1.png",
+      "level": 1,
+      "is_activated": false,
+      "is_rank_work": false,
+      "pre_point": "1312206",
+      "anchor": "Point15",
+      "remake": "属性加成",
+      "skill_stages": [
+       {
+        "desc": "",
+        "name": "伤害强化•冰",
+        "level": 1,
+        "remake": "属性加成",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/73dc67dcc8272e15d75812f7b0ed63d1.png",
+        "is_activated": false,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1312210",
+      "point_type": 1,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/73dc67dcc8272e15d75812f7b0ed63d1.png",
+      "level": 1,
+      "is_activated": false,
+      "is_rank_work": false,
+      "pre_point": "1312208",
+      "anchor": "Point18",
+      "remake": "属性加成",
+      "skill_stages": [
+       {
+        "desc": "",
+        "name": "伤害强化•冰",
+        "level": 1,
+        "remake": "属性加成",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/73dc67dcc8272e15d75812f7b0ed63d1.png",
+        "is_activated": false,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1312202",
+      "point_type": 1,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/12bd31a609c82400436f854e6fc3660e.png",
+      "level": 1,
+      "is_activated": false,
+      "is_rank_work": false,
+      "pre_point": "1312101",
+      "anchor": "Point10",
+      "remake": "属性加成",
+      "skill_stages": [
+       {
+        "desc": "",
+        "name": "防御强化",
+        "level": 1,
+        "remake": "属性加成",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/12bd31a609c82400436f854e6fc3660e.png",
+        "is_activated": false,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1312206",
+      "point_type": 1,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/12bd31a609c82400436f854e6fc3660e.png",
+      "level": 1,
+      "is_activated": false,
+      "is_rank_work": false,
+      "pre_point": "1312205",
+      "anchor": "Point14",
+      "remake": "属性加成",
+      "skill_stages": [
+       {
+        "desc": "",
+        "name": "防御强化",
+        "level": 1,
+        "remake": "属性加成",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/12bd31a609c82400436f854e6fc3660e.png",
+        "is_activated": false,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1312209",
+      "point_type": 1,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/12bd31a609c82400436f854e6fc3660e.png",
+      "level": 1,
+      "is_activated": false,
+      "is_rank_work": false,
+      "pre_point": "1312208",
+      "anchor": "Point17",
+      "remake": "属性加成",
+      "skill_stages": [
+       {
+        "desc": "",
+        "name": "防御强化",
+        "level": 1,
+        "remake": "属性加成",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/12bd31a609c82400436f854e6fc3660e.png",
+        "is_activated": false,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1312204",
+      "point_type": 1,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/a3c9ce19a44ee571c46459acc329fc17.png",
+      "level": 1,
+      "is_activated": false,
+      "is_rank_work": false,
+      "pre_point": "1312203",
+      "anchor": "Point12",
+      "remake": "属性加成",
+      "skill_stages": [
+       {
+        "desc": "",
+        "name": "暴击率强化",
+        "level": 1,
+        "remake": "属性加成",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/a3c9ce19a44ee571c46459acc329fc17.png",
+        "is_activated": false,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1312208",
+      "point_type": 1,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/a3c9ce19a44ee571c46459acc329fc17.png",
+      "level": 1,
+      "is_activated": false,
+      "is_rank_work": false,
+      "pre_point": "1312103",
+      "anchor": "Point16",
+      "remake": "属性加成",
+      "skill_stages": [
+       {
+        "desc": "",
+        "name": "暴击率强化",
+        "level": 1,
+        "remake": "属性加成",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/a3c9ce19a44ee571c46459acc329fc17.png",
+        "is_activated": false,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     }
+    ],
+    "base_type": 1,
+    "figure_path": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/5ea5955c3d9533504aea263ed05fca48.png",
+    "element_id": 4,
+    "servant_detail": {
+     "servant_id": "0",
+     "servant_name": "",
+     "servant_icon": "",
+     "servant_properties": [],
+     "servant_skills": [],
+     "is_health_secret": false
+    },
+    "avatar_ld_type": "AvatarLDTypeNone",
+    "cur_enhanced_id": 0,
+    "special_skills": []
+   },
+   {
+    "id": 1206,
+    "level": 80,
+    "name": "素裳",
+    "element": "physical",
+    "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/4deb0b836e0fb036ae62fe0ed93562df.png",
+    "rarity": 4,
+    "rank": 6,
+    "image": "https://act-webstatic.mihoyo.com/game_record/hkrpg/custom/avatar_image/1206@2x.png",
+    "equip": {
+     "id": 21024,
+     "level": 40,
+     "rank": 5,
+     "name": "春水初生",
+     "desc": "练剑的少年稍事歇息。\n阳光烘着他微热的脖颈，缓缓入水，\n没过脚边时，虽是凉的，\n但铃铛叮铃，飞鸟啁啾，\n远方的人们知是春天到了。",
+     "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/eda0f28e643bb2140ba82e0369f0fac1.png",
+     "rarity": 4
+    },
+    "relics": [
+     {
+      "id": 61111,
+      "level": 3,
+      "pos": 1,
+      "name": "怪盗的千人假面",
+      "desc": "用以改变面貌的面具，结合精湛的演技便能以假乱真。",
+      "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/b480e76cf8fcfb2e9be6bf7b61f04368.png",
+      "rarity": 5,
+      "main_property": {
+       "property_type": 27,
+       "value": "231",
+       "times": 0,
+       "is_preview": false
+      },
+      "properties": [
+       {
+        "property_type": 29,
+        "value": "21",
+        "times": 1,
+        "is_preview": false
+       },
+       {
+        "property_type": 56,
+        "value": "3.8%",
+        "times": 1,
+        "is_preview": false
+       },
+       {
+        "property_type": 57,
+        "value": "4.3%",
+        "times": 1,
+        "is_preview": false
+       },
+       {
+        "property_type": 59,
+        "value": "6.4%",
+        "times": 1,
+        "is_preview": false
+       }
+      ]
+     }
+    ],
+    "ornaments": [
+     {
+      "id": 63075,
+      "level": 9,
+      "pos": 5,
+      "name": "塔利亚的钉壳小镇",
+      "desc": "位面封装的是塔利亚上无依无靠的破落小镇：「钉壳」。盗贼们在这个水源地建立破布、钢筋和木板的小镇，为了暂时的和平。",
+      "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/813088a11c61e73e80a3b61f78a55100.png",
+      "rarity": 5,
+      "main_property": {
+       "property_type": 12,
+       "value": "25.8%",
+       "times": 0,
+       "is_preview": false
+      },
+      "properties": [
+       {
+        "property_type": 29,
+        "value": "33",
+        "times": 2,
+        "is_preview": false
+       },
+       {
+        "property_type": 33,
+        "value": "3.4%",
+        "times": 1,
+        "is_preview": false
+       },
+       {
+        "property_type": 34,
+        "value": "5.4%",
+        "times": 1,
+        "is_preview": false
+       },
+       {
+        "property_type": 51,
+        "value": "4",
+        "times": 2,
+        "is_preview": false
+       }
+      ]
+     },
+     {
+      "id": 53076,
+      "level": 0,
+      "pos": 6,
+      "name": "塔利亚的裸皮电线",
+      "desc": "这是从废料场中收捡来电线，它的绝缘层部分脱落，部分残留，但仍然没有退役。在塔利亚的盗匪小镇上，从来就没有真正的废物。",
+      "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/3ec38949c2cbd120373d1fb1910520bd.png",
+      "rarity": 4,
+      "main_property": {
+       "property_type": 59,
+       "value": "8.2%",
+       "times": 0,
+       "is_preview": false
+      },
+      "properties": [
+       {
+        "property_type": 27,
+        "value": "27",
+        "times": 1,
+        "is_preview": false
+       },
+       {
+        "property_type": 29,
+        "value": "15",
+        "times": 1,
+        "is_preview": false
+       },
+       {
+        "property_type": 53,
+        "value": "4.1%",
+        "times": 1,
+        "is_preview": true
+       },
+       {
+        "property_type": 52,
+        "value": "2.5%",
+        "times": 1,
+        "is_preview": true
+       }
+      ]
+     }
+    ],
+    "ranks": [
+     {
+      "id": 120601,
+      "pos": 1,
+      "name": "游刃有余",
+      "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/58a154e6a5a640958ef35427fa2e36cf.png",
+      "desc": "对陷入弱点击破状态的敌方目标施放战技后，恢复1个战技点。",
+      "is_unlocked": true
+     },
+     {
+      "id": 120602,
+      "pos": 2,
+      "name": "其身百炼",
+      "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/7cb6727efbba3ffe555ae59605005277.png",
+      "desc": "触发【剑势】后，素裳受到的伤害降低20%，持续1回合。",
+      "is_unlocked": true
+     },
+     {
+      "id": 120603,
+      "pos": 3,
+      "name": "传古剑流",
+      "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/d8a4dc51c9f4d9391b8d5e7bab6cbdb9.png",
+      "desc": "终结技等级+2，最多不超过15级；天赋等级+2，最多不超过15级。",
+      "is_unlocked": true
+     },
+     {
+      "id": 120604,
+      "pos": 4,
+      "name": "其心百辟",
+      "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/d5c97eec11e54f7533c10bdd920cdbdc.png",
+      "desc": "素裳的击破特攻提高40%。",
+      "is_unlocked": true
+     },
+     {
+      "id": 120605,
+      "pos": 5,
+      "name": "太虚神意",
+      "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/11c8abcd46aecf0fd112bd390f5c423f.png",
+      "desc": "战技等级+2，最多不超过15级；普攻等级+1，最多不超过10级。",
+      "is_unlocked": true
+     },
+     {
+      "id": 120606,
+      "pos": 6,
+      "name": "上善若水",
+      "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/0684be563b9d57a9e6b32d8a989d9280.png",
+      "desc": "天赋的加速效果可以叠加，最多叠加2层，且进入战斗后素裳立即获得1层天赋的加速效果。",
+      "is_unlocked": true
+     }
+    ],
+    "properties": [
+     {
+      "property_type": 1,
+      "base": "1287",
+      "add": "258",
+      "final": "1546"
+     },
+     {
+      "property_type": 2,
+      "base": "772",
+      "add": "96",
+      "final": "869"
+     },
+     {
+      "property_type": 3,
+      "base": "592",
+      "add": "32",
+      "final": "624"
+     },
+     {
+      "property_type": 4,
+      "base": "107",
+      "add": "4",
+      "final": "111"
+     },
+     {
+      "property_type": 5,
+      "base": "5.0%",
+      "add": "0.0%",
+      "final": "5.0%"
+     },
+     {
+      "property_type": 6,
+      "base": "50.0%",
+      "add": "0.0%",
+      "final": "50.0%"
+     },
+     {
+      "property_type": 12,
+      "base": "25.8%",
+      "add": "0.0%",
+      "final": "25.8%"
+     },
+     {
+      "property_type": 58,
+      "base": "30.7%",
+      "add": "0.0%",
+      "final": "30.7%"
+     },
+     {
+      "property_type": 71,
+      "base": "0.0%",
+      "add": "0.0%",
+      "final": "0.0%"
+     },
+     {
+      "property_type": 7,
+      "base": "0.0%",
+      "add": "0.0%",
+      "final": "0.0%"
+     },
+     {
+      "property_type": 9,
+      "base": "100.0%",
+      "add": "0.0%",
+      "final": "100.0%"
+     },
+     {
+      "property_type": 10,
+      "base": "3.8%",
+      "add": "0.0%",
+      "final": "3.8%"
+     },
+     {
+      "property_type": 11,
+      "base": "4.3%",
+      "add": "0.0%",
+      "final": "4.3%"
+     }
+    ],
+    "skills": [
+     {
+      "point_id": "1206001",
+      "point_type": 2,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/eb3823881ba3a87d9c98e92dd57f8f03.png",
+      "level": 2,
+      "is_activated": true,
+      "is_rank_work": true,
+      "pre_point": "0",
+      "anchor": "Point01",
+      "remake": "普攻",
+      "skill_stages": [
+       {
+        "desc": "对指定敌方单体造成等同于素裳60%攻击力的物理属性伤害。",
+        "name": "云骑剑经 • 素霓",
+        "level": 2,
+        "remake": "普攻",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/439bc1838939dd6bf46d167484643f78.png",
+        "is_activated": true,
+        "is_rank_work": true,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "120601",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1206002",
+      "point_type": 2,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/cc8a133c29569afc4a4ceabe56d3c056.png",
+      "level": 3,
+      "is_activated": true,
+      "is_rank_work": true,
+      "pre_point": "0",
+      "anchor": "Point02",
+      "remake": "战技",
+      "skill_stages": [
+       {
+        "desc": "对指定敌方单体造成等同于素裳126%攻击力的物理属性伤害。同时最后一击后有33%概率发动【剑势】，对目标造成等同于素裳60%攻击力的物理属性附加伤害。\n若该目标处于弱点击破状态，则【剑势】必定发动。",
+        "name": "云骑剑经 • 山倾",
+        "level": 3,
+        "remake": "战技",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/a5e590ed09ae2696c42339d23e7740fb.png",
+        "is_activated": true,
+        "is_rank_work": true,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "120602",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1206003",
+      "point_type": 2,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/db431f23b0f40ebf99adebdc044dade1.png",
+      "level": 3,
+      "is_activated": true,
+      "is_rank_work": true,
+      "pre_point": "0",
+      "anchor": "Point03",
+      "remake": "终结技",
+      "skill_stages": [
+       {
+        "desc": "对指定敌方单体造成等同于素裳217%攻击力的物理属性伤害，并使素裳立即行动。同时使其攻击力提高20%，且施放战技时额外增加2次【剑势】的发动判定，持续2回合。\n通过额外判定发动的【剑势】伤害为原伤害的50%。",
+        "name": "太虚形蕴 • 烛夜",
+        "level": 3,
+        "remake": "终结技",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/c64a1ee5bb2553d87bbe464ea97ae650.png",
+        "is_activated": true,
+        "is_rank_work": true,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "120603",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1206004",
+      "point_type": 2,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/1f1b9e8bef8bae6b8995b985bfe2738f.png",
+      "level": 3,
+      "is_activated": true,
+      "is_rank_work": true,
+      "pre_point": "0",
+      "anchor": "Point04",
+      "remake": "天赋",
+      "skill_stages": [
+       {
+        "desc": "当场上有敌方目标的弱点被击破，素裳的速度提高16.00%，持续2回合。",
+        "name": "游刃若水",
+        "level": 3,
+        "remake": "天赋",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/08fb265e986a17930ddf8cfbc1f5c741.png",
+        "is_activated": true,
+        "is_rank_work": true,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "120604",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1206007",
+      "point_type": 2,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/2fb8c8fb6832a3ff99ffae1cbe2bbf8a.png",
+      "level": 1,
+      "is_activated": true,
+      "is_rank_work": false,
+      "pre_point": "0",
+      "anchor": "Point05",
+      "remake": "秘技",
+      "skill_stages": [
+       {
+        "desc": "立即攻击敌人，进入战斗后对敌方全体造成等同于素裳80%攻击力的物理属性伤害。",
+        "name": "云骑剑经 • 叩阵",
+        "level": 1,
+        "remake": "秘技",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/bada39341ae780ceef5c1a3671ed55d4.png",
+        "is_activated": true,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "120607",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1206101",
+      "point_type": 3,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/16d3a9e9435d0e6f29d05fc4edf676ac.png",
+      "level": 1,
+      "is_activated": false,
+      "is_rank_work": false,
+      "pre_point": "0",
+      "anchor": "Point06",
+      "remake": "额外能力",
+      "skill_stages": [
+       {
+        "desc": "若当前生命值百分比小于等于50%，则被敌方目标攻击的概率降低。",
+        "name": "赤子",
+        "level": 1,
+        "remake": "额外能力",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/16d3a9e9435d0e6f29d05fc4edf676ac.png",
+        "is_activated": false,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1206102",
+      "point_type": 3,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/aedb9b1d69fd75ab1bb2955ba0879ad4.png",
+      "level": 1,
+      "is_activated": false,
+      "is_rank_work": false,
+      "pre_point": "0",
+      "anchor": "Point07",
+      "remake": "额外能力",
+      "skill_stages": [
+       {
+        "desc": "每发动1次【剑势】，【剑势】造成的伤害提高2%，该效果最多叠加10层。",
+        "name": "逐寇",
+        "level": 1,
+        "remake": "额外能力",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/aedb9b1d69fd75ab1bb2955ba0879ad4.png",
+        "is_activated": false,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1206103",
+      "point_type": 3,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/94d23a9f915f2d27ba2160ae1210c387.png",
+      "level": 1,
+      "is_activated": false,
+      "is_rank_work": false,
+      "pre_point": "0",
+      "anchor": "Point08",
+      "remake": "额外能力",
+      "skill_stages": [
+       {
+        "desc": "施放普攻或战技后，若场上有敌方目标处于弱点击破状态，则素裳的行动提前15%。",
+        "name": "破敌",
+        "level": 1,
+        "remake": "额外能力",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/94d23a9f915f2d27ba2160ae1210c387.png",
+        "is_activated": false,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1206201",
+      "point_type": 1,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/3b1b8b26af5dc8a01272e692b8fbfb18.png",
+      "level": 1,
+      "is_activated": false,
+      "is_rank_work": false,
+      "pre_point": "0",
+      "anchor": "Point09",
+      "remake": "属性加成",
+      "skill_stages": [
+       {
+        "desc": "",
+        "name": "攻击强化",
+        "level": 1,
+        "remake": "属性加成",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/3b1b8b26af5dc8a01272e692b8fbfb18.png",
+        "is_activated": false,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1206203",
+      "point_type": 1,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/3b1b8b26af5dc8a01272e692b8fbfb18.png",
+      "level": 1,
+      "is_activated": false,
+      "is_rank_work": false,
+      "pre_point": "1206202",
+      "anchor": "Point11",
+      "remake": "属性加成",
+      "skill_stages": [
+       {
+        "desc": "",
+        "name": "攻击强化",
+        "level": 1,
+        "remake": "属性加成",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/3b1b8b26af5dc8a01272e692b8fbfb18.png",
+        "is_activated": false,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1206205",
+      "point_type": 1,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/3b1b8b26af5dc8a01272e692b8fbfb18.png",
+      "level": 1,
+      "is_activated": false,
+      "is_rank_work": false,
+      "pre_point": "1206102",
+      "anchor": "Point13",
+      "remake": "属性加成",
+      "skill_stages": [
+       {
+        "desc": "",
+        "name": "攻击强化",
+        "level": 1,
+        "remake": "属性加成",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/3b1b8b26af5dc8a01272e692b8fbfb18.png",
+        "is_activated": false,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1206207",
+      "point_type": 1,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/3b1b8b26af5dc8a01272e692b8fbfb18.png",
+      "level": 1,
+      "is_activated": false,
+      "is_rank_work": false,
+      "pre_point": "0",
+      "anchor": "Point15",
+      "remake": "属性加成",
+      "skill_stages": [
+       {
+        "desc": "",
+        "name": "攻击强化",
+        "level": 1,
+        "remake": "属性加成",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/3b1b8b26af5dc8a01272e692b8fbfb18.png",
+        "is_activated": false,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1206210",
+      "point_type": 1,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/3b1b8b26af5dc8a01272e692b8fbfb18.png",
+      "level": 1,
+      "is_activated": false,
+      "is_rank_work": false,
+      "pre_point": "1206208",
+      "anchor": "Point18",
+      "remake": "属性加成",
+      "skill_stages": [
+       {
+        "desc": "",
+        "name": "攻击强化",
+        "level": 1,
+        "remake": "属性加成",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/3b1b8b26af5dc8a01272e692b8fbfb18.png",
+        "is_activated": false,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1206202",
+      "point_type": 1,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/411f04cba004bfc40f91bccb8b8f4a7e.png",
+      "level": 1,
+      "is_activated": false,
+      "is_rank_work": false,
+      "pre_point": "1206101",
+      "anchor": "Point10",
+      "remake": "属性加成",
+      "skill_stages": [
+       {
+        "desc": "",
+        "name": "生命强化",
+        "level": 1,
+        "remake": "属性加成",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/411f04cba004bfc40f91bccb8b8f4a7e.png",
+        "is_activated": false,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1206206",
+      "point_type": 1,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/411f04cba004bfc40f91bccb8b8f4a7e.png",
+      "level": 1,
+      "is_activated": false,
+      "is_rank_work": false,
+      "pre_point": "1206205",
+      "anchor": "Point14",
+      "remake": "属性加成",
+      "skill_stages": [
+       {
+        "desc": "",
+        "name": "生命强化",
+        "level": 1,
+        "remake": "属性加成",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/411f04cba004bfc40f91bccb8b8f4a7e.png",
+        "is_activated": false,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1206209",
+      "point_type": 1,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/411f04cba004bfc40f91bccb8b8f4a7e.png",
+      "level": 1,
+      "is_activated": false,
+      "is_rank_work": false,
+      "pre_point": "1206208",
+      "anchor": "Point17",
+      "remake": "属性加成",
+      "skill_stages": [
+       {
+        "desc": "",
+        "name": "生命强化",
+        "level": 1,
+        "remake": "属性加成",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/411f04cba004bfc40f91bccb8b8f4a7e.png",
+        "is_activated": false,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1206204",
+      "point_type": 1,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/12bd31a609c82400436f854e6fc3660e.png",
+      "level": 1,
+      "is_activated": false,
+      "is_rank_work": false,
+      "pre_point": "0",
+      "anchor": "Point12",
+      "remake": "属性加成",
+      "skill_stages": [
+       {
+        "desc": "",
+        "name": "防御强化",
+        "level": 1,
+        "remake": "属性加成",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/12bd31a609c82400436f854e6fc3660e.png",
+        "is_activated": false,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     },
+     {
+      "point_id": "1206208",
+      "point_type": 1,
+      "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/12bd31a609c82400436f854e6fc3660e.png",
+      "level": 1,
+      "is_activated": false,
+      "is_rank_work": false,
+      "pre_point": "1206103",
+      "anchor": "Point16",
+      "remake": "属性加成",
+      "skill_stages": [
+       {
+        "desc": "",
+        "name": "防御强化",
+        "level": 1,
+        "remake": "属性加成",
+        "item_url": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/12bd31a609c82400436f854e6fc3660e.png",
+        "is_activated": false,
+        "is_rank_work": false,
+        "exclusive_skill": {
+         "name": "",
+         "desc": ""
+        },
+        "skill_id": "0",
+        "special_point_type": "PointTypeNormal",
+        "linked_avatar_list": [],
+        "desc_icon_map": {},
+        "elation_skill_priority": "0"
+       }
+      ],
+      "special_point_type": "PointTypeNormal"
+     }
+    ],
+    "base_type": 2,
+    "figure_path": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/a1bd200e3d8cf492de7c74d64ef8bc1a.png",
+    "element_id": 1,
+    "servant_detail": {
+     "servant_id": "0",
+     "servant_name": "",
+     "servant_icon": "",
+     "servant_properties": [],
+     "servant_skills": [],
+     "is_health_secret": false
+    },
+    "avatar_ld_type": "AvatarLDTypeNone",
+    "cur_enhanced_id": 0,
+    "special_skills": []
+   }
+  ],
+  "property_info": {
+   "1": {
+    "property_type": 1,
+    "name": "生命值",
+    "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/c6a769476ff8238f9437069b1c680fb2.png",
+    "property_name_relic": "生命值",
+    "property_name_filter": "生命值"
+   },
+   "2": {
+    "property_type": 2,
+    "name": "攻击力",
+    "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/69ebd139fefe9dfc43df8548d9f5f1ae.png",
+    "property_name_relic": "攻击力",
+    "property_name_filter": "攻击力"
+   },
+   "3": {
+    "property_type": 3,
+    "name": "防御力",
+    "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/381e1b266392bd6aef0ef6f1bc5854e9.png",
+    "property_name_relic": "防御力",
+    "property_name_filter": "防御力"
+   },
+   "4": {
+    "property_type": 4,
+    "name": "速度",
+    "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/12647b723a4c10e2dc292bd517a271da.png",
+    "property_name_relic": "速度",
+    "property_name_filter": "速度"
+   },
+   "5": {
+    "property_type": 5,
+    "name": "暴击率",
+    "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/cef80e22639b3457af62eeb8cc12acf9.png",
+    "property_name_relic": "暴击率",
+    "property_name_filter": "暴击率"
+   },
+   "6": {
+    "property_type": 6,
+    "name": "暴击伤害",
+    "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/11265a9f0c86a7089c77ed38ae8f98de.png",
+    "property_name_relic": "暴击伤害",
+    "property_name_filter": "暴击伤害"
+   },
+   "7": {
+    "property_type": 7,
+    "name": "治疗量加成",
+    "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/cc28c4ce671d62edd97b5f4ba1552b63.png",
+    "property_name_relic": "治疗量加成",
+    "property_name_filter": "治疗量加成"
+   },
+   "8": {
+    "property_type": 8,
+    "name": "",
+    "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/8a298655662621eaa4d6c3bcc0132a97.png",
+    "property_name_relic": "",
+    "property_name_filter": ""
+   },
+   "22": {
+    "property_type": 22,
+    "name": "量子属性伤害提高",
+    "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/6469f12e1c7d93012afdfd77507deec8.png",
+    "property_name_relic": "量子属性伤害提高",
+    "property_name_filter": "量子属性伤害提高"
+   },
+   "33": {
+    "property_type": 33,
+    "name": "攻击力",
+    "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/69ebd139fefe9dfc43df8548d9f5f1ae.png",
+    "property_name_relic": "攻击力",
+    "property_name_filter": "攻击力百分比"
+   },
+   "36": {
+    "property_type": 36,
+    "name": "受治疗量提高#1[f1]%",
+    "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/cc28c4ce671d62edd97b5f4ba1552b63.png",
+    "property_name_relic": "治疗量加成",
+    "property_name_filter": "治疗量加成"
+   },
+   "57": {
+    "property_type": 57,
+    "name": "效果抵抗",
+    "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/a69d21e6e65c900f755546196d26b1c0.png",
+    "property_name_relic": "效果抵抗",
+    "property_name_filter": "效果抵抗"
+   },
+   "59": {
+    "property_type": 59,
+    "name": "击破特攻",
+    "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/4d4c83f5124a3f67265dbb573d8fb97a.png",
+    "property_name_relic": "击破特攻",
+    "property_name_filter": "击破特攻"
+   },
+   "61": {
+    "property_type": 61,
+    "name": "",
+    "icon": "https://act-webstatic.mihoyo.com/darkmatter/hkrpg/prod_gf_cn/item_icon_u064oe/29fe062f8bed0c0d1e98115a66957571.png",
+    "property_name_relic": "",
+    "property_name_filter": ""
+   }
+  }
+ }
+}

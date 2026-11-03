@@ -667,10 +667,10 @@ def test_app_server_mounts_mys_tools() -> None:
 # ---- mys_get_roster_detail（changes/mys-roster-detail design.md §2 契约 5：
 # 信封五态与 mys_get_characters 完全一致 + detail 序列化载荷形态 + 脱敏）----
 
-#: index 全量明细自造样例（T-2 交付 fixture：结构对照 2026-11-03 实测快照，
-#: id/名值自造不绑真账号；甲全量形态 / 乙无光锥无遗器 / 丙遗器缺件三形态）
+#: avatar/info 全量明细真实样本（2026-11-04 实测响应加工：抽 3 角色 + 词典
+#: 14 键，见 fixture _source 注记；甲全量形态 / 乙无光锥无遗器 / 丙缺件三形态）
 DETAIL_SAMPLE_PATH: Path = (
-    Path(__file__).resolve().parents[3] / 'fixtures' / 'mys' / 'hkrpg_index_detail_sample.json'
+    Path(__file__).resolve().parents[3] / 'fixtures' / 'mys' / 'hkrpg_avatar_info_detail_sample.json'
 )
 
 #: 新工具 description 的定死开头段（任务书原文，锁「描述文案定死」）
@@ -684,7 +684,7 @@ ROSTER_DETAIL_DESC_OPENING: str = (
 def _detail_sample_route() -> tuple[str, HttpSendResult]:
     snapshot = json.loads(DETAIL_SAMPLE_PATH.read_bytes().decode('utf-8'))
     return (
-        GAME_RECORD_BASE_URL + 'hkrpg/api/index',
+        GAME_RECORD_BASE_URL + 'hkrpg/api/avatar/info',
         _json_result({'retcode': 0, 'message': 'OK', 'data': snapshot['data']}),
     )
 
@@ -705,7 +705,7 @@ def test_get_roster_detail_success_payload_shape(
     assert env['message'] == '共获取 3 名角色明细'
     data = env['data']
     assert isinstance(data, list) and len(data) == 3
-    assert [item['name'] for item in data] == ['样例角色甲', '样例角色乙', '样例角色丙']
+    assert [item['name'] for item in data] == ['丹恒•饮月', '米沙', '素裳']
 
     # 甲（全量形态）：顶层冻结字段集 + 轻口径中文字段 + 光锥摘要
     first = data[0]
@@ -714,32 +714,34 @@ def test_get_roster_detail_success_payload_shape(
         'base_type', 'base_type_cn', 'equip', 'relics', 'ornaments', 'ranks',
         'skills', 'properties',
     }
-    assert first['element_cn'] == '火'
-    assert first['base_type_cn'] == '巡猎'
-    assert first['equip'] == {'name': '样例光锥・晨昏线', 'level': 80, 'rank': 1, 'rarity': 5}
+    assert first['element_cn'] == '虚数'
+    assert first['base_type_cn'] == '毁灭'
+    assert first['equip'] == {'name': '比阳光更明亮的', 'level': 80, 'rank': 1, 'rarity': 5}
 
     # 遗器六件套：pos_cn 部位查表、main/subs 词条三元组（times 透传）
     relic = first['relics'][0]
     assert set(relic.keys()) == {'name', 'pos', 'pos_cn', 'rarity', 'level', 'main', 'subs'}
     assert relic['pos_cn'] == '头部'
     assert relic['main'] == {'name_cn': '生命值', 'value': '705', 'times': 0}
-    assert relic['subs'][0] == {'name_cn': '防御力', 'value': '59', 'times': 3}
+    assert relic['subs'][0] == {'name_cn': '生命值', 'value': '3.4%', 'times': 1}
     # 位面饰品与遗器同构映射
     assert first['ornaments'][0]['pos_cn'] == '位面球'
-    assert first['ornaments'][0]['main'] == {'name_cn': '生命值', 'value': '43.2%', 'times': 0}
+    assert first['ornaments'][0]['main'] == {'name_cn': '虚数属性伤害提高', 'value': '38.8%', 'times': 0}
     # 星魂：全量透传解锁状态，无 pos_cn（星魂 pos 是星魂序号，禁查部位表）
     assert set(first['ranks'][0].keys()) == {'pos', 'name', 'desc', 'is_unlocked'}
     assert [r['is_unlocked'] for r in first['ranks']] == [True, True, False, False, False, False]
-    # 行迹：name 取 remake 标签，终结技两段分段文案
-    skill = first['skills'][2]
+    # 行迹：name 取 remake 标签，普攻四段分段文案（多段列表逐条展开）
+    skill = first['skills'][0]
     assert set(skill.keys()) == {'name', 'level', 'is_activated', 'stages'}
-    assert skill['name'] == '终结技'
-    assert len(skill['stages']) == 2
+    assert skill['name'] == '普攻'
+    assert len(skill['stages']) == 4
     assert set(skill['stages'][0].keys()) == {'name', 'desc', 'level'}
+    assert skill['stages'][0]['name'] == '泽芝'
+    assert skill['stages'][3]['name'] == '盘拏耀跃'
     # 面板属性行：name_cn 查表 + base/add/final 字符串透传
     assert set(first['properties'][0].keys()) == {'name_cn', 'base', 'add', 'final'}
     assert first['properties'][0] == {
-        'name_cn': '生命值', 'base': '2406', 'add': '2005', 'final': '4411',
+        'name_cn': '生命值', 'base': '2300', 'add': '1227', 'final': '3527',
     }
 
     # 乙（无光锥无遗器形态）：equip=None + 空明细数组照常出载荷
@@ -774,7 +776,7 @@ def test_get_roster_detail_expired_and_risk_control_states(
     controller.store.save_role({'role_id': '1', 'server': 'prod_gf_cn'})
 
     # 服务端会话失效码 → session_expired 信封 + 过期标记落盘 + 文件保留
-    send.add_route((GAME_RECORD_BASE_URL + 'hkrpg/api/index', _code_result(10001)))
+    send.add_route((GAME_RECORD_BASE_URL + 'hkrpg/api/avatar/info', _code_result(10001)))
     env = controller.get_roster_detail()
     _assert_envelope_shape(env)
     assert env['status'] == 'session_expired'
@@ -791,14 +793,14 @@ def test_get_roster_detail_expired_and_risk_control_states(
 
     # 整体覆盖清除标记（登录成功同款路径）→ 1034 专属文案
     controller.store.save_session_full({'ok': 'v'})
-    send.add_route((GAME_RECORD_BASE_URL + 'hkrpg/api/index',
+    send.add_route((GAME_RECORD_BASE_URL + 'hkrpg/api/avatar/info',
                     _json_result({'retcode': 1034, 'message': '请求遇到验证码'})))
     env_1034 = controller.get_roster_detail()
     assert env_1034['status'] == 'error'
     assert env_1034['message'] == mys_tools.RISK_CONTROL_1034_MESSAGE
 
     # 通用业务码 → error 透传 retcode
-    send.add_route((GAME_RECORD_BASE_URL + 'hkrpg/api/index', _code_result(-1)))
+    send.add_route((GAME_RECORD_BASE_URL + 'hkrpg/api/avatar/info', _code_result(-1)))
     env_err = controller.get_roster_detail()
     assert env_err['status'] == 'error'
     assert '获取角色明细失败(retcode=-1)' in env_err['message']
@@ -835,7 +837,7 @@ def test_get_roster_detail_envelopes_never_contain_credentials(
     # error（1034 专属文案）：重置会话后打风险码
     controller.store.save_session_full({'ok': 'v'})
     controller.store.save_role({'role_id': '1', 'server': 'prod_gf_cn'})
-    send.add_route((GAME_RECORD_BASE_URL + 'hkrpg/api/index',
+    send.add_route((GAME_RECORD_BASE_URL + 'hkrpg/api/avatar/info',
                     _json_result({'retcode': 1034, 'message': '请求遇到验证码'})))
     collected.append(controller.get_roster_detail())
 
