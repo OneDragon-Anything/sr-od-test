@@ -366,16 +366,24 @@ def test_char_grant_cards_retired_from_scan_exclusions():
     assert '溜佩佩+' not in cw_investments._STRATEGY_GRANTS_SCAN_EXCLUSIONS
 
 
-# ==================== ④ 结构分区(design §2.7)====================
+# ==================== ④ 结构分区(design §2.7;统一阵容评分迭代重写)=====
 
 #: 自拆台合成选项名(「净化身心」词缀克 DoT/减益;未注册名组件恒 0,
-#: 排除是结构规则非定价;策略屏与环境屏节点同款)
+#: 减分是结构规则非定价)
 _SELF_DEFEAT_OPT = '净化身心试验'
 
 
-def _gs_dot_board() -> GameState:
+def _gs_hold_backline(*names: str) -> GameState:
+    """持有面种子(后排队;1★)——选卡锚点线(候选首名)由此点亮。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        Unit,
+        deployed_view_sequential,
+    )
     gs = _fresh_gs()
-    gs.observe(gs.board, {'持续伤害': 2}, evidence='test', sig=_SIG_OBS)
+    gs.observe(gs.deployed,
+               deployed_view_sequential(
+                   [], [Unit(char_id=n, star=1, equips=[]) for n in names]),
+               evidence='t', sig=_SIG_OBS)
     return gs
 
 
@@ -405,29 +413,30 @@ def test_empty_frame_degrades_idx0():
     assert out.idx == 0 and out.reason.startswith('empty-frame')
 
 
-def test_self_defeat_excluded_in_normal_frame():
-    """板面 DoT/减益 ≥2:克制者从非血非禁域排除(多候选帧仍排除,
-    design §2.7-2)。"""
-    out = _decide_pick([_SELF_DEFEAT_OPT, '嘴硬', '二极管'], _gs_dot_board())
-    assert out.idx != 0
+def test_counter_penalty_applies_against_top1_line_main_faction():
+    """克制减分(counters_dot 硬排除迁移,design §3.2;触发时序差异 =
+    现行板面计数≥2 成型后触发 → 新 top1 线主派即触发,P1 更早更广):
+    持卡芙卡 → 候选首名 = DOT队(锚 8000)→ 主派 持续伤害 受克集
+    {DoT};净化身心试验 −750 落败,嘴硬 6 胜(纯加权,非排除)。"""
+    out = _decide_pick([_SELF_DEFEAT_OPT, '嘴硬', '二极管'],
+                       _gs_hold_backline('卡芙卡'))
+    assert out.idx == 1 and out.total == 6.0
+    assert out.components[5] == 0.0, '胜者无克制'
 
 
-def test_self_defeat_guard_regains_one_selfdefeat_two_blood():
-    """辖域护栏·1 自拆 + 2 血帧:自拆排除掏空非血域 → 自拆卡回归,
-    血卡不得上位(design §2.7-2;与旧机器 L1 行为对齐)。"""
-    out = _decide_pick(
-        [_SELF_DEFEAT_OPT, '奋斗协议', '不等价交换'], _gs_dot_board())
-    assert out.idx == 0
+def test_counter_penalty_zero_when_anchor_missing():
+    """锚缺失帧(零证据 → 无候选首名)克制减分不触发:同一自拆台卡在
+    零证据帧不减分(0 分并列,品质/槽序裁决)——保守缺省申报。"""
+    out = _decide_pick([_SELF_DEFEAT_OPT, '嘴硬'], _fresh_gs())
+    assert out.idx == 1 and out.total == 6.0, '零锚帧不减分,嘴硬现金胜'
 
 
-def test_self_defeat_guard_regains_two_forbid_one_selfdefeat():
-    """辖域护栏·2 禁 + 1 自拆帧:禁选后非血域仅剩自拆卡,排除致空 →
-    回归 → 选自拆卡。"""
-    cfg = SimpleNamespace(strategy_priority=[],
-                          strategy_forbid=['嘴硬', '二极管'])
-    out = _decide_pick([_SELF_DEFEAT_OPT, '嘴硬', '二极管'], _gs_dot_board(),
-                       config=cfg)
-    assert out.idx == 0
+def test_counter_penalty_worse_than_cash_max():
+    """克制档数量级:−750 压过现金满档——克制减分为线分数量级分量,
+    与方向分同标尺(design §2 克制档)。"""
+    gs = _gs_hold_backline('卡芙卡')
+    out = _decide_pick([_SELF_DEFEAT_OPT + '藏一手', '嘴硬', '二极管'], gs)
+    assert out.idx != 0, '−750 须压过任何现金组件'
 
 
 def test_blood_forced_l2_domain():
@@ -440,12 +449,21 @@ def test_blood_forced_l2_domain():
     assert out.reason.startswith('blood-forced')
 
 
-def test_defining_zone_shrinks_and_component_argmax():
-    """定义型分区:竞争域收缩为定义型子集(支配无条件化,design §2.7-4);
-    方向分链下线后两定义型组件并列(黑塔纪元 gift 50 = 本姑娘就是罗刹
-    gift 50),tie-break 槽序裁决取 idx 0,尽管藏一手现金 80 在场。"""
-    out = _decide_pick(['黑塔纪元', '本姑娘就是罗刹', '藏一手'], _fresh_gs())
-    assert out.idx == 0 and out.total == 50.0
+def test_defining_partition_retired_direction_score_decides():
+    """定义型分区退役(design §3.2 defining 布尔退役):支配由方向分
+    数值实现——零证据帧(锚缺失 → 方向分 0)定义卡按组件分竞争,藏一手
+    现金 80 胜过 黑塔纪元/罗刹 赠卡 50(行为变更申报:P1 零证据开局帧
+    定义卡不再无条件支配);锚点亮帧(持大黑塔+黑塔 → top1 = 大黑塔
+    银河学者)黑塔纪元方向分 500 + 赠卡 50 = 550 支配胜出。"""
+    bare = _decide_pick(['黑塔纪元', '本姑娘就是罗刹', '藏一手'],
+                        _fresh_gs())
+    assert bare.idx == 2 and bare.total == 80.0, \
+        '零证据帧定义分区不再秒选(锚缺失方向分 0)'
+    lit = _decide_pick(['黑塔纪元', '本姑娘就是罗刹', '藏一手'],
+                       _gs_hold_backline('大黑塔', '黑塔'))
+    assert lit.idx == 0 and lit.total == 550.0
+    assert lit.components[1] == 500.0, '方向分 = 定义卡通道加分'
+
 
 # ==================== ⑤ 平分裁决(design §2.8)====================
 
@@ -592,13 +610,21 @@ def test_refresh_frame_gate_passes_low_frame():
     assert out.slots == (0, 1, 2)
 
 
-def test_refresh_blocked_by_defining_top():
-    """帧级门 ③:定义型卡在场(非被禁)→ 整帧不刷(帧级顶级类 =
-    定义型 ∨ 引擎,黑塔纪元 = 定义型)。"""
+def test_refresh_blocked_by_derived_defining_top():
+    """帧级门 ③:顶级卡(派生:给 top1 线加分 ≥ 强档阈值)在场(非被禁)
+    → 整帧不刷——锚点亮帧(持大黑塔+黑塔 → top1 = 大黑塔银河学者,
+    黑塔纪元方向分 500 ≥ 500)整帧保护;对照零证据帧(锚缺失 → 方向分
+    0 → 非顶级)同候选组照常建议刷(行为变更申报:现行查表不依赖锚,
+    零证据开局帧定义卡受保护;新机制锚缺失不保护,入 sim 场景①)。"""
     out = invest_strategy.decide(['黑塔纪元', '嘴硬', '二极管'],
-                                 _fresh_gs(), '', False, frozenset(),
-                                 _EMPTY_CONFIG)
+                                 _gs_hold_backline('大黑塔', '黑塔'),
+                                 '', False, frozenset(), _EMPTY_CONFIG)
     assert isinstance(out, InvestStrategyDecision)
+    zero = invest_strategy.decide(['黑塔纪元', '嘴硬', '二极管'],
+                                  _fresh_gs(), '', False, frozenset(),
+                                  _EMPTY_CONFIG)
+    assert isinstance(zero, StrategyRefreshSuggestion), \
+        '零锚帧定义卡不过阈,顶级保护不辖'
 
 
 def test_refresh_blocked_by_engine_top():
@@ -689,8 +715,10 @@ def test_decide_pick_never_suggests_on_refresh_frame():
 
 def test_decide_pick_same_baseline_as_decide():
     """同评分基线:门失败帧(不刷)上 decide 与 decide_pick 逐位一致
-    (idx/reason/total/components)。"""
-    frame = ['黑塔纪元', '嘴硬', '二极管']
+    (idx/reason/total/components)。取引擎卡帧(开源节流 = 帧级顶级,
+    整帧不刷)——统一阵容评分后零锚帧定义卡不再拦刷,黑塔纪元帧已变
+    建议刷帧(test_refresh_blocked_by_derived_defining_top 对照面)。"""
+    frame = ['开源节流', '嘴硬', '二极管']
     gs = _fresh_gs()
     out_decide = invest_strategy.decide(frame, gs, '', False, frozenset(),
                                         _EMPTY_CONFIG)
@@ -891,26 +919,35 @@ def test_env_refresh_threshold_is_full_registry_mean():
     assert 0.0 < invest_env.REFRESH_THRESHOLD < 100.0
 
 
-# ---- ⑥ 自拆台排除 ----
+# ---- ⑥ 选卡克制减分(counters_dot 硬排除迁移,design §3.2/§7)----
 
 #: 全排除退化帧:三条概念股同被 env_forbid 子串命中(排除规则覆盖全体)。
 _ALL_EXCLUDED_OPTS = ('仙舟概念股', '减益概念股', '击破概念股')
 
 
-def test_env_self_defeat_counters_dot_excluded_from_board():
-    """板面 持续伤害+减益 ≥2:克制 DoT/减益的候选被排除,平分取先落到
-    次席(剩余次数置 0 关刷新建议,隔离次数闸)。"""
+def test_env_counter_penalty_against_top1_line():
+    """环境屏克制减分(机制与策略屏同源,design §3.2):持卡芙卡 →
+    候选首名 = DOT队 → 净化身心试验 −750 落到次席(剩余次数置 0 关刷新
+    建议,隔离次数闸;环境名不含词缀注册名族,生产帧该分量恒 0,
+    合成名钉机制)。"""
     gs = _fresh_gs()
     _env_set_refresh_left(gs, 0)
-    gs.observe(gs.board, {'持续伤害': 2}, evidence='test', sig=_ENV_SIG_OBS)
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        Unit,
+        deployed_view_sequential,
+    )
+    gs.observe(gs.deployed,
+               deployed_view_sequential([], [Unit(char_id='卡芙卡', star=1)]),
+               evidence='t', sig=_ENV_SIG_OBS)
     out = invest_env.decide([_SELF_DEFEAT_OPT, '黄金时代', '白银时代'],
                             gs, '', False, frozenset(), _ENV_EMPTY_CONFIG)
     assert isinstance(out, InvestEnvDecision)
-    assert out.idx == 1
+    assert out.idx == 1, '克制减分使自拆台卡落败(纯加权)'
 
 
-def test_env_no_self_defeat_without_dot_board():
-    """板面无 DoT/减益 ≥2:不触发排除,同分并列取先(落首席)。"""
+def test_env_no_counter_penalty_when_anchor_missing():
+    """锚缺失帧(零证据)不减分:同分并列取先(落首席)——旧「板面
+    DoT/减益 ≥2 排除」随硬排除退役,触发面换锚点线主派。"""
     gs = _fresh_gs()
     _env_set_refresh_left(gs, 0)
     out = invest_env.decide([_SELF_DEFEAT_OPT, '黄金时代', '白银时代'],
@@ -1180,22 +1217,24 @@ def test_guard_generic_frame_unchanged_with_basis():
         (bare.idx, bare.reason, bare.total)
 
 
-def test_guard_scopeless_holdings_defining_pick_unchanged():
-    """无指向持有帧定义型秒选不回归(§4 清单):只持打捞人才库(指向集
-    空)→ 基准空 → 护栏不辖,定义型分区秒选照旧(§2.3 规则表行 1)。"""
+def test_guard_scopeless_holdings_zero_anchor_frame():
+    """无指向持有帧(§4 清单):只持打捞人才库(指向集空)→ 基准空 →
+    护栏不辖;零证据锚缺失帧定义卡按组件分竞争(藏一手 80 胜——定义型
+    分区退役后的数值语义,锚点亮支配由方向分承载)。"""
     out = _decide_pick(['黑塔纪元', '本姑娘就是罗刹', '藏一手'],
                        _gs_holding(strategies=('打捞人才库',)))
-    assert out.idx == 0 and out.total == 50.0
-    assert out.reason.startswith('defining-zone')
+    assert out.idx == 2 and out.total == 80.0
+    assert out.reason.startswith('pick total='), '护栏不辖帧无前缀'
 
 
 def test_guard_all_off_direction_falls_back_full_argmax():
     """全出域回退(§4 清单):圣杯基下三候选全出域 → 回退全候选 argmax
-    (不制造空选),定义型分区照常在回退域内收缩,标签按管线序拼接。"""
+    (不制造空选),回退域内按组件总分裁决(定义型分区已退役,黑塔纪元
+    赠卡 50 胜),标签按管线序拼接。"""
     out = _decide_pick(['黑塔纪元', '琼玉专家:青雀', '列车同行星徽'],
                        _gs_holding(env='命运圣杯邀请'))
-    assert out.idx == 0   # 黑塔纪元:回退域内唯一定义型(150 分)
-    assert out.reason.startswith('off-direction fallback defining-zone')
+    assert out.idx == 0   # 黑塔纪元:回退域内赠卡分最高
+    assert out.reason.startswith('off-direction fallback pick total=')
 
 
 def test_guard_refresh_off_slot_in_action_not_frame_top():
@@ -1228,13 +1267,14 @@ def test_guard_reason_grammar_off_direction_then_blood_forced():
     assert out.reason.startswith('off-direction blood-forced pick total=')
 
 
-def test_guard_reason_grammar_off_direction_then_defining_zone():
-    """reason 文法锁·定义型支:锁定景元仙舟帧(基准 = {仙舟}),黑塔
-    纪元出域、飞光·映月(仙舟)兼容定义型 → off-direction → defining-zone。"""
+def test_guard_reason_grammar_off_direction_then_direction_score():
+    """reason 文法锁·方向分支(统一阵容评分迭代):锁定景元仙舟帧
+    (基准 = {仙舟}),黑塔纪元出域、飞光·映月(仙舟)兼容 → off-direction
+    → 飞光方向分 500(+赠卡)胜出(定义型分区退役,支配数值化)。"""
     out = _decide_pick(['黑塔纪元', '飞光·映月', '嘴硬'], _fresh_gs(),
                        locked_comp='景元仙舟')
     assert out.idx == 1
-    assert out.reason.startswith('off-direction defining-zone')
+    assert out.reason.startswith('off-direction pick total=')
 
 
 def test_guard_lock_switch_held_mistake_not_in_basis():
@@ -1272,12 +1312,14 @@ def test_guard_lock_switch_relax_pursuit_compatible_after_lock():
 def test_guard_demoted_frame_falls_back_to_holdings_basis():
     """锁定换基·降格帧(demoted_endgame,前瞻语义,护栏设计 §2.2/§2.6):
     锁线不入基,基准回持有指向并集——误持黑塔纪元({银河学者})+ 降格,
-    银河学者星徽按持有兼容合法胜出;命运圣杯星徽对持有基冲突出域(帧级
-    off-direction 标记;降格 = 终局方向暂席,锁线阵营不再保护)。"""
+    银河学者星徽按持有兼容合法胜出(降格帧锚点回候选首名 = 大黑塔
+    银河学者〔+500 通道〕→ 星徽方向分 150 加成);命运圣杯星徽对持有基
+    冲突出域(帧级 off-direction 标记;降格 = 终局方向暂席,锁线阵营
+    不再保护)。"""
     gs = _gs_holding(strategies=('黑塔纪元',))
     out = _decide_pick(['银河学者星徽', '命运圣杯星徽', '嘴硬'], gs,
                        locked_comp='双王圣杯', demoted_endgame=True)
-    assert out.idx == 2
+    assert out.idx == 0, '持有兼容卡 + 方向分胜出(降格回持有基)'
     assert out.reason.startswith('off-direction')
 
 
