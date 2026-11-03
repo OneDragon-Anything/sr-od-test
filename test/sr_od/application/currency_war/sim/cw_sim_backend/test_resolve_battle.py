@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import pytest
 from test.sr_od.application.currency_war.sim.test_sim_backend import (
+    _SIG,
     _backend,
     _close_shop_feed,
     _drive_step,
@@ -191,5 +192,66 @@ def test_resolve_battle_writes_ring_frames(
         assert frame3.hp_after == int(gs.hp.value or 0), \
             '败局 hp_after = 扣血后现值'
         assert frame3.hp_after < frame2.hp_after, '掉血入帧(差分基准数据)'
+    finally:
+        uninstall_backend()
+
+
+# ============================================================ 开源节流扑满递延(floor 快照随行)
+
+def test_piggy_floor_snapshot_deferred_topup(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """扑满递延快照 floor 元(T-295 设计 §2.3-3;锁 5):持卡局扑满窗开,
+    tick 捕获载体在窗开消费入快照(扩元第 4 位,载体即清);结算腿息分量
+    顶满至 resolved 帽且利息累计账计顶满值(record_interest_earned 消费
+    row.interest 同源,T-27 计数源随计——公司契约下游联动申报面,方向与
+    实机一致)。floor 评估时点 = 进节点时点(tick 捕获),非结算刻——结算
+    刻重评估会读扑满节点自身的花费,时点漂移禁,快照随行承担。r1 窗开在
+    持卡前(快照无 floor),断言自 r2 同扑满窗起算;窗口金压到顶满可观察
+    区(<90,自然息 < 帽 9 显影)。"""
+    from types import SimpleNamespace
+
+    from sr_od.application.currency_war.kernel.cw_effect_inventory import (
+        CounterKey,
+    )
+    from sr_od.application.currency_war.kernel.cw_gain_chain import (
+        gain_invest_strategy,
+    )
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        STRATEGY_EFFECTS,
+    )
+
+    b = _piggy_backend()
+    try:
+        gs = b.gs
+        assert b.screen_identity() == SCREEN_PREP
+        assert is_piggy_node(gs), '前置:r1 = 扑满节点(经济过热奖励节点)'
+        # 持卡缝:kernel 获得链入口直接喂卡(①名单 + ②条目登记;选卡
+        # 上报形态先例 = test_strategy_pick_gudinglicai._pick 的
+        # session=SimpleNamespace 形)。
+        out = gain_invest_strategy(gs, SimpleNamespace(), '开源节流',
+                                   rand=False, sig=_SIG)
+        assert out.placed
+        gs.write_logic(gs.gold, 25, produced_by='Test', evidence='t:gold',
+                       sig=_SIG)
+        # r1 结算推进(窗开在持卡前,息自然值,不作精确断言)
+        _force_settle(monkeypatch, won=True)
+        _start_battle_feed(gs)
+        # 推进至 r2 同扑满窗:tick 捕获(prev=False,无花费)→ 载体 = 9
+        # → 窗开消费入快照(载体即清)。
+        _node_advance_feed(gs, trigger='settle_confirm')
+        assert is_piggy_node(gs), '前置:r2 同为扑满奖励节点'
+        gold_at_window = int(gs.gold.value or 0)
+        assert gold_at_window < 90, '前置:窗口金在顶满可观察区'
+        counter_at_window = gs.effects.interest_earned
+        assert gs.effects.counter(STRATEGY_EFFECTS['开源节流'].id,
+                                  CounterKey.INTEREST_TOPUP) == 0, \
+            '载体窗开消费清零(入快照递延)'
+        # r2 结算:息分量顶满 9(自然 = gold_at_window//10 < 9 显影);
+        # 利息累计账计顶满值(计数 = row.interest 同源)。
+        _force_settle(monkeypatch, won=True)
+        _start_battle_feed(gs)
+        assert gs.effects.interest_earned == counter_at_window + 9, \
+            (f'结算腿息分量顶满至 resolved 帽: '
+             f'{counter_at_window} -> {gs.effects.interest_earned}')
     finally:
         uninstall_backend()
