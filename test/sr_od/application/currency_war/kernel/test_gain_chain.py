@@ -1387,7 +1387,7 @@ def test_on_strategy_gained_unregistered_quiet() -> None:
         '战技点星徽',
         '幸运星祝福', '折叠小刀祝福', '和平手枪祝福',
         '生命之花祝福', '量产型装甲祝福', '公司军火更新·金',
-        '回收计划', '回收计划+', '秘密典籍', '秘密典籍+', '全武行', '红钻闪耀', '蓝钻闪耀', '精密拆装·金', '好运令牌·金', '黄金垃圾', '钻石恒永久', '双人舞', '读博深造', '钢铁美学', '人在旅途', '装备党', '借力打力', '量子力学', '摸个鱼吧I', '摸个鱼吧II', '加拉赫顾问', '快请专家·金', '停云顾问', '天降救兵', '及时雨', '临时工合约',
+        '回收计划', '回收计划+', '秘密典籍', '秘密典籍+', '全武行', '红钻闪耀', '蓝钻闪耀', '精密拆装·金', '好运令牌·金', '黄金垃圾', '钻石恒永久', '双人舞', '读博深造', '钢铁美学', '人在旅途', '装备党', '借力打力', '量子力学', '摸个鱼吧I', '摸个鱼吧II', '加拉赫顾问', '快请专家·金', '停云顾问', '天降救兵', '及时雨', '临时工合约', '武装突入',
         '梦境大舞台',
         '这么大的钻石',
         '步狸村之谜', '阿哈大悦',
@@ -1482,8 +1482,8 @@ def test_strategy_box_grants_consistency_lock() -> None:
     assert set(_STRATEGY_BOX_GRANTS) == {
         '战术义眼++', '保守派', '快请专家·彩', '军火贸易', '军火贸易+',
         '步狸村之谜', '阿哈大悦', '秘密典籍', '秘密典籍+'}
-    for name, item in _STRATEGY_BOX_GRANTS.items():
-        assert STRATEGY_GRANTS[name].items_immediate == (item,), \
+    for name, items in _STRATEGY_BOX_GRANTS.items():
+        assert STRATEGY_GRANTS[name].items_immediate == items, \
             f'{name} 效果体发放名与登记表 items_immediate 漂移'
 
 
