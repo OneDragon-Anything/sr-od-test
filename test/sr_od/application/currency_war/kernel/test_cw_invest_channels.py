@@ -101,8 +101,12 @@ def test_evidence_upgrade_quantum_emblem_family() -> None:
 
 
 def test_evidence_upgrade_luocha_to_train() -> None:
-    """罗刹→列车 +750(final_jizi_train 直通线信号谱「策略驱动」层)。"""
-    assert strategy_line_bonus('本姑娘就是罗刹', _comp('列车同行')) \
+    """罗刹→列车系 A/B 两套同 +750(final_jizi_train 直通线信号谱「策略
+    驱动」层;三月七领航员双形态共用 → 批 3 拆分两套同登,同加不改变
+    A/B 相对序)。"""
+    assert strategy_line_bonus('本姑娘就是罗刹', _comp('列车同行·反震')) \
+        == EVIDENCE_UPGRADE_BONUS
+    assert strategy_line_bonus('本姑娘就是罗刹', _comp('列车同行·直伤')) \
         == EVIDENCE_UPGRADE_BONUS
 
 
@@ -133,7 +137,7 @@ def test_strategy_emblem_effect_text_channel() -> None:
     → 圣杯双线 +150;盛会之星星徽类(flex-only 阵营)降 0。"""
     assert strategy_line_bonus('命运圣杯星徽', _comp('命运圣杯红A')) \
         == INVEST_MID
-    assert strategy_line_bonus('梦境大舞台', _comp('列车同行')) == 0, \
+    assert strategy_line_bonus('梦境大舞台', _comp('列车同行·反震')) == 0, \
         '盛会之星 ∈ 列车 flex(中档降 0)'
 
 
@@ -152,10 +156,10 @@ def test_ocr_variant_normalizes_before_lookup() -> None:
 
 
 def test_manual_table_registry_membership_invariants() -> None:
-    """手编表登记完备性锚:EVIDENCE_UPGRADE 恰 4 条目(量子星徽×3+罗刹)、
-    DEFINING_CARDS 恰 4 卡(黑塔纪元/飞光×2/骇客专家)——批 2/3 扩表时
-    计数锚响亮暴露防误删。"""
-    assert len(EVIDENCE_UPGRADE) == 4
+    """手编表登记完备性锚:EVIDENCE_UPGRADE 恰 5 条目(量子星徽×3+罗刹
+    ×2 批 3 拆分双套)、DEFINING_CARDS 恰 4 卡(黑塔纪元/飞光×2/骇客
+    专家)——后续扩表时计数锚响亮暴露防误删。"""
+    assert len(EVIDENCE_UPGRADE) == 5
     assert set(DEFINING_CARDS) == {'黑塔纪元', '飞光·映月', '飞光·传剑',
                                    '骇客专家:银狼'}
 
@@ -195,7 +199,7 @@ def test_strategy_advisor_channel() -> None:
     assert strategy_line_bonus('锻冶专家:刃', _comp('万敌单C')) == INVEST_MID
     assert strategy_line_bonus('骇客专家:银狼', _comp('狼尊欢愉')) \
         == INVEST_DEFINING
-    assert strategy_line_bonus('领航专家:姬子', _comp('列车同行')) == 0
+    assert strategy_line_bonus('领航专家:姬子', _comp('列车同行·反震')) == 0
     from sr_od.application.currency_war.kernel.cw_invest_channels import (
         ADVISOR_NAME_PENDING,
     )
@@ -234,6 +238,6 @@ def test_wandi_fuel_projection_and_bottom_line() -> None:
 def test_registered_train_line_affix_row() -> None:
     """已登记线词缀分走表(批 2 列车同行已扩行——旧「未登记线恒 0」断言
     随扩行失效):正当防卫怕 −150/忍无可忍吃 +750;未登记词条记 0 不罚。"""
-    assert affix_line_score('列车同行', ('正当防卫',)) == -150
-    assert affix_line_score('列车同行', ('忍无可忍',)) == 750
-    assert affix_line_score('列车同行', ('榜样激励',)) == 0
+    assert affix_line_score('列车同行·反震', ('正当防卫',)) == -150
+    assert affix_line_score('列车同行·反震', ('忍无可忍',)) == 750
+    assert affix_line_score('列车同行·反震', ('榜样激励',)) == 0

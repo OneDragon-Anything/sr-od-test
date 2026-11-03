@@ -291,7 +291,7 @@ def test_full_bench_still_normal_pick():
     from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
         state_of,
     )
-    state_of(gs).line_candidates = ('列车同行',)
+    state_of(gs).line_candidates = ('列车同行·反震',)
     _set_bench_units(gs, [Unit(char_id=f'杂鱼{i}', star=1)
                           for i in range(9)])
     opts = [_opt(0, char='花火', equip=''), _opt(1, equip='轮滑鞋')]
@@ -329,8 +329,8 @@ def test_full_bench_junk_char_eliminated_by_virtual_assessment():
     from sr_od.application.currency_war.strategies.impl.mandate_v1.protection import (
         CROSS_LINE_KEEP_NAMES,
     )
-    state_of(gs).line_candidates = ('列车同行',)
-    km = set(_members(_comp_of('列车同行')))
+    state_of(gs).line_candidates = ('列车同行·反震',)
+    km = set(_members(_comp_of('列车同行·反震')))
     # 干净名 = 非线内非万金油(身份保护规避面已随统一让位优先级迭代
     # 3.4 退役,虚拟评估的淘汰语义由档位结构承载)。
     pool = [n for n, c in CHARACTERS.items()
@@ -425,7 +425,7 @@ def test_flow_supply_wiring_wraps_actions_and_parses_locked_comp():
         _opt(0, char='花火', equip='反卫星狙击枪'),
         _opt(1, equip='火力风暴潮')]), produced_by=_PB, sig=_SIG)
     strategy = _wired(gs)
-    strategy.state.v3_intention = IntentionState(locked_comp='列车同行')
+    strategy.state.v3_intention = IntentionState(locked_comp='列车同行·反震')
     out = strategy.decide_supply()
     assert isinstance(out, CwActionPickSupplyParam)
     assert out.idx == 0

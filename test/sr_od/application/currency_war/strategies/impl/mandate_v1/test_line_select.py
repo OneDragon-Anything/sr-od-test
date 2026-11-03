@@ -95,17 +95,20 @@ def _hold(sess: StrategySession, names: list[str]) -> None:
 
 class TestHeatTable:
     def test_table_covers_all_lines_with_positive_counts(self):
-        """热度表覆盖 COMP_LIBRARY 全 20 线且值 > 0(缺行 = 热度维
+        """热度表覆盖 COMP_LIBRARY 全 21 线且值 > 0(缺行 = 热度维
         最低的 fail 方向,生产不应触发;十类帖数全为正)。"""
         assert set(line_select.LINE_HEAT) == {c.name for c in COMP_LIBRARY}
         assert all(v > 0 for v in line_select.LINE_HEAT.values())
 
     def test_category_ordering_snapshot(self):
-        """类级热度序快照(姬子 274 > 圣杯 118 > 银狼 68 > 黄泉 50 >
-        万敌 40 = 长尾桶 40 > 希儿/白厄/大黑塔 38 > 绯英 25 > DOT 20);
-        同类多线共享类帖数,长尾 8 线共享桶值 ~40。"""
+        """类级热度序快照(批 3 拆分:姬子 A 165 > B 70 > 圣杯 118
+        之间——A 首位/圣杯 118 > 银狼 68 > 黄泉 50 > 万敌 40 = 长尾桶
+        40 > 希儿/白厄/大黑塔 38 > 绯英 25 > DOT 20;特化 ~39 不入表
+        ——A+B+特化 = 274 对账,LINE_HEAT 表注归属声明)。"""
         h = line_select.LINE_HEAT
-        assert h['列车同行'] == 274
+        assert h['列车同行·反震'] == 165
+        assert h['列车同行·直伤'] == 70
+        assert 165 + 70 + 39 == 274, 'A+B+特化对账(底稿姬子类全量)'
         assert h['命运圣杯红A'] == h['双王圣杯'] == 118
         assert h['DOT队'] == h['专家桑博DOT'] == 20
         assert h['千冶减益'] == h['巡海击破'] == h['龙丹战技点'] \
@@ -122,14 +125,14 @@ class TestCandidates:
         (圣杯两线 118)终局裁定 = 注册序首线。"""
         got = line_select.compute_candidates(
             frozenset(), line_select.OpeningCtx())
-        assert got[:3] == ('列车同行', '命运圣杯红A', '双王圣杯')
+        assert got[:3] == ('列车同行·反震', '命运圣杯红A', '双王圣杯')
         assert len(got) == 3
 
     def test_carry_anchor_outranks_heat(self):
         """锚核心 +8000 压过热度序:持有低热度线的锚(追击飞霄·飞霄,
-        heat 40)胜过零证据高热度线(列车同行 274)。"""
+        heat 40)胜过零证据高热度线(列车同行·反震 165)。"""
         feixiao = next(c for c in COMP_LIBRARY if c.name == '追击飞霄')
-        assert line_select.LINE_HEAT[feixiao.name] < line_select.LINE_HEAT['列车同行']
+        assert line_select.LINE_HEAT[feixiao.name] < line_select.LINE_HEAT['列车同行·反震']
         got = line_select.compute_candidates(
             frozenset({'飞霄'}), line_select.OpeningCtx())
         assert got[0] == '追击飞霄'
@@ -208,7 +211,7 @@ class TestMagnitudeScenarios:
         got = line_select.compute_candidates(
             frozenset({'知更鸟'}), ctx, evidence_gate=True)
         assert '希儿量子' in got, '插件证据点亮(热度不作入选理由)'
-        assert '列车同行' not in got, '零证据满热度线被证据门挡'
+        assert '列车同行·反震' not in got, '零证据满热度线被证据门挡'
 
 
 # ===== 证据门(12 号篇 §1.2 候选入选证据门) =====
@@ -295,7 +298,7 @@ class TestEvidenceGate:
         仍返回热度前三。"""
         assert line_select.compute_candidates(
             frozenset(), line_select.OpeningCtx()) \
-            == ('列车同行', '命运圣杯红A', '双王圣杯')
+            == ('列车同行·反震', '命运圣杯红A', '双王圣杯')
 
 
 # ===== 万敌燃料底线(design §4;词缀分量;sim 场景③) =====
@@ -354,6 +357,69 @@ class TestSimScenariosFiveSix:
         assert bd_flex.invest == 30
 
 
+# ===== 批 3 拆分:B 上位率监控(单帧构局形态;sim 对照待批跑工具恢复)=====
+
+
+class TestTrainSplitBPromotion:
+    def _ab(self):
+        a = next(c for c in COMP_LIBRARY if c.name == '列车同行·反震')
+        b = next(c for c in COMP_LIBRARY if c.name == '列车同行·直伤')
+        return a, b
+
+    def test_no_equip_diff_a_leads(self):
+        """无装备差 → A≥B 恒成立(design §5):同 core 同证据/同投资面
+        (列车系同键),heat A 165 > B 70 → A 恒上位;词缀面 A≥B 亦恒成立
+        (A 吃受击触发族 +750,B 无吃行——任意词缀集 A 词缀分 ≥ B)。"""
+        a, b = self._ab()
+        held = frozenset(a.core_chars)
+        ctx = line_select.OpeningCtx()
+        assert line_select.line_score_key(a, held, ctx) \
+            > line_select.line_score_key(b, held, ctx)
+        for affixes in ((), ('忍无可忍',), ('正当防卫', '忍无可忍'),
+                        ('能量逃逸', '时间刺客')):
+            c = line_select.OpeningCtx(enemy_affixes=affixes)
+            sa = line_select.line_score_breakdown(a, held, c).affix
+            sb = line_select.line_score_breakdown(b, held, c).affix
+            assert sa >= sb, f'词缀面 A≥B 恒成立: {affixes} → {sa} vs {sb}'
+
+    def test_b_exclusive_equips_promote_b(self):
+        """B 专属装备在手 → B 证据分高 → B 上位(B 唯一分化面 = 装备证据,
+        design §5「B 唯一分化面 = 装备证据」的线分承载:key_equips 无交集
+        → 风暴潮+电锯+冷笑话 3 件(+1500)压过 heat 差 95 → B 总分反超;
+        sim 监控 B 上位率趋零则拆分重审)。"""
+        a, b = self._ab()
+        assert set(a.key_equips) & set(b.key_equips) == set(), \
+            'A/B key_equips 无交集(拆分证据)'
+        held = frozenset(a.core_chars)
+        ctx = line_select.OpeningCtx(
+            held_equips=tuple(b.key_equips))
+        sb = line_select.line_score_breakdown(b, held, ctx)
+        sa = line_select.line_score_breakdown(a, held, ctx)
+        assert sa.equip == 0 and sb.equip == 500 * len(b.key_equips)
+        assert sb.total > sa.total, 'B 装备在手 → B 上位(分化面生效)'
+
+    def test_a_exclusive_equips_reinforce_a(self):
+        """A 专属装备在手 → A 证据同升(A/B 分化面对称;以牙还牙甲×2
+        多重集计数按件数)。"""
+        a, b = self._ab()
+        held = frozenset(a.core_chars)
+        ctx = line_select.OpeningCtx(
+            held_equips=tuple(a.key_equips))
+        sa = line_select.line_score_breakdown(a, held, ctx)
+        assert sa.equip == 500 * len(a.key_equips)   # 甲×2+外骨骼=3 件
+
+    def test_equip_evidence_not_in_gate(self):
+        """装备证据只排序不点亮(§1.2 证据门分量集保持):零角色零投资
+        纯装备帧证据门关——买到装备 ≠ 能上人。"""
+        a, _ = self._ab()
+        ctx = line_select.OpeningCtx(
+            held_equips=tuple(a.key_equips))
+        got = line_select.compute_candidates(frozenset(), ctx,
+                                             evidence_gate=True)
+        assert '列车同行·反震' not in got, \
+            '纯装备零持有帧不入候选(装备分量不进 gate_positive)'
+
+
 # ===== P1 无锁(硬规则/即时锁全退役;sim 场景①) =====
 
 
@@ -394,7 +460,7 @@ class TestFallbackAndEvaluate:
     def test_no_lock_before_trigger(self):
         """时点未到(P1/未选卡)→ 不锁(None)。"""
         got = line_select.evaluate_lock(
-            ('列车同行', '命运圣杯红A', '双王圣杯'),
+            ('列车同行·反震', '命运圣杯红A', '双王圣杯'),
             frozenset(), self._CTX,
             plane2_started=False, p2_strategy_pick_done=False)
         assert got is None
@@ -403,7 +469,7 @@ class TestFallbackAndEvaluate:
         """plane2_started 但选卡未完成 → 不锁(P2 入口至兜底锁帧的
         短窗 = 未锁双轨期)。"""
         got = line_select.evaluate_lock(
-            ('列车同行',), frozenset(), self._CTX,
+            ('列车同行·反震',), frozenset(), self._CTX,
             plane2_started=True, p2_strategy_pick_done=False)
         assert got is None
 
@@ -411,10 +477,10 @@ class TestFallbackAndEvaluate:
         """时点兜底触发 → 锁定 top3 中分数最高者(候选元组已按全序
         降序,取首 = 热度序的列车同行)。"""
         got = line_select.evaluate_lock(
-            ('列车同行', '命运圣杯红A', '双王圣杯'),
+            ('列车同行·反震', '命运圣杯红A', '双王圣杯'),
             frozenset(), self._CTX,
             plane2_started=True, p2_strategy_pick_done=True)
-        assert got == '列车同行'
+        assert got == '列车同行·反震'
 
     def test_fallback_full_recompute_head_is_evidence_top(self):
         """空候选分支的真重算:空候选 + 持有面非空 → 锁全量重算首名
@@ -431,7 +497,7 @@ class TestFallbackAndEvaluate:
         got = line_select.evaluate_lock(
             (), frozenset(), self._CTX,
             plane2_started=True, p2_strategy_pick_done=True)
-        assert got == '列车同行'
+        assert got == '列车同行·反震'
         got2 = line_select.evaluate_lock(
             (), frozenset(), self._CTX,
             plane2_started=True, p2_strategy_pick_done=False)
@@ -444,8 +510,10 @@ class TestFallbackAndEvaluate:
 def test_positive_terms_upper_bound_below_restart_magnitude():
     """正项上界不变量(design §2/R4-1):任一线「全员持有 + 全投资持有
     (83 环境∪335 策略,放宽上界假设——不变量只要求任何构局追不上
-    重开级)+ 开局词缀正项 top4 + 满热度」的正项和 < |−100000|。
-    重开级单条即数值排他;上界值随常数表演进自动重算(本断言 = 锁)。"""
+    重开级)+ 开局词缀正项 top4 + 装备证据(key_equips 全持,批 3 分量)
+    + 满热度」的正项和 < |−100000|。
+    重开级单条即数值排他;上界值随常数表演进自动重算(本断言 = 锁;
+    批 3 拆分后 21 线全量自算,现行最坏值 = 巡海击破 36120)。"""
     from sr_od.application.currency_war.kernel.cw_affinity_table import (
         affix_row_of,
     )
@@ -458,6 +526,7 @@ def test_positive_terms_upper_bound_below_restart_magnitude():
         INVESTMENT_STRATEGIES,
     )
     from sr_od.application.currency_war.kernel.cw_line_scales import (
+        PLUGIN_BONUS,
         RESTART_PENALTY,
     )
     worst = ('', 0)
@@ -473,12 +542,15 @@ def test_positive_terms_upper_bound_below_restart_magnitude():
         affix_max = sum(sorted(
             (s.score for s in affix_row_of(comp.name).values()
              if s.score > 0), reverse=True)[:4])
+        equip_max = PLUGIN_BONUS * len(comp.key_equips or [])
         total = bd.carry + bd.skeleton + bd.plugin + bd.heat \
-            + invest_max + affix_max
+            + invest_max + affix_max + equip_max
         if total > worst[1]:
             worst = (comp.name, total)
     assert worst[1] < abs(RESTART_PENALTY), (
         f'正项上界越界:{worst}(design §2 不变量 < 100000)')
+    assert worst == ('巡海击破', 36120), \
+        f'批 3 上界回归锚(装备分量入算后): {worst}'
 
 
 # ===== 端到端:refresh 前置段驱动锁定 =====
@@ -547,7 +619,7 @@ class TestRefreshDrivesLock:
         assert st.p2_strategy_pick_done is True
         assert st.target_comp is not None
         assert st.target_comp.name in {c.name for c in COMP_LIBRARY}
-        assert st.target_comp.name == '列车同行', (
+        assert st.target_comp.name == '列车同行·反震', (
             '零持有兜底锁 top1 = 热度序首线')
 
     def test_write_lock_external_api_sets_slot(self):
@@ -648,7 +720,7 @@ class TestP2WindowRecipeRetirement:
         gs = game_state_of(sess)
         st = state_of(gs)
         st.plane2_started = True          # 窗口谓词已置位
-        st.opening_recipe_comp = get_comp('列车同行')   # 过期残留(哨兵)
+        st.opening_recipe_comp = get_comp('列车同行·反震')   # 过期残留(哨兵)
         st.target_comp = None             # 未锁
         assert session_scope.direction_comp_of(gs) is None
 

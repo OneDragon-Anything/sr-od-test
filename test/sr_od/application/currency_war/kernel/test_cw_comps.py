@@ -187,7 +187,7 @@ def test_member_priority_two_tier_derivation() -> None:
         expected = {n: (0 if n in comp.core_chars else 1)
                     for n in set(comp.core_chars) | set(comp.shared_chars)}
         assert member_rank_of(comp) == expected, f'{comp.name} 两档派生'
-    assert member_rank_of(get_comp('列车同行'))['三月七'] == 0, \
+    assert member_rank_of(get_comp('列车同行·反震'))['三月七'] == 0, \
         '同名双列 core 优先'
     hand = Comp(name='手构线', core_chars=['甲', '乙'],
                 form_tiers={},

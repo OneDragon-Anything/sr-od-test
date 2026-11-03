@@ -187,7 +187,8 @@ def test_empty_window_still_empty() -> None:
 # 2. committed 权威判定直测 + 局23 型帧商店线哨兵
 # ============================================================
 
-_JU23_COMP = next(c for c in COMP_LIBRARY if c.name == '列车同行')
+_JU23_COMP = next(c for c in COMP_LIBRARY
+                  if c.name == '列车同行·反震')   # 批 3 拆分后取 A 主形态(哨兵语义与装备/引擎分岔无关)
 _JU23_STOCK_COST = 4     # 压库件卡费(档窗内;与注册表 cost 解耦)
 
 
@@ -405,11 +406,13 @@ def _observe_restarter_affixes(gs) -> None:
 def test_pair_lines_mapping_by_main_faction() -> None:
     """伪阵容↔线名映射(主派判定:线 bond_signal ∨ form_tiers 首键 ∈
     体系羁绊键):DOT 对 → DOT队+专家桑博DOT(任务书例);希儿系对 →
-    仅希儿量子(专家桑博DOT 的贝洛伯格 2 是次档非主派,防错挂)。"""
+    仅希儿量子(专家桑博DOT 的贝洛伯格 2 是次档非主派,防错挂);列车对
+    → A/B 两套(批 3 拆分后双套主派同键)。"""
     assert intention_mod._p1_pair_lines(('持续伤害',)) \
         == ('DOT队', '专家桑博DOT')
     assert intention_mod._p1_pair_lines(('希儿系',)) == ('希儿量子',)
-    assert intention_mod._p1_pair_lines(('列车同行',)) == ('列车同行',)
+    assert intention_mod._p1_pair_lines(('列车同行',)) \
+        == ('列车同行·反震', '列车同行·直伤')
     assert intention_mod._p1_pair_lines(('仙舟',)) == ('景元仙舟',)
 
 

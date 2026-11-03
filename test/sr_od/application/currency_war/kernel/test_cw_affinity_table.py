@@ -81,16 +81,20 @@ def test_dot_restart_and_longdan_opening_fear() -> None:
         assert affix_line_score('龙丹战技点', (affix,)) == FEAR_PENALTY, affix
 
 
-def test_train_eat_and_fear_row() -> None:
-    """列车同行(A 反震主体,批 3 拆分重写):吃忍无可忍/同步行动
-    +750 受击触发类燃料(final_jizi「吃忍无可忍/同步行动/怪物提速」;
-    怪物提速俗称待采集不入);怕正当防卫/能量逃逸/时间刺客/重症难题
-    (A 节直接记载+构造机理史料级补回)。"""
+def test_train_ab_split_rows() -> None:
+    """列车同行 A/B 拆行(批 3):A 吃忍无可忍/同步行动 +750 受击触发类
+    燃料(final_jizi「吃忍无可忍/同步行动/怪物提速」;怪物提速俗称待
+    采集不入)/怕四词缀(A 节直接记载+§6 脆弱点史料级补回);B 怕集同 A
+    保守复制(B 节无词条记载,design §5)+**无吃行**(词缀面 A≥B 恒成立,
+    B 唯一分化面 = 装备证据)。"""
     for affix in ('忍无可忍', '同步行动'):
-        assert affix_line_score('列车同行', (affix,)) == AFFIX_STRONG_FUEL, affix
-    for affix in ('正当防卫', '能量逃逸', '时间刺客', '重症难题'):
-        assert affix_line_score('列车同行', (affix,)) == FEAR_PENALTY, affix
-    assert '怪物提速' not in affix_row_of('列车同行')
+        assert affix_line_score('列车同行·反震', (affix,)) == AFFIX_STRONG_FUEL, affix
+        assert affix_line_score('列车同行·直伤', (affix,)) == 0, \
+            f'B 无吃行(词缀面 A≥B 恒成立): {affix}'
+    for line in ('列车同行·反震', '列车同行·直伤'):
+        for affix in ('正当防卫', '能量逃逸', '时间刺客', '重症难题'):
+            assert affix_line_score(line, (affix,)) == FEAR_PENALTY, (line, affix)
+    assert '怪物提速' not in affix_row_of('列车同行·反震')
     assert '怪物提速' in AFFIX_ALIASES_PENDING
 
 
@@ -115,10 +119,12 @@ def test_longtail_lines_no_affix_row() -> None:
     longtail = {'千冶减益', '银枝群攻', '巡海击破', '双王圣杯',
                 '火花星间旅人', '景元仙舟', '追击飞霄', '专家桑博DOT'}
     assert longtail & set(AFFINITY_TABLE) == set()
-    # 12 已审线中词缀面空白的昼神阿雅/反甲白厄同走兜底,其余 10 线已登记
+    # 已审线中词缀面空白的昼神阿雅/反甲白厄同走兜底,其余登记 11 行
+    # (列车系批 3 拆 A/B 两行)
     assert set(AFFINITY_TABLE) == {
         '万敌单C', '希儿量子', '命运圣杯红A', '狼尊欢愉', '绯英欢愉',
-        '大黑塔银河学者', '黄泉减益', 'DOT队', '龙丹战技点', '列车同行'}
+        '大黑塔银河学者', '黄泉减益', 'DOT队', '龙丹战技点',
+        '列车同行·反震', '列车同行·直伤'}
 
 
 # ===== 兜底层(方向保守:只给怕不给吃;design §3.3)=====
@@ -168,18 +174,19 @@ def test_registered_line_unregistered_affix_zero() -> None:
     列车同行×榜样激励 均为 0——泛化层不作用于已登记线。"""
     assert affix_line_score('万敌单C', ('一鼓作气', '随从强化')) \
         == AFFIX_STRONG_FUEL
-    assert affix_line_score('列车同行', ('忍无可忍', '榜样激励')) \
+    assert affix_line_score('列车同行·反震', ('忍无可忍', '榜样激励')) \
         == AFFIX_STRONG_FUEL
 
 
 def test_engine_kind_full_coverage() -> None:
-    """B1 引擎型分类覆盖全 20 线(README B1 三类+final_comps 引擎节补核);
-    值域锚(受击/行动/大招/dot/击破/追击)。"""
+    """B1 引擎型分类覆盖全 21 线(README B1 三类+final_comps 引擎节补核;
+    姬子批 3 拆分 A=受击/B=大招);值域锚(受击/行动/大招/dot/击破/追击)。"""
     from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
     assert set(LINE_ENGINE_KIND) == {c.name for c in COMP_LIBRARY}
     assert set(LINE_ENGINE_KIND.values()) == {'受击', '行动', '大招',
                                               'dot', '击破', '追击'}
-    assert LINE_ENGINE_KIND['列车同行'] == '受击'   # 盾反姬子 A 主体
+    assert LINE_ENGINE_KIND['列车同行·反震'] == '受击'   # 盾反姬子 A 主体
+    assert LINE_ENGINE_KIND['列车同行·直伤'] == '大招'   # B 助战技直伤+风暴潮
     assert LINE_ENGINE_KIND['万敌单C'] == '受击'
 
 
@@ -187,10 +194,12 @@ def test_engine_kind_full_coverage() -> None:
 
 
 def test_boss_rows_empirical_four_lines() -> None:
-    """4 线实证:姬子 3 只怕(死龙/酒杯怪/电视机经俗称归位)/希儿×蕉研组
-    怕/阿雅×电视机怕/白厄×史瓦罗重开级(final_baie「重开级,攻略多帖共识」)。"""
-    assert boss_line_score('列车同行', ('死龙', '酒杯怪', '电视机')) \
-        == FEAR_PENALTY * 3
+    """4 线实证:姬子 A/B 两套 3 只怕(死龙/酒杯怪/电视机经俗称归位——
+    类级记载引擎结算双形态同源)/希儿×蕉研组怕/阿雅×电视机怕/白厄×
+    史瓦罗重开级(final_baie「重开级,攻略多帖共识」)。"""
+    for line in ('列车同行·反震', '列车同行·直伤'):
+        assert boss_line_score(line, ('死龙', '酒杯怪', '电视机')) \
+            == FEAR_PENALTY * 3, line
     assert boss_line_score('希儿量子', ('蕉研组',)) == FEAR_PENALTY
     assert boss_line_score('昼神阿雅', ('电视机',)) == FEAR_PENALTY
     assert boss_line_score('反甲白厄', ('史瓦罗',)) == RESTART_PENALTY
@@ -204,7 +213,7 @@ def test_boss_sum_normalizes_and_unknown_zero() -> None:
     assert boss_line_score('希儿量子',
                            ('造梦互动娱乐', '电视机', '灰手生命科技')) \
         == FEAR_PENALTY * 2
-    assert boss_line_score('列车同行', ('凛冬经贸联合体',)) == 0
+    assert boss_line_score('列车同行·反震', ('凛冬经贸联合体',)) == 0
     assert boss_line_score('反甲白厄',
                            ('深穹智械科技', '深穹智械科技', '深穹智械科技')) \
         == RESTART_PENALTY * 3
@@ -240,19 +249,20 @@ def test_strong_enemy_traffic_light_restart() -> None:
         == RESTART_PENALTY
     assert strong_enemy_score('万敌单C', ('红绿灯',), frozenset()) \
         == RESTART_PENALTY
-    assert '红绿灯' not in STRONG_ENEMY_AFFINITY.get('列车同行', {})
+    assert '红绿灯' not in STRONG_ENEMY_AFFINITY.get('列车同行·反震', {})
 
 
 def test_strong_enemy_piggy_via_env_hold() -> None:
     """扑满(经济环境产物开局可见):持有扑满环境(经济过热/经济严重过热,
-    PIGGY_ENV_NAMES 单一源)→ 姬子 −150(counter 有解降档:瓦尔特延后
-    倒计时是机制解,design §3.3);未持环境不触发。"""
-    assert strong_enemy_score('列车同行', (), frozenset({'经济过热'})) \
-        == FEAR_PENALTY
-    assert strong_enemy_score('列车同行', (), frozenset({'经济严重过热'})) \
-        == FEAR_PENALTY
-    assert strong_enemy_score('列车同行', (), frozenset({'蓝海'})) == 0
-    assert strong_enemy_score('列车同行', ('扑满',), frozenset()) == 0, \
+    PIGGY_ENV_NAMES 单一源)→ 姬子 A/B 两套 −150(A 类级记载拖时间克慢速
+    +瓦尔特延后机制解降档;B 同源登记);未持环境不触发。"""
+    for line in ('列车同行·反震', '列车同行·直伤'):
+        assert strong_enemy_score(line, (), frozenset({'经济过热'})) \
+            == FEAR_PENALTY, line
+        assert strong_enemy_score(line, (), frozenset({'经济严重过热'})) \
+            == FEAR_PENALTY, line
+        assert strong_enemy_score(line, (), frozenset({'蓝海'})) == 0, line
+    assert strong_enemy_score('列车同行·反震', ('扑满',), frozenset()) == 0, \
         '扑满非词缀行通道(词缀 OCR 读到「扑满」不触发——观察面 = 环境持有)'
 
 
@@ -268,7 +278,7 @@ def test_restart_hit_primitives() -> None:
     assert affix_restart_hit('万敌单C', ('正当防卫',)) is False
     assert boss_restart_hit('反甲白厄', ('深穹智械科技',)) is True
     assert boss_restart_hit('反甲白厄', (), ('红绿灯',)) is True
-    assert boss_restart_hit('列车同行', ('灰手生命科技',)) is False
+    assert boss_restart_hit('列车同行·反震', ('灰手生命科技',)) is False
     assert affix_restart_hit('专家桑博DOT', ('净化身心',)) is False, \
         '泛化怕档不构成重开级命中'
 
@@ -287,3 +297,17 @@ def test_boss_table_keys_in_canonical_namespace() -> None:
     # BOSS_NICKNAMES 补史瓦罗;祸源萨姆待实机校验不入
     assert BOSS_NICKNAMES['史瓦罗'] == '深穹智械科技'
     assert '祸源萨姆' not in BOSS_NICKNAMES
+
+
+# ===== 批 3 拆分衍生(装备证据分化面/燃料集不受影响;design §5)=====
+
+
+def test_train_split_fuel_bottom_untouched() -> None:
+    """燃料集投影不受拆分影响(design §4:依赖线独例 = 万敌;列车系
+    A/B 无底线登记,行正值投影只作用于万敌行)。"""
+    from sr_od.application.currency_war.kernel.cw_affinity_table import (
+        FUEL_BOTTOM_LINES,
+    )
+    assert FUEL_BOTTOM_LINES == frozenset({'万敌单C'})
+    assert fuel_set_of('列车同行·反震') == frozenset({'忍无可忍', '同步行动'})
+    assert fuel_set_of('列车同行·直伤') == frozenset()

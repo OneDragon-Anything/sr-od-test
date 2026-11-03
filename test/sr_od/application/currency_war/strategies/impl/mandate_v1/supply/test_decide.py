@@ -143,7 +143,7 @@ def test_tier3_carries_merge_star_value_for_member():
     域:聚合读源 = 备战位 ∪ 前后排全量,实现漏计上阵域(二元组直传
     被静默跳过)时花火聚合缺 1、与本断言冲突。"""
     gs = _make_gs(bench=[], front=('花火',), level=3,
-                  candidates=('列车同行',))
+                  candidates=('列车同行·反震',))
     opts = [_opt(0, char='姬子·启行', equip=''),
             _opt(1, char='花火', equip='')]
     out = supply.decide(opts, gs, None, False)
@@ -170,7 +170,7 @@ def test_member_completed_unit_retained_over_high_prob_junk():
     gs = _make_gs(bench=[('花火', 2)]
                   + [(n, 1) for n in fillers5 + fillers4],
                   front=('杂板1', '杂板2', '杂板3', '杂板4', '杂板5'),
-                  level=5, candidates=('列车同行',))
+                  level=5, candidates=('列车同行·反震',))
     opts = [_opt(0, char='娜塔莎', equip=''), _opt(1, equip='轮滑鞋')]
     out = supply.decide(opts, gs, None, False)
     assert isinstance(out, SupplyDecision)

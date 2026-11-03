@@ -216,11 +216,11 @@ class TestAcquireSwapSixStep:
         bench = [('姬子·启行', 1), ('姬子·启行', 1), ('三月七', 1),
                  ('三月七', 1), ('花火', 1), ('万敌', 1),
                  ('千冶·刃', 1), ('卡芙卡', 1), ('桑博', 1)]
-        _x_card = _x_junk_card(('列车同行', '万敌单C', '专家桑博DOT'))
+        _x_card = _x_junk_card(('列车同行·反震', '万敌单C', '专家桑博DOT'))
         gs, sess, cfg = _frame(
             bench=bench,
             shop_cards=[(_x_card, 3, 1)],
-            candidates=('列车同行', '万敌单C', '专家桑博DOT'),
+            candidates=('列车同行·反震', '万敌单C', '专家桑博DOT'),
             gold=100)
         act = decide_shop_action(gs, sess, cfg)
         assert isinstance(act, CwActionCloseShopParam), f'非收工: {act!r}'
@@ -247,7 +247,7 @@ class TestAcquireSwapSixStep:
         花火 ∈ 候选线成员(X 非成员则退化为杂件 X
         平凡帧,test_tail_is_new_card_declines_buy 已辖,不证身份域
         语义)。"""
-        candidates = ('列车同行', '万敌单C', '专家桑博DOT')
+        candidates = ('列车同行·反震', '万敌单C', '专家桑博DOT')
         members: set[str] = set()
         for cn in candidates:
             members |= set(_members(get_comp(cn)))
@@ -281,9 +281,9 @@ class TestAcquireSwapSixStep:
                  ('千冶·刃', 1), ('卡芙卡', 1), ('桑博', 1)]
         gs, sess, cfg = _frame(
             bench=bench,
-            shop_cards=[(_x_junk_card(('列车同行', '万敌单C',
+            shop_cards=[(_x_junk_card(('列车同行·反震', '万敌单C',
                                        '专家桑博DOT')), 3, 1)],
-            candidates=('列车同行', '万敌单C', '专家桑博DOT'),
+            candidates=('列车同行·反震', '万敌单C', '专家桑博DOT'),
             gold=100)
         act = decide_shop_action(gs, sess, cfg)
         assert isinstance(act, CwActionCloseShopParam)
@@ -315,7 +315,7 @@ class TestAcquireSwapSixStep:
         gs, sess, cfg = _frame(
             bench=bench,
             shop_cards=[(_TARGET, 3, 2)],
-            locked_comp='列车同行')
+            locked_comp='列车同行·反震')
         act = decide_shop_action(gs, sess, cfg)
         assert isinstance(act, CwActionBuyCardParam), f'非直买: {act!r}'
         assert act.card.name == _TARGET
@@ -504,7 +504,7 @@ class TestAcquireYieldUnified:
         gs, sess, cfg = _frame(
             bench=bench,
             shop_cards=[('姬子·启行', 3, 1)],
-            candidates=('列车同行',),
+            candidates=('列车同行·反震',),
             gold=1, level=5)
         act = decide_shop_action(gs, sess, cfg)
         assert isinstance(act, CwActionSellBenchParam), \

@@ -1169,11 +1169,12 @@ class TestShelfQualifyArm:
 
     def test_line_outside_virtual_top3_does_not_qualify(self):
         """虚拟 top3 资格(线外不触发):货架四件(黑塔 = 大黑塔 core/
-        姬子·启行 = 列车 anchor/符玄+花火 = 希儿量子 core)——虚拟评估
-        (在手∅∪货架)下 top3 = 列车同行(锚 8000+花火 4000+274)/
-        希儿量子(双 core 8000+38)/千冶减益(符玄 4000+40,注册序压同分
-        龙丹),大黑塔银河学者(黑塔 4000+38)落榜 → 黑塔(槽1)无资格
-        被跳过,首动作 = 槽序内首个在榜资格件姬子·启行(列车 CARRY)。
+        姬子·启行 = 列车 anchor/符玄+花火 = 多线 core)——虚拟评估
+        (在手∅∪货架)下 top3 = 列车 A(锚 8000+花火 4000+165)/列车 B
+        (同证据+70,批 3 拆分双席)/第三席 = 火花星间(花火锚 8000+40)
+        与希儿量子(双 core 8000+38)heat 微差之争(2 分差不锚定),
+        大黑塔银河学者(黑塔 4000+38)恒落榜 → 黑塔(槽1)无资格
+        被跳过,首动作 = 槽序内首个在榜资格件姬子·启行(A/B 共锚 CARRY)。
         前置断言 = 注册表演进使帧前提失守时响亮暴露(统一阵容评分后
         排序 = 数值单值和,锚档支配)。"""
         from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
@@ -1184,7 +1185,8 @@ class TestShelfQualifyArm:
             frozenset(_face), line_select.OpeningCtx())
         assert '大黑塔银河学者' not in _virt, \
             f'帧前提失守:挤出线意外入虚拟 top3: {_virt!r}'
-        assert '列车同行' in _virt and '希儿量子' in _virt
+        assert '列车同行·反震' in _virt and '列车同行·直伤' in _virt, \
+            f'A/B 双席(同 core 同证据,heat 差序): {_virt!r}'
         live, sess, gs, st = _frame(
             gold=60, node_kind='reward', direction=False,
             shop_cards=[('黑塔', 1, 1), ('姬子·启行', 3, 1),
@@ -1204,7 +1206,7 @@ class TestShelfQualifyArm:
             gold=60, node_kind='reward', direction=False,
             bench=[('姬子·启行', 1)], deployed=[],
             shop_cards=[('花火', 2, 1), ('飞霄', 1, 1)],
-            candidates=('列车同行',))
+            candidates=('列车同行·反震',))
         act = live.decide_shop_action()
         assert isinstance(act, CwActionBuyCardParam), f'非买入: {act!r}'
         assert act.card.name == '花火', \

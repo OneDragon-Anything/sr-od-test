@@ -198,7 +198,7 @@ def test_slot_level_position_lands_preferred_slot() -> None:
     落 5 号槽而非 1 号(攻略「中段=护盾相邻覆盖最大化」的落位载体)。
     前排预置一人避开前排保证强转(前排非空 → back 件不被转前排,
     该规则另有语义不混入本测试)。"""
-    comp = get_comp('列车同行')
+    comp = get_comp('列车同行·反震')
     assert comp is not None \
         and comp.char_positions.get('三月七') == 'back@5'
     gs = game_state_of(None)

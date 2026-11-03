@@ -167,7 +167,7 @@ class TestUnifiedSequence:
         凑息缺口 1(万敌 1 费退金 1 恰跨档,跨档止盈不排空本帧)。"""
         sess, gs = _board_full_gs([cw4_bc('万敌'), cw4_bc('瓦尔特')],
                                   gold=49)
-        state_of(gs).line_candidates = ('列车同行',)
+        state_of(gs).line_candidates = ('列车同行·反震',)
         return sess, gs
 
     def test_full_board_pool_shared_by_guarded_scenes(self):
@@ -202,7 +202,7 @@ class TestUnifiedSequence:
         sess, gs = _board_full_gs(
             [cw4_bc('希儿'), cw4_bc('卡芙卡'), cw4_bc('瓦尔特')],
             level=5)
-        state_of(gs).line_candidates = ('列车同行',)
+        state_of(gs).line_candidates = ('列车同行·反震',)
         # 常规面(晶矿):身份段退役,全池按统一序列。
         cands, why = evaluate_sell_candidates(gs, 'ore_make_room')
         assert why == ''
@@ -257,7 +257,7 @@ class TestTakeObservationPayload:
         → 随机尾键命中恒假(命中判定域 = 排序池,等价牌群才可能撞键)。"""
         sess, gs = _board_full_gs([cw4_bc('万敌'), cw4_bc('瓦尔特')],
                                   gold=49)
-        state_of(gs).line_candidates = ('列车同行',)
+        state_of(gs).line_candidates = ('列车同行·反震',)
         cands, why = evaluate_sell_candidates(gs, 'ore_make_room')
         assert why == ''
         assert [(c.char_id, c.tier) for c in cands] == \
@@ -335,7 +335,7 @@ class TestInterestMemberExemption:
         """板满 + 未锁候选帧(列车同行;豁免集口径 = 候选 ∪ 配方 ∪
         锁定线,§2.1 名单一致——本类用候选支承载)。"""
         sess, gs = _board_full_gs(bench, level=5, gold=gold)
-        state_of(gs).line_candidates = ('列车同行',)
+        state_of(gs).line_candidates = ('列车同行·反震',)
         return sess, gs
 
     def test_only_feasible_is_unmet_member_zero_action(self):
@@ -507,9 +507,9 @@ class TestSellLineMembershipSingleAdmission:
         未锁定分支只有候选并集,缺过渡支)。"""
         sess, gs = _mk_gs()
         st = state_of(gs)
-        st.line_candidates = ('列车同行',)
+        st.line_candidates = ('列车同行·反震',)
         st.transition_candidates = self._PAIRS
-        expected = set(cw4_members(get_comp('列车同行'))) \
+        expected = set(cw4_members(get_comp('列车同行·反震'))) \
             | _pair_members(self._PAIRS[0])
         assert sell_line_membership(gs) == frozenset(expected)
         assert '瓦尔特' in sell_line_membership(gs), '候选支(列车同行)'
@@ -532,7 +532,7 @@ class TestP1LockedSellPoolNarrowing:
         sess, gs = _board_full_gs(
             [cw4_bc('卡芙卡'), cw4_bc('星期日')], level=5)
         st = state_of(gs)
-        st.target_comp = get_comp('列车同行')
+        st.target_comp = get_comp('列车同行·反震')
         st.transition_candidates = (('持续伤害', '希儿系'),)
         cands, why = evaluate_sell_candidates(gs, 'ore_make_room')
         assert why == ''
@@ -622,7 +622,7 @@ class TestSceneTableParams:
 # predicate 并入;判据单一源 = predicates.item_slot_unsellable)
 # ============================================================
 
-_COMP = '列车同行'
+_COMP = '列车同行·反震'
 _K = ('线内件',)
 
 

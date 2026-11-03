@@ -214,7 +214,7 @@ def test_completed_kept_tier2_unlocked_and_locked_frames() -> None:
     # 未锁定帧:候选线知识卡 need_star 直读,达标成员天然在表。
     s1 = cw4_session()
     gs1 = cw4_gs(s1, level=7, bench=[cw4_bc(_HUA, star=2)])
-    state_of(gs1).line_candidates = ('列车同行',)
+    state_of(gs1).line_candidates = ('列车同行·反震',)
     ctx_u = assemble_priority_context(s1, gs1, deployed_names=frozenset())
     assert not ctx_u.line_view.locked
     assert ctx_u.need_star_by_member.get(_HUA) == 2
@@ -223,7 +223,7 @@ def test_completed_kept_tier2_unlocked_and_locked_frames() -> None:
     # 不缺行(装配补全判定位:旧装配缺此行 → get() 为 None)。
     s2 = cw4_session()
     gs2 = cw4_gs(s2, level=7, bench=[cw4_bc(_HUA, star=2)])
-    state_of(gs2).target_comp = get_comp('列车同行')
+    state_of(gs2).target_comp = get_comp('列车同行·反震')
     ctx_l = assemble_priority_context(s2, gs2, deployed_names=frozenset())
     assert ctx_l.line_view.locked
     assert ctx_l.need_star_by_member.get(_HUA) == 2, \
@@ -559,14 +559,14 @@ def test_unlocked_frame_candidates_union_and_recipe_members() -> None:
     session = cw4_session()
     gs = cw4_gs(session, level=7, bench=[])
     st = state_of(gs)
-    st.line_candidates = ('列车同行', '火花星间旅人')
+    st.line_candidates = ('列车同行·反震', '火花星间旅人')
     st.transition_candidates = (('持续伤害', '希儿系'),)
     ctx = assemble_priority_context(
         session, gs, deployed_names=frozenset())
     assert not ctx.line_view.locked
     # 候选两线的 need_star 跨线取最大:花火 ∈ 列车同行 ∧ 火金星间
     # 旅人,期望 = 命中各线知识卡取最大(规则现算,值 = 注册表现查)。
-    expected_hua = max(get_comp('列车同行').need_star[_HUA],
+    expected_hua = max(get_comp('列车同行·反震').need_star[_HUA],
                        get_comp('火花星间旅人').need_star[_HUA])
     assert ctx.need_star_by_member.get(_HUA) == expected_hua
     # 过渡候选成员并入名单(过渡支 = 槽展开并集)。
@@ -659,7 +659,7 @@ def test_member_rank_migration_equivalence() -> None:
     session = cw4_session()
     gs = cw4_gs(session, level=7, bench=[])
     st = state_of(gs)
-    st.line_candidates = ('列车同行', '火花星间旅人', '双王圣杯')
+    st.line_candidates = ('列车同行·反震', '火花星间旅人', '双王圣杯')
     ctx = assemble_priority_context(session, gs, deployed_names=frozenset())
     members: set[str] = set()
     cores: set[str] = set()
@@ -830,7 +830,7 @@ def test_transition_member_bottom_in_same_tier() -> None:
     gs = cw4_gs(session, level=7,
                 bench=[cw4_bc('瓦尔特'), cw4_bc('卡芙卡')])
     st = state_of(gs)
-    st.line_candidates = ('列车同行',)
+    st.line_candidates = ('列车同行·反震',)
     st.transition_candidates = (('持续伤害', '希儿系'),)
     ctx = assemble_priority_context(session, gs, deployed_names=frozenset())
     k_walt = sort_key(HeldUnit('瓦尔特', 1, 0, False), ctx)

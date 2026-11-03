@@ -57,7 +57,7 @@ def test_lock_keep_phase_transition_x4_beats_buff() -> None:
     """保板相位(锁定未成档 → 过渡档 ×4 压过 buff/debuff ×3,场景
     走查「P1 锁定、1 核心在手」行):锁定线(列车同行 form=4)一档
     未成期间,过渡体系 2 人(列车 2 档成)留板压过减益件。"""
-    comp = get_comp('列车同行')
+    comp = get_comp('列车同行·反震')
     # 手牌:过渡列车 2 人 vs 减益 2 人(TIER7 buff/debuff 系);K=2。
     units = [_u('姬子·启行'), _u('丹恒·饮月'),      # 列车同行
              _u('佩拉'), _u('桑博')]                # 减益(贝洛伯格/DOT)
@@ -70,7 +70,7 @@ def test_lock_keep_phase_transition_x4_beats_buff() -> None:
 def test_lock_first_tier_flip_displaces_transition() -> None:
     """换防跳变(锁定线第一档成型 → L1 压倒 + 过渡回落 ×1,场景走查
     第 2 行后半):列车 4 人在手,锁定线一档成型压倒过渡板。"""
-    comp = get_comp('列车同行')
+    comp = get_comp('列车同行·反震')
     # 列车 4 人(锁定线 form_tiers=4)vs 过渡仙舟 3 人 + 减益件;K=4。
     units = [_u('姬子·启行'), _u('丹恒·饮月'), _u('三月七'), _u('星期日'),
              _u('青雀'), _u('停云'), _u('藿藿')]
@@ -168,15 +168,15 @@ def test_silverwolf_lands_as_1star() -> None:
 
 
 def test_l2_sub_tiers_keys_only() -> None:
-    """L2 键集 = 仅 sub_tiers(D3-1):锁定线列车同行 sub_tiers =
-    护盾/减益,sub_tiers 件凑档的 L2 域(10⁶)随凑档上升;flex_factions
-    不进 L2(注册表「板面不罚但完成度不数」)。"""
-    comp = get_comp('列车同行')
-    sub_on = [_u('姬子·启行'), _u('佩拉'), _u('椒丘')]   # 减益 2 人
+    """L2 键集 = 仅 sub_tiers(D3-1):锁定线列车同行·反震 sub_tiers =
+    护盾(批 3 拆分各归其一,A=护盾2),sub_tiers 件凑档的 L2(10⁶)随凑档
+    上升;flex_factions 不进 L2(注册表「板面不罚但完成度不数」)。"""
+    comp = get_comp('列车同行·反震')
+    sub_on = [_u('姬子·启行'), _u('三月七'), _u('杰帕德')]   # 护盾 2 人(三月七+杰帕德,flows=护盾)
     sub_off = [_u('姬子·启行'), _u('青雀'), _u('停云')]
     panel = _panel([], locked=True, locked_comp=comp, plane1=False)
-    l2_on = ds.selection_score(panel, sub_on, comp, ('列车同行',))[1]
-    l2_off = ds.selection_score(panel, sub_off, comp, ('列车同行',))[1]
+    l2_on = ds.selection_score(panel, sub_on, comp, ('列车同行·反震',))[1]
+    l2_off = ds.selection_score(panel, sub_off, comp, ('列车同行·反震',))[1]
     assert l2_on > 0.0 > l2_off or l2_on > l2_off, \
         f'sub_tiers 凑档 L2({l2_on}) > 无 sub_tiers 件({l2_off})'
 
@@ -245,7 +245,7 @@ def test_margin_out_layered_form_and_no_challenger() -> None:
     胜者 = 锁定线一档成型板(既有场景),挑战者(成员集与胜者不同的
     最高板)首异层 = 1(L1 层隔离的结构性质,gap > 0 不锁具体值);
     dedup 后仅一可行板 → 三键 null(与尾键决胜 0/0 区分)。"""
-    comp = get_comp('列车同行')
+    comp = get_comp('列车同行·反震')
     units = [_u('姬子·启行'), _u('丹恒·饮月'), _u('三月七'), _u('星期日'),
              _u('青雀'), _u('停云'), _u('藿藿')]
     margin: dict = {}

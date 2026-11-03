@@ -174,10 +174,11 @@ def test_board_by_row_of_reads_container_rows():
 
 
 def test_knowledge_card_schema_nonempty_all_lines():
-    """① 知识卡字段全 20 线非空(need_star 星级目标/key_items 骨架名单
-    ——持有证据分与星级目标的机器前提);旧 lock_rules 字段已整字段退役
-    (统一阵容评分迭代:全部即时锁退役),不再断言。"""
-    assert len(COMP_LIBRARY) == 20
+    """① 知识卡字段全 21 线非空(need_star 星级目标/key_items 骨架名单
+    ——持有证据分与星级目标的机器前提;姬子列车批 3 拆分 20→21);旧
+    lock_rules 字段已整字段退役(统一阵容评分迭代:全部即时锁退役),
+    不再断言。"""
+    assert len(COMP_LIBRARY) == 21
     for comp in COMP_LIBRARY:
         assert not hasattr(comp, 'lock_rules'), \
             f'{comp.name}: lock_rules 字段已整字段退役,禁复活'

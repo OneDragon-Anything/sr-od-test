@@ -651,7 +651,7 @@ def test_refresh_locked_max_n1_blocks():
     P81 单篇 §7 必答③,3.2 候裁)。
     列车同行星徽对锁线『列车同行』N=1(阵营命中,丹恒·饮月不在其 core)。"""
     out = invest_strategy.decide(['列车同行星徽', '嘴硬', '二极管'],
-                                 _fresh_gs(), '列车同行', False,
+                                 _fresh_gs(), '列车同行·反震', False,
                                  frozenset(), _EMPTY_CONFIG)
     assert isinstance(out, InvestStrategyDecision)
 
@@ -662,7 +662,7 @@ def test_refresh_e_exempt_forbidden_not_counted_in_max_n():
     cfg = SimpleNamespace(strategy_priority=[],
                           strategy_forbid=['列车同行星徽'])
     out = invest_strategy.decide(['列车同行星徽', '嘴硬', '二极管'],
-                                 _fresh_gs(), '列车同行', False,
+                                 _fresh_gs(), '列车同行·反震', False,
                                  frozenset(), cfg)
     assert isinstance(out, StrategyRefreshSuggestion)
 
@@ -683,7 +683,7 @@ def test_refresh_demoted_frame_uses_unlocked_scale():
     """降格帧按未锁线口径:无 max_N 门(design §2.9-2),锁线参不生效
     ——同 max_N=1 帧在降格态(锁线已放弃)门通过。"""
     out = invest_strategy.decide(['列车同行星徽', '嘴硬', '二极管'],
-                                 _fresh_gs(), '列车同行', True,
+                                 _fresh_gs(), '列车同行·反震', True,
                                  frozenset(), _EMPTY_CONFIG)
     assert isinstance(out, StrategyRefreshSuggestion)
 

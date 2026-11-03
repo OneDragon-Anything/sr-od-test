@@ -73,7 +73,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
     state_of,
 )
 
-_COMP_NAME = '列车同行'
+_COMP_NAME = '列车同行·反震'   # 批 3 拆分后取 A 主形态(测试载体与装备分岔无关)
 _LINE = tuple(_members(_comp_of(_COMP_NAME)))
 _TARGET = '姬子·启行'   # need_star 3(唯一 3★ 追到底目标)
 _DEPLOY_ANCHOR = '白厄'   # 零阵营流派(板面标签空集锚;注册表现查)

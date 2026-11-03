@@ -41,7 +41,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import (
     predicates,
 )
 
-_COMP = '列车同行'
+_COMP = '列车同行·反震'
 
 
 # ===== 测试基建(exit3 同族口径)=====

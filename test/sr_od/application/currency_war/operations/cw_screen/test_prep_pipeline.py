@@ -269,7 +269,7 @@ class TestStep0SelfRescue:
         """态 3(卖出,有损腾位):候选评估器自救扩展面(仅备战席 + 真
         全量持有)——价值最低者让位;线内件整体置末层(P78 资格仲裁族
         全通道豁免,「零停机出口」优先于硬资格)。"""
-        sess = cw4_session(cw4_comp('列车同行'))
+        sess = cw4_session(cw4_comp('列车同行·反震'))
         cw4_gs(sess, gold=30, level=4, round_num=2, node='战斗',
                bench=[_bc('c0'), _bc('c1'), _bc('姬子·启行')] + [_bc('c2')] * 6,
                front_row=_units(('三月七', '瓦尔特', '丹恒·饮月', '姬子')),
@@ -294,7 +294,7 @@ class TestStep0SelfRescue:
     def test_state3_full_pool_exemptions_reach_line_member(self):
         """真全量豁免测试:候选只剩线内核心件(常规面恒拒)时自救仍可卖
         ——P78-4 核心/④件身份段在自救场景豁免、按价值序末位可卖。"""
-        sess = cw4_session(cw4_comp('列车同行'))
+        sess = cw4_session(cw4_comp('列车同行·反震'))
         cw4_gs(sess, gold=30, level=4, round_num=2, node='战斗',
                bench=[_bc('姬子·启行')] + [_bc('c2')] * 8,
                front_row=_units(('三月七', '瓦尔特', '丹恒·饮月', '姬子')),
@@ -692,7 +692,7 @@ class TestStep7NodeEndInterest:
         桩与容器惰建态在此构造路径下非同对象,判据读口走容器侧)。"""
         sess = self._frame(2, [_bc('姬子·启行', 2), _bc('布洛妮娅')])
         st = state_of(game_state_of(sess))
-        st.line_candidates = ('列车同行',)
+        st.line_candidates = ('列车同行·反震',)
         out = _emit(sess)
         sells = [e.action for e in out
                  if isinstance(e.action, CwActionSellBenchParam)]

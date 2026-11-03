@@ -42,7 +42,7 @@ def test_emit_no_fallback_when_candidates_present() -> None:
     """换源后空窗判定 = 名单真空:未锁帧有候选(方向键 None——无配方
     无锁定)→ 统一线内名单非空,回退不运行;旧读口按「无方向」判定
     会落 p1_gap/p1_lock_band 带(换源后候选即名单,§2.1 口径)。"""
-    gs = _emit_gs(candidates=('列车同行',))
+    gs = _emit_gs(candidates=('列车同行·反震',))
     state_of(gs).v3_intention = IntentionState()
     entry.emit(gs, None)
     assert _fallback_keys(gs) == [], '候选在场 = 名单非空,非空窗'
@@ -71,7 +71,7 @@ def test_prep_entry_clears_deploy_margin_slot() -> None:
     from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
         MandateV1Strategy,
     )
-    gs = _emit_gs(candidates=('列车同行',))
+    gs = _emit_gs(candidates=('列车同行·反震',))
     st = state_of(gs)
     strat = MandateV1Strategy(gs, SimpleNamespace(strategy_seed=None))
     strat.state = st   # 状态归一(cw4_decide 先例)
