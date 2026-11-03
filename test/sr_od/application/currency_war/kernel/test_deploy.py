@@ -76,14 +76,14 @@ def _bs(slot: int, char_id: str) -> BenchSlot:
 
 
 def test_comp_position_override_beats_registry_pref() -> None:
-    """comp char_positions 覆盖注册表:万敌注册表 flex(派生 back),
+    """comp char_positions 覆盖注册表:万敌注册表 common(派生 back),
     「万敌单C」覆盖为 front → 落位排 = front(逐件路由直接断言 +
     落位计划端到端各一分支)。"""
     comp = get_comp('万敌单C')
     assert comp is not None and comp.char_positions.get('万敌') == 'front', \
         '注册表前置自检:万敌单C 带 char_positions 覆盖'
     assert deploy_row_pref('万敌', None) == 'back', \
-        '无 comp 覆盖时:flex 派生 back(③兜底前先走②注册表)'
+        '无 comp 覆盖时:common 派生 back(③兜底前先走②注册表)'
     assert deploy_row_pref('万敌', comp) == 'front', \
         'comp 覆盖压过注册表派生(①>②)'
 
