@@ -55,15 +55,20 @@ def test_env_invitation_mid_channel_and_contract_strong() -> None:
 
 
 def test_env_generic_categories_zero() -> None:
-    """通用类 41 个线分 0(design §3.1 类目计数:经济 15/规则 10/时代 6/
-    专家 10——含特邀专家族,其价值经所赠角色走证据分,通道 0)。"""
+    """通用类线分 0(design §3.1;批 2 起**专家类目例外** = 顾问入商店
+    通道):经济/规则/时代三类目恒 0;专家类目 10 个中 7 个无定向 0
+    (道具/通用增益/条件腿——见 test_env_advisor_channel)。"""
     from sr_od.application.currency_war.kernel.cw_investments import (
         INVESTMENT_ENVS,
     )
     generic = [n for n, e in INVESTMENT_ENVS.items()
-               if e.category not in ('概念股', '邀请', '契约')]
-    assert len(generic) == 41, '通用类计数锚(design §3.1)'
+               if e.category not in ('概念股', '邀请', '契约', '专家')]
+    assert len(generic) == 31, '经济/规则/时代类目计数锚(design §3.1 类目账:41=31+专家10)'
     for name in generic:
+        assert env_line_bonuses(name) == {}, name
+    # 专家类目 0 分卡(顾问表外的道具/通用/条件腿)
+    for name in ('专家研讨会', '人才储备', '战力飙升', '战力提升',
+                 '命运礼物', '英雄登场', '特邀专家:银狼'):
         assert env_line_bonuses(name) == {}, name
 
 
@@ -161,6 +166,37 @@ def test_bonuses_dict_scan_shape() -> None:
     assert got == {'希儿量子': EVIDENCE_UPGRADE_BONUS}
 
 
+def test_env_advisor_channel() -> None:
+    """顾问入商店通道(批 2;「使其加入商店」= 定向供给半腿,弱于概念股
+    三件套 → 中档 +150,目标线 = 顾问角色羁绊∩线核心键):桑博→专家桑博
+    DOT/DOT队/希儿量子(贝成员);加拉赫(击破)→巡海击破,黄泉 flex
+    击破降 0;停云(仙舟/能量)→景元仙舟;特邀专家:银狼条件腿
+    (「首次获得银狼LV.999 时」)不入表 0。"""
+    assert env_line_bonus('特邀专家:桑博', _comp('专家桑博DOT')) == INVEST_MID
+    assert env_line_bonus('特邀专家:桑博', _comp('DOT队')) == INVEST_MID
+    assert env_line_bonus('特邀专家:桑博', _comp('希儿量子')) == INVEST_MID
+    assert env_line_bonus('特邀专家:桑博', _comp('狼尊欢愉')) == 0, \
+        '星间旅人 ∈ 狼尊 flex(中档降 0)'
+    assert env_line_bonus('特邀专家:加拉赫', _comp('巡海击破')) == INVEST_MID
+    assert env_line_bonus('特邀专家:加拉赫', _comp('黄泉减益')) == 0, \
+        '击破 ∈ 黄泉 flex(中档降 0)'
+    assert env_line_bonus('特邀专家:停云', _comp('景元仙舟')) == INVEST_MID
+    assert env_line_bonus('特邀专家:银狼', _comp('狼尊欢愉')) == 0
+
+
+def test_strategy_advisor_channel() -> None:
+    """策略侧顾问卡同通道(批 2):佩拉(减益)→黄泉/千冶减益;貊泽(追击)
+    →追击飞霄;刃(燃血)→万敌单C;定义卡在前短路(骇客专家:银狼对狼尊
+    +500 非顾问中档);领航专家:姬子顾问名不在 CHARACTERS 注册表 0。"""
+    assert strategy_line_bonus('战术专家:佩拉', _comp('黄泉减益')) == INVEST_MID
+    assert strategy_line_bonus('战术专家:佩拉', _comp('千冶减益')) == INVEST_MID
+    assert strategy_line_bonus('潜行专家:貊泽', _comp('追击飞霄')) == INVEST_MID
+    assert strategy_line_bonus('锻冶专家:刃', _comp('万敌单C')) == INVEST_MID
+    assert strategy_line_bonus('骇客专家:银狼', _comp('狼尊欢愉')) \
+        == INVEST_DEFINING
+    assert strategy_line_bonus('领航专家:姬子', _comp('列车同行')) == 0
+
+
 # ===== 吃怕表与万敌燃料底线(design §4;批 1 万敌行直入)=====
 
 
@@ -190,7 +226,9 @@ def test_wandi_fuel_projection_and_bottom_line() -> None:
     assert no_fuel == RESTART_PENALTY * 2, '永久创伤 −100000 + 无燃料底线 −100000'
 
 
-def test_unregistered_line_affix_score_zero() -> None:
-    """未登记线(批 2 扩行前其余 19 线)词缀分恒 0——垫底/排除全由已登记
-    行承载,未登记不误伤。"""
-    assert affix_line_score('列车同行', ('正当防卫',)) == 0
+def test_registered_train_line_affix_row() -> None:
+    """已登记线词缀分走表(批 2 列车同行已扩行——旧「未登记线恒 0」断言
+    随扩行失效):正当防卫怕 −150/忍无可忍吃 +750;未登记词条记 0 不罚。"""
+    assert affix_line_score('列车同行', ('正当防卫',)) == -150
+    assert affix_line_score('列车同行', ('忍无可忍',)) == 750
+    assert affix_line_score('列车同行', ('榜样激励',)) == 0

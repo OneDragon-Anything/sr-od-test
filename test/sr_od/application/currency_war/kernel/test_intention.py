@@ -388,3 +388,80 @@ def test_p1_pair_gate_equivalence_with_gate_first(shape: str) -> None:
     sess = StrategySession()
     state_of(sess).v3_intention = ist
     assert committed_authority(gs, sess) == bool(ist.p1_pair)
+
+# ============================================================
+# 配方锁联动(统一阵容评分批 2;design §6:线分含 −100000 的体系对
+# 不入 _p1_pair_space 候选;全极低分回退照常运行)
+# ============================================================
+
+
+def _observe_restarter_affixes(gs) -> None:
+    """简报词缀观察写入(重开级局种子:量子熄火——希儿量子全线重开级)。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import ChannelSig
+    gs.observe(gs.enemy_affixes, ['量子熄火'], evidence='t',
+               sig=ChannelSig(family='obs', actor='cw-test', mode='read'))
+
+
+def test_pair_lines_mapping_by_main_faction() -> None:
+    """伪阵容↔线名映射(主派判定:线 bond_signal ∨ form_tiers 首键 ∈
+    体系羁绊键):DOT 对 → DOT队+专家桑博DOT(任务书例);希儿系对 →
+    仅希儿量子(专家桑博DOT 的贝洛伯格 2 是次档非主派,防错挂)。"""
+    assert intention_mod._p1_pair_lines(('持续伤害',)) \
+        == ('DOT队', '专家桑博DOT')
+    assert intention_mod._p1_pair_lines(('希儿系',)) == ('希儿量子',)
+    assert intention_mod._p1_pair_lines(('列车同行',)) == ('列车同行',)
+    assert intention_mod._p1_pair_lines(('仙舟',)) == ('景元仙舟',)
+
+
+def test_restart_dead_pair_excluded_from_candidates() -> None:
+    """全线重开级的体系对不入候选:量子熄火局(希儿量子重开级)希儿系
+    单对被排除——DOT 满支持局候选不含含希儿系的对(对照无词缀局)。"""
+    dep, board = _ignite_dot_board()
+    gs = _seed_gs(deployed=dep, board=board)
+    clean = p1_pair_candidates_of(gs)
+    assert ('持续伤害',) in clean, '无词缀局 DOT 单满对居首'
+    _observe_restarter_affixes(gs)
+    got = p1_pair_candidates_of(gs)
+    assert all('希儿系' not in p for p in got), \
+        '希儿系单对全线重开级 → 不入候选'
+    assert ('持续伤害',) in got, '活方向不受影响'
+
+
+def test_partial_dead_pair_kept_when_sibling_line_alive() -> None:
+    """部分死方向保留(保守语义:体系对映射线**全部**重开级才排除)——
+    净化身心局 DOT队 重开级但专家桑博DOT 只有泛化怕(非重开级),持续伤害
+    对不排除(P1 囤牌方向仍可达专家桑博DOT 终局)。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import ChannelSig
+    dep, board = _ignite_dot_board()
+    gs = _seed_gs(deployed=dep, board=board)
+    gs.observe(gs.enemy_affixes, ['净化身心'], evidence='t',
+               sig=ChannelSig(family='obs', actor='cw-test', mode='read'))
+    assert intention_mod._pair_restart_dead(('持续伤害',), gs) is False
+    assert ('持续伤害',) in p1_pair_candidates_of(gs)
+
+
+def test_all_pairs_dead_falls_back_to_unfiltered(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """全体系对极低分回退(design §6「配方锁照常运行,不过渡干预」):
+    量子熄火局希儿系单对出列(9 对);全灭语境(全部对 dead,经
+    monkeypatch 桩 _pair_restart_dead——列车/仙舟方向无现实词缀可全灭,
+    纯回退分支语义验证)→ 回退未过滤全 10 对,配方锁候选照常产出。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        GAME_STATE_SCHEMA_VERSION,
+        ChannelSig,
+        GameState,
+    )
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    sig = ChannelSig(family='obs', actor='cw-test', mode='read')
+    gs.observe(gs.enemy_affixes, ['量子熄火', '红绿灯'], evidence='t', sig=sig)
+    gs.observe(gs.plane_bosses,
+               ['深穹智械科技', '深穹智械科技', '深穹智械科技'],
+               evidence='t', sig=sig)
+    sup = {'仙舟': 1.0, '列车同行': 1.0, '持续伤害': 1.0, '希儿系': 1.0}
+    sp = intention_mod._p1_pair_space(sup, gs)
+    assert ('希儿系',) not in sp, '希儿量子全线重开级 → 单对出列'
+    assert len(sp) == 9, '其余方向未全死——保留 9 对'
+    monkeypatch.setattr(intention_mod, '_pair_restart_dead',
+                        lambda pair, _gs: True)
+    sp2 = intention_mod._p1_pair_space(sup, gs)
+    assert len(sp2) == 10, '全体系对极低分 → 回退未过滤序列(配方锁照常)'

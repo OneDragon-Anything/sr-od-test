@@ -309,8 +309,10 @@ class TestWandiFuelBottom:
         榜首区。"""
         wandi = next(c for c in COMP_LIBRARY if c.name == '万敌单C')
         full_ev = frozenset(wandi.core_chars) | {'万敌'}
+        # 无燃料词缀集避开其他线的重开级登记(净化身心批 2 起 = DOT队
+        # 重开级,会抢垫底位——换纯数值词缀,隔离万敌底线语义)。
         no_fuel_ctx = line_select.OpeningCtx(
-            enemy_affixes=('净化身心', '风之熄火', '沉重脚步', '皮糙肉厚'))
+            enemy_affixes=('第三位面强化', '风之熄火', '沉重脚步', '皮糙肉厚'))
         got = line_select.compute_candidates(full_ev, no_fuel_ctx)
         assert '万敌单C' not in got, '无燃料局被挤出 top3(数值排他)'
         full_rank = sorted(
