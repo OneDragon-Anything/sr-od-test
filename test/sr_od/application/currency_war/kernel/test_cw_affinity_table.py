@@ -210,12 +210,15 @@ def test_boss_sum_normalizes_and_unknown_zero() -> None:
         == RESTART_PENALTY * 3
 
 
-def test_boss_d4_class_fallback_grail_lines() -> None:
-    """D4 类级兜底(README D4 清单类级适用,注释声明):蕉研组克圣杯类 →
-    命运圣杯红A/双王圣杯 各 −150(机制链 = 蕉研组削能量/战技点克圣杯
-    双燃料线,bosses.md 图鉴)。"""
-    assert boss_line_score('命运圣杯红A', ('蕉研组',)) == FEAR_PENALTY
-    assert boss_line_score('双王圣杯', ('造梦互动娱乐',)) == FEAR_PENALTY
+def test_boss_blank_declaration_grail_lines() -> None:
+    """圣杯两线 boss 面空白声明(审查 R1 撤登:README D4 原文唯红绿灯带
+    类级括注且适用线均已实证,蕉研组无类级指向——类推克制属推断不登记,
+    「无直接记载不登记」纪律;版本重跑攻略 boss 记载补登)。蕉研组对圣杯
+    两线 0 分,两线不在 BOSS_AFFINITY。"""
+    assert '命运圣杯红A' not in BOSS_AFFINITY
+    assert '双王圣杯' not in BOSS_AFFINITY
+    assert boss_line_score('命运圣杯红A', ('蕉研组',)) == 0
+    assert boss_line_score('双王圣杯', ('造梦互动娱乐',)) == 0
 
 
 def test_boss_pending_names_not_silently_dropped() -> None:

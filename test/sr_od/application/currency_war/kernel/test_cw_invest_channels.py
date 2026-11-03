@@ -187,7 +187,8 @@ def test_env_advisor_channel() -> None:
 def test_strategy_advisor_channel() -> None:
     """策略侧顾问卡同通道(批 2):佩拉(减益)→黄泉/千冶减益;貊泽(追击)
     →追击飞霄;刃(燃血)→万敌单C;定义卡在前短路(骇客专家:银狼对狼尊
-    +500 非顾问中档);领航专家:姬子顾问名不在 CHARACTERS 注册表 0。"""
+    +500 非顾问中档);领航专家:姬子顾问名待验证(ADVISOR_NAME_PENDING
+    登记,注册表指向未核)持有 0。"""
     assert strategy_line_bonus('战术专家:佩拉', _comp('黄泉减益')) == INVEST_MID
     assert strategy_line_bonus('战术专家:佩拉', _comp('千冶减益')) == INVEST_MID
     assert strategy_line_bonus('潜行专家:貊泽', _comp('追击飞霄')) == INVEST_MID
@@ -195,6 +196,10 @@ def test_strategy_advisor_channel() -> None:
     assert strategy_line_bonus('骇客专家:银狼', _comp('狼尊欢愉')) \
         == INVEST_DEFINING
     assert strategy_line_bonus('领航专家:姬子', _comp('列车同行')) == 0
+    from sr_od.application.currency_war.kernel.cw_invest_channels import (
+        ADVISOR_NAME_PENDING,
+    )
+    assert set(ADVISOR_NAME_PENDING) == {'领航专家:姬子'}
 
 
 # ===== 吃怕表与万敌燃料底线(design §4;批 1 万敌行直入)=====
