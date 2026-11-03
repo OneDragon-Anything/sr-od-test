@@ -35,7 +35,7 @@ def test_gold_futures_registry_row_single_source() -> None:
     领取,禁顺手代登记);base 溯源 id 对拍(id 101101 ↔ plaza:101101)。"""
     assert set(STRATEGY_DELAYED_OFFERS) == {'黄金期货', '黄金期货+',
                                             '彩虹期货', '彩虹期货+',
-                                            '白银投资', '摸个鱼吧I'}, \
+                                            '白银投资', '摸个鱼吧I', '摸个鱼吧II'}, \
         '注册面 = 族现役五卡(展开卡各自独立批,禁顺手代登记)'
     row, = STRATEGY_DELAYED_OFFERS['黄金期货']
     assert row == StrategyDelayedOffer(id='101101', delay_nodes=5,
@@ -127,3 +127,15 @@ def test_validator_id_mismatch_raises(monkeypatch) -> None:
                               offer_quality='金'),))
     with pytest.raises(ValueError, match='id 漂移'):
         _validate_strategy_delayed_offers()
+
+
+def test_mogeyuba2_delay_row():
+    """摸个鱼吧II 延时行锁:5 节点/棱彩品质/可刷新基形(201103 先例
+    同款 refresh_count 缺省)。"""
+    rows = STRATEGY_DELAYED_OFFERS['摸个鱼吧II']
+    assert len(rows) == 1, '单腿'
+    row = rows[0]
+    assert row.id == '260201', 'id 对拍'
+    assert row.delay_nodes == 5, '深思熟虑 5 节点'
+    assert row.offer_quality == '棱彩', '棱彩品质'
+
