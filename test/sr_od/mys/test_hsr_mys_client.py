@@ -599,3 +599,76 @@ def test_detail_malformed_main_affix_warns_but_mapping_continues(
     assert len(affix_warnings) == 1
     assert 'pos=1' in affix_warnings[0]
     assert 'pt=52' in affix_warnings[0]
+
+
+# ---- 防御分支（avatar_list 缺失上抛 / 词典局部脏词条 / 数组键缺失退空）----
+
+
+def _detail_client_with_payload(tmp_path: Path, data: dict) -> tuple[HsrMysClient, MagicMock]:
+    """自定义 data 载荷直灌的 mock 客户端（防御分支剧本用变体构造，装配与
+    _detail_client 相同：role.json 缓存命中，零角色发现请求）。"""
+    mock_client = MagicMock(spec=MysClient)
+    mock_client.request.return_value = data
+    store = SessionStore(tmp_path, threading.Lock())
+    store.save_role({'role_id': '1', 'server': 'prod_gf_cn'})
+    return HsrMysClient(mock_client, store), mock_client
+
+
+def test_detail_missing_avatar_list_raises_as_protocol_error(tmp_path: Path) -> None:
+    """index 响应缺 avatar_list（其余字段在场）→ MysApiError 协议错误上抛，
+    不静默返回空列表掩盖响应形态漂移；同一坏剧本下 v1 get_characters 与
+    v2 get_characters_detail 同判（同一防线两口径一致）。"""
+    data = _fixture_detail_data()
+    del data['avatar_list']
+    hsr, mock_client = _detail_client_with_payload(tmp_path, data)
+
+    with pytest.raises(MysApiError, match='avatar_list'):
+        hsr.get_characters_detail()
+    with pytest.raises(MysApiError, match='avatar_list'):
+        hsr.get_characters()
+    assert mock_client.request.called  # 上抛发生在 index 请求之后，非短路误报
+
+
+def test_detail_dirty_property_info_entries_skipped_mapping_continues(tmp_path: Path) -> None:
+    """响应词典混入局部脏词条（值非 dict / 键非可归一整型）→ 归一时跳过而非
+    抛错（_normalize_property_info 契约），整份明细照常映射：被脏词条占位的码
+    查表自动退快照层（pt=7 → 治疗量加成），合法词典词条不受牵连（pt=98 照常
+    命中）——词典局部异常既不中断映射也不污染其余码的三层查表。"""
+    data = _fixture_detail_data()
+    data['property_info']['7'] = '垃圾'  # 脏词条①：键可归一但值非 dict
+    data['property_info']['abc'] = {  # 脏词条②：值合法但键归一不了 int
+        'name': '不应出现的脏名',
+        'property_name_relic': '不应出现的脏名',
+    }
+    hsr, _ = _detail_client_with_payload(tmp_path, data)
+
+    details = hsr.get_characters_detail()  # 不抛异常是第一判据
+
+    assert len(details) == 3
+    # ① "7" 被跳过 → pt=7 词典 miss、落快照层（甲面板 pt=7 行，下标 9 与
+    # 全量对账测试锁定的同一行序）
+    assert details[0].properties[9] == HsrPanelProperty(
+        name_cn='治疗量加成', base='0.0%', add='0.0%', final='0.0%'
+    )
+    # ② "abc" 被跳过 → 动态词典照常生效，pt=98 仍走词典路命中
+    assert details[0].relics[0].subs[1] == HsrPropertyEntry(
+        name_cn='自造词条甲', value='5.2%', times=2
+    )
+
+
+def test_detail_missing_array_keys_fall_back_to_empty_lists(tmp_path: Path) -> None:
+    """角色条目缺 relics / ornaments 数组键（响应形态漂移面）→ 对应字段退空
+    列表、映射不抛错不中断（_map_relic_list 契约）；另一侧数组照常映射作
+    对照（甲饰品 2 件在列、丙遗器部位齐全）。"""
+    data = _fixture_detail_data()
+    del data['avatar_list'][0]['relics']  # 甲缺 relics 键
+    del data['avatar_list'][2]['ornaments']  # 丙缺 ornaments 键
+    hsr, _ = _detail_client_with_payload(tmp_path, data)
+
+    details = hsr.get_characters_detail()
+
+    first, _, third = details
+    assert first.relics == []
+    assert len(first.ornaments) == 2  # 甲饰品不受键缺失牵连
+    assert third.ornaments == []
+    assert [r.pos for r in third.relics] == [1, 3]  # 丙遗器不受键缺失牵连
