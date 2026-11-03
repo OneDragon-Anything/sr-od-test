@@ -48,7 +48,7 @@ def _make_gs(*, held: tuple[str, ...] = ()) -> GameState:
 
 def test_registry_closed_set() -> None:
     """注册表锁:集合 = {'彩虹矿': 1};孤儿键负控。"""
-    assert STRATEGY_REWARD_ORE_GRANTS == {_CARD: 1}, '集合值对拍'
+    assert STRATEGY_REWARD_ORE_GRANTS == {_CARD: 1, '彩虹矿+': 1}, '集合值对拍(展开卡 +1 行)'
     for n in STRATEGY_REWARD_ORE_GRANTS:
         assert n in INVESTMENT_STRATEGIES, f'孤儿键: {n}'
 
