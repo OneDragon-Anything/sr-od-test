@@ -1168,28 +1168,31 @@ class TestShelfQualifyArm:
         assert act.reason == 'shelf_qualify_buy'
 
     def test_line_outside_virtual_top3_does_not_qualify(self):
-        """虚拟 top3 资格(线外不触发):货架四件(黑塔 = 大黑塔银河学者
-        CARRY / 姬子·启行 = 列车 CARRY / 符玄 = 希儿量子 CARRY /
-        花火 = 希儿量子 CARRY)——虚拟评估(在手∅∪货架)的跨线证据聚合
-        下 top3 = 希儿量子/千冶减益/双王圣杯(现算前置断言钉死),
-        大黑塔银河学者与列车同行落榜 → 黑塔(槽1)/姬子·启行(槽2)
-        均无资格被跳过,首动作 = 槽序内首个在榜资格件符玄(希儿量子
-        CARRY)。前置断言 = 注册表演进使帧前提失守时响亮暴露。"""
+        """虚拟 top3 资格(线外不触发):货架四件(黑塔 = 大黑塔 core/
+        姬子·启行 = 列车 anchor/符玄+花火 = 希儿量子 core)——虚拟评估
+        (在手∅∪货架)下 top3 = 列车同行(锚 8000+花火 4000+274)/
+        希儿量子(双 core 8000+38)/千冶减益(符玄 4000+40,注册序压同分
+        龙丹),大黑塔银河学者(黑塔 4000+38)落榜 → 黑塔(槽1)无资格
+        被跳过,首动作 = 槽序内首个在榜资格件姬子·启行(列车 CARRY)。
+        前置断言 = 注册表演进使帧前提失守时响亮暴露(统一阵容评分后
+        排序 = 数值单值和,锚档支配)。"""
         from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
             line_select,
         )
         _face = {'黑塔', '姬子·启行', '符玄', '花火'}
-        _virt = line_select.compute_candidates(frozenset(_face), frozenset())
-        assert '大黑塔银河学者' not in _virt and '列车同行' not in _virt, \
+        _virt = line_select.compute_candidates(
+            frozenset(_face), line_select.OpeningCtx())
+        assert '大黑塔银河学者' not in _virt, \
             f'帧前提失守:挤出线意外入虚拟 top3: {_virt!r}'
+        assert '列车同行' in _virt and '希儿量子' in _virt
         live, sess, gs, st = _frame(
             gold=60, node_kind='reward', direction=False,
             shop_cards=[('黑塔', 1, 1), ('姬子·启行', 3, 1),
                         ('符玄', 4, 1), ('花火', 2, 1)])
         act = live.decide_shop_action()
         assert isinstance(act, CwActionBuyCardParam), f'非资格买入: {act!r}'
-        assert act.card.name == '符玄', \
-            f'虚拟 top3 外线的货架件(黑塔/姬子·启行)须被跳过: {act!r}'
+        assert act.card.name == '姬子·启行', \
+            f'虚拟 top3 外线的货架件(黑塔)须被跳过,首资格件 = 列车 anchor 姬子·启行: {act!r}'
         assert act.reason == 'shelf_qualify_buy'
 
     def test_missing_loop_precedes_qualify_arm(self):

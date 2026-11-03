@@ -1,17 +1,21 @@
-"""终局线选择(候选-锁定制)内核测试——迭代
-2026-10-12-prep-shop-workflow-redesign 批 3.7;含选线决策族两翼
+"""终局线选择(统一阵容评分)内核测试——迭代
+2026-11-03-unified-line-scoring 批 1;含选线决策族两翼
 (过渡框架判定 + session 作用域载体)。
 
-出处 = line_and_upgrade §1.2-§1.4(判据唯一源):
-- §1.2 线分数 = 字典序(环境分级 → 持有证据级 → 攻略热度,注册序终局)
-  + 热度映射常量表(排序立场数据,落策略层);
-- §1.3 top3 候选管理(每帧重算,签名幂等);
-- §1.4 锁定双触发(硬规则查表:策略型 OR/角色型 AND——判定单一源 =
-  知识卡原语;时点兜底 = plane2_started ∧ P2 投资策略选卡完成)+
-  同帧多命中裁决(线分数最高 + 热度 tie-break + 注册序终局,禁遍历序)。
+出处 = strategy-docs/12_line_and_intention.md §1.1-§1.3(判据唯一源)+
+design.md §2(数量级表)/§6(锁定语义):
+- §1.1 线分数 = 单值和(证据 carry/骨架/插件 + 热度 + 投资通道派生 +
+  词缀〔含万敌燃料底线〕+ boss〔批 2 前恒 0〕;数量级常数单一源 =
+  kernel/cw_line_scales);
+- §1.2 top3 候选管理(每帧重算,签名幂等)+ 证据门(env∨carry∨骨架∨
+  插件 > 0,不含热度);
+- §1.3 锁定 = P2 时点兜底唯一路径(硬规则/即时锁全退役——P1 即锁
+  行为消失为设计语义,sim 场景①)+ 空候选兜底分支;
+- design §2 sim 不变量(正项上界 < |−100000|)与数值对照三场景。
 
 分节组织(同文件三节):
-- 判据本体(本文件主节):候选快照 / 硬规则锁定 / 时点兜底 / 端到端;
+- 判据本体(本文件主节):数量级对照 / 候选快照 / P1 无锁 / 时点兜底 /
+  万敌燃料底线 / 正项上界自算 / 端到端;
 - 配方伪阵容路由(decision_target):统一保护集迭代末阶段收口后,
   过渡框架判据族(pick_framework / transition_score / _framework_counts)
   已随 TRANSITION_PACK 策展符号退役(design §2.4:判据数据源 = 策展
@@ -109,74 +113,132 @@ class TestHeatTable:
             == h['追击飞霄'] == h['景元仙舟'] == 40
 
 
-# ===== 候选快照(top3;字典序) =====
+# ===== 候选快照(top3;单值和排序) =====
 
 
 class TestCandidates:
     def test_empty_state_top3_by_heat_then_registration(self):
-        """零持有帧:环境/证据级全平 → 热度定序;共享热度(圣杯两线)
-        终局裁定 = 注册序首线。"""
-        got = line_select.compute_candidates(frozenset(), frozenset())
+        """零持有帧:证据/投资分量全 0 → 热度定序(每点 +1);共享热度
+        (圣杯两线 118)终局裁定 = 注册序首线。"""
+        got = line_select.compute_candidates(
+            frozenset(), line_select.OpeningCtx())
         assert got[:3] == ('列车同行', '命运圣杯红A', '双王圣杯')
         assert len(got) == 3
 
-    def test_carry_outranks_skeleton_and_heat(self):
-        """持有证据级字典序:CARRY 在手压过骨架计数与热度——持有
-        低热度线的 CARRY(追击飞霄·飞霄,heat 40)胜过只囤骨架的
-        高热度线。"""
+    def test_carry_anchor_outranks_heat(self):
+        """锚核心 +8000 压过热度序:持有低热度线的锚(追击飞霄·飞霄,
+        heat 40)胜过零证据高热度线(列车同行 274)。"""
         feixiao = next(c for c in COMP_LIBRARY if c.name == '追击飞霄')
         assert line_select.LINE_HEAT[feixiao.name] < line_select.LINE_HEAT['列车同行']
-        # 飞霄在手 = 追击飞霄 CARRY 档(大头)→ 证据级首维压热度序
         got = line_select.compute_candidates(
-            frozenset({'飞霄'}), frozenset())
+            frozenset({'飞霄'}), line_select.OpeningCtx())
         assert got[0] == '追击飞霄'
 
-    def test_env_tier_outranks_hold_evidence(self):
-        """环境分级 = 字典序首键:强关联策略命中线(策略型 lock_rules
-        命中)即使零持有也压过持有证据最厚的未命中线。"""
-        # 黑塔纪元 → 大黑塔银河学者(策略型关联)
+    def test_invest_channel_bonus_outranks_heat(self):
+        """投资通道派生分量进线分:黑塔纪元(定义卡 +500)→ 大黑塔
+        银河学者压过零信号热度首线(列车 274)。"""
         got = line_select.compute_candidates(
-            frozenset(), frozenset({'黑塔纪元'}))
+            frozenset(),
+            line_select.OpeningCtx(held_invest=frozenset({'黑塔纪元'})))
         assert got[0] == '大黑塔银河学者'
 
     def test_deterministic_and_idempotent(self):
         """同一持有面重复计算同值(签名幂等);未锁定帧快照 = 派生值。"""
         held = frozenset({'姬子·启行'})
-        a = line_select.compute_candidates(held, frozenset())
-        b = line_select.compute_candidates(held, frozenset())
+        ctx = line_select.OpeningCtx()
+        a = line_select.compute_candidates(held, ctx)
+        b = line_select.compute_candidates(held, ctx)
         assert a == b == tuple(sorted(
-            a, key=lambda n: (*line_select.line_score_key(
+            a, key=lambda n: (-line_select.line_score_key(
                 next(c for c in COMP_LIBRARY if c.name == n),
-                held, frozenset()), _REG_INDEX[n])))
+                held, ctx), _REG_INDEX[n])))
+
+
+# ===== 数量级对照(design §2 三场景:层间/层内数量级锁) =====
+
+
+class TestMagnitudeScenarios:
+    """三对照场景(design §2「sim 数值对照场景」):①单 anchor vs 多非锚
+    core ②4 骨架 vs 1 anchor ③热度满 vs 单插件。
+
+    场景①数值语义申报:anchor +8000 vs 非锚 core +4000(减半)——多非锚
+    core(花火+符玄+缇宝 = 12000)数值上仍高于单 anchor(8000);相对旧
+    等权(24000 vs 8000 = 3:1 支配)修复为 3:2,单 anchor 独压任一非锚
+    core、锚+任一 core 与 3 core 相平(12000 = 12000)。「无希儿的量子线
+    不是量子线」的攻略语义由证据档位(锚不在手 = 该线证据起于 core 档)
+    承载,数值支配关系以本组断言为准(已申报 design §2 场景①的
+    「希儿胜」措辞与采纳常数的张力,处置归迭代方)。
+    """
+
+    def test_scenario_anchor_vs_multi_core(self):
+        """①层内 carry 档:锚 8000 > 单非锚 core 4000;锚+1 core =
+        3 非锚 core(相平点,design §2 表注「锚+任一辅助即胜/相平」)。"""
+        seele = next(c for c in COMP_LIBRARY if c.name == '希儿量子')
+        ctx = line_select.OpeningCtx()
+        anchor_only = line_select.line_score_breakdown(
+            seele, frozenset({'希儿'}), ctx).carry
+        one_core = line_select.line_score_breakdown(
+            seele, frozenset({'花火'}), ctx).carry
+        anchor_plus_core = line_select.line_score_breakdown(
+            seele, frozenset({'希儿', '花火'}), ctx).carry
+        three_core = line_select.line_score_breakdown(
+            seele, frozenset({'花火', '符玄', '缇宝'}), ctx).carry
+        assert anchor_only > one_core
+        assert anchor_plus_core == three_core
+
+    def test_scenario_four_skeleton_equals_one_anchor(self):
+        """②层间:4 骨架 = 1 anchor 相平(design §2 表相平点按 anchor
+        档重校)——分项常数断言(跨线同帧构造等价持有面不可复现,
+        常数关系即设计锁)。"""
+        from sr_od.application.currency_war.kernel.cw_line_scales import (
+            CARRY_ANCHOR,
+            SKELETON_BONUS,
+        )
+        assert 4 * SKELETON_BONUS == CARRY_ANCHOR
+
+    def test_scenario_heat_below_single_plugin(self):
+        """③热度 < 1 插件(R4-2:持有实证 > 社区先验,与字典序行为
+        一致):满热度 274 点 < 插件 500;行为面 = 零证据满热度线被
+        证据门挡,单插件持有线(希儿量子·知更鸟 = shared 插件)入选。"""
+        from sr_od.application.currency_war.kernel.cw_line_scales import (
+            PLUGIN_BONUS,
+        )
+        ctx = line_select.OpeningCtx()
+        assert max(line_select.LINE_HEAT.values()) < PLUGIN_BONUS
+        got = line_select.compute_candidates(
+            frozenset({'知更鸟'}), ctx, evidence_gate=True)
+        assert '希儿量子' in got, '插件证据点亮(热度不作入选理由)'
+        assert '列车同行' not in got, '零证据满热度线被证据门挡'
 
 
 # ===== 证据门(12 号篇 §1.2 候选入选证据门) =====
 
 
 class TestEvidenceGate:
-    """证据门参数(候选快照消费开启版;缺省关闭 = 现行全量口径):
+    """证据门参数(候选快照消费开启版;缺省关闭 = 全量口径):
 
-    - 线入选 ⟺ 证据维非零(CARRY/骨架/插件任一持有 ∨ 环境分级命中);
+    - 线入选 ⟺ 证据门分量为正(投资通道 ∨ carry ∨ 骨架 ∨ 插件——命名
+      分量访问 :attr:`LineScore.gate_positive`,**不含热度**);
     - 零证据线不入候选——热度只作有证据线间的排序,不再是入选理由;
-    - 开局零持有零环境 = 空候选(合法形态;时点兜底空候选分支承接)。
+    - 开局零持有零投资 = 空候选(合法形态;时点兜底空候选分支承接)。
     """
 
     def test_zero_evidence_yields_empty_candidates(self):
-        """零持有零环境 → 空候选(开局「无阵容入选」;缺省版对照 =
+        """零持有零投资 → 空候选(开局「无阵容入选」;缺省版对照 =
         热度前三常驻,TestCandidates.test_empty_state 辖)。"""
         assert line_select.compute_candidates(
-            frozenset(), frozenset(), evidence_gate=True) == ()
+            frozenset(), line_select.OpeningCtx(), evidence_gate=True) == ()
 
     def test_carry_evidence_lights_line(self):
-        """CARRY 在手点亮该线(持有证据首维):飞霄 = 追击飞霄 CARRY
-        档(carry_set 合流口径)——唯一证据线即唯一候选。"""
+        """锚在手点亮该线(证据 carry 层):飞霄 = 追击飞霄锚
+        (LINE_ANCHOR)——唯一证据线即唯一候选。"""
         got = line_select.compute_candidates(
-            frozenset({'飞霄'}), frozenset(), evidence_gate=True)
+            frozenset({'飞霄'}), line_select.OpeningCtx(), evidence_gate=True)
         assert got == ('追击飞霄',)
 
     def test_skeleton_evidence_lights_line(self):
-        """骨架件持有(≥1)点亮该线:key_items 成员在手 = 骨架计数维
-        非零(CARRY 维零也入选)。"""
+        """骨架件持有(≥1)点亮该线:key_items 成员在手 = 骨架分量非零
+        (carry 层零也入选)。"""
         from sr_od.application.currency_war.kernel.cw_comps import (
             carry_set,
         )
@@ -185,95 +247,124 @@ class TestEvidenceGate:
                     and any(n not in carry_set(c) for n in c.key_items))
         skel = next(n for n in comp.key_items if n not in carry_set(comp))
         got = line_select.compute_candidates(
-            frozenset({skel}), frozenset(), evidence_gate=True)
+            frozenset({skel}), line_select.OpeningCtx(), evidence_gate=True)
         assert comp.name in got, (
-            f'骨架件 {skel} 在手须点亮 {comp.name}(骨架计数维)')
+            f'骨架件 {skel} 在手须点亮 {comp.name}(骨架分量)')
 
-    def test_env_tier_evidence_lights_line(self):
-        """环境分级命中(策略型强关联)点亮该线——零持有也入选。"""
+    def test_invest_channel_evidence_lights_line(self):
+        """投资通道命中(定义卡)点亮该线——零持有也入选。"""
         got = line_select.compute_candidates(
-            frozenset(), frozenset({'黑塔纪元'}), evidence_gate=True)
+            frozenset(),
+            line_select.OpeningCtx(held_invest=frozenset({'黑塔纪元'})),
+            evidence_gate=True)
         assert '大黑塔银河学者' in got
 
-    def test_heat_ranks_only_within_evidenced_lines(self):
-        """热度降为有证据线间的排序:候选 ⊆ 持有点亮线域且按线分数
-        全序(证据级字典序 → 热度);零证据高热度线(命运圣杯红A 118 >
-        追击飞霄 40)不入——热度不再是入选理由。姬子·启行跨线点亮
-        (反甲白厄/列车同行)为注册表事实,点亮域按现算取。"""
-        held = frozenset({'姬子·启行', '飞霄'})
+    def test_negative_affix_component_not_in_gate(self):
+        """词缀分量为负不点亮证据门(门分量集显式定义:env∨carry∨骨架∨
+        插件——词缀/boss 不在门内):万敌无燃料局词缀分 −100000,
+        零持有零投资时仍空候选。"""
         got = line_select.compute_candidates(
-            held, frozenset(), evidence_gate=True)
+            frozenset(),
+            line_select.OpeningCtx(
+                enemy_affixes=('永久创伤', '净化身心')),
+            evidence_gate=True)
+        assert got == ()
+
+    def test_heat_ranks_only_within_evidenced_lines(self):
+        """热度降为有证据线间的排序:候选 ⊆ 证据点亮线域且按线分全序;
+        零证据高热度线(命运圣杯红A 118 > 追击飞霄 40)不入——热度不再
+        是入选理由。姬子·启行跨线点亮(反甲白厄/列车同行)为注册表事实,
+        点亮域按现算取。"""
+        held = frozenset({'姬子·启行', '飞霄'})
+        ctx = line_select.OpeningCtx()
+        got = line_select.compute_candidates(held, ctx, evidence_gate=True)
         lit = {c.name for c in COMP_LIBRARY
-               if any(v != 0 for v in
-                      line_select.line_score_key(c, held, frozenset())[:4])}
+               if line_select.line_score_breakdown(
+                   c, held, ctx).gate_positive}
         assert lit and set(got) <= lit, '候选 ⊆ 证据点亮线域'
         assert '命运圣杯红A' not in got, '零证据高热度线不入'
         order = sorted(lit, key=lambda n: (
-            *line_select.line_score_key(
+            -line_select.line_score_key(
                 next(c for c in COMP_LIBRARY if c.name == n),
-                held, frozenset()), _REG_INDEX[n]))
+                held, ctx), _REG_INDEX[n]))
         assert list(got) == order[:line_select.CANDIDATE_TOP_N], \
             '候选序 = 全序在点亮域上的受限投影'
 
     def test_default_off_keeps_full_ranking(self):
-        """缺省关闭 = 现行全量版(其余调用方现行口径不变):零证据帧
+        """缺省关闭 = 全量版(虚拟评估/资格器消费口径):零证据帧
         仍返回热度前三。"""
         assert line_select.compute_candidates(
-            frozenset(), frozenset()) == ('列车同行', '命运圣杯红A', '双王圣杯')
+            frozenset(), line_select.OpeningCtx()) \
+            == ('列车同行', '命运圣杯红A', '双王圣杯')
 
 
-# ===== 硬规则锁定(策略型/角色型;同帧多命中裁决) =====
+# ===== 万敌燃料底线(design §4;词缀分量;sim 场景③) =====
 
 
-class TestHardRules:
-    def test_char_rule_locks_on_full_combo_and_not_partial(self):
-        """角色型 = 关键角色组合全员在手(AND):专家桑博DOT 的
-        ['桑博','卡芙卡','千冶·刃'] 三件齐 → 命中;缺一件 → 不命中。"""
-        full = frozenset({'桑博', '卡芙卡', '千冶·刃'})
-        partial = frozenset({'桑博', '卡芙卡'})
-        hits_full = line_select.hard_lock_hit_lines(full, frozenset())
-        hits_part = line_select.hard_lock_hit_lines(partial, frozenset())
-        assert '专家桑博DOT' in hits_full
-        assert '专家桑博DOT' not in hits_part
+class TestWandiFuelBottom:
+    def test_no_fuel_line_bottom_despite_full_evidence(self):
+        """万敌无燃料局垫底:开局词缀 ∩ 燃料集 = 空 → −100000,满证据
+        (锚+全 core 24040)线分为负、全序垫底(20 线排序末位)且被挤出
+        top3——数值排他非布尔特判;有燃料对照(正当防卫 +900)回到
+        榜首区。"""
+        wandi = next(c for c in COMP_LIBRARY if c.name == '万敌单C')
+        full_ev = frozenset(wandi.core_chars) | {'万敌'}
+        no_fuel_ctx = line_select.OpeningCtx(
+            enemy_affixes=('净化身心', '风之熄火', '沉重脚步', '皮糙肉厚'))
+        got = line_select.compute_candidates(full_ev, no_fuel_ctx)
+        assert '万敌单C' not in got, '无燃料局被挤出 top3(数值排他)'
+        full_rank = sorted(
+            COMP_LIBRARY,
+            key=lambda c: line_select._line_sort_key(c, full_ev, no_fuel_ctx))
+        assert full_rank[-1].name == '万敌单C', '全序垫底(sim 场景③)'
+        assert line_select.line_score_key(wandi, full_ev, no_fuel_ctx) < 0
+        fuel_ctx = line_select.OpeningCtx(enemy_affixes=('正当防卫',))
+        assert line_select.line_score_key(wandi, full_ev, fuel_ctx) \
+            > line_select.line_score_key(wandi, full_ev, no_fuel_ctx)
 
-    def test_strategy_rule_locks_on_association(self):
-        """策略型 = 强关联策略到手(OR):黑塔纪元 → 大黑塔银河学者。"""
-        hits = line_select.hard_lock_hit_lines(frozenset(), frozenset({'黑塔纪元'}))
-        assert '大黑塔银河学者' in hits
 
-    def test_same_frame_multi_hit_adjudication(self):
-        """同帧多命中裁决(§1.4 明文禁遍历序隐式定锁):两线硬规则
-        同帧命中 → 取线分数最高者;分数同 → 热度;再同 → 注册序首线。
+# ===== P1 无锁(硬规则/即时锁全退役;sim 场景①) =====
 
-        构造:① 角色型命中 专家桑博DOT(热 20,无环境、无持有差)
-        + 策略型命中 大黑塔银河学者(热 38)——环境分级首键使大黑塔
-        (策略命中 = 最高级)胜出,即使其热度证据面被反超;
-        ② 共享热度/同证据级的多命中按注册序(圣杯双线同热,角色型
-        组合构造性难同帧,以线分数全序断言形态承载)。"""
-        # ① 环境分级压持有证据:专家桑博DOT 持有全组(证据最厚),
-        # 大黑塔仅策略命中(零持有)——环境级首键 → 大黑塔胜。
-        held = frozenset({'桑博', '卡芙卡', '千冶·刃', '黑塔'})
-        invest = frozenset({'黑塔纪元'})
-        hits = line_select.hard_lock_hit_lines(held, invest)
-        assert {'专家桑博DOT', '大黑塔银河学者'} <= set(hits)
-        assert hits[0] == '大黑塔银河学者', (
-            '环境分级(策略命中线)必须压过持有证据级——字典序首键')
-        # ② 裁决与候选同一全序:命中线首名 = 全序排序首名(禁遍历序)。
-        assert hits == tuple(sorted(
-            hits, key=lambda n: (*line_select.line_score_key(
-                next(c for c in COMP_LIBRARY if c.name == n),
-                held, invest), _REG_INDEX[n])))
+
+class TestHardLocksRetired:
+    def test_full_char_combo_p1_does_not_lock(self):
+        """角色硬锁废:旧角色型全组在手(专家桑博DOT 三件)P1 帧不锁
+        ——核心在手 = carry 证据分(数值必然性替代),锁定唯一路径 =
+        P2 时点兜底。"""
+        sess = StrategySession()
+        _hold(sess, ['桑博', '卡芙卡', '千冶·刃'])
+        gs = game_state_of(sess)
+        gs.node_hist_pos = (1, 2)
+        refresh_line_if_needed(gs)
+        st = state_of(gs)
+        assert st.target_comp is None, 'P1 即锁行为消失(design §6)'
+
+    def test_defining_strategy_p1_does_not_lock(self):
+        """策略即时锁废:黑塔纪元(旧策略型硬锁触发)P1 帧不锁——
+        定义卡 +500 进线分,锁定走时点兜底;候选排序照常被加分驱动。"""
+        sess = StrategySession()
+        gs = game_state_of(sess)
+        gs.node_hist_pos = (1, 2)
+        gs.observe(gs.active_strategies, ['黑塔纪元'], evidence='t',
+                   sig=ChannelSig(family='obs', actor='cw-test', mode='read'))
+        refresh_line_if_needed(gs)
+        st = state_of(gs)
+        assert st.target_comp is None
+        assert st.line_candidates[0] == '大黑塔银河学者', \
+            '定义卡加分照常进候选排序(分数说话)'
 
 
 # ===== 时点兜底与 evaluate_lock 总序 =====
 
 
 class TestFallbackAndEvaluate:
+    _CTX = line_select.OpeningCtx()
+
     def test_no_lock_before_trigger(self):
-        """硬规则未命中 ∧ 时点未到(P1/未选卡)→ 不锁(None)。"""
+        """时点未到(P1/未选卡)→ 不锁(None)。"""
         got = line_select.evaluate_lock(
             ('列车同行', '命运圣杯红A', '双王圣杯'),
-            frozenset(), frozenset(),
+            frozenset(), self._CTX,
             plane2_started=False, p2_strategy_pick_done=False)
         assert got is None
 
@@ -281,7 +372,7 @@ class TestFallbackAndEvaluate:
         """plane2_started 但选卡未完成 → 不锁(P2 入口至兜底锁帧的
         短窗 = 未锁双轨期)。"""
         got = line_select.evaluate_lock(
-            ('列车同行',), frozenset(), frozenset(),
+            ('列车同行',), frozenset(), self._CTX,
             plane2_started=True, p2_strategy_pick_done=False)
         assert got is None
 
@@ -290,51 +381,101 @@ class TestFallbackAndEvaluate:
         降序,取首 = 热度序的列车同行)。"""
         got = line_select.evaluate_lock(
             ('列车同行', '命运圣杯红A', '双王圣杯'),
-            frozenset(), frozenset(),
+            frozenset(), self._CTX,
             plane2_started=True, p2_strategy_pick_done=True)
         assert got == '列车同行'
 
-    def test_fallback_empty_candidates_locks_full_order_head(self):
-        """时点兜底空候选分支(12 号篇 §1.3:
-        证据门下空候选可达,兜底为真规则):候选空 → 锁全 20 线全序
-        首名——零证据帧全序首名 = 热度首线(现行全序的退化情形)。"""
+    def test_fallback_full_recompute_head_is_evidence_top(self):
+        """空候选分支的真重算:空候选 + 持有面非空 → 锁全量重算首名
+        (证据最厚线,非热度首线)。"""
         got = line_select.evaluate_lock(
-            (), frozenset(), frozenset(),
+            (), frozenset({'桑博', '卡芙卡', '千冶·刃'}), self._CTX,
+            plane2_started=True, p2_strategy_pick_done=True)
+        assert got == '专家桑博DOT'
+
+    def test_fallback_empty_candidates_locks_full_order_head(self):
+        """时点兜底空候选分支(12 号篇 §1.3:证据门下空候选可达,
+        兜底为真规则):候选空且零持有 → 锁全 20 线全序首名——零证据帧
+        全序首名 = 热度首线(全序的退化情形);触发前置不满足时仍不锁。"""
+        got = line_select.evaluate_lock(
+            (), frozenset(), self._CTX,
             plane2_started=True, p2_strategy_pick_done=True)
         assert got == '列车同行'
-        # 触发前置不满足时(选卡未完成)空候选仍不锁
         got2 = line_select.evaluate_lock(
-            (), frozenset(), frozenset(),
+            (), frozenset(), self._CTX,
             plane2_started=True, p2_strategy_pick_done=False)
         assert got2 is None
 
-    def test_hard_rule_beats_fallback_same_frame(self):
-        """同帧硬规则与兜底齐备 → 硬规则线胜(先到先锁的判据序)。"""
-        got = line_select.evaluate_lock(
-            ('列车同行',), frozenset({'桑博', '卡芙卡', '千冶·刃'}),
-            frozenset(),
-            plane2_started=True, p2_strategy_pick_done=True)
-        assert got == '专家桑博DOT'
+
+# ===== 正项上界自算(design §2 sim 不变量;批 1 锁常数) =====
+
+
+def test_positive_terms_upper_bound_below_restart_magnitude():
+    """正项上界不变量(design §2/R4-1):任一线「全员持有 + 全投资持有
+    (83 环境∪335 策略,放宽上界假设——不变量只要求任何构局追不上
+    重开级)+ 开局词缀正项 top4 + 满热度」的正项和 < |−100000|。
+    重开级单条即数值排他;上界值随常数表演进自动重算(本断言 = 锁)。"""
+    from sr_od.application.currency_war.kernel.cw_affinity_table import (
+        affix_row_of,
+    )
+    from sr_od.application.currency_war.kernel.cw_invest_channels import (
+        env_line_bonus,
+        strategy_line_bonus,
+    )
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        INVESTMENT_ENVS,
+        INVESTMENT_STRATEGIES,
+    )
+    from sr_od.application.currency_war.kernel.cw_line_scales import (
+        RESTART_PENALTY,
+    )
+    worst = ('', 0)
+    for comp in COMP_LIBRARY:
+        held_all = frozenset(comp.core_chars) \
+            | set(comp.shared_chars or ()) | set(comp.key_items or ())
+        bd = line_select.line_score_breakdown(
+            comp, held_all, line_select.OpeningCtx())
+        invest_max = sum(
+            max(env_line_bonus(n, comp), 0) for n in INVESTMENT_ENVS) \
+            + sum(max(strategy_line_bonus(n, comp), 0)
+                  for n in INVESTMENT_STRATEGIES)
+        affix_max = sum(sorted(
+            (s.score for s in affix_row_of(comp.name).values()
+             if s.score > 0), reverse=True)[:4])
+        total = bd.carry + bd.skeleton + bd.plugin + bd.heat \
+            + invest_max + affix_max
+        if total > worst[1]:
+            worst = (comp.name, total)
+    assert worst[1] < abs(RESTART_PENALTY), (
+        f'正项上界越界:{worst}(design §2 不变量 < 100000)')
 
 
 # ===== 端到端:refresh 前置段驱动锁定 =====
 
 
 class TestRefreshDrivesLock:
-    def test_hard_rule_lock_on_refresh_frame(self):
-        """硬规则命中帧经前置段直接写锁(锁定动作发生的域内立即生效,
-        §3):target_comp 写入 + 候选清空 + 派生缓存同步。"""
-        from sr_od.application.currency_war.kernel.cw_game_state import (
-            game_state_of,
-        )
+    def test_p1_full_combo_waits_until_p2_fallback(self):
+        """端到端(P1 即锁消失 + 时点兜底,sim 场景①):P1 持旧角色硬锁
+        全组不锁;进 P2 且首笔策略获得帧 → 兜底锁证据首名(target_comp
+        写入 + 候选清空 + 派生缓存同步)。"""
         sess = StrategySession()
         _hold(sess, ['桑博', '卡芙卡', '千冶·刃'])
         gs = game_state_of(sess)
         st = state_of(gs)
         gs.node_hist_pos = (1, 2)
         refresh_line_if_needed(gs)
+        assert st.target_comp is None, 'P1 不锁(硬锁退役)'
+        # 进 P2 + 首笔策略获得(滑动基线增长)→ 兜底锁
+        cw4_gs(sess, plane=2, round_num=1, node='prep')
+        gs.node_hist_pos = (2, 1)
+        handle_node_boundary(gs)
+        gs.observe(gs.active_strategies, ['白银投资'], evidence='t',
+                   sig=ChannelSig(family='obs', actor='cw-37-test',
+                                  mode='read'))
+        refresh_line_if_needed(gs)
         assert st.target_comp is not None
-        assert st.target_comp.name == '专家桑博DOT'
+        assert st.target_comp.name == '专家桑博DOT', \
+            '兜底锁 = 证据门版候选首名(全组证据最厚线)'
         assert st.line_candidates == ()
         ist = st.v3_intention
         assert ist.locked_comp == '专家桑博DOT'
@@ -534,9 +675,52 @@ class TestP2PickBaselineSliding:
         refresh_line_if_needed(gs)
         assert st.p2_strategy_pick_done is True, (
             '先于首决策帧的 P2 首笔获得须被滑动基线侦测(吞签形态消解)')
-        # 黑塔纪元 = 大黑塔银河学者策略型硬规则命中 → 该帧硬规则锁
+        # 黑塔纪元(定义卡 +500)→ 大黑塔银河学者线分居首 → 兜底锁首名
         assert st.target_comp is not None
         assert st.target_comp.name == '大黑塔银河学者'
+
+
+# ===== 定义卡缺位线靠证据分入选(sim 场景④)+ 签名词缀分量 =====
+
+
+class TestDefiningCardAbsence:
+    def test_line_enters_via_evidence_without_defining_card(self):
+        """定义卡缺位线靠证据分入选(design §6 sim 场景④「定义卡缺位
+        线靠证据分入选」):不持黑塔纪元,仅持大黑塔+黑塔(锚 8000 +
+        core 4000)→ 证据门候选含大黑塔银河学者且居首——定义卡只是
+        加分通道之一,缺位不挡线。"""
+        got = line_select.compute_candidates(
+            frozenset({'大黑塔', '黑塔'}), line_select.OpeningCtx(),
+            evidence_gate=True)
+        assert got[0] == '大黑塔银河学者'
+
+
+class TestSignatureAffixDimension:
+    def test_affix_observation_triggers_recompute(self):
+        """签名多维性(词缀/boss 分量,design §6):同持有/同节点号,
+        词缀观察写入(简报转正帧形态)→ 签名变化 → 重算——防候选消费
+        静默旧值。"""
+        sess = StrategySession()
+        gs = cw4_gs(sess, plane=1, round_num=2, node='prep')
+        gs.node_hist_pos = (1, 2)
+        st = state_of(gs)
+        refresh_line_if_needed(gs)
+        st.line_candidates = ('sentinel',)
+        # 仅词缀变化(持有/节点号/投资面不变)
+        gs.observe(gs.enemy_affixes, ['正当防卫', '忍无可忍'],
+                   evidence='t',
+                   sig=ChannelSig(family='obs', actor='cw-test', mode='read'))
+        refresh_line_if_needed(gs)
+        assert st.line_candidates != ('sentinel',), \
+            '词缀入签名:观察写入必须触发重算'
+        # boss 分量同判(plane_bosses 写入)
+        st.line_candidates = ('sentinel2',)
+        gs.observe(gs.plane_bosses, ['灰手生命科技', None, None],
+                   evidence='t',
+                   sig=ChannelSig(family='obs', actor='cw-test', mode='read'))
+        refresh_line_if_needed(gs)
+        assert st.line_candidates != ('sentinel2',), \
+            'boss 入签名:观察写入必须触发重算'
 
 
 # ============================================================ 配方伪阵容路由
