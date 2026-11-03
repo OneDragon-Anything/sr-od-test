@@ -21,6 +21,11 @@ invest-effects-calc/designs/T-34-mingyun-liwu.md)§2.5 + §4 锁 8 +
 
 环行经生产单一写端 record_settlement_row 构造(与生产同口,先例 =
 同目录 test_check_env_deploy_lock_perfect.py)。
+
+追加面 = 偶像经济策略道段(迭代 2026-09-23-invest-effects-calc
+designs/REVIEW-T329.md §五④ 锁 4/5/9;世界发放域键域扩展 = 环境 ∪ 策略,
+机制按键查表卡名无关,表 +1 条目自动覆盖):策略道完胜回退正例/混族并存
+零互扰/两道作用域隔离/跨挂点时序策略道并入。
 """
 from __future__ import annotations
 
@@ -206,3 +211,89 @@ def test_settle_rollback_then_window_discharge_same_pos() -> None:
     assert opened == ('item_opened:惊喜盒',), '回退后同窗到点正常弹除'
     assert gs.pending_item_opens.value == (), '队列清空,零滞留'
     assert gs.bench.value is None, '零席位写(直构域未观察即零写形态)'
+
+
+# ============================================================ 策略道段
+# (世界发放域键域扩展首例 = 偶像经济火花礼盒;迭代 2026-09-23-invest-
+# effects-calc designs/REVIEW-T329.md §五④ 锁 4/5/9。机制面按键查表
+# 卡名无关——表 +1 条目自动覆盖,本段锁策略道条目的作用域/混族/时序
+# 行为面。)
+
+_IDOL = '偶像经济'
+
+
+def test_perfect_win_rewinds_strategy_scoped_entry(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """策略道完胜回退正例(REVIEW-T329 §五④ 锁 4):done 含
+    (偶像经济, delayed_open_accel) ∧ 完胜帧 → 火花礼盒条目解锁位回退
+    一步 + 效果串。"""
+    gs = _make_gs(queue=(('火花礼盒', (1, 5)),),
+                  done=((_IDOL, 'delayed_open_accel'),))
+    _settle_frame(gs, 1, 2, killed=True, hp_after=80)
+    _settle_frame(gs, 1, 3, killed=True, hp_after=80)
+    effects = check_env_item_open_perfect(gs, _SIG)
+    assert effects == ('item_open_perfect:火花礼盒@1-4',), '策略道条目回退'
+    assert gs.pending_item_opens.value == (('火花礼盒', (1, 4)),)
+
+
+def test_mixed_family_entries_independent(monkeypatch: pytest.MonkeyPatch
+                                          ) -> None:
+    """混族并存 + 多次完胜累积(REVIEW-T329 §五④ 锁 5):惊喜盒@X +
+    火花礼盒@Y 两族条目独立回退零互扰(done 含两卡键,同帧各回退一步,
+    效果串两行);第二次完胜逐帧累积各再回退一步。"""
+    gs = _make_gs(queue=(('惊喜盒', (1, 5)), ('火花礼盒', (1, 7))),
+                  done=(('命运礼物', 'delayed_open_accel'),
+                        (_IDOL, 'delayed_open_accel')))
+    _settle_frame(gs, 1, 2, killed=True, hp_after=80)
+    _settle_frame(gs, 1, 3, killed=True, hp_after=80)
+    effects = check_env_item_open_perfect(gs, _SIG)
+    assert effects == ('item_open_perfect:惊喜盒@1-4',
+                       'item_open_perfect:火花礼盒@1-6'), '两族独立回退'
+    assert gs.pending_item_opens.value == \
+        (('惊喜盒', (1, 4)), ('火花礼盒', (1, 6))), '零互扰'
+    _settle_frame(gs, 1, 4, killed=True, hp_after=80)
+    check_env_item_open_perfect(gs, _SIG)
+    assert gs.pending_item_opens.value == \
+        (('惊喜盒', (1, 3)), ('火花礼盒', (1, 5))), '多次完胜累积'
+
+
+def test_scope_isolation_between_strategy_and_env(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """作用域隔离(REVIEW-T329 §五④ 锁 4,字段名与 done 键查表卡名
+    无关——scope = 表条目 ∧ accel ∧ done 键件名集,T-34 锁 8 原式):
+    done 不含 (命运礼物, accel) 时惊喜盒条目不动;done 不含 (偶像经济,
+    accel) 时火花礼盒条目不动。"""
+    # done 只含偶像经济 → 火花礼盒回退、惊喜盒不动
+    gs = _make_gs(queue=(('惊喜盒', (1, 5)), ('火花礼盒', (1, 5))),
+                  done=((_IDOL, 'delayed_open_accel'),))
+    _settle_frame(gs, 1, 2, killed=True, hp_after=80)
+    _settle_frame(gs, 1, 3, killed=True, hp_after=80)
+    assert check_env_item_open_perfect(gs, _SIG) == \
+        ('item_open_perfect:火花礼盒@1-4',), '仅策略道条目回退'
+    assert gs.pending_item_opens.value == \
+        (('惊喜盒', (1, 5)), ('火花礼盒', (1, 4))), '惊喜盒不动'
+    # done 只含命运礼物 → 惊喜盒回退、火花礼盒不动
+    gs2 = _make_gs(queue=(('惊喜盒', (1, 5)), ('火花礼盒', (1, 5))),
+                   done=(('命运礼物', 'delayed_open_accel'),))
+    _settle_frame(gs2, 1, 2, killed=True, hp_after=80)
+    _settle_frame(gs2, 1, 3, killed=True, hp_after=80)
+    assert check_env_item_open_perfect(gs2, _SIG) == \
+        ('item_open_perfect:惊喜盒@1-4',), '仅环境道条目回退'
+    assert gs2.pending_item_opens.value == \
+        (('惊喜盒', (1, 4)), ('火花礼盒', (1, 5))), '火花礼盒不动'
+
+
+def test_strategy_entry_rollback_then_window_discharge(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """跨挂点时序策略道并入(REVIEW-T329 §五④ 锁 9):策略道条目回退后
+    到点同窗正常弹除(存量命运礼物版同式的策略道回归域)。"""
+    gs = _make_gs(node_pos=(1, 3),
+                  queue=(('火花礼盒', (1, 4)),),
+                  done=((_IDOL, 'delayed_open_accel'),))
+    _settle_frame(gs, 1, 2, killed=True, hp_after=80)
+    _settle_frame(gs, 1, 3, killed=True, hp_after=80)
+    assert check_env_item_open_perfect(gs, _SIG) == \
+        ('item_open_perfect:火花礼盒@1-3',), '完胜回退一步'
+    opened = discharge_due_item_opens(gs, rand=False, sig=_SIG)
+    assert opened == ('item_opened:火花礼盒',), '回退后同窗到点正常弹除'
+    assert gs.pending_item_opens.value == (), '队列清空,零滞留'
