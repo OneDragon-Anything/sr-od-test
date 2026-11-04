@@ -9,8 +9,10 @@ calc/designs/T-38-chenggong-jingyan.md)§2.6 双端语义 + §4 锁 10(sim 半):
 - **sim = 世界真值**:节点边界发放经 kernel tick 段 write_logic 写
   gs.xp/gs.level → sim 世界等级随白送经验真实推进(8→9 跨级例证),
   零额外接线;
-- **兜底检测晚一拍**:推 8 走基础经验分支(跳过主挂点)时,检出拍 = 下
-  一节点边界,达成当拍不发放(披露键 env_xp_window_late_detect 形态);
+- **达成检测时点**:种子 lv8 路径达成位已达标(检测体首拍 tick 即记,
+  当拍零发放);非买经验源跨级(节点经验等)走升级连锁 = 结算时点记锚
+  (迭代 2026-09-23-invest-effects-calc T-432 定案),晚拍仅剩 live 观察
+  路径的留白申报;
 - **同 seed 重放**:发放序列逐位一致(发放链零 rng 消费的结构判据);
 - **披露键族在册**:ENV_XP_WINDOW_DISCLOSURES 整表并入 sim 披露集。
 """

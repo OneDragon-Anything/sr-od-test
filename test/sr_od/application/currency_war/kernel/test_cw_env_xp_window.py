@@ -10,7 +10,7 @@ sim/cw_sim_backend/test_env_xp_window_sim_chain.py。
 - 锁 1 迁移等值 = test_xp_apply_amount_home_input_domain +
   test_apply_node_xp_regression_after_migration;
 - 锁 2 主挂点达成记录 = test_main_hook_records_anchor_once;
-- 锁 3 兜底达成记录 = test_fallback_detection_at_node_boundary;
+- 锁 3 结算时点达成记录 = test_fallback_detection_at_node_boundary;
 - 锁 4 窗口发放矩阵 = test_window_grant_matrix_and_repeat_tick +
   test_grant_cross_level_carry + test_plane_flip_lex_monotonic;
 - 锁 5 未达 8 全局零行为 = test_below_threshold_zero_world_behavior;
@@ -172,16 +172,19 @@ def test_main_hook_records_anchor_once() -> None:
 # ================ 锁 3:兜底达成记录 ================
 
 def test_fallback_detection_at_node_boundary() -> None:
-    """apply_node_xp 推 8(sim 直调,跳过主挂点)→ 次拍 tick 记达成位
-    且当拍零发放(晚一拍保守,方向恒晚不早);生效位 None 窗 → 零记录
-    零写。"""
+    """apply_node_xp 推 8(sim 直调,跳过主挂点)→ 结算时点即记(设计稿
+    裁决点 3 定案,行为变化 = 设计意图):跨级当拍记达成位 = 当拍生效位、
+    当拍零发放(「接下来 N 个节点」= 达成当拍的后继 N 节点);次拍 tick
+    起按后继节点发放一拍。生效位 None 窗 → 零记录零写。"""
     gs = _seed_gs(7, 50)
     _advance(gs, (1, 1))
     assert apply_node_xp(gs, node_type='boss') == 12, '基础经验推 8'
-    _advance(gs, (1, 2))   # 次拍 tick:兜底检测
     entry = gs.effects.first(_ENV_ID)
-    assert entry.anchor_pos == (1, 2), '兜底记位 = 检出拍生效位'
+    assert entry.anchor_pos == (1, 1), '结算时点记锚 = 跨级当拍生效位'
     assert _granted(entry) == 0 and gs.xp.value == (10, 72), '当拍零发放'
+    _advance(gs, (1, 2))   # 次拍 tick:窗口首发放(达成位后继)
+    assert _granted(entry) == 1 and gs.xp.value == (22, 72), \
+        '次拍发放一拍(达成位后继 N 节点各计)'
     # None 窗:生效位未锚定 → 零记录零写
     gs2 = _seed_gs(8, 0)
     _record_lv8_window_start(gs2)

@@ -74,7 +74,10 @@ from sr_od.application.currency_war.kernel.cw_action_report.close_shop import (
 from sr_od.application.currency_war.kernel.cw_action_report.level_up import (
     report_action_level_up_param,
 )
-from sr_od.application.currency_war.kernel.cw_economy import MAX_PLAYER_LEVEL
+from sr_od.application.currency_war.kernel.cw_economy import (
+    MAX_PLAYER_LEVEL,
+    xp_apply_amount,
+)
 from sr_od.application.currency_war.kernel.cw_env_grants import (
     BOSS_NODE_KEY_PREFIX,
     FIRST_STREAK_KEY,
@@ -157,7 +160,6 @@ from sr_od.application.currency_war.sim.cw_sim_backend import (
     install_backend,
     stream_rng,
     uninstall_backend,
-    xp_apply_amount,
 )
 from sr_od.application.currency_war.sim.cw_sim_battle import (
     SIM_BATTLE_FACE,

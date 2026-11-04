@@ -101,15 +101,16 @@ def _feed_levelup(b: SimBackend, *, spy: bool):
     out = report_action_level_up_param(
         b.gs, SimpleNamespace(cost=4), _SIG,
         executed=ShopActionExecuted(levelup_clicks=5))
-    # 新抽载荷重放(世界分支流键 M22/spy-deal|M22/spy-rotation;确定性
-    # 判据 = 同 seed 同键序逐位一致)。必须在 declare_world 之前构建:
+    # 新抽载荷重放(世界分支流键 M22/spy-deal#k|M22/spy-rotation#k,k =
+    # 后端按节点位执行序计数,首执行 = '#0';确定性判据 = 同 seed 同键序
+    # 逐位一致)。必须在 declare_world 之前构建:
     # sample_shop_deal 读容器剩余牌库派生(drawable_names),世界分支入席
     # 会改牌库——后置重放不与真实抽牌同态,逐位一致判据失效。
     rotation_on = (str(b.gs.active_env.value or '') == '轮岗')
     replay = sample_shop_deal(
-        b.gs, stream_rng(b.seed, 'M22/spy-deal/p1/r1'), level=6,
+        b.gs, stream_rng(b.seed, 'M22/spy-deal/p1/r1#0'), level=6,
         probs=effective_deal_probs(
-            6, stream_rng(b.seed, 'M22/spy-rotation/p1/r1'),
+            6, stream_rng(b.seed, 'M22/spy-rotation/p1/r1#0'),
             rotation_on=rotation_on))
     cw_sim_ports.declare_world(out.world_decl)
     return out, replay
