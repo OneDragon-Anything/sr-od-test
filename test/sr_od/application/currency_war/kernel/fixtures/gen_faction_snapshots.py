@@ -261,6 +261,17 @@ def main() -> int:
         'board_line': board_line,
         'line_static': line_static,
     }
+    # 写前守卫(防分叉态误覆盖):快照 JSON 是迁移恒等基线,生成器本体
+    # 可能落后于判读侧消费面(如 3.2 后 punished 解读轴由旧 JSON 留档、
+    # 生成面已不再产出)——整文件重生成会连带抹掉留档轴。覆盖须显式
+    # 声明 --confirm-overwrite;只想更新局部期望(如部署系数变更)走
+    # 外科手术脚本按键重算,不整文件重写。
+    if '--confirm-overwrite' not in sys.argv:
+        print(f'[守卫] 拒绝写入 {_OUT}:整文件重生成会重置全部期望基线,')
+        print('       且可能抹掉判读侧留档轴(如 punished 历史字段)。')
+        print('       确认基线需要整体重立 → 加 --confirm-overwrite 重跑;')
+        print('       局部期望更新 → 用按键重算的外科手术脚本。')
+        return 1
     _OUT.write_text(json.dumps(data, ensure_ascii=False, indent=1,
                                sort_keys=True), encoding='utf-8')
     diff_inv = [
