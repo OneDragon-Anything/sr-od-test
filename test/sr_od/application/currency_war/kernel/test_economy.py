@@ -92,9 +92,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 )
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
-    pair_target_comp,
     total_remaining_nodes,
-    update_p1_recipe,
 )
 from sr_od.application.currency_war.kernel.cw_investments import (
     EconomyEffect,
@@ -703,33 +701,9 @@ def test_budget_value_domain_and_legal_zero_frames(case_id: str) -> None:
 #  指令死链删除——统一迁移批 ② MAP B 类。)
 
 
-# --- R3 · pair 断供驱逐(蓝图 §4.3-R3 推广)------------------------------------
-
-
-def test_pair_materialization_and_drought_reset() -> None:
-    """pair 体系两面一测试(合并原 test_pair_eviction_keeps_target_chain_
-    materialized / test_pair_drought_resets_when_member_visible,断言分支
-    逐条保留):
-
-    - 物化面(W578 代理门):pair 物化 → pair_target_comp(新 pair)非空
-      且档位账随物化(target 链不盲;W622 P2 病灶防回归;驱逐退役后同样
-      成立——部署/评分消费面不盲);
-    - 断供清零面:成员再现(在店/到手)→ 断供计数清零(计数语义同
-      LineTrack frozen_rounds:窗口重开即清零)。"""
-    # 物化面
-    pair = ('仙舟', '持续伤害')
-    comp = pair_target_comp(pair)
-    assert comp is not None and comp.core_chars
-    assert comp.core_faction_reqs    # 档位账随物化(部署/评分消费面不盲)
-    # 断供清零面
-    ist = IntentionState()
-    ist.p1_pair = ('持续伤害', '仙舟')
-    sess = StrategySession()
-    state_of(sess).v3_intention = ist
-    st = _ba_state(round_num=5, gold=100,
-                shop=[_sc('卡芙卡', 4)], board={})   # 卡芙卡=DOT 系成员
-    update_p1_recipe(_bsb(**st), ist, sess)
-    assert ist.pair_drought.get('持续伤害', 0) == 0
+# (R3 · pair 物化/断供驱逐测试段已随配方决策层退役删除——
+#  pair_target_comp/update_p1_recipe/pair_drought 全族消亡,
+#  考古走 git 历史;comp-structure-unification 3.3。)
 
 
 def test_injection_consistency_single_registry_source() -> None:

@@ -1,26 +1,14 @@
-"""CW 意向/方向层测试面(P1 体系对候选机器 + committed 权威判定 +
-局23 型帧商店线哨兵)。
+"""CW 意向/方向层测试面(committed 权威判定 + 局23 型帧商店线哨兵)。
 
-两节归并自原两个主题文件(测试函数名全量保留,原文件已删):
+(P1 体系对候选机器全谱/门控等价/配方锁联动三段已随 comp-structure-
+unification 3.3 配方决策层退役删除——被测符号 update_p1_recipe/
+p1_pair_candidates_of/冻结域全族消亡,测试面继任者 =
+test_cw_transition_library.py〔过渡库条目机器〕;考古走 git 历史。)
 
-1. 过渡候选机器(原 test_cw_pair_progressive.py;旧四层谓词族已随
-   候选化退役——退役登记 = math_proofs P-T166 行,现行判据 = 候选
-   排序键((对级支持度, 声明序))):出处链 =
-   kernel 成型线 ``cw_battle_calib._transition_formed``(四体系两两
-   组合 = 成型)+ 设计 §2.3(候选空间/对级 min 聚合/门控候选首位/
-   双体系对冻结域);旧病灶史 = sim 批 ``sim_20260918_072900_000_n320``
-   问题 1(65.6% 局终态配方锁停在单体系)——新制以「单体系对不进冻结
-   域」结构性免疫(§2.6-9)。候选机器全谱测试(平手声明序/解冻/进 P2
-   清空/槽写端)在 ``test_cw_transition_candidates.py``。
-2. committed 权威 + 局23 哨兵(原 test_cw_migration_direction_layer.py;
-   该文件系 W628 重构迁移批测试面,迁移对拍半边已随旧判定式退役,现役
-   内容 = 权威序直测 + 商店线行为直测,非迁移对照):
-   - D2 缺供给保守 False 直测在 p1_unarmed 一案;D3 息线 grep 测试(源码
-     扫描形态)已删且不恢复,interest_floor 裸属性读禁令归 review 面;
-   - 局23 哨兵复活说明:曾以「并入 w633」为名删除,并入目标经核查不存在
-     = 指针失真,后按现行商店线决策面复活;息线供给恒等/不死守可辨收敛
-     两面由主题文件承载(test_cw_realizable_interest_floor /
-     test_cw_statefn / test_cw_session_separation / test_cw_shop_line)。
+1. committed 权威(序①锁定线槽 + 序②过渡锁定态直测);
+2. 局23 哨兵(商店线行为直测;息线供给恒等/不死守可辨收敛两面由主题
+   文件承载: test_cw_realizable_interest_floor / test_cw_statefn /
+   test_cw_session_separation / test_cw_shop_line)。
 """
 from __future__ import annotations
 
@@ -32,18 +20,11 @@ from test.sr_od.application.currency_war._cw_helpers import (
     cw4_gs,
 )
 
-from sr_od.application.currency_war.kernel import cw_intention as intention_mod
 from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
 from sr_od.application.currency_war.kernel.cw_game_state import Unit
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
     committed_authority,
-    p1_pair_candidates_of,
-    pair_target_comp,
-    update_p1_recipe,
-)
-from sr_od.application.currency_war.kernel.cw_launch_admission import (
-    readiness_form_ok,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionBuyCardParam,
@@ -88,99 +69,10 @@ def _ignite_dot_board(train_n: int = 0) -> tuple[list, dict]:
         dep.append(Unit(char_id='三月七', star=1 + 1))
         board['列车同行'] = board.get('列车同行', 0) + 1
     return dep, board
-
-
-def test_ignited_pair_stays_single_dual_in_candidates() -> None:
-    """点火帧门控首位 = 单满对;渐进第二席由候选并集承载(design §2.3-3/§2.6-4)。
-
-    构造判别态:板上 2 DOT(点火 1.0)+ 1 列车件(支持 0.5)——旧制渐进
-    通道在此帧产 2 元对(估计器 argmin 选第二席);候选制下门控首位 =
-    支持度最高的 ('持续伤害',) 单满对,双对 ('持续伤害','列车同行') 0.5
-    入候选(第二体系件买面经候选并集承载,不再经 p1_pair)。无单体系
-    冻结(单对不进冻结域);板面对双对方向 readiness 未成型(两档 AND,
-    kernel 成型线)。"""
-    dep, board = _ignite_dot_board(train_n=1)
-    gs = _seed_gs(deployed=dep, board=board)
-
-    ist = IntentionState()
-    ist.p1_pair = ('持续伤害',)
-    update_p1_recipe(gs, ist, None)
-    assert ist.p1_pair == ('持续伤害',), \
-        '门控首位 = 单满对(渐进 2 元对形态随四层谓词族退役,§2.6-6)'
-    cands = p1_pair_candidates_of(gs)
-    assert ('持续伤害', '列车同行') in cands, \
-        f'渐进第二席由候选并集承载: {cands!r}'
-    assert not ist.p1_pair_frozen, '单体系点火不得触发方向冻结(病灶直测)'
-    # readiness 对齐:双对两档 AND 未成型(列车档 1/2)
-    assert not readiness_form_ok(
-        gs, pair_target_comp(('持续伤害', '列车同行')))
-
-
-def test_single_system_formed_pair_not_frozen() -> None:
-    """单体系对板面凑齐不冻结(design §2.6-9 新语义;旧「超窗冻结单对」
-    形态消亡)。
-
-    DOT 点火态单对物化 form_progress = 1.0(单体系档满)——旧制置位评估
-    对当前对求值会冻结单对(窗口关闭帧的停手战);新制冻结域 = 双体系对
-    (§2.3-4),单体系对板面凑齐**不触发冻结**,第二体系件继续经候选
-    并集买进——「单体系锁停 65.6% 局」死锁结构性免疫的直测。"""
-    dep, board = _ignite_dot_board()
-    gs = _seed_gs(deployed=dep, board=board)
-    ist = IntentionState()
-    ist.p1_pair = ('持续伤害',)
-    update_p1_recipe(gs, ist, None)
-    assert ist.p1_pair == ('持续伤害',), '门控首位保持单满对'
-    assert not ist.p1_pair_frozen, \
-        '单体系对板面凑齐不冻结(单对不进冻结域,§2.6-9 新语义)'
-
-
-def test_dual_system_formed_pair_freezes() -> None:
-    """真两体系成型照旧冻结(成型停手语义不变;design §2.3-4 冻结域
-    取 form_ok 首个)。
-
-    板面 DOT 2 + 列车 2:双对 ('持续伤害','列车同行') 对级支持度
-    min(1.0,1.0)=1.0 居候选首位(门控写 p1_pair)且 form_ok(两档
-    AND)——置位帧冻结,事件面走 p1_pair: 前缀。"""
-    dep = [Unit(char_id='桑博', star=1), Unit(char_id='艾丝妲', star=1), Unit(char_id='三月七', star=1), Unit(char_id='丹恒·饮月', star=1)]
-    board = {'持续伤害': 2, '列车同行': 2}
-    gs = _seed_gs(deployed=dep, board=board)
-    ist = IntentionState()
-    ist.p1_pair = ('持续伤害',)
-    update_p1_recipe(gs, ist, None)
-    assert ist.p1_pair == ('持续伤害', '列车同行')
-    assert str(ist.last_event).startswith('p1_pair:'), \
-        f'置位走 p1_pair 事件族, got {ist.last_event!r}'
-    assert ist.p1_pair_frozen, '真两体系成型照旧冻结([13] 停手语义不变)'
-    assert readiness_form_ok(gs, pair_target_comp(ist.p1_pair)), \
-        '两档齐 = form_ok(kernel 成型线)'
-
-
-def test_seele_pair_gate_requires_full_support() -> None:
-    """希儿系对入候选门槛 = 席级支持度 1.0(design §2.3-2/§2.6-10)。
-
-    DOT 点火 + 希儿缺席(席级 0 < 1.0):含希儿系的一切对(单对/双对)
-    不入候选——与旧 Q 门槛路径对齐(单卡希儿 0.5 不驱动买入);旧
-    无门槛 top-2 方向可选希儿系的早期通道随候选制消亡(§2.6-10)。"""
-    dep, board = _ignite_dot_board()
-    gs = _seed_gs(deployed=dep, board=board)
-    cands = p1_pair_candidates_of(gs)
-    assert cands, '前置:DOT 点火帧候选非空'
-    assert all('希儿系' not in p for p in cands), \
-        f'希儿席级 0 < 1.0 门槛:含希儿系对全部不入候选, got {cands!r}'
-    ist = IntentionState()
-    ist.p1_pair = ('持续伤害',)
-    update_p1_recipe(gs, ist, None)
-    assert ist.p1_pair == ('持续伤害',)
-    assert '希儿系' not in ist.p1_pair
-
-
-def test_empty_window_still_empty() -> None:
-    """空窗支零漂移——零资产帧候选空、派生对恒空。"""
-    gs = _seed_gs(deployed=[])
-    ist = IntentionState()
-    update_p1_recipe(gs, ist, None)
-    assert ist.p1_pair == (), '空窗恒空对(既有语义)'
-    assert p1_pair_candidates_of(gs) == (), '无羁绊开局候选空(§2.3-2)'
+# (P1 体系对候选机器全谱段已随配方决策层退役删除——
+#  update_p1_recipe/p1_pair_candidates_of/冻结域全族消亡,测试面
+#  继任者 = test_cw_transition_library.py(过渡库条目机器);考古走
+#  git 历史;comp-structure-unification 3.3。)
 
 
 # ============================================================
@@ -348,128 +240,10 @@ def test_committed_authority_semantics(case: str):
         state_of(sess).v3_intention = IntentionState(
             transition_locked='希儿引擎')
     assert committed_authority(_gs_state(1, 8), sess) is True
-
-
-@pytest.mark.parametrize('shape', [
-    'dual_full', 'single_full', 'partial_band', 'fallback_frame', 'empty'],
-    ids=['dual-full', 'single-full', 'partial-band', 'fallback-frame',
-         'empty'])
-def test_p1_pair_gate_equivalence_with_gate_first(shape: str) -> None:
-    """committed 等价验证(design §2.3-3/§2.6-4):p1_pair 非空 ⟺ 门控
-    首位支持度 ≥1.0 ⟺ 旧 gate_first 合格集非空(席级最高支持度 ≥1.0),
-    含支持度回落帧逐帧等价——committed ⟺ p1_pair 非空 判定零变化
-    (``committed_authority`` 序②等价论证的可执行形式;五形态覆盖满
-    席/单满/(0,1) 混合带/回落帧/空窗)。"""
-    if shape == 'dual_full':
-        dep, board = [  # DOT 2 + 列车 2:双对 1.0(置位帧冻结)
-            Unit(char_id='桑博', star=1), Unit(char_id='艾丝妲', star=1),
-            Unit(char_id='三月七', star=1), Unit(char_id='丹恒·饮月', star=1)], \
-            {'持续伤害': 2, '列车同行': 2}
-    elif shape == 'single_full':
-        dep, board = _ignite_dot_board()      # DOT 1.0 单满
-    elif shape == 'partial_band':
-        # DOT 1.0 + 仙舟 1/3((0,1) 混合带:p1_pair 非空而仙舟未满)
-        dep, board = [Unit(char_id='桑博', star=1),
-                      Unit(char_id='艾丝妲', star=1),
-                      Unit(char_id='符玄', star=1)], {'持续伤害': 2}
-    elif shape == 'fallback_frame':
-        dep, board = [Unit(char_id='桑博', star=1)], {}   # DOT 0.5 回落带
-    else:
-        dep, board = [], {}
-    gs = _seed_gs(deployed=dep, board=board)
-
-    ist = IntentionState()
-    update_p1_recipe(gs, ist, None)
-    sup = intention_mod._p1_system_support(gs)
-    expect_nonempty = (
-        max(sup.values(), default=0.0)
-        >= intention_mod.P1_PAIR_LOCK_MIN_SUPPORT)
-    assert bool(ist.p1_pair) == expect_nonempty, \
-        f'{shape}: 门控首位非空 ⟺ 席级最高支持度 ≥1.0(旧 gate_first Q 非空)'
-    # committed 序②替代口径直证:ist 供给下 committed ⟺ transition_locked
-    # 非空(原 p1_pair 读法已随配方决策层换源)
-    sess = StrategySession()
-    state_of(sess).v3_intention = IntentionState(
-        transition_locked='廉价DOT')
-    assert committed_authority(gs, sess) is True
-    state_of(sess).v3_intention = IntentionState()
-    assert committed_authority(gs, sess) is False
-
+# (门控等价测试 test_p1_pair_gate_equivalence_with_gate_first 已随
+#  配方决策层退役删除——被测等价式(p1_pair ⟺ 门控首位)两端全为
+#  退役符号;comp-structure-unification 3.3。)
 # ============================================================
-# 配方锁联动(统一阵容评分批 2;design §6:线分含 −100000 的体系对
-# 不入 _p1_pair_space 候选;全极低分回退照常运行)
-# ============================================================
-
-
-def _observe_restarter_affixes(gs) -> None:
-    """简报词缀观察写入(重开级局种子:量子熄火——希儿量子全线重开级)。"""
-    from sr_od.application.currency_war.kernel.cw_game_state import ChannelSig
-    gs.observe(gs.enemy_affixes, ['量子熄火'], evidence='t',
-               sig=ChannelSig(family='obs', actor='cw-test', mode='read'))
-
-
-def test_pair_lines_mapping_by_main_faction() -> None:
-    """伪阵容↔线名映射(主派判定:线档 0 首键 ∈
-    体系羁绊键):DOT 对 → DOT队+专家桑博DOT(任务书例);希儿系对 →
-    仅希儿量子(专家桑博DOT 的贝洛伯格 2 是次档非主派,防错挂);列车对
-    → A/B 两套(批 3 拆分后双套主派同键)。"""
-    assert intention_mod._p1_pair_lines(('持续伤害',)) \
-        == ('DOT队', '专家桑博DOT')
-    assert intention_mod._p1_pair_lines(('希儿系',)) == ('希儿量子',)
-    assert intention_mod._p1_pair_lines(('列车同行',)) \
-        == ('列车同行·反震', '列车同行·直伤')
-    assert intention_mod._p1_pair_lines(('仙舟',)) == ('景元仙舟',)
-
-
-def test_restart_dead_pair_excluded_from_candidates() -> None:
-    """全线重开级的体系对不入候选:量子熄火局(希儿量子重开级)希儿系
-    单对被排除——DOT 满支持局候选不含含希儿系的对(对照无词缀局)。"""
-    dep, board = _ignite_dot_board()
-    gs = _seed_gs(deployed=dep, board=board)
-    clean = p1_pair_candidates_of(gs)
-    assert ('持续伤害',) in clean, '无词缀局 DOT 单满对居首'
-    _observe_restarter_affixes(gs)
-    got = p1_pair_candidates_of(gs)
-    assert all('希儿系' not in p for p in got), \
-        '希儿系单对全线重开级 → 不入候选'
-    assert ('持续伤害',) in got, '活方向不受影响'
-
-
-def test_partial_dead_pair_kept_when_sibling_line_alive() -> None:
-    """部分死方向保留(保守语义:体系对映射线**全部**重开级才排除)——
-    净化身心局 DOT队 重开级但专家桑博DOT 只有泛化怕(非重开级),持续伤害
-    对不排除(P1 囤牌方向仍可达专家桑博DOT 终局)。"""
-    from sr_od.application.currency_war.kernel.cw_game_state import ChannelSig
-    dep, board = _ignite_dot_board()
-    gs = _seed_gs(deployed=dep, board=board)
-    gs.observe(gs.enemy_affixes, ['净化身心'], evidence='t',
-               sig=ChannelSig(family='obs', actor='cw-test', mode='read'))
-    assert intention_mod._pair_restart_dead(('持续伤害',), gs) is False
-    assert ('持续伤害',) in p1_pair_candidates_of(gs)
-
-
-def test_all_pairs_dead_falls_back_to_unfiltered(
-        monkeypatch: pytest.MonkeyPatch) -> None:
-    """全体系对极低分回退(design §6「配方锁照常运行,不过渡干预」):
-    量子熄火局希儿系单对出列(9 对);全灭语境(全部对 dead,经
-    monkeypatch 桩 _pair_restart_dead——列车/仙舟方向无现实词缀可全灭,
-    纯回退分支语义验证)→ 回退未过滤全 10 对,配方锁候选照常产出。"""
-    from sr_od.application.currency_war.kernel.cw_game_state import (
-        GAME_STATE_SCHEMA_VERSION,
-        ChannelSig,
-        GameState,
-    )
-    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
-    sig = ChannelSig(family='obs', actor='cw-test', mode='read')
-    gs.observe(gs.enemy_affixes, ['量子熄火', '红绿灯'], evidence='t', sig=sig)
-    gs.observe(gs.plane_bosses,
-               ['深穹智械科技', '深穹智械科技', '深穹智械科技'],
-               evidence='t', sig=sig)
-    sup = {'仙舟': 1.0, '列车同行': 1.0, '持续伤害': 1.0, '希儿系': 1.0}
-    sp = intention_mod._p1_pair_space(sup, gs)
-    assert ('希儿系',) not in sp, '希儿量子全线重开级 → 单对出列'
-    assert len(sp) == 9, '其余方向未全死——保留 9 对'
-    monkeypatch.setattr(intention_mod, '_pair_restart_dead',
-                        lambda pair, _gs: True)
-    sp2 = intention_mod._p1_pair_space(sup, gs)
-    assert len(sp2) == 10, '全体系对极低分 → 回退未过滤序列(配方锁照常)'
+# (配方锁联动段——_pair_lines 映射/restart_dead 排除/partial_dead
+#  保留/all_dead 回退四测——已随配方决策层退役删除;comp-structure
+#  -unification 3.3,考古走 git 历史。)

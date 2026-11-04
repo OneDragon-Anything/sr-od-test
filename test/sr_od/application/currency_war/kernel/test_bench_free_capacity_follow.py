@@ -19,6 +19,7 @@ from __future__ import annotations
 import math
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+from sr_od.application.currency_war.kernel.cw_comps import get_comp
 from sr_od.application.currency_war.kernel.cw_game_state import (
     BenchSlot,
     BenchView,
@@ -26,9 +27,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     NodeKey,
     Unit,
     game_state_of,
-)
-from sr_od.application.currency_war.kernel.cw_intention import (
-    pair_target_comp,
 )
 from sr_od.application.currency_war.kernel.cw_line_switch import e_rounds
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
@@ -41,11 +39,12 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 _SIG = ChannelSig(family='logic_action', actor='cw-t17-test', mode='compute')
 _SIG_OBS = ChannelSig(family='obs', actor='cw-t17-test', mode='synthesized')
 
-_PAIR = ('持续伤害', '希儿系')
-
-
 def _pair_comp():
-    return pair_target_comp(_PAIR)
+    """线构造(换源:原配方伪阵容 pair_target_comp 已随配方决策层退役,
+    改用注册表真线——持续伤害系,占席件按非 DOT 名筛除保持线外)。"""
+    comp = get_comp('专家桑博DOT')
+    assert comp is not None
+    return comp
 
 
 def _filler_names(n: int) -> list[str]:

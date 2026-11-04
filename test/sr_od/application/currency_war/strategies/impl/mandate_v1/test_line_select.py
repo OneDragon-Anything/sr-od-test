@@ -36,19 +36,11 @@ from test.sr_od.application.currency_war._cw_helpers import (
 
 from sr_od.application.currency_war.kernel.cw_comps import (
     COMP_LIBRARY,
-    Comp,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
-    GAME_STATE_SCHEMA_VERSION,
     ChannelSig,
-    GameState,
-    NodeKey,
     Unit,
     game_state_of,
-)
-from sr_od.application.currency_war.kernel.cw_recipe import (
-    decision_target,
-    recipe_comp,
 )
 from sr_od.application.currency_war.kernel.cw_registry import (
     DEFAULT_REGISTRY,
@@ -825,74 +817,10 @@ class TestSignatureAffixDimension:
 
 
 # ============================================================ 配方伪阵容路由
-# (decision_target;过渡框架判据族 pick_framework/transition_score/
-#  _framework_counts 已随 TRANSITION_PACK 策展符号退役——判据数据源 =
-#  策展档位标签,符号删除后为死码,随符号删除;统一保护集迭代
-#  changes/2026-10-15-unified-protection-set design.md §2.4。)
-
-
-def _fw_sig() -> ChannelSig:
-    """渠道①签名(obs 族;观察写入口签名必填)。"""
-    return ChannelSig(family='obs', actor='TestSigWriter', mode='read')
-
-
-def _fw_gs(*, plane: int = 1) -> GameState:
-    """容器:缺省未观察节点(plane_of 缺省 1);plane=2 写节点键。"""
-    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
-    if plane != 1:
-        gs.observe(gs.node, NodeKey(plane=plane, round_num=1, kind='prep'),
-                   sig=_fw_sig())
-    return gs
-
-
-def _fw_target_comp() -> Comp:
-    """终局哨兵线(合成 Comp,身份断言用;值域无关)。"""
-    return Comp(name='测试·终局哨兵', core_chars=['飞霄'],
-                faction_reqs={0: {'追击': 3}})
-
-
-def _fw_session(framework: str, target_comp: Comp | None) -> StrategySession:
-    """策略状态桩:transition_framework/target_comp 黑盒引用
-    (decision_target 两读口);锁定线槽非空 = 锁定态,None = 未锁。"""
-    st = SimpleNamespace(transition_framework=framework,
-                         target_comp=target_comp)
-    s = StrategySession()
-    s.strategy_state = st
-    return s
-
-
-def test_decision_target_recipe_in_dual_track() -> None:
-    """双轨期(未锁定)目标线 = 配方伪 comp(单一入口,消费方零改动):
-    committed=False(锁定线槽空)→ transition_framework='仙舟' →
-    recipe_comp('仙舟') 同一对象;配方形状即消费契约——仙舟键面含
-    持续伤害(deploy 围栏视图键面补全,cw_recipe._RECIPES 注),
-    爻光必后台(站位规则住 comp,漏了落 position_pref 兜底),
-    档 0 = 3 仙舟主羁绊档。framework='' 且未锁 → None(散件口径);
-    策略状态未装配(裸 session,None-safe)→ None。
-    """
-    rc = recipe_comp('仙舟')
-    got = decision_target(_fw_session('仙舟', None), _fw_gs())
-    assert got is rc
-    assert got.name == '过渡·仙舟配方'
-    assert got.factions == ['仙舟'], \
-        'factions = 档 0 键派生(核心语义;持续伤害是弹性面非核心)'
-    assert got.core_faction_reqs == {'仙舟': 3}
-    assert got.char_positions == {'爻光': 'back'}
-    assert decision_target(_fw_session('', None), _fw_gs()) is None
-    assert decision_target(StrategySession(), _fw_gs()) is None
-
-
-def test_decision_target_committed_returns_terminal_line() -> None:
-    """定型权威压过配方路由 → 终局 comp:锁定线槽非空(committed,
-    候选-锁定制语义——P1 硬规则锁定与 P2 时点兜底统一承载)→ 返回
-    target_comp 本体;P2 未锁短窗(双轨期口径):committed=False,
-    配方路由照走。"""
-    sentinel = _fw_target_comp()
-    assert decision_target(_fw_session('仙舟', sentinel),
-                           _fw_gs(plane=1)) is sentinel
-    assert decision_target(_fw_session('仙舟', None),
-                           _fw_gs(plane=2)).name == '过渡·仙舟配方'
-
+# (配方伪阵容路由段已随配方决策层退役删除——decision_target/
+#  recipe_comp/cw_recipe 模块消亡〔comp-structure-unification 3.3〕;
+#  方向读口继任者 = session_scope.direction_comp_of 四层优先
+#  (测试面 = TestFinalLockTransitionRetirement 与 decision_payload)。)
 
 # ============================================================ session 作用域载体
 # (节点边界重置 / 窗口谓词 / 方向状态骨架 / 商店会话标记与机会清单 /
