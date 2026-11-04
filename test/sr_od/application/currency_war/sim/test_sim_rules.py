@@ -191,6 +191,26 @@ def test_difficulty_holy_grail_constant_pending() -> None:
     assert d_on.special_bonus == HOLY_GRAIL_BONUS == 30
 
 
+def test_difficulty_foresight_exempt_quality_and_dynamic_untouched() -> None:
+    """远见难度豁免锁(T-331 设计 §4 锁 1,读法 A 自身豁免,P51 同式
+    守卫):远见单持 quality=0 且 total 与空持卡同值(棱彩 +6 不计);
+    伟大征服+远见对照 special 项照常、quality 项仅远见外成员计入
+    (守卫只跳豁免条目,不误伤同列表其它卡的品质/动态分量)。证伪
+    通道 = 披露键 FORESIGHT_EXEMPTION_READING(读法 A 系实现惯例链
+    非独立验证定谳,对账归遥测批)。"""
+    d_alone = difficulty_of(['远见'], node_kind='battle', streak=0,
+                            base=50)
+    d_none = difficulty_of([], node_kind='battle', streak=0, base=50)
+    assert d_alone.quality_bonus == 0, '远见单持品质分量 0(豁免)'
+    assert d_alone.total == d_none.total == 50, 'total 与空持卡同值'
+    d_pair = difficulty_of(['伟大征服', '远见'], node_kind='battle',
+                           streak=2, base=50)
+    assert d_pair.quality_bonus == 6, \
+        'quality 仅伟大征服计入(棱彩 +6;远见豁免不计)'
+    assert d_pair.special_bonus == 2, '伟大征服 streak 项照常(守卫不误伤动态项)'
+    assert d_pair.total == 50 + 6 + 2
+
+
 def test_plane_boss_override_priority_and_pool_membership() -> None:
     """U02:RunConfig 覆盖位优先;None 位 → 内置池采样(池 = boss 机制
     注册表键集)。"""
