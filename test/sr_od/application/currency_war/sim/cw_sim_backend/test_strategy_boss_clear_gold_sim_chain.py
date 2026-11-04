@@ -7,10 +7,11 @@ sim 结算腿接线与世界真值落地面)。
 断言形态先例 = 同目录 test_strategy_boss_completion_grant_sim_chain.py
 / test_strategy_win_gold_sim_chain.py):
 - 首个 won boss(「通关下一个首领节点」)→ 金笔恰一笔(obs 族
-  'sim:strategy' 组,evidence ``strategy:boss_clear_value:p<位面>r<轮>``,
-  kernel 内构无 sim:engine: 前缀——金写位在 kernel 触发函数内〔闩与
-  金笔同窗两笔 + 0 值照发语义〕,kernel→sim 反向 import 禁止故构不了
-  sim_evidence,tag 语义与审计过滤面不变)+ 闩落(strategy_conditional_
+  'sim:strategy' 组,evidence = ``sim_evidence`` 前缀形
+  ``sim:engine:strategy:boss_clear_value:p<位面>r<轮>``——kernel 触发
+  函数内惰性 import sim_evidence(先例 = check_env_star_merge_gold/
+  check_strategy_hp_loss_grants 金笔同款;前缀承载 _MISMATCH_SUPPRESS_
+  PREFIXES 失配抑制消费面)+ 闩落(strategy_conditional_
   done 纯卡名);
 - 一次性闩:闩落后续位面首领(P2 首领位)再胜零金笔零新闩(「下一个」
   恰一次,函数内闩自管防跨 boss 重复);
@@ -66,7 +67,7 @@ _TRANSIT_SCREENS = (SCREEN_SETTLE, _PLANE_TRANSITION, SCREEN_INVEST_STRATEGY,
                     SCREEN_SUPPLY, SCREEN_ENCOUNTER, SCREEN_BOSS_BRIEFING,
                     SCREEN_MEGASTAR, SCREEN_PLANNER, SCREEN_SHOP)
 
-_EV_PREFIX = 'strategy:boss_clear_value:'
+_EV_PREFIX = 'sim:engine:strategy:boss_clear_value:'
 
 
 @pytest.fixture

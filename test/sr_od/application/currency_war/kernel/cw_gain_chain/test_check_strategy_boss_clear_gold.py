@@ -38,7 +38,7 @@ _SIM_SIG = ChannelSig(family='obs', actor='SimEngineV2', mode='synthesized',
                       group_id='sim:strategy')
 
 _CARD = '搜打撤'
-_EVIDENCE = 'strategy:boss_clear_value'
+_EVIDENCE = 'sim:engine:strategy:boss_clear_value'
 
 
 def _unit(char_id: str, star: int = 1) -> Unit:
