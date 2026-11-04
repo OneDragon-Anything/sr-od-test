@@ -17,8 +17,8 @@ discharge_due_strategy_grants)。
 - 发放拒落(equips 未观察)→ 零写 + 条目仍弹除(到期即消费)+ 回写行
   留存证据;
 - 注册表漂移防御(队列卡名查行失败)→ 零发放 + 条目保留;
-- 确定行零扰动(是钻石总会发光扩形批 T-148:锁「扩形不越权」)→ 既有
-  五确定行发放路径 rng 前后状态零变;
+- 确定行零扰动(是钻石总会发光扩形批 T-148:锁「扩形不越权」)→ 族
+  确定行(现值六行,含周期 repeat 行)发放路径 rng 前后状态零变;
 - 是钻石总会发光 = 随机 choice-set 采样行首例(sim 直构注入固定 rng):
   两 seed 分别命中红钻/蓝钻、队列弹除、效果串随选中物、发放子链
   rand=True 随机态通道 + 队列弹除行确定面 + 同 seed 重跑逐位一致;
@@ -27,6 +27,10 @@ discharge_due_strategy_grants)。
   派生集禁手抄清单、发放子链 rand=True 随机态通道 + 队列弹除行确定面
   + 同 seed 重跑逐位一致;类别池空 = 注册表漂移防御(池随注册表传导,
   import 期哨在先,运行期兜底)→ 零发放 + 条目保留。
+- 好运令牌·彩 = 周期型 repeat 行(周期型首例,REVIEW-T374.md §4 锁 4):
+  到点发放(无论落位成败)后同参重排队,队列长度恒 1 自续至局终——
+  拒落亦重排(周期自续贴卡面「每累计……获得」语义);既有单发行
+  弹除即止零变。
 """
 from __future__ import annotations
 
@@ -362,6 +366,7 @@ def test_due_count2_full_bench_overflow_then_overflow_taken(
 
 @pytest.mark.parametrize('card', [
     '人才激励', '人才激励+', '许诺特权', '先亏后盈', '好运令牌·银',
+    '好运令牌·彩',
 ])
 def test_deterministic_rows_rng_untouched(card: str) -> None:
     """确定行零扰动回归(锁「扩形不越权」):族内既有全部确定行到点
@@ -489,3 +494,44 @@ def test_due_category_pool_empty_defense_retains_entry(monkeypatch) -> None:
     assert gs.pending_strategy_grants.value == ((_HUISHOU, 0),), \
         '池空条目被弹除'
     assert gs.write_seq == seq_before, '池空分支出现写行'
+
+
+# ============================================================ 周期 repeat 行
+# (好运令牌·彩,周期型首例:到点发放后同参重排队,队列长度恒 1 自续;
+# 单发行弹除即止语义零变,上方通用锁辖)
+
+
+def test_due_repeat_row_requeues_same_params() -> None:
+    """好运令牌·彩 到点发放后同参重排队(周期型首例主态):remaining=0 →
+    装备腿入栏 + 效果串 delayed_grant:好运令牌(placed=True)+ 队列回写
+    恰 (('好运令牌·彩', 4),)(同参 (卡名, delay_nodes=4),队列长度恒 1
+    自续,非弹除清空)+ 弹除回写行 evidence strategy_grant_due + 发放行
+    evidence 值含触发卡名(卡名与发放物异名各归其位)。"""
+    gs = _gs(equips=[], bench_slots=None, queue=(('好运令牌·彩', 0),))
+    effects = discharge_due_strategy_grants(
+        gs, rand=False, rng=random.Random(0), sig=_LSIG)
+    assert effects == ('delayed_grant:好运令牌(placed=True)',), \
+        f'效果串: {effects}'
+    assert gs.equips.value == ['好运令牌'], f'装备栏: {gs.equips.value}'
+    assert gs.pending_strategy_grants.value == (('好运令牌·彩', 4),), \
+        f'重排队列: {gs.pending_strategy_grants.value}'
+    assert gs.pending_strategy_grants.evidence == 'strategy_grant_due', \
+        f'队列回写 evidence: {gs.pending_strategy_grants.evidence}'
+    assert gs.equips.evidence == 'strategy_grant_due:好运令牌·彩#equip', \
+        f'发放 evidence: {gs.equips.evidence}'
+
+
+def test_due_repeat_row_requeues_on_reject() -> None:
+    """好运令牌·彩 拒落亦重排(周期自续,裁决默认案;REVIEW-T374.md §3
+    裁决点 2 附项):equips 未观察拒落(placed=False 零写)→ 条目仍以
+    同参重排队(周期腿自续,贴卡面「每累计……获得」重复至局终语义,
+    「拒落即止」备选与卡面冲突已裁否)——单发行同域弹除即止(上方
+    test_grant_rejected_zero_write_entry_still_ejected)不被本行越权。"""
+    gs = _gs(equips=None, bench_slots=None, queue=(('好运令牌·彩', 0),))
+    effects = discharge_due_strategy_grants(
+        gs, rand=False, rng=random.Random(0), sig=_LSIG)
+    assert effects == ('delayed_grant:好运令牌(placed=False)',), \
+        f'效果串: {effects}'
+    assert gs.equips.value is None, '拒落域出现写'
+    assert gs.pending_strategy_grants.value == (('好运令牌·彩', 4),), \
+        f'拒落态重排队列: {gs.pending_strategy_grants.value}'

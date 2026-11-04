@@ -317,3 +317,25 @@ def test_pick_huishou_combined_legs_schedule_category_pool() -> None:
         f'队列值: {gs.pending_strategy_grants.value}'
     assert gs.write_seq == seq_before + 2, \
         f'写行数漂移(即时腿+入队腿恰 2 笔): {gs.write_seq}'
+
+
+def test_pick_haoyun_lingpai_cai_two_leg_instant_and_queue() -> None:
+    """好运令牌·彩 双条目工厂登记腿直断(卡文「获得1个【好运令牌】。每累计
+    进入4个节点后，获得1个【好运令牌】。」带即时短句,人才激励同形):拿卡 →
+    equips 尾部 +1 好运令牌(腿1 rand=False 确定发放)+ 队列恰
+    (('好运令牌·彩', 4),) + 效果串恒 2 枚 equip_grant:好运令牌(placed=
+    True)/ strategy_grant_scheduled:好运令牌@4(登记值单源住
+    STRATEGY_DELAYED_GRANTS 行,效果体零字面量;词面源 =
+    cw_invest_data.py:322)。同物姊妹卡按卡文句式分流:彩带即时短句走
+    双条目工厂,银纯延时单句走延时-only 载体(上方银锁反向面)。"""
+    gs = _gs(equips=[])
+    effects = on_strategy_gained(gs, '好运令牌·彩', rand=False,
+                                 sig=_lsig(), rng=random.Random(0))
+    assert effects == ('equip_grant:好运令牌(placed=True)',
+                       'strategy_grant_scheduled:好运令牌@4'), \
+        f'效果串: {effects}'
+    assert gs.equips.value == ['好运令牌'], f'装备栏: {gs.equips.value}'
+    assert gs.pending_strategy_grants.value == (('好运令牌·彩', 4),), \
+        f'队列值: {gs.pending_strategy_grants.value}'
+    assert gs.equips.source == 'logic' \
+        and gs.pending_strategy_grants.source == 'logic', '两腿走确定面'

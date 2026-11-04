@@ -14,7 +14,10 @@ T-148-shizuanshi-zonghui-faguang.md §4 锁 1/锁 4:随机 choice-set 行
 首例,item='' 占位走 item_choices;item 与 item_choices 恰一 = 防登记
 笔误类按治理口径不入 import 校验,对账归表域恰一锁)+ 回收计划随批扩面
 (designs/T-237-huishou-jihua.md §4 锁 2:item_category 类别池行首例,
-item='' 占位走类别池,值域词表由池派生承载):
+item='' 占位走类别池,值域词表由池派生承载)
++ 好运令牌·彩随批扩面(designs/REVIEW-T374.md §4 锁 1:周期型 repeat
+字段首例,repeat=True 行禁 count>1/禁元组形 delay_nodes 对账锁
+随批——防登记笔误类按 2026-10-28 治理口径不入 import 校验):
 - 登记单一源:行值 = 卡面效果原文直读(人才激励 id 101601/4 节点、
   人才激励+ id 101602/3 节点,两卡唯一差异 = 倒计时 4→3,发放物同
   员工投影仪;许诺特权 id 130201/7 节点/发放物特权武装箱;先亏后盈
@@ -45,19 +48,20 @@ from sr_od.application.currency_war.kernel.cw_investments import (
 
 
 @pytest.mark.parametrize(('card', 'gid', 'delay', 'item', 'count',
-                          'choices', 'category'), [
-    ('人才激励', '101601', 4, '员工投影仪', 1, (), ''),
-    ('人才激励+', '101602', 3, '员工投影仪', 1, (), ''),
-    ('许诺特权', '130201', 7, '特权武装箱', 1, (), ''),
-    ('先亏后盈', '130701', 4, '简易武装箱', 2, (), ''),
-    ('好运令牌·银', '130901', 3, '好运令牌', 1, (), ''),
-    ('是钻石总会发光', '131101', 2, '', 1, ('红钻', '蓝钻'), ''),
-    ('回收计划', '230701', 5, '', 1, (), '简易'),
-    ('快请专家·金', '260401', 4, '员工投影仪', 2, (), ''),
+                          'choices', 'category', 'repeat'), [
+    ('人才激励', '101601', 4, '员工投影仪', 1, (), '', False),
+    ('人才激励+', '101602', 3, '员工投影仪', 1, (), '', False),
+    ('许诺特权', '130201', 7, '特权武装箱', 1, (), '', False),
+    ('先亏后盈', '130701', 4, '简易武装箱', 2, (), '', False),
+    ('好运令牌·银', '130901', 3, '好运令牌', 1, (), '', False),
+    ('是钻石总会发光', '131101', 2, '', 1, ('红钻', '蓝钻'), '', False),
+    ('回收计划', '230701', 5, '', 1, (), '简易', False),
+    ('快请专家·金', '260401', 4, '员工投影仪', 2, (), '', False),
+    ('好运令牌·彩', '331601', 4, '好运令牌', 1, (), '', True),
 ])
 def test_rencai_jili_registry_row_single_source(
         card: str, gid: str, delay: int, item: str, count: int,
-        choices: tuple, category: str) -> None:
+        choices: tuple, category: str, repeat: bool) -> None:
     """登记单一源(姊妹双卡 + 许诺特权 + 先亏后盈 + 好运令牌·银 +
     是钻石总会发光 + 回收计划参数化):行值 = 卡面
     效果原文直读(「N个节点后」→ N 拍,「获得1个【X】」→ 发放物 X;
@@ -72,19 +76,21 @@ def test_rencai_jili_registry_row_single_source(
     计划卡文「获得1件随机简易装备」→ 类别池形 item_category='简易'
     直读(族内类别池行首例),item='' 占位,同卡即时腿「获得1件进阶
     装备」由 PICK_INVEST_EFFECTS 组合登记行承载不入本表);
-    base 溯源 id 对拍(id ↔ plaza:<id>)。表键集闭族现役十一卡(未注册
+    base 溯源 id 对拍(id ↔ plaza:<id>)。表键集闭族现役十三卡(未注册
     展开卡安静不写,禁顺手代登记;军备供应链 = 延时发放族后继
-    delay_nodes 元组形首例,c140c3a14)。"""
+    delay_nodes 元组形首例,c140c3a14;好运令牌·彩 = 周期型 repeat
+    字段首例,repeat 列断言扩形随批)。"""
     assert set(STRATEGY_DELAYED_GRANTS) == {
         '人才激励', '人才激励+', '许诺特权', '先亏后盈', '好运令牌·银',
         '是钻石总会发光', '回收计划', '回收计划+', '红钻闪耀', '蓝钻闪耀',
-        '快请专家·金', '军备供应链'}, \
-        '注册面 = 族现役十一卡(未注册展开卡安静不写,禁顺手代登记)'
+        '快请专家·金', '军备供应链', '好运令牌·彩'}, \
+        '注册面 = 族现役十三卡(未注册展开卡安静不写,禁顺手代登记)'
     row = STRATEGY_DELAYED_GRANTS[card]
     assert row == StrategyDelayedGrant(id=gid, delay_nodes=delay,
                                        item=item, count=count,
                                        item_choices=choices,
-                                       item_category=category), \
+                                       item_category=category,
+                                       repeat=repeat), \
         f'行值漂移: {row!r}'
     base = INVESTMENT_STRATEGIES[card]
     assert base.source == f"plaza:{row.id}", \
@@ -243,3 +249,23 @@ def test_validator_item_category_pool_empty_raises(
                         lambda category: ())
     with pytest.raises(ValueError, match='类别漂移'):
         _validate_strategy_delayed_grants()
+
+
+def test_repeat_rows_mutual_exclusion() -> None:
+    """repeat 互斥对账锁(周期型首例治理口径:防登记笔误类不入 import
+    校验,对账归表域测试——repeat 字段 docstring 同款口径;
+    REVIEW-T374.md §3.3 第⑤查落表域):repeat=True 行禁 count>1
+    (repeat 与数量多发叠加 = 到点每窗多发,卡面无此形)且 delay_nodes
+    恒标量(禁元组形——元组 = 逐节拍一次性多发,与周期自续互斥;重排队
+    标量 int 直读,该形被本锁前置拦在登记面)。注册全集逐行扫,
+    现役唯一 repeat 行 = 好运令牌·彩。"""
+    repeats = {name: row
+               for name, row in STRATEGY_DELAYED_GRANTS.items()
+               if row.repeat}
+    assert set(repeats) == {'好运令牌·彩'}, \
+        f'repeat 行成员漂移: {sorted(repeats)}'
+    for name, row in repeats.items():
+        assert row.count == 1, \
+            f'{name} repeat×count>1 互斥被破坏: {row!r}'
+        assert isinstance(row.delay_nodes, int), \
+            f'{name} repeat×元组形互斥被破坏: {row.delay_nodes!r}'

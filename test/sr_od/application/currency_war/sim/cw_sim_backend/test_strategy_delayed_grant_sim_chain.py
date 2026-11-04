@@ -184,3 +184,28 @@ def test_due_category_pool_sim_chain_discloses_chosen(
             f'留证披露(选中物形态): {b.disclosures}'
     finally:
         uninstall_backend()
+
+
+def test_due_repeat_row_sim_chain_requeues_in_window(
+        _prep_backend) -> None:
+    """好运令牌·彩 sim 端到端(周期 repeat 行首例,REVIEW-T374.md §4 锁 4
+    sim 周期链):种子队列 remaining=1 → 进 (1,2) 窗 → 装备栏 +1 好运
+    令牌 ∧ 队列非弹除而同参重排队 (('好运令牌·彩', 4),)(周期自续,
+    下一倒计时从本窗起算)∧ 披露值 = 好运令牌·彩@1-2:好运令牌(卡名
+    与发放物异名各归其位)。"""
+    b = _prep_backend
+    try:
+        gs = b.gs
+        equips_before = list(gs.equips.value or [])
+        _seed_queue(b, (('好运令牌·彩', 1),))
+        b._enter_node_window((1, 2))
+        assert gs.equips.value == equips_before + ['好运令牌'], \
+            f'装备栏: {gs.equips.value}'
+        assert gs.pending_strategy_grants.value \
+            == (('好运令牌·彩', 4),), \
+            f'重排队列: {gs.pending_strategy_grants.value}'
+        assert b.disclosures[STRATEGY_DELAYED_GRANT_FIRED] \
+            == '好运令牌·彩@1-2:好运令牌', \
+            f'留证披露: {b.disclosures}'
+    finally:
+        uninstall_backend()

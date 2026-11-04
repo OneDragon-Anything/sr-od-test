@@ -226,3 +226,37 @@ def test_p2_end_freeze_no_grant_no_eject() -> None:
     assert gs.pending_strategy_grants.value == ((_CARD, 0),), \
         '终局事件后队列被弹除/改写'
     assert gs.write_seq == seq_before, '终局事件出现效果写行'
+
+
+def test_repeat_cycle_fires_fourth_and_eighth_window() -> None:
+    """好运令牌·彩 周期全链(登记@4 + tick 递减 + 到点发放 + repeat 回队,
+    REVIEW-T374.md §4 锁 4):拿卡后登记 4 拍 → 第 4 后继窗减到 0 → 到点
+    发放 1 件入栏 ∧ 队列以同参重排队 (('好运令牌·彩', 4),)(非弹除
+    清空)→ 再推进 4 窗减到 0 → 第 8 后继窗再发 1 件 ∧ 队列仍恒 1 条目
+    ——拿卡后每 4 节点窗各 1 件至局终的周期语义(计数起点 = 拿卡节点
+    后继窗,家族口径);tick 递减腿零改动,递减对重排队条目与首登条目
+    同形。"""
+    gs = _gs_with_queue(1, 1, (('好运令牌·彩', 4),), equips=[])
+    for _r in range(2, 6):
+        _advance(gs, 1, _r)
+    assert gs.pending_strategy_grants.value == (('好运令牌·彩', 0),), \
+        f'第 4 后继窗应减到 0: {gs.pending_strategy_grants.value}'
+    effects = discharge_due_strategy_grants(
+        gs, rand=False, rng=random.Random(0), sig=_LSIG)
+    assert effects == ('delayed_grant:好运令牌(placed=True)',), \
+        f'第 4 窗发放: {effects}'
+    assert gs.equips.value == ['好运令牌'], f'装备栏: {gs.equips.value}'
+    assert gs.pending_strategy_grants.value == (('好运令牌·彩', 4),), \
+        f'首发后重排队列: {gs.pending_strategy_grants.value}'
+    for _r in range(6, 10):
+        _advance(gs, 1, _r)
+    assert gs.pending_strategy_grants.value == (('好运令牌·彩', 0),), \
+        f'第 8 后继窗应减到 0: {gs.pending_strategy_grants.value}'
+    effects = discharge_due_strategy_grants(
+        gs, rand=False, rng=random.Random(0), sig=_LSIG)
+    assert effects == ('delayed_grant:好运令牌(placed=True)',), \
+        f'第 8 窗再发: {effects}'
+    assert gs.equips.value == ['好运令牌', '好运令牌'], \
+        f'装备栏(两件): {gs.equips.value}'
+    assert gs.pending_strategy_grants.value == (('好运令牌·彩', 4),), \
+        f'再发后队列长度应恒 1: {gs.pending_strategy_grants.value}'
