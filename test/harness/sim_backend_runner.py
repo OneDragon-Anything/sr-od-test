@@ -336,6 +336,18 @@ def run_sim_full_match(test_context: Any,
         'get_project_root',
         lambda: tmp_path)
 
+    # —— 装配缝 1b:遥测根重定向(测试零真实 IO)——cw_loop 局终收尾
+    # 钩子在生产代码里无条件调 match_archive.assemble_pending(recorder
+    # 单例缺省 replay_dir = 生产遥测根),不重定向时整局测试收尾会逐行
+    # 解析生产根下累积的全部局 journal(实测量级:根下 jsonl 总量 GB 级、
+    # 单局 journal 数十 MB,整局测试被归档读取拖到超时)。重定向到 tmp 后
+    # 收尾归档只见本局产物(装配快跑);runs 行/journal 落盘同随根落 tmp。
+    # 单例操作不走 monkeypatch(丢弃重建语义),finally 显式复位。
+    from sr_od.application.currency_war.telemetry.state import (
+        set_recorder_replay_dir,
+    )
+    set_recorder_replay_dir(tmp_path)
+
     # —— 装配缝 2:obs 读口纯钩子半部(生产 = decision_assembly.
     # install_obs_ports;缺陷台账落盘 sink 缺省关,测试零 IO) ——
     set_obs_reset_hook(reset_phase_round_cache)
@@ -388,6 +400,12 @@ def run_sim_full_match(test_context: Any,
         if loop is not None:
             reset_running_state(test_context, loop)
         uninstall_backend()
+        # 遥测根复位(装配缝 1b 对应;丢弃重建语义,复位后单例按生产
+        # 缺省根惰性重建——下一局 run_sim_full_match 重新接 tmp)。
+        from sr_od.application.currency_war.telemetry.state import (
+            set_recorder_replay_dir,
+        )
+        set_recorder_replay_dir(None)
     return SimFullRun(
         backend=backend,
         gs=backend.gs,

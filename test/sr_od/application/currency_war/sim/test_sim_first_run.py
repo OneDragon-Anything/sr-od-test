@@ -29,6 +29,7 @@ import pytest
 from test.harness.sim_backend_runner import run_sim_full_match
 
 from sr_od.application.currency_war.kernel.cw_investments import (
+    SQUAD_HP_CAP,
     STRATEGY_ECONOMY,
 )
 from sr_od.application.currency_war.kernel.cw_node_schedule import (
@@ -50,17 +51,20 @@ ACCEPT_SEED: int = 20260923
 _EXPECT_MIN_PLANE: int = 2
 
 #: hp 轨迹上界(推导值非拍值):开局查表值 + 注册表 hp_instant 正部合计
-#: + 结算型回血族正部 × 日程结算计次。选卡即时腿 +N 直加不 clip(sim 扣
-#: 血绝对值制零上限消费,hp_max 字段缺位),固定 100 上界已随该腿过期;
-#: 按正部合计而非全表合计——负成员(先亏后盈 −20 注册态)入表后全表
-#: 合计会低估上界产生假红,直加不可抬出「每卡至多各加一次」的真值上界。
-#: 结算型回血两腿(首领战支 boss_end_heal_hp / 全战斗域支 battle_end_
-#: heal_hp)每战斗结算直加不 clip,计次单一源 = 日程真值表(战斗类节点
-#: 数与首领位数;节点改写规则只插 supply/换 kind,战斗类计数不变),
-#: 战斗类词表单一源 = sim COMBAT_NODE_TYPES(与结算腿门同一常量),
-#: 金额单一源 = 注册表正部合计(Σ 全表 = 「全卡同持」上包络,松界只
-#: 损灵敏度不生假红假绿)。开局查表与验收局运行器同参(A8/难度108
-#: 实证档),证据单一源 = cw_opening_hp 实证局档。
+#: + 结算型回血族正部 × 日程结算计次 + swap 族正部。选卡即时腿 +N 直加
+#: 不 clip(sim 扣血绝对值制零上限消费,hp_max 字段缺位),固定 100 上界
+#: 已随该腿过期;按正部合计而非全表合计——负成员(先亏后盈 −20 注册态)
+#: 入表后全表合计会低估上界产生假红,直加不可抬出「每卡至多各加一次」
+#: 的真值上界。swap 族正部 = 获得链交换腿(不等价交换 hp := min(gold,
+#: SQUAD_HP_CAP) 赋值语义,任一 hp_gold_swap 注册成员选卡拍至多抬到该
+#: 上界;注册表零成员时按 0 计,界随注册表派生零手维护)。结算型回血
+#: 两腿(首领战支 boss_end_heal_hp / 全战斗域支 battle_end_heal_hp)每
+#: 战斗结算直加不 clip,计次单一源 = 日程真值表(战斗类节点数与首领位
+#: 数;节点改写规则只插 supply/换 kind,战斗类计数不变),战斗类词表
+#: 单一源 = sim COMBAT_NODE_TYPES(与结算腿门同一常量),金额单一源 =
+#: 注册表正部合计(Σ 全表 = 「全卡同持」上包络,松界只损灵敏度不生假红
+#: 假绿)。开局查表与验收局运行器同参(A8/难度108 实证档),证据单一源
+#: = cw_opening_hp 实证局档。
 _BOSS_NODE_COUNT: int = sum(seq.count('boss')
                             for seq in PLANE_NODE_TABLES.values())
 _COMBAT_NODE_COUNT: int = sum(
@@ -73,13 +77,16 @@ _HP_TRAIL_BOUND: int = (
     + _BOSS_NODE_COUNT * sum(max(0, eff.boss_end_heal_hp)
                              for eff in STRATEGY_ECONOMY.values())
     + _COMBAT_NODE_COUNT * sum(max(0, eff.battle_end_heal_hp)
-                               for eff in STRATEGY_ECONOMY.values()))
+                               for eff in STRATEGY_ECONOMY.values())
+    + (SQUAD_HP_CAP if any(eff.hp_gold_swap
+                           for eff in STRATEGY_ECONOMY.values()) else 0))
 
 #: hp 轨迹下界(与上界同构的 Σ负部参数化):负成员选卡损血 −N 直加不
 #: clip(下界无消费端语义,镜像上界裁决),hp 可写负值;按负部合计而
 #: 非固定 0——全负部单卡局可写出「最小持血 + Σ负部」以下的值不会被
 #: 直加造出,轨迹不会低于该推导下界(固定 0 在负成员注册后已过期,
-#: 选卡损血 −5 = 合法轨迹值)。
+#: 选卡损血 −5 = 合法轨迹值)。交换腿负向支(hp := gold_old)写值域 =
+#: [0, SQUAD_HP_CAP] 非负,gold 域非负保证,不触本下界(≥0 恒 ≥ Σ负部)。
 _HP_TRAIL_FLOOR: int = sum(min(0, eff.hp_instant)
                            for eff in STRATEGY_ECONOMY.values())
 
@@ -172,7 +179,8 @@ def test_first_match_container_invariants(two_runs: tuple) -> None:
         'gold 终值与末条写行不一致'
 
     # —— ② hp 轨迹不变式(hp 写行 = 每战斗结算恰一条 + 选卡即时腿逐笔
-    #      + 持卡首领战/战斗结束回血腿逐笔;
+    #      + 持卡首领战/战斗结束回血腿逐笔 + 获得链交换腿逐笔(kernel
+    #      写端,sim 落地腿呈现闩配对;等值交换写行照落,轨迹同拍追加);
     #      轨迹首条 = reset 开局,先于 journal 捕获,故对拍域 = 写流全序
     #      vs 轨迹[1:]) ——
     hp_rows = _write_rows(run, 'hp')
@@ -182,12 +190,13 @@ def test_first_match_container_invariants(two_runs: tuple) -> None:
         f'hp 写流 {written} != 轨迹[1:] {list(run.hp_trail)[1:]}'
     # 终值 0 = 死亡局终的合法终态(出口 hp 遥测含死亡局);中途回 0/负
     # 亦可合法出现——选卡即时损血腿(先亏后盈 −20)直加不 clip,hp 写负
-    # 值后下一败局才由 apply_hp_outcome 保底/局终逻辑接管(上下界双端
-    # = Σ正部/Σ负部参数化,单一源 = 注册表现值)。
+    # 值后下一败局才由 apply_hp_outcome 保底/局终逻辑接管;交换支
+    # (hp := gold_old)gold=0 选卡 → hp=0 字面落 0,同产中局 0(上下界
+    # 双端 = Σ正部/Σ负部参数化 + swap 族正部,单一源 = 注册表现值)。
     assert all(_HP_TRAIL_FLOOR <= h <= _HP_TRAIL_BOUND
                for h in run.hp_trail), \
         f'hp 轨迹出界(界 = [{_HP_TRAIL_FLOOR}, 开局查表 + hp_instant ' \
-        f'+ 回血族正部×日程计次 {_HP_TRAIL_BOUND}])'
+        f'+ 回血族正部×日程计次 + swap 族正部 {_HP_TRAIL_BOUND}])'
     assert run.gs.hp.value == run.hp_trail[-1], 'hp 终值与轨迹末条不一致'
 
     # —— ③ 经验等级不变式(升级逐级 +1 不越上限;carry 恒 0 ≤ cur < need;
