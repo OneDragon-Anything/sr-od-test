@@ -1,5 +1,5 @@
 {
-  "_source": "hkrpg/api/index 实测响应结构快照。出处：2026-11-03 密码登录会话实测（teyvat-resin-planner trace.log hkrpg index 条目，全部 retcode 0；全量 64 角色中取代表性条目两条：带光锥/未装备光锥各一），结构固化依据 changes/mys-account-mcp/design.md §2.3（HsrCharacter 冻结字段集）与 miyoushe-api-flow.md §8.1。avatar_list 条目实测键集：id/level/name/element/icon/rarity/rank/is_chosen/equip/base_type/figure_path/element_id；equip 为 dict（id/level/rank/name/desc/icon/rarity）或 null（未装备光锥，实测 64 例中 7 例）。",
+  "_source": "hkrpg/api/index 实测响应结构快照。出处：2026-11-03 密码登录会话实测（teyvat-resin-planner trace.log hkrpg index 条目，全部 retcode 0；全量 64 角色中取代表性条目两条：带光锥/未装备光锥各一），结构固化依据 changes/mys-account-mcp/design.md §2.3（ssrCharacter 冻结字段集）与 miyoushe-api-flow.md §8.1。avatar_list 条目实测键集：id/level/name/element/icon/rarity/rank/is_chosen/equip/base_type/figure_path/element_id；equip 为 dict（id/level/rank/name/desc/icon/rarity）或 null（未装备光锥，实测 64 例中 7 例）。",
   "retcode": 0,
   "message": "OK",
   "data": {

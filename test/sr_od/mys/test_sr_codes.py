@@ -1,4 +1,4 @@
-"""hsr_codes 码表快照与三层查表单测。
+"""sr_codes 码表快照与三层查表单测。
 
 锁的内容（design.md changes/mys-roster-detail §2 契约 1 / §3 码表单测策略；
 断言依据全部来自本文件固化的权威映射对照表，不读本机易失实测件）：
@@ -18,7 +18,7 @@ ranks[].pos（星魂序号）撞值域但语义无关——部位表只服务遗
 禁两处共用（src 侧 RELIC_POS_CN 注释同此声明）。
 """
 
-from sr_od.mys.hsr_codes import (
+from sr_od.mys.sr_codes import (
     BASE_TYPE_CN,
     ELEMENT_CN,
     PROPERTY_INFO_SNAPSHOT,
