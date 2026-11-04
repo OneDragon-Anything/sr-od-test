@@ -142,3 +142,9 @@ def test_build_set_effects_sorting() -> None:
         ('太空封印站', 2),
         ('生命的翁瓦克', 2),
     ]
+
+
+def test_set_names_unique_across_all_sets() -> None:
+    """防御纵深：RELIC_SETS 内 set_name 重复会令 _SET_BY_NAME 静默 last-wins（T-1 验收 F2）。"""
+    names = [s.set_name for s in RELIC_SETS]
+    assert len(names) == len(set(names))
