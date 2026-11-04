@@ -384,8 +384,12 @@ class TestOrderInheritance:
         st.target_comp = None
         st.cw4_segment_serial += 1   # 触发额度快照(cap − deployed = 0)
         act = live.decide_shop_action()
+        # (换轴后过渡层键域 = 见即买并集〔点名集〕,仙舟凑数件退出线内
+        # 集合——dominance 邻位通道(1★ 全额退净成本 0,自有金/席门)
+        # 对同名件放行为现行为,断言收窄到场况插件通道本身。)
         assert not (isinstance(act, CwActionBuyCardParam)
-                    and act.card.name == plugin), \
+                    and act.card.name == plugin
+                    and act.reason == 'scene_plugin_buy'), \
             '额度尽即停:场况插件不得越会话累计额度买入'
         assert state_of(sess).cw4_counters.get(
             'scene_plugin_budget_exhausted', 0) >= 1
@@ -1285,9 +1289,9 @@ class TestShelfQualifyArm:
 
 
 class TestColdStartArm:
-    """冷启动臂(双空窗完备性;§2.3-8:三羁绊 1 费 1★ 见即买,会话内
-    现算 _p1_system_support 退出——任一三羁绊支持度 >0 即停,希儿系
-    不算;序位 = missing 后、资格臂前)。"""
+    """冷启动臂(双空窗完备性;§2.3-8 键域改造:见即买并集 1 费 1★
+    见即买,退出判据 = 候选槽形成〔与新计分同源〕;序位 = missing 后、
+    资格臂前)。"""
 
     def test_dual_empty_window_buys_three_bond_one_cost(self):
         """双空窗触发:实候选空 ∧ 过渡候选空 ∧ 三羁绊现算全 0 + 货架
@@ -1306,20 +1310,30 @@ class TestColdStartArm:
         assert act.reason == 'cold_start_buy'
         assert sell_gate.launch_cause_of(act.reason) == 'obligation'
 
-    def test_support_recompute_stops_arm_within_session(self):
-        """会话内现算即停(§2.3-8 退出判据):持有艾丝妲(纯过渡件——
-        不点亮任何终局线,实候选仍空)→ 三羁绊支持度现算 DOT > 0 →
-        冷启动停(不依赖槽位轮粒度);货架三月七(1 费三羁绊,冷启动
-        域内件)不被冷启动买入——同帧它经资格臂(列车 CARRY + 虚拟
-        top3)买入,reason 通道分离即退出判据生效证据。"""
+    def test_candidate_slot_formed_stops_arm_within_session(self):
+        """候选槽形成即停(换轴后退出判据,与新计分同源——旧「三羁绊
+        支持度会话内现算」判据随体系对机器退役):持有艾丝妲(廉价DOT
+        计分基准成员)→ 过渡候选机器驱动后候选槽非空 → 冷启动停;
+        货架三月七(1 费,冷启动域内件)不被冷启动买入——同帧它经
+        资格臂(列车 CARRY + 虚拟 top3)买入,reason 通道分离即退出
+        判据生效证据。"""
+        from sr_od.application.currency_war.kernel.cw_intention import (
+            IntentionState,
+            update_transition_candidates,
+        )
         live, sess, gs, st = _frame(
             gold=60, node_kind='reward', direction=False,
             bench=[('艾丝妲', 1)], deployed=[],
             shop_cards=[('三月七', 1, 1)])
+        if st.v3_intention is None:
+            st.v3_intention = IntentionState()
+        update_transition_candidates(
+            gs, st.v3_intention, st=st)   # 方向节拍贵段同参驱动(槽点亮)
+        assert st.transition_candidates == ('廉价DOT',), '候选槽形成前置'
         act = live.decide_shop_action()
         assert isinstance(act, CwActionBuyCardParam), f'非买入: {act!r}'
         assert act.reason != 'cold_start_buy', \
-            '三羁绊现算 >0(艾丝妲 DOT 0.5)即停冷启动——槽位空不是触发条件'
+            '候选槽形成即停冷启动(退出判据与新计分同源)'
 
     def test_cold_start_precedes_qualify_arm_in_order(self):
         """序位(missing 后、资格臂前):货架 [飞霄(槽1,资格件),

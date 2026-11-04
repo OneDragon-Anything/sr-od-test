@@ -159,7 +159,7 @@ def _selection_snapshot(comp, fx: dict) -> dict:
         k_budget=len(fx['units']),
         front_capacity=4, back_capacity=6,
         locked=True, locked_comp=comp,
-        candidate_comps=(), p1_pair=(), plane1=False,
+        candidate_comps=(), transition_comps=(),
         current_board=dict(fx['current_board']),
     )
     keys = tuple(dict.fromkeys(

@@ -344,8 +344,9 @@ def test_committed_authority_semantics(case: str):
     if case == 'locked_committed':
         from sr_od.application.currency_war.kernel.cw_comps import get_comp
         state_of(sess).target_comp = get_comp('万敌单C')   # 锁定线槽直种
-    else:   # p1_pair_committed
-        state_of(sess).v3_intention = IntentionState(p1_pair=('万敌燃血',))
+    else:   # transition_lock_committed(序②替代口径:过渡锁定态非空)
+        state_of(sess).v3_intention = IntentionState(
+            transition_locked='希儿引擎')
     assert committed_authority(_gs_state(1, 8), sess) is True
 
 
@@ -385,10 +386,14 @@ def test_p1_pair_gate_equivalence_with_gate_first(shape: str) -> None:
         >= intention_mod.P1_PAIR_LOCK_MIN_SUPPORT)
     assert bool(ist.p1_pair) == expect_nonempty, \
         f'{shape}: 门控首位非空 ⟺ 席级最高支持度 ≥1.0(旧 gate_first Q 非空)'
-    # committed 序②直证:ist 供给下 committed ⟺ p1_pair 非空
+    # committed 序②替代口径直证:ist 供给下 committed ⟺ transition_locked
+    # 非空(原 p1_pair 读法已随配方决策层换源)
     sess = StrategySession()
-    state_of(sess).v3_intention = ist
-    assert committed_authority(gs, sess) == bool(ist.p1_pair)
+    state_of(sess).v3_intention = IntentionState(
+        transition_locked='廉价DOT')
+    assert committed_authority(gs, sess) is True
+    state_of(sess).v3_intention = IntentionState()
+    assert committed_authority(gs, sess) is False
 
 # ============================================================
 # 配方锁联动(统一阵容评分批 2;design §6:线分含 −100000 的体系对

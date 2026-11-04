@@ -20,12 +20,13 @@ def _u(name: str, star: int = 1, origin: str = 'bench',
 
 
 def _panel(units, *, locked=False, locked_comp=None, candidate_comps=(),
-           p1_pair=(), plane1=True, k=10, back=6,
+           transition_comps=(), k=10, back=6,
            current_board=None) -> ds.DeploySearchPanel:
     return ds.DeploySearchPanel(
         units=tuple(units), k_budget=k, front_capacity=4,
         back_capacity=back, locked=locked, locked_comp=locked_comp,
-        candidate_comps=candidate_comps, p1_pair=p1_pair, plane1=plane1,
+        candidate_comps=candidate_comps,
+        transition_comps=tuple(transition_comps),
         current_board=dict(current_board or {}))
 
 
@@ -39,13 +40,17 @@ def test_p1_early_scatter_board_fills_l3() -> None:
 
 
 def test_p1_system_skeleton_beats_scatter() -> None:
-    """P1 体系骨架成型 > 全散件板:仙舟成员在手即一档(3 人),候选
-    含体系骨架板,L1 压倒 L3 散件——最优板至少 3 仙舟(一档成型;
-    第 4 席留 L3 竞争,断言不写死哪件)。"""
+    """未终局锁定的过渡条目骨架成型 > 全散件板:仙舟铁三角条目在场,
+    候选含条目骨架板(仙舟档 L1),L1 压倒 L3 散件——最优板至少 3 仙舟
+    (一档成型;第 4 席留 L3 竞争,断言不写死哪件)。"""
+    from sr_od.application.currency_war.kernel.cw_intention import (
+        transition_entry_of,
+    )
     scatter = [_u('娜塔莎'), _u('佩拉'), _u('布洛妮娅')]
     xianzhou = [_u('青雀'), _u('停云'), _u('藿藿'), _u('彦卿')]
     out_xz = ds.search_deploy_target(
-        _panel([*xianzhou, *scatter], k=4))
+        _panel([*xianzhou, *scatter], k=4,
+               transition_comps=(transition_entry_of('仙舟铁三角'),)))
     assert len({'青雀', '停云', '藿藿', '彦卿'} & set(out_xz)) >= 3, \
         f'体系件凑档(≥3 仙舟)优先于散件,实际 {sorted(out_xz)}'
     # 对照:无体系件时散件板照常。
@@ -53,18 +58,10 @@ def test_p1_system_skeleton_beats_scatter() -> None:
     assert len(out_sc) == 3
 
 
-def test_lock_keep_phase_transition_x4_beats_buff() -> None:
-    """保板相位(锁定未成档 → 过渡档 ×4 压过 buff/debuff ×3,场景
-    走查「P1 锁定、1 核心在手」行):锁定线(列车同行 form=4)一档
-    未成期间,过渡体系 2 人(列车 2 档成)留板压过减益件。"""
-    comp = get_comp('列车同行·反震')
-    # 手牌:过渡列车 2 人 vs 减益 2 人(TIER7 buff/debuff 系);K=2。
-    units = [_u('姬子·启行'), _u('丹恒·饮月'),      # 列车同行
-             _u('佩拉'), _u('桑博')]                # 减益(贝洛伯格/DOT)
-    panel = _panel(units, locked=True, locked_comp=comp, plane1=True, k=2)
-    out = ds.search_deploy_target(panel)
-    assert set(out) == {'姬子·启行', '丹恒·饮月'}, \
-        '保板相位过渡 ×4 > buff/debuff ×3 → 过渡板维持在场'
+# (test_lock_keep_phase_transition_x4_beats_buff 已随换轴删除:终局锁定窗
+#  过渡家族骨架枚举与 L3 过渡 ×4 保板相位系数均随「终局锁定即过渡层
+#  退役」删除——P1 锁定窗在现行终局锁定时点下不可达,保板相位行为
+#  消亡;comp-structure-unification 3.3。)
 
 
 def test_lock_first_tier_flip_displaces_transition() -> None:
@@ -74,7 +71,7 @@ def test_lock_first_tier_flip_displaces_transition() -> None:
     # 列车 4 人(锁定线档 0=4)vs 过渡仙舟 3 人 + 减益件;K=4。
     units = [_u('姬子·启行'), _u('丹恒·饮月'), _u('三月七'), _u('星期日'),
              _u('青雀'), _u('停云'), _u('藿藿')]
-    panel = _panel(units, locked=True, locked_comp=comp, plane1=True, k=4)
+    panel = _panel(units, locked=True, locked_comp=comp, k=4)
     out = ds.search_deploy_target(panel)
     assert {'姬子·启行', '丹恒·饮月', '三月七', '星期日'} <= set(out), \
         '锁定线一档成型(L1 ≥ 10⁷)压倒过渡加分'
@@ -86,7 +83,7 @@ def test_or_group_takes_best_branch() -> None:
     comp = get_comp('希儿量子')
     units = [_u('希儿'), _u('佩拉'), _u('杰帕德'),   # 贝 2 人支
              _u('青雀'), _u('停云')]                 # 无关件
-    panel = _panel(units, locked=True, locked_comp=comp, plane1=False, k=4)
+    panel = _panel(units, locked=True, locked_comp=comp, k=4)
     out = ds.search_deploy_target(panel)
     assert {'希儿', '佩拉', '杰帕德'} <= set(out), 'OR 组最优支(贝 2)入选'
 
@@ -108,7 +105,7 @@ def test_dp_fill_captures_multi_group_tier_mix() -> None:
     units = [_u('卡芙卡'), _u('黑天鹅'),      # 持续伤害组(档 1 = 2 人)
              _u('三月七'), _u('姬子·启行'),  # 列车同行组(档 1 = 2 人)
              _u('停云')]                     # 仙舟组独件(零值扰动)
-    panel = _panel(units, locked=True, locked_comp=comp, plane1=False, k=4)
+    panel = _panel(units, locked=True, locked_comp=comp, k=4)
     out = ds.search_deploy_target(panel)
     assert set(out) == {'卡芙卡', '黑天鹅', '三月七', '姬子·启行'}, \
         f'DP 联合分配捕获双组凑档(扰动件出局),实际 {sorted(out)}'
@@ -120,12 +117,12 @@ def test_required_deployed_missing_zeroes_l1() -> None:
     comp = get_comp('希儿量子')
     with_seele = [_u('希儿'), _u('花火'), _u('符玄'), _u('缇宝')]
     out_with = ds.selection_score(
-        _panel(with_seele, locked=True, locked_comp=comp, plane1=False),
+        _panel(with_seele, locked=True, locked_comp=comp),
         with_seele, comp, ('量子同频', '贝洛伯格'))
     # required 折条:3 量子成员在场但无希儿 → L1 = 0。
     l1_none = ds.selection_score(
         _panel([_u('花火'), _u('符玄'), _u('缇宝')], locked=True,
-               locked_comp=comp, plane1=False),
+               locked_comp=comp),
         [_u('花火'), _u('符玄'), _u('缇宝')], comp,
         ('量子同频', '贝洛伯格'))[0]
     assert l1_none == 0.0, '希儿不在场 → 该线 L1 = 0'
@@ -138,7 +135,7 @@ def test_seele_binary_needs_two_amplifiers() -> None:
     不足不成型,补齐第二件成型。"""
     one_amp = [_u('希儿'), _u('青雀'), _u('彦卿')]    # 量子 1 / 贝 1(均希儿)
     two_amp = [_u('希儿'), _u('花火'), _u('青雀')]    # 量子 2(希儿+花火)
-    panel = _panel([], plane1=True)
+    panel = _panel([])
     s1 = ds.selection_score(panel, one_amp, None, ('希儿系',))
     s2 = ds.selection_score(panel, two_amp, None, ('希儿系',))
     assert s1[0] == 0.0, '面板放大器计数 1:未成型'
@@ -173,7 +170,7 @@ def test_l2_bonus_keys_only() -> None:
     comp = get_comp('列车同行·反震')
     sub_on = [_u('姬子·启行'), _u('三月七'), _u('杰帕德')]   # 护盾 2 人(三月七+杰帕德,flows=护盾)
     sub_off = [_u('姬子·启行'), _u('青雀'), _u('停云')]
-    panel = _panel([], locked=True, locked_comp=comp, plane1=False)
+    panel = _panel([], locked=True, locked_comp=comp)
     l2_on = ds.selection_score(panel, sub_on, comp, ('列车同行·反震',))[1]
     l2_off = ds.selection_score(panel, sub_off, comp, ('列车同行·反震',))[1]
     assert l2_on > 0.0 > l2_off or l2_on > l2_off, \
@@ -186,7 +183,7 @@ def test_empty_bond_line_core_shared_denominator() -> None:
     comp = get_comp('反甲白厄')
     members = set(comp.core_chars) | set(comp.shared_chars or ())
     two = [_u(n) for n in list(members)[:2]]
-    panel = _panel([], locked=True, locked_comp=comp, plane1=False)
+    panel = _panel([], locked=True, locked_comp=comp)
     l1 = ds.selection_score(panel, two, comp, ())[0]
     expect = (2 / len(members)) * ds._L1_SCALE
     assert abs(l1 - expect) < 1.0, f'{l1} ≈ {expect}(core∪shared 口径)'
@@ -249,7 +246,7 @@ def test_margin_out_layered_form_and_no_challenger() -> None:
              _u('青雀'), _u('停云'), _u('藿藿')]
     margin: dict = {}
     out = ds.search_deploy_target(
-        _panel(units, locked=True, locked_comp=comp, plane1=True, k=4),
+        _panel(units, locked=True, locked_comp=comp, k=4),
         margin_out=margin)
     assert out, '前置:搜索成功定型'
     assert set(margin) == {'runner_up', 'first_diff_layer', 'layer_gap'}
@@ -286,7 +283,7 @@ def test_margin_out_not_written_when_search_returns_empty() -> None:
     panel = ds.DeploySearchPanel(
         units=(_u('青雀'), _u('艾丝妲')), k_budget=4, front_capacity=0,
         back_capacity=0, locked=False, locked_comp=None,
-        candidate_comps=(), p1_pair=(), plane1=True, current_board={})
+        candidate_comps=(), transition_comps=(), current_board={})
     margin: dict = {}
     out = ds.search_deploy_target(panel, margin_out=margin)
     assert out == {}, '前置:容量矛盾 → 搜索返空 dict'

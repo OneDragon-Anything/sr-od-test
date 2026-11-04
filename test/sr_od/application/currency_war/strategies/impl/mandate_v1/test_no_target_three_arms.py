@@ -120,15 +120,20 @@ def _ct(sess) -> dict:
 
 
 class TestFallbackKernelTruth:
-    def test_p2plus_band_interest_default_empty(self):
-        """p2plus 带保利息缺省(丙臂在役唯一形态;3.4 退役申报):未锁
-        空窗帧回退集恒空 + 带归属可辨——机器判活方向不再兜底。"""
+    def test_p1_gap_band_falls_back_to_buy_now_union(self):
+        """空窗带回退 = 过渡库见即买并集(换轴:p2plus 位面带废除,
+        未终局锁定帧过渡层照常活跃——死循环防线 §3:见即买 → 持有 →
+        计分 > 0 → 候选形成)。"""
         gs = _kbridge(**_state(hp=100))
         sess = _session(IntentionState())
-        fb, band = k_empty_window_fallback(gs, state_of(sess).v3_intention)
-        assert fb == frozenset(), \
-            'p2plus 带回退集应为空(保利息缺省,甲臂判活路径退役)'
-        assert band == 'p2plus'
+        fb, band = k_empty_window_fallback(
+            gs, state_of(sess).v3_intention, session=sess)
+        from sr_od.application.currency_war.kernel.cw_intention import (
+            transition_library_buy_now_union,
+        )
+        assert fb == transition_library_buy_now_union(), \
+            '空窗带回退集 = 过渡库见即买并集(构造性非空)'
+        assert band == 'p1_gap'
 
     def test_p1_bands_retained_nonempty(self):
         """p1 两带回退保留(在役;防「K 空→零买入→支持度永不涨」死锁环):

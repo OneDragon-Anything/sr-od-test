@@ -200,7 +200,9 @@ def test_candidate_absorbed_into_virtual_target_still_eliminated():
     (test_acquire_yield 的 X 反例族)。单 5 费件填充构局:贝洛伯格对
     收编前提保持(候选 ∈ target),牺牲者序不达候选(bench 未满,
     无虚拟超容)→ 幸存。"""
-    fillers = _clean_cost_fillers(1, 5, {'娜塔莎', '佩拉'})
+    # 4 费干净件(换轴后:5 费件在未终局锁定帧的终局候选枚举下竞争
+    # 不过贝洛伯格对,收编前提失守——费档下调恢复前提)。
+    fillers = _clean_cost_fillers(1, 4, {'娜塔莎', '佩拉'})
     bench = [('佩拉', 1)] + [(n, 1) for n in fillers]
     gs = _make_gs(bench=bench, front=('吉尔伽美什',), level=3)
     _frame, _sim, target = _virtual_target(gs, '娜塔莎')

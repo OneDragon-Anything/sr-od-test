@@ -89,40 +89,39 @@ def test_locked_frame_three_keys_and_window_consistent() -> None:
     json.dumps(payload)   # 行行自足:载荷可整体序列化落盘
 
 
-def test_unlocked_recipe_frame_direction_and_members() -> None:
-    """P1 未锁配方帧:direction 回落配方键(locked=False/候选透传)。
+def test_unlocked_transition_frame_direction_and_members() -> None:
+    """未终局锁定过渡帧:direction = 四层优先现读(终局候选首位 >
+    过渡锁定条目 > 过渡候选首位;locked=False/候选透传)。
 
     k_members 口径(过渡支 = 32 号稿 §2 双层名单):
-    候选并集(假线名解析失败跳过)∪ 过渡候选成员 = 过渡并集
-    (transition_candidates 槽展开;direction 配方键仍读
-    opening_recipe_comp,两槽种植相互独立)。"""
+    候选并集 ∪ 过渡层贡献名单(条目见即买集;direction 与名单两槽
+    种植相互独立)。"""
     gs = cw4_gs(None, plane=1, round_num=1, node='prep',
                 bench=[cw4_bc('花火'), cw4_bc('杂1')])
     strat = _make(gs)
     st = state_of(gs)
-    comp = get_comp('专家桑博DOT')
-    assert comp is not None
-    st.opening_recipe_comp = comp
-    st.line_candidates = ('线一', '线二', '线三')
-    st.transition_candidates = (('持续伤害', '希儿系'),)
+    st.line_candidates = ('专家桑博DOT',)
+    st.transition_candidates = ('希儿引擎',)
 
     payload = strat.decision_payload()
 
     assert payload['direction'] == {
-        'locked': False, 'comp': comp.name,
-        'candidates': ['线一', '线二', '线三'],
+        'locked': False, 'comp': '专家桑博DOT',
+        'candidates': ['专家桑博DOT'],
     }
-    # 未锁帧统一线内名单 = 候选并集(假线名解析失败跳过)∪ 过渡候选
-    # 成员 = 过渡并集;排序序(读口 = sell_line_membership)。
-    assert payload['k_members'] == sorted(
-        cw_intention._pair_members(('持续伤害', '希儿系')))
+    # 未锁帧统一线内名单 = 候选并集 ∪ 过渡层贡献名单;排序序
+    # (读口 = sell_line_membership)。
+    expected_members = set(cw4_members(get_comp('专家桑博DOT'))) \
+        | cw_intention.transition_member_set(
+            cw_intention.transition_entry_of('希儿引擎'))
+    assert payload['k_members'] == sorted(expected_members)
     assert payload['k_fallback'] == {'hit': False, 'band': ''}
-    # 过渡候选槽照录(嵌套 list 序列化形态);member_rank 二元组 = 过渡
-    # 半边全 (1, 候选位次)(假线名解析失败 → 终局半边空,唯一候选 →
-    # 位次 1,键集与过渡候选成员并集同集)。
-    assert payload['transition_candidates'] == [['持续伤害', '希儿系']]
-    assert payload['member_rank'] == dict.fromkeys(
-        cw_intention._pair_members(('持续伤害', '希儿系')), (1, 1))
+    # 过渡候选槽照录(条目名 list 序列化形态);member_rank 二元组:
+    # 终局半边 = 候选线序数表,过渡点名成员 (1, 0)、重叠归终局
+    # (桑博 = 专家桑博DOT core)。
+    assert payload['transition_candidates'] == ['希儿引擎']
+    assert payload['member_rank'].get('桑博') == (0, 0)
+    assert payload['member_rank'].get('希儿') == (1, 0)
 
 
 def test_k_fallback_hit_and_miss_states() -> None:

@@ -457,9 +457,12 @@ class TestAcquireYieldUnified:
         断言 X ∈ 虚拟定型名集
         (收编形态在场;定型漂移使 X 出 target 时本帧退化为平凡末位
         帧,前置断言让退化响亮暴露)。"""
-        bench = [('佩拉', 1), ('知更鸟', 1), ('银枝', 1),
-                 ('托帕&账账', 1), ('流萤', 1), ('昔涟', 1),
-                 ('云璃', 1), ('景元', 1), ('姬子', 1)]
+        # 组合(换轴后):贝洛伯格三人组(佩拉+布洛妮娅+X)经 L3 凑档
+        # 进虚拟定型(旧组合依赖锁定窗过渡家族骨架枚举,已随终局锁定即
+        # 过渡层退役删除)。
+        bench = [('佩拉', 1), ('布洛妮娅', 1), ('镜流', 1),
+                 ('波提欧', 1), ('长夜月', 1), ('遐蝶', 1),
+                 ('海瑟音', 1), ('火花', 1), ('景元', 1)]
         _x_card = '娜塔莎'
         gs, sess, cfg = _frame_locked(
             [cw4_bc(n, star=s) for n, s in bench], [(_x_card, 3, 1)],
@@ -584,12 +587,14 @@ class TestAcquireYieldUnified:
         不成立 → 次末位 = bench 件店内卖出(直接腾位恒可达)。"""
         gs, sess, cfg = _frame_locked(
             [cw4_bc(n) for n in _WIN_BLOCKED], [(_FUX, 3, 1)], gold=30,
-            front=[_GIL, *_F3[:3]], back=(_F3[3],))
-        # Saber 不在 bench:板上杂件仍部署外?——无换阵触发时定型 =
-        # 现板(场上件全档 1)→ 池 = bench 窗口关件 + X。末位 = bench
-        # 件(窗口谓词不挡卖出)→ 店内卖。此帧验证「窗口关 bench 件
-        # 可卖」的对照面(净腾不可达的场上件路径已由上一用例的可达
-        # 形态对照承载,本帧锁定席满语境 bench victim 恒可达分支)。
+            front=[_GIL, '远坂凛'], back=())
+        # 场上件全 = 锁定线成员(换轴后板上杂件会被终局候选枚举撤换,
+        # 场上 victim 路径不再结构性不可达——构局改为锁定线 core 现板
+        # 定型)→ 定型 = 现板(场上件全档 1)→ 池 = bench 窗口关件 +
+        # X。末位 = bench 件(窗口谓词不挡卖出)→ 店内卖。此帧验证
+        # 「窗口关 bench 件可卖」的对照面(净腾不可达的场上件路径已由
+        # 上一用例的可达形态对照承载,本帧锁定席满语境 bench victim
+        # 恒可达分支)。
         act = decide_shop_action(gs, sess, cfg)
         assert isinstance(act, CwActionSellBenchParam), f'非店内卖: {act!r}'
         assert state_of(sess).yield_plan is None, \

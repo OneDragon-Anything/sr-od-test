@@ -29,6 +29,7 @@ from types import SimpleNamespace
 
 import pytest
 from test.sr_od.application.currency_war._cw_helpers import (
+    cw4_bc,
     cw4_comp,
     cw4_gs,
 )
@@ -569,7 +570,8 @@ class TestRefreshDrivesLock:
         refresh_line_if_needed(gs)
         assert st.target_comp is None, 'P1 不锁(硬锁退役)'
         # 进 P2 + 首笔策略获得(滑动基线增长)→ 兜底锁
-        cw4_gs(sess, plane=2, round_num=1, node='prep')
+        cw4_gs(sess, plane=2, round_num=1, node='prep',
+               bench=[cw4_bc('希儿'), cw4_bc('花火')])
         gs.node_hist_pos = (2, 1)
         handle_node_boundary(gs)
         gs.observe(gs.active_strategies, ['白银投资'], evidence='t',
@@ -640,9 +642,10 @@ class TestRefreshDrivesLock:
 # ===== review-37 修复测试(P1 过期配方读口 / R2 滑动基线)=====
 
 
-class TestP2WindowRecipeRetirement:
-    """进 P2 后开局面配方键退役(review-37 P1):P2 未锁窗
-    direction 读口 = None(两键都空契约),过期 P1 配方禁消费。"""
+class TestFinalLockTransitionRetirement:
+    """过渡层生命周期换轴(终局锁定即退役,位面切换不触发):终局锁定
+    写入点 = 候选槽/过渡锁定态清空出口;位面 2 未终局锁定帧过渡层
+    照常活跃(行为申报 6)。"""
 
     @staticmethod
     def _strategy(gs):
@@ -653,16 +656,11 @@ class TestP2WindowRecipeRetirement:
         )
         return MandateV1Strategy(gs, SimpleNamespace(strategy_seed=None))
 
-    def test_p2_entry_clears_recipe_and_direction_reads_none(self):
-        """端到端:P1 帧配方物化(过渡候选槽首位物化)→ 进 P2(窗口谓词
-        置位)首个贵段清配方锁 + 开局面键/过渡候选槽同点清空 → 未锁窗
-        direction_comp_of 返回 None——shop 序 1 未锁分支/k 空窗回退/
-        形态⑥观测的消费输入面统一恢复(review-37 P1 三消费端)。
-
-        无羁绊开局新语义(12 号篇 §3):空板面(无羁绊
-        开局)→ 过渡候选空 → 物化 **None**(旧制种 p1_pair 即物化的形态
-        随 3.1 物化源切槽消亡)→ K 空窗回退承接——「P1 空窗期恒有方向」
-        只对有羁绊开局成立,无羁绊开局 = 冷启动臂域(11 号稿 §1)。"""
+    def test_final_lock_retires_layer_and_p2_keeps_active(self):
+        """端到端:空板面(开局零持有)→ 过渡候选空 + 无方向(K 空窗
+        回退域,冷启动臂承接);持有点名件 → 候选槽点亮 + 方向读口 =
+        候选首位条目;进位面 2(未终局锁定)候选机器照常驱动、槽不清;
+        终局锁定写入 → 候选槽/过渡锁定态同点清空,方向读口 = 锁定线。"""
         from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
             session_scope,
         )
@@ -671,44 +669,44 @@ class TestP2WindowRecipeRetirement:
         gs.node_hist_pos = (1, 9)
         strat = self._strategy(gs)
         st = state_of(gs)
-        from sr_od.application.currency_war.kernel.cw_intention import (
-            IntentionState,
-        )
-        st.v3_intention = IntentionState()
-        # 空板面:配方链贵段重算 → 过渡候选空 → 物化 None(§2.6-12)
         strat._refresh_direction(gs, st)
-        assert st.transition_candidates == (), '无羁绊开局候选空(§2.3-2)'
-        assert st.opening_recipe_comp is None, \
-            '空板面候选空 → 物化 None(§2.6-12 新语义)'
+        assert st.transition_candidates == (), '零持有开局候选空'
         assert session_scope.direction_comp_of(gs) is None, \
-            '空板面无方向 → K 空窗回退域(冷启动臂承接,§2.3-8)'
-        # 有羁绊开局对照:槽非空 → 物化 = 候选首位伪阵容(便宜段物化链)
-        st.transition_candidates = (('仙舟', '持续伤害'),)
-        strat._refresh_direction_views(gs, st)
-        assert st.opening_recipe_comp is not None, '槽首位物化前置'
-        assert session_scope.direction_comp_of(gs) is st.opening_recipe_comp
-        # 进 P2:边界置窗口谓词 + 贵段清配方(写端)+ 读口守卫(双保险)
-        cw4_gs(sess, plane=2, round_num=1, node='prep')
+            '空板面无方向 → K 空窗回退域(冷启动臂承接)'
+        # 持有点名件:候选点亮 + 方向 = 候选首位条目(四层优先现读)
+        cw4_gs(sess, plane=1, round_num=10, node='prep',
+               bench=[cw4_bc('希儿'), cw4_bc('花火')])
+        gs.node_hist_pos = (1, 10)
+        strat._refresh_direction(gs, st)
+        assert st.transition_candidates == ('希儿引擎',), '候选点亮'
+        assert session_scope.direction_comp_of(gs).name == '希儿引擎'
+        # 进位面 2(未终局锁定):候选机器照常驱动,槽不清(换轴)
+        cw4_gs(sess, plane=2, round_num=1, node='prep',
+               bench=[cw4_bc('希儿'), cw4_bc('花火')])
         gs.node_hist_pos = (2, 1)
         session_scope.handle_node_boundary(gs)
         strat._refresh_direction(gs, st)
-        assert st.v3_intention.p1_pair == (), '配方锁退场'
-        assert st.opening_recipe_comp is None, '开局面键同点清空(写端)'
-        assert st.transition_candidates == (), '过渡候选槽同点清空'
-        assert st.target_comp is None, '未锁窗(P2 首帧未选卡)'
-        assert session_scope.direction_comp_of(gs) is None, (
-            'P2 未锁窗 direction 读口 = None(两键都空契约)')
-        # K 空窗回退 p2plus 带可达性(k=None 判定不再被过期配方遮蔽)
+        assert st.transition_candidates == ('希儿引擎',), \
+            '位面 2 未终局锁定帧过渡层照常活跃(行为申报 6)'
+        assert st.target_comp is None, '未终局锁窗(P2 首帧未选卡)'
+        # 终局锁定写入:候选槽同点清空,方向读口 = 锁定线
+        session_scope.write_line_lock(gs, '黄泉减益')
+        assert st.transition_candidates == (), '终局锁定清空候选槽'
+        assert st.target_comp is not None
+        assert session_scope.direction_comp_of(gs).name == '黄泉减益'
+        # K 空窗回退:锁定帧恒有方向(回退不可达——防御语义见 k_empty)
         from sr_od.application.currency_war.kernel.cw_intention import (
             k_empty_window_fallback,
         )
-        fallback, band = k_empty_window_fallback(gs, st.v3_intention,
-                                                 session=sess)
-        assert band == 'p2plus', '未锁 P2 帧回退带 = p2plus(可达)'
+        _fb, band = k_empty_window_fallback(gs, st.v3_intention,
+                                            session=sess)
+        assert band in ('p1_gap', 'p1_lock_band'), \
+            '回退带值域 = 两带(旧 p2plus 位面带已废)'
 
     def test_direction_read_guard_against_stale_recipe(self):
-        """防御双保险:清空写端未及执行的帧(plane2 首帧先于贵段),
-        读口 plane2_started 守卫仍不消费过期 P1 配方。"""
+        """防御守卫(换轴后形态):终局锁定帧方向读口恒返回锁定线,
+        过渡槽残留(哨兵)不能遮蔽锁定线——四层优先结构承载,无位面
+        判窗残留面。"""
         from sr_od.application.currency_war.kernel.cw_comps import get_comp
         from sr_od.application.currency_war.kernel.cw_game_state import (
             game_state_of,
@@ -719,10 +717,9 @@ class TestP2WindowRecipeRetirement:
         sess = StrategySession()
         gs = game_state_of(sess)
         st = state_of(gs)
-        st.plane2_started = True          # 窗口谓词已置位
-        st.opening_recipe_comp = get_comp('列车同行·反震')   # 过期残留(哨兵)
-        st.target_comp = None             # 未锁
-        assert session_scope.direction_comp_of(gs) is None
+        st.transition_candidates = ('希儿引擎',)   # 过期残留(哨兵)
+        st.target_comp = get_comp('列车同行·反震')   # 终局锁定
+        assert session_scope.direction_comp_of(gs) is st.target_comp
 
 
 class TestP2PickBaselineSliding:
@@ -753,7 +750,8 @@ class TestP2PickBaselineSliding:
         st = state_of(gs)
         assert st.p2_pick_baseline == frozenset({'白银投资'})
         # 进 P2:策略集未变(该笔已在基线)→ 无增长 → 不触发
-        cw4_gs(sess, plane=2, round_num=1, node='prep')
+        cw4_gs(sess, plane=2, round_num=1, node='prep',
+               bench=[cw4_bc('希儿'), cw4_bc('花火')])
         gs.node_hist_pos = (2, 1)
         session_scope.handle_node_boundary(gs)
         refresh_line_if_needed(gs)
@@ -961,13 +959,12 @@ class TestBoundaryKeepsDirectionState:
         st = state_of(gs)
         comp = cw4_comp()
         write_line_lock(gs, comp.name)
-        st.line_candidates = ('external-write',)
-        st.opening_recipe_comp = comp
+        st.transition_candidates = ('希儿引擎',)
         gs.node_hist_pos = (1, 5)
         handle_node_boundary(gs)
         assert st.target_comp is comp           # 锁定跨节点保留(锁定线槽)
-        assert st.line_candidates == ('external-write',)
-        assert st.opening_recipe_comp is comp
+        assert st.transition_candidates == ('希儿引擎',), \
+            '过渡候选槽跨节点保留(贵段重算自写,非节点作用域键)'
         assert st.line_eval_signature is None     # 签名置失效(对照)
 
 
@@ -1033,17 +1030,14 @@ class TestLineRefreshSkeleton:
 
     def test_recompute_respects_lock_slot_and_view(self):
         """键面归一测试:target_comp = 锁定线槽(终态单写者 =
-        write_line_lock)——锁定态下重算不覆写配方键/候选停算;未锁定
+        write_line_lock)——锁定态下候选停算;未锁定
         视图 = 空名单 + 未锁定旗标(候选快照另由真内核产出,主题测试 =
         本文件判据本体节)。"""
         sess = StrategySession()
         gs = cw4_gs(sess, plane=1, round_num=2, node='prep')
-        st = state_of(gs)
         comp = cw4_comp()
         write_line_lock(gs, comp.name)
-        st.opening_recipe_comp = comp   # 外部哨兵:锁定态重算不辖配方键
         refresh_line_if_needed(gs)
-        assert st.opening_recipe_comp is comp   # 重算零写(配方链写端在 flow)
         view = line_members_view(gs)
         assert view.locked is True
         assert view.comp_name == comp.name

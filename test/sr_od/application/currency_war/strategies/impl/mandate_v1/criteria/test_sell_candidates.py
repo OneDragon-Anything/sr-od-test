@@ -49,7 +49,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 )
 from sr_od.application.currency_war.kernel.cw_intention import (
     IntentionState,
-    _pair_members,
+    transition_member_set,
 )
 from sr_od.application.currency_war.kernel.cw_strategy_session import (
     StrategySession,
@@ -215,10 +215,12 @@ class TestUnifiedSequence:
             [cw4_bc('停云'), cw4_bc('黄泉'), cw4_bc('星期日')], level=5)
         cands, why = evaluate_sell_candidates(gs, 'self_rescue')
         assert why == ''
+        # 换轴后未终局锁定帧终局候选族参与部署枚举:黄泉/星期日/停云
+        # 全被统一部署搜索定型收编(档 1),让位池 = 被换下垫件。
         assert [(c.char_id, c.tier, c.zone) for c in cands] \
-            == [('停云', 10, 'bench'), ('杂板4', 10, 'deployed'),
+            == [('杂板3', 10, 'deployed'), ('杂板4', 10, 'deployed'),
                 ('杂板5', 10, 'deployed')], \
-            '兜底档 10(概率正 + 被换下垫件);黄泉/星期日档 1 收编不在池'
+            '兜底档 10(被换下垫件);黄泉/星期日/停云档 1 收编不在池'
 
     def test_guarded_scene_priority_order(self):
         """常规面序列 = 统一序列(身份段已随 3.4 退役,无排除面):
@@ -473,52 +475,48 @@ class TestIdentitySegmentRetired:
 
 
 class TestSellLineMembershipSingleAdmission:
-    """sell_line_membership 三景(双层名单口径 = 32 号稿 §2):
-    过渡支 = transition_candidates 槽展开 + 读前判窗
-    (plane2_started_of),锁定不是退出条件——P1 锁定局 = 锁定线 ∪
-    过渡候选成员;P2 过渡支退出;未锁定 = 实候选并集 ∪ 过渡候选成员。
-    过渡支与买面同源(同一槽 _pair_members 展开)。"""
+    """sell_line_membership 三景(换轴后口径;双层名单 = 32 号稿 §2):
+    终局锁定 = 锁定线单源(过渡层在锁定写入点退役清空);位面 2 未终局
+    锁定 = 过渡支照常活跃(行为申报 6);未锁定 = 实候选并集 ∪ 过渡层
+    贡献名单(transition_member_union 单一源,与买面同源)。"""
 
-    _PAIRS = (('持续伤害', '希儿系'),)
-
-    def test_locked_p1_union_locked_line_and_recipe(self):
-        """P1 锁定局:身份集 = 锁定线名单 ∪ 过渡候选成员(修复前锁定
-        分支只有锁定线——过渡成员被排出线内集,防线/投影口径漏自己人)。"""
+    def test_final_lock_line_only_transition_retired(self):
+        """终局锁定:身份集 = 锁定线单源——换轴后「P1 锁定局并集」形态
+        随终局锁定写入点过渡层退役清空而收敛(槽位残留不消费)。"""
         sess, gs = _mk_gs()
         st = state_of(gs)
         st.target_comp = get_comp('双王圣杯')
-        st.transition_candidates = self._PAIRS
-        expected = set(cw4_members(get_comp('双王圣杯'))) \
-            | _pair_members(self._PAIRS[0])
-        assert sell_line_membership(gs) == frozenset(expected)
-        assert '卡芙卡' in sell_line_membership(gs), \
-            '纯过渡成员入线内集(注册表现查:卡芙卡 ∉ 双王圣杯)'
-
-    def test_p2_recipe_branch_exits(self):
-        """P2(plane2_started=True):过渡支恒空集——槽位残留不消费
-        (判窗在直读之前);身份集退回锁定线单源。"""
-        sess, gs = _mk_gs()
-        st = state_of(gs)
-        st.target_comp = get_comp('双王圣杯')
-        st.transition_candidates = self._PAIRS
-        st.plane2_started = True
+        st.transition_candidates = ('廉价DOT',)
         assert sell_line_membership(gs) \
             == frozenset(cw4_members(get_comp('双王圣杯')))
         assert '卡芙卡' not in sell_line_membership(gs), \
-            '进位面 2 过渡槽残留不入线内集'
+            '终局锁定帧过渡槽残留不入线内集(退役清空)'
+
+    def test_p2_unlocked_recipe_branch_stays_active(self):
+        """位面 2 未终局锁定:过渡支照常贡献(换轴行为申报 6——旧
+        「进位面 2 即退出」随生命周期挂钩终局锁定事件废除)。"""
+        sess, gs = _mk_gs()
+        st = state_of(gs)
+        st.plane2_started = True
+        st.transition_candidates = ('廉价DOT',)
+        assert '卡芙卡' in sell_line_membership(gs), \
+            '位面 2 未终局锁定帧过渡支照常贡献'
 
     def test_unlocked_union_candidates_and_recipe(self):
-        """未锁定:身份集 = 实候选三线成员并集 ∪ 过渡候选成员(修复前
-        未锁定分支只有候选并集,缺过渡支)。"""
+        """未锁定:身份集 = 实候选三线成员并集 ∪ 过渡层贡献名单(条目
+        见即买集展开;混合型含点名件与放大器全体)。"""
         sess, gs = _mk_gs()
         st = state_of(gs)
         st.line_candidates = ('列车同行·反震',)
-        st.transition_candidates = self._PAIRS
+        st.transition_candidates = ('希儿引擎',)
+        from sr_od.application.currency_war.kernel.cw_intention import (
+            transition_entry_of,
+        )
         expected = set(cw4_members(get_comp('列车同行·反震'))) \
-            | _pair_members(self._PAIRS[0])
+            | transition_member_set(transition_entry_of('希儿引擎'))
         assert sell_line_membership(gs) == frozenset(expected)
         assert '瓦尔特' in sell_line_membership(gs), '候选支(列车同行·反震)'
-        assert '卡芙卡' in sell_line_membership(gs), '过渡支'
+        assert '佩拉' in sell_line_membership(gs), '过渡支(放大器成员)'
 
 
 class TestP1LockedSellPoolNarrowing:
@@ -529,21 +527,20 @@ class TestP1LockedSellPoolNarrowing:
     八档档 8〕/凑两星档 7〔旧档 5〕/万金油档 8〔旧档 6〕,design
     §2.2)。"""
 
-    def test_recipe_member_protected_in_locked_frame(self):
-        """过渡成员(凑两星过程保护档 7)殿后保护:板构造(阶段 5/6)
-        同 test_priority_order——万金油满配挡位使 bench 星期日结构性
-        部署外,卡芙卡(过渡候选成员)滞回保板外的换血面零,池 = bench
-        全件。"""
+    def test_recipe_member_retired_in_final_lock_frame(self):
+        """终局锁定帧(换轴):过渡层退役——过渡槽残留不消费,卡芙卡
+        退出成员档名单落兜底档;星期日照收编(万金油)。旧「P1 锁定局
+        过渡成员殿后保护」形态随终局锁定即退役收敛(位面 2 未终局锁定
+        帧的保护形态由 test_p2_unlocked 系承载)。"""
         sess, gs = _board_full_gs(
             [cw4_bc('卡芙卡'), cw4_bc('星期日')], level=5)
         st = state_of(gs)
         st.target_comp = get_comp('列车同行·反震')
-        st.transition_candidates = (('持续伤害', '希儿系'),)
+        st.transition_candidates = ('廉价DOT',)
         cands, why = evaluate_sell_candidates(gs, 'ore_make_room')
         assert why == ''
-        assert _names(cands) == ['杂板5', '卡芙卡'], \
-            '过渡成员(档 7)殿后,被换下垫件(兜底档 10)先让——' \
-            '不误卖自己人(星期日 = 万金油档 1 收编不在池)'
+        assert '星期日' not in _names(cands), \
+            '万金油档 1 收编不在池'
 
 
 # ===== 空板守卫(as-built 收编;全场景)=====
