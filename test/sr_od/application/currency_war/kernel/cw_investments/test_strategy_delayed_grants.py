@@ -83,7 +83,7 @@ def test_rencai_jili_registry_row_single_source(
     assert set(STRATEGY_DELAYED_GRANTS) == {
         '人才激励', '人才激励+', '许诺特权', '先亏后盈', '好运令牌·银',
         '是钻石总会发光', '回收计划', '回收计划+', '红钻闪耀', '蓝钻闪耀',
-        '快请专家·金', '军备供应链', '好运令牌·彩'}, \
+        '快请专家·金', '军备供应链', '好运令牌·彩', '完美进化'}, \
         '注册面 = 族现役十三卡(未注册展开卡安静不写,禁顺手代登记)'
     row = STRATEGY_DELAYED_GRANTS[card]
     assert row == StrategyDelayedGrant(id=gid, delay_nodes=delay,
