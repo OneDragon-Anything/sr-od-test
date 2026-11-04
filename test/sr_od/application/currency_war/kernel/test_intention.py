@@ -117,16 +117,18 @@ def _ju23_session() -> StrategySession:
 
 
 def test_ju23_star2_stock_card_has_no_refund_backing_no_spend():
-    """局23 帧 2★ 压库件:无全额可退背书 ⇒ 不经背书门辖的两臂买入。
+    """局23 帧 2★ 压库件:无全额可退背书 ⇒ 不经背书门辖的买面买入。
 
-    stockpile_buy 与 dominance 同以 refund_full_star_ok 为背书门:
-    2★ 件两条买面都不可发射(断言面 = 逐动作 reason 闭集,非单位测试
-    复述)。出口形态沿革:商店收缩适配 → 3.6 会话重排 → 升级转场
+    stockpile(M6 升星目标带与一星兜底带)同以 refund_full_star_ok 为
+    背书门:2★ 件不可发射(断言面 = 逐动作 reason 闭集,非单位测试
+    复述;dominance_buy 通道已退役——富余买入并入 M6 一星兜底带,
+    comp-structure-unification 3.4)。出口形态沿革:商店收缩适配 → 3.6
+    会话重排 → 升级转场
     (2026-10-17 迭代)→ 升级触发统一批(P1 零主动升级,触发辖域 =
     锁定后 ∧ plane2_started——溢余帧的转场出口消失,会话自然走到
     买面:序 2 场况插件 = 义务通道不走背书门([41]),花火 2★ 若被
-    其买入属现行买面语义,非背书门破口;stockpile/dominance 仍被
-    背书门拦)。店内升级动作退役(升级执行位迁备战画面)。
+    其买入属现行买面语义,非背书门破口;stockpile 仍被背书门拦)。
+    店内升级动作退役(升级执行位迁备战画面)。
     """
     cfg = SimpleNamespace(ev_arm='full')
     sess = _ju23_session()
@@ -145,8 +147,8 @@ def test_ju23_star2_stock_card_has_no_refund_backing_no_spend():
             break
     assert isinstance(act, CwActionCloseShopParam), \
         f'决策有界收束(死守嫌疑): {reasons!r}'
-    assert not ({'m2_stockpile', 'dominance_buy'} & set(reasons)), \
-        f'2★ 无背书件不经背书门辖的两臂买入: {reasons!r}'
+    assert 'm2_stockpile' not in set(reasons), \
+        f'2★ 无背书件不经背书门辖的买面买入: {reasons!r}'
     assert state_of(sess).cw4_counters.get('levelup_transition_close', 0) == 0, \
         'P1 帧零主动升级(触发辖域 = 锁定后 ∧ plane2_started)'
 

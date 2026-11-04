@@ -4,17 +4,16 @@
 
 1. **买入拒真值表**(语义单一源 = ``mandate.
    dead_stock_pair_buy_reject_reason``,方向② G-S1 买侧对偶:非定向
-   1★ 买入禁制造同名 1★×2 死库存对,拒因键 ``dead_stock_pair``)+
-   dominance_buy 席位外部性否决带(ADR-0616 命题 4,bench_free ≤ 1
-   fail-closed,≥ 2 零干涉)。校验资格谓词真值边界,不断言分布数值。
+   1★ 买入禁制造同名 1★×2 死库存对,拒因键 ``dead_stock_pair``)。
+   校验资格谓词真值边界,不断言分布数值。
 2. **消费接线**(拒因本体谓词侧由本文件段 1 锁定;本段校验**消费接线**):
-   dominance 臂(zero_overlap 后,落地报告接线点 1)与 dead_gold_press_
-   buy 臂 prio2 燃料类(接线点 2)拒成对第二张,计数分键
-   ``dominance_dead_stock_pair_blocked`` / ``press_dead_stock_pair_
-   分键 ``dominance_band_wait``(否决此前静默)。帧构造边界:target_
-   comp 给线;燃料名取非线内注册表现算集(核心/保护身份规避面已随
+   M6 一星兜底带臂(zero_overlap 后,接线点 1——dominance_buy 并入位,
+   comp-structure-unification 3.4)与 dead_gold_press_buy 臂 prio2
+   燃料类(接线点 2)拒成对第二张,计数分键
+   ``m6_fallback_dead_stock_pair_blocked`` /
+   ``press_dead_stock_pair_blocked``。帧构造边界:target_comp
+   给线;燃料名取非线内注册表现算集(核心/保护身份规避面已随
    统一让位优先级迭代 3.4 退役;阿格莱雅 = 病灶
-   名:sim 实证同名 1★×2 对经 press 臂 R1 形成后被 G-S1 合成素材守卫
    名:sim 实证同名 1★×2 对经 press 臂 R1 形成后被 G-S1 合成素材守卫
    永久锁卖锁席)。
 3. **退出通道行为测试**(判据⑤;载体 = ``sell_gate.
@@ -29,8 +28,6 @@
 """
 import random
 from types import SimpleNamespace
-
-import pytest
 
 from sr_od.application.currency_war.data.cw_chars import CHARACTERS
 from sr_od.application.currency_war.kernel.cw_comps import (
@@ -91,8 +88,10 @@ _G_STAR = saturation_line(cap_resolved_of_session(
 # press 帧 gold:g* 之下且死金残段 = 3(g* 恒 10 的倍数 ⇒ −37 尾数恒 3),
 # 恰容单张 3 费压库卡
 _PRESS_GOLD = _G_STAR - 37
-# dominance 帧 gold:溢余带内(_G_STAR 之上)
-_DOM_GOLD = _G_STAR + 10
+# 富余帧 gold:溢余带内(_G_STAR 之上)——M6/一星兜底带触发域
+# (dominance_buy 通道已退役,富余买入并入 M6 兜底带,
+# comp-structure-unification 3.4)
+_SURPLUS_GOLD = _G_STAR + 10
 
 # 非线内名(注册表现算防漂移;核心/保护身份规避面已随统一让位优先级
 # 迭代 3.4 退役):[0] = 素材对名,[1] = 垫件,[2] = 商店买卡名
@@ -171,33 +170,15 @@ class TestDeadStockPairBuyReject:
             '', 1, [_bench_char('阿格莱雅')], [], ()) == ''
 
 
-class TestDominanceBuyEligibleSeatBand:
-    """ADR-0616 命题 4:dominance_buy 席位外部性否决带边界。
-
-    支配论证锚(ADR-0611 换锚重写,mandate.dominance_buy_eligible
-    docstring):1★ 全额退净成本 0 的金维支配性与 g*=10×cap_resolved
-    参数化金位门不变,本组只校验席位维带界。
-    """
-
-    def test_seat_band_truth_table(self):
-        """席位带真值表(四格并一):金 ≤ g* 恒不可发射(金维门原样,
-        与席位维无关);V_slot>0 带(bench_free=1)fail-closed 否决;
-        bench_free=0 原物理门语义保留(否决带含边界);bench_free ≥ 2
-        域 P41② 支配论证原样有效零干涉(集成测试留接线段)。"""
-        assert mandate.dominance_buy_eligible(30, 5, cap_resolved=4) is False
-        assert mandate.dominance_buy_eligible(80, 1, cap_resolved=4) is False
-        assert mandate.dominance_buy_eligible(80, 0, cap_resolved=4) is False
-
-    @pytest.mark.parametrize('bench_free', [2])
-    def test_bench_free_two_plus_untouched(self, bench_free: int):
-        """bench_free ≥ 2 域:P41② 支配论证原样有效,零干涉(参数化
-        收敛为带界代表值;带宽语义由谓词本体与集成测试承压)。"""
-        assert mandate.dominance_buy_eligible(
-            80, bench_free, cap_resolved=4) is True
+# (TestDominanceBuyEligibleSeatBand 直调真值表已随 dominance_buy 资格门
+#  整删——富余买入并入 M6 一星兜底带,comp-structure-unification 3.4,
+#  press-stockpile §1:金位面 = M6 富余判定、席位面 = M6 现行席位维
+#  (bench_free=1 照买,旧 bench_free>1 收紧随通道退役);路径级行为由
+#  下方 TestM6FallbackBandWiring 承接。)
 
 
 # ============================================================
-# 段 2:消费接线 + 否决分键(店侧)
+# 段 2:消费接线 + 拦截分键(店侧)
 # ============================================================
 
 
@@ -237,51 +218,57 @@ def _single_card_session(node_kind: str, gold: int,
     return live, sess, SimpleNamespace(ev_arm='full')
 
 
-class TestDominanceArmWiring:
-    """dominance 臂死库存拒(接线点 1)+ band 否决分键。"""
+class TestM6FallbackBandWiring:
+    """M6 一星兜底带死库存拒(接线点 1)+ 兜底带分键(dominance_buy
+    并入位,comp-structure-unification 3.4,press-stockpile §2)。
+
+    帧型 = 溢余带(gold > g*)∧ 带外帧:level 3 档窗 = {1},店刷 3 费
+    1★ ⇒ 升星目标实费带内无货 → 兜底带启用(「带内无货」路径);tier
+    窗非空故不走「无升星目标」支,两支同一 helper 语义,此处锁带内无货
+    支即可。"""
 
     def test_second_copy_rejected_with_key(self):
-        """C=1:同名第二张拒买,dominance_dead_stock_pair_blocked 计 1;
-        C=0 对照:首张照常发射 dominance_buy,两新键零计数(防误伤面)。
-
-        溢余带帧(gold > g* ∧ bench_free ≥ 2 = 资格门开),店刷 bench
-        已持同名 1★ 的第二张——接线点在 zero_overlap 之后,拒后不发射
-        dominance_buy(拒后余臂行为属各臂自身辖域,不断言)。"""
+        """C=1:同名第二张拒买,m6_fallback_dead_stock_pair_blocked 计 1;
+        兜底带零发射(m6_fallback_band_buy 不计)——拒后余臂行为属各臂
+        自身辖域,不断言。"""
         fuels = _fuel_names(2)
         strategy, sess, config = _single_card_session(
-            'prep', _DOM_GOLD, fuels, fuels[0])
+            'prep', _SURPLUS_GOLD, fuels, fuels[0])
         action = strategy.decide_shop_action()
         counters = state_of(sess).cw4_counters
-        assert counters.get('dominance_dead_stock_pair_blocked') == 1
+        assert counters.get('m6_fallback_dead_stock_pair_blocked') == 1
+        assert not counters.get('m6_fallback_band_buy')
         assert not (isinstance(action, CwActionBuyCardParam)
-                    and action.reason == 'dominance_buy')
-        # C=0 对照:首张照常发射(原对照测试迁并)
+                    and action.reason == 'm6_stockpile')
+
+    def test_first_copy_buys_via_fallback_band(self):
+        """C=0 对照:首张照常发射——买入走 M6 本通道买因 m6_stockpile
+        (买因闭集与登记簿不变),m6_fallback_band_frame/_buy 各计 1。"""
         fuels0 = _fuel_names(3)
         strategy0, sess0, config0 = _single_card_session(
-            'prep', _DOM_GOLD, fuels0[1:], fuels0[0])
+            'prep', _SURPLUS_GOLD, fuels0[1:], fuels0[0])
         action0 = strategy0.decide_shop_action()
         counters0 = state_of(sess0).cw4_counters
-        assert isinstance(action0, CwActionBuyCardParam)
-        # 3.6 位次申报:同一首张燃料件可经序 4 垫件补位支(溢余帧第二
-        # 触发域)先行发射——买面行为不变,臂身份按新序可交换。
-        assert action0.reason in ('dominance_buy', 'fuel_filler_stall')
-        assert not counters0.get('dominance_dead_stock_pair_blocked')
-        assert not counters0.get('dominance_band_wait')
+        assert isinstance(action0, CwActionBuyCardParam), \
+            f'帧未发射买入: {action0!r}'
+        assert action0.reason == 'm6_stockpile'
+        assert counters0.get('m6_fallback_band_frame') == 1
+        assert counters0.get('m6_fallback_band_buy') == 1
 
-    def test_band_veto_key_on_seat_band(self):
-        """bench_free=1 溢余帧:资格门 False 不再静默,dominance_band_wait 计 1。
-
-        否决带 = gold > g* ∧ bench_free ≤ 1(ADR-0616 命题 4,资格门
-        后半合取);金带外(False = 非必花域常态)不计,由 press 组
-        对照帧覆盖。"""
-        fuels = _fuel_names(8)
-        strategy, sess, config = _single_card_session(
-            'prep', _DOM_GOLD, fuels, fuels[0])
-        action = strategy.decide_shop_action()
-        counters = state_of(sess).cw4_counters
-        assert counters.get('dominance_band_wait') == 1
-        assert not (isinstance(action, CwActionBuyCardParam)
-                    and action.reason == 'dominance_buy')
+    def test_bench_free_one_buys_m6_seat_rule(self):
+        """席位维 = M6 现行:bench_free=1 帧(bench 8 席占)兜底带照买
+        ——旧 dominance 资格门的 bench_free>1 收紧已随通道退役,席位
+        紧张的让路由 M6 席满六步流程承载,兜底带零新席位逻辑
+        (press-stockpile §2「与 M6 现行席位维同规则」+ §4 行为申报锁)。"""
+        fuels0 = _fuel_names(9)
+        strategy0, sess0, config0 = _single_card_session(
+            'prep', _SURPLUS_GOLD, fuels0[1:9], fuels0[0])
+        action0 = strategy0.decide_shop_action()
+        counters0 = state_of(sess0).cw4_counters
+        assert isinstance(action0, CwActionBuyCardParam), \
+            f'bench_free=1 帧兜底带未发射: {action0!r}'
+        assert action0.reason == 'm6_stockpile'
+        assert counters0.get('m6_fallback_band_buy') == 1
 
 
 class TestPressArmWiring:
@@ -300,8 +287,9 @@ class TestPressArmWiring:
         action = strategy.decide_shop_action()
         counters = state_of(sess).cw4_counters
         assert counters.get('press_dead_stock_pair_blocked') == 1
-        # 金带外(gold < g*)band 否决键零计数:否则键只辖溢余带帧
-        assert not counters.get('dominance_band_wait')
+        # 金带外(gold < g*)兜底带零计数:带只辖溢余带帧(M6 触发域
+        # = gold > g*,非富余帧 M6 整体不武装)
+        assert not counters.get('m6_fallback_band_frame')
         assert not (isinstance(action, CwActionBuyCardParam)
                     and action.reason == 'dead_gold_press_buy')
         # C=0 对照:首张照常经 prio2 发射(原对照测试迁并)
@@ -486,7 +474,8 @@ class TestWriteEnd:
 
     def test_shop_buy_writes_ledger(self):
         """写端:任一臂买入(经发射位)后获取账含该名 =(位面, 买入轮)
-        ——全因类写端活路径证据(dominance 臂 C=0 首张买入)。"""
+        ——全因类写端活路径证据(M6 兜底带 C=0 首张买入;帧型与
+        TestM6FallbackBandWiring 同款)。"""
         sess = StrategySession(rng=random.Random('cw-t253'))
         gs = game_state_of(sess)
         gs.write_logic(gs.node, NodeKey(plane=1, round_num=3, kind='reward'),   # 3.6:奖励帧抑制会话内升级(本测试辖买面登记)

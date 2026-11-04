@@ -16,48 +16,20 @@ cw_screen_prep.store_plane_table(写 ``gs.node_books``),读端必须同源。
    锚落 ``gs.node_books``)= 谓词读的形状——写读异源即病灶本身,本测试
    单一源对账。
 
-第二部分(原 press_narrow_transition 并入)——锁线转型域收窄:
-出处(单一源):命题正本 = docs/develop/sr_od/application/currency_war/
-proofs/p88.md(§0 辖域/§1 调和引理/§3 解封方向式;收窄集 S_spec =
-{dominance_buy}——hub_option_buy 行已随乙臂退役删除,统一让位优先级
-迭代 3.4,豁免 ⇔ reason ∈ LAUNCH_CAUSE_BY_ARM
-∖ S_spec 闭集单一源);落码 = shop.py S_spec 发射位辖域前置
-(分键 press_narrowed_transition_domain)+ mandate.swap_transition_narrow_frame
-(域谓词单一源 = kernel ``swap_bond_gate_domain_of`` 转型域判别子全合取,
-design 2026-10-26-swap-channel-unified §2.3.1 谓词源迁移)。
-(F4 闭集对账正本与 S_spec 辖域分支迁并
- test_sell_window_launch::test_launch_cause_closed_set(12 臂映射段);
- F1 开火/F2/F3 豁免/F5 零漂移/F6 M6 零触碰/F7 单一源/F8 prep 对称/
- F9 wiring 旗位各测试已退役。)
+第二部分(原 press_narrow_transition 并入)——现仅存 test_f9 万金油
+退出义务买入面行为断言(统一让位优先级迭代 3.4 申报②的验收锁,
+保留不动)。P88 锁线转型域收窄测试(TestDominanceNarrowFire/
+narrow_frame 旗断言/press_narrowed_* 分键)已随 P88 全套退役删除
+——comp-structure-unification 3.4,press-stockpile §3:富余金占位
+买入通道并入 M6 一星兜底带,收窄集 S_spec 与域谓词源
+(swap_transition_narrow_frame/kernel swap_bond_gate_domain_of)整删;
+闭集对账正本 = test_sell_window_launch::test_launch_cause_closed_set
+(键集断言,收窄集对账段同批删除)。
 """
 from __future__ import annotations
 
 from types import SimpleNamespace
 
-from test.sr_od.application.currency_war._cw_helpers import (
-    cw4_box as _bridge,
-)
-from test.sr_od.application.currency_war._cw_helpers import (
-    cw4_gs,
-)
-from test.sr_od.application.currency_war.strategies.impl.mandate_v1.test_leak_ladder import (
-    _bc as _lad_bc,
-)
-from test.sr_od.application.currency_war.strategies.impl.mandate_v1.test_leak_ladder import (
-    _card as _lad_card,
-)
-from test.sr_od.application.currency_war.strategies.impl.mandate_v1.test_leak_ladder import (
-    _km as _lad_km,
-)
-from test.sr_od.application.currency_war.strategies.impl.mandate_v1.test_leak_ladder import (
-    _off_name as _lad_off_name,
-)
-from test.sr_od.application.currency_war.strategies.impl.mandate_v1.test_leak_ladder import (
-    _session_stub as _lad_session,
-)
-from test.sr_od.application.currency_war.strategies.impl.mandate_v1.test_leak_ladder import (
-    _st as _lad_st,
-)
 from test.sr_od.application.currency_war.strategies.impl.mandate_v1.test_no_target_three_arms import (
     IntentionState,
 )
@@ -82,22 +54,13 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     GameState,
     NodeKey,
-    Unit,
     game_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionBuyCardParam,
-    ShopCard,
 )
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
     store_plane_table,
-)
-from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
-    mandate,
-    shop,
-)
-from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
-    state_of,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn import (
     predicates,
@@ -182,59 +145,22 @@ def test_store_plane_table_shape_feeds_predicates():
     assert predicates.front_window_frame(gs) is True, '写端形状 → 谓词 True'
 
 
-# ==================== 锁线转型域收窄(原 press_narrow_transition 并入)===
-
-_NARROW_KEY = 'press_narrowed_transition_domain'
-_NARROW_HUB_KEY = 'press_narrowed_transition_domain_hub'
-
-
-def _d_frame_deps(n_km: int = 0) -> tuple[list[Unit], frozenset[str]]:
-    """板满构造(level 5 ⇒ max_units=5,bench 空):锁线采购集前 n_km 名
-    2★ 上板(其余线内名留作缺员),余位线外 2★ 垫件补满。
-    返回 (板上件, 板上名集)——候选/缺员选取须 exclude 板上名集。"""
-    km = _lad_km()
-    names = list(km[:n_km])
-    while len(names) < 5:
-        names.append(_lad_off_name(exclude=tuple(names)))
-    deps = [_lad_bc(m, star=2) for i, m in enumerate(names)]
-    return deps, frozenset(names)
-
-
-def _d_frame_st(gold: int, cards: list[ShopCard]) -> dict:
-    """D 帧默认形(n_km=0 纯垫件板):锁线 ∧ fp<1.00(board 空)∧ 板满。"""
-    deps, _names = _d_frame_deps(0)
-    return _lad_st(gold, cards, locked=True, deployed=deps)
-
-
-def _decide(st: dict, sess) -> object:
-    return shop.decide_shop_action(cw4_gs(sess, **st), sess, SimpleNamespace(ev_arm='full'))
-
-
-class TestDominanceNarrowFire:
-
-    def test_f1b_candidate_none_frame_key_silent(self):
-        """分键口径 = 将发射笔:同 D 帧但店无 dominance 候选(仅 2★
-        线外卡,refund 门先拒)⇒ 无将发射笔,收窄分键零显影(禁把辖域
-        机会帧计入开火数,防 §4.1-⑦① 覆盖比畸变)。"""
-        _deps, dep_names = _d_frame_deps(0)
-        cand = _lad_off_name(exclude=tuple(dep_names))
-        st = _d_frame_st(60, [_lad_card(cand, cost=2, star=2)])
-        sess = _lad_session(locked=True)
-        assert mandate.swap_transition_narrow_frame(_bridge(**st), sess) is True
-        _decide(st, sess)
-        assert _NARROW_KEY not in state_of(sess).cw4_counters, \
-            '无可发射笔帧分键照计 = 口径漂移(帧内无将发射笔)'
+# ==================== 万金油退出义务买入面(原 press_narrow_transition 并入)===
+# (P88 锁线转型域收窄测试面——_NARROW_KEY 分键/_d_frame_* D 帧构造/
+#  TestDominanceNarrowFire 开火口径/test_f9 收窄旗断言——已随 P88
+#  全套退役删除,comp-structure-unification 3.4,press-stockpile §3;
+#  下方仅保留 test_f9 的万金油行为断言〔另一迭代的验收锁,不动〕。)
 
 
 class TestUnlockedFrameUntouched:
     def test_f9_unlocked_frame_untouched(self):
-        """未锁无目标帧收窄旗恒 False;万金油件(花火)不再经序 1 义务面
-        自动买入(万金油退出义务买入面【拍,总纲 §2.7 申报②】,统一让位
-        优先级迭代 3.4——原乙臂收编形态〔枢纽件经序 1 成员面照常发射〕
-        随万金油项删除废止)、hub_option 买因与收窄哨兵键零显影。"""
+        """万金油件(花火)不再经序 1 义务面自动买入(万金油退出义务
+        买入面【拍,总纲 §2.7 申报②】,统一让位优先级迭代 3.4——原乙臂
+        收编形态〔枢纽件经序 1 成员面照常发射〕随万金油项删除废止)、
+        hub_option 买因零显影。(原收窄旗断言与收窄哨兵键断言已随 P88
+        退役删除,comp-structure-unification 3.4。)"""
         st = _hub_state(shop_cards=[_hub_card('花火', cost=2)])
         sess = _hub_session(IntentionState())
-        assert mandate.swap_transition_narrow_frame(_bridge(**st), sess) is False
         act = _hub_decide(st, sess)
         assert not (isinstance(act, CwActionBuyCardParam)
                     and act.card.name == '花火'
@@ -242,4 +168,3 @@ class TestUnlockedFrameUntouched:
             f'万金油件经义务面买入(3.4 申报②失效): {act!r}'
         ct = _hub_ct(sess)
         assert 'hub_option_buy_hit' not in ct
-        assert _NARROW_HUB_KEY not in ct

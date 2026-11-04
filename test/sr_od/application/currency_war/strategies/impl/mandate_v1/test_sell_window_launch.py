@@ -131,19 +131,21 @@ def _registry(sess: StrategySession) -> dict:
 class TestLaunchRegistry:
     """发射登记 API 测试(P78 §2.2 窗口段载体;ADR-0585 §2/§3;
     3.4 修订:hold 类随 C1/囤货臂两买臂退役删除——闭集收敛
-    {obligation, press, stall_protect},映射表 12 键)。"""
+    {obligation, press, stall_protect};dominance_buy 行已随通道
+    退役删除(富余买入并入 M6 一星兜底带,comp-structure-unification
+    3.4)——映射表 13 键。"""
 
     def test_launch_cause_closed_set(self):
         """闭集三个测试并一:
         [枚举拒] LaunchCause 枚举外值拒收(方案 v3 §5.3 防复发
           双闸②;新买入臂必须先归入某因果类才合法;hold 类同为枚举外
           ——3.4 退役后登记被拒);
-        [12 臂映射] 买入臂全映射 + 值域 ⊆ LaunchCause 闭集 +
+        [13 臂映射] 买入臂全映射 + 值域 ⊆ LaunchCause 闭集 +
           ev_buy→press(方案 v3 §3.1;新买入臂未分类即登记 = 红,测试红
           时该登记的语义 = 把新臂补进映射表并过对抗审,非机械跟绿)。
           core_single_card_buy 族/protection_hoard 三行已随两买臂退役
-          删除(3.4)。P88 迁并分支:收窄集 S_spec ⊆ 闭集 + 豁免 =
-          闭集 ∖ S_spec 实名对账;
+          删除(统一让位优先级迭代 3.4);dominance_buy 行已随通道退役
+          删除(comp-structure-unification 3.4);
         [双视图] 单载体双视图:press 登记入窗口段排除面(active_window),
           垫保登记只入 T3 视图(stall_protect_active → defer 参数)——
           垫保在凑息是 defer 跳过、在 M4/funding 是降序放行(转化类,
@@ -157,11 +159,11 @@ class TestLaunchRegistry:
         with pytest.raises(ValueError):
             sell_gate.register_launch(_sess(), _FUEL, cause='hold',
                                       round_num=3)
-        # [14 臂映射](11 号稿 §1 序 1 扩展臂注册
+        # [13 臂映射](11 号稿 §1 序 1 扩展臂注册
         # ×2:shelf_qualify_buy/cold_start_buy,义务类)
         arms = ('m2_line_member', 'm2_locked_member', 'm2_stockpile',
                 'm2_merge_completion', 'shelf_qualify_buy',
-                'cold_start_buy', 'dominance_buy', 'm6_stockpile',
+                'cold_start_buy', 'm6_stockpile',
                 'press_buy_deployable',
                 'ev_buy', 'dead_gold_press_buy', 'fuel_filler_stall',
                 't3_unlocked_hemostat', 'scene_plugin_buy')
@@ -174,25 +176,10 @@ class TestLaunchRegistry:
         assert sell_gate.launch_cause_of('scene_plugin_buy') == 'press'
         assert sell_gate.launch_cause_of('不存在的臂') is None
         assert sell_gate.launch_cause_of('protection_hoard') is None
-        # P88 迁并分支:收窄集 ⊆ 闭集;豁免集 = 闭集 ∖ S_spec——新买入
-        # 臂入映射表即红(强制分类进收窄/豁免,防绕辖域前置的第五臂;
-        # 对账符号 = mandate.PRESS_NARROWED_ARMS)
-        assert set(sell_gate.LAUNCH_CAUSE_BY_ARM) \
-            >= mandate.PRESS_NARROWED_ARMS, \
-            f'收窄集越出闭集: ' \
-            f'{mandate.PRESS_NARROWED_ARMS - set(sell_gate.LAUNCH_CAUSE_BY_ARM)}'
-        exempt = set(sell_gate.LAUNCH_CAUSE_BY_ARM) \
-            - mandate.PRESS_NARROWED_ARMS
-        must_exempt = {
-            'm2_line_member', 'm2_locked_member', 'm2_stockpile',
-            'm2_merge_completion', 'shelf_qualify_buy', 'cold_start_buy',
-            'm6_stockpile',
-            'press_buy_deployable', 'ev_buy',
-            'dead_gold_press_buy', 'fuel_filler_stall',
-            't3_unlocked_hemostat', 'scene_plugin_buy',
-        }
-        assert exempt == must_exempt, \
-            f'豁免集漂移: 多={exempt - must_exempt} 少={must_exempt - exempt}'
+        # (P88 收窄集对账段已随 P88 全套退役删除——S_spec 谓词源
+        #  PRESS_NARROWED_ARMS/swap_transition_narrow_frame 同批整删,
+        #  comp-structure-unification 3.4,press-stockpile §3;闭集
+        #  本体对账(上方键集断言)保留。)
         # [双视图]
         sess = _sess()
         assert sell_gate.register_launch(sess, _FUEL, cause='press',
@@ -319,7 +306,7 @@ _W1_CHANNEL_CASES = ('funding-e2e', 'm4-candidates')
 
 
 class TestW1SameVisitBan:
-    """W1 测试:②(b)/dominance 等 press 类买入登记活跃帧(登记轮==
+    """W1 测试:②(b) 等 press 类买入登记活跃帧(登记轮==
     当前轮),凑息/funding/M4 全通道资格面均不含该件——「拆窗口段时
     该件恰入卖出槽集」的病理形态由红证直调复现。三通道参数化并一
     (通道无关,P78 INV)。"""
