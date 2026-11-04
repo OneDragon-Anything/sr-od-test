@@ -25,7 +25,8 @@ from sr_od.application.currency_war.kernel.cw_investments import (
 #: 星魂升华(策略源 UNIT_BUFF 族,前台星魂 +1 阶零响应登记)= 75 键现值;
 #: 开源节流(条件息顶满载体宿主条目,2026-11-03)= 78 键现值;
 #: 公司严选(「现在及每个位面开始时」族第 3 员,位面周期金 + 商店改写对,
-#: 2026-11-03)= 82 键现值。
+#: 2026-11-03)= 82 键现值;
+#: 搜打撤(每节点 +1 免费刷 overlay 补条,T-332 批)= 83 键现值。
 _EXPECTED_KEYS: frozenset[str] = frozenset({
     '淘金客', '固定理财', '固定理财+', '经验就是财富', '商业间谍',
     '双手狸开键盘！', '采购专员·金', '采购专员·彩', '全员晋升', '人力重组',
@@ -71,6 +72,7 @@ _EXPECTED_KEYS: frozenset[str] = frozenset({
     '利息上调',
     '开源节流',
     '公司严选',
+    '搜打撤',
 })
 
 
@@ -81,7 +83,7 @@ def test_strategy_effects_keyset_closed() -> None:
         'STRATEGY_EFFECTS 键集漂移:\n'
         f'  缺员: {sorted(set(_EXPECTED_KEYS) - set(STRATEGY_EFFECTS))}\n'
         f'  多员: {sorted(set(STRATEGY_EFFECTS) - set(_EXPECTED_KEYS))}')
-    assert len(STRATEGY_EFFECTS) == 82, '基数申报对账(effect-domain §5)'
+    assert len(STRATEGY_EFFECTS) == 83, '基数申报对账(effect-domain §5)'
 
 
 def test_strategy_effects_keys_unique_ids() -> None:
