@@ -290,7 +290,7 @@ def test_grant_registry_counts_and_closed_set():
     退役,后者 = 这么大的钻石用户裁定 2026-11-02 读法 B 入册)+ 1 非候选
     直读登记(狸职手续,「获得」直读但发放对象为卡面用名「狸狸」∉ 角色
     注册表,反扫零命中自动排除,按实机录名归一);顾问档名单在册。"""
-    assert len(STRATEGY_GRANTS) == 100
+    assert len(STRATEGY_GRANTS) == 101
     advisors = {n for n, g in STRATEGY_GRANTS.items() if g.advisor}
     assert len(advisors) == 11
     assert {'停云顾问', '加拉赫顾问', '摸个鱼吧I'} <= advisors
