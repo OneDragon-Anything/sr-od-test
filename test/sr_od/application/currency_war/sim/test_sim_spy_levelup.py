@@ -128,8 +128,9 @@ def test_spy_levelup_steal_persist_reopen_presents_two() -> None:
         assert out.applied
         assert out.world_decl is not None \
             and out.world_decl.trigger == 'spy_shop_refresh'
-        # 步④:信号置位(写端 = 上报回调,实机/sim 同源)。
-        assert b.gs.shop_randomized_pending is True
+        # 步④:信号置位(写端 = 升级值变更回调,实机/sim 同源;槽值形态 =
+        # 来源代次戳,None = 无信号,T-434)。
+        assert b.gs.shop_randomized_pending is not None
         # 步②:偷最贵 3 张 → 备战席真实入席(可断言具体牌,多重集对拍)。
         stolen = _top3_of(replay)
         bench_after = [s.unit.char_id for s in b.gs.bench.value.slots
@@ -151,7 +152,7 @@ def test_spy_levelup_steal_persist_reopen_presents_two() -> None:
         assert outs and outs[0].reason == 'step1_shop_randomized_reopen', \
             f'备战重开触发: {outs}'
         assert isinstance(outs[0].action, CwActionOpenShopParam)
-        assert b.gs.shop_randomized_pending is False, '重开位消费后清信号'
+        assert b.gs.shop_randomized_pending is None, '重开位消费后清信号'
         assert state_of(b.gs).shop_handled is None, '重开位清 handled 标记'
         # 开店呈现剩余 2 张(非重新发牌:_shop_record 写回,不再发牌)。
         b._handle_click_source(SCREEN_PREP, '按钮-商店')
@@ -176,7 +177,7 @@ def test_no_spy_levelup_zero_shop_side_effect() -> None:
         out, _replay = _feed_levelup(b, spy=False)
         assert out.applied, '升级照常生效'
         assert out.world_decl is None, '无持卡 → 无世界分支声明'
-        assert b.gs.shop_randomized_pending is False, '信号不置'
+        assert b.gs.shop_randomized_pending is None, '信号不置'
         assert _content_names(b.gs.shop.value) == [
             s.card.name for s in board_before
             if s.kind == 'content' and s.card is not None], '牌面不变'
@@ -204,7 +205,7 @@ def test_spy_steal_bench_full_overflow_disclosed() -> None:
                              for i in range(9)], capacity=9),
             evidence='test:spy', sig=_SIG_OBS)
         out, replay = _feed_levelup(b, spy=True)
-        assert out.applied and b.gs.shop_randomized_pending is True
+        assert out.applied and b.gs.shop_randomized_pending is not None
         bench_now = [s.unit.char_id for s in b.gs.bench.value.slots
                      if s.kind == 'unit' and s.unit is not None]
         assert bench_now == [f'垫件{i}' for i in range(9)], \

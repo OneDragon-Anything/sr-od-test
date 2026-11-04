@@ -57,7 +57,14 @@ from sr_od.application.currency_war.sim.cw_sim_run_config import RunConfig
 
 _EV_PICK = 'sim:engine:xp:strategy_pick:固定理财'
 _EV_REFIRE = 'sim:engine:xp:strategy_plane_refire:固定理财'
-_SAFE_FILLER = '淘金客'   # 无 burst/刷新/位面字段,落卡零扰目标断言
+# 填充卡前提申报(T-311-r1 裁决 a:只修注释、卡不换——换卡位移种子轨迹,
+# 明令禁止):淘金客现役 xp_per_refresh=2(cw_investments.py 注册行),
+# 刷新 XP 世界腿已接入调用(T-311)——「无刷新字段」旧注失实(burst/
+# 位面字段仍为零);本卡作填充的安全性前提 = 本目录 sim 链驱动器
+# (_drive_step)商店屏一律直接关店、零付费刷新帧 → XP 分支零开火,
+# 落卡零扰目标断言;未来引入付费刷新驱动须先换无 XP 字段填充卡或显式
+# 预算 XP 推进对。
+_SAFE_FILLER = '淘金客'
 _SAFE_OPTS = ['淘金客', '躺平', '买断制']
 
 

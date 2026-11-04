@@ -161,10 +161,20 @@ def test_prereg_spy_closure_full_match(test_context: Any,
                                        tmp_path: Any) -> None:
     """③随机态闭环全跑实证(间谍供奉变体):策略 offer 候选桩化为单候选
     商业间谍(必选;真实 pick 判据在环),一整局内商业间谍升级回调与
-    备战重开位逐次配对,偷取 3 张/次入备战席真实可断言。
+    备战重开位逐次配对,偷取 3 张/次入席+溢出张数守恒可断言。
 
     批跑(上测)种子集内间谍零被选(0=0 恒等平凡成立),确定性闭环的
-    单帧证据 = T-3 sim 闭环用例;本测试补全跑域的真实闭环实例。"""
+    单帧证据 = T-3 sim 闭环用例;本测试补全跑域的真实闭环实例。
+
+    入席实例判据演变(T-432/T-434 连带,定向改期望):入席机制有无的
+    精确锁 = test_sim_spy_levelup 具体牌断言(单帧域);全跑域「至少一次
+    真实入席」原为种子实例快照(旧轨迹下唯一升级落店中拍、席有空位),
+    T-432 把分支执行定案为结算时点(进窗拍)后本 seed 唯一升级恰逢席满
+    全溢出(placed=0/ovf=3,实测),种子实例断言随已申报的轨迹位移失效
+    ——判据改为与批跑同形的条件式(入席 > 0 局须有 spy_steal 观察写行),
+    不钉轨迹统计值。信号来源代次(迭代 2026-09-23-invest-effects-calc
+    T-434)恢复重开腿对节点时点源成立,守恒式 spy_deals == reopens 本
+    seed 实测 1 == 1。"""
     from sr_od.application.currency_war.sim import cw_sim_backend
 
     def _forced_spy_offer(rng, excluded, forced_quality='', forced_slots=()):
@@ -193,4 +203,8 @@ def test_prereg_spy_closure_full_match(test_context: Any,
     assert spy_deals == reopens, \
         f'闭环破:间谍升级 {spy_deals} ≠ 重开 {reopens}'
     assert placed + overflow == 3 * spy_deals, '偷取张数守恒破'
-    assert placed >= 1, '零真实入席(偷取全溢出,入席面无实例)'
+    if placed > 0:
+        assert any(r.get('row') == 'write'
+                   and 'spy_steal' in str(r.get('evidence') or '')
+                   for r in run.journal_rows), \
+            f'入席 {placed} 张但无备战席观察写行(spy_steal 证据)'

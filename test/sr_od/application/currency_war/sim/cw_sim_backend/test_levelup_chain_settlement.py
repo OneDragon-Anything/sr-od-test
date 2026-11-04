@@ -10,17 +10,26 @@ advance 尾统一排空段)。kernel 直驱锁 = kernel/test_cw_levelup_callback
   被本锁钉死);
 - 锁 4 消费时点断言(B1):选卡即时 XP 跨级 → 排空发生在该选卡 advance
   尾(当拍);首购 XP 跨级 → 排空发生在窗内次声明拍(买牌动作不喂声明,
-  上限 = 下一声明驱动 advance,设计稿申报制残余)。
+  上限 = 下一声明驱动 advance,设计稿申报制残余);
+- 来源代次锁·免战跳过路径(迭代 2026-09-23-invest-effects-calc T-434):
+  被跳节点 XP 跨级置位的信号,代次戳在间谍分支执行尾刷新为牌面所属窗
+  (免战路径 = 模拟器本地推进,置位时点序位滞后一节点)——节点边界
+  清扫按代次判据保留新源,重开腿对免战源不破。
 
 引擎驱动助手 import 自 sim/test_sim_backend.py(在册超限拆分债文件,
 禁追加,只 import 复用不改;先例 = 同目录 test_env_xp_window_sim_chain.py)。
 """
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 from test.sr_od.application.currency_war.sim.test_sim_backend import (
     _node_advance_feed,
 )
 
+from sr_od.application.currency_war.kernel.cw_action_report.start_battle import (
+    report_action_start_battle_param,
+)
 from sr_od.application.currency_war.kernel.cw_economy import (
     XP_TO_NEXT_LEVEL,
 )
@@ -32,6 +41,9 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     NodeKey,
     shop_randomized_pending_of,
 )
+from sr_od.application.currency_war.kernel.cw_investments import (
+    STRATEGY_EFFECTS,
+)
 from sr_od.application.currency_war.kernel.cw_world_decl import WorldDecl
 from sr_od.application.currency_war.sim import cw_sim_ports
 from sr_od.application.currency_war.sim.cw_sim_backend import (
@@ -42,6 +54,12 @@ from sr_od.application.currency_war.sim.cw_sim_backend import (
     uninstall_backend,
 )
 from sr_od.application.currency_war.sim.cw_sim_run_config import RunConfig
+from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+    session_scope,
+)
+from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state import (
+    state_of,
+)
 
 _SIG = ChannelSig(family='logic_action', actor='LevelupChainTest',
                   mode='compute')
@@ -197,5 +215,40 @@ def test_pick_xp_drains_same_advance_first_buy_next_decl() -> None:
         assert b2.disclosures.get('spy_deal_count') == 1, \
             '排空发生在窗内次声明拍(申报制残余的行为边界)'
         assert gs.pending_levelup_world_decls == [], '次声明拍取走即清'
+    finally:
+        uninstall_backend()
+
+
+def test_skip_battle_cross_stamp_refreshed_to_board_window() -> None:
+    """来源代次锁·免战跳过路径(T-434):被跳节点 XP(reward +2)跨级
+    置位的信号,置位时点序位 = 被离开节点(免战路径 = 模拟器本地推进,
+    经验入账先于直进下一窗),间谍分支执行尾把代次戳刷新为牌面所属窗
+    ——下一备战帧节点边界按代次判据保留新源,重开腿对免战源不破
+    (无刷新则戳滞后一节点,信号被当过期代次清掉 = T-432 偏差 A 同形
+    复发)。"""
+    b = _to_prep()
+    try:
+        gs = b.gs
+        gs.effects.register_strategy(STRATEGY_EFFECTS['免战牌'],
+                                     acquired_key=(1, 1))
+        gs.observe(gs.active_strategies, ['商业间谍'],
+                   evidence='t:seed', sig=_SIG_OBS)
+        gs.observe(gs.level, 3, evidence='t:seed', sig=_SIG_OBS)
+        gs.observe(gs.xp, (2, XP_TO_NEXT_LEVEL[3]),
+                   evidence='t:seed', sig=_SIG_OBS)
+        st = state_of(gs)
+        st.node_boundary_last_pos = (1, 1)   # (1,1) 备战帧边界已过(生产形态)
+        out = report_action_start_battle_param(
+            gs, SimpleNamespace(), _SIG, session=gs, skip_substate=True)
+        assert out.applied, f'免战跳过上报未落账: {out.reason!r}'
+        cw_sim_ports.declare_world(out.world_decl)
+        assert b.disclosures.get('spy_deal_count') == 1, \
+            '被跳节点 XP 跨级 → 商店分支当拍执行(advance 尾排空)'
+        assert shop_randomized_pending_of(gs) is True, '跨级信号置位'
+        assert gs.shop_randomized_pending == (1, 2), \
+            '代次戳 = 牌面所属窗(免战路径分支执行尾刷新,非滞留被离开节点)'
+        session_scope.handle_node_boundary(gs)
+        assert gs.shop_randomized_pending is not None, \
+            '节点边界 (1,1)→(1,2) 检出变化仍保留新源(重开腿恢复)'
     finally:
         uninstall_backend()

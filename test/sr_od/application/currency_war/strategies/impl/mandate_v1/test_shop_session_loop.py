@@ -54,6 +54,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     ShopSlot,
     Unit,
     game_state_of,
+    mark_shop_randomized_pending,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
     deployed_view_sequential as _dvs,
@@ -730,8 +731,10 @@ class TestUpgradeIntentExit:
 
 # ============================================================ 备战随机态重开位
 # (迭代 2026-10-17-levelup-shop-transition design §2.2 第 1 步/§2.4:
-# 信号宿主 = GameState 簿记槽 shop_randomized_pending;写端 = T-3 商业
-# 间谍升级回调,本阶段恒 False = 零行为,读端 + 清位先行。)
+# 信号宿主 = GameState 簿记槽 shop_randomized_pending(None = 无信号,
+# 非 None = 带来源代次戳,迭代 2026-09-23-invest-effects-calc T-434);
+# 写端 = 升级值变更回调经 mark_shop_randomized_pending 盖戳,读端 +
+# 清位先行。)
 
 
 class TestPrepRandomizedReopen:
@@ -746,31 +749,53 @@ class TestPrepRandomizedReopen:
         out0 = entry.emit(sess, None)
         assert not [e for e in out0
                     if e.reason == 'step1_shop_randomized_reopen'], out0
-        # 信号在(测试直种;生产写端 = T-3 商业间谍升级回调):重开位消费。
+        # 信号在(测试直种带代次戳的真值;生产写端 = 商业间谍升级回调经
+        # mark_shop_randomized_pending 盖戳):重开位消费。
         session_scope.mark_shop_handled(gs)
         assert session_scope.shop_handled_for_current_node(gs)
-        gs.shop_randomized_pending = True
+        gs.shop_randomized_pending = (1, 3)
         out = entry.emit(sess, None)
         assert out and out[0].reason == 'step1_shop_randomized_reopen', out
         assert isinstance(out[0].action, CwActionOpenShopParam)
         assert st.shop_handled is None, '重开位清 handled 标记'
-        assert gs.shop_randomized_pending is False, '重开位消费后清信号'
+        assert gs.shop_randomized_pending is None, '重开位消费后清信号'
         assert st.cw4_counters.get('shop_randomized_reopen') == 1, \
             '重开触发计数键在册(§2.6③ 随机态闭环取数口)'
 
-    def test_node_boundary_sweeps_signal(self):
-        """节点边界清扫:信号残留跨节点 = 旧牌面语义死亡,边界函数清位
-        (design §2.4 清位两出口之二)。"""
+    def test_node_boundary_sweeps_stale_generation_signal(self):
+        """节点边界清扫(过期代次):信号戳 ≠ 当前生效序位 = 旧节点牌面
+        语义死亡,边界函数清位(design §2.4 清位两出口之二;代次判据 =
+        迭代 2026-09-23-invest-effects-calc T-434,真旧源清扫旧语义保持)。"""
         _live, _sess, gs, _st = _frame(gold=60, node_kind='reward',
                                        shop_cards=[])
-        gs.shop_randomized_pending = True
+        gs.shop_randomized_pending = (1, 3)   # 上一节点内置位未消费的戳
         gs.write_logic(gs.node, NodeKey(plane=1, round_num=4,
                                         kind='reward'),
                        produced_by='cw-36-loop', sig=_LOGIC_SIG)
         gs.observe(gs.node_pos, (1, 4), evidence='cw-36-loop',
                    sig=_OBS_SIG)
         session_scope.handle_node_boundary(gs)
-        assert gs.shop_randomized_pending is False, '节点边界清信号'
+        assert gs.shop_randomized_pending is None, '过期代次信号边界清位'
+
+    def test_node_boundary_keeps_fresh_generation_signal(self):
+        """来源代次锁(T-434):节点推进时点置位的新源(戳 = 当前生效序位;
+        生产形态 = T-432 advance 尾排空置位,恰在进入新节点的同一次
+        advance 内盖新节点戳)不被边界清扫清掉——清扫只清过期代次,新源
+        信号保留交本帧重开位消费(守恒式重开腿对节点时点源恢复)。"""
+        _live, _sess, gs, _st = _frame(gold=60, node_kind='reward',
+                                       shop_cards=[])
+        gs.write_logic(gs.node, NodeKey(plane=1, round_num=4,
+                                        kind='reward'),
+                       produced_by='cw-36-loop', sig=_LOGIC_SIG)
+        gs.observe(gs.node_pos, (1, 4), evidence='cw-36-loop',
+                   sig=_OBS_SIG)
+        # 节点推进时点置位(生产写端盖戳路径,stamp = effective_node_pos)。
+        mark_shop_randomized_pending(gs)
+        assert gs.shop_randomized_pending == (1, 4), \
+            '置位盖来源代次戳 = 当前生效节点序位'
+        session_scope.handle_node_boundary(gs)
+        assert gs.shop_randomized_pending is not None, \
+            '新源信号(代次戳 = 当前序位)不被节点边界清扫清掉'
 
 
 # ============================================================ 等钱帧刷新让位
