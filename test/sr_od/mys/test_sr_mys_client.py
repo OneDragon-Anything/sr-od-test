@@ -16,10 +16,16 @@
 - 明细富映射（get_characters_detail，avatar/info 端点）：剧本按 URL 分流
   （index → v1 轻剧本不动；avatar/info → detail 剧本，detail 栈不注册 index
   路由——端点回归回 index 即响亮失败）；detail 请求 URL 含 avatar/info 与
-  need_wiki=true（端点切换存在性锁）；CharacterDetail 及六个子结构冻结字段
-  集逐字对账（契约 3/4，增删即失败）；词条/面板 name_cn 两路解析（fixture
-  动态词典 + 快照兜底 + 占位符/空名实测形态）；主词条部位校验哨兵 warning
-  （畸形数据不中断映射）；空遗器/无光锥/缺件/星魂未解锁等形态透传。
+  need_wiki=true（端点切换存在性锁）；CharacterDetail 及八个子结构冻结字段
+  集逐字对账（契约 3/4 + mys-relic-sets 契约 1/2，增删即失败）；词条/面板
+  name_cn 两路解析（fixture 动态词典 + 快照兜底 + 占位符/空名实测形态）；
+  主词条部位校验哨兵 warning（畸形数据不中断映射）；空遗器/无光锥/缺件/
+  星魂未解锁等形态透传。
+- 套装映射（mys-relic-sets design.md §2 契约 1/2）：逐件 set_name 件名反查
+  （真实件名 → 套装官方全名；未知件名 → 「未知套装」+ resolve 层 warning
+  恰一次，映射/build 层不重复告警）；角色级 set_effects 激活档形态（4 件套
+  2/4 双档、2 件套单档、缺件不足 4 无 4 件档、全空 → 空列表、ornaments 空 →
+  无饰品条目）与 set_effects 序列化面对账。
 """
 
 import json
@@ -45,7 +51,7 @@ from one_dragon.mys.mys_session import (
     MysSessionExpired,
     SessionStore,
 )
-from sr_od.mys import sr_mys_client
+from sr_od.mys import sr_mys_client, sr_relic_sets
 from sr_od.mys.sr_mys_client import (
     CharacterDetail,
     ConeSummary,
@@ -55,6 +61,8 @@ from sr_od.mys.sr_mys_client import (
     SrPropertyEntry,
     SrRank,
     SrRelic,
+    SrSetEffect,
+    SrSetEffectEntry,
     SrSkill,
     SrSkillStage,
 )
@@ -404,21 +412,27 @@ def test_detail_expired_short_circuit_raises_without_any_request(
 
 
 def test_detail_frozen_field_sets_locked(tmp_path: Path) -> None:
-    """契约 3/4 冻结字段集逐字对账：CharacterDetail 15 字段 + 六个子结构
-    字段名集合，任何增删即失败；SrRank 不设 pos_cn（星魂 pos 是星魂序号，
+    """契约 3/4 + mys-relic-sets 契约 1/2 冻结字段集逐字对账：CharacterDetail
+    16 字段 + 八个子结构字段名集合（set_name/set_effects 为 mys-relic-sets
+    新增进契约面），任何增删即失败；SrRank 不设 pos_cn（星魂 pos 是星魂序号，
     与遗器部位码撞值域——结构性防混淆）；序列化面 = 冻结字段集（icon/desc/
-    figure_path/point_id 等不透传字段不出现在载荷）。"""
+    figure_path/point_id 等不透传字段不出现在载荷，set_effects 档条目键集
+    同判）。"""
     sr, _ = _detail_stack(tmp_path)
     details = sr.get_characters_detail()
 
     assert {f.name for f in fields(CharacterDetail)} == {
         'id', 'name', 'level', 'rarity', 'rank', 'element', 'element_cn',
         'base_type', 'base_type_cn', 'equip', 'relics', 'ornaments', 'ranks',
-        'skills', 'properties',
+        'skills', 'properties', 'set_effects',
     }
     assert {f.name for f in fields(SrRelic)} == {
-        'name', 'pos', 'pos_cn', 'rarity', 'level', 'main', 'subs',
+        'name', 'pos', 'pos_cn', 'rarity', 'level', 'main', 'subs', 'set_name',
     }
+    assert {f.name for f in fields(SrSetEffect)} == {
+        'set_name', 'kind', 'piece_count', 'pieces', 'activated',
+    }
+    assert {f.name for f in fields(SrSetEffectEntry)} == {'count', 'desc'}
     assert {f.name for f in fields(SrPropertyEntry)} == {'name_cn', 'value', 'times'}
     assert {f.name for f in fields(SrRank)} == {'pos', 'name', 'desc', 'is_unlocked'}
     assert {f.name for f in fields(SrSkill)} == {'name', 'level', 'is_activated', 'stages'}
@@ -431,6 +445,10 @@ def test_detail_frozen_field_sets_locked(tmp_path: Path) -> None:
     assert set(payload['equip'].keys()) == {f.name for f in fields(ConeSummary)}
     assert set(payload['relics'][0].keys()) == {f.name for f in fields(SrRelic)}
     assert set(payload['relics'][0]['main'].keys()) == {f.name for f in fields(SrPropertyEntry)}
+    assert set(payload['set_effects'][0].keys()) == {f.name for f in fields(SrSetEffect)}
+    assert set(payload['set_effects'][0]['activated'][0].keys()) == {
+        f.name for f in fields(SrSetEffectEntry)
+    }
     assert set(payload['ranks'][0].keys()) == {f.name for f in fields(SrRank)}
     assert set(payload['skills'][0].keys()) == {f.name for f in fields(SrSkill)}
     assert set(payload['skills'][0]['stages'][0].keys()) == {f.name for f in fields(SrSkillStage)}
@@ -467,6 +485,7 @@ def test_detail_mapping_full_form(tmp_path: Path) -> None:
     assert first.relics == [
         SrRelic(
             name='快枪手的野穗毡帽', pos=1, pos_cn='头部', rarity=5, level=15,
+            set_name='野穗伴行的快枪手',
             main=SrPropertyEntry(name_cn='生命值', value='705', times=0),
             subs=[
                 SrPropertyEntry(name_cn='生命值', value='3.4%', times=1),
@@ -477,6 +496,7 @@ def test_detail_mapping_full_form(tmp_path: Path) -> None:
         ),
         SrRelic(
             name='快枪手的粗革手套', pos=2, pos_cn='手部', rarity=5, level=15,
+            set_name='野穗伴行的快枪手',
             main=SrPropertyEntry(name_cn='攻击力', value='352', times=0),
             subs=[
                 SrPropertyEntry(name_cn='生命值', value='42', times=1),
@@ -486,7 +506,8 @@ def test_detail_mapping_full_form(tmp_path: Path) -> None:
             ],
         ),
         SrRelic(
-            name='勇烈的飞翎瓷甲', pos=3, pos_cn='躯干', rarity=5, level=15,
+            name='快枪手的猎风披肩', pos=3, pos_cn='躯干', rarity=5, level=15,
+            set_name='野穗伴行的快枪手',
             main=SrPropertyEntry(name_cn='暴击伤害', value='64.8%', times=0),
             subs=[
                 SrPropertyEntry(name_cn='防御力', value='9.7%', times=2),
@@ -496,7 +517,8 @@ def test_detail_mapping_full_form(tmp_path: Path) -> None:
             ],
         ),
         SrRelic(
-            name='勇烈的逐猎腿甲', pos=4, pos_cn='脚部', rarity=5, level=15,
+            name='快枪手的铆钉马靴', pos=4, pos_cn='脚部', rarity=5, level=15,
+            set_name='野穗伴行的快枪手',
             main=SrPropertyEntry(name_cn='攻击力', value='43.2%', times=0),
             subs=[
                 SrPropertyEntry(name_cn='生命值', value='80', times=2),
@@ -509,6 +531,7 @@ def test_detail_mapping_full_form(tmp_path: Path) -> None:
     assert first.ornaments == [
         SrRelic(
             name='泰科铵的镭射球场', pos=5, pos_cn='位面球', rarity=5, level=15,
+            set_name='繁星竞技场',
             main=SrPropertyEntry(name_cn='虚数属性伤害提高', value='38.8%', times=0),
             subs=[
                 SrPropertyEntry(name_cn='生命值', value='3.8%', times=1),
@@ -519,6 +542,7 @@ def test_detail_mapping_full_form(tmp_path: Path) -> None:
         ),
         SrRelic(
             name='泰科铵的弧光赛道', pos=6, pos_cn='连结绳', rarity=5, level=15,
+            set_name='繁星竞技场',
             main=SrPropertyEntry(name_cn='攻击力', value='43.2%', times=0),
             subs=[
                 SrPropertyEntry(name_cn='攻击力', value='21', times=1),
@@ -690,6 +714,102 @@ def test_detail_malformed_main_affix_warns_but_mapping_continues(
     assert len(affix_warnings) == 1
     assert 'pos=1' in affix_warnings[0]
     assert 'pt=52' in affix_warnings[0]
+
+
+# ---- 套装映射（mys-relic-sets design.md §2 契约 1/2：set_name 反查 + set_effects 激活档）----
+
+
+def test_relic_set_name_resolved_and_set_effects_two_tier_activation(tmp_path: Path) -> None:
+    """甲（快枪手 4 件 + 繁星竞技场 2 件，真实件名 fixture）：逐件 set_name
+    反查正确（件名 → 套装官方全名，relics/ornaments 同规则）；set_effects
+    两条目按 piece_count 降序——快枪手（cavern）4 件套 2/4 两档激活（pieces
+    为实际佩戴件名、佩戴序 = 响应数组顺序），繁星竞技场（ornament）2 件档
+    激活；效果文案与套装常量表逐字一致（官方原文透传）。"""
+    sr, _ = _detail_stack(tmp_path)
+    first = sr.get_characters_detail()[0]
+
+    assert [r.set_name for r in first.relics] == ['野穗伴行的快枪手'] * 4
+    assert [o.set_name for o in first.ornaments] == ['繁星竞技场'] * 2
+    assert first.set_effects == [
+        SrSetEffect(
+            set_name='野穗伴行的快枪手', kind='cavern', piece_count=4,
+            pieces=['快枪手的野穗毡帽', '快枪手的粗革手套', '快枪手的猎风披肩', '快枪手的铆钉马靴'],
+            activated=[
+                SrSetEffectEntry(count=2, desc='攻击力提高12%。'),
+                SrSetEffectEntry(count=4, desc='使装备者的速度提高6%，普攻造成的伤害提高10%。'),
+            ],
+        ),
+        SrSetEffect(
+            set_name='繁星竞技场', kind='ornament', piece_count=2,
+            pieces=['泰科铵的镭射球场', '泰科铵的弧光赛道'],
+            activated=[
+                SrSetEffectEntry(
+                    count=2,
+                    desc='使装备者的暴击率提高8%。当装备者当前暴击率大于等于70%时，普攻和战技造成的伤害提高20%。',
+                ),
+            ],
+        ),
+    ]
+
+
+def test_unknown_piece_name_falls_back_with_single_warning(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """未知件名形态（新版本套装未入常量）：甲一件遗器件名改自造名 →
+    set_name 落「未知套装」字面量、resolve 层 warning 恰一次（映射层逐件
+    反查触发、build 层静默跳过不重复告警）；set_effects 不含「未知套装」
+    条目，快枪手剩 3 件只激活 2 件档（不足 4 无 4 件档）。"""
+    fake_log = MagicMock()
+    monkeypatch.setattr(sr_relic_sets, 'log', fake_log)
+    data = _fixture_detail_data()
+    data['avatar_list'][0]['relics'][2]['name'] = '自造的不存在件名'
+    sr, _ = _detail_stack(tmp_path, data)
+
+    first = sr.get_characters_detail()[0]
+
+    assert first.relics[2].name == '自造的不存在件名'
+    assert first.relics[2].set_name == '未知套装'
+    resolve_warnings = [
+        str(call.args[0]) for call in fake_log.warning.call_args_list
+        if 'sr_relic_sets:' in str(call.args[0])
+    ]
+    assert len(resolve_warnings) == 1
+    assert all(entry.set_name != '未知套装' for entry in first.set_effects)
+    kuai = next(entry for entry in first.set_effects if entry.set_name == '野穗伴行的快枪手')
+    assert kuai.piece_count == 3
+    assert kuai.pieces == ['快枪手的野穗毡帽', '快枪手的粗革手套', '快枪手的铆钉马靴']
+    assert [act.count for act in kuai.activated] == [2]
+
+
+def test_set_effects_empty_for_unequipped_character(tmp_path: Path) -> None:
+    """乙（米沙全空形态）：零遗器零饰品 → set_effects == []（零激活条目）。"""
+    sr, _ = _detail_stack(tmp_path)
+    second = sr.get_characters_detail()[1]
+
+    assert second.relics == []
+    assert second.ornaments == []
+    assert second.set_effects == []
+
+
+def test_set_effects_partial_cavern_without_ornaments(tmp_path: Path) -> None:
+    """丙缺件形态（自造加工：同套 2 件遗器 + 0 饰品，复用甲的真实快枪手件）：
+    同套 ≥2 激活 2 件档、不足 4 无 4 件档（set_effects 恰一条 cavern 条目、
+    activated 单档）；ornaments 空 → 无饰品条目。"""
+    data = _fixture_detail_data()
+    data['avatar_list'][2]['relics'] = data['avatar_list'][0]['relics'][:2]  # 快枪手 pos1/2
+    data['avatar_list'][2]['ornaments'] = []
+    sr, _ = _detail_stack(tmp_path, data)
+    third = sr.get_characters_detail()[2]
+
+    assert [r.pos for r in third.relics] == [1, 2]
+    assert third.ornaments == []
+    assert third.set_effects == [
+        SrSetEffect(
+            set_name='野穗伴行的快枪手', kind='cavern', piece_count=2,
+            pieces=['快枪手的野穗毡帽', '快枪手的粗革手套'],
+            activated=[SrSetEffectEntry(count=2, desc='攻击力提高12%。')],
+        ),
+    ]
 
 
 # ---- 防御分支（端点存在性锁 / avatar_list 缺失上抛 / 词典局部脏词条 / 数组键缺失退空）----

@@ -673,10 +673,12 @@ DETAIL_SAMPLE_PATH: Path = (
     Path(__file__).resolve().parents[3] / 'fixtures' / 'mys' / 'hkrpg_avatar_info_detail_sample.json'
 )
 
-#: 新工具 description 的定死开头段（任务书原文，锁「描述文案定死」）
+#: 新工具 description 的定死开头段（任务书原文 + mys-relic-sets 契约 3 增补
+#: 「含套装名与已激活套装效果」，锁「描述文案定死」）
 ROSTER_DETAIL_DESC_OPENING: str = (
     '获取崩坏:星穹铁道全角色名册明细（每名角色的遗器六件套词条明细/位面饰品/'
-    '星魂/行迹/属性面板，词条与面板属性均为中文名）。数据量较大（64 角色全量）。'
+    '星魂/行迹/属性面板，词条与面板属性均为中文名，含套装名与已激活套装效果）。'
+    '数据量较大（64 角色全量）。'
     '会话过期时返回 session_expired 并提示重新登录，不清除任何本机数据'
 )
 
@@ -692,9 +694,9 @@ def _detail_sample_route() -> tuple[str, HttpSendResult]:
 def test_get_roster_detail_success_payload_shape(
     controller: MysAccessController, send: _ScriptedHttpSend,
 ) -> None:
-    """success：detail 序列化载荷形态断言（契约 3/4 冻结字段集经
-    character_to_dict 逐层展开）——顶层十字段+五组明细、子结构字段名集合、
-    中文字段随载荷、times 透传；乙无光锥无遗器形态照常出载荷。"""
+    """success：detail 序列化载荷形态断言（契约 3/4 + mys-relic-sets 契约 1/2
+    冻结字段集经 character_to_dict 逐层展开）——顶层十字段+六组明细、子结构
+    字段名集合、中文字段随载荷、times 透传；乙无光锥无遗器形态照常出载荷。"""
     controller.store.save_role({'role_id': '1', 'server': 'prod_gf_cn'})
     send.add_route(_detail_sample_route())
 
@@ -712,15 +714,15 @@ def test_get_roster_detail_success_payload_shape(
     assert set(first.keys()) == {
         'id', 'name', 'level', 'rarity', 'rank', 'element', 'element_cn',
         'base_type', 'base_type_cn', 'equip', 'relics', 'ornaments', 'ranks',
-        'skills', 'properties',
+        'skills', 'properties', 'set_effects',
     }
     assert first['element_cn'] == '虚数'
     assert first['base_type_cn'] == '毁灭'
     assert first['equip'] == {'name': '比阳光更明亮的', 'level': 80, 'rank': 1, 'rarity': 5}
 
-    # 遗器六件套：pos_cn 部位查表、main/subs 词条三元组（times 透传）
+    # 遗器六件套：pos_cn 部位查表、main/subs 词条三元组（times 透传）、套装名随件
     relic = first['relics'][0]
-    assert set(relic.keys()) == {'name', 'pos', 'pos_cn', 'rarity', 'level', 'main', 'subs'}
+    assert set(relic.keys()) == {'name', 'pos', 'pos_cn', 'rarity', 'level', 'main', 'subs', 'set_name'}
     assert relic['pos_cn'] == '头部'
     assert relic['main'] == {'name_cn': '生命值', 'value': '705', 'times': 0}
     assert relic['subs'][0] == {'name_cn': '生命值', 'value': '3.4%', 'times': 1}
