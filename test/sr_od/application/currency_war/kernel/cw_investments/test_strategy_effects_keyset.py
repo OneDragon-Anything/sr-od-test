@@ -33,7 +33,7 @@ _EXPECTED_KEYS: frozenset[str] = frozenset({
     '大裁员', '降本增效', '躺平', '免战牌', '本金充裕', '本金充裕+',
     '加油站', '免费午餐', '存款回报', '打捞人才库', '打捞人才库+',
     '全队的希望', '成长基金', '武力刷新', '星星相印', '节省工位',
-    '公司人才流动', '公司军火更新·银', '市场干预', '合并同类项', '溜佩佩',
+    '公司人才流动', '公司军火更新·银', '公司军火更新·金', '公司军火更新·彩', '市场干预', '合并同类项', '溜佩佩',
     '溜佩佩+', '全都要·银', '全都要·银#supply_delta', '全都要·金',
     '全都要·金#supply_delta', '团队力量·银',
     '应援团', '正能量', '完美开局', '效率员工奖', '基层贡献',
@@ -44,7 +44,6 @@ _EXPECTED_KEYS: frozenset[str] = frozenset({
     '和平手枪祝福',
     '生命之花祝福',
     '量产型装甲祝福',
-    '公司军火更新·金',
     '人海战术',
     '打通上下游·金',
     '独狼',
@@ -83,7 +82,7 @@ def test_strategy_effects_keyset_closed() -> None:
         'STRATEGY_EFFECTS 键集漂移:\n'
         f'  缺员: {sorted(set(_EXPECTED_KEYS) - set(STRATEGY_EFFECTS))}\n'
         f'  多员: {sorted(set(STRATEGY_EFFECTS) - set(_EXPECTED_KEYS))}')
-    assert len(STRATEGY_EFFECTS) == 83, '基数申报对账(effect-domain §5)'
+    assert len(STRATEGY_EFFECTS) == 84, '基数申报对账(effect-domain §5)'
 
 
 def test_strategy_effects_keys_unique_ids() -> None:
