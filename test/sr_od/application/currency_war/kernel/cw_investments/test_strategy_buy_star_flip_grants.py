@@ -24,7 +24,9 @@ from sr_od.application.currency_war.kernel.cw_investments import (
 )
 
 _CARD = '四费晋升'
-_ROW = (4, 2)
+_ROW = ((4,), 2)
+_CARD2 = '着眼当下'
+_ROW2 = ((1, 2, 3, 4, 5), 2)
 
 
 def test_registry_row_single_source() -> None:
@@ -32,10 +34,15 @@ def test_registry_row_single_source() -> None:
     禁顺手代登记);行值 = 卡面两维直读(费用过滤档 4/目标星级 2);
     键 ∈ 策略注册表且 id 对拍 plaza:202201。行值精确断言 = 治理裁定下
     登记笔误对账的合规承载(值域 import 期形查不加)。"""
-    assert set(STRATEGY_BUY_STAR_FLIP_GRANTS) == {_CARD}, \
-        '注册面 = 族现役首例'
+    assert set(STRATEGY_BUY_STAR_FLIP_GRANTS) == {_CARD, _CARD2}, \
+        '注册面 = 家族两键成员(四费晋升单档 + 着眼当下全档枚举)'
     assert STRATEGY_BUY_STAR_FLIP_GRANTS[_CARD] == _ROW, \
         f'行值漂移: {STRATEGY_BUY_STAR_FLIP_GRANTS!r}'
+    assert STRATEGY_BUY_STAR_FLIP_GRANTS[_CARD2] == _ROW2, \
+            f'着眼当下行值漂移: {STRATEGY_BUY_STAR_FLIP_GRANTS!r}'
+    assert _CARD2 in INVESTMENT_STRATEGIES, '着眼当下键必须在策略注册表'
+    assert INVESTMENT_STRATEGIES[_CARD2].source == 'plaza:303901', \
+            '着眼当下注册行 id 对拍(303901)'
     assert _CARD in INVESTMENT_STRATEGIES, '键必须在策略注册表'
     assert INVESTMENT_STRATEGIES[_CARD].source == 'plaza:202201', \
         '注册行 id 对拍(202201,改名/换 id 漂移哨现值通过)'
