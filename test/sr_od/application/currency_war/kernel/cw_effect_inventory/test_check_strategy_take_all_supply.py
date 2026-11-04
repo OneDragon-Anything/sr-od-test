@@ -3,13 +3,15 @@ check_strategy_take_all_supply,挂点行为面归 kernel/cw_action_report/
 test_pick_supply.py)。
 
 锁面(卡面 id 131001「下1个补给阶段选择后，额外获得所有未选择的角色
-及装备」/ id 203501「下2个……」官方原文,语义正本 = 全都要族设计稿
-§2.3):
+及装备」/ id 203501「下2个……」/ id 331701「补给阶段选择后……」无限定
+词 = recurring,官方原文,语义正本 = 全都要族设计稿§2.3):
 - 门序:未持卡零写零闩 / 持卡 ∧ 配额耗尽零写(计数闩) / 兜底形态(源
   None/空)零发放但配额照耗(A 案事件消耗制);
 - 全捞主锁:全未选列逐列发放 + evidence 串 + 闩设(计数复合键)+ 消费
   即清 + 零 rng;
 - 金卡特有:配额两拍(第 3 拍零写零消耗)+ 0 列空转拍 + 双持独立性;
+- 彩卡特有:recurring 三拍各发各阶段(无早退)+ None 配额零闩格(sim
+  形态零簿记正面断言/0 列空转零写零格耗)+ 三卡同持互不早退;
 - 列形态:席满拒落不阻断 / 席未观察 / 孤儿簇仅装备腿;
 - 归一失败:fail-closed 已解析件照常入账。
 """
@@ -151,6 +153,58 @@ def test_take_all_grants_all_columns_consume_clear_and_zero_rng(
     assert gs.write_seq == seq, '二次调用零写(闩门封账,重入幂等)'
 
 
+def test_take_all_color_recurring_three_picks_each_stage() -> None:
+    """彩卡特有·recurring 三拍锁(无配额域恒放行,recurring 无早退——与
+    金卡第 3 拍零写对照互证):持彩卡连续三次选择,各拍发各阶段全未选列
+    (各拍构造不同列,发放物 = 该拍快照内容);recurring 无封账面,done
+    域三拍恒空(零 ``take_all#全都要·彩#*`` 键),消费即清逐拍;char-only
+    列臂 = 第三拍零装备写零缺陷。"""
+    stages = (
+        _COLS,
+        (SupplyOption(idx=0, char='停云', equip='折叠小刀',
+                      extra_equips=()),),
+        (SupplyOption(idx=0, char='刃', equip='', extra_equips=()),),
+    )
+    gs = _take_all_gs(cards=('全都要·彩',), unchosen=None)
+    expect_bench: list[str] = []
+    for no, stage in enumerate(stages, 1):
+        gs.write_logic(gs.unchosen_supply, stage, produced_by='test-seed',
+                       sig=_SIG)
+        seq = gs.write_seq
+        _take_all_run(gs)
+        expect_bench += [c.char for c in stage if c.char]
+        assert _bench_names(gs) == expect_bench, \
+            f'拍 {no} 各发各阶段: {_bench_names(gs)}'
+        assert tuple(gs.strategy_conditional_done.value or ()) == (), \
+            f'拍 {no} 零闩格(recurring 无封账面)'
+        assert gs.unchosen_supply.value is None, f'拍 {no} 消费即清'
+        assert gs.write_seq != seq, f'拍 {no} 发生写(无早退)'
+    assert gs.equips.value == ['光能电池', '折叠小刀', '折叠小刀'], \
+        f'装备腿按拍累积: {gs.equips.value}'
+
+
+def test_take_all_color_none_quota_zero_latch_arms() -> None:
+    """彩 None 分支零闩格锁:持彩卡事件后 ``strategy_conditional_done`` 域
+    无 ``take_all#全都要·彩#*`` 键(域恒空正面断言;银卡同形态对照得一
+    笔无害簿记键,存量兜底锁互证)。兜底形态(源 None = sim 决策未接恒
+    None 形态,S2 零簿记)零发放零簿记全链零写;0 列空转拍零写零副作用零
+    格耗(银/金 0 列空转照耗格,本卡无格可耗)。"""
+    gs = _take_all_gs(cards=('全都要·彩',), unchosen=None)
+    seq = gs.write_seq
+    _take_all_run(gs)
+    assert tuple(gs.strategy_conditional_done.value or ()) == (), \
+        '彩零簿记键(sim 形态正面断言,域恒空)'
+    assert gs.write_seq == seq, '兜底形态全链零写(None 配额无消耗)'
+    assert _bench_names(gs) == [] and gs.equips.value == [], '零发放'
+
+    gs_empty = _take_all_gs(cards=('全都要·彩',), unchosen=())
+    seq_empty = gs_empty.write_seq
+    _take_all_run(gs_empty)
+    assert gs_empty.write_seq == seq_empty, '0 列空转零写(零格耗)'
+    assert tuple(gs_empty.strategy_conditional_done.value or ()) == (), \
+        '零闩格'
+
+
 def test_take_all_column_shapes_full_bench_and_unobserved() -> None:
     """列形态锁:席满(bench 满 9)→ 列 0 char 腿拒落零写且装备腿照发、
     后续列(列 1)不阻断;席未观察 → bench 保持 None 拒落(detail=
@@ -175,6 +229,22 @@ def test_take_all_column_shapes_full_bench_and_unobserved() -> None:
     _take_all_run(gs_orphan)
     assert _bench_names(gs_orphan) == [], '孤儿簇列零角色腿'
     assert gs_orphan.equips.value == ['折叠小刀'], '仅装备腿'
+
+    # 彩卡臂(None 配额走同发放分支,零闩格伴随):席满 char 腿拒落装备腿
+    # 照发不阻断;席未观察同形。
+    gs_color_full = _take_all_gs(cards=('全都要·彩',), bench_entries=full)
+    _take_all_run(gs_color_full)
+    assert _bench_names(gs_color_full) == [u.char_id for u in full], \
+        '彩席满拒落零写'
+    assert gs_color_full.equips.value == ['光能电池', '折叠小刀'], \
+        '彩装备腿照发 + 后续列不阻断'
+    assert tuple(gs_color_full.strategy_conditional_done.value or ()) == (), \
+        '彩零闩格伴随'
+    gs_color_unobs = _take_all_gs(cards=('全都要·彩',), bench_unobserved=True)
+    _take_all_run(gs_color_unobs)
+    assert gs_color_unobs.bench.value is None, '彩席未观察零写'
+    assert gs_color_unobs.equips.value == ['光能电池', '折叠小刀'], \
+        '彩装备腿照发'
 
 
 def test_take_all_unresolved_name_fail_closed_resolved_survives() -> None:
@@ -239,29 +309,38 @@ def test_take_all_gold_empty_column_round_consumes_quota() -> None:
     assert gs.write_seq == seq, '耗尽后零写(重入幂等)'
 
 
-def test_take_all_double_hold_independent_quotas() -> None:
-    """双持独立性锁:银(配额 1)+金(配额 2)同持 → 同一选择事件两卡闩各
-    +1、各发各的未选列(内容同源重复 = 卡面叠加语义零判重闸,单槽场字段
-    共享一次清);银闩满后金部分耗尽态(1/2)照常发放(互不早退——布尔形
-    银键存在会误杀金卡剩余格,计数形分卡独立计数)。"""
-    gs = _take_all_gs(cards=('全都要·银', '全都要·金'), unchosen=_COLS)
+def test_take_all_multi_hold_independent_quotas() -> None:
+    """同持独立性锁(存量双持锁扩三卡形):银(配额 1)+金(配额 2)+彩
+    (None 无界)同持 → 同一选择事件三卡各发各的未选列、互不早退(内容
+    同源重复 = 卡面叠加语义零判重闸,单槽场字段共享一次清);银闩满后金
+    部分耗尽态(1/2)照常发放、彩恒放行(布尔形银键存在会误杀金卡剩余格
+    = 静默漏发,计数形分卡独立计数;None 配额卡无耗尽态无此雷);彩全程
+    零闩格,done 域仅 int 卡键。"""
+    gs = _take_all_gs(cards=('全都要·银', '全都要·金', '全都要·彩'),
+                      unchosen=_COLS)
     _take_all_run(gs)
-    assert _bench_names(gs) == ['希儿', '希儿'], '双持各发一遍(char 同名 +2)'
-    assert gs.equips.value == ['光能电池', '折叠小刀'] * 2, \
+    # 三卡各发一遍:同名 1★ 三副本 → 合成级联收束 2★(拍 1 即合并,
+    # 双持拍 1 两副本不合并的对照面 = 存量双持锁)。
+    assert _bench_names(gs) == ['希儿'], \
+        f'三持各发一遍(级联合并收束): {_bench_names(gs)}'
+    assert gs.bench.value.slots[0].unit.star == 2, '三副本合成产物星级'
+    assert gs.equips.value == ['光能电池', '折叠小刀'] * 3, \
         f'装备腿各发一遍: {gs.equips.value}'
-    assert gs.strategy_conditional_done.value == (
-        'take_all#全都要·银#1', 'take_all#全都要·金#1'), '两卡各闩各的'
+    assert tuple(gs.strategy_conditional_done.value or ()) == (
+        'take_all#全都要·银#1', 'take_all#全都要·金#1'), \
+        'int 卡各闩各的,彩零闩格(域恰两键)'
     assert gs.unchosen_supply.value is None, '消费即清'
     gs.write_logic(gs.unchosen_supply, _COLS, produced_by='test-seed',
                    sig=_SIG)
     _take_all_run(gs)
-    assert _bench_names(gs) == ['希儿'], \
-        '银闩满零发,金第二拍发放(入席第 3 席同名 → 合成级联收束 2★)'
-    assert gs.bench.value.slots[0].unit.star == 2, '同名合成产物星级'
-    assert gs.strategy_conditional_done.value == (
+    # 拍 2:银闩满零发,金第二拍 + 彩第一拍各发一遍(2× 1★ 入席,不足
+    # 三副本零合并;2★ 星组独立不参与)。
+    assert _bench_names(gs) == ['希儿', '希儿', '希儿'], \
+        f'金/彩各发一遍互不早退: {_bench_names(gs)}'
+    assert tuple(gs.strategy_conditional_done.value or ()) == (
         'take_all#全都要·银#1',
         'take_all#全都要·金#1', 'take_all#全都要·金#2'), \
-        '银键不追加(满),金追加'
+        '银键不追加(满),金追加,彩键空间恒空'
 
 
 def test_take_all_producer_attribution_and_assumption_keys(

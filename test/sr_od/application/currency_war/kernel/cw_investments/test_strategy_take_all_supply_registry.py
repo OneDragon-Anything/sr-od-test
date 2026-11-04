@@ -1,11 +1,13 @@
 """全都要族注册面测试(cw_investments 分目录镜像;双腿异键登记 + 配额
-map 一致性 + 单取链登记缺位。族 = 银 id 131001 / 金 id 203501)。
+map 一致性 + 单取链登记缺位。族 = 银 id 131001 / 金 id 203501 /
+彩 id 331701)。
 
 - 登记锁:每卡两条 EffectSpec(canon 键 = 发放腿 / 申报键 = 列数修饰腿)
   过 ``_validate_strategy_effects``(import 即炸,本文件 import 即过);
 - 配额 map-注册表一致性锁(表域测试,不入 import 校验——2026-10-28 治理
   口径「防登记笔误校验不加」,先例 = 先亏后盈 count/打捞族):map 键集 ⊆
-  STRATEGY_EFFECTS name 集 + 配额值锁(卡面「下 N 个」明写,银 1/金 2);
+  STRATEGY_EFFECTS name 集 + 配额值锁(int 卡 = 卡面「下 N 个」明写,银 1/
+  金 2;彩 = None 值锁,recurring 无配额域防误写成 int 配额);
 - 申报键永登记缺位锁:单取登记链 ``STRATEGY_EFFECTS.get(canon)`` 只自动
   登记 canon 键条目,申报键条目纯注册表声明(防误改键位引发双登记)。
 """
@@ -37,9 +39,11 @@ _SIG_OBS = ChannelSig(family='obs', actor='test', mode='read')
 
 _FAMILY_SPECS: dict[str, tuple[str, str]] = {
     # 卡名 → (plaza id, 发放腿持续期值):银配额 1 = ONCE 一次性形;
-    # 金配额 2 = WHILE_HELD(「下2个」非一次性,计数闩承载耗尽即停)。
+    # 金配额 2 = WHILE_HELD(「下2个」非一次性,计数闩承载耗尽即停);
+    # 彩 recurring 无配额(None = 无界,恒放行无耗尽态)= WHILE_HELD。
     '全都要·银': ('131001', 'once'),
     '全都要·金': ('203501', 'while_held'),
+    '全都要·彩': ('331701', 'while_held'),
 }
 
 
@@ -70,15 +74,19 @@ def test_take_all_two_leg_specs_registered() -> None:
 
 def test_take_all_name_set_subset_of_registry() -> None:
     """配额 map-注册表一致性锁(表域测试):map 键任一成员失联(注册表
-    改名/移除)即红——同一卡名两抄本的漂移防线,彩卡后继扩 map 防静默
-    失联(判据维度 = name 集:申报键条目键不在 canon 键集,spec.name
-    才在);配额值锁 = 卡面「下 N 个」明写值(银 1/金 2),防写表人笔误
-    (配额写错 = 静默漏发/多发,值面同一抄本防线)。"""
+    改名/移除)即红——同一卡名两抄本的漂移防线(判据维度 = name 集:申报
+    键条目键不在 canon 键集,spec.name 才在);配额值锁 = 卡面明写值
+    (int 卡「下 N 个」:银 1/金 2,配额写错 = 静默漏发/多发)+ 彩 None
+    值锁(recurring 无配额域,误写成 int 配额 = 凭空耗尽早退 = 静默漏发)
+    ——值面同一抄本防线,防写表人笔误。"""
     registry_names = {s.name for s in STRATEGY_EFFECTS.values()}
     assert set(_TAKE_ALL_SUPPLY_QUOTA) <= registry_names, \
         f'配额 map 键失联: {set(_TAKE_ALL_SUPPLY_QUOTA) - registry_names}'
-    assert _TAKE_ALL_SUPPLY_QUOTA == {'全都要·银': 1, '全都要·金': 2}, \
-        f'配额值锁(卡面「下 N 个」明写): {_TAKE_ALL_SUPPLY_QUOTA}'
+    assert _TAKE_ALL_SUPPLY_QUOTA == {
+        '全都要·银': 1, '全都要·金': 2, '全都要·彩': None,
+    }, f'配额值锁(卡面明写): {_TAKE_ALL_SUPPLY_QUOTA}'
+    assert _TAKE_ALL_SUPPLY_QUOTA['全都要·彩'] is None, \
+        '彩 None 值锁(recurring 无配额域,恒放行零闩格)'
 
 
 def test_take_all_declaration_key_never_enters_ledger() -> None:
