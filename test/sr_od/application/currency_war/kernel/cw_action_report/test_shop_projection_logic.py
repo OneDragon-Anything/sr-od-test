@@ -925,3 +925,144 @@ def test_report_random_leg_uses_observed_boosted_bar() -> None:
                     '槽位费用档 ∈ 翻倍表键集'
         signatures.append(_slot_signature(payload))
     assert signatures[0] == signatures[1], '固定种子 → 采样确定性'
+
+
+# ---- 付费刷新 XP 分支(T-311 淘金客:刷新上报写端付费帧把结果写进
+# 状态副本;世界腿 = 把结果写进状态副本的实现分支)----
+
+
+def _seed_xp_leg_gs(*, level: int | None = 3,
+                    xp: tuple[int, int] | None = (1, 4),
+                    hold_taojinke: bool = True) -> GameState:
+    """XP 分支场景种子:level/xp 按参观察(传 None = 未观察形态,None 门
+    锁用)+ 在屏空店(随机态分支采样面)+ 持淘金客 = 账本登记(与生产
+    选卡入账同一入口;驱动源 = 鸭子类型读取 payload.xp_per_refresh)。"""
+    gs = _fresh_gs()
+    if level is not None:
+        gs.observe(gs.level, level, sig=_OSIG)
+    if xp is not None:
+        gs.observe(gs.xp, xp, sig=_OSIG)
+    gs.observe(gs.shop, ShopPayload(cards=[ShopSlot(kind='empty')
+                                            for _ in range(5)],
+                                    refresh_probs={}), sig=_OSIG)
+    if hold_taojinke:
+        gs.effects.register_strategy(STRATEGY_EFFECTS['淘金客'],
+                                     acquired_key=(1, 5))
+    return gs
+
+
+def test_refresh_paid_xp_leg_world_write(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """锁 1 付费帧把结果写进状态副本(非跨级帧):持卡 + level/xp 在场 →
+    付费帧上报 → xp 推进对 +2,写端元数据 evidence='effect_refresh_xp' +
+    produced_by='EffectLedgerBridge:淘金客'(署名 = 在场条目名拼接,驱动源 =
+    鸭子类型读取 payload.xp_per_refresh 聚合);不持卡零基线对照臂 =
+    test_refresh_paid_deducts_gold_and_samples_rand_payload(零 XP 写行,
+    xp 保持 None,禁误改)。"""
+    captured = _spy_write_logic(monkeypatch)
+    gs = _seed_xp_leg_gs(level=3, xp=(1, 4))
+    captured.clear()
+    out = report_action_refresh_shop_param(
+        gs, CwActionRefreshShopParam(cost=2), _LSIG,
+        rng=random.Random('cw-shop-xp-leg'))
+    assert out.applied, 'applied 恒 True(计数职责不受 XP 分支影响)'
+    assert gs.level.value == 3, '非跨级帧 level 不写'
+    assert gs.xp.value == (3, 4), 'xp: 期望 1+2=3 < lv3 门槛 4 推进不跨级'
+    assert [row for row in captured if row[0] == 'xp'] == [
+        ('xp', (3, 4), 'EffectLedgerBridge:淘金客', 'effect_refresh_xp'),
+    ], 'XP 分支写端元数据(署名 = 在场条目名拼接,evidence 常量词面)'
+    assert gs.effects.refresh_paid == 1 and gs.effects.refresh_total == 1, \
+        '付费帧计数分支照常'
+
+
+def test_refresh_paid_xp_leg_cross_level_and_same_frame_deal() -> None:
+    """锁 1 跨级结转 + 同帧发牌 level 断言:跨级帧本帧 shop 采样用升级后
+    level(XP 分支插入位置 = 随机态分支前,时序假设被结构固定)——采样
+    概率条 = 升级后等级的概率表(载荷 refresh_probs 承载,结构断言零
+    mock)。"""
+    gs = _seed_xp_leg_gs(level=7, xp=(51, 52))
+    report_action_refresh_shop_param(
+        gs, CwActionRefreshShopParam(cost=2), _LSIG,
+        rng=random.Random('cw-shop-xp-leg-cross'))
+    assert gs.level.value == 8, '跨级直写 7→8(51+2=53 ≥ lv7 门槛 52)'
+    assert gs.xp.value == (1, 72), 'xp: 溢出结转 (1, lv8 门槛 72)'
+    payload = gs.shop.value
+    assert payload is not None and gs.shop.source == 'logic_rand', \
+        '本帧发牌照常(随机态通道)'
+    assert payload.refresh_probs == {c: p for c, p in REFRESH_PROB[8].items()
+                                     if p > 0}, \
+        '同帧发牌用升级后 level(采样概率条 = lv8 表非 lv7 表——插入位置' \
+        '在随机态分支前的结构证据)'
+
+
+def test_refresh_free_xp_leg_zero_write(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """锁 2 免费帧零 XP(Field 免费帧与显式 free=True 两支):XP 分支零
+    写行(「消耗金币」排免费刷),计数分支照常(refresh_total+1/refresh_paid
+    +0)。"""
+    captured = _spy_write_logic(monkeypatch)
+    # 支 1:Field 免费帧(登记置剩余次数,免费判定走 Field 值)
+    gs = _seed_xp_leg_gs(level=3, xp=(1, 4))
+    gs.write_logic(gs.free_refresh_left, 2, produced_by='EffectLedgerBridge',
+                   evidence='effect_burst', sig=_HSIG)
+    captured.clear()
+    report_action_refresh_shop_param(
+        gs, CwActionRefreshShopParam(cost=2), _LSIG,
+        rng=random.Random('cw-shop-xp-leg-free'))
+    assert not [row for row in captured if row[0] in ('xp', 'level')], \
+        '免费帧零 XP 写行'
+    assert gs.xp.value == (1, 4) and gs.xp.source == 'observation', \
+        'xp 保持观察值不翻 logic'
+    assert gs.effects.refresh_total == 1 and gs.effects.refresh_paid == 0, \
+        '计数分支照常(免费帧不进 paid)'
+    # 支 2:显式 free=True 帧(sim 形态注入,Field 同置值)
+    gs2 = _seed_xp_leg_gs(level=3, xp=(1, 4))
+    gs2.write_logic(gs2.free_refresh_left, 1, produced_by='EffectLedgerBridge',
+                    evidence='effect_burst', sig=_HSIG)
+    captured.clear()
+    report_action_refresh_shop_param(
+        gs2, CwActionRefreshShopParam(cost=2), _LSIG, free=True,
+        rng=random.Random('cw-shop-xp-leg-free'))
+    assert not [row for row in captured if row[0] in ('xp', 'level')], \
+        '显式免费帧零 XP 写行'
+    assert gs2.effects.refresh_total == 1 and gs2.effects.refresh_paid == 0
+
+
+def test_refresh_xp_leg_none_gate() -> None:
+    """锁 3 None 门(grant_xp 原语单一源):level 或 xp 任一未观察 → 零 XP
+    写行(无基座不虚构推进对,未读域保持种子原值),applied 恒 True
+    (计数职责不受门影响)。"""
+    for why, axes in (('level 未观察', {'level': None}),
+                      ('xp 未观察', {'xp': None})):
+        gs = _seed_xp_leg_gs(**axes)
+        out = report_action_refresh_shop_param(
+            gs, CwActionRefreshShopParam(cost=2), _LSIG,
+            rng=random.Random('cw-shop-xp-leg-none'))
+        assert out.applied, f'{why}: applied 恒 True'
+        if 'level' in axes:
+            assert gs.level.value is None and gs.xp.value == (1, 4), \
+                f'{why}: 双域零动作(xp 值/来源不变)'
+            assert gs.xp.source == 'observation', f'{why}: xp 不翻 logic'
+        else:
+            assert gs.xp.value is None and gs.level.value == 3, \
+                f'{why}: 双域零动作'
+        assert gs.effects.refresh_paid == 1 and gs.effects.refresh_total == 1, \
+            f'{why}: 计数分支照常'
+
+
+def test_refresh_xp_leg_level_cap_skip(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """锁 4 满级封顶(grant_xp 算子零变化跳写单一源):满级局付费帧 → 零
+    XP/level 写行(level/xp 值不变),计数分支照常。"""
+    captured = _spy_write_logic(monkeypatch)
+    gs = _seed_xp_leg_gs(level=10, xp=(0, 4))
+    captured.clear()
+    out = report_action_refresh_shop_param(
+        gs, CwActionRefreshShopParam(cost=2), _LSIG,
+        rng=random.Random('cw-shop-xp-leg-cap'))
+    assert out.applied
+    assert not [row for row in captured if row[0] in ('xp', 'level')], \
+        '满级零推进零写行(算子零变化跳写)'
+    assert gs.xp.value == (0, 4) and gs.level.value == 10
+    assert gs.effects.refresh_paid == 1 and gs.effects.refresh_total == 1, \
+        '计数分支照常'
