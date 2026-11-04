@@ -92,7 +92,7 @@ def _opt(idx: int, char: str = '', equip: str = '',
 def _comp(core: list[str], key: list[str] | None = None) -> Comp:
     """测试 comp(仅决策消费的字段有意;其余注册表字段与本判据无关)。"""
     return Comp(name='测试套', core_chars=core,
-                form_tiers={'追击': 3},
+                faction_reqs={0: {'追击': 3}},
                 key_equips=key or [])
 
 

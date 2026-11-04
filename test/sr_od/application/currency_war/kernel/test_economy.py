@@ -720,7 +720,7 @@ def test_pair_materialization_and_drought_reset() -> None:
     pair = ('仙舟', '持续伤害')
     comp = pair_target_comp(pair)
     assert comp is not None and comp.core_chars
-    assert comp.form_tiers    # 档位账随物化(部署/评分消费面不盲)
+    assert comp.core_faction_reqs    # 档位账随物化(部署/评分消费面不盲)
     # 断供清零面
     ist = IntentionState()
     ist.p1_pair = ('持续伤害', '仙舟')

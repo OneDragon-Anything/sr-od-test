@@ -50,7 +50,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 
 _C_COMP = Comp(name='C组生长测', core_chars=[
     '瓦尔特', '杰帕德', '停云', '希儿', '符玄'],
-    form_tiers={},
+    faction_reqs={},
     required_deployed=('瓦尔特', '杰帕德'))
 
 
@@ -74,7 +74,7 @@ def _c_shape_session() -> tuple:
 
 
 def test_locked_empty_bond_line_core_shared_completion() -> None:
-    """空羁绊线(反甲流形态,form_tiers={} ∧ factions=[]):L1 由角色
+    """空羁绊线(反甲流形态,档 0 空 ∧ factions=[]):L1 由角色
     完成度单独承载(core∪shared 口径,D2-3)——required 两件(瓦尔特/
     杰帕德)与线成员符玄进目标态,非成员(停云/希儿)让位。"""
     session, st = _c_shape_session()

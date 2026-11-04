@@ -71,7 +71,7 @@ def test_lock_first_tier_flip_displaces_transition() -> None:
     """换防跳变(锁定线第一档成型 → L1 压倒 + 过渡回落 ×1,场景走查
     第 2 行后半):列车 4 人在手,锁定线一档成型压倒过渡板。"""
     comp = get_comp('列车同行·反震')
-    # 列车 4 人(锁定线 form_tiers=4)vs 过渡仙舟 3 人 + 减益件;K=4。
+    # 列车 4 人(锁定线档 0=4)vs 过渡仙舟 3 人 + 减益件;K=4。
     units = [_u('姬子·启行'), _u('丹恒·饮月'), _u('三月七'), _u('星期日'),
              _u('青雀'), _u('停云'), _u('藿藿')]
     panel = _panel(units, locked=True, locked_comp=comp, plane1=True, k=4)
@@ -119,7 +119,6 @@ def test_required_deployed_missing_zeroes_l1() -> None:
     量子板不成型,过渡/散件板竞争胜出。"""
     comp = get_comp('希儿量子')
     with_seele = [_u('希儿'), _u('花火'), _u('符玄'), _u('缇宝')]
-    without = [_u('花火'), _u('符玄'), _u('缇宝'), _u('佩拉')]
     out_with = ds.selection_score(
         _panel(with_seele, locked=True, locked_comp=comp, plane1=False),
         with_seele, comp, ('量子同频', '贝洛伯格'))
@@ -167,9 +166,9 @@ def test_silverwolf_lands_as_1star() -> None:
     assert out.get('藿藿', ('', 0))[1] == 2, '选定星维透传(落场后形态)'
 
 
-def test_l2_sub_tiers_keys_only() -> None:
-    """L2 键集 = 仅 sub_tiers(D3-1):锁定线列车同行·反震 sub_tiers =
-    护盾(批 3 拆分各归其一,A=护盾2),sub_tiers 件凑档的 L2(10⁶)随凑档
+def test_l2_bonus_keys_only() -> None:
+    """L2 键集 = 仅加分层(bonus_faction_reqs,D3-1):锁定线列车同行·反震
+    档 1 = 护盾(批 3 拆分各归其一,A=护盾2),加分层件凑档的 L2(10⁶)随凑档
     上升;flex_factions 不进 L2(注册表「板面不罚但完成度不数」)。"""
     comp = get_comp('列车同行·反震')
     sub_on = [_u('姬子·启行'), _u('三月七'), _u('杰帕德')]   # 护盾 2 人(三月七+杰帕德,flows=护盾)
@@ -178,11 +177,11 @@ def test_l2_sub_tiers_keys_only() -> None:
     l2_on = ds.selection_score(panel, sub_on, comp, ('列车同行·反震',))[1]
     l2_off = ds.selection_score(panel, sub_off, comp, ('列车同行·反震',))[1]
     assert l2_on > 0.0 > l2_off or l2_on > l2_off, \
-        f'sub_tiers 凑档 L2({l2_on}) > 无 sub_tiers 件({l2_off})'
+        f'加分层凑档 L2({l2_on}) > 无加分层件({l2_off})'
 
 
 def test_empty_bond_line_core_shared_denominator() -> None:
-    """空羁绊线(反甲白厄 form_tiers={} ∧ factions=[]):L1 由角色
+    """空羁绊线(反甲白厄档 0 空 ∧ factions=[]):L1 由角色
     完成度单独承载,分母 = core∪shared 总数(D2-3)。"""
     comp = get_comp('反甲白厄')
     members = set(comp.core_chars) | set(comp.shared_chars or ())

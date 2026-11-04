@@ -404,7 +404,7 @@ def _observe_restarter_affixes(gs) -> None:
 
 
 def test_pair_lines_mapping_by_main_faction() -> None:
-    """伪阵容↔线名映射(主派判定:线 bond_signal ∨ form_tiers 首键 ∈
+    """伪阵容↔线名映射(主派判定:线档 0 首键 ∈
     体系羁绊键):DOT 对 → DOT队+专家桑博DOT(任务书例);希儿系对 →
     仅希儿量子(专家桑博DOT 的贝洛伯格 2 是次档非主派,防错挂);列车对
     → A/B 两套(批 3 拆分后双套主派同键)。"""

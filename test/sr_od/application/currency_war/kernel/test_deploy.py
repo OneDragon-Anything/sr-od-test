@@ -190,7 +190,8 @@ def test_comp_rejects_invalid_char_position_value() -> None:
     from sr_od.application.currency_war.kernel.cw_comps import Comp
     with pytest.raises(ValueError, match='char_positions'):
         Comp(name='x', core_chars=['万敌'],
-             form_tiers={'燃血': 2}, char_positions={'万敌': 'middle'})
+             faction_reqs={0: {'燃血': 2}},
+             char_positions={'万敌': 'middle'})
 
 
 def test_slot_level_position_lands_preferred_slot() -> None:

@@ -346,7 +346,7 @@ class TestSimScenariosFiveSix:
 
     def test_concept_stock_core_vs_flex_contrast(self):
         """⑥概念股×核心线 vs ×flex 线对照:同概念股(击破)对核心线
-        (巡海击破,击破 ∈ form_tiers)全档 +300 vs flex 线(黄泉减益,
+        (巡海击破,击破 ∈ 档 0)全档 +300 vs flex 线(黄泉减益,
         击破 ∈ flex)软档 +30——通道加分目标线分档(design §3.1)。"""
         core = next(c for c in COMP_LIBRARY if c.name == '巡海击破')
         flex = next(c for c in COMP_LIBRARY if c.name == '黄泉减益')
@@ -850,7 +850,7 @@ def _fw_gs(*, plane: int = 1) -> GameState:
 def _fw_target_comp() -> Comp:
     """终局哨兵线(合成 Comp,身份断言用;值域无关)。"""
     return Comp(name='测试·终局哨兵', core_chars=['飞霄'],
-                form_tiers={'追击': 3})
+                faction_reqs={0: {'追击': 3}})
 
 
 def _fw_session(framework: str, target_comp: Comp | None) -> StrategySession:
@@ -869,7 +869,7 @@ def test_decision_target_recipe_in_dual_track() -> None:
     recipe_comp('仙舟') 同一对象;配方形状即消费契约——仙舟键面含
     持续伤害(deploy 围栏视图键面补全,cw_recipe._RECIPES 注),
     爻光必后台(站位规则住 comp,漏了落 position_pref 兜底),
-    form_tiers = 3 仙舟主羁绊档。framework='' 且未锁 → None(散件口径);
+    档 0 = 3 仙舟主羁绊档。framework='' 且未锁 → None(散件口径);
     策略状态未装配(裸 session,None-safe)→ None。
     """
     rc = recipe_comp('仙舟')
@@ -877,8 +877,8 @@ def test_decision_target_recipe_in_dual_track() -> None:
     assert got is rc
     assert got.name == '过渡·仙舟配方'
     assert got.factions == ['仙舟'], \
-        'factions = form_tiers 键派生(核心语义;持续伤害是弹性面非核心)'
-    assert got.form_tiers == {'仙舟': 3}
+        'factions = 档 0 键派生(核心语义;持续伤害是弹性面非核心)'
+    assert got.core_faction_reqs == {'仙舟': 3}
     assert got.char_positions == {'爻光': 'back'}
     assert decision_target(_fw_session('', None), _fw_gs()) is None
     assert decision_target(StrategySession(), _fw_gs()) is None

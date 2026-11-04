@@ -137,7 +137,7 @@ def test_line_switch_affordable_window_linkage() -> None:
     from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
     from sr_od.application.currency_war.kernel.cw_line_switch import e_rounds
 
-    comp = next(c for c in COMP_LIBRARY if c.form_tiers)
+    comp = next(c for c in COMP_LIBRARY if c.core_faction_reqs)
     axes = {'plane': 2, 'round_num': 2, 'gold': 55, 'level': 7, 'hp': 60,
             'shop_refresh_cost': 2, 'node': 'battle'}
     e_base = e_rounds(comp, _bridge(**axes), session=StrategySession())

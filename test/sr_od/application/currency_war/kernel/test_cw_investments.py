@@ -181,7 +181,7 @@ def test_strategy_scope_char_leg_qiongyu_qingque() -> None:
 
 def test_env_scope_affinity_leg_grail_invite_and_contract() -> None:
     """命运圣杯邀请/契约(faction 分支命运圣杯;通道派生全档命中 {双王圣杯,
-    命运圣杯红A}——命运圣杯 ∈ 两线 form_tiers)→ 派生分支双王圣杯线
+    命运圣杯红A}——命运圣杯 ∈ 两线档 0)→ 派生分支双王圣杯线
     factions 全集(命运圣杯+能量)→ {命运圣杯, 能量}(副阵营随线带入,
     §2.1 例;§4 清单:邀请/契约同为派生分支口径;统一阵容评分迭代起
     替换旧亲和表,值不变)。"""

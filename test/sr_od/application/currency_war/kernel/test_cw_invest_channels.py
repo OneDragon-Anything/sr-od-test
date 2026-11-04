@@ -40,7 +40,7 @@ def _comp(name: str):
 
 
 def test_env_concept_stock_strong_channel_full_tier() -> None:
-    """概念股 = 通道②定向刷新,强档 +300:击破 ∈ 巡海击破 form_tiers →
+    """概念股 = 通道②定向刷新,强档 +300:击破 ∈ 巡海击破档 0 →
     全档(通用类 41 个线分 0 的对照面在 test_env_generic_categories_zero)。"""
     assert env_line_bonus('击破概念股', _comp('巡海击破')) == INVEST_STRONG
 

@@ -190,7 +190,7 @@ def test_member_priority_two_tier_derivation() -> None:
     assert member_rank_of(get_comp('列车同行·反震'))['三月七'] == 0, \
         '同名双列 core 优先'
     hand = Comp(name='手构线', core_chars=['甲', '乙'],
-                form_tiers={},
+                faction_reqs={},
                 shared_chars=['乙', '丙'])
     assert member_rank_of(hand) == {'甲': 0, '乙': 0, '丙': 1}, \
         '派生即两档'
