@@ -137,9 +137,12 @@ _R_OPENING = 23
 
 
 def test_cash_instant_gold_face_value():
-    """instant_gold 面值直计:藏一手 = 80(注册表全表最大一次性金;
-    现金分语义 = 金等价面值,非拍值评估分)。"""
-    assert strategy_economy_value('藏一手', _fresh_gs()) == (80.0, True)
+    """instant_gold 面值直计:决议:娱乐星球 = 50(现役注册表最大一次性金)。
+    藏一手 2026-11-04 用户裁定 R1 = 奖励(30 经验 + 80 金)随救援触发当场
+    发放,注册行反向改判全默认 → 估值 (0.0, False)(救援价值不进经济分,
+    归策略立场域后继批立项;载荷单一源 = STRATEGY_DEATH_SAVE_GRANTS)。"""
+    assert strategy_economy_value('决议:娱乐星球', _fresh_gs()) == (50.0, True)
+    assert strategy_economy_value('藏一手', _fresh_gs()) == (0.0, False)
 
 
 def test_cash_gold_next_nodes_r_minus_1_truncation():
@@ -389,9 +392,13 @@ def _gs_hold_backline(*names: str) -> GameState:
 
 def test_forbid_excluded_from_competition():
     """禁选排除:最高分候选被 forbid 命中 → 出局,次高胜出(集合排除,
-    分值化禁选退役)。藏一手 80 被禁 → 嘴硬 6 胜。"""
-    cfg = SimpleNamespace(strategy_priority=[], strategy_forbid=['藏一手'])
-    out = _decide_pick(['藏一手', '嘴硬', '二极管'], _fresh_gs(), config=cfg)
+    分值化禁选退役)。决议:娱乐星球 50 被禁 → 嘴硬 6 胜。(原现金锚
+    藏一手 R1 用户裁定 2026-11-04 反向改判后零分,禁选不再可辨——锚换
+    现役面值例,见 test_cash_instant_gold_face_value。)"""
+    cfg = SimpleNamespace(strategy_priority=[],
+                          strategy_forbid=['决议:娱乐星球'])
+    out = _decide_pick(['决议:娱乐星球', '嘴硬', '二极管'], _fresh_gs(),
+                       config=cfg)
     assert out.idx == 1 and out.total == 6.0
 
 
@@ -400,8 +407,9 @@ def test_all_forbidden_frame_falls_back_to_all_argmax():
     (landing ④;reason 前缀 all-excluded-fallback)。"""
     cfg = SimpleNamespace(
         strategy_priority=[],
-        strategy_forbid=['藏一手', '嘴硬', '二极管'])
-    out = _decide_pick(['藏一手', '嘴硬', '二极管'], _fresh_gs(), config=cfg)
+        strategy_forbid=['决议:娱乐星球', '嘴硬', '二极管'])
+    out = _decide_pick(['决议:娱乐星球', '嘴硬', '二极管'], _fresh_gs(),
+                       config=cfg)
     assert out.idx == 0
     assert out.reason.startswith('all-excluded-fallback')
 
@@ -451,14 +459,16 @@ def test_blood_forced_l2_domain():
 
 def test_defining_partition_retired_direction_score_decides():
     """定义型分区退役(design §3.2 defining 布尔退役):支配由方向分
-    数值实现——零证据帧(锚缺失 → 方向分 0)定义卡按组件分竞争,藏一手
-    现金 80 胜过 黑塔纪元/罗刹 赠卡 50(行为变更申报:P1 零证据开局帧
-    定义卡不再无条件支配);锚点亮帧(持大黑塔+黑塔 → top1 = 大黑塔
-    银河学者)黑塔纪元方向分 500 + 赠卡 50 = 550 支配胜出。"""
+    数值实现——零证据帧(锚缺失 → 方向分 0)定义卡按组件分竞争,黑塔
+    纪元/罗刹 赠卡 50 同分,平分裁决键取先(行为变更申报:P1 零证据
+    开局帧定义卡不再无条件支配);锚点亮帧(持大黑塔+黑塔 → top1 =
+    大黑塔银河学者)黑塔纪元方向分 500 + 赠卡 50 = 550 支配胜出。
+    (原现金锚 藏一手 R1 用户裁定 2026-11-04 反向改判后估值 (0.0,False)
+    零分出局,组件分竞争面换赠卡对内竞争。)"""
     bare = _decide_pick(['黑塔纪元', '本姑娘就是罗刹', '藏一手'],
                         _fresh_gs())
-    assert bare.idx == 2 and bare.total == 80.0, \
-        '零证据帧定义分区不再秒选(锚缺失方向分 0)'
+    assert bare.idx == 0 and bare.total == 50.0, \
+        '零证据帧定义分区不再秒选(锚缺失方向分 0,赠卡分竞争)'
     lit = _decide_pick(['黑塔纪元', '本姑娘就是罗刹', '藏一手'],
                        _gs_hold_backline('大黑塔', '黑塔'))
     assert lit.idx == 0 and lit.total == 550.0
@@ -1219,11 +1229,12 @@ def test_guard_generic_frame_unchanged_with_basis():
 
 def test_guard_scopeless_holdings_zero_anchor_frame():
     """无指向持有帧(§4 清单):只持打捞人才库(指向集空)→ 基准空 →
-    护栏不辖;零证据锚缺失帧定义卡按组件分竞争(藏一手 80 胜——定义型
-    分区退役后的数值语义,锚点亮支配由方向分承载)。"""
+    护栏不辖;零证据锚缺失帧定义卡按组件分竞争(黑塔纪元赠卡 50 胜——
+    定义型分区退役后的数值语义,锚点亮支配由方向分承载;原现金锚藏一手
+    R1 改判后零分出局)。"""
     out = _decide_pick(['黑塔纪元', '本姑娘就是罗刹', '藏一手'],
                        _gs_holding(strategies=('打捞人才库',)))
-    assert out.idx == 2 and out.total == 80.0
+    assert out.idx == 0 and out.total == 50.0
     assert out.reason.startswith('pick total='), '护栏不辖帧无前缀'
 
 
@@ -1462,17 +1473,20 @@ def test_env_margin_boundary_three_forms():
 
 def test_strategy_margin_value_and_domain():
     """策略面值序与竞争域(design §2.2-2):次名 = 结构分区竞争域内
-    除胜者外按同一平分裁决键的最高者(藏一手 80 金胜,嘴硬 6 分次);
-    被禁槽不入域(80 分的藏一手被禁后不进 margin)。"""
+    除胜者外按同一平分裁决键的最高者(决议:娱乐星球 50 金胜,嘴硬 6
+    分次);被禁槽不入域(50 分的决议:娱乐星球被禁后不进 margin)。
+    (面值锚原 = 藏一手 80,R1 用户裁定 2026-11-04 反向改判零分后换锚,
+    面值例现役归属见 test_cash_instant_gold_face_value。)"""
     gs = _fresh_gs()
-    out = _decide_pick(['藏一手', '嘴硬', '二极管'], gs)
+    out = _decide_pick(['决议:娱乐星球', '嘴硬', '二极管'], gs)
     assert out.margin == {'runner_up': '嘴硬', 'runner_up_total': 6.0,
-                          'margin': 74.0}
-    cfg = SimpleNamespace(strategy_priority=[], strategy_forbid=['藏一手'])
-    out2 = invest_strategy.decide_pick(['藏一手', '嘴硬', '二极管'], gs,
-                                       '', False, frozenset(), cfg)
+                          'margin': 44.0}
+    cfg = SimpleNamespace(strategy_priority=[],
+                          strategy_forbid=['决议:娱乐星球'])
+    out2 = invest_strategy.decide_pick(['决议:娱乐星球', '嘴硬', '二极管'],
+                                       gs, '', False, frozenset(), cfg)
     # 嘴硬/二极管同为 6 分(现金分真值):胜者嘴硬(平分裁决键取先),
-    # 次名二极管 margin = 0;藏一手 80 分被禁不入域。
+    # 次名二极管 margin = 0;决议:娱乐星球 50 分被禁不入域。
     assert out2.margin == {'runner_up': '二极管', 'runner_up_total': 6.0,
                            'margin': 0.0}
 
