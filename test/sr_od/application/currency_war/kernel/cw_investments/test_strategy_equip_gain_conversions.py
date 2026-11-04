@@ -4,12 +4,15 @@ STRATEGY_EQUIP_GAIN_CONVERSIONS + 构建校验;按拆目录规范落位,先例 =
 
 测试面依据 = 迭代设计 designs/T-143-ziyou-shichang.md §4 锁 9 校验注册
 义务 + REVIEW-T143 §3 漂移表 #10 校验面收敛(2026-10-28 治理口径):
-三漂移哨留(孤儿键/源类别池非空/目标名 ∈ 词表 ∪ 装备注册表,均能被
+三漂移哨留(孤儿键/源漂移按源形分派/目标名 ∈ 词表 ∪ 装备注册表,均能被
 游戏版本变更独立触发);源类别 ≠ 目标类别防自指属写表人纯笔误类,不加
 import 期校验 → 降为表域数据性质测试(本文件 test_target_domain_
 disjoint_no_self_reference,BENCH_ITEM_KINDS 键集一致性同口径归测试与
 评审)。族第二成员好运来(装备目标分支首例)登记面依据 =
-designs/T-248-haoyunlai.md §2.1(行值 = 卡面获得腿直读)。
+designs/T-248-haoyunlai.md §2.1(行值 = 卡面获得腿直读)。族第三成员
+独家代言(名单集源形首例)登记面依据 = designs/T-372-dujia-daiyan.md
+§2.2 + REVIEW-T372 §3.3(行值 = 卡面获得腿直读;源形 = 配方组件名单
+元组,成员判;名单集哨两支 = ⑤a 词表/⑤b 类别,⑤c 防自指禁加)。
 """
 from __future__ import annotations
 
@@ -33,9 +36,13 @@ def test_conversion_rows_single_source() -> None:
     - 好运来行(装备目标分支首例):「合成与获得进阶装备时，改为获得
       一个【好运令牌】」的获得腿 → 源类别进阶、目标装备注册表在册
       工具类物(id 231601 ↔ plaza:231601);卡面合成腿不走获得链零建模;
-    - 表键集闭族 = 族现役卡(姊妹卡独家代言独立批领取,禁顺手代登记)。"""
-    assert set(STRATEGY_EQUIP_GAIN_CONVERSIONS) == {'自由市场', '好运来'}, \
-        '注册面 = 族现役两卡(独家代言独立批,禁顺手代登记)'
+    - 独家代言行(名单集源形首例):「你获得组成该装备的简易装备时，
+      改为获得该进阶装备」→ 源 = 配方组件名单元组(成员判)、目标 =
+      腿1 占位选定件以牙还牙甲(id 331401 ↔ plaza:331401);
+    - 表键集闭族 = 族现役卡(新卡随各自实现批领取,禁顺手代登记)。"""
+    assert set(STRATEGY_EQUIP_GAIN_CONVERSIONS) == {
+        '自由市场', '好运来', '独家代言'}, \
+        '注册面 = 族现役三卡(新卡随各自实现批领取,禁顺手代登记)'
     source_cat, target = STRATEGY_EQUIP_GAIN_CONVERSIONS['自由市场']
     assert (source_cat, target) == ('简易', '简易武装箱'), '行值 = 卡面直读'
     assert equips_by_category(source_cat), '源类别池非空(数据性质)'
@@ -50,19 +57,34 @@ def test_conversion_rows_single_source() -> None:
         '转换产物 = 工具类装备(非占席道具、非占源类别)'
     assert INVESTMENT_STRATEGIES['好运来'].source == 'plaza:231601', \
         f'溯源 id 对拍失同步: {INVESTMENT_STRATEGIES["好运来"].source}'
+    source_names, target = STRATEGY_EQUIP_GAIN_CONVERSIONS['独家代言']
+    assert isinstance(source_names, tuple), '源形 = 名单集元组(首例)'
+    assert tuple(source_names) == ('量产型装甲', '幸运星'), \
+        '名单 = 占位选定进阶的配方组件(卡面直读;派生式现值同值)'
+    assert all(EQUIPMENTS[n].category == '简易' for n in source_names), \
+        '名单成员全 = 简易组件(卡面「简易装备」语义前提)'
+    assert target == '以牙还牙甲', '目标 = 腿1 占位选定件'
+    assert EQUIPMENTS[target].category == '进阶', '目标 = 进阶类(装备分支)'
+    assert INVESTMENT_STRATEGIES['独家代言'].source == 'plaza:331401', \
+        f'溯源 id 对拍失同步: {INVESTMENT_STRATEGIES["独家代言"].source}'
 
 
 def test_target_domain_disjoint_no_self_reference() -> None:
     """数据性质(防自指,治理口径归测试与评审非 import 校验):目标名不
-    属源装备类别——若目标 ∈ 源类别池,转换产物再入装备域会形成转换环;
-    现值目标域两分支并存(占席道具 + 装备注册表在册物),逐行验证
-    (装备分支行 = 好运来:产物工具类 ∉ 进阶池,即使误重入零再转换,
-    不重入主防线 = 守卫直落不重查)。"""
+    属源集——若目标 ∈ 源类别池/名单集,转换产物再入装备域会形成转换环;
+    现值目标域两分支并存(占席道具 + 装备注册表在册物),逐行按源形分派
+    验证(装备分支行 = 好运来:产物工具类 ∉ 进阶池;独家代言:产物
+    以牙还牙甲 ∉ 配方组件名单,即使误重入零再转换,不重入主防线 =
+    守卫直落不重查)。"""
     assert BENCH_ITEM_NAMES & set(EQUIPMENTS) == set(), \
         '占席道具词表与装备注册表互斥(目标域判别无歧义前提)'
-    for name, (source_cat, target) in STRATEGY_EQUIP_GAIN_CONVERSIONS.items():
-        assert target not in equips_by_category(source_cat), \
-            f'{name}: 目标 ∉ 源类别池(转换无环数据性质)'
+    for name, (source, target) in STRATEGY_EQUIP_GAIN_CONVERSIONS.items():
+        if isinstance(source, tuple):
+            assert target not in source, \
+                f'{name}: 目标 ∉ 名单集(转换无环数据性质)'
+        else:
+            assert target not in equips_by_category(source), \
+                f'{name}: 目标 ∉ 源类别池(转换无环数据性质)'
 
 
 def test_validator_orphan_key_raises(monkeypatch) -> None:
@@ -96,4 +118,28 @@ def test_validator_target_name_drift_raises(monkeypatch) -> None:
         cw_investments.STRATEGY_EQUIP_GAIN_CONVERSIONS, '自由市场',
         ('简易', '不存在的目标'))
     with pytest.raises(ValueError, match='目标名漂移'):
+        _validate_strategy_equip_gain_conversions()
+
+
+def test_validator_list_member_drift_raises(monkeypatch) -> None:
+    """构建校验⑤a(名单集哨·词表漂移支):名单集源形成员 ∉ EQUIPMENTS
+    → ValueError——词表漂移成员运行期永不命中(守卫 EQUIPMENTS 早退),
+    转换静默失效无台账,import 期哨唯一响亮面(源形分派扩形支,与哨②
+    同理由)。"""
+    monkeypatch.setitem(
+        cw_investments.STRATEGY_EQUIP_GAIN_CONVERSIONS, '独家代言',
+        (('量产型装甲', '不存在的组件'), '以牙还牙甲'))
+    with pytest.raises(ValueError, match='名单成员漂移'):
+        _validate_strategy_equip_gain_conversions()
+
+
+def test_validator_list_category_drift_raises(monkeypatch) -> None:
+    """构建校验⑤b(名单集哨·类别漂移支):名单成员类别 ≠ '简易' →
+    ValueError——名单集源形的语义前提 = 卡文「获得组成该装备的简易
+    装备」,游戏类别改版后成员不再是 desc 辖域的简易装备,名单行成过
+    名单须随批修表(import 期哨唯一响亮面)。"""
+    monkeypatch.setitem(
+        cw_investments.STRATEGY_EQUIP_GAIN_CONVERSIONS, '独家代言',
+        (('量产型装甲', '以牙还牙甲'), '以牙还牙甲'))
+    with pytest.raises(ValueError, match='名单类别漂移'):
         _validate_strategy_equip_gain_conversions()

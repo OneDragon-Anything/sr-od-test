@@ -288,12 +288,14 @@ def test_char_grant_cards_gift_value_off_zero():
 
 def test_grant_registry_counts_and_closed_set():
     """底册计数测试(对账记录 = 迭代目录 strategy-grants-reconciliation.md):
-    96 条 = 11 顾问 + 68 绑定母体白得 + 4 反扫补网 + 9 开箱分支(占席道具
+    103 条 = 11 顾问 + 68 绑定母体白得 + 4 反扫补网 + 9 开箱分支(占席道具
     直读)+ 3 非直读人工转正(佩佩逛街句/佩佩携钻句,前者反扫白名单同批
     退役,后者 = 这么大的钻石用户裁定 2026-11-02 读法 B 入册)+ 1 非候选
     直读登记(狸职手续,「获得」直读但发放对象为卡面用名「狸狸」∉ 角色
-    注册表,反扫零命中自动排除,按实机录名归一);顾问档名单在册。"""
-    assert len(STRATEGY_GRANTS) == 102
+    注册表,反扫零命中自动排除,按实机录名归一)+ 1 选择型具名装备
+    (独家代言,人工登记——「从3件进阶装备中选择一件获取」占位选定建模,
+    选择获取无「获得…roster 名」直读,反扫零命中);顾问档名单在册。"""
+    assert len(STRATEGY_GRANTS) == 103
     advisors = {n for n, g in STRATEGY_GRANTS.items() if g.advisor}
     assert len(advisors) == 11
     assert {'停云顾问', '加拉赫顾问', '摸个鱼吧I'} <= advisors
