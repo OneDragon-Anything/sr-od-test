@@ -1,14 +1,19 @@
 """羁绊优先级结构迁移(faction_reqs)的快照期望生成脚本。
 
 迭代 comp-structure-unification 3.1 的迁移恒等测试载体(details/
-faction-priority.md §7):**迁移前**在旧代码(form_tiers/sub_tiers 结构)上
-运行,产出期望 JSON(faction_migration_snapshots.json,同目录随仓提交);
-迁移后测试读 JSON 逐位断言恒等;变化①②(副档投资分/轮廓计数)按新语义
-镜像生成期望并标注,测试单列断言。
+faction-priority.md §7)。**真实生成流程**:随仓提交的期望 JSON
+(faction_migration_snapshots.json)由**旧代码(form_tiers/sub_tiers
+结构)+ 本脚本的历史版本**在迁移前产出(git 历史可溯);3.1 落地后
+本脚本读口已全部换新(core_faction_reqs 等),**现运行产出的是新代码
+侧的输出**——用于后续结构迁移类重构的重放核对(当期代码重立期望
+基线),不是旧期望的再生成。受克判定面(punished 字段)已随 3.2
+克制表直写从生成面移除(直写表机器无机制属性轴;旧 JSON 中的
+punished 保留,由恒等测试按解读轴消费);变化①②(副档投资分/轮廓
+计数)按新语义镜像生成期望并标注,测试单列断言。
 
 快照面(§7):板面 fixture(每线 3 代表板面 + 2 全局混合板面 = 65)×
 21 套阵容 → 成型度/线距离逐档进度/部署 L1/L2/L3;每线静态面 → 囤货
-采购集/受克判定输出/投资通道逐卡加分/阵容轮廓(变化②)。
+采购集/投资通道逐卡加分/阵容轮廓(变化②)。
 
 板面构造规则(§7,构造确定性——成员取注册表该羁绊成员名单前 N 名):
 - zero 零羁绊板 = 独立羁绊白厄 + 两未注册名(板面标签恒空);
@@ -55,9 +60,6 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.deploy_search imp
     SearchUnit,
     _line_form_tier_groups,
     selection_score,
-)
-from sr_od.application.currency_war.strategies.impl.mandate_v1.pick_common import (
-    punished_mechs_of,
 )
 
 _OUT = Path(__file__).parent / 'faction_migration_snapshots.json'
@@ -233,7 +235,6 @@ def main() -> int:
         line_static[comp.name] = {
             'hoard_chars': sorted(chars),
             'hoard_equips': sorted(equips),
-            'punished': sorted(punished_mechs_of(comp)),
             'invest_old': _invest_snapshots(comp, new_semantics=False),
             'invest_new': _invest_snapshots(comp, new_semantics=True),
             'all_factions_old': sorted(set(comp.factions)
@@ -249,10 +250,11 @@ def main() -> int:
             'lines': len(COMP_LIBRARY),
             'mixed_pairs': [list(p) for p in _MIXED_PAIRS],
             'note': '恒等断言面 = board_line 全字段 + line_static 的 '
-                    'hoard/punished(迁移前后逐位恒等);invest_old 与 '
+                    'hoard(迁移前后逐位恒等);invest_old 与 '
                     'all_factions_old 仅供对照,恒等断言面 = invest_new'
                     '/all_factions_new 之外的新代码实跑值与 invest_old'
-                    ' 相等、与 all_factions_old 相等——变化①②差异另列',
+                    ' 相等、与 all_factions_old 相等——变化①②差异另列;'
+                    '受克判定恒等不在此面(3.2 起消费端直写表断言)',
         },
         'boards': [{k: fx[k] for k in ('id', 'kind', 'line', 'members')}
                    for fx in boards],

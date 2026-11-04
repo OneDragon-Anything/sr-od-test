@@ -33,6 +33,9 @@ from sr_od.application.currency_war.kernel.cw_invest_channels import (
     env_line_bonus,
     strategy_line_bonus,
 )
+from sr_od.application.currency_war.kernel.cw_line_scales import (
+    COUNTER_PICK_PENALTY,
+)
 from sr_od.application.currency_war.kernel.cw_line_switch import (
     line_distance,
     tier_progress,
@@ -42,10 +45,20 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.deploy_search imp
     selection_score,
 )
 from sr_od.application.currency_war.strategies.impl.mandate_v1.pick_common import (
-    punished_mechs_of,
+    AFFIX_COUNTERS_FACTIONS,
+    counter_pick_penalty,
 )
 
 _FIXTURES = Path(__file__).parent / 'fixtures'
+
+#: 迁移前快照 ``punished`` 字段的解读轴:活链路 2 条词缀克制的机制
+#: 属性名(= 快照生成时点旧克制表的有效行,git 历史可溯)。仅用于解读
+#: 随仓提交的历史期望数据,非生产数据源——生产侧克制登记已直写为
+#: 羁绊名轴(pick_common.AFFIX_COUNTERS_FACTIONS,3.2 克制表直写)。
+_LEGACY_COUNTER_MECHS: dict[str, frozenset[str]] = {
+    '净化身心': frozenset({'DoT', '减益'}),
+    '永久创伤': frozenset({'燃血'}),
+}
 
 
 def _load_gen_module():
@@ -124,8 +137,14 @@ def test_migration_identity_board_lines(snapshot: dict, fixtures: dict) -> None:
 
 
 def test_migration_identity_line_static(snapshot: dict) -> None:
-    """恒等静态面:囤货采购集(角色件/装备件)与受克判定输出逐线相等
-    (受克判定 = 3.1 中间态行为面,键集恒等 → 输出恒等)。"""
+    """恒等静态面:囤货采购集(角色件/装备件)与受克判定输出逐线相等。
+
+    受克判定 = 选卡克制减分机器(counter_pick_penalty,3.2 起直写表判
+    锚点线档 0 键);期望值由迁移前快照 ``punished`` 字段(旧机器的受克
+    机制属性集)按解读轴推出——活链路 2 条词缀 × 21 线逐线比对,
+    新旧机器判定值恒等即直写迁移行为恒等。"""
+    assert set(_LEGACY_COUNTER_MECHS) == set(AFFIX_COUNTERS_FACTIONS), \
+        '活链路词缀集与新克制表键集漂移'
     from sr_od.application.currency_war.kernel import cw_intention
     for comp in COMP_LIBRARY:
         want = snapshot['line_static'][comp.name]
@@ -134,8 +153,12 @@ def test_migration_identity_line_static(snapshot: dict) -> None:
             f'{comp.name} 囤货角色件漂移'
         assert sorted(equips) == want['hoard_equips'], \
             f'{comp.name} 囤货装备件漂移'
-        assert sorted(punished_mechs_of(comp)) == want['punished'], \
-            f'{comp.name} 受克判定输出漂移'
+        legacy_punished = frozenset(want['punished'])
+        core = frozenset(comp.core_faction_reqs)
+        for affix, legacy_mechs in _LEGACY_COUNTER_MECHS.items():
+            hit = counter_pick_penalty(affix, core) == COUNTER_PICK_PENALTY
+            assert hit == (not legacy_punished.isdisjoint(legacy_mechs)), \
+                f'{comp.name} 受克判定输出漂移({affix})'
 
 
 def test_invest_bonus_subtier_semantics(snapshot: dict) -> None:

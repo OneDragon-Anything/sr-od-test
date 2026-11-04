@@ -368,8 +368,8 @@ def test_char_grant_cards_retired_from_scan_exclusions():
 
 # ==================== ④ 结构分区(design §2.7;统一阵容评分迭代重写)=====
 
-#: 自拆台合成选项名(「净化身心」词缀克 DoT/减益;未注册名组件恒 0,
-#: 减分是结构规则非定价)
+#: 自拆台合成选项名(「净化身心」词缀克制名单含 持续伤害/减益;未注册名
+#: 组件恒 0,减分是结构规则非定价)
 _SELF_DEFEAT_OPT = '净化身心试验'
 
 
@@ -414,10 +414,10 @@ def test_empty_frame_degrades_idx0():
 
 
 def test_counter_penalty_applies_against_top1_line_main_faction():
-    """克制减分(counters_dot 硬排除迁移,design §3.2;触发时序差异 =
-    现行板面计数≥2 成型后触发 → 新 top1 线主派即触发,P1 更早更广):
-    持卡芙卡 → 候选首名 = DOT队(锚 8000)→ 主派 持续伤害 受克集
-    {DoT};净化身心试验 −750 落败,嘴硬 6 胜(纯加权,非排除)。"""
+    """克制减分(counters_dot 硬排除迁移,design §3.2;锚点线档 0 键
+    命中克制名单即触发,P1 更早更广):
+    持卡芙卡 → 候选首名 = DOT队(锚 8000)→ 档 0 键 持续伤害 ∈
+    净化身心克制名单;净化身心试验 −750 落败,嘴硬 6 胜(纯加权,非排除)。"""
     out = _decide_pick([_SELF_DEFEAT_OPT, '嘴硬', '二极管'],
                        _gs_hold_backline('卡芙卡'))
     assert out.idx == 1 and out.total == 6.0
