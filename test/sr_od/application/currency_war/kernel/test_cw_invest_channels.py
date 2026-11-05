@@ -80,10 +80,13 @@ def test_env_core_faction_hit_full_tier() -> None:
 
 
 def test_env_flex_downgrade_strong_to_soft_and_mid_to_zero() -> None:
-    """flex 降档(design §3.1:强→+30/中→0):黄泉减益 flex 含击破——
+    """flex 降档(design §3.1:强→+30/中→0):黄泉减益的「击破」随
+    flex∩bonus 互斥清理(comp-data-row-cleanup)由 flex 列移入档 1
+    承载——降档行为不变(bonus 与 flex 同分支同分值):
     击破概念股(强)降 +30;击破邀请(中)降 0。"""
     hq = _comp('黄泉减益')
-    assert '击破' in hq.flex_factions
+    assert '击破' not in hq.flex_factions, 'flex 侧已清(互斥校验)'
+    assert hq.faction_reqs.get(1) == {'击破': 2}, '档 1 承载(更强形态)'
     assert env_line_bonus('击破概念股', hq) == INVEST_SOFT
     assert env_line_bonus('击破邀请', hq) == 0
 
