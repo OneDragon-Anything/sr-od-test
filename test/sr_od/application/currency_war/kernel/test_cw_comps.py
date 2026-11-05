@@ -10,6 +10,7 @@ fp 折算契约 = form_progress docstring)。
 """
 from __future__ import annotations
 
+from collections import Counter
 from types import SimpleNamespace
 
 import pytest
@@ -18,6 +19,7 @@ from sr_od.application.currency_war.kernel.cw_comps import (
     COMMIT_FRAC,
     COMP_LIBRARY,
     Comp,
+    derive_key_equips,
     derive_member_priority,
     form_progress,
     get_comp,
@@ -206,6 +208,20 @@ def test_zhanjidian_concept_stock_gift_tier_off() -> None:
     的牌库时点分叉系范围外申报沿仙舟/狼狩/击破/减益实例同指针;本域双
     口径探针现值零偏差 50.0/50.0,本档零扰动)。"""
     assert gift_hit_tier(ENV_GIFTS['战技点概念股']) == 'off'
+
+
+def test_key_equips_projection_identity() -> None:
+    """key_equips 手编字段 ≡ equip_assign 投影的全库恒等锁(C5 兼容地基;
+    此前该约束仅有 docstring 声明、全仓无防线——本测试 = 防线本体)。
+
+    多重集口径(Counter):合成材料判定/囤货缺口消费均为多重集语义;
+    顺序仅影响 equip_allocation 容量紧张帧的 carry 取件先后(derive_key_equips
+    docstring 自认),已迁移套手编序 ≠ 投影序属合法态,不作断言。
+    迁移期语义:equip_assign 为空的套走 fallback 返回手编原值(自恒等);
+    任一侧单独改动即本测试红 = 双源漂移信号,禁「改测试对齐」式糊绿。"""
+    for comp in COMP_LIBRARY:
+        assert Counter(comp.key_equips) == Counter(derive_key_equips(comp)), \
+            f'{comp.name}: key_equips 手编值与 equip_assign 投影漂移(双源)'
 
 
 def test_member_priority_two_tier_derivation() -> None:
