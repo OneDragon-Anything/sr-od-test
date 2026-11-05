@@ -27,6 +27,7 @@ def test_light_cones_snapshot_completeness() -> None:
     assert len(set(tids)) == 170
     assert len(set(names)) == 170
     assert all(c.rarity in (3, 4, 5) for c in LIGHT_CONES)
+    assert all(c.skill for c in LIGHT_CONES)  # 特效全文固化齐备（用户裁定进 py）
 
 
 def test_tid_segment_matches_rarity() -> None:
@@ -49,6 +50,7 @@ def test_anchor_cones_and_helpers() -> None:
     assert by_name.tid == 23000
     assert by_name.rarity == 5
     assert by_name.path_id == 'erudition'
+    assert '流星群' in by_name.skill  # 特效锚点（skill 名 + 文本透传）
 
     assert resolve_light_cone('于夜色中').tid == 23001
     assert resolve_cone_by_tid(24002).name == '记忆的质料'

@@ -24,6 +24,7 @@ def test_lookup_by_tid_and_name() -> None:
     assert by_tid['data']['name'] == '银河铁道之夜'
     assert by_tid['data']['rarity'] == 5
     assert by_tid['data']['path_cn'] == '智识'
+    assert '流星群' in by_tid['data']['skill']  # 特效全文随定义返回
     assert by_tid['data']['icon'] == 'assets/game_data/light_cone_icons/lightcone_23000.webp'
     assert by_tid['data']['match'] == 'tid'
 
