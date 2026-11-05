@@ -30,6 +30,7 @@ from sr_od.application.currency_war.kernel.cw_investments import (
 #: 全都要·彩双腿两键(族收官,None 无界 recurring,T-375 批,2026-11-05)= 87 键现值。
 #: 分解万物(三面分治:腿1 PICK 具名工厂 + 腿2 装备变换登记型,案甲 pending 冻结,2026-11-05)= 88 键现值。
 #: 幸运闪避EX(受击概率伤害变换零响应登记,幸运一击域)= 103 键现值。
+#: 羁绊的力量(羁绊计数条件双轴战力 buff 零响应登记)= 104 键现值。
 _EXPECTED_KEYS: frozenset[str] = frozenset({
     '淘金客', '固定理财', '固定理财+', '经验就是财富', '商业间谍',
     '双手狸开键盘！', '采购专员·金', '采购专员·彩', '全员晋升', '人力重组',
@@ -76,7 +77,7 @@ _EXPECTED_KEYS: frozenset[str] = frozenset({
     '开源节流',
     '公司严选',
     '搜打撤',
-    '分解万物', '完美进化', '幸运之子', '超光速提拔', '榜样的力量·彩', '万箭齐发', '后勤超响应', '三五成群', '基本保障', '更快,更幸运', '打通上下游·彩', '野蛮成长', '保守派', '攻防一体', '战术义眼+', '幸运闪避EX',
+    '分解万物', '完美进化', '幸运之子', '超光速提拔', '榜样的力量·彩', '万箭齐发', '后勤超响应', '三五成群', '基本保障', '更快,更幸运', '打通上下游·彩', '野蛮成长', '保守派', '攻防一体', '战术义眼+', '幸运闪避EX', '羁绊的力量',
 })
 
 
@@ -87,7 +88,7 @@ def test_strategy_effects_keyset_closed() -> None:
         'STRATEGY_EFFECTS 键集漂移:\n'
         f'  缺员: {sorted(set(_EXPECTED_KEYS) - set(STRATEGY_EFFECTS))}\n'
         f'  多员: {sorted(set(STRATEGY_EFFECTS) - set(_EXPECTED_KEYS))}')
-    assert len(STRATEGY_EFFECTS) == 103, '基数申报对账(effect-domain §5)'
+    assert len(STRATEGY_EFFECTS) == 104, '基数申报对账(effect-domain §5)'
 
 
 def test_strategy_effects_keys_unique_ids() -> None:
