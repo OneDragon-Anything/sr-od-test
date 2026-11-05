@@ -13,7 +13,14 @@ huobi.md §3 锁 8(REVIEW-T191 §四④ 基线修正:活体 46 + 本卡 = **47**
 """
 from __future__ import annotations
 
+from sr_od.application.currency_war.kernel.cw_effect_inventory import (
+    BENCH_REROLL_LEFT6,
+    DurationKind,
+    EffectKind,
+    TriggerKind,
+)
 from sr_od.application.currency_war.kernel.cw_investments import (
+    STRATEGY_ECONOMY,
     STRATEGY_EFFECTS,
 )
 
@@ -31,6 +38,8 @@ from sr_od.application.currency_war.kernel.cw_investments import (
 #: 分解万物(三面分治:腿1 PICK 具名工厂 + 腿2 装备变换登记型,案甲 pending 冻结,2026-11-05)= 88 键现值。
 #: 幸运闪避EX(受击概率伤害变换零响应登记,幸运一击域)= 103 键现值。
 #: 羁绊的力量(羁绊计数条件双轴战力 buff 零响应登记)= 104 键现值。
+#: 乱成一锅粥(bench_reroll 重掷零逻辑写 + burst=5 载体字段单条目双载登记,
+#: bench_reroll 族第 2 员)= 105 键现值。
 _EXPECTED_KEYS: frozenset[str] = frozenset({
     '淘金客', '固定理财', '固定理财+', '经验就是财富', '商业间谍',
     '双手狸开键盘！', '采购专员·金', '采购专员·彩', '全员晋升', '人力重组',
@@ -77,7 +86,7 @@ _EXPECTED_KEYS: frozenset[str] = frozenset({
     '开源节流',
     '公司严选',
     '搜打撤',
-    '分解万物', '完美进化', '幸运之子', '超光速提拔', '榜样的力量·彩', '万箭齐发', '后勤超响应', '三五成群', '基本保障', '更快,更幸运', '打通上下游·彩', '野蛮成长', '保守派', '攻防一体', '战术义眼+', '幸运闪避EX', '羁绊的力量',
+    '分解万物', '完美进化', '幸运之子', '超光速提拔', '榜样的力量·彩', '万箭齐发', '后勤超响应', '三五成群', '基本保障', '更快,更幸运', '打通上下游·彩', '野蛮成长', '保守派', '攻防一体', '战术义眼+', '幸运闪避EX', '羁绊的力量', '乱成一锅粥',
 })
 
 
@@ -88,7 +97,7 @@ def test_strategy_effects_keyset_closed() -> None:
         'STRATEGY_EFFECTS 键集漂移:\n'
         f'  缺员: {sorted(set(_EXPECTED_KEYS) - set(STRATEGY_EFFECTS))}\n'
         f'  多员: {sorted(set(STRATEGY_EFFECTS) - set(_EXPECTED_KEYS))}')
-    assert len(STRATEGY_EFFECTS) == 104, '基数申报对账(effect-domain §5)'
+    assert len(STRATEGY_EFFECTS) == 105, '基数申报对账(effect-domain §5)'
 
 
 def test_strategy_effects_keys_unique_ids() -> None:
@@ -101,3 +110,25 @@ def test_strategy_effects_keys_unique_ids() -> None:
         assert spec.id not in ids, \
             f'id 重复:{spec.id}({ids.get(spec.id)} vs {key})'
         ids[spec.id] = key
+
+
+def test_strategy_effects_bench_reroll_dual_carrier() -> None:
+    """乱成一锅粥 双载条目锁:五元组 + payload 双载(bench_reroll 词表值 /
+    free_refresh_burst=5)+ duties.track 单置;burst 双源同值(注册行 ==
+    载体值,治理后形双源对账归注册面测试锁,同形先例 =
+    test_strategy_dacaiyuan_registry)。"""
+    spec = STRATEGY_EFFECTS['乱成一锅粥']
+    assert spec.id == '352101'
+    assert spec.trigger is TriggerKind.NODE_ENTER, '触发 = 节点进入'
+    assert spec.duration is DurationKind.WHILE_HELD, '持续期 = 持有绑定'
+    assert spec.category is EffectKind.BATTLEFIELD, '类别 = 战场改变'
+    assert spec.payload.bench_reroll == BENCH_REROLL_LEFT6, \
+        '词表值单一源(禁裸串漂移)'
+    assert spec.payload.free_refresh_burst == 5, \
+        '官方卡文「立刻获得5次免费刷新」'
+    assert spec.duties.track is True, 'track 单置(重掷面账本可见性)'
+    assert spec.duties.predict is False and spec.duties.respond is False, \
+        '无预知/姿态消费面'
+    reg = STRATEGY_ECONOMY['乱成一锅粥'].free_refresh_burst
+    assert reg == 5, '官方卡文 5(base 层 plaza:352101)'
+    assert reg == spec.payload.free_refresh_burst, '双源同值(注册行 ↔ 载体条目)'
