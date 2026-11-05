@@ -10,7 +10,6 @@ fp 折算契约 = form_progress docstring)。
 """
 from __future__ import annotations
 
-from collections import Counter
 from types import SimpleNamespace
 
 import pytest
@@ -19,7 +18,7 @@ from sr_od.application.currency_war.kernel.cw_comps import (
     COMMIT_FRAC,
     COMP_LIBRARY,
     Comp,
-    derive_key_equips,
+    _validate_comp_equip_assign,
     derive_member_priority,
     form_progress,
     get_comp,
@@ -210,18 +209,18 @@ def test_zhanjidian_concept_stock_gift_tier_off() -> None:
     assert gift_hit_tier(ENV_GIFTS['战技点概念股']) == 'off'
 
 
-def test_key_equips_projection_identity() -> None:
-    """key_equips 手编字段 ≡ equip_assign 投影的全库恒等锁(C5 兼容地基;
-    此前该约束仅有 docstring 声明、全仓无防线——本测试 = 防线本体)。
-
-    多重集口径(Counter):合成材料判定/囤货缺口消费均为多重集语义;
-    顺序仅影响 equip_allocation 容量紧张帧的 carry 取件先后(derive_key_equips
-    docstring 自认),已迁移套手编序 ≠ 投影序属合法态,不作断言。
-    迁移期语义:equip_assign 为空的套走 fallback 返回手编原值(自恒等);
-    任一侧单独改动即本测试红 = 双源漂移信号,禁「改测试对齐」式糊绿。"""
-    for comp in COMP_LIBRARY:
-        assert Counter(comp.key_equips) == Counter(derive_key_equips(comp)), \
-            f'{comp.name}: key_equips 手编值与 equip_assign 投影漂移(双源)'
+def test_equip_assign_build_validation() -> None:
+    """装备到人配方建库校验(C5 完成态防线;key_equips 手编字段已退役为
+    投影 property——恒等由构造保证,防线从「恒等测试」转建库校验):
+    ①键 ⊆ core ∪ shared(``Comp.__post_init__`` 逐实例,替班者并入成员
+    名单承载);②终局条目 equip_assign 非空(库级 ``_validate_comp_equip_assign``,
+    import 期防线——防新条目开空账回退「清单无到人真源」的双源形态)。
+    全库正值面由 import 期校验承载,本测试锁非法构造即炸的负例行为。"""
+    with pytest.raises(ValueError, match='∉ core_chars'):
+        Comp(name='x', core_chars=['甲'],
+             equip_assign={'乙': ['反重力皮靴']})
+    with pytest.raises(ValueError, match='equip_assign 为空'):
+        _validate_comp_equip_assign([Comp(name='x', core_chars=['甲'])])
 
 
 def test_member_priority_two_tier_derivation() -> None:

@@ -90,10 +90,12 @@ def _opt(idx: int, char: str = '', equip: str = '',
 
 
 def _comp(core: list[str], key: list[str] | None = None) -> Comp:
-    """测试 comp(仅决策消费的字段有意;其余注册表字段与本判据无关)。"""
+    """测试 comp(仅决策消费的字段有意;其余注册表字段与本判据无关)。
+    key = 关键装备清单,经 equip_assign 挂首位 core 成员承载(key_equips
+    已退役为投影;供给判据只消费扁平投影,不读人到件绑定)。"""
     return Comp(name='测试套', core_chars=core,
                 faction_reqs={0: {'追击': 3}},
-                key_equips=key or [])
+                equip_assign={core[0]: list(key)} if key else {})
 
 
 def _set_left(gs: GameState, left: int) -> None:
