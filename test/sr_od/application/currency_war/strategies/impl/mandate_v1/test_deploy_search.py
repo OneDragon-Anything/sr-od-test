@@ -78,9 +78,14 @@ def test_lock_first_tier_flip_displaces_transition() -> None:
 
 
 def test_or_group_takes_best_branch() -> None:
-    """OR 承接组取最优支(希儿量子 or_reqs = 量子 2 ∨ 贝 2):贝洛伯格
-    支先达(2 人)时按最优支计完成度,量子支半程不稀释。"""
-    comp = get_comp('希儿量子')
+    """OR 承接组取最优支(or_reqs = 量子 2 ∨ 贝 2):贝洛伯格支先达
+    (2 人)时按最优支计完成度,量子支半程不稀释。载体 = 过渡条目
+    「希儿引擎」(or_reqs 现行唯一持有条目——终局希儿量子已随
+    or-reqs-retirement 3.1 改档纯 AND,不再持 or_reqs)。"""
+    from sr_od.application.currency_war.kernel.cw_intention import (
+        transition_entry_of,
+    )
+    comp = transition_entry_of('希儿引擎')
     units = [_u('希儿'), _u('佩拉'), _u('杰帕德'),   # 贝 2 人支
              _u('青雀'), _u('停云')]                 # 无关件
     panel = _panel(units, locked=True, locked_comp=comp, k=4)

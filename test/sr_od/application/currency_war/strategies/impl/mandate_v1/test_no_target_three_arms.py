@@ -178,8 +178,13 @@ class TestKSourceCandidateUnion:
         (保利息缺省;旧 fallback 方向采购集承接行为退役)。"""
         comp = get_comp('希儿量子')
         chars, _eq = cw_intention._line_hoard(comp)
-        missing_piece = sorted(m for m in chars
-                               if m not in comp.core_chars)[0]
+        # 探针须避开货架资格面(carry_set ∪ key_items):货架资格臂
+        # (shelf_qualify_buy,在役)与甲臂(已退役)是两条臂,探针落在
+        # 资格面会被前者合法买入,污染「机器方向不囤」断言——杰帕德 =
+        # 贝键展开件,全库无 carry/key_items 归属(探针判据静态可查)。
+        missing_piece = '杰帕德'
+        assert missing_piece in chars \
+            and missing_piece not in comp.core_chars, '探针须在采购集非 core 面'
         st = _state(hp=100, shop_cards=[_card(missing_piece, cost=1)])
         st['bench'] = [_bc(m) for m in comp.core_chars]
         st['front_row'] = [Unit(char_id='板上件锚', star=1)]

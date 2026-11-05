@@ -1,21 +1,55 @@
-"""gift_hit_tier 送卡档位机器回归锁(镜像 src = kernel/cw_comps.py 的该
-被测函数;此前零直测,本锁 = 估值域「现值不变」防线)。
+"""cw_comps 条目与机器的回归锁(镜像 src = kernel/cw_comps.py)。
 
-测试面依据 = T-28 设计稿(迭代 2026-09-23-invest-effects-calc)§2.5 +
-§4.3:条件分支建模批对估值域零动作——持续伤害契约(即时集非空,走规则①
-即时优先)的档位由 COMP_LIBRARY 数据派生,不得随条件分支引擎落地漂移。
+两主题:①gift_hit_tier 送卡档位机器(此前零直测,本锁 = 估值域「现值
+不变」防线;测试面依据 = T-28 设计稿(迭代 2026-09-23-invest-effects-calc)
+§2.5 + §4.3:条件分支建模批对估值域零动作——持续伤害契约(即时集非空,
+走规则①即时优先)的档位由 COMP_LIBRARY 数据派生,不得随条件分支引擎
+落地漂移);②终局希儿量子条目改档结构锁与 fp 曲线(or-reqs-retirement
+3.1,设计 = changes/2026-11-05-or-reqs-retirement/details/
+seele-final-comp.md)。
 """
 from __future__ import annotations
 
+from types import SimpleNamespace
+
+import pytest
+
 from sr_od.application.currency_war.kernel.cw_comps import (
+    COMMIT_FRAC,
     COMP_LIBRARY,
     Comp,
     derive_member_priority,
+    form_progress,
     get_comp,
     gift_hit_tier,
     member_rank_of,
 )
 from sr_od.application.currency_war.kernel.cw_investments import ENV_GIFTS
+
+
+class _Box:
+    """form_progress 鸭型读的最小值箱(属性名与状态容器视图对齐)。"""
+
+    def __init__(self, value: object) -> None:
+        self.value = value
+
+
+class _Slots:
+    """deployed 视图最小桩(front/back 槽位单位,鸭型同名读口)。"""
+
+    def __init__(self, *front_names: str) -> None:
+        self.front_slots = [SimpleNamespace(char_id=n) for n in front_names]
+        self.back_slots: list[SimpleNamespace] = []
+
+
+class _Panel:
+    """轻量假想面板桩:board.value = 羁绊计数 dict + deployed 视图
+    (required_deployed 在板判定;缺省 deployed 视图 = 按 0 计保守向)。"""
+
+    def __init__(self, board: dict[str, int],
+                 front: tuple[str, ...] = ()) -> None:
+        self.board = _Box(dict(board))
+        self.deployed = _Box(_Slots(*front))
 
 
 def test_dot_contract_gift_tier_unchanged() -> None:
@@ -195,3 +229,37 @@ def test_member_priority_two_tier_derivation() -> None:
     assert member_rank_of(hand) == {'甲': 0, '乙': 0, '丙': 1}, \
         '派生即两档'
     assert derive_member_priority(hand) == {'甲': 0, '乙': 0, '丙': 1}
+
+
+def test_seele_quantum_final_tiers() -> None:
+    """终局希儿量子条目改档结构锁(or-reqs-retirement 3.1,设计 =
+    changes/2026-11-05-or-reqs-retirement/details/seele-final-comp.md §1):
+    档 0 = 量子4+贝洛伯格4 纯 AND(终局完全体,双修即唯一主流终局形态)、
+    档 1 = 战技点2/治疗2(实证 53/67 与 36/67,加分层不进成型判定)、
+    flex 收敛为盛会之星/列车同行、or_reqs 清零(COMP_LIBRARY 内 OR 承接
+    形态退役;过渡库「希儿引擎」条目仍持 or_reqs,机器删除归 3.3)。"""
+    comp = get_comp('希儿量子')
+    assert comp.faction_reqs == {
+        0: {'量子同频': 4, '贝洛伯格': 4}, 1: {'战技点': 2, '治疗': 2}}
+    assert comp.flex_factions == ['盛会之星', '列车同行']
+    assert comp.or_reqs == []
+    assert comp.required_deployed == ('希儿',)
+
+
+def test_seele_quantum_fp_curve() -> None:
+    """希儿量子 fp 曲线五值(or-reqs-retirement 3.1 行为核算,期望表 =
+    seele-final-comp.md §2):改档后 form_progress 按纯 AND 折算,
+    新 fp = (min(量,4)/4 + min(贝,4)/4 + [希儿在板])/3——分度恢复,
+    量2 不再虚假满成型,完全体(量4贝4)才 1.0;希儿+量1 ≈ 0.417 仍过
+    COMMIT_FRAC(装备工具激活面 =「希儿到手即开线」不丢)。"""
+    seele = get_comp('希儿量子')
+
+    def fp(board: dict[str, int]) -> float:
+        return form_progress(seele, _Panel(board, front=('希儿',)))
+
+    assert fp({'量子同频': 1}) == pytest.approx(1.25 / 3)   # ≈ 0.417
+    assert fp({'量子同频': 2}) == pytest.approx(0.5)
+    assert fp({'量子同频': 2, '贝洛伯格': 2}) == pytest.approx(2 / 3)
+    assert fp({'量子同频': 4, '贝洛伯格': 2}) == pytest.approx(2.5 / 3)
+    assert fp({'量子同频': 4, '贝洛伯格': 4}) == 1.0
+    assert fp({'量子同频': 1}) >= COMMIT_FRAC, '希儿+量1 仍过 commit 线'

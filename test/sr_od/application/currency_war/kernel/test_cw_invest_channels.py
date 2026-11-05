@@ -72,9 +72,10 @@ def test_env_generic_categories_zero() -> None:
         assert env_line_bonuses(name) == {}, name
 
 
-def test_env_faction_hit_or_reqs_counts_as_core() -> None:
-    """目标线命中含 or_reqs 键(希儿量子:贝洛伯格 ∈ or_reqs)——贝洛伯格
-    概念股对希儿量子给全档,不按 flex 降档。"""
+def test_env_core_faction_hit_full_tier() -> None:
+    """目标线命中档 0 键给全档(希儿量子:贝洛伯格 ∈ 档 0)——贝洛伯格
+    概念股对希儿量子给全档值,不按降档(flex/档 1 才走 INVEST_SOFT);
+    or-reqs-retirement 3.1 改档后档 0 = 量4+贝4,键面不变,本值恒等。"""
     assert env_line_bonus('贝洛伯格概念股', _comp('希儿量子')) == INVEST_STRONG
 
 
