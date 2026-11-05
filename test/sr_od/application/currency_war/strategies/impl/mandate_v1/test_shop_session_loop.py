@@ -1448,12 +1448,15 @@ class TestTransitionShelfQualifyArm:
             f'过渡锁定帧资格臂不得发射: {act!r}'
 
     def test_final_lock_disarms_arm(self):
-        """触发窗②(详设 §2):终局锁定 → 过渡层整体退役态,臂不触发
-        (残留过渡锁定值证臂自身守卫 = 终局锁优先;生产链终局锁定写入
-        点同点清空过渡层,位面切换不触发)。"""
+        """触发窗②(详设 §2):终局锁定 → 过渡层整体退役态,臂不触发。
+        单变量构帧(终局锁 ∧ 过渡锁空):臂守卫是合取,叠加残留过渡锁
+        会使断言对「实现漏写终局锁分量」的突变零分辨力(另一分量照样
+        拦截)——过渡锁半边由 test_transition_locked_disarms_arm 单独
+        钉住,本用例只验终局锁分量独立生效。生产链终局锁定写入点同点
+        清空过渡层,位面切换不触发。"""
         live, sess, gs, st = self._frame_seeded()
         st.target_comp = COMP_LIBRARY[0]   # 终局锁定帧(target_comp 非空)
-        st.v3_intention.transition_locked = '仙舟3+DOT2'   # 残留值
+        assert not st.v3_intention.transition_locked, '构帧前置:过渡锁空'
         act = live.decide_shop_action()
         assert not (isinstance(act, CwActionBuyCardParam)
                     and act.card.name == '佩拉'
