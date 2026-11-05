@@ -4,9 +4,9 @@
 不变」防线;测试面依据 = T-28 设计稿(迭代 2026-09-23-invest-effects-calc)
 §2.5 + §4.3:条件分支建模批对估值域零动作——持续伤害契约(即时集非空,
 走规则①即时优先)的档位由 COMP_LIBRARY 数据派生,不得随条件分支引擎
-落地漂移);②终局希儿量子条目改档结构锁与 fp 曲线(or-reqs-retirement
-3.1,设计 = changes/2026-11-05-or-reqs-retirement/details/
-seele-final-comp.md)。
+落地漂移);②终局希儿量子条目改档结构锁与 fp 曲线(档 0 = 量4+贝4
+纯 AND/档 1 = 战技点2/治疗2 加分层;条目值单一源 = cw_comps 本体,
+fp 折算契约 = form_progress docstring)。
 """
 from __future__ import annotations
 
@@ -232,8 +232,9 @@ def test_member_priority_two_tier_derivation() -> None:
 
 
 def test_seele_quantum_final_tiers() -> None:
-    """终局希儿量子条目改档结构锁(or-reqs-retirement 3.1,设计 =
-    changes/2026-11-05-or-reqs-retirement/details/seele-final-comp.md §1):
+    """终局希儿量子条目改档结构锁(档 0 = 量4+贝4 纯 AND、档 1 =
+    战技点2/治疗2 加分层;条目值单一源 = cw_comps COMP_LIBRARY 条目
+    本体,本测试锁结构不被手改漂移):
     档 0 = 量子4+贝洛伯格4 纯 AND(终局完全体,双修即唯一主流终局形态)、
     档 1 = 战技点2/治疗2(实证 53/67 与 36/67,加分层不进成型判定)、
     flex 收敛为盛会之星/列车同行、required = 希儿在场。"""
@@ -245,8 +246,7 @@ def test_seele_quantum_final_tiers() -> None:
 
 
 def test_seele_quantum_fp_curve() -> None:
-    """希儿量子 fp 曲线五值(or-reqs-retirement 3.1 行为核算,期望表 =
-    seele-final-comp.md §2):改档后 form_progress 按纯 AND 折算,
+    """希儿量子 fp 曲线五值:改档后 form_progress 按纯 AND 折算,
     新 fp = (min(量,4)/4 + min(贝,4)/4 + [希儿在板])/3——分度恢复,
     量2 不再虚假满成型,完全体(量4贝4)才 1.0;希儿+量1 ≈ 0.417 仍过
     COMMIT_FRAC(装备工具激活面 =「希儿到手即开线」不丢)。"""

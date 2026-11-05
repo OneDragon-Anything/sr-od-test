@@ -1,6 +1,7 @@
 """过渡组合条目库与候选机器测试面(or-reqs-retirement 3.2)。
 
-锁定对象 = 详设(details/transition-combos.md)的关键设计约定:
+锁定对象 = 语义权威版本 strategy-docs/12_line_and_intention.md §3 的
+关键设计约定:
 - 建库结构:五块构造块两两组合恒 10 条/字段合并规则/建库校验五条;
 - 计分成员域 = 见即买集(块级域并集,点名块不含羁绊凑数件);
 - 候选机器:持有计分开局全 0、词缀减分 7+3 粒度、top3 与注册序
@@ -53,7 +54,7 @@ def _lib(name: str) -> Comp:
 
 
 def test_library_structure_generated_combos() -> None:
-    """生成器结构锁(设计 §2):库恒 10 条(五块两两组合序),档 0 = 两块
+    """生成器结构锁:库恒 10 条(五块两两组合序),档 0 = 两块
     键 AND,core/required = 两块点名件保序去重(生成期显式填),need_star
     两块合批,其余 Comp 字段缺省空。"""
     assert [e.name for e in TRANSITION_LIBRARY] == [
@@ -86,7 +87,7 @@ def test_library_structure_generated_combos() -> None:
 
 
 def test_bond_score_members_domains() -> None:
-    """块计分域(设计 §1):点名型 = 点名集(羁绊凑数件不进);羁绊型与
+    """块计分域:点名型 = 点名集(羁绊凑数件不进);羁绊型与
     混合型 = 点名 ∪ 羁绊全体注册成员;combo 条目见即买集 = 两块域并集
     (跨点名/多羁绊阵营按角色去重);未知名(旧条目名/防御态)返空集。"""
     xz = transition_bond_of('仙舟3')
@@ -121,7 +122,7 @@ def test_bond_score_members_domains() -> None:
 
 
 def test_validation_rejects_illegal_bonds() -> None:
-    """建库校验五条(设计 §4;模块级真值调用 = import 期防线,import 成功
+    """建库校验五条(模块级真值调用 = import 期防线,import 成功
     即证真值合法),非法构造直接断言 ValueError(逐条独立命中)。"""
     # ① 库长 != C(n,2)(真值五块配截断库)
     with pytest.raises(ValueError, match='库长'):
@@ -167,7 +168,7 @@ def test_opening_all_zero_no_candidates() -> None:
 
 
 def test_scoring_ranks_and_registration_tiebreak() -> None:
-    """持有分排序 + tie-break(设计 §3):分数降序,同分按注册序(排序键
+    """持有分排序 + tie-break:分数降序,同分按注册序(排序键
     单一实现在 transition_scores,返回有序全序);候选槽 = 前 3 切片。"""
     held = {'希儿', '花火', '桑博'}
     assert transition_scores(held, ()) == [

@@ -182,7 +182,8 @@ class TestKSourceCandidateUnion:
         # 臂在役):①终局资格面(carry_set ∪ key_items)——被货架资格臂
         # 合法买入;②过渡资格面(五块计分域并集)——手持希儿量子 core
         # 时贝键展开件(杰帕德)在 希儿贝2 混合块计分域内,会被过渡资格
-        # 臂按虚拟 top3 合法买入(virtual-eval-arm.md §4 行为申报①),
+        # 臂按虚拟 top3 合法买入(语义权威版本 = strategy-docs/
+        # 12_line_and_intention.md §3),
         # 污染「机器方向不囤」断言。加拉赫 = 治疗 bonus 档键展开件
         # (盛会之星/治疗/击破面全库无羁绊块归属,探针判据静态可查)。
         missing_piece = '加拉赫'

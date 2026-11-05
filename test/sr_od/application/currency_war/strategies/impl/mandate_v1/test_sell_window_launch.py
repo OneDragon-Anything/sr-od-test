@@ -161,7 +161,8 @@ class TestLaunchRegistry:
                                       round_num=3)
         # [14 臂映射](11 号稿 §1 序 1 扩展臂注册 ×3:
         # shelf_qualify_buy/transition_shelf_qualify_buy/cold_start_buy,
-        # 义务类;过渡资格臂 = or-reqs-retirement 3.4 详设四增补)
+        # 义务类;过渡资格臂语义权威版本 = strategy-docs/
+        # 12_line_and_intention.md §3)
         arms = ('m2_line_member', 'm2_locked_member', 'm2_stockpile',
                 'm2_merge_completion', 'shelf_qualify_buy',
                 'transition_shelf_qualify_buy', 'cold_start_buy',
