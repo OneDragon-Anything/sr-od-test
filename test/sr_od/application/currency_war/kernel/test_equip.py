@@ -15,6 +15,12 @@
   装备」节;事故 = run_20260918_075416 分身墨镜Max 拖给丹恒·饮月
   静默不生效 → 装备滞留 owned → 安灯停局):登记完整性 / 白名单
   真值表 / 分配器消费位排除 / 回退帧 fail-closed / 注册表互检。
+- **特权映射双射锁**(特权赋予卡与融合召唤共用的确定性变换映射单一源
+  ``privilege_counterpart``):进阶全集逐名正向 / 特权全集逐名反向,
+  36/36 全量闭合钉死——游戏装备注册表改版(单侧新增)触发 = 漂移哨。
+- **穿着即合成 × 特权档边转换域分界**:特权档产物(非进阶件)不经
+  获得转换卡改写——转换卡辖「合成/获得进阶装备」事件,与融合召唤
+  共享穿报插入点的双持卡局域分界。
 """
 from __future__ import annotations
 
@@ -24,6 +30,7 @@ from test.sr_od.application.currency_war._cw_helpers import (
     cw4_session,
 )
 
+from sr_od.application.currency_war.data.cw_equipment_data import EQUIPMENTS
 from sr_od.application.currency_war.data.cw_equipment_wear_rules_data import (
     ITEM_WEAR_GATES,
     YINLANG_WEAR_ALLOWLIST,
@@ -445,3 +452,55 @@ def test_wear_advanced_no_conversion_without_synthesis():
     assert out.applied
     assert gs.bench.value.slots[0].unit.equips == items, \
         '零合成穿戴照常并存(零转换)'
+
+
+# ============================================================ 特权映射双射锁
+# (映射单一源 = cw_effect_inventory.privilege_counterpart,特权赋予卡
+# 库存/穿域两分支与融合召唤穿报特权档边共用;「全量双射由测试钉死」
+# 申报的承载位。)
+
+
+def test_privilege_counterpart_bijection_registry_pinned():
+    """进阶↔特权 36/36 全量双射锁(6a 正向 + 6b 反向):进阶全集逐名
+    ``privilege_counterpart`` 在册且 category='特权';特权全集逐名去
+    后缀在册且 category='进阶';双表同基数 36。游戏装备注册表改版
+    (单侧新增进阶/特权件)会触发 = 漂移哨——处置 = 版本重采后双表
+    同步(映射为后缀拼接,双表天然同步,单侧漂移 = 注册表缺口需申报)。"""
+    from sr_od.application.currency_war.kernel.cw_effect_inventory import (
+        EQUIP_PRIVILEGE_SUFFIX,
+        privilege_counterpart,
+    )
+    advance = {n for n, e in EQUIPMENTS.items() if e.category == '进阶'}
+    privilege = {n for n, e in EQUIPMENTS.items() if e.category == '特权'}
+    assert len(advance) == 36 and len(privilege) == 36, \
+        f'双表基数 36/36(实得 {len(advance)}/{len(privilege)})'
+    for n in sorted(advance):
+        c = privilege_counterpart(n)
+        assert c in EQUIPMENTS and EQUIPMENTS[c].category == '特权', \
+            f'正向断:{n!r} → {c!r} 不在册/类别漂移'
+    for n in sorted(privilege):
+        base = n.removesuffix(EQUIP_PRIVILEGE_SUFFIX)
+        assert base in EQUIPMENTS and EQUIPMENTS[base].category == '进阶', \
+            f'反向断:{n!r} ← {base!r} 不在册/类别漂移'
+        assert privilege_counterpart(base) == n, '去后缀/拼接往返闭合'
+
+
+# ============================================================ 穿着即合成 × 特权档边转换域分界
+
+
+def test_wear_privilege_fusion_product_not_converted():
+    """双持卡局域分界:融合召唤(同进阶对→特权件)× 好运来(进阶获得
+    转换)同局,特权档产物**不经转换改写**——转换卡辖「合成/获得进阶
+    装备」事件,特权件 category='特权' 非进阶件不在改写域(转换注入
+    只辖基础档边产物);穿报特权档边与转换面共享插入点,此分界防未来
+    转换表扩类时误改写特权产物。"""
+    gs = _wear_grant_gs(unit_equips=['武器大师'], owned=['武器大师'],
+                        register=False)
+    gs.write_logic(gs.active_strategies, ['融合召唤', '好运来'],
+                   produced_by='test-seed', evidence='t:card',
+                   sig=ChannelSig(family='logic_action', actor='test',
+                                  mode='compute'))
+    out = _wear_item(gs, '武器大师')
+    assert out.applied
+    assert gs.bench.value.slots[0].unit.equips == ['武器大师·特权'], \
+        '同进阶对 → 特权件原形(零转换改写)'

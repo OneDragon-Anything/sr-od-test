@@ -288,14 +288,13 @@ def test_char_grant_cards_gift_value_off_zero():
 
 def test_grant_registry_counts_and_closed_set():
     """底册计数测试(对账记录 = 迭代目录 strategy-grants-reconciliation.md):
-    103 条 = 11 顾问 + 68 绑定母体白得 + 4 反扫补网 + 9 开箱分支(占席道具
-    直读)+ 3 非直读人工转正(佩佩逛街句/佩佩携钻句,前者反扫白名单同批
-    退役,后者 = 这么大的钻石用户裁定 2026-11-02 读法 B 入册)+ 1 非候选
-    直读登记(狸职手续,「获得」直读但发放对象为卡面用名「狸狸」∉ 角色
-    注册表,反扫零命中自动排除,按实机录名归一)+ 1 选择型具名装备
-    (独家代言,人工登记——「从3件进阶装备中选择一件获取」占位选定建模,
-    选择获取无「获得…roster 名」直读,反扫零命中);顾问档名单在册。"""
-    assert len(STRATEGY_GRANTS) == 103
+    104 条 = 11 顾问 + 76 角色直读(绑定母体白得/反扫补网/非直读人工
+    转正[佩佩逛街句/佩佩携钻句]/非候选直读登记[狸职手续,按实机录名
+    归一])+ 15 开箱分支(占席道具直读,箱腿卡随批扩员,含融合召唤)
+    + 1 选择型具名装备(独家代言,人工登记——「从3件进阶装备中选择一件
+    获取」占位选定建模,选择获取无「获得…roster 名」直读,反扫零命中)
+    + 1 角色×道具混合(龙虎兄弟狸);顾问档名单在册。"""
+    assert len(STRATEGY_GRANTS) == 104
     advisors = {n for n, g in STRATEGY_GRANTS.items() if g.advisor}
     assert len(advisors) == 11
     assert {'停云顾问', '加拉赫顾问', '摸个鱼吧I'} <= advisors
@@ -346,9 +345,10 @@ def test_grants_box_legs_items_only_pass_validation(monkeypatch):
     assert grant_gift_value(STRATEGY_GRANTS['保守派'], frozenset()) == 0.0
     assert grant_gift_value(STRATEGY_GRANTS['军火贸易'], frozenset()) == 0.0
     assert grant_gift_value(STRATEGY_GRANTS['军火贸易+'], frozenset()) == 0.0
-    # 正面:新 items-only 条目(融合召唤,注册表在册卡)通过校验不炸
+    # 正面:items-only 条目经校验不炸(patch 值 = 融合召唤注册表真值形;
+    # 该卡落注册后本例兼作「已注册卡重校验」形态,断言面 = 校验不炸)。
     patched = dict(STRATEGY_GRANTS)
-    patched['融合召唤'] = GiftGrant(items_immediate=('进阶武装箱',))
+    patched['融合召唤'] = GiftGrant(items_immediate=('简易武装箱',))
     _patch_grants(monkeypatch, patched)
     cw_investments._validate_strategy_grants()
 
