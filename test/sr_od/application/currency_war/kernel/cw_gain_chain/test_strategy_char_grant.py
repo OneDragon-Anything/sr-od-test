@@ -146,7 +146,7 @@ def test_strategy_char_grants_consistency_lock() -> None:
     真值可暴露)。"""
     assert set(_STRATEGY_CHAR_GRANTS) == {'溜佩佩', '溜佩佩+', '招财狗',
                                           '艾丝妲的猛犬！', '狸职手续',
-                                          '佩佩客串'}
+                                          '佩佩客串', '佩佩驾到'}
     for name, (char, _count) in _STRATEGY_CHAR_GRANTS.items():
         assert STRATEGY_GRANTS[name].chars_immediate == (char,), \
             f'{name} 效果体发放名与登记表 chars_immediate 漂移'
