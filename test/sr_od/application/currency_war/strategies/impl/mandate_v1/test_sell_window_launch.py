@@ -103,7 +103,8 @@ def _sess() -> StrategySession:
     s = StrategySession()
     state_of(s).cw4_counters = {}
     state_of(s).target_comp = SimpleNamespace(
-        name='测试线', core_chars=('目标件',), shared_chars=())
+        name='测试线', core_chars=('目标件',), shared_chars=(),
+        members=('目标件',))
     state_of(s).v3_intention = IntentionState()
     return s
 
