@@ -1135,7 +1135,7 @@ def test_funding_exhausted_records_opportunity():
 
 # ============================================================
 # 货架资格臂 + 冷启动臂(11 号稿 §1 序 1 扩展臂条款;
-# 序 1 层内扩展臂):资格判据(CARRY/骨架级 ∧ 虚拟
+# 序 1 层内扩展臂):资格判据(CARRY 级 ∧ 虚拟
 # top3)/义务类管线/子序(missing 后、冷启动次之、资格臂殿后)/双空窗
 # 完备性(1 费三羁绊见即买,会话内现算退出);
 # 过渡资格臂(语义权威版本 = strategy-docs/12_line_and_intention.md §3):
@@ -1144,11 +1144,11 @@ def test_funding_exhausted_records_opportunity():
 #
 # 构帧纪律:未锁 + line_candidates/transition_candidates 双空(资格
 # 判据的虚拟评估只作资格器,零持久化);货架件身份注册表现算防漂移
-# (飞霄 = 追击飞霄 CARRY〔1 费非三羁绊〕;丹恒·饮月 = 列车同行骨架
-# 〔2 费三羁绊〕;刃 = 黄泉减益插件级〔1 费非三羁绊〕;艾丝妲 = 纯
-# 过渡件〔1 费持续伤害,不在任何终局线〕;三月七 = 列车 CARRY ∩
-# 骨架〔1 费列车同行〕;佩拉 = 希儿贝2 块计分域纯过渡件〔贝洛伯格,
-# 全库无 carry/key_items 归属〕)。
+# (飞霄 = 追击飞霄 CARRY〔1 费非三羁绊〕;丹恒·饮月 = 龙丹战技点
+# CARRY〔2 费三羁绊,非列车成员〕;刃 = 黄泉减益插件级〔1 费非三羁绊〕;
+# 艾丝妲 = 纯过渡件〔1 费持续伤害,不在任何终局线〕;三月七 = 列车
+# CARRY〔1 费列车同行〕;佩拉 = 希儿贝2 块计分域纯过渡件〔贝洛伯格,
+# 全库无 carry 归属〕)。
 # ============================================================
 
 
@@ -1173,23 +1173,37 @@ class TestShelfQualifyArm:
         assert sell_gate.launch_cause_of(act.reason) == 'obligation', \
             '资格臂 = 义务类(τ=∞ 义务账,§2.2-3)'
 
-    def test_skeleton_card_on_shelf_qualifies(self):
-        """骨架触发 + 1 费档冷启动限定(双证帧):货架丹恒·饮月(列车
-        同行骨架非 CARRY,2 费三羁绊)→ 冷启动 1 费门不收;列车同行经
-        丹恒·饮月虚拟持有(skeleton=1)进虚拟 top3 → 骨架级资格买入。"""
+    def test_non_carry_card_on_shelf_does_not_qualify(self):
+        """资格域外件不触发终局资格买入(反向):货架椒丘(原骨架级单卡,
+        全库唯一无任何 CARRY 身份者——不在任何线的 carry_set)→ 虚拟
+        top3 线的资格集(CARRY 级单源)不含椒丘 → 终局资格臂零对象;
+        持有飞霄(追击锚)点亮实候选挡冷启动臂且椒丘 ∉ 追击成员域挡
+        m2。椒丘的过渡侧身份(DOT2 计分域)由过渡资格臂独立承载——
+        若发生买入,reason 不得是终局资格通道 shelf_qualify_buy。"""
+        from sr_od.application.currency_war.kernel.cw_comps import (
+            carry_set,
+            get_comp,
+        )
+        from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+            line_select,
+        )
+        _virt = line_select.compute_candidates(
+            frozenset({'椒丘'}), line_select.OpeningCtx())
+        assert all('椒丘' not in carry_set(get_comp(n)) for n in _virt), \
+            f'帧前提失守:椒丘获得 CARRY 身份: {_virt!r}'
         live, sess, gs, st = _frame(
             gold=60, node_kind='reward', direction=False,
-            shop_cards=[('丹恒·饮月', 2, 1)])
+            bench=[('飞霄', 1)],
+            shop_cards=[('椒丘', 1, 1)])
         act = live.decide_shop_action()
-        assert isinstance(act, CwActionBuyCardParam), f'非资格买入: {act!r}'
-        assert act.card.name == '丹恒·饮月'
-        assert act.reason == 'shelf_qualify_buy', \
-            '骨架级货架件经资格臂买入(冷启动 1 费门不收 2 费件)'
+        if isinstance(act, CwActionBuyCardParam):
+            assert act.reason != 'shelf_qualify_buy', \
+                f'资格域外件(椒丘)不得触发终局资格买入: {act.reason}'
 
     def test_plugin_card_on_shelf_does_not_qualify(self):
         """插件不触发(同帧对照):货架 [刃(槽1,黄泉减益插件级),
         黄泉(槽2,黄泉减益 CARRY)]——黄泉减益经货架虚拟证据进虚拟
-        top3,但刃只是插件级(members − CARRY − 骨架)不入资格域 →
+        top3,但刃只是插件级(members − CARRY)不入资格域 →
         槽序在前的刃被跳过,首资格件 = 黄泉(CARRY 触发)。"""
         live, sess, gs, st = _frame(
             gold=60, node_kind='reward', direction=False,
@@ -1250,7 +1264,7 @@ class TestShelfQualifyArm:
     def test_qualify_buy_lights_real_candidates_next_frame(self):
         """买入转实链路(§2.2-2 闭环):资格买入飞霄 → 持有写入 → 方向
         签名变 → refresh 重算 → 实候选经证据门点亮追击飞霄 → 义务面
-        跟进(下一帧货架追击骨架件知更鸟经 m2 义务通道买入)。"""
+        跟进(下一帧货架追击线件知更鸟经 m2 义务通道买入)。"""
         live, sess, gs, st = _frame(
             gold=60, node_kind='reward', direction=False,
             shop_cards=[('飞霄', 1, 1)])
@@ -1268,7 +1282,7 @@ class TestShelfQualifyArm:
         session_scope.refresh_line_if_needed(gs)
         assert '追击飞霄' in st.line_candidates, \
             '资格买入写持有 → 签名变 → 实候选经证据门点亮(§2.1-1 闭环)'
-        # 下一帧:追击飞霄骨架件知更鸟在货架 → 义务面跟进(m2 通道)
+        # 下一帧:追击飞霄线件知更鸟在货架 → 义务面跟进(m2 通道)
         cards = [ShopSlot(kind='content',
                           card=ShopCard(name='知更鸟', faction='', cost=4,
                                         star=1, slot=1))]
@@ -1476,9 +1490,9 @@ class TestTransitionShelfQualifyArm:
 
     def test_triangle_third_piece_dual_qualification_routes_to_final(self):
         """铁三角例(双资格路由例):手握铁三角
-        二人(爻光+藿藿)+ 货架第三点名件(丹恒·饮月)→ 虚拟计分下含
+        二人(爻光+丹恒·饮月)+ 货架第三点名件(藿藿)→ 虚拟计分下含
         仙舟3 块的组合条目以 3 分进 top3(过渡侧资格成立)∧ 终局侧
-        龙丹战技点在虚拟 top3(丹恒·饮月 ∈ 其 CARRY 域,终局侧资格
+        双王圣杯在虚拟 top3(藿藿 ∈ 其 CARRY 域,终局侧资格
         亦成立)→ 双资格并存时终局臂先消费,买入 reason =
         shelf_qualify_buy——过渡资格臂是终局侧不点亮牌的追加面。"""
         from sr_od.application.currency_war.kernel.cw_comps import (
@@ -1491,7 +1505,7 @@ class TestTransitionShelfQualifyArm:
         from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
             line_select,
         )
-        _virt = frozenset({'爻光', '藿藿', '丹恒·饮月'})
+        _virt = frozenset({'爻光', '丹恒·饮月', '藿藿'})
         _t_top3 = transition_scores(_virt, ())[:3]
         assert all(n.startswith('仙舟3') for n, _s in _t_top3), \
             f'前置失守:含仙舟3 块组合未进虚拟 top3: {_t_top3!r}'
@@ -1502,16 +1516,15 @@ class TestTransitionShelfQualifyArm:
             _c = get_comp(_n)
             if _c is not None:
                 _f_qual |= carry_set(_c)
-                _f_qual |= set(_c.key_items or ())
-        assert '丹恒·饮月' in _f_qual, \
-            f'前置失守:终局虚拟 top3 未点亮丹恒·饮月: {_f_top3!r}'
+        assert '藿藿' in _f_qual, \
+            f'前置失守:终局虚拟 top3 未点亮藿藿: {_f_top3!r}'
         live, sess, gs, st = _frame(
             gold=60, node_kind='reward', direction=False,
-            bench=[('爻光', 1), ('藿藿', 1)], deployed=[],
-            shop_cards=[('丹恒·饮月', 2, 1)])
+            bench=[('爻光', 1), ('丹恒·饮月', 1)], deployed=[],
+            shop_cards=[('藿藿', 1, 1)])
         act = live.decide_shop_action()
         assert isinstance(act, CwActionBuyCardParam), f'非买入: {act!r}'
-        assert act.card.name == '丹恒·饮月'
+        assert act.card.name == '藿藿'
         assert act.reason == 'shelf_qualify_buy', \
             f'双资格并存时终局臂先消费: {act!r}'
 

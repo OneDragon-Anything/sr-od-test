@@ -20,8 +20,8 @@ faction/position_pref 不入容器形状,消费点经注册表按 char_id 派生
 ⑤ char_first_faction 派生式(主阵营单一源):命中 → factions[0],
    注册但无阵营 = '',未注册/空名 = '?'。
 
-知识卡节(统一阵容评分迭代重写,2026-11-03):①schema 全 20 线
-need_star/key_items 非空;②名字空间 ⊆ 注册表键(手编建表笔误防线
+知识卡节(统一阵容评分迭代重写,2026-11-03):①schema 全 21 线
+need_star 非空;②名字空间 ⊆ 注册表键(手编建表笔误防线
 ——写错名 = 分值静默失效);③ CARRY 锚派生(plaza_carry 直用 +
 攻略补全登记)与 CARRY 档 = 单名锚 ∪ core_chars 合流;④旧
 lock_rules 字段/char_lock_hit/strategy_lock_hit 已随「全部即时锁退役」
@@ -174,23 +174,21 @@ def test_board_by_row_of_reads_container_rows():
 
 
 def test_knowledge_card_schema_nonempty_all_lines():
-    """① 知识卡字段全 21 线非空(need_star 星级目标/key_items 骨架名单
-    ——持有证据分与星级目标的机器前提;姬子列车批 3 拆分 20→21);旧
-    lock_rules 字段已整字段退役(统一阵容评分迭代:全部即时锁退役),
-    不再断言。"""
+    """① 知识卡字段全 21 线非空(need_star 星级目标
+    ——星级目标的机器前提;姬子列车批 3 拆分 20→21);已退役字段
+    不再断言(lock_rules 同款防复活断言在下)。"""
     assert len(COMP_LIBRARY) == 21
     for comp in COMP_LIBRARY:
         assert not hasattr(comp, 'lock_rules'), \
             f'{comp.name}: lock_rules 字段已整字段退役,禁复活'
         assert comp.need_star, comp.name
-        assert comp.key_items, comp.name
 
 
 def test_knowledge_card_names_in_registries():
     """② 名单/键全落注册表键空间:角色名 ⊆ CHARACTERS。建表是手编数据,
-    名字写错 = 证据分/星级目标静默失效。"""
+    名字写错 = 星级目标静默失效。"""
     for comp in COMP_LIBRARY:
-        for name in (*comp.need_star, *comp.key_items):
+        for name in comp.need_star:
             assert name in CHARACTERS, (comp.name, name)
 
 
@@ -212,7 +210,7 @@ def test_carry_anchor_plaza_first_fallback_registered():
 def test_carry_set_union_anchor_and_core():
     """③' CARRY 档 = 单名锚 ∪ core_chars 合流(§1.2「plaza_carry ∪ core_chars
     合流」的派生落地;3.7 持有证据按「持有任一档内成员计 CARRY 档」消费)——
-    core 全员进档(单名锚窄化会把 core 成员错档到骨架/插件档)。"""
+    core 全员进档(单名锚窄化会把 core 成员错档到插件档)。"""
     for comp in COMP_LIBRARY:
         cs = carry_set(comp)
         assert cs, comp.name

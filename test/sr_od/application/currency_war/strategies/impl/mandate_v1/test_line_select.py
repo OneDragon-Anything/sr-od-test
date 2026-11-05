@@ -4,10 +4,10 @@
 
 出处 = strategy-docs/12_line_and_intention.md §1.1-§1.3(判据唯一源)+
 design.md §2(数量级表)/§6(锁定语义):
-- §1.1 线分数 = 单值和(证据 carry/骨架/插件 + 热度 + 投资通道派生 +
+- §1.1 线分数 = 单值和(证据 carry/插件 + 热度 + 投资通道派生 +
   词缀〔含万敌燃料底线〕+ boss〔批 2 前恒 0〕;数量级常数单一源 =
   kernel/cw_line_scales);
-- §1.2 top3 候选管理(每帧重算,签名幂等)+ 证据门(env∨carry∨骨架∨
+- §1.2 top3 候选管理(每帧重算,签名幂等)+ 证据门(env∨carry∨
   插件 > 0,不含热度);
 - §1.3 锁定 = P2 时点兜底唯一路径(硬规则/即时锁全退役——P1 即锁
   行为消失为设计语义,sim 场景①)+ 空候选兜底分支;
@@ -154,8 +154,8 @@ class TestCandidates:
 
 
 class TestMagnitudeScenarios:
-    """三对照场景(design §2「sim 数值对照场景」):①单 anchor vs 多非锚
-    core ②4 骨架 vs 1 anchor ③热度满 vs 单插件。
+    """两对照场景(design §2「sim 数值对照场景」):①单 anchor vs 多非锚
+    core ②热度满 vs 单插件。
 
     场景①数值语义申报:anchor +8000 vs 非锚 core +4000(减半)——多非锚
     core(花火+符玄+缇宝 = 12000)数值上仍高于单 anchor(8000);相对旧
@@ -182,16 +182,6 @@ class TestMagnitudeScenarios:
         assert anchor_only > one_core
         assert anchor_plus_core == three_core
 
-    def test_scenario_four_skeleton_equals_one_anchor(self):
-        """②层间:4 骨架 = 1 anchor 相平(design §2 表相平点按 anchor
-        档重校)——分项常数断言(跨线同帧构造等价持有面不可复现,
-        常数关系即设计锁)。"""
-        from sr_od.application.currency_war.kernel.cw_line_scales import (
-            CARRY_ANCHOR,
-            SKELETON_BONUS,
-        )
-        assert 4 * SKELETON_BONUS == CARRY_ANCHOR
-
     def test_scenario_heat_below_single_plugin(self):
         """③热度 < 1 插件(R4-2:持有实证 > 社区先验,与字典序行为
         一致):满热度 274 点 < 插件 500;行为面 = 零证据满热度线被
@@ -213,7 +203,7 @@ class TestMagnitudeScenarios:
 class TestEvidenceGate:
     """证据门参数(候选快照消费开启版;缺省关闭 = 全量口径):
 
-    - 线入选 ⟺ 证据门分量为正(投资通道 ∨ carry ∨ 骨架 ∨ 插件——命名
+    - 线入选 ⟺ 证据门分量为正(投资通道 ∨ carry ∨ 插件——命名
       分量访问 :attr:`LineScore.gate_positive`,**不含热度**);
     - 零证据线不入候选——热度只作有证据线间的排序,不再是入选理由;
     - 开局零持有零投资 = 空候选(合法形态;时点兜底空候选分支承接)。
@@ -232,21 +222,6 @@ class TestEvidenceGate:
             frozenset({'飞霄'}), line_select.OpeningCtx(), evidence_gate=True)
         assert got == ('追击飞霄',)
 
-    def test_skeleton_evidence_lights_line(self):
-        """骨架件持有(≥1)点亮该线:key_items 成员在手 = 骨架分量非零
-        (carry 层零也入选)。"""
-        from sr_od.application.currency_war.kernel.cw_comps import (
-            carry_set,
-        )
-        comp = next(c for c in COMP_LIBRARY
-                    if c.key_items
-                    and any(n not in carry_set(c) for n in c.key_items))
-        skel = next(n for n in comp.key_items if n not in carry_set(comp))
-        got = line_select.compute_candidates(
-            frozenset({skel}), line_select.OpeningCtx(), evidence_gate=True)
-        assert comp.name in got, (
-            f'骨架件 {skel} 在手须点亮 {comp.name}(骨架分量)')
-
     def test_invest_channel_evidence_lights_line(self):
         """投资通道命中(定义卡)点亮该线——零持有也入选。"""
         got = line_select.compute_candidates(
@@ -256,7 +231,7 @@ class TestEvidenceGate:
         assert '大黑塔银河学者' in got
 
     def test_negative_affix_component_not_in_gate(self):
-        """词缀分量为负不点亮证据门(门分量集显式定义:env∨carry∨骨架∨
+        """词缀分量为负不点亮证据门(门分量集显式定义:env∨carry∨
         插件——词缀/boss 不在门内):万敌无燃料局词缀分 −100000,
         零持有零投资时仍空候选。"""
         got = line_select.compute_candidates(
@@ -526,7 +501,7 @@ def test_positive_terms_upper_bound_below_restart_magnitude():
     worst = ('', 0)
     for comp in COMP_LIBRARY:
         held_all = frozenset(comp.core_chars) \
-            | set(comp.shared_chars or ()) | set(comp.key_items or ())
+            | set(comp.shared_chars or ())
         bd = line_select.line_score_breakdown(
             comp, held_all, line_select.OpeningCtx())
         invest_max = sum(
@@ -537,7 +512,7 @@ def test_positive_terms_upper_bound_below_restart_magnitude():
             (s.score for s in affix_row_of(comp.name).values()
              if s.score > 0), reverse=True)[:4])
         equip_max = PLUGIN_BONUS * len(comp.key_equips or [])
-        total = bd.carry + bd.skeleton + bd.plugin + bd.heat \
+        total = bd.carry + bd.plugin + bd.heat \
             + invest_max + affix_max + equip_max
         if total > worst[1]:
             worst = (comp.name, total)

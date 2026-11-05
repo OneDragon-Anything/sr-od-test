@@ -179,7 +179,7 @@ class TestKSourceCandidateUnion:
         comp = get_comp('希儿量子')
         chars, _eq = cw_intention._line_hoard(comp)
         # 探针须避开两张货架资格面(or-reqs-retirement 3.4 后买面双资格
-        # 臂在役):①终局资格面(carry_set ∪ key_items)——被货架资格臂
+        # 臂在役):①终局资格面(carry_set)——被货架资格臂
         # 合法买入;②过渡资格面(五块计分域并集)——手持希儿量子 core
         # 时贝键展开件(杰帕德)在 希儿贝2 混合块计分域内,会被过渡资格
         # 臂按虚拟 top3 合法买入(语义权威版本 = strategy-docs/
@@ -199,8 +199,7 @@ class TestKSourceCandidateUnion:
             m for b in TRANSITION_BONDS for m in bond_score_members(b)}, \
             '探针落在过渡计分域内(过渡资格臂会合法买入)'
         assert missing_piece not in {
-            m for c in COMP_LIBRARY
-            for m in (carry_set(c) | set(c.key_items or ()))}, \
+            m for c in COMP_LIBRARY for m in carry_set(c)}, \
             '探针落在终局资格域内(货架资格臂会合法买入)'
         st = _state(hp=100, shop_cards=[_card(missing_piece, cost=1)])
         st['bench'] = [_bc(m) for m in comp.core_chars]
