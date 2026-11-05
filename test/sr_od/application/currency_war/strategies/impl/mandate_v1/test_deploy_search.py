@@ -77,24 +77,23 @@ def test_lock_first_tier_flip_displaces_transition() -> None:
         '锁定线一档成型(L1 ≥ 10⁷)压倒过渡加分'
 
 
-def test_or_group_takes_best_branch() -> None:
-    """OR 承接组取最优支(or_reqs = 量子 2 ∨ 贝 2):贝洛伯格支先达
-    (2 人)时按最优支计完成度,量子支半程不稀释。载体 = 手构 Comp
-    (旧过渡条目「希儿引擎」已随 or-reqs-retirement 3.2 组合制退役,
-    OR 折法语义仍在库外独立成立,机器删除归 3.3)。"""
+def test_dual_key_line_keeps_leading_branch() -> None:
+    """档 0 双键线(纯 AND)一键先达仍圈先达支:手构 Comp 档 0 =
+    量子 2 + 贝 2,贝支先达(2 人)时先达支照常入选,不被另一键
+    半程挤出(OR 折法机器已随 or-reqs-retirement 3.3 退役,圈人
+    统一走条目档 0 键组)。"""
     from sr_od.application.currency_war.kernel.cw_comps import Comp
     comp = Comp(
-        name='手构OR条目',
+        name='手构双键条目',
         core_chars=['希儿'],
         faction_reqs={0: {'量子同频': 2, '贝洛伯格': 2}},
-        or_reqs=[('量子同频', 2), ('贝洛伯格', 2)],
         need_star={'希儿': 3},
     )
     units = [_u('希儿'), _u('佩拉'), _u('杰帕德'),   # 贝 2 人支
-             _u('青雀'), _u('停云')]                 # 无关件
+             _u('青雀'), _u('停云')]                 # 量子件 + 无关件
     panel = _panel(units, locked=True, locked_comp=comp, k=4)
     out = ds.search_deploy_target(panel)
-    assert {'希儿', '佩拉', '杰帕德'} <= set(out), 'OR 组最优支(贝 2)入选'
+    assert {'希儿', '佩拉', '杰帕德'} <= set(out), '先达支(贝 2)入选'
 
 
 def test_dp_fill_captures_multi_group_tier_mix() -> None:
@@ -138,17 +137,10 @@ def test_required_deployed_missing_zeroes_l1() -> None:
     assert out_with[0] > 0.0
 
 
-def test_seele_binary_needs_two_amplifiers() -> None:
-    """希儿系二元计分(对齐现役 seele_system_formed:希儿在场 ∧ 面板
-    放大器阵营计数 ≥2——希儿本人亦量子/贝成员计入面板口径):计数
-    不足不成型,补齐第二件成型。"""
-    one_amp = [_u('希儿'), _u('青雀'), _u('彦卿')]    # 量子 1 / 贝 1(均希儿)
-    two_amp = [_u('希儿'), _u('花火'), _u('青雀')]    # 量子 2(希儿+花火)
-    panel = _panel([])
-    s1 = ds.selection_score(panel, one_amp, None, ('希儿系',))
-    s2 = ds.selection_score(panel, two_amp, None, ('希儿系',))
-    assert s1[0] == 0.0, '面板放大器计数 1:未成型'
-    assert s2[0] > 0.0, '面板放大器计数 2:成型'
+# (test_seele_binary_needs_two_amplifiers 已随 or-reqs-retirement 3.3
+#  删除:'希儿系' 伪键计分分支(L1 二元判定 + L3 成型加档)随 deploy_search
+#  希儿系机器退役——过渡部署圈人统一走条目档 0 键组(AND 语义,
+#  圈人行为由 test_dual_key_line_keeps_leading_branch 承载)。)
 
 
 def test_same_name_highest_star_wins() -> None:

@@ -55,7 +55,7 @@ def _lib(name: str) -> Comp:
 def test_library_structure_generated_combos() -> None:
     """生成器结构锁(设计 §2):库恒 10 条(五块两两组合序),档 0 = 两块
     键 AND,core/required = 两块点名件保序去重(生成期显式填),need_star
-    两块合批,其余 Comp 字段缺省空(过渡条目零 or_reqs)。"""
+    两块合批,其余 Comp 字段缺省空。"""
     assert [e.name for e in TRANSITION_LIBRARY] == [
         '仙舟3+DOT2', '仙舟3+列车2', '仙舟3+希儿量2', '仙舟3+希儿贝2',
         'DOT2+列车2', 'DOT2+希儿量2', 'DOT2+希儿贝2',
@@ -79,9 +79,9 @@ def test_library_structure_generated_combos() -> None:
     assert by_name['仙舟3+希儿量2'].need_star == {
         '爻光': 2, '藿藿': 2, '丹恒·饮月': 2, '希儿': 3}
     assert by_name['DOT2+列车2'].need_star == {}
-    # 其余 Comp 字段缺省空(过渡只填档 0;or_reqs 全库清零)
+    # 其余 Comp 字段缺省空(过渡只填档 0)
     for e in TRANSITION_LIBRARY:
-        assert e.or_reqs == [] and e.key_equips == [] \
+        assert e.key_equips == [] \
             and e.shared_chars == [] and e.flex_factions == []
 
 

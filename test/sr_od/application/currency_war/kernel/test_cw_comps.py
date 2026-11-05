@@ -236,14 +236,11 @@ def test_seele_quantum_final_tiers() -> None:
     changes/2026-11-05-or-reqs-retirement/details/seele-final-comp.md §1):
     档 0 = 量子4+贝洛伯格4 纯 AND(终局完全体,双修即唯一主流终局形态)、
     档 1 = 战技点2/治疗2(实证 53/67 与 36/67,加分层不进成型判定)、
-    flex 收敛为盛会之星/列车同行、or_reqs 清零(COMP_LIBRARY 与过渡
-    组合库全清——过渡旧「希儿引擎」条目已随 or-reqs-retirement 3.2
-    组合制退役,OR 机器删除归 3.3)。"""
+    flex 收敛为盛会之星/列车同行、required = 希儿在场。"""
     comp = get_comp('希儿量子')
     assert comp.faction_reqs == {
         0: {'量子同频': 4, '贝洛伯格': 4}, 1: {'战技点': 2, '治疗': 2}}
     assert comp.flex_factions == ['盛会之星', '列车同行']
-    assert comp.or_reqs == []
     assert comp.required_deployed == ('希儿',)
 
 

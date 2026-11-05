@@ -20,7 +20,7 @@ punished 保留,由恒等测试按解读轴消费);变化①②(副档投资分/
 - half 半成型板 = 每个档 0 键各上 ⌈目标人数/2⌉ 名该羁绊注册成员;
 - formed 成型板 = 各键达标人数;
 - mixed 混合板(全局 2 个,线对脚本内定)= 两线 core_chars 各取前半,
-  线对刻意覆盖副档/or_reqs 形态(变化①②断言面)。
+  线对刻意覆盖副档形态(变化①②断言面)。
 
 重跑(仓库根): $env:PYTHONPATH='src'; uv run python sr-od-test/test/
 sr_od/application/currency_war/kernel/fixtures/gen_faction_snapshots.py
@@ -66,11 +66,11 @@ _OUT = Path(__file__).parent / 'faction_migration_snapshots.json'
 
 _SIG = ChannelSig(family='obs', actor='GenFactionSnapshots')
 
-#: 混合板线对(脚本内定,构造确定性;两对各覆盖副档形态与 or_reqs 形态,
+#: 混合板线对(脚本内定,构造确定性;两对均覆盖副档形态,
 #: 使变化①②的断言面有实际数据)
 _MIXED_PAIRS: tuple[tuple[str, str], ...] = (
     ('列车同行·反震', '黄泉减益'),   # 两线均带副档(护盾2/击破2)
-    ('希儿量子', '万敌单C'),         # or_reqs 线 + 副档(战技点2)线
+    ('希儿量子', '万敌单C'),         # 档 0 双键线 + 副档(战技点2)线
 )
 
 _ZERO_MEMBERS: list[str] = ['白厄', '路人甲', '路人乙']
@@ -170,7 +170,7 @@ def _selection_snapshot(comp, fx: dict) -> dict:
 
 def _new_hit_bonus(faction: str, tier: int, comp) -> int:
     """变化①镜像(新语义羁绊命中档,faction-priority.md §4 投资通道行):
-    档 0/or 键 = 全档;副档键 = 降档分(INVEST_SOFT 同 flex 规则);flex
+    档 0 键 = 全档;副档键 = 降档分(INVEST_SOFT 同 flex 规则);flex
     不变。仅 ``_faction_hit_bonus`` 换轴,查询链其余环节原样。"""
     from sr_od.application.currency_war.kernel.cw_line_scales import (
         INVEST_SOFT,
@@ -178,8 +178,7 @@ def _new_hit_bonus(faction: str, tier: int, comp) -> int:
     )
     if not faction:
         return 0
-    core_keys = set(comp.core_faction_reqs) \
-        | {f for f, _t in (getattr(comp, 'or_reqs', None) or ())}
+    core_keys = set(comp.core_faction_reqs)
     if faction in core_keys:
         return tier
     if faction in set(comp.bonus_faction_reqs) \
