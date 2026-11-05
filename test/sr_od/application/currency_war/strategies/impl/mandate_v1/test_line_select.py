@@ -227,7 +227,7 @@ class TestEvidenceGate:
 
     def test_carry_evidence_lights_line(self):
         """锚在手点亮该线(证据 carry 层):飞霄 = 追击飞霄锚
-        (LINE_ANCHOR)——唯一证据线即唯一候选。"""
+        (rating_anchor)——唯一证据线即唯一候选。"""
         got = line_select.compute_candidates(
             frozenset({'飞霄'}), line_select.OpeningCtx(), evidence_gate=True)
         assert got == ('追击飞霄',)
