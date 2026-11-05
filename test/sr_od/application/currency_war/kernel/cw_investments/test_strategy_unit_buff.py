@@ -1,10 +1,10 @@
-"""星魂升华(id 253101)登记锁(cw_investments 分目录镜像;策略源
-UNIT_BUFF 族战力类零响应登记,族模式卡 = 「全队的希望」/同目录
-test_strategy_zanmei_entry.py 装备党同代形)。
+"""策略源 UNIT_BUFF 族战力类零响应登记锁,逐卡(cw_investments 分目录
+镜像;族模式卡 = 「全队的希望」/同目录 test_strategy_zanmei_entry.py
+装备党同代形)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-278-xinghun-
-shenghua.md(定稿,REVIEW 免裁 5/5)§4 锁面(卡面官方原文:「本局游戏中，
-我方前台角色的星魂提高1阶」):
+星魂升华(id 253101)测试面依据 = 迭代 2026-09-23-invest-effects-calc
+designs/T-278-xinghun-shenghua.md(定稿,REVIEW 免裁 5/5)§4 锁面
+(卡面官方原文:「本局游戏中，我方前台角色的星魂提高1阶」):
 
 - 条目锁(锁 1):UNIT_BUFF 零响应登记形 / id 253101 / trigger
   PLANE_START 占位形(无离散触发事件,对齐 _portal_placeholder_spec
@@ -22,6 +22,14 @@ shenghua.md(定稿,REVIEW 免裁 5/5)§4 锁面(卡面官方原文:「本局游�
 - 封闭集不扩锁(锁 4):本卡不入 PICK_INVEST_EFFECTS(入集 = 实现错误,
   既有封闭集断言在 test_gain_chain.py 原样保留即第二道防线)+ 不入商店
   停机钩子名单(卡面无采集需求,零响应 buff 非停机对象)。
+
+幸运闪避EX(id 351701)测试面依据 = 同迭代 designs/T-400-xingyun-
+shanbi-ex.md(定稿 v1.2)§4 五锁面(卡面官方原文:「我方小队获得25%幸运
+一击率，受到敌人攻击时，有等同于30%幸运一击率的概率使受到的伤害变为
+1。」clause 1 全队幸运一击率直增 + clause 2 受击概率伤害变换,均战斗
+内游戏侧自算 bot 零响应):条目形状(锁 1)/单一源对拍(锁 2)/封闭集不扩
+(锁 3)/绑定隔离(锁 4)/估值停机双隔离(锁 5)与星魂升华同形;同 payload
+形的获得链登记与桥 no-op 行为面由星魂升华锁承载,不重测。
 """
 from __future__ import annotations
 
@@ -67,6 +75,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.strategy_economy 
 
 _CARD = '星魂升华'
 _CID = '253101'
+
+_CARD_EX = '幸运闪避EX'
+_CID_EX = '351701'
 
 _SIG_LOGIC = ChannelSig(family='logic_action', actor='CwGainChain',
                         mode='compute')
@@ -174,4 +185,61 @@ def test_xinghun_not_in_pick_and_watch_names() -> None:
     类限定 ClassVar)。"""
     assert _CARD not in set(PICK_INVEST_EFFECTS), '本卡禁入 PICK 封闭集'
     assert _CARD not in CwScreenPrep._SPEC_INVEST_WATCH_NAMES, \
+        '本卡不入停机钩子名单'
+
+
+def test_xingyun_shanbi_entry_registered() -> None:
+    """幸运闪避EX 条目锁(锁 1):UNIT_BUFF 零响应登记形;五元组逐位 +
+    id 对拍;duties 三位全 False;pending False(概率读法/受击粒度/变换
+    边界判读申报制不冻结,零响应下两读法 bot 行为恒同);构建校验
+    import 期已过(表长按开工基线 +1 语义,无绝对数断言)。"""
+    spec = STRATEGY_EFFECTS[_CARD_EX]
+    assert spec.id == _CID_EX, 'id 对拍'
+    assert spec.name == _CARD_EX
+    assert spec.trigger is TriggerKind.PLANE_START, '占位形(无离散触发)'
+    assert spec.duration is DurationKind.WHILE_HELD, '持有期绑定'
+    assert spec.category is EffectKind.UNIT_BUFF, 'category = UNIT_BUFF'
+    assert isinstance(spec.payload, UnitBuffRef), '载荷 = UnitBuffRef'
+    assert spec.duration_nodes == 0 and spec.duration_uses == 0, \
+        'WHILE_HELD 无余期计数器'
+    assert spec.duties is not None and not (spec.duties.track
+                                            or spec.duties.predict
+                                            or spec.duties.respond), \
+        'duties 三位全 False(零响应)'
+    assert spec.pending is False, 'pending False'
+
+
+def test_xingyun_shanbi_effect_text_single_source() -> None:
+    """幸运闪避EX 单一源对拍锁(锁 2):effect_text 与 base 注册表卡面
+    原文对拍(payload 表达式经 PLAZA_AUGMENTS id 键取数,禁字面量第二
+    源;版本更新改文自动跟随,id 漂移 = StopIteration import 即炸)。"""
+    assert STRATEGY_EFFECTS[_CARD_EX].payload.effect_text \
+        == INVESTMENT_STRATEGIES[_CARD_EX].effect, \
+        'effect_text 单一源对拍(= base 注册表 .effect)'
+
+
+def test_xingyun_shanbi_cash_fail_closed() -> None:
+    """幸运闪避EX 现金分支锁(锁 5 前半):无 STRATEGY_ECONOMY 条目 →
+    估值 fail-closed (0.0, False)(战力类不进经济模型,防未来误加
+    STRATEGY_ECONOMY 条目或通道误开)。"""
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    assert strategy_economy_value(_CARD_EX, gs) == (0.0, False)
+
+
+def test_xingyun_shanbi_no_faction_binding() -> None:
+    """幸运闪避EX 绑定不绑锁(锁 4):全队泛用数值直增不入显式绑定表
+    (登记判据:效果引用阵容专属机制/召唤物/星徽/赠 key 角色才绑);公开
+    绑定读端 fail-closed 空元组。"""
+    assert _CARD_EX not in _STRATEGY_BINDINGS_EXPLICIT, '显式绑定表零触碰'
+    assert _CARD_EX not in STRATEGY_BINDINGS, '派生绑定表零触碰'
+    assert strategy_bindings(INVESTMENT_STRATEGIES[_CARD_EX]) \
+        == (frozenset(), frozenset()), '表外默认空绑定(fail-closed)'
+
+
+def test_xingyun_shanbi_not_in_pick_and_watch_names() -> None:
+    """幸运闪避EX 封闭集不扩 + 停机钩子零成员(锁 3 + 锁 5 后半):零响应
+    登记非效果体卡不入 PICK(入集 = 实现错误);卡面无采集需求,不入商店
+    停机钩子名单(名单访问形 = 类限定 ClassVar)。"""
+    assert _CARD_EX not in set(PICK_INVEST_EFFECTS), '本卡禁入 PICK 封闭集'
+    assert _CARD_EX not in CwScreenPrep._SPEC_INVEST_WATCH_NAMES, \
         '本卡不入停机钩子名单'
