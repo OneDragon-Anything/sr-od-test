@@ -75,7 +75,7 @@ _EXPECTED_KEYS: frozenset[str] = frozenset({
     '开源节流',
     '公司严选',
     '搜打撤',
-    '分解万物', '完美进化', '幸运之子', '超光速提拔', '榜样的力量·彩', '万箭齐发', '后勤超响应', '三五成群', '基本保障', '战术义眼+',
+    '分解万物', '完美进化', '幸运之子', '超光速提拔', '榜样的力量·彩', '万箭齐发', '后勤超响应', '三五成群', '基本保障', '更快,更幸运', '战术义眼+',
 })
 
 
@@ -86,7 +86,7 @@ def test_strategy_effects_keyset_closed() -> None:
         'STRATEGY_EFFECTS 键集漂移:\n'
         f'  缺员: {sorted(set(_EXPECTED_KEYS) - set(STRATEGY_EFFECTS))}\n'
         f'  多员: {sorted(set(STRATEGY_EFFECTS) - set(_EXPECTED_KEYS))}')
-    assert len(STRATEGY_EFFECTS) == 97, '基数申报对账(effect-domain §5)'
+    assert len(STRATEGY_EFFECTS) == 98, '基数申报对账(effect-domain §5)'
 
 
 def test_strategy_effects_keys_unique_ids() -> None:
