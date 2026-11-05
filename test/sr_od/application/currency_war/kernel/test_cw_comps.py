@@ -223,6 +223,14 @@ def test_equip_assign_build_validation() -> None:
         _validate_comp_equip_assign([Comp(name='x', core_chars=['甲'])])
 
 
+def test_shared_chars_echo_validation() -> None:
+    """双列回声建库校验(core∩shared=∅;回声防线):终局成员身份由
+    core 列单列承载,shared 列重复登记(双列回声)构造即炸;全库正值面
+    由 import 期校验承载,本测试锁非法构造即炸的负例行为。"""
+    with pytest.raises(ValueError, match='交集非空'):
+        Comp(name='x', core_chars=['甲', '乙'], shared_chars=['乙', '丙'])
+
+
 def test_member_priority_two_tier_derivation() -> None:
     """成员优先级两档派生语义(统一让位优先级迭代 design §2.1.1):
     ``member_rank_of`` = core 0/其余 1 现算——字段化形态已退役
@@ -230,17 +238,17 @@ def test_member_priority_two_tier_derivation() -> None:
     全库等价 + 读口语义。
 
     - 全库:每套 member_rank_of 覆盖 core ∪ shared 且取值与两档派生式一致;
-    - 同名双列(core ∩ shared,列车同行三月七类)core 优先;
+    - core 档恒 0(三月七 = 双列回声清理后终局身份由 core 单列承载的实例);
     - 手构 Comp(含 pair 伪阵容同路径)派生即两档。"""
     for comp in COMP_LIBRARY:
         expected = {n: (0 if n in comp.core_chars else 1)
                     for n in set(comp.core_chars) | set(comp.shared_chars)}
         assert member_rank_of(comp) == expected, f'{comp.name} 两档派生'
     assert member_rank_of(get_comp('列车同行·反震'))['三月七'] == 0, \
-        '同名双列 core 优先'
+        'core 档恒 0'
     hand = Comp(name='手构线', core_chars=['甲', '乙'],
                 faction_reqs={},
-                shared_chars=['乙', '丙'])
+                shared_chars=['丙'])
     assert member_rank_of(hand) == {'甲': 0, '乙': 0, '丙': 1}, \
         '派生即两档'
     assert derive_member_priority(hand) == {'甲': 0, '乙': 0, '丙': 1}
