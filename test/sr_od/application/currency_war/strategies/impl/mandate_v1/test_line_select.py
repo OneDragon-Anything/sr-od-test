@@ -665,20 +665,24 @@ class TestFinalLockTransitionRetirement:
         assert st.transition_candidates == (), '零持有开局候选空'
         assert session_scope.direction_comp_of(gs) is None, \
             '空板面无方向 → K 空窗回退域(冷启动臂承接)'
-        # 持有点名件:候选点亮 + 方向 = 候选首位条目(四层优先现读)
+        # 持有点名件:候选点亮 + 方向 = 候选首位条目(四层优先现读)。
+        # 持有希儿+花火:希儿量2 块 2 分(希儿花火)、希儿贝2 块 1 分
+        # (希儿)→ 2 分组合按注册序占前 3(or-reqs-retirement 3.2)。
         cw4_gs(sess, plane=1, round_num=10, node='prep',
                bench=[cw4_bc('希儿'), cw4_bc('花火')])
         gs.node_hist_pos = (1, 10)
         strat._refresh_direction(gs, st)
-        assert st.transition_candidates == ('希儿引擎',), '候选点亮'
-        assert session_scope.direction_comp_of(gs).name == '希儿引擎'
+        assert st.transition_candidates == (
+            '仙舟3+希儿量2', 'DOT2+希儿量2', '列车2+希儿量2'), '候选点亮'
+        assert session_scope.direction_comp_of(gs).name == '仙舟3+希儿量2'
         # 进位面 2(未终局锁定):候选机器照常驱动,槽不清(换轴)
         cw4_gs(sess, plane=2, round_num=1, node='prep',
                bench=[cw4_bc('希儿'), cw4_bc('花火')])
         gs.node_hist_pos = (2, 1)
         session_scope.handle_node_boundary(gs)
         strat._refresh_direction(gs, st)
-        assert st.transition_candidates == ('希儿引擎',), \
+        assert st.transition_candidates == (
+            '仙舟3+希儿量2', 'DOT2+希儿量2', '列车2+希儿量2'), \
             '位面 2 未终局锁定帧过渡层照常活跃(行为申报 6)'
         assert st.target_comp is None, '未终局锁窗(P2 首帧未选卡)'
         # 终局锁定写入:候选槽同点清空,方向读口 = 锁定线
@@ -709,7 +713,7 @@ class TestFinalLockTransitionRetirement:
         sess = StrategySession()
         gs = game_state_of(sess)
         st = state_of(gs)
-        st.transition_candidates = ('希儿引擎',)   # 过期残留(哨兵)
+        st.transition_candidates = ('希儿量2+希儿贝2',)   # 过期残留(哨兵)
         st.target_comp = get_comp('列车同行·反震')   # 终局锁定
         assert session_scope.direction_comp_of(gs) is st.target_comp
 
@@ -887,11 +891,11 @@ class TestBoundaryKeepsDirectionState:
         st = state_of(gs)
         comp = cw4_comp()
         write_line_lock(gs, comp.name)
-        st.transition_candidates = ('希儿引擎',)
+        st.transition_candidates = ('希儿量2+希儿贝2',)
         gs.node_hist_pos = (1, 5)
         handle_node_boundary(gs)
         assert st.target_comp is comp           # 锁定跨节点保留(锁定线槽)
-        assert st.transition_candidates == ('希儿引擎',), \
+        assert st.transition_candidates == ('希儿量2+希儿贝2',), \
             '过渡候选槽跨节点保留(贵段重算自写,非节点作用域键)'
         assert st.line_eval_signature is None     # 签名置失效(对照)
 

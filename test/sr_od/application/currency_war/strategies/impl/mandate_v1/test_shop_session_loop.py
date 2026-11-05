@@ -1312,8 +1312,8 @@ class TestColdStartArm:
 
     def test_candidate_slot_formed_stops_arm_within_session(self):
         """候选槽形成即停(换轴后退出判据,与新计分同源——旧「三羁绊
-        支持度会话内现算」判据随体系对机器退役):持有艾丝妲(廉价DOT
-        计分基准成员)→ 过渡候选机器驱动后候选槽非空 → 冷启动停;
+        支持度会话内现算」判据随体系对机器退役):持有艾丝妲(DOT2 块
+        计分域成员)→ 过渡候选机器驱动后候选槽非空 → 冷启动停;
         货架三月七(1 费,冷启动域内件)不被冷启动买入——同帧它经
         资格臂(列车 CARRY + 虚拟 top3)买入,reason 通道分离即退出
         判据生效证据。"""
@@ -1329,7 +1329,9 @@ class TestColdStartArm:
             st.v3_intention = IntentionState()
         update_transition_candidates(
             gs, st.v3_intention, st=st)   # 方向节拍贵段同参驱动(槽点亮)
-        assert st.transition_candidates == ('廉价DOT',), '候选槽形成前置'
+        # 艾丝妲只在 DOT2 块域 → 含 DOT2 的组合同分 1,tie-break 注册序
+        assert st.transition_candidates == (
+            '仙舟3+DOT2', 'DOT2+列车2', 'DOT2+希儿量2'), '候选槽形成前置'
         act = live.decide_shop_action()
         assert isinstance(act, CwActionBuyCardParam), f'非买入: {act!r}'
         assert act.reason != 'cold_start_buy', \

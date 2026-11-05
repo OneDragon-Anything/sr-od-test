@@ -34,9 +34,9 @@ def test_final_lock_retires_transition_layer() -> None:
                 bench=[cw4_bc('希儿'), cw4_bc('花火')],
                 shop_screen='off')
     st = state_of(gs)
-    st.transition_candidates = ('希儿引擎',)
+    st.transition_candidates = ('希儿量2+希儿贝2',)
     st.v3_intention = IntentionState()
-    st.v3_intention.transition_locked = '希儿引擎'
+    st.v3_intention.transition_locked = '希儿量2+希儿贝2'
     session_scope.write_line_lock(gs, '希儿量子')
     assert st.transition_candidates == (), '终局锁定写入点清空候选槽'
     assert st.v3_intention.transition_locked == '', \
@@ -56,16 +56,16 @@ def test_plane_switch_keeps_transition_layer() -> None:
     gs.node_hist_pos = (1, 9)
     strat = MandateV1Strategy(gs, SimpleNamespace(strategy_seed=None))
     st = state_of(gs)
-    st.transition_candidates = ('廉价DOT',)
+    st.transition_candidates = ('DOT2+列车2',)
     st.v3_intention = IntentionState()
-    st.v3_intention.transition_locked = '廉价DOT'
+    st.v3_intention.transition_locked = 'DOT2+列车2'
     strat._refresh_direction(gs, st)
     # 进位面 2(未终局锁定):清空不发生
     cw4_gs(sess, plane=2, round_num=1, node='prep', shop_screen='off')
     gs.node_hist_pos = (2, 1)
     session_scope.handle_node_boundary(gs)
     strat._refresh_direction(gs, st)
-    assert st.v3_intention.transition_locked == '廉价DOT', \
+    assert st.v3_intention.transition_locked == 'DOT2+列车2', \
         '位面切换不触发过渡层退役(生命周期挂钩终局锁定事件)'
     assert st.target_comp is None
 

@@ -240,7 +240,7 @@ def test_committed_authority_semantics(case: str):
         state_of(sess).target_comp = get_comp('万敌单C')   # 锁定线槽直种
     else:   # transition_lock_committed(序②替代口径:过渡锁定态非空)
         state_of(sess).v3_intention = IntentionState(
-            transition_locked='希儿引擎')
+            transition_locked='希儿量2+希儿贝2')
     assert committed_authority(_gs_state(1, 8), sess) is True
 # (门控等价测试 test_p1_pair_gate_equivalence_with_gate_first 已随
 #  配方决策层退役删除——被测等价式(p1_pair ⟺ 门控首位)两端全为

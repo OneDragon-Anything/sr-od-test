@@ -560,7 +560,7 @@ def test_unlocked_frame_candidates_union_and_recipe_members() -> None:
     gs = cw4_gs(session, level=7, bench=[])
     st = state_of(gs)
     st.line_candidates = ('列车同行·反震', '火花星间旅人')
-    st.transition_candidates = ('希儿引擎',)
+    st.transition_candidates = ('希儿量2+希儿贝2',)
     ctx = assemble_priority_context(
         session, gs, deployed_names=frozenset())
     assert not ctx.line_view.locked
@@ -570,11 +570,11 @@ def test_unlocked_frame_candidates_union_and_recipe_members() -> None:
                        get_comp('火花星间旅人').need_star[_HUA])
     assert ctx.need_star_by_member.get(_HUA) == expected_hua
     # 过渡层贡献名单并入(过渡支 = 条目见即买集)。
-    expected_recipe = transition_member_set(transition_entry_of('希儿引擎'))
+    expected_recipe = transition_member_set(transition_entry_of('希儿量2+希儿贝2'))
     assert ctx.recipe_members == frozenset(expected_recipe), \
         '过渡候选条目成员非空(见即买集展开)'
     # 序数二元组:候选 core (0,0) 高优先级、候选 shared (0,1) 低档;
-    # 重叠成员(过渡 ∩ 候选——花火/银狼均量子同频 ∈ 希儿引擎放大器池)
+    # 重叠成员(过渡 ∩ 候选——花火/银狼均量子同频 ∈ 希儿量2 块放大器池)
     # 取终局值(零特判)。
     assert ctx.member_rank.get(_HUA) == (0, 0), '重叠归终元:花火 = 候选 core'
     assert ctx.member_rank.get('银狼') == (0, 1), \
@@ -623,7 +623,7 @@ def test_recipe_members_stay_low_priority() -> None:
     gs = cw4_gs(session, level=7, bench=[])
     st = state_of(gs)
     st.line_candidates = ('火花星间旅人', '双王圣杯')
-    st.transition_candidates = ('希儿引擎',)
+    st.transition_candidates = ('希儿量2+希儿贝2',)
     ctx = assemble_priority_context(session, gs, deployed_names=frozenset())
     recipe_only = ctx.recipe_members - ctx.candidate_members
     assert recipe_only, '纯过渡支非空(希儿类,前置)'
@@ -686,15 +686,15 @@ def test_member_rank_migration_equivalence() -> None:
 
 
 def _final_locked_gs(plane: int = 1):
-    """终局锁定种子(两景共用):锁定线 = 双王圣杯,过渡候选 = 廉价DOT
-    (注册表事实:卡芙卡 ∈ 廉价DOT ∉ 锁定线);bench 持卡芙卡 1★,
+    """终局锁定种子(两景共用):锁定线 = 双王圣杯,过渡候选 = DOT2+列车2
+    (注册表事实:卡芙卡 ∈ DOT2 块域 ∉ 锁定线);bench 持卡芙卡 1★,
     场上镜流中性件。"""
     session = cw4_session()
     gs = cw4_gs(session, plane=plane, level=7, bench=[cw4_bc('卡芙卡')],
                 front_row=[Unit(char_id='镜流', star=1)])
     st = state_of(gs)
     st.target_comp = get_comp('双王圣杯')
-    st.transition_candidates = ('廉价DOT',)
+    st.transition_candidates = ('DOT2+列车2',)
     return session, gs
 
 
@@ -721,7 +721,7 @@ def test_p2_unlocked_frame_recipe_branch_stays_active() -> None:
     gs = cw4_gs(session, plane=2, level=7, bench=[cw4_bc('卡芙卡')])
     st = state_of(gs)
     st.plane2_started = True
-    st.transition_candidates = ('廉价DOT',)
+    st.transition_candidates = ('DOT2+列车2',)
     ctx = assemble_priority_context(
         session, gs, deployed_names=frozenset())
     assert not ctx.line_view.locked
@@ -768,21 +768,21 @@ def test_transition_rank_dual_layer_and_min_position() -> None:
     位次;重叠成员归终元(rank 取终局值,装配序承载零特判);点名
     成员按条目 need_star 入表,未点名成员缺省 1。
 
-    种槽:候选 1 = 仙舟铁三角(点名 爻光/藿藿/丹恒·饮月 → (1, 0)),
-    候选 2 = 希儿引擎(点名 希儿 → (1, 0);量子/贝放大器 = 羁绊半边,
-    表外落判定端缺省)。符玄 = 量子同频 ∈ 希儿引擎放大器池 ∧ 双王
-    圣杯候选 core → 归终元 (0, 0)。"""
+    种槽:候选 1 = 仙舟3+DOT2(点名 爻光/藿藿/丹恒·饮月 → (1, 0)),
+    候选 2 = 希儿量2+希儿贝2(点名 希儿 → (1, 0);量子/贝放大器 =
+    羁绊半边,表外落判定端缺省)。符玄 = 量子同频 ∈ 希儿量2 块放大器
+    池 ∧ 双王圣杯候选 core → 归终元 (0, 0)。"""
     session = cw4_session()
     gs = cw4_gs(session, level=7, bench=[])
     st = state_of(gs)
     st.line_candidates = ('双王圣杯',)
-    st.transition_candidates = ('仙舟铁三角', '希儿引擎')
+    st.transition_candidates = ('仙舟3+DOT2', '希儿量2+希儿贝2')
     ctx = assemble_priority_context(session, gs, deployed_names=frozenset())
     # 点名成员 = (1, 线内位次 0)(条目 core 两档派生)。
     assert ctx.member_rank['爻光'] == (1, 0), \
-        '点名过渡成员 (1, 0)(仙舟铁三角 core)'
+        '点名过渡成员 (1, 0)(仙舟3+DOT2 core)'
     assert ctx.member_rank['希儿'] == (1, 0), \
-        '点名过渡成员 (1, 0)(希儿引擎 core;跨条目同名取最小位次)'
+        '点名过渡成员 (1, 0)(希儿量2+希儿贝2 core;跨条目同名取最小位次)'
     # 羁绊半边成员(放大器/凑数件)不入序数表 → 判定端缺省
     # RANK_TRANSITION_BOTTOM(佩拉 ∈ 贝洛伯格全体 ∉ core∪shared)。
     assert '佩拉' in ctx.recipe_members
@@ -808,7 +808,7 @@ def test_transition_member_bottom_in_same_tier() -> None:
                 bench=[cw4_bc('瓦尔特'), cw4_bc('桑博')])
     st = state_of(gs)
     st.line_candidates = ('列车同行·反震',)
-    st.transition_candidates = ('廉价DOT',)
+    st.transition_candidates = ('DOT2+列车2',)
     ctx = assemble_priority_context(session, gs, deployed_names=frozenset())
     k_walt = sort_key(HeldUnit('瓦尔特', 1, 0, False), ctx)
     k_mar = sort_key(HeldUnit('桑博', 1, 1, False), ctx)
@@ -816,7 +816,7 @@ def test_transition_member_bottom_in_same_tier() -> None:
         '两者均档 7(need 1 持 1★ 未到两星,谓词同构)'
     assert ctx.member_rank['瓦尔特'][0] == 0, '终局成员层 0'
     assert '桑博' not in ctx.member_rank, \
-        '羁绊型成员不入序数表(判定端缺省过渡层末位)'
+        '羁绊半边成员不入序数表(判定端缺省过渡层末位)'
     assert k_walt < k_mar, \
         '同档内终局 (0,r) 键小后卖、过渡 (1,r) 键大先让(垫底)'
     pool: list[HeldUnit | ShopUnit] = [
@@ -846,7 +846,7 @@ def test_transition_completed_unit_tier4_same_predicates() -> None:
     兜底档 10(保留张谓词与等价群自愈随档复制,零例外)。"""
     session = cw4_session()
     gs = cw4_gs(session, level=7, bench=[cw4_bc('卡芙卡', star=2)])
-    state_of(gs).transition_candidates = ('廉价DOT',)
+    state_of(gs).transition_candidates = ('DOT2+列车2',)
     ctx = assemble_priority_context(session, gs, deployed_names=frozenset())
     assert sort_key(HeldUnit('卡芙卡', 2, 0, False), ctx)[0] == 4, \
         '过渡 2★ 保留张同构进档 4(未点名成员 need 缺省 1)'
@@ -856,7 +856,7 @@ def test_transition_completed_unit_tier4_same_predicates() -> None:
     # (行为变化申报:过渡条目点名成员星级保护生效)。
     session_ns = cw4_session()
     gs_ns = cw4_gs(session_ns, level=7, bench=[cw4_bc('希儿')])
-    state_of(gs_ns).transition_candidates = ('希儿引擎',)
+    state_of(gs_ns).transition_candidates = ('希儿量2+希儿贝2',)
     ctx_ns = assemble_priority_context(session_ns, gs_ns,
                                        deployed_names=frozenset())
     assert sort_key(HeldUnit('希儿', 1, 0, False), ctx_ns)[0] == 3, \
@@ -865,7 +865,7 @@ def test_transition_completed_unit_tier4_same_predicates() -> None:
     # 等价群 [2,2] 经 bench 两张 2★ 种入)。
     session2 = cw4_session()
     gs2 = cw4_gs(session2, level=7, bench=[cw4_bc('卡芙卡')])
-    state_of(gs2).transition_candidates = ('廉价DOT',)
+    state_of(gs2).transition_candidates = ('DOT2+列车2',)
     ctx1 = assemble_priority_context(session2, gs2,
                                      deployed_names=frozenset())
     assert sort_key(HeldUnit('卡芙卡', 1, 0, False), ctx1)[0] == 7, \
@@ -873,7 +873,7 @@ def test_transition_completed_unit_tier4_same_predicates() -> None:
     session3 = cw4_session()
     gs3 = cw4_gs(session3, level=7,
                  bench=[cw4_bc('卡芙卡', star=2), cw4_bc('卡芙卡', star=2)])
-    state_of(gs3).transition_candidates = ('廉价DOT',)
+    state_of(gs3).transition_candidates = ('DOT2+列车2',)
     ctx2 = assemble_priority_context(session3, gs3,
                                      deployed_names=frozenset())
     assert sort_key(HeldUnit('卡芙卡', 2, 0, False), ctx2)[0] == 10, \
@@ -888,13 +888,13 @@ def test_interest_exempt_covers_transition_members() -> None:
     跟随。"""
     session = cw4_session()
     gs = cw4_gs(session, level=7, bench=[cw4_bc('卡芙卡')])
-    state_of(gs).transition_candidates = ('廉价DOT',)
+    state_of(gs).transition_candidates = ('DOT2+列车2',)
     ctx = assemble_priority_context(session, gs, deployed_names=frozenset())
     assert interest_exempt_member('卡芙卡', ctx), \
         '过渡在建件(1★ 未到两星)受凑息豁免'
     session2 = cw4_session()
     gs2 = cw4_gs(session2, level=7, bench=[cw4_bc('卡芙卡', star=2)])
-    state_of(gs2).transition_candidates = ('廉价DOT',)
+    state_of(gs2).transition_candidates = ('DOT2+列车2',)
     ctx2 = assemble_priority_context(session2, gs2,
                                      deployed_names=frozenset())
     assert not interest_exempt_member('卡芙卡', ctx2), \

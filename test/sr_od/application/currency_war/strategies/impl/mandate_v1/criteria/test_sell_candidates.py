@@ -486,7 +486,7 @@ class TestSellLineMembershipSingleAdmission:
         sess, gs = _mk_gs()
         st = state_of(gs)
         st.target_comp = get_comp('双王圣杯')
-        st.transition_candidates = ('廉价DOT',)
+        st.transition_candidates = ('DOT2+列车2',)
         assert sell_line_membership(gs) \
             == frozenset(cw4_members(get_comp('双王圣杯')))
         assert '卡芙卡' not in sell_line_membership(gs), \
@@ -498,22 +498,22 @@ class TestSellLineMembershipSingleAdmission:
         sess, gs = _mk_gs()
         st = state_of(gs)
         st.plane2_started = True
-        st.transition_candidates = ('廉价DOT',)
+        st.transition_candidates = ('DOT2+列车2',)
         assert '卡芙卡' in sell_line_membership(gs), \
             '位面 2 未终局锁定帧过渡支照常贡献'
 
     def test_unlocked_union_candidates_and_recipe(self):
         """未锁定:身份集 = 实候选三线成员并集 ∪ 过渡层贡献名单(条目
-        见即买集展开;混合型含点名件与放大器全体)。"""
+        见即买集展开;混合块含点名件与放大器全体)。"""
         sess, gs = _mk_gs()
         st = state_of(gs)
         st.line_candidates = ('列车同行·反震',)
-        st.transition_candidates = ('希儿引擎',)
+        st.transition_candidates = ('希儿量2+希儿贝2',)
         from sr_od.application.currency_war.kernel.cw_intention import (
             transition_entry_of,
         )
         expected = set(cw4_members(get_comp('列车同行·反震'))) \
-            | transition_member_set(transition_entry_of('希儿引擎'))
+            | transition_member_set(transition_entry_of('希儿量2+希儿贝2'))
         assert sell_line_membership(gs) == frozenset(expected)
         assert '瓦尔特' in sell_line_membership(gs), '候选支(列车同行·反震)'
         assert '佩拉' in sell_line_membership(gs), '过渡支(放大器成员)'
@@ -536,7 +536,7 @@ class TestP1LockedSellPoolNarrowing:
             [cw4_bc('卡芙卡'), cw4_bc('星期日')], level=5)
         st = state_of(gs)
         st.target_comp = get_comp('列车同行·反震')
-        st.transition_candidates = ('廉价DOT',)
+        st.transition_candidates = ('DOT2+列车2',)
         cands, why = evaluate_sell_candidates(gs, 'ore_make_room')
         assert why == ''
         assert '星期日' not in _names(cands), \

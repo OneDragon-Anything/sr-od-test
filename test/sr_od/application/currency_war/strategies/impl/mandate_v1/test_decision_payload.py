@@ -101,7 +101,7 @@ def test_unlocked_transition_frame_direction_and_members() -> None:
     strat = _make(gs)
     st = state_of(gs)
     st.line_candidates = ('专家桑博DOT',)
-    st.transition_candidates = ('希儿引擎',)
+    st.transition_candidates = ('希儿量2+希儿贝2',)
 
     payload = strat.decision_payload()
 
@@ -113,13 +113,13 @@ def test_unlocked_transition_frame_direction_and_members() -> None:
     # (读口 = sell_line_membership)。
     expected_members = set(cw4_members(get_comp('专家桑博DOT'))) \
         | cw_intention.transition_member_set(
-            cw_intention.transition_entry_of('希儿引擎'))
+            cw_intention.transition_entry_of('希儿量2+希儿贝2'))
     assert payload['k_members'] == sorted(expected_members)
     assert payload['k_fallback'] == {'hit': False, 'band': ''}
     # 过渡候选槽照录(条目名 list 序列化形态);member_rank 二元组:
     # 终局半边 = 候选线序数表,过渡点名成员 (1, 0)、重叠归终局
     # (桑博 = 专家桑博DOT core)。
-    assert payload['transition_candidates'] == ['希儿引擎']
+    assert payload['transition_candidates'] == ['希儿量2+希儿贝2']
     assert payload['member_rank'].get('桑博') == (0, 0)
     assert payload['member_rank'].get('希儿') == (1, 0)
 

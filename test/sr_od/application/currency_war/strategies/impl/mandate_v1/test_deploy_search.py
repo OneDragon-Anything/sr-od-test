@@ -40,7 +40,7 @@ def test_p1_early_scatter_board_fills_l3() -> None:
 
 
 def test_p1_system_skeleton_beats_scatter() -> None:
-    """未终局锁定的过渡条目骨架成型 > 全散件板:仙舟铁三角条目在场,
+    """未终局锁定的过渡条目骨架成型 > 全散件板:仙舟3+DOT2 条目在场,
     候选含条目骨架板(仙舟档 L1),L1 压倒 L3 散件——最优板至少 3 仙舟
     (一档成型;第 4 席留 L3 竞争,断言不写死哪件)。"""
     from sr_od.application.currency_war.kernel.cw_intention import (
@@ -50,7 +50,7 @@ def test_p1_system_skeleton_beats_scatter() -> None:
     xianzhou = [_u('青雀'), _u('停云'), _u('藿藿'), _u('彦卿')]
     out_xz = ds.search_deploy_target(
         _panel([*xianzhou, *scatter], k=4,
-               transition_comps=(transition_entry_of('仙舟铁三角'),)))
+               transition_comps=(transition_entry_of('仙舟3+DOT2'),)))
     assert len({'青雀', '停云', '藿藿', '彦卿'} & set(out_xz)) >= 3, \
         f'体系件凑档(≥3 仙舟)优先于散件,实际 {sorted(out_xz)}'
     # 对照:无体系件时散件板照常。
@@ -79,13 +79,17 @@ def test_lock_first_tier_flip_displaces_transition() -> None:
 
 def test_or_group_takes_best_branch() -> None:
     """OR 承接组取最优支(or_reqs = 量子 2 ∨ 贝 2):贝洛伯格支先达
-    (2 人)时按最优支计完成度,量子支半程不稀释。载体 = 过渡条目
-    「希儿引擎」(or_reqs 现行唯一持有条目——终局希儿量子已随
-    or-reqs-retirement 3.1 改档纯 AND,不再持 or_reqs)。"""
-    from sr_od.application.currency_war.kernel.cw_intention import (
-        transition_entry_of,
+    (2 人)时按最优支计完成度,量子支半程不稀释。载体 = 手构 Comp
+    (旧过渡条目「希儿引擎」已随 or-reqs-retirement 3.2 组合制退役,
+    OR 折法语义仍在库外独立成立,机器删除归 3.3)。"""
+    from sr_od.application.currency_war.kernel.cw_comps import Comp
+    comp = Comp(
+        name='手构OR条目',
+        core_chars=['希儿'],
+        faction_reqs={0: {'量子同频': 2, '贝洛伯格': 2}},
+        or_reqs=[('量子同频', 2), ('贝洛伯格', 2)],
+        need_star={'希儿': 3},
     )
-    comp = transition_entry_of('希儿引擎')
     units = [_u('希儿'), _u('佩拉'), _u('杰帕德'),   # 贝 2 人支
              _u('青雀'), _u('停云')]                 # 无关件
     panel = _panel(units, locked=True, locked_comp=comp, k=4)

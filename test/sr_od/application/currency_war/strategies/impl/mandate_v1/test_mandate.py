@@ -29,15 +29,15 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 
 
 def _p2_unlocked_seed(plane2: bool = True):
-    """位面 2 未终局锁定种子:过渡候选 = 廉价DOT(注册表事实:卡芙卡
-    ∈ 廉价DOT,无锁定线);终局锁定态缺省未置。"""
+    """位面 2 未终局锁定种子:过渡候选 = DOT2+列车2(注册表事实:卡芙卡
+    ∈ DOT2 块域,无锁定线);终局锁定态缺省未置。"""
     session = cw4_session()
     gs = cw4_gs(session, plane=2 if plane2 else 1, level=7,
                 bench=[cw4_bc('卡芙卡')], node='prep')
     st = state_of(gs)
     if plane2:
         st.plane2_started = True
-    st.transition_candidates = ('廉价DOT',)
+    st.transition_candidates = ('DOT2+列车2',)
     return gs
 
 
@@ -47,7 +47,8 @@ def test_snapshot_frame_k_members_p2_unlocked_union() -> None:
     锁定即退役收敛——锁定帧名单 = 锁定线单源);排序序承载。"""
     gs = _p2_unlocked_seed()
     frame = snapshot_frame(gs)
-    expected = {'卡芙卡', '桑博', '椒丘', '海瑟音', '艾丝妲', '黑天鹅'}
+    expected = {'卡芙卡', '桑博', '椒丘', '海瑟音', '艾丝妲', '黑天鹅',
+                '姬子·启行', '三月七'}
     assert set(frame.k_members) == expected
     assert frame.k_members == tuple(sorted(expected))
     assert '卡芙卡' in frame.k_members, '过渡成员随换源可见(位面 2 照收)'
@@ -60,7 +61,7 @@ def test_snapshot_frame_k_members_final_lock_line_only() -> None:
     gs = cw4_gs(session, level=7, bench=[cw4_bc('卡芙卡')], node='prep')
     st = state_of(gs)
     st.target_comp = get_comp('双王圣杯')
-    st.transition_candidates = ('廉价DOT',)
+    st.transition_candidates = ('DOT2+列车2',)
     frame = snapshot_frame(gs)
     assert set(frame.k_members) == set(cw4_members(get_comp('双王圣杯')))
     assert '卡芙卡' not in frame.k_members
