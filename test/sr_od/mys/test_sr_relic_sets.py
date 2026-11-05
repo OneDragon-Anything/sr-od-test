@@ -21,7 +21,13 @@ from unittest.mock import MagicMock
 import pytest
 
 import sr_od.mys.sr_relic_sets as sr_relic_sets
-from sr_od.mys.sr_relic_sets import RELIC_SETS, build_set_effects, resolve_set_name
+from sr_od.mys.sr_relic_sets import (
+    RELIC_SETS,
+    build_set_effects,
+    icon_webp_rel_path,
+    resolve_set_by_tid,
+    resolve_set_name,
+)
 
 _MESSENGER_PIECES: list[str] = [
     '信使的全息目镜', '信使的百变义手', '信使的密信挎包', '信使的酷跑板鞋',
@@ -148,3 +154,45 @@ def test_set_names_unique_across_all_sets() -> None:
     """防御纵深：RELIC_SETS 内 set_name 重复会令 _SET_BY_NAME 静默 last-wins（T-1 验收 F2）。"""
     names = [s.set_name for s in RELIC_SETS]
     assert len(names) == len(set(names))
+
+
+def test_set_id_biject_with_list_order() -> None:
+    """set_id 增量固化（2026-11-05）：62 套全非零且唯一；与列表序严格双射
+    （隧洞第 i 套 = 101+i、位面第 i 套 = 301+i——双源实证：tid 公式 43 套
+    + 解包图标名对照 19 套，见 sr_relic_sets 模块 docstring）。锚点取 tid
+    实证套（信使=114 / 翁瓦克=308）与图标对照套（伶人=133 / 寰宇=328）。"""
+    cavern_sets = [s for s in RELIC_SETS if s.kind == 'cavern']
+    ornament_sets = [s for s in RELIC_SETS if s.kind == 'ornament']
+
+    set_ids = [s.set_id for s in RELIC_SETS]
+    assert all(set_ids)
+    assert len(set_ids) == len(set(set_ids))
+    assert [s.set_id for s in cavern_sets] == list(range(101, 101 + len(cavern_sets)))
+    assert [s.set_id for s in ornament_sets] == list(range(301, 301 + len(ornament_sets)))
+
+    by_name = {s.set_name: s for s in RELIC_SETS}
+    assert by_name['骇域漫游的信使'].set_id == 114
+    assert by_name['生命的翁瓦克'].set_id == 308
+    assert by_name['戏梦点星的伶人'].set_id == 133
+    assert by_name['寰宇生研院'].set_id == 328
+
+
+def test_resolve_set_by_tid() -> None:
+    """tid 反查：隧洞（60000 段）与位面（50000 段）锚点命中套装定义；
+    未知 tid 返回 None 不抛异常。公式 = base+set_id*10+pos。"""
+    assert resolve_set_by_tid(61013).set_name == '云无留迹的过客'
+    assert resolve_set_by_tid(53076).set_name == '盗贼公国塔利亚'
+    assert resolve_set_by_tid(0) is None
+
+
+def test_piece_desc_obtain_and_icon_path() -> None:
+    """单件 desc / 套装 obtain 齐备形态（192/62 全非空，纯展示文本透传）；
+    图标寻址公式锚点（192 件归档的地址契约，文件存在性不在此锁）。"""
+    pieces = [p for s in RELIC_SETS for p in s.pieces]
+    assert all(p.desc for p in pieces)
+    assert all(s.obtain for s in RELIC_SETS)
+
+    messenger = next(s for s in RELIC_SETS if s.set_name == '骇域漫游的信使')
+    assert icon_webp_rel_path(messenger.set_id, 1) == 'assets/game_data/relic_icons/iconrelic_114_1.webp'
+    wakka = next(s for s in RELIC_SETS if s.set_name == '生命的翁瓦克')
+    assert icon_webp_rel_path(wakka.set_id, 5) == 'assets/game_data/relic_icons/iconrelic_308_5.webp'
