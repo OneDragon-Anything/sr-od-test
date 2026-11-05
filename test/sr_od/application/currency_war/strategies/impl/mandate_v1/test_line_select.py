@@ -506,7 +506,8 @@ def test_positive_terms_upper_bound_below_restart_magnitude():
     重开级)+ 开局词缀正项 top4 + 装备证据(key_equips 全持,批 3 分量)
     + 满热度」的正项和 < |−100000|。
     重开级单条即数值排他;上界值随常数表演进自动重算(本断言 = 锁;
-    批 3 拆分后 21 线全量自算,现行最坏值 = 巡海击破 36120)。"""
+    批 3 拆分后 21 线全量自算,现行最坏值 = 巡海击破 35620——装备到人
+    补全批后巡海击破装备证据面按教义缩至 3 件,锚随真值走)。"""
     from sr_od.application.currency_war.kernel.cw_affinity_table import (
         affix_row_of,
     )
@@ -542,7 +543,7 @@ def test_positive_terms_upper_bound_below_restart_magnitude():
             worst = (comp.name, total)
     assert worst[1] < abs(RESTART_PENALTY), (
         f'正项上界越界:{worst}(design §2 不变量 < 100000)')
-    assert worst == ('巡海击破', 36120), \
+    assert worst == ('巡海击破', 35620), \
         f'批 3 上界回归锚(装备分量入算后): {worst}'
 
 
