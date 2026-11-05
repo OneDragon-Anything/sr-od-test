@@ -68,7 +68,9 @@ def test_lookup_not_found() -> None:
 
 
 def test_register_relic_tools_smoke() -> None:
-    """注册冒烟：装配后 FastMCP 工具列表含 relic_lookup 且标记只读。"""
+    """注册冒烟：装配后 FastMCP 工具列表含 relic_lookup 且标记只读；
+    docstring 首句带「观察类」标注、query 参数带 Field 描述（mcp-implementation
+    §1 双标原则 + §2 参数描述规范）。"""
     import asyncio
 
     mcp = FastMCP('test')
@@ -78,3 +80,7 @@ def test_register_relic_tools_smoke() -> None:
     relic_tool = next(t for t in tool_list if t.name == 'relic_lookup')
     assert relic_tool.annotations.readOnlyHint is True
     assert '遗器' in relic_tool.description
+    assert relic_tool.description.startswith('观察类')
+    query_schema = relic_tool.inputSchema['properties']['query']
+    assert '查询词' in query_schema['description']
+    assert 'query' in relic_tool.inputSchema.get('required', [])
