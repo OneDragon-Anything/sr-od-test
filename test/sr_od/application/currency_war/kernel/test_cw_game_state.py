@@ -9,17 +9,36 @@ effects-calc/designs/T-39-zhuanjia-yantaohui.md)§2.3 + §4 锁 11:
   BenchSlot.item 逐槽保真(unit/empty 槽 None 同保真)——restore 侧只读
   kind/unit 会丢身份,回放判读面身份不可溯即红;
 - 旧档形态:槽值无 item 键 → .get 容忍恢复 None,零炸零迁移。
+
+另辖:商店投影写入渠道签名纪律(投影测试 M5)——写入口族校验
+(《商店黑板容器化方案》§3.2.4 硬约束 2),主断言对象 = 本镜像 src
+的写入口族门。
 """
 from __future__ import annotations
 
+import pytest
+from test.sr_od.application.currency_war._cw_helpers import (
+    cw4_card as _card,
+)
+from test.sr_od.application.currency_war._cw_helpers import (
+    cw4_gs,
+)
+
+from sr_od.application.currency_war.kernel.cw_action_report import (
+    report_action_buy_card_param,
+)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
     BenchSlot,
     BenchView,
     ChannelSig,
     GameState,
+    ShopActionExecuted,
     Unit,
     restore_state_snapshot,
+)
+from sr_od.application.currency_war.kernel.cw_vocab import (
+    CwActionBuyCardParam,
 )
 
 _SIG_OBS = ChannelSig(family='obs', actor='ReplayTest')
@@ -75,3 +94,22 @@ def test_restore_legacy_slot_without_item_key_tolerated() -> None:
     assert [s.kind for s in slots] == ['supply_box', 'unit', 'empty'], \
         'kind 照常恢复'
     assert all(s.item is None for s in slots), '旧档缺键 → item=None 容忍'
+
+
+# ---- 商店投影写入渠道签名纪律(投影测试 M5)----
+
+
+def _gs_of(**axes):
+    """投影场景种子(原裸帧合成配方承接:节点整域不写、空店离屏;
+    域覆盖集与原合成口逐域一致)。"""
+    return cw4_gs(node_fill=False, shop_screen='off', **axes)
+
+
+def test_wrong_family_sig_rejected():
+    """渠道签名纪律:非 logic_action 族显式炸(§3.2.4 硬约束 2)。"""
+    gs = _gs_of(gold=30, shop=[_card('希儿')])
+    with pytest.raises(ValueError):
+        report_action_buy_card_param(
+            gs, CwActionBuyCardParam(card=_card('希儿')),
+            executed=ShopActionExecuted(bought_count=1),
+            sig=ChannelSig(family='obs', actor='CwScreenShop'))
