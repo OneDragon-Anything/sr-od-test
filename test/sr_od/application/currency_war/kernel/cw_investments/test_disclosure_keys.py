@@ -9,6 +9,7 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     STRATEGY_DELAYED_RANDOM_CHOICE_ASSUMPTION_KEYS,
     STRATEGY_DESC_UNMODELED_KEYS,
     STRATEGY_HIRING_LETTER_UNMODELED_ASSUMPTION_KEYS,
+    STRATEGY_REINCARNATOR_UNMODELED,
 )
 
 
@@ -43,5 +44,16 @@ def test_desc_unmodeled_keys_registered() -> None:
     assert STRATEGY_DESC_UNMODELED_KEYS == (
         'strategy_worn_equip_unmodeled',
         'strategy_periodic_unit_leave_unmodeled',
+    )
+
+
+def test_reincarnator_unmodeled_key_registered() -> None:
+    """披露键静态常量在册断言(「轮回者」三腿零建模申报,现单卡单成员):
+    覆盖域 = 腿1b 装备授予 + 腿3 局终变换 + 腿4 局终回退共享缺口——
+    「轮回者」四面零数据(装备注册表/占席词表/识别词面/测试仓全零),
+    sim 世界少一件未知装备资产 + 局终变换域空;实机取证落数据时升级
+    家族键,本断言随批扩员——申报面扩员即红一次,批内顺手更新即绿。"""
+    assert STRATEGY_REINCARNATOR_UNMODELED == (
+        'strategy_reincarnator_unmodeled',
     )
 
