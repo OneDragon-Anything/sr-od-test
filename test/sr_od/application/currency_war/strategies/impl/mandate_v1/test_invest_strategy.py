@@ -288,13 +288,13 @@ def test_char_grant_cards_gift_value_off_zero():
 
 def test_grant_registry_counts_and_closed_set():
     """底册计数测试(对账记录 = 迭代目录 strategy-grants-reconciliation.md):
-    105 条 = 11 顾问 + 77 角色直读(绑定母体白得/反扫补网/非直读人工
+    106 条 = 11 顾问 + 77 角色直读(绑定母体白得/反扫补网/非直读人工
     转正[佩佩逛街句/佩佩携钻句/佩佩客串登场句]/非候选直读登记[狸职手续,
-    按实机录名归一])+ 15 开箱分支(占席道具直读,箱腿卡随批扩员,含融合召唤)
+    按实机录名归一])+ 16 开箱分支(占席道具直读,箱腿卡随批扩员,含融合召唤)
     + 1 选择型具名装备(独家代言,人工登记——「从3件进阶装备中选择一件
     获取」占位选定建模,选择获取无「获得…roster 名」直读,反扫零命中)
     + 1 角色×道具混合(龙虎兄弟狸);顾问档名单在册。"""
-    assert len(STRATEGY_GRANTS) == 105
+    assert len(STRATEGY_GRANTS) == 106
     advisors = {n for n, g in STRATEGY_GRANTS.items() if g.advisor}
     assert len(advisors) == 11
     assert {'停云顾问', '加拉赫顾问', '摸个鱼吧I'} <= advisors
@@ -333,7 +333,8 @@ def test_grants_box_legs_items_only_pass_validation(monkeypatch):
     """开箱分支条目(占席道具直读)登记形状(chars 两通道空 + items_immediate
     非空 = 合法,登记面先例 = 三张棱彩箱分支卡 + 军火贸易/军火贸易+);箱条目
     经消费口恒 off → 0 分(design 取舍 3,占席道具不进打分零改动)。"""
-    for name, item in (('战术义眼++', '进阶武装箱'),
+    for name, item in (('战术义眼+', '简易武装箱'),
+                       ('战术义眼++', '进阶武装箱'),
                        ('保守派', '进阶武装箱'),
                        ('快请专家·彩', '进阶武装箱'),
                        ('军火贸易', '简易武装箱'),
