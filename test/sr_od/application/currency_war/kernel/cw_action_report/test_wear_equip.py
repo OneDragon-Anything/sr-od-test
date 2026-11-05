@@ -149,7 +149,7 @@ def test_fusion_summon_registration_consolidated() -> None:
         '镜像表与登记表逐对相等'
     assert '融合召唤' in PICK_INVEST_EFFECTS, '工厂自动占 PICK 键'
     assert len(STRATEGY_GRANTS) == 106
-    assert len(PICK_INVEST_EFFECTS) == 163
+    assert len(PICK_INVEST_EFFECTS) == 164
     assert len(_STRATEGY_BOX_GRANTS) == 13
     assert '融合召唤' not in STRATEGY_EFFECTS, \
         '腿1 零登记(TriggerKind 无穿戴事件成员,死条目主体更紧)'
