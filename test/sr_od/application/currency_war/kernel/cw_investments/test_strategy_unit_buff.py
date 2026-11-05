@@ -37,6 +37,18 @@ liliang.md(定稿 v1.2)§4 五锁面(卡面官方原文:「每有一个已激活
 双轴[伤害增幅/伤害减免]独立定值并列非跨轴派生,计数判定与数值全游戏
 侧自算 bot 零响应):五锁与幸运闪避EX 同形;同 payload 形的获得链登记
 与桥 no-op 行为面由星魂升华锁承载,不重测。
+
+调饮专家:加拉赫(id 360501)测试面依据 = 同迭代 designs/T-417-tiaoyin-
+zhuanjia-jialahe.md(定稿,判定无需裁定·可实现)§4 五锁面(卡面官方原文:
+「获得装备着【绝对热量】的专家顾问【加拉赫】，并使其在本局游戏中加入
+商店。加拉赫行动时，为我方全体恢复3点能量并触发【绝对热量】的生命回复
+效果。」顾问授予族三腿分治:腿1 顾问授予+入商店 = GRANTS advisor=True
+条目在册零动作;腿2 佩戴绝对热量零建模;腿3 行动触发双效果 = 触发面/
+效果面/联动面三盲零响应登记):payload 单一源对拍(锁 1)/条目构造七字段
+(锁 2)/存量负向 GRANTS 计数与 PICK 闭集不变(锁 3,存量计数锁与键集
+闭集现值锚在 test_invest_strategy.py / test_gain_chain.py 原样保留即第二
+道防线)/估值零计分带 gs 实参(锁 4)/登记面现值钉死(锁 5,赠 key 专家
+顾问显式绑定行在册,与族内三卡「泛用不绑」形态相反,钉现值防漂移)。
 """
 from __future__ import annotations
 
@@ -71,6 +83,7 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     INVESTMENT_STRATEGIES,
     STRATEGY_BINDINGS,
     STRATEGY_EFFECTS,
+    STRATEGY_GRANTS,
     strategy_bindings,
 )
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
@@ -88,6 +101,9 @@ _CID_EX = '351701'
 
 _CARD_JB = '羁绊的力量'
 _CID_JB = '351801'
+
+_CARD_TY = '调饮专家:加拉赫'
+_CID_TY = '360501'
 
 _SIG_LOGIC = ChannelSig(family='logic_action', actor='CwGainChain',
                         mode='compute')
@@ -310,4 +326,69 @@ def test_jiban_not_in_pick_and_watch_names() -> None:
     停机钩子名单(名单访问形 = 类限定 ClassVar)。"""
     assert _CARD_JB not in set(PICK_INVEST_EFFECTS), '本卡禁入 PICK 封闭集'
     assert _CARD_JB not in CwScreenPrep._SPEC_INVEST_WATCH_NAMES, \
+        '本卡不入停机钩子名单'
+
+
+def test_tiaoyin_entry_registered() -> None:
+    """调饮专家:加拉赫 条目构造锁(锁 2):UNIT_BUFF 零响应登记形;七字段
+    逐位(id/name/trigger=PLANE_START 占位形/duration=WHILE_HELD/category=
+    UNIT_BUFF/duties 全空/pending=False);构建校验(孤儿键/id 双匹配)
+    import 期已过。"""
+    spec = STRATEGY_EFFECTS[_CARD_TY]
+    assert spec.id == _CID_TY, 'id 对拍'
+    assert spec.name == _CARD_TY
+    assert spec.trigger is TriggerKind.PLANE_START, '占位形(无离散触发)'
+    assert spec.duration is DurationKind.WHILE_HELD, '持有期绑定'
+    assert spec.category is EffectKind.UNIT_BUFF, 'category = UNIT_BUFF'
+    assert isinstance(spec.payload, UnitBuffRef), '载荷 = UnitBuffRef'
+    assert spec.duration_nodes == 0 and spec.duration_uses == 0, \
+        'WHILE_HELD 无余期计数器'
+    assert spec.duties is not None and not (spec.duties.track
+                                            or spec.duties.predict
+                                            or spec.duties.respond), \
+        'duties 三位全 False(零响应)'
+    assert spec.pending is False, 'pending False'
+
+
+def test_tiaoyin_effect_text_single_source() -> None:
+    """调饮专家:加拉赫 payload 单一源锁(锁 1):effect_text 与 base 注册表
+    卡面原文对拍(payload 表达式经 PLAZA_AUGMENTS id 键取数,禁字面量第二
+    源;版本更新改文自动跟随,id 漂移 = StopIteration import 即炸)。"""
+    assert STRATEGY_EFFECTS[_CARD_TY].payload.effect_text \
+        == INVESTMENT_STRATEGIES[_CARD_TY].effect, \
+        'effect_text 单一源对拍(= base 注册表 .effect)'
+
+
+def test_tiaoyin_cash_fail_closed() -> None:
+    """调饮专家:加拉赫 估值零计分锁(锁 4):无 STRATEGY_ECONOMY 条目 →
+    strategy_economy_value 带 gs 实参返回 (0.0, False)(战力类不进经济
+    模型,防未来误加 STRATEGY_ECONOMY 条目或通道误开;签名 (name, gs),
+    缺 gs 实参非合法调用形)。"""
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    assert strategy_economy_value(_CARD_TY, gs) == (0.0, False)
+
+
+def test_tiaoyin_registry_pins() -> None:
+    """调饮专家:加拉赫 登记面现值钉死锁(锁 5 + 腿1 前提):赠 key 专家
+    顾问(加拉赫)显式绑定行在册,公开绑定读端现值 = (frozenset(),
+    frozenset({'加拉赫'}))(零新增,只锁不动——与族内三卡「泛用不绑」
+    形态相反,本卡绑定系顾问授予结构化面既有登记);腿1 零动作前提 =
+    GRANTS advisor=True 条目在册(获得链 advisor 道解锁入商店的登记面
+    基础),逐字段钉现值防漂移。"""
+    assert _CARD_TY in _STRATEGY_BINDINGS_EXPLICIT, '显式绑定行在册(零新增)'
+    assert STRATEGY_BINDINGS[_CARD_TY] == (frozenset(), frozenset({'加拉赫'})), \
+        '绑定现值不动'
+    grant = STRATEGY_GRANTS[_CARD_TY]
+    assert grant.advisor is True, '腿1 前提:advisor 型授予(解锁入商店链)'
+    assert grant.chars_immediate == ('加拉赫',), '授予对象 = 加拉赫'
+
+
+def test_tiaoyin_not_in_pick_and_watch_names() -> None:
+    """调饮专家:加拉赫 存量负向锁(锁 3 卡级面):零响应登记非效果体卡不入
+    PICK(入集 = 实现错误;顾问授予计数锁与 PICK 键集闭集存量断言在
+    test_invest_strategy.py / test_gain_chain.py 原样保留即第二道防线,本卡
+    对两表零触碰);卡面无采集需求,不入商店停机钩子名单(名单访问形 =
+    类限定 ClassVar)。"""
+    assert _CARD_TY not in set(PICK_INVEST_EFFECTS), '本卡禁入 PICK 封闭集'
+    assert _CARD_TY not in CwScreenPrep._SPEC_INVEST_WATCH_NAMES, \
         '本卡不入停机钩子名单'
