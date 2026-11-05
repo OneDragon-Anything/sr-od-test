@@ -261,13 +261,12 @@ def test_grant_conditional_downgraded():
 
 
 def test_grant_all_off_universe_zero():
-    """发放角色全员集外(evicted 排除其在全部候选套的三名单身份)→ 0,
-    不炸:借力打力的黑塔/缇宝宿主(core∪shared∪transition)全 evicted
+    """发放角色全员集外(evicted 排除其在全部候选套的两名单身份)→ 0,
+    不炸:借力打力的黑塔/缇宝宿主(core∪shared)全 evicted
     → 档落 off。"""
     hosts = frozenset(
         c.name for c in COMP_LIBRARY
-        if {'黑塔', '缇宝'} & (set(c.core_chars) | set(c.shared_chars)
-                               | set(c.transition_chars)))
+        if {'黑塔', '缇宝'} & (set(c.core_chars) | set(c.shared_chars)))
     assert grant_gift_value(STRATEGY_GRANTS['借力打力'], hosts) == 0.0
 
 
@@ -1019,22 +1018,23 @@ def test_env_build_validation_orphan_stance_key_raises(monkeypatch):
 
 
 def test_env_build_validation_coefficient_tables_complete():
-    """系数表键完备:赠卡档覆盖四档。(import 已过一遍;显式再验 = 钉住
-    校验函数自身行为。线强度档校验已随 strength/方向分链下线移除。)"""
+    """系数表键完备:赠卡档覆盖三档且键域收窄恰为 {'core','shared','off'}
+    (transition-chars-retirement 迭代降三档)。(import 已过一遍;显式再验 =
+    钉住校验函数自身行为。线强度档校验已随 strength/方向分链下线移除。)"""
     invest_env._validate_coefficient_tables()   # 不抛 = 键完备
     from sr_od.application.currency_war.strategies.impl.mandate_v1.gift_value import (
         GIFT_TIER_SCORE,
     )
-    assert {'core', 'shared', 'transition', 'off'} <= set(GIFT_TIER_SCORE)
+    assert set(GIFT_TIER_SCORE) == {'core', 'shared', 'off'}
 
 
 def test_env_build_validation_coefficient_missing_key_raises(monkeypatch):
-    """系数表缺键即炸(校验逻辑本体拒绝测试):赠卡档缺 transition 拒绝。
+    """系数表缺键即炸(校验逻辑本体拒绝测试):赠卡档缺 shared 拒绝。
     (线强度缺键分支已随 strength/方向分链下线移除。)"""
     with monkeypatch.context() as m:
         m.setattr(invest_env, 'GIFT_TIER_SCORE',
                   {k: v for k, v in invest_env.GIFT_TIER_SCORE.items()
-                   if k != 'transition'})
+                   if k != 'shared'})
         with pytest.raises(ValueError, match='赠卡档分缺键'):
             invest_env._validate_coefficient_tables()
 
