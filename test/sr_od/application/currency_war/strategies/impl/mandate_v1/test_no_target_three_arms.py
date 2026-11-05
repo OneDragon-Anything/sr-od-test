@@ -178,13 +178,29 @@ class TestKSourceCandidateUnion:
         (保利息缺省;旧 fallback 方向采购集承接行为退役)。"""
         comp = get_comp('希儿量子')
         chars, _eq = cw_intention._line_hoard(comp)
-        # 探针须避开货架资格面(carry_set ∪ key_items):货架资格臂
-        # (shelf_qualify_buy,在役)与甲臂(已退役)是两条臂,探针落在
-        # 资格面会被前者合法买入,污染「机器方向不囤」断言——杰帕德 =
-        # 贝键展开件,全库无 carry/key_items 归属(探针判据静态可查)。
-        missing_piece = '杰帕德'
+        # 探针须避开两张货架资格面(or-reqs-retirement 3.4 后买面双资格
+        # 臂在役):①终局资格面(carry_set ∪ key_items)——被货架资格臂
+        # 合法买入;②过渡资格面(五块计分域并集)——手持希儿量子 core
+        # 时贝键展开件(杰帕德)在 希儿贝2 混合块计分域内,会被过渡资格
+        # 臂按虚拟 top3 合法买入(virtual-eval-arm.md §4 行为申报①),
+        # 污染「机器方向不囤」断言。加拉赫 = 治疗 bonus 档键展开件
+        # (盛会之星/治疗/击破面全库无羁绊块归属,探针判据静态可查)。
+        missing_piece = '加拉赫'
         assert missing_piece in chars \
             and missing_piece not in comp.core_chars, '探针须在采购集非 core 面'
+        from sr_od.application.currency_war.kernel.cw_comps import (
+            COMP_LIBRARY,
+            TRANSITION_BONDS,
+            bond_score_members,
+            carry_set,
+        )
+        assert missing_piece not in {
+            m for b in TRANSITION_BONDS for m in bond_score_members(b)}, \
+            '探针落在过渡计分域内(过渡资格臂会合法买入)'
+        assert missing_piece not in {
+            m for c in COMP_LIBRARY
+            for m in (carry_set(c) | set(c.key_items or ()))}, \
+            '探针落在终局资格域内(货架资格臂会合法买入)'
         st = _state(hp=100, shop_cards=[_card(missing_piece, cost=1)])
         st['bench'] = [_bc(m) for m in comp.core_chars]
         st['front_row'] = [Unit(char_id='板上件锚', star=1)]

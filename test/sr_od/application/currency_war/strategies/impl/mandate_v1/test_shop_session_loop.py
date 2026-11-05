@@ -1137,14 +1137,18 @@ def test_funding_exhausted_records_opportunity():
 # 货架资格臂 + 冷启动臂(11 号稿 §1 序 1 扩展臂条款;
 # 序 1 层内扩展臂):资格判据(CARRY/骨架级 ∧ 虚拟
 # top3)/义务类管线/子序(missing 后、冷启动次之、资格臂殿后)/双空窗
-# 完备性(1 费三羁绊见即买,会话内现算退出)。
+# 完备性(1 费三羁绊见即买,会话内现算退出);
+# 过渡资格臂(or-reqs-retirement 3.4 详设 virtual-eval-arm.md):
+# 序 1 层内终局资格臂之后殿后——过渡组合计分域成员的虚拟 top3 资格,
+# 触发窗 = 未终局锁定 ∧ 未过渡锁定,零持久化。
 #
 # 构帧纪律:未锁 + line_candidates/transition_candidates 双空(资格
 # 判据的虚拟评估只作资格器,零持久化);货架件身份注册表现算防漂移
 # (飞霄 = 追击飞霄 CARRY〔1 费非三羁绊〕;丹恒·饮月 = 列车同行骨架
 # 〔2 费三羁绊〕;刃 = 黄泉减益插件级〔1 费非三羁绊〕;艾丝妲 = 纯
 # 过渡件〔1 费持续伤害,不在任何终局线〕;三月七 = 列车 CARRY ∩
-# 骨架〔1 费列车同行〕)。
+# 骨架〔1 费列车同行〕;佩拉 = 希儿贝2 块计分域纯过渡件〔贝洛伯格,
+# 全库无 carry/key_items 归属〕)。
 # ============================================================
 
 
@@ -1361,6 +1365,153 @@ class TestColdStartArm:
         assert isinstance(act, CwActionBuyCardParam), f'非买入: {act!r}'
         assert act.reason == 'shelf_qualify_buy', \
             '非三羁绊 1 费件不走冷启动(经资格臂通道=限定证据)'
+
+
+class TestTransitionShelfQualifyArm:
+    """过渡货架资格臂(or-reqs-retirement 3.4;详设
+    virtual-eval-arm.md §1-§4):过渡组合计分域成员的虚拟 top3 资格
+    ——transition_scores(在手 ∪ 货架, 简报克制源)前 3 条组合的
+    transition_member_set 并集 = 资格名单;触发窗 = 未终局锁定 ∧
+    未过渡锁定;即算即用零持久化(虚拟结果不落候选槽,锁定域语义
+    不受污染)。"""
+
+    def _frame_seeded(self, *, bench=(('爻光', 1),), shop_cards=(('佩拉', 2, 1),)):
+        """构帧 + 方向节拍驱动(持爻光 → 实候选槽点亮仙舟3 组合;
+        佩拉 ∈ 希儿贝2 计分域但 ∉ 实候选并集——虚拟评估点亮的正是
+        实候选看不见的差一张件,详设 §1 语义)。"""
+        from sr_od.application.currency_war.kernel.cw_intention import (
+            IntentionState,
+            update_transition_candidates,
+        )
+        live, sess, gs, st = _frame(
+            gold=60, node_kind='reward', direction=False,
+            bench=list(bench), deployed=[], shop_cards=list(shop_cards))
+        if st.v3_intention is None:
+            st.v3_intention = IntentionState()
+        update_transition_candidates(gs, st.v3_intention, st=st)
+        return live, sess, gs, st
+
+    def test_transition_domain_member_on_shelf_qualifies(self):
+        """资格买入(详设 §1):持爻光(仙舟3 块 1/3)+ 候选槽已点亮
+        (方向节拍驱动后实候选 = 仙舟3 组合)+ 货架佩拉(希儿贝2 块
+        计分域)→ 虚拟计分(在手∪货架)下仙舟3+希儿贝2 以 2 分居首
+        进 top3 → 佩拉 ∈ 资格名单,义务类买入,reason =
+        transition_shelf_qualify_buy。前置断言 = 佩拉 ∉ 实候选并集
+        (虚拟评估点亮实候选看不见的牌——臂的存在理由,详设 §4-①);
+        后置断言 = 零持久化(候选槽/过渡锁定态在资格评估帧后不变,
+        详设关键取舍)。"""
+        from sr_od.application.currency_war.kernel import cw_intention
+        from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+            sell_gate,
+        )
+        live, sess, gs, st = self._frame_seeded()
+        assert st.transition_candidates == (
+            '仙舟3+DOT2', '仙舟3+列车2', '仙舟3+希儿量2'), '构帧前置'
+        assert '佩拉' not in cw_intention.transition_member_union(st), \
+            '佩拉须在实候选并集外(否则经 m2 义务面买,测不到资格臂)'
+        act = live.decide_shop_action()
+        assert isinstance(act, CwActionBuyCardParam), f'非资格买入: {act!r}'
+        assert act.card.name == '佩拉'
+        assert act.reason == 'transition_shelf_qualify_buy'
+        assert sell_gate.launch_cause_of(act.reason) == 'obligation', \
+            '过渡资格臂 = 义务类(方向投资件 τ=∞ 义务账,详设 §2)'
+        assert st.transition_candidates == (
+            '仙舟3+DOT2', '仙舟3+列车2', '仙舟3+希儿量2'), \
+            '零持久化:虚拟评估不得写候选槽'
+        assert not st.v3_intention.transition_locked, \
+            '零持久化:虚拟评估不得立过渡锁定'
+
+    def test_shelf_card_outside_virtual_top3_not_bought(self):
+        """虚拟计分域外不触发(详设 §1 反向):货架遐蝶(全库无羁绊块
+        归属)∉ 任何虚拟 top3 组合计分域 → 过渡资格臂零买入(遐蝶若被
+        买入只能是富余金兜底等其他通道;虚拟评估帧同样零持久化)。"""
+        live, sess, gs, st = self._frame_seeded(
+            shop_cards=[('遐蝶', 4, 1)])
+        _cand = tuple(st.transition_candidates)
+        act = live.decide_shop_action()
+        assert not (isinstance(act, CwActionBuyCardParam)
+                    and act.card.name == '遐蝶'
+                    and act.reason == 'transition_shelf_qualify_buy'), \
+            f'计分域外货架件不得经过渡资格臂买入: {act!r}'
+        assert st.transition_candidates == _cand, '零持久化(未买路径)'
+
+    def test_transition_locked_disarms_arm(self):
+        """触发窗①(详设 §2):过渡锁定(transition_locked 非空)后
+        买面 = 锁定条目成员域——资格臂的方向点亮语义与「锁后不换」
+        互斥,佩拉(虚拟计分下仍资格)零行为。"""
+        live, sess, gs, st = self._frame_seeded()
+        st.v3_intention.transition_locked = '仙舟3+DOT2'
+        act = live.decide_shop_action()
+        assert not (isinstance(act, CwActionBuyCardParam)
+                    and act.card.name == '佩拉'
+                    and act.reason == 'transition_shelf_qualify_buy'), \
+            f'过渡锁定帧资格臂不得发射: {act!r}'
+
+    def test_final_lock_disarms_arm(self):
+        """触发窗②(详设 §2):终局锁定 → 过渡层整体退役态,臂不触发
+        (残留过渡锁定值证臂自身守卫 = 终局锁优先;生产链终局锁定写入
+        点同点清空过渡层,位面切换不触发)。"""
+        live, sess, gs, st = self._frame_seeded()
+        st.target_comp = COMP_LIBRARY[0]   # 终局锁定帧(target_comp 非空)
+        st.v3_intention.transition_locked = '仙舟3+DOT2'   # 残留值
+        act = live.decide_shop_action()
+        assert not (isinstance(act, CwActionBuyCardParam)
+                    and act.card.name == '佩拉'
+                    and act.reason == 'transition_shelf_qualify_buy'), \
+            f'终局锁定帧资格臂不得发射: {act!r}'
+
+    def test_final_qualify_arm_precedes_transition_arm(self):
+        """并存序(详设 §3):同帧终局资格件(飞霄,槽 2)与过渡资格件
+        (佩拉,槽 1)并存 → 终局臂先消费(臂序优先于货架槽序),
+        首动作 = 飞霄 shelf_qualify_buy;两层信号互补不互斥。"""
+        live, sess, gs, st = self._frame_seeded(
+            shop_cards=[('佩拉', 2, 1), ('飞霄', 1, 1)])
+        act = live.decide_shop_action()
+        assert isinstance(act, CwActionBuyCardParam), f'非买入: {act!r}'
+        assert act.card.name == '飞霄', \
+            f'终局资格臂须先于过渡资格臂(槽序在前的佩拉不抢序): {act!r}'
+        assert act.reason == 'shelf_qualify_buy'
+
+    def test_triangle_third_piece_dual_qualification_routes_to_final(self):
+        """铁三角例(详设 §4-①/§3;landing 3.4 完成判据例):手握铁三角
+        二人(爻光+藿藿)+ 货架第三点名件(丹恒·饮月)→ 虚拟计分下含
+        仙舟3 块的组合条目以 3 分进 top3(过渡侧资格成立)∧ 终局侧
+        龙丹战技点在虚拟 top3(丹恒·饮月 ∈ 其 CARRY 域,终局侧资格
+        亦成立)→ 双资格并存时终局臂先消费,买入 reason =
+        shelf_qualify_buy——过渡资格臂是终局侧不点亮牌的追加面。"""
+        from sr_od.application.currency_war.kernel.cw_comps import (
+            carry_set,
+            get_comp,
+        )
+        from sr_od.application.currency_war.kernel.cw_intention import (
+            transition_scores,
+        )
+        from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+            line_select,
+        )
+        _virt = frozenset({'爻光', '藿藿', '丹恒·饮月'})
+        _t_top3 = transition_scores(_virt, ())[:3]
+        assert all(n.startswith('仙舟3') for n, _s in _t_top3), \
+            f'前置失守:含仙舟3 块组合未进虚拟 top3: {_t_top3!r}'
+        _f_top3 = line_select.compute_candidates(
+            _virt, line_select.OpeningCtx())
+        _f_qual = set()
+        for _n in _f_top3:
+            _c = get_comp(_n)
+            if _c is not None:
+                _f_qual |= carry_set(_c)
+                _f_qual |= set(_c.key_items or ())
+        assert '丹恒·饮月' in _f_qual, \
+            f'前置失守:终局虚拟 top3 未点亮丹恒·饮月: {_f_top3!r}'
+        live, sess, gs, st = _frame(
+            gold=60, node_kind='reward', direction=False,
+            bench=[('爻光', 1), ('藿藿', 1)], deployed=[],
+            shop_cards=[('丹恒·饮月', 2, 1)])
+        act = live.decide_shop_action()
+        assert isinstance(act, CwActionBuyCardParam), f'非买入: {act!r}'
+        assert act.card.name == '丹恒·饮月'
+        assert act.reason == 'shelf_qualify_buy', \
+            f'双资格并存时终局臂先消费(详设 §3): {act!r}'
 
 
 def test_opening_empty_buy_face_zero_m2_buys():

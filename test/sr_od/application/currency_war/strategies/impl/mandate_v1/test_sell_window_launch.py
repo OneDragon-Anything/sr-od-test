@@ -133,14 +133,14 @@ class TestLaunchRegistry:
     3.4 修订:hold 类随 C1/囤货臂两买臂退役删除——闭集收敛
     {obligation, press, stall_protect};dominance_buy 行已随通道
     退役删除(富余买入并入 M6 一星兜底带,comp-structure-unification
-    3.4)——映射表 13 键。"""
+    3.4);or-reqs-retirement 3.4 增过渡资格臂行——映射表 14 键。"""
 
     def test_launch_cause_closed_set(self):
         """闭集三个测试并一:
         [枚举拒] LaunchCause 枚举外值拒收(方案 v3 §5.3 防复发
           双闸②;新买入臂必须先归入某因果类才合法;hold 类同为枚举外
           ——3.4 退役后登记被拒);
-        [13 臂映射] 买入臂全映射 + 值域 ⊆ LaunchCause 闭集 +
+        [14 臂映射] 买入臂全映射 + 值域 ⊆ LaunchCause 闭集 +
           ev_buy→press(方案 v3 §3.1;新买入臂未分类即登记 = 红,测试红
           时该登记的语义 = 把新臂补进映射表并过对抗审,非机械跟绿)。
           core_single_card_buy 族/protection_hoard 三行已随两买臂退役
@@ -159,11 +159,13 @@ class TestLaunchRegistry:
         with pytest.raises(ValueError):
             sell_gate.register_launch(_sess(), _FUEL, cause='hold',
                                       round_num=3)
-        # [13 臂映射](11 号稿 §1 序 1 扩展臂注册
-        # ×2:shelf_qualify_buy/cold_start_buy,义务类)
+        # [14 臂映射](11 号稿 §1 序 1 扩展臂注册 ×3:
+        # shelf_qualify_buy/transition_shelf_qualify_buy/cold_start_buy,
+        # 义务类;过渡资格臂 = or-reqs-retirement 3.4 详设四增补)
         arms = ('m2_line_member', 'm2_locked_member', 'm2_stockpile',
                 'm2_merge_completion', 'shelf_qualify_buy',
-                'cold_start_buy', 'm6_stockpile',
+                'transition_shelf_qualify_buy', 'cold_start_buy',
+                'm6_stockpile',
                 'press_buy_deployable',
                 'ev_buy', 'dead_gold_press_buy', 'fuel_filler_stall',
                 't3_unlocked_hemostat', 'scene_plugin_buy')
