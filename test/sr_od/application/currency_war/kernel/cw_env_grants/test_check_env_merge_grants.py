@@ -246,3 +246,102 @@ def test_resolver_explicit_rng_beats_provider(seeded_provider) -> None:
     explicit = random.Random(7)
     assert action_sampling_rng(ENV_MERGE_GRANT_RNG_TOOL, explicit) \
         is explicit, '显式传入优先于注入槽'
+
+
+# ============================================================ 飞光·映月 tier 升星写端
+# (写端挂本函数入口 = 合并升星事件单一收口:四发火点[买牌/获得链/入席桥/
+#  晶矿]与后继新发火点结构性全覆盖;T-410 设计 §4 锁 4 单函数直测。
+#  facts 形状四通道同构 (char_id, new_star),通道覆盖面按用例 label 申报;
+#  gating = 档字段已观察(None = 未拿卡零写),写值只升不降。)
+
+_YINGYUE_EVIDENCE = 'env_merge_yingyue_tier'
+
+
+def _seed_tier(gs: GameState, tier: int) -> GameState:
+    """档字段种子(拿卡后形态;Field frozen,写 = 换帧)。"""
+    from dataclasses import replace
+    from sr_od.application.currency_war.kernel.cw_game_state import Field
+    return replace(gs, yingyue_cost_tier=Field(value=tier, source='logic'))
+
+
+def test_yingyue_tier_write_precedes_env_gate(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """入口位(env 条件矩阵之前):env 未激活/不在册形态下镜流合成事件
+    照写档——写端不随 env 发放短路,四发火点的零发放场景(环境不
+    在册等)零漏挂(漏挂即静默毒化形态,晶矿通道现役可达)。"""
+    for env in (None, '', '蓝海'):
+        gs = _make_gs(env=env, bench=[])
+        gs = _seed_tier(gs, 1)
+        calls = _record_writes(gs, monkeypatch)
+        check_env_merge_grants(gs, (('镜流', 2),), sig=_SIG)
+        assert calls == [('yingyue_cost_tier', _YINGYUE_EVIDENCE, 'logic')], \
+            f'env={env!r} 短路场景写端照落: {calls}'
+        assert gs.yingyue_cost_tier.value == 3
+
+
+@pytest.mark.parametrize(('channel', 'facts'), [
+    ('买牌合并', (('镜流', 2),)),
+    ('获得链', (('镜流', 2), ('景元', 2))),
+    ('入席桥', (('镜流', 2),)),
+    ('晶矿角色奖励', (('镜流', 2),)),
+])
+def test_yingyue_tier_two_star_writes_3(channel: str,
+                                        facts: tuple,
+                                        monkeypatch: pytest.MonkeyPatch
+                                        ) -> None:
+    """四通道来源 facts 各一组(D' 单窗下 facts 同构,通道 label 申报
+    覆盖面):已拿卡形态 → 镜流 2★ 合成写档 3,evidence 留证;同窗
+    非镜流 facts 不触发(获得链组含景元升星对照)。"""
+    gs = _seed_tier(_make_gs(bench=[]), 1)
+    calls = _record_writes(gs, monkeypatch)
+    check_env_merge_grants(gs, facts, sig=_SIG)
+    tier_calls = [c for c in calls if c[0] == 'yingyue_cost_tier']
+    assert tier_calls == [('yingyue_cost_tier', _YINGYUE_EVIDENCE,
+                           'logic')], f'{channel} 写端一笔: {calls}'
+    assert gs.yingyue_cost_tier.value == 3, f'{channel} 2★→3'
+
+
+def test_yingyue_tier_three_star_writes_5(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """3★ 合成 → 显式写 5(与注册表起始费恒等,显式写保留已拿卡事实,
+    与 None = 未拿卡两态可分)。"""
+    gs = _seed_tier(_make_gs(bench=[]), 3)
+    calls = _record_writes(gs, monkeypatch)
+    check_env_merge_grants(gs, (('镜流', 3),), sig=_SIG)
+    assert calls == [('yingyue_cost_tier', _YINGYUE_EVIDENCE, 'logic')], \
+        f'写端一笔: {calls}'
+    assert gs.yingyue_cost_tier.value == 5
+
+
+def test_yingyue_tier_gating_not_held_zero_write(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """gating 未拿卡(None):商店购得镜流合成不触变费(卡文机制前提 =
+    持卡,None 单义化)——零写,档保持 None。"""
+    gs = _make_gs(bench=[])
+    assert gs.yingyue_cost_tier.value is None
+    calls = _record_writes(gs, monkeypatch)
+    check_env_merge_grants(gs, (('镜流', 2),), sig=_SIG)
+    assert not calls, f'未拿卡零写: {calls}'
+    assert gs.yingyue_cost_tier.value is None
+
+
+def test_yingyue_tier_monotonic_no_regression(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """写值只升不降:档 5(3★ 后)再喂 2★ 合成事件(同窗新合成镜流档
+    低于场上存量高星)不回退——游戏真值按最高星镜流计,模型同口径。"""
+    gs = _seed_tier(_make_gs(bench=[]), 5)
+    calls = _record_writes(gs, monkeypatch)
+    check_env_merge_grants(gs, (('镜流', 2),), sig=_SIG)
+    assert not calls, f'低档事件零写(不回退): {calls}'
+    assert gs.yingyue_cost_tier.value == 5
+
+
+def test_yingyue_tier_non_jingliu_zero_write(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """非镜流 facts(发放物升星/他角色合成)→ tier 写端零触(facts 用
+    发放池成员 = 非触发角色,环境发放面零干扰,本锁只看 tier 写端)。"""
+    gs = _seed_tier(_make_gs(bench=[]), 1)
+    calls = _record_writes(gs, monkeypatch)
+    check_env_merge_grants(gs, (('希儿', 2), ('符玄', 3)), sig=_SIG)
+    assert not calls, f'非镜流零写: {calls}'
+    assert gs.yingyue_cost_tier.value == 1
