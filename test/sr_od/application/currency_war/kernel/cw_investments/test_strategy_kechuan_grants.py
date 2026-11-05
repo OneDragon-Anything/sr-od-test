@@ -73,7 +73,7 @@ def test_member_matches_registration_faces() -> None:
     多处独立字面量的漂移唯此锁可暴露;win 金计数单位同款纪律)。"""
     assert STRATEGY_GRANTS[_CARD].chars_immediate == (_KECHUAN_UNIT_IDENTITY,), \
         '登记行发放对象 = 佩佩'
-    assert _STRATEGY_CHAR_GRANTS[_CARD] == (_KECHUAN_UNIT_IDENTITY, 1), \
+    assert _STRATEGY_CHAR_GRANTS[_CARD] == (_KECHUAN_UNIT_IDENTITY, 1, 1), \
         '工厂镜像行发放对象 = 佩佩×1'
     assert _KECHUAN_UNIT_IDENTITY == '佩佩'
 

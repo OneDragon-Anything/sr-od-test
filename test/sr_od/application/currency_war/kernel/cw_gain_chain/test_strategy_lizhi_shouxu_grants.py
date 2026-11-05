@@ -98,7 +98,7 @@ def test_lizhi_registry_row_name_canonicalization() -> None:
     grant = STRATEGY_GRANTS[_CARD]
     assert grant.chars_immediate == ('狸职狸狸',), '登记名 = 实机录名归一'
     assert '狸狸' not in grant.chars_immediate, '卡面用名非注册名(防回退)'
-    assert _STRATEGY_CHAR_GRANTS[_CARD] == ('狸职狸狸', 3), \
+    assert _STRATEGY_CHAR_GRANTS[_CARD] == ('狸职狸狸', 3, 1), \
         '世界腿只数单一源 = 工厂表行值(卡面明写 3)'
     assert '狸狸' not in CHARACTER_ROSTER, '卡面用名确在注册表外(锁前提)'
     assert INVESTMENT_STRATEGIES[_CARD].source == 'plaza:204001', \

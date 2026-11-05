@@ -1,4 +1,4 @@
-"""策略卡每节点绑定角色复制发放检查腿测试(镜像 src = kernel/
+"""策略卡每节点角色复制发放检查腿测试(镜像 src = kernel/
 cw_gain_chain.py 的 ``check_strategy_node_char_grants``;分方法拆目录规范
 落位,文件镜像超限纪律 = 新函数落拆目录新文件,先例 = 同目录
 check_strategy_* 族镜像文件)。
@@ -17,6 +17,17 @@ T-165-jiazhi-touzi-jin.md(定稿)§4 锁 4/5/7 + REVIEW-T165 §2/④
   → 1 名;
 - 锁 7 双持共发:金+彩两键并存同窗共发数量独立;彩未注册获得腿前绑定
   恒缺 → 金侧行为不受扰(彩侧 fail-closed 留证)。
+
+具名固定子形扩展(设计 T-408-benguniang-jiushi-luocha.md §4 锁 3/4,
+表 = cw_gain_effects._STRATEGY_NODE_CHAR_GRANTS,检查函数第二分支):
+
+- 锁 3 具名形常规:持本卡 + 节点窗 → 恰 +1 名 1★ 三月七(复制星级 =
+  desc 未载星级的占位判;evidence 前缀 strategy_node_char:<卡名> 与绑定
+  分支共用,卡名空间不交可区分);无供给加成对照(prev_kind='supply'
+  后继窗仍恰 1 名——本卡无「补给后」分句,与绑定分支计数式分道的
+  回归钉,防共用公式回潮);
+- 锁 4 级联:预置 2×1★ 三月七 → 窗发放第 3 只 → 到席瞬间 3 合 1 成 2★
+  (获得链现役级联语义)。
 """
 from __future__ import annotations
 
@@ -229,3 +240,57 @@ def test_dual_hold_grants_independent_fail_closed(
     names = sorted(u.char_id for u in bench_units_of(gs2))
     assert names == sorted([_BOUND, '卡芙卡']), '各按绑定逐卡发放'
     assert rows_sink.kinds() == [], '双绑定齐备零申报行'
+
+
+# ============================================================ ②具名固定子形分支
+# (「每次进入新节点时,获得【具名角色】」具名固定形;本姑娘就是罗刹首例,
+# 表 = cw_gain_effects._STRATEGY_NODE_CHAR_GRANTS,检查函数第二分支;
+# 行为锁先例 = ①绑定形各锁同形换表)
+
+_NAMED_CARD = '本姑娘就是罗刹'
+
+
+def test_named_card_grants_fixed_char(rows_sink) -> None:
+    """具名形常规锁(锁 3):持卡 + 节点窗 → 恰 1 名 1★ 三月七(发放名 =
+    表行固定名零绑定域消费,复制星级 = desc 未载星级的占位判);
+    evidence 前缀与绑定分支共用,按卡名可分;零申报行(具名形无缺口
+    形态,绑定缺失 defect 分支不涉)。"""
+    gs = _make_gs(bench=[], cards=[_NAMED_CARD])
+    granted = check_strategy_node_char_grants(gs, prev_kind='battle',
+                                              sig=_LSIG)
+    assert granted == 1, '具名形基础发放 = 1 名'
+    units = bench_units_of(gs)
+    assert [(u.char_id, u.star) for u in units] == [('三月七', 1)], \
+        '恰 1 名 1★ 三月七(表行固定名)'
+    assert (gs.bench.evidence or '').startswith(
+        f'strategy_node_char:{_NAMED_CARD}'), '发放写 evidence 前缀'
+    assert rows_sink.kinds() == [], '具名形零绑定域消费,零申报行'
+
+
+def test_named_card_no_supply_bonus(rows_sink) -> None:
+    """具名形无供给加成回归钉(锁 3 后半):prev_kind='supply' 后继窗仍
+    恰 1 名——本卡无「补给后」分句,与①绑定形计数式(1+2=3)分道,
+    防共用公式回潮(共用即本窗误发 3 名 = 行为级错误)。"""
+    gs = _make_gs(bench=[], cards=[_NAMED_CARD])
+    granted = check_strategy_node_char_grants(gs, prev_kind='supply',
+                                              sig=_LSIG)
+    assert granted == 1, '具名形计数恒名数常量,无供给加成'
+    assert [(u.char_id, u.star) for u in bench_units_of(gs)] == [
+        ('三月七', 1)], '供给后继窗仍 1 名'
+    assert rows_sink.kinds() == [], '零申报行'
+
+
+def test_named_card_merge_cascade_third_copy(rows_sink) -> None:
+    """具名形级联锁(锁 4):预置 2×1★ 三月七 → 窗发放第 3 只 → 到席瞬间
+    3 合 1 合成 2★(获得链现役级联;返回值 = 发放名数,级联前口径)。
+    商店购买同名录入外的第三通道并发 = 同链语义,T-408 §1.2i 量级推演
+    的合成链兑现面。"""
+    gs = _make_gs(bench=[('三月七', 1), ('三月七', 1)],
+                  cards=[_NAMED_CARD])
+    granted = check_strategy_node_char_grants(gs, prev_kind='battle',
+                                              sig=_LSIG)
+    assert granted == 1, '发放名数 = 1(级联前口径)'
+    units = bench_units_of(gs)
+    assert [(u.char_id, u.star) for u in units] == [('三月七', 2)], \
+        '3 名 1★ 同名凑三 → 链现役 3 合 1 升星级联 = 席面 1 只 2★'
+    assert rows_sink.kinds() == [], '正常路径零申报行'
