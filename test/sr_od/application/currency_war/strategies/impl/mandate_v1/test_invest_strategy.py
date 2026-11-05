@@ -288,21 +288,21 @@ def test_char_grant_cards_gift_value_off_zero():
 
 def test_grant_registry_counts_and_closed_set():
     """底册计数测试(对账记录 = 迭代目录 strategy-grants-reconciliation.md):
-    104 条 = 11 顾问 + 76 角色直读(绑定母体白得/反扫补网/非直读人工
-    转正[佩佩逛街句/佩佩携钻句]/非候选直读登记[狸职手续,按实机录名
-    归一])+ 15 开箱分支(占席道具直读,箱腿卡随批扩员,含融合召唤)
+    105 条 = 11 顾问 + 77 角色直读(绑定母体白得/反扫补网/非直读人工
+    转正[佩佩逛街句/佩佩携钻句/佩佩客串登场句]/非候选直读登记[狸职手续,
+    按实机录名归一])+ 15 开箱分支(占席道具直读,箱腿卡随批扩员,含融合召唤)
     + 1 选择型具名装备(独家代言,人工登记——「从3件进阶装备中选择一件
     获取」占位选定建模,选择获取无「获得…roster 名」直读,反扫零命中)
     + 1 角色×道具混合(龙虎兄弟狸);顾问档名单在册。"""
-    assert len(STRATEGY_GRANTS) == 104
+    assert len(STRATEGY_GRANTS) == 105
     advisors = {n for n, g in STRATEGY_GRANTS.items() if g.advisor}
     assert len(advisors) == 11
     assert {'停云顾问', '加拉赫顾问', '摸个鱼吧I'} <= advisors
     for n in ('龙虎兄弟狸', '佩佩驾到', '艾丝妲的猛犬！', '招财狗'):
         assert n in STRATEGY_GRANTS
-    # 非直读人工转正 3 条(溜佩佩/溜佩佩+/这么大的钻石):注册存在 +
-    # 发放对象 = 佩佩
-    for n in ('溜佩佩', '溜佩佩+', '这么大的钻石'):
+    # 非直读人工转正 4 条(溜佩佩/溜佩佩+/这么大的钻石/佩佩客串):
+    # 注册存在 + 发放对象 = 佩佩
+    for n in ('溜佩佩', '溜佩佩+', '这么大的钻石', '佩佩客串'):
         assert n in STRATEGY_GRANTS, '转正卡注册在册'
         assert STRATEGY_GRANTS[n].chars_immediate == ('佩佩',), \
             '转正登记发放对象 = 佩佩'

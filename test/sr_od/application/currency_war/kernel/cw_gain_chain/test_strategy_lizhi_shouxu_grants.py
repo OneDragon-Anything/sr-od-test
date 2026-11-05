@@ -118,9 +118,9 @@ def test_lizhi_char_grant_triple_with_merge_cascade(
     effects = on_strategy_gained(gs, _CARD, rand=False, sig=_LSIG,
                                  rng=random.Random(0))
     assert effects == (
-        'char_grant:狸职狸狸(placed=True,merge=0)',
-        'char_grant:狸职狸狸(placed=True,merge=0)',
-        'char_grant:狸职狸狸(placed=True,merge=1)',
+        'char_grant:狸职狸狸(placed=True,merge=0,uid=1)',
+        'char_grant:狸职狸狸(placed=True,merge=0,uid=2)',
+        'char_grant:狸职狸狸(placed=True,merge=1,uid=3)',
     ), '逐次三发 + 合成级联 merge 计数随串留证'
     units = bench_units_of(gs)
     assert [(u.char_id, u.star) for u in units] == [('狸职狸狸', 2)], \
@@ -144,9 +144,9 @@ def test_lizhi_char_grant_bench_full_overflow_unit_kind(
     effects = on_strategy_gained(gs, _CARD, rand=False, sig=_LSIG,
                                  rng=random.Random(0))
     assert effects == (
-        'char_grant:狸职狸狸(placed=True,merge=0)',
-        'char_grant:狸职狸狸(placed=False,merge=0)',
-        'char_grant:狸职狸狸(placed=False,merge=0)',
+        'char_grant:狸职狸狸(placed=True,merge=0,uid=1)',
+        'char_grant:狸职狸狸(placed=False,merge=0,uid=2)',
+        'char_grant:狸职狸狸(placed=False,merge=0,uid=3)',
     ), '第 1 发溢出落位,第 2/3 发溢出位已占零写'
     assert gs.overflow_warning.value is True, '席满溢出落位(告警在场)'
     assert gs.overflow_card.value == '狸职狸狸', '溢出位身份 = 角色名'

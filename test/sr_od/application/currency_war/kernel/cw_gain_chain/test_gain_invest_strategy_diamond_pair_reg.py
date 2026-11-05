@@ -9,7 +9,7 @@ cw_investments.STRATEGY_GRANTS 非直读人工转正行;按被测方法拆目录
 PENDING-DECISIONS.md):
 - 组合腿主链(锁 2):直构 on_strategy_gained(rand=False)→ 腿序 =
   卡文语序佩佩腿先/宝钻腿后,效果串
-  ``char_grant:佩佩(placed=True,merge=0)``,
+  ``char_grant:佩佩(placed=True,merge=0,uid=1)``,
   ``named_equip_grant:财富宝钻(placed=True)`` 各一条;备战恰 +1 只
   1★ 佩佩(星级占位非先验)、equips 恰 +1 件财富宝钻;正常路径零
   申报行;
@@ -108,7 +108,7 @@ def test_pair_legs_grant_peipei_then_diamond(rows_sink: _RowSink) -> None:
     units_before = len(bench_units_of(gs))
     effects = on_strategy_gained(gs, _CARD, rand=False, sig=_LSIG,
                                  rng=random.Random(0))
-    assert effects == ('char_grant:佩佩(placed=True,merge=0)',
+    assert effects == ('char_grant:佩佩(placed=True,merge=0,uid=1)',
                        f'named_equip_grant:{_EQUIP}(placed=True)'), \
         f'双腿步串漂移: {effects!r}'
     units = bench_units_of(gs)
@@ -141,7 +141,7 @@ def test_equips_unobserved_diamond_leg_rejected() -> None:
     gs.prep_anchored = True
     effects = on_strategy_gained(gs, _CARD, rand=False, sig=_LSIG,
                                  rng=random.Random(0))
-    assert effects == ('char_grant:佩佩(placed=True,merge=0)',
+    assert effects == ('char_grant:佩佩(placed=True,merge=0,uid=1)',
                        f'named_equip_grant:{_EQUIP}(placed=False)'), \
         f'拒落形态步串漂移: {effects!r}'
     assert gs.equips.value is None, '拒落档零写'

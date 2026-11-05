@@ -88,11 +88,13 @@ def test_on_step_consumer_regression_with_on_merge() -> None:
         f'on_step 每级恰一次且看该级终态: {step_stars}'
 
 
-def test_merge_product_drops_uid_both_carriers() -> None:
-    """引擎 A 合成产物 uid=None(T-30 设计 §4 锁 10,与引擎 B 各一锁):
-    被锁实例(uid=1)作素材/载体的合成照常推进,产物 = 新实体 uid 为
-    None——双载体形状各验一次(bench 包 Unit / 场上裸 Unit);锁随消耗
-    自愈(引擎 A 与容器守卫的实例语义分界)。"""
+def test_merge_product_inherits_uid_both_carriers() -> None:
+    """合成承继双载体(T-30 设计 §4 锁 10 的 T-368 承继规则改判版,与
+    链端各一锁):素材含已发号实例(uid=1)→ 产物承继 min=1(_merge_
+    inherit_uid 单一源;gs 缺省 = 纯表形态零豁免,锁域豁免归
+    test_merge_inherit_uid.py 专项);素材全未发号 → 产物 uid=None
+    (新实体语义保留)——双载体形状各验一次(bench 包 Unit / 场上裸
+    Unit,缺省 merge_uid=None 时 _bump_carrier 直呼仍是显式 None 形)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         BenchSlot,
         Unit,
@@ -100,7 +102,7 @@ def test_merge_product_drops_uid_both_carriers() -> None:
     from sr_od.application.currency_war.kernel.cw_merge_simulate import (
         _bump_carrier,
     )
-    # bench 载体(BenchSlot 包 Unit):真路径 _merge_bench
+    # bench 载体(BenchSlot 包 Unit):真路径 _merge_bench,素材含 uid=1
     bench = _bench([
         _bc('流萤'),
         BenchSlot(kind='unit', unit=Unit(char_id='流萤', star=1, uid=1)),
@@ -109,11 +111,20 @@ def test_merge_product_drops_uid_both_carriers() -> None:
     _merge_bench(bench, [])
     product = [s.unit for s in bench if s is not None and s.kind == 'unit']
     assert [(u.char_id, u.star) for u in product] == [('流萤', 2)]
-    assert product[0].uid is None, 'bench 载体产物 uid=None'
-    # 场上裸 Unit 载体:_bump_carrier 单元锁
+    assert product[0].uid == 1, 'bench 载体产物承继素材已发号 min'
+    # 全未发号素材 → 产物 uid=None(新实体语义保留)
+    bench_plain = _bench([_bc('流萤'), _bc('流萤'), _bc('流萤')])
+    _merge_bench(bench_plain, [])
+    product_plain = [s.unit for s in bench_plain
+                     if s is not None and s.kind == 'unit']
+    assert product_plain[0].uid is None, '全未发号素材产物 uid=None'
+    # 场上裸 Unit 载体:_bump_carrier 单元锁(缺省 merge_uid = None 显式形)
     bumped = _bump_carrier(Unit(char_id='流萤', star=1, uid=1), 2, ['x'])
     assert (bumped.char_id, bumped.star) == ('流萤', 2)
-    assert bumped.uid is None, '场上裸 Unit 载体产物 uid=None'
+    assert bumped.uid is None, '场上裸 Unit 直呼缺省 = 显式 None 形'
+    bumped_inherit = _bump_carrier(Unit(char_id='流萤', star=1, uid=1), 2,
+                                   ['x'], merge_uid=1)
+    assert bumped_inherit.uid == 1, '承继形态 uid 随参落地'
 
 
 def test_full_bench_merge_buy_on_merge_passthrough() -> None:

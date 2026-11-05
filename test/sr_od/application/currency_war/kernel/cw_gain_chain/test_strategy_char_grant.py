@@ -100,10 +100,12 @@ def test_char_grant_leg_places_peipei(
     seq_before = gs.write_seq
     effects = on_strategy_gained(gs, card, rand=False, sig=_LSIG,
                                  rng=random.Random(0))
-    assert effects == ('char_grant:佩佩(placed=True,merge=0)',), '单发步串'
+    assert effects == ('char_grant:佩佩(placed=True,merge=0,uid=1)',), '单发步串'
     units = bench_units_of(gs)
     assert [(u.char_id, u.star) for u in units] == [('佩佩', 1)], \
         '备战追加恰 1 只 1★ 佩佩(星级 1 = 占位非先验)'
+    assert all(u.uid is not None for u in units), \
+        '发放刻赋实例号(个体归属承载,策略链发号名单全部键)'
     assert gs.bench.source == 'logic', '确定发放走确定面'
     assert gs.bench.evidence == 'pick_invest_char_grant#place', \
         '落位写 evidence(效果体 evidence + #place 后缀)'
@@ -127,7 +129,7 @@ def test_char_grant_leg_bench_full_overflow(
     gs.prep_anchored = True
     effects = on_strategy_gained(gs, card, rand=False, sig=_LSIG,
                                  rng=random.Random(0))
-    assert effects == ('char_grant:佩佩(placed=True,merge=0)',)
+    assert effects == ('char_grant:佩佩(placed=True,merge=0,uid=1)',)
     assert gs.overflow_warning.value is True, '席满溢出落位(告警在场)'
     assert gs.overflow_card.value == '佩佩', '溢出位身份 = 角色名'
     assert len(bench_units_of(gs)) == 9, '备战席不超容,佩佩在溢出位'
@@ -143,7 +145,38 @@ def test_strategy_char_grants_consistency_lock() -> None:
     漏登——两处独立字面量的名字漂移在备战断言不可见,唯此测试 + 落位
     真值可暴露)。"""
     assert set(_STRATEGY_CHAR_GRANTS) == {'溜佩佩', '溜佩佩+', '招财狗',
-                                          '艾丝妲的猛犬！', '狸职手续'}
+                                          '艾丝妲的猛犬！', '狸职手续',
+                                          '佩佩客串'}
     for name, (char, _count) in _STRATEGY_CHAR_GRANTS.items():
         assert STRATEGY_GRANTS[name].chars_immediate == (char,), \
             f'{name} 效果体发放名与登记表 chars_immediate 漂移'
+
+
+def test_peipei_kechuan_grants_uid_and_leave_queue() -> None:
+    """佩佩客串发号 + 离场队列登记(T-368 佩佩客串批,F1 个体归属承载 +
+    效果条目③ 承载):拿卡发放刻佩佩 uid 非空(env_grant_uid_seq 计数器
+    递增)、离场倒计时队列登记 (uid, 5)(登记表 STRATEGY_KECHUAN_LEAVE_
+    GRANTS 命中卡才写)、发号笔 evidence #uid 后缀分域;对照 = 离场表
+    非命中卡(招财狗)发号照常但零队列写(登记轴差异非发号差异)。"""
+    gs = _make_gs(bench=[('希儿', 1)])
+    gs.prep_anchored = True
+    seq_before = int(gs.env_grant_uid_seq.value or 0)
+    effects = on_strategy_gained(gs, '佩佩客串', rand=False, sig=_LSIG,
+                                 rng=random.Random(0))
+    units = bench_units_of(gs)
+    pp = [u for u in units if u.char_id == '佩佩']
+    assert len(pp) == 1 and pp[0].uid == seq_before + 1, \
+        f'发放刻发号递增: uid={pp[0].uid!r} seq_before={seq_before!r}'
+    assert gs.env_grant_uid_seq.value == seq_before + 1, '计数器写回'
+    assert gs.pending_kechuan_leaves.value == ((pp[0].uid, 5),), \
+        f'离场倒计时入队: {gs.pending_kechuan_leaves.value!r}'
+    assert f'uid={pp[0].uid}' in effects[0], f'效果串带 uid: {effects!r}'
+    # 对照:招财狗(离场表非命中卡)发号照常、零队列写
+    gs2 = _make_gs(bench=[('希儿', 1)])
+    gs2.prep_anchored = True
+    on_strategy_gained(gs2, '招财狗', rand=False, sig=_LSIG,
+                       rng=random.Random(0))
+    pp2 = [u for u in bench_units_of(gs2) if u.char_id == '佩佩']
+    assert pp2 and pp2[0].uid is not None, '名单全部键发号(非本卡特例)'
+    assert gs2.pending_kechuan_leaves.value in (None, ()), \
+        '离场表非命中卡零队列写'

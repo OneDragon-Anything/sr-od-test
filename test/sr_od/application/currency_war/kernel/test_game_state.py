@@ -2053,6 +2053,9 @@ _A_SEEDED: tuple[str, ...] = (
     'pending_strategy_offers',
     # 策略延时发放倒计时队列(空底座,递减/到点判定零 None 防御)
     'pending_strategy_grants',
+    # 佩佩客串离场倒计时队列(空底座,递减/弹除判定零 None 防御,
+    # T-368 佩佩客串批)
+    'pending_kechuan_leaves',
     # 策略卡条件发放已发标记(空底座,检查腿跳过判定零 None 防御)
     'strategy_conditional_done',
     # 绑定型随机角色授予名字绑定域(空 dict 底座,复制发放腿键查判定

@@ -75,8 +75,8 @@ def test_shuangrenwu_chain_places_two_chars() -> None:
     effects = on_strategy_gained(gs, _CARD, rand=False, sig=_LSIG,
                                  rng=rng0)
     assert len(effects) == 2, f'效果串恰 2 条: {effects}'
-    assert effects == ('char_grant:千冶·刃(placed=True,merge=0)',
-                       'char_grant:卡芙卡(placed=True,merge=0)'), \
+    assert effects == ('char_grant:千冶·刃(placed=True,merge=0,uid=1)',
+                       'char_grant:卡芙卡(placed=True,merge=0,uid=2)'), \
         f'双腿步串卡文序: {effects}'
     names = [s.unit.char_id for s in gs.bench.value.slots
              if s.kind == 'unit' and s.unit]

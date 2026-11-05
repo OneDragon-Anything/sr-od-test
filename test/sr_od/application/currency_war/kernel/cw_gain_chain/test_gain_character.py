@@ -137,8 +137,10 @@ def test_uid_param_injected_into_placed_unit() -> None:
 def test_merge_consumes_locked_unit_product_free() -> None:
     """锁件合成消耗自由(设计 §4 锁 9,裁决 6 随裁决 2 收口钉死):被锁
     流萤(uid=1)作素材的 3 合 1 成功——不炸不拦(锁 = 直部署禁令,
-    合成消耗不在辖域);产物 2★ uid=None(新实体),被锁 uid 随素材
-    摘除消失 = 锁随消耗自愈(锁记录孤悬,守卫不再匹配任何容器单位)。"""
+    合成消耗不在辖域);产物 2★ uid=1 承继(T-368 合成承继规则改判:
+    素材已发号 uid 最小值;本测试 gs 无锁记录 = 豁免不触发,锁域豁免
+    形态归 test_merge_inherit_uid.py 专项)——「锁随消耗自愈」经豁免
+    路径保留(素材 uid 命中未解锁锁记录时产物置 None,守卫不再匹配)。"""
     slots_units = [Unit(char_id='流萤', star=1),
                    Unit(char_id='流萤', star=1, uid=1),
                    Unit(char_id='流萤', star=1)]
@@ -154,15 +156,15 @@ def test_merge_consumes_locked_unit_product_free() -> None:
     assert _bench_units(gs) == [('流萤', 2), ('流萤', 1)]
     placed = [s.unit for s in gs.bench.value.slots
               if s is not None and s.kind == 'unit' and s.unit is not None]
-    assert all(u.uid is None for u in placed), \
-        '产物与新落位只均 uid=None(被锁 uid 已随素材消耗)'
+    assert placed[0].uid == 1 and placed[1].uid is None, \
+        '产物承继素材已发号 min(uid=1),新落位缺省恒 None'
 
 
 def test_board_carrier_merge_product_lands_board_uid_free() -> None:
     """场上载体优先通道(设计 §4 锁 9 后半):被锁流萤(uid=1)在场上
     作载体 + bench 1×同名 → 新落位补齐后跨域三连,载体 = 场上那只
     (引擎 B merge_step_once「场上优先」规则)→ 产物直接落 board 且
-    uid=None,不炸不拦。"""
+    uid=1 承继(素材已发号 min,T-368 承继规则;不炸不拦)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         DeployedView,
     )
@@ -180,7 +182,7 @@ def test_board_carrier_merge_product_lands_board_uid_free() -> None:
     front = [u for u in gs.deployed.value.front_slots if u is not None]
     assert [(u.char_id, u.star) for u in front] == [('流萤', 2)], \
         '场上载体升星,产物落 board'
-    assert front[0].uid is None, 'board 产物 uid=None'
+    assert front[0].uid == 1, 'board 产物承继载体 uid(素材已发号 min)'
     bench_left = [s.unit for s in gs.bench.value.slots
                   if s is not None and s.kind == 'unit' and s.unit is not None]
     assert bench_left == [], 'bench 素材两只(存量+新落位)全数被消耗'

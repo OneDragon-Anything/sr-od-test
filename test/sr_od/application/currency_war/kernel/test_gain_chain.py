@@ -1396,7 +1396,7 @@ def test_on_strategy_gained_unregistered_quiet() -> None:
         '溜佩佩+', '招财狗', '狸职手续', '是钻石总会发光', '价值投资·金',
         '黄晶矿工',
         '大扩招', '独家代言', '分解万物', '完美进化', '数值碾压',
-        '融合召唤'}
+        '融合召唤', '佩佩客串'}
     gs = _make_gs(bench=[('希儿', 1)], equips=[])
     seq_before = gs.write_seq
     effects = on_strategy_gained(gs, '随便一张未收录卡', rand=False,
