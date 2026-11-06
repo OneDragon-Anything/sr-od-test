@@ -2,7 +2,7 @@
 
 测试文件组织说明:tools/ 目录无 src 镜像先例(tools 不是 src-layout 包),
 无法按「src 路径同源镜像」落位,按工具名组织为本文件(规范变通记录于
-文件头,sr-od-test/README.md「测试文件组织」的镜像规则以 src 文件为锚)。
+文件头,sr-od-test/README.md「测试文件组织」的镜像规则以 src 文件为基准)。
 
 被测行为锁 = 渲染设计约定,出处(持久索引):
 - docs/develop/sr_od/application/currency_war/changes/2026-10-16-journal-review-renderer/
@@ -78,7 +78,7 @@ def receipt(op: str, reason: str = '', detail: str = '',
 
 
 def receipts_row(ts: str, *recs: dict[str, Any], **kw: Any) -> dict[str, Any]:
-    """receipts 锚行(after = 回执滚动窗整窗)。"""
+    """receipts 基准行(after = 回执滚动窗整窗)。"""
     kw.setdefault('family', 'logic_action')
     kw.setdefault('actor', 'CwScreenPrep')
     return mkrow(ts, 'receipts', list(recs), **kw)
@@ -197,13 +197,13 @@ def test_placeholder_screen_when_no_evidence_at_group_head():
 def test_unregistered_screen_actor_gap_annotated_mid_chapter():
     """未注册画面 op 行(pipeline §4「未注册 actor」+「缺口可见性为设计
     目标」):不切分,挂当前画面章尾注 + 记缺口;obs 与非 obs 两 family 都
-    显影 actor 名(同章同 actor 聚合一条带计数);非 obs 行禁止静默混入动作
+    显示 actor 名(同章同 actor 聚合一条带计数);非 obs 行禁止静默混入动作
     状态变化表(一律走尾注);receipts 动作节机制与快照章形态 op
     (CwScreenPrep 等)/非画面 actor(cw_observation)不受判定影响。"""
     rows = [
         mkrow('t1', 'hp', 80, screen='货币战争-备战'),            # 开备战章
         receipts_row('t2', receipt('BuyCard')),                   # 动作节 1
-        # obs 未注册画面 op:值显影(观察尾注)+ actor 显影(缺口)
+        # obs 未注册画面 op:值显示(观察尾注)+ actor 显示(缺口)
         mkrow('t3', 'new_screen_payload', {'opts': ['x']},
               screen='货币战争-备战', actor='CwScreenBrandNewPayload'),
         # 非 obs 未注册画面 op ×2:聚合一条尾注,不入变化表
@@ -219,10 +219,10 @@ def test_unregistered_screen_actor_gap_annotated_mid_chapter():
     report, md = build(rows)
     scr = section_of_kind(report, 'node').screens[0]
     joined = '\n'.join(scr.annots)
-    # actor 名显影:obs ×1 + 非 obs ×2 聚合一条带计数
+    # actor 名显示:obs ×1 + 非 obs ×2 聚合一条带计数
     assert '缺口: 未注册写入者 CwScreenBrandNewPayload ×3' in joined
     assert '- 缺口: 未注册写入者 CwScreenBrandNewPayload ×3' in md
-    # obs family:值显影进 0 观察动态段(非注册键观察写入);非 obs family:不走观察尾注
+    # obs family:值显示进 0 观察动态段(非注册键观察写入);非 obs family:不走观察尾注
     assert '- new_screen_payload {"opts":["x"]}' in md
     assert not any(a.startswith('观察: new_screen_payload=')
                    for a in scr.annots)
@@ -241,12 +241,12 @@ def test_unregistered_screen_actor_gap_annotated_mid_chapter():
 
 # ---------------------------------------------------------------------------
 # 切章证据收窄与广播形态(渲染器 _locate_screen/SCREEN_REGISTRY 注:
-# 切章锚 = field='current_screen' 写入行本体;相邻合并键 = title)
+# 切章基准 = field='current_screen' 写入行本体;相邻合并键 = title)
 # ---------------------------------------------------------------------------
 
 
 def test_stale_snapshot_cs_never_switches_chapter():
-    """切章证据收窄:非广播行携带的快照 cs 只作归属,永不作为切章锚——
+    """切章证据收窄:非广播行携带的快照 cs 只作归属,永不作为切章基准——
     结算段陈值 cs=备战(sim 广播节拍下两次广播之间的行全带陈值)不重开
     备战章,挂当前战斗章(幽灵章回归:只看键在场时章数近倍膨胀)。"""
     rows = [
@@ -328,7 +328,7 @@ def test_opening_note_skips_empty_value_rows():
 
 
 def test_receipt_same_value_noop_not_an_action():
-    """动作锚 = receipts 且 same_value≠true;no-op 整窗重写(same_value=
+    """动作基准 = receipts 且 same_value≠true;no-op 整窗重写(same_value=
     true,实测 524 条中 183 条)不产动作节。"""
     win = [receipt('BuyCard', screen='货币战争-备战-开商店')]
     rows = [
@@ -344,7 +344,7 @@ def test_receipt_same_value_noop_not_an_action():
 
 def test_retry_chain_merged_into_one_action():
     """重试链合并:连续回执同 op 且前条 reason 非空 → 合并一节,节内
-    逐条列出(实测样例 StartBattle 重发链);异 op 锚仍开新节。"""
+    逐条列出(实测样例 StartBattle 重发链);异 op 基准仍开新节。"""
     rows = [
         receipts_row('t1', receipt('StartBattle', reason='弹窗未关')),
         receipts_row('t2', receipt('StartBattle', detail='出战已点击')),
@@ -354,13 +354,13 @@ def test_retry_chain_merged_into_one_action():
     actions = section_of_kind(report, 'node').screens[0].actions
     assert [a.op for a in actions] == ['StartBattle', 'BuyCard']
     assert len(actions[0].chain) == 2  # 链内逐条
-    assert actions[0].chain[0]['reason'] == '弹窗未关'  # 合并判据锚 = reason 非空
+    assert actions[0].chain[0]['reason'] == '弹窗未关'  # 合并判据基准 = reason 非空
     assert '#### 1 出战' in md
-    assert '⚠ ' in md and 'applied' not in md  # 受阻样式挂 reason,布尔零显影
+    assert '⚠ ' in md and 'applied' not in md  # 受阻样式挂 reason,布尔零显示
 
 
 def test_transition_action_attributed_to_issuing_screen():
-    """动作节章归属锚 = 回执 screen(动作发出画面;出处 =
+    """动作节章归属基准 = 回执 screen(动作发出画面;出处 =
     tools/cw/replay_to_md.py 模块头「渲染结构」):开商店回执在切屏写入行
     之后落窗(sim 实测形态:cs 先翻、回执后落),按发出画面回搜归备战章,
     不按位置落到变更后画面;后续动作(买牌)照常归商店章;开店自身零
@@ -368,7 +368,7 @@ def test_transition_action_attributed_to_issuing_screen():
     rows = [
         mkrow('t1', 'current_screen', '货币战争-备战',
               screen='货币战争-备战'),
-        # 切屏先落盘(开商店的世界推进)
+        # 切屏先落盘(开商店的状态副本推进)
         mkrow('t2', 'current_screen', '货币战争-备战-开商店',
               screen='货币战争-备战-开商店'),
         # 开店回执后落窗,screen = 发出画面(备战)
@@ -439,7 +439,7 @@ def test_retry_chain_across_screen_switch_stays_on_issuing_chapter():
 def test_legacy_applied_key_receipts_render_clean():
     """旧 journal 兼容(历史批回执含 applied/gold_delta 双键):两键不读
     不显(extra 排除表承接,两处排除字面量保留判据),布尔与金差字样
-    零显影;合并判据只看 reason(旧受阻条 reason 非空照常并链),重渲染
+    零显示;合并判据只看 reason(旧受阻条 reason 非空照常并链),重渲染
     零异常。"""
     legacy_blocked = {'op': 'StartBattle', 'applied': False,
                       'reason': '弹窗未关', 'detail': '旧数据'}
@@ -455,8 +455,8 @@ def test_legacy_applied_key_receipts_render_clean():
     actions = section_of_kind(report, 'node').screens[0].actions
     assert [a.op for a in actions] == ['StartBattle', 'BuyCard']
     assert len(actions[0].chain) == 2  # 旧受阻条 reason 非空 → 照常并链
-    assert 'applied' not in md  # 布尔字样零显影
-    assert 'gold_delta' not in md  # 退役金差键零显影(extra 排除表承接)
+    assert 'applied' not in md  # 布尔字样零显示
+    assert 'gold_delta' not in md  # 退役金差键零显示(extra 排除表承接)
 
 
 def test_delta_causal_flush_and_cross_node_chain():
@@ -473,7 +473,7 @@ def test_delta_causal_flush_and_cross_node_chain():
         mkrow('t3', 'gold', 29, screen='货币战争-备战',
               family='logic_action', actor='PrepActionExecutor'),
         # 节点 1-2:1-1 组尾的 gold29 无回执认领 → 尾扫 1-1 章内变化块;
-        # 1-2 锚节吸收组内待认领写入,前值跨组接链(29)
+        # 1-2 基准节吸收组内待认领写入,前值跨组接链(29)
         mkrow('t4', 'hp', 78, node=(1, 2, 'reward'), screen='货币战争-备战'),
         receipts_row('t5', receipt('BuyCard'), node=(1, 2, 'reward')),
         mkrow('t6', 'gold', 27, node=(1, 2, 'reward'),
@@ -484,7 +484,7 @@ def test_delta_causal_flush_and_cross_node_chain():
     secs = [s for s in report.sections if s.kind == 'node']
     s11 = secs[0].screens[0]
     assert len(s11.actions) == 1
-    # t1 的写入因果归 t2 的 BuyCard 节(不再显影滞后为下一动作的效果)
+    # t1 的写入因果归 t2 的 BuyCard 节(不再显示滞后为下一动作的效果)
     assert [(d.field, d.before, d.after) for d in s11.actions[0].deltas] \
         == [('gold', None, 30)]
     # t3 组尾无回执认领 → 章内变化块
@@ -525,7 +525,7 @@ def test_obs_rows_not_in_delta_settlement_to_trailing():
     assert [(d.field, d.is_hook) for d in prep.actions[0].deltas] \
         == [('node', True)]
     assert all(d.field != 'round_fresh_buys' for d in prep.actions[0].deltas)
-    # obs 回读显影进 0 观察动态段(非注册键观察写入)
+    # obs 回读显示进 0 观察动态段(非注册键观察写入)
     assert '- 本轮新买(round_fresh_buys) phase[1, 1]: 翡翠' in md
     assert not any(a.startswith('观察: round_fresh_buys=')
                    for a in prep.annots)
@@ -764,8 +764,8 @@ def test_opening_unattributed_rows_bucketed():
 
 
 def test_obs_note_rules_skip_dedup_and_route_keys():
-    """观察显影规则:空值不渲染;prev_screen/current_screen 路由键跳过;
-    非注册键观察写入进 0 观察动态段(首写定帧值),同值回读不重复显影。"""
+    """观察显示规则:空值不渲染;prev_screen/current_screen 路由键跳过;
+    非注册键观察写入进 0 观察动态段(首写定帧值),同值回读不重复显示。"""
     rows = [
         mkrow('t1', 'hp', 80, node=(1, 1, 'reward'), screen='货币战争-备战'),
         mkrow('t2', 'prev_screen', '货币战争-战斗等待', node=(1, 1, 'reward'),
@@ -844,7 +844,7 @@ def test_action_payload_brief_and_settlement_battle_chapter():
 
 def test_obs_note_entry_keys_skipped_unique_fields_kept():
     """观察尾注跳过已注册画面 0 观察键(注册表并集)——这些字段必在对应画面
-    章 0 观察显影,观察回读是重复显影且时间窗归属会误挂进无关动作;非
+    章 0 观察显示,观察回读是重复显示且时间窗归属会误挂进无关动作;非
     entry 键(pending_loss 等独有信息)保留。"""
     rows = [
         mkrow('t1', 'hp', 80, node=(1, 1, 'reward'), screen='货币战争-备战'),
@@ -953,7 +953,7 @@ def test_star_tome_registry_fix_and_box_unchanged():
     """零差异例外清单(landing §3.4 配套修订):SCREEN_REGISTRY 补星徽秘典
     弹窗广播行(→ 画面-书卡/star_tome_opts);CwScreenBookcard 键集修复
     (box_card_names → star_tome_opts 存量错行);武装箱两行
-    (box_card_names)不动。广播行开「画面-书卡」章无缺口注记,0 观察显影
+    (box_card_names)不动。广播行开「画面-书卡」章无缺口注记,0 观察显示
     star_tome_opts;CwScreenBoxPick 章仍「画面-箱子」。"""
     assert mod.SCREEN_REGISTRY['货币战争-星徽秘典弹窗'].title == '画面-书卡'
     assert mod.SCREEN_REGISTRY['货币战争-星徽秘典弹窗'].entry_fields \
@@ -1064,7 +1064,7 @@ def test_action_join_basis_block_position_and_payload(tmp_path: Path):
     i_action = md.index('- 动作:')
     i_table = md.index('| 字段 |')
     assert i_title < i_basis < i_action < i_table   # 标题下、变化表前
-    # probe:2 无回执匹配 → 锚章「策略决策未落地」注记(不落章级小节)
+    # probe:2 无回执匹配 → 归属章「策略决策未落地」注记(不落章级小节)
     assert '- 策略决策未落地: probe:2(CwActionWearEquipParam)' in md
     assert '- 策略遥测: probe (2 条)' in md
 
@@ -1149,10 +1149,10 @@ def test_chapter_level_fifo_and_section_position(tmp_path: Path):
 
 
 def test_supply_action_join_and_chapter_skip(tmp_path: Path):
-    """补给迁动作级 join(补给决策链接线批):decide_supply ∈ 动作级适用
+    """补给迁动作级 join(补给决策链接入批):decide_supply ∈ 动作级适用
     集——回执 CwActionPickSupplyOp 经归一映射对 CwActionPickSupplyParam,
     依据块挂动作节;章级小节对适用集入口关闭(两级互斥);无回执匹配的
-    补给记录 → 锚章「策略决策未落地」注记(与 prep/shop 同待遇)。"""
+    补给记录 → 归属章「策略决策未落地」注记(与 prep/shop 同待遇)。"""
     rows = [
         mkrow('t1', 'current_screen', '货币战争-补给', node=(1, 1, 'supply'),
               screen='货币战争-补给'),
@@ -1175,7 +1175,7 @@ def test_supply_action_join_and_chapter_skip(tmp_path: Path):
 
 def test_header_three_states_and_unattached_counts(tmp_path: Path):
     """局头策略遥测行三态(render-assembly §4):无遥测整行省略;全归属 =
-    「- 策略遥测: <sid> (N 条)」;未归属(node=null 帧 / 无锚章)> 0 →
+    「- 策略遥测: <sid> (N 条)」;未归属(node=null 帧 / 无归属章)> 0 →
     行尾追加 (未归属 M 条) 且不逐条展开。"""
     rows = [
         mkrow('t1', 'current_screen', '货币战争-备战', screen='货币战争-备战'),
@@ -1189,7 +1189,7 @@ def test_header_three_states_and_unattached_counts(tmp_path: Path):
     recs_null = recs_ok + [
         mkrec('probe:2', 'decide_partner', node=None,
               op='CwActionPickPartnerParam'),   # node=null → 不入章级
-        mkrec('probe:3', 'decide_supply', node=(5, 5)),   # 无锚章
+        mkrec('probe:3', 'decide_supply', node=(5, 5)),   # 无归属章
     ]
     report_n, md_n = build_t(rows, recs_null, tmp_path)
     assert '- 策略遥测: probe (3 条)(未归属 2 条)' in md_n
