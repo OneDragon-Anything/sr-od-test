@@ -1,5 +1,5 @@
 """sim 世界链测试(镜像 src = 获得链 check_strategy_conditional_grants
-经 sim 节点推进;§2.4 申报 sim 零新增接线——tick 双端同链,sim 容器现值
+经 sim 节点推进;§2.4 申报 sim 零新增接入调用——tick 实机(live)和模拟器(sim)两边同链,sim 容器现值
 = 世界真值)。
 
 测试面依据 = 迭代设计 designs/T-102-guimo-xiaoying.md §4 锁 8:

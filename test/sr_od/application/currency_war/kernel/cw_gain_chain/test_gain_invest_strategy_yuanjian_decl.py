@@ -9,7 +9,7 @@ test_gain_invest_strategy_pick_grant.py)。
   无关——申报对象是「获得机制本身」的随机掷骰留证,非写通道语义);
 - 非名单卡闭集零行:注册表派生对照(代表卡跨三品质 + 腿② granted 金名
   场景)零申报行——名单单一源 = STRATEGY_RANDOM_GRANTS,表外卡获得
-  零掷骰语义,行为 fail-closed 同构(ENV_REROLL_DECL 双端分道先例)。
+  零掷骰语义,行为 fail-closed 同构(ENV_REROLL_DECL 实机(live)和模拟器(sim)两边分道先例)。
 构造沿现役获得链测试先例:GameState 直构(取安静未收录卡/注册表在册
 卡,席位/道具/效果域零触碰)。
 """

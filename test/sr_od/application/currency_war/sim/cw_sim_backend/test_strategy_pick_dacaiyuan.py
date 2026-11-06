@@ -84,7 +84,7 @@ def test_pick_dacaiyuan_full_chain_sell_and_burst() -> None:
         gold_before = int(gs.gold.value or 0)
         _pick_card(b, '大裁员')
         _f, _bk = deployed_rows_of_view(gs.deployed.value)
-        assert (_f, _bk) == ([], []), '场清空(出售面,双端同链)'
+        assert (_f, _bk) == ([], []), '场清空(出售面,实机和模拟器两边同链)'
         assert int(gs.gold.value or 0) - gold_before == expected_refund, \
             '退款 = 板面全额公式值(单一源 cw_economy;×2 修饰缺口低估' \
             '申报,观察覆盖)'
@@ -113,7 +113,7 @@ def test_pick_dacaiyuan_zero_deal_leg_criterion_split() -> None:
                        produced_by='Test', evidence='t:opts', sig=_SIG)
         _pick_card(b, '大裁员')
         _f, _bk = deployed_rows_of_view(gs.deployed.value)
-        assert (_f, _bk) == ([], []), '出售面照走(双端同链)'
+        assert (_f, _bk) == ([], []), '出售面照走(实机和模拟器两边同链)'
         assert _bench_units(gs) == [], \
             '零发牌(撤销细分即误发 5 只 2★,本断言必红)'
     finally:

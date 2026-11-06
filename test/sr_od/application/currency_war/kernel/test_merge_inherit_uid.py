@@ -50,7 +50,7 @@ def _gs() -> GameState:
 
 
 def test_chain_and_simulate_inherit_min_uid() -> None:
-    """双端一致 + min 规则:三只佩佩 uid 3/1/5 → 产物 2★ 承继 min=1
+    """实机(live)和模拟器(sim)两边一致 + min 规则:三只佩佩 uid 3/1/5 → 产物 2★ 承继 min=1
     (链端与推演端同输入同产物——交叉核对 uid 面);承继后个体仍可被
     离场/穿戴按 uid 命中(「接走佩佩们」卡文不区分星级的承载前提)。"""
     gs = _gs()

@@ -947,7 +947,7 @@ def test_strategy_pick_chain_board_rewrite() -> None:
 
 def test_strategy_pick_chain_named_equip_grant() -> None:
     """获得链断言:选全员晋升 → equips 恰 +2 拆装扳手(具名装备授予腿,
-    双端同链,sim 世界写入即容器写)+ bench/deployed 零变化(板面重写面
+    实机(live)和模拟器(sim)两边同链,sim 写状态副本即容器写)+ bench/deployed 零变化(板面重写面
     零建模 = 既有边界申报,sim-design §8.2 板面重写族行)。"""
     b = _backend(7)
     try:
@@ -1173,7 +1173,7 @@ def test_strategy_pick_chain_random_star_equip_grant() -> None:
     (采样效果子链;rng 注入流键,sim 采样即世界真值);同 seed 同流键
     重放 equips 逐位一致。与打捞人才库+ 锁同构——泛化表 (category, count)
     两行走同一工厂路径,本锁辖星徽行的 sim 全链接线(零特殊接线申报,
-    双端同链)。"""
+    实机和模拟器两边同链)。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
         roll_random_equip,
     )

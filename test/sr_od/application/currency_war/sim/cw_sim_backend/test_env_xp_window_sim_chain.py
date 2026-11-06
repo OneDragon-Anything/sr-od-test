@@ -5,7 +5,7 @@ kernel 发放桥 grant_effect_node_xp 经 sim 后端节点推进全链;按流程
 test_env_deploy_lock_sim_chain.py〕)。
 
 测试面依据 = 迭代 T-38 设计(.debug/progress/2026-09-23-invest-effects-
-calc/designs/T-38-chenggong-jingyan.md)§2.6 双端语义 + §4 锁 10(sim 半):
+calc/designs/T-38-chenggong-jingyan.md)§2.6 实机(live)和模拟器(sim)两边语义 + §4 锁 10(sim 半):
 - **sim = 世界真值**:节点边界发放经 kernel tick 段 write_logic 写
   gs.xp/gs.level → sim 世界等级随白送经验真实推进(8→9 跨级例证),
   零额外接线;

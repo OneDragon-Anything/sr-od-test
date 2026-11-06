@@ -11,7 +11,7 @@ snapshot.py):
   登记,同 env_grant_uid_seq 先例——未登记域若发生类型漂移在此暴露);
 - 审计行:PROJECTION_AUDIT 出 strategy_death_save_used 行(process_only,
   发放簿记过程量无观察读端——救援事件 live 由游戏自算自显,闩 live 零写
-  零消费双端不对称;容器字段完备性纪律的显式锁,表完备性另有抽检测试
+  零消费实机(live)和模拟器(sim)两边不对称;容器字段完备性纪律的显式锁,表完备性另有抽检测试
   兜底)。
 """
 from __future__ import annotations

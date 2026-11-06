@@ -138,7 +138,7 @@ def test_rescue_full_chain_sim(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_rescue_live_sell_leg_zero_write(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """live 形态零写(sim 门关):判定/闩/瞬时位照常(双端同链),出售腿
+    """live 形态零写(sim 门关):判定/一次性标志位/瞬时位照常(实机(live)和模拟器(sim)两边同链),出售写状态分支
     三笔(deployed/gold/equips)零写——游戏自执行出售,观察覆盖承接。"""
     gs = _make_gs(front=((('希儿'), 2, (_EM,)),))
     sold = _seed_rescuable(gs)

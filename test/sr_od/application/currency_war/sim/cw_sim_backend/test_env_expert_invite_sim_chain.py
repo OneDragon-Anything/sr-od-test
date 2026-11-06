@@ -115,7 +115,7 @@ def _run_expert_chain(seed: int) -> tuple[list, list[str]]:
 def test_expert_invite_env_sim_full_chain(
         _isolate_defect_buffer) -> None:
     """sim 全链轻量局(T-39 设计 §4 锁 8):五段断言见模块 docstring;
-    世界发放域登记一处,双端同链零 sim 私有接线(链原语复用 = kernel
+    写状态副本发放域登记一处,实机(live)和模拟器(sim)两边同链零 sim 私有接入调用(链原语复用 = kernel
     单一获得链,sim 世界写入即容器写)。"""
     slots, equips = _run_expert_chain(7)
     assert len(slots) == 6, '4 开局手牌 + 2 道具槽'

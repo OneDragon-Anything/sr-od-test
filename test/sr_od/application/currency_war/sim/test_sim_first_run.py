@@ -192,7 +192,7 @@ def test_first_match_container_invariants(two_runs: tuple) -> None:
     # 亦可合法出现——选卡即时损血腿(先亏后盈 −20)直加不 clip,hp 写负
     # 值后下一败局才由 apply_hp_outcome 保底/局终逻辑接管;交换支
     # (hp := gold_old)gold=0 选卡 → hp=0 字面落 0,同产中局 0(上下界
-    # 双端 = Σ正部/Σ负部参数化 + swap 族正部,单一源 = 注册表现值)。
+    # 实机(live)和模拟器(sim)两边 = Σ正部/Σ负部参数化 + swap 族正部,单一源 = 注册表现值)。
     assert all(_HP_TRAIL_FLOOR <= h <= _HP_TRAIL_BOUND
                for h in run.hp_trail), \
         f'hp 轨迹出界(界 = [{_HP_TRAIL_FLOOR}, 开局查表 + hp_instant ' \

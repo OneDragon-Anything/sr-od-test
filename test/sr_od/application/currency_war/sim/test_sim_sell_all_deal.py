@@ -251,7 +251,7 @@ def test_sell_all_deal_absent_on_direct_report_form() -> None:
             session=SimpleNamespace())
         assert out.applied
         _f, _bk = deployed_rows_of_view(gs.deployed.value)
-        assert (_f, _bk) == ([], []), '出售面照走(双端同链)'
+        assert (_f, _bk) == ([], []), '出售面照走(实机和模拟器两边同链)'
         assert _bench_units(gs) == [], \
             '发牌腿零触发(直调不经分派层,bench 无凭空补员)'
     finally:

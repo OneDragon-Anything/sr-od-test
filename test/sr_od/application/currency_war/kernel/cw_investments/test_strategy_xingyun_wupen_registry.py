@@ -52,7 +52,7 @@ def test_xingyun_wupen_unit_buff_registration_surface() -> None:
     对拍 + 现金 fail-closed 0;构建校验(孤儿键/id 双匹配)import 期已
     过——本测试存活即证。卡特异性申报:「幸运一击伤害」= 战斗内独立乘区
     伤害增幅(幸运一击与暴击独立计算,机制正本 = combat.md 幸运一击乘区
-    节),非泛用强度、非双端盲区形态——机制有正本承载,游戏侧自算 bot
+    节),非泛用强度、非实机(live)和模拟器(sim)两边盲区形态——机制有权威版本承载,游戏侧自算 bot
     零消费,后继族卡禁转引「盲区」口径。数值(25%)与对象(我方小队)
     游戏侧自算,bot 零建模零观察。"""
     spec = STRATEGY_EFFECTS[_CARD]

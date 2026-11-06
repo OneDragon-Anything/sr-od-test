@@ -87,7 +87,7 @@ def test_pick_jiangben_zengxiao_full_chain_sell_and_free_buys() -> None:
         gold_before = int(gs.gold.value or 0)
         _pick_card(b, '降本增效')
         _f, _bk = deployed_rows_of_view(gs.deployed.value)
-        assert (_f, _bk) == ([], []), '场清空(出售面,双端同链)'
+        assert (_f, _bk) == ([], []), '场清空(出售面,实机和模拟器两边同链)'
         assert int(gs.gold.value or 0) - gold_before == 3, \
             '退款恰 3(基础公式;×2 修饰缺口低估申报,观察覆盖)'
         assert _bench_units(gs) == [], 'bench 清空且零新增(素出售无发牌面)'

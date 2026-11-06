@@ -9,7 +9,7 @@ designs/T-19-laowu-paiqian-hetong.md(定稿)§2.3 + §4.3-§4.5:
   形态,宁缺勿造)/bench 未观察(缓发不标 boss 键)/达标发放;
 - **周期性**:序贯两个首领节点坐标(按现役 node_sequence_of 取实际
   boss 位)各发一次;同节点重复调用零新增写;
-- **双端互斥**:sim 形态 sig(logic_action)与 live 形态 sig(logic_hook)
+- **实机(live)和模拟器(sim)两边互斥**:sim 形态 sig(logic_action)与 live 形态 sig(logic_hook)
   先后各调一次,另一路径重调 = done 短路零双发;
 - **两写契约**:角色链 + done boss 键同 evidence 同 sig 相邻。
 """
@@ -236,7 +236,7 @@ def test_periodicity_two_boss_nodes_then_repeat(
 
 def test_dual_path_done_short_circuit(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """双端互斥(T-19 设计 §4.5):一端发放后,另一路径(live logic_hook
+    """实机和模拟器两边互斥(T-19 设计 §4.5):一端发放后,另一路径(live logic_hook
     形态 / sim logic_action 形态)重调同节点 = done 短路零双发(两形态
     各验一个方向)。"""
     gs = _make_gs(bench=[], done=_seed_done())

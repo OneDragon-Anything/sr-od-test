@@ -526,7 +526,7 @@ def test_bench_unobserved_fails_closed_with_defect(
         rows_sink: _RowSink) -> None:
     """bench 未观察 fail-closed(设计 §4 锁 5 条 3):不判零写 + 缺陷
     保留证据行(新 kind gain_chain_cond_bench_unobserved);种子底座下
-    生产双端不可达(开局种子恒种 bench),直构/测试形态防御。"""
+    生产实机(live)和模拟器(sim)两边不可达(开局种子恒种 bench),直构/测试形态防御。"""
     gs = _make_conditional_gs(bench=None)
     out = gain_invest_env(gs, None, _ENV_EXPERT_WOLF, rand=False, sig=_SIG)
     assert out.effects == (f'advisor_unlock:{_ENV_EXPERT_WOLF}:',), \

@@ -11,7 +11,7 @@ T-122-wushang-tongguan.md(定稿)§4 锁面 + REVIEW-T122 §四 ③/④ 裁决�
   ``gain_equipment(rand=False)`` 单件入栏,效果串恰一条含 placed
   (gain-chain.md §5:卡文无随机词);
 - 条件金腿 = 卡文句 1「战斗结束时，若此次战斗中没有角色陷入过无法战斗状态，
-  获得1金币。」双端真值皆盲零建模(正本 = invest_effects.md §8 型③成员;
+  获得1金币。」实机(live)和模拟器(sim)两边真值皆盲零建模(权威版本 = invest_effects.md §8 型③成员;
   记录模型不经 instant_gold 消费,fields.md §4.1 观察覆盖兜底)——金零写
   钉死进腿锁 + STRATEGY_EFFECTS 反向锁钉死「零建模是有意裁决非漏登记」;
 - 精密金面前置按物判(判据映射只挂拆装扳手):生命之花 gate 恒 None 走

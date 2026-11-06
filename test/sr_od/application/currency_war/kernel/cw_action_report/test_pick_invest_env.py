@@ -168,7 +168,7 @@ def test_deterministic_equip_env_grants_without_rng(
     """确定性装备环境(T-31 设计 §4 锁 5):红钻贵族零随机支 → rng 谓词
     零解析(provider 不触,确定性装备入账分支不入谓词);选卡后 equips 尾追
     '红钻'、bench +1 箱(supply_box)——上报 → gain_invest_env →
-    on_env_gained 双端同链,live/sim 共用语义一条测试覆盖。"""
+    on_env_gained 实机(live)和模拟器(sim)两边同链,live/sim 共用语义一条测试覆盖。"""
     gs = _make_gs(['红钻贵族', '轮岗', '头彩'])
     out = report_action_pick_invest_env_param(
         gs, SimpleNamespace(idx=0), _SIG)
@@ -184,7 +184,7 @@ def test_deterministic_equip_env_grants_without_rng_blue(
         provider_calls: list[str]) -> None:
     """确定性装备环境(T-32 设计 §4 锁 5):蓝钻贵族零随机支 → rng 谓词
     零解析(provider 不触);选卡后 equips 尾追 '蓝钻'、bench +1 箱
-    (supply_box)——上报 → gain_invest_env → on_env_gained 双端同链,
+    (supply_box)——上报 → gain_invest_env → on_env_gained 实机和模拟器两边同链,
     live/sim 共用语义一条测试覆盖。"""
     gs = _make_gs(['蓝钻贵族', '轮岗', '头彩'])
     out = report_action_pick_invest_env_param(
@@ -202,7 +202,7 @@ def test_deterministic_equip_env_grants_without_rng_lieche(
     """确定性装备环境(T-63 设计 §4 锁 5):列车同行邀请(邀请族首例,
     equips_immediate only)零随机支 → rng 谓词零解析(provider 不触);
     选卡后 equips 尾追 '列车同行星徽'、bench 零落位(无开箱腿)——上报
-    → gain_invest_env → on_env_gained 双端同链,live/sim 共用语义一条
+    → gain_invest_env → on_env_gained 实机和模拟器两边同链,live/sim 共用语义一条
     测试覆盖。"""
     gs = _make_gs(['列车同行邀请', '轮岗', '头彩'])
     out = report_action_pick_invest_env_param(
@@ -220,7 +220,7 @@ def test_deterministic_equip_env_grants_without_rng_yinhe(
     """确定性装备环境(T-64 设计 §4 锁 5,治理后形态):银河学者邀请
     (邀请族展开首卡,equips_immediate only)零随机支 → rng 谓词零解析
     (provider 不触);选卡后 equips 尾追 '银河学者星徽'、bench 零落位
-    (无开箱腿)——上报 → gain_invest_env → on_env_gained 双端同链,
+    (无开箱效果条目)——上报 → gain_invest_env → on_env_gained 实机和模拟器两边同链,
     live/sim 共用语义一条测试覆盖。"""
     gs = _make_gs(['银河学者邀请', '轮岗', '头彩'])
     out = report_action_pick_invest_env_param(
@@ -238,7 +238,7 @@ def test_deterministic_equip_env_grants_without_rng_beluoboge(
     """确定性装备环境(T-65 设计 §4 锁 5,治理后形态):贝洛伯格邀请
     (邀请族展开卡,equips_immediate only)零随机支 → rng 谓词零解析
     (provider 不触);选卡后 equips 尾追 '贝洛伯格星徽'、bench 零落位
-    (无开箱腿)——上报 → gain_invest_env → on_env_gained 双端同链,
+    (无开箱效果条目)——上报 → gain_invest_env → on_env_gained 实机和模拟器两边同链,
     live/sim 共用语义一条测试覆盖。"""
     gs = _make_gs(['贝洛伯格邀请', '轮岗', '头彩'])
     out = report_action_pick_invest_env_param(
@@ -256,7 +256,7 @@ def test_deterministic_equip_env_grants_without_rng_xingjian_lvren(
     """确定性装备环境(T-66 设计 §4 锁 5,治理后形态):星间旅人邀请
     (邀请族展开卡,equips_immediate only)零随机支 → rng 谓词零解析
     (provider 不触);选卡后 equips 尾追 '星间旅人星徽'、bench 零落位
-    (无开箱腿)——上报 → gain_invest_env → on_env_gained 双端同链,
+    (无开箱效果条目)——上报 → gain_invest_env → on_env_gained 实机和模拟器两边同链,
     live/sim 共用语义一条测试覆盖。"""
     gs = _make_gs(['星间旅人邀请', '轮岗', '头彩'])
     out = report_action_pick_invest_env_param(
@@ -274,7 +274,7 @@ def test_deterministic_equip_env_grants_without_rng_xianzhou(
     """确定性装备环境(T-67 设计 §4 锁 5,治理后形态):仙舟邀请
     (邀请族展开卡,equips_immediate only)零随机支 → rng 谓词零解析
     (provider 不触);选卡后 equips 尾追 '仙舟星徽'、bench 零落位
-    (无开箱腿)——上报 → gain_invest_env → on_env_gained 双端同链,
+    (无开箱效果条目)——上报 → gain_invest_env → on_env_gained 实机和模拟器两边同链,
     live/sim 共用语义一条测试覆盖。"""
     gs = _make_gs(['仙舟邀请', '轮岗', '头彩'])
     out = report_action_pick_invest_env_param(
@@ -292,7 +292,7 @@ def test_deterministic_equip_env_grants_without_rng_langshou(
     """确定性装备环境(T-68 设计 §4 锁 5,治理后形态):狼狩邀请
     (邀请族展开卡,equips_immediate only)零随机支 → rng 谓词零解析
     (provider 不触);选卡后 equips 尾追 '狼狩星徽'、bench 零落位
-    (无开箱腿)——上报 → gain_invest_env → on_env_gained 双端同链,
+    (无开箱效果条目)——上报 → gain_invest_env → on_env_gained 实机和模拟器两边同链,
     live/sim 共用语义一条测试覆盖。"""
     gs = _make_gs(['狼狩邀请', '轮岗', '头彩'])
     out = report_action_pick_invest_env_param(
@@ -310,7 +310,7 @@ def test_deterministic_equip_env_grants_without_rng_shenghui_zhixing(
     """确定性装备环境(T-69 设计 §4 锁 5,治理后形态):盛会之星邀请
     (邀请族展开卡,equips_immediate only)零随机支 → rng 谓词零解析
     (provider 不触);选卡后 equips 尾追 '盛会之星星徽'、bench 零落位
-    (无开箱腿)——上报 → gain_invest_env → on_env_gained 双端同链,
+    (无开箱效果条目)——上报 → gain_invest_env → on_env_gained 实机和模拟器两边同链,
     live/sim 共用语义一条测试覆盖。"""
     gs = _make_gs(['盛会之星邀请', '轮岗', '头彩'])
     out = report_action_pick_invest_env_param(
@@ -328,7 +328,7 @@ def test_deterministic_equip_env_grants_without_rng_zhouzhi_banshen(
     """确定性装备环境(T-70 设计 §4 锁 5,治理后形态):昼之半神邀请
     (邀请族展开卡,equips_immediate only)零随机支 → rng 谓词零解析
     (provider 不触);选卡后 equips 尾追 '昼之半神星徽'、bench 零落位
-    (无开箱腿)——上报 → gain_invest_env → on_env_gained 双端同链,
+    (无开箱效果条目)——上报 → gain_invest_env → on_env_gained 实机和模拟器两边同链,
     live/sim 共用语义一条测试覆盖。"""
     gs = _make_gs(['昼之半神邀请', '轮岗', '头彩'])
     out = report_action_pick_invest_env_param(
@@ -346,7 +346,7 @@ def test_deterministic_equip_env_grants_without_rng_yezhi_banshen(
     """确定性装备环境(T-71 设计 §4 锁 5,治理后形态):夜之半神邀请
     (邀请族展开卡,equips_immediate only)零随机支 → rng 谓词零解析
     (provider 不触);选卡后 equips 尾追 '夜之半神星徽'、bench 零落位
-    (无开箱腿)——上报 → gain_invest_env → on_env_gained 双端同链,
+    (无开箱效果条目)——上报 → gain_invest_env → on_env_gained 实机和模拟器两边同链,
     live/sim 共用语义一条测试覆盖。"""
     gs = _make_gs(['夜之半神邀请', '轮岗', '头彩'])
     out = report_action_pick_invest_env_param(
@@ -364,7 +364,7 @@ def test_deterministic_equip_env_grants_without_rng_zhuiji(
     """确定性装备环境(T-72 设计 §4 锁 5,治理后形态):追击邀请
     (邀请族展开卡,equips_immediate only)零随机支 → rng 谓词零解析
     (provider 不触);选卡后 equips 尾追 '追击星徽'、bench 零落位
-    (无开箱腿)——上报 → gain_invest_env → on_env_gained 双端同链,
+    (无开箱效果条目)——上报 → gain_invest_env → on_env_gained 实机和模拟器两边同链,
     live/sim 共用语义一条测试覆盖。"""
     gs = _make_gs(['追击邀请', '轮岗', '头彩'])
     out = report_action_pick_invest_env_param(
@@ -382,7 +382,7 @@ def test_deterministic_equip_env_grants_without_rng_jipo(
     """确定性装备环境(T-73 设计 §4 锁 5,治理后形态):击破邀请
     (邀请族展开卡,equips_immediate only)零随机支 → rng 谓词零解析
     (provider 不触);选卡后 equips 尾追 '击破星徽'、bench 零落位
-    (无开箱腿)——上报 → gain_invest_env → on_env_gained 双端同链,
+    (无开箱效果条目)——上报 → gain_invest_env → on_env_gained 实机和模拟器两边同链,
     live/sim 共用语义一条测试覆盖。"""
     gs = _make_gs(['击破邀请', '轮岗', '头彩'])
     out = report_action_pick_invest_env_param(
@@ -400,7 +400,7 @@ def test_deterministic_equip_env_grants_without_rng_qungong(
     """确定性装备环境(T-74 设计 §4 锁 5,治理后形态):群攻邀请
     (邀请族展开卡,equips_immediate only)零随机支 → rng 谓词零解析
     (provider 不触);选卡后 equips 尾追 '群攻星徽'、bench 零落位
-    (无开箱腿)——上报 → gain_invest_env → on_env_gained 双端同链,
+    (无开箱效果条目)——上报 → gain_invest_env → on_env_gained 实机和模拟器两边同链,
     live/sim 共用语义一条测试覆盖。"""
     gs = _make_gs(['群攻邀请', '轮岗', '头彩'])
     out = report_action_pick_invest_env_param(
@@ -418,7 +418,7 @@ def test_deterministic_equip_env_grants_without_rng_nengliang(
     """确定性装备环境(T-75 设计 §4 锁 5,治理后形态):能量邀请
     (邀请族展开卡,equips_immediate only)零随机支 → rng 谓词零解析
     (provider 不触);选卡后 equips 尾追 '能量星徽'、bench 零落位
-    (无开箱腿)——上报 → gain_invest_env → on_env_gained 双端同链,
+    (无开箱效果条目)——上报 → gain_invest_env → on_env_gained 实机和模拟器两边同链,
     live/sim 共用语义一条测试覆盖。"""
     gs = _make_gs(['能量邀请', '轮岗', '头彩'])
     out = report_action_pick_invest_env_param(
@@ -436,7 +436,7 @@ def test_deterministic_equip_env_grants_without_rng_ranxue(
     """确定性装备环境(T-76 设计 §4 锁 5,治理后形态):燃血邀请
     (邀请族展开卡,equips_immediate only)零随机支 → rng 谓词零解析
     (provider 不触);选卡后 equips 尾追 '燃血星徽'、bench 零落位
-    (无开箱腿)——上报 → gain_invest_env → on_env_gained 双端同链,
+    (无开箱效果条目)——上报 → gain_invest_env → on_env_gained 实机和模拟器两边同链,
     live/sim 共用语义一条测试覆盖。"""
     gs = _make_gs(['燃血邀请', '轮岗', '头彩'])
     out = report_action_pick_invest_env_param(
@@ -454,7 +454,7 @@ def test_deterministic_equip_env_grants_without_rng_jianyi(
     """确定性装备环境(T-77 设计 §4 锁 5,治理后形态):减益邀请
     (邀请族展开卡,equips_immediate only)零随机支 → rng 谓词零解析
     (provider 不触);选卡后 equips 尾追 '减益星徽'、bench 零落位
-    (无开箱腿)——上报 → gain_invest_env → on_env_gained 双端同链,
+    (无开箱效果条目)——上报 → gain_invest_env → on_env_gained 实机和模拟器两边同链,
     live/sim 共用语义一条测试覆盖。"""
     gs = _make_gs(['减益邀请', '轮岗', '头彩'])
     out = report_action_pick_invest_env_param(
@@ -472,7 +472,7 @@ def test_deterministic_equip_env_grants_without_rng_chixu_shanghai(
     """确定性装备环境(T-78 设计 §4 锁 5,治理后形态):持续伤害邀请
     (邀请族展开卡,equips_immediate only)零随机支 → rng 谓词零解析
     (provider 不触);选卡后 equips 尾追 '持续伤害星徽'、bench 零落位
-    (无开箱腿)——上报 → gain_invest_env → on_env_gained 双端同链,
+    (无开箱效果条目)——上报 → gain_invest_env → on_env_gained 实机和模拟器两边同链,
     live/sim 共用语义一条测试覆盖。"""
     gs = _make_gs(['持续伤害邀请', '轮岗', '头彩'])
     out = report_action_pick_invest_env_param(
@@ -490,7 +490,7 @@ def test_deterministic_equip_env_grants_without_rng_liangzi_tongpin(
     """确定性装备环境(T-79 设计 §4 锁 5,治理后形态):量子同频邀请
     (邀请族展开卡,equips_immediate only)零随机支 → rng 谓词零解析
     (provider 不触);选卡后 equips 尾追 '量子同频星徽'、bench 零落位
-    (无开箱腿)——上报 → gain_invest_env → on_env_gained 双端同链,
+    (无开箱效果条目)——上报 → gain_invest_env → on_env_gained 实机和模拟器两边同链,
     live/sim 共用语义一条测试覆盖。"""
     gs = _make_gs(['量子同频邀请', '轮岗', '头彩'])
     out = report_action_pick_invest_env_param(
@@ -508,7 +508,7 @@ def test_deterministic_equip_env_grants_without_rng_zhanjidian_invite(
     """确定性装备环境(T-80 设计 §4 锁 5,治理后形态):战技点邀请
     (邀请族展开卡,equips_immediate only)零随机支 → rng 谓词零解析
     (provider 不触);选卡后 equips 尾追 '战技点星徽'、bench 零落位
-    (无开箱腿)——上报 → gain_invest_env → on_env_gained 双端同链,
+    (无开箱效果条目)——上报 → gain_invest_env → on_env_gained 实机和模拟器两边同链,
     live/sim 共用语义一条测试覆盖。"""
     gs = _make_gs(['战技点邀请', '轮岗', '头彩'])
     out = report_action_pick_invest_env_param(
@@ -526,7 +526,7 @@ def test_deterministic_equip_env_grants_without_rng_huanyu_invite(
     """确定性装备环境(T-81 设计 §4 锁 5,治理后形态):欢愉邀请
     (邀请族展开卡,equips_immediate only)零随机支 → rng 谓词零解析
     (provider 不触);选卡后 equips 尾追 '欢愉星徽'、bench 零落位
-    (无开箱腿)——上报 → gain_invest_env → on_env_gained 双端同链,
+    (无开箱效果条目)——上报 → gain_invest_env → on_env_gained 实机和模拟器两边同链,
     live/sim 共用语义一条测试覆盖。"""
     gs = _make_gs(['欢愉邀请', '轮岗', '头彩'])
     out = report_action_pick_invest_env_param(
@@ -544,7 +544,7 @@ def test_deterministic_equip_env_grants_without_rng_mingyun_shengbei(
     """确定性装备环境(T-82 设计 §4 锁 5,治理后形态):命运圣杯邀请
     (邀请族收官卡,equips_immediate only)零随机支 → rng 谓词零解析
     (provider 不触);选卡后 equips 尾追 '命运圣杯星徽'、bench 零落位
-    (无开箱腿)——上报 → gain_invest_env → on_env_gained 双端同链,
+    (无开箱效果条目)——上报 → gain_invest_env → on_env_gained 实机和模拟器两边同链,
     live/sim 共用语义一条测试覆盖。"""
     gs = _make_gs(['命运圣杯邀请', '轮岗', '头彩'])
     out = report_action_pick_invest_env_param(
@@ -563,7 +563,7 @@ def test_deterministic_equip_env_grants_without_rng_mingyun_shengbei(
 
 def test_expert_seminar_pick_grants_two_item_slots_no_rng(
         provider_calls: list[str]) -> None:
-    """双端同链(T-39 设计 §4 锁 7):report_action_pick_invest_env_param
+    """实机和模拟器两边同链(T-39 设计 §4 锁 7):report_action_pick_invest_env_param
     ('专家研讨会') → gain_invest_env → on_env_gained 道具通道 → bench 落
     两槽,kind 序 = ['bookcard', 'supply_box'] 且 item 逐槽 = 卡文名
     (live/sim 共用语义一条覆盖);零随机支 → rng 谓词零解析(条件行锁,
@@ -586,7 +586,7 @@ def test_expert_seminar_pick_grants_two_item_slots_no_rng(
 
 def test_opening_replace_env_pick_bench_three_not_seven(
         provider_calls: list[str]) -> None:
-    """双端同链替换语义分界锁(T-43 设计 §4 锁 5):上报选人才储备 →
+    """实机和模拟器两边同链替换语义分界锁(T-43 设计 §4 锁 5):上报选人才储备 →
     bench 恰 3 只 3 费 1★(替换语义分界:发放结果即终态,非 4+3=7 叠加
     ——T-10/T-36 追加语义与本卡替换语义的分界);恰一次 rng 解析(随机支
     在册,pick_invest_env 条件行命中)。"""

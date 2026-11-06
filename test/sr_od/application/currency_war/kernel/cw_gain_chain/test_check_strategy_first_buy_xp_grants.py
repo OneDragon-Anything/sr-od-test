@@ -186,7 +186,7 @@ def test_sim_world_write_exact_threshold_carry(sim_installed) -> None:
 
 def test_live_form_latch_only_world_write_zero() -> None:
     """live 零写锁(锁 5,核心):未装配 sim(纯实机态)→ 闩照写(簿记
-    逻辑态双端同写)、gs.level/gs.xp 零写(防门控失效退化成猜测写世界
+    逻辑态实机(live)和模拟器(sim)两边同写)、gs.level/gs.xp 零写(防门控失效退化成猜测写状态副本
     真值)。"""
     cw_sim_ports.uninstall_sim_backend()
     gs = _gs()

@@ -555,7 +555,7 @@ def test_env_gift_summon_unit_cuxing_peipei(rows_sink: _RowSink) -> None:
 def test_env_gift_item_channel(rows_sink: _RowSink) -> None:
     """ENV_GIFTS 道具通道(§2.3):items_immediate 命中 → 效果串
     ``item_gift:<名>``(数量 = 元素重复次数)+ 落席写入(送卡落席同构,
-    备战空槽 ``kind='supply_box'``;双端同一获得链,sim 世界写入即容器写);
+    备战空槽 ``kind='supply_box'``;实机(live)和模拟器(sim)两边同一获得链,sim 世界写入即容器写);
     正常路径零申报行。"""
     gs = _make_gs(bench=[], equips=[])
     gs.prep_anchored = True
@@ -1301,7 +1301,7 @@ def test_gain_invest_strategy_xp_instant_live_zero_write() -> None:
     直调形态)→ xp/level 值与来源域零变化。经验「选牌当场」= 观察覆盖
     豁免(伟大征服口径,fields.md §3.2.10);即时经验把结果写进状态副本的实现分支 = sim 自持
     账域(sim 后端落地拍),链内加经验写会连带 live——本锁防后续实现者
-    把腿误挂进双端链。"""
+    把效果条目误挂进实机和模拟器两边链。"""
     gs = _make_gs(bench=[], equips=[])
     gs.observe(gs.level, 3, sig=_SIG_OBS)
     gs.observe(gs.xp, (0, 4), sig=_SIG_OBS)

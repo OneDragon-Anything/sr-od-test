@@ -9,7 +9,7 @@ T-26-liangzi-tongpin-qiyue.md(定稿)§2.2 + §4.4/§4.5:
   零效果串;bench 未观察 → 效果串照返、容器零写(链拒落语义,不炸);
   席满 + 溢出位空 → 溢出落位;席满 + 溢出位占 → 零写 +
   DEFECT_OVERFLOW_TAKEN 留证;
-- **rng 双端**:注入槽确定性(装 provider 同动作序列两次重放结果一致)/
+- **rng 实机(live)和模拟器(sim)两边**:注入槽确定性(装 provider 同动作序列两次重放结果一致)/
   回退自掷(未装配仍产出 = live 猜测口径)/ 解析口显式优先
   (action_sampling_rng 解析序,在本工具键解析点钉住)。
 """
