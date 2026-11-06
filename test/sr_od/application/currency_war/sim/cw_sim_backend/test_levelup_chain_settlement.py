@@ -5,7 +5,7 @@ advance 尾统一排空段)。kernel 直驱锁 = kernel/test_cw_levelup_callback
 - 锁 4 主臂:节点经验(boss +12)跨级 → 结算时点信号置位 + advance 尾
   排空后队列空 + spy_deal_count +1(商店分支已执行)+ gift 入席;
 - 锁 4 对照臂:无 spy 无 gift → 零商店副作用(零抽牌零入席零信号);
-- 锁 4 双源负例(S1 队列化定谳):同栈双源跨级(节点经验 + 窗口分支
+- 锁 4 双源负例(S1 队列化定论):同栈双源跨级(节点经验 + 窗口分支
   装备计数腿叠加)→ 队列两项 → 商店分支恰两次(单值槽覆盖丢笔形态
   被本锁钉死);
 - 锁 4 消费时点断言(B1):选卡即时 XP 跨级 → 排空发生在该选卡 advance
@@ -152,7 +152,7 @@ def test_no_cards_zero_shop_side_effect() -> None:
 
 
 def test_same_stack_double_cross_two_decls_two_deals() -> None:
-    """锁 4 双源负例(S1 队列化定谳):同栈双源跨级 = 节点经验(boss +12
+    """锁 4 双源负例(S1 队列化定论):同栈双源跨级 = 节点经验(boss +12
     推 7→8)+ 同 advance 窗口分支装备计数腿(赞美太阳 70 件白昼装备 +70
     推 8→9)→ 队列两项 → 商店分支恰两次(单值槽会覆盖丢一次,本锁钉死
     队列化修复)。"""

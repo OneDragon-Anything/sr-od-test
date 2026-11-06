@@ -4,13 +4,13 @@
 currency_war/flow/README.md §2.2 备战接口行:
 
 - **契约形状**(``decide_prep_screen`` 终态契约 §2.2 单动作词表):返回
-  **恰一个 CwAction** = 本帧要执行的那个;空发射帧 →
+  **恰一个 CwAction** = 本帧要执行的那个;本帧无动作帧 →
   ``CwActionObsParam(scope='outer_loop')``(本帧无动作可发,交回外循环
-  重观察;原 HoldFrame 通道收编,用户裁定 2026-09-20,``None`` 退役);
+  重观察;原 HoldFrame 通道并入,用户裁定 2026-09-20,``None`` 退役);
   非法形状由消费端 F3 守卫拒绝(策略器 bug 响亮暴露,禁静默跳过);
 - **九段全扫**(``entry.emit``):各段触发态首中断言 + 回扫语义、自救
   动作序(按损失递增 + 真全量豁免)、晶矿垫件测试(垫件谓词过滤后取价值
-  最小)、第 3 步空段零动作透传测试(旧升级判据直删后透传,新判据落码)、
+  最小)、第 3 步空段零动作透传测试(旧升级判据直删后透传,新判据已写进代码)、
   节末凑息闭合即止测试、上线窗口信号表建表完备性。
 
 帧构造纪律:
@@ -21,7 +21,7 @@ currency_war/flow/README.md §2.2 备战接口行:
 - 窗口辖域测试用追击飞霄线(synergy 3 = 板面追击 3 档;追击为流派
   键,``board_by_row`` 聚合含 flows)——规避配方底线门辖列车件的
   干扰(围栏语义与窗口辖域分立,测试只校验窗口)。
-- 卖出场景帧 deployed 非空(空板守卫 = 评估器 as-built 收编语义,
+- 卖出场景帧 deployed 非空(空板守卫 = 评估器 as-built 纳入语义,
   deployed = 0 帧卖出哑火)且 deploy_vacancy = 0(防第 5 步部署先中,
   散件填位与凑息让位的序差属第 5 步语义,第 7 步测试只校验凑息)。
 """
@@ -98,7 +98,7 @@ def _prep_strategy(monkeypatch: pytest.MonkeyPatch,
     """mandate_v1 具现(真实类)+ 决策核发射缝桩,离线直调备战契约入口。
 
     - ``decide_prep_frame`` 模块桩 = 决策核发射缝——本测试辖「边界把发射
-      序列映射成单动作/空发射 obs」的形状,核内三遍编排/帧稳定截断不在
+      序列映射成单动作/本帧无动作 obs」的形状,核内三遍编排/帧稳定截断不在
       测试面;预算披露(决策入口前置发射位之后)走真实现,零屏零外部面;
     - ``gs.frame_class_prep`` 缺省 'none' → 入口内务(帧代次消费)
       空转,方向刷新不触发,测试零全局残留。
@@ -134,10 +134,10 @@ def test_prep_contract_returns_single_action_first_of_emission(
 
 def test_prep_contract_empty_emission_returns_hold_frame(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """备战契约边界:空发射 → 返回 ``CwActionObsParam(scope='outer_loop')``
+    """备战契约边界:本帧无动作 → 返回 ``CwActionObsParam(scope='outer_loop')``
     = 本帧无动作交回外循环。
 
-    出处 = docs/develop/sr_od/application/currency_war/flow/README.md §2.2 备战接口行(终态契约 §2.2:空发射帧 = 交回外循环重观察,None 退役;原 HoldFrame 收编,用户裁定 2026-09-20)。
+    出处 = docs/develop/sr_od/application/currency_war/flow/README.md §2.2 备战接口行(终态契约 §2.2:本帧无动作帧 = 交回外循环重观察,None 退役;原 HoldFrame 并入,用户裁定 2026-09-20)。
     备战域
     「本帧无动作」是合法通道:返回必须是 obs 交回口径本身——返回
     ``None``(退役形状回潮)或空列表或抛错都不合格。
@@ -245,7 +245,7 @@ class TestStep0SelfRescue:
 
     def test_state2_open_consumable_when_no_seats(self):
         """态 2(点开消耗品,免费腾位):无 cap 空位 ∧ 备战席有占席物品
-        → 点开腾槽(占席道具不可卖但可点开——补给箱不可卖为实机定谳;
+        → 点开腾槽(占席道具不可卖但可点开——补给箱不可卖为实机定论;
         告警帧冻结条款对点消耗品例外:点开本身就是自救动作)。"""
         sess = cw4_session()
         # deployed 4 = cap(level 4)→ 无空位;bench 含占席物品槽
@@ -478,7 +478,7 @@ class TestStep3LevelUp:
         """升级友好形态(带滞后 + 金充裕)发射升级整批:锁定线唯一
         未完成星级目标(希儿 3 费)带下界 7 > 等级 4 → stay_gate 触发,
         现金 − 批 ≥ 利息线 → 同帧执行帧一次买齐(P48 整买;先前空段期
-        透传测试已随新判据落码终结,替代语义 = 本形态测试)。"""
+        透传测试已随新判据写进代码而终结,替代语义 = 本形态测试)。"""
         sess = cw4_session(cw4_comp('希儿量子'))
         cw4_gs(sess, gold=80, level=4, round_num=2, node='战斗', plane=2,
                bench=[_bc(n, 1) for n in ('花火', '符玄', '缇宝', '刻律德菈')]
@@ -623,7 +623,7 @@ class TestStep6EquipTools:
 
     def test_wear_plan_emits_and_tool_eval_counter(self):
         """owned 可穿 → 穿戴计划发射(CwActionWearEquipParam);工具
-        评估留痕(m7_5_evaluated;零可执行件帧 reject_none 显影)。"""
+        评估留痕(m7_5_evaluated;零可执行件帧 reject_none 暴露)。"""
         sess = cw4_session()
         cw4_gs(sess, gold=50, level=6, round_num=2, node='战斗',
                bench=[], front_row=(), back_row=(),
@@ -707,12 +707,12 @@ class TestStep7NodeEndInterest:
                  if isinstance(e.action, CwActionSellBenchParam)]
         assert not sells, '凑息零卖出(阶段 5/6:统一部署搜索把线内核心' \
             '件收进档 1——比凑息豁免更强的保护,同一零卖出出口)'
-        # 阶段 5/6 行为申报:档 1 收编先于豁免剔除(池在豁免前已空,
+        # 阶段 5/6 行为申报:档 1 编入先于豁免剔除(池在豁免前已空,
         # 拒因 = no_candidates 非 exempt_depleted)——剔光观测键辖
         # 「豁免真翻转卖出→零动作」帧,由 criteria 单测
         # (test_sell_candidates 凑息豁免族)继续锁定。
         assert st.cw4_counters.get(INTEREST_EXEMPT_DEPLETED_KEY, 0) == 0, \
-            '档 1 收编帧不落剔光键(键辖豁免真翻转帧)'
+            '档 1 编入帧不落剔光键(键辖豁免真翻转帧)'
 
     def test_above_line_no_sell(self):
         """金 ≥ 息线 → 本步零动作(透传到出战;50 = 恰在溢余带外,

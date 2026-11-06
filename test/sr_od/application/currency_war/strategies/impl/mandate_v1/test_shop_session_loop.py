@@ -25,7 +25,7 @@
    持久契约(节点内卖出腾位 → 买入原在店件,牌面不因店内卖出/重开
    刷新,research/economy.md §2.1);筹资兜底穷尽机会清单。
 
-实机观察点登记(3.5 风险传递,实机首跑 reconcile 显影):
+实机观察点登记(3.5 风险传递,实机首跑 reconcile 暴露):
 - 出售区拖拽落点(R1 显隐成因;R2 拖拽高亮 (108,786) 亮团是否激活
   证据)——拖拽 no-op 时按 no_method 坐标区直接 MCP 改 rect;
 - 账面-实读偏差(漏账侦测信号)。
@@ -276,7 +276,7 @@ class TestGoldLedgerProtocol:
         sells = [a for a in acts if isinstance(a, CwActionSellBenchParam)]
         buys = [a for a in acts if isinstance(a, CwActionBuyCardParam)]
         assert len(sells) >= 2 and sells[0].reason == 'shop_swap', \
-            '统一获取让位收编后取用 reason = shop_swap(旧 session_' \
+            '统一获取让位并入后取用 reason = shop_swap(旧 session_' \
             'funding 键停产)'
         assert buys and buys[0].card.name == _MEMBER, \
             '凑够即买(缺口闭合后下一帧买入接手)'

@@ -68,7 +68,7 @@ _HOLD_SIG = ChannelSig(family='logic_action', actor='TestSeed',
 def _isolate_defect_buffer():
     """缺陷台账缓冲隔离(沿同目录同名 fixture 先例,fixture 不可跨文件
     import 故本文件自带同语义副本);主锁同拍相邻写应落抑制分支,
-    本夹具兼作「零告警行」断言底座。"""
+    本夹具兼作「零告警行」断言基础数据。"""
     consume_defect_sink()
     yield
     set_defect_sink(None)

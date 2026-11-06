@@ -4,7 +4,7 @@ _on_invest_picked 已损血衍生金落地腿 + 呈现一次性标志位 + 披�
 锁 sim 选卡落地腿接入调用与世界真值落地面)。
 
 测试面依据 = 迭代设计 designs/T-325-xingji-heping-baoxian.md §4 锁 4
-(REVIEW-T325 免裁 7/7;驱动与断言形态先例 = 同目录
+(REVIEW-T325 无需用户决定 7/7;驱动与断言形态先例 = 同目录
 test_strategy_pick_hp.py):
 - 持卡发放真值:直构损血后选卡落地 → 金笔存在且 amount == max(0,
   opening−hp),独立 evidence 笔 ``strategy:hp_loss_gold``,sig = obs 族

@@ -10,7 +10,7 @@
    纯执行层零策略判据):商店域发射 SellBench/LevelUp 可执行,执行参数
    直达机械层(拖拽两端按商店画面档解析/买经验整批连点),发出即记账 +
    容器上报对账一致,守卫链照常(名-槽不一致响亮暴露)。
-3. **关店机械口 payload 清场**(T-40 收编面;病理 run_20260918_063249
+3. **关店机械口 payload 清场**(T-40 并入面;病理 run_20260918_063249
    停局链:上轮买后 payload 跨轮残留 → 下轮开店帧实读失配安灯停局):
    关店两出口(点击已发/幂等已关)同清 payload;重开重洗采新对照;当轮
    买投影回归。
@@ -175,7 +175,7 @@ def _shop_host(monkeypatch: pytest.MonkeyPatch, strategy) -> tuple:
     monkeypatch.setattr(buy_mod, 'CurrencyWarConfig',
                         lambda idx: SimpleNamespace(strategy_id='mandate_v1',
                                                     ev_arm=''))
-    # 预算披露桩化(真实现经 mandate state_of 对异型状态对象冷建覆写,
+    # 预算披露桩化(真实现经 mandate state_of 对异型状态对象每局全新创建覆写,
     # 会换掉宿主的 SimpleNamespace 状态载体;与本测试无关)。
     from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
         economy_cycle as economy_cycle_mod,
@@ -312,7 +312,7 @@ def test_act_node_unobserved_close_skips_then_executes(monkeypatch):
 
     assert rr.is_success, '留痕后照常执行(关店终结交回)'
     assert close_clicks == [1], '跳过访问 = 零消费动作,关店离店仍真执行'
-    assert 'shop_skipped_unobserved' in rows, '留痕分键显影'
+    assert 'shop_skipped_unobserved' in rows, '留痕分键暴露'
 
 
 # ============================================================
@@ -462,8 +462,8 @@ def test_shop_sell_guard_name_mismatch_still_loud(monkeypatch):
 
 
 # ============================================================
-# 段 3:关店机械口 payload 清场(T-40 收编面;病理 run_20260918_063249)
-# 现役修法 = 关店执行位收编进 CwActionCloseShopOp 执行体:帧上找
+# 段 3:关店机械口 payload 清场(T-40 并入面;病理 run_20260918_063249)
+# 现役修法 = 关店执行位并入 CwActionCloseShopOp 执行体:帧上找
 # 「按钮-收起」miss = 店已关(幂等)/ 命中 = 点击 + 固定等待,两出口
 # 同调清场上报(report_action_close_shop_param 的 leave_screen 离屏写)。
 # ============================================================
@@ -617,7 +617,7 @@ def _run_observe_node(ctx: SimpleNamespace):
 
 def _defense_host(monkeypatch: pytest.MonkeyPatch, *,
                   strategy_seed: int | None) -> SimpleNamespace:
-    """替身缝 = 观察 node 顶部消费面:config 工厂(seed 可参)/
+    """替身函数的接缝(stub seam) = 观察 node 顶部消费面:config 工厂(seed 可参)/
     点击点位/area 中心(恒缺 → 入口校验 round_fail 早退)。
     ctx.cw_match 缺席 = 独立单跑前提(兜底建核触发面)。"""
     monkeypatch.setattr(
@@ -924,7 +924,7 @@ def test_refresh_fee_observed_value_is_used(monkeypatch):
 def test_refresh_fee_ledger_equals_gold_deduction(monkeypatch):
     """T-21 分支 3 锁 10 等值断言:上报已进的帧内,op 花销账累加值 ≡ 金账
     扣减值——两侧同式同源(容器刷价 ``or`` 基价 + 同一 free_refresh_left
-    谓词),镜像漂移在本断言显影(spend 3 ≡ 30−27)。"""
+    谓词),镜像漂移在本断言暴露(spend 3 ≡ 30−27)。"""
     monkeypatch.setattr('time.sleep', lambda _s: None)   # 点击后固定等待
     session = StrategySession()
     state = game_state_of(session)

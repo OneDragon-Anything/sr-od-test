@@ -2,21 +2,21 @@
 开始时」族展开卡,先例 = 同目录 test_strategy_gudinglicai_registry.py)。
 
 测试面依据 = 迭代设计 designs/T-183-gudinglicai-plus.md §2.1/§2.2/§4
-(锁 1/锁 2)+ 用户裁定书 T-182 节同判(2026-11-01 拍定:中途拿卡时当前
+(锁 1/锁 2)+ 用户裁定书 T-182 节同判(2026-11-01 用户决定:中途拿卡时当前
 已开始的位面,其位面段奖励照常发放〔全额〕,后续位面照常——两卡一次
-拍定,裁决联动禁两态)。卡面官方原文(cw_invest_data.py:131 逐字):
+用户决定,裁决联动禁两态)。卡面官方原文(cw_invest_data.py:131 逐字):
 「现在以及每个位面开始时，获得6经验值和3次免费刷新。」
 
-机制件零新增(桥/腿按 payload 字段鸭子读,全量承姊妹批),本文件只锁
-注册面两处:注册行四字段现值 + EffectSpec 条目定谳形态;行为面(桥/
+机制件零新增(桥/腿按 payload 字段鸭子类型读取(duck typing),全量承姊妹批),本文件只锁
+注册面两处:注册行四字段现值 + EffectSpec 条目定论形态;行为面(桥/
 腿/登记拍/sim walk)由姊妹锁文件与同目录 gain-chain/sim 镜像辖。
 
 - 注册行锁(锁 1):四字段现值 xp_instant=6 / xp_per_plane=6 /
   free_refresh_burst=3 / free_refresh_per_plane=3 + 其余字段缺省
   (对照 EconomyEffect() 默认实例逐字段比);
-- EffectSpec 条目锁(锁 2,定谳形):trigger=PLANE_START /
+- EffectSpec 条目锁(锁 2,定论形):trigger=PLANE_START /
   duration=PERMANENT / category=STATE / payload is STRATEGY_ECONOMY
-  ['固定理财+'](同一实例)/ pending=False(二义经用户裁定拍定补发,
+  ['固定理财+'](同一实例)/ pending=False(二义经用户裁定补发,
   与姊妹同判,notes 记裁定)/ notes 含两条效果条目分段与同判裁定语义。
 """
 from __future__ import annotations
@@ -66,7 +66,7 @@ def test_gudinglicai_plus_registration_row_four_fields() -> None:
 
 
 def test_gudinglicai_plus_effect_spec_entry() -> None:
-    """EffectSpec 条目锁(锁 2,定谳形):五元组 + 单一实例 payload +
+    """EffectSpec 条目锁(锁 2,定论形):五元组 + 单一实例 payload +
     pending 撤除(与姊妹同判记 notes)+ notes 两条效果条目分段与同判裁定语义。"""
     spec = STRATEGY_EFFECTS[_CARD]
     assert spec.id == '201802'
@@ -76,7 +76,7 @@ def test_gudinglicai_plus_effect_spec_entry() -> None:
     assert spec.payload is STRATEGY_ECONOMY[_CARD], \
         'payload 引注册行同一实例(单一源)'
     assert spec.pending is False, \
-        '所在位面补发读法经用户裁定(2026-11-01)拍定补发,与姊妹同判定谳'
+        '所在位面补发读法经用户裁定(2026-11-01)补发,与姊妹同判定论'
     for token in ('位面段', '补发', '2026-11-01', '同判'):
         assert token in (spec.notes or ''), f'notes 承载裁定语义缺 {token}'
 

@@ -1,11 +1,11 @@
 """泄金阶梯单帧测试(ADR-0604 判据测试;测试清单 = 设计方案 §4.3
-本批归属 L1-L7 + 档 2 轮内新鲜度排除,方案正本指针 = ADR-0604 头注)。
+本批归属 L1-L7 + 档 2 轮内新鲜度排除,方案权威版本指针 = ADR-0604 头注)。
 
 测试清单(§4.3 表存续面):
 - LF′ 档 2 轮内新鲜度排除载体相位过期:跨轮/跨位面读数空集(排除
       上界 ≤1 轮;发射位排除面归写端与消费位测试辖)。
 - L3′ prep 位 M6 摘旗可达性:stop_flag=False(线未齐)∧ gold>g* ∧
-      席满帧,M6 prep 块被触达(m6_bench_full 拒因显影——摘旗前该帧
+      席满帧,M6 prep 块被触达(m6_bench_full 拒因暴露——摘旗前该帧
       被 stop_flag 短路、拒因结构性不可见)。
 (原 L7 ALL IN 类别过滤面已随域辖谓词删除退役——hp-purge
       迭代 3.1 A-6,见文末退役注。)
@@ -151,7 +151,7 @@ class TestL3FlagRemoval:
 
     def test_l3_prep_m6_reachable_without_stop_flag(self):
         """prep 位 M6 摘旗可达性:stop_flag=False(线未齐)∧ gold>g*
-        ∧ 席满帧,M6 prep 块被触达(m6_bench_full 拒因显影)——摘旗前
+        ∧ 席满帧,M6 prep 块被触达(m6_bench_full 拒因暴露)——摘旗前
         该帧 M6 prep 被 stop_flag 短路、拒因结构性不可见。"""
         from sr_od.application.currency_war.strategies.impl.cw_strategy import (
             StrategySession,

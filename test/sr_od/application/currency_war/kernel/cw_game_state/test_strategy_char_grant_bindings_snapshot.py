@@ -8,7 +8,7 @@ T-165-jiazhi-touzi-jin.md(定稿)§2.2 域四件套义务:
 
 - 快照存续:绑定 dict 进快照 → restore 往返逐位相等(str→str 双显式
   化不漂移——rebuild 登记在位为前提,未登记域恢复面 = 静默类型漂移);
-- 冷建种子底座 = {}(A 类,同 pending_item_grants 种子族——域值恒非
+- 每局全新创建种子初始值 = {}(A 类,同 pending_item_grants 种子族——域值恒非
   None,复制发放腿键查判定零 None 防御);
 - 审计行:PROJECTION_AUDIT 出 strategy_char_grant_bindings 行
   (process_only,掷骰结果非观察投影,无观察读端)。
@@ -29,11 +29,11 @@ _CARD = '价值投资·金'
 
 
 def test_seed_empty_and_snapshot_roundtrip() -> None:
-    """种子底座(冷建空 dict)+ 快照→恢复类型不变(str→str dict)+
+    """种子初始值(每局全新创建空 dict)+ 快照→恢复类型不变(str→str dict)+
     逐位相等——绑定随快照存续 = 恢复局复制发放腿判据不丢。"""
     seed_gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     seed_opening_state(seed_gs)
-    assert seed_gs.strategy_char_grant_bindings.value == {}, '冷建空底座'
+    assert seed_gs.strategy_char_grant_bindings.value == {}, '每局全新创建空初始值'
 
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.prep_anchored = True

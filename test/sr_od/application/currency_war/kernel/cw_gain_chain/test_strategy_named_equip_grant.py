@@ -7,7 +7,7 @@
 T-119-quanyuan-jinsheng.md(定稿)§4 锁 1/2/3 + REVIEW-T119 五裁决点默认案:
 - 腿语义 = 卡文句 2「获得2个【拆装扳手】」:具名确定发放
   ``gain_equipment(rand=False)`` ×2(gain-chain.md §5:卡文无随机词;与
-  env 侧即时装备支 rand=True 系两通道分野,正本 = fields.md §3.2.15
+  env 侧即时装备支 rand=True 系两通道分野,权威版本 = fields.md §3.2.15
   rand 两通道分野注记),效果串逐件一条含 placed(拒落可审计);
 - 精密金面前置 fail-closed:已持精密拆装扳手 → 整腿零容器写 + 申报行
   留证(宣言 kind = ``NAMED_EQUIP_PRECISE_DECL``,语义申报非缺陷告警)+

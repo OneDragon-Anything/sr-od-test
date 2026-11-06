@@ -1,5 +1,5 @@
-"""GameState 迁移回归测试(迁移批次一;设计正本 = docs/develop/sr_od/application/currency_war/
-容器数据结构设计,下称「设计」;正本 = game_state/fields.md)。
+"""GameState 迁移回归测试(迁移批次一;设计权威版本 = docs/develop/sr_od/application/currency_war/
+容器数据结构设计,下称「设计」;权威版本 = game_state/fields.md)。
 
 测试面 = 写入口两态制与构造守卫(§2.1-§2.4/§8.6-5)+ 派生不存储
 (§8.6-4 续)+ 观察流接入调用与 hp 失读统一口径 + 心跳哨兵(§2.4 关键
@@ -8,7 +8,7 @@
 两组测试。机制主题归并(禁批次命名):本文件 = GameState 容器机制正名
 主题文件,消费切换批(刷新计数/结算覆盖/合成升星判定/streak 解析/
 备战席读链)、容器合同(六通道/版本流水/快照/画面上下文/渠道签名
-封闭集)、开局种子底座与锚定标志、deployed 视图桥与快照迁移各节按
+封闭集)、开局初始值与锚定标志、deployed 视图桥与快照迁移各节按
 机制并入(断言体零语义改动)。
 
 退役面:§8.6 差距清单逐条测试(gap3/gap4 组)与 §3 字段语义抽样组已删;
@@ -130,9 +130,9 @@ def _hsig() -> _ChannelSig:
 
 
 def test_write_logic_direct_write_immediately_readable() -> None:
-    """ADR-0651 两态制核心测试(写通道合同正本,全仓唯一份):逻辑推算值经
+    """ADR-0651 两态制核心测试(写通道合同权威版本,全仓唯一份):逻辑推算值经
     write_logic **直接写字段**(source=logic)——策略器立即可读,无「预期
-    条目表挂账」中间态;evidence 透传入账。"""
+    条目表待办」中间态;evidence 透传入账。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.observe(gs.gold, 20, sig=_sig())
     gs.write_logic(gs.gold, 17, produced_by='TestSigWriter',
@@ -869,7 +869,7 @@ def test_observation_feed_carries_screen_name_and_precise_exempt(
 
 def test_level_up_and_battle_end_hooks_write_unified_ledger() -> None:
     """升级标记(prep_actions)与结算(battle_wait)两调用点直写 GameState
-    正本:game_state_of(sess).effects 落单一实例,session 上无旁路字段。"""
+    权威版本:game_state_of(sess).effects 落单一实例,session 上无旁路字段。"""
     sess = StrategySession()
     game_state_of(sess).effects.on_level_up()
     assert game_state_of(sess).effects.event_count('_event_level_up') == 1, \
@@ -898,7 +898,7 @@ def test_register_seeds_remaining_uses_and_nodes() -> None:
 def test_node_tick_and_advance_dedup_guard_expiry() -> None:
     """§5.1 节点推进(tick_node/advance_node 双口):同节点去重(每备战环
     采样只推进一次)/登记当节点不推进(「持续 N 个节点」= 登记节点的后继
-    N 节点,实采定谳前保守读)/归零移除并返回到期条目(尾款触发面);
+    N 节点,实采定论前保守读)/归零移除并返回到期条目(尾款触发面);
     advance_node 的 advanced 位 = 余额累加闸(同节点重复推进 advanced=
     False,每节点恰一次)。"""
     inv = ActiveEffectInventory()
@@ -1024,7 +1024,7 @@ def test_per_node_family_without_now_clause_no_pick_grant() -> None:
 def test_free_lunch_ledger_zero_per_node_grant() -> None:
     """免费午餐 per_node 负向(T-88 设计 §4 锁 2):仅持免费午餐的账本
     节点边界零授予——EconomyEffect 纯 burst 一条效果条目(free_refresh_per_node/
-    条件三元组/BattlefieldEffect 载体字段全缺省 0,桥鸭子读缺省),桥零
+    条件三元组/BattlefieldEffect 载体字段全缺省 0,桥鸭子类型读取(duck typing)缺省),桥零
     授予跳写,free_refresh_left 保持未写(None 基零行);burst 腿归登记
     调用点,与本桥无关。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
@@ -1378,8 +1378,8 @@ def test_restore_session_empty_refused_then_late_truth_lands(
     - 阶段 1(空默认拒):恢复局新 session 五镜像字段停会话默认
       (''/[])→ 生产 feed(read_game_state 观察流)逐帧中继全被空值闸拒:
       非种子的 plane_bosses 保持 None(未知态不固化成正式值);开局种子
-      底座三 A 类镜像字段(active_strategies/active_env/enemy_affixes)
-      冷建即种子态,拒写语义 = 保持种子原样、不落 session_carrier 痕迹;
+      初始值三 A 类镜像字段(active_strategies/active_env/enemy_affixes)
+      每局全新创建即种子态,拒写语义 = 保持种子原样、不落 session_carrier 痕迹;
     - 阶段 2(真值后到):session 侧被接管协议/事件屏 handler 写入 →
       下一帧中继正常落五镜像(source=logic + evidence=session_carrier)
       ——空默认拒写不拦截后到真值。"""
@@ -2025,7 +2025,7 @@ def test_channel_family_closed_set() -> None:
             ChannelSig(family=family, actor='CwScreenPrep', mode='read')
 
 
-# ============================================================ 开局种子底座 + 锚定标志 + carry 收窄
+# ============================================================ 开局初始值 + 锚定标志 + carry 收窄
 
 #: A 类种子字段全集(与 seed_opening_state 写面一一对应;board 不入——
 #: 派生量禁双写,journal 行面断言兜住;行域合卷为 deployed 单字段)。
@@ -2038,43 +2038,43 @@ _A_SEEDED: tuple[str, ...] = (
     'shop_refresh_cost', 'prev_node_spent',
     'strategy_refresh_left',
     # 晶矿附着奖励与声明通道三域(迭代 2026-10-10-ore-reward-attach:
-    # 空底座,幂等守卫 membership 与挂接入口合并写零 None 防御)
+    # 空初始值,幂等守卫 membership 与挂接入口合并写零 None 防御)
     'ore_rewards', 'ore_declared_pending', 'ore_declared_done',
     # 环境条件发放已发标记(迭代 2026-10-10-env-conditional-grants:
-    # 空底座,「本局首次」守卫初始真值 = 空集)
+    # 空初始值,「本局首次」守卫初始真值 = 空集)
     'env_grants_done',
-    # 环境发放上场锁 + 发号计数器(T-30 星核猎手契约:空/零底座,
+    # 环境发放上场锁 + 发号计数器(T-30 星核猎手契约:空/零初始值,
     # 守卫 membership 与发号均零 None 防御)
     'env_grant_deploy_locks', 'env_grant_uid_seq',
-    # 环境倒计时件开盒队列(T-34 命运礼物:空底座,到点弹除比较判定
+    # 环境倒计时件开盒队列(T-34 命运礼物:空初始值,到点弹除比较判定
     # 零 None 防御)
     'pending_item_opens',
-    # 策略延时 offer 倒计时队列(空底座,递减/到点判定零 None 防御)
+    # 策略延时 offer 倒计时队列(空初始值,递减/到点判定零 None 防御)
     'pending_strategy_offers',
-    # 策略延时发放倒计时队列(空底座,递减/到点判定零 None 防御)
+    # 策略延时发放倒计时队列(空初始值,递减/到点判定零 None 防御)
     'pending_strategy_grants',
-    # 佩佩客串离场倒计时队列(空底座,递减/弹除判定零 None 防御,
+    # 佩佩客串离场倒计时队列(空初始值,递减/弹除判定零 None 防御,
     # T-368 佩佩客串批)
     'pending_kechuan_leaves',
-    # 策略卡条件发放已发标记(空底座,检查腿跳过判定零 None 防御)
+    # 策略卡条件发放已发标记(空初始值,检查腿跳过判定零 None 防御)
     'strategy_conditional_done',
-    # 绑定型随机角色授予名字绑定域(空 dict 底座,复制发放腿键查判定
+    # 绑定型随机角色授予名字绑定域(空 dict 初始值,复制发放腿键查判定
     # 零 None 防御;空 = 未持绑定卡的正常态)
     'strategy_char_grant_bindings',
-    # 分期金剩余效果条数容器(空 dict 底座,节点窗腿键查判定零 None 防御;
+    # 分期金剩余效果条数容器(空 dict 初始值,节点窗腿键查判定零 None 防御;
     # 空 = 未持分期卡的正常态,T-177 长期主义首例)
     'strategy_gold_next_nodes_left',
-    # 策略卡羁绊档位条件发放已发档位一次性标志位(空 tuple 底座,检查腿 membership
+    # 策略卡羁绊档位条件发放已发档位一次性标志位(空 tuple 初始值,检查腿 membership
     # 判定零 None 防御;空 = 无档已发的正常态)
     'strategy_bond_tier_fired',
-    # 策略卡赠礼条件两条效果条目已发标记(空 tuple 底座,检查腿 membership 判定
+    # 策略卡赠礼条件两条效果条目已发标记(空 tuple 初始值,检查腿 membership 判定
     # 零 None 防御;空 = 无腿已发的正常态)
     'strategy_grants_done',
-    # 损血档位触发累积器(零底座,触发函数累加取模零 None 防御;
+    # 损血档位触发累积器(零初始值,触发函数累加取模零 None 防御;
     # 0 = 无累积语义中性,种 0 不伪装已触发)
     'strategy_hp_loss_accum',
     # 惊喜盒板件 ⏳N 读数观察域(迭代 2026-10-19-giftbox-piece-obs:
-    # 空底座,整条替换写零 None 防御)
+    # 空初始值,整条替换写零 None 防御)
     'giftbox_sight',
 )
 
@@ -2095,7 +2095,7 @@ _OBS_SIG = ChannelSig(family='obs', actor='CwScreenPrep', mode='read')
 
 
 def test_cold_build_seeds_all_a_fields(monkeypatch) -> None:
-    """冷建即含种子(缓存单例支):A 类逐字段值 + 来源(logic_rand/
+    """每局全新创建即含种子(缓存单例支):A 类逐字段值 + 来源(logic_rand/
     seed:opening)+ journal 种子行过滤键(actor/mode);B/C 类仍 None;
     board 不落种子行;锚定标志缺省 False。"""
     rows: list[dict] = []
@@ -2113,24 +2113,24 @@ def test_cold_build_seeds_all_a_fields(monkeypatch) -> None:
     assert gs.equips.value == []
     assert gs.occupied_equips.value == {}
     assert gs.spheres.value == OreSight()
-    assert gs.ore_rewards.value == {}, '附着奖励域冷建空底座'
-    assert gs.ore_declared_pending.value == (), '声明队列冷建空底座'
-    assert gs.ore_declared_done.value == (), '声明消费标记冷建空底座'
-    assert gs.env_grants_done.value == (), '条件发放标记冷建空底座'
-    assert gs.env_grant_deploy_locks.value == (), '上场锁域冷建空底座'
-    assert gs.env_grant_uid_seq.value == 0, '发号计数器冷建零底座'
-    assert gs.pending_item_opens.value == (), '开盒队列冷建空底座'
-    assert gs.pending_strategy_offers.value == (), '延时 offer 队列冷建空底座'
-    assert gs.pending_strategy_grants.value == (), '延时发放队列冷建空底座'
-    assert gs.strategy_conditional_done.value == (), '条件发放标记冷建空底座'
+    assert gs.ore_rewards.value == {}, '附着奖励域每局全新创建空初始值'
+    assert gs.ore_declared_pending.value == (), '声明队列每局全新创建空初始值'
+    assert gs.ore_declared_done.value == (), '声明消费标记每局全新创建空初始值'
+    assert gs.env_grants_done.value == (), '条件发放标记每局全新创建空初始值'
+    assert gs.env_grant_deploy_locks.value == (), '上场锁域每局全新创建空初始值'
+    assert gs.env_grant_uid_seq.value == 0, '发号计数器每局全新创建零初始值'
+    assert gs.pending_item_opens.value == (), '开盒队列每局全新创建空初始值'
+    assert gs.pending_strategy_offers.value == (), '延时 offer 队列每局全新创建空初始值'
+    assert gs.pending_strategy_grants.value == (), '延时发放队列每局全新创建空初始值'
+    assert gs.strategy_conditional_done.value == (), '条件发放标记每局全新创建空初始值'
     assert gs.strategy_char_grant_bindings.value == {}, \
-        '绑定域冷建空底座'
+        '绑定域每局全新创建空初始值'
     assert gs.strategy_gold_next_nodes_left.value == {}, \
         '分期金剩余发放数容器,每局全新创建(空初始值)'
     assert gs.strategy_bond_tier_fired.value == (), \
-        '羁绊档位一次性标志位冷建空底座'
-    assert gs.strategy_hp_loss_accum.value == 0, '损血累积器冷建零底座'
-    assert gs.giftbox_sight.value == (), '板件读数域冷建空底座'
+        '羁绊档位一次性标志位每局全新创建空初始值'
+    assert gs.strategy_hp_loss_accum.value == 0, '损血累积器每局全新创建零初始值'
+    assert gs.giftbox_sight.value == (), '板件读数域每局全新创建空初始值'
     assert gs.gold.value == 3
     assert gs.level.value == 3
     assert gs.xp.value == (0, XP_TO_NEXT_LEVEL[3])
@@ -2142,7 +2142,7 @@ def test_cold_build_seeds_all_a_fields(monkeypatch) -> None:
     assert gs.overflow_card.value == ''
     assert gs.active_env.value == ''
     assert gs.active_strategies.value == []
-    assert gs.pending_item_grants.value == [], '定时道具队列冷建空底座'
+    assert gs.pending_item_grants.value == [], '定时道具队列每局全新创建空初始值'
     assert gs.enemy_affixes.value == []
     assert gs.shop_refresh_cost.value == REFRESH_COST_BASE
     assert gs.prev_node_spent.value is False
@@ -2169,7 +2169,7 @@ def test_cold_build_seeds_all_a_fields(monkeypatch) -> None:
 def test_giftbox_sight_domain_registration() -> None:
     """giftbox_sight 域五件套:schema 独立键版本 1(不并入任何域 bump)
     + 快照 rebuild 往返(_json_safe 落 list,rebuild 还原 tuple 不漂移)
-    + 投影审计行 observation_only。种子底座锁 =
+    + 投影审计行 observation_only。种子初始值锁 =
     test_cold_build_seeds_all_a_fields(同文件,不重复)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         DEFAULT_GS_SCHEMA,
@@ -2435,7 +2435,7 @@ def test_sequential_placement_matches_compact_row_semantics() -> None:
 
 
 def test_deployed_field_replacement_inherits_capacity() -> None:
-    """容量变化 = 整视图结构性写:seed 底座后排容量 6;7-9 扩展格由
+    """容量变化 = 整视图结构性写:seed 初始值后排容量 6;7-9 扩展格由
     语义写端显式扩容(工作副本桥 orig 参继承),禁静默截断。"""
     view = deployed_view_sequential([], [_m31_u('甲')] * 7, back_capacity=7)
     assert len(view.back_slots) == 7, '7 格局显式扩容'

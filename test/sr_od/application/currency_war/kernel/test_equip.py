@@ -9,8 +9,8 @@
 - **merge 装备继承**(语义源 = merge_mechanics):同名同星 3 合 1,
   素材装备按扫描序继承到载体(场上载体优先;载体自有在前),素材槽
   清空——重写容器形状时的不变量哨兵;
-- **银狼专属装备可穿性门**(2026-09-18 用户定谳,10 件,白名单 =
-  银狼 + 银狼LV.999;机制正本 =
+- **银狼专属装备可穿性门**(2026-09-18 用户定论,10 件,白名单 =
+  银狼 + 银狼LV.999;机制权威版本 =
   docs/game/currency_war/research/equipment_mechanics.md「银狼专属
   装备」节;事故 = run_20260918_075416 分身墨镜Max 拖给丹恒·饮月
   静默不生效 → 装备滞留 owned → 安灯停局):登记完整性 / 白名单
@@ -98,7 +98,7 @@ def test_m7_reads_container_without_prep_obs():
 
 def test_m7_fail_gate_owned_unobserved():
     """fail 门:owned 域未观察(None) → 保守关,fail_reason 指向 owned。
-    (直构容器承载:session 容器冷建即种子空表,None 档仅直构域可达。)"""
+    (直构容器承载:session 容器每局全新创建即种子空表,None 档仅直构域可达。)"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.observe(gs.occupied_equips, {'front:1': ['x']}, sig=_SIG)
     ret = _build_equip_wear_plan(gs)
@@ -221,7 +221,7 @@ def test_deployed_carrier_inherits_bench_material_equips() -> None:
 
 # ============================================================ 银狼专属装备可穿性门
 
-#: 口述 10 件清单(2026-09-18 用户定谳;测试锚 = 登记的完整性,防漏登/多登)。
+#: 口述 10 件清单(2026-09-18 用户定论;测试锚 = 登记的完整性,防漏登/多登)。
 ORAL_EXCLUSIVE_TEN = frozenset({
     '分身墨镜', '分身墨镜Max',
     '数据拷贝仪', '数据拷贝仪Max', '数据拷贝仪Pro',
@@ -241,7 +241,7 @@ def test_gate_table_matches_oral_list():
 
 
 def test_allowlist_two_chars_wearable():
-    """白名单两角色全部可穿(定谳:「两个都行」,非仅银狼LV.999)。"""
+    """白名单两角色全部可穿(定论:「两个都行」,非仅银狼LV.999)。"""
     for item in ORAL_EXCLUSIVE_TEN:
         for char in ('银狼', '银狼LV.999'):
             assert _wearable_gate_ok([], char, item) is True
@@ -256,7 +256,7 @@ def test_non_allowlist_chars_rejected():
 
 def test_unregistered_items_unaffected():
     """门只辖登记键:特殊类非专属件(垃圾袋)恒可穿;骇客类非专属件
-    (扑满病毒)走类别门定谳白名单(银狼系放行/他人拒)。"""
+    (扑满病毒)走类别门定论白名单(银狼系放行/他人拒)。"""
     assert _wearable_gate_ok([], '丹恒·饮月', '垃圾袋') is True
     assert _wearable_gate_ok([], '银狼', '垃圾袋') is True
     assert _wearable_gate_ok([], '银狼', '扑满病毒') is True

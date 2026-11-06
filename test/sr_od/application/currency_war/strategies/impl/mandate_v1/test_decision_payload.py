@@ -3,7 +3,7 @@
 被测 = src/sr_od/application/currency_war/strategies/impl/mandate_v1/
 decision_payload.py(build_decision_payload)与 bridge.MandateV1Strategy.
 decision_payload 覆写;
-设计出处 = strategy-docs/strategy-telemetry.md(payload 键表正本)+
+设计出处 = strategy-docs/strategy-telemetry.md(payload 键表权威版本)+
 changes/2026-10-24-strategy-telemetry/details/capture-store.md §3。
 判据:payload 各键与 gs/state 现读直算一致;k_fallback 与
 ``cw_intention.k_empty_window_fallback`` 直调一致;锁定帧 candidates=[];

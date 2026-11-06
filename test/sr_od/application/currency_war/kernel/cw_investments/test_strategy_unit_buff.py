@@ -3,7 +3,7 @@
 装备党同代形)。
 
 星魂升华(id 253101)测试面依据 = 迭代 2026-09-23-invest-effects-calc
-designs/T-278-xinghun-shenghua.md(定稿,REVIEW 免裁 5/5)§4 锁面
+designs/T-278-xinghun-shenghua.md(定稿,REVIEW 无需用户决定 5/5)§4 锁面
 (卡面官方原文:「本局游戏中，我方前台角色的星魂提高1阶」):
 
 - 条目锁(锁 1):UNIT_BUFF 零响应登记形 / id 253101 / trigger
@@ -13,7 +13,7 @@ designs/T-278-xinghun-shenghua.md(定稿,REVIEW 免裁 5/5)§4 锁面
   (估值恒 (0.0, False));
 - 登记链锁 + 桥负锁(锁 2):获得链既有只登记不写状态的实现分支自动入册(register_strategy
   → by_source 含本条)、注册照常;UnitBuffRef 无任何世界写入字段 → 全部
-  桥鸭子读缺省守卫 no-op(burst / 位面段补发 / 板面重写 / 节点边界 /
+  桥鸭子类型读取(duck typing)缺省守卫 no-op(burst / 位面段补发 / 板面重写 / 节点边界 /
   容量直写五桥,登记期零 Field 行);on_strategy_gained 未收录安静
   返回零效果串;session=None 支登记跳过、注册照常;
 - 绑定不绑锁(锁 3):泛用养成数值(前台角色星魂 +1 阶)不入显式绑定表
@@ -160,7 +160,7 @@ def test_xinghun_cash_fail_closed() -> None:
 def test_xinghun_gain_chain_register_and_bridges_noop() -> None:
     """登记链锁 + 桥负锁(锁 2):session 在场选卡 → 注册入表 + 账本
     登记(register_strategy,by_source 含本条);UnitBuffRef 无世界写入
-    字段 → 五桥鸭子读缺省守卫 no-op,登记期零 Field 行;on_strategy_
+    字段 → 五桥鸭子类型读取缺省守卫 no-op,登记期零 Field 行;on_strategy_
     gained 未收录安静返回零效果串;session=None 支登记跳过、注册照常。"""
     gs = _make_gs()
     gain_invest_strategy(gs, object(), _CARD, rand=False, sig=_SIG_LOGIC)

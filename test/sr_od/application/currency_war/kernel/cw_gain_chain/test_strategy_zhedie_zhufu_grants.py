@@ -5,7 +5,7 @@ cw_gain_effects.py PICK_INVEST_EFFECTS '折叠小刀祝福' 行:具名装备一�
 test_strategy_xingyun_zhufu_grants.py 幸运星祝福)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-232 对应稿
-§4 锁 3(REVIEW-T232 免裁 7/7;卡面官方原文「获得1个【折叠小刀】」;
+§4 锁 3(REVIEW-T232 无需用户决定 7/7;卡面官方原文「获得1个【折叠小刀】」;
 rand=False 策略卡侧具名效果条目通道归属;祝福面 = UNIT_BUFF 零响应登记):
 
 - 行为链真值:确定入口 → equips 恰 +1 折叠小刀、步串

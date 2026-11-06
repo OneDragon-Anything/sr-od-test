@@ -3,7 +3,7 @@
 
 设计依据: abolish-node-ordinal 迭代 design.md §2.1(后继原语四态
 契约、``seqs`` 缺省 = 默认表与 ``node_sequence_of`` 同参约定、
-NodePos 字典序 = 有效序列按位面拼接展平的全序);语义收敛正本 =
+NodePos 字典序 = 有效序列按位面拼接展平的全序);语义收敛权威版本 =
 ``docs/develop/sr_od/application/currency_war/game_state/
 node-derivation.md`` §3.3(键原语)。测试面地图:
 

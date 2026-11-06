@@ -73,7 +73,7 @@ def test_chaofa_huobi_effect_spec_entry_shape() -> None:
     assert spec.duties == DutyFlags(), 'duties 全空'
     assert spec.duration_nodes == 6, \
         '发放入口序 = offset(5)+1 = 第 6 次节点入口(用户裁定 2026-09-10)'
-    assert spec.pending is False, '两分支语义已定谳,无保守支'
+    assert spec.pending is False, '两分支语义已定论,无保守支'
 
 
 def test_chaofa_huobi_discriminator_keys_match_registry() -> None:

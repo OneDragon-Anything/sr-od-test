@@ -194,8 +194,8 @@ def test_source_a_zero_interest_row_still_records(
                             _tok('连胜', 39, 220, 111, 56),
                             _tok('×0', 134, 222, 126, 55)])
     op._record_round_outcome(_FRAME)
-    assert gs.effects.interest_earned == 0, '零值入账(过单口)'
-    assert gs.env_grants_done.value == (), '阈值不足零发放(底座空元组)'
+    assert gs.effects.interest_earned == 0, '零值入账(过唯一入口函数)'
+    assert gs.env_grants_done.value == (), '阈值不足零发放(初始值空元组)'
     assert op._st.interest_counted_pos == (1, 1), '计数刻成立(一次性标志位置位)'
 
 
@@ -369,7 +369,7 @@ def test_strategy_level_grant_fires_on_settlement_level_asset(
     assert idx_level < calls.index(pair[0]), \
         f'接入调用次序漂移(发放必须在结算覆盖后): {calls}'
     # live 零回调(锁 8 live 半):三联动域零写零观察(逻辑侧禁写,
-    # 联动归观察域识别器;底座种子值调用前后零变化)
+    # 联动归观察域识别器;种子初始值调用前后零变化)
     touched = [c for c in calls if c[1] in ('diamond_count', 'deploy_cap',
                                             'back_layout')]
     assert touched == [], f'live 出现联动域写: {touched}'

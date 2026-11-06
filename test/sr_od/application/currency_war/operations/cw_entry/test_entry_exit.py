@@ -15,7 +15,7 @@ FixtureController 记录点击。CwLoop 在委托测试①⑤中桩化(边界 op
 
 (收尾整删)原测试③「干净备战帧 → 直接退局发起」:与测试②同走 A 类名单
 直退链,唯一差异 = 首帧建档(免战 vs 部署完成备战),直退判据 = 同一份
-PREP_DIRECT_EXIT_SCREENS 名单消费,②已承重同一份运行时行为;原
+PREP_DIRECT_EXIT_SCREENS 名单消费,②已承担同一份运行时行为;原
 test_route_table_has_no_battle_pause_dead_entry「ROUTE_BY_SCREEN 无死项」
 删:运行时对象成员断言 = 常量复述,答不出哪个运行行为坏了。
 """

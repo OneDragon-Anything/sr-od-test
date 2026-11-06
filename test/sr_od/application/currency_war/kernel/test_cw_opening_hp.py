@@ -138,7 +138,7 @@ def test_observe_overwrite_no_callback(rows_sink: _RowSink) -> None:
 
 
 def test_seed_write_no_callback() -> None:
-    """种子写(old=None)不触发重算(设计 §2.3 N5 边界):开局种子底座
+    """种子写(old=None)不触发重算(设计 §2.3 N5 边界):开局初始值
     首写词缀名单 diff 语义 = 全量消失候选,回调直接跳过——hp 维持种子
     随机态(基线 82),不被翻成 prior。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (

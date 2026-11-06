@@ -49,7 +49,7 @@ def test_registry_row_single_source() -> None:
 def test_emblem_dual_source_emblem_family() -> None:
     """徽名双源对表(构建校验②现值通过 = import 过闸即证,显式对拍):
     徽名 ∈ EQUIPMENTS 且类别 = 星徽族(校验哨同判据;零配方非合成件事实
-    不校验,T-219 设计稿定谳,登记面注释申报)。"""
+    不校验,T-219 设计稿定论,登记面注释申报)。"""
     assert _EM in EQUIPMENTS, '徽名必须在装备注册表'
     assert EQUIPMENTS[_EM].category == '星徽', '徽名必须属星徽族'
 

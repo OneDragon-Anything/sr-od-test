@@ -6,7 +6,7 @@ grant.py,同物 ×2 先例 = 小复制 test_strategy_named_equip_grant_xiaofuzhi
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
 T-239-shengji-guolu.md(定稿)§4 锁 5 G 形态 + 同目录裁定册
-PENDING-DECISIONS.md T-239 小节(用户裁定 2026-11-02 拍案 G 选卡即得):
+PENDING-DECISIONS.md T-239 小节(用户裁定 2026-11-02 案 G 选卡即得):
 - 卡文两句分治:句②「获得2个【冶金炉】」= **选卡即得**(获得句后置于条件
   句亦判即得——「立刻标记」家族口径的反例首例),登记行直书
   ``_make_named_equip_grant_effect('冶金炉', 2)``,具名确定发放

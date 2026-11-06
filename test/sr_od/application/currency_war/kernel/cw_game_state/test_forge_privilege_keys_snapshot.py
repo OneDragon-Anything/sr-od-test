@@ -6,8 +6,8 @@ kernel/cw_projection_audit.py 的同名审计行 + cw_effect_inventory 常量
 测试面依据 = 迭代设计 designs/T-418-duanye-zhuanjia-ren.md §2 裁决点
 2-A(Field 缺省承载开局值,零置位写入腿——无卡局不消费零行为差;
 「耗尽后可充能」次数契约与免战牌 remaining_uses「用尽即效果离场」
-分野,次数账正本不骑效果账本载体):
-- 冷建缺省 = 1/0(声明即真值);seed_opening_state 零置位(种子后值
+分野,次数账权威版本不骑效果账本载体):
+- 每局全新创建缺省 = 1/0(声明即真值);seed_opening_state 零置位(种子后值
   与来源双不变);
 - 快照存续:次数/计数值进快照 → restore 往返逐位相等(int 保型直通
   免 rebuild 登记,env_grant_uid_seq 同款);

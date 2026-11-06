@@ -2,7 +2,7 @@
 的 STRATEGY_BOND_BATTLE_GRANTS + 构建校验)。
 
 测试面依据 = 迭代设计 designs/T-172-buyao-xiaokan-women-de-jiban.md §4
-锁 8 + REVIEW-T172(校验面按 2026-10-28 治理判据分诊,T-163 R1 判例同
+锁 8 + REVIEW-T172(校验面按 2026-10-28 治理判据分诊,T-163 R1 先例同
 形:「只能由写表人笔误触发的校验删」——阈值/类别词/件数值形手抄笔误类
 不落校验;「能被游戏版本变更独立触发的漂移哨留」——孤儿键一哨全落;
 直构形态先例 = 同目录 test_strategy_boss_battle_grants.py):

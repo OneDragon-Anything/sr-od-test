@@ -1,6 +1,6 @@
 """power_model 特征面对齐测试(src 镜像:sim/power_model/features.py)。
 
-锁的设计约定(design 2026-10-19-sim-power-model-v1 §2.2 + 正本
+锁的设计约定(design 2026-10-19-sim-power-model-v1 §2.2 + 权威版本
 sim-power-model §4.2):
 - 双侧同源:sim GameState 与实机 decisions 行同一板面输入 → 同一
   特征向量(对齐测试是设计验收对象,非实现细节);

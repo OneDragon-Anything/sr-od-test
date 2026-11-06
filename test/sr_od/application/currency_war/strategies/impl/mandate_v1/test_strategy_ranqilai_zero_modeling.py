@@ -4,7 +4,7 @@ cw_investments.py 与绑定/估值面;按被测方法拆目录规范落位 manda
 月光宝盒七锁)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-276 对应稿
-§4 七锁(REVIEW-T276 免裁 3/3;卡面官方原文:「【燃血角斗场】以80%上限
+§4 七锁(REVIEW-T276 无需用户决定 3/3;卡面官方原文:「【燃血角斗场】以80%上限
 开始战斗，且保留的充能提高20%。获得【万敌】和【千冶·刃】。」——腿 A/B
 实机(live)和模拟器(sim)两边盲零建模零登记;效果条目 C 授予/绑定/估值三面已登记零动作):
 
@@ -14,7 +14,7 @@ cw_investments.py 与绑定/估值面;按被测方法拆目录规范落位 manda
 - 锁 3 绑定面:显式绑定二元组对拍(阵营×角色,scope 只申报不锁死);
 - 锁 4 规范名幂等;
 - 锁 5 零建模现值回归:on_strategy_gained 返回空效果串 ∧ 世界容器零写
-  (现值锁非终态锁,交付家族批落码组合行时随批修订翻转,设计稿 §4 已
+  (现值锁非终态锁,交付家族批把组合行写进代码时随批修订翻转,设计稿 §4 已
   内嵌修订义务);
 - 锁 6 反扫闭集:候选扫描已登记 + 注册表已登记双断言;
 - 锁 7 经济面零条目:三表零命中(零建模申报的回归面,家族收尾批落
@@ -86,7 +86,7 @@ def test_ranqilai_name_normalize() -> None:
 
 def test_ranqilai_zero_modeling_on_gain() -> None:
     """锁 5(零建模现值回归):on_strategy_gained 返回空效果串且世界零写
-    (现值锁非终态锁,交付家族批落码组合行时随批修订翻转)。"""
+    (现值锁非终态锁,交付家族批把组合行写进代码时随批修订翻转)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.prep_anchored = True
     seq_before = gs.write_seq

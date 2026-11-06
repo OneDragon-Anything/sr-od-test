@@ -1,7 +1,7 @@
 """链观察测试面(链观察载体/查询/派生直定 + 过渡屏写端 + 备战帧写端 +
 节点行归位 + 晶矿奖励通道挂接)。
 
-语义正本 = game_state/chain-observation.md §2/§3/§6(载体与两链字段、
+语义权威版本 = game_state/chain-observation.md §2/§3/§6(载体与两链字段、
 过渡屏基线/离场快照、备战屏现行链写、零内建回落);节点行归位判据 =
 商店刷新终结判据迭代「备战入口 heavy 观察触发槽序表/台账写」;晶矿奖励
 通道挂接 = ore-reward-channel 详设 §4-§5。
@@ -11,7 +11,7 @@ harness run_node):
 - 现行链载体与查询(kernel 字段语义 + 商店查链派生直定消费面);
 - 过渡屏(``cw_screen_plane_transition._build_transition_chain`` +
   ``report_screen_plane_transition_obs``;写闸防御测试在
-  test_screen_report_ports 承重,本文件不重复);
+  test_screen_report_ports 承担,本文件不重复);
 - 备战帧(``cw_screen_prep._write_prep_node_chain``:轮位对齐门/左移
   携带/boss SIFT 禁回落/变异窗/基线回填 + 槽序表/台账/未识别图标采集
   的节点行消费位 + heavy 观察触发接入调用)。
@@ -119,7 +119,7 @@ def test_chain_node_type_query_states():
                _chain(1, 'encounter', 'encounter', 'encounter'),
                evidence='t', sig=_SIG)
     assert chain_node_type(gs, 1, 2).token is None, \
-        '零内建回落:基线在场也不兜底(链正本 §6)'
+        '零内建回落:基线在场也不兜底(链权威版本 §6)'
 
 
 def test_derivation_shop_panel_chain_query_writes_kind():
@@ -300,7 +300,7 @@ def test_transition_non_opening_writes_snapshot_only():
     assert gs.node_path.value is not None \
         and gs.node_path.value.plane == 2, '离场快照 = 镜像位面(刚离开)'
     assert gs.node_path_baseline.value is None, \
-        'P2/P3 基线不来自过渡屏(首帧回填承接,链正本 §3)'
+        'P2/P3 基线不来自过渡屏(首帧回填承接,链权威版本 §3)'
 
 
 def test_transition_mirror_missing_non_opening_skips():

@@ -1,6 +1,6 @@
 """词缀吃怕表 + boss 面测试(design §3.3/§3.4;2026-11-03-unified-line-scoring 批 2)。
 
-判据正本 = docs/develop/sr_od/application/currency_war/changes/
+判据权威版本 = docs/develop/sr_od/application/currency_war/changes/
 2026-11-03-unified-line-scoring/design.md §3.3(词缀:12 已审线+兜底层)
 /§3.4(boss 面:4 线实证+D4 类级兜底+非 boss 强敌)。断言全部引设计
 语义,期望值 = cw_line_scales 常数符号直读;数据源出处 = final_comps

@@ -3,7 +3,7 @@
 拆目录规范落新位)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
-T-316-huangjing-kuanggong.md(定稿,REVIEW-T316 免裁 7/7)§4 锁 1:
+T-316-huangjing-kuanggong.md(定稿,REVIEW-T316 无需用户决定 7/7)§4 锁 1:
 - 注册行直测 = 行值防线(治理口径 2026-10-28「笔误哨删/漂移哨留」——
   值形笔误哨按 M12 判删,行值精确断言防线强于 import 期形查);
 - 孤儿键负例 = 唯一漂移哨的负控(版本改名/移除后静默失联形态);

@@ -1,4 +1,4 @@
-"""链 diff 纯函数与触发面测试(语义正本 = action-logic-state.md 增益链节;
+"""链 diff 纯函数与触发面测试(语义权威版本 = action-logic-state.md 增益链节;
 game_state/chain-observation.md §4/§5)。
 
 chain_diff = 数学单一源(实机与 sim 共用);maybe_emit_chain_diff = 触发面
@@ -44,7 +44,7 @@ def test_chain_diff_rewrite_and_channel_limited():
 
 
 def test_chain_diff_length_and_coverage():
-    """长度差(增节点)与基线 None 洞位集(基线未辨位显影)。"""
+    """长度差(增节点)与基线 None 洞位集(基线未辨位暴露)。"""
     baseline = _chain('battle', None, 'supply')          # 槽 1 = 基线未辨
     current = _chain('battle', 'battle', 'supply', 'reward')
     diff = chain_diff(baseline, current)
@@ -65,7 +65,7 @@ def test_maybe_emit_two_frame_gate_and_snapshot_exempt():
     gs.observe(gs.node_path_baseline, _chain('battle', 'battle'),
                evidence='t', sig=_SIG)
     emitted: list[dict] = []
-    gs.note_obs_event = (  # 实例级捕获(链正本 §5:发射走 note_obs_event)
+    gs.note_obs_event = (  # 实例级捕获(链权威版本 §5:发射走 note_obs_event)
         lambda event, field, payload, verdict=None, sig=None:
         emitted.append(payload))
 

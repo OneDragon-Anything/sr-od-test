@@ -196,7 +196,7 @@ def test_validator_char_unknown_raises(monkeypatch) -> None:
 
 def test_plane_p2_p3_windows_grant() -> None:
     """行为锁(锁 2 前半):持卡局 P1→P2 位面开始窗(2,1)发放 1 只 1★
-    白厄,效果串恰 1 条定谳形;P2→P3 窗(3,1)第二次同验,终 2 只零合并
+    白厄,效果串恰 1 条定论形;P2→P3 窗(3,1)第二次同验,终 2 只零合并
     (同名同星凑三触发链现役合成,2 只不触发)。"""
     gs = _make_gs(bench=[])
     gs.observe(gs.active_strategies, ['轮回不止'], sig=_SIG_OBS)

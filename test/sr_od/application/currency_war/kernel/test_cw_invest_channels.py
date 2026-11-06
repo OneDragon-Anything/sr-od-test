@@ -1,6 +1,6 @@
 """投资通道派生测试(design §3.1/§3.2;2026-11-03-unified-line-scoring 批 1)。
 
-判据正本 = docs/develop/sr_od/application/currency_war/changes/
+判据权威版本 = docs/develop/sr_od/application/currency_war/changes/
 2026-11-03-unified-line-scoring/design.md §3.1(环境四通道)/§3.2(策略
 五通道+实证覆盖升档)。断言全部引设计语义,期望值 = 常数表符号直读
 (cw_line_scales 单一源),注册表真实数据现算锚定。

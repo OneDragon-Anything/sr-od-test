@@ -67,7 +67,7 @@ def _bench_units(gs: GameState) -> list[Unit]:
 
 
 def _to_prep(seed: int = 7) -> SimBackend:
-    """构造 + 走到 P1r1 备战屏(开局种子底座已落);调用方负责卸载。"""
+    """构造 + 走到 P1r1 备战屏(开局初始值已落);调用方负责卸载。"""
     b = SimBackend(seed=seed, cfg=_CFG)
     install_backend(b)
     b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
@@ -180,7 +180,7 @@ def test_multi_level_jump_grants_per_intermediate_level() -> None:
 
 def test_live_gate_false_zero_write() -> None:
     """sim 门 False = 实机路径(锁⑥):端口未装 → 持卡跨级也零采样
-    零写(实机该角色由游戏引擎发放,bench 观察承接定谳;若门失效会
+    零写(实机该角色由游戏引擎发放,bench 观察承接定论;若门失效会
     走回退自掷采样并写 bench,本锁即红)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     slots = [BenchSlot(kind='unit', unit=Unit(char_id='垫件', star=1))]

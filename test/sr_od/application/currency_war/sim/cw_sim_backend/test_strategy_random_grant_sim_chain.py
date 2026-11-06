@@ -291,7 +291,7 @@ def test_foresight_rewrite_single_prism_candidate(
 
 def test_foresight_joint_slot_rewrite(_isolate_defect_buffer) -> None:
     """联席槽改写锁(锁 5):联席决策 + 远见同持 → 额外槽 (2,6) 亦单
-    棱彩候选(「投资策略节点」词面辖联席槽,offer_slots 单口自动覆盖
+    棱彩候选(「投资策略节点」词面辖联席槽,offer_slots 唯一入口函数自动覆盖
     零特判)。"""
     b = _env_backend(61, '联席决策')
     try:

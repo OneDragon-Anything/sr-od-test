@@ -202,7 +202,7 @@ def test_live_form_latch_only_world_write_zero() -> None:
 
 
 def test_buy_card_path_grants_xp(sim_installed) -> None:
-    """买牌上报 path 世界锁(锁 4 主条):持卡局经上报单口买 2 费牌 →
+    """买牌上报 path 世界锁(锁 4 主条):持卡局经上报唯一入口函数买 2 费牌 →
     xp 恰 +3、落一次性标志位(发火腿接入调用全链;gold 未读买分支跳写,场景最小化)。"""
     gs = cw4_gs(node_fill=False, shop_screen='off', gold_unread=True,
                 bench=[], active_strategies=(_CARD,),

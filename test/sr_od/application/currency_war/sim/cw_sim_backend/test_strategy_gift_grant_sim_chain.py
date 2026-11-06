@@ -121,7 +121,7 @@ def test_both_legs_fire_in_next_window(_prep_backend) -> None:
     b = _prep_backend
     gs = b.gs
     _seed_board(b)
-    assert gs.strategy_grants_done.value == (), '前置:开局空底座'
+    assert gs.strategy_grants_done.value == (), '前置:开局空初始值'
     b._enter_node_window((1, 2))
     units = _units(gs)
     assert ('黄泉', 2) in units, f'效果条目1 备战 2★黄泉: {units}'

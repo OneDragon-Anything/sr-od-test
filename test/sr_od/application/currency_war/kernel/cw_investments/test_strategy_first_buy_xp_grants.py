@@ -8,7 +8,7 @@ STRATEGY_FIRST_BUY_XP_GRANTS + 构建校验)。
 test_strategy_encounter_battle_grants.py):
 - 登记单一源:行值 = 卡面效果原文直读(孪生素数 id 200201:五费用档
   1/2/3/4/5 → 2/3/5/7/11 XP,值下标 = 费用−1);五桶全取上限 = 28
-  (求和算例随锁,与 fields.md/invest_effects.md 正本订正值对拍);
+  (求和算例随锁,与 fields.md/invest_effects.md 权威版本订正值对拍);
 - 构建校验负控:孤儿键单哨(2026-10-28 治理后形——五桶值系手抄常量
   纯笔误类,值形查按治理不加;行值防线 = 锁 1 精确断言 + id 对拍,
   强于 import 期形查)。
@@ -30,7 +30,7 @@ _AMOUNTS = (2, 3, 5, 7, 11)
 def test_registry_row_single_source() -> None:
     """登记单一源(锁 1):键集 = 族现役首例;行值 = 卡面五桶直读;
     键 ∈ 策略注册表且 id 对拍(防改名/换 id 后静默错挂);五桶全取上限
-    求和 = 28(2+3+5+7+11,正本口径)。行值精确断言 = 值形防线的合规
+    求和 = 28(2+3+5+7+11,权威版本口径)。行值精确断言 = 值形防线的合规
     承载(治理裁定:登记笔误类对账归评审与测试,import 期形查不加)。"""
     assert set(STRATEGY_FIRST_BUY_XP_GRANTS) == {_CARD}, \
         '注册面 = 族现役首例(同族后续卡各自独立批,禁顺手代登记)'

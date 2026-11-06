@@ -64,7 +64,7 @@ def test_dot_contract_gift_tier_unchanged() -> None:
 
 
 def test_concept_stock_gift_tier_off() -> None:
-    """追击概念股估值档恒 'off'(概念股族模式卡登记约定,正本 =
+    """追击概念股估值档恒 'off'(概念股族模式卡登记约定,权威版本 =
     fields.md §5.2 效果缺口与载体登记):档位机器只读 chars_immediate/
     chars_conditional 两个具名估值域字段,随机规格(阵营轴)/随机装备
     条目不入 → 恒 off → named_gift_value 恒 0——登记概念股不产生策略层
@@ -73,7 +73,7 @@ def test_concept_stock_gift_tier_off() -> None:
 
 
 def test_ranxue_concept_stock_gift_tier_off() -> None:
-    """燃血概念股估值档恒 'off'(概念股族展开卡登记约定,正本 =
+    """燃血概念股估值档恒 'off'(概念股族展开卡登记约定,权威版本 =
     fields.md §5.2 效果缺口与载体登记,追击首例同锁第二实例):随机规格
     (阵营轴)/随机装备条目不入档位机器估值域 → 恒 off——族展开登记
     不产生策略层双重计分,与 random_faction_gift_value 随机阵营路径
@@ -82,7 +82,7 @@ def test_ranxue_concept_stock_gift_tier_off() -> None:
 
 
 def test_nengliang_concept_stock_gift_tier_off() -> None:
-    """能量概念股估值档恒 'off'(概念股族展开卡登记约定,正本 =
+    """能量概念股估值档恒 'off'(概念股族展开卡登记约定,权威版本 =
     fields.md §5.2 效果缺口与载体登记,追击首例同锁第三实例):随机规格
     (阵营轴)/随机装备条目不入档位机器估值域 → 恒 off——族展开登记
     不产生策略层双重计分,与 random_faction_gift_value 随机阵营路径
@@ -91,7 +91,7 @@ def test_nengliang_concept_stock_gift_tier_off() -> None:
 
 
 def test_lieche_concept_stock_gift_tier_off() -> None:
-    """列车同行概念股估值档恒 'off'(概念股族展开卡登记约定,正本 =
+    """列车同行概念股估值档恒 'off'(概念股族展开卡登记约定,权威版本 =
     fields.md §5.2 效果缺口与载体登记,追击首例同锁第四实例):随机规格
     (阵营轴)/随机装备条目不入档位机器估值域 → 恒 off——族展开登记
     不产生策略层双重计分,与 random_faction_gift_value 随机阵营路径
@@ -100,7 +100,7 @@ def test_lieche_concept_stock_gift_tier_off() -> None:
 
 
 def test_yinhe_concept_stock_gift_tier_off() -> None:
-    """银河学者概念股估值档恒 'off'(概念股族展开卡登记约定,正本 =
+    """银河学者概念股估值档恒 'off'(概念股族展开卡登记约定,权威版本 =
     fields.md §5.2 效果缺口与载体登记,追击首例同锁第五实例):随机规格
     (阵营轴)/随机装备条目不入档位机器估值域 → 恒 off——族展开登记
     不产生策略层双重计分,与 random_faction_gift_value 随机阵营路径
@@ -109,7 +109,7 @@ def test_yinhe_concept_stock_gift_tier_off() -> None:
 
 
 def test_beluoboge_concept_stock_gift_tier_off() -> None:
-    """贝洛伯格概念股估值档恒 'off'(概念股族展开卡登记约定,正本 =
+    """贝洛伯格概念股估值档恒 'off'(概念股族展开卡登记约定,权威版本 =
     fields.md §5.2 效果缺口与载体登记,追击首例同锁第六实例):随机规格
     (阵营轴)/随机装备条目不入档位机器估值域 → 恒 off——族展开登记
     不产生策略层双重计分,与 random_faction_gift_value 随机阵营路径
@@ -119,7 +119,7 @@ def test_beluoboge_concept_stock_gift_tier_off() -> None:
 
 
 def test_xingjianlvren_concept_stock_gift_tier_off() -> None:
-    """星间旅人概念股估值档恒 'off'(概念股族展开卡登记约定,正本 =
+    """星间旅人概念股估值档恒 'off'(概念股族展开卡登记约定,权威版本 =
     fields.md §5.2 效果缺口与载体登记,追击首例同锁第七实例):随机规格
     (阵营轴)/随机装备条目不入档位机器估值域 → 恒 off——族展开登记
     不产生策略层双重计分,与 random_faction_gift_value 随机阵营路径
@@ -129,7 +129,7 @@ def test_xingjianlvren_concept_stock_gift_tier_off() -> None:
 
 
 def test_xianzhou_concept_stock_gift_tier_off() -> None:
-    """仙舟概念股估值档恒 'off'(概念股族展开卡登记约定,正本 =
+    """仙舟概念股估值档恒 'off'(概念股族展开卡登记约定,权威版本 =
     fields.md §5.2 效果缺口与载体登记,追击首例同锁第八实例):随机规格
     (阵营轴)/随机装备条目不入档位机器估值域 → 恒 off——族展开登记
     不产生策略层双重计分,与 random_faction_gift_value 随机阵营路径
@@ -139,7 +139,7 @@ def test_xianzhou_concept_stock_gift_tier_off() -> None:
 
 
 def test_langshou_concept_stock_gift_tier_off() -> None:
-    """狼狩概念股估值档恒 'off'(概念股族展开卡登记约定,正本 =
+    """狼狩概念股估值档恒 'off'(概念股族展开卡登记约定,权威版本 =
     fields.md §5.2 效果缺口与载体登记,追击首例同锁第九实例):随机规格
     (阵营轴)/随机装备条目不入档位机器估值域 → 恒 off——族展开登记
     不产生策略层双重计分,与 random_faction_gift_value 随机阵营路径
@@ -149,7 +149,7 @@ def test_langshou_concept_stock_gift_tier_off() -> None:
 
 
 def test_zhouzhibanshen_concept_stock_gift_tier_off() -> None:
-    """昼之半神概念股估值档恒 'off'(概念股族展开卡登记约定,正本 =
+    """昼之半神概念股估值档恒 'off'(概念股族展开卡登记约定,权威版本 =
     fields.md §5.2 效果缺口与载体登记,追击首例同锁第十实例):随机规格
     (阵营轴)/随机装备条目不入档位机器估值域 → 恒 off——族展开登记
     不产生策略层双重计分,与 random_faction_gift_value 随机阵营路径
@@ -159,7 +159,7 @@ def test_zhouzhibanshen_concept_stock_gift_tier_off() -> None:
 
 
 def test_yezhibanshen_concept_stock_gift_tier_off() -> None:
-    """夜之半神概念股估值档恒 'off'(概念股族展开卡登记约定,正本 =
+    """夜之半神概念股估值档恒 'off'(概念股族展开卡登记约定,权威版本 =
     fields.md §5.2 效果缺口与载体登记,追击首例同锁第十一实例):随机规格
     (阵营轴)/随机装备条目不入档位机器估值域 → 恒 off——族展开登记
     不产生策略层双重计分,与 random_faction_gift_value 随机阵营路径
@@ -169,7 +169,7 @@ def test_yezhibanshen_concept_stock_gift_tier_off() -> None:
 
 
 def test_jipo_concept_stock_gift_tier_off() -> None:
-    """击破概念股估值档恒 'off'(概念股族展开卡登记约定,正本 =
+    """击破概念股估值档恒 'off'(概念股族展开卡登记约定,权威版本 =
     fields.md §5.2 效果缺口与载体登记,追击首例同锁第十二实例):随机规格
     (阵营轴)/随机装备条目不入档位机器估值域 → 恒 off——族展开登记
     不产生策略层双重计分,与 random_faction_gift_value 随机阵营路径
@@ -179,7 +179,7 @@ def test_jipo_concept_stock_gift_tier_off() -> None:
 
 
 def test_qungong_concept_stock_gift_tier_off() -> None:
-    """群攻概念股估值档恒 'off'(概念股族展开卡登记约定,正本 =
+    """群攻概念股估值档恒 'off'(概念股族展开卡登记约定,权威版本 =
     fields.md §5.2 效果缺口与载体登记,追击首例同锁第十三实例):随机规格
     (阵营轴)/随机装备条目不入档位机器估值域 → 恒 off——族展开登记
     不产生策略层双重计分,与 random_faction_gift_value 随机阵营路径
@@ -189,7 +189,7 @@ def test_qungong_concept_stock_gift_tier_off() -> None:
 
 
 def test_jianyi_concept_stock_gift_tier_off() -> None:
-    """减益概念股估值档恒 'off'(概念股族展开卡登记约定,正本 =
+    """减益概念股估值档恒 'off'(概念股族展开卡登记约定,权威版本 =
     fields.md §5.2 效果缺口与载体登记,追击首例同锁第十四实例):随机规格
     (阵营轴)/随机装备条目不入档位机器估值域 → 恒 off——族展开登记
     不产生策略层双重计分,与 random_faction_gift_value 随机阵营路径
@@ -200,7 +200,7 @@ def test_jianyi_concept_stock_gift_tier_off() -> None:
 
 
 def test_zhanjidian_concept_stock_gift_tier_off() -> None:
-    """战技点概念股估值档恒 'off'(概念股族展开卡登记约定,正本 =
+    """战技点概念股估值档恒 'off'(概念股族展开卡登记约定,权威版本 =
     fields.md §5.2 效果缺口与载体登记,追击首例同锁第十五实例):随机规格
     (阵营轴)/随机装备条目不入档位机器估值域 → 恒 off——族展开登记
     不产生策略层双重计分,与 random_faction_gift_value 随机阵营路径

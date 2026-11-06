@@ -6,8 +6,8 @@ test_gain_chain.py 超线冻结禁追加,新锁落新镜像,先例 = 同目录
 test_strategy_random_equip_grant_gongsi_junhuo_yin.py 银卡(count=1))。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-236 对应稿
-§4(REVIEW-T236 免裁 9/9;卡面官方原文:「获得2件随机简易装备」;count=2
-放回抽 = T-167 判例直引——同 rng 两次采样可重复同名;变异腿不属本文件
+§4(REVIEW-T236 无需用户决定 9/9;卡面官方原文:「获得2件随机简易装备」;count=2
+放回抽 = T-167 先例直引——同 rng 两次采样可重复同名;变异腿不属本文件
 辖域,登记形态 = 同目录 test_gain_invest_strategy_equips_reroll.py):
 
 - 固定 rng 注入链发放真值(行身份锁):equips 恰 +2、两件同名 = 采样值
@@ -73,7 +73,7 @@ class _RowSink:
 
 def test_gold_two_equip_leg_chain_places_two() -> None:
     """链发放真值(行身份锁):确定入口+固定 rng → equips 恰 +2、两件
-    同名 = 采样值(放回抽 T-167 判例:同 rng 两次采样可重复同名)、
+    同名 = 采样值(放回抽 T-167 先例:同 rng 两次采样可重复同名)、
     效果串恰 2 条、active_strategies 入表;正常路径零申报行。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
         roll_random_equip,

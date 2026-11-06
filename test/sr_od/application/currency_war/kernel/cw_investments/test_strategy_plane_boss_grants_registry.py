@@ -73,7 +73,7 @@ def test_dual_source_reconciliation() -> None:
 
 def test_data_row_id_anchor() -> None:
     """数据行锚对拍:base 溯源 id 与卡名一致(表键 ↔ base 溯源;
-    数据行 = 卡面冻结正本)。"""
+    数据行 = 卡面冻结权威版本)。"""
     from sr_od.application.currency_war.kernel.cw_investments import (
         INVESTMENT_STRATEGIES,
     )

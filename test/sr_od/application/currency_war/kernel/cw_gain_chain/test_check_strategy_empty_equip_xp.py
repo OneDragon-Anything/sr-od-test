@@ -136,7 +136,7 @@ def test_deployed_wearing_irrelevant_scope_a() -> None:
 
 def test_none_defense_fail_closed() -> None:
     """None 防御(锁 3 序 0):三域任一未观察 → 0(fail-closed;sim 生产
-    开局种子底座不触发,直构单测域触发)。"""
+    开局初始值不触发,直构单测域触发)。"""
     assert check_strategy_empty_equip_xp(_gs(card=_CARD)) == 0
     assert check_strategy_empty_equip_xp(_gs(card=_CARD, equips=[])) == 0
     assert check_strategy_empty_equip_xp(_gs(card=_CARD, bench=[])) == 0

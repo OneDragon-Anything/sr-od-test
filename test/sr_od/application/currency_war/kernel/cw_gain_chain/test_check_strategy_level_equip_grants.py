@@ -40,7 +40,7 @@ _LATCH_EV = f'strategy_level_grant:{_CARD}'
 
 
 def _seeded_gs() -> GameState:
-    """开局种子底座(level=3/xp 现值已登记);达标发放 = 确定事件,置一次性标志位锁
+    """开局初始值(level=3/xp 现值已登记);达标发放 = 确定事件,置一次性标志位锁
     确定面写通道。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.prep_anchored = True
@@ -120,13 +120,13 @@ def test_no_card_and_out_of_table_card_zero_write() -> None:
 
 
 def test_prefers_silence_on_unobserved_then_self_heals() -> None:
-    """宁缺勿造 + 自愈(锁 5):冷建无种子(level/equips 恒 None)→ None
+    """宁缺勿造 + 自愈(锁 5):每局全新创建无种子(level/equips 恒 None)→ None
     零写零一次性标志位;equips 先到仍 None(level 缺,禁半发放);level 达标到位 →
     补发自愈(一次性标志位只在发放同窗登记,拒落不落一次性标志位语义)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.prep_anchored = True
     _hold(gs)
-    assert gs.level.value is None and gs.equips.value is None, '前置:冷建'
+    assert gs.level.value is None and gs.equips.value is None, '前置:每局全新创建'
     assert check_strategy_level_equip_grants(gs, _LSIG) is None, '全缺误发放'
     gs.observe(gs.equips, [], sig=_SIG_OBS)
     assert check_strategy_level_equip_grants(gs, _LSIG) is None, 'level 缺误发放'

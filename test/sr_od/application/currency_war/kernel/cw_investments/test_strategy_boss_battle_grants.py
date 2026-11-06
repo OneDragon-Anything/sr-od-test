@@ -2,7 +2,7 @@
 cw_investments.py 的 STRATEGY_BOSS_BATTLE_GRANTS + 构建校验)。
 
 测试面依据 = 迭代设计 designs/T-166-qiang-zaishou.md §4 锁 8 +
-REVIEW-T166(校验面按 2026-10-28 治理判据分诊 + T-163 R1 判例同形:
+REVIEW-T166(校验面按 2026-10-28 治理判据分诊 + T-163 R1 先例同形:
 「只能由写表人笔误触发的校验删」——类别词/件数值形手抄笔误类不落校验;
 「能被游戏版本变更独立触发的漂移哨留」——孤儿键一哨全落;直构形态先例 =
 同目录 test_strategy_encounter_battle_grants.py);T-167 展开卡扩名沿

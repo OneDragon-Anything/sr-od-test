@@ -13,7 +13,7 @@ kind 首槽);点击点 = 「武装箱开启位-{slot}」建档 area 中心(「�
 None 现算双出口各一条 AssertionError;sim 形态 = 机械分支旁路静默成功
 + 后端世界推进(advance 收到 open_box 声明)。
 开箱上报 = 零写族(腾席事实归下一入口 heavy 实读),容器 bench 零写
-是非本测断言面(正本 = test_overlay 零写族覆盖)。
+是非本测断言面(权威版本 = test_overlay 零写族覆盖)。
 """
 from __future__ import annotations
 
@@ -127,7 +127,7 @@ def test_explicit_slot_clicks_open_area_and_declares_world(
     op = CwActionOpenBoxOp(test_context, CwActionOpenBoxParam(slot=1),
                            env=env)
     rr = _run(test_context, op)
-    assert rr.is_success and rr.status == '开箱槽1', '机械执行成功 + 摘要显影槽号'
+    assert rr.is_success and rr.status == '开箱槽1', '机械执行成功 + 摘要显示槽号'
     assert _env_controller(env).clicks == [(135, 900)], \
         '点击落武装箱开启位建档坐标中心'
     assert len(_env_controller(env).moves) == 1, '防吞点击:先移后点'
@@ -140,7 +140,7 @@ def test_none_slot_resolves_first_box_and_rebuilds_param(
         test_context, monkeypatch):
     """slot=None 现算(design §2.1-1/§2.5):gs 容器现算首个 supply_box 槽
     (下标+1)→ resolved slot 重建 param(入参对象不改写)→ 点击落现算
-    槽建档坐标、round 摘要显影显式槽号。"""
+    槽建档坐标、round 摘要显示显式槽号。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         game_state_of,
     )
@@ -157,7 +157,7 @@ def test_none_slot_resolves_first_box_and_rebuilds_param(
     op = CwActionOpenBoxOp(test_context, param_in, env=env)
     rr = _run(test_context, op)
     assert rr.is_success and rr.status == '开箱槽5', \
-        '现算首件槽 = 容器下标+1,round 摘要显影'
+        '现算首件槽 = 容器下标+1,round 摘要显示'
     assert param_in.slot is None, '落地机制 = resolved slot 重建 param,不改写入参对象'
     assert _env_controller(env).clicks == [(175, 900)], '点击落现算槽建档坐标'
 

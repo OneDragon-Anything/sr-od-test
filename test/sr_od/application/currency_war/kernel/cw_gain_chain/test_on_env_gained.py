@@ -28,7 +28,7 @@ fail-closed 零写 + 缺陷行 / 在场判定覆盖 deployed 与溢出位。
 锁面 3/4(写门三分支/触发链)归 operations/cw_screen/test_plane_intel_pipeline.py
 与 kernel/cw_screen_report/test_plane_intel.py。
 
-再追加面 = 概念股族模式卡(阵营随机赠卡 + 随机简易装备;正本 =
+再追加面 = 概念股族模式卡(阵营随机赠卡 + 随机简易装备;权威版本 =
 game_state/gain-chain.md §3 随机支/随机装备支段 + fields.md §5.2 效果缺口
 与载体登记,语义 = 「概念股族模式卡登记约定」):阵营支发放(阵营池
 现算比对 + 采样子链不进失配网)与绑定门非绑定态(零 done 键 +
@@ -37,7 +37,7 @@ kernel/test_gain_chain.py 随机装备通道段三锁(超限文件,禁追加,跑
 即回归判据)。
 
 再追加面 = 概念股族展开卡(燃血概念股 id 1002,T-49;概念股族展开卡
-登记约定,正本 = fields.md §5.2 效果缺口与载体登记 + gain-chain.md §3
+登记约定,权威版本 = fields.md §5.2 效果缺口与载体登记 + gain-chain.md §3
 随机支/随机装备支段):族内第二实例,与追击测试同构仅值异——燃血域
 随机支发放分支 + 绑定门非绑定态(seed 消耗序同构,期望名改从燃血池/
 简易池现算)。
@@ -81,7 +81,7 @@ _EVIDENCE = f'on_env_gained:{_ENV}'
 
 
 def _make_gs(*, node: bool = False) -> GameState:
-    """直构容器(bench = 开局种子底座 9 空槽);``node`` = 节点窗已开。"""
+    """直构容器(bench = 开局初始值 9 空槽);``node`` = 节点窗已开。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.observe(gs.bench, BenchView(slots=[BenchSlot(kind='empty')] * 9,
                                    capacity=9), sig=_SIG_OBS)
@@ -414,8 +414,8 @@ _EXPERT_ENV = '专家研讨会'
 
 
 def _make_gs_seeded() -> GameState:
-    """直构 + 开局种子底座(设计锁 2 前置:直构不种底座 = bench 未观察
-    拒落零写;种子底座单一源 = seed_opening_state)。"""
+    """直构 + 开局初始值(设计锁 2 前置:直构不种初始值 = bench 未观察
+    拒落零写;种子初始值单一源 = seed_opening_state)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         seed_opening_state,
     )
@@ -426,7 +426,7 @@ def _make_gs_seeded() -> GameState:
 
 def test_expert_seminar_dual_item_grants_card_text_order(
         monkeypatch) -> None:
-    """发放分支(T-39 设计 §2.1/§2.4 + §4 锁 2):种子底座直构 → 选专家
+    """发放分支(T-39 设计 §2.1/§2.4 + §4 锁 2):种子初始值直构 → 选专家
     研讨会 → bench 落两槽,kind 序 = ['bookcard', 'supply_box'] 且 item 名
     逐槽 = ['专家邀请函', '简易武装箱'](卡文序);效果串两行
     ``item_gift:<名>`` 顺序同卡文(发放事实恒登记)。"""
@@ -525,7 +525,7 @@ def test_seed_without_lv999_keeps_empty_tail(rows_sink: _RowSink) -> None:
 def test_bench_unobserved_fails_closed_with_defect(
         rows_sink: _RowSink) -> None:
     """bench 未观察 fail-closed(设计 §4 锁 5 条 3):不判零写 + 缺陷
-    保留证据行(新 kind gain_chain_cond_bench_unobserved);种子底座下
+    保留证据行(新 kind gain_chain_cond_bench_unobserved);种子初始值下
     生产实机(live)和模拟器(sim)两边不可达(开局种子恒种 bench),直构/测试形态防御。"""
     gs = _make_conditional_gs(bench=None)
     out = gain_invest_env(gs, None, _ENV_EXPERT_WOLF, rand=False, sig=_SIG)
@@ -683,7 +683,7 @@ def test_affix_disable_rust_release_unfollows() -> None:
 
 
 # ============================================================ 概念股族
-# (阵营随机赠卡 + 随机简易装备;正本 = game_state/gain-chain.md §3 随机支
+# (阵营随机赠卡 + 随机简易装备;权威版本 = game_state/gain-chain.md §3 随机支
 # /随机装备支段 + fields.md §5.2 效果缺口与载体登记,语义 = 「概念股族
 # 模式卡登记约定」。绑定门:ENV_BOSS_GRANTS 成员(劳务派遣合同)绑定态
 # 行为逐位不变 = 存量 kernel/test_gain_chain.py 随机装备通道段三锁辖域,
@@ -748,7 +748,7 @@ def test_concept_stock_random_equip_leg_unbound_no_done(
     assert rows_sink.kinds() == [], '正常路径零申报行'
 
 
-# 族展开第二实例(燃血概念股 id 1002;概念股族展开卡登记约定,正本 =
+# 族展开第二实例(燃血概念股 id 1002;概念股族展开卡登记约定,权威版本 =
 # fields.md §5.2 效果缺口与载体登记 + gain-chain.md §3 随机支/随机装备支
 # 段,与追击同构仅值异。)
 

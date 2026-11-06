@@ -23,7 +23,7 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionCloseShopParam,
 )
 
-# 改写依据(分诊):写入者登记面随「商店单动作循环收编」演进——
+# 改写依据(分诊):写入者登记面随「商店单动作循环纳入统一管理」演进——
 # 生产写点 actor 现役 = CwScreenShop(cw_screen_shop,登记面已登记),
 # 旧名 CwOpBuyCards 已退役;测试模拟生产写入随登记面改名。
 _SIG = ChannelSig(family='logic_action', actor='CwScreenShop',

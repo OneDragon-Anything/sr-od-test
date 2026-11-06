@@ -11,7 +11,7 @@ effects-calc/designs/T-39-zhuanjia-yantaohui.md)§2.1/§2.4 + §4 锁 8:
   呈现数据源 = 容器登记,open_bookcard 上报内 register);
 - 选卡上报消费 expert_invite 登记 + 纯转移回备战(注:sim 选卡上报 =
   容器零写契约〔zero_writes.py〕,``chosen_expert`` 容器写 = live 画面 op
-  落地复查点、由 kernel 侧既有锁面承重——本链断言消费与转移面);
+  落地复查点、由 kernel 侧既有锁面承担——本链断言消费与转移面);
 - 武装箱开箱链独立正常(箱画面候选 → 选定 → 所得经获得链入栏);
 - 同 seed 重放确定(环境道具分支零采样)。
 """

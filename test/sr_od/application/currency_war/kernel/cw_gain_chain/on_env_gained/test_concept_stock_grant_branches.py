@@ -426,7 +426,7 @@ def test_zhanjidian_concept_stock_faction_char_grant_branch(
     = 专家域 1 名,域 7 名过滤后 6 名,注册表派生不手抄)且 ∉ EXPERT_
     CHARS(种子落点选点 = 牌库时点过滤后池现算,专家不入池,过滤语义
     钉死;族惯例 seed 20261027 落点已实现批现算验证落非专家成员);
-    独立单位成员 Archer 照发在候选池内〔economy.md:94 族级定谳点名
+    独立单位成员 Archer 照发在候选池内〔economy.md:94 族级定论点名
     战技点(Archer)〕;效果串 ``env_gift_random:<名>@1star``(星级 =
     spec.star 先验);锚定容器 + 采样子链 rand=True → 写照常生效且不进
     失配网(随机态语义,首观察静默覆盖)。期望名从同 seed 现算(单一来源,
@@ -444,7 +444,7 @@ def test_zhanjidian_concept_stock_faction_char_grant_branch(
     assert expected in pool and expected not in EXPERT_CHARS, \
         '发放名 ∈ 牌库时点池且非专家(未解锁专家剔除生效)'
     assert 'Archer' in pool, \
-        '独立单位成员照发在候选池(economy.md:94 族级定谳)'
+        '独立单位成员照发在候选池(economy.md:94 族级定论)'
     assert rows_sink.kinds() == [], '随机态写不进失配网,零缺陷行'
 
 

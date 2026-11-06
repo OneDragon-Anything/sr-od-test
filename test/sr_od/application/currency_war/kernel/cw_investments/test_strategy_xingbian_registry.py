@@ -3,14 +3,14 @@
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-180-xingbian.md
 (定稿)§4 锁 1/锁 3/锁 4 + 用户裁定书 PENDING-DECISIONS.md T-180 节
-(2026-11-01 拍定:变形持续性 = A 临时 + 随机目标选卡默认不选)。
+(2026-11-01 用户决定:变形持续性 = A 临时 + 随机目标选卡默认不选)。
 卡面官方原文:「战斗开始时，使一个随机1费角色变为3星。」
 
 - 登记面锁:条目五元组 = PLANE_START 占位形(无离散触发事件,对齐
   _portal_placeholder_spec 环境源先例)× WHILE_HELD × UNIT_BUFF ×
   UnitBuffRef(官方效果原文)× duties 三位全 False(零计数器/零预知/
-  零姿态);pending=False(变形持续性经用户裁定拍定临时——仅当次战斗内
-  生效,战斗结束复原,板面零净变化,裁定已定谳非二义冻结,条目 notes 记
+  零姿态);pending=False(变形持续性经用户裁定定为临时——仅当次战斗内
+  生效,战斗结束复原,板面零净变化,裁定已定论非二义冻结,条目 notes 记
   裁定;变形世界写端未建模,临时性仅申报);effect_text 与 base 注册表
   .effect 单一源对拍(条目经 PLAZA_AUGMENTS 数据面表达式引官方原文,防
   表达式被改字面量后漂移);现金分支 = 已注册名无 economy → (0.0, False)
@@ -59,7 +59,7 @@ def test_xingbian_unit_buff_registration_surface() -> None:
     条目五元组逐位 + 单一源对拍 + 现金 fail-closed 0;构建校验(孤儿键/
     id 双匹配)import 期已过——本测试存活即证。触发拍(战斗开始时)/对象
     选取(随机1费角色)/变形数值游戏侧自算,bot 零建模零观察;变形持续性
-    经用户裁定(2026-11-01)拍定临时,板面零净变化。"""
+    经用户裁定(2026-11-01)定为临时,板面零净变化。"""
     spec = STRATEGY_EFFECTS[_CARD]
     cw_investments._validate_strategy_effects()   # 构建校验复跑不炸
     assert spec.id == '201601'
@@ -74,7 +74,7 @@ def test_xingbian_unit_buff_registration_surface() -> None:
     assert (spec.duties.track, spec.duties.predict, spec.duties.respond) \
         == (False, False, False), '零 duties(零响应登记)'
     assert spec.pending is False, \
-        '变形持续性经用户裁定拍定临时(定谳非二义冻结,notes 记裁定)'
+        '变形持续性经用户裁定定为临时(定论非二义冻结,notes 记裁定)'
     assert spec.duration_nodes == 0 and spec.duration_uses == 0, \
         'WHILE_HELD 无余期计数器(_seed_progress 双 None)'
     gs = game_state_of(SimpleNamespace())

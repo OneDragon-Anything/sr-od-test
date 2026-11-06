@@ -3,7 +3,7 @@ strategy_xp_per_node_of 薄读函数 + _begin_node_window 聚段调用块;先例
 同目录条件 XP 族锁形)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-302 对应稿
-(REVIEW-T302 免裁 7/7;卡面官方原文:「你不再获得利息。即刻获得15金币。
+(REVIEW-T302 无需用户决定 7/7;卡面官方原文:「你不再获得利息。即刻获得15金币。
 每次进入新节点时，获得4经验。」——利息关闭腿 cap=0 聚合取宽零改动即活/
 instant_gold=15 族级缺口维持/xp_per_node=4 静态通道世界写消费面):
 

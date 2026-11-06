@@ -20,7 +20,7 @@ rng,世界真值)——bench 增战技点流派域 1★ 一张、equips 增简�
 同 seed 重放确定性。本域特有面:域 7 名中青雀为专家,牌库时点池过滤后
 候选 6 名(economy.md §8 用户裁定 2026-10-28,赠卡名显式 ∉ EXPERT_CHARS
 钉专家剔除生效);独立单位成员 Archer 照发在候选池内〔economy.md:94
-族级定谳点名战技点(Archer)〕;花火(2费,flows 战技点、量子同频)≠
+族级定论点名战技点(Archer)〕;花火(2费,flows 战技点、量子同频)≠
 火花(4费,flows 战技点、欢愉)两名形近成员,量子同频/欢愉均无概念股卡
 零联动;economy.md 四卡线索名单不含战技点 = 装备身份零先验。
 """
@@ -67,7 +67,7 @@ def test_zhanjidian_concept_stock_env_pick_grant_sim_chain(
     ('战技点') 现算集,不手抄;域 7 名中青雀为专家,牌库时点池过滤后
     6 名候选——环境注册时点解锁恒空,economy.md:96 用户裁定 2026-10-28;
     赠卡名显式 ∉ EXPERT_CHARS 钉专家剔除生效;独立单位成员 Archer 照发
-    在候选池内〔economy.md:94 族级定谳点名战技点(Archer)〕)、equips
+    在候选池内〔economy.md:94 族级定论点名战技点(Archer)〕)、equips
     计数 +1 且名 ∈ equips_by_category('简易') 现算集(economy.md 四卡
     线索名单不含战技点 = 装备身份零先验,均匀 v0 + 按卡固定假说待校准
     随家族键已登记,零新增申报);同 seed 重放确定性(世界发放可重放)。"""

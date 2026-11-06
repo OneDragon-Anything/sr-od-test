@@ -1,8 +1,8 @@
-"""获得链(gain-chain)行为测试(链式规范 + 开局种子底座通道规则)。
+"""获得链(gain-chain)行为测试(链式规范 + 开局初始值通道规则)。
 
-测试面依据(语义正本,changes/ 过程件不引):获得链正本 =
+测试面依据(语义权威版本,changes/ 过程件不引):获得链权威版本 =
 docs/develop/sr_od/application/currency_war/game_state/gain-chain.md
-(§2 原语契约/§2.5 单级合成/§6 失败安全);通道规则与种子底座正本 =
+(§2 原语契约/§2.5 单级合成/§6 失败安全);通道规则与种子初始值权威版本 =
 同目录 fields.md §2.6(未锚定 → 随机态、锚定后按形参、失配网生效)。测试面:
 
 - **对拍一致**(§2.1-3):单级合成 ``merge_step_once`` ×N 次终态与
@@ -16,7 +16,7 @@ docs/develop/sr_od/application/currency_war/game_state/gain-chain.md
   效果分支对子链的通道翻转只及子链;
 - **失败安全**(§2.7):溢出落位/归位/溢出位被占留证;bench/equips
   未观察(直构域)= 拒落档零写、零缺陷发射(两未观察 kind 已随开局
-  种子底座与锚定标志批退役);种子容器(缓存单例支,接管局同构)正常
+  种子初始值与锚定标志批退役);种子容器(缓存单例支,接管局同构)正常
   落账;置一次性标志位后失配网原样生效(确定面被观察覆盖产失配行);
 - **欢愉契约条件分支 rider**(条件分支正式模型,测试面 = 银狼策划选择落地相
   上报的授予行为):通道语义(授予 rand=True 全通道 logic_rand,rand
@@ -28,7 +28,7 @@ docs/develop/sr_od/application/currency_war/game_state/gain-chain.md
   调用点级 best-effort(分支类型分派照常 + joy_conditional_grant_failed
   留证行)、授予走链固定时序(预置两枚同候选可合成);弱化兜底档退役
   测试(分类落 unknown/打分两档制)归 test_planner_report.py;
-- **LV.999 变换窗**(银狼费用档变换,2026-09-18 定谳〔口述·权威〕:
+- **LV.999 变换窗**(银狼费用档变换,2026-09-18 定论〔口述·权威〕:
   费用档不同时存在,分组键 (char_id, star) 无跨档歧义):升费分支 2★→1★
   变换三态与级联合并、上阵 3★→1★ 变换窗与恒等搬运对照;
 - **选卡上报落地**(投资策略屏/portal 经获得链):策略屏注册去重 +
@@ -414,7 +414,7 @@ def test_overflow_slot_taken_zero_write(rows_sink: _RowSink) -> None:
 
 
 def test_unobserved_direct_zero_write_no_defect(rows_sink: _RowSink) -> None:
-    """bench/equips 未观察(直构容器,种子底座下生产不可达):拒落档
+    """bench/equips 未观察(直构容器,种子初始值下生产不可达):拒落档
     零写 + detail 档保留,零缺陷行发射(两未观察 kind 已退役——退役
     断言走台账面:调链原语后台账无新增行,禁源码扫描)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
@@ -432,11 +432,11 @@ def test_unobserved_direct_zero_write_no_defect(rows_sink: _RowSink) -> None:
 def test_seeded_container_chain_lands_and_takeover_isomorphic(
         rows_sink: _RowSink) -> None:
     """种子容器(经 game_state_of 缓存单例支,新局/接管局同构)链原语
-    正常落账:bench 空底座(种子)落位、equips 空栏追加入栏——未观察
+    正常落账:bench 空初始值(种子)落位、equips 空栏追加入栏——未观察
     拒落档生产死化。"""
     gs = game_state_of(StrategySession())
     assert gs.bench.source == 'logic_rand' \
-        and gs.bench.evidence == 'seed:opening', '缓存单例支冷建含种子'
+        and gs.bench.evidence == 'seed:opening', '缓存单例支每局全新创建含种子'
     out_c = gain_character(gs, '希儿', 1, rand=False, sig=_lsig(),
                            evidence='g', producer='T')
     assert out_c.placed is True and out_c.landing == 'bench'
@@ -445,7 +445,7 @@ def test_seeded_container_chain_lands_and_takeover_isomorphic(
                            evidence='g', producer='T')
     assert out_e.placed is True
     assert gs.equips.value == ['分身墨镜'], '种子空栏追加入栏'
-    assert rows_sink.kinds() == [], '种子底座上链落账零缺陷行'
+    assert rows_sink.kinds() == [], '种子初始值上链落账零缺陷行'
 
 
 def test_anchor_gates_mismatch_net() -> None:
@@ -796,7 +796,7 @@ def test_opening_replace_leg_clear_and_grant(rows_sink: _RowSink) -> None:
 
 
 def test_opening_replace_leg_zero_unit_zero_write(rows_sink: _RowSink) -> None:
-    """零 unit 零写(T-43 设计 §4 锁 3):空 bench 直构(live 空底座形态)
+    """零 unit 零写(T-43 设计 §4 锁 3):空 bench 直构(live 空初始值形态)
     → 清席分支零写,只留效果串 env_opening_replace:0 申报替换事实;写面 =
     落席 3 笔(赠卡照常落,替换语义对 live = 无开局可清,发放不受影响)。"""
     gs = _make_gs(bench=[], equips=[])
@@ -1216,7 +1216,7 @@ def test_gain_invest_strategy_force_refresh_register_noop_grants() -> None:
 def test_gain_invest_strategy_team_hope_unit_buff_zero_response() -> None:
     """全队的希望 登记链锁 + 消费面负锁(T-97 设计 §4 锁 2):策略源
     UNIT_BUFF 首条,只登记不写状态的实现分支既有链自动入册(register_strategy),payload=
-    UnitBuffRef 无任何世界写入字段 → 四桥鸭子读全量缺省守卫 no-op
+    UnitBuffRef 无任何世界写入字段 → 四桥鸭子类型读取(duck typing)全量缺省守卫 no-op
     (burst 桥 free_refresh_burst 缺省 0 / 板面重写桥 board_rewrite 缺省
     '' → None / 节点边界桥 per_node 族缺省 0 / 容量直写桥 capacity_limit
     缺省 0 → target=默认 → 早退),bot 零响应(游戏侧自算战果)。
@@ -1734,7 +1734,7 @@ def test_reinforcement_bench_full_overflow_decoupled(
 
 
 def test_reinforcement_charter_not_in_named_grants() -> None:
-    """宪章回归:「随机发放不入具名登记表」——STRATEGY_GRANTS 登记判据 =
+    """模块职责说明回归:「随机发放不入具名登记表」——STRATEGY_GRANTS 登记判据 =
     「获得…角色名/占席道具」具名直读,随机发放不入册;本卡注册只落
     PICK_INVEST_EFFECTS 效果体,构建校验(孤儿键/角色名漂移/反扫闭集)
     通过。防后续实现者把本卡误登记进具名表。"""
@@ -1744,7 +1744,7 @@ def test_reinforcement_charter_not_in_named_grants() -> None:
     assert '二费援军' not in STRATEGY_GRANTS, '随机发放不入具名登记表'
     assert '扩充团队' not in STRATEGY_GRANTS, \
         '多档混合随机卡同不入具名登记表'
-    _validate_strategy_grants()   # import 期已跑;显式调用 = 宪章回归语义
+    _validate_strategy_grants()   # import 期已跑;显式调用 = 模块职责说明回归语义
 
 
 # ============================================================ 随机装备族效果
@@ -1921,7 +1921,7 @@ def _joy_seed_for(candidate: str) -> int:
 
 
 def _joy_seeded_gs(env_name: str = '欢愉契约') -> GameState:
-    """种子容器(缓存单例支冷建即含开局种子底座)+ 已登记环境直写
+    """种子容器(缓存单例支每局全新创建即含开局初始值)+ 已登记环境直写
     (观察链同写入口;'' = 保持种子初值空环境)。"""
     gs = game_state_of(StrategySession())
     if env_name:
@@ -1938,7 +1938,7 @@ def test_joy_rider_grant_channel_rand_anchor_and_coverage(
     采样面本义,校准面 = outcome 行)。"""
     cands = _joy_candidates()
     seed = _joy_seed_for(cands[0])
-    # 臂 1:未落一次性标志位(种子底座窗)。
+    # 臂 1:未落一次性标志位(种子初始值窗)。
     gs = _joy_seeded_gs()
     out = report_action_pick_planner_param(
         gs, None, _lsig('CwScreenYinLang'), branch_type='unknown',
@@ -2106,7 +2106,7 @@ def test_joy_rider_grant_chain_timing_merge(rows_sink: _RowSink) -> None:
 
 # ============================================================ LV.999 变换窗
 # (银狼费用档变换;升费分支经 pick_planner 上报、上阵分支经 move_unit 统一拖动上报,
-#  2026-09-18 定谳〔口述·权威〕:费用档不同时存在,分组键 (char_id, star)
+#  2026-09-18 定论〔口述·权威〕:费用档不同时存在,分组键 (char_id, star)
 #  无跨档歧义)
 
 
@@ -2217,7 +2217,7 @@ def test_deploy_non_target_identity(rows_sink: _RowSink) -> None:
 
 
 def test_deploy_cascade_lv999_normal_merge(rows_sink: _RowSink) -> None:
-    """上阵级联正常推演测试(同 2026-09-18 定谳,普通单位同语义):变换出的
+    """上阵级联正常推演测试(同 2026-09-18 定论,普通单位同语义):变换出的
     1★ 落场与备战 2× 1★ 凑满全场同星组 → 合成载体 = 场上那张(场上优先,
     _merge_bench 语义),备战素材被消费腾槽,write_logic 逐级落行。"""
     gs = _make_gs(bench=[('银狼LV.999', 3), ('银狼LV.999', 1),
@@ -2262,7 +2262,7 @@ def test_invest_strategy_landing_hacker_wolf(
     assert gs.active_strategies.value == ['骇客专家:银狼'], '注册入持卡面'
     # 投资策略屏在生产链序(简报→投资环境→投资策略→备战)位于锚定(备战
     # heavy)之前,通道规则「未锚定 → 随机态」使确定入口链写改道
-    # logic_rand(开局种子底座与锚定标志批行为申报,首观察静默覆盖)。
+    # logic_rand(开局初始值与锚定标志批行为申报,首观察静默覆盖)。
     assert gs.active_strategies.source == 'logic_rand'
     assert gs.unlocked_experts.value == ('银狼',), 'advisor 解锁分支写入'
     units = [(u.char_id, u.star) for u in bench_units_of(gs)]
@@ -2650,7 +2650,7 @@ def test_sell_swap_transfer_v2_contract(
 
 
 def test_env_gift_equip_leg_card_text_order(rows_sink: _RowSink) -> None:
-    """发放分支(T-31 设计 §4 锁 2,on_env_gained 直构 + 种子底座):equips
+    """发放分支(T-31 设计 §4 锁 2,on_env_gained 直构 + 种子初始值):equips
     尾追 '红钻'、bench 落 1 个 supply_box 槽件;效果串两行按卡文序
     (``equip_gift:红钻`` 先、``item_gift:简易武装箱`` 后——装备支位于
     道具支之前,遥测序与卡文对齐)。"""
@@ -2704,7 +2704,7 @@ def test_env_gift_channel_selection_both_states(rows_sink: _RowSink) -> None:
     """写通道择道(T-31 设计 §4 锁 8):装备入账分支 rand=True 硬编码 → 未锚定
     与锚定两态均走 write_logic_rand(equips.source 恒 'logic_rand',
     猜测语义不进失配网);开箱分支 rand=False 透传 → 未锚定 'logic_rand'、
-    锚定 'logic' 确定面(对照分支;T-2 实机定谳纪律)。"""
+    锚定 'logic' 确定面(对照分支;T-2 实机定论纪律)。"""
     gs = _make_gs(bench=[], equips=[])
     on_env_gained(gs, None, '红钻贵族', rand=False, sig=_lsig())
     assert gs.equips.source == 'logic_rand', '装备入账分支未锚定随机态'
@@ -2724,7 +2724,7 @@ def test_env_gift_channel_selection_both_states(rows_sink: _RowSink) -> None:
 
 def test_env_gift_equip_leg_blue_diamond(rows_sink: _RowSink) -> None:
     """发放分支(T-32 设计 §4 锁 2,on_env_gained 直构;容器前置同 T-31
-    判例 = 观察/逻辑写组装,equips/bench 非 None 才落):equips 尾追
+    先例 = 观察/逻辑写组装,equips/bench 非 None 才落):equips 尾追
     '蓝钻'、bench 落 1 个 supply_box 槽件;效果串两行按卡文序
     (``equip_gift:蓝钻`` 先、``item_gift:简易武装箱`` 后)。"""
     gs = _make_gs(bench=[], equips=[])

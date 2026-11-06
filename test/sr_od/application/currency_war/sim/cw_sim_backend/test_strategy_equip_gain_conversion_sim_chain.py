@@ -106,7 +106,7 @@ def test_box_open_loop_intercepts_chosen_equip(
         _isolate_defect_buffer) -> None:
     """sim 开箱环路(锁 8,裁决点 3 默认案机械回归):持卡(sim 直置,
     T-102 sim 链先例形态)+ 种 1 箱 → 开箱选定简易件 → 被选件不入栏 +
-    转换箱落位恰 +1。开箱腾席 = 观察域容器零写(zero_writes 正本申报),
+    转换箱落位恰 +1。开箱腾席 = 观察域容器零写(zero_writes 权威版本申报),
     sim 侧开掉的箱槽不被移除——断言用 +1 非「箱数守恒」;live 真值 =
     净箱数守恒(开一箱转换回一箱),装备零净得两侧同真。"""
     b: SimBackend = _backend(7)

@@ -44,7 +44,7 @@ def test_registry_row_single_source() -> None:
 
 
 def test_row_values_desc_aligned() -> None:
-    """行值-卡面结构对拍(值形防线,星级恒 1/金币>0 笔误哨删后的承重锁):
+    """行值-卡面结构对拍(值形防线,星级恒 1/金币>0 笔误哨删后的起决定作用的锁):
     星级恒 1(desc「1星」明写);角色名 ∈ CHARACTER_ROSTER;离场金与
     注册费用档平行(花火 2 费留 2 金/火花 4 费留 4 金——desc 判读的结构
     依据,费用档漂移即本锁红)。"""

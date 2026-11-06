@@ -10,7 +10,7 @@
 - 快照 → 虚拟置牌 + 升星连锁 → 部署定型 → 部署外件全集按
   ``priority.sell_order`` 排序(新牌 = 将获取旗标;**评估侧 X 不进
   档 1 保护**——deployed_names 剔除 X 名,X 恒按卡面价值参与排序,
-  末位判定不受虚拟定型收编影响)→ victim 试探
+  末位判定不受虚拟定型编入影响)→ victim 试探
   (末位起前缀增长):末位 = 新牌 → 放弃分键;victim = 存量 → 按
   落位分流(bench 件店内卖 / 场上件跨画面计划 + 关店不置标记);
 - 虚拟金币 = gold − cost(X) + Σ前缀退金;金币要求集三项(可购性/
@@ -211,7 +211,7 @@ class TestAcquireSwapSixStep:
         动作,记录「优先级不足」拦因,收工关店。X 与持件桑博共享贝洛
         伯格标签(可参与虚拟定型竞争的组成)——评估侧 X 不进档 1 保护
         (_acquire_yield deployed_names 剔除 X 名),X 恒按卡面价值
-        定序,末位判定与虚拟定型是否收编 X 无关(收编形态的专项反例 =
+        定序,末位判定与虚拟定型是否编入 X 无关(编入形态的专项反例 =
         test_x_absorbed_into_virtual_target_still_declines_buy)。"""
         bench = [('姬子·启行', 1), ('姬子·启行', 1), ('三月七', 1),
                  ('三月七', 1), ('花火', 1), ('万敌', 1),
@@ -444,7 +444,7 @@ class TestAcquireYieldUnified:
         """X 进虚拟定型仍判末位 = X 反例(获取让位 X 末位敏感性;
         design §2.2 第 4 项步 6「末位 = X → 放弃」的任意组成可达性):
         X 与持件有同羁绊标签搭档 ∧ X 统一优先级最低 → 虚拟定型把 X
-        收编进 target 也不改变末位判定——评估侧 X 不进档 1 保护
+        并入 target 也不改变末位判定——评估侧 X 不进档 1 保护
         (步 4:deployed_names 剔除 X 名;档 1 保护对象 = 存量资产,
         X 是「将获取」的假设性入场者,其去留正是评估要回答的问题)。
         若档 1 按名命中覆盖到 X,X 即经虚拟定型自我保护、末位恒落到
@@ -455,7 +455,7 @@ class TestAcquireYieldUnified:
         进部署枚举;与 bench 佩拉共享贝洛伯格标签;3 费 level 7 概率
         0.40 = 全池最高 → 兜底档 10 末位,十档口径 design §2.2)。帧前提
         断言 X ∈ 虚拟定型名集
-        (收编形态在场;定型漂移使 X 出 target 时本帧退化为平凡末位
+        (编入形态在场;定型漂移使 X 出 target 时本帧退化为平凡末位
         帧,前置断言让退化响亮暴露)。"""
         # 组合(换轴后):贝洛伯格三人组(佩拉+布洛妮娅+X)经 L3 凑档
         # 进虚拟定型(旧组合依赖锁定窗过渡家族骨架枚举,已随终局锁定即
@@ -467,7 +467,7 @@ class TestAcquireYieldUnified:
         gs, sess, cfg = _frame_locked(
             [cw4_bc(n, star=s) for n, s in bench], [(_x_card, 3, 1)],
             gold=100, level=7, front=(_GIL, _SBR, '远坂凛'))
-        # 帧前提:X 名进虚拟定型(收编形态;直调部署接口复算评估步 3)。
+        # 帧前提:X 名进虚拟定型(编入形态;直调部署接口复算评估步 3)。
         from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
             mandate,
         )
@@ -480,7 +480,7 @@ class TestAcquireYieldUnified:
             virtual_bench=[bs for _i, bs in sim.bench],
             virtual_field=sim.field)
         assert _x_card in target, \
-            f'帧前提失守:X 未被虚拟定型收编: {sorted(target)}'
+            f'帧前提失守:X 未被虚拟定型编入: {sorted(target)}'
         act = decide_shop_action(gs, sess, cfg)
         assert isinstance(act, CwActionCloseShopParam), f'非收工: {act!r}'
         ct = state_of(sess).cw4_counters
@@ -495,10 +495,10 @@ class TestAcquireYieldUnified:
     def test_unmet_member_tail_sold_no_interest_exemption(self):
         """凑息豁免不适用被迫类(design §2.2 第 5 项动机二分/§3 凑息
         豁免测试第四用例)——entry_signals 退役后行为演进登记:瓦尔特
-        (列车·反震线内成员)被虚拟定型收编上场进档 1 → victim 域
+        (列车·反震线内成员)被虚拟定型编入上场进档 1 → victim 域
         (部署外存量件)不含在建成员 → 无让位可卖 → yield_plan 收尾
         (金不足拦因);「线内在建件不可为凑息卖」与「被迫 victim 域
-        排除档 1 件」在档 1 收编形态下重合(双重保护),动机二分的
+        排除档 1 件」在档 1 编入形态下重合(双重保护),动机二分的
         残留差异(豁免谓词辖线内未达标档 1 外件)见 sell_candidates
         用例对照面。X = 姬子·启行 3 费,gold 1 金不足帧。"""
         bench = [('瓦尔特', 1)]
@@ -509,7 +509,7 @@ class TestAcquireYieldUnified:
             gold=1, level=5)
         act = decide_shop_action(gs, sess, cfg)
         assert isinstance(act, CwActionCloseShopParam), \
-            f'档 1 收编下无部署外 victim → 让位评估收尾: {act!r}'
+            f'档 1 编入下无部署外 victim → 让位评估收尾: {act!r}'
         assert act.reason == 'yield_plan'
 
     def test_prefix_pool_exhausted_records_gold_short(self):

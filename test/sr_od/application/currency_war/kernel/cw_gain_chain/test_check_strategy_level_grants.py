@@ -37,7 +37,7 @@ _OUT_OF_SCOPE = '特战资金'   # STRATEGY_ECONOMY 已登记,boss 金字段非�
 
 
 def _seeded_gs() -> GameState:
-    """开局种子底座(level/gold 现值已登记;宁缺勿造分支用无种子冷建)。"""
+    """开局初始值(level/gold 现值已登记;宁缺勿造分支用无种子每局全新创建)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.prep_anchored = True
     seed_opening_state(gs)
@@ -83,13 +83,13 @@ def test_matrix_no_card_and_out_of_scope_card() -> None:
 
 
 def test_prefers_silence_on_unobserved_then_recovers() -> None:
-    """宁缺勿造(锁 4):冷建无种子(level/gold 恒 None)→ None;gold
+    """宁缺勿造(锁 4):每局全新创建无种子(level/gold 恒 None)→ None;gold
     先到仍 None(level 缺);level 达标到位 → 发放(值到位重查自愈,
     决策零写故无封账残留)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.prep_anchored = True
     _hold(gs, _CARD)
-    assert gs.level.value is None and gs.gold.value is None, '前置:冷建'
+    assert gs.level.value is None and gs.gold.value is None, '前置:每局全新创建'
     assert check_strategy_level_grants(gs) is None, '全缺误发放'
     gs.observe(gs.gold, 10, sig=_SIG_OBS)
     assert check_strategy_level_grants(gs) is None, 'level 缺误发放'

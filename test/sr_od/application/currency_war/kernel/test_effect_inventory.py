@@ -3,7 +3,7 @@
 被测机制(按节):
 - **apply_board_rewrite 锚定通道行为**(通道择道单一源 =
   ``cw_game_state.anchor_aware_write``;通道规则「未锚定 → 随机态」,
-  语义域 = 容器正本 game_state/fields.md「开局种子底座」节):人力
+  语义域 = 容器权威版本 game_state/fields.md「开局初始值」节):人力
   重组双臂(种子未落一次性标志位 → logic_rand / 置一次性标志位 → logic)、静默覆盖臂
   (未落一次性标志位零失配行落 logic_rand_outcome,置一次性标志位失配网生效)、回归臂
   (UPGRADE_ALL 零容器写 / 非板面条目零动作 / burst 桥 Field 发放);
@@ -76,7 +76,7 @@ _SELL_ALL = STRATEGY_EFFECTS['人力重组']
 
 
 def _seeded_gs() -> GameState:
-    """种子容器(经 game_state_of 缓存单例支冷建,与生产局容器同构)。"""
+    """种子容器(经 game_state_of 缓存单例支每局全新创建,与生产局容器同构)。"""
     return game_state_of(StrategySession())
 
 
@@ -91,14 +91,14 @@ def test_sell_all_channel_dual_arm_by_anchor() -> None:
     静默覆盖);置一次性标志位(测试专口直赋)后同路径 source=logic(确定面)。"""
     # 臂 1:种子容器(未落一次性标志位)→ 清空写走随机态
     gs = _seeded_gs()
-    assert gs.deployed.source == 'logic_rand', '前置:冷建含种子底座'
+    assert gs.deployed.source == 'logic_rand', '前置:每局全新创建含种子初始值'
     seq_before = gs.write_seq
     report = apply_board_rewrite(gs, _SELL_ALL)
     assert report is not None
     assert report.cleared_fields == ('deployed', 'bench'), \
         '种子后两门全开(行域合卷 = deployed 单字段),两域各一行清空写'
     assert report.refund_gold == 0 and report.sold_units == 0, \
-        '种子空底座无可出售面,退款零'
+        '种子空初始值无可出售面,退款零'
     assert gs.write_seq - seq_before == 2, '恰好两行清空写'
     assert gs.deployed.source == 'logic_rand'
     assert gs.bench.source == 'logic_rand'
@@ -319,8 +319,8 @@ def seeded_merge_provider() -> Iterator[None]:
 
 
 def test_record_interest_earned_accumulates_and_rejects_negative() -> None:
-    """利息累计账单口(record_interest_earned,T-27 设计 §4.2):多笔
-    累加单调递增;0 合法(息 0 轮照常过单口,保持「每收入刻必过单口」
+    """利息累计账唯一入口函数(record_interest_earned,T-27 设计 §4.2):多笔
+    累加单调递增;0 合法(息 0 轮照常过唯一入口函数,保持「每收入刻必过唯一入口函数」
     写端纪律);负数拒收 raise(单调累计账无递减语义,
     bump_equip_progress 同款防线)。"""
     inv = ActiveEffectInventory()
@@ -335,7 +335,7 @@ def test_record_interest_earned_accumulates_and_rejects_negative() -> None:
 
 
 def test_record_ore_open_accumulates_and_rejects_nonpositive() -> None:
-    """晶矿开启计数单口(record_ore_open,T-29 设计 §2.2 + §4 锁 2):
+    """晶矿开启计数唯一入口函数(record_ore_open,T-29 设计 §2.2 + §4 锁 2):
     多笔累加单调递增(批内开成点数一次入账);n=0/负数炸(单调计数器
     无递减语义,bump_equip_progress 同款防线),拒收后账面不变;与
     refresh 双计数隔离(同族直挂计数器互不串账)。"""
@@ -457,7 +457,7 @@ def test_bridge_reject_no_trigger() -> None:
 
 # ============================================================ 占位注记渲染器
 # (G 组摘要 = GiftGrant 发放形状字段全量渲染,10 字段中 9 渲染 +
-# sell_value_note 显式排除;正本 = game_state/fields.md §5.2 效果缺口与
+# sell_value_note 显式排除;权威版本 = game_state/fields.md §5.2 效果缺口与
 # 载体登记,语义 = 「概念股族模式卡登记约定」——已登记裸「GiftGrant」
 # 标记债(非渲染字段条目只露裸标记)同批清偿,裸标记回归 = 红。
 # 族展开第二实例 = 燃血概念股 / 第三实例 = 能量概念股 / 第四实例 = 列车
@@ -541,7 +541,7 @@ def test_portal_placeholder_grant_shape_full_fields() -> None:
 
 # ============================================================ 打捞人才库族检查
 # (进入补给阶段时点检查函数 check_strategy_supply_salvage:门序/列内容
-#  形态/rand 通道与归因/消费即清幂等。语义正本 = 卡面 id 100701 官方原文
+#  形态/rand 通道与归因/消费即清幂等。语义权威版本 = 卡面 id 100701 官方原文
 #  「每次进入补给阶段后，随机获得一个未被选择的角色及其携带的装备」。
 #  固定种子 = 注入槽确定性,种子→列映射(同序元组 choice 坐标系):
 #  Random(1)→列 0 / Random(7)→列 1 / Random(5)→列 2。)

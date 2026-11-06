@@ -5,15 +5,15 @@
 
 1. journal 流水装配兜底 + 收尾落盘(原 test_cw_journal_assembly_guard.py;
    背景实证:2026-09-14 18:56 起 8 连局零 state 行零档案,深检
-   run_20260915_054718.md §0;修法正本 = kernel ``ensure_journal_assembly``
+   run_20260915_054718.md §0;修法权威版本 = kernel ``ensure_journal_assembly``
    docstring + ``cw_game_state.game_state_of`` 建立路径注释);
 2. 跨档段去重守卫(原 test_cw_match_archive_dedup.py;口径单一源 =
    telemetry-reading.md「决策独有段(零结算段)按段首 ts 归前局」+
    模块 docstring 归局骨架节);
 3. 重装配保真(原 test_cw_match_archive_reassembly.py;背景 = 真实双档
    重放实证的「重装配无益有损」);
-4. 局终域 match_final(原 test_cw_match_final.py;正本锚 = retirement.md
-   §2 / §3.6.1 / §3.6.2,设计锚 = 流程侧遥测正本 §3.2.3 行型 2 / 表 3-3)。
+4. 局终域 match_final(原 test_cw_match_final.py;权威版本锚 = retirement.md
+   §2 / §3.6.1 / §3.6.2,设计锚 = 流程侧遥测权威版本 §3.2.3 行型 2 / 表 3-3)。
 
 测试隔离:journal sink / run_id provider / 监听槽均为模块级全局——fixture
 统一安装/复位;测试零真实副作用(流水落 tmp_path)。
@@ -242,14 +242,14 @@ def test_assemble_converges_double_counted_segment(tmp_path: Path):
         assert all(r.get('run_id') != _R_B for r in rows)
     assert ma.find_cross_archive_segment_dups(rd) == []
     # 收敛形态(并入分支):C 档段集摘除 B(按当前口径只剩本局段),且
-    # 整体重装配路径不产生剪枝记录(pruned_segments 仅定向剪枝路径显影)
+    # 整体重装配路径不产生剪枝记录(pruned_segments 仅定向剪枝路径暴露)
     arch_c = _read_archive(md, _G_C)
     assert _seg_rids(arch_c) == [_R_C]
     assert 'pruned_segments' not in arch_c
 
 
 def test_prune_converges_archive_with_lost_source(tmp_path: Path):
-    """源流失的错误档案定向剪枝:摘段+切片,显影记录,孤本条目禁动。"""
+    """源流失的错误档案定向剪枝:摘段+切片,显示记录,孤本条目禁动。"""
     rd = tmp_path / 'live'
     md = ma.matches_dir(rd)
     _write_journal(rd, _journal_rows(rd))
@@ -268,7 +268,7 @@ def test_prune_converges_archive_with_lost_source(tmp_path: Path):
 
 
 def test_orphan_double_archive_still_reported(tmp_path: Path):
-    """守卫收敛不了的孤立双档(同段源流失)由核验显影,不静默。"""
+    """守卫收敛不了的孤立双档(同段源流失)由核验暴露,不静默。"""
     rd = tmp_path / 'live'
     md = ma.matches_dir(rd)
     # journal 无 B 行(源流失):两档案各持 B,守卫无归属判据可依 → 不动
@@ -279,7 +279,7 @@ def test_orphan_double_archive_still_reported(tmp_path: Path):
 
     assert ma.assemble_game(rd, _G_A) is not None
     dups = ma.find_cross_archive_segment_dups(rd)
-    # archives 按档案文件名序(守卫无归属判据可依的孤立形态,纯显影)
+    # archives 按档案文件名序(守卫无归属判据可依的孤立形态,纯显示)
     assert dups == [{'run_id': _R_B, 'archives': [_G_D, _G_C]}]
 
 
@@ -446,7 +446,7 @@ def test_assemble_rebuilds_derived_columns_from_legacy_streams(tmp_path: Path):
         {'plane': 2, 'round': 3, 'node_type': 'battle', 'hp': 0,
          'delta': -10, 'hp_source': 'endgame_final',
          'outcome_source': 'runs.final_hp', 'ts': None}]
-    # hp 事件显影 / 离场(段内相邻帧差分:卖出命中 + 无动作消失)
+    # hp 事件显示 / 离场(段内相邻帧差分:卖出命中 + 无动作消失)
     assert arch['hp_events'] == [
         {'run_id': _RA, 'ts': '2026-09-08T10:00:20', 'plane': 1, 'round': 1,
          'currency': 'hp', 'hp_delta': -10, 'mode': 'blood_buy', 'clicks': 1,
@@ -589,7 +589,7 @@ def _final_rows() -> list[dict]:
 #  ——src 侧 cw_game_state.py 常量段注释仍指针本文件对拍,收尾申报见报告。
 # 原 test_write_match_final_default_duration_segment_level「duration_s
 # 缺省 = 段级自算」删:缺省时长 = time.monotonic 差值 ≥0,语言自带保证面,
-# 显式传值直通半由原子行测试 duration_s=1234.5 断言承重。
+# 显式传值直通半由原子行测试 duration_s=1234.5 断言承担。
 
 
 def test_write_match_final_one_atomic_row(journal, run_id,
@@ -631,7 +631,7 @@ def test_write_match_final_one_atomic_row(journal, run_id,
 
 
 def test_write_match_final_segment_idempotent(journal, run_id) -> None:
-    """段内幂等(G12 终局防重写前查重收编):本段已有终局行 → 第二次调用
+    """段内幂等(G12 终局防重写前查重并入):本段已有终局行 → 第二次调用
     no-op 返 False,不产第二行。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     assert write_match_final(gs, final_type='win', plane=3, round_num=9) is True
@@ -643,7 +643,7 @@ def test_write_match_final_segment_idempotent(journal, run_id) -> None:
 
 def test_abnormal_backfill_note_recovered_version_allocated(journal, run_id) -> None:
     """异常终局补写(G8):backfilled=True → 版本 id 照常分配 + 行载荷
-    backfilled 位 + 行注记缺省 recovered 显影(判读可辨真伪)。"""
+    backfilled 位 + 行注记缺省 recovered 显示(判读可辨真伪)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     v_before = gs.write_seq
     assert write_match_final(gs, final_type='abnormal', plane=1, round_num=3,
@@ -652,7 +652,7 @@ def test_abnormal_backfill_note_recovered_version_allocated(journal, run_id) -> 
     assert row['v'] == v_before + 1, '补写行版本 id 照常分配'
     assert row['after']['final_type'] == 'abnormal'
     assert row['after']['backfilled'] is True
-    assert row['note'] == 'recovered', '补写行 note=recovered 显影'
+    assert row['note'] == 'recovered', '补写行 note=recovered 显示'
 
 
 def test_match_final_listener_fires_on_row_only(journal, run_id) -> None:
@@ -708,7 +708,7 @@ def test_match_final_listener_fires_unarmed_and_offmatch(tmp_path) -> None:
 
 # (收尾整删)原 test_obs_event_vocab_closed_set「obs_event 事件词表封闭
 #  集(硬约束 2)」删:常量字面断言 + 炸错分支 = 事实源在 cw_vocab 词表定义,
-#  集外炸错由 pytest.raises 形态与封闭集测试同构面承重不成立——如实申报:
+#  集外炸错由 pytest.raises 形态与封闭集测试同构面承担不成立——如实申报:
 #  note_obs_event 集外炸错行为现无独立测试,词表漂移归 kernel 既有测试与
 #  review 面(覆盖缺口随收尾申报)。
 
@@ -754,7 +754,7 @@ def test_resolve_final_type_priority_ladder() -> None:
 
 
 def test_runs_result_mapping_covers_archive_values() -> None:
-    """runs result 词表收编映射:win/loss/stopped 直映;非完结值(含
+    """runs result 词表并入映射:win/loss/stopped 直映;非完结值(含
     abandoned/completed/空)= abnormal——与档案装配器完结判定同界。"""
     assert runs_result_to_final_type('win') == 'win'
     assert runs_result_to_final_type('loss') == 'loss'
@@ -765,7 +765,7 @@ def test_runs_result_mapping_covers_archive_values() -> None:
 
 
 def test_detect_match_final_evidence_ladder() -> None:
-    """证据阶梯:journal 已收尾 → None(幂等);runs_summary 行 → 收编映射;
+    """证据阶梯:journal 已收尾 → None(幂等);runs_summary 行 → 并入映射;
     terminal_closure 结算行 → 收尾行映射;全缺 → abnormal(补写形态判据)。"""
     assert detect_match_final(run_id='r', journal_final={'v': 1}) is None
     d = detect_match_final(
@@ -823,9 +823,9 @@ def test_extract_match_final_rows_recognition() -> None:
 
 
 # (收尾整删)原 test_view_match_final_reading「判读 CLI 读面(view_
-#  match_final 显影/无行提示)」删:CLI 输出文案测试(「type=」「补写」等
+#  match_final 暴露/无行提示)」删:CLI 输出文案测试(「type=」「补写」等
 #  字样断言)= 展示层快照,红时答不出哪个消费行为坏了;判读读数面由
-#  match_final_rows 行取数(原 view 测试内同函数断言)与下游档案测试承重。
+#  match_final_rows 行取数(原 view 测试内同函数断言)与下游档案测试承担。
 
 
 def test_build_archive_endgame_match_final(tmp_path, monkeypatch) -> None:

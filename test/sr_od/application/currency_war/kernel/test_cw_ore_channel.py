@@ -31,7 +31,7 @@ def _seeded_gs() -> GameState:
 
 def _tap_journal(monkeypatch) -> list[dict]:
     """接容器 journal sink(行含 field/sig 键,过滤键用法同
-    test_game_state 冷建种子行断言)。"""
+    test_game_state 每局全新创建种子行断言)。"""
     rows: list[dict] = []
     monkeypatch.setattr(gs_mod, '_STATE_JOURNAL_SINK', rows.append)
     return rows

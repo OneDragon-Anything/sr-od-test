@@ -5,7 +5,7 @@ cw_gain_effects.py PICK_INVEST_EFFECTS '量子力学' 行:
 test_strategy_compose_grant_gangtie.py 钢铁美学一条效果条目形)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-277 对应稿
-§4 锁面(REVIEW-T277 免裁 7/7;卡面官方原文:「【量子同频】角色累计星数达
+§4 锁面(REVIEW-T277 无需用户决定 7/7;卡面官方原文:「【量子同频】角色累计星数达
 3/6/9时，额外获得1/2/3层【同频】。获得【希儿】。」——条件段【量子同频
 星数档位】游戏侧自算 bot 零建模;效果串 1 条):
 

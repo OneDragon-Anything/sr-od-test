@@ -1,6 +1,6 @@
 """补给选卡决策单帧测试(补给统一优先级后的角色级判据面)。
 
-判据正本(持久索引):
+判据权威版本(持久索引):
 - 统一装配与候选不进档 1 = docs/develop/sr_od/application/currency_war/
   strategy-docs/30_supply_screen.md §2.1(裁定五 2026-11-01:补给沿用
   统一优先级;候选 = 假设性入场者按卡面十档定序〔完成品保护迭代
@@ -157,7 +157,7 @@ def test_tier3_carries_merge_star_value_for_member():
 def test_member_completed_unit_retained_over_high_prob_junk():
     """成员 2★ 完成品保留序提前(design §2.5-8 行为申报回归锁;十档
     口径 = §2.2 档 2 need≥2 达标保留张)——entry_signals 退役后行为
-    演进登记:花火 2★(列车·反震 need 2 达标)被虚拟定型收编上场 →
+    演进登记:花火 2★(列车·反震 need 2 达标)被虚拟定型编入上场 →
     **档 1 名级保护**(不在补给评估池,比档 2 完成品保留更强的保护面;
     「档满不上场 → 档 2 在池」构局经列车 4 档满 + 角色完成度封顶两式
     构造均不可达——L1 递增总能吸收第 5 件);档 2 保留张键位模型仍由
@@ -174,7 +174,7 @@ def test_member_completed_unit_retained_over_high_prob_junk():
     assert isinstance(out, SupplyDecision)
     frame, sim, target = _virtual_target(gs, '娜塔莎')
     assert '花火' in target, \
-        f'帧前提:花火被虚拟定型收编(entry_signals 退役后 L1 递增):' \
+        f'帧前提:花火被虚拟定型编入(entry_signals 退役后 L1 递增):' \
         f'{sorted(target)}'
     ctx, units = assemble_candidate_eval(
         gs, gs, sim=sim, base_bench_len=len(frame.bench), target=target,
@@ -182,7 +182,7 @@ def test_member_completed_unit_retained_over_high_prob_junk():
     keyed = sell_order_with_keys(units, ctx)
     assert not [u for u, _k in keyed
                 if u.name == '花火' and not isinstance(u, ShopUnit)], \
-        '完成品成员档 1 收编(不在评估池,强于档 2 保留张)'
+        '完成品成员档 1 编入(不在评估池,强于档 2 保留张)'
     victim_u, victim_k = max(keyed, key=lambda p: p[1][:-1])
     assert victim_u.name != '花火' and victim_k[0] == 10, \
         f'让位牺牲者应为兜底杂件而非成员完成品:' \
@@ -193,27 +193,27 @@ def test_candidate_absorbed_into_virtual_target_still_eliminated():
     """候选进虚拟定型仍判末位 = 候选反例(商店 X 反例的补给镜像;
     30 号篇 §2.1 候选不进档 1)——entry_signals 退役后构局退化登记:
     原构局(bench 铺羁绊填充件 + 前排空位)退役前依赖窗口把填充件挡
-    在部署外(贝洛伯格对〔佩拉+娜塔莎〕是唯一可上场组合 → 候选收编
+    在部署外(贝洛伯格对〔佩拉+娜塔莎〕是唯一可上场组合 → 候选编入
     → 虚拟超容牺牲者 = 候选 → 淘汰落装备轴);退役后填充件全部可
-    上场自成组合抢占席位,「候选被收编且被淘汰」构局不可达——候选
+    上场自成组合抢占席位,「候选被编入且被淘汰」构局不可达——候选
     幸存照选为现行为;「候选不进档 1」语义的现行承载 = 商店面
     (test_acquire_yield 的 X 反例族)。单 5 费件填充构局:贝洛伯格对
-    收编前提保持(候选 ∈ target),牺牲者序不达候选(bench 未满,
+    编入前提保持(候选 ∈ target),牺牲者序不达候选(bench 未满,
     无虚拟超容)→ 幸存。"""
     # 4 费干净件(换轴后:5 费件在未终局锁定帧的终局候选枚举下竞争
-    # 不过贝洛伯格对,收编前提失守——费档下调恢复前提)。
+    # 不过贝洛伯格对,编入前提失守——费档下调恢复前提)。
     fillers = _clean_cost_fillers(1, 4, {'娜塔莎', '佩拉'})
     bench = [('佩拉', 1)] + [(n, 1) for n in fillers]
     gs = _make_gs(bench=bench, front=('吉尔伽美什',), level=3)
     _frame, _sim, target = _virtual_target(gs, '娜塔莎')
     assert '娜塔莎' in target, \
-        f'贝洛伯格对收编前提保持: {sorted(target)}'
+        f'贝洛伯格对编入前提保持: {sorted(target)}'
     opts = [_opt(0, char='娜塔莎', equip=''),
             _opt(1, equip='轮滑鞋')]
     out = supply.decide(opts, gs, None, False)
     assert isinstance(out, SupplyDecision)
     assert out.idx == 0, \
-        '收编但无虚拟超容帧:候选幸存照选(淘汰分支需席满超容形态)'
+        '纳入但无虚拟超容帧:候选幸存照选(淘汰分支需席满超容形态)'
 
 
 def test_field_redeployed_out_units_enter_elimination_pool():

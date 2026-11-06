@@ -46,7 +46,7 @@ def _make_gs() -> GameState:
 def test_registration_chain_and_four_bridges_noop() -> None:
     """登记链锁 + 四桥负锁:session 在场选卡 → active_strategies 注册 +
     效果账本入册(category=unit_buff);payload=UnitBuffRef 无任何世界
-    写入字段 → 四桥鸭子读全量缺省守卫 no-op(burst 桥 free_refresh_burst
+    写入字段 → 四桥鸭子类型读取(duck typing)全量缺省守卫 no-op(burst 桥 free_refresh_burst
     缺省 0 / 板面重写桥 board_rewrite 缺省 '' → None / 节点边界桥
     per_node 族缺省 0 / 容量直写桥 capacity_limit 缺省 0 → 早退),bot
     零响应(波次触发/生命上限最高敌方目标选取/1000% 伤害+30% 易伤全

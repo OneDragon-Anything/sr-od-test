@@ -5,7 +5,7 @@ _make_random_equip_effect('简易', 1))``;按被测方法拆目录规范落位,
 先例 = 同目录 test_strategy_compose_grant_jingmi_jin.py 精密拆装·金)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-247 对应稿
-§4 锁面(REVIEW-T247 免裁 6/6;卡面官方原文:「获得1个【好运令牌】和1件
+§4 锁面(REVIEW-T247 无需用户决定 6/6;卡面官方原文:「获得1个【好运令牌】和1件
 随机简易装备」;效果条目1 具名确定写 rand=False;效果条目2 简易池 8 件均匀随机;
 效果串恒 2 条按卡文语序):
 

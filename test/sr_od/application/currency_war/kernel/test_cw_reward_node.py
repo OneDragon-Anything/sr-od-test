@@ -17,7 +17,7 @@ from sr_od.application.currency_war.kernel.cw_reward_node import (
 #: 已登记扑满卡手抄件(卡面 = cw_invest_data PlazaPortal:id 105/id 119)。
 #: 手抄 = 闸:版本重采增删扑满卡或改派生判据时,此处必须显式更新——
 #: 与 kernel 侧 ENV_ORE_PANEL_BONUS 键集完全一致校验同纪律(增删扑满
-#: 环境须逐处显式拍定,禁静默跟随)。
+#: 环境须逐处显式定为,禁静默跟随)。
 _IN_REGISTER_PIGGY_ENVS: frozenset[str] = frozenset(
     {'经济过热', '经济严重过热'})
 

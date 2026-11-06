@@ -3,7 +3,7 @@
 test_strategy_heping_zhufu_entry.py 和平手枪祝福)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-234 对应稿
-§4(REVIEW-T234 免裁 7/7;卡面官方原文:「获得1个【生命之花】。我方小队
+§4(REVIEW-T234 无需用户决定 7/7;卡面官方原文:「获得1个【生命之花】。我方小队
 获得15%生命增幅和5%治疗强度。」——祝福面游戏侧自算,bot 零响应):
 
 - 条目锁:category UNIT_BUFF / payload UnitBuffRef 且 effect_text 与

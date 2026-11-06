@@ -5,7 +5,7 @@ cw_gain_effects.py PICK_INVEST_EFFECTS '全武行' 行:
 test_strategy_named_equip_grant_wushang_tongguan.py 无伤通关)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-242 对应稿
-§4 锁 1 修正形(REVIEW-T242 免裁 6/6;卡面官方原文「获得1个【武器大师】」;
+§4 锁 1 修正形(REVIEW-T242 无需用户决定 6/6;卡面官方原文「获得1个【武器大师】」;
 效果条目2「额外提供5%×3」= 零建模 + 判读申报制,装备携带形态族口径):
 
 - 行为链真值:确定入口 → equips 恰 +1 武器大师、步串恰 1 条

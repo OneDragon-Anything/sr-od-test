@@ -1,7 +1,7 @@
 """摸个鱼吧III(id 360101)具名装备授予腿锁(镜像 src = kernel/cw_gain_effects.py
 的 ``PICK_INVEST_EFFECTS`` 直书登记行「摸个鱼吧III」;摸个鱼吧族收官卡两条效果条目
 分治:送卡腿「获得18个【青雀】」登记面镜像 = cw_investments.STRATEGY_GRANTS
-同卡行(已登记,数量「18个」失真族判例单元素申报,估值档机器只读 chars
+同卡行(已登记,数量「18个」失真族先例单元素申报,估值档机器只读 chars
 集合零影响,非 advisor 零运行时消费道),令牌腿「2个【好运令牌】」= 本
 文件锁面;族模式卡 = 全员晋升——工厂语义锁住同目录姊妹镜像
 test_strategy_named_equip_grant.py,count=2 同物形先例 = 小复制

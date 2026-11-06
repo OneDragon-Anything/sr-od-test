@@ -189,7 +189,7 @@ def test_buy_report_marks_prev_node_spent(monkeypatch) -> None:
 
 # ============================================================ M1 投影直测(《商店黑板容器化方案》§4-M1;同 src 按被测方法归并)
 
-# 改写依据(分诊):写入者登记面随「商店单动作循环收编」演进——
+# 改写依据(分诊):写入者登记面随「商店单动作循环纳入统一管理」演进——
 # 生产写点 actor 现役 = CwScreenShop(cw_screen_shop,登记面已登记),
 # 旧名 CwOpBuyCards 已退役;测试模拟生产写入随登记面改名。
 _PROJ_SIG = ChannelSig(family='logic_action', actor='CwScreenShop',
@@ -259,12 +259,12 @@ def test_buy_simple_placement():
 
 
 def test_merge_buy_single_report_two_forms():
-    """合成买单口两形态直测(升星分支内聚 report_action_buy_card_param 后,
+    """合成买唯一入口函数两形态直测(升星分支内聚 report_action_buy_card_param 后,
     原升星分支单写测试随聚合口退役;快照基点正确性 = 两形态 bench 期望
     共辖——基点误取买后容器会重复落位/漏升,shop 视图缺失会漏满栏
     合成):非满栏合成买(2 副本在席买第 3 张 → 落位即合成升 2★)与
     满栏合成买(k=2,3 副本合 1 升 2★ 在席副本槽9)。gold −单价×k 与
-    payload −k 由同一单口携带(原「分支零写」申报随两写合一消亡)。"""
+    payload −k 由同一唯一入口函数携带(原「分支零写」申报随两写合一消亡)。"""
     for title, axes, act, k, bench_expect in (
         ('非满栏合成买',
          {'gold': 30, 'shop': [_card('希儿', cost=3)],

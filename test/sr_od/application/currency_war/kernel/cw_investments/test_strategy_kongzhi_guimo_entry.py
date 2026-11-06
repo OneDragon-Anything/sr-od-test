@@ -3,7 +3,7 @@
 声明性条目锁形)。
 
 测试面依据 = 迭代设计 designs/T-324-kongzhi-guimo.md §4 锁 2/6/7
-(REVIEW-T324 免裁 7/7;卡面官方原文:「最大等级变为7级，获得【财富宝钻】
+(REVIEW-T324 无需用户决定 7/7;卡面官方原文:「最大等级变为7级，获得【财富宝钻】
 和40金币。」——帽改写腿 level_cap_override=7 注册行承载 / 宝钻腿 =
 cw_gain_effects.PICK_INVEST_EFFECTS 具名装备登记行 / 40 金腿 =
 instant_gold=40 已登记估值零漂):

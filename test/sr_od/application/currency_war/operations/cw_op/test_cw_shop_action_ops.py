@@ -55,7 +55,7 @@ class TestGuardProposalVsMainDomain:
 
     def test_healthy_proposal_passes_and_buy_off_shop_raises(self):
         """健康提案零炸出(主域对得上);买牌提案指向店外牌 → 炸出
-        (跨代际/已消费提案 = 策略器 bug 显影)。"""
+        (跨代际/已消费提案 = 策略器 bug 暴露)。"""
         from sr_od.application.currency_war.operations.cw_op.cw_shop_action_ops import (
             guard_proposal_vs_expected,
         )

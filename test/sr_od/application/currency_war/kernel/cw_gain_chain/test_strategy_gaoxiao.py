@@ -1,14 +1,14 @@
 """高效决策(id 301701)窗末失配豁免锁(镜像 src = cw_mismatch_policy.
-EXEMPT_REGISTRY 高效决策条目组;零登记零建模定谳,豁免 = 唯一建模增量;
+EXEMPT_REGISTRY 高效决策条目组;零登记零建模定论,豁免 = 唯一建模增量;
 先例 = 失配豁免注册表 charter 形)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-312 对应稿
-(REVIEW-T312 免裁 6/6;卡面官方原文:「获得9999免费刷新次数，有效期45
+(REVIEW-T312 无需用户决定 6/6;卡面官方原文:「获得9999免费刷新次数，有效期45
 秒。到期时，所有未使用的免费刷新次数都会被移除。」——数值全 desc 明写,
 墙钟载体挂 effect-domain §10-8 既有待裁决项,本卡不决):
 
 - 锁 1 反向锁:STRATEGY_ECONOMY 零条目 + STRATEGY_EFFECTS 无本卡键
-  (9999 永续语义错误,T-88 定谳);
+  (9999 永续语义错误,T-88 定论);
 - 锁 2 可信域绑定锁:注册行 free_refresh_burst == 9999 == 9999(双值
   一致性);
 - 锁 3 豁免行为锁:EXEMPT_REGISTRY 条目组存在且前缀覆盖盘点全集
@@ -32,10 +32,10 @@ _PREFIXES = {'proj_refresh_free_left', 'effect_burst', 'effect_node',
 
 
 def test_fanxiang_zero_registered() -> None:
-    """锁 1 反向锁:两注册面零登记(9999 永续语义错误,T-88 定谳)。"""
+    """锁 1 反向锁:两注册面零登记(9999 永续语义错误,T-88 定论)。"""
     assert _CARD in STRATEGY_ECONOMY, 'ECONOMY 注册行已登记(零动作载体)'
     assert _CARD not in STRATEGY_EFFECTS, 'ECONOMY 效果面零条目(9999 永续'
-    '语义错误,T-88 定谳)'
+    '语义错误,T-88 定论)'
 
 
 def test_burst_value_consistent() -> None:

@@ -319,7 +319,7 @@ def test_calibration_face_fill_dual_keys_and_fill_branch():
         _row(gs3, 1, 6, '普通战斗', False, fill=0.3)
         out = encounter_pick.decide([_opt(0, 2), _opt(1, 3)], gs3)
         assert isinstance(out, EncounterPickDecision)
-        assert out.idx == 0, '未定谳:fill 分支不激活,败局臂恒边缘'
+        assert out.idx == 0, '未定论:fill 分支不激活,败局臂恒边缘'
     finally:
         encounter_pick.reset_calibration()
 

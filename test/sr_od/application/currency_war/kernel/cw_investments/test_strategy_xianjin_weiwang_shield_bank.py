@@ -4,7 +4,7 @@
 登记面新锁落本镜像目录新文件)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-252-xianjin-weiwang.md
-§3 锁面(REVIEW-T252 免裁 7/7;卡面官方原文 cw_invest_data.py:200 逐字:
+§3 锁面(REVIEW-T252 无需用户决定 7/7;卡面官方原文 cw_invest_data.py:200 逐字:
 「出售场上和备战席的所有角色，之后每场进入战斗时，为我方前台提供护盾，
 护盾量等同于该次出售角色所获得总金币数*1000。」):
 

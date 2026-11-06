@@ -2,7 +2,7 @@
 test_strategy_zhuangbei_entry.py 装备党)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-272-zanmei-
-taiyang.md(定稿,REVIEW 免裁 9/9)§4 锁面(卡面官方原文:「每拥有一件
+taiyang.md(定稿,REVIEW 无需用户决定 9/9)§4 锁面(卡面官方原文:「每拥有一件
 【白昼装备】以及其原型装备，在进入新节点时就获得1点经验。角色每穿戴一件
 【白昼装备】，幸运一击率提高10%。获得【那刻夏】。」):
 

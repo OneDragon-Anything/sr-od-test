@@ -207,7 +207,7 @@ def test_piggy_floor_snapshot_deferred_topup(
     实机一致)。floor 评估时点 = 进节点时点(tick 捕获),非结算刻——结算
     刻重评估会读扑满节点自身的花费,时点漂移禁,快照随行承担。r1 窗开在
     持卡前(快照无 floor),断言自 r2 同扑满窗起算;窗口金压到顶满可观察
-    区(<90,自然息 < 帽 9 显影)。"""
+    区(<90,自然息 < 帽 9 暴露)。"""
     from types import SimpleNamespace
 
     from sr_od.application.currency_war.kernel.cw_effect_inventory import (
@@ -246,7 +246,7 @@ def test_piggy_floor_snapshot_deferred_topup(
         assert gs.effects.counter(STRATEGY_EFFECTS['开源节流'].id,
                                   CounterKey.INTEREST_TOPUP) == 0, \
             '载体窗开消费清零(入快照递延)'
-        # r2 结算:息分量顶满 9(自然 = gold_at_window//10 < 9 显影);
+        # r2 结算:息分量顶满 9(自然 = gold_at_window//10 < 9 暴露);
         # 利息累计账计顶满值(计数 = row.interest 同源)。
         _force_settle(monkeypatch, won=True)
         _start_battle_feed(gs)

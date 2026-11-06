@@ -1,9 +1,9 @@
 """补给屏测试面(决策 / 选项归并读链 / 选卡上报 / 节点推进接入调用)。
 
-判据正本(持久索引):
+判据权威版本(持久索引):
 - 决策单帧测试 = docs/develop/sr_od/application/currency_war/strategy-docs/
   30_supply_screen.md(3.1 验收凭据①-⑨,判据语义 = §2.5);
-- 选项归并读链 = T-9 过剩经费 design §2.2/§4.1/§4.2(设计正本 =
+- 选项归并读链 = T-9 过剩经费 design §2.2/§4.1/§4.2(设计权威版本 =
   .debug/progress/2026-09-23-invest-effects-calc/designs/
   T-9-guoshengjingfei.md);
 - 选卡上报(pick_supply 通道)= supply-pick design §2.0B/§3 验收锚 1
@@ -12,7 +12,7 @@
   对齐:补给选完关模态回备战自动弹店,推进归出战动作 supply_finish,
   旧「确认即 supply_confirm 推进」接入调用随「确认即推节点」废止);
   kernel 原语语义(门挡/去重/补推)由 test_node_advance
-  承重,本文件只校验接入调用面。
+  承担,本文件只校验接入调用面。
 
 测试纪律:零真实副作用;决策/归并断言钉住设计语义不断言牌面;归并读链坐标
 全部为测试自造常量(按归档帧布局实证取值,不读归档帧文件、不跑 OCR)。

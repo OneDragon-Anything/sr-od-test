@@ -2,7 +2,7 @@
 同实例单一源首例;先例 = 同目录 test_strategy_baocang_entry.py 爆仓形)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-301 对应稿
-(REVIEW-T301 免裁 4/4;卡面官方原文:「获得25金币。你的最大利息提升至
+(REVIEW-T301 无需用户决定 4/4;卡面官方原文:「获得25金币。你的最大利息提升至
 10金币。」——静态分量 interest_cap_override=10 注册行承载;
 instant_gold=25 族级缺口维持):
 

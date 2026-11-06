@@ -29,7 +29,7 @@
 test_cw_round_fresh_buys_host 并入;同 visit 卖回防线第二载体,逐字段
 处置表 #18/#19):轮内新鲜度账宿主 = 容器 Field ``GameState.round_
 fresh_buys``(record_fresh_buy 写 → fresh_buys_of/fresh_buys_sell_face
-读同一容器,写读单口 sim/live 同口;相位失配 = 跨轮整体作废、读取零销
+读同一容器,写读唯一入口函数 sim/live 同口;相位失配 = 跨轮整体作废、读取零销
 账;值形状 names = list);商店访问账本的四死基座字段(期望态残留,
 全为写端无读端)不再在场——对象面运行时检查,非源码扫描。(原卖出
 落地测试随商店域 SellBenchOp 退役移除:动作 op 重组批③,备战域卖出由

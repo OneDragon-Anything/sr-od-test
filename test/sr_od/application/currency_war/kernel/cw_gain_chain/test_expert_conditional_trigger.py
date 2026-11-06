@@ -70,7 +70,7 @@ def test_env_mismatch_no_trigger() -> None:
 
 def test_env_absent_no_trigger() -> None:
     """条件②缺(active_env 空/未选择形态):不触发——active_env 开局
-    种子底座 = ''(未选择),判据读空值短路。"""
+    种子初始值 = ''(未选择),判据读空值短路。"""
     gs = _gs(active_env=None)
     assert expert_conditional_trigger(gs, '银狼LV.999', rand=False, sig=_SIG,
                                       evidence='t') is False

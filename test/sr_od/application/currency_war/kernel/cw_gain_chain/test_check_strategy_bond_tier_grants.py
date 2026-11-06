@@ -65,7 +65,7 @@ def _slots(bench: list[tuple[str, int]]) -> list[BenchSlot]:
 
 def _gs(*, card: str | None = _CARD, board: dict[str, int] | None,
         deployed: DeployedView | None = None) -> GameState:
-    """持卡 + 板面直置直构域(equips 走 seed 底座 [] = 观察态,发放可
+    """持卡 + 板面直置直构域(equips 走 seed 初始值 [] = 观察态,发放可
     落位;board/deployed None = 双缺域,fail-closed 判别输入)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     seed_opening_state(gs)

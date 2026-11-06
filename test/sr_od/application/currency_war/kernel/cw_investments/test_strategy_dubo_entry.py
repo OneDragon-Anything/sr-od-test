@@ -3,7 +3,7 @@
 登记;先例 = 同目录 test_strategy_zuanshi_entry.py 钻石恒永久)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-267 对应稿
-§4 锁面(REVIEW-T267 免裁 7/7;卡面官方原文:「战斗开始时，若银河学者羁绊
+§4 锁面(REVIEW-T267 无需用户决定 7/7;卡面官方原文:「战斗开始时，若银河学者羁绊
 处于激活状态，一名随机的1费或2费银河学者变成3星。获得【艾丝妲】和【阮·梅】。」
 ——条件段与随机升星游戏侧自算,bot 零响应):
 
@@ -24,7 +24,7 @@ _CARD = '读博深造'
 def test_dubo_entry_registered() -> None:
     """条目锁:UNIT_BUFF 零响应登记形(钻石恒永久同形;effect_text 与卡面
     单一源对拍;duties 三位全 False;pending False[变形持续性 T-180 案 A
-    定谳])。"""
+    定论])。"""
     spec = STRATEGY_EFFECTS[_CARD]
     assert spec.id == '251901', 'id 对拍'
     assert spec.category.value == 'unit_buff', 'category = UNIT_BUFF'

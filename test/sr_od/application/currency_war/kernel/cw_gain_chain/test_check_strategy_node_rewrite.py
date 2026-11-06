@@ -46,7 +46,7 @@ _P3 = _P2
 def _gs(*, card: str | None = _CARD,
         done: tuple[str, ...] = (),
         seqs: dict[int, tuple[str, ...]] | None = None) -> GameState:
-    """持卡/一次性标志位/场字段直置直构域(纯函数零写,seed 底座非必需)。"""
+    """持卡/一次性标志位/场字段直置直构域(纯函数零写,seed 初始值非必需)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if card is not None:
         gs.write_logic(gs.active_strategies, (card,),

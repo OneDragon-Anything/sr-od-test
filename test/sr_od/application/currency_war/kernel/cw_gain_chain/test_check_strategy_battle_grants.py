@@ -110,7 +110,7 @@ def test_repeatable_no_done_latch() -> None:
 
 def test_unobserved_bench_refused() -> None:
     """锁 6 拒落:bench 未观察(None)→ 原语内拒落零写返回空(宁缺勿造,
-    开局种子底座下生产不可达,直构/测试形态防御)。"""
+    开局初始值下生产不可达,直构/测试形态防御)。"""
     gs = _gs(bench_slots=None)
     assert check_strategy_battle_grants(gs, 'encounter', _LSIG) == (), \
         '未观察窗误发放'

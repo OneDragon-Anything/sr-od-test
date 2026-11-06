@@ -12,7 +12,7 @@ test_per_node_family_without_now_clause_no_pick_grant(b 组),宿主超限
 - overlay 条目补齐前 payload 永不入 gs.effects = 节点边界桥恒零
   (登记缺口形态本锁以「登记前边界零发放」承载);
 - payload 实例同一性:EffectSpec.payload is STRATEGY_ECONOMY['搜打撤']
-  (共享实例单一源,EconomyEffect frozen dataclass,桥鸭子读 per_node
+  (共享实例单一源,EconomyEffect frozen dataclass,桥鸭子类型读取(duck typing) per_node
   字段与注册行同源)。
 """
 from __future__ import annotations
@@ -33,7 +33,7 @@ _CARD = '搜打撤'
 
 def test_soudache_overlay_payload_single_instance() -> None:
     """payload 实例同一性(共享实例单一源):条目 payload 与注册行
-    STRATEGY_ECONOMY['搜打撤'] 同一对象——桥鸭子读的 free_refresh_
+    STRATEGY_ECONOMY['搜打撤'] 同一对象——桥鸭子类型读取的 free_refresh_
     per_node 与注册面单一源,禁字段拷贝第二源。"""
     spec = STRATEGY_EFFECTS[_CARD]
     assert spec.payload is STRATEGY_ECONOMY[_CARD], \

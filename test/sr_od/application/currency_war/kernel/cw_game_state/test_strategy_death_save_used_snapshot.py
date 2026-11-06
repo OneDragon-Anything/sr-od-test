@@ -28,13 +28,13 @@ _LSIG = ChannelSig(family='logic_action', actor='TestDriver', mode='compute')
 
 
 def test_seed_none_opening_and_snapshot_roundtrip() -> None:
-    """种子底座(开局不种 None)+ 快照→恢复逐位相等(bool 保型直通)
+    """种子初始值(开局不种 None)+ 快照→恢复逐位相等(bool 保型直通)
     ——一次性标志位随快照存续 = 接管局不丢(救援一次性跨接管不重发;接管局一次性标志位
     None = 可再救一次,与 hp_floor_triggered 接管形态同款申报)。"""
     seed_gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     seed_opening_state(seed_gs)
     assert seed_gs.strategy_death_save_used.value is None, \
-        '冷建种子底座应不种(B 类,None = 未判定设计语义)'
+        '每局全新创建种子初始值应不种(B 类,None = 未判定设计语义)'
 
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.prep_anchored = True

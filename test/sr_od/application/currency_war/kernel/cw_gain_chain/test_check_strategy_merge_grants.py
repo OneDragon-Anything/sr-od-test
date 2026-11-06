@@ -17,9 +17,9 @@ taojin.md(定稿)§4 锁 1/3/4 + REVIEW-T179 §3.4(卡面官方原文:「合成
   费用不符(2★3费)→ 零效果串零写;
 - 逐级触发(锁 4):一次调用链级联 1→2→3(2 费)→ facts 两级、发放恰
   一次(仅 to_star==2 级,级联终档 3★ 不发——用户裁定「每完成一级
-  3 合 1 各发一次」判例的判据粒度);
+  3 合 1 各发一次」先例的判据粒度);
 - live 门控负锁:未装配 sim(纯实机态)→ 持卡 + 命中 facts 零写
-  (策略卡发牌族正本:不建逻辑写、观察收尾,防门控失效退化成猜测写);
+  (策略卡发牌族权威版本:不建逻辑写、观察收尾,防门控失效退化成猜测写);
 - 具名判据行(T-409):持黑塔纪元 + 3★黑塔 facts(星级/费用/角色名
   三匹配)→ 发 1★大黑塔;同星同费不同名(三月七 1 费 3★ facts)→
   零发放(名字维单变量负例,通配行此形会发);级联 1→2→3(黑塔)
@@ -174,7 +174,7 @@ def test_cost_mismatch_zero_grant(sim_installed) -> None:
 
 def test_live_form_zero_write() -> None:
     """live 门控负锁(锁 1):未装配 sim(纯实机态)→ 持卡 + 命中 facts
-    零效果串——防门控失效退化成猜测写(策略卡发牌族正本:不建逻辑写、
+    零效果串——防门控失效退化成猜测写(策略卡发牌族权威版本:不建逻辑写、
     观察收尾)。"""
     cw_sim_ports.uninstall_sim_backend()
     gs = _gs()
@@ -184,7 +184,7 @@ def test_live_form_zero_write() -> None:
 
 def test_direct_hit_pinned_evidence_and_star(sim_installed) -> None:
     """函数直构主锁:持卡 + 单条 2★2费 facts → 恰一条效果串(卡名
-    证据串),bench 落 1 个 1★砂金;同窗两条命中逐条发(逐级触发判例)。"""
+    证据串),bench 落 1 个 1★砂金;同窗两条命中逐条发(逐级触发先例)。"""
     gs = _gs()
     effects = check_strategy_merge_grants(gs, ((_CHAR2, 2),), sig=_SIG)
     assert effects == (_EV,), f'效果串钉死: {effects}'

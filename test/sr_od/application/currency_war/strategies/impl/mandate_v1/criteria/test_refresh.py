@@ -100,7 +100,7 @@ def _locked_frame(*, bench, deployed, gold: int, level: int,
 
 
 def _line_bench_base() -> list:
-    """列车同行达标底座(三月七/花火 2★ 达标、瓦尔特 1★ 达标——
+    """列车同行达标基础数据(三月七/花火 2★ 达标、瓦尔特 1★ 达标——
     未完成目标收敛到姬子·启行)。"""
     return [_bc('三月七', star=2), _bc('花火', star=2)]
 

@@ -25,8 +25,8 @@
 - 商店牌面(2026-10-17 用户裁定):牌面 = 节点级持久事实(发牌时定),
   开店呈现写回/关店清呈现不清记录/节点切换新发牌覆盖。
 
-设计依据 = sim- 后端结构(正本 = sim/sim-
-合法引用;正本更新义务归末阶段)。
+设计依据 = sim- 后端结构(权威版本 = sim/sim-
+合法引用;权威版本更新义务归末阶段)。
 """
 from __future__ import annotations
 
@@ -1209,7 +1209,7 @@ def test_strategy_pick_chain_random_star_equip_grant() -> None:
 
 
 # ============================================================ 追加随机环境分支(蓝海 id113)
-# 语义正本 = gain-chain.md §3 追加随机环境申报行段 + invest_effects.md
+# 语义权威版本 = gain-chain.md §3 追加随机环境申报行段 + invest_effects.md
 # 蓝海条:选卡上报完整首链(获得蓝海:active_env + 金 +6 + 申报行)→
 # advance 消费选卡声明 → 后端掷骰二次入链「获得卷中环境」。池掷骰流键
 # 桩 = _stub_env_reroll_roll(恒定下标;卷中随机支 'M02/env-reroll-gift'
@@ -2225,7 +2225,7 @@ def test_silver_env_difficulty_records_track_selections() -> None:
     - **备战画面敌方难度读数观察面**(``gs.enemy_difficulty``):每次
       结算屏时点,值 = 108 + 该时点已选卡静态 Δ 之和(现算);
     - **难度账快照面**(``difficulty_records``):逐条品质分量恒 0
-      (守 economy.md §9「白银+0」定谳,防已作废的「白银−3」旧说
+      (守 economy.md §9「白银+0」定论,防已作废的「白银−3」旧说
       回流)、策略静态 Δ = 按记录节点重建的已选卡注册表现算、特殊
       加成恒 0(伟大征服棱彩品质,结构性进不了银池)、encounter 类
       遭遇档在表值域、非遭遇类恒 0。计数口径:结算屏访问数 ≤ 记录数
@@ -2292,7 +2292,7 @@ def test_silver_env_difficulty_records_track_selections() -> None:
                      if slot <= (rec.plane, rec.round_num)]
             assert rec.breakdown.base is None, 'U25 基础曲线未采恒 None'
             assert rec.breakdown.quality_bonus == 0, \
-                '白银局全银,品质分量恒 0(守「白银+0」定谳)'
+                '白银局全银,品质分量恒 0(守「白银+0」定论)'
             assert rec.breakdown.special_bonus == 0, \
                 '伟大征服棱彩品质进不了银池,连胜项无源'
             assert rec.breakdown.strategy_delta \
@@ -2308,7 +2308,7 @@ def test_silver_env_difficulty_records_track_selections() -> None:
         uninstall_backend()
 
 
-# ============================================================ 头彩局(settled 定谳接入)
+# ============================================================ 头彩局(settled 定论接入)
 
 _TOUCAI_ENV = '头彩'
 
@@ -2332,7 +2332,7 @@ def _toucai_env_backend(seed: int = 61) -> SimBackend:
 
 
 def test_toucai_env_full_walk_first_offer_all_prism() -> None:
-    """头彩局 sim 全流程测试(部分改写型 settled 定谳接入首例;2026-10-16
+    """头彩局 sim 全流程测试(部分改写型 settled 定论接入首例;2026-10-16
     用户裁定:offer 级覆盖面 = 第 1 次取卡机会 3 张候选全棱彩):开局
     环境 offer 走 opening 形态不进取卡序;第 1 次策略三选一呈现,候选全
     棱彩注册名;第 2 次起不设品质断言(单抽不可断言「按默认分布」,恒真
@@ -2374,7 +2374,7 @@ def test_toucai_env_full_walk_first_offer_all_prism() -> None:
         uninstall_backend()
 
 
-# ============================================================ 尾彩局(settled 定谳接入·末张)
+# ============================================================ 尾彩局(settled 定论接入·末张)
 
 _WEICAI_ENV = '尾彩'
 
@@ -2398,7 +2398,7 @@ def _weicai_env_backend(seed: int = 61) -> SimBackend:
 
 
 def test_weicai_env_full_walk_third_offer_all_prism() -> None:
-    """尾彩局 sim 全流程测试(部分改写型末张 settled 定谳接入;2026-10-16
+    """尾彩局 sim 全流程测试(部分改写型末张 settled 定论接入;2026-10-16
     用户裁定:offer 级覆盖面 = 第 3 次取卡机会 3 张候选全棱彩):开局
     环境 offer 走 opening 形态不进取卡序;第 1/2 次三选一不设品质断言
     (单抽不可断言「按默认分布」,恒真空断言不可用,该两序语义由判据锁
@@ -2730,7 +2730,7 @@ def test_wear_report_synthesis_branch() -> None:
 
 
 def test_wear_report_synthesis_grant_world_truth() -> None:
-    """sim 世界真值同口:动作注入穿戴合成与 live 同一上报函数单口,
+    """sim 世界真值同口:动作注入穿戴合成与 live 同一上报函数唯一入口,
     账本持卡 → 合成发放自动生效(free_refresh_left +2,sim 世界容器
     与 live 同格)——发放腿住上报函数内,sim 穿戴批未来接入调用零返工。
     sim 自主局零穿戴 = 零触发(装备域 sim 未建模既有边界,不设负锁)。"""
@@ -2883,7 +2883,7 @@ def test_screen_announce_broadcast_points_and_value_exemption() -> None:
             return [r['after'] for r in rows[mark:]
                     if r.get('field') == 'current_screen']
 
-        # ① 简报(构造即 reset 广播;首对 prev = 容器冷建空串)
+        # ① 简报(构造即 reset 广播;首对 prev = 容器每局全新创建空串)
         assert_broadcast(SCREEN_BRIEFING)
         pair = rows[-2:]
         assert [r['field'] for r in pair] == ['prev_screen',

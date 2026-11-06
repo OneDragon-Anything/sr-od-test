@@ -4,7 +4,7 @@ cw_gain_chain/test_check_strategy_boss_end_heal.py,本文件锁 sim 结算腿
 接入调用与世界真值落地面)。
 
 测试面依据 = 迭代设计 designs/T-313-fendou-xieyi.md §4 锁 3/4/5/6/7
-(REVIEW-T313 免裁 6/6;驱动与断言形态先例 = 同目录
+(REVIEW-T313 无需用户决定 6/6;驱动与断言形态先例 = 同目录
 test_strategy_boss_battle_grant_sim_chain.py,跨位面驱动先例 =
 test_p3_win_terminal._drive_step 的位面过渡分派支):
 

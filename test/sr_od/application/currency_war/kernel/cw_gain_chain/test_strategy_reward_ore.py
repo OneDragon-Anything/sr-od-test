@@ -4,7 +4,7 @@ ORE_GRANTS 白名单表 + check_strategy_reward_ore_grants 纯判定 + sim
 同目录条件发放族锁形)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-306 对应稿
-(REVIEW-T306 免裁 6/6;卡面官方原文:「进入新的奖励节点时，获得1个晶
+(REVIEW-T306 无需用户决定 6/6;卡面官方原文:「进入新的奖励节点时，获得1个晶
 矿。」——表值 = 发矿数卡面明写;晶矿无 placement 发放即一次性标志位,载体自证差异):
 
 - 注册表锁:集合 = {'彩虹矿': 1} + 孤儿键负控;

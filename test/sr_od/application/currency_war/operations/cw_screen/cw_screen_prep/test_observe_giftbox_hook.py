@@ -7,7 +7,7 @@ operations/cw_screen/cw_screen_prep/。锁面 = 迭代设计
 §4.5:调用点触发即写(检测生成路径真实跑,不桩生成端)/ 零写路径经写
 入口 no-op 证实 / 晶矿链真实读口回归零扰动(read_ore_sights 不桩)。
 盒+球同区共存帧 fixture 未采(设计 §7 归校准批补采),共存不互扰暂由
-两帧各自断言承重。
+两帧各自断言承担。
 """
 from __future__ import annotations
 

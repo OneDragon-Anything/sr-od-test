@@ -3,17 +3,17 @@
 test_strategy_gudinglicai_registry.py)。
 
 测试面依据 = 迭代设计 designs/T-309-gongsi-yanxuan.md §2.1/§2.2/§2.4
-+ REVIEW-T309 §3(裁决点 5 = B 案改判:用户裁定 2026-11-01 族级拍定
++ REVIEW-T309 §3(裁决点 5 = B 案改判:用户裁定 2026-11-01 族级裁定
 「中途拿卡所在位面补发 = 补发·当前位面全额」,固定理财族级明文覆盖;
-裁决点 6 = 增条 pending=False 定谳;裁决点 7 = 三新字段入待建模塌 0)。
+裁决点 6 = 增条 pending=False 定论;裁决点 7 = 三新字段入待建模塌 0)。
 卡面官方原文(cw_invest_data.py 逐字):
 「现在及每个位面开始时，开启一个由5个独特4费角色组成的商店，并获得3金币。」
 
 - 注册行锁(锁 1):四字段现值 instant_gold=3 / gold_per_plane=3 /
   shop_rewrite_forced_cost=4 / shop_rewrite_forced_unique=True;
 - EffectSpec 条目锁(锁 2):五元组 + payload 同实例(单一源)+ pending
-  定谳(裁定记录住 notes,尾行特征串 = 条目锚,防与注释同名文本误触)
-  + duties 对表姊妹落码形(track+respond);
+  定论(裁定记录住 notes,尾行特征串 = 条目锚,防与注释同名文本误触)
+  + duties 对表姊妹已实现形(track+respond);
 - 引擎通道闭集锁(治理后形 = 测试锁对账,非 import 炸):三字段入
   _ENGINE_CHANNEL_SINGLE_FIELDS 且不入排除桶(位面周期发放/可重复
   触发 = 持续通道,非一次性/结构登记);
@@ -64,8 +64,8 @@ def test_gongsi_yanxuan_registration_row_four_fields() -> None:
 
 
 def test_gongsi_yanxuan_effect_spec_entry() -> None:
-    """EffectSpec 条目锁(锁 2,B 案定谳形):五元组 + payload 同一实例
-    + pending 撤除(裁定记录住 notes)+ duties 对表姊妹落码形 +
+    """EffectSpec 条目锁(锁 2,B 案定论形):五元组 + payload 同一实例
+    + pending 撤除(裁定记录住 notes)+ duties 对表姊妹已实现形 +
     notes 尾行特征串(条目锚,多行文本判据用尾行特征防同名误触)。"""
     spec = STRATEGY_EFFECTS[_CARD]
     assert spec.id == '301401'
@@ -75,11 +75,11 @@ def test_gongsi_yanxuan_effect_spec_entry() -> None:
     assert spec.payload is STRATEGY_ECONOMY[_CARD], \
         'payload 引注册行同一实例(单一源)'
     assert spec.pending is False, \
-        '位面段补发读法经用户裁定(2026-11-01 族级)定谳,非冻结'
+        '位面段补发读法经用户裁定(2026-11-01 族级)定论,非冻结'
     sister = STRATEGY_EFFECTS[_SISTER]
     assert (spec.duties.track, spec.duties.respond) \
         == (sister.duties.track, sister.duties.respond), \
-        'duties 对表姊妹落码形(裁决联动禁两态)'
+        'duties 对表姊妹已实现形(裁决联动禁两态)'
     for token in ('位面段', '补发', '2026-11-01', '固定理财族同判', '独特'):
         assert token in (spec.notes or ''), f'notes 承载裁定语义缺 {token}'
     assert (spec.notes or '').endswith('2★ 直出翻星效果条目与基线共享(人才下沉局)'), \

@@ -8,7 +8,7 @@
   成员」(R5-01 方向②)——候选线成员经序 1 义务面照常买入(m2_* 买因),
   机器判活方向不再兜底;行为申报(收窄侧)= 弱势局未锁无目标帧从
   「按机器方向囤」变「保利息缺省」;
-- **乙臂**(枢纽期权):发射位已并入序 1 候选集(12 号篇 §4 收编),
+- **乙臂**(枢纽期权):发射位已并入序 1 候选集(12 号篇 §4 纳入),
   hub_option_buy 买因与 hub_option_* 拒因族不得复现;持有段
   (hub_acquired_names_of)随装配 A 身份段退役删除;
 - **丙臂**(无目标期守息缺省):p2plus 带唯一形态——kernel
@@ -233,7 +233,7 @@ class TestHubRetired:
 
     def test_hub_reject_family_retired_not_silent(self):
         """乙臂拒因族退役后,席位/金不足形态照常拦截(非静默放行):
-        席满帧非义务面件不买,拒因不再以 hub_option_* 分键显影。"""
+        席满帧非义务面件不买,拒因不再以 hub_option_* 分键暴露。"""
         st = _state(gold=60, plane=2, shop_cards=[_card('花火', cost=2)],
                     bench=[_bc(f'注册表外高价值件{i}', star=2)
                            for i in range(BENCH_CAPACITY)],
@@ -246,7 +246,7 @@ class TestHubRetired:
         assert not [k for k in _ct(sess) if k.startswith('hub_option_')]
 
 
-# ===== 丙臂收编:守息缺省并入统一金约束门 =====
+# ===== 丙臂纳入:守息缺省并入统一金约束门 =====
 
 
 class TestArmCHoldDefault:
@@ -264,7 +264,7 @@ class TestArmCHoldDefault:
         assert isinstance(act, CwActionCloseShopParam)
         ct = _ct(sess)
         assert 'shop_no_target_hold_default' not in ct, \
-            '丙臂独立守息分支键已收编(统一金约束门)'
+            '丙臂独立守息分支键已纳入(统一金约束门)'
         assert 'shop_r1_no_chaseable_member' not in ct, \
             'R1 判据键随路径总账退役'
 

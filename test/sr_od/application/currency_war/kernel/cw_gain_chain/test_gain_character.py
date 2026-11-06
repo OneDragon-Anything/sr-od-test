@@ -7,7 +7,7 @@ T-26-liangzi-tongpin-qiyue.md(定稿)§2.3 条 3 + §2.2 条 ④ + §4.3:
 - **引擎 B 采集顶层发火**:链内每级合并攒一条 ``(角色名, 新星级)``
   事实,顶层 ``gain_character`` 全部写毕后统一交
   ``check_env_merge_grants``——单级三连 = 发火一次一发;
-- **级联两级 = 两次发放**(逐级触发判例:每完成一级 3 合 1 各触发
+- **级联两级 = 两次发放**(逐级触发先例:每完成一级 3 合 1 各触发
   一次);
 - **发放物不在触发集不发**:希儿/符玄自身升星,facts 过滤后零发放,
   递归天然终止(无环,无额外闸)。
@@ -85,7 +85,7 @@ def test_single_level_fires_once(seeded_provider) -> None:
 
 
 def test_cascade_two_levels_fires_twice(seeded_provider) -> None:
-    """级联两级两次发放(T-26 设计 §4.3,逐级触发判例):预置 2×1★ +
+    """级联两级两次发放(T-26 设计 §4.3,逐级触发先例):预置 2×1★ +
     2×2★ 花火,gain_character('花火', 1) → facts [(花火,2),(花火,3)]
     两条 → 两次发放(同窗逐条发,共享一个解析 rng 依序消耗)。"""
     r = random.Random(20261016)

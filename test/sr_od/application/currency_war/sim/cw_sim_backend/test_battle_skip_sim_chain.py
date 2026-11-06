@@ -189,7 +189,7 @@ def test_skip_walk_zero_battle_faces_then_normal_resolve(
         gs.observe(gs.xp, (0, XP_TO_NEXT_LEVEL[3]), sig=_SIG_OBS)
         hp0 = int(gs.hp.value or 0)
         streak0 = gs.streak.value
-        b.disclosures.clear()   # 只看本局新增(开局底座披露剔除)
+        b.disclosures.clear()   # 只看本局新增(开局初始值披露剔除)
         # —— 第一跳:(1,3) → (1,4) ——
         settle0 = len(settle_calls)   # 步行局已消耗 (1,1)/(1,2) 两次常规结算
         offers = _wrap_ring_offer(gs, monkeypatch)

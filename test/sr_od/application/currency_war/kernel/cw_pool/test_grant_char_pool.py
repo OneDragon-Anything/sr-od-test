@@ -33,12 +33,12 @@ from sr_od.application.currency_war.kernel.cw_pool import grant_char_pool
 
 
 def _fresh_gs() -> GameState:
-    """空解锁容器(开局种子底座,专家候选面 = 过滤态)。"""
+    """空解锁容器(开局初始值,专家候选面 = 过滤态)。"""
     return GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
 
 
 def _unlocked_gs(names: tuple[str, ...]) -> GameState:
-    """解锁态容器(unlocked_experts 单口直写)。"""
+    """解锁态容器(unlocked_experts 唯一入口函数直写)。"""
     gs = _fresh_gs()
     from sr_od.application.currency_war.sim.cw_sim_base import logic_sig
     gs.write_logic(gs.unlocked_experts, names, produced_by='test-seed',
@@ -146,7 +146,7 @@ def test_zhouzhibanshen_faction_pool_identity_instance() -> None:
     assert set(pool) == expected, \
         '昼之半神域候选 = 全域(域无专家,牌库时点过滤恒等)'
     assert '昔涟' in pool, \
-        '独立单位照发 + 双阵营成员照发(族级口径定谳)'
+        '独立单位照发 + 双阵营成员照发(族级口径定论)'
     assert set(pool) <= CHARACTER_ROSTER
     assert set(random_char_pool(spec)) == expected, \
         '静态基底同值(两层面在本域重合)'
@@ -168,7 +168,7 @@ def test_yezhibanshen_faction_pool_identity_instance() -> None:
     assert set(pool) == expected, \
         '夜之半神域候选 = 全域(域无专家,牌库时点过滤恒等)'
     assert '昔涟' in pool, \
-        '独立单位照发 + 双阵营成员照发(族级口径定谳)'
+        '独立单位照发 + 双阵营成员照发(族级口径定论)'
     assert set(pool) <= CHARACTER_ROSTER
     assert set(random_char_pool(spec)) == expected, \
         '静态基底同值(两层面在本域重合)'
@@ -218,7 +218,7 @@ def test_qungong_faction_pool_identity_instance() -> None:
     assert set(pool) == expected, \
         '群攻域候选 = 全域(域无专家,牌库时点过滤恒等)'
     assert '翡翠' in pool, \
-        '域独占成员照发 + 具名契约不改随机池成员资格(双事实锚定谳)'
+        '域独占成员照发 + 具名契约不改随机池成员资格(双事实锚定论)'
     assert set(pool) <= CHARACTER_ROSTER
     assert set(random_char_pool(spec)) == expected, \
         '静态基底同值(两层面在本域重合)'
@@ -251,7 +251,7 @@ def test_jianyi_faction_pool_expert_filter_instance() -> None:
     assert '佩拉' in random_char_pool(spec), \
         '静态基底含全部注册成员(过滤归 grant_char_pool 层,分层职责)'
     assert '椒丘' in pool, \
-        '具名契约不改随机池成员资格(双事实锚定谳)'
+        '具名契约不改随机池成员资格(双事实锚定论)'
 
 
 def test_zhanjidian_faction_pool_expert_filter_instance() -> None:
@@ -264,7 +264,7 @@ def test_zhanjidian_faction_pool_expert_filter_instance() -> None:
     过滤后费用 1-5 全档仍覆盖);②解锁 {'青雀'} → 7 名回归(专家入池时机
     与商店同源,economy.md §1);③静态基底 random_char_pool 仍含青雀
     (专家剔除只发生在 grant_char_pool 层,两层语义不混写);④显式断言
-    'Archer' ∈ 池(独立单位成员照发[economy.md:94 族级定谳点名
+    'Archer' ∈ 池(独立单位成员照发[economy.md:94 族级定论点名
     战技点(Archer)] + 「命运圣杯契约」条件发放对象不改随机池成员资格的
     双事实锚——具名 vs 随机字段不相交,沿昼之半神/夜之半神锁'昔涟'/群攻锁
     '翡翠'/减益锁'椒丘'显式成员断言先例)。"""
@@ -282,4 +282,4 @@ def test_zhanjidian_faction_pool_expert_filter_instance() -> None:
     assert '青雀' in random_char_pool(spec), \
         '静态基底含全部注册成员(过滤归 grant_char_pool 层,分层职责)'
     assert 'Archer' in pool, \
-        '独立单位照发 + 具名契约不改随机池成员资格(双事实锚定谳)'
+        '独立单位照发 + 具名契约不改随机池成员资格(双事实锚定论)'

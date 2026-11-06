@@ -6,7 +6,7 @@ cw_gain_effects._STRATEGY_BOX_GRANTS 镜像),其 pick/席满行为面由
 test_gain_chain.py 箱分支参数化锁承载,本文件只锁只登记不写状态的实现分支零响应。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-386-zhanshu-
-yiyan-plus.md(定稿,REVIEW 免裁)§7 实现要点(卡面官方原文:「我方小队
+yiyan-plus.md(定稿,REVIEW 无需用户决定)§7 实现要点(卡面官方原文:「我方小队
 消灭普通/精英及首领敌人时，恢复25%/75%能量。获得1个【简易武装箱】。」):
 
 - 条目锁(锁 1):UNIT_BUFF 零响应登记形 / id 350402 / trigger
@@ -14,7 +14,7 @@ yiyan-plus.md(定稿,REVIEW 免裁)§7 实现要点(卡面官方原文:「我方
   WHILE_HELD × UnitBuffRef 且 effect_text 与卡面单一源对拍 / duties 三位
   全 False / pending False / 现金分支 fail-closed(估值恒 (0.0, False));
 - 登记链锁 + 桥负锁(锁 2):获得链只登记不写状态的实现分支自动入册,UnitBuffRef 无任何
-  世界写入字段 → 全部桥鸭子读缺省守卫 no-op(五桥登记期零 Field 行);
+  世界写入字段 → 全部桥鸭子类型读取(duck typing)缺省守卫 no-op(五桥登记期零 Field 行);
   获得时点效果串 = 恰箱腿单步(SE 条目零增量,非 advisor 零解锁写、
   零单位域写入);session=None 支登记跳过、注册照常;
 - 聚合零承载锁(锁 3):aggregate_economy 输出与本卡缺席逐位一致
@@ -128,7 +128,7 @@ def test_zhanshu_yiyan_plus_cash_fail_closed_and_aggregate_zero() -> None:
 
 def test_zhanshu_yiyan_plus_gain_chain_register_and_bridges_noop() -> None:
     """登记链锁 + 桥负锁(锁 2):session 在场选卡 → 注册入表 + 账本登记
-    (by_source 含本条);UnitBuffRef 无世界写入字段 → 五桥鸭子读缺省守卫
+    (by_source 含本条);UnitBuffRef 无世界写入字段 → 五桥鸭子类型读取缺省守卫
     no-op,登记期零 Field 行;获得时点效果串 = 恰箱腿单步(SE 条目零增量;
     箱腿 pick/席满行为面 = test_gain_chain.py 箱分支参数化锁辖域)、非
     advisor 条目只登记不写状态的实现分支零解锁写、道具非角色零单位域写入;session=None 支

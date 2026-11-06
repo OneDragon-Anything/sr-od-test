@@ -23,7 +23,7 @@ tracked 亦退役:对账唯一合法时点 = 观察边界 kernel cw_reconcile,�
    失败形态(deployed-only 写回/双空读守卫)不置位 = 保持未观察;
 4. 接管置位:cw_loop._invalidate_tracked_on_takeover → False(接管检测确认点);
 5. 未观察访问跳过留痕:商店画面 op 收到策略关店 → 缺陷台账分键
-   shop_skipped_unobserved 显影 + 连续计数 +1,visit 以 (None, ledger)
+   shop_skipped_unobserved 暴露 + 连续计数 +1,visit 以 (None, ledger)
    正常收工(跳过非失败,交回外循环重判);
 6. 连续跳过熔断:计数达 SHOP_UNOBSERVED_SKIP_LIMIT → (round_fail, None)
    显式停(锚定失败出口,禁无限静默重试);
@@ -70,7 +70,7 @@ _SIG = ChannelSig(family='logic_action', actor='CwScreenPrep')
 
 
 def _spy_defects(monkeypatch) -> list[tuple]:
-    """桩掉缺陷台账写入(测试零真实副作用)+ 留调用记录供显影断言。"""
+    """桩掉缺陷台账写入(测试零真实副作用)+ 留调用记录供暴露断言。"""
     rows: list[tuple] = []
 
     def _rec(surface, kind, expected, observed, **kwargs):
@@ -373,7 +373,7 @@ def _run_visit_unobserved_host(monkeypatch, tmp_path, counters, *,
 
 
 def test_unobserved_visit_skips_with_defect_and_streak(monkeypatch, tmp_path):
-    """测试5 未观察访问跳过:策略关店 → 缺陷分键显影 + 连续计数 +1,visit
+    """测试5 未观察访问跳过:策略关店 → 缺陷分键暴露 + 连续计数 +1,visit
     以 (None, ledger) 正常收工(交回外循环重判,跳过非失败)。"""
     rows = _spy_defects(monkeypatch)
     counters: dict = {}
@@ -384,7 +384,7 @@ def test_unobserved_visit_skips_with_defect_and_streak(monkeypatch, tmp_path):
     assert rr is None and ledger is not None   # 正常收工交回外循环
     assert counters['shop_skipped_unobserved_streak'] == 1   # 计数落位
     assert any(kind == 'shop_skipped_unobserved'
-               for _s, kind, _e, _o in rows)   # 分键显影(防静默)
+               for _s, kind, _e, _o in rows)   # 分键暴露(防静默)
 
 
 def test_unobserved_skip_streak_limit_stops(monkeypatch, tmp_path):
@@ -400,7 +400,7 @@ def test_unobserved_skip_streak_limit_stops(monkeypatch, tmp_path):
     assert ledger is None   # 停机支形态
     assert counters['shop_skipped_unobserved_streak'] == 2
     assert any(kind == 'shop_skipped_unobserved_stop'
-               for _s, kind, _e, _o in rows)   # 熔断分键显影
+               for _s, kind, _e, _o in rows)   # 熔断分键暴露
 
 
 def test_observed_visit_resets_streak_and_no_defect(monkeypatch, tmp_path):

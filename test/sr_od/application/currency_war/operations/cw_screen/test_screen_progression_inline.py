@@ -3,9 +3,9 @@
 
 背景:11 推进型屏脱离共享骨架(原推进型基类,其骨架语义 = 「入口观察 →
 单次推进 → 重入观察裁决交回」),逐屏内联为「观察 node → 决策动作 node」
-两段直继承 SrOperation;武装箱选卡屏两 node 化并把卡名写点收编至
+两段直继承 SrOperation;武装箱选卡屏两 node 化并把卡名写点并入
 ``report_screen_box_pick_obs``(kernel 屏文件,report 函数级契约由
-test_screen_report_ports 测试承重,本文件不重复)。
+test_screen_report_ports 测试承担,本文件不重复)。
 
 测试的语义(测试纪律:只校验新形态的核心约定,先例 = test_screen_two_node_
 family.py):

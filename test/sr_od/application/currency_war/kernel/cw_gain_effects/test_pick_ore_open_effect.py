@@ -3,7 +3,7 @@ _make_ore_open_pick_effect + PICK_INVEST_EFFECTS 工厂条目;按被测模块拆
 目录规范落新位,先例 = 同级 cw_investments/cw_gain_chain 拆目录族)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
-T-316-huangjing-kuanggong.md(定稿,REVIEW-T316 免裁 7/7)§4 锁 3:
+T-316-huangjing-kuanggong.md(定稿,REVIEW-T316 无需用户决定 7/7)§4 锁 3:
 - 直构持卡 pick → spheres +1 '金' 点 + ore_rewards +1(获得链分派契约
   消费,注册表键集闭集内注册即生效);
 - level 缺读 → 授予矿无附着不炸(矿仍入世界,点击走既有缺项兜底);

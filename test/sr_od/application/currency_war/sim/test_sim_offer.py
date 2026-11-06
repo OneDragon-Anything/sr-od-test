@@ -7,7 +7,7 @@ M06/M05 + 节点选项生成 M16/M17/M18)。
   offer 同构 3 选 1/品质分布显式常量占位。选卡入账分支 = kernel 获得链
   (测试面迁 test_sim_backend.py,注入核随退役删除);品质改写已接入
   三选一抽样(判据测试 rewrite_slot_qualities_for_pick 槽位向量形接
-  全改写型 + settled 定谳型 + 银·金·彩槽位向量型 + kernel 游戏事实
+  全改写型 + settled 定论型 + 银·金·彩槽位向量型 + kernel 游戏事实
   名单一致性测试;「未建模」披露键已退役,名单常量位仍 = kernel
   cw_investments;刷新重掷单卡分支同契约);
 - 派生池与发牌:副本数真值(27/27/9/9/9)/held 星级派生不变量/≥9 清空
@@ -293,7 +293,7 @@ def test_rewrite_slot_qualities_full_rewrite_and_settled() -> None:
     """品质改写判据(槽位向量形,2026-10-19 用户裁定批自单品质形泛化,
     原型语义等价 = 单品质 = 三槽同向量特例):2026-10-14 用户裁定判据
     形状 = rewrite_picks == (1,2,3) 结构特征,2026-10-16 用户裁定头彩/
-    尾彩 settled 定谳(offer 级覆盖面)后同判据接入;2026-10-19 用户裁定
+    尾彩 settled 定论(offer 级覆盖面)后同判据接入;2026-10-19 用户裁定
     银·金·彩槽位向量(卡面即真值)恒接入固定日程取卡。时代族命中次
     返回 (q,)*3(彩虹 1/2/3 次 → 棱彩,第 4 次不存在于固定日程但判据
     仍闭)、黄金/白银同构族自动覆盖;头彩第 1 次 → (棱彩,)*3、第 2/3 次
@@ -308,11 +308,11 @@ def test_rewrite_slot_qualities_full_rewrite_and_settled() -> None:
     assert rewrite_slot_qualities_for_pick('黄金时代', 2) == ('金',) * 3
     assert rewrite_slot_qualities_for_pick('白银时代', 3) == ('银',) * 3
     assert rewrite_slot_qualities_for_pick('头彩', 1) == ('棱彩',) * 3, \
-        'settled 定谳接入第 1 次取卡'
+        'settled 定论接入第 1 次取卡'
     assert rewrite_slot_qualities_for_pick('头彩', 2) is None, '只登记序接入'
     assert rewrite_slot_qualities_for_pick('头彩', 3) is None, '只登记序接入'
     assert rewrite_slot_qualities_for_pick('尾彩', 3) == ('棱彩',) * 3, \
-        'settled 定谳接入第 3 次取卡'
+        'settled 定论接入第 3 次取卡'
     assert rewrite_slot_qualities_for_pick('尾彩', 1) is None, '只登记序接入'
     assert rewrite_slot_qualities_for_pick('尾彩', 2) is None, '只登记序接入'
     _slot_vec = ('银', '金', '棱彩')
@@ -328,10 +328,10 @@ def test_rewrite_slot_qualities_full_rewrite_and_settled() -> None:
 
 def test_rewrite_slot_qualities_unsettaled_partial_stays_out(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """未定谳部分型不接入判据的合成载体锁(尾彩 2026-10-16 定谳后,
-    现役 ENV_POOL_REWRITE 不再存在未定谳部分型实体,判据函数的
+    """未定论部分型不接入判据的合成载体锁(尾彩 2026-10-16 定论后,
+    现役 ENV_POOL_REWRITE 不再存在未定论部分型实体,判据函数的
     ``not rewrite_settled`` 分支失去实体载体——本锁以合成条目守护该
-    分支不被静默删除:未来新增部分改写型环境未定谳时仍须拒接)。注入
+    分支不被静默删除:未来新增部分改写型环境未定论时仍须拒接)。注入
     副本 + 直调沿 settled 闸锁同函数惯用法(test_cw_investments.py
     test_env_pool_rewrite_settled_gate 先例);判据函数调用时读 sim 模块
     命名空间绑定(cw_sim_backend.py import 处),patch 目标 = sim 模块。"""
@@ -340,7 +340,7 @@ def test_rewrite_slot_qualities_unsettaled_partial_stays_out(
         rewrite_quality='棱彩', rewrite_picks=(1,), rewrite_settled=False)
     monkeypatch.setattr(cw_sim_backend, 'ENV_POOL_REWRITE', forged)
     assert rewrite_slot_qualities_for_pick('合成部分型', 1) is None, \
-        '未定谳部分型不接入(settled 分支守卫)'
+        '未定论部分型不接入(settled 分支守卫)'
 
 
 def test_quality_rewrite_name_list_subset_of_registry() -> None:
@@ -572,7 +572,7 @@ def test_in_stage_refresh_keeps_rotated_probs() -> None:
 # ============================================================ 节点选项生成(M16/M17/M18)
 
 def test_encounter_options_structure_and_tier_bonus_truth() -> None:
-    """U22:档位集 = 四档序结构;遭遇等级加成四档 0/10/20/30 = 定谳
+    """U22:档位集 = 四档序结构;遭遇等级加成四档 0/10/20/30 = 定论
     真值(economy.md §9,唯一有档数值;表住 cw_sim_enemy 难度账域)。"""
     opts = encounter_options()
     assert len(opts) == 4

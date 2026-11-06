@@ -17,7 +17,7 @@ huobi.md §3 锁 3/锁 4/锁 5/锁 6/锁 9(REVIEW-T191 §四④ 同面;锁 6 直
 - 局终蒸发(锁 6):第 6 窗前条目留置蒸发不补发(无任何局终补发方,
   窗口前读 = 唯一触发面,锁 4 引擎侧已证);
 - 修饰局计数(锁 9):人身意外险插入补给窗照计数,第 6 个窗事件触发回流
-  (计数域 = 节点入口事件全型,T-106 判例)。
+  (计数域 = 节点入口事件全型,T-106 先例)。
 
 复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py 与
 sim/cw_sim_backend/test_p3_win_terminal.py(已登记拆分债文件,禁追加,
@@ -379,7 +379,7 @@ def test_modified_seq_inserted_window_counts(
     """修饰局计数(锁 9,引擎链):人身意外险插入型改写(P1 9→10,
     boss 前插补给)下,插入的补给窗照计数——第 6 个窗事件 = r9(插入
     补给窗)触发回流(evidence p/r 坐标对拍 + 节点 kind 对拍 = 插入窗
-    身份)。计数域 = 节点入口事件全型(T-106 判例)。"""
+    身份)。计数域 = 节点入口事件全型(T-106 先例)。"""
     _force_settle(monkeypatch, won=True)
     b = _backend()
     try:

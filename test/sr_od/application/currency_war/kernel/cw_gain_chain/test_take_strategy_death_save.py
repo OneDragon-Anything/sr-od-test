@@ -140,7 +140,7 @@ def test_latch_true_blocks_repeat() -> None:
 
 def test_hp_none_base_zero_write() -> None:
     """锁 2④:hp 基座未观察(None)→ None 零写(禁造假基座,
-    apply_hp_outcome 未观察零写同款防御;现役开局种子底座下不可达)。"""
+    apply_hp_outcome 未观察零写同款防御;现役开局初始值下不可达)。"""
     gs = _gs(hp=None)
     assert take_strategy_death_save(gs, logic_sig=_LSIG) is None, \
         'None 基座误发放'

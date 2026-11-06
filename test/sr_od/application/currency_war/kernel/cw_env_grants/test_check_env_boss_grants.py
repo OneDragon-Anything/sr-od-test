@@ -282,7 +282,7 @@ def test_binding_pool_consistent_with_registry() -> None:
 
 
 def _gs_with_unlocked(names: tuple[str, ...]) -> GameState:
-    """解锁态容器(在 _make_gs 基础上单口直写 unlocked_experts)。"""
+    """解锁态容器(在 _make_gs 基础上唯一入口函数直写 unlocked_experts)。"""
     gs = _make_gs(bench=[], done=_seed_done())
     gs.write_logic(gs.unlocked_experts, names, produced_by='test-seed',
                    evidence='test:unlock', sig=_SIG_SIM)

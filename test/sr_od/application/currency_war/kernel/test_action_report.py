@@ -658,8 +658,8 @@ def test_equip_write_sides_report_form_final_values() -> None:
     assert EQUIP_WRITE_SIDES['精密拆装扳手'] == \
         'contribution:equip_wrench_duplicate_gold', '金面不变'
     assert EQUIP_WRITE_SIDES['好运令牌'] == 'bridge:grant_equip_item', \
-        '维持 R9 挂账(不虚报已接通)'
-    _validate_equip_write_sides()   # 词表封闭 + 落码目标已登记
+        '维持 R9 待办(不虚报已接通)'
+    _validate_equip_write_sides()   # 词表封闭 + 已写进代码的目标已登记
 
 
 def test_equip_write_sides_report_form_rejects_unknown_target(
@@ -838,7 +838,7 @@ def test_buy_card_unknown_proposal_fails_without_slot_fallback(monkeypatch):
 def test_buy_card_slot_out_of_range_fails(monkeypatch):
     """B 层·槽号越界:payload 槽号 7 对 5 点表 → op 内守卫断言
     AssertionError(信息含 slot 与点表长,槽号-点表不一致 = 建档/数据
-    漂移上游显影);零点击零记账。"""
+    漂移上游暴露);零点击零记账。"""
     deep = ShopCard(x=70, slot=7, name='停云', faction='?', cost=2, star=1)
     op, ledger, clicks = _buy_op_env_ex(
         monkeypatch,
@@ -884,7 +884,7 @@ def _wear_env(monkeypatch: pytest.MonkeyPatch) -> tuple:
     ex._bench_pts = [Point(300, 800)] * 9
     ex._front_pts = [Point(300 + i * 140, 400) for i in range(4)]
     ex._back_pts = [Point(300 + i * 140, 620) for i in range(6)]
-    # 坐标边注入(替身缝 = 执行器实例方法;等价于 screen_info 命中形态)。
+    # 坐标边注入(替身函数接缝 = 执行器实例方法;等价于 screen_info 命中形态)。
     ex._equip_slot_drag_point = lambda row, slot: Point(420, 421)
     ex._owned_grid_locate = lambda name: Point(1768, 247)
     env = PrepExecEnv(op=op, match=ctx.cw_match, executor=ex)
@@ -989,7 +989,7 @@ def _deploy_env(session: object | None):
     return env
 
 
-# (test_deploy_move_tracks_immediately_on_emit 已随 CwActionDeployMoveOp 戊批收编删除:
+# (test_deploy_move_tracks_immediately_on_emit 已随 CwActionDeployMoveOp 戊批并入后删除:
 #  发出即记账语义 = move_unit 统一拖动上报,镜像测试见 cw_action_report/
 #  test_move_unit.py。)
 

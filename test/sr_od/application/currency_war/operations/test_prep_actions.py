@@ -9,7 +9,7 @@ round 结果成功态 = ``''``;round_fail = status 经闭集映射取受阻码�
 整体证据承接;``未生效:*`` 族随 StartBattle 弹窗 area 缺失检查删除零
 供给退役,terminal-fail-status 迭代)。
 
-驱动 = 真 executor + 真 kernel 写路径(容器供给口不桩,session 冷建),
+驱动 = 真 executor + 真 kernel 写路径(容器供给口不桩,session 每局全新创建),
 出战 op 的宿主替身/area_center 按剧本应答(先例 =
 operations/cw_op/test_prep_action_ops.py 出战段桩形);零真实 IO。
 """

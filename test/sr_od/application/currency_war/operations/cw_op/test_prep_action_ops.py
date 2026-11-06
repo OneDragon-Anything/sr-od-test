@@ -1,8 +1,8 @@
 """CW 备战动作 op 测试面(执行器机械半 + 逻辑态上报 + 发射面装载)。
 
-规则正本 = docs/develop/sr_od/application/currency_war/flow/
+规则权威版本 = docs/develop/sr_od/application/currency_war/flow/
 action-logic-state.md 与 flow/logic-updates/prep-executor-actions.md;
-op 形态正本 = flow/action_ops.md(动作 op = 机械执行后直调自己的上报
+op 形态权威版本 = flow/action_ops.md(动作 op = 机械执行后直调自己的上报
 函数,映射单一源 = kernel/cw_action_report 同名上报函数族,op-layer.md
 §1.2)。测试面三组(全部运行时行为测试,源码扫描测试禁止,AGENTS.md
 §10.4;kernel/执行器级用桩宿主,零真实 IO):
@@ -239,7 +239,7 @@ def test_vocab_actions_all_have_logic_state_projection(
     - **合法零写集**:CwActionOpenBoxParam(R7 终结化)/CwActionLuckyTokenUse
       Param(判据面 fail-closed 永不准入,上报零写留证)。
     裁决注记:CwActionWearEquipParam 原在零写集(聚合口形态),上报
-    函数族起穿戴 = 发出即记账 owned −1(已登记才减,执行侧效果收编进
+    函数族起穿戴 = 发出即记账 owned −1(已登记才减,执行侧效果并入
     上报),按新事实移入容器写集;工具六类原在零写集(零写占位),
     tool-gain-report 迭代升格容器写。函数名机械推导(snake 规约同
     test_action_report)。"""
@@ -402,7 +402,7 @@ def test_levelup_executes_single_click_per_frame(monkeypatch):
 def test_moveunit_slot_out_of_range_guard_assertion(monkeypatch):
     """MoveUnit 落位载荷越界直驱 = op 内守卫断言 AssertionError
     (terminal-fail-status QD 终裁:参数违法类校验收拢 op 内;旧
-    DeployMove op 守卫随戊批收编,等价面 = 统一拖动 op 同款守卫)。"""
+    DeployMove op 守卫随戊批并入,等价面 = 统一拖动 op 同款守卫)。"""
     monkeypatch.setattr('time.sleep', lambda _s: None)
     from sr_od.application.currency_war.operations.cw_op.cw_move_unit_action import (
         CwActionMoveUnitOp,
@@ -570,7 +570,7 @@ def test_prep_sell_gold_booked_exactly_once_across_seam_and_projection():
     (旧 apply_op_effect)与容器投影,两条分支各记一次 +refund → 逻辑金系统
     性虚高,下帧实读倒挂(journal 实证 −2,run_20260915_070645)。修后
     容器唯一写点 = 卖出上报函数,确认口(apply_confirm_effect,dict 确认
-    族专用)对动作参数零入账(复返即红:确认口若再收编动作分支即两条分支
+    族专用)对动作参数零入账(复返即红:确认口若再纳入动作分支即两条分支
     双记)。"""
     from sr_od.application.currency_war.kernel.cw_economy import (
         bench_char_cost,
@@ -603,7 +603,7 @@ def test_prep_sell_gold_booked_exactly_once_across_seam_and_projection():
 def test_wear_equip_single_mechanical_drag_no_diff_verification(monkeypatch):
     """CwActionWearEquipParam 单次机械拖拽,无补救链重试(用户裁定:动作 op = 机械
     执行,判效/重试禁入动作层):发出即记账(emitted=True),拖后零
-    落地判定,拖拽静默不生效由观察侧 reconcile 对账显影。
+    落地判定,拖拽静默不生效由观察侧 reconcile 对账暴露。
     (monkeypatch time.sleep = 拖后固定等待空等,真机等待节奏非本测试辖面。)"""
     monkeypatch.setattr('time.sleep', lambda _s: None)
     from sr_od.application.currency_war import prep_actions as pa
@@ -667,7 +667,7 @@ def test_open_bookcard_executor_mechanical(monkeypatch):
     ex = _make_executor(controller, [], cw_match=cw_match,
                         screen_loader=loader)
     detail, emitted = ex._open_bookcard(CwActionOpenBookcardParam())
-    assert emitted and '槽2' in detail, '现算首件槽显影显式槽号'
+    assert emitted and '槽2' in detail, '现算首件槽显示显式槽号'
     assert [(p.x, p.y) for p in controller.clicks] == [(145, 912)], \
         '单击落备战栏建档坐标中心'
     assert len(controller.moves) == 1   # bug#1 缓解口径:先移后点
@@ -947,7 +947,7 @@ def test_emission_resolves_container_index_fail_closed():
 
 
 def _emit_with_bench(bench_slots: list[BenchSlot]):
-    """观测 bench 后调 entry.emit(臂① 早返回面;session = cw4 冷建)。"""
+    """观测 bench 后调 entry.emit(臂① 早返回面;session = cw4 每局全新创建)。"""
     from test.sr_od.application.currency_war._cw_helpers import cw4_session
 
     from sr_od.application.currency_war.strategies.impl.mandate_v1 import entry
@@ -966,7 +966,7 @@ def test_entry_card_arms_emit_from_bench_kind():
     'bookcard' → entry ① 卡片臂发射 CwActionOpenBookcardParam(物理槽号
     = 下标 +1);优先序卡先于箱(旧「入口清场先于观察」全局序)。
     (历史注:「trial_card」臂随幻影机制撤销——备战栏发光金卡 = 动画帧
-    误判,用户定谳 2026-09-19,禁再建模。)"""
+    误判,用户定论 2026-09-19,禁再建模。)"""
     # bookcard 槽 → OpenBookcard(slot=下标+1)
     out = _emit_with_bench([BenchSlot(kind='unit', unit=Unit(
         char_id='甲', star=1, equips=[])),
@@ -1068,7 +1068,7 @@ def test_start_battle_click_sequence_and_envelope(monkeypatch):
       (交回外循环重判,不炸);
     - 包络分支:经注册表分派写 ``executor.last_launch_ok`` 旁路(点击序列
       已执行语义)与机械摘要 ``last_detail``,执行缝金差恒 0,薄委托
-      替身缝返回序保持原 (ok, detail)。"""
+      替身函数的接缝(stub seam)返回序保持原 (ok, detail)。"""
     from test.harness.fixture_controller import fast_sleep
 
     from sr_od.application.currency_war.operations.cw_op.cw_start_battle_action import (
@@ -1131,7 +1131,7 @@ def test_start_battle_click_sequence_and_envelope(monkeypatch):
         ex.execute(CwActionStartBattleParam())
     assert ex.last_launch_ok is True
     assert '出战已点击' in ex.last_detail
-    # 薄委托替身缝:返回序保持原 (ok, detail)
+    # 薄委托替身函数接缝:返回序保持原 (ok, detail)
     assert ex._start_battle()[0] is True
 
 

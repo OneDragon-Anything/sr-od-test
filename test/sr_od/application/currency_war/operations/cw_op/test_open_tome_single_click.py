@@ -130,7 +130,7 @@ def test_explicit_slot_single_clicks_bench_center_and_reports(
     op = _make_op(test_context, env, CwActionOpenTomeParam(slot=2))
     rr = _run(test_context, op)
     assert rr.is_success, '单击开典籍成功(选中即开启)'
-    assert rr.status == '开典籍槽2', 'round 摘要显影显式槽号'
+    assert rr.status == '开典籍槽2', 'round 摘要显示显式槽号'
     assert _env_controller(env).clicks == [(145, 912)], \
         '恰一次点击落备战栏建档坐标中心(双击序列已退役)'
     assert len(_env_controller(env).moves) == 1, '防吞点击:先移后点'
@@ -143,7 +143,7 @@ def test_none_slot_resolves_first_tome_and_rebuilds_param(
         test_context, monkeypatch):
     """slot=None 现算(design §2.1-1/§2.5):gs 容器现算首件槽(与决策层
     同源同规则,下标+1)→ resolved slot 重建 param(入参对象不改写,
-    journal/上报显影显式槽号)→ 点击落现算槽、上报按显式槽腾席。"""
+    journal/上报显示显式槽号)→ 点击落现算槽、上报按显式槽腾席。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         game_state_of,
     )
@@ -159,7 +159,7 @@ def test_none_slot_resolves_first_tome_and_rebuilds_param(
     op = _make_op(test_context, env, param_in)
     rr = _run(test_context, op)
     assert rr.is_success and rr.status == '开典籍槽3', \
-        '现算首件槽 = 容器下标+1,round 摘要显影'
+        '现算首件槽 = 容器下标+1,round 摘要显示'
     assert param_in.slot is None, '落地机制 = resolved slot 重建 param,不改写入参对象'
     assert _env_controller(env).clicks == [(155, 912)], '点击落现算槽建档坐标'
     assert gs.bench.value.slots[2].kind == 'empty', '上报按显式槽腾席'

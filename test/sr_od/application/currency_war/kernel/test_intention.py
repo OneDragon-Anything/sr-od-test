@@ -106,7 +106,7 @@ def _ju23_session() -> StrategySession:
     state_of(sess).target_comp = _JU23_COMP
     # 宿主归一接入调用(锁定局意图成立的前提):decide_shop_action 内
     # line_members_view(gs) 读 gs 侧状态,生产接入调用 = cw_strategy.py 的
-    # state setter;未接通时 gs 侧冷建未锁态,货架资格臂(11 号稿 §1)
+    # state setter;未接通时 gs 侧每局全新创建未锁态,货架资格臂(11 号稿 §1)
     # 按未锁评估货架——旧未锁分支空买面无行为面,
     # 接入调用缺陷随资格臂显形。
     from sr_od.application.currency_war.kernel.cw_game_state import (

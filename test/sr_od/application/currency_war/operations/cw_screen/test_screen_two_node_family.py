@@ -2,12 +2,12 @@
 
 测试的语义(测试纪律:只校验新形态的核心约定,先例 = test_obs_arch_event_
 screens.py 盛会之星段;report 函数级契约由 test_screen_report_ports 测试
-承重,本文件不重复):
+承担,本文件不重复):
 
 - **观察上报接入调用测试**(表驱动;命运卜者双域拆独立测试):观察 node 读链桩化 →
   驱动 observe →
   report 经屏文件落容器(容器终值);盛会之星接入调用由 obs_arch_event_screens
-  同文件测试承重(懒读保真,不在本表);
+  同文件测试承担(懒读保真,不在本表);
 - **入口门语义测试**(带门四屏):门 miss = round_fail 交回外循环重判,
   文案沿用现役,且不进读链(obs 不装载);
 - **chosen 写时机测试**(祈愿试炼代表):确认已发 → 标识不在 = 选卡落地
@@ -163,7 +163,7 @@ def test_observe_reports_container_per_screen(test_context, monkeypatch,
     monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
     if cls_name in ('CwScreenPartner', 'CwScreenWishTrial', 'CwScreenBookcard',
                     'CwScreenExpertInvite'):
-        # 带门屏:门桩放行(门 miss 语义由下一测试承重)
+        # 带门屏:门桩放行(门 miss 语义由下一测试承担)
         monkeypatch.setattr(op, 'round_by_find_area',
                             lambda s, sc, a, **k: _Area(True), raising=False)
     setup(op, monkeypatch)
@@ -950,7 +950,7 @@ def _setup_partner_act(test_context, monkeypatch, session, decide,
         raising=False)
     op = mod.CwScreenPartner(test_context)
     monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
-    # 门桩放行(入口门/未选中提示两读全部命中;门 miss 语义由既有测试承重)。
+    # 门桩放行(入口门/未选中提示两读全部命中;门 miss 语义由既有测试承担)。
     monkeypatch.setattr(op, 'round_by_find_area',
                         lambda s, sc, a, **k: _Area(True), raising=False)
     monkeypatch.setattr(

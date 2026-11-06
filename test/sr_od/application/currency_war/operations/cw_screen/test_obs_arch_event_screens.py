@@ -3,7 +3,7 @@
 两屏均已迁移「观察 node → 决策动作 node」直继承 SrOperation 形态(盛会之星
 = 节点循环 overlay 环形;遭遇 = 带分支刷新链的全形态)。测试的语义(测试
 纪律:只校验新形态的核心约定;report 函数级契约由 test_screen_report_ports
-承重,本文件不重复):
+承担,本文件不重复):
 
 - **入口门语义测试**(遭遇):画面身份门 miss = round_fail 交回外循环重判,
   文案沿用现役,且不进读链(obs 不装载);盛会之星 = 节点完成门(overlay
@@ -23,7 +23,7 @@
   3.3 扩围):选卡确认链派发后 round_success 终结交回(零重入裁决轮);
   空候选 = 零点击终结交回(禁盲选派发确认——不可逆消耗);闸拒绝
   重调落选卡后同样终结。chosen_encounter 发射即写契约(动作侧 report
-  函数级)= test_screen_report_ports 承重,本文件不重复。
+  函数级)= test_screen_report_ports 承担,本文件不重复。
 - **决策出口守卫测试**(遭遇):决策无有效输出(decide_encounter 返回
   词表外/None)= 具名 round_fail 零盲发(op-layer §1.1 出口③);pick
   idx 越界 = 守卫断言 AssertionError(§1.3 禁钳位)——两守卫均派发前
@@ -403,7 +403,7 @@ def test_encounter_refresh_gate_mismatch_round_fail_redispatch(
     migration design §2.5):拒绝后重调仍返回刷新建议(刷新锚点读缺面)
     → round_fail 交回——失败计入外循环重派上限
     (``OP_FAIL_REDISPATCH_LIMIT`` 只计连续 fail,零点击 round_success
-    交回不计数且清零计数窗,故改 fail 有界收敛;设计定谳「零点击交回」
+    交回不计数且清零计数窗,故改 fail 有界收敛;设计定论「零点击交回」
     对「锚持续读缺 ∧ 建议刷恒成立」无防护)。红 = 零点击 round_success
     终结交回回潮(无界重进循环面)/ 拒绝-重调环回潮漏处置死循环。"""
     clicks, dispatches = _refresh_fixture(test_context, monkeypatch)
@@ -423,7 +423,7 @@ def test_encounter_refresh_gate_mismatch_round_fail_redispatch(
 
 def test_claim_encounter_reward_branches(
         test_context, monkeypatch) -> None:
-    """奖励兑现回调测试(迭代 …3.3 扩围 design §2.4,R1 复攻定谳后形态):
+    """奖励兑现回调测试(迭代 …3.3 扩围 design §2.4,R1 复攻定论后形态):
     判遭遇 = 双证(node 镜像 token 'encounter' ∧ settlement_ring 尾行
     node_type='遭遇')——单分支不满足即拒(ring-mismatch 臂 = 镜像遭遇但
     ring 尾行普通战斗的陈旧镜像防线);达标 = progress_delta>0 单判。
@@ -613,13 +613,13 @@ def test_megastar_redispatch_no_reclick_and_gate_reset(
     - 门 miss(离开巨星 overlay)→ 节点完成即复位,标记不跨节点保持
       (巨星一局可多次触发);
     - 状态对象缺席(裸 session,第三方策略面)→ 读退 False、写跳过,
-      执行层不冷建策略器状态(禁 impl ``state_of`` 装配语义);
+      执行层不做每局全新创建策略器状态(禁 impl ``state_of`` 装配语义);
     - chosen_megastar = 选择点留守写端(动作事实边界,不进 report),
       首派发选中时点落容器;
     - 派发 env = idx-only 构造(选择坐标观察上报收敛):零 target 传参,
       候选点击坐标由动作 op 自容器取(op-layer.md §1.1「选择坐标观察
       上报」)。
-    红 = 重入再触发选中 / 门 miss 不复位 / 缺席态炸错或冷建 / chosen 断流
+    红 = 重入再触发选中 / 门 miss 不复位 / 缺席态炸错或每局全新创建 / chosen 断流
     / 派发 env 回潮带 target 坐标。"""
     import sr_od.application.currency_war.operations.cw_op.cw_action_registry as reg_mod
     from sr_od.application.currency_war.kernel.cw_events import MegastarOption
@@ -683,7 +683,7 @@ def test_megastar_redispatch_no_reclick_and_gate_reset(
                         lambda scr, s, a, **k: _Area(False))
     assert op._in_node(_FRAME) is False, '门 miss = 节点完成'
     assert st.megastar_clicked is False, '门 miss 复位(标记不跨节点保持)'
-    # ④ 状态对象缺席:读退 False、写跳过、不冷建(裸 session 可完整跑动作)
+    # ④ 状态对象缺席:读退 False、写跳过、不做每局全新创建(裸 session 可完整跑动作)
     session2 = StrategySession()   # strategy_state 缺省 None
     monkeypatch.setattr(test_context, 'cw_match',
                         SimpleNamespace(session=session2,
@@ -699,7 +699,7 @@ def test_megastar_redispatch_no_reclick_and_gate_reset(
     assert dispatches == [True, False, True], (
         '缺席态读退 False → 照常触发选中(无宿主防重入)')
     assert env_targets[-1] is None, '缺席态派发 env 仍 idx-only 零 target'
-    assert session2.strategy_state is None, '缺席态写跳过,执行层不冷建'
+    assert session2.strategy_state is None, '缺席态写跳过,执行层不做每局全新创建'
 
 
 # ==================== 盛会之星(局外无早退支 + 观察标准化门)====================
@@ -904,7 +904,7 @@ def test_megastar_lcs_tie_resolves_domain_first(
         test_context, monkeypatch) -> None:
     """LCS 同分确定性测试(设计钉面 = 标准化门评分循环「固定序,平分取序
     首」):桩控域内全员 LCS 同分(最高/次高分差 0)+ 边距常量桩 0 放行
-    (边距拒判本身由歧义测试承重,本测试只校验平分取向的稳定序确定性)→ 转换
+    (边距拒判本身由歧义测试承担,本测试只校验平分取向的稳定序确定性)→ 转换
     放行且取域序首规范名(静态域 = 注册表序)。红 = 平分结果随内部容
     器序漂移(同分不可确定 = 识别结果不稳定)。"""
     import sr_od.application.currency_war.kernel.cw_obs_core as _oc
@@ -1007,7 +1007,7 @@ def test_megastar_read_sift_cross_validate(monkeypatch) -> None:
     ① SIFT 命中且与 OCR 转换名一致 → 放行;
     ② 不一致 → 置 ``READ_FAILED`` 哨兵,过标准化门判观察失败(识别质量
       不足以区分);
-    ③ SIFT 未命中(None = 库缺新角色形态)→ OCR 转换名承重(不硬依赖);
+    ③ SIFT 未命中(None = 库缺新角色形态)→ 由 OCR 转换名决定(不硬依赖);
     ④ OCR 名域外 → 原值留列表过门,标准化门既有判法判观察失败。
     红 = 不一致放行 / 未命中误判失败 / 域外名放行。"""
     import sr_od.application.currency_war.obs.cw_megastar_obs as mo
@@ -1028,11 +1028,11 @@ def test_megastar_read_sift_cross_validate(monkeypatch) -> None:
     assert mo.standardize_megastar_options(opts2, None) is None, (
         '哨兵过标准化门判失败')
 
-    # ③ 未命中 → OCR 转换名承重
+    # ③ 未命中 → 由 OCR 转换名决定
     opts3 = mo.read_megastar_options(ctx, _stub_screen(),
                                      identify=lambda _crop: None)
     assert opts3 is not None and [o.char_id for o in opts3] == ['花火'], (
-        f'未命中 OCR 承重:{opts3!r}')
+        f'未命中由 OCR 决定:{opts3!r}')
 
     # ④ OCR 名域外 → 原值过门判失败(标准化门既有判法;「乱码」域外由
     #   既有失败测试 test_megastar_observe_standardize_failure_fails_clean
@@ -1088,7 +1088,7 @@ def test_megastar_observe_reports_xy_and_standardize_passthrough(
     """观察上报 xy 透传测试(选择坐标观察上报收敛,规范 = screens/op-layer.md
     §1.1「选择坐标观察上报」):read 产每卡自带 xy(标签中心 x + 已登记
     卡身线 y,候选检测重做批新坐标模型;xy 生产正确性由候选检测重做批
-    各测试承重,本测试不重复),经标准化门转换后 xy 原值透传(转换只动名字,
+    各测试承担,本测试不重复),经标准化门转换后 xy 原值透传(转换只动名字,
     名字与坐标同进退),经真实观察链落容器后 xy 仍在(动作 op 取点输入)。
     红 = 标准化剥坐标 / 观察链容器终值丢 xy。"""
     from sr_od.application.currency_war.kernel.cw_events import MegastarOption
@@ -1374,7 +1374,7 @@ def _make_supply_flow_op(cls, *, in_node: bool, do_action_calls: list):
     """补给流转形态测试装配(bypass __init__):round_by_find_area 程序化回
     in_node;``_do_action`` 桩只记调用并回 wait 形态轮次结果(原 runnode
     等价测试并入,校验 act 流转形态而非动作内容——动作内容由上两个测试
-    承重;决策链接入调用迭代起动作体自产轮次结果,act 透传)。"""
+    承担;决策链接入调用迭代起动作体自产轮次结果,act 透传)。"""
 
     class _FakeArea:
         def __init__(self, ok: bool): self.is_success = ok

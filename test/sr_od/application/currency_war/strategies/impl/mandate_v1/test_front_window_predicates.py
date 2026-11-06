@@ -23,7 +23,7 @@ narrow_frame 旗断言/press_narrowed_* 分键)已随 P88 全套退役删除
 ——comp-structure-unification 3.4,press-stockpile §3:富余金占位
 买入通道并入 M6 一星兜底带,收窄集 S_spec 与域谓词源
 (swap_transition_narrow_frame/kernel swap_bond_gate_domain_of)整删;
-闭集对账正本 = test_sell_window_launch::test_launch_cause_closed_set
+闭集对账权威版本 = test_sell_window_launch::test_launch_cause_closed_set
 (键集断言,收窄集对账段同批删除)。
 """
 from __future__ import annotations
@@ -156,8 +156,8 @@ class TestUnlockedFrameUntouched:
     def test_f9_unlocked_frame_untouched(self):
         """万金油件(花火)不再经序 1 义务面自动买入(万金油退出义务
         买入面【拍,总纲 §2.7 申报②】,统一让位优先级迭代 3.4——原乙臂
-        收编形态〔枢纽件经序 1 成员面照常发射〕随万金油项删除废止)、
-        hub_option 买因零显影。(原收窄旗断言与收窄哨兵键断言已随 P88
+        编入形态〔枢纽件经序 1 成员面照常发射〕随万金油项删除废止)、
+        hub_option 买因零暴露。(原收窄旗断言与收窄哨兵键断言已随 P88
         退役删除,comp-structure-unification 3.4。)"""
         st = _hub_state(shop_cards=[_hub_card('花火', cost=2)])
         sess = _hub_session(IntentionState())

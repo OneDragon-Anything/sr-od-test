@@ -266,7 +266,7 @@ def _gs_with_bench_trailblazer(deployed_taken: bool):
 def test_move_unit_report_normalizes_trailblazer_form_to_target_row() -> None:
     """``move_unit`` 统一拖动上报有归一(benchchar-retirement P3 缺陷修复
     申报面,design §3 不变量 5;旧 swap/deploy_move 两上报同源归一,随
-    戊批收编并入 move_unit):开拓者拖上场 → 排变、形态(char_id)
+    戊批并入 move_unit):开拓者拖上场 → 排变、形态(char_id)
     同步切目标排;占槽目标 = 交换形态下归一同源。"""
     # 空槽直落形态
     gs = _gs_with_bench_trailblazer(deployed_taken=False)

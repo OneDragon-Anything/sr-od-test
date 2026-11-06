@@ -4,7 +4,7 @@ registry.py)。
 
 测试面依据 = 迭代设计 designs/T-182-gudinglicai.md §2.1/§2.2/§2.6/§4
 (锁 1/锁 2/锁 8;锁 3 可达面按裁定 B 改形)+ 用户裁定书 T-182 节
-(2026-11-01 拍定:中途拿卡时当前已开始的位面,其位面段奖励照常发放
+(2026-11-01 用户决定:中途拿卡时当前已开始的位面,其位面段奖励照常发放
 〔全额〕,后续位面照常)。卡面官方原文(cw_invest_data.py:130 逐字):
 「现在以及每个位面开始时，获得4经验值和2次免费刷新。」
 
@@ -14,8 +14,8 @@ registry.py)。
   显式扩面改写,原冻结断言 T-183 批随批解除);
 - EffectSpec 条目锁(锁 2):trigger=PLANE_START / duration=PERMANENT /
   category=STATE / payload is STRATEGY_ECONOMY['固定理财'](同一实例)
-  / pending=False(二义经用户裁定拍定补发,定谳非冻结,notes 记裁定,
-  T-180 星变同判例)/ notes 含两条效果条目分段与裁定语义;
+  / pending=False(二义经用户裁定补发,定论非冻结,notes 记裁定,
+  T-180 星变同先例)/ notes 含两条效果条目分段与裁定语义;
 - 引擎通道闭集锁:双字段入 _ENGINE_CHANNEL_SINGLE_FIELDS(周期发放 =
   持续通道,非一次性/结构登记排除桶);
 - 待建模登记锁(锁 8):两行存续 + 描述非空(闭集断言④点名,删行即
@@ -71,7 +71,7 @@ def test_gudinglicai_registration_row_four_fields() -> None:
 
 def test_gudinglicai_effect_spec_entry() -> None:
     """EffectSpec 条目锁(锁 2,裁定 B 形):五元组 + 单一实例 payload +
-    pending 撤除(定谳记 notes)+ notes 两条效果条目分段与裁定语义。"""
+    pending 撤除(定论记 notes)+ notes 两条效果条目分段与裁定语义。"""
     spec = STRATEGY_EFFECTS[_CARD]
     assert spec.id == '201801'
     assert spec.trigger is TriggerKind.PLANE_START
@@ -80,7 +80,7 @@ def test_gudinglicai_effect_spec_entry() -> None:
     assert spec.payload is STRATEGY_ECONOMY[_CARD], \
         'payload 引注册行同一实例(单一源)'
     assert spec.pending is False, \
-        '所在位面补发读法经用户裁定(2026-11-01)拍定补发,定谳非冻结'
+        '所在位面补发读法经用户裁定(2026-11-01)补发,定论非冻结'
     for token in ('位面段', '补发', '2026-11-01'):
         assert token in (spec.notes or ''), f'notes 承载裁定语义缺 {token}'
 

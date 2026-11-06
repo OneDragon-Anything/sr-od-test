@@ -9,7 +9,7 @@ roster-plane1-union design §2.6 换源不消亡)。
 
 观测面 = ``prep_k_fallback_<band>`` 计数键(写入端单一源 = entry.emit
 顶段;decision_payload 同参重推导不写计数)。种子纪律 = 容器即 session
-(生产形态 session/gs 同一对象;一次性容器经 cw4_gs(None) 冷建)。
+(生产形态 session/gs 同一对象;一次性容器经 cw4_gs(None) 每局全新创建)。
 """
 from __future__ import annotations
 

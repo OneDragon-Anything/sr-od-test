@@ -108,7 +108,7 @@ def _locked_frame(*, bench, deployed, gold: int, level: int,
 
 
 def _full_line_bench(*, jizi_star: int = 2, fillers: int = 5) -> list:
-    """席满线底座:姬子 jizi_star 星(追 3★ 目标)+ 三月七/花火/瓦尔特
+    """席满线基础数据:姬子 jizi_star 星(追 3★ 目标)+ 三月七/花火/瓦尔特
     达标 + 2★ 填充(无 1★ ⇒ 零燃料,目标可买席位腿恒假)。"""
     fill = _fillers(fillers)
     return [_bc(_TARGET, star=jizi_star), _bc('三月七', star=2),

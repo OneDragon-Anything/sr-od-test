@@ -111,7 +111,7 @@ def _make_sp_gs(*, bench_units: list[tuple[str, int]],
                 ore_open_total: int = 0):
     """战技点契约采晶矿场景(直构容器,观察种子):三点批 + 附着值
     (点1 金 / 点2 角色〔银狼,与种子单位异名防合并〕/ 点3 金——席满
-    场景第 3 点恒跳过不采);bench 按参组装;计数经单口播种。"""
+    场景第 3 点恒跳过不采);bench 按参组装;计数经唯一入口函数播种。"""
     gs = game_state_of(cw4_session())
     gs.observe(gs.active_env, _SP_ENV, sig=_SEED_SIG)
     slots = [BenchSlot(kind='unit', unit=Unit(char_id=c, star=s))

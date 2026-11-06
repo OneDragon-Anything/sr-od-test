@@ -511,7 +511,7 @@ def test_check_level_expiry_cleans_old_plane(
 
 
 def test_seed_and_restore_type_roundtrip() -> None:
-    """开局种子底座:三域恒非 None(空 dict/空元组);快照→恢复类型不变:
+    """开局初始值:三域恒非 None(空 dict/空元组);快照→恢复类型不变:
     ore_rewards 仍 dict[str, OreReward]、声明两域仍 tuple-of-tuple
     (不登记则 dict-of-dicts/list-of-lists 静默类型漂移)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
@@ -593,7 +593,7 @@ def _coll_gs(*, bench: list[tuple[str, int]] | None = None,
 
 
 def _attach(gs: GameState, rewards: dict[str, OreReward]) -> None:
-    """预置 ore_rewards 附着域(挂接入口同款随机态直写,测试底座)。"""
+    """预置 ore_rewards 附着域(挂接入口同款随机态直写,测试基础数据)。"""
     gs.write_logic_rand(gs.ore_rewards, dict(rewards),
                         produced_by='test-seed', sig=_COLLECT_SIG)
 

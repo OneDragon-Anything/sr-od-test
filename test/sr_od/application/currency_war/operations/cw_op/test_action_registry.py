@@ -118,9 +118,9 @@ from sr_od.operations.sr_operation import SrOperation
 # 终态契约动作类型的注册豁免集(终态契约 landing 测试规格:白名单成员
 # 要么有注册行、要么在豁免集——无 op 行例外申报):三刷新动作
 # (handler 自管点击链;attack4 M6 裁定 (a):同型豁免)。
-# (HoldFrame 曾在豁免集,随 2026-09-20 用户裁定收编进
+# (HoldFrame 曾在豁免集,随 2026-09-20 用户裁定并入
 #  CwActionObsParam(scope='outer_loop') 删除;7 pick 类已随
-#  pick-op-unify 批收编入表——豁免集现形 = 三刷新动作。)
+#  pick-op-unify 批并入表——豁免集现形 = 三刷新动作。)
 _TERMINAL_CONTRACT_REGISTRY_EXEMPT = (
     CwActionRefreshNodeOptionsParam,
     CwActionRefreshSupplyParam,
@@ -261,7 +261,7 @@ def test_registry_covers_unified_vocab_and_pick_types():
 
 
 def test_pick_rows_resolve_class_and_instance_consistently():
-    """pick 行收编面(终态契约 §2.2 换键名:策略器产出 = 词表子类型;
+    """pick 行并入面(终态契约 §2.2 换键名:策略器产出 = 词表子类型;
     pick-op-unify 批起分批扩至全 12 类):类级解析与实例级工厂解析同
     op 类(行序 is-a 语义一致;实例级仅本测试构造,注册完备测试本体不
     构造)。"""

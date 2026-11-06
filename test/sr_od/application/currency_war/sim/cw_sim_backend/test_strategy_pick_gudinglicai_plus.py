@@ -4,8 +4,8 @@ apply_strategy_plane_refire_xp 选卡拍补发腿 + _apply_strategy_plane_start_
 test_strategy_pick_gudinglicai.py 姊妹形态参数化 +本卡)。
 
 测试面依据 = 迭代设计 designs/T-183-gudinglicai-plus.md §4(锁 4 位面段
-行为锁)+ 用户裁定书 T-182 节同判(2026-11-01 拍定:中途拿卡时当前已
-开始的位面,其位面段奖励照常发放〔全额〕,后续位面照常——两卡一次拍定):
+行为锁)+ 用户裁定书 T-182 节同判(2026-11-01 用户决定:中途拿卡时当前已
+开始的位面,其位面段奖励照常发放〔全额〕,后续位面照常——两卡一次用户决定):
 - (1,3) 拿卡局:拿卡拍 = 即时段(xp_instant +6/burst +3)+ 位面段补发
   (+6/+3,P1 已开始)双发各独立 evidence 笔;后续 (2,1)/(3,1) 位面
   开始照常(刷新支 kernel 桥 +3/位面、XP 支 sim 窗腿 +6/位面);

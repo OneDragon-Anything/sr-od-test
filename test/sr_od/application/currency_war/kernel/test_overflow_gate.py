@@ -1,6 +1,6 @@
 """备战席溢出门测试面(2026-09-15,R11 用户定案)。
 
-语义正本 = flow/action-logic-state.md §2.4 溢出条件行 + game_state/fields.md
+语义权威版本 = flow/action-logic-state.md §2.4 溢出条件行 + game_state/fields.md
 §3.2.21;实机建档 = docs/game/screens/currency_war_prep.md 告警/溢出节。
 
 测试的三件事:

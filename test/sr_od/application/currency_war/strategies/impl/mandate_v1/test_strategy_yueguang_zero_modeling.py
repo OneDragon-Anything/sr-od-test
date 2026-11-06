@@ -3,7 +3,7 @@ cw_investments.py 与绑定/估值面;按被测方法拆目录规范落位 manda
 镜像,先例 = 同目录既有登记锁族)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-273 对应稿
-§4 七锁(REVIEW-T273 免裁 4/4;卡面官方原文:「完美通关时，夜之半神获得
+§4 七锁(REVIEW-T273 无需用户决定 4/4;卡面官方原文:「完美通关时，夜之半神获得
 的【月光精华】提高100%，领取夜之半神奖励时，也会获得一名夜之半神角色，
 【月色】层数越高，越可能领取到高费角色。获得【赛飞儿】和【万敌】。」
 ——腿 A/B 型③零建模;腿 C 授予/绑定/估值三面已登记零动作):
@@ -14,7 +14,7 @@ cw_investments.py 与绑定/估值面;按被测方法拆目录规范落位 manda
 - 锁 3 绑定面:显式绑定二元组对拍(阵营×角色,scope 只申报不锁死);
 - 锁 4 规范名幂等;
 - 锁 5 零建模现值回归:on_strategy_gained 返回空效果串(现值锁非终态
-  锁,交付家族批落码时随批修订退役);
+  锁,交付家族批写进代码时随批修订退役);
 - 锁 6 反扫闭集:候选扫描已登记;
 - 锁 7 经济面零条目:三表零命中(零建模申报的回归面)。
 """
@@ -84,7 +84,7 @@ def test_yueguang_name_normalize() -> None:
 
 def test_yueguang_zero_modeling_on_gain() -> None:
     """锁 5(零建模现值回归):on_strategy_gained 返回空效果串且世界零写
-    (现值锁非终态锁,交付家族批落码时随批修订退役)。"""
+    (现值锁非终态锁,交付家族批写进代码时随批修订退役)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.prep_anchored = True
     seq_before = gs.write_seq

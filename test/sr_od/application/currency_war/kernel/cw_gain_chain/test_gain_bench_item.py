@@ -31,7 +31,7 @@ _SIG_OBS = ChannelSig(family='obs', actor='CwGainChainTest')
 
 
 def _make_gs_seeded() -> GameState:
-    """种子底座直构(bench 未观察拒落,先种 9 空槽)。"""
+    """种子初始值直构(bench 未观察拒落,先种 9 空槽)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     seed_opening_state(gs)
     return gs

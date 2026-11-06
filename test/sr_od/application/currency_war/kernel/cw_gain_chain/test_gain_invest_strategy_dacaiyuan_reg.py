@@ -51,7 +51,7 @@ def _make_gs() -> GameState:
                BenchView(slots=[BenchSlot(kind='empty')] * 9, capacity=9),
                sig=_SIG_OBS)
     gs.observe(gs.equips, [], sig=_SIG_OBS)
-    # 金观察底座(退款入金前置:gold 未读 = 无累加基座,桥跳过金写)。
+    # 金观察初始值(退款入金前置:gold 未读 = 无累加基座,桥跳过金写)。
     gs.observe(gs.gold, 10, sig=_SIG_OBS)
     return gs
 

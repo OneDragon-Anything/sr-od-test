@@ -5,7 +5,7 @@ strategy_conditional_done 审计行)。
 测试面依据 = 迭代设计 designs/T-102-guimo-xiaoying.md §4 锁 6/7:
 - 快照存续:一次性标志位值进快照 → restore 往返逐位相等(tuple-of-str 不漂移为
   list——rebuild 登记在位为前提,未登记域恢复面 = 静默类型漂移);
-- 冷建种子底座 = ()(A 类,同 env_grants_done 种子族);
+- 每局全新创建种子初始值 = ()(A 类,同 env_grants_done 种子族);
 - 审计行:PROJECTION_AUDIT 出 strategy_conditional_done 行
   (process_only,发放登记事实无观察读端;容器字段完备性纪律的显式锁,
   表完备性另有抽检测试兜底)。
@@ -24,12 +24,12 @@ _LSIG = ChannelSig(family='logic_action', actor='TestDriver', mode='compute')
 
 
 def test_seed_empty_and_snapshot_roundtrip() -> None:
-    """种子底座(冷建空集)+ 快照→恢复类型不变(tuple-of-str)+ 逐位
+    """种子初始值(每局全新创建空集)+ 快照→恢复类型不变(tuple-of-str)+ 逐位
     相等——done 随快照存续 = 恢复局(离线回放)检查腿跳过判定天然闭合,
     不重发。"""
     seed_gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     seed_opening_state(seed_gs)
-    assert seed_gs.strategy_conditional_done.value == (), '冷建空底座'
+    assert seed_gs.strategy_conditional_done.value == (), '每局全新创建空初始值'
 
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.prep_anchored = True

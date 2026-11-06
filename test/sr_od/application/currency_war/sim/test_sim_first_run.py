@@ -6,11 +6,11 @@
   P1 → P2 boss 到局终,op 执行零失败(成功收尾 = 回大厅终局链);
 - 确定性:同 seed 同 RunConfig 双跑容器逐位一致(双跑快照 diff 为空);
 - 容器不变式:金币不出现无规则依据的负值 / hp 轨迹与结算写流一致 /
-  经验等级符合规则表(carry 与阈值表)/ 局终无未消费败态挂账;
+  经验等级符合规则表(carry 与阈值表)/ 局终无未消费败态待办;
 - L1 全量绿(由全量运行承载,非本文件断言面)。
 
 设计依据 = flow-seam 详设 §4(运行器装配缝)+ sim-backend 详设(状态机
-与序列语义;迭代内合法引用,正本更新义务归末阶段)。运行原语住
+与序列语义;迭代内合法引用,权威版本更新义务归末阶段)。运行原语住
 ``test/harness/sim_backend_runner.py``(装配缝单一源,本文件只消费)。
 
 「多种子首局完备」语义不再在此重复整局覆盖(2026-10-14 裁决:与
@@ -157,7 +157,7 @@ def test_first_match_container_invariants(two_runs: tuple) -> None:
     """容器不变式四条尺(尺③;同一整局产物一次对账):
     ①金币不出现无规则依据的负值;②hp 轨迹与结算写流逐条一致;
     ③经验等级符合规则表(逐级 +1、carry 界、阈值表单一源);
-    ④局终无未消费败态挂账(败补 U04 口径消费归下一战斗轮轮首)。
+    ④局终无未消费败态待办(败补 U04 口径消费归下一战斗轮轮首)。
 
     凭据 = 状态 journal 写流(轮首收入/环境金/买入扣费/晶矿金每笔在案;
     level/xp 写通道 = 节点经验入账与购买经验同一通道);终值另核对容器
@@ -223,6 +223,6 @@ def test_first_match_container_invariants(two_runs: tuple) -> None:
         assert final_xp[1] == XP_TO_NEXT_LEVEL.get(final_level), \
             '终态阈值与规则表不一致'
 
-    # —— ④ 败态挂账不变式(局终仍挂账 = 败补链断裂) ——
+    # —— ④ 败态待办不变式(局终仍待办 = 败补链断裂) ——
     assert run.gs.pending_loss.value is None, \
-        f'局终败态挂账未消费: {run.gs.pending_loss.value!r}'
+        f'局终败态待办未消费: {run.gs.pending_loss.value!r}'

@@ -5,7 +5,7 @@ _make_char_grant_effect('银枝'))``;先例 = 同目录
 test_strategy_compose_grant_shuangrenwu.py 双人舞两条效果条目形)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-269 对应稿
-§4 锁面(REVIEW-T269 免裁 5/5;卡面官方原文:「星间旅人若只有3名及以下
+§4 锁面(REVIEW-T269 无需用户决定 5/5;卡面官方原文:「星间旅人若只有3名及以下
 登场，登场角色额外提供200%的星间旅人属性加成。获得【绯英】和【银枝】。」
 ——条件段星间旅人计数游戏侧自算 bot 零建模;腿序 = 卡文语序,效果串
 2 条):

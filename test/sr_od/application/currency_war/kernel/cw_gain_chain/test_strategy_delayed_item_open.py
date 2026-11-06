@@ -137,7 +137,7 @@ def test_strategy_delayed_leg_repeat_gain_two_entries_scope_once() -> None:
 
 
 def test_char_grant_leg_stays_family_level_gap(monkeypatch) -> None:
-    """腿① 送卡缺口维持锁(REVIEW-T329 §五④ 锁 7,族级定谳 = T-267
+    """腿① 送卡缺口维持锁(REVIEW-T329 §五④ 锁 7,族级定论 = T-267
     §1.7-4/T-272):选偶像经济前后 bench/overflow 逐位不变——火花
     不入席 = sim 世界缺口申报的行为面锁定,防实现批顺手建送卡效果体
     (本文件锁 2 的独立面:锁 2 锁「礼盒腿零席位写」,本锁锁「角色腿

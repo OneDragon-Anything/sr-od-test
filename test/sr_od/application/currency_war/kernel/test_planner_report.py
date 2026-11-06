@@ -1,6 +1,6 @@
 """银狼策划上报测试面(分支类型判定单源 / 名称归一分层 / 分支应用三态 / 采样池)。
 
-判据正本(持久索引):银狼闭环设计 §2.0/§2.1/§2.4(docs/develop/
+判据权威版本(持久索引):银狼闭环设计 §2.0/§2.1/§2.4(docs/develop/
 sr_od/application/currency_war/ 迭代详设;单相即时上报契约 §2.0)。
 测试面:
 
@@ -285,7 +285,7 @@ def test_hacker_mod_pool_v0_no_max() -> None:
     )
     assert len(HACKER_MOD_POOL_V0) == 5
     assert all(not n.endswith('Max') for n in HACKER_MOD_POOL_V0), \
-        '排除 Max 件(用户拍定临时口径)'
+        '排除 Max 件(用户定为临时口径)'
     assert all(n in ITEM_WEAR_GATES for n in HACKER_MOD_POOL_V0), \
         '成员 ⊆ 银狼专属 10 件名单'
     a = [roll_hacker_mod(random.Random(7)) for _ in range(20)]

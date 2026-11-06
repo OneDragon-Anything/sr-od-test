@@ -1,6 +1,6 @@
 """power_model 语料抽取器测试(src 镜像:sim/power_model/corpus_extract.py)。
 
-锁的设计约定(landing 2026-10-19-sim-power-model-v1 §3.1 + 正本
+锁的设计约定(landing 2026-10-19-sim-power-model-v1 §3.1 + 权威版本
 sim-power-model §5.1/§8-1):
 - 输入守卫 = 解析后路径精确相等断言 + sim 批根目录守卫;
 - run 级隔离(fake_/sim_ 前缀 + 显式名单)= 铁律 2 的 run 粒度防线;

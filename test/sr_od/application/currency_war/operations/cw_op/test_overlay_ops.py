@@ -1,7 +1,7 @@
 """CW 覆盖层弹窗/屏上动作 op 测试面(pick 全族 + 专家邀请函 + 刷新零效果
 对账)。
 
-规则正本 = flow/action_ops.md 与 screens/op-layer.md §1.1「选择坐标
+规则权威版本 = flow/action_ops.md 与 screens/op-layer.md §1.1「选择坐标
 观察上报」+ §1.3(决策出口守卫)。测试面三组(全部运行时行为测试,源码
 扫描测试禁止,AGENTS.md §10.4;桩宿主零真实 IO):
 
@@ -853,7 +853,7 @@ def test_expert_invite_entry_select_only(test_context, monkeypatch):
     """收缩为弹窗画面 op:入口门 = 弹窗已开单一形态(两 node 形态观察
     node 承载)——弹窗不在 = fail 交回外循环重识别(外循环按下一帧画面
     重分发自愈;开卡缺位由备战词表 CwActionOpenBookcardParam 链承接)。
-    选卡成功链的行为面由决策出口守卫测试组承重,本测试不重复。"""
+    选卡成功链的行为面由决策出口守卫测试组承担,本测试不重复。"""
     from test.sr_od.application.currency_war._cw_helpers import (
         Area,
         run_node,
@@ -875,7 +875,7 @@ def _expert_guard_harness(test_context, monkeypatch, strategy):
     """守卫测试组装配:obs 读链桩 + area_center 桩(迁观察链 = 观察上报
     坐标域种子,act 决策段零 area_center 可桩)+ 注册表 action_op_for
     派发捕获桩。strategy = decide_expert_invite 注入体(match =
-    StrategySession 冷建;strategy=None = 局外无 match 语境)。
+    StrategySession 每局全新创建;strategy=None = 局外无 match 语境)。
     返回 (op, match, dispatches)。"""
     from test.sr_od.application.currency_war._cw_helpers import Area
 
@@ -958,7 +958,7 @@ def test_expert_invite_decision_invalid_return_named_fail(test_context,
     """测试B(返回契约,op-layer §1.1 出口③):策略桩返回 None 与词表外对象
     (SimpleNamespace(idx=0))两子态 → act 具名 round_fail(消息含「决策
     无有效输出」与原值 repr)、零派发零点击、_pick_pending None。原
-    AttributeError 传播路径收编进具名 fail(诊断面原值 repr 直读)。红 =
+    AttributeError 传播路径并入具名 fail(诊断面原值 repr 直读)。红 =
     盲发派发 / 消息缺原值。"""
     from test.harness.fixture_controller import fast_sleep
     from test.sr_od.application.currency_war._cw_helpers import run_node

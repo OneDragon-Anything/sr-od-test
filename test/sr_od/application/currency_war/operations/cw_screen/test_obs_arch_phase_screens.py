@@ -1,6 +1,6 @@
 """统一观察架构·相位/收尾屏迁移测试(五相位屏 + 收尾屏,原两文件并入)。
 
-设计正本 = docs/develop/sr_od/application/currency_war/flow/统一观察架构-画面op基类设计.md
+设计权威版本 = docs/develop/sr_od/application/currency_war/flow/统一观察架构-画面op基类设计.md
 (下称「架构设计」);迁移粒度/五段形态依据 = );
 迁移手法单一源 = 装配点分流 + 五段钩子转录 + 实机适配器①封口 + on_outcome
 注册表(先例:CwScreenPrep/遭遇/盛会之星,断言集模板 =
@@ -17,24 +17,24 @@ test_plane_intel_pipeline.py,本文件不辖。
 
 - 投资环境/投资策略:sim 分支 = 不适用——有 sim 事实来源(``decide_invest``
   注入段,架构设计 §3.2)但 sim 端口适配器未建(归 sim 接入调用批),本批
-  等价判据主承重 = 实机已登记行为测试 + 写入流对拍(实机分支),禁引用 sim 域
+  等价判据主承担 = 实机已登记行为测试 + 写入流对拍(实机分支),禁引用 sim 域
   对拍;
 - 战斗等待:sim 分支 = 不适用——sim 事实来源为 coarse 结算产出,非画面段
-  (§3.2 结算行),等价判据主承重 = 实机已登记行为测试(B2-③ 主门:已登记
+  (§3.2 结算行),等价判据主承担 = 实机已登记行为测试(B2-③ 主门:已登记
   行为测试经 execute()/wait() 走新路径全绿);
 - 简报/BOSS 简报:sim 分支 = 不适用——sim 无对应画面段(过渡相位,§3.2),
-  等价判据主承重 = 实机已登记行为测试 + 写入流对拍;
+  等价判据主承担 = 实机已登记行为测试 + 写入流对拍;
 - 位面过渡/武装箱弹窗/未达上限弹窗/等待1-1:sim 分支 = 不适用——sim 无
-  对应画面段(架构设计 §3.4 过渡相位/中断弹窗行),等价判据主承重 =
+  对应画面段(架构设计 §3.4 过渡相位/中断弹窗行),等价判据主承担 =
   实机已登记行为测试 + 本文件两 node 形态测试,禁引用 sim 域对拍。
 
 测试的语义(测试纪律 7 自检;出处 = landing 阶段一/三判据;行为测试单驱动
 生产路径):
 
-- **重入裁决归属测试**(单一定谳;简报分支 = ``test_briefing_reentry_
+- **重入裁决归属测试**(单一定论;简报分支 = ``test_briefing_reentry_
   adjudication_flag_gate_combination``,收尾屏组合分支 =
   ``test_reentry_arbitration_flag_gate_combination``):「已发」旗标裁决
-  住决策动作 node 顶部(直驱 act 承重);投资两屏已改派发即终结交回
+  住决策动作 node 顶部(直驱 act 承担);投资两屏已改派发即终结交回
   (写时点测试另辖);简报仍为重入裁决形态;BOSS 简报无裁决旗标,横幅
   退场裁决 = 外循环重派后的下一次入口门;战斗等待/等待1-1 无裁决旗标。
   红 = 裁决被转录进观察 node。
@@ -136,7 +136,7 @@ def test_briefing_reentry_adjudication_flag_gate_combination(test_context,
                                                              monkeypatch) -> None:
     """简报重入裁决测试(重入裁决现役,归后续批;投资两屏的「派发即终结
     交回 + 派发时点写入」分支由 test_invest_env_active_env_written_at_
-    dispatch / test_invest_strategy_written_at_dispatch 承重,不再重复):
+    dispatch / test_invest_strategy_written_at_dispatch 承担,不再重复):
     - 简报·落地轮:pending 在位 + 标识已退 → 裁决出口 success,读链不
       发生(裁决住决策动作 node 顶部,act 零读链);
     - 简报·门命中轮:pending 在位 + 标识仍在 → 「下一步」重发,旗标经
@@ -242,7 +242,7 @@ def _make_env(test_context, monkeypatch: pytest.MonkeyPatch, *,
 # (原 test_invest_env_dispatch_and_gate「投资环境分流双向 + 段迹形态」删:
 #  装两端口走五段新路径的分流/段迹面随并存窗收尾整删(生产端口恒 None);
 #  其唯一跨路径幸存断言「确认发出置 pending」并入下方选卡时点写测试;
-#  离屏门 fail 早退语义由简报/BOSS 简报已登记行为测试同形承重。)
+#  离屏门 fail 早退语义由简报/BOSS 简报已登记行为测试同形承担。)
 
 
 def test_invest_env_observe_gate_and_report(test_context,
@@ -646,7 +646,7 @@ def test_invest_strategy_out_of_match_no_early_exit_normal_chain(
 
 # (原 test_strategy_refresh_emission_wired_to_registry 删:注册表取证型
 #  断言——登记件缺席时发射行为半必红,取证面零独立判别力,登记形状重构
-#  = 误红源;行为半由 test_strategy_refresh_emission_semantics 承重。
+#  = 误红源;行为半由 test_strategy_refresh_emission_semantics 承担。
 
 
 def test_strategy_refresh_terminal_handback(test_context, monkeypatch) -> None:
@@ -655,7 +655,7 @@ def test_strategy_refresh_terminal_handback(test_context, monkeypatch) -> None:
     重进 = 入口重建,重进后重观察重决策;本访问零比对零重决策——刷后不重读
     不比对不重决策)。观察轮 report 落容器 ``invest_strategy_opts`` 接入调用归测试
     (容器终值)。刷新计数写端随画面 op 基类退役(记账归动作 op 会话承接,
-    本 op 不写计数——容器计数断言不设,闸 2 读端由下一测试承重)。
+    本 op 不写计数——容器计数断言不设,闸 2 读端由下一测试承担)。
     红 = 刷新点击丢失 / 循环内重读重决策回潮 / 终结交回改轮询 / 接入调用断流。"""
     names = ['赌神·银', '恢复生机', '气氛组']
     book = _FrameBook([object()])
@@ -731,7 +731,7 @@ def test_invest_strategy_observe_reprobe_and_report(test_context,
 # 留守测试」(getsource ×6:注册表接入调用恰一处/钩子体与豁免面字面在场/环境屏
 # 零登记件)——源码扫描形态(README 禁止清单,红时是文本变了,答不出哪个
 # 运行行为坏了);豁免面纪律归 review 与代码规范。豁免面的行为面
-# (chosen 写端不入注册表收编)由 event_screens 同名行为测试辖。
+# (chosen 写端不入注册表纳入)由 event_screens 同名行为测试辖。
 
 
 # ==================== 简报:三字段写语义 ====================
@@ -784,7 +784,7 @@ def _make_briefing(test_context, monkeypatch: pytest.MonkeyPatch, *,
 #  端口走五段新路径的分流/段迹面随并存窗收尾整删;其跨路径幸存断言
 #  (「下一步」发出置 pending / 标识 miss 门 fail 早退零读链)分别由
 #  test_reentry_arbitration_flag_gate_combination 的简报两条分支与三字段写
-#  语义测试承重。)
+#  语义测试承担。)
 
 
 def test_briefing_observe_gate_and_report(test_context, monkeypatch) -> None:
@@ -829,7 +829,7 @@ def test_briefing_session_write_semantics_three_fields(test_context,
     读到非空恒覆写(重读自愈首次误读)/ 读空跳过写(读缺=跳过写,
     不擦同局已读真值)。单驱动观察 node(读侧住观察 node,写闸住
     report 屏文件,report 函数级闸面由 test_screen_report_ports
-    承重,本测试辖 op 侧读链接入调用)。
+    承担,本测试辖 op 侧读链接入调用)。
     红 = 读链被已读守卫短路 / 覆写或跳写语义漂移。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         ChannelSig as _cs_t,
@@ -951,7 +951,7 @@ def _make_boss(test_context, monkeypatch: pytest.MonkeyPatch, *,
 # (原 test_boss_briefing_dispatch_both_ways「BOSS 简报分流双向」删:装两
 #  端口走五段新路径的分流/段迹面随并存窗收尾整删;其跨路径幸存断言
 #  (横幅在 = 点空白 + success 交回 / 横幅已退 = 零动作早退)由下方误读
-#  接管测试与观察门测试同形承重。)
+#  接管测试与观察门测试同形承担。)
 
 
 def test_boss_briefing_misread_takeover(test_context, monkeypatch) -> None:
@@ -1111,7 +1111,7 @@ def _make_bwait(test_context, monkeypatch: pytest.MonkeyPatch,
 
 # (原 test_battle_wait_execute_terminal_exit_new_path「B2-③ 主门经
 #  execute() 走新路径:大厅终局锚 → terminal_lobby 早退」删:装端口驱动
-#  的出口门随并存窗收尾整删;出口门生产那份由下方完成白名单测试承重。)
+#  的出口门随并存窗收尾整删;出口门生产那份由下方完成白名单测试承担。)
 
 
 def test_battle_wait_normal_exits(test_context, monkeypatch) -> None:
@@ -1210,7 +1210,7 @@ def _stub_controller(test_context, monkeypatch: pytest.MonkeyPatch) -> list:
 def test_reentry_arbitration_flag_gate_combination(test_context,
                                                    monkeypatch) -> None:
     """重入裁决×门组合行为测试(位面过渡/武装箱/未达上限均已迁移两 node
-    形态,「已发」旗标裁决住决策动作 node 顶部,直驱 act 承重):
+    形态,「已发」旗标裁决住决策动作 node 顶部,直驱 act 承担):
     - 位面过渡:门命中 + pending 在位 → 裁决不误判完成(门在 = 动作未
       落地,重点一次机械交回 round_wait);推进体缺坐标的失败轮旗标保持
       已消费态不复活;落地轮(提示已退 = 过渡完成)→ 裁决出口 success +
@@ -1308,9 +1308,9 @@ def test_plane_transition_observe_gate_and_chain_report(
         test_context, monkeypatch) -> None:
     """位面过渡观察 node 测试(两 node 形态):提示门 miss = round_fail 早退
     (现役文案,obs 不装载、零读链);门 hit → 底部行读数构造链值 → report
-    落容器(开局链容器终值:node_path + node_path_baseline 双写,链正本
+    落容器(开局链容器终值:node_path + node_path_baseline 双写,链权威版本
     §3 基线幂等门的写闸面在 report 屏文件,由 test_screen_report_ports
-    承重,本测试辖 op 侧读链→report 接入调用)→ obs 挂实例属性。
+    承担,本测试辖 op 侧读链→report 接入调用)→ obs 挂实例属性。
     红 = 门失效 / 读链未接 / 容器终值漂移。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         game_state_of,

@@ -5,7 +5,7 @@ M19/M20/M21 / 轮首收入与连胜经济 M04/M15)。
 - 战斗结算:U01 随机输出面(胜负 P=0.5 均匀伯努利/扣血均匀区间
   [23,70]/流键可复现)/U03 分项置 None/简化档标记/M14 结构规则(败才
   扣血/首次 0hp 保底剩 1/再次归零局终);
-- 敌人:U25 难度定谳成分与基础 None 披露(品质彩 6/遭遇档 20/伟大征服
+- 敌人:U25 难度定论成分与基础 None 披露(品质彩 6/遭遇档 20/伟大征服
   连胜项;难度修改器节点型限定)/U02 boss 池采样与覆盖优先/U26 开拓者
   形态路由;
 - 经济:U04 败轮金(被败节点基础奖励 + 利息,平面感知取键)/U05 补给轮
@@ -155,7 +155,7 @@ def test_win_prob_constant_is_ruling_value() -> None:
 # ============================================================ 敌人难度与名单(M19/M20/M21)
 
 def test_difficulty_known_components_and_base_none_u25() -> None:
-    """U25:定谳成分(品质彩6/遭遇档20/伟大征服连胜项)逐项可算;
+    """U25:定论成分(品质彩6/遭遇档20/伟大征服连胜项)逐项可算;
     基础曲线未采 → base=None 且 total=None(禁插值不出合计)。"""
     d = difficulty_of(['伟大征服'], node_kind='encounter', streak=2,
                       encounter_tier=3, base=None)
@@ -168,7 +168,7 @@ def test_difficulty_known_components_and_base_none_u25() -> None:
 
 
 def test_difficulty_total_with_base_and_node_scoped_delta() -> None:
-    """base 可传(局级输入档):total = base + 定谳成分;难度修改器
+    """base 可传(局级输入档):total = base + 定论成分;难度修改器
     (−4,遭遇+首领限定)只在遭遇/首领节点计入。"""
     d_battle = difficulty_of(['难度修改器'], node_kind='battle',
                              streak=0, base=100)
@@ -183,7 +183,7 @@ def test_difficulty_total_with_base_and_node_scoped_delta() -> None:
 
 
 def test_difficulty_holy_grail_constant_pending() -> None:
-    """圣杯 +30 定谳真值已登记;激活态占位(首版恒未激活)。"""
+    """圣杯 +30 定论真值已登记;激活态占位(首版恒未激活)。"""
     d_off = difficulty_of([], node_kind='battle', streak=0, base=50)
     assert d_off.special_bonus == 0
     d_on = difficulty_of([], node_kind='battle', streak=0, base=50,
@@ -197,7 +197,7 @@ def test_difficulty_foresight_exempt_quality_and_dynamic_untouched() -> None:
     伟大征服+远见对照 special 项照常、quality 项仅远见外成员计入
     (守卫只跳豁免条目,不误伤同列表其它卡的品质/动态分量)。证伪
     通道 = 披露键 FORESIGHT_EXEMPTION_READING(读法 A 系实现惯例链
-    非独立验证定谳,对账归遥测批)。"""
+    非独立验证定论,对账归遥测批)。"""
     d_alone = difficulty_of(['远见'], node_kind='battle', streak=0,
                             base=50)
     d_none = difficulty_of([], node_kind='battle', streak=0, base=50)

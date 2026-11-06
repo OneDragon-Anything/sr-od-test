@@ -1,6 +1,6 @@
 """CW 升级判据单帧测试(触发单判据三分派 + 资金线门 + 单帧原子发射)。
 
-出处(持久索引):判据正本锚 = strategy-docs/11_shop_decisions.md §2
+出处(持久索引):判据权威版本锚 = strategy-docs/11_shop_decisions.md §2
 (升级触发单判据三分派/资金线门/拦截层处置)。判据本体 =
 strategies/impl/mandate_v1/criteria/levelup.py,发射位 = entry 备战
 第 4 步。测试面组:

@@ -19,7 +19,7 @@
 3. **退出通道行为测试**(判据⑤;载体 = ``sell_gate.
    dead_pair_exit_release`` 单点函数 + 持久获取账 ``register_
    acquisition``,写端 = shop._emit_buy 发射位):行为测试①-⑤ + N1/N4
-   收编面(N3 = 注释级同参钉死,消费位同参传参由测试①装配路径覆盖;
+   并入面(N3 = 注释级同参钉死,消费位同参传参由测试①装配路径覆盖;
    N2 kept_young 分键由测试②辖)。帧构造边界:素材名取「非保护集非
    核心」现算集(与段 2 同款防漂移);测试①②③④ 走备战域
    ``run_mandate`` M4 腾席臂(设计 flagship 场景 = 死锁帧腾席),判据
@@ -359,7 +359,7 @@ class TestLock1DeadlockDominance:
         缺口件死锁帧 → M4 卖对成员腾席。
 
         校验 2.1.3:B 弱支配 A(帧内持有收益 0 成本 V_slot>0);卖出分支 =
-        m4_fuel_sell,释放/卖出两键显影,腾出席位不再耗竭。释放集单点
+        m4_fuel_sell,释放/卖出两键暴露,腾出席位不再耗竭。释放集单点
         函数直读:对成员入集(判据 (a)(b)(c) 合取正例),kept 面零计数。"""
         sess, gs, frame = _prep_frame(pair_ledger_round=2)
         out = run_mandate(frame, sess, state=gs)

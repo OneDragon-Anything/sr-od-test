@@ -9,7 +9,7 @@ cw_gain_chain.py 的 check_strategy_boss_completion_grants)。
   确定事件 = logic 渠道零采样)、落一次性标志位(strategy_conditional_done 纯卡名
   追加)、evidence ``strategy_boss_completion#<卡名>``(**断言用前缀
   匹配禁精确匹配**,gain_equipment 原语内追加 ``#equip`` 后缀,T-167
-  锁 2 判例);
+  锁 2 先例);
 - 一次性标志位:卡名已置一次性标志位 → 短路零写(「下个」恰一次;幂等守卫只防同战斗
   重放,一次性标志位防下一场 boss 重复,函数内自管);
 - 拒落不落一次性标志位自愈 = 裁决点 7 边界申报(sim 域 equips 恒种子观察拒落不可达,

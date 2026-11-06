@@ -52,7 +52,7 @@ _SCREENS = (
     'plane_transition', 'armory_box', 'boss_briefing', 'wait_one_one',
     'deploy_not_full', 'battle_wait', 'plane_intel', 'prep', 'shop',
     # 推进型/商店框 11 屏(无 report;开店 obs 随 CwOpOpenShop 类壳解散
-    # 退役——直调体 open_shop 规范化后无观察面,正本 =
+    # 退役——直调体 open_shop 规范化后无观察面,权威版本 =
     # screens/op-layer.md §3 画面框 op 停用件注)
     'next_button', 'plane_detail', 'consumable_overlay',
     'emblem_detail_popup', 'item_detail_popup', 'interrupt_dialog',
@@ -63,7 +63,7 @@ _SCREENS = (
 #: 推进型/商店框(空决策形态,无 report 接口;。
 #: 名单外的 obs 类默认必须带 report 函数——新增屏漏归侧即红。
 #: (关店编排壳 obs 行随壳退役删除,
-#:  3.4:CloseShop 执行位收编进 CwActionCloseShopOp,孤儿 obs 文件随壳退役。)
+#:  3.4:CloseShop 执行位并入 CwActionCloseShopOp,孤儿 obs 文件随壳退役。)
 _NO_REPORT = frozenset({
     'CwScreenNextButtonObs', 'CwScreenPlaneDetailObs',
     'CwScreenConsumableOverlayObs', 'CwScreenEmblemDetailPopupObs',
@@ -82,7 +82,7 @@ _NO_REPORT = frozenset({
 #:  类型直定(目标 = 现 hist),写门/直定专项测试归 test_node_chain 与
 #:  test_game_state 节点域测试;shop 保持占位:
 #:  唯一候选写点 = 段头 gold 救援补写,属入口观察链内纠正补写,勘察
-#:  结论申报在 kernel 屏文件模块头,不收编交后续批裁决。)
+#:  结论申报在 kernel 屏文件模块头,不纳入,交后续批裁决。)
 _PLACEHOLDERS = ('armory_box', 'wait_one_one',
                  'deploy_not_full', 'battle_wait', 'shop')
 
@@ -404,7 +404,7 @@ def test_bookcard_report_equal_length_guard():
 def test_briefing_write_semantics():
     """简报写语义(统一读写口径):三字段读到非空恒覆写(重读自愈
     首次误读)/ 读空跳过写(读缺=跳过写,瞬时 OCR 失手不擦同局已读
-    真值;跨局残留由每局容器冷建/丢弃挡死)。转换失败 = 观察侧
+    真值;跨局残留由每局容器全新创建/丢弃挡死)。转换失败 = 观察侧
     round_fail,不进本写点(标准化留口,屏契约登记见 screens/briefing.md)。"""
     mod = _screen_module('briefing')
     gs = _blank_gs()

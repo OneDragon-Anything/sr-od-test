@@ -86,7 +86,7 @@ def _make_gs(*, env: str | None = _ENV,
              bench: list[tuple[str, int]] | None = None,
              ore_open_total: int = 0,
              done: tuple[tuple[str, str], ...] | None = None) -> GameState:
-    """观察面按参组装(bench None = 保持未观察形态;计数/登记域经单口
+    """观察面按参组装(bench None = 保持未观察形态;计数/登记域经唯一入口函数
     /logic 直写播种)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if env is not None:

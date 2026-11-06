@@ -49,7 +49,7 @@ _SIG_OBS = ChannelSig(family='obs', actor='SellBenchTest')
 
 
 def _make_gs_full_bench() -> GameState:
-    """种子底座 + 9 满席(1★ 希儿 ×9,无装备无三连)。"""
+    """种子初始值 + 9 满席(1★ 希儿 ×9,无装备无三连)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     seed_opening_state(gs)
     gs.observe(gs.bench, BenchView(
@@ -105,7 +105,7 @@ def test_sell_absorbs_overflow_char_unit_leg_regression() -> None:
 
 # ============================================================ M1 投影直测(《商店黑板容器化方案》§4-M1;同 src 按被测方法归并)
 
-# 改写依据(分诊):写入者登记面随「商店单动作循环收编」演进——
+# 改写依据(分诊):写入者登记面随「商店单动作循环纳入统一管理」演进——
 # 生产写点 actor 现役 = CwScreenShop(cw_screen_shop,登记面已登记),
 # 旧名 CwOpBuyCards 已退役;测试模拟生产写入随登记面改名。
 _PROJ_SIG = ChannelSig(family='logic_action', actor='CwScreenShop',
@@ -175,7 +175,7 @@ def test_sell_bench_refund():
 def test_stale_sell_proposal_no_write():
     """陈旧卖出提案(空槽/越界):守卫辖面,拒绝 = applied=False 零写。
     (集外动作型零写分支删:上报函数族每动作恰一函数,无按类型聚合的
-    登记面可「静默收编集外型」——闭集性质归命名规约完备测试
+    登记面可「静默纳入集外型」——闭集性质归命名规约完备测试
     test_action_report 辖。)"""
     gs = _gs_of(gold=30, shop=[])
     seq0 = gs.write_seq

@@ -5,7 +5,7 @@
 - **连败/连胜条件发放 kernel 矩阵**(详设 details/env-conditional-grant.md
   §1–§4):触发条件七序短路、随机态发放写行(equips 追加
   write_logic_rand + done 登记 write_logic 同 evidence 相邻)、sig 单
-  形态契约、宝钻获得回调三写、登记表构建校验、种子底座与快照恢复;
+  形态契约、宝钻获得回调三写、登记表构建校验、种子初始值与快照恢复;
 - **live 接入调用**(该迭代 landing 3.2 节):结算覆盖写端之后才触发发放
   (fake 结算路径真走覆盖写端,防假绿)、猜错整表观察纠偏、streak
   None 结算跳过;
@@ -313,12 +313,12 @@ def test_env_streak_grants_registry_and_validation(
 
 def test_seed_and_restore_type_roundtrip_no_regrant(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """种子底座(冷建空集)+ 快照→恢复类型不变(tuple-of-tuple)+
+    """种子初始值(每局全新创建空集)+ 快照→恢复类型不变(tuple-of-tuple)+
     恢复局(快照含 done)触发函数不再发——done 随快照存续,守卫天然
     闭合。"""
     seed_gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     seed_opening_state(seed_gs)
-    assert seed_gs.env_grants_done.value == (), '冷建空底座'
+    assert seed_gs.env_grants_done.value == (), '每局全新创建空初始值'
 
     # 深井局发放完成态 → 快照 → 恢复
     gs = _make_gs(env=_ENV, equips=['永动机'])

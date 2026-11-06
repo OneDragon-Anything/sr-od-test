@@ -1,4 +1,4 @@
-"""投资策略画面策略层单测(判据正本 = docs/develop/sr_od/application/
+"""投资策略画面策略层单测(判据权威版本 = docs/develop/sr_od/application/
 currency_war/strategy-docs/29_invest_strategy_screen.md;规格出处 =
 
 下称 design §)。
@@ -280,7 +280,7 @@ def test_grant_advisor_halved():
 def test_char_grant_cards_gift_value_off_zero():
     """转正卡赠卡分 0(佩佩 = cost0 系统召唤单位,COMP_LIBRARY 无档 →
     off 档机器事实):注册进估值读端后策略估值零行为变化(off 恒 0.0;
-    若未来 COMP_LIBRARY 收编佩佩本锁显影,归立场重拍批)。"""
+    若未来 COMP_LIBRARY 纳入佩佩本锁暴露,归立场重拍批)。"""
     for n in ('溜佩佩', '溜佩佩+', '这么大的钻石'):
         assert grant_gift_value(STRATEGY_GRANTS[n], frozenset()) == 0.0
 

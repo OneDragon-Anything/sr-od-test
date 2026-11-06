@@ -17,7 +17,7 @@ test_prep_action_ops harness 形状);环级 = 桩策略 + 实例级重观察桩
    scope 拼错值 → op 内守卫断言(值域闭集 OBS_SCOPES);
 5. 环级接入调用:桩策略 [Obs(in_place), Obs(outer_loop)] → in_place 经注册表
    派发执行(重观察恰一次 + 帧代次标 full)+ 循环续跑;outer_loop 在 F3
-   之前拦截交回外循环(不进执行器,行为 = 原 HoldFrame 收编,
+   之前拦截交回外循环(不进执行器,行为 = 原 HoldFrame 并入,
    用户裁定 2026-09-20)。
 """
 from __future__ import annotations
@@ -147,7 +147,7 @@ def test_prep_loop_obs_reobserves_in_place_and_continues(
     派发执行(宿主重观察恰一次)+ 帧代次标 full + 循环续跑;outer_loop 在
     F3 之前拦截交回外循环(不进执行器 → 重观察仍恰一次)。
 
-    判据四件:①重观察恰一次(outer 拦截型不触发重观察,收编自 HoldFrame
+    判据四件:①重观察恰一次(outer 拦截型不触发重观察,纳入自 HoldFrame
     的行为不变量);②decide 恰两次(in_place 后原地续决策,非交回);
     ③frame_class_prep == 'full'(方向重估触发,同入口帧;outer 交回路径
     不写帧代次);④交回语义文案带 outer_loop 标识。红 = outer 误进执行器 /

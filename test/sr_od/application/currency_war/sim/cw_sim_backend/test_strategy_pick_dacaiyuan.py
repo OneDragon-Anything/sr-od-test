@@ -69,7 +69,7 @@ def _board_refund(gs) -> int:
 # ============================================================ 锁 3:全链主锁
 
 def test_pick_dacaiyuan_full_chain_sell_and_burst() -> None:
-    """decl 分派全链:选大裁员 → 出售面(场清空+退款恰 = 选卡拍板面
+    """decl 分派全链:选大裁员 → 出售面(场清空+退款恰 = 选卡用户决定面
     全额公式预演)+ 刷腿(free_refresh_left +6)一拍落地;bench 清空且
     零新增单位(素出售无发牌面)。"""
     b = _backend(7)
@@ -78,7 +78,7 @@ def test_pick_dacaiyuan_full_chain_sell_and_burst() -> None:
         gs = b.gs
         _seed_sold_unit(b)
         expected_refund = _board_refund(gs)
-        assert expected_refund > 0, '预演前提:选卡拍板面非空'
+        assert expected_refund > 0, '预演前提:选卡用户决定面非空'
         gs.write_logic(gs.invest_strategy_opts, _OPTS,
                        produced_by='Test', evidence='t:opts', sig=_SIG)
         gold_before = int(gs.gold.value or 0)

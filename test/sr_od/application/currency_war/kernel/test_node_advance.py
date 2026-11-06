@@ -11,7 +11,7 @@
 - **场景走查测试**(landing §3.6 走查集:快弹窗全型/boss 段/恢复局
   自愈/结算真值金采样/备战锚定接入调用;已有判据不重写,本节只收缺口);
 - **环境修饰序位表**(人身意外险 id 107 节点序列环境修饰,设计 §4
-  锁 1-11;设计正本 = .debug/progress/2026-09-23-invest-effects-calc/
+  锁 1-11;设计权威版本 = .debug/progress/2026-09-23-invest-effects-calc/
   designs/T-8-renshenyiwai-xian.md,钉住设计约定不断言实现细节):修饰规则
   纯函数/场字段生命周期/next_screen 推导/观察读链两位数/白名单归属/
   sim 世界真值/键化消费面/acquired_key 同坐标系/结算读数与单调门。
@@ -530,7 +530,7 @@ def test_deposit_return_conditional_grant_and_roll(
 
 
 def test_prep_heavy_receipt_anchors_node(test_context, monkeypatch) -> None:
-    """备战帧锚定接入调用测试(design §2.4 写端 1,攻击 F1 定谳):CwScreenPrep
+    """备战帧锚定接入调用测试(design §2.4 写端 1,攻击 F1 定论):CwScreenPrep
     heavy 观察回执携带本帧 plane/round → ``observe_node_anchor``(唯一
     生产锚定缝,cw_screen_prep.py::_observe heavy 段)——首帧 first_anchor
     建账含尾段发放、后续读数 advance/reanchor 落账、回执缺位跳过(禁猜)。"""

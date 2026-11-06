@@ -6,7 +6,7 @@ _make_named_equip_grant_effect('和平手枪', 1))``;按被测方法拆目录
 同目录 test_strategy_random_equip_grant_kongcang.py 空仓)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-196 对应稿
-§4(REVIEW-T196 免裁 7/7;卡面官方原文:「首次有我方队员在战斗中达到500
+§4(REVIEW-T196 无需用户决定 7/7;卡面官方原文:「首次有我方队员在战斗中达到500
 前台或后台强度时，获得30金币。立即获得【折叠小刀】、【和平手枪】。」):
 
 - 登记单一源:双具名组合行(折叠小刀×1 先/和平手枪×1 后,依卡文语序;

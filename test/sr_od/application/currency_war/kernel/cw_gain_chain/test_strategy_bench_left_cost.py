@@ -4,7 +4,7 @@ GRANTS/bench_leftmost_unit_of/check_strategy_bench_left_cost_xp/sim
 聚段调用块;八锁落拆目录新文件,先例 = 同目录条件 XP 族锁形)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-299 对应稿
-(REVIEW-T299 免裁 9/9;卡面官方原文:「每次进入新节点时获得经验，数值
+(REVIEW-T299 无需用户决定 9/9;卡面官方原文:「每次进入新节点时获得经验，数值
 等同于你备战席最左侧角色的基础费用。」):
 
 1 注册表锁 / 2 派生矩阵锁 / 3 左一读口锁 / 4 未持卡零 / 5 cost=0 零 /

@@ -12,7 +12,7 @@ _on_invest_picked 宝钻腿 + 呈现一次性标志位 _strategy_pick_diamond_la
   (回调三写非幂等,重放伪 +1);
 - 发放落地门负验(锁 3 负面):equips 未观察形态(equips_unobserved 同
   判据,T-141 到级腿 placed 门同构)→ 宝钻腿拒落 + 回调零发 → 三写零发
-  (防 back_layout/diamond_count 伪 +1);sim 种子底座 equips=[] 下门恒
+  (防 back_layout/diamond_count 伪 +1);sim 种子初始值 equips=[] 下门恒
   开,本锁以容器替身构造拒落形态(门系形态级卫生面)。
 控制规模扩展(designs/T-324-kongzhi-guimo.md §4 锁 5,拿卡触发第二卡
 随批归一同支):拿卡 → 宝钻入栏 + 世界三写同构(无佩佩腿,单位数零变);

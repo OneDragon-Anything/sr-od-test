@@ -1,5 +1,5 @@
 """STRATEGY_EFFECTS 键集闭集断言(cw_investments 分目录镜像;新写锁,
-落位守 T-426 超限冻结判例——test_cw_investments.py 禁追加,拆目录新文件
+落位守 T-426 超限冻结先例——test_cw_investments.py 禁追加,拆目录新文件
 先例 = 同目录各登记锁文件)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-191-chaofa-

@@ -472,7 +472,7 @@ def test_expected_refreshes_boundaries() -> None:
     assert refresh_prob(99, 3) == 0.0, '查表缺级 → 0'
 
 
-# ==================== xp 买费折扣修复测试族(正本 = ADR-0632) ====================
+# ==================== xp 买费折扣修复测试族(权威版本 = ADR-0632) ====================
 # 规范语义 = strategy-env-impacts.md §2 通用模式 1(2026-09-10 定稿):
 # 观察优先、兜底逻辑——显示价(最近备战帧 OCR,游戏已算好折扣)直通不再减;
 # 观察缺省 → 兜底 = 基准 4 − 折扣(max 0;商业间谍 xp_buy_cost_discount +
@@ -1034,7 +1034,7 @@ class TestBudgetDisclosureWriteRead:
         W6 波 4:预算接缝读 session 容器单例,种子先于披露(生产同路 =
         观察漏斗,测试同路 = cw4_gs 容器域种子)。"""
         sess = StrategySession()
-        # 构造金 120:开局种子底座后备战帧息帽含排程升级费(种子域喂入
+        # 构造金 120:开局初始值后备战帧息帽含排程升级费(种子域喂入
         # reserve_cap 现算),取高金保「溢余/义务非退化」判据有效。
         _disclose_cur(sess, 1, 8, 120, node_type='prep')
         disclose_budget(game_state_of(sess), sess)
@@ -1059,7 +1059,7 @@ class TestShopOpenFrameDualWrite:
 
     def test_prep_frame_without_gold_keeps_zero_semantics(self):
         """prep 关店帧 ⇒ overflow/budget 恒 0 =「金未采」已知语义(非
-        真 0;实机首局 g_20260907_025608 锚⑤定谳),reserve_cap 不受
+        真 0;实机首局 g_20260907_025608 锚⑤定论),reserve_cap 不受
         影响(gold 无关)——关店 0 语义由容器金缺席承载(F2 门:gold
         仅店开态可信,关店读空不写容器)。"""
         sess = StrategySession()
@@ -1074,7 +1074,7 @@ class TestShopOpenFrameDualWrite:
 
     def test_shop_open_frame_overwrites_with_frame_values(self):
         """店开观察帧覆写:overflow/budget 变帧现值(gold 120 > 息帽 ⇒
-        溢余/义务 >0;开局种子底座后备战帧息帽含排程升级费,构造金取高
+        溢余/义务 >0;开局初始值后备战帧息帽含排程升级费,构造金取高
         保非退化);同轮重复覆写不清 spent(轮界清零归 prep 键戳
         独占);下轮 prep 关店帧 ⇒ 披露 = 容器现值重算(W6 波 4 语义
         变更;键戳翻轮清零断言面 = 测试 D 主测试,此处不重复)。"""

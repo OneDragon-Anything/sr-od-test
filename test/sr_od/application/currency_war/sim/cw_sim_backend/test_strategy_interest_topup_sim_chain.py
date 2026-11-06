@@ -5,7 +5,7 @@ _begin_node_window 载体消费 + apply_round_start_income floor 透传;新锁
 测试面依据 = 迭代设计 designs/T-295-kaiyuan-jieru.md §4 锁 4 + REVIEW-
 T295 §3.3 裁决点 1/2(条件金腿 = 利息分量顶满;tick 捕获→窗口消费):
 - 上节点未花费 → 下窗收入息分量顶满至 resolved 帽 9(金 25 自然息 2
-  显影)+ 载体消费清零 + prev_node_spent 滚回 False;
+  暴露)+ 载体消费清零 + prev_node_spent 滚回 False;
 - **S2 回归红线用例**:上节点已花费(prev 直写 True 测试缝;置位通道
   本体 = 存款回报批四花费通道接入调用锁)→ 无顶满,息 = min(gold//10, 9)
   ——若 tick 闸内捕获被移到滚位后,捕获读恒 False → 载体 = 帽 → 本例
@@ -122,7 +122,7 @@ def _drive_to_offer(b: SimBackend, plane: int, round_num: int) -> None:
 
 def test_unspent_prev_tops_interest_and_carrier_consumed() -> None:
     """上节点未花费 → 下窗息分量顶满 9(锁 4 主用例):金 25 种子压低
-    自然息(min(2, 9)=2)使顶满显影;息累计账增量恰 = 9(收入应用单
+    自然息(min(2, 9)=2)使顶满暴露;息累计账增量恰 = 9(收入应用单
     口 = record_interest_earned 计 row.interest,四分支同源);载体窗开
     消费清零 + prev 滚回 False。"""
     b = _backend()

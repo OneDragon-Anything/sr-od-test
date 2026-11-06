@@ -8,7 +8,7 @@ md §3 锁 1/锁 2 + REVIEW-T197 八裁决点默认案(经族级授权收尾)。
 
 - 注册行直测(锁 1):STRATEGY_ECONOMY['大扩招'] 全等 EconomyEffect(
   instant_gold=16)——+16 金腿注册已登记;扣金侧不进 EconomyEffect
-  (禁 instant_gold 定额扣金建模,fields.md §5.2 金面缺口行正本);
+  (禁 instant_gold 定额扣金建模,fields.md §5.2 金面缺口行权威版本);
 - 扣金计划边界表(锁 2):dakuozhao_deduction_plan 纯函数 7 点边界
   (0/3/4/39/40/41/80),取整读法 = 只扣 4 的整数倍、余金保留;
 - 载体形态负锁(裁决点 3 默认案):卡不入 STRATEGY_EFFECTS(零持卡

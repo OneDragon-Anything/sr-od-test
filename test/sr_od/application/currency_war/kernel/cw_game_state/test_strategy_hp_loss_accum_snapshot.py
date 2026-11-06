@@ -6,9 +6,9 @@ strategy_hp_loss_accum 审计行)。
 分诊 A 类:0 = 无累积语义中性,种 0 不伪装已触发):
 - 快照存续:累积值进快照 → restore 往返逐位相等(int 保型直通免
   rebuild 登记——_json_safe 对 int 无漂移,env_grant_uid_seq 同款);
-- 冷建种子底座 = 0(触发函数累加取模零 None 防御);
+- 每局全新创建种子初始值 = 0(触发函数累加取模零 None 防御);
 - 登记四件:schema 独立键版本 1 + 审计行 PROCESS_ONLY(容器字段完备性
-  纪律的显式锁;fields.md §3.5.6c 为正本登记面,文档完备性归评审把关,
+  纪律的显式锁;fields.md §3.5.6c 为权威版本登记面,文档完备性归评审把关,
   本锁锁代码登记面)。
 """
 from __future__ import annotations
@@ -26,12 +26,12 @@ _LSIG = ChannelSig(family='logic_action', actor='TestDriver', mode='compute')
 
 
 def test_seed_zero_and_snapshot_roundtrip() -> None:
-    """种子底座(冷建 0 = 无累积语义中性)+ 快照→恢复类型不变(int 保型
+    """种子初始值(每局全新创建 0 = 无累积语义中性)+ 快照→恢复类型不变(int 保型
     直通)+ 逐位相等——累积值随快照存续 = 恢复局档位边界不位移(无 done
     一次性标志位的周期型触发器,累积器即跨战结转唯一载体)。"""
     seed_gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     seed_opening_state(seed_gs)
-    assert seed_gs.strategy_hp_loss_accum.value == 0, '冷建零底座'
+    assert seed_gs.strategy_hp_loss_accum.value == 0, '每局全新创建零初始值'
 
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.prep_anchored = True

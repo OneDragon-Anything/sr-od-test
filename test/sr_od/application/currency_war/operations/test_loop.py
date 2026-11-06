@@ -423,7 +423,7 @@ def test_on_fail_retry_branch_capped_before_retry_pool(monkeypatch):
 
 # ===== 出战链紧缩对位防线(槽位表占用数守门)=====
 # (紧缩占席序 × 容器槽位表对位守门两测试(deploy_plan_moves 装配链的
-#  unhealthy/healthy 表行为)已随部署统一批丁丁批收编删除:装配链退役,
+#  unhealthy/healthy 表行为)已随部署统一批丁丁批并入后删除:装配链退役,
 # 统一链(搜索 + 差分执行器)按容器槽位表下标直读产出动作,无「紧缩序
 # vs 槽位表」双坐标系错位面——unified-deploy-order §4;等价防线 = 差分
 # 执行器的容器直读坐标系与 deploy_diff 单测承载。)
@@ -447,7 +447,7 @@ def _bcd_gs(bench_slots) -> object:
 
 
 def test_deploy_chain_stale_frame_no_moves_via_unified_chain():
-    """统一链下的等价断言(收编改写):陈旧决策帧(bench 快照与容器现值
+    """统一链下的等价断言(纳入改写):陈旧决策帧(bench 快照与容器现值
     不一致)不再有独立守门面——差分执行器容器直读,快照漂移零动作面
     (部署面 = 容器真值,unified-deploy-order §3 容器坐标系)。"""
     from sr_od.application.currency_war.kernel.cw_strategy_session import (

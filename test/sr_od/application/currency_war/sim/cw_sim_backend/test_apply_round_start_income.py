@@ -8,7 +8,7 @@ apply_round_start_income 接入调用;同文件兄弟扑满结算分支测试 =
   逐节点窗口累计、同节点窗重放零双加、跨阈发放一次不重发;
 - **cap/flat 修饰**(设计 §4.6):利息上调局计数按 resolved cap
   (注册表直调 10);买断制(cap 0)+ 狸财经狸(flat 2)局每节点
-  +2——cap 0 被 ``or`` 真值折叠回缺省 5 的最高危陷阱由此显影
+  +2——cap 0 被 ``or`` 真值折叠回缺省 5 的最高危陷阱由此暴露
   (期望现算自 kernel 公式单一源,禁手抄)。
 
 复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py(已登记超限
@@ -92,7 +92,7 @@ def test_interest_account_via_engine_window_and_threshold_grant(
         assert gs.effects.interest_earned == 0, '开局零基线'
         gs.write_logic(gs.gold, 200, produced_by='Test',
                        evidence='t:gold', sig=_SIG)
-        # 推进至累计息入 35+ 档(每窗 +5;窗口路径落写的存在性由此显影)
+        # 推进至累计息入 35+ 档(每窗 +5;窗口路径落写的存在性由此暴露)
         _drive_until(b, lambda: gs.effects.interest_earned >= 35)
         # 窗口重放:同节点窗二次打开零双加(幂等守卫住窗口)
         before = gs.effects.interest_earned
@@ -118,7 +118,7 @@ def test_interest_account_via_engine_window_and_threshold_grant(
     (('利息上调',), lambda: interest(100, interest_cap_resolved(
         aggregate_economy(['利息上调']).interest_cap_override))),
     # 买断制(cap 0)+ 狸财经狸(flat 2):息通道关,仅 flat 计息
-    # ——cap 0 若被 or 折叠回缺省 5,期望 2 vs 实算 7 显影
+    # ——cap 0 若被 or 折叠回缺省 5,期望 2 vs 实算 7 暴露
     (('买断制', '狸财经狸'), lambda: interest(100, interest_cap_resolved(
         aggregate_economy(['买断制', '狸财经狸']).interest_cap_override))
      + aggregate_economy(['买断制', '狸财经狸']).interest_flat_per_node),

@@ -4,8 +4,8 @@ cw_gain_chain/test_check_strategy_battle_end_heal.py,本文件锁 sim 结算腿
 接入调用与世界真值落地面)。
 
 测试面依据 = 迭代设计 designs/T-325-xingji-heping-baoxian.md §4 锁 5
-(REVIEW-T325 免裁 7/7;驱动与断言形态先例 = 同目录
-test_strategy_boss_end_heal_sim_chain.py,直加不 clip 边界沿其锁 4 落码
+(REVIEW-T325 无需用户决定 7/7;驱动与断言形态先例 = 同目录
+test_strategy_boss_end_heal_sim_chain.py,直加不 clip 边界沿其锁 4 实现
 现值重推形):
 
 - 节点矩阵:battle/encounter/boss 三型结算 → 回血笔 hp +10 + hp_trail
@@ -13,7 +13,7 @@ test_strategy_boss_end_heal_sim_chain.py,直加不 clip 边界沿其锁 4 落码
   evidence ``sim:engine:strategy:battle_heal:p<位面>r<轮>``,sig = obs 族
   'sim:strategy' 组;胜败两态共同路径(败局存活也回);
 - reward/supply → 零笔(扑满 ∈ reward 随默认子案 a 同闸零笔——触发域
-  判读申报披露键承载,非定谳);
+  判读申报披露键承载,非定论);
 - 死亡局 → 零笔(dead 提前 return 在调用点之前);
 - 直加不 clip 边界:hp 预置 95 → 回血 105 越存量 100 上界仍直加(正部
   HP 加法家族形真值锁,后继补 clip 常量在此显式红)+ 三披露键存在性

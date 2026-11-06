@@ -47,7 +47,7 @@ def test_reward_node_table_entry() -> None:
 
 def test_data_row_id_anchor() -> None:
     """数据行锚对拍:base 溯源 id 253601 与卡名一致(表键 ↔ base 溯源;
-    数据行 = 卡面冻结正本,表值漂移先炸孤儿键哨,本锁兜 id↔名换位形)。"""
+    数据行 = 卡面冻结权威版本,表值漂移先炸孤儿键哨,本锁兜 id↔名换位形)。"""
     from sr_od.application.currency_war.kernel.cw_investments import (
         INVESTMENT_STRATEGIES,
     )

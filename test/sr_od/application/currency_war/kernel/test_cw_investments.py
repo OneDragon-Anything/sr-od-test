@@ -342,47 +342,47 @@ def test_env_pool_rewrite_offer_node_gate(
         cw_investments._validate_env_pool_rewrite()
 
 
-# ==================== 头彩定谳接入(rewrite_settled 开关)====================
+# ==================== 头彩定论接入(rewrite_settled 开关)====================
 
 def test_toucai_entry_settled_registered() -> None:
-    """头彩条目定谳锁(2026-10-16 用户裁定:覆盖面定谳 = offer 级,第 1
+    """头彩条目定论锁(2026-10-16 用户裁定:覆盖面定论 = offer 级,第 1
     次取卡机会 3 张候选全棱彩):登记 rewrite_settled=True + rewrite_picks
     ==(1,)+ 非空 pending_notes(notes 记裁定时点与结论)。"""
     entry = ENV_POOL_REWRITE['头彩']
     assert entry.rewrite_settled is True
     assert entry.rewrite_picks == (1,)
-    assert entry.pending_notes, '定谳记录亦以非空 notes 承载'
+    assert entry.pending_notes, '定论记录亦以非空 notes 承载'
 
 
 def test_weicai_entry_settled_registered() -> None:
-    """尾彩条目定谳锁(2026-10-16 用户裁定:覆盖面定谳 = offer 级,第 3
+    """尾彩条目定论锁(2026-10-16 用户裁定:覆盖面定论 = offer 级,第 3
     次取卡机会 3 张候选全棱彩):登记 rewrite_settled=True + rewrite_picks
-    ==(3,)+ 非空 pending_notes(定谳记录)。至此品质覆写族 7 键全部定谳
-    或结构定形,注册表无未定谳部分型实体(「未定谳部分型不接入」语义由
+    ==(3,)+ 非空 pending_notes(定论记录)。至此品质覆写族 7 键全部定论
+    或结构定形,注册表无未定论部分型实体(「未定论部分型不接入」语义由
     合成载体锁承载,test_sim_offer.py
     test_rewrite_slot_qualities_unsettaled_partial_stays_out)。"""
     entry = ENV_POOL_REWRITE['尾彩']
     assert entry.rewrite_settled is True
     assert entry.rewrite_picks == (3,)
-    assert entry.pending_notes, '定谳记录亦以非空 notes 承载'
+    assert entry.pending_notes, '定论记录亦以非空 notes 承载'
 
 
-# ==================== 银·金·彩槽位向量定谳接入(2026-10-19 用户裁定批)====================
+# ==================== 银·金·彩槽位向量定论接入(2026-10-19 用户裁定批)====================
 
 def test_yinjincai_entry_slot_qualities_registered() -> None:
-    """银·金·彩条目定谳锁(2026-10-19 用户裁定:卡面直读即真值 = 左银
+    """银·金·彩条目定论锁(2026-10-19 用户裁定:卡面直读即真值 = 左银
     中金右彩,旧「实测 offer 金重仓」观察记录同裁定作废):登记
     slot_qualities = ('银','金','棱彩')(坐标系 = 投资界面卡槽物理排位
     左→右 0..2)+ offer_structure 结构标记 + extra_pick_refreshes = 2
     (sim 策略屏刷新呈现与世界分支消费端)+ rewrite_quality 空(槽位向量型
-    与品质改写型互斥)+ 非空 pending_notes(定谳记录)。"""
+    与品质改写型互斥)+ 非空 pending_notes(定论记录)。"""
     entry = ENV_POOL_REWRITE['银·金·彩']
     assert entry.slot_qualities == ('银', '金', '棱彩')
     assert entry.offer_structure == 'silver_gold_prism_slots'
     assert entry.extra_pick_refreshes == 2
     assert entry.rewrite_quality == ''
     assert entry.rewrite_picks == ()
-    assert entry.pending_notes, '定谳记录亦以非空 notes 承载'
+    assert entry.pending_notes, '定论记录亦以非空 notes 承载'
     cw_investments._validate_env_pool_rewrite()
 
 
@@ -1503,7 +1503,7 @@ def test_bench_capacity_registration_surface() -> None:
     「在接下来3个节点」);payload 双字段 = capacity_limit=3(容量桥声明契约)
     + expiry_simple_equips=3(到期发放腿件数);duties 只 track(容量消费端
     读容器派生,无预知/无姿态);pending=True 必带保守支 notes(「3 件」随机性
-    v0 未实采,家族判据「二义未实采不拍死」);id 双匹配过校验(import 期已
+    v0 未实采,家族判据「二义未实采不定死」);id 双匹配过校验(import 期已
     过——本测试存活即证,直调 = 复跑回归锚)。"""
     spec = STRATEGY_EFFECTS['节省工位']
     cw_investments._validate_strategy_effects()   # 构建校验复跑不炸

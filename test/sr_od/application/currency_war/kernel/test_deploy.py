@@ -4,7 +4,7 @@
 - **部署围栏与占槽物品防线**:占位件(kind ∈ tome/bookcard/supply_box)
   恒 held、拒因 ``item_slot``,先于一切围栏/cap 判定被剔除(benchchar-
   retirement P4 容器槽位 kind 口);
-- **板满门三个测试**(事故 match_g_20260918_023823,定谳见
+- **板满门三个测试**(事故 match_g_20260918_023823,定论见
   .debug/temp/incidents/20260918-reconcile/rootcause-reopen.md 案一):
   部署输入改容器现读 + 显式板满门,拒因 ``deploy_cap_full`` 帧级去重;
 - **落位策略三级排路由**:comp 站位覆盖 > 注册表派生 > back 兜底;
@@ -13,12 +13,12 @@
   required 成员 cap 竞争首桶序;
 - **残余补部署守卫**(P24 结构支配定理,零自由参数):dup 剔除 /
   cap 满停 / 两排皆满停 / cap=None 不设门 + 配方底线门 kernel 直测;
-- **载荷与执行语义**(P2 拖拽语义落码):(to_row, to_slot) 直落
+- **载荷与执行语义**(P2 拖拽语义已写进代码):(to_row, to_slot) 直落
   反「首空」、目标槽有人 = 交换(写侧/执行链/sim 三面同源);
 - **动作上报单写写序**(合卷契约):一次语义变更 = 恰一次 deployed 写;
   动态容量布局真值辖载荷校验。
 
-(换入臂/双轨对锁期换入通道/发射门三轴测试节已随部署统一批丁丁收编删除:
+(换入臂/双轨对锁期换入通道/发射门三轴测试节已随部署统一批丁丁并入后删除:
 kernel swap 机器与三轴门退役,场上去留 = 统一部署搜索定型单属——
 unified-deploy-order §2.7/§4;残余补部署/配方底线门测试随七桶选人
 退役批次处置。)
@@ -63,7 +63,7 @@ def _drain_defect_buffer():
 
 
 # (围栏与占槽物品防线/板满门/必需件 cap 竞争测试节已随部署统一批丁丁批
-#  收编删除:七桶选人族(select_deployments)与 _deployable/_emit_
+#  并入后删除:七桶选人族(select_deployments)与 _deployable/_emit_
 #  deploy_moves/_deploy_cap_full_gate 随选人退役,拒因闭集
 #  (item_slot/deploy_cap_full/deploy_emit_held_*)停产——unified-
 #  deploy-order §2/§4;占位件不入目标板 = 搜索段 0 剔除,板满帧部署
@@ -150,13 +150,13 @@ def test_back_layout_extended_value_extends_back_slots() -> None:
 
 
 # (残余补部署守卫(P24)与配方底线门/仙舟供给谓词测试节已随部署统一
-#  批丁丁批收编删除:七桶选人族与 recipe_floor_holds/xianzhou_supply_
+#  批丁丁批并入后删除:七桶选人族与 recipe_floor_holds/xianzhou_supply_
 #  exists/residual_fill_plan 随选人退役——unified-deploy-order §2/§4;
 #  空槽补位/围栏语义由统一部署搜索 + 差分执行器单测承载
 #  (test_deploy_search.py/test_deploy_diff.py)。)
 # ============================================================
 # (载荷与执行语义/动作上报单写写序两节(旧 CwActionDeployMoveParam/
-#  CwActionSwapDeployParam 载体)已随部署统一批戊批收编删除:词表类/
+#  CwActionSwapDeployParam 载体)已随部署统一批戊批并入后删除:词表类/
 #  执行 op/上报模块同批退役,统一拖动 = CwActionMoveUnitParam 单载体——
 #  unified-deploy-order §2.7/§4;写侧单写契约/交换语义/越界拒绝/动态
 #  后排容量覆盖面归 cw_action_report/test_move_unit.py 与

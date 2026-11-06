@@ -3,7 +3,7 @@ cw_gain_chain.py 同名函数 + _grant_ores_to_world 世界写;test_gain_chain.p
 已超行限禁追加,本文件按拆目录规范落新位)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
-T-316-huangjing-kuanggong.md(定稿,REVIEW-T316 免裁 7/7)§4 锁 2:
+T-316-huangjing-kuanggong.md(定稿,REVIEW-T316 无需用户决定 7/7)§4 锁 2:
 - 条件矩阵:掷中授予/未掷中零写/非持卡零写零流键消耗/灰档链底零发放/
   未知色档零发放/live 英文归一同判;
 - 撞键负例锁(轮 1 F1 修订后基准案):spheres 预置 sim 满面板 8 点摘 1 号

@@ -32,7 +32,7 @@ _SIG_OBS = ChannelSig(family='obs', actor='OpenBookcardTest')
 
 
 def _make_gs(slots: list[BenchSlot]) -> GameState:
-    """种子底座 + 指定槽位表观察。"""
+    """种子初始值 + 指定槽位表观察。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     seed_opening_state(gs)
     gs.observe(gs.bench, BenchView(slots=slots, capacity=9), sig=_SIG_OBS)

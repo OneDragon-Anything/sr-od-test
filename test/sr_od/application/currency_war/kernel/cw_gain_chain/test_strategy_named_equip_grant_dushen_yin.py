@@ -5,7 +5,7 @@ grant.py,本文件只锁本卡登记面 + 行为面,按被测方法拆目录规�
 同目录姊妹镜像文件 test_strategy_named_equip_grant_xingxing_xiangyin.py)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-140-dushen-yin.md
-(定稿)§4 锁面 + REVIEW-T140 §四 ④(锁 6 前提被落码按物判门表消解,降为
+(定稿)§4 锁面 + REVIEW-T140 §四 ④(锁 6 前提被已写进代码的按物判门表消解,降为
 门表轻断言,零新增前置行为锁——工厂泛化守卫由姊妹镜像承载,防冗余双锁):
 - 腿 = 卡文单句「获得一个【随便骰子】」:登记行直书
   ``_make_named_equip_grant_effect('随便骰子', 1)``,具名确定发放

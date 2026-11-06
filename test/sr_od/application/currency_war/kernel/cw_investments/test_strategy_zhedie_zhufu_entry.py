@@ -3,7 +3,7 @@
 test_strategy_xingyun_zhufu_entry.py 幸运星祝福)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-232 对应稿
-§4(REVIEW-T232 免裁 7/7;卡面官方原文:「获得1个【折叠小刀】。我方小队
+§4(REVIEW-T232 无需用户决定 7/7;卡面官方原文:「获得1个【折叠小刀】。我方小队
 获得30%前台强度和5%伤害增幅。」——祝福面游戏侧自算,bot 零响应):
 
 - 条目锁:category UNIT_BUFF / payload UnitBuffRef 且 effect_text 与

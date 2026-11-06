@@ -5,7 +5,7 @@ cw_gain_effects.py PICK_INVEST_EFFECTS '加拉赫顾问' 行:
 test_strategy_compose_grant_gangtie.py 钢铁美学形)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-288 对应稿
-§4 锁面(REVIEW-T288 免裁 7/7;卡面官方原文:「获得专家顾问【加拉赫】，
+§4 锁面(REVIEW-T288 无需用户决定 7/7;卡面官方原文:「获得专家顾问【加拉赫】，
 并使其在本局游戏中加入商店。获得【生命之花】和4金币。」——顾问腿/金腿
 已登记零动作,本卡唯一机制件 = 生命之花具名授予腿):
 
