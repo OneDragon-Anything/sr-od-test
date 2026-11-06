@@ -1,5 +1,5 @@
-"""sim 策略卡赠礼条件两条效果条目节点窗腿测试(镜像 src = sim/cw_sim_backend.py
-的 _begin_node_window 赠礼腿;kernel 触发函数直构面 =
+"""sim 策略卡赠礼条件两条效果条目节点窗效果条目测试(镜像 src = sim/cw_sim_backend.py
+的 _begin_node_window 赠礼效果条目;kernel 触发函数直构面 =
 kernel/cw_gain_chain/test_check_strategy_gift_grants.py,本文件锁 sim
 窗口接入调用与状态副本里的值落地面)。
 

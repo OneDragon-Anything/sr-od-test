@@ -9,7 +9,7 @@ check_strategy_level_grants 纯决策本体 + LEVEL_GRANT_PRODUCER 署名)。
 - 宁缺勿造(锁 4):level/gold 现值 None → None 且不封账,值到位重查
   发放(check_env_refresh_grants 三要素同款);
 - 纯决策零写(live 零接入调用通道前提):达标态全量快照调用前后逐位相等;
-- 快照存续(本腿语义层):一次性标志位后快照→恢复往返,决策函数跳过(恢复局不
+- 快照存续(本效果条目语义层):一次性标志位后快照→恢复往返,决策函数跳过(恢复局不
   重发;域五件套 roundtrip 本体 = kernel/cw_game_state 锁文件已登记)。
 """
 from __future__ import annotations
@@ -111,7 +111,7 @@ def test_grant_shape_and_purity_zero_write() -> None:
 
 
 def test_snapshot_roundtrip_latch_honored() -> None:
-    """快照存续(本腿语义层):达标发放后落一次性标志位 → full_state_snapshot →
+    """快照存续(本效果条目语义层):达标发放后落一次性标志位 → full_state_snapshot →
     restore 往返 → 决策函数对恢复局返回 None(中断恢复不重发;rebuild
     类型面归 cw_game_state 域锁)。"""
     gs = _seeded_gs()

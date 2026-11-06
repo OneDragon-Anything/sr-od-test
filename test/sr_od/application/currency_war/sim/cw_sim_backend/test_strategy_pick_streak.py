@@ -1,5 +1,5 @@
-"""sim 策略选卡连胜置位腿测试(镜像 src = sim/cw_sim_backend.py 的
-apply_strategy_pick_streak helper + _on_invest_picked 落地腿 + 呈现一次性标志位)。
+"""sim 策略选卡连胜置位效果条目测试(镜像 src = sim/cw_sim_backend.py 的
+apply_strategy_pick_streak helper + _on_invest_picked 落地效果条目 + 呈现一次性标志位)。
 
 测试面依据 = 迭代设计 designs/T-96-shengli-haishi-shengli.md §4 八锁中的
 sim 状态副本七锁(锁 7 注册表与双闭集断言落 kernel/test_cw_investments.py 与
@@ -54,7 +54,7 @@ from sr_od.application.currency_war.sim.cw_sim_battle import (
 )
 from sr_od.application.currency_war.sim.cw_sim_run_config import RunConfig
 
-#: 置位腿独立笔 evidence 前缀(单一源 = cw_sim_base.sim_evidence
+#: 置位效果条目独立笔 evidence 前缀(单一源 = cw_sim_base.sim_evidence
 #: 契约:前缀 sim:engine: + 写点 tag streak:strategy_pick:<卡名>)。
 _STREAK_EV_PREFIX = 'sim:engine:streak:strategy_pick:'
 
@@ -86,8 +86,8 @@ def _drive_until(b: SimBackend, pred, limit: int = 512) -> None:
 
 
 def _drive_to_offer(b: SimBackend) -> None:
-    """驱动至策略 offer 呈现(固定日程首槽 P1r3 起;呈现即置置位腿一次性标志位
-    ——本腿生效前提)。"""
+    """驱动至策略 offer 呈现(固定日程首槽 P1r3 起;呈现即置置位效果条目一次性标志位
+    ——本效果条目生效前提)。"""
     _drive_until(b, lambda: b.screen_identity() == SCREEN_INVEST_STRATEGY)
 
 

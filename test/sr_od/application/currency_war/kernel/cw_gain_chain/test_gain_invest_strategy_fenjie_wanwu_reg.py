@@ -8,7 +8,7 @@ BattlefieldEffect.equips_transform 字段与 EQUIPS_TRANSFORM_ADVANCED_MATTER
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-376-fenjie-
 wanwu.md(定稿)§4 锁 3(REVIEW-T376 §5④ 编排者定形案甲:pending=True +
 保守支 notes,断言联动 pending is True):
-- 变换腿登记形态(session 选入 → 账本条目四元组 + payload 词表值 +
+- 变换效果条目登记形态(session 选入 → 账本条目四元组 + payload 词表值 +
   duties.track 置位 + pending 冻结;锁登记形态与词表值,防裸串漂移与
   载体误配);
 - 三桥 no-op 负断言哨(限定当前 spec 形态 = PLANE_START / WHILE_HELD /
@@ -60,10 +60,10 @@ def _make_gs() -> GameState:
 
 
 def test_gain_invest_strategy_fenjie_wanwu_register_shape() -> None:
-    """分解万物 变换腿登记形态锁:session 选入 → 账本条目形态 =
+    """分解万物 变换效果条目登记形态锁:session 选入 → 账本条目形态 =
     PLANE_START(占位)/ WHILE_HELD / BATTLEFIELD + payload.equips_transform
     词表值(防裸串漂移与载体误配)+ duties.track 置位 + pending 冻结。
-    发放腿(选卡落地物质分解液入栏)不属本锁辖域,由发放腿链锁承载。"""
+    发放类效果条目(选卡落地物质分解液入栏)不属本锁辖域,由发放类效果条目链锁承载。"""
     gs = _make_gs()
     gain_invest_strategy(gs, object(), '分解万物', rand=False, sig=_LSIG)
     assert gs.active_strategies.value == ['分解万物'], '注册入表'

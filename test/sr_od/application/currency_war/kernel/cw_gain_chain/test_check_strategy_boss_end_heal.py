@@ -1,16 +1,16 @@
-"""策略卡首领战结束回血检查腿测试(镜像 src = kernel/cw_gain_chain.py
+"""策略卡首领战结束回血检查效果条目测试(镜像 src = kernel/cw_gain_chain.py
 的 check_strategy_boss_end_heal)。
 
 测试面依据 = 迭代设计 designs/T-313-fendou-xieyi.md §4 锁 2(REVIEW
 -T313 无需用户决定 6/6;直构形态先例 = 同目录 test_check_strategy_boss_battle_
 grants.py 的状态容器直置):
-- 纯函数锁:无卡 0 / 持卡 50 / 多卡累加(持无回血腿的他卡不合量误加)
+- 纯函数锁:无卡 0 / 持卡 50 / 多卡累加(持无回血效果条目的他卡不合量误加)
   / 表外卡 miss-safe(get_strategy 归一通道 miss = None 零贡献不炸);
 - 归一通道锁:本卡规范名无分隔符形变支,归一面 = get_strategy 入口
   (active_strategies 存量 OCR 原始名经 normalize_invest_name 归一,
   blood_xp_mode 同法)——锁 economy 对象与 STRATEGY_ECONOMY 注册行同
   实例(直读单一源,零第二份登记);
-- 节点类型门归调用方(kind == 'boss' 在 sim 结算腿),本函数对任意
+- 节点类型门归调用方(kind == 'boss' 在 sim 结算效果条目),本函数对任意
   持卡局返回合量,sim 侧门锁 = sim/cw_sim_backend/
   test_strategy_boss_end_heal_sim_chain.py。
 """
@@ -59,18 +59,18 @@ def test_held_card_returns_fifty() -> None:
 
 
 def test_multi_card_sum_only_heal_members() -> None:
-    """锁 2c(多卡累加):奋斗协议 + 成本控制(无回血腿成员)→ 仍 50
-    ——逐持卡 Σ boss_end_heal_hp,无腿成员零贡献不误加。"""
+    """锁 2c(多卡累加):奋斗协议 + 成本控制(无回血效果条目成员)→ 仍 50
+    ——逐持卡 Σ boss_end_heal_hp,无效果条目成员零贡献不误加。"""
     assert check_strategy_boss_end_heal(_gs(_CARD, '成本控制')) == 50, \
-        '无腿他卡不得误入合量'
+        '无效果条目他卡不得误入合量'
 
 
 def test_out_of_registry_card_miss_safe() -> None:
     """锁 2d(归一通道 miss-safe):表外卡经 get_strategy 归一 miss =
-    None 零贡献不炸(与持卡并存时持卡腿照常)。"""
+    None 零贡献不炸(与持卡并存时持卡效果条目照常)。"""
     assert check_strategy_boss_end_heal(_gs('躺平')) == 0, '表外卡零贡献'
     assert check_strategy_boss_end_heal(_gs('躺平', _CARD)) == 50, \
-        '表外卡不吞持卡腿'
+        '表外卡不吞持卡效果条目'
 
 
 def test_normalization_reads_registry_single_source() -> None:

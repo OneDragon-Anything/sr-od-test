@@ -1,4 +1,4 @@
-"""策略卡首领节点完成固定集发放检查腿测试(镜像 src = kernel/
+"""策略卡首领节点完成固定集发放检查效果条目测试(镜像 src = kernel/
 cw_gain_chain.py 的 check_strategy_boss_completion_grants)。
 
 测试面依据 = 迭代设计 designs/T-330-wuqi-pifashang.md §4 锁 3 + §2.2/

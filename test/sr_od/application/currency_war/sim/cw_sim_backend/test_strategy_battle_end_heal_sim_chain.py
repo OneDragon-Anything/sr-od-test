@@ -1,6 +1,6 @@
 """策略卡战斗结束回血 sim 状态副本链测试(镜像 src = sim/cw_sim_backend.py
-的 _resolve_battle 战斗结束回血腿;kernel 触发函数单元面 = kernel/
-cw_gain_chain/test_check_strategy_battle_end_heal.py,本文件锁 sim 结算腿
+的 _resolve_battle 战斗结束回血效果条目;kernel 触发函数单元面 = kernel/
+cw_gain_chain/test_check_strategy_battle_end_heal.py,本文件锁 sim 结算效果条目
 接入调用与状态副本里的值落地面)。
 
 测试面依据 = 迭代设计 designs/T-325-xingji-heping-baoxian.md §4 锁 5
@@ -9,7 +9,7 @@ test_strategy_boss_end_heal_sim_chain.py,直加不 clip 边界沿其锁 4 实现
 现值重推形):
 
 - 节点矩阵:battle/encounter/boss 三型结算 → 回血笔 hp +10 + hp_trail
-  成对追加(写流↔轨迹同构在腿粒度保持:结算笔 + 回血笔恰两笔);
+  成对追加(写流↔轨迹同构在效果条目粒度保持:结算笔 + 回血笔恰两笔);
   evidence ``sim:engine:strategy:battle_heal:p<位面>r<轮>``,sig = obs 族
   'sim:strategy' 组;胜败两态共同路径(败局存活也回);
 - reward/supply → 零笔(扑满 ∈ reward 随默认子案 a 同闸零笔——触发域

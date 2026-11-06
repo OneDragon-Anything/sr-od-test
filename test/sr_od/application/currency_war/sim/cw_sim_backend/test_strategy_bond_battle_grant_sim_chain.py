@@ -66,7 +66,7 @@ _CARD = '不要小看我们的羁绊'
 _EVIDENCE_PREFIX = 'strategy_bond_battle#'
 
 #: 中途过屏集合(settle/过渡/补给/遭遇/简报/巨星/升星/商店/投资策略;
-#: 驱动步 = _drive_env_grant_step 单步,先例 = 同目录 win 金腿锁同形)。
+#: 驱动步 = _drive_env_grant_step 单步,先例 = 同目录 win 金币效果条目锁同形)。
 _PLANE_TRANSITION = '货币战争-位面过渡'
 _TRANSIT_SCREENS = (SCREEN_SETTLE, _PLANE_TRANSITION, '货币战争-投资策略',
                     '货币战争-补给', '货币战争-遭遇节点',
@@ -194,7 +194,7 @@ def _drive_to_kind_prep(monkeypatch: pytest.MonkeyPatch, b: SimBackend,
                         *, target_kind: str) -> None:
     """自当前窗驱动到指定位面 1 节点类型的备战窗(途经战斗/奖励节点
     全胜强制穿过,中间屏走现役驱动步;目标判定 = 节点窗场字段 kind
-    序列真值;同目录 win 金腿/损血腿锁同形副本)。"""
+    序列真值;同目录 win 金币效果条目/损血效果条目锁同形副本)。"""
     gs = b.gs
     for _ in range(80):
         node = gs.node.value
@@ -353,7 +353,7 @@ def test_repeatable_two_qualified_battles_deliver_twice(
 def test_settled_replay_no_rearm_no_regrant(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """锁 5(幂等回归):同节点战斗重放(battle_resolve 重入)→
-    _settled_key 既有守卫整段跳过,零二次武装零新增笔(防本腿绕过);
+    _settled_key 既有守卫整段跳过,零二次武装零新增笔(防本效果条目绕过);
     随后正常推进窗开恰交付一次(armed 消费,窗口幂等守卫辖域)。"""
     b = _prep_backend(85)
     try:

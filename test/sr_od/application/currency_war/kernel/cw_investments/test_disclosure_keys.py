@@ -14,7 +14,7 @@ from sr_od.application.currency_war.kernel.cw_investments import (
 
 
 def test_hiring_letter_unmodeled_keys_registered() -> None:
-    """披露键静态常量已登记断言(聘用书授予族道具腿零建模申报,键 = 族卡
+    """披露键静态常量已登记断言(聘用书授予族道具效果条目零建模申报,键 = 族卡
     名):首卡招聘资金在列。家族随族卡实现批追加(招聘资金+/专家招募/
     专家招募+ 各自批并入元组),本断言随批扩员——申报面扩员即红一次,
     批内顺手更新即绿。"""

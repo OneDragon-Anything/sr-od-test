@@ -1,5 +1,5 @@
-"""sim 策略卡备战席条件离场金节点窗腿测试(镜像 src = sim/cw_sim_backend.py
-的 _begin_node_window 备战席条件离场金腿 + kernel 纯判定
+"""sim 策略卡备战席条件离场金节点窗效果条目测试(镜像 src = sim/cw_sim_backend.py
+的 _begin_node_window 备战席条件离场金币效果条目 + kernel 纯判定
 check_strategy_bench_leave_gold 的 sim 调用点状态副本写;kernel 原语单元面 =
 kernel/cw_gain_chain/test_check_strategy_bench_leave_gold.py,本文件锁
 sim 窗口接入调用与状态副本里的值落地面)。
@@ -12,7 +12,7 @@ T-292-yuzhe-ezuoju.md(定稿)§4 锁 3 + REVIEW-T292 §四④:
 - 幂等锁(锁 4):同节点窗重放(_window_begun_pos 守卫整段早退)零新增
   写行、金不双发;
 - 移出制结构性零重发(锁 4 变体):单位离场后下一窗条件自然消失零发放
-  (与零 done 一次性标志位计数腿「每窗重查」的结构差异——本卡产出含状态移除,
+  (与零 done 一次性标志位计数效果条目「每窗重查」的结构差异——本卡产出含状态移除,
   同单位不可二次离场)。
 """
 from __future__ import annotations
@@ -80,7 +80,7 @@ def _bench_leave_view() -> BenchView:
 
 def _watch_gold_writes(gs, monkeypatch: pytest.MonkeyPatch):
     """捕获 gold 域 observe 写值(记录包装透传真实现;窗口内金域多条效果条目分写,
-    本腿金笔按 evidence 定位取值)。"""
+    本效果条目金笔按 evidence 定位取值)。"""
     gold_writes: list[tuple[int, str | None]] = []
     real = gs.observe
 
@@ -120,7 +120,7 @@ def test_node_window_leaves_gold_and_slots(
         assert all(c[0] == 'obs' and c[3].family == 'obs'
                    and c[3].group_id == 'sim:strategy'
                    for c in calls if c[2] == _EV), \
-            '本腿写均 obs 族组 sim:strategy'
+            '本效果条目写均 obs 族组 sim:strategy'
     finally:
         uninstall_backend()
 
@@ -165,7 +165,7 @@ def test_units_gone_next_window_no_refire(
 
 
 def test_no_card_zero_write(monkeypatch: pytest.MonkeyPatch) -> None:
-    """未持卡零写(锁 3 反向):席内匹配单位已登记但不持卡 → 窗推进零本腿
+    """未持卡零写(锁 3 反向):席内匹配单位已登记但不持卡 → 窗推进零本效果条目
     写(白名单表外禁从效果原文自动猜装的窗口面)。"""
     b = _setup(grant=False)
     try:
@@ -176,7 +176,7 @@ def test_no_card_zero_write(monkeypatch: pytest.MonkeyPatch) -> None:
         calls = _record_all_writes(gs, monkeypatch)
         b._enter_node_window((1, 2))
         assert [c for c in calls if c[2] and 'bench_leave_gold' in c[2]] \
-            == [], '未持卡窗零本腿写'
+            == [], '未持卡窗零本效果条目写'
         view = gs.bench.value
         assert view.slots[0].kind == 'unit', '未持卡单位不离场'
         assert int(gs.gold.value or 0) >= gold_before, '金不减'
@@ -186,13 +186,13 @@ def test_no_card_zero_write(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_no_match_zero_write(monkeypatch: pytest.MonkeyPatch) -> None:
     """席内无匹配单位零写(锁 3 反向):持卡但席内全非 1星花火/火花
-    (开局 4 希儿种子形态)→ 零本腿写、席视图不动。"""
+    (开局 4 希儿种子形态)→ 零本效果条目写、席视图不动。"""
     b = _setup()
     try:
         gs = b.gs
         calls = _record_all_writes(gs, monkeypatch)
         b._enter_node_window((1, 2))
         assert [c for c in calls if c[2] and 'bench_leave_gold' in c[2]] \
-            == [], '无匹配单位窗零本腿写'
+            == [], '无匹配单位窗零本效果条目写'
     finally:
         uninstall_backend()

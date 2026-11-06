@@ -8,7 +8,7 @@
 获得双倍价格的金币。你接下来6次购买角色是免费的。」
 
 - EffectSpec 条目锁(锁 1):id/trigger/duration/category 五元组 +
-  素出售载体(board_rewrite=SELL_ALL)+ 免费购买腿 uses 种子
+  素出售载体(board_rewrite=SELL_ALL)+ 免费购买效果条目 uses 种子
   (duration_uses=6,免战牌机制复用)+ duties predict+track 双置
   (predict=买牌对账须预知免费价;track=次数余量剩余期量);
 - 注册值锁:STRATEGY_ECONOMY sell_price_mult == 2.0(官方卡文「双倍
@@ -18,7 +18,7 @@
 - 发牌判据细分确认锁(义务 6):素出售卡不入 sim 发牌判据集(sim 局
   零假发牌;词表 _DEAL 双值细分在码,本卡注册自动不入集);
 - 待建模登记锁(裁决点 7):卡级 PENDING 行存续 + 描述非空 + 现金分
-  fail-closed(免费购买腿估值未入现金通道,×2 修饰施径缺口待实采,
+  fail-closed(免费购买效果条目估值未入现金通道,×2 修饰施径缺口待实采,
   估值塌 0 = 治理账零行为)。
 """
 from __future__ import annotations
@@ -57,7 +57,7 @@ def test_jiangben_zengxiao_effect_spec_entry() -> None:
     assert spec.id == '202301'
     assert spec.trigger is TriggerKind.INSTANT
     assert spec.duration is DurationKind.ONCE, \
-        'ONCE 注记辖出售腿一次性语义(uses 维度独立播种,免战牌机制)'
+        'ONCE 注记辖出售写状态分支一次性语义(uses 维度独立播种,免战牌机制)'
     assert spec.category is EffectKind.BATTLEFIELD
     assert spec.payload.board_rewrite == BOARD_REWRITE_SELL_ALL, \
         '素出售语义(卡文无发牌句,不入 sim 发牌集)'
@@ -88,7 +88,7 @@ def test_jiangben_zengxiao_delivery_channel_registration_leg() -> None:
 
 def test_jiangben_zengxiao_not_in_sim_deal_criterion() -> None:
     """发牌判据细分确认锁(义务 6):本卡 ∉ sim 发牌判据集(素出售语义
-    值,判据集 = 具发牌腿 _DEAL 值派生)→ sim 局选本卡零假发牌;撤销
+    值,判据集 = 具发牌效果条目 _DEAL 值派生)→ sim 局选本卡零假发牌;撤销
     细分(判据回退素出售值过滤)则本卡自动入集、sim 局误发 5 只 2★。"""
     assert _CARD not in cw_sim_backend.SELL_ALL_REWRITE_STRATEGIES, \
         '素出售卡不入发牌判据集(语义值细分)'
@@ -97,10 +97,10 @@ def test_jiangben_zengxiao_not_in_sim_deal_criterion() -> None:
 
 def test_jiangben_zengxiao_pending_modeling_and_cash_failclosed() -> None:
     """待建模登记锁(裁决点 7 默认案):卡级 PENDING 行存续 + 描述非空
-    (治理账可见性,零运行时闸);现金分 fail-closed——免费购买腿估值
+    (治理账可见性,零运行时闸);现金分 fail-closed——免费购买效果条目估值
     未入现金通道,×2 修饰(sell_price_mult)归待建模分类塌 0。"""
     assert _CARD in STRATEGY_ECONOMY_PENDING_MODELING, '卡级 PENDING 行已登记'
     assert STRATEGY_ECONOMY_PENDING_MODELING[_CARD], '描述非空'
     gs = game_state_of(SimpleNamespace())
     assert strategy_economy_value(_CARD, gs) == (0.0, False), \
-        '现金分 fail-closed(sell_price_mult 待建模塌 0,免费腿无现金通道)'
+        '现金分 fail-closed(sell_price_mult 待建模塌 0,免费效果条目无现金通道)'

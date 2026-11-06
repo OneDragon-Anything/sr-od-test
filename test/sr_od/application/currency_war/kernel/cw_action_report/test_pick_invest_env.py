@@ -201,7 +201,7 @@ def test_deterministic_equip_env_grants_without_rng_lieche(
         provider_calls: list[str]) -> None:
     """确定性装备环境(T-63 设计 §4 锁 5):列车同行邀请(邀请族首例,
     equips_immediate only)零随机支 → rng 谓词零解析(provider 不触);
-    选卡后 equips 尾追 '列车同行星徽'、bench 零落位(无开箱腿)——上报
+    选卡后 equips 尾追 '列车同行星徽'、bench 零落位(无开箱效果条目)——上报
     → gain_invest_env → on_env_gained 实机和模拟器两边同链,live/sim 共用语义一条
     测试覆盖。"""
     gs = _make_gs(['列车同行邀请', '轮岗', '头彩'])
@@ -212,7 +212,7 @@ def test_deterministic_equip_env_grants_without_rng_lieche(
     assert list(gs.equips.value) == ['列车同行星徽'], '装备入账分支入栏'
     boxes = [s for s in gs.bench.value.slots
              if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '装备 only 环境零开箱腿'
+    assert boxes == [], '装备 only 环境零开箱效果条目'
 
 
 def test_deterministic_equip_env_grants_without_rng_yinhe(
@@ -230,7 +230,7 @@ def test_deterministic_equip_env_grants_without_rng_yinhe(
     assert list(gs.equips.value) == ['银河学者星徽'], '装备入账分支入栏'
     boxes = [s for s in gs.bench.value.slots
              if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '装备 only 环境零开箱腿'
+    assert boxes == [], '装备 only 环境零开箱效果条目'
 
 
 def test_deterministic_equip_env_grants_without_rng_beluoboge(
@@ -248,7 +248,7 @@ def test_deterministic_equip_env_grants_without_rng_beluoboge(
     assert list(gs.equips.value) == ['贝洛伯格星徽'], '装备入账分支入栏'
     boxes = [s for s in gs.bench.value.slots
              if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '装备 only 环境零开箱腿'
+    assert boxes == [], '装备 only 环境零开箱效果条目'
 
 
 def test_deterministic_equip_env_grants_without_rng_xingjian_lvren(
@@ -266,7 +266,7 @@ def test_deterministic_equip_env_grants_without_rng_xingjian_lvren(
     assert list(gs.equips.value) == ['星间旅人星徽'], '装备入账分支入栏'
     boxes = [s for s in gs.bench.value.slots
              if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '装备 only 环境零开箱腿'
+    assert boxes == [], '装备 only 环境零开箱效果条目'
 
 
 def test_deterministic_equip_env_grants_without_rng_xianzhou(
@@ -284,7 +284,7 @@ def test_deterministic_equip_env_grants_without_rng_xianzhou(
     assert list(gs.equips.value) == ['仙舟星徽'], '装备入账分支入栏'
     boxes = [s for s in gs.bench.value.slots
              if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '装备 only 环境零开箱腿'
+    assert boxes == [], '装备 only 环境零开箱效果条目'
 
 
 def test_deterministic_equip_env_grants_without_rng_langshou(
@@ -302,7 +302,7 @@ def test_deterministic_equip_env_grants_without_rng_langshou(
     assert list(gs.equips.value) == ['狼狩星徽'], '装备入账分支入栏'
     boxes = [s for s in gs.bench.value.slots
              if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '装备 only 环境零开箱腿'
+    assert boxes == [], '装备 only 环境零开箱效果条目'
 
 
 def test_deterministic_equip_env_grants_without_rng_shenghui_zhixing(
@@ -320,7 +320,7 @@ def test_deterministic_equip_env_grants_without_rng_shenghui_zhixing(
     assert list(gs.equips.value) == ['盛会之星星徽'], '装备入账分支入栏'
     boxes = [s for s in gs.bench.value.slots
              if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '装备 only 环境零开箱腿'
+    assert boxes == [], '装备 only 环境零开箱效果条目'
 
 
 def test_deterministic_equip_env_grants_without_rng_zhouzhi_banshen(
@@ -338,7 +338,7 @@ def test_deterministic_equip_env_grants_without_rng_zhouzhi_banshen(
     assert list(gs.equips.value) == ['昼之半神星徽'], '装备入账分支入栏'
     boxes = [s for s in gs.bench.value.slots
              if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '装备 only 环境零开箱腿'
+    assert boxes == [], '装备 only 环境零开箱效果条目'
 
 
 def test_deterministic_equip_env_grants_without_rng_yezhi_banshen(
@@ -356,7 +356,7 @@ def test_deterministic_equip_env_grants_without_rng_yezhi_banshen(
     assert list(gs.equips.value) == ['夜之半神星徽'], '装备入账分支入栏'
     boxes = [s for s in gs.bench.value.slots
              if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '装备 only 环境零开箱腿'
+    assert boxes == [], '装备 only 环境零开箱效果条目'
 
 
 def test_deterministic_equip_env_grants_without_rng_zhuiji(
@@ -374,7 +374,7 @@ def test_deterministic_equip_env_grants_without_rng_zhuiji(
     assert list(gs.equips.value) == ['追击星徽'], '装备入账分支入栏'
     boxes = [s for s in gs.bench.value.slots
              if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '装备 only 环境零开箱腿'
+    assert boxes == [], '装备 only 环境零开箱效果条目'
 
 
 def test_deterministic_equip_env_grants_without_rng_jipo(
@@ -392,7 +392,7 @@ def test_deterministic_equip_env_grants_without_rng_jipo(
     assert list(gs.equips.value) == ['击破星徽'], '装备入账分支入栏'
     boxes = [s for s in gs.bench.value.slots
              if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '装备 only 环境零开箱腿'
+    assert boxes == [], '装备 only 环境零开箱效果条目'
 
 
 def test_deterministic_equip_env_grants_without_rng_qungong(
@@ -410,7 +410,7 @@ def test_deterministic_equip_env_grants_without_rng_qungong(
     assert list(gs.equips.value) == ['群攻星徽'], '装备入账分支入栏'
     boxes = [s for s in gs.bench.value.slots
              if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '装备 only 环境零开箱腿'
+    assert boxes == [], '装备 only 环境零开箱效果条目'
 
 
 def test_deterministic_equip_env_grants_without_rng_nengliang(
@@ -428,7 +428,7 @@ def test_deterministic_equip_env_grants_without_rng_nengliang(
     assert list(gs.equips.value) == ['能量星徽'], '装备入账分支入栏'
     boxes = [s for s in gs.bench.value.slots
              if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '装备 only 环境零开箱腿'
+    assert boxes == [], '装备 only 环境零开箱效果条目'
 
 
 def test_deterministic_equip_env_grants_without_rng_ranxue(
@@ -446,7 +446,7 @@ def test_deterministic_equip_env_grants_without_rng_ranxue(
     assert list(gs.equips.value) == ['燃血星徽'], '装备入账分支入栏'
     boxes = [s for s in gs.bench.value.slots
              if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '装备 only 环境零开箱腿'
+    assert boxes == [], '装备 only 环境零开箱效果条目'
 
 
 def test_deterministic_equip_env_grants_without_rng_jianyi(
@@ -464,7 +464,7 @@ def test_deterministic_equip_env_grants_without_rng_jianyi(
     assert list(gs.equips.value) == ['减益星徽'], '装备入账分支入栏'
     boxes = [s for s in gs.bench.value.slots
              if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '装备 only 环境零开箱腿'
+    assert boxes == [], '装备 only 环境零开箱效果条目'
 
 
 def test_deterministic_equip_env_grants_without_rng_chixu_shanghai(
@@ -482,7 +482,7 @@ def test_deterministic_equip_env_grants_without_rng_chixu_shanghai(
     assert list(gs.equips.value) == ['持续伤害星徽'], '装备入账分支入栏'
     boxes = [s for s in gs.bench.value.slots
              if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '装备 only 环境零开箱腿'
+    assert boxes == [], '装备 only 环境零开箱效果条目'
 
 
 def test_deterministic_equip_env_grants_without_rng_liangzi_tongpin(
@@ -500,7 +500,7 @@ def test_deterministic_equip_env_grants_without_rng_liangzi_tongpin(
     assert list(gs.equips.value) == ['量子同频星徽'], '装备入账分支入栏'
     boxes = [s for s in gs.bench.value.slots
              if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '装备 only 环境零开箱腿'
+    assert boxes == [], '装备 only 环境零开箱效果条目'
 
 
 def test_deterministic_equip_env_grants_without_rng_zhanjidian_invite(
@@ -518,7 +518,7 @@ def test_deterministic_equip_env_grants_without_rng_zhanjidian_invite(
     assert list(gs.equips.value) == ['战技点星徽'], '装备入账分支入栏'
     boxes = [s for s in gs.bench.value.slots
              if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '装备 only 环境零开箱腿'
+    assert boxes == [], '装备 only 环境零开箱效果条目'
 
 
 def test_deterministic_equip_env_grants_without_rng_huanyu_invite(
@@ -536,7 +536,7 @@ def test_deterministic_equip_env_grants_without_rng_huanyu_invite(
     assert list(gs.equips.value) == ['欢愉星徽'], '装备入账分支入栏'
     boxes = [s for s in gs.bench.value.slots
              if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '装备 only 环境零开箱腿'
+    assert boxes == [], '装备 only 环境零开箱效果条目'
 
 
 def test_deterministic_equip_env_grants_without_rng_mingyun_shengbei(
@@ -554,7 +554,7 @@ def test_deterministic_equip_env_grants_without_rng_mingyun_shengbei(
     assert list(gs.equips.value) == ['命运圣杯星徽'], '装备入账分支入栏'
     boxes = [s for s in gs.bench.value.slots
              if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '装备 only 环境零开箱腿'
+    assert boxes == [], '装备 only 环境零开箱效果条目'
 
 
 # ==================== 环境道具双件(专家研讨会)====================

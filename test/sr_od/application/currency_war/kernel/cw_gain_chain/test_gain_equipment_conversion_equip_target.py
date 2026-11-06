@@ -10,7 +10,7 @@ REVIEW-T248 §4③ 裁决点默认案(转换载体 A = 专表 + 装备目标分�
   不入栏、转换产物 '好运令牌' 入栏(名字替换落原插入路径)、detail 含
   converted 标记;on_equipment_gained 以令牌分派零后果(令牌 ∉
   EQUIP_ACQUIRE_CONSEQUENCES,effects 空)——任一经原语的进阶获得通道
-  同判定(如回收计划双卡随机进阶组合腿),拦截单咽喉自动覆盖;
+  同判定(如回收计划双卡随机进阶组合效果条目),拦截单咽喉自动覆盖;
 - 锁 2 类别边界:简易〔以太钻头点名:注册表归'简易'作基础件,防图鉴
   口径误引〕/工具/星徽/特殊类别获得不转换照常入栏(转换谓词按注册
   类别判,进阶谓词仅辖源类别);
@@ -114,7 +114,7 @@ def test_conversion_intercept_places_token_not_equip(
     → 出参 placed=True/detail=f'converted:{卡}'/landing='skipped';
     进阶件不入栏 + 令牌入栏恰 +1(名字替换落原插入路径);on_equipment_
     gained 以令牌分派零后果(effects 空,令牌 ∉ 后果表);正常路径零申报
-    行。任一经原语的进阶获得通道同判定(随机进阶组合腿等),单咽喉自动
+    行。任一经原语的进阶获得通道同判定(随机进阶组合效果条目等),单咽喉自动
     覆盖,零特判。"""
     item = sorted(equips_by_category('进阶'))[0]
     gs = _make_gs(bench=[], equips=[])

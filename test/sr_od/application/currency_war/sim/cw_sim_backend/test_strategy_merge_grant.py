@@ -1,4 +1,4 @@
-"""买牌上报·策略卡合成触发发放腿 sim 集成测试(镜像 src = kernel/
+"""买牌上报·策略卡合成触发发放类效果条目 sim 集成测试(镜像 src = kernel/
 cw_action_report/buy_card.py 合并发火段调用点;kernel 发放函数单元面 +
 获得链集成面 = kernel/cw_gain_chain/test_check_strategy_merge_grants.py,
 本文件锁 buy 域调用点经真实上报函数的 sim 状态副本落地面,先例 = 同目录
@@ -59,7 +59,7 @@ _HOLD_SIG = ChannelSig(family='logic_action', actor='TestSeed',
 
 def _prep_backend(seed: int) -> SimBackend:
     """装配后端至 P1r1 备战屏(调用方负责 uninstall;先例 = 同目录
-    合成金腿锁 _prep_backend 形)。"""
+    合成金币效果条目锁 _prep_backend 形)。"""
     b = _backend(seed)
     b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
     b._maybe_finish_wait()
@@ -69,7 +69,7 @@ def _prep_backend(seed: int) -> SimBackend:
 
 def _hold_card(gs) -> None:
     """持卡直置(注册状态容器直写 = 持卡事实;本卡不进 STRATEGY_EFFECTS,
-    零账本登记面——触发腿查 active_strategies ∩ STRATEGY_MERGE_GRANTS)。"""
+    零账本登记面——触发效果条目查 active_strategies ∩ STRATEGY_MERGE_GRANTS)。"""
     gs.write_logic(gs.active_strategies, [_CARD],
                    produced_by='test-seed', evidence='t:card',
                    sig=_HOLD_SIG)

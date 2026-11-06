@@ -19,10 +19,10 @@ T-3;设计 = details/shop-buy-reform.md §1-§3,镜像 = mandate_v1/shop.py
     ``star_goal_met``) |
 - **W4 停留刷窗口让位**:窗口内(``refresh_warranted`` 真)M6 压牌库
   囤货臂零发射;非窗口 M6 照常回归。
-- **W11 刷新负结果记忆**(3.2 后记忆面 = 金线腿):拒绝态关店置标记;
-  重入无状态变化跳过刷新提案;状态变化清标记后提案恢复(付费腿);
-  「目标不可买」置位分支随预测门退役(design §2.2,免费腿无条件刷)。
-- 合成腿谓词机制全集直调形态表(恰 2 张 1★ / 2×1★+2★ / 2×2★)。
+- **W11 刷新负结果记忆**(3.2 后记忆面 = 金线效果条目):拒绝态关店置标记;
+  重入无状态变化跳过刷新提案;状态变化清标记后提案恢复(付费效果条目);
+  「目标不可买」置位分支随预测门退役(design §2.2,免费效果条目无条件刷)。
+- 合成效果条目谓词机制全集直调形态表(恰 2 张 1★ / 2×1★+2★ / 2×2★)。
 
 帧构造 = 列车同行注册表线(need_star:姬子·启行 3/三月七 2/花火 2/
 瓦尔特 1);deployed 锚 = 白厄(注册表零阵营流派唯一名,板面标签空集
@@ -109,7 +109,7 @@ def _locked_frame(*, bench, deployed, gold: int, level: int,
 
 def _full_line_bench(*, jizi_star: int = 2, fillers: int = 5) -> list:
     """席满线基础数据:姬子 jizi_star 星(追 3★ 目标)+ 三月七/花火/瓦尔特
-    达标 + 2★ 填充(无 1★ ⇒ 零燃料,目标可买席位腿恒假)。"""
+    达标 + 2★ 填充(无 1★ ⇒ 零燃料,目标可买席位效果条目恒假)。"""
     fill = _fillers(fillers)
     return [_bc(_TARGET, star=jizi_star), _bc('三月七', star=2),
             _bc('花火', star=2), _bc('瓦尔特', star=2)] \
@@ -278,7 +278,7 @@ class TestW5StarArmsMatrix:
             st.cw4_shop_rejects
 
     def test_merge_pair_predicate_mechanism_full_set(self):
-        """合成腿谓词机制全集直调形态表:恰 2 张 1★ / 2×1★ + 2★ /
+        """合成效果条目谓词机制全集直调形态表:恰 2 张 1★ / 2×1★ + 2★ /
         2×2★ 入集;1×1★ + 1×2★(双档各 1,任一档都凑不满 3)不入集。"""
         pairs = _shop._merge_pair_names(
             [_bc('花火', star=1), _bc('花火', star=1)],
@@ -347,11 +347,11 @@ class TestW4StayWindowYield:
 
 class TestW11RefreshNegativeMemory:
     """刷新负结果记忆(轻量形态;统一让位优先级迭代 3.2 后记忆面 =
-    金线腿——「目标不可买」置位分支随预测门退役,design §2.2;免费腿
+    金线效果条目——「目标不可买」置位分支随预测门退役,design §2.2;免费效果条目
     无条件刷,不再进入拒绝面)。"""
 
     def test_reject_close_sets_marker(self):
-        """拒绝态关店(金线腿):带内可刷帧金不足(r2_budget 拒)→ 置
+        """拒绝态关店(金线效果条目):带内可刷帧金不足(r2_budget 拒)→ 置
         会话标记(节点, 金, 席位, 星级目标键)+ 照常收店(驱动器契约:
         关店为收尾终结动作不入序列,空序列 = 纯关店帧)。"""
         bench = [_bc(_TARGET, star=2)] + _full_line_bench(jizi_star=2)[1:8]
@@ -367,7 +367,7 @@ class TestW11RefreshNegativeMemory:
         assert st.refresh_blocked[3] == ((_TARGET, 3),), \
             '键分量 = 星级目标键(星级目标完成即键变)'
         assert st.cw4_counters.get('shop_refresh_target_unbuyable', 0) == 0, \
-            '金线腿置位:目标可买拒因不在场(免费腿无条件刷已脱离拒绝面)'
+            '金线效果条目置位:目标可买拒因不在场(免费效果条目无条件刷已脱离拒绝面)'
 
     def test_reentry_same_state_skips_refresh_proposal(self):
         """拒绝态重入(无状态变化,解拦复核清 handled 重开形态):刷新
@@ -389,7 +389,7 @@ class TestW11RefreshNegativeMemory:
 
     def test_state_change_clears_marker_and_proposal_recovers(self):
         """状态变化清标记:金变化(键分量比对)后重入,标记清除,刷新
-        提案恢复发射(付费——金线闸放行腿)。"""
+        提案恢复发射(付费——金线闸放行效果条目)。"""
         bench = [_bc(_TARGET, star=2)] + _full_line_bench(jizi_star=2)[1:8]
         s, gs, st = _locked_frame(bench=bench,
                                   deployed=[Unit(char_id=_fillers(6)[5], star=2)],
@@ -407,7 +407,7 @@ class TestW11RefreshNegativeMemory:
         assert st.refresh_blocked is None, '标记已清'
 
     def test_extended_merge_form_refresh_at_full_bench(self):
-        """合成腿扩面单帧:席满 + 零燃料 + 场上 2★ + 备战 1★×2 → 目标
+        """合成效果条目扩面单帧:席满 + 零燃料 + 场上 2★ + 备战 1★×2 → 目标
         可买为真(旧「恰 2 张全 1★」口径该帧三条效果条目全无误拦追星刷新)。"""
         fill = _fillers(4)
         bench = [_bc(_TARGET, star=1), _bc(_TARGET, star=1),

@@ -1,4 +1,4 @@
-"""策略卡首领战后随机装备发放检查腿测试(镜像 src = kernel/cw_gain_chain.py
+"""策略卡首领战后随机装备发放检查效果条目测试(镜像 src = kernel/cw_gain_chain.py
 的 check_strategy_boss_battle_grants)。
 
 测试面依据 = 迭代设计 designs/T-166-qiang-zaishou.md §4 锁 3/4/7 +
@@ -147,7 +147,7 @@ def test_dual_hold_independent_grants_per_card(
     字段级 evidence 只示末笔,双笔归属须记写序)互不吞并——触发函数
     逐持卡独立查表发放,无跨卡判重闸(卡面两行独立直读;同卡双持不可能
     = active_strategies 按名去重,跨卡双持可能;发放序 = 持卡登记序,
-    前笔模式卡/后笔展开卡)。边界注记:同局持自由市场时本腿发放经转换腿
+    前笔模式卡/后笔展开卡)。边界注记:同局持自由市场时本效果条目发放经转换效果条目
     改写物种,断言改按转换后(简易武装箱)——族语义 T-143 批已锁,
     不按卡重复立锁。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)

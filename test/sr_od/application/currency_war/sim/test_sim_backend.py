@@ -858,10 +858,10 @@ def test_strategy_pick_chain_deposit_return_conditional() -> None:
             session=SimpleNamespace())
         assert out.applied
         assert gs.free_refresh_left.value is None, \
-            '无立即腿 = 登记期零发放(burst 桥零额度 no-op)'
+            '无立即效果条目 = 登记期零发放(burst 桥零额度 no-op)'
         cw_sim_ports.declare_world(out.world_decl)
         b._maybe_finish_wait()
-        # (1,1) 零买牌节点 → 推进 (1,2):桥条件腿 +2,滚位判等跳写
+        # (1,1) 零买牌节点 → 推进 (1,2):桥条件效果条目 +2,滚位判等跳写
         if b.screen_identity() == SCREEN_SHOP:
             _close_shop_feed(b)
         _start_battle_feed(gs)
@@ -946,7 +946,7 @@ def test_strategy_pick_chain_board_rewrite() -> None:
 
 
 def test_strategy_pick_chain_named_equip_grant() -> None:
-    """获得链断言:选全员晋升 → equips 恰 +2 拆装扳手(具名装备授予腿,
+    """获得链断言:选全员晋升 → equips 恰 +2 拆装扳手(具名装备授予效果条目,
     实机(live)和模拟器(sim)两边同链,sim 写状态副本即容器写)+ bench/deployed 零变化(板面重写面
     零建模 = 既有边界申报,sim-design §8.2 板面重写族行)。"""
     b = _backend(7)
@@ -969,7 +969,7 @@ def test_strategy_pick_chain_named_equip_grant() -> None:
             session=SimpleNamespace())
         assert out.applied
         assert gs.equips.value == ['拆装扳手', '拆装扳手'], \
-            '装备腿恰 2 件入栏(sim 状态副本里的值)'
+            '装备效果条目恰 2 件入栏(sim 状态副本里的值)'
         assert _bench_ids() == bench_before, 'bench 零变化(板面零建模)'
         assert gs.deployed.value == deployed_before, \
             'deployed 零变化(板面零建模)'
@@ -978,9 +978,9 @@ def test_strategy_pick_chain_named_equip_grant() -> None:
 
 
 def test_strategy_pick_chain_named_equip_grant_wuhai_laji() -> None:
-    """获得链断言:选无害垃圾 → equips 恰 +1 垃圾袋(具名装备授予腿,
+    """获得链断言:选无害垃圾 → equips 恰 +1 垃圾袋(具名装备授予效果条目,
     具名确定发放零采样,同 seed 重放确定不经 rng 注入)+ bench/deployed
-    零变化(板面重写面零建模 = 既有边界申报);金腿 8 金 = instant_gold
+    零变化(板面重写面零建模 = 既有边界申报);金币效果条目 8 金 = instant_gold
     已登记计分、发放写端 = 族级缺口(sim 金面锁不住,维持观察)。"""
     def _run_once() -> tuple:
         b = _backend(7)
@@ -1005,7 +1005,7 @@ def test_strategy_pick_chain_named_equip_grant_wuhai_laji() -> None:
             assert out.applied
             assert '无害垃圾' in gs.active_strategies.value
             assert list(gs.equips.value) == equips_before + ['垃圾袋'], \
-                f'装备腿恰 1 件入栏(sim 状态副本里的值): {gs.equips.value}'
+                f'装备效果条目恰 1 件入栏(sim 状态副本里的值): {gs.equips.value}'
             assert _bench_ids() == bench_before, 'bench 零变化(板面零建模)'
             assert gs.deployed.value == deployed_before, \
                 'deployed 零变化(板面零建模)'
@@ -1041,13 +1041,13 @@ def test_strategy_pick_chain_hacker_part_grant() -> None:
 
 @pytest.mark.parametrize('card', ['战术义眼++', '军火贸易', '军火贸易+'])
 def test_strategy_pick_chain_box_grant_immediate(card: str) -> None:
-    """获得链断言:选开箱分支策略卡(箱腿组五卡 offer 一次注入、pick 该卡)
+    """获得链断言:选开箱分支策略卡(箱条目组五卡 offer 一次注入、pick 该卡)
     → 箱道具获得时点立即落备战席(supply_box 槽件;仅选中卡效果体分派
     ——另四卡若误分派席上会多出箱,恰 1 = 唯一分派证据)+
     pending_item_grants 不受扰(直发不经定时队列,与特权阶级
     「登记入队、到点发放」形态相斥);军火贸易变体 = 简易武装箱名首次走
     report 上报链,+ 变体道具名同名、链路同形(与姊妹卡仅金量 4→8 差分,
-    金腿不经本链,族级缺口维持)。"""
+    金币效果条目不经本链,族级缺口维持)。"""
     b = _backend(7)
     try:
         b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
@@ -1129,7 +1129,7 @@ def test_strategy_pick_chain_reinforcement_grant() -> None:
 def test_strategy_pick_chain_random_equip_grant() -> None:
     """获得链断言(打捞人才库+ 迁移回归重立):选打捞人才库+ → 简易池均匀
     采样 1 件入栏(采样效果子链;rng 注入流键,sim 采样即状态副本里的值);同
-    seed 同流键重放 equips 逐位一致;主腿 unchosen_supply 恒 None(sim 局
+    seed 同流键重放 equips 逐位一致;主效果条目 unchosen_supply 恒 None(sim 局
     不种本域 → 检查恒第 2 门早退 = fail-closed 零发放,沿打捞族 T-94 键族
     语义)。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
@@ -1160,7 +1160,7 @@ def test_strategy_pick_chain_random_equip_grant() -> None:
             assert list(gs.equips.value) == before + [pick], \
                 f'equips 恰 +1 且名 = 流键采样值: {gs.equips.value} vs {pick}'
             assert gs.unchosen_supply.value is None, \
-                '主腿 unchosen_supply 恒 None(sim fail-closed 继承)'
+                '主效果条目 unchosen_supply 恒 None(sim fail-closed 继承)'
             return tuple(gs.equips.value)
         finally:
             uninstall_backend()
@@ -2732,7 +2732,7 @@ def test_wear_report_synthesis_branch() -> None:
 def test_wear_report_synthesis_grant_world_truth() -> None:
     """sim 状态副本里的值同口:动作注入穿戴合成与 live 同一上报函数唯一入口,
     账本持卡 → 合成发放自动生效(free_refresh_left +2,sim 状态容器
-    与 live 同格)——发放腿住上报函数内,sim 穿戴批未来接入调用零返工。
+    与 live 同格)——发放类效果条目住上报函数内,sim 穿戴批未来接入调用零返工。
     sim 自主局零穿戴 = 零触发(装备域 sim 未建模既有边界,不设负锁)。"""
     advance, (a, b) = next(iter(CROSS_RECIPES.items()))
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)

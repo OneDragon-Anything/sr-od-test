@@ -81,7 +81,7 @@ def test_validator_orphan_key_raises(monkeypatch) -> None:
 
 def test_validator_gate_faction_drift_raises(monkeypatch) -> None:
     """构建校验负控②(gate 漂移哨):gate_faction 不在 FACTIONS →
-    ValueError(档位判据派生源失联 = 条件腿静默失效,构建期响亮拦截)。"""
+    ValueError(档位判据派生源失联 = 条件效果条目静默失效,构建期响亮拦截)。"""
     monkeypatch.setitem(
         STRATEGY_BOND_TIER_GRANTS, '梦境大舞台',
         StrategyBondTierGrant(gate_faction='不存在的羁绊', tiers=(3, 7, 10),

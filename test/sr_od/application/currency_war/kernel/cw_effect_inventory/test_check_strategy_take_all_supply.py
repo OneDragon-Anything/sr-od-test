@@ -12,7 +12,7 @@ test_pick_supply.py)。
 - 金卡特有:配额两拍(第 3 拍零写零消耗)+ 0 列空转拍 + 双持独立性;
 - 彩卡特有:recurring 三拍各发各阶段(无早退)+ None 配额零配额格(sim
   形态零簿记正面断言/0 列空转零写零格耗)+ 三卡同持互不早退;
-- 列形态:席满拒落不阻断 / 席未观察 / 孤儿簇仅装备腿;
+- 列形态:席满拒落不阻断 / 席未观察 / 孤儿簇仅装备效果条目;
 - 归一失败:fail-closed 已解析件照常入账。
 """
 from __future__ import annotations
@@ -81,7 +81,7 @@ def _take_all_gs(*, bench_entries: list[Unit] | None = None,
 
 
 def _take_all_run(gs: GameState) -> None:
-    """检查函数运行(零采样腿,无 rng 注入面——固定 seed 零扰面本体)。"""
+    """检查函数运行(零采样写,无 rng 注入面——固定 seed 零扰面本体)。"""
     check_strategy_take_all_supply(gs, _SIG)
 
 
@@ -121,7 +121,7 @@ def test_take_all_fallback_round_consumes_quota_zero_grant() -> None:
 def test_take_all_grants_all_columns_consume_clear_and_zero_rng(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """全捞主锁:持卡 + 未选 2 列(列 0 = 角色+装备 / 列 1 = 孤儿簇仅装备)
-    → 两列全发放:char 腿入席 1★、装备腿 owned 恒规范名;char 腿 evidence
+    → 两列全发放:char 效果条目入席 1★、装备效果条目 owned 恒规范名;char 效果条目 evidence
     = ``strategy_take_all:<名>@1star``(效果串落点 = 随机写 evidence 本身);
     置一次性标志位 + 字段清(消费即清)+ 二次调用零写(重入幂等);rng 消费 = 0
     (「所有」= 零采样,采样入口计数桩断言零调用);发放面 = 随机态通道
@@ -135,17 +135,17 @@ def test_take_all_grants_all_columns_consume_clear_and_zero_rng(
     monkeypatch.setattr(ar_mod, 'action_sampling_rng', _counting_rng)
     gs = _take_all_gs()
     _take_all_run(gs)
-    assert _bench_names(gs) == ['希儿'], 'char 腿入席(全未选列逐列)'
+    assert _bench_names(gs) == ['希儿'], 'char 效果条目入席(全未选列逐列)'
     assert gs.equips.value == ['光能电池', '折叠小刀'], \
-        f'装备腿按列内容入账: {gs.equips.value}'
+        f'装备效果条目按列内容入账: {gs.equips.value}'
     assert gs.bench.evidence == 'strategy_take_all:希儿@1star', \
-        f'char 腿 evidence 串: {gs.bench.evidence}'
+        f'char 效果条目 evidence 串: {gs.bench.evidence}'
     assert gs.strategy_conditional_done.value == \
         ('take_all#全都要·银#1',), '置一次性标志位(计数复合键)'
     assert gs.unchosen_supply.value is None, '消费即清'
     assert calls == [], f'零 rng 消费(零采样): {calls}'
-    assert gs.bench.source == 'logic_rand', 'char 腿随机态通道'
-    assert gs.equips.source == 'logic_rand', '装备腿随机态通道'
+    assert gs.bench.source == 'logic_rand', 'char 效果条目随机态通道'
+    assert gs.equips.source == 'logic_rand', '装备效果条目随机态通道'
     assert gs.unchosen_supply.source == 'logic', '消费即清 = 逻辑态'
     assert gs.strategy_conditional_done.source == 'logic', '一次性标志位 = 逻辑态'
     seq = gs.write_seq
@@ -180,7 +180,7 @@ def test_take_all_color_recurring_three_picks_each_stage() -> None:
         assert gs.unchosen_supply.value is None, f'拍 {no} 消费即清'
         assert gs.write_seq != seq, f'拍 {no} 发生写(无早退)'
     assert gs.equips.value == ['光能电池', '折叠小刀', '折叠小刀'], \
-        f'装备腿按拍累积: {gs.equips.value}'
+        f'装备效果条目按拍累积: {gs.equips.value}'
 
 
 def test_take_all_color_none_quota_zero_latch_arms() -> None:
@@ -206,9 +206,9 @@ def test_take_all_color_none_quota_zero_latch_arms() -> None:
 
 
 def test_take_all_column_shapes_full_bench_and_unobserved() -> None:
-    """列形态锁:席满(bench 满 9)→ 列 0 char 腿拒落零写且装备腿照发、
+    """列形态锁:席满(bench 满 9)→ 列 0 char 效果条目拒落零写且装备效果条目照发、
     后续列(列 1)不阻断;席未观察 → bench 保持 None 拒落(detail=
-    'bench_unobserved' 语义)装备腿照发;孤儿簇列(char='')仅装备腿
+    'bench_unobserved' 语义)装备效果条目照发;孤儿簇列(char='')仅装备效果条目
     (主锁列 1 臂已覆盖,此臂显式单列)。"""
     full = [Unit(char_id=n, star=1) for n in
             ('希儿', '符玄', '花火', '停云', '刃', '杰帕德', '娜塔莎',
@@ -217,34 +217,34 @@ def test_take_all_column_shapes_full_bench_and_unobserved() -> None:
     _take_all_run(gs_full)
     assert _bench_names(gs_full) == [u.char_id for u in full], '席满拒落零写'
     assert gs_full.equips.value == ['光能电池', '折叠小刀'], \
-        '装备腿照发 + 后续列不阻断'
+        '装备效果条目照发 + 后续列不阻断'
     assert gs_full.unchosen_supply.value is None, '消费即清'
 
     gs_unobs = _take_all_gs(bench_unobserved=True)
     _take_all_run(gs_unobs)
     assert gs_unobs.bench.value is None, '席未观察零写'
-    assert gs_unobs.equips.value == ['光能电池', '折叠小刀'], '装备腿照发'
+    assert gs_unobs.equips.value == ['光能电池', '折叠小刀'], '装备效果条目照发'
 
     gs_orphan = _take_all_gs(unchosen=(_COLS[1],))
     _take_all_run(gs_orphan)
-    assert _bench_names(gs_orphan) == [], '孤儿簇列零角色腿'
-    assert gs_orphan.equips.value == ['折叠小刀'], '仅装备腿'
+    assert _bench_names(gs_orphan) == [], '孤儿簇列零角色效果条目'
+    assert gs_orphan.equips.value == ['折叠小刀'], '仅装备效果条目'
 
-    # 彩卡臂(None 配额走同发放分支,零配额格伴随):席满 char 腿拒落装备腿
+    # 彩卡臂(None 配额走同发放分支,零配额格伴随):席满 char 效果条目拒落装备效果条目
     # 照发不阻断;席未观察同形。
     gs_color_full = _take_all_gs(cards=('全都要·彩',), bench_entries=full)
     _take_all_run(gs_color_full)
     assert _bench_names(gs_color_full) == [u.char_id for u in full], \
         '彩席满拒落零写'
     assert gs_color_full.equips.value == ['光能电池', '折叠小刀'], \
-        '彩装备腿照发 + 后续列不阻断'
+        '彩装备效果条目照发 + 后续列不阻断'
     assert tuple(gs_color_full.strategy_conditional_done.value or ()) == (), \
         '彩零配额格伴随'
     gs_color_unobs = _take_all_gs(cards=('全都要·彩',), bench_unobserved=True)
     _take_all_run(gs_color_unobs)
     assert gs_color_unobs.bench.value is None, '彩席未观察零写'
     assert gs_color_unobs.equips.value == ['光能电池', '折叠小刀'], \
-        '彩装备腿照发'
+        '彩装备效果条目照发'
 
 
 def test_take_all_unresolved_name_fail_closed_resolved_survives() -> None:
@@ -272,8 +272,8 @@ def test_take_all_gold_quota_two_picks_then_exhausted() -> None:
     gs.write_logic(gs.unchosen_supply, _COLS, produced_by='test-seed',
                    sig=_SIG)
     _take_all_run(gs)
-    assert _bench_names(gs) == ['希儿'], '拍 1 全捞(char 腿)'
-    assert gs.equips.value == ['光能电池', '折叠小刀'], '拍 1 装备腿'
+    assert _bench_names(gs) == ['希儿'], '拍 1 全捞(char 效果条目)'
+    assert gs.equips.value == ['光能电池', '折叠小刀'], '拍 1 装备效果条目'
     assert gs.strategy_conditional_done.value == \
         ('take_all#全都要·金#1',), '一次性标志位 0→1(计数复合键)'
     assert gs.unchosen_supply.value is None, '消费即清'
@@ -325,7 +325,7 @@ def test_take_all_multi_hold_independent_quotas() -> None:
         f'三持各发一遍(级联合并收束): {_bench_names(gs)}'
     assert gs.bench.value.slots[0].unit.star == 2, '三副本合成产物星级'
     assert gs.equips.value == ['光能电池', '折叠小刀'] * 3, \
-        f'装备腿各发一遍: {gs.equips.value}'
+        f'装备效果条目各发一遍: {gs.equips.value}'
     assert tuple(gs.strategy_conditional_done.value or ()) == (
         'take_all#全都要·银#1', 'take_all#全都要·金#1'), \
         'int 卡各置各的一次性标志位,彩零配额格(域恰两键)'
@@ -346,7 +346,7 @@ def test_take_all_multi_hold_independent_quotas() -> None:
 def test_take_all_producer_attribution_and_assumption_keys(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """写端归属锁:随机态发放写行 producer = 'CwScreenSupplyNode'(未选域
-    发放写端家族值,与打捞腿同归属,防缺省归因混淆)+ 披露键静态常量已登记
+    发放写端家族值,与打捞效果条目同归属,防缺省归因混淆)+ 披露键静态常量已登记
     (无运行时 setdefault 动作,两键:钻归属零建模 / sim fail-closed)。"""
     gs = _take_all_gs()
     captured: list[tuple] = []

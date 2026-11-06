@@ -1,5 +1,5 @@
-"""sim 策略 boss 金腿测试(镜像 src = sim/cw_sim_backend.py 的
-strategy_boss_gold_of 聚合 helper + _begin_node_window 收尾 boss 金腿)。
+"""sim 策略 boss 金币效果条目测试(镜像 src = sim/cw_sim_backend.py 的
+strategy_boss_gold_of 聚合 helper + _begin_node_window 收尾 boss 金币效果条目)。
 
 测试面依据 = 迭代设计 designs/T-85-tezhan-zijin.md §2.1/§2.4/§4 七语义点:
 - 持卡发放真值(锁 1/7):进 boss 节点窗金增量 = 轮首收入面(kernel

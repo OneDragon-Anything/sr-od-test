@@ -1,4 +1,4 @@
-"""策略卡装备计数经验检查腿测试(镜像 src = kernel/cw_gain_chain.py 的
+"""策略卡装备计数经验检查效果条目测试(镜像 src = kernel/cw_gain_chain.py 的
 check_strategy_equip_count_xp 纯判定 + sim/cw_sim_backend.py 节点窗调用点
 唯一调用口;先例 = 同目录 test_check_strategy_empty_equip_xp.py)。
 

@@ -9,8 +9,8 @@ import sim,不设静态扫描锁)+ designs/T-198-baiyin-touzi.md §4(锁 3
 - 拿卡黄金期货 → 队列 (('黄金期货', 5),) + 效果串
   strategy_offer_scheduled:金@5;
 - 拿卡白银投资(族首张含两条效果条目的卡)→ 队列 (('白银投资', 0), ('白银投资', 3))
-  登记序 = 腿序 + 效果串两条 @0/@3;
-- 未登记策略卡(表外名 + 已登记无腿卡)零写;
+  登记序 = 条目序 + 效果串两条 @0/@3;
+- 未登记策略卡(表外名 + 已登记无效果条目卡)零写;
 - 递归形态(monkeypatch 临时加彩虹期货行)→ 链式再入队(锁「handler
   按注册表驱动」机制,非本批交付行为);
 - live 落地形态(gain_invest_strategy 同函数,session=None 直构)队列
@@ -58,10 +58,10 @@ def test_pick_gold_futures_queues_delayed_offer() -> None:
 
 def test_pick_silver_invest_queues_two_legs_registration_order() -> None:
     """只登记不写状态的实现分支两条效果条目形(白银投资批锁 3):拿卡白银投资(族首张含两条效果条目的卡)→
-    队列恰 (('白银投资', 0), ('白银投资', 3))(登记序 = 表内腿序,
+    队列恰 (('白银投资', 0), ('白银投资', 3))(登记序 = 表内条目序,
     确定性;一次 write 回写 = 单一登记写端)+ 效果串两条
-    @0/@3(每腿一枚,同序)。「3个节点后再获得一个」= 完整包复刻
-    (用户裁定 2026-11-02,案 A:延时腿复刻立刻腿品质+刷新授权,
+    @0/@3(每效果条目一枚,同序)。「3个节点后再获得一个」= 完整包复刻
+    (用户裁定 2026-11-02,案 A:延时效果条目复刻立刻效果条目品质+刷新授权,
     效果串只载品质@节拍,授权面在登记表)。"""
     gs = _gs()
     effects = on_strategy_gained(gs, '白银投资', rand=False, sig=_lsig(),
@@ -76,7 +76,7 @@ def test_pick_silver_invest_queues_two_legs_registration_order() -> None:
 
 
 def test_unregistered_cards_zero_write() -> None:
-    """未登记卡零写(两形):表外名(查无效果安静不写)与已登记无腿卡
+    """未登记卡零写(两形):表外名(查无效果安静不写)与已登记无效果条目卡
     (躺平,注册表有卡但无登记行)均 → 零效果串 + 队列零写。"""
     for name in ('随便一张未收录卡', '躺平'):
         gs = _gs()
@@ -115,7 +115,7 @@ def test_recursive_form_chained_requeue(monkeypatch) -> None:
 def test_live_gain_chain_queues_offer_zero_world_action() -> None:
     """live 链登记(不对称申报的行为半边):live 落地形态同函数
     (gain_invest_strategy,session=None 直构)→ 注册去重 + 队列照写;
-    kernel 零呈现动作(呈现腿仅存在于 sim 模块,模块边界承担,无静态
+    kernel 零呈现动作(呈现效果条目仅存在于 sim 模块,模块边界承担,无静态
     扫描锁)。"""
     gs = _gs()
     outcome = gain_invest_strategy(gs, None, '黄金期货', rand=False,

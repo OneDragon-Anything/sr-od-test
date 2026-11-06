@@ -1,4 +1,4 @@
-"""搜打撤每节点免费刷新腿生效链测试(镜像 src = cw_investments.py
+"""搜打撤每节点免费刷新效果条目生效链测试(镜像 src = cw_investments.py
 STRATEGY_EFFECTS['搜打撤'] overlay 条目 + cw_game_state.py 节点边界桥
 grant_effect_node_refresh_balance;镜像母本 = test_game_state.py
 test_gas_station_pick_node_grant_matches_official_text(a 组)/
@@ -44,7 +44,7 @@ def test_soudache_overlay_payload_single_instance() -> None:
 
 
 def test_soudache_pick_node_zero_then_next_nodes_plus_one() -> None:
-    """腿 1 生效时序(b 组形):拿卡当节点边界零发放(含同节点去重
+    """效果条目 1 生效时序(b 组形):拿卡当节点边界零发放(含同节点去重
     与 burst 桥零操作)→ 次节点边界 +1 → 再次节点再 +1。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     # 本节点边界已在拿卡前推进(终结动作上报时序:拿卡晚于边界),

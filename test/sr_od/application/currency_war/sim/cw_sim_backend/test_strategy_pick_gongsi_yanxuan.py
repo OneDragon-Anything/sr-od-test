@@ -1,5 +1,5 @@
 """sim 公司严选把结果写进状态副本的实现分支 walk 测试(镜像 src = sim/cw_sim_backend.py 的
-选卡拍改写腿 + 位面段补发两条效果条目(B 案)+ 位面首节点窗金/改写腿 + 窗口
+选卡拍改写效果条目 + 位面段补发两条效果条目(B 案)+ 位面首节点窗金/改写效果条目 + 窗口
 起点快照差分,经真实推进链)。
 
 测试面依据 = 迭代设计 designs/T-309-gongsi-yanxuan.md §2.5/§2.6/§4
@@ -20,7 +20,7 @@ B 案:用户裁定 2026-11-01 族级裁定「中途拿卡所在位面补发·当
 
 路径选卡卫生:驱动途中逢 offer 一律定向落「淘金客」(无改写/位面/
 burst 字段,落卡零扰目标断言);无环境局(RunConfig.env_present 缺省
-False)翻星腿零发生,强制店恒 4 费 1★。复用声明:引擎驱动助手 import
+False)翻星效果条目零发生,强制店恒 4 费 1★。复用声明:引擎驱动助手 import
 自 test_p3_win_terminal._drive_step 与 sim/test_sim_backend._SIG 族
 (已登记超限拆分债文件,禁追加,只 import 复用不改;先例 =
 test_strategy_pick_gudinglicai.py)。
@@ -119,7 +119,7 @@ def _drive_to_offer(b: SimBackend, plane: int, round_num: int) -> None:
 
 
 def _drive_steps_tolerant(b: SimBackend, steps: int) -> None:
-    """有界步进(局败容忍):驱动至多 steps 步,局败回大厅即停——本腿
+    """有界步进(局败容忍):驱动至多 steps 步,局败回大厅即停——本效果条目
     断言面是「无后续位面开始零增量」,局败属合法终局非驱动故障。"""
     for _ in range(steps):
         if b.screen_identity() == '货币战争-大厅':
@@ -142,7 +142,7 @@ def _assert_forced_shop(gs, *, plane: int, r: int) -> None:
 
 def test_pick_p1r3_gain_refire_then_later_planes_normal() -> None:
     """(1,3) 拿卡局:拿卡拍三条效果条目(改写 + 补发金 +3 + 补发改写)→
-    (2,1)/(3,1) 位面开始照常(金腿 + 位面改写覆盖)。"""
+    (2,1)/(3,1) 位面开始照常(金币效果条目 + 位面改写覆盖)。"""
     b = _backend(seed=37)
     try:
         gs = b.gs
@@ -160,7 +160,7 @@ def test_pick_p1r3_gain_refire_then_later_planes_normal() -> None:
         assert gs.gold.value == gold_before + 3, \
             f'补发金 +3(P1 已开始): {gs.gold.value}'
         assert gs.gold.evidence == _EV_REFIRE_GOLD
-        # (2,1) 位面开始照常:金腿单笔 + 位面改写覆盖(M05 后后置)。
+        # (2,1) 位面开始照常:金币效果条目单笔 + 位面改写覆盖(M05 后后置)。
         _drive_with_safe_picks(
             b, lambda: gs.gold.evidence == f'{_EV_PLANE_GOLD}p2')
         assert gs.shop.evidence == f'{_EV_PLANE}p2r1', \
@@ -249,14 +249,14 @@ def test_pick_p3r2_late_pick_refire_only() -> None:
 
 def test_later_pick_no_rescan_counterexample() -> None:
     """反例锁(r1-S1):先拿 公司严选、再拿他卡 → 零改写重燃(「本次
-    新获得」限定,防扫描式回归);位面窗腿照常不受影响。"""
+    新获得」限定,防扫描式回归);位面窗效果条目照常不受影响。"""
     b = _backend(seed=37)
     try:
         gs = b.gs
         _drive_to_offer(b, 1, 3)
         _pick(b, _CARD, [_CARD, '躺平', _SAFE_FILLER])
         assert b.disclosures.get('shop_rewrite_gain_count') == 1
-        # 推进至 (2,1) 窗(位面腿照常 → plane_count=2),再至 (2,2) offer。
+        # 推进至 (2,1) 窗(位面效果条目照常 → plane_count=2),再至 (2,2) offer。
         _drive_with_safe_picks(
             b, lambda: gs.shop.evidence == f'{_EV_PLANE}p2r1')
         assert b.disclosures.get('shop_rewrite_plane_count') == 2
@@ -298,7 +298,7 @@ def test_replay_advance_zero_double() -> None:
 
 
 def test_refire_gold_node_absent_conservative_zero() -> None:
-    """补发金腿 node 缺席保守零补发锁:gs.node None → 返回 0、零写
+    """补发金币效果条目 node 缺席保守零补发锁:gs.node None → 返回 0、零写
     (禁猜;登记恒在节点窗内,node 缺席 = bypass 形态防御)。"""
     gs = cw4_gs(gold=30, node_fill=False, shop_screen='off')
     assert gs.node.value is None

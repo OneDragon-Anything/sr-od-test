@@ -83,7 +83,7 @@ def test_reward_char_registered_and_cost_matches_criterion() -> None:
 
 def test_grants_entry_coexists_world_channel_pointer() -> None:
     """双母体对账(两行各一):STRATEGY_GRANTS 估值域条目保留零删
-    (即时/条件腿底册完整,反扫闭集不受新表影响);本表辖写状态副本发放,
+    (即时/条件效果条目底册完整,反扫闭集不受新表影响);本表辖写状态副本发放,
     两表同键各表各域。"""
     grant = STRATEGY_GRANTS[_CARD]
     assert grant.chars_conditional == ((_REWARD, '合成2星2费角色时'),), \

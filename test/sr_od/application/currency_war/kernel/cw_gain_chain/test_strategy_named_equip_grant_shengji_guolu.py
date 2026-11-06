@@ -1,4 +1,4 @@
-"""升级锅炉(id 230801)具名装备授予腿锁(镜像 src = kernel/cw_gain_effects.py
+"""升级锅炉(id 230801)具名装备授予效果条目锁(镜像 src = kernel/cw_gain_effects.py
 的 ``PICK_INVEST_EFFECTS`` 直书登记行「升级锅炉」;具名装备授予族后继卡,
 族模式卡 = 全员晋升——工厂语义锁住同目录姊妹镜像 test_strategy_named_equip_
 grant.py,同物 ×2 先例 = 小复制 test_strategy_named_equip_grant_xiaofuzhi.py,
@@ -17,7 +17,7 @@ PENDING-DECISIONS.md T-239 小节(用户裁定 2026-11-02 案 G 选卡即得):
   走纯发放循环——已持精密拆装扳手时本卡照常 +2 炉零申报行(卡级前置
   分支禁遗传;工厂若误把精密前置遗传给炉发放物会在此红,T-137 买彩票+
   同型机械化回归);
-- 句①升格修饰面零建模 = 炉上报链零改动:本卡注册只增选卡拍发放腿,
+- 句①升格修饰面零建模 = 炉上报链零改动:本卡注册只增选卡拍发放类效果条目,
   持卡面对烧炉变异链零分支(张力归 v0 校准批,不在本锁面);
 - 本卡无金句零金币效果条目(gold 域零写断言覆盖);实机(live)和模拟器(sim)两边同链:sim 选卡经同一
   ``gain_invest_strategy`` 链零新代码(炉 ×2 自动入 gs.equips;sim 局
@@ -115,7 +115,7 @@ def test_shengji_guolu_grant_leg_places_two_furnaces(
     assert gs.equips.value == [_ITEM, _ITEM], '选卡即得:具名双件入栏恰 2 件'
     assert gs.equips.source == 'logic', '确定发放走确定面'
     assert gs.equips.evidence.startswith('pick_invest_named_equip'), \
-        '腿写端 evidence 前缀(原语内追加 #equip 后缀,前缀匹配防假红)'
+        '效果条目写端 evidence 前缀(原语内追加 #equip 后缀,前缀匹配防假红)'
     assert gs.write_seq - seq_before == 3, \
         '写数恰 3 = 注册 1 + 装备效果条目 2(②段账本登记 session=None 跳过)'
     assert out.effects == (
@@ -140,7 +140,7 @@ def test_shengji_guolu_precision_gate_not_inherited(
     out = gain_invest_strategy(gs, None, _CARD, rand=False, sig=_LSIG)
     assert out.placed
     assert gs.equips.value == ['精密拆装扳手', _ITEM, _ITEM], \
-        '精密在场不拦炉腿,库尾照常追加 2 件'
+        '精密在场不拦炉效果条目,库尾照常追加 2 件'
     assert gs.write_seq - seq_before == 3, '写数恰 3(注册 1 + 炉效果条目 2)'
     assert out.effects == (
         f'named_equip_grant:{_ITEM}(placed=True)',

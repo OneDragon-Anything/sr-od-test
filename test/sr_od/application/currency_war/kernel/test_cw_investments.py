@@ -1090,7 +1090,7 @@ def test_zhanjidian_invite_registry_surface() -> None:
     发放形态);星徽 ∈ EQUIPMENTS(装备身份;装备名漂移哨同判据)且 ∉
     BENCH_ITEM_NAMES(装备不进占席词表;量子同频邀请姊妹行同判)。与
     T-79 差异:战技点星徽 recipes 非空可合成(蓝钻+折叠小刀)= 合成获得
-    路径与发放腿正交;T-79 量子同频星徽 recipes 空、无合成路径。"""
+    路径与发放类效果条目正交;T-79 量子同频星徽 recipes 空、无合成路径。"""
     from sr_od.application.currency_war.data.cw_equipment_data import (
         EQUIPMENTS,
     )
@@ -1116,7 +1116,7 @@ def test_huanyu_invite_registry_surface() -> None:
     发放形态);星徽 ∈ EQUIPMENTS(装备身份;装备名漂移哨同判据)且 ∉
     BENCH_ITEM_NAMES(装备不进占席词表;战技点邀请姊妹行同判)。与
     T-80 差异:欢愉星徽 recipes 双配方(蓝钻+垃圾袋/红钻+垃圾袋)=
-    22 件星徽唯一双配方件,合成获得路径与发放腿正交;T-80 战技点星徽
+    22 件星徽唯一双配方件,合成获得路径与发放类效果条目正交;T-80 战技点星徽
     recipes 单配方(蓝钻+折叠小刀)。"""
     from sr_od.application.currency_war.data.cw_equipment_data import (
         EQUIPMENTS,
@@ -1143,7 +1143,7 @@ def test_mingyun_shengbei_invite_registry_surface() -> None:
     发放形态);星徽 ∈ EQUIPMENTS(装备身份;装备名漂移哨同判据)且 ∉
     BENCH_ITEM_NAMES(装备不进占席词表;欢愉邀请姊妹行同判)。与
     T-81 差异:命运圣杯星徽 recipes 空 = 合成路径不存在(获取 = 本卡
-    发放+策略卡 211401+棱彩策略卡 352801),合成获得路径与发放腿正交;
+    发放+策略卡 211401+棱彩策略卡 352801),合成获得路径与发放类效果条目正交;
     卡文数量词「1个」数字形态与他卡「一个」同义 = 1 件(族内唯一异形)。"""
     from sr_od.application.currency_war.data.cw_equipment_data import (
         EQUIPMENTS,
@@ -1345,7 +1345,7 @@ def test_deposit_return_overlay_single_source_payload() -> None:
 def test_force_refresh_overlay_single_source_payload() -> None:
     """武力刷新 overlay 条目单一源锁:payload 引 STRATEGY_ECONOMY 同一
     实例;触发/持续/类型 = ON_MERGE/WHILE_HELD/ECONOMY(策略源 ON_MERGE
-    首条,合成事件发放腿的账本匹配面);数值 = 2(卡面「获得2次刷新」)。
+    首条,合成事件发放类效果条目的账本匹配面);数值 = 2(卡面「获得2次刷新」)。
     id 匹配由 import 期孤儿键/id 双查担,不重复锁。"""
     assert STRATEGY_EFFECTS['武力刷新'].payload \
         is STRATEGY_ECONOMY['武力刷新']
@@ -1361,7 +1361,7 @@ def test_salvage_registration_surface() -> None:
     本测试存活即证):payload = BattlefieldEffect 专字段(不入 Economy,
     避开经济三分类闭集义务)∧ category 同族;pending=True 必带 notes
     保守支声明(R-entry 读法);SUPPLY_PHASE 枚举成员已登记引用(防静默
-    移除——该枚举值全仓唯一已登记条目即本卡);基础卡无经济腿
+    移除——该枚举值全仓唯一已登记条目即本卡);基础卡无经济效果条目
     (STRATEGY_ECONOMY 零条目,发放物 = 状态副本既有列非经济流)。"""
     spec = STRATEGY_EFFECTS['打捞人才库']
     cw_investments._validate_strategy_effects()   # 构建校验复跑不炸
@@ -1374,32 +1374,32 @@ def test_salvage_registration_surface() -> None:
     assert spec.duration.value == 'while_held'
     assert spec.pending is True
     assert 'R-entry' in (spec.notes or ''), 'pending 必带保守支声明'
-    assert '打捞人才库' not in STRATEGY_ECONOMY, '基础卡无经济腿'
+    assert '打捞人才库' not in STRATEGY_ECONOMY, '基础卡无经济效果条目'
 
 
 def test_salvage_plus_registration_surface() -> None:
     """打捞人才库+ 登记面锁(展开卡姊妹条目,T-95):id 100702 双匹配
-    过校验(import 期已过——本测试存活即证);主腿与基础卡条目同值
+    过校验(import 期已过——本测试存活即证);主效果条目与基础卡条目同值
     (同 payload 同 trigger 双条目一致性——机制单一源 = 基础卡+检查函数,
-    本条目纯登记零新设计);pending=True 带 notes 三面拆分声明(主腿
-    R-entry 沿基础卡 / 句2 装备腿归 PICK_INVEST_EFFECTS 时点保守支
-    R-instant / 句2 金腿 instant_gold=4 已登记零动,发放端缺口族级待办);
-    经济腿已登记零动(STRATEGY_ECONOMY instant_gold=4)。"""
+    本条目纯登记零新设计);pending=True 带 notes 三面拆分声明(主效果条目
+    R-entry 沿基础卡 / 句2 装备效果条目归 PICK_INVEST_EFFECTS 时点保守支
+    R-instant / 句2 金币效果条目 instant_gold=4 已登记零动,发放端缺口族级待办);
+    经济效果条目已登记零动(STRATEGY_ECONOMY instant_gold=4)。"""
     spec = STRATEGY_EFFECTS['打捞人才库+']
     base = STRATEGY_EFFECTS['打捞人才库']
     cw_investments._validate_strategy_effects()   # 构建校验复跑不炸
     assert spec.id == '100702'
     assert isinstance(spec.payload, BattlefieldEffect)
-    assert spec.payload == base.payload, '主腿 payload 与基础卡条目同值'
+    assert spec.payload == base.payload, '主效果条目 payload 与基础卡条目同值'
     assert spec.category is EffectKind.BATTLEFIELD
     assert spec.trigger is TriggerKind.SUPPLY_PHASE
     assert spec.trigger is base.trigger and spec.duration is base.duration
     assert spec.pending is True
-    assert 'R-entry' in (spec.notes or ''), '主腿保守支声明'
-    assert 'R-instant' in (spec.notes or ''), '句2 装备腿时点保守支声明'
-    assert 'instant_gold' in (spec.notes or ''), '句2 金腿缺口申报'
+    assert 'R-entry' in (spec.notes or ''), '主效果条目保守支声明'
+    assert 'R-instant' in (spec.notes or ''), '句2 装备效果条目时点保守支声明'
+    assert 'instant_gold' in (spec.notes or ''), '句2 金币效果条目缺口申报'
     assert STRATEGY_ECONOMY['打捞人才库+'].instant_gold == 4, \
-        '经济腿已登记零动'
+        '经济效果条目已登记零动'
 
 
 # ==================== 引擎判别排除集(T-93 尾款交付起,随批续建)====================
@@ -1415,7 +1415,7 @@ def test_gold_at_final_supply_in_engine_excluded_set() -> None:
 
 def test_streak_set_registration_surface() -> None:
     """胜利,还是胜利 注册面锁(T-96 设计 §4 锁 7):条目双字段并存
-    (streak_set=4 置位腿与 instant_gold=4 金腿不互斥,经济面零漂移);
+    (streak_set=4 置位效果条目与 instant_gold=4 金币效果条目不互斥,经济面零漂移);
     ``streak_set`` ∈ ``_ENGINE_CHANNEL_EXCLUDED_FIELDS``(一次性状态
     置位,非持续通道——「使当前连胜数变为N」选卡当场绝对赋值,防误入
     引擎判定使 is_economy_engine 对持卡局误判真;尾款金字段同款防误移)。"""
@@ -1472,8 +1472,8 @@ def test_char_grant_unit_buff_registration_surface(card: str, card_id: str,
     (官方效果原文)× duties 三位全 False;pending=False(数值/位置/对象全
     desc 明文);effect_text 与 base 注册表 .effect 单一源对拍(条目经
     PLAZA_AUGMENTS 数据面表达式引官方原文);现金分支 = 与全队的希望差异
-    点——两卡金腿(9/15 金)STRATEGY_ECONOMY 已登记,经济值 = 金腿注册值
-    而非 fail-closed 0(战力类腿不进经济模型,经济通道只承金腿);构建
+    点——两卡金币效果条目(9/15 金)STRATEGY_ECONOMY 已登记,经济值 = 金币效果条目注册值
+    而非 fail-closed 0(战力类效果条目不进经济模型,经济通道只承金币效果条目);构建
     校验(孤儿键/id 双匹配)import 期已过——本测试存活即证。"""
     spec = STRATEGY_EFFECTS[card]
     cw_investments._validate_strategy_effects()   # 构建校验复跑不炸
@@ -1492,7 +1492,7 @@ def test_char_grant_unit_buff_registration_surface(card: str, card_id: str,
         'WHILE_HELD 无余期计数器(_seed_progress 双 None)'
     gs = game_state_of(SimpleNamespace())
     assert strategy_economy_value(card, gs) == (gold_leg, True), \
-        '经济通道读数 = 金腿注册值 instant_gold(战力类腿不进经济模型)'
+        '经济通道读数 = 金币效果条目注册值 instant_gold(战力类效果条目不进经济模型)'
 
 
 # ==================== 容量时限族(T-110 节省工位起,随批续建)====================
@@ -1501,7 +1501,7 @@ def test_bench_capacity_registration_surface() -> None:
     """节省工位 登记面锁:条目四元组 = CONDITIONAL/N_NODES/BATTLEFIELD(容量 =
     备战/板面域,BattlefieldEffect↔BATTLEFIELD);duration_nodes = 3(卡面
     「在接下来3个节点」);payload 双字段 = capacity_limit=3(容量桥声明契约)
-    + expiry_simple_equips=3(到期发放腿件数);duties 只 track(容量消费端
+    + expiry_simple_equips=3(到期发放类效果条目件数);duties 只 track(容量消费端
     读状态容器派生,无预知/无姿态);pending=True 必带保守支 notes(「3 件」随机性
     v0 未实采,家族判据「二义未实采不定死」);id 双匹配过校验(import 期已
     过——本测试存活即证,直调 = 复跑回归基准)。"""

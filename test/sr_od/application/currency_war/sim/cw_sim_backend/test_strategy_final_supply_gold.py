@@ -1,6 +1,6 @@
-"""sim 策略尾款金腿测试(镜像 src = sim/cw_sim_backend.py 的
+"""sim 策略尾款金币效果条目测试(镜像 src = sim/cw_sim_backend.py 的
 strategy_final_supply_gold_of 聚合 helper + _begin_node_window 收尾
-「最后一个补给阶段」金腿;同族先例 = 本目录 test_strategy_boss_gold.py)。
+「最后一个补给阶段」金币效果条目;同族先例 = 本目录 test_strategy_boss_gold.py)。
 
 测试面依据 = 迭代设计 designs/T-93-weikuan-jiaofu.md §2.3/§2.5/§4
 十一锁面(锁 1-8),例值按现表重派生(标记 = 展平全序列最末 supply 位,
@@ -124,7 +124,7 @@ def test_final_supply_gold_leg_via_engine_window() -> None:
         s3 = max(int(gs.streak.value or 0), 0)
         mult, flat, cap = income_modifiers_of(gs)
         # 本局途中经获得链到手的每节点金卡(如按劳分配,固定 seed 采样
-        # 池现值)使窗开先落一笔 invest 分量(腿骑聚合,收入段最前)——
+        # 池现值)使窗开先落一笔 invest 分量(效果条目骑聚合,收入段最前)——
         # 收入面息基数 = 窗开金 = g2 + invest(g2 捕获于上一窗后,窗间
         # 无其他金写),invest 程序化现算非硬编码
         invest = strategy_invest_node_gold_of(gs)
@@ -207,7 +207,7 @@ def test_same_window_pickup_after_front_segment_no_grant(monkeypatch) -> None:
     「窗口前段聚合读之后、同窗收尾段才到手」的状态容器态(生产时序 = 选卡
     确认是 offer 呈现后的玩家动作,恒晚于窗口前段聚合读)→ 该窗零发放。
     注入点 = 商店全刷(收尾段位 = 收入→…→尾款金→商店全刷;若未来实现
-    把腿移到 offer 呈现之后,同窗到手先于聚合读,本锁红)。"""
+    把效果条目移到 offer 呈现之后,同窗到手先于聚合读,本锁红)。"""
     import sr_od.application.currency_war.sim.cw_sim_backend as sb
 
     b = _backend()

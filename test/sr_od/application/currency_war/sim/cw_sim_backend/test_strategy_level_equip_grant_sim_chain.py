@@ -1,5 +1,5 @@
-"""sim 策略卡到级装备腿状态副本链测试(镜像 src = sim/cw_sim_backend.py 的
-_on_node_advance / _on_node_advance_terminal 双点接入调用段;kernel 检查腿
+"""sim 策略卡到级装备效果条目状态副本链测试(镜像 src = sim/cw_sim_backend.py 的
+_on_node_advance / _on_node_advance_terminal 双点接入调用段;kernel 检查效果条目
 单元面 = kernel/cw_gain_chain/test_check_strategy_level_equip_grants.py,
 本文件锁 sim 接入调用、宝钻状态副本联动与休眠数值边界)。
 
@@ -11,14 +11,14 @@ _on_node_advance / _on_node_advance_terminal 双点接入调用段;kernel 检查
 - 宝钻状态副本联动(锁 8):发放后 diamond_count +1 / deploy_cap = level +
   财富宝钻数 / back_layout +1(on_diamond_acquired 经 sim 接入调用);
 - 休眠边界(锁 9,数值口径):节点经验合计 70 固化(NODE_XP_BY_TYPE ×
-  PLANE_NODE_TABLES)+ 即时腿注册面上界 < 3→9 级累计门槛 194、封顶
+  PLANE_NODE_TABLES)+ 即时效果条目注册面上界 < 3→9 级累计门槛 194、封顶
   8 级——常量/注册行变更使 9 级可达时本锁先红 = 触发边界重申报;
-  即时腿键集显式扩集制(新增即时腿 = 红 → 休眠上界随批重申报;
+  即时效果条目键集显式扩集制(新增即时效果条目 = 红 → 休眠上界随批重申报;
   免战牌 +30 入注册面随批重申报,合计 134 仍 < 194)。
 
 驱动形态复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py 与
 同目录 test_p3_win_terminal.py(已登记先例,禁追加只 import;整局驱动
-_handle_click_source/_maybe_finish_wait 直调先例 = 同目录到级金腿锁)。
+_handle_click_source/_maybe_finish_wait 直调先例 = 同目录到级金币效果条目锁)。
 """
 from __future__ import annotations
 
@@ -72,7 +72,7 @@ def _isolate_defect_buffer():
 def _record_writes(gs, monkeypatch: pytest.MonkeyPatch) -> list[tuple]:
     """包装 write_logic/write_logic_rand/observe 记录
     (通道, 字段名, evidence, sig, value, produced_by) 写序(透传真实现
-    零行为变化;同目录到级金腿锁 _record_level_writes 同形副本)。"""
+    零行为变化;同目录到级金币效果条目锁 _record_level_writes 同形副本)。"""
     calls: list[tuple] = []
 
     def _wrap_logic(real, channel: str):
@@ -100,7 +100,7 @@ def _record_writes(gs, monkeypatch: pytest.MonkeyPatch) -> list[tuple]:
 
 def _prep_backend(seed: int) -> SimBackend:
     """装配后端至 P1r1 备战屏(调用方负责 uninstall;先例 = 同目录到级
-    金腿锁 _backend 形)。"""
+    金币效果条目锁 _backend 形)。"""
     b = _backend(seed)
     b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
     b._maybe_finish_wait()
@@ -136,7 +136,7 @@ def test_advance_point_cross_grant_then_latch(
         # 发放通道 = anchor 规则家族现值:sim 状态副本 prep_anchored 恒 False
         #(置位写端 = live reconcile_tracking,sim 不经)→ rand=False 确定
         # 事件经 anchor_aware_write 落随机态(未锚定期落账 = 未验证推算,
-        # sim 无观察覆盖值随写即真值;T-102 tick 腿 sim 侧同规则,T-5 宝钻
+        # sim 无观察覆盖值随写即真值;T-102 tick 效果条目 sim 侧同规则,T-5 宝钻
         # 发放 write_logic_rand 同族先例);一次性标志位 = 登记事实直写 write_logic
         #(T-108 sim 一次性标志位同形)。
         assert equip_leg[:2] == ('rand', 'equips'), \
@@ -152,11 +152,11 @@ def test_advance_point_cross_grant_then_latch(
         assert latch_leg[3].group_id == 'sim:strategy' \
             and latch_leg[4] == (_CARD,) and latch_leg[5] == _PRODUCER, \
             f'一次性标志位形态漂移: {latch_leg}'
-        # 发放拍序:装备腿在节点经验入账后(跨级事件拍,先于新节点窗)
+        # 发放拍序:装备效果条目在节点经验入账后(跨级事件拍,先于新节点窗)
         idx_xp = next(i for i, c in enumerate(calls)
                       if c[1] == 'level' and c[2] == 'sim:engine:xp:node')
         assert idx_xp < calls.index(equip_leg), '发放拍早于经验入账'
-        # 一次性封账(锁 3):级仍 ≥9 续推进 → 零新增腿(驱动步全屏分派
+        # 一次性封账(锁 3):级仍 ≥9 续推进 → 零新增效果条目(驱动步全屏分派
         # 推进至节点序位真前进;战斗恒胜桩防死亡分支截断)
         n_after_first = len(calls)
         pos_before = b._node_pos()
@@ -175,7 +175,7 @@ def test_terminal_cross_grant_world_coupling_before_disclosure(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """局终跨级 + 宝钻状态副本联动(锁 7/8):末节点经验入账跨 9 → 发放先于
     局终声明(双点之二;直构 = 备战窗强置级/xp 后直调局终推进 handler,
-    handler 内序 = 经验入账 → 装备腿 → 局终披露与收尾);发放后宝钻回调
+    handler 内序 = 经验入账 → 装备效果条目 → 局终披露与收尾);发放后宝钻回调
     三写 = diamond_count +1 / deploy_cap = level + 财富宝钻数 /
     back_layout +1(状态副本数值面 observe,sim 状态副本写即真值)。"""
     b = _prep_backend(29)
@@ -210,7 +210,7 @@ def test_terminal_cross_grant_world_coupling_before_disclosure(
 
 def test_dormant_boundary_numeric() -> None:
     """休眠边界数值锁(锁 9):节点经验合计 70 固化(NODE_XP_BY_TYPE ×
-    PLANE_NODE_TABLES 全三位面)+ 即时腿注册面(STRATEGY_ECONOMY
+    PLANE_NODE_TABLES 全三位面)+ 即时效果条目注册面(STRATEGY_ECONOMY
     xp_instant>0,键集显式扩集制)上界 < 3→9 级累计门槛 194、派生封顶
     恰 8 级——常量/注册行变更使上界 ≥ 门槛时本锁先红 = 触发边界重申报
     (防静默激活;免战牌 +30、固定理财 +4、固定理财+ +6 各随批重申报,
@@ -226,7 +226,7 @@ def test_dormant_boundary_numeric() -> None:
     assert instant == {'伟大征服': 12, '成长的快乐': 4, '固定理财': 4,
                          '固定理财+': 6, '空仓+': 10, '经验到账': 10, '气氛组+': 8,
                          '免战牌': 30, '复印件': 24}, \
-        f'即时腿注册面扩集: {instant} —— 新即时腿 = 休眠上界随批重申报'
+        f'即时效果条目注册面扩集: {instant} —— 新即时效果条目 = 休眠上界随批重申报'
     bound = node_xp_total + sum(instant.values())
     threshold_9 = sum(XP_TO_NEXT_LEVEL[lv] for lv in range(3, 9))
     assert threshold_9 == 194, \

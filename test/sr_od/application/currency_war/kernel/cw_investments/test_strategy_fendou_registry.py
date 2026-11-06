@@ -27,11 +27,11 @@ _FACE = ('购买经验值消耗6点小队生命值而非金币。'
 
 
 def test_fendou_economy_registry_dual_values() -> None:
-    """锁 1(注册行双值):血本位成本腿 6 + 首领战回血腿 50,数值全出
+    """锁 1(注册行双值):血本位成本效果条目 6 + 首领战回血效果条目 50,数值全出
     卡面直读零占位。"""
     eff = STRATEGY_ECONOMY[_CARD]
-    assert eff.xp_buy_hp_cost == 6, '购经验血价腿 = 6'
-    assert eff.boss_end_heal_hp == 50, '首领战回血腿 = 50'
+    assert eff.xp_buy_hp_cost == 6, '购经验血价效果条目 = 6'
+    assert eff.boss_end_heal_hp == 50, '首领战回血效果条目 = 50'
 
 
 def test_fendou_strategy_row_face_single_source() -> None:

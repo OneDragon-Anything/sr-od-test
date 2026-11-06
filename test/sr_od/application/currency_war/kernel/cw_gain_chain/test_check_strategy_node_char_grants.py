@@ -1,4 +1,4 @@
-"""策略卡每节点角色复制发放检查腿测试(镜像 src = kernel/
+"""策略卡每节点角色复制发放检查效果条目测试(镜像 src = kernel/
 cw_gain_chain.py 的 ``check_strategy_node_char_grants``;分方法拆目录规范
 落位,文件镜像超限纪律 = 新函数落拆目录新文件,先例 = 同目录
 check_strategy_* 族镜像文件)。
@@ -15,7 +15,7 @@ T-165-jiazhi-touzi-jin.md(定稿)§4 锁 4/5/7 + REVIEW-T165 §2/④
   P2r3→P2r4 / P3r3→P3r4)经节点序列真值表现值推导 prev_kind 断言;跨
   位面分支 = 防御代码阴性申报(现役日程三位面末位恒 boss);P1r1(None)
   → 1 名;
-- 锁 7 双持共发:金+彩两键并存同窗共发数量独立;彩未注册获得腿前绑定
+- 锁 7 双持共发:金+彩两键并存同窗共发数量独立;彩未注册获得效果条目前绑定
   恒缺 → 金侧行为不受扰(彩侧 fail-closed 留证)。
 
 具名固定子形扩展(设计 T-408-benguniang-jiushi-luocha.md §4 锁 3/4,
@@ -209,7 +209,7 @@ def test_supply_after_positions_derived_from_schedule(rows_sink) -> None:
 def test_dual_hold_grants_independent_fail_closed(
         rows_sink, monkeypatch: pytest.MonkeyPatch) -> None:
     """锁 7 双持共发:金+彩两键并存 → 金侧行为不受扰(数量独立)。
-    两形态:①现役形(彩未注册获得腿 = 绑定表外卡)→ 金侧照发、彩侧
+    两形态:①现役形(彩未注册获得效果条目 = 绑定表外卡)→ 金侧照发、彩侧
     表外卡静默零写;②彩注册后形(monkeypatch 表加彩行,绑定双键并存)
     → 各按绑定独立判定发放,数量互不挤占。"""
     # ① 现役形:彩 = 绑定表内卡[T-321 展开卡批注册]但绑定缺 → 持卡未

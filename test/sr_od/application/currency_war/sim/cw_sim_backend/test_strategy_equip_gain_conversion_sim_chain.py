@@ -76,7 +76,7 @@ def test_free_market_pick_chain_converts_leg2(
     """sim 选卡链(锁 7):装配后端 → offer 注入 → pick 自由市场 →
     bench 恰 +1 简易武装箱(带名槽件)∧ equips 零新增(效果条目2 采样名被
     转换消费)——状态副本里的值,使用面(tool_use 上报链)天然可消费;
-    rng 显式流键构造(缺省回退自掷破 sim 确定性,采样腿族纪律)。"""
+    rng 显式流键构造(缺省回退自掷破 sim 确定性,采样写族纪律)。"""
     b: SimBackend = _backend(7)
     try:
         b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')

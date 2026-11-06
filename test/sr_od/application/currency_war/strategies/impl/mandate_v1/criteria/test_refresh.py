@@ -6,7 +6,7 @@ design.md §2.0 第 2/3 条 + details/refresh-chain.md §5 清单)。
 - ① 带内 + 金够 + 席可腾 → 发射(付费,reason ``star_target``);
 - ② 已 2★ 追 3★ 目标帧 ρ = 其卡价(实费档;锁定支单一源
   ``r2_card_reserve``,未锁窗口恒 0);
-- ③ 席满 + 可合成 → 发射(合成腿消费现役 ``_merge_pair_names``
+- ③ 席满 + 可合成 → 发射(合成效果条目消费现役 ``_merge_pair_names``
   「恰 2 张全 1★」语义——机制全集重写归买面改革批,本批锁现役口径);
 - ④ 席满 + 零燃料 + 不可合成 → **付费刷新发射**(统一让位优先级迭代
   3.4:预测门整拆——旧「目标可买三条效果条目」判据删除,拒因
@@ -20,7 +20,7 @@ design.md §2.0 第 2/3 条 + details/refresh-chain.md §5 清单)。
   墓碑不设 pytest)以执行侧残留扫描承载,记录归迭代报告。
 
 帧构造 = 列车同行注册表线(need_star:姬子·启行 3/三月七 2/花火 2/
-瓦尔特 1;费档 3/1/2/5 注册表现查),合成腿/拒发射帧均上阵行非空
+瓦尔特 1;费档 3/1/2/5 注册表现查),合成效果条目/拒发射帧均上阵行非空
 (空板止损守卫 = 燃料资格面前置门)。
 """
 from __future__ import annotations
@@ -74,7 +74,7 @@ _LOGIC_SIG = ChannelSig(family='logic_action', actor='cw-refresh-chain',
 
 
 def _fillers(count: int, exclude: tuple[str, ...] = ()) -> list[str]:
-    """非线燃料名(注册表现算防漂移;席位腿测试帧填充——身份保护/
+    """非线燃料名(注册表现算防漂移;席位效果条目测试帧填充——身份保护/
     C1 核心规避面已随统一让位优先级迭代 3.4 退役,非线内即可)。"""
     out = [n for n in CHARACTERS
            if n not in _LINE and n not in exclude]
@@ -115,7 +115,7 @@ class TestRefreshChainSingleFrame:
     """七条清单(⑦ = 执行侧扫描,见模块 docstring)。"""
 
     def test_1_in_band_gold_enough_seat_free_emits(self):
-        """①带内 + 金够 + 席可腾(空位腿)→ 付费刷新发射。"""
+        """①带内 + 金够 + 席可腾(空位效果条目)→ 付费刷新发射。"""
         level = 7
         _assert_band_premise(int(CHARACTERS[_TARGET].cost), level)
         bench = [_bc(_TARGET, star=2)] + _line_bench_base() \
@@ -128,7 +128,7 @@ class TestRefreshChainSingleFrame:
                      if isinstance(a, CwActionRefreshShopParam)]
         assert refreshes, f'带内金够帧刷新应发射: {acts!r}'
         assert refreshes[0].reason == 'star_target'
-        assert refreshes[0].cost > 0, '付费刷新(免费腿未登记)'
+        assert refreshes[0].cost > 0, '付费刷新(免费效果条目未登记)'
 
     def test_2_rho_stay_target_effective_cost(self):
         """②已 2★ 追 3★ 目标帧 ρ = 其卡价(实费档);未锁窗口恒 0。
@@ -153,7 +153,7 @@ class TestRefreshChainSingleFrame:
         assert crit_refresh.r2_card_reserve(gs2) == 0, '未锁窗口 ρ = 0'
 
     def test_3_full_bench_merge_pair_emits(self):
-        """③席满 + 可合成 → 发射(合成腿消费机制全集谓词
+        """③席满 + 可合成 → 发射(合成效果条目消费机制全集谓词
         ``_merge_pair_names`` 的 1★ 档计数 == 2 子形态——本帧无同名 2★,
         与旧「恰 2 张全 1★」口径同判;扩展形态〔场上 2★ + 备战 1★×2〕
         随谓词全集重写生效,单帧见 shop 域买面改革测试)。"""
@@ -235,5 +235,5 @@ class TestRefreshChainSingleFrame:
         assert refreshes[0].cost == 0 \
             and refreshes[0].reason == 'free_refresh', refreshes[0]
         # 外层负结果记忆闸照旧(design §2.2:免费与付费同闸)——记忆
-        # 置位帧免费腿同跳,本帧零标记(免费分支不再置位)。
+        # 置位帧免费效果条目同跳,本帧零标记(免费分支不再置位)。
         assert st.refresh_blocked is None

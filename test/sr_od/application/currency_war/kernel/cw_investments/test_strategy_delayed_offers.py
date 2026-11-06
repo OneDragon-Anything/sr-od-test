@@ -10,8 +10,8 @@ StrategyDelayedOffer + STRATEGY_DELAYED_OFFERS + 构建校验)。
   彩虹期货+ id 201102/4 节点/棱彩;白银投资 id 203201 两条效果条目
   (立刻/银/刷3)+(3节点/银/刷3)),
   表键集闭族现役卡(展开卡各自独立批领取,禁顺手代登记);
-- 值形泛化锁:表值恒腿元组(期货四行一元元组语义不变;白银投资两条效果条目
-  元组,腿序 = 登记序);
+- 值形泛化锁:表值恒效果条目元组(期货四行一元元组语义不变;白银投资两条效果条目
+  元组,条目序 = 登记序);
 - 构建校验 2 条(漂移哨,import 即炸语义经直调校验函数锁定):孤儿键 /
   id 双匹配(改名且 id 仍在的漂移也炸)。
 """
@@ -85,16 +85,16 @@ def test_rainbow_futures_plus_registry_row_values() -> None:
 
 
 def test_value_shape_generalized_tuple_silver_two_legs() -> None:
-    """值形泛化锁(白银投资批):表值恒非空腿元组(逐行);期货四行
+    """值形泛化锁(白银投资批):表值恒非空效果条目元组(逐行);期货四行
     一元元组语义不变(行值锁四条已直测);白银投资行 = 两条效果条目元组,
-    腿序 = 登记序(立刻腿 delay 0 + 延时腿 delay 3,同品质银、同刷新
+    条目序 = 登记序(立刻效果条目 delay 0 + 延时效果条目 delay 3,同品质银、同刷新
     授权 3;id 同源 203201 对拍)。「再获得一个」= 完整包复刻
-    (用户裁定 2026-11-02,案 A:延时腿复刻立刻腿全参数)。"""
+    (用户裁定 2026-11-02,案 A:延时效果条目复刻立刻效果条目全参数)。"""
     for _name, _legs in STRATEGY_DELAYED_OFFERS.items():
         assert isinstance(_legs, tuple) and _legs, \
             f'{_name} 值形非非空元组: {_legs!r}'
         assert all(isinstance(_l, StrategyDelayedOffer) for _l in _legs), \
-            f'{_name} 腿元素类型漂移'
+            f'{_name} 效果条目元素类型漂移'
     legs = STRATEGY_DELAYED_OFFERS['白银投资']
     assert legs == (
         StrategyDelayedOffer(id='203201', delay_nodes=0,

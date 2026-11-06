@@ -1,5 +1,5 @@
-"""sim 策略延时发放窗口腿测试(镜像 src = sim/cw_sim_backend.py 的
-_begin_node_window 策略发放腿;kernel 原语单元面 =
+"""sim 策略延时发放窗口效果条目测试(镜像 src = sim/cw_sim_backend.py 的
+_begin_node_window 策略发放类效果条目;kernel 原语单元面 =
 kernel/cw_gain_chain/test_discharge_due_strategy_grants.py,本文件锁
 sim 窗口接入调用与状态副本里的值落地面)。
 
@@ -95,7 +95,7 @@ def test_due_grants_equipment_in_window(
 
 def test_not_due_zero_grant_queue_only_decrement(_prep_backend) -> None:
     """未到点(锁 4 反面):remaining=2 → 进 (1,2) 窗只递减 2→1(kernel
-    tick 腿),零发放零弹除,披露键缺席。"""
+    tick 效果条目),零发放零弹除,披露键缺席。"""
     b = _prep_backend
     try:
         gs = b.gs

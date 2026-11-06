@@ -1,7 +1,7 @@
-"""琼玉专家:青雀(id 360301)顾问入商店族具名装备授予腿锁(镜像 src =
+"""琼玉专家:青雀(id 360301)顾问入商店族具名装备授予效果条目锁(镜像 src =
 kernel/cw_gain_effects.py 的 ``PICK_INVEST_EFFECTS`` 直书登记行
-「琼玉专家:青雀」;顾问解锁腿 = cw_investments.STRATEGY_GRANTS 同卡行
-advisor=True 登记面零改动复核,本文件锁效果体腿与两条效果条目联立全序;按被测
+「琼玉专家:青雀」;顾问解锁效果条目 = cw_investments.STRATEGY_GRANTS 同卡行
+advisor=True 登记面零改动复核,本文件锁效果体效果条目与两条效果条目联立全序;按被测
 方法拆目录规范落位,同形模板 = 停云顾问 test_strategy_tingyun.py
 〔advisor+具名授予联立〕与升级锅炉 test_strategy_named_equip_grant_
 shengji_guolu.py〔同物冶金炉 ×2〕)。
@@ -9,16 +9,16 @@ shengji_guolu.py〔同物冶金炉 ×2〕)。
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
 T-415-qiongyu-zhuanjia-qingque.md(定稿)§4 锁面(卡面官方原文:
 「获得装备着3个随机星徽的专家顾问【青雀】，并使其在本局游戏中加入
-商店。获得2个【冶金炉】。」——顾问腿/入商店腿已登记零动作,冶金炉腿 =
+商店。获得2个【冶金炉】。」——顾问效果条目/入商店效果条目已登记零动作,冶金炉效果条目 =
 本卡唯一机制件):
 
 - 效果条目2 = 登记行直书 ``_make_named_equip_grant_effect('冶金炉', 2)``,
   具名确定发放 ``gain_equipment(rand=False)`` 循环 2 次逐件一条入栏;
 - 联立效果串全序:恰 3 条 = advisor_unlock 1 → named_equip_grant 2
-  (获得链 advisor 腿先于效果体分派,顺序与卡文语序一致);
+  (获得链 advisor 效果条目先于效果体分派,顺序与卡文语序一致);
 - 双顾问去重:摸个鱼吧I 同解锁青雀,解锁原语只增去重,跨卡/同卡两形态
   同锁;
-- 穿戴腿「装备着3个随机星徽」零建模 = 本文件零穿戴断言面,拒落形态锁
+- 穿戴效果条目「装备着3个随机星徽」零建模 = 本文件零穿戴断言面,拒落形态锁
   覆盖 equips 未观察负支。
 """
 from __future__ import annotations
@@ -119,7 +119,7 @@ def test_qiongyu_qingque_chain_unlock_then_two_furnaces(
         rows_sink: _RowSink) -> None:
     """行为主锁(联立效果串全序):gain_invest_strategy 全链(rand=False,
     固定种子)→ 注册入表 + 解锁写 + equips 恰 +2 冶金炉;效果串全序恰
-    3 条 = advisor_unlock 1 → named_equip_grant 2(advisor 腿先于效果体
+    3 条 = advisor_unlock 1 → named_equip_grant 2(advisor 效果条目先于效果体
     分派,与卡文语序顾问先/冶金炉后一致);解锁 evidence 前缀断言;确定
     发放走确定面;写数恰 4 = 注册 1 + 解锁 1 + 炉效果条目 2(②段账本登记
     session=None 跳过);rng 零消费;板面域零写;零金写(本卡无金句);
@@ -141,12 +141,12 @@ def test_qiongyu_qingque_chain_unlock_then_two_furnaces(
     assert gs.unlocked_experts.value == ('青雀',), '专家解锁权威写'
     assert gs.unlocked_experts.evidence == \
         f'on_strategy_gained:{_CARD}#expert_unlock', \
-        '解锁写 evidence 前缀(获得链 advisor 腿申报形态)'
+        '解锁写 evidence 前缀(获得链 advisor 效果条目申报形态)'
     assert gs.unlocked_experts.source == 'logic', '解锁确定事实走确定面'
     assert gs.equips.value == [_ITEM, _ITEM], '冶金炉双件入栏恰 2 件'
     assert gs.equips.source == 'logic', '确定发放走确定面'
     assert gs.equips.evidence.startswith('pick_invest_named_equip'), \
-        '腿写端 evidence 前缀(原语内追加 #equip 后缀,前缀匹配防假红)'
+        '效果条目写端 evidence 前缀(原语内追加 #equip 后缀,前缀匹配防假红)'
     assert gs.write_seq - seq_before == 4, \
         '写数恰 4 = 注册 1 + 解锁 1 + 炉效果条目 2(账本登记 session=None 跳过)'
     assert rng0.getstate() == rng_state0, '零随机面(rng 不消费)'
@@ -167,7 +167,7 @@ def test_qiongyu_qingque_precision_gate_not_inherited(
     out = gain_invest_strategy(gs, None, _CARD, rand=False, sig=_LSIG)
     assert out.placed
     assert gs.equips.value == ['精密拆装扳手', _ITEM, _ITEM], \
-        '精密在场不拦炉腿,库尾照常追加 2 件'
+        '精密在场不拦炉效果条目,库尾照常追加 2 件'
     assert out.effects == (
         f'advisor_unlock:{_CARD}:青雀',
         f'named_equip_grant:{_ITEM}(placed=True)',
@@ -179,7 +179,7 @@ def test_qiongyu_qingque_precision_gate_not_inherited(
 def test_qiongyu_qingque_unobserved_reject_auditable(
         rows_sink: _RowSink) -> None:
     """拒落负支:equips 未观察(None)直构 → 效果条目2 原语拒落零写 + 效果串仍
-    逐件登记(placed=False ×2,拒落可审计);顾问解锁腿不受扰照写(equips
+    逐件登记(placed=False ×2,拒落可审计);顾问解锁效果条目不受扰照写(equips
     观察态与解锁域零耦合);零申报行(拒落档 = 原语既有语义静默档)。"""
     gs = _make_gs()
     gs.prep_anchored = True
@@ -189,8 +189,8 @@ def test_qiongyu_qingque_unobserved_reject_auditable(
         f'advisor_unlock:{_CARD}:青雀',
         f'named_equip_grant:{_ITEM}(placed=False)',
         f'named_equip_grant:{_ITEM}(placed=False)',
-    ), '效果串恒 3 条,炉腿逐件 placed=False 拒落可审计'
-    assert gs.unlocked_experts.value == ('青雀',), '解锁腿照写(域零耦合)'
+    ), '效果串恒 3 条,炉效果条目逐件 placed=False 拒落可审计'
+    assert gs.unlocked_experts.value == ('青雀',), '解锁效果条目照写(域零耦合)'
     assert gs.equips.value is None, '效果条目2 拒落零写'
     assert gs.write_seq - seq_before == 1, '写数恰 1 = 解锁写(拒落零写)'
     assert rows_sink.kinds() == [], '拒落档零申报行(非 fail-closed 档)'

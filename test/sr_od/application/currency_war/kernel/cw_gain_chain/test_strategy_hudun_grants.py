@@ -8,7 +8,7 @@ test_strategy_liangzi_grants.py 量子同频星徽)。
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-229 对应稿
 §4(REVIEW-T229 无需用户决定 6/6;卡面官方原文双具名直读;效果条目1 rand=False 策略
 卡侧具名效果条目通道归属;效果条目2 砂金 1★ 先验家族口径;登记条目
-chars_immediate=('砂金',) 与本卡人腿同源零触碰):
+chars_immediate=('砂金',) 与本卡人效果条目同源零触碰):
 
 - 登记单一源:组合行已登记;泛化随机表零条目;
 - 行为链真值:确定入口 → equips 恰 +1 徽、bench 恰 +1 砂金、
@@ -84,7 +84,7 @@ def test_hudun_chain_places_equip_and_char() -> None:
     assert bench_units == ['砂金'], f'bench 恰 +1: {bench_units}'
     assert len(out.effects) == 2, f'效果串两条: {out.effects}'
     assert any(e.startswith('named_equip_grant:') for e in out.effects), \
-        f'装备腿前缀: {out.effects}'
+        f'装备效果条目前缀: {out.effects}'
     assert any(e.startswith('char_grant:') for e in out.effects), \
-        f'角色腿前缀: {out.effects}'
+        f'角色效果条目前缀: {out.effects}'
     assert rng0.getstate() == rng_state0, '零随机面(rng 不消费)'

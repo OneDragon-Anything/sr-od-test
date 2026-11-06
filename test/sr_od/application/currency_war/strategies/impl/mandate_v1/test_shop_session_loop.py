@@ -785,7 +785,7 @@ class TestPrepRandomizedReopen:
         """来源代次锁(T-434):节点推进时点置位的新源(戳 = 当前生效序位;
         生产形态 = T-432 advance 尾排空置位,恰在进入新节点的同一次
         advance 内盖新节点戳)不被边界清扫清掉——清扫只清过期代次,新源
-        信号保留交本帧重开位消费(守恒式重开腿对节点时点源恢复)。"""
+        信号保留交本帧重开位消费(守恒式重开效果条目对节点时点源恢复)。"""
         _live, _sess, gs, _st = _frame(gold=60, node_kind='reward',
                                        shop_cards=[])
         gs.write_logic(gs.node, NodeKey(plane=1, round_num=4,
@@ -870,8 +870,8 @@ class TestRefreshTerminationSession:
                                     bench=[(n, 1) for n in _fuel(2)],
                                     deployed=[_fuel(3)[0]],
                                     shop_cards=[])   # 空面隔离买面
-        # 免费刷新已登记 → 刷新发射(免费腿同过目标可买检查——金线不适用;
-        # 本帧有空位腿,目标可买为真,刷新照发)。
+        # 免费刷新已登记 → 刷新发射(免费效果条目同过目标可买检查——金线不适用;
+        # 本帧有空位效果条目,目标可买为真,刷新照发)。
         gs.write_logic(gs.free_refresh_left, 2, produced_by='cw-36-loop',
                        sig=_LOGIC_SIG)
         a1 = live.decide_shop_action()

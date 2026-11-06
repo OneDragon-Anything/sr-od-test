@@ -1,10 +1,10 @@
-"""collect_ore 上报尾部策略卡晶矿开启触发发放腿集成锁(镜像 src =
+"""collect_ore 上报尾部策略卡晶矿开启触发发放类效果条目集成锁(镜像 src =
 kernel/cw_action_report/collect_ore.py 尾部调用块;test_collect_ore.py
 语义面 = 合并升星/战技点契约既有锁零触碰,本文件按同目录新文件落位)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
 T-316-huangjing-kuanggong.md(定稿,REVIEW-T316 无需用户决定 7/7)§4 锁 4:
-- 窗序锁:计数入账后、契约腿后(env 触发分支写先于只供策略算分的实现分支写);
+- 窗序锁:计数入账后、契约效果条目后(env 触发分支写先于只供策略算分的实现分支写);
 - 席满跳过点不入色档列(「点开才触发」与计数分支同口径);
 - 批尾 spheres 单写含授予点(「一次写一 evidence」);
 - opened == 0 早退路径零触发。
@@ -118,7 +118,7 @@ def _record_writes(gs: GameState,
 
 def test_window_order_count_env_then_strategy_leg(
         monkeypatch: pytest.MonkeyPatch, seeded_provider) -> None:
-    """窗序锁(T-316 设计 §4 锁 4):计数入账(含本批)→ 契约腿写
+    """窗序锁(T-316 设计 §4 锁 4):计数入账(含本批)→ 契约效果条目写
     (env_grant#...)→ 只供策略算分的实现分支写(strategy_ore_open_grant#1,含授予点 +
     附着)。"""
     gs = _make_gs(bench_units=[], env=_SP_ENV, ore_open_total=20)
@@ -128,7 +128,7 @@ def test_window_order_count_env_then_strategy_leg(
     assert out.applied, f'开成: {out.reason}'
     assert gs.effects.ore_open_total == 21, '计数先入账(含本批)'
     assert gs.env_grants_done.value == ((_SP_ENV, 'ore_open#20'),), \
-        '契约腿照常封账(既有腿零扰动)'
+        '契约效果条目照常封账(既有效果条目零扰动)'
     gold_idx = next(i for i, c in enumerate(calls)
                     if c[1] == 'proj_ore_reward_gold#ore1')
     env_idx = next(i for i, c in enumerate(calls)
@@ -181,7 +181,7 @@ def test_zero_open_early_return_no_trigger(
 
 def test_miss_seed_zero_strategy_leg_writes(
         monkeypatch: pytest.MonkeyPatch, seeded_provider) -> None:
-    """未掷中零写锁(上报集成面):掷点未中 → 只供策略算分的实现分支零写(既有腿照常,
+    """未掷中零写锁(上报集成面):掷点未中 → 只供策略算分的实现分支零写(既有效果条目照常,
     只供策略算分的实现分支不产生任何台账行)。"""
     set_action_rng_provider(lambda tool: random.Random(_MISS_SEED))
     try:

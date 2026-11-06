@@ -14,8 +14,8 @@ encounter_options_for helper + encounter 呈现写点 + STRATEGY_ECONOMY
   观察生成器(gen_encounter 状态容器回读链)与状态容器一致;
 - 锁 3 注册行直测:STRATEGY_ECONOMY['二极管'] 直读三条效果条目值(instant_gold
   ==6 ∧ hp_instant==10 ∧ encounter_tier_extremes_only is True,防表外
-  安静返 0/注册笔误,T-121 注册行直测先例);hp 腿直调真值 + 表外卡
-  零写(apply_strategy_pick_hp 通用腿直调,照 T-127
+  安静返 0/注册笔误,T-121 注册行直测先例);hp 效果条目直调真值 + 表外卡
+  零写(apply_strategy_pick_hp 通用效果条目直调,照 T-127
   test_strategy_pick_hp.py 形态)。
 
 复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py(已登记超限
@@ -48,7 +48,7 @@ from sr_od.application.currency_war.sim.cw_sim_backend import (
 #: STRATEGY_ECONOMY)。
 _CARD = '二极管'
 
-#: hp 即时腿独立笔 evidence 前缀(单一源 = cw_sim_base.sim_evidence
+#: hp 即时效果条目独立笔 evidence 前缀(单一源 = cw_sim_base.sim_evidence
 #: 契约:前缀 sim:engine: + 写点 tag hp:strategy_pick:<卡名>)。
 _HP_EV_PREFIX = 'sim:engine:hp:strategy_pick:'
 
@@ -140,7 +140,7 @@ def test_no_card_presentation_stays_full_set() -> None:
         uninstall_backend()
 
 
-# ============================================================ 锁 3 注册行直测 + hp 腿直调
+# ============================================================ 锁 3 注册行直测 + hp 效果条目直调
 
 def test_registration_row_direct_three_legs() -> None:
     """注册行直测:三条效果条目值全直读——卡面「获得10小队生命值和生命上限,
@@ -152,7 +152,7 @@ def test_registration_row_direct_three_legs() -> None:
 
 
 def test_hp_leg_direct_call_grants_exact_and_offtable_zero_write() -> None:
-    """hp 腿直调真值 + 表外卡零写(apply_strategy_pick_hp 通用腿直调,
+    """hp 效果条目直调真值 + 表外卡零写(apply_strategy_pick_hp 通用效果条目直调,
     T-127 test_strategy_pick_hp.py 形态):已登记卡入账恰 +10 恰一笔
     (独立 evidence 笔),表外名零笔零写(hp/evidence 双不动)。rng
     形参 = 负值支扩调用点随批加入(正部成员不消费采样,传独立实例形)。"""

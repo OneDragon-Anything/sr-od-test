@@ -1,4 +1,4 @@
-"""策略卡等级装备发放检查腿测试(镜像 src = kernel/cw_gain_chain.py 的
+"""策略卡等级装备发放检查效果条目测试(镜像 src = kernel/cw_gain_chain.py 的
 check_strategy_level_equip_grants 直写本体)。
 
 测试面依据 = 迭代设计 designs/T-141-zuanshi-shangren.md §4 锁 2/3/4/5/6
@@ -8,7 +8,7 @@ LEVEL 单一源,8 级直构可得〕经 apply_node_xp 真经验通道跨 9,禁�
 - 跨级发放主链(锁 2):经 apply_node_xp 跨 9 → equips 追加财富宝钻恰
   一次 + 落一次性标志位 + 返回装备名,两写 evidence/sig/source 形态;
 - 一次性封账(锁 3):一次性标志位后再查(等级持续 ≥9)零追加零重一次性标志位;
-- 未持卡/表外卡零写(锁 4):持卡交集空整腿无候选;
+- 未持卡/表外卡零写(锁 4):持卡交集空整效果条目无候选;
 - 宁缺勿造(锁 5):level/equips 现值 None → 零写零一次性标志位,值到位重查自愈;
 - 状态检查型语义(锁 6):拿卡时已 level ≥9 → 下一次检查即发放(禁实现
   批顺手改严格跨越型而无锁);
@@ -105,7 +105,7 @@ def test_latch_blocks_regrant_while_level_holds() -> None:
 
 def test_no_card_and_out_of_table_card_zero_write() -> None:
     """未持卡/表外卡零写(锁 4):等级 ≥9 但未持卡 → 零写零一次性标志位;持已登记
-    非本表卡(躺平)→ 同零写零一次性标志位(持卡 ∩ 登记表为空整腿无候选,表外卡
+    非本表卡(躺平)→ 同零写零一次性标志位(持卡 ∩ 登记表为空整效果条目无候选,表外卡
     禁从效果原文自动猜装)。"""
     gs = _seeded_gs()
     gs.observe(gs.equips, [], sig=_SIG_OBS)
@@ -151,7 +151,7 @@ def test_state_semantics_hold_at_level_grants() -> None:
 def test_snapshot_roundtrip_latch_honored() -> None:
     """快照存续:达标发放落一次性标志位 → full_state_snapshot → restore 往返 →
     恢复局再查返回 None(中断恢复不重发;五件套 roundtrip 本体 =
-    kernel/cw_game_state 锁文件已登记,本锁锁本腿语义层)。"""
+    kernel/cw_game_state 锁文件已登记,本锁锁本效果条目语义层)。"""
     gs = _seeded_gs()
     _hold(gs)
     gs.observe(gs.equips, [], sig=_SIG_OBS)

@@ -5,11 +5,11 @@ test_strategy_compose_grant_plus.py)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-197-dakuozhao.
 md §3 锁 4/锁 5/锁 6/锁 8 + REVIEW-T197 八裁决点默认案:
-- 组合登记 = 随机角色腿(变量计数)×具名装备腿,_compose_grant_legs 组合,
-  腿序 = 卡文语序随机先/具名后;
+- 组合登记 = 随机角色效果条目(变量计数)×具名装备效果条目,_compose_grant_legs 组合,
+  条目序 = 卡文语序随机先/具名后;
 - 变量计数(锁 6):效果串条数随注入持金按 dakuozhao_deduction_plan
-  角色数分量走(非表载常量)——与 sim 扣金负腿同函数单一源;
-- 效果体零写金(锁 5):扣金归 sim 负腿,效果体执行前后 gold 状态容器
+  角色数分量走(非表载常量)——与 sim 扣金负效果条目同函数单一源;
+- 效果体零写金(锁 5):扣金归 sim 负效果条目,效果体执行前后 gold 状态容器
   值/证据笔零触碰(实机(live)和模拟器(sim)两边发放量与扣金解耦);
 - 放回语义(锁 8):同 rng 实例 n 抽可重复(预采样序列含重复名 +
   效果串如实携带);
@@ -68,7 +68,7 @@ def _pool() -> list[str]:
 
 def _sample(seed: int, count: int) -> list[str]:
     """预采样序列(独立 rng 实例按效果体消费序 n 抽放回;与注入 rng
-    同种子同序,腿序改排/采样改式 = 序列漂移即红)。"""
+    同种子同序,条目序改排/采样改式 = 序列漂移即红)。"""
     rng = random.Random(seed)
     pool = _pool()
     return [rng.choice(pool) for _ in range(count)]
@@ -79,7 +79,7 @@ def _make_gs(*, bench: list[tuple[str, int]] | None = None,
              gold: int | None = None) -> GameState:
     """观测面按参组装(None = 保持未观察;镜像
     test_strategy_compose_grant_plus._make_gs,gold 支为本卡新增——
-    变量计数腿的现算输入)。"""
+    变量计数效果条目的现算输入)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if bench is not None:
         slots = [BenchSlot(kind='unit', unit=Unit(char_id=c, star=s))
@@ -119,9 +119,9 @@ def rows_sink() -> _RowSink:
 
 def test_dakuozhao_compose_legs_variable_count_chain(
         rows_sink: _RowSink) -> None:
-    """组合腿 + 变量计数锁(锁 4/锁 6 主形态):注入持金 30 → 效果串
-    恰 7+1 条且顺序 = 随机腿 7 条(名 = 预采样序列,∈4 费池派生集、
-    全 1★ 落席)+ 具名腿 1 条(named_equip_grant:完美投影仪 placed);
+    """组合效果条目 + 变量计数锁(锁 4/锁 6 主形态):注入持金 30 → 效果串
+    恰 7+1 条且顺序 = 随机效果条目 7 条(名 = 预采样序列,∈4 费池派生集、
+    全 1★ 落席)+ 具名效果条目 1 条(named_equip_grant:完美投影仪 placed);
     bench 恰 +7;equips 恰 +完美投影仪;条数与公式角色数分量对拍
     (单一源锁);效果体零写金(锁 5,gold 值与证据笔保持种子笔);
     正常路径零申报行。
@@ -147,9 +147,9 @@ def test_dakuozhao_compose_legs_variable_count_chain(
     assert out.effects == (
         *(f'strategy_gift_random:{name}@1star' for name in expected),
         f'named_equip_grant:{_NAMED_EQUIP}(placed=True)',
-    ), '效果串恰 7+1 条且顺序 = 卡文语序(随机腿先/具名腿后)'
+    ), '效果串恰 7+1 条且顺序 = 卡文语序(随机效果条目先/具名效果条目后)'
     # 锁 5(效果体零写金):值与证据笔零触碰(种子笔 t:gold-seed 保持,
-    # 扣金归 sim 负腿,live 面金面禁直写)。
+    # 扣金归 sim 负效果条目,live 面金面禁直写)。
     assert int(gs.gold.value or 0) == 30, '金值零触碰'
     assert gs.gold.evidence == 't:gold-seed', '金证据笔零触碰'
     assert rows_sink.kinds() == [], '正常路径零申报行'
@@ -157,9 +157,9 @@ def test_dakuozhao_compose_legs_variable_count_chain(
 
 def test_dakuozhao_count_follows_formula_gold_axis(
         rows_sink: _RowSink) -> None:
-    """锁 6(变量计数对公式轴):持金 8 → 效果串随机腿恰 2 条
+    """锁 6(变量计数对公式轴):持金 8 → 效果串随机效果条目恰 2 条
     (= dakuozhao_deduction_plan(8)[1])——发放只数非表载常量,随注入
-    持金沿公式走(效果体与 sim 负腿同函数,两端数量口径天然一致;
+    持金沿公式走(效果体与 sim 负效果条目同函数,两端数量口径天然一致;
     主形态 30→7 见组合锁,本锁换点证「不是恒 7」)。"""
     expected = _sample(_RECRUIT_SEED, 2)
     assert dakuozhao_deduction_plan(8) == (8, 2), '公式对拍前提'
@@ -170,7 +170,7 @@ def test_dakuozhao_count_follows_formula_gold_axis(
     assert out.effects == (
         *(f'strategy_gift_random:{name}@1star' for name in expected),
         f'named_equip_grant:{_NAMED_EQUIP}(placed=True)',
-    ), '持金 8 → 随机腿恰 2 条(变量计数,非常量发放)'
+    ), '持金 8 → 随机效果条目恰 2 条(变量计数,非常量发放)'
     assert len(bench_units_of(gs)) == 2
 
 
@@ -225,13 +225,13 @@ def test_dakuozhao_bench_full_overflow_then_zero_writes(
 
 
 def test_dakuozhao_zero_gold_zero_grant(rows_sink: _RowSink) -> None:
-    """零金边界:持金 0 → 公式 (0, 0) → 随机腿零条(fail-closed),
-    具名腿照发(卡文「获得1个【完美投影仪】」无持金条件)。"""
+    """零金边界:持金 0 → 公式 (0, 0) → 随机效果条目零条(fail-closed),
+    具名效果条目照发(卡文「获得1个【完美投影仪】」无持金条件)。"""
     assert dakuozhao_deduction_plan(0) == (0, 0), '公式对拍前提'
     gs = _make_gs(bench=[], equips=[], gold=0)
     gs.prep_anchored = True
     out = gain_invest_strategy(gs, None, _CARD, rand=False, sig=_LSIG,
                                rng=random.Random(_RECRUIT_SEED))
     assert out.effects == (f'named_equip_grant:{_NAMED_EQUIP}(placed=True)',), \
-        '随机腿零条 + 具名腿照发'
+        '随机效果条目零条 + 具名效果条目照发'
     assert bench_units_of(gs) == []

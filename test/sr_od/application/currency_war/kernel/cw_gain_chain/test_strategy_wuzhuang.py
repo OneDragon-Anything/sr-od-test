@@ -1,5 +1,5 @@
 """武装突入(id 302001)双箱组合登记行锁(镜像 src = PICK '武装突入'
-行 _make_box_grant_effect(('简易武装箱', '简易武装箱')) + SG 箱腿组
+行 _make_box_grant_effect(('简易武装箱', '简易武装箱')) + SG 箱条目组
 两元素元组行;镜像表泛化 dict[str, tuple[str, …]] 首个 count>1 成员;
 先例 = 同目录天降救兵组合锁形)。
 
@@ -53,7 +53,7 @@ def test_wuzhuang_chain_places_two_boxes() -> None:
                                  rng=rng0)
     assert len(effects) == 2, f'效果串恰 2 条: {effects}'
     assert all(e.startswith('box_grant:简易武装箱') for e in effects), \
-        f'双箱腿: {effects}'
+        f'双箱条目: {effects}'
     boxes = [sl for sl in gs.bench.value.slots
              if sl.kind != 'unit' and sl.kind != 'empty'
              and getattr(sl, 'item', None) == '简易武装箱']

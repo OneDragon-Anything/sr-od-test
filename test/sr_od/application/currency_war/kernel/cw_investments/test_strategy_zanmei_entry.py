@@ -75,7 +75,7 @@ def test_zanmei_effect_text_single_source() -> None:
 
 def test_zanmei_cash_fail_closed() -> None:
     """现金分支锁(锁 1 尾):无 STRATEGY_ECONOMY 条目 → 估值 fail-closed
-    (0.0, False)(xp_per_node 静态挂值被否决后的登记后果申报:腿 1 动态
+    (0.0, False)(xp_per_node 静态挂值被否决后的登记后果申报:效果条目 1 动态
     XP 未入现金通道,战力类立场 0,复合结果 = 零现金分)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     assert strategy_economy_value(_CARD, gs) == (0.0, False)

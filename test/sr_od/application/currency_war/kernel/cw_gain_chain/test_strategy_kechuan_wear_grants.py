@@ -1,4 +1,4 @@
-"""策略卡完美通关穿戴检查腿测试(镜像 src = kernel/cw_gain_chain.py 的
+"""策略卡完美通关穿戴检查效果条目测试(镜像 src = kernel/cw_gain_chain.py 的
 check_strategy_kechuan_wear_grants)。
 
 测试面依据 = 迭代设计 designs/T-368-peipei-kechuan.md §9.2 效果条目②

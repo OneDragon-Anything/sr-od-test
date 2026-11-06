@@ -1116,7 +1116,7 @@ def test_gain_invest_strategy_session_ledger_branch() -> None:
     登记分支跳过、注册照常;未收录卡登记分支零动作。(选卡 = 固定理财:
     STRATEGY_EFFECTS 已登记条目且 payload.free_refresh_burst=2,桥 docstring
     背书;市场干预已入册本表,payload 引 STRATEGY_ECONOMY 同一实例,
-    burst 腿锁 = test_gain_invest_strategy_market_intervention_burst_grant。)"""
+    burst 效果条目锁 = test_gain_invest_strategy_market_intervention_burst_grant。)"""
     gs = _make_gs(bench=[], equips=[])
     gain_invest_strategy(gs, object(), '固定理财', rand=False, sig=_lsig())
     assert gs.active_strategies.value == ['固定理财']
@@ -1205,7 +1205,7 @@ def test_gain_invest_strategy_force_refresh_register_noop_grants() -> None:
     """武力刷新只登记不写状态的实现分支:session 在场选卡 → register_strategy 入册
     (effects.first 按 id 非空);burst 桥零额度、板面重写桥非战场
     payload 返回 None(登记期零 Field 行,零即时发放——发放面全归
-    穿戴合成事件腿)。"""
+    穿戴合成事件效果条目)。"""
     gs = _make_gs(bench=[], equips=[])
     gain_invest_strategy(gs, object(), '武力刷新', rand=False, sig=_lsig())
     assert gs.active_strategies.value == ['武力刷新'], '注册入表'
@@ -1342,7 +1342,7 @@ def test_on_strategy_gained_unregistered_quiet() -> None:
     武装支援+/买彩票+/精密拆装·银/回收计划/这么大的钻石) + 具名装备授予族(全员晋升/无伤通关/星星相印/小复制/小复制+/赌神·银/无害垃圾/控制规模) + 具名角色
     发放族(溜佩佩/溜佩佩+/招财狗/艾丝妲的猛犬！/狸职手续) + 绑定型随机角色授予族(价值投资·金)
     + 策略延时 offer 族 + 策略延时发放族
-    (箱腿/援军/随机装备/具名角色/绑定型随机角色条目由工厂自各自生成表生成,组合卡
+    (箱条目/援军/随机装备/具名角色/绑定型随机角色条目由工厂自各自生成表生成,组合卡
     直书登记行由组合子组合两条效果条目,具名装备授予直书登记行由具名装备工厂生成
     闭包,延时 offer 条目由工厂自 STRATEGY_DELAYED_OFFERS 派生,延时发放
     族按卡文句式分流:带即时短句的成员经两条效果条目成员集走两条效果条目工厂派生,纯延时
@@ -1496,7 +1496,7 @@ def test_strategy_box_grants_consistency_lock() -> None:
 
 
 def test_levelup_companion_gold_consistency_lock() -> None:
-    """节节高升金腿双字面量一致性锁(BOX 表先例同域):经济注册行
+    """节节高升金币效果条目双字面量一致性锁(BOX 表先例同域):经济注册行
     gold_per_level_up 与 live 伴生常量 LEVELUP_COMPANION_GOLD 逐值相等
     ——伴生不读注册表,两处独立字面量漂移即 live 记账与注册表/聚合间
     静默分叉,且在备战断言不可见,唯此测试可暴露(纯锁零生产行为)。"""
@@ -1505,7 +1505,7 @@ def test_levelup_companion_gold_consistency_lock() -> None:
     )
     assert STRATEGY_ECONOMY['节节高升'].gold_per_level_up \
         == LEVELUP_COMPANION_GOLD, \
-        '金腿注册行与 live 伴生常量漂移(live 记账与聚合将静默分叉)'
+        '金币效果条目注册行与 live 伴生常量漂移(live 记账与聚合将静默分叉)'
 
 
 # ============================================================ 援军族效果
@@ -1759,7 +1759,7 @@ def test_random_equip_sampler_pool_and_ore_pool_lock() -> None:
     """采样纯函数锁(泛化 (category, count) 表形重立):固定种子返回名 ∈
     对应类别派生池且种子可复现;池 = ``equips_by_category`` 注册表派生
     (非空/成员全 ∈ EQUIPMENTS 且类别对/无重复;计数随版本漂移不锁);
-    简易池与晶矿 _SIMPLE_EQUIP_POOL、到期发放腿 _EXPIRY_SIMPLE_EQUIP_POOL
+    简易池与晶矿 _SIMPLE_EQUIP_POOL、到期发放类效果条目 _EXPIRY_SIMPLE_EQUIP_POOL
     同集断言(互指语义锁——本地池两处独立定义,口径漂移唯此测试可暴露)。
     星徽池 = 买彩票(策略侧)与劳务派遣合同(环境侧)共用注册表派生源,
     零本地第二源,故无同集断言对象。"""
@@ -1788,7 +1788,7 @@ def test_random_equip_sampler_pool_and_ore_pool_lock() -> None:
     assert set(simple_pool) == set(_SIMPLE_EQUIP_POOL), \
         '与晶矿简易池同集(互指语义锁)'
     assert set(simple_pool) == set(_EXPIRY_SIMPLE_EQUIP_POOL), \
-        '与到期发放腿简易池同集(池互指语义锁)'
+        '与到期发放类效果条目简易池同集(池互指语义锁)'
     picks_simple = [roll_random_equip(random.Random(7), '简易')
                     for _ in range(8)]
     picks_star = [roll_random_equip(random.Random(7), '星徽')
@@ -2799,7 +2799,7 @@ def test_env_gift_blue_channel_selection_both_states(
 
 def test_env_gift_equip_leg_lieche_invite(rows_sink: _RowSink) -> None:
     """发放分支(T-63 设计 §4 锁 3,on_env_gained 直构):选列车同行邀请 →
-    equips 尾追 '列车同行星徽'、bench 零落位(装备 only,无开箱腿);
+    equips 尾追 '列车同行星徽'、bench 零落位(装备 only,无开箱效果条目);
     效果串单行 ``equip_gift:列车同行星徽``。星徽 ∈ EQUIP_ACQUIRE_
     CONSEQUENCES 表外 → 零子链(申报行空为证)。"""
     gs = _make_gs(bench=[], equips=[])
@@ -2819,7 +2819,7 @@ def test_env_gift_equip_leg_lieche_invite(rows_sink: _RowSink) -> None:
 def test_env_gift_equip_leg_yinhe_invite(rows_sink: _RowSink) -> None:
     """发放分支(T-64 设计 §4 锁 3,治理后形态,on_env_gained 直构):选
     银河学者邀请 → equips 尾追 '银河学者星徽'、bench 零落位(装备 only,
-    无开箱腿);效果串单行 ``equip_gift:银河学者星徽``。星徽 ∈ EQUIP_
+    无开箱效果条目);效果串单行 ``equip_gift:银河学者星徽``。星徽 ∈ EQUIP_
     ACQUIRE_CONSEQUENCES 表外 → 零子链(申报行空为证)。"""
     gs = _make_gs(bench=[], equips=[])
     out = on_env_gained(gs, None, '银河学者邀请', rand=False, sig=_lsig())
@@ -2838,7 +2838,7 @@ def test_env_gift_equip_leg_yinhe_invite(rows_sink: _RowSink) -> None:
 def test_env_gift_equip_leg_beluoboge_invite(rows_sink: _RowSink) -> None:
     """发放分支(T-65 设计 §4 锁 3,治理后形态,on_env_gained 直构):选
     贝洛伯格邀请 → equips 尾追 '贝洛伯格星徽'、bench 零落位(装备 only,
-    无开箱腿);效果串单行 ``equip_gift:贝洛伯格星徽``。星徽 ∈ EQUIP_
+    无开箱效果条目);效果串单行 ``equip_gift:贝洛伯格星徽``。星徽 ∈ EQUIP_
     ACQUIRE_CONSEQUENCES 表外 → 零子链(申报行空为证)。"""
     gs = _make_gs(bench=[], equips=[])
     out = on_env_gained(gs, None, '贝洛伯格邀请', rand=False, sig=_lsig())
@@ -2857,7 +2857,7 @@ def test_env_gift_equip_leg_beluoboge_invite(rows_sink: _RowSink) -> None:
 def test_env_gift_equip_leg_xingjian_lvren_invite(rows_sink: _RowSink) -> None:
     """发放分支(T-66 设计 §4 锁 3,治理后形态,on_env_gained 直构):选
     星间旅人邀请 → equips 尾追 '星间旅人星徽'、bench 零落位(装备 only,
-    无开箱腿);效果串单行 ``equip_gift:星间旅人星徽``。星徽 ∈ EQUIP_
+    无开箱效果条目);效果串单行 ``equip_gift:星间旅人星徽``。星徽 ∈ EQUIP_
     ACQUIRE_CONSEQUENCES 表外 → 零子链(申报行空为证)。"""
     gs = _make_gs(bench=[], equips=[])
     out = on_env_gained(gs, None, '星间旅人邀请', rand=False, sig=_lsig())
@@ -2876,7 +2876,7 @@ def test_env_gift_equip_leg_xingjian_lvren_invite(rows_sink: _RowSink) -> None:
 def test_env_gift_equip_leg_xianzhou_invite(rows_sink: _RowSink) -> None:
     """发放分支(T-67 设计 §4 锁 3,治理后形态,on_env_gained 直构):选
     仙舟邀请 → equips 尾追 '仙舟星徽'、bench 零落位(装备 only,
-    无开箱腿);效果串单行 ``equip_gift:仙舟星徽``。星徽 ∈ EQUIP_
+    无开箱效果条目);效果串单行 ``equip_gift:仙舟星徽``。星徽 ∈ EQUIP_
     ACQUIRE_CONSEQUENCES 表外 → 零子链(申报行空为证)。"""
     gs = _make_gs(bench=[], equips=[])
     out = on_env_gained(gs, None, '仙舟邀请', rand=False, sig=_lsig())
@@ -2895,7 +2895,7 @@ def test_env_gift_equip_leg_xianzhou_invite(rows_sink: _RowSink) -> None:
 def test_env_gift_equip_leg_langshou_invite(rows_sink: _RowSink) -> None:
     """发放分支(T-68 设计 §4 锁 3,治理后形态,on_env_gained 直构):选
     狼狩邀请 → equips 尾追 '狼狩星徽'、bench 零落位(装备 only,
-    无开箱腿);效果串单行 ``equip_gift:狼狩星徽``。星徽 ∈ EQUIP_
+    无开箱效果条目);效果串单行 ``equip_gift:狼狩星徽``。星徽 ∈ EQUIP_
     ACQUIRE_CONSEQUENCES 表外 → 零子链(申报行空为证)。"""
     gs = _make_gs(bench=[], equips=[])
     out = on_env_gained(gs, None, '狼狩邀请', rand=False, sig=_lsig())
@@ -2915,7 +2915,7 @@ def test_env_gift_equip_leg_shenghui_zhixing_invite(
         rows_sink: _RowSink) -> None:
     """发放分支(T-69 设计 §4 锁 3,治理后形态,on_env_gained 直构):选
     盛会之星邀请 → equips 尾追 '盛会之星星徽'、bench 零落位(装备 only,
-    无开箱腿);效果串单行 ``equip_gift:盛会之星星徽``。星徽 ∈ EQUIP_
+    无开箱效果条目);效果串单行 ``equip_gift:盛会之星星徽``。星徽 ∈ EQUIP_
     ACQUIRE_CONSEQUENCES 表外 → 零子链(申报行空为证)。"""
     gs = _make_gs(bench=[], equips=[])
     out = on_env_gained(gs, None, '盛会之星邀请', rand=False, sig=_lsig())
@@ -2935,7 +2935,7 @@ def test_env_gift_equip_leg_zhouzhi_banshen_invite(
         rows_sink: _RowSink) -> None:
     """发放分支(T-70 设计 §4 锁 3,治理后形态,on_env_gained 直构):选
     昼之半神邀请 → equips 尾追 '昼之半神星徽'、bench 零落位(装备 only,
-    无开箱腿);效果串单行 ``equip_gift:昼之半神星徽``。星徽 ∈ EQUIP_
+    无开箱效果条目);效果串单行 ``equip_gift:昼之半神星徽``。星徽 ∈ EQUIP_
     ACQUIRE_CONSEQUENCES 表外 → 零子链(申报行空为证)。"""
     gs = _make_gs(bench=[], equips=[])
     out = on_env_gained(gs, None, '昼之半神邀请', rand=False, sig=_lsig())
@@ -2955,7 +2955,7 @@ def test_env_gift_equip_leg_yezhi_banshen_invite(
         rows_sink: _RowSink) -> None:
     """发放分支(T-71 设计 §4 锁 3,治理后形态,on_env_gained 直构):选
     夜之半神邀请 → equips 尾追 '夜之半神星徽'、bench 零落位(装备 only,
-    无开箱腿);效果串单行 ``equip_gift:夜之半神星徽``。星徽 ∈ EQUIP_
+    无开箱效果条目);效果串单行 ``equip_gift:夜之半神星徽``。星徽 ∈ EQUIP_
     ACQUIRE_CONSEQUENCES 表外 → 零子链(申报行空为证)。"""
     gs = _make_gs(bench=[], equips=[])
     out = on_env_gained(gs, None, '夜之半神邀请', rand=False, sig=_lsig())
@@ -2975,7 +2975,7 @@ def test_env_gift_equip_leg_zhuiji_invite(
         rows_sink: _RowSink) -> None:
     """发放分支(T-72 设计 §4 锁 3,治理后形态,on_env_gained 直构):选
     追击邀请 → equips 尾追 '追击星徽'、bench 零落位(装备 only,
-    无开箱腿);效果串单行 ``equip_gift:追击星徽``。星徽 ∈ EQUIP_
+    无开箱效果条目);效果串单行 ``equip_gift:追击星徽``。星徽 ∈ EQUIP_
     ACQUIRE_CONSEQUENCES 表外 → 零子链(申报行空为证)。"""
     gs = _make_gs(bench=[], equips=[])
     out = on_env_gained(gs, None, '追击邀请', rand=False, sig=_lsig())
@@ -2995,7 +2995,7 @@ def test_env_gift_equip_leg_jipo_invite(
         rows_sink: _RowSink) -> None:
     """发放分支(T-73 设计 §4 锁 3,治理后形态,on_env_gained 直构):选
     击破邀请 → equips 尾追 '击破星徽'、bench 零落位(装备 only,
-    无开箱腿);效果串单行 ``equip_gift:击破星徽``。星徽 ∈ EQUIP_
+    无开箱效果条目);效果串单行 ``equip_gift:击破星徽``。星徽 ∈ EQUIP_
     ACQUIRE_CONSEQUENCES 表外 → 零子链(申报行空为证)。"""
     gs = _make_gs(bench=[], equips=[])
     out = on_env_gained(gs, None, '击破邀请', rand=False, sig=_lsig())
@@ -3015,7 +3015,7 @@ def test_env_gift_equip_leg_qungong_invite(
         rows_sink: _RowSink) -> None:
     """发放分支(T-74 设计 §4 锁 3,治理后形态,on_env_gained 直构):选
     群攻邀请 → equips 尾追 '群攻星徽'、bench 零落位(装备 only,
-    无开箱腿);效果串单行 ``equip_gift:群攻星徽``。星徽 ∈ EQUIP_
+    无开箱效果条目);效果串单行 ``equip_gift:群攻星徽``。星徽 ∈ EQUIP_
     ACQUIRE_CONSEQUENCES 表外 → 零子链(申报行空为证)。"""
     gs = _make_gs(bench=[], equips=[])
     out = on_env_gained(gs, None, '群攻邀请', rand=False, sig=_lsig())
@@ -3035,7 +3035,7 @@ def test_env_gift_equip_leg_nengliang_invite(
         rows_sink: _RowSink) -> None:
     """发放分支(T-75 设计 §4 锁 3,治理后形态,on_env_gained 直构):选
     能量邀请 → equips 尾追 '能量星徽'、bench 零落位(装备 only,
-    无开箱腿);效果串单行 ``equip_gift:能量星徽``。星徽 ∈ EQUIP_
+    无开箱效果条目);效果串单行 ``equip_gift:能量星徽``。星徽 ∈ EQUIP_
     ACQUIRE_CONSEQUENCES 表外 → 零子链(申报行空为证)。"""
     gs = _make_gs(bench=[], equips=[])
     out = on_env_gained(gs, None, '能量邀请', rand=False, sig=_lsig())
@@ -3055,7 +3055,7 @@ def test_env_gift_equip_leg_ranxue_invite(
         rows_sink: _RowSink) -> None:
     """发放分支(T-76 设计 §4 锁 3,治理后形态,on_env_gained 直构):选
     燃血邀请 → equips 尾追 '燃血星徽'、bench 零落位(装备 only,
-    无开箱腿);效果串单行 ``equip_gift:燃血星徽``。星徽 ∈ EQUIP_
+    无开箱效果条目);效果串单行 ``equip_gift:燃血星徽``。星徽 ∈ EQUIP_
     ACQUIRE_CONSEQUENCES 表外 → 零子链(申报行空为证)。"""
     gs = _make_gs(bench=[], equips=[])
     out = on_env_gained(gs, None, '燃血邀请', rand=False, sig=_lsig())
@@ -3075,7 +3075,7 @@ def test_env_gift_equip_leg_jianyi_invite(
         rows_sink: _RowSink) -> None:
     """发放分支(T-77 设计 §4 锁 3,治理后形态,on_env_gained 直构):选
     减益邀请 → equips 尾追 '减益星徽'、bench 零落位(装备 only,
-    无开箱腿);效果串单行 ``equip_gift:减益星徽``。星徽 ∈ EQUIP_
+    无开箱效果条目);效果串单行 ``equip_gift:减益星徽``。星徽 ∈ EQUIP_
     ACQUIRE_CONSEQUENCES 表外 → 零子链(申报行空为证)。"""
     gs = _make_gs(bench=[], equips=[])
     out = on_env_gained(gs, None, '减益邀请', rand=False, sig=_lsig())
@@ -3095,7 +3095,7 @@ def test_env_gift_equip_leg_chixu_shanghai_invite(
         rows_sink: _RowSink) -> None:
     """发放分支(T-78 设计 §4 锁 3,治理后形态,on_env_gained 直构):选
     持续伤害邀请 → equips 尾追 '持续伤害星徽'、bench 零落位(装备 only,
-    无开箱腿);效果串单行 ``equip_gift:持续伤害星徽``。星徽 ∈ EQUIP_
+    无开箱效果条目);效果串单行 ``equip_gift:持续伤害星徽``。星徽 ∈ EQUIP_
     ACQUIRE_CONSEQUENCES 表外 → 零子链(申报行空为证)。"""
     gs = _make_gs(bench=[], equips=[])
     out = on_env_gained(gs, None, '持续伤害邀请', rand=False, sig=_lsig())
@@ -3115,7 +3115,7 @@ def test_env_gift_equip_leg_liangzi_tongpin_invite(
         rows_sink: _RowSink) -> None:
     """发放分支(T-79 设计 §4 锁 3,治理后形态,on_env_gained 直构):选
     量子同频邀请 → equips 尾追 '量子同频星徽'、bench 零落位(装备 only,
-    无开箱腿);效果串单行 ``equip_gift:量子同频星徽``。星徽 ∈ EQUIP_
+    无开箱效果条目);效果串单行 ``equip_gift:量子同频星徽``。星徽 ∈ EQUIP_
     ACQUIRE_CONSEQUENCES 表外 → 零子链(申报行空为证)。"""
     gs = _make_gs(bench=[], equips=[])
     out = on_env_gained(gs, None, '量子同频邀请', rand=False, sig=_lsig())
@@ -3135,7 +3135,7 @@ def test_env_gift_equip_leg_zhanjidian_invite(
         rows_sink: _RowSink) -> None:
     """发放分支(T-80 设计 §4 锁 3,治理后形态,on_env_gained 直构):选
     战技点邀请 → equips 尾追 '战技点星徽'、bench 零落位(装备 only,
-    无开箱腿);效果串单行 ``equip_gift:战技点星徽``。星徽 ∈ EQUIP_
+    无开箱效果条目);效果串单行 ``equip_gift:战技点星徽``。星徽 ∈ EQUIP_
     ACQUIRE_CONSEQUENCES 表外 → 零子链(申报行空为证)。"""
     gs = _make_gs(bench=[], equips=[])
     out = on_env_gained(gs, None, '战技点邀请', rand=False, sig=_lsig())
@@ -3155,7 +3155,7 @@ def test_env_gift_equip_leg_huanyu_invite(
         rows_sink: _RowSink) -> None:
     """发放分支(T-81 设计 §4 锁 3,治理后形态,on_env_gained 直构):选
     欢愉邀请 → equips 尾追 '欢愉星徽'、bench 零落位(装备 only,
-    无开箱腿);效果串单行 ``equip_gift:欢愉星徽``。星徽 ∈ EQUIP_
+    无开箱效果条目);效果串单行 ``equip_gift:欢愉星徽``。星徽 ∈ EQUIP_
     ACQUIRE_CONSEQUENCES 表外 → 零子链(申报行空为证)。"""
     gs = _make_gs(bench=[], equips=[])
     out = on_env_gained(gs, None, '欢愉邀请', rand=False, sig=_lsig())
@@ -3175,7 +3175,7 @@ def test_env_gift_equip_leg_mingyun_shengbei_invite(
         rows_sink: _RowSink) -> None:
     """发放分支(T-82 设计 §4 锁 3,治理后形态,on_env_gained 直构):选
     命运圣杯邀请 → equips 尾追 '命运圣杯星徽'、bench 零落位(装备 only,
-    无开箱腿);效果串单行 ``equip_gift:命运圣杯星徽``。星徽 ∈ EQUIP_
+    无开箱效果条目);效果串单行 ``equip_gift:命运圣杯星徽``。星徽 ∈ EQUIP_
     ACQUIRE_CONSEQUENCES 表外 → 零子链(申报行空为证)。"""
     gs = _make_gs(bench=[], equips=[])
     out = on_env_gained(gs, None, '命运圣杯邀请', rand=False, sig=_lsig())

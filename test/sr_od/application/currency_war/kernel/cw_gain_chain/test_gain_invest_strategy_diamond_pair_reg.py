@@ -7,8 +7,8 @@ cw_investments.STRATEGY_GRANTS 非直读人工转正行;按被测方法拆目录
 测试面依据 = 迭代设计 designs/T-243-zheme-da-de-zuanshi.md §4 锁 2/4/5①
 + 用户裁定 2026-11-02 读法 B(佩佩真实入后台,裁定册
 PENDING-DECISIONS.md):
-- 组合腿主链(锁 2):直构 on_strategy_gained(rand=False)→ 腿序 =
-  卡文语序佩佩腿先/宝钻腿后,效果串
+- 组合效果条目主链(锁 2):直构 on_strategy_gained(rand=False)→ 条目序 =
+  卡文语序佩佩效果条目先/宝钻效果条目后,效果串
   ``char_grant:佩佩(placed=True,merge=0,uid=1)``,
   ``named_equip_grant:财富宝钻(placed=True)`` 各一条;备战恰 +1 只
   1★ 佩佩(星级占位非先验)、equips 恰 +1 件财富宝钻;正常路径零
@@ -16,10 +16,10 @@ PENDING-DECISIONS.md):
 - 判读前提漂移哨(锁 5①):卡面 effect 无「获得」子串程序化断言——
   本卡转正行正因该缺席而人工登记,词表改版若引入「获得」反扫即命中,
   本哨先红触发重申报;同锁钉转正行登记形态(发放对象 = 佩佩);
-- 拒落形态(发放落地门下游):equips 未观察 → 宝钻腿拒落零写
-  (placed=False 串留证)、佩佩腿不涉装备域照常落席;
+- 拒落形态(发放落地门下游):equips 未观察 → 宝钻效果条目拒落零写
+  (placed=False 串留证)、佩佩效果条目不涉装备域照常落席;
 - live 零回调锁(锁 4):kernel 形态拿卡(无 sim)→ 宝钻状态副本三域
-  diamond_count/deploy_cap/back_layout 零写——回调只活在 sim 拿卡腿
+  diamond_count/deploy_cap/back_layout 零写——回调只活在 sim 拿卡效果条目
   (sim/cw_sim_backend),三域 live 归观察识别器,逻辑侧禁写契约,
   与 sim 全链锁(sim/cw_sim_backend/test_strategy_pick_diamond_grant_
   sim_chain.py)成对锁死 sim-only 分岔。
@@ -100,7 +100,7 @@ def rows_sink() -> _RowSink:
 
 
 def test_pair_legs_grant_peipei_then_diamond(rows_sink: _RowSink) -> None:
-    """组合腿主链(锁 2):腿序 = 卡文语序(佩佩腿先/宝钻腿后),两条效果条目各
+    """组合效果条目主链(锁 2):条目序 = 卡文语序(佩佩效果条目先/宝钻效果条目后),两条效果条目各
     产一条效果串;备战恰 +1 只 1★ 佩佩、equips 恰 +1 件财富宝钻;
     确定发放零采样面;正常路径零申报行。"""
     gs = _make_gs(bench=[], equips=[])
@@ -134,8 +134,8 @@ def test_effect_text_has_no_gain_verb_and_grant_registered() -> None:
 
 
 def test_equips_unobserved_diamond_leg_rejected() -> None:
-    """拒落形态(发放落地门下游):equips 未观察 → 宝钻腿拒落零写
-    (效果串 placed=False 留证,状态容器维持 None),佩佩腿不涉装备域照常
+    """拒落形态(发放落地门下游):equips 未观察 → 宝钻效果条目拒落零写
+    (效果串 placed=False 留证,状态容器维持 None),佩佩效果条目不涉装备域照常
     落席——两条效果条目独立,装备域缺失不拖累单位入队。"""
     gs = _make_gs(bench=[])
     gs.prep_anchored = True
@@ -145,13 +145,13 @@ def test_equips_unobserved_diamond_leg_rejected() -> None:
                        f'named_equip_grant:{_EQUIP}(placed=False)'), \
         f'拒落形态步串漂移: {effects!r}'
     assert gs.equips.value is None, '拒落档零写'
-    assert (bench_units_of(gs)[-1].char_id) == '佩佩', '佩佩腿不受扰'
+    assert (bench_units_of(gs)[-1].char_id) == '佩佩', '佩佩效果条目不受扰'
 
 
 def test_kernel_pick_zero_world_coupling_writes() -> None:
     """live 零回调锁(锁 4):kernel 形态拿卡(效果体两条效果条目正常入栏)→
     宝钻状态副本三域零写(值维持 None)——on_diamond_acquired 调用只活在
-    sim 拿卡腿,live 三域归观察识别器(逻辑侧禁写,投影审计契约)。"""
+    sim 拿卡效果条目,live 三域归观察识别器(逻辑侧禁写,投影审计契约)。"""
     gs = _make_gs(bench=[], equips=[])
     gs.prep_anchored = True
     effects = on_strategy_gained(gs, _CARD, rand=False, sig=_LSIG,

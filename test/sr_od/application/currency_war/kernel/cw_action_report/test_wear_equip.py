@@ -150,7 +150,7 @@ def test_wear_same_simple_pair_no_blind_concat() -> None:
 
 
 def test_fusion_summon_registration_consolidated() -> None:
-    """登记对拍汇总(四把存量锁就地扩集的卡级收尾,防扩集漏项):箱腿
+    """登记对拍汇总(四把存量锁就地扩集的卡级收尾,防扩集漏项):箱条目
     注册形状(GRANTS 条目 items 直读 + 镜像表逐对相等 + PICK 工厂键)
     与效果条目1 零登记面(STRATEGY_EFFECTS / STRATEGY_BINDINGS 双缺席)同点
     钉死;计数 = 各存量锁扩集后的现值。"""
@@ -159,9 +159,9 @@ def test_fusion_summon_registration_consolidated() -> None:
         PICK_INVEST_EFFECTS,
     )
     grant = STRATEGY_GRANTS['融合召唤']
-    assert grant.items_immediate == ('简易武装箱',), '箱腿卡文直读'
+    assert grant.items_immediate == ('简易武装箱',), '箱条目卡文直读'
     assert grant.chars_immediate == () and grant.chars_conditional == (), \
-        'items-only 合法形态(箱腿正面形)'
+        'items-only 合法形态(箱条目正面形)'
     assert _STRATEGY_BOX_GRANTS['融合召唤'] == ('简易武装箱',), \
         '镜像表与登记表逐对相等'
     assert '融合召唤' in PICK_INVEST_EFFECTS, '工厂自动占 PICK 键'

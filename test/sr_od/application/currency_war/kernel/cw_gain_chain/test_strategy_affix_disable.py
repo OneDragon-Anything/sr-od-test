@@ -5,11 +5,11 @@ cw_gain_chain.py on_strategy_gained 硬编码分支;按拆目录规范落位,
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/REVIEW-T291.md
 §3(生效方案 = 复用敌后破坏已落三条效果条目机制建模,选择规则均匀随机换为取尾;
 机制单一源 = designs/T-45-dihou-pohuai.md §2.5 族面条款;卡面官方原文:
-「使最右侧的敌人词缀失效，并使敌人难度-5。获得8金币。」——失效腿 =
-本文件锁面;难度腿/金腿 = STRATEGY_ECONOMY 注册行静态承载〔机制锁由
+「使最右侧的敌人词缀失效，并使敌人难度-5。获得8金币。」——失效效果条目 =
+本文件锁面;难度效果条目/金币效果条目 = STRATEGY_ECONOMY 注册行静态承载〔机制锁由
 test_sim_rules 难度族与 economy 估值锁现役辖域,零新增〕):
 
-- 锁 1 删除腿:选退化(rng 注入定值 + 词缀种子右端定向)→
+- 锁 1 删除效果条目:选退化(rng 注入定值 + 词缀种子右端定向)→
   enemy_affixes 长度 -1、来源 logic_rand(rand=True 双保险,mid-run
   锚定窗也落随机态)、logic_rand_fields() 含 enemy_affixes(补观察谓词
   消费口)、效果串策略变体 strategy_affix_disable:<名> 在账;
@@ -19,7 +19,7 @@ test_sim_rules 难度族与 economy 估值锁现役辖域,零新增〕):
   不改变选择(确定性取尾,零流键消费——不与敌后破坏采样流共槽);
 - 锁 4 mid-run 守卫:节点窗在动 + 当期 hp 真值在场 → 词缀照删、hp
   零写(真值不踩;HP 回调级守卫锁归 kernel/test_cw_opening_hp.py);
-- 锁 5 闭集负锁:退化不入 PICK_INVEST_EFFECTS(失效腿走硬编码分支,
+- 锁 5 闭集负锁:退化不入 PICK_INVEST_EFFECTS(失效效果条目走硬编码分支,
   误登记吃红)。
 """
 from __future__ import annotations
@@ -111,7 +111,7 @@ def _record_writes(gs: GameState,
 
 
 def test_affix_disable_tail_leg_random_state_write(monkeypatch) -> None:
-    """删除腿四断言(锁 1):选退化(rng 注入定值)→ ①enemy_affixes
+    """删除效果条目四断言(锁 1):选退化(rng 注入定值)→ ①enemy_affixes
     长度 -1(尾元素整条移除,剩余整条替换);②来源 logic_rand(rand=True
     声明采样链);③logic_rand_fields() 含 enemy_affixes;④效果串策略
     变体 strategy_affix_disable:<名> 在账。词缀种子 = 位置域序(读链
@@ -195,10 +195,10 @@ def test_affix_disable_mid_run_guard_preserves_hp_truth() -> None:
 
 
 def test_tuihua_not_in_pick_closed_set() -> None:
-    """闭集负锁(锁 5):退化不入 PICK_INVEST_EFFECTS——失效腿走
+    """闭集负锁(锁 5):退化不入 PICK_INVEST_EFFECTS——失效效果条目走
     on_strategy_gained 硬编码分支,误登记四名闭集吃红。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
         PICK_INVEST_EFFECTS,
     )
     assert _CARD not in PICK_INVEST_EFFECTS, \
-        '闭集负锁:词缀失效腿走硬编码分支,误登记吃红'
+        '闭集负锁:词缀失效效果条目走硬编码分支,误登记吃红'

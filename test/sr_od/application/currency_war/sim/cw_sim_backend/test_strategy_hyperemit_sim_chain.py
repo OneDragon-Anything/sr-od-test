@@ -1,16 +1,16 @@
 """sim 超发货币两条效果条目测试(镜像 src = sim/cw_sim_backend.py 的选卡落地拍
-负债腿 + 节点窗回流腿 pre-read 两拍 + 呈现一次性标志位;先例 =
-本目录 test_invest_installment_gold.py〔分期金窗腿〕/
-test_strategy_pick_gudinglicai.py〔拿卡落地拍腿族〕同形态)。
+负债效果条目 + 节点窗回流效果条目 pre-read 两拍 + 呈现一次性标志位;先例 =
+本目录 test_invest_installment_gold.py〔分期金窗效果条目〕/
+test_strategy_pick_gudinglicai.py〔拿卡落地拍效果条目族〕同形态)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-191-chaofa-
 huobi.md §3 锁 3/锁 4/锁 5/锁 6/锁 9(REVIEW-T191 §四④ 同面;锁 6 直构
 形态 = T-177 锁 6 先形「无补发方,容器即终态」):
-- 负债腿(锁 3):真拿卡路径落地 → 条目已登记(remaining_nodes=6 ∧
+- 负债效果条目(锁 3):真拿卡路径落地 → 条目已登记(remaining_nodes=6 ∧
   counters[LOST]=G)∧ 金清零笔(−G = 写前金 − 0)∧ 呈现一次性标志位防重放(同声明
   复喂零动作零噪声);bypass 形态(登记缺位)= 零动作 + disclosures 留证
   (零新增披露键,内联运行时键);
-- 回流腿(锁 4):拿卡后第 1-5 个节点窗零发放;第 6 窗 +G+70 一笔
+- 回流效果条目(锁 4):拿卡后第 1-5 个节点窗零发放;第 6 窗 +G+70 一笔
   (evidence 含 p/r 坐标;支付先于该窗收入 = 增量公式以「窗前金 + 回流额」
   为息基数现算,禁观测差分反推);第 7 窗不再发(条目已移除,前读落空);
 - 零金兜底(锁 5):0 金拿卡 → 快照 0 → 清零短路零写 → 第 6 窗回流 70;
@@ -145,7 +145,7 @@ def _drive_with_safe_picks(b: SimBackend, pred, limit: int = 512) -> None:
 
 def _drive_to_offer(b: SimBackend, plane: int = 1, round_num: int = 3) -> None:
     """驱动至指定位面的策略 offer 呈现(缺省 = 固定日程首槽 P1r3;呈现即
-    置负债腿一次性标志位;途中 offer 安全 filler 化,保到达槽为首个未被消费的
+    置负债效果条目一次性标志位;途中 offer 安全 filler 化,保到达槽为首个未被消费的
     日程槽)。"""
 
     def _at_offer() -> bool:
@@ -159,7 +159,7 @@ def _drive_to_offer(b: SimBackend, plane: int = 1, round_num: int = 3) -> None:
 def _window_income(gs: GameState, plane: int, r: int, gold_base: int) -> int:
     """节点窗收入面 kernel 公式现算(禁观测差分反推——混账形态测不出;
     先例 = test_invest_installment_gold._window_income 同式)。
-    gold_base = 利息基数(窗开金在窗前腿落账后的现值口径,由调用方传入)。"""
+    gold_base = 利息基数(窗开金在窗前效果条目落账后的现值口径,由调用方传入)。"""
     kind = gs.node.value.kind
     streak = max(int(gs.streak.value or 0), 0)
     mult, flat, cap = income_modifiers_of(gs)
@@ -170,7 +170,7 @@ def _window_income(gs: GameState, plane: int, r: int, gold_base: int) -> int:
 
 def test_drain_leg_via_engine_and_replay_guard(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """负债腿引擎链(锁 3 主形态)+ 呈现一次性标志位防重放:真拿卡路径落地 →
+    """负债效果条目引擎链(锁 3 主形态)+ 呈现一次性标志位防重放:真拿卡路径落地 →
     条目已登记(remaining_nodes=6 ∧ counters[LOST]=登记帧读数 G)∧ 金清零
     (evidence 笔字面量钉死,−G = 写前金 − 0);同声明复喂 → 一次性标志位已消费,
     零动作零噪声(gold 证据笔保持清零笔)。全胜骨架沿分期金锁先形
@@ -188,7 +188,7 @@ def test_drain_leg_via_engine_and_replay_guard(
         assert entry.remaining_nodes == 6, 'N_NODES 播种'
         assert entry.counters.get('lost') == gold_before, \
             f'负债播值 = 登记帧金读数: {entry.counters}'
-        assert int(gs.gold.value or 0) == 0, '负债腿清零'
+        assert int(gs.gold.value or 0) == 0, '负债效果条目清零'
         assert gs.gold.evidence == _DRAIN_EV, \
             f'清零笔 evidence 字面量钉死: {gs.gold.evidence}'
         _drive_until(b, lambda: b._node_pos() == (1, 4))
@@ -246,12 +246,12 @@ def test_bypass_no_entry_disclosures(
 
 def test_payoff_sixth_window_before_income_then_stop(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """回流腿(锁 4,引擎链):拿卡(P1r3)后第 1-5 个节点窗(r4-r8)
+    """回流效果条目(锁 4,引擎链):拿卡(P1r3)后第 1-5 个节点窗(r4-r8)
     零发放(条目逐窗递减 5→1 不提前移除 = 无回流发生面;r4-r7 金增量 =
     纯收入面);第 6 窗(r9)+G+70 一笔(evidence 含 p/r 坐标;支付先于
     该窗计息——窗增量公式以「窗前金 + 回流额」为息基数现算);条目已随
     第 6 入口转换 tick 移除;第 7 窗(P2r1)不再发(挂起已消费)。
-    r8 = 奖励窗,窗内奖励面板拾取金为状态副本里的值非本腿面,精确增量断言
+    r8 = 奖励窗,窗内奖励面板拾取金为状态副本里的值非本效果条目面,精确增量断言
     落 r9(拾取金已含在窗前金基线内,不受窗内构成影响)。"""
     _force_settle(monkeypatch, won=True)
     b = _backend()
@@ -416,7 +416,7 @@ def test_payoff_plane_transition_entry_literal_evidence(
     (2,2) 拿卡 → 第 6 入口 = P3r1 位面过渡窗——过渡窗早退分支在收入段
     之前,回流笔后无收入笔覆盖 → 金 Field evidence 可全等断言(常规窗
     金笔被收入笔覆盖,evidence 断言落本观测位 = 分期金锁「函数级直构面」
-    同判据先形的引擎链等价位);位面首入口照常回流(回流腿挂过渡早退
+    同判据先形的引擎链等价位);位面首入口照常回流(回流效果条目挂过渡早退
     分支之前);点空白收尾后收入段以含回流额基数计息(支付先于计息)。"""
     _force_settle(monkeypatch, won=True)
     b = _backend()

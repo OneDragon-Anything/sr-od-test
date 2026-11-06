@@ -1,5 +1,5 @@
 """溜佩佩/溜佩佩+/招财狗/艾丝妲的猛犬!(id 103401/103402/103501/203801)
-具名角色发放腿锁(镜像 src = kernel/cw_gain_effects.py 的
+具名角色发放类效果条目锁(镜像 src = kernel/cw_gain_effects.py 的
 ``_STRATEGY_CHAR_GRANTS`` + ``_make_char_grant_effect`` +
 ``PICK_INVEST_EFFECTS`` 推导;按被测方法拆目录规范落位——
 test_gain_chain.py 超线冻结禁追加,新增测试落新镜像,先例 = 同目录姊妹
@@ -8,8 +8,8 @@ test_gain_chain.py 超线冻结禁追加,新增测试落新镜像,先例 = 同�
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
 T-128-liu-peipei.md(定稿)§4 锁 2/3 + REVIEW-T128 七裁决点默认案:
-- 腿语义 = 卡面「佩佩会在你的后排逛街」句(非「获得」直读,人工转正
-  登记)与「获得一个穿戴…的【佩佩】」句(猛犬,佩戴腿零建模):具名
+- 效果条目语义 = 卡面「佩佩会在你的后排逛街」句(非「获得」直读,人工转正
+  登记)与「获得一个穿戴…的【佩佩】」句(猛犬,佩戴效果条目零建模):具名
   确定发放 ``gain_character(rand=False)``,星级实参 1 = 占位非先验
   (佩佩 = cost0 系统召唤单位无星级,环境侧佩佩发放同判);效果串
   ``char_grant:佩佩(placed=True,merge=0)``(placed/merge 随串
@@ -20,7 +20,7 @@ T-128-liu-peipei.md(定稿)§4 锁 2/3 + REVIEW-T128 七裁决点默认案:
   发放星级),只数/星级不进登记表)与登记表 STRATEGY_GRANTS 各卡
   chars_immediate 逐对
   相等(两处独立字面量的漂移在备战断言不可见,唯此锁 + 落位真值可
-  暴露,箱腿一致性锁同构)。
+  暴露,箱条目一致性锁同构)。
 """
 from __future__ import annotations
 
@@ -91,11 +91,11 @@ def rows_sink() -> _RowSink:
 @pytest.mark.parametrize('card', ['溜佩佩', '溜佩佩+', '招财狗', '艾丝妲的猛犬！'])
 def test_char_grant_leg_places_peipei(
         card: str, rows_sink: _RowSink) -> None:
-    """腿行为主锁(设计 §4 锁 3):on_strategy_gained 直构(rand=False)
+    """效果条目行为主锁(设计 §4 锁 3):on_strategy_gained 直构(rand=False)
     → 备战追加恰 1 只 1★ 佩佩、效果串
     ``char_grant:佩佩(placed=True,merge=0)``(单发零升星)、确定发放走
     确定面、落位写 evidence = pick_invest_char_grant#place;正常路径零
-    申报行。两卡效果体同形(金腿 9/15 差异不进效果体,归 STRATEGY_ECONOMY)。"""
+    申报行。两卡效果体同形(金币效果条目 9/15 差异不进效果体,归 STRATEGY_ECONOMY)。"""
     gs = _make_gs(bench=[])
     gs.prep_anchored = True
     seq_before = gs.write_seq
@@ -121,7 +121,7 @@ def test_char_grant_leg_bench_full_overflow(
     溢出落位,overflow_card == 佩佩(角色名两分形态;溢出位阻断出战 =
     溢出建模既定语义),效果串 placed=True;席满溢出是既定语义零申报行。
     填席用 9 只互异单位:升星判断 = 链对全池(备战∪上阵∪溢出)的现役
-    机制,同名同星凑三会连升既有单位(与发放腿无关),互异填席隔离该面
+    机制,同名同星凑三会连升既有单位(与发放类效果条目无关),互异填席隔离该面
     使本锁只辖溢出落位。"""
     fillers = [('希儿', 1), ('卡芙卡', 1), ('黄泉', 1), ('刃', 1),
                ('椒丘', 1), ('花火', 1), ('翡翠', 1), ('飞霄', 1),
@@ -138,7 +138,7 @@ def test_char_grant_leg_bench_full_overflow(
 
 
 def test_strategy_char_grants_consistency_lock() -> None:
-    """发放名单单一源一致性测试(箱腿 _STRATEGY_BOX_GRANTS 同构):效果体
+    """发放名单单一源一致性测试(箱条目 _STRATEGY_BOX_GRANTS 同构):效果体
     工厂表 _STRATEGY_CHAR_GRANTS(值形 = (发放角色, 发放只数, 发放星级))
     与登记表 STRATEGY_GRANTS 各卡 chars_immediate 逐对相等——只数/星级
     不进登记表(估值档位与两参无关),只数 > 1 成员(狸职手续×3)的只数

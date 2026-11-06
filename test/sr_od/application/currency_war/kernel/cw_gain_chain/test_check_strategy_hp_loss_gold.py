@@ -1,4 +1,4 @@
-"""策略卡选卡已损血衍生金检查腿测试(镜像 src = kernel/cw_gain_chain.py
+"""策略卡选卡已损血衍生金检查效果条目测试(镜像 src = kernel/cw_gain_chain.py
 的 check_strategy_hp_loss_gold)。
 
 测试面依据 = 迭代设计 designs/T-325-xingji-heping-baoxian.md §4 锁 2
@@ -9,7 +9,7 @@ end_heal.py 的状态容器直置):
   ValueError;
 - 归一通道锁:get_strategy 入口直读 STRATEGY_ECONOMY 注册行同实例
   (归一单一源,零第二份登记);
-- 时点门归调用方(选卡落地拍在 sim 腿),sim 侧门锁 =
+- 时点门归调用方(选卡落地拍在 sim 效果条目),sim 侧门锁 =
   sim/cw_sim_backend/test_strategy_hp_loss_gold_pick.py。
 """
 from __future__ import annotations
@@ -69,7 +69,7 @@ def test_hp_unobserved_returns_zero() -> None:
 
 
 def test_healed_above_opening_clamps_zero() -> None:
-    """锁 2d:hp 高于开局血量(回血腿后合法形态)→ clamp 0,负差不出金。"""
+    """锁 2d:hp 高于开局血量(回血效果条目后合法形态)→ clamp 0,负差不出金。"""
     gs = _gs(_CARD)
     gs.observe(gs.hp, 95, sig=_SIG_OBS)
     assert check_strategy_hp_loss_gold(gs, opening_hp=82) == 0, \

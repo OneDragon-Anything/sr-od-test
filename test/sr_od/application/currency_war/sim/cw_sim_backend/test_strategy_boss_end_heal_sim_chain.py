@@ -1,6 +1,6 @@
 """策略卡首领战结束回血 sim 状态副本链测试(镜像 src = sim/cw_sim_backend.py
-的 _resolve_battle 首领战回血腿;kernel 触发函数单元面 = kernel/
-cw_gain_chain/test_check_strategy_boss_end_heal.py,本文件锁 sim 结算腿
+的 _resolve_battle 首领战回血效果条目;kernel 触发函数单元面 = kernel/
+cw_gain_chain/test_check_strategy_boss_end_heal.py,本文件锁 sim 结算效果条目
 接入调用与状态副本里的值落地面)。
 
 测试面依据 = 迭代设计 designs/T-313-fendou-xieyi.md §4 锁 3/4/5/6/7
@@ -9,9 +9,9 @@ test_strategy_boss_battle_grant_sim_chain.py,跨位面驱动先例 =
 test_p3_win_terminal._drive_step 的位面过渡分派支):
 
 - 锁 3:持卡局首领战结算(胜败两态)回血笔 hp +50 + hp_trail 成对追加
-  (first_run 状态容器不变式② 写流↔轨迹同构在腿粒度保持:结算写 + 回血笔
+  (first_run 状态容器不变式② 写流↔轨迹同构在效果条目粒度保持:结算写 + 回血笔
   恰两笔);evidence ``sim:engine:strategy:boss_heal:p<位面>r<轮>``
-  (sim_evidence 前缀契约,win 金腿同形)、sig = obs 族 'sim:strategy'
+  (sim_evidence 前缀契约,win 金币效果条目同形)、sig = obs 族 'sim:strategy'
   组;建模假设披露键随局申报(cap/perfect_win_bias);
 - 锁 4(直加不 clip 边界,现值重推落形):hp 预置 90 → 回血 140,
   越过存量 100 上界仍直加(正部 HP 加法家族形真值锁——后继补 clip 常
@@ -194,7 +194,7 @@ def test_boss_win_settle_heals_held_card(
             and row[3].group_id == 'sim:strategy', f'sig 组漂移: {row[3]}'
         assert row[4] == hp_before + 50, \
             f'回血值漂移: {row[4]} (before={hp_before})'
-        # 轨迹成对(不变式②腿粒度):结算笔 + 回血笔恰两笔,末值 = 状态容器现值
+        # 轨迹成对(不变式②效果条目粒度):结算笔 + 回血笔恰两笔,末值 = 状态容器现值
         assert len(b.hp_trail) - trail_len == 2, \
             f'轨迹追加笔数漂移: {b.hp_trail[trail_len:]}'
         assert list(b.hp_trail[trail_len:]) == [hp_before, hp_before + 50], \

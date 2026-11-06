@@ -1,4 +1,4 @@
-"""sim 策略卡条件节点序列改写腿测试(镜像 src = sim/cw_sim_backend.py
+"""sim 策略卡条件节点序列改写效果条目测试(镜像 src = sim/cw_sim_backend.py
 的 _enter_node_window 窗开调用点 + kernel 纯决策 check_strategy_node_rewrite
 的 sim 接入调用与状态副本里的值落地面;kernel 原语单元面 = kernel/cw_gain_chain/
 test_check_strategy_node_rewrite.py,本文件锁 sim 窗口接入调用)。
@@ -63,7 +63,7 @@ def _setup(seed: int = 31, *, grant: bool = True):
 
 
 def _strategy_writes(calls: list[tuple]) -> list[tuple]:
-    """本腿写行过滤(node_seq:strategy 证据,logic 通道)。"""
+    """本效果条目写行过滤(node_seq:strategy 证据,logic 通道)。"""
     return [c for c in calls if c[0] == 'logic' and c[2] == _RW_EV]
 
 
@@ -79,10 +79,10 @@ def test_battle_window_rewrites_world_and_latches(
         calls = _record_all_writes(gs, monkeypatch)
         b._enter_node_window((1, 3))
         writes = _strategy_writes(calls)
-        assert len(writes) == 2, f'本腿恰两笔写(改写+一次性标志位): {writes!r}'
+        assert len(writes) == 2, f'本效果条目恰两笔写(改写+一次性标志位): {writes!r}'
         assert all(c[3].group_id == 'sim:strategy'
                    and c[3].family == 'logic_action' for c in writes), \
-            '本腿写均 logic 族组 sim:strategy'
+            '本效果条目写均 logic 族组 sim:strategy'
         seqs = gs.node_seq_by_plane.value
         assert seqs is not None, '改写写落场字段'
         assert seqs[1] == ('reward', 'reward', 'battle',

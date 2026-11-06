@@ -93,7 +93,7 @@ def test_feiguang_chuanjian_chain_places_two_chars() -> None:
     assert len(effects) == 2, f'效果串 2 条(两条效果条目): {effects}'
     assert effects == ('char_grant:彦卿(placed=True,merge=0,uid=1)',
                        'char_grant:景元(placed=True,merge=0,uid=2)'), \
-        f'腿序 = 卡文语序彦卿→景元: {effects}'
+        f'条目序 = 卡文语序彦卿→景元: {effects}'
     slots = [s for s in gs.bench.value.slots
              if s.kind == 'unit' and s.unit]
     assert [s.unit.char_id for s in slots] == ['彦卿', '景元'], \

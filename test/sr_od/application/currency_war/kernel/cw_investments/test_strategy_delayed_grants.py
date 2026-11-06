@@ -7,7 +7,7 @@ StrategyDelayedGrant + STRATEGY_DELAYED_GRANTS + 构建校验)。
 (designs/T-107-rencai-jili-plus.md §4 锁 1 同型)+ 许诺特权随批扩面
 (designs/T-139-xunuo-tequan.md §4 锁 1 同型)+ 先亏后盈随批扩面
 (designs/T-144-xiankui-houying.md §4 锁 1:count 字段首例 + 伴随损血
-腿 STRATEGY_ECONOMY 行)+ 好运令牌·银随批扩面(designs/
+效果条目 STRATEGY_ECONOMY 行)+ 好运令牌·银随批扩面(designs/
 T-146-haoyun-lingpai-yin.md §4 锁 1:卡名与发放物异名首例,物名断言
 防卡名当物名笔误)+ 是钻石总会发光随批扩面(designs/
 T-148-shizuanshi-zonghui-faguang.md §4 锁 1/锁 4:随机 choice-set 行
@@ -65,16 +65,16 @@ def test_rencai_jili_registry_row_single_source(
     """登记单一源(姊妹双卡 + 许诺特权 + 先亏后盈 + 好运令牌·银 +
     是钻石总会发光 + 回收计划参数化):行值 = 卡面
     效果原文直读(「N个节点后」→ N 拍,「获得1个【X】」→ 发放物 X;
-    人才激励系即时腿「获得1个【员工投影仪】」由 PICK_INVEST_EFFECTS
-    工厂承载不入本表,许诺特权卡文纯延时单句零即时腿,只登记不写状态的实现分支 = 延时-
-    only 一条效果条目载体;先亏后盈卡文延时腿「获得2个」→ count=2 族内首例
-    >1,伴随损血腿不入本表走 STRATEGY_ECONOMY hp 通道;好运令牌·银
-    卡文纯延时单句零即时腿同延时-only 载体,发放物与卡名异名——item
+    人才激励系即时效果条目「获得1个【员工投影仪】」由 PICK_INVEST_EFFECTS
+    工厂承载不入本表,许诺特权卡文纯延时单句零即时效果条目,只登记不写状态的实现分支 = 延时-
+    only 一条效果条目载体;先亏后盈卡文延时效果条目「获得2个」→ count=2 族内首例
+    >1,伴随损血效果条目不入本表走 STRATEGY_ECONOMY hp 通道;好运令牌·银
+    卡文纯延时单句零即时效果条目同延时-only 载体,发放物与卡名异名——item
     断言为物名「好运令牌」非卡名,防拿卡名当物名笔误;是钻石总会发光
     卡文「获得【红钻】或【蓝钻】」→ item='' 占位(空串断言锁二元集行
     不携确定件)+ item_choices 封闭集直读,掷骰时点 = 到点发放窗;回收
     计划卡文「获得1件随机简易装备」→ 类别池形 item_category='简易'
-    直读(族内类别池行首例),item='' 占位,同卡即时腿「获得1件进阶
+    直读(族内类别池行首例),item='' 占位,同卡即时效果条目「获得1件进阶
     装备」由 PICK_INVEST_EFFECTS 组合登记行承载不入本表);
     base 溯源 id 对拍(id ↔ plaza:<id>)。表键集闭族现役十三卡(未注册
     展开卡安静不写,禁顺手代登记;军备供应链 = 延时发放族后继
@@ -100,7 +100,7 @@ def test_rencai_jili_registry_row_single_source(
 def test_grant_item_not_in_bench_wordlist() -> None:
     """发放物分道词表归属对拍(分道判据前提,注册表逐行锁):装备名
     不入占席词表(本专表不接入 BENCH_ITEM_NAMES 派生,装备名误入词表
-    即被当占席道具——溢出腿假道具,该形态钉死);许诺特权发放物特权
+    即被当占席道具——溢出效果条目假道具,该形态钉死);许诺特权发放物特权
     武装箱 = 占席词表已登记 ∧ 装备表无条目(占席分道判据前提);好运
     令牌·银发放物好运令牌 = 装备表已登记 ∧ 占席词表负成员(装备分道
     判据前提,负成员申报 = 入 items 会错派占席身份,禁入占席通道);
@@ -110,7 +110,7 @@ def test_grant_item_not_in_bench_wordlist() -> None:
         EQUIPMENTS,
     )
     row = STRATEGY_DELAYED_GRANTS['人才激励']
-    assert row.item in EQUIPMENTS, '发放物 = 装备表已登记(装备腿分道)'
+    assert row.item in EQUIPMENTS, '发放物 = 装备表已登记(装备效果条目分道)'
     assert row.item not in BENCH_ITEM_NAMES, \
         '装备名误入占席词表(禁入形态被破坏)'
     xunuo = STRATEGY_DELAYED_GRANTS['许诺特权']
@@ -131,17 +131,17 @@ def test_grant_item_not_in_bench_wordlist() -> None:
 
 
 def test_xiankui_hp_instant_negative_row() -> None:
-    """先亏后盈伴随损血腿注册行(STRATEGY_ECONOMY):hp_instant = −20
+    """先亏后盈伴随损血效果条目注册行(STRATEGY_ECONOMY):hp_instant = −20
     (卡面「损失20点小队生命值」数值 20 直读取负,非设计数);同字段
     正负成员并存(健康充值 +30 / 本卡 −20)。两表行断言随本表域锁面
-    (损血腿与延时腿同卡分道,行值漂移在此显形);负值支写端行为面 =
+    (损血效果条目与延时效果条目同卡分道,行值漂移在此显形);负值支写端行为面 =
     sim 侧 test_strategy_pick_hp.py 锁面。"""
     from sr_od.application.currency_war.data.cw_invest_data import (
         PLAZA_AUGMENTS,
     )
-    assert '先亏后盈' in STRATEGY_ECONOMY, '损血腿注册行缺位'
+    assert '先亏后盈' in STRATEGY_ECONOMY, '损血效果条目注册行缺位'
     assert STRATEGY_ECONOMY['先亏后盈'].hp_instant == -20, \
-        f'损血腿值漂移: {STRATEGY_ECONOMY["先亏后盈"].hp_instant}'
+        f'损血效果条目值漂移: {STRATEGY_ECONOMY["先亏后盈"].hp_instant}'
     # 卡面数值对拍:注册值取负 = 卡面「损失20点」的 20 直读,防两源漂移。
     base = next(a for a in PLAZA_AUGMENTS if a.id == '130701')
     assert '损失20点小队生命值' in base.effect, f'卡面漂移: {base.effect!r}'
@@ -173,7 +173,7 @@ def test_validator_id_mismatch_raises(monkeypatch) -> None:
 
 def test_validator_item_unknown_raises(monkeypatch) -> None:
     """构建校验③(发放物名漂移哨):发放物双域皆非(装备表/占席词表
-    均无)→ ValueError(版本改名/未知名,发放腿无从分道)。"""
+    均无)→ ValueError(版本改名/未知名,发放类效果条目无从分道)。"""
     monkeypatch.setitem(
         cw_investments.STRATEGY_DELAYED_GRANTS, '人才激励',
         StrategyDelayedGrant(id='101601', delay_nodes=4,
@@ -185,7 +185,7 @@ def test_validator_item_unknown_raises(monkeypatch) -> None:
 def test_validator_choice_element_unknown_raises(monkeypatch) -> None:
     """构建校验④(choice-set 元素漂移哨):非空 item_choices 逐元素
     双域皆非(装备表/占席词表均无)→ ValueError(版本改名/未知名,
-    采样行发放腿无从分道;镜像③形态)。"""
+    采样行发放类效果条目无从分道;镜像③形态)。"""
     monkeypatch.setitem(
         cw_investments.STRATEGY_DELAYED_GRANTS, '是钻石总会发光',
         StrategyDelayedGrant(id='131101', delay_nodes=2, item='',
@@ -198,7 +198,7 @@ def test_registry_triplet_exactly_one() -> None:
     """表域三方恰一纪律锁(item / item_choices / item_category 三选一
     登记;治理口径 = 2026-10-28「防登记笔误校验不加」,对账归表域测试,
     同 count/delay_nodes 处置):注册全集逐行三形恰一非空,双填/多填/
-    全空均红——双填 = 分道判据静默走 item 丢随机集,全空 = 发放腿双域
+    全空均红——双填 = 分道判据静默走 item 丢随机集,全空 = 发放类效果条目双域
     皆非防御支条目永久滞留,两形态都越 import 哨不可见(回收计划批由
     二方恰一扩为三方恰一)。"""
     for name, row in STRATEGY_DELAYED_GRANTS.items():
@@ -244,7 +244,7 @@ def test_validator_item_category_pool_empty_raises(
     """构建校验⑤(类别漂移哨·类别清空路径):类别名合法但注册表该类
     清零(游戏版本数据漂移可独立触发)→ 同哨 ValueError——哨按池派生
     表达,两触发路径(改名/清空)同响,import 期把拦截面前移到构建期
-    (运行期实况 = 发放腿类别池查空防御 log + 条目保留)。"""
+    (运行期实况 = 发放类效果条目类别池查空防御 log + 条目保留)。"""
     monkeypatch.setattr(cw_investments, 'equips_by_category',
                         lambda category: ())
     with pytest.raises(ValueError, match='类别漂移'):

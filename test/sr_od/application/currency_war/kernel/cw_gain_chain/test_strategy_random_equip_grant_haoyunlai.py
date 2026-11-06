@@ -1,4 +1,4 @@
-"""好运来(id 231601)即时腿随机简易装备发放锁(镜像 src = kernel/
+"""好运来(id 231601)即时效果条目随机简易装备发放锁(镜像 src = kernel/
 cw_gain_effects.py 的泛化随机装备表 ``_STRATEGY_RANDOM_EQUIP_GRANTS``
 '好运来' 行('简易', 2)+ 工厂 ``_make_random_equip_effect('简易', 2)``
 经 ``PICK_INVEST_EFFECTS`` 生成式注册;按被测方法拆目录规范落位——
@@ -51,7 +51,7 @@ _CARD = '好运来'
 def _make_gs(*, bench: list[tuple[str, int]] | None = None,
              equips: list[str] | None = None) -> GameState:
     """观测面按参组装(None = 保持未观察;镜像 test_gain_chain._make_gs
-    的 bench/equips 两支,本卡即时腿只涉这两域)。"""
+    的 bench/equips 两支,本卡即时效果条目只涉这两域)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if bench is not None:
         slots = [BenchSlot(kind='unit', unit=Unit(char_id=c, star=s))

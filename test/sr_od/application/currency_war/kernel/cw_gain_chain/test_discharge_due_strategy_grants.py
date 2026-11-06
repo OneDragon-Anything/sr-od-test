@@ -5,7 +5,7 @@ discharge_due_strategy_grants)。
 面;sim 窗口接入调用与状态副本里的值归 sim/cw_sim_backend 侧文件)+ 裁决点 3/4
 默认案。直构形态先例 = 同目录 test_check_strategy_battle_grants.py:
 - 未到点(remaining > 0)零发放零写;
-- 到点(remaining <= 0)→ 装备腿入栏 + 弹除 + 效果串
+- 到点(remaining <= 0)→ 装备效果条目入栏 + 弹除 + 效果串
   delayed_grant:<item>(placed=…)+ 队列回写 evidence strategy_grant_due
   (姊妹双卡参数化:人才激励 / 人才激励+,T-107 批扩面);
 - 分道判据(monkeypatch 临时占席道具条目)→ gain_bench_item 落席;
@@ -137,7 +137,7 @@ def test_not_due_zero_grant_zero_write() -> None:
 def test_due_grants_equipment_ejects_entry(card: str, item: str) -> None:
     """到点发放真值(真注册装备分道成员参数化,逐名经真实注册表查行):
     remaining
-    = 0 → 装备腿尾追入栏 + 条目弹除 + 效果串 delayed_grant:<item>
+    = 0 → 装备效果条目尾追入栏 + 条目弹除 + 效果串 delayed_grant:<item>
     (placed=True)+ 队列回写 evidence strategy_grant_due(确定面),
     evidence 值含触发卡名(同款发放物经卡名可分;好运令牌·银 = 卡名
     与发放物异名,效果串按物名/evidence 按卡名各归其位)。"""
@@ -158,7 +158,7 @@ def test_due_grants_equipment_ejects_entry(card: str, item: str) -> None:
 
 def test_due_routing_bench_item_branch(monkeypatch) -> None:
     """分道判据(锁机制):注册表临时条目发放物 ∈ 占席词表 → 占席道具
-    腿落席(带名槽件),不走装备栏——两词表归属即分道,零第二源。"""
+    效果条目落席(带名槽件),不走装备栏——两词表归属即分道,零第二源。"""
     from sr_od.application.currency_war.kernel.cw_investments import (
         StrategyDelayedGrant,
     )
@@ -404,7 +404,7 @@ def test_due_choice_set_samples_both_diamonds_by_seed() -> None:
         assert gs.equips.value == [expected], \
             f'seed={seed} 装备栏: {gs.equips.value}'
         assert gs.equips.source == 'logic_rand', \
-            f'seed={seed} 发放腿未走随机态面(采样行 rand=True 覆盖失效)'
+            f'seed={seed} 发放类效果条目未走随机态面(采样行 rand=True 覆盖失效)'
         assert gs.pending_strategy_grants.value == (), '到期条目未弹除'
         assert gs.pending_strategy_grants.source == 'logic', \
             '队列弹除行未走确定面(只载卡名应随调用方 rand 透传)'
@@ -455,7 +455,7 @@ def test_due_category_pool_samples_by_seed() -> None:
         assert gs.equips.value == [expected], \
             f'seed={seed} 装备栏: {gs.equips.value}'
         assert gs.equips.source == 'logic_rand', \
-            f'seed={seed} 发放腿未走随机态面(类别池行 rand=True 失效)'
+            f'seed={seed} 发放类效果条目未走随机态面(类别池行 rand=True 失效)'
         assert gs.pending_strategy_grants.value == (), '到期条目未弹除'
         assert gs.pending_strategy_grants.source == 'logic', \
             '队列弹除行未走确定面(只载卡名应随调用方 rand 透传)'
@@ -503,7 +503,7 @@ def test_due_category_pool_empty_defense_retains_entry(monkeypatch) -> None:
 
 def test_due_repeat_row_requeues_same_params() -> None:
     """好运令牌·彩 到点发放后同参重排队(周期型首例主态):remaining=0 →
-    装备腿入栏 + 效果串 delayed_grant:好运令牌(placed=True)+ 队列回写
+    装备效果条目入栏 + 效果串 delayed_grant:好运令牌(placed=True)+ 队列回写
     恰 (('好运令牌·彩', 4),)(同参 (卡名, delay_nodes=4),队列长度恒 1
     自续,非弹除清空)+ 弹除回写行 evidence strategy_grant_due + 发放行
     evidence 值含触发卡名(卡名与发放物异名各归其位)。"""
@@ -524,7 +524,7 @@ def test_due_repeat_row_requeues_same_params() -> None:
 def test_due_repeat_row_requeues_on_reject() -> None:
     """好运令牌·彩 拒落亦重排(周期自续,裁决默认案;REVIEW-T374.md §3
     裁决点 2 附项):equips 未观察拒落(placed=False 零写)→ 条目仍以
-    同参重排队(周期腿自续,贴卡面「每累计……获得」重复至局终语义,
+    同参重排队(周期效果条目自续,贴卡面「每累计……获得」重复至局终语义,
     「拒落即止」备选与卡面冲突已裁否)——单发行同域弹除即止(上方
     test_grant_rejected_zero_write_entry_still_ejected)不被本行越权。"""
     gs = _gs(equips=None, bench_slots=None, queue=(('好运令牌·彩', 0),))

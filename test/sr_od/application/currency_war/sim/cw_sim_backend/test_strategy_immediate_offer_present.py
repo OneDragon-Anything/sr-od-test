@@ -1,8 +1,8 @@
-"""sim 拿卡拍立即腿测试(镜像 src = sim/cw_sim_backend.py 的
-_on_invest_picked 尾段立即腿调用点 + _present_extra_offer_screen 呈现体)。
+"""sim 拿卡拍立即效果条目测试(镜像 src = sim/cw_sim_backend.py 的
+_on_invest_picked 尾段立即效果条目调用点 + _present_extra_offer_screen 呈现体)。
 
 测试面依据 = 迭代设计 designs/T-198-baiyin-touzi.md §2.3/§4(锁 4 即时
-呈现腿 + 锁 6 双调用点互斥;用户裁定 2026-11-02 完整包复刻):
+呈现效果条目 + 锁 6 双调用点互斥;用户裁定 2026-11-02 完整包复刻):
 - 拿卡白银投资 → 拿卡拍立即呈现第二选卡(候选全银池,环境品质改写不
   作用于本通道)+ 逐卡刷新授权 3(refresh_slots/状态容器/槽向量簿记)+ 队列
   弹除 delay-0 条目(delay-3 条目留存)+ 序位计数 +1 + resume='node'
@@ -98,7 +98,7 @@ def _pick(b: SimBackend, name: str, opts: list[str]) -> WorldDecl:
 
 
 def test_immediate_leg_fires_on_silver_pick_with_refresh_auth() -> None:
-    """立即腿主锁(锁 4):拿卡白银投资 → 同拍立即呈现第二选卡(不进
+    """立即效果条目主锁(锁 4):拿卡白银投资 → 同拍立即呈现第二选卡(不进
     模态返回):候选全银池、逐卡刷新授权 3(状态容器 + 槽向量簿记 + 流水号
     归零)、队列弹除 delay-0 条目(delay-3 留存)、序位计数 +1、
     resume='node'、呈现留证键(值 = 白银投资@1-3)、声明对账零漂移。"""
@@ -108,7 +108,7 @@ def test_immediate_leg_fires_on_silver_pick_with_refresh_auth() -> None:
         assert b._invest_pick_ordinal == 1, '日程槽呈现序位 = 1'
         _pick(b, '白银投资', ['白银投资', '躺平', '淘金客'])
         assert b.screen_identity() == SCREEN_INVEST_STRATEGY, \
-            '立即腿未呈现(落回节点屏 = 误入模态返回)'
+            '立即效果条目未呈现(落回节点屏 = 误入模态返回)'
         opts2 = list(b.gs.invest_strategy_opts.value or [])
         assert len(opts2) == 3, f'第二选卡候选数: {opts2}'
         assert all(INVESTMENT_STRATEGIES[n].rarity == '银' for n in opts2), \
@@ -135,7 +135,7 @@ def test_immediate_leg_fires_on_silver_pick_with_refresh_auth() -> None:
 
 
 def test_second_pick_lands_and_restores_node_screen() -> None:
-    """第二选卡落地(锁 4):立即腿呈现后经同一 report 通道重入落地 →
+    """第二选卡落地(锁 4):立即效果条目呈现后经同一 report 通道重入落地 →
     排除集更新、持卡注册、恢复进节点屏、队列留存 delay-3 条目。"""
     b = _backend()
     try:
@@ -158,7 +158,7 @@ def test_second_pick_lands_and_restores_node_screen() -> None:
 
 
 def test_futures_pick_no_immediate_leg() -> None:
-    """期货拿卡零立即呈现(锁 6 常型零扰动):黄金期货(无 delay-0 腿)
+    """期货拿卡零立即呈现(锁 6 常型零扰动):黄金期货(无 delay-0 效果条目)
     拿卡 → 队列只入延时条目、无第二选卡、模态正常返回节点屏、序位
     计数零动、立即留证键缺席。"""
     b = _backend()
@@ -188,12 +188,12 @@ def test_two_legs_present_at_different_beats() -> None:
         _pick(b, opts2[0], opts2)
         _assert_back_on_node_screen(b)
         # 推进 3 节点窗:delay-3 条目 (1,4)/(1,5)/(1,6) 递减归零,
-        # (1,6) 窗首到期腿呈现(拿卡窗 (1,3) + 3)。
+        # (1,6) 窗首到期效果条目呈现(拿卡窗 (1,3) + 3)。
         _drive_until(b, lambda: (
             b.screen_identity() == SCREEN_INVEST_STRATEGY
             and b._invest_pick_ordinal >= 3))
         assert b._invest_pick_ordinal == 3, '窗首拍序位'
-        assert b.gs.pending_strategy_offers.value == (), '延时腿未弹除'
+        assert b.gs.pending_strategy_offers.value == (), '延时效果条目未弹除'
         assert b.disclosures[STRATEGY_DELAYED_OFFER_FIRED] \
             == '白银投资@1-6', f'窗首留证: {b.disclosures}'
         assert b.disclosures[STRATEGY_IMMEDIATE_OFFER_FIRED] \

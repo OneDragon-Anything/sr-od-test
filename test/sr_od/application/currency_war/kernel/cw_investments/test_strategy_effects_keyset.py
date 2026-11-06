@@ -112,7 +112,7 @@ def test_strategy_effects_keys_unique_ids() -> None:
     ids: dict[str, str] = {}
     for key, spec in STRATEGY_EFFECTS.items():
         if '#' in key:
-            continue   # 申报键(同卡第二腿声明面)豁免,对表 = 键集锁
+            continue   # 申报键(同卡第二效果条目声明面)豁免,对表 = 键集锁
         assert spec.id not in ids, \
             f'id 重复:{spec.id}({ids.get(spec.id)} vs {key})'
         ids[spec.id] = key

@@ -1,6 +1,6 @@
 """补给选卡上报调用点测试(src 镜像 = kernel/cw_action_report/pick_supply.py;
 主断言对象 = report_action_pick_supply_param 的 R-choice 检查调用点——三个
-applied 出口前统一调 check_strategy_take_all_supply,全都要族发放腿)。
+applied 出口前统一调 check_strategy_take_all_supply,全都要族发放类效果条目)。
 
 锁面(卡面 id 131001「下1个补给阶段选择后，额外获得所有未选择的
 角色及装备」):

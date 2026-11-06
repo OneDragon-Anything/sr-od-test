@@ -2,14 +2,14 @@
 cw_gain_effects.py PICK_INVEST_EFFECTS '飞光·映月' 行:
 ``_compose_grant_legs(_make_yingyue_tier_init_leg(),
 _make_char_grant_effect('镜流'), _make_char_grant_effect('景元'))``;
-tier 腿 + char×char 组合行,按被测方法拆目录规范落位,先例 = 同目录
+tier 效果条目 + char×char 组合行,按被测方法拆目录规范落位,先例 = 同目录
 test_strategy_compose_grant_shuangrenwu.py 双人舞形)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-410-feiguang-
 yingyue.md §4 锁 3(卡面官方原文:「获得【镜流】和特殊的1费【景元】，
 他们获得【师徒】羁绊。【镜流】2星时，【景元】变为3费。【镜流】3星时，
 【景元】变为你认识的5费【景元】。」——师徒羁绊非注册羁绊零建模;效果条目1
-费用档初始写 1 = 特殊景元起始档,前置于发放腿防发放级联覆盖,腿序理由
+费用档初始写 1 = 特殊景元起始档,前置于发放类效果条目防发放级联覆盖,条目序理由
 见 _make_yingyue_tier_init_leg docstring):
 
 - 组合行单一源:三条效果条目组合行已登记(泛化表零本卡键负断言防回退撞键);
@@ -82,7 +82,7 @@ def test_yingyue_chain_writes_tier_and_places_two_chars() -> None:
     assert effects == ('pick_invest_yingyue_tier',
                        'char_grant:镜流(placed=True,merge=0,uid=1)',
                        'char_grant:景元(placed=True,merge=0,uid=2)'), \
-        f'腿序 = tier 先写 + 卡文语序: {effects}'
+        f'条目序 = tier 先写 + 卡文语序: {effects}'
     names = [s.unit.char_id for s in gs.bench.value.slots
              if s.kind == 'unit' and s.unit]
     assert names == ['镜流', '景元'], f'恰两角色入栏(卡文序): {names}'
@@ -93,7 +93,7 @@ def test_yingyue_chain_writes_tier_and_places_two_chars() -> None:
 
 def test_yingyue_grant_triggers_merge_star_tier_3() -> None:
     """发放触发合成级联(场上存量 2×镜流 + 发放镜流凑三 2★)→ 升星拍经
-    合并升星入口写档 3:拿卡拍先落 1、升星拍随后单调推进(腿序防覆盖)。"""
+    合并升星入口写档 3:拿卡拍先落 1、升星拍随后单调推进(条目序防覆盖)。"""
     gs = _make_gs(bench=[('镜流', 1), ('镜流', 1)], equips=[])
     gs.prep_anchored = True
     effects = on_strategy_gained(gs, _CARD, rand=False, sig=_LSIG,

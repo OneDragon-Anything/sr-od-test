@@ -1,7 +1,7 @@
 """战术义眼+(id 350402)登记锁(cw_investments 分目录镜像;策略源 UNIT_BUFF
 族战力类零响应登记,族先例 = 同目录 test_strategy_unit_buff.py 星魂升华
-同代形)。两条效果条目分治:能量恢复腿 = STRATEGY_EFFECTS 本条目零响应登记;
-「获得1个【简易武装箱】」腿 = 获得时点效果(STRATEGY_GRANTS 开箱分支 +
+同代形)。两条效果条目分治:能量恢复效果条目 = STRATEGY_EFFECTS 本条目零响应登记;
+「获得1个【简易武装箱】」效果条目 = 获得时点效果(STRATEGY_GRANTS 开箱分支 +
 cw_gain_effects._STRATEGY_BOX_GRANTS 镜像),其 pick/席满行为面由
 test_gain_chain.py 箱分支参数化锁承载,本文件只锁只登记不写状态的实现分支零响应。
 
@@ -15,7 +15,7 @@ yiyan-plus.md(定稿,REVIEW 无需用户决定)§7 实现要点(卡面官方原�
   全 False / pending False / 现金分支 fail-closed(估值恒 (0.0, False));
 - 登记链锁 + 桥负锁(锁 2):获得链只登记不写状态的实现分支自动入册,UnitBuffRef 无任何
   写状态副本字段 → 全部桥鸭子类型读取(duck typing)缺省守卫 no-op(五桥登记期零 Field 行);
-  获得时点效果串 = 恰箱腿单步(SE 条目零增量,非 advisor 零解锁写、
+  获得时点效果串 = 恰箱条目单步(SE 条目零增量,非 advisor 零解锁写、
   零单位域写入);session=None 支登记跳过、注册照常;
 - 聚合零承载锁(锁 3):aggregate_economy 输出与本卡缺席逐位一致
   (单持/并持两形,战力类不进经济模型);
@@ -74,7 +74,7 @@ _SIG_LOGIC = ChannelSig(family='logic_action', actor='CwGainChain',
 
 
 def _make_gs() -> GameState:
-    """最小观测面(bench 空席,箱腿落席有位;equips 空栏)。"""
+    """最小观测面(bench 空席,箱条目落席有位;equips 空栏)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.observe(gs.bench,
                BenchView(slots=[BenchSlot(kind='empty')] * 9, capacity=9),
@@ -129,8 +129,8 @@ def test_zhanshu_yiyan_plus_cash_fail_closed_and_aggregate_zero() -> None:
 def test_zhanshu_yiyan_plus_gain_chain_register_and_bridges_noop() -> None:
     """登记链锁 + 桥负锁(锁 2):session 在场选卡 → 注册入表 + 账本登记
     (by_source 含本条);UnitBuffRef 无写状态副本字段 → 五桥鸭子类型读取缺省守卫
-    no-op,登记期零 Field 行;获得时点效果串 = 恰箱腿单步(SE 条目零增量;
-    箱腿 pick/席满行为面 = test_gain_chain.py 箱分支参数化锁辖域)、非
+    no-op,登记期零 Field 行;获得时点效果串 = 恰箱条目单步(SE 条目零增量;
+    箱条目 pick/席满行为面 = test_gain_chain.py 箱分支参数化锁辖域)、非
     advisor 条目只登记不写状态的实现分支零解锁写、道具非角色零单位域写入;session=None 支
     登记跳过、注册照常。"""
     gs = _make_gs()
@@ -159,7 +159,7 @@ def test_zhanshu_yiyan_plus_gain_chain_register_and_bridges_noop() -> None:
     gs2 = _make_gs()
     effects = on_strategy_gained(gs2, _CARD, rand=False, sig=_SIG_LOGIC)
     assert effects == (f'box_grant:{_BOX_ITEM}(placed=True)',), \
-        '获得时点效果串 = 恰箱腿单步(SE 条目零增量)'
+        '获得时点效果串 = 恰箱条目单步(SE 条目零增量)'
     assert gs2.unlocked_experts.value in (None, ()), '非 advisor 零解锁写'
     assert bench_units_of(gs2) == [], '道具非角色,单位域不变'
     # session=None 支:登记跳过、注册照常(登记分支同型断言)

@@ -84,7 +84,7 @@ def test_validator_char_drift_negative(
 def test_validator_faction_drift_negative(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """负例·阵营名漂移(漂移哨③):判据阵营 ∉ FACTIONS → ValueError
-    (判据源失联 = 条件腿静默永不达标)。"""
+    (判据源失联 = 条件效果条目静默永不达标)。"""
     monkeypatch.setitem(STRATEGY_FACTION_COUNT_GRANTS, _CARD,
                         ('不存在的羁绊', 4, '黄泉', 2, ''))
     with pytest.raises(ValueError, match='阵营漂移'):

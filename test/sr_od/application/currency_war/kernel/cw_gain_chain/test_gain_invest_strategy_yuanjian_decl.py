@@ -7,7 +7,7 @@ test_gain_invest_strategy_pick_grant.py)。
 申报行,裁决点 4 默认案 = 内联名单分支):
 - 名单卡两形各一行:rand=False/True 写通道两形同产申报行(申报与写通道
   无关——申报对象是「获得机制本身」的随机掷骰留证,非写通道语义);
-- 非名单卡闭集零行:注册表派生对照(代表卡跨三品质 + 腿② granted 金名
+- 非名单卡闭集零行:注册表派生对照(代表卡跨三品质 + 效果条目② granted 金名
   场景)零申报行——名单单一源 = STRATEGY_RANDOM_GRANTS,表外卡获得
   零掷骰语义,行为 fail-closed 同构(ENV_REROLL_DECL 实机(live)和模拟器(sim)两边分道先例)。
 构造沿现役获得链测试先例:GameState 直构(取安静未收录卡/注册表已登记
@@ -69,7 +69,7 @@ def test_yuanjian_grant_decl_one_row(rand: bool,
 
 
 def test_non_member_zero_rows(_isolate_defect_buffer) -> None:
-    """非名单卡闭集零行:注册表派生对照(跨三品质代表卡 + 腿② granted
+    """非名单卡闭集零行:注册表派生对照(跨三品质代表卡 + 效果条目② granted
     金名获得场景)零 STRATEGY_GRANT_DECL 行——名单单一源 =
     STRATEGY_RANDOM_GRANTS,表外卡获得零掷骰语义。"""
     rows: list[dict] = []

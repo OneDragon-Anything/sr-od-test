@@ -1,5 +1,5 @@
 """策略卡死亡救援 sim 状态副本链测试(镜像 src = sim/cw_sim_backend.py 的
-_resolve_battle 死亡救援腿;kernel 触发函数单元面 =
+_resolve_battle 死亡救援效果条目;kernel 触发函数单元面 =
 kernel/cw_gain_chain/test_take_strategy_death_save.py,本文件锁
 sim 结算折算点接入调用与 M-B 独立叠加序列的状态副本里的值落地面)。
 
@@ -142,7 +142,7 @@ def _prep_backend(seed: int) -> SimBackend:
 def _drive_to_kind_prep(monkeypatch: pytest.MonkeyPatch, b: SimBackend,
                         *, target_kind: str) -> None:
     """自当前窗驱动到指定节点类型的备战窗(途经战斗/奖励节点全胜强制
-    穿过,中间屏走现役驱动步;同目录 win 金腿锁同形副本)。"""
+    穿过,中间屏走现役驱动步;同目录 win 金币效果条目锁同形副本)。"""
     gs = b.gs
     for _ in range(80):
         node = gs.node.value
@@ -216,7 +216,7 @@ def test_rescue_floor_death_sequence(
         assert gs.hp.value == _SAVE_HP, '救援后 hp 漂移'
         xp_rows = [c for c in calls if c[1] == 'xp' and c[0] == 'logic'
                    and _DS_PREFIX in str(c[2] or '')]
-        assert len(xp_rows) == 1, '救援经验笔缺失(grant_xp 经验腿)'
+        assert len(xp_rows) == 1, '救援经验笔缺失(grant_xp 经验效果条目)'
         # 结算环行:救援局 = 败局存活(killed=False)+ hp_after=40。
         tail = gs.settlement_ring.last_row()
         assert tail is not None and tail.killed is False \

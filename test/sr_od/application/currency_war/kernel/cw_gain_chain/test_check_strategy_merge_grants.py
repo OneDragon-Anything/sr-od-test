@@ -1,4 +1,4 @@
-"""策略卡合并升星触发发放腿测试(镜像 src = kernel/cw_gain_chain.py 的
+"""策略卡合并升星触发发放类效果条目测试(镜像 src = kernel/cw_gain_chain.py 的
 check_strategy_merge_grants;分方法拆目录规范落位,文件镜像超限纪律 =
 新函数落拆目录新文件,先例 = 同目录 test_check_strategy_star_merge_gold.py
 与 kernel/cw_env_grants/test_check_env_merge_grants.py)。
@@ -68,25 +68,25 @@ _CHAR3 = '姬子'   # 3 费(费用负例素材)
 
 
 class _SimPresenceStub:
-    """装配占位后端(仅令 ``sim_backend_installed()`` 为真;本腿不触后端
+    """装配占位后端(仅令 ``sim_backend_installed()`` 为真;本效果条目不触后端
     任何口,触即 AssertionError 响亮——被测门控只读装配槽非 None;
     test_check_strategy_star_merge_gold 同名先例)。"""
 
     def screen_identity(self) -> str:
-        raise AssertionError('策略卡合成发放腿不触后端读口')
+        raise AssertionError('策略卡合成发放类效果条目不触后端读口')
 
     def observe(self, screen_name: str) -> object:
-        raise AssertionError('策略卡合成发放腿不触后端观察')
+        raise AssertionError('策略卡合成发放类效果条目不触后端观察')
 
     def visible(self, screen_name: str, area_name: str) -> bool:
-        raise AssertionError('策略卡合成发放腿不触后端门问询')
+        raise AssertionError('策略卡合成发放类效果条目不触后端门问询')
 
     def click_answer(self, op: object, screen_name: str, area_name: str,
                      until_find_all: object, until_not_find_all: object):
-        raise AssertionError('策略卡合成发放腿不触后端点击')
+        raise AssertionError('策略卡合成发放类效果条目不触后端点击')
 
     def advance(self, decl: object) -> None:
-        raise AssertionError('策略卡合成发放腿不触后端推进')
+        raise AssertionError('策略卡合成发放类效果条目不触后端推进')
 
 
 @pytest.fixture
@@ -99,7 +99,7 @@ def sim_installed():
 
 def _gs(*, card: str | None = _CARD) -> GameState:
     """直构状态容器(card=None = 未持卡;表外卡同参;bench 种空席——直构域
-    bench 未观察 = 链拒落零写,本腿落席面断言需可写席)。"""
+    bench 未观察 = 链拒落零写,本效果条目落席面断言需可写席)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if card is not None:
         gs.write_logic(gs.active_strategies, [card],
@@ -118,7 +118,7 @@ def _bench_units(gs) -> list[tuple[str, int]]:
 def test_gain_chain_three_one_star_merge_grants_sha_jin(
         sim_installed) -> None:
     """获得链集成主锁(锁 1):持卡局 gain_character 1★×3 同名 2 费 →
-    链内合成 2★ → bench 含 1 个 1★砂金,evidence 笔 = 本腿写点
+    链内合成 2★ → bench 含 1 个 1★砂金,evidence 笔 = 本效果条目写点
     (链顶层发火,发放 1★ 先验 rand=False 确定写)。"""
     gs = cw4_gs(node_fill=False, shop_screen='off',
                 bench=[_bc(_CHAR2, 1), _bc(_CHAR2, 1)])
@@ -136,7 +136,7 @@ def test_gain_chain_three_one_star_merge_grants_sha_jin(
 
 
 def test_gain_chain_no_card_zero_grant(sim_installed) -> None:
-    """非持卡局零发放(锁 1 负面):同操作合成照常发生,本腿零动作——
+    """非持卡局零发放(锁 1 负面):同操作合成照常发生,本效果条目零动作——
     表外卡同路(白名单表外禁自动猜装)。"""
     for card in (None, '躺平'):
         gs = cw4_gs(node_fill=False, shop_screen='off',

@@ -1,5 +1,5 @@
 """sim 策略选卡获得链交换分支轨迹成对测试(镜像 src = sim/cw_sim_backend.py
-的 _on_invest_picked 交换分支轨迹成对腿 + 三呈现点呈现一次性标志位;按被测方法拆
+的 _on_invest_picked 交换分支轨迹成对效果条目 + 三呈现点呈现一次性标志位;按被测方法拆
 目录规范落位,先例 = 同目录 test_strategy_pick_hp.py)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-333-budengjia-

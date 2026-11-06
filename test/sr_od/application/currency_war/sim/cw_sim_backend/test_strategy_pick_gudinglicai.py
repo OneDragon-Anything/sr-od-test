@@ -1,13 +1,13 @@
 """sim 固定理财位面段两条效果条目 walk 测试(镜像 src = sim/cw_sim_backend.py 的
-apply_strategy_plane_refire_xp 选卡拍补发腿 + _apply_strategy_plane_start_xp
-位面首节点窗腿 + 呈现一次性标志位 + kernel 双桥经真实推进链)。
+apply_strategy_plane_refire_xp 选卡拍补发效果条目 + _apply_strategy_plane_start_xp
+位面首节点窗效果条目 + 呈现一次性标志位 + kernel 双桥经真实推进链)。
 
 测试面依据 = 迭代设计 designs/T-182-gudinglicai.md §2.5/§4(锁 3 裁定 B
 改形/锁 4 XP 支窗口重放)+ 用户裁定书 T-182 节(2026-11-01 用户决定:中途
 拿卡时当前已开始的位面,其位面段奖励照常发放〔全额〕,后续位面照常):
 - (1,3) 拿卡局:拿卡拍 = 即时段(xp_instant +4/burst +2)+ 位面段补发
   (+4/+2,P1 已开始)双发各独立 evidence 笔;后续 (2,1)/(3,1) 位面
-  开始照常(刷新支 kernel 桥 +2/位面、XP 支 sim 窗腿 +4/位面);
+  开始照常(刷新支 kernel 桥 +2/位面、XP 支 sim 窗效果条目 +4/位面);
 - (3,2) 拿卡局:全程仅拿卡拍双发(P3 开始在拿卡前、未持卡零发,补发
   恰覆盖 P3 段;其后无位面开始),此前位面开始拍零增量;
 - 重放防双发(锁 4):同 offer 落地声明重放 → 第二次零写(呈现一次性标志位已
@@ -109,7 +109,7 @@ def _drive_with_safe_picks(b: SimBackend, pred, limit: int = 512) -> None:
 
 
 def _drive_to_offer(b: SimBackend, plane: int, round_num: int) -> None:
-    """驱动至指定位面的策略 offer 呈现(呈现即置各落地腿一次性标志位;途中 offer
+    """驱动至指定位面的策略 offer 呈现(呈现即置各落地效果条目一次性标志位;途中 offer
     安全 filler 化,保到达槽为首个未被消费的日程槽)。"""
 
     def _at_offer() -> bool:
@@ -122,7 +122,7 @@ def _drive_to_offer(b: SimBackend, plane: int, round_num: int) -> None:
 
 def _drive_steps_tolerant(b: SimBackend, steps: int) -> None:
     """有界步进(局败容忍):驱动至多 steps 步,局败回大厅(seed 路径
-    可能途局 hp 归零)即停——本腿断言面是「无后续位面开始零增发」,
+    可能途局 hp 归零)即停——本效果条目断言面是「无后续位面开始零增发」,
     局败属合法终局非驱动故障。"""
     for _ in range(steps):
         if b.screen_identity() == '货币战争-大厅':
@@ -146,14 +146,14 @@ def test_pick_p1r3_refire_then_later_planes_normal() -> None:
         _seed_level_xp(gs, 5, 0)
         _pick(b, '固定理财', ['固定理财', '躺平', _SAFE_FILLER])
         # 拿卡拍:即时段 +4(xp_instant)与补发段 +4(xp_per_plane)两笔
-        # 独立 evidence,后笔 = 补发腿;刷新 = burst 2 + 补发 2 = 4。
+        # 独立 evidence,后笔 = 补发效果条目;刷新 = burst 2 + 补发 2 = 4。
         assert gs.xp.value == (8, XP_TO_NEXT_LEVEL[5]), \
             f'拿卡拍 +8(4 即时 + 4 补发): {gs.xp.value}'
         assert gs.xp.evidence == _EV_REFIRE, \
-            f'后笔 = 补发腿 evidence: {gs.xp.evidence}'
+            f'后笔 = 补发效果条目 evidence: {gs.xp.evidence}'
         assert gs.free_refresh_left.value == 4, 'burst 2 + 补发 2'
         # 后续位面开始照常:(1,3) 之后至 P1 末各节点推进 XP(出节点结算,
-        # 序列表折叠)+ (2,1) 窗腿 +4。
+        # 序列表折叠)+ (2,1) 窗效果条目 +4。
         seq1 = node_sequence_of(1, gs.node_seq_by_plane.value)
         lvl, cur = 5, 8
         for kind in seq1[2:]:   # 出 (1,3)..(1,末) 各节点的结算经验
@@ -162,9 +162,9 @@ def test_pick_p1r3_refire_then_later_planes_normal() -> None:
         _drive_with_safe_picks(
             b, lambda: gs.xp.evidence == 'sim:engine:xp:strategy_plane:p2')
         assert gs.xp.value == (cur2, XP_TO_NEXT_LEVEL[lvl2]), \
-            f'(2,1) 窗腿 +4: {gs.xp.value}'
+            f'(2,1) 窗效果条目 +4: {gs.xp.value}'
         assert gs.free_refresh_left.value == 6, '位面开始桥 +2'
-        # (3,1) 照常:刷新第三笔 +2,XP 窗腿 evidence 换 p3(值面含中途
+        # (3,1) 照常:刷新第三笔 +2,XP 窗效果条目 evidence 换 p3(值面含中途
         # 节点/选卡干扰写,不作精确断言,evidence 转移即证)。
         _drive_with_safe_picks(
             b, lambda: gs.xp.evidence == 'sim:engine:xp:strategy_plane:p3')

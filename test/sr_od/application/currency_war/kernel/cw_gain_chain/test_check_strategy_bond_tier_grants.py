@@ -1,9 +1,9 @@
-"""策略卡羁绊档位条件发放检查腿测试(镜像 src = kernel/cw_gain_chain.py
+"""策略卡羁绊档位条件发放检查效果条目测试(镜像 src = kernel/cw_gain_chain.py
 的 check_strategy_bond_tier_grants + kernel/cw_game_state.py 的
 strategy_bond_tier_fired 一次性标志位域)。
 
 测试面依据 = 迭代设计 designs/T-271-mengjing-dawutai.md §4 锁 3/4/5
-(构造 = 状态容器直置直调检查腿;计数判据单一源 = cw_system_cards.
+(构造 = 状态容器直置直调检查效果条目;计数判据单一源 = cw_system_cards.
 _faction_count 双源 max——board 状态容器(左面板真值口径,含 L2 星徽装备
 贡献)× board_by_row 身份聚合(仅 factions+flows),直构按断言面向单侧
 或双侧喂源;禁经 gain_character 构造达标态,会对触发面盲区假绿):
@@ -83,7 +83,7 @@ def _gs(*, card: str | None = _CARD, board: dict[str, int] | None,
 
 def _deployed(*units: tuple[str, str | None]) -> DeployedView:
     """行域直构:(角色名, 佩戴装备名 | None);前排承载全部单位
-    (检查腿不分排,全板合计口径)。"""
+    (检查效果条目不分排,全板合计口径)。"""
     front = [Unit(char_id=name, star=1,
                   equips=[equip] if equip else [])
              for name, equip in units]
@@ -91,7 +91,7 @@ def _deployed(*units: tuple[str, str | None]) -> DeployedView:
 
 
 def _bond_counts(gs: GameState) -> int:
-    """激活非独立羁绊数镜像(测试侧判读辅助,口径 = 检查腿单一源)。"""
+    """激活非独立羁绊数镜像(测试侧判读辅助,口径 = 检查效果条目单一源)。"""
     from sr_od.application.currency_war.data.cw_factions import FACTIONS
     from sr_od.application.currency_war.kernel.cw_system_cards import (
         _faction_count,
@@ -103,7 +103,7 @@ def _bond_counts(gs: GameState) -> int:
 
 def test_no_card_zero_write() -> None:
     """短路锁(无卡):板面达标但未持卡 → 零发放零一次性标志位(持卡交集为空 =
-    整腿无候选)。"""
+    整效果条目无候选)。"""
     gs = _gs(card=None, board=_BOARD_T3)
     from sr_od.application.currency_war.kernel.cw_gain_chain import (
         check_strategy_bond_tier_grants,
@@ -219,7 +219,7 @@ def test_independent_factions_excluded() -> None:
 def test_l2_badge_contribution_counts_via_board_source() -> None:
     """L2 星徽贡献计入锁:盛会之星第 2 计数来自穿徽单位(L2 装备贡献,
     身份聚合口径不计——cw_board_by_row 只算 factions+flows),仅 board
-    状态容器(左面板真值)承载 → gate 经双源 max 融合开启;若检查腿单吃
+    状态容器(左面板真值)承载 → gate 经双源 max 融合开启;若检查效果条目单吃
     身份源则 gate 关闭误零发(红判据)。板面 = 花火 + 娜塔莎(佩戴
     星徽)→ 盛会之星 2;娜塔莎+藿藿 = 治疗 2;杰帕德+砂金 = 护盾 2。"""
     deployed = _deployed(('花火', None), ('娜塔莎', _EQUIP), ('藿藿', None),

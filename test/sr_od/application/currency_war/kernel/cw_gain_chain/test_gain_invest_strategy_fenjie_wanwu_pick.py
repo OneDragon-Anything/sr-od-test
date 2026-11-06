@@ -13,7 +13,7 @@ wanwu.md(定稿)§4 锁 2/锁 4/锁 5(REVIEW-T376 §5④):
   (效果条目3 战力类零建模,不进经济模型);
 - 锁 5 负锁:'分解万物' 不入 STRATEGY_BINDINGS(绑定域零本卡)。
 
-效果条目2 变换腿登记形态由同目录
+效果条目2 变换效果条目登记形态由同目录
 test_gain_invest_strategy_fenjie_wanwu_reg.py 承载(两注册面分域)。
 """
 from __future__ import annotations

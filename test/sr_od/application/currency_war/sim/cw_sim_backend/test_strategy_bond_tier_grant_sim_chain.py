@@ -1,5 +1,5 @@
 """策略卡羁绊档位条件发放 sim 状态副本链测试(镜像 src = sim/cw_sim_backend.py
-的 _resolve_battle 结算腿族槽调用点;kernel 触发函数单元面 = kernel/
+的 _resolve_battle 结算效果条目族槽调用点;kernel 触发函数单元面 = kernel/
 cw_gain_chain/test_check_strategy_bond_tier_grants.py,本文件锁 sim 接入调用
 与状态副本里的值落地面)。
 
@@ -138,7 +138,7 @@ def _record_world_writes(gs, monkeypatch: pytest.MonkeyPatch) -> list[tuple]:
 
 
 def _grant_rows(calls: list[tuple]) -> list[tuple]:
-    """本腿装备写行(strategy_bond_tier 前缀)。"""
+    """本效果条目装备写行(strategy_bond_tier 前缀)。"""
     return [c for c in calls
             if c[1] == 'equips'
             and str(c[2] or '').startswith(_EVIDENCE_PREFIX)]
@@ -167,7 +167,7 @@ def test_settle_grants_on_win(
         assert str(rows[0][2]) == f'{_EVIDENCE_PREFIX}#equip', \
             f'evidence 漂移: {rows[0][2]!r}'
         # 通道断言不设:sim 状态副本未锚定期确定发放走随机态通道是链级既定
-        # 约定(gain-chain §5,箱腿同款),确定面 source 锁归 kernel 单元面
+        # 约定(gain-chain §5,箱条目同款),确定面 source 锁归 kernel 单元面
         #(test_check_strategy_bond_tier_grants 首达主条 prep_anchored 置一次性标志位)。
         assert rows[0][3].family == 'logic_action' \
             and rows[0][3].group_id == 'sim:strategy', \
@@ -206,7 +206,7 @@ def test_settle_grants_on_loss_alive(
 def test_settled_replay_no_regrant(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """幂等回归锁:同节点战斗重放(battle_resolve 重入)→ _settled_key
-    既有守卫整段跳过,零二次发放零新增一次性标志位写笔(防本腿绕过)。"""
+    既有守卫整段跳过,零二次发放零新增一次性标志位写笔(防本效果条目绕过)。"""
     b = _prep_backend(93)
     try:
         gs = b.gs

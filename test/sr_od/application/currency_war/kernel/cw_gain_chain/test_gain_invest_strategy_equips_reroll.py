@@ -7,15 +7,15 @@ equips_reroll 字段与 EQUIPS_REROLL_SAME_QUALITY 词表;按被测方法拆目�
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
 T-138-gongsi-junhuo-gengxin-yin.md(定稿)§4 锁 2/锁 3:
-- 变异腿登记形态(session 选入 → 账本条目四元组 + payload 词表值 +
+- 变异效果条目登记形态(session 选入 → 账本条目四元组 + payload 词表值 +
   duties.track 置位;锁登记形态与词表值,防裸串漂移与载体误配);
 - 三桥 no-op 负断言哨(限定当前 spec 形态 = NODE_ENTER / WHILE_HELD /
   BATTLEFIELD + equips_reroll-only payload;桥 no-op 本质 = 桥 docstring
   契约——payload 无对应字段或缺省零;族扩展批若合法给 equips_reroll 接
   执行桥,须随批改哨)。
 
-两条效果条目并存结构由本文件(STRATEGY_EFFECTS 在账)+ 发放腿链锁合取承载;
-发放腿(「获得1件随机简易装备」)链面 = 同目录
+两条效果条目并存结构由本文件(STRATEGY_EFFECTS 在账)+ 发放类效果条目链锁合取承载;
+发放类效果条目(「获得1件随机简易装备」)链面 = 同目录
 test_strategy_random_equip_grant_gongsi_junhuo_yin.py(两注册面分域,
 不经组合子)。
 """
@@ -61,8 +61,8 @@ def test_gain_invest_strategy_equips_reroll_register_shape() -> None:
     """公司军火更新·银 登记形态锁:session 选入 → 账本条目形态 =
     NODE_ENTER / WHILE_HELD / BATTLEFIELD + payload.equips_reroll 词表值
     (防裸串漂移与载体误配)+ duties.track 置位(账本可见性,无
-    predict/respond 消费面)。发放腿(选卡落地简易装备入栏)不属本锁
-    辖域,由发放腿链锁承载。"""
+    predict/respond 消费面)。发放类效果条目(选卡落地简易装备入栏)不属本锁
+    辖域,由发放类效果条目链锁承载。"""
     gs = _make_gs()
     gain_invest_strategy(gs, object(), '公司军火更新·银', rand=False,
                          sig=_LSIG)

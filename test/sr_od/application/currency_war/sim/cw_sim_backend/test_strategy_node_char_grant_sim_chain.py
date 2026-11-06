@@ -1,5 +1,5 @@
-"""sim 策略卡每节点绑定角色复制发放窗口腿测试(镜像 src = sim/
-cw_sim_backend.py 的 _begin_node_window 复制发放腿 + kernel 获得效果体的
+"""sim 策略卡每节点绑定角色复制发放窗口效果条目测试(镜像 src = sim/
+cw_sim_backend.py 的 _begin_node_window 复制发放类效果条目 + kernel 获得效果体的
 sim 门控绑定写;kernel 原语单元面 =
 kernel/cw_gain_chain/test_check_strategy_node_char_grants.py,本文件锁
 sim 窗口接入调用与状态副本里的值落地面)。
@@ -9,7 +9,7 @@ T-165-jiazhi-touzi-jin.md(定稿)§4 锁 2(sim 状态副本形)/锁 5(补给后)
 锁 6(幂等):
 
 - 获得时点(sim 装配)= 采样即状态副本里的值:固定 rng → 备战 +1 名 2★ ∈
-  1 费池 + 绑定域写入(sim 门控 True = 绑定即状态副本里的值,复制发放腿
+  1 费池 + 绑定域写入(sim 门控 True = 绑定即状态副本里的值,复制发放类效果条目
   判据落账);
 - 每节点窗(进窗事实点在窗口幂等守卫内):+1 名 1★ 绑定同名;同节点
   窗重放(_window_begun_pos 守卫整段早退)零新增写行不双发;

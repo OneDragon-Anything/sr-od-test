@@ -1,4 +1,4 @@
-"""买牌上报·合成 3 星条件金腿 sim 集成测试(镜像 src = kernel/cw_action_report/
+"""买牌上报·合成 3 星条件金币效果条目 sim 集成测试(镜像 src = kernel/cw_action_report/
 buy_card.py 合并发火段调用点;kernel 发放函数单元面 + 获得链集成面 =
 kernel/cw_gain_chain/test_check_strategy_star_merge_gold.py,本文件锁
 buy 域调用点经真实上报函数的 sim 状态副本落地面)。
@@ -8,11 +8,11 @@ xiangyin.md(定稿)§4 锁 2 + REVIEW-T135 §四 ④:
 
 - 主锁:sim 局预种持卡 + 席面 2★×2 → 买入同名第 3 只(2★)→ gold +5
   (观察笔恰一笔,evidence = sim:engine:strategy_star_merge_gold:1,
-  sim 侧策略金腿家族统一形态);金位同拍先经 proj_buy_gold logic 写、
+  sim 侧策略金币效果条目家族统一形态);金位同拍先经 proj_buy_gold logic 写、
   发放 observe 相邻异通道覆盖落失配抑制分支 = 记账路径(T-108 同拍
   相邻写先例,全程零真失配告警行);
 - 负锁:凑不齐三只(席面 2★×1 买第 2 只,只凑对不出 3 星)→ 零金笔
-  (费用 logic 笔照常,条件金腿与买牌费用解耦)。
+  (费用 logic 笔照常,条件金币效果条目与买牌费用解耦)。
 
 驱动形态:引擎构造助手 import 自 sim/test_sim_backend.py(已登记超限
 拆分债文件,禁追加,只 import 复用不改 = T-426 政策);上报函数直调
@@ -77,7 +77,7 @@ def _isolate_defect_buffer():
 
 def _prep_backend(seed: int) -> SimBackend:
     """装配后端至 P1r1 备战屏(调用方负责 uninstall;先例 = 同目录
-    到级金腿锁 _prep_backend 形)。"""
+    到级金币效果条目锁 _prep_backend 形)。"""
     b = _backend(seed)
     b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
     b._maybe_finish_wait()
@@ -86,7 +86,7 @@ def _prep_backend(seed: int) -> SimBackend:
 
 
 def _hold_card(gs) -> None:
-    """持卡直置(注册状态容器直写 = 持卡事实)+ 账本条目登记(发放腿读
+    """持卡直置(注册状态容器直写 = 持卡事实)+ 账本条目登记(发放类效果条目读
     效果账本,登记缺位 = 零命中零动作)。"""
     gs.write_logic(gs.active_strategies, [_CARD],
                    produced_by='test-seed', evidence='t:card',
@@ -132,7 +132,7 @@ def test_buy_third_two_star_grants_five_gold(
             f'金值 = 买前 {gold_before} − 单价 2 + 发放 5'
         assert gs.gold.source == 'observation', '发放 = 观察通道'
         assert gs.gold.evidence == _EV, \
-            f'发放笔证据串 = 本腿写点 tag: {gs.gold.evidence!r}'
+            f'发放笔证据串 = 本效果条目写点 tag: {gs.gold.evidence!r}'
         # 相邻异通道覆盖落 sim:engine 抑制分支 = 零真失配告警行
         assert all(r['kind'] != 'observe_vs_logic_mismatch'
                    for r in consume_defect_sink()), '零真失配行'

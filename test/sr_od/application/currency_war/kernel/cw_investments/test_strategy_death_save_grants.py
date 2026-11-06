@@ -44,7 +44,7 @@ def test_registry_row_single_source() -> None:
 def test_registry_row_r1_default_economy() -> None:
     """R1 注册面双源对账(设计 §4 锁 1 R1 形态):STRATEGY_ECONOMY 注册行
     即时两条效果条目全默认——奖励(经验/金)已迁发放表随救援触发,注册行复活
-    任一即时腿 = 选卡拍双发(import 期双源哨同判据,本断言为测试侧
+    任一即时效果条目 = 选卡拍双发(import 期双源哨同判据,本断言为测试侧
     对账位);历史形态 instant_gold=80(选牌当场读)已被用户裁定
     2026-11-04 反向改判,复活即裁判定向漂移。"""
     eff = STRATEGY_ECONOMY[_CARD]
@@ -73,7 +73,7 @@ def test_validator_orphan_key_raises(monkeypatch) -> None:
 
 
 def test_validator_registry_dual_source_raises(monkeypatch) -> None:
-    """构建校验(注册面双源哨):注册行复活即时腿 → ValueError(奖励
+    """构建校验(注册面双源哨):注册行复活即时效果条目 → ValueError(奖励
     同源双发面——救援拍 + 选卡拍;R1 用户裁定反向改判的防复活哨,
     import 期前移拦截)。"""
     monkeypatch.setitem(

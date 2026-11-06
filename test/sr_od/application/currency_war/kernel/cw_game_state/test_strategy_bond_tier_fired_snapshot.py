@@ -28,7 +28,7 @@ _LSIG = ChannelSig(family='logic_action', actor='TestDriver', mode='compute')
 
 def test_seed_empty_and_snapshot_roundtrip() -> None:
     """种子初始值(每局全新创建空集)+ 快照→恢复类型不变(tuple-of-str)+ 逐位
-    相等——一次性标志位随快照存续 = 恢复局(离线回放)检查腿跳过判定天然闭合,
+    相等——一次性标志位随快照存续 = 恢复局(离线回放)检查效果条目跳过判定天然闭合,
     不重发(降档再回不弹同口径)。"""
     seed_gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     seed_opening_state(seed_gs)
@@ -49,7 +49,7 @@ def test_seed_empty_and_snapshot_roundtrip() -> None:
         'tuple-of-str 不漂移为 list(rebuild 登记面)'
 
     # 恢复局跳过判定语义(域消费面):已置一次性标志位复合键已登记 = 对应档跳过
-    # (此处只锁域值语义载体,检查腿行为归 cw_gain_chain 锁文件)。
+    # (此处只锁域值语义载体,检查效果条目行为归 cw_gain_chain 锁文件)。
 
 
 def test_audit_row_declared_process_only() -> None:

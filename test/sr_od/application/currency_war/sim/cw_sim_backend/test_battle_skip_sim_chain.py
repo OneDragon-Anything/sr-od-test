@@ -1,23 +1,23 @@
 """sim 免战跳过状态副本链测试(镜像 src = sim/cw_sim_backend.py 的
-_skip_battle 消费腿 + advance 分派 battle_skip 分支 + visible 按钮替换
+_skip_battle 消费效果条目 + advance 分派 battle_skip 分支 + visible 按钮替换
 子态;声明构造面 = kernel/cw_action_report/start_battle.py,其对照锁落
 kernel/test_world_decl.py)。
 
 测试面依据 = 迭代设计 designs/T-161-mianzhan-pai.md §4 锁 2/3/4/5 +
 REVIEW-T161 §5 特别核查①(镜像现值 _on_node_advance 记账段——跳过拍 =
-跨级事件拍,到级金/装备二腿随批镜像):
+跨级事件拍,到级金/装备二效果条目随批镜像):
 - 分派键集锁(锁 2)= kernel/test_world_decl.py 集内断言 + 集外
   ValueError 既有锁,本文件不重复;
 - sim 跳过 walk 锁(锁 3):battle_skip 消费拍 hp/streak 零写、无结算
   收入落账、无难度记录、无结算环帧行、无败局待办,被跳节点经验照常
-  入账(xp 真值 = 红验基准:禁用 skip 腿本锁先红);两跳后第三次战斗节点
+  入账(xp 真值 = 红验基准:禁用 skip 效果条目本锁先红);两跳后第三次战斗节点
   恢复常规 _resolve_battle;下一节点窗轮首收入照常发生;
 - 幂等锁(锁 4):_settled_key 零双账——同节点重放 battle_skip、skip 后
   又到 battle_resolve、后到 node_advance 三形全空转;
 - visible 子态锁(锁 5):reward 节点出辖域出战恒 True;battle 持卡
   余量>0 出战 False/跳过 True(备战/开商店两屏);用尽移除后出战恢复;
-- 跨级到级金/装备腿镜像锁(REVIEW-T161 特别核查①增补):skip 跨级 →
-  成长基金金腿双通道写 / 钻石商人装备腿直写 + 宝钻状态副本联动,发放拍 =
+- 跨级到级金/装备效果条目镜像锁(REVIEW-T161 特别核查①增补):skip 跨级 →
+  成长基金金币效果条目双通道写 / 钻石商人装备效果条目直写 + 宝钻状态副本联动,发放拍 =
   经验入账后。
 
 驱动形态复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py(已登记
@@ -132,7 +132,7 @@ def _wrap_ring_offer(gs, monkeypatch: pytest.MonkeyPatch) -> list[object]:
 def _record_writes(gs, monkeypatch: pytest.MonkeyPatch) -> list[tuple]:
     """包装 write_logic/write_logic_rand/observe 记录
     (通道, 字段名, evidence, sig, value, produced_by) 写序(透传真实现
-    零行为变化;同目录到级装备腿锁 _record_writes 同形副本)。"""
+    零行为变化;同目录到级装备效果条目锁 _record_writes 同形副本)。"""
     calls: list[tuple] = []
 
     def _wrap_logic(real, channel: str):
@@ -337,8 +337,8 @@ def test_visible_button_substitute_states(monkeypatch:
 
 def test_skip_cross_level_gold_grant_mirror(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """跳过拍跨级到级金腿镜像锁(REVIEW-T161 特别核查①):直构 level=8
-    + xp 贴阈(8→9 门槛 72)持成长基金,skip 跨 9 → 金腿双通道写
+    """跳过拍跨级到级金币效果条目镜像锁(REVIEW-T161 特别核查①):直构 level=8
+    + xp 贴阈(8→9 门槛 72)持成长基金,skip 跨 9 → 金币效果条目双通道写
     (gold observe 独立笔 + done 一次性标志位 logic 笔),发放拍 = 被跳节点经验
     入账之后。"""
     _counting_force_settle(monkeypatch, won=True)
@@ -362,7 +362,7 @@ def test_skip_cross_level_gold_grant_mirror(
         latch_legs = [c for c in calls
                       if c[1] == 'strategy_conditional_done'
                       and c[2] == f'strategy:level_gold:{_GOLD_CARD}']
-        assert len(gold_legs) == 1, f'金腿 observe 笔漂移: {gold_legs}'
+        assert len(gold_legs) == 1, f'金币效果条目 observe 笔漂移: {gold_legs}'
         assert len(latch_legs) == 1, f'done 一次性标志位写笔漂移: {latch_legs}'
         assert latch_legs[0][4] == (_GOLD_CARD,), \
             f'一次性标志位值漂移: {latch_legs[0]}'
@@ -377,7 +377,7 @@ def test_skip_cross_level_gold_grant_mirror(
 
 def test_skip_cross_level_equip_grant_world_coupling(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
-    """跳过拍跨级到级装备腿镜像锁 + 宝钻状态副本联动:直构 level=8 + xp 贴阈
+    """跳过拍跨级到级装备效果条目镜像锁 + 宝钻状态副本联动:直构 level=8 + xp 贴阈
     持钻石商人,skip 跨 9 → equips 随机态写 + 一次性标志位写一笔(producer 专名),
     宝钻回调三写(diamond_count +1 / deploy_cap = level+钻数 /
     back_layout +1);发放拍 = 经验入账后。"""
@@ -399,7 +399,7 @@ def test_skip_cross_level_equip_grant_world_coupling(
         legs = [c for c in calls
                 if c[2] in (f'strategy_level_grant:{_EQUIP_CARD}#equip',
                             f'strategy_level_grant:{_EQUIP_CARD}')]
-        assert len(legs) == 2, f'装备腿/一次性标志位写笔数漂移: {legs}'
+        assert len(legs) == 2, f'装备效果条目/一次性标志位写笔数漂移: {legs}'
         equip_leg, latch_leg = legs
         assert equip_leg[:2] == ('rand', 'equips'), \
             f'发放通道漂移: {equip_leg[:2]}'

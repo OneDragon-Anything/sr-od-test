@@ -1,4 +1,4 @@
-"""策略卡备战席条件离场金检查腿测试(镜像 src = kernel/cw_gain_chain.py 的
+"""策略卡备战席条件离场金检查效果条目测试(镜像 src = kernel/cw_gain_chain.py 的
 check_strategy_bench_leave_gold 纯判定 + sim/cw_sim_backend.py 节点窗调用点
 唯一调用口)。
 

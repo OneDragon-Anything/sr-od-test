@@ -1,4 +1,4 @@
-"""策略卡羁绊条件节点窗交付检查腿测试(镜像 src = kernel/cw_gain_chain.py
+"""策略卡羁绊条件节点窗交付检查效果条目测试(镜像 src = kernel/cw_gain_chain.py
 的 discharge_strategy_bond_battle_grants;两拍制发放拍,含 rng)。
 
 测试面依据 = 迭代设计 designs/T-172-buyao-xiaokan-women-de-jiban.md §4
@@ -12,7 +12,7 @@ test_check_strategy_boss_battle_grants.py;采样断言 = 固定 rng 同种子
   #equip``(原语内追加 #equip 后缀,断言前缀匹配禁精确)、随机态通道
   (source = logic_rand)、消费武装 armed False(evidence
   ``strategy_bond_battle#consume``);
-- **rng 必填无缺省**(签名锁):较损血腿「缺省回退自掷」更严——本腿
+- **rng 必填无缺省**(签名锁):较损血效果条目「缺省回退自掷」更严——本效果条目
   唯一消费方 = sim 调用点传流键,无缺省形态则采样猜测口径的结构性风险
   面消失,签名退化(加缺省)即红;
 - 可重复无 done 一次性标志位:消费后重新武装 → 再交付(armed 消费-再武装链,

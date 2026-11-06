@@ -1,5 +1,5 @@
-"""sim 策略选卡即时经验腿测试(镜像 src = sim/cw_sim_backend.py 的
-apply_strategy_pick_xp helper + _on_invest_picked 落地腿 + 呈现一次性标志位 +
+"""sim 策略选卡即时经验效果条目测试(镜像 src = sim/cw_sim_backend.py 的
+apply_strategy_pick_xp helper + _on_invest_picked 落地效果条目 + 呈现一次性标志位 +
 披露键 strategy_pick_instant_legs)。
 
 测试面依据 = 迭代设计 designs/T-87-jingyan-daozhang.md §2.1/§2.4/§4 七锁:
@@ -48,7 +48,7 @@ from sr_od.application.currency_war.sim.cw_sim_backend import (
 )
 from sr_od.application.currency_war.sim.cw_sim_run_config import RunConfig
 
-#: xp 即时腿独立笔 evidence 前缀(单一源 = cw_sim_base.sim_evidence
+#: xp 即时效果条目独立笔 evidence 前缀(单一源 = cw_sim_base.sim_evidence
 #: 契约:前缀 sim:engine: + 写点 tag xp:strategy_pick:<卡名>)。
 _XP_EV_PREFIX = 'sim:engine:xp:strategy_pick:'
 
@@ -79,7 +79,7 @@ def _drive_until(b: SimBackend, pred, limit: int = 512) -> None:
 
 def _drive_to_offer(b: SimBackend) -> None:
     """驱动至策略 offer 呈现(固定日程首槽 P1r3 起;呈现即置即时经验
-    腿一次性标志位——本腿生效前提)。"""
+    效果条目一次性标志位——本效果条目生效前提)。"""
     _drive_until(b, lambda: b.screen_identity() == SCREEN_INVEST_STRATEGY)
 
 
@@ -162,7 +162,7 @@ def test_unpicked_card_zero_grant() -> None:
 
 def test_threshold_cross_carry_over() -> None:
     """跨级结转(锁 4):门槛 −k(k=3<10)形态落地 → level+1、
-    余量 10−k=7(xp_apply_amount 结转语义经本腿的回归)。"""
+    余量 10−k=7(xp_apply_amount 结转语义经本效果条目的回归)。"""
     b = _backend(seed=34)
     try:
         gs = b.gs
@@ -200,7 +200,7 @@ def test_two_instant_cards_independent_legs() -> None:
 
 
 def test_great_conquest_single_pick_grant_12() -> None:
-    """伟大征服单选(锁 5 辖域矩阵):+12 独立笔(3 卡辖域防「腿实为
+    """伟大征服单选(锁 5 辖域矩阵):+12 独立笔(3 卡辖域防「效果条目实为
     经验到账特判」误实现)。"""
     b = _backend(seed=36)
     try:
@@ -216,7 +216,7 @@ def test_great_conquest_single_pick_grant_12() -> None:
 
 def test_mianzhanpai_single_pick_grant_30() -> None:
     """免战牌单选(锁 5 辖域成员,+30;免战牌建模批):xp_instant 注册行
-    落地后字段分派通用腿自动覆盖(非单卡特判),独立 evidence 笔——
+    落地后字段分派通用效果条目自动覆盖(非单卡特判),独立 evidence 笔——
     同时锁条目 payload 与 STRATEGY_ECONOMY 注册行同实例(改回内联或
     换值即红)。30 > 5 级门槛 20 → 跨级结转形态(level 6,余 10)。"""
     b = _backend(seed=38)

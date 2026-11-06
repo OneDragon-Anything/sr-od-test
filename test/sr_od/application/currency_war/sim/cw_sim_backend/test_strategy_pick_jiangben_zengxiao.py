@@ -92,7 +92,7 @@ def test_pick_jiangben_zengxiao_full_chain_sell_and_free_buys() -> None:
             '退款恰 3(基础公式;×2 修饰缺口低估申报,观察覆盖)'
         assert _bench_units(gs) == [], 'bench 清空且零新增(素出售无发牌面)'
         assert gs.effects.first(_SPEC_ID).remaining_uses == 6, \
-            '免费购买腿播种(remaining_uses=6)'
+            '免费购买效果条目播种(remaining_uses=6)'
         # 前 6 张买零扣金(免费闸;uses 逐张递减,第 6 张买毕离场)。
         for i in range(6):
             out = report_action_buy_card_param(

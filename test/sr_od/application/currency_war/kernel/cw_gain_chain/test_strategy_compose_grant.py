@@ -7,10 +7,10 @@
 T-116-wuzhuang-zhiyuan.md(定稿)§4 锁 1 + REVIEW-T116 六裁决点默认案:
 - 组合登记 = ``PICK_INVEST_EFFECTS['武装支援'] = _compose_grant_legs(
   _make_random_equip_effect('简易', 1), _make_reinforcement_effect(((3, 2),)))``
-  (腿序 = 卡文语序装备腿先/角色腿后;腿参数登记行单次出现,单一源);
+  (条目序 = 卡文语序装备效果条目先/角色效果条目后;效果条目参数登记行单次出现,单一源);
 - 固定 rng 注入链发放真值:rng 消费序 3 抽 = 第 1 抽装备
   (``roll_random_equip`` 简易池)+ 第 2/3 抽角色
-  (``roll_reinforcement_names`` 3 费池放回)——腿序改排即采样名漂移,
+  (``roll_reinforcement_names`` 3 费池放回)——条目序改排即采样名漂移,
   被顺序断言捕获;效果串恰 3 条且顺序固定;
 - 前提守卫:「效果串恒 3 条」前提 = 简易池 ∩ ``EQUIP_ACQUIRE_CONSEQUENCES``
   = ∅(设计 §1.2d/§4 锁 1 前提注记)——装备注册表扩员(新简易件带获得
@@ -99,7 +99,7 @@ def rows_sink() -> _RowSink:
 
 def test_wuzhuang_zhiyuan_compose_legs_chain_in_order(
         rows_sink: _RowSink) -> None:
-    """组合腿锁(设计 §4 锁 1):gain_invest_strategy 确定入口(rand=False)
+    """组合效果条目锁(设计 §4 锁 1):gain_invest_strategy 确定入口(rand=False)
     + 固定 rng 注入 → equips 恰 +1(名 ∈ 简易池派生集,禁手抄清单)、
     bench 恰 +2(名 ∈ 3 费载体派生集、均 1★;批内 2 只 < 3 零级联,
     级联仅与存量同名交互)、效果串恰 3 条且顺序 = [strategy_random_equip:
@@ -107,7 +107,7 @@ def test_wuzhuang_zhiyuan_compose_legs_chain_in_order(
     <角色名>@1star](顺序锁 = 多条效果条目编排与 rng 消费序,本卡新增机制面);
     正常路径零申报行。"""
     # 预采样(独立 rng 实例按消费序 3 抽):与实际注入的 rng 同种子同序,
-    # 腿序改排 = 采样名互换,顺序断言必红(改序 = 掷序漂移)。
+    # 条目序改排 = 采样名互换,顺序断言必红(改序 = 掷序漂移)。
     rng = random.Random(_COMPOSE_SEED)
     equip_pick = roll_random_equip(rng, '简易')
     char_picks = roll_reinforcement_names(rng, 3, 2)
@@ -134,5 +134,5 @@ def test_wuzhuang_zhiyuan_compose_legs_chain_in_order(
         f'strategy_random_equip:{equip_pick}',
         f'strategy_gift_random:{char_picks[0]}@1star',
         f'strategy_gift_random:{char_picks[1]}@1star',
-    ), '效果串恰 3 条且顺序 = 卡文语序(装备腿先/角色腿后)'
+    ), '效果串恰 3 条且顺序 = 卡文语序(装备效果条目先/角色效果条目后)'
     assert rows_sink.kinds() == [], '正常路径零申报行'

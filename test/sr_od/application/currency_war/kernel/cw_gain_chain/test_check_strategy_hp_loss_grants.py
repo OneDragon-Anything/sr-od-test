@@ -1,4 +1,4 @@
-"""策略卡损血档位触发发放检查腿测试(镜像 src = kernel/cw_gain_chain.py
+"""策略卡损血档位触发发放检查效果条目测试(镜像 src = kernel/cw_gain_chain.py
 的 check_strategy_hp_loss_grants)。
 
 测试面依据 = 迭代设计 designs/T-142-baoxian.md §4 锁 2 +

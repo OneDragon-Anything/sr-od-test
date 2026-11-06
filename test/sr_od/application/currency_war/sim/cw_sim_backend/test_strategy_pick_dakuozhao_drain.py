@@ -1,13 +1,13 @@
-"""sim 大扩招扣金负腿测试(镜像 src = sim/cw_sim_backend.py 的选卡落地拍
-扣金腿 + 呈现一次性标志位;先例 = 本目录 test_strategy_hyperemit_sim_chain.py
-〔超发货币负债腿,负金腿最同构先例〕同形态)。
+"""sim 大扩招扣金负效果条目测试(镜像 src = sim/cw_sim_backend.py 的选卡落地拍
+扣金币效果条目 + 呈现一次性标志位;先例 = 本目录 test_strategy_hyperemit_sim_chain.py
+〔超发货币负债效果条目,负金币效果条目最同构先例〕同形态)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-197-dakuozhao.
 md §3 锁 3 + 锁 6(sim 侧对拍) + REVIEW-T197 八裁决点默认案:
-- 扣金腿(锁 3):真拿卡路径落地 → 持金 30 扣 28(gold=30→2)∧
+- 扣金币效果条目(锁 3):真拿卡路径落地 → 持金 30 扣 28(gold=30→2)∧
   evidence 笔字面量钉死 strategy:recruit_drain:大扩招(sim 写统一
   前缀 + 写点 tag)∧ 扣金额与 dakuozhao_deduction_plan 对拍(锁 6
-  sim 侧,与获得链随机角色腿发放只数同函数单一源);
+  sim 侧,与获得链随机角色效果条目发放只数同函数单一源);
 - 零金兜底(锁 3 伴随):持金 0 拿卡 → (0, 0) 零写零笔(金证据笔
   保持种子笔);
 - 呈现一次性标志位防重放(锁 3 伴随):同声明复喂 → 零动作零噪声(扣金非幂等,
@@ -46,9 +46,9 @@ _DRAIN_EV = 'sim:engine:strategy:recruit_drain:大扩招'
 
 def test_drain_leg_gold_30_deducts_28(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """扣金腿引擎链(锁 3 主形态):真拿卡路径落地 → 持金 30 扣 28
+    """扣金币效果条目引擎链(锁 3 主形态):真拿卡路径落地 → 持金 30 扣 28
     (gold=2)∧ evidence 笔字面量钉死 ∧ 扣金额与公式对拍(锁 6 sim 侧:
-    deduct == dakuozhao_deduction_plan(30)[0],与随机角色腿同函数单一源)。
+    deduct == dakuozhao_deduction_plan(30)[0],与随机角色效果条目同函数单一源)。
     全胜骨架沿超发货币锁先形(_force_settle patch 面 = backend 模块
     命名空间)。"""
     _force_settle(monkeypatch, won=True)

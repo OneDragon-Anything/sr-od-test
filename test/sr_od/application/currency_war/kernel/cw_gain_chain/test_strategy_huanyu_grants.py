@@ -7,7 +7,7 @@ test_strategy_wuqiang_grants.py 五百强)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-204 对应稿
 §4(REVIEW-T204 无需用户决定 10/10;卡面官方原文:「获得1个【欢愉星徽】，和1个
-【绯英】。」;反转①徽腿 rand=False〔策略卡侧具名效果条目通道归属,fields.md
+【绯英】。」;反转①徽效果条目 rand=False〔策略卡侧具名效果条目通道归属,fields.md
 §3.2.15 族级分野注记〕;反转②组合登记行准展开卡形态):
 
 - 登记单一源:两条效果条目组合行(欢愉星徽×1 先/绯英后,依卡文语序);泛化
@@ -86,7 +86,7 @@ def test_huanyu_chain_places_equip_and_char() -> None:
     assert bench_units == ['绯英'], f'bench 恰 +1 绯英: {bench_units}'
     assert len(out.effects) == 2, f'效果串两条: {out.effects}'
     assert any(e.startswith('named_equip_grant:') for e in out.effects), \
-        f'装备腿前缀: {out.effects}'
+        f'装备效果条目前缀: {out.effects}'
     assert any(e.startswith('char_grant:') for e in out.effects), \
-        f'角色腿前缀: {out.effects}'
+        f'角色效果条目前缀: {out.effects}'
     assert rng0.getstate() == rng_state0, '零随机面(rng 不消费)'

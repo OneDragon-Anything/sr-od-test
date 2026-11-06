@@ -6,7 +6,7 @@ kernel/cw_env_grants.py 的该被测函数;同模块完胜判据族测试 =
 测试面依据 = 迭代设计 designs/T-412-doushi-zhejiade-cuo.md §2.2 三件套
 + §4 锁 3-6:
 - **判据真值表**(读法 A = 救援仅覆盖「胜利∧损血」):胜∧损血∧徽携带∧
-  配额>0 → 救援(瞬时位 True + 配额一次性标志位 +1 + sim 出售腿);胜∧无损血 →
+  配额>0 → 救援(瞬时位 True + 配额一次性标志位 +1 + sim 出售写状态分支);胜∧无损血 →
   零救援;败局 → 零救援;环 <2 行 → 不判定;配额 0 → 零救援不扣;
   徽不在 deployed → 零救援不扣。**用例系纯注入形态声明**:「胜∧损血∧
   徽携带」在现码状态副本不可自然发生——sim 双重休眠(部署单位 unit.equips
@@ -15,7 +15,7 @@ kernel/cw_env_grants.py 的该被测函数;同模块完胜判据族测试 =
 - **env consult**(锁 4):救援置位后 check_env_deploy_lock_perfect 判据
   放宽触发(损血局锁回退发生);未置位(None)行为与现状逐字节等价
   (零回归,存量判据测试全绿即证,本文件补置位/None 两态对照);
-- **出售腿**(锁 5,sim 形态直测):槽置 None 定长保持 + 退款 =
+- **出售写状态分支**(锁 5,sim 形态直测):槽置 None 定长保持 + 退款 =
   ``sell_refund(star, bench_char_cost(u, gs))`` 口径 + 装备回收第三笔;
   live 形态零写断言(sim 门关 → deployed/gold/equips 零写);
 - **零 rng**(锁 6):救援全确定,同输入两次执行状态逐位相同。
@@ -111,12 +111,12 @@ def _seed_rescuable(gs: GameState) -> Unit | None:
 
 
 def _sim_on(monkeypatch: pytest.MonkeyPatch) -> None:
-    """sim 门开(出售腿状态副本写通道;monkeypatch 自动还原)。"""
+    """sim 门开(出售写状态分支状态副本写通道;monkeypatch 自动还原)。"""
     monkeypatch.setattr(cw_sim_ports, 'sim_backend_installed', lambda: True)
 
 
 def test_rescue_full_chain_sim(monkeypatch: pytest.MonkeyPatch) -> None:
-    """救援全链正例(锁 3 成立面 + 锁 5 sim 出售腿):瞬时位 True + 配额
+    """救援全链正例(锁 3 成立面 + 锁 5 sim 出售写状态分支):瞬时位 True + 配额
     一次性标志位 +1 + 槽置 None 定长保持 + 退款金 sell_refund 口径 + 装备回收第三笔;
     效果串一条 strategy_perfect_rescue:<出售角色名>。"""
     _sim_on(monkeypatch)
@@ -197,7 +197,7 @@ def test_quota_exhausted_no_rescue() -> None:
 
 def test_no_carrier_no_rescue() -> None:
     """徽不携带零救援零扣(锁 3 携带门):deployed 无徽携带者 → 瞬时位
-    False、零配额一次性标志位、零 deployed 写(sim 出售腿的前提面不成立)。"""
+    False、零配额一次性标志位、零 deployed 写(sim 出售写状态分支的前提面不成立)。"""
     gs = _make_gs(front=((('希儿'), 2, ()),))
     _seed_rescuable(gs)
     assert check_strategy_perfect_rescue(gs, _SIG) == ()

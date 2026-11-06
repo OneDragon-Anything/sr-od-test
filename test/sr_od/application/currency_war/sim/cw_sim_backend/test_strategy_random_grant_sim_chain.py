@@ -1,4 +1,4 @@
-"""sim 随机策略发放腿(远见腿②)与节点改写分支(远见腿③)测试(镜像
+"""sim 随机策略发放类效果条目(远见效果条目②)与节点改写分支(远见效果条目③)测试(镜像
 src = sim/cw_sim_backend.py 的 ``_fire_strategy_random_grants`` 两调用点 +
 ``_present_offer_or_node_screen`` 远见改写分支;kernel 登记表/申报行单元
 面 = cw_investments/test_strategy_random_grants.py + cw_gain_chain/
@@ -10,11 +10,11 @@ T331 §4.2-R1 修订(获得链调用后就地判,直发拍即掷)+ §六 ④ 锁
   金名(∈ 注册表金池)、excluded_invest 不含 granted 名、难度读数同帧
   = 基线 + granted 金 3(远见自身豁免 0——豁免世界级锁同帧钉死)、
   池分布披露键已登记、申报行恰一行;
-- 零再发断言(钉 r1-F1 重入门):远见后继拾取(腿③单卡改写槽)金名
+- 零再发断言(钉 r1-F1 重入门):远见后继拾取(效果条目③单卡改写槽)金名
   计数不再增长;
 - 零假发断言(钉 r1-F1 假发门):远见呈现未选局落地他卡零发放;
 - T-46 直发远见局时序锁(R1 修订核心):直发拍即掷(获得时点语义)
-  ——门单挂拾取拍会把腿②迟滞到下一拾取拍;后继调用点的调用零再发;
+  ——门单挂拾取拍会把效果条目②迟滞到下一拾取拍;后继调用点的调用零再发;
 - 改写锁(锁 4):远见已登记时后继 offer 呈现 opts 长度 1 ∈ 棱彩池、
   刷新零授权(呈现 obs refresh_slots 空)、拾取落地正常入链;
 - 联席槽改写锁(锁 5):联席决策 + 远见 → 额外槽单棱彩候选(「投资
@@ -260,8 +260,8 @@ def test_foresight_rewrite_single_prism_candidate(
         _drive_to_next_offer(b)
         _pick(b, '远见', ['远见', '躺平', '淘金客'])
         gold_before = _gold_held(b)
-        assert len(gold_before) == 1, '前置:腿②已掷'
-        _drive_to_next_offer(b, single_only=True)   # (2,2) 改写呈现(腿③)
+        assert len(gold_before) == 1, '前置:效果条目②已掷'
+        _drive_to_next_offer(b, single_only=True)   # (2,2) 改写呈现(效果条目③)
         node = b.gs.node.value
         assert (node.plane, node.round_num) == (2, 2), '后继固定日程槽'
         opts = list(b.gs.invest_strategy_opts.value or [])
@@ -353,7 +353,7 @@ def test_t46_direct_grant_foresight_fires_at_grant_time(
         _isolate_defect_buffer) -> None:
     """T-46 直发远见局时序锁(R1 修订核心):持策略大师环境走至直发节点
     (extra_strategy_grant_node),直发桩恒发远见(棱彩 ∈ 直发全池)
-    → 直发拍即掷(远见入列同拍金名 +1——门单挂拾取拍会把腿②迟滞到
+    → 直发拍即掷(远见入列同拍金名 +1——门单挂拾取拍会把效果条目②迟滞到
     下一拾取拍,违「获得时点」语义);后继调用点的调用零再发(门集记名)。"""
     _stub_direct_roll_foresight(monkeypatch)
     rows: list[dict] = []

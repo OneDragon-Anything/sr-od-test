@@ -1,4 +1,4 @@
-"""搜打撤 boss 通关价值金腿 kernel 面测试(镜像 src = cw_gain_chain.py
+"""搜打撤 boss 通关价值金币效果条目 kernel 面测试(镜像 src = cw_gain_chain.py
 board_bench_char_value_sum / check_strategy_boss_clear_gold;直构形态
 先例 = 同目录 test_check_strategy_boss_completion_grants.py 的状态容器直置,
 禁经战斗链假绿)。

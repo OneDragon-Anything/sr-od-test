@@ -201,7 +201,7 @@ def test_resolve_battle_writes_ring_frames(
 def test_piggy_floor_snapshot_deferred_topup(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """扑满递延快照 floor 元(T-295 设计 §2.3-3;锁 5):持卡局扑满窗开,
-    tick 捕获载体在窗开消费入快照(扩元第 4 位,载体即清);结算腿息分量
+    tick 捕获载体在窗开消费入快照(扩元第 4 位,载体即清);结算效果条目息分量
     顶满至 resolved 帽且利息累计账计顶满值(record_interest_earned 消费
     row.interest 同源,T-27 计数源随计——公司契约下游联动申报面,方向与
     实机一致)。floor 评估时点 = 进节点时点(tick 捕获),非结算刻——结算
@@ -251,7 +251,7 @@ def test_piggy_floor_snapshot_deferred_topup(
         _force_settle(monkeypatch, won=True)
         _start_battle_feed(gs)
         assert gs.effects.interest_earned == counter_at_window + 9, \
-            (f'结算腿息分量顶满至 resolved 帽: '
+            (f'结算效果条目息分量顶满至 resolved 帽: '
              f'{counter_at_window} -> {gs.effects.interest_earned}')
     finally:
         uninstall_backend()

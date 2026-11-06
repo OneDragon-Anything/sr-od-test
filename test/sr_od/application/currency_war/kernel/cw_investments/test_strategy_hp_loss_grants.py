@@ -13,7 +13,7 @@ test_strategy_win_gold_grants.py):
   STRATEGY_ECONOMY['保险'].gold_per_20hp_lost(两表面同出卡面同句,
   单侧改数唯此断言可暴露);
 - 构建校验 2 条(漂移哨,import 即炸语义经直调校验函数锁定):孤儿键 +
-  装备类别漂移(类别名漂移运行期实况 = 池空静默幻影,发放腿零写无
+  装备类别漂移(类别名漂移运行期实况 = 池空静默幻影,发放类效果条目零写无
   台账,import 期哨是唯一响亮拦截面)。
 """
 from __future__ import annotations
@@ -57,10 +57,10 @@ def test_gold_dual_source_same_value() -> None:
 
 def test_category_pool_nonempty_premise() -> None:
     """类别池非空前提(登记行类别直连发放池;漂移哨现值通过 = import
-    过闸即证,显式对拍锁池派生面):'简易' 池注册表现算非空,装备腿
+    过闸即证,显式对拍锁池派生面):'简易' 池注册表现算非空,装备效果条目
     采样域存在。"""
     assert len(equips_by_category(STRATEGY_HP_LOSS_GRANTS[_CARD][2])) > 0, \
-        '登记行类别池空(发放腿静默幻影面)'
+        '登记行类别池空(发放类效果条目静默幻影面)'
 
 
 def test_disclosure_key_registered() -> None:

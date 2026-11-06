@@ -1,4 +1,4 @@
-"""狸职手续(id 204001)具名角色发放腿 count 泛化把结果写进状态副本的实现分支锁(镜像 src =
+"""狸职手续(id 204001)具名角色发放类效果条目 count 泛化把结果写进状态副本的实现分支锁(镜像 src =
 kernel/cw_gain_effects.py ``_STRATEGY_CHAR_GRANTS['狸职手续'] =
 ('狸职狸狸', 3)`` + ``_make_char_grant_effect`` count 循环;按被测方法拆
 目录规范落位——test_gain_chain.py 超线冻结禁追加,新锁落新镜像,先例 =

@@ -13,7 +13,7 @@ test_check_strategy_first_buy_xp_grants.py):
   费用匹配,无星级轴);费用不匹配/已置一次性标志位二次短路零写;
 - 买牌上报链翻转局 walk(锁 3):落位 Unit.star==2 + 一次性标志位置位 + payload
   移除按购买原星匹配(在售 2★ 件幸存)+ 金扣原价 + on_buy 收购买原星;
-  未持卡对照局落 1★;升星腿两分支分开断言(首买零同名零重写/同名低星
+  未持卡对照局落 1★;升星效果条目两分支分开断言(首买零同名零重写/同名低星
   在场幂等整表重写一次);
 - 一次性消耗(锁 4):第二只 4 费不再翻;
 - 池账跟随(锁 5):翻转购买 held 计质量 3/常规对照 held 1/守恒破直构
@@ -157,7 +157,7 @@ def test_buy_path_flip_latch_payload_gold_onbuy_original_star() -> None:
     """翻转局 walk 主条(锁 3):持卡买 4 费 1★ → 落位 Unit.star==2 +
     一次性标志位置位 + payload 移除 1 张按购买原星匹配(在售 2★ 件幸存)+ 金扣
     原价 + on_buy 回调收购买原星(翻转零 bleed 进交易对象与效果账本);
-    首买零同名 → 升星腿零重写(分支 a)。"""
+    首买零同名 → 升星效果条目零重写(分支 a)。"""
     on_buy_calls: list[tuple[object, int, int]] = []
     gs = cw4_gs(node_fill=False, gold=30,
                 shop=[_card(_FOUR_COST, cost=4, x=0),
@@ -180,7 +180,7 @@ def test_buy_path_flip_latch_payload_gold_onbuy_original_star() -> None:
     assert len(on_buy_calls) == 1, 'on_buy 恰一次'
     assert on_buy_calls[0][1] == 1, 'on_buy 收购买原星(非翻转后 2)'
     assert gs.bench.evidence == 'proj_buy_place', \
-        '首买零同名 → 升星腿零重写(分支 a)'
+        '首买零同名 → 升星效果条目零重写(分支 a)'
 
 
 def test_buy_path_no_card_lands_original_star() -> None:
@@ -196,8 +196,8 @@ def test_buy_path_no_card_lands_original_star() -> None:
 
 
 def test_buy_path_same_name_low_star_upgrade_branch_fires_once() -> None:
-    """升星腿分支 b(锁 3):同名 1★ 已在席,买同名牌翻 2★ → 同名最高星
-    抬升 = 升星腿判据真值,幂等整表重写一次(bench 终行 evidence =
+    """升星效果条目分支 b(锁 3):同名 1★ 已在席,买同名牌翻 2★ → 同名最高星
+    抬升 = 升星效果条目判据真值,幂等整表重写一次(bench 终行 evidence =
     proj_merge_upgrade;写笔账恰 +1 重写,防误加守卫也防重复发火)。"""
     gs = cw4_gs(node_fill=False, gold=30, bench=[_bc(_FOUR_COST)],
                 shop=[_card(_FOUR_COST, cost=4, x=0)],
@@ -210,7 +210,7 @@ def test_buy_path_same_name_low_star_upgrade_branch_fires_once() -> None:
     assert sorted(_bench_units(gs)) == [(_FOUR_COST, 1), (_FOUR_COST, 2)], \
         f'旧 1★ + 翻转 2★ 并存(2×1★ 不合成): {_bench_units(gs)}'
     assert gs.bench.evidence == 'proj_merge_upgrade', \
-        '升星腿幂等整表重写(分支 b)'
+        '升星效果条目幂等整表重写(分支 b)'
     assert gs.write_seq == seq0 + 6, \
         '写笔账 = gold+payload+落位+升星重写+一次性标志位+花费置位(重写恰一次)'
 

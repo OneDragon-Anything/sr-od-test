@@ -13,7 +13,7 @@
   登记非运行时发放定论);
 - 估值:gift_hit_tier = 'off'(召唤单位无估值档位,摸个鱼吧II 单名
   先例同判)/grant_gift_value = 0.0;
-- 息腿:STRATEGY_ECONOMY interest_flat 注册行已登记零新增锁(存量四
+- 息效果条目:STRATEGY_ECONOMY interest_flat 注册行已登记零新增锁(存量四
   文件锁即回归网,零改动定论不建锁先例)。
 """
 from __future__ import annotations

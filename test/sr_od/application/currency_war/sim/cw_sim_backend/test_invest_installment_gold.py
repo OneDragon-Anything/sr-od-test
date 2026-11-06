@@ -1,21 +1,21 @@
-"""sim 分期金节点窗腿测试(镜像 src = sim/cw_sim_backend.py 的
+"""sim 分期金节点窗效果条目测试(镜像 src = sim/cw_sim_backend.py 的
 apply_invest_installment_gold 把结果写进状态副本的实现分支 + _begin_node_window 收入段接入调用 +
-apply_strategy_pick_gold_next_nodes_init 拿卡初始化腿 + 呈现一次性标志位;先例 =
-本目录 test_invest_node_gold.py [定期福利聚合腿]/test_strategy_pick_xp.py
-[拿卡落地拍腿族] 同形态)。
+apply_strategy_pick_gold_next_nodes_init 拿卡初始化效果条目 + 呈现一次性标志位;先例 =
+本目录 test_invest_node_gold.py [定期福利聚合效果条目]/test_strategy_pick_xp.py
+[拿卡落地拍效果条目族] 同形态)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-177-changqi-
 zhuyi.md §4 锁 3/锁 5/锁 6(REVIEW-T177 §4.3 同面):
 - 拿卡后连续 3 个节点窗各 +7、第 4 窗不发(锁 3,引擎链:真拿卡路径走
-  初始化腿 + 呈现一次性标志位 + 窗腿接入调用;每窗状态容器递减笔 = 分期腿发生过的持久
+  初始化效果条目 + 呈现一次性标志位 + 窗效果条目接入调用;每窗状态容器递减笔 = 分期效果条目发生过的持久
   证据,金笔在非扑满窗被收入笔覆盖故引擎面以状态容器笔与金增量公式现算
   断言;金笔 evidence 字面量断言落函数级直构面[无覆盖可全等]);
 - 跨卡双持 per-entry(锁 5,同拍双持场景:长期主义 + 长期主义+ 各发
   各额 7 与 9 × 3 窗,每卡独立 evidence 笔,evidence 前缀取完整卡名段
   + 分隔符边界——「长期主义」系「长期主义+」真前缀,断言全等形态即
   天然含边界;禁按聚合额断言);
-- 耗尽短路 + 终局截断(锁 6):剩余 0 零写零报错;局终剩余腿留置蒸发
-  不补发(可达腿语义 = 剩余 >0 照发,无任何局终补发方)。
+- 耗尽短路 + 终局截断(锁 6):剩余 0 零写零报错;局终剩余效果条目留置蒸发
+  不补发(可达效果条目语义 = 剩余 >0 照发,无任何局终补发方)。
 
 复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py 与
 sim/cw_sim_backend/test_p3_win_terminal.py(已登记拆分债文件,禁追加,
@@ -93,7 +93,7 @@ def _drive_until(b: SimBackend, pred, limit: int = 512) -> None:
 
 def _drive_to_offer(b: SimBackend) -> None:
     """驱动至策略 offer 呈现(固定日程首槽 P1r3 起;呈现即置分期金
-    初始化腿一次性标志位——本腿生效前提)。"""
+    初始化效果条目一次性标志位——本效果条目生效前提)。"""
     _drive_until(b, lambda: b.screen_identity() == SCREEN_INVEST_STRATEGY)
 
 
@@ -112,7 +112,7 @@ def _pick(b: SimBackend, name: str, opts: list[str]) -> None:
 def _window_income(gs, plane: int, r: int, gold_base: int) -> int:
     """节点窗收入面 kernel 公式现算(禁观测差分反推——混账形态测不出;
     先例 = test_invest_node_gold.test_invest_node_gold_leg_via_engine_
-    window 同式)。gold_base = 利息基数(窗开金在分期腿落账后的现值口径,
+    window 同式)。gold_base = 利息基数(窗开金在分期效果条目落账后的现值口径,
     由调用方传入)。"""
     kind = gs.node.value.kind
     streak = max(int(gs.streak.value or 0), 0)
@@ -125,11 +125,11 @@ def _window_income(gs, plane: int, r: int, gold_base: int) -> int:
 def test_pick_then_three_windows_pay_seven_fourth_stops(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """拿卡后 3 窗各 +7、第 4 窗不发(锁 3,引擎链):真拿卡路径落地后
-    状态容器 = {'长期主义': 3}(初始化腿,值 = 注册值 count);r4/r5/r6 每窗
+    状态容器 = {'长期主义': 3}(初始化效果条目,值 = 注册值 count);r4/r5/r6 每窗
     金增量 = 7 + 收入面(kernel 公式现算,息基数含 +7——窗开先落账)、
     状态容器逐窗递减且递减笔 evidence 逐窗独立(r4/r5/r6 三笔);r7 耗尽
     短路:金增量 = 纯收入面、状态容器零写(evidence 保持 r6 笔)。「现在」
-    腿无写端:拿卡拍金零增(T-112 族级待办维持)。全胜骨架:开局一次
+    效果条目无写端:拿卡拍金零增(T-112 族级待办维持)。全胜骨架:开局一次
     patch 强制战斗全胜(防随机败局登记 pending_loss 引入败补支——
     败补窗开参数停驻面不可复现,公式简式以无败局为前提;_force_settle
     patch 面 = backend 模块命名空间,CW skill sim-testing 规约)。"""
@@ -144,7 +144,7 @@ def test_pick_then_three_windows_pay_seven_fourth_stops(
             f'拿卡落地拍初始化 = 注册值 count: ' \
             f'{gs.strategy_gold_next_nodes_left.value}'
         assert int(gs.gold.value or 0) == gold_before_pick, \
-            '「现在」腿无状态副本写端,拿卡拍金零增(T-112 待办维持)'
+            '「现在」效果条目无状态副本写端,拿卡拍金零增(T-112 待办维持)'
         assert gs.strategy_gold_next_nodes_left.evidence \
             == f'strategy:gold_next_nodes_init:{_CARD}'
         prev_gold = gold_before_pick
@@ -216,8 +216,8 @@ def test_installment_leg_per_entry_dual_hold() -> None:
 
 def test_installment_leg_zero_hold_and_exhaust_short_circuit() -> None:
     """未持卡零写 + 耗尽短路 + 终局截断(锁 6):状态容器空(未持分期卡)
-    调腿 → 返回 0、金零增、零 Field 写(表外卡零噪声);剩余效果条数即
-    可达腿上限——局终剩余 >0 时条目留置蒸发(无局终补发方,断言面 =
+    调效果条目 → 返回 0、金零增、零 Field 写(表外卡零噪声);剩余效果条数即
+    可达效果条目上限——局终剩余 >0 时条目留置蒸发(无局终补发方,断言面 =
     留置值不再变动、不报错);耗尽(0)再调零写零报错。"""
     gs = cw4_box()
     assert apply_invest_installment_gold(gs, plane=1, round_num=2) == 0, \
@@ -225,7 +225,7 @@ def test_installment_leg_zero_hold_and_exhaust_short_circuit() -> None:
     assert int(gs.gold.value or 0) == 0
     assert gs.strategy_gold_next_nodes_left.value in (None, {}), \
         '零 Field 写(无递减笔)'
-    # 终局截断:种 3 期,局只走到 2 窗(模拟 R 剩余 <3)——可达腿照发,
+    # 终局截断:种 3 期,局只走到 2 窗(模拟 R 剩余 <3)——可达效果条目照发,
     # 剩余 1 期局终蒸发;无任何补发方使金再变,条目留置即终态。
     gs.write_logic(gs.strategy_gold_next_nodes_left, {_CARD: 3},
                    produced_by='Test', evidence='t:seed', sig=_SIG)
@@ -237,7 +237,7 @@ def test_installment_leg_zero_hold_and_exhaust_short_circuit() -> None:
         '局终剩余 1 期留置(蒸发不补发——无补发方,状态容器即终态)'
     gold_final = int(gs.gold.value or 0)
     assert apply_invest_installment_gold(gs, plane=3, round_num=9) == 1, \
-        '可达腿语义 = 剩余 >0 照发(下一窗存在则发)'
+        '可达效果条目语义 = 剩余 >0 照发(下一窗存在则发)'
     assert int(gs.gold.value or 0) == gold_final + 7
     # 耗尽后再调:零写零报错
     assert apply_invest_installment_gold(gs, plane=3, round_num=9) == 0

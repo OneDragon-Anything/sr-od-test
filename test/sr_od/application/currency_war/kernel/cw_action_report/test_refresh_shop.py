@@ -1,8 +1,8 @@
-"""刷新上报·策略出对条件金腿测试(report_action_refresh_shop_param 镜像)。
+"""刷新上报·策略出对条件金币效果条目测试(report_action_refresh_shop_param 镜像)。
 
-锁面 = 「合并同类项」金腿设计与实现(卡面官方原文:「刷新商店时，若刷新的
-角色中出现2个相同的角色，获得1金币。获得4次免费刷新。」):随机态腿之后挂
-策略条件金检查腿,``sim_backend_installed()`` 门控——sim 采样即状态副本里的值、
+锁面 = 「合并同类项」金币效果条目设计与实现(卡面官方原文:「刷新商店时，若刷新的
+角色中出现2个相同的角色，获得1金币。获得4次免费刷新。」):随机态效果条目之后挂
+策略条件金检查效果条目,``sim_backend_installed()`` 门控——sim 采样即状态副本里的值、
 判定成立经观察通道发金;live 采样是猜测,金面禁猜测直写(零写)。本文件锁:
 
 - 锁 2:sim 装配 + 本卡在场 → 出对帧 gold 恰 +1(观察笔形态断言);
@@ -68,24 +68,24 @@ _SIG = ChannelSig(family='logic_action', actor='CwActionRefreshShopParam',
 
 
 class _SimPresenceStub:
-    """装配占位后端(仅令 ``sim_backend_installed()`` 为真;本腿不触后端
+    """装配占位后端(仅令 ``sim_backend_installed()`` 为真;本效果条目不触后端
     任何口,触即 AssertionError 响亮——被测门控只读装配槽非 None)。"""
 
     def screen_identity(self) -> str:
-        raise AssertionError('出对金腿不触后端读口')
+        raise AssertionError('出对金币效果条目不触后端读口')
 
     def observe(self, screen_name: str) -> object:
-        raise AssertionError('出对金腿不触后端观察')
+        raise AssertionError('出对金币效果条目不触后端观察')
 
     def visible(self, screen_name: str, area_name: str) -> bool:
-        raise AssertionError('出对金腿不触后端门问询')
+        raise AssertionError('出对金币效果条目不触后端门问询')
 
     def click_answer(self, op: object, screen_name: str, area_name: str,
                      until_find_all: object, until_not_find_all: object):
-        raise AssertionError('出对金腿不触后端点击')
+        raise AssertionError('出对金币效果条目不触后端点击')
 
     def advance(self, decl: object) -> None:
-        raise AssertionError('出对金腿不触后端推进')
+        raise AssertionError('出对金币效果条目不触后端推进')
 
 
 @pytest.fixture
@@ -115,7 +115,7 @@ def _payload_of(entries: list[tuple[str, int] | None]) -> ShopPayload:
 
 def _seed_gs_with_card() -> object:
     """金位已读(30)+ 本卡入册的状态容器(免费帧隔离:显式 free=True 排除
-    扣费腿/免费扣减腿干扰,金面只承载被测腿)。"""
+    扣费效果条目/免费扣减效果条目干扰,金面只承载被测效果条目)。"""
     gs = cw4_gs(gold=30, node_fill=False, shop_screen='off')
     gs.effects.register_strategy(STRATEGY_EFFECTS['合并同类项'], (1, 2))
     return gs
@@ -174,8 +174,8 @@ def test_live_without_sim_backend_never_writes_pair_gold(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """锁 4(live 门控负锁,核心):未装配 sim(纯实机态)→ 出对帧零金写
     ——防门控失效退化成猜测写金(live 采样是猜测,金面禁猜测直写)。附
-    level 缺读帧同判:采样腿跳写(概率表按级索引),调用点在 level 判空块内
-    → 本腿同帧零发放(shop 保持离屏 + gold 零写)。"""
+    level 缺读帧同判:采样写分支跳写(概率表按级索引),调用点在 level 判空块内
+    → 本效果条目同帧零发放(shop 保持离屏 + gold 零写)。"""
     payload = _payload_of([('甲', 1), ('甲', 1), ('乙', 1), None, None])
     monkeypatch.setattr(refresh_shop, 'sample_shop_deal',
                         lambda gs, rng, *, level, probs: payload)
@@ -188,7 +188,7 @@ def test_live_without_sim_backend_never_writes_pair_gold(
     assert gs.shop.source == 'logic_rand', '随机态分支照常写(采样桩面)'
     assert gs.gold.value == 30 and gs.gold.source == 'observation', \
         'live 门控:出对帧零金写(真值 = 下一入口观察覆盖)'
-    # level 缺读帧:整段随机态分支跳写(shop 不写),金腿同帧零发放
+    # level 缺读帧:整段随机态分支跳写(shop 不写),金币效果条目同帧零发放
     gs2 = cw4_gs(gold=30, level_unread=True, node_fill=False,
                  shop_screen='off')
     gs2.effects.register_strategy(STRATEGY_EFFECTS['合并同类项'], (1, 2))

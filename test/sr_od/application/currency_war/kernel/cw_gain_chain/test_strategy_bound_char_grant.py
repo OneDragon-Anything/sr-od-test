@@ -1,4 +1,4 @@
-"""价值投资·金(id 200401)绑定型随机角色授予腿锁(镜像 src =
+"""价值投资·金(id 200401)绑定型随机角色授予效果条目锁(镜像 src =
 kernel/cw_gain_effects.py 的 ``_STRATEGY_CHAR_GRANT_BINDINGS`` +
 ``_make_bound_char_grant_effect`` + ``PICK_INVEST_EFFECTS`` 生成式注册 +
 家族披露键常量;按被测方法拆目录规范落位——test_gain_chain.py 超线冻结
@@ -8,17 +8,17 @@ kernel/cw_gain_effects.py 的 ``_STRATEGY_CHAR_GRANT_BINDINGS`` +
 T-165-jiazhi-touzi-jin.md(定稿)§4 锁 1/2/3 + REVIEW-T165 §2/④(七裁决
 点全部默认案):
 
-- 锁 1 注册腿:表值 = (1, 1, 2)(费用档, 名数, 到手星级);效果体条目
+- 锁 1 注册效果条目:表值 = (1, 1, 2)(费用档, 名数, 到手星级);效果体条目
   由工厂从表生成进注册表(表驱动生成式,禁两处字面量);披露键 = 家族
   常量纳入已登记两键(uniform/with_replacement),零新增键内容(单一源:
   与援军族三键常量的交集 = 全集,键不得双源另立);
-- 锁 2 腿 1 sim 状态副本(sim 装配):固定 rng → 备战 +1 名 2★、名 ∈ 1 费
+- 锁 2 效果条目 1 sim 状态副本(sim 装配):固定 rng → 备战 +1 名 2★、名 ∈ 1 费
   载体派生池(禁手抄清单);效果串 ``strategy_gift_random:<名>@2star``
   前缀 + @ 后缀一体断言;采样后绑定域写入(evidence
   ``value_invest_bind:*``,绑定即状态副本里的值);门控测试形态:直构 gs 无
   sim 装配 → 门控恒 False,绑定断言须装配占位后端后行使;
-- 锁 3 腿 1 live 形态:同 path 非装配 → 备战随机态写(logic_rand 通道)
-  、绑定域零写(live 掷骰是猜测,假绑定禁入状态容器——复制发放腿唯一判据)。
+- 锁 3 效果条目 1 live 形态:同 path 非装配 → 备战随机态写(logic_rand 通道)
+  、绑定域零写(live 掷骰是猜测,假绑定禁入状态容器——复制发放类效果条目唯一判据)。
 """
 from __future__ import annotations
 
@@ -59,25 +59,25 @@ _LSIG = ChannelSig(family='logic_action', actor='CwActionPickInvestOp',
 
 
 class _SimPresenceStub:
-    """装配占位后端(仅令 ``sim_backend_installed()`` 为真;本腿不触后端
+    """装配占位后端(仅令 ``sim_backend_installed()`` 为真;本效果条目不触后端
     任何口,触即 AssertionError 响亮——被测门控只读装配槽非 None;
     test_check_strategy_star_merge_gold 同名先例)。"""
 
     def screen_identity(self) -> str:
-        raise AssertionError('绑定腿不触后端读口')
+        raise AssertionError('绑定效果条目不触后端读口')
 
     def observe(self, screen_name: str) -> object:
-        raise AssertionError('绑定腿不触后端观察')
+        raise AssertionError('绑定效果条目不触后端观察')
 
     def visible(self, screen_name: str, area_name: str) -> bool:
-        raise AssertionError('绑定腿不触后端门问询')
+        raise AssertionError('绑定效果条目不触后端门问询')
 
     def click_answer(self, op: object, screen_name: str, area_name: str,
                      until_find_all: object, until_not_find_all: object):
-        raise AssertionError('绑定腿不触后端点击')
+        raise AssertionError('绑定效果条目不触后端点击')
 
     def advance(self, decl: object) -> None:
-        raise AssertionError('绑定腿不触后端推进')
+        raise AssertionError('绑定效果条目不触后端推进')
 
 
 @pytest.fixture
@@ -130,7 +130,7 @@ def rows_sink() -> _RowSink:
 
 
 def test_bound_char_grant_table_and_registration() -> None:
-    """锁 1 注册腿:表值三元(费用档, 名数, 到手星级)= 卡面结构值
+    """锁 1 注册效果条目:表值三元(费用档, 名数, 到手星级)= 卡面结构值
     (2星1费 ×1 名);效果体条目由工厂从表生成进注册表(表驱动生成式,
     禁两处字面量);家族披露键 = 已登记两键纳入(与援军族三键常量取交集
     = 全集——零新增键内容,键禁双源另立)。"""
@@ -186,7 +186,7 @@ def test_bound_char_grant_sim_world_writes_binding(
         sim_installed, rows_sink) -> None:
     """锁 2 sim 状态副本主锁(装配后端行使门控):获得时点 → 备战 +1 名 2★
     ∈ 1 费池 + 绑定域写入(值 = {卡名: 采样名},evidence
-    ``value_invest_bind:<卡名>:<名>``——绑定即状态副本里的值,复制发放腿唯一
+    ``value_invest_bind:<卡名>:<名>``——绑定即状态副本里的值,复制发放类效果条目唯一
     判据落账)。"""
     rng = random.Random(200401)
     expected = rng.choice(random_char_pool(RandomCharSpec(cost=1, star=2)))
@@ -211,7 +211,7 @@ def test_bound_char_grant_live_form_zero_binding_write(
     """锁 3 live 形态负锁(核心):未装配 sim(纯实机态)→ 备战照常
     随机态直写(T-89 族形猜测写:live 掷骰 = 未验证推算,下一备战帧
     bench 整表观察纠偏)、绑定域零写——假绑定即使无消费面也禁入状态容器
-    (复制发放腿唯一判据,静默存续不可接受)。"""
+    (复制发放类效果条目唯一判据,静默存续不可接受)。"""
     cw_sim_ports.uninstall_sim_backend()
     rng = random.Random(200401)
     expected = rng.choice(random_char_pool(RandomCharSpec(cost=1, star=2)))

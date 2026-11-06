@@ -1,4 +1,4 @@
-"""策略卡胜利结算条件金检查腿测试(镜像 src = kernel/cw_gain_chain.py 的
+"""策略卡胜利结算条件金检查效果条目测试(镜像 src = kernel/cw_gain_chain.py 的
 check_strategy_win_gold_grants)。
 
 测试面依据 = 迭代设计 designs/T-130-zhaocai-gou.md §4 锁 2/锁 3 +
@@ -110,7 +110,7 @@ def test_no_card_zero_grant() -> None:
 
 def test_unobserved_containers_zero_grant() -> None:
     """锁 2 未观察防御:bench/deployed 未观察(None)→ 该域计 0 宁缺
-    勿造(env 触发器同契约;溢出位身份在仍计 1,域防御不整腿废弃)。"""
+    勿造(env 触发器同契约;溢出位身份在仍计 1,域防御不整效果条目废弃)。"""
     gs = _gs(bench=None, overflow_card='佩佩')
     assert check_strategy_win_gold_grants(gs, won=True, hp_delta=0) == 1
 

@@ -77,10 +77,10 @@ def test_jishiyu_chain_places_three_chars_and_equip() -> None:
     assert len(effects) == 4, f'效果串恰 4 条: {effects}'
     assert sum(1 for e in effects
                if e.startswith('strategy_gift_random:')) == 3, \
-        f'三随机角色腿: {effects}'
+        f'三随机角色效果条目: {effects}'
     assert all(e.endswith('@2star') for e in effects[:3]), \
         f'2 星档: {effects}'
-    assert '完美投影仪' in effects[3], f'装备授予腿: {effects}'
+    assert '完美投影仪' in effects[3], f'装备授予效果条目: {effects}'
     units = [s.unit for s in gs.bench.value.slots
              if s.kind == 'unit' and s.unit]
     assert len(units) == 3 and all(u.star == 2 for u in units), \

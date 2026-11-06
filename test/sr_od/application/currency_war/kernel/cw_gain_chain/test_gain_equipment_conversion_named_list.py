@@ -7,7 +7,7 @@ kernel/cw_gain_chain.py 的 ``_equip_gain_conversion_hit`` 名单集源形判定
 测试面依据 = 迭代设计 designs/T-372-dujia-daiyan.md §4 +
 REVIEW-T372 §4④ 测试锁面(2026-11-05 判定窗现值):
 - 锁 1 镜像一致性:登记表 equips_immediate 与效果体发放名逐对相等
-  (箱腿一致性锁族形;两处独立字面量漂移在备战断言不可见唯此锁可暴露)
+  (箱条目一致性锁族形;两处独立字面量漂移在备战断言不可见唯此锁可暴露)
   + 披露键辖卡元组断言;
 - 锁 1b 装备名/类别断言锁:目标/名单成员 ∈ EQUIPMENTS ∧ 类别断言 ∧
   与合成配方派生一致(``_validate_strategy_grants`` 无装备名校验,本锁
@@ -131,7 +131,7 @@ def test_grant_effect_mirror_and_disclosure_lock(
         rows_sink: _RowSink) -> None:
     """镜像一致性 + 披露键辖卡锁(设计 §4 锁 1):登记表
     ``equips_immediate`` 与效果体发放名逐对相等(直呼同名单效果体,
-    经获得链入栏断言,箱腿一致性锁族形;两处独立字面量漂移在备战断言
+    经获得链入栏断言,箱条目一致性锁族形;两处独立字面量漂移在备战断言
     不可见唯此锁可暴露)+ 卡名 ∈ 披露键辖卡元组 ∧ 键值形制(T-205/
     T-218 键形先例)∧ base 注册表已登记。"""
     assert INVESTMENT_STRATEGIES['独家代言'].source == 'plaza:331401', \

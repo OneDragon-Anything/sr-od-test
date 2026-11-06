@@ -57,7 +57,7 @@ def test_env_invitation_mid_channel_and_contract_strong() -> None:
 def test_env_generic_categories_zero() -> None:
     """通用类线分 0(design §3.1;批 2 起**专家类目例外** = 顾问入商店
     通道):经济/规则/时代三类目恒 0;专家类目 10 个中 7 个无定向 0
-    (道具/通用增益/条件腿——见 test_env_advisor_channel)。"""
+    (道具/通用增益/条件效果条目——见 test_env_advisor_channel)。"""
     from sr_od.application.currency_war.kernel.cw_investments import (
         INVESTMENT_ENVS,
     )
@@ -66,7 +66,7 @@ def test_env_generic_categories_zero() -> None:
     assert len(generic) == 31, '经济/规则/时代类目计数基准(design §3.1 类目账:41=31+专家10)'
     for name in generic:
         assert env_line_bonuses(name) == {}, name
-    # 专家类目 0 分卡(顾问表外的道具/通用/条件腿)
+    # 专家类目 0 分卡(顾问表外的道具/通用/条件效果条目)
     for name in ('专家研讨会', '人才储备', '战力飙升', '战力提升',
                  '命运礼物', '英雄登场', '特邀专家:银狼'):
         assert env_line_bonuses(name) == {}, name
@@ -175,10 +175,10 @@ def test_bonuses_dict_scan_shape() -> None:
 
 
 def test_env_advisor_channel() -> None:
-    """顾问入商店通道(批 2;「使其加入商店」= 定向供给半腿,弱于概念股
+    """顾问入商店通道(批 2;「使其加入商店」= 定向供给半效果条目,弱于概念股
     三件套 → 中档 +150,目标线 = 顾问角色羁绊∩线核心键):桑博→专家桑博
     DOT/DOT队/希儿量子(贝成员);加拉赫(击破)→巡海击破,黄泉 flex
-    击破降 0;停云(仙舟/能量)→景元仙舟;特邀专家:银狼条件腿
+    击破降 0;停云(仙舟/能量)→景元仙舟;特邀专家:银狼条件效果条目
     (「首次获得银狼LV.999 时」)不入表 0。"""
     assert env_line_bonus('特邀专家:桑博', _comp('专家桑博DOT')) == INVEST_MID
     assert env_line_bonus('特邀专家:桑博', _comp('DOT队')) == INVEST_MID

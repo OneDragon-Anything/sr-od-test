@@ -1,7 +1,7 @@
 """策略卡胜利结算条件金 sim 状态副本链测试(镜像 src = sim/cw_sim_backend.py
-的 _resolve_battle 策略胜利金腿;kernel 触发函数单元面 =
+的 _resolve_battle 策略胜利金币效果条目;kernel 触发函数单元面 =
 kernel/cw_gain_chain/test_check_strategy_win_gold_grants.py,本文件锁
-sim 结算腿接入调用与状态副本里的值落地面)。
+sim 结算效果条目接入调用与状态副本里的值落地面)。
 
 测试面依据 = 迭代设计 designs/T-130-zhaocai-gou.md §4 锁 4/锁 7 +
 REVIEW-T130(r1-S2 修法:节点类型矩阵四态——防实现批把接入调用误包进
@@ -130,7 +130,7 @@ def _win_gold_rows(calls: list[tuple]) -> list[tuple]:
 
 def _prep_backend(seed: int, *, piggy: bool = False) -> SimBackend:
     """装配后端至 P1r1 备战屏(调用方负责 uninstall;先例 = 同目录
-    到级金腿锁 _prep_backend 形)。piggy = 窗开前置扑满环境(窗口收尾
+    到级金币效果条目锁 _prep_backend 形)。piggy = 窗开前置扑满环境(窗口收尾
     is_piggy_node 现读 → 收入递延快照在窗开拍冻结)。P1 序列现值
     P1r1 = reward 位。"""
     b = _backend(seed)
@@ -207,7 +207,7 @@ def test_reward_node_win_pays_gold(
 def test_piggy_win_pays_gold_after_income_row(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """锁 4②:扑满胜局(won=True, hp_delta=0)→ 金笔存在,值 = 锚定
-    同拍收入笔后合计(扑满收入落账 observe 居本腿调用点之前,本腿值 =
+    同拍收入笔后合计(扑满收入落账 observe 居本效果条目调用点之前,本效果条目值 =
     收入笔现值 + 佩佩数;序 = income 笔先、win 金笔后)。"""
     b = _prep_backend(52, piggy=True)
     try:
@@ -237,7 +237,7 @@ def test_piggy_loss_zero_gold(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """锁 4③:扑满败局(won=False 豁免 hp_delta=0)→ 零金笔(双判据
     必要性的接入调用级锁——not won 在函数内短路;收入笔照付败局形,胜败
-    分野只在策略金腿)。"""
+    分野只在策略金币效果条目)。"""
     b = _prep_backend(53, piggy=True)
     try:
         gs = b.gs

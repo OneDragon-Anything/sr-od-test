@@ -1,4 +1,4 @@
-"""策略延时发放倒计时递减腿测试(镜像 src = kernel/cw_game_state.py 的
+"""策略延时发放倒计时递减效果条目测试(镜像 src = kernel/cw_game_state.py 的
 _tick_pending_strategy_grants + _tick_effect_boundary_impl 接入调用)。
 
 测试面依据 = 迭代设计 designs/T-106-rencai-jili.md §4 锁 3(3 条)+
@@ -8,7 +8,7 @@ _tick_pending_strategy_grants + _tick_effect_boundary_impl 接入调用)。
   逐次减 1,第 N 后继窗减到 0——「N个节点后」;姊妹双卡参数化
   人才激励@4 / 人才激励+@3);
 - 同节点重复 tick 零递减(与效果账本 advance_node 同一 advanced 位闸);
-- remaining=0 悬置不越减(到点条目待发放,递减腿永不写负);
+- remaining=0 悬置不越减(到点条目待发放,递减效果条目永不写负);
 - 空队列 tick 零写;
 - P2 末冻结:后继 = None(P3 未观测)→ 终局事件零效果 tick,队列原样
   零发放零弹除(裁决点 5 申报);
@@ -124,7 +124,7 @@ def test_zero_entry_suspended_no_over_decrement() -> None:
 
 
 def test_empty_queue_tick_zero_write() -> None:
-    """空队列 tick 零写:递减腿队空早退,无队列行(write_logic 无同值
+    """空队列 tick 零写:递减效果条目队空早退,无队列行(write_logic 无同值
     去重,省行惯例 = 调用方早退)。"""
     gs = _gs_with_card_at(1, 1, _CARD, remaining=None)
     seq_before = gs.write_seq
@@ -204,7 +204,7 @@ def test_huishou_countdown_zero_sampling_then_due_category_sample() -> None:
 def test_p2_end_freeze_no_grant_no_eject() -> None:
     """锁 9(P2 末冻结直构):P2 末节点后继 = None(P3 未观测,场字段
     未注册第 3 位面)→ 终局上报零效果 tick——倒计时跨 P2 末的条目冻结
-    不发放不弹除(裁决点 5 申报;发放归 sim 窗口腿,本域零状态副本写)。"""
+    不发放不弹除(裁决点 5 申报;发放归 sim 窗口效果条目,本域零状态副本写)。"""
     seqs = resolve_plane_node_seqs('')
     seq2 = seqs[2]
     last_r = len(seq2)
@@ -234,7 +234,7 @@ def test_repeat_cycle_fires_fourth_and_eighth_window() -> None:
     发放 1 件入栏 ∧ 队列以同参重排队 (('好运令牌·彩', 4),)(非弹除
     清空)→ 再推进 4 窗减到 0 → 第 8 后继窗再发 1 件 ∧ 队列仍恒 1 条目
     ——拿卡后每 4 节点窗各 1 件至局终的周期语义(计数起点 = 拿卡节点
-    后继窗,家族口径);tick 递减腿零改动,递减对重排队条目与首登条目
+    后继窗,家族口径);tick 递减效果条目零改动,递减对重排队条目与首登条目
     同形。"""
     gs = _gs_with_queue(1, 1, (('好运令牌·彩', 4),), equips=[])
     for _r in range(2, 6):

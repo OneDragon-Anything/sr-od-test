@@ -1,7 +1,7 @@
-"""sim 出售发牌腿回归测试(板面重写族出售支:选「出售场上和备战席的
+"""sim 出售发牌效果条目回归测试(板面重写族出售支:选「出售场上和备战席的
 所有角色并获得 5 只随机 2★」类卡,sim 状态副本自持账补全)。
 
-测试面(发牌腿唯一落点 = ``cw_sim_backend._on_invest_picked`` opening=
+测试面(发牌效果条目唯一落点 = ``cw_sim_backend._on_invest_picked`` opening=
 False 支链尾,decl 分派形态可达;直调上报函数不经分派层 = 存量形态
 零扰):
 - 全链主锁:出售面(场清空+卖价退款)与发牌面(恰 5 只全 2★,费用
@@ -12,7 +12,7 @@ False 支链尾,decl 分派形态可达;直调上报函数不经分派层 = 存�
   桶,必红);
 - 重入防:同局第二次 pick 零重复发放(呈现一次性标志位落地拍消费,无一次性标志位重放
   零写);
-- 直调形态零扰:只上报不喂声明 = 出售面照走(kernel 获得链)、发牌腿
+- 直调形态零扰:只上报不喂声明 = 出售面照走(kernel 获得链)、发牌效果条目
   零触发(分派层独占),bench 清空后无凭空补员;
 - 空桶防御:注册表漂移态(某费用档桶空)→ 该档零写 + 不炸链,余档
   照发(on_env_gained 随机支同款语义)。
@@ -88,7 +88,7 @@ def _bench_units(gs) -> list[tuple[str, int]]:
 
 def _drive_to_strategy_offer(b: SimBackend) -> None:
     """简报 → P1r3(U07 固定 offer 槽)驱动:策略选卡屏呈现即三条效果条目一次性标志位
-    置位(发牌腿前置状态)。路径 = 既有 overlay 让路测试同款出战/推进
+    置位(发牌效果条目前置状态)。路径 = 既有 overlay 让路测试同款出战/推进
     序(声明化单轨)。"""
     b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
     b._maybe_finish_wait()
@@ -101,12 +101,12 @@ def _drive_to_strategy_offer(b: SimBackend) -> None:
     _node_advance_feed(gs, trigger='settle_confirm')
     assert gs.node.value.round_num == 3
     assert b.screen_identity() == SCREEN_INVEST_STRATEGY, \
-        'P1r3 offer 槽呈现(发牌腿呈现一次性标志位置位前提)'
+        'P1r3 offer 槽呈现(发牌效果条目呈现一次性标志位置位前提)'
 
 
 def _pick_card(b: SimBackend, name: str) -> None:
     """选卡上报 + 声明喂入(decl 分派形态:上报走 kernel 获得链,喂入
-    走后端 ``advance`` 分派 → ``_on_invest_picked`` 落地腿)。"""
+    走后端 ``advance`` 分派 → ``_on_invest_picked`` 落地效果条目)。"""
     gs = b.gs
     out = report_action_pick_invest_strategy_param(
         gs, SimpleNamespace(norm_name=name), _SIG,
@@ -190,7 +190,7 @@ def test_sell_all_deal_draws_after_sell_not_before() -> None:
         finally:
             uninstall_backend()
 
-    # 种子搜索:发牌腿首抽 = 3 费桶 rng 放回一抽;出售刚清场 → 桶 =
+    # 种子搜索:发牌效果条目首抽 = 3 费桶 rng 放回一抽;出售刚清场 → 桶 =
     # 固定全集,与断言时点现值同集同序(发牌 1 只 2★ 计 3 副本 < 档
     # 副本数,桶成员资格不变)。选使首抽命中被卖名的 seed。
     probe = _backend(7)
@@ -214,7 +214,7 @@ def test_sell_all_deal_draws_after_sell_not_before() -> None:
 
 def test_sell_all_deal_no_repeat_on_second_pick() -> None:
     """同局第二次 pick(选另一张卡)零重复发放:呈现一次性标志位落地拍消费,
-    无一次性标志位的再次分派零写(xp/streak 腿同款防重放口径)。"""
+    无一次性标志位的再次分派零写(xp/streak 效果条目同款防重放口径)。"""
     b = _backend(7)
     try:
         _drive_to_strategy_offer(b)
@@ -234,7 +234,7 @@ def test_sell_all_deal_no_repeat_on_second_pick() -> None:
 
 def test_sell_all_deal_absent_on_direct_report_form() -> None:
     """直调上报形态(存量直调形,不喂声明 = 不经后端分派层):出售面照走
-    (kernel 获得链,场清空)而发牌腿零触发——发牌唯一落点 = 分派层,
+    (kernel 获得链,场清空)而发牌效果条目零触发——发牌唯一落点 = 分派层,
     直调路径 bench 清空后无凭空补员(存量直调形态行为零变化)。"""
     b = _backend(7)
     try:
@@ -253,7 +253,7 @@ def test_sell_all_deal_absent_on_direct_report_form() -> None:
         _f, _bk = deployed_rows_of_view(gs.deployed.value)
         assert (_f, _bk) == ([], []), '出售面照走(实机和模拟器两边同链)'
         assert _bench_units(gs) == [], \
-            '发牌腿零触发(直调不经分派层,bench 无凭空补员)'
+            '发牌效果条目零触发(直调不经分派层,bench 无凭空补员)'
     finally:
         uninstall_backend()
 

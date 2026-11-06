@@ -1,5 +1,5 @@
 """嘴硬败局修饰族 sim 链测试(镜像 src = sim/cw_sim_backend.py 的
-_resolve_battle 败局 hp 腿与 streak 转移 keep_on_loss 形参;kernel 聚合
+_resolve_battle 败局 hp 效果条目与 streak 转移 keep_on_loss 形参;kernel 聚合
 helper 注册面 = kernel/cw_investments/test_strategy_zuiying_registry.py)。
 
 测试面依据 = 迭代设计 designs/T-181-zuiying.md §4 锁 1/锁 2/锁 5:
@@ -9,7 +9,7 @@ helper 注册面 = kernel/cw_investments/test_strategy_zuiying_registry.py)。
   分支形参不参与;缺省 False = 现行为逐位不变(存量测试零扰动的对账
   锁)。镜像口 streak_income_after 无 piggy 形参,keep 形参仅辖战斗类
   分支,扑满帧维持语义不在其辖域(禁在此设扑满帧断言);
-- 锁 2 hp 腿:持卡败局帧 = 基础采样追加扣血(强制结算输出 −23 →
+- 锁 2 hp 效果条目:持卡败局帧 = 基础采样追加扣血(强制结算输出 −23 →
   −28,不依赖随机面);扑满败局豁免优先(hp_delta=0 零基础不产生伤害,
   「扑满不掉血」同向);胜局帧零影响;
 - 锁 5 walk 收入边界:败局收入行无连胜分量(维持的是计数,不使败局获

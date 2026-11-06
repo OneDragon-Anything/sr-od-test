@@ -1,4 +1,4 @@
-"""赌神·银(id 130301)具名装备授予腿锁(镜像 src = kernel/cw_gain_effects.py
+"""赌神·银(id 130301)具名装备授予效果条目锁(镜像 src = kernel/cw_gain_effects.py
 的 ``PICK_INVEST_EFFECTS`` 直书登记行「赌神·银」;具名装备授予族后继卡,
 族模式卡 = 全员晋升——工厂语义锁住同目录姊妹镜像 test_strategy_named_equip_
 grant.py,本文件只锁本卡登记面 + 行为面,按被测方法拆目录规范落位,先例 =
@@ -7,7 +7,7 @@ grant.py,本文件只锁本卡登记面 + 行为面,按被测方法拆目录规�
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-140-dushen-yin.md
 (定稿)§4 锁面 + REVIEW-T140 §四 ④(锁 6 前提被已写进代码的按物判门表消解,降为
 门表轻断言,零新增前置行为锁——工厂泛化守卫由姊妹镜像承载,防冗余双锁):
-- 腿 = 卡文单句「获得一个【随便骰子】」:登记行直书
+- 效果条目 = 卡文单句「获得一个【随便骰子】」:登记行直书
   ``_make_named_equip_grant_effect('随便骰子', 1)``,具名确定发放
   ``gain_equipment(rand=False)`` 单件入栏,效果串恰一条含 placed;
 - 精密金面前置按物判(判据映射只挂拆装扳手):随便骰子 gate 恒 None
@@ -87,8 +87,8 @@ def rows_sink() -> _RowSink:
 
 
 def test_dushen_yin_grant_leg_places_dice(rows_sink: _RowSink) -> None:
-    """登记面 + 腿行为主锁:gain_invest_strategy 全链(rand=False)→ 注册
-    入表 + equips 恰 +1 随便骰子、写数恰 +2(注册 1 + 腿 1;②段账本登记
+    """登记面 + 效果条目行为主锁:gain_invest_strategy 全链(rand=False)→ 注册
+    入表 + equips 恰 +1 随便骰子、写数恰 +2(注册 1 + 效果条目 1;②段账本登记
     session=None 跳过)、来源 = 确定面 logic、效果串恰一条含 placed=True;
     精确名与身份(锁 2):发放名 = 装备注册表 '随便骰子' 进阶类(生成文件
     防改名漂移)+ 精密门表不含(锁 6 降级轻断言:gate 恒 None 走纯发放
@@ -108,7 +108,7 @@ def test_dushen_yin_grant_leg_places_dice(rows_sink: _RowSink) -> None:
     assert gs.equips.value == [_ITEM], '具名单件入栏恰 1 件'
     assert gs.equips.source == 'logic', '确定发放走确定面'
     assert gs.equips.evidence == 'pick_invest_named_equip#equip', \
-        '腿写端 evidence(#equip 后缀一笔)'
+        '效果条目写端 evidence(#equip 后缀一笔)'
     assert gs.write_seq - seq_before == 2, \
         '写数恰 2 = 注册 1 + 装备效果条目 1(②段账本登记 session=None 跳过)'
     assert out.effects == (f'named_equip_grant:{_ITEM}(placed=True)',), \

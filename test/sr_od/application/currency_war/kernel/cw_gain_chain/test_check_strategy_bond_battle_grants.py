@@ -1,4 +1,4 @@
-"""策略卡羁绊条件战后发放武装检查腿测试(镜像 src = kernel/cw_gain_chain.py
+"""策略卡羁绊条件战后发放武装检查效果条目测试(镜像 src = kernel/cw_gain_chain.py
 的 check_strategy_bond_battle_grants;两拍制武装拍,零 rng)。
 
 测试面依据 = 迭代设计 designs/T-172-buyao-xiaokan-women-de-jiban.md §4

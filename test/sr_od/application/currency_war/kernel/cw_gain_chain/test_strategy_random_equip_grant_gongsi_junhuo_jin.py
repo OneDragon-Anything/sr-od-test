@@ -7,7 +7,7 @@ test_strategy_random_equip_grant_gongsi_junhuo_yin.py 银卡(count=1))。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-236 对应稿
 §4(REVIEW-T236 无需用户决定 9/9;卡面官方原文:「获得2件随机简易装备」;count=2
-放回抽 = T-167 先例直引——同 rng 两次采样可重复同名;变异腿不属本文件
+放回抽 = T-167 先例直引——同 rng 两次采样可重复同名;变异效果条目不属本文件
 辖域,登记形态 = 同目录 test_gain_invest_strategy_equips_reroll.py):
 
 - 固定 rng 注入链发放真值(行身份锁):equips 恰 +2、两件同名 = 采样值

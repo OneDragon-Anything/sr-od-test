@@ -18,7 +18,7 @@
 - 交付通道锁:两条效果条目全在获得链只登记不写状态的实现分支,③段效果体表零新增(键集断言
   零联动);
 - 待建模登记锁(裁决点 4):卡级 PENDING 行存续 + 描述非空 + 现金分
-  fail-closed(退款腿无字段载体非估值常量,×2 修饰施径缺口待实采,
+  fail-closed(退款效果条目无字段载体非估值常量,×2 修饰施径缺口待实采,
   估值塌 0 = 治理账零行为)。
 """
 from __future__ import annotations
@@ -104,7 +104,7 @@ def test_dacaiyuan_delivery_channel_registration_leg() -> None:
 
 def test_dacaiyuan_pending_modeling_and_cash_failclosed() -> None:
     """待建模登记锁(裁决点 4 默认案):卡级 PENDING 行存续 + 描述非空
-    (治理账可见性,零运行时闸);现金分 fail-closed——退款腿无字段载体
+    (治理账可见性,零运行时闸);现金分 fail-closed——退款效果条目无字段载体
     (依赖场上构成,非估值常量),burst/sell_price_mult 均待建模分类塌 0。"""
     assert _CARD in STRATEGY_ECONOMY_PENDING_MODELING, '卡级 PENDING 行已登记'
     assert STRATEGY_ECONOMY_PENDING_MODELING[_CARD], '描述非空'

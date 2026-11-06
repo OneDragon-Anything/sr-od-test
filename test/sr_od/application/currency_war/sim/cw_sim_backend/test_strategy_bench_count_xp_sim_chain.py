@@ -1,5 +1,5 @@
-"""sim 策略卡备战席计数经验节点窗腿测试(镜像 src = sim/cw_sim_backend.py
-的 _begin_node_window 备战席计数 XP 腿 + kernel 纯判定
+"""sim 策略卡备战席计数经验节点窗效果条目测试(镜像 src = sim/cw_sim_backend.py
+的 _begin_node_window 备战席计数 XP 效果条目 + kernel 纯判定
 check_strategy_bench_count_xp 的 sim 调用点状态副本写;kernel 原语单元面 =
 kernel/cw_gain_chain/test_check_strategy_bench_count_xp.py,本文件锁
 sim 窗口接入调用与状态副本里的值落地面)。
@@ -60,7 +60,7 @@ _XP_EV = 'sim:engine:xp:bench_count'
 
 def _setup(seed: int = 31, *, grant: bool = True):
     """装配后端至 P1r1 备战窗(调用方负责 uninstall;驱动形态先例 = 同目录
-    test_strategy_empty_equip_xp_sim_chain——本卡无即时腿,无装备采样面,
+    test_strategy_empty_equip_xp_sim_chain——本卡无即时效果条目,无装备采样面,
     状态副本态即开局种子)。"""
     b = _backend(seed)
     b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')

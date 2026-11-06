@@ -8,7 +8,7 @@
 
 - 注册行双值:gold_per_hp_lost_now is True(选卡时点已损血数金,布尔
   旗标字段)∧ battle_end_heal_hp=10(战斗结束回血,战斗结算型 HP 状态副本
-  腿,数值 = 卡面直读);
+  效果条目,数值 = 卡面直读);
 - 卡面单一源:effect = cw_invest_data plaza 原文逐字(rarity 棱彩);
 - 两道闭集伴随(排除集战斗结算修饰组 + strategy_economy 三分不计分
   桶)由模块 import 面自动覆盖——strategy_economy._validate_field_
@@ -28,11 +28,11 @@ _FACE = ('获得等同于你已损失生命数量的金币。'
 
 
 def test_baoxian_economy_registry_dual_values() -> None:
-    """锁 1(注册行双值):选卡衍生金旗标 True + 战斗结束回血腿 10,
+    """锁 1(注册行双值):选卡衍生金旗标 True + 战斗结束回血效果条目 10,
     数值全出卡面直读零占位。"""
     eff = STRATEGY_ECONOMY[_CARD]
-    assert eff.gold_per_hp_lost_now is True, '选卡衍生金腿旗标 = True'
-    assert eff.battle_end_heal_hp == 10, '战斗结束回血腿 = 10'
+    assert eff.gold_per_hp_lost_now is True, '选卡衍生金币效果条目旗标 = True'
+    assert eff.battle_end_heal_hp == 10, '战斗结束回血效果条目 = 10'
 
 
 def test_baoxian_strategy_row_face_single_source() -> None:

@@ -7,10 +7,10 @@
 T-137-maicai-piao-plus.md(定稿)§4 锁 2 + REVIEW-T137 七裁决点默认案:
 - 组合登记 = ``PICK_INVEST_EFFECTS['买彩票+'] = _compose_grant_legs(
   _make_random_equip_effect('星徽', 1), _make_named_equip_grant_effect(
-  '冶金炉', 1))``(腿序 = 卡文语序随机腿先/具名腿后;腿参数登记行单次
-  出现,单一源;不入随机装备泛化表——同名键 dict 顺序覆盖丢腿);
+  '冶金炉', 1))``(条目序 = 卡文语序随机效果条目先/具名效果条目后;效果条目参数登记行单次
+  出现,单一源;不入随机装备泛化表——同名键 dict 顺序覆盖丢效果条目);
 - 固定 rng 注入链发放真值:rng 消费序 = 仅第 1 抽装备(星徽池,效果条目2 具名
-  确定发放零采样面)——腿序改排即采样名漂移,被顺序断言捕获;效果串恰
+  确定发放零采样面)——条目序改排即采样名漂移,被顺序断言捕获;效果串恰
   2 条且两条效果条目形态字面分明(效果条目1 ``strategy_random_equip:<名>`` 无 placed
   后缀 / 效果条目2 ``named_equip_grant:<名>(placed=<bool>)`` 带 placed 形态,
   跨家族前缀分域可独立过滤);
@@ -103,18 +103,18 @@ def rows_sink() -> _RowSink:
 
 
 def test_maicai_plus_compose_legs_chain_in_order(rows_sink: _RowSink) -> None:
-    """组合腿锁(设计 §4 锁 2):gain_invest_strategy 确定入口(rand=False)
+    """组合效果条目锁(设计 §4 锁 2):gain_invest_strategy 确定入口(rand=False)
     + 固定 rng 注入 → equips 恰 +2 且两条效果条目各就各位(效果条目1 名 = 采样值 ∈ 星徽池
     派生集禁手抄清单、效果条目2 == 冶金炉精确名)、效果串恰 2 条且顺序 = 卡文语序
-    (随机腿串在前)两条效果条目形态字面分明、正常路径零申报行;表外卡零写(未收录
+    (随机效果条目串在前)两条效果条目形态字面分明、正常路径零申报行;表外卡零写(未收录
     卡安静不写,本卡注册不扰动分派面)。rng 恰 1 次语义由预采样同序对拍锁
     首——「恰 1 次」= 正常径契约,池空漂移态 rng 行为归 T-136 载体锁辖域
     (设计 §4 锁 2 边界注记)。"""
     # 预采样(独立 rng 实例按消费序 1 抽):与实际注入的 rng 同种子同序,
-    # 腿序改排(具名腿先) = 采样名漂移,顺序断言必红(改序 = 掷序漂移)。
+    # 条目序改排(具名效果条目先) = 采样名漂移,顺序断言必红(改序 = 掷序漂移)。
     rng = random.Random(_MAICAI_PLUS_SEED)
     equip_pick = roll_random_equip(rng, '星徽')
-    # 前提守卫(设计 §4 锁 5 前提注记):破前提时任一腿获得后果链追加串,
+    # 前提守卫(设计 §4 锁 5 前提注记):破前提时任一效果条目获得后果链追加串,
     # 「效果串恒 2 条」失效——守卫先红,勿盲改断言数。
     assert set(equips_by_category('星徽')) & \
         set(EQUIP_ACQUIRE_CONSEQUENCES) == set(), \
@@ -132,7 +132,7 @@ def test_maicai_plus_compose_legs_chain_in_order(rows_sink: _RowSink) -> None:
     # 两条效果条目各就各位:效果条目1 = 随机星徽(名 = 采样值,追加序 = 卡文语序)、
     # 效果条目2 = 冶金炉精确名(具名件名面防护:误名在此暴露,非静默)。
     assert gs.equips.value == [equip_pick, _NAMED_LEG_ITEM], \
-        'equips 恰 +2 且腿序 = 卡文语序(随机腿先/具名腿后)'
+        'equips 恰 +2 且条目序 = 卡文语序(随机效果条目先/具名效果条目后)'
     # 效果串两态分形:恰 2 条,两条效果条目各持本族字面形态(效果条目1 无 placed 后缀 /
     # 效果条目2 带 placed=<bool>),跨家族前缀分域可独立过滤,禁并单串。
     assert out.effects == (

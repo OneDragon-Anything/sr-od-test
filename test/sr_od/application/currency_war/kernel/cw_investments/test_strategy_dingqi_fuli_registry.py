@@ -51,7 +51,7 @@ def test_dingqi_fuli_no_faction_binding() -> None:
 
 def test_dingqi_fuli_not_in_pick_effects_closed_set() -> None:
     """即时金写端负锁:定期福利不得入 PICK_INVEST_EFFECTS(本卡
-    instant_gold 腿按族级待办维持零写端,入集 = 越约;全集逐名断言
+    instant_gold 效果条目按族级待办维持零写端,入集 = 越约;全集逐名断言
     归存量闭集锁,此处只锁本卡键不在集)。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
         PICK_INVEST_EFFECTS,

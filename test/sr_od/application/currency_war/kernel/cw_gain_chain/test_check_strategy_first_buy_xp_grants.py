@@ -1,6 +1,6 @@
-"""策略卡首购经验检查腿测试(镜像 src = kernel/cw_gain_chain.py 的
+"""策略卡首购经验检查效果条目测试(镜像 src = kernel/cw_gain_chain.py 的
 check_strategy_first_buy_xp_grants + kernel/cw_action_report/buy_card.py
-尾段发火腿接入调用)。
+尾段发火效果条目接入调用)。
 
 测试面依据 = 迭代设计 designs/T-163-luansheng-sushu.md(定稿)§4 锁
 3/4/5/6 + REVIEW-T163 §4②(卡面官方原文:「获得本投资策略后，首次购买
@@ -51,25 +51,25 @@ _XP_EV_PREFIX = 'sim:engine:xp:first_buy:'
 
 
 class _SimPresenceStub:
-    """装配占位后端(仅令 ``sim_backend_installed()`` 为真;本腿不触后端
+    """装配占位后端(仅令 ``sim_backend_installed()`` 为真;本效果条目不触后端
     任何口,触即 AssertionError 响亮——被测门控只读装配槽非 None;
     test_check_strategy_star_merge_gold 同名先例)。"""
 
     def screen_identity(self) -> str:
-        raise AssertionError('首购经验腿不触后端读口')
+        raise AssertionError('首购经验效果条目不触后端读口')
 
     def observe(self, screen_name: str) -> object:
-        raise AssertionError('首购经验腿不触后端观察')
+        raise AssertionError('首购经验效果条目不触后端观察')
 
     def visible(self, screen_name: str, area_name: str) -> bool:
-        raise AssertionError('首购经验腿不触后端门问询')
+        raise AssertionError('首购经验效果条目不触后端门问询')
 
     def click_answer(self, op: object, screen_name: str, area_name: str,
                      until_find_all: object, until_not_find_all: object):
-        raise AssertionError('首购经验腿不触后端点击')
+        raise AssertionError('首购经验效果条目不触后端点击')
 
     def advance(self, decl: object) -> None:
-        raise AssertionError('首购经验腿不触后端推进')
+        raise AssertionError('首购经验效果条目不触后端推进')
 
 
 @pytest.fixture
@@ -174,7 +174,7 @@ def test_no_card_and_off_table_card_zero_write(sim_installed) -> None:
 
 def test_sim_world_write_exact_threshold_carry(sim_installed) -> None:
     """跨级结转算例(锁 4):门槛恰跨形态(5 级余 18 + 2)→ 6 级余 0
-    (xp_apply_amount 结转语义经本腿回归)。"""
+    (xp_apply_amount 结转语义经本效果条目回归)。"""
     gs = _gs(cur=XP_TO_NEXT_LEVEL[5] - 2)
     out = check_strategy_first_buy_xp_grants(gs, cost=1, sig=_SIG)
     assert out == 2
@@ -203,7 +203,7 @@ def test_live_form_latch_only_world_write_zero() -> None:
 
 def test_buy_card_path_grants_xp(sim_installed) -> None:
     """买牌上报 path 状态副本锁(锁 4 主条):持卡局经上报唯一入口函数买 2 费牌 →
-    xp 恰 +3、落一次性标志位(发火腿接入调用全链;gold 未读买分支跳写,场景最小化)。"""
+    xp 恰 +3、落一次性标志位(发火效果条目接入调用全链;gold 未读买分支跳写,场景最小化)。"""
     gs = cw4_gs(node_fill=False, shop_screen='off', gold_unread=True,
                 bench=[], active_strategies=(_CARD,),
                 level=5, xp=(0, XP_TO_NEXT_LEVEL[5]))

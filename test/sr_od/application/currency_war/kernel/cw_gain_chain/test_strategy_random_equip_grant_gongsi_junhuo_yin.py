@@ -10,12 +10,12 @@ T-138-gongsi-junhuo-gengxin-yin.md(定稿)§4 锁 4/锁 6:
 - 固定 rng 注入链发放真值(行身份锁:equips 恰 +1、名 ∈ 简易池派生集
   且 = 采样值、效果串恰 1 条 ``strategy_random_equip:<名>``——锁成员
   关系不锁池计数)/equips 未观察拒落跳写形态;
-- rand 语义锁(采样腿 write_logic_rand 通道、不触发失配网)由
+- rand 语义锁(采样写走 write_logic_rand 通道、不触发失配网)由
   test_gain_chain.test_random_equip_leg_rand_channel_subchain 辖——
   同一工厂路径的通道语义,本行与该锁同为 '简易' 类别实参,类别实参不
   改变通道选择,不重复立锁(星徽行先例同判)。
 
-本卡变异腿(「每节点物品栏装备同品质变异」)不属本文件辖域:登记形态
+本卡变异效果条目(「每节点物品栏装备同品质变异」)不属本文件辖域:登记形态
 = 同目录 test_gain_invest_strategy_equips_reroll.py(两注册面分域,
 合取承载两条效果条目并存结构)。
 """
@@ -117,7 +117,7 @@ def test_simple_equip_leg_equips_unobserved_skip_decoupled() -> None:
     """equips 未观察形态锁(设计 §4 锁 6):拒落跳写(原语
     detail='equips_unobserved' 现役语义,零写零缺陷)、效果串恒登记
     ``strategy_random_equip:<名>(skipped)``(发放事实与落位成败解耦,
-    非静默丢失;骇客 mod_sampled 两形态同构)。变异腿零代码行为不涉本锁
+    非静默丢失;骇客 mod_sampled 两形态同构)。变异效果条目零代码行为不涉本锁
     (游戏侧自动面)。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
         roll_random_equip,

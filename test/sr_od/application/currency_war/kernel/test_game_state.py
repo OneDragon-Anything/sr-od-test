@@ -1025,7 +1025,7 @@ def test_free_lunch_ledger_zero_per_node_grant() -> None:
     """免费午餐 per_node 负向(T-88 设计 §4 锁 2):仅持免费午餐的账本
     节点边界零授予——EconomyEffect 纯 burst 一条效果条目(free_refresh_per_node/
     条件三元组/BattlefieldEffect 载体字段全缺省 0,桥鸭子类型读取(duck typing)缺省),桥零
-    授予跳写,free_refresh_left 保持未写(None 基零行);burst 腿归登记
+    授予跳写,free_refresh_left 保持未写(None 基零行);burst 效果条目归登记
     调用点,与本桥无关。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.effects.register_strategy(STRATEGY_EFFECTS['免费午餐'],
@@ -2056,19 +2056,19 @@ _A_SEEDED: tuple[str, ...] = (
     # 佩佩客串离场倒计时队列(空初始值,递减/弹除判定零 None 防御,
     # T-368 佩佩客串批)
     'pending_kechuan_leaves',
-    # 策略卡条件发放已发标记(空初始值,检查腿跳过判定零 None 防御)
+    # 策略卡条件发放已发标记(空初始值,检查效果条目跳过判定零 None 防御)
     'strategy_conditional_done',
-    # 绑定型随机角色授予名字绑定域(空 dict 初始值,复制发放腿键查判定
+    # 绑定型随机角色授予名字绑定域(空 dict 初始值,复制发放类效果条目键查判定
     # 零 None 防御;空 = 未持绑定卡的正常态)
     'strategy_char_grant_bindings',
-    # 分期金剩余效果条数状态容器(空 dict 初始值,节点窗腿键查判定零 None 防御;
+    # 分期金剩余效果条数状态容器(空 dict 初始值,节点窗效果条目键查判定零 None 防御;
     # 空 = 未持分期卡的正常态,T-177 长期主义首例)
     'strategy_gold_next_nodes_left',
-    # 策略卡羁绊档位条件发放已发档位一次性标志位(空 tuple 初始值,检查腿 membership
+    # 策略卡羁绊档位条件发放已发档位一次性标志位(空 tuple 初始值,检查效果条目 membership
     # 判定零 None 防御;空 = 无档已发的正常态)
     'strategy_bond_tier_fired',
-    # 策略卡赠礼条件两条效果条目已发标记(空 tuple 初始值,检查腿 membership 判定
-    # 零 None 防御;空 = 无腿已发的正常态)
+    # 策略卡赠礼条件两条效果条目已发标记(空 tuple 初始值,检查效果条目 membership 判定
+    # 零 None 防御;空 = 无效果条目已发的正常态)
     'strategy_grants_done',
     # 损血档位触发累积器(零初始值,触发函数累加取模零 None 防御;
     # 0 = 无累积语义中性,种 0 不伪装已触发)

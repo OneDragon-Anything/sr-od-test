@@ -47,12 +47,12 @@ def test_refresh_pair_spec_single_source_identity() -> None:
 def test_refresh_pair_migration_completeness() -> None:
     """锁 8:注册行等值迁移完整性——instant_gold 缺省(0)∧
     gold_per_refresh_pair=1 ∧ free_refresh_burst=4。防「双登记」回潮:
-    双登记下未来 instant_gold 写状态副本的发放效果条目建模时本卡金腿双发,需排除集特判
+    双登记下未来 instant_gold 写状态副本的发放效果条目建模时本卡金币效果条目双发,需排除集特判
     = 弃案埋雷。"""
     eff = STRATEGY_ECONOMY['合并同类项']
     assert eff.instant_gold == 0, '迁移完整性:instant_gold 缺省(防双登记)'
-    assert eff.gold_per_refresh_pair == 1, '迁移完整性:条件金腿挂新字段'
-    assert eff.free_refresh_burst == 4, 'burst 腿原值保持(卡面 4 明写)'
+    assert eff.gold_per_refresh_pair == 1, '迁移完整性:条件金币效果条目挂新字段'
+    assert eff.free_refresh_burst == 4, 'burst 效果条目原值保持(卡面 4 明写)'
 
 
 def test_refresh_pair_engine_and_pending_classification() -> None:
@@ -65,5 +65,5 @@ def test_refresh_pair_engine_and_pending_classification() -> None:
         '策略侧分类 = 待建模桶(出对频次分布未采,分类校验闭集成员)'
     gs = cw4_gs(node_fill=False, shop_screen='off')
     assert strategy_economy_value('合并同类项', gs) == (0.0, False), \
-        '估值 fail-closed:条件概率型不入现金分(条件刷新腿同判据先例:' \
+        '估值 fail-closed:条件概率型不入现金分(条件刷新效果条目同判据先例:' \
         '按兑现结构性归待建模桶)'

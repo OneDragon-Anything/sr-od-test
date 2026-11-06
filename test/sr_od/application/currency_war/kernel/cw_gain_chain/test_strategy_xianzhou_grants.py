@@ -83,7 +83,7 @@ def test_xianzhou_chain_places_equip_and_char() -> None:
     assert bench_units == ['藿藿'], f'bench 恰 +1: {bench_units}'
     assert len(out.effects) == 2, f'效果串两条: {out.effects}'
     assert any(e.startswith('named_equip_grant:') for e in out.effects), \
-        f'装备腿前缀: {out.effects}'
+        f'装备效果条目前缀: {out.effects}'
     assert any(e.startswith('char_grant:') for e in out.effects), \
-        f'角色腿前缀: {out.effects}'
+        f'角色效果条目前缀: {out.effects}'
     assert rng0.getstate() == rng_state0, '零随机面(rng 不消费)'

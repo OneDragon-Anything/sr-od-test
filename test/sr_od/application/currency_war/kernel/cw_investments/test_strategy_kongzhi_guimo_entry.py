@@ -4,8 +4,8 @@
 
 测试面依据 = 迭代设计 designs/T-324-kongzhi-guimo.md §4 锁 2/6/7
 (REVIEW-T324 无需用户决定 7/7;卡面官方原文:「最大等级变为7级，获得【财富宝钻】
-和40金币。」——帽改写腿 level_cap_override=7 注册行承载 / 宝钻腿 =
-cw_gain_effects.PICK_INVEST_EFFECTS 具名装备登记行 / 40 金腿 =
+和40金币。」——帽改写效果条目 level_cap_override=7 注册行承载 / 宝钻效果条目 =
+cw_gain_effects.PICK_INVEST_EFFECTS 具名装备登记行 / 40 金币效果条目 =
 instant_gold=40 已登记估值零漂):
 
 - 注册行直测(锁 2):level_cap_override == 7 ∧ instant_gold == 40
@@ -41,7 +41,7 @@ _POOL_SIZE = 335
 
 
 def test_registry_row_value() -> None:
-    """注册行直测(锁 2):帽腿 7 ∧ 金腿 40 等值扩写(估值现金计分零漂)。"""
+    """注册行直测(锁 2):帽效果条目 7 ∧ 金币效果条目 40 等值扩写(估值现金计分零漂)。"""
     eff = STRATEGY_ECONOMY[_CARD]
     assert eff.level_cap_override == 7
     assert eff.instant_gold == 40

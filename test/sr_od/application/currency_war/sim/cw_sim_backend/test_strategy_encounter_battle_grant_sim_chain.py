@@ -1,7 +1,7 @@
 """策略卡战后触发发放 sim 状态副本链测试(镜像 src = sim/cw_sim_backend.py
 的 _resolve_battle 只供策略算分的实现分支;kernel 触发函数单元面 =
 kernel/cw_gain_chain/test_check_strategy_battle_grants.py,本文件锁
-sim 结算腿接入调用与状态副本里的值落地面)。
+sim 结算效果条目接入调用与状态副本里的值落地面)。
 
 测试面依据 = 迭代设计 designs/T-105-yizhan-yangzhan.md §4 锁 1/2/3/4/5/8:
 - 持卡局遭遇节点(P1 序列现值恰一 encounter 位)战斗结算后,备战席
@@ -240,7 +240,7 @@ def test_dead_battle_no_grant(
 def test_settled_key_guard_no_double_grant(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """锁 5(幂等回归):同遭遇节点战斗重放(battle_resolve 重入)→
-    _settled_key 既有守卫整段跳过,零二次发放零新增笔(防本腿绕过)。"""
+    _settled_key 既有守卫整段跳过,零二次发放零新增笔(防本效果条目绕过)。"""
     b = _backend(7)
     try:
         b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
@@ -263,7 +263,7 @@ def test_modified_plane_sequence_encounter_kind_follows() -> None:
     """锁 8(修饰局跟随,序列现值判定非硬编码轮次):插入型修饰局
     (人身意外险,boss 位前插 supply)P1 序列的 encounter 位次由序列
     真值派生——现役修饰局遭遇位不移动(发放次数 = 序列 encounter 数,
-    不变);触发腿 node_kind 传结算点现值,序列重构零特判跟随。"""
+    不变);触发效果条目 node_kind 传结算点现值,序列重构零特判跟随。"""
     base = resolve_plane_node_seqs('')[1]
     modified = resolve_plane_node_seqs('人身意外险')[1]
     enc_base = [i + 1 for i, k in enumerate(base) if k == 'encounter']

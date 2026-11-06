@@ -7,10 +7,10 @@
 T-145-jingmi-caizhuang-yin.md(定稿)§4 锁 2 + REVIEW-T145 六裁决点默认案:
 - 组合登记 = ``PICK_INVEST_EFFECTS['精密拆装·银'] = _compose_grant_legs(
   _make_named_equip_grant_effect('精密拆装扳手', 1), _make_random_equip_effect(
-  '简易', 1))``(腿序 = 卡文语序具名腿先/随机腿后;腿参数登记行单次出现,
-  单一源;不入随机装备泛化表——同名键 dict 顺序覆盖丢腿);
+  '简易', 1))``(条目序 = 卡文语序具名效果条目先/随机效果条目后;效果条目参数登记行单次出现,
+  单一源;不入随机装备泛化表——同名键 dict 顺序覆盖丢效果条目);
 - 固定 rng 注入链发放真值:rng 消费序 = 仅第 2 抽装备(简易池,效果条目1 具名
-  确定发放零采样面)——腿序改排(随机腿先)= 效果串序与 equips 追加序
+  确定发放零采样面)——条目序改排(随机效果条目先)= 效果串序与 equips 追加序
   漂移,被顺序断言捕获;效果串恰 2 条且两条效果条目形态字面分明(效果条目1
   ``named_equip_grant:<名>(placed=<bool>)`` 带 placed 形态 / 效果条目2
   ``strategy_random_equip:<名>`` 无 placed 后缀,跨家族前缀分域可独立
@@ -113,16 +113,16 @@ def rows_sink() -> _RowSink:
 
 
 def test_jingmi_yin_compose_legs_chain_in_order(rows_sink: _RowSink) -> None:
-    """组合腿锁(设计 §4 锁 2):gain_invest_strategy 确定入口(rand=False)
+    """组合效果条目锁(设计 §4 锁 2):gain_invest_strategy 确定入口(rand=False)
     + 固定 rng 注入 → equips 恰 +2 且两条效果条目各就各位(效果条目1 == 精密拆装扳手精确名、
     效果条目2 名 = 采样值 ∈ 简易池派生集禁手抄清单)、效果串恰 2 条且顺序 = 卡文
-    语序(具名腿串在前)两条效果条目形态字面分明、正常路径零申报行;表外卡零写
+    语序(具名效果条目串在前)两条效果条目形态字面分明、正常路径零申报行;表外卡零写
     (未收录卡安静不写,本卡注册不扰动分派面)。rng 恰 1 次语义由预采样
     同序对拍锁首。"""
     # 预采样(独立 rng 实例按消费序 1 抽):与实际注入的 rng 同种子同序。
     rng = random.Random(_JINGMI_YIN_SEED)
     equip_pick = roll_random_equip(rng, '简易')
-    # 前提守卫(设计 §4 锁 5 前提注记):破前提时任一腿获得后果链追加串,
+    # 前提守卫(设计 §4 锁 5 前提注记):破前提时任一效果条目获得后果链追加串,
     # 「效果串恒 2 条」失效——守卫先红,勿盲改断言数。
     assert set(equips_by_category('简易')) & \
         set(EQUIP_ACQUIRE_CONSEQUENCES) == set(), \
@@ -144,7 +144,7 @@ def test_jingmi_yin_compose_legs_chain_in_order(rows_sink: _RowSink) -> None:
     # 两条效果条目各就各位:效果条目1 = 精密拆装扳手精确名(具名件名面防护:误名在此
     # 暴露,非静默)、效果条目2 = 随机简易(名 = 采样值,追加序 = 卡文语序)。
     assert gs.equips.value == [_NAMED_LEG_ITEM, equip_pick], \
-        'equips 恰 +2 且腿序 = 卡文语序(具名腿先/随机腿后)'
+        'equips 恰 +2 且条目序 = 卡文语序(具名效果条目先/随机效果条目后)'
     # 效果串两态分形:恰 2 条,两条效果条目各持本族字面形态(效果条目1 带 placed=<bool> /
     # 效果条目2 无 placed 后缀),跨家族前缀分域可独立过滤,禁并单串。
     assert out.effects == (

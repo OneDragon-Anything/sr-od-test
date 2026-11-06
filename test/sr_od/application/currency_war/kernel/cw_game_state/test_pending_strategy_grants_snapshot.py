@@ -17,7 +17,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 
 def test_pending_strategy_grants_snapshot_round_trip() -> None:
     """快照存续(锁 6):倒计时队列随快照往返逐位相等;live 恢复局队列
-    悬置 = 模型推算知识存续(不对称申报,发放腿 sim-only)。"""
+    悬置 = 模型推算知识存续(不对称申报,发放类效果条目 sim-only)。"""
     sig = ChannelSig(family='logic_action', actor='test-seed',
                      mode='compute')
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)

@@ -89,7 +89,7 @@ def test_gongsi_yanxuan_effect_spec_entry() -> None:
 def test_gongsi_yanxuan_engine_channel_membership() -> None:
     """引擎通道闭集锁(治理后形 = 测试锁对账):三字段入
     _ENGINE_CHANNEL_SINGLE_FIELDS(默认值对账)且不入排除桶——位面
-    周期金与可重复触发的改写 = 持续通道;改写为呈现面腿非刷新激励,
+    周期金与可重复触发的改写 = 持续通道;改写为呈现面效果条目非刷新激励,
     引擎旗标语义 = 持卡在场即帧级顶级(P81 划界:持续/一次性结构事实)。"""
     members = dict(_ENGINE_CHANNEL_SINGLE_FIELDS)
     assert members.get('gold_per_plane') == 0

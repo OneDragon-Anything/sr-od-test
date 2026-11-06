@@ -10,7 +10,7 @@ T-136-maicai-piao.md(定稿)§4 + REVIEW-T136 六裁决点默认案:
   迁移回归重立留 test_gain_chain.py 原区);池 = ``equips_by_category``
   注册表派生单源,'星徽' 类别池 import 期独立闸搭环境侧便车;
 - 固定 rng 注入链发放真值(星徽行链锁)/equips 未观察拒落跳写形态/
-  零后果前提锁;rand 语义锁(采样腿 write_logic_rand 通道、不触发失配网)
+  零后果前提锁;rand 语义锁(采样写走 write_logic_rand 通道、不触发失配网)
   由 test_gain_chain.test_random_equip_leg_rand_channel_subchain 辖
   (同一工厂路径的通道语义,类别实参不改变通道选择,不重复立锁);
 - 键集闭集断言(+1 '买彩票')与采样纯函数锁(池派生/种子可复现)随

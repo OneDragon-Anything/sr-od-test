@@ -283,10 +283,10 @@ def test_three_sources_one_count_per_node(test_context, monkeypatch) -> None:
     assert gs.env_grants_done.value == (), '阈值内纯累计(无发放混入)'
 
 
-# ==================================================== 策略卡到级装备腿
+# ==================================================== 策略卡到级装备效果条目
 
 #: live 接入调用 sig 契约形态(logic_hook 族,组号按触发名区分,同窗多触发
-#: 各归各组台账可对账;src = 结算覆盖段策略卡到级装备腿调用)。
+#: 各归各组台账可对账;src = 结算覆盖段策略卡到级装备效果条目调用)。
 _SIG_STRAT = ChannelSig(family='logic_hook', actor='CwScreenBattleWait',
                         group_id='battle-wait:strategy-level-grant')
 
@@ -381,7 +381,7 @@ def test_strategy_level_grant_skipped_when_level_asset_none(
         test_context, monkeypatch) -> None:
     """门控锁:结算 level 资产 None(覆盖写端跳过 level 观察口径)→ 不调
     不写——门控与覆盖写端同口径,防「读不到硬判」误发。流达证明 =
-    同段持续伤害检查(dot)被调到(门控位前最后一段),kernel 检查腿
+    同段持续伤害检查(dot)被调到(门控位前最后一段),kernel 检查效果条目
     记录器零调用。"""
     op = _make_op(test_context, monkeypatch, [_outcome(killed=True)])
     gs = game_state_of(test_context.cw_match.session)
@@ -401,7 +401,7 @@ def test_strategy_level_grant_skipped_when_level_asset_none(
 
     op._record_round_outcome(_FRAME)
 
-    assert reached == ['dot'], '前置:结算覆盖段未走到装备腿门控位(块中断)'
-    assert kernel_calls == [], 'level 资产 None 门控失效(误调检查腿)'
+    assert reached == ['dot'], '前置:结算覆盖段未走到装备效果条目门控位(块中断)'
+    assert kernel_calls == [], 'level 资产 None 门控失效(误调检查效果条目)'
     assert gs.equips.value == [], '门控窗误发放'
     assert gs.strategy_conditional_done.value in (None, ()), '门控窗误置一次性标志位'

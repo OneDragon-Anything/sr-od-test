@@ -1,4 +1,4 @@
-"""sim 策略延时 offer 呈现腿测试(镜像 src = sim/cw_sim_backend.py 的
+"""sim 策略延时 offer 呈现效果条目测试(镜像 src = sim/cw_sim_backend.py 的
 _present_due_extra_offer + _present_offer_or_node_screen 尾部调用点)。
 
 测试面依据 = 迭代设计 designs/T-98-huangjin-qihuo.md §4(锁 4 条件矩阵
@@ -11,7 +11,7 @@ _present_due_extra_offer + _present_offer_or_node_screen 尾部调用点)。
 - 呈现即消费:呈现后队列即空,重复进窗不二次呈现。
 
 白银投资批追加(designs/T-198-baiyin-touzi.md §4 锁 5,可刷系首例):
-- 窗首到期腿呈现带逐卡刷新授权 3(登记 refresh_count 单一源,授权
+- 窗首到期效果条目呈现带逐卡刷新授权 3(登记 refresh_count 单一源,授权
   写状态容器 = report 摄入,品质承诺槽向量簿记取登记品质);
 - 递减链(拿卡当拍不递减,3 次推进归零)kernel tick 直构 → 窗首呈现;
 - 联席路径拿卡 (2,6) → 3 后继窗 = (3,2) 撞固定日程槽 → 顺延 (3,3)
@@ -95,7 +95,7 @@ def test_due_presents_all_gold_pool_once() -> None:
         assert b._invest_pick_ordinal == 1, '序位计数照增'
         assert b.disclosures[STRATEGY_DELAYED_OFFER_FIRED] \
             == '黄金期货@1-1', f'呈现留证: {b.disclosures}'
-        assert b._strategy_pick_xp_latch is True, '即时经验腿一次性标志位照置'
+        assert b._strategy_pick_xp_latch is True, '即时经验效果条目一次性标志位照置'
         assert b._offer_refreshable is False, '定品质禁刷新'
         assert b.gs.strategy_refresh_left.value == refresh_left_before, \
             '空授权不得写刷新计数'
@@ -160,7 +160,7 @@ def test_present_consumes_eject_atomic_no_double_present() -> None:
 
 
 def test_silver_leg_presents_with_per_card_refresh_auth() -> None:
-    """白银窗首腿授权呈现(白银批锁 5):到点呈现 = 候选全银池 +
+    """白银窗首效果条目授权呈现(白银批锁 5):到点呈现 = 候选全银池 +
     逐卡刷新授权 3(refresh_slots [(3,x,20)]×3,授权数值单一源 = 登记
     refresh_count)+ 授权写状态容器(逐卡 3)+ 品质承诺槽向量簿记 =
     ('银','银','银')(重掷品质跨刷新保持)+ 呈现留证键 + 队列弹除
@@ -215,7 +215,7 @@ def test_silver_leg_decrement_chain_via_kernel_tick() -> None:
 
 def test_joint_decision_path_conflict_defers_at_3_2() -> None:
     """联席路径撞槽顺延(白银批锁 5,自然可达冲突直构):联席拿卡
-    (2,6) → 3 后继窗 = (3,2) 恰为固定日程槽,延时腿到点 → 日程先
+    (2,6) → 3 后继窗 = (3,2) 恰为固定日程槽,延时效果条目到点 → 日程先
     呈现、条目悬置顺延下一窗(scheduled_slot_occupied 披露)——
     (3,2) 钉窗 + 联席环境在场直构,披露键由结构性守卫转真值留证。"""
     b = _backend()

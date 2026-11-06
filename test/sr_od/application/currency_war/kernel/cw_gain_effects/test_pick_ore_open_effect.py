@@ -1,4 +1,4 @@
-"""黄晶矿工(id 302101)立刻腿效果体锁(镜像 src = cw_gain_effects.py
+"""黄晶矿工(id 302101)立刻效果条目效果体锁(镜像 src = cw_gain_effects.py
 _make_ore_open_pick_effect + PICK_INVEST_EFFECTS 工厂条目;按被测模块拆
 目录规范落新位,先例 = 同级 cw_investments/cw_gain_chain 拆目录族)。
 
@@ -11,9 +11,9 @@ T-316-huangjing-kuanggong.md(定稿,REVIEW-T316 无需用户决定 7/7)§4 锁 3
   断言,本文件不重复)。
 
 状态副本写单源说明: spheres/ore_rewards 写经 cw_gain_chain._grant_ores_to_world
-(触发腿+立刻腿同一授予写函数),其撞键/续接/附着语义由
+(触发效果条目+立刻效果条目同一授予写函数),其撞键/续接/附着语义由
 cw_gain_chain/test_check_strategy_ore_open_effects.py 撞键负例锁承载,
-本文件只锁获得链分派接入调用与本腿特有语义(金档固定/分派 rng 消费)。
+本文件只锁获得链分派接入调用与本效果条目特有语义(金档固定/分派 rng 消费)。
 """
 from __future__ import annotations
 
@@ -37,7 +37,7 @@ _CARD = '黄晶矿工'
 
 
 def _make_gs(*, level: int | None = 3) -> GameState:
-    """直构状态容器(持卡由 on_strategy_gained 前置写入;gold 腿不涉——本卡
+    """直构状态容器(持卡由 on_strategy_gained 前置写入;gold 效果条目不涉——本卡
     无经济数值,STRATEGY_ECONOMY 零行)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if level is not None:
@@ -46,7 +46,7 @@ def _make_gs(*, level: int | None = 3) -> GameState:
 
 
 def test_pick_grants_gold_ore_with_attachment() -> None:
-    """立刻腿授予锁(T-316 设计 §4 锁 3):持卡 pick → spheres +1 '金'
+    """立刻效果条目授予锁(T-316 设计 §4 锁 3):持卡 pick → spheres +1 '金'
     点(合成形基准 0 起专用带 (10,10))+ ore_rewards +1 附着。"""
     gs = _make_gs()
     gs.write_logic(gs.active_strategies, [_CARD],

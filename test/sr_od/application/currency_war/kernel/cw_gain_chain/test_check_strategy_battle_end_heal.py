@@ -1,4 +1,4 @@
-"""策略卡战斗结束回血检查腿测试(镜像 src = kernel/cw_gain_chain.py
+"""策略卡战斗结束回血检查效果条目测试(镜像 src = kernel/cw_gain_chain.py
 的 check_strategy_battle_end_heal)。
 
 测试面依据 = 迭代设计 designs/T-325-xingji-heping-baoxian.md §4 锁 3
@@ -10,7 +10,7 @@ end_heal.py 的状态容器直置):
 - 归一通道锁:本卡规范名无分隔符形变支(normalize_invest_name 形变族
   = bullet/全角冒号映射,本卡名不含),归一面 = get_strategy 入口
   直读 STRATEGY_ECONOMY 注册行同实例(单一源,零第二份登记);
-- 节点类型门归调用方(kind ∈ COMBAT_NODE_TYPES 在 sim 结算腿),本函数
+- 节点类型门归调用方(kind ∈ COMBAT_NODE_TYPES 在 sim 结算效果条目),本函数
   对任意持卡局返回合量,sim 侧门锁 =
   sim/cw_sim_backend/test_strategy_battle_end_heal_sim_chain.py。
 """
@@ -60,22 +60,22 @@ def test_held_card_returns_ten() -> None:
 
 
 def test_dual_card_two_functions_independent() -> None:
-    """锁 3c(双卡不相串):星际和平保险 + 奋斗协议同持 → 战斗结束腿
-    恰 10(只 Σ battle_end_heal_hp)、首领战腿恰 50(只 Σ boss_end_heal_
-    hp)——两检查函数独立不相串,族邻腿零交叉污染。"""
+    """锁 3c(双卡不相串):星际和平保险 + 奋斗协议同持 → 战斗结束效果条目
+    恰 10(只 Σ battle_end_heal_hp)、首领战效果条目恰 50(只 Σ boss_end_heal_
+    hp)——两检查函数独立不相串,族邻效果条目零交叉污染。"""
     gs = _gs(_CARD, _BOSS_CARD)
     assert check_strategy_battle_end_heal(gs) == 10, \
-        '战斗结束腿不得混入首领战字段'
+        '战斗结束效果条目不得混入首领战字段'
     assert check_strategy_boss_end_heal(gs) == 50, \
-        '首领战腿不得混入战斗结束字段'
+        '首领战效果条目不得混入战斗结束字段'
 
 
 def test_out_of_registry_card_miss_safe() -> None:
     """锁 3d(归一通道 miss-safe):表外卡经 get_strategy 归一 miss =
-    None 零贡献不炸(与持卡并存时持卡腿照常)。"""
+    None 零贡献不炸(与持卡并存时持卡效果条目照常)。"""
     assert check_strategy_battle_end_heal(_gs('躺平')) == 0, '表外卡零贡献'
     assert check_strategy_battle_end_heal(_gs('躺平', _CARD)) == 10, \
-        '表外卡不吞持卡腿'
+        '表外卡不吞持卡效果条目'
 
 
 def test_normalization_reads_registry_single_source() -> None:

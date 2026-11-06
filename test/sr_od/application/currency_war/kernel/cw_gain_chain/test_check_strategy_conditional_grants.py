@@ -1,10 +1,10 @@
-"""策略卡条件发放检查腿测试(镜像 src = kernel/cw_gain_chain.py 的
+"""策略卡条件发放检查效果条目测试(镜像 src = kernel/cw_gain_chain.py 的
 check_strategy_conditional_grants + kernel/cw_game_state.py 的
 _tick_strategy_conditional_grants 接入调用)。
 
 测试面依据 = 迭代设计 designs/T-102-guimo-xiaoying.md §4 锁 2/3/4/5/9:
 - 构造 = 状态容器直置 + advance_node_effective 驱动(序位前进唯一落账入口,
-  尾段自带 tick_effect_boundary;advanced 位闸下同序位重复 tick 检查腿
+  尾段自带 tick_effect_boundary;advanced 位闸下同序位重复 tick 检查效果条目
   跳过,达标触发必须真实推进——设计稿「直调 tick_effect_boundary」的
   可达形;禁经 gain_character 构造达标态,会对触发面盲区假绿);
 - 持卡 + 池(备战 ∪ 上阵 ∪ 溢出)8 同名单位 → tick → equips 追加完美
@@ -102,7 +102,7 @@ def test_below_threshold_zero_grant_zero_latch() -> None:
 
 def test_no_card_pool_met_zero_grant() -> None:
     """未持卡(锁 2c):池 ≥8 同名但未持卡 → 零发放零一次性标志位(持卡为条件
-    前置,active_strategies ∩ 注册表为空即整腿无候选)。"""
+    前置,active_strategies ∩ 注册表为空即整效果条目无候选)。"""
     gs = _gs_with_card(bench=[(_NAME, 1)] * 8, equips=[], card=None)
     _advance(gs, 1, 1)
     assert gs.equips.value == [], '未持卡误发放'

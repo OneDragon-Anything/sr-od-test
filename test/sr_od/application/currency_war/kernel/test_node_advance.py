@@ -498,7 +498,7 @@ def test_deposit_return_conditional_grant_and_roll(
     assert gs.prev_node_spent.value is False, '开局种子 False(前置)'
     observe_node_anchor(gs, (1, 2), trigger_screen='货币战争-备战',
                         actor=_ACTOR)
-    assert gs.free_refresh_left.value == 2, '未花费首边界 +2(桥条件腿)'
+    assert gs.free_refresh_left.value == 2, '未花费首边界 +2(桥条件效果条目)'
     assert gs.prev_node_spent.value is False, '滚位判等跳写(False 保持)'
 
     # 节点 (1,2) 内买牌上报(置位通道 1)

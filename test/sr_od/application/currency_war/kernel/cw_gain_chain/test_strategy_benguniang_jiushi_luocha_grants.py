@@ -133,7 +133,7 @@ def test_pick_leg_grants_two_star_march(rows_sink: _RowSink) -> None:
 def test_pick_leg_no_merge_with_one_star_copy(rows_sink: _RowSink) -> None:
     """效果条目1 非空备战席回归(锁 2 后半):预置 1★ 三月七 → 2★ 直授零合并
     (合并判据 = 同名同星,星级不同不触发,链现役语义)——升星只走同名
-    同星凑三通道,即时 2★ 与每节点 1★ 复制腿并存是设计语义非缺口。"""
+    同星凑三通道,即时 2★ 与每节点 1★ 复制效果条目并存是设计语义非缺口。"""
     gs = _make_gs(bench=[('三月七', 1)])
     gs.prep_anchored = True
     effects = on_strategy_gained(gs, _CARD, rand=False, sig=_LSIG,

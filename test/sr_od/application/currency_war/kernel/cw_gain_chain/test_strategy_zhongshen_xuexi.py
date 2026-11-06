@@ -1,6 +1,6 @@
 """终身学习(id 330901)行为锁(镜像 src = STRATEGY_PLANE_START_GRANTS
 位面开始专表 + check_strategy_plane_start_grants 窗检查函数 +
-apply_strategy_plane_refire_item 选卡拍补发腿;先例 = 节点条件晶矿发放
+apply_strategy_plane_refire_item 选卡拍补发效果条目;先例 = 节点条件晶矿发放
 三件套锁形 + 位面段补发族[固定理财族同判])。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-367 对应稿
@@ -11,7 +11,7 @@ apply_strategy_plane_refire_item 选卡拍补发腿;先例 = 节点条件晶矿�
 - 表锁:登记行 id/item/count 现值 + KINDS['星徽秘典']=='tome' 正例;
 - 行为锁:持卡局位面首窗(r==1)入席 +1 效果串恰 1 条;r=2 短路零写;
   未持卡零写;未注册卡持卡零写;席满溢出 overflow_card 身份;
-- 补发腿锁:中途拿卡局 gs.node 在场 → 补发 +1;node None 保守零补发。
+- 补发效果条目锁:中途拿卡局 gs.node 在场 → 补发 +1;node None 保守零补发。
 """
 from __future__ import annotations
 
@@ -46,13 +46,13 @@ def _make_gs(held: tuple[str, ...], bench_full: bool = False) -> GameState:
 
 
 def test_table_registration() -> None:
-    """表锁:登记行现值 + KINDS 类别正例 + GRANTS 即时腿已登记。"""
+    """表锁:登记行现值 + KINDS 类别正例 + GRANTS 即时效果条目已登记。"""
     grant = STRATEGY_PLANE_START_GRANTS['终身学习']
     assert grant.id == '330901', f'id 漂移: {grant.id!r}'
     assert grant.item == '星徽秘典', f'item 漂移: {grant.item!r}'
     assert grant.count == 1, f'count 漂移: {grant.count!r}'
     assert BENCH_ITEM_KINDS['星徽秘典'] == 'tome', 'KINDS 类别漂移'
-    assert '终身学习' in STRATEGY_GRANTS, '即时腿 GRANTS 行缺席'
+    assert '终身学习' in STRATEGY_GRANTS, '即时效果条目 GRANTS 行缺席'
     assert STRATEGY_GRANTS['终身学习'].items_immediate == ('星徽秘典',)
 
 
@@ -91,7 +91,7 @@ def test_bench_full_overflow_identity() -> None:
 
 
 def test_refire_item_leg() -> None:
-    """补发腿锁:中途拿卡局 gs.node 在场 → 补发入席;None 保守零补发。"""
+    """补发效果条目锁:中途拿卡局 gs.node 在场 → 补发入席;None 保守零补发。"""
     from sr_od.application.currency_war.sim.cw_sim_backend import (
         apply_strategy_plane_refire_item,
     )

@@ -3,7 +3,7 @@ _begin_node_window 载体消费 + apply_round_start_income floor 透传;新锁
 落拆目录新文件,命名随 test_strategy_*_sim_chain 家族)。
 
 测试面依据 = 迭代设计 designs/T-295-kaiyuan-jieru.md §4 锁 4 + REVIEW-
-T295 §3.3 裁决点 1/2(条件金腿 = 利息分量顶满;tick 捕获→窗口消费):
+T295 §3.3 裁决点 1/2(条件金币效果条目 = 利息分量顶满;tick 捕获→窗口消费):
 - 上节点未花费 → 下窗收入息分量顶满至 resolved 帽 9(金 25 自然息 2
   暴露)+ 载体消费清零 + prev_node_spent 滚回 False;
 - **S2 回归红线用例**:上节点已花费(prev 直写 True 测试缝;置位通道

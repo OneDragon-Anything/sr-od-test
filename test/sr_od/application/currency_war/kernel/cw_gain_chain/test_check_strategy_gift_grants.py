@@ -1,4 +1,4 @@
-"""策略卡赠礼条件两条效果条目发放检查腿测试(镜像 src = kernel/cw_gain_chain.py
+"""策略卡赠礼条件两条效果条目发放检查效果条目测试(镜像 src = kernel/cw_gain_chain.py
 的 ``check_strategy_gift_grants``;分方法拆目录规范落位,新函数落拆目录
 新文件,先例 = 同目录 check_strategy_* 族镜像文件)。
 
@@ -168,7 +168,7 @@ def test_leg2_reward_node_grants_with_latch() -> None:
 
 
 def test_leg2_non_reward_node_zero_write() -> None:
-    """锁 3 门控:非 reward 节点(battle/supply/encounter/boss)整腿跳过
+    """锁 3 门控:非 reward 节点(battle/supply/encounter/boss)整效果条目跳过
     零写(「奖励节点」= 节点类型词分立判读,T-161 口径)。"""
     for kind in ('battle', 'supply', 'encounter', 'boss'):
         gs = _gs(cards=[_CARD], bench=[], equips=[])

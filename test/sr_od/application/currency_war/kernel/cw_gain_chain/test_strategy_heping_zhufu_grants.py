@@ -1,4 +1,4 @@
-"""和平手枪祝福(id 230301)装备腿行为锁(镜像 src = kernel/
+"""和平手枪祝福(id 230301)装备效果条目行为锁(镜像 src = kernel/
 cw_gain_effects.py PICK_INVEST_EFFECTS '和平手枪祝福' 行:具名装备一条效果条目
 ``_make_named_equip_grant_effect('和平手枪', 1)``;按被测方法拆目录规范
 落位——test_gain_chain.py 超线冻结禁追加,新锁落新镜像,先例 = 同目录

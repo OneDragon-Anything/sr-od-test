@@ -6,7 +6,7 @@ REVIEW-T130(无需用户决定 8/8;值域校验按 2026-10-28 治理口径不设
 纯笔误类,游戏版本变更不可能独立触发;孤儿键哨留——版本改名/移除可
 独立触发;直构形态先例 = 同目录 test_strategy_encounter_battle_grants.py):
 - 登记单一源:行值 = 卡面效果原文直读(招财狗 id 103501:「每有一个佩佩
-  就会为你提供1金币」→ 每佩佩 1 金;佩佩召唤腿「获得一个佩佩」归
+  就会为你提供1金币」→ 每佩佩 1 金;佩佩召唤效果条目「获得一个佩佩」归
   cw_gain_effects 具名角色发放名单,不入本表);
 - 计数单位与登记面对拍:本表语义的计数目标单位 = 招财狗登记行
   chars_immediate(卡授予「佩佩」、结算数「佩佩」,同名单一源);
@@ -36,7 +36,7 @@ def test_registry_row_single_source() -> None:
     漂移);注册面 = 族现役首例(同族后续条件金卡各自独立批,禁顺手代
     登记)。"""
     assert set(STRATEGY_WIN_GOLD_GRANTS) == {_CARD}, \
-        '注册面 = win 结算腿族现役首例(同族后续卡各自独立批,禁顺手代登记)'
+        '注册面 = win 结算效果条目族现役首例(同族后续卡各自独立批,禁顺手代登记)'
     assert STRATEGY_WIN_GOLD_GRANTS[_CARD] == 1, \
         f'行值漂移(卡面明写每佩佩 1 金): {STRATEGY_WIN_GOLD_GRANTS!r}'
     assert _CARD in INVESTMENT_STRATEGIES, '键必须在策略注册表'

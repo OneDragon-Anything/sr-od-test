@@ -1,7 +1,7 @@
-"""sim 策略选卡已损血衍生金腿测试(镜像 src = sim/cw_sim_backend.py 的
-_on_invest_picked 已损血衍生金落地腿 + 呈现一次性标志位 + 披露键;kernel 触发函数
+"""sim 策略选卡已损血衍生金币效果条目测试(镜像 src = sim/cw_sim_backend.py 的
+_on_invest_picked 已损血衍生金落地效果条目 + 呈现一次性标志位 + 披露键;kernel 触发函数
 单元面 = kernel/cw_gain_chain/test_check_strategy_hp_loss_gold.py,本文件
-锁 sim 选卡落地腿接入调用与状态副本里的值落地面)。
+锁 sim 选卡落地效果条目接入调用与状态副本里的值落地面)。
 
 测试面依据 = 迭代设计 designs/T-325-xingji-heping-baoxian.md §4 锁 4
 (REVIEW-T325 无需用户决定 7/7;驱动与断言形态先例 = 同目录
@@ -48,7 +48,7 @@ from sr_od.application.currency_war.sim.cw_sim_backend import (
 )
 from sr_od.application.currency_war.sim.cw_sim_run_config import RunConfig
 
-#: 衍生金腿独立笔 evidence 全串(单一源 = cw_sim_base.sim_evidence
+#: 衍生金币效果条目独立笔 evidence 全串(单一源 = cw_sim_base.sim_evidence
 #: 契约:前缀 sim:engine: + 写点 tag strategy:hp_loss_gold)。
 _GOLD_EV = 'sim:engine:strategy:hp_loss_gold'
 
@@ -77,7 +77,7 @@ def _drive_until(b: SimBackend, pred, limit: int = 512) -> None:
 
 
 def _drive_to_offer(b: SimBackend) -> None:
-    """驱动至策略 offer 呈现(固定日程首槽;呈现即置衍生金腿一次性标志位——本腿
+    """驱动至策略 offer 呈现(固定日程首槽;呈现即置衍生金币效果条目一次性标志位——本效果条目
     生效前提)。"""
     _drive_until(b, lambda: b.screen_identity() == SCREEN_INVEST_STRATEGY)
 

@@ -1,4 +1,4 @@
-"""sim 策略卡到级金腿状态副本链测试(镜像 src = sim/cw_sim_backend.py 的
+"""sim 策略卡到级金币效果条目状态副本链测试(镜像 src = sim/cw_sim_backend.py 的
 _on_node_advance / _on_node_advance_terminal 双点接入调用段;kernel 决策函数
 单元面 = kernel/cw_gain_chain/test_check_strategy_level_grants.py,本文件
 锁 sim 接入调用与状态副本里的值落地面)。
@@ -6,7 +6,7 @@ _on_node_advance / _on_node_advance_terminal 双点接入调用段;kernel 决策
 测试面依据 = 迭代设计 designs/T-108-chengzhang-jijin.md §4 锁 1/2/3/6/7/
 8/10(实现批修正:锁 8 文字面 = 现役 NODE_XP_BY_TYPE × PLANE_NODE_TABLES
 (含 P3)常量下完整 P1+P2+P3 持卡局全程零发放,经验写源 = 节点经验 ×
-选卡即时腿两源,上界 96 < 门槛 194 封顶 7 级):
+选卡即时效果条目两源,上界 96 < 门槛 194 封顶 7 级):
 - 跨级发放主链(锁 1,直构状态容器强制 level=8 + xp 贴近阈值〔XP_TO_NEXT_
   LEVEL 单一源,8 级直构可得〕):推进跨 9 → 金 +40 恰一次,双通道形态
   = 金 observe 独立笔(evidence sim:engine:strategy:level_gold:<卡名>,
@@ -25,7 +25,7 @@ _on_node_advance / _on_node_advance_terminal 双点接入调用段;kernel 决策
 
 驱动形态复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py 与
 同目录 test_p3_win_terminal.py(已登记先例,禁追加只 import;整局驱动
-_handle_click_source/_maybe_finish_wait 直调先例 = 本目录 boss 金腿锁)。
+_handle_click_source/_maybe_finish_wait 直调先例 = 本目录 boss 金币效果条目锁)。
 """
 from __future__ import annotations
 
@@ -104,7 +104,7 @@ def _record_level_writes(gs, monkeypatch: pytest.MonkeyPatch) -> list[tuple]:
 
 def _prep_backend(seed: int) -> SimBackend:
     """装配后端至 P1r1 备战屏(调用方负责 uninstall;先例 = 同目录
-    boss 金腿锁 _backend 形)。"""
+    boss 金币效果条目锁 _backend 形)。"""
     b = _backend(seed)
     b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
     b._maybe_finish_wait()
@@ -139,7 +139,7 @@ def test_cross_level_grant_main_chain_then_latch(
         legs = _grant_calls(calls)
         assert len(legs) == 2, f'发放笔数漂移: {[c[:3] for c in legs]}'
         gold_leg, done_leg = legs
-        # 金腿:observe 独立笔(obs 族 sim:strategy),值 = 跨级前 +40
+        # 金币效果条目:observe 独立笔(obs 族 sim:strategy),值 = 跨级前 +40
         assert gold_leg[:2] == ('obs', 'gold'), f'金通道漂移: {gold_leg[:2]}'
         assert gold_leg[3].family == 'obs' \
             and gold_leg[3].group_id == 'sim:strategy', \
@@ -156,7 +156,7 @@ def test_cross_level_grant_main_chain_then_latch(
         assert done_leg[4] == (_CARD,), f'一次性标志位值漂移: {done_leg[4]!r}'
         assert done_leg[5] == 'strategy_level_grant', \
             f'producer 漂移: {done_leg[5]!r}'
-        # 发放拍序:金腿在 xp:node 入账后、窗收入前(跨级事件拍)
+        # 发放拍序:金币效果条目在 xp:node 入账后、窗收入前(跨级事件拍)
         idx_xp = next(i for i, c in enumerate(calls)
                       if c[1] == 'level' and c[2] == 'sim:engine:xp:node')
         idx_income = next(i for i, c in enumerate(calls)
@@ -235,7 +235,7 @@ def test_terminal_cross_grants_before_game_over(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """局终跨级(锁 7):末节点经验入账跨 9 → 发放先于局终声明(双点之
     二;直构 = 备战窗强置级/xp 后直调局终推进 handler,handler 内序 =
-    经验入账 → 金腿 → 局终披露与收尾)。"""
+    经验入账 → 金币效果条目 → 局终披露与收尾)。"""
     b = _prep_backend(26)
     try:
         gs = b.gs
@@ -265,7 +265,7 @@ def test_dormant_full_p3_run_zero_grant(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """休眠边界(锁 8,慢桶):完整 P1+P2+P3 持卡局(seed 37 胜局基准,
     _drive_step 全程分派)全程零发放 ∧ 全程等级 < 9——现役经验两源
-    (节点经验表 × 选卡即时腿)上界 96 < 3→9 级门槛 194,封顶 7 级;
+    (节点经验表 × 选卡即时效果条目)上界 96 < 3→9 级门槛 194,封顶 7 级;
     经验常量/序列变更使 9 级可达时本锁先红 = 触发边界重申报。"""
     b = _prep_backend(37)
     try:

@@ -173,7 +173,7 @@ def test_prereg_spy_closure_full_match(test_context: Any,
     全溢出(placed=0/ovf=3,实测),种子实例断言随已申报的轨迹位移失效
     ——判据改为与批跑同形的条件式(入席 > 0 局须有 spy_steal 观察写行),
     不钉轨迹统计值。信号来源代次(迭代 2026-09-23-invest-effects-calc
-    T-434)恢复重开腿对节点时点源成立,守恒式 spy_deals == reopens 本
+    T-434)恢复重开效果条目对节点时点源成立,守恒式 spy_deals == reopens 本
     seed 实测 1 == 1。"""
     from sr_od.application.currency_war.sim import cw_sim_backend
 

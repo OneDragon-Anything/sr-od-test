@@ -1,4 +1,4 @@
-"""策略卡死亡救援触发检查腿测试(镜像 src = kernel/cw_gain_chain.py 的
+"""策略卡死亡救援触发检查效果条目测试(镜像 src = kernel/cw_gain_chain.py 的
 take_strategy_death_save)。
 
 测试面依据 = 迭代设计 designs/T-323-cang-yishou.md §4 锁 2/6 + 用户裁定
@@ -45,7 +45,7 @@ def _gs(*, card: bool = True, hp: int | None = 10,
         latch: bool | None = None) -> GameState:
     """直构 gs(节点 P1r3 观察定 evidence 帧;gold/hp 观察定发放承载;
     card = 持卡态;hp=None = 基座未观察态;latch = 预置一次性标志位值)。等级基座
-    取 9 级(XP_TO_NEXT_LEVEL[9]=84 > 载荷 30,经验腿单笔不触发跨级
+    取 9 级(XP_TO_NEXT_LEVEL[9]=84 > 载荷 30,经验效果条目单笔不触发跨级
     level 连写——跨级连锁归 grant_xp 原语自身测试域)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.observe(gs.node, NodeKey(plane=1, round_num=3, kind='battle'),

@@ -1,5 +1,5 @@
-"""sim 策略选卡即时生命腿测试(镜像 src = sim/cw_sim_backend.py 的
-apply_strategy_pick_hp helper + _on_invest_picked 落地腿 + 呈现一次性标志位 +
+"""sim 策略选卡即时生命效果条目测试(镜像 src = sim/cw_sim_backend.py 的
+apply_strategy_pick_hp helper + _on_invest_picked 落地效果条目 + 呈现一次性标志位 +
 披露键 strategy_pick_instant_legs hp 族扩面)。
 
 测试面依据 = 迭代设计 designs/T-127-jiankang-chongzhi.md §2.1/§4 三锁:
@@ -7,7 +7,7 @@ apply_strategy_pick_hp helper + _on_invest_picked 落地腿 + 呈现一次性标
   笔 ``hp:strategy_pick:健康充值``(与开局 ``opening``/战斗
   ``battle:hp`` 笔分账),hp_trail 同步恰追加(落卡前/后/下一战斗三读),
   开局笔与战斗笔不受扰;
-- 呈现一次性标志位防重放(锁 2):同 offer 落地 advance 重放 → 第二次零写(xp 腿
+- 呈现一次性标志位防重放(锁 2):同 offer 落地 advance 重放 → 第二次零写(xp 效果条目
   一次性标志位锁同形,轨迹亦不再追加);
 - 无卡局零扰动(锁 3):opts 含本卡但不落卡(选另一张)→ 落地交集空 →
   零 ``hp:strategy_pick`` 笔、hp 零增量(名单推导负例,防误发)。
@@ -51,7 +51,7 @@ from sr_od.application.currency_war.sim.cw_sim_backend import (
 )
 from sr_od.application.currency_war.sim.cw_sim_run_config import RunConfig
 
-#: hp 即时腿独立笔 evidence 前缀(单一源 = cw_sim_base.sim_evidence
+#: hp 即时效果条目独立笔 evidence 前缀(单一源 = cw_sim_base.sim_evidence
 #: 契约:前缀 sim:engine: + 写点 tag hp:strategy_pick:<卡名>)。
 _HP_EV_PREFIX = 'sim:engine:hp:strategy_pick:'
 
@@ -84,7 +84,7 @@ def _drive_until(b: SimBackend, pred, limit: int = 512) -> None:
 
 def _drive_to_offer(b: SimBackend) -> None:
     """驱动至策略 offer 呈现(固定日程首槽 P1r3 起;呈现即置即时生命
-    腿一次性标志位——本腿生效前提)。"""
+    效果条目一次性标志位——本效果条目生效前提)。"""
     _drive_until(b, lambda: b.screen_identity() == SCREEN_INVEST_STRATEGY)
 
 
@@ -104,7 +104,7 @@ def _pick(b: SimBackend, name: str, opts: list[str]) -> WorldDecl:
 def test_pick_grants_exact_instant_hp_with_trail_append() -> None:
     """持卡发放真值(锁 1):offer 落地后 hp 恰 +30,独立 evidence 笔与
     开局/战斗笔分账,hp_trail 落卡前/后/下一战斗三读同步恰追加——开局
-    笔不被扰、下一战斗笔照常落账(写流↔轨迹同构的选卡腿延伸形态)。"""
+    笔不被扰、下一战斗笔照常落账(写流↔轨迹同构的选卡效果条目延伸形态)。"""
     b = _backend()
     try:
         gs = b.gs
@@ -207,7 +207,7 @@ def test_negative_no_clip_floor_branch_next_lost_battle() -> None:
     """不 clip 下界 + §1.4 机械推论(锁 5):直构 hp=15 → 选卡写 −5
     (负值直加不 clip,hp 出负 = 下界无消费端语义);下一败局结算按
     apply_hp_outcome ≤0 分支 → 首次保底剩 1(floor 位写真)。钉死
-    「腿不 clip」默认案与「选卡写不经 floor 判定」边界。"""
+    「效果条目不 clip」默认案与「选卡写不经 floor 判定」边界。"""
     b = _backend(seed=45)
     mp = pytest.MonkeyPatch()
     try:
@@ -230,7 +230,7 @@ def test_negative_no_clip_floor_branch_next_lost_battle() -> None:
 
 
 def test_pick_loss_feeds_insurance_accumulator_hook() -> None:
-    """扩调用点行为锁(漂移增量):持保险局直构选卡先亏后盈 → 损血腿
+    """扩调用点行为锁(漂移增量):持保险局直构选卡先亏后盈 → 损血效果条目
     写后同拍调 check_strategy_hp_loss_grants:−20 换算 +20 损失入累计
     器(非「减负」)→ 档位当拍触发:金 +5(桶数 1)∧ 简易装备 +1 件
     ∧ 累计器取模回 0。扩调用点缺位时此局静默漏计(披露键 ③ 申报形态),
@@ -246,7 +246,7 @@ def test_pick_loss_feeds_insurance_accumulator_hook() -> None:
         equips_before = list(gs.equips.value or [])
         trail_before = len(b.hp_trail)
         _pick(b, '先亏后盈', ['先亏后盈', '躺平', '淘金客'])
-        assert gs.hp.value == hp_before - 20, '前置:损血腿应写 −20'
+        assert gs.hp.value == hp_before - 20, '前置:损血效果条目应写 −20'
         assert len(b.hp_trail) == trail_before + 1, '前置:轨迹恰追加一笔'
         assert gs.strategy_hp_loss_accum.value == 0, \
             f'累计器应 +20 入账后取模回 0: {gs.strategy_hp_loss_accum.value}'
@@ -265,7 +265,7 @@ def test_dual_hold_independent_pens_not_aggregated() -> None:
     只防同卡,跨卡双持可达——前置持健康充值局再拿先亏后盈,opts 交集
     命中两卡)→ +30 与 −20 各自独立 hp 写行按 opts 序落账([b+30,
     b+10] 两行,互不聚合 = 禁聚合通道回归,聚合字段集不含 hp_instant);
-    轨迹按写行粒度恰 +2(追加读现值语义 = 腿返回笔数,同拍多笔共用
+    轨迹按写行粒度恰 +2(追加读现值语义 = 效果条目返回笔数,同拍多笔共用
     末值,逐值对拍归单笔锁)。"""
     b = _backend(seed=47)
     mp = pytest.MonkeyPatch()

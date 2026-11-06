@@ -1,7 +1,7 @@
 """策略卡首领通关价值金 sim 状态副本链测试(镜像 src = sim/cw_sim_backend.py
-的 _resolve_battle 首领通关价值金腿;kernel 触发函数单元面 =
+的 _resolve_battle 首领通关价值金币效果条目;kernel 触发函数单元面 =
 kernel/cw_gain_chain/test_check_strategy_boss_clear_gold.py,本文件锁
-sim 结算腿接入调用与状态副本里的值落地面)。
+sim 结算效果条目接入调用与状态副本里的值落地面)。
 
 测试面依据 = 迭代设计 designs/T-332-souda-che.md §4 锁 3/锁 4(驱动与
 断言形态先例 = 同目录 test_strategy_boss_completion_grant_sim_chain.py
@@ -150,7 +150,7 @@ def _drive_to_kind_prep(monkeypatch: pytest.MonkeyPatch, b: SimBackend,
                         *, target_kind: str) -> None:
     """自当前窗驱动到指定位面节点类型的备战窗(途经战斗/奖励节点
     全胜强制穿过,中间屏走现役驱动步;目标判定 = 节点窗场字段 kind
-    序列真值;同目录 boss 战后腿锁同形副本)。"""
+    序列真值;同目录 boss 战后效果条目锁同形副本)。"""
     gs = b.gs
     for _ in range(120):
         node = gs.node.value
@@ -252,8 +252,8 @@ def test_second_won_boss_no_repeat_after_latch(
             f'前置:应达 P2 首领位备战窗(plane={gs.node.value.plane})'
         _force_settle(monkeypatch, won=True)
         _start_battle_feed(gs)
-        # 一次性标志位后零重复判据 = 本腿前缀笔零新增(gold 全列表会混入 P2 途程
-        # 其他收入通道产出,非本腿语义面)。
+        # 一次性标志位后零重复判据 = 本效果条目前缀笔零新增(gold 全列表会混入 P2 途程
+        # 其他收入通道产出,非本效果条目语义面)。
         assert _gold_rows(calls) == [], '一次性标志位后跨位面首领重复发金'
         assert _latch_rows(calls) == [], '一次性标志位后零新一次性标志位写笔'
         assert _CARD in (gs.strategy_conditional_done.value or ()), '一次性标志位漂移'

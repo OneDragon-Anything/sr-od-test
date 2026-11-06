@@ -144,7 +144,7 @@ def test_conversion_bench_unobserved_zero_write() -> None:
 def test_non_simple_categories_pass_through(cat: str,
                                             rows_sink: _RowSink) -> None:
     """类别边界(设计 §4 锁 3):非登记源类别获得不转换照常入栏(转换
-    谓词按注册类别判;骇客改件腿注册类别 = '特殊' 不命中,设计 §1.3
+    谓词按注册类别判;骇客改件效果条目注册类别 = '特殊' 不命中,设计 §1.3
     辨析回归)。取样排除后果表成员,隔离 on_equipment_gained 追加入席
     干扰(本锁只断言入栏与零箱,后果面非辖域)。"""
     from sr_od.application.currency_war.kernel.cw_effect_inventory import (
@@ -206,8 +206,8 @@ def test_pick_chain_self_conversion_net_one_box(rows_sink: _RowSink) -> None:
 
 def test_rng_draw_count_identical_with_and_without_card() -> None:
     """掷序不变(设计 §4 锁 6):同 seed 持/不持卡两局随机数消耗一致
-    (转换确定事件零 rng 消费;对照局 = 同族随机简易腿卡 打捞人才库+,
-    无转换腿)。状态副本差异仅在写入内容:持卡局 bench +1 箱 equips 空,
+    (转换确定事件零 rng 消费;对照局 = 同族随机简易效果条目卡 打捞人才库+,
+    无转换效果条目)。状态副本差异仅在写入内容:持卡局 bench +1 箱 equips 空,
     对照局 equips +1 简易件。"""
     gs_a = _make_gs(bench=[], equips=[])
     rng_a = random.Random(_SEED)

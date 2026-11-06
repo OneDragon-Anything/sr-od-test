@@ -1,4 +1,4 @@
-"""枪在手(id 200501)即时腿随机简易装备发放锁(镜像 src = kernel/
+"""枪在手(id 200501)即时效果条目随机简易装备发放锁(镜像 src = kernel/
 cw_gain_effects.py 的泛化随机装备表 ``_STRATEGY_RANDOM_EQUIP_GRANTS``
 '枪在手' 行('简易', 1)+ 工厂 ``_make_random_equip_effect('简易', 1)``
 经 ``PICK_INVEST_EFFECTS`` 生成式注册;按被测方法拆目录规范落位——
@@ -10,12 +10,12 @@ T-166-qiang-zaishou.md(定稿)§4 锁 1(骑 T-136 锁形,行身份锁):
 - 固定 rng 注入链发放真值(选卡落地拍:equips 恰 +1、名 ∈ 简易池派生集
   且 = 采样值、效果串恰 1 条 ``strategy_random_equip:<名>``——锁成员
   关系不锁池计数)/equips 未观察拒落跳写形态;
-- 同卡战后腿(「首领战后,获得1件随机简易装备」)不入本表——触发时点
-  非选卡拍,归 cw_investments.STRATEGY_BOSS_BATTLE_GRANTS + sim 结算腿
+- 同卡战后效果条目(「首领战后,获得1件随机简易装备」)不入本表——触发时点
+  非选卡拍,归 cw_investments.STRATEGY_BOSS_BATTLE_GRANTS + sim 结算效果条目
   (登记面锁 = kernel/cw_investments/test_strategy_boss_battle_grants.py,
   行为链锁 = 同目录 test_check_strategy_boss_battle_grants.py 与 sim/
   cw_sim_backend/test_strategy_boss_battle_grant_sim_chain.py,两条效果条目分域);
-- rand 语义锁(采样腿 write_logic_rand 通道、不触发失配网)由
+- rand 语义锁(采样写走 write_logic_rand 通道、不触发失配网)由
   test_gain_chain.test_random_equip_leg_rand_channel_subchain 辖——
   同一工厂路径的通道语义,本行与该锁同为 '简易' 类别实参,类别实参不
   改变通道选择,不重复立锁(公司军火更新·银先例同判)。
@@ -52,7 +52,7 @@ _SIMPLE_SEED = 20261102
 def _make_gs(*, bench: list[tuple[str, int]] | None = None,
              equips: list[str] | None = None) -> GameState:
     """观测面按参组装(None = 保持未观察;镜像 test_gain_chain._make_gs
-    的 bench/equips 两支,本卡即时腿只涉这两域)。"""
+    的 bench/equips 两支,本卡即时效果条目只涉这两域)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if bench is not None:
         slots = [BenchSlot(kind='unit', unit=Unit(char_id=c, star=s))

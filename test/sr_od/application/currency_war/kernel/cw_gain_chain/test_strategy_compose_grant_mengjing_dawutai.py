@@ -5,15 +5,15 @@ cw_gain_effects.py PICK_INVEST_EFFECTS '梦境大舞台' 行:
 test_strategy_compose_grant_gangtie.py 钢铁美学单角色形)。
 
 测试面依据 = 迭代设计 designs/T-271-mengjing-dawutai.md §4 锁 6
-(卡面句③「获得【花火】」即时角色腿骑厂交付;句② 条件装备腿走
-STRATEGY_BOND_TIER_GRANTS + 结算拍检查腿另表,两注册面分治——GRANTS
+(卡面句③「获得【花火】」即时角色效果条目骑厂交付;句② 条件装备效果条目走
+STRATEGY_BOND_TIER_GRANTS + 结算拍检查效果条目另表,两注册面分治——GRANTS
 条目 equips_immediate 维持 (),条件发放禁误补即时字段):
 
 - 组合行单一源:组合行已登记(泛化表零本卡键负断言防回退撞键);
 - 行为链真值:确定入口 → 恰一角色入栏(花火 1★)、效果串恰 1 条
   char_grant、equips 零写(本行只辖角色句)、rng 零消费;
 - 词表隔离锁:'盛会之星星徽' ∉ BENCH_ITEM_NAMES(星徽系装备非占席,
-  条件腿发放物不入占席道具词表)。
+  条件效果条目发放物不入占席道具词表)。
 """
 from __future__ import annotations
 
@@ -69,7 +69,7 @@ def test_mengjing_compose_row_single_source() -> None:
 
 def test_mengjing_chain_places_huohi_only() -> None:
     """行为链真值:确定入口 → 恰一角色入栏(花火)、效果串恰 1 条
-    char_grant、equips 零写(本行只辖句③角色句,条件装备腿不入效果
+    char_grant、equips 零写(本行只辖句③角色句,条件装备效果条目不入效果
     体)、rng 零消费。"""
     gs = _make_gs(bench=[], equips=[])
     gs.prep_anchored = True
@@ -87,12 +87,12 @@ def test_mengjing_chain_places_huohi_only() -> None:
              if s.kind == 'unit' and s.unit]
     assert stars == [1], f'1★ 先验家族口径: {stars}'
     assert gs.bench.source == 'logic', '确定发放走确定面'
-    assert gs.equips.value == [], 'equips 应零写(装备腿另表)'
+    assert gs.equips.value == [], 'equips 应零写(装备效果条目另表)'
     assert rng0.getstate() == rng_state0, '零随机面(rng 不消费)'
 
 
 def test_badge_equip_not_bench_item() -> None:
     """词表隔离锁:'盛会之星星徽' ∉ BENCH_ITEM_NAMES(星徽系装备归
-    equips 装备库存域;错入占席词表会让条件腿发放被误判占席道具)。"""
+    equips 装备库存域;错入占席词表会让条件效果条目发放被误判占席道具)。"""
     assert '盛会之星星徽' not in BENCH_ITEM_NAMES, \
         '星徽发放物禁入占席道具词表'

@@ -1,7 +1,7 @@
 """策略卡首领战后随机装备发放 sim 状态副本链测试(镜像 src =
-sim/cw_sim_backend.py 的 _resolve_battle 首领战后腿;kernel 触发函数
+sim/cw_sim_backend.py 的 _resolve_battle 首领战后效果条目;kernel 触发函数
 单元面 = kernel/cw_gain_chain/test_check_strategy_boss_battle_grants.py,
-本文件锁 sim 结算腿接入调用与状态副本里的值落地面)。
+本文件锁 sim 结算效果条目接入调用与状态副本里的值落地面)。
 
 测试面依据 = 迭代设计 designs/T-166-qiang-zaishou.md §4 锁 2/3/4/5/6/9
 + REVIEW-T166(驱动与断言形态先例 = 同目录 test_strategy_encounter_
@@ -64,7 +64,7 @@ from sr_od.application.currency_war.sim.cw_sim_backend import (
 
 _CARD = '枪在手'
 #: T-167 展开卡参数化扩名(designs/T-167-qiang-zaishou-plus.md §4 锁 2
-#: +1 名;战后腿与模式卡逐字同句,端到端行身份 = evidence 前缀分卡)。
+#: +1 名;战后效果条目与模式卡逐字同句,端到端行身份 = evidence 前缀分卡)。
 _CARD_PLUS = '枪在手+'
 _MOD_ENV = '人身意外险'
 _PLANE_TRANSITION = '货币战争-位面过渡'
@@ -166,7 +166,7 @@ def _drive_to_kind_prep(monkeypatch: pytest.MonkeyPatch, b: SimBackend,
                         *, target_kind: str) -> None:
     """自当前窗驱动到指定位面 1 节点类型的备战窗(途经战斗/奖励节点
     全胜强制穿过,中间屏走现役驱动步;目标判定 = 节点窗场字段 kind
-    序列真值;同目录 win 金腿/损血腿锁同形副本)。"""
+    序列真值;同目录 win 金币效果条目/损血效果条目锁同形副本)。"""
     gs = b.gs
     for _ in range(80):
         node = gs.node.value
@@ -309,7 +309,7 @@ def test_dead_battle_no_grant(
 def test_settled_key_guard_no_double_grant(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """锁 6(幂等回归):同 boss 节点战斗重放(battle_resolve 重入)→
-    _settled_key 既有守卫整段跳过,零二次发放零新增笔(防本腿绕过)。"""
+    _settled_key 既有守卫整段跳过,零二次发放零新增笔(防本效果条目绕过)。"""
     b = _prep_backend(76)
     try:
         gs = b.gs
@@ -332,7 +332,7 @@ def test_modified_plane_boss_follows_sequence(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """锁 9(修饰局跟随,序列现值判定非硬编码轮次):插入型修饰局
     (人身意外险,boss 位前插 supply)P1 序列的 boss 位次由序列真值
-    派生(默认 P1 末位 r9 → 修饰局 r10);触发腿 node_kind 传结算点
+    派生(默认 P1 末位 r9 → 修饰局 r10);触发效果条目 node_kind 传结算点
     现值,序列重构零特判跟随。"""
     b = _prep_backend_env(77, _MOD_ENV)
     try:

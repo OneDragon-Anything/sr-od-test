@@ -1,11 +1,11 @@
-"""策略延时 offer 倒计时递减腿测试(镜像 src = kernel/cw_game_state.py 的
+"""策略延时 offer 倒计时递减效果条目测试(镜像 src = kernel/cw_game_state.py 的
 _tick_pending_strategy_offers + _tick_effect_boundary_impl 接入调用)。
 
 测试面依据 = 迭代设计 designs/T-98-huangjin-qihuo.md §4 锁 3(3 条):
 - 计数起点 = 拿卡节点第 N 后继节点窗(拿卡窗内登记不递减,后继推进
   逐次减 1,第 5 后继窗减到 0);
 - 同节点重复 tick 零递减(与效果账本 advance_node 同一 advanced 位闸);
-- remaining=0 悬置不越减(到点条目待呈现,递减腿永不写负);
+- remaining=0 悬置不越减(到点条目待呈现,递减效果条目永不写负);
 - 空队列 tick 零写。
 
 驱动口 = advance_node_effective(序位前进唯一落账入口,尾段自带
@@ -83,7 +83,7 @@ def test_zero_entry_suspended_no_over_decrement() -> None:
 
 
 def test_empty_queue_tick_zero_write() -> None:
-    """空队列 tick 零写:递减腿队空早退,无队列行(write_logic 无同值
+    """空队列 tick 零写:递减效果条目队空早退,无队列行(write_logic 无同值
     去重,省行惯例 = 调用方早退)。"""
     gs = _gs_with_card_at(1, 1, remaining=None)
     seq_before = gs.write_seq

@@ -1,4 +1,4 @@
-"""无伤通关(id 103001)具名装备授予腿锁(镜像 src = kernel/cw_gain_effects.py
+"""无伤通关(id 103001)具名装备授予效果条目锁(镜像 src = kernel/cw_gain_effects.py
 的 ``PICK_INVEST_EFFECTS`` 直书登记行「无伤通关」;具名装备授予族后继卡,
 族模式卡 = 全员晋升——工厂语义锁住同目录姊妹镜像 test_strategy_named_equip_
 grant.py,本文件只锁本卡登记面 + 行为面 + 零建模边界,按被测方法拆目录规范
@@ -6,14 +6,14 @@ grant.py,本文件只锁本卡登记面 + 行为面 + 零建模边界,按被测�
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
 T-122-wushang-tongguan.md(定稿)§4 锁面 + REVIEW-T122 §四 ③/④ 裁决默认案:
-- 即时腿 = 卡文句 2「立即获得1个【生命之花】」:登记行直书
+- 即时效果条目 = 卡文句 2「立即获得1个【生命之花】」:登记行直书
   ``_make_named_equip_grant_effect('生命之花', 1)``,具名确定发放
   ``gain_equipment(rand=False)`` 单件入栏,效果串恰一条含 placed
   (gain-chain.md §5:卡文无随机词);
-- 条件金腿 = 卡文句 1「战斗结束时，若此次战斗中没有角色陷入过无法战斗状态，
+- 条件金币效果条目 = 卡文句 1「战斗结束时，若此次战斗中没有角色陷入过无法战斗状态，
   获得1金币。」实机(live)和模拟器(sim)两边真值皆盲零建模(权威版本 = invest_effects.md §8 型③成员;
   记录模型不经 instant_gold 消费,fields.md §4.1 观察覆盖兜底)——金零写
-  钉死进腿锁 + STRATEGY_EFFECTS 反向锁钉死「零建模是有意裁决非漏登记」;
+  钉死进效果条目锁 + STRATEGY_EFFECTS 反向锁钉死「零建模是有意裁决非漏登记」;
 - 精密金面前置按物判(判据映射只挂拆装扳手):生命之花 gate 恒 None 走
   纯发放循环,精密在场照常入栏零申报行(卡级前置分支零遗传的登记面回归,
   与姊妹镜像的工厂直呼形态互补)。
@@ -92,10 +92,10 @@ def rows_sink() -> _RowSink:
 
 def test_wushang_tongguan_grant_leg_places_flower(
         rows_sink: _RowSink) -> None:
-    """登记面 + 腿行为主锁:gain_invest_strategy 全链(rand=False)→ 注册
-    入表 + equips 恰 +1 生命之花、写数恰 +2(注册 1 + 腿 1;②段账本登记
+    """登记面 + 效果条目行为主锁:gain_invest_strategy 全链(rand=False)→ 注册
+    入表 + equips 恰 +1 生命之花、写数恰 +2(注册 1 + 效果条目 1;②段账本登记
     session=None 跳过)、来源 = 确定面 logic、效果串恰一条含 placed=True
-    (效果串仅 named_equip_grant 前缀——金腿零建模不进效果体);条件金腿
+    (效果串仅 named_equip_grant 前缀——金币效果条目零建模不进效果体);条件金币效果条目
     零建模钉死(gold 值与来源双不动);板面域(bench/deployed)零写;
     正常路径零申报行。"""
     assert '无伤通关' in PICK_INVEST_EFFECTS, '登记面已登记'
@@ -108,13 +108,13 @@ def test_wushang_tongguan_grant_leg_places_flower(
     assert gs.equips.value == ['生命之花'], '具名单件入栏恰 1 件'
     assert gs.equips.source == 'logic', '确定发放走确定面'
     assert gs.equips.evidence == 'pick_invest_named_equip#equip', \
-        '腿写端 evidence(#equip 后缀一笔)'
+        '效果条目写端 evidence(#equip 后缀一笔)'
     assert gs.write_seq - seq_before == 2, \
         '写数恰 2 = 注册 1 + 装备效果条目 1(②段账本登记 session=None 跳过)'
     assert out.effects == ('named_equip_grant:生命之花(placed=True)',), \
         '效果串恰一条含 placed'
     assert gs.gold.value == 10 and gs.gold.source == 'observation', \
-        '条件金腿零建模钉死(金面禁直写,真值归观察覆盖兜底)'
+        '条件金币效果条目零建模钉死(金面禁直写,真值归观察覆盖兜底)'
     assert len(bench_units_of(gs)) == 1, 'bench 零变化'
     assert gs.deployed.value is None, 'deployed 未观察保持未写(板面零建模)'
     assert rows_sink.kinds() == [], '正常路径零申报行'
@@ -153,11 +153,11 @@ def test_wushang_tongguan_unobserved_reject_auditable(
 
 
 def test_wushang_tongguan_condition_gold_zero_modeling_boundary() -> None:
-    """条件金腿零建模反向锁(设计 §4 锁 4 现值基准改形:BATTLE_END 枚举成员
+    """条件金币效果条目零建模反向锁(设计 §4 锁 4 现值基准改形:BATTLE_END 枚举成员
     已随死代码清偿移除,反向基准改挂 STRATEGY_EFFECTS 键集):「无伤通关」∉
-    STRATEGY_EFFECTS——条件金腿零建模是有意裁决非漏登记(触发事件「角色
+    STRATEGY_EFFECTS——条件金币效果条目零建模是有意裁决非漏登记(触发事件「角色
     陷入无法战斗」sim 无生产点/live 结算屏无观察识别标志,权威版本 = invest_effects.
     md §8 型③成员点名 + effect-domain.md §7.4 候选点名在卷;启用 = 各自
     建模批先立规格条目再接事件源,防后续批静默补条目破坏观察覆盖兜底口径)。"""
     assert '无伤通关' not in STRATEGY_EFFECTS, \
-        '零建模边界:条件腿无 STRATEGY_EFFECTS 条目(有意裁决非漏登记)'
+        '零建模边界:条件效果条目无 STRATEGY_EFFECTS 条目(有意裁决非漏登记)'

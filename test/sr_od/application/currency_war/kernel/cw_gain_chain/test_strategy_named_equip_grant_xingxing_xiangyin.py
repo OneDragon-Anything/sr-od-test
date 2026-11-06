@@ -1,4 +1,4 @@
-"""星星相印(id 104001)具名装备授予腿锁(镜像 src = kernel/cw_gain_effects.py
+"""星星相印(id 104001)具名装备授予效果条目锁(镜像 src = kernel/cw_gain_effects.py
 的 ``PICK_INVEST_EFFECTS`` 直书登记行「星星相印」;具名装备授予族后继卡,
 族模式卡 = 全员晋升——工厂语义锁住同目录姊妹镜像 test_strategy_named_equip_
 grant.py,本文件只锁本卡登记面 + 行为面,按被测方法拆目录规范落位,先例 =
@@ -11,8 +11,8 @@ xiangyin.md(定稿)§4 锁 4 + REVIEW-T135 §四 ④:
   ``gain_equipment(rand=False)`` 单件入栏,效果串恰一条含 placed;
 - 精密金面前置按物判(判据映射只挂拆装扳手):员工投影仪 gate 恒 None
   走纯发放循环,精密在场照常入栏零申报行(卡级前置分支零遗传);
-- 合成金腿(卡文句 1)= STRATEGY_EFFECTS ON_MERGE 条目 + 合成事件发放
-  腿另路(kernel),两条效果条目异族不入本文件辖域(金腿行为面 = 姊妹镜像
+- 合成金币效果条目(卡文句 1)= STRATEGY_EFFECTS ON_MERGE 条目 + 合成事件发放
+  效果条目另路(kernel),两条效果条目异族不入本文件辖域(金币效果条目行为面 = 姊妹镜像
   test_check_strategy_star_merge_gold.py)。
 """
 from __future__ import annotations
@@ -48,8 +48,8 @@ _ITEM = '员工投影仪'
 
 
 def _make_gs(*, equips: list[str] | None = None) -> GameState:
-    """观测面按参组装(None = 保持未观察,供拒落分支;本卡装备腿只涉
-    equips 域,bench 恒空场 + gold 未读 = 金腿域零干扰对照)。"""
+    """观测面按参组装(None = 保持未观察,供拒落分支;本卡装备效果条目只涉
+    equips 域,bench 恒空场 + gold 未读 = 金币效果条目域零干扰对照)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     slots = [BenchSlot(kind='unit', unit=Unit(char_id='希儿', star=1)),
              BenchSlot(kind='empty')]
@@ -86,10 +86,10 @@ def rows_sink() -> _RowSink:
 
 def test_xingxing_xiangyin_grant_leg_places_projector(
         rows_sink: _RowSink) -> None:
-    """登记面 + 腿行为主锁:gain_invest_strategy 全链(rand=False)→ 注册
-    入表 + equips 恰 +1 员工投影仪、写数恰 +2(注册 1 + 腿 1;②段账本
+    """登记面 + 效果条目行为主锁:gain_invest_strategy 全链(rand=False)→ 注册
+    入表 + equips 恰 +1 员工投影仪、写数恰 +2(注册 1 + 效果条目 1;②段账本
     登记 session=None 跳过)、来源 = 确定面 logic、效果串恰一条含
-    placed=True;金腿异族不入效果体(gold 未读保持未读,零金写);
+    placed=True;金币效果条目异族不入效果体(gold 未读保持未读,零金写);
     板面域(bench/deployed)零写;正常路径零申报行。"""
     assert _CARD in PICK_INVEST_EFFECTS, '登记面已登记'
     gs = _make_gs(equips=[])
@@ -101,12 +101,12 @@ def test_xingxing_xiangyin_grant_leg_places_projector(
     assert gs.equips.value == [_ITEM], '具名单件入栏恰 1 件'
     assert gs.equips.source == 'logic', '确定发放走确定面'
     assert gs.equips.evidence == 'pick_invest_named_equip#equip', \
-        '腿写端 evidence(#equip 后缀一笔)'
+        '效果条目写端 evidence(#equip 后缀一笔)'
     assert gs.write_seq - seq_before == 2, \
         '写数恰 2 = 注册 1 + 装备效果条目 1(②段账本登记 session=None 跳过)'
     assert out.effects == (f'named_equip_grant:{_ITEM}(placed=True)',), \
         '效果串恰一条含 placed'
-    assert gs.gold.value is None, '金腿异族不入效果体(装备腿零金写)'
+    assert gs.gold.value is None, '金币效果条目异族不入效果体(装备效果条目零金写)'
     assert len(bench_units_of(gs)) == 1, 'bench 零变化'
     assert gs.deployed.value is None, 'deployed 未观察保持未写(板面零建模)'
     assert rows_sink.kinds() == [], '正常路径零申报行'

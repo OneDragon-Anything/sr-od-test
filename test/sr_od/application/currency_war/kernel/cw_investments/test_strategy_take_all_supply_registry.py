@@ -2,7 +2,7 @@
 map 一致性 + 单取链登记缺位。族 = 银 id 131001 / 金 id 203501 /
 彩 id 331701)。
 
-- 登记锁:每卡两条 EffectSpec(canon 键 = 发放腿 / 申报键 = 列数修饰腿)
+- 登记锁:每卡两条 EffectSpec(canon 键 = 发放类效果条目 / 申报键 = 列数修饰效果条目)
   过 ``_validate_strategy_effects``(import 即炸,本文件 import 即过);
 - 配额 map-注册表一致性锁(表域测试,不入 import 校验——2026-10-28 治理
   口径「防登记笔误校验不加」,先例 = 先亏后盈 count/打捞族):map 键集 ⊆
@@ -38,7 +38,7 @@ _SIG_OBS = ChannelSig(family='obs', actor='test', mode='read')
 
 
 _FAMILY_SPECS: dict[str, tuple[str, str]] = {
-    # 卡名 → (plaza id, 发放腿持续期值):银配额 1 = ONCE 一次性形;
+    # 卡名 → (plaza id, 发放类效果条目持续期值):银配额 1 = ONCE 一次性形;
     # 金配额 2 = WHILE_HELD(「下2个」非一次性,计数一次性标志位承载耗尽即停);
     # 彩 recurring 无配额(None = 无界,恒放行无耗尽态)= WHILE_HELD。
     '全都要·银': ('131001', 'once'),
@@ -48,8 +48,8 @@ _FAMILY_SPECS: dict[str, tuple[str, str]] = {
 
 
 def test_take_all_two_leg_specs_registered() -> None:
-    """登记锁:每卡两条 EffectSpec(canon 键 = 发放腿 / 申报键 = 列数修饰
-    腿)过 ``_validate_strategy_effects`` 四查(import 即炸,本文件 import
+    """登记锁:每卡两条 EffectSpec(canon 键 = 发放类效果条目 / 申报键 = 列数修饰
+    效果条目)过 ``_validate_strategy_effects`` 四查(import 即炸,本文件 import
     即过);canon 条目 pending=True 带 notes 保守支、效果条目2 持续期按配额形
     分立;申报键条目声明面无 pending、spec.name 恒规范名。"""
     for name, (pid, leg2_dur) in _FAMILY_SPECS.items():
@@ -57,7 +57,7 @@ def test_take_all_two_leg_specs_registered() -> None:
         assert (leg2.id, leg2.name) == (pid, name), 'plaza 双对拍'
         assert leg2.trigger is TriggerKind.SUPPLY_PHASE, \
             '触发面 = 补给选定时点'
-        assert leg2.duration.value == leg2_dur, f'发放腿持续期({name})'
+        assert leg2.duration.value == leg2_dur, f'发放类效果条目持续期({name})'
         assert leg2.category is EffectKind.BATTLEFIELD, \
             '类别 = 战场改变(发放类写状态副本)'
         assert leg2.payload.salvage_all_unchosen_supply is True, '效果条目2 载体字段'
@@ -91,7 +91,7 @@ def test_take_all_name_set_subset_of_registry() -> None:
 
 def test_take_all_declaration_key_never_enters_ledger() -> None:
     """申报键永登记缺位锁:选卡获得链单取 ``STRATEGY_EFFECTS.get(canon)``
-    → 效果账本恰一条(发放腿,canon 键),申报键条目(列数修饰腿)永不入
+    → 效果账本恰一条(发放类效果条目,canon 键),申报键条目(列数修饰效果条目)永不入
     册——双登记 = 未来消费端按 payload 判别时的双发雷。两族卡同锁。"""
     for name in _FAMILY_SPECS:
         gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
@@ -108,4 +108,4 @@ def test_take_all_declaration_key_never_enters_ledger() -> None:
             '入册条目 = 发放条目(非申报键效果条目1)'
         assert not any(
             int(getattr(e.spec.payload, 'supply_option_delta', 0) or 0) != 0
-            for e in entries), '申报键条目(列数修饰腿)零入册'
+            for e in entries), '申报键条目(列数修饰效果条目)零入册'

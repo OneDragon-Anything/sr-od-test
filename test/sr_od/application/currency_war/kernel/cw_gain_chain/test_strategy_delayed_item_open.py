@@ -15,7 +15,7 @@ kernel/cw_env_grants/test_check_env_item_open_perfect.py 策略道段)。
 - 锁 2 修饰局/局终:人身意外险(P1=10)下 (1,3)+10 = (2,3);日程过短
   步进遇 None 停留最后合法值;
 - 锁 6 重复获得:队列两条独立条目,done 加速键幂等只写一次;
-- 锁 7 腿① 缺口维持:选卡前后 bench/overflow/deployed 逐位不变
+- 锁 7 效果条目① 缺口维持:选卡前后 bench/overflow/deployed 逐位不变
   (火花不入席 = sim 状态副本写端缺口申报的行为面锁定,防实现批顺手接送卡);
 - 锁 8 快照存续:含策略道条目的队列快照 restore 往返逐位相等。
 """
@@ -137,10 +137,10 @@ def test_strategy_delayed_leg_repeat_gain_two_entries_scope_once() -> None:
 
 
 def test_char_grant_leg_stays_family_level_gap(monkeypatch) -> None:
-    """腿① 送卡缺口维持锁(REVIEW-T329 §五④ 锁 7,族级定论 = T-267
+    """效果条目① 送卡缺口维持锁(REVIEW-T329 §五④ 锁 7,族级定论 = T-267
     §1.7-4/T-272):选偶像经济前后 bench/overflow 逐位不变——火花
     不入席 = sim 状态副本写端缺口申报的行为面锁定,防实现批顺手建送卡效果体
-    (本文件锁 2 的独立面:锁 2 锁「礼盒腿零席位写」,本锁锁「角色腿
+    (本文件锁 2 的独立面:锁 2 锁「礼盒效果条目零席位写」,本锁锁「角色效果条目
     不因本批获得通道入席」)。"""
     gs = _make_gs_node_pos((1, 3))
     bench_before = gs.bench.value

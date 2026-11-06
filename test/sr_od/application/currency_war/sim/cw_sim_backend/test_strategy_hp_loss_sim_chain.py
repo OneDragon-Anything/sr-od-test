@@ -1,7 +1,7 @@
 """策略卡损血档位触发发放 sim 状态副本链测试(镜像 src = sim/cw_sim_backend.py
-的 _resolve_battle 损血档位腿;kernel 触发函数单元面 =
+的 _resolve_battle 损血档位效果条目;kernel 触发函数单元面 =
 kernel/cw_gain_chain/test_check_strategy_hp_loss_grants.py,本文件锁
-sim 结算腿接入调用与状态副本里的值落地面)。
+sim 结算效果条目接入调用与状态副本里的值落地面)。
 
 测试面依据 = 迭代设计 designs/T-142-baoxian.md §4 锁 3/4/5 +
 REVIEW-T142(节点矩阵形态先例 = 同目录 test_strategy_win_gold_sim_
@@ -162,7 +162,7 @@ def _drive_to_kind_prep(monkeypatch: pytest.MonkeyPatch, b: SimBackend,
                         *, target_kind: str) -> None:
     """自当前窗驱动到指定位面 1 节点类型的备战窗(途经战斗/奖励节点
     全胜强制穿过,中间屏走现役驱动步;目标判定 = 节点窗场字段 kind
-    序列真值;同目录 win 金腿锁同形副本)。"""
+    序列真值;同目录 win 金币效果条目锁同形副本)。"""
     gs = b.gs
     for _ in range(80):
         node = gs.node.value

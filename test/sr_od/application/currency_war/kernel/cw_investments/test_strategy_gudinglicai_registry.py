@@ -96,12 +96,12 @@ def test_gudinglicai_engine_channel_membership() -> None:
 def test_gudinglicai_pending_modeling_rows() -> None:
     """待建模登记锁(锁 8):两行存续 + 描述非空(闭集断言④点名卡,
     删行即 import 炸——本测试存活即证);描述改写为建模落地后形态
-    (位面段发放腿已建,估值通道未建)。"""
+    (位面段发放类效果条目已建,估值通道未建)。"""
     for name in (_CARD, _SISTER):
         assert name in STRATEGY_ECONOMY_PENDING_MODELING, name
         assert STRATEGY_ECONOMY_PENDING_MODELING[name], f'{name} 描述非空'
         assert '估值通道未建' in STRATEGY_ECONOMY_PENDING_MODELING[name], \
-            f'{name} 行描述改写为建模落地后形态(位面段腿已建,估值未建)'
+            f'{name} 行描述改写为建模落地后形态(位面段效果条目已建,估值未建)'
 
 
 def test_gudinglicai_cash_score_instant_active() -> None:

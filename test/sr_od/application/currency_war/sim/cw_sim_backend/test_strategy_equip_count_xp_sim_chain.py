@@ -1,5 +1,5 @@
-"""sim 策略卡装备计数经验节点窗腿测试(镜像 src = sim/cw_sim_backend.py
-的 _begin_node_window 装备计数 XP 腿 + kernel 纯判定
+"""sim 策略卡装备计数经验节点窗效果条目测试(镜像 src = sim/cw_sim_backend.py
+的 _begin_node_window 装备计数 XP 效果条目 + kernel 纯判定
 check_strategy_equip_count_xp 的 sim 调用点状态副本写;kernel 原语单元面 =
 kernel/cw_gain_chain/test_check_strategy_equip_count_xp.py,本文件锁
 sim 窗口接入调用与状态副本里的值落地面;先例 = 同目录

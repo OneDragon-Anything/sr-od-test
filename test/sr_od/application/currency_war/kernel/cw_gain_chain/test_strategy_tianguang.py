@@ -1,4 +1,4 @@
-"""天降救兵(id 300501)随机星档×箱腿组合登记行锁(镜像 src = kernel/
+"""天降救兵(id 300501)随机星档×箱条目组合登记行锁(镜像 src = kernel/
 cw_gain_effects.py PICK_INVEST_EFFECTS '天降救兵' 行:
 ``_compose_grant_legs(_make_random_star_char_effect(1, 3),
 _make_box_grant_effect('简易武装箱'))``;roll star 参扩展首例消费;
@@ -7,7 +7,7 @@ test_strategy_compose_grant_gangtie.py 钢铁美学形)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-298 对应稿
 §4 锁面(REVIEW-T298 无需用户决定 7/7;卡面官方原文:「获得一个随机3星1费角色，
-获得1个【简易武装箱」。」——效果条目1 随机星档角色(双档卡面明写)/效果条目2 箱腿):
+获得1个【简易武装箱」。」——效果条目1 随机星档角色(双档卡面明写)/效果条目2 箱条目):
 
 - 组合行单一源:两条效果条目组合行已登记(泛化表零本卡键负断言防回退撞键);
 - 行为链真值:确定入口 → 恰一随机角色(3 星)入席+恰一箱入栏、效果串
@@ -74,9 +74,9 @@ def test_tianguang_chain_places_random_char_and_box() -> None:
                                  rng=rng0)
     assert len(effects) == 2, f'效果串恰 2 条: {effects}'
     assert effects[0].startswith('strategy_gift_random:') \
-        and effects[0].endswith('@3star'), f'随机 3 星角色腿: {effects}'
+        and effects[0].endswith('@3star'), f'随机 3 星角色效果条目: {effects}'
     assert effects[1].startswith('box_grant:简易武装箱'), \
-        f'箱腿: {effects}'
+        f'箱条目: {effects}'
     units = [s.unit for s in gs.bench.value.slots
              if s.kind == 'unit' and s.unit]
     assert len(units) == 1 and units[0].star == 3, \

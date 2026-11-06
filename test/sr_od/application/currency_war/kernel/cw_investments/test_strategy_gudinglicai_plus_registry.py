@@ -7,9 +7,9 @@
 用户决定,裁决联动禁两态)。卡面官方原文(cw_invest_data.py:131 逐字):
 「现在以及每个位面开始时，获得6经验值和3次免费刷新。」
 
-机制件零新增(桥/腿按 payload 字段鸭子类型读取(duck typing),全量承姊妹批),本文件只锁
+机制件零新增(桥/效果条目按 payload 字段鸭子类型读取(duck typing),全量承姊妹批),本文件只锁
 注册面两处:注册行四字段现值 + EffectSpec 条目定论形态;行为面(桥/
-腿/登记拍/sim walk)由姊妹锁文件与同目录 gain-chain/sim 镜像辖。
+效果条目/登记拍/sim walk)由姊妹锁文件与同目录 gain-chain/sim 镜像辖。
 
 - 注册行锁(锁 1):四字段现值 xp_instant=6 / xp_per_plane=6 /
   free_refresh_burst=3 / free_refresh_per_plane=3 + 其余字段缺省

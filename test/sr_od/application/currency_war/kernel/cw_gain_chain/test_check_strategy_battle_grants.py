@@ -1,4 +1,4 @@
-"""策略卡战后触发发放检查腿测试(镜像 src = kernel/cw_gain_chain.py 的
+"""策略卡战后触发发放检查效果条目测试(镜像 src = kernel/cw_gain_chain.py 的
 check_strategy_battle_grants)。
 
 测试面依据 = 迭代设计 designs/T-105-yizhan-yangzhan.md §4 锁 6(条件矩阵
@@ -62,7 +62,7 @@ def test_non_encounter_kind_short_circuit() -> None:
 
 def test_no_card_zero_grant() -> None:
     """锁 6b:未持卡 + encounter → 空(active_strategies ∩ 登记表键集
-    为空即整腿无候选)。"""
+    为空即整效果条目无候选)。"""
     gs = _gs(card=None, bench_slots=_empty_slots())
     assert check_strategy_battle_grants(gs, 'encounter', _LSIG) == (), \
         '未持卡误发放'

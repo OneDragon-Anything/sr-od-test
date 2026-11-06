@@ -1,4 +1,4 @@
-"""小复制+(id 200602)具名装备授予腿锁(镜像 src = kernel/cw_gain_effects.py
+"""小复制+(id 200602)具名装备授予效果条目锁(镜像 src = kernel/cw_gain_effects.py
 的 ``PICK_INVEST_EFFECTS`` 直书登记行「小复制+」;具名装备授予族后继卡,
 族模式卡 = 全员晋升——工厂语义锁住同目录姊妹镜像 test_strategy_named_equip_
 grant.py,本文件只锁本卡登记面 + 行为面,按被测方法拆目录规范落位,先例 =
@@ -8,7 +8,7 @@ grant.py,本文件只锁本卡登记面 + 行为面,按被测方法拆目录规�
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
 T-169-xiaofuzhi-plus.md(定稿)§4 锁 2/4/5/6 + REVIEW-T169 §③ 裁决点 5
 + §④ + REVIEW-T168 §3④:
-- 腿 1 = 卡文句 1「获得2个【员工投影仪】」:登记行直书
+- 效果条目 1 = 卡文句 1「获得2个【员工投影仪】」:登记行直书
   ``_make_named_equip_grant_effect('员工投影仪', 2)``,具名确定发放
   ``gain_equipment(rand=False)`` 循环 2 次逐件一条入栏,效果串恰两条各含
   placed;evidence 断言用前缀匹配(原语内追加 ``#equip`` 后缀,精确匹配
@@ -16,7 +16,7 @@ T-169-xiaofuzhi-plus.md(定稿)§4 锁 2/4/5/6 + REVIEW-T169 §③ 裁决点 5
 - 精密金面前置按物判(判据映射只挂拆装扳手):员工投影仪 gate 恒 None
   走纯发放循环,精密在场照常入栏零申报行(卡级前置分支零遗传);金面接入调用批
   回改前置分支后本锁仍须绿(员工投影仪永不在金面改道辖域);
-- 金腿(卡文句 2「获得13金币」)= STRATEGY_ECONOMY instant_gold=13 已登记
+- 金币效果条目(卡文句 2「获得13金币」)= STRATEGY_ECONOMY instant_gold=13 已登记
   计分,kernel 发放写端缺口归 T-112 族级待办,不入效果体(主锁金域零写
   断言覆盖);
 - 双持语义(小复制 + 小复制+ 同局)= 两行独立各发共 4 件,零判重闸
@@ -56,8 +56,8 @@ _ITEM = '员工投影仪'
 
 
 def _make_gs(*, equips: list[str] | None = None) -> GameState:
-    """观测面按参组装(None = 保持未观察,供拒落分支;本卡装备腿只涉
-    equips 域,bench 恒空场 + gold 未读 = 金腿域零干扰对照)。"""
+    """观测面按参组装(None = 保持未观察,供拒落分支;本卡装备效果条目只涉
+    equips 域,bench 恒空场 + gold 未读 = 金币效果条目域零干扰对照)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     slots = [BenchSlot(kind='unit', unit=Unit(char_id='希儿', star=1)),
              BenchSlot(kind='empty')]
@@ -94,10 +94,10 @@ def rows_sink() -> _RowSink:
 
 def test_xiaofuzhi_plus_grant_leg_places_two_projectors(
         rows_sink: _RowSink) -> None:
-    """登记面 + 腿行为主锁:gain_invest_strategy 全链(rand=False)→ 注册
+    """登记面 + 效果条目行为主锁:gain_invest_strategy 全链(rand=False)→ 注册
     入表 + equips 恰 +2 员工投影仪、写数恰 +3(注册 1 + 效果条目 2;②段账本
     登记 session=None 跳过)、来源 = 确定面 logic、效果串恰两条逐件一条
-    各含 placed=True;金腿异族不入效果体(gold 未读保持未读,零金写);
+    各含 placed=True;金币效果条目异族不入效果体(gold 未读保持未读,零金写);
     板面域(bench/deployed)零写;正常路径零申报行。"""
     assert _CARD in PICK_INVEST_EFFECTS, '登记面已登记'
     gs = _make_gs(equips=[])
@@ -109,14 +109,14 @@ def test_xiaofuzhi_plus_grant_leg_places_two_projectors(
     assert gs.equips.value == [_ITEM, _ITEM], '具名双件入栏恰 2 件'
     assert gs.equips.source == 'logic', '确定发放走确定面'
     assert gs.equips.evidence.startswith('pick_invest_named_equip'), \
-        '腿写端 evidence 前缀(原语内追加 #equip 后缀,前缀匹配防假红)'
+        '效果条目写端 evidence 前缀(原语内追加 #equip 后缀,前缀匹配防假红)'
     assert gs.write_seq - seq_before == 3, \
         '写数恰 3 = 注册 1 + 装备效果条目 2(②段账本登记 session=None 跳过)'
     assert out.effects == (
         f'named_equip_grant:{_ITEM}(placed=True)',
         f'named_equip_grant:{_ITEM}(placed=True)',
     ), '效果串恰两条逐件一条各含 placed'
-    assert gs.gold.value is None, '金腿异族不入效果体(装备腿零金写)'
+    assert gs.gold.value is None, '金币效果条目异族不入效果体(装备效果条目零金写)'
     assert len(bench_units_of(gs)) == 1, 'bench 零变化'
     assert gs.deployed.value is None, 'deployed 未观察保持未写(板面零建模)'
     assert rows_sink.kinds() == [], '正常路径零申报行'

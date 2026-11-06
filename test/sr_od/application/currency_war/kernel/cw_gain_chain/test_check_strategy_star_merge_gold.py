@@ -1,4 +1,4 @@
-"""合成 3 星事件条件金发放腿测试(镜像 src = kernel/cw_gain_chain.py 的
+"""合成 3 星事件条件金发放类效果条目测试(镜像 src = kernel/cw_gain_chain.py 的
 check_strategy_star_merge_gold;分方法拆目录规范落位,文件镜像超限纪律 =
 新函数落拆目录新文件,先例 = 同目录 check_strategy_* 族镜像)。
 
@@ -7,12 +7,12 @@ xiangyin.md(定稿)§4 锁 1 + REVIEW-T135 §四 ④(卡面官方原文:「每�
 3星角色时，获得5金币。立刻获得1个【员工投影仪】。」):
 
 - 主锁:持卡局 gain_character 2★×3 同名 → gold 恰 +5(观察笔一笔,
-  evidence 带 sim:engine: 命名空间前缀,sim 侧策略金腿家族统一形态);
+  evidence 带 sim:engine: 命名空间前缀,sim 侧策略金币效果条目家族统一形态);
 - 级联计数:1→2→3 一次调用只 +5(to_star==3 单事件计数,级联中间档
   非 3 星合成);一次调用双 3 星合并 → +10(每次合成逐事件计);
 - 负锁:非持卡局零写 / live 门控(未装配 sim)零写 / gold 未读宁缺勿造;
-- 隔离互证:同触发异载体双向鸭子缺省——武力刷新条目在本腿零发放 ∧
-  本卡条目在 T-109 刷新腿零发放(与 test_invest_strategy 的 T-109
+- 隔离互证:同触发异载体双向鸭子缺省——武力刷新条目在本效果条目零发放 ∧
+  本卡条目在 T-109 刷新效果条目零发放(与 test_invest_strategy 的 T-109
   注册锁互补,两条效果条目字段判别双向隔离的回归基准)。
 """
 from __future__ import annotations
@@ -48,25 +48,25 @@ _CARD = '星星相印'
 
 
 class _SimPresenceStub:
-    """装配占位后端(仅令 ``sim_backend_installed()`` 为真;本腿不触后端
+    """装配占位后端(仅令 ``sim_backend_installed()`` 为真;本效果条目不触后端
     任何口,触即 AssertionError 响亮——被测门控只读装配槽非 None;
     test_refresh_shop 同名先例)。"""
 
     def screen_identity(self) -> str:
-        raise AssertionError('合成金腿不触后端读口')
+        raise AssertionError('合成金币效果条目不触后端读口')
 
     def observe(self, screen_name: str) -> object:
-        raise AssertionError('合成金腿不触后端观察')
+        raise AssertionError('合成金币效果条目不触后端观察')
 
     def visible(self, screen_name: str, area_name: str) -> bool:
-        raise AssertionError('合成金腿不触后端门问询')
+        raise AssertionError('合成金币效果条目不触后端门问询')
 
     def click_answer(self, op: object, screen_name: str, area_name: str,
                      until_find_all: object, until_not_find_all: object):
-        raise AssertionError('合成金腿不触后端点击')
+        raise AssertionError('合成金币效果条目不触后端点击')
 
     def advance(self, decl: object) -> None:
-        raise AssertionError('合成金腿不触后端推进')
+        raise AssertionError('合成金币效果条目不触后端推进')
 
 
 @pytest.fixture
@@ -188,7 +188,7 @@ def test_gain_chain_three_two_star_merge_pays_five(sim_installed) -> None:
     assert gs.gold.value == gold_before + 5, '2★×3 合成 3★ → +5'
     assert gs.gold.source == 'observation', '观察通道'
     assert gs.gold.evidence == 'sim:engine:strategy_star_merge_gold:1', \
-        '证据串 = 本腿写点(链顶层发火一笔)'
+        '证据串 = 本效果条目写点(链顶层发火一笔)'
     units = [(s.unit.char_id, s.unit.star) for s in gs.bench.value.slots
              if s is not None and s.kind == 'unit' and s.unit is not None]
     assert ('花火', 3) in units, '合成产物 3★ 在席(链主分支照常)'
@@ -221,19 +221,19 @@ def test_gain_chain_no_card_zero_write() -> None:
 
 def test_duck_default_isolation_both_directions(sim_installed) -> None:
     """同触发异载体双向鸭子缺省隔离(与 T-109 互证):
-    ① 武力刷新条目在本腿零发放(payload 无 gold_per_3star_merge 字段,
+    ① 武力刷新条目在本效果条目零发放(payload 无 gold_per_3star_merge 字段,
     ON_MERGE ∧ ECONOMY 双过滤命中但鸭子缺省 0);
-    ② 本卡条目在 T-109 刷新腿零发放(payload 无 refresh_per_compose
+    ② 本卡条目在 T-109 刷新效果条目零发放(payload 无 refresh_per_compose
     字段,名单集零命中同判)——两条效果条目字段判别双向隔离回归基准。"""
     gs = _gs(card='武力刷新')
     seq0 = gs.write_seq
     check_strategy_star_merge_gold(gs, (('甲', 3),), sig=_SIG,
                                    producer='TestProducer')
     assert gs.gold.value == 30 and gs.write_seq == seq0, \
-        '武力刷新:本腿鸭子缺省 0 零发放'
+        '武力刷新:本效果条目鸭子缺省 0 零发放'
 
     gs2 = _gs(card=_CARD)
     seq1 = gs2.write_seq
     apply_on_merge_refresh_grant(gs2, merges=2)
     assert gs2.free_refresh_left.value in (None, 0) \
-        and gs2.write_seq == seq1, '星星相印:刷新腿零命中零发放'
+        and gs2.write_seq == seq1, '星星相印:刷新效果条目零命中零发放'

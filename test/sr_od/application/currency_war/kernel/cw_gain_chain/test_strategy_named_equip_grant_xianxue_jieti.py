@@ -1,4 +1,4 @@
-"""鲜血阶梯(id 351201)具名装备授予腿锁(镜像 src = kernel/cw_gain_effects.py
+"""鲜血阶梯(id 351201)具名装备授予效果条目锁(镜像 src = kernel/cw_gain_effects.py
 的 ``PICK_INVEST_EFFECTS`` 直书登记行「鲜血阶梯」;具名装备授予族后继卡,
 族模式卡 = 全员晋升——工厂语义锁住同目录姊妹镜像 test_strategy_named_equip_
 grant.py,单件先例 = 赌神·银 test_strategy_named_equip_grant_dushen_yin.py,
@@ -16,11 +16,11 @@ T-395-xianxue-jieti.md(定稿)§7-② 锁 2/锁 3/锁 4 + REVIEW-T395 §7:
   字面量精确断言,工厂参数漂移或变体误引在此红;
 - 效果条目2「每消灭一名精英/首领敌人伤害增幅永久提高8%」= 击杀触发族型③
   零登记零建模(触发事件逐击杀两边皆盲,占位登记即判读失真),本文件
-  零建模腿锁 = 负面由 PICK 键集闭集/五注册表现值锁承载(零 SE/零 GRANTS
+  零建模效果条目锁 = 负面由 PICK 键集闭集/五注册表现值锁承载(零 SE/零 GRANTS
   条目已在注册表现值锁面),不另立哨;
 - 双持好运来链上拦截 = 既有转换守卫真值(类目制 '进阶'→'好运令牌',
   转换域锁 test_gain_equipment_conversion.py 承载),本文件不重复锁;
-- 本卡无金句零金腿(gold 域零写断言覆盖);装备非占席不入 bench,
+- 本卡无金句零金币效果条目(gold 域零写断言覆盖);装备非占席不入 bench,
   板面域(bench/deployed)零写。
 """
 from __future__ import annotations
@@ -98,7 +98,7 @@ def rows_sink() -> _RowSink:
 def test_xianxue_jieti_grant_leg_places_equipment(
         rows_sink: _RowSink) -> None:
     """效果条目1 放置行为主锁(§7-② 锁 2):gain_invest_strategy 全链(rand=False)
-    → 注册入表 + equips 恰 +1 斩首行动、写数恰 2(注册 1 + 腿 1;②段账本
+    → 注册入表 + equips 恰 +1 斩首行动、写数恰 2(注册 1 + 效果条目 1;②段账本
     登记 session=None 跳过)、来源 = 确定面 logic;零金写(本卡无金句);
     板面域(bench/deployed)零写;正常路径零申报行。前提守卫:斩首行动
     ∉ 后果表(破前提时获得后果链追加效果串与写入——守卫先红,勿盲改)。"""
@@ -114,7 +114,7 @@ def test_xianxue_jieti_grant_leg_places_equipment(
     assert gs.equips.value.count(_ITEM) == 1, '选卡即得:具名单件入栏恰 1 件'
     assert gs.equips.source == 'logic', '确定发放走确定面'
     assert gs.equips.evidence.startswith('pick_invest_named_equip'), \
-        '腿写端 evidence 前缀(原语内追加 #equip 后缀,前缀匹配防假红)'
+        '效果条目写端 evidence 前缀(原语内追加 #equip 后缀,前缀匹配防假红)'
     assert gs.write_seq - seq_before == 2, \
         '写数恰 2 = 注册 1 + 装备效果条目 1(②段账本登记 session=None 跳过)'
     assert gs.gold.value is None, '本卡无金句零金写'

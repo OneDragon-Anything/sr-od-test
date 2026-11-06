@@ -261,7 +261,7 @@ def test_per_source_chain_coverage(sim_armed) -> None:
     两个经验入账函数(逻辑写 grant_xp/上报口;观察写 settle_xp_observe)
     时,本清单即「源-函数对应表」扩员检查单。对应表(源 → 本测驱动入口):
     1 买经验上报 → report;2 环境窗口 → grant_xp;3 节点基础 →
-    apply_node_xp;4-9 模拟器窗口/位面腿(写体已收敛 settle_xp_observe,
+    apply_node_xp;4-9 模拟器窗口/位面效果条目(写体已收敛 settle_xp_observe,
     逐源独立 evidence 词面透传 = 分账身份)→ settle_xp_observe 逐词面;
     10 位面段补发 → apply_strategy_plane_refire_xp;11 选卡即时 →
     apply_strategy_pick_xp;12 首购 → check_strategy_first_buy_xp_grants;
@@ -285,7 +285,7 @@ def test_per_source_chain_coverage(sim_armed) -> None:
     gs = _fresh()
     assert apply_node_xp(gs, node_type='boss') == 12
     assert shop_randomized_pending_of(gs), '源 3 节点基础经验'
-    # 源 4-9:窗口/位面腿写体收敛 settle_xp_observe,逐源 evidence 词面
+    # 源 4-9:窗口/位面效果条目写体收敛 settle_xp_observe,逐源 evidence 词面
     # (xp:strategy_per_node / bench_count / empty_slot / equip_count /
     #  bench_left_cost / strategy_plane:p1)——直驱收敛体 + 词面透传断言。
     for evidence in ('xp:strategy_per_node', 'xp:bench_count',

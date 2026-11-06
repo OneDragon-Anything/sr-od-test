@@ -1,4 +1,4 @@
-"""刷新出对条件金腿判定测试(apply_on_refresh_pair_gold_grant 分方法镜像)。
+"""刷新出对条件金币效果条目判定测试(apply_on_refresh_pair_gold_grant 分方法镜像)。
 
 锁 5(判定边界,直构 payload 逐形态):恰 2 同名成立 / 3 同名单笔(不多发)/
 双对(2+2)单笔 / 空槽不参与 / 异 star 同名成立(前瞻锁——采样器直出恒 1★

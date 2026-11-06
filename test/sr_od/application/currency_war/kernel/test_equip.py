@@ -317,12 +317,12 @@ def test_orphan_gate_entry_and_bad_char_warned(monkeypatch):
     assert any('银狼不存在' in w for w in warnings)
 
 
-# ============================================================ 合成事件发放腿(穿戴 applied 出口)
+# ============================================================ 合成事件发放类效果条目(穿戴 applied 出口)
 
 
 def _wear_grant_gs(*, unit_equips: list[str], owned: list[str],
                    register: bool = True) -> GameState:
-    """合成事件发放腿场景种子:bench 槽 1 单位带已穿装备 + owned 库存
+    """合成事件发放类效果条目场景种子:bench 槽 1 单位带已穿装备 + owned 库存
     (deployed 保持未观察 → 上报定位走 bench 名匹配回退,与 sim 动作
     注入同形态);register=True 时账本登记武力刷新(与选卡只登记不写状态的实现分支同形
     register_strategy,只登记不写状态的实现分支缺位负向由 register=False 承载)。"""
@@ -340,7 +340,7 @@ def _wear_grant_gs(*, unit_equips: list[str], owned: list[str],
 
 
 def _wear_item(gs: GameState, item_name: str) -> LogicOutcome:
-    """对 bench 槽 1 单位穿戴一件(上报函数 = 合成事件发放腿调用点宿主)。"""
+    """对 bench 槽 1 单位穿戴一件(上报函数 = 合成事件发放类效果条目调用点宿主)。"""
     from sr_od.application.currency_war.kernel.cw_action_report.wear_equip import (
         report_action_wear_equip_param,
     )
@@ -431,7 +431,7 @@ def test_wear_synthesis_converted_by_strategy_card():
     assert gs.bench.value.slots[0].unit.equips == ['好运令牌'], \
         f'合成产物经转换替换:{a}+{b} → 令牌(非 {advance})'
     assert gs.free_refresh_left.value is None, \
-        '登记缺位零发放(发放腿与转换面互不干涉)'
+        '登记缺位零发放(发放类效果条目与转换面互不干涉)'
     assert gs.write_seq - seq0 == 2, \
         f'恰两行穿戴写(零发放行),实得 {gs.write_seq - seq0}'
 

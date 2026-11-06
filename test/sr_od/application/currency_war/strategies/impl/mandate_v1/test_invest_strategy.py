@@ -160,7 +160,7 @@ def test_cash_per_node_interest_xp_channels():
     """per-node 流/固定息/XP 双通道(值 = 注册表【注】× R 查表):
     定期福利 = 4 + 2×23;狸财经狸息分支 = 2×23(活计分分支,取款/存款分支
     待建模不关门——design 申报 7);伟大征服 xp_instant = 12;气氛组+ =
-    8(注册行形状一并锁,即时腿骑 apply_strategy_pick_xp 字段分派通道);
+    8(注册行形状一并锁,即时效果条目骑 apply_strategy_pick_xp 字段分派通道);
     买断制 = 15 + 4×23(xp_per_node 流);XP_GOLD_RATE = 1.0。
     (R 开局 16→23 = P3 行入真值表,2026-10-15 用户裁定联动。)"""
     assert strategy_economy_value('定期福利', _fresh_gs()) == (50.0, True)
@@ -172,10 +172,10 @@ def test_cash_per_node_interest_xp_channels():
 
 
 def test_streak_set_pending_classification_and_zero_value_drift():
-    """胜利,还是胜利 置位腿策略侧锁(T-96 设计 §4 锁 7):
+    """胜利,还是胜利 置位效果条目策略侧锁(T-96 设计 §4 锁 7):
     ``streak_set`` ∈ ``_PENDING_MODELING_FIELDS``(置位金流变化轨迹依赖
     未建模,import 期字段分类校验的硬义务面——显式断言防后人误移);
-    估值零漂移 = 现金分仍恰为 instant_gold=4 面值(置位腿不入任何通道
+    估值零漂移 = 现金分仍恰为 instant_gold=4 面值(置位效果条目不入任何通道
     公式,新字段不进现金分)。"""
     from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
         strategy_economy,
@@ -289,7 +289,7 @@ def test_grant_registry_counts_and_closed_set():
     """底册计数测试(对账记录 = 迭代目录 strategy-grants-reconciliation.md):
     106 条 = 11 顾问 + 77 角色直读(绑定母体白得/反扫补网/非直读人工
     转正[佩佩逛街句/佩佩携钻句/佩佩客串登场句]/非候选直读登记[狸职手续,
-    按实机录名归一])+ 16 开箱分支(占席道具直读,箱腿卡随批扩员,含融合召唤)
+    按实机录名归一])+ 16 开箱分支(占席道具直读,箱条目卡随批扩员,含融合召唤)
     + 1 选择型具名装备(独家代言,人工登记——「从3件进阶装备中选择一件
     获取」占位选定建模,选择获取无「获得…roster 名」直读,反扫零命中)
     + 1 角色×道具混合(龙虎兄弟狸);顾问档名单已登记。"""
@@ -549,7 +549,7 @@ def test_pending_modeling_registry_shape():
     """卡级待建模已登记正面形状:5 张辖域派生闭集卡必已登记(固定理财/+
     孪生素数/狸财经狸/超发货币,landing ⑥)+ 注册表外经济语义代表例
     (被动收入/招财狗/气氛组/气氛组+,design §2.3 处置口径——气氛组系
-    条件腿零建模是有意登记非漏登记);孪生素数 = 全默认 economy
+    条件效果条目零建模是有意登记非漏登记);孪生素数 = 全默认 economy
     已登记条目(③断言的真实对象)。"""
     from sr_od.application.currency_war.kernel.cw_investments import (
         EconomyEffect,

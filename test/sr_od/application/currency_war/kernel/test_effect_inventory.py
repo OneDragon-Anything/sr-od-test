@@ -608,17 +608,17 @@ def test_salvage_gate_order_zero_write_arms() -> None:
 
 def test_salvage_full_column_grant_and_consume_clear() -> None:
     """门序锁·发放臂(列 0 = 角色+双装备)+ 消费即清幂等:固定种子恰
-    1 列发放——char 腿入席 1★ + 装备腿按列内容 y 序入账(owned 恒规范
-    名);char 腿写 evidence 串 = ``strategy_salvage:<名>@1star``(效果
+    1 列发放——char 效果条目入席 1★ + 装备效果条目按列内容 y 序入账(owned 恒规范
+    名);char 效果条目写 evidence 串 = ``strategy_salvage:<名>@1star``(效果
     串落点 = 随机写 evidence 本身);字段被清 + 二次调用零写(同阶段
     观察上报多次第 2 次起零发)。"""
     gs = _salvage_gs()
     _salvage_run(gs, 1)   # Random(1) → 列 0
-    assert _salvage_bench(gs) == [('希儿', 1)], 'char 腿入席 1★'
+    assert _salvage_bench(gs) == [('希儿', 1)], 'char 效果条目入席 1★'
     assert gs.equips.value == ['光能电池', '垃圾袋'], \
-        f'装备腿按列内容 y 序入账: {gs.equips.value}'
+        f'装备效果条目按列内容 y 序入账: {gs.equips.value}'
     assert gs.bench.evidence == 'strategy_salvage:希儿@1star', \
-        f'char 腿 evidence 串: {gs.bench.evidence}'
+        f'char 效果条目 evidence 串: {gs.bench.evidence}'
     assert gs.unchosen_supply.value is None, '消费即清'
     seq = gs.write_seq
     check_strategy_supply_salvage(gs, _SALV_SIG)
@@ -626,13 +626,13 @@ def test_salvage_full_column_grant_and_consume_clear() -> None:
 
 
 def test_salvage_unresolved_name_fail_closed_char_leg_survives() -> None:
-    """列内容形态锁(列 1 = 角色在 + 装备名归一失败):char 腿照常发放
-    (腿间独立,失败件不阻断角色腿),件名不可辨禁猜 → equips 值不变
+    """列内容形态锁(列 1 = 角色在 + 装备名归一失败):char 效果条目照常发放
+    (效果条目间独立,失败件不阻断角色效果条目),件名不可辨禁猜 → equips 值不变
     翻来源留存证据(fail-closed)+ 缺陷行 kind=
     ``strategy_salvage_name_unresolved``(错名不入账,观察覆盖自愈)。"""
     gs = _salvage_gs()
     _salvage_run(gs, 7)   # Random(7) → 列 1
-    assert _salvage_bench(gs) == [('停云', 1)], 'char 腿照发'
+    assert _salvage_bench(gs) == [('停云', 1)], 'char 效果条目照发'
     assert gs.equips.value == [], '归一失败件不入账'
     kinds = [r['kind'] for r in consume_defect_sink()]
     assert 'strategy_salvage_name_unresolved' in kinds, f'缺陷留证: {kinds}'
@@ -640,46 +640,46 @@ def test_salvage_unresolved_name_fail_closed_char_leg_survives() -> None:
 
 
 def test_salvage_orphan_cluster_equip_only_column() -> None:
-    """列内容形态锁(列 2 = 孤儿簇列 char=''):仅装备腿零角色写,装备件
+    """列内容形态锁(列 2 = 孤儿簇列 char=''):仅装备效果条目零角色写,装备件
     OCR 原文经归一两段式入账(owned 恒规范名断言)。"""
     gs = _salvage_gs()
     _salvage_run(gs, 5)   # Random(5) → 列 2
-    assert _salvage_bench(gs) == [], 'char 空 = 零角色腿'
-    assert gs.equips.value == ['折叠小刀'], '装备腿照发(归一命中规范名)'
+    assert _salvage_bench(gs) == [], 'char 空 = 零角色效果条目'
+    assert gs.equips.value == ['折叠小刀'], '装备效果条目照发(归一命中规范名)'
 
 
 def test_salvage_char_only_column_zero_equip_writes() -> None:
-    """列内容形态锁(char-only 列 = 人才储备类合法形态):仅角色腿,装备
+    """列内容形态锁(char-only 列 = 人才储备类合法形态):仅角色效果条目,装备
     域零写零缺陷(补给选定上报零装备名分支同构——件名全失读子况的失配
     由 equips 观察覆盖暴露,不发缺陷)。"""
     col = (SupplyOption(idx=0, char='希儿', equip='', extra_equips=()),)
     gs = _salvage_gs(unchosen=col)
     _salvage_run(gs, 1)
-    assert _salvage_bench(gs) == [('希儿', 1)], '仅角色腿'
+    assert _salvage_bench(gs) == [('希儿', 1)], '仅角色效果条目'
     assert gs.equips.value == [], '装备域零写'
     assert consume_defect_sink() == [], 'char-only 合法形态零缺陷'
     assert gs.unchosen_supply.value is None, '消费即清'
 
 
 def test_salvage_bench_full_rejects_char_leg_equip_leg_still() -> None:
-    """席满形态锁(拒落语义):bench 满 9 → 角色腿拒落零写(bench 不变,
-    detail='bench_full' 语义,无溢出概念)且装备腿照发(腿间独立)。"""
+    """席满形态锁(拒落语义):bench 满 9 → 角色效果条目拒落零写(bench 不变,
+    detail='bench_full' 语义,无溢出概念)且装备效果条目照发(效果条目间独立)。"""
     full = [Unit(char_id=n, star=1) for n in
             ('希儿', '符玄', '花火', '停云', '刃', '杰帕德', '娜塔莎',
              '丹恒', '三月七')]
     gs = _salvage_gs(bench_entries=full)
     _salvage_run(gs, 1)   # 列 0:希儿 + 双装备
     assert _salvage_bench(gs) == [(u.char_id, 1) for u in full], '席满拒落零写'
-    assert gs.equips.value == ['光能电池', '垃圾袋'], '装备腿照发'
+    assert gs.equips.value == ['光能电池', '垃圾袋'], '装备效果条目照发'
 
 
 def test_salvage_bench_unobserved_rejects_char_leg() -> None:
-    """席未观察形态锁:bench 域 None → 角色腿拒落零写(bench 保持
-    None,detail='bench_unobserved' 语义),装备腿照发。"""
+    """席未观察形态锁:bench 域 None → 角色效果条目拒落零写(bench 保持
+    None,detail='bench_unobserved' 语义),装备效果条目照发。"""
     gs = _salvage_gs(bench_unobserved=True)
     _salvage_run(gs, 1)
     assert gs.bench.value is None, '席未观察零写'
-    assert gs.equips.value == ['光能电池', '垃圾袋'], '装备腿照发'
+    assert gs.equips.value == ['光能电池', '垃圾袋'], '装备效果条目照发'
 
 
 def test_salvage_rand_channel_and_producer_attribution(monkeypatch) -> None:
@@ -692,9 +692,9 @@ def test_salvage_rand_channel_and_producer_attribution(monkeypatch) -> None:
     rows: list[dict] = []
     monkeypatch.setattr(gs_mod, '_STATE_JOURNAL_SINK', rows.append)
     monkeypatch.setattr(gs_mod, '_RUN_ID_PROVIDER', lambda: 'test-run')
-    _salvage_run(gs, 1)   # 列 0:char 腿 + 双装备腿
-    assert gs.bench.source == 'logic_rand', 'char 腿随机态通道'
-    assert gs.equips.source == 'logic_rand', '装备腿随机态通道'
+    _salvage_run(gs, 1)   # 列 0:char 效果条目 + 双装备效果条目
+    assert gs.bench.source == 'logic_rand', 'char 效果条目随机态通道'
+    assert gs.equips.source == 'logic_rand', '装备效果条目随机态通道'
     assert gs.unchosen_supply.source == 'logic', '消费即清 = 逻辑态'
     write_rows = [r for r in rows if r['row'] == 'write'
                   and r['field'] in ('bench', 'equips', 'unchosen_supply')]
@@ -722,8 +722,8 @@ def test_salvage_plus_card_held_triggers() -> None:
     gs = _salvage_gs(card=False)
     gs.observe(gs.active_strategies, ['打捞人才库+'], sig=_SIG_OBS)
     _salvage_run(gs, 1)   # Random(1) → 列 0
-    assert _salvage_bench(gs) == [('希儿', 1)], '+卡持局主腿照发'
-    assert gs.equips.value == ['光能电池', '垃圾袋'], '装备腿照发'
+    assert _salvage_bench(gs) == [('希儿', 1)], '+卡持局主效果条目照发'
+    assert gs.equips.value == ['光能电池', '垃圾袋'], '装备效果条目照发'
     assert gs.unchosen_supply.value is None, '消费即清'
 
 
@@ -741,7 +741,7 @@ def test_salvage_dual_hold_single_grant() -> None:
     assert gs.write_seq == seq, '二次调用零写(重入幂等不因双持改变)'
 
 
-# ============================================================ 合成事件发放腿(穿戴 applied 出口)
+# ============================================================ 合成事件发放类效果条目(穿戴 applied 出口)
 
 
 def test_on_merge_grant_linear_in_merges() -> None:
@@ -761,7 +761,7 @@ def test_on_merge_grant_linear_in_merges() -> None:
 def test_on_merge_card_bridges_noop() -> None:
     """桥零扰动负向:仅持武力刷新的账本过 burst 桥/节点桥 →
     free_refresh_left 零变化(两桥 payload 读面 = free_refresh_burst 与
-    per_node 族字段,本卡字段鸭子缺省 0 零授予——发放面全归合成事件腿,
+    per_node 族字段,本卡字段鸭子缺省 0 零授予——发放面全归合成事件效果条目,
     无双发)。"""
     gs = _seeded_gs()
     gs.effects.register_strategy(STRATEGY_EFFECTS['武力刷新'], (1, 1))
@@ -774,7 +774,7 @@ def test_on_merge_card_bridges_noop() -> None:
 
 def test_on_merge_grant_affix_isolated() -> None:
     """词缀隔离:同触发面词缀条目(变宝为废,BATTLEFIELD 载体)在账时
-    发放腿零命中零写(名单钉卡非触发面匹配——断言保留,防未来合表后
+    发放类效果条目零命中零写(名单钉卡非触发面匹配——断言保留,防未来合表后
     字段过滤回归把 BATTLEFIELD 卷进经济发放)。"""
     gs = _seeded_gs()
     gs.effects.register_affix(AFFIX_EFFECT_SPECS['变宝为废'], (1, 1))
@@ -792,7 +792,7 @@ def test_on_merge_assumption_keys_registered() -> None:
     )
 
 
-# ============================================================ 到期发放腿(tick 到期段)
+# ============================================================ 到期发放类效果条目(tick 到期段)
 
 def test_capacity_window_arithmetic_current_reading() -> None:
     """窗口算术现值钉子(锁即申报现役读法):登记于 N、remaining=3 → 后继
@@ -814,9 +814,9 @@ def test_capacity_window_arithmetic_current_reading() -> None:
 
 
 def test_expiry_grant_leg_gains_three_simple_equips(monkeypatch) -> None:
-    """到期腿正锁(tick 集成形态——红验靶):节省工位选卡登记 → 三次节点
+    """到期效果条目正锁(tick 集成形态——红验靶):节省工位选卡登记 → 三次节点
     推进,前两拍存活零发放、容量桥同拍激活(bench 归一 capacity 3),第 3 拍
-    到期 → tick 到期腿逐件采样 → equips 恰 +3、全部 ∈ 简易池、rand 通道、
+    到期 → tick 到期效果条目逐件采样 → equips 恰 +3、全部 ∈ 简易池、rand 通道、
     evidence ``strategy_grant_expiry:`` 前缀、归因 = EffectLedgerBridge
     (journal 行 actor,Field 不存 producer——salvage 归因锁同形态);
     第 4 拍到期列表空 → 零追加发放(构造性一次性,无重入面不设一次性标志位)。"""
