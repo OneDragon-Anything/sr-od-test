@@ -216,4 +216,6 @@ def test_arc_return_to_top_fixed_drags(
         result = op._return_to_top()
     assert result.result == OperationRoundResultEnum.WAIT
     assert len(drags) >= 3, f'回顶拖动次数不足:{len(drags)}'
+    assert all(s.y < e.y for s, e in drags), (
+        '回顶拖动方向错:手指应自上而下(上滑=向后翻页,反写会冲向列表尾)')
     assert op._need_top is False, '回顶后应清除回顶标记'
