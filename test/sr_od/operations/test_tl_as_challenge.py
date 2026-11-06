@@ -15,9 +15,19 @@
 
 from __future__ import annotations
 
+import pytest
+from one_dragon.base.geometry.point import Point
+from one_dragon.base.geometry.rectangle import Rect
 from one_dragon.base.operation.operation_edge import OperationEdge
+from one_dragon.base.operation.operation_round_result import OperationRoundResultEnum
+from sr_od.application.treasures_lightward.obs.tl_team_obs import (
+    AnchorCell,
+    MemberGuess,
+)
 from sr_od.operations.tl_as_challenge import TlApocalypticShadowChallengeOp
+from sr_od.operations.tl_as_challenge import TlAsTeamFillOp
 from test.conftest import SrTestContext
+from test.harness.fixture_controller import fast_sleep
 
 _TEAM = ['姬子•启行', '瓦尔特', '知更鸟', '丹恒•腾荒',
          '黄泉', '卡芙卡', '黑天鹅', '灵砂']
@@ -91,3 +101,95 @@ def test_sub_ops_independent_start(test_context: SrTestContext) -> None:
     for op in (fill, equip, battle):
         assert op._analyse_node_annotations()[0] is not None, (
             f'{type(op).__name__} 缺 start 节点')
+
+
+# --------------------------------------------------------------------------
+# 星启填人单卡判定(约定锁,机制出处 = tl_as_challenge 星启交互注释块):
+# 列表卡点击是加/移开关——点已入队角色的卡会把人移出队伍,所以找卡绝不点击
+# 带「队伍N」标记的卡;落位复验只认被点那张卡上的标记(与翻页无关)。
+# --------------------------------------------------------------------------
+
+_ARC_TEAM = ['海瑟音', '波提欧', '花火', '灵砂',
+             '姬子•启行', '瓦尔特', '知更鸟', '丹恒•腾荒',
+             '千冶•刃', '风堇', '长夜月', '椒丘']
+
+
+def _mk_cell(x: int, y: int, guess: MemberGuess) -> AnchorCell:
+    """测试格:头像区 90x95(真实验标几何),中心即点击中心。"""
+    return AnchorCell(
+        center=Point(x, y), guess=guess,
+        rect=Rect(x - 45, y - 47, x + 45, y + 48))
+
+
+def test_arc_fill_skips_badged_cell(
+        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
+    """找卡命中含带标记的卡时不点它,点击落到无标记的弱命中上。"""
+    op = TlAsTeamFillOp(test_context, _ARC_TEAM)
+    op._need_top = False
+    badged = _mk_cell(300, 300, MemberGuess('花火', True, [('花火', 0.9)]))
+    unbadged = _mk_cell(600, 300, MemberGuess(None, False, [('花火', 0.8)]))
+    clicks: list[Point] = []
+    monkeypatch.setattr(op, '_team_tag_boxes', lambda image: [badged.rect.center])
+    monkeypatch.setattr(op.ctx.controller, 'click',
+                        lambda point, press_time=0.1: clicks.append(point))
+    with fast_sleep():
+        result = op._arc_fill_round(None, [badged, unbadged], '花火', 1)
+    assert result.result == OperationRoundResultEnum.WAIT
+    assert clicks == [unbadged.center], f'点了带标记的卡:{clicks}'
+    assert op._pending_rect == unbadged.rect, '复验对象应是实际点击的卡'
+
+
+def test_arc_fill_only_badged_no_click(
+        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
+    """可见命中全部带标记时不点击任何卡,转入翻页找下一页。"""
+    op = TlAsTeamFillOp(test_context, _ARC_TEAM)
+    op._need_top = False
+    badged = _mk_cell(300, 300, MemberGuess('花火', True, [('花火', 0.9)]))
+    clicks: list[Point] = []
+    paged = []
+    monkeypatch.setattr(op, '_team_tag_boxes', lambda image: [badged.rect.center])
+    monkeypatch.setattr(op.ctx.controller, 'click',
+                        lambda point, press_time=0.1: clicks.append(point))
+    monkeypatch.setattr(op, '_page_down',
+                        lambda cells, target, row_no: paged.append(target))
+    with fast_sleep():
+        op._arc_fill_round(None, [badged], '花火', 1)
+    assert clicks == [], '点了带标记的卡(拆队行为)'
+    assert paged == ['花火'], '应转入翻页'
+
+
+def test_arc_verify_only_pending_card(
+        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
+    """复验只认被点那张卡:标记落在被点卡 = 落位推进;标记在别处 = 不推进。"""
+    op = TlAsTeamFillOp(test_context, _ARC_TEAM)
+    op._need_top = False
+    hit = _mk_cell(300, 300, MemberGuess('花火', True, [('花火', 0.9)]))
+    other = _mk_cell(600, 300, MemberGuess('风堇', True, [('风堇', 0.9)]))
+    op._pending_center = hit.center
+    op._pending_rect = hit.rect
+    op._click_rounds = 1
+
+    # 标记落在被点卡 → 推进游标
+    monkeypatch.setattr(op, '_team_tag_boxes',
+                        lambda image: [hit.rect.center])
+    with fast_sleep():
+        op._arc_fill_round(None, [hit], '花火', 1)
+    assert op._char_idx == 1, '标记在被点卡上应推进'
+    assert op._pending_rect is None, '推进后应清复验态'
+
+    # 标记不在被点卡上 → 不推进;名字仍认得该卡时偶数轮补点同一张卡
+    op2 = TlAsTeamFillOp(test_context, _ARC_TEAM)
+    op2._need_top = False
+    op2._pending_center = hit.center
+    op2._pending_rect = hit.rect
+    op2._click_rounds = 1
+    clicks: list[Point] = []
+    monkeypatch.setattr(op2, '_team_tag_boxes',
+                        lambda image: [other.rect.center])
+    monkeypatch.setattr(op2.ctx.controller, 'click',
+                        lambda point, press_time=0.1: clicks.append(point))
+    with fast_sleep():
+        result = op2._arc_fill_round(None, [hit, other], '花火', 1)
+    assert op2._char_idx == 0, '标记不在被点卡上不得推进'
+    assert result.result == OperationRoundResultEnum.WAIT
+    assert clicks == [hit.center], f'补点应落回同一张卡:{clicks}'
