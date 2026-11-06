@@ -42,6 +42,8 @@ from sr_od.application.currency_war.kernel.cw_investments import (
 #: bench_reroll 族第 2 员)= 105 键现值。
 #: 乱成一锅粥+(姊妹展开卡,同形双载 burst=7,bench_reroll 族第 3 员)= 106 键现值。
 #: 调饮专家:加拉赫(顾问授予族战力类 UNIT_BUFF 零响应登记,行动触发双效果三盲)= 107 键现值。
+#: 黑塔纪元(战力类 UNIT_BUFF 零响应登记〔强度效果条目纸面登记,追击转圈型③零登记〕,
+#: 2026-11-06)= 108 键现值。
 _EXPECTED_KEYS: frozenset[str] = frozenset({
     '淘金客', '固定理财', '固定理财+', '经验就是财富', '商业间谍',
     '双手狸开键盘！', '采购专员·金', '采购专员·彩', '全员晋升', '人力重组',
@@ -90,6 +92,7 @@ _EXPECTED_KEYS: frozenset[str] = frozenset({
     '搜打撤',
     '分解万物', '完美进化', '幸运之子', '超光速提拔', '榜样的力量·彩', '万箭齐发', '后勤超响应', '三五成群', '基本保障', '更快,更幸运', '打通上下游·彩', '野蛮成长', '保守派', '攻防一体', '战术义眼+', '幸运闪避EX', '羁绊的力量', '乱成一锅粥', '乱成一锅粥+',
     '调饮专家:加拉赫',
+    '黑塔纪元',
 })
 
 
@@ -100,7 +103,7 @@ def test_strategy_effects_keyset_closed() -> None:
         'STRATEGY_EFFECTS 键集漂移:\n'
         f'  缺员: {sorted(set(_EXPECTED_KEYS) - set(STRATEGY_EFFECTS))}\n'
         f'  多员: {sorted(set(STRATEGY_EFFECTS) - set(_EXPECTED_KEYS))}')
-    assert len(STRATEGY_EFFECTS) == 107, '基数申报对账(effect-domain §5)'
+    assert len(STRATEGY_EFFECTS) == 108, '基数申报对账(effect-domain §5)'
 
 
 def test_strategy_effects_keys_unique_ids() -> None:

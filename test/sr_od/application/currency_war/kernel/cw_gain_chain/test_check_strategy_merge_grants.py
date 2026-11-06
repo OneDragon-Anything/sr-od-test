@@ -5,7 +5,9 @@ check_strategy_merge_grants;分方法拆目录规范落位,文件镜像超限纪
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-179-shali-
 taojin.md(定稿)§4 锁 1/3/4 + REVIEW-T179 §3.4(卡面官方原文:「合成
-2星2费角色时，获得1张【砂金】。」):
+2星2费角色时，获得1张【砂金】。」)+ designs/T-409-heita-jiyuan.md §5.1
+用户终裁(2026-11-06 具名判据行,卡面原文:「你获得3星【黑塔】时获得
+【大黑塔】」):
 
 - 主锁(锁 1):持卡局 gain_character 1★×3 同名 2 费 → 链内合成 2★ →
   bench 含 1 个 1★砂金,evidence 笔 = strategy_merge_grant:砂里淘金
@@ -17,7 +19,12 @@ taojin.md(定稿)§4 锁 1/3/4 + REVIEW-T179 §3.4(卡面官方原文:「合成
   一次(仅 to_star==2 级,级联终档 3★ 不发——用户裁定「每完成一级
   3 合 1 各发一次」判例的判据粒度);
 - live 门控负锁:未装配 sim(纯实机态)→ 持卡 + 命中 facts 零写
-  (策略卡发牌族正本:不建逻辑写、观察收尾,防门控失效退化成猜测写)。
+  (策略卡发牌族正本:不建逻辑写、观察收尾,防门控失效退化成猜测写);
+- 具名判据行(T-409):持黑塔纪元 + 3★黑塔 facts(星级/费用/角色名
+  三匹配)→ 发 1★大黑塔;同星同费不同名(三月七 1 费 3★ facts)→
+  零发放(名字维单变量负例,通配行此形会发);级联 1→2→3(黑塔)
+  facts 两级发放恰一次(仅 3★ 级命中具名判据)。通配行行为回归 =
+  本文件既有砂里淘金各锁(空串判据角色名,费用/星级双匹配即发)。
 """
 from __future__ import annotations
 
@@ -49,6 +56,12 @@ _EV = 'strategy_merge_grant:砂里淘金'
 _EV_PLACE = _EV + '#place'  # #place 后缀 = 获得链落位写 evidence 约定
 
 _CARD = '砂里淘金'
+
+_EV_HT = 'strategy_merge_grant:黑塔纪元'
+
+_EV_HT_PLACE = _EV_HT + '#place'
+
+_CARD_HT = '黑塔纪元'
 
 _CHAR2 = '花火'   # 2 费(cw_chars 判据费用域内素材)
 _CHAR3 = '姬子'   # 3 费(费用负例素材)
@@ -209,3 +222,45 @@ def test_empty_facts_zero_grant(sim_installed) -> None:
     """facts 空(链零升星形态)→ 零动作(持卡不变零写)。"""
     gs = _gs()
     assert check_strategy_merge_grants(gs, (), sig=_SIG) == ()
+
+
+def test_named_row_direct_hit_grants_daheita(sim_installed) -> None:
+    """具名行行为锁(T-409 终裁 A 案):持黑塔纪元 + 单条 3★黑塔 facts
+    (星级 3 + 费用 1 + 具名黑塔三匹配)→ 恰一条效果串,bench 落 1 个
+    1★大黑塔(发放 1★ 先验 rand=False 确定写)。"""
+    gs = _gs(card=_CARD_HT)
+    effects = check_strategy_merge_grants(gs, (('黑塔', 3),), sig=_SIG)
+    assert effects == (_EV_HT,), f'具名行效果串钉死: {effects}'
+    assert _bench_units(gs).count(('大黑塔', 1)) == 1, '落 1 个 1★大黑塔'
+
+
+def test_named_row_role_mismatch_zero_grant(sim_installed) -> None:
+    """具名判据角色名负例(名字维单变量):同星同费不同名(三月七 1 费
+    3★ facts)→ 零效果串零写——事件角色名 ≠ 判据角色名黑塔;同形 facts
+    在通配行(砂里淘金族费用域内)会发,具名行拦住 = 名字维判定生效。"""
+    gs = _gs(card=_CARD_HT)
+    effects = check_strategy_merge_grants(gs, (('三月七', 3),), sig=_SIG)
+    assert effects == (), f'具名判据角色名不匹配零发放: {effects}'
+    assert not _bench_units(gs), '零写'
+
+
+def test_named_row_gain_chain_cascade_grants_once(sim_installed) -> None:
+    """获得链集成(具名行,逐级判据粒度):持黑塔纪元,席面 2★×2 +
+    1★×3 → gain 1 只 1★ → 链内级联 1→2→3 → facts 两级、发放恰一次
+    (仅 3★ 级命中具名判据;2★ 级星级不符黑塔纪元、费用不符砂里淘金
+    〔未持〕)。"""
+    gs = cw4_gs(node_fill=False, shop_screen='off',
+                bench=[_bc('黑塔', 2), _bc('黑塔', 2),
+                       _bc('黑塔', 1), _bc('黑塔', 1), _bc('黑塔', 1)])
+    gs.write_logic(gs.active_strategies, [_CARD_HT],
+                   produced_by='test-seed', evidence='t:card', sig=_SIG)
+    out = gain_character(gs, '黑塔', 1, rand=False, sig=_SIG,
+                         evidence='t:chain', producer='TestChain')
+    assert out.merge_levels == 2, \
+        f'链内级联两级(3×1★→2★,再 3×2★→3★): {out}'
+    units = _bench_units(gs)
+    assert ('黑塔', 3) in units, f'级联产物 3★黑塔 在席: {units}'
+    assert units.count(('大黑塔', 1)) == 1, \
+        f'具名行发放恰 1 个 1★大黑塔(仅 3★ 级命中): {units}'
+    assert gs.bench.evidence == _EV_HT_PLACE, \
+        f'bench 尾笔 evidence = 发放写点: {gs.bench.evidence!r}'

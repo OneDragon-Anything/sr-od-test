@@ -1397,6 +1397,7 @@ def test_on_strategy_gained_unregistered_quiet() -> None:
         '黄晶矿工',
         '大扩招', '独家代言', '分解万物', '完美进化', '数值碾压',
         '融合召唤', '佩佩客串', '佩佩驾到', '轮回不止', '本姑娘就是罗刹',
+        '黑塔纪元',
         '都是这家伙的错！'}
     gs = _make_gs(bench=[('希儿', 1)], equips=[])
     seq_before = gs.write_seq
