@@ -44,10 +44,11 @@ from sr_od.application.currency_war.kernel.cw_board_by_row import (
     board_by_row_of,
 )
 from sr_od.application.currency_war.kernel.cw_comps import (
-    CARRY_ANCHOR_FALLBACK,
     COMP_LIBRARY,
+    TRANSITION_LIBRARY,
     carry_anchor,
     carry_set,
+    named_units,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
@@ -192,25 +193,20 @@ def test_knowledge_card_names_in_registries():
             assert name in CHARACTERS, (comp.name, name)
 
 
-def test_carry_anchor_plaza_first_fallback_registered():
-    """③ 锚派生口径(§1.2):plaza_carry 非空直用;空值线恰为攻略补全登记的
-    3 线(银枝/飞霄/桑博,依据 = CARRY_ANCHOR_FALLBACK 就地注释)。"""
+def test_carry_anchor_is_core_head():
+    """③ 锚派生口径(plaza-carry-retirement):carry_anchor == core_chars[0]
+    (首位=定义件契约)逐线成立;过渡组合条目 named_units == core 全员
+    (身份驱动判据,过渡语义取真条目——named_units docstring 契约)。"""
     for comp in COMP_LIBRARY:
-        anchor = carry_anchor(comp)
-        assert anchor, comp.name
-        if comp.plaza_carry:
-            assert anchor == comp.plaza_carry, comp.name
-    assert set(CARRY_ANCHOR_FALLBACK) == {
-        c.name for c in COMP_LIBRARY if not c.plaza_carry}
-    assert (CARRY_ANCHOR_FALLBACK['银枝群攻'] == '银枝'
-            and CARRY_ANCHOR_FALLBACK['追击飞霄'] == '飞霄'
-            and CARRY_ANCHOR_FALLBACK['专家桑博DOT'] == '桑博')
+        assert carry_anchor(comp) == comp.core_chars[0], comp.name
+    for comp in TRANSITION_LIBRARY:
+        assert named_units(comp) == tuple(comp.core_chars), comp.name
 
 
 def test_carry_set_union_anchor_and_core():
-    """③' CARRY 档 = 单名锚 ∪ core_chars 合流(§1.2「plaza_carry ∪ core_chars
-    合流」的派生落地;3.7 持有证据按「持有任一档内成员计 CARRY 档」消费)——
-    core 全员进档(单名锚窄化会把 core 成员错档到插件档)。"""
+    """③' CARRY 档 = 单名锚 ∪ core_chars 合流(12 号篇 §1.1 持有证据按
+    「持有任一档内成员计 CARRY 档」消费)——core 全员进档(单名锚窄化会把
+    core 成员错档到插件档)。"""
     for comp in COMP_LIBRARY:
         cs = carry_set(comp)
         assert cs, comp.name
