@@ -6,7 +6,7 @@
 REVIEW-T143 §4③ 裁决点 3 默认案(转换辖域 = 全域字面含开箱所得,机械
 回归 = 本文件锁 8,防「辖域含开箱」裁定落地后被静默豁免):
 - 锁 7 选卡链:offer 注入自由市场 → pick → bench 含箱 ∧ equips 零新增
-  (腿2 采样名被转换消费,净得 1 箱);
+  (效果条目2 采样名被转换消费,净得 1 箱);
 - 锁 8 开箱环路:持卡 + 开箱选定简易件 → 被选件不入栏 + 转换箱落位 +1
   (开箱腾席 = 观察域容器零写,sim 侧开掉的箱槽不移除;live 真值 = 净
   箱数守恒「开一箱转换回一箱」,装备零净得两侧同真)。
@@ -74,7 +74,7 @@ def _box_count(gs) -> int:
 def test_free_market_pick_chain_converts_leg2(
         _isolate_defect_buffer) -> None:
     """sim 选卡链(锁 7):装配后端 → offer 注入 → pick 自由市场 →
-    bench 恰 +1 简易武装箱(带名槽件)∧ equips 零新增(腿2 采样名被
+    bench 恰 +1 简易武装箱(带名槽件)∧ equips 零新增(效果条目2 采样名被
     转换消费)——世界真值,使用面(tool_use 上报链)天然可消费;
     rng 显式流键构造(缺省回退自掷破 sim 确定性,采样腿族纪律)。"""
     b: SimBackend = _backend(7)

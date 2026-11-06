@@ -1,5 +1,5 @@
 """sim 降本增效选卡落地全链 walk 测试(镜像 src = sim/cw_sim_backend.py
-素出售判据细分零接线 + kernel 获得链登记腿桥;驱动助手 import 复用
+素出售判据细分零接线 + kernel 获得链只登记不写状态的实现分支桥;驱动助手 import 复用
 test_sim_sell_all_deal/test_strategy_pick_dacaiyuan 同形文件,只 import
 复用不改——先例 = test_strategy_pick_dacaiyuan.py 同构)。
 

@@ -1,4 +1,4 @@
-"""sim 超发货币两腿测试(镜像 src = sim/cw_sim_backend.py 的选卡落地拍
+"""sim 超发货币两条效果条目测试(镜像 src = sim/cw_sim_backend.py 的选卡落地拍
 负债腿 + 节点窗回流腿 pre-read 两拍 + 呈现闩;先例 =
 本目录 test_invest_installment_gold.py〔分期金窗腿〕/
 test_strategy_pick_gudinglicai.py〔拿卡落地拍腿族〕同形态)。
@@ -122,7 +122,7 @@ def _drive_until(b: SimBackend, pred, limit: int = 512) -> None:
 
 # 填充卡前提申报(T-311-r1 裁决 a:只修注释、卡不换——换卡位移种子轨迹,
 # 明令禁止):淘金客现役 xp_per_refresh=2(cw_investments.py 注册行),
-# 刷新 XP 世界腿已接入调用(T-311);本卡作填充的安全性前提 = 本目录
+# 刷新 XP 把结果写进状态副本的实现分支已接入调用(T-311);本卡作填充的安全性前提 = 本目录
 # sim 链驱动器(_drive_step)商店屏一律直接关店、零付费刷新帧 → XP
 # 分支零开火,落卡零扰目标断言;未来引入付费刷新驱动须先换无 XP 字段
 # 填充卡或显式预算 XP 推进对。

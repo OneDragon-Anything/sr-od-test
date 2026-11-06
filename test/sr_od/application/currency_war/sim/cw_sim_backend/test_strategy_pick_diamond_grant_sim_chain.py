@@ -5,7 +5,7 @@ _on_invest_picked 宝钻腿 + 呈现闩 _strategy_pick_diamond_latch;kernel
 
 测试面依据 = 迭代设计 designs/T-243-zheme-da-de-zuanshi.md §4 锁 3/4
 + 用户裁定 2026-11-02 读法 B(裁定册 PENDING-DECISIONS.md):
-- 拿卡世界联动主链(锁 3 正面):选卡落地 → 腿1 效果体宝钻入栏 → 拿卡腿
+- 拿卡世界联动主链(锁 3 正面):选卡落地 → 效果条目1 效果体宝钻入栏 → 拿卡腿
   调 on_diamond_acquired → diamond_count +1 / deploy_cap = level + 财富
   宝钻数 / back_layout = min(9, 现值+1)(observe 通道,sim 世界写即真值);
 - 呈现闩防重放(锁 2 同形):同 offer 落地 advance 重放 → 三域零再写
@@ -130,7 +130,7 @@ def test_pick_grants_diamond_world_coupling() -> None:
         count_before = gs.diamond_count.value
         evs = _record_observe_ev(gs, mp)
         _pick(b, _CARD, [_CARD, '躺平', '淘金客'])
-        # 腿1 效果体入栏(宝钻在库尾)+ 腿3 佩佩入席
+        # 效果条目1 效果体入栏(宝钻在库尾)+ 效果条目3 佩佩入席
         equips_after = list(gs.equips.value or [])
         assert equips_after[:len(equip_before)] == equip_before \
             and equips_after[len(equip_before):] == [_EQUIP], \
@@ -138,7 +138,7 @@ def test_pick_grants_diamond_world_coupling() -> None:
         units = bench_units_of(gs)
         assert len(units) == units_before + 1 \
             and units[-1].char_id == '佩佩', '佩佩应恰 +1 入席'
-        # 腿2 世界三域联动(observe 通道)
+        # 效果条目2 世界三域联动(observe 通道)
         assert int(gs.diamond_count.value) == (int(count_before or 0) + 1), \
             f'diamond_count 未 +1: {gs.diamond_count.value!r}'
         assert int(gs.deploy_cap.value) == int(gs.level.value) + 1, \
@@ -193,7 +193,7 @@ def test_equips_unobserved_gate_blocks_coupling() -> None:
         units_before = len(bench_units_of(gs))
         # 容器替身:equips 通道替换为未观察形态(门/拒落双读点同塌;
         # restore 于 mp.undo)。佩佩腿(gain_character)不读 equips,
-        # 首链其余登记腿本卡无条目,替身不扰他腿。
+        # 首链其余只登记不写状态的实现分支本卡无条目,替身不扰他腿。
         mp.setattr(gs, 'equips', SimpleNamespace(value=None))
         evs = _record_observe_ev(gs, mp)
         _pick(b, _CARD, [_CARD, '躺平', '淘金客'])

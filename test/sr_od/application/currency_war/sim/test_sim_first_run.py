@@ -58,7 +58,7 @@ _EXPECT_MIN_PLANE: int = 2
 #: 的真值上界。swap 族正部 = 获得链交换腿(不等价交换 hp := min(gold,
 #: SQUAD_HP_CAP) 赋值语义,任一 hp_gold_swap 注册成员选卡拍至多抬到该
 #: 上界;注册表零成员时按 0 计,界随注册表派生零手维护)。结算型回血
-#: 两腿(首领战支 boss_end_heal_hp / 全战斗域支 battle_end_heal_hp)每
+#: 两条写分支(首领战支 boss_end_heal_hp / 全战斗域支 battle_end_heal_hp)每
 #: 战斗结算直加不 clip,计次单一源 = 日程真值表(战斗类节点数与首领位
 #: 数;节点改写规则只插 supply/换 kind,战斗类计数不变),战斗类词表
 #: 单一源 = sim COMBAT_NODE_TYPES(与结算腿门同一常量),金额单一源 =

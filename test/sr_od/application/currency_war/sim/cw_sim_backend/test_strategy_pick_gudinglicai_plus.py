@@ -1,4 +1,4 @@
-"""sim 固定理财+ 位面段双腿 walk 测试(镜像 src = sim/cw_sim_backend.py 的
+"""sim 固定理财+ 位面段两条效果条目 walk 测试(镜像 src = sim/cw_sim_backend.py 的
 apply_strategy_plane_refire_xp 选卡拍补发腿 + _apply_strategy_plane_start_xp
 位面首节点窗腿 + 呈现闩 + kernel 双桥经真实推进链;先例 =
 test_strategy_pick_gudinglicai.py 姊妹形态参数化 +本卡)。
@@ -11,7 +11,7 @@ test_strategy_pick_gudinglicai.py 姊妹形态参数化 +本卡)。
   开始照常(刷新支 kernel 桥 +3/位面、XP 支 sim 窗腿 +6/位面);
 - (3,2) 拿卡局:拿卡前位面开始未持卡零发放(表外卡零写面),全程仅拿
   卡拍双发(补发恰覆盖 P3 段;其后无位面开始)。
-- 重放防双发:呈现闩机制为姊妹同代码路径已锁(共享闩,同持多卡单腿独
+- 重放防双发:呈现闩机制为姊妹同代码路径已锁(共享闩,同持多卡一条效果条目独
   立),本文件不重复姊妹的重放 walk(两条测同一件事 = 冗余)。
 
 路径选卡卫生:驱动途中逢 offer 一律定向落「淘金客」(无 burst/刷新字段
@@ -59,7 +59,7 @@ from sr_od.application.currency_war.sim.cw_sim_run_config import RunConfig
 _EV_REFIRE = 'sim:engine:xp:strategy_plane_refire:固定理财+'
 # 填充卡前提申报(T-311-r1 裁决 a:只修注释、卡不换——换卡位移种子轨迹,
 # 明令禁止):淘金客现役 xp_per_refresh=2(cw_investments.py 注册行),
-# 刷新 XP 世界腿已接入调用(T-311)——「无刷新字段」旧注失实(burst/
+# 刷新 XP 把结果写进状态副本的实现分支已接入调用(T-311)——「无刷新字段」旧注失实(burst/
 # 位面字段仍为零);本卡作填充的安全性前提 = 本目录 sim 链驱动器
 # (_drive_step)商店屏一律直接关店、零付费刷新帧 → XP 分支零开火,
 # 落卡零扰目标断言;未来引入付费刷新驱动须先换无 XP 字段填充卡或显式

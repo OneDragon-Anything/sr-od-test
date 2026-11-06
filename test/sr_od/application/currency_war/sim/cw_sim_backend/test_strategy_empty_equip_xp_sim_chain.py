@@ -55,7 +55,7 @@ def _setup(seed: int = 31, *, grant: bool = True,
     """装配后端至 P1r1 备战窗(调用方负责 uninstall;驱动形态先例 = 同目录
     test_strategy_node_char_grant_sim_chain)。
 
-    grant=True → 拿卡(P1r1 窗已开,选卡拍结构性晚于窗前置段);腿1 随卡
+    grant=True → 拿卡(P1r1 窗已开,选卡拍结构性晚于窗前置段);效果条目1 随卡
     采样 1 件简易入栏,clear_equips=True → 观察通道清空物品栏(模拟该件
     已售出/耗用后的世界态——条件谓词恢复成立;观察→观察覆盖静默,
     test_env_xp_window_sim_chain 等级种子同写入口先例)。"""
@@ -168,7 +168,7 @@ def test_consecutive_empty_windows_each_fire(
 
 
 def test_non_empty_deck_zero_write(monkeypatch: pytest.MonkeyPatch) -> None:
-    """非空仓零写(锁 4 反向):腿1 采样的简易件在栏(非消耗品)→ 谓词
+    """非空仓零写(锁 4 反向):效果条目1 采样的简易件在栏(非消耗品)→ 谓词
     失败,窗推进零 xp 写(结构性自洽:拿卡即破空仓)。"""
     b = _setup(grant=True, clear_equips=False)
     try:

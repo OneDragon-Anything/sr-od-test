@@ -87,7 +87,7 @@ def _bench_units(gs) -> list[tuple[str, int]]:
 
 
 def _drive_to_strategy_offer(b: SimBackend) -> None:
-    """简报 → P1r3(U07 固定 offer 槽)驱动:策略选卡屏呈现即三腿闩
+    """简报 → P1r3(U07 固定 offer 槽)驱动:策略选卡屏呈现即三条效果条目闩
     置位(发牌腿前置状态)。路径 = 既有 overlay 让路测试同款出战/推进
     序(声明化单轨)。"""
     b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')

@@ -1,5 +1,5 @@
 """sim 分期金节点窗腿测试(镜像 src = sim/cw_sim_backend.py 的
-apply_invest_installment_gold 世界腿 + _begin_node_window 收入段接线 +
+apply_invest_installment_gold 把结果写进状态副本的实现分支 + _begin_node_window 收入段接线 +
 apply_strategy_pick_gold_next_nodes_init 拿卡初始化腿 + 呈现闩;先例 =
 本目录 test_invest_node_gold.py [定期福利聚合腿]/test_strategy_pick_xp.py
 [拿卡落地拍腿族] 同形态)。
@@ -216,7 +216,7 @@ def test_installment_leg_per_entry_dual_hold() -> None:
 
 def test_installment_leg_zero_hold_and_exhaust_short_circuit() -> None:
     """未持卡零写 + 耗尽短路 + 终局截断(锁 6):容器空(未持分期卡)
-    调腿 → 返回 0、金零增、零 Field 写(表外卡零噪声);剩余腿数即
+    调腿 → 返回 0、金零增、零 Field 写(表外卡零噪声);剩余效果条数即
     可达腿上限——局终剩余 >0 时条目留置蒸发(无局终补发方,断言面 =
     留置值不再变动、不报错);耗尽(0)再调零写零报错。"""
     gs = cw4_box()

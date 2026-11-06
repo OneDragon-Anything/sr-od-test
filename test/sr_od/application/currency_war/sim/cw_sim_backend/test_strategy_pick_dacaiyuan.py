@@ -1,5 +1,5 @@
 """sim 大裁员选卡落地全链 walk 测试(镜像 src = sim/cw_sim_backend.py
-出售发牌腿判据细分 + kernel 获得链登记腿双桥;驱动助手 import 复用
+出售发牌腿判据细分 + kernel 获得链只登记不写状态的实现分支双桥;驱动助手 import 复用
 test_sim_sell_all_deal 同形文件,只 import 复用不改——先例 =
 test_strategy_pick_gudinglicai.py 跨测试模块复用声明)。
 
@@ -46,7 +46,7 @@ from sr_od.application.currency_war.sim.cw_sim_backend import (
 
 _OPTS = ['大裁员', '躺平', '淘金客']
 _SOLD = ('三月七', 2)   # 预种 2★1 费:cost=1 无手续费,×2 两候选口径同值
-                        #(恰 3 精确锚在容器受控的 kernel 登记腿锁 4)
+                        #(恰 3 精确锚在容器受控的 kernel 只登记不写状态的实现分支锁 4)
 
 
 def _seed_sold_unit(b) -> None:

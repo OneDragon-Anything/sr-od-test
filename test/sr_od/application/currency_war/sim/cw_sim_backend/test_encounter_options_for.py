@@ -1,6 +1,6 @@
 """sim 遭遇呈现集收窄测试(镜像 src = sim/cw_sim_backend.py 的
 encounter_options_for helper + encounter 呈现写点 + STRATEGY_ECONOMY
-『二极管』三腿注册行)。
+『二极管』三条效果条目注册行)。
 
 测试面依据 = 迭代设计 designs/T-133-erjiguan.md §4 + REVIEW-T133 实现
 要点摘要 §④ 三锁:
@@ -12,7 +12,7 @@ encounter_options_for helper + encounter 呈现写点 + STRATEGY_ECONOMY
   去重追加,预种不被后续 pick 覆写)走到遭遇节点 → 容器呈现集长度 2 ∧
   difficulty 集 = {全集首, 全集末} ∧ idx 集 = {0,1}(全派生式),
   观察生成器(gen_encounter 容器回读链)与容器一致;
-- 锁 3 注册行直测:STRATEGY_ECONOMY['二极管'] 直读三腿值(instant_gold
+- 锁 3 注册行直测:STRATEGY_ECONOMY['二极管'] 直读三条效果条目值(instant_gold
   ==6 ∧ hp_instant==10 ∧ encounter_tier_extremes_only is True,防表外
   安静返 0/注册笔误,T-121 注册行直测先例);hp 腿直调真值 + 表外卡
   零写(apply_strategy_pick_hp 通用腿直调,照 T-127
@@ -143,7 +143,7 @@ def test_no_card_presentation_stays_full_set() -> None:
 # ============================================================ 锁 3 注册行直测 + hp 腿直调
 
 def test_registration_row_direct_three_legs() -> None:
-    """注册行直测:三腿值全直读——卡面「获得10小队生命值和生命上限,
+    """注册行直测:三条效果条目值全直读——卡面「获得10小队生命值和生命上限,
     获得6金币」+ 遭遇两档(防表外安静返 0/注册笔误,T-121 先例)。"""
     eff = STRATEGY_ECONOMY[_CARD]
     assert eff.instant_gold == 6

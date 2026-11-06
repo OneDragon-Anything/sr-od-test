@@ -79,7 +79,7 @@ def _bench_leave_view() -> BenchView:
 
 
 def _watch_gold_writes(gs, monkeypatch: pytest.MonkeyPatch):
-    """捕获 gold 域 observe 写值(记录包装透传真实现;窗口内金域多腿分写,
+    """捕获 gold 域 observe 写值(记录包装透传真实现;窗口内金域多条效果条目分写,
     本腿金笔按 evidence 定位取值)。"""
     gold_writes: list[tuple[int, str | None]] = []
     real = gs.observe

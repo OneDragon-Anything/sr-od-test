@@ -1,4 +1,4 @@
-"""sim 固定理财位面段双腿 walk 测试(镜像 src = sim/cw_sim_backend.py 的
+"""sim 固定理财位面段两条效果条目 walk 测试(镜像 src = sim/cw_sim_backend.py 的
 apply_strategy_plane_refire_xp 选卡拍补发腿 + _apply_strategy_plane_start_xp
 位面首节点窗腿 + 呈现闩 + kernel 双桥经真实推进链)。
 
@@ -59,7 +59,7 @@ _EV_PICK = 'sim:engine:xp:strategy_pick:固定理财'
 _EV_REFIRE = 'sim:engine:xp:strategy_plane_refire:固定理财'
 # 填充卡前提申报(T-311-r1 裁决 a:只修注释、卡不换——换卡位移种子轨迹,
 # 明令禁止):淘金客现役 xp_per_refresh=2(cw_investments.py 注册行),
-# 刷新 XP 世界腿已接入调用(T-311)——「无刷新字段」旧注失实(burst/
+# 刷新 XP 把结果写进状态副本的实现分支已接入调用(T-311)——「无刷新字段」旧注失实(burst/
 # 位面字段仍为零);本卡作填充的安全性前提 = 本目录 sim 链驱动器
 # (_drive_step)商店屏一律直接关店、零付费刷新帧 → XP 分支零开火,
 # 落卡零扰目标断言;未来引入付费刷新驱动须先换无 XP 字段填充卡或显式
@@ -206,7 +206,7 @@ def test_pick_p3r2_late_pick_refire_only() -> None:
 
 def test_replay_advance_zero_double_grant() -> None:
     """重放防双发(锁 4):同 offer 落地声明重放 → 第二次零写(呈现闩
-    已消费;补发/即时/刷新三腿均不残留)。"""
+    已消费;补发/即时/刷新三条效果条目均不残留)。"""
     b = _backend(seed=37)
     try:
         gs = b.gs

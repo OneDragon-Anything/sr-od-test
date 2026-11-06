@@ -179,7 +179,7 @@ def test_threshold_cross_carry_over() -> None:
 def test_two_instant_cards_independent_legs() -> None:
     """双即时卡各发各的(锁 5):先经验到账(+10)再成长的快乐(+4)
     → 两笔独立 evidence 笔笔分键,合计 +14 无一次聚合笔(第二次落地
-    前重种攒度,两腿增量各自可辨)。"""
+    前重种攒度,两条效果条目增量各自可辨)。"""
     b = _backend(seed=35)
     try:
         gs = b.gs
