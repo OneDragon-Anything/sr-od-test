@@ -278,7 +278,7 @@ class TestBranchRoutingMock:
     @pytest.mark.parametrize(
         'hit_finds, hit_clicks, expect_status, expect_find_clicks, expect_bare',
         [
-            # 退出确认面板:锚命中 → 点「菜单-暂离」→ round_retry
+            # 退出确认面板:识别标志命中 → 点「菜单-暂离」→ round_retry
             (
                 {('模拟宇宙', '菜单-暂离')},
                 {('模拟宇宙', '菜单-暂离')},
@@ -483,13 +483,13 @@ class TestCwLobbyResidualBranch:
     「回大厅」后的大厅 UI 层是残留态——开始按钮不响应任何点击(app 重试循环
     与手动双击均无效),右上角「按钮-关闭」才是真退出(关 X 露出世界场景后
     世界入口接管一切正常)。该残留态与开局前大厅共用同一 screen_info 档
-    (货币战争-大厅,创业指南 id_mark 锚 + 按钮-关闭 template),由既有
+    (货币战争-大厅,创业指南 id_mark 识别标志 + 按钮-关闭 template),由既有
     大厅分支接管:标识命中 → find+click「按钮-关闭」→ round_retry
     逐帧重识别露世界 → 「角色图标」分支 SUCCESS。
 
     真帧锁:fixture = run49 真实失败帧(死按钮大厅态,含创业指南+开始钮+
     右上关闭钮,测试仓归档 ``大厅-残留态-run49.webp``)。不 mock 画面识别,
-    锁「真帧 → 分支路由 + 点击 area」全链:锚点失配 / 模板漂移 / 误吸
+    锁「真帧 → 分支路由 + 点击 area」全链:识别标志失配 / 模板漂移 / 误吸
     别分支(尤其对话守卫与兜底)会在此红。
     """
 
@@ -511,7 +511,7 @@ class TestCwLobbyResidualBranch:
         # 分支路由:round_retry 等下一轮逐帧重识别露世界(非 success / 兜底)
         assert not result.is_success, f'残留态应 round_retry,status={result.status}'
         assert result.status == self.SCREEN
-        # 识别事实(真 OCR):创业指南 id_mark 锚命中(分支入口判据)。
+        # 识别事实(真 OCR):创业指南 id_mark 识别标志命中(分支入口判据)。
         assert (self.SCREEN, '标识-创业指南') in finds, f'识别命中:{finds}'
         # 动作(锁光标恢复态加固锁,2026-09-02 事故根修):命中后直点
         # 「按钮-关闭」area 中心,且必须带 pc_alt=True(锁光标下不带 Alt 的
@@ -558,7 +558,7 @@ class TestBattleFailScreenBranch:
         # 分支路由:round_retry 等下一轮逐帧重识别(点空白落到战前画面)
         assert not result.is_success, f'战败屏应 round_retry,status={result.status}'
         assert result.status == self.SCREEN
-        # 识别事实(真 OCR):标题 id_mark 锚命中(分支入口判据)
+        # 识别事实(真 OCR):标题 id_mark 识别标志命中(分支入口判据)
         assert (self.SCREEN, '标题-战斗失败') in finds, f'识别命中:{finds}'
         # 动作:只 find+click 点空白继续;不落兜底裸点击
         assert find_clicks == [(self.SCREEN, '点击空白区域继续')], (

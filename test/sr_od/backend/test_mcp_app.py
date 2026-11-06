@@ -234,7 +234,7 @@ def test_click_game_tool_delegates() -> None:
 
 
 def test_input_tools_collect_stop_interrupted_as_structured_error() -> None:
-    """停机守卫异常(BaseException)在工具层按名收口为结构化错误,不外抛。
+    """停机守卫异常(BaseException)在工具层按名收尾为结构化错误,不外抛。
 
     裁决背景(2026-09-02 第二轮审计冲突):ServerErrorMiddleware/FastMCP 泛型
     兜底只接 Exception,BaseException 穿透会变成 ASGI 层错误 + 连接断,客户端
@@ -257,7 +257,7 @@ def test_input_tools_collect_stop_interrupted_as_structured_error() -> None:
         backend_method.side_effect = StopRunInterrupted('停机')
         tool = mcp._tool_manager._tools[name]
         fn = getattr(tool, 'fn', None) or getattr(tool, 'func', None)
-        result = invoke(fn)  # 不抛即过:按名收口为结构化错误
+        result = invoke(fn)  # 不抛即过:按名收尾为结构化错误
         assert result['success'] is False, f'{name} 应返回失败结构'
         assert '停机中断' in result['error'], f'{name} 错误文案应指明停机中断,实得 {result["error"]}'
         backend_method.side_effect = None

@@ -7,7 +7,7 @@
    bot 可能误识别)。
 
 新增 / 改动画面后跑这个,能抓"id_mark 撞车" —— A 的 id_mark 文字 / 模板在 B 画面也全命中
-→ A 与 B 撞车。修复:给撞车的屏加更独有的 id_mark(更长关键词 / 独有锚 / 第 2 个 id_mark)。
+→ A 与 B 撞车。修复:给撞车的屏加更独有的 id_mark(更长关键词 / 独有识别标志 / 第 2 个 id_mark)。
 
 旧版只硬编码 ~16 屏验真阳性(``get_match_screen_name`` 返回正确名),抓不到碰撞;新版自动
 发现全部 fixture + 加碰撞检查。
@@ -83,13 +83,13 @@ _ALLOWED_DUAL_HIT: dict[tuple[str, str], set[str]] = {
     # 菜单的省略号子菜单是小型 overlay,不遮菜单 id_mark(开拓等级) → 菜单对该帧
     # is_precise 属画面事实;上层排除由导航顺序/运行时上下文负责。
     ('菜单-更多', '展开'): {'菜单'},
-    # 我来当策划模态只盖上半屏,商店锚(购买经验/收起)在下层透出 → 开商店对该帧
+    # 我来当策划模态只盖上半屏,商店识别标志(购买经验/收起)在下层透出 → 开商店对该帧
     # is_precise 属画面事实;运行时消歧由 cw_loop 0a2 分支优先级负责
-    # (模态分支先于备战双锚分支接管,W944 实证帧归档)。
+    # (模态分支先于备战双识别标志分支接管,W944 实证帧归档)。
     ('货币战争-银狼升星', '骇入二选一'): {'货币战争-备战-开商店'},
-    # 遭遇锁定暗色态 = 备战子态(整屏暗化蒙层,备战锚购买经验/出战在下层可读)
+    # 遭遇锁定暗色态 = 备战子态(整屏暗化蒙层,备战识别标志购买经验/出战在下层可读)
     # → 备战对该帧 is_precise 属画面事实;运行时消歧由遭遇 op 专属分发与
-    # cw_loop 锁定态分支负责(策略锁定近似撞车已随其锚 lcs 0.75 收口)。
+    # cw_loop 锁定态分支负责(策略锁定近似撞车已随其识别标志 lcs 0.75 完结)。
     ('货币战争-备战-遭遇锁定', '锁定态'): {'货币战争-备战'},
 }
 
@@ -98,7 +98,7 @@ _ALLOWED_DUAL_HIT: dict[tuple[str, str], set[str]] = {
     'screen,state',
     [
         pytest.param(s, st, marks=pytest.mark.xfail(
-            reason='fixture 错档:实为无名勋礼面板屏(菜单锚不可见),待迁移+建模',
+            reason='fixture 错档:实为无名勋礼面板屏(菜单识别标志不可见),待迁移+建模',
             strict=True,
         )) if (s, st) in _KNOWN_MISFILED else (s, st)
         for s, st in _FIXTURES
@@ -140,5 +140,5 @@ def test_id_mark(screen: str, state: str, test_context: SrTestContext) -> None:
             collisions.append(info.screen_name)
     assert not collisions, (
         f'{screen}/{state}:被别家画面 {collisions} 的 id_mark 全命中(撞车)'
-        ' → 给本屏或撞车屏加更独有的 id_mark(更长关键词 / 独有锚 / 第 2 个 id_mark)'
+        ' → 给本屏或撞车屏加更独有的 id_mark(更长关键词 / 独有识别标志 / 第 2 个 id_mark)'
     )

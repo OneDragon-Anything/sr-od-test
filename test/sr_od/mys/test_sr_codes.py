@@ -4,14 +4,14 @@
 断言依据全部来自本文件固化的权威映射对照表，不读本机易失实测件）：
 
 - 四表封闭集：PROPERTY_INFO_SNAPSHOT 恰 56 码逐键锁定（权威快照，映射内容
-  禁自行增删改——新码走兜底不进表）、命途/元素/部位三表全集与锚点、
+  禁自行增删改——新码走兜底不进表）、命途/元素/部位三表全集与基准、
   RELIC_MAIN_AFFIX_ALLOWED 部位可选集逐键锁定；
 - 三层查表行为：动态词典「干净可用值」优先（property_name_relic 先于 name）、
   占位符规避（实测词典两形态对偶：name 带 '#1[f1]%' 靠 relic 规避、relic 带
   '#1[i]' 靠 name 规避）、词典缺失退快照、空名占位码与词典外码落「未知属性」
   终兜底不抛异常；
 - validate_relic_main_affix 部位校验：命中 / 跨部位拒绝 / 未知部位拒绝；
-- 单参助手接线：各自查对应的表且 miss 兜底文案含入参。
+- 单参助手接入：各自查对应的表且 miss 兜底文案含入参。
 
 撞域纪律（文档性声明，design.md §2 契约 1）：RELIC_POS_CN 键域 1-6 与星魂
 ranks[].pos（星魂序号）撞值域但语义无关——部位表只服务遗器/饰品 pos 字段，
@@ -68,8 +68,8 @@ def test_property_info_snapshot_closed_set() -> None:
 
 
 def test_base_type_element_pos_anchor_and_closed_set() -> None:
-    """命途/元素/部位三表全集与锚点：命途恰 9 键（9=欢愉——开拓者 id 8010 与
-    wiki「开拓者•欢愉」词条双确认；3=智识——姬子锚）；元素恰 7 键
+    """命途/元素/部位三表全集与基准：命途恰 9 键（9=欢愉——开拓者 id 8010 与
+    wiki「开拓者•欢愉」词条双确认；3=智识——姬子为基准）；元素恰 7 键
     （lightning→雷）；部位恰 6 键。"""
     assert len(BASE_TYPE_CN) == 9
     assert set(BASE_TYPE_CN.keys()) == set(range(1, 10))
@@ -148,7 +148,7 @@ def test_validate_relic_main_affix() -> None:
 
 
 def test_resolve_helpers_table_wiring_and_fallback() -> None:
-    """三个单参助手接线：各查对应的表（命中值 = 表值），miss 兜底文案含入参
+    """三个单参助手接入：各查对应的表（命中值 = 表值），miss 兜底文案含入参
     便于定位。元素侧顺带锁 lightning≠Thunder 陷阱（传社区内部名 thunder 落
     兜底而非查中）。"""
     assert resolve_base_type_cn(9) == '欢愉'

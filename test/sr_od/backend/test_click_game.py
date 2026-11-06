@@ -54,17 +54,17 @@ def test_click_game_default_press_time(mock_ctx_game_ready):
 
 
 def test_click_game_exempted_when_stop_latch_armed():
-    """停机闩窗口内 click_game 放行不抛(ADR-0406 豁免机制的实证裁决)。
+    """停机中断一次性标志位窗口内 click_game 放行不抛(ADR-0406 豁免机制的实证裁决)。
 
     裁决背景(2026-09-02 第二轮审计冲突):FastMCP 同步工具经 anyio to_thread
     在单一 worker 线程执行整个工具体,backend.click_game 内的
     ``with stop_guard_exemption():`` 与 controller 调用同线程——线程本地豁免
-    令牌覆盖到位,守卫不抛。本测试用真 ControllerBase 子类 + 武装闩 + 独立
+    令牌覆盖到位,守卫不抛。本测试用真 ControllerBase 子类 + 武装标志位 + 独立
     worker 线程(模拟 anyio 线程池)复现该路径:
-    ① 裸调 controller.click(无豁免)抛 StopRunInterrupted——证明闩是活的;
+    ① 裸调 controller.click(无豁免)抛 StopRunInterrupted——证明标志位是活的;
     ② 经 backend.click_game(豁免内)同线程放行返回成功——证明豁免覆盖;
     ③ 守卫异常是 BaseException,若豁免缺失会穿透工具层泛型兜底(另见
-    test_mcp_app 的工具层按名收口测试)。
+    test_mcp_app 的工具层按名收尾测试)。
     """
     import threading
 
@@ -93,7 +93,7 @@ def test_click_game_exempted_when_stop_latch_armed():
             return True
 
     controller = _GuardedController()
-    controller.stop_guard = lambda: True  # 闩窗口内(latch 武装)
+    controller.stop_guard = lambda: True  # 标志位窗口内(latch 武装)
     ctx = MagicMock(name='SrContext')
     ctx.ready_for_application = True
     ctx.controller = controller
@@ -115,6 +115,6 @@ def test_click_game_exempted_when_stop_latch_armed():
                                     'in_window': True, 'pc_alt': False}
     assert controller.clicked == [(960, 540)]
 
-    # ① 对照:同线程裸调(无豁免)确实被守卫拦——闩是活的,豁免才是放行原因
+    # ① 对照:同线程裸调(无豁免)确实被守卫拦——标志位是活的,豁免才是放行原因
     with pytest.raises(StopRunInterrupted):
         controller.click(Point(1, 1))

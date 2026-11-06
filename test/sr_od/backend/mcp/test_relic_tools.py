@@ -1,6 +1,6 @@
 """relic_lookup 遗器查询工具单测。
 
-锁的内容（relic_tools 模块 docstring 匹配策略 + mys-relic-sets 常量锚点）：
+锁的内容（relic_tools 模块 docstring 匹配策略 + mys-relic-sets 常量基准）：
 
 - tid 数字命中：61013 → 云无留迹的过客（含 kind_cn/set_id/effects/pieces
   与图标路径公式）；未知 tid → not_found 不抛异常；
@@ -18,7 +18,7 @@ from sr_od.backend.mcp.relic_tools import lookup_relic, register_relic_tools
 
 
 def test_lookup_by_tid() -> None:
-    """tid 数字命中：信使锚点件 id → 骇域漫游的信使；data 含结构化全量。"""
+    """tid 数字命中：信使基准件 id → 骇域漫游的信使；data 含结构化全量。"""
     result = lookup_relic('61141')
     assert result['status'] == 'success'
     data = result['data']

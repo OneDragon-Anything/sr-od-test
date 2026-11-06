@@ -1,15 +1,15 @@
 """sr_relic_sets 套装快照常量与套装效果助手单测。
 
 锁的内容（design.md changes/mys-relic-sets §1 数据层 / §3 测试策略；断言依据
-全部来自本文件固化的锚点值，不读本机易失快照件）：
+全部来自本文件固化的基准值，不读本机易失快照件）：
 
 - 快照完整性：RELIC_SETS 恰 62 套（隧洞 34 + 位面饰品 28）、效果齐备形态
   （62 条带 '2'、34 条 cavern 带 '4'、ornament 无 '4'）、192 件名唯一、
   pos 坐标系（隧洞 1-4 / 位面 5-6）；
-- 锚点：官方全名套装（骇域漫游的信使 4 件件名 + 2/4 效果、生命的翁瓦克
+- 基准：官方全名套装（骇域漫游的信使 4 件件名 + 2/4 效果、生命的翁瓦克
   2 件 + 充能效率效果——社区简称≠官方全名，勿按简称入表）、3.6/3.7 新
   套装在列（快照 verification 块新套装抽 2）；
-- 件名反查：resolve_set_name 锚点命中；未知件名 None + warning（``sr_relic_sets:``
+- 件名反查：resolve_set_name 基准命中；未知件名 None + warning（``sr_relic_sets:``
   前缀、文案含件名）不抛异常；
 - build_set_effects 三形态与排序：满装（4+2 双激活）/ 缺件（只 2 件档）/
   饰品 1 件（count<2 不产出条目）/ 未知件名静默跳过（告警责任在
@@ -62,7 +62,7 @@ def test_relic_sets_snapshot_completeness() -> None:
 
 
 def test_anchor_and_new_version_sets() -> None:
-    """官方全名套装锚点：骇域漫游的信使（4 件件名逐一定名 + 2/4 件效果）、
+    """官方全名套装基准：骇域漫游的信使（4 件件名逐一定名 + 2/4 件效果）、
     生命的翁瓦克（2 件件名 + 充能效率效果）；3.6/3.7 新套装在列
     （verification.new_sets_check 抽 2：伶人=3.7 隧洞、寰宇生研院=3.6 位面）。"""
     by_name = {s.set_name: s for s in RELIC_SETS}
@@ -85,7 +85,7 @@ def test_anchor_and_new_version_sets() -> None:
 def test_resolve_set_name_hit_and_miss_warning(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """件名反查：隧洞与位面锚点命中官方全名；未知件名返回 None 不抛异常，
+    """件名反查：隧洞与位面基准命中官方全名；未知件名返回 None 不抛异常，
     warning 恰一条且带 ``sr_relic_sets:`` 前缀、文案含件名便于定位。"""
     assert resolve_set_name('信使的全息目镜') == '骇域漫游的信使'
     assert resolve_set_name('翁瓦克的诞生之岛') == '生命的翁瓦克'
@@ -159,7 +159,7 @@ def test_set_names_unique_across_all_sets() -> None:
 def test_set_id_biject_with_list_order() -> None:
     """set_id 增量固化（2026-11-05）：62 套全非零且唯一；与列表序严格双射
     （隧洞第 i 套 = 101+i、位面第 i 套 = 301+i——双源实证：tid 公式 43 套
-    + 归档图标名对照 19 套，见 sr_relic_sets 模块 docstring）。锚点取 tid
+    + 归档图标名对照 19 套，见 sr_relic_sets 模块 docstring）。基准取 tid
     实证套（信使=114 / 翁瓦克=308）与图标对照套（伶人=133 / 寰宇=328）。"""
     cavern_sets = [s for s in RELIC_SETS if s.kind == 'cavern']
     ornament_sets = [s for s in RELIC_SETS if s.kind == 'ornament']
@@ -178,7 +178,7 @@ def test_set_id_biject_with_list_order() -> None:
 
 
 def test_resolve_set_by_tid() -> None:
-    """tid 反查：隧洞（60000 段）与位面（50000 段）锚点命中套装定义；
+    """tid 反查：隧洞（60000 段）与位面（50000 段）基准命中套装定义；
     未知 tid 返回 None 不抛异常。公式 = base+set_id*10+pos。"""
     assert resolve_set_by_tid(61013).set_name == '云无留迹的过客'
     assert resolve_set_by_tid(53076).set_name == '盗贼公国塔利亚'
@@ -187,7 +187,7 @@ def test_resolve_set_by_tid() -> None:
 
 def test_piece_desc_obtain_and_icon_path() -> None:
     """单件 desc / 套装 obtain 齐备形态（192/62 全非空，纯展示文本透传）；
-    图标寻址公式锚点（192 件归档的地址契约，文件存在性不在此锁）。"""
+    图标寻址公式基准（192 件归档的地址契约，文件存在性不在此锁）。"""
     pieces = [p for s in RELIC_SETS for p in s.pieces]
     assert all(p.desc for p in pieces)
     assert all(s.obtain for s in RELIC_SETS)

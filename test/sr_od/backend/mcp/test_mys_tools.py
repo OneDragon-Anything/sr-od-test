@@ -455,7 +455,7 @@ def test_ticket_session_id_mismatch_while_awaiting_discarded(
     assert [c.session_id for c in verifiers[0].started] == ['s-1', 's-2']
     assert verifiers[0].closed is False
 
-    # 换题后正确票据照常收口（丢弃路径未污染状态机）
+    # 换题后正确票据照常收尾（丢弃路径未污染状态机）
     send.add_route((LOGIN_URL, _login_ok_result()))
     verifiers[0].deliver({'session_id': 's-2', 'ticket': _ticket()})
     assert verifiers[0].closed is True

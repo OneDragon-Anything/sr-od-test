@@ -1,7 +1,7 @@
 """共享画面 fixture 态测试 —— 验 ``in_secondary_ui`` 在真实归档截图上能正确识别。
 
 这些是 app 共用的通用画面(合成 被 synthesize_trick_snack 等用;队伍 被战前编队 / world_patrol 等
-用),无独立 app 测试文件,故集中在此验画面态识别(标题锚点在真实截图上可匹配)。fixture 缺则 skip。
+用),无独立 app 测试文件,故集中在此验画面态识别(标题识别标志在真实截图上可匹配)。fixture 缺则 skip。
 """
 
 import pytest

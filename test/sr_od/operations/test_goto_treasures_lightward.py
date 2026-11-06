@@ -4,7 +4,7 @@
 - 前置链共用:判定节点分流;大世界起走全链(大世界→指南→分类页→选关);
 - 已在分类页(含面板选中态与目标不符)→ 显式点目标分类后进入;
 - 已在选关(混沌回忆视图干净态)→ 零点击直成功;
-- 末日幻影尾部:目标画面未建档,点入口按钮后显式失败(锁挂账语义)。
+- 末日幻影尾部:目标画面未建档,点入口按钮后显式失败(锁登记成待办语义)。
 
 OFF_PATH 分支(委托 BackToNormalWorldPlus)内部分支依赖多画面 area,fixture
 剧本难覆盖,由实机 run_operation 验证(编队屏起跑即命中该分支),本文件不测。
@@ -157,7 +157,7 @@ def test_as_unmodeled_fails_after_click(
     test_context: SrTestContext,
     fixture_controller: FixtureController,
 ) -> None:
-    """末日幻影目标画面未建档:点入口按钮后显式失败(锁挂账语义,防静默半途)。"""
+    """末日幻影目标画面未建档:点入口按钮后显式失败(锁登记成待办语义,防静默半途)。"""
     _require_screens(test_context, [_CATEGORY_AS_FRAME])
     fixture_controller.set_phases([{'frame': _CATEGORY_AS_FRAME}])
     op = _WatchedGoto(test_context, TLMode.APOCALYPTIC_SHADOW)
