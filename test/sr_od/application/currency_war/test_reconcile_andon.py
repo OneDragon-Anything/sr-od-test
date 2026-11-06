@@ -52,7 +52,7 @@ def test_andon_mismatch_stops_with_framework_evidence(monkeypatch, caplog):
 
 
 def test_andon_no_latch_repeat_fires_stop_again():
-    """无每局一次性标志位:重复触发照发 stop——幂等收口与截图防重由框架
+    """无每局一次性标志位:重复触发照发 stop——幂等收尾与截图防重由框架
     stop_running(幂等 + was_live 门)保证,闭包不自维护状态。"""
     rc = _Rc()
     set_reconcile_andon_hook(

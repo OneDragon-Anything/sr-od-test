@@ -1,5 +1,5 @@
 """开源节流条件息顶满捕获腿测试(镜像 src = kernel/cw_gain_chain.py 的
-capture_strategy_interest_topup + kernel/cw_game_state.py tick 闸接线;
+capture_strategy_interest_topup + kernel/cw_game_state.py tick 闸接入调用;
 宿主文件 test_game_state.py 超限冻结,按被测函数拆目录新文件落位)。
 
 测试面依据 = 迭代设计 designs/T-295-kaiyuan-jieru.md §4 锁 3 + REVIEW-

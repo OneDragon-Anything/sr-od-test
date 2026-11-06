@@ -5,7 +5,7 @@
 1. **位面 op 6 node 流程测试**:识别位面1 → 点开位面2 → 识别位面2 →
    点开位面3 → 识别位面3 → 上报 全链走通;三张位面卡各点一次 + 每位面
    点 boss 节点(动态定位);采集 op 零关闭动作(开/关转场归编排 op)。
-   附属机制挂点随流程验:节点台账 plane_detail 源 + boss 位回填、敌人
+   附属机制调用点随流程验:节点台账 plane_detail 源 + boss 位回填、敌人
    难度参考值逐位面落账(三识别 node 各读、上报节点落账)、词缀效果
    账本登记恰一次。识别域读法(节点条/类型名标签/SIFT/词缀/难度)桩化,
    画面门与点击/写门真跑(fixture 帧 + 真 screen_info area + 真容器)。
@@ -161,7 +161,7 @@ def _run_op(test_context, op) -> object:
 
 def test_plane_intel_six_node_pipeline_flow(test_context, monkeypatch) -> None:
     """6 node 管线全链:三卡点选 + 每位面 boss 节点点击 + 上报写门 +
-    附属机制三挂点(台账/难度/词缀登记)。红 = 管线结构或挂点接线断裂。"""
+    附属机制三调用点(台账/难度/词缀登记)。红 = 管线结构或调用点接入调用断裂。"""
     if not test_context.has_screen(*_DETAIL_FRAME):
         pytest.skip(f'存档截图缺失:screens/{_DETAIL_FRAME[0]}/{_DETAIL_FRAME[1]}.png')
 
@@ -521,7 +521,7 @@ def test_prep_delegate_skips_on_unreadable_frame(test_context, monkeypatch) -> N
 
 def test_prep_delegate_freezes_decision_on_half_open_rand_affixes(
         test_context, monkeypatch) -> None:
-    """半开帧封死态(T-45 §4 锁 4,接线 1 默认案):位面真值已有 ∧ 词缀
+    """半开帧封死态(T-45 §4 锁 4,接入调用 1 默认案):位面真值已有 ∧ 词缀
     随机态(仅第二支命中)∧ 节点条不可读 → round_wait 等待态不放行决策
     (静默放行会让决策消费随机态值,违反「先转正后消费」不变量);零
     委派零决策消费,非重试等待态不烧 node 重试预算。"""

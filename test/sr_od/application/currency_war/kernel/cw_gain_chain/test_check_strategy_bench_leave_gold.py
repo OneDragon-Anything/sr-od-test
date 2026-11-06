@@ -1,5 +1,5 @@
 """策略卡备战席条件离场金检查腿测试(镜像 src = kernel/cw_gain_chain.py 的
-check_strategy_bench_leave_gold 纯判定 + sim/cw_sim_backend.py 节点窗挂点
+check_strategy_bench_leave_gold 纯判定 + sim/cw_sim_backend.py 节点窗调用点
 唯一调用口)。
 
 测试面依据 = 迭代设计 designs/T-292-yuzhe-ezuoju.md(定稿)§4 锁 2 +
@@ -11,7 +11,7 @@ test_check_strategy_bench_count_xp.py):
   文义);未持卡/表外卡→空;bench 未观察(None)→空;占位件槽→空
   (辖域判别用例——占位件非「角色」);
 - 槽位序 = BenchView.slots 0 基下标(离场写端定位坐标系);
-- 纯读零写:函数体零容器写(判定无 sig 形参,世界写端归 sim 挂点)。
+- 纯读零写:函数体零容器写(判定无 sig 形参,世界写端归 sim 调用点)。
 """
 from __future__ import annotations
 
@@ -137,7 +137,7 @@ def test_no_card_and_off_table_empty() -> None:
 
 def test_pure_read_zero_container_writes() -> None:
     """纯读零写(形态 A):命中路径零容器写(判定无 sig 形参零世界写,
-    世界写端 = sim 挂点唯一调用口)。"""
+    世界写端 = sim 唯一调用点)。"""
     gs = _gs(bench=[_unit('花火')])
     seq0 = gs.write_seq
     assert check_strategy_bench_leave_gold(gs) == [(0, '花火', 2)]

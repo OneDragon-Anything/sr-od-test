@@ -13,7 +13,7 @@ T-316-huangjing-kuanggong.md(定稿,REVIEW-T316 免裁 7/7)§4 锁 3:
 世界写单源说明: spheres/ore_rewards 写经 cw_gain_chain._grant_ores_to_world
 (触发腿+立刻腿同一授予写函数),其撞键/续接/附着语义由
 cw_gain_chain/test_check_strategy_ore_open_effects.py 撞键负例锁承载,
-本文件只锁获得链分派接线与本腿特有语义(金档固定/分派 rng 消费)。
+本文件只锁获得链分派接入调用与本腿特有语义(金档固定/分派 rng 消费)。
 """
 from __future__ import annotations
 

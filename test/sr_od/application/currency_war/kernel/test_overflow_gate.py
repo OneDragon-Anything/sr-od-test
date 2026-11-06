@@ -71,7 +71,7 @@ def _frame(**kw) -> MandateFrame:
 def _state():
     """容器种子 + 上阵 1 人(免 empty_board_sell_guard:场上无人禁卖守卫,
     守卫读容器上阵域非 frame)。bench 槽表照实观察(生产 heavy 帧恒产出;
-    批2b 换算收口后溢出发射位按容器槽位表解析下标,黑板视图与容器同帧
+    批2b 换算收尾后溢出发射位按容器槽位表解析下标,黑板视图与容器同帧
     同源是解析前提)。"""
     gs = game_state_of(None)
     gs.write_logic(gs.bench, cw4_bview(

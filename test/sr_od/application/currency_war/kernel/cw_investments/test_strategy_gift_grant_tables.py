@@ -3,7 +3,7 @@ test_cw_investments.py 超行数线,登记面新锁落本镜像目录,先例 =
 同目录 test_strategy_jiangben_zengxiao_registry.py)。
 
 测试面依据 = 迭代设计 designs/T-283-mi-zhi-lvren.md(定稿)§4 锁 1/锁 5
-+ 七裁决点全部默认案(经族级授权自动收口,判定 = designs/REVIEW-T283.md)。
++ 七裁决点全部默认案(经族级授权自动收尾,判定 = designs/REVIEW-T283.md)。
 卡面官方原文(cw_invest_data.py 253601 行逐字):「激活4【巡海游侠】时，
 其中3位巡海游侠会发生一次讨论，之后，你获得一个携带着【星间旅人星徽】
 的2星【黄泉】。进入下一个奖励节点时，获得【波提欧】。」

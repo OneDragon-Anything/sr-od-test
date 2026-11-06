@@ -7,7 +7,7 @@ T295 §3.3 裁决点 1/2(条件金腿 = 利息分量顶满;tick 捕获→窗口�
 - 上节点未花费 → 下窗收入息分量顶满至 resolved 帽 9(金 25 自然息 2
   显影)+ 载体消费清零 + prev_node_spent 滚回 False;
 - **S2 回归红线用例**:上节点已花费(prev 直写 True 测试缝;置位通道
-  本体 = 存款回报批四花费通道接线锁)→ 无顶满,息 = min(gold//10, 9)
+  本体 = 存款回报批四花费通道接入调用锁)→ 无顶满,息 = min(gold//10, 9)
   ——若 tick 闸内捕获被移到滚位后,捕获读恒 False → 载体 = 帽 → 本例
   息分量变 9 即红(kernel 侧同型序锁 =
   kernel/cw_game_state/test_interest_topup_capture.py);

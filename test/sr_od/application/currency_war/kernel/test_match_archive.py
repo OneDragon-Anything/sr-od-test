@@ -1,9 +1,9 @@
-"""CW 遥测按局档案域测试面(状态流水装配收口 + 跨档去重 + 重装配保真 +
+"""CW 遥测按局档案域测试面(状态流水装配收尾 + 跨档去重 + 重装配保真 +
 局终行写口/判定/下游识别)。
 
 四节归并自原四个主题文件(测试函数名全量保留,原文件已删):
 
-1. journal 流水装配兜底 + 收口落盘(原 test_cw_journal_assembly_guard.py;
+1. journal 流水装配兜底 + 收尾落盘(原 test_cw_journal_assembly_guard.py;
    背景实证:2026-09-14 18:56 起 8 连局零 state 行零档案,深检
    run_20260915_054718.md §0;修法正本 = kernel ``ensure_journal_assembly``
    docstring + ``cw_game_state.game_state_of`` 建立路径注释);
@@ -64,7 +64,7 @@ from sr_od.application.currency_war.telemetry.state import (
 )
 
 # ============================================================
-# 1. journal 流水装配兜底 + 收口落盘
+# 1. journal 流水装配兜底 + 收尾落盘
 # ============================================================
 
 
@@ -96,8 +96,8 @@ def test_ensure_assembly_installs_at_default_root_when_absent(
 
 
 def test_game_state_establish_wires_assembly() -> None:
-    """正主单例建立路径接线:game_state_of 局容器建立注入 run_id_provider
-    即装配(重定向原「run 领取单点接线」测试;精化令 2026-09-15:触发
+    """正主单例建立路径接入调用:game_state_of 局容器建立注入 run_id_provider
+    即装配(重定向原「run 领取单点接入调用」测试;精化令 2026-09-15:触发
     只钉该建立点,GameState 构造器零装配逻辑;行为等价 = 未初始化容器首写
     前装配已发生)。"""
     reset_state_telemetry()
@@ -124,8 +124,8 @@ def test_draft_birth_and_run_claim_do_not_wire_assembly(
 
 def test_close_run_flushes_buffered_rows_before_threshold(
         tmp_path: Path, _reset_run_cluster: None) -> None:
-    """收口落盘:批量阈值内的缓冲行随 close_run 落盘(装配读盘不漏局终行);
-    无装配实例时 flush_pending 恒 0(收口单点在未武装进程零副作用)。"""
+    """收尾落盘:批量阈值内的缓冲行随 close_run 落盘(装配读盘不漏局终行);
+    无装配实例时 flush_pending 恒 0(收尾单点在未武装进程零副作用)。"""
     # 未武装进程:flush 零副作用(先于装配,隔离面)
     reset_state_telemetry()
     assert flush_pending() == 0
@@ -140,7 +140,7 @@ def test_close_run_flushes_buffered_rows_before_threshold(
               final_hp=0, notes='auto')
     lines = jpath.read_text(encoding='utf-8').splitlines()
     assert len(lines) == 1
-    assert state_journal_instance() is not None   # 收口 flush ≠ 拆装配
+    assert state_journal_instance() is not None   # 收尾 flush ≠ 拆装配
 
 
 # ============================================================
@@ -424,7 +424,7 @@ def test_assemble_rebuilds_derived_columns_from_legacy_streams(tmp_path: Path):
     assert arch is not None
     # 切片契约不回填:单键,旧流键不重入档案载荷
     assert set(arch['slices'].keys()) == {'state/journal.jsonl'}
-    # 逐轮表:3 轮,结算真值链/动作合并/快照/收口全在
+    # 逐轮表:3 轮,结算真值链/动作合并/快照/收尾全在
     rounds = arch['rounds']
     assert [(r['plane'], r['round']) for r in rounds] == [(1, 1), (1, 2), (2, 3)]
     assert [(r['hp'], r['hp_source'], r['hp_delta']) for r in rounds] == \
@@ -579,14 +579,14 @@ def _final_rows() -> list[dict]:
     return [r for r in _rows() if r.get('field') == MATCH_FINAL_FIELD]
 
 
-# (收口整删)原 test_match_final_domain_registered 删:单行「域键在场」断言,经核
+# (收尾整删)原 test_match_final_domain_registered 删:单行「域键在场」断言,经核
 #  判读/档案消费面无人读 gs_schema['match_final'] 键——write 系测试红时
 #  同故障,子集断言不留。)
-# (收口整删)原 test_match_final_closed_vocab「终局类型词表封闭集」:
+# (收尾整删)原 test_match_final_closed_vocab「终局类型词表封闭集」:
 #  集外炸错分支并入下方原子行测试(常量字面断言不留);原
 #  test_match_final_version_stamps「版本戳」:载荷戳分支并入原子行测试,
 #  解析器等值对拍半(kernel 复刻 vs telemetry 单一源双实现等值)随该测试退役
-#  ——src 侧 cw_game_state.py 常量段注释仍指针本文件对拍,收口申报见报告。
+#  ——src 侧 cw_game_state.py 常量段注释仍指针本文件对拍,收尾申报见报告。
 # 原 test_write_match_final_default_duration_segment_level「duration_s
 # 缺省 = 段级自算」删:缺省时长 = time.monotonic 差值 ≥0,语言自带保证面,
 # 显式传值直通半由原子行测试 duration_s=1234.5 断言承重。
@@ -656,7 +656,7 @@ def test_abnormal_backfill_note_recovered_version_allocated(journal, run_id) -> 
 
 
 def test_match_final_listener_fires_on_row_only(journal, run_id) -> None:
-    """复盘触发器挂点(武装+局内态):监听缺省关;写口受理成功即触发
+    """复盘触发器调用点(武装+局内态):监听缺省关;写口受理成功即触发
     (幂等跳过不触发);事件携带 run_id/终局类型/版本;监听异常不毒化终局
     流转。未武装/局外两态的触发真值 = 下一个测试。"""
     fired: list[dict] = []
@@ -681,7 +681,7 @@ def test_match_final_listener_fires_on_row_only(journal, run_id) -> None:
 
 def test_match_final_listener_fires_unarmed_and_offmatch(tmp_path) -> None:
     """触发真值两态(申报勘误钉住的测试):未武装(无 sink)/局外(供给槽返空)
-    行均不落而监听照触发,事件 run_id=''——消费方(复盘触发接线)按此
+    行均不落而监听照触发,事件 run_id=''——消费方(复盘触发接入调用)按此
     自滤,禁按「落行才触发」旧申报消费。"""
     fired: list[dict] = []
     set_match_final_listener(fired.append)
@@ -706,11 +706,11 @@ def test_match_final_listener_fires_unarmed_and_offmatch(tmp_path) -> None:
         reset_state_telemetry()
 
 
-# (收口整删)原 test_obs_event_vocab_closed_set「obs_event 事件词表封闭
+# (收尾整删)原 test_obs_event_vocab_closed_set「obs_event 事件词表封闭
 #  集(硬约束 2)」删:常量字面断言 + 炸错分支 = 事实源在 cw_vocab 词表定义,
 #  集外炸错由 pytest.raises 形态与封闭集测试同构面承重不成立——如实申报:
 #  note_obs_event 集外炸错行为现无独立测试,词表漂移归 kernel 既有测试与
-#  review 面(覆盖缺口随收口申报)。
+#  review 面(覆盖缺口随收尾申报)。
 
 
 def test_g10_retrograde_obs_event_evidence(journal, run_id) -> None:
@@ -765,8 +765,8 @@ def test_runs_result_mapping_covers_archive_values() -> None:
 
 
 def test_detect_match_final_evidence_ladder() -> None:
-    """证据阶梯:journal 已收口 → None(幂等);runs_summary 行 → 收编映射;
-    terminal_closure 结算行 → 收口行映射;全缺 → abnormal(补写形态判据)。"""
+    """证据阶梯:journal 已收尾 → None(幂等);runs_summary 行 → 收编映射;
+    terminal_closure 结算行 → 收尾行映射;全缺 → abnormal(补写形态判据)。"""
     assert detect_match_final(run_id='r', journal_final={'v': 1}) is None
     d = detect_match_final(
         run_id='r',
@@ -782,7 +782,7 @@ def test_detect_match_final_evidence_ladder() -> None:
     assert (d2.final_type, d2.plane, d2.round_num) == ('stopped', 2, 6)
     assert d2.evidence == 'terminal_closure'
     d3 = detect_match_final(run_id='r', outcome_rows=[
-        {'source': '', 'killed': False}])   # 非收口行不入阶梯 3
+        {'source': '', 'killed': False}])   # 非收尾行不入阶梯 3
     assert d3.final_type == 'abnormal'
     assert d3.evidence == 'no_close_evidence'
 
@@ -822,7 +822,7 @@ def test_extract_match_final_rows_recognition() -> None:
     assert ma.extract_match_final_rows(None) == {}
 
 
-# (收口整删)原 test_view_match_final_reading「判读 CLI 读面(view_
+# (收尾整删)原 test_view_match_final_reading「判读 CLI 读面(view_
 #  match_final 显影/无行提示)」删:CLI 输出文案测试(「type=」「补写」等
 #  字样断言)= 展示层快照,红时答不出哪个消费行为坏了;判读读数面由
 #  match_final_rows 行取数(原 view 测试内同函数断言)与下游档案测试承重。

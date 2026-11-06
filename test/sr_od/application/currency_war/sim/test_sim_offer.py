@@ -132,7 +132,7 @@ def test_joint_decision_extra_slot_env_gated() -> None:
 
 def test_joint_decision_extra_slot_derived_from_kernel_registry() -> None:
     """同值锁(T-23 设计 §4.1):额外槽常量 = kernel ENV_POOL_REWRITE
-    登记值且同一对象——单一源派生,手改回字面量 / 登记缺挂点即红。"""
+    登记值且同一对象——单一源派生,手改回字面量 / 登记缺调用点即红。"""
     registered = ENV_POOL_REWRITE[JOINT_DECISION_ENV_NAME].extra_strategy_offer_node
     assert JOINT_DECISION_EXTRA_SLOT == (2, 6)
     assert JOINT_DECISION_EXTRA_SLOT is registered
@@ -393,7 +393,7 @@ def _gs_with_unlocked(name: str):
 def test_expert_wolf_conditional_env_deal_pool_lifecycle() -> None:
     """特邀专家:银狼条件触发局锁(T-42 设计 §4 锁 6,消费面行为回归):
     触发前 deal 候选永不含银狼(未解锁隔离);开局种子起手(bench 已含
-    银狼LV.999)经环境获得时点在场判定(挂点④)解锁后,4 费档 deal 候选
+    银狼LV.999)经环境获得时点在场判定(调用点④)解锁后,4 费档 deal 候选
     含银狼(expert-pool-unlock 池派生消费面);银狼持有后 held/剩余池守恒
     (EXPERT_COPIES_ASSUMED − held,获得链落席与购买渠道对池数学等价)。"""
     gs = _fresh_gs()
@@ -406,7 +406,7 @@ def test_expert_wolf_conditional_env_deal_pool_lifecycle() -> None:
     assert '银狼' not in drawable_names(gs, 4), '触发前未解锁隔离(不可刷)'
     out = gain_invest_env(gs, None, '特邀专家:银狼', rand=False, sig=_lsig())
     assert out.effects == ('advisor_unlock:特邀专家:银狼:银狼',), \
-        f'挂点④在场判定命中: {out.effects}'
+        f'调用点④在场判定命中: {out.effects}'
     assert gs.unlocked_experts.value == ('银狼',), '解锁写入'
     assert '银狼' in drawable_names(gs, 4), '解锁后 4 费档可进店'
     gain_character(gs, '银狼', 1, rand=False, sig=_lsig(), evidence='buy',
@@ -546,7 +546,7 @@ def test_in_stage_refresh_keeps_rotated_probs() -> None:
     """轮岗局 sim 世界真值阶段内不回退:M05 首刷携带翻倍表
     (``effective_deal_probs`` → ``deal_shop`` 真值直写)后,阶段内刷新
     上报(kernel 随机态分支,与生产 op 同段同口)写回载荷的概率条仍 =
-    翻倍表——刷新上报采样表经 ``state_deal_probs`` 轮岗感知接线
+    翻倍表——刷新上报采样表经 ``state_deal_probs`` 轮岗感知接入调用
     (出处 = docs/game/currency_war/research/invest_effects.md §2 轮岗行)。"""
     base = dict(REFRESH_PROB[6])
     rotated = effective_deal_probs(6, stream_rng(11, 'M05/rotation/1/6'),

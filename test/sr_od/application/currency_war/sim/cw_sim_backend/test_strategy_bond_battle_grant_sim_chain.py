@@ -1,8 +1,8 @@
 """策略卡羁绊条件战后发放 sim 世界链测试(镜像 src = sim/cw_sim_backend.py
-的 _resolve_battle 武装拍挂点 + _begin_node_window 交付拍挂点;kernel
+的 _resolve_battle 武装拍调用点 + _begin_node_window 交付拍调用点;kernel
 触发函数单元面 = kernel/cw_gain_chain/test_check_strategy_bond_battle_
 grants.py 与 test_discharge_strategy_bond_battle_grants.py,本文件锁
-sim 双挂点接线与世界真值落地面)。
+sim 双调用点接通与世界真值落地面)。
 
 测试面依据 = 迭代设计 designs/T-172-buyao-xiaokan-women-de-jiban.md
 §4 锁 1/2/3/4/5/7 + REVIEW-T172(驱动与断言形态先例 = 同目录
@@ -14,7 +14,7 @@ test_strategy_boss_battle_grant_sim_chain.py):
   内追加 #equip 后缀)+ armed 消费 False;
 - 可重复链锁(无 done 一次性标志位,卡面无「首次」限定 = 战后触发族直读):连续
   两场合格战斗各交付 1 次(armed 消费-再武装链);
-- 条件不满足(7 激活板)零武装零写;未持卡零武装;死亡局不武装(挂点
+- 条件不满足(7 激活板)零武装零写;未持卡零武装;死亡局不武装(调用点
   在死亡提前 return 之后,局终不见发放);
 - 幂等回归 = 既有守卫(同节点战斗重放 _settled_key 整段跳过;窗重放
   面 = armed 消费后非 True 结构性短路,重入零双发);
@@ -379,7 +379,7 @@ def test_settled_replay_no_rearm_no_regrant(
 def test_dead_battle_no_arm_no_grant(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """锁 7(死亡局):保底已用 + 濒死局 boss 战败 → hp 归零死亡提前
-    return 在武装挂点之前,零武装直接进终局(局终不见发放,与实机
+    return 在武装调用点之前,零武装直接进终局(局终不见发放,与实机
     一致;boss 位伤害可击穿 1 hp 濒死,普通战斗位伤害不必然致死)。"""
     b = _prep_backend(86)
     try:

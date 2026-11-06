@@ -251,7 +251,7 @@ class TestWindowLifecycle:
     def _case_four_exits_close_and_count(self):
         """四出口生命周期(方案 v3 §3.1):①卖出销(shim 同出口)/
         ②部署销(只销部署名,垫保账存)/②′合成销(V2-05;空账 no-op;
-        未接线窗口滞留 ≤1 轮由轮界销兜底)/③换线闭合(P78 §2.1「线账
+        未接通窗口滞留 ≤1 轮由轮界销兜底)/③换线闭合(P78 §2.1「线账
         闭合」:义务类登记名离基座 ⇒ 销账+close_on_switch;读点原宿主
         = identity_exclusions,已随身份段退役迁入 sell_exclusions——
         3.4;复读幂等零重复计数)。"""

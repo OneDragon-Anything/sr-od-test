@@ -10,7 +10,7 @@ docs/develop/sr_od/application/currency_war/game_state/gain-chain.md
   套语义的执行测试);
 - **调用序**(§2.1 固定时序):落位 → 回调 → 升星 → 产物递归;回调补齐
   第三只后再合成;
-- **通道收口双臂**(通道规则「未锚定 → 随机态」):直构未落一次性标志位容器
+- **通道收尾双臂**(通道规则「未锚定 → 随机态」):直构未落一次性标志位容器
   rand=False 链写被改道 write_logic_rand;置一次性标志位(测试专口直赋)后
   rand=False 恢复 write_logic;rand=True 恒 write_logic_rand;采样
   效果分支对子链的通道翻转只及子链;
@@ -305,7 +305,7 @@ def test_call_order_place_callback_merge_recurse(
 
 def test_rand_passthrough_and_channel_by_anchor(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """通道收口双臂 + rand 透传(通道规则「未锚定 → 随机态」):直构
+    """通道收尾双臂 + rand 透传(通道规则「未锚定 → 随机态」):直构
     未落一次性标志位容器 rand=False 链写被改道 write_logic_rand(未验证推算,首观察
     静默覆盖);置一次性标志位(测试专口直赋)后 rand=False 恢复 write_logic;
     rand=True 恒 write_logic_rand;采样效果分支对子链的通道翻转只及子链。"""
@@ -660,7 +660,7 @@ def test_env_gift_random_branch_typed_pool_star2_seeded(
     固定种子 rng → bench 追加 1 张 2★(spec.star 直传,类型过滤池 =
     1 费「输出」件)且名 ∈ 规格池;效果串 'env_gift_random:<名>@2star'
     (星级后缀随 spec,卡面明写非先验);获得链写序 = 仅 bench 一笔写——
-    属性加成分支不建模的零写端钉死(锁 9 收窄形:节点推进无本卡挂点,
+    属性加成分支不建模的零写端钉死(锁 9 收窄形:节点推进无本卡调用点,
     差分重放不稳定不设)。期望名从同 seed 现算(单一来源,不手抄)。"""
     gs = _make_gs(bench=[], equips=[])
     seq_before = gs.write_seq
@@ -774,7 +774,7 @@ def test_opening_replace_leg_clear_and_grant(rows_sink: _RowSink) -> None:
     种子 rng → on_env_gained 后 bench 恰 3 只,每只 1★ 且名 ∈ 3 费规格池
     (= chars_by_cost(3) 全档,type_tag 空);效果串 = env_opening_replace:4
     + env_gift_random:<名>@1star ×3;获得链全部写面 = 清席 1 + 落席 3
-    恰 4 笔(分支 2 不建模的零写端钉死:升星/节点/战斗无本卡挂点,零顺手
+    恰 4 笔(分支 2 不建模的零写端钉死:升星/节点/战斗无本卡调用点,零顺手
     计数器);容量随原观察保持。期望名从同 seed 现算(单一来源,不手抄)。"""
     gs = _make_gs(bench=[('希儿', 1)] * 4, equips=[])
     seq_before = gs.write_seq

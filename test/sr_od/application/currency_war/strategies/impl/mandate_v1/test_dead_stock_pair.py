@@ -1,4 +1,4 @@
-"""死库存对(G-S1)防线行为测试:买入拒真值表 / 消费接线与分键 / 退出
+"""死库存对(G-S1)防线行为测试:买入拒真值表 / 消费接入调用与分键 / 退出
 通道与获取账。三段同机制归并(原三文件按机制并入,判据规格出处 =
 三合取 + 遥测三键族;数学论证 = proofs P96 帧级支配 + N=3 载体寿命):
 
@@ -6,10 +6,10 @@
    dead_stock_pair_buy_reject_reason``,方向② G-S1 买侧对偶:非定向
    1★ 买入禁制造同名 1★×2 死库存对,拒因键 ``dead_stock_pair``)。
    校验资格谓词真值边界,不断言分布数值。
-2. **消费接线**(拒因本体谓词侧由本文件段 1 锁定;本段校验**消费接线**):
-   M6 一星兜底带臂(zero_overlap 后,接线点 1——dominance_buy 并入位,
+2. **消费接入调用**(拒因本体谓词侧由本文件段 1 锁定;本段校验**消费接入调用**):
+   M6 一星兜底带臂(zero_overlap 后,接入调用点 1——dominance_buy 并入位,
    comp-structure-unification 3.4)与 dead_gold_press_buy 臂 prio2
-   燃料类(接线点 2)拒成对第二张,计数分键
+   燃料类(接入调用点 2)拒成对第二张,计数分键
    ``m6_fallback_dead_stock_pair_blocked`` /
    ``press_dead_stock_pair_blocked``。帧构造边界:target_comp
    给线;燃料名取非线内注册表现算集(核心/保护身份规避面已随
@@ -178,7 +178,7 @@ class TestDeadStockPairBuyReject:
 
 
 # ============================================================
-# 段 2:消费接线 + 拦截分键(店侧)
+# 段 2:消费接入调用 + 拦截分键(店侧)
 # ============================================================
 
 
@@ -214,12 +214,12 @@ def _single_card_session(node_kind: str, gold: int,
                    produced_by='cw-t243-test', sig=_LOGIC_SIG)
     state_of(sess).target_comp = COMP_LIBRARY[0]
     live = MandateV1Live(game_state_of(sess), SimpleNamespace(strategy_seed=None))   # 终态契约:构造注入
-    live.state = state_of(sess)   # 状态同源接线:会话播种对象(零参口)
+    live.state = state_of(sess)   # 状态同源接入调用:会话播种对象(零参口)
     return live, sess, SimpleNamespace(ev_arm='full')
 
 
 class TestM6FallbackBandWiring:
-    """M6 一星兜底带死库存拒(接线点 1)+ 兜底带分键(dominance_buy
+    """M6 一星兜底带死库存拒(接入调用点 1)+ 兜底带分键(dominance_buy
     并入位,comp-structure-unification 3.4,press-stockpile §2)。
 
     帧型 = 溢余带(gold > g*)∧ 带外帧:level 3 档窗 = {1},店刷 3 费
@@ -272,7 +272,7 @@ class TestM6FallbackBandWiring:
 
 
 class TestPressArmWiring:
-    """dead_gold_press_buy 臂 prio2 燃料类死库存拒(接线点 2)。"""
+    """dead_gold_press_buy 臂 prio2 燃料类死库存拒(接入调用点 2)。"""
 
     def test_prio2_second_copy_rejected_with_key(self):
         """C=1:燃料类第二张拒买,press_dead_stock_pair_blocked 计 1;
@@ -500,7 +500,7 @@ class TestWriteEnd:
                        produced_by='cw-t253-test', sig=_LOGIC_SIG)
         state_of(sess).target_comp = COMP_LIBRARY[0]
         _live = MandateV1Live(gs, SimpleNamespace(strategy_seed=None))   # 终态契约:构造注入
-        _live.state = state_of(sess)   # 状态同源接线:会话播种对象(零参口)
+        _live.state = state_of(sess)   # 状态同源接入调用:会话播种对象(零参口)
         action = _live.decide_shop_action()
         assert isinstance(action, CwActionBuyCardParam), f'帧未发射买入: {action!r}'
         ledger = getattr(state_of(sess), sell_gate.ACQUISITION_LEDGER_ATTR)

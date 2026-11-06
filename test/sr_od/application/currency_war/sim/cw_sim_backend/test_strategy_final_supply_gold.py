@@ -1,5 +1,5 @@
 """sim 策略尾款金腿测试(镜像 src = sim/cw_sim_backend.py 的
-strategy_final_supply_gold_of 聚合 helper + _begin_node_window 收口
+strategy_final_supply_gold_of 聚合 helper + _begin_node_window 收尾
 「最后一个补给阶段」金腿;同族先例 = 本目录 test_strategy_boss_gold.py)。
 
 测试面依据 = 迭代设计 designs/T-93-weikuan-jiaofu.md §2.3/§2.5/§4
@@ -134,7 +134,7 @@ def test_final_supply_gold_leg_via_engine_window() -> None:
         assert gs.gold.value == g2 + income + invest + 30, \
             f'窗金增量 ≠ invest+收入面+30: ' \
             f'{g2}+{invest}+{income}+30 vs {gs.gold.value}'
-        # 锁 7 幂等回归:同节点窗重放,守卫住整段收口零双发
+        # 锁 7 幂等回归:同节点窗重放,守卫住整段收尾零双发
         gold_at_anchor = gs.gold.value
         b._begin_node_window()
         assert gs.gold.value == gold_at_anchor \
@@ -204,9 +204,9 @@ def test_modified_env_anchor_follows_field() -> None:
 
 def test_same_window_pickup_after_front_segment_no_grant(monkeypatch) -> None:
     """拿卡当节点不发放(锁 6,机制锁·直构形态,不假设场景可达):直构
-    「窗口前段聚合读之后、同窗收口段才到手」的容器态(生产时序 = 选卡
+    「窗口前段聚合读之后、同窗收尾段才到手」的容器态(生产时序 = 选卡
     确认是 offer 呈现后的玩家动作,恒晚于窗口前段聚合读)→ 该窗零发放。
-    注入点 = 商店全刷(收口段位 = 收入→…→尾款金→商店全刷;若未来实现
+    注入点 = 商店全刷(收尾段位 = 收入→…→尾款金→商店全刷;若未来实现
     把腿移到 offer 呈现之后,同窗到手先于聚合读,本锁红)。"""
     import sr_od.application.currency_war.sim.cw_sim_backend as sb
 

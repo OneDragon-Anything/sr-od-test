@@ -1,5 +1,5 @@
-"""board 派生视图 + 行槽位纯重排吸收 测试面(观察对账族架构收口,20260918-
-reconcile 第 5 例收口批; 容器合并:行域 = deployed
+"""board 派生视图 + 行槽位纯重排吸收 测试面(观察对账族架构收尾,20260918-
+reconcile 第 5 例收尾批; 容器合并:行域 = deployed
 单字段视图,断言同步改写)。
 
 出处 = ``.debug/temp/incidents/20260918-reconcile/report.md`` 第 5 例
@@ -238,7 +238,7 @@ def test_env_badge_wearer_removal_ghost_count_adopts(andon) -> None:
     源(增量口径对幽灵无从减除);下一帧面板实读(幽灵已随佩戴者离场)
     与派生失配 → ``board_derived_adopt`` 台账行采新、安灯不触发。
     修前此形态 = 真失配安灯停局(20260918-reconcile 第 5 例停局族在
-    行变更侧的复发径,docstring 曾自称「观察覆盖收敛」而接线缺失)。"""
+    行变更侧的复发径,docstring 曾自称「观察覆盖收敛」而接入调用缺失)。"""
     gs = game_state_of(None)
     gs.observe(gs.deployed, _bv([_pepe()]), sig=_SIG_OBS)
     gs.observe(gs.board, {'减益': 1}, sig=_SIG_OBS)  # 星徽贡献只在面板
@@ -468,11 +468,11 @@ def test_projection_audit_table_complete_and_gap_free() -> None:
     """字段审计完备性抽检测试:①GameState 全部容器字段已登记(防新字段
     静默逃过审计);②表无退役残留键;③状态全在枚举内(「无写端无规则」
     缺口态 = 表内不可表达,可失配面必须落在写端/吸收两态);④已知停局
-    家族(20260918 五连停局各域)的收口机制关键词仍在位(防重构悄悄
+    家族(20260918 五连停局各域)的收尾机制关键词仍在位(防重构悄悄
     拔掉吸收/派生面)。"""
     names = _gs_field_names()
     assert pa.audit_missing_fields(names) == [], '字段漏登记'
     assert pa.audit_stale_keys(names) == [], '表残留退役键'
     assert pa.audit_bad_status_keys() == [], '状态越枚举'
     assert pa.audit_family_mechanism_missing() == [], \
-        '停局家族收口机制失位'
+        '停局家族收尾机制失位'

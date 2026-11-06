@@ -10,7 +10,7 @@
   state 逐位一致,发放不额外消耗;
 - 锁 3:全异名 payload → 零金写;
 - 锁 4:live 门控(核心负锁)——未装配 sim 零金写,防门控失效退化成
-  猜测写金;附 level 缺读帧同判(挂点在随机态分支 level 判空块内的备案);
+  猜测写金;附 level 缺读帧同判(调用点在随机态分支 level 判空块内的备案);
 - 锁 9:过滤隔离——同触发异载体条目(淘金客 STATE / 采购专员·金
   BATTLEFIELD / 市场干预 ECONOMY-无字段鸭子缺省)零金写。
 
@@ -174,7 +174,7 @@ def test_live_without_sim_backend_never_writes_pair_gold(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """锁 4(live 门控负锁,核心):未装配 sim(纯实机态)→ 出对帧零金写
     ——防门控失效退化成猜测写金(live 采样是猜测,金面禁猜测直写)。附
-    level 缺读帧同判:采样腿跳写(概率表按级索引),挂点在 level 判空块内
+    level 缺读帧同判:采样腿跳写(概率表按级索引),调用点在 level 判空块内
     → 本腿同帧零发放(shop 保持离屏 + gold 零写)。"""
     payload = _payload_of([('甲', 1), ('甲', 1), ('乙', 1), None, None])
     monkeypatch.setattr(refresh_shop, 'sample_shop_deal',
@@ -196,7 +196,7 @@ def test_live_without_sim_backend_never_writes_pair_gold(
         gs2, CwActionRefreshShopParam(cost=2), _SIG, free=True,
         rng=random.Random('cw-pair-live'))
     assert gs2.shop.value is None, 'level 缺读 → 随机态分支跳写(离屏保持)'
-    assert gs2.gold.value == 30, '同帧零发放(挂点在 level 判空块内)'
+    assert gs2.gold.value == 30, '同帧零发放(调用点在 level 判空块内)'
 
 
 @pytest.mark.parametrize('spec_name', ['淘金客', '采购专员·金', '市场干预'])

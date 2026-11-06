@@ -1,8 +1,8 @@
 """sim 策略卡备战席计数经验节点窗腿测试(镜像 src = sim/cw_sim_backend.py
 的 _begin_node_window 备战席计数 XP 腿 + kernel 纯判定
-check_strategy_bench_count_xp 的 sim 挂点世界写;kernel 原语单元面 =
+check_strategy_bench_count_xp 的 sim 调用点世界写;kernel 原语单元面 =
 kernel/cw_gain_chain/test_check_strategy_bench_count_xp.py,本文件锁
-sim 窗口接线与世界真值落地面)。
+sim 窗口接入调用与世界真值落地面)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
 T-192-rencai-kongdong.md(定稿)§4 锁 3/4/5 + REVIEW-T192 §四④:

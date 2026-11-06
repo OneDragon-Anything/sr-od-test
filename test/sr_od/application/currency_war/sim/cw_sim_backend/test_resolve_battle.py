@@ -1,5 +1,5 @@
-"""sim 扑满结算分支利息接线测试(镜像 src = sim/cw_sim_backend.py 的
-_resolve_battle 扑满收入落账段;常规轮首接线测试 =
+"""sim 扑满结算分支利息接入调用测试(镜像 src = sim/cw_sim_backend.py 的
+_resolve_battle 扑满收入落账段;常规轮首接入调用测试 =
 本目录 test_apply_round_start_income.py,按被测方法拆目录规范落位)。
 
 测试面依据 = 迭代 T-27 公司契约利息累计触发设计(v2.3 定稿)§2.4 条 2 + §4.5:

@@ -340,7 +340,7 @@ def _wear_grant_gs(*, unit_equips: list[str], owned: list[str],
 
 
 def _wear_item(gs: GameState, item_name: str) -> LogicOutcome:
-    """对 bench 槽 1 单位穿戴一件(上报函数 = 合成事件发放腿挂点宿主)。"""
+    """对 bench 槽 1 单位穿戴一件(上报函数 = 合成事件发放腿调用点宿主)。"""
     from sr_od.application.currency_war.kernel.cw_action_report.wear_equip import (
         report_action_wear_equip_param,
     )

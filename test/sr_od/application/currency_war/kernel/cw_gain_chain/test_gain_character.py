@@ -135,7 +135,7 @@ def test_uid_param_injected_into_placed_unit() -> None:
 
 
 def test_merge_consumes_locked_unit_product_free() -> None:
-    """锁件合成消耗自由(设计 §4 锁 9,裁决 6 随裁决 2 收口钉死):被锁
+    """锁件合成消耗自由(设计 §4 锁 9,裁决 6 随裁决 2 收尾钉死):被锁
     流萤(uid=1)作素材的 3 合 1 成功——不炸不拦(锁 = 直部署禁令,
     合成消耗不在辖域);产物 2★ uid=1 承继(T-368 合成承继规则改判:
     素材已发号 uid 最小值;本测试 gs 无锁记录 = 豁免不触发,锁域豁免

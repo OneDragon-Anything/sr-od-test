@@ -16,7 +16,7 @@ test_plane_intel_pipeline.py,本文件不辖。
 **sim 分支不适用例外清单(随迁移批逐屏落测试 docstring,总纲 §2.2-3)**:
 
 - 投资环境/投资策略:sim 分支 = 不适用——有 sim 事实来源(``decide_invest``
-  注入段,架构设计 §3.2)但 sim 端口适配器未建(归 sim 接线批),本批
+  注入段,架构设计 §3.2)但 sim 端口适配器未建(归 sim 接入调用批),本批
   等价判据主承重 = 实机已登记行为测试 + 写入流对拍(实机分支),禁引用 sim 域
   对拍;
 - 战斗等待:sim 分支 = 不适用——sim 事实来源为 coarse 结算产出,非画面段
@@ -38,11 +38,11 @@ test_plane_intel_pipeline.py,本文件不辖。
   (写时点测试另辖);简报仍为重入裁决形态;BOSS 简报无裁决旗标,横幅
   退场裁决 = 外循环重派后的下一次入口门;战斗等待/等待1-1 无裁决旗标。
   红 = 裁决被转录进观察 node。
-- **观察上报接线测试**(两 node 形态屏):观察 node 稳定帧一次读
+- **观察上报接入调用测试**(两 node 形态屏):观察 node 稳定帧一次读
   → report 经屏文件落容器(容器终值)+ obs 挂实例属性;投资策略入口锚
   复探窗(ADR-0529 有界自愈)语义逐位(复探窗内自愈、超窗 round_retry
   消耗观察 node 预算)。位面过渡 = 实体链写(链容器终值双写);武装箱/
-  未达上限/等待1-1 = 占位接线(现役零容器写点,统一形态)。
+  未达上限/等待1-1 = 占位接入调用(现役零容器写点,统一形态)。
 - **刷新终结交回测试**(投资策略,两 node 形态):建议刷新 → 闸 1 槽计数
   现读 >0 → 点钮恰一次 → 终结交回 round_success(交回外循环重进 = 入口
   重建);刷新计数写端随画面 op 基类退役(记账归动作 op 会话承接),
@@ -57,7 +57,7 @@ test_plane_intel_pipeline.py,本文件不辖。
   变体)+ 固定超时留证兜底。
 - **判别单一源消费面测试**已随三审整删退役(见文件尾已登记注;源码扫描
   测试禁令不重建),防线归 review 与代码规范。
-- **收口测试不恢复**(分诊):「cw_screen/ 顶层 op 类必为基类后代」AST
+- **收尾测试不恢复**(分诊):「cw_screen/ 顶层 op 类必为基类后代」AST
   全目录扫描形态(AGENTS §10.4.4 禁),摘除不恢复;结构面归 review 与
   代码规范。
 
@@ -219,7 +219,7 @@ def _make_env(test_context, monkeypatch: pytest.MonkeyPatch, *,
             if events is not None:
                 events.append(('card_click',
                                (self.env.target.x, self.env.target.y)))
-            # 模拟真动作 op 即时上报(桩不跑机械链,只承载上报接线;写时点
+            # 模拟真动作 op 即时上报(桩不跑机械链,只承载上报接入调用;写时点
             # 对拍载体 = 派发时点结果已写入 game state)
             report_action_pick_invest_env_param(
                 game_state_of(session), self.param,
@@ -240,7 +240,7 @@ def _make_env(test_context, monkeypatch: pytest.MonkeyPatch, *,
 
 
 # (原 test_invest_env_dispatch_and_gate「投资环境分流双向 + 段迹形态」删:
-#  装两端口走五段新路径的分流/段迹面随并存窗收口整删(生产端口恒 None);
+#  装两端口走五段新路径的分流/段迹面随并存窗收尾整删(生产端口恒 None);
 #  其唯一跨路径幸存断言「确认发出置 pending」并入下方选卡时点写测试;
 #  离屏门 fail 早退语义由简报/BOSS 简报已登记行为测试同形承重。)
 
@@ -249,7 +249,7 @@ def test_invest_env_observe_gate_and_report(test_context,
                                             monkeypatch) -> None:
     """投资环境观察 node 测试(两 node 形态):入口门 miss = round_fail 早退
     (现役文案,obs 不装载);门 hit → 稳定帧候选一次读 → report 落容器
-    ``invest_env_opts``(容器终值)+ obs 挂实例属性。红 = 门失效 / 接线
+    ``invest_env_opts``(容器终值)+ obs 挂实例属性。红 = 门失效 / 接入调用
     断流 / 容器终值漂移。"""
     opts = [('追击概念股', 460), ('彩虹时代', 960), ('头彩', 1460)]
     op_off, _m0, _s0, _d0 = _make_env(test_context, monkeypatch, in_screen=False,
@@ -440,7 +440,7 @@ def test_invest_env_out_of_match_no_early_exit_normal_chain(
     assert dispatches == [], f'零派发零上报:{dispatches!r}'
 
 
-# ==================== 投资策略:分流双向 + 发射型接线 + 对拍 ====================
+# ==================== 投资策略:分流双向 + 发射型接入调用 + 对拍 ====================
 
 
 class _FrameBook:
@@ -545,7 +545,7 @@ def test_invest_strategy_written_at_dispatch(test_context,
                                              monkeypatch) -> None:
     """写入流对拍(即时上报契约,写时点测试):派发确认链时点 = 持卡面已
     写入(动作 op 点完确认立即上报,gain_invest_strategy 整链:按名字去重
-    追加)→ round_success 终结交回。真上报接线经桩内调用
+    追加)→ round_success 终结交回。真上报接入调用经桩内调用
     report_action_pick_invest_strategy_param 承载(与 _make_strategy 桩
     同款);本测试辖「决策 → 派发 → 写入 → 终结」全链。
     红 = 写时点回退(派发时零写)或 round_wait 循环回潮。"""
@@ -653,10 +653,10 @@ def test_strategy_refresh_terminal_handback(test_context, monkeypatch) -> None:
     """逐卡刷新终结交回测试(两 node 形态):建议刷新 → 闸 1 槽计数现读 >0 →
     点钮恰一次(文本锚定)→ 终结交回 = round_success(op 结束,交回外循环
     重进 = 入口重建,重进后重观察重决策;本访问零比对零重决策——刷后不重读
-    不比对不重决策)。观察轮 report 落容器 ``invest_strategy_opts`` 接线归测试
+    不比对不重决策)。观察轮 report 落容器 ``invest_strategy_opts`` 接入调用归测试
     (容器终值)。刷新计数写端随画面 op 基类退役(记账归动作 op 会话承接,
     本 op 不写计数——容器计数断言不设,闸 2 读端由下一测试承重)。
-    红 = 刷新点击丢失 / 循环内重读重决策回潮 / 终结交回改轮询 / 接线断流。"""
+    红 = 刷新点击丢失 / 循环内重读重决策回潮 / 终结交回改轮询 / 接入调用断流。"""
     names = ['赌神·银', '恢复生机', '气氛组']
     book = _FrameBook([object()])
     book.options[id(book.frames[0])] = _opts_of(names)
@@ -693,7 +693,7 @@ def test_invest_strategy_observe_reprobe_and_report(test_context,
     node 预算的既有 retry 面);在窗 → 一次读全 → report 落容器
     ``invest_strategy_opts``(容器终值)+ 逐卡刷新剩余 ``strategy_refresh_
     left`` 摄入(观察写端,键 = 规范卡名)+ obs 挂实例属性。
-    红 = 超窗改 fail(炸 op 触发哨兵)/ 复探窗丢失 / 接线断流。"""
+    红 = 超窗改 fail(炸 op 触发哨兵)/ 复探窗丢失 / 接入调用断流。"""
     names = ['赌神·银', '恢复生机', '气氛组']
     # ① 超窗(entry_ok False)→ round_retry 现役文案,obs 不装载
     book_off = _FrameBook([])
@@ -728,7 +728,7 @@ def test_invest_strategy_observe_reprobe_and_report(test_context,
 
 
 # (三审整删)原 test_write_flow_exempt_surfaces_stay_inline「豁免
-# 留守测试」(getsource ×6:注册表接线恰一处/钩子体与豁免面字面在场/环境屏
+# 留守测试」(getsource ×6:注册表接入调用恰一处/钩子体与豁免面字面在场/环境屏
 # 零登记件)——源码扫描形态(README 禁止清单,红时是文本变了,答不出哪个
 # 运行行为坏了);豁免面纪律归 review 与代码规范。豁免面的行为面
 # (chosen 写端不入注册表收编)由 event_screens 同名行为测试辖。
@@ -781,7 +781,7 @@ def _make_briefing(test_context, monkeypatch: pytest.MonkeyPatch, *,
 
 
 # (原 test_briefing_dispatch_and_session_writes「简报分流双向」删:装两
-#  端口走五段新路径的分流/段迹面随并存窗收口整删;其跨路径幸存断言
+#  端口走五段新路径的分流/段迹面随并存窗收尾整删;其跨路径幸存断言
 #  (「下一步」发出置 pending / 标识 miss 门 fail 早退零读链)分别由
 #  test_reentry_arbitration_flag_gate_combination 的简报两条分支与三字段写
 #  语义测试承重。)
@@ -792,7 +792,7 @@ def test_briefing_observe_gate_and_report(test_context, monkeypatch) -> None:
     (现役文案,obs 不装载零读链);门 hit → 三读数一次读 → report 落
     容器(三字段容器终值)+ obs 挂实例属性;「下一步」点击不在观察轮
     (归决策动作 node,点击桩零命中断言)。
-    红 = 门失效 / 接线断流 / 容器终值漂移 / 观察轮误点击。"""
+    红 = 门失效 / 接入调用断流 / 容器终值漂移 / 观察轮误点击。"""
     # ① 门 miss → fail 早退,obs 不装载零读链
     op_off, _s0, calls_off = _make_briefing(test_context, monkeypatch,
                                             mark_hit=False,
@@ -829,7 +829,7 @@ def test_briefing_session_write_semantics_three_fields(test_context,
     读到非空恒覆写(重读自愈首次误读)/ 读空跳过写(读缺=跳过写,
     不擦同局已读真值)。单驱动观察 node(读侧住观察 node,写闸住
     report 屏文件,report 函数级闸面由 test_screen_report_ports
-    承重,本测试辖 op 侧读链接线)。
+    承重,本测试辖 op 侧读链接入调用)。
     红 = 读链被已读守卫短路 / 覆写或跳写语义漂移。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         ChannelSig as _cs_t,
@@ -949,7 +949,7 @@ def _make_boss(test_context, monkeypatch: pytest.MonkeyPatch, *,
 
 
 # (原 test_boss_briefing_dispatch_both_ways「BOSS 简报分流双向」删:装两
-#  端口走五段新路径的分流/段迹面随并存窗收口整删;其跨路径幸存断言
+#  端口走五段新路径的分流/段迹面随并存窗收尾整删;其跨路径幸存断言
 #  (横幅在 = 点空白 + success 交回 / 横幅已退 = 零动作早退)由下方误读
 #  接管测试与观察门测试同形承重。)
 
@@ -973,9 +973,9 @@ def test_boss_briefing_observe_gate_and_report_wiring(
         test_context, monkeypatch) -> None:
     """BOSS 简报观察 node 测试(两 node 形态):横幅已退(area 锚 miss +
     片段判别 miss)→ 早退 success 交回外循环重判(零点击,obs 不装载);
-    横幅在 → obs 装载 + report 接线恰一次(match/gs 在场;boss 类型直定,
+    横幅在 → obs 装载 + report 接入调用恰一次(match/gs 在场;boss 类型直定,
     目标 = 现 hist)。
-    红 = 门语义反转 / 接线断流。"""
+    红 = 门语义反转 / 接入调用断流。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_boss_briefing as bb,
     )
@@ -1000,16 +1000,16 @@ def test_boss_briefing_observe_gate_and_report_wiring(
     assert rs.is_success, f'观察 success:{rs!r}'
     assert op._obs is not None and op._obs.on_screen is True, 'obs 挂实例属性'
     assert len(_reports) == 1 and _reports[0] is op._obs, (
-        f'report 接线恰一次(统一形态调用):{_reports!r}')
+        f'report 接入调用恰一次(统一形态调用):{_reports!r}')
 
 
 def test_boss_briefing_env_grant_trigger_wiring(
         test_context, monkeypatch) -> None:
-    """live 观察链触发接线(劳务派遣合同分支2 live 半边):_observe_live 在
+    """live 观察链触发接入调用(劳务派遣合同分支2 live 半边):_observe_live 在
     report 之后 best-effort 调 check_env_boss_grants——绑定已登记的局观察
     一帧 → done 追加 boss 键 + bench +1(hist = boss 类型直定目标同源,
     零双发靠 done 短路);触发路径异常不阻塞观察链(best-effort,观察门
-    测试 ② 的 gs=object() 形态即压住该路径)。红 = live 接线断流 /
+    测试 ② 的 gs=object() 形态即压住该路径)。红 = live 接入调用断流 /
     node_hist_pos 未传。"""
     from sr_od.application.currency_war.kernel.cw_env_grants import (
         BOSS_NODE_KEY_PREFIX,
@@ -1043,7 +1043,7 @@ def test_boss_briefing_env_grant_trigger_wiring(
                         SimpleNamespace(session=SimpleNamespace(), gs=gs),
                         raising=False)
     obs = op._observe_live()
-    assert obs.on_screen is True, '观察链照常产出 obs(接线不阻塞)'
+    assert obs.on_screen is True, '观察链照常产出 obs(接入调用不阻塞)'
     done = gs.env_grants_done.value or ()
     assert ('劳务派遣合同',
             f'{BOSS_NODE_KEY_PREFIX}1-{boss_round}') in done, \
@@ -1111,7 +1111,7 @@ def _make_bwait(test_context, monkeypatch: pytest.MonkeyPatch,
 
 # (原 test_battle_wait_execute_terminal_exit_new_path「B2-③ 主门经
 #  execute() 走新路径:大厅终局锚 → terminal_lobby 早退」删:装端口驱动
-#  的出口门随并存窗收口整删;出口门生产那份由下方完成白名单测试承重。)
+#  的出口门随并存窗收尾整删;出口门生产那份由下方完成白名单测试承重。)
 
 
 def test_battle_wait_normal_exits(test_context, monkeypatch) -> None:
@@ -1164,7 +1164,7 @@ def test_battle_wait_normal_exits(test_context, monkeypatch) -> None:
     assert _rec.called
     assert op._st.rounds_done == 1, 'C-1 新结算帧计数'
     assert not rs.is_success and rs.result == OperationRoundResultEnum.WAIT, (
-        '驻留轮 round_wait(等待语义;子 op 成功后回 ③段出口收口)')
+        '驻留轮 round_wait(等待语义;子 op 成功后回 ③段出口收尾)')
 
 
 def test_battle_wait_fallback_exits(test_context, monkeypatch) -> None:
@@ -1204,7 +1204,7 @@ def _stub_controller(test_context, monkeypatch: pytest.MonkeyPatch) -> list:
     return clicks
 
 
-# (继承结构/节点预算门等静态形状测试分诊不恢复,见文件头「收口测试不恢复」。)
+# (继承结构/节点预算门等静态形状测试分诊不恢复,见文件头「收尾测试不恢复」。)
 
 
 def test_reentry_arbitration_flag_gate_combination(test_context,
@@ -1310,7 +1310,7 @@ def test_plane_transition_observe_gate_and_chain_report(
     (现役文案,obs 不装载、零读链);门 hit → 底部行读数构造链值 → report
     落容器(开局链容器终值:node_path + node_path_baseline 双写,链正本
     §3 基线幂等门的写闸面在 report 屏文件,由 test_screen_report_ports
-    承重,本测试辖 op 侧读链→report 接线)→ obs 挂实例属性。
+    承重,本测试辖 op 侧读链→report 接入调用)→ obs 挂实例属性。
     红 = 门失效 / 读链未接 / 容器终值漂移。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         game_state_of,
@@ -1383,9 +1383,9 @@ def test_armory_box_two_node_observe_report_and_round_wait(
         test_context, monkeypatch) -> None:
     """武装箱两 node 形态测试(轻屏统一形态,
     report):观察 node = 标识门(miss = round_fail 交编排壳,obs 不装载)+
-    obs{on_screen} → 占位 report 接线(gs 缺席跳过不炸;本屏现役零容器
+    obs{on_screen} → 占位 report 接入调用(gs 缺席跳过不炸;本屏现役零容器
     写点,接口为统一形态占位);决策动作 node = 点 × 关闭机械交回
-    round_wait(不烧节点重试预算)。红 = 门失效 / 接线断流 / 循环推进
+    round_wait(不烧节点重试预算)。红 = 门失效 / 接入调用断流 / 循环推进
     回退为计预算 retry。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_armory_box as abm,
@@ -1410,7 +1410,7 @@ def test_armory_box_two_node_observe_report_and_round_wait(
     assert rs.is_success, f'观察 success:{rs!r}'
     assert op._obs is not None and op._obs.on_screen is True, 'obs 挂实例属性'
     assert len(_reports) == 1 and _reports[0] is op._obs, (
-        f'占位 report 接线恰一次(统一形态调用):{_reports!r}')
+        f'占位 report 接入调用恰一次(统一形态调用):{_reports!r}')
     # ③ 点 × 关闭 → round_wait 机械交回(落地裁决 = 下轮 act 顶部)
     rs2 = _run_node(test_context, op, op.act)
     assert rs2.result == OperationRoundResultEnum.WAIT, (
@@ -1444,9 +1444,9 @@ def test_deploy_not_full_observe_gate_and_placeholder_report(
         test_context, monkeypatch) -> None:
     """未达上限观察 node 测试(两 node 形态,补齐观察门申报面):
     标识门 miss = round_fail 早退(现役文案,obs 不装载、零 report);
-    门 hit + gs 在场 → obs 装载 + 占位 report 接线恰一次;
+    门 hit + gs 在场 → obs 装载 + 占位 report 接入调用恰一次;
     cw_match/gs 缺席 → 跳过 report 不炸(obs 仍装载,局外兜底路径)。
-    红 = 门失效 / 接线断流 / 缺席路径误炸。"""
+    红 = 门失效 / 接入调用断流 / 缺席路径误炸。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_deploy_not_full as dnm,
     )
@@ -1473,7 +1473,7 @@ def test_deploy_not_full_observe_gate_and_placeholder_report(
     assert rs.is_success, f'观察 success:{rs!r}'
     assert op._obs is not None and op._obs.on_screen is True, 'obs 挂实例属性'
     assert len(_reports) == 1 and _reports[0] is op._obs, (
-        f'占位 report 接线恰一次(统一形态调用):{_reports!r}')
+        f'占位 report 接入调用恰一次(统一形态调用):{_reports!r}')
     # ③ cw_match 缺席 → 跳过 report(obs 仍装载,局外兜底路径不炸)
     _reports_skip: list = []
     monkeypatch.setattr(dnm, 'report_screen_deploy_not_full_obs',
@@ -1506,11 +1506,11 @@ def _make_wait_one_one(test_context, monkeypatch: pytest.MonkeyPatch, *,
 def test_wait_one_one_anchor_hit_and_poll_round_wait(
         test_context, monkeypatch) -> None:
     """等待1-1 两 node 形态测试(纯等待型,现役 handle 逐位映射):锚命中 →
-    观察轮 obs 装载 + 占位 report 接线恰一次(现役零容器写点,统一形态
+    观察轮 obs 装载 + 占位 report 接入调用恰一次(现役零容器写点,统一形态
     占位)→ round_success 进决策动作 node → act 零动作 success 交回
     ('1-1 备战就绪' 终态语义同点);锚 miss 且未超时 → 观察轮 round_wait
     轮询(自环,不吃 retry 预算,轮询轮不装载 obs)。
-    红 = 轮询改计预算 retry / 终态语义漂移 / 接线断流。"""
+    红 = 轮询改计预算 retry / 终态语义漂移 / 接入调用断流。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_wait_one_one as wom,
     )
@@ -1526,7 +1526,7 @@ def test_wait_one_one_anchor_hit_and_poll_round_wait(
     assert rs.is_success, f'锚命中观察轮 success 进 act:{rs!r}'
     assert op._obs is not None and op._obs.on_screen is True, 'obs 挂实例属性'
     assert len(_reports) == 1 and _reports[0] is op._obs, (
-        f'占位 report 接线恰一次(统一形态调用):{_reports!r}')
+        f'占位 report 接入调用恰一次(统一形态调用):{_reports!r}')
     rs_act = _run_node(test_context, op, op.act)
     assert rs_act.is_success and rs_act.status == '1-1 备战就绪', (
         f'锚命中终态语义(act 零动作交回):{rs_act!r}')

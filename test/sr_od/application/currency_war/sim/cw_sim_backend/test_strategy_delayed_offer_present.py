@@ -1,5 +1,5 @@
 """sim 策略延时 offer 呈现腿测试(镜像 src = sim/cw_sim_backend.py 的
-_present_due_extra_offer + _present_offer_or_node_screen 尾部挂点)。
+_present_due_extra_offer + _present_offer_or_node_screen 尾部调用点)。
 
 测试面依据 = 迭代设计 designs/T-98-huangjin-qihuo.md §4(锁 4 条件矩阵
 + 锁 5 弹除原子性;同窗冲突/多期货两分支现交付域自然不可达,直构):

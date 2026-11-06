@@ -112,7 +112,7 @@ def _frame(bench: list[tuple[str, int]],
            shop_cards: list[tuple[str, int, int]], *,
            locked_comp=None, recipe_comp=None, candidates: tuple = (),
            gold: int = 30, level: int = 7, filler_min_cost: int = 2):
-    """席满帧(备战 9/9;场前排铺满 cap;双宿主状态同源接线)。
+    """席满帧(备战 9/9;场前排铺满 cap;双宿主状态同源接入调用)。
     locked_comp/recipe_comp 接受线名(注册表解析为 Comp 对象落槽)。
     铺板杂件排除店内 X 名(bench/field/shop 三域名字互异——同名会被
     部署需要面一并保护,同帧多机制耦合会稀释被测分支)。
@@ -496,7 +496,7 @@ class TestAcquireYieldUnified:
         """凑息豁免不适用被迫类(design §2.2 第 5 项动机二分/§3 凑息
         豁免测试第四用例)——entry_signals 退役后行为演进登记:瓦尔特
         (列车·反震线内成员)被虚拟定型收编上场进档 1 → victim 域
-        (部署外存量件)不含在建成员 → 无让位可卖 → yield_plan 收口
+        (部署外存量件)不含在建成员 → 无让位可卖 → yield_plan 收尾
         (金不足拦因);「线内在建件不可为凑息卖」与「被迫 victim 域
         排除档 1 件」在档 1 收编形态下重合(双重保护),动机二分的
         残留差异(豁免谓词辖线内未达标档 1 外件)见 sell_candidates
@@ -509,7 +509,7 @@ class TestAcquireYieldUnified:
             gold=1, level=5)
         act = decide_shop_action(gs, sess, cfg)
         assert isinstance(act, CwActionCloseShopParam), \
-            f'档 1 收编下无部署外 victim → 让位评估收口: {act!r}'
+            f'档 1 收编下无部署外 victim → 让位评估收尾: {act!r}'
         assert act.reason == 'yield_plan'
 
     def test_prefix_pool_exhausted_records_gold_short(self):

@@ -1,17 +1,17 @@
 """sim 拿卡拍立即腿测试(镜像 src = sim/cw_sim_backend.py 的
-_on_invest_picked 尾段立即腿挂点 + _present_extra_offer_screen 呈现体)。
+_on_invest_picked 尾段立即腿调用点 + _present_extra_offer_screen 呈现体)。
 
 测试面依据 = 迭代设计 designs/T-198-baiyin-touzi.md §2.3/§4(锁 4 即时
-呈现腿 + 锁 6 双挂点互斥;用户裁定 2026-11-02 完整包复刻):
+呈现腿 + 锁 6 双调用点互斥;用户裁定 2026-11-02 完整包复刻):
 - 拿卡白银投资 → 拿卡拍立即呈现第二选卡(候选全银池,环境品质改写不
   作用于本通道)+ 逐卡刷新授权 3(refresh_slots/容器/槽向量簿记)+ 队列
   弹除 delay-0 条目(delay-3 条目留存)+ 序位计数 +1 + resume='node'
   + 呈现留证键 strategy_immediate_offer_fired;
 - 第二选卡落地 → 排除集更新、恢复进节点屏(经同一 report 通道重入
-  落地,双挂点互斥 = 立即拍不进窗首检查);
+  落地,双调用点互斥 = 立即拍不进窗首检查);
 - 期货拿卡(无 delay-0 条目)→ 零立即呈现(常型零扰动);
 - 同卡双条目不同拍各呈现一次:立即拍 @0 → 3 后继窗首 @3(递减链
-  自然驱动,锁双挂点时序互斥)。
+  自然驱动,锁双调用点时序互斥)。
 
 直构形态先例 = 同目录 test_strategy_pick_xp.py(_pick 直写 opts + 上报
 + 声明喂入;_drive_until 步进助手)。"""
@@ -177,7 +177,7 @@ def test_futures_pick_no_immediate_leg() -> None:
 
 def test_two_legs_present_at_different_beats() -> None:
     """同卡双条目不同拍各呈现一次(锁 6):立即拍 @0 → 3 后继窗首 @3
-    (自然递减链驱动),两拍序位计数各 +1、留证键分立、双挂点互斥
+    (自然递减链驱动),两拍序位计数各 +1、留证键分立、双调用点互斥
     (立即拍不抢窗首检查,窗首呈现时队列已无 delay-0 条目)。"""
     b = _backend()
     try:

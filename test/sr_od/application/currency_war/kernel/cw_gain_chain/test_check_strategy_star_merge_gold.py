@@ -90,7 +90,7 @@ def _gs(*, card: str | None = _CARD, gold: int | None = 30) -> GameState:
 
 def test_direct_single_star3_event_grants_five(sim_installed) -> None:
     """函数单元主锁:持卡 + 单条 3 星事件 → 恰 +5(观察笔一笔,值/来源/
-    证据串三面钉死;证据串带 sim:engine: 命名空间——挂点金位可为 logic
+    证据串三面钉死;证据串带 sim:engine: 命名空间——调用点金位可为 logic
     来源,覆盖须落失配抑制分支,禁入真失配告警)。"""
     gs = _gs()
     seq0 = gs.write_seq
@@ -209,7 +209,7 @@ def test_gain_chain_cascade_single_grant(sim_installed) -> None:
 
 def test_gain_chain_no_card_zero_write() -> None:
     """获得链非持卡局零写:同操作(2★×3 合成 3★ 照常发生)金位零写
-    (账本零命中,函数级零动作经链挂点传导)。"""
+    (账本零命中,函数级零动作经链调用点传导)。"""
     gs = cw4_gs(gold=30, node_fill=False, shop_screen='off',
                 bench=[_bc('花火', 2), _bc('花火', 2)])
     gold_before = int(gs.gold.value or 0)

@@ -1,5 +1,5 @@
 """策略延时 offer 倒计时递减腿测试(镜像 src = kernel/cw_game_state.py 的
-_tick_pending_strategy_offers + _tick_effect_boundary_impl 接线)。
+_tick_pending_strategy_offers + _tick_effect_boundary_impl 接入调用)。
 
 测试面依据 = 迭代设计 designs/T-98-huangjin-qihuo.md §4 锁 3(3 条):
 - 计数起点 = 拿卡节点第 N 后继节点窗(拿卡窗内登记不递减,后继推进

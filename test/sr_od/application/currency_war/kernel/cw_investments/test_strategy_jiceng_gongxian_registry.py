@@ -52,7 +52,7 @@ def test_jiceng_gongxian_unit_buff_registration_surface() -> None:
     角色数、3星1费按 3 计、并列取法)与双属性数值(3% 速度增幅/2% 伤害
     减免)游戏侧自算,bot 零建模零观察(kernel cost 读口群 card_cost/
     bench_char_cost/effective_cost/sell_refund 系经济域观察读口,非效果
-    建模件,零接线)。"""
+    建模件,零接入调用)。"""
     spec = STRATEGY_EFFECTS[_CARD]
     cw_investments._validate_strategy_effects()   # 构建校验复跑不炸
     assert spec.id == '150701'

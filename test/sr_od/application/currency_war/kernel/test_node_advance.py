@@ -9,7 +9,7 @@
   结构挡/恰一档/等值翻锚/倒退免疫/补推含尾段发放/跨位面/越域丢弃/
   终局事件式;
 - **场景走查测试**(landing §3.6 走查集:快弹窗全型/boss 段/恢复局
-  自愈/结算真值金采样/备战锚定接线;已有判据不重写,本节只收缺口);
+  自愈/结算真值金采样/备战锚定接入调用;已有判据不重写,本节只收缺口);
 - **环境修饰序位表**(人身意外险 id 107 节点序列环境修饰,设计 §4
   锁 1-11;设计正本 = .debug/progress/2026-09-23-invest-effects-calc/
   designs/T-8-renshenyiwai-xian.md,钉住设计约定不断言实现细节):修饰规则
@@ -155,11 +155,11 @@ def test_reanchor_unlocks_next_advance() -> None:
 
 
 def test_settle_confirm_wires_battle_grant_once() -> None:
-    """T-30 同战共现条件发放接线(settle_confirm 分支,黑天鹅直登相邻):
+    """T-30 同战共现条件发放接入调用(settle_confirm 分支,黑天鹅直登相邻):
     真推进恰好查一次——三将同战结算后 bench 增 1★流萤带实例号 + 锁记录
     落账;重复上报(观察态门挡)不重查不重发;再推进 done 短路不重发
     且黑天鹅占卜屋计数器计数不受发放影响(回归锁);supply_finish 推进
-    不触发本检查(分支封闭集内仅 settle_confirm 接线)。"""
+    不触发本检查(分支封闭集内仅 settle_confirm 接入调用)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         BenchSlot,
         BenchView,
@@ -418,7 +418,7 @@ def test_settle_truth_gold_samples_conditional_grant(
     assert gs.free_refresh_left.value is None, (
         '战前陈旧金 40 ≤ 阈值 50:首锚定零条件授予')
 
-    # 结算链先于确认点击:结算屏真值金 85 无条件收口(settle_truth)
+    # 结算链先于确认点击:结算屏真值金 85 无条件收尾(settle_truth)
     apply_settlement_cover(gs, hp_after=80, streak_after=1, gold=85)
     assert gs.gold.value == 85
 
@@ -430,7 +430,7 @@ def test_settle_truth_gold_samples_conditional_grant(
 
 
 def _prep_heavy_harness(test_context, monkeypatch, session):
-    """CwScreenPrep heavy 观察跑壳(锚定写端接线测试共用):observe_full 桩
+    """CwScreenPrep heavy 观察跑壳(锚定写端接入调用测试共用):observe_full 桩
     按 ``receipt['r']`` 回传读数回执(None = 缺位),其余观察面全桩零;
     返回 (gs, op, receipt)。本缝静默丢失时生产 value 门挡全程卡死,故
     直测 wiring 面(与补给屏锚定对称,先例 = test_supply)。"""
@@ -530,7 +530,7 @@ def test_deposit_return_conditional_grant_and_roll(
 
 
 def test_prep_heavy_receipt_anchors_node(test_context, monkeypatch) -> None:
-    """备战帧锚定接线测试(design §2.4 写端 1,攻击 F1 定谳):CwScreenPrep
+    """备战帧锚定接入调用测试(design §2.4 写端 1,攻击 F1 定谳):CwScreenPrep
     heavy 观察回执携带本帧 plane/round → ``observe_node_anchor``(唯一
     生产锚定缝,cw_screen_prep.py::_observe heavy 段)——首帧 first_anchor
     建账含尾段发放、后续读数 advance/reanchor 落账、回执缺位跳过(禁猜)。"""
@@ -767,7 +767,7 @@ def test_lock6_recognizer_tool_state_shares_parsing(
 
 def test_lock6_recorder_and_funnel_wiring_passes_caps(
         monkeypatch) -> None:
-    """cw_match_recorder 语料采集与 read_game_state 漏斗接线:
+    """cw_match_recorder 语料采集与 read_game_state 漏斗接入调用:
     round_caps 透传场字段现值(实时态);局外无容器 = None 回退。"""
     from sr_od.application.currency_war.telemetry import cw_match_recorder
 
@@ -1048,7 +1048,7 @@ def test_lock11_monotonic_gate_tuple_compare(
 def test_lock11_killed_hp_fallback_path_gone(
         test_context, monkeypatch) -> None:
     """killed-hp 兜底门删除:两主路径(progress 符号/killed 文本)同失
-    (killed=None ∧ progress=None)→ killed 保持 None 观察收口,无 HP
+    (killed=None ∧ progress=None)→ killed 保持 None 观察收尾,无 HP
     推断路径(旧门会按 hp 对比产出 killed)。"""
     from sr_od.application.currency_war.kernel.cw_performance import (
         RoundOutcome,

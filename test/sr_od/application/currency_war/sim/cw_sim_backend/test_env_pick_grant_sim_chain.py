@@ -1,4 +1,4 @@
-"""环境直发策略取卡挂点 sim 全链轻量局测试(镜像 src = sim/cw_sim_backend.py
+"""环境直发策略取卡调用点 sim 全链轻量局测试(镜像 src = sim/cw_sim_backend.py
 的 ``_begin_node_window`` 直发发放事件;按流程级测试落位本目录,引擎驱动
 助手 import 自 sim/test_sim_backend.py〔已登记超限拆分债文件,禁追加,只
 import 复用不改;先例 = 本目录 test_env_bond_tier_sim_chain.py〕)。
@@ -10,7 +10,7 @@ T-46-celue-dashi.md(定稿)§4 锁 5(§2.2(e) 落地形态):
   金额对账 = 发放行值 − 同窗轮首收入行值,与收入数值解耦);
 - 直发后 excluded_invest 含到手名(全程去重契约锁);
 - 窗口重放不双发(幂等守卫族语义锁,boss 先例同款断言位);
-- 非挂点节点不发;表外环境不发。
+- 非调用点节点不发;表外环境不发。
 
 追加面 = 概念股族模式卡(正本 = game_state/gain-chain.md §3 随机支/随机
 装备支段 + fields.md §5.2 效果缺口与载体登记,语义 = 「概念股族模式卡
@@ -154,8 +154,8 @@ def test_direct_grant_fires_at_p3r5_no_offer_screen(
     一张(随机新策略,排除已拥有)、无选卡屏(窗后直落节点屏)、发放行
     金额 = 2×直发后持有数(直发经获得链自动触发金币分支)、到手名并入
     excluded_invest。结算恒胜桩保全程存活(死亡分支与本测无关)。
-    非挂点节点不发:r4 窗开时点已入快照基线——若误挂 (3,4),直发卡已在
-    held_before 内、r5 段零新发放行,本组断言即红(最近邻非挂点窗负例;
+    非调用点节点不发:r4 窗开时点已入快照基线——若误挂 (3,4),直发卡已在
+    held_before 内、r5 段零新发放行,本组断言即红(最近邻非调用点窗负例;
     表外环境负例另测)。"""
     _force_settle(monkeypatch, True)
     b = _env_pick_backend(7)
@@ -222,7 +222,7 @@ def test_foreign_env_no_grant_at_p3r5(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """表外环境不发(T-46 设计 §4 锁 5):登记表外环境(增发货币)局
     推进至 (3,5) 窗口 → 零直发(持有不动、零 env_grant gold 写行);
-    direct 挂点查询 get None = 无直发的合法语义。"""
+    direct 调用点查询 get None = 无直发的合法语义。"""
     _force_settle(monkeypatch, True)
     b = _env_pick_backend(7)
     try:

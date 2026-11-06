@@ -14,7 +14,7 @@ harness run_node):
   test_screen_report_ports 承重,本文件不重复);
 - 备战帧(``cw_screen_prep._write_prep_node_chain``:轮位对齐门/左移
   携带/boss SIFT 禁回落/变异窗/基线回填 + 槽序表/台账/未识别图标采集
-  的节点行消费位 + heavy 观察触发接线)。
+  的节点行消费位 + heavy 观察触发接入调用)。
 """
 from __future__ import annotations
 
@@ -123,7 +123,7 @@ def test_chain_node_type_query_states():
 
 
 def test_derivation_shop_panel_chain_query_writes_kind():
-    """类型派生商店查现行链(landing 消费接线):店开上下文写入
+    """类型派生商店查现行链(landing 消费接入调用):店开上下文写入
     → node.kind = 查链直定值(目标 = hist 反解位);生产时序等价形态 =
     N-1 帧 upcoming Hu 在 N 帧进店时在位。"""
     session = SimpleNamespace()
@@ -569,7 +569,7 @@ def test_icon_capture_debounced_300s(monkeypatch, tmp_path):
 
 
 def test_prep_entry_heavy_observation_triggers_writes(test_context, monkeypatch):
-    """备战入口 heavy 观察触发(接线测试):CwScreenPrep._observe heavy 经
+    """备战入口 heavy 观察触发(接入调用测试):CwScreenPrep._observe heavy 经
     observe_full 回传 slots → 节点行消费位同帧同点落位(槽序表 + 台账)。
     识别零新增:observe_full 桩只回传「现役 read_node_sequence 的产物
     形态」,读链不入桩面。"""
@@ -610,7 +610,7 @@ def test_prep_entry_heavy_observation_triggers_writes(test_context, monkeypatch)
     run_node(test_context, op, lambda: op._observe(True, screen=object()))
 
     assert gs.node_books.plane_node_table == ['battle'], \
-        '备战入口 heavy 观察触发槽序表写(归位接线)'
+        '备战入口 heavy 观察触发槽序表写(归位接入调用)'
     ledger = get_node_ledger(session)
     assert ledger.seq_by_plane[1] == [None, None, None, 'battle', None], \
         '备战入口 heavy 观察触发台账落账(prep_row)'
@@ -622,14 +622,14 @@ def _run_prep_heavy_with_fakes(test_context, monkeypatch, session, *,
                                plane: int, round_num: int = 1,
                                ores: list | None = None,
                                level: int | None = 5):
-    """备战 heavy 观察跑壳(ore 通道接线测试专用;每调用 = 一个备战环,
+    """备战 heavy 观察跑壳(ore 通道接入调用测试专用;每调用 = 一个备战环,
     op 现场重建——跨环幂等守卫不住 op 实例,测试形态与生产每环重建对齐)。
 
     fake ``observe_full`` **真实写 node/level 容器域**(与 read_game_state
-    漏斗写点同构):node 域 plane 的权威写点在漏斗内,接线判据 = 回执后
+    漏斗写点同构):node 域 plane 的权威写点在漏斗内,接入调用判据 = 回执后
     现值——fake 不写 node 而在 setup 预置,则「回执后读 plane」与
     「回执前读」不可分辨,按漏斗前值构造的断言假绿(ore-reward-channel
-    接线批测试构造约束)。
+    接入调用批测试构造约束)。
 
     ``ores`` 元素 = ``(色档, 点, 半径)``(read_ore_sights 产物形态,
     点带 x/y 属性);``level`` = fake 同帧写入的 level 域值(None = 不写,
@@ -761,7 +761,7 @@ def test_prep_ore_level_idempotent_across_prep_rings(
 
 def test_prep_ore_expiry_cleanup_trace_on_plane_transition(
         test_context, monkeypatch):
-    """电平过期清理留痕(live 接线面):位面过渡帧(p1 残留 → p2)旧
+    """电平过期清理留痕(live 接入调用面):位面过渡帧(p1 残留 → p2)旧
     plane 条目移除(pending/done 同清理),evidence 逐旧位面留痕
     ``ore_declared_expired#p1``;当前面声明照常入队(矿未现留队)。"""
     session = cw4_session()

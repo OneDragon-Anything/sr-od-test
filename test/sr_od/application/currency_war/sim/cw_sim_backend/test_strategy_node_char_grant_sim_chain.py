@@ -2,7 +2,7 @@
 cw_sim_backend.py 的 _begin_node_window 复制发放腿 + kernel 获得效果体的
 sim 门控绑定写;kernel 原语单元面 =
 kernel/cw_gain_chain/test_check_strategy_node_char_grants.py,本文件锁
-sim 窗口接线与世界真值落地面)。
+sim 窗口接入调用与世界真值落地面)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
 T-165-jiazhi-touzi-jin.md(定稿)§4 锁 2(sim 世界形)/锁 5(补给后)/

@@ -1,4 +1,4 @@
-"""补给屏测试面(决策 / 选项归并读链 / 选卡上报 / 节点推进接线)。
+"""补给屏测试面(决策 / 选项归并读链 / 选卡上报 / 节点推进接入调用)。
 
 判据正本(持久索引):
 - 决策单帧测试 = docs/develop/sr_od/application/currency_war/strategy-docs/
@@ -8,11 +8,11 @@
   T-9-guoshengjingfei.md);
 - 选卡上报(pick_supply 通道)= supply-pick design §2.0B/§3 验收锚 1
   + T-60 批漏项补齐(零写迁移通道;按动作 key 幂等契约);
-- 节点推进接线 = 补给节点**零推进**接线判据面(2026-10-29 流程模型
+- 节点推进接入调用 = 补给节点**零推进**接入调用判据面(2026-10-29 流程模型
   对齐:补给选完关模态回备战自动弹店,推进归出战动作 supply_finish,
-  旧「确认即 supply_confirm 推进」接线随「确认即推节点」废止);
+  旧「确认即 supply_confirm 推进」接入调用随「确认即推节点」废止);
   kernel 原语语义(门挡/去重/补推)由 test_node_advance
-  承重,本文件只校验接线面。
+  承重,本文件只校验接入调用面。
 
 测试纪律:零真实副作用;决策/归并断言钉住设计语义不断言牌面;归并读链坐标
 全部为测试自造常量(按归档帧布局实证取值,不读归档帧文件、不跑 OCR)。
@@ -394,11 +394,11 @@ def test_empty_options_frame_returns_no_options():
     assert out.reason == 'no-options'
 
 
-# ==================== flow 接线测试(3.1 改接线)====================
+# ==================== flow 接入调用测试(3.1 改接入调用)====================
 
 
 def test_flow_supply_wiring_wraps_actions_and_parses_locked_comp():
-    """flow.decide_supply 接线测试:候选自 gs.supply payload、纯值出口包装
+    """flow.decide_supply 接入调用测试:候选自 gs.supply payload、纯值出口包装
     动作词表(Pick/Refresh 互斥)、locked_comp 套名经 get_comp 解析三态
     ——锁线 comp 生效 / 伪套名解析失败按未锁口径(凭据③的解析失败帧)/
     刷新建议经 flow 闸内嵌语义直发。"""
@@ -772,7 +772,7 @@ def test_pick_supply_extra_norm_items_land_all_legs(
 def test_pick_supply_content_unknown_flips_domains(
         rows_sink: _RowSink) -> None:
     """补给内容全未知(兜底点卡路径,载荷空):禁猜——bench/equips 值
-    不变翻来源 + 留证行(观察覆盖差异收口自愈)。"""
+    不变翻来源 + 留证行(观察覆盖差异收尾自愈)。"""
     gs = _make_gs(bench=[('希儿', 1)], equips=['折叠小刀'])
     out = report_action_pick_supply_param(
         gs, CwActionPickSupplyParam(idx=0),
@@ -785,7 +785,7 @@ def test_pick_supply_content_unknown_flips_domains(
     assert rows_sink.kinds() == ['pick_supply_content_unresolved'], '留证行 kind'
 
 
-# ==================== 画面 op 即时上报与节点推进接线 ====================
+# ==================== 画面 op 即时上报与节点推进接入调用 ====================
 
 
 def _seeded_gs():
@@ -846,7 +846,7 @@ def test_chosen_supply_written_before_dispatch_and_no_landing_phase(
         test_context, monkeypatch) -> None:
     """画面 op 侧测试:chosen_supply 2 元组(角色, 装备名列表;T-9 裁定 2)
     在动作派发前已写(写点 = 选择点,``op-layer.md`` §2.2);选卡派发即终结
-    (动作体自产 round_success 终结交回,决策链接线迭代起 ``_do_action``
+    (动作体自产 round_success 终结交回,决策链接入调用迭代起 ``_do_action``
     返回轮次结果);节点完成门 miss(act 分发身份安全网)后零容器写
     (无落地相补写面)。"""
     from sr_od.application.currency_war.operations.cw_op import (
@@ -899,7 +899,7 @@ def test_chosen_supply_written_before_dispatch_and_no_landing_phase(
         '门 miss 后零容器写(无落地相补写面)'
 
 
-# --- 节点推进接线(补给侧)---
+# --- 节点推进接入调用(补给侧)---
 
 #: 剧本读数:节点条「备战阶段 1-5」→ 序位键 (1, 5)(补给节点 = 位面1 第5轮)。
 _POS_1_5: tuple[int, int] = (1, 5)

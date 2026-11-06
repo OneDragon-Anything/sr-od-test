@@ -16,12 +16,12 @@ design.md §2(数量级表)/§6(锁定语义):
 分节组织(同文件三节):
 - 判据本体(本文件主节):数量级对照 / 候选快照 / P1 无锁 / 时点兜底 /
   万敌燃料底线 / 正项上界自算 / 端到端;
-- 配方伪阵容路由(decision_target):统一保护集迭代末阶段收口后,
+- 配方伪阵容路由(decision_target):统一保护集迭代末阶段收尾后,
   过渡框架判据族(pick_framework / transition_score / _framework_counts)
   已随 TRANSITION_PACK 策展符号退役(design §2.4:判据数据源 = 策展
   档位标签,符号删除后为死码),本节保留配方路由与配方形状判定;
 - session 作用域载体(节点边界重置 / 窗口谓词 / 方向状态骨架 /
-  商店会话标记与机会清单 / 双域接线):锁定写入与判重载体面。
+  商店会话标记与机会清单 / 双域接入调用):锁定写入与判重载体面。
 """
 from __future__ import annotations
 
@@ -804,7 +804,7 @@ class TestSignatureAffixDimension:
 
 # ============================================================ session 作用域载体
 # (节点边界重置 / 窗口谓词 / 方向状态骨架 / 商店会话标记与机会清单 /
-#  双域接线;判据本体 = 本文件主节。节点号驱动 = 直赋 ``gs.node_hist_pos``
+#  双域接入调用;判据本体 = 本文件主节。节点号驱动 = 直赋 ``gs.node_hist_pos``
 #  〔生效序位的单调水位分量,生产写端 = advance_node_effective〕。)
 
 
@@ -1044,8 +1044,8 @@ class TestShopMarksStorage:
 class TestEntryWiring:
 
     def test_prep_entry_runs_boundary(self, monkeypatch: pytest.MonkeyPatch):
-        """备战入口接线测试:decide_prep_screen 到达任何决策前执行边界
-        重置(armed 短路帧同样先过边界——接线位 = 入口最前;armed
+        """备战入口接入调用测试:decide_prep_screen 到达任何决策前执行边界
+        重置(armed 短路帧同样先过边界——接入调用位 = 入口最前;armed
         判定核桩化为单键替身,真 armed 判据不在本测试面)。"""
         import sr_od.application.currency_war.kernel.cw_launch_admission as admit_mod
         from sr_od.application.currency_war.kernel.cw_vocab import CwAction
@@ -1057,14 +1057,14 @@ class TestEntryWiring:
         monkeypatch.setattr(admit_mod, 'readiness_launch_decision',
                             lambda *a, **k: {'armed': True})
         strat = MandateV1Strategy(gs, SimpleNamespace(strategy_seed=None))
-        st = state_of(gs)   # 构造 setter 已接线容器 → 同一状态对象
+        st = state_of(gs)   # 构造 setter 已接通容器 → 同一状态对象
         st.shop_handled = (1, 1)   # 污染(上一节点残留态)
         action = strat.decide_prep_screen()
         assert isinstance(action, CwAction)
         assert st.shop_handled is None    # 备战入口已执行边界重置
 
     def test_shop_entry_runs_boundary(self):
-        """商店入口接线测试:decide_shop_action 单动作核入口先过边界
+        """商店入口接入调用测试:decide_shop_action 单动作核入口先过边界
         (生产单动作循环与 decide_shop_screen 驱动器共用本口)。"""
         from test.sr_od.application.currency_war._cw_helpers import DecideCfg
 

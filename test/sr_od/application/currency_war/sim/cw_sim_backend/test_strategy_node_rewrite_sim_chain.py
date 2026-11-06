@@ -1,7 +1,7 @@
 """sim 策略卡条件节点序列改写腿测试(镜像 src = sim/cw_sim_backend.py
-的 _enter_node_window 窗开挂点 + kernel 纯决策 check_strategy_node_rewrite
-的 sim 接线与世界真值落地面;kernel 原语单元面 = kernel/cw_gain_chain/
-test_check_strategy_node_rewrite.py,本文件锁 sim 窗口接线)。
+的 _enter_node_window 窗开调用点 + kernel 纯决策 check_strategy_node_rewrite
+的 sim 接入调用与世界真值落地面;kernel 原语单元面 = kernel/cw_gain_chain/
+test_check_strategy_node_rewrite.py,本文件锁 sim 窗口接入调用)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
 T-318-jueyi-yule-xingqiu.md §4 附锁(REVIEW-T318 §五④,sim 全链锁形态 =

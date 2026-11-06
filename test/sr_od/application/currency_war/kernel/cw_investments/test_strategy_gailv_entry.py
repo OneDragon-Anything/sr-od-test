@@ -5,7 +5,7 @@
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-297 对应稿
 §4 锁面(REVIEW-T297 免裁 7/7;卡面官方原文:「刷新时有45%概率获得一次
 免费刷新。」——付费域口径待实采 pending 如实标注;世界写入面 = §6.3
-随机分支观察收口):
+随机分支观察收尾):
 
 - 条目锁:category ECONOMY / payload 同实例单一源对拍 STRATEGY_ECONOMY
   键 / trigger ON_REFRESH / duties 仅 respond=True / pending True;

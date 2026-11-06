@@ -156,7 +156,7 @@ def _frame(*, gold: int = 60, bench=(), deployed=(), shop_cards=(),
                sig=_OBS_SIG)   # 标记写入的节点号读面(生产观察链)
     if hist is not None:
         gs.node_hist_pos = hist
-    live = _live(gs, st)   # 状态接线先行(gs 宿主统一,边界写入同状态)
+    live = _live(gs, st)   # 状态接入调用先行(gs 宿主统一,边界写入同状态)
     gs.strategy_state = st   # 宿主归一:session_scope 函数族经 gs 取态
     st.node_boundary_last_pos = None   # 边界执行态(plane2/窗口谓词置位)
     session_scope.handle_node_boundary(gs)
@@ -964,7 +964,7 @@ def _frame_session(*, bench_units: list[str], deployed_units: list[str],
     st.gold_ledger = gold
     st.node_boundary_last_pos = (1, 3)
     live = MandateV1Live(gs, SimpleNamespace(strategy_seed=None))   # 终态契约:构造注入
-    live.state = st   # 状态同源接线:会话播种对象(零参口决策读 self.state)
+    live.state = st   # 状态同源接入调用:会话播种对象(零参口决策读 self.state)
     return live, sess, SimpleNamespace(ev_arm='full')
 
 
@@ -997,7 +997,7 @@ def _frame_m2_stockpile_vacate():
 
 def _frame_interest_sell():
     """凑息回拉形态:金贴息线下、席不满、缺员件不在店 → 店内零凑息
-    卖射(凑息 = 备战第 7 步接线),收工关店交回备战。"""
+    卖射(凑息 = 备战第 7 步接入调用),收工关店交回备战。"""
     return _frame_session(
         bench_units=_fuel_names(5),
         deployed_units=list(COMP_LIBRARY[0].core_chars[1:2]),

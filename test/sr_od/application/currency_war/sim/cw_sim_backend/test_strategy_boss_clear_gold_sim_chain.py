@@ -1,7 +1,7 @@
 """策略卡首领通关价值金 sim 世界链测试(镜像 src = sim/cw_sim_backend.py
 的 _resolve_battle 首领通关价值金腿;kernel 触发函数单元面 =
 kernel/cw_gain_chain/test_check_strategy_boss_clear_gold.py,本文件锁
-sim 结算腿接线与世界真值落地面)。
+sim 结算腿接入调用与世界真值落地面)。
 
 测试面依据 = 迭代设计 designs/T-332-souda-che.md §4 锁 3/锁 4(驱动与
 断言形态先例 = 同目录 test_strategy_boss_completion_grant_sim_chain.py
@@ -17,7 +17,7 @@ sim 结算腿接线与世界真值落地面)。
   恰一次,函数内一次性标志位自管防跨 boss 重复);
 - 败局存活(won=False)零发放零一次性标志位(「通关」= 胜利限定,与武器批发商
   无胜利限定形对形分化);死亡局(hp_floor_triggered 濒死败局)零发放
-  零一次性标志位直接进终局(挂点在死亡提前 return 之后);
+  零一次性标志位直接进终局(调用点在死亡提前 return 之后);
 - 驱动形态 = 出战动作触发结算(2026-10-29 流程模型);引擎驱动助手
   import 自 sim/test_sim_backend.py(已登记超限拆分债文件,禁追加,只
   import 复用不改);helper 副本(世界写包装/类型备战驱动/定参结算)
@@ -215,7 +215,7 @@ def test_first_won_boss_gold_and_latch(
         assert row[3].family == 'obs' \
             and row[3].group_id == 'sim:strategy', f'sig 漂移: {row[3]}'
         # 值增量对收入免疫:金笔 = 紧邻前一笔 gold 现值 + 板面价值
-        #(结算段收入笔在挂点前落账则取其值;无前序笔 = 收入已在窗开
+        #(结算段收入笔在调用点前落账则取其值;无前序笔 = 收入已在窗开
         # 拍入账,退回记录前现值——两种形态 boss 位结算都可达)。
         all_gold = [c for c in calls if c[1] == 'gold']
         idx = all_gold.index(row)
@@ -287,7 +287,7 @@ def test_boss_loss_survival_zero_gold_and_latch(
 def test_dead_battle_zero_gold_and_latch(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """锁 4b(死亡局零发放):保底已用 + 濒死局首领战败 → hp 归零死亡
-    提前 return 在挂点之前,零金笔零一次性标志位直接进终局(局终不见发放,与实机
+    提前 return 在调用点之前,零金笔零一次性标志位直接进终局(局终不见发放,与实机
     一致;死亡早退形态仅 sim _resolve_battle 可构造,kernel 镜像不可
     表达)。"""
     b = _prep_backend(88)

@@ -1,7 +1,7 @@
 """买牌上报·策略卡合成触发发放腿 sim 集成测试(镜像 src = kernel/
-cw_action_report/buy_card.py 合并发火段挂点;kernel 发放函数单元面 +
+cw_action_report/buy_card.py 合并发火段调用点;kernel 发放函数单元面 +
 获得链集成面 = kernel/cw_gain_chain/test_check_strategy_merge_grants.py,
-本文件锁 buy 域挂点经真实上报函数的 sim 世界落地面,先例 = 同目录
+本文件锁 buy 域调用点经真实上报函数的 sim 世界落地面,先例 = 同目录
 test_star_merge_gold.py)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-179-shali-
@@ -9,7 +9,7 @@ taojin.md(定稿)§4 锁 2 + REVIEW-T179 §3.4(卡面官方原文:「合成
 2星2费角色时，获得1张【砂金】。」):
 
 - 主锁:sim 局预种持卡 + 席面 1★×2 同名 2 费 → 买入第 3 只 1★ →
-  合成 2★ → bench 含 1 个 1★砂金(buy 域挂点,发放 1★ 先验);
+  合成 2★ → bench 含 1 个 1★砂金(buy 域调用点,发放 1★ 先验);
 - 负锁:买入非 2 费同名凑三(席面 1★×2 3 费 + 买第 3 只 3 费 → 合成
   2★3费)→ 判据费用不符零发放(合成照常,费用笔照常)。
 
@@ -97,7 +97,7 @@ def _bench_units(gs) -> list[tuple[str, int]]:
 
 def test_buy_third_one_star_merges_and_grants_shajin() -> None:
     """主锁(锁 2):席面 1★×2 花火 + 买第 3 只 1★ → 合成 2★花火 →
-    bench 含 1 个 1★砂金(buy 域挂点发放,1★ 先验)。"""
+    bench 含 1 个 1★砂金(buy 域调用点发放,1★ 先验)。"""
     b = _prep_backend(62)
     try:
         gs = b.gs
@@ -109,7 +109,7 @@ def test_buy_third_one_star_merges_and_grants_shajin() -> None:
         assert ('花火', 2) in units, \
             f'合成产物 2★ 在席(前置:凑齐三只): {units}'
         assert units.count(('砂金', 1)) == 1, \
-            f'buy 域挂点发放恰 1 个 1★砂金: {units}'
+            f'buy 域调用点发放恰 1 个 1★砂金: {units}'
         assert gs.bench.evidence == 'strategy_merge_grant:砂里淘金#place', \
             f'bench 尾笔 evidence = 发放写点(链 #place 后缀): ' \
             f'{gs.bench.evidence!r}'

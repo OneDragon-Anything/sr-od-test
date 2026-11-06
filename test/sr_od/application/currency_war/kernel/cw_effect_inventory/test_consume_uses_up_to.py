@@ -56,7 +56,7 @@ def test_consume_uses_up_to_zero_n_no_action() -> None:
 
 def test_consume_uses_up_to_unregistered_and_non_use_spec() -> None:
     """锁 6 保守端:未登记条目 → 0;非次数类条目(躺平,remaining_nodes
-    载体)→ 0 零动作(递减挂点与登记挂点解耦,登记面缺位的局不炸执行
+    载体)→ 0 零动作(递减调用点与登记调用点解耦,登记面缺位的局不炸执行
     链,consume_use 同纪律)。"""
     inv = ActiveEffectInventory()
     assert inv.consume_uses_up_to(_SPEC_ID, 3) == 0, '未登记 → 0'

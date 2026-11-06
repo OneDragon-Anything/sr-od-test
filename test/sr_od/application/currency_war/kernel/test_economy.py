@@ -934,7 +934,7 @@ def _run_shop_visit_offline_host(monkeypatch: pytest.MonkeyPatch,
     不落盘。返回 (warned, rr, ledger);rr=None = 正常收工(出参交接契约,
     详设 §2.2)。驱动 = 真类实例 + 节点函数直驱(过渡薄壳已随 3.4 退役,
     先例 = operations/cw_screen/test_shop_screen_op.py)。
-    disclose_impl 替换店开帧披露写点(接线点为函数内 lazy import,每次
+    disclose_impl 替换店开帧披露写点(接入调用点为函数内 lazy import,每次
     调用取模块属性,monkeypatch 即生效)。"""
     import sr_od.application.currency_war.operations.cw_screen.cw_screen_shop as buy_mod
     from sr_od.application.currency_war.kernel.cw_vocab import CwActionCloseShopParam
@@ -962,7 +962,7 @@ def _run_shop_visit_offline_host(monkeypatch: pytest.MonkeyPatch,
     monkeypatch.setattr(tel_state, '_defect_seen_run', '')
 
     class _CloseShopStrategy:
-        """替身决策源:首动作即 CwActionCloseShopParam 终结(段顶接线段后立即收工)。"""
+        """替身决策源:首动作即 CwActionCloseShopParam 终结(段顶接入调用段后立即收工)。"""
 
         def decide_shop_action(self) -> CwActionCloseShopParam:
             return CwActionCloseShopParam()
@@ -1236,8 +1236,8 @@ def test_armed_shortcircuit_frame_writes_no_disclosure(
 
 def test_shop_frame_disclosure_wired_at_shop_entry(
         monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    """接线存在测试(店开帧第二写点):spy 计数 = 店开观察帧段顶接线段
-    恰调用一次(接线断裂/漂移即红)+ 循环收工两条分支。"""
+    """接入调用存在测试(店开帧第二写点):spy 计数 = 店开观察帧段顶接入调用段
+    恰调用一次(接入调用断裂/漂移即红)+ 循环收工两条分支。"""
     seen_calls: list = []
 
     def _spy(state, session, registry=None) -> None:
@@ -1246,7 +1246,7 @@ def test_shop_frame_disclosure_wired_at_shop_entry(
     _warned, rr, ledger = _run_shop_visit_offline_host(monkeypatch, tmp_path,
                                                        _spy)
     assert len(seen_calls) == 1, \
-        f'店开帧披露写点调用次数异常({len(seen_calls)}):接线断裂/漂移'
+        f'店开帧披露写点调用次数异常({len(seen_calls)}):接入调用断裂/漂移'
     assert rr is None and ledger is not None, '商店循环未正常收工'
 
 
@@ -1254,7 +1254,7 @@ def test_shop_frame_disclosure_failure_degrades_with_warning(
         monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """行为测试:披露覆写失败 → log.warning 降级留痕、不外抛中断商店循环
     (遥测 best-effort 契约;锚⑤缺陷无声复发防线)。触发法 = 披露写点
-    monkeypatch 成抛错,经共用离线宿主驱动观察 node 段顶接线段,断言
+    monkeypatch 成抛错,经共用离线宿主驱动观察 node 段顶接入调用段,断言
     warning 被调且循环正常收工——log 措辞/写法漂移不再假红。"""
 
     def _boom(*a, **k):

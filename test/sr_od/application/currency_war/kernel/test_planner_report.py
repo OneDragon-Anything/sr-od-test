@@ -21,7 +21,7 @@ sr_od/application/currency_war/ 迭代详设;单相即时上报契约 §2.0)。
 - **好运令牌后果链锚**(§2.2 全渠道):apply_equip_acquire_consequence
   对表外件零写零行为、表内件送出单位。
 
-观察收口(等值静默/差异 logic_rand_outcome)= 基座测试
+观察收尾(等值静默/差异 logic_rand_outcome)= 基座测试
 test_game_state.py::test_write_logic_rand_and_observe_random_outcome,
 不重复。
 """
@@ -182,7 +182,7 @@ def test_equip_leg_unresolved_flips_source(
                                            norm_item='', sig=_lsig())
     assert out.applied is True
     assert gs.equips.value == ['幸运星'], '值不变'
-    assert gs.equips.source == 'logic_rand', '翻来源(观察差异收口自愈)'
+    assert gs.equips.source == 'logic_rand', '翻来源(观察差异收尾自愈)'
     assert rows_sink.kinds() == ['planner_equip_name_unresolved']
     assert gs.bench.source == 'observation', '无后果链(不猜件名)'
 

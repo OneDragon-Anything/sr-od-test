@@ -1,7 +1,7 @@
 """sim 策略延时发放窗口腿测试(镜像 src = sim/cw_sim_backend.py 的
 _begin_node_window 策略发放腿;kernel 原语单元面 =
 kernel/cw_gain_chain/test_discharge_due_strategy_grants.py,本文件锁
-sim 窗口接线与世界真值落地面)。
+sim 窗口接入调用与世界真值落地面)。
 
 测试面依据 = 迭代设计 designs/T-106-rencai-jili.md §4 锁 4(sim 端到端
 形态)与锁 5 同源幂等申报 + T-107 展开卡批(designs/T-107-rencai-jili-plus.md

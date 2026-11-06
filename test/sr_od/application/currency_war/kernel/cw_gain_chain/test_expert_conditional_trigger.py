@@ -94,7 +94,7 @@ def test_already_unlocked_idempotent_zero_write() -> None:
 
 def test_rand_true_writes_rand_channel_after_anchor() -> None:
     """rand 透传(采样链纪律):置一次性标志位后 rand=True 仍走随机态通道
-    (write_logic_rand),rand=False 走确定面——通道选择入口单一收口。"""
+    (write_logic_rand),rand=False 走确定面——通道选择入口单一收尾。"""
     gs_rand = _gs()
     gs_rand.prep_anchored = True
     assert expert_conditional_trigger(gs_rand, '银狼LV.999', rand=True,

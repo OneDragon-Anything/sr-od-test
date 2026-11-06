@@ -8,7 +8,7 @@
 - **入口门语义测试**(遭遇):画面身份门 miss = round_fail 交回外循环重判,
   文案沿用现役,且不进读链(obs 不装载);盛会之星 = 节点完成门(overlay
   消失 = 节点完成 success 交还外层)。
-- **观察上报接线测试**(遭遇):观察 node 稳定帧一次读(候选 + 剩余次数)
+- **观察上报接入调用测试**(遭遇):观察 node 稳定帧一次读(候选 + 剩余次数)
   → report 经屏文件落容器 ``encounter`` + ``encounter_refresh_left``
   (容器终值)+ obs 与刷新文本锚点挂实例属性。
 - **刷新链终结测试**(遭遇,
@@ -202,10 +202,10 @@ def test_encounter_observe_gate_fails_off_screen(
 
 def test_encounter_observe_reports_container(
         test_context, monkeypatch) -> None:
-    """观察上报接线测试:观察 node 稳定帧一次读(候选 + 剩余次数)→ report
+    """观察上报接入调用测试:观察 node 稳定帧一次读(候选 + 剩余次数)→ report
     落容器 ``encounter``(容器终值 = 候选)+ ``encounter_refresh_left``
     (剩余语义摄入;读缺跳写闸在 report 内)+ obs 与刷新文本锚点挂实例
-    属性。红 = 接线断流 / 容器终值漂移 / left 未摄入。"""
+    属性。红 = 接入调用断流 / 容器终值漂移 / left 未摄入。"""
     opts = [EncounterOption(idx=0, difficulty=1, rewards=['金币×2'])]
     op, _match, session = _make_encounter(
         test_context, monkeypatch, in_screen=True, options=opts,
@@ -1215,7 +1215,7 @@ def _make_supply(test_context, monkeypatch, *, pick, opts,
                         lambda scr, s, a, **k: _Area(True))
     monkeypatch.setattr(sn, 'read_supply_options', lambda ctx, screen: list(opts))
     monkeypatch.setattr(op, '_read_refresh_anchor', lambda screen: anchor)
-    # 节点条锚定桩(读不得 = 跳过;锚定接线测试归
+    # 节点条锚定桩(读不得 = 跳过;锚定接入调用测试归
     # test_supply,本文件不重复)
     monkeypatch.setattr(op, '_read_node_bar', lambda screen: None)
 
@@ -1244,7 +1244,7 @@ def test_supply_chosen_written_on_confirm_pick(test_context, monkeypatch) -> Non
       source=logic,机械派发半照发(记录面不拦截动作链);
       选定快照携 ``refresh_left`` 键 = 容器剩余次数现值(可 None)
       + ``extra_equips`` 键 = 列内附加装备;派发 env.target = 实机读链
-      点击点(决策链接线迭代:决策输入换 obs 载体,实机执行载体原样);
+      点击点(决策链接入调用迭代:决策输入换 obs 载体,实机执行载体原样);
     - 刷新轮不写 = 真选守卫(对照闸拒绝防线 round_fail 路径语义)。
     OCR 读链/配置/机械派发半桩化,只校验记录面。"""
     from one_dragon.base.geometry.point import Point
@@ -1374,7 +1374,7 @@ def _make_supply_flow_op(cls, *, in_node: bool, do_action_calls: list):
     """补给流转形态测试装配(bypass __init__):round_by_find_area 程序化回
     in_node;``_do_action`` 桩只记调用并回 wait 形态轮次结果(原 runnode
     等价测试并入,校验 act 流转形态而非动作内容——动作内容由上两个测试
-    承重;决策链接线迭代起动作体自产轮次结果,act 透传)。"""
+    承重;决策链接入调用迭代起动作体自产轮次结果,act 透传)。"""
 
     class _FakeArea:
         def __init__(self, ok: bool): self.is_success = ok
@@ -1414,7 +1414,7 @@ def _make_supply_flow_op(cls, *, in_node: bool, do_action_calls: list):
 
 def test_supply_node_flow_act_wait_then_success() -> None:
     """补给流转两段形态测试(仍在补给屏 → 决策动作 node 恰消费一次动作体 +
-    轮次结果透传——决策链接线迭代起动作体自产终结/防线轮次结果,act 零
+    轮次结果透传——决策链接入调用迭代起动作体自产终结/防线轮次结果,act 零
     二次包装;锚 miss(离开节点画面)→ success 零动作——验证完成才
     success。离开画面的完成门行为在
     分发身份安全网测试(test_supply)亦有消费面

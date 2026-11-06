@@ -1,7 +1,7 @@
 """cw_observation 账实金对账生产者测试(gold 域统一对账)。
 
 锁两件事(design executor-gold-delta-retire §2.3):
-1. 生产者接线语义:gap>0 产 ``obs_conflict('gold_delta', old=账面,
+1. 生产者接入调用语义:gap>0 产 ``obs_conflict('gold_delta', old=账面,
    new=实读)``,old/new 方向 = 容器账面在 old(告警门按 |new-old| 算
    gap,方向反了证据行失真);gap=0 / 账面 None / 同帧重入静默零产证;
 2. 告警门首次可达:同一调用形态喂真告警门(kernel/cw_observe.obs_conflict),

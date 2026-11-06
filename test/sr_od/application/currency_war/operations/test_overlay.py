@@ -1,7 +1,7 @@
 """货币战争 overlay 生命周期行为测试(选卡判据 / 触发登记 / 消费呈现 /
 身份两段式 / 路由清点)。
 
-五个部分(overlay 从「判据 → 登记 → 呈现/消费 → 识别收口 → 残留清理」
+五个部分(overlay 从「判据 → 登记 → 呈现/消费 → 识别收尾 → 残留清理」
 的一条生命周期线,外加 CwLoop 侧残面清理):
 
 - **选卡判据 kernel**(原 overlay 三件选卡判据收编 kernel 的行为保持面):
@@ -702,8 +702,8 @@ class TestSimPresentationFromPending:
                        for p in b.gs.screen_changes.pending), '条目存活等待'
             b._screen = '货币战争-备战'
             b._present_pending_overlay()
-            assert b.gs.screen_changes.pending == [], '底层备战时收口消费'
-            assert f'{OVERLAY_PARAM_PENDING}:fortune' in b.disclosures, '呈现门收口披露'
+            assert b.gs.screen_changes.pending == [], '底层备战时收尾消费'
+            assert f'{OVERLAY_PARAM_PENDING}:fortune' in b.disclosures, '呈现门收尾披露'
         finally:
             uninstall_backend()
 
@@ -990,7 +990,7 @@ class TestLoopFallbackClear:
 
     def test_sim_state_skips(self, test_context, monkeypatch):
         """sim 装配态(mechanical_io_allowed False)直跳:呈现即消费
-        由后端收口,实机兜底清不辖。"""
+        由后端收尾,实机兜底清不辖。"""
         from sr_od.application.currency_war.sim import cw_sim_ports
         monkeypatch.setattr(test_context, 'cw_match',
                             SimpleNamespace(session=StrategySession()),
@@ -1039,7 +1039,7 @@ class TestFortuneNodeWindowM1:
                 gs, 'fortune', KIND_SCREEN_NAMES['fortune'],
                 's4_battle_count@settle_confirm')
             # settle_confirm 推进 → P1r2(battle)节点窗起点:先落底层
-            #(battle → 备战档)再查呈现门 → fortune 收口消费;窗收尾自动
+            #(battle → 备战档)再查呈现门 → fortune 收尾消费;窗收尾自动
             # 弹店(2026-10-29 流程模型对齐),节点屏不被吞。
             adv = report_node_advance(gs, trigger='settle_confirm')
             assert adv.applied
@@ -1047,7 +1047,7 @@ class TestFortuneNodeWindowM1:
             assert b.screen_identity() == '货币战争-备战-开商店', \
                 '节点窗底层照常呈现(battle → 备战 → 自动弹店),不被 fortune 门吞'
             assert gs.screen_changes.pending == [], \
-                'fortune 在备战底层收口消费(逐 kind 呈现门)'
+                'fortune 在备战底层收尾消费(逐 kind 呈现门)'
             assert any('fortune' in str(k) and 'unmodeled' in str(v)
                        for k, v in b.disclosures.items()), '消费披露已登记'
         finally:
@@ -1060,7 +1060,7 @@ class TestFortuneNodeWindowM1:
 
 
 def _stub_loop(gs: GameState) -> SimpleNamespace:
-    """桩 self:挂点只读 self.ctx.cw_match.gs,其余零依赖。"""
+    """桩 self:调用点只读 self.ctx.cw_match.gs,其余零依赖。"""
     return SimpleNamespace(ctx=SimpleNamespace(
         cw_match=SimpleNamespace(gs=gs)))
 

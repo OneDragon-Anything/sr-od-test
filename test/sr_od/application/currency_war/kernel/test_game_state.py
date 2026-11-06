@@ -2,9 +2,9 @@
 容器数据结构设计,下称「设计」;正本 = game_state/fields.md)。
 
 测试面 = 写入口两态制与构造守卫(§2.1-§2.4/§8.6-5)+ 派生不存储
-(§8.6-4 续)+ 观察流接线与 hp 失读统一口径 + 心跳哨兵(§2.4 关键
+(§8.6-4 续)+ 观察流接入调用与 hp 失读统一口径 + 心跳哨兵(§2.4 关键
 结构 2)+ sim 合成口箱占席语义(§3.2.5;迁移批次一任务书第 7 件)
-+ 设计 §8.7 批次三(挂点机制/B1 桥)与批次四(退役 + relay 空值闸)
++ 设计 §8.7 批次三(调用点机制/B1 桥)与批次四(退役 + relay 空值闸)
 两组测试。机制主题归并(禁批次命名):本文件 = GameState 容器机制正名
 主题文件,消费切换批(刷新计数/结算覆盖/合成升星判定/streak 解析/
 备战席读链)、容器合同(六通道/版本流水/快照/画面上下文/渠道签名
@@ -12,11 +12,11 @@
 机制并入(断言体零语义改动)。
 
 退役面:§8.6 差距清单逐条测试(gap3/gap4 组)与 §3 字段语义抽样组已删;
-心跳写点序/断流计数两个测试并一,level_up/battle_end 挂点两个测试并一,
+心跳写点序/断流计数两个测试并一,level_up/battle_end 调用点两个测试并一,
 tick/advance_node 两个测试并一(并入分支见各测试 docstring)。
 
 合并面(第二刀,断言分支零丢失):bench_free 两形态参数化并一;失配缺陷
-台账+sink drain 并一;合成口真值域 on/off 参数化并一;feed 接线+hp 三
+台账+sink drain 并一;合成口真值域 on/off 参数化并一;feed 接入调用+hp 三
 分支同帧驱动并一;burst/per_node 授权两形态参数化并一;relay 单元三个测试
 表驱动并一;relay 端到端两个测试并一;席位视图转换三个测试并一(ShopCard 映射
 单测试独立)。
@@ -186,7 +186,7 @@ def test_bench_free_slots_and_full_derivation(case: str) -> None:
 
 
 # ============================================================ §8.6-5
-# 构造守卫:frozen 帧替换 + hp 不变式 + 缺陷台账挂点
+# 构造守卫:frozen 帧替换 + hp 不变式 + 缺陷台账调用点
 
 
 def test_observe_replaces_frame_not_mutates() -> None:
@@ -245,14 +245,14 @@ def test_leave_screen_payload_only() -> None:
 
 
 def test_observe_over_logic_mismatch_defect_row_and_sink_drain() -> None:
-    """§2.3/ADR-0651 失配缺陷台账 + 挂点消费并一(合并原
+    """§2.3/ADR-0651 失配缺陷台账 + 调用点消费并一(合并原
     test_observe_over_logic_mismatch_emits_defect_row /
     test_consume_defect_sink_drains,断言分支逐条保留):
 
-    - 失配分支:观察覆盖 logic 值失配 → 失配记入缺陷台账(挂点注入,缺省
+    - 失配分支:观察覆盖 logic 值失配 → 失配记入缺陷台账(调用点注入,缺省
       关);观察赢——来源改回 observation。失配 = 推算 bug 留证修码;
       一致反分支 = 投影被实读核实形态,零缺陷行;
-    - drain 分支:挂点 = 注入槽模式(缺省关+显式接通;模块级缓冲在 setup
+    - drain 分支:调用点 = 注入槽模式(缺省关+显式接通;模块级缓冲在 setup
       先清,隔离整条副作用链);consume 供装配点取走行后复位,防跨局
       残留。"""
     # —— 失配分支(失配留证 + 观察赢)——
@@ -641,11 +641,11 @@ def _patch_clean_readers(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_observation_feed_wiring_and_hp_loss_semantics(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """观察流接线 + hp 失读统一口径同帧驱动一测试(合并原
+    """观察流接入调用 + hp 失读统一口径同帧驱动一测试(合并原
     test_observation_feed_wires_board_state /
     test_observation_feed_hp_unified_loss_semantics,断言分支逐条保留):
 
-    - 接线分支(任务书件 2):read_game_state 观察流——真读字段进 GameState
+    - 接入调用分支(任务书件 2):read_game_state 观察流——真读字段进 GameState
       (observation);失读字段走 carried/prior;hp 写入闸:非真读帧不经
       observe 假值入账;
     - hp 三分支(§2.2,任务书件 1 断言面):①字段已有正式值 → 失读写
@@ -653,7 +653,7 @@ def test_observation_feed_wiring_and_hp_loss_semantics(
       None,session 外源值禁猜入);真值帧 → observation 转正。"""
     from sr_od.application.currency_war.obs import cw_observation
 
-    # —— 接线分支:干净 prep_clean 帧,真读值进容器,hp 开局先验形态 ——
+    # —— 接入调用分支:干净 prep_clean 帧,真读值进容器,hp 开局先验形态 ——
     sess = SimpleNamespace(last_streak=0, active_strategies=[])
     _patch_clean_readers(monkeypatch)
     cw_observation.read_game_state(_feed_ctx(sess), None, phase='prep_clean')
@@ -856,9 +856,9 @@ def test_observation_feed_carries_screen_name_and_precise_exempt(
 
 # ============================================================ §8.7 批次三
 # 策略器状态归位(原独立批次文件按主题文件纪律归并入本文件;断言体零语义
-# 改动)。测试面 = §8.7 批次三现存件:§5.1 effect_inventory 挂点机制(登记/
+# 改动)。测试面 = §8.7 批次三现存件:§5.1 effect_inventory 调用点机制(登记/
 # 节点 tick 与 advance/计数 bump/到期尾款返回面)+ §3.2.19 跳过递减/
-# §5.1 账本载体归一(挂点
+# §5.1 账本载体归一(调用点
 # 写点落在 GameState.effects 单例)。断言全部按设计语义写,与上方批次一/
 # 消费批测试面不重复。
 
@@ -868,20 +868,20 @@ def test_observation_feed_carries_screen_name_and_precise_exempt(
 
 
 def test_level_up_and_battle_end_hooks_write_unified_ledger() -> None:
-    """升级标记(prep_actions)与结算(battle_wait)两挂点直写 GameState
+    """升级标记(prep_actions)与结算(battle_wait)两调用点直写 GameState
     正本:game_state_of(sess).effects 落单一实例,session 上无旁路字段。"""
     sess = StrategySession()
     game_state_of(sess).effects.on_level_up()
     assert game_state_of(sess).effects.event_count('_event_level_up') == 1, \
-        '挂点写点落在单一实例'
+        '调用点写点落在单一实例'
     game_state_of(sess).effects.on_battle_end()
     assert game_state_of(sess).effects.event_count('_event_battle_end') == 1, \
-        '挂点写点落在单一实例'
+        '调用点写点落在单一实例'
     assert not hasattr(sess, 'effect_inventory'), \
         'session 兼容读口已撤,禁残留旁路字段'
 
 
-# ============================================================ §5.1 挂点机制
+# ============================================================ §5.1 调用点机制
 # register 播种 / tick 去重与到期 / consume_use / bump_key
 
 
@@ -938,10 +938,10 @@ def test_effect_refresh_balance_grant_forms(case: str) -> None:
     None 基 = 0 起算):
     - burst:登记时点把 payload.free_refresh_burst 一次性累加进 Field
       (固定理财即时段=2 活载体);零额度 payload(免战牌)= no-op 零行。
-      「一次性」由调用点唯一性承载(登记挂点,接线测试辖),函数本体不加
+      「一次性」由调用点唯一性承载(登记调用点,接入调用测试辖),函数本体不加
       去重;
     - per_node:节点边界一次,把在场条目声明的每节点额度累加进 Field
-      (双手狸 free_refresh_on_node_enter=2 活载体);同节点重复挂点采样
+      (双手狸 free_refresh_on_node_enter=2 活载体);同节点重复调用点采样
       不双计(闸 = advance_node advanced 位)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if case == 'burst-once-grant':
@@ -960,7 +960,7 @@ def test_effect_refresh_balance_grant_forms(case: str) -> None:
     if adv:
         grant_effect_node_refresh_balance(gs, frame='p1-r6')
     assert gs.free_refresh_left.value == 2, 'None 基 = 0 起算'
-    # 同节点重复采样(挂点每备战环一次):去重位关闭累加
+    # 同节点重复采样(调用点每备战环一次):去重位关闭累加
     adv2, _ex2 = gs.effects.advance_node((1, 6))
     if adv2:
         grant_effect_node_refresh_balance(gs, frame='p1-r6')
@@ -1026,7 +1026,7 @@ def test_free_lunch_ledger_zero_per_node_grant() -> None:
     节点边界零授予——EconomyEffect 纯 burst 一条效果条目(free_refresh_per_node/
     条件三元组/BattlefieldEffect 载体字段全缺省 0,桥鸭子读缺省),桥零
     授予跳写,free_refresh_left 保持未写(None 基零行);burst 腿归登记
-    挂点,与本桥无关。"""
+    调用点,与本桥无关。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.effects.register_strategy(STRATEGY_EFFECTS['免费午餐'],
                                  acquired_key=(1, 2))
@@ -1170,7 +1170,7 @@ def test_capacity_projection_multi_entry_min_and_noop() -> None:
 
 def test_consume_use_decrements_removes_and_tolerates_missing() -> None:
     """§3.2.19 跳过递减:落地一次 −1;归零移除;无已登记条目返 None 零动作
-    (递减挂点与登记挂点解耦,不炸执行链)。"""
+    (递减调用点与登记调用点解耦,不炸执行链)。"""
     inv = ActiveEffectInventory()
     assert inv.consume_use('151301') is None, '未登记 = None 零动作'
     inv.register_strategy(STRATEGY_EFFECTS['免战牌'], acquired_key=(1, 3))
@@ -1207,7 +1207,7 @@ def test_market_intervention_track_counts_refreshes() -> None:
 
 
 def test_on_buy_bumps_buy_key_by_k() -> None:
-    """购买回调计数面(形态镜像 on_level_up;挂点 = 买牌上报函数获取
+    """购买回调计数面(形态镜像 on_level_up;调用点 = 买牌上报函数获取
     计算完时点):满栏合成一击多买按实际张数 k 计 k 次(返利族「每购
     3 张 5 费」门槛面);推进只辖 duties.track=True 条目(bump_key 同一
     承载);缺省 k=1 = 简单分支单击单张。"""
@@ -1219,11 +1219,11 @@ def test_on_buy_bumps_buy_key_by_k() -> None:
     assert inv.counter('201201', CounterKey.BUY) == 4, '缺省 k=1'
 
 
-# ============================================================ 挂点接线测试(缓交)
-# 原 test_effect_hooks_wired_at_production_sites(§5.1 四挂点+B1 桥两采样点
+# ============================================================ 调用点接通测试(缓交)
+# 原 test_effect_hooks_wired_at_production_sites(§5.1 四调用点+B1 桥两采样点
 # 字符串在场断言)本批不收录:分诊=修复需 import 在飞互斥面符号
 # (cw_screen_shop 的执行落地 bump、cw_loop 的节点 tick),且本体为
-# 源码扫描形态(AGENTS §10.4.4 禁)。挂点接线的行为测试待在飞批落地后按
+# 源码扫描形态(AGENTS §10.4.4 禁)。调用点接通的行为测试待在飞批落地后按
 # 行为测试形态重写,台账见 .debug/progress//reports/
 # 分诊报告(易失)。
 
@@ -1507,7 +1507,7 @@ def test_settlement_cover_writes_truth_group() -> None:
     ②败局页无收入面板(gold/level/xp 缺席不写),hp/streak 真值照覆;
     ③hp 失读(结算页 OCR miss)不写(不可信帧不写,§2.2 写入闸),不清
     既有正式值;④progress_delta 带符号真值落 settlement 结构(胜局正/
-    败局负;battle_wait 调用点传参为接线半,本测试辖函数半)。"""
+    败局负;battle_wait 调用点传参为接入调用半,本测试辖函数半)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     apply_settlement_cover(gs, hp_after=76, streak_after=4,
                            killed=True, gold=23, level=6, xp=(3, 10))
@@ -1728,7 +1728,7 @@ def test_chosen_record_face_true_pick_only(case_id: str) -> None:
     - fallback(无会话/候选未读到/越界/羁绊缺失/选中槽文本空)不写;
       专家「现金为王」兜底不写——该事实由 ConfirmExpertCash +4 金到账
       登记通道承载,照旧不动;真选守卫照 chosen_tome 式。
-    (写端接线在位/落地验真后写的调用时点面归 review 与代码规范;本测试
+    (写端接入调用在位/落地验真后写的调用时点面归 review 与代码规范;本测试
     辖记录面行为半。)"""
     from sr_od.application.currency_war.strategies.impl.cw_strategy import (
         StrategySession,

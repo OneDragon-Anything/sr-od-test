@@ -223,7 +223,7 @@ def test_lieche_faction_pool_matches_registry_and_validates() -> None:
 def test_dual_form_merge_pool_construction() -> None:
     """开拓者双形态按角色位合并机制锁(开拓者双形态角色位合并约定,
     正本 = fields.md §5.2 效果缺口与载体登记 + economy.md §8:键侧条目
-    剔除在 type_tag 过滤之后,消费 = random_char_pool 尾部统一收口):
+    剔除在 type_tag 过滤之后,消费 = random_char_pool 尾部统一收尾):
     4 费档池 = chars_by_cost(4) 剔除'开拓者·记忆'现算(人才引进采样
     概率随合并向实机真值收敛);3 费档无开拓者条目 = chars_by_cost(3)
     全档回归(合并对无双形态档零扰);能量域直构 spec 池 = chars_by_
@@ -238,7 +238,7 @@ def test_dual_form_merge_pool_construction() -> None:
     energy_expected = {c.name for c in chars_by_faction('能量')} \
         - {'开拓者·记忆'}
     assert set(random_char_pool(RandomCharSpec(faction='能量'))) == \
-        energy_expected, '能量域直构 spec 同收口(剔除开拓者·记忆)'
+        energy_expected, '能量域直构 spec 同收尾(剔除开拓者·记忆)'
 
 
 def test_yinhe_concept_stock_entry_shape() -> None:

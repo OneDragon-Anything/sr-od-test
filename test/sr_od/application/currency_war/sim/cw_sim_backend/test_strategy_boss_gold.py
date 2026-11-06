@@ -1,5 +1,5 @@
 """sim 策略 boss 金腿测试(镜像 src = sim/cw_sim_backend.py 的
-strategy_boss_gold_of 聚合 helper + _begin_node_window 收口 boss 金腿)。
+strategy_boss_gold_of 聚合 helper + _begin_node_window 收尾 boss 金腿)。
 
 测试面依据 = 迭代设计 designs/T-85-tezhan-zijin.md §2.1/§2.4/§4 七语义点:
 - 持卡发放真值(锁 1/7):进 boss 节点窗金增量 = 轮首收入面(kernel
@@ -113,7 +113,7 @@ def test_boss_gold_leg_via_engine_window() -> None:
             interest_flat=flat, interest_cap=cap).total
         assert gs.gold.value == g8 + income + 7, \
             f'窗金增量 ≠ 收入面+7: {g8}+{income}+7 vs {gs.gold.value}'
-        # 锁 5 幂等回归:同节点窗重放,守卫住整段收口零双发
+        # 锁 5 幂等回归:同节点窗重放,守卫住整段收尾零双发
         gold_at_boss = gs.gold.value
         b._begin_node_window()
         assert gs.gold.value == gold_at_boss \

@@ -55,7 +55,7 @@ def test_yanchi_shouyi_unit_buff_registration_surface() -> None:
     的「行动值」读数定义正本无机制条目(读法 A = 战斗内全局行动值轴经过
     100 后激活;读法 B = 其他游戏侧口径),两读法下条件均为游戏侧自算、
     bot 行为语义完全相同,按判读申报制留痕不在读法间拍死;行动值读数
-    kernel/sim 全域零建模,bot 零消费、读数不接线、不实机查。数值(伤害
+    kernel/sim 全域零建模,bot 零消费、读数不接入调用、不实机查。数值(伤害
     增幅 40%)与对象(我方小队)游戏侧自算。"""
     spec = STRATEGY_EFFECTS[_CARD]
     cw_investments._validate_strategy_effects()   # 构建校验复跑不炸

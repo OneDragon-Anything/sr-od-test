@@ -1,5 +1,5 @@
 """sim 分期金节点窗腿测试(镜像 src = sim/cw_sim_backend.py 的
-apply_invest_installment_gold 把结果写进状态副本的实现分支 + _begin_node_window 收入段接线 +
+apply_invest_installment_gold 把结果写进状态副本的实现分支 + _begin_node_window 收入段接入调用 +
 apply_strategy_pick_gold_next_nodes_init 拿卡初始化腿 + 呈现一次性标志位;先例 =
 本目录 test_invest_node_gold.py [定期福利聚合腿]/test_strategy_pick_xp.py
 [拿卡落地拍腿族] 同形态)。
@@ -7,7 +7,7 @@ apply_strategy_pick_gold_next_nodes_init 拿卡初始化腿 + 呈现一次性标
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-177-changqi-
 zhuyi.md §4 锁 3/锁 5/锁 6(REVIEW-T177 §4.3 同面):
 - 拿卡后连续 3 个节点窗各 +7、第 4 窗不发(锁 3,引擎链:真拿卡路径走
-  初始化腿 + 呈现一次性标志位 + 窗腿接线;每窗容器递减笔 = 分期腿发生过的持久
+  初始化腿 + 呈现一次性标志位 + 窗腿接入调用;每窗容器递减笔 = 分期腿发生过的持久
   证据,金笔在非扑满窗被收入笔覆盖故引擎面以容器笔与金增量公式现算
   断言;金笔 evidence 字面量断言落函数级直构面[无覆盖可全等]);
 - 跨卡双持 per-entry(锁 5,同拍双持场景:长期主义 + 长期主义+ 各发

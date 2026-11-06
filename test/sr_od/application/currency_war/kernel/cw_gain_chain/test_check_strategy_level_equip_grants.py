@@ -171,5 +171,5 @@ def test_snapshot_roundtrip_latch_honored() -> None:
 
 def test_producer_signature() -> None:
     """写端署名(家族纪律):producer = 专名 strategy_level_equip_grant
-    (新写端新名,不沿用链缺省伪装连续;跨模块断言面 = sim 接线锁)。"""
+    (新写端新名,不沿用链缺省伪装连续;跨模块断言面 = sim 接入调用锁)。"""
     assert _LEVEL_EQUIP_PRODUCER == 'strategy_level_equip_grant'

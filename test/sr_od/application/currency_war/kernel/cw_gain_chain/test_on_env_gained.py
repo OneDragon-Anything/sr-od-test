@@ -17,7 +17,7 @@ calc/designs/T-33-yingxiong-dengchang.md)§2.3 + §4 锁 2/3/4/9/11:
 / 未锚定窗防御基准 / rng 链确定性 / 溢出解耦 / 表外环境安静。
 
 再追加面 = T-42 特邀专家:银狼设计(designs/T-42-teyao-zhuanjia-yinlang.md)
-§4 锁 5(advisor 分道条件形态支,挂点④):种子起手在场判定解锁(裁定④,
+§4 锁 5(advisor 分道条件形态支,调用点④):种子起手在场判定解锁(裁定④,
 防误改回「种子不解锁」)/ 种子无目标名 → 空尾效果串维持 / bench 未观察
 fail-closed 零写 + 缺陷行 / 在场判定覆盖 deployed 与溢出位。
 
@@ -343,7 +343,7 @@ def test_delayed_item_grant_leg_enqueues_zero_seat_write(
     (('惊喜盒', (2, 4)),)((1,1) 步进 12)+ 效果串 item_open_scheduled:
     惊喜盒@2-4 + done 含 (命运礼物, delayed_open_accel);**零席位写**
     (占席证伪锁:bench/overflow/equips 任何字段零写,惊喜盒 = 战利品区
-    浮动件非占席)——容器写恰两笔:队列(rand 通道,链收口)+ done
+    浮动件非占席)——容器写恰两笔:队列(rand 通道,链收尾)+ done
     (logic 直写,登记事实)。"""
     gs = _make_gs_node_pos((1, 1))
     calls = _record_writes(gs, monkeypatch)
@@ -362,7 +362,7 @@ def test_delayed_item_grant_leg_enqueues_zero_seat_write(
          'rand', GAIN_CHAIN_PRODUCER),
         ('env_grants_done', f'on_env_gained:{_DELAYED_ENV}#accel_scope',
          'logic', GAIN_CHAIN_PRODUCER),
-    ], f'容器写恰两笔(队列链收口 + done 直写): {calls}'
+    ], f'容器写恰两笔(队列链收尾 + done 直写): {calls}'
     assert all(c[3] == _SIG for c in calls), '同 sig(同窗相邻)'
 
 
@@ -442,7 +442,7 @@ def test_expert_seminar_dual_item_grants_card_text_order(
         f'两槽卡文序落席(kind+item 逐槽): {placed}'
 
 
-# ============================================================ 条件形态挂点④
+# ============================================================ 条件形态调用点④
 # (advisor 分道条件形态支,首例 = 特邀专家:银狼;T-42 设计 §2.4 + §4 锁 5。
 # 环境获得时刻在场判定 = 备战 ∪ 上阵 ∪ 溢出位;开局获得形态 deployed 恒空,
 # 中途获得形态 deployed 现读是判定域组成部分——两臂都锁。)
@@ -497,7 +497,7 @@ def _make_conditional_gs(*, bench: list[tuple[str, int]] | None = (),
 
 def test_seed_start_lv999_unlocks_on_env_gain(rows_sink: _RowSink) -> None:
     """种子起手解锁(设计 §4 锁 5 主分支,锁裁定④防误改回「种子不解锁」):
-    开局 bench 已含银狼LV.999,获得环境特邀专家:银狼 → 挂点④在场判定
+    开局 bench 已含银狼LV.999,获得环境特邀专家:银狼 → 调用点④在场判定
     解锁,效果串 advisor_unlock:特邀专家:银狼:银狼(与即时形态同形);
     解锁 evidence = 环境获得族后缀(provenance 由环境名可辨)。"""
     gs = _make_conditional_gs(bench=[('银狼LV.999', 1)])
@@ -513,7 +513,7 @@ def test_seed_start_lv999_unlocks_on_env_gain(rows_sink: _RowSink) -> None:
 def test_seed_without_lv999_keeps_empty_tail(rows_sink: _RowSink) -> None:
     """种子无目标名不解锁(设计 §4 锁 5 条 2):在场判定未命中 → 零写,
     效果串维持现值空尾(事实申报,空尾即「条件形态未触发」的自然读法);
-    环境获得后的首次获得走三渠道(两挂点无缝衔接,此处只锁未命中形态)。"""
+    环境获得后的首次获得走三渠道(两调用点无缝衔接,此处只锁未命中形态)。"""
     gs = _make_conditional_gs(bench=[('火花', 1)])
     out = gain_invest_env(gs, None, _ENV_EXPERT_WOLF, rand=False, sig=_SIG)
     assert out.effects == (f'advisor_unlock:{_ENV_EXPERT_WOLF}:',), \

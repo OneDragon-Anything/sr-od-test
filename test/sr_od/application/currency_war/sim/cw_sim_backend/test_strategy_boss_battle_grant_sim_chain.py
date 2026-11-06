@@ -1,7 +1,7 @@
 """策略卡首领战后随机装备发放 sim 世界链测试(镜像 src =
 sim/cw_sim_backend.py 的 _resolve_battle 首领战后腿;kernel 触发函数
 单元面 = kernel/cw_gain_chain/test_check_strategy_boss_battle_grants.py,
-本文件锁 sim 结算腿接线与世界真值落地面)。
+本文件锁 sim 结算腿接入调用与世界真值落地面)。
 
 测试面依据 = 迭代设计 designs/T-166-qiang-zaishou.md §4 锁 2/3/4/5/6/9
 + REVIEW-T166(驱动与断言形态先例 = 同目录 test_strategy_encounter_
@@ -9,8 +9,8 @@ battle_grant_sim_chain.py / test_strategy_hp_loss_sim_chain.py):
 - 持卡局 boss 节点(P1 序列现值末位)战斗结算后 equips 恰 +1 +
   ``strategy_boss_battle#<卡名>`` 前缀 evidence 笔(sig 组
   'sim:strategy';**断言用前缀匹配禁精确匹配**——gain_equipment 原语内
-  追加 #equip 后缀,T-166 收口批 D2 口径);非 boss 节点/未持卡零发放;
-  败局存活也发(卡面无「胜利」限定 = 直读);死亡局不发放(挂点在死亡
+  追加 #equip 后缀,T-166 收尾批 D2 口径);非 boss 节点/未持卡零发放;
+  败局存活也发(卡面无「胜利」限定 = 直读);死亡局不发放(调用点在死亡
   提前 return 之后);幂等 = _settled_key 既有守卫回归(同节点重放不
   双发);修饰局跟随 = 序列现值判定(非硬编码轮次);采样断言 = 名 ∈
   简易池派生集,禁手抄清单。
@@ -267,7 +267,7 @@ def test_no_card_boss_zero_grant(
 def test_loss_survival_still_grants(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """锁 5a(败局存活也发):持卡局 boss 战败未死 → 装备照入栏(卡面无
-    「胜利」限定 = 直读;挂点在胜败两态共同路径,败局待办登记之前)。"""
+    「胜利」限定 = 直读;调用点在胜败两态共同路径,败局待办登记之前)。"""
     b = _prep_backend(74)
     try:
         gs = b.gs
@@ -288,7 +288,7 @@ def test_loss_survival_still_grants(
 def test_dead_battle_no_grant(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """锁 5b(死亡局不发放):保底已用 + 濒死局 boss 战败 → hp 归零死亡
-    提前 return 在挂点之前,零发放直接进终局(局终不见发放,与实机一致)。"""
+    提前 return 在调用点之前,零发放直接进终局(局终不见发放,与实机一致)。"""
     b = _prep_backend(75)
     try:
         gs = b.gs

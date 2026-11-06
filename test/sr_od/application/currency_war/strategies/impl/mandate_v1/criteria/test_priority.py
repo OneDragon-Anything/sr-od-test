@@ -512,7 +512,7 @@ def test_locked_frame_need_star_full_transcription() -> None:
     消费位(升级触发/停留目标)不动。
 
     种子纪律:方向状态宿主 = gs.strategy_state(生产 = cw_strategy
-    状态 setter 同源接线;装配面统一读 gs 侧,与 line_members_view
+    状态 setter 同源接入调用;装配面统一读 gs 侧,与 line_members_view
     同宿主)→ 锁定线槽种 gs 侧状态对象。"""
     session = cw4_session()
     gs = cw4_gs(session, level=7, bench=[cw4_bc(_SABER, star=3)],

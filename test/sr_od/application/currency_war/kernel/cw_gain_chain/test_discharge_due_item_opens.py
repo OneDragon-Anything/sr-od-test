@@ -32,7 +32,7 @@ _SIG_SEED = ChannelSig(family='logic_action', actor='test-seed',
 
 def _make_gs(*, node_pos: tuple[int, int] | None,
              queue: tuple = ()) -> GameState:
-    """直构容器:生效序位观察锚定(sim 进节点收口时点 = 新序位已锚定);
+    """直构容器:生效序位观察锚定(sim 进节点收尾时点 = 新序位已锚定);
     bench/equips 观察播种(零席位写断言的逐位对照基座);队列经 logic
     直写播种(测试自造输入)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)

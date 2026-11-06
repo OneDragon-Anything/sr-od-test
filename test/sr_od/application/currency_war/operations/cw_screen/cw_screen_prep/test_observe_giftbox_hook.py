@@ -1,10 +1,10 @@
 """cw_screen_prep 镜像测试(按被测方法拆目录):_observe heavy 段
-惊喜盒板件挂点行为。
+惊喜盒板件调用点行为。
 
 镜像规范:cw_screen_prep.py 已超 800 行拆目录线,新测试按被测方法落
 operations/cw_screen/cw_screen_prep/。锁面 = 迭代设计
 .debug/progress/2026-10-19-giftbox-piece-obs/designs/giftbox-piece-obs.md
-§4.5:挂点触发即写(检测生成路径真实跑,不桩生成端)/ 零写路径经写
+§4.5:调用点触发即写(检测生成路径真实跑,不桩生成端)/ 零写路径经写
 入口 no-op 证实 / 晶矿链真实读口回归零扰动(read_ore_sights 不桩)。
 盒+球同区共存帧 fixture 未采(设计 §7 归校准批补采),共存不互扰暂由
 两帧各自断言承重。
@@ -76,7 +76,7 @@ def _run_heavy(test_context, monkeypatch, session: StrategySession,
 
 
 def test_hook_writes_giftbox_on_box_frame(test_context, monkeypatch) -> None:
-    """挂点触发即写:盒帧 heavy 观察 → giftbox_sight 落 (12,)(真实检测
+    """调用点触发即写:盒帧 heavy 观察 → giftbox_sight 落 (12,)(真实检测
     生成路径:模板资产 + 徽章 OCR 全真,不桩生成端)。evidence 非空且含
     本帧序位注记(fake 回执锚定 p1-r2)。"""
     if not test_context.has_screen(_SCREEN, 'reward_giftbox_phantom'):
@@ -88,7 +88,7 @@ def test_hook_writes_giftbox_on_box_frame(test_context, monkeypatch) -> None:
     _run_heavy(test_context, monkeypatch, session, frame)
 
     gs = game_state_of(session)
-    assert gs.giftbox_sight.value == (12,), 'heavy 段挂点触发即写'
+    assert gs.giftbox_sight.value == (12,), 'heavy 段调用点触发即写'
     assert gs.giftbox_sight.source == 'observation', '观察通道写入'
     assert gs.giftbox_sight.evidence == 'giftbox#p1-r2', \
         'evidence 非空含序位(prov 时间线锚)'

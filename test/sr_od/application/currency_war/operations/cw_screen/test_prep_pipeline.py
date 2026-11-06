@@ -471,7 +471,7 @@ class TestStep2Ore:
 
 class TestStep3LevelUp:
     """第 4 步升级测试(11 号稿 §2:触发单判据三分派 + 单帧原子发射——
-    判据单帧测试主文件 = test_levelup_prob_axis.py,本类只校验工序接线
+    判据单帧测试主文件 = test_levelup_prob_axis.py,本类只校验工序接入调用
     形态)。"""
 
     def test_upgrade_friendly_state_emits_batch(self):
@@ -501,7 +501,7 @@ class TestStep3LevelUp:
 
 
 class TestStep4ShopSession:
-    """第 4 步商店会话入口测试(契约 A:标记判定 + 解拦复核接线位)。
+    """第 4 步商店会话入口测试(契约 A:标记判定 + 解拦复核接入调用位)。
     ``test_handled_marker_skips_step`` 兼辖「全静帧唯一完成态」事实
     (以上全部步骤无动作 → 恰一个出战交回,原第 8 步测试同帧同断言)。"""
 
@@ -618,7 +618,7 @@ class TestStep5DeployWindow:
 
 
 class TestStep6EquipTools:
-    """第 6 步装备与工具接线测试(装备穿戴判据本体保留;工具评估留痕
+    """第 6 步装备与工具接入调用测试(装备穿戴判据本体保留;工具评估留痕
     计数 = 现行 M7.5 发射位口径)。"""
 
     def test_wear_plan_emits_and_tool_eval_counter(self):
@@ -692,7 +692,7 @@ class TestStep7NodeEndInterest:
     def test_exempt_depleted_frame_zero_action_with_counter(self):
         """凑息豁免剔光帧(第 8 步集成面):唯一可行件为线内未达标成员
         → 零卖出动作 + 剔光观测键落**生产** counters(roster-plane1-
-        union design §2.2 第 5 项;观测键接线 = 第 8 步传 cw4_counters
+        union design §2.2 第 5 项;观测键接入调用 = 第 8 步传 cw4_counters
         ——删该传参则行为不变而键永不落账,本测试锁生产写点)。金 2 →
         缺口 8:姬子·启行 2★(列车同行 need 3 未达标)退金 3×3−1 = 8
         恰跨档,布洛妮娅 1★ 退金 5 < 8 不可行——无豁免时本帧卖出在建

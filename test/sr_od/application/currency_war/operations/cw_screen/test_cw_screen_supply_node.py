@@ -1,7 +1,7 @@
 """补给节点 op 测试(src 镜像 = operations/cw_screen/cw_screen_supply_node.py)。
 
 两块测试面:
-- 利息接线(镜像来源 C 计数刻;迭代 T-27 公司契约利息累计触发设计 v2.4
+- 利息接入调用(镜像来源 C 计数刻;迭代 T-27 公司契约利息累计触发设计 v2.4
   复裁版 §2.5 来源 C + §4.8②):
   - 常规形态(备战帧已锚本节点 = 形态门开)领取完成刻推算计数(基座 =
     备战帧 gs.gold 观察 = 领取前真值);
@@ -9,7 +9,7 @@
     接管局形态同归宁缺;
   - 刷新分支/对照闸拒绝路径不经计数体 = 天然防补给 op 重入双计;
   - 局外兜底路径(match 缺席)零计数。
-- 决策链接线行为面(supply-decision-wiring 迭代 §2.6 新增 1-4/6;存量
+- 决策链接入调用行为面(supply-decision-wiring 迭代 §2.6 新增 1-4/6;存量
   三条行为测试住 test_obs_arch_event_screens.py〔超限只读〕,本文件按
   src 镜像规范承接增量):
   - 空候选 = 零点击终结零派发(禁盲选,§2.1);
@@ -150,7 +150,7 @@ def test_source_c_out_of_match_counts_nothing(
     assert gs.effects.interest_earned == 0, '局外路径零计数'
 
 
-# ==================== 决策链接线行为面(实机态;supply-decision-wiring)====
+# ==================== 决策链接入调用行为面(实机态;supply-decision-wiring)====
 
 
 def _make_supply_live(test_context, monkeypatch, *, pick, opts,
@@ -193,7 +193,7 @@ def _make_supply_live(test_context, monkeypatch, *, pick, opts,
     monkeypatch.setattr(sn, 'read_supply_options',
                         lambda ctx, screen: list(opts))
     monkeypatch.setattr(op, '_read_refresh_anchor', lambda screen: anchor)
-    # 节点条锚定桩(读不得 = 跳过;锚定接线测试归存量 behavior 面)
+    # 节点条锚定桩(读不得 = 跳过;锚定接入调用测试归存量 behavior 面)
     monkeypatch.setattr(op, '_read_node_bar', lambda screen: None)
 
     class _StubPickOp:
@@ -305,7 +305,7 @@ def test_supply_gate_rejection_redecide_still_refresh_live_round_fail(
         f'零点击零派发:{clicks!r} executed={stub.executed}')
 
 
-# ==================== 决策链接线行为面(sim 两态)====================
+# ==================== 决策链接入调用行为面(sim 两态)====================
 
 _SIM_CFG = RunConfig(selected_difficulty='A8', enemy_difficulty=108)
 
@@ -471,7 +471,7 @@ def test_supply_sim_gate_rejection_redecide_zero_click_terminal(
 
 def test_supply_sim_two_state_pick_flow(test_context, monkeypatch) -> None:
     """sim 两态 pick 流测试(§2.6 新增①):装 SimBackend 跑补给节点画面
-    op——决策链接线(``decide_supply`` 被调,历史 sim 局结构性不可达面)、
+    op——决策链接入调用(``decide_supply`` 被调,历史 sim 局结构性不可达面)、
     owned 内容载荷分支入账写行、``chosen_supply`` 写行、零节点推进
     (2026-10-29 流程模型对齐:选完关模态回备战自动弹店,推进归出战动作
     supply_finish)。装配缝 = run_sim_full_match 同源(真策略
@@ -649,9 +649,9 @@ def test_supply_non_pick_rounds_do_not_seed_unchosen(
 def test_supply_sim_pick_flow_unchosen_fail_closed(
         test_context, monkeypatch) -> None:
     """sim 形态未选集写点锁 + fail-closed 回归:sim 局决策分支可达真选
-    写点(决策链接线后两态同链),但未选集域限机械执行态不种——
+    写点(决策链接入调用后两态同链),但未选集域限机械执行态不种——
     ``unchosen_supply`` 恒 None → 检查函数恒第 2 门早退零发放(防未来
-    误接线静默改 sim 行为):真选后 chosen 写行而 unchosen 恒 None;
+    误接入调用静默改 sim 行为):真选后 chosen 写行而 unchosen 恒 None;
     持卡局下一次成功观察帧过检查,bench/equips 零打捞增量。"""
     with _sim_supply_world(test_context, monkeypatch, seed=61) as b:
         _match, strategy = _sim_match(test_context, monkeypatch, b)
@@ -674,7 +674,7 @@ def test_supply_sim_pick_flow_unchosen_fail_closed(
         bench_after = gs.bench.value
         equips_after = list(gs.equips.value or [])
         # 持卡局下一次成功观察帧(sim 呈现链同函数):检查恒第 2 门早退,
-        # 零打捞增量(真值对齐归 sim 补给真值专项,本卡零 sim 接线)。
+        # 零打捞增量(真值对齐归 sim 补给真值专项,本卡零 sim 接入调用)。
         report_screen_supply_node_obs(
             gs, CwScreenSupplyNodeObs(
                 in_node=True,
@@ -685,10 +685,10 @@ def test_supply_sim_pick_flow_unchosen_fail_closed(
 
 def test_supply_sim_pick_take_all_fail_closed_latch_bookkeeping(
         test_context, monkeypatch) -> None:
-    """全都要·银·sim pick 流 fail-closed 锁(选卡时点检查挂点,真注册表
+    """全都要·银·sim pick 流 fail-closed 锁(选卡时点检查调用点,真注册表
     派发链全通):sim 局未选集恒 None(机械执行态限定写)→ 持卡局选卡
     派发后发放侧零写(bench/equips 不变),事件消耗一次性标志位照置 = 一笔无害簿记写
-    (A 案,sim 一次性标志位写笔申报形态);防未来误接线静默改变 sim 行为。"""
+    (A 案,sim 一次性标志位写笔申报形态);防未来误接入调用静默改变 sim 行为。"""
     with _sim_supply_world(test_context, monkeypatch, seed=61) as b:
         _match, _strategy = _sim_match(test_context, monkeypatch, b)
         gs = b.gs
@@ -719,11 +719,11 @@ def test_supply_sim_pick_take_all_fail_closed_latch_bookkeeping(
 
 def test_supply_sim_pick_take_all_color_none_quota_zero_latch(
         test_context, monkeypatch) -> None:
-    """全都要·彩·sim pick 流零簿记锁(选卡时点检查挂点,真注册表派发链
+    """全都要·彩·sim pick 流零簿记锁(选卡时点检查调用点,真注册表派发链
     全通):None 配额卡(recurring 无配额域)在 sim 形态(未选集恒 None,
     机械执行态限定写)下选卡派发后 done 域零 ``take_all#`` 键——与银卡
     同形态恰一键对照互证(A 案事件消耗簿记只对 int 配额卡存在),发放侧
-    零写;防未来误接线静默改变 sim 行为。"""
+    零写;防未来误接入调用静默改变 sim 行为。"""
     with _sim_supply_world(test_context, monkeypatch, seed=61) as b:
         _match, _strategy = _sim_match(test_context, monkeypatch, b)
         gs = b.gs

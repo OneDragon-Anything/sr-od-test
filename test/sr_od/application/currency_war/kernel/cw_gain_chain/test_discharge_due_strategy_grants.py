@@ -2,7 +2,7 @@
 discharge_due_strategy_grants)。
 
 测试面依据 = 迭代设计 designs/T-106-rencai-jili.md §4 锁 4(kernel 原语
-面;sim 窗口接线与世界真值归 sim/cw_sim_backend 侧文件)+ 裁决点 3/4
+面;sim 窗口接入调用与世界真值归 sim/cw_sim_backend 侧文件)+ 裁决点 3/4
 默认案。直构形态先例 = 同目录 test_check_strategy_battle_grants.py:
 - 未到点(remaining > 0)零发放零写;
 - 到点(remaining <= 0)→ 装备腿入栏 + 弹除 + 效果串

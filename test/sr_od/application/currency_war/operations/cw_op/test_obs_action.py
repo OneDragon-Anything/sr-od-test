@@ -10,12 +10,12 @@ test_prep_action_ops harness 形状);环级 = 桩策略 + 实例级重观察桩
 1. 注册表语义:obs 行非终结 + terminal_wait=0(决策环续跑的形状前提;
    终结集等价测试归 test_action_registry,此处校验 obs 自身行);
 2. op 行为(in_place 口径):宿主重观察恰一次 + round_success(零点击);
-   自上报接线(零写函数被桩捕获);
+   自上报接入调用(零写函数被桩捕获);
 3. overlay bail:重观察回执 event_overlay 非空 → CwObsOverlayBail
    (tag 透传;自上报已在 bail 前完成 = 发出即记账);
-4. 域能力守卫:env.op 未接线 reobserve_in_visit → AssertionError 响亮;
+4. 域能力守卫:env.op 未接通 reobserve_in_visit → AssertionError 响亮;
    scope 拼错值 → op 内守卫断言(值域闭集 OBS_SCOPES);
-5. 环级接线:桩策略 [Obs(in_place), Obs(outer_loop)] → in_place 经注册表
+5. 环级接入调用:桩策略 [Obs(in_place), Obs(outer_loop)] → in_place 经注册表
    派发执行(重观察恰一次 + 帧代次标 full)+ 循环续跑;outer_loop 在 F3
    之前拦截交回外循环(不进执行器,行为 = 原 HoldFrame 收编,
    用户裁定 2026-09-20)。
@@ -85,7 +85,7 @@ def _make_env(host: object) -> SimpleNamespace:
 
 def test_obs_op_runs_host_reobserve_once_and_succeeds(monkeypatch):
     """op 行为:宿主重观察恰一次 → round_success(零点击零拖拽);
-    自上报接线:零写函数恰一次且 param 原样透传(发出即记账统一形态)。"""
+    自上报接入调用:零写函数恰一次且 param 原样透传(发出即记账统一形态)。"""
     import sr_od.application.currency_war.operations.cw_op.cw_obs_action as mod
 
     reported: list = []
@@ -118,7 +118,7 @@ def test_obs_op_bails_on_event_overlay(monkeypatch):
 
 
 def test_obs_op_env_without_capability_loud_fails():
-    """域能力守卫:env.op 未接线 reobserve_in_visit → AssertionError 响亮
+    """域能力守卫:env.op 未接通 reobserve_in_visit → AssertionError 响亮
     (obs 现役只在备战决策环可用;非法发射 = 策略器 bug,禁静默)。"""
     host = SimpleNamespace()   # 无 reobserve_in_visit
     op = CwActionObsOp(SimpleNamespace(), CwActionObsParam(),
@@ -139,7 +139,7 @@ def test_obs_scope_invalid_value_guard_assertion():
     assert 'OBS_SCOPES' in str(ei.value), '守卫断言消息带值域单一源'
 
 
-# ===== 5. 环级接线(桩策略 + 实例级重观察桩)=====
+# ===== 5. 环级接入调用(桩策略 + 实例级重观察桩)=====
 
 def test_prep_loop_obs_reobserves_in_place_and_continues(
         test_context, monkeypatch):

@@ -1,5 +1,5 @@
 """策略卡空仓经验检查腿测试(镜像 src = kernel/cw_gain_chain.py 的
-check_strategy_empty_equip_xp 纯判定 + sim/cw_sim_backend.py 节点窗挂点
+check_strategy_empty_equip_xp 纯判定 + sim/cw_sim_backend.py 节点窗调用点
 唯一调用口)。
 
 测试面依据 = 迭代设计 designs/T-189-kongcang.md(定稿)§4 锁 3 + REVIEW-T189
@@ -10,7 +10,7 @@ check_strategy_empty_equip_xp 纯判定 + sim/cw_sim_backend.py 节点窗挂点
   上阵带装备→表值(辖域判读 A 锚定);None 防御→0(fail-closed);
 - 效果条目1→效果条目2 交互(锁 3):选卡落地后物品栏恒非消耗品(简易池无工具/特殊类)
   → 拿卡当窗必判 0(结构性自洽);
-- 纯读零写:函数体零容器写(判定无 sig 形参,世界写端归 sim 挂点)。
+- 纯读零写:函数体零容器写(判定无 sig 形参,世界写端归 sim 调用点)。
 """
 from __future__ import annotations
 
@@ -163,7 +163,7 @@ def test_leg1_interaction_pick_window_zero() -> None:
 
 def test_pure_read_zero_container_writes() -> None:
     """纯读零写(形态 A):命中路径零容器写(判定无 sig 形参零世界写,
-    世界写端 = sim 挂点唯一调用口)。"""
+    世界写端 = sim 唯一调用点)。"""
     gs = _gs(equips=[], bench=[])
     seq0 = gs.write_seq
     assert check_strategy_empty_equip_xp(gs) == _XP

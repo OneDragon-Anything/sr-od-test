@@ -8,7 +8,7 @@ test_env_deploy_lock_sim_chain.py〕)。
 calc/designs/T-38-chenggong-jingyan.md)§2.6 实机(live)和模拟器(sim)两边语义 + §4 锁 10(sim 半):
 - **sim = 世界真值**:节点边界发放经 kernel tick 段 write_logic 写
   gs.xp/gs.level → sim 世界等级随白送经验真实推进(8→9 跨级例证),
-  零额外接线;
+  零额外接入调用;
 - **达成检测时点**:种子 lv8 路径达成位已达标(检测体首拍 tick 即记,
   当拍零发放);非买经验源跨级(节点经验等)走升级连锁 = 结算时点记锚
   (迭代 2026-09-23-invest-effects-calc T-432 定案),晚拍仅剩 live 观察

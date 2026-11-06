@@ -1,7 +1,7 @@
 """策略卡损血档位触发发放 sim 世界链测试(镜像 src = sim/cw_sim_backend.py
 的 _resolve_battle 损血档位腿;kernel 触发函数单元面 =
 kernel/cw_gain_chain/test_check_strategy_hp_loss_grants.py,本文件锁
-sim 结算腿接线与世界真值落地面)。
+sim 结算腿接入调用与世界真值落地面)。
 
 测试面依据 = 迭代设计 designs/T-142-baoxian.md §4 锁 3/4/5 +
 REVIEW-T142(节点矩阵形态先例 = 同目录 test_strategy_win_gold_sim_
@@ -314,7 +314,7 @@ def test_piggy_exemption_zero_pen(
 def test_death_zero_pen_early_return(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """锁 3⑤:死亡局(保底已用再次归零)→ 零笔(_game_over 提前
-    return 在触发链前,天然不达挂点;累积器保持 0)。"""
+    return 在触发链前,天然不达调用点;累积器保持 0)。"""
     b = _prep_backend(65)
     try:
         gs = b.gs

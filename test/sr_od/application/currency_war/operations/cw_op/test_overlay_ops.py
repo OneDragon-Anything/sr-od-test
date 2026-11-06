@@ -8,7 +8,7 @@
 - **pick op 机械行为**(五屏确认链,桩宿主记录点击):确认钮查找
   全族统一(用户裁定 2026-09-22)、选中点击坐标 = 容器单点源
   (``*_opts_xy``/payload,缺/越界 = 守卫断言,禁 env.target 回退、
-  禁坐标现算)、轮次结果经 env.round_result 旁路回传、自上报接线;
+  禁坐标现算)、轮次结果经 env.round_result 旁路回传、自上报接入调用;
 - **专家邀请函**(画面 op 入口单一形态 + 决策出口守卫测试组:异常传播/
   返回契约/值域/正路两态/局外无早退支 + report 双写门);
 - **投资环境刷新零效果留证**(证据齐 → 缺陷落台账 + 消费即清)。
@@ -115,7 +115,7 @@ def _screen_loader_none() -> SimpleNamespace:
 
 def _stub_supply_reports(monkeypatch, reported: list) -> None:
     """补给动作 op 上报函数桩(效果分支行为测试归 test_supply;回执/机械
-    面测试只锁接线形态):自上报零容器写,调用入列供断言。2026-10-29
+    面测试只锁接入调用形态):自上报零容器写,调用入列供断言。2026-10-29
     流程模型对齐:动作 op 无节点推进上报面(选完回备战弹店,推进归出战
     动作 supply_finish),推进桩随之退役。"""
     import sr_od.application.currency_war.operations.cw_op.cw_pick_supply_action as pick_mod
@@ -267,7 +267,7 @@ def test_supply_pick_op_clicks_target_and_confirms(no_pick_sleep, monkeypatch):
     # 补给确认无直连到账写边(上报桩零效果;equips 保持开局种子 [],
     # 未混入选中装备名)。
     assert game_state_of(session).equips.value == []
-    # 即时上报接线照旧:机械链发出后恰一次,param 原样透传;确认零节点
+    # 即时上报接入调用照旧:机械链发出后恰一次,param 原样透传;确认零节点
     # 推进(推进归出战动作,本 op 无推进上报面)。
     assert len(reported) == 1 and reported[0] is param
 
@@ -452,7 +452,7 @@ def test_invest_pick_op_clicks_target_confirms_and_self_reports(
     """投资确认链(投资两屏共用 op,拆类后两 param 类同指;即时上报契约):
     点选中位 → 「按钮-确认」area 查找点击确认(屏名按宿主屏类解析,全族
     统一)→ **按 param 类型立即自上报完整结果**(分步上报废
-    除);轮次结果旁路回传;上报接线 = 机械链发出后恰一次。"""
+    除);轮次结果旁路回传;上报接入调用 = 机械链发出后恰一次。"""
     import sr_od.application.currency_war.operations.cw_op.cw_pick_invest_action as pick_mod
 
     rs = SimpleNamespace(sentinel='rs')
@@ -481,7 +481,7 @@ def test_invest_pick_op_clicks_target_confirms_and_self_reports(
     assert confirm_calls == [('货币战争-投资环境', '按钮-确认',
                               {'success_wait': 1.0})]
     assert env.round_result is rs
-    # 即时上报接线(机械链发出后恰一次;param 原样透传;Env param → env 支)。
+    # 即时上报接入调用(机械链发出后恰一次;param 原样透传;Env param → env 支)。
     assert len(reported) == 1 and reported[0][1].idx == 2
 
     # 策略 param → strategy 支(类型机械分派测试)。
@@ -502,7 +502,7 @@ def test_fortune_pick_op_clicks_card_confirms_and_self_reports(
     """命运卜者确认链(坐标随报收敛后):点卡坐标 = 按下标自容器
     ``fortune_opts_xy`` 读(缺/越界 = 守卫断言,二态见下一测试)→
     「按钮-确认选择」area 查找点击确认(全族统一);轮次结果旁路回传;
-    自上报接线。env 停喂 idx/target(已收敛屏)。"""
+    自上报接入调用。env 停喂 idx/target(已收敛屏)。"""
     import sr_od.application.currency_war.operations.cw_op.cw_pick_fortune_action as pick_mod
 
     rs = SimpleNamespace(sentinel='rs')
@@ -574,7 +574,7 @@ def test_wish_trial_pick_op_clicks_card_area_confirms_and_self_reports(
     """祈愿试炼确认链(坐标随报收敛后):点卡坐标 = 按下标自容器
     ``wish_trial_opts_xy`` 读(缺/越界 = 守卫断言,二态见下一测试)→
     「按钮-确认选择」area 查找点击确认(全族统一);轮次结果旁路回传;
-    自上报接线。env 停喂 idx/target(已收敛屏)。"""
+    自上报接入调用。env 停喂 idx/target(已收敛屏)。"""
     import sr_od.application.currency_war.operations.cw_op.cw_pick_wish_trial_action as pick_mod
 
     rs = SimpleNamespace(sentinel='rs')

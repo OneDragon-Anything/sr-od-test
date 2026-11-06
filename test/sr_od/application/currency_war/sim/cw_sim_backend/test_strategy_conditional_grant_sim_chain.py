@@ -4,7 +4,7 @@
 
 测试面依据 = 迭代设计 designs/T-102-guimo-xiaoying.md §4 锁 8:
 持卡 + 容器直置齐 8 同名 → 推进节点(kernel advance_node_effective 尾段
-tick,sim/live 同链零 sim 私有接线)→ sim equips 尾追完美投影仪 + 一次性标志位在
+tick,sim/live 同链零 sim 私有接入调用)→ sim equips 尾追完美投影仪 + 一次性标志位在
 (strategy_conditional_done)。
 
 直构形态先例 = 同目录 test_env_bond_tier_sim_chain.py(_backend 装配 +

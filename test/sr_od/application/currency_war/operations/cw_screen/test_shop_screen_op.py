@@ -6,7 +6,7 @@
    op-layer §1.1):观察 node 每访问恰一次读 + 段首簿记;决策动作 node
    round_wait 单动作循环(全动作统一路径零拦截);「终结不入 decisions
    行」契约;未观察跳过链(留痕后照常执行关店)。
-2. **执行端口接线**(迭代 2026-10-12-prep-shop-workflow-redesign 3.5,
+2. **执行端口接入调用**(迭代 2026-10-12-prep-shop-workflow-redesign 3.5,
    纯执行层零策略判据):商店域发射 SellBench/LevelUp 可执行,执行参数
    直达机械层(拖拽两端按商店画面档解析/买经验整批连点),发出即记账 +
    容器上报对账一致,守卫链照常(名-槽不一致响亮暴露)。
@@ -316,7 +316,7 @@ def test_act_node_unobserved_close_skips_then_executes(monkeypatch):
 
 
 # ============================================================
-# 段 2:执行端口接线(纯执行层,零策略判据)
+# 段 2:执行端口接入调用(纯执行层,零策略判据)
 # ============================================================
 
 _LEVEL_BTN_PT = Point(123, 456)   # 购买经验按钮锚(观察 node area 桩值)
@@ -447,7 +447,7 @@ def test_shop_sell_bench_executes_via_port(monkeypatch):
 
 def test_shop_sell_guard_name_mismatch_still_loud(monkeypatch):
     """守卫链照常:SellBench 名-槽不一致在商店域同辖响亮暴露
-    (guard_proposal_vs_expected 先于执行端口,端口接线不改守卫辖面)。"""
+    (guard_proposal_vs_expected 先于执行端口,端口接入调用不改守卫辖面)。"""
     from test.sr_od.application.currency_war._cw_helpers import cw4_bc
 
     strategy = _ScriptedStrategy([
@@ -636,7 +636,7 @@ def test_defense_path_wires_seed_and_telemetry_like_funnel(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """差①种子 + 差③遥测消除:防御构建 session.rng 按 strategy_seed
     播种;局容器建立点以遥测 current_run_id 为 provider 触发 journal
-    装配;策略器/状态同源接线与漏斗同款。"""
+    装配;策略器/状态同源接入调用与漏斗同款。"""
     assembly_calls: list = []
     monkeypatch.setattr(gs_mod, 'ensure_journal_assembly',
                         lambda provider: assembly_calls.append(provider))
@@ -657,7 +657,7 @@ def test_defense_path_wires_seed_and_telemetry_like_funnel(
     assert assembly_calls[0]() == 't-def-42'
     # 策略器经漏斗 StrategyManager 按 config.strategy_id 实例化
     assert match.strategy.STRATEGY_ID == 'mandate_v1'
-    # 状态同源接线(漏斗 §2.6 过渡桥同款):session 键位状态 = 策略器状态
+    # 状态同源接入调用(漏斗 §2.6 过渡桥同款):session 键位状态 = 策略器状态
     from sr_od.application.currency_war.kernel.cw_strategy_session import (
         strategy_state_of,
     )

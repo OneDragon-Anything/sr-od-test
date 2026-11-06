@@ -1,7 +1,7 @@
 """sim 策略卡到级金腿世界链测试(镜像 src = sim/cw_sim_backend.py 的
-_on_node_advance / _on_node_advance_terminal 双点接线段;kernel 决策函数
+_on_node_advance / _on_node_advance_terminal 双点接入调用段;kernel 决策函数
 单元面 = kernel/cw_gain_chain/test_check_strategy_level_grants.py,本文件
-锁 sim 接线与世界真值落地面)。
+锁 sim 接入调用与世界真值落地面)。
 
 测试面依据 = 迭代设计 designs/T-108-chengzhang-jijin.md §4 锁 1/2/3/6/7/
 8/10(实现批修正:锁 8 文字面 = 现役 NODE_XP_BY_TYPE × PLANE_NODE_TABLES
@@ -235,7 +235,7 @@ def test_terminal_cross_grants_before_game_over(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """局终跨级(锁 7):末节点经验入账跨 9 → 发放先于局终声明(双点之
     二;直构 = 备战窗强置级/xp 后直调局终推进 handler,handler 内序 =
-    经验入账 → 金腿 → 局终披露与收口)。"""
+    经验入账 → 金腿 → 局终披露与收尾)。"""
     b = _prep_backend(26)
     try:
         gs = b.gs
@@ -252,8 +252,8 @@ def test_terminal_cross_grants_before_game_over(
             f'局终金值漂移: {legs[0][4]} != {gold_before}+40'
         assert legs[1][4] == (_CARD,) \
             and legs[1][5] == 'strategy_level_grant', f'局终一次性标志位形态漂移: {legs[1]}'
-        # 发放先于局终声明:handler 收口后局终位与披露齐备
-        assert b.done, '局终位未收口'
+        # 发放先于局终声明:handler 收尾后局终位与披露齐备
+        assert b.done, '局终位未收尾'
         assert gs.strategy_conditional_done.value == (_CARD,), '一次性标志位未随局终存续'
         assert b.disclosures.get(DISCLOSURE_RUN_COMPLETE) \
             == 'survived_p3_boss', '局终披露漂移'
@@ -279,7 +279,7 @@ def test_dormant_full_p3_run_zero_grant(
                 break
             _drive_step(b, 37)
             max_level = max(max_level, int(gs.level.value or 0))
-        assert b.done, '4096 步内未收口(流程异常)'
+        assert b.done, '4096 步内未收尾(流程异常)'
         assert DISCLOSURE_RUN_COMPLETE in b.disclosures, \
             '前置:非胜局锚(seed 37 应走完 P3 存活终局)'
         assert _grant_calls(calls) == [], '休眠局出现到级发放'

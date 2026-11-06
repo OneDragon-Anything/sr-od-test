@@ -1,7 +1,7 @@
 """sim 策略卡到级装备腿世界链测试(镜像 src = sim/cw_sim_backend.py 的
-_on_node_advance / _on_node_advance_terminal 双点接线段;kernel 检查腿
+_on_node_advance / _on_node_advance_terminal 双点接入调用段;kernel 检查腿
 单元面 = kernel/cw_gain_chain/test_check_strategy_level_equip_grants.py,
-本文件锁 sim 接线、宝钻世界联动与休眠数值边界)。
+本文件锁 sim 接入调用、宝钻世界联动与休眠数值边界)。
 
 测试面依据 = 迭代设计 designs/T-141-zuanshi-shangren.md §4 锁 3/7/8/9:
 - 推进点跨级发放主链(锁 2 sim 面):直构 level=8 + xp 贴阈,推经跨 9 →
@@ -9,7 +9,7 @@ _on_node_advance / _on_node_advance_terminal 双点接线段;kernel 检查腿
   sim:strategy)+ 发放拍 = 经验入账后;一次性标志位后续推进零再写(锁 3);
 - 局终跨级(锁 7):末节点经验跨 9 → 发放先于局终声明(双点之二);
 - 宝钻世界联动(锁 8):发放后 diamond_count +1 / deploy_cap = level +
-  财富宝钻数 / back_layout +1(on_diamond_acquired 经 sim 接线调用);
+  财富宝钻数 / back_layout +1(on_diamond_acquired 经 sim 接入调用);
 - 休眠边界(锁 9,数值口径):节点经验合计 70 固化(NODE_XP_BY_TYPE ×
   PLANE_NODE_TABLES)+ 即时腿注册面上界 < 3→9 级累计门槛 194、封顶
   8 级——常量/注册行变更使 9 级可达时本锁先红 = 触发边界重申报;
@@ -175,7 +175,7 @@ def test_terminal_cross_grant_world_coupling_before_disclosure(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """局终跨级 + 宝钻世界联动(锁 7/8):末节点经验入账跨 9 → 发放先于
     局终声明(双点之二;直构 = 备战窗强置级/xp 后直调局终推进 handler,
-    handler 内序 = 经验入账 → 装备腿 → 局终披露与收口);发放后宝钻回调
+    handler 内序 = 经验入账 → 装备腿 → 局终披露与收尾);发放后宝钻回调
     三写 = diamond_count +1 / deploy_cap = level + 财富宝钻数 /
     back_layout +1(世界数值面 observe,sim 世界写即真值)。"""
     b = _prep_backend(29)
@@ -199,8 +199,8 @@ def test_terminal_cross_grant_world_coupling_before_disclosure(
             f'deploy_cap 漂移: {gs.deploy_cap.value!r} != level 9 + 宝钻 1'
         assert int(gs.back_layout.value) == min(9, back_before + 1), \
             'back_layout 未 +1'
-        # 发放先于局终声明:handler 收口后局终位与披露齐备
-        assert b.done, '局终位未收口'
+        # 发放先于局终声明:handler 收尾后局终位与披露齐备
+        assert b.done, '局终位未收尾'
         assert gs.strategy_conditional_done.value == (_CARD,), '一次性标志位未随局终存续'
         assert b.disclosures.get(DISCLOSURE_RUN_COMPLETE) \
             == 'survived_p3_boss', '局终披露漂移'

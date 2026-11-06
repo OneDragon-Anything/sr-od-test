@@ -332,13 +332,13 @@ def _dispatch(host, op, journal_name: str, **kwargs):
                                       frame_tag=None, wait=2, **kwargs)
 
 
-# (原 test_tick_window_semantics 删:纯函数窗口语义被测试2/3/4 的接线级
+# (原 test_tick_window_semantics 删:纯函数窗口语义被测试2/3/4 的接入调用级
 #  断言完全辖——同键 ok 复位/异键 ok 闭窗计数从 1 重计/达限转 fail,单层
 #  归因价值不及冗余成本。)
 
 
 def test_cap_fires_at_limit_with_readout(monkeypatch):
-    """测试2 接线:上限-1 次维持默认映射,第 LIMIT 次转可判读 round_fail。"""
+    """测试2 接入调用:上限-1 次维持默认映射,第 LIMIT 次转可判读 round_fail。"""
     calls = _spy_cw_op(monkeypatch)
     host = _Host(CwLoop.OP_FAIL_REDISPATCH_LIMIT)
     limit = CwLoop.OP_FAIL_REDISPATCH_LIMIT

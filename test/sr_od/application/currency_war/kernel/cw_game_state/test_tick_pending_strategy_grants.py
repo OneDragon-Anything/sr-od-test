@@ -1,5 +1,5 @@
 """策略延时发放倒计时递减腿测试(镜像 src = kernel/cw_game_state.py 的
-_tick_pending_strategy_grants + _tick_effect_boundary_impl 接线)。
+_tick_pending_strategy_grants + _tick_effect_boundary_impl 接入调用)。
 
 测试面依据 = 迭代设计 designs/T-106-rencai-jili.md §4 锁 3(3 条)+
 锁 9(P2 末冻结直构)+ T-107 展开卡批(designs/T-107-rencai-jili-plus.md

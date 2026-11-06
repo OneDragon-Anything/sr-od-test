@@ -1,4 +1,4 @@
-"""结算域行为测试(确认动作流程 / 观测覆盖度守卫 / 真值收口 / 金面板解析 / hp 直读)。
+"""结算域行为测试(确认动作流程 / 观测覆盖度守卫 / 真值收尾 / 金面板解析 / hp 直读)。
 
 五部分(结算屏一个域的各承重面):
 
@@ -13,15 +13,15 @@
   = cw4_session 旁表 + observe_node_anchor 预锚定 observation 态。
 - **观测覆盖度守卫测试**(T-23;2026-09-15 局深检 §8-1 形态根治。病理:
   长战斗形态整窗零「结算观测」行实锤(run_20260915_054718 深检:488s
-  主战 hp 3→0 扣血链零观测,复盘断节不可知)。修 = 战斗链收口守卫面
+  主战 hp 3→0 扣血链零观测,复盘断节不可知)。修 = 战斗链收尾守卫面
   (cw_loop ``_on_battle_wait`` 出口归一点)计数留证:窗口单元 success 出口
   + 出战开窗在 + 本窗零结算观测行 → 缺陷台账 L1 行(只计数不停机))。
   校验三面:守卫判定真值表 / 结算观测行写点刷新窗锚 + 真值传导 /
-  cw_loop 战斗分支接线消费守卫。
-- **真值收口测试**(settle_truth):金币战后真值无条件入账。背景(2026-09-18
+  cw_loop 战斗分支接入调用消费守卫。
+- **真值收尾测试**(settle_truth):金币战后真值无条件入账。背景(2026-09-18
   回滚批):节点收入由游戏侧在结算屏展示前入账,bot 无逻辑写端,账本与
   结算真值的差 = 预期边界收入而非推算 bug——经 observe 失配链则每场战斗
-  必停局(全夜停局病态),吸收窗方案已回滚。现行 = 结算点无条件收口 +
+  必停局(全夜停局病态),吸收窗方案已回滚。现行 = 结算点无条件收尾 +
   差值台账行留证(测试依据 = GameState.settle_truth docstring)。
 - **金面板解析回归测试**(T-42 读端加固批。病理:2026-09-18 两实机局
   journal+停局截图定谳,胜局结算页金面板「存量 <N>」OCR 读失败率连续
@@ -400,7 +400,7 @@ def _make_coverage_loop(test_context, monkeypatch,
 
 def test_battle_branch_exit_consumes_coverage_guard(
         test_context, monkeypatch) -> None:
-    """测试3 收口接线:战斗分支 op 返回 back_to_loop → 守卫被消费,零观测窗
+    """测试3 收尾接入调用:战斗分支 op 返回 back_to_loop → 守卫被消费,零观测窗
     落 L1 行;已观测窗(锚匹配)不落行。"""
     calls: list[tuple[tuple, dict]] = []
     monkeypatch.setattr(_defects_mod, 'record_defect',
@@ -411,7 +411,7 @@ def test_battle_branch_exit_consumes_coverage_guard(
                                              settled_battle_ts=None))
     with fast_sleep():
         _run_node(test_context, op, op.loop)
-    assert len(calls) == 1, f'收口点应消费覆盖度守卫并落行:{calls}'
+    assert len(calls) == 1, f'收尾点应消费覆盖度守卫并落行:{calls}'
     args0, kwargs0 = calls[0]
     assert args0[:2] == ('settlement', 'settle_obs_coverage_miss')
     assert kwargs0.get('severity') == SEVERITY_L1_ALERT
@@ -425,7 +425,7 @@ def test_battle_branch_exit_consumes_coverage_guard(
     assert calls == [], '已观测窗 exit 不落覆盖度行'
 
 
-# ==================== 真值收口测试(settle_truth)====================
+# ==================== 真值收尾测试(settle_truth)====================
 
 
 def _sig():
@@ -460,7 +460,7 @@ def test_diff_credits_with_ledger_row(monkeypatch) -> None:
 
 
 def test_equal_value_no_row(monkeypatch) -> None:
-    """等值收口(账本与真值一致)→ 零新信息,不落台账行,来源照常翻
+    """等值收尾(账本与真值一致)→ 零新信息,不落台账行,来源照常翻
     观察态。"""
     kinds = _spy_defects(monkeypatch)
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)

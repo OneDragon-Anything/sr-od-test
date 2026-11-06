@@ -3,7 +3,7 @@
 测试面 = sim 全量局完成判据(确定性双跑/不变式断言四条尺):
 
 - 跑完:真策略 mandate_v1 决策 + 真 CwLoop 驱动,SimBackend 从 reset 经
-  P1 → P2 boss 到局终,op 执行零失败(成功收口 = 回大厅终局链);
+  P1 → P2 boss 到局终,op 执行零失败(成功收尾 = 回大厅终局链);
 - 确定性:同 seed 同 RunConfig 双跑容器逐位一致(双跑快照 diff 为空);
 - 容器不变式:金币不出现无规则依据的负值 / hp 轨迹与结算写流一致 /
   经验等级符合规则表(carry 与阈值表)/ 局终无未消费败态挂账;
@@ -101,7 +101,7 @@ def two_runs(test_context: Any, tmp_path_factory: Any) -> tuple:
 
 
 def _one_run(test_context: Any, tmp_path: Any, seed: int) -> Any:
-    """单局运行(独立 MonkeyPatch:局终 3c 收口会直置 ctx.cw_match=None,
+    """单局运行(独立 MonkeyPatch:局终 3c 收尾会直置 ctx.cw_match=None,
     逐局 undo 保证下一局从干净 ctx 起跑)。"""
     mp = pytest.MonkeyPatch()
     try:
@@ -116,13 +116,13 @@ def _one_run(test_context: Any, tmp_path: Any, seed: int) -> Any:
 def test_first_match_runs_to_game_over_without_op_fail(two_runs: tuple) -> None:
     """跑完判据:reset → P1 → P2 boss → 局终,零 op fail、零 retry 耗尽。
 
-    凭据形态:execute() 成功收口(回大厅终局链 = 战斗等待 terminal_lobby
+    凭据形态:execute() 成功收尾(回大厅终局链 = 战斗等待 terminal_lobby
     → 主循环 3c)+ 后端局终位 done + 到达位面下限 + 外环 fail 重派计数
     未触限(连续 fail 达限会转 round_fail 使 execute 失败,前置即零 fail
     的运行级凭据)+ 结算轮数非零(真打过仗)。"""
     run = two_runs[0]
     assert run.result is not None and run.result.success, \
-        f'execute 未成功收口: {getattr(run.result, "status", "")!r}'
+        f'execute 未成功收尾: {getattr(run.result, "status", "")!r}'
     assert run.backend.done, '后端局终位未置(done)'
     node = run.gs.node.value
     assert node is not None and node.plane >= _EXPECT_MIN_PLANE, \

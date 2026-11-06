@@ -13,7 +13,7 @@ T-117-wuzhuang-zhiyuan-plus.md(定稿)§4 锁 1 + REVIEW-T117 六裁决点默认
   (``roll_random_equip`` 简易池)+ 第 2 抽角色(4 费池放回)——腿序改排
   即采样名漂移,被顺序断言捕获;效果串恰 2 条且顺序固定;
 - 值域派生集:4 费采样池 = ``random_char_pool(RandomCharSpec(cost=4,
-  star=1))``(chars_by_cost(4) 派生 14 名经双形态合并收口——开拓者·记忆
+  star=1))``(chars_by_cost(4) 派生 14 名经双形态合并收尾——开拓者·记忆
   为键侧剔除条目,采样名走值侧形态;罗刹物理置于 5 费段区块,禁按段区块
   目测手抄清单);
 - 前提守卫:「效果串恒 2 条」前提 = 简易池 ∩ ``EQUIP_ACQUIRE_CONSEQUENCES``

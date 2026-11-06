@@ -1,7 +1,7 @@
 """策略卡首领战结束回血 sim 世界链测试(镜像 src = sim/cw_sim_backend.py
 的 _resolve_battle 首领战回血腿;kernel 触发函数单元面 = kernel/
 cw_gain_chain/test_check_strategy_boss_end_heal.py,本文件锁 sim 结算腿
-接线与世界真值落地面)。
+接入调用与世界真值落地面)。
 
 测试面依据 = 迭代设计 designs/T-313-fendou-xieyi.md §4 锁 3/4/5/6/7
 (REVIEW-T313 免裁 6/6;驱动与断言形态先例 = 同目录
@@ -128,7 +128,7 @@ def _hold_card(gs, *, card: str = _CARD) -> None:
 def _drive_to_kind_prep(monkeypatch: pytest.MonkeyPatch, b: SimBackend,
                         *, target_kind: str) -> None:
     """自当前窗驱动到指定节点类型的备战窗(途经战斗全胜强制穿过;跨位面
-    经位面过渡屏空白点击收口,先例 = test_p3_win_terminal._drive_step
+    经位面过渡屏空白点击收尾,先例 = test_p3_win_terminal._drive_step
     过渡分派支;目标判定 = 节点窗场字段 kind 序列真值)。"""
     gs = b.gs
     for _ in range(150):
@@ -212,7 +212,7 @@ def test_boss_win_settle_heals_held_card(
 def test_boss_loss_survival_heals(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """锁 3b(败局存活也回血):卡面无「胜利」限定 = 败局存活同拍回血
-    (败局 −23 + 回血 +50,挂点在胜败两态共同路径)。"""
+    (败局 −23 + 回血 +50,调用点在胜败两态共同路径)。"""
     b = _prep_backend(82)
     try:
         gs = b.gs
@@ -259,7 +259,7 @@ def test_direct_add_no_clip_boundary(
 def test_dead_battle_no_heal(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """锁 5(死亡局不回血):保底已用 + 濒死局 boss 战败致死 → hp 归零
-    死亡提前 return 在回血挂点之前,零回血笔直接进终局(局终不见回血,
+    死亡提前 return 在回血调用点之前,零回血笔直接进终局(局终不见回血,
     与实机一致)。"""
     b = _prep_backend(84)
     try:

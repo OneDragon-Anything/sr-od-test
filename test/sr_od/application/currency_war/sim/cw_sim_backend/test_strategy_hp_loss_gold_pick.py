@@ -1,7 +1,7 @@
 """sim 策略选卡已损血衍生金腿测试(镜像 src = sim/cw_sim_backend.py 的
 _on_invest_picked 已损血衍生金落地腿 + 呈现一次性标志位 + 披露键;kernel 触发函数
 单元面 = kernel/cw_gain_chain/test_check_strategy_hp_loss_gold.py,本文件
-锁 sim 选卡落地腿接线与世界真值落地面)。
+锁 sim 选卡落地腿接入调用与世界真值落地面)。
 
 测试面依据 = 迭代设计 designs/T-325-xingji-heping-baoxian.md §4 锁 4
 (REVIEW-T325 免裁 7/7;驱动与断言形态先例 = 同目录

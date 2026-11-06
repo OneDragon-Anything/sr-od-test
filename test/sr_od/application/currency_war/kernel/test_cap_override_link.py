@@ -110,8 +110,8 @@ def test_multi_hold_takes_widest() -> None:
 
 
 def test_budget_face_reserve_floor_linkage() -> None:
-    """测试①预算面随批接线:R* 守息线分量 = resolved 链(ADR-0598)——
-    买断制局刷新授权车道不再被 50 金地板压死(囤金车道收口),利息
+    """测试①预算面随批接入调用:R* 守息线分量 = resolved 链(ADR-0598)——
+    买断制局刷新授权车道不再被 50 金地板压死(囤金车道收尾),利息
     上调局守息线抬到 100。registry 旋钮不辖本链(ADR-0516 归一)。"""
     from sr_od.application.currency_war.kernel.cw_economy import reserve_cap
 
@@ -131,7 +131,7 @@ def test_budget_face_reserve_floor_linkage() -> None:
 
 
 def test_line_switch_affordable_window_linkage() -> None:
-    """测试①换线可负担窗随批接线:e_rounds 的可负担刷数守息线 = resolved
+    """测试①换线可负担窗随批接入调用:e_rounds 的可负担刷数守息线 = resolved
     链(ADR-0598)——买断制局 affordable 从 (g−50)//刷价 放宽到 (g−0)
     //刷价;session=None 调用形态退注册表派生值(既有桩零漂移)。"""
     from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY

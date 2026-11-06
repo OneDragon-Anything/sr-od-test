@@ -11,7 +11,7 @@ T-22-rencai-xiachen.md §4;过程件引用寿命 = 迭代,语义以测试本体�
    量级 = 注册表 p(固定种子下确定,粗带防参数错接)。
 
 另辖:随机态分支采样表(state_deal_probs 轮岗感知采样:无观测条退基线
-/ 观测条透传 / 0 档逐档降级 / 上报接线,锁面出处 =
+/ 观测条透传 / 0 档逐档降级 / 上报接入调用,锁面出处 =
 docs/game/currency_war/research/invest_effects.md §2 轮岗行)。
 """
 import random
@@ -130,7 +130,7 @@ def test_rng_zero_perturbation() -> None:
 
 
 def test_disclosure_key_registered() -> None:
-    """披露键已登记闸:_BASE_DISCLOSURES 接线即随局披露。"""
+    """披露键已登记闸:_BASE_DISCLOSURES 接入调用即随局披露。"""
     assert _BASE_DISCLOSURES.get(SHOP_TWO_STAR_DEAL_PLACEHOLDER) == \
         'user_placeholder_pending_field_sampling'
 
@@ -171,7 +171,7 @@ def _slot_signature(payload: ShopPayload) -> list:
 def test_state_deal_probs_falls_back_to_baseline_without_bar() -> None:
     """无观测条形态零行为变化:店离屏(payload 未观察)与概率条空表两
     形态下 ``state_deal_probs`` = 基线表逐键相等(键集 = 正概率档)——
-    刷新随机态分支接线对无观测条局的采样分布恒等(出处 =
+    刷新随机态分支接入调用对无观测条局的采样分布恒等(出处 =
     docs/game/currency_war/research/invest_effects.md §2 轮岗行)。"""
     baseline = {c: p for c, p in REFRESH_PROB[6].items() if p > 0}
     assert state_deal_probs(_seed_for_random_branch_at(6, None), 6) \
@@ -200,7 +200,7 @@ def test_state_deal_probs_zero_tier_per_tier_fallback() -> None:
 
 
 def test_report_random_leg_uses_observed_boosted_bar() -> None:
-    """上报接线:观测翻倍条在场 → 刷新上报写出的载荷概率条 = 翻倍表
+    """上报接入调用:观测翻倍条在场 → 刷新上报写出的载荷概率条 = 翻倍表
     (非基线),槽位费用档 ∈ 翻倍表键集;固定种子复跑载荷逐槽相等
     (采样确定性随轮岗形保持)。"""
     bar = {1: 0.60, 2: 0.22, 3: 0.15, 4: 0.03, 5: 0.00}

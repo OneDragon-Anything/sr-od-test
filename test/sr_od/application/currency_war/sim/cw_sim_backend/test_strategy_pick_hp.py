@@ -12,8 +12,8 @@ apply_strategy_pick_hp helper + _on_invest_picked 落地腿 + 呈现一次性标
 - 无卡局零扰动(锁 3):opts 含本卡但不落卡(选另一张)→ 落地交集空 →
   零 ``hp:strategy_pick`` 笔、hp 零增量(名单推导负例,防误发)。
 T-144 先亏后盈随批扩面(designs/T-144-xiankui-houying.md §4 锁 3/5/8
-+ 扩挂点漂移增量锁):负值支 delta 断言形 / 不 clip 下界直构与败局
-floor 分支 / 持保险局选卡损血扩挂点入累计器 / 双持独立笔互不聚合。
++ 扩调用点漂移增量锁):负值支 delta 断言形 / 不 clip 下界直构与败局
+floor 分支 / 持保险局选卡损血扩调用点入累计器 / 双持独立笔互不聚合。
 
 复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py(已登记超限
 拆分债文件,禁追加,只 import 复用不改)与 cw_sim_backend/
@@ -174,7 +174,7 @@ def test_unpicked_card_zero_grant() -> None:
 
 
 # ============================================================ T-144 扩面
-# 负值支(先亏后盈 −20)与扩挂点(损血档位触发族第二挂点)
+# 负值支(先亏后盈 −20)与扩调用点(损血档位触发族第二调用点)
 
 
 def test_pick_hp_loss_delta_written_negative() -> None:
@@ -230,11 +230,11 @@ def test_negative_no_clip_floor_branch_next_lost_battle() -> None:
 
 
 def test_pick_loss_feeds_insurance_accumulator_hook() -> None:
-    """扩挂点行为锁(漂移增量):持保险局直构选卡先亏后盈 → 损血腿
+    """扩调用点行为锁(漂移增量):持保险局直构选卡先亏后盈 → 损血腿
     写后同拍调 check_strategy_hp_loss_grants:−20 换算 +20 损失入累计
     器(非「减负」)→ 档位当拍触发:金 +5(桶数 1)∧ 简易装备 +1 件
-    ∧ 累计器取模回 0。扩挂点缺位时此局静默漏计(披露键 ③ 申报形态),
-    本锁钉死第二挂点在码。"""
+    ∧ 累计器取模回 0。扩调用点缺位时此局静默漏计(披露键 ③ 申报形态),
+    本锁钉死第二调用点在码。"""
     b = _backend(seed=46)
     try:
         gs = b.gs

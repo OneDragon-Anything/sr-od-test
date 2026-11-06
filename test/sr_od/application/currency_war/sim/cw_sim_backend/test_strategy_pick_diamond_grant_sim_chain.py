@@ -1,7 +1,7 @@
 """sim 选卡落地拍宝钻世界联动腿测试(镜像 src = sim/cw_sim_backend.py 的
 _on_invest_picked 宝钻腿 + 呈现一次性标志位 _strategy_pick_diamond_latch;kernel
 效果体单元面 = cw_gain_chain/test_gain_invest_strategy_diamond_pair_reg.py,
-本文件锁 sim 接线、世界三域联动与防重放)。
+本文件锁 sim 接入调用、世界三域联动与防重放)。
 
 测试面依据 = 迭代设计 designs/T-243-zheme-da-de-zuanshi.md §4 锁 3/4
 + 用户裁定 2026-11-02 读法 B(裁定册 PENDING-DECISIONS.md):

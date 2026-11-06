@@ -1,7 +1,7 @@
 """策略卡死亡救援 sim 世界链测试(镜像 src = sim/cw_sim_backend.py 的
 _resolve_battle 死亡救援腿;kernel 触发函数单元面 =
 kernel/cw_gain_chain/test_take_strategy_death_save.py,本文件锁
-sim 结算折算点接线与 M-B 独立叠加序列的世界真值落地面)。
+sim 结算折算点接入调用与 M-B 独立叠加序列的世界真值落地面)。
 
 测试面依据 = 迭代设计 designs/T-323-cang-yishou.md §4 锁 3/4 + 用户裁定
 2026-11-04(M-B 独立叠加 = 卡救先消耗,全局保底留给后续致死;序列

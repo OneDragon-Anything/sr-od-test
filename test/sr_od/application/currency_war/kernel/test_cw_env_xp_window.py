@@ -9,7 +9,7 @@ sim/cw_sim_backend/test_env_xp_window_sim_chain.py。
 锁面 → 测试对照:
 - 锁 1 迁移等值 = test_xp_apply_amount_home_input_domain +
   test_apply_node_xp_regression_after_migration;
-- 锁 2 主挂点达成记录 = test_main_hook_records_anchor_once;
+- 锁 2 主调用点达成记录 = test_main_hook_records_anchor_once;
 - 锁 3 结算时点达成记录 = test_fallback_detection_at_node_boundary;
 - 锁 4 窗口发放矩阵 = test_window_grant_matrix_and_repeat_tick +
   test_grant_cross_level_carry + test_plane_flip_lex_monotonic;
@@ -84,7 +84,7 @@ def _seed_gs(level: int, xp_cur: int, *, with_env: bool = True,
 
 
 def _advance(gs, pos) -> bool:
-    """推进生效原语驱动(生产同口:尾段效果推进 = tick 桥挂点)。"""
+    """推进生效原语驱动(生产同口:尾段效果推进 = tick 桥调用点)。"""
     return advance_node_effective(gs, pos, actor='TestXpWindow',
                                   sig=_SIG_LOGIC, source='logic')
 
@@ -129,7 +129,7 @@ def test_apply_node_xp_regression_after_migration() -> None:
     assert (gs3.level.value, gs3.xp.value) == (7, (50, 52)), '补给零入账'
 
 
-# ================ 锁 2:主挂点达成记录 ================
+# ================ 锁 2:主调用点达成记录 ================
 
 def test_main_hook_records_anchor_once() -> None:
     """购买经验上报推 8(48+4=52 跨 52 门槛)→ anchor_pos = 当拍生效位、
@@ -172,7 +172,7 @@ def test_main_hook_records_anchor_once() -> None:
 # ================ 锁 3:兜底达成记录 ================
 
 def test_fallback_detection_at_node_boundary() -> None:
-    """apply_node_xp 推 8(sim 直调,跳过主挂点)→ 结算时点即记(设计稿
+    """apply_node_xp 推 8(sim 直调,跳过主调用点)→ 结算时点即记(设计稿
     裁决点 3 定案,行为变化 = 设计意图):跨级当拍记达成位 = 当拍生效位、
     当拍零发放(「接下来 N 个节点」= 达成当拍的后继 N 节点);次拍 tick
     起按后继节点发放一拍。生效位 None 窗 → 零记录零写。"""

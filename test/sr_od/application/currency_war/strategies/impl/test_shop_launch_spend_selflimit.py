@@ -292,7 +292,7 @@ def test_restricted_session_normal_path_chain(monkeypatch, tmp_path):
     monkeypatch.setattr(mandate_shop, 'decide_shop_action', _core)
 
     match = CurrencyWarMatch(strategy, session)
-    # 会话状态载体归一:session.strategy_state = 构造接线后的同一状态对象
+    # 会话状态载体归一:session.strategy_state = 构造接入调用后的同一状态对象
     # (裸 session 桩的容器附着面不依赖;宿主显式归一,先例 = 未观察流测试
     # 宿主的 strategy_state 显式置位)。
     match.session.strategy_state = state_of(gs)

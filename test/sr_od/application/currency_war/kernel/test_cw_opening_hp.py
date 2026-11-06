@@ -5,7 +5,7 @@ kernel/cw_opening_hp.py 的该被测函数;按 src 镜像规范落位)。
 calc/designs/T-45-dihou-pohuai.md)§2.3 + §4 锁 5(对抗轮 2 N1/N2 修法甲
 落定形态):
 - **HP 跟随 = 词缀域逻辑写尾回调**:enemy_affixes 逻辑写(logic/logic_rand
-  两通道同经,挂点 = cw_game_state._write_logic_frame)落帧后 diff 新旧
+  两通道同经,调用点 = cw_game_state._write_logic_frame)落帧后 diff 新旧
   名单,消失词缀命中 _AFFIX_HP_DELTA → 以删除后词缀表经 opening_hp_prior
   现算 → 经 write_prior 重算 HP 先验(写通道统一 prior 单一来源,evidence
   必带 prior: 前缀);
@@ -101,7 +101,7 @@ def test_delete_hp_delta_affix_resyncs_prior() -> None:
 
 
 def test_logic_rand_channel_same_tail() -> None:
-    """logic_rand 通道同经(挂点在 _write_logic_frame 共用体,两逻辑通道
+    """logic_rand 通道同经(调用点在 _write_logic_frame 共用体,两逻辑通道
     同款):随机态写删除「开局不利」→ 同走 prior 重算。"""
     gs = _make_gs(['开局不利', '库藏生锈'])
     gs.write_logic_rand(gs.enemy_affixes, ['库藏生锈'], produced_by='Test',

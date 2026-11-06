@@ -66,7 +66,7 @@ def _sig():
 
 
 def _launch_host(session):
-    """gs 宿主(终态管线形态):strategy_state 同源接线后返回容器——
+    """gs 宿主(终态管线形态):strategy_state 同源接入调用后返回容器——
     前置发射位已改收容器,_launch_front_check(gs)。"""
     gs = game_state_of(session)
     gs.strategy_state = state_of(session)

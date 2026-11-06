@@ -1,4 +1,4 @@
-"""环境条件发放测试(机制主题文件;kernel 条件矩阵 → live 接线 → 刷新
+"""环境条件发放测试(机制主题文件;kernel 条件矩阵 → live 接入调用 → 刷新
 次数发放全链;迭代 2026-10-10-env-conditional-grants + T-7 二手市场)。
 
 被测机制(按节):
@@ -6,21 +6,21 @@
   §1–§4):触发条件七序短路、随机态发放写行(equips 追加
   write_logic_rand + done 登记 write_logic 同 evidence 相邻)、sig 单
   形态契约、宝钻获得回调三写、登记表构建校验、种子底座与快照恢复;
-- **live 接线**(该迭代 landing 3.2 节):结算覆盖写端之后才触发发放
+- **live 接入调用**(该迭代 landing 3.2 节):结算覆盖写端之后才触发发放
   (fake 结算路径真走覆盖写端,防假绿)、猜错整表观察纠偏、streak
   None 结算跳过;
 - **刷新次数条件发放**(T-7 二手市场,设计 =
   .debug/progress/2026-09-23-invest-effects-calc/designs/T-7-ershichang.md
   §2):登记表六查(含 T-21 跨锁失同步)、条件矩阵(含 gold/equips 缺读
   缓发禁半发放)、发放三笔相邻写、计数域全量口径(用户裁定①)、
-  一次性(用户裁定②)、上报函数接线存在性;
+  一次性(用户裁定②)、上报函数接入调用存在性;
 - **长线利好**(T-21 付费域触发器,设计 =
   .debug/progress/2026-09-23-invest-effects-calc/designs/T-21-changxian-
   liaoli.md §4):付费域计数(「花费金币」限定词,防回退全量域)、
-  金-only 两笔发放、一次性、缓发重试、上报接线与刷费价基边界
+  金-only 两笔发放、一次性、缓发重试、上报接入调用与刷费价基边界
   (第 30 刷扣旧价同窗 +20,31 刷扣新价 1)。
 
-sim 接线(3.3)与 supply 采纳边界不在此。
+sim 接入调用(3.3)与 supply 采纳边界不在此。
 """
 from __future__ import annotations
 
@@ -340,11 +340,11 @@ def test_seed_and_restore_type_roundtrip_no_regrant(
     assert not calls, f'恢复局 done 已登记零写: {calls}'
 
 
-# ============================================================ live 接线
+# ============================================================ live 接入调用
 # (驱动 = 裸实例 + 全桩面走生产链路 _record_round_outcome,先例 =
 #  test_settle 的覆盖度守卫测试。)
 
-#: live 接线 sig 契约形态(design §2 契约:logic_hook 族,组号
+#: live 接入调用 sig 契约形态(design §2 契约:logic_hook 族,组号
 #: 'battle-wait:env-grant',actor = op 类名;发放两笔 logic 写同组)。
 _LIVE_SIG = ChannelSig(family='logic_hook', actor='CwScreenBattleWait',
                        group_id='battle-wait:env-grant')
@@ -412,7 +412,7 @@ def _idx(writes: list[tuple[str, str, ChannelSig]],
 
 def _outcome(streak: int | None) -> RoundOutcome:
     """胜局结算观察桩(streak = 结算屏「连胜×N」带方向真值;
-    None = 收口行不发 streak 真值口径)。"""
+    None = 收尾行不发 streak 真值口径)。"""
     return RoundOutcome(round_num=1, plane=1, node_type='普通战斗',
                         comp_tag='c', hp_after=3, hp_confidence=1.0,
                         killed=False, streak=streak)
@@ -420,7 +420,7 @@ def _outcome(streak: int | None) -> RoundOutcome:
 
 def test_env_grant_fires_after_settlement_cover_in_order(
         test_context, monkeypatch) -> None:
-    """接线点次序真测试:5 连胜结算走真覆盖写端(streak 真值落账为可断言
+    """接入调用点次序真测试:5 连胜结算走真覆盖写端(streak 真值落账为可断言
     前置态)后,条件发放紧随触发——写序 = streak 观察(覆盖写端)→
     equips 随机态写(发放)→ done 登记;发放两笔同组 sig = live 契约
     形态。"""
@@ -442,7 +442,7 @@ def test_env_grant_fires_after_settlement_cover_in_order(
     assert _idx(writes, 'observe', 'streak') \
         < _idx(writes, 'rand', 'equips') \
         < _idx(writes, 'logic', 'env_grants_done'), \
-        f'接线次序漂移(发放必须在结算覆盖后): {writes}'
+        f'接入调用次序漂移(发放必须在结算覆盖后): {writes}'
     assert writes[_idx(writes, 'rand', 'equips')][2] == _LIVE_SIG
     assert writes[_idx(writes, 'logic', 'env_grants_done')][2] == _LIVE_SIG
 
@@ -732,7 +732,7 @@ def test_exactly_once_in_21_refresh_loop(
 
 
 def test_report_wiring_grants_on_threshold() -> None:
-    """接线存在性:上报函数尾部触发检查在已登记环境达阈时发放落地
+    """接入调用存在性:上报函数尾部触发检查在已登记环境达阈时发放落地
     (集成 1 条;矩阵断言归 kernel 级,不在此层重复)。窗口内 = 刷费
     扣金分支(容器直读,T-21 分支 3:免费未观察保守按付费,基价 2)+ 发放
     三笔;level 不写 = 随机态采样分支跳写。"""
@@ -860,7 +860,7 @@ def test_paid_grant_gold_unobserved_withhold_then_retry(
 
 
 def test_report_wiring_paid_grant_price_base_at_threshold() -> None:
-    """接线存在性 + 30 次边界价基(T-21 锁 6/锁 11 前半):第 30 次付费
+    """接入调用存在性 + 30 次边界价基(T-21 锁 6/锁 11 前半):第 30 次付费
     刷新动作窗内,上报函数尾部触发检查发放落地;当窗刷费扣旧价 2
     (付完才满 30,容器价基假设 desc 直读)+ 发放 +20 = 净 +18。"""
     gs = _l_make_gs(gold=100)

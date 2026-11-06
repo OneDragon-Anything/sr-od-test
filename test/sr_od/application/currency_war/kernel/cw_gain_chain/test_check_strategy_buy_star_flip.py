@@ -1,7 +1,7 @@
 """策略卡购买翻星检查/置一次性标志位与买牌上报链翻转局测试(镜像 src =
 kernel/cw_gain_chain.py 的 check_strategy_buy_star_flip /
 mark_strategy_buy_star_flip_consumed + kernel/cw_action_report/buy_card.py
-两处接线 + kernel/cw_pool.py 池账跟随)。
+两处接入调用 + kernel/cw_pool.py 池账跟随)。
 
 测试面依据 = 迭代设计 designs/T-187-sifei-jinsheng.md(定稿)§2.2/§2.4/
 §2.5/§4 锁 2/3/4/5 + REVIEW-T187 §四.4(卡面官方原文:「你购买的下1个

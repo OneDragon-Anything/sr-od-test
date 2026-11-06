@@ -4,14 +4,14 @@
 (统一部署搜索内核换接,设计单一源 = changes/2026-10-30-roster-
 plane1-union/details/unified-deploy-order.md §1/§2 + 接口契约②:
 target_board = 名 → (排, 星))与 ``entry._step5_deploy`` 的差分执行器
-消费接线:
+消费接入调用:
 
 - 目标态 = 搜索定型板面(名+排+星;窗口谓词辖新上场、场上件恒满足
   §3.9);
 - 同名升星对(场景走查「同名异星对」行):就位粒度含星 → diff 非空
   → 两步换星(低星直卖 + 高星上场,通道不停摆,D2-1);
 - 纯函数零遥测:目标态求取不写 counters(虚拟重算副本零写入红线);
-- 生产接线:定型收敛帧零动作;diff 帧产统一拖动/换星直卖序列。
+- 生产接入调用:定型收敛帧零动作;diff 帧产统一拖动/换星直卖序列。
 """
 from __future__ import annotations
 
@@ -97,7 +97,7 @@ def test_locked_empty_bond_line_core_shared_completion() -> None:
 
 
 def test_step5_settled_frame_zero_action() -> None:
-    """生产接线·定型收敛帧:目标态 == 现板(名+排+星全对)→ 差分空 →
+    """生产接入调用·定型收敛帧:目标态 == 现板(名+排+星全对)→ 差分空 →
     零动作(diff 空 = 显式零动作,§3.1;旧 m1p pending 复位断言随
     kernel swap 机器收编删除——载体字段已随部署统一批丁退役,unified-
     deploy-order §2.7/§4)。"""
@@ -111,7 +111,7 @@ def test_step5_settled_frame_zero_action() -> None:
 
 
 def test_step5_vacancy_diff_emits_move_unit() -> None:
-    """生产接线·空槽补位帧:目标态 ⊋ 现板 → 差分执行器产统一拖动
+    """生产接入调用·空槽补位帧:目标态 ⊋ 现板 → 差分执行器产统一拖动
     (载体 = CwActionMoveUnitParam;落位判据 = 搜索排分配)。"""
     session = cw4_session()
     gs = cw4_gs(session, deploy_cap=5, level=5,
@@ -188,7 +188,7 @@ def test_target_board_payload_shape() -> None:
 # ====================  私有槽通道:出参透传 + _step5 写槽形态)====================
 
 def test_step5_writes_deploy_margin_slot_diff_forms() -> None:
-    """生产接线·写槽形态(design §2.1:写入点 = deploy_diff 计算后):
+    """生产接入调用·写槽形态(design §2.1:写入点 = deploy_diff 计算后):
     diff 非空帧 → top-2 键形三键;diff 空收敛帧 → {"diff_empty": True}
     形态(写入时点在真实出口,无第二实现)。"""
     session, st = _c_shape_session()

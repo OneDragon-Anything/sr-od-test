@@ -13,7 +13,7 @@ FixtureController 记录点击。CwLoop 在委托测试①⑤中桩化(边界 op
   (⑥链的「委托一次 CwLoop」步骤已删,设计 §2.1);
 - ⑥ 委托后 A 类画面立即交还(停机位与路由③同源常量,无往返)。
 
-(收口整删)原测试③「干净备战帧 → 直接退局发起」:与测试②同走 A 类名单
+(收尾整删)原测试③「干净备战帧 → 直接退局发起」:与测试②同走 A 类名单
 直退链,唯一差异 = 首帧建档(免战 vs 部署完成备战),直退判据 = 同一份
 PREP_DIRECT_EXIT_SCREENS 名单消费,②已承重同一份运行时行为;原
 test_route_table_has_no_battle_pause_dead_entry「ROUTE_BY_SCREEN 无死项」

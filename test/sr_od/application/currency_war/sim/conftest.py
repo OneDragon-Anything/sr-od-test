@@ -52,7 +52,7 @@ def sim_batch_runs(test_context: Any, tmp_path_factory: Any) -> dict[int, SimBat
     """逐 seed 一整局(会话级一次;冒烟批与预注册批共享,贵计算只算一次)。
 
     逐局独立 MonkeyPatch:实机采集停机钩子桩掉(sim 局无实机画面可采,
-    语义澄清非绕过验证面)+ 局终 3c 收口会直置 ctx.cw_match=None,逐局
+    语义澄清非绕过验证面)+ 局终 3c 收尾会直置 ctx.cw_match=None,逐局
     undo 保证下一局从干净 ctx 起跑(与首局验收 ``_one_run`` 同款)。
     """
     from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (

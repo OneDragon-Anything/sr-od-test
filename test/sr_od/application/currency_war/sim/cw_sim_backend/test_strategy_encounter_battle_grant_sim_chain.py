@@ -1,13 +1,13 @@
 """策略卡战后触发发放 sim 世界链测试(镜像 src = sim/cw_sim_backend.py
 的 _resolve_battle 只供策略算分的实现分支;kernel 触发函数单元面 =
 kernel/cw_gain_chain/test_check_strategy_battle_grants.py,本文件锁
-sim 结算腿接线与世界真值落地面)。
+sim 结算腿接入调用与世界真值落地面)。
 
 测试面依据 = 迭代设计 designs/T-105-yizhan-yangzhan.md §4 锁 1/2/3/4/5/8:
 - 持卡局遭遇节点(P1 序列现值恰一 encounter 位)战斗结算后,备战席
   supply_box 恰 +1 + strategy_post_battle evidence 笔(sig 组
   'sim:strategy' 首落);非遭遇节点/未持卡零发放;败局存活也发(卡文无
-  「胜利」限定),死亡局不发放(挂点在死亡提前 return 之后);幂等 =
+  「胜利」限定),死亡局不发放(调用点在死亡提前 return 之后);幂等 =
   _settled_key 既有守卫回归(同节点重放不双发);修饰局跟随 = 序列
   现值判定(非硬编码轮次)。
 - 驱动形态 = 出战动作触发结算(2026-10-29 流程模型:遭遇选完回备战,
@@ -199,7 +199,7 @@ def test_no_card_encounter_zero_grant(
 def test_loss_survival_still_grants(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """锁 4a(败局存活也发):持卡局遭遇战败未死 → 箱照落(卡文无
-    「胜利」限定 = 直读;挂点在胜败两态共同路径,败局待办登记之前)。"""
+    「胜利」限定 = 直读;调用点在胜败两态共同路径,败局待办登记之前)。"""
     b = _backend(7)
     try:
         b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
@@ -218,7 +218,7 @@ def test_loss_survival_still_grants(
 def test_dead_battle_no_grant(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """锁 4b(死亡局不发放):保底已用 + 濒死局遭遇战败 → hp 归零死亡
-    提前 return 在挂点之前,零发放直接进终局(局终不见发放,与实机一致)。"""
+    提前 return 在调用点之前,零发放直接进终局(局终不见发放,与实机一致)。"""
     b = _backend(7)
     try:
         b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')

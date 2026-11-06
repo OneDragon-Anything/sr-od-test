@@ -7,7 +7,7 @@
 calc/designs/T-41-teyao-zhuanjia-jialahe.md)§4 锁 4(§2.3/§2.4 落地形态):
 - 加拉赫环境 + 击破阵容部署过 2 档 → equips 出现以太钻头(库尾追加)+
   done 封账 bond_tier_2(实机(live)和模拟器(sim)两边同链:deployed 逻辑写 → 值回调级联 →
-  尾部门外必查 → 发放原语,零 sim 私有接线);
+  尾部门外必查 → 发放原语,零 sim 私有接入调用);
 - 对照局(无环境)同操作零发放。
 """
 from __future__ import annotations

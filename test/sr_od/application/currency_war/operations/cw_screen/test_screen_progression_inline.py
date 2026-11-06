@@ -1,4 +1,4 @@
-"""推进型 11 屏骨架内联形态测试 + 武装箱选卡观察上报接线测试(迭代
+"""推进型 11 屏骨架内联形态测试 + 武装箱选卡观察上报接入调用测试(迭代
  T-6 批)。
 
 背景:11 推进型屏脱离共享骨架(原推进型基类,其骨架语义 = 「入口观察 →
@@ -20,7 +20,7 @@ family.py):
   (不烧节点重试预算);推进体未落地 = round_fail + 旗标不置位;
 - **免锚出口测试**(参数化屏空锚构造):无「已离开」观察信号 → 发出即
   success(免锚),重入裁决不可达;
-- **武装箱观察上报接线测试**:门 hit + 读数非空 → 观察标准化门 → 容器
+- **武装箱观察上报接入调用测试**:门 hit + 读数非空 → 观察标准化门 → 容器
   ``box_card_names`` 终值 = 标准名表 + 坐标同门双写
   ``box_card_names_xy``(观察期解点);读数空/门 miss/转换失败 → fail
   交回 + 容器与 obs 均空(report 不调,禁盲值;名字与坐标同进退);
@@ -338,7 +338,7 @@ def test_area_center_advance_missing_fail(test_context, monkeypatch) -> None:
     assert op._advanced_once is False, '失败轮旗标不置位'
 
 
-# ==================== 武装箱选卡观察上报接线测试 ====================
+# ==================== 武装箱选卡观察上报接入调用测试 ====================
 
 #: x 升序读数桩(名字 = 装备注册表已登记名——观察标准化门要求读数可
 #: 转换为标准注册名,桩名必须真名可命中)。
@@ -365,9 +365,9 @@ def _make_box_pick(test_context, monkeypatch: pytest.MonkeyPatch,
 
 
 def test_box_pick_observe_reports_card_names(test_context, monkeypatch):
-    """观察上报接线测试:门 hit + 读数非空 → 观察标准化门 → 容器
-    ``box_card_names`` 终值 = 标准名表(report 接线落容器)+ 坐标同门
-    双写 ``box_card_names_xy``(观察期解点,x + CARD_Y)。红 = 接线断流 /
+    """观察上报接入调用测试:门 hit + 读数非空 → 观察标准化门 → 容器
+    ``box_card_names`` 终值 = 标准名表(report 接入调用落容器)+ 坐标同门
+    双写 ``box_card_names_xy``(观察期解点,x + CARD_Y)。红 = 接入调用断流 /
     容器终值漂移 / 坐标域断供。"""
     import importlib
 

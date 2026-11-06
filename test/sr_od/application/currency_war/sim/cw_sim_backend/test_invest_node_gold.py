@@ -1,18 +1,18 @@
 """sim 投资策略每节点金腿测试(镜像 src = sim/cw_sim_backend.py 的
 strategy_invest_node_gold_of 聚合 helper + _begin_node_window 收入段最前
-invest 金腿;先例 = 本目录 test_strategy_boss_gold.py 收口腿同形态)。
+invest 金腿;先例 = 本目录 test_strategy_boss_gold.py 收尾腿同形态)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-162-dingqi-
 fuli.md §4 锁 2/锁 3/锁 4:
 - 腿函数真值(锁 2,直构容器):持卡 = 2、与姊妹近似卡同持 = sum 3、
   未持 = 0(数值 = 卡面真值字面锁,锁注册表值流经聚合单一源);
-- 挂点接线(锁 3):非扑满局窗增量 = invest + 收入面(kernel 公式现算,
+- 调用点接通(锁 3):非扑满局窗增量 = invest + 收入面(kernel 公式现算,
   息基数 = 窗前基准现值 + 本窗 invest——腿在收入段最前先落账),窗后
   evidence = 收入笔(invest 笔先落账被收入笔
-  覆盖 = 挂点在收入段之前的机制序证据)+ 同窗重放零双发;扑满局窗开
+  覆盖 = 调用点在收入段之前的机制序证据)+ 同窗重放零双发;扑满局窗开
   即 +2 且**结算腿利息基数含 +2**(息差断言:窗开金落在进位档
   (g−2 mod10 ∈ {8,9}、帽界内)时 interest(g) − interest(g−2) = 1
-  ——挂点若后置于快照,快照金少 2、息恰少 1,断言红);
+  ——调用点若后置于快照,快照金少 2、息恰少 1,断言红);
 - 未持卡零发放(锁 4,腿零噪声:窗内金来源 = 收入笔)。
 
 复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py(已登记超限
@@ -112,7 +112,7 @@ def test_invest_node_gold_aggregation_matrix() -> None:
 
 def test_invest_node_gold_leg_via_engine_window() -> None:
     """持卡真值(锁 3 前半,单局串联):奖励窗后 evidence = 收入笔
-    (invest 笔先落账、收入笔后写覆盖——挂点在收入段之前的机制序);
+    (invest 笔先落账、收入笔后写覆盖——调用点在收入段之前的机制序);
     boss 窗金增量 = invest + 收入面(kernel 公式现算,息基数 = 窗开金 =
     窗前基准现值 + 本窗 invest);同节点窗重放零双发(窗口幂等守卫复用
     回归)。"""
@@ -147,7 +147,7 @@ def test_invest_node_gold_leg_via_engine_window() -> None:
         # 腿零写;invest 笔先落账被覆盖)
         assert gs.gold.evidence == 'sim:engine:income:p1r9', \
             f'boss 窗后 evidence 非 income 笔: {gs.gold.evidence}'
-        # 幂等回归:同节点窗重放,守卫住整段收口零双发
+        # 幂等回归:同节点窗重放,守卫住整段收尾零双发
         gold_at_boss = gs.gold.value
         b._begin_node_window()
         assert gs.gold.value == gold_at_boss \
@@ -211,7 +211,7 @@ def test_piggy_window_pays_first_and_interest_base_contains_it(
     扑满窗开 evidence = 本腿独立笔(窗内唯一金写,快照不写金——独立
     观察笔与收入笔分键的直接证据);窗开金含本窗 +2;结算分支息 =
     interest(窗开金)(kernel 公式现算期望)且息差非平凡(interest(g)
-    − interest(g−2) = 1,搜索器保证)——若腿挂点后置于递延快照,快照
+    − interest(g−2) = 1,搜索器保证)——若腿调用点后置于递延快照,快照
     金少 2、息恰少 1,本断言红(基数序回归防线)。"""
     b = _piggy_backend()
     try:
@@ -301,7 +301,7 @@ def test_piggy_window_installment_pays_first_and_interest_base_contains_it(
     (interest(10) − interest(3) = 1,首窗低金段帽界内,**确定命中**非
     搜索——+7 版若搜后期窗,金 ≥50 息帽恒吞差,息断言不可判,首窗
     形态绕开);结算息 = interest(窗开金)(kernel 公式现算期望)——若
-    分期腿挂点后置于递延快照,快照金 3、息恰少 1,本断言红(基数序
+    分期腿调用点后置于递延快照,快照金 3、息恰少 1,本断言红(基数序
     回归防线)。"""
     b = _piggy_backend_card_held_before_first_window(_CARD_INSTALLMENT)
     try:

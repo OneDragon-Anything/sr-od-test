@@ -569,8 +569,8 @@ class TestFundLineEmissionPins:
         (interest_cap_override=0 注册表派生)⇒ cap_resolved=0 ⇒ 下界
         saturation_line(0)=0 ⇒ 门恒过——现金 25(旧口径线 50 下花后
         5 必 defer 的帧)整批发射;下界随 resolved 链消解,无特判分支。
-        锁的是 cap 链接线(active_strategies → cap_resolved_of_session
-        → 门),真值表直测(test_fund_gate_truth_table)不覆盖该接线。"""
+        锁的是 cap 链接入调用(active_strategies → cap_resolved_of_session
+        → 门),真值表直测(test_fund_gate_truth_table)不覆盖该接入调用。"""
         from sr_od.application.currency_war.kernel.cw_economy import (
             cap_resolved_of_session,
             saturation_line,

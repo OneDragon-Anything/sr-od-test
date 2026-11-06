@@ -1,5 +1,5 @@
-"""补给选卡上报挂点测试(src 镜像 = kernel/cw_action_report/pick_supply.py;
-主断言对象 = report_action_pick_supply_param 的 R-choice 检查挂点——三个
+"""补给选卡上报调用点测试(src 镜像 = kernel/cw_action_report/pick_supply.py;
+主断言对象 = report_action_pick_supply_param 的 R-choice 检查调用点——三个
 applied 出口前统一调 check_strategy_take_all_supply,全都要族发放腿)。
 
 锁面(卡面 id 131001「下1个补给阶段选择后，额外获得所有未选择的
@@ -10,7 +10,7 @@ applied 出口前统一调 check_strategy_take_all_supply,全都要族发放腿)
   确认窗写点在派发动作 op 之前,上报入口已见同窗值——本文件在报告边界
   以种子字段构造该时点;op 侧写点锁 = operations/cw_screen/
   test_cw_screen_supply_node.py);
-- 未持卡局三出口零一次性标志位零发放(挂点零扰)。
+- 未持卡局三出口零一次性标志位零发放(调用点零扰)。
 """
 from __future__ import annotations
 
@@ -41,7 +41,7 @@ _UNCHOSEN = (SupplyOption(idx=1, char='停云', equip='折叠小刀',
 
 def _hook_gs(*, card: bool, unchosen: tuple[SupplyOption, ...] | None = None,
              latched: bool = False) -> GameState:
-    """挂点直构容器(bench/equips 已观察 = 上报主分支可写;持卡/源/一次性标志位按参)。"""
+    """调用点直构容器(bench/equips 已观察 = 上报主分支可写;持卡/源/一次性标志位按参)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.observe(gs.bench,
                BenchView(slots=[BenchSlot(kind='empty')] * 9, capacity=9),
@@ -112,7 +112,7 @@ def test_no_equip_column_exit_grants_from_field_snapshot() -> None:
 
 def test_landing_exit_grants_from_field_snapshot() -> None:
     """落地出口:装备入账分支照常 + 检查发放快照列(时序同前)——置一次性标志位 +
-    字段清;未持卡局同出口零一次性标志位零快照发放(挂点零扰对照)。"""
+    字段清;未持卡局同出口零一次性标志位零快照发放(调用点零扰对照)。"""
     gs = _hook_gs(card=True, unchosen=_UNCHOSEN)
     out = report_action_pick_supply_param(
         gs, SimpleNamespace(idx=0, char_name='希儿', norm_item='垃圾袋'),

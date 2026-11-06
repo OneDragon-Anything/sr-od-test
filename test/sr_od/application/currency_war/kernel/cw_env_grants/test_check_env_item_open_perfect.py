@@ -5,7 +5,7 @@ kernel/test_env_grants.py 与本目录按被测方法拆分文件,本文件按�
 
 测试面依据 = 迭代 T-34 命运礼物设计(.debug/progress/2026-09-23-
 invest-effects-calc/designs/T-34-mingyun-liwu.md)§2.5 + §4 锁 8 +
-锁 6 跨挂点时序半边:
+锁 6 跨调用点时序半边:
 - **判据**(用户裁定 2026-10-18 口径,check_env_deploy_lock_perfect 同
   判据已登记):环尾行 killed=True ∧ 尾行 hp_after 与前一行持平;killed
   非 True(败局/读缺)或 hp_after 下降 → 零改写;
@@ -16,8 +16,8 @@ invest-effects-calc/designs/T-34-mingyun-liwu.md)§2.5 + §4 锁 8 +
   不动;
 - **改写原语**:解锁位沿序列表前驱回退一步(sequence_prev),多次完胜
   累积逐帧递减;效果串 item_open_perfect:<名>@<位>-<轮>;
-- **跨挂点时序**(锁 6 集成半边):settle_confirm 完胜回退先于 sim 进
-  节点收口——回退后 unlock ≤ eff 的条目同窗到点正常弹除,零互扰。
+- **跨调用点时序**(锁 6 集成半边):settle_confirm 完胜回退先于 sim 进
+  节点收尾——回退后 unlock ≤ eff 的条目同窗到点正常弹除,零互扰。
 
 环行经生产单一写端 record_settlement_row 构造(与生产同口,先例 =
 同目录 test_check_env_deploy_lock_perfect.py)。
@@ -25,7 +25,7 @@ invest-effects-calc/designs/T-34-mingyun-liwu.md)§2.5 + §4 锁 8 +
 追加面 = 偶像经济策略道段(迭代 2026-09-23-invest-effects-calc
 designs/REVIEW-T329.md §五④ 锁 4/5/9;世界发放域键域扩展 = 环境 ∪ 策略,
 机制按键查表卡名无关,表 +1 条目自动覆盖):策略道完胜回退正例/混族并存
-零互扰/两道作用域隔离/跨挂点时序策略道并入。
+零互扰/两道作用域隔离/跨调用点时序策略道并入。
 """
 from __future__ import annotations
 
@@ -196,8 +196,8 @@ def test_consecutive_perfect_wins_accumulate() -> None:
 
 
 def test_settle_rollback_then_window_discharge_same_pos() -> None:
-    """跨挂点时序(T-34 设计 §4 锁 6 集成半边):settle_confirm 完胜
-    回退先于 sim 进节点收口——回退把解锁位 (1,4) 压到生效序位 (1,3)
+    """跨调用点时序(T-34 设计 §4 锁 6 集成半边):settle_confirm 完胜
+    回退先于 sim 进节点收尾——回退把解锁位 (1,4) 压到生效序位 (1,3)
     持平后,同窗开盒原语正常命中弹除(回退与开盒零互扰;开盒零席位写
     = 队列弹除零消耗分支)。"""
     gs = _make_gs(node_pos=(1, 3),
@@ -285,7 +285,7 @@ def test_scope_isolation_between_strategy_and_env(
 
 def test_strategy_entry_rollback_then_window_discharge(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """跨挂点时序策略道并入(REVIEW-T329 §五④ 锁 9):策略道条目回退后
+    """跨调用点时序策略道并入(REVIEW-T329 §五④ 锁 9):策略道条目回退后
     到点同窗正常弹除(存量命运礼物版同式的策略道回归域)。"""
     gs = _make_gs(node_pos=(1, 3),
                   queue=(('火花礼盒', (1, 4)),),

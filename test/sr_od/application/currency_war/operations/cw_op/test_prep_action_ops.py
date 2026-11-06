@@ -1158,7 +1158,7 @@ def test_start_battle_skip_substate_reported_not_consumed(monkeypatch):
 
 
 def test_freeze_card_decrement_via_report_path(monkeypatch):
-    """免战牌递减经 op 自上报测试(T-286;接线):PrepActionExecutor
+    """免战牌递减经 op 自上报测试(T-286;接入调用):PrepActionExecutor
     .execute(跳过型 CwActionStartBattleParam)→ op 自上报
     report_action_start_battle_param 在 session effects 递减 remaining_uses
     (上报时递减);常规出战零递减;未登记(登记面缺位)零动作不炸。"""
@@ -1190,7 +1190,7 @@ def test_freeze_card_decrement_via_report_path(monkeypatch):
         ex2.execute(CwActionStartBattleParam())
     assert bs2.effects.first(
         STRATEGY_EFFECTS['免战牌'].id).remaining_uses == 2
-    # 未登记:零动作不炸(递减挂点与登记面解耦;execute 无返回契约,
+    # 未登记:零动作不炸(递减调用点与登记面解耦;execute 无返回契约,
     # 不抛 = 链路完整)
     sess3 = SimpleNamespace()
     ex3 = _sb_executor(_RecordingController(), _sb_stub_op({_HIT_SKIP}),

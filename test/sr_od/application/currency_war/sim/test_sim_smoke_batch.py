@@ -5,7 +5,7 @@
 各批单帧测试承载;用户裁定 2026-10-13 本迭代冒烟不设基线与 A/B 对照):
 
 - 逐 seed 一整局:真 mandate_v1 策略 + 真 CwLoop 驱动 SimBackend,从
-  reset 经 P1 → P2 → P3 到局终,op 执行零失败收口(死循环由看门狗轮限转
+  reset 经 P1 → P2 → P3 到局终,op 执行零失败收尾(死循环由看门狗轮限转
   execute 失败承载,崩溃由异常传播承载——两者都让本测试红);
 - 终局合法形态 = 死亡(hp 归零且保底已用)/ 胜利(走完位面 3,披露键
   run_complete),两源都算「跑完」;
@@ -261,7 +261,7 @@ def _stats_line(seed: int, run: Any, duration_s: float) -> str:
     """逐局统计行(冒烟报告产出面;字段取现值快照,不做断言)。
 
     字段口径:终局源 = 死亡(``final_hp == 0``,保底已用归零)/ 胜利
-    (走完位面 3,披露键 run_complete)/ abandoned(局未收口即停——
+    (走完位面 3,披露键 run_complete)/ abandoned(局未收尾即停——
     execute 失败/崩溃局,终点字段仅记录崩点位置);节点写数 = 状态
     journal ``node`` 域写行数(每进一节点恰一写);驱动步 = 后端端口
     驱动计数(advance + click 合计)。
@@ -303,13 +303,13 @@ def _stats_line(seed: int, run: Any, duration_s: float) -> str:
 @pytest.mark.parametrize('seed', BATCH_SEEDS)
 def test_smoke_match_completes(seed: int,
                                sim_batch_runs: dict[int, Any]) -> None:
-    """冒烟判据:该 seed 一整局跑完——收口成功 ∧ 局终位 ∧ 无 op fail
+    """冒烟判据:该 seed 一整局跑完——收尾成功 ∧ 局终位 ∧ 无 op fail
     连发 ∧ 真打过仗(结算轮 ≥ 1)。
 
     整局由 sim/conftest.py 共享夹具会话级跑一次;本测试只消费该 seed 的
     记录做断言。失败形态三源各自可见:崩溃 = 夹具留档异常在此 re-raise
     (traceback + 运行原语注入的崩点 note〔node/画面/步数〕);死循环 =
-    看门狗轮限使 execute 收口失败;未到局终 = done 假。op fail streak
+    看门狗轮限使 execute 收尾失败;未到局终 = done 假。op fail streak
     触限虽被框架重派掩盖,也以计数暴露(连续 fail 达限即软死循环)。
     """
     entry = sim_batch_runs[seed]
@@ -320,7 +320,7 @@ def test_smoke_match_completes(seed: int,
     run = entry.run
     print(_stats_line(seed, run, entry.duration_s))
     assert run.result is not None and run.result.success, \
-        f'execute 未成功收口: {getattr(run.result, "status", "")!r}'
+        f'execute 未成功收尾: {getattr(run.result, "status", "")!r}'
     assert run.backend.done, '后端局终位未置(done)'
     assert run.loop._op_fail_streak_n < 5, '外环 op 连续 fail 计数触限'
     assert run.loop._settle.rounds_done >= 1, '零结算轮(未打任何一场战斗)'

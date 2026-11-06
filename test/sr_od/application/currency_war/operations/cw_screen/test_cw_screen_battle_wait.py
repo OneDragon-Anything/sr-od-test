@@ -1,5 +1,5 @@
-"""战斗等待 op 利息接线测试(镜像 src = operations/cw_screen/
-cw_screen_battle_wait.py 的来源 A/B 计数刻;streak 兄弟接线测试 =
+"""战斗等待 op 利息接入调用测试(镜像 src = operations/cw_screen/
+cw_screen_battle_wait.py 的来源 A/B 计数刻;streak 兄弟接入调用测试 =
 kernel/test_env_grants.py〔超限只读复用〕,本文件按 src 镜像规范落位)。
 
 测试面依据 = 迭代 T-27 公司契约利息累计触发设计(v2.3 定稿)§2.5 + §4.8③④ + §4.9:
@@ -285,7 +285,7 @@ def test_three_sources_one_count_per_node(test_context, monkeypatch) -> None:
 
 # ==================================================== 策略卡到级装备腿
 
-#: live 接线 sig 契约形态(logic_hook 族,组号按触发名区分,同窗多触发
+#: live 接入调用 sig 契约形态(logic_hook 族,组号按触发名区分,同窗多触发
 #: 各归各组台账可对账;src = 结算覆盖段策略卡到级装备腿调用)。
 _SIG_STRAT = ChannelSig(family='logic_hook', actor='CwScreenBattleWait',
                         group_id='battle-wait:strategy-level-grant')
@@ -330,7 +330,7 @@ def _record_strategy_writes(gs, monkeypatch) -> list[tuple]:
 
 def test_strategy_level_grant_fires_on_settlement_level_asset(
         test_context, monkeypatch) -> None:
-    """live 接线锁(结算覆盖位):持卡 + 结算 level 资产 9 → 覆盖写端
+    """live 接入调用锁(结算覆盖位):持卡 + 结算 level 资产 9 → 覆盖写端
     level 真值落账后 equips 写 + 一次性标志位(确定面 logic 写,evidence 基串/
     基串+#equip,同 sig = logic_hook 族组 battle-wait:strategy-level-
     grant);live 零回调 = 三联动域(diamond_count/deploy_cap/back_layout)
@@ -367,7 +367,7 @@ def test_strategy_level_grant_fires_on_settlement_level_asset(
     # 次序:level 观察(覆盖写端)严格先于发放两笔
     idx_level = next(i for i, c in enumerate(calls) if c[1] == 'level')
     assert idx_level < calls.index(pair[0]), \
-        f'接线次序漂移(发放必须在结算覆盖后): {calls}'
+        f'接入调用次序漂移(发放必须在结算覆盖后): {calls}'
     # live 零回调(锁 8 live 半):三联动域零写零观察(逻辑侧禁写,
     # 联动归观察域识别器;底座种子值调用前后零变化)
     touched = [c for c in calls if c[1] in ('diamond_count', 'deploy_cap',

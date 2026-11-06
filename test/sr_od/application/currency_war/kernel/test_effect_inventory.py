@@ -7,7 +7,7 @@
   重组双臂(种子未落一次性标志位 → logic_rand / 置一次性标志位 → logic)、静默覆盖臂
   (未落一次性标志位零失配行落 logic_rand_outcome,置一次性标志位失配网生效)、回归臂
   (UPGRADE_ALL 零容器写 / 非板面条目零动作 / burst 桥 Field 发放);
-- **效果推进段 tick_effect_boundary**(结算真值收口后只剩账本推进/
+- **效果推进段 tick_effect_boundary**(结算真值收尾后只剩账本推进/
   刷新发放/异常边界三判据;2026-10-12-abolish-node-ordinal §3.2 起
   生效序位 = (位面, 轮) 元组键):None 守卫 / 推进+到账 / 吞异常;
 - **清盘 → 再买 → 前排部署交互**(清盘后规范形空视图不崩,清盘写
@@ -151,7 +151,7 @@ def test_upgrade_all_and_other_bridges_unchanged() -> None:
     assert report.cleared_fields == ()
     assert report.refund_gold == 0 and report.sold_units == 0
     assert report.partial_read is False
-    assert gs.write_seq == seq_before, 'UPGRADE_ALL 零容器写(随机面观察收口)'
+    assert gs.write_seq == seq_before, 'UPGRADE_ALL 零容器写(随机面观察收尾)'
     # 非板面重写条目 → None 零动作(零 Field 写)
     assert apply_board_rewrite(gs, STRATEGY_EFFECTS['固定理财']) is None
     assert gs.write_seq == seq_before
@@ -716,7 +716,7 @@ def test_salvage_assumption_keys_registered() -> None:
 
 
 def test_salvage_plus_card_held_triggers() -> None:
-    """判据集合锁(T-95 +卡接线):持 + 卡(不持基础卡)→ 检查正常触发
+    """判据集合锁(T-95 +卡接入调用):持 + 卡(不持基础卡)→ 检查正常触发
     发放(名单集任一成员 ∈ active_strategies 即持卡);两卡均不持臂 =
     门序锁 card=False 臂现值语义(集合双名下未持 = 两卡均不持)。"""
     gs = _salvage_gs(card=False)

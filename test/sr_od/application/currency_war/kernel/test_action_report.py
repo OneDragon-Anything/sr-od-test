@@ -14,7 +14,7 @@
    采样/投影仪走链/EQUIP_WRITE_SIDES 词表校验;
 3. 动作行归一 reason 键序列化(原 test_cw_action_reason_serialization.py;
    提取键序单一源 = telemetry/schema.py ``ACTION_REASON_SOURCE_KEYS``,
-   接线位 = ``serialize_action``;缺陷实证 = 2026-09-15 sim 批
+   接入调用位 = ``serialize_action``;缺陷实证 = 2026-09-15 sim 批
    CwActionLevelUpParam 6978 行 / CwActionSellBenchParam 3729 行零 reason);
 4. 动作 op「机械执行 + 发出即记账」(原 test_cw_action_emit_book.py;
    用户裁定:动作 op = 机械执行,动作层禁设一切判效与重试——落地判定归
@@ -658,7 +658,7 @@ def test_equip_write_sides_report_form_final_values() -> None:
     assert EQUIP_WRITE_SIDES['精密拆装扳手'] == \
         'contribution:equip_wrench_duplicate_gold', '金面不变'
     assert EQUIP_WRITE_SIDES['好运令牌'] == 'bridge:grant_equip_item', \
-        '维持 R9 挂账(不虚报已接线)'
+        '维持 R9 挂账(不虚报已接通)'
     _validate_equip_write_sides()   # 词表封闭 + 落码目标已登记
 
 

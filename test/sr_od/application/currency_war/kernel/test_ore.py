@@ -17,7 +17,7 @@
   详设 details/ore-click-consume.md §1/§4):采样器支撑集、附着命中
   零掷骰写序、角色分支 3合1 连锁、席满即止、缺项兜底、None 边界。
 
-(sim 接线测试 = 后端侧测试 test_sim_backend.py;观察收口等值静默/
+(sim 接入调用测试 = 后端侧测试 test_sim_backend.py;观察收尾等值静默/
 差异 logic_rand_outcome = 基座测试
 test_game_state.py::test_write_logic_rand_and_observe_random_outcome,
 不重复。)

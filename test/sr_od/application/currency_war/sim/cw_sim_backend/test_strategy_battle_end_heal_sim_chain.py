@@ -1,7 +1,7 @@
 """策略卡战斗结束回血 sim 世界链测试(镜像 src = sim/cw_sim_backend.py
 的 _resolve_battle 战斗结束回血腿;kernel 触发函数单元面 = kernel/
 cw_gain_chain/test_check_strategy_battle_end_heal.py,本文件锁 sim 结算腿
-接线与世界真值落地面)。
+接入调用与世界真值落地面)。
 
 测试面依据 = 迭代设计 designs/T-325-xingji-heping-baoxian.md §4 锁 5
 (REVIEW-T325 免裁 7/7;驱动与断言形态先例 = 同目录
@@ -14,7 +14,7 @@ test_strategy_boss_end_heal_sim_chain.py,直加不 clip 边界沿其锁 4 落码
   'sim:strategy' 组;胜败两态共同路径(败局存活也回);
 - reward/supply → 零笔(扑满 ∈ reward 随默认子案 a 同闸零笔——触发域
   判读申报披露键承载,非定谳);
-- 死亡局 → 零笔(dead 提前 return 在挂点之前);
+- 死亡局 → 零笔(dead 提前 return 在调用点之前);
 - 直加不 clip 边界:hp 预置 95 → 回血 105 越存量 100 上界仍直加(正部
   HP 加法家族形真值锁,后继补 clip 常量在此显式红)+ 三披露键存在性
   断言(scope/cap 家族键/完胜偏严);
@@ -123,7 +123,7 @@ def _hold_card(gs, *, card: str = _CARD) -> None:
 def _drive_to_kind_prep(monkeypatch: pytest.MonkeyPatch, b: SimBackend,
                         *, target_kind: str) -> None:
     """自当前窗驱动到指定节点类型的备战窗(途经战斗全胜强制穿过;跨位面
-    经位面过渡屏空白点击收口,先例 =
+    经位面过渡屏空白点击收尾,先例 =
     test_strategy_boss_end_heal_sim_chain._drive_to_kind_prep;目标判定 =
     节点窗场字段 kind 序列真值)。"""
     gs = b.gs
@@ -209,7 +209,7 @@ def test_combat_node_matrix_heals_on_win_settlement(
 def test_loss_survival_heals(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """败局存活也回血:卡面「战斗后」无「胜利」限定 = 败局存活同拍回血
-    (败局 −23 + 回血 +10,挂点在胜败两态共同路径)。"""
+    (败局 −23 + 回血 +10,调用点在胜败两态共同路径)。"""
     b = _prep_backend(92)
     try:
         gs = b.gs
@@ -289,7 +289,7 @@ def test_reward_and_supply_zero_heal(
 def test_dead_battle_no_heal(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """死亡局不回血:保底已用 + 濒死局战斗败致死 → hp 归零死亡提前
-    return 在回血挂点之前,零回血笔直接进终局。"""
+    return 在回血调用点之前,零回血笔直接进终局。"""
     b = _prep_backend(94)
     try:
         gs = b.gs

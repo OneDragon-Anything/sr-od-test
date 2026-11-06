@@ -4,9 +4,9 @@
 screens.py 盛会之星段;report 函数级契约由 test_screen_report_ports 测试
 承重,本文件不重复):
 
-- **观察上报接线测试**(表驱动;命运卜者双域拆独立测试):观察 node 读链桩化 →
+- **观察上报接入调用测试**(表驱动;命运卜者双域拆独立测试):观察 node 读链桩化 →
   驱动 observe →
-  report 经屏文件落容器(容器终值);盛会之星接线由 obs_arch_event_screens
+  report 经屏文件落容器(容器终值);盛会之星接入调用由 obs_arch_event_screens
   同文件测试承重(懒读保真,不在本表);
 - **入口门语义测试**(带门四屏):门 miss = round_fail 交回外循环重判,
   文案沿用现役,且不进读链(obs 不装载);
@@ -105,7 +105,7 @@ def _setup_expert(op, monkeypatch) -> None:
                         lambda ctx, name, screen: _pts.get(name))
 
 
-# ==================== 观察上报接线测试(表驱动)====================
+# ==================== 观察上报接入调用测试(表驱动)====================
 
 # 屏键 → (模块名, 类名, 装配钩子(op, monkeypatch), 期望容器字段, 期望终值)
 _OBS_ROWS = {
@@ -151,9 +151,9 @@ _OBS_ROWS = {
     'partner', 'planner', 'wish_trial', 'expert_invite'])
 def test_observe_reports_container_per_screen(test_context, monkeypatch,
                                               screen_key: str) -> None:
-    """观察上报接线测试(表驱动四屏;命运卜者/星徽秘典双域测试拆独立 = 下两个测试):
+    """观察上报接入调用测试(表驱动四屏;命运卜者/星徽秘典双域测试拆独立 = 下两个测试):
     观察 node 读链桩化 → observe success → report 经屏文件落容器
-    (容器终值逐位 = 现役写点转录值)+ obs 挂实例属性。红 = 接线断流 /
+    (容器终值逐位 = 现役写点转录值)+ obs 挂实例属性。红 = 接入调用断流 /
     容器终值漂移 / obs 未装载。"""
     import importlib
 
@@ -184,7 +184,7 @@ def test_fortune_observe_reports_dual_domain(test_context, monkeypatch) -> None:
     """命运卜者观察上报测试(双域,坐标随报条款):表驱动 5 元组不容双域
     拆独立测试——观察 node 读链桩化(OCR + area_center 读桩回定值,恒稳
     断言不读真实建档)→ observe success → report 双写 fortune_opts /
-    fortune_opts_xy(同门同序等长)+ obs 挂实例属性。红 = 接线断流 /
+    fortune_opts_xy(同门同序等长)+ obs 挂实例属性。红 = 接入调用断流 /
     坐标域未随观察上报 / 双域终值漂移。"""
     from one_dragon.base.geometry.point import Point
     from sr_od.application.currency_war.operations.cw_screen import (
@@ -219,7 +219,7 @@ def test_wish_observe_reports_dual_domain(test_context, monkeypatch) -> None:
     桩化(OCR 桩 + 门桩放行,恒稳断言不读真实建档)→ observe success →
     report 双写 wish_trial_opts / wish_trial_opts_xy(同门同序等长;坐标
     = CARD_XS 桶锚 + CARD_Y 观察期一次解出,值锚 660/340 槽常量)+
-    obs 挂实例属性。红 = 接线断流 / 坐标域未随观察上报 / 双域终值漂移。"""
+    obs 挂实例属性。红 = 接入调用断流 / 坐标域未随观察上报 / 双域终值漂移。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_wish_trial as mod,
     )
@@ -255,7 +255,7 @@ def test_bookcard_observe_reports_dual_domain(test_context, monkeypatch) -> None
     建档)→ 标准化门(「列车同行星徽」→ FACTIONS 精确命中)→ observe
     success → report 双写 star_tome_opts / star_tome_opts_xy(同门同序
     等长;坐标 = OCR x 中心 + x 近邻「星徽卡-N」建档中心 y,观察期一次
-    解出)+ obs 挂实例属性。红 = 接线断流 / 坐标域未随观察上报 / 双域
+    解出)+ obs 挂实例属性。红 = 接入调用断流 / 坐标域未随观察上报 / 双域
     终值漂移 / 标准化门失守(裸 OCR 名直写容器)。"""
     from one_dragon.base.geometry.point import Point
     from sr_od.application.currency_war.operations.cw_screen import (

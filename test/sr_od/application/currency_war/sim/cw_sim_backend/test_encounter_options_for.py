@@ -155,7 +155,7 @@ def test_hp_leg_direct_call_grants_exact_and_offtable_zero_write() -> None:
     """hp 腿直调真值 + 表外卡零写(apply_strategy_pick_hp 通用腿直调,
     T-127 test_strategy_pick_hp.py 形态):已登记卡入账恰 +10 恰一笔
     (独立 evidence 笔),表外名零笔零写(hp/evidence 双不动)。rng
-    形参 = 负值支扩挂点随批加入(正部成员不消费采样,传独立实例形)。"""
+    形参 = 负值支扩调用点随批加入(正部成员不消费采样,传独立实例形)。"""
     b = _backend(seed=52)
     try:
         gs = b.gs

@@ -1,8 +1,8 @@
 """sim 策略卡装备计数经验节点窗腿测试(镜像 src = sim/cw_sim_backend.py
 的 _begin_node_window 装备计数 XP 腿 + kernel 纯判定
-check_strategy_equip_count_xp 的 sim 挂点世界写;kernel 原语单元面 =
+check_strategy_equip_count_xp 的 sim 调用点世界写;kernel 原语单元面 =
 kernel/cw_gain_chain/test_check_strategy_equip_count_xp.py,本文件锁
-sim 窗口接线与世界真值落地面;先例 = 同目录
+sim 窗口接入调用与世界真值落地面;先例 = 同目录
 test_strategy_bench_count_xp_sim_chain.py)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-272-zanmei-
@@ -115,7 +115,7 @@ def test_node_window_holding_grants(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_holding_carry_levelup(monkeypatch: pytest.MonkeyPatch) -> None:
     """跨级结转算例:门槛恰跨形态(3 级差 1 + 2 → 4 级余 1)——世界等级
-    随经验真实推进(升级联动发牌概率的耦合面以此为底,挂点钉在商店全刷
+    随经验真实推进(升级联动发牌概率的耦合面以此为底,调用点钉在商店全刷
     前的语义锚)。"""
     b = _setup(holding=_HOLDING)
     try:

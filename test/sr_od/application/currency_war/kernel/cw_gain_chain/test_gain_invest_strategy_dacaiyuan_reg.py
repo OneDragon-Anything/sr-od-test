@@ -2,12 +2,12 @@
 建模——BattlefieldEffect 载体携 burst 首例,单条目双桥同拍各司其职,
 先例 = 同目录 test_gain_invest_strategy_refresh_pair_burst.py)。
 
-锁 4(只登记不写状态的实现分支 burst 挂点锁,镜像固定理财/合并同类项 burst 锁形):
+锁 4(只登记不写状态的实现分支 burst 调用点锁,镜像固定理财/合并同类项 burst 锁形):
 session 在场选「大裁员」→ 获得链只登记不写状态的实现分支 register_strategy 入册 + burst 桥
 把 ``payload.free_refresh_burst=6`` 一次性累加进免费刷新余额(None 基 =
 0 起算)+ 板面重写桥出售面同拍执行(预种 2★1 费退款恰 3——cost=1 无
 手续费,×2 两候选口径同值的确定性锚;缺口 G4 闭合前按基础公式记)。
-挂点 = 只登记不写状态的实现分支(②段)回归钉,防漂移到 ③段效果体。
+调用点 = 只登记不写状态的实现分支(②段)回归钉,防漂移到 ③段效果体。
 """
 from __future__ import annotations
 

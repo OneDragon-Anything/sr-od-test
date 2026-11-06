@@ -138,7 +138,7 @@ class TestSceneClosedSet:
 
     def test_unknown_scenario_rejected(self):
         """场景闭集防线:枚举外值抛错(与 sell_gate SELL_CHANNELS 同款
-        单一入口纪律;新场景先登记 SCENE_SPECS 再接线)。"""
+        单一入口纪律;新场景先登记 SCENE_SPECS 再接入调用)。"""
         sess, gs = _board_full_gs([cw4_bc('停云')])
         with pytest.raises(ValueError, match='未知卖出场景'):
             evaluate_sell_candidates(gs, 'bogus_scene')
@@ -588,7 +588,7 @@ class TestSceneTableParams:
                 assert spec.legacy_channel in SELL_CHANNELS
         assert 'funding' not in SELL_CHANNELS, \
             'funding 通道随筹资场景退役,闭集零残留'
-        assert len(SELL_SCENARIOS) == 3   # 三触发三场景(闭集 5→3 收口)
+        assert len(SELL_SCENARIOS) == 3   # 三触发三场景(闭集 5→3 收尾)
 
     def test_interest_scene_carries_cross_tier_param(self):
         """跨档止盈 = 节末凑息独有场景参数(acquisition §3 表):其余

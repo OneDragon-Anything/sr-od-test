@@ -1,6 +1,6 @@
 """策略卡羁绊档位条件发放 sim 世界链测试(镜像 src = sim/cw_sim_backend.py
-的 _resolve_battle 结算腿族槽挂点;kernel 触发函数单元面 = kernel/
-cw_gain_chain/test_check_strategy_bond_tier_grants.py,本文件锁 sim 接线
+的 _resolve_battle 结算腿族槽调用点;kernel 触发函数单元面 = kernel/
+cw_gain_chain/test_check_strategy_bond_tier_grants.py,本文件锁 sim 接入调用
 与世界真值落地面)。
 
 测试面依据 = 迭代设计 designs/T-271-mengjing-dawutai.md §4 锁 8
@@ -16,7 +16,7 @@ chain.py;触发-发放单拍制 = 结算拍直接发放,无节点窗交付拍):
   路径);
 - 幂等回归 = 既有守卫(同节点战斗重放 _settled_key 整段跳过,零二次
   发放);
-- 死亡局不发放(挂点在死亡提前 return 之后,局终不见发放);
+- 死亡局不发放(调用点在死亡提前 return 之后,局终不见发放);
 - 板面直构双源同喂(board 容器 = 左面板口径 + deployed 行域注入 =
   身份口径,两源同值;构成式:花火+知更鸟 = 盛会之星 2 gate,娜塔莎+
   藿藿 = 治疗 2,杰帕德+砂金 = 护盾 2,娜塔莎+杰帕德 = 贝洛伯格 2 →
@@ -228,7 +228,7 @@ def test_settled_replay_no_regrant(
 def test_dead_battle_no_grant(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """死亡局锁:保底已用 + 濒死局 boss 战败 → hp 归零死亡提前 return
-    在发放挂点之前,零发放直接进终局(局终不见发放,与实机一致;boss
+    在发放调用点之前,零发放直接进终局(局终不见发放,与实机一致;boss
     位伤害可击穿 1 hp 濒死,普通战斗位伤害不必然致死)。"""
     b = _prep_backend(94)
     try:

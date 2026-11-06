@@ -1,5 +1,5 @@
-"""gain_invest_strategy 环境取卡触发发放接线测试(镜像 src =
-kernel/cw_gain_chain.py 的 gain_invest_strategy 金币分支接线段;按被测方法拆
+"""gain_invest_strategy 环境取卡触发发放接入调用测试(镜像 src =
+kernel/cw_gain_chain.py 的 gain_invest_strategy 金币分支接入调用段;按被测方法拆
 目录规范落位,先例 = 同目录 test_gain_invest_env.py)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
@@ -7,7 +7,7 @@ T-46-celue-dashi.md(定稿)§4 锁 3(§2.1(c) 落地形态):
 - live 同口(report_action_pick_invest_strategy_param)两连笔——首笔 +2 金、
   次笔 +4 金(含本张口径的链级锁),active_strategies 注册不受触发影响;
 - 次序锁:注入 on_strategy_gained 抛异常 → 金已入账且异常上抛
-  (锁「金币分支在③前」接线位置)。
+  (锁「金币分支在③前」接入调用位置)。
 构造沿现役获得链测试先例:直写 opts 定向选入策略大师(环境经
 report_action_pick_invest_env_param),策略经 report_action_pick_invest_
 strategy_param 上报。

@@ -18,7 +18,7 @@ currency_war/strategy-docs/29_invest_strategy_screen.md;规格出处 =
 - ⑩ LCS 兜底命中即告警(观测锚);
 - ⑪ 环境屏(env)平行测试面(投资环境策略层 invest_env:线价值三口径/
   赠卡分/时代族零值/环境现金分/刷新三态与阈值/自拆台排除/构建校验
-  /flow 消费侧接线)——与策略屏同族评分概念的 env 支,两屏生产模块
+  /flow 消费侧接入调用)——与策略屏同族评分概念的 env 支,两屏生产模块
   平行,各自直测;
 - ⑫ 阵容冲突护栏·策略屏(护栏设计 §2.2/§2.3:基准锁定/持有切换/出域
   排除/全出域回退/刷新交互/reason 文法);
@@ -26,7 +26,7 @@ currency_war/strategy-docs/29_invest_strategy_screen.md;规格出处 =
   槽位表通道——禁选通道先建议刷新/闸尽落选出域已排除/全出域回退/
   基准空帧与通用环境零变化)。
 
-校验「import 即炸」的接线面:直接调校验入口 + monkeypatch 表断言抛错,
+校验「import 即炸」的接入调用面:直接调校验入口 + monkeypatch 表断言抛错,
 不用 reload/源码扫描。
 
 测试纪律:零真实副作用;断言钉住设计语义,数值期望 = 注册表真实数据
@@ -762,7 +762,7 @@ def test_exact_hit_does_not_warn(caplog):
 
 # ==================== ⑪ 环境屏(env)平行测试面 ====================
 # 投资环境策略层(与策略屏同族评分概念的 env 支;两屏生产模块平行,
-# 各自直测)。判据 = ①-⑦ + flow 消费侧接线测试。
+# 各自直测)。判据 = ①-⑦ + flow 消费侧接入调用测试。
 
 _ENV_SIG_LOGIC = ChannelSig(family='logic_action', actor='cw-invest-env-test',
                             mode='compute')
@@ -1039,7 +1039,7 @@ def test_env_build_validation_coefficient_missing_key_raises(monkeypatch):
             invest_env._validate_coefficient_tables()
 
 
-# ---- flow 消费侧接线测试 ----
+# ---- flow 消费侧接入调用测试 ----
 
 
 def _env_wired_strategy(gs: GameState):
@@ -1132,7 +1132,7 @@ def _write_strategy_frame(gs: GameState, options: list[str]) -> None:
 
 
 def test_env_flow_strategy_axis_strategy_layer_reason_shape():
-    """策略轴接线回归:kind='strategy' 走策略层 ``invest_strategy.decide``——
+    """策略轴接入调用回归:kind='strategy' 走策略层 ``invest_strategy.decide``——
     产物 = CwActionPickInvestStrategyParam 且 reason 为策略层新机签名
     形态 ``pick total=...`` 前缀(归因来源可辨);idx 落在候选域。"""
     from sr_od.application.currency_war.kernel.cw_vocab import (

@@ -10,7 +10,7 @@ grants``,发放原语 = ``cw_env_grants.grant_env_bond_tier``):
 - 单窗跨两档各 1 件(两对写,evidence 各带档位);
 - 每档一次性:降档再回零新增写(用户裁定「每个档位只发一次奖励」);
 - equips None 跳过后,不改任何 watched 集的板面写(卖非已登记阵营场上件)
-  重试补发(sets-changed 门外的必查语义,判据挂点锁);
+  重试补发(sets-changed 门外的必查语义,判据调用点锁);
 - 阈值边界:计数 1(2/4/6/9 全不达)零写;
 - L2 装备贡献锁:非击破出身穿【击破星徽】→ 计数达标触发;
 - 递归安全:发放窗口内无 deployed 行域写(写序检查)。
@@ -172,7 +172,7 @@ def test_equips_none_withhold_then_board_write_retry(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """equips None 跳过(宁缺勿造,零写零 done)后,不改任何 watched 集
     的板面写(卖非已登记阵营场上件,击破计数不动)重试补发——sets-changed
-    门辖不到的写,门外必查分支兜住(判据挂点锁,接回门内本测试即红)。"""
+    门辖不到的写,门外必查分支兜住(判据调用点锁,接回门内本测试即红)。"""
     gs = _gs(env=_ENV)   # equips 未写 = None
     _write_dep(gs, [_u('乱破'), _u('大丽花'), _u('希儿')])
     assert gs.equips.value is None, '缺读零写(宁缺勿造)'

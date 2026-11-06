@@ -16,7 +16,7 @@ T-5-r1.md,由本测试 ``-s`` 输出收割):
   ``steal_on_level_up``);入席 > 0 局须有备战席观察写行(spy_steal
   证据);
 - ④判据面禁 hp/胜率:本文件断言面零 hp/胜率消费(sim-testing 边界;
-  逐局统计行的终局源分类沿用冒烟形态,属运行收口分类非判据输入);
+  逐局统计行的终局源分类沿用冒烟形态,属运行收尾分类非判据输入);
 - ⑤同 seed 重放确定性:全跑双跑容器逐位一致 =
   ``test_sim_first_run.py::test_first_match_deterministic_double_run_
   identical`` 承载(全跑快照对拍,本批不重复建设)。

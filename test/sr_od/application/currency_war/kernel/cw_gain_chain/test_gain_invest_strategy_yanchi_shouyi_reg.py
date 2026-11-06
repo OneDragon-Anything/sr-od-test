@@ -50,7 +50,7 @@ def test_registration_chain_and_four_bridges_noop() -> None:
     缺省 0 / 板面重写桥 board_rewrite 缺省 '' → None / 节点边界桥
     per_node 族缺省 0 / 容量直写桥 capacity_limit 缺省 0 → 早退),bot
     零响应(行动值时点触发〔读数定义判读申报制〕/我方小队伤害增幅 40%
-    全游戏侧自算,行动值读数零建模零接线)。session=None 支登记跳过、
+    全游戏侧自算,行动值读数零建模零接入调用)。session=None 支登记跳过、
     注册照常。注:测试直调 session=None 跳过只登记不写状态的实现分支 = 测试形态;生产对局
     动作 op 与 sim 驱动器均装配 session,只登记不写状态的实现分支真实执行(live/sim 同链
     kernel 单一实现)。"""

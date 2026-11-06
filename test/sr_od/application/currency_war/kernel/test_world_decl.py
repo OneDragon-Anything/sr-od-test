@@ -162,7 +162,7 @@ def test_logic_outcome_world_decl_default_compat():
 
 def test_declare_world_port_default_off_and_forwarding():
     """declare_world 喂入契约测试(契约 3):未装配 = no-op(实机零开销
-    零行为变化——本迭代产物「在库未接线」的机制前提);装配后 =
+    零行为变化——本迭代产物「在库未接通」的机制前提);装配后 =
     后端 advance(decl) 恰转发一次;decl = None(非转移动作)端口层
     直返,装配与否都不触后端。"""
     # 未装配:no-op 不响(纯实机缺省态)
@@ -192,7 +192,7 @@ def test_declare_world_port_default_off_and_forwarding():
 
 def test_advance_trigger_out_of_set_raises():
     """advance 分派表集外值 ValueError 测试(详设 world-decl.md §3 集外
-    处置):集外 trigger 响亮(构造点漂移 = 接线 bug 禁静默);'' 纯转移
+    处置):集外 trigger 响亮(构造点漂移 = 接入调用 bug 禁静默);'' 纯转移
     恒在键集(空串安全 = 不 raise,零专属过程)。"""
     from sr_od.application.currency_war.sim.cw_sim_backend import (
         ADVANCE_TRIGGER_KINDS,

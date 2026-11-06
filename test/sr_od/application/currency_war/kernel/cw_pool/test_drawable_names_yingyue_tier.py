@@ -5,7 +5,7 @@ kernel/cw_pool.py 该两出口;宿主目录按被测函数拆目录规范落位,
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-410-feiguang-
 yingyue.md §4 锁 5(默认案 A 全场同名同档,含商店在架卡):
 - 飞光·映月拿卡档 1(tier=1)→ 景元归入 1 费桶(商店发牌桶/随机授予桶
-  自动跟随,经 effective_cost 档感知过滤零额外接线);
+  自动跟随,经 effective_cost 档感知过滤零额外接入调用);
 - 未拿卡(None)→ 景元在注册表起始 5 费桶。
 """
 from __future__ import annotations

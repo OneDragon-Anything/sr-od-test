@@ -1,7 +1,7 @@
 """策略卡首领节点完成固定集发放 sim 世界链测试(镜像 src =
 sim/cw_sim_backend.py 的 _resolve_battle 首领完成腿;kernel 触发函数
 单元面 = kernel/cw_gain_chain/test_check_strategy_boss_completion_
-grants.py,本文件锁 sim 结算腿接线与世界真值落地面)。
+grants.py,本文件锁 sim 结算腿接入调用与世界真值落地面)。
 
 测试面依据 = 迭代设计 designs/T-330-wuqi-pifashang.md §4 锁 4/5/6 +
 REVIEW-T330(驱动与断言形态先例 = 同目录 test_strategy_boss_battle_
@@ -9,11 +9,11 @@ grant_sim_chain.py):
 - 持卡局 P1 首领节点(P1 序列现值末位)战斗结算后 equips 恰 +8(简易池
   注册表序全集)+ ``strategy_boss_completion#<卡名>`` 前缀 evidence 笔
   ×8 + 落一次性标志位(strategy_conditional_done 纯卡名;**断言用前缀匹配禁精确
-  匹配**——gain_equipment 原语内追加 #equip 后缀,T-166 收口批 D2
+  匹配**——gain_equipment 原语内追加 #equip 后缀,T-166 收尾批 D2
   口径);确定发放 = logic 渠道(锚定域 rand=False);
 - 一次性标志位:落一次性标志位后续位面首领(P2 首领位)再结算零新增笔(「下个」恰
   一次,函数内一次性标志位自管防跨 boss 重复);
-- 败局存活也发(卡面无「胜利」限定 = 直读);死亡局不发放(挂点在死亡
+- 败局存活也发(卡面无「胜利」限定 = 直读);死亡局不发放(调用点在死亡
   提前 return 之后);
 - 驱动形态 = 出战动作触发结算(2026-10-29 流程模型);引擎驱动助手
   import 自 sim/test_sim_backend.py(已登记超限拆分债文件,禁追加,只
@@ -243,7 +243,7 @@ def test_next_plane_boss_no_repeat_after_latch(
 def test_loss_survival_still_grants(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """锁 5(败局存活也发):持卡局首领战败未死 → 固定集照入栏(卡面无
-    「胜利」限定 = 直读;挂点在胜败两态共同路径,败局待办登记之前)。"""
+    「胜利」限定 = 直读;调用点在胜败两态共同路径,败局待办登记之前)。"""
     b = _prep_backend(83)
     try:
         gs = b.gs
@@ -265,7 +265,7 @@ def test_loss_survival_still_grants(
 def test_dead_battle_no_grant(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """锁 6(死亡局不发放):保底已用 + 濒死局首领战败 → hp 归零死亡
-    提前 return 在挂点之前,零发放直接进终局(局终不见发放,与实机
+    提前 return 在调用点之前,零发放直接进终局(局终不见发放,与实机
     一致)。"""
     b = _prep_backend(84)
     try:

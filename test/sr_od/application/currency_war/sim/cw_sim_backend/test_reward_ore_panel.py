@@ -13,7 +13,7 @@
   败局基础+息 + 连胜清零 + 不掉血,super 局同样生效;
 - 占位披露回归:``PIGGY_ORE_PANEL_BONUS_PLACEHOLDER`` 随局披露已登记
   (先例 = ORE_PLANE_START_PENDING 直断,sim/test_sim_backend.py),
-  封死「键已登记但未接线 = 永不发射死常量」回归通道。
+  封死「键已登记但未接通 = 永不发射死常量」回归通道。
 
 复用声明:装配/结算/推进助手 import 自 sim/test_sim_backend.py(已登记
 超限拆分债文件,禁追加,只 import 复用不改,设计 §2.1 落点约束);
@@ -82,7 +82,7 @@ def test_reward_ore_panel_points_count_and_continuation() -> None:
 @pytest.mark.parametrize('piggy_env', _PIGGY_ENVS)
 def test_piggy_super_panel_and_income_legs(
         piggy_env: str, monkeypatch: pytest.MonkeyPatch) -> None:
-    """后端装配单点接线 + 扑满链三条分支变体冒烟(递延/连胜例外/不掉血):
+    """后端装配单点接入调用 + 扑满链三条分支变体冒烟(递延/连胜例外/不掉血):
     备战帧 spheres 点数 = 锚 + 注册表增量(现算形,装配点未消费注册表
     即红);备战帧金 = 开局种子值(kernel ``seed_opening_state`` 金种子,
     T-6 验收锐度建议的直断);胜局结算分支一次落账 = 基础+息+连胜、连胜
@@ -131,10 +131,10 @@ def test_piggy_super_panel_and_income_legs(
 
 def test_piggy_ore_panel_bonus_disclosure_registered() -> None:
     """占位披露回归锁:PIGGY_ORE_PANEL_BONUS_PLACEHOLDER 在后端披露集
-    已登记(_BASE_DISCLOSURES 接线即随局披露;键已登记但未接线 = 永不发射
+    已登记(_BASE_DISCLOSURES 接入调用即随局披露;键已登记但未接通 = 永不发射
     死常量的回归通道由此封死;先例 = ORE_PLANE_START_PENDING 直断,
     sim/test_sim_backend.py)。裸构造即断:基座披露与局进程无关。"""
     b = SimBackend(seed=1, cfg=RunConfig(
         selected_difficulty='A8', enemy_difficulty=108))
     assert b.disclosures.get(PIGGY_ORE_PANEL_BONUS_PLACEHOLDER) is not None, \
-        '占位披露键未接线(死常量回归)'
+        '占位披露键未接通(死常量回归)'

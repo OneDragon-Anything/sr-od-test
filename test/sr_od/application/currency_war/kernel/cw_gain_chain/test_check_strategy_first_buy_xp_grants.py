@@ -1,6 +1,6 @@
 """策略卡首购经验检查腿测试(镜像 src = kernel/cw_gain_chain.py 的
 check_strategy_first_buy_xp_grants + kernel/cw_action_report/buy_card.py
-尾段发火腿接线)。
+尾段发火腿接入调用)。
 
 测试面依据 = 迭代设计 designs/T-163-luansheng-sushu.md(定稿)§4 锁
 3/4/5/6 + REVIEW-T163 §4②(卡面官方原文:「获得本投资策略后，首次购买
@@ -203,7 +203,7 @@ def test_live_form_latch_only_world_write_zero() -> None:
 
 def test_buy_card_path_grants_xp(sim_installed) -> None:
     """买牌上报 path 世界锁(锁 4 主条):持卡局经上报单口买 2 费牌 →
-    xp 恰 +3、落一次性标志位(发火腿接线全链;gold 未读买分支跳写,场景最小化)。"""
+    xp 恰 +3、落一次性标志位(发火腿接入调用全链;gold 未读买分支跳写,场景最小化)。"""
     gs = cw4_gs(node_fill=False, shop_screen='off', gold_unread=True,
                 bench=[], active_strategies=(_CARD,),
                 level=5, xp=(0, XP_TO_NEXT_LEVEL[5]))

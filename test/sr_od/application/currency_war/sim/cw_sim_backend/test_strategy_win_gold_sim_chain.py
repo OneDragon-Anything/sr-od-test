@@ -1,15 +1,15 @@
 """策略卡胜利结算条件金 sim 世界链测试(镜像 src = sim/cw_sim_backend.py
 的 _resolve_battle 策略胜利金腿;kernel 触发函数单元面 =
 kernel/cw_gain_chain/test_check_strategy_win_gold_grants.py,本文件锁
-sim 结算腿接线与世界真值落地面)。
+sim 结算腿接入调用与世界真值落地面)。
 
 测试面依据 = 迭代设计 designs/T-130-zhaocai-gou.md §4 锁 4/锁 7 +
-REVIEW-T130(r1-S2 修法:节点类型矩阵四态——防实现批把接线误包进
+REVIEW-T130(r1-S2 修法:节点类型矩阵四态——防实现批把接入调用误包进
 kind in COMBAT_NODE_TYPES 守卫而静默翻转触发域默认案〔全部结算节点〕):
 - ①普通奖励关(恒胜白拿路径)持卡有佩佩 → 金笔存在;
 - ②扑满胜局 → 金笔存在,值 = 锚定同拍收入笔后合计(income 落账 observe
-  居挂点之前,按收入笔现值 + 佩佩数断言);
-- ③扑满败局(won=False 豁免 hp_delta=0)→ 零金笔(双判据必要性的接线
+  居调用点之前,按收入笔现值 + 佩佩数断言);
+- ③扑满败局(won=False 豁免 hp_delta=0)→ 零金笔(双判据必要性的接入调用
   级锁);④战斗类败局 → 零金笔;
 - evidence = sim:engine:strategy_win_gold:p<位面>r<轮>(sim_evidence 前缀
   + 写点 tag 独立分域可过滤审计),sig 单形态 = obs 族 'sim:strategy'
@@ -207,7 +207,7 @@ def test_reward_node_win_pays_gold(
 def test_piggy_win_pays_gold_after_income_row(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """锁 4②:扑满胜局(won=True, hp_delta=0)→ 金笔存在,值 = 锚定
-    同拍收入笔后合计(扑满收入落账 observe 居本腿挂点之前,本腿值 =
+    同拍收入笔后合计(扑满收入落账 observe 居本腿调用点之前,本腿值 =
     收入笔现值 + 佩佩数;序 = income 笔先、win 金笔后)。"""
     b = _prep_backend(52, piggy=True)
     try:
@@ -236,7 +236,7 @@ def test_piggy_win_pays_gold_after_income_row(
 def test_piggy_loss_zero_gold(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """锁 4③:扑满败局(won=False 豁免 hp_delta=0)→ 零金笔(双判据
-    必要性的接线级锁——not won 在函数内短路;收入笔照付败局形,胜败
+    必要性的接入调用级锁——not won 在函数内短路;收入笔照付败局形,胜败
     分野只在策略金腿)。"""
     b = _prep_backend(53, piggy=True)
     try:

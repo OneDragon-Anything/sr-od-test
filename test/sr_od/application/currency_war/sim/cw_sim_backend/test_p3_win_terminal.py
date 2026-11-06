@@ -126,7 +126,7 @@ def _drive_step(b: SimBackend, rng_seed: int) -> None:
 
 
 def _run_full(seed: int, env_name: str = '') -> dict:
-    """整局驱动到终局(装配缝完整收口:返回终局快照 dict,后端在退出前
+    """整局驱动到终局(装配缝完整收尾:返回终局快照 dict,后端在退出前
     必卸——进程内单装配,对拍连跑两局不撞装配槽)。"""
     cfg = RunConfig(selected_difficulty='A8', enemy_difficulty=108,
                     env_present=bool(env_name))
@@ -152,7 +152,7 @@ def _run_full(seed: int, env_name: str = '') -> dict:
             if node is not None:
                 kinds[(node.plane, node.round_num)] = node.kind
             _drive_step(b, seed)
-        assert b.done, '4096 步内未收口(流程异常)'
+        assert b.done, '4096 步内未收尾(流程异常)'
         res = b.result()
         node = b.gs.node.value
         return {
@@ -183,7 +183,7 @@ def test_full_walk_p3_survive_is_win_terminal() -> None:
 
 
 def test_hp_zero_death_is_loss_without_win_disclosure(monkeypatch) -> None:
-    """败局:结算恒败桩 → hp 归零死亡分支收口,无 run_complete(胜负
+    """败局:结算恒败桩 → hp 归零死亡分支收尾,无 run_complete(胜负
     判别单一源在披露集;hp 归零败局语义不变)。"""
     import sr_od.application.currency_war.sim.cw_sim_backend as sb
 

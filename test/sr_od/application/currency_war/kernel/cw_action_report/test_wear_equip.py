@@ -150,7 +150,7 @@ def test_wear_same_simple_pair_no_blind_concat() -> None:
 
 
 def test_fusion_summon_registration_consolidated() -> None:
-    """登记对拍汇总(四把存量锁就地扩集的卡级收口,防扩集漏项):箱腿
+    """登记对拍汇总(四把存量锁就地扩集的卡级收尾,防扩集漏项):箱腿
     注册形状(GRANTS 条目 items 直读 + 镜像表逐对相等 + PICK 工厂键)
     与效果条目1 零登记面(STRATEGY_EFFECTS / STRATEGY_BINDINGS 双缺席)同点
     钉死;计数 = 各存量锁扩集后的现值。"""

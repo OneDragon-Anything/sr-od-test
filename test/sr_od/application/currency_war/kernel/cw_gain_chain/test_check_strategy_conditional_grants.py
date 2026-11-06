@@ -1,6 +1,6 @@
 """策略卡条件发放检查腿测试(镜像 src = kernel/cw_gain_chain.py 的
 check_strategy_conditional_grants + kernel/cw_game_state.py 的
-_tick_strategy_conditional_grants 接线)。
+_tick_strategy_conditional_grants 接入调用)。
 
 测试面依据 = 迭代设计 designs/T-102-guimo-xiaoying.md §4 锁 2/3/4/5/9:
 - 构造 = 容器直置 + advance_node_effective 驱动(序位前进唯一落账入口,

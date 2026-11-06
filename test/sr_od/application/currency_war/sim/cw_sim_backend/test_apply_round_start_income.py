@@ -1,9 +1,9 @@
-"""sim 常规轮首利息接线测试(镜像 src = sim/cw_sim_backend.py 的
-apply_round_start_income 接线;同文件兄弟扑满结算分支测试 =
+"""sim 常规轮首利息接入调用测试(镜像 src = sim/cw_sim_backend.py 的
+apply_round_start_income 接入调用;同文件兄弟扑满结算分支测试 =
 本目录 test_resolve_battle.py,按被测方法拆目录规范落位)。
 
 测试面依据 = 迭代 T-27 公司契约利息累计触发设计(v2.3 定稿)§2.4 + §4.4 + §4.6:
-- **常规轮首接线**(须经 sim 引擎窗口路径落写,设计 §4.4——record 无
+- **常规轮首接入调用**(须经 sim 引擎窗口路径落写,设计 §4.4——record 无
   内建幂等,幂等守卫住 ``_begin_node_window``,函数级直调会双加):
   逐节点窗口累计、同节点窗重放零双加、跨阈发放一次不重发;
 - **cap/flat 修饰**(设计 §4.6):利息上调局计数按 resolved cap
@@ -80,9 +80,9 @@ def _topa_count(gs) -> int:
 
 def test_interest_account_via_engine_window_and_threshold_grant(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """常规轮首接线真窗口路径(T-27 设计 §4.4):逐节点窗开累计息账;
+    """常规轮首接入调用真窗口路径(T-27 设计 §4.4):逐节点窗开累计息账;
     同节点窗重放(``_begin_node_window`` 二次调用)零双加——幂等守卫
-    住窗口收口,不在收入函数内;跨阈节点窗发放恰一次(托帕&账账 1★
+    住窗口收尾,不在收入函数内;跨阈节点窗发放恰一次(托帕&账账 1★
     入席 + done 封账),后续窗口不再重发。金库经容器直写抬到利息满档区
     (测试缝:引擎轮首收入读容器现值算息,抬金使每节点息 = 满档 5,
     阈值 40 在 P1 内可达,免跨位面推进)。"""

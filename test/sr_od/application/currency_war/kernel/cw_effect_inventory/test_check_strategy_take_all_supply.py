@@ -1,5 +1,5 @@
 """全都要族选卡时点检查测试(cw_effect_inventory 分目录镜像;被测 =
-check_strategy_take_all_supply,挂点行为面归 kernel/cw_action_report/
+check_strategy_take_all_supply,调用点行为面归 kernel/cw_action_report/
 test_pick_supply.py)。
 
 锁面(卡面 id 131001「下1个补给阶段选择后，额外获得所有未选择的角色
@@ -40,7 +40,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     consume_defect_sink,
 )
 
-# sig 形态 = 挂点真值:补给选定上报的调用方签名(动作 op 内构造)。
+# sig 形态 = 调用点真值:补给选定上报的调用方签名(动作 op 内构造)。
 _SIG = ChannelSig(family='logic_action', actor='CwActionPickSupplyOp',
                   mode='compute')
 _SIG_OBS = ChannelSig(family='obs', actor='test', mode='read')

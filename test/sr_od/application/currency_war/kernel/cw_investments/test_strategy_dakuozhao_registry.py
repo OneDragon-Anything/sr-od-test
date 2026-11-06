@@ -2,7 +2,7 @@
 同目录 test_strategy_dacaiyuan_registry.py 单卡注册测试模式)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-197-dakuozhao.
-md §3 锁 1/锁 2 + REVIEW-T197 八裁决点默认案(经族级授权收口)。卡面
+md §3 锁 1/锁 2 + REVIEW-T197 八裁决点默认案(经族级授权收尾)。卡面
 官方原文(cw_invest_data.py:145 逐字):「扣除你的金币，每损失4金币，
 获得一个随机4费角色，最多扣除40金币。获得1个【完美投影仪】和16金币。」
 

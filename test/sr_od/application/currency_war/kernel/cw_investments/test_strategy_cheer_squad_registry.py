@@ -50,7 +50,7 @@ def test_cheer_squad_unit_buff_registration_surface() -> None:
     溜佩佩/溜佩佩+/团队力量·银):条目五元组逐位 + 单一源对拍 + 现金
     fail-closed 0;构建校验(孤儿键/id 双匹配)import 期已过——本测试
     存活即证。条件面(进入战斗时上阵后排≥4)与数值(15% 速度增幅)
-    游戏侧自算,bot 零建模零观察(back_capacity_of 读口不接线)。"""
+    游戏侧自算,bot 零建模零观察(back_capacity_of 读口不接入调用)。"""
     spec = STRATEGY_EFFECTS[_CARD]
     cw_investments._validate_strategy_effects()   # 构建校验复跑不炸
     assert spec.id == '150201'

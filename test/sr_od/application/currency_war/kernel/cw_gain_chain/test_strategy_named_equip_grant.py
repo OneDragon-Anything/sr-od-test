@@ -12,7 +12,7 @@ T-119-quanyuan-jinsheng.md(定稿)§4 锁 1/2/3 + REVIEW-T119 五裁决点默认
 - 精密金面前置 fail-closed:已持精密拆装扳手 → 整腿零容器写 + 申报行
   留证(宣言 kind = ``NAMED_EQUIP_PRECISE_DECL``,语义申报非缺陷告警)+
   效果串仍逐件登记(placed=False)+ gold 零写钉死(官方真值 = 改 +1 金
-  不进栏,金面未建模,接线归获得回执覆盖批);
+  不进栏,金面未建模,接入调用归获得回执覆盖批);
 - 工厂泛化守卫:精密前置按物判(判据映射挂在发放物上)——非扳手发放物
   不受精密在场影响(卡级前置分支禁遗传,后继卡直呼工厂不受污染);
 - 板面重写句(同卡另一建模面)零改动:注册/词表/桥负写端由存量锁
@@ -136,7 +136,7 @@ def test_named_equip_grant_precision_gate_fail_closed(
     assert gs.write_seq == seq_before, '整腿零容器写(fail-closed)'
     assert gs.equips.value == ['精密拆装扳手'], 'equips 原值不动'
     assert gs.gold.value == 10 and gs.gold.source == 'observation', \
-        'gold 零写钉死(金面改道未建模,真值归观察/接线覆盖批)'
+        'gold 零写钉死(金面改道未建模,真值归观察/接入调用覆盖批)'
     assert rows_sink.kinds() == [NAMED_EQUIP_PRECISE_DECL], '申报行恰一行'
 
 

@@ -238,7 +238,7 @@ def test_replay_zero_write_when_latch_closed_then_single_write_when_open(
 
 def test_set_value_naturally_follows_settlement_chain(_always_win) -> None:
     """自然跟随回归(锁 8):置位 4 → 下一胜局结算 → ==5 且结算笔存在
-    (置位值经现役共享链自动跟随,零新接线;结算笔与置位笔分账)。"""
+    (置位值经现役共享链自动跟随,零新接入调用;结算笔与置位笔分账)。"""
     b = _backend(seed=47)
     try:
         gs = b.gs
