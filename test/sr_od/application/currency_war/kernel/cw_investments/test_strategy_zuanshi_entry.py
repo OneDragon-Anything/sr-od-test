@@ -1,11 +1,11 @@
-"""钻石恒永久(id 251601)双腿登记锁(cw_investments 分目录镜像;腿1
-具名授予在 cw_gain_effects PICK 直书行,腿2 UNIT_BUFF 族战力类零响应
+"""钻石恒永久(id 251601)两条效果条目登记锁(cw_investments 分目录镜像;效果条目1
+具名授予在 cw_gain_effects PICK 直书行,效果条目2 UNIT_BUFF 族战力类零响应
 登记;先例 = 同目录 test_strategy_tuandui_jin_entry.py 团队力量·金)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-265 对应稿
 §4 锁面(REVIEW-T265 免裁 10/10;卡面官方原文:「获得1个【红钻】，角色每
 携带1件钻石或由钻石合成的装备，在进入新节点时会永久获得3%伤害增幅。」
-——腿2 携带计数与增长段游戏侧自算,bot 零响应):
+——效果条目2 携带计数与增长段游戏侧自算,bot 零响应):
 
 - 条目锁:category UNIT_BUFF / payload UnitBuffRef 且 effect_text 与
   卡面单一源对拍 / id 251601 / duties 三位全 False / pending False;

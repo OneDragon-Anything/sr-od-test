@@ -8,7 +8,7 @@ test_cw_investments.py 禁追加,拆目录落位)。
 
 - 注册面锁:STRATEGY_ECONOMY 条目三字段 = instant_gold=6 ∧
   loss_hp_extra=5 ∧ keep_streak_on_loss=True(数值 = 卡面 desc 逐字;
-  金腿 = 选卡当场在册,败局修饰两腿 = 本批新增);败局修饰族非收入
+  金腿 = 选卡当场在册,败局修饰两条效果条目 = 本批新增);败局修饰族非收入
   通道,is_economy_engine 恒 False(排除桶成员);
 - 闭集落位锁:两字段 ∈ kernel 引擎排除桶(战斗结算修饰族划界;
   2026-10-28 治理后漏登记不炸,成员防线 = 本锁)+ 策略侧三分

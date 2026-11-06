@@ -15,7 +15,7 @@
   双源同值条件失配(frozen 载体禁字面 mutation,注入 + 直读房法;
   治理后形无 import 校验闸,双源对账归本锁——2026-10-28 治理裁定
   「防登记笔误类 import 校验禁新增」);
-- 交付通道锁:双腿全在获得链登记腿,③段效果体表零新增(键集断言
+- 交付通道锁:两条效果条目全在获得链只登记不写状态的实现分支,③段效果体表零新增(键集断言
   零联动);
 - 待建模登记锁(裁决点 4):卡级 PENDING 行存续 + 描述非空 + 现金分
   fail-closed(退款腿无字段载体非估值常量,×2 修饰施径缺口待实采,
@@ -93,7 +93,7 @@ def test_dacaiyuan_registry_burst_drift_breaks_lock(
 
 
 def test_dacaiyuan_delivery_channel_registration_leg() -> None:
-    """交付通道锁:双腿全在获得链登记腿(STRATEGY_EFFECTS 条目),③段
+    """交付通道锁:两条效果条目全在获得链只登记不写状态的实现分支(STRATEGY_EFFECTS 条目),③段
     效果体表零新增(A 案单条目双载,键集闭集断言零联动)。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
         PICK_INVEST_EFFECTS,

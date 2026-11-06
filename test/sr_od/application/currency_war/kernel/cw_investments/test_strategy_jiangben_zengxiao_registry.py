@@ -13,7 +13,7 @@
   (predict=买牌对账须预知免费价;track=次数余量剩余期量);
 - 注册值锁:STRATEGY_ECONOMY sell_price_mult == 2.0(官方卡文「双倍
   价格」,建模早于本条目在册,零漂移订正面);
-- 交付通道锁:双腿全在获得链登记腿,③段效果体表零新增(键集断言
+- 交付通道锁:两条效果条目全在获得链只登记不写状态的实现分支,③段效果体表零新增(键集断言
   零联动);
 - 发牌判据细分确认锁(义务 6):素出售卡不入 sim 发牌判据集(sim 局
   零假发牌;词表 _DEAL 双值细分在码,本卡注册自动不入集);
@@ -77,7 +77,7 @@ def test_jiangben_zengxiao_registry_sell_price_mult() -> None:
 
 
 def test_jiangben_zengxiao_delivery_channel_registration_leg() -> None:
-    """交付通道锁:双腿全在获得链登记腿(STRATEGY_EFFECTS 条目),③段
+    """交付通道锁:两条效果条目全在获得链只登记不写状态的实现分支(STRATEGY_EFFECTS 条目),③段
     效果体表零新增(键集闭集断言零联动)。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
         PICK_INVEST_EFFECTS,

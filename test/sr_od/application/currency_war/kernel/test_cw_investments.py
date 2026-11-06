@@ -1407,7 +1407,7 @@ def test_salvage_plus_registration_surface() -> None:
 def test_gold_at_final_supply_in_engine_excluded_set() -> None:
     """尾款金字段引擎判别锁(T-93 设计 §4 锁 11):``gold_at_final_supply``
     ∈ ``_ENGINE_CHANNEL_EXCLUDED_FIELDS``(一次性/时点金族——整局一次的
-    序列位置锚条件金,世界腿 = sim 节点窗独立笔,非持续通道;防后续误入
+    序列位置锚条件金,把结果写进状态副本的实现分支 = sim 节点窗独立笔,非持续通道;防后续误入
     引擎通道使 is_economy_engine 对持卡局误判真)。"""
     assert 'gold_at_final_supply' \
         in cw_investments._ENGINE_CHANNEL_EXCLUDED_FIELDS

@@ -408,7 +408,7 @@ class TestW11RefreshNegativeMemory:
 
     def test_extended_merge_form_refresh_at_full_bench(self):
         """合成腿扩面单帧:席满 + 零燃料 + 场上 2★ + 备战 1★×2 → 目标
-        可买为真(旧「恰 2 张全 1★」口径该帧三腿全无误拦追星刷新)。"""
+        可买为真(旧「恰 2 张全 1★」口径该帧三条效果条目全无误拦追星刷新)。"""
         fill = _fillers(4)
         bench = [_bc(_TARGET, star=1), _bc(_TARGET, star=1),
                  _bc('三月七', star=2), _bc('花火', star=2),

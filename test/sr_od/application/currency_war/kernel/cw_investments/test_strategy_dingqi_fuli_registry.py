@@ -8,7 +8,7 @@ fuli.md §4 锁 1。卡面官方原文(cw_invest_data.py):「立刻获得4个金
 - 注册面锁:STRATEGY_ECONOMY 条目双字段 = instant_gold=4 ∧
   gold_per_node=2(固化快照滞后订正——注册行先于消费面接线在册,
   数值来源 = 卡面 desc 逐字;本卡系 gold_per_node 族唯一精确卡,
-  desc「每次进入新节点时」与字段语义逐字对应,两腿零条件零上限);
+  desc「每次进入新节点时」与字段语义逐字对应,两条效果条目零条件零上限);
 - 绑定负锁:卡不入 STRATEGY_BINDINGS(泛用给金无阵营/召唤物/星徽
   点名,登记判据「泛用数值 → 不绑」直辖),strategy_bindings() 返回
   默认空元组(fail-closed);

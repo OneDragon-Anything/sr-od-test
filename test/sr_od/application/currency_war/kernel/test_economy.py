@@ -271,7 +271,7 @@ def test_half3_distinguish_fixtures(patched_registry) -> None:
 def test_weikuan_migration_registry_and_aggregate() -> None:
     """尾款交付等值迁移锁(注册表 + 聚合,真表直断):条目
     ``gold_at_final_supply == 30`` 且 ``instant_gold == 0``(迁移完整性
-    ——防「双登记」回潮:双登记下未来 instant_gold 世界腿建模时本卡
+    ——防「双登记」回潮:双登记下未来 instant_gold 把结果写进状态副本的实现分支建模时本卡
     30 双发,需排除集特判 = 弃案埋雷);聚合单一源对真表求和 == 30;
     分型表含新字段 sum 行(聚合语义机器可读单一源同步)。"""
     eff = inv.STRATEGY_ECONOMY['尾款交付']

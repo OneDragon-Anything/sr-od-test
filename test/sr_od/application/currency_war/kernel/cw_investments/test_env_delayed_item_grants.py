@@ -11,7 +11,7 @@ kernel/test_cw_investments.py DELAYED 段〔超限只读复用〕)。
   「完胜…额外减少1点」→ 加速 True、「一个【火花礼盒】」→ 件名);
 - 孤儿键哨键域 = INVESTMENT_ENVS ∪ INVESTMENT_STRATEGIES(世界发放域
   = 环境 ∪ 策略):策略孤儿键炸、环境孤儿键炸(存量段同款半边的策略
-  道镜像)、**偶像经济同入 STRATEGY_GRANTS + 本表合法不炸**(双腿分表
+  道镜像)、**偶像经济同入 STRATEGY_GRANTS + 本表合法不炸**(两条效果条目分表
   正例锁——角色腿具名送卡/礼盒腿队列登记两表通道互斥,防后继把环境域
   ∩ENV_GIFTS=∅ 防呆盲扩到策略域);
 - 现役条目锁 + 非占席词表反向锁(火花礼盒 = 战利品区浮动件,若后继批
@@ -48,14 +48,14 @@ def test_idol_economy_registry_row_single_source() -> None:
 
 
 def test_dual_leg_split_tables_legal() -> None:
-    """双腿分表正例锁(REVIEW-T329 §五④ 锁 1):偶像经济同入
+    """两条效果条目分表正例锁(REVIEW-T329 §五④ 锁 1):偶像经济同入
     STRATEGY_GRANTS(角色腿 = 具名送卡)+ 本表(礼盒腿 = 队列登记)
     → 合法不炸;若后继把环境域 ∩ENV_GIFTS=∅ 防呆盲扩成 ∩STRATEGY_
     GRANTS,本卡 import 即红。"""
     grant = STRATEGY_GRANTS[_CARD]
     assert grant.chars_immediate == ('火花',), '角色腿 = STRATEGY_GRANTS 在册'
     assert _CARD in ENV_DELAYED_ITEM_GRANTS, '礼盒腿 = 本表在册'
-    _validate_env_delayed_item_grants()   # 双腿分表 = 校验通过零炸
+    _validate_env_delayed_item_grants()   # 两条效果条目分表 = 校验通过零炸
 
 
 def test_validator_strategy_orphan_key_raises(monkeypatch) -> None:

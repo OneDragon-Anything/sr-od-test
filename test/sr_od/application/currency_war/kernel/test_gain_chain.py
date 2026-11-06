@@ -1132,7 +1132,7 @@ def test_gain_invest_strategy_session_ledger_branch() -> None:
 
 def test_gain_invest_strategy_free_lunch_burst_grant(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """免费午餐登记腿(T-88 设计 §4 锁 1):session 在场选免费午餐 →
+    """免费午餐只登记不写状态的实现分支(T-88 设计 §4 锁 1):session 在场选免费午餐 →
     burst 桥把 payload.free_refresh_burst=11 一次性累加进免费刷新余额
     (None 基 = 0 起算)。写端形态 = write_logic 逻辑直写、
     evidence=effect_burst[@frame]、produced_by 带卡名——produced_by 不落
@@ -1162,7 +1162,7 @@ def test_gain_invest_strategy_free_lunch_burst_grant(
 
 def test_gain_invest_strategy_market_intervention_burst_grant(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """市场干预登记腿(T-113 设计 §4 锁 1):session 在场选市场干预 →
+    """市场干预只登记不写状态的实现分支(T-113 设计 §4 锁 1):session 在场选市场干预 →
     burst 桥把 payload.free_refresh_burst 一次性累加进免费刷新余额
     (常量源 = STRATEGY_ECONOMY['市场干预'].free_refresh_burst 直读禁
     写死;None 基 = 0 起算)。写端形态 = write_logic 逻辑直写、
@@ -1194,7 +1194,7 @@ def test_gain_invest_strategy_market_intervention_burst_grant(
 def test_market_intervention_spec_single_source_identity() -> None:
     """市场干预单一源同实例(T-113 设计 §4 锁 2):STRATEGY_EFFECTS 条目
     payload 必须 is STRATEGY_ECONOMY 注册行同一实例(误复制实例即红;
-    成长基金登记腿可见性锁同型),plaza id 对拍。"""
+    成长基金只登记不写状态的实现分支可见性锁同型),plaza id 对拍。"""
     spec = STRATEGY_EFFECTS['市场干预']
     assert spec.payload is STRATEGY_ECONOMY['市场干预'], \
         'payload 必须为注册行同一实例(单一源)'
@@ -1202,7 +1202,7 @@ def test_market_intervention_spec_single_source_identity() -> None:
 
 
 def test_gain_invest_strategy_force_refresh_register_noop_grants() -> None:
-    """武力刷新登记腿:session 在场选卡 → register_strategy 入册
+    """武力刷新只登记不写状态的实现分支:session 在场选卡 → register_strategy 入册
     (effects.first 按 id 非空);burst 桥零额度、板面重写桥非战场
     payload 返回 None(登记期零 Field 行,零即时发放——发放面全归
     穿戴合成事件腿)。"""
@@ -1215,7 +1215,7 @@ def test_gain_invest_strategy_force_refresh_register_noop_grants() -> None:
 
 def test_gain_invest_strategy_team_hope_unit_buff_zero_response() -> None:
     """全队的希望 登记链锁 + 消费面负锁(T-97 设计 §4 锁 2):策略源
-    UNIT_BUFF 首条,登记腿既有链自动入册(register_strategy),payload=
+    UNIT_BUFF 首条,只登记不写状态的实现分支既有链自动入册(register_strategy),payload=
     UnitBuffRef 无任何世界写入字段 → 四桥鸭子读全量缺省守卫 no-op
     (burst 桥 free_refresh_burst 缺省 0 / 板面重写桥 board_rewrite 缺省
     '' → None / 节点边界桥 per_node 族缺省 0 / 容量直写桥 capacity_limit
@@ -1229,7 +1229,7 @@ def test_gain_invest_strategy_team_hope_unit_buff_zero_response() -> None:
         'register_strategy 入册(获得链登记腿既有链,零新代码)'
     assert entries[0].spec.category.value == 'unit_buff'
     # burst 桥负锁:UnitBuffRef 无 free_refresh_burst → 缺省 0 no-op 零 Field 行
-    # (登记腿内部已调,free_refresh_left 保持 None 即证;显式补调一次同证幂等)
+    # (只登记不写状态的实现分支内部已调,free_refresh_left 保持 None 即证;显式补调一次同证幂等)
     assert gs.free_refresh_left.value is None, 'burst 桥 no-op(零 Field 行)'
     seq_after_gain = gs.write_seq   # 入册本身占账本写;四桥零写以此为基
     spec = entries[0].spec
@@ -1299,7 +1299,7 @@ def test_gain_invest_strategy_bench_reroll_bridges_noop() -> None:
 def test_gain_invest_strategy_xp_instant_live_zero_write() -> None:
     """live 链零写回归:xp_instant 卡(经验到账)走获得链(session=None
     直调形态)→ xp/level 值与来源域零变化。经验「选牌当场」= 观察覆盖
-    豁免(伟大征服口径,fields.md §3.2.10);即时经验世界腿 = sim 自持
+    豁免(伟大征服口径,fields.md §3.2.10);即时经验把结果写进状态副本的实现分支 = sim 自持
     账域(sim 后端落地拍),链内加经验写会连带 live——本锁防后续实现者
     把腿误挂进双端链。"""
     gs = _make_gs(bench=[], equips=[])
@@ -1343,9 +1343,9 @@ def test_on_strategy_gained_unregistered_quiet() -> None:
     发放族(溜佩佩/溜佩佩+/招财狗/艾丝妲的猛犬！/狸职手续) + 绑定型随机角色授予族(价值投资·金)
     + 策略延时 offer 族 + 策略延时发放族
     (箱腿/援军/随机装备/具名角色/绑定型随机角色条目由工厂自各自生成表生成,组合卡
-    直书登记行由组合子组合双腿,具名装备授予直书登记行由具名装备工厂生成
+    直书登记行由组合子组合两条效果条目,具名装备授予直书登记行由具名装备工厂生成
     闭包,延时 offer 条目由工厂自 STRATEGY_DELAYED_OFFERS 派生,延时发放
-    族按卡文句式分流:带即时短句的成员经两腿成员集走两腿工厂派生,纯延时
+    族按卡文句式分流:带即时短句的成员经两条效果条目成员集走两条效果条目工厂派生,纯延时
     单句卡许诺特权/先亏后盈/好运令牌·银/是钻石总会发光显式单行登记
     延时-only 载体;键集
     断言 = 现役

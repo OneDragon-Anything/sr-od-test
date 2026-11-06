@@ -15,7 +15,7 @@ registry.py)。
 - EffectSpec 条目锁(锁 2):trigger=PLANE_START / duration=PERMANENT /
   category=STATE / payload is STRATEGY_ECONOMY['固定理财'](同一实例)
   / pending=False(二义经用户裁定拍定补发,定谳非冻结,notes 记裁定,
-  T-180 星变同判例)/ notes 含双腿分段与裁定语义;
+  T-180 星变同判例)/ notes 含两条效果条目分段与裁定语义;
 - 引擎通道闭集锁:双字段入 _ENGINE_CHANNEL_SINGLE_FIELDS(周期发放 =
   持续通道,非一次性/结构登记排除桶);
 - 待建模登记锁(锁 8):两行存续 + 描述非空(闭集断言④点名,删行即
@@ -71,7 +71,7 @@ def test_gudinglicai_registration_row_four_fields() -> None:
 
 def test_gudinglicai_effect_spec_entry() -> None:
     """EffectSpec 条目锁(锁 2,裁定 B 形):五元组 + 单一实例 payload +
-    pending 撤除(定谳记 notes)+ notes 双腿分段与裁定语义。"""
+    pending 撤除(定谳记 notes)+ notes 两条效果条目分段与裁定语义。"""
     spec = STRATEGY_EFFECTS[_CARD]
     assert spec.id == '201801'
     assert spec.trigger is TriggerKind.PLANE_START

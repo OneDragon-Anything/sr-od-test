@@ -16,7 +16,7 @@ huobi.md §3 锁 1/锁 2(REVIEW-T191 §四④ 锁 1 落位修正:本卡注册锁
   用户裁定 2026-09-10)+ payload 同一实例(单一源)+ duties 全空 +
   pending=False;
 - 判别键一致性锁:HYPEREMIT_SPEC_ID/NAME 常量与注册行/条目对拍(漂移
-  即红——登记播值腿与 sim 两腿共用判别键,静默漂移 = 三腿全失联);
+  即红——登记播值腿与 sim 两条效果条目共用判别键,静默漂移 = 三条效果条目全失联);
 - 双闭集伴随锁(锁 2):gold_at_node/gold_at_node_offset ∈ 引擎排除桶
   _ENGINE_CHANNEL_EXCLUDED_FIELDS ∧ ∈ 估值待建模字段集
   _PENDING_MODELING_FIELDS(薄锁防漂移;import 期炸校验已兜底)。
@@ -78,7 +78,7 @@ def test_chaofa_huobi_effect_spec_entry_shape() -> None:
 
 def test_chaofa_huobi_discriminator_keys_match_registry() -> None:
     """判别键一致性锁:HYPEREMIT_SPEC_ID/NAME 与注册行/条目对拍
-    (登记播值腿与 sim 清零/回流两腿共用的条目判别键,漂移即红)。"""
+    (登记播值腿与 sim 清零/回流两条效果条目共用的条目判别键,漂移即红)。"""
     assert HYPEREMIT_SPEC_ID == '202501'
     assert HYPEREMIT_SPEC_NAME == _CARD
     assert STRATEGY_EFFECTS[HYPEREMIT_SPEC_NAME].id == HYPEREMIT_SPEC_ID

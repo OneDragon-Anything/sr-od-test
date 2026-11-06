@@ -324,8 +324,8 @@ def _wear_grant_gs(*, unit_equips: list[str], owned: list[str],
                    register: bool = True) -> GameState:
     """合成事件发放腿场景种子:bench 槽 1 单位带已穿装备 + owned 库存
     (deployed 保持未观察 → 上报定位走 bench 名匹配回退,与 sim 动作
-    注入同形态);register=True 时账本登记武力刷新(与选卡登记腿同形
-    register_strategy,登记腿缺位负向由 register=False 承载)。"""
+    注入同形态);register=True 时账本登记武力刷新(与选卡只登记不写状态的实现分支同形
+    register_strategy,只登记不写状态的实现分支缺位负向由 register=False 承载)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     slots: list[BenchSlot | None] = [None] * 9
     slots[0] = BenchSlot(kind='unit',
@@ -399,7 +399,7 @@ def test_wear_without_synthesis_zero_grant():
 
 
 def test_wear_synthesis_without_card_zero_grant():
-    """无持卡负向:账本无条目(登记腿缺位局)→ 合成照常发生但保守零动作,
+    """无持卡负向:账本无条目(只登记不写状态的实现分支缺位局)→ 合成照常发生但保守零动作,
     零 Field 发放行(登记接入点纪律:登记缺位不虚构发放)。"""
     advance, (a, b) = next(iter(CROSS_RECIPES.items()))
     gs = _wear_grant_gs(unit_equips=[a], owned=[b], register=False)

@@ -3,11 +3,11 @@
 
 测试面依据 = 迭代设计 designs/T-313-fendou-xieyi.md §4 锁 1(REVIEW
 -T313 免裁 6/6;卡面官方原文:「购买经验值消耗6点小队生命值而非金币。
-首领战斗结束时回复50点小队生命值。」双腿 = 血本位成本面 + 首领战回血
-HP 世界腿):
+首领战斗结束时回复50点小队生命值。」两条效果条目 = 血本位成本面 + 首领战回血
+HP 把结果写进状态副本的实现分支):
 
 - 注册行双值:xp_buy_hp_cost=6(成本币种切换)∧ boss_end_heal_hp=50
-  (首领战斗结束回血,战斗结算型 HP 世界腿);
+  (首领战斗结束回血,战斗结算型 HP 把结果写进状态副本的实现分支);
 - 卡面单一源:effect = cw_invest_data plaza 原文逐字(rarity 棱彩);
 - 两道闭集伴随(排除集血本位结算修饰组 + strategy_economy 三分不计分
   桶)由模块 import 面自动覆盖——strategy_economy._validate_field_

@@ -1,4 +1,4 @@
-"""读博深造(id 251901)双腿登记锁(cw_investments 分目录镜像;腿 2/3 送卡
+"""读博深造(id 251901)两条效果条目登记锁(cw_investments 分目录镜像;效果条目 2/3 送卡
 在 cw_gain_effects PICK char×char 组合行,本表 UNIT_BUFF 族战力类零响应
 登记;先例 = 同目录 test_strategy_zuanshi_entry.py 钻石恒永久)。
 

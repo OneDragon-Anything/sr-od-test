@@ -49,7 +49,7 @@ _CID = '252401'
 
 def test_zanmei_entry_registered() -> None:
     """条目锁(锁 1):UNIT_BUFF 零响应登记形;id 对拍;duties 三位全
-    False;pending False(三腿全卡面明文,无二义冻结面)。"""
+    False;pending False(三条效果条目全卡面明文,无二义冻结面)。"""
     spec = STRATEGY_EFFECTS[_CARD]
     assert spec.id == _CID, 'id 对拍'
     assert spec.category is EffectKind.UNIT_BUFF, 'category = UNIT_BUFF'
@@ -85,7 +85,7 @@ def test_zanmei_grant_and_binding_stock_members() -> None:
     """授予/绑定存量成员锁(锁 5):那刻夏逐名独立构造(防伪锁——整元组
     引用同一常量对象会漏「字段被替换为别值」形态);绑定二元组精确相等;
     阵容域差集语义 ⊇ {昼之半神, 追击}(scope 全值随阵容知识批漂移,
-    不锁全值只锁本卡两腿来源必在域)。"""
+    不锁全值只锁本卡两条效果条目来源必在域)。"""
     grant = STRATEGY_GRANTS[_CARD]
     assert grant.chars_immediate == ('那刻夏',), '腿 3 授予 = 那刻夏单发'
     assert grant.advisor is False, '卡面无「加入商店」句,advisor False'
@@ -97,7 +97,7 @@ def test_zanmei_grant_and_binding_stock_members() -> None:
 
 
 def test_zanmei_not_in_pick_and_watch_names() -> None:
-    """封闭集不扩 + 停机钩子零成员(锁 6):腿 3 系具名角色发放非具名装备,
+    """封闭集不扩 + 停机钩子零成员(锁 6):效果条目 3 系具名角色发放非具名装备,
     不入 PICK(入集 = 实现错误);本卡零响应 + sim XP 真值非采集需求,
     不入商店停机钩子名单(名单访问形 = 类限定 ClassVar)。"""
     assert _CARD not in set(PICK_INVEST_EFFECTS), '本卡禁入 PICK 封闭集'

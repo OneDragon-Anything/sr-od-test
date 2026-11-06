@@ -265,7 +265,7 @@ def test_take_all_unresolved_name_fail_closed_resolved_survives() -> None:
 def test_take_all_gold_quota_two_picks_then_exhausted() -> None:
     """金卡特有·配额两拍锁(门序计数三态 0/1/2)+ 全捞主锁金卡臂:持金卡
     (配额 2)两次选择各发该阶段全未选列(2 列构造形态;实机持卡局常态
-    ≤1 列、下限 0 列——腿1 −2 压缩域,族级注记)闩 0→1→2;第 3 次选择
+    ≤1 列、下限 0 列——效果条目1 −2 压缩域,族级注记)闩 0→1→2;第 3 次选择
     零写零消耗(配额恰 2,非 ≥2 早退于第 2 拍——布尔形会把已耗 1 格误判
     耗尽 = 静默漏发,计数形统一在册)。"""
     gs = _take_all_gs(cards=('全都要·金',), unchosen=None)
@@ -293,7 +293,7 @@ def test_take_all_gold_quota_two_picks_then_exhausted() -> None:
 
 
 def test_take_all_gold_empty_column_round_consumes_quota() -> None:
-    """0 列空转拍锁(域规模下限局:腿1 −2 后在屏 1 列选定后未选 0 列):
+    """0 列空转拍锁(域规模下限局:效果条目1 −2 后在屏 1 列选定后未选 0 列):
     unchosen=() → 零发放 + 配额照耗(A 案事件消耗制 fail-visible 申报,
     域行为仍正确);两拍耗尽后第三拍零写。"""
     gs = _take_all_gs(cards=('全都要·金',), unchosen=())

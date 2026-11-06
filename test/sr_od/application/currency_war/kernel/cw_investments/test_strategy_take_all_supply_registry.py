@@ -1,4 +1,4 @@
-"""全都要族注册面测试(cw_investments 分目录镜像;双腿异键登记 + 配额
+"""全都要族注册面测试(cw_investments 分目录镜像;两条效果条目异键登记 + 配额
 map 一致性 + 单取链登记缺位。族 = 银 id 131001 / 金 id 203501 /
 彩 id 331701)。
 
@@ -50,7 +50,7 @@ _FAMILY_SPECS: dict[str, tuple[str, str]] = {
 def test_take_all_two_leg_specs_registered() -> None:
     """登记锁:每卡两条 EffectSpec(canon 键 = 发放腿 / 申报键 = 列数修饰
     腿)过 ``_validate_strategy_effects`` 四查(import 即炸,本文件 import
-    即过);canon 条目 pending=True 带 notes 保守支、腿2 持续期按配额形
+    即过);canon 条目 pending=True 带 notes 保守支、效果条目2 持续期按配额形
     分立;申报键条目声明面无 pending、spec.name 恒规范名。"""
     for name, (pid, leg2_dur) in _FAMILY_SPECS.items():
         leg2 = STRATEGY_EFFECTS[name]

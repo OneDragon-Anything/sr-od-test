@@ -1,4 +1,4 @@
-"""燃起来了(id 252801)三腿卡零改动现值回归锁(镜像 src = kernel/
+"""燃起来了(id 252801)含三条效果条目的卡零改动现值回归锁(镜像 src = kernel/
 cw_investments.py 与绑定/估值面;按被测方法拆目录规范落位 mandate_v1/
 镜像,同构对表基准 = test_strategy_yueguang_zero_modeling.py
 月光宝盒七锁)。

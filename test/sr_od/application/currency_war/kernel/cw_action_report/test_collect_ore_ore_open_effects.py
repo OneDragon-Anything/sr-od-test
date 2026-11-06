@@ -4,7 +4,7 @@ kernel/cw_action_report/collect_ore.py 尾部调用块;test_collect_ore.py
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
 T-316-huangjing-kuanggong.md(定稿,REVIEW-T316 免裁 7/7)§4 锁 4:
-- 窗序锁:计数入账后、契约腿后(env 触发分支写先于策略腿写);
+- 窗序锁:计数入账后、契约腿后(env 触发分支写先于只供策略算分的实现分支写);
 - 席满跳过点不入色档列(「点开才触发」与计数分支同口径);
 - 批尾 spheres 单写含授予点(「一次写一 evidence」);
 - opened == 0 早退路径零触发。
@@ -119,7 +119,7 @@ def _record_writes(gs: GameState,
 def test_window_order_count_env_then_strategy_leg(
         monkeypatch: pytest.MonkeyPatch, seeded_provider) -> None:
     """窗序锁(T-316 设计 §4 锁 4):计数入账(含本批)→ 契约腿写
-    (env_grant#...)→ 策略腿写(strategy_ore_open_grant#1,含授予点 +
+    (env_grant#...)→ 只供策略算分的实现分支写(strategy_ore_open_grant#1,含授予点 +
     附着)。"""
     gs = _make_gs(bench_units=[], env=_SP_ENV, ore_open_total=20)
     calls = _record_writes(gs, monkeypatch)
@@ -168,7 +168,7 @@ def test_bench_full_skip_point_not_in_tier_list(
 
 def test_zero_open_early_return_no_trigger(
         monkeypatch: pytest.MonkeyPatch, seeded_provider) -> None:
-    """opened == 0 零触发锁:全批席满 → 早退路径零容器写(策略腿零写、
+    """opened == 0 零触发锁:全批席满 → 早退路径零容器写(只供策略算分的实现分支零写、
     零掷点)。"""
     gs = _make_gs(bench_units=[('希儿', 1)] * 9)
     calls = _record_writes(gs, monkeypatch)
@@ -181,8 +181,8 @@ def test_zero_open_early_return_no_trigger(
 
 def test_miss_seed_zero_strategy_leg_writes(
         monkeypatch: pytest.MonkeyPatch, seeded_provider) -> None:
-    """未掷中零写锁(上报集成面):掷点未中 → 策略腿零写(既有腿照常,
-    策略腿不产生任何台账行)。"""
+    """未掷中零写锁(上报集成面):掷点未中 → 只供策略算分的实现分支零写(既有腿照常,
+    只供策略算分的实现分支不产生任何台账行)。"""
     set_action_rng_provider(lambda tool: random.Random(_MISS_SEED))
     try:
         gs = _make_gs(bench_units=[], held=True, level=True)

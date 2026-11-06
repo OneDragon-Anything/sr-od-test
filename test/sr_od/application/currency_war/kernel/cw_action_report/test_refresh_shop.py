@@ -557,7 +557,7 @@ def test_anchor_covers_logic_mismatch_fires_andon(
 
 
 # ---- 付费刷新 XP 分支(T-311 淘金客:刷新上报写端付费帧把结果写进
-# 状态副本;世界腿 = 把结果写进状态副本的实现分支)----
+# 状态副本,写分支 = 把结果写进状态副本的实现分支)----
 
 
 def _seed_xp_leg_gs(*, level: int | None = 3,

@@ -17,7 +17,7 @@
 - EffectSpec 条目锁(锁 2,定谳形):trigger=PLANE_START /
   duration=PERMANENT / category=STATE / payload is STRATEGY_ECONOMY
   ['固定理财+'](同一实例)/ pending=False(二义经用户裁定拍定补发,
-  与姊妹同判,notes 记裁定)/ notes 含双腿分段与同判裁定语义。
+  与姊妹同判,notes 记裁定)/ notes 含两条效果条目分段与同判裁定语义。
 """
 from __future__ import annotations
 
@@ -67,7 +67,7 @@ def test_gudinglicai_plus_registration_row_four_fields() -> None:
 
 def test_gudinglicai_plus_effect_spec_entry() -> None:
     """EffectSpec 条目锁(锁 2,定谳形):五元组 + 单一实例 payload +
-    pending 撤除(与姊妹同判记 notes)+ notes 双腿分段与同判裁定语义。"""
+    pending 撤除(与姊妹同判记 notes)+ notes 两条效果条目分段与同判裁定语义。"""
     spec = STRATEGY_EFFECTS[_CARD]
     assert spec.id == '201802'
     assert spec.trigger is TriggerKind.PLANE_START

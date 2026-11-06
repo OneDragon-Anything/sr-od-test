@@ -36,7 +36,7 @@ def test_changqi_zhuyi_economy_registration_surface() -> None:
 
 def test_changqi_zhuyi_no_effect_spec_entry() -> None:
     """分期族键空间负锁:卡无 STRATEGY_EFFECTS 条目(economy-only 注册,
-    无战场段登记腿;入集 = 越约——分期金唯一新增机制件住 sim 世界腿,
+    无战场段只登记不写状态的实现分支;入集 = 越约——分期金唯一新增机制件住 sim 把结果写进状态副本的实现分支,
     不走 effects 自动递减通道,T-191 r1-F2 同证口径)。"""
     assert _CARD not in STRATEGY_EFFECTS, 'economy-only 注册零 EffectSpec 条目'
 

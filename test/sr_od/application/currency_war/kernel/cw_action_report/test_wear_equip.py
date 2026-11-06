@@ -2,7 +2,7 @@
 (镜像 src = kernel/cw_action_report/wear_equip.py;零卡穿戴与槽位定位
 既有断言住 test_action_report.py,本文件不与其混写)。
 
-特权档合成边 = 融合召唤(id 332301)腿1,卡面「给角色穿戴2件相同进阶
+特权档合成边 = 融合召唤(id 332301)效果条目1,卡面「给角色穿戴2件相同进阶
 装备时，它们会合成为对应的特权装备」。规则住 ``_wear_synthesis`` kernel
 单一源,三门时点 = 门①持卡调用侧前置 / 门②「worn 现值同进阶对」门③
 「对应特权件在册」都是特权档边循环内的逐轮边判定(前置闸读法下基础档
@@ -15,7 +15,7 @@
 特权档合成同属「合成装备时」事件 → 计入 merged 计数(持武力刷新局
 每次特权档合成 +2 刷新,卡文字面直读,申报面非缺陷);零 rng 消费。
 
-刃锻特权化支 = 锻冶专家:刃(id 360601)腿2,卡面「在【刃】的装备栏
+刃锻特权化支 = 锻冶专家:刃(id 360601)效果条目2,卡面「在【刃】的装备栏
 中合成进阶装备时，将其变为特权装备，该效果可生效1次」——合成触发特权
 变换族第二成员(融合召唤姊妹卡,异构形:基础档产物特权化 + 刃栏辖域 +
 次数账限次)。门③ 产物判定 = 名字计数差分(重名场景锁在册:名字集差
@@ -152,7 +152,7 @@ def test_wear_same_simple_pair_no_blind_concat() -> None:
 def test_fusion_summon_registration_consolidated() -> None:
     """登记对拍汇总(四把存量锁就地扩集的卡级收口,防扩集漏项):箱腿
     注册形状(GRANTS 条目 items 直读 + 镜像表逐对相等 + PICK 工厂键)
-    与腿1 零登记面(STRATEGY_EFFECTS / STRATEGY_BINDINGS 双缺席)同点
+    与效果条目1 零登记面(STRATEGY_EFFECTS / STRATEGY_BINDINGS 双缺席)同点
     钉死;计数 = 各存量锁扩集后的现值。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
         _STRATEGY_BOX_GRANTS,
@@ -174,7 +174,7 @@ def test_fusion_summon_registration_consolidated() -> None:
         '效果主语全装备,不绑(绑定判据:泛用装备 → 不绑)'
 
 
-# ===== 刃锻特权化支(锻冶专家:刃腿2;设计锁 1-4)=====
+# ===== 刃锻特权化支(锻冶专家:刃效果条目2;设计锁 1-4)=====
 
 
 def test_wear_forge_converts_advance_product() -> None:
