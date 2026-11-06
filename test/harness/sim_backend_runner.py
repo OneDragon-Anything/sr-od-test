@@ -286,7 +286,8 @@ def run_sim_full_match(test_context: Any,
     上限)。obs 读口装配点接通纯钩子半部(缓存清理 + 合成特效帧门;
     缺陷台账 sink 缺省关 = 不落盘,测试零真实 IO)。
 
-    侧写重定向:决策帧留证钩子 ``get_project_root`` → tmp_path;CW 模块
+    钩子桩(装配缝 1/1c):决策帧留证钩子源上桩(sim 帧无仲裁对象,
+    零留证写入)+ 实机采集停机钩子桩(语义同批夹具)。CW 模块
     裸 ``time.sleep`` 冻结。telemetry 归档不接(任务边界:验收只做测试
     断言;journal sink 走内存捕获)。
 
@@ -330,7 +331,20 @@ def run_sim_full_match(test_context: Any,
         reset_running_state,
     )
 
-    # —— 装配缝 1:留证钩子落盘重定向(常驻钩子,写入重定向到 tmp) ——
+    # —— 装配缝 1:留证钩子源上桩(sim 局零留证写入)——决策帧留的是
+    # 「识别完成点的原始画面」,作实机识别漏读/误读的仲裁基准(模块头
+    # 层次定位);sim 帧是合成产物,无仲裁对象,逐帧 PNG 落盘纯付测试
+    # 时长(单局 ~59 帧,慢盘环境单帧可达秒级 → 整局批预算被磁盘态绑架)。
+    # 桩形沿用仓内单帧测试先例(save_decision_frame no-op 桩);桩面 =
+    # 调用方模块命名空间绑定(from-import 语义,见 sim-testing「批驱动器
+    # monkeypatch 规约」)。get_project_root 重定向保留作兜底:未来新增
+    # 直连该缝的写入点仍不落真实仓。
+    monkeypatch.setattr(
+        'sr_od.application.currency_war.operations.cw_loop.save_decision_frame',
+        lambda *a, **k: None)
+    monkeypatch.setattr(
+        'sr_od.application.currency_war.operations.cw_screen.cw_screen_shop.'
+        'save_decision_frame', lambda *a, **k: None)
     monkeypatch.setattr(
         'sr_od.application.currency_war.operations.decision_frame_hooks.'
         'get_project_root',
@@ -347,6 +361,15 @@ def run_sim_full_match(test_context: Any,
         set_recorder_replay_dir,
     )
     set_recorder_replay_dir(tmp_path)
+
+    # —— 装配缝 1c:实机采集停机钩子桩(同 sim/conftest.py 批夹具桩形:
+    # sim 局无实机画面可采,语义澄清非绕过验证面)——整局轨迹持
+    # _SPEC_INVEST_WATCH_NAMES 名单投资策略进商店即触发真实停机:
+    # 验收局被截断,且 stop_running 残留(last_run_result)贯穿同一测试
+    # 内的后续局(W209j 刹车拒动作 → 看门狗轮限空转假红)。
+    monkeypatch.setattr(
+        'sr_od.application.currency_war.operations.cw_screen.cw_screen_prep.'
+        'CwScreenPrep._spec_invest_shop_stop_hook', lambda self: None)
 
     # —— 装配缝 2:obs 读口纯钩子半部(生产 = decision_assembly.
     # install_obs_ports;缺陷台账落盘 sink 缺省关,测试零 IO) ——

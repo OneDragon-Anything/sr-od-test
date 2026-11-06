@@ -12,7 +12,8 @@ test_back_to_normal_world_plus.py::TestCwLobbyResidualBranch::test_residual_lobb
 # 2026-10-15 摘牌:cw 分发语料 true 向(登记名早已失效=函数更名后未同步,
 # mark 实际未生效);现名 call 实测 0.25s(conftest OCR 磁盘缓存层),现役
 # 位置 = operations/test_loop.py::test_dispatch_corpus_identity_true_direction
-# sim 统一 3.4 首局验收:模块夹具跑两整局 sim(~43s),三条验收测试共享
+# sim 统一 3.4 首局验收:模块夹具跑两整局 sim(2026-11-07 实测 ~7s,
+# 运行原语装配缝对留证/停机钩子源上桩后),三条验收测试共享
 # (容器不变式四条尺 2026-10-14 归并一条,消费同一夹具产物;多种子完备性
 # 2026-10-14 裁决整批摘除——与 smoke 冒烟逐 seed 整局完全重叠,语义由
 # smoke_batch 承接,活锁机制锁 = test_cw_prep_action_ops 桥复检语境坐标锁)
@@ -22,8 +23,10 @@ test/sr_od/application/currency_war/sim/test_sim_first_run.py::test_first_match_
 # sim 冒烟批:默认 8 代表号(2026-10-24 压缩裁定:全量压到 ~3 分钟,
 # 整局批跑与预注册判据批共享 sim/conftest.py 夹具,20 连号全量普查改
 # 临时换 FULL_SWEEP_SEEDS;2026-10-13 land-38-fix 修复批曾扩回 20 seed,
-# 修复后 20/20 全跑通 ~2 分钟);逐 seed 一整局 sim(健康树 ~7s/seed),
-# 复跑带 -s 收统计行
+# 修复后 20/20 全跑通 ~2 分钟);逐 seed 一整局 sim(2026-11-07 修复后
+# 实测健康树 0.9-11.1s/seed;seed 20261018 存在生产侧词缀随机态封死
+# 等待环,整局 40 分钟级不收敛,看门狗轮限也罩不住,修复前整批不可
+# 全绿),复跑带 -s 收统计行
 test_sim_smoke_batch.py::test_smoke_match_completes[20261012]
 test_sim_smoke_batch.py::test_smoke_match_completes[20261014]
 test_sim_smoke_batch.py::test_smoke_match_completes[20261015]
