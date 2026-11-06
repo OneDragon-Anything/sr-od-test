@@ -13,7 +13,7 @@
   (容器终值)+ obs 与刷新文本锚点挂实例属性。
 - **刷新链终结测试**(遭遇,
   3.3:刷新 = 终结动作,剩余闸 = 观察真值):建议刷新 ∧ 闸放行(容器
-  left>0 且锚点在位)→ 文本锚定点圆钮恰一次 + 固定等待 → round_success
+  left>0 且识别标志在位)→ 文本识别标志位圆钮恰一次 + 固定等待 → round_success
   终结交回——无同访问 ``screenshot()`` 重读面、无 report 二次覆盖写、
   无重决策、零选卡派发;闸拒绝(剩余 0/None)→ 零点击,重调一次决策
   落选卡;重调仍建议刷新(刷新锚读缺面)→ round_fail 交回(计入外循环
@@ -320,8 +320,8 @@ def _refresh_fixture(test_context, monkeypatch) -> tuple[list, list]:
 def test_encounter_refresh_terminal_click_once_and_success(
         test_context, monkeypatch) -> None:
     """刷新链终结测试(
-    design §2.0A):建议刷新 ∧ 剩余闸放行(容器 left=1 ∧ 锚点在位)→
-    文本锚定点圆钮**恰一次** + 固定等待 → round_success 终结交回;同访问
+    design §2.0A):建议刷新 ∧ 剩余闸放行(容器 left=1 ∧ 识别标志在位)→
+    文本识别标志位圆钮**恰一次** + 固定等待 → round_success 终结交回;同访问
     零 ``screenshot()`` 重读、零 report 二次覆盖写(容器终值 = 刷前候选)、
     零重决策(恰一次决策)、零选卡派发。红 = 重读回潮 / 二次覆盖写回潮 /
     重复点钮 / 终结交回失败。"""
