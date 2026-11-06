@@ -134,10 +134,16 @@ def test_prereg_upgrade_cycle_batch(
             f'seed={seed} 偷取张数守恒破: 入席{placed}+溢出{overflow}' \
             f' ≠ 3×{spy_deals}'
         if placed > 0:
+            # 入席写行 schema(T-440 连带修正,改判申报归 reports/T-440-r1):
+            # sim 入席写 = gs.observe(bench, evidence='sim:engine:shop:spy_
+            # steal')——evidence 落 Field,**不进 journal 'write' 行**(行
+            # schema 无 evidence 键,T-5 原断言读该键 = 恒不可满足,placed>0
+            # 首次发生才显形)。落账承接锁 = bench 写行存在;机制量 = 上行
+            # 守恒式;evidence 级精确锁归单帧域 test_sim_spy_levelup。
             assert any(r.get('row') == 'write'
-                       and 'spy_steal' in str(r.get('evidence') or '')
+                       and r.get('field') == 'bench'
                        for r in run.journal_rows), \
-                f'seed={seed} 入席 {placed} 张但无备战席观察写行'
+                f'seed={seed} 入席 {placed} 张但无备战席写行'
         total_transitions += transitions
         total_upgrades += upgrades
         total_spy_deals += spy_deals
@@ -204,7 +210,11 @@ def test_prereg_spy_closure_full_match(test_context: Any,
         f'闭环破:间谍升级 {spy_deals} ≠ 重开 {reopens}'
     assert placed + overflow == 3 * spy_deals, '偷取张数守恒破'
     if placed > 0:
+        # 入席写行 schema(T-440 连带修正,改判申报归 reports/T-440-r1):
+        # journal 'write' 行 schema 无 evidence 键(spy_steal evidence 落
+        # Field),原「行内 spy_steal 证据」断言恒不可满足(placed>0 首次
+        # 发生才显形);落账承接锁 = bench 写行存在。
         assert any(r.get('row') == 'write'
-                   and 'spy_steal' in str(r.get('evidence') or '')
+                   and r.get('field') == 'bench'
                    for r in run.journal_rows), \
-            f'入席 {placed} 张但无备战席观察写行(spy_steal 证据)'
+            f'入席 {placed} 张但无备战席写行'
