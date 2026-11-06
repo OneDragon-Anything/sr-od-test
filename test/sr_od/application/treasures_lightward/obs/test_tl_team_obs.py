@@ -45,13 +45,13 @@ def test_character_list_tab_empty_slots(test_context: SrTestContext) -> None:
     assert view.environment_text is not None and '笑点' in view.environment_text
     joined = ''.join(view.star_targets)
     assert '10' in joined and '20' in joined and '无法战斗' in joined
-    # 该帧关卡 = 物竞天择其十,2 波(弱点真值 2026-11-04 实机帧,视觉仲裁)
-    assert len(view.waves) == 2
-    assert [w.wave_idx for w in view.waves] == [1, 2]
-    assert view.waves[0].weaknesses == ['虚数', '火']
-    assert view.waves[1].weaknesses == ['量子', '冰']
-    for wave in view.waves:
-        for member in wave.members:
+    # 该帧关卡 = 物竞天择其十,2 节点(弱点真值 2026-11-04 实机帧,视觉仲裁)
+    assert len(view.nodes) == 2
+    assert [n.node_idx for n in view.nodes] == [1, 2]
+    assert view.nodes[0].weaknesses == ['虚数', '火']
+    assert view.nodes[1].weaknesses == ['量子', '冰']
+    for node in view.nodes:
+        for member in node.members:
             assert member.empty, f'空队伍帧不应识别出头像: {member}'
 
 
@@ -102,14 +102,14 @@ def test_preset_tab_teams_binding(test_context: SrTestContext) -> None:
 
 
 def test_applied_slots_filled(test_context: SrTestContext) -> None:
-    """预设已应用帧:波次绑定(弱点+编队)真值 + 槽1第4位空槽(角色冲突被自动撤下)。"""
+    """预设已应用帧:节点绑定(弱点+编队)真值 + 槽1第4位空槽(角色冲突被自动撤下)。"""
     view = _collect(test_context, '编队屏-预设编队-已应用')
     assert view.left_tab == '预设编队'
-    assert len(view.waves) == 2
-    w1, w2 = view.waves
-    assert [g.char for g in w1.members] == ['大丽花', '飞霄', '加拉赫', None]
-    assert w1.members[3].empty
-    assert [g.char for g in w2.members] == ['黑塔', '知更鸟', '布洛妮娅', '停云']
+    assert len(view.nodes) == 2
+    n1, n2 = view.nodes
+    assert [g.char for g in n1.members] == ['大丽花', '飞霄', '加拉赫', None]
+    assert n1.members[3].empty
+    assert [g.char for g in n2.members] == ['黑塔', '知更鸟', '布洛妮娅', '停云']
     # 该帧关卡 = 物竞天择其一(弱点真值 2026-11-04 实机帧,视觉仲裁)
-    assert w1.weaknesses == ['雷']
-    assert w2.weaknesses == ['虚数', '物理']
+    assert n1.weaknesses == ['雷']
+    assert n2.weaknesses == ['虚数', '物理']
