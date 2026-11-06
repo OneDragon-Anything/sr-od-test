@@ -253,7 +253,7 @@ class TestBatchEmission:
         60 ≥ 线 50)→ 不再卖牌凑金——零卖出动作、零升级发射,整批
         推迟拒因键 levelup_fund_line_defer 已登记;对照金位升至线+批
         (现金 80:80−20 = 60 ≥ 50)→ 整批发射(「钱够了再升」的
-        正向锚:发射只由资金线支配,不由变现加速)。"""
+        正向基准:发射只由资金线支配,不由变现加速)。"""
         from sr_od.application.currency_war.kernel.cw_game_state import Unit
         # lv5 整级批 20 金;现金 68(花后 48 < 线 50)∧ 活期 4 件
         # (c0/c1/c2/c4 各退 3,注册表外散件按保守估——不同名互不构成

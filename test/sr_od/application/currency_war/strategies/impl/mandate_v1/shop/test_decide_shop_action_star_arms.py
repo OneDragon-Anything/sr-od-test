@@ -25,7 +25,7 @@ T-3;设计 = details/shop-buy-reform.md §1-§3,镜像 = mandate_v1/shop.py
 - 合成效果条目谓词机制全集直调形态表(恰 2 张 1★ / 2×1★+2★ / 2×2★)。
 
 帧构造 = 列车同行注册表线(need_star:姬子·启行 3/三月七 2/花火 2/
-瓦尔特 1);deployed 锚 = 白厄(注册表零阵营流派唯一名,板面标签空集
+瓦尔特 1);deployed 定义件 = 白厄(注册表零阵营流派唯一名,板面标签空集
 ——序 2 场况插件羁绊差一门对任意在售牌零命中,买面测试免序 2 干扰);
 node='reward' → 升级检查①奖励帧抑制 defer,会话恒进入买面与刷新提案。
 """
@@ -76,7 +76,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 _COMP_NAME = '列车同行·反震'   # 批 3 拆分后取 A 主形态(测试载体与装备分岔无关)
 _LINE = tuple(_members(_comp_of(_COMP_NAME)))
 _TARGET = '姬子·启行'   # need_star 3(唯一 3★ 追到底目标)
-_DEPLOY_ANCHOR = '白厄'   # 零阵营流派(板面标签空集锚;注册表现查)
+_DEPLOY_ANCHOR = '白厄'   # 零阵营流派(板面标签空集定义件;注册表现查)
 
 
 def _fillers(count: int, exclude: tuple[str, ...] = ()) -> list[str]:

@@ -75,9 +75,9 @@ def _c_shape_session() -> tuple:
 def test_locked_empty_bond_line_core_shared_completion() -> None:
     """空羁绊线(反甲流形态,档 0 空 ∧ factions=[]):L1 由角色
     完成度单独承载(core∪shared 口径,D2-3;members 承载支不挂 named
-    层——分子已含锚)——members 手牌(锚瓦尔特/core 杰帕德/成员符玄)
+    层——分子已含定义件)——members 手牌(定义件瓦尔特/core 杰帕德/成员符玄)
     满编即 3/3 唯一满分板,非成员(停云/希儿)让位(required_deployed
-    已退役,点名承载 = 锚 core[0] + core)。"""
+    已退役,点名承载 = 定义件 core[0] + core)。"""
     session, st = _c_shape_session()
     gs = cw4_gs(session, deploy_cap=3, level=3,
                 bench=[cw4_bc('瓦尔特'), cw4_bc('杰帕德')],
@@ -89,7 +89,7 @@ def test_locked_empty_bond_line_core_shared_completion() -> None:
         session, gs, frame))
     assert len(target) == 3, f'K 满编,实得 {sorted(target)}'
     assert set(target) == {'瓦尔特', '杰帕德', '符玄'}, \
-        f'members 手牌(锚+core+成员)满编唯一满分,实得 {sorted(target)}'
+        f'members 手牌(定义件+core+成员)满编唯一满分,实得 {sorted(target)}'
     assert '停云' not in target and '希儿' not in target, \
         '非线成员让位(core∪shared 口径)'
     assert st.cw4_counters == counters_before, \

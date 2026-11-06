@@ -15,7 +15,7 @@ currency_war/strategy-docs/29_invest_strategy_screen.md;规格出处 =
 - ⑥ 构建期校验(字段三分/卡级待建模断言集/立场表孤儿);
 - ⑦ 刷新判据(帧级门与槽级顶级两谓词分立、E-豁免、F2 守卫、对齐保护);
 - ⑨ decide_pick 纯选卡口(同评分基线、永不建议刷);
-- ⑩ LCS 兜底命中即告警(观测锚);
+- ⑩ LCS 兜底命中即告警(观测标记点);
 - ⑪ 环境屏(env)平行测试面(投资环境策略层 invest_env:线价值三口径/
   赠卡分/时代族零值/环境现金分/刷新三态与阈值/自拆台排除/构建校验
   /flow 消费侧接入调用)——与策略屏同族评分概念的 env 支,两屏生产模块
@@ -379,7 +379,7 @@ _SELF_DEFEAT_OPT = '净化身心试验'
 
 
 def _gs_hold_backline(*names: str) -> GameState:
-    """持有面种子(后排队;1★)——选卡锚点线(候选首名)由此点亮。"""
+    """持有面种子(后排队;1★)——选卡定义件线(候选首名)由此点亮。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         Unit,
         deployed_view_sequential,
@@ -394,8 +394,8 @@ def _gs_hold_backline(*names: str) -> GameState:
 
 def test_forbid_excluded_from_competition():
     """禁选排除:最高分候选被 forbid 命中 → 出局,次高胜出(集合排除,
-    分值化禁选退役)。决议:娱乐星球 50 被禁 → 嘴硬 6 胜。(原现金锚
-    藏一手 R1 用户裁定 2026-11-04 反向改判后零分,禁选不再可辨——锚换
+    分值化禁选退役)。决议:娱乐星球 50 被禁 → 嘴硬 6 胜。(原现金定义件
+    藏一手 R1 用户裁定 2026-11-04 反向改判后零分,禁选不再可辨——定义件换
     现役面值例,见 test_cash_instant_gold_face_value。)"""
     cfg = SimpleNamespace(strategy_priority=[],
                           strategy_forbid=['决议:娱乐星球'])
@@ -424,9 +424,9 @@ def test_empty_frame_degrades_idx0():
 
 
 def test_counter_penalty_applies_against_top1_line_main_faction():
-    """克制减分(counters_dot 硬排除迁移,design §3.2;锚点线档 0 键
+    """克制减分(counters_dot 硬排除迁移,design §3.2;定义件线档 0 键
     命中克制名单即触发,P1 更早更广):
-    持卡芙卡 → 候选首名 = DOT队(锚 8000)→ 档 0 键 持续伤害 ∈
+    持卡芙卡 → 候选首名 = DOT队(定义件 8000)→ 档 0 键 持续伤害 ∈
     净化身心克制名单;净化身心试验 −750 落败,嘴硬 6 胜(纯加权,非排除)。"""
     out = _decide_pick([_SELF_DEFEAT_OPT, '嘴硬', '二极管'],
                        _gs_hold_backline('卡芙卡'))
@@ -435,10 +435,10 @@ def test_counter_penalty_applies_against_top1_line_main_faction():
 
 
 def test_counter_penalty_zero_when_anchor_missing():
-    """锚缺失帧(零证据 → 无候选首名)克制减分不触发:同一自拆台卡在
+    """定义件缺失帧(零证据 → 无候选首名)克制减分不触发:同一自拆台卡在
     零证据帧不减分(0 分并列,品质/槽序裁决)——保守缺省申报。"""
     out = _decide_pick([_SELF_DEFEAT_OPT, '嘴硬'], _fresh_gs())
-    assert out.idx == 1 and out.total == 6.0, '零锚帧不减分,嘴硬现金胜'
+    assert out.idx == 1 and out.total == 6.0, '零定义件帧不减分,嘴硬现金胜'
 
 
 def test_counter_penalty_worse_than_cash_max():
@@ -461,16 +461,16 @@ def test_blood_forced_l2_domain():
 
 def test_defining_partition_retired_direction_score_decides():
     """定义型分区退役(design §3.2 defining 布尔退役):支配由方向分
-    数值实现——零证据帧(锚缺失 → 方向分 0)定义卡按组件分竞争,黑塔
+    数值实现——零证据帧(定义件缺失 → 方向分 0)定义卡按组件分竞争,黑塔
     纪元/罗刹 赠卡 50 同分,平分裁决键取先(行为变更申报:P1 零证据
-    开局帧定义卡不再无条件支配);锚点亮帧(持大黑塔+黑塔 → top1 =
+    开局帧定义卡不再无条件支配);定义件点亮帧(持大黑塔+黑塔 → top1 =
     大黑塔银河学者)黑塔纪元方向分 500 + 赠卡 50 = 550 支配胜出。
-    (原现金锚 藏一手 R1 用户裁定 2026-11-04 反向改判后估值 (0.0,False)
+    (原现金定义件 藏一手 R1 用户裁定 2026-11-04 反向改判后估值 (0.0,False)
     零分出局,组件分竞争面换赠卡对内竞争。)"""
     bare = _decide_pick(['黑塔纪元', '本姑娘就是罗刹', '藏一手'],
                         _fresh_gs())
     assert bare.idx == 0 and bare.total == 50.0, \
-        '零证据帧定义分区不再秒选(锚缺失方向分 0,赠卡分竞争)'
+        '零证据帧定义分区不再秒选(定义件缺失方向分 0,赠卡分竞争)'
     lit = _decide_pick(['黑塔纪元', '本姑娘就是罗刹', '藏一手'],
                        _gs_hold_backline('大黑塔', '黑塔'))
     assert lit.idx == 0 and lit.total == 550.0
@@ -624,10 +624,10 @@ def test_refresh_frame_gate_passes_low_frame():
 
 def test_refresh_blocked_by_derived_defining_top():
     """帧级门 ③:顶级卡(派生:给 top1 线加分 ≥ 强档阈值)在场(非被禁)
-    → 整帧不刷——锚点亮帧(持大黑塔+黑塔 → top1 = 大黑塔银河学者,
-    黑塔纪元方向分 500 ≥ 500)整帧保护;对照零证据帧(锚缺失 → 方向分
-    0 → 非顶级)同候选组照常建议刷(行为变更申报:现行查表不依赖锚,
-    零证据开局帧定义卡受保护;新机制锚缺失不保护,入 sim 场景①)。"""
+    → 整帧不刷——定义件点亮帧(持大黑塔+黑塔 → top1 = 大黑塔银河学者,
+    黑塔纪元方向分 500 ≥ 500)整帧保护;对照零证据帧(定义件缺失 → 方向分
+    0 → 非顶级)同候选组照常建议刷(行为变更申报:现行查表不依赖定义件,
+    零证据开局帧定义卡受保护;新机制定义件缺失不保护,入 sim 场景①)。"""
     out = invest_strategy.decide(['黑塔纪元', '嘴硬', '二极管'],
                                  _gs_hold_backline('大黑塔', '黑塔'),
                                  '', False, frozenset(), _EMPTY_CONFIG)
@@ -636,7 +636,7 @@ def test_refresh_blocked_by_derived_defining_top():
                                   _fresh_gs(), '', False, frozenset(),
                                   _EMPTY_CONFIG)
     assert isinstance(zero, StrategyRefreshSuggestion), \
-        '零锚帧定义卡不过阈,顶级保护不辖'
+        '零定义件帧定义卡不过阈,顶级保护不辖'
 
 
 def test_refresh_blocked_by_engine_top():
@@ -728,7 +728,7 @@ def test_decide_pick_never_suggests_on_refresh_frame():
 def test_decide_pick_same_baseline_as_decide():
     """同评分基线:门失败帧(不刷)上 decide 与 decide_pick 逐位一致
     (idx/reason/total/components)。取引擎卡帧(开源节流 = 帧级顶级,
-    整帧不刷)——统一阵容评分后零锚帧定义卡不再拦刷,黑塔纪元帧已变
+    整帧不刷)——统一阵容评分后零定义件帧定义卡不再拦刷,黑塔纪元帧已变
     建议刷帧(test_refresh_blocked_by_derived_defining_top 对照面)。"""
     frame = ['开源节流', '嘴硬', '二极管']
     gs = _fresh_gs()
@@ -741,10 +741,10 @@ def test_decide_pick_same_baseline_as_decide():
         (out_pick.idx, out_pick.reason, out_pick.total)
 
 
-# ==================== ⑩ 观测锚(landing ⑩,申报 5)====================
+# ==================== ⑩ 观测标记点(landing ⑩,申报 5)====================
 
 def test_lcs_fallback_hit_warns(caplog):
-    """LCS 兜底命中即告警(观测锚;形变名会拿错卡全组件分,须可见):
+    """LCS 兜底命中即告警(观测标记点;形变名会拿错卡全组件分,须可见):
     『嘴硬+』(LCS → 嘴硬)帧产 [cw!][invest_strategy] warning。"""
     with caplog.at_level(logging.WARNING):
         _decide_pick(['嘴硬+', '二极管'], _fresh_gs())
@@ -753,7 +753,7 @@ def test_lcs_fallback_hit_warns(caplog):
 
 
 def test_exact_hit_does_not_warn(caplog):
-    """对照:精确命中不告警(锚只辖 LCS 兜底形态)。"""
+    """对照:精确命中不告警(标记点只辖 LCS 兜底形态)。"""
     with caplog.at_level(logging.WARNING):
         _decide_pick(['嘴硬', '二极管'], _fresh_gs())
     assert not any('[cw!][invest_strategy]' in r.message
@@ -958,8 +958,8 @@ def test_env_counter_penalty_against_top1_line():
 
 
 def test_env_no_counter_penalty_when_anchor_missing():
-    """锚缺失帧(零证据)不减分:同分并列取先(落首席)——旧「板面
-    DoT/减益 ≥2 排除」随硬排除退役,触发面换锚点线主派。"""
+    """定义件缺失帧(零证据)不减分:同分并列取先(落首席)——旧「板面
+    DoT/减益 ≥2 排除」随硬排除退役,触发面换定义件线主派。"""
     gs = _fresh_gs()
     _env_set_refresh_left(gs, 0)
     out = invest_env.decide([_SELF_DEFEAT_OPT, '黄金时代', '白银时代'],
@@ -1232,8 +1232,8 @@ def test_guard_generic_frame_unchanged_with_basis():
 
 def test_guard_scopeless_holdings_zero_anchor_frame():
     """无指向持有帧(§4 清单):只持打捞人才库(指向集空)→ 基准空 →
-    护栏不辖;零证据锚缺失帧定义卡按组件分竞争(黑塔纪元赠卡 50 胜——
-    定义型分区退役后的数值语义,锚点亮支配由方向分承载;原现金锚藏一手
+    护栏不辖;零证据定义件缺失帧定义卡按组件分竞争(黑塔纪元赠卡 50 胜——
+    定义型分区退役后的数值语义,定义件点亮支配由方向分承载;原现金定义件藏一手
     R1 改判后零分出局)。"""
     out = _decide_pick(['黑塔纪元', '本姑娘就是罗刹', '藏一手'],
                        _gs_holding(strategies=('打捞人才库',)))
@@ -1326,7 +1326,7 @@ def test_guard_lock_switch_relax_pursuit_compatible_after_lock():
 def test_guard_demoted_frame_falls_back_to_holdings_basis():
     """锁定换基·降格帧(demoted_endgame,前瞻语义,护栏设计 §2.2/§2.6):
     锁线不入基,基准回持有指向并集——误持黑塔纪元({银河学者})+ 降格,
-    银河学者星徽按持有兼容合法胜出(降格帧锚点回候选首名 = 大黑塔
+    银河学者星徽按持有兼容合法胜出(降格帧定义件回候选首名 = 大黑塔
     银河学者〔+500 通道〕→ 星徽方向分 150 加成);命运圣杯星徽对持有基
     冲突出域(帧级 off-direction 标记;降格 = 终局方向暂席,锁线阵营
     不再保护)。"""
@@ -1478,7 +1478,7 @@ def test_strategy_margin_value_and_domain():
     """策略面值序与竞争域(design §2.2-2):次名 = 结构分区竞争域内
     除胜者外按同一平分裁决键的最高者(决议:娱乐星球 50 金胜,嘴硬 6
     分次);被禁槽不入域(50 分的决议:娱乐星球被禁后不进 margin)。
-    (面值锚原 = 藏一手 80,R1 用户裁定 2026-11-04 反向改判零分后换锚,
+    (面值基准原 = 藏一手 80,R1 用户裁定 2026-11-04 反向改判零分后换基准,
     面值例现役归属见 test_cash_instant_gold_face_value。)"""
     gs = _fresh_gs()
     out = _decide_pick(['决议:娱乐星球', '嘴硬', '二极管'], gs)

@@ -122,13 +122,13 @@ class TestCompDoneP1Proxy:
         可达——skill 脚本 _readiness_from_snapshot docstring 已声明)。
         锁三件事:
         1. 轮末快照可算时覆盖镜像(②同源走 _row_form_ok)——满档 ∧
-           点名件(锚)在板 → 翻正;满档但点名件缺板 → 压制(点名件
+           点名件(定义件)在板 → 翻正;满档但点名件缺板 → 压制(点名件
            统一表达式进完备契约,required-deployed-retirement 后语义);
         2. p1_pair 帧(配方锁)现行恒回退镜像读数(伪阵容载体已退役);
         3. 快照缺输入回退镜像。"""
         line = '希儿量子'
         snap = _materialized_snapshot(line)
-        # 翻正分支:镜像 False(stale),轮末板面已物化(满档+锚在板) → 判真
+        # 翻正分支:镜像 False(stale),轮末板面已物化(满档+定义件在板) → 判真
         row_ok = _row(locked_comp=line, form_ok=False)
         row_ok['state_board_factions'] = snap['board_factions']
         row_ok['state_deployed'] = snap['deployed']
@@ -137,7 +137,7 @@ class TestCompDoneP1Proxy:
         assert m_ok['comp_done'] == 1
         assert m_ok['comp_proxy'] is False
         # 压制分支:镜像 True(stale),轮末板面物化但点名件缺板
-        # (满档 ∧ 锚不在板 → fp < 1.0)→ 判假
+        # (满档 ∧ 定义件不在板 → fp < 1.0)→ 判假
         row_ng = _row(locked_comp=line, form_ok=True)
         row_ng['state_board_factions'] = snap['board_factions']
         row_ng['state_deployed'] = []
@@ -166,7 +166,7 @@ class TestCompDoneP1Proxy:
 def _materialized_snapshot(line: str) -> dict:
     """按注册表档位现造「已物化」轮末快照(档位/点名件消费 kernel
     单一源,测试不手写 tier 值——registry 演进测试自动跟随;点名件 =
-    锚/core 统一表达式,与 form_progress 同式——
+    定义件/core 统一表达式,与 form_progress 同式——
     required-deployed-retirement 后语义)。"""
     from sr_od.application.currency_war.kernel.cw_comps import (
         carry_anchor,

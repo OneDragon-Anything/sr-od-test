@@ -122,7 +122,7 @@ class TestCandidates:
         assert len(got) == 3
 
     def test_carry_anchor_outranks_heat(self):
-        """锚核心 +8000 压过热度序:持有低热度线的锚(追击飞霄·飞霄,
+        """定义件核心 +8000 压过热度序:持有低热度线的定义件(追击飞霄·飞霄,
         heat 40)胜过零证据高热度线(列车同行·反震 165)。"""
         feixiao = next(c for c in COMP_LIBRARY if c.name == '追击飞霄')
         assert line_select.LINE_HEAT[feixiao.name] < line_select.LINE_HEAT['列车同行·反震']
@@ -157,18 +157,18 @@ class TestMagnitudeScenarios:
     """两对照场景(design §2「sim 数值对照场景」):①单 anchor vs 多非锚
     core ②热度满 vs 单插件。
 
-    场景①数值语义申报:anchor +8000 vs 非锚 core +4000(减半)——多非锚
+    场景①数值语义申报:anchor +8000 vs 非定义件 core +4000(减半)——多非定义件
     core(花火+符玄+缇宝 = 12000)数值上仍高于单 anchor(8000);相对旧
-    等权(24000 vs 8000 = 3:1 支配)修复为 3:2,单 anchor 独压任一非锚
-    core、锚+任一 core 与 3 core 相平(12000 = 12000)。「无希儿的量子线
-    不是量子线」的攻略语义由证据档位(锚不在手 = 该线证据起于 core 档)
+    等权(24000 vs 8000 = 3:1 支配)修复为 3:2,单 anchor 独压任一非定义件
+    core、定义件+任一 core 与 3 core 相平(12000 = 12000)。「无希儿的量子线
+    不是量子线」的攻略语义由证据档位(定义件不在手 = 该线证据起于 core 档)
     承载,数值支配关系以本组断言为准(已申报 design §2 场景①的
     「希儿胜」措辞与采纳常数的张力,处置归迭代方)。
     """
 
     def test_scenario_anchor_vs_multi_core(self):
-        """①层内 carry 档:锚 8000 > 单非锚 core 4000;锚+1 core =
-        3 非锚 core(相平点,design §2 表注「锚+任一辅助即胜/相平」)。"""
+        """①层内 carry 档:定义件 8000 > 单非定义件 core 4000;定义件+1 core =
+        3 非定义件 core(相平点,design §2 表注「锚+任一辅助即胜/相平」)。"""
         seele = next(c for c in COMP_LIBRARY if c.name == '希儿量子')
         ctx = line_select.OpeningCtx()
         anchor_only = line_select.line_score_breakdown(
@@ -216,7 +216,7 @@ class TestEvidenceGate:
             frozenset(), line_select.OpeningCtx(), evidence_gate=True) == ()
 
     def test_carry_evidence_lights_line(self):
-        """锚在手点亮该线(证据 carry 层):飞霄 = 追击飞霄锚
+        """定义件在手点亮该线(证据 carry 层):飞霄 = 追击飞霄定义件
         (rating_anchor)——唯一证据线即唯一候选。"""
         got = line_select.compute_candidates(
             frozenset({'飞霄'}), line_select.OpeningCtx(), evidence_gate=True)
@@ -275,7 +275,7 @@ class TestEvidenceGate:
 class TestWandiFuelBottom:
     def test_no_fuel_line_bottom_despite_full_evidence(self):
         """万敌无燃料局垫底:开局词缀 ∩ 燃料集 = 空 → −100000,满证据
-        (锚+全 core 24040)线分为负、全序垫底(20 线排序末位)且被挤出
+        (定义件+全 core 24040)线分为负、全序垫底(20 线排序末位)且被挤出
         top3——数值排他非布尔特判;有燃料对照(正当防卫 +900)回到
         榜首区。"""
         wandi = next(c for c in COMP_LIBRARY if c.name == '万敌单C')
@@ -482,7 +482,7 @@ def test_positive_terms_upper_bound_below_restart_magnitude():
     + 满热度」的正项和 < |−100000|。
     重开级单条即数值排他;上界值随常数表演进自动重算(本断言 = 锁;
     批 3 拆分后 21 线全量自算,现行最坏值 = 巡海击破 35620——装备到人
-    补全批后巡海击破装备证据面按教义缩至 3 件,锚随真值走)。"""
+    补全批后巡海击破装备证据面按教义缩至 3 件,定义件随真值走)。"""
     from sr_od.application.currency_war.kernel.cw_affinity_table import (
         affix_row_of,
     )
@@ -519,7 +519,7 @@ def test_positive_terms_upper_bound_below_restart_magnitude():
     assert worst[1] < abs(RESTART_PENALTY), (
         f'正项上界越界:{worst}(design §2 不变量 < 100000)')
     assert worst == ('巡海击破', 35620), \
-        f'批 3 上界回归锚(装备分量入算后): {worst}'
+        f'批 3 上界回归基准(装备分量入算后): {worst}'
 
 
 # ===== 端到端:refresh 前置段驱动锁定 =====
@@ -759,7 +759,7 @@ class TestP2PickBaselineSliding:
 class TestDefiningCardAbsence:
     def test_line_enters_via_evidence_without_defining_card(self):
         """定义卡缺位线靠证据分入选(design §6 sim 场景④「定义卡缺位
-        线靠证据分入选」):不持黑塔纪元,仅持大黑塔+黑塔(锚 8000 +
+        线靠证据分入选」):不持黑塔纪元,仅持大黑塔+黑塔(定义件 8000 +
         core 4000)→ 证据门候选含大黑塔银河学者且居首——定义卡只是
         加分通道之一,缺位不挡线。"""
         got = line_select.compute_candidates(

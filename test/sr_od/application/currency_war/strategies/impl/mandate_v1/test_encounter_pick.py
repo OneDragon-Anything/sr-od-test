@@ -1,6 +1,6 @@
 """遭遇选档决策单帧测试(能力态直通形;判据语义 =
  §2.2-§2.5,
-;验收锚点 = design §2.12 锚点 1-6
+;验收基准 = design §2.12 锚点 1-6
 + 立场重拍回退态(design §2.2/§2.3)。
 
 测试语义不写巧合:断言「这段判据应该怎么表现」(窗口普战口径、κ_S 三态、
@@ -76,10 +76,10 @@ def _set_left(gs: GameState, left: int) -> None:
     gs.write_logic(gs.encounter_refresh_left, left, produced_by=_PB, sig=_SIG)
 
 
-# ==================== 锚点 1:足量帧选最高可及档 ====================
+# ==================== 基准 1:足量帧选最高可及档 ====================
 
 def test_sufficient_frame_picks_highest_reachable_tier():
-    """锚点 1:窗口两场全胜 → κ_S 足量 → 难度最高可及档胜出(t ≤ 4
+    """基准 1:窗口两场全胜 → κ_S 足量 → 难度最高可及档胜出(t ≤ 4
     能力态直判);reason 照 design §2.2 归因串。"""
     gs = _fresh_gs()
     _win_window(gs)
@@ -89,10 +89,10 @@ def test_sufficient_frame_picks_highest_reachable_tier():
     assert out.reason == 'e3-simple|pick:t3|kappa=足量'
 
 
-# ==================== 锚点 2:边缘帧 cap ====================
+# ==================== 基准 2:边缘帧 cap ====================
 
 def test_edge_frame_caps_reachable_at_two():
-    """锚点 2:恰一胜 → 边缘态难度上限 = 立场常量 EDGE_CAP(其三不可及);
+    """基准 2:恰一胜 → 边缘态难度上限 = 立场常量 EDGE_CAP(其三不可及);
     另一场删失(None)同归边缘(删失分支,非不足);cap 过滤在前——其五
     即使有经验正证据也被排除(边缘态 t ≥ 3 全排除,含五/六)。"""
     # 败局臂:另一场败局(fill 槽 None → fill 分支不激活)→ 边缘
@@ -117,10 +117,10 @@ def test_edge_frame_caps_reachable_at_two():
     assert out.idx == 0, '边缘态 cap 过滤在前:其五即使经验层放行也被排除'
 
 
-# ==================== 锚点 3:不足帧刷新阀两臂 ====================
+# ==================== 基准 3:不足帧刷新阀两臂 ====================
 
 def test_insufficient_frame_refresh_valve_two_arms():
-    """锚点 3:κ_S 不足 → 可及集空:剩余 ≥1 → 建议刷;剩余 0/None
+    """基准 3:κ_S 不足 → 可及集空:剩余 ≥1 → 建议刷;剩余 0/None
     (未观察,fail-closed)→ 落最低档(dark-fallback 因词;最低档按
     difficulty 取,与列表位置无关)。"""
     # 两场全败 → 不足;有次数 → 刷
@@ -156,10 +156,10 @@ def test_insufficient_frame_refresh_valve_two_arms():
     assert isinstance(out, EncounterRefreshSuggestion)
 
 
-# ==================== 锚点 4:其五/六仅经验层放行 ====================
+# ==================== 基准 4:其五/六仅经验层放行 ====================
 
 def test_tier5_6_gated_by_experience_evidence():
-    """锚点 4:足量态下其五/六无经验正证据不可及;本局该档存在
+    """基准 4:足量态下其五/六无经验正证据不可及;本局该档存在
     killed=True 遭遇行 → 可及且按主序胜出;败局行不算正证据。"""
     gs = _fresh_gs()
     _win_window(gs)
@@ -179,10 +179,10 @@ def test_tier5_6_gated_by_experience_evidence():
     assert out.idx == 1
 
 
-# ==================== 锚点 5:同档并列 tiebreak ====================
+# ==================== 基准 5:同档并列 tiebreak ====================
 
 def test_same_tier_tiebreak_preference_order():
-    """锚点 5:同档并列按奖励偏好档序(钻 > 装备 > 金币 > 末档,小 = 优);
+    """基准 5:同档并列按奖励偏好档序(钻 > 装备 > 金币 > 末档,小 = 优);
     档序仍并列 → 输入序先。奖励文本用注册表真名(火力风暴潮 ∈
     EQUIPMENT_ROSTER)/钻字面(红钻 ∈ 检测集)/金币字面构造。"""
     gs = _fresh_gs()
@@ -209,10 +209,10 @@ def test_same_tier_tiebreak_preference_order():
     assert out.idx == 0
 
 
-# ==================== 锚点 6:窗口普战口径 ====================
+# ==================== 基准 6:窗口普战口径 ====================
 
 def test_window_counts_last_two_normal_battles_only():
-    """锚点 6:窗口 = 最近 2 个普通战斗行(普战口径,design §2.2 候选 A)
+    """基准 6:窗口 = 最近 2 个普通战斗行(普战口径,design §2.2 候选 A)
     ——奖励行/遭遇行不入窗:两者 killed 为删失/败局,若误入窗会压 κ 降档,
     本帧须仍判足量选其三(误入窗即红)。"""
     gs = _fresh_gs()
@@ -234,11 +234,11 @@ def test_window_counts_last_two_normal_battles_only():
     assert out.idx == 1, '遭遇行不入窗:普战口径维持足量判'
 
 
-# ==================== 锚点 7:窗口不足独立态与因词 ====================
+# ==================== 基准 7:窗口不足独立态与因词 ====================
 
 def test_window_insufficient_is_distinct_state_with_own_cause():
-    """锚点 7:窗口 < 2 普战行 = 独立态(数据不足 ≠ κ_S 能力不足),
-    因词 window-insufficient 与 kappa-不足 分因可判读;阀两臂同锚点 3。"""
+    """基准 7:窗口 < 2 普战行 = 独立态(数据不足 ≠ κ_S 能力不足),
+    因词 window-insufficient 与 kappa-不足 分因可判读;阀两臂同基准 3。"""
     gs = _fresh_gs()   # 空环
     _set_left(gs, 1)
     out = encounter_pick.decide([_opt(0, 1)], gs)
@@ -259,10 +259,10 @@ def test_window_insufficient_is_distinct_state_with_own_cause():
     assert out.reason == 'e3-simple|refresh-valve:window-insufficient'
 
 
-# ==================== 锚点 8:立场重拍回退态 ====================
+# ==================== 基准 8:立场重拍回退态 ====================
 
 def test_stance_none_falls_back_to_lowest_tier_zero_refresh(monkeypatch):
-    """锚点 8(重拍回退机制,design §2.2/§2.3):立场常量任一置 None →
+    """基准 8(重拍回退机制,design §2.2/§2.3):立场常量任一置 None →
     恒最低档零刷新(dark-fallback:stance-unconfirmed)——即使窗口足量、
     可及集非空、刷新次数在场也不评估。"""
     opts = [_opt(0, 3), _opt(1, 1)]

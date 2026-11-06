@@ -1177,7 +1177,7 @@ class TestShelfQualifyArm:
         """资格域外件不触发终局资格买入(反向):货架椒丘(原骨架级单卡,
         全库唯一无任何 CARRY 身份者——不在任何线的 carry_set)→ 虚拟
         top3 线的资格集(CARRY 级单源)不含椒丘 → 终局资格臂零对象;
-        持有飞霄(追击锚)点亮实候选挡冷启动臂且椒丘 ∉ 追击成员域挡
+        持有飞霄(追击定义件)点亮实候选挡冷启动臂且椒丘 ∉ 追击成员域挡
         m2。椒丘的过渡侧身份(DOT2 计分域)由过渡资格臂独立承载——
         若发生买入,reason 不得是终局资格通道 shelf_qualify_buy。"""
         from sr_od.application.currency_war.kernel.cw_comps import (
@@ -1217,13 +1217,13 @@ class TestShelfQualifyArm:
     def test_line_outside_virtual_top3_does_not_qualify(self):
         """虚拟 top3 资格(线外不触发):货架四件(黑塔 = 大黑塔 core/
         姬子·启行 = 列车 anchor/符玄+花火 = 多线 core)——虚拟评估
-        (在手∅∪货架)下 top3 = 列车 A(锚 8000+花火 4000+165)/列车 B
-        (同证据+70,批 3 拆分双席)/第三席 = 火花星间(花火锚 8000+40)
+        (在手∅∪货架)下 top3 = 列车 A(定义件 8000+花火 4000+165)/列车 B
+        (同证据+70,批 3 拆分双席)/第三席 = 火花星间(花火定义件 8000+40)
         与希儿量子(双 core 8000+38)heat 微差之争(2 分差不锚定),
         大黑塔银河学者(黑塔 4000+38)恒落榜 → 黑塔(槽1)无资格
-        被跳过,首动作 = 槽序内首个在榜资格件姬子·启行(A/B 共锚 CARRY)。
+        被跳过,首动作 = 槽序内首个在榜资格件姬子·启行(A/B 共用定义件 CARRY)。
         前置断言 = 注册表演进使帧前提失守时响亮暴露(统一阵容评分后
-        排序 = 数值单值和,锚档支配)。"""
+        排序 = 数值单值和,定义件档支配)。"""
         from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
             line_select,
         )
