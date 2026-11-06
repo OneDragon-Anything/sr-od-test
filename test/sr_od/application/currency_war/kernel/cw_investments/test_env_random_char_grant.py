@@ -370,7 +370,7 @@ def test_xianzhou_concept_stock_entry_shape() -> None:
     值双源同值)+ star 1(先验,desc 未标星);随机装备 = ('简易',)
     (desc「初始简易装备」类别明文,单数叙述默认 1 件;economy.md「概念股
     送装备件」四卡线索名单含仙舟→折叠小刀,先验随 fixed_hypothesis 家族
-    键在册,登记行零新增申报)。族内第八实例,与追击/燃血/能量/列车同行/
+    键已登记,登记行零新增申报)。族内第八实例,与追击/燃血/能量/列车同行/
     银河学者/贝洛伯格/星间旅人登记行同构仅值异;odds 键 env_1008 随批
     追加进家族常量。"""
     assert '仙舟概念股' in ENV_GIFTS
@@ -484,7 +484,7 @@ def test_zhouzhibanshen_concept_stock_entry_shape() -> None:
     ENV_FACTION 派生值双源同值)+ star 1(先验,desc 未标星);随机装备
     = ('简易',)(desc「初始简易装备」类别明文,单数叙述默认 1 件;
     economy.md「概念股送装备件」四卡线索名单含昼神→轮滑鞋,先验随
-    fixed_hypothesis 家族键在册,登记行零新增申报)。族内第十实例,与
+    fixed_hypothesis 家族键已登记,登记行零新增申报)。族内第十实例,与
     追击/燃血/能量/列车同行/银河学者/贝洛伯格/星间旅人/仙舟/狼狩登记行
     同构仅值异;odds 键 env_1010 随批追加进家族常量。"""
     assert '昼之半神概念股' in ENV_GIFTS
@@ -512,7 +512,7 @@ def test_zhouzhibanshen_faction_pool_matches_registry_and_validates() -> None:
     变动;本域 6 名 is_expert 全空 = 非专家域,无仙舟/狼狩型专家分层
     断言,过滤恒等由 cw_pool 镜像授予池锁承载);显式断言'昔涟' ∈ 静态
     基底池(独立单位「挚爱之人」照发 + 双阵营成员「昼之半神、夜之半神」
-    双边在册照发双事实锚,族级口径 economy.md:94,镜像仙舟锁'彦卿'
+    双边已登记照发双事实锚,族级口径 economy.md:94,镜像仙舟锁'彦卿'
     定谳断言式)。"""
     cw_investments._validate_env_gifts()
     spec = ENV_GIFTS['昼之半神概念股'].chars_random_immediate[0]
@@ -539,7 +539,7 @@ def test_yezhibanshen_concept_stock_entry_shape() -> None:
     ENV_FACTION 派生值双源同值)+ star 1(先验,desc 未标星);随机装备
     = ('简易',)(desc「初始简易装备」类别明文,单数叙述默认 1 件;
     economy.md「概念股送装备件」四卡线索名单不含夜之半神 = 装备身份零
-    先验,均匀 v0 + 按卡固定假说待校准随 fixed_hypothesis 家族键在册,
+    先验,均匀 v0 + 按卡固定假说待校准随 fixed_hypothesis 家族键已登记,
     登记行零新增申报)。族内第十一实例,与追击/燃血/能量/列车同行/银河
     学者/贝洛伯格/星间旅人/仙舟/狼狩/昼之半神登记行同构仅值异;odds 键
     env_1011 随批追加进家族常量。"""
@@ -568,7 +568,7 @@ def test_yezhibanshen_faction_pool_matches_registry_and_validates() -> None:
     变动;本域 7 名 is_expert 全空 = 非专家域,无仙舟/狼狩型专家分层
     断言,过滤恒等由 cw_pool 镜像授予池锁承载);显式断言'昔涟' ∈ 静态
     基底池(独立单位「挚爱之人」照发 + 双阵营成员「昼之半神、夜之半神」
-    双边在册照发双事实锚,族级口径 economy.md:94,镜像仙舟锁'彦卿'
+    双边已登记照发双事实锚,族级口径 economy.md:94,镜像仙舟锁'彦卿'
     定谳断言式)。"""
     cw_investments._validate_env_gifts()
     spec = ENV_GIFTS['夜之半神概念股'].chars_random_immediate[0]
@@ -625,7 +625,7 @@ def test_jipo_faction_pool_matches_registry_and_validates() -> None:
     沿追击/燃血锁先例形态);显式断言专家成员'加拉赫'/'姬子' ∈ 静态
     基底池(基底 = 注册表全域,专家剔除只发生在 grant_char_pool 牌库
     时点层——分层职责锁,沿仙舟/狼狩锁同款形态);双羁绊成员'灵砂'
-    ∈ 池照发(flows='治疗、击破' 双边在册,镜像银河学者锁'真理医生'
+    ∈ 池照发(flows='治疗、击破' 双边已登记,镜像银河学者锁'真理医生'
     定谳断言式)。"""
     cw_investments._validate_env_gifts()
     spec = ENV_GIFTS['击破概念股'].chars_random_immediate[0]
@@ -636,7 +636,7 @@ def test_jipo_faction_pool_matches_registry_and_validates() -> None:
         and '姬子' in random_char_pool(spec), \
         '专家在静态基底池(过滤归 grant_char_pool 层,分层职责)'
     assert '灵砂' in random_char_pool(spec), \
-        '双羁绊成员在池照发(flows 双边在册定谳)'
+        '双羁绊成员在池照发(flows 双边已登记定谳)'
     assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
 
 
@@ -693,7 +693,7 @@ def test_qungong_faction_pool_matches_registry_and_validates() -> None:
     assert set(random_char_pool(spec)) == expected, \
         '静态基底池 = chars_by_faction 全域(注册表现算双射)'
     assert '缇宝' in random_char_pool(spec), \
-        '双羁绊成员在池照发(flows 双边在册定谳,量子同频零联动)'
+        '双羁绊成员在池照发(flows 双边已登记定谳,量子同频零联动)'
     assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
 
 
@@ -752,7 +752,7 @@ def test_jianyi_faction_pool_matches_registry_and_validates() -> None:
     assert '佩拉' in random_char_pool(spec), \
         '专家在静态基底池(过滤归 grant_char_pool 层,分层职责)'
     assert '千冶·刃' in random_char_pool(spec), \
-        '双羁绊成员在池照发(flows 双边在册定谳)'
+        '双羁绊成员在池照发(flows 双边已登记定谳)'
     assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
 
 

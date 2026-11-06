@@ -9,7 +9,7 @@ STRATEGY_DEATH_SAVE_GRANTS + 构建校验 + 建模假设披露键家族)。
   数值面全 desc 明写);
 - R1 注册面双源对账:注册行即时两条效果条目必须全默认(奖励载荷单一源迁本表,
   注册行复活 instant_gold/xp_instant = 同一奖励双源双发——用户裁定
-  2026-10-28「写表人笔误类校验删、漂移哨留」下,import 期双源哨在册,
+  2026-10-28「写表人笔误类校验删、漂移哨留」下,import 期双源哨已登记,
   行现值断言为测试侧对账把关);
 - 构建校验 2 条漂移哨(直调校验函数锁定):孤儿键 + 注册面双源。
 """
@@ -54,7 +54,7 @@ def test_registry_row_r1_default_economy() -> None:
 
 
 def test_disclosure_keys_family_registered() -> None:
-    """披露键家族在册且恰两键(设计 §6:一次性 + 独立叠加两建模假设各
+    """披露键家族已登记且恰两键(设计 §6:一次性 + 独立叠加两建模假设各
     一键,奖励时点 R1 定读非假设不设键;消费 = sim 救援发放刻随局
     setdefault,sim 链锁断言发射形态)。"""
     assert set(STRATEGY_DEATH_SAVE_ASSUMPTION_KEYS) == {

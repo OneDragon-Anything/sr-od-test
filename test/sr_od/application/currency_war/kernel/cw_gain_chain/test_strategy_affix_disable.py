@@ -128,7 +128,7 @@ def test_affix_disable_tail_leg_random_state_write(monkeypatch) -> None:
     assert gs.enemy_affixes.source == 'logic_rand', \
         '②来源 logic_rand(rand=True 双保险)'
     assert 'enemy_affixes' in gs.logic_rand_fields(), \
-        '③随机态字段在册(补观察谓词消费口)'
+        '③随机态字段已登记(补观察谓词消费口)'
     rows = [(c[0], c[1], c[2], c[4]) for c in calls
             if c[0] == 'enemy_affixes']
     assert rows == [('enemy_affixes',
@@ -139,7 +139,7 @@ def test_affix_disable_tail_leg_random_state_write(monkeypatch) -> None:
 def test_affix_disable_empty_container_zero_write_with_decl(
         monkeypatch, rows_sink: _RowSink) -> None:
     """空容器边界(锁 2):容器空(直构未写)时选退化 → 零容器写 +
-    申报行在册(kind = strategy_affix_disable_empty_container,实机已
+    申报行已登记(kind = strategy_affix_disable_empty_container,实机已
     失效而模型未删的偏差申报),零效果串。"""
     gs = _make_gs(None)
     calls = _record_writes(gs, monkeypatch)

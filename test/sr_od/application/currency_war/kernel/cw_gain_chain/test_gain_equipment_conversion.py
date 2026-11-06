@@ -1,6 +1,6 @@
 """装备获得转换拦截锁(镜像 src = kernel/cw_gain_chain.py 的 gain_equipment
 顶段守卫 + _equip_gain_conversion_hit 判定件;按被测方法拆目录规范落位
-——test_gain_chain.py 在册超限冻结禁追加,新锁落新镜像,先例 = 同目录
+——test_gain_chain.py 已登记超限冻结禁追加,新锁落新镜像,先例 = 同目录
 既有镜像文件)。
 
 测试面依据 = 迭代设计 designs/T-143-ziyou-shichang.md §4 + REVIEW-T143
@@ -8,7 +8,7 @@
 - 锁 2 转换主锁:持卡 + gain_equipment(简易件, rand=False)→ equips 零
   增 + 备战席 +1 简易武装箱 + detail 含 converted;箱席满走溢出落位既有
   语义不另锁(落位矩阵回归 = test_gain_bench_item 三落位/test_gain_chain
-  test_strategy_box_leg_bench_full_overflow_name 在册);
+  test_strategy_box_leg_bench_full_overflow_name 已登记);
 - 锁 3 类别边界:进阶/工具/星徽/骇客改件(注册类别'特殊')获得不转换
   照常入栏(转换谓词按注册类别判);
 - 锁 4 不持卡零转换(守卫零副作用);

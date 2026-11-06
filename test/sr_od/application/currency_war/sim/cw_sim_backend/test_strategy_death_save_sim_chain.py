@@ -6,7 +6,7 @@ sim 结算折算点接线与 M-B 独立叠加序列的世界真值落地面)。
 测试面依据 = 迭代设计 designs/T-323-cang-yishou.md §4 锁 3/4 + 用户裁定
 2026-11-04(M-B 独立叠加 = 卡救先消耗,全局保底留给后续致死;序列
 致死①→卡救→致死②→保底 1→致死③→局终;已过全局保底后拿卡仍可被救):
-- 致死矩阵:①持卡败局致死 → hp 写 40 + 奖励两笔 + 闩置位 +
+- 致死矩阵:①持卡败局致死 → hp 写 40 + 奖励两笔 + 一次性标志位置位 +
   hp_floor_triggered 零翻转(M-B 钉死)+ 结算环行 killed=False/hp_after=40
   + 建模假设披露键随局申报;②同局第二次致死 → 全局保底 hp=1(保底位
   翻真);③第三次致死 → dead 局终;④非致死败局 → 原路零涉;
@@ -14,7 +14,7 @@ sim 结算折算点接线与 M-B 独立叠加序列的世界真值落地面)。
 - 锁 4 已过保底拿卡:先耗全局保底(hp=1)再持卡 → 下一次致死 → 卡救
   hp=40(M-B 与 M-A 的行为分叉点,M-A 下此局 = dead);
 - 驱动形态 = 出战动作触发结算(2026-10-29 流程模型);引擎驱动助手
-  import 自 sim/test_sim_backend.py(在册超限拆分债文件,禁追加,只
+  import 自 sim/test_sim_backend.py(已登记超限拆分债文件,禁追加,只
   import 复用不改);helper 扩展(自定义扣血强判/世界写包装)沿同目录
   test_strategy_hp_loss_sim_chain.py 先例自带同语义副本。
 """
@@ -182,7 +182,7 @@ def _settle_lethal(monkeypatch: pytest.MonkeyPatch, b: SimBackend,
 
 def test_rescue_floor_death_sequence(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
-    """锁 3①②③ M-B 独立叠加全序列:致死①→卡救(hp=40+奖励两笔+闩
+    """锁 3①②③ M-B 独立叠加全序列:致死①→卡救(hp=40+奖励两笔+一次性标志位
     置位+保底位零翻转)→致死②→全局保底 hp=1(保底位翻真,卡救不耗
     保底)→致死③→dead 局终(hp=0)。三拍接续断言 = 用户裁定 2026-11-04
     「叠加,先消耗这个」的直接序列化。"""
@@ -197,7 +197,7 @@ def test_rescue_floor_death_sequence(
         _settle_lethal(monkeypatch, b, calls)
         rows = _ds_rows(calls)
         # hp 笔恰一笔(obs 族,值 = 表载救援值);金笔 = 现值 + 表载金;
-        # 闩笔置位 True(produced_by 署名救援写端);保底位零翻转(M-B)。
+        # 一次性标志位写笔置位 True(produced_by 署名救援写端);保底位零翻转(M-B)。
         hp_rows = [c for c in rows if c[1] == 'hp']
         assert len(hp_rows) == 1 and hp_rows[0][4] == _SAVE_HP \
             and hp_rows[0][0] == 'obs', \
@@ -210,7 +210,7 @@ def test_rescue_floor_death_sequence(
                       if c[1] == 'strategy_death_save_used']
         assert len(latch_rows) == 1 and latch_rows[0][4] is True \
             and latch_rows[0][0] == 'logic', \
-            f'闩笔漂移: {[(c[0], c[4]) for c in latch_rows]}'
+            f'一次性标志位写笔漂移: {[(c[0], c[4]) for c in latch_rows]}'
         assert gs.hp_floor_triggered.value is None, \
             '救援局误翻全局保底位(M-B:救援不耗保底)'
         assert gs.hp.value == _SAVE_HP, '救援后 hp 漂移'
@@ -228,10 +228,10 @@ def test_rescue_floor_death_sequence(
             '一次性假设披露键未申报'
         assert b.disclosures.get(_FLOOR_KEY) == 'assumed_v0', \
             '独立叠加假设披露键未申报'
-        # —— 致死②:闩挡卡救,全局保底接盘 ——
+        # —— 致死②:一次性标志位挡卡救,全局保底接盘 ——
         _drive_to_kind_prep(monkeypatch, b, target_kind='battle')
         _settle_lethal(monkeypatch, b, calls)
-        assert _ds_rows(calls) == [], '第二次致死误再救援(一次性闩失效)'
+        assert _ds_rows(calls) == [], '第二次致死误再救援(一次性标志位失效)'
         assert gs.hp.value == 1, '全局保底未接盘(应写 1)'
         assert gs.hp_floor_triggered.value is True, '保底位未翻真'
         # —— 致死③:保底已用再归零 → 局终 ——

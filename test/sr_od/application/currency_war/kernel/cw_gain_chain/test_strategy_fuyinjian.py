@@ -92,7 +92,7 @@ def test_copy_unobserved_skip() -> None:
 
 
 def test_economy_row_and_valuation() -> None:
-    """XP 注册行直测(xp_instant=24)+估值 24.0;PICK 登记键在册。"""
+    """XP 注册行直测(xp_instant=24)+估值 24.0;PICK 登记键已登记。"""
     row = STRATEGY_ECONOMY['复印件']
     assert row.xp_instant == 24, f'XP 注册行漂移: {row!r}'
     assert row.xp_instant == 24

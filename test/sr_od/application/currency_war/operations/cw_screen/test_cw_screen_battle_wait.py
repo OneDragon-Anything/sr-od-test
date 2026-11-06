@@ -9,7 +9,7 @@ kernel/test_env_grants.py〔超限只读复用〕,本文件按 src 镜像规范�
   (非 telemetry 无面板)零计数不混计;
 - **来源 B 唯一计数刻**(V2-F2):1f 败局行写点(_record_loss_page 成功
   路径)显式 killed is False 门内恰计一次;killed=None 抑制零计数;
-  「前往结算」补录路径零计数防双计;同败局多帧指纹重入由入账节点闩拦;
+  「前往结算」补录路径零计数防双计;同败局多帧指纹重入由入账节点一次性标志位拦;
 - **三来源覆盖判据**(§4.9):胜局+败局+补给三节点序列逐轮累计,每轮
   恰好一来源,面板读数与推算支不混计。
 
@@ -152,7 +152,7 @@ def test_source_a_panel_interest_counts_and_grants(
     """来源 A 胜局计数 + 触发(T-27 设计 §4.8③):结算覆盖窗内息行读数
     入账(38+2 跨阈)→ gain_character + done 两笔同 evidence 同 sig;
     sig = logic_hook 族 group 'battle-wait:env-grant'(同 streak live
-    形态);入账节点闩置位。面板读口桩 = 合成 token(真帧锁归 obs 测试)。"""
+    形态);入账节点一次性标志位置位。面板读口桩 = 合成 token(真帧锁归 obs 测试)。"""
     op = _make_op(test_context, monkeypatch, [_outcome(killed=True)])
     gs = _seed_interest_gs(test_context)
     gs.effects.record_interest_earned(38)
@@ -175,13 +175,13 @@ def test_source_a_panel_interest_counts_and_grants(
     assert pair[0][1] == _EVIDENCE + '#place', '链写 evidence(基串+#place)'
     assert pair[1][1] == _EVIDENCE, 'done evidence(基串)'
     assert all(c[2] == _SIG_HOOK for c in pair), '同 sig(logic_hook 族)'
-    assert op._st.interest_counted_pos == (1, 1), '入账节点闩置位'
+    assert op._st.interest_counted_pos == (1, 1), '入账节点一次性标志位置位'
 
 
 def test_source_a_zero_interest_row_still_records(
         test_context, monkeypatch) -> None:
     """息 0 形态照常过账(T-27 设计 §2.5:面板在息行缺席 = 零值形态非
-    失读):面板读数 0 → record(0) 零增量但计数刻成立(闩置位),阈值
+    失读):面板读数 0 → record(0) 零增量但计数刻成立(一次性标志位置位),阈值
     不足零发放。"""
     op = _make_op(test_context, monkeypatch, [_outcome(killed=True)])
     gs = _seed_interest_gs(test_context)
@@ -196,7 +196,7 @@ def test_source_a_zero_interest_row_still_records(
     op._record_round_outcome(_FRAME)
     assert gs.effects.interest_earned == 0, '零值入账(过单口)'
     assert gs.env_grants_done.value == (), '阈值不足零发放(底座空元组)'
-    assert op._st.interest_counted_pos == (1, 1), '计数刻成立(闩置位)'
+    assert op._st.interest_counted_pos == (1, 1), '计数刻成立(一次性标志位置位)'
 
 
 def test_source_a_no_count_on_transfer_button_page(
@@ -209,7 +209,7 @@ def test_source_a_no_count_on_transfer_button_page(
                         lambda ctx, screen: [])   # 按钮页无面板
     op._record_round_outcome(_FRAME)
     assert gs.effects.interest_earned == 0, '无面板帧零计数'
-    assert op._st.interest_counted_pos is None, '闩未置位(刻未成立)'
+    assert op._st.interest_counted_pos is None, '一次性标志位未置位(刻未成立)'
 
 
 # ============================================================ 来源 B
@@ -218,7 +218,7 @@ def test_source_a_no_count_on_transfer_button_page(
 def test_source_b_unique_counting_point(test_context, monkeypatch) -> None:
     """来源 B 唯一计数刻(T-27 设计 §4.8④/V2-F2):①killed=None 抑制
     形态零计数(宁缺勿造);②killed=False 行写点恰计一次(推算 = 出战金
-    100 → 息 10);③同败局多帧指纹重入由入账节点闩拦零双加;④「前往
+    100 → 息 10);③同败局多帧指纹重入由入账节点一次性标志位拦零双加;④「前往
     结算」补录路径(非 telemetry 帧面)零计数防双计。"""
     # ① 抑制形态:killed=None 进度漏读败局页
     op = _make_op(test_context, monkeypatch, [_outcome(killed=None)])
@@ -232,11 +232,11 @@ def test_source_b_unique_counting_point(test_context, monkeypatch) -> None:
     op._record_loss_page(_FRAME, pre_fp=('loss-b', 1))
     assert gs.effects.interest_earned == interest(100, DEFAULT_INTEREST_CAP), \
         '推算息入账(基座 100,缺省 cap 满档,现算期望)'
-    assert op._st.interest_counted_pos == (1, 1), '入账节点闩置位'
+    assert op._st.interest_counted_pos == (1, 1), '入账节点一次性标志位置位'
     # ③ 同败局多帧指纹重入(不同指纹 = 双补录行形态)零双加
     op._record_loss_page(_FRAME, pre_fp=('loss-c', 2))
     assert gs.effects.interest_earned == interest(100, DEFAULT_INTEREST_CAP), \
-        '入账节点闩拦零双加'
+        '入账节点一次性标志位拦零双加'
     # ④ 「前往结算」补录路径(非 telemetry,killed=None 帧面,无面板)
     queue.append(_outcome(killed=None))
     monkeypatch.setattr(bw_mod, 'read_settle_interest_panel',
@@ -263,7 +263,7 @@ def test_three_sources_one_count_per_node(test_context, monkeypatch) -> None:
     op._record_round_outcome(_FRAME)
     assert gs.effects.interest_earned == 3, 'r1 = 来源 A 面板读数'
     assert op._st.interest_counted_pos == (1, 1)
-    # r2 败局(入账节点闩换节点 = (1,2) 开放;基座金 = 出战前观察 100 →
+    # r2 败局(入账节点一次性标志位换节点 = (1,2) 开放;基座金 = 出战前观察 100 →
     # 缺省 cap 满档息 5)
     op._record_loss_page(_FRAME, pre_fp=('loss-r2', 2))
     assert gs.effects.interest_earned == 3 + interest(100, DEFAULT_INTEREST_CAP), \
@@ -331,13 +331,13 @@ def _record_strategy_writes(gs, monkeypatch) -> list[tuple]:
 def test_strategy_level_grant_fires_on_settlement_level_asset(
         test_context, monkeypatch) -> None:
     """live 接线锁(结算覆盖位):持卡 + 结算 level 资产 9 → 覆盖写端
-    level 真值落账后 equips 写 + 闩(确定面 logic 写,evidence 基串/
+    level 真值落账后 equips 写 + 一次性标志位(确定面 logic 写,evidence 基串/
     基串+#equip,同 sig = logic_hook 族组 battle-wait:strategy-level-
     grant);live 零回调 = 三联动域(diamond_count/deploy_cap/back_layout)
     零写零观察。"""
     op = _make_op(test_context, monkeypatch, [_outcome(killed=True)])
     gs = game_state_of(test_context.cw_match.session)
-    gs.prep_anchored = True   # 置闩:达标发放 = 确定事件,锁确定面写通道
+    gs.prep_anchored = True   # 置一次性标志位:达标发放 = 确定事件,锁确定面写通道
     gs.observe(gs.active_strategies, ['钻石商人'], sig=_SIG_OBS)
     gs.observe(gs.equips, [], sig=_SIG_OBS)
     _stub_settlement_assets(monkeypatch, level=9)
@@ -354,13 +354,13 @@ def test_strategy_level_grant_fires_on_settlement_level_asset(
         '结算覆盖写端必须真实落账(前置态缺失 = 断言恒绿假形态)'
     assert gs.equips.value == ['财富宝钻'], f'未发放: {gs.equips.value!r}'
     assert gs.equips.source == 'logic', '确定事件应走确定面写'
-    assert gs.strategy_conditional_done.value == ('钻石商人',), '闩未落'
+    assert gs.strategy_conditional_done.value == ('钻石商人',), '未落一次性标志位'
     pair = [c for c in calls
             if c[1] in ('equips', 'strategy_conditional_done')]
     assert [c[1] for c in pair] == ['equips', 'strategy_conditional_done'], \
         f'发放两笔相邻写: {[c[:3] for c in calls]}'
     assert pair[0][2] == f'{_LATCH_EV}#equip', '发放 evidence(#equip 链)'
-    assert pair[1][2] == _LATCH_EV, '闩 evidence(基串)'
+    assert pair[1][2] == _LATCH_EV, '一次性标志位 evidence(基串)'
     assert all(c[3] == _SIG_STRAT for c in pair), '同 sig(logic_hook 族)'
     assert all(c[4] == 'strategy_level_equip_grant' for c in pair), \
         'producer 专名(家族纪律)'
@@ -404,4 +404,4 @@ def test_strategy_level_grant_skipped_when_level_asset_none(
     assert reached == ['dot'], '前置:结算覆盖段未走到装备腿门控位(块中断)'
     assert kernel_calls == [], 'level 资产 None 门控失效(误调检查腿)'
     assert gs.equips.value == [], '门控窗误发放'
-    assert gs.strategy_conditional_done.value in (None, ()), '门控窗误闩'
+    assert gs.strategy_conditional_done.value in (None, ()), '门控窗误置一次性标志位'

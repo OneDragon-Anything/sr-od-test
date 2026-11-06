@@ -14,7 +14,7 @@ from sr_od.application.currency_war.kernel.cw_reward_node import (
     PIGGY_ENV_NAMES,
 )
 
-#: 在册扑满卡手抄件(卡面 = cw_invest_data PlazaPortal:id 105/id 119)。
+#: 已登记扑满卡手抄件(卡面 = cw_invest_data PlazaPortal:id 105/id 119)。
 #: 手抄 = 闸:版本重采增删扑满卡或改派生判据时,此处必须显式更新——
 #: 与 kernel 侧 ENV_ORE_PANEL_BONUS 键集完全一致校验同纪律(增删扑满
 #: 环境须逐处显式拍定,禁静默跟随)。
@@ -23,7 +23,7 @@ _IN_REGISTER_PIGGY_ENVS: frozenset[str] = frozenset(
 
 
 def test_piggy_env_names_derivation_covers_registered_cards() -> None:
-    """派生完备锁:名单 ⊇ 在册两扑满卡。缺员即红 = 版本改词漏派生在
+    """派生完备锁:名单 ⊇ 已登记两扑满卡。缺员即红 = 版本改词漏派生在
     测试期暴露,而非扑满全套行为对漏卡局静默关闭。"""
     assert _IN_REGISTER_PIGGY_ENVS <= PIGGY_ENV_NAMES, \
         f'扑满名单缺员: {sorted(_IN_REGISTER_PIGGY_ENVS - PIGGY_ENV_NAMES)}'

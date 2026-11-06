@@ -1,5 +1,5 @@
 """sim 策略选卡即时经验腿测试(镜像 src = sim/cw_sim_backend.py 的
-apply_strategy_pick_xp helper + _on_invest_picked 落地腿 + 呈现闩 +
+apply_strategy_pick_xp helper + _on_invest_picked 落地腿 + 呈现一次性标志位 +
 披露键 strategy_pick_instant_legs)。
 
 测试面依据 = 迭代设计 designs/T-87-jingyan-daozhang.md §2.1/§2.4/§4 七锁:
@@ -16,7 +16,7 @@ apply_strategy_pick_xp helper + _on_invest_picked 落地腿 + 呈现闩 +
 
 锁 7(live 链零写)落 kernel/test_gain_chain.py(获得链现址)。
 
-复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py(在册超限
+复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py(已登记超限
 拆分债文件,禁追加,只 import 复用不改;先例 = 本目录
 test_strategy_boss_gold.py)。
 """
@@ -79,7 +79,7 @@ def _drive_until(b: SimBackend, pred, limit: int = 512) -> None:
 
 def _drive_to_offer(b: SimBackend) -> None:
     """驱动至策略 offer 呈现(固定日程首槽 P1r3 起;呈现即置即时经验
-    腿闩——本腿生效前提)。"""
+    腿一次性标志位——本腿生效前提)。"""
     _drive_until(b, lambda: b.screen_identity() == SCREEN_INVEST_STRATEGY)
 
 
@@ -145,7 +145,7 @@ def test_zero_value_forms_zero_grant() -> None:
 
 def test_unpicked_card_zero_grant() -> None:
     """无效载荷零发放(锁 3):opts 含本卡但不落卡(选另一张)→ 落地
-    交集空 → 零写(呈现闩同拍消耗,本次不残留)。"""
+    交集空 → 零写(呈现一次性标志位同拍消耗,本次不残留)。"""
     b = _backend(seed=33)
     try:
         gs = b.gs
@@ -234,7 +234,7 @@ def test_mianzhanpai_single_pick_grant_30() -> None:
 
 def test_replay_advance_zero_double_grant() -> None:
     """重放防双发(锁 6):同 offer 落地 advance 重放一次 → 第二次零写
-    (呈现闩已消费;无新呈现不再置位)。"""
+    (呈现一次性标志位已消费;无新呈现不再置位)。"""
     b = _backend(seed=37)
     try:
         gs = b.gs

@@ -16,7 +16,7 @@ helper 注册面 = kernel/cw_investments/test_strategy_zuiying_registry.py)。
   连胜金)+ 下一节点窗开收入按维持后连胜兑现(共享链端到端;常规链
   收入在窗开拍轮初口径,战斗位结算拍零收入回归锚)。
 - 驱动形态 = 出战动作触发结算(2026-10-29 流程模型);引擎驱动助手
-  import 自 sim/test_sim_backend.py(在册超限拆分债文件,禁追加,只
+  import 自 sim/test_sim_backend.py(已登记超限拆分债文件,禁追加,只
   import 复用不改;先例 = 本目录 test_strategy_win_gold_sim_chain.py)。
 """
 from __future__ import annotations
@@ -213,7 +213,7 @@ def test_piggy_loss_hp_exempt_income_boundary_streak_kept(
     """锁 2b + 锁 5①②(扑满域):r1 扑满胜局前置连胜 1 → r2 持卡败局 =
     豁免优先 hp 恒不动(零基础不产生伤害)∧ 收入 = 基础+息无连胜分量
     (维持不使败局获连胜金)∧ 连胜维持 1(修饰层对 T-6 基线账:不持卡
-    同分支照旧清零,存量锁在册)→ r3 窗开常规支按维持后连胜兑现
+    同分支照旧清零,存量锁已登记)→ r3 窗开常规支按维持后连胜兑现
     (扑满败局不登记败补待办,下一战斗轮走常规胜轮支——共享链端到端)。"""
     b = _prep_backend(64, piggy=True)
     try:

@@ -3,7 +3,7 @@
 
 测试面依据 = 迭代设计 designs/T-271-mengjing-dawutai.md §4 锁 1/2
 (REVIEW-T271 §3.1 校验面 M12 治理归类:三漂移哨全落、档位升序哨删——
-「只能由写表人笔误触发的校验删」在册治理口径,升序性属值形/阈值形纯笔误
+「只能由写表人笔误触发的校验删」已登记治理口径,升序性属值形/阈值形纯笔误
 类,行值精确断言在本文件把关;直构形态先例 = 同目录
 test_strategy_bond_battle_grants.py):
 
@@ -15,8 +15,8 @@ test_strategy_bond_battle_grants.py):
   句),与战后触发族两拍制时点语义异构各建各表;
 - 构建校验 3 条(漂移哨,import 即炸语义经直调校验函数锁定):孤儿键 /
   gate 羁绊漂移 / 装备名漂移;
-- 数据对拍:gate ∈ FACTIONS(档位判据派生源在册)∧ item ∈ EQUIPMENTS
-  (发放物身份在册),键 ∈ 策略注册表。
+- 数据对拍:gate ∈ FACTIONS(档位判据派生源已登记)∧ item ∈ EQUIPMENTS
+  (发放物身份已登记),键 ∈ 策略注册表。
 """
 from __future__ import annotations
 
@@ -60,8 +60,8 @@ def test_registry_row_single_source(card: str,
 @pytest.mark.parametrize(('card', 'row'), sorted(_CARD_ROWS.items()))
 def test_registry_row_data_crosscheck(card: str,
                                       row: StrategyBondTierGrant) -> None:
-    """数据对拍锁:gate ∈ FACTIONS(激活判据 tiers[0] 派生源在册)∧
-    item ∈ EQUIPMENTS(发放物在册;错名运行期 = 幻影装备盲追加,import
+    """数据对拍锁:gate ∈ FACTIONS(激活判据 tiers[0] 派生源已登记)∧
+    item ∈ EQUIPMENTS(发放物已登记;错名运行期 = 幻影装备盲追加,import
     哨外第二道表域对账)。"""
     assert row.gate_faction in FACTIONS, \
         f'gate 羁绊漂移: {row.gate_faction!r}'

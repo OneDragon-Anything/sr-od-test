@@ -16,7 +16,7 @@ cw_investments.py 与绑定/估值面;按被测方法拆目录规范落位 manda
 - 锁 5 零建模现值回归:on_strategy_gained 返回空效果串 ∧ 世界容器零写
   (现值锁非终态锁,交付家族批落码组合行时随批修订翻转,设计稿 §4 已
   内嵌修订义务);
-- 锁 6 反扫闭集:候选扫描在册 + 注册表在册双断言;
+- 锁 6 反扫闭集:候选扫描已登记 + 注册表已登记双断言;
 - 锁 7 经济面零条目:三表零命中(零建模申报的回归面,家族收口批落
   组合行时 PICK 部分随批翻转)。
 """
@@ -73,7 +73,7 @@ def test_ranqilai_gift_value_tier() -> None:
 
 def test_ranqilai_binding_pair() -> None:
     """锁 3(绑定面):显式绑定二元组对拍(scope 只申报不锁死)。"""
-    assert _CARD in _STRATEGY_BINDINGS_EXPLICIT, '显式绑定在册'
+    assert _CARD in _STRATEGY_BINDINGS_EXPLICIT, '显式绑定已登记'
     factions, chars = _STRATEGY_BINDINGS_EXPLICIT[_CARD]
     assert factions == frozenset({'燃血'}), '阵营侧'
     assert chars == frozenset({'万敌', '千冶·刃'}), '角色侧'
@@ -97,9 +97,9 @@ def test_ranqilai_zero_modeling_on_gain() -> None:
 
 
 def test_ranqilai_scan_closed_set() -> None:
-    """锁 6(反扫闭集):候选扫描在册 + 注册表在册双断言。"""
-    assert _CARD in _scan_strategy_grant_candidates(), '候选扫描在册'
-    assert _CARD in STRATEGY_GRANTS, '注册表在册'
+    """锁 6(反扫闭集):候选扫描已登记 + 注册表已登记双断言。"""
+    assert _CARD in _scan_strategy_grant_candidates(), '候选扫描已登记'
+    assert _CARD in STRATEGY_GRANTS, '注册表已登记'
 
 
 def test_ranqilai_zero_modeling_registries() -> None:

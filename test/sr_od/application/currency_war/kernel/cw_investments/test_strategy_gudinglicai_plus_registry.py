@@ -82,7 +82,7 @@ def test_gudinglicai_plus_effect_spec_entry() -> None:
 
 
 def test_gudinglicai_plus_cash_score_instant_active() -> None:
-    """现金分激活锁:xp_instant=6 在册计分分类字段,注册挂值即通道自动
+    """现金分激活锁:xp_instant=6 已登记计分分类字段,注册挂值即通道自动
     生效(6×XP_GOLD_RATE;位面段两字段待建模塌 0,估值面不重复计;
     存量并排断言见 test_invest_strategy,本锁为镜像位单卡点)。"""
     gs = game_state_of(SimpleNamespace())

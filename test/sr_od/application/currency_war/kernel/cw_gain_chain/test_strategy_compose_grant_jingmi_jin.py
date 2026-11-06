@@ -10,7 +10,7 @@ _make_random_equip_effect('简易', 2))``;按被测方法拆目录规范落位,
 1个【冶金炉】和2个随机简易武装」;效果条目1/效果条目2 具名确定写 rand=False;效果条目3
 随机简易×2 放回抽 T-167 判例恰 2 次掷,效果串恒 4 条按卡文语序):
 
-- 组合行单一源:三条效果条目组合行在册(泛化表零本卡键负断言防回退撞键);
+- 组合行单一源:三条效果条目组合行已登记(泛化表零本卡键负断言防回退撞键);
 - 行为链真值:确定入口 → equips 恰 +3(扳手/炉确定写在前、随机两名在后)、
   效果串恰 4 条(2 具名+2 随机)、rng 仅效果条目 3 消费。
 """
@@ -53,7 +53,7 @@ def _make_gs(*, bench: list[tuple[str, int]] | None = None,
 
 
 def test_jingmi_jin_compose_row_single_source() -> None:
-    """组合行单一源:三条效果条目组合行在册;泛化表零本卡键(防回退撞键)。"""
+    """组合行单一源:三条效果条目组合行已登记;泛化表零本卡键(防回退撞键)。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
         _STRATEGY_RANDOM_EQUIP_GRANTS,
         PICK_INVEST_EFFECTS,

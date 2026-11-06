@@ -9,7 +9,7 @@ shengji_guolu.py〔同物冶金炉 ×2〕)。
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
 T-415-qiongyu-zhuanjia-qingque.md(定稿)§4 锁面(卡面官方原文:
 「获得装备着3个随机星徽的专家顾问【青雀】，并使其在本局游戏中加入
-商店。获得2个【冶金炉】。」——顾问腿/入商店腿已在册零动作,冶金炉腿 =
+商店。获得2个【冶金炉】。」——顾问腿/入商店腿已登记零动作,冶金炉腿 =
 本卡唯一机制件):
 
 - 效果条目2 = 登记行直书 ``_make_named_equip_grant_effect('冶金炉', 2)``,
@@ -101,11 +101,11 @@ def rows_sink() -> _RowSink:
 
 
 def test_qiongyu_qingque_row_single_source() -> None:
-    """登记面单一源:具名授予行在册 + 顾问解锁登记面镜像在册(advisor 型
+    """登记面单一源:具名授予行已登记 + 顾问解锁登记面镜像已登记(advisor 型
     chars_immediate 直读);泛化表零本卡键(防回退撞键);冶金炉 ∉ 后果表
     (获得零级联 = 「效果串恒 2 条」前提守卫,破前提时获得后果链追加效果
     串,守卫先红勿盲改断言数)。"""
-    assert _CARD in PICK_INVEST_EFFECTS, '登记行在册'
+    assert _CARD in PICK_INVEST_EFFECTS, '登记行已登记'
     assert _CARD not in _STRATEGY_RANDOM_EQUIP_GRANTS, \
         '泛化表零本卡键(撞键形态禁回退)'
     grant = STRATEGY_GRANTS[_CARD]

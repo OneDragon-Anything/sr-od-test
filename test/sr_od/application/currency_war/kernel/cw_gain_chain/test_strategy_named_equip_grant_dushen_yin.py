@@ -94,7 +94,7 @@ def test_dushen_yin_grant_leg_places_dice(rows_sink: _RowSink) -> None:
     防改名漂移)+ 精密门表不含(锁 6 降级轻断言:gate 恒 None 走纯发放
     循环,行为面由泛化守卫姊妹镜像承载);板面域(bench/deployed)零写;
     正常路径零申报行。"""
-    assert _CARD in PICK_INVEST_EFFECTS, '登记面在册'
+    assert _CARD in PICK_INVEST_EFFECTS, '登记面已登记'
     assert _ITEM not in _NAMED_EQUIP_PRECISE_GATES, \
         '精密门表外(gate 恒 None 走纯发放循环)'
     assert EQUIPMENTS[_ITEM].category == '进阶', \

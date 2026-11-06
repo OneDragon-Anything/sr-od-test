@@ -10,7 +10,7 @@ False 支链尾,decl 分派形态可达;直调上报函数不经分派层 = 存�
 - 先卖后抽时序:预种同名 2★×3 挤空 3 费桶(剩余 = 0),选卡后发牌
   仍可发出该名(种子强制首抽命中 = 确定性断言;时序颠倒则该名不在
   桶,必红);
-- 重入防:同局第二次 pick 零重复发放(呈现闩落地拍消费,无闩重放
+- 重入防:同局第二次 pick 零重复发放(呈现一次性标志位落地拍消费,无一次性标志位重放
   零写);
 - 直调形态零扰:只上报不喂声明 = 出售面照走(kernel 获得链)、发牌腿
   零触发(分派层独占),bench 清空后无凭空补员;
@@ -87,7 +87,7 @@ def _bench_units(gs) -> list[tuple[str, int]]:
 
 
 def _drive_to_strategy_offer(b: SimBackend) -> None:
-    """简报 → P1r3(U07 固定 offer 槽)驱动:策略选卡屏呈现即三条效果条目闩
+    """简报 → P1r3(U07 固定 offer 槽)驱动:策略选卡屏呈现即三条效果条目一次性标志位
     置位(发牌腿前置状态)。路径 = 既有 overlay 让路测试同款出战/推进
     序(声明化单轨)。"""
     b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
@@ -101,7 +101,7 @@ def _drive_to_strategy_offer(b: SimBackend) -> None:
     _node_advance_feed(gs, trigger='settle_confirm')
     assert gs.node.value.round_num == 3
     assert b.screen_identity() == SCREEN_INVEST_STRATEGY, \
-        'P1r3 offer 槽呈现(发牌腿呈现闩置位前提)'
+        'P1r3 offer 槽呈现(发牌腿呈现一次性标志位置位前提)'
 
 
 def _pick_card(b: SimBackend, name: str) -> None:
@@ -213,8 +213,8 @@ def test_sell_all_deal_draws_after_sell_not_before() -> None:
 # ============================================================ 锁 3:重入防
 
 def test_sell_all_deal_no_repeat_on_second_pick() -> None:
-    """同局第二次 pick(选另一张卡)零重复发放:呈现闩落地拍消费,
-    无闩的再次分派零写(xp/streak 腿同款防重放口径)。"""
+    """同局第二次 pick(选另一张卡)零重复发放:呈现一次性标志位落地拍消费,
+    无一次性标志位的再次分派零写(xp/streak 腿同款防重放口径)。"""
     b = _backend(7)
     try:
         _drive_to_strategy_offer(b)

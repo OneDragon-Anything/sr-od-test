@@ -58,12 +58,12 @@ def test_chaofa_huobi_economy_registration_surface() -> None:
 
 
 def test_chaofa_huobi_effect_spec_entry_shape() -> None:
-    """条目形状锁:STRATEGY_EFFECTS 在册(漏登记 = 获得链静默失联面)+
+    """条目形状锁:STRATEGY_EFFECTS 已登记(漏登记 = 获得链静默失联面)+
     duration_nodes=6(入口序 = offset+1,用户裁定 2026-09-10)+ payload
     同一实例(单一源,误复制实例即红)+ duties 全空(余期推进 N_NODES
     结构自动,回流发放不住 duties)+ pending=False。"""
     spec = STRATEGY_EFFECTS.get(_CARD)
-    assert spec is not None, '条目在册'
+    assert spec is not None, '条目已登记'
     assert spec.id == '202501', 'plaza id 对拍'
     assert spec.name == _CARD, '规范名对拍'
     assert spec.trigger is TriggerKind.CONDITIONAL, '触发声明占 CONDITIONAL'

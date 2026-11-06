@@ -18,7 +18,7 @@ T-165-jiazhi-touzi-jin.md(定稿)§4 锁 2(sim 世界形)/锁 5(补给后)/
   对合并不变量,发放名数线性)。
 
 驱动形态 = _enter_node_window 直通点 / _drive_until 引擎步进(锚定补推
-路径真形态);引擎驱动助手 import 自 sim/test_sim_backend.py(在册超限
+路径真形态);引擎驱动助手 import 自 sim/test_sim_backend.py(已登记超限
 拆分债文件,禁追加,只 import 复用不改;先例 = 本目录
 test_strategy_delayed_grant_sim_chain.py)。
 """

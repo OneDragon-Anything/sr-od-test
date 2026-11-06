@@ -10,7 +10,7 @@ test_strategy_compose_grant_shuangrenwu.py 双人舞两条效果条目形)。
 ——条件段星间旅人计数游戏侧自算 bot 零建模;腿序 = 卡文语序,效果串
 2 条):
 
-- 组合行单一源:两条效果条目组合行在册(泛化表零本卡键负断言防回退撞键);
+- 组合行单一源:两条效果条目组合行已登记(泛化表零本卡键负断言防回退撞键);
 - 行为链真值:确定入口 → 恰两角色入栏(绯英/银枝卡文序)、效果串恰 2 条
   char_grant、rng 零消费。
 """
@@ -57,8 +57,8 @@ def _make_gs(*, bench: list[tuple[str, int]] | None = None,
 
 
 def test_renzailvtu_compose_row_single_source() -> None:
-    """组合行单一源:两条效果条目组合行在册;泛化表零本卡键(防回退撞键)。"""
-    assert _CARD in PICK_INVEST_EFFECTS, '组合行在册'
+    """组合行单一源:两条效果条目组合行已登记;泛化表零本卡键(防回退撞键)。"""
+    assert _CARD in PICK_INVEST_EFFECTS, '组合行已登记'
     assert _CARD not in _STRATEGY_RANDOM_EQUIP_GRANTS, \
         '泛化表零本卡键(撞键形态禁回退)'
 

@@ -3,7 +3,7 @@ Field/schema 独立键/种子/rebuild 登记 + kernel/cw_projection_audit.py 的
 strategy_conditional_done 审计行)。
 
 测试面依据 = 迭代设计 designs/T-102-guimo-xiaoying.md §4 锁 6/7:
-- 快照存续:闩值进快照 → restore 往返逐位相等(tuple-of-str 不漂移为
+- 快照存续:一次性标志位值进快照 → restore 往返逐位相等(tuple-of-str 不漂移为
   list——rebuild 登记在位为前提,未登记域恢复面 = 静默类型漂移);
 - 冷建种子底座 = ()(A 类,同 env_grants_done 种子族);
 - 审计行:PROJECTION_AUDIT 出 strategy_conditional_done 行
@@ -40,11 +40,11 @@ def test_seed_empty_and_snapshot_roundtrip() -> None:
     restored = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     restore_state_snapshot(restored, snap)
     dv = restored.strategy_conditional_done.value
-    assert dv == ('规模效应',), f'闩值往返失真: {dv!r}'
+    assert dv == ('规模效应',), f'一次性标志位值往返失真: {dv!r}'
     assert isinstance(dv, tuple) and isinstance(dv[0], str), \
         'tuple-of-str 不漂移为 list(rebuild 登记面)'
 
-    # 恢复局跳过判定语义(域消费面):已闩卡名在册 = 检查腿跳过
+    # 恢复局跳过判定语义(域消费面):已置一次性标志位卡名已登记 = 检查腿跳过
     # (此处只锁域值语义载体,检查腿行为归 cw_gain_chain 锁文件)。
 
 
@@ -57,5 +57,5 @@ def test_audit_row_declared_process_only() -> None:
         PROJECTION_AUDIT,
     )
     row = PROJECTION_AUDIT.get('strategy_conditional_done')
-    assert row is not None, '登记行在册'
+    assert row is not None, '登记行已登记'
     assert row.status == AUDIT_PROCESS_ONLY, '无观察读端 → process_only'

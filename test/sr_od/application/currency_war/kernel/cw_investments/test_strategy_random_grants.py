@@ -37,7 +37,7 @@ from sr_od.application.currency_war.kernel.cw_investments import (
 def test_yuanjian_registry_row_single_source() -> None:
     """登记单一源:表键集闭族现役单卡(远见),行值 = 卡面「黄金投资
     策略」直读品质词「金」;base 溯源(id 303601/棱彩)对拍;金腿与
-    难度豁免腿归 STRATEGY_ECONOMY 三字段在册通道不入本表。"""
+    难度豁免腿归 STRATEGY_ECONOMY 三字段已登记通道不入本表。"""
     assert set(STRATEGY_RANDOM_GRANTS) == {'远见'}, \
         '注册面 = 族现役单卡(直接发放形状全池唯一)'
     assert STRATEGY_RANDOM_GRANTS['远见'] == '金', \
@@ -46,15 +46,15 @@ def test_yuanjian_registry_row_single_source() -> None:
     assert base.source == 'plaza:303601', f'溯源 id 漂移: {base.source}'
     assert base.rarity == '棱彩', '远见自身品质(棱彩)与发放品质(金)分域'
     eco = STRATEGY_ECONOMY['远见']
-    assert eco.instant_gold == 15, '腿①即时金在册估值通道(不入本表)'
-    assert eco.future_quality_upgrade == 'prism', '腿③改写字段在册'
-    assert eco.difficulty_inflation_exempt is True, '难度豁免字段在册'
+    assert eco.instant_gold == 15, '腿①即时金已登记估值通道(不入本表)'
+    assert eco.future_quality_upgrade == 'prism', '腿③改写字段已登记'
+    assert eco.difficulty_inflation_exempt is True, '难度豁免字段已登记'
 
 
 def test_yuanjian_not_in_strategy_effects() -> None:
     """远见 ∉ STRATEGY_EFFECTS(裁决点 8):零 trigger/burst/板面载荷,
     声明性条目零消费位(burst 桥只读 free_refresh_burst,远见条目即使
-    在册也无下游);同判 T-299/T-302 在册先例。"""
+    已登记也无下游);同判 T-299/T-302 已登记先例。"""
     assert '远见' not in STRATEGY_EFFECTS
 
 
@@ -83,7 +83,7 @@ def test_grant_quality_pool_nonempty_and_membership() -> None:
 
 
 def test_disclosure_keys_family() -> None:
-    """披露键四枚在册(§6 设想,常量宿主 = cw_investments):腿②分布
+    """披露键四枚已登记(§6 设想,常量宿主 = cw_investments):腿②分布
     假设键 + 腿③形状键 + 豁免读法键 + env 冲突优先级键——键值互异且
     为蛇形字符串(消费面 = sim 随局披露面 disclosures)。"""
     keys = {

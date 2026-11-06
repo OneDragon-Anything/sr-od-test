@@ -9,7 +9,7 @@
 
 - 条目锁:category ECONOMY / payload 同实例单一源对拍 STRATEGY_ECONOMY
   键 / trigger ON_REFRESH / duties 仅 respond=True / pending True;
-- 现金 fail-closed 锁:查询键 refresh_free_chance 在册(ECONOMY 注册
+- 现金 fail-closed 锁:查询键 refresh_free_chance 已登记(ECONOMY 注册
   行值不变)。
 """
 from __future__ import annotations

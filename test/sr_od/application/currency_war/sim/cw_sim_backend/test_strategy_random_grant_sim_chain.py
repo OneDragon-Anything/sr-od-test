@@ -9,20 +9,20 @@ T331 §4.2-R1 修订(获得链调用后就地判,直发拍即掷)+ §六 ④ 锁
 - 授予锁(锁 2 正面):远见拾取落地 → active_strategies 含远见 +1 个
   金名(∈ 注册表金池)、excluded_invest 不含 granted 名、难度读数同帧
   = 基线 + granted 金 3(远见自身豁免 0——豁免世界级锁同帧钉死)、
-  池分布披露键在册、申报行恰一行;
+  池分布披露键已登记、申报行恰一行;
 - 零再发断言(钉 r1-F1 重入门):远见后继拾取(腿③单卡改写槽)金名
   计数不再增长;
 - 零假发断言(钉 r1-F1 假发门):远见呈现未选局落地他卡零发放;
 - T-46 直发远见局时序锁(R1 修订核心):直发拍即掷(获得时点语义)
   ——门单挂拾取拍会把腿②迟滞到下一拾取拍;后继挂点调用零再发;
-- 改写锁(锁 4):远见在册时后继 offer 呈现 opts 长度 1 ∈ 棱彩池、
+- 改写锁(锁 4):远见已登记时后继 offer 呈现 opts 长度 1 ∈ 棱彩池、
   刷新零授权(呈现 obs refresh_slots 空)、拾取落地正常入链;
 - 联席槽改写锁(锁 5):联席决策 + 远见 → 额外槽单棱彩候选(「投资
   策略节点」词面辖联席槽);
 - 冲突优先级锁(锁 6):远见 × 时代族 rewrite_picks 同持且本拍 env 改
-  写本应命中 → 单棱彩候选(非三候选)+ 优先级披露键在册(远见胜短路)。
+  写本应命中 → 单棱彩候选(非三候选)+ 优先级披露键已登记(远见胜短路)。
 驱动形态复用声明:引擎驱动助手 import 自同目录 test_p3_win_terminal.py
-(在册先例,禁追加只 import);_pick 直调形态先例 = 同目录
+(已登记先例,禁追加只 import);_pick 直调形态先例 = 同目录
 test_strategy_pick_diamond_grant_sim_chain.py;联席环境装配形态 =
 test_sim_backend._joint_env_backend 同款。
 """
@@ -194,7 +194,7 @@ def test_pick_grants_random_gold_strategy(_isolate_defect_buffer) -> None:
     """授予锁主链:远见拾取落地 → 持卡含远见 +1 金名(∈ 金池)、
     excluded_invest 不含 granted 名、难度读数同帧 = 108+3(granted 金
     +3,远见自身豁免 0——若未豁免读数应为 117,豁免世界级锁同帧钉)、
-    池分布披露键在册、申报行恰一行(granted 名非名单卡,二次入链零
+    池分布披露键已登记、申报行恰一行(granted 名非名单卡,二次入链零
     新增)。"""
     rows: list[dict] = []
     set_defect_sink(rows.append)
@@ -202,7 +202,7 @@ def test_pick_grants_random_gold_strategy(_isolate_defect_buffer) -> None:
     try:
         _drive_to_next_offer(b)   # (1,3) 固定日程 offer
         assert (b.gs.node.value.plane, b.gs.node.value.round_num) == (1, 3)
-        assert b.gs.enemy_difficulty.value == _BASE_DIFF, '前置基线在册'
+        assert b.gs.enemy_difficulty.value == _BASE_DIFF, '前置基线已登记'
         _pick(b, '远见', ['远见', '躺平', '淘金客'])
         assert '远见' in (b.gs.active_strategies.value or []), '持卡含远见'
         gold = _gold_held(b)
@@ -214,9 +214,9 @@ def test_pick_grants_random_gold_strategy(_isolate_defect_buffer) -> None:
             f'难度同帧 = 基线+granted金3(远见豁免 0): ' \
             f'{b.gs.enemy_difficulty.value!r}'
         assert STRATEGY_RANDOM_GRANT_ASSUMPTION_UNIFORM_V0 \
-            in b.disclosures, '池分布披露键在册'
+            in b.disclosures, '池分布披露键已登记'
         assert FORESIGHT_EXEMPTION_READING in b.disclosures, \
-            '豁免读法披露键在册(远见在列即申报)'
+            '豁免读法披露键已登记(远见在列即申报)'
         kinds = [r['kind'] for r in rows]
         assert kinds.count(STRATEGY_GRANT_DECL) == 1, kinds
     finally:
@@ -226,7 +226,7 @@ def test_pick_grants_random_gold_strategy(_isolate_defect_buffer) -> None:
 def test_foresight_presented_not_picked_zero_grant(
         _isolate_defect_buffer) -> None:
     """零假发断言(锁 2,钉 r1-F1 假发门):呈现候选含远见但落地选他卡
-    → 远见不入列 → 零发放(金名零增长、池披露键不在册、门集不含远见
+    → 远见不入列 → 零发放(金名零增长、池披露键未登记、门集不含远见
     ——membership 判定构造性挡住假发)。"""
     rows: list[dict] = []
     set_defect_sink(rows.append)
@@ -321,7 +321,7 @@ def test_foresight_joint_slot_rewrite(_isolate_defect_buffer) -> None:
 def test_foresight_env_rewrite_priority_wins(_isolate_defect_buffer) -> None:
     """冲突优先级锁(锁 6):远见 × 时代族(彩虹时代 rewrite_picks=
     (1,2,3))同持且本拍 env 改写本应命中(ordinal 2 ∈ rewrite_picks)
-    → 单棱彩候选(非 env 改写三候选)+ 优先级披露键在册(远见胜短路;
+    → 单棱彩候选(非 env 改写三候选)+ 优先级披露键已登记(远见胜短路;
     证伪通道 = 实机同持局)。"""
     b = _env_backend(63, '彩虹时代')
     try:
@@ -341,7 +341,7 @@ def test_foresight_env_rewrite_priority_wins(_isolate_defect_buffer) -> None:
             f'远见胜:单候选(非 env 改写三候选): {opts}'
         assert INVESTMENT_STRATEGIES[opts[0]].rarity == '棱彩'
         assert FORESIGHT_ENV_REWRITE_PRIORITY in b.disclosures, \
-            '优先级披露键在册(真冲突短路)'
+            '优先级披露键已登记(真冲突短路)'
     finally:
         uninstall_backend()
 
@@ -384,7 +384,7 @@ def test_t46_direct_grant_foresight_fires_at_grant_time(
             'granted 名不加入排除集'
         assert b._strategy_grant_fired == {'远见'}, '门集恰记远见'
         assert STRATEGY_RANDOM_GRANT_ASSUMPTION_UNIFORM_V0 \
-            in b.disclosures, '池分布披露键在册'
+            in b.disclosures, '池分布披露键已登记'
         # 后继挂点调用零再发(任意拾取拍/直发拍的助手调用均被门挡)。
         b._fire_strategy_random_grants(plane=3, r=5)
         assert set(_gold_held(b)) == gold_now, '零再发:金名集合不变'

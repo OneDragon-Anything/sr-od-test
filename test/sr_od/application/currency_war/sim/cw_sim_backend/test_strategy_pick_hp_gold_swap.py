@@ -1,5 +1,5 @@
 """sim 策略选卡获得链交换分支轨迹成对测试(镜像 src = sim/cw_sim_backend.py
-的 _on_invest_picked 交换分支轨迹成对腿 + 三呈现点呈现闩;按被测方法拆
+的 _on_invest_picked 交换分支轨迹成对腿 + 三呈现点呈现一次性标志位;按被测方法拆
 目录规范落位,先例 = 同目录 test_strategy_pick_hp.py)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-333-budengjia-
@@ -7,11 +7,11 @@ jiaohuan.md §4 锁 5(REVIEW-T333.md §五.④ 同面;kernel 侧锁 1-4 落
 kernel/cw_gain_chain/ 同批新文件,本文件只锁 sim 侧):
 - 固定 seed 局持卡选卡(锁 5):kernel 交换分支写行落容器后,落地拍
   hp_trail 恰追加一行且尾值 == gs.hp 现值(写流↔轨迹全序同构);
-- 呈现闩防重放:落地 advance 重放 → 轨迹零再追加(kernel 写行恰一,
+- 呈现一次性标志位防重放:落地 advance 重放 → 轨迹零再追加(kernel 写行恰一,
   配对必须恰一);
 - 等值交换仍配对:交换前 hp 已 == min(gold, SQUAD_HP_CAP) 时写行照落
   (等值写先例 = apply_hp_outcome 胜局支),轨迹仍同拍追加——尾值检测式
-  在此形态漏配,呈现闩 + 判别按「每发恰一写行」计数天然覆盖;
+  在此形态漏配,呈现一次性标志位 + 判别按「每发恰一写行」计数天然覆盖;
 - 未落卡零扰动:opts 含本卡但选另一张 → 交集空 → 零 hp 写行零追加。
 
 复用声明:装配与驱动助手 import 自 sim/test_sim_backend.py 与同目录
@@ -47,7 +47,7 @@ _SWAP_EVIDENCE = 'strategy:hp_gold_swap'
 
 def test_swap_pick_writes_and_trail_pairs_exactly_once() -> None:
     """持卡交换真值 + 轨迹成对(锁 5):自然 offer 呈现(三呈现点统一
-    置闩)后定向选不等价交换 → hp == min(gold_old, SQUAD_HP_CAP) ∧
+    置一次性标志位)后定向选不等价交换 → hp == min(gold_old, SQUAD_HP_CAP) ∧
     gold == hp_old(双字段各一条交换写行,evidence 同串)→ hp_trail 恰
     追加一行且尾值 == gs.hp 现值;下一战斗结算笔照常配对不受扰。"""
     b = _backend(seed=48)
@@ -83,8 +83,8 @@ def test_swap_pick_writes_and_trail_pairs_exactly_once() -> None:
 
 
 def test_swap_replay_advance_zero_double_append() -> None:
-    """呈现闩防重放:同 offer 落地 advance 重放一次 → kernel 写行不再
-    产生(上报不在重放路径)、轨迹零再追加(闩已消费;重放多配一行即
+    """呈现一次性标志位防重放:同 offer 落地 advance 重放一次 → kernel 写行不再
+    产生(上报不在重放路径)、轨迹零再追加(一次性标志位已消费;重放多配一行即
     破写流↔轨迹全序同构)。"""
     b = _backend(seed=49)
     try:
@@ -104,7 +104,7 @@ def test_swap_replay_advance_zero_double_append() -> None:
 
 def test_equal_value_swap_still_pairs_trail() -> None:
     """等值交换仍配对:交换前 hp 已 == min(gold, SQUAD_HP_CAP) → 等值
-    写行照落、轨迹仍同拍追加(尾值检测式在此形态漏配,呈现闩 + 判别
+    写行照落、轨迹仍同拍追加(尾值检测式在此形态漏配,呈现一次性标志位 + 判别
     按每发恰一写行计数;本锁钉死配对形态选择的正确性)。"""
     b = _backend(seed=50)
     try:
@@ -132,7 +132,7 @@ def test_equal_value_swap_still_pairs_trail() -> None:
 
 def test_unpicked_swap_card_zero_write_zero_append() -> None:
     """未落卡零扰动:opts 含本卡但选另一张 → 落地交集空 → 零交换写行
-    零轨迹追加(kernel 分支按上报卡名触发不按 opts 触发;闩同拍消费,
+    零轨迹追加(kernel 分支按上报卡名触发不按 opts 触发;一次性标志位同拍消费,
     本次不残留)。"""
     b = _backend(seed=51)
     try:

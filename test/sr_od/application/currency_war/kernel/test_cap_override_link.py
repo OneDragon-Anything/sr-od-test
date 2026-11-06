@@ -10,8 +10,8 @@
   买断制 0——测试值一律注册表名,禁裸 override 数字)。
 
 测试面(方案审验收 ④-⑤ 编号):
-1. ①注册表直调三卡在册 → cap 联动(kernel 链 + 预算面 R* + 换线可负担窗;
-   前置锚 = 三卡覆写值在册直调;回落面 = 不在册 → DEFAULT);
+1. ①注册表直调三卡已登记 → cap 联动(kernel 链 + 预算面 R* + 换线可负担窗;
+   前置锚 = 三卡覆写值已登记直调;回落面 = 未登记 → DEFAULT);
 2. ④None/0 区分测试(最高危陷阱):买断制 override=0 不得被 ``or`` 真值
    折叠回 5——判别只认 None;
 3. ⑤并持 max 语义测试(ADR-0131):开源节流+利息上调 → 10;
@@ -68,12 +68,12 @@ def _sess_with(*names: str) -> StrategySession:
 
 
 def test_three_cap_cards_linkage() -> None:
-    """测试①:注册表直调三卡在册 → cap 联动(resolved 链单点)。前置锚:
-    三卡覆写值直调在册(9/10/0;表缺任一 = 本文件全部按名注入的测试失去
-    锚点,先修注册表再谈测试)。回落面:不在册 → DEFAULT_INTEREST_CAP
+    """测试①:注册表直调三卡已登记 → cap 联动(resolved 链单点)。前置锚:
+    三卡覆写值直调已登记(9/10/0;表缺任一 = 本文件全部按名注入的测试失去
+    锚点,先修注册表再谈测试)。回落面:未登记 → DEFAULT_INTEREST_CAP
     (裸 session/None/未注册名三形态;回落问题实际形态 = 从未持有,
     append-only)。"""
-    # 前置锚(原可达性测试迁并):三卡覆写值在册直调
+    # 前置锚(原可达性测试迁并):三卡覆写值已登记直调
     assert {9: '开源节流', 10: '利息上调', 0: '买断制'}.items() \
         <= _CAP_CARD_BY_VALUE.items()
     for cap, name in _CAP_CARD_BY_VALUE.items():

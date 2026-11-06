@@ -1,5 +1,5 @@
 """统一观察对账安灯·装配闭包测试( §2.4;
-2026-09-16 框架化:处置壳 = stop_running 一行,截图归框架,flag/闩退役)。
+2026-09-16 框架化:处置壳 = stop_running 一行,截图归框架,flag/一次性标志位退役)。
 
 闭包工厂 = currency_war_app._build_reconcile_andon(ctx);kernel 槽缺省关的
 零副作用面由 test_mismatch_policy.py 校验,本文件只校验生产闭包行为面。
@@ -52,7 +52,7 @@ def test_andon_mismatch_stops_with_framework_evidence(monkeypatch, caplog):
 
 
 def test_andon_no_latch_repeat_fires_stop_again():
-    """无每局闩:重复触发照发 stop——幂等收口与截图防重由框架
+    """无每局一次性标志位:重复触发照发 stop——幂等收口与截图防重由框架
     stop_running(幂等 + was_live 门)保证,闭包不自维护状态。"""
     rc = _Rc()
     set_reconcile_andon_hook(

@@ -1,6 +1,6 @@
 """羁绊档位条件发放 sim 全链轻量局测试(镜像 src 主断言对象 = T-41
 特邀专家:加拉赫击破档分支经 sim 后端全链;按流程级测试落位本目录,引擎
-驱动助手 import 自 sim/test_sim_backend.py〔在册超限拆分债文件,禁追加,
+驱动助手 import 自 sim/test_sim_backend.py〔已登记超限拆分债文件,禁追加,
 只 import 复用不改;先例 = 本目录 test_env_expert_invite_sim_chain.py〕)。
 
 测试面依据 = 迭代 T-41 设计稿(.debug/progress/2026-09-23-invest-effects-

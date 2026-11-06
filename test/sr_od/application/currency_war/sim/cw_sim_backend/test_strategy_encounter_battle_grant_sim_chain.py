@@ -12,7 +12,7 @@ sim 结算腿接线与世界真值落地面)。
   现值判定(非硬编码轮次)。
 - 驱动形态 = 出战动作触发结算(2026-10-29 流程模型:遭遇选完回备战,
   出战声明 battle_resolve);复用声明沿本目录先例:引擎驱动助手 import
-  自 sim/test_sim_backend.py(在册超限拆分债文件,禁追加,只 import
+  自 sim/test_sim_backend.py(已登记超限拆分债文件,禁追加,只 import
   复用不改);途经策略定卡固定「加油站」= 零判读域写,断言与 seed
   采样解耦(_drive_env_grant_step 内建)。
 """

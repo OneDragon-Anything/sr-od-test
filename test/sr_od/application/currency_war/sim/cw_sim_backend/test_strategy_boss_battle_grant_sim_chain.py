@@ -15,10 +15,10 @@ battle_grant_sim_chain.py / test_strategy_hp_loss_sim_chain.py):
   双发);修饰局跟随 = 序列现值判定(非硬编码轮次);采样断言 = 名 ∈
   简易池派生集,禁手抄清单。
 - 装备笔计数断言前提 = 简易池 ∩ EQUIP_ACQUIRE_CONSEQUENCES = ∅(空集
-  守卫在册 = test_strategy_hp_loss_sim_chain.py::
+  守卫已登记 = test_strategy_hp_loss_sim_chain.py::
   test_simple_pool_no_acquire_consequences,同池同前提不重复立锁)。
 - 驱动形态 = 出战动作触发结算(2026-10-29 流程模型);引擎驱动助手
-  import 自 sim/test_sim_backend.py(在册超限拆分债文件,禁追加,只
+  import 自 sim/test_sim_backend.py(已登记超限拆分债文件,禁追加,只
   import 复用不改);helper 副本(世界写包装/类型备战驱动/定参结算)
   沿同目录先例自带同语义拷贝。
 """

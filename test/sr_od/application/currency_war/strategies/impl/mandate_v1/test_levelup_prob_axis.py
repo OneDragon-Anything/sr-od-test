@@ -251,7 +251,7 @@ class TestBatchEmission:
         2026-10-30:不存在升级卖牌凑金——保持最大压牌库,钱够了再升):
         花后破线 ∧ 备战席活期充足(原「凑金可达域」形态:68+12−20 =
         60 ≥ 线 50)→ 不再卖牌凑金——零卖出动作、零升级发射,整批
-        推迟拒因键 levelup_fund_line_defer 在册;对照金位升至线+批
+        推迟拒因键 levelup_fund_line_defer 已登记;对照金位升至线+批
         (现金 80:80−20 = 60 ≥ 50)→ 整批发射(「钱够了再升」的
         正向锚:发射只由资金线支配,不由变现加速)。"""
         from sr_od.application.currency_war.kernel.cw_game_state import Unit
@@ -270,7 +270,7 @@ class TestBatchEmission:
         assert not [e for e in out
                     if isinstance(e.action, CwActionLevelUpParam)]
         assert state_of(s).cw4_counters.get('levelup_fund_line_defer') == 1, \
-            '整批推迟拒因键在册(原凑金可达帧与不可达帧同键同形)'
+            '整批推迟拒因键已登记(原凑金可达帧与不可达帧同键同形)'
         # 对照:金位 ≥ 线+批(现金 80,花后 60 ≥ 50)→ 整批发射。
         gs2, s2 = _frame(level=5, gold=80, bench=_stay_bench())
         _mark_handled(gs2)
@@ -364,7 +364,7 @@ class TestRetainedGates:
         原凑金可达帧(花后破线 ∧ 现金 + bench 活期 − 批 ≥ 线)与
         凑金不可达帧(宽池可卖也守不住线)verdict 同形 GATE_DEFER
         ——值域闭集 = miss/defer/emit 三值,金不足帧拒因键
-        levelup_fund_line_defer 在册(触发键经计数证:defer 元组不
+        levelup_fund_line_defer 已登记(触发键经计数证:defer 元组不
         携键)。"""
         from sr_od.application.currency_war.kernel.cw_game_state import Unit
         # 原凑金可达帧:lv5 批 20,现金 68,活期 4 件退 12(68+12−20
@@ -446,7 +446,7 @@ class TestDeferFrameInterestRuns:
         """等钱帧(触发命中 ∧ 花后破线 → levelup_fund_line_defer):
         lv5 批 20,金 48 花后 28 < 线 50 → 第 4 步整批推迟零动作;
         凑息缺口 2(gold 48 → 下一档 50)∧ bench 散件退 3 跨档 →
-        第 8 步照常卖出(interest_prep)——同帧双键在册(资金 defer +
+        第 8 步照常卖出(interest_prep)——同帧双键已登记(资金 defer +
         凑息取用),证明两步互不抑制。"""
         gs, s = self._defer_frame(level=5, gold=48, deploy_cap=5)
         _mark_handled(gs)
@@ -637,7 +637,7 @@ class TestFundLineEmissionPins:
                 f'攒息带金 {gold}:该帧不发射(整批推迟)'
             assert state_of(s).cw4_counters.get(
                 'levelup_fund_line_defer') == 1, \
-                f'攒息带金 {gold}:推迟拒因在册'
+                f'攒息带金 {gold}:推迟拒因已登记'
         # 活期充足变体:金 55 + 活期 5 件(退 15,原凑金可达域)→ 恒
         # defer,零发射零卖出(压牌库资产不再被升级变现回抽——用户
         # 裁定 2026-10-30:不存在升级卖牌凑金,钱够了再升)。
@@ -655,18 +655,18 @@ class TestFundLineEmissionPins:
                     if isinstance(e.action, CwActionSellBenchParam)], \
             '活期充足金不足帧零卖出(凑金链已整删)'
         assert state_of(s2).cw4_counters.get(
-            'levelup_fund_line_defer') == 1, '推迟拒因在册'
+            'levelup_fund_line_defer') == 1, '推迟拒因已登记'
 
     def test_natural_upgrade_fund_gate_end_to_end(self):
         """design §2.7⑩ 自然升级 × 资金门端到端:无未完成星级目标 →
         natural 键触发,资金门对 natural 同参管辖——金足帧整批发射
         (花后 ≥ 线,触发键随发射装载),金不足帧推迟零动作(触发计数
-        与资金 defer 计数同帧在册,证两链同帧串接)。"""
+        与资金 defer 计数同帧已登记,证两链同帧串接)。"""
         from sr_od.application.currency_war.kernel.cw_economy import (
             cap_resolved_of_session,
             saturation_line,
         )
-        # 金不足:花后 30−批 < 线 ∧ 无活期 → defer(natural 触发在册)
+        # 金不足:花后 30−批 < 线 ∧ 无活期 → defer(natural 触发已登记)
         gs, s = _frame(level=5, gold=30, bench=_stay_bench(xili_star=3))
         assert levelup.unfinished_star_targets(gs) == []
         _mark_handled(gs)
@@ -675,8 +675,8 @@ class TestFundLineEmissionPins:
                     if isinstance(e.action, CwActionLevelUpParam)], \
             '金不足自然升级帧:推迟零动作'
         ct = state_of(s).cw4_counters
-        assert ct.get('levelup_trigger_natural') == 1, 'natural 触发在册'
-        assert ct.get('levelup_fund_line_defer') >= 1, '资金 defer 同帧在册'
+        assert ct.get('levelup_trigger_natural') == 1, 'natural 触发已登记'
+        assert ct.get('levelup_fund_line_defer') >= 1, '资金 defer 同帧已登记'
         # 金足:花后 ≥ 线 → 整批发射,auth_basis = natural
         gs2, s2 = _frame(level=5, gold=100, bench=_stay_bench(xili_star=3))
         _mark_handled(gs2)

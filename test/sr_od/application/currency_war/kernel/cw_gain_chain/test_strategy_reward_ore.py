@@ -5,11 +5,11 @@ ORE_GRANTS 白名单表 + check_strategy_reward_ore_grants 纯判定 + sim
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-306 对应稿
 (REVIEW-T306 免裁 6/6;卡面官方原文:「进入新的奖励节点时，获得1个晶
-矿。」——表值 = 发矿数卡面明写;晶矿无 placement 发放即闩,载体自证差异):
+矿。」——表值 = 发矿数卡面明写;晶矿无 placement 发放即一次性标志位,载体自证差异):
 
 - 注册表锁:集合 = {'彩虹矿': 1} + 孤儿键负控;
-- 判定矩阵锁:未持卡 0 / 非 reward 节点 0 / 持卡 reward 首窗发 1+闩 /
-  重放零重发(闩命中);
+- 判定矩阵锁:未持卡 0 / 非 reward 节点 0 / 持卡 reward 首窗发 1+一次性标志位 /
+  重放零重发(一次性标志位命中);
 - PENDING 行文案锁。
 """
 from __future__ import annotations
@@ -54,7 +54,7 @@ def test_registry_closed_set() -> None:
 
 
 def test_gate_matrix_and_latch() -> None:
-    """判定矩阵锁:非 reward 0 / 未持卡 0 / 持卡 reward 首窗发 1+闩 /
+    """判定矩阵锁:非 reward 0 / 未持卡 0 / 持卡 reward 首窗发 1+一次性标志位 /
     重放零重发。"""
     gs = _make_gs(held=(_CARD,))
     assert check_strategy_reward_ore_grants(gs, node_kind='battle',
@@ -67,7 +67,7 @@ def test_gate_matrix_and_latch() -> None:
                                            sig=_SIG)
     assert got == 1, f'持卡 reward 首窗发 1: {got}'
     latch = f'{_CARD}#{STRATEGY_GIFT_LEG_REWARD_ORE}'
-    assert latch in (gs3.strategy_grants_done.value or ()), f'闩: {latch}'
+    assert latch in (gs3.strategy_grants_done.value or ()), f'一次性标志位: {latch}'
     again = check_strategy_reward_ore_grants(gs3, node_kind='reward',
                                              sig=_SIG)
     assert again == 0, f'重放零重发: {again}'

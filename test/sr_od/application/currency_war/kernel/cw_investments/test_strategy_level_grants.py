@@ -31,7 +31,7 @@ from sr_od.application.currency_war.kernel.cw_investments import (
 def test_diamond_merchant_registry_row_single_source() -> None:
     """登记单一源:钻石商人行 = 卡面效果原文直读(「升到9级时」→ 触发
     等级 9;「获得【财富宝钻】」→ 具名装备);发放物 = 装备注册表成员
-    (cw_equipment_data 在册);base 溯源 id 对拍(130401 ↔ plaza:130401)。"""
+    (cw_equipment_data 已登记);base 溯源 id 对拍(130401 ↔ plaza:130401)。"""
     assert set(STRATEGY_LEVEL_GRANTS) == {'钻石商人'}, \
         '注册面 = 族现役首例(同族后续卡各自独立批,禁顺手代登记)'
     row = STRATEGY_LEVEL_GRANTS['钻石商人']
@@ -79,7 +79,7 @@ def test_validator_item_equip_name_drift_raises(monkeypatch) -> None:
     (EQUIPMENTS = 游戏数据派生注册表,版本更新改名/移除装备可独立触发,
     STRATEGY_CONDITIONAL_GRANTS 校验③同形)。错名运行期实况 = 静默
     幻影:gain_equipment 盲追加 + on_equipment_gained .get() 安静不写 +
-    live 调用位返回值刻意忽略 → 静默幻影装备永久落闩零报错——import 期
+    live 调用位返回值刻意忽略 → 静默幻影装备永久落一次性标志位零报错——import 期
     哨是唯一响亮拦截面,本锁防哨被再删。"""
     monkeypatch.setitem(
         cw_investments.STRATEGY_LEVEL_GRANTS, '钻石商人',

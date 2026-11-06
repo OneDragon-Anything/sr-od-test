@@ -9,7 +9,7 @@ test_strategy_compose_grant_gangtie.py 钢铁美学一条效果条目形)。
 3/6/9时，额外获得1/2/3层【同频】。获得【希儿】。」——条件段【量子同频
 星数档位】游戏侧自算 bot 零建模;效果串 1 条):
 
-- 组合行单一源:单角色组合行在册(泛化表零本卡键负断言防回退撞键);
+- 组合行单一源:单角色组合行已登记(泛化表零本卡键负断言防回退撞键);
 - 行为链真值:确定入口 → 恰一角色入栏(希儿)、效果串恰 1 条 char_grant、
   rng 零消费。
 """
@@ -56,8 +56,8 @@ def _make_gs(*, bench: list[tuple[str, int]] | None = None,
 
 
 def test_liangzi_compose_row_single_source() -> None:
-    """组合行单一源:单角色组合行在册;泛化表零本卡键(防回退撞键)。"""
-    assert _CARD in PICK_INVEST_EFFECTS, '组合行在册'
+    """组合行单一源:单角色组合行已登记;泛化表零本卡键(防回退撞键)。"""
+    assert _CARD in PICK_INVEST_EFFECTS, '组合行已登记'
     assert _CARD not in _STRATEGY_RANDOM_EQUIP_GRANTS, \
         '泛化表零本卡键(撞键形态禁回退)'
 

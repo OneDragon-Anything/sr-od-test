@@ -372,13 +372,13 @@ class _BattleWaitStub:
 
 def _make_coverage_loop(test_context, monkeypatch,
                         settle: SettlementState) -> CwLoop:
-    """CwLoop 裸装配 + 全桩面,战斗窗驻留闩置位(先例 = boss 帧排除测试)。"""
+    """CwLoop 裸装配 + 全桩面,战斗窗驻留一次性标志位置位(先例 = boss 帧排除测试)。"""
     op = CwLoop.__new__(CwLoop)
     op.ctx = test_context
     op._iter = 3                # 3+1=4:跳过 iter1 预检/焦点检查/首读分支
     op._stop_at_prep = False
     op._max_rounds = None
-    op._battle_wait_active = True   # 战斗窗驻留闩(出战成功形态)
+    op._battle_wait_active = True   # 战斗窗驻留一次性标志位(出战成功形态)
     op._battle_ts = 1234.0
     op._cw_resume_candidate = False
     op._cw_locked_resume = False

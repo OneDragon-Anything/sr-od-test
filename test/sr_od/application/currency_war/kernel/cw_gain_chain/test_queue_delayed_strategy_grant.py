@@ -26,7 +26,7 @@ monkeypatch 形态测随真注册转直测):
   (拿卡前后 rng 状态逐位相等,预掷被否的行为证据)∧ equips 未观察域
   载体分流直断 + 两条效果条目成员集负成员(T-148 批扩面);
 - equips 未观察 → 即时腿拒落零写 placed=False、入队腿照写;
-- 未登记策略卡(表外名 + 在册无腿卡)零写;
+- 未登记策略卡(表外名 + 已登记无腿卡)零写;
 - 回收计划 = 组合登记行入队腿(designs/T-237-huishou-jihua.md §4 锁 6:
   随机腿×延时入队腿,类别池效果串池标记形直断 + rng 恰 1 次同序对拍);
 - live 落地形态(gain_invest_strategy 同函数,session=None 直构)队列
@@ -57,7 +57,7 @@ def _gs(equips: list[str] | None) -> GameState:
     if equips is not None:
         gs.write_logic(gs.equips, list(equips), produced_by='test-seed',
                        evidence='t:equips', sig=_lsig())
-    gs.prep_anchored = True   # 置闩:登记 = 确定事件,锁确定面写通道
+    gs.prep_anchored = True   # 置一次性标志位:登记 = 确定事件,锁确定面写通道
     return gs
 
 
@@ -95,7 +95,7 @@ def test_equips_unobserved_instant_rejected_queue_still_written() -> None:
 
 
 def test_unregistered_cards_zero_write() -> None:
-    """未登记卡零写(两形):表外名(查无效果安静不写)与在册无腿卡
+    """未登记卡零写(两形):表外名(查无效果安静不写)与已登记无腿卡
     (躺平,注册表有卡但无登记行)均 → 零效果串 + 队列零写。"""
     for name in ('随便一张未收录卡', '躺平'):
         gs = _gs(equips=[])

@@ -103,7 +103,7 @@ def test_lizhi_registry_row_name_canonicalization() -> None:
     assert '狸狸' not in CHARACTER_ROSTER, '卡面用名确在注册表外(锁前提)'
     assert INVESTMENT_STRATEGIES[_CARD].source == 'plaza:204001', \
         '注册行 id 对拍'
-    assert _CARD in PICK_INVEST_EFFECTS, '世界发放腿注册在册'
+    assert _CARD in PICK_INVEST_EFFECTS, '世界发放腿注册已登记'
 
 
 def test_lizhi_char_grant_triple_with_merge_cascade(

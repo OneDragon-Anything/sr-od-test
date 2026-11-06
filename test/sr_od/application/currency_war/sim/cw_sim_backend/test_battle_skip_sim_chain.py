@@ -20,7 +20,7 @@ REVIEW-T161 §5 特别核查①(镜像现值 _on_node_advance 记账段——跳
   成长基金金腿双通道写 / 钻石商人装备腿直写 + 宝钻世界联动,发放拍 =
   经验入账后。
 
-驱动形态复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py(在册
+驱动形态复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py(已登记
 超限拆分债文件,禁追加,只 import 复用不改)。
 """
 from __future__ import annotations
@@ -339,7 +339,7 @@ def test_skip_cross_level_gold_grant_mirror(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """跳过拍跨级到级金腿镜像锁(REVIEW-T161 特别核查①):直构 level=8
     + xp 贴阈(8→9 门槛 72)持成长基金,skip 跨 9 → 金腿双通道写
-    (gold observe 独立笔 + done 闩 logic 笔),发放拍 = 被跳节点经验
+    (gold observe 独立笔 + done 一次性标志位 logic 笔),发放拍 = 被跳节点经验
     入账之后。"""
     _counting_force_settle(monkeypatch, won=True)
     b = _backend(seed=47)
@@ -363,9 +363,9 @@ def test_skip_cross_level_gold_grant_mirror(
                       if c[1] == 'strategy_conditional_done'
                       and c[2] == f'strategy:level_gold:{_GOLD_CARD}']
         assert len(gold_legs) == 1, f'金腿 observe 笔漂移: {gold_legs}'
-        assert len(latch_legs) == 1, f'done 闩笔漂移: {latch_legs}'
+        assert len(latch_legs) == 1, f'done 一次性标志位写笔漂移: {latch_legs}'
         assert latch_legs[0][4] == (_GOLD_CARD,), \
-            f'闩值漂移: {latch_legs[0]}'
+            f'一次性标志位值漂移: {latch_legs[0]}'
         # 发放拍 = 经验入账后(跨级事件拍,先于新节点窗轮首收入)
         idx_xp = next(i for i, c in enumerate(calls)
                       if c[1] == 'level'
@@ -378,7 +378,7 @@ def test_skip_cross_level_gold_grant_mirror(
 def test_skip_cross_level_equip_grant_world_coupling(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """跳过拍跨级到级装备腿镜像锁 + 宝钻世界联动:直构 level=8 + xp 贴阈
-    持钻石商人,skip 跨 9 → equips 随机态写 + 闩一笔(producer 专名),
+    持钻石商人,skip 跨 9 → equips 随机态写 + 一次性标志位写一笔(producer 专名),
     宝钻回调三写(diamond_count +1 / deploy_cap = level+钻数 /
     back_layout +1);发放拍 = 经验入账后。"""
     _counting_force_settle(monkeypatch, won=True)
@@ -399,7 +399,7 @@ def test_skip_cross_level_equip_grant_world_coupling(
         legs = [c for c in calls
                 if c[2] in (f'strategy_level_grant:{_EQUIP_CARD}#equip',
                             f'strategy_level_grant:{_EQUIP_CARD}')]
-        assert len(legs) == 2, f'装备腿/闩笔数漂移: {legs}'
+        assert len(legs) == 2, f'装备腿/一次性标志位写笔数漂移: {legs}'
         equip_leg, latch_leg = legs
         assert equip_leg[:2] == ('rand', 'equips'), \
             f'发放通道漂移: {equip_leg[:2]}'
@@ -407,8 +407,8 @@ def test_skip_cross_level_equip_grant_world_coupling(
         assert equip_leg[5] == 'strategy_level_equip_grant', \
             f'producer 漂移: {equip_leg[5]!r}'
         assert latch_leg[:2] == ('logic', 'strategy_conditional_done'), \
-            f'闩通道漂移: {latch_leg[:2]}'
-        assert latch_leg[4] == (_EQUIP_CARD,), f'闩值漂移: {latch_leg}'
+            f'一次性标志位通道漂移: {latch_leg[:2]}'
+        assert latch_leg[4] == (_EQUIP_CARD,), f'一次性标志位值漂移: {latch_leg}'
         # 宝钻世界联动三写
         assert int(gs.diamond_count.value) == 1, 'diamond_count 未 +1'
         assert int(gs.deploy_cap.value) == 9 + 1, \

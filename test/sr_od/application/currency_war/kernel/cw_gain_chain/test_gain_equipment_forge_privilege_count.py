@@ -1,7 +1,7 @@
 """gain_equipment 尾段刃锻特权化获得计数锁(镜像 src = kernel
 /cw_gain_chain.py 的 gain_equipment 尾段调用 + kernel/cw_effect_inventory
 .record_forge_privilege_gain 机制单一源;按被测方法拆目录规范落位——
-test_gain_chain.py 在册超限冻结禁追加,新锁落新镜像,先例 = 同目录
+test_gain_chain.py 已登记超限冻结禁追加,新锁落新镜像,先例 = 同目录
 既有镜像文件)。
 
 测试面依据 = 迭代设计 designs/T-418-duanye-zhuanjia-ren.md §4 锁 5

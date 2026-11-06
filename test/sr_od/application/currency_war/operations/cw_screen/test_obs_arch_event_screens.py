@@ -39,7 +39,7 @@
   (双源域命中·转换失败·歧义拒判·LCS 同分取域序首确定性)/决策守卫
   (候选空 fail 零盲发·idx 越界断言)/选择坐标观察上报收敛(候选检测
   重做批:标签带限定 OCR 定卡 1..N + 逐卡立绘 SIFT 交叉验证,xy =
-  各卡标签中心 x + 在册卡身线 y 每卡自带,零枚举映射;fixture 全链·
+  各卡标签中心 x + 已登记卡身线 y 每卡自带,零枚举映射;fixture 全链·
   部分读 xy 自带·SIFT 交叉裁决·reader 失败信号透传 round_fail·
   标准化透传·派发 env idx-only·动作 op 容器取点守卫三臂断言零点击)
   各一测试,语义见各 docstring。
@@ -964,10 +964,10 @@ def _read_stub_ctx(ocr_map: dict, *, gs: object | None = None) -> SimpleNamespac
 
 
 def test_megastar_read_fixture_full_chain(test_context) -> None:
-    """fixture 全链测试(候选检测重做批;归档 fixture = 本屏在册存档
+    """fixture 全链测试(候选检测重做批;归档 fixture = 本屏已登记存档
     「未选择.webp」,双候选:左 = 星期日 / 右 = 花火):标签带限定 OCR
     定卡 + 逐卡立绘 SIFT 交叉验证全链真跑(真 OCR + 真 SIFT 立绘库,
-    零桩)→ 2 选项 = 标准名,xy = 各卡标签中心 x + 在册卡身线 y,
+    零桩)→ 2 选项 = 标准名,xy = 各卡标签中心 x + 已登记卡身线 y,
     序左→右。红 = 标签带 area 失效 / OCR 漏读 / SIFT 裁区漂移 /
     标准化门误拒 / 序或坐标错。"""
     import sr_od.application.currency_war.obs.cw_megastar_obs as mo
@@ -977,7 +977,7 @@ def test_megastar_read_fixture_full_chain(test_context) -> None:
     assert [o.char_id for o in opts] == ['星期日', '花火'], (
         f'标准名左→右:{[o.char_id for o in opts]!r}')
     # 标签中心 fixture OCR 实测:星期日 823+199/2≈922、花火 1060+199/2≈1160;
-    # 容差 2px 容 OCR 亚像素漂移;y = 在册卡身线 333。
+    # 容差 2px 容 OCR 亚像素漂移;y = 已登记卡身线 333。
     assert abs(opts[0].xy[0] - 922) <= 2 and opts[0].xy[1] == 333, (
         f'左卡 xy:{opts[0].xy!r}')
     assert abs(opts[1].xy[0] - 1160) <= 2 and opts[1].xy[1] == 333, (
@@ -1086,7 +1086,7 @@ def test_megastar_read_failure_round_fails_clean(
 def test_megastar_observe_reports_xy_and_standardize_passthrough(
         test_context, monkeypatch) -> None:
     """观察上报 xy 透传测试(选择坐标观察上报收敛,规范 = screens/op-layer.md
-    §1.1「选择坐标观察上报」):read 产每卡自带 xy(标签中心 x + 在册
+    §1.1「选择坐标观察上报」):read 产每卡自带 xy(标签中心 x + 已登记
     卡身线 y,候选检测重做批新坐标模型;xy 生产正确性由候选检测重做批
     各测试承重,本测试不重复),经标准化门转换后 xy 原值透传(转换只动名字,
     名字与坐标同进退),经真实观察链落容器后 xy 仍在(动作 op 取点输入)。

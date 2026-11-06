@@ -136,7 +136,7 @@ def test_explicit_slot_single_clicks_bench_center_and_reports(
     assert len(_env_controller(env).moves) == 1, '防吞点击:先移后点'
     assert gs.bench.value.slots[1].kind == 'empty', '开件腾席落账'
     assert [p.kind for p in gs.screen_changes.pending] == ['star_tome'], \
-        'star_tome 登记在册'
+        'star_tome 已登记'
 
 
 def test_none_slot_resolves_first_tome_and_rebuilds_param(

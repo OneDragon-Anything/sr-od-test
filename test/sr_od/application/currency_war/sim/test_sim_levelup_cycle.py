@@ -6,7 +6,7 @@ T-5-r1.md,由本测试 ``-s`` 输出收割):
 
 - ①富余帧:商店转场帧(``levelup_transition_close`` = 资格门命中可发射
   的转场出口)发生的局,备战升级批必落地(``levelup_batch_emitted`` >
-  0)∧ 刷新判据可达(刷新动作 receipts > 0 ∨ 显式拒因计数在册——
+  0)∧ 刷新判据可达(刷新动作 receipts > 0 ∨ 显式拒因计数已登记——
   ``shop_refresh_*`` 拒因族 + r2 预算拦下键);
 - ②人口位不饿死:等级(cap 解锁地板,``max_units_of`` 经读口跟随)
   journal 轨迹逐写单调不回退;
@@ -36,7 +36,7 @@ import pytest
 from test.harness.sim_backend_runner import run_sim_full_match
 from test.sr_od.application.currency_war.sim.conftest import BATCH_SEEDS
 
-#: 刷新判据可达的显式拒因键族(计数在册 = 判据运行到拒;除 receipts 外
+#: 刷新判据可达的显式拒因键族(计数已登记 = 判据运行到拒;除 receipts 外
 #: 的第二可达证据面;存在性门时代两键随门删除退役,拒因观测归
 #: ``shop_refresh_*`` 前缀族)。
 _REFRESH_REJECT_KEYS: tuple[str, ...] = (

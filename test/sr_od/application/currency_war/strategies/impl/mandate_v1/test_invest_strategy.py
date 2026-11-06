@@ -232,7 +232,7 @@ def test_cash_missing_node_degrades_to_opening_frame():
 
 
 def test_cash_pending_modeling_card_failclosed():
-    """计分通道矩阵:固定理财系两卡 = xp_instant 现金计分在册分类字段,
+    """计分通道矩阵:固定理财系两卡 = xp_instant 现金计分已登记分类字段,
     注册挂值即通道自动生效(固定理财 4×/固定理财+ 6×XP_GOLD_RATE;位面段
     两字段待建模塌 0,估值面不重复计——2026-11-01 建模批两卡同判);孪生
     素数全默认 = 纯无字段分支 fail-closed 0。"""
@@ -292,7 +292,7 @@ def test_grant_registry_counts_and_closed_set():
     按实机录名归一])+ 16 开箱分支(占席道具直读,箱腿卡随批扩员,含融合召唤)
     + 1 选择型具名装备(独家代言,人工登记——「从3件进阶装备中选择一件
     获取」占位选定建模,选择获取无「获得…roster 名」直读,反扫零命中)
-    + 1 角色×道具混合(龙虎兄弟狸);顾问档名单在册。"""
+    + 1 角色×道具混合(龙虎兄弟狸);顾问档名单已登记。"""
     assert len(STRATEGY_GRANTS) == 106
     advisors = {n for n, g in STRATEGY_GRANTS.items() if g.advisor}
     assert len(advisors) == 11
@@ -302,7 +302,7 @@ def test_grant_registry_counts_and_closed_set():
     # 非直读人工转正 4 条(溜佩佩/溜佩佩+/这么大的钻石/佩佩客串):
     # 注册存在 + 发放对象 = 佩佩
     for n in ('溜佩佩', '溜佩佩+', '这么大的钻石', '佩佩客串'):
-        assert n in STRATEGY_GRANTS, '转正卡注册在册'
+        assert n in STRATEGY_GRANTS, '转正卡注册已登记'
         assert STRATEGY_GRANTS[n].chars_immediate == ('佩佩',), \
             '转正登记发放对象 = 佩佩'
         assert STRATEGY_GRANTS[n].advisor is False, '转正卡非顾问型'
@@ -546,11 +546,11 @@ def test_field_classification_double_membership_raises(monkeypatch):
 
 
 def test_pending_modeling_registry_shape():
-    """卡级待建模在册正面形状:5 张辖域派生闭集卡必在册(固定理财/+
+    """卡级待建模已登记正面形状:5 张辖域派生闭集卡必已登记(固定理财/+
     孪生素数/狸财经狸/超发货币,landing ⑥)+ 注册表外经济语义代表例
     (被动收入/招财狗/气氛组/气氛组+,design §2.3 处置口径——气氛组系
     条件腿零建模是有意登记非漏登记);孪生素数 = 全默认 economy
-    在册条目(③断言的真实对象)。"""
+    已登记条目(③断言的真实对象)。"""
     from sr_od.application.currency_war.kernel.cw_investments import (
         EconomyEffect,
     )
@@ -580,7 +580,7 @@ def test_pending_modeling_orphan_and_empty_raises(monkeypatch):
 
 
 def test_pending_modeling_all_default_entry_required(monkeypatch):
-    """卡级登记 ③:全默认 economy 条目必须卡级在册(摘除孪生素数即炸
+    """卡级登记 ③:全默认 economy 条目必须卡级已登记(摘除孪生素数即炸
     ——全默认卡不入字段分类视野,唯卡级登记辖得住)。"""
     bad = {n: v for n, v in
            strategy_economy.STRATEGY_ECONOMY_PENDING_MODELING.items()
@@ -832,7 +832,7 @@ def test_env_random_faction_gift_is_member_tier_average():
 
 
 def test_env_random_faction_gift_no_member_in_rosters_is_zero():
-    """无成员在册 → 0(全员 evicted 后三名单皆不在,除零防)。"""
+    """无成员已登记 → 0(全员 evicted 后三名单皆不在,除零防)。"""
     all_comps = frozenset(c.name for c in COMP_LIBRARY)
     assert random_faction_gift_value('量子同频', all_comps) == 0.0
 

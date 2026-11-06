@@ -9,7 +9,7 @@
    入键(变化 → 键变 = 幂等键分裂);发射臂路由标签不入键;容器下标
    字段构成键面;
 2. **词表白名单行为**:词表外类型注册表解析口 AssertionError 响亮暴露,
-   在册动作解析命中(执行器集中式 validate 已退役,守卫单一形态 =
+   已登记动作解析命中(执行器集中式 validate 已退役,守卫单一形态 =
    守卫断言);
 3. **终结集 ⟺ 注册表 terminal 属性逐一等价**:备战环终结集四类
    terminal=True、备战机械动作全部非终结、terminal_wait 同源比对
@@ -158,12 +158,12 @@ def test_action_key_faces_pinned_per_class():
 
 def test_prep_vocab_rejects_unknown_and_admits_registered():
     """词表白名单行为半(执行器集中式 validate 退役后,守卫单一形态 =
-    守卫断言):词表外类型在注册表解析口 AssertionError 响亮暴露,在册
+    守卫断言):词表外类型在注册表解析口 AssertionError 响亮暴露,已登记
     动作解析命中 op 类。"""
     with pytest.raises(AssertionError):
         action_op_class_for(SimpleNamespace())   # 词表外 → 拒
     assert action_op_class_for(
-        CwActionSellBenchParam(bench_idx=0)) is not None   # 在册 → 命中
+        CwActionSellBenchParam(bench_idx=0)) is not None   # 已登记 → 命中
 
 
 def test_open_bookcard_registered_and_slot_guard():

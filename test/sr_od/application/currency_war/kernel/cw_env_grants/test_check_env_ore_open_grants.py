@@ -4,7 +4,7 @@ kernel/cw_env_grants.py 的该被测函数;同模块兄弟触发函数测试住�
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
 T-29-zhanjidian-qiyue.md(定稿 v2.1)§2.3 + §4:
-- **条件矩阵**:env 空链/不在册 → 零写;bench 未观察 → 缓发不标 done
+- **条件矩阵**:env 空链/未登记 → 零写;bench 未观察 → 缓发不标 done
   (宁缺勿造);未达标 → 零写;达标 → bench 增火花(1★)+ 随机分支 1 名;
 - **两条分支随机态**:两条分支 gain_character 一律 rand=True(通道定级硬语义,
   用户裁定 2026-10-17:触发前提 = 晶矿开启计数为未验证推演,发放按
@@ -135,12 +135,12 @@ def _bench_units(gs: GameState) -> list[tuple[str, int]]:
 
 def test_condition_matrix_short_circuits(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """未发放分支逐序零写(设计 §2.3 条件矩阵 1/2/4):env 空链/不在册/
+    """未发放分支逐序零写(设计 §2.3 条件矩阵 1/2/4):env 空链/未登记/
     计数未达标 → 返回空效果串且容器零写行。"""
     cases = [
         ('env 未激活(None 形态)', _make_gs(env=None, bench=[], ore_open_total=20)),
         ('env 空链形态', _make_gs(env='', bench=[], ore_open_total=20)),
-        ('env 不在册', _make_gs(env='蓝海', bench=[], ore_open_total=20)),
+        ('env 未登记', _make_gs(env='蓝海', bench=[], ore_open_total=20)),
         ('计数未达标(19)', _make_gs(bench=[], ore_open_total=_FIRST - 1)),
     ]
     for label, gs in cases:

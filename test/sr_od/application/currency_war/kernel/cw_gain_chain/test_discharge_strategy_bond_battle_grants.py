@@ -15,7 +15,7 @@ test_check_strategy_boss_battle_grants.py;采样断言 = 固定 rng 同种子
 - **rng 必填无缺省**(签名锁):较损血腿「缺省回退自掷」更严——本腿
   唯一消费方 = sim 挂点传流键,无缺省形态则采样猜测口径的结构性风险
   面消失,签名退化(加缺省)即红;
-- 可重复无 done 闩:消费后重新武装 → 再交付(armed 消费-再武装链,
+- 可重复无 done 一次性标志位:消费后重新武装 → 再交付(armed 消费-再武装链,
   一局发放次数 = 合格战斗数)。
 """
 from __future__ import annotations
@@ -120,7 +120,7 @@ def test_armed_delivers_five_starbadges_and_consumes(
 
 def test_repeatable_rearm_then_deliver_again() -> None:
     """锁 4 单元面(可重复链):交付消费(False)→ 重新武装(True)→
-    再交付再 +5(共 10,armed 消费-再武装链;无 done 闩,一局发放次数
+    再交付再 +5(共 10,armed 消费-再武装链;无 done 一次性标志位,一局发放次数
     = 合格战斗数)。"""
     gs = _gs(armed=True)
     first = discharge_strategy_bond_battle_grants(

@@ -166,7 +166,7 @@ def test_live_form_zero_write() -> None:
 
 def test_gold_unread_skips_defensively(sim_installed) -> None:
     """gold 现值 None(未观察)→ 宁缺勿造跳过(持卡 + 事件在场仍零写;
-    事件携带事实无 done 闩,下个合成事件自动重查)。"""
+    事件携带事实无 done 一次性标志位,下个合成事件自动重查)。"""
     gs = _gs(gold=None)
     seq0 = gs.write_seq
     check_strategy_star_merge_gold(gs, (('甲', 3),), sig=_SIG,

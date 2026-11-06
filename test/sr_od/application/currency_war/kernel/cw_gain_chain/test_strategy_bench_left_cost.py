@@ -27,7 +27,7 @@ _SIG_OBS = None  # 占位:本文件零世界写(纯判定锁)
 
 
 def test_registry_closed_set() -> None:
-    """锁 1(注册表):集合 = {'被动收入'};孤儿键负控(全体在册)。"""
+    """锁 1(注册表):集合 = {'被动收入'};孤儿键负控(全体已登记)。"""
     assert set(STRATEGY_BENCH_LEFT_COST_XP_GRANTS) == {'被动收入'}
     for n in STRATEGY_BENCH_LEFT_COST_XP_GRANTS:
         assert n in INVESTMENT_STRATEGIES, f'孤儿键: {n}'
@@ -71,6 +71,6 @@ def test_pending_row_wording() -> None:
     )
     pending = getattr(strategy_economy, 'STRATEGY_ECONOMY_PENDING_MODELING',
                       None)
-    assert pending is not None, 'PENDING 表在册'
+    assert pending is not None, 'PENDING 表已登记'
     row = pending.get('被动收入')
     assert row is not None and '已建状态副本写入通道' in row, f'落地后文案: {row}'

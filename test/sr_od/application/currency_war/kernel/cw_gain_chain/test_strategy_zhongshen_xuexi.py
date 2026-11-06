@@ -46,7 +46,7 @@ def _make_gs(held: tuple[str, ...], bench_full: bool = False) -> GameState:
 
 
 def test_table_registration() -> None:
-    """表锁:登记行现值 + KINDS 类别正例 + GRANTS 即时腿在册。"""
+    """表锁:登记行现值 + KINDS 类别正例 + GRANTS 即时腿已登记。"""
     grant = STRATEGY_PLANE_START_GRANTS['终身学习']
     assert grant.id == '330901', f'id 漂移: {grant.id!r}'
     assert grant.item == '星徽秘典', f'item 漂移: {grant.item!r}'

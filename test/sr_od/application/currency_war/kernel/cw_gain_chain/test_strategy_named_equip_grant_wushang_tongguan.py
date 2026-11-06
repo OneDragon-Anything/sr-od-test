@@ -98,7 +98,7 @@ def test_wushang_tongguan_grant_leg_places_flower(
     (效果串仅 named_equip_grant 前缀——金腿零建模不进效果体);条件金腿
     零建模钉死(gold 值与来源双不动);板面域(bench/deployed)零写;
     正常路径零申报行。"""
-    assert '无伤通关' in PICK_INVEST_EFFECTS, '登记面在册'
+    assert '无伤通关' in PICK_INVEST_EFFECTS, '登记面已登记'
     gs = _make_gs(equips=[], gold=10)
     gs.prep_anchored = True
     seq_before = gs.write_seq

@@ -76,7 +76,7 @@ def test_dacaiyuan_registry_burst_dual_source() -> None:
     payload = STRATEGY_EFFECTS[_CARD].payload.free_refresh_burst
     assert reg == 6, '官方卡文 6(base 层 plaza:202101)'
     assert reg == payload, '双源同值(注册行 ↔ 载体条目)'
-    assert STRATEGY_ECONOMY[_CARD].sell_price_mult == 2.0, '×2 卖价修饰在册'
+    assert STRATEGY_ECONOMY[_CARD].sell_price_mult == 2.0, '×2 卖价修饰已登记'
 
 
 def test_dacaiyuan_registry_burst_drift_breaks_lock(
@@ -106,7 +106,7 @@ def test_dacaiyuan_pending_modeling_and_cash_failclosed() -> None:
     """待建模登记锁(裁决点 4 默认案):卡级 PENDING 行存续 + 描述非空
     (治理账可见性,零运行时闸);现金分 fail-closed——退款腿无字段载体
     (依赖场上构成,非估值常量),burst/sell_price_mult 均待建模分类塌 0。"""
-    assert _CARD in STRATEGY_ECONOMY_PENDING_MODELING, '卡级 PENDING 行在册'
+    assert _CARD in STRATEGY_ECONOMY_PENDING_MODELING, '卡级 PENDING 行已登记'
     assert STRATEGY_ECONOMY_PENDING_MODELING[_CARD], '描述非空'
     assert BOARD_REWRITE_SELL_ALL_DEAL != BOARD_REWRITE_SELL_ALL
     gs = game_state_of(SimpleNamespace())

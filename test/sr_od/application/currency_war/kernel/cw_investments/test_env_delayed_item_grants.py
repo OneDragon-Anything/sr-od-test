@@ -53,8 +53,8 @@ def test_dual_leg_split_tables_legal() -> None:
     → 合法不炸;若后继把环境域 ∩ENV_GIFTS=∅ 防呆盲扩成 ∩STRATEGY_
     GRANTS,本卡 import 即红。"""
     grant = STRATEGY_GRANTS[_CARD]
-    assert grant.chars_immediate == ('火花',), '角色腿 = STRATEGY_GRANTS 在册'
-    assert _CARD in ENV_DELAYED_ITEM_GRANTS, '礼盒腿 = 本表在册'
+    assert grant.chars_immediate == ('火花',), '角色腿 = STRATEGY_GRANTS 已登记'
+    assert _CARD in ENV_DELAYED_ITEM_GRANTS, '礼盒腿 = 本表已登记'
     _validate_env_delayed_item_grants()   # 两条效果条目分表 = 校验通过零炸
 
 

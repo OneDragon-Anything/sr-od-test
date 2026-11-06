@@ -10,8 +10,8 @@ board_bench_char_value_sum / check_strategy_boss_clear_gold;直构形态
   读法(读法 B)在 2★/3★ 与实测分叉即红;
 - 锁 5(求和域):场上前/后排 + bench unit 槽计入;bench 占位件
   (tome/bookcard/supply_box)不计(「角色」域文义);空场空席 =
-  「所有角色价值」为 0 的结构可达态——0 金笔照发且 0 值仍消费闩
-  (闩与金笔同窗 = 卡面「下一个」恰一次的载体,0 值短路不闩会让后继
+  「所有角色价值」为 0 的结构可达态——0 金笔照发且 0 值仍消费一次性标志位
+  (一次性标志位与金笔同窗 = 卡面「下一个」恰一次的载体,0 值短路不落一次性标志位会让后继
   boss 重触发)。
 """
 from __future__ import annotations
@@ -117,8 +117,8 @@ def test_value_sum_domain_front_back_bench_excludes_placeholders() -> None:
 
 
 def test_zero_value_grant_still_latches() -> None:
-    """锁 5 附注(0 值仍消费闩):空场空席局调触发函数 → 金笔 +0
-    (gold 值不变、evidence 笔落)+ 闩落(「下一个」恰一次的载体,
+    """锁 5 附注(0 值仍消费一次性标志位):空场空席局调触发函数 → 金笔 +0
+    (gold 值不变、evidence 笔落)+ 落一次性标志位(「下一个」恰一次的载体,
     防后继 boss 重触发);直构窗无 node → evidence 退化无时点段。"""
     gs = _gs()
     before = gs.write_seq
@@ -127,6 +127,6 @@ def test_zero_value_grant_still_latches() -> None:
     assert gs.gold.evidence == _EVIDENCE, \
         f'evidence 退化形漂移: {gs.gold.evidence!r}'
     assert gs.gold.source == 'observation', '金笔 = 观察通道(世界数值面)'
-    assert gs.strategy_conditional_done.value == (_CARD,), '0 值闩未落'
-    assert gs.strategy_conditional_done.source == 'logic', '闩 = 逻辑态'
-    assert gs.write_seq == before + 2, '同窗两笔(金 observe + 闩 logic)'
+    assert gs.strategy_conditional_done.value == (_CARD,), '0 值未落一次性标志位'
+    assert gs.strategy_conditional_done.source == 'logic', '一次性标志位 = 逻辑态'
+    assert gs.write_seq == before + 2, '同窗两笔(金 observe + 一次性标志位 logic)'

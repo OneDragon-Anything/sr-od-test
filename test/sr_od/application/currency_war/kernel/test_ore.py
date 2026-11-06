@@ -151,7 +151,7 @@ def test_collect_ore_container_precise_drop():
     """容器逻辑态:CwActionCollectOreParam 载荷坐标精确摘除(未被点的晶矿保留);
     count/colors 随载荷同步重算;附着兑现开成即同点移除该键(未被点的
     附着保全)。(logic-rand-sampling 迭代:摘除写改随机态,bench/level
-    前置守卫在册——未观察整批拒。)"""
+    前置守卫已登记——未观察整批拒。)"""
     session = cw4_session()
     gs = game_state_of(session)
     _write_spheres(session, (('gold', 100, 200, 30), ('blue', 300, 400, 20)))
@@ -445,7 +445,7 @@ def test_check_level_enqueue_idempotent_guards(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """入队电平规则:env ∈ 注册表 ∧ (env,plane) ∉ pending ∧ ∉ done →
     追加 (env, plane, 金额[plane-1]);重复检查不重发(pending 守卫);
-    消费后 done 守卫跨环不重发;env 不在册 / node 未锚定零写。"""
+    消费后 done 守卫跨环不重发;env 未登记 / node 未锚定零写。"""
     gs = _make_gs(plane=1, env=_ENV)
     calls = _record_gen_writes(gs, monkeypatch)
     check_ore_declared_level(gs, hook_sig=_SIG_HOOK)
@@ -459,7 +459,7 @@ def test_check_level_enqueue_idempotent_guards(
     assert not [c for c in calls if c[0].startswith('ore_declared')], \
         '守卫命中零写'
 
-    # 消费后(pending 清空 + done 在册):跨环重查不重发
+    # 消费后(pending 清空 + done 已登记):跨环重查不重发
     gs.write_logic(gs.ore_declared_pending, (), produced_by='t', sig=_SIG_HOOK)
     gs.write_logic(gs.ore_declared_done, ((_ENV, 1),), produced_by='t',
                    sig=_SIG_HOOK)
@@ -473,7 +473,7 @@ def test_check_level_enqueue_idempotent_guards(
     check_ore_declared_level(gs2, hook_sig=_SIG_HOOK)
     assert gs2.ore_declared_pending.value == ((_ENV, 2, 8),)
 
-    # env 不在册(非声明矿环境)/未选环境:零写
+    # env 未登记(非声明矿环境)/未选环境:零写
     for env in ('蓝海', ''):
         gs3 = _make_gs(plane=1, env=env)
         calls = _record_gen_writes(gs3, monkeypatch)
@@ -549,7 +549,7 @@ def test_seed_and_restore_type_roundtrip() -> None:
     restore_state_snapshot(gs2, snap)
     check_ore_declared_level(gs2, hook_sig=_SIG_HOOK)
     assert gs2.ore_declared_pending.value == ((_ENV, 1, 6),), \
-        '恢复 done 在册 → 不重发(仅恢复的 pending 原样保留)'
+        '恢复 done 已登记 → 不重发(仅恢复的 pending 原样保留)'
 
 
 # ============================================================ 点矿随机态兑现

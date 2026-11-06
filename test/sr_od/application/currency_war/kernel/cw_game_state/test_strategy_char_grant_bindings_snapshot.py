@@ -59,5 +59,5 @@ def test_audit_row_declared_process_only() -> None:
         PROJECTION_AUDIT,
     )
     row = PROJECTION_AUDIT.get('strategy_char_grant_bindings')
-    assert row is not None, '登记行在册'
+    assert row is not None, '登记行已登记'
     assert row.status == AUDIT_PROCESS_ONLY, '无观察读端 → process_only'

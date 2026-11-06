@@ -89,7 +89,7 @@ def test_validator_passes_on_current_tables() -> None:
 def test_validator_orphan_key_negative(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """负例·孤儿键(漂移哨①):表键不在 INVESTMENT_STRATEGIES →
-    ValueError(版本改名/移除后静默失联;键用注册表外幻影名——在册卡
+    ValueError(版本改名/移除后静默失联;键用注册表外幻影名——已登记卡
     名不可作表外锚)。"""
     monkeypatch.setitem(STRATEGY_PLANE_BOSS_GRANTS, '不存在的卡',
                         (2, 'boss', _CHAR, 1))

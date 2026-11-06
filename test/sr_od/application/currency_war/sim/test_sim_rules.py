@@ -183,7 +183,7 @@ def test_difficulty_total_with_base_and_node_scoped_delta() -> None:
 
 
 def test_difficulty_holy_grail_constant_pending() -> None:
-    """圣杯 +30 定谳真值在册;激活态占位(首版恒未激活)。"""
+    """圣杯 +30 定谳真值已登记;激活态占位(首版恒未激活)。"""
     d_off = difficulty_of([], node_kind='battle', streak=0, base=50)
     assert d_off.special_bonus == 0
     d_on = difficulty_of([], node_kind='battle', streak=0, base=50,
@@ -223,7 +223,7 @@ def test_plane_boss_override_priority_and_pool_membership() -> None:
     assert picked[1] in BOSS_MECHANICS
     full_sampled = resolve_plane_bosses(None, random.Random(2))
     assert all(b in BOSS_MECHANICS for b in full_sampled)
-    assert BOSS_DEDUP_PENDING  # 去重语义占位披露键在册
+    assert BOSS_DEDUP_PENDING  # 去重语义占位披露键已登记
 
 
 # (planner 升星判据助手测试已随旧评估器退役删除:判据单一源 = 值回调

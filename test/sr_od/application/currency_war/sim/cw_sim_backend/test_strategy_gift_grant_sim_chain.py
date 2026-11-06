@@ -9,7 +9,7 @@ kernel/cw_gain_chain/test_check_strategy_gift_grants.py,本文件锁 sim
 - 预种持卡 + 板面 4 巡海游侠 → 下一节点窗开(P1r2 = reward):效果条目1 发
   2★黄泉(携星间旅人星徽入栏)+ 效果条目2 发 1★波提欧,封账两条效果条目复合键并存;
 - 窗口重放零双发(_begin_node_window 二次进入,_window_begun_pos 守卫
-  整段早退)+ done 闩双层幂等。
+  整段早退)+ done 一次性标志位双层幂等。
 
 驱动形态 = _enter_node_window 直通点。装配/写序记录助手 = 本文件自带
 同语义副本(test_sim_backend._backend/_record_all_writes 先例;助手
@@ -137,7 +137,7 @@ def test_window_replay_no_double_grant(_prep_backend,
                                        monkeypatch: pytest.MonkeyPatch
                                        ) -> None:
     """锁 4 幂等:同节点窗重放(_begin_node_window 二次进入)→ 零新增
-    写行、发放物不双发(窗口幂等守卫 + done 闩双层)。"""
+    写行、发放物不双发(窗口幂等守卫 + done 一次性标志位双层)。"""
     b = _prep_backend
     gs = b.gs
     _seed_board(b)

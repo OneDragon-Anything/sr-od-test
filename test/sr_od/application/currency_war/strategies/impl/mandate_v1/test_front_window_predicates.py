@@ -8,7 +8,7 @@
 cw_screen_prep.store_plane_table(写 ``gs.node_books``),读端必须同源。
 
 测试面(此前零覆盖):
-1. 表在场真路径:node_books 在册(位面锚=1)→ 表就绪 True / 前窗帧
+1. 表在场真路径:node_books 已登记(位面锚=1)→ 表就绪 True / 前窗帧
    轮窗(轮 1..首战槽+1)True,出窗 False;
 2. fail-closed 负路径:表缺(裸容器)/ 锚不符(旧表滞留 P2)/ state
    位面非 1 / 脏表(全零战斗词)→ False(前窗行为不发生);
@@ -89,7 +89,7 @@ def _seed_table(gs: GameState, plane: int = 1,
 
 
 def test_table_ready_true_and_front_window_round_window():
-    """表在场真路径:node_books 在册(位面锚=1)→ 表就绪 True;前窗帧
+    """表在场真路径:node_books 已登记(位面锚=1)→ 表就绪 True;前窗帧
     = 轮 1..首战槽+1(样例表首战第 3 槽 → 轮 1/2/3 True,轮 4 出窗)。"""
     gs = _gs(plane=1, round_num=1)
     _seed_table(gs)

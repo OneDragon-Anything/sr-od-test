@@ -13,12 +13,12 @@ taiyang.md(定稿)§4 + §2.1(卡面官方原文:「每拥有一件【白昼装�
   xp_apply_amount 结转(含跨级结转算例),evidence ``xp:equip_count``
   独立笔 + sig 组 'sim:xp' 断言;零持有/未持卡零写;
 - 幂等锁:同节点窗重放(_window_begun_pos 守卫整段早退)零新增写行;
-  连续两个满足节点各发一次(零 done 闩可重复性);
+  连续两个满足节点各发一次(零 done 一次性标志位可重复性);
 - 拿卡当节点不发锁(结构性):选卡落地所在节点窗(P1r1)前置段已跑过,
   本卡后补零发放(发放起点 = 下一节点窗)。
 
 驱动形态 = _enter_node_window 直通点(锚定补推路径真形态);引擎驱动助手
-import 自 sim/test_sim_backend.py(在册超限拆分债文件,禁追加,只 import
+import 自 sim/test_sim_backend.py(已登记超限拆分债文件,禁追加,只 import
 复用不改;族先例同上)。sim 世界零羁绊不产白昼件——持有面经观察通道
 直构(观察→观察覆盖静默,族先例同法);原型件 = sim 结构性可达面
 (进阶合成),白昼件直构等价计件,计数器不区分来源。
@@ -80,7 +80,7 @@ def test_pick_window_structural_no_fire() -> None:
     equip_count(发放起点 = 下一节点窗)。"""
     b = _setup(holding=_HOLDING)
     try:
-        assert b.gs.xp.value is not None, '前置:sim 开局经验种子在册'
+        assert b.gs.xp.value is not None, '前置:sim 开局经验种子已登记'
         assert b.gs.xp.evidence != _XP_EV, '拿卡当窗不应发放'
     finally:
         uninstall_backend()
@@ -151,7 +151,7 @@ def test_replay_guard_no_double_fire(
 
 def test_consecutive_windows_each_fire(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """连续两满足节点各发一次(可重复性):零 done 闩的结构差异锁(与
+    """连续两满足节点各发一次(可重复性):零 done 一次性标志位的结构差异锁(与
     首购经验 at-most-once 分道)——(1,2)/(1,3) 两窗各 +2。"""
     b = _setup(holding=_HOLDING)
     try:
@@ -171,7 +171,7 @@ def test_consecutive_windows_each_fire(
 
 
 def test_no_card_zero_write(monkeypatch: pytest.MonkeyPatch) -> None:
-    """未持卡零写(反向):持有在册但不持卡 → 零发放(白名单表外禁从
+    """未持卡零写(反向):持有已登记但不持卡 → 零发放(白名单表外禁从
     效果原文自动猜装的窗口面)。"""
     b = _setup(grant=False, holding=_HOLDING)
     try:

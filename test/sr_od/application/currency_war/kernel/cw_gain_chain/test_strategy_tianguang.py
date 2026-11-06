@@ -9,7 +9,7 @@ test_strategy_compose_grant_gangtie.py 钢铁美学形)。
 §4 锁面(REVIEW-T298 免裁 7/7;卡面官方原文:「获得一个随机3星1费角色，
 获得1个【简易武装箱」。」——效果条目1 随机星档角色(双档卡面明写)/效果条目2 箱腿):
 
-- 组合行单一源:两条效果条目组合行在册(泛化表零本卡键负断言防回退撞键);
+- 组合行单一源:两条效果条目组合行已登记(泛化表零本卡键负断言防回退撞键);
 - 行为链真值:确定入口 → 恰一随机角色(3 星)入席+恰一箱入栏、效果串
   恰 2 条(strategy_gift_random@3star+box_grant)、rng 恰消费 1 次。
 """
@@ -56,8 +56,8 @@ def _make_gs(*, bench: list[tuple[str, int]] | None = None,
 
 
 def test_tianguang_compose_row_single_source() -> None:
-    """组合行单一源:两条效果条目组合行在册;泛化表零本卡键(防回退撞键)。"""
-    assert _CARD in PICK_INVEST_EFFECTS, '组合行在册'
+    """组合行单一源:两条效果条目组合行已登记;泛化表零本卡键(防回退撞键)。"""
+    assert _CARD in PICK_INVEST_EFFECTS, '组合行已登记'
     assert _CARD not in _STRATEGY_RANDOM_EQUIP_GRANTS, \
         '泛化表零本卡键(撞键形态禁回退)'
 

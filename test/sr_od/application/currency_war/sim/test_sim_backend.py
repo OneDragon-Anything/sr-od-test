@@ -981,7 +981,7 @@ def test_strategy_pick_chain_named_equip_grant_wuhai_laji() -> None:
     """获得链断言:选无害垃圾 → equips 恰 +1 垃圾袋(具名装备授予腿,
     具名确定发放零采样,同 seed 重放确定不经 rng 注入)+ bench/deployed
     零变化(板面重写面零建模 = 既有边界申报);金腿 8 金 = instant_gold
-    在册计分、发放写端 = 族级缺口(sim 金面锁不住,维持观察)。"""
+    已登记计分、发放写端 = 族级缺口(sim 金面锁不住,维持观察)。"""
     def _run_once() -> tuple:
         b = _backend(7)
         try:
@@ -1279,7 +1279,7 @@ def _env_pick_backend(seed: int = 7) -> SimBackend:
 def test_env_reroll_pick_second_gain_branch(_isolate_defect_buffer) -> None:
     """追加随机环境分支(设计锁面 3):选蓝海完整首链 → 掷骰二次入链——
     active_env ∈ 全集−追加名单且 ≠ 蓝海(追加非替换)、金净变恰 +6
-    (池无 gold_instant 条目,二次入链零重复发金)、池分布披露键在册、
+    (池无 gold_instant 条目,二次入链零重复发金)、池分布披露键已登记、
     申报行恰一行(首链所产;卷中名 ∉ 名单,二次入链零新增)。"""
     rows: list[dict] = []
     set_defect_sink(rows.append)
@@ -1295,7 +1295,7 @@ def test_env_reroll_pick_second_gain_branch(_isolate_defect_buffer) -> None:
         rolled = b.gs.active_env.value
         assert rolled in pool, (rolled, '卷中名 ∈ 池(全集−追加名单)')
         assert int(b.gs.gold.value) == gold0 + 6, '二次入链零重复发金'
-        assert ENV_REROLL_ASSUMPTION_POOL in b.disclosures, '池分布披露键在册'
+        assert ENV_REROLL_ASSUMPTION_POOL in b.disclosures, '池分布披露键已登记'
         kinds = [r['kind'] for r in rows]
         assert kinds.count(ENV_REROLL_DECL) == 1, kinds
     finally:
@@ -1535,7 +1535,7 @@ def test_ore_env_plane1_declare_instead_of_direct_gold(
                 if c == 'rand' and n == 'ore_rewards'] == ['ore_gen#p1+9'], \
             f'同批恰一次生成写: {calls}'
         assert b.disclosures.get(ORE_PLANE_START_PENDING) is not None, \
-            '位面开局矿呈现面披露键在册(实机首遇校)'
+            '位面开局矿呈现面披露键已登记(实机首遇校)'
         # 入队电平幂等:绕过窗口守卫直查(窗口重放守卫外的第二道保险)
         b._apply_env_plane_start(1)
         assert gs.ore_declared_pending.value == () \
@@ -1666,7 +1666,7 @@ def test_ore_env_plane2_declared_ore_and_expiry_cleanup(
         # 测试侧整理(真策略同构行为:部署腾席 + 奖励面板点击收口):
         # 备战单位移上板 + 清掉未点击面板残留。不清则残留 (10,10)/(20,10)
         # 与声明点跨面板别名继承 → 声明饿死(该角为 ore-reward-channel
-        # §4 在册披露,非本测试面)。
+        # §4 已登记披露,非本测试面)。
         units = [s.unit for s in gs.bench.value.slots
                  if s is not None and s.kind == 'unit' and s.unit is not None]
         gs.observe(gs.deployed, _dvs(units[:4], units[4:]), sig=_SIG_OBS)
@@ -1711,7 +1711,7 @@ def test_supply_node_window_refresh_and_pick() -> None:
     回备战自动弹店、节点不推进(2026-10-29 流程模型对齐:推进归出战动作
     supply_finish)。宝钻发放分支 = chosen_supply (角色, 装备名列表) 按
     DIAMOND_EQUIP_NAMES 名单派生(T-9 裁定 2)——sim 选项件名恒非钻名 →
-    派生不发(选项级钻标属呈现面近似,U24 披露在册);含钻名形态的派生
+    派生不发(选项级钻标属呈现面近似,U24 披露已登记);含钻名形态的派生
     测试 = test_supply_diamond_leg_derives_from_chosen_name_list。"""
     b = _backend(1013)
     try:
@@ -1791,7 +1791,7 @@ def test_megastar_lazy_presentation_on_identity_query() -> None:
                        sig=ChannelSig(family='logic_action', actor='test',
                                       mode='compute'))
         assert any(p.kind == 'megastar'
-                   for p in gs.screen_changes.pending), '判据登记在册'
+                   for p in gs.screen_changes.pending), '判据已登记'
         # 3.5:呈现位 = screen_identity 问询时点懒呈现(事实事件槽退役)。
         assert b.screen_identity() == '货币战争-盛会之星', '跨首层模态呈现'
         assert gs.megastar_opts.value, '候选写容器槽'
@@ -1833,7 +1833,7 @@ def test_planner_lazy_presentation_dedup_marker() -> None:
                        sig=ChannelSig(family='logic_action', actor='test',
                                       mode='compute'))
         assert any(p.kind == 'planner'
-                   for p in gs.screen_changes.pending), '判据登记在册'
+                   for p in gs.screen_changes.pending), '判据已登记'
         # 3.5:呈现位 = screen_identity 问询时点懒呈现(事实事件槽退役)。
         assert b.screen_identity() == '货币战争-银狼升星'
         consume_screen_change(gs, 'planner')
@@ -2064,7 +2064,7 @@ def test_golden_env_difficulty_records_track_selections() -> None:
       (0→3→6 移动的可观察形态);写点 = 节点窗开 + 选卡落地。
     - **难度账快照面**(``difficulty_records``):每场战斗结算恰一条
       记录(落账在幂等守卫后,重入无双计),逐条品质分量 = 该结算
-      时点已选数×金档;encounter 类遭遇档分量在册表值域内,非遭遇类
+      时点已选数×金档;encounter 类遭遇档分量已登记表值域内,非遭遇类
       恒 0;轨迹单调不减;首段 0 + 末段三档齐 = 全链拉通(P3 行入表后
       固定日程三槽全部可达)。"""
     b = _golden_env_backend(61)
@@ -2716,7 +2716,7 @@ def test_wear_report_synthesis_branch() -> None:
             if s is not None and s.kind == 'unit' and s.unit is not None]
     assert worn == [[advance]], f'穿着即合成:{a}+{b} → {advance}'
     assert gs.equips.value == [], '库存件已穿上'
-    # 拒绝形态:owned 无件 / 目标不在册 → applied=False 零写
+    # 拒绝形态:owned 无件 / 目标未登记 → applied=False 零写
     out_rej = report_action_wear_equip_param(
         gs, CwActionWearEquipParam(item_name=a, char_name='淘金客',
                                    row='front', slot=1), _SIG)
@@ -3274,7 +3274,7 @@ def test_dot_contract_opening_acquisition_confirms_at_eighth_battle(
 
 def test_supply_diamond_pick_keeps_zero_callback(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """supply 路径零行为变化(landing 3.3):深井角斗场在册环境下带钻
+    """supply 路径零行为变化(landing 3.3):深井角斗场已登记环境下带钻
     补给选定 → 仅 diamond_count +1(_on_supply_picked 既有行为,带钻以
     名单内件名入 chosen 列表承载——T-9 列表派生,sim 选项级钻标属呈现
     面不入名单),deploy_cap/back_layout 零写、零发放——钻类型未建模,
@@ -3311,7 +3311,7 @@ def test_supply_diamond_leg_derives_from_chosen_name_list() -> None:
     装备名列表),列表任一件名命中 DIAMOND_EQUIP_NAMES → diamond_count
     +1;不含 → 不发(两态同 backend 直驱;live 写端 = 画面 op 确认即写,
     sim 决策链未接 = chosen 恒 None 死分支维持)。OCR 误读边(列表名不
-    匹配漏发)= fail-visible,装备/钻数观察下一帧暴露,披露 4 在册。"""
+    匹配漏发)= fail-visible,装备/钻数观察下一帧暴露,披露 4 已登记。"""
     b = _backend(5)
     try:
         gs = b.gs
@@ -3635,7 +3635,7 @@ def test_unregistered_screen_raises_named_error() -> None:
     清单外的档名(如大厅/武装箱弹窗)观察请求必须响亮拒绝,禁产空产物。"""
     b = _backend()
     try:
-        assert b.screen_identity() == SCREEN_BRIEFING   # 简报在册,先确认基线
+        assert b.screen_identity() == SCREEN_BRIEFING   # 简报已登记,先确认基线
         b.observe(SCREEN_BRIEFING)
         with pytest.raises(LookupError, match='未注册'):
             b.observe('货币战争-大厅')

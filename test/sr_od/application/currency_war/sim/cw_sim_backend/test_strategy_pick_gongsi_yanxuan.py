@@ -22,7 +22,7 @@ B 案:用户裁定 2026-11-01 族级拍定「中途拿卡所在位面补发·当
 burst 字段,落卡零扰目标断言);无环境局(RunConfig.env_present 缺省
 False)翻星腿零发生,强制店恒 4 费 1★。复用声明:引擎驱动助手 import
 自 test_p3_win_terminal._drive_step 与 sim/test_sim_backend._SIG 族
-(在册超限拆分债文件,禁追加,只 import 复用不改;先例 =
+(已登记超限拆分债文件,禁追加,只 import 复用不改;先例 =
 test_strategy_pick_gudinglicai.py)。
 """
 from __future__ import annotations

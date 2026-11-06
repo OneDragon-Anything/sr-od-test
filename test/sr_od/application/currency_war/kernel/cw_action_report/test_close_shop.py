@@ -24,7 +24,7 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
 )
 
 # 改写依据(分诊):写入者登记面随「商店单动作循环收编」演进——
-# 生产写点 actor 现役 = CwScreenShop(cw_screen_shop,登记面在册),
+# 生产写点 actor 现役 = CwScreenShop(cw_screen_shop,登记面已登记),
 # 旧名 CwOpBuyCards 已退役;测试模拟生产写入随登记面改名。
 _SIG = ChannelSig(family='logic_action', actor='CwScreenShop',
                   mode='compute', group_id='act:CwScreenShop@1')

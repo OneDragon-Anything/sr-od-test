@@ -7,7 +7,7 @@ kernel/test_env_grants.py 与本目录按被测方法拆分文件,本文件按�
 invest-effects-calc/designs/T-34-mingyun-liwu.md)§2.5 + §4 锁 8 +
 锁 6 跨挂点时序半边:
 - **判据**(用户裁定 2026-10-18 口径,check_env_deploy_lock_perfect 同
-  判据在册):环尾行 killed=True ∧ 尾行 hp_after 与前一行持平;killed
+  判据已登记):环尾行 killed=True ∧ 尾行 hp_after 与前一行持平;killed
   非 True(败局/读缺)或 hp_after 下降 → 零改写;
 - **宁缺勿造**:环不足两行(首战)或任一侧 hp_after None → 不判定;
   生效序位缺读(eff None)→ 零改写;

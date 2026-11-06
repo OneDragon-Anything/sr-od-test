@@ -1,6 +1,6 @@
 """环境直发策略取卡挂点 sim 全链轻量局测试(镜像 src = sim/cw_sim_backend.py
 的 ``_begin_node_window`` 直发发放事件;按流程级测试落位本目录,引擎驱动
-助手 import 自 sim/test_sim_backend.py〔在册超限拆分债文件,禁追加,只
+助手 import 自 sim/test_sim_backend.py〔已登记超限拆分债文件,禁追加,只
 import 复用不改;先例 = 本目录 test_env_bond_tier_sim_chain.py〕)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
@@ -570,7 +570,7 @@ def test_xianzhou_concept_stock_env_pick_grant_sim_chain(
     7 名候选——环境注册时点解锁恒空,economy.md §8 用户裁定 2026-10-28;
     赠卡名显式 ∉ EXPERT_CHARS 钉专家剔除生效;双阵营成员丹恒·饮月/彦卿
     按 factions 轴在池)、equips 计数 +1 且名 ∈ equips_by_category('简易')
-    现算集(装备线索含仙舟→折叠小刀,economy.md:92 随家族键在册,零新增
+    现算集(装备线索含仙舟→折叠小刀,economy.md:92 随家族键已登记,零新增
     申报);同 seed 重放确定性(世界发放可重放)。"""
     from collections import Counter
 
@@ -617,7 +617,7 @@ def test_langshou_concept_stock_env_pick_grant_sim_chain(
     6 名候选——环境注册时点解锁恒空,economy.md §8 用户裁定 2026-10-28;
     赠卡名显式 ∉ EXPERT_CHARS 钉专家剔除生效;双阵营成员彦卿按 factions
     轴在池)、equips 计数 +1 且名 ∈ equips_by_category('简易') 现算集
-    (装备身份零先验,economy.md 四卡线索名单不含狼狩,随家族键在册,
+    (装备身份零先验,economy.md 四卡线索名单不含狼狩,随家族键已登记,
     零新增申报);同 seed 重放确定性(世界发放可重放)。"""
     from collections import Counter
 
@@ -664,7 +664,7 @@ def test_zhouzhibanshen_concept_stock_env_pick_grant_sim_chain(
     牌库时点池过滤恒等零收窄,与仙舟/狼狩专家域相反型,池 = 原始域;
     独立单位成员昔涟照发,族级口径 economy.md:94)、equips 计数 +1 且
     名 ∈ equips_by_category('简易') 现算集(装备先验「昼神送轮滑鞋」随
-    家族键在册,零新增申报);同 seed 重放确定性(世界发放可重放)。"""
+    家族键已登记,零新增申报);同 seed 重放确定性(世界发放可重放)。"""
     from collections import Counter
 
     faction_names = {c.name for c in chars_by_faction('昼之半神')}
@@ -751,7 +751,7 @@ def test_jipo_concept_stock_env_pick_grant_sim_chain(
     2026-10-28;赠卡名显式 ∉ EXPERT_CHARS 钉专家剔除生效;双羁绊成员
     加拉赫/灵砂按 flows 轴在池)、equips 计数 +1 且名 ∈
     equips_by_category('简易') 现算集(economy.md 四卡线索名单不含
-    击破 = 装备身份零先验,均匀 v0 + 按卡固定假说待校准随家族键在册,
+    击破 = 装备身份零先验,均匀 v0 + 按卡固定假说待校准随家族键已登记,
     零新增申报);同 seed 重放确定性(世界发放可重放)。"""
     from collections import Counter
 
@@ -797,7 +797,7 @@ def test_qungong_concept_stock_env_pick_grant_sim_chain(
     翡翠在公司契约具名发放对象之外照发随机池成员资格〔具名 vs 随机字段
     不相交〕)、equips 计数 +1 且名 ∈ equips_by_category('简易') 现算集
     (economy.md 四卡线索名单不含群攻 = 装备身份零先验,均匀 v0 + 按卡
-    固定假说待校准随家族键在册,零新增申报);同 seed 重放确定性(世界
+    固定假说待校准随家族键已登记,零新增申报);同 seed 重放确定性(世界
     发放可重放)。"""
     from collections import Counter
 

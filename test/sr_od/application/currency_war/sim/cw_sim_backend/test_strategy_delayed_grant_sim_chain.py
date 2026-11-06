@@ -21,7 +21,7 @@ sim 窗口接线与世界真值落地面)。
 
 驱动形态 = _enter_node_window 直通点(锚定补推路径真形态:观察锚定 →
 推进 tick 递减 → 返回后开窗,递减先于发放的时序由真实路径承载);
-引擎驱动助手 import 自 sim/test_sim_backend.py(在册超限拆分债文件,
+引擎驱动助手 import 自 sim/test_sim_backend.py(已登记超限拆分债文件,
 禁追加,只 import 复用不改)。"""
 from __future__ import annotations
 

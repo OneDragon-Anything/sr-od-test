@@ -11,11 +11,11 @@
 - 后端装配 + 扑满链三条分支变体冒烟(两卡谓词同构,参数化双环境):备战帧
   金对开局种子值直断(递延锐度)/胜局结算分支一次落账 + 连胜 0→1 /
   败局基础+息 + 连胜清零 + 不掉血,super 局同样生效;
-- 占位披露回归:``PIGGY_ORE_PANEL_BONUS_PLACEHOLDER`` 随局披露在册
+- 占位披露回归:``PIGGY_ORE_PANEL_BONUS_PLACEHOLDER`` 随局披露已登记
   (先例 = ORE_PLANE_START_PENDING 直断,sim/test_sim_backend.py),
-  封死「键在册但未接线 = 永不发射死常量」回归通道。
+  封死「键已登记但未接线 = 永不发射死常量」回归通道。
 
-复用声明:装配/结算/推进助手 import 自 sim/test_sim_backend.py(在册
+复用声明:装配/结算/推进助手 import 自 sim/test_sim_backend.py(已登记
 超限拆分债文件,禁追加,只 import 复用不改,设计 §2.1 落点约束);
 装配环境参数化经该模块 ``_PIGGY_ENV`` 名单旋钮(monkeypatch 运行时
 替换,装配函数本体零改)。
@@ -131,7 +131,7 @@ def test_piggy_super_panel_and_income_legs(
 
 def test_piggy_ore_panel_bonus_disclosure_registered() -> None:
     """占位披露回归锁:PIGGY_ORE_PANEL_BONUS_PLACEHOLDER 在后端披露集
-    在册(_BASE_DISCLOSURES 接线即随局披露;键在册但未接线 = 永不发射
+    已登记(_BASE_DISCLOSURES 接线即随局披露;键已登记但未接线 = 永不发射
     死常量的回归通道由此封死;先例 = ORE_PLANE_START_PENDING 直断,
     sim/test_sim_backend.py)。裸构造即断:基座披露与局进程无关。"""
     b = SimBackend(seed=1, cfg=RunConfig(

@@ -8,15 +8,15 @@ REVIEW-T330(驱动与断言形态先例 = 同目录 test_strategy_boss_battle_
 grant_sim_chain.py):
 - 持卡局 P1 首领节点(P1 序列现值末位)战斗结算后 equips 恰 +8(简易池
   注册表序全集)+ ``strategy_boss_completion#<卡名>`` 前缀 evidence 笔
-  ×8 + 闩落(strategy_conditional_done 纯卡名;**断言用前缀匹配禁精确
+  ×8 + 落一次性标志位(strategy_conditional_done 纯卡名;**断言用前缀匹配禁精确
   匹配**——gain_equipment 原语内追加 #equip 后缀,T-166 收口批 D2
   口径);确定发放 = logic 渠道(锚定域 rand=False);
-- 一次性闩:闩落后续位面首领(P2 首领位)再结算零新增笔(「下个」恰
-  一次,函数内闩自管防跨 boss 重复);
+- 一次性标志位:落一次性标志位后续位面首领(P2 首领位)再结算零新增笔(「下个」恰
+  一次,函数内一次性标志位自管防跨 boss 重复);
 - 败局存活也发(卡面无「胜利」限定 = 直读);死亡局不发放(挂点在死亡
   提前 return 之后);
 - 驱动形态 = 出战动作触发结算(2026-10-29 流程模型);引擎驱动助手
-  import 自 sim/test_sim_backend.py(在册超限拆分债文件,禁追加,只
+  import 自 sim/test_sim_backend.py(已登记超限拆分债文件,禁追加,只
   import 复用不改);helper 副本(世界写包装/类型备战驱动/定参结算)
   沿同目录先例自带同语义拷贝。
 """
@@ -166,7 +166,7 @@ def _grant_rows(calls: list[tuple]) -> list[tuple]:
 
 
 def _latch_rows(calls: list[tuple]) -> list[tuple]:
-    """strategy_boss_completion 前缀闩写行(strategy_conditional_done
+    """strategy_boss_completion 前缀一次性标志位写行(strategy_conditional_done
     字段,evidence 同证据基)。"""
     return [c for c in calls
             if c[1] == 'strategy_conditional_done'
@@ -177,7 +177,7 @@ def test_boss_settle_grants_full_set_and_latch(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """锁 4a(sim 端到端发放真值):持卡局 P1 首领节点战斗结算后
     equips 恰 +8(简易池注册表序全集,禁手抄清单)+ 前缀 evidence 笔
-    ×8 + 闩落;确定发放 = logic 渠道,单形态 = logic_action 族
+    ×8 + 落一次性标志位;确定发放 = logic 渠道,单形态 = logic_action 族
     'sim:strategy' 组。"""
     b = _prep_backend(81)
     try:
@@ -204,8 +204,8 @@ def test_boss_settle_grants_full_set_and_latch(
         assert list(gs.equips.value or [])[-len(SIMPLE_EQUIP_ALL):] \
             and set(gs.equips.value or []) >= pool, '入栏应含简易全集'
         latches = _latch_rows(calls)
-        assert len(latches) == 1, f'闩笔数漂移: {[c[:3] for c in latches]}'
-        assert _CARD in (gs.strategy_conditional_done.value or ()), '闩未落'
+        assert len(latches) == 1, f'一次性标志位写笔数漂移: {[c[:3] for c in latches]}'
+        assert _CARD in (gs.strategy_conditional_done.value or ()), '未落一次性标志位'
         assert b.screen_identity() == SCREEN_SETTLE, '结算后应泊结算屏'
     finally:
         uninstall_backend()
@@ -213,9 +213,9 @@ def test_boss_settle_grants_full_set_and_latch(
 
 def test_next_plane_boss_no_repeat_after_latch(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
-    """锁 4b(一次性闩跨位面):P1 首领结算闩落 → 驱动至 P2 首领位再
-    结算 → 零新增发放笔零新闩(「下个」恰一次;幂等守卫防同战斗重放,
-    闩防跨 boss 重复)。"""
+    """锁 4b(一次性标志位跨位面):P1 首领结算落一次性标志位 → 驱动至 P2 首领位再
+    结算 → 零新增发放笔零新一次性标志位(「下个」恰一次;幂等守卫防同战斗重放,
+    一次性标志位防跨 boss 重复)。"""
     b = _prep_backend(82)
     try:
         gs = b.gs
@@ -224,18 +224,18 @@ def test_next_plane_boss_no_repeat_after_latch(
         _force_settle(monkeypatch, won=True)
         _start_battle_feed(gs)
         assert _CARD in (gs.strategy_conditional_done.value or ()), \
-            '前置:首首领结算闩未落'
+            '前置:首首领结算未落一次性标志位'
         calls = _record_world_writes(gs, monkeypatch)
         _drive_to_kind_prep(monkeypatch, b, target_kind='boss')
         assert gs.node.value.plane == 2, \
             f'前置:应达 P2 首领位备战窗(plane={gs.node.value.plane})'
         _force_settle(monkeypatch, won=True)
         _start_battle_feed(gs)
-        # 闩后零重复判据 = 本腿前缀笔零新增(equips 全列表会混入 P2
+        # 一次性标志位后零重复判据 = 本腿前缀笔零新增(equips 全列表会混入 P2
         # 途程其他发放通道产出,非本腿语义面)。
-        assert _grant_rows(calls) == [], '闩后跨位面首领重复发放'
-        assert _latch_rows(calls) == [], '闩后零新闩笔'
-        assert _CARD in (gs.strategy_conditional_done.value or ()), '闩漂移'
+        assert _grant_rows(calls) == [], '一次性标志位后跨位面首领重复发放'
+        assert _latch_rows(calls) == [], '一次性标志位后零新一次性标志位写笔'
+        assert _CARD in (gs.strategy_conditional_done.value or ()), '一次性标志位漂移'
     finally:
         uninstall_backend()
 
@@ -257,7 +257,7 @@ def test_loss_survival_still_grants(
         assert len(rows) == len(SIMPLE_EQUIP_ALL), \
             f'败局存活未足额发放: {[c[:3] for c in rows]}'
         assert _CARD in (gs.strategy_conditional_done.value or ()), \
-            '败局存活闩未落'
+            '败局存活未落一次性标志位'
     finally:
         uninstall_backend()
 
@@ -281,6 +281,6 @@ def test_dead_battle_no_grant(
             '败局致死应进终局'
         assert _grant_rows(calls) == [], '死亡局误发放'
         assert _CARD not in (gs.strategy_conditional_done.value or ()), \
-            '死亡局误闩'
+            '死亡局误置一次性标志位'
     finally:
         uninstall_backend()

@@ -1,6 +1,6 @@
 """策略卡条件节点序列改写决策锁(镜像 src = kernel/cw_gain_chain.py 的
 check_strategy_node_rewrite 纯决策函数 + 改写词分派 + kernel/cw_game_state.py
-的 strategy_conditional_done 纯卡名闩读面)。
+的 strategy_conditional_done 纯卡名一次性标志位读面)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
 T-318-jueyi-yule-xingqiu.md §4 锁 2/3/4(REVIEW-T318 §五④):
@@ -10,10 +10,10 @@ T-318-jueyi-yule-xingqiu.md §4 锁 2/3/4(REVIEW-T318 §五④):
   非 battle 位(reward/encounter/supply/boss)触发 → None(裁决点 2 类型
   读法默认案);
 - 锁 3 改写合法性:输出值元素 ∈ NODE_KINDS 词表;
-- 锁 4 闩一次性:纯卡名闩置位后函数返回 None;他卡闩键不误伤(纯卡名
+- 锁 4 一次性标志位只置一次:纯卡名一次性标志位置位后函数返回 None;他卡一次性标志位键不误伤(纯卡名
   键域精确匹配)。
 构造 = 容器直置直调纯函数(零写零 rng;场字段 None = 未注册态回退默认表
-为在册契约,单列边界锁;已注册修饰场字段为权威现值,单列边界锁)。
+为已登记契约,单列边界锁;已注册修饰场字段为权威现值,单列边界锁)。
 """
 from __future__ import annotations
 
@@ -46,7 +46,7 @@ _P3 = _P2
 def _gs(*, card: str | None = _CARD,
         done: tuple[str, ...] = (),
         seqs: dict[int, tuple[str, ...]] | None = None) -> GameState:
-    """持卡/闩/场字段直置直构域(纯函数零写,seed 底座非必需)。"""
+    """持卡/一次性标志位/场字段直置直构域(纯函数零写,seed 底座非必需)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if card is not None:
         gs.write_logic(gs.active_strategies, (card,),
@@ -136,7 +136,7 @@ def test_non_battle_node_returns_none() -> None:
 
 
 def test_latched_card_returns_none() -> None:
-    """锁 4 闩一次性:纯卡名闩 ∈ strategy_conditional_done → None(改写
+    """锁 4 一次性标志位只置一次:纯卡名一次性标志位 ∈ strategy_conditional_done → None(改写
     一局至多一次)。"""
     from sr_od.application.currency_war.kernel.cw_gain_chain import (
         check_strategy_node_rewrite,
@@ -146,14 +146,14 @@ def test_latched_card_returns_none() -> None:
 
 
 def test_foreign_latch_key_no_false_block() -> None:
-    """锁 4 键域精确:他卡闩键(复合键/他卡名)在场不误伤本卡(纯卡名键
-    域匹配,与 strategy_grants_done 复合串闩分域纪律的对偶面)。"""
+    """锁 4 键域精确:他卡一次性标志位键(复合键/他卡名)在场不误伤本卡(纯卡名键
+    域匹配,与 strategy_grants_done 复合串一次性标志位分域纪律的对偶面)。"""
     from sr_od.application.currency_war.kernel.cw_gain_chain import (
         check_strategy_node_rewrite,
     )
     gs = _gs(done=('迷之旅人#faction_count', '另卡'))
     got = check_strategy_node_rewrite(gs, pos=(1, 3), gold=500)
-    assert got == _expected_rewrite((1, 3)), '他卡闩键误短路'
+    assert got == _expected_rewrite((1, 3)), '他卡一次性标志位键误短路'
 
 
 def test_output_values_within_node_kinds() -> None:

@@ -15,7 +15,7 @@ fuli.md §4 锁 2/锁 3/锁 4:
   ——挂点若后置于快照,快照金少 2、息恰少 1,断言红);
 - 未持卡零发放(锁 4,腿零噪声:窗内金来源 = 收入笔)。
 
-复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py(在册超限
+复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py(已登记超限
 拆分债文件,禁追加,只 import 复用不改;先例 = 本目录
 test_strategy_boss_gold.py)。
 """

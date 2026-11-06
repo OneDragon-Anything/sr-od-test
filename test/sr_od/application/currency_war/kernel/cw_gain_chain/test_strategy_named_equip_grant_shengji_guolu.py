@@ -105,7 +105,7 @@ def test_shengji_guolu_grant_leg_places_two_furnaces(
     效果串,「效果串恒 2 条」失效——守卫先红,勿盲改断言数)。"""
     assert _ITEM not in EQUIP_ACQUIRE_CONSEQUENCES, \
         '冶金炉 ∉ 后果表(效果串恒 2 条前提)'
-    assert _CARD in PICK_INVEST_EFFECTS, '登记面在册'
+    assert _CARD in PICK_INVEST_EFFECTS, '登记面已登记'
     gs = _make_gs(equips=[])
     gs.prep_anchored = True
     seq_before = gs.write_seq

@@ -10,7 +10,7 @@ test_per_node_family_without_now_clause_no_pick_grant(b 组),宿主超限
   per_node_pick_node_grant.md §3.2):拿卡当节点不发放,首发放 =
   下一节点边界 +1;
 - overlay 条目补齐前 payload 永不入 gs.effects = 节点边界桥恒零
-  (登记缺口形态本锁以「在册前边界零发放」承载);
+  (登记缺口形态本锁以「登记前边界零发放」承载);
 - payload 实例同一性:EffectSpec.payload is STRATEGY_ECONOMY['搜打撤']
   (共享实例单一源,EconomyEffect frozen dataclass,桥鸭子读 per_node
   字段与注册行同源)。
@@ -48,10 +48,10 @@ def test_soudache_pick_node_zero_then_next_nodes_plus_one() -> None:
     与 burst 桥零操作)→ 次节点边界 +1 → 再次节点再 +1。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     # 本节点边界已在拿卡前推进(终结动作上报时序:拿卡晚于边界),
-    # 效果在册前边界零发放(零行)。
+    # 效果登记前边界零发放(零行)。
     gs.effects.advance_node((1, 2))
     grant_effect_node_refresh_balance(gs, frame='p1-r2')
-    assert gs.free_refresh_left.value is None, '效果在册前边界零发放(零行)'
+    assert gs.free_refresh_left.value is None, '效果登记前边界零发放(零行)'
     # 登记期:burst 桥按 payload 发放,搜打撤 burst=0 = no-op 零行。
     apply_effect_burst_grant(gs, STRATEGY_EFFECTS[_CARD], frame='p1-r2')
     gs.effects.register_strategy(STRATEGY_EFFECTS[_CARD],

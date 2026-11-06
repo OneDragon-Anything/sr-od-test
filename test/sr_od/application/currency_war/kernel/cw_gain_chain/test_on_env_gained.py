@@ -318,7 +318,7 @@ def test_deploy_lock_grant_leg_overflow_decoupled(monkeypatch) -> None:
 
 def test_non_registered_env_stays_quiet(monkeypatch) -> None:
     """表外环境安静不写(T-33 设计 §4 锁 11;早退出口改形回归半边):
-    INVESTMENT_ENVS 在册但零登记表命中(轮岗)→ 效果串恒空逐位不变
+    INVESTMENT_ENVS 已登记但零登记表命中(轮岗)→ 效果串恒空逐位不变
     (() 形态)、零容器写——赠卡锁分支为表外环境零写径。"""
     gs = _make_gs_node_pos((1, 1))
     calls = _record_writes(gs, monkeypatch)
@@ -607,7 +607,7 @@ def test_affix_disable_deletion_leg_random_state_write(monkeypatch) -> None:
     kept.remove(expected_removed)
     assert gs.enemy_affixes.value == kept, '①长度 -1 且整条替换'
     assert gs.enemy_affixes.source == 'logic_rand', '②来源 logic_rand'
-    assert 'enemy_affixes' in gs.logic_rand_fields(), '③随机态字段在册'
+    assert 'enemy_affixes' in gs.logic_rand_fields(), '③随机态字段已登记'
     rows = [(c[0], c[1], c[2], c[4]) for c in calls
             if c[0] == 'enemy_affixes']
     assert rows == [('enemy_affixes',
@@ -644,7 +644,7 @@ def test_affix_disable_slot_scoped_to_hit(monkeypatch) -> None:
 def test_affix_disable_empty_container_zero_write_with_decl(
         monkeypatch, rows_sink: _RowSink) -> None:
     """空容器边界(T-45 设计 §4 锁 2):容器空(直构未写)时选敌后破坏 →
-    零容器写 + 申报行在册(kind = env_affix_disable_empty_container,
+    零容器写 + 申报行已登记(kind = env_affix_disable_empty_container,
     实机已失效而模型未删的偏差申报),零效果串。"""
     gs = _make_affix_gs(None)
     calls = _record_writes(gs, monkeypatch)

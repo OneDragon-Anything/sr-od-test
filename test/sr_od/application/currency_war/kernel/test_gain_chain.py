@@ -10,18 +10,18 @@ docs/develop/sr_od/application/currency_war/game_state/gain-chain.md
   套语义的执行测试);
 - **调用序**(§2.1 固定时序):落位 → 回调 → 升星 → 产物递归;回调补齐
   第三只后再合成;
-- **通道收口双臂**(通道规则「未锚定 → 随机态」):直构未闩容器
-  rand=False 链写被改道 write_logic_rand;置闩(测试专口直赋)后
+- **通道收口双臂**(通道规则「未锚定 → 随机态」):直构未落一次性标志位容器
+  rand=False 链写被改道 write_logic_rand;置一次性标志位(测试专口直赋)后
   rand=False 恢复 write_logic;rand=True 恒 write_logic_rand;采样
   效果分支对子链的通道翻转只及子链;
 - **失败安全**(§2.7):溢出落位/归位/溢出位被占留证;bench/equips
   未观察(直构域)= 拒落档零写、零缺陷发射(两未观察 kind 已随开局
-  种子底座与锚定闩批退役);种子容器(缓存单例支,接管局同构)正常
-  落账;置闩后失配网原样生效(确定面被观察覆盖产失配行);
+  种子底座与锚定标志批退役);种子容器(缓存单例支,接管局同构)正常
+  落账;置一次性标志位后失配网原样生效(确定面被观察覆盖产失配行);
 - **欢愉契约条件分支 rider**(条件分支正式模型,测试面 = 银狼策划选择落地相
   上报的授予行为):通道语义(授予 rand=True 全通道 logic_rand,rand
-  形参优先于锚定闩——未闩/置闩同通道)+ 覆盖校准面 = 观察覆盖落
-  logic_rand_outcome 行零失配行;在册判定(active_env 归一 = 欢愉契约)、
+  形参优先于锚定标志——未落一次性标志位/置一次性标志位同通道)+ 覆盖校准面 = 观察覆盖落
+  logic_rand_outcome 行零失配行;已登记判定(active_env 归一 = 欢愉契约)、
   rng 注入确定性(同 seed 同单位,两候选均可达)、触发计数封闭清单
   (落地相 equip/upgrade/unknown 各恰一次,发射相零授予,branch_type=''
   兜底仍触发且终态兜底 reason = unrouted_leg_zero_write)、授予失败
@@ -260,8 +260,8 @@ def test_call_order_place_callback_merge_recurse(
     """固定时序测试(§2.1):落位 → 回调 → 升星 → 产物递归;回调补齐第三只
     后再合成(用户裁定「先触发回调…回来后再触发 3 合 1 升星判断」)。"""
     gs = _make_gs(bench=[('银狼', 1), ('希儿', 1)])
-    # 置闩(测试专口直赋):本测试焦点 = 调用序,置闩使 rand=False 链写
-    # 走 write_logic 桩(未闩会被通道规则改道 write_logic_rand,桩不触发)。
+    # 置一次性标志位(测试专口直赋):本测试焦点 = 调用序,置一次性标志位使 rand=False 链写
+    # 走 write_logic 桩(未落一次性标志位会被通道规则改道 write_logic_rand,桩不触发)。
     gs.prep_anchored = True
     events: list[str] = []
     granted = {'n': 0}
@@ -306,30 +306,30 @@ def test_call_order_place_callback_merge_recurse(
 def test_rand_passthrough_and_channel_by_anchor(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """通道收口双臂 + rand 透传(通道规则「未锚定 → 随机态」):直构
-    未闩容器 rand=False 链写被改道 write_logic_rand(未验证推算,首观察
-    静默覆盖);置闩(测试专口直赋)后 rand=False 恢复 write_logic;
+    未落一次性标志位容器 rand=False 链写被改道 write_logic_rand(未验证推算,首观察
+    静默覆盖);置一次性标志位(测试专口直赋)后 rand=False 恢复 write_logic;
     rand=True 恒 write_logic_rand;采样效果分支对子链的通道翻转只及子链。"""
-    # 臂 1:直构未闩 + rand=False → 通道改道 logic_rand
+    # 臂 1:直构未落一次性标志位 + rand=False → 通道改道 logic_rand
     gs = _make_gs(bench=[])
     assert gs.prep_anchored is False
     out = gain_character(gs, '希儿', 1, rand=False, sig=_lsig(),
                          evidence='g', producer='T')
     assert out.placed is True
     assert gs.bench.source == 'logic_rand', '未锚定期确定入口被改道随机态'
-    # 臂 2:置闩 + rand=False → 恢复按形参走 write_logic
+    # 臂 2:置一次性标志位 + rand=False → 恢复按形参走 write_logic
     gs2 = _make_gs(bench=[])
     gs2.prep_anchored = True
     gain_character(gs2, '希儿', 1, rand=False, sig=_lsig(), evidence='g',
                    producer='T')
     assert gs2.bench.source == 'logic', '锚定后确定面通道按形参'
-    # 臂 3:rand=True 恒 logic_rand(与闩无关)
+    # 臂 3:rand=True 恒 logic_rand(与一次性标志位无关)
     gs3 = _make_gs(bench=[])
     gs3.prep_anchored = True
     gain_character(gs3, '停云', 1, rand=True, sig=_lsig(), evidence='g',
                    producer='T')
     assert gs3.bench.source == 'logic_rand'
 
-    # 采样效果分支翻转子链(机制测试,rand 透传纪律;置闩容器上外链与子链
+    # 采样效果分支翻转子链(机制测试,rand 透传纪律;置一次性标志位容器上外链与子链
     # 通道可分辨):确定入口走 write_logic,采样子链走 write_logic_rand,
     # 外链不被子链污染。
     def sampling_cb(gs: GameState, name: str, star: int, *, rand: bool,
@@ -356,7 +356,7 @@ def test_rand_passthrough_and_channel_by_anchor(
     monkeypatch.setattr(gs4, 'write_logic_rand', rec_r)
     gain_character(gs4, '银狼', 1, rand=False, sig=_lsig(), evidence='main',
                    producer='T')
-    assert ('logic', 'main#place') in chan, '置闩确定入口落位走 write_logic'
+    assert ('logic', 'main#place') in chan, '置一次性标志位确定入口落位走 write_logic'
     assert ('logic_rand', 'sampled#place') in chan, \
         '采样效果子链走 write_logic_rand(翻转只及子链)'
     assert all(c == 'logic' for c, e in chan if e and e.startswith('main')), \
@@ -449,7 +449,7 @@ def test_seeded_container_chain_lands_and_takeover_isomorphic(
 
 
 def test_anchor_gates_mismatch_net() -> None:
-    """锚定闩辖失配网(通道规则的验证信号面):置闩后链写(确定面)被
+    """锚定标志辖失配网(通道规则的验证信号面):置一次性标志位后链写(确定面)被
     观察以不同值覆盖 → 产 observe_vs_logic_mismatch 失配行(网未盲);
     未锚定期链写(随机态)被观察覆盖 → 仅 logic_rand_outcome 台账行、
     零失配行(首观察静默覆盖)。"""
@@ -458,7 +458,7 @@ def test_anchor_gates_mismatch_net() -> None:
         slots=[BenchSlot(kind='unit',
                          unit=Unit(char_id='停云', star=1))]
         + [BenchSlot(kind='empty')] * 8, capacity=9)
-    # 未闩臂:随机态链写 → 观察覆盖静默(差异落 logic_rand_outcome)
+    # 未落一次性标志位臂:随机态链写 → 观察覆盖静默(差异落 logic_rand_outcome)
     gs = _make_gs(bench=[])
     consume_defect_sink()
     gain_character(gs, '希儿', 1, rand=False, sig=_lsig(), evidence='g',
@@ -467,7 +467,7 @@ def test_anchor_gates_mismatch_net() -> None:
     kinds = [r['kind'] for r in consume_defect_sink()]
     assert 'observe_vs_logic_mismatch' not in kinds, '未锚定期首观察零失配行'
     assert 'logic_rand_outcome' in kinds, '随机态差异落 logic_rand_outcome'
-    # 闩臂:确定面链写 → 观察覆盖产真失配行(失配网未盲)
+    # 一次性标志位臂:确定面链写 → 观察覆盖产真失配行(失配网未盲)
     gs2 = _make_gs(bench=[])
     gs2.prep_anchored = True
     consume_defect_sink()
@@ -488,7 +488,7 @@ def test_env_gift_advisor_split_and_quiet(rows_sink: _RowSink) -> None:
     退役);advisor=False 入席递归(chars_immediate 1★);表外环境查无
     效果安静不写(裁定④)。session=None = 登记分支跳过、容器写照常
     (编排语义裁定)。"""
-    # advisor:特邀专家 → 解锁入池(置闩保持确定面通道断言;本测试焦点
+    # advisor:特邀专家 → 解锁入池(置一次性标志位保持确定面通道断言;本测试焦点
     # = 分道)
     gs_a = _make_gs(bench=[], equips=[])
     gs_a.prep_anchored = True
@@ -1006,7 +1006,7 @@ def test_pending_item_grants_audit_row_declared() -> None:
         PROJECTION_AUDIT,
     )
     row = PROJECTION_AUDIT.get('pending_item_grants')
-    assert row is not None, '登记行在册'
+    assert row is not None, '登记行已登记'
     assert row.status == AUDIT_PROCESS_ONLY, '无观察读端 → process_only'
 
 
@@ -1084,7 +1084,7 @@ def test_gain_invest_strategy_register_dedup_and_hacker_chain(
     monkeypatch.setattr(random.Random, 'choice',
                         lambda self, seq: '破解芯片')   # 表外件(无后果分支)
     gs = _make_gs(bench=[('银狼', 1), ('银狼', 1)], equips=[])
-    # 置闩(测试专口直赋):注册分支确定面通道断言(source == 'logic')以
+    # 置一次性标志位(测试专口直赋):注册分支确定面通道断言(source == 'logic')以
     # 通道规则前置;采样分支 rand=True 恒 logic_rand 不受影响。
     gs.prep_anchored = True
     seq_before = gs.write_seq
@@ -1114,7 +1114,7 @@ def test_gain_invest_strategy_session_ledger_branch() -> None:
     """登记分支(design §2.4-2):session 在场 + STRATEGY_EFFECTS 命中 →
     register_strategy 入册 + burst 桥累加免费刷新余额;session=None =
     登记分支跳过、注册照常;未收录卡登记分支零动作。(选卡 = 固定理财:
-    STRATEGY_EFFECTS 在册条目且 payload.free_refresh_burst=2,桥 docstring
+    STRATEGY_EFFECTS 已登记条目且 payload.free_refresh_burst=2,桥 docstring
     背书;市场干预已入册本表,payload 引 STRATEGY_ECONOMY 同一实例,
     burst 腿锁 = test_gain_invest_strategy_market_intervention_burst_grant。)"""
     gs = _make_gs(bench=[], equips=[])
@@ -1259,7 +1259,7 @@ def test_gain_invest_strategy_bench_reroll_register_shape() -> None:
     账本条目形态 = NODE_ENTER / WHILE_HELD / BATTLEFIELD +
     payload.bench_reroll 词表值(防裸串漂移与载体误配)+ duties.track 置位
     (账本可见性,无 predict/respond 消费面)。经济面 instant_gold=2 选卡
-    当场 = STRATEGY_ECONOMY 在册零动,不属本锁辖域。"""
+    当场 = STRATEGY_ECONOMY 已登记零动,不属本锁辖域。"""
     gs = _make_gs(bench=[], equips=[])
     gain_invest_strategy(gs, object(), '公司人才流动', rand=False, sig=_lsig())
     assert gs.active_strategies.value == ['公司人才流动'], '注册入表'
@@ -1536,7 +1536,7 @@ def test_reinforcement_grants_pair_sequence_shape() -> None:
 def test_reinforcement_sampler_pool_and_domain_guard() -> None:
     """采样纯函数:固定种子 4 抽全部 ∈ 载体派生池(单一源派生集,禁手抄
     清单);cost ∉ 1..5 → ValueError——cost=0 档系统单位(狸猫对/佩佩
-    族召唤)在册非空,「池非空」哨防不住误传 0,值域限定是系统单位不入
+    族召唤)已登记非空,「池非空」哨防不住误传 0,值域限定是系统单位不入
     随机发放池的唯一保证。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
         roll_reinforcement_names,
@@ -1617,7 +1617,7 @@ def test_reinforcement_sampling_channel_rand_subchain(
         pairs: tuple[tuple[int, int], ...], seed: int) -> None:
     """采样语义 rand=True(通道翻转只及子链,按卡参数化):锚定容器上
     发放 → 入口注册走确定面,采样子链恒 write_logic_rand(rand 优先于
-    锚定闩);覆盖观察差异落 logic_rand_outcome 行、零失配行(随机态不
+    锚定标志);覆盖观察差异落 logic_rand_outcome 行、零失配行(随机态不
     触发失配网,校准面 = outcome 行)。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
         roll_reinforcement_names,
@@ -1908,7 +1908,7 @@ def test_gain_bench_item_three_landings(
 
 
 def _joy_candidates() -> list[str]:
-    """条件分支候选名集单一源(结构化在册数据,禁测试内第二抄本)。"""
+    """条件分支候选名集单一源(结构化已登记数据,禁测试内第二抄本)。"""
     return [name for name, _text in ENV_GIFTS['欢愉契约'].chars_conditional]
 
 
@@ -1921,7 +1921,7 @@ def _joy_seed_for(candidate: str) -> int:
 
 
 def _joy_seeded_gs(env_name: str = '欢愉契约') -> GameState:
-    """种子容器(缓存单例支冷建即含开局种子底座)+ 在册环境直写
+    """种子容器(缓存单例支冷建即含开局种子底座)+ 已登记环境直写
     (观察链同写入口;'' = 保持种子初值空环境)。"""
     gs = game_state_of(StrategySession())
     if env_name:
@@ -1932,13 +1932,13 @@ def _joy_seeded_gs(env_name: str = '欢愉契约') -> GameState:
 def test_joy_rider_grant_channel_rand_anchor_and_coverage(
         rows_sink: _RowSink) -> None:
     """通道语义(授予体含采样 → rand=True 全通道 logic_rand,rand 形参
-    优先于锚定闩):种子容器未闩臂授予落 bench source=logic_rand;置闩
-    (测试专口直赋)后同路径 source 仍 = logic_rand;未闩臂观察覆盖落
+    优先于锚定标志):种子容器未落一次性标志位臂授予落 bench source=logic_rand;置一次性标志位
+    (测试专口直赋)后同路径 source 仍 = logic_rand;未落一次性标志位臂观察覆盖落
     logic_rand_outcome 行、零 observe_vs_logic_mismatch(无失配网辖 =
     采样面本义,校准面 = outcome 行)。"""
     cands = _joy_candidates()
     seed = _joy_seed_for(cands[0])
-    # 臂 1:未闩(种子底座窗)。
+    # 臂 1:未落一次性标志位(种子底座窗)。
     gs = _joy_seeded_gs()
     out = report_action_pick_planner_param(
         gs, None, _lsig('CwScreenYinLang'), branch_type='unknown',
@@ -1946,7 +1946,7 @@ def test_joy_rider_grant_channel_rand_anchor_and_coverage(
     assert out.applied is True
     granted = [u.char_id for u in bench_units_of(gs) if u.char_id in cands]
     assert granted == [cands[0]], '恰一次授予,选中单位 = 注入 rng 采样值'
-    assert gs.bench.source == 'logic_rand', '未闩授予落随机态'
+    assert gs.bench.source == 'logic_rand', '未落一次性标志位授予落随机态'
     # 观察覆盖:差异落 logic_rand_outcome、零失配行(首观察静默覆盖)。
     sig_obs = ChannelSig(family='obs', actor='CwScreenPrep', mode='read')
     other = BenchView(slots=[BenchSlot(kind='empty')] * 9, capacity=9)
@@ -1955,7 +1955,7 @@ def test_joy_rider_grant_channel_rand_anchor_and_coverage(
     kinds = [r['kind'] for r in consume_defect_sink()]
     assert 'observe_vs_logic_mismatch' not in kinds, '随机态覆盖零失配行'
     assert 'logic_rand_outcome' in kinds, '校准面 = outcome 行'
-    # 臂 2:置闩后同路径 —— source 仍 = logic_rand(rand 优先于闩)。
+    # 臂 2:置一次性标志位后同路径 —— source 仍 = logic_rand(rand 优先于一次性标志位)。
     gs2 = _joy_seeded_gs()
     gs2.prep_anchored = True
     report_action_pick_planner_param(
@@ -1965,8 +1965,8 @@ def test_joy_rider_grant_channel_rand_anchor_and_coverage(
 
 
 def test_joy_rider_registry_gate(rows_sink: _RowSink) -> None:
-    """在册判定:active_env 空(种子初值)/其他环境 → 零授予零写;欢愉
-    契约在册 → 恰一次授予(正常授予零留证行,unknown 分支载荷各留一行)。"""
+    """已登记判定:active_env 空(种子初值)/其他环境 → 零授予零写;欢愉
+    契约已登记 → 恰一次授予(正常授予零留证行,unknown 分支载荷各留一行)。"""
     cands = _joy_candidates()
     seed = _joy_seed_for(cands[0])
     gs = _joy_seeded_gs('')          # 空 = 种子初值
@@ -1990,7 +1990,7 @@ def test_joy_rider_registry_gate(rows_sink: _RowSink) -> None:
         gs, None, _lsig('CwScreenYinLang'), branch_type='unknown',
         rng=random.Random(seed))
     granted = [u.char_id for u in bench_units_of(gs) if u.char_id in cands]
-    assert granted == [cands[0]], '欢愉契约在册恰一次授予'
+    assert granted == [cands[0]], '欢愉契约已登记恰一次授予'
     kinds = rows_sink.kinds()
     # 台账除三条分支载荷行外,仅「观察覆盖种子('' → 公司契约)」的 outcome
     # 行(随机态覆盖预期内,与授予无关);授予自身零留证。
@@ -2262,7 +2262,7 @@ def test_invest_strategy_landing_hacker_wolf(
     assert gs.active_strategies.value == ['骇客专家:银狼'], '注册入持卡面'
     # 投资策略屏在生产链序(简报→投资环境→投资策略→备战)位于锚定(备战
     # heavy)之前,通道规则「未锚定 → 随机态」使确定入口链写改道
-    # logic_rand(开局种子底座与锚定闩批行为申报,首观察静默覆盖)。
+    # logic_rand(开局种子底座与锚定标志批行为申报,首观察静默覆盖)。
     assert gs.active_strategies.source == 'logic_rand'
     assert gs.unlocked_experts.value == ('银狼',), 'advisor 解锁分支写入'
     units = [(u.char_id, u.star) for u in bench_units_of(gs)]
@@ -2317,7 +2317,7 @@ def test_invest_portal_landing_no_card_pollution(
         rows_sink: _RowSink) -> None:
     """portal 确认(欢愉契约)整支走获得链:active_env 写(选择事实落地
     经 gain_invest_env)+ 银狼LV.999 1★ 入席递归(on_env_gained
-    chars_immediate 唯一分支——条件分支临时翻来源闩已撤:零翻面、零
+    chars_immediate 唯一分支——条件分支临时翻来源一次性标志位已撤:零翻面、零
     provisional 标记行,正式模型 = 银狼策划上报条件分支 rider,测试面 =
     本文件 rider 组);禁入 active_strategies(防 portal 卡污染持卡面)。"""
     gs = _make_gs(bench=[('希儿', 1)], equips=['幸运星'], gold=30)
@@ -2335,11 +2335,11 @@ def test_invest_portal_landing_no_card_pollution(
     assert gs.active_env.source == 'logic_rand'
     units = [(u.char_id, u.star) for u in bench_units_of(gs)]
     assert units == [('希儿', 1), ('银狼LV.999', 1)], \
-        'immediate 分支唯一(撤闩后 on_env_gained 仅 chars_immediate)'
+        'immediate 分支唯一(撤一次性标志位后 on_env_gained 仅 chars_immediate)'
     assert gs.bench.source == 'logic_rand', '送卡链写未锚定期改道随机态'
     assert gs.equips.source == 'observation' \
         and gs.equips.value == ['幸运星'], '零翻面(equips 值与来源均不动)'
-    assert rows_sink.kinds() == [], 'provisional 标记行零发射(撤闩后台账零新增)'
+    assert rows_sink.kinds() == [], 'provisional 标记行零发射(撤一次性标志位后台账零新增)'
 
 
 def test_invest_portal_env_gifts_full_access(
@@ -2670,7 +2670,7 @@ def test_env_gift_equip_leg_callback_zero_effect(
     """回调零效果(T-31 设计 §4 锁 4):红钻 ∈ EQUIP_ACQUIRE_CONSEQUENCES
     表外 → 获得链零子链;红钻非财富宝钻 → 宝钻数值回调族
     (diamond_count/deploy_cap/back_layout)零变化(on_diamond_acquired
-    非财富宝钻早退在册,且唯一调用点 = sim 深井发放路径,本链不经)。"""
+    非财富宝钻早退已登记,且唯一调用点 = sim 深井发放路径,本链不经)。"""
     gs = _make_gs(bench=[], equips=[])
     diamond0 = gs.diamond_count.value
     cap0 = gs.deploy_cap.value
@@ -2742,7 +2742,7 @@ def test_env_gift_blue_callback_zero_effect(rows_sink: _RowSink) -> None:
     """回调零效果(T-32 设计 §4 锁 3):蓝钻 ∈ EQUIP_ACQUIRE_CONSEQUENCES
     表外 → 获得链零子链;蓝钻非财富宝钻 → 宝钻数值回调族
     (diamond_count/deploy_cap/back_layout)零变化(on_diamond_acquired
-    非财富宝钻早退在册,红钻贵族同判)。"""
+    非财富宝钻早退已登记,红钻贵族同判)。"""
     gs = _make_gs(bench=[], equips=[])
     diamond0 = gs.diamond_count.value
     cap0 = gs.deploy_cap.value

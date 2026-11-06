@@ -1,5 +1,5 @@
 """sim 策略选卡即时生命腿测试(镜像 src = sim/cw_sim_backend.py 的
-apply_strategy_pick_hp helper + _on_invest_picked 落地腿 + 呈现闩 +
+apply_strategy_pick_hp helper + _on_invest_picked 落地腿 + 呈现一次性标志位 +
 披露键 strategy_pick_instant_legs hp 族扩面)。
 
 测试面依据 = 迭代设计 designs/T-127-jiankang-chongzhi.md §2.1/§4 三锁:
@@ -7,15 +7,15 @@ apply_strategy_pick_hp helper + _on_invest_picked 落地腿 + 呈现闩 +
   笔 ``hp:strategy_pick:健康充值``(与开局 ``opening``/战斗
   ``battle:hp`` 笔分账),hp_trail 同步恰追加(落卡前/后/下一战斗三读),
   开局笔与战斗笔不受扰;
-- 呈现闩防重放(锁 2):同 offer 落地 advance 重放 → 第二次零写(xp 腿
-  闩锁同形,轨迹亦不再追加);
+- 呈现一次性标志位防重放(锁 2):同 offer 落地 advance 重放 → 第二次零写(xp 腿
+  一次性标志位锁同形,轨迹亦不再追加);
 - 无卡局零扰动(锁 3):opts 含本卡但不落卡(选另一张)→ 落地交集空 →
   零 ``hp:strategy_pick`` 笔、hp 零增量(名单推导负例,防误发)。
 T-144 先亏后盈随批扩面(designs/T-144-xiankui-houying.md §4 锁 3/5/8
 + 扩挂点漂移增量锁):负值支 delta 断言形 / 不 clip 下界直构与败局
 floor 分支 / 持保险局选卡损血扩挂点入累计器 / 双持独立笔互不聚合。
 
-复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py(在册超限
+复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py(已登记超限
 拆分债文件,禁追加,只 import 复用不改)与 cw_sim_backend/
 test_p3_win_terminal.py(先例 = 同目录 test_strategy_pick_xp.py)。
 """
@@ -84,7 +84,7 @@ def _drive_until(b: SimBackend, pred, limit: int = 512) -> None:
 
 def _drive_to_offer(b: SimBackend) -> None:
     """驱动至策略 offer 呈现(固定日程首槽 P1r3 起;呈现即置即时生命
-    腿闩——本腿生效前提)。"""
+    腿一次性标志位——本腿生效前提)。"""
     _drive_until(b, lambda: b.screen_identity() == SCREEN_INVEST_STRATEGY)
 
 
@@ -133,8 +133,8 @@ def test_pick_grants_exact_instant_hp_with_trail_append() -> None:
 
 
 def test_replay_advance_zero_double_grant() -> None:
-    """呈现闩防重放(锁 2):同 offer 落地 advance 重放一次 → 第二次
-    零写(闩已消费;hp 值/evidence/轨迹三方均不再动)。"""
+    """呈现一次性标志位防重放(锁 2):同 offer 落地 advance 重放一次 → 第二次
+    零写(一次性标志位已消费;hp 值/evidence/轨迹三方均不再动)。"""
     b = _backend(seed=42)
     try:
         gs = b.gs
@@ -155,7 +155,7 @@ def test_replay_advance_zero_double_grant() -> None:
 
 def test_unpicked_card_zero_grant() -> None:
     """无卡局零扰动(锁 3):opts 含本卡但不落卡(选另一张)→ 落地
-    交集空 → 零 hp:strategy_pick 笔、hp 零增量、轨迹零追加(闩同拍
+    交集空 → 零 hp:strategy_pick 笔、hp 零增量、轨迹零追加(一次性标志位同拍
     消费,本次不残留)。"""
     b = _backend(seed=43)
     try:

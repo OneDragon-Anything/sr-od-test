@@ -17,7 +17,7 @@ T295 §3.3 裁决点 1/2(条件金腿 = 利息分量顶满;tick 捕获→窗口�
 字段,防自动选卡污染息面断言;先例 =
 test_strategy_pick_gudinglicai._drive_with_safe_picks)。复用声明:
 引擎驱动助手 import 自 test_p3_win_terminal._drive_step(位面过渡屏在
-其分派表内)与 sim/test_sim_backend._SIG 族(在册超限拆分债文件,禁
+其分派表内)与 sim/test_sim_backend._SIG 族(已登记超限拆分债文件,禁
 追加,只 import 复用不改)。
 """
 from __future__ import annotations
@@ -109,7 +109,7 @@ def _carrier(gs) -> int:
 
 
 def _drive_to_offer(b: SimBackend, plane: int, round_num: int) -> None:
-    """驱动至指定位面的策略 offer 呈现(呈现闩置位;途中 offer 安全
+    """驱动至指定位面的策略 offer 呈现(呈现一次性标志位置位;途中 offer 安全
     filler 化,先例同上)。"""
 
     def _at_offer() -> bool:

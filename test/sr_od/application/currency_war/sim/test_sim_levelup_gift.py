@@ -5,7 +5,7 @@
 EffectSpec/满级费用钳池域/连跳逐级/节点与窗口升级源不挂)。驱动形态 =
 test_sim_spy_levelup 同款「上报直驱」(report_action_level_up_param,
 sim 装配 = 注入槽流键 rng 即世界真值);采样池 = cw_pool.grant_char_pool
-(规格域 ∩ 当时牌库、未解锁专家剔除——授予通道在册裁定 2026-10-28)。
+(规格域 ∩ 当时牌库、未解锁专家剔除——授予通道已登记裁定 2026-10-28)。
 
 测试面:
 1. 持卡跨级:bench +1 名 2★ 且费用档 = max(1, min(5, 新等级-4))

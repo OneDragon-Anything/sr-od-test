@@ -11,7 +11,7 @@ chain.py;触发-发放单拍制 = 结算拍直接发放,无节点窗交付拍):
   贝洛伯格 2)战斗结算 → equips 恰 +1 盛会之星星徽(``strategy_bond_
   tier:<卡名>@3`` 前缀 evidence 笔——**断言用前缀匹配禁精确匹配**,
   gain_equipment 原语内追加 #equip 后缀;sig 组 'sim:strategy';确定
-  通道零随机)+ 闩 '<卡名>#3' 落域;
+  通道零随机)+ 一次性标志位 '<卡名>#3' 落域;
 - 胜负无关:败局存活局同样发放(卡面无「胜利」限定,胜败两态共同
   路径);
 - 幂等回归 = 既有守卫(同节点战斗重放 _settled_key 整段跳过,零二次
@@ -145,14 +145,14 @@ def _grant_rows(calls: list[tuple]) -> list[tuple]:
 
 
 def _latch_rows(calls: list[tuple]) -> list[tuple]:
-    """闩域写行(strategy_bond_tier_fired 字段)。"""
+    """一次性标志位域写行(strategy_bond_tier_fired 字段)。"""
     return [c for c in calls if c[1] == 'strategy_bond_tier_fired']
 
 
 def test_settle_grants_on_win(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """锁 8 主条(胜局):持卡 + 3 激活板 → P1r1 战斗结算拍 equips 恰
-    +1 星徽(evidence 前缀笔、'sim:strategy' 组、确定通道)+ 闩落。"""
+    +1 星徽(evidence 前缀笔、'sim:strategy' 组、确定通道)+ 落一次性标志位。"""
     b = _prep_backend(91)
     try:
         gs = b.gs
@@ -168,7 +168,7 @@ def test_settle_grants_on_win(
             f'evidence 漂移: {rows[0][2]!r}'
         # 通道断言不设:sim 世界未锚定期确定发放走随机态通道是链级既定
         # 约定(gain-chain §5,箱腿同款),确定面 source 锁归 kernel 单元面
-        #(test_check_strategy_bond_tier_grants 首达主条 prep_anchored 置闩)。
+        #(test_check_strategy_bond_tier_grants 首达主条 prep_anchored 置一次性标志位)。
         assert rows[0][3].family == 'logic_action' \
             and rows[0][3].group_id == 'sim:strategy', \
             f'sig 组漂移: {rows[0][3]}'
@@ -176,8 +176,8 @@ def test_settle_grants_on_win(
         assert gs.equips.value == [_EQUIP], f'入栏漂移: {gs.equips.value!r}'
         latches = _latch_rows(calls)
         assert len(latches) == 1 and latches[0][4] == (_LATCH_KEY,), \
-            f'闩写漂移: {[c[:5] for c in latches]}'
-        assert gs.strategy_bond_tier_fired.value == (_LATCH_KEY,), '闩值漂移'
+            f'一次性标志位写漂移: {[c[:5] for c in latches]}'
+        assert gs.strategy_bond_tier_fired.value == (_LATCH_KEY,), '一次性标志位值漂移'
     finally:
         uninstall_backend()
 
@@ -198,7 +198,7 @@ def test_settle_grants_on_loss_alive(
         assert b.screen_identity() == SCREEN_SETTLE, '败局存活应泊结算屏'
         assert len(_grant_rows(calls)) == 1, '败局存活局未发放'
         assert gs.equips.value == [_EQUIP], '败局存活局入栏漂移'
-        assert gs.strategy_bond_tier_fired.value == (_LATCH_KEY,), '闩未落'
+        assert gs.strategy_bond_tier_fired.value == (_LATCH_KEY,), '未落一次性标志位'
     finally:
         uninstall_backend()
 
@@ -206,7 +206,7 @@ def test_settle_grants_on_loss_alive(
 def test_settled_replay_no_regrant(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """幂等回归锁:同节点战斗重放(battle_resolve 重入)→ _settled_key
-    既有守卫整段跳过,零二次发放零新增闩笔(防本腿绕过)。"""
+    既有守卫整段跳过,零二次发放零新增一次性标志位写笔(防本腿绕过)。"""
     b = _prep_backend(93)
     try:
         gs = b.gs
@@ -219,7 +219,7 @@ def test_settled_replay_no_regrant(
         _start_battle_feed(gs)
         assert b.screen_identity() == SCREEN_SETTLE, '重放应泊原结算屏'
         assert _grant_rows(calls) == [], '重入误发放'
-        assert _latch_rows(calls) == [], '重入误闩'
+        assert _latch_rows(calls) == [], '重入误置一次性标志位'
         assert gs.equips.value == [_EQUIP], '重入入栏漂移'
     finally:
         uninstall_backend()
@@ -265,6 +265,6 @@ def test_dead_battle_no_grant(
         assert b.done and b.screen_identity() == SCREEN_LOBBY, \
             '败局致死应进终局'
         assert _grant_rows(calls) == [], '死亡局误发放'
-        assert _latch_rows(calls) == [], '死亡局误闩'
+        assert _latch_rows(calls) == [], '死亡局误置一次性标志位'
     finally:
         uninstall_backend()

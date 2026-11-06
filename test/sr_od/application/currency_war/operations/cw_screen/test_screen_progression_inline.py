@@ -340,7 +340,7 @@ def test_area_center_advance_missing_fail(test_context, monkeypatch) -> None:
 
 # ==================== 武装箱选卡观察上报接线测试 ====================
 
-#: x 升序读数桩(名字 = 装备注册表在册名——观察标准化门要求读数可
+#: x 升序读数桩(名字 = 装备注册表已登记名——观察标准化门要求读数可
 #: 转换为标准注册名,桩名必须真名可命中)。
 _CARDS = [('反重力皮靴', 500), ('光能电池', 900)]
 
@@ -499,7 +499,7 @@ def test_box_pick_read_gate_admits_registry_longest_priv_name(
         '读数闸上限必须派生自装备注册表最长名,禁手抄常数')
     nine = '战场进化手册·特权'
     assert len(nine) == 9 and nine in EQUIPMENT_ROSTER, (
-        '用例前提:9 字特权名在册(旧 8 字闸必丢的形态)')
+        '用例前提:9 字特权名已登记(旧 8 字闸必丢的形态)')
     op, session = _make_box_pick(test_context, monkeypatch, gate_ok=True,
                                  cards=[])
     # 还原真读数闸 + OCR/rect 桩(读数 = 9 字特权名 + 1 字噪声 + 4 字简易名)。
@@ -566,7 +566,7 @@ def test_box_pick_act_clicks_decided_card(test_context, monkeypatch):
         '点击坐标由动作 op 自取)')
     assert rs.is_success and '选卡即终结' in (rs.status or ''), (
         f'选卡即终结交回:{rs!r}')
-    assert mod.CwScreenBoxPick.CARD_Y == 290, '画面常量在册(避让几何)'
+    assert mod.CwScreenBoxPick.CARD_Y == 290, '画面常量已登记(避让几何)'
 
 
 def test_box_pick_act_off_match_fails_via_normal_chain(test_context,

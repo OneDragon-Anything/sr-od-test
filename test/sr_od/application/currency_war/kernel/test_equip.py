@@ -462,8 +462,8 @@ def test_wear_advanced_no_conversion_without_synthesis():
 
 def test_privilege_counterpart_bijection_registry_pinned():
     """进阶↔特权 36/36 全量双射锁(6a 正向 + 6b 反向):进阶全集逐名
-    ``privilege_counterpart`` 在册且 category='特权';特权全集逐名去
-    后缀在册且 category='进阶';双表同基数 36。游戏装备注册表改版
+    ``privilege_counterpart`` 已登记且 category='特权';特权全集逐名去
+    后缀已登记且 category='进阶';双表同基数 36。游戏装备注册表改版
     (单侧新增进阶/特权件)会触发 = 漂移哨——处置 = 版本重采后双表
     同步(映射为后缀拼接,双表天然同步,单侧漂移 = 注册表缺口需申报)。"""
     from sr_od.application.currency_war.kernel.cw_effect_inventory import (
@@ -477,11 +477,11 @@ def test_privilege_counterpart_bijection_registry_pinned():
     for n in sorted(advance):
         c = privilege_counterpart(n)
         assert c in EQUIPMENTS and EQUIPMENTS[c].category == '特权', \
-            f'正向断:{n!r} → {c!r} 不在册/类别漂移'
+            f'正向断:{n!r} → {c!r} 未登记/类别漂移'
     for n in sorted(privilege):
         base = n.removesuffix(EQUIP_PRIVILEGE_SUFFIX)
         assert base in EQUIPMENTS and EQUIPMENTS[base].category == '进阶', \
-            f'反向断:{n!r} ← {base!r} 不在册/类别漂移'
+            f'反向断:{n!r} ← {base!r} 未登记/类别漂移'
         assert privilege_counterpart(base) == n, '去后缀/拼接往返闭合'
 
 

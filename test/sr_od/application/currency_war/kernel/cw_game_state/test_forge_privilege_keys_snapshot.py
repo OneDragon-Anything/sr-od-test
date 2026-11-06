@@ -14,7 +14,7 @@ kernel/cw_projection_audit.py 的同名审计行 + cw_effect_inventory 常量
 - 登记四件:schema 独立键版本 1(不并入他域 bump)+ 审计行
   PROCESS_ONLY × 2(容器字段完备性纪律的显式锁);
 - 常量与登记面单一源:辖域角色/持卡键 = STRATEGY_GRANTS 同卡条目
-  chars_immediate/advisor 一致(效果条目1 顾问解锁在册零改动的正向护行)。
+  chars_immediate/advisor 一致(效果条目1 顾问解锁已登记零改动的正向护行)。
 """
 from __future__ import annotations
 
@@ -92,13 +92,13 @@ def test_audit_rows_declared_process_only() -> None:
     for name in ('forge_privilege_charges_left',
                  'forge_privilege_gained_count'):
         row = PROJECTION_AUDIT.get(name)
-        assert row is not None, f'{name} 登记行在册'
+        assert row is not None, f'{name} 登记行已登记'
         assert row.status == AUDIT_PROCESS_ONLY, f'{name} process_only'
 
 
 def test_constants_tie_to_registry_single_source() -> None:
     """常量与登记面单一源:持卡键/辖域角色 = STRATEGY_GRANTS 同卡条目
-    chars_immediate/advisor 一致(效果条目1 顾问解锁+入商店登记面在册零改动
+    chars_immediate/advisor 一致(效果条目1 顾问解锁+入商店登记面已登记零改动
     的正向护行)+ 扩次阈值 = 卡面数值 10。"""
     from sr_od.application.currency_war.kernel.cw_investments import (
         STRATEGY_BINDINGS,
@@ -109,5 +109,5 @@ def test_constants_tie_to_registry_single_source() -> None:
     assert grant.chars_immediate == (FORGE_PRIVILEGE_CHAR,), \
         '辖域角色 = 登记面 chars_immediate 单成员'
     assert FORGE_PRIVILEGE_CHAR in STRATEGY_BINDINGS[FORGE_PRIVILEGE_CARD][1], \
-        '顾问角色绑定条目在册'
+        '顾问角色绑定条目已登记'
     assert FORGE_PRIVILEGE_GAINS_PER_CHARGE == 10, '扩次阈值 = 卡面数值'

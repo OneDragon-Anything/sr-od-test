@@ -128,12 +128,12 @@ def _record_writes(gs: GameState,
 
 def test_condition_matrix_short_circuits(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """条件矩阵前五序短路:env 空链(None/'')/不在册/连败方向/低于阈值/
+    """条件矩阵前五序短路:env 空链(None/'')/未登记/连败方向/低于阈值/
     已发 done → 全部 None 且零写。"""
     cases: list[tuple[str, GameState]] = [
         ('env 未选择(None 形态)', _make_gs(equips=[])),
         ('env 空链(开局种子形态)', _make_gs(env='', equips=[])),
-        ('env 不在册', _make_gs(env='蓝海', equips=[])),
+        ('env 未登记', _make_gs(env='蓝海', equips=[])),
     ]
     for label, gs in cases:
         calls = _record_writes(gs, monkeypatch)
@@ -154,12 +154,12 @@ def test_condition_matrix_short_circuits(
     assert check_env_streak_grants(gs, 4, _SIG_HOOK) is None
     assert not calls, '低于阈值零写'
 
-    # 已发 done 在册(幂等守卫,5/6 连胜重查不重发)
+    # 已发 done 已登记(幂等守卫,5/6 连胜重查不重发)
     gs = _make_gs(env=_ENV, equips=[], done=((_ENV, FIRST_STREAK_KEY),))
     for streak in (5, 6):
         calls = _record_writes(gs, monkeypatch)
         assert check_env_streak_grants(gs, streak, _SIG_HOOK) is None
-        assert not calls, f'done 在册 streak={streak} 零写'
+        assert not calls, f'done 已登记 streak={streak} 零写'
 
 
 def test_done_none_treated_as_empty(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -337,7 +337,7 @@ def test_seed_and_restore_type_roundtrip_no_regrant(
     # 恢复局再触发(6 连胜重查)不再发:零写
     calls = _record_writes(restored, monkeypatch)
     assert check_env_streak_grants(restored, 6, _SIG_HOOK) is None
-    assert not calls, f'恢复局 done 在册零写: {calls}'
+    assert not calls, f'恢复局 done 已登记零写: {calls}'
 
 
 # ============================================================ live 接线
@@ -450,7 +450,7 @@ def test_env_grant_fires_after_settlement_cover_in_order(
 def test_wrong_guess_healed_by_whole_table_observation(
         test_context, monkeypatch) -> None:
     """随机态发放 + equips 观察整表覆盖纠偏(猜错自愈):发放猜值与
-    下一备战帧实读表不同 → 观察赢;done 在册使 6 连胜重查零重发 =
+    下一备战帧实读表不同 → 观察赢;done 已登记使 6 连胜重查零重发 =
     零持续污染。"""
     op = _make_op(test_context, monkeypatch, [_outcome(5), _outcome(6)])
     gs = game_state_of(test_context.cw_match.session)
@@ -467,7 +467,7 @@ def test_wrong_guess_healed_by_whole_table_observation(
     assert gs.equips.value == reality
     assert gs.equips.source == 'observation', '观察赢(纠偏)'
 
-    # 第二结算(6 连胜重查):done 在册 → 零发放写,观察表不被二次污染
+    # 第二结算(6 连胜重查):done 已登记 → 零发放写,观察表不被二次污染
     writes.clear()
     op._record_round_outcome(_FRAME)
     assert gs.streak.value == 6, '第二结算覆盖写端照常落账(路径存活)'
@@ -475,7 +475,7 @@ def test_wrong_guess_healed_by_whole_table_observation(
     assert gs.equips.source == 'observation'
     assert gs.env_grants_done.value == ((_ENV, 'first_streak'),)
     assert not [w for w in writes if w[1] in ('equips', 'env_grants_done')], \
-        f'done 在册零发放写: {writes}'
+        f'done 已登记零发放写: {writes}'
 
 
 def test_streak_none_settlement_skips_env_grant(
@@ -576,12 +576,12 @@ def test_env_refresh_grants_registry_and_validation(
 
 def test_refresh_condition_matrix_short_circuits(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """刷新发放条件矩阵短路:env 空链(None/'')/不在册/已 done/未达阈 →
+    """刷新发放条件矩阵短路:env 空链(None/'')/未登记/已 done/未达阈 →
     全部 None 且零写。"""
     cases: list[tuple[str, GameState]] = [
         ('env 未选择(None 形态)', _r_make_gs(gold=100, equips=[])),
         ('env 空链(开局种子形态)', _r_make_gs(env='', gold=100, equips=[])),
-        ('env 不在册', _r_make_gs(env='蓝海', gold=100, equips=[])),
+        ('env 未登记', _r_make_gs(env='蓝海', gold=100, equips=[])),
     ]
     for label, gs in cases:
         _count_refreshes(gs, 20)
@@ -589,13 +589,13 @@ def test_refresh_condition_matrix_short_circuits(
         assert check_env_refresh_grants(gs, _R_SIG_LOGIC) is None, label
         assert not calls, f'{label} 零写: {calls}'
 
-    # 已 done 在册(幂等守卫,第 21 刷重查不重发)
+    # 已 done 已登记(幂等守卫,第 21 刷重查不重发)
     gs = _r_make_gs(env=_R_ENV, gold=100, equips=[],
                     done=((_R_ENV, REFRESH_THRESHOLD_KEY),))
     _count_refreshes(gs, 20)
     calls = _record_writes(gs, monkeypatch)
     assert check_env_refresh_grants(gs, _R_SIG_LOGIC) is None
-    assert not calls, 'done 在册零写'
+    assert not calls, 'done 已登记零写'
 
     # 未达阈(19 < 20)
     gs = _r_make_gs(env=_R_ENV, gold=100, equips=[])
@@ -724,7 +724,7 @@ def test_exactly_once_in_21_refresh_loop(
 
     assert grants.count(_R_EQUIP) == 1, f'21 刷恰发一次: {grants}'
     assert grants[19] == _R_EQUIP, '第 20 次发放'
-    assert grants[20] is None, '第 21 次 done 在册不再发'
+    assert grants[20] is None, '第 21 次 done 已登记不再发'
     assert gs.env_grants_done.value == ((_R_ENV, REFRESH_THRESHOLD_KEY),)
     assert len([c for c in calls if c[0] == 'env_grants_done']) == 1, \
         'done 只登记一次'
@@ -732,7 +732,7 @@ def test_exactly_once_in_21_refresh_loop(
 
 
 def test_report_wiring_grants_on_threshold() -> None:
-    """接线存在性:上报函数尾部触发检查在在册环境达阈时发放落地
+    """接线存在性:上报函数尾部触发检查在已登记环境达阈时发放落地
     (集成 1 条;矩阵断言归 kernel 级,不在此层重复)。窗口内 = 刷费
     扣金分支(容器直读,T-21 分支 3:免费未观察保守按付费,基价 2)+ 发放
     三笔;level 不写 = 随机态采样分支跳写。"""

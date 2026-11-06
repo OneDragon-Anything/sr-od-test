@@ -33,7 +33,7 @@ _PREFIXES = {'proj_refresh_free_left', 'effect_burst', 'effect_node',
 
 def test_fanxiang_zero_registered() -> None:
     """锁 1 反向锁:两注册面零登记(9999 永续语义错误,T-88 定谳)。"""
-    assert _CARD in STRATEGY_ECONOMY, 'ECONOMY 注册行在册(零动作载体)'
+    assert _CARD in STRATEGY_ECONOMY, 'ECONOMY 注册行已登记(零动作载体)'
     assert _CARD not in STRATEGY_EFFECTS, 'ECONOMY 效果面零条目(9999 永续'
     '语义错误,T-88 定谳)'
 
@@ -41,14 +41,14 @@ def test_fanxiang_zero_registered() -> None:
 def test_burst_value_consistent() -> None:
     """锁 2 可信域绑定锁:免费午餐族对比基线(burst 字段一致形态)。"""
     spec = STRATEGY_ECONOMY['免费午餐']
-    assert spec.free_refresh_burst == 11, '免费午餐 11 在册(并持溢出形态'
+    assert spec.free_refresh_burst == 11, '免费午餐 11 已登记(并持溢出形态'
     '基线)'
 
 
 def test_exempt_entries_full_coverage() -> None:
     """锁 3 豁免行为锁:条目组存在、前缀覆盖盘点全集、reason 同文。"""
     entries = EXEMPT_REGISTRY.get(_KEY, ())
-    assert entries, '条目组在册'
+    assert entries, '条目组已登记'
     got = {e.logic_evidence for e in entries}
     assert got >= _PREFIXES, f'前缀覆盖盘点全集: {sorted(got)}'
     assert len({e.reason for e in entries}) == 1, 'reason 同文'

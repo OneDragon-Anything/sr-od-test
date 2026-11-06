@@ -1,6 +1,6 @@
 """入职礼包(id 331301)登记锁(镜像 src = STRATEGY_EFFECTS UNIT_BUFF
 零响应登记条目;先例 = 和平手枪祝福 SE 条目同族形态 + pending 冻结
-在册表纪律)。
+已登记表纪律)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-371 对应稿
 (REVIEW-T371 免裁 8/8;卡面官方原文:「进入战斗时:携带了2件装备的

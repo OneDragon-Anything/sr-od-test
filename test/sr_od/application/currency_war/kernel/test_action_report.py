@@ -643,7 +643,7 @@ def test_mutate_faces_do_not_fire_gain_callbacks(monkeypatch,
 
 def test_equip_write_sides_report_form_final_values() -> None:
     """EQUIP_WRITE_SIDES 新词表校验测试:工具七行逐行终值(design §2.3 表)
-    + 校验器通过(report: 第五形目标须在 tool_use 在册,import 即炸面
+    + 校验器通过(report: 第五形目标须在 tool_use 已登记,import 即炸面
     的直调复验)。"""
     assert EQUIP_WRITE_SIDES['冶金炉'] == \
         'report:report_action_furnace_use_param'
@@ -659,12 +659,12 @@ def test_equip_write_sides_report_form_final_values() -> None:
         'contribution:equip_wrench_duplicate_gold', '金面不变'
     assert EQUIP_WRITE_SIDES['好运令牌'] == 'bridge:grant_equip_item', \
         '维持 R9 挂账(不虚报已接线)'
-    _validate_equip_write_sides()   # 词表封闭 + 落码目标在册
+    _validate_equip_write_sides()   # 词表封闭 + 落码目标已登记
 
 
 def test_equip_write_sides_report_form_rejects_unknown_target(
         monkeypatch) -> None:
-    """report: 第五形校验封闭性:目标函数不在 tool_use 在册 = 构建校验炸
+    """report: 第五形校验封闭性:目标函数不在 tool_use 已登记 = 构建校验炸
     (改名/删除即暴露,禁静默失联)。"""
     monkeypatch.setitem(EQUIP_WRITE_SIDES, '冶金炉',
                         'report:report_action_not_in_tool_use')

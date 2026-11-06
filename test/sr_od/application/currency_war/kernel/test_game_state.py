@@ -8,7 +8,7 @@
 两组测试。机制主题归并(禁批次命名):本文件 = GameState 容器机制正名
 主题文件,消费切换批(刷新计数/结算覆盖/合成升星判定/streak 解析/
 备战席读链)、容器合同(六通道/版本流水/快照/画面上下文/渠道签名
-封闭集)、开局种子底座与锚定闩、deployed 视图桥与快照迁移各节按
+封闭集)、开局种子底座与锚定标志、deployed 视图桥与快照迁移各节按
 机制并入(断言体零语义改动)。
 
 退役面:§8.6 差距清单逐条测试(gap3/gap4 组)与 §3 字段语义抽样组已删;
@@ -441,7 +441,7 @@ def test_write_logic_rand_and_observe_random_outcome(
                         evidence='ore_rand@p1-r2', sig=_lsig())
     assert gs.gold.source == 'logic_rand' and gs.gold.value == 12, \
         '随机口径直写落 logic_rand 来源,策略器立即可读'
-    assert gs.logic_rand_fields() == ['gold'], '随机态字段在册(消费门查询口)'
+    assert gs.logic_rand_fields() == ['gold'], '随机态字段已登记(消费门查询口)'
     assert gs.gold not in [getattr(gs, n) for n in gs.logic_written_fields()] \
         and 'gold' not in gs.logic_written_fields(), \
         '严格对账巡检面(logic_written_fields)不辖随机态字段'
@@ -483,7 +483,7 @@ def test_write_logic_rand_and_observe_random_outcome(
 
 def test_any_logic_rand_truth_table() -> None:
     """any_logic_rand 污染判定口真值表(logic-rand-sampling 迭代):
-    空集 → False;含随机态域 → True;全非随机态 → False;未在册名
+    空集 → False;含随机态域 → True;全非随机态 → False;未登记名
     容错跳过不炸。消费面 = 动作上报入口跨动作污染判定(design §2.2 #3)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.observe(gs.gold, 10, sig=_sig())
@@ -494,7 +494,7 @@ def test_any_logic_rand_truth_table() -> None:
     assert gs.any_logic_rand(['gold', 'hp']) is True, '含随机态域 → True'
     assert gs.any_logic_rand(['hp']) is False, '其余域不误报'
     assert gs.any_logic_rand(['nonexistent_field', 'gold']) is True, \
-        '未在册名容错跳过,不炸且不遮蔽在册判定'
+        '未登记名容错跳过,不炸且不遮蔽已登记判定'
 
 
 # ============================================================ 单例宿主与心跳观察者
@@ -975,14 +975,14 @@ def test_gas_station_pick_node_grant_matches_official_text() -> None:
     """拿卡登记期核查测试·加油站(a 组,行为结论单一源 =
     docs/game/currency_war/research/per_node_pick_node_grant.md):官方文
     「现在及每次进入新节点时获得1次免费刷新」——拿卡当节点即享:
-    - 本节点边界推进先于拿卡(终结动作上报时序),在册前零发放;
+    - 本节点边界推进先于拿卡(终结动作上报时序),登记前零发放;
     - 拿卡登记期 burst +1(「现在」分支,apply_effect_burst_grant 按 payload);
     - 拿卡节点边界去重(已推进过)不重复发 per_node;
     - 下一节点边界 per_node +1(「每次进入新节点」分支)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.effects.advance_node((1, 2))   # 本节点边界已在拿卡前推进(拿卡晚于边界)
     grant_effect_node_refresh_balance(gs, frame='p1-r2')
-    assert gs.free_refresh_left.value is None, '效果在册前边界零发放(零行)'
+    assert gs.free_refresh_left.value is None, '效果登记前边界零发放(零行)'
     apply_effect_burst_grant(gs, STRATEGY_EFFECTS['加油站'], frame='p1-r2')
     gs.effects.register_strategy(STRATEGY_EFFECTS['加油站'], acquired_key=(1, 2))
     assert gs.free_refresh_left.value == 1, '拿卡当节点「现在」分支即发'
@@ -1009,7 +1009,7 @@ def test_per_node_family_without_now_clause_no_pick_grant() -> None:
                    'free_refresh_burst', 0) == 0
     assert STRATEGY_ECONOMY['本金充裕'].free_refresh_burst == 0
     assert STRATEGY_ECONOMY['本金充裕+'].free_refresh_burst == 0
-    # 在册代表(双手狸):登记期零发放,首发放 = 下一节点边界 +2。
+    # 已登记代表(双手狸):登记期零发放,首发放 = 下一节点边界 +2。
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.effects.register_strategy(STRATEGY_EFFECTS['双手狸开键盘！'],
                                  acquired_key=(1, 2))
@@ -1051,7 +1051,7 @@ def test_deposit_return_none_conditional_zero_grant() -> None:
 
 
 def test_capacity_projection_activates_and_recovers() -> None:
-    """桥·容量投影(§3.2.5):在册容量声明 payload.capacity_limit=3 → bench
+    """桥·容量投影(§3.2.5):已登记容量声明 payload.capacity_limit=3 → bench
     容量投影 3;条目到期移除 → 回默认 9;bench 未观察(None)= 无容器跳过;
     零声明条目 → 恒默认 9(幂等)。声明契约 = payload 鸭子属性
     capacity_limit(机制先于数据,鸭子桩承载)。槽表归一(容量条目入册同批
@@ -1131,7 +1131,7 @@ def test_capacity_projection_slot_overflow_keeps_truth(monkeypatch) -> None:
 
 
 def test_capacity_projection_multi_entry_min_and_noop() -> None:
-    """limits 推导单一源(active_capacity_limit):两条目在册取 min(叠加
+    """limits 推导单一源(active_capacity_limit):两条目已登记取 min(叠加
     收紧向);零条目 + 表已归一 → 全视图相等零写(no-op 逐位,防回归
     冗余行)。"""
     from types import SimpleNamespace as _NS
@@ -1169,7 +1169,7 @@ def test_capacity_projection_multi_entry_min_and_noop() -> None:
 
 
 def test_consume_use_decrements_removes_and_tolerates_missing() -> None:
-    """§3.2.19 跳过递减:落地一次 −1;归零移除;无在册条目返 None 零动作
+    """§3.2.19 跳过递减:落地一次 −1;归零移除;无已登记条目返 None 零动作
     (递减挂点与登记挂点解耦,不炸执行链)。"""
     inv = ActiveEffectInventory()
     assert inv.consume_use('151301') is None, '未登记 = None 零动作'
@@ -2025,7 +2025,7 @@ def test_channel_family_closed_set() -> None:
             ChannelSig(family=family, actor='CwScreenPrep', mode='read')
 
 
-# ============================================================ 开局种子底座 + 锚定闩 + carry 收窄
+# ============================================================ 开局种子底座 + 锚定标志 + carry 收窄
 
 #: A 类种子字段全集(与 seed_opening_state 写面一一对应;board 不入——
 #: 派生量禁双写,journal 行面断言兜住;行域合卷为 deployed 单字段)。
@@ -2064,7 +2064,7 @@ _A_SEEDED: tuple[str, ...] = (
     # 分期金剩余效果条数容器(空 dict 底座,节点窗腿键查判定零 None 防御;
     # 空 = 未持分期卡的正常态,T-177 长期主义首例)
     'strategy_gold_next_nodes_left',
-    # 策略卡羁绊档位条件发放已发档位闩(空 tuple 底座,检查腿 membership
+    # 策略卡羁绊档位条件发放已发档位一次性标志位(空 tuple 底座,检查腿 membership
     # 判定零 None 防御;空 = 无档已发的正常态)
     'strategy_bond_tier_fired',
     # 策略卡赠礼条件两条效果条目已发标记(空 tuple 底座,检查腿 membership 判定
@@ -2097,7 +2097,7 @@ _OBS_SIG = ChannelSig(family='obs', actor='CwScreenPrep', mode='read')
 def test_cold_build_seeds_all_a_fields(monkeypatch) -> None:
     """冷建即含种子(缓存单例支):A 类逐字段值 + 来源(logic_rand/
     seed:opening)+ journal 种子行过滤键(actor/mode);B/C 类仍 None;
-    board 不落种子行;锚定闩缺省 False。"""
+    board 不落种子行;锚定标志缺省 False。"""
     rows: list[dict] = []
     monkeypatch.setattr(gs_mod, '_STATE_JOURNAL_SINK', rows.append)
     monkeypatch.setattr(gs_mod, '_RUN_ID_PROVIDER', lambda: 'seed-t')
@@ -2128,7 +2128,7 @@ def test_cold_build_seeds_all_a_fields(monkeypatch) -> None:
     assert gs.strategy_gold_next_nodes_left.value == {}, \
         '分期金剩余发放数容器,每局全新创建(空初始值)'
     assert gs.strategy_bond_tier_fired.value == (), \
-        '羁绊档位闩冷建空底座'
+        '羁绊档位一次性标志位冷建空底座'
     assert gs.strategy_hp_loss_accum.value == 0, '损血累积器冷建零底座'
     assert gs.giftbox_sight.value == (), '板件读数域冷建空底座'
     assert gs.gold.value == 3
@@ -2160,7 +2160,7 @@ def test_cold_build_seeds_all_a_fields(monkeypatch) -> None:
     # —— B/C 类字段仍 None ——
     for name in _BC_UNSEEDED:
         assert getattr(gs, name).value is None, name
-    # —— 锚定闩缺省 False(直读 + 读口解析,本体直通形态)——
+    # —— 锚定标志缺省 False(直读 + 读口解析,本体直通形态)——
     assert gs.prep_anchored is False
     assert prep_anchored_of(session) is False
     assert prep_anchored_of(gs) is False
@@ -2197,7 +2197,7 @@ def test_giftbox_sight_domain_registration() -> None:
         'tuple 不漂移为 list'
 
     row = PROJECTION_AUDIT.get('giftbox_sight')
-    assert row is not None, '审计表登记在册(完备性双向锁另一半)'
+    assert row is not None, '审计表已登记(完备性双向锁另一半)'
     assert row.status == AUDIT_OBSERVATION_ONLY, \
         '观察读端 + 零逻辑写端(纯旁路证据域)'
 
@@ -2216,7 +2216,7 @@ def test_none_session_and_direct_construct_not_seeded() -> None:
 
 
 def test_reconcile_bench_anchor_sets_prep_anchored() -> None:
-    """锚定闩生产置位:reconcile_tracking bench 侧屏幕真值写回成功 →
+    """锚定标志生产置位:reconcile_tracking bench 侧屏幕真值写回成功 →
     prep_anchored 置位 + 读口 True(tracked True 同一成功条件)。"""
     session = StrategySession()
     assert prep_anchored_of(session) is False
@@ -2232,7 +2232,7 @@ def test_reconcile_bench_anchor_sets_prep_anchored() -> None:
 
 def test_reconcile_deployed_only_keeps_prep_anchored_off() -> None:
     """失败形态不置位:bench 侧未读(deployed-only 写回成功)= 未锚定,
-    闩保持 False——两闩同一成功条件,不新增判断分支。"""
+    一次性标志位保持 False——两一次性标志位同一成功条件,不新增判断分支。"""
     session = StrategySession()
 
     ok, _, _ = reconcile_tracking(session, None, DeployedView(), screen=None,

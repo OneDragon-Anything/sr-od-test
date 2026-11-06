@@ -233,7 +233,7 @@ class TestRegisterContract:
         assert _pending_kinds(gs) == ['megastar', 'partner'], 'FIFO + 去重'
         consume_screen_change(gs, 'partner')   # 与顺序无关的消费
         assert _pending_kinds(gs) == ['megastar']
-        consume_screen_change(gs, 'partner')   # 不在册 = no-op
+        consume_screen_change(gs, 'partner')   # 未登记 = no-op
         clear_screen_changes(gs)
         assert _pending_kinds(gs) == []
         with pytest.raises(ValueError, match='集外'):
@@ -253,7 +253,7 @@ class TestPartnerTrigger:
 
     def test_member_removal_fires_and_to_anchor_only_not(self):
         """成员减弹(写后仍 ≥2 人:姬子 + 另一成员);卖到只剩姬子不弹
-        (「另有成员」前提不满足——用户确认口径 §1.2 在册边界)。"""
+        (「另有成员」前提不满足——用户确认口径 §1.2 已登记边界)。"""
         gs = _gs()
         _write_dep(gs, _view(front=[_u('三月七'), _u('姬子·启行'),
                                      _u('丹恒·饮月')]))
@@ -967,7 +967,7 @@ class TestTwoStageRealImpl:
         name, pred = shell._resolve_frame_identity(object())
         assert KIND_SCREEN_NAMES['aha'] not in tried, \
             '底屏锚条目不进两段式(防备战名死循环)'
-        assert [p.kind for p in pred] == ['megastar'], '候选过滤在册'
+        assert [p.kind for p in pred] == ['megastar'], '候选过滤已登记'
         assert name == KIND_SCREEN_NAMES['megastar']
 
 
@@ -1049,7 +1049,7 @@ class TestFortuneNodeWindowM1:
             assert gs.screen_changes.pending == [], \
                 'fortune 在备战底层收口消费(逐 kind 呈现门)'
             assert any('fortune' in str(k) and 'unmodeled' in str(v)
-                       for k, v in b.disclosures.items()), '消费披露在册'
+                       for k, v in b.disclosures.items()), '消费披露已登记'
         finally:
             uninstall_backend()
 

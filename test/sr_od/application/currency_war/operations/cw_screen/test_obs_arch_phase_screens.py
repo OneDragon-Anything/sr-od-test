@@ -17,16 +17,16 @@ test_plane_intel_pipeline.py,本文件不辖。
 
 - 投资环境/投资策略:sim 分支 = 不适用——有 sim 事实来源(``decide_invest``
   注入段,架构设计 §3.2)但 sim 端口适配器未建(归 sim 接线批),本批
-  等价判据主承重 = 实机在册行为测试 + 写入流对拍(实机分支),禁引用 sim 域
+  等价判据主承重 = 实机已登记行为测试 + 写入流对拍(实机分支),禁引用 sim 域
   对拍;
 - 战斗等待:sim 分支 = 不适用——sim 事实来源为 coarse 结算产出,非画面段
-  (§3.2 结算行),等价判据主承重 = 实机在册行为测试(B2-③ 主门:在册
+  (§3.2 结算行),等价判据主承重 = 实机已登记行为测试(B2-③ 主门:已登记
   行为测试经 execute()/wait() 走新路径全绿);
 - 简报/BOSS 简报:sim 分支 = 不适用——sim 无对应画面段(过渡相位,§3.2),
-  等价判据主承重 = 实机在册行为测试 + 写入流对拍;
+  等价判据主承重 = 实机已登记行为测试 + 写入流对拍;
 - 位面过渡/武装箱弹窗/未达上限弹窗/等待1-1:sim 分支 = 不适用——sim 无
   对应画面段(架构设计 §3.4 过渡相位/中断弹窗行),等价判据主承重 =
-  实机在册行为测试 + 本文件两 node 形态测试,禁引用 sim 域对拍。
+  实机已登记行为测试 + 本文件两 node 形态测试,禁引用 sim 域对拍。
 
 测试的语义(测试纪律 7 自检;出处 = landing 阶段一/三判据;行为测试单驱动
 生产路径):
@@ -51,11 +51,11 @@ test_plane_intel_pipeline.py,本文件不辖。
   时点零写,落地相经获得链写;ADR-0598 点卡前写退役)、
   ``active_strategies`` 重入裁决出口 append(值/时点)、
   简报三字段容器写(词缀幂等辖「读+采」/boss 恒覆写/难度仅 None 写)
-  逐位;结算观察半直写(D-94 时序)经战斗等待在册行为测试的轨迹断言承载。
+  逐位;结算观察半直写(D-94 时序)经战斗等待已登记行为测试的轨迹断言承载。
 - **round_wait 语义测试**(收尾屏):循环推进 = round_wait(不烧节点重试
   预算);等待1-1 = 轮询 round_wait 自环观察 node(全库唯一观察轮询
   变体)+ 固定超时留证兜底。
-- **判别单一源消费面测试**已随三审整删退役(见文件尾在册注;源码扫描
+- **判别单一源消费面测试**已随三审整删退役(见文件尾已登记注;源码扫描
   测试禁令不重建),防线归 review 与代码规范。
 - **收口测试不恢复**(分诊):「cw_screen/ 顶层 op 类必为基类后代」AST
   全目录扫描形态(AGENTS §10.4.4 禁),摘除不恢复;结构面归 review 与
@@ -242,7 +242,7 @@ def _make_env(test_context, monkeypatch: pytest.MonkeyPatch, *,
 # (原 test_invest_env_dispatch_and_gate「投资环境分流双向 + 段迹形态」删:
 #  装两端口走五段新路径的分流/段迹面随并存窗收口整删(生产端口恒 None);
 #  其唯一跨路径幸存断言「确认发出置 pending」并入下方选卡时点写测试;
-#  离屏门 fail 早退语义由简报/BOSS 简报在册行为测试同形承重。)
+#  离屏门 fail 早退语义由简报/BOSS 简报已登记行为测试同形承重。)
 
 
 def test_invest_env_observe_gate_and_report(test_context,
@@ -1006,7 +1006,7 @@ def test_boss_briefing_observe_gate_and_report_wiring(
 def test_boss_briefing_env_grant_trigger_wiring(
         test_context, monkeypatch) -> None:
     """live 观察链触发接线(劳务派遣合同分支2 live 半边):_observe_live 在
-    report 之后 best-effort 调 check_env_boss_grants——绑定在册的局观察
+    report 之后 best-effort 调 check_env_boss_grants——绑定已登记的局观察
     一帧 → done 追加 boss 键 + bench +1(hist = boss 类型直定目标同源,
     零双发靠 done 短路);触发路径异常不阻塞观察链(best-effort,观察门
     测试 ② 的 gs=object() 形态即压住该路径)。红 = live 接线断流 /
@@ -1064,7 +1064,7 @@ def test_boss_briefing_env_grant_trigger_wiring(
 # 禁止清单);「判别逻辑禁复制成第二源」防线归 review 与代码规范。
 
 
-# ==================== 战斗等待:B2-③ 主门(在册行为测试·生产路径)====
+# ==================== 战斗等待:B2-③ 主门(已登记行为测试·生产路径)====
 
 
 def _make_bwait(test_context, monkeypatch: pytest.MonkeyPatch,

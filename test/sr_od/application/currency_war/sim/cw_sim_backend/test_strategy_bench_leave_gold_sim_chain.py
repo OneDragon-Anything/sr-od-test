@@ -12,7 +12,7 @@ T-292-yuzhe-ezuoju.md(定稿)§4 锁 3 + REVIEW-T292 §四④:
 - 幂等锁(锁 4):同节点窗重放(_window_begun_pos 守卫整段早退)零新增
   写行、金不双发;
 - 移出制结构性零重发(锁 4 变体):单位离场后下一窗条件自然消失零发放
-  (与零 done 闩计数腿「每窗重查」的结构差异——本卡产出含状态移除,
+  (与零 done 一次性标志位计数腿「每窗重查」的结构差异——本卡产出含状态移除,
   同单位不可二次离场)。
 """
 from __future__ import annotations
@@ -148,7 +148,7 @@ def test_units_gone_next_window_no_refire(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """移出制结构性零重发(锁 4 变体):单位已离场,下一节点窗条件自然
     消失零发放(状态移除制的可重复性语义——同单位不可二次离场,零 done
-    闩不构成重发面)。"""
+    一次性标志位不构成重发面)。"""
     b = _setup()
     try:
         gs = b.gs
@@ -165,7 +165,7 @@ def test_units_gone_next_window_no_refire(
 
 
 def test_no_card_zero_write(monkeypatch: pytest.MonkeyPatch) -> None:
-    """未持卡零写(锁 3 反向):席内匹配单位在册但不持卡 → 窗推进零本腿
+    """未持卡零写(锁 3 反向):席内匹配单位已登记但不持卡 → 窗推进零本腿
     写(白名单表外禁从效果原文自动猜装的窗口面)。"""
     b = _setup(grant=False)
     try:

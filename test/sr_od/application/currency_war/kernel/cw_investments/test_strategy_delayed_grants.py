@@ -101,16 +101,16 @@ def test_grant_item_not_in_bench_wordlist() -> None:
     """发放物分道词表归属对拍(分道判据前提,注册表逐行锁):装备名
     不入占席词表(本专表不接入 BENCH_ITEM_NAMES 派生,装备名误入词表
     即被当占席道具——溢出腿假道具,该形态钉死);许诺特权发放物特权
-    武装箱 = 占席词表在册 ∧ 装备表无条目(占席分道判据前提);好运
-    令牌·银发放物好运令牌 = 装备表在册 ∧ 占席词表负成员(装备分道
+    武装箱 = 占席词表已登记 ∧ 装备表无条目(占席分道判据前提);好运
+    令牌·银发放物好运令牌 = 装备表已登记 ∧ 占席词表负成员(装备分道
     判据前提,负成员申报 = 入 items 会错派占席身份,禁入占席通道);
-    是钻石总会发光 choice-set 两元素红钻/蓝钻 = 装备表在册 ∧ 占席词表
+    是钻石总会发光 choice-set 两元素红钻/蓝钻 = 装备表已登记 ∧ 占席词表
     负成员(采样行同走装备分道,钻石禁入占席通道)。"""
     from sr_od.application.currency_war.data.cw_equipment_data import (
         EQUIPMENTS,
     )
     row = STRATEGY_DELAYED_GRANTS['人才激励']
-    assert row.item in EQUIPMENTS, '发放物 = 装备表在册(装备腿分道)'
+    assert row.item in EQUIPMENTS, '发放物 = 装备表已登记(装备腿分道)'
     assert row.item not in BENCH_ITEM_NAMES, \
         '装备名误入占席词表(禁入形态被破坏)'
     xunuo = STRATEGY_DELAYED_GRANTS['许诺特权']

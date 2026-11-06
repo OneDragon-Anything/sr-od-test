@@ -2,7 +2,7 @@
 
 出处 = docs/develop/sr_od/application/currency_war/flow/action_exec.md §3
 (备战单动作消费·重观察通道)+ screens/prep.md §4(循环形态·读屏点
-在册例外)。零真实 IO:op 级 = 桩宿主(SimpleNamespace,同
+已登记例外)。零真实 IO:op 级 = 桩宿主(SimpleNamespace,同
 test_prep_action_ops harness 形状);环级 = 桩策略 + 实例级重观察桩
 (同 test_prep_pipeline 消费端形状)。
 

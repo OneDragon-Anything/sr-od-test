@@ -4,7 +4,7 @@
 - 锁 6:STRATEGY_EFFECTS 条目 payload is STRATEGY_ECONOMY 注册行同一实例
   (单一源)+ plaza id / 触发 / 类别对拍;
 - 锁 7:闭集落位——kernel 侧引擎单字段桶谓词直测;策略侧字段分类 =
-  待建模桶在册 + 选卡估值 fail-closed 0(条件概率型,现金分 1→0 失真修正
+  待建模桶已登记 + 选卡估值 fail-closed 0(条件概率型,现金分 1→0 失真修正
   方向 = 低估);
 - 锁 8:注册行等值迁移完整性——instant_gold 缺省 ∧ gold_per_refresh_pair=1
   ∧ free_refresh_burst=4(防迁移半途;同形先例 = test_economy 尾款交付
@@ -56,7 +56,7 @@ def test_refresh_pair_migration_completeness() -> None:
 
 
 def test_refresh_pair_engine_and_pending_classification() -> None:
-    """锁 7:闭集落位两断言(kernel 侧引擎桶谓词直测 + 策略侧待建模桶在册),
+    """锁 7:闭集落位两断言(kernel 侧引擎桶谓词直测 + 策略侧待建模桶已登记),
     附选卡估值 fail-closed 行为锁(条件概率型现金分 1→0 = 失真修正,
     方向低估)。"""
     assert is_economy_engine(EconomyEffect(gold_per_refresh_pair=1)) is True, \

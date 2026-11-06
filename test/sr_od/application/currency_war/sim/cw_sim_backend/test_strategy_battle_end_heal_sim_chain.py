@@ -20,7 +20,7 @@ test_strategy_boss_end_heal_sim_chain.py,直加不 clip 边界沿其锁 4 落码
   断言(scope/cap 家族键/完胜偏严);
 - 无卡局写流不变(恰结算一笔,轨迹 +1)。
 
-复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py(在册超限
+复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py(已登记超限
 拆分债文件,禁追加,只 import 复用不改)。
 """
 from __future__ import annotations

@@ -70,7 +70,7 @@ def test_zhanjidian_concept_stock_env_pick_grant_sim_chain(
     在候选池内〔economy.md:94 族级定谳点名战技点(Archer)〕)、equips
     计数 +1 且名 ∈ equips_by_category('简易') 现算集(economy.md 四卡
     线索名单不含战技点 = 装备身份零先验,均匀 v0 + 按卡固定假说待校准
-    随家族键在册,零新增申报);同 seed 重放确定性(世界发放可重放)。"""
+    随家族键已登记,零新增申报);同 seed 重放确定性(世界发放可重放)。"""
     from sr_od.application.currency_war.data.cw_chars import EXPERT_CHARS
 
     faction_names = {c.name for c in chars_by_faction('战技点')}

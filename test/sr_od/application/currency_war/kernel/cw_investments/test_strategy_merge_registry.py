@@ -64,7 +64,7 @@ def test_registry_rows_single_source() -> None:
 
 
 def test_reward_char_registered_and_cost_matches_criterion() -> None:
-    """发放/判据角色在册三对拍:两行发放名 ∈ CHARACTER_ROSTER(角色漂移
+    """发放/判据角色已登记三对拍:两行发放名 ∈ CHARACTER_ROSTER(角色漂移
     哨现值通过);通配行判据角色名恒空串(费用是唯一判别维,无具名一致性
     面);具名行判据角色名 ∈ CHARACTER_ROSTER 且其注册费用与判据费用
     一致——黑塔 cost=1 = 判据费用 1(游戏改费漂移唯构建校验哨 + 本锁

@@ -14,7 +14,7 @@ xiangyin.md(定稿)§4 锁 2 + REVIEW-T135 §四 ④:
 - 负锁:凑不齐三只(席面 2★×1 买第 2 只,只凑对不出 3 星)→ 零金笔
   (费用 logic 笔照常,条件金腿与买牌费用解耦)。
 
-驱动形态:引擎构造助手 import 自 sim/test_sim_backend.py(在册超限
+驱动形态:引擎构造助手 import 自 sim/test_sim_backend.py(已登记超限
 拆分债文件,禁追加,只 import 复用不改 = T-426 政策);上报函数直调
 先例 = kernel/cw_action_report/test_buy_card.py。
 """

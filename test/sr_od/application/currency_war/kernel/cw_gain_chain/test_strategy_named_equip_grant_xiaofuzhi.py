@@ -14,7 +14,7 @@ grant.py,本文件只锁本卡登记面 + 行为面,按被测方法拆目录规�
   假红——REVIEW-T168 §3④ 口径);
 - 精密金面前置按物判(判据映射只挂拆装扳手):员工投影仪 gate 恒 None
   走纯发放循环(卡级前置分支零遗传,正常路径零申报行由主锁覆盖);
-- 金腿(卡文句 2「获得7金币」)= STRATEGY_ECONOMY instant_gold=7 在册
+- 金腿(卡文句 2「获得7金币」)= STRATEGY_ECONOMY instant_gold=7 已登记
   计分,kernel 发放写端缺口归 T-112 族级待办,不入效果体(主锁金域零写
   断言覆盖)。
 """
@@ -94,7 +94,7 @@ def test_xiaofuzhi_grant_leg_places_two_projectors(
     登记 session=None 跳过)、来源 = 确定面 logic、效果串恰两条逐件一条
     各含 placed=True;金腿异族不入效果体(gold 未读保持未读,零金写);
     板面域(bench/deployed)零写;正常路径零申报行。"""
-    assert _CARD in PICK_INVEST_EFFECTS, '登记面在册'
+    assert _CARD in PICK_INVEST_EFFECTS, '登记面已登记'
     gs = _make_gs(equips=[])
     gs.prep_anchored = True
     seq_before = gs.write_seq

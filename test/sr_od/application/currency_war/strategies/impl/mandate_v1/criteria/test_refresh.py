@@ -14,7 +14,7 @@ design.md §2.0 第 2/3 条 + details/refresh-chain.md §5 清单)。
   信息最少,design §2.10 单帧断言 1 = 2-4 开店帧应触发刷新);
 - ⑤ 升级推迟帧刷新维持拒绝(资金序 = 升级优先于刷新,判据①支无
   解锁支);
-- ⑥ 免费次数在册即刷(统一让位优先级迭代 3.2:design §2.2 无条件刷
+- ⑥ 免费次数已登记即刷(统一让位优先级迭代 3.2:design §2.2 无条件刷
   【拍】,外层负结果记忆闸照旧);
 - ⑦ 死码符号零残留——按本测试仓纪律(源码扫描测试禁写,退役符号
   墓碑不设 pytest)以执行侧残留扫描承载,记录归迭代报告。
@@ -128,7 +128,7 @@ class TestRefreshChainSingleFrame:
                      if isinstance(a, CwActionRefreshShopParam)]
         assert refreshes, f'带内金够帧刷新应发射: {acts!r}'
         assert refreshes[0].reason == 'star_target'
-        assert refreshes[0].cost > 0, '付费刷新(免费腿未在册)'
+        assert refreshes[0].cost > 0, '付费刷新(免费腿未登记)'
 
     def test_2_rho_stay_target_effective_cost(self):
         """②已 2★ 追 3★ 目标帧 ρ = 其卡价(实费档);未锁窗口恒 0。
@@ -212,7 +212,7 @@ class TestRefreshChainSingleFrame:
             '升级推迟期刷新维持拒绝(资金序,无解锁支)'
 
     def test_6_free_refresh_unconditional_when_counted(self):
-        """⑥免费次数在册即刷(统一让位优先级迭代 3.2;design §2.2 免费
+        """⑥免费次数已登记即刷(统一让位优先级迭代 3.2;design §2.2 免费
         刷新行为声明:分支内零判据门——行为申报 = 唯一变化「目标可买」
         门删除,目标不可买(备战位满)帧从「拦下不耗次数」变「照刷耗
         次数」,免费不耗金、次数每节点重置/概率补给,低价值接受)。"""
@@ -231,7 +231,7 @@ class TestRefreshChainSingleFrame:
         acts = _decide(s)
         refreshes = [a for a in acts
                      if isinstance(a, CwActionRefreshShopParam)]
-        assert refreshes, f'免费次数在册帧无条件刷: {acts!r}'
+        assert refreshes, f'免费次数已登记帧无条件刷: {acts!r}'
         assert refreshes[0].cost == 0 \
             and refreshes[0].reason == 'free_refresh', refreshes[0]
         # 外层负结果记忆闸照旧(design §2.2:免费与付费同闸)——记忆

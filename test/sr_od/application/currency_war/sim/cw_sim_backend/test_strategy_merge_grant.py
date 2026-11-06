@@ -13,7 +13,7 @@ taojin.md(定稿)§4 锁 2 + REVIEW-T179 §3.4(卡面官方原文:「合成
 - 负锁:买入非 2 费同名凑三(席面 1★×2 3 费 + 买第 3 只 3 费 → 合成
   2★3费)→ 判据费用不符零发放(合成照常,费用笔照常)。
 
-驱动形态:引擎构造助手 import 自 sim/test_sim_backend.py(在册超限
+驱动形态:引擎构造助手 import 自 sim/test_sim_backend.py(已登记超限
 拆分债文件,禁追加,只 import 复用不改 = T-426 政策);上报函数直调
 先例 = kernel/cw_action_report/test_buy_card.py。
 """

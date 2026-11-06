@@ -15,7 +15,7 @@ calc/designs/T-33-yingxiong-dengchang.md)§2.4 数据面 + §4 锁 8(sim
 半边):结算分支补写环帧(killed = won 语义同口 / hp_after = apply 后
 gs.hp 现值;与 live 同一 ring 读口,sim 节点 kind → 结算行词表)。
 
-复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py(在册超限
+复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py(已登记超限
 拆分债文件,禁追加,只 import 复用不改;先例 = 本目录
 test_reward_ore_panel.py)。
 """

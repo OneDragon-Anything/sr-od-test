@@ -589,7 +589,7 @@ def test_opening_replace_env_pick_bench_three_not_seven(
     """实机和模拟器两边同链替换语义分界锁(T-43 设计 §4 锁 5):上报选人才储备 →
     bench 恰 3 只 3 费 1★(替换语义分界:发放结果即终态,非 4+3=7 叠加
     ——T-10/T-36 追加语义与本卡替换语义的分界);恰一次 rng 解析(随机支
-    在册,pick_invest_env 条件行命中)。"""
+    已登记,pick_invest_env 条件行命中)。"""
     gs = _make_gs(['人才储备', '轮岗', '头彩'])
     out = report_action_pick_invest_env_param(
         gs, SimpleNamespace(idx=0), _SIG)

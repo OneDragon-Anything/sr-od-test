@@ -1,13 +1,13 @@
 """sim 超发货币两条效果条目测试(镜像 src = sim/cw_sim_backend.py 的选卡落地拍
-负债腿 + 节点窗回流腿 pre-read 两拍 + 呈现闩;先例 =
+负债腿 + 节点窗回流腿 pre-read 两拍 + 呈现一次性标志位;先例 =
 本目录 test_invest_installment_gold.py〔分期金窗腿〕/
 test_strategy_pick_gudinglicai.py〔拿卡落地拍腿族〕同形态)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-191-chaofa-
 huobi.md §3 锁 3/锁 4/锁 5/锁 6/锁 9(REVIEW-T191 §四④ 同面;锁 6 直构
 形态 = T-177 锁 6 先形「无补发方,容器即终态」):
-- 负债腿(锁 3):真拿卡路径落地 → 条目在册(remaining_nodes=6 ∧
-  counters[LOST]=G)∧ 金清零笔(−G = 写前金 − 0)∧ 呈现闩防重放(同声明
+- 负债腿(锁 3):真拿卡路径落地 → 条目已登记(remaining_nodes=6 ∧
+  counters[LOST]=G)∧ 金清零笔(−G = 写前金 − 0)∧ 呈现一次性标志位防重放(同声明
   复喂零动作零噪声);bypass 形态(登记缺位)= 零动作 + disclosures 留证
   (零新增披露键,内联运行时键);
 - 回流腿(锁 4):拿卡后第 1-5 个节点窗零发放;第 6 窗 +G+70 一笔
@@ -20,7 +20,7 @@ huobi.md §3 锁 3/锁 4/锁 5/锁 6/锁 9(REVIEW-T191 §四④ 同面;锁 6 直
   (计数域 = 节点入口事件全型,T-106 判例)。
 
 复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py 与
-sim/cw_sim_backend/test_p3_win_terminal.py(在册拆分债文件,禁追加,
+sim/cw_sim_backend/test_p3_win_terminal.py(已登记拆分债文件,禁追加,
 只 import 复用不改)。
 """
 from __future__ import annotations
@@ -145,7 +145,7 @@ def _drive_with_safe_picks(b: SimBackend, pred, limit: int = 512) -> None:
 
 def _drive_to_offer(b: SimBackend, plane: int = 1, round_num: int = 3) -> None:
     """驱动至指定位面的策略 offer 呈现(缺省 = 固定日程首槽 P1r3;呈现即
-    置负债腿闩;途中 offer 安全 filler 化,保到达槽为首个未被消费的
+    置负债腿一次性标志位;途中 offer 安全 filler 化,保到达槽为首个未被消费的
     日程槽)。"""
 
     def _at_offer() -> bool:
@@ -170,9 +170,9 @@ def _window_income(gs: GameState, plane: int, r: int, gold_base: int) -> int:
 
 def test_drain_leg_via_engine_and_replay_guard(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """负债腿引擎链(锁 3 主形态)+ 呈现闩防重放:真拿卡路径落地 →
-    条目在册(remaining_nodes=6 ∧ counters[LOST]=登记帧读数 G)∧ 金清零
-    (evidence 笔字面量钉死,−G = 写前金 − 0);同声明复喂 → 闩已消费,
+    """负债腿引擎链(锁 3 主形态)+ 呈现一次性标志位防重放:真拿卡路径落地 →
+    条目已登记(remaining_nodes=6 ∧ counters[LOST]=登记帧读数 G)∧ 金清零
+    (evidence 笔字面量钉死,−G = 写前金 − 0);同声明复喂 → 一次性标志位已消费,
     零动作零噪声(gold 证据笔保持清零笔)。全胜骨架沿分期金锁先形
     (_force_settle patch 面 = backend 模块命名空间)。"""
     _force_settle(monkeypatch, won=True)
@@ -184,7 +184,7 @@ def test_drain_leg_via_engine_and_replay_guard(
         assert gold_before > 0, '前置:引擎链拿卡帧持有金在场'
         _pick(b, _CARD, [_CARD, '躺平', '淘金客'])
         entry = gs.effects.first(HYPEREMIT_SPEC_ID)
-        assert entry is not None, '条目在册(获得链登记,单载体)'
+        assert entry is not None, '条目已登记(获得链登记,单载体)'
         assert entry.remaining_nodes == 6, 'N_NODES 播种'
         assert entry.counters.get('lost') == gold_before, \
             f'负债播值 = 登记帧金读数: {entry.counters}'
@@ -199,7 +199,7 @@ def test_drain_leg_via_engine_and_replay_guard(
 
 def test_replay_same_declaration_zero_noise(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """呈现闩防重放(锁 3 伴随;先例 = test_strategy_pick_gudinglicai
+    """呈现一次性标志位防重放(锁 3 伴随;先例 = test_strategy_pick_gudinglicai
     重放同形):同 offer 落地声明复喂 → 第二次零动作(gold 证据笔保持
     清零笔、条目快照不变)。"""
     _force_settle(monkeypatch, won=True)

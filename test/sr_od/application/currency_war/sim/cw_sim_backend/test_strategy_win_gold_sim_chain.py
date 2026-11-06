@@ -17,7 +17,7 @@ kind in COMBAT_NODE_TYPES 守卫而静默翻转触发域默认案〔全部结算
 - 金面禁直写:全程零 logic 金笔(observe 世界数值面写端通道分工);
 - 披露键(锁 7 随局面):发金拍 setdefault 触发域假设键,值非空。
 - 驱动形态 = 出战动作触发结算(2026-10-29 流程模型);引擎驱动助手
-  import 自 sim/test_sim_backend.py(在册超限拆分债文件,禁追加,只
+  import 自 sim/test_sim_backend.py(已登记超限拆分债文件,禁追加,只
   import 复用不改);扑满态 = 窗开前置 active_env ∈ PIGGY_ENV_NAMES
   (窗口收尾 is_piggy_node 现读,收入递延快照在窗开拍冻结)。
 """

@@ -1,6 +1,6 @@
 """策略大师金币分支估值口径(通道 4 公式)测试(镜像 src =
 strategies/impl/mandate_v1/env_economy.py 的通道 4;按被测面拆文件落位,
-先例 = 同目录 test_invest_strategy.py〔在册超限文件,只读复用不追加〕
+先例 = 同目录 test_invest_strategy.py〔已登记超限文件,只读复用不追加〕
 ④现金分组)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
@@ -52,7 +52,7 @@ def test_channel4_first_pick_contributes_coef_times_one() -> None:
     p2 = ENV_ECONOMY_ESTIMATES['plane_arrival_p2'].value
     expected = _COEF * (1 * 1.0 + 2 * 1.0 + 3 * p2)
     value, resolved = env_economy_value('策略大师', _gs_with_held(0))
-    assert resolved is True, '到达参数在册,方向闭合'
+    assert resolved is True, '到达参数已登记,方向闭合'
     assert value == pytest.approx(expected, abs=1e-9), \
         f'金额 = coef×k(首张 coef×1): {value} vs {expected}'
 

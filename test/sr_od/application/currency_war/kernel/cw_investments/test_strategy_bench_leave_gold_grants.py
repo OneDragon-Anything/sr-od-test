@@ -50,7 +50,7 @@ def test_row_values_desc_aligned() -> None:
     依据,费用档漂移即本锁红)。"""
     for name, star, gold in _ROWS:
         assert star == 1, f'{name}: 星级恒 1(desc 明写)'
-        assert name in CHARACTER_ROSTER, f'{name}: 角色名在册'
+        assert name in CHARACTER_ROSTER, f'{name}: 角色名已登记'
         assert gold == CHARACTERS[name].cost, \
             f'{name}: 离场金({gold})须与费用档({CHARACTERS[name].cost})平行'
 

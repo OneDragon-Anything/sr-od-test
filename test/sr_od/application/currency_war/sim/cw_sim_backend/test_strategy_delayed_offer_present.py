@@ -95,7 +95,7 @@ def test_due_presents_all_gold_pool_once() -> None:
         assert b._invest_pick_ordinal == 1, '序位计数照增'
         assert b.disclosures[STRATEGY_DELAYED_OFFER_FIRED] \
             == '黄金期货@1-1', f'呈现留证: {b.disclosures}'
-        assert b._strategy_pick_xp_latch is True, '即时经验腿闩照置'
+        assert b._strategy_pick_xp_latch is True, '即时经验腿一次性标志位照置'
         assert b._offer_refreshable is False, '定品质禁刷新'
         assert b.gs.strategy_refresh_left.value == refresh_left_before, \
             '空授权不得写刷新计数'

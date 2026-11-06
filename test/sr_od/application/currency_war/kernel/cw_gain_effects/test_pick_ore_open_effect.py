@@ -54,7 +54,7 @@ def test_pick_grants_gold_ore_with_attachment() -> None:
     effects = on_strategy_gained(gs, _CARD, rand=False, sig=_SIG,
                                  rng=random.Random(7))
     assert any(e.startswith('strategy_ore_pick_grant#') for e in effects), \
-        f'效果串在册前缀: {effects}'
+        f'效果串登记前缀: {effects}'
     pts = gs.spheres.value.points if gs.spheres.value else ()
     assert ('金', 10, 10, 10) in pts, f'金矿授予点: {pts}'
     assert len(pts) == 1, f'spheres +1: {pts}'

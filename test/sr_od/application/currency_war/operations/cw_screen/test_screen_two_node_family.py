@@ -657,9 +657,9 @@ def test_planner_act_decides_leg_and_dispatch_terminal(
     """决策动作 node 测试(银狼策划,即时上报
     equip-immediate-report design §2.1):零参决策 → 分支类型判定单源
     ``classify_planner_branch`` → env 携分支类型载荷 → 选卡确认链派发即
-    ``round_success`` 终结(零重入裁决轮、零证据闩存证——效果分支在动作 op
+    ``round_success`` 终结(零重入裁决轮、零证据一次性标志位存证——效果分支在动作 op
     确认点击后即时上报)。
-    红 = 分支类型载荷断流 / 派发后回退 wait(重入裁决回潮)/ 存证闩回潮。"""
+    红 = 分支类型载荷断流 / 派发后回退 wait(重入裁决回潮)/ 存证一次性标志位回潮。"""
     from sr_od.application.currency_war.kernel.cw_screen_report.planner import (
         CwScreenPlannerObs,
     )
@@ -982,8 +982,8 @@ def test_partner_act_empty_candidates_fails_without_dispatch(
         test_context, monkeypatch) -> None:
     """守卫①候选空臂(op-layer.md §1.1 出口③,两臂分开断言):match 在场、
     读链桩改返空(options 空 ⇔ cands 空)→ act 具名 round_fail(「伙伴屏
-    无候选」在册文案)、零派发零点击、_confirm_pending 保持未置位。
-    红 = 空候选盲发回潮 / 在册文案漂移。"""
+    无候选」已登记文案)、零派发零点击、_confirm_pending 保持未置位。
+    红 = 空候选盲发回潮 / 已登记文案漂移。"""
     session = StrategySession()
     op, dispatches = _setup_partner_act(
         test_context, monkeypatch, session,

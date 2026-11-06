@@ -6,7 +6,7 @@ kernel/test_env_grants.py〔超限只读复用〕与本目录按被测方法拆�
 测试面依据 = 迭代 T-30 星核猎手契约设计(v2.1 定稿,
 .designs/T-30-xinghe-lieshou-qiyue.md,迭代目录
 .debug/progress/2026-09-23-invest-effects-calc)§2.3 + §4:
-- **条件矩阵**(八序短路):env 空链/不在册/已 done(一次性封账)/
+- **条件矩阵**(八序短路):env 空链/未登记/已 done(一次性封账)/
   deployed 缺读/bench 缺读(均缓发不标 done,宁缺勿造)/生效序位缺读/
   共现不齐 → 零写;
 - **四笔写契约**:发号(uid)+ 角色链(gain_character rand=False,1★
@@ -126,11 +126,11 @@ _TRIO = ['刃', '卡芙卡', '银狼']
 
 def test_condition_matrix_short_circuits(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """未发放分支逐序零写(设计 §2.3 条件矩阵 1-3):env 空链/不在册/
+    """未发放分支逐序零写(设计 §2.3 条件矩阵 1-3):env 空链/未登记/
     已 done → 返回 None 且容器零写行。"""
     for label, gs in (
             ('env 空链', _make_gs(env=None, deployed=_TRIO, bench=[])),
-            ('不在册', _make_gs(env='轮岗', deployed=_TRIO, bench=[])),
+            ('未登记', _make_gs(env='轮岗', deployed=_TRIO, bench=[])),
             ('已 done', _make_gs(deployed=_TRIO, bench=[],
                                  done=((_ENV, BATTLE_CO_PRESENCE_KEY),))),
     ):
@@ -323,7 +323,7 @@ def test_snapshot_roundtrip_locks_and_seq_persist(
                          Unit(char_id=c, star=1) for c in _TRIO]
                          + [None], back_slots=[None] * 6), sig=_SIG_OBS)
     assert check_env_battle_grants(restored, _SIG_HOOK) is None
-    assert not calls, f'恢复局 done 在册零写: {calls}'
+    assert not calls, f'恢复局 done 已登记零写: {calls}'
     # 无快照接管形态(done 空)重发放:发号从存续值续号,不与恢复的
     # 锁记录 uid=1 撞号
     restored.write_logic(restored.env_grants_done, (),

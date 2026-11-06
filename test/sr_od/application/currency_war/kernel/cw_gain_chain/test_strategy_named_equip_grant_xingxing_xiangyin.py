@@ -91,7 +91,7 @@ def test_xingxing_xiangyin_grant_leg_places_projector(
     登记 session=None 跳过)、来源 = 确定面 logic、效果串恰一条含
     placed=True;金腿异族不入效果体(gold 未读保持未读,零金写);
     板面域(bench/deployed)零写;正常路径零申报行。"""
-    assert _CARD in PICK_INVEST_EFFECTS, '登记面在册'
+    assert _CARD in PICK_INVEST_EFFECTS, '登记面已登记'
     gs = _make_gs(equips=[])
     gs.prep_anchored = True
     seq_before = gs.write_seq

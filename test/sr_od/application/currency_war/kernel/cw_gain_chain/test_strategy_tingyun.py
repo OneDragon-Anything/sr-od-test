@@ -7,9 +7,9 @@ cw_gain_effects.py PICK_INVEST_EFFECTS '停云顾问' 行:
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-290 对应稿
 §4 锁面(REVIEW-T290 免裁 5/5;卡面官方原文:「获得专家顾问【停云】，
 并使其在本局游戏中加入商店。获得【光能电池】和4金币。」——顾问腿/金腿
-已在册零动作,本卡唯一机制件 = 光能电池具名授予腿):
+已登记零动作,本卡唯一机制件 = 光能电池具名授予腿):
 
-- 行单一源:具名授予行在册(泛化表零本卡键负断言防回退撞键);
+- 行单一源:具名授予行已登记(泛化表零本卡键负断言防回退撞键);
 - 行为链真值:确定入口 → 顾问解锁+光能电池入栏、效果串恰 2 条
   (advisor_unlock+named_equip_grant)、rng 零消费。
 """
@@ -47,8 +47,8 @@ def _make_gs(*, equips: list[str] | None = None) -> GameState:
 
 
 def test_tingyun_row_single_source() -> None:
-    """行单一源:具名授予行在册;泛化表零本卡键(防回退撞键)。"""
-    assert _CARD in PICK_INVEST_EFFECTS, '行在册'
+    """行单一源:具名授予行已登记;泛化表零本卡键(防回退撞键)。"""
+    assert _CARD in PICK_INVEST_EFFECTS, '行已登记'
     assert _CARD not in _STRATEGY_RANDOM_EQUIP_GRANTS, \
         '泛化表零本卡键(撞键形态禁回退)'
 

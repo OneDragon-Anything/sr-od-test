@@ -9,7 +9,7 @@
 
 - 触发矩阵锁:P2 boss 窗持卡 → 备战 1★火花(placed)+ 封账恰一笔
   (穿戴腿/开拓者腿零建模 = 落席仅火花一名);非 boss 窗/P1、P3 boss 窗/
-  未持卡 → 零写;已闩 → 短路;bench 未观察 → 零写不闩;
+  未持卡 → 零写;已置一次性标志位 → 短路;bench 未观察 → 零写不落一次性标志位;
 - 修饰免疫锁:人身意外险修饰局 node_seq_by_plane 场字段下 P2-8 boss 窗
   照常触发(kind 函数内现读,坐标不钉死;同局 (2,7) 已变 supply 位零写)。
 """
@@ -80,12 +80,12 @@ def test_p2_boss_window_grants_with_latch() -> None:
 
 
 def test_replay_and_latched_zero_write() -> None:
-    """幂等:同窗重放零双发(已闩短路,零写零追加;板面维持持卡亦不再发)。"""
+    """幂等:同窗重放零双发(已置一次性标志位短路,零写零追加;板面维持持卡亦不再发)。"""
     gs = _gs(cards=[_CARD], bench=[])
     check_strategy_plane_boss_grants(gs, node_pos=(2, 7), sig=_LSIG)
     seq0 = gs.write_seq
     got = check_strategy_plane_boss_grants(gs, node_pos=(2, 7), sig=_LSIG)
-    assert got is None, '闩后短路'
+    assert got is None, '一次性标志位后短路'
     assert gs.write_seq == seq0, '重放零写'
     assert _units(gs) == [(_CHAR, 1)], '火花不双发'
     assert gs.strategy_grants_done.value == (_LATCH,), '封账不追加'
@@ -93,17 +93,17 @@ def test_replay_and_latched_zero_write() -> None:
 
 def test_non_boss_and_other_plane_windows_zero_write() -> None:
     """合取门控:非 boss 窗(2,3 = supply)/P1 boss 窗 (1,9)/P3 boss 窗
-    (3,7) → 零写零闩(位面-节点类型合取直判,零坐标猜测)。"""
+    (3,7) → 零写零一次性标志位(位面-节点类型合取直判,零坐标猜测)。"""
     for pos in ((2, 3), (1, 9), (3, 7)):
         gs = _gs(cards=[_CARD], bench=[])
         seq0 = gs.write_seq
         got = check_strategy_plane_boss_grants(gs, node_pos=pos, sig=_LSIG)
         assert got is None and gs.write_seq == seq0, f'{pos}: 零写'
-        assert gs.strategy_grants_done.value in (None, ()), f'{pos}: 不闩'
+        assert gs.strategy_grants_done.value in (None, ()), f'{pos}: 不落一次性标志位'
 
 
 def test_no_card_and_bench_unobserved_zero_write() -> None:
-    """负锁:未持卡零写(白名单表外零消费);bench 未观察 → 零写不闩
+    """负锁:未持卡零写(白名单表外零消费);bench 未观察 → 零写不落一次性标志位
     (宁缺勿造,check_env_boss_grants 同款防御)。"""
     gs = _gs(bench=[])
     seq0 = gs.write_seq

@@ -15,7 +15,7 @@ DEFINING_CARDS 定义卡点名登记,已由 test_cw_invest_channels.py 锁定,
 
 - 登记面直测:GRANTS 条目 chars_immediate = 卡文语序 (彦卿, 景元) 且
   advisor=False(设计稿 §4 锁 1);绑定行 (仙舟域, {彦卿, 景元}) 用户
-  确认语义冻结(§4 锁 2);组合行在册,泛化表零本卡键(防回退撞键)。
+  确认语义冻结(§4 锁 2);组合行已登记,泛化表零本卡键(防回退撞键)。
 - 行为链真值(§4 锁 3):确定入口 → 恰两角色入栏(彦卿/景元卡文序,
   1★ 先验家族口径)、效果串 2 条 char_grant、rng 零消费。
 """
@@ -68,14 +68,14 @@ def _make_gs(*, bench: list[tuple[str, int]] | None = None,
 def test_feiguang_chuanjian_grant_and_binding_registry() -> None:
     """登记面直测:GRANTS 条目 chars_immediate = 卡文语序 (彦卿, 景元)
     且 advisor=False(非顾问分道);绑定行 (仙舟域, {彦卿, 景元})(用户
-    确认语义冻结);组合行在册,泛化表零本卡键(撞键形态禁回退)。"""
+    确认语义冻结);组合行已登记,泛化表零本卡键(撞键形态禁回退)。"""
     grant = STRATEGY_GRANTS[_CARD]
     assert grant.chars_immediate == ('彦卿', '景元'), '卡文语序直读'
     assert grant.advisor is False, '非顾问分道'
     assert STRATEGY_BINDINGS[_CARD] == (
         frozenset({'仙舟'}), frozenset({'彦卿', '景元'})), \
         '绑定行(用户确认语义冻结)'
-    assert _CARD in PICK_INVEST_EFFECTS, '组合行在册'
+    assert _CARD in PICK_INVEST_EFFECTS, '组合行已登记'
     assert _CARD not in _STRATEGY_RANDOM_EQUIP_GRANTS, \
         '泛化表零本卡键(撞键形态禁回退)'
 

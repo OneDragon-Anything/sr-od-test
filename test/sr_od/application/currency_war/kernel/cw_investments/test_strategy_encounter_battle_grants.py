@@ -8,7 +8,7 @@ STRATEGY_ENCOUNTER_BATTLE_GRANTS + 构建校验)。
 grants.py):
 - 登记单一源:行值 = 卡面效果原文直读(以战养战 id 101501:每次遭遇节点
   战斗后 1 个简易武装箱;金腿「获得6金币」归 STRATEGY_ECONOMY instant_
-  gold 在册不进本表);表只收「遭遇战后」触发器形状,族内后续卡各建各批;
+  gold 已登记不进本表);表只收「遭遇战后」触发器形状,族内后续卡各建各批;
 - 构建校验 2 条(漂移哨,import 即炸语义经直调校验函数锁定):孤儿键 /
   道具名漂移(占席道具词表外——BENCH_ITEM_NAMES 为游戏数据派生,版本
   改名/移除可独立触发;落席原语查名字→类别映射 KeyError 响亮但迟,import

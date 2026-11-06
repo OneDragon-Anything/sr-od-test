@@ -64,7 +64,7 @@ def test_category_pool_nonempty_premise() -> None:
 
 
 def test_disclosure_key_registered() -> None:
-    """披露键常量在册且值非空(设计 §5 裁决点 7 kernel 面;一键承载三
+    """披露键常量已登记且值非空(设计 §5 裁决点 7 kernel 面;一键承载三
     假设——桶结转/真值差/触发源域仅战斗结算,消费 = sim disclosures
     setdefault,随局形态由 sim 链锁承载)。"""
     assert isinstance(STRATEGY_HP_LOSS_BUCKET_ASSUMPTION, str)

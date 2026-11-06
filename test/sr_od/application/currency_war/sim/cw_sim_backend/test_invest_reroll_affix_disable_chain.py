@@ -1,6 +1,6 @@
 """sim 全链敌后破坏追加获得分支测试(镜像 src 主断言对象 = kernel 删除分支
 经 sim 后端 T-14 蓝海追加链全链;按流程级测试落位本目录,引擎驱动
-助手 import 自 sim/test_sim_backend.py〔在册超限拆分债文件,禁追加,只
+助手 import 自 sim/test_sim_backend.py〔已登记超限拆分债文件,禁追加,只
 import 复用不改;先例 = 本目录 test_env_deploy_lock_sim_chain.py〕)。
 
 测试面依据 = T-45 敌后破坏设计(.debug/progress/2026-09-23-invest-effects-

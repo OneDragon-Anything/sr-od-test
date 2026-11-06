@@ -6,7 +6,7 @@ cw_investments.py 与绑定/估值面;按被测方法拆目录规范落位 manda
 §4 七锁(REVIEW-T273 免裁 4/4;卡面官方原文:「完美通关时，夜之半神获得
 的【月光精华】提高100%，领取夜之半神奖励时，也会获得一名夜之半神角色，
 【月色】层数越高，越可能领取到高费角色。获得【赛飞儿】和【万敌】。」
-——腿 A/B 型③零建模;腿 C 授予/绑定/估值三面已在册零动作):
+——腿 A/B 型③零建模;腿 C 授予/绑定/估值三面已登记零动作):
 
 - 锁 1 授予形状:STRATEGY_GRANTS 条目逐字段(卡文语序/advisor False/
   零装备面);
@@ -15,7 +15,7 @@ cw_investments.py 与绑定/估值面;按被测方法拆目录规范落位 manda
 - 锁 4 规范名幂等;
 - 锁 5 零建模现值回归:on_strategy_gained 返回空效果串(现值锁非终态
   锁,交付家族批落码时随批修订退役);
-- 锁 6 反扫闭集:候选扫描在册;
+- 锁 6 反扫闭集:候选扫描已登记;
 - 锁 7 经济面零条目:三表零命中(零建模申报的回归面)。
 """
 from __future__ import annotations
@@ -71,7 +71,7 @@ def test_yueguang_gift_value_tier() -> None:
 
 def test_yueguang_binding_pair() -> None:
     """锁 3(绑定面):显式绑定二元组对拍(scope 只申报不锁死)。"""
-    assert _CARD in _STRATEGY_BINDINGS_EXPLICIT, '显式绑定在册'
+    assert _CARD in _STRATEGY_BINDINGS_EXPLICIT, '显式绑定已登记'
     factions, chars = _STRATEGY_BINDINGS_EXPLICIT[_CARD]
     assert factions == frozenset({'夜之半神'}), '阵营侧'
     assert chars == frozenset({'赛飞儿', '万敌'}), '角色侧'
@@ -95,9 +95,9 @@ def test_yueguang_zero_modeling_on_gain() -> None:
 
 
 def test_yueguang_scan_closed_set() -> None:
-    """锁 6(反扫闭集):候选扫描在册 + 注册表在册双断言。"""
-    assert _CARD in _scan_strategy_grant_candidates(), '候选扫描在册'
-    assert _CARD in STRATEGY_GRANTS, '注册表在册'
+    """锁 6(反扫闭集):候选扫描已登记 + 注册表已登记双断言。"""
+    assert _CARD in _scan_strategy_grant_candidates(), '候选扫描已登记'
+    assert _CARD in STRATEGY_GRANTS, '注册表已登记'
 
 
 def test_yueguang_zero_modeling_registries() -> None:

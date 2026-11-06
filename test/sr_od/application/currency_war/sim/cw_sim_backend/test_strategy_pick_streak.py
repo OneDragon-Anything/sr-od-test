@@ -1,5 +1,5 @@
 """sim 策略选卡连胜置位腿测试(镜像 src = sim/cw_sim_backend.py 的
-apply_strategy_pick_streak helper + _on_invest_picked 落地腿 + 呈现闩)。
+apply_strategy_pick_streak helper + _on_invest_picked 落地腿 + 呈现一次性标志位)。
 
 测试面依据 = 迭代设计 designs/T-96-shengli-haishi-shengli.md §4 八锁中的
 sim 世界七锁(锁 7 注册表与双闭集断言落 kernel/test_cw_investments.py 与
@@ -8,16 +8,16 @@ strategies/impl/mandate_v1/test_invest_strategy.py 现址):
   ``streak:strategy_pick:胜利,还是胜利``(与结算笔 ``streak:pNrN`` 分账);
 - 连败翻转(锁 2)/高连胜回落(锁 3):带符号绝对置位(-2→4、6→4,
   锁「变为」字面语义,禁 max 现值读法);
-- 无效载荷零写(锁 4):opts 含本卡但不落卡 → 交集空零写且闩已消费
-  (前置直构闩 True:锁面 = 「picked 空亦消费」,闩自始 None 则断言空转);
+- 无效载荷零写(锁 4):opts 含本卡但不落卡 → 交集空零写且一次性标志位已消费
+  (前置直构一次性标志位 True:锁面 = 「picked 空亦消费」,一次性标志位自始 None 则断言空转);
 - 表外卡零写(锁 5):落无 streak_set 条目卡 → 注册表 miss→0 跳写;
-- 重放防回写(锁 6):闩关重放零写(已推进 5 不得回写 4)/闩开恰一次
-  置位写(锁面 = 闩本体是唯一闸);
+- 重放防回写(锁 6):一次性标志位关重放零写(已推进 5 不得回写 4)/一次性标志位开恰一次
+  置位写(锁面 = 一次性标志位本体是唯一闸);
 - 自然跟随回归(锁 8):置位 4 → 下一胜局结算 → ==5 且结算笔存在
   (共用链零断;深井角斗场触发面已有 test_env_grants 覆盖不重复建)。
 
 复用声明:引擎驱动助手 import 自 sim/test_p3_win_terminal.py 与
-sim/test_sim_backend.py(在册超限拆分债文件,禁追加,只 import 复用
+sim/test_sim_backend.py(已登记超限拆分债文件,禁追加,只 import 复用
 不改;先例 = 本目录 test_strategy_pick_xp.py)。
 """
 from __future__ import annotations
@@ -86,7 +86,7 @@ def _drive_until(b: SimBackend, pred, limit: int = 512) -> None:
 
 
 def _drive_to_offer(b: SimBackend) -> None:
-    """驱动至策略 offer 呈现(固定日程首槽 P1r3 起;呈现即置置位腿闩
+    """驱动至策略 offer 呈现(固定日程首槽 P1r3 起;呈现即置置位腿一次性标志位
     ——本腿生效前提)。"""
     _drive_until(b, lambda: b.screen_identity() == SCREEN_INVEST_STRATEGY)
 
@@ -168,9 +168,9 @@ def test_high_streak_falls_back_to_set_value() -> None:
 
 def test_unpicked_card_zero_write_and_latch_consumed() -> None:
     """无效载荷零写(锁 4):opts 含本卡但不落卡(选另一张)→ 交集空
-    零写,且呈现闩已消费(picked 空亦消费 = 每呈现窗至多一次落地消费,
-    无效载荷的重放同样不得再触发)。advance 前直构闩 True:锁面 =
-    消费支被武装下的交集空支,闩自始 None 则断言空转锁面失效。"""
+    零写,且呈现一次性标志位已消费(picked 空亦消费 = 每呈现窗至多一次落地消费,
+    无效载荷的重放同样不得再触发)。advance 前直构一次性标志位 True:锁面 =
+    消费支被武装下的交集空支,一次性标志位自始 None 则断言空转锁面失效。"""
     b = _backend(seed=44)
     try:
         gs = b.gs
@@ -182,7 +182,7 @@ def test_unpicked_card_zero_write_and_latch_consumed() -> None:
         assert '胜利,还是胜利' not in (gs.active_strategies.value or [])
         assert gs.streak.value == streak0 and gs.streak.evidence == ev0, \
             f'未落卡出现置位笔: {gs.streak.value} / {gs.streak.evidence}'
-        assert b._strategy_pick_streak_latch is None, '闩未消费'
+        assert b._strategy_pick_streak_latch is None, '一次性标志位未消费'
     finally:
         uninstall_backend()
 
@@ -206,10 +206,10 @@ def test_card_without_leg_zero_write() -> None:
 
 def test_replay_zero_write_when_latch_closed_then_single_write_when_open(
         _always_win) -> None:
-    """重放防回写(锁 6,两态直构闩态免流形依赖):①闩关(落地消费后
+    """重放防回写(锁 6,两态直构一次性标志位态免流形依赖):①一次性标志位关(落地消费后
     未复置位)——置位后战斗推进至 5,重放同一落地 advance 零写(不得
-    把 5 回写成 4,实害面);②闩开(直构呈现置位态)——重放恰一次
-    置位写且闩再消费(锁面 = 闩本体是唯一闸,不是巧合不写)。"""
+    把 5 回写成 4,实害面);②一次性标志位开(直构呈现置位态)——重放恰一次
+    置位写且一次性标志位再消费(锁面 = 一次性标志位本体是唯一闸,不是巧合不写)。"""
     b = _backend(seed=46)
     try:
         gs = b.gs
@@ -218,20 +218,20 @@ def test_replay_zero_write_when_latch_closed_then_single_write_when_open(
         decl = _pick(b, '胜利,还是胜利', ['胜利,还是胜利', '躺平', '淘金客'])
         assert gs.streak.value == 4
         assert b._strategy_pick_streak_latch is None
-        # 闩关支:战斗推进 4→5 后重放,零写(已推进真值不回写)。
+        # 一次性标志位关分支:战斗推进 4→5 后重放,零写(已推进真值不回写)。
         _drive_until(b, lambda: gs.streak.value == 5)
         assert _SETTLE_EV_PATTERN.match(gs.streak.evidence or ''), \
             f'推进笔非结算形态: {gs.streak.evidence}'
         cw_sim_ports.declare_world(decl)
-        assert gs.streak.value == 5, f'闩关重放回写: {gs.streak.value}'
+        assert gs.streak.value == 5, f'一次性标志位关重放回写: {gs.streak.value}'
         assert _SETTLE_EV_PATTERN.match(gs.streak.evidence or ''), \
-            f'闩关重放换笔: {gs.streak.evidence}'
-        # 闩开支:直构呈现置位态后重放,恰一次置位写。
+            f'一次性标志位关重放换笔: {gs.streak.evidence}'
+        # 一次性标志位开分支:直构呈现置位态后重放,恰一次置位写。
         b._strategy_pick_streak_latch = True
         cw_sim_ports.declare_world(decl)
-        assert gs.streak.value == 4, f'闩开置位未写: {gs.streak.value}'
+        assert gs.streak.value == 4, f'一次性标志位开置位未写: {gs.streak.value}'
         assert gs.streak.evidence == _STREAK_EV_PREFIX + '胜利,还是胜利'
-        assert b._strategy_pick_streak_latch is None, '闩开消费缺失'
+        assert b._strategy_pick_streak_latch is None, '一次性标志位开消费缺失'
     finally:
         uninstall_backend()
 

@@ -11,7 +11,7 @@ _make_named_equip_grant_effect('完美投影仪', 1))``;count=3 = 工厂 count
 投影仪装备入栏[完美投影仪 ∈ EQUIPMENTS 工具类,非占席道具,规模效应
 装备授予先例同款] / 效果条目3 免费刷新在 ECONOMY burst 注册行零动作):
 
-- 组合行单一源:两条效果条目组合行在册(泛化表零本卡键负断言防回退撞键);
+- 组合行单一源:两条效果条目组合行已登记(泛化表零本卡键负断言防回退撞键);
 - 行为链真值:恰三随机角色(2 星)入席+完美投影仪装备入栏、效果串
   恰 4 条(3 随机@2star+1 装备授予)、rng 恰消费。
 """
@@ -58,8 +58,8 @@ def _make_gs(*, bench: list[tuple[str, int]] | None = None,
 
 
 def test_jishiyu_compose_row_single_source() -> None:
-    """组合行单一源:两条效果条目组合行在册;泛化表零本卡键(防回退撞键)。"""
-    assert _CARD in PICK_INVEST_EFFECTS, '组合行在册'
+    """组合行单一源:两条效果条目组合行已登记;泛化表零本卡键(防回退撞键)。"""
+    assert _CARD in PICK_INVEST_EFFECTS, '组合行已登记'
     assert _CARD not in _STRATEGY_RANDOM_EQUIP_GRANTS, \
         '泛化表零本卡键(撞键形态禁回退)'
 

@@ -12,7 +12,7 @@ test_strategy_boss_battle_grant_sim_chain.py):
   ``strategy_bond_battle#<卡名>`` 前缀 evidence 笔(sig 组
   'sim:strategy';**断言用前缀匹配禁精确匹配**——gain_equipment 原语
   内追加 #equip 后缀)+ armed 消费 False;
-- 可重复链锁(无 done 闩,卡面无「首次」限定 = 战后触发族直读):连续
+- 可重复链锁(无 done 一次性标志位,卡面无「首次」限定 = 战后触发族直读):连续
   两场合格战斗各交付 1 次(armed 消费-再武装链);
 - 条件不满足(7 激活板)零武装零写;未持卡零武装;死亡局不武装(挂点
   在死亡提前 return 之后,局终不见发放);
@@ -29,7 +29,7 @@ test_strategy_boss_battle_grant_sim_chain.py):
   (左面板直读口径)可承载——直构须 deployed 注入 + board 直写两源
   同值,单喂 deployed 则独立 6 名全漏计(激活 = 3 误负控)。
 - 驱动形态 = 出战动作触发结算(2026-10-29 流程模型);引擎驱动助手
-  import 自 sim/test_sim_backend.py(在册超限拆分债文件,禁追加,只
+  import 自 sim/test_sim_backend.py(已登记超限拆分债文件,禁追加,只
   import 复用不改);helper 副本(世界写包装/类型备战驱动/定参结算)
   沿同目录先例自带同语义拷贝。
 """

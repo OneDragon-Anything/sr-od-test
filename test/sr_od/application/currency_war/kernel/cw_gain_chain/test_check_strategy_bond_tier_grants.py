@@ -1,6 +1,6 @@
 """策略卡羁绊档位条件发放检查腿测试(镜像 src = kernel/cw_gain_chain.py
 的 check_strategy_bond_tier_grants + kernel/cw_game_state.py 的
-strategy_bond_tier_fired 闩域)。
+strategy_bond_tier_fired 一次性标志位域)。
 
 测试面依据 = 迭代设计 designs/T-271-mengjing-dawutai.md §4 锁 3/4/5
 (构造 = 容器直置直调检查腿;计数判据单一源 = cw_system_cards.
@@ -9,8 +9,8 @@ _faction_count 双源 max——board 容器(左面板真值口径,含 L2 星徽�
 或双侧喂源;禁经 gain_character 构造达标态,会对触发面盲区假绿):
 
 - 条件矩阵短路:无卡零写 / gate 不达(门槛羁绊计数 < tiers[0])零写
-  零闩 / 激活非独立数 < 档位零写;
-- 逐档首达闩:首达 3 发 1 件 + 闩;同板面再结算零重发;降档再回零重发;
+  零一次性标志位 / 激活非独立数 < 档位零写;
+- 逐档首达一次性标志位:首达 3 发 1 件 + 一次性标志位;同板面再结算零重发;降档再回零重发;
   3∧7∧10 同拍跳档三笔升序;独立羁绊不计(救世主板面判别);gate 羁绊
   计入(首达锁板面即判别形);L2 星徽贡献计入(board 容器侧承载);
 - 计数双源 max:身份侧 > 容器侧取大;双源双缺 → 0 零武装 fail-closed。
@@ -69,7 +69,7 @@ def _gs(*, card: str | None = _CARD, board: dict[str, int] | None,
     落位;board/deployed None = 双缺域,fail-closed 判别输入)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     seed_opening_state(gs)
-    gs.prep_anchored = True   # 置闩:达标发放 = 确定事件,锁确定面写通道
+    gs.prep_anchored = True   # 置一次性标志位:达标发放 = 确定事件,锁确定面写通道
     if card is not None:
         gs.write_logic(gs.active_strategies, [card],
                        produced_by='test-seed', evidence='t:card',
@@ -102,7 +102,7 @@ def _bond_counts(gs: GameState) -> int:
 
 
 def test_no_card_zero_write() -> None:
-    """短路锁(无卡):板面达标但未持卡 → 零发放零闩(持卡交集为空 =
+    """短路锁(无卡):板面达标但未持卡 → 零发放零一次性标志位(持卡交集为空 =
     整腿无候选)。"""
     gs = _gs(card=None, board=_BOARD_T3)
     from sr_od.application.currency_war.kernel.cw_gain_chain import (
@@ -110,11 +110,11 @@ def test_no_card_zero_write() -> None:
     )
     assert check_strategy_bond_tier_grants(gs, _LSIG) == ()
     assert gs.equips.value == [], '未持卡误发放'
-    assert gs.strategy_bond_tier_fired.value in (None, ()), '未持卡误闩'
+    assert gs.strategy_bond_tier_fired.value in (None, ()), '未持卡误置一次性标志位'
 
 
 def test_gate_shut_zero_write_zero_latch() -> None:
-    """短路锁(gate 不达):门槛羁绊计数 1 < tiers[0]=2 → 零写零闩
+    """短路锁(gate 不达):门槛羁绊计数 1 < tiers[0]=2 → 零写零一次性标志位
     (状态检查型:gate 关闭期不武装不记档,即便激活数已达标也不发)。"""
     gs = _gs(board=_BOARD_GATE_SHUT)
     assert _bond_counts(gs) >= 3, '前置:激活数本身已达标(gate 唯一判别)'
@@ -123,24 +123,24 @@ def test_gate_shut_zero_write_zero_latch() -> None:
     )
     assert check_strategy_bond_tier_grants(gs, _LSIG) == ()
     assert gs.equips.value == [], 'gate 关闭误发放'
-    assert gs.strategy_bond_tier_fired.value in (None, ()), 'gate 关闭误闩'
+    assert gs.strategy_bond_tier_fired.value in (None, ()), 'gate 关闭误置一次性标志位'
 
 
 def test_activated_below_tier_zero_write() -> None:
     """短路锁(激活非独立数 < 档位):gate 开但激活数 2 < 3 → 零写
-    零闩。"""
+    零一次性标志位。"""
     gs = _gs(board=_BOARD_ACT2)
     from sr_od.application.currency_war.kernel.cw_gain_chain import (
         check_strategy_bond_tier_grants,
     )
     assert check_strategy_bond_tier_grants(gs, _LSIG) == ()
     assert gs.equips.value == [], '激活不足误发放'
-    assert gs.strategy_bond_tier_fired.value in (None, ()), '激活不足误闩'
+    assert gs.strategy_bond_tier_fired.value in (None, ()), '激活不足误置一次性标志位'
 
 
 def test_first_reach_tier3_grants_and_latches() -> None:
-    """首达闩锁(主条,兼 gate 羁绊计入口径判别):板面 3 激活(含
-    gate 羁绊自身)→ 发 1 件星徽 + 闩落;发放走确定面,evidence =
+    """首达一次性标志位锁(主条,兼 gate 羁绊计入口径判别):板面 3 激活(含
+    gate 羁绊自身)→ 发 1 件星徽 + 落一次性标志位;发放走确定面,evidence =
     strategy_bond_tier:<卡名>@<档位>(gain_equipment #equip 后缀链)。
     若 gate 羁绊不计入则激活 = 2 不触发(红判据)。"""
     gs = _gs(board=_BOARD_T3)
@@ -155,19 +155,19 @@ def test_first_reach_tier3_grants_and_latches() -> None:
     assert gs.equips.evidence \
         == f'strategy_bond_tier:{_CARD}@3#equip'
     assert gs.strategy_bond_tier_fired.value == (f'{_CARD}#3',), \
-        f'闩未落: {gs.strategy_bond_tier_fired.value!r}'
-    assert gs.strategy_bond_tier_fired.source == 'logic', '闩 = 登记事实直写'
+        f'未落一次性标志位: {gs.strategy_bond_tier_fired.value!r}'
+    assert gs.strategy_bond_tier_fired.source == 'logic', '一次性标志位 = 登记事实直写'
     assert gs.strategy_bond_tier_fired.evidence \
         == f'strategy_bond_tier:{_CARD}@3'
-    # 同板面再结算:零重发(闩命中)
+    # 同板面再结算:零重发(一次性标志位命中)
     assert check_strategy_bond_tier_grants(gs, _LSIG) == ()
     assert gs.equips.value == [_EQUIP], '同板面重发'
-    assert gs.strategy_bond_tier_fired.value == (f'{_CARD}#3',), '闩值漂移'
+    assert gs.strategy_bond_tier_fired.value == (f'{_CARD}#3',), '一次性标志位值漂移'
 
 
 def test_latch_survives_dip_and_restore() -> None:
-    """首达闩锁(降档再回):发放后板面跌回(2 激活)→ 零写;再回 3
-    激活 → 仍零重发(闩 = 「首次」语义,卖员降档不回滚已发放)。"""
+    """首达一次性标志位锁(降档再回):发放后板面跌回(2 激活)→ 零写;再回 3
+    激活 → 仍零重发(一次性标志位 = 「首次」语义,卖员降档不回滚已发放)。"""
     gs = _gs(board=_BOARD_T3)
     from sr_od.application.currency_war.kernel.cw_gain_chain import (
         check_strategy_bond_tier_grants,
@@ -179,12 +179,12 @@ def test_latch_survives_dip_and_restore() -> None:
     gs.observe(gs.board, dict(_BOARD_T3), sig=_SIG_OBS)
     assert check_strategy_bond_tier_grants(gs, _LSIG) == (), '回档重发'
     assert gs.equips.value == [_EQUIP], '回档误发放'
-    assert gs.strategy_bond_tier_fired.value == (f'{_CARD}#3',), '闩值漂移'
+    assert gs.strategy_bond_tier_fired.value == (f'{_CARD}#3',), '一次性标志位值漂移'
 
 
 def test_same_call_tier_jump_grants_ascending() -> None:
     """跳档锁(3∧7∧10 同拍):10 激活板 → 单次调用三笔发放按档位升序,
-    闩三键升序齐落(一局上限 Σ档位 = 3 件;禁全局单发形态)。"""
+    一次性标志位三键升序齐落(一局上限 Σ档位 = 3 件;禁全局单发形态)。"""
     gs = _gs(board=_BOARD_T10)
     from sr_od.application.currency_war.kernel.cw_gain_chain import (
         check_strategy_bond_tier_grants,
@@ -197,8 +197,8 @@ def test_same_call_tier_jump_grants_ascending() -> None:
     assert gs.equips.value == [_EQUIP] * 3, \
         f'入栏应恰 3 件: {gs.equips.value!r}'
     assert gs.strategy_bond_tier_fired.value \
-        == (f'{_CARD}#3', f'{_CARD}#7', f'{_CARD}#10'), '闩键序漂移'
-    # 再结算零重发(三闩全命中)
+        == (f'{_CARD}#3', f'{_CARD}#7', f'{_CARD}#10'), '一次性标志位键序漂移'
+    # 再结算零重发(三一次性标志位全命中)
     assert check_strategy_bond_tier_grants(gs, _LSIG) == ()
     assert gs.equips.value == [_EQUIP] * 3, '跳档后重发'
 
@@ -253,14 +253,14 @@ def test_identity_source_superiority_max_fusion() -> None:
 
 def test_dual_source_missing_fail_closed() -> None:
     """计数双源双缺 fail-closed 锁:board 与 deployed 均未观察 →
-    全族计数 0,gate 关闭零写零闩(宁缺勿造)。"""
+    全族计数 0,gate 关闭零写零一次性标志位(宁缺勿造)。"""
     gs = _gs(board=None, deployed=None)
     from sr_od.application.currency_war.kernel.cw_gain_chain import (
         check_strategy_bond_tier_grants,
     )
     assert check_strategy_bond_tier_grants(gs, _LSIG) == ()
     assert gs.equips.value == [], '双缺域误发放'
-    assert gs.strategy_bond_tier_fired.value in (None, ()), '双缺域误闩'
+    assert gs.strategy_bond_tier_fired.value in (None, ()), '双缺域误置一次性标志位'
 
 
 def test_bench_side_unused_in_count() -> None:

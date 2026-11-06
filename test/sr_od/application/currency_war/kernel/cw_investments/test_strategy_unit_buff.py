@@ -43,12 +43,12 @@ zhuanjia-jialahe.md(定稿,判定无需裁定·可实现)§4 五锁面(卡面官
 「获得装备着【绝对热量】的专家顾问【加拉赫】，并使其在本局游戏中加入
 商店。加拉赫行动时，为我方全体恢复3点能量并触发【绝对热量】的生命回复
 效果。」顾问授予族三条效果条目分治:效果条目1 顾问授予+入商店 = GRANTS advisor=True
-条目在册零动作;效果条目2 佩戴绝对热量零建模;效果条目3 行动触发双效果 = 触发面/
+条目已登记零动作;效果条目2 佩戴绝对热量零建模;效果条目3 行动触发双效果 = 触发面/
 效果面/联动面三盲零响应登记):payload 单一源对拍(锁 1)/条目构造七字段
 (锁 2)/存量负向 GRANTS 计数与 PICK 闭集不变(锁 3,存量计数锁与键集
 闭集现值锚在 test_invest_strategy.py / test_gain_chain.py 原样保留即第二
 道防线)/估值零计分带 gs 实参(锁 4)/登记面现值钉死(锁 5,赠 key 专家
-顾问显式绑定行在册,与族内三卡「泛用不绑」形态相反,钉现值防漂移)。
+顾问显式绑定行已登记,与族内三卡「泛用不绑」形态相反,钉现值防漂移)。
 """
 from __future__ import annotations
 
@@ -370,12 +370,12 @@ def test_tiaoyin_cash_fail_closed() -> None:
 
 def test_tiaoyin_registry_pins() -> None:
     """调饮专家:加拉赫 登记面现值钉死锁(锁 5 + 效果条目1 前提):赠 key 专家
-    顾问(加拉赫)显式绑定行在册,公开绑定读端现值 = (frozenset(),
+    顾问(加拉赫)显式绑定行已登记,公开绑定读端现值 = (frozenset(),
     frozenset({'加拉赫'}))(零新增,只锁不动——与族内三卡「泛用不绑」
     形态相反,本卡绑定系顾问授予结构化面既有登记);效果条目1 零动作前提 =
-    GRANTS advisor=True 条目在册(获得链 advisor 道解锁入商店的登记面
+    GRANTS advisor=True 条目已登记(获得链 advisor 道解锁入商店的登记面
     基础),逐字段钉现值防漂移。"""
-    assert _CARD_TY in _STRATEGY_BINDINGS_EXPLICIT, '显式绑定行在册(零新增)'
+    assert _CARD_TY in _STRATEGY_BINDINGS_EXPLICIT, '显式绑定行已登记(零新增)'
     assert STRATEGY_BINDINGS[_CARD_TY] == (frozenset(), frozenset({'加拉赫'})), \
         '绑定现值不动'
     grant = STRATEGY_GRANTS[_CARD_TY]

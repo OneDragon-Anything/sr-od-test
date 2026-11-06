@@ -6,7 +6,7 @@
 (REVIEW-T324 免裁 7/7;卡面官方原文:「最大等级变为7级，获得【财富宝钻】
 和40金币。」——帽改写腿 level_cap_override=7 注册行承载 / 宝钻腿 =
 cw_gain_effects.PICK_INVEST_EFFECTS 具名装备登记行 / 40 金腿 =
-instant_gold=40 在册估值零漂):
+instant_gold=40 已登记估值零漂):
 
 - 注册行直测(锁 2):level_cap_override == 7 ∧ instant_gold == 40
   (等值扩写——金面零漂);

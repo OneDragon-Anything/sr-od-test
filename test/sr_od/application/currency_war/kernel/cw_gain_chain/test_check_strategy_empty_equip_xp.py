@@ -6,7 +6,7 @@ check_strategy_empty_equip_xp 纯判定 + sim/cw_sim_backend.py 节点窗挂点
 §五④(卡面官方原文:「进入新节点时，如果物品栏和备战席没有任何装备(消耗品
 除外)，则获得2经验值。」;直构形态先例 = 同目录 check_strategy_* 族镜像):
 - 条件矩阵(锁 3):满装备→0;工具类/特殊类(垃圾袋,口径 A 锚定)+裸
-  bench→表值;空+裸→表值;bench unit 带装备→0;名字不在册→0(防御);
+  bench→表值;空+裸→表值;bench unit 带装备→0;名字未登记→0(防御);
   上阵带装备→表值(辖域判读 A 锚定);None 防御→0(fail-closed);
 - 效果条目1→效果条目2 交互(锁 3):选卡落地后物品栏恒非消耗品(简易池无工具/特殊类)
   → 拿卡当窗必判 0(结构性自洽);
@@ -38,7 +38,7 @@ _CARD = '空仓'
 _XP = 2
 
 #: 类别代表件(注册表现值直读):工具/特殊类各一;非消耗品取简易池首件。
-_TOOL = '员工投影仪'      # 工具类(EQUIPMENTS 在册,穿戴候选过滤面同源)
+_TOOL = '员工投影仪'      # 工具类(EQUIPMENTS 已登记,穿戴候选过滤面同源)
 _SPECIAL = '垃圾袋'       # 特殊类(两口径判别件,口径 A 下按消耗品)
 _UNKNOWN = '不存在的装备'  # 注册表外名(防御分支输入)
 
@@ -118,7 +118,7 @@ def test_bench_unit_with_equips_zero() -> None:
 
 
 def test_unknown_name_counts_as_equip_zero() -> None:
-    """名字不在册防御(锁 3):按装备计 → 0(log 留证;XP 是奖励,误发 =
+    """名字未登记防御(锁 3):按装备计 → 0(log 留证;XP 是奖励,误发 =
     捏造世界真值,宁可漏发)。"""
     gs = _gs(equips=[_UNKNOWN], bench=[])
     assert check_strategy_empty_equip_xp(gs) == 0
@@ -172,5 +172,5 @@ def test_pure_read_zero_container_writes() -> None:
 
 def test_simple_pool_names_all_in_registry() -> None:
     """注册表闭合旁证(锁 3 防御支的结构前提):简易池全体 ∈ EQUIPMENTS
-    (生产不可达「名字不在册」,防御分支仅为读链漂移兜底)。"""
+    (生产不可达「名字未登记」,防御分支仅为读链漂移兜底)。"""
     assert set(equips_by_category('简易')) <= set(EQUIPMENTS)

@@ -12,7 +12,7 @@ yingyue.md §4 锁 3(卡面官方原文:「获得【镜流】和特殊的1费【
 费用档初始写 1 = 特殊景元起始档,前置于发放腿防发放级联覆盖,腿序理由
 见 _make_yingyue_tier_init_leg docstring):
 
-- 组合行单一源:三条效果条目组合行在册(泛化表零本卡键负断言防回退撞键);
+- 组合行单一源:三条效果条目组合行已登记(泛化表零本卡键负断言防回退撞键);
 - 行为链真值:确定入口 → tier=1 先写(拿卡拍)、恰两角色入栏(镜流/
   景元卡文序)、效果串 3 条(tier 串 + 双 char_grant)、rng 零消费。
 """
@@ -59,8 +59,8 @@ def _make_gs(*, bench: list[tuple[str, int]] | None = None,
 
 
 def test_yingyue_compose_row_single_source() -> None:
-    """组合行单一源:三条效果条目组合行在册;泛化表零本卡键(防回退撞键)。"""
-    assert _CARD in PICK_INVEST_EFFECTS, '组合行在册'
+    """组合行单一源:三条效果条目组合行已登记;泛化表零本卡键(防回退撞键)。"""
+    assert _CARD in PICK_INVEST_EFFECTS, '组合行已登记'
     assert _CARD not in _STRATEGY_RANDOM_EQUIP_GRANTS, \
         '泛化表零本卡键(撞键形态禁回退)'
 

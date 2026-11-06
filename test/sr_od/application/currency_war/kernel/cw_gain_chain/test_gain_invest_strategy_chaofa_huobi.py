@@ -3,7 +3,7 @@
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-191-chaofa-
 huobi.md §3 锁 7(REVIEW-T191 §四④ 同面):
-- 窗内登记:条目在册 remaining_nodes=6(N_NODES 播种)+ counters[LOST]
+- 窗内登记:条目已登记 remaining_nodes=6(N_NODES 播种)+ counters[LOST]
   = 登记帧金读数(播值腿)+ **gs.gold 容器零触碰**(播值 = 容器簿记
   非金写,live 零写金断言——gold 值/来源/证据三面现值不变);
 - 金读数 None:计数缺省 + 缺陷留存证据(kind
@@ -58,7 +58,7 @@ def _make_gs(*, node: tuple[int, int] | None = (2, 3),
 
 
 def test_gain_chaofa_huobi_registers_lost_snapshot() -> None:
-    """锁 7 主形态:窗内登记 → 条目在册 remaining_nodes=6 ∧
+    """锁 7 主形态:窗内登记 → 条目已登记 remaining_nodes=6 ∧
     counters[LOST] = 登记帧金读数 ∧ gold 容器零触碰(值/来源/证据三面
     现值不变 = live 零写金断言)。"""
     gs = _make_gs()
@@ -77,7 +77,7 @@ def test_gain_chaofa_huobi_registers_lost_snapshot() -> None:
 def test_gain_chaofa_huobi_gold_unread_defect_branch() -> None:
     """锁 7 申报分支:登记帧金读数 None → 计数缺省(禁猜测写)+ 缺陷
     留存证据(kind gain_chain_lost_counter_gold_unread);登记其余面
-    照常(条目在册、余期播种)。"""
+    照常(条目已登记、余期播种)。"""
     consume_defect_sink()
     gs = _make_gs(gold=None)
     gain_invest_strategy(gs, object(), '超发货币', rand=False, sig=_lsig())
@@ -104,7 +104,7 @@ def test_gain_chaofa_huobi_sixth_entry_removal_regression() -> None:
         expired = gs.effects.tick_node(key)
         if nth < 6:
             assert gs.effects.first(HYPEREMIT_SPEC_ID) is not None, \
-                f'第 {nth} 次推进后条目应在册'
+                f'第 {nth} 次推进后条目应已登记'
             assert gs.effects.first(HYPEREMIT_SPEC_ID).remaining_nodes \
                 == 6 - nth
             assert expired == [], '未到期零移除'

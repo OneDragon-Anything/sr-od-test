@@ -53,7 +53,7 @@ def test_confirm_buy_card_without_card_pays_full() -> None:
     gs = game_state_of(session)
     effects = apply_confirm_effect(session, dict(_ACTION))
     assert gs.gold.value == 27, '未持卡照常扣金(cost×bought)'
-    assert effects and effects[0]['path'] == 'gold', '金推进记录在册'
+    assert effects and effects[0]['path'] == 'gold', '金推进记录已登记'
     assert effects[0]['value'] == '-3(买牌×1)', \
         '免张数 0 时消息形与改前一致(行为等价面)'
 

@@ -1,6 +1,6 @@
 """环境 XP 窗口(成功经验)sim 全链轻量局测试(镜像 src 主断言对象 =
 kernel 发放桥 grant_effect_node_xp 经 sim 后端节点推进全链;按流程级
-测试落位本目录,引擎驱动助手 import 自 sim/test_sim_backend.py〔在册
+测试落位本目录,引擎驱动助手 import 自 sim/test_sim_backend.py〔已登记
 超限拆分债文件,禁追加,只 import 复用不改;先例 = 同目录
 test_env_deploy_lock_sim_chain.py〕)。
 
@@ -14,7 +14,7 @@ calc/designs/T-38-chenggong-jingyan.md)§2.6 实机(live)和模拟器(sim)两边
   (迭代 2026-09-23-invest-effects-calc T-432 定案),晚拍仅剩 live 观察
   路径的留白申报;
 - **同 seed 重放**:发放序列逐位一致(发放链零 rng 消费的结构判据);
-- **披露键族在册**:ENV_XP_WINDOW_DISCLOSURES 整表并入 sim 披露集。
+- **披露键族已登记**:ENV_XP_WINDOW_DISCLOSURES 整表并入 sim 披露集。
 """
 from __future__ import annotations
 
@@ -105,7 +105,7 @@ def _walk(b: SimBackend, monkeypatch: pytest.MonkeyPatch,
     (发放序列重放对拍载体)。"""
     gs = b.gs
     entry = gs.effects.first(_ENV_ID)
-    assert entry is not None, '成功经验条目在册(portal 登记链)'
+    assert entry is not None, '成功经验条目已登记(portal 登记链)'
     trail = []
     for _ in range(steps):
         _settle_node_win(b, monkeypatch)
@@ -121,7 +121,7 @@ def test_sim_chain_world_truth_and_seed_replay(
     """sim 全链(设计 §2.6/§4 锁 10):种子 lv8(60/72)→ 达成当拍
     (1-2 tick)只记锚零发放 → (1,3)/(1,4)/(1,5) 三节点各 +12 且发放
     +12 恰跨 72 门槛把 sim 世界等级真推到 9 → 同 seed 双跑轨迹逐位一致;
-    披露键族整表在册。"""
+    披露键族整表已登记。"""
     b = _pick_xp_env(7)
     try:
         for k in ENV_XP_WINDOW_DISCLOSURES:

@@ -297,7 +297,7 @@ def _si(name: str) -> SimpleNamespace:
 
 
 def test_removed_lobby_screens_not_in_match():
-    """5 张移出屏不入对局中输出;备战/备战-免战等在册对局屏不受影响。"""
+    """5 张移出屏不入对局中输出;备战/备战-免战等已登记对局屏不受影响。"""
     names = [*_REMOVED_FROM_IN_MATCH, '货币战争-备战', '货币战争-备战-免战']
     out = in_match_screen_names([_si(n) for n in names])
     assert not (set(_REMOVED_FROM_IN_MATCH) & set(out))

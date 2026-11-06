@@ -88,7 +88,7 @@ def _logic_sig(actor: str = 'TestSeqEnv') -> ChannelSig:
 # ================================================================ 推进原语判据面
 
 def _gs_with_double_pair() -> GameState:
-    """新容器 + 双手狸在册(每进节点 +2 免费刷新,发放断言活载体)。"""
+    """新容器 + 双手狸已登记(每进节点 +2 免费刷新,发放断言活载体)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.effects.register_strategy(STRATEGY_EFFECTS['双手狸开键盘！'],
                                  acquired_key=(1, 5))
@@ -269,7 +269,7 @@ def test_terminal_match_end_event_style() -> None:
     """终局事件式(design §2.11 测试 3):位面 3 末 boss (3,7) 结算确认 →
     sequence_next = None → applied=True reason='match_end' + 声明
     next_screen='';零写入(node_pos/node_hist_pos 保持锚定态)零效果
-    tick(在册效果余期不递减)。applied 语义扩展 = 终结动作落地事实。"""
+    tick(已登记效果余期不递减)。applied 语义扩展 = 终结动作落地事实。"""
     gs = _gs_with_double_pair()
     observe_node_anchor(gs, (3, 7), trigger_screen='货币战争-备战', actor=_ACTOR)
     assert gs.free_refresh_left.value == 2, '锚定 (3,7) 当帧发放(对照基线)'
@@ -287,7 +287,7 @@ def test_terminal_match_end_event_style() -> None:
 # ================================================================ 场景走查测试
 
 def _gs_with(test_context, monkeypatch, spec_name: str) -> GameState:
-    """session 旁表容器挂 ctx.cw_match(op 上报口供给面)+ 指定效果在册
+    """session 旁表容器挂 ctx.cw_match(op 上报口供给面)+ 指定效果已登记
     (发放断言活载体);返回容器与 gs_of_ctx 同源。"""
     session = cw4_session()
     monkeypatch.setattr(test_context, 'cw_match',

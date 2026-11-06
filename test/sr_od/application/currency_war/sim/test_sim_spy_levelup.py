@@ -81,7 +81,7 @@ def _top3_of(payload) -> list[str]:
 
 def _to_prep(seed: int = 7) -> SimBackend:
     """构造 + 走到 P1r1 备战屏(窗起点发牌已落:shop 载荷 + 节点级
-    记录在册);调用方负责 uninstall。"""
+    记录已登记);调用方负责 uninstall。"""
     b = SimBackend(seed=seed, cfg=_CFG)
     install_backend(b)
     b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')

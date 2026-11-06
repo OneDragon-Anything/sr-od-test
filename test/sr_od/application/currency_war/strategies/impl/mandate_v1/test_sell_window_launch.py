@@ -150,7 +150,7 @@ class TestLaunchRegistry:
         [双视图] 单载体双视图:press 登记入窗口段排除面(active_window),
           垫保登记只入 T3 视图(stall_protect_active → defer 参数)——
           垫保在凑息是 defer 跳过、在 M4/funding 是降序放行(转化类,
-          P78-5′ 四关系表「放行(在册语义保持)」),硬排除会杀死转化
+          P78-5′ 四关系表「放行(已登记语义保持)」),硬排除会杀死转化
           类放行;窗口排除面 = press(P78-1 无对价豁免)。两簿合一 =
           载体/生命周期合一(轮界共销账),非排除面合一。"""
         # [枚举拒](hold 类已随两买臂退役 = 枚举外)
@@ -465,7 +465,7 @@ def test_round_fresh_buys_phase_mismatch_invalidates_whole_record() -> None:
 
 
 def test_fresh_buys_sell_face_failclosed_and_phase_gate() -> None:
-    """L1 卖侧闩读端(容器宿主):节点未定帧 = fail-closed 排除当前记录
+    """L1 卖侧一次性标志位读端(容器宿主):节点未定帧 = fail-closed 排除当前记录
     全集(方向安全,上界单轮);节点已定帧相位失配 = 整体作废。"""
     session = StrategySession()
     gs = game_state_of(session)   # node 未定:相位键 = 缺省 (1, 1)

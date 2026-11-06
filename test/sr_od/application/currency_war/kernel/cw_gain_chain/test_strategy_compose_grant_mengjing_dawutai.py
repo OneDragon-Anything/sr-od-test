@@ -9,7 +9,7 @@ test_strategy_compose_grant_gangtie.py 钢铁美学单角色形)。
 STRATEGY_BOND_TIER_GRANTS + 结算拍检查腿另表,两注册面分治——GRANTS
 条目 equips_immediate 维持 (),条件发放禁误补即时字段):
 
-- 组合行单一源:组合行在册(泛化表零本卡键负断言防回退撞键);
+- 组合行单一源:组合行已登记(泛化表零本卡键负断言防回退撞键);
 - 行为链真值:确定入口 → 恰一角色入栏(花火 1★)、效果串恰 1 条
   char_grant、equips 零写(本行只辖角色句)、rng 零消费;
 - 词表隔离锁:'盛会之星星徽' ∉ BENCH_ITEM_NAMES(星徽系装备非占席,
@@ -61,8 +61,8 @@ def _make_gs(*, bench: list[tuple[str, int]] | None = None,
 
 
 def test_mengjing_compose_row_single_source() -> None:
-    """组合行单一源:单角色组合行在册;泛化表零本卡键(防回退撞键)。"""
-    assert _CARD in PICK_INVEST_EFFECTS, '组合行在册'
+    """组合行单一源:单角色组合行已登记;泛化表零本卡键(防回退撞键)。"""
+    assert _CARD in PICK_INVEST_EFFECTS, '组合行已登记'
     assert _CARD not in _STRATEGY_RANDOM_EQUIP_GRANTS, \
         '泛化表零本卡键(撞键形态禁回退)'
 

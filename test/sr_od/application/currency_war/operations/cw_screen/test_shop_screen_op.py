@@ -249,7 +249,7 @@ def test_act_node_round_wait_until_terminal_unified_path(monkeypatch):
     assert strategy.calls == 2, '逐动作决策(零特例拦截,无提前退出)'
     assert receipt_ops == ['CwActionBuyCardParam', 'CwActionCloseShopOp'], \
         ('CwActionCloseShopParam 不入 decisions 行(终结回执由关店动作 op '
-         '自身承担);买牌回执簿在册')
+         '自身承担);买牌回执簿已登记')
 
 
 def test_act_buy_card_slot_out_of_range_raises_no_receipt(monkeypatch):
@@ -440,7 +440,7 @@ def test_shop_sell_bench_executes_via_port(monkeypatch):
     assert op.ledger.total_sell == 1, '访问账卖出计数(发出即记账)'
     _slots = gs.bench.value.slots
     assert _slots[0].kind == 'empty', '容器上报对账:卖出槽位置空'
-    assert 'CwActionSellBenchParam' in receipt_ops, '商店动作回执簿在册'
+    assert 'CwActionSellBenchParam' in receipt_ops, '商店动作回执簿已登记'
 
     assert op.act().is_success, '后续关店终结照常'
 

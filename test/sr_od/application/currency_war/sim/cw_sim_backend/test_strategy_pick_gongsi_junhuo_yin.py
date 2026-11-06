@@ -10,7 +10,7 @@ T-138-gongsi-junhuo-gengxin-yin.md(定稿)§4 锁 7:播种 offer 含本卡 →
 变异面 sim 零建模 = 变换族既定边界(sim 不反映每节点物品栏变异,
 公司人才流动同判在码),不设断言(负向申报,notes 面)。
 
-复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py(在册超限
+复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py(已登记超限
 拆分债文件,禁追加,只 import 复用不改)。
 """
 from __future__ import annotations

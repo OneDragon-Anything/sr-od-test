@@ -15,7 +15,7 @@ strategy_final_supply_gold_of 聚合 helper + _begin_node_window 收口
 - 拿卡当节点不发放(锁 6,窗口前段聚合读时序机制锁——直构「同窗晚到
   手」容器态,不假设场景可达:现行建模域 offer 槽域与 supply 零重合)。
 
-复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py(在册超限
+复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py(已登记超限
 拆分债文件,禁追加,只 import 复用不改;先例 = 本目录
 test_strategy_boss_gold.py)。
 """

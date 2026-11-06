@@ -18,7 +18,7 @@ encounter_options_for helper + encounter 呈现写点 + STRATEGY_ECONOMY
   零写(apply_strategy_pick_hp 通用腿直调,照 T-127
   test_strategy_pick_hp.py 形态)。
 
-复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py(在册超限
+复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py(已登记超限
 拆分债文件,禁追加,只 import 复用不改)。
 """
 from __future__ import annotations
@@ -70,12 +70,12 @@ def test_held_card_narrows_to_derived_extremes_with_idx_rebuild() -> None:
 
 
 def test_unheld_or_nonmember_returns_full_set_unchanged() -> None:
-    """未持有/空名单/非本卡(在册无旗标卡 + 表外名)→ 全四档原样,
+    """未持有/空名单/非本卡(已登记无旗标卡 + 表外名)→ 全四档原样,
     零收窄(负例:读法 miss 安静回全集,不抛不窄)。"""
     full = encounter_options()
     assert encounter_options_for([]) == full
     assert encounter_options_for(['躺平']) == full
-    assert encounter_options_for(['不在册卡名']) == full
+    assert encounter_options_for(['未登记卡名']) == full
 
 
 def test_multi_strategy_any_hit_still_narrows() -> None:
@@ -153,7 +153,7 @@ def test_registration_row_direct_three_legs() -> None:
 
 def test_hp_leg_direct_call_grants_exact_and_offtable_zero_write() -> None:
     """hp 腿直调真值 + 表外卡零写(apply_strategy_pick_hp 通用腿直调,
-    T-127 test_strategy_pick_hp.py 形态):在册卡入账恰 +10 恰一笔
+    T-127 test_strategy_pick_hp.py 形态):已登记卡入账恰 +10 恰一笔
     (独立 evidence 笔),表外名零笔零写(hp/evidence 双不动)。rng
     形参 = 负值支扩挂点随批加入(正部成员不消费采样,传独立实例形)。"""
     b = _backend(seed=52)
@@ -165,7 +165,7 @@ def test_hp_leg_direct_call_grants_exact_and_offtable_zero_write() -> None:
         assert gs.hp.evidence == _HP_EV_PREFIX + _CARD, \
             f'独立笔缺失或来源漂移: {gs.hp.evidence}'
         hp1, ev1 = int(gs.hp.value), gs.hp.evidence
-        assert apply_strategy_pick_hp(gs, ['不在册卡名'],
+        assert apply_strategy_pick_hp(gs, ['未登记卡名'],
                                       random.Random(7)) == 0
         assert gs.hp.value == hp1 and gs.hp.evidence == ev1, \
             f'表外卡出现写: {gs.hp.value} / {gs.hp.evidence}'

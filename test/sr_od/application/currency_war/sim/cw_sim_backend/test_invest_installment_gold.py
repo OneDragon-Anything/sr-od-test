@@ -1,13 +1,13 @@
 """sim 分期金节点窗腿测试(镜像 src = sim/cw_sim_backend.py 的
 apply_invest_installment_gold 把结果写进状态副本的实现分支 + _begin_node_window 收入段接线 +
-apply_strategy_pick_gold_next_nodes_init 拿卡初始化腿 + 呈现闩;先例 =
+apply_strategy_pick_gold_next_nodes_init 拿卡初始化腿 + 呈现一次性标志位;先例 =
 本目录 test_invest_node_gold.py [定期福利聚合腿]/test_strategy_pick_xp.py
 [拿卡落地拍腿族] 同形态)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-177-changqi-
 zhuyi.md §4 锁 3/锁 5/锁 6(REVIEW-T177 §4.3 同面):
 - 拿卡后连续 3 个节点窗各 +7、第 4 窗不发(锁 3,引擎链:真拿卡路径走
-  初始化腿 + 呈现闩 + 窗腿接线;每窗容器递减笔 = 分期腿发生过的持久
+  初始化腿 + 呈现一次性标志位 + 窗腿接线;每窗容器递减笔 = 分期腿发生过的持久
   证据,金笔在非扑满窗被收入笔覆盖故引擎面以容器笔与金增量公式现算
   断言;金笔 evidence 字面量断言落函数级直构面[无覆盖可全等]);
 - 跨卡双持 per-entry(锁 5,同拍双持场景:长期主义 + 长期主义+ 各发
@@ -18,7 +18,7 @@ zhuyi.md §4 锁 3/锁 5/锁 6(REVIEW-T177 §4.3 同面):
   不补发(可达腿语义 = 剩余 >0 照发,无任何局终补发方)。
 
 复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py 与
-sim/cw_sim_backend/test_p3_win_terminal.py(在册拆分债文件,禁追加,
+sim/cw_sim_backend/test_p3_win_terminal.py(已登记拆分债文件,禁追加,
 只 import 复用不改;先例 = 本目录 test_strategy_pick_xp.py)。
 """
 from __future__ import annotations
@@ -93,7 +93,7 @@ def _drive_until(b: SimBackend, pred, limit: int = 512) -> None:
 
 def _drive_to_offer(b: SimBackend) -> None:
     """驱动至策略 offer 呈现(固定日程首槽 P1r3 起;呈现即置分期金
-    初始化腿闩——本腿生效前提)。"""
+    初始化腿一次性标志位——本腿生效前提)。"""
     _drive_until(b, lambda: b.screen_identity() == SCREEN_INVEST_STRATEGY)
 
 
@@ -246,13 +246,13 @@ def test_installment_leg_zero_hold_and_exhaust_short_circuit() -> None:
 
 def test_installment_leg_skips_registry_missing_entry() -> None:
     """注册表缺行防御支:容器条目卡名不在 STRATEGY_ECONOMY(注册表漂移
-    态)→ 悬空跳过不递减不报错(下次窗重试自愈,拒落域不闩同向)。"""
+    态)→ 悬空跳过不递减不报错(下次窗重试自愈,拒落域不落一次性标志位同向)。"""
     gs = cw4_box()
     gs.write_logic(gs.strategy_gold_next_nodes_left,
                    {_CARD: 3, '幽灵卡': 3},
                    produced_by='Test', evidence='t:seed', sig=_SIG)
     assert apply_invest_installment_gold(gs, plane=1, round_num=4) == 1, \
-        '仅注册行在册的卡发放'
+        '仅注册行已登记的卡发放'
     assert int(gs.gold.value or 0) == 7
     assert gs.strategy_gold_next_nodes_left.value == {_CARD: 2,
                                                       '幽灵卡': 3}, \

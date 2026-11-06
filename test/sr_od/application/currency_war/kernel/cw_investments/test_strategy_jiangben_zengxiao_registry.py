@@ -12,7 +12,7 @@
   (duration_uses=6,免战牌机制复用)+ duties predict+track 双置
   (predict=买牌对账须预知免费价;track=次数余量剩余期量);
 - 注册值锁:STRATEGY_ECONOMY sell_price_mult == 2.0(官方卡文「双倍
-  价格」,建模早于本条目在册,零漂移订正面);
+  价格」,建模早于本条目已登记,零漂移订正面);
 - 交付通道锁:两条效果条目全在获得链只登记不写状态的实现分支,③段效果体表零新增(键集断言
   零联动);
 - 发牌判据细分确认锁(义务 6):素出售卡不入 sim 发牌判据集(sim 局
@@ -73,7 +73,7 @@ def test_jiangben_zengxiao_registry_sell_price_mult() -> None:
     """注册值锁:注册行 sell_price_mult == 2.0(官方卡文「获得双倍价格的
     金币」;注册行 = ×2 修饰估值面对账源,单一条目不可变)。"""
     assert STRATEGY_ECONOMY[_CARD].sell_price_mult == 2.0, \
-        '×2 卖价修饰在册(官方卡文 2 倍,无漂移订正面)'
+        '×2 卖价修饰已登记(官方卡文 2 倍,无漂移订正面)'
 
 
 def test_jiangben_zengxiao_delivery_channel_registration_leg() -> None:
@@ -99,7 +99,7 @@ def test_jiangben_zengxiao_pending_modeling_and_cash_failclosed() -> None:
     """待建模登记锁(裁决点 7 默认案):卡级 PENDING 行存续 + 描述非空
     (治理账可见性,零运行时闸);现金分 fail-closed——免费购买腿估值
     未入现金通道,×2 修饰(sell_price_mult)归待建模分类塌 0。"""
-    assert _CARD in STRATEGY_ECONOMY_PENDING_MODELING, '卡级 PENDING 行在册'
+    assert _CARD in STRATEGY_ECONOMY_PENDING_MODELING, '卡级 PENDING 行已登记'
     assert STRATEGY_ECONOMY_PENDING_MODELING[_CARD], '描述非空'
     gs = game_state_of(SimpleNamespace())
     assert strategy_economy_value(_CARD, gs) == (0.0, False), \

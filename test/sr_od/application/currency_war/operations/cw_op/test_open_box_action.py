@@ -132,7 +132,7 @@ def test_explicit_slot_clicks_open_area_and_declares_world(
         '点击落武装箱开启位建档坐标中心'
     assert len(_env_controller(env).moves) == 1, '防吞点击:先移后点'
     assert [p.kind for p in gs.screen_changes.pending] == ['box_card'], \
-        '点击直弹登记在册(武装箱选择画面出现事实)'
+        '点击直弹已登记(武装箱选择画面出现事实)'
     assert rr.data is not None, '后果声明随 round data 携带(journal 记账面)'
 
 

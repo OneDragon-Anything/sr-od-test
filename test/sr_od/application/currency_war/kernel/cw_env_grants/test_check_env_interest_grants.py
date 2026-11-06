@@ -4,7 +4,7 @@ kernel/test_env_grants.py〔超限只读复用〕与本目录按被测方法拆�
 本文件按拆目录规范落位)。
 
 测试面依据 = 迭代 T-27 公司契约利息累计触发设计(v2.3 定稿)§2.3 + §4.3:
-- **条件矩阵**(六序短路):env 空链/不在册/已 done(一次性封账)/
+- **条件矩阵**(六序短路):env 空链/未登记/已 done(一次性封账)/
   计数不足/bench 未观察(缓发不标 done,宁缺勿造)/达标发放;
 - **两写契约**:角色链(gain_character rand=False 确定发放,1★ 先验)
   + done interest_threshold 键同 evidence 同 sig 同 produced_by 相邻;
@@ -102,14 +102,14 @@ def _bench_units(gs: GameState) -> list[tuple[str, int]]:
 def test_condition_matrix_short_circuits(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """未发放分支逐序零写(T-27 设计 §2.3 条件矩阵 1-4):env 空链/
-    不在册/已 done/计数不足 → 返回 None 且容器零写行(计数不足分支
+    未登记/已 done/计数不足 → 返回 None 且容器零写行(计数不足分支
     放在 done 之后断言,与设计短路序一致)。"""
     # ① env 未激活(None/空链)
     gs = _make_gs(env=None, bench=[], interest_earned=_THRESHOLD)
     calls = _record_writes(gs, monkeypatch)
     assert check_env_interest_grants(gs, _SIG_HOOK) is None
     assert not calls, f'env 空链零写: {calls}'
-    # ② 不在册(表外环境)
+    # ② 未登记(表外环境)
     gs = _make_gs(env='轮岗', bench=[], interest_earned=_THRESHOLD)
     calls = _record_writes(gs, monkeypatch)
     assert check_env_interest_grants(gs, _SIG_HOOK) is None
@@ -193,4 +193,4 @@ def test_snapshot_roundtrip_done_persists(
     calls = _record_writes(restored, monkeypatch)
     restored.effects.record_interest_earned(_THRESHOLD)
     assert check_env_interest_grants(restored, _SIG_HOOK) is None
-    assert not calls, f'恢复局 done 在册零写: {calls}'
+    assert not calls, f'恢复局 done 已登记零写: {calls}'

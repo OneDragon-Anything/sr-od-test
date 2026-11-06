@@ -1,7 +1,7 @@
 """独家代言(331401)装备获得转换·名单集源形锁(镜像 src =
 kernel/cw_gain_chain.py 的 ``_equip_gain_conversion_hit`` 名单集源形判定支
 + 名单定向 > 类别词分派序 + gain_equipment 顶段装备目标分支;按被测方法
-拆目录规范落位——test_gain_chain.py 在册超限冻结禁追加,新锁落新镜像;
+拆目录规范落位——test_gain_chain.py 已登记超限冻结禁追加,新锁落新镜像;
 先例 = 同目录 test_gain_equipment_conversion_equip_target.py〔好运来族〕)。
 
 测试面依据 = 迭代设计 designs/T-372-dujia-daiyan.md §4 +
@@ -133,9 +133,9 @@ def test_grant_effect_mirror_and_disclosure_lock(
     ``equips_immediate`` 与效果体发放名逐对相等(直呼同名单效果体,
     经获得链入栏断言,箱腿一致性锁族形;两处独立字面量漂移在备战断言
     不可见唯此锁可暴露)+ 卡名 ∈ 披露键辖卡元组 ∧ 键值形制(T-205/
-    T-218 键形先例)∧ base 注册表在册。"""
+    T-218 键形先例)∧ base 注册表已登记。"""
     assert INVESTMENT_STRATEGIES['独家代言'].source == 'plaza:331401', \
-        'base 注册表在册(溯源 id 对拍)'
+        'base 注册表已登记(溯源 id 对拍)'
     grant = STRATEGY_GRANTS[_CARD]
     assert grant.equips_immediate == (_TARGET,), \
         '登记行 = 占位选定进阶单件'
@@ -159,12 +159,12 @@ def test_grant_items_registry_and_recipe_consistency() -> None:
     (目标 = 进阶/成员 = 简易)∧ 名单 = 目标的合成配方组件(cross_
     components 派生一致——登记名单与配方库漂移的独立字面量防);
     ``_validate_strategy_grants`` 无装备名校验,本锁为唯一防漂移面。"""
-    assert _TARGET in EQUIPMENTS, '目标在册(词表漂移由 import 哨⑤a 辖)'
+    assert _TARGET in EQUIPMENTS, '目标已登记(词表漂移由 import 哨⑤a 辖)'
     assert EQUIPMENTS[_TARGET].category == '进阶', '目标 = 进阶类'
     assert cross_components(_TARGET) == _MEMBERS, \
         '名单 = 目标配方组件(与合成库派生一致;交叉件两读同值)'
     for n in _MEMBERS:
-        assert n in EQUIPMENTS, f'成员 {n!r} 在册'
+        assert n in EQUIPMENTS, f'成员 {n!r} 已登记'
         assert EQUIPMENTS[n].category == '简易', \
             f'成员 {n!r} = 简易组件(卡面「简易装备」语义前提)'
 
@@ -205,7 +205,7 @@ def test_non_member_items_pass_through(item: str,
     from sr_od.application.currency_war.kernel.cw_effect_inventory import (
         EQUIP_ACQUIRE_CONSEQUENCES,
     )
-    assert item in EQUIPMENTS, f'前提: {item!r} 在册(漂移须随批改)'
+    assert item in EQUIPMENTS, f'前提: {item!r} 已登记(漂移须随批改)'
     assert item not in _MEMBERS, f'前提: {item!r} ∉ 名单集(漂移须随批改)'
     assert item not in EQUIP_ACQUIRE_CONSEQUENCES, '取样前提(零后果隔离)'
     gs = _make_gs(bench=[], equips=[])

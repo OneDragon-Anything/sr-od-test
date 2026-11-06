@@ -28,7 +28,7 @@ _LSIG = ChannelSig(family='logic_action', actor='TestDriver', mode='compute')
 def test_seed_zero_and_snapshot_roundtrip() -> None:
     """种子底座(冷建 0 = 无累积语义中性)+ 快照→恢复类型不变(int 保型
     直通)+ 逐位相等——累积值随快照存续 = 恢复局档位边界不位移(无 done
-    闩的周期型触发器,累积器即跨战结转唯一载体)。"""
+    一次性标志位的周期型触发器,累积器即跨战结转唯一载体)。"""
     seed_gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     seed_opening_state(seed_gs)
     assert seed_gs.strategy_hp_loss_accum.value == 0, '冷建零底座'
@@ -62,5 +62,5 @@ def test_audit_row_declared_process_only() -> None:
         PROJECTION_AUDIT,
     )
     row = PROJECTION_AUDIT.get('strategy_hp_loss_accum')
-    assert row is not None, '登记行在册'
+    assert row is not None, '登记行已登记'
     assert row.status == AUDIT_PROCESS_ONLY, '无观察读端 → process_only'

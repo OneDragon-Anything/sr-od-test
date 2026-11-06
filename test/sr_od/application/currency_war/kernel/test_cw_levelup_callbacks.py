@@ -81,7 +81,7 @@ def sim_armed():
 def _seed_gs(level: int, xp_cur: int, *, strategies: list[str] | None = None,
              with_env: bool = False) -> GameState:
     """裸容器种子(观察链同写入口;bench 9 空槽供 gift 入席断言)。
-    ``strategies`` = 持卡观察种子;``with_env`` = 成功经验在册(锚断言)。"""
+    ``strategies`` = 持卡观察种子;``with_env`` = 成功经验已登记(锚断言)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.observe(gs.level, int(level), evidence='t:seed', sig=_SIG_OBS)
     gs.observe(gs.xp, (int(xp_cur), XP_TO_NEXT_LEVEL.get(int(level), 4)),

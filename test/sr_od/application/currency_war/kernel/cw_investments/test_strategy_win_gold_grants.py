@@ -52,7 +52,7 @@ def test_count_unit_matches_grant_registration() -> None:
 
 
 def test_scope_disclosure_key_registered() -> None:
-    """披露键常量在册且值非空(设计 §4 锁 7 的 kernel 面;触发域 = desc
+    """披露键常量已登记且值非空(设计 §4 锁 7 的 kernel 面;触发域 = desc
     未写明面的建模假设申报,消费 = sim disclosures setdefault,随局形态
     由 sim 链锁承载)。"""
     assert isinstance(STRATEGY_WIN_GOLD_SCOPE_ASSUMPTION, str)

@@ -189,7 +189,7 @@ def test_ore_executor_is_mechanical_payload_clicks(monkeypatch):
         points=(('gold', 12, 34, 50), ('blue', 99, 99, 10))),
                sig=ChannelSig(family='obs', actor='cw4_seed',
                        mode='synthesized'))
-    # logic-rand-sampling 迭代:bench/level 前置守卫在册,须观测方可摘除
+    # logic-rand-sampling 迭代:bench/level 前置守卫已登记,须观测方可摘除
     gs.observe(gs.bench, BenchView(
         slots=[BenchSlot(kind='empty') for _ in range(9)], capacity=9),
         sig=ChannelSig(family='obs', actor='CwScreenPrep'))
@@ -239,7 +239,7 @@ def test_vocab_actions_all_have_logic_state_projection(
     - **合法零写集**:CwActionOpenBoxParam(R7 终结化)/CwActionLuckyTokenUse
       Param(判据面 fail-closed 永不准入,上报零写留证)。
     裁决注记:CwActionWearEquipParam 原在零写集(聚合口形态),上报
-    函数族起穿戴 = 发出即记账 owned −1(在册才减,执行侧效果收编进
+    函数族起穿戴 = 发出即记账 owned −1(已登记才减,执行侧效果收编进
     上报),按新事实移入容器写集;工具六类原在零写集(零写占位),
     tool-gain-report 迭代升格容器写。函数名机械推导(snake 规约同
     test_action_report)。"""
@@ -322,7 +322,7 @@ def test_vocab_actions_all_have_logic_state_projection(
         _report(gs, action)
         assert _seq() > before, f'{type(action).__name__} 应产生容器写'
     # 供数容器重播种(工具循环的消耗/置换不复原;穿戴分支依赖
-    # owned 在册、卖出分支依赖前排 1 号位有单位)。
+    # owned 已登记、卖出分支依赖前排 1 号位有单位)。
     gs.observe(gs.equips, ['轮滑鞋'], sig=_sig)
     gs.observe(gs.deployed, _dvs([Unit(char_id='丙', star=1, equips=[])], []), sig=_sig)
 
@@ -348,7 +348,7 @@ def test_vocab_actions_all_have_logic_state_projection(
         before = _seq()
         _report(gs, action)
         assert _seq() == before, f'{type(action).__name__} 应合法零写'
-    # 穿戴分支单独重播种(布尔契约前置:owned 在册 + 目标角色在册——前序
+    # 穿戴分支单独重播种(布尔契约前置:owned 已登记 + 目标角色已登记——前序
     # 卖出分支已消耗前排;与工具循环同款入场态纪律)。
     gs.observe(gs.equips, ['轮滑鞋'], sig=_sig)
     gs.observe(gs.deployed, _dvs([Unit(char_id='丙', star=1, equips=['轮滑鞋'])], []), sig=_sig)
@@ -1058,7 +1058,7 @@ def _sb_env(ex):
 
 
 def test_start_battle_click_sequence_and_envelope(monkeypatch):
-    """在册例外(点击序列语义)+ 三条弹窗路径 + 包络分支:
+    """已登记例外(点击序列语义)+ 三条弹窗路径 + 包络分支:
 
     - 常规帧:出战一次单击 → True(detail = 已点击无弹窗);零验证
       (无轮询/重试面,单击即完成交回);

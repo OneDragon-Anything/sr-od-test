@@ -441,7 +441,7 @@ def test_held_derived_from_bench_and_deployed_stars() -> None:
 def test_drawable_names_nine_copy_clearance() -> None:
     """≥9 清空 = 发牌过滤(U11):held ≥9 的牌不再进店,即便 1/2 费
     27 副本下剩余仍 >0(两条件不可互替);同态双出口分野:授予出口
-    (grant_bucket_names)无 ≥9 过滤,同卡仍在册。"""
+    (grant_bucket_names)无 ≥9 过滤,同卡仍已登记。"""
     gs = _fresh_gs()
     n1 = chars_by_cost(1)[0].name
     gs.observe(gs.bench, cw4_bview([
@@ -515,7 +515,7 @@ def test_deal_shop_level1_pure_cost1_payload() -> None:
 
 
 def test_deal_shop_level9_domain_and_registered_names() -> None:
-    """Lv9 混档发牌:出场费用档 ⊆ 表内正概率档,名集全部注册表在册
+    """Lv9 混档发牌:出场费用档 ⊆ 表内正概率档,名集全部注册表已登记
     (M06 抽名约束;表外直出 2 星 = 0、3 星 = 0,U12;2★ 注册表分支 =
     ENV_SHOP_TWO_STAR_DEAL_PROB 表外不触发)。"""
     gs = _fresh_gs()

@@ -17,7 +17,7 @@
   (战力类不进经济模型,防未来误加 STRATEGY_ECONOMY 条目或通道误开);
 - 策略默认不选承载锁(本卡特有):变形随机改写羁绊构成,破坏策略预判,
   随机目标效果不入具名打分(「随机发放不可具名,不入具名打分,恒 off」
-  在册先例口径 = invest_effects.md 人才引进条)——选卡具名承载四面全不在
+  已登记先例口径 = invest_effects.md 人才引进条)——选卡具名承载四面全不在
   册(STRATEGY_ECONOMY 现金 / STRATEGY_GRANTS 赠卡 / STANCE_SCORE 立场 /
   STRATEGY_BINDINGS 方向),五组件恒 0 即恒 off;把缺席固化为设计约定,
   防未来误入具名打分表;
@@ -85,7 +85,7 @@ def test_xingbian_unit_buff_registration_surface() -> None:
 def test_xingbian_strategy_valuation_off_by_default() -> None:
     """策略默认不选承载锁(本卡特有):变形随机改写羁绊构成破坏策略预判,
     随机目标效果不入具名打分(「随机发放不可具名,不入具名打分,恒 off」
-    在册先例口径)——选卡估值具名承载四面全不在册,五组件恒 0 即恒 off,
+    已登记先例口径)——选卡估值具名承载四面全未登记,五组件恒 0 即恒 off,
     策略默认实现自然避开本卡(仅全零帧平分裁决可能选中,该形态不属具名
     打分承载);把缺席固化为设计约定,防未来误入任一具名表。"""
     assert _CARD not in STRATEGY_ECONOMY, '不入现金打分表(随机目标不入具名打分)'

@@ -212,7 +212,7 @@ def test_bench_view_of_capacity_aware(monkeypatch) -> None:
 
 def test_bench_read_call_sites_follow_active_capacity(monkeypatch) -> None:
     """双调用点全量接线(只改一处则另一路径残存 9 容量混合态):活跃容量 3
-    (ctx.cw_match.gs 在册容量条目)→ read_bench_view 与
+    (ctx.cw_match.gs 已登记容量条目)→ read_bench_view 与
     read_bench_view_tiered 均直产 3 长 capacity=3 观察视图——观察覆盖
     logic 容量值的缺陷形态不再存在。"""
     from types import SimpleNamespace as _NS

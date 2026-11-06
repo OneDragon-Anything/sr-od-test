@@ -132,7 +132,7 @@ def test_source_c_pick_completion_counting(test_context, monkeypatch) -> None:
 def test_source_c_auto_popup_gate_counts_nothing(
         test_context, monkeypatch) -> None:
     """「自动弹」形态宁缺(T-27 设计 v2.4 复裁:无备战帧形态门关):
-    基座不取(哪怕 gs.gold 在册——自动弹形态其值非本节点备战帧观察,
+    基座不取(哪怕 gs.gold 已登记——自动弹形态其值非本节点备战帧观察,
     禁用)→ 零计数;接管局形态同归宁缺口径。"""
     op, session = _bare_op(test_context, monkeypatch, prep_anchored=False)
     gs = game_state_of(session)
@@ -687,8 +687,8 @@ def test_supply_sim_pick_take_all_fail_closed_latch_bookkeeping(
         test_context, monkeypatch) -> None:
     """全都要·银·sim pick 流 fail-closed 锁(选卡时点检查挂点,真注册表
     派发链全通):sim 局未选集恒 None(机械执行态限定写)→ 持卡局选卡
-    派发后发放侧零写(bench/equips 不变),事件消耗闩照设 = 一笔无害簿记写
-    (A 案,sim 闩笔申报形态);防未来误接线静默改变 sim 行为。"""
+    派发后发放侧零写(bench/equips 不变),事件消耗一次性标志位照置 = 一笔无害簿记写
+    (A 案,sim 一次性标志位写笔申报形态);防未来误接线静默改变 sim 行为。"""
     with _sim_supply_world(test_context, monkeypatch, seed=61) as b:
         _match, _strategy = _sim_match(test_context, monkeypatch, b)
         gs = b.gs
@@ -746,7 +746,7 @@ def test_supply_sim_pick_take_all_color_none_quota_zero_latch(
         assert not any(
             k.startswith('take_all#')
             for k in (gs.strategy_conditional_done.value or ())), (
-            'None 配额卡零闩格(done 域无 take_all# 键,正面断言)')
+            'None 配额卡零配额格(done 域无 take_all# 键,正面断言)')
         assert gs.bench.value == bench_before, '发放侧零写:bench 不变'
         assert list(gs.equips.value) == \
             equips_before + [gs.chosen_supply.value[1][0]], (

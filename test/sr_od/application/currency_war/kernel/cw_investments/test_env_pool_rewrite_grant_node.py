@@ -2,7 +2,7 @@
 (镜像 src = kernel/cw_investments.py 的 `StrategyPoolRewrite.
 extra_strategy_grant_node` 字段与 `_validate_env_pool_rewrite` 增量;按拆
 目录规范落位本目录,先例 = 同目录 test_env_bond_tier_grants.py;offer 通道
-现役闸锁 = kernel/test_cw_investments.py〔在册超限文件,只读复用不追加〕)。
+现役闸锁 = kernel/test_cw_investments.py〔已登记超限文件,只读复用不追加〕)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
 T-46-celue-dashi.md(定稿)§4 锁 4(§2.2(b)/(c)/(d) 落地形态;

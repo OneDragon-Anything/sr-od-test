@@ -11,15 +11,15 @@ sim 结算腿接线与世界真值落地面)。
   ``sim:engine:strategy:boss_clear_value:p<位面>r<轮>``——kernel 触发
   函数内惰性 import sim_evidence(先例 = check_env_star_merge_gold/
   check_strategy_hp_loss_grants 金笔同款;前缀承载 _MISMATCH_SUPPRESS_
-  PREFIXES 失配抑制消费面)+ 闩落(strategy_conditional_
+  PREFIXES 失配抑制消费面)+ 落一次性标志位(strategy_conditional_
   done 纯卡名);
-- 一次性闩:闩落后续位面首领(P2 首领位)再胜零金笔零新闩(「下一个」
-  恰一次,函数内闩自管防跨 boss 重复);
-- 败局存活(won=False)零发放零闩(「通关」= 胜利限定,与武器批发商
+- 一次性标志位:落一次性标志位后续位面首领(P2 首领位)再胜零金笔零新一次性标志位(「下一个」
+  恰一次,函数内一次性标志位自管防跨 boss 重复);
+- 败局存活(won=False)零发放零一次性标志位(「通关」= 胜利限定,与武器批发商
   无胜利限定形对形分化);死亡局(hp_floor_triggered 濒死败局)零发放
-  零闩直接进终局(挂点在死亡提前 return 之后);
+  零一次性标志位直接进终局(挂点在死亡提前 return 之后);
 - 驱动形态 = 出战动作触发结算(2026-10-29 流程模型);引擎驱动助手
-  import 自 sim/test_sim_backend.py(在册超限拆分债文件,禁追加,只
+  import 自 sim/test_sim_backend.py(已登记超限拆分债文件,禁追加,只
   import 复用不改);helper 副本(世界写包装/类型备战驱动/定参结算)
   沿同目录先例自带同语义拷贝。
 """
@@ -181,7 +181,7 @@ def _gold_rows(calls: list[tuple]) -> list[tuple]:
 
 
 def _latch_rows(calls: list[tuple]) -> list[tuple]:
-    """strategy:boss_clear_value 前缀闩写行(strategy_conditional_done
+    """strategy:boss_clear_value 前缀一次性标志位写行(strategy_conditional_done
     字段,evidence 同证据基)。"""
     return [c for c in calls
             if c[1] == 'strategy_conditional_done'
@@ -192,7 +192,7 @@ def test_first_won_boss_gold_and_latch(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """锁 3a(sim 端到端发放真值):持卡局首个 won boss 结算 → 金笔
     恰一笔(obs 族 'sim:strategy' 组,evidence 带结算点时点段,值 =
-    紧邻前一笔 gold 现值 + 板面价值)且闩恰一笔落卡名。"""
+    紧邻前一笔 gold 现值 + 板面价值)且一次性标志位恰一笔落卡名。"""
     b = _prep_backend(85)
     try:
         gs = b.gs
@@ -223,9 +223,9 @@ def test_first_won_boss_gold_and_latch(
         assert row[4] == prev + board_value, \
             f'金值漂移: {row[4]} != {prev}+{board_value}'
         latches = _latch_rows(calls)
-        assert len(latches) == 1, f'闩笔数漂移: {[c[:3] for c in latches]}'
-        assert latches[0][0] == 'logic', '闩 = 逻辑态通道'
-        assert _CARD in (gs.strategy_conditional_done.value or ()), '闩未落'
+        assert len(latches) == 1, f'一次性标志位写笔数漂移: {[c[:3] for c in latches]}'
+        assert latches[0][0] == 'logic', '一次性标志位 = 逻辑态通道'
+        assert _CARD in (gs.strategy_conditional_done.value or ()), '未落一次性标志位'
         assert b.screen_identity() == SCREEN_SETTLE, '结算后应泊结算屏'
     finally:
         uninstall_backend()
@@ -233,8 +233,8 @@ def test_first_won_boss_gold_and_latch(
 
 def test_second_won_boss_no_repeat_after_latch(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
-    """锁 3b(一次性闩跨位面):P1 首领胜局闩落 → 驱动至 P2 首领位再
-    胜 → 零金笔零新闩(「下一个」恰一次;幂等守卫防同战斗重放,闩防
+    """锁 3b(一次性标志位跨位面):P1 首领胜局落一次性标志位 → 驱动至 P2 首领位再
+    胜 → 零金笔零新一次性标志位(「下一个」恰一次;幂等守卫防同战斗重放,一次性标志位防
     跨 boss 重复)。"""
     b = _prep_backend(86)
     try:
@@ -245,27 +245,27 @@ def test_second_won_boss_no_repeat_after_latch(
         _force_settle(monkeypatch, won=True)
         _start_battle_feed(gs)
         assert _CARD in (gs.strategy_conditional_done.value or ()), \
-            '前置:首首领胜局闩未落'
+            '前置:首首领胜局未落一次性标志位'
         calls = _record_world_writes(gs, monkeypatch)
         _drive_to_kind_prep(monkeypatch, b, target_kind='boss')
         assert gs.node.value.plane == 2, \
             f'前置:应达 P2 首领位备战窗(plane={gs.node.value.plane})'
         _force_settle(monkeypatch, won=True)
         _start_battle_feed(gs)
-        # 闩后零重复判据 = 本腿前缀笔零新增(gold 全列表会混入 P2 途程
+        # 一次性标志位后零重复判据 = 本腿前缀笔零新增(gold 全列表会混入 P2 途程
         # 其他收入通道产出,非本腿语义面)。
-        assert _gold_rows(calls) == [], '闩后跨位面首领重复发金'
-        assert _latch_rows(calls) == [], '闩后零新闩笔'
-        assert _CARD in (gs.strategy_conditional_done.value or ()), '闩漂移'
+        assert _gold_rows(calls) == [], '一次性标志位后跨位面首领重复发金'
+        assert _latch_rows(calls) == [], '一次性标志位后零新一次性标志位写笔'
+        assert _CARD in (gs.strategy_conditional_done.value or ()), '一次性标志位漂移'
     finally:
         uninstall_backend()
 
 
 def test_boss_loss_survival_zero_gold_and_latch(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
-    """锁 4a(boss 败局存活零发放):持卡局首领战败未死 → 零金笔零闩
+    """锁 4a(boss 败局存活零发放):持卡局首领战败未死 → 零金笔零一次性标志位
     (「通关」= 胜利限定直读,与武器批发商无胜利限定形对形分化;败局
-    存活泊结算屏,闩未消耗 = 后续首领通关仍可触发)。"""
+    存活泊结算屏,一次性标志位未消耗 = 后续首领通关仍可触发)。"""
     b = _prep_backend(87)
     try:
         gs = b.gs
@@ -277,9 +277,9 @@ def test_boss_loss_survival_zero_gold_and_latch(
         _start_battle_feed(gs)
         assert b.screen_identity() == SCREEN_SETTLE, '败局存活(未进终局)'
         assert _gold_rows(calls) == [], 'boss 败局误发金'
-        assert _latch_rows(calls) == [], 'boss 败局误闩'
+        assert _latch_rows(calls) == [], 'boss 败局误置一次性标志位'
         assert _CARD not in (gs.strategy_conditional_done.value or ()), \
-            '败局闩应未消耗'
+            '败局标志应未消耗'
     finally:
         uninstall_backend()
 
@@ -287,7 +287,7 @@ def test_boss_loss_survival_zero_gold_and_latch(
 def test_dead_battle_zero_gold_and_latch(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """锁 4b(死亡局零发放):保底已用 + 濒死局首领战败 → hp 归零死亡
-    提前 return 在挂点之前,零金笔零闩直接进终局(局终不见发放,与实机
+    提前 return 在挂点之前,零金笔零一次性标志位直接进终局(局终不见发放,与实机
     一致;死亡早退形态仅 sim _resolve_battle 可构造,kernel 镜像不可
     表达)。"""
     b = _prep_backend(88)
@@ -304,8 +304,8 @@ def test_dead_battle_zero_gold_and_latch(
         assert b.done and b.screen_identity() == SCREEN_LOBBY, \
             '败局致死应进终局'
         assert _gold_rows(calls) == [], '死亡局误发金'
-        assert _latch_rows(calls) == [], '死亡局误闩'
+        assert _latch_rows(calls) == [], '死亡局误置一次性标志位'
         assert _CARD not in (gs.strategy_conditional_done.value or ()), \
-            '死亡局误闩'
+            '死亡局误置一次性标志位'
     finally:
         uninstall_backend()

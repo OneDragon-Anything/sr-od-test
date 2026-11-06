@@ -4,7 +4,7 @@ kernel/test_env_grants.py,本文件按被测方法拆目录规范落位)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc
 designs/T-19-laowu-paiqian-hetong.md(定稿)§2.3 + §4.3-§4.5:
-- **全条件矩阵**(八序短路):env 空链/不在册/node_pos None(直构防御,
+- **全条件矩阵**(八序短路):env 空链/未登记/node_pos None(直构防御,
   live hist 未建禁猜)/本节点已发(done 幂等)/绑定缺失(无快照接管局
   形态,宁缺勿造)/bench 未观察(缓发不标 boss 键)/达标发放;
 - **周期性**:序贯两个首领节点坐标(按现役 node_sequence_of 取实际
@@ -112,7 +112,7 @@ def _seed_done() -> tuple[tuple[str, str], ...]:
 def test_condition_matrix_short_circuits(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """条件矩阵前六序短路(T-19 设计 §2.3 条 1-6,§4.3 全矩阵锁):
-    env 空链(None/'')/不在册/node_pos None(直构防御,live hist 未建禁
+    env 空链(None/'')/未登记/node_pos None(直构防御,live hist 未建禁
     猜)/本节点已发(done 幂等)/绑定缺失(无快照接管局形态)→ 全部
     None 且零写。"""
     done_seed = _seed_done()
@@ -122,7 +122,7 @@ def test_condition_matrix_short_circuits(
          (1, boss)),
         ('env 空链(开局种子形态)', _make_gs(env='', bench=[], done=done_seed),
          (1, boss)),
-        ('env 不在册', _make_gs(env='蓝海', bench=[], done=done_seed),
+        ('env 未登记', _make_gs(env='蓝海', bench=[], done=done_seed),
          (1, boss)),
         ('node_pos None(hist 未建禁猜)',
          _make_gs(bench=[], done=done_seed), None),
@@ -153,7 +153,7 @@ def test_binding_missing_no_prefix_key_for_other_env(
 def test_bench_unobserved_withhold_no_done(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """bench 未观察(直构形态防御,T-19 设计 §2.3 条 7):零写且不标
-    boss 键(boss 窗一次性无自动重试 = 该节点漏发,披露面在册)。"""
+    boss 键(boss 窗一次性无自动重试 = 该节点漏发,披露面已登记)。"""
     gs = _make_gs(bench=None, done=_seed_done())
     assert gs.bench.value is None
     calls = _record_writes(gs, monkeypatch)

@@ -163,7 +163,7 @@ def test_zhouzhibanshen_concept_stock_random_equip_leg_unbound_no_done(
     ``env_star_grant:`` 分域)、env_grants_done 零 star_grant# 绑定键
     (非成员零绑定写,治「无条件绑定等第二个消费者」缺陷);装备照常入栏
     且名 ∈ 类别池现算集(equips_by_category('简易') 注册表派生,不手抄;
-    装备先验「昼神送轮滑鞋」随 fixed_hypothesis 家族键在册,零卡级申报)。
+    装备先验「昼神送轮滑鞋」随 fixed_hypothesis 家族键已登记,零卡级申报)。
     两条分支期望值从同 seed 现算(字符分支先掷、装备入账分支同 rng 续掷,与生产消费
     序一致)。"""
     from sr_od.application.currency_war.kernel.cw_investments import (
@@ -219,7 +219,7 @@ def test_yezhibanshen_concept_stock_random_equip_leg_unbound_no_done(
     (非成员零绑定写,治「无条件绑定等第二个消费者」缺陷);装备照常入栏
     且名 ∈ 类别池现算集(equips_by_category('简易') 注册表派生,不手抄;
     economy.md 四卡线索名单不含夜之半神 = 装备身份零先验,均匀 v0 + 按
-    卡固定假说待校准随 fixed_hypothesis 家族键在册,零卡级申报)。两条分支
+    卡固定假说待校准随 fixed_hypothesis 家族键已登记,零卡级申报)。两条分支
     期望值从同 seed 现算(字符分支先掷、装备入账分支同 rng 续掷,与生产消费
     序一致)。"""
     from sr_od.application.currency_war.kernel.cw_investments import (
@@ -278,7 +278,7 @@ def test_jipo_concept_stock_random_equip_leg_unbound_no_done(
     (非成员零绑定写,治「无条件绑定等第二个消费者」缺陷);装备照常
     入栏且名 ∈ 类别池现算集(equips_by_category('简易') 注册表派生,
     不手抄;economy.md 四卡线索名单不含击破 = 装备身份零先验,均匀 v0 +
-    按卡固定假说待校准随 fixed_hypothesis 家族键在册,零卡级申报)。两条
+    按卡固定假说待校准随 fixed_hypothesis 家族键已登记,零卡级申报)。两条
     分支期望值从同 seed 现算(字符分支先掷、装备入账分支同 rng 续掷,与
     生产消费序一致)。"""
     from sr_od.application.currency_war.kernel.cw_investments import (
@@ -335,7 +335,7 @@ def test_qungong_concept_stock_random_equip_branch_unbound_no_done(
     (非成员零绑定写,治「无条件绑定等第二个消费者」缺陷);装备照常
     入栏且名 ∈ 类别池现算集(equips_by_category('简易') 注册表派生,
     不手抄;economy.md 四卡线索名单不含群攻 = 装备身份零先验,均匀 v0 +
-    按卡固定假说待校准随 fixed_hypothesis 家族键在册,零卡级申报)。两条
+    按卡固定假说待校准随 fixed_hypothesis 家族键已登记,零卡级申报)。两条
     分支期望值从同 seed 现算(字符分支先掷、装备入账分支同 rng 续掷,与
     生产消费序一致)。"""
     from sr_od.application.currency_war.kernel.cw_investments import (
@@ -394,7 +394,7 @@ def test_jianyi_concept_stock_random_equip_branch_unbound_no_done(
     (非成员零绑定写,治「无条件绑定等第二个消费者」缺陷);装备照常
     入栏且名 ∈ 类别池现算集(equips_by_category('简易') 注册表派生,
     不手抄;economy.md 四卡线索名单不含减益 = 装备身份零先验,均匀 v0 +
-    按卡固定假说待校准随 fixed_hypothesis 家族键在册,零卡级申报)。两条
+    按卡固定假说待校准随 fixed_hypothesis 家族键已登记,零卡级申报)。两条
     分支期望值从同 seed 现算(字符分支先掷、装备入账分支同 rng 续掷,与
     生产消费序一致)。"""
     from sr_od.application.currency_war.kernel.cw_investments import (
@@ -457,7 +457,7 @@ def test_zhanjidian_concept_stock_random_equip_branch_unbound_no_done(
     (非成员零绑定写,治「无条件绑定等第二个消费者」缺陷);装备照常
     入栏且名 ∈ 类别池现算集(equips_by_category('简易') 注册表派生,
     不手抄;economy.md 四卡线索名单不含战技点 = 装备身份零先验,均匀 v0 +
-    按卡固定假说待校准随 fixed_hypothesis 家族键在册,零卡级申报)。两条
+    按卡固定假说待校准随 fixed_hypothesis 家族键已登记,零卡级申报)。两条
     分支期望值从同 seed 现算(字符分支先掷、装备入账分支同 rng 续掷,与
     生产消费序一致)。"""
     from sr_od.application.currency_war.kernel.cw_investments import (

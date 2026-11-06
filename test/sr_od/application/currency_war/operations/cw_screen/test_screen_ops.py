@@ -1,12 +1,12 @@
-"""CW 屏 op 行为测试面(战斗等待败局闩键门 + 选择伙伴选选流序)。
+"""CW 屏 op 行为测试面(战斗等待败局标志键门 + 选择伙伴选选流序)。
 
 两节归并自原两个主题文件(测试函数名全量保留,原文件已删):
 
-1. 战斗等待 op 败局闩键门(原 test_cw_battle_wait_defeat_latch.py;
+1. 战斗等待 op 败局标志键门(原 test_cw_battle_wait_defeat_latch.py;
    判据面 = 迭代 2026-10-12-abolish-node-ordinal landing §3.3 + 设计
    §2.11 测试 7):键门 (位面, 轮) >= (2,5) 与旧 9 制序数门 (p-1)*9+r >= 14
    在边界值上逐值同判(含修饰局 (1,10) 形态),另两臂语义保持(负分量
-   缺席不置闩 / 容器节点读口未观察 fail-closed 不置闩);
+   缺席不置一次性标志位 / 容器节点读口未观察 fail-closed 不置一次性标志位);
 2. 选择伙伴选选流序(原 test_cw_partner_select_confirm_flow.py;事故
    机制单一源 = docs/game/screens/currency_war_choose_partner.md:旧
    「选中态 gate」全屏 OCR「已选择」恒误命中 → op 每轮只点置灰确认钮 →
@@ -45,7 +45,7 @@ from sr_od.application.currency_war.operations.cw_screen.cw_screen_partner impor
 )
 
 # ============================================================
-# 1. 战斗等待 op 败局闩键门
+# 1. 战斗等待 op 败局标志键门
 # ============================================================
 
 _SIG_OBS = ChannelSig(family='obs', actor='TestDefeatLatch', mode='read')
@@ -72,9 +72,9 @@ def _make_op(test_context, monkeypatch) -> CwScreenBattleWait:
 @pytest.mark.parametrize('pos', [(1, 10), (2, 1), (2, 4), (2, 5)])
 def test_lock7_defeat_latch_gate_matches_old_t_gate(
         test_context, monkeypatch, pos) -> None:
-    """败局闩键门与旧 t 门逐值对拍(设计 §2.11 测试 7):旧门
+    """败局标志键门与旧 t 门逐值对拍(设计 §2.11 测试 7):旧门
     (p-1)*9+r >= 14 在边界值上的判定 = 新键门 (p,r) >= (2,5) 的实际
-    置闩行为,逐值不分叉。"""
+    置一次性标志位行为,逐值不分叉。"""
     old_t = (pos[0] - 1) * 9 + pos[1]
     expected = old_t >= 14
     op = _make_op(test_context, monkeypatch)
@@ -89,8 +89,8 @@ def test_lock7_defeat_latch_gate_matches_old_t_gate(
 
 
 def test_lock7_latch_requires_neg_and_node(test_context, monkeypatch) -> None:
-    """门另两臂语义保持:面板负分量缺席不置闩(序位过门也不置);
-    节点未观察(容器 node 读口 None)fail-closed 不置闩。"""
+    """门另两臂语义保持:面板负分量缺席不置一次性标志位(序位过门也不置);
+    节点未观察(容器 node 读口 None)fail-closed 不置一次性标志位。"""
     op = _make_op(test_context, monkeypatch)
     gs = game_state_of(test_context.cw_match.session)
     gs.observe(gs.node, NodeKey(plane=2, round_num=5, kind='battle'),

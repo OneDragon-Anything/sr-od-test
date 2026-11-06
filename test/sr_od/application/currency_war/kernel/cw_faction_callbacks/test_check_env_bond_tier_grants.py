@@ -9,7 +9,7 @@ grants``,发放原语 = ``cw_env_grants.grant_env_bond_tier``):
   equips 走 write_logic_rand / done 走 write_logic);
 - 单窗跨两档各 1 件(两对写,evidence 各带档位);
 - 每档一次性:降档再回零新增写(用户裁定「每个档位只发一次奖励」);
-- equips None 跳过后,不改任何 watched 集的板面写(卖非在册阵营场上件)
+- equips None 跳过后,不改任何 watched 集的板面写(卖非已登记阵营场上件)
   重试补发(sets-changed 门外的必查语义,判据挂点锁);
 - 阈值边界:计数 1(2/4/6/9 全不达)零写;
 - L2 装备贡献锁:非击破出身穿【击破星徽】→ 计数达标触发;
@@ -95,7 +95,7 @@ def _grant_rows(calls: list[tuple]) -> list[tuple]:
 
 def test_no_env_and_other_env_zero_writes(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """无环境(active_env 未选)/ 环境非加拉赫(在册但无表条目)→
+    """无环境(active_env 未选)/ 环境非加拉赫(已登记但无表条目)→
     零写零 done。"""
     for label, gs in (('无环境', _gs(equips=[])),
                       ('环境不在表', _gs(env='蓝海', equips=[]))):
@@ -171,7 +171,7 @@ def test_once_per_tier_downgrade_reup_no_regrant(
 def test_equips_none_withhold_then_board_write_retry(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """equips None 跳过(宁缺勿造,零写零 done)后,不改任何 watched 集
-    的板面写(卖非在册阵营场上件,击破计数不动)重试补发——sets-changed
+    的板面写(卖非已登记阵营场上件,击破计数不动)重试补发——sets-changed
     门辖不到的写,门外必查分支兜住(判据挂点锁,接回门内本测试即红)。"""
     gs = _gs(env=_ENV)   # equips 未写 = None
     _write_dep(gs, [_u('乱破'), _u('大丽花'), _u('希儿')])

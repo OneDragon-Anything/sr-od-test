@@ -1,6 +1,6 @@
 """cw_game_state 回放守恒测试(镜像 src = kernel/cw_game_state.py 的
 restore_state_snapshot._bench_view / full_state_snapshot 往返;同 src 兄弟
-测试 = kernel/test_game_state.py 容器机制正名主题文件〔在册文件,主题不同
+测试 = kernel/test_game_state.py 容器机制正名主题文件〔已登记文件,主题不同
 不混写〕)。
 
 测试面依据 = 迭代 T-39 专家研讨会设计(.debug/progress/2026-09-23-invest-
@@ -74,7 +74,7 @@ def test_snapshot_restore_round_trip_item_per_slot() -> None:
         assert (b.kind, b.item) == (o.kind, o.item), \
             f'槽{i} kind+item 逐位保真: {(b.kind, b.item)} != {(o.kind, o.item)}'
     assert back[1].item == '专家邀请函' and back[2].item == '简易武装箱' \
-        and back[3].item == '星徽秘典', '道具三轴名字逐一在册'
+        and back[3].item == '星徽秘典', '道具三轴名字逐一已登记'
 
 
 def test_restore_legacy_slot_without_item_key_tolerated() -> None:

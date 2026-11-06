@@ -104,14 +104,14 @@ def test_leg1_replay_no_double_grant() -> None:
              equips=[])
     check_strategy_gift_grants(gs, node_kind='battle', sig=_LSIG)
     out = check_strategy_gift_grants(gs, node_kind='battle', sig=_LSIG)
-    assert out == (), '闩后零发放'
+    assert out == (), '一次性标志位后零发放'
     assert _units(gs).count((_CHAR_L1, 2)) == 1, '黄泉不双发'
     assert gs.equips.value.count(_EQUIP) == 1, '徽不双发'
     assert gs.strategy_grants_done.value == (_LATCH_L1,), '封账不追加'
 
 
 def test_leg1_below_threshold_no_write_no_latch() -> None:
-    """锁 2 负锁:3 巡海游侠(差 1)→ 零写零闩(条件未满足下窗重查,
+    """锁 2 负锁:3 巡海游侠(差 1)→ 零写零一次性标志位(条件未满足下窗重查,
     与 done 已发短路不同,未达条件永驻重查)。"""
     gs = _gs(cards=[_CARD], deployed=list(_RAIDER_FOUR[:3]), bench=[],
              equips=[])
@@ -133,15 +133,15 @@ def test_leg1_bench_same_name_not_counted() -> None:
 
 def test_leg1_unobserved_containers_fail_closed() -> None:
     """锁 2 宁缺勿造:deployed 未观察(计数不可评估)/ equips 未观察
-    (徽与角色拆拍引双发面,原子同窗)→ 零写零闩,下窗自愈。"""
+    (徽与角色拆拍引双发面,原子同窗)→ 零写零一次性标志位,下窗自愈。"""
     gs = _gs(cards=[_CARD], bench=[], equips=[])
     out = check_strategy_gift_grants(gs, node_kind='battle', sig=_LSIG)
     assert out == () and gs.strategy_grants_done.value in (None, ()), \
-        'deployed 未观察零写零闩'
+        'deployed 未观察零写零一次性标志位'
     gs2 = _gs(cards=[_CARD], deployed=list(_RAIDER_FOUR), bench=[])
     out2 = check_strategy_gift_grants(gs2, node_kind='battle', sig=_LSIG)
     assert out2 == () and gs2.strategy_grants_done.value in (None, ()), \
-        'equips 未观察零写零闩(原子宁缺勿造)'
+        'equips 未观察零写零一次性标志位(原子宁缺勿造)'
     assert _units(gs2) == [], '角色不落位'
 
 
@@ -194,7 +194,7 @@ def test_leg2_no_card_and_replay_guards() -> None:
 
 
 def test_leg2_legs_independent_latches() -> None:
-    """两条效果条目闩独立:效果条目1 已发不封效果条目2(reward 窗两条效果条目各闩各的,复合键各段
+    """两条效果条目一次性标志位独立:效果条目1 已发不封效果条目2(reward 窗两条效果条目各置各的一次性标志位,复合键各段
     独立;反向同里)。"""
     gs = _gs(cards=[_CARD], deployed=list(_RAIDER_FOUR), bench=[],
              equips=[])
@@ -207,16 +207,16 @@ def test_leg2_legs_independent_latches() -> None:
 
 
 def test_leg2_bench_unobserved_no_latch_retry_selfheal() -> None:
-    """锁 3 拒落自愈:bench 未观察 → gain_character 拒落零写不闩
-    (placed 才闩,观察到位后下窗重试)。"""
+    """锁 3 拒落自愈:bench 未观察 → gain_character 拒落零写不落一次性标志位
+    (placed 才一次性标志位,观察到位后下窗重试)。"""
     gs = _gs(cards=[_CARD])
     out = check_strategy_gift_grants(gs, node_kind='reward', sig=_LSIG)
     assert out == () and gs.strategy_grants_done.value in (None, ()), \
-        '拒落零写零闩'
+        '拒落零写零一次性标志位'
 
 
 def test_raider_faction_threshold_is_registry_truth() -> None:
-    """判据档位注册表锚:「激活4」= FACTIONS 巡海游侠 tiers 4 人档在册
+    """判据档位注册表锚:「激活4」= FACTIONS 巡海游侠 tiers 4 人档已登记
     (表值 4 与注册表档位一致,判据人数非凭空常量)。"""
     from sr_od.application.currency_war.data.cw_factions import FACTIONS
     from sr_od.application.currency_war.kernel.cw_investments import (
@@ -225,4 +225,4 @@ def test_raider_faction_threshold_is_registry_truth() -> None:
     faction, threshold, _char, _star, _equip = \
         STRATEGY_FACTION_COUNT_GRANTS[_CARD]
     assert threshold in FACTIONS[faction].tiers, \
-        '判据人数 = FACTIONS 真实档位(4 人档在册)'
+        '判据人数 = FACTIONS 真实档位(4 人档已登记)'

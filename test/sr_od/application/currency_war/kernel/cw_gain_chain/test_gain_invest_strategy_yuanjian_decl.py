@@ -10,7 +10,7 @@ test_gain_invest_strategy_pick_grant.py)。
 - 非名单卡闭集零行:注册表派生对照(代表卡跨三品质 + 腿② granted 金名
   场景)零申报行——名单单一源 = STRATEGY_RANDOM_GRANTS,表外卡获得
   零掷骰语义,行为 fail-closed 同构(ENV_REROLL_DECL 实机(live)和模拟器(sim)两边分道先例)。
-构造沿现役获得链测试先例:GameState 直构(取安静未收录卡/注册表在册
+构造沿现役获得链测试先例:GameState 直构(取安静未收录卡/注册表已登记
 卡,席位/道具/效果域零触碰)。
 """
 from __future__ import annotations
@@ -76,7 +76,7 @@ def test_non_member_zero_rows(_isolate_defect_buffer) -> None:
     set_defect_sink(rows.append)
     representatives = [
         '随便一张未收录卡',                      # 安静未收录卡(先例构造)
-        '躺平',                                  # 现役在册卡(银)
+        '躺平',                                  # 现役已登记卡(银)
         '免费午餐',                              # 金池 ∩ STRATEGY_EFFECTS
         '这么大的钻石',                          # 棱彩(宝钻联动卡)
     ]

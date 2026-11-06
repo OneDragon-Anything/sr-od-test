@@ -9,7 +9,7 @@ test_strategy_jianyi_grants.py 减益星徽)。
 §4(REVIEW-T227 免裁 7/7;卡面官方原文双具名直读;效果条目1 rand=False 策略
 卡侧具名效果条目通道归属;效果条目2 卡芙卡 1★ 先验家族口径):
 
-- 登记单一源:组合行在册;泛化随机表零条目;
+- 登记单一源:组合行已登记;泛化随机表零条目;
 - 行为链真值:确定入口 → equips 恰 +1 徽、bench 恰 +1 卡芙卡、
   效果串两条前缀分域、零随机面。
 """
@@ -52,7 +52,7 @@ def _make_gs(*, bench: list[tuple[str, int]] | None = None,
 
 
 def test_chixu_registry_row_single_source() -> None:
-    """登记单一源:组合行在册;泛化随机表零条目;id 对拍 plaza:220801。"""
+    """登记单一源:组合行已登记;泛化随机表零条目;id 对拍 plaza:220801。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
         _STRATEGY_RANDOM_EQUIP_GRANTS,
         PICK_INVEST_EFFECTS,
@@ -60,7 +60,7 @@ def test_chixu_registry_row_single_source() -> None:
     from sr_od.application.currency_war.kernel.cw_investments import (
         INVESTMENT_STRATEGIES,
     )
-    assert _CARD in PICK_INVEST_EFFECTS, '组合行在册'
+    assert _CARD in PICK_INVEST_EFFECTS, '组合行已登记'
     assert _CARD not in _STRATEGY_RANDOM_EQUIP_GRANTS, '双具名非随机族'
     assert INVESTMENT_STRATEGIES[_CARD].source == 'plaza:220801', \
         '注册行 id 对拍'

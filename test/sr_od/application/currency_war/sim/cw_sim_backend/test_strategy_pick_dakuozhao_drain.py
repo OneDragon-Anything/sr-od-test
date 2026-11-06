@@ -1,5 +1,5 @@
 """sim 大扩招扣金负腿测试(镜像 src = sim/cw_sim_backend.py 的选卡落地拍
-扣金腿 + 呈现闩;先例 = 本目录 test_strategy_hyperemit_sim_chain.py
+扣金腿 + 呈现一次性标志位;先例 = 本目录 test_strategy_hyperemit_sim_chain.py
 〔超发货币负债腿,负金腿最同构先例〕同形态)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-197-dakuozhao.
@@ -10,8 +10,8 @@ md §3 锁 3 + 锁 6(sim 侧对拍) + REVIEW-T197 八裁决点默认案:
   sim 侧,与获得链随机角色腿发放只数同函数单一源);
 - 零金兜底(锁 3 伴随):持金 0 拿卡 → (0, 0) 零写零笔(金证据笔
   保持种子笔);
-- 呈现闩防重放(锁 3 伴随):同声明复喂 → 零动作零噪声(扣金非幂等,
-  重放多扣一笔,闩使重放零写)。
+- 呈现一次性标志位防重放(锁 3 伴随):同声明复喂 → 零动作零噪声(扣金非幂等,
+  重放多扣一笔,一次性标志位使重放零写)。
 
 复用声明:引擎驱动助手 import 自本目录 test_strategy_hyperemit_sim_chain.py
 (拆分镜像文件,只 import 复用不改)。
@@ -90,9 +90,9 @@ def test_zero_gold_no_write_no_entry(
 
 def test_replay_same_declaration_zero_write(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """呈现闩防重放(锁 3 伴随;先例 = 超发货币重放同形):同 offer 落地
+    """呈现一次性标志位防重放(锁 3 伴随;先例 = 超发货币重放同形):同 offer 落地
     声明复喂 → 第二次零动作(金证据笔保持首笔、金值不再变——扣金非幂等,
-    闩使重放零写零噪声)。"""
+    一次性标志位使重放零写零噪声)。"""
     _force_settle(monkeypatch, won=True)
     b = _backend()
     try:

@@ -9,10 +9,10 @@ T-105/T-283 sim 锁先例):
 
 - 世界写锁:battle 位窗开 gold≥180 → node_seq_by_plane 整表改写 logic 写
   (evidence 'sim:engine:node_seq:strategy',sig 组 'sim:strategy')+
-  strategy_conditional_done 纯卡名闩同拍追加;当前位 kind 不变
+  strategy_conditional_done 纯卡名一次性标志位同拍追加;当前位 kind 不变
   (改写不含当前位,本窗收尾重读零失真);
 - 短路锁:reward 位窗开 / gold<180 → 零策略写;
-- 幂等锁:闩置位后任意窗开零新增策略写;
+- 幂等锁:一次性标志位置位后任意窗开零新增策略写;
 - 消费跟随锁:改写后 sequence_next 与节点窗 kind 取值按新序列。
 """
 from __future__ import annotations
@@ -70,7 +70,7 @@ def _strategy_writes(calls: list[tuple]) -> list[tuple]:
 def test_battle_window_rewrites_world_and_latches(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """世界写锁主条:P1r3(battle)窗开 gold=200 → 场字段整表改写 + 纯卡名
-    闩同拍;当前位 kind 保持 battle(窗收尾重读零失真);两笔写 sig 组
+    一次性标志位同拍;当前位 kind 保持 battle(窗收尾重读零失真);两笔写 sig 组
     'sim:strategy' logic 族。"""
     b = _setup()
     try:
@@ -79,7 +79,7 @@ def test_battle_window_rewrites_world_and_latches(
         calls = _record_all_writes(gs, monkeypatch)
         b._enter_node_window((1, 3))
         writes = _strategy_writes(calls)
-        assert len(writes) == 2, f'本腿恰两笔写(改写+闩): {writes!r}'
+        assert len(writes) == 2, f'本腿恰两笔写(改写+一次性标志位): {writes!r}'
         assert all(c[3].group_id == 'sim:strategy'
                    and c[3].family == 'logic_action' for c in writes), \
             '本腿写均 logic 族组 sim:strategy'
@@ -90,7 +90,7 @@ def test_battle_window_rewrites_world_and_latches(
             f'P1 改写形(当前位 r3 保留): {seqs[1]!r}'
         assert seqs[2][6] == 'boss' and seqs[3][6] == 'boss', 'boss 位保留'
         assert _CARD in (gs.strategy_conditional_done.value or ()), \
-            '闩追加(纯卡名键)'
+            '一次性标志位追加(纯卡名键)'
     finally:
         uninstall_backend()
 
@@ -125,8 +125,8 @@ def test_gold_below_threshold_no_rewrite(
 
 
 def test_latch_prevents_second_fire(monkeypatch: pytest.MonkeyPatch) -> None:
-    """幂等锁:改写命中后再进任意窗 → 零新增策略写(闩命中;改写后剩余
-    槽位无 battle 位,重入天然零操作,闩仅省同值冗余写)。"""
+    """幂等锁:改写命中后再进任意窗 → 零新增策略写(一次性标志位命中;改写后剩余
+    槽位无 battle 位,重入天然零操作,一次性标志位仅省同值冗余写)。"""
     b = _setup()
     try:
         gs = b.gs
@@ -135,7 +135,7 @@ def test_latch_prevents_second_fire(monkeypatch: pytest.MonkeyPatch) -> None:
         b._enter_node_window((1, 3))
         assert len(_strategy_writes(calls)) == 2, '前置:首窗命中两笔'
         b._enter_node_window((1, 4))
-        assert len(_strategy_writes(calls)) == 2, '闩后窗开零新增策略写'
+        assert len(_strategy_writes(calls)) == 2, '一次性标志位后窗开零新增策略写'
     finally:
         uninstall_backend()
 

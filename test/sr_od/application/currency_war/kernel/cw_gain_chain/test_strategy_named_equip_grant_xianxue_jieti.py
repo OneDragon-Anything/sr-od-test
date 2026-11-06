@@ -104,7 +104,7 @@ def test_xianxue_jieti_grant_leg_places_equipment(
     ∉ 后果表(破前提时获得后果链追加效果串与写入——守卫先红,勿盲改)。"""
     assert _ITEM not in EQUIP_ACQUIRE_CONSEQUENCES, \
         '斩首行动 ∉ 后果表(单条效果串前提)'
-    assert _CARD in PICK_INVEST_EFFECTS, '登记面在册'
+    assert _CARD in PICK_INVEST_EFFECTS, '登记面已登记'
     gs = _make_gs(equips=[])
     gs.prep_anchored = True
     seq_before = gs.write_seq

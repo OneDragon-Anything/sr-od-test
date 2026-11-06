@@ -34,7 +34,7 @@ def test_conversion_rows_single_source() -> None:
     - 自由市场行:「将要获得一件简易装备」→ 源类别简易,「改为获得1个
       【简易武装箱】」→ 目标占席道具(id 130601 ↔ plaza:130601);
     - 好运来行(装备目标分支首例):「合成与获得进阶装备时，改为获得
-      一个【好运令牌】」的获得腿 → 源类别进阶、目标装备注册表在册
+      一个【好运令牌】」的获得腿 → 源类别进阶、目标装备注册表已登记
       工具类物(id 231601 ↔ plaza:231601);卡面合成腿不走获得链零建模;
     - 独家代言行(名单集源形首例):「你获得组成该装备的简易装备时，
       改为获得该进阶装备」→ 源 = 配方组件名单元组(成员判)、目标 =
@@ -52,7 +52,7 @@ def test_conversion_rows_single_source() -> None:
     source_cat, target = STRATEGY_EQUIP_GAIN_CONVERSIONS['好运来']
     assert (source_cat, target) == ('进阶', '好运令牌'), '行值 = 卡面直读'
     assert equips_by_category(source_cat), '源类别池非空(数据性质)'
-    assert target in EQUIPMENTS, '目标 = 装备注册表在册物(装备分支)'
+    assert target in EQUIPMENTS, '目标 = 装备注册表已登记物(装备分支)'
     assert EQUIPMENTS[target].category == '工具', \
         '转换产物 = 工具类装备(非占席道具、非占源类别)'
     assert INVESTMENT_STRATEGIES['好运来'].source == 'plaza:231601', \
@@ -72,7 +72,7 @@ def test_conversion_rows_single_source() -> None:
 def test_target_domain_disjoint_no_self_reference() -> None:
     """数据性质(防自指,治理口径归测试与评审非 import 校验):目标名不
     属源集——若目标 ∈ 源类别池/名单集,转换产物再入装备域会形成转换环;
-    现值目标域两分支并存(占席道具 + 装备注册表在册物),逐行按源形分派
+    现值目标域两分支并存(占席道具 + 装备注册表已登记物),逐行按源形分派
     验证(装备分支行 = 好运来:产物工具类 ∉ 进阶池;独家代言:产物
     以牙还牙甲 ∉ 配方组件名单,即使误重入零再转换,不重入主防线 =
     守卫直落不重查)。"""

@@ -7,7 +7,7 @@ test_strategy_named_equip_grant_quanwuxing.py 全武行)。
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-249 对应稿
 §4 锁面(REVIEW-T249 免裁 5/5;卡面官方原文:「获得一个【金垃圾袋】，它
 提供大量属性和15金币。」——效果条目1 具名金垃圾袋确定发放;「大量属性和15金币」
-= 装备携带形态战力面 + 金腿 STRATEGY_ECONOMY instant_gold=15 在册零改动):
+= 装备携带形态战力面 + 金腿 STRATEGY_ECONOMY instant_gold=15 已登记零改动):
 
 - 行为链真值:确定入口 → equips 恰 +1 金垃圾袋、步串恰 1 条
   ``named_equip_grant:金垃圾袋(placed=True)``、零随机面。

@@ -6,7 +6,7 @@
 huobi.md §3 锁 8(REVIEW-T191 §四④ 基线修正:活体 46 + 本卡 = **47**,
 禁按设计稿 14/15 动刀)。实码原无任何 STRATEGY_EFFECTS 键集断言(设计稿
 轮 1 F1 全测试仓反查实证)——本闭集锁「注册即红防静默漏登记」:新增/删改
-条目键必须显式过本断言,静默漏登记(卡在册无条目 = 获得链登记分支永不
+条目键必须显式过本断言,静默漏登记(卡已登记无条目 = 获得链登记分支永不
 命中)即红。
 
 键序 = 注册表字典序(登记序);全等形态连「意外多出的申报键」同红。
@@ -108,7 +108,7 @@ def test_strategy_effects_keyset_closed() -> None:
 
 def test_strategy_effects_keys_unique_ids() -> None:
     """伴生锁:规范键条目 id 唯一(同卡两条效果条目申报键除外——全都要·银/金/彩#
-    supply_delta 与 canon 键同 id 系在册申报形态,非漂移)。"""
+    supply_delta 与 canon 键同 id 系已登记申报形态,非漂移)。"""
     ids: dict[str, str] = {}
     for key, spec in STRATEGY_EFFECTS.items():
         if '#' in key:

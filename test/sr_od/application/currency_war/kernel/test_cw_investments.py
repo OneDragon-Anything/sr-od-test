@@ -81,7 +81,7 @@ def test_zhanli_biaosheng_registration_and_full_cost_pool() -> None:
     """战力飙升登记不变量(T-37 设计 §4 锁 1/2):∈ ENV_GIFTS 且 ∉
     ENV_ECONOMY(import 期互斥校验半边显式断言);登记规格 = 卡面直读
     (2 费/2★/无类型词 → type_tag 空);池 = 2 费全档注册表现算双射——
-    池名 ⊆ 注册表;爻光费用勘误 2→1(注册表在册)自动不入池(勘误件
+    池名 ⊆ 注册表;爻光费用勘误 2→1(注册表已登记)自动不入池(勘误件
     防呆断言);池规模 = 注释性快照(2026-10 时点 15 名),非断言值。"""
     assert '战力飙升' in ENV_GIFTS
     assert '战力飙升' not in ENV_ECONOMY
@@ -127,9 +127,9 @@ def test_env_reroll_names_member_validation(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """追加随机环境名单成员校验(设计 §4 测试 1):成员 ∉ INVESTMENT_ENVS
     → 校验炸(防注册表改名/移除后名单静默失联——失联形态 = sim 掷骰永不
-    中、live 永不申报);现役成员(蓝海)在册通过。注入 + 直调沿本文件
+    中、live 永不申报);现役成员(蓝海)已登记通过。注入 + 直调沿本文件
     ENV_GIFTS 校验测试惯用法(import 期调用,重触 = 直调校验函数)。"""
-    # 现役成员:直调现值表零炸 + 全员在册
+    # 现役成员:直调现值表零炸 + 全员已登记
     cw_investments._validate_env_reroll_names()
     assert set(INVESTMENT_ENVS) >= ENV_REROLL_NAMES
     assert '蓝海' in ENV_REROLL_NAMES
@@ -219,7 +219,7 @@ def test_strategy_scope_multi_faction_char_expansion() -> None:
 
 
 def test_scope_unbound_and_unregistered_empty() -> None:
-    """无绑定/未注册 → 空集(通用卡,护栏不辖):打捞人才库(注册表在册、
+    """无绑定/未注册 → 空集(通用卡,护栏不辖):打捞人才库(注册表已登记、
     STRATEGY_BINDINGS 无条目);未注册策略名;未注册环境名(§4 清单)。"""
     assert '打捞人才库' in INVESTMENT_STRATEGIES
     assert strategy_faction_scope('打捞人才库') == frozenset()
@@ -318,8 +318,8 @@ def test_env_pool_rewrite_offer_node_gate(
     位面 ∈ PLANE_NODE_TABLES 且轮次 ≤ 该位面序列长——越界 (2,9)(超
     P2 序列长 7)与位面不在表 (4,1) 均炸(登记笔误 import 期响,防 sim
     挂点比对静默恒 False);合法 (3,5) 放行(策略大师同构卡将按此登记);
-    现表直调通过 = 联席决策 (2,6) 在册回归。"""
-    # 现表回归:联席决策 (2,6) 在册,直调零炸
+    现表直调通过 = 联席决策 (2,6) 已登记回归。"""
+    # 现表回归:联席决策 (2,6) 已登记,直调零炸
     cw_investments._validate_env_pool_rewrite()
     assert ENV_POOL_REWRITE['联席决策'].extra_strategy_offer_node == (2, 6)
     # 合法挂点放行(P3 序列长 7,3-5 在表内)
@@ -391,7 +391,7 @@ def test_env_pool_rewrite_slot_qualities_gates(
     """槽位品质词集哨锁(import 即炸语义,注入 + 直调沿本文件惯用法;
     2026-10-28 治理后形态:同有同无/长度恒 3/双型互斥属防登记笔误类,
     校验随删——词集哨留,错字与版本增删品质都表现为词集外)。现表直调
-    通过 = 银·金·彩在册回归。"""
+    通过 = 银·金·彩已登记回归。"""
     cw_investments._validate_env_pool_rewrite()
     # 品质不在词集 → 炸
     bad_vocab = dict(ENV_POOL_REWRITE)
@@ -1356,12 +1356,12 @@ def test_force_refresh_overlay_single_source_payload() -> None:
 
 
 def test_salvage_registration_surface() -> None:
-    """打捞人才库登记面锁(BATTLEFIELD 载体 + SUPPLY_PHASE 触发首个在册
+    """打捞人才库登记面锁(BATTLEFIELD 载体 + SUPPLY_PHASE 触发首个已登记
     条目 + pending 保守支;构建校验孤儿键/id 双匹配 import 期已过——
     本测试存活即证):payload = BattlefieldEffect 专字段(不入 Economy,
     避开经济三分类闭集义务)∧ category 同族;pending=True 必带 notes
-    保守支声明(R-entry 读法);SUPPLY_PHASE 枚举成员在册引用(防静默
-    移除——该枚举值全仓唯一在册条目即本卡);基础卡无经济腿
+    保守支声明(R-entry 读法);SUPPLY_PHASE 枚举成员已登记引用(防静默
+    移除——该枚举值全仓唯一已登记条目即本卡);基础卡无经济腿
     (STRATEGY_ECONOMY 零条目,发放物 = 世界既有列非经济流)。"""
     spec = STRATEGY_EFFECTS['打捞人才库']
     cw_investments._validate_strategy_effects()   # 构建校验复跑不炸
@@ -1383,8 +1383,8 @@ def test_salvage_plus_registration_surface() -> None:
     (同 payload 同 trigger 双条目一致性——机制单一源 = 基础卡+检查函数,
     本条目纯登记零新设计);pending=True 带 notes 三面拆分声明(主腿
     R-entry 沿基础卡 / 句2 装备腿归 PICK_INVEST_EFFECTS 时点保守支
-    R-instant / 句2 金腿 instant_gold=4 在册零动,发放端缺口族级待办);
-    经济腿在册零动(STRATEGY_ECONOMY instant_gold=4)。"""
+    R-instant / 句2 金腿 instant_gold=4 已登记零动,发放端缺口族级待办);
+    经济腿已登记零动(STRATEGY_ECONOMY instant_gold=4)。"""
     spec = STRATEGY_EFFECTS['打捞人才库+']
     base = STRATEGY_EFFECTS['打捞人才库']
     cw_investments._validate_strategy_effects()   # 构建校验复跑不炸
@@ -1399,7 +1399,7 @@ def test_salvage_plus_registration_surface() -> None:
     assert 'R-instant' in (spec.notes or ''), '句2 装备腿时点保守支声明'
     assert 'instant_gold' in (spec.notes or ''), '句2 金腿缺口申报'
     assert STRATEGY_ECONOMY['打捞人才库+'].instant_gold == 4, \
-        '经济腿在册零动'
+        '经济腿已登记零动'
 
 
 # ==================== 引擎判别排除集(T-93 尾款交付起,随批续建)====================
@@ -1472,7 +1472,7 @@ def test_char_grant_unit_buff_registration_surface(card: str, card_id: str,
     (官方效果原文)× duties 三位全 False;pending=False(数值/位置/对象全
     desc 明文);effect_text 与 base 注册表 .effect 单一源对拍(条目经
     PLAZA_AUGMENTS 数据面表达式引官方原文);现金分支 = 与全队的希望差异
-    点——两卡金腿(9/15 金)STRATEGY_ECONOMY 在册,经济值 = 金腿注册值
+    点——两卡金腿(9/15 金)STRATEGY_ECONOMY 已登记,经济值 = 金腿注册值
     而非 fail-closed 0(战力类腿不进经济模型,经济通道只承金腿);构建
     校验(孤儿键/id 双匹配)import 期已过——本测试存活即证。"""
     spec = STRATEGY_EFFECTS[card]

@@ -12,7 +12,7 @@ sr_od/application/currency_war/ 迭代详设;单相即时上报契约 §2.0)。
 - **装备入账分支**(§2.1②):归一命中 → 入栏 + 获得后果链;未解析 → 值不变
   翻来源 + 留证;unknown = 零记账 + 留证(含弱化词未知名卡文退役后落此档);
 - **即时单相上报**(§2.0):确认点击后一次上报即应用完整效果分支,无发射/
-  落地两相、无证据闩;
+  落地两相、无证据一次性标志位;
 - **注册表级装备名分层归一**(``normalize_registry_equip_name``):互撞族
   精确快道恒命中 / OCR 形变救援(containment + LCS 唯一命中)/ 多命中
   拒识(fail-closed 禁猜);
@@ -214,7 +214,7 @@ def test_unknown_leg_evidenced_zero_write(
 def test_planner_report_is_immediate_single_phase(
         rows_sink: _RowSink) -> None:
     """单相即时上报测试(design §2.0):确认点击后一次上报即应用效果分支
-    (2★ 源即消费)——无发射相零写窗、无落地证据闩(两相已退役)。"""
+    (2★ 源即消费)——无发射相零写窗、无落地证据一次性标志位(两相已退役)。"""
     from sr_od.application.currency_war.kernel.cw_action_report.pick_planner import (
         report_action_pick_planner_param,
     )
@@ -223,7 +223,7 @@ def test_planner_report_is_immediate_single_phase(
     out1 = report_action_pick_planner_param(gs, param, _lsig('CwActionPickPlannerOp'),
                                             branch_type='upgrade')
     assert out1.applied is True
-    assert gs.bench.value.slots[0].unit.star == 1, '一次上报即变换(无证据闩)'
+    assert gs.bench.value.slots[0].unit.star == 1, '一次上报即变换(无证据一次性标志位)'
     assert gs.active_strategies.value in (None, []), '持卡面未被 planner 上报触碰'
 
 

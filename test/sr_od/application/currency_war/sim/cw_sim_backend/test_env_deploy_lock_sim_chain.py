@@ -1,6 +1,6 @@
 """sim 全链赠卡锁分支轻量局测试(镜像 src 主断言对象 = kernel 赠卡锁分支经
 sim 后端全链;按流程级测试落位本目录,引擎驱动助手 import 自
-sim/test_sim_backend.py〔在册超限拆分债文件,禁追加,只 import 复用不改;
+sim/test_sim_backend.py〔已登记超限拆分债文件,禁追加,只 import 复用不改;
 先例 = 本目录 test_resolve_battle.py〕)。
 
 测试面依据 = 迭代 T-33 英雄登场设计(.debug/progress/2026-09-23-

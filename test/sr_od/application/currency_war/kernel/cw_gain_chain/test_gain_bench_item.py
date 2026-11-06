@@ -1,6 +1,6 @@
 """gain_bench_item 落位口测试(镜像 src = kernel/cw_gain_chain.py,被测 =
 `_place_bench_item`/`gain_bench_item`/`_build_pool` 占位,按拆目录规范落位;
-同 src 兄弟测试 = kernel/test_gain_chain.py〔在册超限文件,只读复用不追加;
+同 src 兄弟测试 = kernel/test_gain_chain.py〔已登记超限文件,只读复用不追加;
 三落位回归 = 其 test_gain_bench_item_three_landings〕)。
 
 测试面依据 = 迭代 T-39 专家研讨会设计(.debug/progress/2026-09-23-invest-

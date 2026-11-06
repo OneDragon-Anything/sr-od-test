@@ -534,7 +534,7 @@ def test_xp_click_joy_level_gate_truth_table(
     """成长的快乐真值表测试(兜底支等级门;方案审关键修改②,关闭
     「登记不消费」豁免口)+ 兜底支下限 0 钳行。
 
-    聚合分型已在册(sum+guarded_min,AGG_FIELDS 两字段在表),本测试钉消费位:
+    聚合分型已登记(sum+guarded_min,AGG_FIELDS 两字段在表),本测试钉消费位:
     折扣合计 = xp_buy_cost_discount + (等级 ≥ xp_click_discount_from_level_at
     时 xp_click_discount_from_level)。sim 恒兜底支(无 OCR),不消费 =
     sim 对该卡局费用恒虚高 1 金/击,恰保留本修复要消灭的 sim/实机分歧。
@@ -1272,7 +1272,7 @@ def test_shop_frame_disclosure_failure_degrades_with_warning(
 
 def test_world_shop_refresh_cost_threshold_flip() -> None:
     """改价渲染 helper(T-21 锁 8,2026-10-16 用户裁决语义):长线利好
-    refresh_paid < 30 → 基价;≥ 30 → 新价;环境不在册/在册无改价字段 →
+    refresh_paid < 30 → 基价;≥ 30 → 新价;环境未登记/已登记无改价字段 →
     基价;**付费域**——免费帧累计不推进判定(与 ENV_REFRESH_GRANTS 登记
     计数同口径,防回退全量域)。数值单一源 = 注册表(ENV_ECONOMY.
     refresh_cost_after)与基价常量,断言现算不手抄第二源。"""
@@ -1296,11 +1296,11 @@ def test_world_shop_refresh_cost_threshold_flip() -> None:
     for _ in range(40):
         gs_off.effects.record_refresh(free=False)
     assert world_shop_refresh_cost(gs_off) == REFRESH_COST_BASE, \
-        '环境不在册基价'
+        '环境未登记基价'
 
     gs_nocost = cw4_gs(active_env='二手市场')
     for _ in range(40):
         gs_nocost.effects.record_refresh(free=False)
     assert world_shop_refresh_cost(gs_nocost) == REFRESH_COST_BASE, \
-        '在册无改价字段(refresh_cost_after=None)基价'
+        '已登记无改价字段(refresh_cost_after=None)基价'
 

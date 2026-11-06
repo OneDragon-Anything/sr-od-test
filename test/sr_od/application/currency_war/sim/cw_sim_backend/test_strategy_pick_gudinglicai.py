@@ -1,6 +1,6 @@
 """sim 固定理财位面段两条效果条目 walk 测试(镜像 src = sim/cw_sim_backend.py 的
 apply_strategy_plane_refire_xp 选卡拍补发腿 + _apply_strategy_plane_start_xp
-位面首节点窗腿 + 呈现闩 + kernel 双桥经真实推进链)。
+位面首节点窗腿 + 呈现一次性标志位 + kernel 双桥经真实推进链)。
 
 测试面依据 = 迭代设计 designs/T-182-gudinglicai.md §2.5/§4(锁 3 裁定 B
 改形/锁 4 XP 支窗口重放)+ 用户裁定书 T-182 节(2026-11-01 拍定:中途
@@ -10,14 +10,14 @@ apply_strategy_plane_refire_xp 选卡拍补发腿 + _apply_strategy_plane_start_
   开始照常(刷新支 kernel 桥 +2/位面、XP 支 sim 窗腿 +4/位面);
 - (3,2) 拿卡局:全程仅拿卡拍双发(P3 开始在拿卡前、未持卡零发,补发
   恰覆盖 P3 段;其后无位面开始),此前位面开始拍零增量;
-- 重放防双发(锁 4):同 offer 落地声明重放 → 第二次零写(呈现闩已
+- 重放防双发(锁 4):同 offer 落地声明重放 → 第二次零写(呈现一次性标志位已
   消费)。
 
 路径选卡卫生:驱动途中逢 offer 一律定向落「淘金客」(无 burst/刷新字段
 ——防日程槽自动选卡采到 burst 卡污染 free_refresh 断言;首槽目标卡用例
 另行定向)。复用声明:引擎驱动助手 import 自 test_p3_win_terminal.
 _drive_step(位面过渡屏在其分派表内,达 P2/P3 必经)与
-sim/test_sim_backend._SIG 族(在册超限拆分债文件,禁追加,只 import
+sim/test_sim_backend._SIG 族(已登记超限拆分债文件,禁追加,只 import
 复用不改;先例 = test_strategy_pick_xp.py)。
 """
 from __future__ import annotations
@@ -109,7 +109,7 @@ def _drive_with_safe_picks(b: SimBackend, pred, limit: int = 512) -> None:
 
 
 def _drive_to_offer(b: SimBackend, plane: int, round_num: int) -> None:
-    """驱动至指定位面的策略 offer 呈现(呈现即置各落地腿闩;途中 offer
+    """驱动至指定位面的策略 offer 呈现(呈现即置各落地腿一次性标志位;途中 offer
     安全 filler 化,保到达槽为首个未被消费的日程槽)。"""
 
     def _at_offer() -> bool:
@@ -205,7 +205,7 @@ def test_pick_p3r2_late_pick_refire_only() -> None:
 
 
 def test_replay_advance_zero_double_grant() -> None:
-    """重放防双发(锁 4):同 offer 落地声明重放 → 第二次零写(呈现闩
+    """重放防双发(锁 4):同 offer 落地声明重放 → 第二次零写(呈现一次性标志位
     已消费;补发/即时/刷新三条效果条目均不残留)。"""
     b = _backend(seed=37)
     try:

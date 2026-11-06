@@ -16,7 +16,7 @@ T-192-rencai-kongdong.md(定稿)§4 锁 3/4/5 + REVIEW-T192 §四④:
   本卡后补零发放(发放起点 = 下一节点窗)。
 
 驱动形态 = _enter_node_window 直通点(锚定补推路径真形态);引擎驱动助手
-import 自 sim/test_sim_backend.py(在册超限拆分债文件,禁追加,只 import
+import 自 sim/test_sim_backend.py(已登记超限拆分债文件,禁追加,只 import
 复用不改;先例 = 同目录 test_strategy_empty_equip_xp_sim_chain.py)。
 sim 开局备战席种子 = 4 单位(M06),恰在「≤4」门槛上——满足窗天然成立,
 超门槛用例经观察通道覆盖席视图构造 5 单位。
@@ -88,7 +88,7 @@ def test_pick_window_structural_no_fire() -> None:
     b = _setup()
     try:
         xp = b.gs.xp.value
-        assert xp is not None, '前置:sim 开局经验种子在册'
+        assert xp is not None, '前置:sim 开局经验种子已登记'
         assert b.gs.xp.evidence != _XP_EV, '拿卡当窗不应发放'
     finally:
         uninstall_backend()
@@ -160,7 +160,7 @@ def test_replay_guard_no_double_fire(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_consecutive_windows_each_fire(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """连续两满足节点各发一次(锁 4 可重复性):零 done 闩的结构差异锁
+    """连续两满足节点各发一次(锁 4 可重复性):零 done 一次性标志位的结构差异锁
     (与孪生素数 at-most-once 分道)——(1,2)/(1,3) 两窗各 +3(第二窗
     余量按纯函数期望对拍,不落跨级即按当前级门槛续攒)。"""
     b = _setup()

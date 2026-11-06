@@ -735,7 +735,7 @@ def test_prep_ore_level_idempotent_across_prep_rings(
     assert gs.ore_declared_pending.value == ((_ENV, 1, 6),), \
         '环 1 入队(位面 1 档 = 6 金),矿未现留队'
 
-    # 环 2:op 重建;矿现 → 入队幂等守卫(pending 在册不重发)+ 生成即消费
+    # 环 2:op 重建;矿现 → 入队幂等守卫(pending 已登记不重发)+ 生成即消费
     _run_prep_heavy_with_fakes(
         test_context, monkeypatch, session, plane=1,
         ores=[('金', SimpleNamespace(x=100, y=100), 30)])

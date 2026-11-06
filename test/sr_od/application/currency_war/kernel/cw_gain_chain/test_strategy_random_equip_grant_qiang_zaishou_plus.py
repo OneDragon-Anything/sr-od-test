@@ -24,7 +24,7 @@ REVIEW-T167 §四② 落位按现树):
   同一工厂路径的通道语义,本行与该锁同为 '简易' 类别实参,类别实参与
   count 均不改变通道选择,不重复立锁(模式卡先例同判);
 - 零后果前提锁不按卡重复:'简易' 池 ∩ EQUIP_ACQUIRE_CONSEQUENCES 空
-  集守卫在册 = sim/cw_sim_backend/test_strategy_hp_loss_sim_chain.py::
+  集守卫已登记 = sim/cw_sim_backend/test_strategy_hp_loss_sim_chain.py::
   test_simple_pool_no_acquire_consequences,同池同前提。
 """
 from __future__ import annotations

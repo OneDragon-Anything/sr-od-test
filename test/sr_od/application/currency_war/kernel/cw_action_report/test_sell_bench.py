@@ -1,6 +1,6 @@
 """sell_bench 溢出分支入位身份守恒测试(镜像 src =
 kernel/cw_action_report/sell_bench.py;同 src 兄弟测试 =
-kernel/test_gain_chain.py 卖牌段〔在册超限文件,只读复用不追加〕)。
+kernel/test_gain_chain.py 卖牌段〔已登记超限文件,只读复用不追加〕)。
 
 测试面依据 = 迭代 T-39 专家研讨会设计(.debug/progress/2026-09-23-invest-
 effects-calc/designs/T-39-zhuanjia-yantaohui.md)§2.4.3 + §4 锁 5:
@@ -106,7 +106,7 @@ def test_sell_absorbs_overflow_char_unit_leg_regression() -> None:
 # ============================================================ M1 投影直测(《商店黑板容器化方案》§4-M1;同 src 按被测方法归并)
 
 # 改写依据(分诊):写入者登记面随「商店单动作循环收编」演进——
-# 生产写点 actor 现役 = CwScreenShop(cw_screen_shop,登记面在册),
+# 生产写点 actor 现役 = CwScreenShop(cw_screen_shop,登记面已登记),
 # 旧名 CwOpBuyCards 已退役;测试模拟生产写入随登记面改名。
 _PROJ_SIG = ChannelSig(family='logic_action', actor='CwScreenShop',
                        mode='compute', group_id='act:CwScreenShop@1')

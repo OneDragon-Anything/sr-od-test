@@ -16,7 +16,7 @@ advance 尾统一排空段)。kernel 直驱锁 = kernel/test_cw_levelup_callback
   (免战路径 = 模拟器本地推进,置位时点序位滞后一节点)——节点边界
   清扫按代次判据保留新源,重开腿对免战源不破。
 
-引擎驱动助手 import 自 sim/test_sim_backend.py(在册超限拆分债文件,
+引擎驱动助手 import 自 sim/test_sim_backend.py(已登记超限拆分债文件,
 禁追加,只 import 复用不改;先例 = 同目录 test_env_xp_window_sim_chain.py)。
 """
 from __future__ import annotations
@@ -175,7 +175,7 @@ def test_pick_xp_drains_same_advance_first_buy_next_decl() -> None:
     advance 尾(当拍,spy_deal_count 立即可读);首购 XP 跨级 → 买牌上报
     链内队列滞留(买牌动作不喂声明,设计稿申报制残余),排空发生在窗内
     次声明拍(本测以纯转移声明触发,上限 = 下一声明驱动 advance)。"""
-    # (a) 选卡即时:真身 pick advance(呈现闩 = 生产 offer 呈现置位形态)
+    # (a) 选卡即时:真身 pick advance(呈现一次性标志位 = 生产 offer 呈现置位形态)
     b = _to_prep()
     try:
         gs = b.gs

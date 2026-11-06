@@ -10,7 +10,7 @@ import sim,不设静态扫描锁)+ designs/T-198-baiyin-touzi.md §4(锁 3
   strategy_offer_scheduled:金@5;
 - 拿卡白银投资(族首张含两条效果条目的卡)→ 队列 (('白银投资', 0), ('白银投资', 3))
   登记序 = 腿序 + 效果串两条 @0/@3;
-- 未登记策略卡(表外名 + 在册无腿卡)零写;
+- 未登记策略卡(表外名 + 已登记无腿卡)零写;
 - 递归形态(monkeypatch 临时加彩虹期货行)→ 链式再入队(锁「handler
   按注册表驱动」机制,非本批交付行为);
 - live 落地形态(gain_invest_strategy 同函数,session=None 直构)队列
@@ -39,7 +39,7 @@ def _lsig() -> ChannelSig:
 
 def _gs() -> GameState:
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
-    gs.prep_anchored = True   # 置闩:登记 = 确定事件,锁确定面写通道
+    gs.prep_anchored = True   # 置一次性标志位:登记 = 确定事件,锁确定面写通道
     return gs
 
 
@@ -76,7 +76,7 @@ def test_pick_silver_invest_queues_two_legs_registration_order() -> None:
 
 
 def test_unregistered_cards_zero_write() -> None:
-    """未登记卡零写(两形):表外名(查无效果安静不写)与在册无腿卡
+    """未登记卡零写(两形):表外名(查无效果安静不写)与已登记无腿卡
     (躺平,注册表有卡但无登记行)均 → 零效果串 + 队列零写。"""
     for name in ('随便一张未收录卡', '躺平'):
         gs = _gs()

@@ -1,5 +1,5 @@
 """sim 选卡落地拍宝钻世界联动腿测试(镜像 src = sim/cw_sim_backend.py 的
-_on_invest_picked 宝钻腿 + 呈现闩 _strategy_pick_diamond_latch;kernel
+_on_invest_picked 宝钻腿 + 呈现一次性标志位 _strategy_pick_diamond_latch;kernel
 效果体单元面 = cw_gain_chain/test_gain_invest_strategy_diamond_pair_reg.py,
 本文件锁 sim 接线、世界三域联动与防重放)。
 
@@ -8,7 +8,7 @@ _on_invest_picked 宝钻腿 + 呈现闩 _strategy_pick_diamond_latch;kernel
 - 拿卡世界联动主链(锁 3 正面):选卡落地 → 效果条目1 效果体宝钻入栏 → 拿卡腿
   调 on_diamond_acquired → diamond_count +1 / deploy_cap = level + 财富
   宝钻数 / back_layout = min(9, 现值+1)(observe 通道,sim 世界写即真值);
-- 呈现闩防重放(锁 2 同形):同 offer 落地 advance 重放 → 三域零再写
+- 呈现一次性标志位防重放(锁 2 同形):同 offer 落地 advance 重放 → 三域零再写
   (回调三写非幂等,重放伪 +1);
 - 发放落地门负验(锁 3 负面):equips 未观察形态(equips_unobserved 同
   判据,T-141 到级腿 placed 门同构)→ 宝钻腿拒落 + 回调零发 → 三写零发
@@ -17,7 +17,7 @@ _on_invest_picked 宝钻腿 + 呈现闩 _strategy_pick_diamond_latch;kernel
 控制规模扩展(designs/T-324-kongzhi-guimo.md §4 锁 5,拿卡触发第二卡
 随批归一同支):拿卡 → 宝钻入栏 + 世界三写同构(无佩佩腿,单位数零变);
 发放落地门负验同构。驱动形态复用声明:引擎驱动助手 import 自同目录
-test_p3_win_terminal.py(在册先例,禁追加只 import);_backend/_pick
+test_p3_win_terminal.py(已登记先例,禁追加只 import);_backend/_pick
 直调形态先例 = 同目录 test_strategy_pick_hp.py(选卡落地拍腿族)。
 """
 from __future__ import annotations
@@ -83,7 +83,7 @@ def _drive_until(b: SimBackend, pred, limit: int = 512) -> None:
 
 def _drive_to_offer(b: SimBackend) -> None:
     """驱动至策略 offer 呈现(固定日程首槽 P1r3 起;呈现即置宝钻腿
-    闩——本腿生效前提)。"""
+    一次性标志位——本腿生效前提)。"""
     _drive_until(b, lambda: b.screen_identity() == SCREEN_INVEST_STRATEGY)
 
 
@@ -155,8 +155,8 @@ def test_pick_grants_diamond_world_coupling() -> None:
 
 
 def test_replay_advance_zero_double_coupling() -> None:
-    """呈现闩防重放(锁 2 同形):同 offer 落地 advance 重放一次 →
-    三域零再写(闩已消费;回调非幂等,重放伪 +1 必须拦)。"""
+    """呈现一次性标志位防重放(锁 2 同形):同 offer 落地 advance 重放一次 →
+    三域零再写(一次性标志位已消费;回调非幂等,重放伪 +1 必须拦)。"""
     b = _backend(seed=52)
     mp = pytest.MonkeyPatch()
     try:

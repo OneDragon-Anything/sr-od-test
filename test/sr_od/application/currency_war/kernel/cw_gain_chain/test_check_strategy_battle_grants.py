@@ -7,7 +7,7 @@ check_strategy_battle_grants)。
 - node_kind 非 encounter → 空(节点类型条件短路);
 - 未持卡/表外卡 → 空(持卡交集判定);
 - 命中 → 席上落带名槽件 + 返回 (卡名, 道具名) 逐对一致 + evidence 形态;
-- 可重复(无 done 闩,对照 T-102 条件通道的「首次」闩语义——本卡卡文无
+- 可重复(无 done 一次性标志位,对照 T-102 条件通道的「首次」一次性标志位语义——本卡卡文无
   「首次」限定 = 每次遭遇战后都发);
 - bench 未观察(None)→ 原语内拒落零写(宁缺勿造,与 env 触发器同契约)。
 """
@@ -95,8 +95,8 @@ def test_grant_lands_named_slot_and_returns_pairs() -> None:
 
 
 def test_repeatable_no_done_latch() -> None:
-    """锁 6 可重复(对照 T-102「首次」闩语义的通道差异):同 kind 连调
-    两次 → 两箱(无 done 闩,卡文无「首次」限定 = 每次遭遇战后都发;
+    """锁 6 可重复(对照 T-102「首次」一次性标志位语义的通道差异):同 kind 连调
+    两次 → 两箱(无 done 一次性标志位,卡文无「首次」限定 = 每次遭遇战后都发;
     防重归调用方节点键幂等守卫,本函数零二次守卫)。"""
     gs = _gs(bench_slots=_empty_slots())
     assert check_strategy_battle_grants(gs, 'encounter', _LSIG) \

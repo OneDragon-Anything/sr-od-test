@@ -130,7 +130,7 @@ def test_rng_zero_perturbation() -> None:
 
 
 def test_disclosure_key_registered() -> None:
-    """披露键在册闸:_BASE_DISCLOSURES 接线即随局披露。"""
+    """披露键已登记闸:_BASE_DISCLOSURES 接线即随局披露。"""
     assert _BASE_DISCLOSURES.get(SHOP_TWO_STAR_DEAL_PLACEHOLDER) == \
         'user_placeholder_pending_field_sampling'
 

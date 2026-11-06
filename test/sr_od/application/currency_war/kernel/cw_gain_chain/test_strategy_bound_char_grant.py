@@ -10,7 +10,7 @@ T-165-jiazhi-touzi-jin.md(定稿)§4 锁 1/2/3 + REVIEW-T165 §2/④(七裁决
 
 - 锁 1 注册腿:表值 = (1, 1, 2)(费用档, 名数, 到手星级);效果体条目
   由工厂从表生成进注册表(表驱动生成式,禁两处字面量);披露键 = 家族
-  常量收编在册两键(uniform/with_replacement),零新增键内容(单一源:
+  常量收编已登记两键(uniform/with_replacement),零新增键内容(单一源:
   与援军族三键常量的交集 = 全集,键不得双源另立);
 - 锁 2 腿 1 sim 世界(sim 装配):固定 rng → 备战 +1 名 2★、名 ∈ 1 费
   载体派生池(禁手抄清单);效果串 ``strategy_gift_random:<名>@2star``
@@ -132,21 +132,21 @@ def rows_sink() -> _RowSink:
 def test_bound_char_grant_table_and_registration() -> None:
     """锁 1 注册腿:表值三元(费用档, 名数, 到手星级)= 卡面结构值
     (2星1费 ×1 名);效果体条目由工厂从表生成进注册表(表驱动生成式,
-    禁两处字面量);家族披露键 = 在册两键收编(与援军族三键常量取交集
+    禁两处字面量);家族披露键 = 已登记两键收编(与援军族三键常量取交集
     = 全集——零新增键内容,键禁双源另立)。"""
     assert _STRATEGY_CHAR_GRANT_BINDINGS == {_CARD: (1, 1, 2),
                                              '价值投资·彩': (2, 1, 2)}, \
         '表值 = 卡面结构值(金: 2星1费×1;彩: 2星2费×1[T-321 展开卡批])'
     entry = PICK_INVEST_EFFECTS.get(_CARD)
-    assert entry is not None, '注册面在册(生成式)'
+    assert entry is not None, '注册面已登记(生成式)'
     assert callable(entry), '值 = 工厂生成效果体'
     assert set(STRATEGY_RANDOM_CHAR_GRANT_ASSUMPTION_KEYS) == {
         'strategy_gift_random_char_uniform',
         'strategy_gift_random_char_with_replacement'}, \
-        '家族披露键 = 在册两键(抽样先验 uniform + 放回申报)'
+        '家族披露键 = 已登记两键(抽样先验 uniform + 放回申报)'
     assert set(STRATEGY_RANDOM_CHAR_GRANT_ASSUMPTION_KEYS) <= set(
         REINFORCEMENT_ASSUMPTION_KEYS), \
-        '披露键与援军族在册键集同源(零新增键内容,禁双源)'
+        '披露键与援军族已登记键集同源(零新增键内容,禁双源)'
 
 
 def test_bound_char_grant_sampler_pool_and_domain_guard(

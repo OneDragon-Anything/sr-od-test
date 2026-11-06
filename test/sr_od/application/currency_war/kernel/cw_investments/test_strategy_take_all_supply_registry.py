@@ -39,7 +39,7 @@ _SIG_OBS = ChannelSig(family='obs', actor='test', mode='read')
 
 _FAMILY_SPECS: dict[str, tuple[str, str]] = {
     # 卡名 → (plaza id, 发放腿持续期值):银配额 1 = ONCE 一次性形;
-    # 金配额 2 = WHILE_HELD(「下2个」非一次性,计数闩承载耗尽即停);
+    # 金配额 2 = WHILE_HELD(「下2个」非一次性,计数一次性标志位承载耗尽即停);
     # 彩 recurring 无配额(None = 无界,恒放行无耗尽态)= WHILE_HELD。
     '全都要·银': ('131001', 'once'),
     '全都要·金': ('203501', 'while_held'),
@@ -86,7 +86,7 @@ def test_take_all_name_set_subset_of_registry() -> None:
         '全都要·银': 1, '全都要·金': 2, '全都要·彩': None,
     }, f'配额值锁(卡面明写): {_TAKE_ALL_SUPPLY_QUOTA}'
     assert _TAKE_ALL_SUPPLY_QUOTA['全都要·彩'] is None, \
-        '彩 None 值锁(recurring 无配额域,恒放行零闩格)'
+        '彩 None 值锁(recurring 无配额域,恒放行零配额格)'
 
 
 def test_take_all_declaration_key_never_enters_ledger() -> None:

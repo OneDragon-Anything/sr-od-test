@@ -5,7 +5,7 @@ kernel/test_env_grants.py,本文件按被测方法拆目录规范落位,先例 =
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
 T-26-liangzi-tongpin-qiyue.md(定稿)§2.2 + §4.4/§4.5:
-- **条件矩阵**:env 未激活(None/空链)/不在册/facts 无触发角色 → 零写
+- **条件矩阵**:env 未激活(None/空链)/未登记/facts 无触发角色 → 零写
   零效果串;bench 未观察 → 效果串照返、容器零写(链拒落语义,不炸);
   席满 + 溢出位空 → 溢出落位;席满 + 溢出位占 → 零写 +
   DEFECT_OVERFLOW_TAKEN 留证;
@@ -128,14 +128,14 @@ def _record_writes(gs: GameState,
 def test_condition_matrix_short_circuits(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """条件矩阵前两序短路(T-26 设计 §2.2 条 ①②):env 未激活(None/
-    空链形态)/不在册/facts 无触发角色(发放物升星形态)→ 空效果串
+    空链形态)/未登记/facts 无触发角色(发放物升星形态)→ 空效果串
     且零写(rng 未解析,不消耗采样流键)。"""
     cases = [
         ('env 未选择(None 形态)',
          _make_gs(env=None, bench=[]), (('花火', 2),)),
         ('env 空链(开局种子形态)',
          _make_gs(env='', bench=[]), (('花火', 2),)),
-        ('env 不在册', _make_gs(env='蓝海', bench=[]), (('花火', 2),)),
+        ('env 未登记', _make_gs(env='蓝海', bench=[]), (('花火', 2),)),
         ('facts 无触发角色(发放物升星)',
          _make_gs(bench=[]), (('希儿', 2),)),
     ]
@@ -266,9 +266,9 @@ def _seed_tier(gs: GameState, tier: int) -> GameState:
 
 def test_yingyue_tier_write_precedes_env_gate(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """入口位(env 条件矩阵之前):env 未激活/不在册形态下镜流合成事件
+    """入口位(env 条件矩阵之前):env 未激活/未登记形态下镜流合成事件
     照写档——写端不随 env 发放短路,四发火点的零发放场景(环境不
-    在册等)零漏挂(漏挂即静默毒化形态,晶矿通道现役可达)。"""
+    已登记等)零漏挂(漏挂即静默毒化形态,晶矿通道现役可达)。"""
     for env in (None, '', '蓝海'):
         gs = _make_gs(env=env, bench=[])
         gs = _seed_tier(gs, 1)

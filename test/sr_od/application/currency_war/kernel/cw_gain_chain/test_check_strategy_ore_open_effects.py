@@ -188,7 +188,7 @@ def test_collision_negative_non_continuous_remaining(rng_provider) -> None:
     assert ('蓝', 90, 10, 10) in pts, f'授予点 = max+1 序: {pts}'
     # ③ 与剩余点零同坐标
     assert len({(p[1], p[2]) for p in pts}) == len(pts), '零同坐标'
-    # ④ ore_rewards 零键覆盖(剩余矿附着原值不动)+ 授予矿新键在册
+    # ④ ore_rewards 零键覆盖(剩余矿附着原值不动)+ 授予矿新键已登记
     attach = gs.ore_rewards.value or {}
     for i in range(2, 9):
         assert attach[f'{i * 10},10'] == OreReward(kind='gold', gold=i), \

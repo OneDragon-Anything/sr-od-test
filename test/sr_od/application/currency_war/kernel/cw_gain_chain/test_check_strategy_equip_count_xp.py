@@ -78,7 +78,7 @@ def _unit(char_id: str = '那刻夏',
 def test_name_set_closed_derivation() -> None:
     """名集闭集锁(锁 4 前半):名集 == category 白昼全集 ∪ 三基件名
     (依 EQUIPMENTS 现值重推导后比对,非硬编码 9 名字面);特权变体三件
-    不入(裁决点 4 默认案 A 锚定——翻 B 口径本锁先红);基件 = 进阶类在册
+    不入(裁决点 4 默认案 A 锚定——翻 B 口径本锁先红);基件 = 进阶类已登记
     (结构前提)。"""
     daylight = {n for n, e in EQUIPMENTS.items() if e.category == '白昼'}
     want = daylight | set(_BASE_NAMES)
@@ -168,7 +168,7 @@ def test_pure_read_zero_container_writes() -> None:
 def test_validator_drift_sentinels(monkeypatch) -> None:
     """构建校验负控(两漂移哨):①孤儿键(版本改名/移除静默失联);
     ②装备名漂移(名集成员不在 EQUIPMENTS = 计数恒 0 静默漏发,import 期
-    哨是唯一响亮拦截面;白昼半区派生自注册表恒在册,哨实辖基件名半区)。"""
+    哨是唯一响亮拦截面;白昼半区派生自注册表恒已登记,哨实辖基件名半区)。"""
     import sr_od.application.currency_war.kernel.cw_investments as inv
 
     bad = dict(STRATEGY_EQUIP_COUNT_XP_GRANTS)

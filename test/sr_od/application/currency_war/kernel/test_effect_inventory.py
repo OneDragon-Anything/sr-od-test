@@ -4,8 +4,8 @@
 - **apply_board_rewrite 锚定通道行为**(通道择道单一源 =
   ``cw_game_state.anchor_aware_write``;通道规则「未锚定 → 随机态」,
   语义域 = 容器正本 game_state/fields.md「开局种子底座」节):人力
-  重组双臂(种子未闩 → logic_rand / 置闩 → logic)、静默覆盖臂
-  (未闩零失配行落 logic_rand_outcome,置闩失配网生效)、回归臂
+  重组双臂(种子未落一次性标志位 → logic_rand / 置一次性标志位 → logic)、静默覆盖臂
+  (未落一次性标志位零失配行落 logic_rand_outcome,置一次性标志位失配网生效)、回归臂
   (UPGRADE_ALL 零容器写 / 非板面条目零动作 / burst 桥 Field 发放);
 - **效果推进段 tick_effect_boundary**(结算真值收口后只剩账本推进/
   刷新发放/异常边界三判据;2026-10-12-abolish-node-ordinal §3.2 起
@@ -86,10 +86,10 @@ def _u(cid: str, star: int = 1, equips: list[str] | None = None) -> Unit:
 
 
 def test_sell_all_channel_dual_arm_by_anchor() -> None:
-    """人力重组双臂(通道规则「未锚定 → 随机态」):种子容器(未闩)
+    """人力重组双臂(通道规则「未锚定 → 随机态」):种子容器(未落一次性标志位)
     SELL_ALL 清空写恰三行 source=logic_rand(未验证推算走随机态,首观察
-    静默覆盖);置闩(测试专口直赋)后同路径 source=logic(确定面)。"""
-    # 臂 1:种子容器(未闩)→ 清空写走随机态
+    静默覆盖);置一次性标志位(测试专口直赋)后同路径 source=logic(确定面)。"""
+    # 臂 1:种子容器(未落一次性标志位)→ 清空写走随机态
     gs = _seeded_gs()
     assert gs.deployed.source == 'logic_rand', '前置:冷建含种子底座'
     seq_before = gs.write_seq
@@ -102,7 +102,7 @@ def test_sell_all_channel_dual_arm_by_anchor() -> None:
     assert gs.write_seq - seq_before == 2, '恰好两行清空写'
     assert gs.deployed.source == 'logic_rand'
     assert gs.bench.source == 'logic_rand'
-    # 臂 2:置闩后同路径 → 按现语义 write_logic
+    # 臂 2:置一次性标志位后同路径 → 按现语义 write_logic
     gs2 = _seeded_gs()
     gs2.prep_anchored = True
     report2 = apply_board_rewrite(gs2, _SELL_ALL)
@@ -113,15 +113,15 @@ def test_sell_all_channel_dual_arm_by_anchor() -> None:
 
 
 def test_sell_all_silent_override_unanchored_mismatch_after_anchor() -> None:
-    """静默覆盖臂:未闩清空写(随机态)被观察以不同值覆盖 → 零失配
-    三分流行、差异落 logic_rand_outcome(首观察静默覆盖);置闩后同场景
+    """静默覆盖臂:未落一次性标志位清空写(随机态)被观察以不同值覆盖 → 零失配
+    三分流行、差异落 logic_rand_outcome(首观察静默覆盖);置一次性标志位后同场景
     (确定面清空写)被观察覆盖 → observe_vs_logic_mismatch 缺陷行
     (失配网未盲)。"""
     other_view = BenchView(
         slots=[BenchSlot(kind='unit',
                          unit=Unit(char_id='停云', star=1))]
         + [BenchSlot(kind='empty')] * 8, capacity=9)
-    # 未闩臂:随机态清空写 → 观察覆盖静默
+    # 未落一次性标志位臂:随机态清空写 → 观察覆盖静默
     gs = _seeded_gs()
     apply_board_rewrite(gs, _SELL_ALL)
     consume_defect_sink()
@@ -129,7 +129,7 @@ def test_sell_all_silent_override_unanchored_mismatch_after_anchor() -> None:
     kinds = [r['kind'] for r in consume_defect_sink()]
     assert 'observe_vs_logic_mismatch' not in kinds, '未锚定期首观察零失配行'
     assert 'logic_rand_outcome' in kinds, '随机态差异落 logic_rand_outcome'
-    # 闩臂:确定面清空写 → 观察覆盖产真失配行
+    # 一次性标志位臂:确定面清空写 → 观察覆盖产真失配行
     gs2 = _seeded_gs()
     gs2.prep_anchored = True
     apply_board_rewrite(gs2, _SELL_ALL)
@@ -167,7 +167,7 @@ def test_upgrade_all_and_other_bridges_unchanged() -> None:
 # ============================================================ 效果推进段(tick_effect_boundary)
 
 def test_none_guard_skips_whole_segment() -> None:
-    """判据①:effective None → 整段跳过——在册效果零发放(「未观察不当真
+    """判据①:effective None → 整段跳过——已登记效果零发放(「未观察不当真
     进节点」守卫,禁虚耗余期/虚累余额;现码 cw_loop 禁令随迁)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.effects.register_strategy(STRATEGY_EFFECTS['双手狸开键盘！'],
@@ -381,7 +381,7 @@ def test_worn_transform_keeps_uid_and_guard_still_blocks() -> None:
                 if s is not None and s.kind == 'unit' and s.unit is not None]
     assert replaced[0].equips == [_WORN + '·特权'], '装备已变换'
     assert replaced[0].uid == 1, '实例号随行(同实体变换)'
-    # 守卫仍拦(锁记录在册 + 生效序位 < 解锁序位)
+    # 守卫仍拦(锁记录已登记 + 生效序位 < 解锁序位)
     gs.observe(gs.node_pos, (1, 7), sig=_SIG_OBS)
     gs.write_logic(gs.env_grant_deploy_locks, (('流萤', 1, (1, 9)),),
                    produced_by='test-seed',
@@ -458,7 +458,7 @@ def test_bridge_reject_no_trigger() -> None:
 # ============================================================ 占位注记渲染器
 # (G 组摘要 = GiftGrant 发放形状字段全量渲染,10 字段中 9 渲染 +
 # sell_value_note 显式排除;正本 = game_state/fields.md §5.2 效果缺口与
-# 载体登记,语义 = 「概念股族模式卡登记约定」——在册裸「GiftGrant」
+# 载体登记,语义 = 「概念股族模式卡登记约定」——已登记裸「GiftGrant」
 # 标记债(非渲染字段条目只露裸标记)同批清偿,裸标记回归 = 红。
 # 族展开第二实例 = 燃血概念股 / 第三实例 = 能量概念股 / 第四实例 = 列车
 # 同行概念股 / 第五实例 = 银河学者概念股 / 第六实例 = 贝洛伯格概念股 /
@@ -473,7 +473,7 @@ def test_bridge_reject_no_trigger() -> None:
 
 def test_portal_placeholder_grant_shape_full_fields() -> None:
     """占位注记全字段段锁(fields.md §5.2 效果缺口与载体登记:渲染
-    登记形状静态值,不渲染运行期采样身份):在册代表卡逐段断言——
+    登记形状静态值,不渲染运行期采样身份):已登记代表卡逐段断言——
     追击概念股 随机[阵营追击@1星]+随机装备[简易](阵营轴首例,渲染
     格 = 阵营<名>@<星>星)/ 燃血概念股 随机[阵营燃血@1星]+随机装备[简易]
     (族展开第二实例,概念股族展开卡登记约定——登记行零渲染器改动,
@@ -698,14 +698,14 @@ def test_salvage_rand_channel_and_producer_attribution(monkeypatch) -> None:
     assert gs.unchosen_supply.source == 'logic', '消费即清 = 逻辑态'
     write_rows = [r for r in rows if r['row'] == 'write'
                   and r['field'] in ('bench', 'equips', 'unchosen_supply')]
-    assert write_rows, '打捞写行在册'
+    assert write_rows, '打捞写行已登记'
     assert all(r['sig']['actor'] == 'CwScreenSupplyNode'
                for r in write_rows), \
         f'归因 = CwScreenSupplyNode: {[r["sig"]["actor"] for r in write_rows]}'
 
 
 def test_salvage_assumption_keys_registered() -> None:
-    """披露键静态常量在册断言(无运行时 setdefault 动作,四键全集:
+    """披露键静态常量已登记断言(无运行时 setdefault 动作,四键全集:
     R-entry 触发读法 / 未选列均匀 / 星级先验 / sim fail-closed)。"""
     assert STRATEGY_SALVAGE_ASSUMPTION_KEYS == (
         'strategy_salvage_trigger_entry_reading',
@@ -784,7 +784,7 @@ def test_on_merge_grant_affix_isolated() -> None:
 
 
 def test_on_merge_assumption_keys_registered() -> None:
-    """披露键静态常量在册断言(两键全集:实机到账时点与数值真值 /
+    """披露键静态常量已登记断言(两键全集:实机到账时点与数值真值 /
     垃圾化分支是否照发;STRATEGY_SALVAGE_ASSUMPTION_KEYS 同形)。"""
     assert STRATEGY_ON_MERGE_LIVE_UNVERIFIED == (
         'strategy_on_merge_live_timing_and_value',
@@ -819,7 +819,7 @@ def test_expiry_grant_leg_gains_three_simple_equips(monkeypatch) -> None:
     到期 → tick 到期腿逐件采样 → equips 恰 +3、全部 ∈ 简易池、rand 通道、
     evidence ``strategy_grant_expiry:`` 前缀、归因 = EffectLedgerBridge
     (journal 行 actor,Field 不存 producer——salvage 归因锁同形态);
-    第 4 拍到期列表空 → 零追加发放(构造性一次性,无重入面不设闩)。"""
+    第 4 拍到期列表空 → 零追加发放(构造性一次性,无重入面不设一次性标志位)。"""
     from sr_od.application.currency_war.kernel.cw_effect_inventory import (
         _EXPIRY_SIMPLE_EQUIP_POOL,
     )
@@ -886,7 +886,7 @@ def test_expiry_grant_bridge_negative_and_rng_injection() -> None:
 
 
 def test_capacity_expiry_assumption_keys_registered() -> None:
-    """披露键静态常量在册断言(三键全集:窗口读法待实采旗/到期发放随机性
+    """披露键静态常量已登记断言(三键全集:窗口读法待实采旗/到期发放随机性
     v0/进窗占席压缩未建模;STRATEGY_SALVAGE_ASSUMPTION_KEYS 同形)。"""
     assert STRATEGY_CAPACITY_EXPIRY_ASSUMPTION_KEYS == (
         'strategy_capacity_window_node_reading',

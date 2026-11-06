@@ -12,7 +12,7 @@ grant.py,本文件只锁本卡登记面 + 行为面,按被测方法拆目录规�
 - 精密金面前置按物判(判据映射只挂拆装扳手):垃圾袋 gate 恒 None 走纯
   发放循环,精密在场照常入栏零申报行(卡级前置分支零遗传);金面接线批
   回改前置分支后本锁仍须绿(垃圾袋不在金面改道辖域);
-- 卡文句 2「并获得8金币」金腿 = STRATEGY_ECONOMY instant_gold=8 在册,
+- 卡文句 2「并获得8金币」金腿 = STRATEGY_ECONOMY instant_gold=8 已登记,
   发放写端缺口 = 族级待办(T-112),两条效果条目异族不入本文件辖域(金零写 =
   主锁对照面,金面行为不锁)。
 """
@@ -91,7 +91,7 @@ def test_wuhai_laji_grant_leg_places_laji_bag(rows_sink: _RowSink) -> None:
     登记 session=None 跳过)、来源 = 确定面 logic、效果串恰一条含
     placed=True;金腿异族不入效果体(gold 未读保持未读,零金写);
     板面域(bench/deployed)零写;正常路径零申报行。"""
-    assert _CARD in PICK_INVEST_EFFECTS, '登记面在册'
+    assert _CARD in PICK_INVEST_EFFECTS, '登记面已登记'
     gs = _make_gs(equips=[])
     gs.prep_anchored = True
     seq_before = gs.write_seq

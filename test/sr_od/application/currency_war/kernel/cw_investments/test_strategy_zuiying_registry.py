@@ -8,7 +8,7 @@ test_cw_investments.py 禁追加,拆目录落位)。
 
 - 注册面锁:STRATEGY_ECONOMY 条目三字段 = instant_gold=6 ∧
   loss_hp_extra=5 ∧ keep_streak_on_loss=True(数值 = 卡面 desc 逐字;
-  金腿 = 选卡当场在册,败局修饰两条效果条目 = 本批新增);败局修饰族非收入
+  金腿 = 选卡当场已登记,败局修饰两条效果条目 = 本批新增);败局修饰族非收入
   通道,is_economy_engine 恒 False(排除桶成员);
 - 闭集落位锁:两字段 ∈ kernel 引擎排除桶(战斗结算修饰族划界;
   2026-10-28 治理后漏登记不炸,成员防线 = 本锁)+ 策略侧三分
@@ -35,7 +35,7 @@ _CARD = '嘴硬'
 
 
 def test_zuiying_economy_registration_surface() -> None:
-    """注册面锁:三字段全在册且数值 = 卡面 desc 逐字(instant_gold=6
+    """注册面锁:三字段全已登记且数值 = 卡面 desc 逐字(instant_gold=6
     选卡当场 / loss_hp_extra=5 败局伤害提高 / keep_streak_on_loss 败局
     连胜维持);败局修饰族非收入通道,引擎谓词恒 False。本测试存活同时
     证明构建校验通过(注册表孤儿键/双匹配闸在 import 期)。"""
@@ -50,7 +50,7 @@ def test_zuiying_economy_registration_surface() -> None:
 
 
 def test_zuiying_closed_set_classification() -> None:
-    """闭集落位锁:kernel 引擎排除桶两字段在册(治理后漏登记不炸,
+    """闭集落位锁:kernel 引擎排除桶两字段已登记(治理后漏登记不炸,
     成员防线 = 本锁;难度族同款划界)+ 策略侧三分各归各桶——
     keep_streak_on_loss 待建模(维持的金流价值轨迹依赖未建模)、
     loss_hp_extra 不计分(纯负向成本,负向结构登记族)。"""

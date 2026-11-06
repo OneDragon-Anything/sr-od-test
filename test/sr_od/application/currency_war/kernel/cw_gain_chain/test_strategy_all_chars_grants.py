@@ -9,7 +9,7 @@ test_strategy_random_equip_grant_kongcang.py 空仓)。
 
 - 行为链真值:确定入口 → equips/席按池逐名入席、效果串恒 Σ池数条
   (发放事实与落位成败解耦)、零随机面(rng 不消费);
-- 披露键三键在册(池含专家/星级先验 1/溢出截断)。
+- 披露键三键已登记(池含专家/星级先验 1/溢出截断)。
 """
 from __future__ import annotations
 
@@ -50,7 +50,7 @@ def _make_gs(*, bench: list[tuple[str, int]] | None = None,
 
 
 def test_all_chars_pool_keys_registered() -> None:
-    """披露键三键在册(池含专家/星级先验/溢出截断;家族形 = 全元组精确
+    """披露键三键已登记(池含专家/星级先验/溢出截断;家族形 = 全元组精确
     比对,随批扩员同形)。"""
     from sr_od.application.currency_war.kernel.cw_investments import (
         STRATEGY_ALL_CHARS_ASSUMPTION_KEYS,
@@ -89,4 +89,4 @@ def test_all_chars_chain_places_pool_and_zero_rng() -> None:
     assert all(e.startswith('all_cost_chars:') for e in out.effects), \
         f'效果串前缀: {out.effects[:3]}'
     assert rng0.getstate() == rng_state0, '零随机面(rng 不消费)'
-    assert _CARD in PICK_INVEST_EFFECTS, '注册行在册(效果体引用存活)'
+    assert _CARD in PICK_INVEST_EFFECTS, '注册行已登记(效果体引用存活)'

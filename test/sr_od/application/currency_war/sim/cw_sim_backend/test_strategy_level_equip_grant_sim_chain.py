@@ -5,8 +5,8 @@ _on_node_advance / _on_node_advance_terminal 双点接线段;kernel 检查腿
 
 测试面依据 = 迭代设计 designs/T-141-zuanshi-shangren.md §4 锁 3/7/8/9:
 - 推进点跨级发放主链(锁 2 sim 面):直构 level=8 + xp 贴阈,推经跨 9 →
-  equips logic 写 + 闩一笔(producer strategy_level_equip_grant,logic 族
-  sim:strategy)+ 发放拍 = 经验入账后;闩后续推进零再写(锁 3);
+  equips logic 写 + 一次性标志位写一笔(producer strategy_level_equip_grant,logic 族
+  sim:strategy)+ 发放拍 = 经验入账后;一次性标志位后续推进零再写(锁 3);
 - 局终跨级(锁 7):末节点经验跨 9 → 发放先于局终声明(双点之二);
 - 宝钻世界联动(锁 8):发放后 diamond_count +1 / deploy_cap = level +
   财富宝钻数 / back_layout +1(on_diamond_acquired 经 sim 接线调用);
@@ -17,7 +17,7 @@ _on_node_advance / _on_node_advance_terminal 双点接线段;kernel 检查腿
   免战牌 +30 入注册面随批重申报,合计 134 仍 < 194)。
 
 驱动形态复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py 与
-同目录 test_p3_win_terminal.py(在册先例,禁追加只 import;整局驱动
+同目录 test_p3_win_terminal.py(已登记先例,禁追加只 import;整局驱动
 _handle_click_source/_maybe_finish_wait 直调先例 = 同目录到级金腿锁)。
 """
 from __future__ import annotations
@@ -117,8 +117,8 @@ def test_advance_point_cross_grant_then_latch(
     """推进点跨级发放主链 + 一次性封账(锁 2 sim 面/锁 3):直构 level=8
     + xp=(71,72)(8→9 门槛 72)→ 推进跨 9 → equips logic 写恰一次
     (evidence strategy_level_grant:<卡>#equip,sig logic 族 sim:strategy,
-    producer 专名)+ 闩一笔同基串;发放拍 = 节点经验入账后;闩后继续
-    推进零再写零再闩。"""
+    producer 专名)+ 一次性标志位写一笔同基串;发放拍 = 节点经验入账后;一次性标志位后继续
+    推进零再写零再一次性标志位。"""
     b = _prep_backend(28)
     try:
         gs = b.gs
@@ -137,8 +137,8 @@ def test_advance_point_cross_grant_then_latch(
         #(置位写端 = live reconcile_tracking,sim 不经)→ rand=False 确定
         # 事件经 anchor_aware_write 落随机态(未锚定期落账 = 未验证推算,
         # sim 无观察覆盖值随写即真值;T-102 tick 腿 sim 侧同规则,T-5 宝钻
-        # 发放 write_logic_rand 同族先例);闩 = 登记事实直写 write_logic
-        #(T-108 sim 闩同形)。
+        # 发放 write_logic_rand 同族先例);一次性标志位 = 登记事实直写 write_logic
+        #(T-108 sim 一次性标志位同形)。
         assert equip_leg[:2] == ('rand', 'equips'), \
             f'发放通道漂移: {equip_leg[:2]}'
         assert equip_leg[3].family == 'logic_action' \
@@ -148,10 +148,10 @@ def test_advance_point_cross_grant_then_latch(
         assert equip_leg[5] == _PRODUCER, \
             f'producer 漂移: {equip_leg[5]!r}'
         assert latch_leg[:2] == ('logic', 'strategy_conditional_done'), \
-            f'闩通道漂移: {latch_leg[:2]}'
+            f'一次性标志位通道漂移: {latch_leg[:2]}'
         assert latch_leg[3].group_id == 'sim:strategy' \
             and latch_leg[4] == (_CARD,) and latch_leg[5] == _PRODUCER, \
-            f'闩形态漂移: {latch_leg}'
+            f'一次性标志位形态漂移: {latch_leg}'
         # 发放拍序:装备腿在节点经验入账后(跨级事件拍,先于新节点窗)
         idx_xp = next(i for i, c in enumerate(calls)
                       if c[1] == 'level' and c[2] == 'sim:engine:xp:node')
@@ -165,8 +165,8 @@ def test_advance_point_cross_grant_then_latch(
                 break
             _drive_env_grant_step(b)
         assert b._node_pos() != pos_before, '前置:续推进未发生'
-        assert _equip_legs(calls[n_after_first:]) == [], '闩后再发放'
-        assert gs.strategy_conditional_done.value == (_CARD,), '闩值漂移'
+        assert _equip_legs(calls[n_after_first:]) == [], '一次性标志位后再发放'
+        assert gs.strategy_conditional_done.value == (_CARD,), '一次性标志位值漂移'
     finally:
         uninstall_backend()
 
@@ -201,7 +201,7 @@ def test_terminal_cross_grant_world_coupling_before_disclosure(
             'back_layout 未 +1'
         # 发放先于局终声明:handler 收口后局终位与披露齐备
         assert b.done, '局终位未收口'
-        assert gs.strategy_conditional_done.value == (_CARD,), '闩未随局终存续'
+        assert gs.strategy_conditional_done.value == (_CARD,), '一次性标志位未随局终存续'
         assert b.disclosures.get(DISCLOSURE_RUN_COMPLETE) \
             == 'survived_p3_boss', '局终披露漂移'
     finally:

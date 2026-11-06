@@ -53,7 +53,7 @@ def _make_gs(*, bench: list[tuple[str, int]] | None = None,
 
 
 def test_wuqiang_registry_row_single_source() -> None:
-    """登记单一源:组合行在册(双具名);泛化随机表零条目(非随机族);
+    """登记单一源:组合行已登记(双具名);泛化随机表零条目(非随机族);
     id 对拍 plaza:203001。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
         _STRATEGY_RANDOM_EQUIP_GRANTS,
@@ -62,7 +62,7 @@ def test_wuqiang_registry_row_single_source() -> None:
     from sr_od.application.currency_war.kernel.cw_investments import (
         INVESTMENT_STRATEGIES,
     )
-    assert _CARD in PICK_INVEST_EFFECTS, '组合行在册'
+    assert _CARD in PICK_INVEST_EFFECTS, '组合行已登记'
     assert _CARD not in _STRATEGY_RANDOM_EQUIP_GRANTS, '双具名非随机族'
     assert INVESTMENT_STRATEGIES[_CARD].source == 'plaza:203001', \
         '注册行 id 对拍'

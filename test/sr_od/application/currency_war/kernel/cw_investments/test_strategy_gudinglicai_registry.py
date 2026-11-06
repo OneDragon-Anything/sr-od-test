@@ -20,7 +20,7 @@ registry.py)。
   持续通道,非一次性/结构登记排除桶);
 - 待建模登记锁(锁 8):两行存续 + 描述非空(闭集断言④点名,删行即
   import 炸——本测试存活即证);
-- 现金分激活锁:xp_instant=4 在册计分分类字段,注册挂值即通道自动
+- 现金分激活锁:xp_instant=4 已登记计分分类字段,注册挂值即通道自动
   生效(4×XP_GOLD_RATE;位面段两字段待建模塌 0 不重复计)。
 """
 from __future__ import annotations
@@ -105,7 +105,7 @@ def test_gudinglicai_pending_modeling_rows() -> None:
 
 
 def test_gudinglicai_cash_score_instant_active() -> None:
-    """现金分激活锁:xp_instant=4 在册计分分类字段,注册挂值即通道自动
+    """现金分激活锁:xp_instant=4 已登记计分分类字段,注册挂值即通道自动
     生效(4×XP_GOLD_RATE;裁决点 6 默认案);位面段两字段待建模塌 0,
     估值面不重复计。"""
     gs = game_state_of(SimpleNamespace())

@@ -612,7 +612,7 @@ class TestReopenTriggers:
 # (迭代 2026-10-17-levelup-shop-transition design §2.1 出口 + 凑金链
 # 整删收敛:商店会话不执行店内升级——命中 ∧ 可发射 → 关店转场不置
 # 标记;金不足(恒 defer)/未命中 → None 会话继续;资格门逐道拒因
-# 在册。)
+# 已登记。)
 
 
 class TestUpgradeIntentExit:
@@ -638,7 +638,7 @@ class TestUpgradeIntentExit:
         """命中 ∧ 可发射 → 关店转场且不置 handled 标记(design §2.1
         分支一):金充裕带滞后帧(等级 < 带下界,现金 − 批 ≥ 线)资格门
         全链通过 → 首动作 = 关店;标记未置(转场帧的后继 = 备战升级执行,
-        商店未「事情办完」);转场计数在册;零店内卖出/店内升级发射。"""
+        商店未「事情办完」);转场计数已登记;零店内卖出/店内升级发射。"""
         live, sess, gs, st = self._stay_frame(gold=80)
         act = live.decide_shop_action()
         assert isinstance(act, CwActionCloseShopParam), act
@@ -649,7 +649,7 @@ class TestUpgradeIntentExit:
 
     def test_hit_gold_short_returns_none_session_continues(self):
         """命中 ∧ 金不足(花后破线恒 defer)→ 检查返回 None,会话照常
-        继续:停留门触发 ∧ 花后破线 → 资金线 defer 拒因在册(资金面
+        继续:停留门触发 ∧ 花后破线 → 资金线 defer 拒因已登记(资金面
         拒因统一键);会话走 §2.5 正常收工置标记(「等节点收入」形态
         成立),非转场关店。凑金链已整删(用户裁定 2026-10-30:不
         存在升级卖牌凑金,保持最大压牌库,钱够了再升)。"""
@@ -658,14 +658,14 @@ class TestUpgradeIntentExit:
         ct = st.cw4_counters
         assert ct.get('levelup_trigger_stay_gate') == 1
         assert ct.get('levelup_fund_line_defer') == 1, \
-            '金不足帧资格门拒因在册(资金线 defer 统一键)'
+            '金不足帧资格门拒因已登记(资金线 defer 统一键)'
         assert ct.get('levelup_transition_close', 0) == 0, '金不足不转场'
         assert isinstance(act, CwActionCloseShopParam), act
         assert st.shop_handled is not None, \
             '金不足帧会话经正常收工置标记(出店→战斗→节点收入→资金线自然过线)'
 
     def test_gate_level_cap_frame_rejects(self):
-        """资格门②等级帽帧:满级帧判据不发射(拒因在册),会话照常
+        """资格门②等级帽帧:满级帧判据不发射(拒因已登记),会话照常
         收工置标记(正常收工,非转场)。"""
         live, sess, gs, st = _frame(gold=100, level=10, plane=1,
                                     node_kind='battle', shop_cards=[])
@@ -676,7 +676,7 @@ class TestUpgradeIntentExit:
         assert st.shop_handled is not None
 
     def test_gate_reward_frame_defers(self):
-        """资格门①奖励帧抑制:奖励帧(非扑满环境)不发射(拒因在册,
+        """资格门①奖励帧抑制:奖励帧(非扑满环境)不发射(拒因已登记,
         抑制先于触发判定),会话照常收工置标记。"""
         live, sess, gs, st = _frame(gold=100, level=5, plane=1,
                                     node_kind='reward', shop_cards=[])
@@ -705,7 +705,7 @@ class TestUpgradeIntentExit:
     def test_gate_xp_batch_payment_frame_defers_and_control(self):
         """资格门⑤经验批支付门(R-1 币种通式):血本位局(奋斗协议,
         6 血/击)∧ 血余额 < 整级血成本 → 不发射(xp_batch_payment_defer
-        拒因在册);对照血足帧 → 可发射转场关店。构帧注:lv6 血批 =
+        拒因已登记);对照血足帧 → 可发射转场关店。构帧注:lv6 血批 =
         10 击 × 6 = 60,hp 45 不足血批(支付能力检查——币种余额 ≥
         整批成本;金本位局本门直通,金侧归资金线门)。"""
         live, sess, gs, st = self._stay_frame(level=6, gold=80, hp=45,
@@ -724,7 +724,7 @@ class TestUpgradeIntentExit:
 
     def test_gate_zero_clicks_frame_defers(self):
         """资格门④击数 > 0:XP 已满当前级(击数 0)→ 无批可发(拒因
-        在册),会话照常收工置标记。"""
+        已登记),会话照常收工置标记。"""
         live, sess, gs, st = self._stay_frame(gold=80, xp=(20, 20))
         act = live.decide_shop_action()
         assert st.cw4_counters.get('levelup_zero_clicks_defer') == 1
@@ -764,7 +764,7 @@ class TestPrepRandomizedReopen:
         assert st.shop_handled is None, '重开位清 handled 标记'
         assert gs.shop_randomized_pending is None, '重开位消费后清信号'
         assert st.cw4_counters.get('shop_randomized_reopen') == 1, \
-            '重开触发计数键在册(§2.6③ 随机态闭环取数口)'
+            '重开触发计数键已登记(§2.6③ 随机态闭环取数口)'
 
     def test_node_boundary_sweeps_stale_generation_signal(self):
         """节点边界清扫(过期代次):信号戳 ≠ 当前生效序位 = 旧节点牌面
@@ -815,7 +815,7 @@ class TestLevelupReserveGuard:
     def test_gold_short_wait_frame_no_refresh(self):
         """等钱帧零刷新(升级资金不被刷新烧):带滞后触发 ∧ 花后破线
         (金 68,批 20,花后 48 < 线 50;bench 活期充足——原凑金可达域
-        形态)→ 资格门 defer 在册(levelup_fund_line_defer 统一键,
+        形态)→ 资格门 defer 已登记(levelup_fund_line_defer 统一键,
         待付窗分键 levelup_stockpile_wait 已停产);刷新判据带互斥
         不批(等级 < 带下界)→ 零刷新动作,会话正常收工置标记
         (「等节点收入」形态成立)。"""
@@ -831,7 +831,7 @@ class TestLevelupReserveGuard:
         act = live.decide_shop_action()
         assert isinstance(act, CwActionCloseShopParam), act
         assert st.cw4_counters.get('levelup_fund_line_defer') == 1, \
-            '花后破线帧 defer 在册(资金面统一键——原凑金可达帧同形)'
+            '花后破线帧 defer 已登记(资金面统一键——原凑金可达帧同形)'
         assert not isinstance(act, CwActionRefreshShopParam), \
             '等钱帧零刷新(升级资金完整性优先)'
         assert st.shop_handled is not None, \
@@ -870,7 +870,7 @@ class TestRefreshTerminationSession:
                                     bench=[(n, 1) for n in _fuel(2)],
                                     deployed=[_fuel(3)[0]],
                                     shop_cards=[])   # 空面隔离买面
-        # 免费刷新在册 → 刷新发射(免费腿同过目标可买检查——金线不适用;
+        # 免费刷新已登记 → 刷新发射(免费腿同过目标可买检查——金线不适用;
         # 本帧有空位腿,目标可买为真,刷新照发)。
         gs.write_logic(gs.free_refresh_left, 2, produced_by='cw-36-loop',
                        sig=_LOGIC_SIG)

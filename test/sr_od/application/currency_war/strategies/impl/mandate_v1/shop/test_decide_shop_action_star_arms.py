@@ -254,7 +254,7 @@ class TestW5StarArmsMatrix:
         assert not [a for a in acts if isinstance(a, CwActionBuyCardParam)], \
             f'达标成员同名副本应显式停买: {acts!r}'
         assert st.cw4_counters.get('star_goal_met', 0) == 1, \
-            'star_goal_met 拒因计数在册(m2_stockpile 门位)'
+            'star_goal_met 拒因计数已登记(m2_stockpile 门位)'
         assert st.cw4_shop_rejects.get('远坂凛') == 'star_goal_met', \
             st.cw4_shop_rejects
 
@@ -318,7 +318,7 @@ class TestW4StayWindowYield:
         assert not [a for a in acts if isinstance(a, CwActionBuyCardParam)], \
             f'窗口帧 M6 囤货零发射: {acts!r}'
         assert st.cw4_counters.get('m6_stay_window_yield', 0) == 1, \
-            '让位否决观测键在册'
+            '让位否决观测键已登记'
         refreshes = [a for a in acts
                      if isinstance(a, CwActionRefreshShopParam)]
         assert refreshes and refreshes[0].cost > 0, \
@@ -385,7 +385,7 @@ class TestW11RefreshNegativeMemory:
         assert acts2 == [], \
             f'无状态变化重入帧零刷新提案,按六序/关店走: {acts2!r}'
         assert st.cw4_counters.get(
-            'shop_refresh_blocked_memory_skip', 0) == 1, '跳过观测键在册'
+            'shop_refresh_blocked_memory_skip', 0) == 1, '跳过观测键已登记'
 
     def test_state_change_clears_marker_and_proposal_recovers(self):
         """状态变化清标记:金变化(键分量比对)后重入,标记清除,刷新

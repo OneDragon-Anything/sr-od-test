@@ -10,7 +10,7 @@ REVIEW-T166(直构形态先例 = 同目录 test_check_strategy_hp_loss_grants.py
   (禁手抄池清单,T-116 家族口径)、evidence ``strategy_boss_battle#<卡名>
   #equip``(原语内追加 #equip 后缀)、随机态通道(source = logic_rand,
   rand=True 采样效果子链)、返回值 = 发放名序列;
-- 可重复无 done 闩(卡面无「首次」限定 = 每次 boss 战后都发,防重归
+- 可重复无 done 一次性标志位(卡面无「首次」限定 = 每次 boss 战后都发,防重归
   调用方节点键幂等守卫);
 - rng 缺省回退自掷路径与显式传参路径**写语义同构**(零写计数/evidence
   形态/发放件数一致;非结果等价——自掷路径采样值不可复现,断言只锁
@@ -111,7 +111,7 @@ def test_boss_grant_places_sampled_equip() -> None:
 
 
 def test_repeatable_no_done_latch() -> None:
-    """可重复(无 done 闩):同 kind 连调两次 → 两件入栏(卡面无「首次」
+    """可重复(无 done 一次性标志位):同 kind 连调两次 → 两件入栏(卡面无「首次」
     限定 = 每次 boss 战后都发,一局现役最多 3 次;防重归调用方节点键
     幂等守卫,本函数零二次守卫)。"""
     gs = _gs()

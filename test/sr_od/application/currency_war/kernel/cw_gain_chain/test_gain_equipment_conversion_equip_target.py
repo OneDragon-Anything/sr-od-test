@@ -1,7 +1,7 @@
 """装备获得转换·装备目标分支锁(镜像 src = kernel/cw_gain_chain.py 的
 gain_equipment 顶段装备目标分支 + _equip_gain_conversion_hit 判定件 +
 equip_gain_conversion_target 公开预测面;按被测方法拆目录规范落位——
-test_gain_chain.py 在册超限冻结禁追加,新锁落新镜像;bench 分支先例 =
+test_gain_chain.py 已登记超限冻结禁追加,新锁落新镜像;bench 分支先例 =
 同目录 test_gain_equipment_conversion.py 模式卡自由市场)。
 
 测试面依据 = 迭代设计 designs/T-248-haoyunlai.md §4 锁 1/2/3/5 +

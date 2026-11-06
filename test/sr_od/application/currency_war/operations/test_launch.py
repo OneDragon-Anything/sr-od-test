@@ -20,7 +20,7 @@
   - stale(非备战屏) → (False, 'readiness_stale_screen') + 分键;
   - 浮层命中(遭遇 OCR 兜底路径) → (False, 'readiness_overlay_hold:…')
     + 分键;
-  - resume 闩:首调部署原子序 + 置闩,次调跳过部署;
+  - resume 一次性标志位:首调部署原子序 + 置一次性标志位,次调跳过部署;
   - 非法 face 拒绝;
   - readiness_battle_launch 抽取 helper 后等价守卫(stale 形态同返回)。
 """
@@ -277,15 +277,15 @@ def test_unified_overlay_hold_rejects(launch_env) -> None:
 
 
 def test_unified_resume_latch(launch_env) -> None:
-    """resume 闩:首调部署原子序 + 置闩;次调跳过部署、CwActionStartBattleParam 照发。"""
+    """resume 一次性标志位:首调部署原子序 + 置一次性标志位;次调跳过部署、CwActionStartBattleParam 照发。"""
     op = _StubOp([_Frame(hits=PREP_HITS), _Frame(hits=PREP_HITS)])
     ok1, _ = launch_battle_unified(op, launch_env.ctx, face='resume')
     assert ok1 is True
-    assert op._cw_locked_sync_done is True, '首调置闩'
+    assert op._cw_locked_sync_done is True, '首调置一次性标志位'
     assert launch_env.deploy_calls == [1], '首调部署原子序一次'
     ok2, _ = launch_battle_unified(op, launch_env.ctx, face='resume')
     assert ok2 is True
-    assert launch_env.deploy_calls == [1], '闩后部署原子序不再现算'
+    assert launch_env.deploy_calls == [1], '一次性标志位后部署原子序不再现算'
     assert len(_StubExecutor.instances) == 2, '两调各一次 CwActionStartBattleParam 执行'
 
 

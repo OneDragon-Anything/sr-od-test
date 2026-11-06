@@ -1,5 +1,5 @@
 """sim 策略选卡已损血衍生金腿测试(镜像 src = sim/cw_sim_backend.py 的
-_on_invest_picked 已损血衍生金落地腿 + 呈现闩 + 披露键;kernel 触发函数
+_on_invest_picked 已损血衍生金落地腿 + 呈现一次性标志位 + 披露键;kernel 触发函数
 单元面 = kernel/cw_gain_chain/test_check_strategy_hp_loss_gold.py,本文件
 锁 sim 选卡落地腿接线与世界真值落地面)。
 
@@ -9,11 +9,11 @@ test_strategy_pick_hp.py):
 - 持卡发放真值:直构损血后选卡落地 → 金笔存在且 amount == max(0,
   opening−hp),独立 evidence 笔 ``strategy:hp_loss_gold``,sig = obs 族
   'sim:strategy' 组,披露键随局申报;
-- 呈现闩防重放:同 offer 落地 advance 重放 → 第二次零写;
+- 呈现一次性标志位防重放:同 offer 落地 advance 重放 → 第二次零写;
 - 零损失选卡(开局即选,hp == 开局基线)→ 检查函数返回 0 = 零笔零申报;
 - 无卡局零扰动:opts 含本卡但不落卡(选另一张)→ 落地交集空 → 零金笔。
 
-复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py(在册超限
+复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py(已登记超限
 拆分债文件,禁追加,只 import 复用不改)与 cw_sim_backend/
 test_p3_win_terminal.py(先例 = 同目录 test_strategy_pick_hp.py)。
 """
@@ -77,7 +77,7 @@ def _drive_until(b: SimBackend, pred, limit: int = 512) -> None:
 
 
 def _drive_to_offer(b: SimBackend) -> None:
-    """驱动至策略 offer 呈现(固定日程首槽;呈现即置衍生金腿闩——本腿
+    """驱动至策略 offer 呈现(固定日程首槽;呈现即置衍生金腿一次性标志位——本腿
     生效前提)。"""
     _drive_until(b, lambda: b.screen_identity() == SCREEN_INVEST_STRATEGY)
 
@@ -137,7 +137,7 @@ def test_pick_grants_exact_hp_loss_gold_with_disclosure(
 
 
 def test_replay_advance_zero_double_grant() -> None:
-    """呈现闩防重放:同 offer 落地 advance 重放一次 → 第二次零写(闩已
+    """呈现一次性标志位防重放:同 offer 落地 advance 重放一次 → 第二次零写(一次性标志位已
     消费;金值/evidence/披露键三方均不再动)。"""
     b = _backend(seed=52)
     try:
@@ -181,7 +181,7 @@ def test_zero_loss_pick_no_gold_pen() -> None:
 
 def test_unpicked_card_zero_grant() -> None:
     """无卡局零扰动(名单推导负例):opts 含本卡但不落卡(选另一张)→
-    落地交集空 → 零金笔、金零增量(闩同拍消费,本次不残留)。"""
+    落地交集空 → 零金笔、金零增量(一次性标志位同拍消费,本次不残留)。"""
     b = _backend(seed=54)
     try:
         gs = b.gs

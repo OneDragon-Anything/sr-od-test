@@ -29,7 +29,7 @@ from sr_od.application.currency_war.kernel.cw_investments import (
 def test_scale_effect_registry_row_single_source() -> None:
     """登记单一源:规模效应行 = 卡面效果原文直读(「获得1个【完美投影
     仪】」→ 具名装备;「8个一样的角色」→ 同名阈值 8,单位数口径);
-    发放物 = 装备注册表成员(工具类,cw_equipment_data 在册);base 溯源
+    发放物 = 装备注册表成员(工具类,cw_equipment_data 已登记);base 溯源
     id 对拍(id 101301 ↔ plaza:101301)。"""
     assert set(STRATEGY_CONDITIONAL_GRANTS) == {'规模效应'}, \
         '注册面 = 族现役首例(同族后续卡各自独立批,禁顺手代登记)'
@@ -70,7 +70,7 @@ def test_validator_item_equip_name_drift_raises(monkeypatch) -> None:
     (EQUIPMENTS = 游戏数据派生注册表,版本更新改名/移除装备可独立触发,
     _validate_env_gifts 装备名漂移哨同形)。错名运行期实况 = 静默幻影:
     gain_equipment 盲追加 + on_equipment_gained .get() 安静不写 + tick
-    吞异常 → 静默幻影装备永久落闩零报错——import 期哨是唯一响亮拦截
+    吞异常 → 静默幻影装备永久落一次性标志位零报错——import 期哨是唯一响亮拦截
     面,本锁防哨被再删。"""
     monkeypatch.setitem(
         cw_investments.STRATEGY_CONDITIONAL_GRANTS, '规模效应',

@@ -122,8 +122,8 @@ def test_pair_legs_grant_peipei_then_diamond(rows_sink: _RowSink) -> None:
 def test_effect_text_has_no_gain_verb_and_grant_registered() -> None:
     """判读前提漂移哨(锁 5①)+ 转正行形态:卡面 effect 无「获得」子串
     (本卡人工转正行的立据——词表改版引入「获得」动词时反扫即命中,
-    本哨先红触发判读重申报);转正行在册且发放对象 = 佩佩;组合登记行
-    在册(把结果写进状态副本的实现分支单一源)。"""
+    本哨先红触发判读重申报);转正行已登记且发放对象 = 佩佩;组合登记行
+    已登记(把结果写进状态副本的实现分支单一源)。"""
     assert '获得' not in INVESTMENT_STRATEGIES[_CARD].effect, \
         '卡文出现「获得」:反扫判读前提漂移,转正依据重申报'
     grant = STRATEGY_GRANTS.get(_CARD)

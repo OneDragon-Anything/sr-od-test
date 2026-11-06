@@ -56,4 +56,4 @@ def test_cap_widest_coexist() -> None:
     """cap 取宽并存锁:并持利息上调(cap=10)→ 聚合取宽 10(买断制 0 不
     硬关闭,ADR-0131 语义)。"""
     eff = STRATEGY_ECONOMY['利息上调']
-    assert eff.interest_cap_override == 10, '利息上调 cap=10 在册'
+    assert eff.interest_cap_override == 10, '利息上调 cap=10 已登记'

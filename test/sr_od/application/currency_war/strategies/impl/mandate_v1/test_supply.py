@@ -891,7 +891,7 @@ def test_chosen_supply_written_before_dispatch_and_no_landing_phase(
         'chosen_supply 2 元组在派发前已写(写点 = 选择点,携全列装备)'
     write_seq_after_dispatch = gs.write_seq
     # 节点完成门 miss(overlay 已关)= 分发身份安全网 success 交回,
-    # 零落地相补写面(证据闩已随即时上报批退役)。
+    # 零落地相补写面(证据一次性标志位已随即时上报批退役)。
     monkeypatch.setattr(op, '_in_node', lambda screen: False)
     result = _run_node(test_context, op, op.act)
     assert result.is_success, '门 miss = 节点完成 success 交回'

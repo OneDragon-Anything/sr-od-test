@@ -3,7 +3,7 @@ cw_investments.py 的 STRATEGY_BOSS_COMPLETION_GRANTS + 构建校验)。
 
 测试面依据 = 迭代设计 designs/T-330-wuqi-pifashang.md §4 锁 1/2 +
 REVIEW-T330 §4.3(校验面五哨逐哨定性全留,禁按「治理 = 全删」误删
-漂移哨):①孤儿键/②id 双匹配(幸存面,id 字段表家族在册形)/③items
+漂移哨):①孤儿键/②id 双匹配(幸存面,id 字段表家族已登记形)/③items
 非空/④逐件 ∈ 装备注册表名闭集/⑤类别断言(锁「全集 = 简易」语义)——
 哨面共同性质 = 能被游戏版本变更(策略卡改名/数据 source 改/注册表
 改版)独立触发,按 2026-10-28 治理判据属漂移哨全留;import 即炸语义
@@ -72,7 +72,7 @@ def test_validator_orphan_key_raises(monkeypatch) -> None:
 def test_validator_id_mismatch_raises(monkeypatch) -> None:
     """哨②(id 双匹配,幸存面):id 与数据 source 改任一独立触发 →
     ValueError(数据行 source 改版/id 手抄改写双源;id 字段表家族
-    在册形)。"""
+    已登记形)。"""
     monkeypatch.setitem(STRATEGY_BOSS_COMPLETION_GRANTS, _CARD,
                         StrategyBossCompletionGrant(id='999999',
                                                     items=SIMPLE_EQUIP_ALL))

@@ -1,6 +1,6 @@
 """专家研讨会 sim 全链轻量局测试(镜像 src 主断言对象 = 环境发放经 sim
 后端全链;按流程级测试落位本目录,引擎驱动助手 import 自
-sim/test_sim_backend.py〔在册超限拆分债文件,禁追加,只 import 复用不改;
+sim/test_sim_backend.py〔已登记超限拆分债文件,禁追加,只 import 复用不改;
 先例 = 本目录 test_env_deploy_lock_sim_chain.py 与 T-32
 test_equip_env_pick_sim_full_chain_blue_diamond〕)。
 

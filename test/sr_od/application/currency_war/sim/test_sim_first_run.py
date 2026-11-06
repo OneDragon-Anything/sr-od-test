@@ -180,7 +180,7 @@ def test_first_match_container_invariants(two_runs: tuple) -> None:
 
     # —— ② hp 轨迹不变式(hp 写行 = 每战斗结算恰一条 + 选卡即时腿逐笔
     #      + 持卡首领战/战斗结束回血腿逐笔 + 获得链交换腿逐笔(kernel
-    #      写端,sim 落地腿呈现闩配对;等值交换写行照落,轨迹同拍追加);
+    #      写端,sim 落地腿呈现一次性标志位配对;等值交换写行照落,轨迹同拍追加);
     #      轨迹首条 = reset 开局,先于 journal 捕获,故对拍域 = 写流全序
     #      vs 轨迹[1:]) ——
     hp_rows = _write_rows(run, 'hp')

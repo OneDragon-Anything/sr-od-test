@@ -4,11 +4,11 @@ take_strategy_death_save)。
 测试面依据 = 迭代设计 designs/T-323-cang-yishou.md §4 锁 2/6 + 用户裁定
 2026-11-04(一次性 + M-B 独立叠加 + R1 奖励随救援发放;直构形态先例 =
 同目录 test_check_strategy_hp_loss_grants.py):
-- 五态矩阵:①未持卡零写;②持卡 ∧ 闩 ∈ {None, False}(未用,两值均
-  放行)→ 载荷三元组 + 闩置位 + 三笔写(hp 40/经验/金);③持卡 ∧ 闩
+- 五态矩阵:①未持卡零写;②持卡 ∧ 一次性标志位 ∈ {None, False}(未用,两值均
+  放行)→ 载荷三元组 + 一次性标志位置位 + 三笔写(hp 40/经验/金);③持卡 ∧ 一次性标志位
   True(已用)→ None 零写(一次性防复发);④hp 基座 None → None 零写
   (禁造假基座,None 局禁救援);
-- 写序:闩置位先行,后 hp/经验/金同窗相邻(同 sig 同窗家族纪律);
+- 写序:一次性标志位置位先行,后 hp/经验/金同窗相邻(同 sig 同窗家族纪律);
 - 奖励笔署名(锁 6):经验笔 produced_by = strategy_death_save 词根
   (经 grant_xp 形参如实署名,非缺省「EffectLedgerBridge:成功经验」桥
   语义);金笔 = observe 独立笔(扑满收入 observe 金同款,金面禁 logic
@@ -44,7 +44,7 @@ _HP, _XP, _GOLD = STRATEGY_DEATH_SAVE_GRANTS[_CARD]
 def _gs(*, card: bool = True, hp: int | None = 10,
         latch: bool | None = None) -> GameState:
     """直构 gs(节点 P1r3 观察定 evidence 帧;gold/hp 观察定发放承载;
-    card = 持卡态;hp=None = 基座未观察态;latch = 预置闩值)。等级基座
+    card = 持卡态;hp=None = 基座未观察态;latch = 预置一次性标志位值)。等级基座
     取 9 级(XP_TO_NEXT_LEVEL[9]=84 > 载荷 30,经验腿单笔不触发跨级
     level 连写——跨级连锁归 grant_xp 原语自身测试域)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
@@ -102,40 +102,40 @@ def _death_save_rows(calls: list[tuple]) -> list[tuple]:
 
 
 def test_no_card_zero_write() -> None:
-    """锁 2①:未持卡 → None 零写(闩保持未判定 None,写序不变)。"""
+    """锁 2①:未持卡 → None 零写(一次性标志位保持未判定 None,写序不变)。"""
     gs = _gs(card=False)
     assert take_strategy_death_save(gs, logic_sig=_LSIG) is None, \
         '未持卡误发放'
-    assert gs.strategy_death_save_used.value is None, '未持卡误置闩'
+    assert gs.strategy_death_save_used.value is None, '未持卡误置一次性标志位'
 
 
 def test_hit_latch_none_and_false_both_pass(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """锁 2②:持卡 ∧ 闩未用(None/False 两态均放行)→ 载荷三元组 +
-    闩置位 True + hp 写 40 + 经验 +30 + 金 +80(载荷全取表载值;
-    闩 False = 已判定未触发态,与 None 同放行——表述统一防分支漏)。"""
+    """锁 2②:持卡 ∧ 一次性标志位未用(None/False 两态均放行)→ 载荷三元组 +
+    一次性标志位置位 True + hp 写 40 + 经验 +30 + 金 +80(载荷全取表载值;
+    一次性标志位 False = 已判定未触发态,与 None 同放行——表述统一防分支漏)。"""
     for latch in (None, False):
         gs = _gs(latch=latch)
         calls = _record_writes(gs, monkeypatch)
         assert take_strategy_death_save(gs, logic_sig=_LSIG) \
-            == (_HP, _XP, _GOLD), f'闩 {latch!r} 态误拒'
-        assert gs.strategy_death_save_used.value is True, '闩未置位'
-        assert gs.hp.value == _HP, f'闩 {latch!r} 态 hp 写漂移'
-        assert gs.gold.value == 10 + _GOLD, f'闩 {latch!r} 态金写漂移'
+            == (_HP, _XP, _GOLD), f'一次性标志位 {latch!r} 态误拒'
+        assert gs.strategy_death_save_used.value is True, '一次性标志位未置位'
+        assert gs.hp.value == _HP, f'一次性标志位 {latch!r} 态 hp 写漂移'
+        assert gs.gold.value == 10 + _GOLD, f'一次性标志位 {latch!r} 态金写漂移'
         assert gs.xp.value == (_XP, XP_TO_NEXT_LEVEL[9]), \
-            f'闩 {latch!r} 态经验写漂移'
+            f'一次性标志位 {latch!r} 态经验写漂移'
         rows = _death_save_rows(calls)
         assert len(rows) == 4, \
-            f'闩 {latch!r} 态写笔数漂移: {[c[:3] for c in rows]}'
+            f'一次性标志位 {latch!r} 态写笔数漂移: {[c[:3] for c in rows]}'
 
 
 def test_latch_true_blocks_repeat() -> None:
-    """锁 2③:闩已置位(True)→ None 零写(一次性防复发——每局仅首次
+    """锁 2③:一次性标志位已置位(True)→ None 零写(一次性防复发——每局仅首次
     致死触发救援,后续致死正常死亡;写序不变 = 全短路)。"""
     gs = _gs(latch=True)
     assert take_strategy_death_save(gs, logic_sig=_LSIG) is None, \
-        '已闩误二次发放'
-    assert gs.hp.value == 10 and gs.gold.value == 10, '已闩误写'
+        '已置一次性标志位误二次发放'
+    assert gs.hp.value == 10 and gs.gold.value == 10, '已置一次性标志位误写'
 
 
 def test_hp_none_base_zero_write() -> None:
@@ -144,12 +144,12 @@ def test_hp_none_base_zero_write() -> None:
     gs = _gs(hp=None)
     assert take_strategy_death_save(gs, logic_sig=_LSIG) is None, \
         'None 基座误发放'
-    assert gs.strategy_death_save_used.value is None, 'None 基座误置闩'
+    assert gs.strategy_death_save_used.value is None, 'None 基座误置一次性标志位'
 
 
 def test_write_order_latch_first(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """锁 2⑤:命中拍写序 = 闩置位先行 → hp → 经验 → 金(同 sig 同窗
+    """锁 2⑤:命中拍写序 = 一次性标志位置位先行 → hp → 经验 → 金(同 sig 同窗
     相邻写;evidence 帧互异可过滤审计)。"""
     gs = _gs()
     calls = _record_writes(gs, monkeypatch)
