@@ -1,7 +1,7 @@
 """sim 策略卡赠礼条件两条效果条目节点窗腿测试(镜像 src = sim/cw_sim_backend.py
 的 _begin_node_window 赠礼腿;kernel 触发函数直构面 =
 kernel/cw_gain_chain/test_check_strategy_gift_grants.py,本文件锁 sim
-窗口接入调用与世界真值落地面)。
+窗口接入调用与状态副本里的值落地面)。
 
 测试面依据 = 迭代设计 designs/T-283-mi-zhi-lvren.md(定稿)§4 锁 4
 + 七裁决点全部默认案(经族级授权自动收尾,判定 = designs/REVIEW-T283.md):
@@ -116,7 +116,7 @@ def _units(gs: GameState) -> list[tuple[str, int]]:
 
 def test_both_legs_fire_in_next_window(_prep_backend) -> None:
     """锁 4 主锁:持卡 + 板面 4 巡海 → 下一节点窗(P1r2 = reward)→
-    效果条目1 2★黄泉 + 徽入栏 + 效果条目2 1★波提欧,封账两条效果条目复合键并存(世界真值,
+    效果条目1 2★黄泉 + 徽入栏 + 效果条目2 1★波提欧,封账两条效果条目复合键并存(状态副本里的值,
     使用面天然可消费)。"""
     b = _prep_backend
     gs = b.gs

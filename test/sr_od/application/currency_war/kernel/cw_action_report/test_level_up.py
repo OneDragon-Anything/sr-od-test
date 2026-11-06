@@ -6,13 +6,13 @@ pick_diamond_grant_sim_chain.py,本文件只锁行为面)。
 
 测试面依据 = 迭代设计 designs/T-324-kongzhi-guimo.md §4 锁 3:
 - 直构 gs(level=7 持控制规模)→ 满级门 applied=False reason='level_cap'
-  零写 + 推进算子两件零推进(持卡世界等级轴 7 封顶);
+  零写 + 推进算子两件零推进(持卡状态副本等级轴 7 封顶);
 - 无卡对照同参推进成功(跨 7 级断言——帽缺省 = MAX_PLAYER_LEVEL,
   门与算子对无卡局零扰);
 - 边界 level=6 持卡升至 7 恰停(帽截断等级推进,溢出照常 cur 结转)。
 
 建模语义 = 持卡生效的进度轴上限改写(cap-only,不回退已达等级;策略侧
-lv 判据读注册表 level_max 系另一把尺,世界面拒发与规划失配 = 决策质量
+lv 判据读注册表 level_max 系另一把尺,状态副本这一侧拒发与规划失配 = 决策质量
 议题,本锁不辖)。
 """
 from __future__ import annotations

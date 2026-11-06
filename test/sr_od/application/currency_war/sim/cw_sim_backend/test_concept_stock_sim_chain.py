@@ -15,8 +15,8 @@ import 复用(先例 = test_p3_win_terminal._drive_step 形态),fixture
 
 测试面依据 = game_state/gain-chain.md §3 随机支/随机装备支段 +
 fields.md §5.2 效果缺口与载体登记,语义 = 「概念股族展开卡登记约定」:
-sim 局选战技点概念股 → 世界发放全链自动生效(选卡上报条件解析注入流键
-rng,世界真值)——bench 增战技点流派域 1★ 一张、equips 增简易类别一件;
+sim 局选战技点概念股 → 写状态副本发放全链自动生效(选卡上报条件解析注入流键
+rng,状态副本里的值)——bench 增战技点流派域 1★ 一张、equips 增简易类别一件;
 同 seed 重放确定性。本域特有面:域 7 名中青雀为专家,牌库时点池过滤后
 候选 6 名(economy.md §8 用户裁定 2026-10-28,赠卡名显式 ∉ EXPERT_CHARS
 钉专家剔除生效);独立单位成员 Archer 照发在候选池内〔economy.md:94
@@ -61,7 +61,7 @@ def _isolate_defect_buffer():
 def test_zhanjidian_concept_stock_env_pick_grant_sim_chain(
         _isolate_defect_buffer) -> None:
     """sim 选卡全链第十五实例(gain-chain.md §3 随机支/随机装备支段:sim
-    世界真值 = 流键 rng,族展开登记经 kernel 获得链自动生效,零 sim 新
+    状态副本里的值 = 流键 rng,族展开登记经 kernel 获得链自动生效,零 sim 新
     代码;概念股族展开卡登记约定):选战技点概念股 → bench = 开局 4 +
     战技点流派域 1★ 一张(星级 = spec 先验;成员名 ∈ chars_by_faction
     ('战技点') 现算集,不手抄;域 7 名中青雀为专家,牌库时点池过滤后
@@ -70,7 +70,7 @@ def test_zhanjidian_concept_stock_env_pick_grant_sim_chain(
     在候选池内〔economy.md:94 族级定论点名战技点(Archer)〕)、equips
     计数 +1 且名 ∈ equips_by_category('简易') 现算集(economy.md 四卡
     线索名单不含战技点 = 装备身份零先验,均匀 v0 + 按卡固定假说待校准
-    随家族键已登记,零新增申报);同 seed 重放确定性(世界发放可重放)。"""
+    随家族键已登记,零新增申报);同 seed 重放确定性(写状态副本发放可重放)。"""
     from sr_od.application.currency_war.data.cw_chars import EXPERT_CHARS
 
     faction_names = {c.name for c in chars_by_faction('战技点')}

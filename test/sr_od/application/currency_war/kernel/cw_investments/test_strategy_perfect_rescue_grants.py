@@ -1,5 +1,5 @@
 """策略卡完胜判定改写登记表测试(镜像 src = kernel/cw_investments.py 的
-STRATEGY_PERFECT_RESCUE_GRANTS + 构建校验;世界发放腿注册面镜像 =
+STRATEGY_PERFECT_RESCUE_GRANTS + 构建校验;写状态副本的发放效果条目注册面镜像 =
 cw_gain_effects.PICK_INVEST_EFFECTS 组合登记行)。
 
 测试面依据 = 迭代设计 designs/T-412-doushi-zhejiade-cuo.md §2.2 件1 +
@@ -9,7 +9,7 @@ test_strategy_death_save_grants.py 死亡救援同形三件套):
 - 登记单一源:行值 = 卡面原文直读(都是这家伙的错!id 352801:「……视为
   完美通关并出售1名携带【命运圣杯星徽】的上场角色,可生效3次」→
   (命运圣杯星徽, 3));
-- 效果条目1 注册面:金腿 instant_gold=10(卡面「和10金币」直读)+ 世界发放腿
+- 效果条目1 注册面:金腿 instant_gold=10(卡面「和10金币」直读)+ 写状态副本的发放效果条目
   PICK 组合登记行已登记;登记表 STRATEGY_GRANTS 零登记(装备腿唯一出现点
   纪律,控制规模同物同形);
 - 构建校验 2 条漂移哨(直调校验函数锁定):孤儿键 + 徽名双源。
@@ -65,7 +65,7 @@ def test_economy_row_instant_gold() -> None:
 
 
 def test_pick_row_world_grant_registered() -> None:
-    """效果条目1a 世界发放腿注册面:PICK 组合登记行已登记(效果体引用存活);
+    """效果条目1a 写状态副本的发放效果条目注册面:PICK 组合登记行已登记(效果体引用存活);
     登记表 STRATEGY_GRANTS 零登记(装备腿唯一出现点纪律,镜像一致性
     锁零涉——本卡无 GRANTS 条目即无逐对相等对)。"""
     assert _CARD in PICK_INVEST_EFFECTS, 'PICK 组合登记行缺位'

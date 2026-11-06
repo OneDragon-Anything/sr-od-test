@@ -43,7 +43,7 @@ from sr_od.application.currency_war.sim.cw_sim_opening import (
 )
 from sr_od.application.currency_war.sim.cw_sim_run_config import RunConfig
 
-#: 验收局种子(世界后端与策略器共用;经种子扫描选定 = 该 seed 下真
+#: 验收局种子(状态副本后端与策略器共用;经种子扫描选定 = 该 seed 下真
 #: 策略能从 P1 打到 P2 boss 局终,确定性双跑与种子值解耦)。
 ACCEPT_SEED: int = 20260923
 

@@ -1,5 +1,5 @@
 """check_strategy_ore_open_effects 晶矿开启触发发放直构锁(镜像 src =
-cw_gain_chain.py 同名函数 + _grant_ores_to_world 世界写;test_gain_chain.py
+cw_gain_chain.py 同名函数 + _grant_ores_to_world 状态副本写;test_gain_chain.py
 已超行限禁追加,本文件按拆目录规范落新位)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
@@ -101,7 +101,7 @@ def test_hit_grants_tier_down_with_attachment(rng_provider) -> None:
 
 def test_miss_zero_write(rng_provider) -> None:
     """未掷中零写锁:未掷中 seed → 返回 0,spheres/ore_rewards 值不变
-    (零写;rng 消耗 = 50% 掷点一笔,世界零落)。"""
+    (零写;rng 消耗 = 50% 掷点一笔,状态副本零落)。"""
     _seed_provider(_MISS_SEED)
     gs = _make_gs(points=(('gold', 100, 200, 30),))
     got = check_strategy_ore_open_effects(gs, ('金',), sig=_SIG, level=3)
@@ -200,11 +200,11 @@ def test_collision_negative_non_continuous_remaining(rng_provider) -> None:
 
 
 def test_level_none_grant_without_attachment(rng_provider) -> None:
-    """level 缺读兜底锁:授予照常入世界,ore_rewards 零写(该批矿无附着,
+    """level 缺读兜底锁:授予照常入状态副本,ore_rewards 零写(该批矿无附着,
     点击走既有缺项兜底路径,禁炸)。"""
     _seed_provider(_HIT_SEED)
     gs = _make_gs(points=(('gold', 100, 200, 30),), level=None)
     got = check_strategy_ore_open_effects(gs, ('金',), sig=_SIG, level=None)
     assert got == 1, f'level 缺读仍授予: {got}'
-    assert ('蓝', 10, 10, 10) in _sphere_pts(gs), '矿入世界'
+    assert ('蓝', 10, 10, 10) in _sphere_pts(gs), '矿入状态副本'
     assert gs.ore_rewards.value is None, '无附着零写'

@@ -312,7 +312,7 @@ _SIM_CFG = RunConfig(selected_difficulty='A8', enemy_difficulty=108)
 
 def _feed_start_battle(gs) -> None:
     """出战上报 + 声明喂入(声明化单轨;动作 op「上报后一行喂入」同形,
-    手法源 = test_sim_backend 世界喂入链)。"""
+    手法源 = test_sim_backend 状态副本喂入链)。"""
     out = report_action_start_battle_param(
         gs, SimpleNamespace(),
         ChannelSig(family='logic_action', actor='SimSupplyTest',
@@ -329,10 +329,10 @@ def _feed_node_advance(gs, *, trigger: str) -> None:
 
 @contextmanager
 def _sim_supply_world(test_context, monkeypatch, *, seed: int = 61):
-    """sim 补给节点世界装配缝(run_sim_full_match 装配段同源,不另发明):
+    """sim 补给节点状态副本装配缝(run_sim_full_match 装配段同源,不另发明):
     SimBackend(A8/108 标准局)+ 端口槽/事件钩子/动作分支 rng 提供槽
     (``install_backend`` 单点)+ controller 桩(任何真实 IO 触碰即炸 =
-    机械执行分支零触碰的响亮证明)+ obs 读口纯钩子半部 + 世界驱动简报→P1r5
+    机械执行分支零触碰的响亮证明)+ obs 读口纯钩子半部 + 状态副本驱动简报→P1r5
     补给节点窗(入口呈现 3 选项 + 免费刷新 left=1)。yield backend;
     teardown 必卸(端口槽进程全局,残留会把后续测试静默切进 sim 模式)。"""
     from sr_od.application.currency_war.kernel.cw_reconcile import (
@@ -354,7 +354,7 @@ def _sim_supply_world(test_context, monkeypatch, *, seed: int = 61):
     install_backend(backend)
     monkeypatch.setattr(test_context, 'controller', SimControllerStub())
     try:
-        # 世界驱动到补给节点窗(喂入链手法源 = test_sim_backend.
+        # 状态副本驱动到补给节点窗(喂入链手法源 = test_sim_backend.
         # test_supply_node_window_refresh_and_pick;P1r5 = 补给节点)。
         backend._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
         backend._maybe_finish_wait()
@@ -363,7 +363,7 @@ def _sim_supply_world(test_context, monkeypatch, *, seed: int = 61):
             if backend.screen_identity() == SCREEN_SETTLE:
                 _feed_node_advance(backend.gs, trigger='settle_confirm')
         assert backend.screen_identity() == SCREEN_SUPPLY, (
-            f'前置:世界在补给节点窗(实得 {backend.screen_identity()!r})')
+            f'前置:状态副本在补给节点窗(实得 {backend.screen_identity()!r})')
         yield backend
     finally:
         uninstall_backend()
@@ -372,7 +372,7 @@ def _sim_supply_world(test_context, monkeypatch, *, seed: int = 61):
 def _sim_match(test_context, monkeypatch, backend,
                strategy_seed: int = 61):
     """真策略装配段(run_sim_full_match 同源):StrategySession + 容器
-    绑定(后端容器 = 流程唯一世界)+ MandateV1Strategy 构造 +
+    绑定(后端容器 = 流程唯一状态副本)+ MandateV1Strategy 构造 +
     CurrencyWarMatch 挂 ctx。返回 (match, strategy)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         bind_session_container,
@@ -403,7 +403,7 @@ def test_supply_sim_refresh_leg_area_click_backend_refresh(
     建议刷 → 「文本-剩余次数」area 点击(基类 sim 改道 → 后端
     ``_supply_refresh``)→ left−1 + 选项重掷落容器,本访问终结交回;
     决策恰一次(零重调)。controller 桩在装 = 机械执行分支零触碰的结构性证明
-    (刷新世界分支全走点击源端口)。"""
+    (刷新状态副本分支全走点击源端口)。"""
     with _sim_supply_world(test_context, monkeypatch, seed=53) as b:
         _match, strategy = _sim_match(test_context, monkeypatch, b)
         gs = b.gs
@@ -477,7 +477,7 @@ def test_supply_sim_two_state_pick_flow(test_context, monkeypatch) -> None:
     supply_finish)。装配缝 = run_sim_full_match 同源(真策略
     MandateV1Strategy;left 预刷尽使真实 decide 恒落选卡——次数闸内嵌,
     刷新建议不可能,决策确定性由 seed 承载)。动作 op 走真注册表派发:
-    机械执行分支端口检查跳过,世界反应 = 上报声明链(内容载荷分支
+    机械执行分支端口检查跳过,状态副本反应 = 上报声明链(内容载荷分支
     owned += 规范名)。占位池 char 恒空 → 单位入账分支结构性零写
     (design §2.2 申报;bench 分支对占位池不可达,不在断言面)。journal
     走内存 sink(零落盘),run 态测试复位。"""
@@ -710,7 +710,7 @@ def test_supply_sim_pick_take_all_fail_closed_latch_bookkeeping(
             '未选集域 sim 恒 None(fail-closed 载体面)')
         assert gs.strategy_conditional_done.value == \
             ('take_all#全都要·银#1',), (
-            '事件消耗照耗(A 案 sim 簿记 = 一笔计数复合键 done 写,零世界效果)')
+            '事件消耗照耗(A 案 sim 簿记 = 一笔计数复合键 done 写,零状态副本效果)')
         assert gs.bench.value == bench_before, '发放侧零写:bench 不变'
         assert list(gs.equips.value) == \
             equips_before + [gs.chosen_supply.value[1][0]], (

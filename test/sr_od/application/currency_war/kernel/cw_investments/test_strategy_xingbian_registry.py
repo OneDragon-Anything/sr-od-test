@@ -11,7 +11,7 @@
   UnitBuffRef(官方效果原文)× duties 三位全 False(零计数器/零预知/
   零姿态);pending=False(变形持续性经用户裁定定为临时——仅当次战斗内
   生效,战斗结束复原,板面零净变化,裁定已定论非二义冻结,条目 notes 记
-  裁定;变形世界写端未建模,临时性仅申报);effect_text 与 base 注册表
+  裁定;变形状态副本写端未建模,临时性仅申报);effect_text 与 base 注册表
   .effect 单一源对拍(条目经 PLAZA_AUGMENTS 数据面表达式引官方原文,防
   表达式被改字面量后漂移);现金分支 = 已注册名无 economy → (0.0, False)
   (战力类不进经济模型,防未来误加 STRATEGY_ECONOMY 条目或通道误开);
@@ -21,7 +21,7 @@
   册(STRATEGY_ECONOMY 现金 / STRATEGY_GRANTS 赠卡 / STANCE_SCORE 立场 /
   STRATEGY_BINDINGS 方向),五组件恒 0 即恒 off;把缺席固化为设计约定,
   防未来误入具名打分表;
-- 封闭集负锁:卡不入 PICK_INVEST_EFFECTS(无获得时点世界写入,零响应
+- 封闭集负锁:卡不入 PICK_INVEST_EFFECTS(无获得时点写状态副本,零响应
   登记不进发放族;断言本体 = 存量闭集锁,此处只锁本卡键不在集)。
 """
 from __future__ import annotations
@@ -98,7 +98,7 @@ def test_xingbian_strategy_valuation_off_by_default() -> None:
 
 def test_xingbian_not_in_pick_effects_closed_set() -> None:
     """封闭集负锁:星变不得入 PICK_INVEST_EFFECTS(本卡零获得时点
-    世界写入,入集 = 实现错误;全集逐名断言归存量闭集锁,此处只锁
+    写状态副本,入集 = 实现错误;全集逐名断言归存量闭集锁,此处只锁
     本卡键不在集)。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
         PICK_INVEST_EFFECTS,

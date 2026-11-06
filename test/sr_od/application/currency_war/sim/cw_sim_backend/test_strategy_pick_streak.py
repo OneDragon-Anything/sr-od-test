@@ -2,7 +2,7 @@
 apply_strategy_pick_streak helper + _on_invest_picked 落地腿 + 呈现一次性标志位)。
 
 测试面依据 = 迭代设计 designs/T-96-shengli-haishi-shengli.md §4 八锁中的
-sim 世界七锁(锁 7 注册表与双闭集断言落 kernel/test_cw_investments.py 与
+sim 状态副本七锁(锁 7 注册表与双闭集断言落 kernel/test_cw_investments.py 与
 strategies/impl/mandate_v1/test_invest_strategy.py 现址):
 - 持卡置位真值(锁 1):预置 streak=1 落卡后恰 ==4,独立 evidence 笔
   ``streak:strategy_pick:胜利,还是胜利``(与结算笔 ``streak:pNrN`` 分账);

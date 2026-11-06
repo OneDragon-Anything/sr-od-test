@@ -12,7 +12,7 @@ test_cw_investments.py 超行数线,登记面新锁落本镜像目录,先例 =
   (四漂移哨在役:孤儿键/角色/阵营/装备;星级值域/人数下界笔误哨按
   2026-10-28 治理判据删,行值精确断言即本文件);
 - 校验器负例(monkeypatch 表值 → ValueError,import 炸形态同源);
-- 交付通道锁(锁 5 零联动申报的本批自身契约面):两条效果条目世界发放 = 独立
+- 交付通道锁(锁 5 零联动申报的本批自身契约面):两条效果条目写状态副本发放 = 独立
   双表承载,不入效果体表 PICK_INVEST_EFFECTS(估值域 STRATEGY_GRANTS
   条目注释性底册维持,其 20.0 降档锁归 mandate_v1 域存量锁,本文件
   零重复断言)。
@@ -113,7 +113,7 @@ def test_validator_reward_node_char_drift_negative(
 
 
 def test_delivery_channel_not_in_pick_effects() -> None:
-    """交付通道锁:两条效果条目不入效果体表(世界发放唯一通道 = 双白名单表 +
+    """交付通道锁:两条效果条目不入效果体表(写状态副本发放唯一通道 = 双白名单表 +
     触发函数;效果体表键集闭集零扩,估值域底册条目维持注释性语义)。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
         PICK_INVEST_EFFECTS,

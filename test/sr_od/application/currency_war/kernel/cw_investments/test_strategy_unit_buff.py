@@ -12,7 +12,7 @@ designs/T-278-xinghun-shenghua.md(定稿,REVIEW 无需用户决定 5/5)§4 锁�
   对拍 / duties 三位全 False / pending False / 现金分支 fail-closed
   (估值恒 (0.0, False));
 - 登记链锁 + 桥负锁(锁 2):获得链既有只登记不写状态的实现分支自动入册(register_strategy
-  → by_source 含本条)、注册照常;UnitBuffRef 无任何世界写入字段 → 全部
+  → by_source 含本条)、注册照常;UnitBuffRef 无任何写状态副本字段 → 全部
   桥鸭子类型读取(duck typing)缺省守卫 no-op(burst / 位面段补发 / 板面重写 / 节点边界 /
   容量直写五桥,登记期零 Field 行);on_strategy_gained 未收录安静
   返回零效果串;session=None 支登记跳过、注册照常;
@@ -159,7 +159,7 @@ def test_xinghun_cash_fail_closed() -> None:
 
 def test_xinghun_gain_chain_register_and_bridges_noop() -> None:
     """登记链锁 + 桥负锁(锁 2):session 在场选卡 → 注册入表 + 账本
-    登记(register_strategy,by_source 含本条);UnitBuffRef 无世界写入
+    登记(register_strategy,by_source 含本条);UnitBuffRef 无写状态副本
     字段 → 五桥鸭子类型读取缺省守卫 no-op,登记期零 Field 行;on_strategy_
     gained 未收录安静返回零效果串;session=None 支登记跳过、注册照常。"""
     gs = _make_gs()

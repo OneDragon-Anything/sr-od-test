@@ -1,4 +1,4 @@
-"""策略位面-节点合取条件世界发放检查腿测试(镜像 src = kernel/cw_gain_chain.py
+"""策略位面-节点合取条件写状态副本发放检查腿测试(镜像 src = kernel/cw_gain_chain.py
 的 ``check_strategy_plane_boss_grants``;分方法拆目录规范落位,新函数落
 拆目录新文件,先例 = 同目录 check_strategy_* 族镜像文件)。
 

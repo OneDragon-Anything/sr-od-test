@@ -17,7 +17,7 @@ yazhi.md(定稿)§4 锁 1/锁 4。卡面官方原文:「我方小队获得10%速
   + 泛用攻击追伤被动,无阵营/召唤物/星徽点名;「星级」系单位养成通用
   轴非阵营语义),strategy_bindings() 返回默认空元组——把现状固化为
   设计约定,防未来误绑;
-- 封闭集负锁:卡不入 PICK_INVEST_EFFECTS(无获得时点世界写入,零响应
+- 封闭集负锁:卡不入 PICK_INVEST_EFFECTS(无获得时点写状态副本,零响应
   登记不进发放族;断言本体 = 存量闭集锁,此处只锁本卡键不在集)。
 """
 from __future__ import annotations
@@ -85,7 +85,7 @@ def test_xingji_yazhi_no_faction_binding() -> None:
 
 def test_xingji_yazhi_not_in_pick_effects_closed_set() -> None:
     """封闭集负锁:星级压制不得入 PICK_INVEST_EFFECTS(本卡零获得时点
-    世界写入,入集 = 实现错误;全集逐名断言归存量闭集锁,此处只锁
+    写状态副本,入集 = 实现错误;全集逐名断言归存量闭集锁,此处只锁
     本卡键不在集)。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
         PICK_INVEST_EFFECTS,

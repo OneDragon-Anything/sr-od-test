@@ -1,4 +1,4 @@
-"""世界发放域倒计时件登记表测试(镜像 src = kernel/cw_investments.py 的
+"""写状态副本发放域倒计时件登记表测试(镜像 src = kernel/cw_investments.py 的
 EnvDelayedItemGrant + ENV_DELAYED_ITEM_GRANTS + _validate_env_delayed_
 item_grants;按拆目录规范落位,存量命运礼物段 =
 kernel/test_cw_investments.py DELAYED 段〔超限只读复用〕)。
@@ -9,7 +9,7 @@ kernel/test_cw_investments.py DELAYED 段〔超限只读复用〕)。
 - 键域扩展首例(策略道):偶像经济条目 = 卡面效果原文直读(id 303401,
   cw_invest_data.PLAZA_AUGMENTS 同 id 行;「倒计时10个节点」→ 10、
   「完胜…额外减少1点」→ 加速 True、「一个【火花礼盒】」→ 件名);
-- 孤儿键哨键域 = INVESTMENT_ENVS ∪ INVESTMENT_STRATEGIES(世界发放域
+- 孤儿键哨键域 = INVESTMENT_ENVS ∪ INVESTMENT_STRATEGIES(写状态副本发放域
   = 环境 ∪ 策略):策略孤儿键炸、环境孤儿键炸(存量段同款半边的策略
   道镜像)、**偶像经济同入 STRATEGY_GRANTS + 本表合法不炸**(两条效果条目分表
   正例锁——角色腿具名送卡/礼盒腿队列登记两表通道互斥,防后继把环境域

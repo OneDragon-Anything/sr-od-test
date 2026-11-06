@@ -1,12 +1,12 @@
 """sim 策略卡备战席计数经验节点窗腿测试(镜像 src = sim/cw_sim_backend.py
 的 _begin_node_window 备战席计数 XP 腿 + kernel 纯判定
-check_strategy_bench_count_xp 的 sim 调用点世界写;kernel 原语单元面 =
+check_strategy_bench_count_xp 的 sim 调用点状态副本写;kernel 原语单元面 =
 kernel/cw_gain_chain/test_check_strategy_bench_count_xp.py,本文件锁
-sim 窗口接入调用与世界真值落地面)。
+sim 窗口接入调用与状态副本里的值落地面)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
 T-192-rencai-kongdong.md(定稿)§4 锁 3/4/5 + REVIEW-T192 §四④:
-- sim 世界锁(锁 3):持卡 + 席内单位 ≤4 局节点窗推进 → gs.xp/gs.level
+- sim 状态副本锁(锁 3):持卡 + 席内单位 ≤4 局节点窗推进 → gs.xp/gs.level
   按 xp_apply_amount 结转(含跨级结转算例),evidence ``xp:bench_count``
   独立笔 + sig 组 'sim:xp' 断言;席 >4 零写;未持卡零写;
 - 幂等锁(锁 4):同节点窗重放(_window_begun_pos 守卫整段早退)零新增
@@ -61,7 +61,7 @@ _XP_EV = 'sim:engine:xp:bench_count'
 def _setup(seed: int = 31, *, grant: bool = True):
     """装配后端至 P1r1 备战窗(调用方负责 uninstall;驱动形态先例 = 同目录
     test_strategy_empty_equip_xp_sim_chain——本卡无即时腿,无装备采样面,
-    世界态即开局种子)。"""
+    状态副本态即开局种子)。"""
     b = _backend(seed)
     b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
     b._maybe_finish_wait()
@@ -112,7 +112,7 @@ def test_node_window_bench_at_threshold_grants(
         assert gs.level.value == want_lv, 'level 按结转式推进'
         assert gs.xp.value == (want_cur, XP_TO_NEXT_LEVEL.get(
             want_lv, before_xp[1])), f'xp 恰 +3: {gs.xp.value}'
-        assert gs.xp.source == 'observation', '世界数值面 = 观察通道'
+        assert gs.xp.source == 'observation', '状态副本数值面 = 观察通道'
         assert gs.xp.evidence == _XP_EV, f'独立笔缺失: {gs.xp.evidence}'
         xp_calls = [c for c in calls if c[1] in ('level', 'xp')]
         assert [(c[1], c[2]) for c in xp_calls] == [
@@ -126,7 +126,7 @@ def test_node_window_bench_at_threshold_grants(
 
 def test_threshold_carry_levelup(monkeypatch: pytest.MonkeyPatch) -> None:
     """跨级结转算例(锁 3):门槛恰跨形态(3 级余 2 + 3 → 4 级余 1)——
-    世界等级随白送经验真实推进(升级联动发牌概率的耦合面以此为底)。"""
+    状态副本等级随白送经验真实推进(升级联动发牌概率的耦合面以此为底)。"""
     b = _setup()
     try:
         gs = b.gs
@@ -216,7 +216,7 @@ def test_no_card_zero_write(monkeypatch: pytest.MonkeyPatch) -> None:
         uninstall_backend()
 
 
-# ── 姊妹人才济济(202701,'ge' 行)sim 世界锁(T-193 批:机制件零新,
+# ── 姊妹人才济济(202701,'ge' 行)sim 状态副本锁(T-193 批:机制件零新,
 # 谓词 ge 分支在码,通道级 evidence 同笔族)──
 _CARD2 = '人才济济'
 
@@ -224,7 +224,7 @@ _CARD2 = '人才济济'
 def test_ge_eight_units_window_write(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """姊妹持卡+席 ≥8(锁):观察通道覆盖席视图为 8 单位 → 节点窗 XP +3
-    世界写走全链(evidence 通道级 ``xp:bench_count`` 勿假设带卡名)。"""
+    状态副本写走全链(evidence 通道级 ``xp:bench_count`` 勿假设带卡名)。"""
     b = _setup()
     try:
         gs = b.gs

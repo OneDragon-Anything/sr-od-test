@@ -18,7 +18,7 @@ yibang.md(定稿)§4 锁 1/锁 3/锁 4。卡面官方原文:「每个波次开�
   星徽点名;「生命上限最高的敌方目标」系战斗通用域选择非阵营语义),
   strategy_bindings() 返回默认空元组——把现状固化为设计约定,防未来
   误绑;
-- 封闭集负锁:卡不入 PICK_INVEST_EFFECTS(无获得时点世界写入,零响应
+- 封闭集负锁:卡不入 PICK_INVEST_EFFECTS(无获得时点写状态副本,零响应
   登记不进发放族;断言本体 = 存量闭集锁,此处只锁本卡键不在集)。
 """
 from __future__ import annotations
@@ -90,7 +90,7 @@ def test_dangtou_yibang_no_faction_binding() -> None:
 
 def test_dangtou_yibang_not_in_pick_effects_closed_set() -> None:
     """封闭集负锁:当头一棒不得入 PICK_INVEST_EFFECTS(本卡零获得时点
-    世界写入,入集 = 实现错误;全集逐名断言归存量闭集锁,此处只锁本卡键
+    写状态副本,入集 = 实现错误;全集逐名断言归存量闭集锁,此处只锁本卡键
     不在集)。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
         PICK_INVEST_EFFECTS,

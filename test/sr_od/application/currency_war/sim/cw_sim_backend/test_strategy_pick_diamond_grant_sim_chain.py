@@ -1,13 +1,13 @@
-"""sim 选卡落地拍宝钻世界联动腿测试(镜像 src = sim/cw_sim_backend.py 的
+"""sim 选卡落地拍宝钻状态副本联动腿测试(镜像 src = sim/cw_sim_backend.py 的
 _on_invest_picked 宝钻腿 + 呈现一次性标志位 _strategy_pick_diamond_latch;kernel
 效果体单元面 = cw_gain_chain/test_gain_invest_strategy_diamond_pair_reg.py,
-本文件锁 sim 接入调用、世界三域联动与防重放)。
+本文件锁 sim 接入调用、状态副本三域联动与防重放)。
 
 测试面依据 = 迭代设计 designs/T-243-zheme-da-de-zuanshi.md §4 锁 3/4
 + 用户裁定 2026-11-02 读法 B(裁定册 PENDING-DECISIONS.md):
-- 拿卡世界联动主链(锁 3 正面):选卡落地 → 效果条目1 效果体宝钻入栏 → 拿卡腿
+- 拿卡状态副本联动主链(锁 3 正面):选卡落地 → 效果条目1 效果体宝钻入栏 → 拿卡腿
   调 on_diamond_acquired → diamond_count +1 / deploy_cap = level + 财富
-  宝钻数 / back_layout = min(9, 现值+1)(observe 通道,sim 世界写即真值);
+  宝钻数 / back_layout = min(9, 现值+1)(observe 通道,sim 状态副本写即真值);
 - 呈现一次性标志位防重放(锁 2 同形):同 offer 落地 advance 重放 → 三域零再写
   (回调三写非幂等,重放伪 +1);
 - 发放落地门负验(锁 3 负面):equips 未观察形态(equips_unobserved 同
@@ -15,7 +15,7 @@ _on_invest_picked 宝钻腿 + 呈现一次性标志位 _strategy_pick_diamond_la
   (防 back_layout/diamond_count 伪 +1);sim 种子初始值 equips=[] 下门恒
   开,本锁以容器替身构造拒落形态(门系形态级卫生面)。
 控制规模扩展(designs/T-324-kongzhi-guimo.md §4 锁 5,拿卡触发第二卡
-随批归一同支):拿卡 → 宝钻入栏 + 世界三写同构(无佩佩腿,单位数零变);
+随批归一同支):拿卡 → 宝钻入栏 + 状态副本三写同构(无佩佩腿,单位数零变);
 发放落地门负验同构。驱动形态复用声明:引擎驱动助手 import 自同目录
 test_p3_win_terminal.py(已登记先例,禁追加只 import);_backend/_pick
 直调形态先例 = 同目录 test_strategy_pick_hp.py(选卡落地拍腿族)。
@@ -116,7 +116,7 @@ def _record_observe_ev(gs, monkeypatch: pytest.MonkeyPatch) -> list[str]:
 
 
 def test_pick_grants_diamond_world_coupling() -> None:
-    """拿卡世界联动主链(锁 3 正面):落地后 equips 尾部恰 +1 件宝钻、
+    """拿卡状态副本联动主链(锁 3 正面):落地后 equips 尾部恰 +1 件宝钻、
     备战恰 +1 只佩佩、diamond_count +1、deploy_cap = level + 宝钻数、
     back_layout +1 封顶 9;三写均带 env_diamond evidence 笔。"""
     b = _backend()
@@ -138,7 +138,7 @@ def test_pick_grants_diamond_world_coupling() -> None:
         units = bench_units_of(gs)
         assert len(units) == units_before + 1 \
             and units[-1].char_id == '佩佩', '佩佩应恰 +1 入席'
-        # 效果条目2 世界三域联动(observe 通道)
+        # 效果条目2 状态副本三域联动(observe 通道)
         assert int(gs.diamond_count.value) == (int(count_before or 0) + 1), \
             f'diamond_count 未 +1: {gs.diamond_count.value!r}'
         assert int(gs.deploy_cap.value) == int(gs.level.value) + 1, \
@@ -148,7 +148,7 @@ def test_pick_grants_diamond_world_coupling() -> None:
             f'back_layout 未 +1: {back_before} -> {gs.back_layout.value!r}'
         diamond_pens = [e for e in evs if _DIAMOND_EV in (e or '')]
         assert len(diamond_pens) == 3, \
-            f'世界联动应恰三笔 env_diamond 写: {diamond_pens}'
+            f'状态副本联动应恰三笔 env_diamond 写: {diamond_pens}'
     finally:
         mp.undo()
         uninstall_backend()
@@ -214,7 +214,7 @@ def test_equips_unobserved_gate_blocks_coupling() -> None:
 
 
 def test_pick_kongzhi_grants_diamond_world_coupling() -> None:
-    """控制规模拿卡世界联动主链(T-324 锁 5 正面):拿卡即发宝钻腿入栏 +
+    """控制规模拿卡状态副本联动主链(T-324 锁 5 正面):拿卡即发宝钻腿入栏 +
     拿卡腿回调三写(diamond_count +1 / deploy_cap = level + 1 /
     back_layout +1 封顶 9),三笔 env_diamond evidence;本卡无佩佩腿,
     备战单位数零变(与这么大的钻石双卡分野自证)。"""
@@ -244,7 +244,7 @@ def test_pick_kongzhi_grants_diamond_world_coupling() -> None:
             f'back_layout 未 +1: {back_before} -> {gs.back_layout.value!r}'
         diamond_pens = [e for e in evs if _DIAMOND_EV in (e or '')]
         assert len(diamond_pens) == 3, \
-            f'世界联动应恰三笔 env_diamond 写: {diamond_pens}'
+            f'状态副本联动应恰三笔 env_diamond 写: {diamond_pens}'
     finally:
         mp.undo()
         uninstall_backend()

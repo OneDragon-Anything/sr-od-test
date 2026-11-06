@@ -68,7 +68,7 @@ _ENV_ID = '138'   # 成功经验 plaza id(窗口锚断言的条目主键)
 @pytest.fixture()
 def sim_armed():
     """端口桩 + rng 提供槽装配(调度器模拟器门判据为真;teardown 双卸)。
-    桩对象零方法——调度器只问装配与否,世界过程不触桩。"""
+    桩对象零方法——调度器只问装配与否,状态副本过程不触桩。"""
     cw_sim_ports.install_sim_backend(SimpleNamespace())
     seq = itertools.count()
     set_action_rng_provider(

@@ -290,7 +290,7 @@ def test_rng_fallback_without_provider() -> None:
 
 def test_rng_provider_deterministic_replay(seeded_provider) -> None:
     """注入槽确定性(设计 §2.5):装 provider 后同动作序列两次重放
-    (各自全新 gs)随机分支结果一致——sim 世界真值 + 动作序列确定性
+    (各自全新 gs)随机分支结果一致——sim 状态副本里的值 + 动作序列确定性
     ⟹ 采样链确定性。"""
     results = []
     for _ in range(2):

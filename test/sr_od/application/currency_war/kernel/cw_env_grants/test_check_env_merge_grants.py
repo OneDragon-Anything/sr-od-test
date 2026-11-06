@@ -225,7 +225,7 @@ def test_rng_fallback_without_provider(seeded_provider) -> None:
 
 def test_rng_provider_deterministic_replay(seeded_provider) -> None:
     """注入槽确定性(T-26 设计 §4.5):装 provider 后同 facts 两次重放
-    (各自全新 gs)采样结果一致——sim 世界真值 + 动作序列确定性 ⟹
+    (各自全新 gs)采样结果一致——sim 状态副本里的值 + 动作序列确定性 ⟹
     采样链确定性;同窗两条 facts 逐条发(两次发放)。"""
     facts = (('花火', 2), ('缇宝', 2))
     r = random.Random(20261016)

@@ -1,4 +1,4 @@
-"""自由市场 sim 世界真值链测试(镜像 src 主断言对象 = 获得链 gain_equipment
+"""自由市场 sim 状态副本里的值链测试(镜像 src 主断言对象 = 获得链 gain_equipment
 顶段转换拦截经 sim 后端全链;拦截在 kernel 原语,sim 零新增接入调用——sim
 容器现值 = 状态副本里的值,live 零写观察覆盖为实机(live)和模拟器(sim)两边同真值的另一端口径)。
 
@@ -75,7 +75,7 @@ def test_free_market_pick_chain_converts_leg2(
         _isolate_defect_buffer) -> None:
     """sim 选卡链(锁 7):装配后端 → offer 注入 → pick 自由市场 →
     bench 恰 +1 简易武装箱(带名槽件)∧ equips 零新增(效果条目2 采样名被
-    转换消费)——世界真值,使用面(tool_use 上报链)天然可消费;
+    转换消费)——状态副本里的值,使用面(tool_use 上报链)天然可消费;
     rng 显式流键构造(缺省回退自掷破 sim 确定性,采样腿族纪律)。"""
     b: SimBackend = _backend(7)
     try:

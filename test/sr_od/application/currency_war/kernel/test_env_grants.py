@@ -232,13 +232,13 @@ def test_callback_three_writes_cap_and_back_layout(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """回调三写:diamond_count+1 / deploy_cap = level + equips 现值中
     财富宝钻计数(拥有即算可叠加)/ back_layout = min(9, 现值+1);
-    三写翻 observation(observe 渠道,sim 世界事实)。"""
+    三写翻 observation(observe 渠道,sim 状态副本事实)。"""
     # 标准路径:发放后形态(库存含刚到手的 1 颗),level 5
     gs = _make_gs(env=_ENV, equips=['永动机', _EQUIP],
                   diamond_count=0, back_layout=6)
     on_diamond_acquired(gs, _EQUIP)
     assert gs.diamond_count.value == 1
-    assert gs.diamond_count.source == 'observation', '世界事实走观察通道'
+    assert gs.diamond_count.source == 'observation', '状态副本事实走观察通道'
     assert gs.deploy_cap.value == 5 + 1, 'cap = level + 拥有财富宝钻数'
     assert gs.back_layout.value == 7, '现值 6 → +1'
 

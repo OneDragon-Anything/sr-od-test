@@ -1,12 +1,12 @@
 """sim 策略卡备战席条件离场金节点窗腿测试(镜像 src = sim/cw_sim_backend.py
 的 _begin_node_window 备战席条件离场金腿 + kernel 纯判定
-check_strategy_bench_leave_gold 的 sim 调用点世界写;kernel 原语单元面 =
+check_strategy_bench_leave_gold 的 sim 调用点状态副本写;kernel 原语单元面 =
 kernel/cw_gain_chain/test_check_strategy_bench_leave_gold.py,本文件锁
-sim 窗口接入调用与世界真值落地面)。
+sim 窗口接入调用与状态副本里的值落地面)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
 T-292-yuzhe-ezuoju.md(定稿)§4 锁 3 + REVIEW-T292 §四④:
-- sim 世界锁(锁 3):持卡 + 席内 1星花火/火花局节点窗推进 → 金 observe
+- sim 状态副本锁(锁 3):持卡 + 席内 1星花火/火花局节点窗推进 → 金 observe
   独立笔 = Σ计划金币(2+4=6)+ evidence 含逐单位明细 + sig 组
   'sim:strategy';匹配槽置空(卖备战席角色置 empty 同形);
 - 幂等锁(锁 4):同节点窗重放(_window_begun_pos 守卫整段早退)零新增
@@ -55,7 +55,7 @@ _EV = (f'sim:engine:strategy:bench_leave_gold:{_CARD}'
 def _setup(seed: int = 31, *, grant: bool = True):
     """装配后端至 P1r1 备战窗(调用方负责 uninstall;驱动形态先例 =
     同目录 test_strategy_bench_count_xp_sim_chain——本卡无采样面,
-    世界态 = 开局种子 + 观察覆盖席视图)。"""
+    状态副本态 = 开局种子 + 观察覆盖席视图)。"""
     b = _backend(seed)
     b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
     b._maybe_finish_wait()

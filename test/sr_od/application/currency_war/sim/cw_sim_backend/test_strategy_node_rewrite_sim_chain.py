@@ -1,13 +1,13 @@
 """sim 策略卡条件节点序列改写腿测试(镜像 src = sim/cw_sim_backend.py
 的 _enter_node_window 窗开调用点 + kernel 纯决策 check_strategy_node_rewrite
-的 sim 接入调用与世界真值落地面;kernel 原语单元面 = kernel/cw_gain_chain/
+的 sim 接入调用与状态副本里的值落地面;kernel 原语单元面 = kernel/cw_gain_chain/
 test_check_strategy_node_rewrite.py,本文件锁 sim 窗口接入调用)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
 T-318-jueyi-yule-xingqiu.md §4 附锁(REVIEW-T318 §五④,sim 全链锁形态 =
 T-105/T-283 sim 锁先例):
 
-- 世界写锁:battle 位窗开 gold≥180 → node_seq_by_plane 整表改写 logic 写
+- 状态副本写锁:battle 位窗开 gold≥180 → node_seq_by_plane 整表改写 logic 写
   (evidence 'sim:engine:node_seq:strategy',sig 组 'sim:strategy')+
   strategy_conditional_done 纯卡名一次性标志位同拍追加;当前位 kind 不变
   (改写不含当前位,本窗收尾重读零失真);
@@ -69,7 +69,7 @@ def _strategy_writes(calls: list[tuple]) -> list[tuple]:
 
 def test_battle_window_rewrites_world_and_latches(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """世界写锁主条:P1r3(battle)窗开 gold=200 → 场字段整表改写 + 纯卡名
+    """状态副本写锁主条:P1r3(battle)窗开 gold=200 → 场字段整表改写 + 纯卡名
     一次性标志位同拍;当前位 kind 保持 battle(窗收尾重读零失真);两笔写 sig 组
     'sim:strategy' logic 族。"""
     b = _setup()

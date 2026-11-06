@@ -13,7 +13,7 @@ cw_investments.py 与绑定/估值面;按被测方法拆目录规范落位 manda
 - 锁 2 估值传导:gift_hit_tier = core,分数断言只引常量名;
 - 锁 3 绑定面:显式绑定二元组对拍(阵营×角色,scope 只申报不锁死);
 - 锁 4 规范名幂等;
-- 锁 5 零建模现值回归:on_strategy_gained 返回空效果串 ∧ 世界容器零写
+- 锁 5 零建模现值回归:on_strategy_gained 返回空效果串 ∧ 状态容器零写
   (现值锁非终态锁,交付家族批把组合行写进代码时随批修订翻转,设计稿 §4 已
   内嵌修订义务);
 - 锁 6 反扫闭集:候选扫描已登记 + 注册表已登记双断言;
@@ -85,7 +85,7 @@ def test_ranqilai_name_normalize() -> None:
 
 
 def test_ranqilai_zero_modeling_on_gain() -> None:
-    """锁 5(零建模现值回归):on_strategy_gained 返回空效果串且世界零写
+    """锁 5(零建模现值回归):on_strategy_gained 返回空效果串且状态副本零写
     (现值锁非终态锁,交付家族批把组合行写进代码时随批修订翻转)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.prep_anchored = True
@@ -93,7 +93,7 @@ def test_ranqilai_zero_modeling_on_gain() -> None:
     effects = on_strategy_gained(gs, _CARD, rand=False, sig=_LSIG,
                                  rng=None)
     assert effects == (), f'零建模空效果串: {effects}'
-    assert gs.write_seq == seq_before, '世界容器零写'
+    assert gs.write_seq == seq_before, '状态容器零写'
 
 
 def test_ranqilai_scan_closed_set() -> None:

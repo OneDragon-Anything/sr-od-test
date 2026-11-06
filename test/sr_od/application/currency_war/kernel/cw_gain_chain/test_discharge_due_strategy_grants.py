@@ -2,7 +2,7 @@
 discharge_due_strategy_grants)。
 
 测试面依据 = 迭代设计 designs/T-106-rencai-jili.md §4 锁 4(kernel 原语
-面;sim 窗口接入调用与世界真值归 sim/cw_sim_backend 侧文件)+ 裁决点 3/4
+面;sim 窗口接入调用与状态副本里的值归 sim/cw_sim_backend 侧文件)+ 裁决点 3/4
 默认案。直构形态先例 = 同目录 test_check_strategy_battle_grants.py:
 - 未到点(remaining > 0)零发放零写;
 - 到点(remaining <= 0)→ 装备腿入栏 + 弹除 + 效果串
@@ -181,7 +181,7 @@ def test_due_routing_bench_item_branch(monkeypatch) -> None:
 
 def test_grant_rejected_zero_write_entry_still_ejected() -> None:
     """发放拒落(equips 未观察直构域):零写 + 条目仍弹除(到期即消费,
-    裁决点 4 默认案 = 环境通道弹除语义同构)+ 回写行留存证据(世界偏穷
+    裁决点 4 默认案 = 环境通道弹除语义同构)+ 回写行留存证据(状态副本偏穷
     有界:每条至多 1 件)。"""
     gs = _gs(equips=None, bench_slots=None, queue=((_CARD, 0),))
     effects = discharge_due_strategy_grants(
@@ -284,7 +284,7 @@ def test_due_bench_item_real_member_bench_full_overflow(
 def test_due_bench_item_real_member_overflow_taken(
         rows_sink: _RowSink) -> None:
     """许诺特权到点席满 ∧ 溢出位已被占 → 零写 + 留证(DEFECT_OVERFLOW_
-    TAKEN)+ 条目仍弹除(到期即消费,该件世界性丢失留证于 defect 行):
+    TAKEN)+ 条目仍弹除(到期即消费,该件状态副本丢失,留证于 defect 行):
     bench/overflow 两域零写、效果串 placed=False。"""
     gs = _gs(equips=[],
              bench_slots=[BenchSlot(kind='unit',
@@ -416,7 +416,7 @@ def test_due_choice_set_samples_both_diamonds_by_seed() -> None:
 
 
 def test_due_choice_set_same_seed_bitwise_reproducible() -> None:
-    """是钻石总会发光 同 seed 重跑逐位一致(sim 世界真值确定性):
+    """是钻石总会发光 同 seed 重跑逐位一致(sim 状态副本里的值确定性):
     两个独立构造的同构局,同 seed 各自发放 → 效果串/装备栏/队列终态
     逐位相等(采样在窗口内现掷,同 seed 重放同结果)。"""
     finals = []
@@ -468,7 +468,7 @@ def test_due_category_pool_samples_by_seed() -> None:
 
 
 def test_due_category_pool_same_seed_bitwise_reproducible() -> None:
-    """回收计划 同 seed 重跑逐位一致(类别池行世界真值确定性,与
+    """回收计划 同 seed 重跑逐位一致(类别池行状态副本里的值确定性,与
     choice-set 行同构面)。"""
     finals = []
     for _run in range(2):

@@ -6,7 +6,7 @@
 语义完备性〔卡面「相同的角色」= 同名〕非现役行为,直构面覆盖);附负锁:
 无对零写 / gold 未读宁缺勿造跳过 / 零命中保守零动作 / 同触发异载体鸭子缺省。
 
-发金 = ``gs.observe``(sim 世界数值面 = 观察通道;gold 现值 None → 跳过,
+发金 = ``gs.observe``(sim 状态副本数值面 = 观察通道;gold 现值 None → 跳过,
 条件逐刷独立下次刷新自动重查)。
 """
 from __future__ import annotations

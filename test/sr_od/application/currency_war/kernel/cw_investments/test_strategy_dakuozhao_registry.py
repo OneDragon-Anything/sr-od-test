@@ -37,7 +37,7 @@ _CARD = '大扩招'
 def test_dakuozhao_registry_instant_gold_only() -> None:
     """锁 1(注册行直测):STRATEGY_ECONOMY['大扩招'] 全等
     EconomyEffect(instant_gold=16)——其余字段全缺省(+16 金腿注册已登记;
-    扣金面不注册,扣金 = sim 世界真值负腿,非估值常量)。"""
+    扣金面不注册,扣金 = sim 状态副本里的值负腿,非估值常量)。"""
     assert STRATEGY_ECONOMY[_CARD] == EconomyEffect(instant_gold=16), \
         '注册行漂移(卡面「获得…16金币」直读,其余字段禁载)'
 

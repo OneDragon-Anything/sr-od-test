@@ -12,7 +12,7 @@ T-416-maoyi-zhuanjia-tingyun.md(定稿)§4 锁面(卡面官方原文:
 「获得专家顾问【停云】，并使其在本局游戏中加入商店。并获得4个【简易武装箱】、
 【精密拆装扳手】和10金币。」——四腿:顾问解锁腿 = 登记面 advisor=True 获得
 链自动;箱×4 = 登记面 items_immediate 四元素元组 + 镜像表同名行;扳手×1 =
-具名装备工厂 rand=False 确定发放;金腿 10 金 = STRATEGY_ECONOMY 已登记,世界
+具名装备工厂 rand=False 确定发放;金腿 10 金 = STRATEGY_ECONOMY 已登记,状态副本
 写端缺口维持族级待办 = 零金写申报):
 
 - 联立效果串全序:恰 6 条 = advisor_unlock 1 → box_grant 4 →
@@ -112,7 +112,7 @@ def rows_sink() -> _RowSink:
 def test_maoyi_tingyun_row_single_source() -> None:
     """登记面单一源:GRANTS 条目(顾问腿 + 箱×4 元组)已登记 + 镜像表同名行
     与登记面 items 逐对相等 + PICK 组合键已登记 + 金腿经济注册行已登记(零金写
-    = 世界写端缺口维持族级待办的申报前提,破前提时主锁零金写断言语义变化);
+    = 状态副本写端缺口维持族级待办的申报前提,破前提时主锁零金写断言语义变化);
     箱/扳手均 ∉ 后果表(获得零级联 = 「效果串恒 6 条」前提守卫);扳手本体
     ∉ 精密门表(gate 恒 None 注册面结构前提)。"""
     assert _CARD in PICK_INVEST_EFFECTS, '组合登记行已登记'
@@ -123,7 +123,7 @@ def test_maoyi_tingyun_row_single_source() -> None:
     assert _STRATEGY_BOX_GRANTS[_CARD] == (_BOX,) * 4, \
         '镜像表同名行与登记面 items 逐对相等'
     assert STRATEGY_ECONOMY[_CARD].instant_gold == 10, \
-        '金腿经济注册行已登记(世界写端缺口维持族级待办,零金写申报前提)'
+        '金腿经济注册行已登记(状态副本写端缺口维持族级待办,零金写申报前提)'
     assert _BOX not in EQUIP_ACQUIRE_CONSEQUENCES \
         and _WRENCH not in EQUIP_ACQUIRE_CONSEQUENCES, \
         '箱/扳手 ∉ 后果表(效果串恒 6 条前提)'
@@ -137,7 +137,7 @@ def test_maoyi_tingyun_chain_full_order(rows_sink: _RowSink) -> None:
     6 条 = advisor_unlock 1 → box_grant 4 → named_equip_grant 1(advisor
     腿先于效果体分派,组合条目序 = 卡文语序箱→扳手);确定发放走确定面;
     写数恰 7 = 注册 1 + 解锁 1 + 箱腿 4 + 扳手 1(②段账本登记 session=None
-    跳过);rng 零消费;零金写(instant_gold 经济聚合面已登记,世界写端缺口
+    跳过);rng 零消费;零金写(instant_gold 经济聚合面已登记,状态副本写端缺口
     维持族级待办的申报不对称);板面域零写;正常路径零申报行。"""
     gs = _make_gs(bench_units=1, equips=[])
     gs.prep_anchored = True
@@ -172,7 +172,7 @@ def test_maoyi_tingyun_chain_full_order(rows_sink: _RowSink) -> None:
         '写数恰 7 = 注册 1 + 解锁 1 + 箱腿 4 + 扳手 1'
     assert rng0.getstate() == rng_state0, '零随机面(rng 不消费)'
     assert gs.gold.value is None, \
-        '零金写(instant_gold 经济聚合面已登记,世界写端族级待办的申报不对称)'
+        '零金写(instant_gold 经济聚合面已登记,状态副本写端族级待办的申报不对称)'
     assert len(bench_units_of(gs)) == 1, '单位域不变(道具非角色)'
     assert gs.deployed.value is None, 'deployed 未观察保持未写'
     assert rows_sink.kinds() == [], '正常路径零申报行'

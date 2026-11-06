@@ -83,7 +83,7 @@ def test_yueguang_name_normalize() -> None:
 
 
 def test_yueguang_zero_modeling_on_gain() -> None:
-    """锁 5(零建模现值回归):on_strategy_gained 返回空效果串且世界零写
+    """锁 5(零建模现值回归):on_strategy_gained 返回空效果串且状态副本零写
     (现值锁非终态锁,交付家族批写进代码时随批修订退役)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.prep_anchored = True
@@ -91,7 +91,7 @@ def test_yueguang_zero_modeling_on_gain() -> None:
     effects = on_strategy_gained(gs, _CARD, rand=False, sig=_LSIG,
                                  rng=None)
     assert effects == (), f'零建模空效果串: {effects}'
-    assert gs.write_seq == seq_before, '世界容器零写'
+    assert gs.write_seq == seq_before, '状态容器零写'
 
 
 def test_yueguang_scan_closed_set() -> None:

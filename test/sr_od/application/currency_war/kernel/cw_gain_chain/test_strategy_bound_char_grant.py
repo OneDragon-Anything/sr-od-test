@@ -12,10 +12,10 @@ T-165-jiazhi-touzi-jin.md(定稿)§4 锁 1/2/3 + REVIEW-T165 §2/④(七裁决
   由工厂从表生成进注册表(表驱动生成式,禁两处字面量);披露键 = 家族
   常量纳入已登记两键(uniform/with_replacement),零新增键内容(单一源:
   与援军族三键常量的交集 = 全集,键不得双源另立);
-- 锁 2 腿 1 sim 世界(sim 装配):固定 rng → 备战 +1 名 2★、名 ∈ 1 费
+- 锁 2 腿 1 sim 状态副本(sim 装配):固定 rng → 备战 +1 名 2★、名 ∈ 1 费
   载体派生池(禁手抄清单);效果串 ``strategy_gift_random:<名>@2star``
   前缀 + @ 后缀一体断言;采样后绑定域写入(evidence
-  ``value_invest_bind:*``,绑定即世界真值);门控测试形态:直构 gs 无
+  ``value_invest_bind:*``,绑定即状态副本里的值);门控测试形态:直构 gs 无
   sim 装配 → 门控恒 False,绑定断言须装配占位后端后行使;
 - 锁 3 腿 1 live 形态:同 path 非装配 → 备战随机态写(logic_rand 通道)
   、绑定域零写(live 掷骰是猜测,假绑定禁入容器——复制发放腿唯一判据)。
@@ -184,9 +184,9 @@ def test_bound_char_grant_bad_star_raises() -> None:
 
 def test_bound_char_grant_sim_world_writes_binding(
         sim_installed, rows_sink) -> None:
-    """锁 2 sim 世界主锁(装配后端行使门控):获得时点 → 备战 +1 名 2★
+    """锁 2 sim 状态副本主锁(装配后端行使门控):获得时点 → 备战 +1 名 2★
     ∈ 1 费池 + 绑定域写入(值 = {卡名: 采样名},evidence
-    ``value_invest_bind:<卡名>:<名>``——绑定即世界真值,复制发放腿唯一
+    ``value_invest_bind:<卡名>:<名>``——绑定即状态副本里的值,复制发放腿唯一
     判据落账)。"""
     rng = random.Random(200401)
     expected = rng.choice(random_char_pool(RandomCharSpec(cost=1, star=2)))
@@ -197,7 +197,7 @@ def test_bound_char_grant_sim_world_writes_binding(
     assert gs.strategy_char_grant_bindings.value == {_CARD: expected}, \
         '绑定域 = {卡名: 采样名}(合并写,双持姊妹卡各键并存)'
     fld = gs.strategy_char_grant_bindings
-    assert fld.source == 'logic', '绑定 = 世界真值 → 确定面直写'
+    assert fld.source == 'logic', '绑定 = 状态副本里的值 → 确定面直写'
     assert (fld.evidence or '').startswith(
         f'value_invest_bind:{_CARD}:'), '绑定写 evidence 前缀'
     units = bench_units_of(gs)

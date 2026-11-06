@@ -1,7 +1,7 @@
-"""策略卡战后触发发放 sim 世界链测试(镜像 src = sim/cw_sim_backend.py
+"""策略卡战后触发发放 sim 状态副本链测试(镜像 src = sim/cw_sim_backend.py
 的 _resolve_battle 只供策略算分的实现分支;kernel 触发函数单元面 =
 kernel/cw_gain_chain/test_check_strategy_battle_grants.py,本文件锁
-sim 结算腿接入调用与世界真值落地面)。
+sim 结算腿接入调用与状态副本里的值落地面)。
 
 测试面依据 = 迭代设计 designs/T-105-yizhan-yangzhan.md §4 锁 1/2/3/4/5/8:
 - 持卡局遭遇节点(P1 序列现值恰一 encounter 位)战斗结算后,备战席

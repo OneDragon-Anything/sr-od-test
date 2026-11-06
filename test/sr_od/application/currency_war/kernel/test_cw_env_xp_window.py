@@ -3,7 +3,7 @@
 设计权威版本 = .debug/progress/2026-09-23-invest-effects-calc/designs/
 T-38-chenggong-jingyan.md(§2 建模方案/§4 测试锁面;升到8级后进入
 接下来3个节点每节点+12XP)。本文件承 §4 锁 1-9 与锁 10 的 kernel 半;
-sim 世界真值与同 seed 全链重放 = 同迭代
+sim 状态副本里的值与同 seed 全链重放 = 同迭代
 sim/cw_sim_backend/test_env_xp_window_sim_chain.py。
 
 锁面 → 测试对照:
@@ -251,7 +251,7 @@ def test_plane_flip_lex_monotonic() -> None:
 
 def test_below_threshold_zero_world_behavior() -> None:
     """等级恒 <8 的局:节点推进对 xp/level 零额外写、锚零记录、计数
-    零播种(世界面按真实等级,不继承估值「升 8 必然发生」假设)。"""
+    零播种(状态副本这一侧按真实等级,不继承估值「升 8 必然发生」假设)。"""
     gs = _seed_gs(5, 0)
     for pos in [(1, 1), (1, 2), (1, 3)]:
         _advance(gs, pos)

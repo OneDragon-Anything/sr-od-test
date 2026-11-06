@@ -5,12 +5,12 @@ strategy_xp_per_node_of 薄读函数 + _begin_node_window 聚段调用块;先例
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-302 对应稿
 (REVIEW-T302 无需用户决定 7/7;卡面官方原文:「你不再获得利息。即刻获得15金币。
 每次进入新节点时，获得4经验。」——利息关闭腿 cap=0 聚合取宽零改动即活/
-instant_gold=15 族级缺口维持/xp_per_node=4 静态通道世界写消费面):
+instant_gold=15 族级缺口维持/xp_per_node=4 静态通道状态副本写消费面):
 
 - 薄读函数锁:持卡聚合求和分量(买断制 → 4);
 - 注册行值锁:三静态分量(cap=0/instant_gold=15/xp_per_node=4);
 - cap 取宽并存锁:并持利息上调(cap=10)→ resolved 取宽 = 10(ADR-0131);
-- evidence 分账锁:sim 世界写独立笔 xp:strategy_per_node。
+- evidence 分账锁:sim 状态副本写独立笔 xp:strategy_per_node。
 """
 from __future__ import annotations
 

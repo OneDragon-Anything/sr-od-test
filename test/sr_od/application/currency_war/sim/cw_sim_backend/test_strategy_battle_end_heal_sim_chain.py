@@ -1,7 +1,7 @@
-"""策略卡战斗结束回血 sim 世界链测试(镜像 src = sim/cw_sim_backend.py
+"""策略卡战斗结束回血 sim 状态副本链测试(镜像 src = sim/cw_sim_backend.py
 的 _resolve_battle 战斗结束回血腿;kernel 触发函数单元面 = kernel/
 cw_gain_chain/test_check_strategy_battle_end_heal.py,本文件锁 sim 结算腿
-接入调用与世界真值落地面)。
+接入调用与状态副本里的值落地面)。
 
 测试面依据 = 迭代设计 designs/T-325-xingji-heping-baoxian.md §4 锁 5
 (REVIEW-T325 无需用户决定 7/7;驱动与断言形态先例 = 同目录

@@ -1,4 +1,4 @@
-"""策略位面-节点合取条件世界发放注册表测试(cw_investments 分目录镜像;宿主
+"""策略位面-节点合取条件写状态副本发放注册表测试(cw_investments 分目录镜像;宿主
 test_cw_investments.py 超行数线,登记面新锁落本镜像目录,先例 =
 同目录 test_strategy_gift_grant_tables.py)。
 
@@ -11,7 +11,7 @@ test_cw_investments.py 超行数线,登记面新锁落本镜像目录,先例 =
   值域/双源对账不入 import 期校验,归本文件把关,防线强于 import 期形查)
   + 校验器复跑不炸(三漂移哨在役:孤儿键/角色名漂移/合取可达性);
 - 校验器负例(monkeypatch 表值 → ValueError,import 炸形态同源);
-- 交付通道锁:本卡不入效果体表 PICK_INVEST_EFFECTS(世界发放唯一通道 =
+- 交付通道锁:本卡不入效果体表 PICK_INVEST_EFFECTS(写状态副本发放唯一通道 =
   白名单表 + 触发函数,效果体表键集闭集零扩)。
 """
 from __future__ import annotations
@@ -120,7 +120,7 @@ def test_validator_combo_unreachable_negative(
 
 
 def test_delivery_channel_not_in_pick_effects() -> None:
-    """交付通道锁:本卡不入效果体表(世界发放唯一通道 = 白名单表 +
+    """交付通道锁:本卡不入效果体表(写状态副本发放唯一通道 = 白名单表 +
     触发函数;效果体表键集闭集零扩)。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
         PICK_INVEST_EFFECTS,

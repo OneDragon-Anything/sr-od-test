@@ -1,15 +1,15 @@
 """sim 策略卡装备计数经验节点窗腿测试(镜像 src = sim/cw_sim_backend.py
 的 _begin_node_window 装备计数 XP 腿 + kernel 纯判定
-check_strategy_equip_count_xp 的 sim 调用点世界写;kernel 原语单元面 =
+check_strategy_equip_count_xp 的 sim 调用点状态副本写;kernel 原语单元面 =
 kernel/cw_gain_chain/test_check_strategy_equip_count_xp.py,本文件锁
-sim 窗口接入调用与世界真值落地面;先例 = 同目录
+sim 窗口接入调用与状态副本里的值落地面;先例 = 同目录
 test_strategy_bench_count_xp_sim_chain.py)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-272-zanmei-
 taiyang.md(定稿)§4 + §2.1(卡面官方原文:「每拥有一件【白昼装备】以及
 其原型装备，在进入新节点时就获得1点经验。」):
 
-- sim 世界锁:持卡 + 白昼系持有局节点窗推进 → gs.xp/gs.level 按
+- sim 状态副本锁:持卡 + 白昼系持有局节点窗推进 → gs.xp/gs.level 按
   xp_apply_amount 结转(含跨级结转算例),evidence ``xp:equip_count``
   独立笔 + sig 组 'sim:xp' 断言;零持有/未持卡零写;
 - 幂等锁:同节点窗重放(_window_begun_pos 守卫整段早退)零新增写行;
@@ -19,7 +19,7 @@ taiyang.md(定稿)§4 + §2.1(卡面官方原文:「每拥有一件【白昼装�
 
 驱动形态 = _enter_node_window 直通点(锚定补推路径真形态);引擎驱动助手
 import 自 sim/test_sim_backend.py(已登记超限拆分债文件,禁追加,只 import
-复用不改;族先例同上)。sim 世界零羁绊不产白昼件——持有面经观察通道
+复用不改;族先例同上)。sim 状态副本零羁绊不产白昼件——持有面经观察通道
 直构(观察→观察覆盖静默,族先例同法);原型件 = sim 结构性可达面
 (进阶合成),白昼件直构等价计件,计数器不区分来源。
 """
@@ -101,7 +101,7 @@ def test_node_window_holding_grants(monkeypatch: pytest.MonkeyPatch) -> None:
         assert gs.level.value == want_lv, 'level 按结转式推进'
         assert gs.xp.value == (want_cur, XP_TO_NEXT_LEVEL.get(
             want_lv, before_xp[1])), f'xp 恰 +2: {gs.xp.value}'
-        assert gs.xp.source == 'observation', '世界数值面 = 观察通道'
+        assert gs.xp.source == 'observation', '状态副本数值面 = 观察通道'
         assert gs.xp.evidence == _XP_EV, f'独立笔缺失: {gs.xp.evidence}'
         xp_calls = [c for c in calls if c[1] in ('level', 'xp')]
         assert [(c[1], c[2]) for c in xp_calls] == [
@@ -114,7 +114,7 @@ def test_node_window_holding_grants(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_holding_carry_levelup(monkeypatch: pytest.MonkeyPatch) -> None:
-    """跨级结转算例:门槛恰跨形态(3 级差 1 + 2 → 4 级余 1)——世界等级
+    """跨级结转算例:门槛恰跨形态(3 级差 1 + 2 → 4 级余 1)——状态副本等级
     随经验真实推进(升级联动发牌概率的耦合面以此为底,调用点钉在商店全刷
     前的语义锚)。"""
     b = _setup(holding=_HOLDING)

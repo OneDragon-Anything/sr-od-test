@@ -170,7 +170,7 @@ def test_collect_ore_container_precise_drop():
     view = gs.spheres.value
     assert view.points == (('gold', 100, 200, 30),)
     assert view.count == 1 and view.colors == ('gold',)
-    assert gs.spheres.source == 'logic_rand', '摘除写属采样世界(随机态)'
+    assert gs.spheres.source == 'logic_rand', '摘除写属采样状态副本(随机态)'
     assert '300,400' not in gs.ore_rewards.value, '开成即键移除'
     assert '100,200' in gs.ore_rewards.value, '未被点的附着保全'
 

@@ -2,14 +2,14 @@
 cw_sim_backend.py 的 _begin_node_window 复制发放腿 + kernel 获得效果体的
 sim 门控绑定写;kernel 原语单元面 =
 kernel/cw_gain_chain/test_check_strategy_node_char_grants.py,本文件锁
-sim 窗口接入调用与世界真值落地面)。
+sim 窗口接入调用与状态副本里的值落地面)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
-T-165-jiazhi-touzi-jin.md(定稿)§4 锁 2(sim 世界形)/锁 5(补给后)/
+T-165-jiazhi-touzi-jin.md(定稿)§4 锁 2(sim 状态副本形)/锁 5(补给后)/
 锁 6(幂等):
 
-- 获得时点(sim 装配)= 采样即世界真值:固定 rng → 备战 +1 名 2★ ∈
-  1 费池 + 绑定域写入(sim 门控 True = 绑定即世界真值,复制发放腿
+- 获得时点(sim 装配)= 采样即状态副本里的值:固定 rng → 备战 +1 名 2★ ∈
+  1 费池 + 绑定域写入(sim 门控 True = 绑定即状态副本里的值,复制发放腿
   判据落账);
 - 每节点窗(进窗事实点在窗口幂等守卫内):+1 名 1★ 绑定同名;同节点
   窗重放(_window_begun_pos 守卫整段早退)零新增写行不双发;
@@ -72,7 +72,7 @@ def _copy_mass(gs, name: str) -> int:
 
 @pytest.fixture
 def _prep_backend():
-    """装配后端至 P1r1 备战窗 + 持卡获得(sim 世界:绑定即真值;调用方
+    """装配后端至 P1r1 备战窗 + 持卡获得(sim 状态副本:绑定即真值;调用方
     负责 uninstall;驱动形态先例 = 同目录
     test_strategy_delayed_grant_sim_chain)。"""
     from sr_od.application.currency_war.sim.cw_sim_backend import (
@@ -88,13 +88,13 @@ def _prep_backend():
 
 
 def test_pick_writes_binding_world_truth(_prep_backend) -> None:
-    """获得时点 sim 世界形(锁 2 链面):绑定域 = {卡名: 采样名} + 备战
-    +1 名 2★ ∈ 1 费池(采样即世界真值;live 零写形态归 kernel 锁文件)。"""
+    """获得时点 sim 状态副本形(锁 2 链面):绑定域 = {卡名: 采样名} + 备战
+    +1 名 2★ ∈ 1 费池(采样即状态副本里的值;live 零写形态归 kernel 锁文件)。"""
     b = _prep_backend
     gs = b.gs
     expected = _bound_name()
     assert gs.strategy_char_grant_bindings.value == {_CARD: expected}, \
-        'sim 门控绑定写 = 世界真值'
+        'sim 门控绑定写 = 状态副本里的值'
     units = [(u.char_id, u.star) for u in bench_units_of(gs)]
     assert (expected, 2) in units, f'备战含 1 名 2★ 采样名: {units}'
 

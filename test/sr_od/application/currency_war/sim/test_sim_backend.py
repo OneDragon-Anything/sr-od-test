@@ -1,4 +1,4 @@
-"""sim 游戏后端 SimBackend 回归测试(驱动反转迭代;世界本体 + 画面状态机
+"""sim 游戏后端 SimBackend 回归测试(驱动反转迭代;状态副本本体 + 画面状态机
 + 观察生成 + 装配接缝 + 商店写回)。
 
 测试面 = 迭代设计判据的可执行形态:
@@ -218,7 +218,7 @@ def _encounter_pick_feed(gs: GameState) -> None:
 
 def test_reset_deterministic_double_run_container_identical() -> None:
     """确定性测试(验收判据):同 seed 同 RunConfig reset 双跑,容器逐位
-    一致(全采样由 seed 派生;世界真值域 + 新容器 Field 全集对拍)。"""
+    一致(全采样由 seed 派生;状态副本里的值域 + 新容器 Field 全集对拍)。"""
     b1 = SimBackend(seed=42, cfg=_CFG)
     b2 = SimBackend(seed=42, cfg=_CFG)
     for name in ('hp', 'gold', 'level', 'xp', 'streak', 'bench',
@@ -500,7 +500,7 @@ def test_random_env_gift_sim_seeded_roll_to_bench() -> None:
     (4 张 M01 开局 + 1 张随机 4 费 1★ 赠卡);恰 1 张 4 费(开局手牌
     费用形状 (1,1,1,3)/(1,1,2,2) 无 4 费件,4 费 = 赠卡);同 seed 重放
     确定性(同名同星)——rng 经 install_backend 动作分支提供槽(流键
-    action/pick_invest_env/0)注入 = 采样即世界真值。"""
+    action/pick_invest_env/0)注入 = 采样即状态副本里的值。"""
     def _pick_once() -> list[tuple[str, int]]:
         b = SimBackend(seed=7, cfg=RunConfig(
             selected_difficulty='A8', enemy_difficulty=108, env_present=True))
@@ -538,7 +538,7 @@ def test_typed_random_env_gift_sim_seeded_roll_to_bench() -> None:
     选战力提升 → 选卡后 bench = 5 张(4 张 M01 开局全 1★ + 1 张 2★ 赠卡;
     星级 2 = 赠卡唯一判据,开局手牌无 2★);赠卡名 ∈ 规格过滤池(注册表
     现算);同 seed 重放确定性(同名同星)——rng 经 install_backend 动作分支
-    提供槽(流键 action/pick_invest_env/0)注入 = 采样即世界真值。"""
+    提供槽(流键 action/pick_invest_env/0)注入 = 采样即状态副本里的值。"""
     def _pick_once() -> list[tuple[str, int]]:
         b = SimBackend(seed=7, cfg=RunConfig(
             selected_difficulty='A8', enemy_difficulty=108, env_present=True))
@@ -617,7 +617,7 @@ def test_opening_replace_env_sim_replaces_m01_hand() -> None:
     纠回,非 4+3=7 叠加;选卡前无消费者,瞬态不可见);每张 1★ 且名 ∈
     3 费全档池(注册表现算);同 seed 重放确定性(同名同星)——rng 经
     install_backend 动作分支提供槽(流键 action/pick_invest_env/0)注入 =
-    采样即世界真值。"""
+    采样即状态副本里的值。"""
     def _pick_once() -> list[tuple[str, int]]:
         b = SimBackend(seed=7, cfg=RunConfig(
             selected_difficulty='A8', enemy_difficulty=108, env_present=True))
@@ -743,7 +743,7 @@ def test_scheduled_env_gift_discharged_at_plane2_first_window() -> None:
 def test_laowu_env_star_grant_and_boss_node_legs() -> None:
     """劳务派遣合同 sim 全链(该迭代 designs/T-19-laowu-paiqian-hetong.md
     §4.7):选卡后 equips 含 1 件 category='星徽' 装备 + done 有
-    star_grant# 绑定键(分支1,采样 = 注入槽流键世界真值);推进至 P1 boss
+    star_grant# 绑定键(分支1,采样 = 注入槽流键状态副本里的值);推进至 P1 boss
     窗 → bench 恰 +1 个 1★ 绑定羁绊角色 + done 有 boss#<位面>-<轮> 键
     (分支2,M21 流键);同 seed 重放确定性(equips/bench/done 逐位同)。"""
 
@@ -840,9 +840,9 @@ def test_strategy_pick_chain_burst_gold() -> None:
 
 
 def test_strategy_pick_chain_deposit_return_conditional() -> None:
-    """获得链断言(T-92 设计 §4 锁 5,sim 世界同链):选存款回报 →
+    """获得链断言(T-92 设计 §4 锁 5,sim 状态副本同链):选存款回报 →
     零买牌节点进下一节点桥 +2;对拍:有花费节点(购经验 cost>0 置位)
-    不发放;两拍滚位均复位 False(世界真值闭环:置位→桥评估→滚位,
+    不发放;两拍滚位均复位 False(状态副本里的值闭环:置位→桥评估→滚位,
     sim 节点推进走 kernel 同链)。"""
     b = _backend(7)
     try:
@@ -887,10 +887,10 @@ def test_strategy_pick_chain_deposit_return_conditional() -> None:
 
 
 def test_strategy_pick_chain_free_lunch_burst() -> None:
-    """获得链断言:选免费午餐 → burst 桥一次 +11 入世界免费刷新余额,
+    """获得链断言:选免费午餐 → burst 桥一次 +11 入状态副本免费刷新余额,
     后续一次商店刷新判免费(Field 扣减 + 免费帧禁进付费计数;T-88 设计
     §4 锁 4,形态 = test_strategy_pick_chain_burst_gold 同构)。免费判
-    单一源 = ``gs.free_refresh_left``,选卡前 sim 世界未发放(None 基)。"""
+    单一源 = ``gs.free_refresh_left``,选卡前 sim 状态副本未发放(None 基)。"""
     b = _backend(7)
     try:
         b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
@@ -969,7 +969,7 @@ def test_strategy_pick_chain_named_equip_grant() -> None:
             session=SimpleNamespace())
         assert out.applied
         assert gs.equips.value == ['拆装扳手', '拆装扳手'], \
-            '装备腿恰 2 件入栏(sim 世界真值)'
+            '装备腿恰 2 件入栏(sim 状态副本里的值)'
         assert _bench_ids() == bench_before, 'bench 零变化(板面零建模)'
         assert gs.deployed.value == deployed_before, \
             'deployed 零变化(板面零建模)'
@@ -1005,7 +1005,7 @@ def test_strategy_pick_chain_named_equip_grant_wuhai_laji() -> None:
             assert out.applied
             assert '无害垃圾' in gs.active_strategies.value
             assert list(gs.equips.value) == equips_before + ['垃圾袋'], \
-                f'装备腿恰 1 件入栏(sim 世界真值): {gs.equips.value}'
+                f'装备腿恰 1 件入栏(sim 状态副本里的值): {gs.equips.value}'
             assert _bench_ids() == bench_before, 'bench 零变化(板面零建模)'
             assert gs.deployed.value == deployed_before, \
                 'deployed 零变化(板面零建模)'
@@ -1018,7 +1018,7 @@ def test_strategy_pick_chain_named_equip_grant_wuhai_laji() -> None:
 
 def test_strategy_pick_chain_hacker_part_grant() -> None:
     """获得链断言:选骇客改件卡(骇客专家:银狼)→ 银狼入席 + 随机
-    改件入栏(采样效果子链;rng 注入流键,sim 采样即世界真值)。"""
+    改件入栏(采样效果子链;rng 注入流键,sim 采样即状态副本里的值)。"""
     b = _backend(7)
     try:
         b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
@@ -1077,7 +1077,7 @@ def test_strategy_pick_chain_box_grant_immediate(card: str) -> None:
 
 def test_strategy_pick_chain_reinforcement_grant() -> None:
     """获得链断言:选二费援军 → 费用档注册池内 4 名 1★ 入席(采样效果
-    子链;rng 注入流键,sim 采样即世界真值);同 seed 同流键重放 bench
+    子链;rng 注入流键,sim 采样即状态副本里的值);同 seed 同流键重放 bench
     逐位一致(掷序 = 批内同 rng 实例顺序推进)。"""
     from collections import Counter
 
@@ -1128,7 +1128,7 @@ def test_strategy_pick_chain_reinforcement_grant() -> None:
 
 def test_strategy_pick_chain_random_equip_grant() -> None:
     """获得链断言(打捞人才库+ 迁移回归重锚):选打捞人才库+ → 简易池均匀
-    采样 1 件入栏(采样效果子链;rng 注入流键,sim 采样即世界真值);同
+    采样 1 件入栏(采样效果子链;rng 注入流键,sim 采样即状态副本里的值);同
     seed 同流键重放 equips 逐位一致;主腿 unchosen_supply 恒 None(sim 局
     不种本域 → 检查恒第 2 门早退 = fail-closed 零发放,沿打捞族 T-94 键族
     语义)。"""
@@ -1170,7 +1170,7 @@ def test_strategy_pick_chain_random_equip_grant() -> None:
 
 def test_strategy_pick_chain_random_star_equip_grant() -> None:
     """获得链断言(买彩票,星徽行):选买彩票 → 星徽池均匀采样 1 件入栏
-    (采样效果子链;rng 注入流键,sim 采样即世界真值);同 seed 同流键
+    (采样效果子链;rng 注入流键,sim 采样即状态副本里的值);同 seed 同流键
     重放 equips 逐位一致。与打捞人才库+ 锁同构——泛化表 (category, count)
     两行走同一工厂路径,本锁辖星徽行的 sim 全链接入调用(零特殊接入调用申报,
     实机和模拟器两边同链)。"""
@@ -1428,7 +1428,7 @@ def test_reward_node_ore_substate_and_collect_via_report(
     """奖励节点 = 备战档晶矿子态:面板写容器 spheres(U23 锚 8 晶矿)经
     挂接入口**生成即附着**(同批一次写);点晶矿走 kernel 上报按附着值
     兑现——命中零掷骰(掷骰已前移生成侧),金入账 = 附着金精确合计
-    (采样即世界真值)。"""
+    (采样即状态副本里的值)。"""
     b = _backend(7)
     try:
         b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
@@ -2507,7 +2507,7 @@ def test_yinjincai_env_full_walk_slot_qualities() -> None:
 
 
 def test_yinjincai_env_refresh_world_leg_slot_quality_persists() -> None:
-    """银·金·彩局刷新世界分支(2026-10-19 用户裁定「sim 与实机一致提供
+    """银·金·彩局刷新状态副本分支(2026-10-19 用户裁定「sim 与实机一致提供
     刷新次数」批):首次 offer 逐卡计数 3 → 刷新声明喂入(槽 0,生产同形
     = 上报函数取声明 + declare_world 喂入)→ 该槽重掷新银卡(槽位品质
     承诺跨刷新保持)、计数 3→2、未刷槽不动 → 重复刷新至计数尽 → 尽后
@@ -2559,7 +2559,7 @@ def test_yinjincai_env_refresh_world_leg_slot_quality_persists() -> None:
 
 
 def test_env_screen_refresh_world_leg_group_reroll() -> None:
-    """环境屏整组刷新世界分支(2026-10-19 用户裁定批):开局环境屏呈现
+    """环境屏整组刷新状态副本分支(2026-10-19 用户裁定批):开局环境屏呈现
     refresh=(1,...)(基准 1 次,呈现写点落容器)→ 整组刷新声明喂入
     (active_env 空 → 触发词 refresh_invest_env)→ 候选整组重掷(组内
     全换)+ 计数落 0 → 尽后再喂声明 = 静默无操作。"""
@@ -2597,7 +2597,7 @@ def test_no_env_match_refresh_routes_strategy_branch() -> None:
     = 合法无环境支路配置,该局 active_env 恒空 + env_refresh_left 未写
     (None)→ 刷新声明推导必须走策略屏逐卡分支(旧单一 active_env 依据会
     误派 env 分支 → env_refresh_left=None 静默无操作 → 计数不减 → 活锁);
-    世界分支照常重掷扣减(基准 1 次)。"""
+    状态副本分支照常重掷扣减(基准 1 次)。"""
     b = _backend()
     try:
         _open_to_first_window(b)
@@ -2698,7 +2698,7 @@ def _advance_pair() -> tuple[str, str, str]:
 
 
 def test_wear_report_synthesis_branch() -> None:
-    """穿着即合成(世界规则,单一源 = kernel 穿装备上报):穿第二件
+    """穿着即合成(状态副本规则,单一源 = kernel 穿装备上报):穿第二件
     基础件 → worn 内立即合成进阶件;owned 扣减;上限按合成后计。"""
     a, b, advance = _advance_pair()
     assert synthesize_target(a, b) == advance
@@ -2730,8 +2730,8 @@ def test_wear_report_synthesis_branch() -> None:
 
 
 def test_wear_report_synthesis_grant_world_truth() -> None:
-    """sim 世界真值同口:动作注入穿戴合成与 live 同一上报函数唯一入口,
-    账本持卡 → 合成发放自动生效(free_refresh_left +2,sim 世界容器
+    """sim 状态副本里的值同口:动作注入穿戴合成与 live 同一上报函数唯一入口,
+    账本持卡 → 合成发放自动生效(free_refresh_left +2,sim 状态容器
     与 live 同格)——发放腿住上报函数内,sim 穿戴批未来接入调用零返工。
     sim 自主局零穿戴 = 零触发(装备域 sim 未建模既有边界,不设负锁)。"""
     advance, (a, b) = next(iter(CROSS_RECIPES.items()))
@@ -2747,7 +2747,7 @@ def test_wear_report_synthesis_grant_world_truth() -> None:
         gs, CwActionWearEquipParam(item_name=b, char_name='淘金客',
                                    row='front', slot=1), _SIG)
     assert out.applied
-    assert gs.free_refresh_left.value == 2, '世界真值同口:合成 +2 到账'
+    assert gs.free_refresh_left.value == 2, '状态副本里的值同口:合成 +2 到账'
 
 
 # ============================================================ 经验账本(平移)
@@ -2988,7 +2988,7 @@ def test_expert_screen_presentation_raises_loud_on_observe() -> None:
 
 def test_unpresented_overlay_anchor_not_visible_on_prep() -> None:
     """visible area 级细化(3.4 联调):sim 不可呈现浮层的在场锚恒
-    False(阿哈装备选择浮层检测锚;sim 不建模该浮层 = 世界真值)——
+    False(阿哈装备选择浮层检测锚;sim 不建模该浮层 = 状态副本里的值)——
     画面档匹配语义会把它误答真,备战帧被浮层分支抢走。"""
     b = _backend(7)
     try:
@@ -3552,7 +3552,7 @@ def test_non_piggy_reward_always_wins_no_hp_loss(
 
 
 # ============================================================ 观察生成器
-# (sim 统一 3.3:每生成器单测 = 构造世界态 → backend.observe(档名) 生成
+# (sim 统一 3.3:每生成器单测 = 构造状态副本态 → backend.observe(档名) 生成
 #  obs(生产路径 = 注册表分派,产物经同名 report_screen_* 落容器)→ 容器
 #  字段断言;设计依据 = sim- + flow-seam 接缝契约。)
 
@@ -4139,7 +4139,7 @@ def test_click_leg_archive_point_and_until_polling(_sim_ctx):
             until_find_all=[until_target])
         assert r3.result is OperationRoundResultEnum.SUCCESS
         assert backend.clicked == [click_target]
-        # ④ 屏门拒点:按钮不可见(世界已切走)→ retry(防驻留型动作 op
+        # ④ 屏门拒点:按钮不可见(状态副本已切走)→ retry(防驻留型动作 op
         # 越屏偷跑推进,冒烟批阻断二实证形态; MinimalSimBackend 先记录
         # 请求再委托机械镜,拒绝在镜像层发生,故 clicked 记录增长)
         backend.visible_areas.discard(click_target)

@@ -6,7 +6,7 @@ cw_gain_effects.py 泛化随机装备表 '公司军火更新·银' 行经获得�
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
 T-138-gongsi-junhuo-gengxin-yin.md(定稿)§4 锁 7:播种 offer 含本卡 →
-落地 equips +1(世界真值,名 ∈ 简易池);同 seed 同流键重放一致;
+落地 equips +1(状态副本里的值,名 ∈ 简易池);同 seed 同流键重放一致;
 变异面 sim 零建模 = 变换族既定边界(sim 不反映每节点物品栏变异,
 公司人才流动同判在码),不设断言(负向申报,notes 面)。
 
@@ -47,7 +47,7 @@ def _backend(seed: int = 7) -> SimBackend:
 
 def test_pick_chain_random_simple_equip_grant() -> None:
     """获得链断言(公司军火更新·银,简易行):选本卡 → 简易池均匀采样
-    1 件入栏(采样效果子链;rng 注入流键,sim 采样即世界真值,零新增
+    1 件入栏(采样效果子链;rng 注入流键,sim 采样即状态副本里的值,零新增
     接入调用);同 seed 同流键重放 equips 逐位一致。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
         roll_random_equip,

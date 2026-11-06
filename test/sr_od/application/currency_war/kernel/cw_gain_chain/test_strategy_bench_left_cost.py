@@ -23,7 +23,7 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     STRATEGY_BENCH_LEFT_COST_XP_GRANTS,
 )
 
-_SIG_OBS = None  # 占位:本文件零世界写(纯判定锁)
+_SIG_OBS = None  # 占位:本文件零状态副本写(纯判定锁)
 
 
 def test_registry_closed_set() -> None:

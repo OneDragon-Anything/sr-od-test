@@ -1,7 +1,7 @@
-"""策略卡死亡救援 sim 世界链测试(镜像 src = sim/cw_sim_backend.py 的
+"""策略卡死亡救援 sim 状态副本链测试(镜像 src = sim/cw_sim_backend.py 的
 _resolve_battle 死亡救援腿;kernel 触发函数单元面 =
 kernel/cw_gain_chain/test_take_strategy_death_save.py,本文件锁
-sim 结算折算点接入调用与 M-B 独立叠加序列的世界真值落地面)。
+sim 结算折算点接入调用与 M-B 独立叠加序列的状态副本里的值落地面)。
 
 测试面依据 = 迭代设计 designs/T-323-cang-yishou.md §4 锁 3/4 + 用户裁定
 2026-11-04(M-B 独立叠加 = 卡救先消耗,全局保底留给后续致死;序列
@@ -15,7 +15,7 @@ sim 结算折算点接入调用与 M-B 独立叠加序列的世界真值落地�
   hp=40(M-B 与 M-A 的行为分叉点,M-A 下此局 = dead);
 - 驱动形态 = 出战动作触发结算(2026-10-29 流程模型);引擎驱动助手
   import 自 sim/test_sim_backend.py(已登记超限拆分债文件,禁追加,只
-  import 复用不改);helper 扩展(自定义扣血强判/世界写包装)沿同目录
+  import 复用不改);helper 扩展(自定义扣血强判/状态副本写包装)沿同目录
   test_strategy_hp_loss_sim_chain.py 先例自带同语义副本。
 """
 from __future__ import annotations

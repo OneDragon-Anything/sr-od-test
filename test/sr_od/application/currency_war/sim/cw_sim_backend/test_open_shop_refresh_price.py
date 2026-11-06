@@ -3,7 +3,7 @@
 设计依据 = invest-effects-calc 迭代
 designs/T-21-changxian-liaoli.md §2.2/§4 锁 9(2026-10-16 用户裁定:
 「够次数之后,要将刷新费用变成 1,就是 sim 里观察的刷新费用也需要是 1」):
-开店呈现以 kernel 渲染世界真值(:func:`cw_economy.world_shop_refresh_cost`)
+开店呈现以 kernel 渲染状态副本里的值(:func:`cw_economy.world_shop_refresh_cost`)
 经**观察通道**写 ``gs.shop_refresh_cost``——对偶实机每次进店 live 漏斗
 重读刷价;不走 write_logic(观察域字段只收观察写端,防 W875 式逻辑侧
 预写回潮)。测试面:未达阈开店基价 / 达阈开店翻新价 / 离屏不开店不写
@@ -86,7 +86,7 @@ def test_open_shop_presents_world_refresh_price_at_threshold() -> None:
         assert gs.shop_refresh_cost.source == 'observation', \
             '写端 = 观察通道(不走 write_logic)'
         assert gs.shop_refresh_cost.value == world_shop_refresh_cost(gs), \
-            '呈现值 = kernel 渲染世界真值'
+            '呈现值 = kernel 渲染状态副本里的值'
 
         _close_shop_feed(b)
         gs.effects.record_refresh(free=False)   # 第 30 次付费(不开店)

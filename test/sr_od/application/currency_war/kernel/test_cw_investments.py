@@ -374,7 +374,7 @@ def test_yinjincai_entry_slot_qualities_registered() -> None:
     中金右彩,旧「实测 offer 金重仓」观察记录同裁定作废):登记
     slot_qualities = ('银','金','棱彩')(坐标系 = 投资界面卡槽物理排位
     左→右 0..2)+ offer_structure 结构标记 + extra_pick_refreshes = 2
-    (sim 策略屏刷新呈现与世界分支消费端)+ rewrite_quality 空(槽位向量型
+    (sim 策略屏刷新呈现与状态副本分支消费端)+ rewrite_quality 空(槽位向量型
     与品质改写型互斥)+ 非空 pending_notes(定论记录)。"""
     entry = ENV_POOL_REWRITE['银·金·彩']
     assert entry.slot_qualities == ('银', '金', '棱彩')
@@ -443,7 +443,7 @@ def test_env_merge_grants_registry_and_validation(
 def test_merge_contract_coexists_with_estimation_tables() -> None:
     """表间并存合法(T-26 设计 §2.1 豁免声明显式半边):量子同频契约
     ∈ ENV_GIFTS(chars_conditional 辖估值域档位)且 ∈ ENV_MERGE_GRANTS
-    (本表辖世界发放触发)且 ∉ ENV_ECONOMY(零金流,经济域无条目)。"""
+    (本表辖写状态副本发放触发)且 ∉ ENV_ECONOMY(零金流,经济域无条目)。"""
     assert '量子同频契约' in ENV_GIFTS
     assert '量子同频契约' in cw_investments.ENV_MERGE_GRANTS
     assert '量子同频契约' not in ENV_ECONOMY
@@ -477,7 +477,7 @@ def test_env_interest_grants_registry_and_validation(
 def test_interest_contract_coexists_with_gifts_table() -> None:
     """表间并存合法(T-27 设计 §2.1 豁免声明显式半边):公司契约
     ∈ INVESTMENT_ENVS 且 ∈ ENV_GIFTS(chars_conditional 首元 = 托帕&账账,
-    辖估值域档位)且 ∈ ENV_INTEREST_GRANTS(本表辖世界发放触发)且
+    辖估值域档位)且 ∈ ENV_INTEREST_GRANTS(本表辖写状态副本发放触发)且
     ∉ ENV_ECONOMY(零金流,经济域无条目)。"""
     assert '公司契约' in INVESTMENT_ENVS
     assert '公司契约' in ENV_GIFTS
@@ -489,8 +489,8 @@ def test_interest_contract_coexists_with_gifts_table() -> None:
 def test_dot_contract_not_in_any_conditional_grant_table() -> None:
     """五表反向锁(T-28 设计稿 §4.2):持续伤害契约 ∈ ENV_GIFTS(
     chars_immediate = 椒丘/卡芙卡 + chars_conditional 首元 = 黑天鹅,辖
-    估值域档位)且**不入五张世界发放条件登记表**——本卡建模形状 =
-    猜测写+证实(计数源无世界真值生产点),非条件检查型;误补登记 =
+    估值域档位)且**不入五张写状态副本发放条件登记表**——本卡建模形状 =
+    猜测写+证实(计数源无状态副本里的值生产点),非条件检查型;误补登记 =
     双引擎重复发放回归信号(数据断言非源码扫描)。"""
     assert '持续伤害契约' in INVESTMENT_ENVS
     assert ENV_GIFTS['持续伤害契约'].chars_immediate == ('椒丘', '卡芙卡')
@@ -1362,7 +1362,7 @@ def test_salvage_registration_surface() -> None:
     避开经济三分类闭集义务)∧ category 同族;pending=True 必带 notes
     保守支声明(R-entry 读法);SUPPLY_PHASE 枚举成员已登记引用(防静默
     移除——该枚举值全仓唯一已登记条目即本卡);基础卡无经济腿
-    (STRATEGY_ECONOMY 零条目,发放物 = 世界既有列非经济流)。"""
+    (STRATEGY_ECONOMY 零条目,发放物 = 状态副本既有列非经济流)。"""
     spec = STRATEGY_EFFECTS['打捞人才库']
     cw_investments._validate_strategy_effects()   # 构建校验复跑不炸
     assert spec.id == '100701'

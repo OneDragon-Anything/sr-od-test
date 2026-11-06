@@ -1,5 +1,5 @@
 """ENV_BOND_TIER_GRANTS 注册表构建校验测试(T-41 特邀专家:加拉赫击破
-档分支;镜像 src = kernel/cw_investments.py 世界发放注册表区)。
+档分支;镜像 src = kernel/cw_investments.py 写状态副本发放注册表区)。
 
 被测面 = T-41 设计稿 §2.2 四条(import 即炸语义,注入 + 直调,沿
 test_env_grants.py 的 ENV_STREAK/ENV_REFRESH 校验测试惯用法):

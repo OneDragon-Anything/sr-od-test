@@ -4,7 +4,7 @@
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-272-zanmei-
 taiyang.md(定稿)§4 锁 3(腿 1 登记归宿裁决点 1 默认案:PENDING 卡级
-登记 + 条件 XP 族世界通道,空仓/人才空洞同形):
+登记 + 条件 XP 族状态副本通道,空仓/人才空洞同形):
 - 已登记成员 + 描述非空 + 行值精确断言(登记笔误对账归测试,治理裁定
   2026-10-28 形);
 - _validate_pending_modeling_registry 直调不炸(①孤儿键 ②空描述
@@ -26,7 +26,7 @@ _ROW = ('装备计数经验发放已建状态副本写入通道 STRATEGY_EQUIP_C
 
 def test_zanmei_pending_row_registered() -> None:
     """登记锁:成员已登记 + 描述非空 + 行值精确断言(动态计数 XP 不挂
-    xp_per_node 无条件通道,治理口径 = 已建世界通道 + 估值零登记维持)。"""
+    xp_per_node 无条件通道,治理口径 = 已建状态副本通道 + 估值零登记维持)。"""
     assert _CARD in STRATEGY_ECONOMY_PENDING_MODELING, '卡级已登记'
     desc = STRATEGY_ECONOMY_PENDING_MODELING[_CARD]
     assert desc, '描述非空'

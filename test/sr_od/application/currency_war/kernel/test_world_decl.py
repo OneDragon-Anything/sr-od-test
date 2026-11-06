@@ -1,4 +1,4 @@
-"""世界后果声明对照测试(schema 形状 / 载体兼容 / 喂入端口 / 分派校验 /
+"""状态副本后果声明对照测试(schema 形状 / 载体兼容 / 喂入端口 / 分派校验 /
 表 #1-#18 逐动作声明对照)。
 
 钉住设计约定(动作后果声明化迭代总纲  契约 1/2/3/5 + 详设
@@ -452,7 +452,7 @@ def test_pick_supply_decl_row12_both_applied_exits():
     装备落地分支)声明同形 = (商店档, pick_supply)——补给选完关模态回
     备战并自动弹店(2026-10-29 流程模型对齐,「确认即推节点」的
     supply_confirm 推进随声明废止,出战动作才完成节点);选卡后画面本
-    瞬间不变,弹店由 sim 世界承接。装备名 = 注册表真名(垃圾袋);留证行
+    瞬间不变,弹店由 sim 状态副本承接。装备名 = 注册表真名(垃圾袋);留证行
     经 consume_defect_sink 前清后清隔离。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         consume_defect_sink,
@@ -582,7 +582,7 @@ def test_bottom_screen_decl_family_derives_at_encounter_slot():
     """「返回节点屏」声明族 + offer 选卡声明按当前生效节点推导(统一节点
     改写批修根,推导单一源分家:关店/巨星/命运卜者等「返回底层」族 =
     ``node_screen_now``(改造后恒备战/位面首过渡);投资策略选卡 =
-    ``window_stable_screen_now`` 窗稳态预测——offer 选完世界落到节点窗
+    ``window_stable_screen_now`` 窗稳态预测——offer 选完状态副本落到节点窗
     稳态,遭遇槽(战争边疆替换使固定 offer 槽 P3-2 变遭遇)落点 = 接着
     呈现的遭遇模态屏,battle 型槽 = 商店档(#14 自动弹店))。
     位面首例外 = 推导机制保留的判别位(本文件尾部)。全链零漂移对拍面 =

@@ -1,7 +1,7 @@
-"""sim 策略卡到级金腿世界链测试(镜像 src = sim/cw_sim_backend.py 的
+"""sim 策略卡到级金腿状态副本链测试(镜像 src = sim/cw_sim_backend.py 的
 _on_node_advance / _on_node_advance_terminal 双点接入调用段;kernel 决策函数
 单元面 = kernel/cw_gain_chain/test_check_strategy_level_grants.py,本文件
-锁 sim 接入调用与世界真值落地面)。
+锁 sim 接入调用与状态副本里的值落地面)。
 
 测试面依据 = 迭代设计 designs/T-108-chengzhang-jijin.md §4 锁 1/2/3/6/7/
 8/10(实现批修正:锁 8 文字面 = 现役 NODE_XP_BY_TYPE × PLANE_NODE_TABLES

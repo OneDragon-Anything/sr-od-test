@@ -11,7 +11,7 @@ taiyang.md(定稿,REVIEW 无需用户决定 9/9)§4 锁 4(卡面官方原文:「
   防静默漂移;特权变体三件不入 = 裁决点 4 默认案锚定);
 - 判定矩阵(三态 + 边界):无持卡 → 0;持卡 + 2 件原型 → 2;库存与穿戴
   混合 → 四源合计;特权变体/非白昼装备不计;表外卡 → 0;None 防御
-  fail-closed;纯读零写(判定无 sig 形参,世界写端归 sim 调用点)。
+  fail-closed;纯读零写(判定无 sig 形参,状态副本写端归 sim 调用点)。
 """
 from __future__ import annotations
 
@@ -114,7 +114,7 @@ def test_no_card_and_zero_holding_zero() -> None:
 
 def test_two_prototypes_grant() -> None:
     """持卡 + 2 件原型(锁 4 三态主真值):库存 2 件基件 → 2 XP(白昼系
-    名集含基件,库存单源可达成——sim 结构性可达面,sim 世界零羁绊不产
+    名集含基件,库存单源可达成——sim 结构性可达面,sim 状态副本零羁绊不产
     白昼件但原型件经进阶合成可达,本通道 sim 非死代码)。"""
     gs = _gs(equips=['光速螺旋桨', '武器大师'])
     assert check_strategy_equip_count_xp(gs) == 2
@@ -157,8 +157,8 @@ def test_none_strategy_set_zero() -> None:
 
 
 def test_pure_read_zero_container_writes() -> None:
-    """纯读零写(形态 A):命中路径零容器写(判定无 sig 形参零世界写,
-    世界写端 = sim 唯一调用点)。"""
+    """纯读零写(形态 A):命中路径零容器写(判定无 sig 形参零状态副本写,
+    状态副本写端 = sim 唯一调用点)。"""
     gs = _gs(equips=['光速螺旋桨'])
     seq0 = gs.write_seq
     assert check_strategy_equip_count_xp(gs) == 1

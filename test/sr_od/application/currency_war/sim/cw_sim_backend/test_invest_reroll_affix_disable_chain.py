@@ -5,7 +5,7 @@ import 复用不改;先例 = 本目录 test_env_deploy_lock_sim_chain.py〕)。
 
 测试面依据 = T-45 敌后破坏设计(.debug/progress/2026-09-23-invest-effects-
 calc/designs/T-45-dihou-pohuai.md)§1 条 6 + §2.3 + §4 锁 7(限 sim 端,
-attack-v2 S1):sim 蓝海追加获得敌后破坏 → 世界掷骰二次入链
+attack-v2 S1):sim 蓝海追加获得敌后破坏 → 状态副本掷骰二次入链
 (cw_sim_backend._on_invest_picked 原语复用)→ 删除分支自动触发一次——
 词缀名单长度 -1、来源 logic_rand;HP 词缀回调同步重算(write_prior,
 开局 62 → 删「开局不利」后 82)。live 端无二次入链(零删除分支触发),
@@ -41,7 +41,7 @@ from sr_od.application.currency_war.sim.cw_sim_streams import stream_rng
 
 
 def _reroll_seed_hitting(target: str) -> int:
-    """追加分支世界掷骰命中目标的 seed(现算单一来源:同引擎公式
+    """追加分支状态副本掷骰命中目标的 seed(现算单一来源:同引擎公式
     `pool[stream_rng(seed, 'M02/env-reroll').randrange(len(pool))]`,
     探针 = 首个命中 seed,不手抄魔数)。"""
     pool = sorted(n for n in INVESTMENT_ENVS if n not in ENV_REROLL_NAMES)
@@ -52,7 +52,7 @@ def _reroll_seed_hitting(target: str) -> int:
 
 
 def _pick_reroll_env(seed: int) -> SimBackend:
-    """开局选蓝海的装配后端(调用方负责 uninstall;追加分支由后端世界
+    """开局选蓝海的装配后端(调用方负责 uninstall;追加分支由后端状态副本
     掷骰二次入链,seed 经现算钉住卷中敌后破坏)。"""
     b = SimBackend(seed=seed, cfg=RunConfig(
         selected_difficulty='A8', enemy_difficulty=108, env_present=True,
@@ -79,7 +79,7 @@ def _pick_reroll_env(seed: int) -> SimBackend:
 
 def test_reroll_affix_disable_deletion_leg_fires_once(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """追加链触发一次(T-45 设计 §4 锁 7 sim 端):选蓝海 → 世界掷骰
+    """追加链触发一次(T-45 设计 §4 锁 7 sim 端):选蓝海 → 状态副本掷骰
     卷中敌后破坏 → 二次入链删除分支自动触发——词缀名单 ('开局不利',) →
     [](删尽态)、来源 logic_rand(模型猜测口径,sim 内下游直读零消费门);
     HP 词缀回调同步重算:开局 62(开局不利 −20)→ write_prior 82,
@@ -100,7 +100,7 @@ def test_reroll_affix_disable_deletion_leg_fires_once(
 
 def test_reroll_same_seed_replay_deterministic(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """同 seed 重放逐位确定(追加分支世界掷骰 = 流键 rng 世界真值;删除分支
+    """同 seed 重放逐位确定(追加分支状态副本掷骰 = 流键 rng 状态副本里的值;删除分支
     采样走动作分支注入槽 = 同一确定性链):双跑词缀终态/HP 逐位一致。"""
 
     def _run() -> tuple[list[str] | None, str, int | None, str]:

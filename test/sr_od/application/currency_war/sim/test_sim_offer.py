@@ -543,7 +543,7 @@ def test_effective_deal_probs_rotation_toggle() -> None:
 
 
 def test_in_stage_refresh_keeps_rotated_probs() -> None:
-    """轮岗局 sim 世界真值阶段内不回退:M05 首刷携带翻倍表
+    """轮岗局 sim 状态副本里的值阶段内不回退:M05 首刷携带翻倍表
     (``effective_deal_probs`` → ``deal_shop`` 真值直写)后,阶段内刷新
     上报(kernel 随机态分支,与生产 op 同段同口)写回载荷的概率条仍 =
     翻倍表——刷新上报采样表经 ``state_deal_probs`` 轮岗感知接入调用

@@ -7,7 +7,7 @@
 把结果写进状态副本的实现分支):
 
 - 注册行双值:gold_per_hp_lost_now is True(选卡时点已损血数金,布尔
-  旗标字段)∧ battle_end_heal_hp=10(战斗结束回血,战斗结算型 HP 世界
+  旗标字段)∧ battle_end_heal_hp=10(战斗结束回血,战斗结算型 HP 状态副本
   腿,数值 = 卡面直读);
 - 卡面单一源:effect = cw_invest_data plaza 原文逐字(rarity 棱彩);
 - 两道闭集伴随(排除集战斗结算修饰组 + strategy_economy 三分不计分

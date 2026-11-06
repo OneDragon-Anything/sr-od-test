@@ -9,7 +9,7 @@ kernel/cw_env_grants.py 的该被测函数;同模块完胜判据族测试 =
   配额>0 → 救援(瞬时位 True + 配额一次性标志位 +1 + sim 出售腿);胜∧无损血 →
   零救援;败局 → 零救援;环 <2 行 → 不判定;配额 0 → 零救援不扣;
   徽不在 deployed → 零救援不扣。**用例系纯注入形态声明**:「胜∧损血∧
-  徽携带」在现码世界不可自然发生——sim 双重休眠(部署单位 unit.equips
+  徽携带」在现码状态副本不可自然发生——sim 双重休眠(部署单位 unit.equips
   恒空 + sim 结算帧胜利不掉血)+ live 无 sim 写,注入形性质防误当
   自然路径回归;
 - **env consult**(锁 4):救援置位后 check_env_deploy_lock_perfect 判据

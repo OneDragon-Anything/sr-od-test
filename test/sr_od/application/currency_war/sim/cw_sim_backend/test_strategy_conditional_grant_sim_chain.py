@@ -1,6 +1,6 @@
-"""sim 世界链测试(镜像 src = 获得链 check_strategy_conditional_grants
+"""sim 状态副本链测试(镜像 src = 获得链 check_strategy_conditional_grants
 经 sim 节点推进;§2.4 申报 sim 零新增接入调用——tick 实机(live)和模拟器(sim)两边同链,sim 容器现值
-= 世界真值)。
+= 状态副本里的值)。
 
 测试面依据 = 迭代设计 designs/T-102-guimo-xiaoying.md §4 锁 8:
 持卡 + 容器直置齐 8 同名 → 推进节点(kernel advance_node_effective 尾段
@@ -50,7 +50,7 @@ def _isolate_defect_buffer():
 def test_scale_effect_grants_in_sim_world(_isolate_defect_buffer) -> None:
     """sim 端到端(锁 8):装配后端(1-1 窗已过 tick,持卡前零发放)→
     持卡 + 容器直置 8 同名 → 推进到 1-2(tick advanced 位闸)→ sim
-    equips 尾追完美投影仪 + 落一次性标志位——世界真值,使用面(tool_use 上报链)
+    equips 尾追完美投影仪 + 落一次性标志位——状态副本里的值,使用面(tool_use 上报链)
     天然可消费。"""
     b: SimBackend = _backend(7)
     try:
@@ -67,7 +67,7 @@ def test_scale_effect_grants_in_sim_world(_isolate_defect_buffer) -> None:
                                       sig=_SIG, source='logic'), '推进被挡'
         assert gs.equips.value is not None \
             and gs.equips.value[-1] == _EQUIP, \
-            f'sim 世界未发放: {gs.equips.value!r}'
+            f'sim 状态副本未发放: {gs.equips.value!r}'
         assert gs.strategy_conditional_done.value == (_CARD,), \
             f'未落一次性标志位: {gs.strategy_conditional_done.value!r}'
     finally:

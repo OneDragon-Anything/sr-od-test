@@ -1,7 +1,7 @@
 """买牌上报·合成 3 星条件金腿 sim 集成测试(镜像 src = kernel/cw_action_report/
 buy_card.py 合并发火段调用点;kernel 发放函数单元面 + 获得链集成面 =
 kernel/cw_gain_chain/test_check_strategy_star_merge_gold.py,本文件锁
-buy 域调用点经真实上报函数的 sim 世界落地面)。
+buy 域调用点经真实上报函数的 sim 状态副本落地面)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-135-xingxing-
 xiangyin.md(定稿)§4 锁 2 + REVIEW-T135 §四 ④:

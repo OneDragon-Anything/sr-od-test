@@ -7,7 +7,7 @@ test_strategy_pick_gongsi_junhuo_yin.py)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
 T-169-xiaofuzhi-plus.md(定稿)§4 锁 7:播种 offer 含本卡 → 落地 equips
-恰 +2 员工投影仪(世界真值,具名确定发放零采样);同 seed 同流重放一致;
+恰 +2 员工投影仪(状态副本里的值,具名确定发放零采样);同 seed 同流重放一致;
 金腿 13 金 = instant_gold 已登记计分、发放写端 = 族级缺口(T-112,sim 金面
 锁不住,维持观察——金腿零锁申报);bench/deployed 零变化(板面零建模 =
 既有边界申报)。双持语义(姊妹小复制同局)= 表行驱动自然覆盖,零专锁。
@@ -74,7 +74,7 @@ def test_pick_chain_named_equip_grant_xiaofuzhi_plus() -> None:
             assert out.applied
             assert _CARD in gs.active_strategies.value
             assert list(gs.equips.value) == equips_before + [_ITEM, _ITEM], \
-                f'装备腿恰 2 件入栏(sim 世界真值): {gs.equips.value}'
+                f'装备腿恰 2 件入栏(sim 状态副本里的值): {gs.equips.value}'
             assert _bench_ids() == bench_before, 'bench 零变化(板面零建模)'
             assert gs.deployed.value == deployed_before, \
                 'deployed 零变化(板面零建模)'

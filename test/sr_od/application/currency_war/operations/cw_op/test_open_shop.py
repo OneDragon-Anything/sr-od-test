@@ -7,7 +7,7 @@ docs/develop/sr_od/application/currency_war/changes/
 
 - 实机:is_success = 发出事实;定位缺失 = 唯一受阻出口
   (回执 reason=定位缺失(按钮-商店) 申报未发出);
-- sim:点击经宿主 round_by_* → 端口 click_answer 受理即已发出(世界推进
+- sim:点击经宿主 round_by_* → 端口 click_answer 受理即已发出(状态副本推进
   通道);屏门按点击前档名问询的失败是转移后可见性语义,不作发出判读
   ——恒按已发出簿记(reason='')。
 

@@ -555,7 +555,7 @@ def test_env_gift_summon_unit_cuxing_peipei(rows_sink: _RowSink) -> None:
 def test_env_gift_item_channel(rows_sink: _RowSink) -> None:
     """ENV_GIFTS 道具通道(§2.3):items_immediate 命中 → 效果串
     ``item_gift:<名>``(数量 = 元素重复次数)+ 落席写入(送卡落席同构,
-    备战空槽 ``kind='supply_box'``;实机(live)和模拟器(sim)两边同一获得链,sim 世界写入即容器写);
+    备战空槽 ``kind='supply_box'``;实机(live)和模拟器(sim)两边同一获得链,sim 写状态副本即容器写);
     正常路径零申报行。"""
     gs = _make_gs(bench=[], equips=[])
     gs.prep_anchored = True
@@ -622,7 +622,7 @@ def test_env_reroll_declaration_row_member_only(rows_sink: _RowSink) -> None:
     assert gs.active_env.value == '蓝海', '选择事实写值'
     assert gs.active_env.source == 'logic', '容器写通道与普通环境一致'
     assert gs.gold.value == 6, '金收入分支照常(+6,ENV_ECONOMY 唯一 gold_instant)'
-    assert out.effects == (), '追加获得非本链职责(世界掷骰归 sim 后端)'
+    assert out.effects == (), '追加获得非本链职责(状态副本掷骰归 sim 后端)'
     assert rows_sink.kinds() == [ENV_REROLL_DECL], '申报行恰一行'
     # 名单外对照:增发货币零新增申报行
     gs2 = _make_gs(bench=[], equips=[])
@@ -1216,7 +1216,7 @@ def test_gain_invest_strategy_force_refresh_register_noop_grants() -> None:
 def test_gain_invest_strategy_team_hope_unit_buff_zero_response() -> None:
     """全队的希望 登记链锁 + 消费面负锁(T-97 设计 §4 锁 2):策略源
     UNIT_BUFF 首条,只登记不写状态的实现分支既有链自动入册(register_strategy),payload=
-    UnitBuffRef 无任何世界写入字段 → 四桥鸭子类型读取(duck typing)全量缺省守卫 no-op
+    UnitBuffRef 无任何写状态副本字段 → 四桥鸭子类型读取(duck typing)全量缺省守卫 no-op
     (burst 桥 free_refresh_burst 缺省 0 / 板面重写桥 board_rewrite 缺省
     '' → None / 节点边界桥 per_node 族缺省 0 / 容量直写桥 capacity_limit
     缺省 0 → target=默认 → 早退),bot 零响应(游戏侧自算战果)。

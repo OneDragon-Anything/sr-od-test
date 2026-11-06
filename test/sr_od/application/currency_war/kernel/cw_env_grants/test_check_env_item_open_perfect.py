@@ -23,7 +23,7 @@ invest-effects-calc/designs/T-34-mingyun-liwu.md)§2.5 + §4 锁 8 +
 同目录 test_check_env_deploy_lock_perfect.py)。
 
 追加面 = 偶像经济策略道段(迭代 2026-09-23-invest-effects-calc
-designs/REVIEW-T329.md §五④ 锁 4/5/9;世界发放域键域扩展 = 环境 ∪ 策略,
+designs/REVIEW-T329.md §五④ 锁 4/5/9;写状态副本发放域键域扩展 = 环境 ∪ 策略,
 机制按键查表卡名无关,表 +1 条目自动覆盖):策略道完胜回退正例/混族并存
 零互扰/两道作用域隔离/跨调用点时序策略道并入。
 """
@@ -214,7 +214,7 @@ def test_settle_rollback_then_window_discharge_same_pos() -> None:
 
 
 # ============================================================ 策略道段
-# (世界发放域键域扩展首例 = 偶像经济火花礼盒;迭代 2026-09-23-invest-
+# (写状态副本发放域键域扩展首例 = 偶像经济火花礼盒;迭代 2026-09-23-invest-
 # effects-calc designs/REVIEW-T329.md §五④ 锁 4/5/9。机制面按键查表
 # 卡名无关——表 +1 条目自动覆盖,本段锁策略道条目的作用域/混族/时序
 # 行为面。)

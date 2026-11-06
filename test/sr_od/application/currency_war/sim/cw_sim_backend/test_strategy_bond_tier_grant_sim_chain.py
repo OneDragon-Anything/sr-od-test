@@ -1,7 +1,7 @@
-"""策略卡羁绊档位条件发放 sim 世界链测试(镜像 src = sim/cw_sim_backend.py
+"""策略卡羁绊档位条件发放 sim 状态副本链测试(镜像 src = sim/cw_sim_backend.py
 的 _resolve_battle 结算腿族槽调用点;kernel 触发函数单元面 = kernel/
 cw_gain_chain/test_check_strategy_bond_tier_grants.py,本文件锁 sim 接入调用
-与世界真值落地面)。
+与状态副本里的值落地面)。
 
 测试面依据 = 迭代设计 designs/T-271-mengjing-dawutai.md §4 锁 8
 (驱动与断言形态先例 = 同目录 test_strategy_bond_battle_grant_sim_
@@ -166,7 +166,7 @@ def test_settle_grants_on_win(
         assert len(rows) == 1, f'结算拍发放笔数漂移: {[c[:3] for c in rows]}'
         assert str(rows[0][2]) == f'{_EVIDENCE_PREFIX}#equip', \
             f'evidence 漂移: {rows[0][2]!r}'
-        # 通道断言不设:sim 世界未锚定期确定发放走随机态通道是链级既定
+        # 通道断言不设:sim 状态副本未锚定期确定发放走随机态通道是链级既定
         # 约定(gain-chain §5,箱腿同款),确定面 source 锁归 kernel 单元面
         #(test_check_strategy_bond_tier_grants 首达主条 prep_anchored 置一次性标志位)。
         assert rows[0][3].family == 'logic_action' \

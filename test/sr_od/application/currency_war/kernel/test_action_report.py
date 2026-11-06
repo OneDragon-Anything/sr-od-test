@@ -1022,7 +1022,7 @@ def test_on_step_fires_once_per_merge_level() -> None:
 
 def test_on_step_sees_post_step_state() -> None:
     """回调时列表已落定该级终态:第一级后 3×1★ 已消费(置 None)、
-    载体升 2★——调用侧此刻落容器即该级完成后的世界。"""
+    载体升 2★——调用侧此刻落容器即该级完成后的状态副本。"""
     bench = [_char(1, 1), _char(2, 1), _char(3, 1)]
     steps: list[list[tuple[str, int] | None]] = []
     _merge_bench(bench, None, on_step=lambda: steps.append(_snapshot(bench)))

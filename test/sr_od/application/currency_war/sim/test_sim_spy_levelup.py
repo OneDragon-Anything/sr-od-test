@@ -4,7 +4,7 @@ T-3;landing §3.3 验收凭据)。
 设计唯一源 = 迭代 design.md §2.3(回调四步:抽 5 张/偷最贵 3 张入席/
 剩余 2 张 = 商店新牌面/置随机态信号)+ §2.4(信号写端唯一 = 上报回调
 第 4 步)。驱动形态 = test_sim_backend 同款「上报 + 声明喂入」单轨
-(动作 op 同形:report → cw_sim_ports.declare_world),世界分支确定性 =
+(动作 op 同形:report → cw_sim_ports.declare_world),状态副本分支确定性 =
 流键重放(同 seed 同键序逐位一致,sim 确定性判据)。
 
 测试面:
@@ -69,7 +69,7 @@ def _content_names(payload) -> list[str]:
 
 def _top3_of(payload) -> list[str]:
     """新抽载荷的最贵 3 张名(序 = 费用降序 → 星级降序 → 槽位升序,
-    单一源 = backend 世界分支同款排序)。"""
+    单一源 = backend 状态副本分支同款排序)。"""
     content = [s for s in payload.cards
                if s.kind == 'content' and s.card is not None]
     ranked = sorted(content,
@@ -101,10 +101,10 @@ def _feed_levelup(b: SimBackend, *, spy: bool):
     out = report_action_level_up_param(
         b.gs, SimpleNamespace(cost=4), _SIG,
         executed=ShopActionExecuted(levelup_clicks=5))
-    # 新抽载荷重放(世界分支流键 M22/spy-deal#k|M22/spy-rotation#k,k =
+    # 新抽载荷重放(状态副本分支流键 M22/spy-deal#k|M22/spy-rotation#k,k =
     # 后端按节点位执行序计数,首执行 = '#0';确定性判据 = 同 seed 同键序
     # 逐位一致)。必须在 declare_world 之前构建:
-    # sample_shop_deal 读容器剩余牌库派生(drawable_names),世界分支入席
+    # sample_shop_deal 读容器剩余牌库派生(drawable_names),状态副本分支入席
     # 会改牌库——后置重放不与真实抽牌同态,逐位一致判据失效。
     rotation_on = (str(b.gs.active_env.value or '') == '轮岗')
     replay = sample_shop_deal(
@@ -168,7 +168,7 @@ def test_spy_levelup_steal_persist_reopen_presents_two() -> None:
 
 def test_no_spy_levelup_zero_shop_side_effect() -> None:
     """无商业间谍对照(design §2.3 末条):升级零商店副作用——牌面
-    不变、信号不置、无世界分支声明(重开靠备战执行帧清标记通道)。"""
+    不变、信号不置、无状态副本分支声明(重开靠备战执行帧清标记通道)。"""
     b = _to_prep()
     try:
         board_before = list(b.gs.shop.value.cards)
@@ -176,7 +176,7 @@ def test_no_spy_levelup_zero_shop_side_effect() -> None:
                         if s.kind == 'unit' and s.unit is not None]
         out, _replay = _feed_levelup(b, spy=False)
         assert out.applied, '升级照常生效'
-        assert out.world_decl is None, '无持卡 → 无世界分支声明'
+        assert out.world_decl is None, '无持卡 → 无状态副本分支声明'
         assert b.gs.shop_randomized_pending is None, '信号不置'
         assert _content_names(b.gs.shop.value) == [
             s.card.name for s in board_before

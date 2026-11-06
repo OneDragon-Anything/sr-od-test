@@ -2,7 +2,7 @@
 
 锁面 = 「合并同类项」金腿设计与实现(卡面官方原文:「刷新商店时，若刷新的
 角色中出现2个相同的角色，获得1金币。获得4次免费刷新。」):随机态腿之后挂
-策略条件金检查腿,``sim_backend_installed()`` 门控——sim 采样即世界真值、
+策略条件金检查腿,``sim_backend_installed()`` 门控——sim 采样即状态副本里的值、
 判定成立经观察通道发金;live 采样是猜测,金面禁猜测直写(零写)。本文件锁:
 
 - 锁 2:sim 装配 + 本卡在场 → 出对帧 gold 恰 +1(观察笔形态断言);
@@ -15,7 +15,7 @@
   BATTLEFIELD / 市场干预 ECONOMY-无字段鸭子缺省)零金写。
 
 判读锚:判定 = payload 5 槽非空 card 按 name 计数存在任意名 ≥2、单刷至多
-一笔;发金 = ``gs.observe``(sim 世界数值面 = 观察通道,禁 logic 写)。
+一笔;发金 = ``gs.observe``(sim 状态副本数值面 = 观察通道,禁 logic 写)。
 """
 from __future__ import annotations
 
@@ -144,7 +144,7 @@ def test_sim_pair_refresh_grants_one_gold_and_zero_extra_rng(
     assert gs.shop.source == 'logic_rand', '随机态分支照常写(前置面)'
     assert gs.gold.value == 31, '出对帧 +1 金(免费帧零扣费干扰)'
     assert gs.gold.source == 'observation', \
-        '发金 = 观察通道(sim 世界数值面,禁 logic 写)'
+        '发金 = 观察通道(sim 状态副本数值面,禁 logic 写)'
     assert gs.gold.evidence == 'strategy_refresh_pair_gold@refresh', \
         '观察笔证据串(判读可辨,带动作帧)'
     _, rng_ctrl = _run(register=False)

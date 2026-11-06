@@ -144,7 +144,7 @@ def test_pick_then_three_windows_pay_seven_fourth_stops(
             f'拿卡落地拍初始化 = 注册值 count: ' \
             f'{gs.strategy_gold_next_nodes_left.value}'
         assert int(gs.gold.value or 0) == gold_before_pick, \
-            '「现在」腿无世界写端,拿卡拍金零增(T-112 待办维持)'
+            '「现在」腿无状态副本写端,拿卡拍金零增(T-112 待办维持)'
         assert gs.strategy_gold_next_nodes_left.evidence \
             == f'strategy:gold_next_nodes_init:{_CARD}'
         prev_gold = gold_before_pick

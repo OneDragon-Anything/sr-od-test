@@ -1,4 +1,4 @@
-"""sim 免战跳过世界链测试(镜像 src = sim/cw_sim_backend.py 的
+"""sim 免战跳过状态副本链测试(镜像 src = sim/cw_sim_backend.py 的
 _skip_battle 消费腿 + advance 分派 battle_skip 分支 + visible 按钮替换
 子态;声明构造面 = kernel/cw_action_report/start_battle.py,其对照锁落
 kernel/test_world_decl.py)。
@@ -17,7 +17,7 @@ REVIEW-T161 §5 特别核查①(镜像现值 _on_node_advance 记账段——跳
 - visible 子态锁(锁 5):reward 节点出辖域出战恒 True;battle 持卡
   余量>0 出战 False/跳过 True(备战/开商店两屏);用尽移除后出战恢复;
 - 跨级到级金/装备腿镜像锁(REVIEW-T161 特别核查①增补):skip 跨级 →
-  成长基金金腿双通道写 / 钻石商人装备腿直写 + 宝钻世界联动,发放拍 =
+  成长基金金腿双通道写 / 钻石商人装备腿直写 + 宝钻状态副本联动,发放拍 =
   经验入账后。
 
 驱动形态复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py(已登记
@@ -89,7 +89,7 @@ def _counting_force_settle(monkeypatch: pytest.MonkeyPatch,
 
 def _skip_feed(b: SimBackend) -> WorldDecl:
     """免战跳过上报 + 声明喂入(session = sim 容器本体直通——递减与
-    世界消费同容器;上报后一行喂入 = 动作 op 同形)。返回声明供幂等
+    状态副本消费同容器;上报后一行喂入 = 动作 op 同形)。返回声明供幂等
     重放用例直喂(重放面 = sim 消费守卫,不经上报重复递减)。"""
     out = report_action_start_battle_param(
         b.gs, SimpleNamespace(), _SIG, session=b.gs, skip_substate=True)
@@ -100,7 +100,7 @@ def _skip_feed(b: SimBackend) -> WorldDecl:
 
 def _dismiss_offer(b: SimBackend) -> None:
     """策略 offer 屏落卡回窗(op 同形:P1r3 固定日程首槽,跳过点击前
-    窗内选卡先收尾;选卡落世界链与跳过锁无涉,卡名取首槽)。"""
+    窗内选卡先收尾;选卡落状态副本链与跳过锁无涉,卡名取首槽)。"""
     opts = b.gs.invest_strategy_opts.value or []
     out = report_action_pick_invest_strategy_param(
         b.gs, SimpleNamespace(norm_name=opts[0]), _SIG,
@@ -208,7 +208,7 @@ def test_skip_walk_zero_battle_faces_then_normal_resolve(
         assert gs.level.value == 3
         assert gs.node.value is not None \
             and (gs.node.value.plane, gs.node.value.round_num) == (1, 4), \
-            f'世界未直进下一节点: {gs.node.value}'
+            f'状态副本未直进下一节点: {gs.node.value}'
         entry = gs.effects.first(_SKIP_CARD.id)
         assert entry is not None and entry.remaining_uses == 1, 'uses 未递减'
         assert b.disclosures.get(CW_SKIP_SCOPE_BATTLE_ONLY_ASSUMPTION) \
@@ -252,7 +252,7 @@ def test_skip_idempotent_zero_double_account(
     """幂等锁(锁 4):_settled_key 零双账 + 后到 node_advance 空转。
     可锁形态(声明不携节点身份,跨节点重放与真实新跳过按声明形状
     不可分辨,同节点窗 = 守卫辖域):①同节点 resolve→skip 对——battle
-    节点常规结算后(世界驻留该节点)再喂 battle_skip 声明 → 守卫空转,
+    节点常规结算后(状态副本驻留该节点)再喂 battle_skip 声明 → 守卫空转,
     零二次结算零推进;②skip 后直喂 node_advance 声明(补推形态)→
     序位守卫空转零双账。"""
     _counting_force_settle(monkeypatch, won=True)
@@ -281,7 +281,7 @@ def test_skip_idempotent_zero_double_account(
         )
         _node_advance_feed(gs, trigger='settle_confirm')
         assert (gs.node.value.plane, gs.node.value.round_num) == (1, 4)
-        # ② skip (1,4) → 世界 (1,5);node_advance 声明直喂空转
+        # ② skip (1,4) → 状态副本 (1,5);node_advance 声明直喂空转
         gs.effects.register_strategy(_SKIP_CARD, acquired_key=(1, 4))
         decl = _skip_feed(b)
         assert (gs.node.value.plane, gs.node.value.round_num) == (1, 5)
@@ -377,7 +377,7 @@ def test_skip_cross_level_gold_grant_mirror(
 
 def test_skip_cross_level_equip_grant_world_coupling(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
-    """跳过拍跨级到级装备腿镜像锁 + 宝钻世界联动:直构 level=8 + xp 贴阈
+    """跳过拍跨级到级装备腿镜像锁 + 宝钻状态副本联动:直构 level=8 + xp 贴阈
     持钻石商人,skip 跨 9 → equips 随机态写 + 一次性标志位写一笔(producer 专名),
     宝钻回调三写(diamond_count +1 / deploy_cap = level+钻数 /
     back_layout +1);发放拍 = 经验入账后。"""
@@ -409,7 +409,7 @@ def test_skip_cross_level_equip_grant_world_coupling(
         assert latch_leg[:2] == ('logic', 'strategy_conditional_done'), \
             f'一次性标志位通道漂移: {latch_leg[:2]}'
         assert latch_leg[4] == (_EQUIP_CARD,), f'一次性标志位值漂移: {latch_leg}'
-        # 宝钻世界联动三写
+        # 宝钻状态副本联动三写
         assert int(gs.diamond_count.value) == 1, 'diamond_count 未 +1'
         assert int(gs.deploy_cap.value) == 9 + 1, \
             f'deploy_cap 漂移: {gs.deploy_cap.value!r}'

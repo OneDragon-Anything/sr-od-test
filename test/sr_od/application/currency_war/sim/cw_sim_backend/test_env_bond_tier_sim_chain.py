@@ -62,7 +62,7 @@ def _deploy_pair(gs) -> None:
 
 def test_bond_tier_grant_fires_in_sim(_isolate_defect_buffer) -> None:
     """目标局(T-41 设计 §4 锁 4):选特邀专家:加拉赫 → 击破部署过
-    2 档 → equips 出现以太钻头 + done 封账(发放分支与世界事实同容器,
+    2 档 → equips 出现以太钻头 + done 封账(发放分支与状态副本事实同容器,
     live/sim 同链)。"""
     b = _env_pick_backend(7)
     try:

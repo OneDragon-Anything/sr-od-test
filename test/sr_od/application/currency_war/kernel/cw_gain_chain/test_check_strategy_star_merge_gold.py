@@ -97,7 +97,7 @@ def test_direct_single_star3_event_grants_five(sim_installed) -> None:
     check_strategy_star_merge_gold(gs, (('甲', 3),), sig=_SIG,
                                    producer='TestProducer')
     assert gs.gold.value == 35, '单 3 星事件 +5'
-    assert gs.gold.source == 'observation', '观察通道(sim 世界数值面)'
+    assert gs.gold.source == 'observation', '观察通道(sim 状态副本数值面)'
     assert gs.gold.evidence == 'sim:engine:strategy_star_merge_gold:1', \
         '证据串 = 命名空间前缀 + 写点 tag + 事件计数'
     assert gs.write_seq == seq0 + 1, '恰一次观察笔'

@@ -9,7 +9,7 @@ check_strategy_* 族镜像):
 - 条件矩阵(锁 3):未持卡/表外卡零写;首购 cost=c → 一次性标志位键
   ``first_buy_xp#c`` + 返回 XP_c(值下标 = 费用−1);同桶二次短路;
   cost=0/6 表外零写;五桶全取 = 28(一局上限算例,含跨级结转);
-- sim 世界锁(锁 4):持卡局买牌上报 path → gs.level/gs.xp 按
+- sim 状态副本锁(锁 4):持卡局买牌上报 path → gs.level/gs.xp 按
   xp_apply_amount 结转推进(含门槛恰跨结转算例,evidence
   ``sim:engine:xp:first_buy:<费用>`` 独立笔);
 - live 零写锁(锁 5):非 sim 形态同 path → 一次性标志位写、gs.level/gs.xp 零写
@@ -100,7 +100,7 @@ def _gs(*, card: str | None = _CARD, level: int | None = 5,
 
 def test_hold_card_first_buy_latch_and_grant(sim_installed) -> None:
     """触发主条(锁 3):持卡首购 1 费 → 返回 2;一次性标志位键 first_buy_xp#1
-    落账(逻辑面,evidence 同键);xp 世界写独立笔(source=observation,
+    落账(逻辑面,evidence 同键);xp 状态副本写独立笔(source=observation,
     evidence = sim:engine:xp:first_buy:1);恰三笔写(一次性标志位 + level + xp)。"""
     gs = _gs()
     seq0 = gs.write_seq
@@ -111,7 +111,7 @@ def test_hold_card_first_buy_latch_and_grant(sim_installed) -> None:
     assert gs.strategy_conditional_done.source == 'logic', '一次性标志位 = 簿记逻辑态'
     assert gs.strategy_conditional_done.evidence == 'first_buy_xp#1'
     assert gs.xp.value == (2, XP_TO_NEXT_LEVEL[5]), f'xp 恰 +2: {gs.xp.value}'
-    assert gs.xp.source == 'observation', '世界数值面 = 观察通道'
+    assert gs.xp.source == 'observation', '状态副本数值面 = 观察通道'
     assert gs.xp.evidence == _XP_EV_PREFIX + '1', \
         f'独立笔缺失或来源漂移: {gs.xp.evidence}'
     assert gs.write_seq == seq0 + 3, '恰三笔(一次性标志位 + level + xp)'
@@ -202,7 +202,7 @@ def test_live_form_latch_only_world_write_zero() -> None:
 
 
 def test_buy_card_path_grants_xp(sim_installed) -> None:
-    """买牌上报 path 世界锁(锁 4 主条):持卡局经上报唯一入口函数买 2 费牌 →
+    """买牌上报 path 状态副本锁(锁 4 主条):持卡局经上报唯一入口函数买 2 费牌 →
     xp 恰 +3、落一次性标志位(发火腿接入调用全链;gold 未读买分支跳写,场景最小化)。"""
     gs = cw4_gs(node_fill=False, shop_screen='off', gold_unread=True,
                 bench=[], active_strategies=(_CARD,),

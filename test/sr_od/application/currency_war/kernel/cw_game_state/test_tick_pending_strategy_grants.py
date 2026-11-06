@@ -204,7 +204,7 @@ def test_huishou_countdown_zero_sampling_then_due_category_sample() -> None:
 def test_p2_end_freeze_no_grant_no_eject() -> None:
     """锁 9(P2 末冻结直构):P2 末节点后继 = None(P3 未观测,场字段
     未注册第 3 位面)→ 终局上报零效果 tick——倒计时跨 P2 末的条目冻结
-    不发放不弹除(裁决点 5 申报;发放归 sim 窗口腿,本域零世界写)。"""
+    不发放不弹除(裁决点 5 申报;发放归 sim 窗口腿,本域零状态副本写)。"""
     seqs = resolve_plane_node_seqs('')
     seq2 = seqs[2]
     last_r = len(seq2)

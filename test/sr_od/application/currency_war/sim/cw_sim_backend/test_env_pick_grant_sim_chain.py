@@ -14,8 +14,8 @@ T-46-celue-dashi.md(定稿)§4 锁 5(§2.2(e) 落地形态):
 
 追加面 = 概念股族模式卡(权威版本 = game_state/gain-chain.md §3 随机支/随机
 装备支段 + fields.md §5.2 效果缺口与载体登记,语义 = 「概念股族模式卡
-登记约定」):sim 局选追击概念股 → 世界发放全链自动生效(选卡上报条件
-解析注入流键 rng,世界真值)——bench 增追击阵营域 1★ 一张、equips 增
+登记约定」):sim 局选追击概念股 → 写状态副本发放全链自动生效(选卡上报条件
+解析注入流键 rng,状态副本里的值)——bench 增追击阵营域 1★ 一张、equips 增
 简易类别一件;同 seed 重放确定性。
 
 再追加面 = 概念股族展开卡(燃血概念股 id 1002 族内第二实例/能量概念股
@@ -279,12 +279,12 @@ def _pick_concept_stock_backend(seed: int,
 
 def test_concept_stock_env_pick_grant_sim_chain(
         _isolate_defect_buffer) -> None:
-    """sim 选卡全链(gain-chain.md §3 随机支/随机装备支段:sim 世界
+    """sim 选卡全链(gain-chain.md §3 随机支/随机装备支段:sim 状态副本
     真值 = 流键 rng,新形状经 kernel 获得链自动生效,零 sim 新代码):
     选追击概念股 → bench = 开局 4 + 追击阵营域 1★ 一张(星级 = spec
     先验;成员名 ∈ chars_by_faction('追击') 现算集,不手抄)、equips
     计数 +1 且名 ∈ equips_by_category('简易') 现算集;同 seed 重放
-    确定性(世界发放可重放)。"""
+    确定性(写状态副本发放可重放)。"""
     from collections import Counter
     faction_names = {c.name for c in chars_by_faction('追击')}
     simple_names = set(equips_by_category('简易'))
@@ -318,11 +318,11 @@ _RANXUE_ENV = '燃血概念股'
 def test_ranxue_concept_stock_env_pick_grant_sim_chain(
         _isolate_defect_buffer) -> None:
     """sim 选卡全链第二实例(gain-chain.md §3 随机支/随机装备支段:sim
-    世界真值 = 流键 rng,族展开登记经 kernel 获得链自动生效,零 sim 新
+    状态副本里的值 = 流键 rng,族展开登记经 kernel 获得链自动生效,零 sim 新
     代码;概念股族展开卡登记约定):选燃血概念股 → bench = 开局 4 +
     燃血阵营域 1★ 一张(星级 = spec 先验;成员名 ∈ chars_by_faction
     ('燃血') 现算集,不手抄)、equips 计数 +1 且名 ∈ equips_by_category
-    ('简易') 现算集;同 seed 重放确定性(世界发放可重放)。"""
+    ('简易') 现算集;同 seed 重放确定性(写状态副本发放可重放)。"""
     from collections import Counter
     faction_names = {c.name for c in chars_by_faction('燃血')}
     simple_names = set(equips_by_category('简易'))
@@ -357,11 +357,11 @@ _ENERGY_ENV = '能量概念股'
 def test_nengliang_concept_stock_env_pick_grant_sim_chain(
         _isolate_defect_buffer) -> None:
     """sim 选卡全链第三实例(gain-chain.md §3 随机支/随机装备支段:sim
-    世界真值 = 流键 rng,族展开登记经 kernel 获得链自动生效,零 sim 新
+    状态副本里的值 = 流键 rng,族展开登记经 kernel 获得链自动生效,零 sim 新
     代码;概念股族展开卡登记约定):选能量概念股 → bench = 开局 4 +
     能量阵营域 1★ 一张(星级 = spec 先验;成员名 ∈ chars_by_faction
     ('能量') 现算集,不手抄)、equips 计数 +1 且名 ∈ equips_by_category
-    ('简易') 现算集;同 seed 重放确定性(世界发放可重放)。"""
+    ('简易') 现算集;同 seed 重放确定性(写状态副本发放可重放)。"""
     from collections import Counter
     faction_names = {c.name for c in chars_by_faction('能量')}
     simple_names = set(equips_by_category('简易'))
@@ -396,12 +396,12 @@ _LIECHE_ENV = '列车同行概念股'
 def test_lieche_concept_stock_env_pick_grant_sim_chain(
         _isolate_defect_buffer) -> None:
     """sim 选卡全链第四实例(gain-chain.md §3 随机支/随机装备支段:sim
-    世界真值 = 流键 rng,族展开登记经 kernel 获得链自动生效,零 sim 新
+    状态副本里的值 = 流键 rng,族展开登记经 kernel 获得链自动生效,零 sim 新
     代码;概念股族展开卡登记约定 + 开拓者双形态角色位合并约定):选列车
     同行概念股 → bench = 开局 4 + 列车同行域 1★ 一张(星级 = spec 先验;
     成员名 ∈ 合并后池现算 = chars_by_faction('列车同行') 剔除
     '开拓者·记忆',采样即发放名恒欢愉,不手抄)、equips 计数 +1 且名 ∈
-    equips_by_category('简易') 现算集;同 seed 重放确定性(世界发放可
+    equips_by_category('简易') 现算集;同 seed 重放确定性(写状态副本发放可
     重放)。"""
     from collections import Counter
     faction_names = {c.name for c in chars_by_faction('列车同行')} \
@@ -439,13 +439,13 @@ _YINHE_ENV = '银河学者概念股'
 def test_yinhe_concept_stock_env_pick_grant_sim_chain(
         _isolate_defect_buffer) -> None:
     """sim 选卡全链第五实例(gain-chain.md §3 随机支/随机装备支段:sim
-    世界真值 = 流键 rng,族展开登记经 kernel 获得链自动生效,零 sim 新
+    状态副本里的值 = 流键 rng,族展开登记经 kernel 获得链自动生效,零 sim 新
     代码;概念股族展开卡登记约定):选银河学者概念股 → bench = 开局 4 +
     银河学者阵营域 1★ 一张(星级 = spec 先验;成员名 ∈ chars_by_faction
     ('银河学者') 现算集,不手抄;双阵营成员真理医生等按 factions 轴在池,
     域内无开拓者条目,合并对本域零作用)、equips 计数 +1 且名 ∈
     equips_by_category('简易') 现算集(装备身份零先验,economy.md 四卡
-    线索名单不含银河学者);同 seed 重放确定性(世界发放可重放)。"""
+    线索名单不含银河学者);同 seed 重放确定性(写状态副本发放可重放)。"""
     from collections import Counter
     faction_names = {c.name for c in chars_by_faction('银河学者')}
     simple_names = set(equips_by_category('简易'))
@@ -480,13 +480,13 @@ _BELOBOGE_ENV = '贝洛伯格概念股'
 def test_beluoboge_concept_stock_env_pick_grant_sim_chain(
         _isolate_defect_buffer) -> None:
     """sim 选卡全链第六实例(gain-chain.md §3 随机支/随机装备支段:sim
-    世界真值 = 流键 rng,族展开登记经 kernel 获得链自动生效,零 sim 新
+    状态副本里的值 = 流键 rng,族展开登记经 kernel 获得链自动生效,零 sim 新
     代码;概念股族展开卡登记约定):选贝洛伯格概念股 → bench = 开局 4 +
     贝洛伯格阵营域 1★ 一张(星级 = spec 先验;成员名 ∈ chars_by_faction
     ('贝洛伯格') 现算集,不手抄;域 = 布洛妮娅双羁绊注册表修正后 6 名,
     独立单位「大守护者」在候选内照发)、equips 计数 +1 且名 ∈
     equips_by_category('简易') 现算集(装备身份零先验,economy.md 四卡
-    线索名单不含贝洛伯格);同 seed 重放确定性(世界发放可重放)。"""
+    线索名单不含贝洛伯格);同 seed 重放确定性(写状态副本发放可重放)。"""
     from collections import Counter
     faction_names = {c.name for c in chars_by_faction('贝洛伯格')}
     simple_names = set(equips_by_category('简易'))
@@ -521,14 +521,14 @@ _XINGJIANLVREN_ENV = '星间旅人概念股'
 def test_xingjianlvren_concept_stock_env_pick_grant_sim_chain(
         _isolate_defect_buffer) -> None:
     """sim 选卡全链第七实例(gain-chain.md §3 随机支/随机装备支段:sim
-    世界真值 = 流键 rng,族展开登记经 kernel 获得链自动生效,零 sim 新
+    状态副本里的值 = 流键 rng,族展开登记经 kernel 获得链自动生效,零 sim 新
     代码;概念股族展开卡登记约定):选星间旅人概念股 → bench = 开局 4 +
     星间旅人阵营域 1★ 一张(星级 = spec 先验;成员名 ∈ chars_by_faction
     ('星间旅人') 现算集,不手抄;域 7 名全档覆盖,双阵营成员桑博/真理
     医生/瓦尔特按 factions 轴在池,域内无开拓者条目,合并对本域零作用)、
     equips 计数 +1 且名 ∈ equips_by_category('简易') 现算集(装备身份
     零先验,economy.md 四卡线索名单不含星间旅人);同 seed 重放确定性
-    (世界发放可重放)。"""
+    (写状态副本发放可重放)。"""
     from collections import Counter
     faction_names = {c.name for c in chars_by_faction('星间旅人')}
     simple_names = set(equips_by_category('简易'))
@@ -563,7 +563,7 @@ _XIANZHOU_ENV = '仙舟概念股'
 def test_xianzhou_concept_stock_env_pick_grant_sim_chain(
         _isolate_defect_buffer) -> None:
     """sim 选卡全链第八实例(gain-chain.md §3 随机支/随机装备支段:sim
-    世界真值 = 流键 rng,族展开登记经 kernel 获得链自动生效,零 sim 新
+    状态副本里的值 = 流键 rng,族展开登记经 kernel 获得链自动生效,零 sim 新
     代码;概念股族展开卡登记约定):选仙舟概念股 → bench = 开局 4 +
     仙舟阵营域 1★ 一张(星级 = spec 先验;成员名 ∈ chars_by_faction
     ('仙舟') 现算集,不手抄;域 9 名中青雀/停云为专家,牌库时点池过滤后
@@ -571,7 +571,7 @@ def test_xianzhou_concept_stock_env_pick_grant_sim_chain(
     赠卡名显式 ∉ EXPERT_CHARS 钉专家剔除生效;双阵营成员丹恒·饮月/彦卿
     按 factions 轴在池)、equips 计数 +1 且名 ∈ equips_by_category('简易')
     现算集(装备线索含仙舟→折叠小刀,economy.md:92 随家族键已登记,零新增
-    申报);同 seed 重放确定性(世界发放可重放)。"""
+    申报);同 seed 重放确定性(写状态副本发放可重放)。"""
     from collections import Counter
 
     from sr_od.application.currency_war.data.cw_chars import EXPERT_CHARS
@@ -610,7 +610,7 @@ _LANGSHOU_ENV = '狼狩概念股'
 def test_langshou_concept_stock_env_pick_grant_sim_chain(
         _isolate_defect_buffer) -> None:
     """sim 选卡全链第九实例(gain-chain.md §3 随机支/随机装备支段:sim
-    世界真值 = 流键 rng,族展开登记经 kernel 获得链自动生效,零 sim 新
+    状态副本里的值 = 流键 rng,族展开登记经 kernel 获得链自动生效,零 sim 新
     代码;概念股族展开卡登记约定):选狼狩概念股 → bench = 开局 4 +
     狼狩阵营域 1★ 一张(星级 = spec 先验;成员名 ∈ chars_by_faction
     ('狼狩') 现算集,不手抄;域 7 名中貊泽为专家,牌库时点池过滤后
@@ -618,7 +618,7 @@ def test_langshou_concept_stock_env_pick_grant_sim_chain(
     赠卡名显式 ∉ EXPERT_CHARS 钉专家剔除生效;双阵营成员彦卿按 factions
     轴在池)、equips 计数 +1 且名 ∈ equips_by_category('简易') 现算集
     (装备身份零先验,economy.md 四卡线索名单不含狼狩,随家族键已登记,
-    零新增申报);同 seed 重放确定性(世界发放可重放)。"""
+    零新增申报);同 seed 重放确定性(写状态副本发放可重放)。"""
     from collections import Counter
 
     from sr_od.application.currency_war.data.cw_chars import EXPERT_CHARS
@@ -657,14 +657,14 @@ _ZHOUZHIBANSHEN_ENV = '昼之半神概念股'
 def test_zhouzhibanshen_concept_stock_env_pick_grant_sim_chain(
         _isolate_defect_buffer) -> None:
     """sim 选卡全链第十实例(gain-chain.md §3 随机支/随机装备支段:sim
-    世界真值 = 流键 rng,族展开登记经 kernel 获得链自动生效,零 sim 新
+    状态副本里的值 = 流键 rng,族展开登记经 kernel 获得链自动生效,零 sim 新
     代码;概念股族展开卡登记约定):选昼之半神概念股 → bench = 开局 4 +
     昼之半神阵营域 1★ 一张(星级 = spec 先验;成员名 ∈ chars_by_faction
     ('昼之半神') 现算集,不手抄;域 6 名 is_expert 全空 = 全员非专家,
     牌库时点池过滤恒等零收窄,与仙舟/狼狩专家域相反型,池 = 原始域;
     独立单位成员昔涟照发,族级口径 economy.md:94)、equips 计数 +1 且
     名 ∈ equips_by_category('简易') 现算集(装备先验「昼神送轮滑鞋」随
-    家族键已登记,零新增申报);同 seed 重放确定性(世界发放可重放)。"""
+    家族键已登记,零新增申报);同 seed 重放确定性(写状态副本发放可重放)。"""
     from collections import Counter
 
     faction_names = {c.name for c in chars_by_faction('昼之半神')}
@@ -702,7 +702,7 @@ _QUNGONG_ENV = '群攻概念股'
 def test_yezhibanshen_concept_stock_env_pick_grant_sim_chain(
         _isolate_defect_buffer) -> None:
     """sim 选卡全链第十一实例(gain-chain.md §3 随机支/随机装备支段:sim
-    世界真值 = 流键 rng,族展开登记经 kernel 获得链自动生效,零 sim 新
+    状态副本里的值 = 流键 rng,族展开登记经 kernel 获得链自动生效,零 sim 新
     代码;概念股族展开卡登记约定):选夜之半神概念股 → bench = 开局 4 +
     夜之半神阵营域 1★ 一张(星级 = spec 先验;成员名 ∈ chars_by_faction
     ('夜之半神') 现算集,不手抄;域 7 名 is_expert 全空 = 全员非专家,
@@ -710,7 +710,7 @@ def test_yezhibanshen_concept_stock_env_pick_grant_sim_chain(
     独立单位成员昔涟照发,族级口径 economy.md:94)、equips 计数 +1 且
     名 ∈ equips_by_category('简易') 现算集(economy.md 四卡线索名单不含
     夜之半神 = 装备身份零先验,均匀 v0 + 按卡固定假说待校准随家族键在
-    册,零新增申报);同 seed 重放确定性(世界发放可重放)。"""
+    册,零新增申报);同 seed 重放确定性(写状态副本发放可重放)。"""
     from collections import Counter
 
     faction_names = {c.name for c in chars_by_faction('夜之半神')}
@@ -743,7 +743,7 @@ def test_yezhibanshen_concept_stock_env_pick_grant_sim_chain(
 def test_jipo_concept_stock_env_pick_grant_sim_chain(
         _isolate_defect_buffer) -> None:
     """sim 选卡全链第十二实例(gain-chain.md §3 随机支/随机装备支段:sim
-    世界真值 = 流键 rng,族展开登记经 kernel 获得链自动生效,零 sim 新
+    状态副本里的值 = 流键 rng,族展开登记经 kernel 获得链自动生效,零 sim 新
     代码;概念股族展开卡登记约定):选击破概念股 → bench = 开局 4 +
     击破阵营域 1★ 一张(星级 = spec 先验;成员名 ∈ chars_by_faction
     ('击破') 现算集,不手抄;域 9 名中加拉赫/姬子为专家,牌库时点池
@@ -752,7 +752,7 @@ def test_jipo_concept_stock_env_pick_grant_sim_chain(
     加拉赫/灵砂按 flows 轴在池)、equips 计数 +1 且名 ∈
     equips_by_category('简易') 现算集(economy.md 四卡线索名单不含
     击破 = 装备身份零先验,均匀 v0 + 按卡固定假说待校准随家族键已登记,
-    零新增申报);同 seed 重放确定性(世界发放可重放)。"""
+    零新增申报);同 seed 重放确定性(写状态副本发放可重放)。"""
     from collections import Counter
 
     from sr_od.application.currency_war.data.cw_chars import EXPERT_CHARS
@@ -788,7 +788,7 @@ def test_jipo_concept_stock_env_pick_grant_sim_chain(
 def test_qungong_concept_stock_env_pick_grant_sim_chain(
         _isolate_defect_buffer) -> None:
     """sim 选卡全链第十三实例(gain-chain.md §3 随机支/随机装备支段:sim
-    世界真值 = 流键 rng,族展开登记经 kernel 获得链自动生效,零 sim 新
+    状态副本里的值 = 流键 rng,族展开登记经 kernel 获得链自动生效,零 sim 新
     代码;概念股族展开卡登记约定):选群攻概念股 → bench = 开局 4 +
     群攻流派域 1★ 一张(星级 = spec 先验;成员名 ∈ chars_by_faction
     ('群攻') 现算集,不手抄;域 7 名 is_expert 全空 = 全员非专家,牌库
@@ -797,7 +797,7 @@ def test_qungong_concept_stock_env_pick_grant_sim_chain(
     翡翠在公司契约具名发放对象之外照发随机池成员资格〔具名 vs 随机字段
     不相交〕)、equips 计数 +1 且名 ∈ equips_by_category('简易') 现算集
     (economy.md 四卡线索名单不含群攻 = 装备身份零先验,均匀 v0 + 按卡
-    固定假说待校准随家族键已登记,零新增申报);同 seed 重放确定性(世界
+    固定假说待校准随家族键已登记,零新增申报);同 seed 重放确定性(状态副本
     发放可重放)。"""
     from collections import Counter
 
@@ -834,7 +834,7 @@ _JIANYI_ENV = '减益概念股'
 def test_jianyi_concept_stock_env_pick_grant_sim_chain(
         _isolate_defect_buffer) -> None:
     """sim 选卡全链第十四实例(gain-chain.md §3 随机支/随机装备支段:sim
-    世界真值 = 流键 rng,族展开登记经 kernel 获得链自动生效,零 sim 新
+    状态副本里的值 = 流键 rng,族展开登记经 kernel 获得链自动生效,零 sim 新
     代码;概念股族展开卡登记约定):选减益概念股 → bench = 开局 4 +
     减益流派域 1★ 一张(星级 = spec 先验;成员名 ∈ chars_by_faction
     ('减益') 现算集,不手抄;域 7 名中佩拉为专家,牌库时点池过滤后
@@ -844,7 +844,7 @@ def test_jianyi_concept_stock_env_pick_grant_sim_chain(
     契约具名发放对象,具名契约不改随机池成员资格照发)、equips 计数 +1
     且名 ∈ equips_by_category('简易') 现算集(economy.md 四卡线索名单
     不含减益 = 装备身份零先验,均匀 v0 + 按卡固定假说待校准随家族键在
-    册,零新增申报);同 seed 重放确定性(世界发放可重放)。"""
+    册,零新增申报);同 seed 重放确定性(写状态副本发放可重放)。"""
     from collections import Counter
 
     from sr_od.application.currency_war.data.cw_chars import EXPERT_CHARS

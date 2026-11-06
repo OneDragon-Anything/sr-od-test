@@ -1,7 +1,7 @@
-"""策略卡损血档位触发发放 sim 世界链测试(镜像 src = sim/cw_sim_backend.py
+"""策略卡损血档位触发发放 sim 状态副本链测试(镜像 src = sim/cw_sim_backend.py
 的 _resolve_battle 损血档位腿;kernel 触发函数单元面 =
 kernel/cw_gain_chain/test_check_strategy_hp_loss_grants.py,本文件锁
-sim 结算腿接入调用与世界真值落地面)。
+sim 结算腿接入调用与状态副本里的值落地面)。
 
 测试面依据 = 迭代设计 designs/T-142-baoxian.md §4 锁 3/4/5 +
 REVIEW-T142(节点矩阵形态先例 = 同目录 test_strategy_win_gold_sim_
@@ -17,7 +17,7 @@ chain.py 的 T-130 锁 4):
   (O6/T-116 先例:获得后果表扩员会静默扩断言面,空集守卫断言已登记);
 - 驱动形态 = 出战动作触发结算(2026-10-29 流程模型);引擎驱动助手
   import 自 sim/test_sim_backend.py(已登记超限拆分债文件,禁追加,只
-  import 复用不改);helper 扩展(自定义扣血强判/世界写包装)沿同目录
+  import 复用不改);helper 扩展(自定义扣血强判/状态副本写包装)沿同目录
   先例自带同语义副本。
 """
 from __future__ import annotations

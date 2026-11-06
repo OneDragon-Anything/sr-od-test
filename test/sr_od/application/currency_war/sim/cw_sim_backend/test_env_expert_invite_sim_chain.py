@@ -116,7 +116,7 @@ def test_expert_invite_env_sim_full_chain(
         _isolate_defect_buffer) -> None:
     """sim 全链轻量局(T-39 设计 §4 锁 8):五段断言见模块 docstring;
     写状态副本发放域登记一处,实机(live)和模拟器(sim)两边同链零 sim 私有接入调用(链原语复用 = kernel
-    单一获得链,sim 世界写入即容器写)。"""
+    单一获得链,sim 写状态副本即容器写)。"""
     slots, equips = _run_expert_chain(7)
     assert len(slots) == 6, '4 开局手牌 + 2 道具槽'
     assert len(equips) == 1, '开箱所得 1 件入栏'

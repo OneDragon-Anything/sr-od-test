@@ -11,7 +11,7 @@ T-5-r1.md,由本测试 ``-s`` 输出收割):
 - ②人口位不饿死:等级(cap 解锁地板,``max_units_of`` 经读口跟随)
   journal 轨迹逐写单调不回退;
 - ③随机态闭环:商业间谍升级次数(后端披露 ``spy_deal_count``,每次
-  升级回调恰一次世界分支)= 随机态重开触发次数(``shop_randomized_
+  升级回调恰一次状态副本分支)= 随机态重开触发次数(``shop_randomized_
   reopen`` 计数键);偷取入席 + 席满溢出 = 3×升级数(EffectSpec 300201
   ``steal_on_level_up``);入席 > 0 局须有备战席观察写行(spy_steal
   证据);

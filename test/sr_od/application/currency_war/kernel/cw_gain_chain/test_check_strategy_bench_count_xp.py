@@ -9,7 +9,7 @@ REVIEW-T192 §四④(卡面官方原文:「节点开始时，如果备战席角�
   unit→3(计数口径 A 锚定判别用例——若翻「占位件计入」读法本锁先红);
   bench None→0;active_strategies None→0;未持卡/表外卡→0;
 - 'ge' 分支行为归姊妹人才济济批锁,本卡不建;
-- 纯读零写:函数体零容器写(判定无 sig 形参,世界写端归 sim 调用点)。
+- 纯读零写:函数体零容器写(判定无 sig 形参,状态副本写端归 sim 调用点)。
 """
 from __future__ import annotations
 
@@ -110,8 +110,8 @@ def test_no_card_and_off_table_zero() -> None:
 
 
 def test_pure_read_zero_container_writes() -> None:
-    """纯读零写(形态 A):命中路径零容器写(判定无 sig 形参零世界写,
-    世界写端 = sim 唯一调用点)。"""
+    """纯读零写(形态 A):命中路径零容器写(判定无 sig 形参零状态副本写,
+    状态副本写端 = sim 唯一调用点)。"""
     gs = _gs(bench=[_unit()])
     seq0 = gs.write_seq
     assert check_strategy_bench_count_xp(gs) == _XP

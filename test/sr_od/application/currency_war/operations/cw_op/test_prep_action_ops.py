@@ -854,7 +854,7 @@ def test_bridge_recheck_context_uses_slot_table_indices(monkeypatch):
     ``decide_prep_frame`` 供给截断复检的 bench 占用集必须 = **定长槽位表
     下标**(动作参数坐标系,bench_idx 同系,cw_vocab 坐标契约节单一源)
     ——前部有洞帧按紧缩序(bench_entries_of)枚举下标供给会错杀后部
-    占用槽的合法引用,发射被截空后世界不变 → 备战环「本帧无动作」
+    占用槽的合法引用,发射被截空后状态副本不变 → 备战环「本帧无动作」
     无限交回(sim 多种子首局活锁实证,实机同链路同受害)。"""
     from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
         bridge,

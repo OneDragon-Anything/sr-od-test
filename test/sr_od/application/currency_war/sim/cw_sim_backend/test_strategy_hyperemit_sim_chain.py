@@ -192,7 +192,7 @@ def test_drain_leg_via_engine_and_replay_guard(
         assert gs.gold.evidence == _DRAIN_EV, \
             f'清零笔 evidence 字面量钉死: {gs.gold.evidence}'
         _drive_until(b, lambda: b._node_pos() == (1, 4))
-        assert int(gs.gold.value or 0) > 0, 'r4 窗收入面正常(世界未锁死)'
+        assert int(gs.gold.value or 0) > 0, 'r4 窗收入面正常(状态副本未锁死)'
     finally:
         uninstall_backend()
 
@@ -251,7 +251,7 @@ def test_payoff_sixth_window_before_income_then_stop(
     纯收入面);第 6 窗(r9)+G+70 一笔(evidence 含 p/r 坐标;支付先于
     该窗计息——窗增量公式以「窗前金 + 回流额」为息基数现算);条目已随
     第 6 入口转换 tick 移除;第 7 窗(P2r1)不再发(挂起已消费)。
-    r8 = 奖励窗,窗内奖励面板拾取金为世界真值非本腿面,精确增量断言
+    r8 = 奖励窗,窗内奖励面板拾取金为状态副本里的值非本腿面,精确增量断言
     落 r9(拾取金已含在窗前金基线内,不受窗内构成影响)。"""
     _force_settle(monkeypatch, won=True)
     b = _backend()
@@ -332,7 +332,7 @@ def test_zero_gold_pick_snapshot_then_pay_seventy(
             f'金已为 0 短路零写(证据笔保持种子笔): {gs.gold.evidence}'
         prev_gold = 0
         for r in (4, 5, 6, 7, 8):   # 前 5 窗零发放(r8 奖励窗含面板拾取金
-            # 世界真值,不作精确断言;余期递减已由 r9 恰 70 隐证)
+            # 状态副本里的值,不作精确断言;余期递减已由 r9 恰 70 隐证)
             _drive_until(b, lambda r=r: b._node_pos() == (1, r))
             prev_gold = int(gs.gold.value or 0)
         _drive_until(b, lambda: b._node_pos() == (1, 9))
@@ -393,7 +393,7 @@ def test_modified_seq_inserted_window_counts(
         assert int(gs.gold.value or 0) == 0
         prev_gold = 0
         for r in (4, 5, 6, 7, 8):   # 前 5 窗事件递减(r8 奖励窗含面板拾取
-            # 金世界真值,不作精确断言;插入窗恰触发已由 r9 断言隐证)
+            # 金状态副本里的值,不作精确断言;插入窗恰触发已由 r9 断言隐证)
             _drive_until(b, lambda r=r: b._node_pos() == (1, r))
             prev_gold = int(gs.gold.value or 0)
         # 第 6 个窗事件 = 插入的补给窗 r9(非 boss)——插入窗照计数

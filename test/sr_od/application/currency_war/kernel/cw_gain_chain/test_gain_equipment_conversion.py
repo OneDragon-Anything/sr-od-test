@@ -15,7 +15,7 @@
 - 锁 1+5 自我转换:选卡链落地 → 净得 1 箱(equips 零增 + bench +1;
   效果条目2 掷序消耗恰 1 抽,效果串恒登记采样名);
 - 锁 6 掷序不变:同 seed 持/不持卡两局随机数消耗一致(转换零 rng 消费,
-  世界差异仅在写入内容)。
+  状态副本差异仅在写入内容)。
 """
 from __future__ import annotations
 
@@ -207,7 +207,7 @@ def test_pick_chain_self_conversion_net_one_box(rows_sink: _RowSink) -> None:
 def test_rng_draw_count_identical_with_and_without_card() -> None:
     """掷序不变(设计 §4 锁 6):同 seed 持/不持卡两局随机数消耗一致
     (转换确定事件零 rng 消费;对照局 = 同族随机简易腿卡 打捞人才库+,
-    无转换腿)。世界差异仅在写入内容:持卡局 bench +1 箱 equips 空,
+    无转换腿)。状态副本差异仅在写入内容:持卡局 bench +1 箱 equips 空,
     对照局 equips +1 简易件。"""
     gs_a = _make_gs(bench=[], equips=[])
     rng_a = random.Random(_SEED)
@@ -220,6 +220,6 @@ def test_rng_draw_count_identical_with_and_without_card() -> None:
     assert rng_a.getstate() == rng_b.getstate(), \
         '转换零 rng 消费(两局掷序一致)'
     assert gs_a.equips.value == [] and len(_box_slots(gs_a)) == 1, \
-        '持卡局:箱替代装备(世界差异 = 写入内容)'
+        '持卡局:箱替代装备(状态副本差异 = 写入内容)'
     assert len(gs_b.equips.value or []) == 1 and _box_slots(gs_b) == [], \
         '不持卡对照局:简易件照常入栏'

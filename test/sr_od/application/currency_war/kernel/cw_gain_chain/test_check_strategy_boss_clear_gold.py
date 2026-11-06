@@ -126,7 +126,7 @@ def test_zero_value_grant_still_latches() -> None:
     assert gs.gold.value == 50, '空场空席金笔 +0(值不变)'
     assert gs.gold.evidence == _EVIDENCE, \
         f'evidence 退化形漂移: {gs.gold.evidence!r}'
-    assert gs.gold.source == 'observation', '金笔 = 观察通道(世界数值面)'
+    assert gs.gold.source == 'observation', '金笔 = 观察通道(状态副本数值面)'
     assert gs.strategy_conditional_done.value == (_CARD,), '0 值未落一次性标志位'
     assert gs.strategy_conditional_done.source == 'logic', '一次性标志位 = 逻辑态'
     assert gs.write_seq == before + 2, '同窗两笔(金 observe + 一次性标志位 logic)'

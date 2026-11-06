@@ -1,7 +1,7 @@
-"""策略卡首领节点完成固定集发放 sim 世界链测试(镜像 src =
+"""策略卡首领节点完成固定集发放 sim 状态副本链测试(镜像 src =
 sim/cw_sim_backend.py 的 _resolve_battle 首领完成腿;kernel 触发函数
 单元面 = kernel/cw_gain_chain/test_check_strategy_boss_completion_
-grants.py,本文件锁 sim 结算腿接入调用与世界真值落地面)。
+grants.py,本文件锁 sim 结算腿接入调用与状态副本里的值落地面)。
 
 测试面依据 = 迭代设计 designs/T-330-wuqi-pifashang.md §4 锁 4/5/6 +
 REVIEW-T330(驱动与断言形态先例 = 同目录 test_strategy_boss_battle_
@@ -17,7 +17,7 @@ grant_sim_chain.py):
   提前 return 之后);
 - 驱动形态 = 出战动作触发结算(2026-10-29 流程模型);引擎驱动助手
   import 自 sim/test_sim_backend.py(已登记超限拆分债文件,禁追加,只
-  import 复用不改);helper 副本(世界写包装/类型备战驱动/定参结算)
+  import 复用不改);helper 副本(状态副本写包装/类型备战驱动/定参结算)
   沿同目录先例自带同语义拷贝。
 """
 from __future__ import annotations

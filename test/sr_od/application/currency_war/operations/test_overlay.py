@@ -603,7 +603,7 @@ def _backend(seed: int = 7) -> SimBackend:
 
 
 class TestPickReportsConsume:
-    """八选卡上报 consume(两世界同一行代码)。"""
+    """八选卡上报 consume(两状态副本同一行代码)。"""
 
     def test_eight_picks_consume_own_kind(self):
         from sr_od.application.currency_war.kernel.cw_action_report import (

@@ -5,7 +5,7 @@ test_sim_sell_all_deal/test_strategy_pick_dacaiyuan 同形文件,只 import
 
 测试面依据 = 迭代设计 designs/T-188-jiangben-zengxiao.md §2.2-2/§4
 (锁 5 sim 全链主锁)+ 八裁决点默认案。sim 现状持卡局仅记名
-active_strategies(清场/退款/免购全无)= 预登记错扣面;注册后世界真值
+active_strategies(清场/退款/免购全无)= 预登记错扣面;注册后状态副本里的值
 恢复:选卡拍清场+基础公式退款,后续前 6 张买零扣金(免费闸)、uses 递减、
 用尽移除恢复扣金。素出售不入发牌判据集 → bench 零新增单位(零假发牌)。
 """
@@ -54,7 +54,7 @@ _SPEC_ID = '202301'
 
 
 def _seed_sold_unit(b) -> None:
-    """预种一枚 2★1 费到前台 + 清空备战席(sim 开局世界自带备战席单位,
+    """预种一枚 2★1 费到前台 + 清空备战席(sim 开局状态副本自带备战席单位,
     退款公式的输入须全域受控,恰 3 锚才成立)。"""
     b.gs.observe(b.gs.deployed,
                  _dvs([Unit(char_id=_SOLD[0], star=_SOLD[1])], []),

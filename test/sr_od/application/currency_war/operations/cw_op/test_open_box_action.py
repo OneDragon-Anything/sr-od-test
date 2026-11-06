@@ -11,7 +11,7 @@ kind 首槽);点击点 = 「武装箱开启位-{slot}」建档 area 中心(「�
 测试面(design §2.5 测试条):slot 显式/None 现算两态 → 建档坐标点击 +
 自上报(box_card 登记 + 声明喂入)+ success;slot 越界 AssertionError;
 None 现算双出口各一条 AssertionError;sim 形态 = 机械分支旁路静默成功
-+ 后端世界推进(advance 收到 open_box 声明)。
++ 后端状态副本推进(advance 收到 open_box 声明)。
 开箱上报 = 零写族(腾席事实归下一入口 heavy 实读),容器 bench 零写
 是非本测断言面(权威版本 = test_overlay 零写族覆盖)。
 """
@@ -210,7 +210,7 @@ def test_sim_form_silent_bypass_and_backend_world_advance(
         test_context, monkeypatch):
     """sim 形态(design §2.5):机械分支旁路静默成功(零点击零移动),
     自上报照走(box_card 登记),后果声明经 declare_world 喂入后端
-    advance(trigger = open_box)——sim 后端世界建模由此真正收到上报。"""
+    advance(trigger = open_box)——sim 后端状态副本建模由此真正收到上报。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         game_state_of,
     )
@@ -257,6 +257,6 @@ def test_sim_form_silent_bypass_and_backend_world_advance(
             '武装箱选择画面呈现登记照走'
         assert len(backend.advances) == 1 \
             and backend.advances[0].trigger == 'open_box', \
-            '后果声明喂入后端 advance(世界推进主通道)'
+            '后果声明喂入后端 advance(状态副本推进主通道)'
     finally:
         cw_sim_ports.uninstall_sim_backend()

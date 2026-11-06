@@ -752,7 +752,7 @@ def test_pick_supply_extra_norm_items_land_all_legs(
         rows_sink: _RowSink) -> None:
     """附加装备入账分支测试(T-9):extra_norm_items 两件 → owned 尾追两件
     (主件 → 附加件画面 y 序)+ 获得后果链逐件(主件分身墨镜送银狼 1★
-    合成 2★、附加件分身墨镜Max 送银狼 2★)——世界写入 = 角色 + 随选
+    合成 2★、附加件分身墨镜Max 送银狼 2★)——写状态副本 = 角色 + 随选
     装备组全列。"""
     gs = _make_gs(bench=[('银狼', 1), ('银狼', 1)], equips=[])
     out = report_action_pick_supply_param(

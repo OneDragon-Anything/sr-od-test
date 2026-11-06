@@ -14,7 +14,7 @@
   锁 1-11;设计权威版本 = .debug/progress/2026-09-23-invest-effects-calc/
   designs/T-8-renshenyiwai-xian.md,钉住设计约定不断言实现细节):修饰规则
   纯函数/场字段生命周期/next_screen 推导/观察读链两位数/白名单归属/
-  sim 世界真值/键化消费面/acquired_key 同坐标系/结算读数与单调门。
+  sim 状态副本里的值/键化消费面/acquired_key 同坐标系/结算读数与单调门。
 """
 from __future__ import annotations
 
@@ -1067,7 +1067,7 @@ def test_lock11_killed_hp_fallback_path_gone(
         'HP 推断路径消亡:killed 诚实缺位(旧门会产出 True/False)'
 
 
-# ------------------------------------------------------------ sim 世界真值
+# ------------------------------------------------------------ sim 状态副本里的值
 
 _DEF_STEPS = 400
 

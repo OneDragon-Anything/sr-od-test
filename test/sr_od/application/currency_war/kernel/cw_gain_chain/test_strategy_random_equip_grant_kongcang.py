@@ -13,7 +13,7 @@ T-189-kongcang.md(定稿)§4 锁 1(骑 T-136 锁形,行身份锁):
 - 同卡条件腿(「进入新节点时…获得2经验值」)不入本表——触发时点非选卡
   拍,归 cw_investments.STRATEGY_EMPTY_EQUIP_XP_GRANTS + sim 节点窗腿
   (登记面锁 = kernel/cw_investments/test_strategy_empty_equip_xp_grants.py,
-  谓词面锁 = 同目录 test_check_strategy_empty_equip_xp.py,sim 世界锁 =
+  谓词面锁 = 同目录 test_check_strategy_empty_equip_xp.py,sim 状态副本锁 =
   sim/cw_sim_backend/test_strategy_empty_equip_xp_sim_chain.py,两条效果条目分域);
 - rand 语义锁(采样腿 write_logic_rand 通道、不触发失配网)由
   test_gain_chain.test_random_equip_leg_rand_channel_subchain 辖——

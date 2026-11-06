@@ -59,7 +59,7 @@ def test_take_all_two_leg_specs_registered() -> None:
             '触发面 = 补给选定时点'
         assert leg2.duration.value == leg2_dur, f'发放腿持续期({name})'
         assert leg2.category is EffectKind.BATTLEFIELD, \
-            '类别 = 战场改变(发放类世界写入)'
+            '类别 = 战场改变(发放类写状态副本)'
         assert leg2.payload.salvage_all_unchosen_supply is True, '效果条目2 载体字段'
         assert leg2.pending and leg2.notes, '二义条目 pending + 保守支必带'
 

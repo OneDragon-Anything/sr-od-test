@@ -13,7 +13,7 @@ fuli.md §4 锁 1。卡面官方原文(cw_invest_data.py):「立刻获得4个金
   点名,登记判据「泛用数值 → 不绑」直辖),strategy_bindings() 返回
   默认空元组(fail-closed);
 - 即时金写端负锁:卡不入 PICK_INVEST_EFFECTS——instant_gold 族的
-  选卡当场金写端当前按族级待办维持不建(零获得时点世界写入),入集
+  选卡当场金写端当前按族级待办维持不建(零获得时点写状态副本),入集
   = 实现越约;族级写端立项时随批迁移本锁。
 """
 from __future__ import annotations
@@ -57,4 +57,4 @@ def test_dingqi_fuli_not_in_pick_effects_closed_set() -> None:
         PICK_INVEST_EFFECTS,
     )
     assert _CARD not in PICK_INVEST_EFFECTS, \
-        '即时金族写端未建,零获得时点世界写入(负向防线)'
+        '即时金族写端未建,零获得时点写状态副本(负向防线)'

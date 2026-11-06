@@ -1,7 +1,7 @@
-"""策略卡首领通关价值金 sim 世界链测试(镜像 src = sim/cw_sim_backend.py
+"""策略卡首领通关价值金 sim 状态副本链测试(镜像 src = sim/cw_sim_backend.py
 的 _resolve_battle 首领通关价值金腿;kernel 触发函数单元面 =
 kernel/cw_gain_chain/test_check_strategy_boss_clear_gold.py,本文件锁
-sim 结算腿接入调用与世界真值落地面)。
+sim 结算腿接入调用与状态副本里的值落地面)。
 
 测试面依据 = 迭代设计 designs/T-332-souda-che.md §4 锁 3/锁 4(驱动与
 断言形态先例 = 同目录 test_strategy_boss_completion_grant_sim_chain.py
@@ -20,7 +20,7 @@ sim 结算腿接入调用与世界真值落地面)。
   零一次性标志位直接进终局(调用点在死亡提前 return 之后);
 - 驱动形态 = 出战动作触发结算(2026-10-29 流程模型);引擎驱动助手
   import 自 sim/test_sim_backend.py(已登记超限拆分债文件,禁追加,只
-  import 复用不改);helper 副本(世界写包装/类型备战驱动/定参结算)
+  import 复用不改);helper 副本(状态副本写包装/类型备战驱动/定参结算)
   沿同目录先例自带同语义拷贝。
 """
 from __future__ import annotations

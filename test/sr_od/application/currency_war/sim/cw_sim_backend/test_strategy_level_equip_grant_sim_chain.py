@@ -1,14 +1,14 @@
-"""sim 策略卡到级装备腿世界链测试(镜像 src = sim/cw_sim_backend.py 的
+"""sim 策略卡到级装备腿状态副本链测试(镜像 src = sim/cw_sim_backend.py 的
 _on_node_advance / _on_node_advance_terminal 双点接入调用段;kernel 检查腿
 单元面 = kernel/cw_gain_chain/test_check_strategy_level_equip_grants.py,
-本文件锁 sim 接入调用、宝钻世界联动与休眠数值边界)。
+本文件锁 sim 接入调用、宝钻状态副本联动与休眠数值边界)。
 
 测试面依据 = 迭代设计 designs/T-141-zuanshi-shangren.md §4 锁 3/7/8/9:
 - 推进点跨级发放主链(锁 2 sim 面):直构 level=8 + xp 贴阈,推经跨 9 →
   equips logic 写 + 一次性标志位写一笔(producer strategy_level_equip_grant,logic 族
   sim:strategy)+ 发放拍 = 经验入账后;一次性标志位后续推进零再写(锁 3);
 - 局终跨级(锁 7):末节点经验跨 9 → 发放先于局终声明(双点之二);
-- 宝钻世界联动(锁 8):发放后 diamond_count +1 / deploy_cap = level +
+- 宝钻状态副本联动(锁 8):发放后 diamond_count +1 / deploy_cap = level +
   财富宝钻数 / back_layout +1(on_diamond_acquired 经 sim 接入调用);
 - 休眠边界(锁 9,数值口径):节点经验合计 70 固化(NODE_XP_BY_TYPE ×
   PLANE_NODE_TABLES)+ 即时腿注册面上界 < 3→9 级累计门槛 194、封顶
@@ -133,7 +133,7 @@ def test_advance_point_cross_grant_then_latch(
         legs = _equip_legs(calls)
         assert len(legs) == 2, f'发放笔数漂移: {[c[:3] for c in legs]}'
         equip_leg, latch_leg = legs
-        # 发放通道 = anchor 规则家族现值:sim 世界 prep_anchored 恒 False
+        # 发放通道 = anchor 规则家族现值:sim 状态副本 prep_anchored 恒 False
         #(置位写端 = live reconcile_tracking,sim 不经)→ rand=False 确定
         # 事件经 anchor_aware_write 落随机态(未锚定期落账 = 未验证推算,
         # sim 无观察覆盖值随写即真值;T-102 tick 腿 sim 侧同规则,T-5 宝钻
@@ -173,11 +173,11 @@ def test_advance_point_cross_grant_then_latch(
 
 def test_terminal_cross_grant_world_coupling_before_disclosure(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
-    """局终跨级 + 宝钻世界联动(锁 7/8):末节点经验入账跨 9 → 发放先于
+    """局终跨级 + 宝钻状态副本联动(锁 7/8):末节点经验入账跨 9 → 发放先于
     局终声明(双点之二;直构 = 备战窗强置级/xp 后直调局终推进 handler,
     handler 内序 = 经验入账 → 装备腿 → 局终披露与收尾);发放后宝钻回调
     三写 = diamond_count +1 / deploy_cap = level + 财富宝钻数 /
-    back_layout +1(世界数值面 observe,sim 世界写即真值)。"""
+    back_layout +1(状态副本数值面 observe,sim 状态副本写即真值)。"""
     b = _prep_backend(29)
     try:
         gs = b.gs
@@ -192,7 +192,7 @@ def test_terminal_cross_grant_world_coupling_before_disclosure(
         assert len(legs) == 2, f'局终点未发放: {[c[:3] for c in legs]}'
         assert legs[0][4] == [_EQUIP] and legs[1][4] == (_CARD,), \
             f'局终发放形态漂移: {legs}'
-        # 宝钻世界联动三写(锁 8;回调消费返回值,发放同窗 equips 已含
+        # 宝钻状态副本联动三写(锁 8;回调消费返回值,发放同窗 equips 已含
         # 新宝钻 → deploy_cap = 9 + 1)
         assert int(gs.diamond_count.value) == 1, 'diamond_count 未 +1'
         assert int(gs.deploy_cap.value) == 9 + 1, \

@@ -18,7 +18,7 @@ PENDING-DECISIONS.md):
   本哨先红触发重申报;同锁钉转正行登记形态(发放对象 = 佩佩);
 - 拒落形态(发放落地门下游):equips 未观察 → 宝钻腿拒落零写
   (placed=False 串留证)、佩佩腿不涉装备域照常落席;
-- live 零回调锁(锁 4):kernel 形态拿卡(无 sim)→ 宝钻世界三域
+- live 零回调锁(锁 4):kernel 形态拿卡(无 sim)→ 宝钻状态副本三域
   diamond_count/deploy_cap/back_layout 零写——回调只活在 sim 拿卡腿
   (sim/cw_sim_backend),三域 live 归观察识别器,逻辑侧禁写契约,
   与 sim 全链锁(sim/cw_sim_backend/test_strategy_pick_diamond_grant_
@@ -150,7 +150,7 @@ def test_equips_unobserved_diamond_leg_rejected() -> None:
 
 def test_kernel_pick_zero_world_coupling_writes() -> None:
     """live 零回调锁(锁 4):kernel 形态拿卡(效果体两条效果条目正常入栏)→
-    宝钻世界三域零写(值维持 None)——on_diamond_acquired 调用只活在
+    宝钻状态副本三域零写(值维持 None)——on_diamond_acquired 调用只活在
     sim 拿卡腿,live 三域归观察识别器(逻辑侧禁写,投影审计契约)。"""
     gs = _make_gs(bench=[], equips=[])
     gs.prep_anchored = True

@@ -1,7 +1,7 @@
-"""策略卡胜利结算条件金 sim 世界链测试(镜像 src = sim/cw_sim_backend.py
+"""策略卡胜利结算条件金 sim 状态副本链测试(镜像 src = sim/cw_sim_backend.py
 的 _resolve_battle 策略胜利金腿;kernel 触发函数单元面 =
 kernel/cw_gain_chain/test_check_strategy_win_gold_grants.py,本文件锁
-sim 结算腿接入调用与世界真值落地面)。
+sim 结算腿接入调用与状态副本里的值落地面)。
 
 测试面依据 = 迭代设计 designs/T-130-zhaocai-gou.md §4 锁 4/锁 7 +
 REVIEW-T130(r1-S2 修法:节点类型矩阵四态——防实现批把接入调用误包进
@@ -14,7 +14,7 @@ kind in COMBAT_NODE_TYPES 守卫而静默翻转触发域默认案〔全部结算
 - evidence = sim:engine:strategy_win_gold:p<位面>r<轮>(sim_evidence 前缀
   + 写点 tag 独立分域可过滤审计),sig 单形态 = obs 族 'sim:strategy'
   (组名沿在役惯例 obs/logic 共用);
-- 金面禁直写:全程零 logic 金笔(observe 世界数值面写端通道分工);
+- 金面禁直写:全程零 logic 金笔(observe 状态副本数值面写端通道分工);
 - 披露键(锁 7 随局面):发金拍 setdefault 触发域假设键,值非空。
 - 驱动形态 = 出战动作触发结算(2026-10-29 流程模型);引擎驱动助手
   import 自 sim/test_sim_backend.py(已登记超限拆分债文件,禁追加,只

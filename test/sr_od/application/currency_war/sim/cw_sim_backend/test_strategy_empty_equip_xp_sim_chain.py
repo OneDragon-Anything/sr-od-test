@@ -1,12 +1,12 @@
 """sim 策略卡空仓经验节点窗腿测试(镜像 src = sim/cw_sim_backend.py 的
 _begin_node_window 空仓 XP 腿 + kernel 纯判定 check_strategy_empty_equip_xp
-的 sim 调用点世界写;kernel 原语单元面 =
+的 sim 调用点状态副本写;kernel 原语单元面 =
 kernel/cw_gain_chain/test_check_strategy_empty_equip_xp.py,本文件锁
-sim 窗口接入调用与世界真值落地面)。
+sim 窗口接入调用与状态副本里的值落地面)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
 T-189-kongcang.md(定稿)§4 锁 4/5/6/7 + REVIEW-T189 §五④:
-- sim 世界锁(锁 4):持卡空仓局节点窗推进 → gs.xp/gs.level 按
+- sim 状态副本锁(锁 4):持卡空仓局节点窗推进 → gs.xp/gs.level 按
   xp_apply_amount 结转(含跨级结转算例),evidence ``xp:empty_slot``
   独立笔 + sig 组 'sim:xp' 断言;非空仓零写;未持卡零写;
 - 幂等锁(锁 5):同节点窗重放(_window_begun_pos 守卫整段早退)零新增
@@ -57,7 +57,7 @@ def _setup(seed: int = 31, *, grant: bool = True,
 
     grant=True → 拿卡(P1r1 窗已开,选卡拍结构性晚于窗前置段);效果条目1 随卡
     采样 1 件简易入栏,clear_equips=True → 观察通道清空物品栏(模拟该件
-    已售出/耗用后的世界态——条件谓词恢复成立;观察→观察覆盖静默,
+    已售出/耗用后的状态副本态——条件谓词恢复成立;观察→观察覆盖静默,
     test_env_xp_window_sim_chain 等级种子同写入口先例)。"""
     b = _backend(seed)
     b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
@@ -99,7 +99,7 @@ def test_node_window_empty_deck_grants_two(
         assert gs.level.value == want_lv, 'level 按结转式推进'
         assert gs.xp.value == (want_cur, XP_TO_NEXT_LEVEL.get(
             want_lv, before_xp[1])), f'xp 恰 +2: {gs.xp.value}'
-        assert gs.xp.source == 'observation', '世界数值面 = 观察通道'
+        assert gs.xp.source == 'observation', '状态副本数值面 = 观察通道'
         assert gs.xp.evidence == _XP_EV, f'独立笔缺失: {gs.xp.evidence}'
         xp_calls = [c for c in calls if c[1] in ('level', 'xp')]
         assert [(c[1], c[2]) for c in xp_calls] == [
@@ -113,7 +113,7 @@ def test_node_window_empty_deck_grants_two(
 
 def test_threshold_carry_levelup(monkeypatch: pytest.MonkeyPatch) -> None:
     """跨级结转算例(锁 4):门槛恰跨形态(3 级余 2 + 2 → 4 级余 0)——
-    世界等级随白送经验真实推进(升级联动发牌概率的耦合面以此为底)。"""
+    状态副本等级随白送经验真实推进(升级联动发牌概率的耦合面以此为底)。"""
     b = _setup()
     try:
         gs = b.gs

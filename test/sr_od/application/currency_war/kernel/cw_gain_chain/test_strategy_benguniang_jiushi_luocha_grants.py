@@ -107,11 +107,11 @@ def test_registration_faces() -> None:
         '工厂表行值 = (三月七, 1, 2★ 直读)'
     assert _STRATEGY_NODE_CHAR_GRANTS[_CARD] == ('三月七', 1), \
         '姊妹专表行值 = (三月七, 每节点 1 名)'
-    assert _CARD in PICK_INVEST_EFFECTS, '世界发放腿注册已登记'
+    assert _CARD in PICK_INVEST_EFFECTS, '写状态副本的发放效果条目注册已登记'
 
 
 def test_pick_leg_grants_two_star_march(rows_sink: _RowSink) -> None:
-    """效果条目1 世界锁(锁 2):on_strategy_gained 直构(rand=False)→ 备战追加
+    """效果条目1 状态副本锁(锁 2):on_strategy_gained 直构(rand=False)→ 备战追加
     恰 1 只 2★ 三月七、效果串 = 工厂现值形 ``char_grant:三月七(placed=
     True,merge=0,uid=1)``(单发零升星);确定发放走确定面;正常路径零
     申报行。"""

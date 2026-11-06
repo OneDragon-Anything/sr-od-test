@@ -16,7 +16,7 @@ taojin.md(定稿)§4 锁 5 + REVIEW-T179 §3.4 + designs/T-409-heita-jiyuan.md
   即发(泛化前原语义零改);
 - 具名行(黑塔纪元):卡面双具名直读,判据角色名 = 黑塔,判据费用 = 黑塔
   注册 cost=1;
-- 双母体对账:本表(世界发放域)与 STRATEGY_GRANTS(估值域档位机器)
+- 双母体对账:本表(写状态副本发放域)与 STRATEGY_GRANTS(估值域档位机器)
   同键共存 = 合法形态,条目保留零删(反扫闭集底册完整);
 - 构建校验 4 条(漂移哨,import 即炸语义经直调校验函数锁定):
   孤儿键 + 发放角色名漂移 + 判据角色名闭集 + 具名行判据费用一致性
@@ -83,7 +83,7 @@ def test_reward_char_registered_and_cost_matches_criterion() -> None:
 
 def test_grants_entry_coexists_world_channel_pointer() -> None:
     """双母体对账(两行各一):STRATEGY_GRANTS 估值域条目保留零删
-    (即时/条件腿底册完整,反扫闭集不受新表影响);本表辖世界发放,
+    (即时/条件腿底册完整,反扫闭集不受新表影响);本表辖写状态副本发放,
     两表同键各表各域。"""
     grant = STRATEGY_GRANTS[_CARD]
     assert grant.chars_conditional == ((_REWARD, '合成2星2费角色时'),), \

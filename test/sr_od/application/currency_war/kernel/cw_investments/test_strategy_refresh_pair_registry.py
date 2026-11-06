@@ -47,7 +47,7 @@ def test_refresh_pair_spec_single_source_identity() -> None:
 def test_refresh_pair_migration_completeness() -> None:
     """锁 8:注册行等值迁移完整性——instant_gold 缺省(0)∧
     gold_per_refresh_pair=1 ∧ free_refresh_burst=4。防「双登记」回潮:
-    双登记下未来 instant_gold 世界发放腿建模时本卡金腿双发,需排除集特判
+    双登记下未来 instant_gold 写状态副本的发放效果条目建模时本卡金腿双发,需排除集特判
     = 弃案埋雷。"""
     eff = STRATEGY_ECONOMY['合并同类项']
     assert eff.instant_gold == 0, '迁移完整性:instant_gold 缺省(防双登记)'

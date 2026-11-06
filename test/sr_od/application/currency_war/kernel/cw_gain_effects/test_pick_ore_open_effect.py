@@ -6,11 +6,11 @@ _make_ore_open_pick_effect + PICK_INVEST_EFFECTS 工厂条目;按被测模块拆
 T-316-huangjing-kuanggong.md(定稿,REVIEW-T316 无需用户决定 7/7)§4 锁 3:
 - 直构持卡 pick → spheres +1 '金' 点 + ore_rewards +1(获得链分派契约
   消费,注册表键集闭集内注册即生效);
-- level 缺读 → 授予矿无附着不炸(矿仍入世界,点击走既有缺项兜底);
+- level 缺读 → 授予矿无附着不炸(矿仍入状态副本,点击走既有缺项兜底);
 - 未收录卡安静不写 = 既有双锁语义正向辖入(「不登记安静」双锁,零新增
   断言,本文件不重复)。
 
-世界写单源说明: spheres/ore_rewards 写经 cw_gain_chain._grant_ores_to_world
+状态副本写单源说明: spheres/ore_rewards 写经 cw_gain_chain._grant_ores_to_world
 (触发腿+立刻腿同一授予写函数),其撞键/续接/附着语义由
 cw_gain_chain/test_check_strategy_ore_open_effects.py 撞键负例锁承载,
 本文件只锁获得链分派接入调用与本腿特有语义(金档固定/分派 rng 消费)。
@@ -63,7 +63,7 @@ def test_pick_grants_gold_ore_with_attachment() -> None:
 
 
 def test_pick_level_none_grants_without_attachment() -> None:
-    """level 缺读不炸锁:授予照常入世界,ore_rewards 零写(既有缺项兜底
+    """level 缺读不炸锁:授予照常入状态副本,ore_rewards 零写(既有缺项兜底
     路径承接,禁炸)。"""
     gs = _make_gs(level=None)
     gs.write_logic(gs.active_strategies, [_CARD],

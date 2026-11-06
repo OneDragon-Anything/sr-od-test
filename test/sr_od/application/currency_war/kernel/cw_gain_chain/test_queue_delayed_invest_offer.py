@@ -14,7 +14,7 @@ import sim,不设静态扫描锁)+ designs/T-198-baiyin-touzi.md §4(锁 3
 - 递归形态(monkeypatch 临时加彩虹期货行)→ 链式再入队(锁「handler
   按注册表驱动」机制,非本批交付行为);
 - live 落地形态(gain_invest_strategy 同函数,session=None 直构)队列
-  照写,零世界呈现动作。
+  照写,零状态副本呈现动作。
 """
 from __future__ import annotations
 

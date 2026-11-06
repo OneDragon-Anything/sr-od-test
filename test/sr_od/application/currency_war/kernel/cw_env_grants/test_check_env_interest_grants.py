@@ -145,7 +145,7 @@ def test_grant_two_adjacent_writes_same_contract(
     + done 追加 ('公司契约','interest_threshold'),两笔写同 evidence
     ``env_grant#公司契约#interest40`` 同 sig 同 produced_by 相邻
     (同窗原子语义面);角色链经 gain_character 确定发放(rand=False
-    形态 = 链内写通道由 gs 采样模式决定,世界无随机采样)。"""
+    形态 = 链内写通道由 gs 采样模式决定,状态副本无随机采样)。"""
     gs = _make_gs(bench=[], interest_earned=_THRESHOLD)
     calls = _record_writes(gs, monkeypatch)
     granted = check_env_interest_grants(gs, _SIG_HOOK)

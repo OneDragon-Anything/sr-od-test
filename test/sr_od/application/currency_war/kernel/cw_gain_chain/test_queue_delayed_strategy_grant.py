@@ -30,7 +30,7 @@ monkeypatch 形态测随真注册转直测):
 - 回收计划 = 组合登记行入队腿(designs/T-237-huishou-jihua.md §4 锁 6:
   随机腿×延时入队腿,类别池效果串池标记形直断 + rng 恰 1 次同序对拍);
 - live 落地形态(gain_invest_strategy 同函数,session=None 直构)队列
-  照写,零世界发放动作。
+  照写,零写状态副本发放动作。
 """
 from __future__ import annotations
 

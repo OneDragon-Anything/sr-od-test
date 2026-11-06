@@ -12,7 +12,7 @@ invest-effects-calc/designs/T-33-yingxiong-dengchang.md)§2.3/§2.5 +
   含 deploy_lock_uid#<uid>;
 - **完胜提前链**:sim 结算分支补写环帧后,完胜帧 settle_confirm 推进 →
   unlock 逐帧递减(1-1 首帧宁缺勿造不判定,1-2/1-3 各回退一步);
-- **确定性**:sim 采样走流键 rng(上报函数条件解析注入 = 世界真值),
+- **确定性**:sim 采样走流键 rng(上报函数条件解析注入 = 状态副本里的值),
   同 seed 重放逐位确定。
 """
 from __future__ import annotations
@@ -100,7 +100,7 @@ def test_full_chain_grant_lock_and_perfect_rewind(
         assert len(two_star) == 1, '恰 1 张 2★(开局全 1★)'
         grant_name, grant_uid = two_star[0]
         assert grant_name in _COST5_POOL, '赠卡 ∈ 5 费全档池'
-        assert grant_uid is not None, '实例号随行(sim 世界写即真值)'
+        assert grant_uid is not None, '实例号随行(sim 状态副本写即真值)'
         assert gs.env_grant_uid_seq.value == grant_uid, '发号计数器落账'
         assert gs.env_grant_deploy_locks.value == \
             ((grant_name, grant_uid, (3, 4)),), '锁记录 (3,4) = (1,1)+19 步'
@@ -135,7 +135,7 @@ def test_full_chain_grant_lock_and_perfect_rewind(
 
 def test_full_chain_same_seed_replay_deterministic(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """同 seed 重放确定(设计 §4 锁 12;赠卡分支采样走流键 rng = 世界
+    """同 seed 重放确定(设计 §4 锁 12;赠卡分支采样走流键 rng = 状态副本
     真值,§2.5):双跑同 seed 同配置,赠卡名/实例号/锁序列逐位一致。"""
     def _run() -> tuple[str, int, tuple]:
         b = _pick_hero_env(42)

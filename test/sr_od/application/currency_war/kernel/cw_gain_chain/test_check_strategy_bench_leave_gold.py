@@ -11,7 +11,7 @@ test_check_strategy_bench_count_xp.py):
   文义);未持卡/表外卡→空;bench 未观察(None)→空;占位件槽→空
   (辖域判别用例——占位件非「角色」);
 - 槽位序 = BenchView.slots 0 基下标(离场写端定位坐标系);
-- 纯读零写:函数体零容器写(判定无 sig 形参,世界写端归 sim 调用点)。
+- 纯读零写:函数体零容器写(判定无 sig 形参,状态副本写端归 sim 调用点)。
 """
 from __future__ import annotations
 
@@ -136,8 +136,8 @@ def test_no_card_and_off_table_empty() -> None:
 
 
 def test_pure_read_zero_container_writes() -> None:
-    """纯读零写(形态 A):命中路径零容器写(判定无 sig 形参零世界写,
-    世界写端 = sim 唯一调用点)。"""
+    """纯读零写(形态 A):命中路径零容器写(判定无 sig 形参零状态副本写,
+    状态副本写端 = sim 唯一调用点)。"""
     gs = _gs(bench=[_unit('花火')])
     seq0 = gs.write_seq
     assert check_strategy_bench_leave_gold(gs) == [(0, '花火', 2)]
