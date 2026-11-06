@@ -218,7 +218,7 @@ def test_wish_observe_reports_dual_domain(test_context, monkeypatch) -> None:
     """祈愿试炼观察上报测试(双域,选择坐标观察上报条款):观察 node 读链
     桩化(OCR 桩 + 门桩放行,恒稳断言不读真实建档)→ observe success →
     report 双写 wish_trial_opts / wish_trial_opts_xy(同门同序等长;坐标
-    = CARD_XS 桶锚 + CARD_Y 观察期一次解出,值锚 660/340 槽常量)+
+    = CARD_XS 桶识别标志 + CARD_Y 观察期一次解出,值识别标志 660/340 槽常量)+
     obs 挂实例属性。红 = 接入调用断流 / 坐标域未随观察上报 / 双域终值漂移。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_wish_trial as mod,
@@ -367,7 +367,7 @@ def test_bookcard_lcs_ambiguity_rejection_and_unique_pass(test_context,
     转换失败,禁直接取最高分——「宙之半神」对昼之/夜之半神同分 3/4 =
     0.75,旧形态取注册表序首个 = 一半概率错配(点卡即选不可逆),现判
     round_fail 零写零上报;明确唯一(「昼之半祌」对昼之半神 3/4 = 0.75、
-    对夜之半神 2/4 = 0.5,差 0.25)照常命中 = 拒判不过严回归锚。红 =
+    对夜之半神 2/4 = 0.5,差 0.25)照常命中 = 拒判不过严回归基准。红 =
     歧义静默取最高分回潮 / 拒判误杀唯一命中。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_bookcard as mod,
@@ -676,7 +676,7 @@ def test_planner_act_decides_leg_and_dispatch_terminal(
     monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
     op = ymod.CwScreenYinLang(test_context)
     monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
-    # 决策半分支类型判定输入 = 选中的右卡卡文(破解芯片 = 装备域锚命中)。
+    # 决策半分支类型判定输入 = 选中的右卡卡文(破解芯片 = 装备域识别标志命中)。
     op._obs = CwScreenPlannerObs(
         on_screen=True,
         options=[PlannerOption(idx=0, text='随便什么左卡'),

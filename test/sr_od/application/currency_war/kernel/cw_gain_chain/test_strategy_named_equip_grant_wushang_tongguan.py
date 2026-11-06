@@ -153,10 +153,10 @@ def test_wushang_tongguan_unobserved_reject_auditable(
 
 
 def test_wushang_tongguan_condition_gold_zero_modeling_boundary() -> None:
-    """条件金腿零建模反向锁(设计 §4 锁 4 现值锚改形:BATTLE_END 枚举成员
-    已随死代码清偿移除,反向锚改挂 STRATEGY_EFFECTS 键集):「无伤通关」∉
+    """条件金腿零建模反向锁(设计 §4 锁 4 现值基准改形:BATTLE_END 枚举成员
+    已随死代码清偿移除,反向基准改挂 STRATEGY_EFFECTS 键集):「无伤通关」∉
     STRATEGY_EFFECTS——条件金腿零建模是有意裁决非漏登记(触发事件「角色
-    陷入无法战斗」sim 无生产点/live 结算屏无观察锚,权威版本 = invest_effects.
+    陷入无法战斗」sim 无生产点/live 结算屏无观察识别标志,权威版本 = invest_effects.
     md §8 型③成员点名 + effect-domain.md §7.4 候选点名在卷;启用 = 各自
     建模批先立规格条目再接事件源,防后续批静默补条目破坏观察覆盖兜底口径)。"""
     assert '无伤通关' not in STRATEGY_EFFECTS, \

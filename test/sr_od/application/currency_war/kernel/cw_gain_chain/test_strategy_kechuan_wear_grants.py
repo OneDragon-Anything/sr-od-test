@@ -82,7 +82,7 @@ def _bench_units(gs: GameState) -> list[Unit]:
 def test_perfect_win_wears_random_advanced() -> None:
     """完胜触发主链:持卡 + 队列 uid=1 + 备战佩佩 uid=1 → equips +1 件
     ∈ 进阶池(采样单一源池);效果串 kechuan_wear 前缀带 uid;穿戴写 =
-    bench 域随机态(source = logic_rand 采样直写形态——prep_anchored 锚
+    bench 域随机态(source = logic_rand 采样直写形态——prep_anchored 锚定标志
     定窗 rand=True 恒 write_logic_rand)。"""
     gs = _gs(bench_units=[Unit(char_id='佩佩', star=1, uid=1)], queue=((1, 5),))
     effects = check_strategy_kechuan_wear_grants(

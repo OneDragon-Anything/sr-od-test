@@ -76,7 +76,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicate
     line_members,
 )
 
-# 注册表事实锚(测试种子选名依据,别换名后不解注册表;档号 = 十档口径,
+# 注册表事实基准(测试种子选名依据,别换名后不解注册表;档号 = 十档口径,
 # 完成品保护迭代 design §2.2):
 # - 万敌(1费,夜之半神+燃血)/远坂凛(1费)= 兜底档 10 干净件(保护集外);
 # - 黄泉(3费,减益)= 档 9 羁绊成员(保护集外);星期日 = 万金油(档 8,
@@ -315,7 +315,7 @@ class TestInterestMemberExemption:
     卖出(溢出/晶矿/获取让位)零豁免(动机二分:因席位/金币被迫按
     优先级让位的无豁免)。
 
-    注册表事实锚:姬子·启行 = 列车同行 need 3(2★ 未达标 = 档 3 形态,
+    注册表事实基准:姬子·启行 = 列车同行 need 3(2★ 未达标 = 档 3 形态,
     3 费 2★ 退金 8)/花火 = need 2(2★ 达标 = 完成品保护档 2,2 费 2★
     退金 5)/瓦尔特 = need 1(1★ 未到两星 = 档 7 形态,5 费 1★ 退金 5);
     布洛妮娅
@@ -608,7 +608,7 @@ class TestSceneTableParams:
                 assert spec.exempt_unmet_members is False, name
 
     def test_face_regular_channel_closure_anchor_list(self):
-        """通道闭集锚:FACE_REGULAR 通道逐一点名(SCENE_SPECS 闭集派生)
+        """通道闭集基准:FACE_REGULAR 通道逐一点名(SCENE_SPECS 闭集派生)
         ——新增常规面通道会撑破本清单(shop_swap 已随置换账替换退役
         〔3.2〕;c1_make_room/deploy_swap 已随身份段/旧价值函数退役
         删除〔3.4〕;levelup_liquidate_prep 已随凑金链整删退役;

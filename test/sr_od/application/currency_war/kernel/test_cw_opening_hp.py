@@ -179,7 +179,7 @@ def test_true_read_overrides_prior_without_alarm(rows_sink: _RowSink) -> None:
 def test_mid_run_node_window_skips_resync() -> None:
     """mid-run 节点窗在动 → 跳写(退化批守卫):策略卡退化可中途获得,
     其词缀删除写触发本回调时,当期 hp 已有战斗真值——开局先验重算只有
-    「静默踩踏」一个效果,守卫跳写(真值不踩)。开局窗形态(node 未锚)
+    「静默踩踏」一个效果,守卫跳写(真值不踩)。开局窗形态(node 未锚定)
     照旧重算 = 既有各锁辖域。"""
     gs = _make_gs(['开局不利', '库藏生锈'])
     gs.observe(gs.node, NodeKey(plane=1, round_num=3, kind='prep'),

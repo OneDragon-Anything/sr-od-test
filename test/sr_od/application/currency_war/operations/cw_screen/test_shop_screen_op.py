@@ -319,7 +319,7 @@ def test_act_node_unobserved_close_skips_then_executes(monkeypatch):
 # 段 2:执行端口接入调用(纯执行层,零策略判据)
 # ============================================================
 
-_LEVEL_BTN_PT = Point(123, 456)   # 购买经验按钮锚(观察 node area 桩值)
+_LEVEL_BTN_PT = Point(123, 456)   # 购买经验按钮识别标志(观察 node area 桩值)
 _BENCH_PTS = [Point(500 + i * 125, 910) for i in range(9)]   # 商店画面档备战栏桩
 _SELL_PT = Point(75, 840)        # 商店画面档出售区桩
 
@@ -767,7 +767,7 @@ def test_segment_head_short_card_points_fail_with_area_names(
 def test_segment_head_level_button_missing_fails(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """A 层·升级钮臂:全 5 槽在而升级钮缺失 → round_fail 带钮名
-    (存量纪律回归锚)。"""
+    (存量纪律回归基准)。"""
     centers = {f'商店牌-{i}': Point(50, 50) for i in range(1, 6)}
     rr = _run_observe_node(_anchor_host(
         monkeypatch, click_pts=[Point(50, 50)] * 5, area_centers=centers))
@@ -824,7 +824,7 @@ def test_segment_head_all_five_slots_proceed_to_access(
 
     rr = _run_observe_node(ctx)
 
-    assert rr is not None and rr.is_success, '三锚齐备 = 访问正常开始'
+    assert rr is not None and rr.is_success, '三识别标志齐备 = 访问正常开始'
     assert reads == [1], '入口观察恰一次读'
 
 

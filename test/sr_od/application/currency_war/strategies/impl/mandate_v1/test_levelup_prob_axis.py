@@ -1,6 +1,6 @@
 """CW 升级判据单帧测试(触发单判据三分派 + 资金线门 + 单帧原子发射)。
 
-出处(持久索引):判据权威版本锚 = strategy-docs/11_shop_decisions.md §2
+出处(持久索引):判据权威版本引用 = strategy-docs/11_shop_decisions.md §2
 (升级触发单判据三分派/资金线门/拦截层处置)。判据本体 =
 strategies/impl/mandate_v1/criteria/levelup.py,发射位 = entry 备战
 第 4 步。测试面组:
@@ -24,7 +24,7 @@ P2 血带节(原 P2 低血带授权域统一件):单一语义权威 = 生产符�
 ①p2_blood_floor 域谓词真值表(信任门/阈值单一源 = HP_BAND_NEAR_DEATH,
 位面域互补——R-7 保留的纯观测面);②凑息拒因键域(血线拒因键退役;
 hp 判据面已随 hp-purge 迭代 3.1 删除——危机帧不再拦升级,升级发射
-门序 6 道、无 hp 支,语义锚 = changes/2026-10-28-hp-purge-refresh-reform/design.md)。
+门序 6 道、无 hp 支,语义基准 = changes/2026-10-28-hp-purge-refresh-reform/design.md)。
 """
 from __future__ import annotations
 
@@ -306,7 +306,7 @@ class TestRetainedGates:
         升级判据不再有 hp 拦截支——该帧 defer 唯一来源 = 资金线门
         (金 30 花后破线,恒 defer 等钱),拒因键域闭集断言(键域 =
         触发 + 资金线 defer;发射门序 6 道无 hp 支)。判定函数级直测 +
-        emit 级双锚。"""
+        emit 级双识别标志。"""
         from sr_od.application.currency_war.kernel.cw_registry import (
             DEFAULT_REGISTRY,
         )

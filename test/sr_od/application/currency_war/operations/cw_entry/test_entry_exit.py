@@ -3,11 +3,11 @@
 出处 =
 判定序表/默认委托/互踢推演)。真帧 fixture 驱动、真建档识别链,
 FixtureController 记录点击。CwLoop 在委托测试①⑤中桩化(边界 op,内部行为不在
-本测试范围);停机位行为由测试⑥直跑真 CwLoop 覆盖(免战帧 = 旧穿透双锚判否、
+本测试范围);停机位行为由测试⑥直跑真 CwLoop 覆盖(免战帧 = 旧穿透双识别标志判否、
 新名单判是的分歧点)。
 
 - ① 列车同行事故帧(2026-09-15 卡死形态)→ 路由走默认委托,零「备战退局发起」;
-- ② 免战帧 → 直接退局发起(屏名白名单,非锚判定);
+- ② 免战帧 → 直接退局发起(屏名白名单,非识别标志判定);
 - ④ 敌人信息浮层帧 → 点关闭回路由(⑤唯一特判,不走委托);
 - ⑤ 认不出帧 → 数拍重试后按计数判战斗中(右上 X),全程无 CwLoop 委托
   (⑥链的「委托一次 CwLoop」步骤已删,设计 §2.1);
@@ -129,7 +129,7 @@ def test_lock1_partner_frame_delegates_without_prep_exit(
 ) -> None:
     """测试①:列车同行事故帧 → 路由走默认委托,零「备战退局发起」触发。
 
-    事故反形:旧穿透双锚穿透选伙伴弹窗误判干净备战 → 备战退局发起空转
+    事故反形:旧穿透双识别标志穿透选伙伴弹窗误判干净备战 → 备战退局发起空转
     966 次;本测试红 = 表外画面判定回退(识别结果被丢弃)。
     """
     _require_screens(test_context, (_PARTNER_SCREEN, _PARTNER_FRAME), _LOBBY)
@@ -170,9 +170,9 @@ def _full_exit_chain(first_frame: tuple[str, str]) -> list[dict]:
 def test_lock2_skip_state_frame_exits_directly(
     test_context, fixture_controller: FixtureController,
 ) -> None:
-    """测试②:免战帧 → 直接退局发起(A 类名单,非锚判定),完整退局链走通。
+    """测试②:免战帧 → 直接退局发起(A 类名单,非识别标志判定),完整退局链走通。
 
-    免战画面「出战」锚被「跳过」替换:旧备战档锚判定对免战恒 False,本测试
+    免战画面「出战」识别标志被「跳过」替换:旧备战档识别标志判定对免战恒 False,本测试
     红 = 免战被误判为需委托/认不出(名单判定回退)。
     """
     _require_screens(test_context, (_SKIP_SCREEN, _SKIP_FRAME),
@@ -249,7 +249,7 @@ def test_lock6_stop_at_prep_returns_immediately_on_class_a(
 
     停机位与退出路由③共用同一常量(cw_screen_state.PREP_DIRECT_EXIT_SCREENS)
     → 两侧对「是否已到可交还态」结论恒一致,无互踢往返。免战帧 = 新旧判据
-    分歧点:旧穿透双锚对免战恒 False(不停机即误入分发),新名单判是。
+    分歧点:旧穿透双识别标志对免战恒 False(不停机即误入分发),新名单判是。
     """
     _require_screens(test_context, (_SKIP_SCREEN, _SKIP_FRAME))
     monkeypatch.setattr(test_context, 'cw_match', None, raising=False)

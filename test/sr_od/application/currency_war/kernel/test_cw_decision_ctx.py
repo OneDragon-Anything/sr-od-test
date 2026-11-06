@@ -1,4 +1,4 @@
-"""kernel 决策上下文槽(dtag 关联锚)锁面。
+"""kernel 决策上下文槽(dtag 关联标记)锁面。
 
 被测 = src/sr_od/application/currency_war/kernel/cw_decision_ctx.py;
 设计出处 = changes/2026-10-24-strategy-telemetry/details/capture-store.md §2

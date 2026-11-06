@@ -512,7 +512,7 @@ def test_zhouzhibanshen_faction_pool_matches_registry_and_validates() -> None:
     变动;本域 6 名 is_expert 全空 = 非专家域,无仙舟/狼狩型专家分层
     断言,过滤恒等由 cw_pool 镜像授予池锁承载);显式断言'昔涟' ∈ 静态
     基底池(独立单位「挚爱之人」照发 + 双阵营成员「昼之半神、夜之半神」
-    双边已登记照发双事实锚,族级口径 economy.md:94,镜像仙舟锁'彦卿'
+    双边已登记照发双事实基准,族级口径 economy.md:94,镜像仙舟锁'彦卿'
     定论断言式)。"""
     cw_investments._validate_env_gifts()
     spec = ENV_GIFTS['昼之半神概念股'].chars_random_immediate[0]
@@ -568,7 +568,7 @@ def test_yezhibanshen_faction_pool_matches_registry_and_validates() -> None:
     变动;本域 7 名 is_expert 全空 = 非专家域,无仙舟/狼狩型专家分层
     断言,过滤恒等由 cw_pool 镜像授予池锁承载);显式断言'昔涟' ∈ 静态
     基底池(独立单位「挚爱之人」照发 + 双阵营成员「昼之半神、夜之半神」
-    双边已登记照发双事实锚,族级口径 economy.md:94,镜像仙舟锁'彦卿'
+    双边已登记照发双事实基准,族级口径 economy.md:94,镜像仙舟锁'彦卿'
     定论断言式)。"""
     cw_investments._validate_env_gifts()
     spec = ENV_GIFTS['夜之半神概念股'].chars_random_immediate[0]

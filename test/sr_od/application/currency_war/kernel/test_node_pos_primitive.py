@@ -123,7 +123,7 @@ def test_sequence_prev_modified_table_follows_field_lengths() -> None:
 
 
 def test_final_supply_pos_default_modified_and_empty() -> None:
-    """尾款锚 helper(序列位置锚单一源;尾款交付「最后一个补给阶段」
+    """尾款标记 helper(序列位置标记单一源;尾款交付「最后一个补给阶段」
     判定):默认表 → (3,3)(键升序位面拼接展平全序末个 supply 位——
     P1 supply@5、P2 supply@3、P3 supply@3,P3 入表后域扩展自动跟随的
     现值形态);修饰表期望由 ``resolve_plane_node_seqs`` 程序化派生

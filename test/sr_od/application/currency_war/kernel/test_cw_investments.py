@@ -600,7 +600,7 @@ def test_env_battle_grants_validation_raises(
 def test_env_battle_grants_current_entry_and_coexistence() -> None:
     """现役条目(T-30 设计 §2.1,id 129 卡面直读)+ 表间并存合法
     (豁免声明显式半边)+ 现表直调通过(构建校验在 import 期已炸过一遍,
-    直调 = 变体注入后的回归锚):星核猎手契约 = AND-of-ORs 三参与组 +
+    直调 = 变体注入后的回归基准):星核猎手契约 = AND-of-ORs 三参与组 +
     流萤 + 锁期 2;∈ INVESTMENT_ENVS 且 ∈ ENV_GIFTS(条件具名集首元 =
     流萤,双源同值)且 ∉ ENV_ECONOMY(零金流)。"""
     grant = cw_investments.ENV_BATTLE_GRANTS['星核猎手契约']
@@ -1220,7 +1220,7 @@ def test_env_deploy_lock_grants_validation_raises(
 
 def test_env_deploy_lock_grants_current_entry_and_coexistence() -> None:
     """现役条目(T-33 设计 §2.1,id 133 卡面直读)+ 表间并存合法 + 现表
-    直调通过(import 期已炸过一遍,直调 = 变体注入后的回归锚):英雄登场
+    直调通过(import 期已炸过一遍,直调 = 变体注入后的回归基准):英雄登场
     = RandomCharSpec(5,2) + 锁期 19 + 完胜加速;∈ INVESTMENT_ENVS 且
     ∉ ENV_GIFTS ∉ ENV_ECONOMY ∉ ENV_BATTLE_GRANTS(各表无本卡条目,
     单表归属)。"""
@@ -1280,7 +1280,7 @@ def test_env_delayed_item_grants_current_entry_and_wordlist_untouched(
     """现役条目(T-34 设计 §2.1,id 134 卡面直读)+ 单表归属 + 词表零扩
     (T-34 设计 §4 锁 10 反向锁:惊喜盒 = 战利品区浮动件非占席,若实现批
     按 v1 占席惯性把件名加进 BENCH_ITEM_NAMES 派生词表,此断言红);
-    现表直调通过(import 期已炸过一遍,直调 = 变体注入后的回归锚)。"""
+    现表直调通过(import 期已炸过一遍,直调 = 变体注入后的回归基准)。"""
     grant = cw_investments.ENV_DELAYED_ITEM_GRANTS['命运礼物']
     assert grant.item == '惊喜盒'
     assert grant.open_delay_nodes == 12
@@ -1407,7 +1407,7 @@ def test_salvage_plus_registration_surface() -> None:
 def test_gold_at_final_supply_in_engine_excluded_set() -> None:
     """尾款金字段引擎判别锁(T-93 设计 §4 锁 11):``gold_at_final_supply``
     ∈ ``_ENGINE_CHANNEL_EXCLUDED_FIELDS``(一次性/时点金族——整局一次的
-    序列位置锚条件金,把结果写进状态副本的实现分支 = sim 节点窗独立笔,非持续通道;防后续误入
+    序列位置标记条件金,把结果写进状态副本的实现分支 = sim 节点窗独立笔,非持续通道;防后续误入
     引擎通道使 is_economy_engine 对持卡局误判真)。"""
     assert 'gold_at_final_supply' \
         in cw_investments._ENGINE_CHANNEL_EXCLUDED_FIELDS
@@ -1504,7 +1504,7 @@ def test_bench_capacity_registration_surface() -> None:
     + expiry_simple_equips=3(到期发放腿件数);duties 只 track(容量消费端
     读状态容器派生,无预知/无姿态);pending=True 必带保守支 notes(「3 件」随机性
     v0 未实采,家族判据「二义未实采不定死」);id 双匹配过校验(import 期已
-    过——本测试存活即证,直调 = 复跑回归锚)。"""
+    过——本测试存活即证,直调 = 复跑回归基准)。"""
     spec = STRATEGY_EFFECTS['节省工位']
     cw_investments._validate_strategy_effects()   # 构建校验复跑不炸
     assert spec.id == '101901'

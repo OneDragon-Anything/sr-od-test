@@ -7,14 +7,14 @@
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
 T-136-maicai-piao.md(定稿)§4 + REVIEW-T136 六裁决点默认案:
 - 泛化表 (category, count) 星徽行登记(打捞人才库+ 简易行同表泛化形,
-  迁移回归重锚留 test_gain_chain.py 原区);池 = ``equips_by_category``
+  迁移回归重立留 test_gain_chain.py 原区);池 = ``equips_by_category``
   注册表派生单源,'星徽' 类别池 import 期独立闸搭环境侧便车;
 - 固定 rng 注入链发放真值(星徽行链锁)/equips 未观察拒落跳写形态/
   零后果前提锁;rand 语义锁(采样腿 write_logic_rand 通道、不触发失配网)
   由 test_gain_chain.test_random_equip_leg_rand_channel_subchain 辖
   (同一工厂路径的通道语义,类别实参不改变通道选择,不重复立锁);
 - 键集闭集断言(+1 '买彩票')与采样纯函数锁(池派生/种子可复现)随
-  泛化改形重锚于 test_gain_chain.py 原区。
+  泛化改形重立于 test_gain_chain.py 原区。
 """
 from __future__ import annotations
 

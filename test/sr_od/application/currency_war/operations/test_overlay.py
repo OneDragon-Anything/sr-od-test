@@ -17,7 +17,7 @@
   pending 非空 → round_success 交回);kernel 兜底清空(清 pending 连
   簿记,生命周期 = 局)。
 - **身份两段式**(CwLoop 真实现 ``_resolve_frame_identity``):pending 首
-  中优先/未中落全扫描 + 对账行留证(B1 回归);底屏锚条目不入两段式
+  中优先/未中落全扫描 + 对账行留证(B1 回归);底屏识别标志条目不入两段式
   (B2 回归,防备战名死循环);CwLoop 兜底清空(清 pending 不清簿记)
   与 sim 态直跳;M1 回归:settle_confirm 登记 fortune → 节点窗起点先落
   底层屏再查呈现门。
@@ -481,7 +481,7 @@ class TestFortuneBattleCount:
         _write_dep(gs, _view(front=[_u('黑天鹅')]))
         report_node_advance(gs, trigger='settle_confirm')
         assert _pending_kinds(gs) == [], '第 1 场(计数 1)不弹'
-        # 结算屏观察重锚(生产 = settle 确认后下一节点被观察;动作推进门
+        # 结算屏观察重新锚定(生产 = settle 确认后下一节点被观察;动作推进门
         # 只放行 observation 态)。
         gs.observe(gs.node_pos, gs.node_pos.value, sig=_SIG_OBS)
         report_node_advance(gs, trigger='settle_confirm')
@@ -558,7 +558,7 @@ class TestDirectRegisters:
 class TestCallbackBoundaries:
     def test_observe_write_zero_callbacks(self):
         """观察写零回调:gs.observe 覆盖 deployed 不触发任何登记
-        (观察 = 重锚事实与纠偏,反应式兜底)。"""
+        (观察 = 重新锚定事实与纠偏,反应式兜底)。"""
         gs = _gs()
         gs.observe(gs.deployed,
                    _view(front=[_u('花火'), _u('知更鸟')]), sig=_SIG_OBS)
@@ -709,7 +709,7 @@ class TestSimPresentationFromPending:
 
     def test_unmodeled_kinds_consumed_with_disclosure(self):
         """aha/wish_trial/star_tome 无 sim 呈现面 → 消费 + 披露(不呈现,
-        防策略读空选项卡死;aha 实机 = 备战锚特殊规则,sim 近似申报)。"""
+        防策略读空选项卡死;aha 实机 = 备战识别标志特殊规则,sim 近似申报)。"""
         b = _backend()
         try:
             b._screen = '货币战争-备战'
@@ -947,7 +947,7 @@ class TestTwoStageRealImpl:
 
     def test_aha_base_screen_entry_excluded_from_two_stage(
             self, live_loop, monkeypatch):
-        """B2 回归:aha 条目 screen_name = 备战(底屏锚)∉ 分发候选集
+        """B2 回归:aha 条目 screen_name = 备战(底屏识别标志)∉ 分发候选集
         → 不参与两段式(is_target_screen 零调用该名)、预测子集排除;
         与 megastar 并存时只试 megastar。"""
         shell, gs = live_loop
@@ -966,7 +966,7 @@ class TestTwoStageRealImpl:
             lambda *a, **k: KIND_SCREEN_NAMES['megastar'])
         name, pred = shell._resolve_frame_identity(object())
         assert KIND_SCREEN_NAMES['aha'] not in tried, \
-            '底屏锚条目不进两段式(防备战名死循环)'
+            '底屏识别标志条目不进两段式(防备战名死循环)'
         assert [p.kind for p in pred] == ['megastar'], '候选过滤已登记'
         assert name == KIND_SCREEN_NAMES['megastar']
 

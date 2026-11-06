@@ -915,7 +915,7 @@ def test_wear_equip_single_mechanical_drag_emits(monkeypatch):
 
 
 def test_wear_locate_slot_anchor_over_name_match():
-    """穿戴目标定位测试:计划步恒戳的物理槽位锚优先于名匹配——同名角色
+    """穿戴目标定位测试:计划步恒戳的物理槽位标记优先于名匹配——同名角色
     跨域在场(deployed 空装 + bench 副本穿满)时,旧 bench 先序名匹配
     会把穿戴记到席上副本 → 超限拒单零写 → 决策环同输入重派无限自旋
     (sim 冒烟 seed 20261014 实证);机械拖拽的真实落点 = 槽位 avatar,
@@ -938,16 +938,16 @@ def test_wear_locate_slot_anchor_over_name_match():
                      Unit(char_id='椒丘', star=1)], [], back_capacity=6),
                sig=sig_obs)
     gs.observe(gs.equips, ['幸运星'], sig=sig_obs)
-    # 槽位锚:front:2 = deployed 椒丘(空装)→ 穿上;bench 同名副本不动。
+    # 槽位标记:front:2 = deployed 椒丘(空装)→ 穿上;bench 同名副本不动。
     out = report_action_wear_equip_param(
         gs, CwActionWearEquipParam(item_name='幸运星', char_name='椒丘',
                                    row='front', slot=2), sig)
-    assert out.applied, f'槽位锚应命中 deployed 椒丘,实得 {out.reason!r}'
+    assert out.applied, f'槽位标记应命中 deployed 椒丘,实得 {out.reason!r}'
     dep = gs.deployed.value
     assert dep is not None and dep.front_slots[1] is not None \
         and dep.front_slots[1].char_id == '椒丘' \
         and list(dep.front_slots[1].equips) == ['幸运星'], \
-        '账随拖点走:穿戴落在槽位锚指名的 deployed 单位'
+        '账随拖点走:穿戴落在槽位标记指名的 deployed 单位'
     bench_unit = gs.bench.value.slots[0].unit
     assert bench_unit is not None and len(bench_unit.equips) == 3, \
         'bench 同名副本不动(名匹配不再先序)'

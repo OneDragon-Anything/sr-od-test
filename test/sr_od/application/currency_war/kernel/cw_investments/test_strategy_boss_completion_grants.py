@@ -11,7 +11,7 @@ REVIEW-T330 §4.3(校验面五哨逐哨定性全留,禁按「治理 = 全删」�
 (武器批发商 id 303501:「下个首领节点后，获得所有类型的简易装备各
 1个。」),表值引用 SIMPLE_EQUIP_ALL 注册表派生冻结快照,禁手写名单
 第二源(锁 2 双源同值 = 现算重取对拍冻结快照,注册表漂移自动跟随的
-回归锚,防表值僵化)。
+回归基准,防表值僵化)。
 """
 from __future__ import annotations
 
@@ -52,7 +52,7 @@ def test_registry_row_single_source() -> None:
 
 def test_simple_pool_frozen_snapshot_matches_registry() -> None:
     """锁 2(池派生双源同值):冻结快照与注册表现算重取同值(注册表
-    漂移自动跟随的回归锚,防表值僵化);快照非空(数据性质,哨 ③ 现值
+    漂移自动跟随的回归基准,防表值僵化);快照非空(数据性质,哨 ③ 现值
     通过的对拍面)。"""
     assert set(SIMPLE_EQUIP_ALL) == set(equips_by_category('简易')), \
         f'池派生漂移: {SIMPLE_EQUIP_ALL!r}'

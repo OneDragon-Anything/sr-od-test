@@ -116,7 +116,7 @@ def test_node_window_holding_grants(monkeypatch: pytest.MonkeyPatch) -> None:
 def test_holding_carry_levelup(monkeypatch: pytest.MonkeyPatch) -> None:
     """跨级结转算例:门槛恰跨形态(3 级差 1 + 2 → 4 级余 1)——状态副本等级
     随经验真实推进(升级联动发牌概率的耦合面以此为底,调用点钉在商店全刷
-    前的语义锚)。"""
+    前的语义基准)。"""
     b = _setup(holding=_HOLDING)
     try:
         gs = b.gs

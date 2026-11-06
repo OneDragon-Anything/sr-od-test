@@ -3,7 +3,7 @@
 两块测试面:
 - 利息接入调用(镜像来源 C 计数刻;迭代 T-27 公司契约利息累计触发设计 v2.4
   复裁版 §2.5 来源 C + §4.8②):
-  - 常规形态(备战帧已锚本节点 = 形态门开)领取完成刻推算计数(基座 =
+  - 常规形态(备战帧已锚定本节点 = 形态门开)领取完成刻推算计数(基座 =
     备战帧 gs.gold 观察 = 领取前真值);
   - 「自动弹」形态(本节点首次锚定发生在补给屏,形态门关)宁缺零计数;
     接管局形态同归宁缺;
@@ -156,9 +156,9 @@ def test_source_c_out_of_match_counts_nothing(
 def _make_supply_live(test_context, monkeypatch, *, pick, opts,
                       anchor=None, seed_left: int | None = None):
     """补给 op 实机态装配(真类实例,无 sim 后端):门桩 + 选项读链桩 +
-    锚读桩 + 机械派发半桩 + controller 点击记录。
+    识别标志读桩 + 机械派发半桩 + controller 点击记录。
     ``pick`` = decide_supply 返回值或可调用(拒绝重调用例传迭代器);
-    ``anchor`` = ``_read_refresh_anchor`` 桩返回值(默认 None = 锚读缺);
+    ``anchor`` = ``_read_refresh_anchor`` 桩返回值(默认 None = 识别标志读缺);
     ``seed_left`` = 观察前预写状态容器剩余读数(残值形态构造,None = 不预写)。
     返回 (op, match, session, stub, envs, clicks)。"""
     from sr_od.application.currency_war.operations.cw_op import (
@@ -280,8 +280,8 @@ def test_supply_guard_out_of_range_idx_asserts(
 
 def test_supply_gate_rejection_redecide_still_refresh_live_round_fail(
         test_context, monkeypatch) -> None:
-    """对照闸拒绝防线测试·实机(§2.2):「残值 ∧ 锚缺」帧(状态容器 left=1
-    为上次访问残值,本次锚读缺不覆盖)建议刷 → 重调一次仍返刷新建议 →
+    """对照闸拒绝防线测试·实机(§2.2):「残值 ∧ 识别标志缺」帧(状态容器 left=1
+    为上次访问残值,本次识别标志读缺不覆盖)建议刷 → 重调一次仍返刷新建议 →
     round_fail 交回(计入外循环 ``OP_FAIL_REDISPATCH_LIMIT``——零点击
     round_success 交回不计数,外循环对该循环无防护,故落防线,有界收敛;
     防线先例 = cw_screen_encounter.act 同款)。红 = 零点击 round_success
@@ -295,7 +295,7 @@ def test_supply_gate_rejection_redecide_still_refresh_live_round_fail(
         anchor=None,
         seed_left=1)
     assert _run_node(test_context, op, op.observe).is_success, (
-        '前置:观察 success(锚读缺,残值不覆盖)')
+        '前置:观察 success(识别标志读缺,残值不覆盖)')
     assert game_state_of(session).supply_refresh_left.value == 1, (
         '前置:残值在状态容器(读缺跳写不覆盖)')
     rs = _run_node(test_context, op, op.act)
@@ -399,7 +399,7 @@ def _sim_match(test_context, monkeypatch, backend,
 
 def test_supply_sim_refresh_leg_area_click_backend_refresh(
         test_context, monkeypatch) -> None:
-    """刷新分支·sim 两态测试(§2.6 新增④ sim 半):sim 态(锚点分量恒过)
+    """刷新分支·sim 两态测试(§2.6 新增④ sim 半):sim 态(识别标志分量恒过)
     建议刷 → 「文本-剩余次数」area 点击(基类 sim 改道 → 后端
     ``_supply_refresh``)→ left−1 + 选项重掷落状态容器,本访问终结交回;
     决策恰一次(零重调)。controller 桩在装 = 机械执行分支零触碰的结构性证明
@@ -438,7 +438,7 @@ def test_supply_sim_gate_rejection_redecide_zero_click_terminal(
     """对照闸拒绝防线测试·sim(§2.6 新增⑥ sim 半):桩驱动「重调仍返
     刷新建议」∧ left 刷尽(0)→ 零点击 round_success 终结零派发,状态容器
     零改(left 不变、选项不重掷;重进重读即恢复——sim 拒绝仅剩 left
-    读缺形态,无机械锚读缺面)。"""
+    读缺形态,无机械识别标志读缺面)。"""
     with _sim_supply_world(test_context, monkeypatch, seed=53) as b:
         _match, strategy = _sim_match(test_context, monkeypatch, b)
         gs = b.gs
@@ -616,7 +616,7 @@ def test_supply_non_pick_rounds_do_not_seed_unchosen(
     ``unchosen_supply`` 恒零写(真选分支不可达 = 无写点)。"""
     from one_dragon.base.geometry.point import Point
 
-    # 刷新轮:锚在位 + left=1 → 对照闸放行,点钮终结。
+    # 刷新轮:识别标志在位 + left=1 → 对照闸放行,点钮终结。
     op, _m, session, _stub, _envs, clicks = _make_supply_live(
         test_context, monkeypatch,
         pick=CwActionRefreshSupplyParam(reason='stub'),
@@ -626,7 +626,7 @@ def test_supply_non_pick_rounds_do_not_seed_unchosen(
     assert rs.is_success and '终结交回' in (rs.status or ''), f'刷新轮:{rs!r}'
     assert game_state_of(session).unchosen_supply.value is None, '刷新轮零写'
 
-    # 对照闸拒绝轮:锚缺 + 残值 → 重调仍建议刷 → round_fail。
+    # 对照闸拒绝轮:识别标志缺 + 残值 → 重调仍建议刷 → round_fail。
     op2, _m2, session2, _stub2, _envs2, _clicks2 = _make_supply_live(
         test_context, monkeypatch,
         pick=CwActionRefreshSupplyParam(reason='stub-again'),

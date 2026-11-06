@@ -62,7 +62,7 @@ from sr_od.application.currency_war.sim.cw_sim_backend import (
 _SIG = ChannelSig(family='logic_action', actor='LevelupCbTest',
                   mode='compute')
 _SIG_OBS = ChannelSig(family='obs', actor='LevelupCbTest', mode='read')
-_ENV_ID = '138'   # 成功经验 plaza id(窗口锚断言的条目主键)
+_ENV_ID = '138'   # 成功经验 plaza id(窗口标记断言的条目主键)
 
 
 @pytest.fixture()
@@ -81,7 +81,7 @@ def sim_armed():
 def _seed_gs(level: int, xp_cur: int, *, strategies: list[str] | None = None,
              with_env: bool = False) -> GameState:
     """裸状态容器种子(观察链同写入口;bench 9 空槽供 gift 入席断言)。
-    ``strategies`` = 持卡观察种子;``with_env`` = 成功经验已登记(锚断言)。"""
+    ``strategies`` = 持卡观察种子;``with_env`` = 成功经验已登记(标记断言)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.observe(gs.level, int(level), evidence='t:seed', sig=_SIG_OBS)
     gs.observe(gs.xp, (int(xp_cur), XP_TO_NEXT_LEVEL.get(int(level), 4)),
@@ -122,7 +122,7 @@ def _chain_marks(gs: GameState) -> tuple[bool, int, list[str]]:
 
 def test_any_source_cross_level_fires_full_chain(sim_armed) -> None:
     """grant_xp(环境窗口发放原语)跨级 → 四面连锁齐发:信号置位 + 队列
-    含 spy 声明(trigger=spy_shop_refresh)+ gift 发放 1 名 2★ + 锚记录
+    含 spy 声明(trigger=spy_shop_refresh)+ gift 发放 1 名 2★ + 标记记录
     (成功经验条目;生效位 None = 零记录,不炸不写)。"""
     gs = _seed_gs(7, 50, strategies=['商业间谍', '节节高升'], with_env=True)
     grant_xp(gs, 12, sig=_SIG, evidence='t:grant')
@@ -137,7 +137,7 @@ def test_any_source_cross_level_fires_full_chain(sim_armed) -> None:
     assert all(s.unit.star == 2 for s in gs.bench.value.slots
                if s.kind == 'unit' and s.unit is not None), '2★ 卡面明写'
     assert gs.effects.first(_ENV_ID).anchor_pos is None, \
-        '生效位未锚定 → 锚零记录(检测体自判,零旁路)'
+        '生效位未锚定 → 标记零记录(检测体自判,零旁路)'
 
 
 def test_live_form_chain_without_port(sim_armed) -> None:
@@ -179,13 +179,13 @@ def test_buy_xp_single_gift_and_two_source_two_gifts(sim_armed) -> None:
 
 def test_observe_and_relay_zero_chain(sim_armed) -> None:
     """持 spy 局,观察写 level 5→6(live 观察摄取形态,值即便跨级)→
-    信号不动、队列空、gift 零写、锚不动——「观察写零回调」契约逐字保持;
+    信号不动、队列空、gift 零写、标记不动——「观察写零回调」契约逐字保持;
     relay 臂:接管播种写 level(从未写过字段)→ 同样零回调。"""
     gs = _seed_gs(5, 0, strategies=['商业间谍'], with_env=True)
     gs.observe(gs.level, 6, evidence='t:obs', sig=_SIG_OBS)
     pending, n_decl, names = _chain_marks(gs)
     assert (pending, n_decl, names) == (False, 0, []), '观察写零回调'
-    assert gs.effects.first(_ENV_ID).anchor_pos is None, '锚零记录'
+    assert gs.effects.first(_ENV_ID).anchor_pos is None, '标记零记录'
     # relay 臂:从未写过的字段中继(接管播种;source=logic 但不经落帧
     # 回调宿主;relay 契约 family=logic_hook)。
     gs2 = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)

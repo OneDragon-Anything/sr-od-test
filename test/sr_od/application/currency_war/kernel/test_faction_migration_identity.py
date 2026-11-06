@@ -5,7 +5,7 @@
 faction_migration_snapshots.json),迁移后本文件重建同构板面逐位断言——
 除变化①②(副档投资分/轮廓计数,按新语义单列断言)外全部恒等。
 **基线换代登记**:快照已随 required-deployed-retirement 迭代整文件
-重立(2026-11-06:fp 点名件折条源 = 锚/core 统一表达式 + 部署 L1
+重立(2026-11-06:fp 点名件折条源 = 定义件/core 统一表达式 + 部署 L1
 两层支配编码,board_line 的 fp/l1 面按新语义重立;受克 punished
 留档轴随换代消失,受克恒等断言退役)——当前 JSON 是
 required-deployed-retirement 后基线,换代前的恒等对照归 git 历史。

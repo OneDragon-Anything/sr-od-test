@@ -172,7 +172,7 @@ def test_collision_negative_non_continuous_remaining(rng_provider) -> None:
     附着原值不动)、原剩余矿全部仍在 spheres。count/len 基准回归形态 =
     授予点 (80,10) 撞 8 号,本锁红灯。"""
     _seed_provider(_HIT_SEED)
-    # sim 面板真实构成(锚 = 1 金 + 5 蓝 + 2 灰):摘 1 号(金)后 remaining
+    # sim 面板真实构成(基准 = 1 金 + 5 蓝 + 2 灰):摘 1 号(金)后 remaining
     remaining = tuple(('蓝', i * 10, 10, 10) for i in range(2, 7)) + \
         (('灰', 70, 10, 10), ('灰', 80, 10, 10))
     seeded_attach = {f'{i * 10},10': OreReward(kind='gold', gold=i)

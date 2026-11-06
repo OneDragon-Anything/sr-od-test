@@ -16,7 +16,7 @@
   主战 hp 3→0 扣血链零观测,复盘断节不可知)。修 = 战斗链收尾守卫面
   (cw_loop ``_on_battle_wait`` 出口归一点)计数留证:窗口单元 success 出口
   + 出战开窗在 + 本窗零结算观测行 → 缺陷台账 L1 行(只计数不停机))。
-  校验三面:守卫判定真值表 / 结算观测行写点刷新窗锚 + 真值传导 /
+  校验三面:守卫判定真值表 / 结算观测行写点刷新窗标记 + 真值传导 /
   cw_loop 战斗分支接入调用消费守卫。
 - **真值收尾测试**(settle_truth):金币战后真值无条件入账。背景(2026-09-18
   回滚批):节点收入由游戏侧在结算屏展示前入账,bot 无逻辑写端,账本与
@@ -25,12 +25,12 @@
   差值台账行留证(测试依据 = GameState.settle_truth docstring)。
 - **金面板解析回归测试**(T-42 读端加固批。病理:2026-09-18 两实机局
   journal+停局截图定论,胜局结算页金面板「存量 <N>」OCR 读失败率连续
-  两局 100%;加固 = 锚词与数值分离 token 兜底;锚词缺失不猜)。
+  两局 100%;加固 = 识别标志词与数值分离 token 兜底;识别标志词缺失不猜)。
   定点读数(read_settle_gold_opt)= 真值入口主路径:当前版本结算布局
   无「存量」token,战后金真值挂右上角货币计数;校验其「不猜」契约与
   稳定门取末帧语义。
-- **hp 直读测试**(decision_hp):锚退役后 decision_hp = gs.hp 直读——
-  结算覆盖写端写入 → 读口立即反映;旧锚字段不再影响读口;可信位语义
+- **hp 直读测试**(decision_hp):标记退役后 decision_hp = gs.hp 直读——
+  结算覆盖写端写入 → 读口立即反映;旧标记字段不再影响读口;可信位语义
   (observation/carried 可信,prior/logic fail-closed)。
 
 纪律:零真实副作用;真帧 fixture 缺失 pytest.skip;纯状态容器/桩直驱部分
@@ -293,16 +293,16 @@ def test_defeat_branch_never_enters_settle_confirm(
 
 
 def test_guard_truth_table(monkeypatch) -> None:
-    """测试1 守卫真值表:两 success 出口 + 窗锚失配 → L1 行;bail/已观测/
-    无窗开锚(battle_ts=None)三静默臂不落行。"""
+    """测试1 守卫真值表:两 success 出口 + 窗标记失配 → L1 行;bail/已观测/
+    无窗开标记(battle_ts=None)三静默臂不落行。"""
     calls: list[tuple[tuple, dict]] = []
     monkeypatch.setattr(_defects_mod, 'record_defect',
                         lambda *a, **k: calls.append((a, k)))
-    # 触发臂①:白名单出口,本窗(出战开窗 100)零观测行(锚 = None)
+    # 触发臂①:白名单出口,本窗(出战开窗 100)零观测行(标记 = None)
     assert count_settlement_obs_coverage_miss(
         SettlementState(battle_ts=100.0, settled_battle_ts=None),
         'back_to_loop') is True
-    # 触发臂②:终局出口,锚滞留上一窗(150 ≠ 当前 200)= 本窗未写过
+    # 触发臂②:终局出口,标记滞留上一窗(150 ≠ 当前 200)= 本窗未写过
     assert count_settlement_obs_coverage_miss(
         SettlementState(battle_ts=200.0, settled_battle_ts=150.0),
         'terminal_lobby') is True
@@ -310,15 +310,15 @@ def test_guard_truth_table(monkeypatch) -> None:
     args0, kwargs0 = calls[0]
     assert args0[:2] == ('settlement', 'settle_obs_coverage_miss')
     assert kwargs0.get('severity') == SEVERITY_L1_ALERT
-    # 静默臂①:本窗已观测(锚 = 窗锚)
+    # 静默臂①:本窗已观测(标记 = 窗标记)
     assert count_settlement_obs_coverage_miss(
         SettlementState(battle_ts=100.0, settled_battle_ts=100.0),
         'back_to_loop') is False
-    # 静默臂②:bail 出口不在窗口单元出口集(帧锚可重入续同窗,计则假阳)
+    # 静默臂②:bail 出口不在窗口单元出口集(帧标记可重入续同窗,计则假阳)
     assert count_settlement_obs_coverage_miss(
         SettlementState(battle_ts=100.0, settled_battle_ts=None),
         '战斗等待连续未识别,bail 交主循环兜底') is False
-    # 静默臂③:接管局/残留屏帧锚入窗,无出战开窗锚
+    # 静默臂③:接管局/残留屏帧标记入窗,无出战开窗标记
     assert count_settlement_obs_coverage_miss(
         SettlementState(battle_ts=None, settled_battle_ts=None),
         'back_to_loop') is False
@@ -327,9 +327,9 @@ def test_guard_truth_table(monkeypatch) -> None:
 
 def test_record_round_outcome_refreshes_window_anchor(
         test_context, monkeypatch) -> None:
-    """测试2 结算观测行写点刷新窗锚 + hp_after 传导:结算屏读点经生产链路
+    """测试2 结算观测行写点刷新窗标记 + hp_after 传导:结算屏读点经生产链路
     (read_round_outcome → performance.record → apply_settlement_cover)
-    后,窗锚 = 当前 battle_ts、gs.hp = 结算真值。"""
+    后,窗标记 = 当前 battle_ts、gs.hp = 结算真值。"""
     session = cw4_session()
     st = SettlementState(battle_ts=1234.0, run_start_ts=time.monotonic(),
                          is_new_match=False)
@@ -352,7 +352,7 @@ def test_record_round_outcome_refreshes_window_anchor(
             hp_after=3, hp_confidence=1.0, killed=False))
     op._record_round_outcome(_FRAME)
     assert st.settled_battle_ts == 1234.0, \
-        '结算观测行写点必须刷新窗锚(缺失 = 覆盖度守卫永久静默)'
+        '结算观测行写点必须刷新窗标记(缺失 = 覆盖度守卫永久静默)'
     assert st.saw_settlement is True
     assert game_state_of(session).hp.value == 3, \
         '结算观测 hp_after 经结算覆盖写端直入 gs(观察赢唯一真值入口)'
@@ -401,7 +401,7 @@ def _make_coverage_loop(test_context, monkeypatch,
 def test_battle_branch_exit_consumes_coverage_guard(
         test_context, monkeypatch) -> None:
     """测试3 收尾接入调用:战斗分支 op 返回 back_to_loop → 守卫被消费,零观测窗
-    落 L1 行;已观测窗(锚匹配)不落行。"""
+    落 L1 行;已观测窗(标记匹配)不落行。"""
     calls: list[tuple[tuple, dict]] = []
     monkeypatch.setattr(_defects_mod, 'record_defect',
                         lambda *a, **k: calls.append((a, k)))
@@ -415,7 +415,7 @@ def test_battle_branch_exit_consumes_coverage_guard(
     args0, kwargs0 = calls[0]
     assert args0[:2] == ('settlement', 'settle_obs_coverage_miss')
     assert kwargs0.get('severity') == SEVERITY_L1_ALERT
-    # 场景②:本窗已观测(锚 = 窗锚)→ 零行
+    # 场景②:本窗已观测(标记 = 窗标记)→ 零行
     calls.clear()
     op2 = _make_coverage_loop(test_context, monkeypatch,
                               SettlementState(battle_ts=1234.0,
@@ -492,7 +492,7 @@ def test_same_token_form_regression() -> None:
 
 
 def test_missing_anchor_stays_none() -> None:
-    """锚词缺失(面板不在场/OCR 整段漏)→ None,不冒认(负例回归)。
+    """识别标志词缺失(面板不在场/OCR 整段漏)→ None,不冒认(负例回归)。
 
     当前版本结算布局无「存量」token(2026-09-18 结算帧亲读实证),本
     负例即生产常态——真值入口主路径 = read_settle_gold_opt 定点读数。"""
@@ -553,21 +553,21 @@ def test_settle_gold_reader_gate_takes_last(monkeypatch) -> None:
 
 def test_hp_direct_read_after_anchor_retirement():
     """hp 直读对照(landing §3.2 判据:门简化为 gs.hp 直读,结算覆盖写端
-    在场场景)。终态契约 §A:锚退役后 decision_hp = gs.hp 直读——
+    在场场景)。终态契约 §A:标记退役后 decision_hp = gs.hp 直读——
     ①结算覆盖写端写入 → 读口立即反映(「结算即写」时序保持);
-    ②锚字段不再影响读口(旧锚在场与否零差异 = 单一源成立);
+    ②标记字段不再影响读口(旧标记在场与否零差异 = 单一源成立);
     ③可信位语义不变(observation/carried 可信,prior/logic fail-closed)。"""
     from sr_od.application.currency_war.kernel.cw_strategy_session import (
         StrategySession,
     )
 
     sess = StrategySession()
-    sess.last_hp = 77          # 旧锚残留(已无写端,模拟迁移期残值)
+    sess.last_hp = 77          # 旧标记残留(已无写端,模拟迁移期残值)
     sess.last_hp_t = 9
     gs = GameState(schema_version=1)
     _hp_sig = ChannelSig(family='obs', actor='cw_observation',
                          screen='货币战争-结算', mode='read')
-    # 结算覆盖写端(§3.5.1 语义:观察直写)→ 读口反映现值,旧锚零影响
+    # 结算覆盖写端(§3.5.1 语义:观察直写)→ 读口反映现值,旧标记零影响
     gs.observe(gs.hp, 80, sig=_hp_sig)
     assert decision_hp(gs, sess) == 80
     assert hp_decision_trusted_of(gs) is True
@@ -576,5 +576,5 @@ def test_hp_direct_read_after_anchor_retirement():
                                             screen='货币战争-备战', mode='carried'))
     assert decision_hp(gs, sess) == 80
     assert hp_decision_trusted_of(gs) is True
-    # 锚字段在场不产生任何覆盖(旧门行为已退役:锚不再回写读口)
+    # 标记字段在场不产生任何覆盖(旧门行为已退役:标记不再回写读口)
     assert decision_hp(gs, sess) == 80

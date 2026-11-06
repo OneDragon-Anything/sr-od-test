@@ -233,7 +233,7 @@ def test_sell_all_deal_no_repeat_on_second_pick() -> None:
 # ============================================================ 锁 4:直调形态零扰
 
 def test_sell_all_deal_absent_on_direct_report_form() -> None:
-    """直调上报形态(存量锚形,不喂声明 = 不经后端分派层):出售面照走
+    """直调上报形态(存量直调形,不喂声明 = 不经后端分派层):出售面照走
     (kernel 获得链,场清空)而发牌腿零触发——发牌唯一落点 = 分派层,
     直调路径 bench 清空后无凭空补员(存量直调形态行为零变化)。"""
     b = _backend(7)

@@ -1751,12 +1751,12 @@ def test_reinforcement_charter_not_in_named_grants() -> None:
 # (策略卡获得时点随机装备发放,打捞人才库+ 首例(简易行)/买彩票 第二类别
 #  首例(星徽行):类别池(equips_by_category 注册表派生单源)均匀 v0 掷骰
 #  count 件 → 逐件 gain_equipment(rand=True) 入栏;装备无星级,效果串
-#  不带 @ 后缀。本区存量锁 = 打捞人才库+ 行迁移回归重锚;买彩票新锁落
+#  不带 @ 后缀。本区存量锁 = 打捞人才库+ 行迁移回归重立;买彩票新锁落
 #  kernel/cw_gain_chain/ 镜像文件,本文件超线冻结禁追加。)
 
 
 def test_random_equip_sampler_pool_and_ore_pool_lock() -> None:
-    """采样纯函数锁(泛化 (category, count) 表形重锚):固定种子返回名 ∈
+    """采样纯函数锁(泛化 (category, count) 表形重立):固定种子返回名 ∈
     对应类别派生池且种子可复现;池 = ``equips_by_category`` 注册表派生
     (非空/成员全 ∈ EQUIPMENTS 且类别对/无重复;计数随版本漂移不锁);
     简易池与晶矿 _SIMPLE_EQUIP_POOL、到期发放腿 _EXPIRY_SIMPLE_EQUIP_POOL
@@ -1803,7 +1803,7 @@ def test_random_equip_sampler_pool_and_ore_pool_lock() -> None:
 
 
 def test_random_equip_leg_chain_places_one(rows_sink: _RowSink) -> None:
-    """链发放真值(打捞人才库+ 迁移回归重锚):gain_invest_strategy 确定入口
+    """链发放真值(打捞人才库+ 迁移回归重立):gain_invest_strategy 确定入口
     (rand=False)+ 固定 rng 注入 → equips 恰 +1、名 ∈ 池且 = 采样值、
     效果串恰 1 条 ``strategy_random_equip:<名>``(装备无星级,串不带
     @ 后缀);正常路径零申报行。"""
@@ -1827,7 +1827,7 @@ def test_random_equip_leg_chain_places_one(rows_sink: _RowSink) -> None:
 
 
 def test_random_equip_leg_equips_unobserved_skip_decoupled() -> None:
-    """equips 未观察形态锁(打捞人才库+ 迁移回归重锚):拒落跳写(原语
+    """equips 未观察形态锁(打捞人才库+ 迁移回归重立):拒落跳写(原语
     detail='equips_unobserved' 现役语义,零写零缺陷)、效果串恒登记
     ``strategy_random_equip:<名>(skipped)``(发放事实与落位成败解耦,
     骇客 mod_sampled 两形态同构)。"""
@@ -2443,7 +2443,7 @@ def test_invest_unregistered_card_unchanged(
 def test_grant_channel_consequence_anchor(
         monkeypatch: pytest.MonkeyPatch,
         rows_sink: _RowSink) -> None:
-    """好运令牌 grant_equip_item 渠道同纳后果链锚(§2.2 全渠道):后果
+    """好运令牌 grant_equip_item 渠道同纳后果链基准(§2.2 全渠道):后果
     函数对表外件零写零行为(令牌推荐四件域恒表外 = 渠道零差);表内件
     直测后果应用(送出 1★ 银狼LV.999 进备战席)。"""
     from test.sr_od.application.currency_war._cw_helpers import cw4_session

@@ -391,7 +391,7 @@ def test_boss_briefing_click_returns_to_prep_with_auto_shop() -> None:
     源)→ 关简报模态回备战并自动弹店(2026-10-29 流程模型对齐:不再直接
     结算,boss 战由出战动作触发);关店 → 出战(battle_resolve)→ 结算页
     → settle_confirm 推进(位面末 → 位面过渡);P2r1 窗收尾自动弹店
-    (1-1 例外外)。seed 61 = 走完通道锚(局终于 P2,必经 P1r9 boss 窗)。"""
+    (1-1 例外外)。seed 61 = 走完通道基准(局终于 P2,必经 P1r9 boss 窗)。"""
     b = _backend(61)
     try:
         b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
@@ -1127,7 +1127,7 @@ def test_strategy_pick_chain_reinforcement_grant() -> None:
 
 
 def test_strategy_pick_chain_random_equip_grant() -> None:
-    """获得链断言(打捞人才库+ 迁移回归重锚):选打捞人才库+ → 简易池均匀
+    """获得链断言(打捞人才库+ 迁移回归重立):选打捞人才库+ → 简易池均匀
     采样 1 件入栏(采样效果子链;rng 注入流键,sim 采样即状态副本里的值);同
     seed 同流键重放 equips 逐位一致;主腿 unchosen_supply 恒 None(sim 局
     不种本域 → 检查恒第 2 门早退 = fail-closed 零发放,沿打捞族 T-94 键族
@@ -1425,7 +1425,7 @@ def _count_ore_rolls(monkeypatch: pytest.MonkeyPatch) -> list[int]:
 
 def test_reward_node_ore_substate_and_collect_via_report(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """奖励节点 = 备战档晶矿子态:面板写状态容器 spheres(U23 锚 8 晶矿)经
+    """奖励节点 = 备战档晶矿子态:面板写状态容器 spheres(U23 基准 8 晶矿)经
     挂接入口**生成即附着**(同批一次写);点晶矿走 kernel 上报按附着值
     兑现——命中零掷骰(掷骰已前移生成侧),金入账 = 附着金精确合计
     (采样即状态副本里的值)。"""
@@ -1437,7 +1437,7 @@ def test_reward_node_ore_substate_and_collect_via_report(
         assert b.screen_identity() == SCREEN_PREP
         assert b._sub == 'ore', '晶矿子态'
         points = gs.spheres.value.points
-        assert len(points) == 8, 'U23 单例锚'
+        assert len(points) == 8, 'U23 单例基准'
         rewards = dict(gs.ore_rewards.value or {})
         assert len(rewards) == 8, '面板矿全部生成附着(无缺项 → 不走兜底)'
         expected_gold = sum(r.gold for r in rewards.values())
@@ -1503,7 +1503,7 @@ def test_ore_env_plane1_declare_instead_of_direct_gold(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """增发货币 P1(详设 §1/§2):位面开局金不再直发(gold = 开局 +
     轮首收入,直发形态 = 13)→ 声明入队在呈现时消费(pending → done)→
-    位面开局声明矿与面板锚点矿**同批合并**一次 spheres 写(第 9 点
+    位面开局声明矿与面板基准点矿**同批合并**一次 spheres 写(第 9 点
     (90,10) 面板序续接,坐标无撞键;声明 6 金归属由生成 rng 掷,采样金
     1..5 与 6 唯一可辨)→ 入队写先于同帧生成写(承载性次序)→ 点击
     全部矿按附着值精确入账(含 6)。"""
@@ -1910,7 +1910,7 @@ def test_rainbow_env_full_walk_offers_all_prism() -> None:
     计数——单计另由 overlay 用例校验);品质改写披露键已退役,
     disclosures 无 invest_quality_rewrite 前缀键。
 
-    seed 61 = 全槽呈现锚(探针实测:P3r2 offer 在 3-2 窗呈现后局于
+    seed 61 = 全槽呈现基准(探针实测:P3r2 offer 在 3-2 窗呈现后局于
     3-5 死亡收尾,三个日程槽全部呈现;改写判据对序数 3 的行为由判据
     测试与抽样测试覆盖)。"""
     b = _rainbow_env_backend(61)
@@ -2407,7 +2407,7 @@ def test_weicai_env_full_walk_third_offer_all_prism() -> None:
     漂移静默失配);局终序数 = 呈现次数;品质改写披露键已退役,全程无
     invest_quality_rewrite 前缀键。
 
-    seed 61 = 全槽呈现锚(头彩局同 seed 走满建模域先例;尾彩局第 3 序
+    seed 61 = 全槽呈现基准(头彩局同 seed 走满建模域先例;尾彩局第 3 序
     +6 难度改变后续轨迹,若换 seed 需在 docstring 记锚定依据)。"""
     b = _weicai_env_backend(61)
     try:
@@ -2813,7 +2813,7 @@ def test_node_window_front_section_idempotent_on_click_replay() -> None:
 
 def test_game_over_presents_lobby_terminal_screen() -> None:
     """局终终态呈现 = 大厅屏(死亡/第一期辖域尽头两源共用;3.4 联调
-    接入调用):呈现即可达流程终局链(CwScreenBattleWait 终局锚 → 主循环
+    接入调用):呈现即可达流程终局链(CwScreenBattleWait 终局识别标志 → 主循环
     3c 收尾),与实机「终局 → 返回货币战争 → 大厅」消费链同形。"""
     from sr_od.application.currency_war.sim.cw_sim_backend import (
         SCREEN_LOBBY,
@@ -2987,16 +2987,16 @@ def test_expert_screen_presentation_raises_loud_on_observe() -> None:
 
 
 def test_unpresented_overlay_anchor_not_visible_on_prep() -> None:
-    """visible area 级细化(3.4 联调):sim 不可呈现浮层的在场锚恒
-    False(阿哈装备选择浮层检测锚;sim 不建模该浮层 = 状态副本里的值)——
+    """visible area 级细化(3.4 联调):sim 不可呈现浮层的在场识别标志恒
+    False(阿哈装备选择浮层检测识别标志;sim 不建模该浮层 = 状态副本里的值)——
     画面档匹配语义会把它误答真,备战帧被浮层分支抢走。"""
     b = _backend(7)
     try:
         b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
         b._maybe_finish_wait()
-        assert b.visible(SCREEN_PREP, '备战标识-购买经验'), '备战锚可见'
+        assert b.visible(SCREEN_PREP, '备战标识-购买经验'), '备战识别标志可见'
         assert not b.visible(SCREEN_PREP, '标识-简易装备'), \
-            '不可呈现浮层锚必须不可见'
+            '不可呈现浮层识别标志必须不可见'
     finally:
         uninstall_backend()
 
@@ -4174,7 +4174,7 @@ def test_find_area_leg_visible_query(_sim_ctx):
 def test_identity_helper_filters_by_screen_list():
     """画面身份读点改道 helper(sim 统一 3.4;flow-seam 附录 A.2
     「sim 画面身份归 screen_identity」):装配后 = 状态机答口,且清单外
-    返回 None(与实机 get_match_screen_name 清单过滤同形,备战双锚默认
+    返回 None(与实机 get_match_screen_name 清单过滤同形,备战双识别标志默认
     分支不受扰);缺省关 = 原识别链零行为变化。"""
     with sim_backend_fixture(MinimalSimBackend(screen='货币战争-补给')):
         assert cw_sim_ports.sim_or_live_identity(

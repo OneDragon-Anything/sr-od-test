@@ -55,7 +55,7 @@ from sr_od.application.currency_war.sim.cw_sim_run_config import RunConfig
 #: 契约:前缀 sim:engine: + 写点 tag hp:strategy_pick:<卡名>)。
 _HP_EV_PREFIX = 'sim:engine:hp:strategy_pick:'
 
-#: 战斗结算 hp 写行 evidence 全串(开局/战斗笔分账的对照锚)。
+#: 战斗结算 hp 写行 evidence 全串(开局/战斗笔分账的对照基准)。
 _BATTLE_HP_EV = 'sim:engine:battle:hp'
 
 

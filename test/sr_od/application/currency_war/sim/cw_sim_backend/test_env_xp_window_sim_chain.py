@@ -10,7 +10,7 @@ calc/designs/T-38-chenggong-jingyan.md)§2.6 实机(live)和模拟器(sim)两边
   gs.xp/gs.level → sim 状态副本等级随白送经验真实推进(8→9 跨级例证),
   零额外接入调用;
 - **达成检测时点**:种子 lv8 路径达成位已达标(检测体首拍 tick 即记,
-  当拍零发放);非买经验源跨级(节点经验等)走升级连锁 = 结算时点记锚
+  当拍零发放);非买经验源跨级(节点经验等)走升级连锁 = 结算时点记标记
   (迭代 2026-09-23-invest-effects-calc T-432 定案),晚拍仅剩 live 观察
   路径的留白申报;
 - **同 seed 重放**:发放序列逐位一致(发放链零 rng 消费的结构判据);
@@ -101,7 +101,7 @@ def _settle_node_win(b: SimBackend, monkeypatch: pytest.MonkeyPatch) -> None:
 
 def _walk(b: SimBackend, monkeypatch: pytest.MonkeyPatch,
           steps: int) -> list:
-    """逐节点推进并记录 (生效位, level, xp, 已发放数, 达成锚) 轨迹
+    """逐节点推进并记录 (生效位, level, xp, 已发放数, 达成标记) 轨迹
     (发放序列重放对拍载体)。"""
     gs = b.gs
     entry = gs.effects.first(_ENV_ID)
@@ -119,7 +119,7 @@ def _walk(b: SimBackend, monkeypatch: pytest.MonkeyPatch,
 def test_sim_chain_world_truth_and_seed_replay(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """sim 全链(设计 §2.6/§4 锁 10):种子 lv8(60/72)→ 达成当拍
-    (1-2 tick)只记锚零发放 → (1,3)/(1,4)/(1,5) 三节点各 +12 且发放
+    (1-2 tick)只记标记零发放 → (1,3)/(1,4)/(1,5) 三节点各 +12 且发放
     +12 恰跨 72 门槛把 sim 状态副本等级真推到 9 → 同 seed 双跑轨迹逐位一致;
     披露键族整表已登记。"""
     b = _pick_xp_env(7)
@@ -129,7 +129,7 @@ def test_sim_chain_world_truth_and_seed_replay(
         trail = _walk(b, monkeypatch, steps=4)
     finally:
         uninstall_backend()
-    # 1-2 拍:锚已记、零发放(离开 1-1 奖励 +2 → (62,72))
+    # 1-2 拍:标记已记、零发放(离开 1-1 奖励 +2 → (62,72))
     assert trail[0] == ((1, 2), 8, (62, 72), 0, (1, 2)), '达成拍零发放'
     # 1-3 拍:首发放 +12 → 74 ≥ 72 跨级,状态副本等级真推 9(溢出结转 2,
     # 分母 84);离开 1-2 奖励 +2 → (4,84)

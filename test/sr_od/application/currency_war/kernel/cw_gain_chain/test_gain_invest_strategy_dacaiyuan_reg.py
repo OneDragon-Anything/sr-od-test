@@ -6,7 +6,7 @@
 session 在场选「大裁员」→ 获得链只登记不写状态的实现分支 register_strategy 入册 + burst 桥
 把 ``payload.free_refresh_burst=6`` 一次性累加进免费刷新余额(None 基 =
 0 起算)+ 板面重写桥出售面同拍执行(预种 2★1 费退款恰 3——cost=1 无
-手续费,×2 两候选口径同值的确定性锚;缺口 G4 闭合前按基础公式记)。
+手续费,×2 两候选口径同值的确定性基准;缺口 G4 闭合前按基础公式记)。
 调用点 = 只登记不写状态的实现分支(②段)回归钉,防漂移到 ③段效果体。
 """
 from __future__ import annotations
@@ -60,7 +60,7 @@ def test_gain_invest_strategy_dacaiyuan_burst_and_sell(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """锁 4:选卡只登记不写状态的实现分支一拍双桥——burst +6(常量源 =
     STRATEGY_ECONOMY['大裁员'].free_refresh_burst 直读禁写死)+ 出售面
-    清场退款(2★1 费锚恰 3)。写端 = write_logic 逻辑直写,burst 笔
+    清场退款(2★1 费基准恰 3)。写端 = write_logic 逻辑直写,burst 笔
     evidence effect_burst[@frame]、produced_by 带卡名。"""
     captured: list[tuple] = []
     real_write = GameState.write_logic
@@ -88,7 +88,7 @@ def test_gain_invest_strategy_dacaiyuan_burst_and_sell(
     _f, _bk = deployed_rows_of_view(gs.deployed.value)
     assert (_f, _bk) == ([], []), '场清空(出售面,板面重写桥同拍)'
     assert gs.gold.value == 13, \
-        '退款恰 3(2★1 费,cost=1 无手续费,×2 两候选口径同值锚;G4 缺口' \
+        '退款恰 3(2★1 费,cost=1 无手续费,×2 两候选口径同值基准;G4 缺口' \
         '闭合前基础公式记)'
     burst_rows = [c for c in captured
                   if c[0] == 'free_refresh_left'

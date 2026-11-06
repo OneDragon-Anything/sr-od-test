@@ -63,7 +63,7 @@ def test_env_generic_categories_zero() -> None:
     )
     generic = [n for n, e in INVESTMENT_ENVS.items()
                if e.category not in ('概念股', '邀请', '契约', '专家')]
-    assert len(generic) == 31, '经济/规则/时代类目计数锚(design §3.1 类目账:41=31+专家10)'
+    assert len(generic) == 31, '经济/规则/时代类目计数基准(design §3.1 类目账:41=31+专家10)'
     for name in generic:
         assert env_line_bonuses(name) == {}, name
     # 专家类目 0 分卡(顾问表外的道具/通用/条件腿)
@@ -160,9 +160,9 @@ def test_ocr_variant_normalizes_before_lookup() -> None:
 
 
 def test_manual_table_registry_membership_invariants() -> None:
-    """手编表登记完备性锚:EVIDENCE_UPGRADE 恰 5 条目(量子星徽×3+罗刹
+    """手编表登记完备性基准:EVIDENCE_UPGRADE 恰 5 条目(量子星徽×3+罗刹
     ×2 批 3 拆分双套)、DEFINING_CARDS 恰 4 卡(黑塔纪元/飞光×2/骇客
-    专家)——后续扩表时计数锚响亮暴露防误删。"""
+    专家)——后续扩表时计数基准响亮暴露防误删。"""
     assert len(EVIDENCE_UPGRADE) == 5
     assert set(DEFINING_CARDS) == {'黑塔纪元', '飞光·映月', '飞光·传剑',
                                    '骇客专家:银狼'}

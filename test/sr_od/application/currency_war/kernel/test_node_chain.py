@@ -490,14 +490,14 @@ def _hk_setup(plane: int = 1, round_num: int = 3):
 
 
 def test_slot_table_first_frame_per_plane_write_once():
-    """槽序表按位面首帧写:首帧落表 + 位面锚 + 长度追加;同位面二次读
+    """槽序表按位面首帧写:首帧落表 + 位面标记 + 长度追加;同位面二次读
     不覆写(write-once);换位面重写并续追长度史。"""
     session, gs = _hk_setup(plane=1, round_num=3)
 
     _write_prep_node_chain(session, _hk_round3_slots(), _SIG_ROW)
     nb = gs.node_books
     assert nb.plane_node_table == ['battle'], '槽序表 = 类型可读槽序(过滤 None 位)'
-    assert nb.plane_node_table_plane == 1, '位面锚落位'
+    assert nb.plane_node_table_plane == 1, '位面标记落位'
     assert nb.plane_lengths_seen == [1], '位面长度史追加(现役口径 = 类型可读槽数)'
 
     _write_prep_node_chain(session, _hk_round3_slots(), _SIG_ROW)

@@ -18,7 +18,7 @@ sr_od/application/currency_war/ 迭代详设;单相即时上报契约 §2.0)。
   拒识(fail-closed 禁猜);
 - **采样链 v0 池**(§2.4):硬编码名单(4 费排除 Max 件口径)无 Max 件,
   种子可复现;
-- **好运令牌后果链锚**(§2.2 全渠道):apply_equip_acquire_consequence
+- **好运令牌后果链基准**(§2.2 全渠道):apply_equip_acquire_consequence
   对表外件零写零行为、表内件送出单位。
 
 观察收尾(等值静默/差异 logic_rand_outcome)= 基座测试
@@ -106,7 +106,7 @@ def test_leg_classifier_equip_domain_first_and_longest_match() -> None:
     """分支类型分类测试(design §2.1①):装备域优先——破解芯片卡文含「弱化」
     仍判 equip(决策关键词碰撞治理);longest-match;相似归一;多命中
     = equip+未解析;关键词降级;unknown。"""
-    # 破解芯片 = 名字 + 含「弱化」效果文 → 装备域锚先行(碰撞治理;
+    # 破解芯片 = 名字 + 含「弱化」效果文 → 装备域识别标志先行(碰撞治理;
     # 含弱化词未知名卡文退役后落 unknown)。
     assert classify_planner_branch(
         '破解芯片 前台强度 30% 首次穿戴该装备时，会使多个节点变为弱化状'
@@ -119,11 +119,11 @@ def test_leg_classifier_equip_domain_first_and_longest_match() -> None:
     # 相似归一:OCR 形变(基础名破坏)唯一命中。
     assert normalize_equip_name('破解 芯片!') == '破解芯片'
     assert classify_planner_branch('破解 芯片!') == ('equip', '破解芯片')
-    # 多命中(锚未中,注册表多件同时高相似)= 装备信号成立、件名未解析
-    # (禁猜——繁体形变使「数据拷贝仪」基础名锚不中,Max 与基础名同时高相似)。
+    # 多命中(识别标志未中,注册表多件同时高相似)= 装备信号成立、件名未解析
+    # (禁猜——繁体形变使「数据拷贝仪」基础名识别标志不中,Max 与基础名同时高相似)。
     assert normalize_equip_name('数據拷贝仪Max') == ''
     assert classify_planner_branch('数據拷贝仪Max') == ('equip', '')
-    # 关键词(锚/相似均未中才轮到;弱化兜底档退役后含弱化词未知名卡文同落 unknown)。
+    # 关键词(识别标志/相似均未中才轮到;弱化兜底档退役后含弱化词未知名卡文同落 unknown)。
     assert classify_planner_branch(
         '提升费用至4费,变为1星银狼LV.999') == ('upgrade', '')
     assert classify_planner_branch('使后续节点【弱化】') == ('unknown', '')

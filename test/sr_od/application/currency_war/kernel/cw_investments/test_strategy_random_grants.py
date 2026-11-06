@@ -14,7 +14,7 @@ T331 §4.2-R2(granted 卡 overlay 缺口按 40/135 现值申报):
   条目零消费位,burst 桥只读 free_refresh_burst,T-299/T-302 同判);
 - 注册面三字段挂值唯一(future_quality_upgrade/difficulty_inflation_
   exempt 全注册表唯一挂值条目 = 远见——腿③改写分支判定名与难度豁免
-  守卫的注册面锚)。
+  守卫的注册面基准)。
 """
 from __future__ import annotations
 
@@ -61,7 +61,7 @@ def test_yuanjian_not_in_strategy_effects() -> None:
 def test_quality_rewrite_and_exempt_fields_unique() -> None:
     """注册面两字段挂值唯一(全注册表枚举):future_quality_upgrade 挂
     值条目与 difficulty_inflation_exempt=True 条目均恰 = 远见——腿③
-    改写分支判定名与难度豁免守卫的注册面单一源锚(第二张挂值卡出现时
+    改写分支判定名与难度豁免守卫的注册面单一源基准(第二张挂值卡出现时
     本锁先红,实现批须重推触发载体而非静默泛化)。"""
     rewrite_srcs = [n for n, e in STRATEGY_ECONOMY.items()
                     if e.future_quality_upgrade]
@@ -74,7 +74,7 @@ def test_quality_rewrite_and_exempt_fields_unique() -> None:
 def test_grant_quality_pool_nonempty_and_membership() -> None:
     """发放品质池成员前提(掷骰腿池派生判据):'金' 品质池 = 注册表
     rarity 等值过滤非空,granted 候选 ∈ 该池;池规模漂移由注册表派生
-    自动跟随,本锁只锚「值 = 注册表品质词且池派生非空」语义。"""
+    自动跟随,本锁只锚定「值 = 注册表品质词且池派生非空」语义。"""
     quality = STRATEGY_RANDOM_GRANTS['远见']
     pool = [n for n, s in INVESTMENT_STRATEGIES.items()
             if s.rarity == quality]

@@ -6,7 +6,7 @@
 ``ENV_ORE_PANEL_BONUS``;占位非核实游戏事实,待实机采证校准)。测试面:
 
 - 面板矿点数三档(**现算形期望**):装配单点真消费注册表——普通 =
-  锚 8 / 经济过热 = 12 / 经济严重过热 = 16;增量灰矿续接面板序,与
+  基准 8 / 经济过热 = 12 / 经济严重过热 = 16;增量灰矿续接面板序,与
   位面开局声明矿的续接位互不撞键;
 - 后端装配 + 扑满链三条分支变体冒烟(两卡谓词同构,参数化双环境):备战帧
   金对开局种子值直断(递延锐度)/胜局结算分支一次落账 + 连胜 0→1 /
@@ -55,13 +55,13 @@ _PIGGY_ENVS: tuple[str, ...] = ('经济过热', '经济严重过热')
 
 
 def test_reward_ore_panel_points_count_and_continuation() -> None:
-    """面板矿点数三档(现算形期望,防同义反复):期望 = 锚合计 +
+    """面板矿点数三档(现算形期望,防同义反复):期望 = 基准合计 +
     注册表增量 → 普通 8 / 经济过热 12 / 经济严重过热 16;表外环境零
     增量;增量矿灰档、x 同列顺延续接面板序;位面开局声明矿续接位
     (10*(N+1), 10) 随扩尾外移,恒不与面板点撞键(声明矿消费方传
     len(panel) 续接,联动零改码)。"""
     anchor = sum(count for _, count in REWARD_ORE_PANEL_ANCHOR)
-    assert anchor == 8, '锚 8 矿(U23);锚形变更须连声明矿锁一起重锚'
+    assert anchor == 8, '基准 8 矿(U23);基准形变更须连声明矿锁一起重定基准'
     for env in ('', '轮岗', '增发货币'):
         assert len(reward_ore_panel_points(env)) == anchor, \
             f'表外环境零增量: {env!r}'
@@ -69,7 +69,7 @@ def test_reward_ore_panel_points_count_and_continuation() -> None:
         pts = reward_ore_panel_points(env)
         expected = anchor + ENV_ORE_PANEL_BONUS[env]
         assert len(pts) == expected, \
-            f'{env}: 期望 = 锚 {anchor} + 注册表增量,现算形'
+            f'{env}: 期望 = 基准 {anchor} + 注册表增量,现算形'
         assert all(color == '灰' for color, *_rest in pts[anchor:]), \
             '增量矿灰档(占位呈现身份)'
         assert [(x, y) for _c, x, y, _r in pts] == \
@@ -83,7 +83,7 @@ def test_reward_ore_panel_points_count_and_continuation() -> None:
 def test_piggy_super_panel_and_income_legs(
         piggy_env: str, monkeypatch: pytest.MonkeyPatch) -> None:
     """后端装配单点接入调用 + 扑满链三条分支变体冒烟(递延/连胜例外/不掉血):
-    备战帧 spheres 点数 = 锚 + 注册表增量(现算形,装配点未消费注册表
+    备战帧 spheres 点数 = 基准 + 注册表增量(现算形,装配点未消费注册表
     即红);备战帧金 = 开局种子值(kernel ``seed_opening_state`` 金种子,
     T-6 验收锐度建议的直断);胜局结算分支一次落账 = 基础+息+连胜、连胜
     0→1;败局 = 基础+息、连胜清零、hp 不动。期望收入现算自统一公式

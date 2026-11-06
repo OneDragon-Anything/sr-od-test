@@ -1,7 +1,7 @@
 """商店入口漏斗 bench 写门场景测试(投影测试族跨方法场景残留件)。
 
 落位 = cw_action_report/test_shop_projection_logic/ 拆目录收留(先例 =
-sim/cw_sim_backend/ 拆目录):本件无单一 src 锚——主断言对象 = 种子
+sim/cw_sim_backend/ 拆目录):本件无单一 src 基准——主断言对象 = 种子
 未读域跳写纪律(bench_unread,测试种子载体契约),防御场景 = 商店
 画面 op 入口链 bench 域的「未读域≠真空域」。
 """

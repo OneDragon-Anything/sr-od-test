@@ -58,7 +58,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 _OBS_SIG = ChannelSig(family='obs', actor='TestShopSpendSelfLimit', mode='read')
 _LOGIC_SIG = ChannelSig(family='logic_action', actor='TestShopSpendSelfLimit')
 
-# 真实判定链金位锚(空状态容器 active_strategies 缺省 → cap_resolved = 缺省息
+# 真实判定链金位基准(空状态容器 active_strategies 缺省 → cap_resolved = 缺省息
 # 帽档 = 息封顶金位/10 → g* = 10×cap;值源 = kernel 派生链,断言只校验金位
 # 形态对应的放行/拒拍/带内三域,不引常量进断言式):
 _GOLD_OVER = 60    # 溢出段;3 费买入花后在线上 → 政策内(放行域)

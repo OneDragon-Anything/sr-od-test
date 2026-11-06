@@ -10,7 +10,7 @@ REVIEW-T161 §5 特别核查①(镜像现值 _on_node_advance 记账段——跳
   ValueError 既有锁,本文件不重复;
 - sim 跳过 walk 锁(锁 3):battle_skip 消费拍 hp/streak 零写、无结算
   收入落账、无难度记录、无结算环帧行、无败局待办,被跳节点经验照常
-  入账(xp 真值 = 红验锚:禁用 skip 腿本锁先红);两跳后第三次战斗节点
+  入账(xp 真值 = 红验基准:禁用 skip 腿本锁先红);两跳后第三次战斗节点
   恢复常规 _resolve_battle;下一节点窗轮首收入照常发生;
 - 幂等锁(锁 4):_settled_key 零双账——同节点重放 battle_skip、skip 后
   又到 battle_resolve、后到 node_advance 三形全空转;

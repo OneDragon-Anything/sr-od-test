@@ -12,7 +12,7 @@ test_strategy_gudinglicai_registry.py)。
 - 注册行锁(锁 1):四字段现值 instant_gold=3 / gold_per_plane=3 /
   shop_rewrite_forced_cost=4 / shop_rewrite_forced_unique=True;
 - EffectSpec 条目锁(锁 2):五元组 + payload 同实例(单一源)+ pending
-  定论(裁定记录住 notes,尾行特征串 = 条目锚,防与注释同名文本误触)
+  定论(裁定记录住 notes,尾行特征串 = 条目对拍键,防与注释同名文本误触)
   + duties 对表姊妹已实现形(track+respond);
 - 引擎通道闭集锁(治理后形 = 测试锁对账,非 import 炸):三字段入
   _ENGINE_CHANNEL_SINGLE_FIELDS 且不入排除桶(位面周期发放/可重复
@@ -66,7 +66,7 @@ def test_gongsi_yanxuan_registration_row_four_fields() -> None:
 def test_gongsi_yanxuan_effect_spec_entry() -> None:
     """EffectSpec 条目锁(锁 2,B 案定论形):五元组 + payload 同一实例
     + pending 撤除(裁定记录住 notes)+ duties 对表姊妹已实现形 +
-    notes 尾行特征串(条目锚,多行文本判据用尾行特征防同名误触)。"""
+    notes 尾行特征串(条目对拍键,多行文本判据用尾行特征防同名误触)。"""
     spec = STRATEGY_EFFECTS[_CARD]
     assert spec.id == '301401'
     assert spec.trigger is TriggerKind.PLANE_START
@@ -83,7 +83,7 @@ def test_gongsi_yanxuan_effect_spec_entry() -> None:
     for token in ('位面段', '补发', '2026-11-01', '固定理财族同判', '独特'):
         assert token in (spec.notes or ''), f'notes 承载裁定语义缺 {token}'
     assert (spec.notes or '').endswith('2★ 直出翻星效果条目与基线共享(人才下沉局)'), \
-        'notes 尾行特征串(条目锚)'
+        'notes 尾行特征串(条目对拍键)'
 
 
 def test_gongsi_yanxuan_engine_channel_membership() -> None:

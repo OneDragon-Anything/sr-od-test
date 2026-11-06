@@ -13,7 +13,7 @@ xiangyin.md(定稿)§4 锁 1 + REVIEW-T135 §四 ④(卡面官方原文:「每�
 - 负锁:非持卡局零写 / live 门控(未装配 sim)零写 / gold 未读宁缺勿造;
 - 隔离互证:同触发异载体双向鸭子缺省——武力刷新条目在本腿零发放 ∧
   本卡条目在 T-109 刷新腿零发放(与 test_invest_strategy 的 T-109
-  注册锁互补,两条效果条目字段判别双向隔离的回归锚)。
+  注册锁互补,两条效果条目字段判别双向隔离的回归基准)。
 """
 from __future__ import annotations
 
@@ -224,7 +224,7 @@ def test_duck_default_isolation_both_directions(sim_installed) -> None:
     ① 武力刷新条目在本腿零发放(payload 无 gold_per_3star_merge 字段,
     ON_MERGE ∧ ECONOMY 双过滤命中但鸭子缺省 0);
     ② 本卡条目在 T-109 刷新腿零发放(payload 无 refresh_per_compose
-    字段,名单集零命中同判)——两条效果条目字段判别双向隔离回归锚。"""
+    字段,名单集零命中同判)——两条效果条目字段判别双向隔离回归基准。"""
     gs = _gs(card='武力刷新')
     seq0 = gs.write_seq
     check_strategy_star_merge_gold(gs, (('甲', 3),), sig=_SIG,

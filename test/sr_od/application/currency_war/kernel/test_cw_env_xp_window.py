@@ -1,4 +1,4 @@
-"""环境 XP 窗口(成功经验 id 138)kernel 链测试:达成锚 + 节点窗口发放。
+"""环境 XP 窗口(成功经验 id 138)kernel 链测试:达成标记 + 节点窗口发放。
 
 设计权威版本 = .debug/progress/2026-09-23-invest-effects-calc/designs/
 T-38-chenggong-jingyan.md(§2 建模方案/§4 测试锁面;升到8级后进入
@@ -106,7 +106,7 @@ def test_xp_apply_amount_home_input_domain() -> None:
     """xp_apply_amount 新家(cw_economy 单一源)输入域代表点逐位:
     门槛内 / 52 门槛跨 1 级(7→8,锁 4 例证同源)/ 跨多级 / 满级封顶 /
     非正零推进。期望值按门槛表 XP_TO_NEXT_LEVEL 手工核算(纯函数迁移,
-    sim 旧实现删除,对拍锚 = 表推进语义)。"""
+    sim 旧实现删除,对拍基准 = 表推进语义)。"""
     assert xp_apply_amount(7, 48, 4) == (8, 0), '52 门槛恰好跨级清零'
     assert xp_apply_amount(7, 48, 12) == (8, 8), '跨 1 级溢出结转'
     assert xp_apply_amount(5, 19, 100) == (8, 7), '跨多级(20/40/52 三门)'
@@ -135,7 +135,7 @@ def test_main_hook_records_anchor_once() -> None:
     """购买经验上报推 8(48+4=52 跨 52 门槛)→ anchor_pos = 当拍生效位、
     XP_GRANTED 零、无任何「剩余」键播种(单调计数器模型);未达 8 →
     零记录;条目不在场(他环境/空账本)→ 上报后零记录;重复上报(已
-    达标已记录)→ 锚不重写(一次性语义)。"""
+    达标已记录)→ 标记不重写(一次性语义)。"""
     # 达成记录臂
     gs = _seed_gs(7, 48)
     _advance(gs, (1, 2))
@@ -147,10 +147,10 @@ def test_main_hook_records_anchor_once() -> None:
     assert _granted(entry) == 0, '达成当拍不计入窗口'
     assert 'xp_left' not in entry.counters and \
         'xp_granted' not in entry.counters, '零剩余键播种(单调模型)'
-    # 重复上报臂:进一节点再买,锚不重写
+    # 重复上报臂:进一节点再买,标记不重写
     _advance(gs, (1, 3))
     _buy(gs, clicks=1)
-    assert entry.anchor_pos == (1, 2), '锚一次性,不随重复上报重写'
+    assert entry.anchor_pos == (1, 2), '标记一次性,不随重复上报重写'
     # 未达 8 臂
     gs2 = _seed_gs(7, 0)
     _advance(gs2, (1, 1))
@@ -180,7 +180,7 @@ def test_fallback_detection_at_node_boundary() -> None:
     _advance(gs, (1, 1))
     assert apply_node_xp(gs, node_type='boss') == 12, '基础经验推 8'
     entry = gs.effects.first(_ENV_ID)
-    assert entry.anchor_pos == (1, 1), '结算时点记锚 = 跨级当拍生效位'
+    assert entry.anchor_pos == (1, 1), '结算时点记标记 = 跨级当拍生效位'
     assert _granted(entry) == 0 and gs.xp.value == (10, 72), '当拍零发放'
     _advance(gs, (1, 2))   # 次拍 tick:窗口首发放(达成位后继)
     assert _granted(entry) == 1 and gs.xp.value == (22, 72), \
@@ -228,7 +228,7 @@ def test_grant_cross_level_carry() -> None:
     gs = _seed_gs(8, 60)
     _advance(gs, (1, 1))
     entry = gs.effects.first(_ENV_ID)
-    assert entry.anchor_pos == (1, 1), '等级已达标,首拍 tick 记锚'
+    assert entry.anchor_pos == (1, 1), '等级已达标,首拍 tick 记标记'
     _advance(gs, (1, 2))
     assert (gs.level.value, gs.xp.value) == (9, (0, 84)), '发放跨级结转'
 
@@ -250,7 +250,7 @@ def test_plane_flip_lex_monotonic() -> None:
 # ================ 锁 5:未达 8 全局零行为 ================
 
 def test_below_threshold_zero_world_behavior() -> None:
-    """等级恒 <8 的局:节点推进对 xp/level 零额外写、锚零记录、计数
+    """等级恒 <8 的局:节点推进对 xp/level 零额外写、标记零记录、计数
     零播种(状态副本这一侧按真实等级,不继承估值「升 8 必然发生」假设)。"""
     gs = _seed_gs(5, 0)
     for pos in [(1, 1), (1, 2), (1, 3)]:
@@ -317,7 +317,7 @@ def test_env_economy_value_regression() -> None:
 
 def test_modified_seq_p1_ten_window_real_counts() -> None:
     """T-8 人身意外险场字段(P1=10)下:达成位与窗口节点 = 变长制真实
-    节点数——(1,9) 记锚,窗口 = (1,10)/(2,1)/(2,2)(NodePos 同键契约,
+    节点数——(1,9) 记标记,窗口 = (1,10)/(2,1)/(2,2)(NodePos 同键契约,
     位面翻页照常)。"""
     gs = _seed_gs(8, 0)
     seqs = resolve_plane_node_seqs('人身意外险')
@@ -325,7 +325,7 @@ def test_modified_seq_p1_ten_window_real_counts() -> None:
     gs.observe(gs.node_seq_by_plane, seqs, evidence='t:seed', sig=_SIG_OBS)
     _advance(gs, (1, 9))
     entry = gs.effects.first(_ENV_ID)
-    assert entry.anchor_pos == (1, 9), '变长制位记锚'
+    assert entry.anchor_pos == (1, 9), '变长制位记标记'
     for pos, n_want in zip([(1, 10), (2, 1), (2, 2), (2, 3)],
                            [1, 2, 3, 3], strict=True):
         _advance(gs, pos)

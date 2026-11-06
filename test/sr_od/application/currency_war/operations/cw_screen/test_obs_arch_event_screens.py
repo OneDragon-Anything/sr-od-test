@@ -10,7 +10,7 @@
   消失 = 节点完成 success 交还外层)。
 - **观察上报接入调用测试**(遭遇):观察 node 稳定帧一次读(候选 + 剩余次数)
   → report 经屏文件落状态容器 ``encounter`` + ``encounter_refresh_left``
-  (状态容器终值)+ obs 与刷新文本锚点挂实例属性。
+  (状态容器终值)+ obs 与刷新文本识别标志挂实例属性。
 - **刷新链终结测试**(遭遇,
   3.3:刷新 = 终结动作,剩余闸 = 观察真值):建议刷新 ∧ 闸放行(状态容器
   left>0 且识别标志在位)→ 文本识别标志位圆钮恰一次 + 固定等待 → round_success
@@ -204,7 +204,7 @@ def test_encounter_observe_reports_container(
         test_context, monkeypatch) -> None:
     """观察上报接入调用测试:观察 node 稳定帧一次读(候选 + 剩余次数)→ report
     落状态容器 ``encounter``(状态容器终值 = 候选)+ ``encounter_refresh_left``
-    (剩余语义摄入;读缺跳写闸在 report 内)+ obs 与刷新文本锚点挂实例
+    (剩余语义摄入;读缺跳写闸在 report 内)+ obs 与刷新文本识别标志挂实例
     属性。红 = 接入调用断流 / 状态容器终值漂移 / left 未摄入。"""
     opts = [EncounterOption(idx=0, difficulty=1, rewards=['金币×2'])]
     op, _match, session = _make_encounter(
@@ -221,7 +221,7 @@ def test_encounter_observe_reports_container(
         'report 摄入剩余次数(状态容器 left = 观察真值)')
     assert op._obs is not None and op._obs.refresh_left == 2, (
         'obs 挂实例属性(剩余次数随观察一次读)')
-    assert op._refresh_point is not None, '刷新文本锚点挂实例属性'
+    assert op._refresh_point is not None, '刷新文本识别标志挂实例属性'
 
 
 def test_encounter_act_dispatch_terminal(
@@ -404,7 +404,7 @@ def test_encounter_refresh_gate_mismatch_round_fail_redispatch(
     → round_fail 交回——失败计入外循环重派上限
     (``OP_FAIL_REDISPATCH_LIMIT`` 只计连续 fail,零点击 round_success
     交回不计数且清零计数窗,故改 fail 有界收敛;设计定论「零点击交回」
-    对「锚持续读缺 ∧ 建议刷恒成立」无防护)。红 = 零点击 round_success
+    对「识别标志持续读缺 ∧ 建议刷恒成立」无防护)。红 = 零点击 round_success
     终结交回回潮(无界重进循环面)/ 拒绝-重调环回潮漏处置死循环。"""
     clicks, dispatches = _refresh_fixture(test_context, monkeypatch)
     opts = [EncounterOption(idx=0, difficulty=1, rewards=['金币×2'])]
@@ -1190,7 +1190,7 @@ def test_megastar_pick_op_asserts_container_xy_before_click(
 
 def _make_supply(test_context, monkeypatch, *, pick, opts,
                  anchor=None):
-    """补给真类装配(两 node 形态):门桩 + 选项读链桩 + 锚读桩 +
+    """补给真类装配(两 node 形态):门桩 + 选项读链桩 + 识别标志读桩 +
     机械派发半桩;观察 node 装载 obs(report 落状态容器)+ 动作体载体。
     ``pick`` = decide_supply 返回值或可调用(闸拒绝重调用例传序列);
     ``anchor`` = ``_read_refresh_anchor`` 桩返回值(默认 None=读缺)。
@@ -1249,7 +1249,7 @@ def test_supply_chosen_written_on_confirm_pick(test_context, monkeypatch) -> Non
     OCR 读链/配置/机械派发半桩化,只校验记录面。"""
     from one_dragon.base.geometry.point import Point
 
-    # ① 真选:确认即写(锚读 1 → 状态容器 left=1 → 快照 refresh_left=1)
+    # ① 真选:确认即写(识别标志读 1 → 状态容器 left=1 → 快照 refresh_left=1)
     opt = SimpleNamespace(char='希儿', equip='星币收集器', has_diamond=True,
                           extra_equips=())
     op, _match, session, stub, envs = _make_supply(
@@ -1268,7 +1268,7 @@ def test_supply_chosen_written_on_confirm_pick(test_context, monkeypatch) -> Non
     assert gs.chosen_supply.source == 'logic', '单次逻辑写入(source=logic)'
     assert stub.executed == 1, '机械派发半照发(记录面不拦截动作链)'
     assert gs.supply.value is not None, '前置:观察轮 report 落状态容器 supply'
-    assert gs.supply_refresh_left.value == 1, '观察轮锚读摄入状态容器 left'
+    assert gs.supply_refresh_left.value == 1, '观察轮识别标志读摄入状态容器 left'
     assert envs and envs[0].picked is not None \
         and envs[0].picked['refresh_left'] == 1 \
         and envs[0].picked['extra_equips'] == (), (
@@ -1290,7 +1290,7 @@ def test_supply_chosen_written_on_confirm_pick(test_context, monkeypatch) -> Non
     assert game_state_of(s1b).chosen_supply.value == \
         ('镜流', ('折叠小刀', '垃圾袋', '财富宝钻')), \
         'chosen 2 元组携全列装备(带钻与否自名单派生,不写入)'
-    # ③ 刷新轮不写(真选守卫;锚读缺 → 对照闸拒绝 → 重调仍建议刷 →
+    # ③ 刷新轮不写(真选守卫;识别标志读缺 → 对照闸拒绝 → 重调仍建议刷 →
     # round_fail 防线路径,真选分支零触达)
     op2, _m2, s2, _stub2, _ = _make_supply(
         test_context, monkeypatch,
@@ -1310,7 +1310,7 @@ def test_supply_refresh_gate_left_semantics(test_context, monkeypatch) -> None:
       (机械派发半照发,刷新钮零点击,派发即终结交回)。
     注(补给画面策略迁移批语义过期注记):判据侧次数闸已内嵌策略层
     decide(``strategies/impl/mandate_v1/supply.py``,仅剩余 ≥1 才可能返
-    刷新建议),生产中「建议刷 ∧ 对照闸拒绝」仅剩刷新锚点缺失一种触发面
+    刷新建议),生产中「建议刷 ∧ 对照闸拒绝」仅剩刷新识别标志缺失一种触发面
     ——重调同输入同输出仍建议刷 → round_fail(防线,专属测试见
     test_cw_screen_supply_node);「按原评分选卡」为旧
     kernel 评分叙述,决策本体现 = 策略层三级字典序。本测试以 stub 驱动,
@@ -1415,7 +1415,7 @@ def _make_supply_flow_op(cls, *, in_node: bool, do_action_calls: list):
 def test_supply_node_flow_act_wait_then_success() -> None:
     """补给流转两段形态测试(仍在补给屏 → 决策动作 node 恰消费一次动作体 +
     轮次结果透传——决策链接入调用迭代起动作体自产终结/防线轮次结果,act 零
-    二次包装;锚 miss(离开节点画面)→ success 零动作——验证完成才
+    二次包装;识别标志 miss(离开节点画面)→ success 零动作——验证完成才
     success。离开画面的完成门行为在
     分发身份安全网测试(test_supply)亦有消费面
     断言;本测试补齐「在屏轮 act 驱动恰一动作体消费 + 结果透传」半。)"""

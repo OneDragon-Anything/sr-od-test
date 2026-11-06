@@ -76,7 +76,7 @@ IDENTITY_CASES: list[tuple[str, str]] = [
     ('货币战争-备战-开商店/免战叠加态.webp', '货币战争-备战-开商店'),
 ]
 
-#: 阶段二默认分支语料:阶段一必须 miss(返回 None)+ 双锚必须命中
+#: 阶段二默认分支语料:阶段一必须 miss(返回 None)+ 双识别标志必须命中
 PREP_DEFAULT_CASES: list[str] = [
     '货币战争-备战/shop_closed.webp',
     '货币战争-备战/shop_closed_a8_start.webp',
@@ -97,7 +97,7 @@ def test_dispatch_corpus_identity_true_direction(test_context: SrTestContext) ->
 
 
 def test_dispatch_corpus_prep_default_direction(test_context: SrTestContext) -> None:
-    """阶段二:备战语料帧上阶段一必须 miss,且双锚默认分支判据必须命中。"""
+    """阶段二:备战语料帧上阶段一必须 miss,且双识别标志默认分支判据必须命中。"""
     for rel in PREP_DEFAULT_CASES:
         path = _SCREENS_DIR / rel
         if not path.exists():
@@ -112,7 +112,7 @@ def test_dispatch_corpus_prep_default_direction(test_context: SrTestContext) -> 
             area = test_context.screen_loader.get_area('货币战争-备战', _area)
             r = find_area_in_screen(test_context, screen, area, crop_first=False)
             assert r == FindAreaResultEnum.TRUE, \
-                f'语料帧 {rel} 备战双锚 {_area} 未命中({r})'
+                f'语料帧 {rel} 备战双识别标志 {_area} 未命中({r})'
 
 
 def _read(path: Path):
@@ -124,21 +124,21 @@ def _read(path: Path):
 
 def test_prep_skip_substate_real_frame_anchor_lock(
         test_context: SrTestContext) -> None:
-    """免战子态实拍帧锚真值锁(实帧面,钉 screen_info 建档可命中)。
+    """免战子态实拍帧识别标志真值锁(实帧面,钉 screen_info 建档可命中)。
 
     判定逻辑钉 = test_launch.py::test_prep_anchors_skip_substate_form
     (stub 帧,锁 ``_prep_anchors_hit`` 的 or 双形态)——但 stub 不触
-    OCR:跳过锚 rect/lcs 在 screen_info 漂移时 stub 恒绿,实机侧静默
-    回到双锚失配形态(免战激活后连续 15 帧未识别整局 abandoned,sim
+    OCR:跳过识别标志 rect/lcs 在 screen_info 漂移时 stub 恒绿,实机侧静默
+    回到双识别标志失配形态(免战激活后连续 15 帧未识别整局 abandoned,sim
     冒烟种子 20261015 事故)。本条用归档实拍帧走生产识别链
-    ``find_area_in_screen``,锚漂移即红。免战形态单一源 =
+    ``find_area_in_screen``,识别标志漂移即红。免战形态单一源 =
     docs/game/screens/currency_war_prep.md「跳过(N/N)」按钮替换节。
 
     - 免战纯帧(货币战争-备战-免战/跳过态.webp):阶段一身份 miss
-      (免战屏不在 CW_DISPATCH_SCREENS)→ 双锚认领形态成立 = 购买
-      经验命中 ∧ 出战 miss ∧ 跳过命中(修复前该帧双锚失配);
-    - 常规帧(货币战争-备战/shop_closed.webp):跳过锚 miss,常规帧
-      无双形态误命中(出战/购买经验两锚已由
+      (免战屏不在 CW_DISPATCH_SCREENS)→ 双识别标志认领形态成立 = 购买
+      经验命中 ∧ 出战 miss ∧ 跳过命中(修复前该帧双识别标志失配);
+    - 常规帧(货币战争-备战/shop_closed.webp):跳过识别标志 miss,常规帧
+      无双形态误命中(出战/购买经验两识别标志已由
       test_dispatch_corpus_prep_default_direction 辖住,不重复)。
     """
     skip_frame = _SCREENS_DIR / '货币战争-备战-免战' / '跳过态.webp'
@@ -156,7 +156,7 @@ def test_prep_skip_substate_real_frame_anchor_lock(
         r = find_area_in_screen(test_context, screen, area, crop_first=False)
         assert r == (FindAreaResultEnum.TRUE if _hit
                      else FindAreaResultEnum.FALSE), \
-            f'免战帧备战锚「{_area}」期望命中={_hit},实际 {r.name}'
+            f'免战帧备战识别标志「{_area}」期望命中={_hit},实际 {r.name}'
 
     normal_frame = _SCREENS_DIR / '货币战争-备战' / 'shop_closed.webp'
     if not normal_frame.exists():
@@ -165,7 +165,7 @@ def test_prep_skip_substate_real_frame_anchor_lock(
     r = find_area_in_screen(test_context, _read(normal_frame), area,
                             crop_first=False)
     assert r == FindAreaResultEnum.FALSE, \
-        f'常规帧跳过锚应 miss(免战无双形态误命中面),实际 {r.name}'
+        f'常规帧跳过识别标志应 miss(免战无双形态误命中面),实际 {r.name}'
 
 
 def _prep_excluded_dispatch_names(test_context: SrTestContext) -> list[str]:
@@ -254,7 +254,7 @@ def test_stage1_transition_identity_boss_frame_takeover(test_context,
 
 def test_boss_frame_without_anchors_falls_to_unknown_fallback(
         test_context, monkeypatch) -> None:
-    """测试2 劣化形态终端:boss 帧位面锚 miss ∧ 判别片段 miss(全帧只剩
+    """测试2 劣化形态终端:boss 帧位面标记 miss ∧ 判别片段 miss(全帧只剩
     共享文案)→ 零派发,落未知兜底 retry(终端 = 停机留证,不为未建档
     形态预建兜底)。"""
     op, calls = _make_loop(

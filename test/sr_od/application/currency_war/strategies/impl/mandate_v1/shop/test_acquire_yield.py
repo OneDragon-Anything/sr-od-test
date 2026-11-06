@@ -144,7 +144,7 @@ def _frame(bench: list[tuple[str, int]],
                 shop=[cw4_card(n, cost=c, star=s, x=i)
                       for i, (n, c, s) in enumerate(shop_cards)])
     # 节点位观察(收工位 mark_shop_handled 的写入前提 = 生效节点号可读;
-    # 未观察 = no-op,会话标记不落,解拦复核面失锚)。
+    # 未观察 = no-op,会话标记不落,解拦复核面失去基准)。
     gs.observe(gs.node_pos, (1, 3), evidence='cw-acquire-swap',
                sig=_OBS_SIG)
     gs.strategy_state = st   # 宿主归一:session_scope 族与判据读口同源

@@ -58,7 +58,7 @@ from sr_od.application.currency_war.sim.cw_sim_run_config import RunConfig
 #: 契约:前缀 sim:engine: + 写点 tag streak:strategy_pick:<卡名>)。
 _STREAK_EV_PREFIX = 'sim:engine:streak:strategy_pick:'
 
-#: 结算连胜笔形态(§1.2e 共用链;与置位笔分账的判别锚)。
+#: 结算连胜笔形态(§1.2e 共用链;与置位笔分账的判别基准)。
 _SETTLE_EV_PATTERN = re.compile(r'^sim:engine:streak:p\d+r\d+$')
 
 

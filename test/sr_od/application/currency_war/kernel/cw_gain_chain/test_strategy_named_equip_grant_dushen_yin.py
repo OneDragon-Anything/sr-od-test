@@ -134,7 +134,7 @@ def test_dushen_yin_unobserved_reject_auditable(
 
 
 def test_dushen_yin_acquire_no_cascade() -> None:
-    """获得零级联锚:随便骰子 ∉ EQUIP_ACQUIRE_CONSEQUENCES(表 = 分身墨镜/
+    """获得零级联基准:随便骰子 ∉ EQUIP_ACQUIRE_CONSEQUENCES(表 = 分身墨镜/
     分身墨镜Max/数据拷贝仪Max 三键现值)——获得零后果是设计转引事实,
     注册面复测钉死(表扩员波及时本锁先红触发重申报)。"""
     from sr_od.application.currency_war.kernel.cw_effect_inventory import (

@@ -14,7 +14,7 @@ helper 注册面 = kernel/cw_investments/test_strategy_zuiying_registry.py)。
   「扑满不掉血」同向);胜局帧零影响;
 - 锁 5 walk 收入边界:败局收入行无连胜分量(维持的是计数,不使败局获
   连胜金)+ 下一节点窗开收入按维持后连胜兑现(共享链端到端;常规链
-  收入在窗开拍轮初口径,战斗位结算拍零收入回归锚)。
+  收入在窗开拍轮初口径,战斗位结算拍零收入回归基准)。
 - 驱动形态 = 出战动作触发结算(2026-10-29 流程模型);引擎驱动助手
   import 自 sim/test_sim_backend.py(已登记超限拆分债文件,禁追加,只
   import 复用不改;先例 = 本目录 test_strategy_win_gold_sim_chain.py)。
@@ -177,7 +177,7 @@ def test_battle_loss_hp_extra_streak_kept_loss_comp_branch(
     """锁 2a + 锁 5①战域 walk(1-3/1-4 连续战斗位):持卡 + 前置连胜
     直置 2(奖励位不计连胜,前置连胜以观察直置模拟上一结算帧真值)
     → 1-3 败局 = 基础采样 −23 追加 −5(三重门全开)∧ 连胜维持 2 ∧
-    结算拍零收入(轮初口径回归锚)→ 1-4 窗开走败补支(被败节点补发
+    结算拍零收入(轮初口径回归基准)→ 1-4 窗开走败补支(被败节点补发
     基项+息,连胜分量恒 0——维持的是计数,败轮不获连胜金)。"""
     b = _prep_backend(61)
     try:
@@ -237,7 +237,7 @@ def test_piggy_loss_hp_exempt_income_boundary_streak_kept(
         gold2 = int(gs.gold.value or 0)
         _node_advance_feed(gs, trigger='settle_confirm')
         # r3 窗开拍收入已落账;泊屏形态不定(投资三选一/弹店/备战),
-        # 只断言金不锚泊屏。选卡面(若有)在断言之后,不入本锁面。
+        # 只断言金不锚定屏面。选卡面(若有)在断言之后,不入本锁面。
         assert int(gs.gold.value or 0) == gold2 + reward_base_gold(1, 3) + \
             streak_gold(1) + min(gold2 // 10, 5), \
             '下一节点窗开收入按维持后连胜兑现(常规支共享链)'

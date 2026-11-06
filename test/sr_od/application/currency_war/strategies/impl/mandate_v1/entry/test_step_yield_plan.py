@@ -3,7 +3,7 @@ roster-plane1-union design §2.2 第 4 项执行端 + 用户裁定补录「跨�
 计划变量终版」+ unified-deploy-order §3.5 拖动/重观察交替;镜像 =
 mandate_v1/entry.py ``_step_yield_plan``)。
 
-验收锚 = design §3「计划变量测试」行:步骤序列写入(shop 侧承载,
+验收基准 = design §3「计划变量测试」行:步骤序列写入(shop 侧承载,
 shop/test_acquire_yield)/前置步逐帧消化(卖 V₁..Vₙ → 驱板面至 T)→
 序列空清槽 → 开店(第 5 步常规机制发,SF-10)/零重验断言(备战执行零
 搜索调用)/执行失败三态(V 不在场/卖失败/卡死)→ 清槽 + X 路径失败

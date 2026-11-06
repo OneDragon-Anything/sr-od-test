@@ -456,7 +456,7 @@ def test_flow_supply_wiring_wraps_actions_and_parses_locked_comp():
 # ==================== 选项归并读链(纯函数)====================
 # ===== 自造坐标常量(依据 = 归档帧布局实证的设计记录,非运行时真值)=====
 
-_COL_XS: tuple[int, ...] = (256, 608, 960, 1312, 1664)   # 5 列锚 x,列距 352
+_COL_XS: tuple[int, ...] = (256, 608, 960, 1312, 1664)   # 5 列识别标志 x,列距 352
 _CHAR_Y: int = 565            # 单排角色名 y(双排 ≈513,纯函数不消费 char y)
 _EQUIP_Y: int = 700           # 单排装备名 y
 _EQUIP_Y_A: int = 648         # 双排第一行 y
@@ -466,7 +466,7 @@ _CLICK_Y = 550                # 卡身点击 y(常量语义断言用,纯函数�
 
 def _chars(names: tuple[str, ...],
            xs: tuple[int, ...] = _COL_XS) -> list[tuple[int, str]]:
-    """列锚造料:第 i 列角色名文本中心 x = 列锚 x(截断 = 前列锚复用,
+    """列识别标志造料:第 i 列角色名文本中心 x = 列识别标志 x(截断 = 前列识别标志复用,
     失读降级造料靠少传名字;可传 xs 局部覆盖)。"""
     return list(zip(xs, names, strict=False))
 
@@ -474,14 +474,14 @@ def _chars(names: tuple[str, ...],
 def _single_row(names: tuple[str, ...],
                 drift: tuple[int, ...] = (0, 0, 0, 0, 0),
                 xs: tuple[int, ...] = _COL_XS) -> list[tuple[int, int, str]]:
-    """单排装备造料:每列一件,装备文本中心 x = 列锚 x + 名长漂移量
+    """单排装备造料:每列一件,装备文本中心 x = 列识别标志 x + 名长漂移量
     (截断语义同 _chars)。"""
     return [(x + d, _EQUIP_Y, n)
             for x, d, n in zip(xs, drift, names, strict=False)]
 
 
 def test_single_row_five_columns_matches_legacy_per_equip_reading() -> None:
-    """单排 5 列回归锚:角色锚点定列与旧「每装备名 = 1 选项」读链逐值
+    """单排 5 列回归基准:角色识别标志定列与旧「每装备名 = 1 选项」读链逐值
     一致(idx/char/equip 序、点击点 = 装备文本中心 x + 卡身 y)——
     默认布局零行为漂移(design §3 零改动声明)。"""
     chars = _chars(('镜流', '希儿', '花火', '停云', '杰帕德'))
@@ -505,7 +505,7 @@ def test_double_row_five_columns_groups_by_column() -> None:
     其余;char 配对正确;点击点 = 簇首件(y 序)x。"""
     chars = _chars(('镜流', '希儿', '花火', '停云', '杰帕德'))
     equips: list[tuple[int, int, str]] = []
-    # 逐列两件:(首件 y=648, 次件 y=748);x = 列锚 + 名长漂移(≤60)
+    # 逐列两件:(首件 y=648, 次件 y=748);x = 列识别标志 + 名长漂移(≤60)
     per_col = (
         ('折叠小刀', '垃圾袋'),
         ('量产型装甲', '生命之花'),
@@ -532,7 +532,7 @@ def test_double_row_five_columns_groups_by_column() -> None:
 def test_missing_char_anchor_degrades_to_orphan_column() -> None:
     """锚点失读降级:某列角色名缺席 → 该列装备簇自成孤儿列(char='',
     不并入邻列);列序按 x 保持,其余列配对不受扰。"""
-    # 第 3 列(花火,x=960)失读:其余四列锚显式传 xs
+    # 第 3 列(花火,x=960)失读:其余四列识别标志显式传 xs
     chars = _chars(('镜流', '希儿', '停云', '杰帕德'),
                    xs=(_COL_XS[0], _COL_XS[1], _COL_XS[3], _COL_XS[4]))
     equips = _single_row(('折叠小刀', '量产型装甲', '光能电池',
@@ -590,8 +590,8 @@ def test_column_gap_keeps_clusters_split_and_name_drift_does_not() -> None:
 
 
 def test_worst_case_geometry_pairs_to_own_anchor() -> None:
-    """最差几何造料(5 字件名 × 2 字角色名,簇心-自身锚点 ~112)不破
-    配对:归入自身锚点(112 ≤ 容差 150),距邻锚 240 > 150 不误归。"""
+    """最差几何造料(5 字件名 × 2 字角色名,簇心-自身识别标志 ~112)不破
+    配对:归入自身识别标志(112 ≤ 容差 150),距邻识别标志 240 > 150 不误归。"""
     chars = [(_COL_XS[0], '镜流'), (_COL_XS[1], '希儿')]
     # 量产型装甲(5 字名)文本中心右移:距自身锚 112(单排帧实测最差列)
     equips = [(_COL_XS[0] + 112, _EQUIP_Y, '量产型装甲'),
@@ -599,7 +599,7 @@ def test_worst_case_geometry_pairs_to_own_anchor() -> None:
     out = _group_supply_columns(chars, equips)
     assert len(out) == 2
     assert out[0][0].char == '镜流' and out[0][0].equip == '量产型装甲', \
-        '最差几何仍配对自身锚点'
+        '最差几何仍配对自身识别标志'
     assert out[1][0].char == '希儿'
 
 

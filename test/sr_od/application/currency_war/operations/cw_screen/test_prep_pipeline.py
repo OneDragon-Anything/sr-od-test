@@ -488,7 +488,7 @@ class TestStep3LevelUp:
         _gs.strategy_state = state_of(sess)   # 宿主归一(session_scope 函数族经 gs 取态)
         _gs.node_hist_pos = (2, 1)   # P2 水位(窗口谓词置位输入)
         session_scope.handle_node_boundary(_gs)
-        state_of(sess).gold_ledger = 80   # 边界复位清账面后重锚(种子稳态)
+        state_of(sess).gold_ledger = 80   # 边界复位清账面后重定基准(种子稳态)
         _mark_handled(sess)
         out = _emit(sess)
         ups = [e for e in out
@@ -740,7 +740,7 @@ class TestStep7NodeEndInterest:
 
 
 # ============================================================
-# 部署自适应 6 场景(entry_signals 整体退役后的行为登记锚;审查设计——
+# 部署自适应 6 场景(entry_signals 整体退役后的行为登记基准;审查设计——
 # 知识真空线〔万敌 1 条/白厄 3 条〕的退化面显式登记,退化明显再议的
 # 对照基线;sim A/B 挂批跑工具恢复,欠账登记 = .debug/progress/
 # unified-line-scoring-sim-debt.md)
@@ -831,7 +831,7 @@ class TestDeployAdaptiveAfterEntryRetirement:
         assert len(self._moves(sess)) >= 2, '过渡体系骨架自然收'
 
     def test_locked_daheita_regression_anchor(self):
-        """⑤ 锁定大黑塔线回归锚:锁定帧上场行为与未锁候选帧一致
+        """⑤ 锁定大黑塔线回归基准:锁定帧上场行为与未锁候选帧一致
         (③ 对照)——退役前锁定帧窗口谓词结构性恒 False(两条豁免分支
         全覆盖),退役后零变化。"""
         sess = self._frame(bench=[_bc('大黑塔'), _bc('黑塔')], level=8,
@@ -839,7 +839,7 @@ class TestDeployAdaptiveAfterEntryRetirement:
         assert len(self._moves(sess)) >= 2, '锁定线骨架照常上场(零变化)'
 
     def test_locked_baie_regression_anchor(self):
-        """⑥ 锁定白厄线回归锚:锁定线 L1 骨架(白厄空羁绊线 = 角色完成
+        """⑥ 锁定白厄线回归基准:锁定线 L1 骨架(白厄空羁绊线 = 角色完成
         度单独承载)照常上场——退役前白厄线锁定帧本就豁免窗口,退役后
         零变化(白厄 3 条 plane_end 知识真空只影响未锁囤积期)。"""
         sess = self._frame(bench=[_bc('白厄'), _bc('三月七')],

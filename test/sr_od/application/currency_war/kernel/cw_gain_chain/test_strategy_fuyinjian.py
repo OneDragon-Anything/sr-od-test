@@ -1,6 +1,6 @@
 """复印件(id 330301)行为锁(镜像 src = _make_owned_emblem_copy_effect
 微工厂 + STRATEGY_ECONOMY xp_instant=24 注册行;先例 = 骇客采样族锁 +
-伟大征服 XP 直测行[直锚先例 test_invest_strategy.py 伟大征服 (12.0,True)])。
+伟大征服 XP 直测行[直引先例 test_invest_strategy.py 伟大征服 (12.0,True)])。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-361 对应稿
 (REVIEW-T361 无需用户决定 7/7;卡面官方原文:「获得一个已经拥有的星徽的复制,

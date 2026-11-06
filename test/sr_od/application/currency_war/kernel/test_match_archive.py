@@ -12,8 +12,8 @@
    模块 docstring 归局骨架节);
 3. 重装配保真(原 test_cw_match_archive_reassembly.py;背景 = 真实双档
    重放实证的「重装配无益有损」);
-4. 局终域 match_final(原 test_cw_match_final.py;权威版本锚 = retirement.md
-   §2 / §3.6.1 / §3.6.2,设计锚 = 流程侧遥测权威版本 §3.2.3 行型 2 / 表 3-3)。
+4. 局终域 match_final(原 test_cw_match_final.py;权威版本引用 = retirement.md
+   §2 / §3.6.1 / §3.6.2,设计引用 = 流程侧遥测权威版本 §3.2.3 行型 2 / 表 3-3)。
 
 测试隔离:journal sink / run_id provider / 监听槽均为模块级全局——fixture
 统一安装/复位;测试零真实副作用(流水落 tmp_path)。

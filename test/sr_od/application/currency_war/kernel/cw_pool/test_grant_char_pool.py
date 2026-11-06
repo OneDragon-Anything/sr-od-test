@@ -134,10 +134,10 @@ def test_zhouzhibanshen_faction_pool_identity_instance() -> None:
     """昼之半神域授予池恒等锁(牌库时点池约定,概念股族展开卡登记约定,
     本域与狼狩相反型 = 6 名 is_expert 全空):空解锁状态容器 → 昼之半神域
     候选 = chars_by_faction('昼之半神') 名集现算比对(过滤恒等 = 域无
-    专家的事实锚,注册表派生非快照不手抄;池规模只记注释零断言值——现值
+    专家的事实基准,注册表派生非快照不手抄;池规模只记注释零断言值——现值
     6 名,随版本正常变动;选投资环境在开局,本域无专家故无 T-56 型避让
     约束);显式断言'昔涟' ∈ 池(独立单位「挚爱之人」照发 + 双阵营成员
-    「昼之半神、夜之半神」照发双事实锚,族级口径 economy.md:94);静态
+    「昼之半神、夜之半神」照发双事实基准,族级口径 economy.md:94);静态
     基底 random_char_pool 同值(两层面在本域重合,沿银河学者非专家域锁
     同款形态)。"""
     spec = RandomCharSpec(faction='昼之半神', star=1)
@@ -156,10 +156,10 @@ def test_yezhibanshen_faction_pool_identity_instance() -> None:
     """夜之半神域授予池恒等锁(牌库时点池约定,概念股族展开卡登记约定,
     本域与昼之半神同型 = 7 名 is_expert 全空):空解锁状态容器 → 夜之半神域
     候选 = chars_by_faction('夜之半神') 名集现算比对(过滤恒等 = 域无
-    专家的事实锚,注册表派生非快照不手抄;池规模只记注释零断言值——现值
+    专家的事实基准,注册表派生非快照不手抄;池规模只记注释零断言值——现值
     7 名,随版本正常变动;选投资环境在开局,本域无专家故无 T-56 型避让
     约束);显式断言'昔涟' ∈ 池(独立单位「挚爱之人」照发 + 双阵营成员
-    「昼之半神、夜之半神」照发双事实锚,族级口径 economy.md:94);静态
+    「昼之半神、夜之半神」照发双事实基准,族级口径 economy.md:94);静态
     基底 random_char_pool 同值(两层面在本域重合,沿银河学者非专家域锁
     同款形态)。"""
     spec = RandomCharSpec(faction='夜之半神', star=1)
@@ -205,10 +205,10 @@ def test_qungong_faction_pool_identity_instance() -> None:
     """群攻域授予池恒等锁(牌库时点池约定,概念股族展开卡登记约定,
     本域与昼之半神/夜之半神同型 = 7 名 is_expert 全空):空解锁状态容器 →
     群攻域候选 = chars_by_faction('群攻') 名集现算比对(过滤恒等 = 域
-    无专家的事实锚,注册表派生非快照不手抄;池规模只记注释零断言值——
+    无专家的事实基准,注册表派生非快照不手抄;池规模只记注释零断言值——
     现值 7 名,随版本正常变动;选投资环境在开局,本域无专家故无 T-56 型
     避让约束);显式断言'翡翠' ∈ 池(域独占成员 + 公司契约具名发放对象
-    双事实锚——具名 vs 随机字段不相交,具名契约不改变随机池成员资格,
+    双事实基准——具名 vs 随机字段不相交,具名契约不改变随机池成员资格,
     沿昼之半神/夜之半神锁'昔涟'显式成员断言先例);静态基底
     random_char_pool 同值(两层面在本域重合,沿银河学者非专家域锁同款
     形态)。"""
@@ -218,7 +218,7 @@ def test_qungong_faction_pool_identity_instance() -> None:
     assert set(pool) == expected, \
         '群攻域候选 = 全域(域无专家,牌库时点过滤恒等)'
     assert '翡翠' in pool, \
-        '域独占成员照发 + 具名契约不改随机池成员资格(双事实锚定论)'
+        '域独占成员照发 + 具名契约不改随机池成员资格(双事实基准定论)'
     assert set(pool) <= CHARACTER_ROSTER
     assert set(random_char_pool(spec)) == expected, \
         '静态基底同值(两层面在本域重合)'
@@ -234,7 +234,7 @@ def test_jianyi_faction_pool_expert_filter_instance() -> None:
     费用 1-5 全档仍覆盖);②解锁 {'佩拉'} → 7 名回归(专家入池时机与商店
     同源,economy.md §1);③静态基底 random_char_pool 仍含佩拉(专家剔除
     只发生在 grant_char_pool 层,两层语义不混写);④显式断言'椒丘' ∈ 池
-    (「持续伤害契约」具名发放对象双事实锚——具名 vs 随机字段不相交,
+    (「持续伤害契约」具名发放对象双事实基准——具名 vs 随机字段不相交,
     具名契约不改变随机池成员资格,沿昼之半神/夜之半神锁'昔涟'/群攻锁
     '翡翠'显式成员断言先例)。"""
     spec = RandomCharSpec(faction='减益', star=1)
@@ -251,7 +251,7 @@ def test_jianyi_faction_pool_expert_filter_instance() -> None:
     assert '佩拉' in random_char_pool(spec), \
         '静态基底含全部注册成员(过滤归 grant_char_pool 层,分层职责)'
     assert '椒丘' in pool, \
-        '具名契约不改随机池成员资格(双事实锚定论)'
+        '具名契约不改随机池成员资格(双事实基准定论)'
 
 
 def test_zhanjidian_faction_pool_expert_filter_instance() -> None:
@@ -266,7 +266,7 @@ def test_zhanjidian_faction_pool_expert_filter_instance() -> None:
     (专家剔除只发生在 grant_char_pool 层,两层语义不混写);④显式断言
     'Archer' ∈ 池(独立单位成员照发[economy.md:94 族级定论点名
     战技点(Archer)] + 「命运圣杯契约」条件发放对象不改随机池成员资格的
-    双事实锚——具名 vs 随机字段不相交,沿昼之半神/夜之半神锁'昔涟'/群攻锁
+    双事实基准——具名 vs 随机字段不相交,沿昼之半神/夜之半神锁'昔涟'/群攻锁
     '翡翠'/减益锁'椒丘'显式成员断言先例)。"""
     spec = RandomCharSpec(faction='战技点', star=1)
     pool = grant_char_pool(_fresh_gs(), spec)
@@ -282,4 +282,4 @@ def test_zhanjidian_faction_pool_expert_filter_instance() -> None:
     assert '青雀' in random_char_pool(spec), \
         '静态基底含全部注册成员(过滤归 grant_char_pool 层,分层职责)'
     assert 'Archer' in pool, \
-        '独立单位照发 + 具名契约不改随机池成员资格(双事实锚定论)'
+        '独立单位照发 + 具名契约不改随机池成员资格(双事实基准定论)'

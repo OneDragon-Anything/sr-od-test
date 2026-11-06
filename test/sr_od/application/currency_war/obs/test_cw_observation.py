@@ -149,13 +149,13 @@ def _patch_shop_open_readers(monkeypatch: pytest.MonkeyPatch,
 
 def test_funnel_anchor_three_states(monkeypatch: pytest.MonkeyPatch) -> None:
     """双态锚定三支一测试(零新增读屏,复用现役 read_shop_refresh_button
-    产物):免费态锚次数 / 付费域锚 0(耗尽/灰态,游戏规则 ⇒ 免费余量恒
+    产物):免费态基准次数 / 付费域基准 0(耗尽/灰态,游戏规则 ⇒ 免费余量恒
     0)/ 整帧判不出跳写(宁缺勿造)。"""
     cases = [
         (ShopRefreshButton(free=True, free_remaining=2, price=None,
-                           affordable=True), 2, '免费态锚次数'),
+                           affordable=True), 2, '免费态基准次数'),
         (ShopRefreshButton(free=False, free_remaining=None, price=2,
-                           affordable=True), 0, '付费域锚 0'),
+                           affordable=True), 0, '付费域基准 0'),
     ]
     for btn, expect, why in cases:
         sess = SimpleNamespace(last_streak=0, active_strategies=[])

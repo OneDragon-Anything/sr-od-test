@@ -431,7 +431,7 @@ def test_env_grant_fires_after_settlement_cover_in_order(
 
     op._record_round_outcome(_FRAME)
 
-    # 防假绿锚:fake 结算路径真实携带 streak_after 且走了真覆盖写端
+    # 防假绿基准:fake 结算路径真实携带 streak_after 且走了真覆盖写端
     assert gs.streak.value == 5 and gs.streak.source == 'observation', \
         '结算覆盖写端必须真实落账(前置态缺失 = 断言恒绿假形态)'
     # 发放真发生:库存尾部随机态追加 + done 首次登记

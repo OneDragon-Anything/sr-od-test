@@ -69,7 +69,7 @@ _LSIG = ChannelSig(family='logic_action', actor='CwActionPickInvestOp',
 #: 固定种子(单抽形态无互异约束,任意种子;失配 = 换种子)。
 _JINGMI_YIN_SEED = 20261103
 
-#: 效果条目1 发放物 = 具名确定(卡文【精密拆装扳手】直读,效果串字面断言锚)。
+#: 效果条目1 发放物 = 具名确定(卡文【精密拆装扳手】直读,效果串字面断言基准)。
 _NAMED_LEG_ITEM = '精密拆装扳手'
 
 

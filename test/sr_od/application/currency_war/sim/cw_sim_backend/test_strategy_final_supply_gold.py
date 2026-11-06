@@ -3,14 +3,14 @@ strategy_final_supply_gold_of 聚合 helper + _begin_node_window 收尾
 「最后一个补给阶段」金腿;同族先例 = 本目录 test_strategy_boss_gold.py)。
 
 测试面依据 = 迭代设计 designs/T-93-weikuan-jiaofu.md §2.3/§2.5/§4
-十一锁面(锁 1-8),例值按现表重派生(锚点 = 展平全序列最末 supply 位,
+十一锁面(锁 1-8),例值按现表重派生(标记 = 展平全序列最末 supply 位,
 默认表现值 (3,3);P3 入表后域扩展自动跟随):
-- 锚点发放真值(锁 1/7/8):(3,3) 窗金增量 = 轮首收入面(kernel 公式
+- 标记发放真值(锁 1/7/8):(3,3) 窗金增量 = 轮首收入面(kernel 公式
   现算,supply 支 base+息,禁只断言 +30)+ 30,独立观察笔(evidence 与
   收入笔分键,收入三分量账不混入);同节点窗重放零双发(幂等守卫复用);
-- 非锚 supply 零发放(锁 2,「全局一次」辖域行为锁)/ 非 supply 节点
+- 非锚定 supply 零发放(锁 2,「全局一次」辖域行为锁)/ 非 supply 节点
   零发放(锁 3)/ 未持卡零发放(锁 4);
-- 修饰局锚点跟随(锁 5,期望由 resolve_plane_node_seqs 程序化派生,
+- 修饰局标记跟随(锁 5,期望由 resolve_plane_node_seqs 程序化派生,
   非硬编码);
 - 拿卡当节点不发放(锁 6,窗口前段聚合读时序机制锁——直构「同窗晚到
   手」状态容器态,不假设场景可达:现行建模域 offer 槽域与 supply 零重合)。
@@ -61,7 +61,7 @@ def _backend(seed: int = 37, *, env_name: str = '') -> SimBackend:
     """装配后端至 P1r1 备战屏(env_name 非空走投资环境屏选环境流——改
     节点序列经环境注册写场字段 ``node_seq_by_plane``,直写状态容器不触;
     装配形态先例 = test_strategy_boss_gold._backend;seed 37 = P3 全程
-    存活探针锚,先例 = 本目录 test_p3_win_terminal)。调用方负责
+    存活探针基准,先例 = 本目录 test_p3_win_terminal)。调用方负责
     uninstall。"""
     from sr_od.application.currency_war.kernel.cw_action_report import (
         report_action_pick_invest_env_param,
@@ -106,7 +106,7 @@ def _drive_until_pos(b: SimBackend, pos: tuple[int, int],
 
 
 def test_final_supply_gold_leg_via_engine_window() -> None:
-    """锚点发放真值(锁 1/7/8,单局串联):(3,2) 战斗窗捕获收入面输入
+    """标记发放真值(锁 1/7/8,单局串联):(3,2) 战斗窗捕获收入面输入
     (金 = (3,2) 收入落账后现值 = (3,3) 息算基数;连胜变化在 (3,2) 结算
     刻落账、supply 轮不动连胜,(3,3) 窗开同值)→ (3,3) 窗独立笔
     evidence 分键 + 窗金增量 = 收入面(kernel 公式现算)+30(锁值含收入
@@ -120,7 +120,7 @@ def test_final_supply_gold_leg_via_engine_window() -> None:
         _drive_until_pos(b, (3, 3))
         # 锁 1/8 独立笔:evidence 与收入笔分键(若并入收入写则留 income 键)
         assert gs.gold.evidence == _GOLD_EV_PREFIX + '3r3', \
-            f'锚点窗独立笔缺或来源漂移: {gs.gold.evidence}'
+            f'标记窗独立笔缺或来源漂移: {gs.gold.evidence}'
         s3 = max(int(gs.streak.value or 0), 0)
         mult, flat, cap = income_modifiers_of(gs)
         # 本局途中经获得链到手的每节点金卡(如按劳分配,固定 seed 采样
@@ -145,25 +145,25 @@ def test_final_supply_gold_leg_via_engine_window() -> None:
 
 
 def test_non_anchor_supply_and_battle_windows_zero_grant() -> None:
-    """非锚 supply 零发放(锁 2,「全局一次」辖域行为锁)+ 非 supply
+    """非锚定 supply 零发放(锁 2,「全局一次」辖域行为锁)+ 非 supply
     节点零发放(锁 3):(1,5)(默认局 P1 supply,非末位)与 (3,4)
-    (锚点后继 battle)窗后无尾款独立笔,金来源 = 收入笔。"""
+    (标记后继 battle)窗后无尾款独立笔,金来源 = 收入笔。"""
     b = _backend()
     try:
         gs = b.gs
         _hold(b, [_CARD])
         _drive_until_pos(b, (1, 5))
         assert gs.gold.evidence == 'sim:engine:income:p1r5', \
-            f'非锚 supply 窗出现尾款笔: {gs.gold.evidence}'
+            f'非锚定 supply 窗出现尾款笔: {gs.gold.evidence}'
         _drive_until_pos(b, (3, 4))
         assert gs.gold.evidence == 'sim:engine:income:p3r4', \
-            f'锚点后继 battle 窗出现尾款笔: {gs.gold.evidence}'
+            f'标记后继 battle 窗出现尾款笔: {gs.gold.evidence}'
     finally:
         uninstall_backend()
 
 
 def test_no_final_supply_gold_without_card() -> None:
-    """未持卡零发放(锁 4):锚点窗金来源 = 收入笔(聚合 0 → 零值零写)。"""
+    """未持卡零发放(锁 4):标记窗金来源 = 收入笔(聚合 0 → 零值零写)。"""
     b = _backend()
     try:
         gs = b.gs
@@ -175,10 +175,10 @@ def test_no_final_supply_gold_without_card() -> None:
 
 
 def test_modified_env_anchor_follows_field() -> None:
-    """修饰局锚点跟随(锁 5):期望由 ``resolve_plane_node_seqs('人身
+    """修饰局标记跟随(锁 5):期望由 ``resolve_plane_node_seqs('人身
     意外险')`` 程序化派生(不硬编码轮次)——派生末 supply 位发放,该表
     其余 supply 位零发放(逐位过窗断言)。seed 93 = 修饰局全程存活探针
-    锚(默认局存活锚 37 在修饰局 hp 轨迹移位下 P3r1 战死,不可达锚点
+    基准(默认局存活基准 37 在修饰局 hp 轨迹移位下 P3r1 战死,不可达标记
     (3,7);sim 战斗 = p0.5 固定随机,存活性与持卡无关,种子即存活
     判定量)。"""
     b = _backend(seed=93, env_name=_MOD_ENV)
@@ -190,11 +190,11 @@ def test_modified_env_anchor_follows_field() -> None:
                           for r, kind in enumerate(seq, 1)
                           if kind == 'supply')
         anchor = supplies[-1]
-        assert anchor == (3, 7), f'修饰局锚点现值漂移: {anchor}'
+        assert anchor == (3, 7), f'修饰局标记现值漂移: {anchor}'
         for pos in supplies[:-1]:
             _drive_until_pos(b, pos)
             assert gs.gold.evidence == f'sim:engine:income:p{pos[0]}r{pos[1]}', \
-                f'非锚 supply {pos} 出现尾款笔: {gs.gold.evidence}'
+                f'非锚定 supply {pos} 出现尾款笔: {gs.gold.evidence}'
         _drive_until_pos(b, anchor)
         assert gs.gold.evidence == _GOLD_EV_PREFIX + f'{anchor[0]}r{anchor[1]}', \
             f'修饰局发放位未随场字段现值: {gs.gold.evidence}'
@@ -231,7 +231,7 @@ def test_same_window_pickup_after_front_segment_no_grant(monkeypatch) -> None:
 
 def test_strategy_final_supply_gold_aggregation_matrix() -> None:
     """聚合数值直构(状态容器锁聚合数学):尾款交付 = 30、未持 = 0
-    (数值 = 卡面真值字面锁;0 = 零值零写前提)。helper 锚域单元锁 =
+    (数值 = 卡面真值字面锁;0 = 零值零写前提)。helper 基准域单元锁 =
     kernel/test_node_pos_primitive.py(锁 10,不在此重复)。"""
     assert strategy_final_supply_gold_of(cw4_box(
         active_strategies=(_CARD,))) == 30

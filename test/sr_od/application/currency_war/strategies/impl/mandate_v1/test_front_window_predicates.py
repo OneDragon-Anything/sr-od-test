@@ -8,12 +8,12 @@
 cw_screen_prep.store_plane_table(写 ``gs.node_books``),读端必须同源。
 
 测试面(此前零覆盖):
-1. 表在场真路径:node_books 已登记(位面锚=1)→ 表就绪 True / 前窗帧
+1. 表在场真路径:node_books 已登记(位面标记=1)→ 表就绪 True / 前窗帧
    轮窗(轮 1..首战槽+1)True,出窗 False;
-2. fail-closed 负路径:表缺(裸状态容器)/ 锚不符(旧表滞留 P2)/ state
+2. fail-closed 负路径:表缺(裸状态容器)/ 标记不符(旧表滞留 P2)/ state
    位面非 1 / 脏表(全零战斗词)→ False(前窗行为不发生);
 3. 写入点形状契约:store_plane_table 写入的形状(list[str] 槽序 + 位面
-   锚落 ``gs.node_books``)= 谓词读的形状——写读异源即病灶本身,本测试
+   标记落 ``gs.node_books``)= 谓词读的形状——写读异源即病灶本身,本测试
    单一源对账。
 
 第二部分(原 press_narrow_transition 并入)——现仅存 test_f9 万金油
@@ -89,7 +89,7 @@ def _seed_table(gs: GameState, plane: int = 1,
 
 
 def test_table_ready_true_and_front_window_round_window():
-    """表在场真路径:node_books 已登记(位面锚=1)→ 表就绪 True;前窗帧
+    """表在场真路径:node_books 已登记(位面标记=1)→ 表就绪 True;前窗帧
     = 轮 1..首战槽+1(样例表首战第 3 槽 → 轮 1/2/3 True,轮 4 出窗)。"""
     gs = _gs(plane=1, round_num=1)
     _seed_table(gs)
@@ -105,14 +105,14 @@ def test_table_ready_true_and_front_window_round_window():
 
 
 def test_fail_closed_when_table_or_anchor_or_plane_gate_fails():
-    """fail-closed 负路径:表缺(裸状态容器)/ 锚不符(旧表滞留 P2)/
+    """fail-closed 负路径:表缺(裸状态容器)/ 标记不符(旧表滞留 P2)/
     state 位面非 1 → 两谓词 False(前窗行为不发生,不静默武装)。"""
-    gs_bare = _gs()   # 未写表:plane_node_table / 位面锚均 None
+    gs_bare = _gs()   # 未写表:plane_node_table / 位面标记均 None
     assert predicates.front_window_table_ready(gs_bare) is False
     assert predicates.front_window_frame(gs_bare) is False
 
     gs_stale = _gs()
-    _seed_table(gs_stale, plane=2)   # 表在场但位面锚 = 2(旧表滞留形态)
+    _seed_table(gs_stale, plane=2)   # 表在场但位面标记 = 2(旧表滞留形态)
     assert predicates.front_window_table_ready(gs_stale) is False
     assert predicates.front_window_frame(gs_stale) is False
 
@@ -140,7 +140,7 @@ def test_store_plane_table_shape_feeds_predicates():
                evidence='t', sig=_SIG)
     assert store_plane_table(session, _P1_TABLE, 1) is True
     assert gs.node_books.plane_node_table == _P1_TABLE, '槽序表按写端形状落位'
-    assert gs.node_books.plane_node_table_plane == 1, '位面锚落位'
+    assert gs.node_books.plane_node_table_plane == 1, '位面标记落位'
     assert predicates.front_window_table_ready(gs) is True
     assert predicates.front_window_frame(gs) is True, '写端形状 → 谓词 True'
 

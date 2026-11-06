@@ -125,4 +125,4 @@ def test_floor_applies_to_loss_comp_branch() -> None:
         interest_floor=9)
     assert row.branch == 'loss_comp', '前置:败补支'
     assert row.interest == 9, '败补支息分量同被顶满'
-    assert row.streak == 0, '败补支连胜取 0(现役口径回归锚)'
+    assert row.streak == 0, '败补支连胜取 0(现役口径回归基准)'

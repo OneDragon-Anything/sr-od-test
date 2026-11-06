@@ -55,7 +55,7 @@ _SPEC_ID = '202301'
 
 def _seed_sold_unit(b) -> None:
     """预种一枚 2★1 费到前台 + 清空备战席(sim 开局状态副本自带备战席单位,
-    退款公式的输入须全域受控,恰 3 锚才成立)。"""
+    退款公式的输入须全域受控,恰 3 基准才成立)。"""
     b.gs.observe(b.gs.deployed,
                  _dvs([Unit(char_id=_SOLD[0], star=_SOLD[1])], []),
                  sig=_SIG_OBS)
@@ -73,7 +73,7 @@ def _board_refund(gs) -> int:
 
 def test_pick_jiangben_zengxiao_full_chain_sell_and_free_buys() -> None:
     """锁 5(sim 全链主锁):decl 分派选降本增效 → 出售面(场清空 + 基础
-    公式退款恰 3 = 预种 2★1 费确定性锚)+ 后续前 6 张买零扣金(uses 逐张
+    公式退款恰 3 = 预种 2★1 费确定性基准)+ 后续前 6 张买零扣金(uses 逐张
     递减、第 6 张买毕条目离场)+ 第 7 张恢复扣金;bench 零新增单位(素
     出售无发牌面)。"""
     b = _drive()
@@ -81,7 +81,7 @@ def test_pick_jiangben_zengxiao_full_chain_sell_and_free_buys() -> None:
         gs = b.gs
         _seed_sold_unit(b)
         expected_refund = _board_refund(gs)
-        assert expected_refund == 3, '预种 2★1 费 = 退款恰 3(确定性锚)'
+        assert expected_refund == 3, '预种 2★1 费 = 退款恰 3(确定性基准)'
         gs.write_logic(gs.invest_strategy_opts, _OPTS,
                        produced_by='Test', evidence='t:opts', sig=_SIG)
         gold_before = int(gs.gold.value or 0)

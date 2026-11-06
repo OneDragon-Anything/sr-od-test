@@ -46,7 +46,7 @@ from sr_od.application.currency_war.sim.cw_sim_backend import (
 
 _OPTS = ['大裁员', '躺平', '淘金客']
 _SOLD = ('三月七', 2)   # 预种 2★1 费:cost=1 无手续费,×2 两候选口径同值
-                        #(恰 3 精确锚在状态容器受控的 kernel 只登记不写状态的实现分支锁 4)
+                        #(恰 3 精确基准在状态容器受控的 kernel 只登记不写状态的实现分支锁 4)
 
 
 def _seed_sold_unit(b) -> None:
@@ -58,7 +58,7 @@ def _seed_sold_unit(b) -> None:
 
 def _board_refund(gs) -> int:
     """现板面全额退款预演算(单一源公式与桥同源;开局单位在席,
-    退款断言 = 全板面公式值,非单枚锚)。"""
+    退款断言 = 全板面公式值,非单枚基准)。"""
     front, back = deployed_rows_of_view(gs.deployed.value)
     bench = [s.unit for s in gs.bench.value.slots
              if s.kind == 'unit' and s.unit is not None]

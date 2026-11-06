@@ -218,7 +218,7 @@ def _gs_state(plane: int, round_num: int):
          'p2-unlocked-dual-track'])
 def test_committed_authority_semantics(case: str):
     """committed 权威判定直测(方向层单一派生源;批 3.7 候选-锁定制
-    语义重锚)。
+    语义重立)。
 
     权威序任一成立即 True:①``st.target_comp`` 非空(锁定线槽——定型
     语义 = 锁定线非空,line_and_upgrade §1.6 判定源迁移)②ist.p1_pair

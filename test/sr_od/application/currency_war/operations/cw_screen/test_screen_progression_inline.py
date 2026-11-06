@@ -14,12 +14,12 @@ family.py):
   round_fail 交回外循环重判(文案沿用现役),obs 不装载;
 - **观察装载测试**(表驱动全 11 屏):门 hit → obs{on_screen=True, screen}
   挂实例属性(空决策形态无 report,本测试不涉状态容器);
-- **重入裁决×旗标组合测试**(默认 area 锚 + 自有 OCR 两形状代表 + 免锚
+- **重入裁决×旗标组合测试**(默认 area 识别标志 + 自有 OCR 两形状代表 + 免识别标志
   参数化屏):已发 + 门 miss = 已离开本画面 → success 交回 + 旗标清 +
   推进体零调用;已发/未发 + 门在 = 再推进恰一次 → round_wait 循环
   (不烧节点重试预算);推进体未落地 = round_fail + 旗标不置位;
-- **免锚出口测试**(参数化屏空锚构造):无「已离开」观察信号 → 发出即
-  success(免锚),重入裁决不可达;
+- **免识别标志出口测试**(参数化屏空识别标志构造):无「已离开」观察信号 → 发出即
+  success(免识别标志),重入裁决不可达;
 - **武装箱观察上报接入调用测试**:门 hit + 读数非空 → 观察标准化门 → 状态容器
   ``box_card_names`` 终值 = 标准名表 + 坐标同门双写
   ``box_card_names_xy``(观察期解点);读数空/门 miss/转换失败 → fail
@@ -88,7 +88,7 @@ def _stub_controller(ctx, monkeypatch: pytest.MonkeyPatch) -> list:
 
 #: 屏键 → (模块名, 类名, 构造参数, 门 miss 桩装配(op, monkeypatch))
 _GATE_MISS_ROWS = {
-    'plane_detail':   # 默认 area 锚形状
+    'plane_detail':   # 默认 area 识别标志形状
         ('cw_screen_plane_detail', 'CwScreenPlaneDetail', (),
          lambda op, mp: mp.setattr(op, 'round_by_find_area',
                                    lambda s, sc, a, **k: _Area(False),
@@ -103,22 +103,22 @@ _GATE_MISS_ROWS = {
          lambda op, mp: mp.setattr(op, 'round_by_ocr',
                                    lambda s, t, **k: _Area(False),
                                    raising=False)),
-    'item_detail_popup':    # OCR ∧ 排他锚(OCR 短路即 miss)
+    'item_detail_popup':    # OCR ∧ 排他识别标志(OCR 短路即 miss)
         ('cw_screen_item_detail_popup', 'CwScreenItemDetailPopup', (),
          lambda op, mp: mp.setattr(op, 'round_by_ocr',
                                    lambda s, t, **k: _Area(False),
                                    raising=False)),
-    'emblem_detail_popup':  # 双锚其一(同桩双锚全 miss)
+    'emblem_detail_popup':  # 双识别标志其一(同桩双识别标志全 miss)
         ('cw_screen_emblem_detail_popup', 'CwScreenEmblemDetailPopup', (),
          lambda op, mp: mp.setattr(op, 'round_by_find_area',
                                    lambda s, sc, a, **k: _Area(False),
                                    raising=False)),
-    'role_detail_overlay':  # 双锚其一(同桩双锚全 miss)
+    'role_detail_overlay':  # 双识别标志其一(同桩双识别标志全 miss)
         ('cw_screen_role_detail_overlay', 'CwScreenRoleDetailOverlay', (),
          lambda op, mp: mp.setattr(op, 'round_by_find_area',
                                    lambda s, sc, a, **k: _Area(False),
                                    raising=False)),
-    'shop_card_detail':     # 双锚 AND(同桩即 miss)
+    'shop_card_detail':     # 双识别标志 AND(同桩即 miss)
         ('cw_screen_shop_card_detail', 'CwScreenShopCardDetailPopup', (),
          lambda op, mp: mp.setattr(op, 'round_by_find_area',
                                    lambda s, sc, a, **k: _Area(False),
@@ -226,7 +226,7 @@ def test_observe_loads_obs_on_hit(test_context, monkeypatch,
 
 # ==================== 重入裁决×旗标组合测试 ====================
 
-#: 裁决代表屏:默认 area 锚形状(位面详情)+ 自有 OCR 形状(前进按钮)。
+#: 裁决代表屏:默认 area 识别标志形状(位面详情)+ 自有 OCR 形状(前进按钮)。
 #: advance 桩 = 推进体 ok/miss 程序化回值;clicks = 推进体调用记录。
 _ADJUDICATION_ROWS = {
     'plane_detail': (
@@ -288,7 +288,7 @@ def test_reentry_arbitration_flag_combination(test_context, monkeypatch,
     assert '推进已发,重入观察裁决' in (rs2.status or ''), (
         f'{screen_key}: 推进已发机械交回文案:{rs2!r}')
     assert _calls2 == [1] and op2._advanced_once is True, (
-        f'{screen_key}: 锚在 = 再推进恰一次,旗标保持已发')
+        f'{screen_key}: 识别标志在 = 再推进恰一次,旗标保持已发')
     # ③ 推进体未落地 → round_fail + 旗标不置位
     op3 = _make_op(mod_name, cls_name, test_context)
     monkeypatch.setattr(op3, 'last_screenshot', _FRAME, raising=False)
@@ -302,23 +302,23 @@ def test_reentry_arbitration_flag_combination(test_context, monkeypatch,
 
 def test_anchor_free_advance_succeeds_immediately(test_context,
                                                   monkeypatch) -> None:
-    """免锚出口测试(参数化屏空锚构造 = 免锚形态):无「已离开」观察信号,
-    发出即 success(免锚),重入裁决不可达(已发与否同出口)。
-    红 = 空锚误走重入裁决 / 免锚出口漂移。"""
+    """免识别标志出口测试(参数化屏空识别标志构造 = 免识别标志形态):无「已离开」观察信号,
+    发出即 success(免识别标志),重入裁决不可达(已发与否同出口)。
+    红 = 空识别标志误走重入裁决 / 免识别标志出口漂移。"""
     op = _make_op('cw_screen_prep_locked_return', 'CwScreenPrepLockedReturn',
                   test_context, '货币战争-备战-策略锁定', '')
     monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
-    assert op.entry_ok(_FRAME) is True, '空锚 = 入口观察恒过(免锚形态)'
+    assert op.entry_ok(_FRAME) is True, '空识别标志 = 入口观察恒过(免识别标志形态)'
     monkeypatch.setattr(op, 'round_by_find_and_click_area',
                         lambda s, sc, a, **k: _Area(True), raising=False)
     rs = _run_node(test_context, op, op.act)
     assert rs.is_success and '推进已发(免识别标志)' in (rs.status or ''), (
-        f'免锚发出即 success:{rs!r}')
-    # 已发重入(空锚无裁决信号)→ 同免锚出口,不误判完成/失败
+        f'免识别标志发出即 success:{rs!r}')
+    # 已发重入(空识别标志无裁决信号)→ 同免识别标志出口,不误判完成/失败
     op._advanced_once = True
     rs2 = _run_node(test_context, op, op.act)
     assert rs2.is_success and '推进已发(免识别标志)' in (rs2.status or ''), (
-        f'免锚重入同出口(裁决不可达):{rs2!r}')
+        f'免识别标志重入同出口(裁决不可达):{rs2!r}')
 
 
 def test_area_center_advance_missing_fail(test_context, monkeypatch) -> None:
@@ -397,7 +397,7 @@ def test_box_pick_observe_reports_card_names(test_context, monkeypatch):
 def test_box_pick_observe_gates_skip_report(test_context, monkeypatch,
                                             gate_ok: bool, cards: list,
                                             expect_status: str) -> None:
-    """两道闸测试(现役单 node 首闸/读数闸逐位):锚 miss / 卡名空 →
+    """两道闸测试(现役单 node 首闸/读数闸逐位):识别标志 miss / 卡名空 →
     fail 交回外循环重派(现役文案),状态容器与 obs 均空(report 不调,
     禁盲值进状态容器)。红 = 闸失效 / 盲写状态容器。"""
     op, session = _make_box_pick(test_context, monkeypatch, gate_ok=gate_ok,
@@ -455,7 +455,7 @@ def test_box_pick_lcs_ambiguity_rejection_and_unique_pass(test_context,
     相似救援层多命中拒后落②段),旧形态取注册表序首个 = 静默错配,现判
     round_fail 零写零上报;明确唯一(「击破星甲徽」噪声插入,对击破星徽
     4/4 = 1.0 与次高追击星徽 3/4 = 0.75,差 0.25)②段照常命中 = 拒判
-    不过严回归锚。红 = 歧义静默取最高分回潮 / 拒判误杀唯一命中。"""
+    不过严回归基准。红 = 歧义静默取最高分回潮 / 拒判误杀唯一命中。"""
     # ① 歧义对 → round_fail,名字与坐标同进退零写、obs 不装载
     op, session = _make_box_pick(test_context, monkeypatch, gate_ok=True,
                                  cards=[('穿剌死棘之枪', 500)])

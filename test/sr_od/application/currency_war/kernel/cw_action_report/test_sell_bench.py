@@ -161,7 +161,7 @@ def _report_action(gs, action, executed=None):
 
 
 def test_sell_bench_refund():
-    """卖备战席:bench −该牌 + gold +退款(sell_refund 锚)。"""
+    """卖备战席:bench −该牌 + gold +退款(sell_refund 基准)。"""
     gs = _gs_of(gold=10, shop=[], bench=[_bc('希儿', star=1)])
     _report_action(gs, CwActionSellBenchParam(bench_idx=0, income=3))
     assert gs.gold.value == 13, \

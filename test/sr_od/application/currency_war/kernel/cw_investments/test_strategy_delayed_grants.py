@@ -212,7 +212,7 @@ def test_huishou_category_pool_membership() -> None:
     件派生,派生集禁手抄清单):item_category='简易' 池 = equips_by_
     category('简易') 非空 8 件,逐件 ∈ EQUIPMENTS ∧ ∉ BENCH_ITEM_NAMES
     (装备分道判据前提,采样件禁入占席通道);注册表扩员(新简易件)时
-    池派生自动跟随,本锁只锚「类别池行发放走注册表派生全集」语义。"""
+    池派生自动跟随,本锁只锚定「类别池行发放走注册表派生全集」语义。"""
     from sr_od.application.currency_war.data.cw_equipment_data import (
         EQUIPMENTS,
     )

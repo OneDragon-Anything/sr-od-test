@@ -14,7 +14,7 @@
 - 锁 9:过滤隔离——同触发异载体条目(淘金客 STATE / 采购专员·金
   BATTLEFIELD / 市场干预 ECONOMY-无字段鸭子缺省)零金写。
 
-判读锚:判定 = payload 5 槽非空 card 按 name 计数存在任意名 ≥2、单刷至多
+判读基准:判定 = payload 5 槽非空 card 按 name 计数存在任意名 ≥2、单刷至多
 一笔;发金 = ``gs.observe``(sim 状态副本数值面 = 观察通道,禁 logic 写)。
 """
 from __future__ import annotations

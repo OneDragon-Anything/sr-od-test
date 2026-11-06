@@ -144,7 +144,7 @@ def test_action_key_faces_pinned_per_class():
     assert action_key(CwActionSellBenchParam(bench_idx=0, route_tag='m4_fuel_sell')) == \
         action_key(CwActionSellBenchParam(bench_idx=0))
     assert 'bench_idx' in action_key(CwActionSellBenchParam(bench_idx=0))
-    # CwActionLevelUpParam:cost 与 auth_basis 入键(键粒度零漂移锚,禁静默改 metadata)
+    # CwActionLevelUpParam:cost 与 auth_basis 入键(键粒度零漂移基准,禁静默改 metadata)
     assert action_key(CwActionLevelUpParam(cost=4)) != action_key(CwActionLevelUpParam(cost=5))
     assert action_key(CwActionLevelUpParam(cost=4, auth_basis='arm1')) != \
         action_key(CwActionLevelUpParam(cost=4))

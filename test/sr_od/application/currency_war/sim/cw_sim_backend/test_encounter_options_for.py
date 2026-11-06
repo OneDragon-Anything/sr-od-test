@@ -124,7 +124,7 @@ def test_presentation_write_point_narrows_container() -> None:
 
 def test_no_card_presentation_stays_full_set() -> None:
     """无卡局对照:同 seed 不预种 → 呈现集 = 全四档原样(写点收窄仅在
-    持卡局生效的集成面锚;前置断言本 seed 未自然持有本卡,若 offer 选中
+    持卡局生效的集成面基准;前置断言本 seed 未自然持有本卡,若 offer 选中
     属种子不幸,换 seed 而非改断言)。"""
     b = _backend(seed=7)
     try:

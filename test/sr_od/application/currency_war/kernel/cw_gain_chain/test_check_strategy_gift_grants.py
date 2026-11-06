@@ -216,7 +216,7 @@ def test_leg2_bench_unobserved_no_latch_retry_selfheal() -> None:
 
 
 def test_raider_faction_threshold_is_registry_truth() -> None:
-    """判据档位注册表锚:「激活4」= FACTIONS 巡海游侠 tiers 4 人档已登记
+    """判据档位注册表基准:「激活4」= FACTIONS 巡海游侠 tiers 4 人档已登记
     (表值 4 与注册表档位一致,判据人数非凭空常量)。"""
     from sr_od.application.currency_war.data.cw_factions import FACTIONS
     from sr_od.application.currency_war.kernel.cw_investments import (

@@ -124,21 +124,21 @@ def test_piggy_loss_leg_interest_same_chain(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """败局结算分支同构(T-27 设计 §4.5「胜局同构」半边):败局收入 =
     基础+息(无连胜成分),息分量仍按窗口开快照基数入账;连胜清零
-    (T-6/M15 现役,回归锚)。"""
+    (T-6/M15 现役,回归基准)。"""
     b = _piggy_backend()
     try:
         gs = b.gs
         gold_at_window, counter_at_window = \
             _drive_to_interest_band_piggy_window(monkeypatch, b)
         streak_before = int(gs.streak.value or 0)
-        assert streak_before > 0, '前置胜局连胜在账(回归锚前置态)'
+        assert streak_before > 0, '前置胜局连胜在账(回归基准前置态)'
         assert gs.effects.interest_earned == counter_at_window, \
             '扑满窗开零计数(递延生效)'
         _force_settle(monkeypatch, won=False)
         _start_battle_feed(gs)
         assert gs.effects.interest_earned == counter_at_window + \
             min(gold_at_window // 10, 5), '败局分支息同链(窗口开金口径)'
-        assert int(gs.streak.value or 0) == 0, '连胜清零(现役回归锚)'
+        assert int(gs.streak.value or 0) == 0, '连胜清零(现役回归基准)'
     finally:
         uninstall_backend()
 

@@ -22,8 +22,8 @@ faction/position_pref 不入状态容器形状,消费点经注册表按 char_id 
 
 知识卡节(统一阵容评分迭代重写,2026-11-03):①schema 全 21 线
 need_star 非空;②名字空间 ⊆ 注册表键(手编建表笔误防线
-——写错名 = 分值静默失效);③ CARRY 锚派生(plaza_carry 直用 +
-攻略补全登记)与 CARRY 档 = 单名锚 ∪ core_chars 合流;④旧
+——写错名 = 分值静默失效);③ CARRY 定义件派生(plaza_carry 直用 +
+攻略补全登记)与 CARRY 档 = 单一具名定义件 ∪ core_chars 合流;④旧
 lock_rules 字段/char_lock_hit/strategy_lock_hit 已随「全部即时锁退役」
 整字段退役——替代机制断言 = 投资通道派生(OCR 间隔号形变归一在
 cw_invest_channels 查询口承载)。
@@ -194,7 +194,7 @@ def test_knowledge_card_names_in_registries():
 
 
 def test_carry_anchor_is_core_head():
-    """③ 锚派生口径(plaza-carry-retirement):carry_anchor == core_chars[0]
+    """③ 定义件派生口径(plaza-carry-retirement):carry_anchor == core_chars[0]
     (首位=定义件契约)逐线成立;过渡组合条目 named_units == core 全员
     (身份驱动判据,过渡语义取真条目——named_units docstring 契约)。"""
     for comp in COMP_LIBRARY:
@@ -204,8 +204,8 @@ def test_carry_anchor_is_core_head():
 
 
 def test_carry_set_union_anchor_and_core():
-    """③' CARRY 档 = 单名锚 ∪ core_chars 合流(12 号篇 §1.1 持有证据按
-    「持有任一档内成员计 CARRY 档」消费)——core 全员进档(单名锚窄化会把
+    """③' CARRY 档 = 单一具名定义件 ∪ core_chars 合流(12 号篇 §1.1 持有证据按
+    「持有任一档内成员计 CARRY 档」消费)——core 全员进档(单一具名定义件窄化会把
     core 成员错档到插件档)。"""
     for comp in COMP_LIBRARY:
         cs = carry_set(comp)
@@ -226,7 +226,7 @@ def test_lock_rule_machinery_retired_replaced_by_channels():
     assert not hasattr(cw_comps, 'ENV_COMP_AFFINITY')
     assert not hasattr(cw_comps, 'AUGMENT_COMP_AFFINITY')
     assert not hasattr(cw_comps, 'augment_affinity')
-    # 替代机制正面锚:旧策略型登记语义(飞光→景元仙舟/黑塔纪元→大黑塔)
+    # 替代机制正面基准:旧策略型登记语义(飞光→景元仙舟/黑塔纪元→大黑塔)
     # 由定义卡通道承载;OCR 形变(•→·)归一命中。
     from sr_od.application.currency_war.kernel.cw_comps import get_comp
     from sr_od.application.currency_war.kernel.cw_invest_channels import (

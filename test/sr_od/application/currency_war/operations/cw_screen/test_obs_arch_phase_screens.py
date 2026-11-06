@@ -39,7 +39,7 @@ test_plane_intel_pipeline.py,本文件不辖。
   退场裁决 = 外循环重派后的下一次入口门;战斗等待/等待1-1 无裁决旗标。
   红 = 裁决被转录进观察 node。
 - **观察上报接入调用测试**(两 node 形态屏):观察 node 稳定帧一次读
-  → report 经屏文件落状态容器(状态容器终值)+ obs 挂实例属性;投资策略入口锚
+  → report 经屏文件落状态容器(状态容器终值)+ obs 挂实例属性;投资策略入口识别标志
   复探窗(ADR-0529 有界自愈)语义逐位(复探窗内自愈、超窗 round_retry
   消耗观察 node 预算)。位面过渡 = 实体链写(链状态容器终值双写);武装箱/
   未达上限/等待1-1 = 占位接入调用(现役零容器写点,统一形态)。
@@ -299,7 +299,7 @@ def test_invest_env_observe_standardization_gate(test_context,
     注册数据,状态容器值域 = 标准注册名):
     - 可转换名(全角冒号形变走归一精确命中;仅 LCS 可命中的单字误读形变)
       → 状态容器与 obs 存标准名(含「彩虹吋代」3/4 恰达阈值命中 = 拒判不过严
-      回归锚);
+      回归基准);
     - 候选含转换失败名(乱串,注册表零重叠)→ 观察 round_fail,零写零
       上报(obs 不装载);
     - 两候选命中同一注册名(选项互斥屏重复名 = 必有误读)→ round_fail;
@@ -390,7 +390,7 @@ def test_invest_env_empty_opts_fail_not_blindfire(test_context,
     from sr_od.application.currency_war.kernel.cw_screen_report.invest_env import (
         CwScreenInvestEnvObs as _ObsT,
     )
-    # 装载「锚在但候选读空」的 obs(observe 成功形态;读缺发生在读链半)
+    # 装载「识别标志在但候选读空」的 obs(observe 成功形态;读缺发生在读链半)
     op._obs = _ObsT(hit=True, options=[])
     rs_empty = _run_node(test_context, op, op.act)
     assert not rs_empty.is_success and '读缺' in (rs_empty.status or ''), (
@@ -464,7 +464,7 @@ def _make_strategy(test_context, monkeypatch: pytest.MonkeyPatch,
                    entry_ok: bool = True, anchor_hit: bool = True):
     """投资策略真类装配(生产构造走 __init__ = 注册表在位)。
 
-    桩面 = 入口锚/截屏/候选读/计数读/刷新点击 + 派发动作 op 桩
+    桩面 = 入口识别标志/截屏/候选读/计数读/刷新点击 + 派发动作 op 桩
     (pick-op-unify 批起选卡+确认机械链迁入 ``CwActionPickInvestOp``;
     刷新臂 ``safe_click`` 留守画面 op,经桩记录)。``_ensure_entry_screen``
     方法级桩(复探窗语义归 ADR-0529 既有测试,本文件不辖)。返回
@@ -589,7 +589,7 @@ def test_invest_strategy_empty_opts_fail_not_blindfire(
     monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
     monkeypatch.setattr(op, 'last_screenshot', _FRAME, raising=False)
     monkeypatch.setattr(op, '_entry_anchor_hit', lambda screen: False)
-    # 装载「锚在但候选读空」的 obs(observe 成功形态;读缺发生在读链半)
+    # 装载「识别标志在但候选读空」的 obs(observe 成功形态;读缺发生在读链半)
     from sr_od.application.currency_war.kernel.cw_screen_report.invest_strategy import (
         CwScreenInvestStrategyObs as _ObsT,
     )
@@ -688,7 +688,7 @@ def test_strategy_refresh_terminal_handback(test_context, monkeypatch) -> None:
 
 def test_invest_strategy_observe_reprobe_and_report(test_context,
                                                     monkeypatch) -> None:
-    """投资策略观察 node 测试(两 node 形态):入口锚复探窗(ADR-0529 有界
+    """投资策略观察 node 测试(两 node 形态):入口识别标志复探窗(ADR-0529 有界
     自愈)语义逐位——复探窗内自愈、超窗 = round_retry(现役文案,消耗观察
     node 预算的既有 retry 面);在窗 → 一次读全 → report 落状态容器
     ``invest_strategy_opts``(状态容器终值)+ 逐卡刷新剩余 ``strategy_refresh_
@@ -909,7 +909,7 @@ def test_clean_boss_names_lcs_ambiguity_rejection_and_unique_pass() -> None:
     歧义 = 转换失败返 None,禁直接取最高分——「造梦互动影业」对造梦
     兄弟影业/造梦互动娱乐同分 4/6 ≈ 0.667(共享词素族跨名借分),旧
     形态取注册表序首个 = 静默错配;明确唯一(「银甲武装公私」对银甲
-    武装公司 5/6 ≈ 0.833,次高不过阈)照常命中 = 拒判不过严回归锚。
+    武装公司 5/6 ≈ 0.833,次高不过阈)照常命中 = 拒判不过严回归基准。
     红 = 歧义取最高分回潮 / 拒判误杀唯一命中。"""
     from sr_od.application.currency_war.obs import cw_briefing_obs as cbo
     assert cbo.clean_boss_names_by_lcs(['造梦互动影业']) is None, (
@@ -923,7 +923,7 @@ def test_clean_boss_names_lcs_ambiguity_rejection_and_unique_pass() -> None:
 
 def _make_boss(test_context, monkeypatch: pytest.MonkeyPatch, *,
                area_hit: bool, ocr_texts: list[str] | None = None):
-    """BOSS 简报真类装配(两 node 形态)。桩面 = 横幅 area 锚/片段判别 OCR/
+    """BOSS 简报真类装配(两 node 形态)。桩面 = 横幅 area 识别标志/片段判别 OCR/
     空白区 center/点击记录器。返回 (op, clicks)。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_boss_briefing as bb,
@@ -955,8 +955,8 @@ def _make_boss(test_context, monkeypatch: pytest.MonkeyPatch, *,
 
 
 def test_boss_briefing_misread_takeover(test_context, monkeypatch) -> None:
-    """误读帧(「强敌米」)两 node 形态仍接管:area 锚 miss + 片段判别命中 →
-    观察判横幅在(obs 装载)→ act 点空白路径(P4R3 锚加固语义,判别单一源
+    """误读帧(「强敌米」)两 node 形态仍接管:area 识别标志 miss + 片段判别命中 →
+    观察判横幅在(obs 装载)→ act 点空白路径(P4R3 识别标志加固语义,判别单一源
     消费同源)。红 = 迁移把片段判别兜底写丢 / 点空白动作断流。"""
     op, clicks = _make_boss(test_context, monkeypatch, area_hit=False,
                             ocr_texts=['强敌米', '点击空白处继续',
@@ -971,7 +971,7 @@ def test_boss_briefing_misread_takeover(test_context, monkeypatch) -> None:
 
 def test_boss_briefing_observe_gate_and_report_wiring(
         test_context, monkeypatch) -> None:
-    """BOSS 简报观察 node 测试(两 node 形态):横幅已退(area 锚 miss +
+    """BOSS 简报观察 node 测试(两 node 形态):横幅已退(area 识别标志 miss +
     片段判别 miss)→ 早退 success 交回外循环重判(零点击,obs 不装载);
     横幅在 → obs 装载 + report 接入调用恰一次(match/gs 在场;boss 类型直定,
     目标 = 现 hist)。
@@ -1110,13 +1110,13 @@ def _make_bwait(test_context, monkeypatch: pytest.MonkeyPatch,
 
 
 # (原 test_battle_wait_execute_terminal_exit_new_path「B2-③ 主门经
-#  execute() 走新路径:大厅终局锚 → terminal_lobby 早退」删:装端口驱动
+#  execute() 走新路径:大厅终局识别标志 → terminal_lobby 早退」删:装端口驱动
 #  的出口门随并存窗收尾整删;出口门生产那份由下方完成白名单测试承担。)
 
 
 def test_battle_wait_normal_exits(test_context, monkeypatch) -> None:
     """正常出口两段并一(单路径驱动,共享体断言不变)。
-    [完成白名单出口] B2-③ 出口门:完成白名单锚命中 →
+    [完成白名单出口] B2-③ 出口门:完成白名单识别标志命中 →
     back_to_loop 交回循环分发(装配点分流随基类退役,wait() 单路径直驱)。
     [结算分支逐位] D-94 读点(结算观察半直写)先于「继续挑战」点击
     (时序红线);C-1 新帧计数。
@@ -1489,7 +1489,7 @@ def test_deploy_not_full_observe_gate_and_placeholder_report(
 
 def _make_wait_one_one(test_context, monkeypatch: pytest.MonkeyPatch, *,
                        anchor_hit: bool):
-    """等待1-1 真类装配(两 node 形态)。桩面 = 备战锚/存图替身。"""
+    """等待1-1 真类装配(两 node 形态)。桩面 = 备战识别标志/存图替身。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_wait_one_one as wom,
     )
@@ -1505,16 +1505,16 @@ def _make_wait_one_one(test_context, monkeypatch: pytest.MonkeyPatch, *,
 
 def test_wait_one_one_anchor_hit_and_poll_round_wait(
         test_context, monkeypatch) -> None:
-    """等待1-1 两 node 形态测试(纯等待型,现役 handle 逐位映射):锚命中 →
+    """等待1-1 两 node 形态测试(纯等待型,现役 handle 逐位映射):识别标志命中 →
     观察轮 obs 装载 + 占位 report 接入调用恰一次(现役零容器写点,统一形态
     占位)→ round_success 进决策动作 node → act 零动作 success 交回
-    ('1-1 备战就绪' 终态语义同点);锚 miss 且未超时 → 观察轮 round_wait
+    ('1-1 备战就绪' 终态语义同点);识别标志 miss 且未超时 → 观察轮 round_wait
     轮询(自环,不吃 retry 预算,轮询轮不装载 obs)。
     红 = 轮询改计预算 retry / 终态语义漂移 / 接入调用断流。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_wait_one_one as wom,
     )
-    # ① 锚命中:观察轮 obs + 占位 report 恰一次 → act 零动作交回
+    # ① 识别标志命中:观察轮 obs + 占位 report 恰一次 → act 零动作交回
     op, _shots = _make_wait_one_one(test_context, monkeypatch, anchor_hit=True)
     _reports: list = []
     monkeypatch.setattr(wom, 'report_screen_wait_one_one_obs',
@@ -1523,24 +1523,24 @@ def test_wait_one_one_anchor_hit_and_poll_round_wait(
                         SimpleNamespace(session=SimpleNamespace(), gs=object()),
                         raising=False)
     rs = _run_node(test_context, op, op.observe)
-    assert rs.is_success, f'锚命中观察轮 success 进 act:{rs!r}'
+    assert rs.is_success, f'识别标志命中观察轮 success 进 act:{rs!r}'
     assert op._obs is not None and op._obs.on_screen is True, 'obs 挂实例属性'
     assert len(_reports) == 1 and _reports[0] is op._obs, (
         f'占位 report 接入调用恰一次(统一形态调用):{_reports!r}')
     rs_act = _run_node(test_context, op, op.act)
     assert rs_act.is_success and rs_act.status == '1-1 备战就绪', (
-        f'锚命中终态语义(act 零动作交回):{rs_act!r}')
-    # ② 锚 miss 且未超时:观察轮 round_wait 轮询(不吃 retry 预算)
+        f'识别标志命中终态语义(act 零动作交回):{rs_act!r}')
+    # ② 识别标志 miss 且未超时:观察轮 round_wait 轮询(不吃 retry 预算)
     op_w, _s_w = _make_wait_one_one(test_context, monkeypatch, anchor_hit=False)
     rs_w = _run_node(test_context, op_w, op_w.observe)
     assert rs_w.result == OperationRoundResultEnum.WAIT, (
-        f'锚 miss = 轮询等待(不吃 retry 预算):{rs_w!r}')
+        f'识别标志 miss = 轮询等待(不吃 retry 预算):{rs_w!r}')
     assert op_w._obs is None, '轮询轮不装载 obs'
 
 
 def test_wait_one_one_timeout_leaves_evidence(test_context,
                                               monkeypatch) -> None:
-    """超时兜底:假时钟快进,锚一直不现 → 观察轮早退 fail 留证(存图替身
+    """超时兜底:假时钟快进,识别标志一直不现 → 观察轮早退 fail 留证(存图替身
     承接,不落真实 .debug),轮询至上界才退出(非首轮放弃)。
     红 = 超时判定丢失 / 提前放弃 / 留证丢失。"""
     from sr_od.application.currency_war.operations.cw_screen import (

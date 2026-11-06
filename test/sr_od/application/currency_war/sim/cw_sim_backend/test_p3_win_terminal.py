@@ -5,7 +5,7 @@
 (3-7 boss 结算存活)= 胜利终局(披露键 `run_complete`);hp 归零 =
 败局语义不变。测试面:
 
-- 胜利终局:默认局全链走完位面 3(seed 37 探针锚)→ done ∧
+- 胜利终局:默认局全链走完位面 3(seed 37 探针基准)→ done ∧
   `DISCLOSURE_RUN_COMPLETE` 披露 ∧ 退役键 `DISCLOSURE_P3_UNOBSERVED`
   不再现 ∧ 终点 (3,7) ∧ hp > 0;
 - 败局:结算恒败桩 → hp 归零死亡分支 → done ∧ 无 run_complete(胜负

@@ -261,8 +261,8 @@ def test_seele_quantum_final_tiers() -> None:
     本体,本测试锁结构不被手改漂移):
     档 0 = 量子4+贝洛伯格4 纯 AND(终局完全体,双修即唯一主流终局形态)、
     档 1 = 战技点2/治疗2(实证 53/67 与 36/67,加分层不进成型判定)、
-    flex 收敛为盛会之星/列车同行、点名件 = 锚希儿(carry_anchor;
-    required_deployed 已退役,「希儿在场」合取支由锚体系承载——fp
+    flex 收敛为盛会之星/列车同行、点名件 = 定义件希儿(carry_anchor;
+    required_deployed 已退役,「希儿在场」合取支由定义件体系承载——fp
     折条/部署 named 层同式消费)。"""
     comp = get_comp('希儿量子')
     assert comp.faction_reqs == {

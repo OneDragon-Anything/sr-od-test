@@ -26,7 +26,7 @@
    读不出 = 未联动)。
 
 fixture 帧:screens/货币战争-位面详情/位面详情全屏.png(详情屏判定)、
-screens/货币战争-备战/shop_closed_a8_start.webp(备战双锚语料帧)。
+screens/货币战争-备战/shop_closed_a8_start.webp(备战双识别标志语料帧)。
 纹章风头像证据帧仅存档备查,不进测试面。
 """
 from __future__ import annotations

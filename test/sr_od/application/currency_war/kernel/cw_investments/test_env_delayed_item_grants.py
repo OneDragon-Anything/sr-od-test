@@ -74,7 +74,7 @@ def test_validator_strategy_orphan_key_raises(monkeypatch) -> None:
 def test_validator_env_orphan_key_still_raises(monkeypatch) -> None:
     """构建校验①环境道半边回归(键域扩展不缩环境域):环境孤儿键 →
     ValueError(存量 kernel/test_cw_investments.py 同款锁的策略道批
-    回归锚)。"""
+    回归基准)。"""
     monkeypatch.setitem(
         cw_investments.ENV_DELAYED_ITEM_GRANTS, '不存在环境Y',
         cw_investments.EnvDelayedItemGrant(item='惊喜盒',

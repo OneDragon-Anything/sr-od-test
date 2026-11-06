@@ -13,9 +13,9 @@ R2 息线 floor / D 牌期望边界 / ev_arm 值域(aggregate_economy 分型登�
 退役面(审计判决删除):金净守恒代表测试(test_gold_net_conserved_buy_sell_
 roundtrip,连 simulate import——其 simulate 全仓零生产消费,金钱面
 = 实机结算对账 + gain_chain 活转移函数直测(test_gain_chain))、利息/streak 真值
-(src 零调用)、区分力非零证明锚(元测试)、refresh_prob 查表
-一致性锚(缺级→0 分支并入 D 牌期望边界)、xp 兜底支钳 0 单测(并入 joy
-真值表一行)、pair 断供驱逐墓碑、ADR-0150 base 层全量计数锚(纯数据计
+(src 零调用)、区分力非零证明基准(元测试)、refresh_prob 查表
+一致性基准(缺级→0 分支并入 D 牌期望边界)、xp 兜底支钳 0 单测(并入 joy
+真值表一行)、pair 断供驱逐墓碑、ADR-0150 base 层全量计数基准(纯数据计
 数;其「过继测试禁删」声明随审计判决解除,335/83 计数归编 #15
 test_cw_data_registry 待承接)。
 
@@ -238,7 +238,7 @@ def patched_registry(monkeypatch):
 
 
 # 区分力 fixture(§E6 义务:每聚合型字段 ≥1 个能区分登记算子与同型
-# 备选算子的构造;即各字段聚合值的「值域表」锚)。
+# 备选算子的构造;即各字段聚合值的「值域表」基准)。
 def test_half3_distinguish_fixtures(patched_registry) -> None:
     cases = [
         # (字段, 两成员值, 登记算子期望)
@@ -354,7 +354,7 @@ class TestR2InterestFloor:
         return comp, sess
 
     def test_cap_resolved_parameterizes_floor(self):
-        """cap 语境测试(息线表锚):g*=10×cap_resolved 随 session 覆写参数
+        """cap 语境测试(息线表基准):g*=10×cap_resolved 随 session 覆写参数
         化——cap=10(息律投资语境)下金 80 < 100+ρ ⇒ 拒(50 非域常数,
         息线 floor「拍常数」禁案的判别测试)。
         (金钱类收缩:floor 门过下界/贴线拒刷两行按裁决不搬,git 可复活。)"""
@@ -434,7 +434,7 @@ def test_next_interest_line_tier_boundaries() -> None:
     """凑息止盈目标线边界(kernel next_interest_line 单一源):档内金取
     下一档线(18→20/0→10);跨档后按新档推进(20→30);达满档(50,
     cap=5)与买断制(cap≤0)= 无档可跨 → None(凑息零收益,消费位
-    必须零发出)。修复锚:旧判据卖到饱和线 g*=50,P1 早期金 10~40 永远
+    必须零发出)。修复基准:旧判据卖到饱和线 g*=50,P1 早期金 10~40 永远
     凑不齐 → 同档零收益卖光 bench(20261016 复盘缺陷①)。"""
     from sr_od.application.currency_war.kernel.cw_economy import (
         next_interest_line,

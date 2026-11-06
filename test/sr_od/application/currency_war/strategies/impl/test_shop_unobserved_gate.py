@@ -172,7 +172,7 @@ def test_default_and_anchored_states_pass_gate_to_core(monkeypatch):
 # ===== 测试3 锚定置位(kernel reconcile_tracking 对账成功点)=====
 
 def test_reconcile_bench_writeback_marks_observed():
-    """bench 侧屏幕真值对账成功 → 状态容器观察锚 True(唯一生产置位点;
+    """bench 侧屏幕真值对账成功 → 状态容器观察锚定标志 True(唯一生产置位点;
     3.2:锚定语义 = 主域已按屏幕真值对账,置位点不变)。
     (载体 = P6 直产 BenchView;断言语义零变。)"""
     session = StrategySession()

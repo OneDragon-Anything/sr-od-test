@@ -8,7 +8,7 @@ obs/cw_settlement_obs.py 的息行解析族 + 来源 B/C 推算单一源;同文�
   无息整帧 webp 提交测试仓,走生产读链 = 建档 area 裁剪 + 放大 OCR):
   有息帧息值/行序(基础奖励/利息/连胜,息在连胜之上)、无息帧息行整行
   缺席 = 零值形态;
-- **纯函数三态**(合成 token 面):面板锚不在 → None 不计数;息行在
+- **纯函数三态**(合成 token 面):面板识别标志不在 → None 不计数;息行在
   数值失读 → None(0 是合法读数不冒认);标签粘连数值形态;
 - **推算公式锁**(§4.8②,来源 B/C 计数单一源):息 = interest(基座金,
   resolved cap) + flat,策略经注册表名注入;基座 None → None 宁缺;
@@ -45,7 +45,7 @@ _SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep')
 
 def test_settle_interest_panel_real_frames(test_context) -> None:
     """真帧锁(T-27 设计 §4.8①):有息帧息值 2、无息帧息行整行缺席 =
-    0(锚在)。两帧各 OCR 一次(慢计算共享)。fixture 缺失 skip 不
+    0(识别标志在)。两帧各 OCR 一次(慢计算共享)。fixture 缺失 skip 不
     error(缺帧恢复自动转绿)。
 
     断言面刻意只锁息值两态(计数判据本体):面板分量行(总览/基础/
@@ -61,26 +61,26 @@ def test_settle_interest_panel_real_frames(test_context) -> None:
     items2 = read_settle_interest_panel(test_context, img2)
     assert parse_settle_interest(items2) == 2, '息行读数(标签+独立数值形态)'
     assert any('金币总览' in (getattr(it, 'data', '') or '')
-               for it in items2), '面板锚在(读链前置态)'
+               for it in items2), '面板识别标志在(读链前置态)'
     # 无息帧(1-1 奖励胜局,息 0 息行整行缺席)
     img0 = cv2_utils.read_image(str(_FIX_INTEREST0))
     items0 = read_settle_interest_panel(test_context, img0)
-    assert parse_settle_interest(items0) == 0, '锚在息行缺席 = 零值形态'
+    assert parse_settle_interest(items0) == 0, '识别标志在息行缺席 = 零值形态'
 
 
 def test_settle_interest_parse_synthetic_states() -> None:
-    """纯函数三态(合成 token 面,T-27 设计 §4.8①):面板锚不在 → None
+    """纯函数三态(合成 token 面,T-27 设计 §4.8①):面板识别标志不在 → None
     不计数;息行在数值失读 → None(宁缺,0 是合法读数不冒认);标签
     粘连数值形态(「利息5」)→ 5。token 属性面 = MatchResult 消费面。"""
 
     def _tok(data: str, x: int = 40, y: int = 0, w: int = 60, h: int = 30):
         return SimpleNamespace(data=data, x=x, y=y, w=w, h=h)
 
-    # 锚不在(败局页/异常帧形态)→ None
+    # 识别标志不在(败局页/异常帧形态)→ None
     assert parse_settle_interest([]) is None
     assert parse_settle_interest([_tok('基础奖励'), _tok('利息'),
                                   _tok('2', x=1000)]) is None
-    # 锚在、息行在、数值 token 缺(失读)→ None 不冒认 0
+    # 识别标志在、息行在、数值 token 缺(失读)→ None 不冒认 0
     anchor_only = [_tok('获得金币总览'), _tok('利息', y=218)]
     assert parse_settle_interest(anchor_only) is None
     # 粘连形态:标签 token 尾粘数值(「利息5」;允许夹图标类非数字)
@@ -97,7 +97,7 @@ def test_settle_interest_parse_synthetic_states() -> None:
 
 def test_estimate_node_interest_formula() -> None:
     """推算公式锁(T-27 设计 §4.8②,来源 B/C 计数单一源):息 =
-    interest(基座金, resolved cap) + flat;策略经注册表名注入(值锚
+    interest(基座金, resolved cap) + flat;策略经注册表名注入(值识别标志
     注册表直调,禁裸数字);基座 None → None 宁缺;买断制 cap 0 不被
     真值折叠(买断制+狸财经狸 = 每节点 2,若折叠回缺省 5 会算出 7)。"""
     gs_plain = cw4_box(gold=100, active_env='公司契约')
@@ -143,7 +143,7 @@ def test_settle_merged_areas_real_frames(test_context, monkeypatch) -> None:
     for name, img in (('ended', ended), ('win', win)):
         # 金币总览面板带(生产读链:迁入 area 裁剪 + 2x 放大 OCR)词面。
         # 子串判断:连胜带 ×N 次数修饰粘连成单 token(实测「连胜×0」),
-        # 词面存在性按子序列会误杀,与既有锚断言同款子串。
+        # 词面存在性按子序列会误杀,与既有识别标志断言同款子串。
         items = read_settle_interest_panel(test_context, img)
         texts = [getattr(it, 'data', '') or '' for it in items]
         for word in ('基础奖励', '利息', '连胜'):

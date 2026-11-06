@@ -75,7 +75,7 @@ class DecideCfg:
 
 def cw4_comp(name: str | None = None):
     """测试 comp:name=None = 注册表首个带 core_chars 的套(六件套家族
-    缺省锚);传名 = 具名套(血线族/spend_face 的 ``'列车同行·反震'``)。"""
+    缺省基准);传名 = 具名套(血线族/spend_face 的 ``'列车同行·反震'``)。"""
     if name is None:
         names = [c.name for c in COMP_LIBRARY
                  if getattr(c, 'core_chars', None)]

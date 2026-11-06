@@ -72,7 +72,7 @@ def test_dual_source_reconciliation() -> None:
 
 
 def test_data_row_id_anchor() -> None:
-    """数据行锚对拍:base 溯源 id 与卡名一致(表键 ↔ base 溯源;
+    """数据行基准对拍:base 溯源 id 与卡名一致(表键 ↔ base 溯源;
     数据行 = 卡面冻结权威版本)。"""
     from sr_od.application.currency_war.kernel.cw_investments import (
         INVESTMENT_STRATEGIES,
@@ -90,7 +90,7 @@ def test_validator_orphan_key_negative(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """负例·孤儿键(漂移哨①):表键不在 INVESTMENT_STRATEGIES →
     ValueError(版本改名/移除后静默失联;键用注册表外幻影名——已登记卡
-    名不可作表外锚)。"""
+    名不可作表外基准)。"""
     monkeypatch.setitem(STRATEGY_PLANE_BOSS_GRANTS, '不存在的卡',
                         (2, 'boss', _CHAR, 1))
     with pytest.raises(ValueError, match='孤儿键'):

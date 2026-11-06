@@ -223,7 +223,7 @@ def test_node_advance_decl_normalizes_both_triggers():
     上报的声明同形(trigger 恒 'node_advance',next_screen 同按推导
     ——归一不改推进/去重逻辑,详设 world-decl.md §2 表 #1/#2;
     supply_finish = 补给节点出战完成语义,2026-10-29 流程模型对齐:
-    补给选完回备战弹店零推进,出战动作才完成节点)。桩 gs 锚 (1,1)
+    补给选完回备战弹店零推进,出战动作才完成节点)。桩 gs 锚定 (1,1)
     → 推进 (1,2) reward 节点:非 1-1 → 商店档(回备战自动弹店)。"""
     for trigger in ('settle_confirm', 'supply_finish'):
         gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
@@ -297,7 +297,7 @@ def test_start_battle_decl_skip_substate_exit():
     session = SimpleNamespace()
     game_state_of(session).effects.register_strategy(
         STRATEGY_EFFECTS['免战牌'], acquired_key=None)
-    # 递减出口(仅首 case 带 session,次数 2→1):锚 (1,3) → 后继 (1,4)
+    # 递减出口(仅首 case 带 session,次数 2→1):锚定 (1,3) → 后继 (1,4)
     # 战斗 → 开商店档
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     observe_node_anchor(gs, (1, 3), trigger_screen='货币战争-备战',

@@ -11,7 +11,7 @@ xiangyin.md(定稿)§4 锁 3 + REVIEW-T135 §四 ④。卡面官方原文:「每
 - 数值单一源:gold_per_3star_merge = 5(卡面明写);
 - 引擎闭集落位:gold_per_3star_merge ∈ 引擎单字段桶
   (is_economy_engine 判据现值即真,持续通道零新增动作);
-- 双向隔离锚:本卡 payload 无 refresh_per_compose 字段(缺省 0,
+- 双向隔离基准:本卡 payload 无 refresh_per_compose 字段(缺省 0,
   与武力刷新刷新腿天然隔离)/ 武力刷新 payload 无本卡字段(反向
   同构)——字段判别双向鸭子缺省的行为面归
   test_check_strategy_star_merge_gold 互证锁。
@@ -47,7 +47,7 @@ def test_star_merge_registry_value_and_engine_bucket() -> None:
     """数值单一源 + 引擎闭集:gold_per_3star_merge = 5(卡面明写,防
     表外安静返 0);字段在引擎单字段桶(持续通道,is_economy_engine 真);
     附双字段互斥缺省(本卡 refresh_per_compose 缺省 0 / 武力刷新
-    gold_per_3star_merge 缺省 0——两条效果条目字段判别隔离的注册面锚)。"""
+    gold_per_3star_merge 缺省 0——两条效果条目字段判别隔离的注册面基准)。"""
     eff = STRATEGY_ECONOMY['星星相印']
     assert eff.gold_per_3star_merge == 5, '合成 3 星 +5(卡面明写)'
     assert eff.refresh_per_compose == 0, '本卡无刷新腿字段(缺省 0)'

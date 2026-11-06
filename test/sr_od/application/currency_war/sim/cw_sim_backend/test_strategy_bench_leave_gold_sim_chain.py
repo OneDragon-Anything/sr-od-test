@@ -67,7 +67,7 @@ def _setup(seed: int = 31, *, grant: bool = True):
 
 def _bench_leave_view() -> BenchView:
     """覆盖席视图:s0 = 1星花火、s1 = 1星火花、余空槽(明细 evidence 的
-    槽位坐标系锚)。"""
+    槽位坐标系基准)。"""
     slots = [
         BenchSlot(kind='unit',
                   unit=Unit(char_id='花火', star=1, equips=[])),

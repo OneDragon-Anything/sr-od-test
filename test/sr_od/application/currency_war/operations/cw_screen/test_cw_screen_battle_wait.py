@@ -349,7 +349,7 @@ def test_strategy_level_grant_fires_on_settlement_level_asset(
 
     op._record_round_outcome(_FRAME)
 
-    # 防假绿锚:fake 结算路径真实携带 level 真值且走了真覆盖写端
+    # 防假绿基准:fake 结算路径真实携带 level 真值且走了真覆盖写端
     assert gs.level.value == 9 and gs.level.source == 'observation', \
         '结算覆盖写端必须真实落账(前置态缺失 = 断言恒绿假形态)'
     assert gs.equips.value == ['财富宝钻'], f'未发放: {gs.equips.value!r}'

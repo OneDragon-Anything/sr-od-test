@@ -5,14 +5,14 @@ run_20260915_054718 §5/§8 候选2 实锤「回退即采新」让同名多星�
 星读抖动直进主账(3★ 合成线整局被污染,episode ×3 全部「连续 2 帧」
 形态恰好吃掉旧 N=2 确认门)。现行口径 = 槽位锚定 + 两帧一致才采新:
 单帧差保旧写账 + 抖动台账行(surface='star');升/降同门、银狼升费形态无
-豁免(门按锚判定与名无关);合成特效窗内星读不可信(冻结,不计两帧);
-锚上身份变换(换人/落新单元)星级随身份直采。缺读帧打断两帧序列
-(缺读 = 证据中断):候选锚部分缺读/整帧双空读(守卫早退)即清除,
+豁免(门按槽位标记判定与名无关);合成特效窗内星读不可信(冻结,不计两帧);
+槽位标记上身份变换(换人/落新单元)星级随身份直采。缺读帧打断两帧序列
+(缺读 = 证据中断):候选槽位标记部分缺读/整帧双空读(守卫早退)即清除,
 同值复现须重新连续两帧。载体 = P6 观察链直产状态容器形状(备战席 BenchView /
 上场位 DeployedView,语义断言自载体迁移零变)。
 
 (tracked 第二账退役):比较基线 = 主域席位视图
-(bench/deployed,锚 = (子表, 下标));门后副本经返回值交 director 观察
+(bench/deployed,槽位标记 = (子表, 下标));门后副本经返回值交 director 观察
 写主域——本文件 _recon 辅助 = 生产 director 环路的测试镜像
 (reconcile → 门后视图 observe 落主域,两帧间账面与生产同源)。
 
@@ -133,7 +133,7 @@ def _bench_sig(session) -> list:
 
 
 def _deployed_sig(session) -> list:
-    """主域 deployed 值签名((名, 排, 星);锚 = (排, 子表下标+1))。"""
+    """主域 deployed 值签名((名, 排, 星);槽位标记 = (排, 子表下标+1))。"""
     view = game_state_of(session).deployed.value
     out: list = []
     for row, sub in (('front', view.front_slots if view else None),
@@ -186,7 +186,7 @@ def test_star_change_needs_two_frame_consistency(monkeypatch):
 
 def test_same_name_multi_star_slot_anchored_no_cross_star(monkeypatch):
     """同名多星并存槽位锚定:单槽抖动不串邻槽;真换位(整表重排)两帧
-    按新槽位落账且全程不串星;换人(锚上身份变)星级随身份直采不辖门。"""
+    按新槽位落账且全程不串星;换人(槽位标记上身份变)星级随身份直采不辖门。"""
     _spy_conflicts(monkeypatch)
     session = StrategySession()
     _seed(session, bench=_view((4, '不死途', 1), (6, '不死途', 2),
@@ -218,7 +218,7 @@ def test_same_name_multi_star_slot_anchored_no_cross_star(monkeypatch):
 
 
 def test_star_gate_name_agnostic_silver_wolf(monkeypatch):
-    """门按锚判定与名无关(银狼升费形态无豁免):单帧保旧,两帧采新。"""
+    """门按槽位标记判定与名无关(银狼升费形态无豁免):单帧保旧,两帧采新。"""
     _spy_conflicts(monkeypatch)
     session = StrategySession()
     _seed(session, bench=_view((1, '银狼', 2)))
@@ -230,7 +230,7 @@ def test_star_gate_name_agnostic_silver_wolf(monkeypatch):
 
 
 def test_deployed_slot_anchor_two_frame(monkeypatch):
-    """deployed 侧锚 = (排, 子表下标+1)(ADR-0392;3.2:基线 = 主域
+    """deployed 侧槽位标记 = (排, 子表下标+1)(ADR-0392;3.2:基线 = 主域
     deployed 视图):后排槽3 单帧 3★→1★ 保旧,两帧一致采新。
     读载体 = P6 直产视图。"""
     _spy_conflicts(monkeypatch)
@@ -275,7 +275,7 @@ def test_merge_effect_window_freezes_confirmation(monkeypatch):
 def test_missing_read_frame_breaks_confirmation(monkeypatch):
     """缺读帧打断两帧序列(缺读 = 证据中断,两帧重计)。P6 直产载体下
     两形态并一:
-    - 部分缺读(读侧已取得但锚不在):主域随实读整表替换,缺席槽置空
+    - 部分缺读(读侧已取得但槽位标记不在):主域随实读整表替换,缺席槽置空
       (真实部分读行为,槽1 3★ 账随实读消失)+ 后续单元重落直采
       (陈旧候选不作祟);
     - 双空读守卫早退帧:保旧 + 候选清除(探针原样序列:抖读 → 双空 →

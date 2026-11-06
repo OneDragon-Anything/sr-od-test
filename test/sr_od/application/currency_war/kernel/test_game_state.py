@@ -556,7 +556,7 @@ def test_sim_synthesis_truth_domain(case: str) -> None:
 
 
 def test_synthesis_unread_bench_no_clobber() -> None:
-    """bench 写门(载体迁移 = benchchar-retirement P5;语义锚:未读域≠
+    """bench 写门(载体迁移 = benchchar-retirement P5;语义基准:未读域≠
     真空域)。种子对未声明 bench 域整域跳写(bench_unread)——状态容器内
     备战装配环的真读观察保持原值原版本;可读真值种子照写不回归。
     原防御对象 = 旧合成口无门合成把漏斗真读覆盖成「9 槽全空」假真空

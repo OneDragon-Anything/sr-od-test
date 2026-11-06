@@ -180,7 +180,7 @@ def test_registered_line_unregistered_affix_zero() -> None:
 
 def test_engine_kind_full_coverage() -> None:
     """B1 引擎型分类覆盖全 21 线(README B1 三类+final_comps 引擎节补核;
-    姬子批 3 拆分 A=受击/B=大招);值域锚(受击/行动/大招/dot/击破/追击)。"""
+    姬子批 3 拆分 A=受击/B=大招);值域基准(受击/行动/大招/dot/击破/追击)。"""
     from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
     assert set(LINE_ENGINE_KIND) == {c.name for c in COMP_LIBRARY}
     assert set(LINE_ENGINE_KIND.values()) == {'受击', '行动', '大招',
@@ -285,7 +285,7 @@ def test_restart_hit_primitives() -> None:
 
 def test_boss_table_keys_in_canonical_namespace() -> None:
     """boss 表键全落 BOSS_MECHANICS 规范名空间(俗称经 BOSS_NICKNAMES 归位,
-    构建校验 import 即炸——此条为可观测锚);强敌表键不撞 boss 名空间。"""
+    构建校验 import 即炸——此条为可观测基准);强敌表键不撞 boss 名空间。"""
     from sr_od.application.currency_war.data.cw_enemy_data import (
         BOSS_MECHANICS,
         BOSS_NICKNAMES,

@@ -103,7 +103,7 @@ def test_special_category_grants_anchor_a() -> None:
 
 
 def test_empty_inventory_bare_bench_grants() -> None:
-    """双空主条(锁 3):物品栏空 + 裸 bench → 表值(真值锁锚点)。"""
+    """双空主条(锁 3):物品栏空 + 裸 bench → 表值(真值锁基准)。"""
     gs = _gs(equips=[], bench=[])
     assert check_strategy_empty_equip_xp(gs) == _XP
 

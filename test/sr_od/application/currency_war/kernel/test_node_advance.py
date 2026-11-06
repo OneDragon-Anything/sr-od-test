@@ -302,7 +302,7 @@ def test_fast_popup_advance_precedes_pick_and_prep_reanchor(
         test_context, monkeypatch,
 ) -> None:
     """快弹窗全型(landing §3.6 S2):结算确认**点击即上报**(去证据门,
-    用户裁定 2026-09-21——点了就是上报,无弹窗锚探查)→ 推进先于弹窗
+    用户裁定 2026-09-21——点了就是上报,无弹窗识别标志探查)→ 推进先于弹窗
     选卡由因果序结构性成立(design §2.3,不依赖弹窗推断);选卡登记零
     推进(登记语义归拿卡上报侧,design §2.6);选卡后备战帧锚定等值
     reanchor 翻回观察态,下一终结动作解锁。"""
@@ -1185,7 +1185,7 @@ def test_lock5_sim_modified_game_full_chain(monkeypatch) -> None:
     (M18 选项)+ 收入 supply 分支(连胜不动);r10 boss;P2 r7/r8 同构;
     P3 r7 插入补给自动适用,走完 P3 r8 = 胜利终局(run_complete 披露,
     修饰局共 25 节点);全程零 DECL_SCREEN_DRIFT。seed 24 = 修饰局走满
-    锚(探针实测:唯一前 80 号内达 (3,8) 胜利终局的种子;P3 插入使
+    基准(探针实测:唯一前 80 号内达 (3,8) 胜利终局的种子;P3 插入使
     boss 挪至 r8,结算流键随轮次变化,与默认局存活集不同)。"""
     from sr_od.application.currency_war.kernel.cw_action_report import (
         report_action_pick_invest_env_param,
@@ -1307,7 +1307,7 @@ def test_lock5_sim_modified_supply_income_keeps_streak() -> None:
 
 def test_lock8_sim_default_game_regression() -> None:
     """默认局回归:无环境局全链一次,局终 = 走进位面 3 后 hp 归零死亡分支
-    (seed 61 探针锚:前 16 节点与现役基线逐值同,3-5 遭遇战死,保底已用;
+    (seed 61 探针基准:前 16 节点与现役基线逐值同,3-5 遭遇战死,保底已用;
     默认环境零修饰行为不变),零 DECL_SCREEN_DRIFT;败局无 run_complete
     披露(胜负判别单一源在披露集)。"""
     from sr_od.application.currency_war.sim.cw_sim_backend import (

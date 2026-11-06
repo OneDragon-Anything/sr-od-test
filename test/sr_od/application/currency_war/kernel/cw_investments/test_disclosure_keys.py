@@ -38,7 +38,7 @@ def test_strategy_delayed_random_choice_keys_registered() -> None:
 def test_desc_unmodeled_keys_registered() -> None:
     """披露键静态常量已登记断言(策略卡「desc 有载但刻意零建模」家族双键):
     键1 佩佩穿戴面零建模申报(用户裁定 2026-10-15 环境侧同源),键2 召唤
-    单位周期离场零建模申报(离场原语缺/留装备指涉物死/触发锚歧义/周期
+    单位周期离场零建模申报(离场原语缺/留装备指涉物死/触发基准歧义/周期
     形状缺四缺口);家族随族卡实现批追加消费方与键,本断言随批扩员——
     申报面扩员即红一次,批内顺手更新即绿。"""
     assert STRATEGY_DESC_UNMODELED_KEYS == (

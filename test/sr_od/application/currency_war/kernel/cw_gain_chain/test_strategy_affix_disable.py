@@ -15,7 +15,7 @@ test_sim_rules 难度族与 economy 估值锁现役辖域,零新增〕):
   消费口)、效果串策略变体 strategy_affix_disable:<名> 在账;
 - 锁 2 空状态容器边界:零写 + 申报行(strategy_affix_disable_empty_container,
   实机已失效而模型未删);
-- 锁 3 取尾选择锚:排序后取右端(状态容器尾元素),非首元素;rng 注入
+- 锁 3 取尾选择基准:排序后取右端(状态容器尾元素),非首元素;rng 注入
   不改变选择(确定性取尾,零流键消费——不与敌后破坏采样流共槽);
 - 锁 4 mid-run 守卫:节点窗在动 + 当期 hp 真值在场 → 词缀照删、hp
   零写(真值不踩;HP 回调级守卫锁归 kernel/test_cw_opening_hp.py);
@@ -115,7 +115,7 @@ def test_affix_disable_tail_leg_random_state_write(monkeypatch) -> None:
     长度 -1(尾元素整条移除,剩余整条替换);②来源 logic_rand(rand=True
     声明采样链);③logic_rand_fields() 含 enemy_affixes;④效果串策略
     变体 strategy_affix_disable:<名> 在账。词缀种子 = 位置域序(读链
-    center.x 升序排序锚),右端 = 尾元素。"""
+    center.x 升序排序基准),右端 = 尾元素。"""
     affixes = ['库藏生锈', '灼热轰炸', '第二位面强化']
     gs = _make_gs(affixes)
     calls = _record_writes(gs, monkeypatch)
@@ -153,7 +153,7 @@ def test_affix_disable_empty_container_zero_write_with_decl(
 
 
 def test_affix_disable_tail_anchor_right_end_deterministic() -> None:
-    """取尾选择锚(锁 3):排序后取右端(状态容器尾元素),非首元素;
+    """取尾选择基准(锁 3):排序后取右端(状态容器尾元素),非首元素;
     不同注入 rng 同一选择且 rng 状态零消耗(确定性取尾,零流键消费
     ——均匀随机旧制不回归)。"""
     affixes = ['库藏生锈', '灼热轰炸', '第二位面强化']

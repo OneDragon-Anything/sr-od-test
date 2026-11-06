@@ -18,7 +18,7 @@ _on_node_advance / _on_node_advance_terminal 双点接入调用段;kernel 决策
   强制 9 级推进 → 金/一次性标志位全零动;
 - 状态检查型语义(锁 6):拿卡时已 level ≥ 9 → 下一次节点推进发放;
 - 局终跨级(锁 7):末节点经验跨 9 → 发放先于局终声明(双点之二);
-- 休眠边界(锁 8):完整 P1+P2+P3 持卡局(seed 37 胜局锚)全程零发放
+- 休眠边界(锁 8):完整 P1+P2+P3 持卡局(seed 37 胜局基准)全程零发放
   ∧ 全程等级 < 9——经验常量/序列变更使 9 级可达时本锁先红,触发边界
   重申报(防静默激活);
 - 披露键(锁 10):语义假设键 + 休眠边界键恒已登记。
@@ -263,7 +263,7 @@ def test_terminal_cross_grants_before_game_over(
 
 def test_dormant_full_p3_run_zero_grant(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
-    """休眠边界(锁 8,慢桶):完整 P1+P2+P3 持卡局(seed 37 胜局锚,
+    """休眠边界(锁 8,慢桶):完整 P1+P2+P3 持卡局(seed 37 胜局基准,
     _drive_step 全程分派)全程零发放 ∧ 全程等级 < 9——现役经验两源
     (节点经验表 × 选卡即时腿)上界 96 < 3→9 级门槛 194,封顶 7 级;
     经验常量/序列变更使 9 级可达时本锁先红 = 触发边界重申报。"""
@@ -281,7 +281,7 @@ def test_dormant_full_p3_run_zero_grant(
             max_level = max(max_level, int(gs.level.value or 0))
         assert b.done, '4096 步内未收尾(流程异常)'
         assert DISCLOSURE_RUN_COMPLETE in b.disclosures, \
-            '前置:非胜局锚(seed 37 应走完 P3 存活终局)'
+            '前置:非胜局基准(seed 37 应走完 P3 存活终局)'
         assert _grant_calls(calls) == [], '休眠局出现到级发放'
         assert gs.strategy_conditional_done.value in (None, ()), '休眠局误置一次性标志位'
         assert max_level < 9, \
