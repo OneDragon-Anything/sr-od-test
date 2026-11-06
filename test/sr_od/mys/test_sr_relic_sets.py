@@ -159,7 +159,7 @@ def test_set_names_unique_across_all_sets() -> None:
 def test_set_id_biject_with_list_order() -> None:
     """set_id 增量固化（2026-11-05）：62 套全非零且唯一；与列表序严格双射
     （隧洞第 i 套 = 101+i、位面第 i 套 = 301+i——双源实证：tid 公式 43 套
-    + 解包图标名对照 19 套，见 sr_relic_sets 模块 docstring）。锚点取 tid
+    + 归档图标名对照 19 套，见 sr_relic_sets 模块 docstring）。锚点取 tid
     实证套（信使=114 / 翁瓦克=308）与图标对照套（伶人=133 / 寰宇=328）。"""
     cavern_sets = [s for s in RELIC_SETS if s.kind == 'cavern']
     ornament_sets = [s for s in RELIC_SETS if s.kind == 'ornament']

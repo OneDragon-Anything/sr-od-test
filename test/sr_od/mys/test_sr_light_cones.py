@@ -1,6 +1,6 @@
 """sr_light_cones 光锥快照常量单测。
 
-锁的内容（sr_light_cones 模块 docstring 契约；锚点值与 mys 实证/解包 SIFT
+锁的内容（sr_light_cones 模块 docstring 契约；锚点值与 mys 实证/归档图标 SIFT
 双源锚定结果一致，不读本机易失快照件）：
 
 - 快照完整性：LIGHT_CONES 恰 170 把、tid 唯一、名称唯一；
