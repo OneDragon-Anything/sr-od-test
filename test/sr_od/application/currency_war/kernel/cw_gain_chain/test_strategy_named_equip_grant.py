@@ -9,7 +9,7 @@ T-119-quanyuan-jinsheng.md(定稿)§4 锁 1/2/3 + REVIEW-T119 五裁决点默认
   ``gain_equipment(rand=False)`` ×2(gain-chain.md §5:卡文无随机词;与
   env 侧即时装备支 rand=True 系两通道分野,权威版本 = fields.md §3.2.15
   rand 两通道分野注记),效果串逐件一条含 placed(拒落可审计);
-- 精密金面前置 fail-closed:已持精密拆装扳手 → 整效果条目零容器写 + 申报行
+- 精密金面前置 fail-closed:已持精密拆装扳手 → 整效果条目零字段写操作 + 申报行
   留证(宣言 kind = ``NAMED_EQUIP_PRECISE_DECL``,语义申报非缺陷告警)+
   效果串仍逐件登记(placed=False)+ gold 零写钉死(官方真值 = 改 +1 金
   不进栏,金面未建模,接入调用归获得回执覆盖批);
@@ -122,7 +122,7 @@ def test_named_equip_grant_leg_places_wrenches(rows_sink: _RowSink) -> None:
 def test_named_equip_grant_precision_gate_fail_closed(
         rows_sink: _RowSink) -> None:
     """精密前置 fail-closed(设计 §4 锁 2):预置精密拆装扳手 1 件 → 整效果条目
-    零容器写(write_seq 不变,锁 2 主断言)+ 申报行恰一行(宣言 kind,语义
+    零字段写操作(write_seq 不变,锁 2 主断言)+ 申报行恰一行(宣言 kind,语义
     申报非缺陷)+ 效果串仍逐件登记(placed=False,发放事实恒登记)+
     gold 零写钉死(值与来源双不动,金面未建模禁写)+ equips 原值不动。"""
     gs = _make_gs(equips=['精密拆装扳手'], gold=10)
@@ -133,7 +133,7 @@ def test_named_equip_grant_precision_gate_fail_closed(
         'named_equip_grant:拆装扳手(placed=False)',
         'named_equip_grant:拆装扳手(placed=False)',
     ), '效果串仍逐件登记,placed=False 拒入栏可审计'
-    assert gs.write_seq == seq_before, '整效果条目零容器写(fail-closed)'
+    assert gs.write_seq == seq_before, '整效果条目零字段写操作(fail-closed)'
     assert gs.equips.value == ['精密拆装扳手'], 'equips 原值不动'
     assert gs.gold.value == 10 and gs.gold.source == 'observation', \
         'gold 零写钉死(金面改道未建模,真值归观察/接入调用覆盖批)'

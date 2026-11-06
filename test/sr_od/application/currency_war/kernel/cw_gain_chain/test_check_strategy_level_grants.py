@@ -99,7 +99,7 @@ def test_prefers_silence_on_unobserved_then_recovers() -> None:
 
 def test_grant_shape_and_purity_zero_write() -> None:
     """返回形状 + 纯决策零写(live 零接入调用通道前提):达标 → (规范卡名,
-    金额);全量快照调用前后逐位相等(零写零 rng 契约,任何容器写即红)。"""
+    金额);全量快照调用前后逐位相等(零写零 rng 契约,任何字段写操作即红)。"""
     gs = _seeded_gs()
     _hold(gs, _CARD)
     gs.observe(gs.level, 9, sig=_SIG_OBS)
@@ -107,7 +107,7 @@ def test_grant_shape_and_purity_zero_write() -> None:
     before = gs.full_state_snapshot()
     grant = check_strategy_level_grants(gs)
     assert grant == (_CARD, 40), f'返回形状漂移: {grant!r}'
-    assert gs.full_state_snapshot() == before, '纯决策函数发生容器写'
+    assert gs.full_state_snapshot() == before, '纯决策函数发生字段写操作'
 
 
 def test_snapshot_roundtrip_latch_honored() -> None:

@@ -947,7 +947,7 @@ def test_strategy_pick_chain_board_rewrite() -> None:
 
 def test_strategy_pick_chain_named_equip_grant() -> None:
     """获得链断言:选全员晋升 → equips 恰 +2 拆装扳手(具名装备授予效果条目,
-    实机(live)和模拟器(sim)两边同链,sim 写状态副本即容器写)+ bench/deployed 零变化(板面重写面
+    实机(live)和模拟器(sim)两边同链,sim 写状态副本即字段写操作)+ bench/deployed 零变化(板面重写面
     零建模 = 既有边界申报,sim-design §8.2 板面重写族行)。"""
     b = _backend(7)
     try:
@@ -3742,7 +3742,7 @@ def test_gen_shop_mirrors_container_receipt_face() -> None:
 def test_gen_battle_wait_on_screen_at_settle_window() -> None:
     """battle_wait 生成器(battle_wait 档名 = sim 战斗窗口呈现屏):出战
     上报 → 结算窗瞬时呈现,生成器答 on_screen;report 为统一形态占位
-    (零容器写点,导入契约不炸)。"""
+    (零字段写操作点,导入契约不炸)。"""
     b = _backend()
     try:
         _open_to_first_window(b)

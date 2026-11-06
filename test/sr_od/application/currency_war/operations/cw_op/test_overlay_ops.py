@@ -115,7 +115,7 @@ def _screen_loader_none() -> SimpleNamespace:
 
 def _stub_supply_reports(monkeypatch, reported: list) -> None:
     """补给动作 op 上报函数桩(效果分支行为测试归 test_supply;回执/机械
-    面测试只锁接入调用形态):自上报零容器写,调用入列供断言。2026-10-29
+    面测试只锁接入调用形态):自上报零字段写操作,调用入列供断言。2026-10-29
     流程模型对齐:动作 op 无节点推进上报面(选完回备战弹店,推进归出战
     动作 supply_finish),推进桩随之退役。"""
     import sr_od.application.currency_war.operations.cw_op.cw_pick_supply_action as pick_mod

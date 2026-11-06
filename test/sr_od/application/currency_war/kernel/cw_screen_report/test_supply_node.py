@@ -1,5 +1,5 @@
 """补给屏观察上报测试(src 镜像 = kernel/cw_screen_report/supply_node.py;
-迭代 = 打捞人才库触发语义调用点;容器写入契约面归
+迭代 = 打捞人才库触发语义调用点;字段写操作契约面归
 ``../test_screen_report_ports.py`` 逐 report 端口族,本文件只承接触发
 语义锁)。
 
@@ -67,7 +67,7 @@ def _salvage_gs(*, card: bool = True,
 
 def test_read_miss_frame_does_not_grant() -> None:
     """读缺帧不发放(R-entry 调用点与早退交互):持卡 + 未选集快照在场,
-    options 空 = 整函数早退在检查调用点之前 → 零容器写(含 supply/left/
+    options 空 = 整函数早退在检查调用点之前 → 零字段写操作(含 supply/left/
     发放三面),快照原样保留——无画面证据帧不发放,读缺局发放顺延。"""
     gs = _salvage_gs()
     seq = gs.write_seq

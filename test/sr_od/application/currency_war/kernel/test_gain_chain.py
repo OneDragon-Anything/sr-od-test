@@ -486,7 +486,7 @@ def test_env_gift_advisor_split_and_quiet(rows_sink: _RowSink) -> None:
     (gs.unlocked_experts,权威状态容器字段——专家顾问初始不参与普通商店
     招募,解锁后入池可刷,economy.md §1;原「只申报一行」随权威写道
     退役);advisor=False 入席递归(chars_immediate 1★);表外环境查无
-    效果安静不写(裁定④)。session=None = 登记分支跳过、容器写照常
+    效果安静不写(裁定④)。session=None = 登记分支跳过、字段写操作照常
     (编排语义裁定)。"""
     # advisor:特邀专家 → 解锁入池(置一次性标志位保持确定面通道断言;本测试焦点
     # = 分道)
@@ -496,7 +496,7 @@ def test_env_gift_advisor_split_and_quiet(rows_sink: _RowSink) -> None:
                            sig=_lsig())
     assert out_a.effects == ('advisor_unlock:特邀专家:停云:停云',)
     assert gs_a.unlocked_experts.value == ('停云',), '解锁状态写入'
-    assert gs_a.active_env.value == '特邀专家:停云'   # 容器写照常
+    assert gs_a.active_env.value == '特邀专家:停云'   # 字段写操作照常
     assert gs_a.active_env.source == 'logic'
     assert bench_units_of(gs_a) == [], '不入席(顾问入商店非送单位)'
     assert rows_sink.kinds() == [], '权威写道零台账申报行'
@@ -527,7 +527,7 @@ def test_env_gift_summon_unit_sanxing_peipei(rows_sink: _RowSink) -> None:
     gs.prep_anchored = True
     out = gain_invest_env(gs, None, '三星佩佩', rand=False, sig=_lsig())
     assert out.effects == ('env_gift:佩佩',), '召唤单位支效果串'
-    assert gs.active_env.value == '三星佩佩', '容器写照常'
+    assert gs.active_env.value == '三星佩佩', '字段写操作照常'
     assert [(u.char_id, u.star) for u in bench_units_of(gs)] == [('佩佩', 1)], \
         '佩佩落席(星级 1 = 占位值非先验)'
     assert gs.equips.value == [], '佩戴星徽分支零建模,equips 零写'
@@ -544,7 +544,7 @@ def test_env_gift_summon_unit_cuxing_peipei(rows_sink: _RowSink) -> None:
     gs.prep_anchored = True
     out = gain_invest_env(gs, None, '粗星佩佩', rand=False, sig=_lsig())
     assert out.effects == ('env_gift:佩佩',), '召唤单位支效果串'
-    assert gs.active_env.value == '粗星佩佩', '容器写照常'
+    assert gs.active_env.value == '粗星佩佩', '字段写操作照常'
     assert [(u.char_id, u.star) for u in bench_units_of(gs)] == [('佩佩', 1)], \
         '佩佩落席(星级 1 = 占位值非先验)'
     assert gs.equips.value == [], '双零分支零建模,equips 零写'
@@ -555,14 +555,14 @@ def test_env_gift_summon_unit_cuxing_peipei(rows_sink: _RowSink) -> None:
 def test_env_gift_item_channel(rows_sink: _RowSink) -> None:
     """ENV_GIFTS 道具通道(§2.3):items_immediate 命中 → 效果串
     ``item_gift:<名>``(数量 = 元素重复次数)+ 落席写入(送卡落席同构,
-    备战空槽 ``kind='supply_box'``;实机(live)和模拟器(sim)两边同一获得链,sim 写状态副本即容器写);
+    备战空槽 ``kind='supply_box'``;实机(live)和模拟器(sim)两边同一获得链,sim 写状态副本即字段写操作);
     正常路径零申报行。"""
     gs = _make_gs(bench=[], equips=[])
     gs.prep_anchored = True
     out = gain_invest_env(gs, None, '火药味', rand=False, sig=_lsig())
     assert out.effects == ('item_gift:简易武装箱', 'item_gift:简易武装箱'), \
         '道具通道效果串:数量 = 元素重复次数'
-    assert gs.active_env.value == '火药味'   # 容器写照常
+    assert gs.active_env.value == '火药味'   # 字段写操作照常
     slots = gs.bench.value.slots
     assert sum(1 for s in slots if s.kind == 'supply_box') == 2, \
         '两箱落备战席空槽(supply_box 槽件)'
@@ -620,7 +620,7 @@ def test_env_reroll_declaration_row_member_only(rows_sink: _RowSink) -> None:
     gs.prep_anchored = True
     out = gain_invest_env(gs, None, '蓝海', rand=False, sig=_lsig())
     assert gs.active_env.value == '蓝海', '选择事实写值'
-    assert gs.active_env.source == 'logic', '容器写通道与普通环境一致'
+    assert gs.active_env.source == 'logic', '字段写操作通道与普通环境一致'
     assert gs.gold.value == 6, '金收入分支照常(+6,ENV_ECONOMY 唯一 gold_instant)'
     assert out.effects == (), '追加获得非本链职责(状态副本掷骰归 sim 后端)'
     assert rows_sink.kinds() == [ENV_REROLL_DECL], '申报行恰一行'
@@ -843,14 +843,14 @@ def test_opening_replace_leg_two_same_one_diff_no_merge() -> None:
 def test_env_gift_conditional_only_quiet_after_random_branch(
         rows_sink: _RowSink) -> None:
     """具名支回归(T-10 设计 §4 测试 6):仅条件分支条目(量子同频契约)
-    在随机支落地后行为逐位不变——零即时发放、零效果串、零容器写
+    在随机支落地后行为逐位不变——零即时发放、零效果串、零字段写操作
     (随机支为追加分支,前置分支零触碰)。"""
     gs = _make_gs(bench=[], equips=[])
     seq_before = gs.write_seq
     out = on_env_gained(gs, None, '量子同频契约', rand=False, sig=_lsig())
     assert out == (), '条件分支不即时发放'
     assert bench_units_of(gs) == []
-    assert gs.write_seq == seq_before, '安静不写,零容器写'
+    assert gs.write_seq == seq_before, '安静不写,零字段写操作'
 
 
 # ============================================================ 随机装备通道
@@ -905,7 +905,7 @@ def test_env_star_grant_empty_pool_skip(rows_sink: _RowSink) -> None:
     assert out == (), '空池跳过,无效果串'
     assert gs.equips.value == [], '零写'
     assert gs.env_grants_done.value is None, '绑定不落'
-    assert gs.write_seq == seq_before, '零容器写'
+    assert gs.write_seq == seq_before, '零字段写操作'
     assert rows_sink.kinds() == [], '防御分支非缺陷(留 log 不留证)'
 
 
@@ -917,14 +917,14 @@ def test_env_gift_scheduled_channel_enqueues(rows_sink: _RowSink) -> None:
     """定时通道登记(gain_invest_env):items_scheduled 逐项入状态容器队列
     pending_item_grants(一次 write 回写整表;entry 形 =
     {env, plane, round_num, item}),效果串 ``item_scheduled:<名>@<节点键>``;
-    登记不落席(零 supply_box 落位),active_env 容器写照常。"""
+    登记不落席(零 supply_box 落位),active_env 字段写操作照常。"""
     gs = _make_gs(bench=[], equips=[])
     gs.prep_anchored = True
     out = gain_invest_env(gs, None, '特权阶级', rand=False, sig=_lsig())
     assert out.effects == ('item_scheduled:特权武装箱@2-1',), \
         '定时通道效果串:发放事实登记,数量 = 元素重复次数'
     assert gs.active_env.value == '特权阶级'
-    assert gs.active_env.source == 'logic', '容器写照常(确定面)'
+    assert gs.active_env.source == 'logic', '字段写操作照常(确定面)'
     assert gs.pending_item_grants.value == [
         {'env': '特权阶级', 'plane': 2, 'round_num': 1, 'item': '特权武装箱'}], \
         '入队 = 解析好的目标节点 + 来源环境'
@@ -1976,7 +1976,7 @@ def test_joy_rider_registry_gate(rows_sink: _RowSink) -> None:
         rng=random.Random(seed))
     assert [u for u in bench_units_of(gs) if u.char_id in cands] == [], \
         '空环境零授予'
-    assert gs.write_seq == seq, '空环境零容器写'
+    assert gs.write_seq == seq, '空环境零字段写操作'
     gs.observe(gs.active_env, '公司契约', sig=_SIG_OBS)
     seq2 = gs.write_seq
     report_action_pick_planner_param(
@@ -1984,7 +1984,7 @@ def test_joy_rider_registry_gate(rows_sink: _RowSink) -> None:
         rng=random.Random(seed))
     assert [u for u in bench_units_of(gs) if u.char_id in cands] == [], \
         '其他环境零授予'
-    assert gs.write_seq == seq2, '其他环境零容器写'
+    assert gs.write_seq == seq2, '其他环境零字段写操作'
     gs.observe(gs.active_env, '欢愉契约', sig=_SIG_OBS)
     report_action_pick_planner_param(
         gs, None, _lsig('CwScreenYinLang'), branch_type='unknown',
@@ -2344,7 +2344,7 @@ def test_invest_portal_landing_no_card_pollution(
 
 def test_invest_portal_env_gifts_full_access(
         rows_sink: _RowSink) -> None:
-    """ENV_GIFTS 全量即时发放经落地相可用(此前仅欢愉契约有容器写分支,
+    """ENV_GIFTS 全量即时发放经落地相可用(此前仅欢愉契约有字段写操作分支,
     现契约类 chars_immediate 全部经链生效;表外环境安静不写)。
     公司契约 = 翡翠/砂金 逐个 1★ 入席递归。"""
     gs = _make_gs(bench=[], equips=[])

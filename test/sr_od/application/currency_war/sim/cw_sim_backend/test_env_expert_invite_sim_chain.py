@@ -10,7 +10,7 @@ effects-calc/designs/T-39-zhuanjia-yantaohui.md)§2.1/§2.4 + §4 锁 8:
 - 开卡上报 applied + 槽腾空 + SCREEN_EXPERT 呈现(advance 纯转移;
   呈现数据源 = 状态容器登记,open_bookcard 上报内 register);
 - 选卡上报消费 expert_invite 登记 + 纯转移回备战(注:sim 选卡上报 =
-  状态容器零写契约〔zero_writes.py〕,``chosen_expert`` 容器写 = live 画面 op
+  状态容器零写契约〔zero_writes.py〕,``chosen_expert`` 字段写操作 = live 画面 op
   落地复查点、由 kernel 侧既有锁面承担——本链断言消费与转移面);
 - 武装箱开箱链独立正常(箱画面候选 → 选定 → 所得经获得链入栏);
 - 同 seed 重放确定(环境道具分支零采样)。
@@ -116,7 +116,7 @@ def test_expert_invite_env_sim_full_chain(
         _isolate_defect_buffer) -> None:
     """sim 全链轻量局(T-39 设计 §4 锁 8):五段断言见模块 docstring;
     写状态副本发放域登记一处,实机(live)和模拟器(sim)两边同链零 sim 私有接入调用(链原语复用 = kernel
-    单一获得链,sim 写状态副本即容器写)。"""
+    单一获得链,sim 写状态副本即字段写操作)。"""
     slots, equips = _run_expert_chain(7)
     assert len(slots) == 6, '4 开局手牌 + 2 道具槽'
     assert len(equips) == 1, '开箱所得 1 件入栏'

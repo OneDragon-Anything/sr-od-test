@@ -78,7 +78,7 @@ def test_strategy_delayed_leg_enqueues_zero_seat_write(monkeypatch) -> None:
     """到手分支入队(REVIEW-T329 §五④ 锁 2):选偶像经济 → 队列 =
     (('火花礼盒', (2,4)),)((1,3) 步进 10)+ 效果串 item_open_scheduled:
     火花礼盒@2-4 + done 含 (偶像经济, delayed_open_accel);**零席位写**
-    ——容器写恰两笔:队列(rand 通道,链收尾)+ done(logic 直写,登记
+    ——字段写操作恰两笔:队列(rand 通道,链收尾)+ done(logic 直写,登记
     事实)。"""
     gs = _make_gs_node_pos((1, 3))
     calls = _record_writes(gs, monkeypatch)
@@ -98,7 +98,7 @@ def test_strategy_delayed_leg_enqueues_zero_seat_write(monkeypatch) -> None:
         ('env_grants_done',
          f'on_strategy_gained:{_CARD}#accel_scope', 'logic',
          GAIN_CHAIN_PRODUCER),
-    ], f'容器写恰两笔(队列链收尾 + done 直写): {calls}'
+    ], f'字段写操作恰两笔(队列链收尾 + done 直写): {calls}'
     assert all(c[3] == _LSIG for c in calls), '同 sig(同窗相邻)'
 
 
@@ -165,7 +165,7 @@ def test_unregistered_strategy_quiet(monkeypatch) -> None:
     effects = on_strategy_gained(gs, '随便一张未收录卡', rand=False,
                                  sig=_LSIG)
     assert effects == (), '表外策略效果串恒空'
-    assert not calls, f'零容器写: {calls}'
+    assert not calls, f'零字段写操作: {calls}'
     assert gs.write_seq == seq_before, '安静不写'
 
 

@@ -9,7 +9,7 @@
 一个月内花光十个亿，你就可以继承狸的财产！。」):
 
 - 登记:chars_immediate = ('狸职狸狸',) 名称归一纪律直读(「狸狸」∉
-  roster,实机浮窗名归一;获得链 on_strategy_gained 零写零容器写 =
+  roster,实机浮窗名归一;获得链 on_strategy_gained 零写零字段写操作 =
   登记非运行时发放定论);
 - 估值:gift_hit_tier = 'off'(召唤单位无估值档位,摸个鱼吧II 单名
   先例同判)/grant_gift_value = 0.0;
@@ -75,4 +75,4 @@ def test_valuation_off_and_zero_gain_chain_write() -> None:
     effects = on_strategy_gained(gs, _CARD, rand=False, sig=_LSIG,
                                  rng=None)
     assert effects == (), f'获得链零写: {effects}'
-    assert gs.write_seq == seq_before, '零容器写(登记非运行时发放)'
+    assert gs.write_seq == seq_before, '零字段写操作(登记非运行时发放)'

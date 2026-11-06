@@ -138,7 +138,7 @@ def test_affix_disable_tail_leg_random_state_write(monkeypatch) -> None:
 
 def test_affix_disable_empty_container_zero_write_with_decl(
         monkeypatch, rows_sink: _RowSink) -> None:
-    """空状态容器边界(锁 2):状态容器空(直构未写)时选退化 → 零容器写 +
+    """空状态容器边界(锁 2):状态容器空(直构未写)时选退化 → 零字段写操作 +
     申报行已登记(kind = strategy_affix_disable_empty_container,实机已
     失效而模型未删的偏差申报),零效果串。"""
     gs = _make_gs(None)
@@ -146,7 +146,7 @@ def test_affix_disable_empty_container_zero_write_with_decl(
     seq_before = gs.write_seq
     effects = on_strategy_gained(gs, _CARD, rand=False, sig=_LSIG)
     assert effects == (), '零效果串(未发生删除)'
-    assert not calls, f'零容器写: {calls}'
+    assert not calls, f'零字段写操作: {calls}'
     assert gs.write_seq == seq_before, '安静不写'
     assert rows_sink.kinds() == [STRATEGY_AFFIX_DISABLE_EMPTY_DECL], \
         f'申报行分键: {rows_sink.kinds()}'

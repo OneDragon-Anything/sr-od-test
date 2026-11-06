@@ -10,7 +10,7 @@
    ``__getattr__`` 命名规约解析)。新增动作漏建上报函数/漏建文件 = 本测试红。
    声明面即命名规约本身,无分发表——分派只允许出现在实机 op 直调与
    sim/回放引擎入口。
-2. 工具上报容器写测试(原 test_cw_tool_use_report.py):逐工具写端/冶金炉
+2. 工具上报字段写操作测试(原 test_cw_tool_use_report.py):逐工具写端/冶金炉
    采样/投影仪走链/EQUIP_WRITE_SIDES 词表校验;
 3. 动作行归一 reason 键序列化(原 test_cw_action_reason_serialization.py;
    提取键序单一源 = telemetry/schema.py ``ACTION_REASON_SOURCE_KEYS``,
@@ -124,7 +124,7 @@ def _snake(cls_name: str) -> str:
 
 @pytest.fixture
 def _isolate_defect_buffer():
-    """缺陷台账缓冲隔离(工具七类上报升格容器写后,冒烟路径对空参/未观察
+    """缺陷台账缓冲隔离(工具七类上报升格为字段写操作后,冒烟路径对空参/未观察
     状态容器会产生 tool_* 留证行;前清防他测残留、后清防本测外泄——全局缓冲
     被后续测试整池排水对账,残留行即假红)。"""
     consume_defect_sink()
@@ -212,7 +212,7 @@ def test_report_pick_invest_env_container_miss_loud_failure():
 
 
 # ============================================================
-# 2. 工具上报容器写测试(逐工具写端 / 冶金炉采样 / 投影仪走链)
+# 2. 工具上报字段写操作测试(逐工具写端 / 冶金炉采样 / 投影仪走链)
 # ============================================================
 
 _SIG_OBS = ChannelSig(family='obs', actor='CwToolUseReportSeed')
@@ -422,7 +422,7 @@ def test_furnace_equip_branch_target_out_of_scope_fail_closed(
                                     item_name='垃圾袋'),
         _lsig(), rng=random.Random(7))
     assert out.applied is True
-    assert gs.equips.value == ['冶金炉', '垃圾袋'], '越白名单零容器写'
+    assert gs.equips.value == ['冶金炉', '垃圾袋'], '越白名单零字段写操作'
     assert 'tool_bridge_zero_write' in rows_sink.kinds(), '留证行落证'
 
 
@@ -619,7 +619,7 @@ def test_mutate_faces_do_not_fire_gain_callbacks(monkeypatch,
                                                  rows_sink: _RowSink) -> None:
     """变异面不走链测试(design §2.0):冶金炉/特权卡 = 原地替换数量不变,
     不触发获得回调(on_character_gained/on_equipment_gained 零调用);
-    容器写照常发生(非零写)。"""
+    字段写操作照常发生(非零写)。"""
     char_calls: list = []
     equip_calls: list = []
     monkeypatch.setattr(cw_gain_chain, 'on_character_gained',
@@ -636,8 +636,8 @@ def test_mutate_faces_do_not_fire_gain_callbacks(monkeypatch,
         gs_priv, CwActionPrivilegeCardUseParam(target_kind='equip',
                                                item_name='反重力皮靴'),
         _lsig())
-    assert gs_furnace.equips.source == 'logic_rand', '炉容器写照常(rand 面)'
-    assert gs_priv.equips.value == ['反重力皮靴·特权'], '特权卡容器写照常'
+    assert gs_furnace.equips.source == 'logic_rand', '炉字段写操作照常(rand 面)'
+    assert gs_priv.equips.value == ['反重力皮靴·特权'], '特权卡字段写操作照常'
     assert char_calls == [] and equip_calls == [], '变异面零获得回调'
 
 

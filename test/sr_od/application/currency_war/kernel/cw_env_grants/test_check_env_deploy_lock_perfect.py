@@ -103,7 +103,7 @@ def test_zero_rewrite_non_win_or_hp_drop(monkeypatch: pytest.MonkeyPatch
                                          ) -> None:
     """零改写两形态(T-33 设计 §4 锁 6 反半边):①尾行 killed 非 True
     (败局 False / 读缺 None);②尾行 hp_after 低于前一行(本帧损血)
-    → 均零改写零容器写零效果串。"""
+    → 均零改写零字段写操作零效果串。"""
     for label, k1, hp1, k2, hp2 in (
             ('败局', True, 80, False, 80),
             ('读缺', True, 80, None, 80),
@@ -125,7 +125,7 @@ def test_zero_rewrite_non_win_or_hp_drop(monkeypatch: pytest.MonkeyPatch
         monkeypatch.setattr(gs, 'write_logic', rec)
         effects = check_env_deploy_lock_perfect(gs, _SIG)
         assert effects == (), f'{label} 零效果串'
-        assert not calls, f'{label} 零容器写: {calls}'
+        assert not calls, f'{label} 零字段写操作: {calls}'
         assert gs.env_grant_deploy_locks.value == (('某角色', 7, (1, 5)),), \
             f'{label} 锁记录零改'
 
@@ -155,7 +155,7 @@ def test_insufficient_rows_or_none_hp_no_judgment(
         monkeypatch.setattr(gs, 'write_logic', rec)
         effects = check_env_deploy_lock_perfect(gs, _SIG)
         assert effects == (), f'{label} 零效果串'
-        assert not calls, f'{label} 零容器写: {calls}'
+        assert not calls, f'{label} 零字段写操作: {calls}'
 
 
 def test_scope_isolation_and_unlocked_untouched(
@@ -193,7 +193,7 @@ def test_scope_isolation_and_unlocked_untouched(
 
 def test_empty_scope_zero_action(monkeypatch: pytest.MonkeyPatch) -> None:
     """作用域空集(T-33 设计 §4 锁 7):本卡未发放(done 无
-    deploy_lock_uid# 键)时完胜帧 → 零改写零效果串零容器写。"""
+    deploy_lock_uid# 键)时完胜帧 → 零改写零效果串零字段写操作。"""
     gs = _make_gs(locks=(('某角色', 7, (1, 5)),),
                   done=(('星核猎手契约', 'battle_co_presence'),))
     _settle_frame(gs, 1, 2, killed=True, hp_after=80)
@@ -209,7 +209,7 @@ def test_empty_scope_zero_action(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(gs, 'write_logic', rec)
     effects = check_env_deploy_lock_perfect(gs, _SIG)
     assert effects == (), '零效果串'
-    assert not calls, f'零容器写: {calls}'
+    assert not calls, f'零字段写操作: {calls}'
 
 
 def test_consecutive_perfect_wins_accumulate() -> None:

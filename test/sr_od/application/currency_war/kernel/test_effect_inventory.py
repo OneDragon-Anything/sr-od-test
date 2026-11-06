@@ -6,7 +6,7 @@
   语义域 = 状态容器权威版本 game_state/fields.md「开局初始值」节):人力
   重组双臂(种子未落一次性标志位 → logic_rand / 置一次性标志位 → logic)、静默覆盖臂
   (未落一次性标志位零失配行落 logic_rand_outcome,置一次性标志位失配网生效)、回归臂
-  (UPGRADE_ALL 零容器写 / 非板面条目零动作 / burst 桥 Field 发放);
+  (UPGRADE_ALL 零字段写操作 / 非板面条目零动作 / burst 桥 Field 发放);
 - **效果推进段 tick_effect_boundary**(结算真值收尾后只剩账本推进/
   刷新发放/异常边界三判据;2026-10-12-abolish-node-ordinal §3.2 起
   生效序位 = (位面, 轮) 元组键):None 守卫 / 推进+到账 / 吞异常;
@@ -140,7 +140,7 @@ def test_sell_all_silent_override_unanchored_mismatch_after_anchor() -> None:
 
 
 def test_upgrade_all_and_other_bridges_unchanged() -> None:
-    """回归臂:全员晋升(UPGRADE_ALL)零容器写不变(替换面随机,报告作
+    """回归臂:全员晋升(UPGRADE_ALL)零字段写操作不变(替换面随机,报告作
     负写端留证);非板面重写条目过桥零动作;burst 桥(免费刷新剩余次数,
     2026-09-21 Field 化后 = 状态容器字段 write_logic)正常发放。"""
     gs = _seeded_gs()
@@ -151,7 +151,7 @@ def test_upgrade_all_and_other_bridges_unchanged() -> None:
     assert report.cleared_fields == ()
     assert report.refund_gold == 0 and report.sold_units == 0
     assert report.partial_read is False
-    assert gs.write_seq == seq_before, 'UPGRADE_ALL 零容器写(随机面观察收尾)'
+    assert gs.write_seq == seq_before, 'UPGRADE_ALL 零字段写操作(随机面观察收尾)'
     # 非板面重写条目 → None 零动作(零 Field 写)
     assert apply_board_rewrite(gs, STRATEGY_EFFECTS['固定理财']) is None
     assert gs.write_seq == seq_before

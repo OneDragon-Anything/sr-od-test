@@ -272,7 +272,7 @@ def test_node_advance_decl_none_on_gate_blocked():
 def test_start_battle_decl_table_row3():
     """表 #3 对照测试:出战上报 applied 出口声明 = (结算屏,
     battle_resolve);两个 applied 出口(常规/免战跳过递减)同声明;
-    桩 gs = 新状态容器(出战上报零容器写,语义 = 结算屏观察覆盖接管)。"""
+    桩 gs = 新状态容器(出战上报零字段写操作,语义 = 结算屏观察覆盖接管)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     out = report_action_start_battle_param(gs, SimpleNamespace(), _SIG)
     assert out.applied

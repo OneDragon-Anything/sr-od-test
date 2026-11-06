@@ -107,7 +107,7 @@ def test_first_pick_two_gold_inclusive_self(
     assert amount == 2, f'首张 coef×1 = 2 金: {amount}'
     assert gs.gold.value == 32, '金账入账'
     assert gs.gold.source == 'logic', '确定发放走 logic 通道'
-    assert gs.write_seq - seq_before == 1, '恰一笔容器写'
+    assert gs.write_seq - seq_before == 1, '恰一笔字段写操作'
     assert gs.gold.evidence == f'env_grant#{_ENV}#pick1', 'evidence 形态'
 
 

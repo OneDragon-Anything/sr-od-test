@@ -847,7 +847,7 @@ def test_chosen_supply_written_before_dispatch_and_no_landing_phase(
     """画面 op 侧测试:chosen_supply 2 元组(角色, 装备名列表;T-9 裁定 2)
     在动作派发前已写(写点 = 选择点,``op-layer.md`` §2.2);选卡派发即终结
     (动作体自产 round_success 终结交回,决策链接入调用迭代起 ``_do_action``
-    返回轮次结果);节点完成门 miss(act 分发身份安全网)后零容器写
+    返回轮次结果);节点完成门 miss(act 分发身份安全网)后零字段写操作
     (无落地相补写面)。"""
     from sr_od.application.currency_war.operations.cw_op import (
         cw_action_registry,
@@ -896,7 +896,7 @@ def test_chosen_supply_written_before_dispatch_and_no_landing_phase(
     result = _run_node(test_context, op, op.act)
     assert result.is_success, '门 miss = 节点完成 success 交回'
     assert gs.write_seq == write_seq_after_dispatch, \
-        '门 miss 后零容器写(无落地相补写面)'
+        '门 miss 后零字段写操作(无落地相补写面)'
 
 
 # --- 节点推进接入调用(补给侧)---

@@ -13,7 +13,7 @@
    mode)——经状态流水捕获行断言(sink/run_id 官方注入槽,monkeypatch
    测试结束自动还原)的行为测试。
 
-纪律:串行、零识别零点击零真实 IO、不断言容器写入行为以外的东西。
+纪律:串行、零识别零点击零真实 IO、不断言字段写操作行为以外的东西。
 """
 import importlib
 import inspect
@@ -73,7 +73,7 @@ _NO_REPORT = frozenset({
     'CwScreenAhaEquipPickObs',
 })
 
-#: 文档化占位 report(现役零观察容器写点,统一形态占位)。
+#: 文档化占位 report(现役零观察字段写操作点,统一形态占位)。
 #: (prep 已于重型屏迁移批升级为真实写面——可选域字段在场才写,见
 #:  _WRITE_CASES['prep'] 与 prep 专项测试;plane_intel 已于接管域迭代
 #:   升级为真实写面——采集真值写门,
@@ -539,7 +539,7 @@ def test_prep_chain_baseline_idempotent_gate():
 
 
 def test_placeholder_report_is_documented_noop():
-    """轻屏/重型屏占位:接口在场、零容器写(摄入面出现时落此处;
+    """轻屏/重型屏占位:接口在场、零字段写操作(摄入面出现时落此处;
     占位不构造不校验 sig——无写即无渠道面)。"""
     for screen in _PLACEHOLDERS:
         mod = _screen_module(screen)

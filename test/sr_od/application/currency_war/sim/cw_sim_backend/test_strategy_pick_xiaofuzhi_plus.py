@@ -49,7 +49,7 @@ def _backend(seed: int = 7) -> SimBackend:
 
 def test_pick_chain_named_equip_grant_xiaofuzhi_plus() -> None:
     """获得链断言(小复制+):选本卡 → equips 恰 +2 员工投影仪(具名
-    确定发放,实机(live)和模拟器(sim)两边同链,sim 写状态副本即容器写)+ bench/deployed 零变化
+    确定发放,实机(live)和模拟器(sim)两边同链,sim 写状态副本即字段写操作)+ bench/deployed 零变化
     (板面零建模);同 seed 重放 equips 逐位一致。"""
     def _run_once() -> tuple:
         b = _backend(7)

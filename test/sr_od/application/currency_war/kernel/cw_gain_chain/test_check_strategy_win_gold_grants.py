@@ -64,7 +64,7 @@ def _gs(*, card: str | None = _CARD,
 
 def test_win_no_loss_two_peipei_pays_two() -> None:
     """锁 2 主条:持卡 + 胜 + 无损 + 佩佩 2 → 2(2 × 每佩佩 1 金,表值
-    单一源;函数纯读零写,零容器写面)。"""
+    单一源;函数纯读零写,零字段写操作面)。"""
     gs = _gs(bench=_bench_view([('佩佩', 1), ('佩佩', 1)]))
     before = gs.write_seq
     assert check_strategy_win_gold_grants(gs, won=True, hp_delta=0) == 2

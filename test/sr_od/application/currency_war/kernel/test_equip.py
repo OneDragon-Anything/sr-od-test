@@ -354,7 +354,7 @@ def test_wear_synthesis_grants_free_refresh(monkeypatch):
     """合成事件发放正锁(卡面「合成装备时，获得2次刷新」):账本持
     武力刷新 + 穿第二件可配对简易 → 穿着即合成恰 1 次,free_refresh_left
     +2(None 基 = 0 起算);写 = write_logic 逻辑直写、evidence =
-    effect_on_merge@wear、produced_by 带卡名,容器写恰三行(目标域重建 +
+    effect_on_merge@wear、produced_by 带卡名,字段写操作恰三行(目标域重建 +
     owned 扣减 + 发放登记,零多余写)。"""
     advance, (a, b) = next(iter(CROSS_RECIPES.items()))
     assert synthesize_target(a, b) == advance
@@ -386,7 +386,7 @@ def test_wear_synthesis_grants_free_refresh(monkeypatch):
 def test_wear_without_synthesis_zero_grant():
     """零合成负向:已穿 1 件进阶再穿另一独立进阶(进阶终品互不配方,
     先例载荷 = 满装闭环测试)→ applied=True 但零合成,发放零动作
-    (free_refresh_left 保持未观察,容器写恰两行穿戴写、零 Field 发放行)。"""
+    (free_refresh_left 保持未观察,字段写操作恰两行穿戴写、零 Field 发放行)。"""
     items = ['物质分解液', '冷笑话引擎']
     gs = _wear_grant_gs(unit_equips=[items[0]], owned=[items[1]])
     seq0 = gs.write_seq

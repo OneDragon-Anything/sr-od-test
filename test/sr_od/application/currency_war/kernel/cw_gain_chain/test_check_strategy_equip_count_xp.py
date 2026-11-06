@@ -157,7 +157,7 @@ def test_none_strategy_set_zero() -> None:
 
 
 def test_pure_read_zero_container_writes() -> None:
-    """纯读零写(形态 A):命中路径零容器写(判定无 sig 形参零状态副本写,
+    """纯读零写(形态 A):命中路径零字段写操作(判定无 sig 形参零状态副本写,
     状态副本写端 = sim 唯一调用点)。"""
     gs = _gs(equips=['光速螺旋桨'])
     seq0 = gs.write_seq

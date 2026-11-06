@@ -115,7 +115,7 @@ def test_zero_rewrite_non_win_hp_drop_or_missing(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """零改写族(T-34 设计 §4 锁 8 反半边):①败局(killed False)/
     读缺(killed None)②本帧损血(hp 下降)③环仅 1 行 ④尾行/前一行
-    hp None ⑤生效序位缺读(eff None)→ 均零改写零容器写零效果串。"""
+    hp None ⑤生效序位缺读(eff None)→ 均零改写零字段写操作零效果串。"""
     cases = [
         ('败局', (1, 3), [(True, 80), (False, 80)]),
         ('killed 读缺', (1, 3), [(True, 80), (None, 80)]),
@@ -143,7 +143,7 @@ def test_zero_rewrite_non_win_hp_drop_or_missing(
         monkeypatch.setattr(gs, 'write_logic', rec)
         effects = check_env_item_open_perfect(gs, _SIG)
         assert effects == (), f'{label} 零效果串'
-        assert not calls, f'{label} 零容器写: {calls}'
+        assert not calls, f'{label} 零字段写操作: {calls}'
         assert gs.pending_item_opens.value == (('惊喜盒', (1, 5)),), \
             f'{label} 队列零改'
 

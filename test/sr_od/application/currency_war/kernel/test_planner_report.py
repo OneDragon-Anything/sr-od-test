@@ -199,7 +199,7 @@ def test_unknown_leg_evidenced_zero_write(
     seq_before = gs.write_seq
     out = report_action_pick_planner_param(gs, None, branch_type='unknown',
                                            norm_item='', sig=_lsig())
-    assert out.applied is True and gs.write_seq == seq_before, '零容器写'
+    assert out.applied is True and gs.write_seq == seq_before, '零字段写操作'
     assert rows_sink.kinds() == ['planner_leg_unknown']
     out2 = report_action_pick_planner_param(gs, None, branch_type='',
                                             norm_item='', sig=_lsig())

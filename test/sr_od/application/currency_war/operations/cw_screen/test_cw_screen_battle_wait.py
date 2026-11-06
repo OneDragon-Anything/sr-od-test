@@ -302,7 +302,7 @@ def _stub_settlement_assets(monkeypatch, level: int | None) -> None:
 
 
 def _record_strategy_writes(gs, monkeypatch) -> list[tuple]:
-    """包装容器写入口记录 (通道, 字段名, evidence, sig, produced_by)
+    """包装字段写操作入口记录 (通道, 字段名, evidence, sig, produced_by)
     (透传真实现;observe 扩展先例 = kernel/test_env_grants
     _live_record_writes,扩 produced_by 轴)。"""
     calls: list[tuple] = []

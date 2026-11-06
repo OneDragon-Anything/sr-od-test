@@ -393,7 +393,7 @@ def test_market_intervention_burst_then_free_leg_consumes(
 def test_report_unobserved_field_conservative_paid() -> None:
     """未观察(None)→ 保守按付费:计数进 paid,零 Field 扣减行(次数是
     记账面非决策闸);level 同帧缺读 → 随机态分支跳写(概率表按级索引)。
-    唯一容器写 = 金币花费置位(T-92:非免费帧与账本 refresh_paid +1 同
+    唯一字段写操作 = 金币花费置位(T-92:非免费帧与账本 refresh_paid +1 同
     条件置位——「未观察保守按付费」的保守性一并继承到花费口径)。"""
     gs = _fresh_gs()
     seq0 = gs.write_seq
@@ -405,7 +405,7 @@ def test_report_unobserved_field_conservative_paid() -> None:
     assert gs.prev_node_spent.value is True, \
         '非免费帧置位(保守按付费一并计花费,T-92)'
     assert gs.write_seq == seq0 + 1, \
-        '唯一容器写 = 花费置位行(扣减/随机态两分支跳写不变)'
+        '唯一字段写操作 = 花费置位行(扣减/随机态两分支跳写不变)'
 
 
 # ---- 两桥发放(写端元数据)----

@@ -148,7 +148,7 @@ def test_first_match_deterministic_double_run_identical(two_runs: tuple) -> None
 # ============================================================ 尺③ 状态容器不变式
 
 def _write_rows(run: Any, field: str) -> list:
-    """容器写流投影(状态 journal sink 内存捕获;field 行按版本序)。"""
+    """字段写操作流投影(状态 journal sink 内存捕获;field 行按版本序)。"""
     return [r for r in run.journal_rows
             if r.get('row') == 'write' and r.get('field') == field]
 

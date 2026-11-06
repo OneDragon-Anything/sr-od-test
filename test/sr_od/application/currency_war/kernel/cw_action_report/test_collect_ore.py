@@ -248,7 +248,7 @@ def test_window_order_reward_writes_before_trigger_branch(
 def test_zero_open_early_return_no_count_no_trigger(
         monkeypatch: pytest.MonkeyPatch, seeded_provider) -> None:
     """opened == 0 早退路径(T-29 设计 §2.4/§4 锁 7):全批席满跳点 →
-    applied=False 零容器写、计数不变(零计数)、零触发零 done
+    applied=False 零字段写操作、计数不变(零计数)、零触发零 done
     (opened==0 路径保持零写零计数)。"""
     gs = _make_sp_gs(bench_units=[('希儿', 1)] * 9, ore_open_total=20)
     calls = _sp_record_writes(gs, monkeypatch)
@@ -256,7 +256,7 @@ def test_zero_open_early_return_no_count_no_trigger(
         gs, CwActionCollectOreParam(points=_XYS), sig=_SIG)
     assert not out.applied and out.reason == 'bench_full_no_open', \
         f'全跳批出参: {out.reason}'
-    assert not calls, f'全跳零容器写: {calls}'
+    assert not calls, f'全跳零字段写操作: {calls}'
     assert gs.effects.ore_open_total == 20, '零计数(opened==0 不入账)'
     assert not any(k.startswith('ore_open')
                    for _e, k in (gs.env_grants_done.value or ())), \

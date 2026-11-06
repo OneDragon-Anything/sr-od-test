@@ -53,7 +53,7 @@ def test_yuanjian_grant_decl_one_row(rand: bool,
                                      _isolate_defect_buffer) -> None:
     """名单卡申报行(rand 两形参数化):远见获得 → STRATEGY_GRANT_DECL
     恰一行(选择时点真值不可观察,申报留证);状态容器注册照常(行为
-    fail-closed——申报行外零容器写差异)。"""
+    fail-closed——申报行外零字段写操作差异)。"""
     rows: list[dict] = []
     set_defect_sink(rows.append)
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)

@@ -70,7 +70,7 @@ def test_due_matrix_zero_write_on_miss_or_unanchored(
         monkeypatch) -> None:
     """到点矩阵零写半边(T-34 设计 §4 锁 4):eff < unlock(未到点)/
     eff None(生效序位缺读,宁缺勿造)/ 命中集空(队列非空但全未到点)
-    → 零效果串零容器写(write_seq 逐位不变),队列原样。"""
+    → 零效果串零字段写操作(write_seq 逐位不变),队列原样。"""
     for label, node_pos, queue in (
             ('未到点', (1, 2), (('惊喜盒', (2, 4)),)),
             ('eff None', None, (('惊喜盒', (1, 2)),)),
@@ -80,7 +80,7 @@ def test_due_matrix_zero_write_on_miss_or_unanchored(
         seq_before = gs.write_seq
         effects = discharge_due_item_opens(gs, rand=False, sig=_SIG)
         assert effects == (), f'{label} 零效果串'
-        assert gs.write_seq == seq_before, f'{label} 零容器写'
+        assert gs.write_seq == seq_before, f'{label} 零字段写操作'
         assert gs.pending_item_opens.value == queue, f'{label} 队列原样'
 
 

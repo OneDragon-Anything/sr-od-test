@@ -42,7 +42,7 @@ test_plane_intel_pipeline.py,本文件不辖。
   → report 经屏文件落状态容器(状态容器终值)+ obs 挂实例属性;投资策略入口识别标志
   复探窗(ADR-0529 有界自愈)语义逐位(复探窗内自愈、超窗 round_retry
   消耗观察 node 预算)。位面过渡 = 实体链写(链状态容器终值双写);武装箱/
-  未达上限/等待1-1 = 占位接入调用(现役零容器写点,统一形态)。
+  未达上限/等待1-1 = 占位接入调用(现役零字段写操作点,统一形态)。
 - **刷新终结交回测试**(投资策略,两 node 形态):建议刷新 → 闸 1 槽计数
   现读 >0 → 点钮恰一次 → 终结交回 round_success(交回外循环重进 = 入口
   重建);刷新计数写端随画面 op 基类退役(记账归动作 op 会话承接),
@@ -50,7 +50,7 @@ test_plane_intel_pipeline.py,本文件不辖。
 - **写入流对拍测试**:``active_env`` 写时点(gain-chain 3.2 反转:点卡/派发
   时点零写,落地相经获得链写;ADR-0598 点卡前写退役)、
   ``active_strategies`` 重入裁决出口 append(值/时点)、
-  简报三字段容器写(词缀幂等辖「读+采」/boss 恒覆写/难度仅 None 写)
+  简报三字段的字段写操作(词缀幂等辖「读+采」/boss 恒覆写/难度仅 None 写)
   逐位;结算观察半直写(D-94 时序)经战斗等待已登记行为测试的轨迹断言承载。
 - **round_wait 语义测试**(收尾屏):循环推进 = round_wait(不烧节点重试
   预算);等待1-1 = 轮询 round_wait 自环观察 node(全库唯一观察轮询
@@ -1506,7 +1506,7 @@ def _make_wait_one_one(test_context, monkeypatch: pytest.MonkeyPatch, *,
 def test_wait_one_one_anchor_hit_and_poll_round_wait(
         test_context, monkeypatch) -> None:
     """等待1-1 两 node 形态测试(纯等待型,现役 handle 逐位映射):识别标志命中 →
-    观察轮 obs 装载 + 占位 report 接入调用恰一次(现役零容器写点,统一形态
+    观察轮 obs 装载 + 占位 report 接入调用恰一次(现役零字段写操作点,统一形态
     占位)→ round_success 进决策动作 node → act 零动作 success 交回
     ('1-1 备战就绪' 终态语义同点);识别标志 miss 且未超时 → 观察轮 round_wait
     轮询(自环,不吃 retry 预算,轮询轮不装载 obs)。

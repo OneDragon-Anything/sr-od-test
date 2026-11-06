@@ -168,7 +168,7 @@ def test_bench_full_skip_point_not_in_tier_list(
 
 def test_zero_open_early_return_no_trigger(
         monkeypatch: pytest.MonkeyPatch, seeded_provider) -> None:
-    """opened == 0 零触发锁:全批席满 → 早退路径零容器写(只供策略算分的实现分支零写、
+    """opened == 0 零触发锁:全批席满 → 早退路径零字段写操作(只供策略算分的实现分支零写、
     零掷点)。"""
     gs = _make_gs(bench_units=[('希儿', 1)] * 9)
     calls = _record_writes(gs, monkeypatch)
@@ -176,7 +176,7 @@ def test_zero_open_early_return_no_trigger(
         gs, CwActionCollectOreParam(points=_XYS), sig=_SIG)
     assert not out.applied and out.reason == 'bench_full_no_open', \
         f'全跳批出参: {out.reason}'
-    assert not calls, f'全跳零容器写(只供策略算分的实现分支含零写): {calls}'
+    assert not calls, f'全跳零字段写操作(只供策略算分的实现分支含零写): {calls}'
 
 
 def test_miss_seed_zero_strategy_leg_writes(

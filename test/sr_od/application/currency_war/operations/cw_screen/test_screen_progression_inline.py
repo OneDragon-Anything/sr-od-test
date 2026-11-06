@@ -573,7 +573,7 @@ def test_box_pick_act_off_match_fails_via_normal_chain(test_context,
                                                        monkeypatch):
     """局外无早退支测试(用户裁决 2026-09-22 全族删门,op-layer.md §1.1):
     match 缺席(局外)不设 round_success 早退门,act 沿正常链路因缺上下文
-    自然失败(AttributeError),零派发零容器写。红 = 局外 round_success
+    自然失败(AttributeError),零派发零字段写操作。红 = 局外 round_success
     早退门回潮 / 兜底决策路径回潮(局外调机器决策/发点击/写状态容器)。"""
     op, session = _make_box_pick(test_context, monkeypatch, gate_ok=True,
                                  cards=list(_CARDS))

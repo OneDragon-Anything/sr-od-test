@@ -9,7 +9,7 @@ op 形态权威版本 = flow/action_ops.md(动作 op = 机械执行后直调自�
 
 - **执行器机械半**:逐动作点击/拖拽契约(零读屏 / 每帧恰一击 / 单次
   机械拖拽无判效重试 / 出战点击序列与弹窗路径 / 免战牌上报递减);
-- **逻辑态上报**:每动作的上报函数容器写契约(覆盖完备 + 逐动作摘件/
+- **逻辑态上报**:每动作的上报函数字段写操作契约(覆盖完备 + 逐动作摘件/
   落位/腾席/金账恰一次);
 - **发射面装载**:kernel 参数构造(晶矿挑选/落位策略)与发射臂装载
   (cost 现算/auth_basis 分键/通道 reason/桥复检语境/状态容器下标 fail-closed
@@ -213,7 +213,7 @@ def test_ore_executor_is_mechanical_payload_clicks(monkeypatch):
 
 @pytest.fixture
 def _isolate_defect_buffer():
-    """缺陷台账缓冲隔离(工具上报升格容器写后,本测覆盖循环会落 tool_*
+    """缺陷台账缓冲隔离(工具上报升格为字段写操作后,本测覆盖循环会落 tool_*
     留证行;后清防外泄——全局缓冲被后续测试整池排水对账,残留行即假红)。"""
     consume_defect_sink()
     yield
@@ -226,22 +226,22 @@ def test_vocab_actions_all_have_logic_state_projection(
     ``kernel/cw_action_report``,每动作恰一个具名函数——原聚合写口
     ``apply_prep_action_logic`` 随批退役)。
 
-    覆盖面三集(登记面申报 = 函数族 docstring:有容器写动作一动作
+    覆盖面三集(登记面申报 = 函数族 docstring:有字段写操作动作一动作
     一文件,零写族集中 ``zero_writes``):
-    - **容器写集**:CwActionSellBenchParam/CwActionSellDeployedParam/
+    - **字段写操作集**:CwActionSellBenchParam/CwActionSellDeployedParam/
       CwActionMoveUnitParam/CwActionLevelUpParam/CwActionCollectOreParam/
       CwActionOpenTomeParam/CwActionOpenBookcardParam/CwActionWearEquipParam
-      ——供数状态容器上逐动作必产生容器写(write_seq 推进);
-    - **工具容器写集**(tool-gain-report 迭代自零写族升格,机械执行直接
+      ——供数状态容器上逐动作必产生字段写操作(write_seq 推进);
+    - **工具字段写操作集**(tool-gain-report 迭代自零写族升格,机械执行直接
       上报写状态容器):冶金炉/特权赋予卡/拆装扳手/精密拆装扳手/员工投影仪/
       完美投影仪——逐动作面对相同入场态(equips 含该工具 + 目标件/穿戴
-      面)必产生容器写;好运令牌除外(见零写集);
+      面)必产生字段写操作;好运令牌除外(见零写集);
     - **合法零写集**:CwActionOpenBoxParam(R7 终结化)/CwActionLuckyTokenUse
       Param(判据面 fail-closed 永不准入,上报零写留证)。
     裁决注记:CwActionWearEquipParam 原在零写集(聚合口形态),上报
     函数族起穿戴 = 发出即记账 owned −1(已登记才减,执行侧效果并入
-    上报),按新事实移入容器写集;工具六类原在零写集(零写占位),
-    tool-gain-report 迭代升格容器写。函数名机械推导(snake 规约同
+    上报),按新事实移入字段写操作集;工具六类原在零写集(零写占位),
+    tool-gain-report 迭代升格为字段写操作。函数名机械推导(snake 规约同
     test_action_report)。"""
     import re
 
@@ -297,7 +297,7 @@ def test_vocab_actions_all_have_logic_state_projection(
     def _seq() -> int:
         return gs.write_seq
 
-    # 工具容器写集(tool-gain-report 升格):逐动作重播种「equips 含该
+    # 工具字段写操作集(tool-gain-report 升格):逐动作重播种「equips 含该
     # 工具 + 目标件/穿戴面 + 前排 1 号位有单位」的相同入场态——前序工具
     # 动作会消耗件名(炉替换/特权变换/扳手回区)与穿戴面,覆盖测试按同一
     # 入场态逐个评估写行为;重播种 = 状态容器域 builder 同写入口(observe)。
@@ -320,7 +320,7 @@ def test_vocab_actions_all_have_logic_state_projection(
                                       equips=['轮滑鞋']))
         before = _seq()
         _report(gs, action)
-        assert _seq() > before, f'{type(action).__name__} 应产生容器写'
+        assert _seq() > before, f'{type(action).__name__} 应产生字段写操作'
     # 供数状态容器重播种(工具循环的消耗/置换不复原;穿戴分支依赖
     # owned 已登记、卖出分支依赖前排 1 号位有单位)。
     gs.observe(gs.equips, ['轮滑鞋'], sig=_sig)
@@ -343,7 +343,7 @@ def test_vocab_actions_all_have_logic_state_projection(
     for action in written:
         before = _seq()
         _report(gs, action)
-        assert _seq() > before, f'{type(action).__name__} 应产生容器写'
+        assert _seq() > before, f'{type(action).__name__} 应产生字段写操作'
     for action in zero:
         before = _seq()
         _report(gs, action)
@@ -355,7 +355,7 @@ def test_vocab_actions_all_have_logic_state_projection(
     before = _seq()
     _report(gs, CwActionWearEquipParam(item_name='轮滑鞋', char_name='丙',
                                        row='front', slot=1))
-    assert _seq() > before, 'CwActionWearEquipParam 应产生容器写'
+    assert _seq() > before, 'CwActionWearEquipParam 应产生字段写操作'
     # 词表覆盖完备性:三集并集(含独立重播种的穿戴分支)覆盖 CW_ACTION_TYPES
     # 中非转场/非组合壳成员
     names = {c.__name__ for c in CW_ACTION_TYPES}
@@ -1138,7 +1138,7 @@ def test_start_battle_click_sequence_and_envelope(monkeypatch):
 def test_start_battle_skip_substate_reported_not_consumed(monkeypatch):
     """免战子态上报测试(T-286):出战 miss + 「按钮-跳过」命中 → 点跳过
     坐标 + env.skip_substate True;递减本体 = op 自上报(行为测试见免战牌
-    递减测试),op 直调层零多余容器写。"""
+    递减测试),op 直调层零多余字段写操作。"""
     from test.harness.fixture_controller import fast_sleep
 
     from sr_od.application.currency_war.operations.cw_op.cw_start_battle_action import (

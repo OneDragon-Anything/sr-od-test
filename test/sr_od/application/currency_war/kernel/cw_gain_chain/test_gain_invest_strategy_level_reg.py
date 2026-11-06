@@ -80,4 +80,4 @@ def test_bridges_noop_zero_world_write() -> None:
     assert apply_board_rewrite(gs, spec) is None, '板面重写桥 no-op'
     assert gs.free_refresh_left.value is None and gs.gold.value is None, \
         '补调误写'
-    assert gs.write_seq == seq_before, '两桥补调零容器写'
+    assert gs.write_seq == seq_before, '两桥补调零字段写操作'

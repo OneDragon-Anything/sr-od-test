@@ -319,13 +319,13 @@ def test_deploy_lock_grant_leg_overflow_decoupled(monkeypatch) -> None:
 def test_non_registered_env_stays_quiet(monkeypatch) -> None:
     """表外环境安静不写(T-33 设计 §4 锁 11;早退出口改形回归半边):
     INVESTMENT_ENVS 已登记但零登记表命中(轮岗)→ 效果串恒空逐位不变
-    (() 形态)、零容器写——赠卡锁分支为表外环境零写径。"""
+    (() 形态)、零字段写操作——赠卡锁分支为表外环境零写径。"""
     gs = _make_gs_node_pos((1, 1))
     calls = _record_writes(gs, monkeypatch)
     seq_before = gs.write_seq
     effects = on_env_gained(gs, None, '轮岗', rand=False, sig=_SIG)
     assert effects == (), '表外环境效果串恒空(() 逐位不变)'
-    assert not calls, f'零容器写: {calls}'
+    assert not calls, f'零字段写操作: {calls}'
     assert gs.write_seq == seq_before, '安静不写'
 
 
@@ -343,7 +343,7 @@ def test_delayed_item_grant_leg_enqueues_zero_seat_write(
     (('惊喜盒', (2, 4)),)((1,1) 步进 12)+ 效果串 item_open_scheduled:
     惊喜盒@2-4 + done 含 (命运礼物, delayed_open_accel);**零席位写**
     (占席证伪锁:bench/overflow/equips 任何字段零写,惊喜盒 = 战利品区
-    浮动件非占席)——容器写恰两笔:队列(rand 通道,链收尾)+ done
+    浮动件非占席)——字段写操作恰两笔:队列(rand 通道,链收尾)+ done
     (logic 直写,登记事实)。"""
     gs = _make_gs_node_pos((1, 1))
     calls = _record_writes(gs, monkeypatch)
@@ -362,7 +362,7 @@ def test_delayed_item_grant_leg_enqueues_zero_seat_write(
          'rand', GAIN_CHAIN_PRODUCER),
         ('env_grants_done', f'on_env_gained:{_DELAYED_ENV}#accel_scope',
          'logic', GAIN_CHAIN_PRODUCER),
-    ], f'容器写恰两笔(队列链收尾 + done 直写): {calls}'
+    ], f'字段写操作恰两笔(队列链收尾 + done 直写): {calls}'
     assert all(c[3] == _SIG for c in calls), '同 sig(同窗相邻)'
 
 
@@ -644,14 +644,14 @@ def test_affix_disable_slot_scoped_to_hit(monkeypatch) -> None:
 def test_affix_disable_empty_container_zero_write_with_decl(
         monkeypatch, rows_sink: _RowSink) -> None:
     """空状态容器边界(T-45 设计 §4 锁 2):状态容器空(直构未写)时选敌后破坏 →
-    零容器写 + 申报行已登记(kind = env_affix_disable_empty_container,
+    零字段写操作 + 申报行已登记(kind = env_affix_disable_empty_container,
     实机已失效而模型未删的偏差申报),零效果串。"""
     gs = _make_affix_gs(None)
     calls = _record_writes(gs, monkeypatch)
     seq_before = gs.write_seq
     effects = on_env_gained(gs, None, _AFFIX_ENV, rand=False, sig=_SIG)
     assert effects == (), '零效果串(未发生删除)'
-    assert not calls, f'零容器写: {calls}'
+    assert not calls, f'零字段写操作: {calls}'
     assert gs.write_seq == seq_before, '安静不写'
     assert rows_sink.kinds() == ['env_affix_disable_empty_container'], \
         f'申报行分键: {rows_sink.kinds()}'
