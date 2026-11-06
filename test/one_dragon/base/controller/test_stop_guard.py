@@ -1,14 +1,14 @@
 """停机刹车语义锁(ADR-0396;ADR-0406 手动端点豁免语义修订):停机信号后零游戏输入。
 
 锁的是**语义**不锁实现:
-- 闩语义:运行中被 stop_running 打断 → is_stop_interrupted=True;idle 杂散
-  stop / 自然完成收口(finish_running)不置闩;start_running 清闩。
+- 标志位语义:运行中被 stop_running 打断 → is_stop_interrupted=True;idle 杂散
+  stop / 自然完成收尾(finish_running)不置标志位;start_running 清标志位。
   **无显式消费入口**(ADR-0406 移除 consume_stop_interrupted——手动端点
-  不再摘全局闩)。
+  不再摘全局标志位)。
 - 守卫语义:controller 公开输入入口(click/drag/btn/scroll/input/mouse_move)
-  在闩置位后抛 StopRunInterrupted,动作零落地。
+  在标志位置位后抛 StopRunInterrupted,动作零落地。
 - 手动豁免语义(ADR-0406):显式外部接管走 ``stop_guard_exemption`` 本地
-  豁免——动作放行但闩不清位、豁免按线程隔离(run 线程视角守卫永远生效)。
+  豁免——动作放行但标志位不清位、豁免按线程隔离(run 线程视角守卫永远生效)。
 - 穿透语义:守卫异常不被中间 op 层吞成普通失败——嵌套 op 链(外环→子 op→
   点击)停机后首个被拦输入即整链中止,外环不再继续下一节点(ADR-0388 实证
   的 director「已停止后又出战」形态由本层结构性消除)。
@@ -16,7 +16,7 @@
 run 26 实证背景:.log/mcp_server.log 08-26 12:56:12「已停止[gui:hotkey]」后
 12:56:16 director 仍点「出战成功」——stop 只设标志位,轮内执行链不查。
 ADR-0406 实证背景(A1b):stop_run 返回≠run 线程结束,MCP 手动端点在
-run 收口期清全局闩 → unwind 中的多动作节点失去守卫成幽灵输入。
+run 收尾期清全局标志位 → unwind 中的多动作节点失去守卫成幽灵输入。
 """
 import contextlib
 import threading
@@ -46,7 +46,7 @@ def _make_run_context() -> ApplicationRunContext:
     return ApplicationRunContext(ctx)
 
 
-# ============ ① 闩语义 ============
+# ============ ① 标志位语义 ============
 
 
 @pytest.mark.parametrize(
@@ -55,14 +55,14 @@ def _make_run_context() -> ApplicationRunContext:
         ('idle_stray', False),   # idle 杂散 stop:STOP 也是 idle 初始态,不作中断判据
         ('live_stop', True),     # 运行中被停 = 合理中断
         ('pause_stop', True),    # 暂停中被停 = 合理中断
-        ('finish', False),       # 自然完成收口(backend op 槽 finally)不置闩,
+        ('finish', False),       # 自然完成收尾(backend op 槽 finally)不置标志位,
                                  # 否则后续 MCP 手动操作(残局清理)会被守卫误拦
     ],
     ids=['idle-stray', 'live-stop', 'pause-stop', 'finish'],
 )
 def test_latch_arming_by_scenario(scenario: str, expect_armed: bool):
-    """闩置位按停机场景参数化:idle 杂散 / finish 收口不置闩,活运行 / 暂停中被停置闩;
-    置闩后新运行 start_running 清闩(闩唯一清除入口)。"""
+    """标志位置位按停机场景参数化:idle 杂散 / finish 收尾不置标志位,活运行 / 暂停中被停置标志位;
+    置标志位后新运行 start_running 清标志位(标志位唯一清除入口)。"""
     rc = _make_run_context()
     if scenario == 'idle_stray':
         rc.stop_running(reason='stray')
@@ -70,7 +70,7 @@ def test_latch_arming_by_scenario(scenario: str, expect_armed: bool):
         assert rc.start_running() is True
         rc.stop_running(reason='gui:hotkey')
         assert rc.is_stop_interrupted is True
-        assert rc.start_running() is True   # 新运行 start_running 清闩
+        assert rc.start_running() is True   # 新运行 start_running 清标志位
         assert rc.is_stop_interrupted is False
         return
     elif scenario == 'pause_stop':
@@ -124,7 +124,7 @@ class _RecordingController(ControllerBase):
 
 
 def test_guard_blocks_all_input_entries_when_armed():
-    """闩置位后全部输入入口抛 StopRunInterrupted 且零动作落地。"""
+    """标志位置位后全部输入入口抛 StopRunInterrupted 且零动作落地。"""
     c = _RecordingController()
     c.stop_guard = lambda: True
     for act in (
@@ -141,7 +141,7 @@ def test_guard_blocks_all_input_entries_when_armed():
 
 
 def test_guard_inactive_when_not_armed_or_unwired():
-    """闩未置位 / 未接线(stop_guard=None)不误拦。"""
+    """标志位未置位 / 未接入(stop_guard=None)不误拦。"""
     c = _RecordingController()
     c.stop_guard = lambda: False
     assert c.click(Point(1, 1)) is True
@@ -171,12 +171,12 @@ def test_pc_controller_real_entries_guarded():
         c.mouse_move(Point(1, 1))
 
 
-# ============ ②b 手动豁免语义(ADR-0406:手动端点不清闩,本地豁免) ============
+# ============ ②b 手动豁免语义(ADR-0406:手动端点不清标志位,本地豁免) ============
 
 
 def test_exemption_passes_but_keeps_latch_armed():
-    """本地豁免:闩置位下豁免内动作放行,且闩不清位——豁免退出后同线程
-    (模拟 run 线程视角)的后续输入仍被拦(ADR-0406 核心:收口期守卫仍活)。"""
+    """本地豁免:标志位置位下豁免内动作放行,且标志位不清位——豁免退出后同线程
+    (模拟 run 线程视角)的后续输入仍被拦(ADR-0406 核心:收尾期守卫仍活)。"""
     c = _RecordingController()
     rc = _make_run_context()
     rc.start_running()
@@ -187,7 +187,7 @@ def test_exemption_passes_but_keeps_latch_armed():
         assert c.click(Point(100, 100)) is True
         c.btn_tap('esc')  # 无返回值,不抛即过
     assert c.actions == ['click', 'btn_tap:esc'], '豁免内手动动作应落地'
-    # 闩未被清:run 收口期(unwind 中)的输入仍被守卫拦截
+    # 标志位未被清:run 收尾期(unwind 中)的输入仍被守卫拦截
     assert rc.is_stop_interrupted is True
     with pytest.raises(StopRunInterrupted):
         c.click(Point(1, 1))
@@ -201,7 +201,7 @@ def test_exemption_is_thread_local():
     c.stop_guard = lambda: True
 
     def _run_thread_input():
-        # 模拟 unwind 中的 run 线程:无豁免,闩置位 → 被拦(异常就地吞,
+        # 模拟 unwind 中的 run 线程:无豁免,标志位置位 → 被拦(异常就地吞,
         # 落地与否由 actions 断言)
         with contextlib.suppress(StopRunInterrupted):
             c.click(Point(1, 1))
@@ -227,27 +227,27 @@ def test_stop_interrupted_is_not_exception_subclass():
 
 
 def test_handle_future_result_collects_stop_interrupted():
-    """future 携带停机守卫异常(BaseException)时,done-callback 收口不外抛。
+    """future 携带停机守卫异常(BaseException)时,done-callback 收尾不外抛。
 
     穿透强化的调用域半径结论:泛型 except Exception 接不住 BaseException,
     不显式接会穿透 done-callback → concurrent.futures 只捕 Exception →
     异常落进工作线程 run() → 线程死(threading.excepthook 只留栈不留
     「已停止」语义)。handle_future_result 是全部 run 类 future 的公共
-    回调,必须在此按名收口。"""
+    回调,必须在此按名收尾。"""
     from concurrent.futures import Future
 
     from one_dragon.utils.thread_utils import handle_future_result
 
     future: Future = Future()
     future.set_exception(StopRunInterrupted('停机'))
-    handle_future_result(future)  # 不抛即过(收口为信息级日志)
+    handle_future_result(future)  # 不抛即过(收尾为信息级日志)
 
 
 def test_on_task_done_decrements_counter_on_stop_interrupted():
     """operator._on_task_done:计数器契约 = 每个 inc 恰好一次 dec,三路统一。
 
     覆盖三条泄漏/停摆路径:
-    - 守卫异常(BaseException,泛型 except 接不住)→ 按名收口递减;
+    - 守卫异常(BaseException,泛型 except 接不住)→ 按名收尾递减;
     - 普通异常 → 递减(原 ``pass`` 漏 dec);
     - **_run 返回 False(stop 打断未跑完指令的正常返回,最常见路径)→
       递减**(原 ``if result`` 在该路径漏 dec → 计数器永不清零 → 主循环
@@ -287,14 +287,14 @@ def test_on_task_done_decrements_counter_on_stop_interrupted():
 
 
 def test_round_wait_not_shortcircuited_in_idle_stop(test_context):
-    """idle STOP(闩未置位)不零等待:直接 op 调试路径的等待语义回归。
+    """idle STOP(标志位未置位)不零等待:直接 op 调试路径的等待语义回归。
 
-    _interruptible_sleep 判据必须用 is_stop_interrupted 闩而非
+    _interruptible_sleep 判据必须用 is_stop_interrupted 标志位而非
     is_context_stop——STOP 也是 idle 初始态,后者会把不经 start_running
     的直接调用(debug.bat 调试/未来工具)的所有 round_wait 静默零等待。"""
     import time as _time
 
-    op = _LongWaitOp(test_context)  # 不 enter_running_state:idle STOP、闩未置位
+    op = _LongWaitOp(test_context)  # 不 enter_running_state:idle STOP、标志位未置位
     assert test_context.run_context.is_context_stop is True
     assert test_context.run_context.is_stop_interrupted is False
     start = _time.perf_counter()
@@ -341,10 +341,10 @@ def test_round_wait_returns_early_when_already_stopped(test_context):
 
 
 def test_execute_exits_within_one_round_after_stop(test_context):
-    """核心回归锁:节点长 round_wait 中停机 → execute 一轮内收口「已停止」。
+    """核心回归锁:节点长 round_wait 中停机 → execute 一轮内收尾「已停止」。
 
     修复前形态:_after_round_wait 整段 time.sleep(30),停机信号要等睡完
-    才被循环顶看见;修复后切片睡眠提前返回,循环顶 is_context_stop 收口。
+    才被循环顶看见;修复后切片睡眠提前返回,循环顶 is_context_stop 收尾。
     """
     import threading
     import time as _time
@@ -417,7 +417,7 @@ def _restore_session_run_state(test_context) -> None:
     """还原 session 级 run_context 状态(纪律①:test_context 共享)。
 
     本文件两处测试会在 session run_context 上留下 last_run_result(非 None)
-    与停机闩——前者会被 ADR-0388 的 CW 刹车判据(last_run_result is not None)
+    与停机标志位——前者会被 ADR-0388 的 CW 刹车判据(last_run_result is not None)
     当成「运行中被停」误拦后续测试文件的 executor 路径(全量实测污染)。
     """
     rc = test_context.run_context
@@ -456,7 +456,7 @@ def test_stop_mid_round_blocks_rest_of_chain(test_context, monkeypatch):
 
 
 def test_run_application_collects_guard_stop_as_stopped(test_context, monkeypatch):
-    """顶层收口:守卫中断经 run_application 收口为「已停止」,非执行异常。"""
+    """顶层收尾:守卫中断经 run_application 收尾为「已停止」,非执行异常。"""
     from one_dragon.base.operation.application.application_run_context import (
         RunFinishReason,
     )
@@ -490,7 +490,7 @@ def test_run_application_collects_guard_stop_as_stopped(test_context, monkeypatc
     assert rc.last_application_result is not None
     assert rc.last_application_result.status.startswith('已停止')
     assert 'gui:hotkey' in rc.last_application_result.status
-    # 顶层收口后复位 session 态(不污染后续测试文件;闩复位由
+    # 顶层收尾后复位 session 态(不污染后续测试文件;标志位复位由
     # _restore_session_run_state 直改,ADR-0406 后无消费入口)
     from test.harness.fixture_controller import reset_running_state
     for op in factory.created:

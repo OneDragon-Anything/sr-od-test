@@ -4,7 +4,7 @@
 - start_running 在进程内单跑道检查通过后真实取得窗口锁;他进程(测试里用
   同键的第二个锁实例模拟,Windows 字节锁按句柄冲突)持锁时拒绝启动,并经
   ``window_mutex_blocker`` 透出占用者描述;
-- 收口(_finish_running,覆盖 finish_running 与 stop_running 两条路径)释放锁,
+- 收尾(_finish_running,覆盖 finish_running 与 stop_running 两条路径)释放锁,
   释放后可再入;
 - 锁不跨失败泄漏:控制器初始化失败 / 初始化抛异常都先还锁。
 
@@ -55,8 +55,8 @@ def _external_mutex(rc: ApplicationRunContext) -> window_run_mutex.WindowRunMute
 @pytest.mark.parametrize('finish', ['finish_running', 'stop_running'],
                          ids=['finish-path', 'stop-path'])
 def test_running_lock_released_on_finish(finish: str) -> None:
-    """收口两路径参数化(finish_running / stop_running → _finish_running):
-    运行中他方句柄取不到,收口释放锁(释放后他方可再入)。"""
+    """收尾两路径参数化(finish_running / stop_running → _finish_running):
+    运行中他方句柄取不到,收尾释放锁(释放后他方可再入)。"""
     rc = ApplicationRunContext(_StubCtx(_StubController()))
 
     assert rc.start_running() is True
@@ -67,7 +67,7 @@ def test_running_lock_released_on_finish(finish: str) -> None:
     else:
         rc.stop_running(reason='测试停止')
     assert rc.window_mutex_blocker is None
-    assert _external_mutex(rc).acquire() is True          # 收口后:锁已释放
+    assert _external_mutex(rc).acquire() is True          # 收尾后:锁已释放
     _external_mutex(rc).release()
 
 

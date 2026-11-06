@@ -150,7 +150,7 @@ class FixtureController(MockController):
         self.recorded_clicks: list[Point] = []
         self.recorded_inputs: list[str] = []
         # 按键记录(顶层 btn_tap/btn_press 等转发到 btn_controller 时落账;
-        # 判例:CwEntryEnter F 分支经 controller.btn_tap 按交互键)
+        # 先例:CwEntryEnter F 分支经 controller.btn_tap 按交互键)
         self.recorded_btn_taps: list[str] = []
 
         # MockController 缺失、但 op 会触达的子对象;
@@ -266,7 +266,7 @@ class FixtureController(MockController):
     # 顶层按键便捷方法:真控制器(PcControllerBase)是顶层转发到 btn_controller,
     # op 代码直接调 controller.btn_tap(如 CwEntryEnter 的 F 交互)。漏补它们时
     # op 走到按键分支必 AttributeError,被框架异常 handler 吞成 round_retry 存图,
-    # 测试仍可能伪绿(判例:_WatchedCwEntryEnter 每跑一次落 3 张 .debug 图)。
+    # 测试仍可能伪绿(先例:_WatchedCwEntryEnter 每跑一次落 3 张 .debug 图)。
     def btn_tap(self, key: str) -> None:
         self.btn_controller.tap(key)
 
@@ -416,7 +416,7 @@ def enter_running_state(ctx: SrTestContext) -> None:
     rc._run_state = ApplicationRunContextStateEnum.RUNNING  # noqa: SLF001
     # 与生产 ``start_running`` 对齐(「新运行开始,清停机中断闩」):本函数是
     # start_running 的测试等价物。session 级 run_context 可能带着前序测试
-    # 真实停机路径(钩子判据 stop_running)遗留的置位闩——不清会让本测试的
+    # 真实停机路径(钩子判据 stop_running)遗留的置位标志位——不清会让本测试的
     # 所有轮间等待被 ``_interruptible_sleep`` 静默短路(单跑必过/全量必挂)。
     rc._stop_interrupted = False  # noqa: SLF001
 
@@ -426,9 +426,9 @@ def reset_running_state(ctx: SrTestContext, op: object) -> None:
 
     session 级 ``test_context`` 被复用:``_init_before_execute`` 在
     ``run_context.event_bus`` 上注册了 PAUSE/RESUME 监听,不清理会累积泄漏。
-    停机中断闩一并复位:被测 op 走真实生产停机路径(如钩子判据触发
-    ``stop_running``)时闩会置位且无生产收口点清它——不复位则泄漏到后续
-    别的测试文件(实证:test_cw_shop_refresh 锁②b 真停用例置闩后,
+    停机中断一次性标志位一并复位:被测 op 走真实生产停机路径(如钩子判据触发
+    ``stop_running``)时标志位会置位且无生产收尾点清它——不复位则泄漏到后续
+    别的测试文件(实证:test_cw_shop_refresh 锁②b 真停用例置标志位后,
     test_back_to_normal_world_plus 全量跑轮间等待全被短路假红)。
     """
     rc = ctx.run_context  # type: ignore[attr-defined]

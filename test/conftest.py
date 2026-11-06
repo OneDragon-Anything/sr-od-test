@@ -539,7 +539,7 @@ _RUN_LEFTOVER_ATTRS: tuple[str, ...] = ('last_run_result',)
 # 真实外网连接守卫(README 测试纪律 5 的机检层)
 # --------------------------------------------------------------------------- #
 # 拦 ``socket.connect``:非 loopback 地址直接 AssertionError(带定位指引),防
-# 测试静默触网——慢(单次秒级)+ 不确定(断网/代理 = 假 flaky)。判例:曾发现
+# 测试静默触网——慢(单次秒级)+ 不确定(断网/代理 = 假 flaky)。先例:曾发现
 # ctx 初始化链路真实请求 ghproxy.link ~1s/次(已短路,本守卫防同型回归)。
 # 放行 loopback(127.0.0.1/::1/localhost):进程内 TestClient 虽不走 socket,
 # 本地 server 类测试不受影响。逃生口:环境变量 ``SR_TEST_ALLOW_NET=1``
@@ -612,13 +612,13 @@ def _guard_shared_ctx(test_context: SrTestContext) -> Iterator[None]:
                     stacklevel=2,
                 )
                 setattr(rc, field, None)
-        # 停机中断闩残留(同族:走真实生产停机路径的测试置位后无收口点清,
+        # 停机中断一次性标志位残留(同族:走真实生产停机路径的测试置位后无收尾点清,
         # 泄漏会让后续所有轮间等待被 _interruptible_sleep 静默短路)。此处是
         # 防线不是许可——用 reset_running_state 的测试已在 harness 层复位,
         # 报警的是绕过 harness 的泄漏点。
         if getattr(rc, 'is_stop_interrupted', False):
             warnings.warn(
-                'run_context 停机中断闩被本测试遗留置位(真实停机路径触发?'
+                'run_context 停机中断一次性标志位被本测试遗留置位(真实停机路径触发?'
                 '已自动复位)——泄漏会让后续测试的轮间等待被静默短路(全集假红)。',
                 stacklevel=2,
             )
@@ -630,7 +630,7 @@ def _guard_shared_ctx(test_context: SrTestContext) -> Iterator[None]:
 # --------------------------------------------------------------------------- #
 # 背景:op 框架的异常 handler(``Operation.execute`` catch 后 ``save_screenshot``)
 # 与部分业务代码直接调 ``debug_utils.save_debug_image``,测试进程中会写真实
-# ``.debug/images/``。判例:fixture 流程测试里 op 节点抛 AttributeError 被框架
+# ``.debug/images/``。先例:fixture 流程测试里 op 节点抛 AttributeError 被框架
 # 吞成 round_retry 重试,每次异常落一张 2.4MB 图(单跑一条测试即写 3 张,
 # 反复跑累积 30+ 张),测试还照样绿 —— 盘脏了且无人察觉。
 # 隔离:``save_debug_image`` 重定向到 pytest tmp_path,真实 .debug/ 零写入;
@@ -686,7 +686,7 @@ def _isolate_window_run_mutex(
     if mutex is not None and mutex.is_holding:
         mutex.release()
         warnings.warn(
-            'run_context 窗口运行锁被本测试遗留持有(未走 finish/stop 收口?)'
+            'run_context 窗口运行锁被本测试遗留持有(未走 finish/stop 收尾?)'
             '已自动释放——Windows 字节锁按句柄冲突,残留会锁死后续 start_running。',
             stacklevel=2,
         )
@@ -695,12 +695,12 @@ def _isolate_window_run_mutex(
 # --------------------------------------------------------------------------- #
 # state 流水装配根隔离(README 测试纪律 2 的机检层)
 # --------------------------------------------------------------------------- #
-# 背景:CW state 流水的生产兜底装配挂在局容器单例建立点(用户裁定
+# 背景:CW state 流水的生产兜底装配挂在局状态容器单例建立点(用户裁定
 # 2026-09-15:遥测装配 = game state 职责,精化令:触发只钉 kernel
 # cw_game_state game_state_of 建立路径 → kernel ensure_journal_assembly,
-# 「未装配即按生产缺省根补装」;生产注入漏斗 = establish_new_match 容器
+# 「未装配即按生产缺省根补装」;生产注入漏斗 = establish_new_match 状态容器
 # 建立点)。
-# op 流程测试驱动到容器建立/首建就会过这个点——不重定向
+# op 流程测试驱动到状态容器建立/首建就会过这个点——不重定向
 # 有两个后果:① 测试真实写 .debug/currency_war/telemetry/live/state/journal.
 # jsonl(纪律 2 禁止);② 装配前置的寿命清理会读真实 85MB 账面(慢 + 可能
 # 重写开发数据)。隔离:把缺省路径缝(kernel default_journal_path)重定向到
@@ -728,7 +728,7 @@ def _isolate_state_journal(
 # CW 决策上下文槽复位(模块级单例槽跨测试残留防线)
 # --------------------------------------------------------------------------- #
 # 背景:cw_decision_ctx._DTAG 是进程级单例槽(策略决策帧 → 动作回执的
-# 关联锚;读取端 = note_action_receipt take 读后清)。「decide 置槽但本
+# 关联标记;读取端 = note_action_receipt take 读后清)。「decide 置槽但本
 # 测试不产回执」的路径(纯策略单测的常态)会把 dtag 泄漏给后续测试的
 # 回执断言(陈旧 dtag 搭上无关节:精确 shape 断言假红 / 关联断言假绿)。
 # 复位面与 state 流水装配槽(_isolate_state_journal)同款:autouse

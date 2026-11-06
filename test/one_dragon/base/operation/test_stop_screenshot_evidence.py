@@ -4,7 +4,7 @@
 ① 运行态下 save_screenshot=True → 独立抓帧一次、落证一次,
    文件名前缀 = stop_<reason>(reason 非法字符已替换),stop_source 照常记录;
 ② 缺省(不传/False)→ 零截图(用户主动停机行为不变);
-③ 证据失败(落盘返回空串/抓帧抛错)不拦截停机,stop_source 照常收口。
+③ 证据失败(落盘返回空串/抓帧抛错)不拦截停机,stop_source 照常收尾。
 """
 from unittest.mock import MagicMock
 
@@ -67,7 +67,7 @@ def test_stop_screenshot_off_by_default(monkeypatch):
 
 
 def test_stop_screenshot_failure_not_blocking(monkeypatch):
-    """③ 证据链失败(落盘空串/抓帧抛错)→ 停机照常收口,reason 不丢。"""
+    """③ 证据链失败(落盘空串/抓帧抛错)→ 停机照常收尾,reason 不丢。"""
     _patch_save(monkeypatch, lambda *a, **k: '')
     rc = _make_run_context()
     result = rc.stop_running(reason='hook:x', save_screenshot=True)

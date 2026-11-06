@@ -40,7 +40,7 @@ class SimControllerStub:
 
     唯一放行面 = :attr:`is_game_window_ready`(恒 True):框架 execute()
     入口的「检测游戏窗口」节点走 ``ctx.is_game_window_ready`` 就绪探针,
-    sim 世界无窗口即恒就绪——这是就绪查询非真实 IO,放行与 fail-loud
+    sim 状态副本无窗口即恒就绪——这是就绪查询非真实 IO,放行与 fail-loud
     语义不冲突(任何真实 IO 接口名仍炸)。
     """
 
@@ -58,7 +58,7 @@ class SimControllerStub:
 
 
 class MinimalSimBackend:
-    """最小假后端(端口协议最小实现;端口/基类接线的锁测试面)。
+    """最小假后端(端口协议最小实现;端口/基类接入的锁测试面)。
 
     - ``screen_identity`` 返回可设的 ``screen`` 档名;
     - ``observe`` 记录调用并返回 ``observe_result``(默认 None);
@@ -136,13 +136,13 @@ def sim_backend_fixture(
 class SimFullRun:
     """一次 sim 全流程运行的产物(验收断言消费)。"""
 
-    #: 世界后端(done=True = 局终)。
+    #: 状态副本后端(done=True = 局终)。
     backend: Any
-    #: 世界容器(运行终态)。
+    #: 状态容器(运行终态)。
     gs: Any
-    #: 容器逐域值快照(确定性双跑对拍载体;字段名 → 冻结为纯数据的值)。
+    #: 状态容器逐域值快照(确定性双跑对拍载体;字段名 → 冻结为纯数据的值)。
     snapshot: dict
-    #: 容器写流(状态 journal sink 内存捕获;不变式断言载体,不落盘)。
+    #: 字段写操作流(状态 journal sink 内存捕获;不变式断言载体,不落盘)。
     journal_rows: list
     #: op 执行终态结果(execute() 返回值)。
     result: Any
@@ -152,15 +152,15 @@ class SimFullRun:
     hp_trail: tuple
 
 
-#: 非世界状态的元数据键(确定性对拍域外,冻结时剥除):match_final 记录
+#: 非状态副本的元数据键(确定性对拍域外,冻结时剥除):match_final 记录
 #: 内嵌的局时长(真实运行耗时,双跑必然不同)与 code_commit(落快照时
-#: 的代码 HEAD 短哈希,随提交变化)——两者均与 sim 世界确定性无关。
+#: 的代码 HEAD 短哈希,随提交变化)——两者均与 sim 状态副本确定性无关。
 _NONDETERMINISTIC_META_KEYS: frozenset = frozenset({'duration_s',
                                                     'code_commit'})
 
 
 def _freeze_value(value: Any) -> Any:
-    """容器值冻结为可 == 对拍的纯数据(dataclass → dict;容器/列表递归;
+    """状态容器值冻结为可 == 对拍的纯数据(dataclass → dict;容器/列表递归;
     墙钟度量键剥除,域见 :data:`_NONDETERMINISTIC_META_KEYS`)。"""
     if value is None or isinstance(value, (bool, int, float, str)):
         return value
@@ -177,7 +177,7 @@ def _freeze_value(value: Any) -> Any:
 
 
 def container_snapshot(gs: Any) -> dict:
-    """容器逐域值快照(域 = gs 上的 Field 形属性,``hasattr(.value)``;
+    """状态容器逐域值快照(域 = gs 上的 Field 形属性,``hasattr(.value)``;
     非域属性(如 strategy_state 附着对象)天然排除)。确定性双跑对拍
     载体——逐位一致判据的取数口。"""
     out: dict = {}
@@ -205,7 +205,7 @@ class _ModuleTimeProxy:
 
 @contextmanager
 def freeze_cw_module_time() -> Iterator[list]:
-    """冻结 CW 树内全部模块的裸 ``time.sleep``(op 模块直睡面;sim 世界
+    """冻结 CW 树内全部模块的裸 ``time.sleep``(op 模块直睡面;sim 状态副本
     瞬时呈现,直睡纯属空等)。范围 = ``sr_od.application.currency_war``
     前缀模块 + 框架 operation 模块,按 sys.modules 现值挂替身,退出逆序
     还原(手法同 fixture_controller.fast_sleep 的模块级桩)。
@@ -237,15 +237,15 @@ def freeze_cw_module_time() -> Iterator[list]:
 
 @contextmanager
 def capture_state_journal() -> Iterator[list]:
-    """容器状态写流内存捕获(kernel 状态 journal sink;不落盘)。
+    """状态容器写流内存捕获(kernel 状态 journal sink;不落盘)。
 
     同点接通 run 归属供给槽(:func:`set_run_id_provider` → telemetry
-    现读口):生产装配点 = 局容器单例建立漏斗(establish_new_match →
-    game_state_of),sim 走容器绑定口绕过该点,行归属供给须运行器补装
+    现读口):生产装配点 = 局状态容器单例建立漏斗(establish_new_match →
+    game_state_of),sim 走状态容器绑定口绕过该点,行归属供给须运行器补装
     ——缺它 = 全部行按「局外拒写」静默丢失(捕获失效)。
 
     退出复位 sink 与供给槽。捕获 = 行投影(版本/行型/字段/after 值)非
-    原行——原行内嵌 full_state_snapshot(全容器转储),整局捕获原行会
+    原行——原行内嵌 full_state_snapshot(全状态容器转储),整局捕获原行会
     内存爆炸;投影行保留不变式断言所需最小面。
     """
     from sr_od.application.currency_war.kernel.cw_game_state import (
@@ -277,12 +277,12 @@ def run_sim_full_match(test_context: Any,
                        strategy_seed: int = 20260923,
                        enemy_affixes: tuple = (),
                        max_rounds: int = 1200) -> SimFullRun:
-    """真流程 × sim 世界跑一整局(3.4 首局验收的运行原语)。
+    """真流程 × sim 状态副本跑一整局(3.4 首局验收的运行原语)。
 
     装配(flow-seam §4):真 screen_loader + controller 桩(就绪探针放行,
     其余触碰即炸)+ SimBackend(端口槽 + 事件钩子 + 动作分支 rng 提供槽)
     + 真 mandate_v1 策略器(构造注入 SimpleNamespace(strategy_seed))
-    + 容器单例绑定(后端容器 = 流程唯一世界)+ 真 CwLoop(看门狗轮数
+    + 状态容器单例绑定(后端状态容器 = 流程唯一状态副本)+ 真 CwLoop(看门狗轮数
     上限)。obs 读口装配点接通纯钩子半部(缓存清理 + 合成特效帧门;
     缺陷台账 sink 缺省关 = 不落盘,测试零真实 IO)。
 
@@ -291,7 +291,7 @@ def run_sim_full_match(test_context: Any,
     断言;journal sink 走内存捕获)。
 
     返回 :class:`SimFullRun`;teardown 必卸(端口槽/事件 sink/rng 槽/
-    运行态/controller/容器绑定随 monkeypatch 与 weakref 生命周期还原)。
+    运行态/controller/状态容器绑定随 monkeypatch 与 weakref 生命周期还原)。
     """
     from types import SimpleNamespace
 
@@ -353,14 +353,14 @@ def run_sim_full_match(test_context: Any,
     set_obs_reset_hook(reset_phase_round_cache)
     set_merge_effect_gate(is_merge_effect_frame)
 
-    # —— 世界后端 + 容器单例绑定(流程取口与后端容器同源) ——
+    # —— 状态副本后端 + 状态容器单例绑定(流程取口与后端状态容器同源) ——
     backend = SimBackend(
         seed=seed,
         cfg=RunConfig(selected_difficulty='A8', enemy_difficulty=108,
                       env_present=True, enemy_affixes=tuple(enemy_affixes)))
     install_backend(backend)
 
-    # —— 策略器 + 局容器(真 mandate_v1,构造注入;终态契约 §2.1) ——
+    # —— 策略器 + 局状态容器(真 mandate_v1,构造注入;终态契约 §2.1) ——
     session = StrategySession()
     session.rng = random.Random(strategy_seed)
     bind_session_container(session, backend.gs)
@@ -388,7 +388,7 @@ def run_sim_full_match(test_context: Any,
                 result = loop.execute()
     except Exception as exc:
         # 崩点上下文注入(PEP-678 add_note:不改异常类型/不吞 traceback,
-        # 报告面追加世界状态——冒烟批「哪节点崩」的最小凭据;「哪动作」
+        # 报告面追加状态副本——冒烟批「哪节点崩」的最小凭据;「哪动作」
         # 由原 traceback 承载。读 backend 私有槽仅取现值,无副作用)。
         exc.add_note(
             'sim 全流程局崩点上下文: '

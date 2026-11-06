@@ -54,7 +54,7 @@ def test_stop_from_running_reaches_stop_and_keeps_source():
 
 
 def test_stop_from_pause_reaches_stop_directly(caplog):
-    """③ PAUSE 态 stop 直达 STOP(无 RESUME 绕道):状态收口 + stop_source 保留
+    """③ PAUSE 态 stop 直达 STOP(无 RESUME 绕道):状态收尾 + stop_source 保留
     + 事件序列只发 STOP 不发 PAUSE + 不打暂停日志。"""
     rc = _make_run_context()
     rc._run_state = ApplicationRunContextStateEnum.PAUSE
