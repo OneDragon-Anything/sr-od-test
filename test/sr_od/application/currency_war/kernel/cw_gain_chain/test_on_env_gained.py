@@ -22,7 +22,7 @@ calc/designs/T-33-yingxiong-dengchang.md)§2.3 + §4 锁 2/3/4/9/11:
 fail-closed 零写 + 缺陷行 / 在场判定覆盖 deployed 与溢出位。
 
 再追加面 = T-45 敌后破坏设计(designs/T-45-dihou-pohuai.md)§4 锁 1/2/6:
-词缀失效删除分支(均匀随机删 1 → 随机态写回四断言)/ 空容器零写 + 申报行 /
+词缀失效删除分支(均匀随机删 1 → 随机态写回四断言)/ 空状态容器零写 + 申报行 /
 装备佩戴豁免跟随解除。锁面 5(HP 词缀回调)归 kernel/test_cw_opening_hp.py
 (回调宿主镜像);锁面 7(sim 追加链)归 sim/cw_sim_backend/(流程级镜像);
 锁面 3/4(写门三分支/触发链)归 operations/cw_screen/test_plane_intel_pipeline.py
@@ -81,7 +81,7 @@ _EVIDENCE = f'on_env_gained:{_ENV}'
 
 
 def _make_gs(*, node: bool = False) -> GameState:
-    """直构容器(bench = 开局初始值 9 空槽);``node`` = 节点窗已开。"""
+    """直构状态容器(bench = 开局初始值 9 空槽);``node`` = 节点窗已开。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.observe(gs.bench, BenchView(slots=[BenchSlot(kind='empty')] * 9,
                                    capacity=9), sig=_SIG_OBS)
@@ -192,7 +192,7 @@ _DEPLOY_ENV = '英雄登场'
 
 
 def _make_gs_node_pos(node_pos: tuple[int, int] | None) -> GameState:
-    """直构容器(bench 9 空槽);``node_pos`` 非 None = 观察锚定生效序位
+    """直构状态容器(bench 9 空槽);``node_pos`` 非 None = 观察锚定生效序位
     (check_env_battle_grants 测试同款直测注入)。"""
     gs = _make_gs()
     if node_pos is not None:
@@ -478,7 +478,7 @@ def rows_sink() -> _RowSink:
 def _make_conditional_gs(*, bench: list[tuple[str, int]] | None = (),
                          front: list[Unit] | None = None,
                          overflow_card: str | None = None) -> GameState:
-    """条件形态局容器(bench None = 保持未观察,供 fail-closed 臂)。"""
+    """条件形态局状态容器(bench None = 保持未观察,供 fail-closed 臂)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if bench is not None:
         slots = [BenchSlot(kind='unit', unit=Unit(char_id=c, star=s))
@@ -557,7 +557,7 @@ def test_presence_covers_deployed_and_overflow(rows_sink: _RowSink) -> None:
 # (敌后破坏 id 146;T-45 设计稿(.debug/progress/2026-09-23-invest-effects-
 # calc/designs/T-45-dihou-pohuai.md)§2.1 + §4 锁 1/2/6:删除式建模——
 # 词缀名单非空时均匀随机删 1、剩余列表整条替换写回(经 _select_write
-# 择道,rand=True 双保险声明采样链);空容器零写 + 申报行;装备佩戴豁免
+# 择道,rand=True 双保险声明采样链);空状态容器零写 + 申报行;装备佩戴豁免
 # 跟随删除后值。HP 先验跟随锁面归 kernel/test_cw_opening_hp.py(回调
 # 宿主镜像),sim 追加链锁面归 sim/cw_sim_backend/(流程级镜像)。)
 
@@ -565,7 +565,7 @@ _AFFIX_ENV = ENV_AFFIX_DISABLE_ENV
 
 
 def _make_affix_gs(affixes: list[str] | None) -> GameState:
-    """词缀名单直写容器(logic 直写;old=None 首写,HP 回调种子档零触发)。"""
+    """词缀名单直写状态容器(logic 直写;old=None 首写,HP 回调种子档零触发)。"""
     gs = _make_gs()
     if affixes is not None:
         gs.write_logic(gs.enemy_affixes, list(affixes), produced_by='seed',
@@ -643,7 +643,7 @@ def test_affix_disable_slot_scoped_to_hit(monkeypatch) -> None:
 
 def test_affix_disable_empty_container_zero_write_with_decl(
         monkeypatch, rows_sink: _RowSink) -> None:
-    """空容器边界(T-45 设计 §4 锁 2):容器空(直构未写)时选敌后破坏 →
+    """空状态容器边界(T-45 设计 §4 锁 2):状态容器空(直构未写)时选敌后破坏 →
     零容器写 + 申报行已登记(kind = env_affix_disable_empty_container,
     实机已失效而模型未删的偏差申报),零效果串。"""
     gs = _make_affix_gs(None)
@@ -659,7 +659,7 @@ def test_affix_disable_empty_container_zero_write_with_decl(
 
 def test_affix_disable_rust_release_unfollows() -> None:
     """豁免跟随(T-45 设计 §4 锁 6):删除「库藏生锈」→ 装备佩戴豁免
-    解除——消费面 = build_equip_env_signals 全量读容器自动跟随,rust
+    解除——消费面 = build_equip_env_signals 全量读状态容器自动跟随,rust
     豁免判据(row4)删除前在场/删除后解除。seed 经现算取命中名(探针:
     s ∈ [0,100) 内存在 choice(['库藏生锈','灼热轰炸'])=='库藏生锈' 的
     seed,循环现算不手抄)。"""
@@ -693,7 +693,7 @@ _CONCEPT_ENV = '追击概念股'
 
 
 def _make_gs_with_equips() -> GameState:
-    """直构容器(bench 9 空槽 + equips 空库):装备入账分支接收面。"""
+    """直构状态容器(bench 9 空槽 + equips 空库):装备入账分支接收面。"""
     gs = _make_gs()
     gs.observe(gs.equips, [], sig=_SIG_OBS)
     return gs
@@ -704,7 +704,7 @@ def test_concept_stock_faxis_char_grant_branch(rows_sink: _RowSink) -> None:
     两族同一循环同一前缀):固定种子 rng 直构 → bench 追加 1 张 1★ 且名
     ∈ 阵营池现算集(grant_char_pool 阵营 spec = 规格域 ∩ 当时牌库,未解锁
     专家剔除,注册表派生不手抄);效果串 ``env_gift_random:<名>@1star``
-    (星级 = spec.star 先验);锚定容器 + 采样子链 rand=True → 写照常生效
+    (星级 = spec.star 先验);锚定状态容器 + 采样子链 rand=True → 写照常生效
     且不进失配网(随机态语义,首观察静默覆盖)。期望名从同 seed 现算
     (单一来源,不手抄)。"""
     from sr_od.application.currency_war.kernel.cw_pool import grant_char_pool
@@ -761,7 +761,7 @@ def test_ranxue_concept_stock_faction_char_grant_branch(
     池掷骰,两族同一循环同一前缀;概念股族展开卡登记约定):固定种子 rng
     直构 → bench 追加 1 张 1★ 且名 ∈ 阵营池现算集(grant_char_pool 阵营
     spec = 规格域 ∩ 当时牌库,未解锁专家剔除,注册表派生不手抄);效果串
-    ``env_gift_random:<名>@1star``(星级 = spec.star 先验);锚定容器 +
+    ``env_gift_random:<名>@1star``(星级 = spec.star 先验);锚定状态容器 +
     采样子链 rand=True → 写照常生效且不进失配网(随机态语义,首观察
     静默覆盖)。期望名从同 seed 现算(单一来源,不手抄)。"""
     from sr_od.application.currency_war.kernel.cw_pool import grant_char_pool

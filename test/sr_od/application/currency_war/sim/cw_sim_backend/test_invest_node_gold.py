@@ -4,7 +4,7 @@ invest 金腿;先例 = 本目录 test_strategy_boss_gold.py 收尾腿同形态)�
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-162-dingqi-
 fuli.md §4 锁 2/锁 3/锁 4:
-- 腿函数真值(锁 2,直构容器):持卡 = 2、与姊妹近似卡同持 = sum 3、
+- 腿函数真值(锁 2,直构状态容器):持卡 = 2、与姊妹近似卡同持 = sum 3、
   未持 = 0(数值 = 卡面真值字面锁,锁注册表值流经聚合单一源);
 - 调用点接通(锁 3):非扑满局窗增量 = invest + 收入面(kernel 公式现算,
   息基数 = 窗前基准现值 + 本窗 invest——腿在收入段最前先落账),窗后
@@ -100,7 +100,7 @@ def _hold(b: SimBackend, names: list[str]) -> None:
 
 
 def test_invest_node_gold_aggregation_matrix() -> None:
-    """数值矩阵(锁 2,直构容器锁聚合数学):定期福利 = 2、与姊妹近似
+    """数值矩阵(锁 2,直构状态容器锁聚合数学):定期福利 = 2、与姊妹近似
     卡(剩余价值,注册值系战斗表现条件金的每节点期望近似)同持 = sum 3、
     未持 = 0(数值 = 卡面真值字面锁;0 = 零值零写前提)。"""
     assert strategy_invest_node_gold_of(cw4_box(
@@ -267,7 +267,7 @@ def _piggy_backend_card_held_before_first_window(card: str) -> SimBackend:
         selected_difficulty='A8', enemy_difficulty=108, env_present=True))
     install_backend(b)
     # 首窗开前持卡(观察直种先例 = _hold;r1 窗开于环境选卡推进内,
-    # 此刻尚未发生)。分期金窗腿判递减容器非持卡面——容器同步种注册值
+    # 此刻尚未发生)。分期金窗腿判递减状态容器非持卡面——状态容器同步种注册值
     # count = 拿卡落地拍状态的直种表达(初始化写端的真身路径归
     # test_invest_installment_gold 引擎链锁,此处直种合法)。
     b.gs.observe(b.gs.active_strategies, [card],

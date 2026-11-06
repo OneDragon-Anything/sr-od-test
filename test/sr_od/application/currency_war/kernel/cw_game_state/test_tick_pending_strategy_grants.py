@@ -59,7 +59,7 @@ def _advance(gs: GameState, plane: int, round_num: int) -> None:
 
 def _gs_with_queue(consume_plane: int, consume_round: int,
                    queue: tuple, equips: list[str] | None = None) -> GameState:
-    """拿卡时序容器:先消耗拿卡节点(该节点 tick 已过,效果账本去重位
+    """拿卡时序状态容器:先消耗拿卡节点(该节点 tick 已过,效果账本去重位
     钉在拿卡窗),再登记队列——复现「登记在节点窗内,递减自下一后继
     advance 起」。equips=None = 装备栏未观察(拒落域);到点发放观测
     需显式传已观察装备栏(如 [])。"""

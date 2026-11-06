@@ -66,15 +66,15 @@ def _sig():
 
 
 def _launch_host(session):
-    """gs 宿主(终态管线形态):strategy_state 同源接入调用后返回容器——
-    前置发射位已改收容器,_launch_front_check(gs)。"""
+    """gs 宿主(终态管线形态):strategy_state 同源接入调用后返回状态容器——
+    前置发射位已改收状态容器,_launch_front_check(gs)。"""
     gs = game_state_of(session)
     gs.strategy_state = state_of(session)
     return gs
 
 
 def _mk_session(monkeypatch, *, decision: dict, zone: bool) -> SimpleNamespace:
-    """桩 session:容器单例(金 50)+ 判定核/溢出段判定脚本化。"""
+    """桩 session:状态容器单例(金 50)+ 判定核/溢出段判定脚本化。"""
     session = SimpleNamespace(last_streak=0, active_strategies=[])
     gs = game_state_of(session)
     gs.observe(gs.gold, 50, sig=_sig())
@@ -110,7 +110,7 @@ def test_front_armed_green_emits_start_battle(monkeypatch) -> None:
     session = _mk_session_base()
     action = _launch_front_check(_launch_host(session))
     assert isinstance(action, CwActionStartBattleParam)
-    assert zone_calls == [50], '帧级金判定直调 kernel(值源 = 容器金现读)'
+    assert zone_calls == [50], '帧级金判定直调 kernel(值源 = 状态容器金现读)'
     assert state_of(session).cw4_launch_spend_visited is False
 
 
@@ -222,7 +222,7 @@ class _StubExecutor:
 
 @pytest.fixture()
 def launch_env(monkeypatch):
-    """公共桩:分键容器 + 部署计划桩 + 执行器替身 + 身份分发桩(逐测重置)。"""
+    """公共桩:分键状态容器 + 部署计划桩 + 执行器替身 + 身份分发桩(逐测重置)。"""
     counters: dict[str, int] = {}
     state = SimpleNamespace(cw4_counters=counters, target_comp=None)
     monkeypatch.setattr(cw_loop, 'strategy_state_of', lambda s: state)

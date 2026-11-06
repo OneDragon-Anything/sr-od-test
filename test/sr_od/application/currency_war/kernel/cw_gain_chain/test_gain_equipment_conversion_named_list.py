@@ -93,7 +93,7 @@ def _make_gs(*, bench: list[tuple[str, int]] | None = None,
 
 
 def _hold_card(gs: GameState, cards: list[str]) -> None:
-    """持卡直置(注册容器直写;同族多卡持卡态由 cards 列表承载)。"""
+    """持卡直置(注册状态容器直写;同族多卡持卡态由 cards 列表承载)。"""
     gs.write_logic(gs.active_strategies, cards, produced_by='test-seed',
                    evidence='t:card', sig=_LSIG)
 
@@ -173,7 +173,7 @@ def test_conversion_intercept_places_target(rows_sink: _RowSink) -> None:
     """转换主锁(设计 §4 锁 2):持卡 + ``gain_equipment('幸运星',
     rand=False)`` → 出参 placed=True/detail=f'converted:{卡}'/
     landing='skipped';幸运星不入栏 + 以牙还牙甲入栏恰 +1;evidence 带
-    ``equip_gain_converted:`` 前缀段(evidence 落 equips 容器行);
+    ``equip_gain_converted:`` 前缀段(evidence 落 equips 状态容器行);
     on_equipment_gained 以替换名分派(以牙还牙甲 ∉ 后果表,effects 空);
     零箱、零申报行。任一经原语的名单成员获得通道同判定,单咽喉自动覆盖。"""
     gs = _make_gs(bench=[], equips=[])

@@ -3,7 +3,7 @@ check_strategy_battle_grants)。
 
 测试面依据 = 迭代设计 designs/T-105-yizhan-yangzhan.md §4 锁 6(条件矩阵
 短路序直构;直构形态先例 = 同目录 test_check_strategy_conditional_grants.py
-的容器直置):
+的状态容器直置):
 - node_kind 非 encounter → 空(节点类型条件短路);
 - 未持卡/表外卡 → 空(持卡交集判定);
 - 命中 → 席上落带名槽件 + 返回 (卡名, 道具名) 逐对一致 + evidence 形态;

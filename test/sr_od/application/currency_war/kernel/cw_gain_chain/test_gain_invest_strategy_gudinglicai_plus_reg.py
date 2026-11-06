@@ -10,7 +10,7 @@ test_gain_invest_strategy_gudinglicai_reg.py)。
   解锁的回归面(改前该断言必红);
 - 补发锁(同判 B):窗内登记(session 在场 ∧ node 在场)→ 补发桥再
   +3(evidence ``effect_plane_refire@frame``,与 burst 笔分键),合计 +6;
-- node 缺席(直构容器局外形态)= burst 照发、补发保守零(「已开始」
+- node 缺席(直构状态容器局外形态)= burst 照发、补发保守零(「已开始」
   判据不可评估,禁猜);
 - session=None 登记分支整体跳过形不另设对照腿(姊妹同形测试已辖同代码
   路径,两条测同一件事 = 冗余,沿设计稿补充对账裁剪)。

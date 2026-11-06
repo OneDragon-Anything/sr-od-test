@@ -5,7 +5,7 @@
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-333-budengjia-
 jiaohuan.md §4 锁 5(REVIEW-T333.md §五.④ 同面;kernel 侧锁 1-4 落
 kernel/cw_gain_chain/ 同批新文件,本文件只锁 sim 侧):
-- 固定 seed 局持卡选卡(锁 5):kernel 交换分支写行落容器后,落地拍
+- 固定 seed 局持卡选卡(锁 5):kernel 交换分支写行落状态容器后,落地拍
   hp_trail 恰追加一行且尾值 == gs.hp 现值(写流↔轨迹全序同构);
 - 呈现一次性标志位防重放:落地 advance 重放 → 轨迹零再追加(kernel 写行恰一,
   配对必须恰一);

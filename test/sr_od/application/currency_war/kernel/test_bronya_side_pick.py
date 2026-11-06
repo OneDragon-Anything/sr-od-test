@@ -66,7 +66,7 @@ def _u(char_id: str, equips: list[str] | None = None) -> SimpleNamespace:
 
 
 def _unit(char_id: str) -> Unit:
-    """容器 Unit 直构(GameState 行域写入形状;零装备)。"""
+    """状态容器 Unit 直构(GameState 行域写入形状;零装备)。"""
     return Unit(char_id=char_id, star=1, equips=[])
 
 
@@ -289,7 +289,7 @@ def test_resync_board_delta_full_recompute_degenerate() -> None:
 def test_sim_observe_board_truth_side_pick() -> None:
     """聚合器 8 `_observe_board_truth`(sim 板面真值,全量循环经
     ``_row_unit_tags`` peers 透传):SimBackend 直构(不装配,观察面
-    纯容器读写)——场景甲真值 = 选边口径;行域写翻转后真值随选边。"""
+    纯状态容器读写)——场景甲真值 = 选边口径;行域写翻转后真值随选边。"""
     from sr_od.application.currency_war.sim.cw_sim_backend import SimBackend
     from sr_od.application.currency_war.sim.cw_sim_run_config import RunConfig
     b = SimBackend(seed=9, cfg=RunConfig(selected_difficulty='A8',

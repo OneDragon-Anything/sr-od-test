@@ -2,7 +2,7 @@
 
 锁两件事(design executor-gold-delta-retire §2.3):
 1. 生产者接入调用语义:gap>0 产 ``obs_conflict('gold_delta', old=账面,
-   new=实读)``,old/new 方向 = 容器账面在 old(告警门按 |new-old| 算
+   new=实读)``,old/new 方向 = 状态容器账面在 old(告警门按 |new-old| 算
    gap,方向反了证据行失真);gap=0 / 账面 None / 同帧重入静默零产证;
 2. 告警门首次可达:同一调用形态喂真告警门(kernel/cw_observe.obs_conflict),
    gap>GOLD_DELTA_ALARM_GAP → ``[cw!][alarm][gold_delta]`` 告警行;
@@ -35,7 +35,7 @@ _SIG = ChannelSig(family='obs', actor='TestGoldReconcile', mode='read')
 
 
 def _make_gs_with_gold(value: int) -> GameState:
-    """直构容器并预置账面金(观察态;对账基线)。"""
+    """直构状态容器并预置账面金(观察态;对账基线)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.observe(gs.gold, value, sig=_SIG)
     return gs

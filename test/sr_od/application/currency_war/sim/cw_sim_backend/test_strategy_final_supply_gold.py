@@ -13,7 +13,7 @@ strategy_final_supply_gold_of 聚合 helper + _begin_node_window 收尾
 - 修饰局锚点跟随(锁 5,期望由 resolve_plane_node_seqs 程序化派生,
   非硬编码);
 - 拿卡当节点不发放(锁 6,窗口前段聚合读时序机制锁——直构「同窗晚到
-  手」容器态,不假设场景可达:现行建模域 offer 槽域与 supply 零重合)。
+  手」状态容器态,不假设场景可达:现行建模域 offer 槽域与 supply 零重合)。
 
 复用声明:引擎驱动助手 import 自 sim/test_sim_backend.py(已登记超限
 拆分债文件,禁追加,只 import 复用不改;先例 = 本目录
@@ -59,7 +59,7 @@ _GOLD_EV_PREFIX = 'sim:engine:strategy:final_supply_gold:p'
 
 def _backend(seed: int = 37, *, env_name: str = '') -> SimBackend:
     """装配后端至 P1r1 备战屏(env_name 非空走投资环境屏选环境流——改
-    节点序列经环境注册写场字段 ``node_seq_by_plane``,直写容器不触;
+    节点序列经环境注册写场字段 ``node_seq_by_plane``,直写状态容器不触;
     装配形态先例 = test_strategy_boss_gold._backend;seed 37 = P3 全程
     存活探针锚,先例 = 本目录 test_p3_win_terminal)。调用方负责
     uninstall。"""
@@ -204,7 +204,7 @@ def test_modified_env_anchor_follows_field() -> None:
 
 def test_same_window_pickup_after_front_segment_no_grant(monkeypatch) -> None:
     """拿卡当节点不发放(锁 6,机制锁·直构形态,不假设场景可达):直构
-    「窗口前段聚合读之后、同窗收尾段才到手」的容器态(生产时序 = 选卡
+    「窗口前段聚合读之后、同窗收尾段才到手」的状态容器态(生产时序 = 选卡
     确认是 offer 呈现后的玩家动作,恒晚于窗口前段聚合读)→ 该窗零发放。
     注入点 = 商店全刷(收尾段位 = 收入→…→尾款金→商店全刷;若未来实现
     把腿移到 offer 呈现之后,同窗到手先于聚合读,本锁红)。"""
@@ -230,7 +230,7 @@ def test_same_window_pickup_after_front_segment_no_grant(monkeypatch) -> None:
 
 
 def test_strategy_final_supply_gold_aggregation_matrix() -> None:
-    """聚合数值直构(容器锁聚合数学):尾款交付 = 30、未持 = 0
+    """聚合数值直构(状态容器锁聚合数学):尾款交付 = 30、未持 = 0
     (数值 = 卡面真值字面锁;0 = 零值零写前提)。helper 锚域单元锁 =
     kernel/test_node_pos_primitive.py(锁 10,不在此重复)。"""
     assert strategy_final_supply_gold_of(cw4_box(

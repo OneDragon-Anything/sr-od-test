@@ -17,8 +17,8 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 
 def test_shop_entry_funnel_bench_survives_synthesis() -> None:
     """商店入口漏斗 bench 写门场景测试(商店画面 op 入口链回归):
-    种子对未声明 bench 域整域跳写(bench_unread)——容器 bench 保持
-    漏斗真读值,与执行账 tracked 同源不破。回归形态 = 种子把容器 bench
+    种子对未声明 bench 域整域跳写(bench_unread)——状态容器 bench 保持
+    漏斗真读值,与执行账 tracked 同源不破。回归形态 = 种子把状态容器 bench
     覆盖成「9 槽全空」假真空(原防御对象 = 旧合成口无门合成,实机
     2026-09-13 商店段循环崩溃 15+ 连发实证;载体随合成口退役改种子
     域纪律测试:未读域≠真空域,跳写语义在种子层等价存续)。"""
@@ -43,6 +43,6 @@ def test_shop_entry_funnel_bench_survives_synthesis() -> None:
     view = gs.bench.value
     assert view is not None and view.slots[3].unit is not None \
         and view.slots[3].unit.char_id == '银枝', \
-        '种子后容器 bench 仍为漏斗真读值(未读域跳写,兜底空表不覆盖)'
+        '种子后状态容器 bench 仍为漏斗真读值(未读域跳写,兜底空表不覆盖)'
     # (3.2 单账化:原「执行账 tracked 不受种子影响」断言随第二账退役删,
-    #  容器即唯一账,上式即全量测试面。)
+    #  状态容器即唯一账,上式即全量测试面。)

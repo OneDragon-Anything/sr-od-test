@@ -809,7 +809,7 @@ class TestSignatureAffixDimension:
 
 
 def _sess_with_node(plane: int, round_num: int):
-    """裸容器 + 生效节点号直种(node_hist_pos 水位分量驱动)。"""
+    """裸状态容器 + 生效节点号直种(node_hist_pos 水位分量驱动)。"""
     sess = StrategySession()
     gs = game_state_of(sess)
     gs.node_hist_pos = (plane, round_num)
@@ -1057,7 +1057,7 @@ class TestEntryWiring:
         monkeypatch.setattr(admit_mod, 'readiness_launch_decision',
                             lambda *a, **k: {'armed': True})
         strat = MandateV1Strategy(gs, SimpleNamespace(strategy_seed=None))
-        st = state_of(gs)   # 构造 setter 已接通容器 → 同一状态对象
+        st = state_of(gs)   # 构造 setter 已接通状态容器 → 同一状态对象
         st.shop_handled = (1, 1)   # 污染(上一节点残留态)
         action = strat.decide_prep_screen()
         assert isinstance(action, CwAction)

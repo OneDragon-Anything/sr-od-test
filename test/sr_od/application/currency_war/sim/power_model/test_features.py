@@ -51,7 +51,7 @@ def _trio_entries() -> list[dict[str, Any]]:
 
 
 def _trio_units() -> DeployedView:
-    """与 _trio_entries 同一名单的容器 Unit 形态(sim 侧;开拓者后排
+    """与 _trio_entries 同一名单的状态容器 Unit 形态(sim 侧;开拓者后排
     = Unit 缺省排语义,与行侧 position_pref='back' 同值)。"""
     return DeployedView(
         front_slots=[Unit(char_id=_XIANZHOU_TRIO[0], star=2),
@@ -75,7 +75,7 @@ def _row(board: dict[str, int], level: int,
 
 
 def _game_state(board: dict[str, int], level: int) -> GameState:
-    """sim 侧容器(与 _row 同一名单同一板面)。"""
+    """sim 侧状态容器(与 _row 同一名单同一板面)。"""
     gs = GameState(schema_version=1)
     gs.board = Field(value=board)
     gs.deployed = Field(value=_trio_units())

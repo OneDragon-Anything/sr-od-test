@@ -6,7 +6,7 @@
 
 测试面四组(全部运行时行为测试,源码扫描测试禁止,AGENTS.md §10.4):
 1. **键粒度**(幂等键消费 = cw_screen_prep 重派/对账去重):行为参数
-   入键(变化 → 键变 = 幂等键分裂);发射臂路由标签不入键;容器下标
+   入键(变化 → 键变 = 幂等键分裂);发射臂路由标签不入键;状态容器下标
    字段构成键面;
 2. **词表白名单行为**:词表外类型注册表解析口 AssertionError 响亮暴露,
    已登记动作解析命中(执行器集中式 validate 已退役,守卫单一形态 =
@@ -135,7 +135,7 @@ def test_action_key_faces_pinned_per_class():
     持久索引见模块头;幂等键消费 = cw_screen_prep 重派/对账去重):
     - 行为参数入键(变化 → 键变 = 幂等键分裂);
     - 发射臂路由标签不入键(同槽不同 tag = 同一动作实例);
-    - 容器下标字段(bench_idx/deployed_idx)构成键面(替换物理槽位字段)。
+    - 状态容器下标字段(bench_idx/deployed_idx)构成键面(替换物理槽位字段)。
     (原「键串 = 归一前族A 形态逐字」分支降规格:逐字 repr 校验的是 Python
     repr 格式,过度规格,消费面只需键稳定性与粒度。)"""
     # CwActionSellBenchParam:行为参数分裂幂等键;route_tag(发射臂路由标签)不入键
@@ -149,7 +149,7 @@ def test_action_key_faces_pinned_per_class():
     assert action_key(CwActionLevelUpParam(cost=4, auth_basis='arm1')) != \
         action_key(CwActionLevelUpParam(cost=4))
     assert 'cost' in action_key(CwActionLevelUpParam(cost=4))
-    # CwActionSellBenchParam/CwActionSellDeployedParam:容器下标字段替换物理槽位字段,键形态同构\r
+    # CwActionSellBenchParam/CwActionSellDeployedParam:状态容器下标字段替换物理槽位字段,键形态同构\r
     assert 'bench_idx' in action_key(CwActionSellBenchParam(bench_idx=1))
     assert 'deployed_idx' in action_key(CwActionSellDeployedParam(deployed_idx=0))
 

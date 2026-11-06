@@ -116,7 +116,7 @@ def test_xianjin_weiwang_bridge_shield_bank_recorded() -> None:
         '护盾记忆量 = 退款×1000(测试字面系数独立对拍)+ 键集恰单键干净'
     assert entry.counters[CounterKey.SHIELD_BANK] == 11000, \
         '×1000 算术硬值对拍(3+8=11 → 11000)'
-    # 臂 2:空场(容器全读但无可出售面)→ 退款零 → 护盾零记账(无该键)。
+    # 臂 2:空场(状态容器全读但无可出售面)→ 退款零 → 护盾零记账(无该键)。
     gs2 = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs2.observe(gs2.deployed, DeployedView(
         front_slots=[None] * 4, back_slots=[None] * 6), sig=_SIG_OBS)

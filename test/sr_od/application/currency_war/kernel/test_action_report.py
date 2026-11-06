@@ -125,7 +125,7 @@ def _snake(cls_name: str) -> str:
 @pytest.fixture
 def _isolate_defect_buffer():
     """缺陷台账缓冲隔离(工具七类上报升格容器写后,冒烟路径对空参/未观察
-    容器会产生 tool_* 留证行;前清防他测残留、后清防本测外泄——全局缓冲
+    状态容器会产生 tool_* 留证行;前清防他测残留、后清防本测外泄——全局缓冲
     被后续测试整池排水对账,残留行即假红)。"""
     consume_defect_sink()
     yield
@@ -144,7 +144,7 @@ def test_every_action_type_has_report_function():
 
 @pytest.mark.parametrize('t', CW_ACTION_TYPES, ids=lambda t: t.__name__)
 def test_report_function_accepts_param_and_sig(t, _isolate_defect_buffer):
-    """逐类冒烟:上报函数以零写/拒绝路径可调用(不要求容器效果,
+    """逐类冒烟:上报函数以零写/拒绝路径可调用(不要求状态容器效果,
     只断言「函数在场且签名可走」——语义正确性归各域直测)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         ChannelSig,
@@ -167,9 +167,9 @@ def test_report_function_accepts_param_and_sig(t, _isolate_defect_buffer):
                 0 if f.type == 'int' else '')
     param = t(**kwargs)
     if t.__name__ == 'CwActionPickInvestEnvParam':
-        # 按 idx 取名契约(op-layer.md §1.1 观察标准化门):env 上报从容器
-        # invest_env_opts 取标准名直传链,容器缺读 = 响亮失败——冒烟播种
-        # 容器承载该路径(裸容器直调会被正当拒绝)。播种名 = 环境注册表
+        # 按 idx 取名契约(op-layer.md §1.1 观察标准化门):env 上报从状态容器
+        # invest_env_opts 取标准名直传链,状态容器缺读 = 响亮失败——冒烟播种
+        # 状态容器承载该路径(裸状态容器直调会被正当拒绝)。播种名 = 环境注册表
         # 真名(含半角冒号,兼覆盖链内归一幂等路径;ENV_GIFTS 仅条件分支,
         # 效果面安静零写)。
         gs.write_logic(gs.invest_env_opts, ['特邀专家:银狼'],
@@ -181,7 +181,7 @@ def test_report_function_accepts_param_and_sig(t, _isolate_defect_buffer):
 
 def test_report_pick_invest_env_container_miss_loud_failure():
     """env 上报「按 idx 取名」契约拒绝分支(op-layer.md §1.1;即时上报契约:
-    选卡链发生时观察必然已完成,容器缺读/idx 越界 = 代码 bug = 响亮失败,
+    选卡链发生时观察必然已完成,状态容器缺读/idx 越界 = 代码 bug = 响亮失败,
     异常上抛禁吞)。红 = 静默零写 noop 回潮 / 非法索引穿透。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         ChannelSig,
@@ -194,16 +194,16 @@ def test_report_pick_invest_env_container_miss_loud_failure():
     sig = ChannelSig(family='logic_action', actor='cw-report-lock',
                      mode='compute')
     fn = rpt.report_action_pick_invest_env_param
-    # ① 容器缺读(None)
+    # ① 状态容器缺读(None)
     with pytest.raises(ValueError):
         fn(GameState(schema_version=1), CwActionPickInvestEnvParam(idx=0), sig)
-    # ② 容器空(读得空 = 同判缺读)
+    # ② 状态容器空(读得空 = 同判缺读)
     gs_empty = GameState(schema_version=1)
     gs_empty.write_logic(gs_empty.invest_env_opts, [],
                          produced_by='test', sig=sig)
     with pytest.raises(ValueError):
         fn(gs_empty, CwActionPickInvestEnvParam(idx=0), sig)
-    # ③ idx 越界(容器非空但 idx 出界)
+    # ③ idx 越界(状态容器非空但 idx 出界)
     gs_seeded = GameState(schema_version=1)
     gs_seeded.write_logic(gs_seeded.invest_env_opts, ['特邀专家:银狼'],
                           produced_by='test', sig=sig)
@@ -378,7 +378,7 @@ def test_furnace_sample_same_seed_reproducible() -> None:
             second = [tool_use.furnace_mutate_sample(r2, item)
                       for _ in range(10)]
             assert first == second, f'{item} seed={seed} 同种子异序列'
-    # 报告函数同种子复现:两次独立容器同 rng 种子 → 同终值。
+    # 报告函数同种子复现:两次独立状态容器同 rng 种子 → 同终值。
     vals = []
     for _ in range(2):
         gs = _make_gs(equips=['冶金炉', '轮滑鞋'])
@@ -414,7 +414,7 @@ def test_furnace_pool_scope_whitelist() -> None:
 
 def test_furnace_equip_branch_target_out_of_scope_fail_closed(
         rows_sink: _RowSink) -> None:
-    """炉·目标越白名单(特殊)= fail-closed 零写 + 留证(禁猜;容器含
+    """炉·目标越白名单(特殊)= fail-closed 零写 + 留证(禁猜;状态容器含
     工具与目标件原样)。"""
     gs = _make_gs(equips=['冶金炉', '垃圾袋'])
     out = report_action_furnace_use_param(
@@ -716,7 +716,7 @@ def _drain_defect_buffer():
 
 def _buy_op_env(monkeypatch: pytest.MonkeyPatch,
                 click_pts: list[Point] | None = None):
-    """BuyCardOp 离线执行环境(零真实副作用,零读屏替身):容器在屏
+    """BuyCardOp 离线执行环境(零真实副作用,零读屏替身):状态容器在屏
     payload 槽1 = 花火;click_pts 可参(缺省槽1命中)。返回 (op, env,
     ledger, gs, clicks)。"""
     session = StrategySession()
@@ -1022,7 +1022,7 @@ def test_on_step_fires_once_per_merge_level() -> None:
 
 def test_on_step_sees_post_step_state() -> None:
     """回调时列表已落定该级终态:第一级后 3×1★ 已消费(置 None)、
-    载体升 2★——调用侧此刻落容器即该级完成后的状态副本。"""
+    载体升 2★——调用侧此刻落状态容器即该级完成后的状态副本。"""
     bench = [_char(1, 1), _char(2, 1), _char(3, 1)]
     steps: list[list[tuple[str, int] | None]] = []
     _merge_bench(bench, None, on_step=lambda: steps.append(_snapshot(bench)))

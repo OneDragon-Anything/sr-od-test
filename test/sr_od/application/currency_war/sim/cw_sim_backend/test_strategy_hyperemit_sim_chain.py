@@ -93,7 +93,7 @@ def _backend(seed: int = 41) -> SimBackend:
 
 def _pick_raw(b: SimBackend, name: str, opts: list[str]) -> WorldDecl:
     """定向选卡上报(直写 opts 定卡 + 上报;返回声明不喂入,由调用方
-    控制落地时点——bypass 形态在声明前改容器;先例 =
+    控制落地时点——bypass 形态在声明前改状态容器;先例 =
     test_strategy_pick_gudinglicai._pick 返回声明同形)。"""
     gs = b.gs
     gs.write_logic(gs.invest_strategy_opts, opts,

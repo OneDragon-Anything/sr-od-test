@@ -219,7 +219,7 @@ def test_empty_bond_line_core_shared_denominator() -> None:
 
 
 def test_rng_situation_seed_same_input_same_target() -> None:
-    """rng 局面哈希播种(§1 D3-7):同一容器状态 → 同一 target(跨帧
+    """rng 局面哈希播种(§1 D3-7):同一状态容器状态 → 同一 target(跨帧
     稳定,防并列板帧间翻转)。"""
     units = [_u('青雀'), _u('停云'), _u('藿藿'), _u('艾丝妲')]
     panel = _panel(units, k=3)

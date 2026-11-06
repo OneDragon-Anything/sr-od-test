@@ -79,7 +79,7 @@ def _clean_cost_fillers(count: int, cost: int, exclude: set[str]) -> list[str]:
 def _make_gs(*, bench: list[tuple[str, int]], front: tuple[str, ...],
              level: int, locked: str | None = None,
              candidates: tuple[str, ...] = ()):
-    """补给评估帧(容器 + 双宿主状态同源接入调用;补给域 session = gs
+    """补给评估帧(状态容器 + 双宿主状态同源接入调用;补给域 session = gs
     同一对象,与生产 supply.decide 调用形态一致)。"""
     from sr_od.application.currency_war.kernel.cw_comps import get_comp
     from sr_od.application.currency_war.kernel.cw_intention import (

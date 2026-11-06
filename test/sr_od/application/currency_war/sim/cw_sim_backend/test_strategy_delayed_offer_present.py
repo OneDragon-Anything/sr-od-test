@@ -12,7 +12,7 @@ _present_due_extra_offer + _present_offer_or_node_screen 尾部调用点)。
 
 白银投资批追加(designs/T-198-baiyin-touzi.md §4 锁 5,可刷系首例):
 - 窗首到期腿呈现带逐卡刷新授权 3(登记 refresh_count 单一源,授权
-  写容器 = report 摄入,品质承诺槽向量簿记取登记品质);
+  写状态容器 = report 摄入,品质承诺槽向量簿记取登记品质);
 - 递减链(拿卡当拍不递减,3 次推进归零)kernel tick 直构 → 窗首呈现;
 - 联席路径拿卡 (2,6) → 3 后继窗 = (3,2) 撞固定日程槽 → 顺延 (3,3)
   + 披露键(自然可达冲突首例,(3,2) 钉窗直构)。
@@ -162,7 +162,7 @@ def test_present_consumes_eject_atomic_no_double_present() -> None:
 def test_silver_leg_presents_with_per_card_refresh_auth() -> None:
     """白银窗首腿授权呈现(白银批锁 5):到点呈现 = 候选全银池 +
     逐卡刷新授权 3(refresh_slots [(3,x,20)]×3,授权数值单一源 = 登记
-    refresh_count)+ 授权写容器(逐卡 3)+ 品质承诺槽向量簿记 =
+    refresh_count)+ 授权写状态容器(逐卡 3)+ 品质承诺槽向量簿记 =
     ('银','银','银')(重掷品质跨刷新保持)+ 呈现留证键 + 队列弹除
     + 序位计数照增。"""
     b = _backend()
@@ -184,7 +184,7 @@ def test_silver_leg_presents_with_per_card_refresh_auth() -> None:
         assert b._offer_refresh_seq == 0, '刷新流水号归零'
         left_map = dict(b.gs.strategy_refresh_left.value or {})
         assert all(left_map.get(n) == 3 for n in opts), \
-            f'授权容器逐卡 3: {left_map!r}'
+            f'授权状态容器逐卡 3: {left_map!r}'
     finally:
         uninstall_backend()
 

@@ -107,7 +107,7 @@ def _prep_strategy(monkeypatch: pytest.MonkeyPatch,
     strategy = cw_bridge.MandateV1Strategy(
         game_state_of(session),
         SimpleNamespace(strategy_seed=None))   # 终态契约:构造注入
-    # (黑板帧装配已随 gs.prep_obs 退役删除——决策输入 = 容器直读,
+    # (黑板帧装配已随 gs.prep_obs 退役删除——决策输入 = 状态容器直读,
     #  「观察帧缺失即抛错」防线随黑板消亡,编排前提由画面 op 保证。)
     monkeypatch.setattr(
         cw_bridge, 'decide_prep_frame',
@@ -170,7 +170,7 @@ def test_prep_consumer_rejects_illegal_return_f3_fail(
     match = CurrencyWarMatch(_IllegalPrepStrategy(), StrategySession())
     monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
     op = CwScreenPrep(test_context)
-    # 阶段 3.5:黑板载体随 gs.prep_obs 退役——决策入口零参直读容器。
+    # 阶段 3.5:黑板载体随 gs.prep_obs 退役——决策入口零参直读状态容器。
     rs = run_node(test_context, op, op.act)
     assert not rs.is_success
     assert rs.status == '策略输出非 CwAction(F3)'
@@ -412,7 +412,7 @@ class TestStep2Ore:
         sells = [e.action for e in out
                  if isinstance(e.action, CwActionSellBenchParam)]
         assert len(sells) == 1 and sells[0].reason == 'ore_make_room'
-        # c0(唯一 1★,紧缩位 2 → 容器槽 2)= 序列末位被卖
+        # c0(唯一 1★,紧缩位 2 → 状态容器槽 2)= 序列末位被卖
         assert sells[0].bench_idx == 2
 
     def test_full_seat_yields_via_sequence_tail(self):
@@ -697,8 +697,8 @@ class TestStep7NodeEndInterest:
         缺口 8:姬子·启行 2★(列车同行 need 3 未达标)退金 3×3−1 = 8
         恰跨档,布洛妮娅 1★ 退金 5 < 8 不可行——无豁免时本帧卖出在建
         阵容件,豁免后零动作。板上三月七/瓦尔特 = 部署定型内档 1,
-        不入卖出池。候选线种在容器宿主状态(state_of(gs)——cw4_session
-        桩与容器惰建态在此构造路径下非同对象,判据读口走容器侧)。"""
+        不入卖出池。候选线种在状态容器宿主状态(state_of(gs)——cw4_session
+        桩与状态容器惰建态在此构造路径下非同对象,判据读口走状态容器侧)。"""
         sess = self._frame(2, [_bc('姬子·启行', 2), _bc('布洛妮娅')])
         st = state_of(game_state_of(sess))
         st.line_candidates = ('列车同行·反震',)

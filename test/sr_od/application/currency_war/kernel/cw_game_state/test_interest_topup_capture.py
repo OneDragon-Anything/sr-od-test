@@ -51,7 +51,7 @@ def _advance(gs: GameState, plane: int, round_num: int) -> None:
 
 
 def _gs_holding(prev: bool | None, holding: bool = True) -> GameState:
-    """持卡时序容器:先消耗 (1,1)(拿卡节点,tick 已过),再持卡 +
+    """持卡时序状态容器:先消耗 (1,1)(拿卡节点,tick 已过),再持卡 +
     种 prev,下一 advance 触发捕获。(1,1) 先进闸同
     test_tick_pending_strategy_grants._gs_with_queue 拿卡时序先例。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
@@ -93,7 +93,7 @@ def test_capture_spent_carrier_zero_order_redline() -> None:
 
 def test_capture_unread_prev_conservative_zero() -> None:
     """持卡 ∧ prev 未写(None 直构)→ 载体 0(禁猜口径,本金充裕金
-    None 同款;锁 3 第三态)。None 态取直构容器不跑种子窗(捕获函数层
+    None 同款;锁 3 第三态)。None 态取直构状态容器不跑种子窗(捕获函数层
     直调)——tick 闸路径下首闸滚位会把直构 None 滚成 False
     (evidence prev_node_spent_roll),None 态在 advanced 闸内结构性不可达,
     tick 级 None 等价归本函数层锁 + 禁猜分支单一源
@@ -102,7 +102,7 @@ def test_capture_unread_prev_conservative_zero() -> None:
         capture_strategy_interest_topup,
     )
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
-    assert gs.prev_node_spent.value is None, '直构容器不跑种子(前置)'
+    assert gs.prev_node_spent.value is None, '直构状态容器不跑种子(前置)'
     gs.write_logic(gs.active_strategies, [_CARD],
                    produced_by='test-seed', evidence='t:strat', sig=_LSIG)
     gs.effects.register_strategy(STRATEGY_EFFECTS[_CARD],

@@ -7,8 +7,8 @@ apply_strategy_pick_gold_next_nodes_init 拿卡初始化腿 + 呈现一次性标
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-177-changqi-
 zhuyi.md §4 锁 3/锁 5/锁 6(REVIEW-T177 §4.3 同面):
 - 拿卡后连续 3 个节点窗各 +7、第 4 窗不发(锁 3,引擎链:真拿卡路径走
-  初始化腿 + 呈现一次性标志位 + 窗腿接入调用;每窗容器递减笔 = 分期腿发生过的持久
-  证据,金笔在非扑满窗被收入笔覆盖故引擎面以容器笔与金增量公式现算
+  初始化腿 + 呈现一次性标志位 + 窗腿接入调用;每窗状态容器递减笔 = 分期腿发生过的持久
+  证据,金笔在非扑满窗被收入笔覆盖故引擎面以状态容器笔与金增量公式现算
   断言;金笔 evidence 字面量断言落函数级直构面[无覆盖可全等]);
 - 跨卡双持 per-entry(锁 5,同拍双持场景:长期主义 + 长期主义+ 各发
   各额 7 与 9 × 3 窗,每卡独立 evidence 笔,evidence 前缀取完整卡名段
@@ -64,7 +64,7 @@ _CARD_PLUS = '长期主义+'
 #: strategy:installment:<卡名>:p{位面}r{轮},设计稿锁 3 字面量钉死)。
 _GOLD_EV_PREFIX = 'sim:engine:strategy:installment:'
 
-#: 容器递减簿记笔 evidence(非金 Field 登记事实直写,前缀无 sim:engine)。
+#: 状态容器递减簿记笔 evidence(非金 Field 登记事实直写,前缀无 sim:engine)。
 _LEDGER_EV_PREFIX = 'strategy:installment:p'
 
 
@@ -125,10 +125,10 @@ def _window_income(gs, plane: int, r: int, gold_base: int) -> int:
 def test_pick_then_three_windows_pay_seven_fourth_stops(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """拿卡后 3 窗各 +7、第 4 窗不发(锁 3,引擎链):真拿卡路径落地后
-    容器 = {'长期主义': 3}(初始化腿,值 = 注册值 count);r4/r5/r6 每窗
+    状态容器 = {'长期主义': 3}(初始化腿,值 = 注册值 count);r4/r5/r6 每窗
     金增量 = 7 + 收入面(kernel 公式现算,息基数含 +7——窗开先落账)、
-    容器逐窗递减且递减笔 evidence 逐窗独立(r4/r5/r6 三笔);r7 耗尽
-    短路:金增量 = 纯收入面、容器零写(evidence 保持 r6 笔)。「现在」
+    状态容器逐窗递减且递减笔 evidence 逐窗独立(r4/r5/r6 三笔);r7 耗尽
+    短路:金增量 = 纯收入面、状态容器零写(evidence 保持 r6 笔)。「现在」
     腿无写端:拿卡拍金零增(T-112 族级待办维持)。全胜骨架:开局一次
     patch 强制战斗全胜(防随机败局登记 pending_loss 引入败补支——
     败补窗开参数停驻面不可复现,公式简式以无败局为前提;_force_settle
@@ -158,11 +158,11 @@ def test_pick_then_three_windows_pay_seven_fourth_stops(
                 f'r{r} 窗增量 ≠ 7+收入面: ' \
                 f'{gold_now - prev_gold} vs 7+{income}'
             assert gs.strategy_gold_next_nodes_left.value == {_CARD: left}, \
-                f'r{r} 窗后容器应递减至 {left}: ' \
+                f'r{r} 窗后状态容器应递减至 {left}: ' \
                 f'{gs.strategy_gold_next_nodes_left.value}'
             assert gs.strategy_gold_next_nodes_left.evidence \
                 == _LEDGER_EV_PREFIX + f'1r{r}', \
-                f'r{r} 容器递减笔缺失或来源漂移: ' \
+                f'r{r} 状态容器递减笔缺失或来源漂移: ' \
                 f'{gs.strategy_gold_next_nodes_left.evidence}'
             prev_gold = gold_now
         # 第 4 窗(r7):耗尽短路零发
@@ -176,7 +176,7 @@ def test_pick_then_three_windows_pay_seven_fourth_stops(
             '耗尽条目留置 0'
         assert gs.strategy_gold_next_nodes_left.evidence \
             == _LEDGER_EV_PREFIX + '1r6', \
-            f'r7 耗尽零写(容器笔保持 r6): ' \
+            f'r7 耗尽零写(状态容器笔保持 r6): ' \
             f'{gs.strategy_gold_next_nodes_left.evidence}'
     finally:
         uninstall_backend()
@@ -186,7 +186,7 @@ def test_installment_leg_per_entry_dual_hold() -> None:
     """跨卡双持 per-entry(锁 5,同拍双持):长期主义(7)+ 长期主义+(9)
     各发各额 × 3 窗,每卡独立金笔——evidence 全等断言含完整卡名段 +
     分隔符边界(「长期主义」系「长期主义+」真前缀,全等形态天然拒裸
-    前缀混淆);容器逐卡独立递减;第 4 窗双零。金笔 evidence 可全等面
+    前缀混淆);状态容器逐卡独立递减;第 4 窗双零。金笔 evidence 可全等面
     = 函数级直构(无收入笔覆盖)。笔数锁 per-entry 形(3 窗 × 2 卡各
     一笔),禁按「4 笔 × 聚合额」断言。"""
     gs = cw4_box()
@@ -198,10 +198,10 @@ def test_installment_leg_per_entry_dual_hold() -> None:
         '每卡各一笔(同窗两笔)'
     assert int(gs.gold.value or 0) == 7 + 9, '各发各额,禁聚合'
     assert gs.gold.evidence == _GOLD_EV_PREFIX + f'{_CARD_PLUS}:p1r4', \
-        f'末笔 = 插入序第二卡(容器 dict 序)独立笔: {gs.gold.evidence}'
+        f'末笔 = 插入序第二卡(状态容器 dict 序)独立笔: {gs.gold.evidence}'
     assert gs.strategy_gold_next_nodes_left.value == {_CARD: 2,
                                                       _CARD_PLUS: 2}, \
-        '容器逐卡独立递减'
+        '状态容器逐卡独立递减'
     for r in (5, 6):
         assert apply_invest_installment_gold(
             gs, plane=1, round_num=r) == 2
@@ -215,13 +215,13 @@ def test_installment_leg_per_entry_dual_hold() -> None:
 
 
 def test_installment_leg_zero_hold_and_exhaust_short_circuit() -> None:
-    """未持卡零写 + 耗尽短路 + 终局截断(锁 6):容器空(未持分期卡)
+    """未持卡零写 + 耗尽短路 + 终局截断(锁 6):状态容器空(未持分期卡)
     调腿 → 返回 0、金零增、零 Field 写(表外卡零噪声);剩余效果条数即
     可达腿上限——局终剩余 >0 时条目留置蒸发(无局终补发方,断言面 =
     留置值不再变动、不报错);耗尽(0)再调零写零报错。"""
     gs = cw4_box()
     assert apply_invest_installment_gold(gs, plane=1, round_num=2) == 0, \
-        '未持分期卡零写(容器空)'
+        '未持分期卡零写(状态容器空)'
     assert int(gs.gold.value or 0) == 0
     assert gs.strategy_gold_next_nodes_left.value in (None, {}), \
         '零 Field 写(无递减笔)'
@@ -234,7 +234,7 @@ def test_installment_leg_zero_hold_and_exhaust_short_circuit() -> None:
     assert apply_invest_installment_gold(gs, plane=3, round_num=8) == 1
     assert int(gs.gold.value or 0) == 14
     assert gs.strategy_gold_next_nodes_left.value == {_CARD: 1}, \
-        '局终剩余 1 期留置(蒸发不补发——无补发方,容器即终态)'
+        '局终剩余 1 期留置(蒸发不补发——无补发方,状态容器即终态)'
     gold_final = int(gs.gold.value or 0)
     assert apply_invest_installment_gold(gs, plane=3, round_num=9) == 1, \
         '可达腿语义 = 剩余 >0 照发(下一窗存在则发)'
@@ -245,7 +245,7 @@ def test_installment_leg_zero_hold_and_exhaust_short_circuit() -> None:
 
 
 def test_installment_leg_skips_registry_missing_entry() -> None:
-    """注册表缺行防御支:容器条目卡名不在 STRATEGY_ECONOMY(注册表漂移
+    """注册表缺行防御支:状态容器条目卡名不在 STRATEGY_ECONOMY(注册表漂移
     态)→ 悬空跳过不递减不报错(下次窗重试自愈,拒落域不落一次性标志位同向)。"""
     gs = cw4_box()
     gs.write_logic(gs.strategy_gold_next_nodes_left,

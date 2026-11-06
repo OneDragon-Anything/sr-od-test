@@ -11,7 +11,7 @@ rolls = 空位数,E_rounds 比值 = (1+3)/(1+2) = 4/3(闭式可算,dist/p
 (原 proof.assemble_lock_frame c_sat 席压项与 economy_cycle O1 填补账
 两个测试已随退役载体在前轮删除,docstring 本处同步收敛为单测试。)
 
-载体 = 容器 BenchView 直写(节省工位效果帧的容器形态;capacity 字段
+载体 = 状态容器 BenchView 直写(节省工位效果帧的状态容器形态;capacity 字段
 单一源语义见 kernel BenchView docstring)。
 """
 from __future__ import annotations

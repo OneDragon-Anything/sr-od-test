@@ -43,7 +43,7 @@ _LSIG = ChannelSig(family='logic_action', actor='CwActionPickInvestOp',
 
 
 def _make_gs_with_equip() -> GameState:
-    """equips 预种非空容器(已观察,防未观察拒落分支)+ 空席装配。"""
+    """equips 预种非空状态容器(已观察,防未观察拒落分支)+ 空席装配。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.observe(gs.bench, BenchView(slots=[BenchSlot(kind='empty')] * 9,
                                    capacity=9), sig=_SIG_OBS)

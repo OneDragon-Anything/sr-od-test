@@ -79,7 +79,7 @@ _PB = 'cw-supply-decision-test'
 
 
 def _fresh_gs() -> GameState:
-    """独立容器(桩 session 宿主;弱引用表按宿主隔离,零跨测残留)。"""
+    """独立状态容器(桩 session 宿主;弱引用表按宿主隔离,零跨测残留)。"""
     return game_state_of(SimpleNamespace())
 
 
@@ -99,7 +99,7 @@ def _comp(core: list[str], key: list[str] | None = None) -> Comp:
 
 
 def _set_left(gs: GameState, left: int) -> None:
-    """写刷新剩余次数(容器观察真值形态;None = 不写保持未观察)。"""
+    """写刷新剩余次数(状态容器观察真值形态;None = 不写保持未观察)。"""
     gs.write_logic(gs.supply_refresh_left, left, produced_by=_PB, sig=_SIG)
 
 
@@ -109,7 +109,7 @@ def _set_equips(gs: GameState, equips: list[str]) -> None:
 
 def _set_rows(gs: GameState, front: list[Unit], back: list[Unit]) -> None:
     """行域合一写(front/back 两参描述游戏排,
-    落容器 = 单字段 DeployedView 一次写)。"""
+    落状态容器 = 单字段 DeployedView 一次写)。"""
     gs.write_logic(gs.deployed, _dvs(front, back), produced_by=_PB, sig=_SIG)
 
 
@@ -789,7 +789,7 @@ def test_pick_supply_content_unknown_flips_domains(
 
 
 def _seeded_gs():
-    """剧本容器:bench 两枚 1★银狼 + equips 空读(后果分支合成级联素材)。"""
+    """剧本状态容器:bench 两枚 1★银狼 + equips 空读(后果分支合成级联素材)。"""
     session = StrategySession()
     gs = game_state_of(session)
     slots = [BenchSlot(kind='unit', unit=Unit(char_id='银狼', star=1))
@@ -808,7 +808,7 @@ def _make_match(test_context, monkeypatch, session):
 
 def test_pick_confirm_reports_full_result_immediately(
         test_context, monkeypatch) -> None:
-    """pick 即时上报测试:确认点击后(机械半全桩,零落地相)容器即持
+    """pick 即时上报测试:确认点击后(机械半全桩,零落地相)状态容器即持
     owned 规范名 + 单位入账分支(1★入席合成级联)+ 装备后果分支(分身墨镜
     → 送 1★银狼)——一口写,无发射/落地两相。"""
     from sr_od.application.currency_war.operations.cw_op import (
@@ -883,7 +883,7 @@ def test_chosen_supply_written_before_dispatch_and_no_landing_phase(
 
     monkeypatch.setattr(cw_action_registry, 'action_op_for',
                         lambda act, ctx, env: _ProbeStubOp())
-    _run_node(test_context, op, op.observe)   # 观察 node 装载 obs(report 落容器)
+    _run_node(test_context, op, op.observe)   # 观察 node 装载 obs(report 落状态容器)
     rs = op._do_action()
     assert rs.is_success and '终结交回' in (rs.status or ''), \
         f'选卡派发即终结(终结交回):{rs!r}'
@@ -906,7 +906,7 @@ _POS_1_5: tuple[int, int] = (1, 5)
 
 
 def _make_match_with_gs(test_context, monkeypatch):
-    """局容器装配:session + gs 挂 cw_match(game_state_from_ctx 供给口)。"""
+    """局状态容器装配:session + gs 挂 cw_match(game_state_from_ctx 供给口)。"""
     session = StrategySession()
     match = SimpleNamespace(session=session)
     match.gs = game_state_of(session)
@@ -958,7 +958,7 @@ def _run_supply_observe(test_context, monkeypatch,
 
 def test_auto_popup_supply_pick_does_not_advance(
         test_context, monkeypatch) -> None:
-    """自动弹形态剧本:结算确认直接弹补给屏(无备战帧锚定,容器 v=None)
+    """自动弹形态剧本:结算确认直接弹补给屏(无备战帧锚定,状态容器 v=None)
     → 补给屏观察 node 节点条读数首锚定(1-5 → 5)→ 选补给确认点击
     **零节点推进**(2026-10-29 流程模型对齐:选完关模态回备战自动弹店,
     节点推进归出战动作 supply_finish;旧「确认即 supply_confirm 推进恰

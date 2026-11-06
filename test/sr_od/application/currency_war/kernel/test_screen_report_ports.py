@@ -2,12 +2,12 @@
  T-1 kernel 基座)。
 
 三个测试面(同动作族 test_action_report 形态;零真实副作用,
-纯容器直驱):
+纯状态容器直驱):
 
 1. 完备测试:遍历包内全部 obs 类,断言「非推进型 ↔ report_screen_<snake>_obs
    在场;推进型/商店框 ↔ 不在场」+ 统一签名形态 (gs, obs, *, sig=None);
-2. 逐 report 接口写入测试:obs 桩值 → 空白容器(GameState 直构,仓内
-   惯例)→ 调 report → 断言容器域值与来源;门语义(空不写/恒写空表/
+2. 逐 report 接口写入测试:obs 桩值 → 空白状态容器(GameState 直构,仓内
+   惯例)→ 调 report → 断言状态容器域值与来源;门语义(空不写/恒写空表/
    简报三闸/过渡链防御)单独成测;
 3. 渠道签名测试:缺省 sig 构造逐位沿用现役写点原值(family/actor/screen/
    mode)——经状态流水捕获行断言(sink/run_id 官方注入槽,monkeypatch
@@ -91,7 +91,7 @@ _TEST_SIG = ChannelSig(family='logic_action', actor='TestSigWriter',
 
 
 def _blank_gs() -> GameState:
-    """空白容器(仓内 cw kernel 测试惯例构造)。"""
+    """空白状态容器(仓内 cw kernel 测试惯例构造)。"""
     return GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
 
 
@@ -285,7 +285,7 @@ def _case_plane_intel(m):
              'enemy_affixes': (['灼热轰炸'], 'logic')})
 
 
-#: 逐实体 report 接口的 obs 桩与期望容器终值(字段 → (期望值, 期望来源);
+#: 逐实体 report 接口的 obs 桩与期望状态容器终值(字段 → (期望值, 期望来源);
 #: 门语义不在此表,见空桩/分屏闸专项)。
 _WRITE_CASES = {
     'encounter': _case_encounter,
@@ -309,7 +309,7 @@ _WRITE_CASES = {
 
 @pytest.mark.parametrize('screen', sorted(_WRITE_CASES))
 def test_report_writes_stub_obs_into_container(screen):
-    """逐 report 接口:obs 桩值 → 空白容器 → 断言容器域值与来源。"""
+    """逐 report 接口:obs 桩值 → 空白状态容器 → 断言状态容器域值与来源。"""
     mod = _screen_module(screen)
     obs, expected = _WRITE_CASES[screen](mod)
     gs = _blank_gs()
@@ -317,7 +317,7 @@ def test_report_writes_stub_obs_into_container(screen):
     fn(gs, obs)
     for field_name, (want_value, want_source) in expected.items():
         fld = getattr(gs, field_name)
-        assert fld.value == want_value, f'{screen}.{field_name} 容器域值不符'
+        assert fld.value == want_value, f'{screen}.{field_name} 状态容器域值不符'
         assert fld.source == want_source, \
             f'{screen}.{field_name} 来源渠道不符'
 
@@ -326,7 +326,7 @@ def test_report_writes_stub_obs_into_container(screen):
 #: 的屏空表照写([])——防线逐位平移,不加强不减弱。
 _EMPTY_OBS_CASES = {
     # 摄入序测试( 3.3):
-    # options 空 = 整函数早退不写含 left——left 读得(3)也不入容器。
+    # options 空 = 整函数早退不写含 left——left 读得(3)也不入状态容器。
     'encounter': (lambda m: m.CwScreenEncounterObs(refresh_left=3),
                   {'encounter': None, 'encounter_refresh_left': None}),
     'megastar': (lambda m: m.CwScreenMegastarObs(), {'megastar_opts': None}),
@@ -335,7 +335,7 @@ _EMPTY_OBS_CASES = {
                  {'star_tome_opts': None, 'star_tome_opts_xy': None}),
     'supply_node': (lambda m: m.CwScreenSupplyNodeObs(), {'supply': None}),
     # 摄入序同 encounter 行:options 空 = 整函数早退不写含 left——left
-    # 读得(3)也不入容器(观察写端缺口补测随行登记)。
+    # 读得(3)也不入状态容器(观察写端缺口补测随行登记)。
     'invest_env': (lambda m: m.CwScreenInvestEnvObs(refresh=(3, 772, 983)),
                    {'invest_env_opts': None, 'env_refresh_left': None}),
     'invest_strategy': (lambda m: m.CwScreenInvestStrategyObs(),
@@ -351,7 +351,7 @@ _EMPTY_OBS_CASES = {
 
 @pytest.mark.parametrize('screen', sorted(_EMPTY_OBS_CASES))
 def test_empty_stub_gate_semantics(screen):
-    """空桩门语义:候选空时的容器终态逐屏对照原写点闸。"""
+    """空桩门语义:候选空时的状态容器终态逐屏对照原写点闸。"""
     make_obs, expected = _EMPTY_OBS_CASES[screen]
     mod = _screen_module(screen)
     gs = _blank_gs()
@@ -404,7 +404,7 @@ def test_bookcard_report_equal_length_guard():
 def test_briefing_write_semantics():
     """简报写语义(统一读写口径):三字段读到非空恒覆写(重读自愈
     首次误读)/ 读空跳过写(读缺=跳过写,瞬时 OCR 失手不擦同局已读
-    真值;跨局残留由每局容器全新创建/丢弃挡死)。转换失败 = 观察侧
+    真值;跨局残留由每局状态容器全新创建/丢弃挡死)。转换失败 = 观察侧
     round_fail,不进本写点(标准化留口,屏契约登记见 screens/briefing.md)。"""
     mod = _screen_module('briefing')
     gs = _blank_gs()
@@ -434,7 +434,7 @@ def test_briefing_write_semantics():
 
 def test_plane_intel_write_gates():
     """位面情报写门两件(接管域迭代 design §2.3):boss 已有真值不覆写
-    (简报源先落 = 真值已在,实采不冲真值)/ 词缀幂等门(仅容器空时写;
+    (简报源先落 = 真值已在,实采不冲真值)/ 词缀幂等门(仅状态容器空时写;
     空读数 = 无词缀不落写,空表覆写会把真值抹成「无数据」)。"""
     mod = _screen_module('plane_intel')
     # boss 已有真值(简报源,含 None 槽)→ 跳写;词缀空读数 → 不写
@@ -547,7 +547,7 @@ def test_placeholder_report_is_documented_noop():
         fn = getattr(mod, _report_fn_name(cls.__name__))
         gs = _blank_gs()
         fn(gs, cls())
-        assert gs.write_seq == 0, f'{screen} 占位 report 不得写容器'
+        assert gs.write_seq == 0, f'{screen} 占位 report 不得写状态容器'
 
 
 # ============================================================ 3. 渠道签名测试

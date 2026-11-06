@@ -8,15 +8,15 @@
    附属机制调用点随流程验:节点台账 plane_detail 源 + boss 位回填、敌人
    难度参考值逐位面落账(三识别 node 各读、上报节点落账)、词缀效果
    账本登记恰一次。识别域读法(节点条/类型名标签/SIFT/词缀/难度)桩化,
-   画面门与点击/写门真跑(fixture 帧 + 真 screen_info area + 真容器)。
+   画面门与点击/写门真跑(fixture 帧 + 真 screen_info area + 真状态容器)。
 2. **识别失败响亮失败测试**:桩 SIFT 恒未命中 → 识别 node 重试耗尽 →
-   op fail(状态含 SIFT 未命中);失败零写容器(无 None/占位/降级分支),
+   op fail(状态含 SIFT 未命中);失败零写状态容器(无 None/占位/降级分支),
    点击有界(重试账收敛,看门狗零触发)。
 3. **node1 入口门测试**:非位面详情屏 = fail + 存证截图,不进重试空转。
-4. **entry 编排测试**:真值跳过门(容器已有位面真值 → 零点击直通成功,
+4. **entry 编排测试**:真值跳过门(状态容器已有位面真值 → 零点击直通成功,
    防手动调起白开白关详情屏)/ 画面不合法 fail + 存证 / 备战进详情 →
    委派 → 关闭全链(委派子 op 桩化,编排责任面单测)。
-5. **prep 触发委派测试**:触发谓词两支(T-45 扩面)= 容器无位面真值 ∨
+5. **prep 触发委派测试**:触发谓词两支(T-45 扩面)= 状态容器无位面真值 ∨
    词缀随机态;半开帧:第一支(boss 面)现役 return None 不变、双支同真
    按第一支,仅词缀随机态支命中时封死为 round_wait 等待态(决策延后一拍,
    零随机态消费);委派结果透传(失败 = round_fail 交外循环失败链,
@@ -117,7 +117,7 @@ def _stub_intel_reads(monkeypatch, *, sift_names: list[str | None],
 
 
 def _install_session(test_context, monkeypatch) -> SimpleNamespace:
-    """挂对局 session 桩(容器经 game_state_of 惰性建,读回断言)。"""
+    """挂对局 session 桩(状态容器经 game_state_of 惰性建,读回断言)。"""
     sess = SimpleNamespace()
     monkeypatch.setattr(test_context, 'cw_match',
                         SimpleNamespace(session=sess), raising=False)
@@ -213,10 +213,10 @@ def test_plane_intel_six_node_pipeline_flow(test_context, monkeypatch) -> None:
     # 附属机制③:难度参考值逐位面读(三识别 node 各一次)
     assert len(calls['difficulty']) == 3, (
         f'难度参考值应逐位面读 3 次:{calls["difficulty"]}')
-    # 上报写门落容器(§2.3 定死写门经 3.1 端口测试;此处校验全链贯通)
+    # 上报写门落状态容器(§2.3 定死写门经 3.1 端口测试;此处校验全链贯通)
     gs = game_state_of(sess)
     assert gs.plane_bosses.value == _BOSS_NAMES and gs.plane_bosses.source == 'logic'
-    # 词缀:容器为开局种子随机态(logic_rand)→ T-45 写门随机态分支走
+    # 词缀:状态容器为开局种子随机态(logic_rand)→ T-45 写门随机态分支走
     # observe 覆盖转正(来源翻 observation,非简报链的 logic 直写)
     assert gs.enemy_affixes.value == ['灼热轰炸'] and gs.enemy_affixes.source == 'observation'
     # 附属机制②:台账 plane_detail 源 + boss 位回填
@@ -233,7 +233,7 @@ def test_plane_intel_six_node_pipeline_flow(test_context, monkeypatch) -> None:
 
 def test_plane_intel_sift_miss_fails_loudly(test_context, monkeypatch) -> None:
     """识别失败响亮失败测试:SIFT 恒未命中 → 识别 node 重试耗尽 → op fail;
-    失败零写容器(无 None/占位/降级),点击有界(重试账收敛)。"""
+    失败零写状态容器(无 None/占位/降级),点击有界(重试账收敛)。"""
     if not test_context.has_screen(*_DETAIL_FRAME):
         pytest.skip(f'存档截图缺失:screens/{_DETAIL_FRAME[0]}/{_DETAIL_FRAME[1]}.png')
 
@@ -257,10 +257,10 @@ def test_plane_intel_sift_miss_fails_loudly(test_context, monkeypatch) -> None:
     assert not res.success, f'SIFT 恒未命中应响亮失败:{res!r}'
     assert 'SIFT 未命中' in (res.status or ''), f'失败状态留证:{res!r}'
     gs = game_state_of(sess)
-    assert gs.plane_bosses.value is None, '失败零写容器(响亮失败,不留半真值)'
+    assert gs.plane_bosses.value is None, '失败零写状态容器(响亮失败,不留半真值)'
     assert gs.enemy_affixes.value == [] \
         and gs.enemy_affixes.source == 'logic_rand', \
-        '失败零写容器:词缀保持开局种子空表原样(不留半真值)'
+        '失败零写状态容器:词缀保持开局种子空表原样(不留半真值)'
     node_bar = _rect_of(test_context, '货币战争-位面详情', '区域-节点条')
     boss_clicks = [p for p in ctrl.recorded_clicks if _in_rect(p, node_bar)]
     assert 3 <= len(boss_clicks) <= 5, (
@@ -316,7 +316,7 @@ def test_plane_intel_select_plane_evidence(test_context, monkeypatch) -> None:
 
 def test_entry_truth_skip_gate_zero_click(test_context, monkeypatch) -> None:
     """真值跳过门:位面真值已有 ∧ 词缀非随机态 → 零点击直通成功(防手动
-    调起白开白关详情屏;T-45 扩面——跳过须词缀非随机态,种子随机态容器
+    调起白开白关详情屏;T-45 扩面——跳过须词缀非随机态,种子随机态状态容器
     会放行补观察,故本测补种简报已供真值形态)。"""
     if not test_context.has_screen(*_PREP_FRAME):
         pytest.skip(f'存档截图缺失:screens/{_PREP_FRAME[0]}/{_PREP_FRAME[1]}.webp')
@@ -459,9 +459,9 @@ def _make_prep(test_context, monkeypatch, sess, *, node_bar_readable: bool):
 
 
 def test_prep_delegate_trigger_predicate(test_context, monkeypatch) -> None:
-    """prep 触发谓词(T-45 扩面后两支;设计 §4 锁 4):①容器无位面真值
+    """prep 触发谓词(T-45 扩面后两支;设计 §4 锁 4):①状态容器无位面真值
     + 节点条可读 → 委派;②位面真值已有 ∧ 词缀随机态 → 仍委派(补观察
-    转正——种子随机态容器在本帧命中第二支);③词缀转正后 → 不委派
+    转正——种子随机态状态容器在本帧命中第二支);③词缀转正后 → 不委派
     (谓词自然收敛,零重复委派)。"""
     sess = _install_session(test_context, monkeypatch)
     cw4_gs(sess)   # 无位面真值(种子词缀 = logic_rand 空名单,双支同真)

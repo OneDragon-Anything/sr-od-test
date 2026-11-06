@@ -12,7 +12,7 @@ op 形态权威版本 = flow/action_ops.md(动作 op = 机械执行后直调自�
 - **逻辑态上报**:每动作的上报函数容器写契约(覆盖完备 + 逐动作摘件/
   落位/腾席/金账恰一次);
 - **发射面装载**:kernel 参数构造(晶矿挑选/落位策略)与发射臂装载
-  (cost 现算/auth_basis 分键/通道 reason/桥复检语境/容器下标 fail-closed
+  (cost 现算/auth_basis 分键/通道 reason/桥复检语境/状态容器下标 fail-closed
   解析)。
 """
 
@@ -175,7 +175,7 @@ def test_ore_executor_is_mechanical_payload_clicks(monkeypatch):
     assert controller.drags == []   # 采晶矿不拖拽
     assert screens == []            # 零读屏(挑选归决策侧 kernel)
     # 逻辑态:按载荷精确摘晶矿(坐标匹配,非保守清空)——宿主 =
-    # report_action_collect_ore_param 容器 spheres 精确摘除。
+    # report_action_collect_ore_param 状态容器 spheres 精确摘除。
     from test.sr_od.application.currency_war._cw_helpers import cw4_session
 
     from sr_od.application.currency_war.kernel.cw_game_state import (
@@ -231,9 +231,9 @@ def test_vocab_actions_all_have_logic_state_projection(
     - **容器写集**:CwActionSellBenchParam/CwActionSellDeployedParam/
       CwActionMoveUnitParam/CwActionLevelUpParam/CwActionCollectOreParam/
       CwActionOpenTomeParam/CwActionOpenBookcardParam/CwActionWearEquipParam
-      ——供数容器上逐动作必产生容器写(write_seq 推进);
+      ——供数状态容器上逐动作必产生容器写(write_seq 推进);
     - **工具容器写集**(tool-gain-report 迭代自零写族升格,机械执行直接
-      上报写容器):冶金炉/特权赋予卡/拆装扳手/精密拆装扳手/员工投影仪/
+      上报写状态容器):冶金炉/特权赋予卡/拆装扳手/精密拆装扳手/员工投影仪/
       完美投影仪——逐动作面对相同入场态(equips 含该工具 + 目标件/穿戴
       面)必产生容器写;好运令牌除外(见零写集);
     - **合法零写集**:CwActionOpenBoxParam(R7 终结化)/CwActionLuckyTokenUse
@@ -276,7 +276,7 @@ def test_vocab_actions_all_have_logic_state_projection(
     _sig = ChannelSig(family='obs', actor='cw4_seed',
                       mode='synthesized')
     _logic = ChannelSig(family='logic_action', actor='CwScreenPrep')
-    # 供数容器:bench(2 unit+1 tome+1 bookcard+1 box)、front 1 人、gold/level/xp、晶矿
+    # 供数状态容器:bench(2 unit+1 tome+1 bookcard+1 box)、front 1 人、gold/level/xp、晶矿
     _slots = [BenchSlot(kind='unit', unit=Unit(char_id='甲', star=1,
                                                equips=[])),
               BenchSlot(kind='unit', unit=Unit(char_id='乙', star=1,
@@ -300,7 +300,7 @@ def test_vocab_actions_all_have_logic_state_projection(
     # 工具容器写集(tool-gain-report 升格):逐动作重播种「equips 含该
     # 工具 + 目标件/穿戴面 + 前排 1 号位有单位」的相同入场态——前序工具
     # 动作会消耗件名(炉替换/特权变换/扳手回区)与穿戴面,覆盖测试按同一
-    # 入场态逐个评估写行为;重播种 = 容器域 builder 同写入口(observe)。
+    # 入场态逐个评估写行为;重播种 = 状态容器域 builder 同写入口(observe)。
     def _reseed_tool_state(tool_name: str, target_unit: Unit) -> None:
         gs.observe(gs.equips, [tool_name, '轮滑鞋'], sig=_sig)
         gs.observe(gs.deployed, _dvs([target_unit], []), sig=_sig)
@@ -321,7 +321,7 @@ def test_vocab_actions_all_have_logic_state_projection(
         before = _seq()
         _report(gs, action)
         assert _seq() > before, f'{type(action).__name__} 应产生容器写'
-    # 供数容器重播种(工具循环的消耗/置换不复原;穿戴分支依赖
+    # 供数状态容器重播种(工具循环的消耗/置换不复原;穿戴分支依赖
     # owned 已登记、卖出分支依赖前排 1 号位有单位)。
     gs.observe(gs.equips, ['轮滑鞋'], sig=_sig)
     gs.observe(gs.deployed, _dvs([Unit(char_id='丙', star=1, equips=[])], []), sig=_sig)
@@ -450,13 +450,13 @@ def test_levelup_logic_state_advances_xp_level_and_gold():
 def test_deploy_slot_plans_front_guarantee_and_slot_set():
     """落位策略测试(发射面;原 kernel assign/empty 测试迁 mandate_v1
     deploy_plan.deploy_slot_plans,断言语义不变):输出覆盖上场集(每件
-    恰一 move)、槽位取自容器空槽集、前排保证(pref=back ∧ 前排全空 →
+    恰一 move)、槽位取自状态容器空槽集、前排保证(pref=back ∧ 前排全空 →
     真 front 先提/无 front 强转)。
 
     名字表达纪律:排偏好经注册表角色名获得(砂金=front,花火/爻光=
     back〔flex 派生 back〕),禁种子构造注入口。"""
     gs = game_state_of(None)   # 行域未观察 = 前后排全空
-    # 容器形:落位策略输入 = 容器占席条目
+    # 状态容器形:落位策略输入 = 状态容器占席条目
     bench = [BenchSlot(kind='unit', unit=Unit(char_id='花火', star=1)),
              BenchSlot(kind='unit', unit=Unit(char_id='砂金', star=1)),
              BenchSlot(kind='unit', unit=Unit(char_id='爻光', star=1))]
@@ -481,7 +481,7 @@ def test_deploy_slot_plans_front_guarantee_and_slot_set():
 
 
 def test_deploymove_logic_state_moves_unit_and_increments_board():
-    """CwActionMoveUnitParam 容器逻辑态(统一拖动落位载荷契约):bench 摘槽 +
+    """CwActionMoveUnitParam 状态容器逻辑态(统一拖动落位载荷契约):bench 摘槽 +
     deployed 按载荷 (to_row, to_slot) 直落——目标槽有人 = 交换交互
     (被占位角色回源 bench 槽,其余占位不受波及,与换位动作同语义);
     载荷槽空 = 放置;源槽空 / 载荷槽跨排非法 = 陈旧提案零写。(docstring
@@ -549,7 +549,7 @@ def test_deploymove_logic_state_moves_unit_and_increments_board():
 
 
 def test_selldeployed_logic_state_clears_slot_and_recounts_board():
-    """CwActionSellDeployedParam 容器逻辑态:deployed 摘槽;金域零写口径
+    """CwActionSellDeployedParam 状态容器逻辑态:deployed 摘槽;金域零写口径
     = gold 未观察时跳写(回金公式单一源 = sell_refund)。(docstring 收窄:
     board 重算面本测未断言,不虚报。)"""
     gs = game_state_of(None)
@@ -567,9 +567,9 @@ def test_selldeployed_logic_state_clears_slot_and_recounts_board():
 def test_prep_sell_gold_booked_exactly_once_across_seam_and_projection():
     """备战卖出金账全链恰一次入账(统一观察对账迭代归因批出口①修模测试):
     历史形态 live 执行链对同一 CwActionSellBenchParam 先后跑执行缝
-    (旧 apply_op_effect)与容器投影,两条分支各记一次 +refund → 逻辑金系统
+    (旧 apply_op_effect)与状态容器投影,两条分支各记一次 +refund → 逻辑金系统
     性虚高,下帧实读倒挂(journal 实证 −2,run_20260915_070645)。修后
-    容器唯一写点 = 卖出上报函数,确认口(apply_confirm_effect,dict 确认
+    状态容器唯一写点 = 卖出上报函数,确认口(apply_confirm_effect,dict 确认
     族专用)对动作参数零入账(复返即红:确认口若再纳入动作分支即两条分支
     双记)。"""
     from sr_od.application.currency_war.kernel.cw_economy import (
@@ -634,11 +634,11 @@ def test_wear_equip_single_mechanical_drag_no_diff_verification(monkeypatch):
 
 
 def test_open_bookcard_executor_mechanical(monkeypatch):
-    """书册卡机械半(容器槽位直点形态,open-actions-mechanical-pure
-    design §2.1/§2.5 重推):槽号解析(None = gs 容器现算首件槽,双出口
+    """书册卡机械半(状态容器槽位直点形态,open-actions-mechanical-pure
+    design §2.1/§2.5 重推):槽号解析(None = gs 状态容器现算首件槽,双出口
     守卫)→ 备战栏-N 建档坐标单击 → 固定动画等待(等待家族单一源
     _OVERLAY_ANIM_WAIT_S;判效交下一帧观察)。识别读门随直点形态拆除
-    ——旧「slot 对位不中/识别空 = 未发出」失败分支不复存在(容器陈旧
+    ——旧「slot 对位不中/识别空 = 未发出」失败分支不复存在(状态容器陈旧
     「件不在」的治理归观察对账域);gs 装配 = 新守卫 slot=None 现算需要
     (design §2.5 既有用例补装条)。"""
     from test.sr_od.application.currency_war._cw_helpers import cw4_session
@@ -662,7 +662,7 @@ def test_open_bookcard_executor_mechanical(monkeypatch):
         + [BenchSlot(kind='empty')] * 7, capacity=9), sig=_sig)
     cw_match = SimpleNamespace(session=session)
 
-    # None 现算:容器首个 bookcard 槽(下标+1 = 槽2)→ 建档坐标单击。
+    # None 现算:状态容器首个 bookcard 槽(下标+1 = 槽2)→ 建档坐标单击。
     controller = _RecordingController()
     ex = _make_executor(controller, [], cw_match=cw_match,
                         screen_loader=loader)
@@ -679,7 +679,7 @@ def test_open_bookcard_executor_mechanical(monkeypatch):
     detail2, emitted2 = ex2._open_bookcard(CwActionOpenBookcardParam(slot=5))
     assert emitted2 and '槽5' in detail2
     assert [(p.x, p.y) for p in controller2.clicks] == [(175, 912)]
-    # None 现算双出口守卫(design §2.5):gs 缺席 / 容器无 bookcard 首槽
+    # None 现算双出口守卫(design §2.5):gs 缺席 / 状态容器无 bookcard 首槽
     # → 守卫断言响亮暴露零点击(参数面,非识别失败)。
     controller3 = _RecordingController()
     ex3 = _make_executor(controller3, [])   # cw_match=None → gs 缺席
@@ -696,14 +696,14 @@ def test_open_bookcard_executor_mechanical(monkeypatch):
                          screen_loader=loader)
     with pytest.raises(AssertionError):
         ex4._open_bookcard(CwActionOpenBookcardParam())
-    assert controller4.clicks == [], '零点击(容器无首件槽出口)'
+    assert controller4.clicks == [], '零点击(状态容器无首件槽出口)'
 
 
 def test_open_bookcard_logic_state_frees_slot():
-    """开卡即腾席(容器版;原黑板 free_bench_slots +1 语义随投影退役):
-    书册卡槽(容器 kind='bookcard',kind 细分批起不再统一降级 supply_box)
+    """开卡即腾席(状态容器版;原黑板 free_bench_slots +1 语义随投影退役):
+    书册卡槽(状态容器 kind='bookcard',kind 细分批起不再统一降级 supply_box)
     经 CwActionOpenBookcardParam 腾席 = 槽 kind → empty——bench_free_slots
-    派生 +1(容器读口单点),其余槽不动。降级口径(slot
+    派生 +1(状态容器读口单点),其余槽不动。降级口径(slot
     kind='supply_box')= 类型不符拒零写(防跨物误腾)。"""
     from test.sr_od.application.currency_war._cw_helpers import cw4_session
 
@@ -741,7 +741,7 @@ def test_pick_box_decision_fail_closed():
     op = bp.CwScreenBoxPick.__new__(bp.CwScreenBoxPick)
     strategy = SimpleNamespace(
         decide_box_card=lambda: SimpleNamespace(idx=9))
-    # 终态契约 §2.7(零参 + 写槽):桩挂载 gs(决策输入 = 容器持有引用;
+    # 终态契约 §2.7(零参 + 写槽):桩挂载 gs(决策输入 = 状态容器持有引用;
     # handler 先写 gs.box_card_names 槽再零参调 decide)。
     _sess = SimpleNamespace()
     op.ctx = SimpleNamespace(cw_match=SimpleNamespace(
@@ -787,7 +787,7 @@ def test_levelup_emission_carries_cost_and_auth_basis():
     sess = SimpleNamespace(cw4_counters={}, target_comp=None,
                            v3_intention=IntentionState(),
                            active_strategies=[])
-    gs = cw4_box(sess, **st)   # 挂 sess:emit 经 game_state_of(session) 解析同容器
+    gs = cw4_box(sess, **st)   # 挂 sess:emit 经 game_state_of(session) 解析同状态容器
     gs.observe(gs.node_pos, (2, 2), sig=ChannelSig(
         family='obs', actor='cw4_seed', mode='synthesized'))
     gs.node_hist_pos = (2, 1)
@@ -819,7 +819,7 @@ def test_sellbench_emission_carries_channel_reason():
     from sr_od.application.currency_war.kernel.cw_intention import (
         IntentionState,
     )
-    # 容器形:MandateFrame 直构面 = 占席条目 + 行域 Unit
+    # 状态容器形:MandateFrame 直构面 = 占席条目 + 行域 Unit
     deployed = [Unit(char_id=f'注册表外散件{i}', star=2)
                 for i in range(4)]
     frame = mandate.MandateFrame(
@@ -829,7 +829,7 @@ def test_sellbench_emission_carries_channel_reason():
         deployed=deployed, deploy_cap=4, node_type='battle',
         stop_flag=False, k_members=(), round_num=2, overflow_warning=True)
     gs = game_state_of(None)
-    # 燃料资格面读容器(空板守卫读 deployed + bench 边际维),双容器预写
+    # 燃料资格面读状态容器(空板守卫读 deployed + bench 边际维),双状态容器预写
     gs.write_logic(gs.bench, BenchView(
         slots=[BenchSlot(kind='unit', unit=Unit(
             char_id='注册表外散件A', star=1))]
@@ -892,8 +892,8 @@ def test_bridge_recheck_context_uses_slot_table_indices(monkeypatch):
 
 
 def test_emission_resolves_container_index_fail_closed():
-    """发射面容器下标解析(换算归属裁定,持久索引见模块头):bench
-    域按紧缩位键(占席序 0 基)与容器槽位表枚举
+    """发射面状态容器下标解析(换算归属裁定,持久索引见模块头):bench
+    域按紧缩位键(占席序 0 基)与状态容器槽位表枚举
     对位取下标;deployed 域按视图子表条目对位;失配 = None
     (fail-closed 跳过,禁猜位)。"""
     gs = game_state_of(None)
@@ -962,7 +962,7 @@ def _emit_with_bench(bench_slots: list[BenchSlot]):
 
 
 def test_entry_card_arms_emit_from_bench_kind():
-    """用户裁定 2026-09-19(开卡时机归策略器):容器 bench 槽位 kind
+    """用户裁定 2026-09-19(开卡时机归策略器):状态容器 bench 槽位 kind
     'bookcard' → entry ① 卡片臂发射 CwActionOpenBookcardParam(物理槽号
     = 下标 +1);优先序卡先于箱(旧「入口清场先于观察」全局序)。
     (历史注:「trial_card」臂随幻影机制撤销——备战栏发光金卡 = 动画帧
@@ -980,7 +980,7 @@ def test_entry_card_arms_emit_from_bench_kind():
 
 
 def test_entry_box_tome_arms_read_benchview_kind():
-    """回归测试:开箱/开典籍臂与卡片臂同读容器 BenchView.slots kind
+    """回归测试:开箱/开典籍臂与卡片臂同读状态容器 BenchView.slots kind
     (占位件三分类 kind 直读,单一形状无换形路)。本测试钉死 box/tome 臂
     在真 kind 载荷上照常命中。"""
     out = _emit_with_bench([BenchSlot(kind='supply_box')])

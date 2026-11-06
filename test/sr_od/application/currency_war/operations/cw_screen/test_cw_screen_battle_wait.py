@@ -109,7 +109,7 @@ def _make_op(test_context, monkeypatch,
 
 
 def _seed_interest_gs(test_context, *, gold: int | None = None):
-    """公司契约局容器种子(环境/席面观察写 + 可选金基座)。"""
+    """公司契约局状态容器种子(环境/席面观察写 + 可选金基座)。"""
     gs = game_state_of(test_context.cw_match.session)
     gs.observe(gs.active_env, _ENV, sig=_SIG_OBS)
     gs.observe(gs.bench,

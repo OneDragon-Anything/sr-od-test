@@ -1,7 +1,7 @@
 """tracked 观察状态行为测试(用户裁定「观察状态落 game state 字段,
 策略消费只走 game state」)。
 
-设计:容器字段 ``GameState.tracked_account_observed``(三态:None=从未写
+设计:状态容器字段 ``GameState.tracked_account_observed``(三态:None=从未写
 = 缺省可信,正常新局/sim 不经失效事件零误伤;False=显式失效未观察,值
 不可消费;True=备战环 heavy 观察 reconcile 屏幕真值写回成功=已锚定)。
 接管(cw_loop 接管检测确认点)写 False;商店开遇未观察 → 策略门
@@ -15,7 +15,7 @@ tracked 亦退役:对账唯一合法时点 = 观察边界 kernel cw_reconcile,�
 文本 = flow/screen_op.md §2.3/§4。
 
 测试的七件事:
-1. 未观察门:容器观察态 False → decide_shop_action 返回 CwActionCloseShopParam,决策
+1. 未观察门:状态容器观察态 False → decide_shop_action 返回 CwActionCloseShopParam,决策
    核不可达(零咨询);
 2. 缺省可信/已观察放行:字段从未写(None,缺省)与已锚定(True)均放行
    决策核——空表/未写不能冒充未观察(空账混同反向测试);
@@ -81,14 +81,14 @@ def _spy_defects(monkeypatch) -> list[tuple]:
 
 
 def _write_shop_payload(session) -> None:
-    """容器在屏空牌面(策略门在屏前置 gs.shop.value 非空的满足面)。"""
+    """状态容器在屏空牌面(策略门在屏前置 gs.shop.value 非空的满足面)。"""
     gs = game_state_of(session)
     gs.write_logic(gs.shop, ShopPayload(cards=[], refresh_probs={}),
                    produced_by='test', sig=_SIG)
 
 
 def _mark_unobserved(session) -> None:
-    """容器观察态字段写 False(生产同形 = 接管检测写点)。"""
+    """状态容器观察态字段写 False(生产同形 = 接管检测写点)。"""
     gs = game_state_of(session)
     gs.write_logic(gs.tracked_account_observed, False,
                    produced_by='test', evidence='takeover_invalidation',
@@ -99,7 +99,7 @@ def _mark_unobserved(session) -> None:
 
 def _mandate_strategy(monkeypatch, session):
     """生产策略实例(mandate_v1.bridge;decide_shop_action 不被覆写,
-    走 flow.py 门)。gs = 测试 session 容器单例(终态零参口:决策输入
+    走 flow.py 门)。gs = 测试 session 状态容器单例(终态零参口:决策输入
     一律 self.gs 自取)。"""
     from sr_od.application.currency_war.strategies.impl.mandate_v1.bridge import (
         MandateV1Strategy,
@@ -172,7 +172,7 @@ def test_default_and_anchored_states_pass_gate_to_core(monkeypatch):
 # ===== 测试3 锚定置位(kernel reconcile_tracking 对账成功点)=====
 
 def test_reconcile_bench_writeback_marks_observed():
-    """bench 侧屏幕真值对账成功 → 容器观察锚 True(唯一生产置位点;
+    """bench 侧屏幕真值对账成功 → 状态容器观察锚 True(唯一生产置位点;
     3.2:锚定语义 = 主域已按屏幕真值对账,置位点不变)。
     (载体 = P6 直产 BenchView;断言语义零变。)"""
     session = StrategySession()
@@ -235,7 +235,7 @@ def _reconcile(session, bench, deployed) -> tuple:
 # ===== 测试4 接管置位(cw_loop 恢复检测确认点)=====
 
 def test_takeover_marks_tracked_unobserved():
-    """接管检测确认点 → 容器观察态 False(显式失效事件写点)。恢复局旗标
+    """接管检测确认点 → 状态容器观察态 False(显式失效事件写点)。恢复局旗标
     resumed_match 原为同口第二写端,已随零消费退役(迭代 T-8),不再断言。"""
     session = StrategySession()
     assert not tracked_unobserved(session)
@@ -254,7 +254,7 @@ def _run_visit_unobserved_host(monkeypatch, tmp_path, counters, *,
                                unobserved: bool):
     """未观察跳过流测试的离线宿主(替身面沿恢复路由测试宿主同式)。
 
-    构造 = 容器在屏空牌面 + 观察态按参;策略 = 生产 MandateV1Strategy
+    构造 = 状态容器在屏空牌面 + 观察态按参;策略 = 生产 MandateV1Strategy
     (真实门路径:未观察 → CwActionCloseShopParam;观察态用例传 Idle 关店策略)。
     关店执行位点击桩化(统一执行路径含 CloseShop 真点击;离线零画面)。
     返回 (访问结果元组, session):正常收工 → (None, ledger),round_fail →
@@ -303,8 +303,8 @@ def _run_visit_unobserved_host(monkeypatch, tmp_path, counters, *,
         strategy = _IdleStrategy()
 
     match = CurrencyWarMatch(strategy, StrategySession())
-    # 容器单例归一:策略 gs = match.session 容器(终态零参口决策读 self.gs
-    # ——牌面/观察态写在 match.session 的同一容器上)。
+    # 状态容器单例归一:策略 gs = match.session 状态容器(终态零参口决策读 self.gs
+    # ——牌面/观察态写在 match.session 的同一状态容器上)。
     strategy.gs = game_state_of(match.session)
     match.session.strategy_state = SimpleNamespace(
         cw4_counters=counters, cw4_segment_serial=0)

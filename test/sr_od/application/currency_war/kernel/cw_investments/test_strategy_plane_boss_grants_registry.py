@@ -31,7 +31,7 @@ _CHAR = '火花'
 
 def test_table_entry() -> None:
     """表条目锁:四元组逐值 = 卡面直读(位面 2/boss 节点/发放角色/星级
-    1 = 卡面未标先验),值形 = 扁平 tuple 非容器(登记面单一形态)。"""
+    1 = 卡面未标先验),值形 = 扁平 tuple 非状态容器(登记面单一形态)。"""
     assert STRATEGY_PLANE_BOSS_GRANTS[_CARD] == (2, 'boss', _CHAR, 1)
     assert isinstance(STRATEGY_PLANE_BOSS_GRANTS[_CARD], tuple)
 

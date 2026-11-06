@@ -39,7 +39,7 @@ _SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep')
 
 def _gs(*, env: str | None = None,
         equips: list[str] | None = None) -> GameState:
-    """容器组装(None = 保持未写形态;登记/库存经 logic 直写播种)。"""
+    """状态容器组装(None = 保持未写形态;登记/库存经 logic 直写播种)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if env is not None:
         gs.observe(gs.active_env, env, sig=_SIG_OBS)

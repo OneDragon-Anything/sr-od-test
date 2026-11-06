@@ -157,7 +157,7 @@ def _record_world_writes(gs, monkeypatch: pytest.MonkeyPatch) -> list[tuple]:
 
 
 def _hold_card(gs, *, card: str = _CARD) -> None:
-    """持卡直置(注册容器直写 = 持卡事实单一源;不经 pick 链)。"""
+    """持卡直置(注册状态容器直写 = 持卡事实单一源;不经 pick 链)。"""
     gs.write_logic(gs.active_strategies, [card],
                    produced_by='test-seed', evidence='t:card', sig=_SIG)
 

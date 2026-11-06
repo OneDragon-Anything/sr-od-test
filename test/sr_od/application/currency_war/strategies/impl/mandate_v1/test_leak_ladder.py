@@ -52,7 +52,7 @@ def _km() -> list[str]:
 
 
 def _bc(name: str, star: int = 1):
-    """行域单位(容器形状;本文件与 press_narrow 转型域共用直构面)。"""
+    """行域单位(状态容器形状;本文件与 press_narrow 转型域共用直构面)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import Unit
     return Unit(char_id=name, star=star)
 
@@ -62,7 +62,7 @@ def _st(gold: int, cards, *, locked: bool = True, level: int = 5,
         plane: int = 2, hp: int = 60, xp=None) -> dict:
     """漏斗阶梯场景种子轴(旧帧配方退役承接 = 桥/feed 两配方公共
     kwargs;``deployed`` = 旧槽表序 Units,前 4 位前排/其余后排的语义
-    在此分行承接,槽号 1 基信息位随行重排;``locked`` 轴不在容器域,
+    在此分行承接,槽号 1 基信息位随行重排;``locked`` 轴不在状态容器域,
     保留参数位 = session 侧语义,由调用方自持)。"""
     axes: dict = {'gold': gold, 'level': level, 'round_num': 2, 'hp': hp,
                   'plane': plane, 'shop': list(cards)}
@@ -86,7 +86,7 @@ def _st(gold: int, cards, *, locked: bool = True, level: int = 5,
 
 
 def _bs(name: str, star: int = 1, slot: int = 1):
-    """容器占席条目(P4 载体迁移:MandateFrame/判据直构面)。"""
+    """状态容器占席条目(P4 载体迁移:MandateFrame/判据直构面)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         BenchSlot,
         Unit,
@@ -95,7 +95,7 @@ def _bs(name: str, star: int = 1, slot: int = 1):
 
 
 def _bu(name: str, star: int = 1, slot: int = 1):
-    """容器行域单位(P4 载体迁移:deployed 直构面)。"""
+    """状态容器行域单位(P4 载体迁移:deployed 直构面)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import Unit
     return Unit(char_id=name, star=star)
 

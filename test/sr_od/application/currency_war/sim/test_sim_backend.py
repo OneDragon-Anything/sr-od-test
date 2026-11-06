@@ -2,8 +2,8 @@
 + 观察生成 + 装配接缝 + 商店写回)。
 
 测试面 = 迭代设计判据的可执行形态:
-- 确定性:同 seed 同 RunConfig reset 双跑容器逐位一致(全采样由 seed 派生);
-- 字段收敛:无第二账——节点键/连胜/相位载荷全部落容器;
+- 确定性:同 seed 同 RunConfig reset 双跑状态容器逐位一致(全采样由 seed 派生);
+- 字段收敛:无第二账——节点键/连胜/相位载荷全部落状态容器;
 - 初始序列(简报 → 环境 → wait_one_one → P1r1)与节点推进序列(收入/
   经验/环境金/发牌/offer 日程)平移语义零改;
 - 转移声明重入幂等 + 选卡分支接获得链(契约送卡/burst 免费刷新/板面重写/
@@ -17,7 +17,7 @@
 - 装备入账分支:穿着即合成住 kernel 穿装备上报(规则件缺口补 kernel,sim 与
   实机动作分支同构);
 - 观察生成(sim 统一 3.3):金路径 13 档名注册表与清单零差零冗余,逐档
-  生成器经 backend.observe 生产路径落容器;未注册屏 LookupError 具名
+  生成器经 backend.observe 生产路径落状态容器;未注册屏 LookupError 具名
   响错(防静默失真);
 - 装配接缝(flow-seam §1/§2):端口槽缺省关 + 单装配纪律;sim 模式
   CwOperation 三条分支(哨兵帧不触 controller/点击分支机械镜/find_area
@@ -217,8 +217,8 @@ def _encounter_pick_feed(gs: GameState) -> None:
 # ============================================================ 确定性
 
 def test_reset_deterministic_double_run_container_identical() -> None:
-    """确定性测试(验收判据):同 seed 同 RunConfig reset 双跑,容器逐位
-    一致(全采样由 seed 派生;状态副本里的值域 + 新容器 Field 全集对拍)。"""
+    """确定性测试(验收判据):同 seed 同 RunConfig reset 双跑,状态容器逐位
+    一致(全采样由 seed 派生;状态副本里的值域 + 新状态容器 Field 全集对拍)。"""
     b1 = SimBackend(seed=42, cfg=_CFG)
     b2 = SimBackend(seed=42, cfg=_CFG)
     for name in ('hp', 'gold', 'level', 'xp', 'streak', 'bench',
@@ -238,7 +238,7 @@ def test_reset_deterministic_double_run_container_identical() -> None:
 
 def test_reset_presents_briefing_and_env_gating_u07u08() -> None:
     """初始序列:reset 呈现简报屏;env_present=False 无环境屏;True 时
-    简报下一步 → 投资环境屏(M02 采样 3 候选写容器 opts 槽,无双账)。"""
+    简报下一步 → 投资环境屏(M02 采样 3 候选写状态容器 opts 槽,无双账)。"""
     b_live = SimBackend(seed=7, cfg=_CFG)
     assert b_live.screen_identity() == SCREEN_BRIEFING
     assert b_live.gs.plane_bosses.value is not None
@@ -257,7 +257,7 @@ def test_reset_presents_briefing_and_env_gating_u07u08() -> None:
         b_env._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
         assert b_env.screen_identity() == SCREEN_INVEST_ENV
         opts = b_env.gs.invest_env_opts.value
-        assert opts is not None and len(opts) == 3, 'M02 候选写容器槽'
+        assert opts is not None and len(opts) == 3, 'M02 候选写状态容器槽'
         out = report_action_pick_invest_env_param(
             b_env.gs, SimpleNamespace(idx=1), _SIG)
         assert out.applied
@@ -437,7 +437,7 @@ def test_node_window_overlay_detour_reruns_offer_check() -> None:
         _node_advance_feed(gs, trigger='settle_confirm')
         assert (gs.node.value.plane, gs.node.value.round_num) == (1, 2)
         # P1r3(U07 offer 槽)窗口起点 overlay 在场 = 让路前提
-        # (呈现数据源 = 容器登记,队列直推退役)
+        # (呈现数据源 = 状态容器登记,队列直推退役)
         register_screen_change(
             gs, 'planner', '货币战争-银狼升星', source='test')
         _start_battle_feed(gs)
@@ -453,7 +453,7 @@ def test_node_window_overlay_detour_reruns_offer_check() -> None:
         assert b.screen_identity() == SCREEN_INVEST_STRATEGY, \
             '让路结束复走 offer 检查(U07 P1r3 槽不被跳过)'
         assert gs.gold.value == gold_at_detour, '窗口前段不因让路重入'
-        assert gs.invest_strategy_opts.value, 'offer 候选写容器槽'
+        assert gs.invest_strategy_opts.value, 'offer 候选写状态容器槽'
         gs.write_logic(gs.invest_strategy_opts,
                        ['加油站', '躺平', '淘金客'],
                        produced_by='Test', evidence='t:opts', sig=_SIG)
@@ -816,7 +816,7 @@ def test_laowu_env_star_grant_and_boss_node_legs() -> None:
 
 def test_strategy_pick_chain_burst_gold() -> None:
     """获得链断言:选 burst 策略卡(加油站)→ 免费刷新发放生效
-    (effect burst 桥,容器零私持);即时金通道现役无写端不发生
+    (effect burst 桥,状态容器零私持);即时金通道现役无写端不发生
     (kernel ``apply_effect_burst_grant`` 只载 free_refresh_burst),
     断言面只校验免费刷新发放。"""
     b = _backend(7)
@@ -1382,7 +1382,7 @@ def test_env_reroll_downstream_gates_follow(
         _isolate_defect_buffer) -> None:
     """门控跟随冒烟(设计锁面 7):卷中名 = 经济过热 → 环境场读现值
     自动跟随(active_env 电平);卷中名 = 人身意外险 → 节点序列场命中补给
-    修饰(容器序列 = resolve_plane_node_seqs(卷中名),写点唯一,位面 1
+    修饰(状态容器序列 = resolve_plane_node_seqs(卷中名),写点唯一,位面 1
     插入一个补给节点)。全量跟随面归各卡自身批次,本条锁「无新接入调用」。"""
     # 经济过热:环境场读现值跟随(原扑满门控断言已随 P8 废弃删除)
     _stub_env_reroll_roll(monkeypatch, '经济过热')
@@ -1425,7 +1425,7 @@ def _count_ore_rolls(monkeypatch: pytest.MonkeyPatch) -> list[int]:
 
 def test_reward_node_ore_substate_and_collect_via_report(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """奖励节点 = 备战档晶矿子态:面板写容器 spheres(U23 锚 8 晶矿)经
+    """奖励节点 = 备战档晶矿子态:面板写状态容器 spheres(U23 锚 8 晶矿)经
     挂接入口**生成即附着**(同批一次写);点晶矿走 kernel 上报按附着值
     兑现——命中零掷骰(掷骰已前移生成侧),金入账 = 附着金精确合计
     (采样即状态副本里的值)。"""
@@ -1706,7 +1706,7 @@ def test_ore_env_plane2_declared_ore_and_expiry_cleanup(
 
 
 def test_supply_node_window_refresh_and_pick() -> None:
-    """补给节点窗:呈现补给屏(3 选项写容器 + 免费刷新 left=1);刷新
+    """补给节点窗:呈现补给屏(3 选项写状态容器 + 免费刷新 left=1);刷新
     = 点击源(left 递减 + 选项重掷);pick_supply 走获得链,选完关模态
     回备战自动弹店、节点不推进(2026-10-29 流程模型对齐:推进归出战动作
     supply_finish)。宝钻发放分支 = chosen_supply (角色, 装备名列表) 按
@@ -1748,7 +1748,7 @@ def test_supply_node_window_refresh_and_pick() -> None:
 
 
 def test_box_open_pick_grant_via_gain_chain() -> None:
-    """开箱动作落地 → 武装箱画面(候选写容器);装备卡点击记录 + 选定
+    """开箱动作落地 → 武装箱画面(候选写状态容器);装备卡点击记录 + 选定
     落地 → 选中装备经获得链入栏;模态交回备战。上报 + 声明喂入单轨
     (open_box / pick_box_card 两条分支,动作 op 同形)。"""
     b = _backend(7)
@@ -1783,7 +1783,7 @@ def test_megastar_lazy_presentation_on_identity_query() -> None:
         b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
         b._maybe_finish_wait()
         gs = b.gs
-        # 呈现数据源 = 容器登记(逻辑写 → 值回调
+        # 呈现数据源 = 状态容器登记(逻辑写 → 值回调
         # 判据 register;观察写零回调),事实事件保留为呈现检查触发点。
         gs.write_logic(gs.deployed, _dvs([Unit(char_id='大丽花', star=1),
                                       Unit(char_id='加拉赫', star=1)], []),
@@ -1794,7 +1794,7 @@ def test_megastar_lazy_presentation_on_identity_query() -> None:
                    for p in gs.screen_changes.pending), '判据已登记'
         # 3.5:呈现位 = screen_identity 问询时点懒呈现(事实事件槽退役)。
         assert b.screen_identity() == '货币战争-盛会之星', '跨首层模态呈现'
-        assert gs.megastar_opts.value, '候选写容器槽'
+        assert gs.megastar_opts.value, '候选写状态容器槽'
         assert any(p.kind == 'megastar'
                    for p in gs.screen_changes.pending), \
             '呈现不清条目(消费归选卡上报)'
@@ -1853,7 +1853,7 @@ def test_planner_lazy_presentation_dedup_marker() -> None:
 def test_full_walk_terminates_with_terminal_invariant() -> None:
     """全链走查到局终:终局合法形态二值不变式(胜利 = run_complete 披露
     且 hp>0 / 死亡 = hp 归零且无 run_complete,胜负判别单一源在披露集);
-    位面 3 行入表后全链自然走进位面 3。局结果面自容器节点键读。"""
+    位面 3 行入表后全链自然走进位面 3。局结果面自状态容器节点键读。"""
     b = _backend(61)
     try:
         b._handle_click_source(SCREEN_BRIEFING, '按钮-下一步')
@@ -1980,7 +1980,7 @@ def test_rainbow_env_overlay_detour_offer_counted_once() -> None:
         assert b.screen_identity() == SCREEN_INVEST_STRATEGY, \
             '让路结束复走 offer 检查(U07 P1r3 槽不被跳过)'
         opts = gs.invest_strategy_opts.value
-        assert opts, 'offer 候选写容器槽'
+        assert opts, 'offer 候选写状态容器槽'
         for name in opts:
             assert INVESTMENT_STRATEGIES[name].rarity == '棱彩', name
         assert b._invest_pick_ordinal == 1, '呈现恰计一次(复走无双计)'
@@ -2511,7 +2511,7 @@ def test_yinjincai_env_refresh_world_leg_slot_quality_persists() -> None:
     刷新次数」批):首次 offer 逐卡计数 3 → 刷新声明喂入(槽 0,生产同形
     = 上报函数取声明 + declare_world 喂入)→ 该槽重掷新银卡(槽位品质
     承诺跨刷新保持)、计数 3→2、未刷槽不动 → 重复刷新至计数尽 → 尽后
-    再喂声明 = 静默无操作(容器剩余闸防线)。"""
+    再喂声明 = 静默无操作(状态容器剩余闸防线)。"""
     b = _yinjincai_env_backend(61)
     try:
         b._maybe_finish_wait()
@@ -2560,7 +2560,7 @@ def test_yinjincai_env_refresh_world_leg_slot_quality_persists() -> None:
 
 def test_env_screen_refresh_world_leg_group_reroll() -> None:
     """环境屏整组刷新状态副本分支(2026-10-19 用户裁定批):开局环境屏呈现
-    refresh=(1,...)(基准 1 次,呈现写点落容器)→ 整组刷新声明喂入
+    refresh=(1,...)(基准 1 次,呈现写点落状态容器)→ 整组刷新声明喂入
     (active_env 空 → 触发词 refresh_invest_env)→ 候选整组重掷(组内
     全换)+ 计数落 0 → 尽后再喂声明 = 静默无操作。"""
     b = SimBackend(seed=11, cfg=RunConfig(
@@ -2572,7 +2572,7 @@ def test_env_screen_refresh_world_leg_group_reroll() -> None:
         opts = list(b.gs.invest_env_opts.value)
         assert b.gs.env_refresh_left.value == 1, '呈现写点落基准 1'
         assert b.observe(SCREEN_INVEST_ENV).refresh == (1, 10, 20), \
-            '生成器自容器现读整组剩余'
+            '生成器自状态容器现读整组剩余'
         out = report_action_refresh_invest_cards_param(
             b.gs, SimpleNamespace(slots=(0, 1, 2)), _SIG)
         assert out.applied
@@ -2778,7 +2778,7 @@ def test_node_xp_table_matches_rules_doc() -> None:
 
 
 def test_node_key_field_convergence() -> None:
-    """字段收敛:容器 gs.node 为唯一节点账(无 plane/round_num 第二账);
+    """字段收敛:状态容器 gs.node 为唯一节点账(无 plane/round_num 第二账);
     NodeKey.kind 与位面日程真值表一致。"""
     b = _backend(7)
     try:
@@ -2828,7 +2828,7 @@ def test_game_over_presents_lobby_terminal_screen() -> None:
 
 
 # ============================================================ 画面广播
-# (迭代 sim-screen-announce §2.1:内部画面状态机 → 容器画面域广播,
+# (迭代 sim-screen-announce §2.1:内部画面状态机 → 状态容器画面域广播,
 # 渲染复盘的画面章证据面。消费方 = tools/cw/replay_to_md.py 画面章
 # 切分,切章锚 = field='current_screen' 写入行本体。)
 
@@ -2883,7 +2883,7 @@ def test_screen_announce_broadcast_points_and_value_exemption() -> None:
             return [r['after'] for r in rows[mark:]
                     if r.get('field') == 'current_screen']
 
-        # ① 简报(构造即 reset 广播;首对 prev = 容器每局全新创建空串)
+        # ① 简报(构造即 reset 广播;首对 prev = 状态容器每局全新创建空串)
         assert_broadcast(SCREEN_BRIEFING)
         pair = rows[-2:]
         assert [r['field'] for r in pair] == ['prev_screen',
@@ -3553,7 +3553,7 @@ def test_non_piggy_reward_always_wins_no_hp_loss(
 
 # ============================================================ 观察生成器
 # (sim 统一 3.3:每生成器单测 = 构造状态副本态 → backend.observe(档名) 生成
-#  obs(生产路径 = 注册表分派,产物经同名 report_screen_* 落容器)→ 容器
+#  obs(生产路径 = 注册表分派,产物经同名 report_screen_* 落状态容器)→ 状态容器
 #  字段断言;设计依据 = sim- + flow-seam 接缝契约。)
 
 def _open_to_first_window(b: SimBackend, *, env_present: bool = False) -> None:
@@ -3644,8 +3644,8 @@ def test_unregistered_screen_raises_named_error() -> None:
 
 
 def test_gen_briefing_round_trips_three_readings() -> None:
-    """简报生成器:三读数(词缀/位面序 boss/难度)自容器直填,经同名
-    report 落容器(读到非空恒覆写,同值幂等)。"""
+    """简报生成器:三读数(词缀/位面序 boss/难度)自状态容器直填,经同名
+    report 落状态容器(读到非空恒覆写,同值幂等)。"""
     b = _backend()
     try:
         assert b.screen_identity() == SCREEN_BRIEFING
@@ -3655,15 +3655,15 @@ def test_gen_briefing_round_trips_three_readings() -> None:
         assert obs.enemy_affixes == list(gs.enemy_affixes.value)
         assert obs.plane_bosses == list(gs.plane_bosses.value)
         assert obs.enemy_difficulty == gs.enemy_difficulty.value
-        # report 分支容器断言:同值覆写后容器与 obs 逐位一致(生成器 →
-        # report → 容器全链走通)。
+        # report 分支状态容器断言:同值覆写后状态容器与 obs 逐位一致(生成器 →
+        # report → 状态容器全链走通)。
         assert gs.enemy_affixes.value == obs.enemy_affixes
     finally:
         uninstall_backend()
 
 
 def test_gen_invest_env_candidates_from_container_slot() -> None:
-    """投资环境生成器:候选名自容器 opts 槽(M02 采样写点),report 分支
+    """投资环境生成器:候选名自状态容器 opts 槽(M02 采样写点),report 分支
     同值回写幂等;x = 下标派生合成值(身份键,无画面语义)。"""
     b = _backend(seed=11, cfg=RunConfig(
         selected_difficulty='A8', enemy_difficulty=108, env_present=True))
@@ -3717,7 +3717,7 @@ def test_gen_prep_wait_one_one_variant_dispatch() -> None:
 
 def test_gen_shop_mirrors_container_receipt_face() -> None:
     """商店生成器:入口回执同面镜像域(gold/hp/level/board/shop/plane/
-    round/node_type)自容器直填;开店点击源进商店档后观察合法。"""
+    round/node_type)自状态容器直填;开店点击源进商店档后观察合法。"""
     b = _backend()
     try:
         _open_to_first_window(b)
@@ -3756,7 +3756,7 @@ def test_gen_battle_wait_on_screen_at_settle_window() -> None:
 
 
 def test_gen_supply_options_and_refresh_left() -> None:
-    """补给生成器:选项载荷自容器呈现写点回读,refresh_left = 容器剩余
+    """补给生成器:选项载荷自状态容器呈现写点回读,refresh_left = 状态容器剩余
     语义观察真值(入口 left=1);report 分支同值回写幂等。"""
     b = _backend(seed=1013)
     try:
@@ -3776,7 +3776,7 @@ def test_gen_supply_options_and_refresh_left() -> None:
 
 def test_gen_invest_strategy_candidates_at_offer_window() -> None:
     """投资策略生成器:P1r3 = U07 固定 offer 日程 → 策略屏呈现,候选名
-    自容器 opts 槽回读;逐卡刷新计数自容器按槽名现读(默认局呈现写点
+    自状态容器 opts 槽回读;逐卡刷新计数自状态容器按槽名现读(默认局呈现写点
     落基准每卡 1 次,2026-10-19 用户裁定批接入呈现)。"""
     b = _backend()
     try:
@@ -3790,9 +3790,9 @@ def test_gen_invest_strategy_candidates_at_offer_window() -> None:
         assert obs.entry_ok is True
         assert [n for n, _x, _y in obs.options] == opts_before
         assert obs.refresh_slots == [(1, 10, 20), (1, 20, 20), (1, 30, 20)], \
-            '默认局逐卡基准 1 次(呈现写点 → 容器 → 生成器现读)'
+            '默认局逐卡基准 1 次(呈现写点 → 状态容器 → 生成器现读)'
         assert b.gs.strategy_refresh_left.value == dict.fromkeys(opts_before, 1), \
-            '观察写端逐卡计数落容器'
+            '观察写端逐卡计数落状态容器'
         assert b.gs.invest_strategy_opts.value == opts_before
     finally:
         uninstall_backend()
@@ -3835,7 +3835,7 @@ def test_gen_plane_transition_chain_absent_honest() -> None:
 
 
 def test_gen_encounter_tier_options_from_container() -> None:
-    """遭遇生成器:档位候选自容器呈现写点回读(四档集);report 分支同值
+    """遭遇生成器:档位候选自状态容器呈现写点回读(四档集);report 分支同值
     回写幂等。"""
     b = _backend()
     try:
@@ -3852,7 +3852,7 @@ def test_gen_encounter_tier_options_from_container() -> None:
 
 
 def test_gen_box_candidates_and_points_same_order() -> None:
-    """开箱生成器(武装箱选择档):候选名 + 点击点自容器呈现写点回读,
+    """开箱生成器(武装箱选择档):候选名 + 点击点自状态容器呈现写点回读,
     同序等长(report 写端守卫同契约);选定分支消费面 = 动作 op 按 idx 取
     xy(合成坐标,身份键)。"""
     b = _backend()
@@ -3875,13 +3875,13 @@ def test_gen_box_candidates_and_points_same_order() -> None:
 
 
 def test_gen_megastar_candidates_from_container() -> None:
-    """巨星生成器:候选(含持星徽贡献与合成坐标)自容器呈现写点回读;
+    """巨星生成器:候选(含持星徽贡献与合成坐标)自状态容器呈现写点回读;
     事实事件触发的呈现态下观察合法。"""
     b = _backend()
     try:
         _open_to_first_window(b)
         b._maybe_finish_wait()
-        # 3.4:呈现数据源 = 容器登记(逻辑写经值回调判据 register;
+        # 3.4:呈现数据源 = 状态容器登记(逻辑写经值回调判据 register;
         # 观察写零回调)。
         b.gs.write_logic(
             b.gs.deployed,
@@ -3902,7 +3902,7 @@ def test_gen_megastar_candidates_from_container() -> None:
 
 
 def test_gen_planner_empty_bucket_writes_like_live() -> None:
-    """planner 生成器:两卡选项自容器回读;sim 呈现写点缺位 = 空桶,
+    """planner 生成器:两卡选项自状态容器回读;sim 呈现写点缺位 = 空桶,
     与实机「恒写两卡 OCR 桶,空桶照写」语义同形(report 无空门直写)。"""
     b = _backend()
     try:
@@ -3912,7 +3912,7 @@ def test_gen_planner_empty_bucket_writes_like_live() -> None:
         slots[0] = BenchSlot(kind='unit', unit=Unit(char_id='银狼LV.999',
                                                     star=1))
         b.gs.observe(b.gs.bench, cw4_bview(slots), sig=_SIG_OBS)
-        # 3.4:呈现数据源 = 容器登记(逻辑写经值回调判据 register;
+        # 3.4:呈现数据源 = 状态容器登记(逻辑写经值回调判据 register;
         # 观察写零回调)。
         b.gs.write_logic(
             b.gs.deployed, _dvs([Unit(char_id='银狼LV.999', star=2)], []),
@@ -3965,7 +3965,7 @@ def test_same_node_second_visit_restores_payload() -> None:
         _drive_to_first_prep(b)
         gs = b.gs
         first = gs.shop.value
-        assert first is not None, '前置:节点窗起发牌已写容器'
+        assert first is not None, '前置:节点窗起发牌已写状态容器'
 
         _open_shop(b)
         assert b.screen_identity() == SCREEN_SHOP, '开店呈现商店态'
@@ -4168,7 +4168,7 @@ def test_find_area_leg_visible_query(_sim_ctx):
 
 # (事实事件缺省关测试已随事实事件槽退役删除:
 #  事实事件槽本体与全部广播调用点同批删除,sim 呈现 =
-#  容器登记 + 问询时点懒呈现,由本文件懒呈现两测试覆盖。)
+#  状态容器登记 + 问询时点懒呈现,由本文件懒呈现两测试覆盖。)
 
 
 def test_identity_helper_filters_by_screen_list():

@@ -3,7 +3,7 @@ cw_gain_chain.py 的 check_strategy_boss_completion_grants)。
 
 测试面依据 = 迭代设计 designs/T-330-wuqi-pifashang.md §4 锁 3 + §2.2/
 §5-7(直构形态先例 = 同目录 test_check_strategy_boss_battle_grants.py
-的容器直置,禁经战斗链假绿):
+的状态容器直置,禁经战斗链假绿):
 - 条件矩阵短路:node_kind 非 boss → 零写;未持卡/表外卡 → 零写零一次性标志位;
 - 发放真值:持卡未落一次性标志位 → 简易池全集 8 件按注册表序逐件追加(rand=False
   确定事件 = logic 渠道零采样)、落一次性标志位(strategy_conditional_done 纯卡名
@@ -86,7 +86,7 @@ def test_boss_completion_grants_full_set_and_latch() -> None:
     assert gs.strategy_conditional_done.value == (_CARD,), \
         f'未落一次性标志位: {gs.strategy_conditional_done.value!r}'
     assert gs.equips.source == 'logic_rand', (
-        '直构域容器未锚定 → 随机态通道(模块通道规则;rand=False 锁值'
+        '直构域状态容器未锚定 → 随机态通道(模块通道规则;rand=False 锁值'
         '确定性 = 注册表序全集非采样,通道与值语义解耦,锚定域归 sim e2e)')
     assert gs.equips.evidence.startswith(_EVIDENCE_PREFIX), \
         f'evidence 前缀漂移: {gs.equips.evidence}'

@@ -9,9 +9,9 @@ encounter_options_for helper + encounter 呈现写点 + STRATEGY_ECONOMY
   表外名 → 全四档原样;多策略含本卡 → 仍收窄(任一命中即收窄,局级
   持续语义);
 - 锁 2 写点集成:backend 局预种持卡(observe 写入;选卡落地链 = 按名
-  去重追加,预种不被后续 pick 覆写)走到遭遇节点 → 容器呈现集长度 2 ∧
+  去重追加,预种不被后续 pick 覆写)走到遭遇节点 → 状态容器呈现集长度 2 ∧
   difficulty 集 = {全集首, 全集末} ∧ idx 集 = {0,1}(全派生式),
-  观察生成器(gen_encounter 容器回读链)与容器一致;
+  观察生成器(gen_encounter 状态容器回读链)与状态容器一致;
 - 锁 3 注册行直测:STRATEGY_ECONOMY['二极管'] 直读三条效果条目值(instant_gold
   ==6 ∧ hp_instant==10 ∧ encounter_tier_extremes_only is True,防表外
   安静返 0/注册笔误,T-121 注册行直测先例);hp 腿直调真值 + 表外卡
@@ -104,9 +104,9 @@ def _backend_with_card_at_encounter(seed: int) -> SimBackend:
 
 
 def test_presentation_write_point_narrows_container() -> None:
-    """呈现写点集成:预种持卡局走到遭遇节点 → 容器呈现集长度 2 ∧
+    """呈现写点集成:预种持卡局走到遭遇节点 → 状态容器呈现集长度 2 ∧
     difficulty 集 = {全集首, 末} ∧ idx 集 = {0,1}(全派生式);观察
-    生成器(gen_encounter 容器回读链)与容器一致。seed 7 = 受扰面
+    生成器(gen_encounter 状态容器回读链)与状态容器一致。seed 7 = 受扰面
     存量锁实证可达 (1,7) 的种子(种子非断言对象,换 seed 需重证可达)。"""
     b = _backend_with_card_at_encounter(seed=7)
     try:

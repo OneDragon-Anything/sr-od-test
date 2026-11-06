@@ -95,7 +95,7 @@ _EMPTY_CONFIG = SimpleNamespace(strategy_priority=[], strategy_forbid=[])
 
 
 def _fresh_gs() -> GameState:
-    """独立容器(桩 session 宿主;弱引用表按宿主隔离,零跨测残留)。"""
+    """独立状态容器(桩 session 宿主;弱引用表按宿主隔离,零跨测残留)。"""
     return game_state_of(SimpleNamespace())
 
 
@@ -777,7 +777,7 @@ _ERA_ENVS = ('彩虹时代', '黄金时代', '白银时代', '头彩', '尾彩',
 
 
 def _env_set_refresh_left(gs: GameState, left: int) -> None:
-    """写环境刷新剩余次数(容器观察真值形态;次数闸 = ≥1)。"""
+    """写环境刷新剩余次数(状态容器观察真值形态;次数闸 = ≥1)。"""
     gs.write_logic(gs.env_refresh_left, left,
                    produced_by='cw-invest-env-test', sig=_ENV_SIG_LOGIC)
 
@@ -1044,7 +1044,7 @@ def test_env_build_validation_coefficient_missing_key_raises(monkeypatch):
 
 def _env_wired_strategy(gs: GameState):
     """活策略核(生产注册壳 mandate_v1.bridge 具现;决策入口 = CwFlowStrategy
-    继承链。零真实副作用:容器桩 session 宿主隔离,config 桩缺省 =
+    继承链。零真实副作用:状态容器桩 session 宿主隔离,config 桩缺省 =
     转向轴全空)。"""
     from sr_od.application.currency_war.strategies.impl.mandate_v1 import bridge
     return bridge.MandateV1Strategy(gs, SimpleNamespace(strategy_seed=None))

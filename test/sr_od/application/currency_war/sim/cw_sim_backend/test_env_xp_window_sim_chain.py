@@ -57,8 +57,8 @@ _SIG_OBS = ChannelSig(family='obs', actor='TestXpWindow', mode='read')
 
 
 def _bound_session(gs):
-    """裸 session 桩 + 后端容器绑定(register_portal_from_env 经
-    game_state_of 取绑定容器;弱引用表随桩对象回收自动解绑)。"""
+    """裸 session 桩 + 后端状态容器绑定(register_portal_from_env 经
+    game_state_of 取绑定状态容器;弱引用表随桩对象回收自动解绑)。"""
     from sr_od.application.currency_war.kernel.cw_strategy_session import (
         StrategySession,
     )
@@ -79,7 +79,7 @@ def _pick_xp_env(seed: int) -> SimBackend:
     b.gs.write_logic(b.gs.invest_env_opts,
                      ['成功经验', '轮岗', '头彩'],
                      produced_by='Test', evidence='t:opts', sig=_SIG)
-    # session 绑定后端容器(portal 登记分支消费;session=None = 登记分支跳过)
+    # session 绑定后端状态容器(portal 登记分支消费;session=None = 登记分支跳过)
     out = report_action_pick_invest_env_param(
         b.gs, SimpleNamespace(idx=0), _SIG, session=_bound_session(b.gs))
     assert out.applied

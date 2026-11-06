@@ -12,7 +12,7 @@
 4. 溢出分支吸收与镜像语义(原 test_cw_overflow_tracked_sync.py 与
    test_cw_overflow_mirror_frame.py 全文件先后迁并,均已删):入位卡回占
    被卖槽(席空数派生不 +1,缺回占 = 决策面假空席,席满拒落类门被假象
-   绕过)+ 陈旧提案(卖出槽容器已空)写口零写、旗标不清(镜像不误发)。
+   绕过)+ 陈旧提案(卖出槽状态容器已空)写口零写、旗标不清(镜像不误发)。
 """
 from __future__ import annotations
 
@@ -57,7 +57,7 @@ def _frame(**kw) -> MandateFrame:
     非四体系中性位,保护集身份段外的可入燃料候选;统一保护集
     changes/2026-10-15-unified-protection-set design.md §2.3——原椒丘
     已属保护集,常规卖出资格面排除,不再充当中性位)。
-    P4 容器形:bench = 占席条目,deployed = 行域 Unit。"""
+    P4 状态容器形:bench = 占席条目,deployed = 行域 Unit。"""
     base = {'gold': 200, 'level': 7,
             'bench': [BenchSlot(kind='unit',
                                 unit=Unit(char_id='万敌', star=1))],
@@ -69,9 +69,9 @@ def _frame(**kw) -> MandateFrame:
 
 
 def _state():
-    """容器种子 + 上阵 1 人(免 empty_board_sell_guard:场上无人禁卖守卫,
-    守卫读容器上阵域非 frame)。bench 槽表照实观察(生产 heavy 帧恒产出;
-    批2b 换算收尾后溢出发射位按容器槽位表解析下标,黑板视图与容器同帧
+    """状态容器种子 + 上阵 1 人(免 empty_board_sell_guard:场上无人禁卖守卫,
+    守卫读状态容器上阵域非 frame)。bench 槽表照实观察(生产 heavy 帧恒产出;
+    批2b 换算收尾后溢出发射位按状态容器槽位表解析下标,黑板视图与状态容器同帧
     同源是解析前提)。"""
     gs = game_state_of(None)
     gs.write_logic(gs.bench, cw4_bview(
@@ -89,7 +89,7 @@ def test_overflow_gate_narrows_to_single_sell():
                       state=_state())
     assert len(out) == 1
     assert isinstance(out[0].action, CwActionSellBenchParam)
-    assert out[0].action.bench_idx == 0   # 唯一冗余位 = 万敌槽(槽1 → 容器下标0)
+    assert out[0].action.bench_idx == 0   # 唯一冗余位 = 万敌槽(槽1 → 状态容器下标0)
     assert not any(isinstance(e.action, CwActionStartBattleParam) for e in out)
     assert state_of(session).cw4_counters.get('overflow_clear_sell') == 1
 
@@ -174,7 +174,7 @@ def test_sellbench_lv999_tiered_refund():
 
 
 def test_sellbench_overflow_missing_identity_skips_absorb():
-    """身份缺读(''):容器跳过入位(槽留空等观察覆盖),卖出/退款本体照常;
+    """身份缺读(''):状态容器跳过入位(槽留空等观察覆盖),卖出/退款本体照常;
     溢出态未消费留观察覆盖(单账断言;原 tracked 对称分支随 3.2 退役删)。"""
     session = StrategySession()
     gs = game_state_of(session)
@@ -200,7 +200,7 @@ def test_sellbench_overflow_missing_identity_skips_absorb():
 
 
 def test_sellbench_stale_proposal_zero_write_flag_kept():
-    """镜像不误发:陈旧提案(卖出槽容器已空)→ 写口零写、旗标不清 →
+    """镜像不误发:陈旧提案(卖出槽状态容器已空)→ 写口零写、旗标不清 →
     席空数派生不变(零写即零变化;原黑板帧镜像分支随黑板退役,镜像语义
     由卖备战上报函数溢出分支单点承载)。"""
     session = StrategySession()
@@ -212,7 +212,7 @@ def test_sellbench_stale_proposal_zero_write_flag_kept():
     gs.write_logic(gs.gold, 10, produced_by='test', sig=_SIG)
     gs.write_logic(gs.overflow_warning, True, produced_by='test', sig=_SIG)
     gs.write_logic(gs.overflow_card, '不死途', produced_by='test', sig=_SIG)
-    # 陈旧提案:卖出槽 1 容器已空(提案与容器失配,写口守卫零写)
+    # 陈旧提案:卖出槽 1 状态容器已空(提案与状态容器失配,写口守卫零写)
     gs.write_logic(gs.bench, cw4_bview(
         [None, BenchSlot(kind='unit', unit=Unit(char_id='刃', star=1))]),
         produced_by='test', sig=_SIG)
@@ -222,6 +222,6 @@ def test_sellbench_stale_proposal_zero_write_flag_kept():
 
     dep = bench_view_slots_of(gs)
     assert (dep[0] is None or dep[0].kind == 'empty') \
-        and dep[1].kind == 'unit' and dep[1].unit.char_id == '刃'   # 容器零写
+        and dep[1].kind == 'unit' and dep[1].unit.char_id == '刃'   # 状态容器零写
     assert gs.overflow_warning.value is True    # 旗标未消费(写口零写)
     assert bench_free_slots(gs) == 8            # 零写 → 席空数不变

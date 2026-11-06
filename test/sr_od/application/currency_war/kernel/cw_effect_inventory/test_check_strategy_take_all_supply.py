@@ -56,7 +56,7 @@ def _take_all_gs(*, bench_entries: list[Unit] | None = None,
                  cards: tuple[str, ...] = ('全都要·银',),
                  unchosen: tuple[SupplyOption, ...] | None = _COLS,
                  latched: bool = False) -> GameState:
-    """直构容器(bench/equips/持卡/未选集/一次性标志位按参;bench_unobserved = 域未
+    """直构状态容器(bench/equips/持卡/未选集/一次性标志位按参;bench_unobserved = 域未
     观察形态;cards = () 未持卡;unchosen None = 无未选定案;latched = 银
     卡一次性标志位预置耗尽态)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)

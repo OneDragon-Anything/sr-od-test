@@ -3,7 +3,7 @@
 
 测试面依据 = 迭代设计 designs/T-166-qiang-zaishou.md §4 锁 3/4/7 +
 REVIEW-T166(直构形态先例 = 同目录 test_check_strategy_hp_loss_grants.py
-的容器直置;采样单一源纪律 = roll_random_equip 禁第二采样表达式):
+的状态容器直置;采样单一源纪律 = roll_random_equip 禁第二采样表达式):
 - 条件矩阵短路:node_kind 非 boss(battle/encounter/reward/supply)→ 空;
   未持卡/表外卡 → 空;
 - 发放真值:固定 rng 注入 → equips 恰 +1、名 = 同种子对同池重放采样值

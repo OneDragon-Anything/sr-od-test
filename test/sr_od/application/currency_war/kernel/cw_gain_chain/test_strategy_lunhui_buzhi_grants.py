@@ -258,7 +258,7 @@ def test_mid_run_pick_no_refire() -> None:
 def test_merge_cascade_third_copy_star_up() -> None:
     """级联记账锁(锁 3):预置 2×1★ 白厄(均置备战栏,落点走「全备战栏
     → 最左」支)→ 效果条目2 位面开始窗发放第 3 只 → 到席瞬间 3 合 1 合成
-    2★(获得链现役级联,事实面 = 容器终态断言);落点 = 全备战栏最左
+    2★(获得链现役级联,事实面 = 状态容器终态断言);落点 = 全备战栏最左
     (载体槽位 = 0)。"""
     gs = _make_gs(bench=[('白厄', 1), ('白厄', 1)])
     gs.observe(gs.active_strategies, ['轮回不止'], sig=_SIG_OBS)

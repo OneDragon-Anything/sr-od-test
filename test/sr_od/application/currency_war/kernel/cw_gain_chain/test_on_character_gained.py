@@ -27,7 +27,7 @@ _ENV = '特邀专家:银狼'
 
 
 def _make_gs(bench: list[tuple[str, int]]) -> GameState:
-    """直构容器 + active_env 注册写(本卡);置一次性标志位 = 确定面通道断言
+    """直构状态容器 + active_env 注册写(本卡);置一次性标志位 = 确定面通道断言
     (未落一次性标志位链写走随机态通道属既定通道规则,与本锁焦点无关)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     slots = [BenchSlot(kind='unit', unit=Unit(char_id=c, star=s))

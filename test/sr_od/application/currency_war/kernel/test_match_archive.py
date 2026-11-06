@@ -96,9 +96,9 @@ def test_ensure_assembly_installs_at_default_root_when_absent(
 
 
 def test_game_state_establish_wires_assembly() -> None:
-    """正主单例建立路径接入调用:game_state_of 局容器建立注入 run_id_provider
+    """正主单例建立路径接入调用:game_state_of 局状态容器建立注入 run_id_provider
     即装配(重定向原「run 领取单点接入调用」测试;精化令 2026-09-15:触发
-    只钉该建立点,GameState 构造器零装配逻辑;行为等价 = 未初始化容器首写
+    只钉该建立点,GameState 构造器零装配逻辑;行为等价 = 未初始化状态容器首写
     前装配已发生)。"""
     reset_state_telemetry()
     assert state_journal_instance() is None
@@ -108,12 +108,12 @@ def test_game_state_establish_wires_assembly() -> None:
 
 def test_draft_birth_and_run_claim_do_not_wire_assembly(
         _reset_run_cluster: None) -> None:
-    """装配边界三支(分层归属 + 精化令):草稿容器直构(GameState
+    """装配边界三支(分层归属 + 精化令):草稿状态容器直构(GameState
     构造器零装配逻辑)/ 一次性空载体 / 缺省单例建立(sim/测试口径)均不
     装配;run 领取层 ``ensure_run_started`` 只铸 run,不辖装配。"""
     reset_state_telemetry()
     assert state_journal_instance() is None
-    GameState(schema_version=GAME_STATE_SCHEMA_VERSION)   # 草稿容器直构:结构性不触发
+    GameState(schema_version=GAME_STATE_SCHEMA_VERSION)   # 草稿状态容器直构:结构性不触发
     game_state_of(None)   # 一次性空载体(局外):不装配
     game_state_of(object())   # 缺省 provider=None 单例建立:不装配
     assert state_journal_instance() is None
@@ -854,7 +854,7 @@ def test_build_archive_endgame_match_final(tmp_path, monkeypatch) -> None:
 
 def test_match_final_payload_carries_cw4_aggregate(journal, run_id) -> None:
     """载荷聚合测试:write_match_final(cw4_counters=…) → 载荷原样落账;
-    写口浅拷贝(传入容器后写不串账)。None = 无策略载体诚实缺省;聚合键
+    写口浅拷贝(传入状态容器后写不串账)。None = 无策略载体诚实缺省;聚合键
     进 journal 局终行 after 载荷,行行自足可读(判读直接读行,零重放;
     原 cw4_aggregate_in_journal_row 行可见性分支并入)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
@@ -863,7 +863,7 @@ def test_match_final_payload_carries_cw4_aggregate(journal, run_id) -> None:
                              cw4_counters=counters) is True
     payload = gs.match_final.value
     assert payload.cw4_counters == counters, '聚合随局终行落账'
-    assert payload.cw4_counters is not counters, '载荷持快照副本非容器引用'
+    assert payload.cw4_counters is not counters, '载荷持快照副本非状态容器引用'
     counters['shop_churn_pair_buy'] = 99
     assert payload.cw4_counters['shop_churn_pair_buy'] == 3, '后写不串'
     # 行可见性分支(并入):journal 局终行 after 携带聚合键(快照态,不受

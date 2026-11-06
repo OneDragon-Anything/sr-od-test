@@ -109,7 +109,7 @@ def _record_world_writes(gs, monkeypatch: pytest.MonkeyPatch) -> list[tuple]:
 
 
 def _hold_card(gs) -> None:
-    """持卡直置(注册容器直写 = 持卡事实单一源;不经 pick 链,佩佩入席
+    """持卡直置(注册状态容器直写 = 持卡事实单一源;不经 pick 链,佩佩入席
     由调用方受控直置,与 T-105 sim 锁 _hold_card 同形)。"""
     gs.write_logic(gs.active_strategies, [_CARD],
                    produced_by='test-seed', evidence='t:card', sig=_SIG)

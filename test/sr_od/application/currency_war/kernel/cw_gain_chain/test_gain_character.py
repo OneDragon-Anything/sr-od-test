@@ -44,7 +44,7 @@ _SIG = ChannelSig(family='logic_action', actor='CwGainChainTest',
 
 def _make_gs(bench: list[tuple[str, int]],
              env: str | None = _ENV) -> GameState:
-    """直构容器:bench 观察(按参组装)+ active_env 观察种子。"""
+    """直构状态容器:bench 观察(按参组装)+ active_env 观察种子。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     slots: list[BenchSlot | None] = [
         BenchSlot(kind='unit', unit=Unit(char_id=c, star=s))

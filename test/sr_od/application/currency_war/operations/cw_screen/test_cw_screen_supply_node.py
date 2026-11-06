@@ -18,7 +18,7 @@
   - 对照闸拒绝防线:重调仍建议刷 → 实机 round_fail(计入外循环重派
     上限)/ sim 零点击终结零派发(§2.2,桩驱动);
   - sim 两态:刷新分支 = area 点击端口触发后端 ``_supply_refresh``
-    (left−1 + 选项重掷落容器);pick 流 = 真 SimBackend + 真策略装配
+    (left−1 + 选项重掷落状态容器);pick 流 = 真 SimBackend + 真策略装配
     (装配缝 = test/harness/sim_backend_runner.run_sim_full_match 同源)
     → decide_supply 被调、owned 内容载荷分支入账写行、chosen_supply 写行、
     零节点推进(选完回备战弹店,推进归出战;占位池 char 恒空 → 单位入账
@@ -142,7 +142,7 @@ def test_source_c_auto_popup_gate_counts_nothing(
 
 def test_source_c_out_of_match_counts_nothing(
         test_context, monkeypatch) -> None:
-    """局外兜底路径(match 缺席)零计数(容器不可得,禁猜)。"""
+    """局外兜底路径(match 缺席)零计数(状态容器不可得,禁猜)。"""
     op, session = _bare_op(test_context, monkeypatch, prep_anchored=True)
     monkeypatch.setattr(test_context, 'cw_match', None, raising=False)
     gs = game_state_of(session)
@@ -159,7 +159,7 @@ def _make_supply_live(test_context, monkeypatch, *, pick, opts,
     锚读桩 + 机械派发半桩 + controller 点击记录。
     ``pick`` = decide_supply 返回值或可调用(拒绝重调用例传迭代器);
     ``anchor`` = ``_read_refresh_anchor`` 桩返回值(默认 None = 锚读缺);
-    ``seed_left`` = 观察前预写容器剩余读数(残值形态构造,None = 不预写)。
+    ``seed_left`` = 观察前预写状态容器剩余读数(残值形态构造,None = 不预写)。
     返回 (op, match, session, stub, envs, clicks)。"""
     from sr_od.application.currency_war.operations.cw_op import (
         cw_action_registry,
@@ -182,7 +182,7 @@ def _make_supply_live(test_context, monkeypatch, *, pick, opts,
     match.gs = game_state_of(match.session)
     monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
     if seed_left is not None:
-        # 残值形态构造:观察前容器已持上次访问读数(读缺跳写语义 = 本次
+        # 残值形态构造:观察前状态容器已持上次访问读数(读缺跳写语义 = 本次
         # 观察不覆盖,残值真实存在——design §2.2 对照闸残值分量)。
         match.gs.observe(match.gs.supply_refresh_left, seed_left,
                          sig=_SIG_OBS)
@@ -280,7 +280,7 @@ def test_supply_guard_out_of_range_idx_asserts(
 
 def test_supply_gate_rejection_redecide_still_refresh_live_round_fail(
         test_context, monkeypatch) -> None:
-    """对照闸拒绝防线测试·实机(§2.2):「残值 ∧ 锚缺」帧(容器 left=1
+    """对照闸拒绝防线测试·实机(§2.2):「残值 ∧ 锚缺」帧(状态容器 left=1
     为上次访问残值,本次锚读缺不覆盖)建议刷 → 重调一次仍返刷新建议 →
     round_fail 交回(计入外循环 ``OP_FAIL_REDISPATCH_LIMIT``——零点击
     round_success 交回不计数,外循环对该循环无防护,故落防线,有界收敛;
@@ -297,7 +297,7 @@ def test_supply_gate_rejection_redecide_still_refresh_live_round_fail(
     assert _run_node(test_context, op, op.observe).is_success, (
         '前置:观察 success(锚读缺,残值不覆盖)')
     assert game_state_of(session).supply_refresh_left.value == 1, (
-        '前置:残值在容器(读缺跳写不覆盖)')
+        '前置:残值在状态容器(读缺跳写不覆盖)')
     rs = _run_node(test_context, op, op.act)
     assert not rs.is_success and '刷新锚点读缺' in (rs.status or ''), (
         f'重调仍建议刷新 → round_fail 交回:{rs!r}')
@@ -371,8 +371,8 @@ def _sim_supply_world(test_context, monkeypatch, *, seed: int = 61):
 
 def _sim_match(test_context, monkeypatch, backend,
                strategy_seed: int = 61):
-    """真策略装配段(run_sim_full_match 同源):StrategySession + 容器
-    绑定(后端容器 = 流程唯一状态副本)+ MandateV1Strategy 构造 +
+    """真策略装配段(run_sim_full_match 同源):StrategySession + 状态容器
+    绑定(后端状态容器 = 流程唯一状态副本)+ MandateV1Strategy 构造 +
     CurrencyWarMatch 挂 ctx。返回 (match, strategy)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         bind_session_container,
@@ -401,7 +401,7 @@ def test_supply_sim_refresh_leg_area_click_backend_refresh(
         test_context, monkeypatch) -> None:
     """刷新分支·sim 两态测试(§2.6 新增④ sim 半):sim 态(锚点分量恒过)
     建议刷 → 「文本-剩余次数」area 点击(基类 sim 改道 → 后端
-    ``_supply_refresh``)→ left−1 + 选项重掷落容器,本访问终结交回;
+    ``_supply_refresh``)→ left−1 + 选项重掷落状态容器,本访问终结交回;
     决策恰一次(零重调)。controller 桩在装 = 机械执行分支零触碰的结构性证明
     (刷新状态副本分支全走点击源端口)。"""
     with _sim_supply_world(test_context, monkeypatch, seed=53) as b:
@@ -428,7 +428,7 @@ def test_supply_sim_refresh_leg_area_click_backend_refresh(
         assert gs.supply_refresh_left.value == 0, '刷新分支:left−1'
         _after = [(o.equip, o.extra_equips)
                   for o in gs.supply.value.options]
-        assert _after != _before, '刷新分支:选项重掷落容器'
+        assert _after != _before, '刷新分支:选项重掷落状态容器'
         assert len(_decide_calls) == 1, f'决策恰一次(零重调):{_decide_calls!r}'
         assert gs.chosen_supply.value is None, '刷新轮零派发(chosen 零写)'
 
@@ -436,7 +436,7 @@ def test_supply_sim_refresh_leg_area_click_backend_refresh(
 def test_supply_sim_gate_rejection_redecide_zero_click_terminal(
         test_context, monkeypatch) -> None:
     """对照闸拒绝防线测试·sim(§2.6 新增⑥ sim 半):桩驱动「重调仍返
-    刷新建议」∧ left 刷尽(0)→ 零点击 round_success 终结零派发,容器
+    刷新建议」∧ left 刷尽(0)→ 零点击 round_success 终结零派发,状态容器
     零改(left 不变、选项不重掷;重进重读即恢复——sim 拒绝仅剩 left
     读缺形态,无机械锚读缺面)。"""
     with _sim_supply_world(test_context, monkeypatch, seed=53) as b:
@@ -460,7 +460,7 @@ def test_supply_sim_gate_rejection_redecide_zero_click_terminal(
         rs = _run_node(test_context, op, op.act)
         assert rs.is_success and '零点击' in (rs.status or ''), (
             f'重调仍建议刷(sim)= 零点击终结交回:{rs!r}')
-        assert gs.supply_refresh_left.value == 0, '拒绝轮容器 left 不变'
+        assert gs.supply_refresh_left.value == 0, '拒绝轮状态容器 left 不变'
         _after = [(o.equip, o.extra_equips)
                   for o in gs.supply.value.options]
         assert _after == _before, '拒绝轮零重掷(选项不变)'
@@ -509,7 +509,7 @@ def test_supply_sim_two_state_pick_flow(test_context, monkeypatch) -> None:
             with capture_state_journal() as rows, freeze_cw_module_time():
                 assert _run_node(test_context, op, op.observe).is_success, (
                     '前置:sim 观察 success')
-                # 两态载体面:obs = 生成器产物(吃容器现值);实机执行
+                # 两态载体面:obs = 生成器产物(吃状态容器现值);实机执行
                 # 载体不回填(sim 无读链,禁承载决策输入的载体归零)。
                 assert op._obs is not None \
                     and op._obs.options == list(gs.supply.value.options), (

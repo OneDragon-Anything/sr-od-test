@@ -95,14 +95,14 @@ _LV8_FILL = tuple(f'杂板{i}' for i in range(1, 11))
 
 
 def _mk_gs(**kw):
-    """裸会话 + 容器种子(cw4_gs 家族缺省;node 观察使轮号可解析)。"""
+    """裸会话 + 状态容器种子(cw4_gs 家族缺省;node 观察使轮号可解析)。"""
     sess = StrategySession()
     gs = cw4_gs(sess, plane=1, round_num=2, node='prep', **kw)
     return sess, gs
 
 
 def _fu(name: str, star: int = 1) -> Unit:
-    """场上行域单位(DeployedView 行域元素 = 容器 Unit——别混用备战
+    """场上行域单位(DeployedView 行域元素 = 状态容器 Unit——别混用备战
     ``cw4_bc`` 的 BenchSlot 形)。"""
     return Unit(char_id=name, star=star)
 
@@ -629,7 +629,7 @@ _K = ('线内件',)
 
 
 def _bc(name: str, star: int = 1) -> BenchSlot:
-    """容器占席条目(P4 载体迁移:身份/星级/槽号随内嵌 Unit)。"""
+    """状态容器占席条目(P4 载体迁移:身份/星级/槽号随内嵌 Unit)。"""
     return BenchSlot(kind='unit',
                      unit=Unit(char_id=name, star=star))
 
@@ -643,7 +643,7 @@ def _gate_state(bench: list, deployed: list | None = None) -> dict:
     # 上阵缺省非空板:空板帧会被空板止损守卫
     # (sell_gate.empty_board_sell_blocked,ADR-0636)先于资格循环短路,
     # 测不到本段辖的物理门本体;plane=2 压掉 P1 血线禁令域(凑息)。
-    # 资格循环输入 = 容器占席条目(本段辖的载体);返回 = ``_bsb``
+    # 资格循环输入 = 状态容器占席条目(本段辖的载体);返回 = ``_bsb``
     # kwargs(桥配方,旧帧缺省 gold=0/hp 直写)。
     if deployed is None:
         deployed = [Unit(char_id='前线', star=1)]

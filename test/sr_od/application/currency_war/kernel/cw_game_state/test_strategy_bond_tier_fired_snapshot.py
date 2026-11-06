@@ -10,7 +10,7 @@ fields.md 组判据(先例 = 同目录 test_strategy_conditional_done_snapshot.p
   复合键 '<卡名>#<档位>' 逐位保真 = 恢复局逐档跳过判定天然闭合,不重发;
 - 每局全新创建种子初始值 = ()(A 类,同 strategy_conditional_done 种子族);
 - 审计行:PROJECTION_AUDIT 出 strategy_bond_tier_fired 行
-  (process_only,条件评估真值无观察读端;容器字段完备性纪律的显式锁,
+  (process_only,条件评估真值无观察读端;状态容器字段完备性纪律的显式锁,
   表完备性另有抽检测试兜底)。
 """
 from __future__ import annotations
@@ -53,7 +53,7 @@ def test_seed_empty_and_snapshot_roundtrip() -> None:
 
 
 def test_audit_row_declared_process_only() -> None:
-    """对账申报(容器字段完备性纪律):strategy_bond_tier_fired 必须在
+    """对账申报(状态容器字段完备性纪律):strategy_bond_tier_fired 必须在
     PROJECTION_AUDIT 登记行,行状态 = process_only(条件评估真值非观察
     投影,无观察读端;strategy_conditional_done 行同构)。"""
     from sr_od.application.currency_war.kernel.cw_projection_audit import (

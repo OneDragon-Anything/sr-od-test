@@ -51,7 +51,7 @@ def test_seed_empty_and_snapshot_roundtrip() -> None:
 
 
 def test_audit_row_declared_process_only() -> None:
-    """对账申报(容器字段完备性纪律):strategy_char_grant_bindings 必须
+    """对账申报(状态容器字段完备性纪律):strategy_char_grant_bindings 必须
     在 PROJECTION_AUDIT 登记行,行状态 = process_only(掷骰结果非观察
     投影,无观察读端;strategy_conditional_done 行同构)。"""
     from sr_od.application.currency_war.kernel.cw_projection_audit import (

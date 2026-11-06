@@ -16,7 +16,7 @@ B 案:用户裁定 2026-11-01 族级裁定「中途拿卡所在位面补发·当
 - (3,2) 拿卡局:全程仅拿卡拍补发(P3 开始在拿卡前;其后无位面开始);
 - 同拍双改写 journal 双行:双计数器(shop_rewrite_gain_count /
   shop_rewrite_plane_count)各 +1 与末行 evidence(refire)共证两行
-  如实登记(容器 Field 只存末值,journal 双行以计数对账承载)。
+  如实登记(状态容器 Field 只存末值,journal 双行以计数对账承载)。
 
 路径选卡卫生:驱动途中逢 offer 一律定向落「淘金客」(无改写/位面/
 burst 字段,落卡零扰目标断言);无环境局(RunConfig.env_present 缺省

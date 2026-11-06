@@ -102,7 +102,7 @@ def _bench_units(gs: GameState) -> list[tuple[str, int]]:
 def test_condition_matrix_short_circuits(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """未发放分支逐序零写(T-27 设计 §2.3 条件矩阵 1-4):env 空链/
-    未登记/已 done/计数不足 → 返回 None 且容器零写行(计数不足分支
+    未登记/已 done/计数不足 → 返回 None 且状态容器零写行(计数不足分支
     放在 done 之后断言,与设计短路序一致)。"""
     # ① env 未激活(None/空链)
     gs = _make_gs(env=None, bench=[], interest_earned=_THRESHOLD)

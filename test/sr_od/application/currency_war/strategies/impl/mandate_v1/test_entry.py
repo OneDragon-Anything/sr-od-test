@@ -8,8 +8,8 @@ roster-plane1-union design §2.6 换源不消亡)。
 落 kernel 回退带;真·空窗帧回退照常运行(回退本体零改)。
 
 观测面 = ``prep_k_fallback_<band>`` 计数键(写入端单一源 = entry.emit
-顶段;decision_payload 同参重推导不写计数)。种子纪律 = 容器即 session
-(生产形态 session/gs 同一对象;一次性容器经 cw4_gs(None) 每局全新创建)。
+顶段;decision_payload 同参重推导不写计数)。种子纪律 = 状态容器即 session
+(生产形态 session/gs 同一对象;一次性状态容器经 cw4_gs(None) 每局全新创建)。
 """
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 
 def _emit_gs(*, candidates: tuple[str, ...]):
     """最小可扫帧种子:上场 1 人(免空板守卫路径)+ 充裕金;候选快照
-    按参种入(无配方/无锁定;方向键 = None 形态)。返回容器(即
+    按参种入(无配方/无锁定;方向键 = None 形态)。返回状态容器(即
     session/状态宿主)。"""
     gs = cw4_gs(None, level=5, gold=200, node='prep',
                 front_row=[Unit(char_id='刃', star=1)])

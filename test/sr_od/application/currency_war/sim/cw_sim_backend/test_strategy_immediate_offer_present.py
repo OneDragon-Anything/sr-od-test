@@ -4,7 +4,7 @@ _on_invest_picked 尾段立即腿调用点 + _present_extra_offer_screen 呈现�
 测试面依据 = 迭代设计 designs/T-198-baiyin-touzi.md §2.3/§4(锁 4 即时
 呈现腿 + 锁 6 双调用点互斥;用户裁定 2026-11-02 完整包复刻):
 - 拿卡白银投资 → 拿卡拍立即呈现第二选卡(候选全银池,环境品质改写不
-  作用于本通道)+ 逐卡刷新授权 3(refresh_slots/容器/槽向量簿记)+ 队列
+  作用于本通道)+ 逐卡刷新授权 3(refresh_slots/状态容器/槽向量簿记)+ 队列
   弹除 delay-0 条目(delay-3 条目留存)+ 序位计数 +1 + resume='node'
   + 呈现留证键 strategy_immediate_offer_fired;
 - 第二选卡落地 → 排除集更新、恢复进节点屏(经同一 report 通道重入
@@ -99,7 +99,7 @@ def _pick(b: SimBackend, name: str, opts: list[str]) -> WorldDecl:
 
 def test_immediate_leg_fires_on_silver_pick_with_refresh_auth() -> None:
     """立即腿主锁(锁 4):拿卡白银投资 → 同拍立即呈现第二选卡(不进
-    模态返回):候选全银池、逐卡刷新授权 3(容器 + 槽向量簿记 + 流水号
+    模态返回):候选全银池、逐卡刷新授权 3(状态容器 + 槽向量簿记 + 流水号
     归零)、队列弹除 delay-0 条目(delay-3 留存)、序位计数 +1、
     resume='node'、呈现留证键(值 = 白银投资@1-3)、声明对账零漂移。"""
     b = _backend()
@@ -125,7 +125,7 @@ def test_immediate_leg_fires_on_silver_pick_with_refresh_auth() -> None:
         assert b._offer_refresh_seq == 0, '刷新流水号归零'
         left_map = dict(b.gs.strategy_refresh_left.value or {})
         assert all(left_map.get(n) == 3 for n in opts2), \
-            f'授权容器逐卡 3: {left_map!r}'
+            f'授权状态容器逐卡 3: {left_map!r}'
         assert b.disclosures[STRATEGY_IMMEDIATE_OFFER_FIRED] \
             == '白银投资@1-3', f'呈现留证: {b.disclosures}'
         assert DECL_SCREEN_DRIFT not in b.disclosures, \

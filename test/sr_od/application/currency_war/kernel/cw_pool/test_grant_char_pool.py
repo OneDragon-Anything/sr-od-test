@@ -4,7 +4,7 @@
 测试面依据 = gain-chain.md §3 随机支段(牌库时点池语义)+ economy.md §8
 「专家顾问未解锁不入随机授予候选;授予候选 = 当时牌库」(用户裁定
 2026-10-28)+ 语义描述「概念股族展开卡登记约定」:
-- **阵营轴过滤**:空解锁容器 → 仙舟域候选 = 注册表全域 − 专家
+- **阵营轴过滤**:空解锁状态容器 → 仙舟域候选 = 注册表全域 − 专家
   (青雀/停云),现算比对非手抄;
 - **解锁态回归**:专家解锁后回到候选(专家入池时机与商店同源,
   economy.md §1);
@@ -33,12 +33,12 @@ from sr_od.application.currency_war.kernel.cw_pool import grant_char_pool
 
 
 def _fresh_gs() -> GameState:
-    """空解锁容器(开局初始值,专家候选面 = 过滤态)。"""
+    """空解锁状态容器(开局初始值,专家候选面 = 过滤态)。"""
     return GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
 
 
 def _unlocked_gs(names: tuple[str, ...]) -> GameState:
-    """解锁态容器(unlocked_experts 唯一入口函数直写)。"""
+    """解锁态状态容器(unlocked_experts 唯一入口函数直写)。"""
     gs = _fresh_gs()
     from sr_od.application.currency_war.sim.cw_sim_base import logic_sig
     gs.write_logic(gs.unlocked_experts, names, produced_by='test-seed',
@@ -47,7 +47,7 @@ def _unlocked_gs(names: tuple[str, ...]) -> GameState:
 
 
 def test_xianzhou_faction_pool_excludes_locked_experts() -> None:
-    """阵营轴过滤(牌库时点池约定,economy.md §8):空解锁容器 → 仙舟域
+    """阵营轴过滤(牌库时点池约定,economy.md §8):空解锁状态容器 → 仙舟域
     候选 = chars_by_faction('仙舟') 名集 − {'青雀','停云'} 现算比对
     (注册表派生非快照不手抄;池规模只记注释零断言值——现值 7 名,随
     版本正常变动);显式断言两名专家 ∉ 候选(选投资环境在开局、彼时专家
@@ -73,7 +73,7 @@ def test_unlocked_expert_returns_to_candidate_pool() -> None:
 
 
 def test_cost_axis_pool_excludes_locked_expert_and_merged_form() -> None:
-    """费用轴过滤(牌库时点池约定):空解锁容器 → 4 费候选 =
+    """费用轴过滤(牌库时点池约定):空解锁状态容器 → 4 费候选 =
     chars_by_cost(4) − {'开拓者·记忆'(双形态合并随基底), '银狼'(专家)}
     现算比对(池规模只记注释零断言值——现值 12 名,随版本正常变动)。"""
     pool = grant_char_pool(_fresh_gs(), RandomCharSpec(cost=4, star=1))
@@ -109,7 +109,7 @@ def test_static_base_pool_still_contains_experts() -> None:
 
 def test_langshou_faction_pool_expert_filter_instance() -> None:
     """狼狩域专家过滤实例锁(牌库时点池约定,概念股族展开卡登记约定,
-    沿仙舟域锁同款三分层断言形态):①空解锁容器 → 狼狩域候选 =
+    沿仙舟域锁同款三分层断言形态):①空解锁状态容器 → 狼狩域候选 =
     chars_by_faction('狼狩') 名集 − {'貊泽'} 现算比对(注册表派生非
     快照不手抄;池规模只记注释零断言值——现值 6 名,随版本正常变动;
     选投资环境在开局、彼时专家结构性未激活);②解锁 {'貊泽'} → 7 名
@@ -132,7 +132,7 @@ def test_langshou_faction_pool_expert_filter_instance() -> None:
 
 def test_zhouzhibanshen_faction_pool_identity_instance() -> None:
     """昼之半神域授予池恒等锁(牌库时点池约定,概念股族展开卡登记约定,
-    本域与狼狩相反型 = 6 名 is_expert 全空):空解锁容器 → 昼之半神域
+    本域与狼狩相反型 = 6 名 is_expert 全空):空解锁状态容器 → 昼之半神域
     候选 = chars_by_faction('昼之半神') 名集现算比对(过滤恒等 = 域无
     专家的事实锚,注册表派生非快照不手抄;池规模只记注释零断言值——现值
     6 名,随版本正常变动;选投资环境在开局,本域无专家故无 T-56 型避让
@@ -154,7 +154,7 @@ def test_zhouzhibanshen_faction_pool_identity_instance() -> None:
 
 def test_yezhibanshen_faction_pool_identity_instance() -> None:
     """夜之半神域授予池恒等锁(牌库时点池约定,概念股族展开卡登记约定,
-    本域与昼之半神同型 = 7 名 is_expert 全空):空解锁容器 → 夜之半神域
+    本域与昼之半神同型 = 7 名 is_expert 全空):空解锁状态容器 → 夜之半神域
     候选 = chars_by_faction('夜之半神') 名集现算比对(过滤恒等 = 域无
     专家的事实锚,注册表派生非快照不手抄;池规模只记注释零断言值——现值
     7 名,随版本正常变动;选投资环境在开局,本域无专家故无 T-56 型避让
@@ -177,7 +177,7 @@ def test_yezhibanshen_faction_pool_identity_instance() -> None:
 def test_jipo_faction_pool_expert_filter_instance() -> None:
     """击破域专家过滤实例锁(牌库时点池约定,概念股族展开卡登记约定,
     沿狼狩域锁同款三分层断言形态;本域 = 专家域 2 名,域 9 名过滤后
-    7 名):①空解锁容器 → 击破域候选 = chars_by_faction('击破') 名集
+    7 名):①空解锁状态容器 → 击破域候选 = chars_by_faction('击破') 名集
     − {'加拉赫','姬子'} 现算比对(注册表派生非快照不手抄;池规模只记
     注释零断言值——现值 7 名,随版本正常变动;选投资环境在开局、彼时
     专家结构性未激活,过滤后费用 1-5 全档仍覆盖);②解锁 {'加拉赫',
@@ -203,7 +203,7 @@ def test_jipo_faction_pool_expert_filter_instance() -> None:
 
 def test_qungong_faction_pool_identity_instance() -> None:
     """群攻域授予池恒等锁(牌库时点池约定,概念股族展开卡登记约定,
-    本域与昼之半神/夜之半神同型 = 7 名 is_expert 全空):空解锁容器 →
+    本域与昼之半神/夜之半神同型 = 7 名 is_expert 全空):空解锁状态容器 →
     群攻域候选 = chars_by_faction('群攻') 名集现算比对(过滤恒等 = 域
     无专家的事实锚,注册表派生非快照不手抄;池规模只记注释零断言值——
     现值 7 名,随版本正常变动;选投资环境在开局,本域无专家故无 T-56 型
@@ -227,7 +227,7 @@ def test_qungong_faction_pool_identity_instance() -> None:
 def test_jianyi_faction_pool_expert_filter_instance() -> None:
     """减益域专家过滤实例锁(牌库时点池约定,概念股族展开卡登记约定,
     沿狼狩/击破域锁同款三分层断言形态;本域 = 专家域 1 名,域 7 名过滤后
-    6 名):①空解锁容器 → 减益域候选 = chars_by_faction('减益') 名集
+    6 名):①空解锁状态容器 → 减益域候选 = chars_by_faction('减益') 名集
     − {'佩拉'} 现算比对(注册表派生非快照不手抄;池规模只记注释零断言值
     ——现值 6 名,随版本正常变动;选投资环境在开局、彼时专家结构性未激活
     [解锁通道全部晚于环境选择,economy.md:96 用户裁定 2026-10-28],过滤后
@@ -257,7 +257,7 @@ def test_jianyi_faction_pool_expert_filter_instance() -> None:
 def test_zhanjidian_faction_pool_expert_filter_instance() -> None:
     """战技点域专家过滤实例锁(牌库时点池约定,概念股族展开卡登记约定,
     沿狼狩/击破/减益域锁同款三分层断言形态;本域 = 专家域 1 名,域 7 名
-    过滤后 6 名):①空解锁容器 → 战技点域候选 = chars_by_faction('战技点')
+    过滤后 6 名):①空解锁状态容器 → 战技点域候选 = chars_by_faction('战技点')
     名集 − {'青雀'} 现算比对(注册表派生非快照不手抄;池规模只记注释零
     断言值——现值 6 名,随版本正常变动;选投资环境在开局、彼时专家结构性
     未激活[解锁通道全部晚于环境选择,economy.md:96 用户裁定 2026-10-28],

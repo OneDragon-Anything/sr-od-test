@@ -1,13 +1,13 @@
-"""晶矿域测试(机制主题文件;席自由派生 → 容器逻辑态 → 奖励附着生成 →
+"""晶矿域测试(机制主题文件;席自由派生 → 状态容器逻辑态 → 奖励附着生成 →
 点矿兑现全链)。
 
 被测机制(按节;详设出处见各节 docstring):
-- **席自由槽派生读口**:``_ore_bench_free`` 改容器派生读口
-  ``bench_free_slots``(旧黑板独立记账退役)——free 由容器 bench 槽位表
+- **席自由槽派生读口**:``_ore_bench_free`` 改状态容器派生读口
+  ``bench_free_slots``(旧黑板独立记账退役)——free 由状态容器 bench 槽位表
   派生、宝箱/典籍占席经 ``slot_occupies`` 口径自动计入、bench 未观察
   → BENCH_CAPACITY 保守(宁多收晶矿不误卖);
-- **容器逻辑态**:``ore_click_targets_of`` 读口还原 +
-  CwActionCollectOreParam 容器逻辑态(载荷坐标精确摘除/陈旧提案零写/
+- **状态容器逻辑态**:``ore_click_targets_of`` 读口还原 +
+  CwActionCollectOreParam 状态容器逻辑态(载荷坐标精确摘除/陈旧提案零写/
   空读零目标);
 - **奖励附着生成与声明通道**(迭代 2026-10-10-ore-reward-attach 3.1;
   详设 details/ore-reward-channel.md §1-§5):生成函数声明金先占席、
@@ -98,7 +98,7 @@ def _ore(color: str, x: int, y: int, r: int = 30) -> tuple[str, int, int, int]:
 
 
 def _write_bench(session, kinds: list[str]) -> None:
-    """按 kind 清单写容器 bench 槽位表('unit' 槽带占位身份)。"""
+    """按 kind 清单写状态容器 bench 槽位表('unit' 槽带占位身份)。"""
     gs = game_state_of(session)
     slots = [BenchSlot(kind='empty') for _ in kinds]
     for i, kind in enumerate(kinds):
@@ -125,11 +125,11 @@ def test_free_unobserved_conservative_capacity():
     assert _ore_bench_free(game_state_of(session)) == BENCH_CAPACITY
 
 
-# ============================================================ 容器逻辑态(读口还原 + 精确摘除)
+# ============================================================ 状态容器逻辑态(读口还原 + 精确摘除)
 
 
 def _write_spheres(session, points: tuple) -> None:
-    """按容器域形态写 spheres(观察写端同款 OreSight 载荷)。"""
+    """按状态容器域形态写 spheres(观察写端同款 OreSight 载荷)。"""
     gs = game_state_of(session)
     gs.observe(gs.spheres, OreSight(
         count=len(points),
@@ -148,7 +148,7 @@ def test_ore_click_targets_roundtrip():
 
 
 def test_collect_ore_container_precise_drop():
-    """容器逻辑态:CwActionCollectOreParam 载荷坐标精确摘除(未被点的晶矿保留);
+    """状态容器逻辑态:CwActionCollectOreParam 载荷坐标精确摘除(未被点的晶矿保留);
     count/colors 随载荷同步重算;附着兑现开成即同点移除该键(未被点的
     附着保全)。(logic-rand-sampling 迭代:摘除写改随机态,bench/level
     前置守卫已登记——未观察整批拒。)"""
@@ -176,7 +176,7 @@ def test_collect_ore_container_precise_drop():
 
 
 def test_collect_ore_stale_payload_zero_write():
-    """陈旧提案守卫:载荷与容器现值无交集(晶矿已被观察回补) → 零写。"""
+    """陈旧提案守卫:载荷与状态容器现值无交集(晶矿已被观察回补) → 零写。"""
     session = cw4_session()
     gs = game_state_of(session)
     _write_spheres(session, (('gold', 100, 200, 30),))
@@ -571,7 +571,7 @@ def _coll_gs(*, bench: list[tuple[str, int]] | None = None,
              level: int | None = 5,
              ores: list[tuple[str, int, int, int]] | None = None,
              board: dict | None = None) -> GameState:
-    """点矿兑现测试容器(观测面按参组装,None = 保持未观察,供 None 边界分支)。"""
+    """点矿兑现测试状态容器(观测面按参组装,None = 保持未观察,供 None 边界分支)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if ores is not None:
         gs.observe(gs.spheres, OreSight(

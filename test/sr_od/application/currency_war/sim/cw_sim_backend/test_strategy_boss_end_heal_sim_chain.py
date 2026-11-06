@@ -9,7 +9,7 @@ test_strategy_boss_battle_grant_sim_chain.py,跨位面驱动先例 =
 test_p3_win_terminal._drive_step 的位面过渡分派支):
 
 - 锁 3:持卡局首领战结算(胜败两态)回血笔 hp +50 + hp_trail 成对追加
-  (first_run 容器不变式② 写流↔轨迹同构在腿粒度保持:结算写 + 回血笔
+  (first_run 状态容器不变式② 写流↔轨迹同构在腿粒度保持:结算写 + 回血笔
   恰两笔);evidence ``sim:engine:strategy:boss_heal:p<位面>r<轮>``
   (sim_evidence 前缀契约,win 金腿同形)、sig = obs 族 'sim:strategy'
   组;建模假设披露键随局申报(cap/perfect_win_bias);
@@ -120,7 +120,7 @@ def _record_world_writes(gs, monkeypatch: pytest.MonkeyPatch) -> list[tuple]:
 
 
 def _hold_card(gs, *, card: str = _CARD) -> None:
-    """持卡直置(注册容器直写 = 持卡事实单一源;不经 pick 链)。"""
+    """持卡直置(注册状态容器直写 = 持卡事实单一源;不经 pick 链)。"""
     gs.write_logic(gs.active_strategies, [card],
                    produced_by='test-seed', evidence='t:card', sig=_SIG)
 
@@ -194,12 +194,12 @@ def test_boss_win_settle_heals_held_card(
             and row[3].group_id == 'sim:strategy', f'sig 组漂移: {row[3]}'
         assert row[4] == hp_before + 50, \
             f'回血值漂移: {row[4]} (before={hp_before})'
-        # 轨迹成对(不变式②腿粒度):结算笔 + 回血笔恰两笔,末值 = 容器现值
+        # 轨迹成对(不变式②腿粒度):结算笔 + 回血笔恰两笔,末值 = 状态容器现值
         assert len(b.hp_trail) - trail_len == 2, \
             f'轨迹追加笔数漂移: {b.hp_trail[trail_len:]}'
         assert list(b.hp_trail[trail_len:]) == [hp_before, hp_before + 50], \
             '结算笔+回血笔轨迹值漂移'
-        assert gs.hp.value == hp_before + 50, '容器终值漂移'
+        assert gs.hp.value == hp_before + 50, '状态容器终值漂移'
         assert b.screen_identity() == SCREEN_SETTLE, '结算后应泊结算屏'
         assert b.disclosures.get(STRATEGY_BOSS_HEAL_HP_CAP_ASSUMPTION) \
             == 'direct_add_no_clip_v0', 'cap 披露键未随局申报'
@@ -249,7 +249,7 @@ def test_direct_add_no_clip_boundary(
         rows = _heal_rows(calls)
         assert len(rows) == 1, f'回血笔数漂移: {[c[:3] for c in rows]}'
         assert rows[0][4] == 140, f'直加越界回血值漂移: {rows[0][4]}'
-        assert gs.hp.value == 140, '容器终值应 140(不 clip)'
+        assert gs.hp.value == 140, '状态容器终值应 140(不 clip)'
         assert list(b.hp_trail[trail_len:]) == [90, 140], \
             '轨迹应恰结算笔+回血笔成对'
     finally:
@@ -325,7 +325,7 @@ def test_next_node_perfect_win_missed_direction(
         _drive_to_kind_prep(monkeypatch, b, target_kind='boss')
         _force_settle(monkeypatch, won=True)
         _start_battle_feed(gs)
-        # 相邻战斗胜零损(环行 C:容器已含回血)
+        # 相邻战斗胜零损(环行 C:状态容器已含回血)
         _drive_to_kind_prep(monkeypatch, b, target_kind='battle')
         _force_settle(monkeypatch, won=True)
         _start_battle_feed(gs)

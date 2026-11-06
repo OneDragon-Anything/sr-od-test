@@ -1,5 +1,5 @@
 """board 派生视图 + 行槽位纯重排吸收 测试面(观察对账族架构收尾,20260918-
-reconcile 第 5 例收尾批; 容器合并:行域 = deployed
+reconcile 第 5 例收尾批; 状态容器合并:行域 = deployed
 单字段视图,断言同步改写)。
 
 出处 = ``.debug/temp/incidents/20260918-reconcile/report.md`` 第 5 例
@@ -11,7 +11,7 @@ reconcile 第 5 例收尾批; 容器合并:行域 = deployed
 - board 派生一致性:deployed 任何逻辑写端(含历史上忘记写
   board 的写端)后 board 自动按单位集合增量重算单一源
   (``GameState._resync_board_delta``);纯重排写 = 零差零写;
-- 观察基座贡献保留:增量口径(非全量重算)不抹掉面板真值中容器行未
+- 观察基座贡献保留:增量口径(非全量重算)不抹掉面板真值中状态容器行未
   建模的装备羁绊贡献(实机 5 例形态:环境卡星徽穿戴只在面板);
 - 纯重排吸收:同子表内单位多重集排列差异 → ``deploy_slot_reorder`` 台账行
   采新(安灯面→纠漂面),缺员/多员/星级差/装备差照真失配停;
@@ -23,7 +23,7 @@ reconcile 第 5 例收尾批; 容器合并:行域 = deployed
   sim 前缀的 ``board_derived_adopt`` 行不落生产缺陷台账
   (buffer/sink 均不落,安灯不触发),吸收采新照常——吸收族不经
   路由层,抑制检查在 ``_emit_defect`` 发射口;
-- 字段审计完备性:GameState 全部容器字段已在 ``PROJECTION_AUDIT``
+- 字段审计完备性:GameState 全部状态容器字段已在 ``PROJECTION_AUDIT``
   登记且无缺口态(「无写端无规则」恒空)。
 
 单帧测试自足:动作语义复用既有 transfer 契约面(test_gain_chain 卖/换上报契约节),
@@ -133,7 +133,7 @@ def andon(monkeypatch: pytest.MonkeyPatch) -> _AndonRecorder:
 
 def test_row_write_resyncs_board_and_preserves_observed_base() -> None:
     """board 派生一致性主测试(5 例回归形态):观察基座 {减益:1}(环境卡
-    星徽贡献,容器行未建模)保持不变,行写端新增乱破 → 其注册表标签
+    星徽贡献,状态容器行未建模)保持不变,行写端新增乱破 → 其注册表标签
     (巡海游侠/击破)自动入 board——历史上忘记写 board 的写端(直接
     write_logic 行域)不再产生「加了单位 board 没跟上」。"""
     gs = game_state_of(None)
@@ -206,7 +206,7 @@ def test_pure_reorder_logic_write_yields_zero_board_delta() -> None:
 
 
 def test_selldeployed_updates_board_via_derived_resync() -> None:
-    """投影写端走同一派生口:CwActionSellDeployedParam 容器分支(旧 board 全量重算写端
+    """投影写端走同一派生口:CwActionSellDeployedParam 状态容器分支(旧 board 全量重算写端
     已退役)卖出场上单位后 board 经 resync 摘除其标签。"""
     gs = game_state_of(None)
     gs.observe(gs.deployed, _fv([_luanpo()]), sig=_SIG_OBS)
@@ -233,7 +233,7 @@ def test_resync_skips_when_board_never_observed() -> None:
 
 def test_env_badge_wearer_removal_ghost_count_adopts(andon) -> None:
     """board_derived_adopt 主测试·C1 形态(环境卡星徽佩戴者移除 → 幽灵
-    计数 → 观察覆盖采新):基座含容器行未建模的星徽贡献(只显于面板),
+    计数 → 观察覆盖采新):基座含状态容器行未建模的星徽贡献(只显于面板),
     佩戴者移出 + 新单位入行的一次行写使派生 board 带着幽灵计数转 logic
     源(增量口径对幽灵无从减除);下一帧面板实读(幽灵已随佩戴者离场)
     与派生失配 → ``board_derived_adopt`` 台账行采新、安灯不触发。
@@ -266,7 +266,7 @@ def test_env_badge_wearer_removal_ghost_count_adopts(andon) -> None:
 
 def test_unknown_identity_row_entry_zero_contribution_adopts(andon) -> None:
     """board_derived_adopt·C2 形态测试(未知身份入行):注册表外单位(狸狸,
-    角色注册表无此身份)入行,容器派生路径对其**零贡献**——Unit 不存
+    角色注册表无此身份)入行,状态容器派生路径对其**零贡献**——Unit 不存
     阵营(禁注册表双源),禁 faction 兜底(口径单一源 =
     ``cw_bond_equips._recount_board``,faction 字段所在载体);同窗有标签
     单位变更使派生 board 转 logic 源后,面板实读含未知身份的羁绊行 →
@@ -278,7 +278,7 @@ def test_unknown_identity_row_entry_zero_contribution_adopts(andon) -> None:
     gs.write_logic(gs.deployed, _bv([_heita(), _unit('狸狸')]),
                    produced_by='T', sig=_SIG)
     assert gs.board.value == {'银河学者': 1, '群攻': 1}, \
-        '未知身份零贡献(容器派生不回退 faction,注册表外不入账)'
+        '未知身份零贡献(状态容器派生不回退 faction,注册表外不入账)'
     rows: list[dict] = []
     set_defect_sink(rows.append)
     try:
@@ -454,7 +454,7 @@ def test_andon_hook_absent_reorder_still_adopts_silently() -> None:
 
 
 def _gs_field_names() -> list[str]:
-    """GameState 全部容器(Field 域)字段名(与 cw_game_state 域声明
+    """GameState 全部状态容器(Field 域)字段名(与 cw_game_state 域声明
     同源;非 Field 簿记宿主不在审计域)。"""
     out: list[str] = []
     for f in dataclasses.fields(GameState):
@@ -465,7 +465,7 @@ def _gs_field_names() -> list[str]:
 
 
 def test_projection_audit_table_complete_and_gap_free() -> None:
-    """字段审计完备性抽检测试:①GameState 全部容器字段已登记(防新字段
+    """字段审计完备性抽检测试:①GameState 全部状态容器字段已登记(防新字段
     静默逃过审计);②表无退役残留键;③状态全在枚举内(「无写端无规则」
     缺口态 = 表内不可表达,可失配面必须落在写端/吸收两态);④已知停局
     家族(20260918 五连停局各域)的收尾机制关键词仍在位(防重构悄悄

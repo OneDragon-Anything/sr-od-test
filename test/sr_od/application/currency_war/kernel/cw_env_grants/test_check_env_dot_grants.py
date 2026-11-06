@@ -115,7 +115,7 @@ def _bench_units(gs: GameState) -> list[tuple[str, int]]:
 def test_condition_matrix_short_circuits(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """零写分支逐序(T-28 设计稿 §2.3 条件矩阵):env 空链/非本卡环境/
-    已证实(done 封账)→ 返回 None 且容器零写行;env 门对进度分支同样生效
+    已证实(done 封账)→ 返回 None 且状态容器零写行;env 门对进度分支同样生效
     (count_battle=True 零计数)。"""
     # ① env 未激活(None/空链)
     gs = _make_gs(env=None, bench=[])
@@ -141,7 +141,7 @@ def test_condition_matrix_short_circuits(
 
 def test_speculate_write_first_settlement(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """猜测写(设计稿 §4.1①):锚定容器上结算窗调用 → bench 增 1★ 黑天鹅
+    """猜测写(设计稿 §4.1①):锚定状态容器上结算窗调用 → bench 增 1★ 黑天鹅
     (rand 通道恒 write_logic_rand,锚定后与确定面可辨)+ evidence
     ``env_dot_speculate#<帧>`` 可辨;live 调用(count_battle 缺省)零进度
     键零证实。"""

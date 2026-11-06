@@ -46,7 +46,7 @@ from sr_od.application.currency_war.sim.cw_sim_backend import (
 
 _OPTS = ['大裁员', '躺平', '淘金客']
 _SOLD = ('三月七', 2)   # 预种 2★1 费:cost=1 无手续费,×2 两候选口径同值
-                        #(恰 3 精确锚在容器受控的 kernel 只登记不写状态的实现分支锁 4)
+                        #(恰 3 精确锚在状态容器受控的 kernel 只登记不写状态的实现分支锁 4)
 
 
 def _seed_sold_unit(b) -> None:

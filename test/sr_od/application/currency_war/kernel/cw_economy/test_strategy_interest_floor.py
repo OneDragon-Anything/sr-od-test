@@ -36,8 +36,8 @@ _CARD = '开源节流'
 
 def _gs(strategies: tuple[str, ...] = (), prev: bool | None = False
         ) -> GameState:
-    """直构容器种子(prev=None = 不写保持直构 None 态,前置断言同
-    test_game_state 直构容器不跑种子先例)。"""
+    """直构状态容器种子(prev=None = 不写保持直构 None 态,前置断言同
+    test_game_state 直构状态容器不跑种子先例)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if strategies:
         gs.write_logic(gs.active_strategies, list(strategies),

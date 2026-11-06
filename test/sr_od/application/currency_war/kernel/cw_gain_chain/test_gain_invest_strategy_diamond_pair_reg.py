@@ -135,7 +135,7 @@ def test_effect_text_has_no_gain_verb_and_grant_registered() -> None:
 
 def test_equips_unobserved_diamond_leg_rejected() -> None:
     """拒落形态(发放落地门下游):equips 未观察 → 宝钻腿拒落零写
-    (效果串 placed=False 留证,容器维持 None),佩佩腿不涉装备域照常
+    (效果串 placed=False 留证,状态容器维持 None),佩佩腿不涉装备域照常
     落席——两条效果条目独立,装备域缺失不拖累单位入队。"""
     gs = _make_gs(bench=[])
     gs.prep_anchored = True

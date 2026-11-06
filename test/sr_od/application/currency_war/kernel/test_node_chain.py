@@ -330,7 +330,7 @@ def test_transition_boss_sift_miss_and_none_cells():
 
 
 def test_transition_no_slots_or_no_session_noop():
-    """slots 空 / 容器缺 → 零构造不炸(观察侧诚实缺位,report 不写)。"""
+    """slots 空 / 状态容器缺 → 零构造不炸(观察侧诚实缺位,report 不写)。"""
     session = SimpleNamespace()
     gs = game_state_of(session)
     assert _build_transition_chain(gs, None) is None
@@ -481,7 +481,7 @@ def _hk_round3_slots() -> list[NodeSlot]:
 
 
 def _hk_setup(plane: int = 1, round_num: int = 3):
-    """容器 + 节点读口种子(窗口缺省关 = 非变异态)。"""
+    """状态容器 + 节点读口种子(窗口缺省关 = 非变异态)。"""
     session = SimpleNamespace()
     gs = game_state_of(session)
     gs.observe(gs.node, NodeKey(plane=plane, round_num=round_num, kind='prep'),
@@ -625,7 +625,7 @@ def _run_prep_heavy_with_fakes(test_context, monkeypatch, session, *,
     """备战 heavy 观察跑壳(ore 通道接入调用测试专用;每调用 = 一个备战环,
     op 现场重建——跨环幂等守卫不住 op 实例,测试形态与生产每环重建对齐)。
 
-    fake ``observe_full`` **真实写 node/level 容器域**(与 read_game_state
+    fake ``observe_full`` **真实写 node/level 状态容器域**(与 read_game_state
     漏斗写点同构):node 域 plane 的权威写点在漏斗内,接入调用判据 = 回执后
     现值——fake 不写 node 而在 setup 预置,则「回执后读 plane」与
     「回执前读」不可分辨,按漏斗前值构造的断言假绿(ore-reward-channel
@@ -633,7 +633,7 @@ def _run_prep_heavy_with_fakes(test_context, monkeypatch, session, *,
 
     ``ores`` 元素 = ``(色档, 点, 半径)``(read_ore_sights 产物形态,
     点带 x/y 属性);``level`` = fake 同帧写入的 level 域值(None = 不写,
-    容器保现值)。
+    状态容器保现值)。
     """
     from sr_od.application.currency_war.obs import cw_observe_full as ofm
     from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (

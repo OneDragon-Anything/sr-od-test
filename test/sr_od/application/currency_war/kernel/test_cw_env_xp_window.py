@@ -67,7 +67,7 @@ _ENV_ID = '138'   # 成功经验 plaza id(env_portal_effects 结构化条目主�
 
 def _seed_gs(level: int, xp_cur: int, *, with_env: bool = True,
              other_env: bool = False):
-    """种子容器(观察链同写入口;等级近门槛 + 成功经验已登记)。
+    """种子状态容器(观察链同写入口;等级近门槛 + 成功经验已登记)。
     ``with_env=False`` = 空账本;``other_env`` = 已登记他环境(无
     xp_after_level 载荷)——条目不在场臂的表驱动过滤证据。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
@@ -336,7 +336,7 @@ def test_modified_seq_p1_ten_window_real_counts() -> None:
 
 def test_exhausted_entry_kept_and_chain_replay_identical() -> None:
     """窗口耗尽后条目已登记(XP_GRANTED=3、剩余计算侧导出 = 0)、后续
-    节点零发放;同链重放(同种子状态同推进序,两个新容器)发放序列
+    节点零发放;同链重放(同种子状态同推进序,两个新状态容器)发放序列
     逐位一致(发放链零 rng 消费;sim 全链重放半 = sim 侧文件)。"""
 
     def _walk():

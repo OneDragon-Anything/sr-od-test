@@ -74,7 +74,7 @@ def rows_sink() -> _RowSink:
 
 def _make_gs(affixes: list[str] | None, *, difficulty: str = 'A8',
              enemy_difficulty: int | None = 108) -> GameState:
-    """直构容器:实证难度档(可覆写供非实证档臂)+ 词缀名单 logic 直写
+    """直构状态容器:实证难度档(可覆写供非实证档臂)+ 词缀名单 logic 直写
     (首写 old=None,回调种子档零触发——被测 diff 的「写前值」由本构造
     落定,测试体再写第二笔触发 diff)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)

@@ -7,7 +7,7 @@ strategy_hp_loss_accum 审计行)。
 - 快照存续:累积值进快照 → restore 往返逐位相等(int 保型直通免
   rebuild 登记——_json_safe 对 int 无漂移,env_grant_uid_seq 同款);
 - 每局全新创建种子初始值 = 0(触发函数累加取模零 None 防御);
-- 登记四件:schema 独立键版本 1 + 审计行 PROCESS_ONLY(容器字段完备性
+- 登记四件:schema 独立键版本 1 + 审计行 PROCESS_ONLY(状态容器字段完备性
   纪律的显式锁;fields.md §3.5.6c 为权威版本登记面,文档完备性归评审把关,
   本锁锁代码登记面)。
 """
@@ -54,7 +54,7 @@ def test_schema_independent_key_registered() -> None:
 
 
 def test_audit_row_declared_process_only() -> None:
-    """对账申报(容器字段完备性纪律):strategy_hp_loss_accum 必须在
+    """对账申报(状态容器字段完备性纪律):strategy_hp_loss_accum 必须在
     PROJECTION_AUDIT 登记行,行状态 = process_only(发放记账过程量,
     无观察读端;env_grants_done/ore_declared_done 行同构)。"""
     from sr_od.application.currency_war.kernel.cw_projection_audit import (

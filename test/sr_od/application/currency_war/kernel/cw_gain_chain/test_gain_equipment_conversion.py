@@ -69,7 +69,7 @@ def _make_gs(*, bench: list[tuple[str, int]] | None = None,
 
 
 def _hold_card(gs: GameState) -> None:
-    """持卡直置(注册容器直写;选卡链正门路径 = 锁 5 走 gain_invest_strategy)。"""
+    """持卡直置(注册状态容器直写;选卡链正门路径 = 锁 5 走 gain_invest_strategy)。"""
     gs.write_logic(gs.active_strategies, [_CARD], produced_by='test-seed',
                    evidence='t:card', sig=_LSIG)
 

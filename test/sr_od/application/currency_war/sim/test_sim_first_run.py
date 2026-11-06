@@ -4,8 +4,8 @@
 
 - 跑完:真策略 mandate_v1 决策 + 真 CwLoop 驱动,SimBackend 从 reset 经
   P1 → P2 boss 到局终,op 执行零失败(成功收尾 = 回大厅终局链);
-- 确定性:同 seed 同 RunConfig 双跑容器逐位一致(双跑快照 diff 为空);
-- 容器不变式:金币不出现无规则依据的负值 / hp 轨迹与结算写流一致 /
+- 确定性:同 seed 同 RunConfig 双跑状态容器逐位一致(双跑快照 diff 为空);
+- 状态容器不变式:金币不出现无规则依据的负值 / hp 轨迹与结算写流一致 /
   经验等级符合规则表(carry 与阈值表)/ 局终无未消费败态待办;
 - L1 全量绿(由全量运行承载,非本文件断言面)。
 
@@ -134,18 +134,18 @@ def test_first_match_runs_to_game_over_without_op_fail(two_runs: tuple) -> None:
 # ============================================================ 尺① 确定性
 
 def test_first_match_deterministic_double_run_identical(two_runs: tuple) -> None:
-    """确定性判据:同 seed 同 RunConfig 双跑,容器逐位一致(diff 为空)。
+    """确定性判据:同 seed 同 RunConfig 双跑,状态容器逐位一致(diff 为空)。
 
-    对拍载体 = 容器逐域值快照(全部 Field 域,冻结为纯数据);任何域
+    对拍载体 = 状态容器逐域值快照(全部 Field 域,冻结为纯数据);任何域
     值漂移(采样链/动作分支 rng/策略 rng 注入缺口)都会在此显形。"""
     run_a, run_b = two_runs
     diff = {k: (run_a.snapshot.get(k), run_b.snapshot.get(k))
             for k in set(run_a.snapshot) | set(run_b.snapshot)
             if run_a.snapshot.get(k) != run_b.snapshot.get(k)}
-    assert not diff, f'双跑容器 diff 非空(逐位一致破坏): {diff}'
+    assert not diff, f'双跑状态容器 diff 非空(逐位一致破坏): {diff}'
 
 
-# ============================================================ 尺③ 容器不变式
+# ============================================================ 尺③ 状态容器不变式
 
 def _write_rows(run: Any, field: str) -> list:
     """容器写流投影(状态 journal sink 内存捕获;field 行按版本序)。"""
@@ -154,13 +154,13 @@ def _write_rows(run: Any, field: str) -> list:
 
 
 def test_first_match_container_invariants(two_runs: tuple) -> None:
-    """容器不变式四条尺(尺③;同一整局产物一次对账):
+    """状态容器不变式四条尺(尺③;同一整局产物一次对账):
     ①金币不出现无规则依据的负值;②hp 轨迹与结算写流逐条一致;
     ③经验等级符合规则表(逐级 +1、carry 界、阈值表单一源);
     ④局终无未消费败态待办(败补 U04 口径消费归下一战斗轮轮首)。
 
     凭据 = 状态 journal 写流(轮首收入/环境金/买入扣费/晶矿金每笔在案;
-    level/xp 写通道 = 节点经验入账与购买经验同一通道);终值另核对容器
+    level/xp 写通道 = 节点经验入账与购买经验同一通道);终值另核对状态容器
     现值。四组断言消费同一 two_runs 产物,归并一条降低慢桶条目数;
     失败定位靠分节注释与各断言消息。"""
     from sr_od.application.currency_war.kernel.cw_economy import (

@@ -1,9 +1,9 @@
 """sim 状态副本链测试(镜像 src = 获得链 check_strategy_conditional_grants
-经 sim 节点推进;§2.4 申报 sim 零新增接入调用——tick 实机(live)和模拟器(sim)两边同链,sim 容器现值
+经 sim 节点推进;§2.4 申报 sim 零新增接入调用——tick 实机(live)和模拟器(sim)两边同链,sim 状态容器现值
 = 状态副本里的值)。
 
 测试面依据 = 迭代设计 designs/T-102-guimo-xiaoying.md §4 锁 8:
-持卡 + 容器直置齐 8 同名 → 推进节点(kernel advance_node_effective 尾段
+持卡 + 状态容器直置齐 8 同名 → 推进节点(kernel advance_node_effective 尾段
 tick,sim/live 同链零 sim 私有接入调用)→ sim equips 尾追完美投影仪 + 一次性标志位在
 (strategy_conditional_done)。
 
@@ -49,7 +49,7 @@ def _isolate_defect_buffer():
 
 def test_scale_effect_grants_in_sim_world(_isolate_defect_buffer) -> None:
     """sim 端到端(锁 8):装配后端(1-1 窗已过 tick,持卡前零发放)→
-    持卡 + 容器直置 8 同名 → 推进到 1-2(tick advanced 位闸)→ sim
+    持卡 + 状态容器直置 8 同名 → 推进到 1-2(tick advanced 位闸)→ sim
     equips 尾追完美投影仪 + 落一次性标志位——状态副本里的值,使用面(tool_use 上报链)
     天然可消费。"""
     b: SimBackend = _backend(7)

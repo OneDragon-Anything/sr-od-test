@@ -359,7 +359,7 @@ class TestR2InterestFloor:
         息线 floor「拍常数」禁案的判别测试)。
         (金钱类收缩:floor 门过下界/贴线拒刷两行按裁决不搬,git 可复活。)"""
         comp, sess = self._frame(80)
-        _seed_actives(sess, ['利息上调'])   # ADR-0598 注入面迁移(容器单源)
+        _seed_actives(sess, ['利息上调'])   # ADR-0598 注入面迁移(状态容器单源)
         acts = _decide(sess)
         assert not [a for a in acts if isinstance(a, CwActionRefreshShopParam)]
 
@@ -369,7 +369,7 @@ class TestR2InterestFloor:
 
 
 def _seed_actives(sess, names: list[str]) -> None:
-    """持卡播种(终态契约 §B:单一源 = 容器,write_logic 直写)。"""
+    """持卡播种(终态契约 §B:单一源 = 状态容器,write_logic 直写)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         ChannelSig,
         game_state_of,
@@ -382,7 +382,7 @@ def _seed_actives(sess, names: list[str]) -> None:
 
 
 def _blood_session(active: list[str] | None = None, **state_kw) -> SimpleNamespace:
-    """经验批支付门消费面依赖桩(容器单源播种;其余无关)。"""
+    """经验批支付门消费面依赖桩(状态容器单源播种;其余无关)。"""
     s = SimpleNamespace()
     _seed_actives(s, list(active or ['奋斗协议']))
     return s
@@ -390,8 +390,8 @@ def _blood_session(active: list[str] | None = None, **state_kw) -> SimpleNamespa
 
 def _blood_gs(hp: int | None, *, source: str = 'observation',
               level: int | None = None) -> GameState:
-    """支付门容器帧构造器(波 2 起门输入 = GameState;来源三态即旧两位
-    语义的容器形态:observation=真读/prior=不可信 fail-closed)。"""
+    """支付门状态容器帧构造器(波 2 起门输入 = GameState;来源三态即旧两位
+    语义的状态容器形态:observation=真读/prior=不可信 fail-closed)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         GAME_STATE_SCHEMA_VERSION,
         ChannelSig,
@@ -423,7 +423,7 @@ def test_xp_batch_payment_gate_untrusted_balance_fail_closed() -> None:
     assert xp_batch_payment_gate_for(_blood_gs(100),
                                      SimpleNamespace(active_strategies=[])) is True
     # 不可信帧经消费适配面同样拒(兜底 100 帧语义 = ADR-0282:两位皆 False,
-    # 容器形态 = prior 支来源,prior/logic 支 fail-closed)
+    # 状态容器形态 = prior 支来源,prior/logic 支 fail-closed)
     st_ghost = _blood_gs(100, source='prior', level=3)
     assert xp_batch_payment_gate_for(st_ghost, _blood_session()) is False
 
@@ -486,9 +486,9 @@ _JUST_SPY = '商业间谍'      # xp_buy_cost_discount=1(cw_investments 注册)
 
 def _xp_state(level: int = 5, strategies: list[str] | None = None,
               display: int | None = None) -> GameState:
-    """费用轴最小决策种子(经济读口已切容器:桥装为测试迁移单一源形态)。
+    """费用轴最小决策种子(经济读口已切状态容器:桥装为测试迁移单一源形态)。
     strategies=已持投资策略;display=OCR 显示价,None=未读到走兜底支
-    ——两支来源凭容器 level_up_cost Field 判别。"""
+    ——两支来源凭状态容器 level_up_cost Field 判别。"""
     return _bsb(gold=30, level=level, round_num=2,
                 active_strategies=list(strategies or []),
                 level_up_cost=display)
@@ -579,8 +579,8 @@ def _ba_state(*, gold: int = 100, plane: int = 1, round_num: int = 5,
               front_row: list[Unit] | None = None,
               back_row: list[Unit] | None = None,
               active_strategies: list[str] | None = None) -> dict:
-    """排程/预算核场景种子轴(容器域直写;返回 = ``_bsb`` kwargs,
-    每次调用点装箱出新容器,与旧「帧→桥」逐次新容器语义同构)。"""
+    """排程/预算核场景种子轴(状态容器域直写;返回 = ``_bsb`` kwargs,
+    每次调用点装箱出新状态容器,与旧「帧→桥」逐次新状态容器语义同构)。"""
     axes: dict = {'plane': plane, 'round_num': round_num, 'gold': gold,
                   'level': level, 'hp': hp, 'shop_refresh_cost': 2,
                   'node': 'battle'}
@@ -738,7 +738,7 @@ def test_injection_consistency_single_registry_source() -> None:
     assert refresh_ev_budget(_bsb(**st2), sess_ov) > 0
     # 披露面装配单源(W636 A 载体 = 披露函数):注入 reg2 披露后,披露
     # 字段 == 逐字段显式注入值(现算与披露写入合一 =
-    # economy_cycle.disclose_budget;局内事实先经种子写容器 = 生产同路;
+    # economy_cycle.disclose_budget;局内事实先经种子写状态容器 = 生产同路;
     # 装配轴 = 桥配方轴集剥 D 类域(shop_refresh_cost 属桥补写域,feed
     # 配方域覆盖集不含))
     from sr_od.application.currency_war.kernel.cw_game_state import (
@@ -917,7 +917,7 @@ class _StubMatch:
 
 def _disclose_cur(sess: StrategySession, plane: int, round_num: int,
                   gold: int = 53, node_type: str | None = None) -> None:
-    """容器域种子(node_type = 节点轴;决策面直读容器)。"""
+    """状态容器域种子(node_type = 节点轴;决策面直读状态容器)。"""
     cw4_gs(sess, gold=gold, level=5, plane=plane, round_num=round_num,
            hp=100, node=node_type)
 
@@ -1031,8 +1031,8 @@ class TestBudgetDisclosureWriteRead:
     def test_state_fields_equal_same_frame_computed_values(self):
         """披露后状态四字段 == 同帧独立现算值(R*/溢余/义务)。红证 =
         现码恒 0(52 行全零实证);本分支断的是「值对」,非「非零」。
-        W6 波 4:预算接缝读 session 容器单例,种子先于披露(生产同路 =
-        观察漏斗,测试同路 = cw4_gs 容器域种子)。"""
+        W6 波 4:预算接缝读 session 状态容器单例,种子先于披露(生产同路 =
+        观察漏斗,测试同路 = cw4_gs 状态容器域种子)。"""
         sess = StrategySession()
         # 构造金 120:开局初始值后备战帧息帽含排程升级费(种子域喂入
         # reserve_cap 现算),取高金保「溢余/义务非退化」判据有效。
@@ -1040,7 +1040,7 @@ class TestBudgetDisclosureWriteRead:
         disclose_budget(game_state_of(sess), sess)
         st = state_of(sess)
         # 独立现算 oracle:同输入现算确定 ⇒ 与披露写点内部同值(非转抄
-        # 披露字段);重算输入 = 同一容器实例(键戳/轮轴的单一来源)。
+        # 披露字段);重算输入 = 同一状态容器实例(键戳/轮轴的单一来源)。
         state = game_state_of(sess)
         expected_cap = kernel_reserve_cap(state, sess)
         assert st.v3_reserve_cap == expected_cap
@@ -1060,8 +1060,8 @@ class TestShopOpenFrameDualWrite:
     def test_prep_frame_without_gold_keeps_zero_semantics(self):
         """prep 关店帧 ⇒ overflow/budget 恒 0 =「金未采」已知语义(非
         真 0;实机首局 g_20260907_025608 锚⑤定论),reserve_cap 不受
-        影响(gold 无关)——关店 0 语义由容器金缺席承载(F2 门:gold
-        仅店开态可信,关店读空不写容器)。"""
+        影响(gold 无关)——关店 0 语义由状态容器金缺席承载(F2 门:gold
+        仅店开态可信,关店读空不写状态容器)。"""
         sess = StrategySession()
         cw4_gs(sess, gold_unread=True, level=5, plane=1, round_num=8,
                hp=100, node='prep')
@@ -1076,7 +1076,7 @@ class TestShopOpenFrameDualWrite:
         """店开观察帧覆写:overflow/budget 变帧现值(gold 120 > 息帽 ⇒
         溢余/义务 >0;开局初始值后备战帧息帽含排程升级费,构造金取高
         保非退化);同轮重复覆写不清 spent(轮界清零归 prep 键戳
-        独占);下轮 prep 关店帧 ⇒ 披露 = 容器现值重算(W6 波 4 语义
+        独占);下轮 prep 关店帧 ⇒ 披露 = 状态容器现值重算(W6 波 4 语义
         变更;键戳翻轮清零断言面 = 测试 D 主测试,此处不重复)。"""
         sess = StrategySession()
         # ① prep 关店帧(轮入口披露;种子金(基线 3)低于息帽,溢余 0——
@@ -1084,9 +1084,9 @@ class TestShopOpenFrameDualWrite:
         disclose_budget(game_state_of(sess), sess)
         st = state_of(sess)
         assert st.v3_reserve_overflow == 0
-        # ② 店开帧覆写(帧现值):金源切容器(W6 波 4),店开帧经种子写
-        # 容器(生产同路 = 观察漏斗;测试同路 = cw4_gs 容器域种子),披露读
-        # 容器现值
+        # ② 店开帧覆写(帧现值):金源切状态容器(W6 波 4),店开帧经种子写
+        # 状态容器(生产同路 = 观察漏斗;测试同路 = cw4_gs 状态容器域种子),披露读
+        # 状态容器现值
         cw4_gs(sess, gold=120, level=5, plane=1, round_num=8, hp=100,
                node='prep')
         disclose_budget_at_shop_frame(game_state_of(sess), sess)
@@ -1097,9 +1097,9 @@ class TestShopOpenFrameDualWrite:
         st.v3_release_spent = 4
         disclose_budget_at_shop_frame(game_state_of(sess), sess)
         assert st.v3_release_spent == 4
-        # ④ 下轮 prep 关店帧(金失读 → 容器 carry 沿用店开金,funnel 同
-        # 口径):披露 = 容器现值重算。「陈旧店开溢余复位 0」旧语义随
-        # 金源切容器消亡——失读沿用下披露恒按沿用金重算,不存在复位面;
+        # ④ 下轮 prep 关店帧(金失读 → 状态容器 carry 沿用店开金,funnel 同
+        # 口径):披露 = 状态容器现值重算。「陈旧店开溢余复位 0」旧语义随
+        # 金源切状态容器消亡——失读沿用下披露恒按沿用金重算,不存在复位面;
         # F1 新会话构造测不到「覆写后再披露」面(翻轮清零语义归测试 D)。
         cw4_gs(sess, gold_unread=True, level=5, plane=1, round_num=9,
                hp=100, node='prep')
@@ -1113,7 +1113,7 @@ class TestRoundBoundaryReset:
     def test_new_round_clears_spent_and_reason_and_renews_key(self):
         """同 session 连续两轮(p1r8→p1r9)披露:新轮首帧 spent==0、
         reason==''(F5 裁决①:reason 并入键戳清零块,杜绝跨轮陈读)、
-        键戳已翻新。键戳轴 = session 容器(W6 波 4),每轮披露前喂入。"""
+        键戳已翻新。键戳轴 = session 状态容器(W6 波 4),每轮披露前喂入。"""
         sess = StrategySession()
         _disclose_cur(sess, 1, 8, 53, node_type='prep')
         disclose_budget(game_state_of(sess), sess)
@@ -1129,7 +1129,7 @@ class TestRoundBoundaryReset:
     def test_same_round_redisclosure_keeps_accumulation(self):
         """同轮重披露(幂等重入)不清账:键戳同值 ⇒ 只覆写三预算字段,
         spent 存活期 = 本轮披露后至下一轮键戳变更(与「轮内截至采样时点
-        累计」语义一致)。键戳轴 = session 容器(W6 波 4),披露前喂入。"""
+        累计」语义一致)。键戳轴 = session 状态容器(W6 波 4),披露前喂入。"""
         sess = StrategySession()
         _disclose_cur(sess, 1, 8, 53, node_type='prep')
         disclose_budget(game_state_of(sess), sess)
@@ -1145,7 +1145,7 @@ class TestReleaseSpentAccrual:
 
     def test_two_refreshes_accumulate_per_receipt(self):
         """执行一次 CwActionRefreshShopParam(cost=2) ⇒ spent==2;同 visit
-        第二笔 ⇒ 4(执行回执位逐笔累计)。键戳轴 = session 容器(W6 波 4),
+        第二笔 ⇒ 4(执行回执位逐笔累计)。键戳轴 = session 状态容器(W6 波 4),
         披露前喂入使键戳成文。"""
         sess = StrategySession()
         _disclose_cur(sess, 1, 8, 53, node_type='prep')
@@ -1179,7 +1179,7 @@ class TestReleaseSpentAccrual:
 
     def test_stale_key_receipt_not_accrued(self):
         """F4 探针①:回执轮次 ≠ 键戳(键戳 r8、回执 r9)⇒ 不累计——
-        防「本轮预算披露行混入上轮累计」的键界漂移。轮键现役轴 = 容器
+        防「本轮预算披露行混入上轮累计」的键界漂移。轮键现役轴 = 状态容器
         读口:喂入翻轮即回执轮已翻,键戳仍钉上一轮。"""
         sess = StrategySession()
         _disclose_cur(sess, 1, 8, 53, node_type='prep')

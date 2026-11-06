@@ -109,7 +109,7 @@ _XYS = ((100, 200), (300, 400), (500, 600))
 
 def _make_sp_gs(*, bench_units: list[tuple[str, int]],
                 ore_open_total: int = 0):
-    """战技点契约采晶矿场景(直构容器,观察种子):三点批 + 附着值
+    """战技点契约采晶矿场景(直构状态容器,观察种子):三点批 + 附着值
     (点1 金 / 点2 角色〔银狼,与种子单位异名防合并〕/ 点3 金——席满
     场景第 3 点恒跳过不采);bench 按参组装;计数经唯一入口函数播种。"""
     gs = game_state_of(cw4_session())
@@ -178,7 +178,7 @@ def test_mixed_batch_missing_level_skip_not_counted(
     缺读,兜底掷不可行)+ 1 席满跳点 → ore_open_total 只计开成点
     (+2 非 +4),两类跳点均不入账、两矿留 spheres(下帧挂接入口
     补生成后再点);出参 reason = 缺项跳点具体原因(优先于席满表达,
-    零写跳点的唯一可断言通道)。直构容器(不经种子 session)保 level
+    零写跳点的唯一可断言通道)。直构状态容器(不经种子 session)保 level
     缺读;种子单位每名至多 2 只防合并腾席(同席满半边锁前提)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     sig_seed = ChannelSig(family='obs', actor='cw4_seed', mode='synthesized')
@@ -199,7 +199,7 @@ def test_mixed_batch_missing_level_skip_not_counted(
                                          char_star=1),
                     '700,800': OreReward(kind='gold', gold=3)},
                    produced_by='test-seed', sig=_SIG)
-    assert gs.level.value is None, '前置:level 缺读(直构容器无种子)'
+    assert gs.level.value is None, '前置:level 缺读(直构状态容器无种子)'
     calls = _sp_record_writes(gs, monkeypatch)
     out = report_action_collect_ore_param(
         gs, CwActionCollectOreParam(

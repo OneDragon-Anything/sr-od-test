@@ -102,7 +102,7 @@ def _prep_backend():
 
 
 def _seed_board(b) -> None:
-    """板面直置 4 巡海游侠(上阵 = 参与判据;容器直置 = sim 测试域
+    """板面直置 4 巡海游侠(上阵 = 参与判据;状态容器直置 = sim 测试域
     既有形态,test_strategy_conditional_grant_sim_chain 同源)。"""
     front = [Unit(char_id=n, star=1) for n in _RAIDER_FOUR]
     b.gs.observe(b.gs.deployed,

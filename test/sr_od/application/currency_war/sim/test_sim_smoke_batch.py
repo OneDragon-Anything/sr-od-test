@@ -27,7 +27,7 @@
   下界,门判定方向安全)。
 
 运行原语 = ``test/harness/sim_backend_runner.py::run_sim_full_match``
-(装配缝单一源:端口槽/容器绑定/时间冻结/journal 内存捕获/留证重定向);
+(装配缝单一源:端口槽/状态容器绑定/时间冻结/journal 内存捕获/留证重定向);
 崩点上下文(node/画面/步数)由运行原语以异常 note 注入。
 
 种子集 = :data:`BATCH_SEEDS`(sim/conftest.py)= 2026-10-12 起 20 连号的
@@ -231,7 +231,7 @@ def _action_scan(journal_rows: list) -> dict:
 def _protection_counters(gs: Any) -> dict:
     """策略器 cw4_counters 读数(3.4 统计面扩展;键缺失按 0 计)。
 
-    策略器状态附着在局容器上(run.gs.strategy_state),局终存活即现值。
+    策略器状态附着在局状态容器上(run.gs.strategy_state),局终存活即现值。
     ``nies`` = 节末凑息卖出计数(node_end_interest_sell,P56+T1 凑息门
     改域申报的发出面;凑息保护档阻断观测键 irpb 已随身份保护判据退役
     删除——统一让位优先级迭代 3.4);``m6`` = M6 压牌库买入计数

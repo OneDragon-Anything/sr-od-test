@@ -7,7 +7,7 @@ _on_node_advance / _on_node_advance_terminal 双点接入调用段;kernel 决策
 8/10(实现批修正:锁 8 文字面 = 现役 NODE_XP_BY_TYPE × PLANE_NODE_TABLES
 (含 P3)常量下完整 P1+P2+P3 持卡局全程零发放,经验写源 = 节点经验 ×
 选卡即时腿两源,上界 96 < 门槛 194 封顶 7 级):
-- 跨级发放主链(锁 1,直构容器强制 level=8 + xp 贴近阈值〔XP_TO_NEXT_
+- 跨级发放主链(锁 1,直构状态容器强制 level=8 + xp 贴近阈值〔XP_TO_NEXT_
   LEVEL 单一源,8 级直构可得〕):推进跨 9 → 金 +40 恰一次,双通道形态
   = 金 observe 独立笔(evidence sim:engine:strategy:level_gold:<卡名>,
   obs 族 sim:strategy)+ 一次性标志位 write_logic(producer strategy_level_grant,
@@ -189,7 +189,7 @@ def test_cross_level_grant_main_chain_then_latch(
 def test_state_semantics_hold_at_level_grants(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """状态检查型语义(锁 6):先置 level=9 再持卡(拿卡时已达标)→
-    下一次节点推进发放——等级 = 容器现值非事件流,禁实现批顺手改成
+    下一次节点推进发放——等级 = 状态容器现值非事件流,禁实现批顺手改成
     严格跨越型而无锁。"""
     b = _prep_backend(24)
     try:

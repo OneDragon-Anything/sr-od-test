@@ -64,7 +64,7 @@ _SIG_SEED = ChannelSig(family='logic_action', actor='test-seed',
 def _make_gs(*, held: bool = True, done: tuple = (),
              front: tuple = (), back: tuple = (),
              gold: int | None = 50) -> GameState:
-    """直构容器:生效序位观察锚定(settle_confirm 分支内 = 战斗后继第一
+    """直构状态容器:生效序位观察锚定(settle_confirm 分支内 = 战斗后继第一
     节点);持卡/一次性标志位域/部署视图/金经写原语播种(测试自造输入;部署单位
     注入 unit.equips = 纯注入形,见模块 docstring 声明)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)

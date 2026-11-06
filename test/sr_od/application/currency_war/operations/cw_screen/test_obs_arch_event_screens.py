@@ -9,10 +9,10 @@
   文案沿用现役,且不进读链(obs 不装载);盛会之星 = 节点完成门(overlay
   消失 = 节点完成 success 交还外层)。
 - **观察上报接入调用测试**(遭遇):观察 node 稳定帧一次读(候选 + 剩余次数)
-  → report 经屏文件落容器 ``encounter`` + ``encounter_refresh_left``
-  (容器终值)+ obs 与刷新文本锚点挂实例属性。
+  → report 经屏文件落状态容器 ``encounter`` + ``encounter_refresh_left``
+  (状态容器终值)+ obs 与刷新文本锚点挂实例属性。
 - **刷新链终结测试**(遭遇,
-  3.3:刷新 = 终结动作,剩余闸 = 观察真值):建议刷新 ∧ 闸放行(容器
+  3.3:刷新 = 终结动作,剩余闸 = 观察真值):建议刷新 ∧ 闸放行(状态容器
   left>0 且识别标志在位)→ 文本识别标志位圆钮恰一次 + 固定等待 → round_success
   终结交回——无同访问 ``screenshot()`` 重读面、无 report 二次覆盖写、
   无重决策、零选卡派发;闸拒绝(剩余 0/None)→ 零点击,重调一次决策
@@ -41,7 +41,7 @@
   重做批:标签带限定 OCR 定卡 1..N + 逐卡立绘 SIFT 交叉验证,xy =
   各卡标签中心 x + 已登记卡身线 y 每卡自带,零枚举映射;fixture 全链·
   部分读 xy 自带·SIFT 交叉裁决·reader 失败信号透传 round_fail·
-  标准化透传·派发 env idx-only·动作 op 容器取点守卫三臂断言零点击)
+  标准化透传·派发 env idx-only·动作 op 状态容器取点守卫三臂断言零点击)
   各一测试,语义见各 docstring。
 - **补给节点测试**(CwScreenSupplyNode,两 node 形态;原 step3 文件并入):
   chosen_supply 确认即写(真选分支单次逻辑写入 2 元组 + 机械派发照发;
@@ -120,7 +120,7 @@ def _make_encounter(test_context, monkeypatch, *, in_screen: bool,
 
     strategy = SimpleNamespace(decide_encounter=_decide)
     match = SimpleNamespace(strategy=strategy, session=session)
-    # 终态契约 §B:match 桩挂载容器(gs 持有引用直用)。
+    # 终态契约 §B:match 桩挂载状态容器(gs 持有引用直用)。
     match.gs = game_state_of(session)
     monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
     op = em.CwScreenEncounter(test_context)
@@ -203,9 +203,9 @@ def test_encounter_observe_gate_fails_off_screen(
 def test_encounter_observe_reports_container(
         test_context, monkeypatch) -> None:
     """观察上报接入调用测试:观察 node 稳定帧一次读(候选 + 剩余次数)→ report
-    落容器 ``encounter``(容器终值 = 候选)+ ``encounter_refresh_left``
+    落状态容器 ``encounter``(状态容器终值 = 候选)+ ``encounter_refresh_left``
     (剩余语义摄入;读缺跳写闸在 report 内)+ obs 与刷新文本锚点挂实例
-    属性。红 = 接入调用断流 / 容器终值漂移 / left 未摄入。"""
+    属性。红 = 接入调用断流 / 状态容器终值漂移 / left 未摄入。"""
     opts = [EncounterOption(idx=0, difficulty=1, rewards=['金币×2'])]
     op, _match, session = _make_encounter(
         test_context, monkeypatch, in_screen=True, options=opts,
@@ -216,9 +216,9 @@ def test_encounter_observe_reports_container(
     gs = game_state_of(session)
     assert gs.encounter.value is not None \
         and list(gs.encounter.value.options) == opts, (
-        f'report 落容器(容器终值):{gs.encounter.value!r}')
+        f'report 落状态容器(状态容器终值):{gs.encounter.value!r}')
     assert gs.encounter_refresh_left.value == 2, (
-        'report 摄入剩余次数(容器 left = 观察真值)')
+        'report 摄入剩余次数(状态容器 left = 观察真值)')
     assert op._obs is not None and op._obs.refresh_left == 2, (
         'obs 挂实例属性(剩余次数随观察一次读)')
     assert op._refresh_point is not None, '刷新文本锚点挂实例属性'
@@ -320,9 +320,9 @@ def _refresh_fixture(test_context, monkeypatch) -> tuple[list, list]:
 def test_encounter_refresh_terminal_click_once_and_success(
         test_context, monkeypatch) -> None:
     """刷新链终结测试(
-    design §2.0A):建议刷新 ∧ 剩余闸放行(容器 left=1 ∧ 识别标志在位)→
+    design §2.0A):建议刷新 ∧ 剩余闸放行(状态容器 left=1 ∧ 识别标志在位)→
     文本识别标志位圆钮**恰一次** + 固定等待 → round_success 终结交回;同访问
-    零 ``screenshot()`` 重读、零 report 二次覆盖写(容器终值 = 刷前候选)、
+    零 ``screenshot()`` 重读、零 report 二次覆盖写(状态容器终值 = 刷前候选)、
     零重决策(恰一次决策)、零选卡派发。红 = 重读回潮 / 二次覆盖写回潮 /
     重复点钮 / 终结交回失败。"""
     opts = [EncounterOption(idx=0, difficulty=1, rewards=['金币×2'])]
@@ -344,7 +344,7 @@ def test_encounter_refresh_terminal_click_once_and_success(
     match.strategy.decide_encounter = _counting
     _run_node(test_context, op, op.observe)
     gs = game_state_of(session)
-    assert gs.encounter_refresh_left.value == 1, '前置:观察轮摄入容器 left'
+    assert gs.encounter_refresh_left.value == 1, '前置:观察轮摄入状态容器 left'
     _ss_calls.clear()
     rs = _run_node(test_context, op, op.act)
     assert rs.is_success and '终结交回' in (rs.status or ''), (
@@ -354,7 +354,7 @@ def test_encounter_refresh_terminal_click_once_and_success(
     assert _decide_calls == [1], f'零重决策(恰一次决策):{_decide_calls!r}'
     assert _ss_calls == [], '同访问零 screenshot() 重读面'
     assert list(gs.encounter.value.options) == opts, (
-        f'零二次覆盖写(容器终值 = 刷前候选):{gs.encounter.value!r}')
+        f'零二次覆盖写(状态容器终值 = 刷前候选):{gs.encounter.value!r}')
     assert gs.encounter_refresh_left.value == 1, 'left 不被访问内改写'
     assert dispatches == [], '终结轮零选卡派发'
 
@@ -389,7 +389,7 @@ def test_encounter_refresh_gate_rejects_zero_and_none(
         cnt=None)
     _run_node(test_context, op2, op2.observe)
     assert game_state_of(session2).encounter_refresh_left.value is None, (
-        '前置:读缺跳写,容器 left 未写')
+        '前置:读缺跳写,状态容器 left 未写')
     rs2 = _run_node(test_context, op2, op2.act)
     assert rs2.is_success and '终结交回' in (rs2.status or ''), (
         f'None 拒绝轮重调落选卡派发即终结:{rs2!r}')
@@ -517,7 +517,7 @@ def test_megastar_observe_gate_completes_off_overlay(
     """盛会之星观察 node 完成门(两 node 形态):门 miss = overlay 消失 /
     进了下一节点 → 节点完成,success 交还外层(完成 settle 承诺不变);
     选中标记复位副作用随 ``_in_node`` 复检保留(跨节点不保持);门早退
-    不读候选不动作不写容器。红 = 完成门失效 / 复位丢失 / 早退后仍发动作。"""
+    不读候选不动作不写状态容器。红 = 完成门失效 / 复位丢失 / 早退后仍发动作。"""
     op, _match, session, calls = _make_megastar(
         test_context, monkeypatch, in_node=False, options=['哨兵'])
     session.strategy_state = StrategyState()
@@ -530,7 +530,7 @@ def test_megastar_observe_gate_completes_off_overlay(
         '宿主 = 策略器 StrategyState)')
     assert calls == [], '离屏早退 = 不发动作'
     assert game_state_of(session).megastar_opts.value is None, (
-        '门早退不进读链,容器零写')
+        '门早退不进读链,状态容器零写')
     # act 顶部裁决分支(并入原 runnode 流转等价测试):门仍 miss = overlay 已
     # 消失 → 决策动作 node 完成裁决 success 交回,完成承诺 = 固定 settle
     # 时长(round_success wait 形参,经包装捕获),零动作。
@@ -556,9 +556,9 @@ def test_megastar_observe_gate_completes_off_overlay(
 def test_megastar_observe_reports_and_act_acts(
         test_context, monkeypatch) -> None:
     """盛会之星在屏形态(两 node 形态):观察 node 读候选一次 → report 落
-    容器 ``megastar_opts``(容器终值)+ obs 挂实例属性 → 决策动作 node 恰
+    状态容器 ``megastar_opts``(状态容器终值)+ obs 挂实例属性 → 决策动作 node 恰
     一个动作 + round_wait 推进循环(不计节点重试预算)。红 = report 断流 /
-    容器终值漂移 / 动作丢失 / 循环推进回退为计预算的 retry。"""
+    状态容器终值漂移 / 动作丢失 / 循环推进回退为计预算的 retry。"""
     from sr_od.application.currency_war.kernel.cw_events import MegastarOption
     op, _match, session, calls = _make_megastar(
         test_context, monkeypatch, in_node=True,
@@ -567,7 +567,7 @@ def test_megastar_observe_reports_and_act_acts(
     rs = _run_node(test_context, op, op.observe)
     assert rs.is_success and game_state_of(session).megastar_opts.value == [
         MegastarOption(idx=0, char_id='花火')], (
-        f'观察上报落容器(容器终值):{game_state_of(session).megastar_opts.value!r}')
+        f'观察上报落状态容器(状态容器终值):{game_state_of(session).megastar_opts.value!r}')
     assert op._obs is not None and len(op._obs.options) == 1, (
         'obs 挂实例属性(跨 node 传递)')
     rs2 = _run_node(test_context, op, op.act)
@@ -579,9 +579,9 @@ def test_megastar_observe_reports_and_act_acts(
 def test_megastar_lazy_read_skipped_on_confirm_visit(
         test_context, monkeypatch) -> None:
     """巨星懒读保真(读时机保真,迁移不增加读屏):已选中(确认访问)→
-    观察 node **不读候选**(读链桩零调用)→ report 空候选不写(容器保持
+    观察 node **不读候选**(读链桩零调用)→ report 空候选不写(状态容器保持
     前值);决策动作 node 照发确认(动作体被消费)。红 = 确认访问重读候选
-    (新增读屏)/ 容器被空值覆写。"""
+    (新增读屏)/ 状态容器被空值覆写。"""
     from sr_od.application.currency_war.kernel.cw_events import MegastarOption
     op, _match, session, calls = _make_megastar(
         test_context, monkeypatch, in_node=True,
@@ -597,7 +597,7 @@ def test_megastar_lazy_read_skipped_on_confirm_visit(
     assert rs.is_success and _read_calls == [], (
         f'确认访问不重读候选(懒读保真):{_read_calls!r}')
     assert game_state_of(session).megastar_opts.value is None, (
-        '空候选不写(闸在 report 内),容器保持前值')
+        '空候选不写(闸在 report 内),状态容器保持前值')
     rs2 = _run_node(test_context, op, op.act)
     assert calls == [1] and not rs2.is_success, '确认访问照发确认动作'
 
@@ -615,9 +615,9 @@ def test_megastar_redispatch_no_reclick_and_gate_reset(
     - 状态对象缺席(裸 session,第三方策略面)→ 读退 False、写跳过,
       执行层不做每局全新创建策略器状态(禁 impl ``state_of`` 装配语义);
     - chosen_megastar = 选择点留守写端(动作事实边界,不进 report),
-      首派发选中时点落容器;
+      首派发选中时点落状态容器;
     - 派发 env = idx-only 构造(选择坐标观察上报收敛):零 target 传参,
-      候选点击坐标由动作 op 自容器取(op-layer.md §1.1「选择坐标观察
+      候选点击坐标由动作 op 自状态容器取(op-layer.md §1.1「选择坐标观察
       上报」)。
     红 = 重入再触发选中 / 门 miss 不复位 / 缺席态炸错或每局全新创建 / chosen 断流
     / 派发 env 回潮带 target 坐标。"""
@@ -666,7 +666,7 @@ def test_megastar_redispatch_no_reclick_and_gate_reset(
                         lambda act, ctx, env: _StubPickOp(env))
     # 观察注入(观察 node 读屏函数注入点):驱动观察 node 装载 obs
     assert op.observe().is_success, '在屏观察 success'
-    # ① 首派发:触发选中(need_select=True)+ 发射即置位 + chosen 留守写端落容器
+    # ① 首派发:触发选中(need_select=True)+ 发射即置位 + chosen 留守写端落状态容器
     op._do_action()
     assert dispatches == [True], f'首派发触发选中半:{dispatches!r}'
     assert env_targets == [None], (
@@ -757,7 +757,7 @@ def test_megastar_out_of_match_no_early_exit_normal_chain(
 def test_megastar_observe_standardizes_options_with_dual_source_domain(
         test_context, monkeypatch) -> None:
     """观察标准化门·命中测试(规范 = screens/op-layer.md §1.1 观察标准化
-    门):选中半候选含可转换名 → 容器存规范名(idx 原值保留)。覆盖三判
+    门):选中半候选含可转换名 → 状态容器存规范名(idx 原值保留)。覆盖三判
     与双源域(用户裁定 2026-09-22:匹配域 = 盛会之星阵营成员 ∪ 场上持
     「盛会之星星徽」角色):
     - 静态域精确命中(「花火」= 阵营成员);
@@ -765,7 +765,7 @@ def test_megastar_observe_standardizes_options_with_dual_source_domain(
       ｈｅｒ」→ Archer,域源 = 前排星徽持有者);
     - ②域内 LCS 兜底(漏「·」单字缺)过阈值命中 + ③边距放行(域内唯
       一过阈值名)+ 动态域开拓者按排归一(后排欢愉形态)。
-    红 = 转换门断流(脏名直报容器)/ 归一失效 / LCS 兜底失效 / 动态域
+    红 = 转换门断流(脏名直报状态容器)/ 归一失效 / LCS 兜底失效 / 动态域
     漏员 / idx 丢失。"""
     from sr_od.application.currency_war.kernel.cw_events import MegastarOption
     from sr_od.application.currency_war.kernel.cw_game_state import (
@@ -791,7 +791,7 @@ def test_megastar_observe_standardizes_options_with_dual_source_domain(
         MegastarOption(idx=0, char_id='花火'),
         MegastarOption(idx=1, char_id='Archer'),
         MegastarOption(idx=2, char_id='开拓者·欢愉')], (
-        '容器存规范名(转换门产出;idx 原值保留):'
+        '状态容器存规范名(转换门产出;idx 原值保留):'
         f'{game_state_of(session).megastar_opts.value!r}')
 
 
@@ -799,10 +799,10 @@ def test_megastar_observe_standardize_failure_fails_clean(
         test_context, monkeypatch) -> None:
     """观察标准化门·失败测试(规范 = screens/op-layer.md §1.1 观察标准化
     门):候选含未注册乱串或域外注册名 → 转换失败 = observe round_fail
-    整函数早退,零写容器零上报零点击(禁带病上报),消息含候选原值列表。
+    整函数早退,零写状态容器零上报零点击(禁带病上报),消息含候选原值列表。
     转置例 = 「火花」(星间旅人,既非盛会之星阵营、gs 亦无穿徽记录;与
     「花火」互为形近误读——域收窄后域外注册名同样不可达)。红 = 脏名
-    进容器 / 转换失败静默续跑 / fail 前发生点击派发。"""
+    进状态容器 / 转换失败静默续跑 / fail 前发生点击派发。"""
     from sr_od.application.currency_war.kernel.cw_events import MegastarOption
     clicks, dispatches = _refresh_fixture(test_context, monkeypatch)
     op, _match, session, _calls = _make_megastar(
@@ -815,7 +815,7 @@ def test_megastar_observe_standardize_failure_fails_clean(
     assert '乱码' in (rs.status or '') and '火花' in (rs.status or ''), (
         f'fail 消息含候选原值列表:{rs.status!r}')
     assert game_state_of(session).megastar_opts.value is None, (
-        '零写容器(转换失败不落脏名)')
+        '零写状态容器(转换失败不落脏名)')
     assert op._obs is None, '零上报(整函数早退,obs 不装载)'
     assert clicks == [] and dispatches == [], (
         f'零点击零派发:{clicks!r} {dispatches!r}')
@@ -838,7 +838,7 @@ def test_megastar_observe_standardize_ambiguity_rejected(
     rs = _run_node(test_context, op, op.observe)
     assert not rs.is_success and '标准化' in (rs.status or ''), (
         f'重复命中 = 拒判:{rs!r}')
-    assert game_state_of(session).megastar_opts.value is None, '零写容器'
+    assert game_state_of(session).megastar_opts.value is None, '零写状态容器'
 
     # ② 单候选最高/次高分差 < 边距(桩控:域内全员同分 → 分差 0;LCS
     # 分值原语单一源 = cw_obs_core,拒判判法全族统一后桩点随迁)。
@@ -851,7 +851,7 @@ def test_megastar_observe_standardize_ambiguity_rejected(
     rs2 = _run_node(test_context, op2, op2.observe)
     assert not rs2.is_success and '标准化' in (rs2.status or ''), (
         f'近分歧义 = 拒判:{rs2!r}')
-    assert game_state_of(session2).megastar_opts.value is None, '零写容器'
+    assert game_state_of(session2).megastar_opts.value is None, '零写状态容器'
 
 
 # ==================== 盛会之星(决策守卫 + 同分确定性)====================
@@ -1050,9 +1050,9 @@ def test_megastar_read_failure_round_fails_clean(
         test_context, monkeypatch) -> None:
     """reader 失败信号裁决测试:真 read 交叉验证反证失败(真 OCR 定卡 +
     identify 桩注入不一致 → ``READ_FAILED`` 哨兵)经真实 observe node →
-    标准化门判失败 → round_fail 零写容器零上报零点击(现役失败机制
+    标准化门判失败 → round_fail 零写状态容器零上报零点击(现役失败机制
     保持、调用方零改;失败信号以列表形态过门,fail 消息构造迭代列表)。
-    红 = 哨兵被吞成空读成功 / 容器被写 / fail 前点击派发。"""
+    红 = 哨兵被吞成空读成功 / 状态容器被写 / fail 前点击派发。"""
     import sr_od.application.currency_war.obs.cw_megastar_obs as mo
     import sr_od.application.currency_war.operations.cw_screen.cw_screen_megastar as ms
     clicks, dispatches = _refresh_fixture(test_context, monkeypatch)
@@ -1077,7 +1077,7 @@ def test_megastar_read_failure_round_fails_clean(
         f'reader 失败信号 → observe round_fail:{rs!r}')
     assert mo.READ_FAILED in (rs.status or ''), (
         f'fail 消息含失败哨兵留证:{rs.status!r}')
-    assert game_state_of(session).megastar_opts.value is None, '零写容器'
+    assert game_state_of(session).megastar_opts.value is None, '零写状态容器'
     assert op._obs is None, '零上报(obs 不装载)'
     assert clicks == [] and dispatches == [], (
         f'fail 前零点击零派发:{clicks!r} {dispatches!r}')
@@ -1089,8 +1089,8 @@ def test_megastar_observe_reports_xy_and_standardize_passthrough(
     §1.1「选择坐标观察上报」):read 产每卡自带 xy(标签中心 x + 已登记
     卡身线 y,候选检测重做批新坐标模型;xy 生产正确性由候选检测重做批
     各测试承担,本测试不重复),经标准化门转换后 xy 原值透传(转换只动名字,
-    名字与坐标同进退),经真实观察链落容器后 xy 仍在(动作 op 取点输入)。
-    红 = 标准化剥坐标 / 观察链容器终值丢 xy。"""
+    名字与坐标同进退),经真实观察链落状态容器后 xy 仍在(动作 op 取点输入)。
+    红 = 标准化剥坐标 / 观察链状态容器终值丢 xy。"""
     from sr_od.application.currency_war.kernel.cw_events import MegastarOption
     from sr_od.application.currency_war.kernel.cw_game_state import (
         ChannelSig,
@@ -1109,17 +1109,17 @@ def test_megastar_observe_reports_xy_and_standardize_passthrough(
     assert rs.is_success, f'标准化门放行:{rs!r}'
     container_opts = game_state_of(session).megastar_opts.value
     assert [o.char_id for o in container_opts] == ['花火', 'Archer'], (
-        f'容器存规范名:{container_opts!r}')
+        f'状态容器存规范名:{container_opts!r}')
     assert [o.xy for o in container_opts] == [(1160, 333), (1400, 333)], (
-        f'标准化透传 xy(转换只动名字,坐标同进退落容器):'
+        f'标准化透传 xy(转换只动名字,坐标同进退落状态容器):'
         f'{[o.xy for o in container_opts]!r}')
 
 
 def test_megastar_pick_op_asserts_container_xy_before_click(
         test_context, monkeypatch) -> None:
-    """动作 op 容器取点守卫测试(action_ops.md §1 增补 5 + op-layer.md §1.3):
-    选中半(need_select=True)点击坐标 = 容器 ``megastar_opts[param.idx].xy``
-    ——容器缺席/空、下标越界、元素缺 xy 三臂均 AssertionError 响亮暴露
+    """动作 op 状态容器取点守卫测试(action_ops.md §1 增补 5 + op-layer.md §1.3):
+    选中半(need_select=True)点击坐标 = 状态容器 ``megastar_opts[param.idx].xy``
+    ——状态容器缺席/空、下标越界、元素缺 xy 三臂均 AssertionError 响亮暴露
     且零点击(守卫在选中点击与确认点击之前;禁控制流回退、禁 screen_info
     二次取点)。红 = 静默跳过选中(旧 target None 消极臂回潮)/ 坐标现算
     回退 / 越界钳位 / 守卫前发生点击。"""
@@ -1142,7 +1142,7 @@ def test_megastar_pick_op_asserts_container_xy_before_click(
     monkeypatch.setattr(pm, 'time', SimpleNamespace(sleep=lambda *_: None))
 
     def _run_arm(session, *, idx: int) -> list[tuple[int, int]]:
-        """三臂公共装配:match 桂挂 session → 容器供给口可达;controller
+        """三臂公共装配:match 桂挂 session → 状态容器供给口可达;controller
         点击记录;env 零机械下标(取点键 = param.idx)+ need_select=True;
         返回点击序。"""
         monkeypatch.setattr(test_context, 'cw_match',
@@ -1162,11 +1162,11 @@ def test_megastar_pick_op_asserts_container_xy_before_click(
             op.run()
         return clicks
 
-    # ① 容器缺席/空(megastar_opts 未写)
+    # ① 状态容器缺席/空(megastar_opts 未写)
     session1 = StrategySession()
     clicks1 = _run_arm(session1, idx=0)
-    assert clicks1 == [], f'容器缺席臂零点击:{clicks1!r}'
-    # ② 下标越界(容器 1 元,param.idx=5)
+    assert clicks1 == [], f'状态容器缺席臂零点击:{clicks1!r}'
+    # ② 下标越界(状态容器 1 元,param.idx=5)
     session2 = StrategySession()
     _sig = ChannelSig(family='logic_action', actor='test', mode='compute')
     game_state_of(session2).write_logic(
@@ -1191,7 +1191,7 @@ def test_megastar_pick_op_asserts_container_xy_before_click(
 def _make_supply(test_context, monkeypatch, *, pick, opts,
                  anchor=None):
     """补给真类装配(两 node 形态):门桩 + 选项读链桩 + 锚读桩 +
-    机械派发半桩;观察 node 装载 obs(report 落容器)+ 动作体载体。
+    机械派发半桩;观察 node 装载 obs(report 落状态容器)+ 动作体载体。
     ``pick`` = decide_supply 返回值或可调用(闸拒绝重调用例传序列);
     ``anchor`` = ``_read_refresh_anchor`` 桩返回值(默认 None=读缺)。
     返回 (op, match, session, stub, envs)。"""
@@ -1242,14 +1242,14 @@ def test_supply_chosen_written_on_confirm_pick(test_context, monkeypatch) -> Non
     - 真选(有选项 + 决策选列):确认分支单次逻辑写入 (角色, 装备名列表)
       2 元组(T-9 裁定 2:不带钻字段,带钻与否消费侧自名单派生),
       source=logic,机械派发半照发(记录面不拦截动作链);
-      选定快照携 ``refresh_left`` 键 = 容器剩余次数现值(可 None)
+      选定快照携 ``refresh_left`` 键 = 状态容器剩余次数现值(可 None)
       + ``extra_equips`` 键 = 列内附加装备;派发 env.target = 实机读链
       点击点(决策链接入调用迭代:决策输入换 obs 载体,实机执行载体原样);
     - 刷新轮不写 = 真选守卫(对照闸拒绝防线 round_fail 路径语义)。
     OCR 读链/配置/机械派发半桩化,只校验记录面。"""
     from one_dragon.base.geometry.point import Point
 
-    # ① 真选:确认即写(锚读 1 → 容器 left=1 → 快照 refresh_left=1)
+    # ① 真选:确认即写(锚读 1 → 状态容器 left=1 → 快照 refresh_left=1)
     opt = SimpleNamespace(char='希儿', equip='星币收集器', has_diamond=True,
                           extra_equips=())
     op, _match, session, stub, envs = _make_supply(
@@ -1257,18 +1257,18 @@ def test_supply_chosen_written_on_confirm_pick(test_context, monkeypatch) -> Non
         pick=CwActionPickSupplyParam(idx=0, reason='test'),
         opts=[(opt, SimpleNamespace(x=900, y=550))],
         anchor=(1, Point(1315, 983)))
-    _run_node(test_context, op, op.observe)   # 观察 node 装载 obs(report 落容器)
+    _run_node(test_context, op, op.observe)   # 观察 node 装载 obs(report 落状态容器)
     rs = op._do_action()
     gs = game_state_of(session)
     assert rs.is_success and '终结交回' in (rs.status or ''), (
         f'选卡派发即 round_success 终结交回:{rs!r}')
     assert gs.chosen_supply.value == ('希儿', ('星币收集器',)), (
-        f'确认即写:容器持选定 2 元组(角色, 装备名列表),'
+        f'确认即写:状态容器持选定 2 元组(角色, 装备名列表),'
         f'实得 {gs.chosen_supply.value!r}')
     assert gs.chosen_supply.source == 'logic', '单次逻辑写入(source=logic)'
     assert stub.executed == 1, '机械派发半照发(记录面不拦截动作链)'
-    assert gs.supply.value is not None, '前置:观察轮 report 落容器 supply'
-    assert gs.supply_refresh_left.value == 1, '观察轮锚读摄入容器 left'
+    assert gs.supply.value is not None, '前置:观察轮 report 落状态容器 supply'
+    assert gs.supply_refresh_left.value == 1, '观察轮锚读摄入状态容器 left'
     assert envs and envs[0].picked is not None \
         and envs[0].picked['refresh_left'] == 1 \
         and envs[0].picked['extra_equips'] == (), (
@@ -1366,7 +1366,7 @@ def test_supply_refresh_gate_left_semantics(test_context, monkeypatch) -> None:
     rs3 = op3._do_action()
     assert rs3.is_success and '终结交回' in (rs3.status or ''), \
         f'None 拒绝轮重调落选卡派发即终结:{rs3!r}'
-    assert len(clicks) == 1, f'None = 刷新钮零点击(容器未写):{clicks!r}'
+    assert len(clicks) == 1, f'None = 刷新钮零点击(状态容器未写):{clicks!r}'
     assert stub3.executed == 1, 'None 拒绝轮重调按原评分选卡'
 
 

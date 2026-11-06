@@ -78,7 +78,7 @@ def sim_installed():
 
 
 def _gs(*, card: str | None = _CARD, gold: int | None = 30) -> GameState:
-    """直构容器(card=None = 账本零命中;gold=None = 未读)。"""
+    """直构状态容器(card=None = 账本零命中;gold=None = 未读)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if gold is not None:
         gs.observe(gs.gold, gold, sig=ChannelSig(family='obs',

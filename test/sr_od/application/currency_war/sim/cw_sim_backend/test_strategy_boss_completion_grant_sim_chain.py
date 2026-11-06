@@ -116,7 +116,7 @@ def _record_world_writes(gs, monkeypatch: pytest.MonkeyPatch) -> list[tuple]:
 
 
 def _hold_card(gs) -> None:
-    """持卡直置(注册容器直写 = 持卡事实单一源;不经 pick 链)。"""
+    """持卡直置(注册状态容器直写 = 持卡事实单一源;不经 pick 链)。"""
     gs.write_logic(gs.active_strategies, [_CARD],
                    produced_by='test-seed', evidence='t:card', sig=_SIG)
 
@@ -196,7 +196,7 @@ def test_boss_settle_grants_full_set_and_latch(
         assert all(str(r[2]).endswith('#equip') for r in rows), \
             f'evidence 后缀漂移: {[str(r[2]) for r in rows]}'
         assert all(r[0] == 'rand' for r in rows), \
-            f'sim 域 equips 容器未锚定 → 随机态通道标签(结构态;rand=False'\
+            f'sim 域 equips 状态容器未锚定 → 随机态通道标签(结构态;rand=False'\
             f' 锁值确定性 = 全集序比对,非通道): {[r[0] for r in rows]}'
         assert all(r[3].family == 'logic_action'
                    and r[3].group_id == 'sim:strategy' for r in rows), \

@@ -56,7 +56,7 @@ _CARD = '控制规模'
 
 
 def _hold(gs, cards: list[str]) -> None:
-    """持卡播种(active_strategies 容器直写,终态契约单一源)。"""
+    """持卡播种(active_strategies 状态容器直写,终态契约单一源)。"""
     gs.write_logic(gs.active_strategies, list(cards),
                    produced_by='test', evidence='t:hold', sig=_SIG)
 

@@ -1,13 +1,13 @@
 """GameState 迁移回归测试(迁移批次一;设计权威版本 = docs/develop/sr_od/application/currency_war/
-容器数据结构设计,下称「设计」;权威版本 = game_state/fields.md)。
+状态容器数据结构设计,下称「设计」;权威版本 = game_state/fields.md)。
 
 测试面 = 写入口两态制与构造守卫(§2.1-§2.4/§8.6-5)+ 派生不存储
 (§8.6-4 续)+ 观察流接入调用与 hp 失读统一口径 + 心跳哨兵(§2.4 关键
 结构 2)+ sim 合成口箱占席语义(§3.2.5;迁移批次一任务书第 7 件)
 + 设计 §8.7 批次三(调用点机制/B1 桥)与批次四(退役 + relay 空值闸)
-两组测试。机制主题归并(禁批次命名):本文件 = GameState 容器机制正名
+两组测试。机制主题归并(禁批次命名):本文件 = GameState 状态容器机制正名
 主题文件,消费切换批(刷新计数/结算覆盖/合成升星判定/streak 解析/
-备战席读链)、容器合同(六通道/版本流水/快照/画面上下文/渠道签名
+备战席读链)、状态容器合同(六通道/版本流水/快照/画面上下文/渠道签名
 封闭集)、开局初始值与锚定标志、deployed 视图桥与快照迁移各节按
 机制并入(断言体零语义改动)。
 
@@ -105,7 +105,7 @@ def _sig() -> _ChannelSig:
 
 
 def _bslot(slot_no: int, name: str, star: int) -> BenchSlot:
-    """备战席占席条目直构(种子容器形状)。"""
+    """备战席占席条目直构(种子状态容器形状)。"""
     return BenchSlot(kind='unit', unit=Unit(char_id=name, star=star))
 
 
@@ -557,13 +557,13 @@ def test_sim_synthesis_truth_domain(case: str) -> None:
 
 def test_synthesis_unread_bench_no_clobber() -> None:
     """bench 写门(载体迁移 = benchchar-retirement P5;语义锚:未读域≠
-    真空域)。种子对未声明 bench 域整域跳写(bench_unread)——容器内
+    真空域)。种子对未声明 bench 域整域跳写(bench_unread)——状态容器内
     备战装配环的真读观察保持原值原版本;可读真值种子照写不回归。
     原防御对象 = 旧合成口无门合成把漏斗真读覆盖成「9 槽全空」假真空
     (实机 2026-09-13 商店段循环崩溃实证),载体随合成口退役,跳写
     语义在种子域纪律层等价存续(防覆盖 = 种子只写声明域)。"""
     sig = _sig()
-    # 容器先有漏斗真读(deploy 后留 bench:物理槽 4 一人,1 基槽号信息位)
+    # 状态容器先有漏斗真读(deploy 后留 bench:物理槽 4 一人,1 基槽号信息位)
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.observe(gs.bench, BenchView(
         slots=[BenchSlot(kind='empty')] * 3
@@ -577,7 +577,7 @@ def test_synthesis_unread_bench_no_clobber() -> None:
     view = gs.bench.value
     assert view is not None and view.slots[3].unit is not None \
         and view.slots[3].unit.char_id == '银枝', \
-        '未读 bench 种子跳写:容器内漏斗真读保持原值'
+        '未读 bench 种子跳写:状态容器内漏斗真读保持原值'
     assert gs.bench is bench_field_before, \
         '跳写 = bench Field 实例不换(其余域照写,版本推进不涉本域)'
     # 可读真值种子照写:域语义不回归
@@ -653,7 +653,7 @@ def test_observation_feed_wiring_and_hp_loss_semantics(
       None,session 外源值禁猜入);真值帧 → observation 转正。"""
     from sr_od.application.currency_war.obs import cw_observation
 
-    # —— 接入调用分支:干净 prep_clean 帧,真读值进容器,hp 开局先验形态 ——
+    # —— 接入调用分支:干净 prep_clean 帧,真读值进状态容器,hp 开局先验形态 ——
     sess = SimpleNamespace(last_streak=0, active_strategies=[])
     _patch_clean_readers(monkeypatch)
     cw_observation.read_game_state(_feed_ctx(sess), None, phase='prep_clean')
@@ -671,7 +671,7 @@ def test_observation_feed_wiring_and_hp_loss_semantics(
     # —— hp 三分支(独立 session;同帧驱动,换 reconcile 读数)——
     # 终态契约 §A:session 暖启动真值(last_hp_real)不再抑制先验——
     # prior = 难度表值(source='prior',fail-closed 非真读),对任何未读
-    # 容器诚实落账;「禁猜」语义由 trusted 位承载(prior ⇒ False)。
+    # 状态容器诚实落账;「禁猜」语义由 trusted 位承载(prior ⇒ False)。
     from sr_od.application.currency_war.kernel import cw_reconcile
 
     sess2 = SimpleNamespace(last_streak=0, active_strategies=[],
@@ -934,7 +934,7 @@ def test_node_tick_and_advance_dedup_guard_expiry() -> None:
                                   'per-node-once-per-node'])
 def test_effect_refresh_balance_grant_forms(case: str) -> None:
     """B1 桥·免费刷发放两形态一测试(参数化并一;2026-09-21 Field 化:免费
-    次数升格容器字段 ``gs.free_refresh_left``,两桥 write_logic 同格登记,
+    次数升格状态容器字段 ``gs.free_refresh_left``,两桥 write_logic 同格登记,
     None 基 = 0 起算):
     - burst:登记时点把 payload.free_refresh_burst 一次性累加进 Field
       (固定理财即时段=2 活载体);零额度 payload(免战牌)= no-op 零行。
@@ -1037,11 +1037,11 @@ def test_free_lunch_ledger_zero_per_node_grant() -> None:
 
 
 def test_deposit_return_none_conditional_zero_grant() -> None:
-    """存款回报保守零授予(T-92 设计 §4 锁 3):直构容器不跑种子
+    """存款回报保守零授予(T-92 设计 §4 锁 3):直构状态容器不跑种子
     (prev_node_spent 未写 = None)→ 桥对存款回报条目零授予——禁猜口径
     (本金充裕金 None 同款;None = 条件不可评估,非「未花费」)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
-    assert gs.prev_node_spent.value is None, '直构容器不跑种子(前置)'
+    assert gs.prev_node_spent.value is None, '直构状态容器不跑种子(前置)'
     gs.effects.register_strategy(STRATEGY_EFFECTS['存款回报'],
                                  acquired_key=(1, 2))
     adv, _ex = gs.effects.advance_node((1, 3))
@@ -1052,7 +1052,7 @@ def test_deposit_return_none_conditional_zero_grant() -> None:
 
 def test_capacity_projection_activates_and_recovers() -> None:
     """桥·容量投影(§3.2.5):已登记容量声明 payload.capacity_limit=3 → bench
-    容量投影 3;条目到期移除 → 回默认 9;bench 未观察(None)= 无容器跳过;
+    容量投影 3;条目到期移除 → 回默认 9;bench 未观察(None)= 无状态容器跳过;
     零声明条目 → 恒默认 9(幂等)。声明契约 = payload 鸭子属性
     capacity_limit(机制先于数据,鸭子桩承载)。槽表归一(容量条目入册同批
     义务):9 长全尾空表随投影截断到容量长(容量外全空 = 无损)。"""
@@ -1067,7 +1067,7 @@ def test_capacity_projection_activates_and_recovers() -> None:
     )
 
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
-    # bench 未观察:无容器可写,投影跳过
+    # bench 未观察:无状态容器可写,投影跳过
     inv = gs.effects
     inv.register_strategy(EffectSpec(
         id='test_cap', name='容量测试桩', trigger=TriggerKind.CONDITIONAL,
@@ -1075,7 +1075,7 @@ def test_capacity_projection_activates_and_recovers() -> None:
         payload=_NS(capacity_limit=3), duties=DutyFlags(track=True),
         duration_nodes=2), acquired_key=(1, 5))
     project_effect_capacity(gs)
-    assert gs.bench.value is None, 'bench 未观察 = 无容器,不造帧'
+    assert gs.bench.value is None, 'bench 未观察 = 无状态容器,不造帧'
     # 观察(默认容量 9)→ 投影 3,槽表随尾空截断归一到 3 长
     slots = [BenchSlot(kind='unit')] + [BenchSlot(kind='empty')] * 8
     gs.observe(gs.bench, BenchView(slots=slots, capacity=BENCH_CAPACITY_DEFAULT), sig=_sig())
@@ -1315,7 +1315,7 @@ def test_relay_unit_gate_truth_table() -> None:
 
     - 空值 = 未知态禁中继:字符串空/空白、列表/元组/字典/集合空 = 会话
       侧值未确立,一律拒写(返回 False,字段保持从未写过,不留来源痕迹);
-    - 闸辖域 = 空字符串与空容器(§2.1 词面:字符串非空/列表非空);falsy
+    - 闸辖域 = 空字符串与空状态容器(§2.1 词面:字符串非空/列表非空);falsy
       但有语义的标量(如 streak=0 真 0)不受闸辖,禁过度收紧;非空列表
       即确立(结构已知,元素 None = 简报源未读得位,保位语义,§8.4);
     - 拒后真值后到可落(恢复局核心语义):空默认被拒后字段仍是「从未
@@ -1335,12 +1335,12 @@ def test_relay_unit_gate_truth_table() -> None:
         fld = getattr(gs, name)
         assert fld.value is None, f'空默认禁落 GameState:{name}'
         assert fld.evidence is None, '拒写不留任何来源痕迹'
-    # ② 闸辖域表行:falsy 有语义标量放行 / 非空容器确立
+    # ② 闸辖域表行:falsy 有语义标量放行 / 非空状态容器确立
     for name, value in (('streak', 0), ('plane_bosses', [None, None, None])):
         gs_scope = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
         assert gs_scope.relay(getattr(gs_scope, name), value,
                               sig=_hsig()) is True, \
-            f'{name}: 闸只辖空串与空容器'
+            f'{name}: 闸只辖空串与空状态容器'
         # relay 写后 Field 实例被替换(冻结帧替换语义),重读再断言
         fld_scope = getattr(gs_scope, name)
         assert fld_scope.value == value
@@ -1400,7 +1400,7 @@ def test_restore_session_empty_refused_then_late_truth_lands(
             f'空默认拒写:保持开局种子态不落中继痕迹:{name}'
 
     # 真值后到(恢复局:简报/事件屏/难度确认屏写端补齐会话侧事实)
-    # active 双字段播种随终态契约 §B 迁容器(write_logic 直写;中继读已切容器源)
+    # active 双字段播种随终态契约 §B 迁状态容器(write_logic 直写;中继读已切状态容器源)
     from sr_od.application.currency_war.kernel.cw_game_state import (
         game_state_of as _gso_t,
     )
@@ -1414,7 +1414,7 @@ def test_restore_session_empty_refused_then_late_truth_lands(
         produced_by='test',
         sig=ChannelSig(family='logic_action', actor='CwLoop',
                        screen='', mode='compute'))
-    # briefing 双字段播种随终态契约 §B 迁容器(write_logic 直写)
+    # briefing 双字段播种随终态契约 §B 迁状态容器(write_logic 直写)
     _gso_t(sess).write_logic(
         _gso_t(sess).plane_bosses, ['首领甲', None, None],
         produced_by='test',
@@ -1444,7 +1444,7 @@ def test_restore_session_empty_refused_then_late_truth_lands(
         assert fld.evidence is None, f'直写形态(无 session_carrier):{name}'
 
 
-# ==================== 容器视图转换/合成口/ShopCard 映射(自 w5_passthrough 归并) ====================
+# ==================== 状态容器视图转换/合成口/ShopCard 映射(自 w5_passthrough 归并) ====================
 
 # 旧槽表换算族的席位转换测试随换形层退役删除:被测换形口不复存在,
 # 阵营派生消费面走注册表单一源(char_first_faction,faction 三类口径
@@ -1460,8 +1460,8 @@ def _mk_legacy_card(x: int, name: str, *, cost: int = 1, star: int = 1,
 
 
 def test_shop_card_mapping_roundtrip() -> None:
-    """映射单一源往返:旧→容器保五记录字段+槽号;容器→旧 x 置 0 不消费、
-    slot 自容器透传(执行/读取器域处置语义见映射函数)。"""
+    """映射单一源往返:旧→状态容器保五记录字段+槽号;状态容器→旧 x 置 0 不消费、
+    slot 自状态容器透传(执行/读取器域处置语义见映射函数)。"""
     legacy = _mk_legacy_card(300, '希儿', cost=1, star=2,
                              cost_source='roster_fallback',
                              slot=3)
@@ -1470,10 +1470,10 @@ def test_shop_card_mapping_roundtrip() -> None:
             container.star, container.cost_source, container.slot) == \
         ('希儿', '仙舟', 1, 2, 'roster_fallback', 3), \
         '五记录字段原值透传不折叠(cost_source 证据分级禁丢);物理槽号透传'
-    assert not hasattr(container, 'x'), '容器牌无执行域坐标字段'
+    assert not hasattr(container, 'x'), '状态容器牌无执行域坐标字段'
     back = shop_cards_to_legacy([container])
     assert back[0].x == 0, 'x 置 0 不消费(执行侧按槽号现取坐标)'
-    assert back[0].slot == 3, '槽号自容器透传(点击取坐标依据,不按下标)'
+    assert back[0].slot == 3, '槽号自状态容器透传(点击取坐标依据,不按下标)'
 
 
 # ============================================================ 消费切换批
@@ -1485,7 +1485,7 @@ def test_refresh_execution_paid_and_free_frame_gates() -> None:
     """§3.3.6-8 刷新执行计数主测试(三条分支一测试):①付费刷新 = paid+1 ∧
     total+1;②免费帧闸 = 免费帧不进付费累计(长线利好触发计数载体禁混入
     免费刷)∧ total 照计;③免费余额下限 0(扣减在 Field,由上报函数承载
-    ——2026-09-21 Field 化:免费次数升格容器字段 ``gs.free_refresh_left``,
+    ——2026-09-21 Field 化:免费次数升格状态容器字段 ``gs.free_refresh_left``,
     账本 ``record_refresh`` 只留 paid/total 累计;Field 下限 0 校验 = 上报
     函数扣减分支,见 test_shop_projection_logic 刷新 Field 段)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
@@ -1750,7 +1750,7 @@ def test_chosen_record_face_true_pick_only(case_id: str) -> None:
         f'{case_id}: fallback 不写'
 
 
-# ============================================================ 容器合同
+# ============================================================ 状态容器合同
 # §1 写入口六通道(observe/carry/身份匹配)/ §2 版本与状态流水 /
 # §3 快照 / §4 画面上下文与节点域 / §5 坐标系纯函数 / §6 终局 /
 # §9 渠道签名封闭集
@@ -2061,7 +2061,7 @@ _A_SEEDED: tuple[str, ...] = (
     # 绑定型随机角色授予名字绑定域(空 dict 初始值,复制发放腿键查判定
     # 零 None 防御;空 = 未持绑定卡的正常态)
     'strategy_char_grant_bindings',
-    # 分期金剩余效果条数容器(空 dict 初始值,节点窗腿键查判定零 None 防御;
+    # 分期金剩余效果条数状态容器(空 dict 初始值,节点窗腿键查判定零 None 防御;
     # 空 = 未持分期卡的正常态,T-177 长期主义首例)
     'strategy_gold_next_nodes_left',
     # 策略卡羁绊档位条件发放已发档位一次性标志位(空 tuple 初始值,检查腿 membership
@@ -2126,7 +2126,7 @@ def test_cold_build_seeds_all_a_fields(monkeypatch) -> None:
     assert gs.strategy_char_grant_bindings.value == {}, \
         '绑定域每局全新创建空初始值'
     assert gs.strategy_gold_next_nodes_left.value == {}, \
-        '分期金剩余发放数容器,每局全新创建(空初始值)'
+        '分期金剩余发放数状态容器,每局全新创建(空初始值)'
     assert gs.strategy_bond_tier_fired.value == (), \
         '羁绊档位一次性标志位每局全新创建空初始值'
     assert gs.strategy_hp_loss_accum.value == 0, '损血累积器每局全新创建零初始值'
@@ -2274,7 +2274,7 @@ def _bench_view1(name: str, star: int) -> BenchView:
 
 
 # ============================================================ deployed 视图桥 + 快照迁移
-# (DeployedView 容器合并落地测试:快照旧档迁移等价 / 视图 ↔ 定长工作表
+# (DeployedView 状态容器合并落地测试:快照旧档迁移等价 / 视图 ↔ 定长工作表
 #  两桥往返 / 紧缩行序顺延 / 容量继承 / 信息位退役)
 
 _M31_SIG_OBS = ChannelSig(family='obs', actor='cw4_seed', mode='synthesized')

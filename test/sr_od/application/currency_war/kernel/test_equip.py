@@ -1,14 +1,14 @@
 """装备域测试(机制主题文件;穿戴计划 → 合并继承 → 可穿性门全链)。
 
 被测机制(按节):
-- **穿戴计划容器换源**(M7 ``_build_equip_wear_plan`` 输入全面换容器
+- **穿戴计划状态容器换源**(M7 ``_build_equip_wear_plan`` 输入全面换状态容器
   game state 读口):黑盒区分(无黑板帧照常产出)+ fail 门方向
   (owned 未观察保守关)+ **穿戴闭环测试**(穿戴上报落账后已穿槽位
   输入即反映,已穿件零重派、满装单位零再派——决策环零读屏下的
   自旋形态测试);
 - **merge 装备继承**(语义源 = merge_mechanics):同名同星 3 合 1,
   素材装备按扫描序继承到载体(场上载体优先;载体自有在前),素材槽
-  清空——重写容器形状时的不变量哨兵;
+  清空——重写状态容器形状时的不变量哨兵;
 - **银狼专属装备可穿性门**(2026-09-18 用户定论,10 件,白名单 =
   银狼 + 银狼LV.999;机制权威版本 =
   docs/game/currency_war/research/equipment_mechanics.md「银狼专属
@@ -68,11 +68,11 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
 
 _SIG = ChannelSig(family='obs', actor='cw4_seed', mode='synthesized')
 
-# ============================================================ 穿戴计划容器换源(fail 门方向)
+# ============================================================ 穿戴计划状态容器换源(fail 门方向)
 
 
 def _observe_equips(session, owned, occupied):
-    """按容器键形态写装备两域(写端生产键 = 'front:1' 形态字符串)。"""
+    """按状态容器键形态写装备两域(写端生产键 = 'front:1' 形态字符串)。"""
     gs = game_state_of(session)
     gs.observe(gs.equips, list(owned), sig=_SIG)
     gs.observe(gs.occupied_equips,
@@ -83,7 +83,7 @@ def _observe_equips(session, owned, occupied):
 
 
 def test_m7_reads_container_without_prep_obs():
-    """黑盒区分测试:无黑板帧 + 容器三域在 → M7 正常进入判据链
+    """黑盒区分测试:无黑板帧 + 状态容器三域在 → M7 正常进入判据链
     (fail_reason 为空 = 四路输入全部读通;旧实现此处 fail 观察帧缺失)。"""
     session = cw4_session(cw4_comp())
     gs = _observe_equips(session, owned=['星币收集器'],
@@ -98,7 +98,7 @@ def test_m7_reads_container_without_prep_obs():
 
 def test_m7_fail_gate_owned_unobserved():
     """fail 门:owned 域未观察(None) → 保守关,fail_reason 指向 owned。
-    (直构容器承载:session 容器每局全新创建即种子空表,None 档仅直构域可达。)"""
+    (直构状态容器承载:session 状态容器每局全新创建即种子空表,None 档仅直构域可达。)"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.observe(gs.occupied_equips, {'front:1': ['x']}, sig=_SIG)
     ret = _build_equip_wear_plan(gs)

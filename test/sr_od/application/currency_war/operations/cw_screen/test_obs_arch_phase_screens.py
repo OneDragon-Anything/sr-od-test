@@ -39,14 +39,14 @@ test_plane_intel_pipeline.py,本文件不辖。
   退场裁决 = 外循环重派后的下一次入口门;战斗等待/等待1-1 无裁决旗标。
   红 = 裁决被转录进观察 node。
 - **观察上报接入调用测试**(两 node 形态屏):观察 node 稳定帧一次读
-  → report 经屏文件落容器(容器终值)+ obs 挂实例属性;投资策略入口锚
+  → report 经屏文件落状态容器(状态容器终值)+ obs 挂实例属性;投资策略入口锚
   复探窗(ADR-0529 有界自愈)语义逐位(复探窗内自愈、超窗 round_retry
-  消耗观察 node 预算)。位面过渡 = 实体链写(链容器终值双写);武装箱/
+  消耗观察 node 预算)。位面过渡 = 实体链写(链状态容器终值双写);武装箱/
   未达上限/等待1-1 = 占位接入调用(现役零容器写点,统一形态)。
 - **刷新终结交回测试**(投资策略,两 node 形态):建议刷新 → 闸 1 槽计数
   现读 >0 → 点钮恰一次 → 终结交回 round_success(交回外循环重进 = 入口
   重建);刷新计数写端随画面 op 基类退役(记账归动作 op 会话承接),
-  闸 2 容器计数读端原样。
+  闸 2 状态容器计数读端原样。
 - **写入流对拍测试**:``active_env`` 写时点(gain-chain 3.2 反转:点卡/派发
   时点零写,落地相经获得链写;ADR-0598 点卡前写退役)、
   ``active_strategies`` 重入裁决出口 append(值/时点)、
@@ -248,9 +248,9 @@ def _make_env(test_context, monkeypatch: pytest.MonkeyPatch, *,
 def test_invest_env_observe_gate_and_report(test_context,
                                             monkeypatch) -> None:
     """投资环境观察 node 测试(两 node 形态):入口门 miss = round_fail 早退
-    (现役文案,obs 不装载);门 hit → 稳定帧候选一次读 → report 落容器
-    ``invest_env_opts``(容器终值)+ obs 挂实例属性。红 = 门失效 / 接入调用
-    断流 / 容器终值漂移。"""
+    (现役文案,obs 不装载);门 hit → 稳定帧候选一次读 → report 落状态容器
+    ``invest_env_opts``(状态容器终值)+ obs 挂实例属性。红 = 门失效 / 接入调用
+    断流 / 状态容器终值漂移。"""
     opts = [('追击概念股', 460), ('彩虹时代', 960), ('头彩', 1460)]
     op_off, _m0, _s0, _d0 = _make_env(test_context, monkeypatch, in_screen=False,
                                       opts=opts)
@@ -264,7 +264,7 @@ def test_invest_env_observe_gate_and_report(test_context,
     assert rs.is_success, f'观察 success:{rs!r}'
     assert game_state_of(session).invest_env_opts.value == [
         n for n, _x in opts], (
-        f'report 落容器(容器终值):'
+        f'report 落状态容器(状态容器终值):'
         f'{game_state_of(session).invest_env_opts.value!r}')
     assert op._obs is not None and op._obs.options == opts, 'obs 挂实例属性'
 
@@ -296,17 +296,17 @@ def test_invest_env_active_env_written_at_dispatch(test_context,
 def test_invest_env_observe_standardization_gate(test_context,
                                                  monkeypatch) -> None:
     """观察标准化门测试(op-layer.md §1.1;观察层在观察时把读数转换成标准
-    注册数据,容器值域 = 标准注册名):
+    注册数据,状态容器值域 = 标准注册名):
     - 可转换名(全角冒号形变走归一精确命中;仅 LCS 可命中的单字误读形变)
-      → 容器与 obs 存标准名(含「彩虹吋代」3/4 恰达阈值命中 = 拒判不过严
+      → 状态容器与 obs 存标准名(含「彩虹吋代」3/4 恰达阈值命中 = 拒判不过严
       回归锚);
     - 候选含转换失败名(乱串,注册表零重叠)→ 观察 round_fail,零写零
       上报(obs 不装载);
     - 两候选命中同一注册名(选项互斥屏重复名 = 必有误读)→ round_fail;
     - LCS 近分歧义(「击口概念股」对击破/追击概念股同分 0.8,注册表内
       歧义不可分辨)→ round_fail(防静默错标准化)。
-    红 = 观察门漏转(脏值入容器)/ 转换失败带病上报 / 分差拒判缺失或过严。"""
-    # ① 可转换名 → 标准名落容器('彩虹吋代' 仅 LCS 可命中:归一后不在注册
+    红 = 观察门漏转(脏值入状态容器)/ 转换失败带病上报 / 分差拒判缺失或过严。"""
+    # ① 可转换名 → 标准名落状态容器('彩虹吋代' 仅 LCS 可命中:归一后不在注册
     # 表,LCS 3/4 恰达阈值且次高分明显低 → 命中;全角冒号走归一精确命中)
     opts = [('特邀专家：银狼', 460), ('彩虹吋代', 960), ('头彩', 1460)]
     op, _m, session, _disp = _make_env(test_context, monkeypatch, in_screen=True,
@@ -315,7 +315,7 @@ def test_invest_env_observe_standardization_gate(test_context,
     assert rs.is_success, f'可转换候选观察 success:{rs!r}'
     assert game_state_of(session).invest_env_opts.value == [
         '特邀专家:银狼', '彩虹时代', '头彩'], (
-        f'容器存标准注册名(值域收敛):'
+        f'状态容器存标准注册名(值域收敛):'
         f'{game_state_of(session).invest_env_opts.value!r}')
     assert op._obs is not None and op._obs.options == [
         ('特邀专家:银狼', 460), ('彩虹时代', 960), ('头彩', 1460)], (
@@ -329,7 +329,7 @@ def test_invest_env_observe_standardization_gate(test_context,
         f'转换失败观察早退:{rs_bad!r}')
     assert op_bad._obs is None, '失败路径 obs 不装载(零上报)'
     assert game_state_of(session2).invest_env_opts.value in (None, []), (
-        '零写容器')
+        '零写状态容器')
     # ③ 两候选命中同一注册名 → round_fail
     op_dup, _m3, session3, _d3 = _make_env(
         test_context, monkeypatch, in_screen=True,
@@ -338,7 +338,7 @@ def test_invest_env_observe_standardization_gate(test_context,
     assert not rs_dup.is_success and '标准化失败' in (rs_dup.status or ''), (
         f'重复命中判失败:{rs_dup!r}')
     assert game_state_of(session3).invest_env_opts.value in (None, []), (
-        '重复命中零写容器')
+        '重复命中零写状态容器')
     # ④ LCS 近分歧义(实机探针:「击口概念股」对击破/追击概念股同分
     # 0.8 → 注册表内歧义不可分辨,禁静默错标准化)
     op_amb, _m4, session4, _d4 = _make_env(
@@ -348,7 +348,7 @@ def test_invest_env_observe_standardization_gate(test_context,
     assert not rs_amb.is_success and '标准化失败' in (rs_amb.status or ''), (
         f'近分歧义拒判:{rs_amb!r}')
     assert game_state_of(session4).invest_env_opts.value in (None, []), (
-        '歧义零写容器')
+        '歧义零写状态容器')
 
 
 def test_invest_env_refresh_left_observed_write(test_context,
@@ -477,7 +477,7 @@ def _make_strategy(test_context, monkeypatch: pytest.MonkeyPatch,
     decide_calls: list[list[str]] = []
 
     def _decide():
-        decide_calls.append(['stub'])   # 零参口后候选自容器槽(handler 写槽)
+        decide_calls.append(['stub'])   # 零参口后候选自状态容器槽(handler 写槽)
         return picks.pop(0) if picks else CwActionPickInvestStrategyParam(
             idx=0, reason='stub-exhausted')
 
@@ -653,9 +653,9 @@ def test_strategy_refresh_terminal_handback(test_context, monkeypatch) -> None:
     """逐卡刷新终结交回测试(两 node 形态):建议刷新 → 闸 1 槽计数现读 >0 →
     点钮恰一次(文本锚定)→ 终结交回 = round_success(op 结束,交回外循环
     重进 = 入口重建,重进后重观察重决策;本访问零比对零重决策——刷后不重读
-    不比对不重决策)。观察轮 report 落容器 ``invest_strategy_opts`` 接入调用归测试
-    (容器终值)。刷新计数写端随画面 op 基类退役(记账归动作 op 会话承接,
-    本 op 不写计数——容器计数断言不设,闸 2 读端由下一测试承担)。
+    不比对不重决策)。观察轮 report 落状态容器 ``invest_strategy_opts`` 接入调用归测试
+    (状态容器终值)。刷新计数写端随画面 op 基类退役(记账归动作 op 会话承接,
+    本 op 不写计数——状态容器计数断言不设,闸 2 读端由下一测试承担)。
     红 = 刷新点击丢失 / 循环内重读重决策回潮 / 终结交回改轮询 / 接入调用断流。"""
     names = ['赌神·银', '恢复生机', '气氛组']
     book = _FrameBook([object()])
@@ -668,7 +668,7 @@ def test_strategy_refresh_terminal_handback(test_context, monkeypatch) -> None:
     rs_obs = _run_node(test_context, op, op.observe)
     assert rs_obs.is_success, f'前置:观察 success:{rs_obs!r}'
     assert game_state_of(session).invest_strategy_opts.value == names, (
-        f'观察 report 落容器(容器终值):'
+        f'观察 report 落状态容器(状态容器终值):'
         f'{game_state_of(session).invest_strategy_opts.value!r}')
     rs = _run_node(test_context, op, op.act)
     assert rs.is_success, (
@@ -681,7 +681,7 @@ def test_strategy_refresh_terminal_handback(test_context, monkeypatch) -> None:
 
 
 # (原 test_strategy_refresh_gate2_reads_container_count 删:剩余语义下
-#  观察写端每访问覆盖容器(与闸 1 obs 同帧同值),「闸 2 独立拦截」形态
+#  观察写端每访问覆盖状态容器(与闸 1 obs 同帧同值),「闸 2 独立拦截」形态
 #  不复存在——剩余 ≤0 的拦截由闸 1 现值天然承载;观察写端摄入测试 =
 #  test_invest_strategy_observe_reprobe_and_report 的 left 终值断言。)
 
@@ -690,8 +690,8 @@ def test_invest_strategy_observe_reprobe_and_report(test_context,
                                                     monkeypatch) -> None:
     """投资策略观察 node 测试(两 node 形态):入口锚复探窗(ADR-0529 有界
     自愈)语义逐位——复探窗内自愈、超窗 = round_retry(现役文案,消耗观察
-    node 预算的既有 retry 面);在窗 → 一次读全 → report 落容器
-    ``invest_strategy_opts``(容器终值)+ 逐卡刷新剩余 ``strategy_refresh_
+    node 预算的既有 retry 面);在窗 → 一次读全 → report 落状态容器
+    ``invest_strategy_opts``(状态容器终值)+ 逐卡刷新剩余 ``strategy_refresh_
     left`` 摄入(观察写端,键 = 规范卡名)+ obs 挂实例属性。
     红 = 超窗改 fail(炸 op 触发哨兵)/ 复探窗丢失 / 接入调用断流。"""
     names = ['赌神·银', '恢复生机', '气氛组']
@@ -704,7 +704,7 @@ def test_invest_strategy_observe_reprobe_and_report(test_context,
         and '投资策略屏未稳定,复探超窗重试' in (rs_off.status or ''), (
         f'超窗 retry 文案沿用现役:{rs_off!r}')
     assert op_off._obs is None, '超窗不装载 obs'
-    # ② 在窗 → report 落容器 + obs 装载(计数在读 → left 观察写端摄入)
+    # ② 在窗 → report 落状态容器 + obs 装载(计数在读 → left 观察写端摄入)
     book = _FrameBook([object()])
     book.options[id(book.frames[0])] = _opts_of(names)
     book.counts[id(book.frames[0])] = [(1, 477, _CNT_Y), (1, 975, _CNT_Y),
@@ -714,7 +714,7 @@ def test_invest_strategy_observe_reprobe_and_report(test_context,
     rs = _run_node(test_context, op, op.observe)
     assert rs.is_success, f'观察 success:{rs!r}'
     assert game_state_of(session).invest_strategy_opts.value == names, (
-        f'report 落容器(容器终值):'
+        f'report 落状态容器(状态容器终值):'
         f'{game_state_of(session).invest_strategy_opts.value!r}')
     _expect_left = {normalize_invest_name(n): 1 for n in names}
     assert game_state_of(session).strategy_refresh_left.value == _expect_left, (
@@ -790,9 +790,9 @@ def _make_briefing(test_context, monkeypatch: pytest.MonkeyPatch, *,
 def test_briefing_observe_gate_and_report(test_context, monkeypatch) -> None:
     """简报观察 node 测试(两 node 形态):入口门 miss = round_fail 早退
     (现役文案,obs 不装载零读链);门 hit → 三读数一次读 → report 落
-    容器(三字段容器终值)+ obs 挂实例属性;「下一步」点击不在观察轮
+    状态容器(三字段状态容器终值)+ obs 挂实例属性;「下一步」点击不在观察轮
     (归决策动作 node,点击桩零命中断言)。
-    红 = 门失效 / 接入调用断流 / 容器终值漂移 / 观察轮误点击。"""
+    红 = 门失效 / 接入调用断流 / 状态容器终值漂移 / 观察轮误点击。"""
     # ① 门 miss → fail 早退,obs 不装载零读链
     op_off, _s0, calls_off = _make_briefing(test_context, monkeypatch,
                                             mark_hit=False,
@@ -804,7 +804,7 @@ def test_briefing_observe_gate_and_report(test_context, monkeypatch) -> None:
     assert op_off._obs is None, '门早退不装载 obs'
     assert calls_off['affix_read'] == 0 and calls_off['boss_read'] == 0, (
         f'门早退零读链:{calls_off!r}')
-    # ② 门 hit → 三读数一次读 → report 落容器 + obs 挂实例属性
+    # ② 门 hit → 三读数一次读 → report 落状态容器 + obs 挂实例属性
     op, session, calls = _make_briefing(test_context, monkeypatch,
                                         mark_hit=True,
                                         affixes=[('火弱点', None)],
@@ -813,11 +813,11 @@ def test_briefing_observe_gate_and_report(test_context, monkeypatch) -> None:
     assert rs.is_success, f'观察 success:{rs!r}'
     _gs = game_state_of(session)
     assert _gs.enemy_affixes.value == ['火弱点'], (
-        f'词缀经 report 落容器:{_gs.enemy_affixes.value!r}')
+        f'词缀经 report 落状态容器:{_gs.enemy_affixes.value!r}')
     assert _gs.plane_bosses.value == ['碎星王虫'], (
-        f'boss 经 report 落容器:{_gs.plane_bosses.value!r}')
+        f'boss 经 report 落状态容器:{_gs.plane_bosses.value!r}')
     assert _gs.enemy_difficulty.value == 5, (
-        f'难度经 report 落容器:{_gs.enemy_difficulty.value!r}')
+        f'难度经 report 落状态容器:{_gs.enemy_difficulty.value!r}')
     assert op._obs is not None and op._obs.enemy_affixes == ['火弱点'], (
         'obs 挂实例属性')
     assert calls['diff_read'] == 1, '难度每次进屏重读(读一次)'
@@ -845,7 +845,7 @@ def test_briefing_session_write_semantics_three_fields(test_context,
             sig=_cs_t(family='logic_action', actor='CwLoop',
                       screen='', mode='compute'))
 
-    # ① 词缀:容器已有也重读重采重写(无已读守卫)
+    # ① 词缀:状态容器已有也重读重采重写(无已读守卫)
     session = StrategySession()
     _seed(session, 'enemy_affixes', ['已有词缀'])
     op, session, calls = _make_briefing(test_context, monkeypatch,
@@ -874,7 +874,7 @@ def test_briefing_session_write_semantics_three_fields(test_context,
     _run_node(test_context, op2b, op2b.observe)
     assert _gso_t(session2b).plane_bosses.value == ['首读真值'], \
         'boss 读空跳过写(不擦已读真值)'
-    # ③ 难度:容器已有也重读重写(无仅缺省读门)
+    # ③ 难度:状态容器已有也重读重写(无仅缺省读门)
     session3 = StrategySession()
     _seed(session3, 'enemy_difficulty', 3)
     op3, session3, calls3 = _make_briefing(test_context, monkeypatch,
@@ -888,7 +888,7 @@ def test_briefing_session_write_semantics_three_fields(test_context,
 
 def test_briefing_boss_standardize_fail_round_fail_zero_write(test_context, monkeypatch) -> None:
     """观察标准化门失败语义测试:boss 读数两段转换失败(任一候选未归一
-    到规范名)= 观察失败——observe round_fail 早退、容器零写零上报、
+    到规范名)= 观察失败——observe round_fail 早退、状态容器零写零上报、
     obs 不装载(op-layer.md §1.1 观察标准化门;禁原名透传带病上报)。
     红 = 失败路径回潮为透传照写照报。"""
     import sr_od.application.currency_war.operations.cw_screen.cw_screen_briefing as bm
@@ -899,7 +899,7 @@ def test_briefing_boss_standardize_fail_round_fail_zero_write(test_context, monk
     monkeypatch.setattr(bm, 'clean_boss_names_by_lcs', lambda gs: None)
     rs = _run_node(test_context, op, op.observe)
     assert not rs.is_success, f'转换失败须 round_fail 早退:{rs!r}'
-    assert game_state_of(session).plane_bosses.value is None, '容器零写'
+    assert game_state_of(session).plane_bosses.value is None, '状态容器零写'
     assert op._obs is None, 'obs 不装载(零上报)'
 
 
@@ -1308,10 +1308,10 @@ def test_plane_transition_observe_gate_and_chain_report(
         test_context, monkeypatch) -> None:
     """位面过渡观察 node 测试(两 node 形态):提示门 miss = round_fail 早退
     (现役文案,obs 不装载、零读链);门 hit → 底部行读数构造链值 → report
-    落容器(开局链容器终值:node_path + node_path_baseline 双写,链权威版本
+    落状态容器(开局链状态容器终值:node_path + node_path_baseline 双写,链权威版本
     §3 基线幂等门的写闸面在 report 屏文件,由 test_screen_report_ports
     承担,本测试辖 op 侧读链→report 接入调用)→ obs 挂实例属性。
-    红 = 门失效 / 读链未接 / 容器终值漂移。"""
+    红 = 门失效 / 读链未接 / 状态容器终值漂移。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         game_state_of,
     )
@@ -1337,7 +1337,7 @@ def test_plane_transition_observe_gate_and_chain_report(
         f'门 miss 文案沿用现役:{rs_off!r}')
     assert op_off._obs is None and _reads == [], (
         f'门早退不装载 obs 零读链:{op_off._obs!r} {_reads!r}')
-    # ② 门 hit + 开局容器(镜像/hist 双缺)→ 链构造 + report 双写
+    # ② 门 hit + 开局状态容器(镜像/hist 双缺)→ 链构造 + report 双写
     session = StrategySession()
     match = SimpleNamespace(session=session)
     match.gs = game_state_of(session)
@@ -1351,7 +1351,7 @@ def test_plane_transition_observe_gate_and_chain_report(
     assert rs.is_success, f'观察 success:{rs!r}'
     gs = game_state_of(session)
     assert gs.node_path.value is not None and gs.node_path.value.plane == 1, (
-        f'离场快照经 report 落容器(开局行位面 = P1):{gs.node_path.value!r}')
+        f'离场快照经 report 落状态容器(开局行位面 = P1):{gs.node_path.value!r}')
     assert gs.node_path_baseline.value == gs.node_path.value, (
         '开局基线经 report 同链双写')
     assert gs.node_path.value.seq[0].token == 'battle', '行读数构造进链(观察侧读半部)'
@@ -1383,7 +1383,7 @@ def test_armory_box_two_node_observe_report_and_round_wait(
         test_context, monkeypatch) -> None:
     """武装箱两 node 形态测试(轻屏统一形态,
     report):观察 node = 标识门(miss = round_fail 交编排壳,obs 不装载)+
-    obs{on_screen} → 占位 report 接入调用(gs 缺席跳过不炸;本屏现役零容器
+    obs{on_screen} → 占位 report 接入调用(gs 缺席跳过不炸;本屏现役零状态容器
     写点,接口为统一形态占位);决策动作 node = 点 × 关闭机械交回
     round_wait(不烧节点重试预算)。红 = 门失效 / 接入调用断流 / 循环推进
     回退为计预算 retry。"""

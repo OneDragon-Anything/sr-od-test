@@ -50,7 +50,7 @@ _SIG_LOGIC = ChannelSig(family='logic_action', actor='test-seed',
 def _gs(*, card: str | None = _CARD, equips: list[str] | None = None,
         bench: list[BenchSlot] | None = None,
         deployed: DeployedView | None = None) -> GameState:
-    """直构容器(card=None = 未持卡;'躺平' = 表外卡;域传 None = 保持
+    """直构状态容器(card=None = 未持卡;'躺平' = 表外卡;域传 None = 保持
     未观察,供 None 防御支;bench 传 [] = 裸备战席)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if card is not None:

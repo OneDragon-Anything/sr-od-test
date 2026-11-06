@@ -30,7 +30,7 @@ _COEF = 2   # 与 kernel 双源同值锁一致(ENV_PICK_GRANTS 闸面另测)
 
 
 def _fresh_gs() -> GameState:
-    """独立容器(桩 session 宿主,弱引用表按宿主隔离,先例 =
+    """独立状态容器(桩 session 宿主,弱引用表按宿主隔离,先例 =
     test_invest_strategy._fresh_gs)。"""
     return game_state_of(SimpleNamespace())
 

@@ -6,13 +6,13 @@ kernel/cw_screen_report/plane_intel.py 的 report_screen_plane_intel_obs;
 测试面依据 = T-45 敌后破坏设计(.debug/progress/2026-09-23-invest-effects-
 calc/designs/T-45-dihou-pohuai.md)§2.2 接入调用 3 + §4 锁 3(attack-v2
 S3/C3 扩):词缀写门三分支的**随机态支**——
-- 随机态容器 + 非空读数 → observe 覆盖转正、差异落 logic_rand_outcome、
+- 随机态状态容器 + 非空读数 → observe 覆盖转正、差异落 logic_rand_outcome、
   等值零台账(被覆盖对象是猜测不是真值,「空表覆写抹掉已有真值」的
   幂等门理由在本分支不适用);
-- 随机态容器(删后空)+ 空列表读数 → observe 写空表转正(删尽态闭环:
+- 随机态状态容器(删后空)+ 空列表读数 → observe 写空表转正(删尽态闭环:
   单词缀局删后名单 = [],读数 [] 是 obs 契约有效语义读数「空列表 =
   无词缀」,转正后补观察谓词解除);
-- 随机态容器 + None 读数 → 不写、维持随机态(None = 本轮无此面/失读,
+- 随机态状态容器 + None 读数 → 不写、维持随机态(None = 本轮无此面/失读,
   非语义读数不进写门);
 - obs 族新签名与现役 logic_action 签名并存(各分支各语义)。
 """
@@ -62,7 +62,7 @@ def rows_sink() -> _RowSink:
 
 
 def _rand_affix_gs(value: list[str]) -> GameState:
-    """随机态词缀容器(删除分支猜测名单形态:logic_rand 来源直写)。"""
+    """随机态词缀状态容器(删除分支猜测名单形态:logic_rand 来源直写)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.write_logic_rand(gs.enemy_affixes, list(value), produced_by='Test',
                         evidence='t:rand', sig=_SIG_LA)
@@ -71,13 +71,13 @@ def _rand_affix_gs(value: list[str]) -> GameState:
 
 def test_rand_container_nonempty_reading_observes_through(
         rows_sink: _RowSink) -> None:
-    """随机态容器 + 非空读数 → observe 覆盖转正(设计 §4 锁 3 主分支):
+    """随机态状态容器 + 非空读数 → observe 覆盖转正(设计 §4 锁 3 主分支):
     来源翻 observation(谓词解除)、差异落 logic_rand_outcome 台账
     (随机效果落地预期内,无告警无停机)。"""
     gs = _rand_affix_gs(['开局不利', '库藏生锈'])
     report_screen_plane_intel_obs(gs, CwScreenPlaneIntelObs(
         on_screen=True, enemy_affixes=['库藏生锈']))
-    assert gs.enemy_affixes.value == ['库藏生锈'], '实采值入容器'
+    assert gs.enemy_affixes.value == ['库藏生锈'], '实采值入状态容器'
     assert gs.enemy_affixes.source == 'observation', '覆盖转正(非 logic 直写)'
     assert rows_sink.kinds() == ['logic_rand_outcome'], \
         f'差异 = 随机效果落地台账行: {rows_sink.kinds()}'
@@ -85,7 +85,7 @@ def test_rand_container_nonempty_reading_observes_through(
 
 def test_rand_container_equal_reading_zero_ledger(
         rows_sink: _RowSink) -> None:
-    """随机态容器 + 等值读数 → 覆盖转正零台账(等值 = 零新信息不产行,
+    """随机态状态容器 + 等值读数 → 覆盖转正零台账(等值 = 零新信息不产行,
     来源仍翻 observation 转正)。"""
     gs = _rand_affix_gs(['库藏生锈'])
     report_screen_plane_intel_obs(gs, CwScreenPlaneIntelObs(
@@ -97,7 +97,7 @@ def test_rand_container_equal_reading_zero_ledger(
 
 def test_rand_container_empty_reading_full_wipe_affirm(
         rows_sink: _RowSink) -> None:
-    """删尽态闭环(设计 §4 锁 3 子锁,attack-v2 S3):随机态容器删后空([])
+    """删尽态闭环(设计 §4 锁 3 子锁,attack-v2 S3):随机态状态容器删后空([])
     + 空列表读数 → observe 写空表转正——被覆盖对象是猜测不是真值,
     空表覆写在本分支合法;转正后补观察谓词解除、闭环收敛。"""
     gs = _rand_affix_gs([])
@@ -108,7 +108,7 @@ def test_rand_container_empty_reading_full_wipe_affirm(
 
 
 def test_rand_container_none_reading_keeps_random_state() -> None:
-    """随机态容器 + None 读数 → 不写、维持随机态(None = 本轮无此面/
+    """随机态状态容器 + None 读数 → 不写、维持随机态(None = 本轮无此面/
     失读,非语义读数不进写门;补观察谓词下帧继续命中)。"""
     gs = _rand_affix_gs(['开局不利'])
     seq_before = gs.write_seq

@@ -43,7 +43,7 @@ _SIG_OBS = ChannelSig(family='obs', actor='PickInvestEnvTest')
 
 
 def _make_gs(opts: list[str]) -> GameState:
-    """直构容器:bench/equips 观察(空席空栏,发放两条分支可落)+ 选卡槽逻辑写。"""
+    """直构状态容器:bench/equips 观察(空席空栏,发放两条分支可落)+ 选卡槽逻辑写。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.observe(gs.bench,
                BenchView(slots=[BenchSlot(kind='empty')] * 9, capacity=9),

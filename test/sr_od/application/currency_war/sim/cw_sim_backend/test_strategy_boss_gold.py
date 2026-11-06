@@ -7,7 +7,7 @@ strategy_boss_gold_of 聚合 helper + _begin_node_window 收尾 boss 金腿)。
   (evidence 与收入笔分键,收入三分量账不混入);
 - 非 boss 节点零发放(锁 2)/ 未持卡零发放(锁 3);
 - 数值矩阵(锁 4):特战资金+ = 11、双卡同持 = 18、未持 = 0(直构
-  容器,数值 = 卡面真值字面锁,锁注册表值流经聚合);
+  状态容器,数值 = 卡面真值字面锁,锁注册表值流经聚合);
 - 同窗重放零双发(锁 5,幂等守卫复用回归);
 - 修饰局发放位随序列现值(锁 6,人身意外险 boss 前插 supply)。
 
@@ -53,7 +53,7 @@ _GOLD_EV_PREFIX = 'sim:engine:strategy:boss_gold:p'
 
 def _backend(seed: int = 23, *, env_name: str = '') -> SimBackend:
     """装配后端至 P1r1 备战屏(env_name 非空走投资环境屏选环境流——改
-    节点序列经环境注册写场字段 ``node_seq_by_plane``,直写容器不触;
+    节点序列经环境注册写场字段 ``node_seq_by_plane``,直写状态容器不触;
     装配形态先例 = test_apply_round_start_income._interest_backend)。
     调用方负责 uninstall。"""
     from sr_od.application.currency_war.kernel.cw_action_report import (
@@ -156,7 +156,7 @@ def test_modified_env_boss_position_follows_sequence() -> None:
 
 
 def test_strategy_boss_gold_aggregation_matrix() -> None:
-    """数值矩阵(锁 4,直构容器锁聚合数学):特战资金+ = 11、双卡同持
+    """数值矩阵(锁 4,直构状态容器锁聚合数学):特战资金+ = 11、双卡同持
     = 18、未持 = 0(数值 = 卡面真值字面锁;0 = 零值零写前提)。"""
     assert strategy_boss_gold_of(cw4_box(
         active_strategies=(_CARD_PLUS,))) == 11

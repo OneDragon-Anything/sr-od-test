@@ -253,7 +253,7 @@ def test_foresight_rewrite_single_prism_candidate(
         _isolate_defect_buffer) -> None:
     """改写锁(锁 4)+ 零再发断言:远见拾取后后继固定日程槽 (2,2) 呈现
     opts 长度 1 ∈ 棱彩池、刷新零授权(簿记 False + 呈现 obs refresh_
-    slots 空 + 容器零授权)、拾取落地正常入链;落地后金名计数不增长
+    slots 空 + 状态容器零授权)、拾取落地正常入链;落地后金名计数不增长
     (零再发——门集记名构造保证,钉 r1-F1 重入门)。"""
     b = _backend(77)
     try:
@@ -273,7 +273,7 @@ def test_foresight_rewrite_single_prism_candidate(
         assert b._offer_refreshable is False, '授权簿记 False(无法刷新)'
         assert b._offer_forced_slots == (), '槽向量簿记清零(无消费位)'
         assert opts[0] not in (b.gs.strategy_refresh_left.value or {}), \
-            '改写候选零授权(容器刷新闸按卡名查,report 合并写语义下旧窗键' \
+            '改写候选零授权(状态容器刷新闸按卡名查,report 合并写语义下旧窗键' \
             '残留为既有行为,新候选名不入键 = 本窗不可刷)'
         obs = b.observe(SCREEN_INVEST_STRATEGY)
         assert [n for n, _x, _y in obs.options] == opts, '呈现 obs 单候选'

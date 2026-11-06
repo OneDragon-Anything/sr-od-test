@@ -140,7 +140,7 @@ def test_opening_hand_fixed_deck_pool_no_experts() -> None:
 
 
 def test_apply_opening_writes_container_opening_state() -> None:
-    """开局态写入容器(obs 渠道;u07u28 §③:金 3/等级 3/cap 3;
+    """开局态写入状态容器(obs 渠道;u07u28 §③:金 3/等级 3/cap 3;
     M06 首个写端 = 开局备战席先于商店发牌)。"""
     sess = StrategySession()
     gs = game_state_of(sess)
@@ -159,4 +159,4 @@ def test_apply_opening_writes_container_opening_state() -> None:
     units = [s.unit for s in gs.bench.value.slots if s.unit is not None]
     assert len(units) == 4 and all(u.star == 1 for u in units), \
         '开局备战席 = 4 张全 1★(M06 派生池不变量首个写端)'
-    assert gs.heartbeat() > 0, '开局写入推进容器心跳'
+    assert gs.heartbeat() > 0, '开局写入推进状态容器心跳'

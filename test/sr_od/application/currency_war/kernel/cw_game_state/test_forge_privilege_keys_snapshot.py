@@ -12,7 +12,7 @@ kernel/cw_projection_audit.py 的同名审计行 + cw_effect_inventory 常量
 - 快照存续:次数/计数值进快照 → restore 往返逐位相等(int 保型直通
   免 rebuild 登记,env_grant_uid_seq 同款);
 - 登记四件:schema 独立键版本 1(不并入他域 bump)+ 审计行
-  PROCESS_ONLY × 2(容器字段完备性纪律的显式锁);
+  PROCESS_ONLY × 2(状态容器字段完备性纪律的显式锁);
 - 常量与登记面单一源:辖域角色/持卡键 = STRATEGY_GRANTS 同卡条目
   chars_immediate/advisor 一致(效果条目1 顾问解锁已登记零改动的正向护行)。
 """
@@ -82,7 +82,7 @@ def test_snapshot_roundtrip_int_straight_through() -> None:
 
 
 def test_audit_rows_declared_process_only() -> None:
-    """对账申报(容器字段完备性纪律):两键必须在 PROJECTION_AUDIT
+    """对账申报(状态容器字段完备性纪律):两键必须在 PROJECTION_AUDIT
     登记行,行状态 = process_only(次数/计数 = 卡文推算知识,无观察
     读端;strategy_hp_loss_accum 行同构)。"""
     from sr_od.application.currency_war.kernel.cw_projection_audit import (

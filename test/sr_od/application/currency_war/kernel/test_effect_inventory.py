@@ -3,7 +3,7 @@
 被测机制(按节):
 - **apply_board_rewrite 锚定通道行为**(通道择道单一源 =
   ``cw_game_state.anchor_aware_write``;通道规则「未锚定 → 随机态」,
-  语义域 = 容器权威版本 game_state/fields.md「开局初始值」节):人力
+  语义域 = 状态容器权威版本 game_state/fields.md「开局初始值」节):人力
   重组双臂(种子未落一次性标志位 → logic_rand / 置一次性标志位 → logic)、静默覆盖臂
   (未落一次性标志位零失配行落 logic_rand_outcome,置一次性标志位失配网生效)、回归臂
   (UPGRADE_ALL 零容器写 / 非板面条目零动作 / burst 桥 Field 发放);
@@ -76,7 +76,7 @@ _SELL_ALL = STRATEGY_EFFECTS['人力重组']
 
 
 def _seeded_gs() -> GameState:
-    """种子容器(经 game_state_of 缓存单例支每局全新创建,与生产局容器同构)。"""
+    """种子状态容器(经 game_state_of 缓存单例支每局全新创建,与生产局状态容器同构)。"""
     return game_state_of(StrategySession())
 
 
@@ -86,10 +86,10 @@ def _u(cid: str, star: int = 1, equips: list[str] | None = None) -> Unit:
 
 
 def test_sell_all_channel_dual_arm_by_anchor() -> None:
-    """人力重组双臂(通道规则「未锚定 → 随机态」):种子容器(未落一次性标志位)
+    """人力重组双臂(通道规则「未锚定 → 随机态」):种子状态容器(未落一次性标志位)
     SELL_ALL 清空写恰三行 source=logic_rand(未验证推算走随机态,首观察
     静默覆盖);置一次性标志位(测试专口直赋)后同路径 source=logic(确定面)。"""
-    # 臂 1:种子容器(未落一次性标志位)→ 清空写走随机态
+    # 臂 1:种子状态容器(未落一次性标志位)→ 清空写走随机态
     gs = _seeded_gs()
     assert gs.deployed.source == 'logic_rand', '前置:每局全新创建含种子初始值'
     seq_before = gs.write_seq
@@ -142,7 +142,7 @@ def test_sell_all_silent_override_unanchored_mismatch_after_anchor() -> None:
 def test_upgrade_all_and_other_bridges_unchanged() -> None:
     """回归臂:全员晋升(UPGRADE_ALL)零容器写不变(替换面随机,报告作
     负写端留证);非板面重写条目过桥零动作;burst 桥(免费刷新剩余次数,
-    2026-09-21 Field 化后 = 容器字段 write_logic)正常发放。"""
+    2026-09-21 Field 化后 = 状态容器字段 write_logic)正常发放。"""
     gs = _seeded_gs()
     seq_before = gs.write_seq
     report = apply_board_rewrite(gs, STRATEGY_EFFECTS['全员晋升'])
@@ -156,7 +156,7 @@ def test_upgrade_all_and_other_bridges_unchanged() -> None:
     assert apply_board_rewrite(gs, STRATEGY_EFFECTS['固定理财']) is None
     assert gs.write_seq == seq_before
     # burst 桥:免费刷新剩余次数 Field 登记(2026-09-21 Field 化:效果
-    # 账本 int 升格容器字段,桥 write_logic 落一行 Field 写)
+    # 账本 int 升格状态容器字段,桥 write_logic 落一行 Field 写)
     seq_before_burst = gs.write_seq
     apply_effect_burst_grant(gs, STRATEGY_EFFECTS['固定理财'])
     assert gs.free_refresh_left.value == 2, 'None 基 = 0 起算'
@@ -254,7 +254,7 @@ _POOL = ('符玄', '希儿')
 
 
 def _merge_contract_gs(bench_entries: list[Unit]) -> GameState:
-    """量子同频契约激活 + bench 按参组装(直构容器,观察种子)。"""
+    """量子同频契约激活 + bench 按参组装(直构状态容器,观察种子)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     slots: list[BenchSlot | None] = [BenchSlot(kind='unit', unit=u)
                                      for u in bench_entries]
@@ -401,7 +401,7 @@ _ENV_YINLANG = '特邀专家:银狼'
 
 
 def _expert_env_gs(bench_entries: list[Unit]) -> GameState:
-    """特邀专家:银狼局容器(bench 按参组装 + active_env 观察种子)。"""
+    """特邀专家:银狼局状态容器(bench 按参组装 + active_env 观察种子)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     slots: list[BenchSlot | None] = [BenchSlot(kind='unit', unit=u)
                                      for u in bench_entries]
@@ -561,7 +561,7 @@ def _salvage_gs(*, bench_entries: list[Unit] | None = None,
                 bench_unobserved: bool = False, card: bool = True,
                 unchosen: tuple[SupplyOption, ...] | None = _SALV_COLS,
                 equips_read: bool = True) -> GameState:
-    """打捞检查直构容器(bench/equips/持卡/未选集按参;bench_unobserved/
+    """打捞检查直构状态容器(bench/equips/持卡/未选集按参;bench_unobserved/
     equips_read=False = 域未观察形态构造;unchosen None = 无未选定案)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if not bench_unobserved:
@@ -686,7 +686,7 @@ def test_salvage_rand_channel_and_producer_attribution(monkeypatch) -> None:
     """rand 语义锁:live 形态发放写 = 随机态通道(bench/equips 全部打捞
     写行 source=logic_rand,观察覆盖差异预期内不触发失配网);producer
     归因断言 = 'CwScreenSupplyNode'(journal 行 actor,观察上报同写端
-    归属值,防缺省归因混淆)。捕获窗 = 种子容器建毕后挂 sink(发放写行
+    归属值,防缺省归因混淆)。捕获窗 = 种子状态容器建毕后挂 sink(发放写行
     独占窗,种子写行不入捕获)。"""
     gs = _salvage_gs()
     rows: list[dict] = []
@@ -860,7 +860,7 @@ def test_expiry_grant_leg_gains_three_simple_equips(monkeypatch) -> None:
 
 def test_expiry_grant_bridge_negative_and_rng_injection() -> None:
     """桥函数负向 + rng 注入:①无字段条目到期(躺平,payload 无
-    expiry_simple_equips → 鸭子 0)零写;②rng 注入形参同 seed 双容器发放
+    expiry_simple_equips → 鸭子 0)零写;②rng 注入形参同 seed 双状态容器发放
     序列逐位一致(可控源——断言按序列一致非具名,内容 = v0 假设)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     inv = gs.effects
@@ -872,7 +872,7 @@ def test_expiry_grant_bridge_negative_and_rng_injection() -> None:
     seq0 = gs.write_seq
     apply_effect_expiry_grants(gs, expired, frame='probe')
     assert gs.write_seq == seq0, '无字段条目到期零写(鸭子缺省 0)'
-    # rng 注入:同 seed 双容器序列一致
+    # rng 注入:同 seed 双状态容器序列一致
     runs = []
     for _ in range(2):
         g = _seeded_gs()

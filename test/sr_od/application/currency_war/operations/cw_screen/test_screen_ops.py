@@ -6,7 +6,7 @@
    判据面 = 迭代 2026-10-12-abolish-node-ordinal landing §3.3 + 设计
    §2.11 测试 7):键门 (位面, 轮) >= (2,5) 与旧 9 制序数门 (p-1)*9+r >= 14
    在边界值上逐值同判(含修饰局 (1,10) 形态),另两臂语义保持(负分量
-   缺席不置一次性标志位 / 容器节点读口未观察 fail-closed 不置一次性标志位);
+   缺席不置一次性标志位 / 状态容器节点读口未观察 fail-closed 不置一次性标志位);
 2. 选择伙伴选选流序(原 test_cw_partner_select_confirm_flow.py;事故
    机制单一源 = docs/game/screens/currency_war_choose_partner.md:旧
    「选中态 gate」全屏 OCR「已选择」恒误命中 → op 每轮只点置灰确认钮 →
@@ -56,7 +56,7 @@ _NEG_PNL = {'damage_base': -1, 'damage_unfinished_progress': None}
 
 def _make_op(test_context, monkeypatch) -> CwScreenBattleWait:
     """battle_wait 裸实例(先例 = test_env_grants._make_op;
-    ctx.cw_match 无 gs 属性 → 容器走 session 旁表兜底,与生产同取口
+    ctx.cw_match 无 gs 属性 → 状态容器走 session 旁表兜底,与生产同取口
     gs_of_ctx)。"""
     session = cw4_session()
     st = SettlementState(battle_ts=1234.0, run_start_ts=time.monotonic(),
@@ -90,7 +90,7 @@ def test_lock7_defeat_latch_gate_matches_old_t_gate(
 
 def test_lock7_latch_requires_neg_and_node(test_context, monkeypatch) -> None:
     """门另两臂语义保持:面板负分量缺席不置一次性标志位(序位过门也不置);
-    节点未观察(容器 node 读口 None)fail-closed 不置一次性标志位。"""
+    节点未观察(状态容器 node 读口 None)fail-closed 不置一次性标志位。"""
     op = _make_op(test_context, monkeypatch)
     gs = game_state_of(test_context.cw_match.session)
     gs.observe(gs.node, NodeKey(plane=2, round_num=5, kind='battle'),
@@ -127,7 +127,7 @@ def _make_watched_op(test_context, monkeypatch) -> CwScreenPartner:
     """真类 + 桩面装配:cw_match 桩(decide_partner 恒 idx=0;决策质量不在
     测试范围,守卫面测试 = test_screen_two_node_family 伙伴臂)、SIFT 立绘
     识别回落 label 名(跳过模板库加载)、模块内 time 不真睡。桩无 ``gs``
-    属性 → chosen 写端经 ``getattr(match, 'gs', None)`` 跳过(两个测试零容器
+    属性 → chosen 写端经 ``getattr(match, 'gs', None)`` 跳过(两个测试零状态容器
     断言不受影响)。"""
 
     class _WatchedPartner(WatchdogOperationMixin, CwScreenPartner):

@@ -42,7 +42,7 @@ _PB = 'cw-encounter-pick-test'
 # ==================== 构造器 ====================
 
 def _fresh_gs() -> GameState:
-    """独立容器(桩 session 宿主;弱引用表按宿主隔离,零跨测残留)。"""
+    """独立状态容器(桩 session 宿主;弱引用表按宿主隔离,零跨测残留)。"""
     return game_state_of(SimpleNamespace())
 
 
@@ -72,7 +72,7 @@ def _win_window(gs: GameState, new_killed: bool | None = True) -> None:
 
 
 def _set_left(gs: GameState, left: int) -> None:
-    """写遭遇刷新剩余次数(容器观察真值形态;不写 = None 未观察)。"""
+    """写遭遇刷新剩余次数(状态容器观察真值形态;不写 = None 未观察)。"""
     gs.write_logic(gs.encounter_refresh_left, left, produced_by=_PB, sig=_SIG)
 
 

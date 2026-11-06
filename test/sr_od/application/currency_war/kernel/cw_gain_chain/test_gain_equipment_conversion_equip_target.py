@@ -74,7 +74,7 @@ def _make_gs(*, bench: list[tuple[str, int]] | None = None,
 
 
 def _hold_card(gs: GameState, cards: list[str]) -> None:
-    """持卡直置(注册容器直写;同族多卡持卡态由 cards 列表承载)。"""
+    """持卡直置(注册状态容器直写;同族多卡持卡态由 cards 列表承载)。"""
     gs.write_logic(gs.active_strategies, cards, produced_by='test-seed',
                    evidence='t:card', sig=_LSIG)
 

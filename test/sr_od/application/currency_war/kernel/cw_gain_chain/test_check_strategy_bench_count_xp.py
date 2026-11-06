@@ -35,7 +35,7 @@ _SIG_LOGIC = ChannelSig(family='logic_action', actor='test-seed',
 
 def _gs(*, card: str | None = _CARD,
         bench: list[BenchSlot] | None = None) -> GameState:
-    """直构容器(card=None = 未持卡;'躺平' = 表外卡;bench 传 None =
+    """直构状态容器(card=None = 未持卡;'躺平' = 表外卡;bench 传 None =
     保持未观察供 None 防御支;传列表 = 按 9 槽 pad 成 BenchView)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if card is not None:

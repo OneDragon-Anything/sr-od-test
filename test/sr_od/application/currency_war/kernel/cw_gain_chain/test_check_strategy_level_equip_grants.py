@@ -3,7 +3,7 @@ check_strategy_level_equip_grants 直写本体)。
 
 测试面依据 = 迭代设计 designs/T-141-zuanshi-shangren.md §4 锁 2/3/4/5/6
 + 快照存续(实现批修正:达标态构造 = 直构 level=8 + xp 贴阈〔XP_TO_NEXT_
-LEVEL 单一源,8 级直构可得〕经 apply_node_xp 真经验通道跨 9,禁容器直置
+LEVEL 单一源,8 级直构可得〕经 apply_node_xp 真经验通道跨 9,禁状态容器直置
 达标态绕过经验通道——T-102 锁 2「禁经间接路径假绿」的等级版):
 - 跨级发放主链(锁 2):经 apply_node_xp 跨 9 → equips 追加财富宝钻恰
   一次 + 落一次性标志位 + 返回装备名,两写 evidence/sig/source 形态;
@@ -137,7 +137,7 @@ def test_prefers_silence_on_unobserved_then_self_heals() -> None:
 
 def test_state_semantics_hold_at_level_grants() -> None:
     """状态检查型语义(锁 6):先置 level=9 再持卡(拿卡时已达标)→
-    下一次检查即发放——等级 = 容器现值非事件流,拿卡时点无从回溯历史
+    下一次检查即发放——等级 = 状态容器现值非事件流,拿卡时点无从回溯历史
     跨越,禁实现批顺手改成严格跨越型而无锁(金支同判先例)。"""
     gs = _seeded_gs()
     _force_level(gs, 9, 0, 84)

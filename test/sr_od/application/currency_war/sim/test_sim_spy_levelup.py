@@ -104,7 +104,7 @@ def _feed_levelup(b: SimBackend, *, spy: bool):
     # 新抽载荷重放(状态副本分支流键 M22/spy-deal#k|M22/spy-rotation#k,k =
     # 后端按节点位执行序计数,首执行 = '#0';确定性判据 = 同 seed 同键序
     # 逐位一致)。必须在 declare_world 之前构建:
-    # sample_shop_deal 读容器剩余牌库派生(drawable_names),状态副本分支入席
+    # sample_shop_deal 读状态容器剩余牌库派生(drawable_names),状态副本分支入席
     # 会改牌库——后置重放不与真实抽牌同态,逐位一致判据失效。
     rotation_on = (str(b.gs.active_env.value or '') == '轮岗')
     replay = sample_shop_deal(

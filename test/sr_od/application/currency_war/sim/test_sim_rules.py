@@ -58,7 +58,7 @@ _OBS_SIG = ChannelSig(family='obs', actor='TestSigWriter')
 
 
 def _hp_gs(hp: int | None = None) -> GameState:
-    """空容器(可选 hp 观察写;战斗结算 HP 折算消费面用)。"""
+    """空状态容器(可选 hp 观察写;战斗结算 HP 折算消费面用)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if hp is not None:
         gs.observe(gs.hp, hp, sig=_OBS_SIG)
@@ -66,7 +66,7 @@ def _hp_gs(hp: int | None = None) -> GameState:
 
 
 def _income_gs(gold: int, strategies: list[str] | None = None) -> GameState:
-    """收入面容器(gold 必写;持卡策略按名观察)。"""
+    """收入面状态容器(gold 必写;持卡策略按名观察)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.observe(gs.gold, gold, sig=_OBS_SIG)
     if strategies:
@@ -132,7 +132,7 @@ def test_hp_outcome_loss_and_win_paths() -> None:
 
 
 def test_hp_floor_guarantee_once_then_game_over() -> None:
-    """M14:首次归零保底剩 1(容器保底位翻真);再次归零 → 局终。"""
+    """M14:首次归零保底剩 1(状态容器保底位翻真);再次归零 → 局终。"""
     gs = _hp_gs(40)
     first = BattleLike(won=False, hp_delta=-40)
     floor_now, dead = apply_hp_outcome(gs, first)

@@ -24,7 +24,7 @@
 - **路由清点**(CwLoop ``_route_clear_stale_payloads``):未识别轮清全部
   可清槽;属屏命中轮只清异属屏;shop 豁免永不清;已 None 跳过。
 
-纪律:零真实副作用(纯容器 + 桩面 + sim 后端装拆);缺陷台账缓冲前后
+纪律:零真实副作用(纯状态容器 + 桩面 + sim 后端装拆);缺陷台账缓冲前后
 双清防跨用例顺序依赖。
 """
 from __future__ import annotations
@@ -113,7 +113,7 @@ def _drain_defect_buffer():
 
 
 def _fresh_gs():
-    """独立容器(桩 session 宿主;弱引用表按宿主隔离,零跨测残留)。"""
+    """独立状态容器(桩 session 宿主;弱引用表按宿主隔离,零跨测残留)。"""
     return game_state_of(SimpleNamespace())
 
 
@@ -646,10 +646,10 @@ class TestPickReportsConsume:
 
 
 class TestSimPresentationFromPending:
-    """sim 呈现数据源 = 容器登记(逐 kind 呈现门/消费披露)。"""
+    """sim 呈现数据源 = 状态容器登记(逐 kind 呈现门/消费披露)。"""
 
     def test_megastar_and_planner_present_from_pending(self):
-        """megastar/planner:登记即呈现(megastar 附候选写容器——候选源
+        """megastar/planner:登记即呈现(megastar 附候选写状态容器——候选源
         = 场上盛会之星成员,种子经逻辑写判据自动登记)。"""
         b = _backend()
         try:
@@ -661,7 +661,7 @@ class TestSimPresentationFromPending:
                        for p in b.gs.screen_changes.pending), '判据自动登记'
             b._present_pending_overlay()
             assert b.screen_identity() == '货币战争-盛会之星'
-            assert b.gs.megastar_opts.value, '候选写容器槽(呈现写点)'
+            assert b.gs.megastar_opts.value, '候选写状态容器槽(呈现写点)'
             consume_screen_change(b.gs, 'megastar')
             b._dismiss_modal()
             register_screen_change(
@@ -739,7 +739,7 @@ class TestSimPresentationFromPending:
             uninstall_backend()
 
     def test_reconcile_exempt_reads_pending(self):
-        """对账豁免 overlay_pending 改读容器登记(队列呈现面退役)。"""
+        """对账豁免 overlay_pending 改读状态容器登记(队列呈现面退役)。"""
         b = _backend()
         try:
             assert b._reconcile_exempt_reason() != 'overlay_pending'

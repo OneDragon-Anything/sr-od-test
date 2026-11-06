@@ -98,7 +98,7 @@ def sim_installed():
 
 
 def _gs(*, card: str | None = _CARD) -> GameState:
-    """直构容器(card=None = 未持卡;表外卡同参;bench 种空席——直构域
+    """直构状态容器(card=None = 未持卡;表外卡同参;bench 种空席——直构域
     bench 未观察 = 链拒落零写,本腿落席面断言需可写席)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if card is not None:

@@ -1,6 +1,6 @@
 """好运来 sim 状态副本里的值链测试(镜像 src 主断言对象 = 获得链 gain_equipment
 顶段转换拦截经 sim 后端全链;拦截在 kernel 原语,sim 零新增接入调用——sim
-容器现值 = 状态副本里的值,live 零写观察覆盖为实机(live)和模拟器(sim)两边同真值的另一端口径)。
+状态容器现值 = 状态副本里的值,live 零写观察覆盖为实机(live)和模拟器(sim)两边同真值的另一端口径)。
 
 测试面依据 = 迭代设计 designs/T-248-haoyunlai.md §4 锁 7(合成域休眠
 申报锁):
@@ -72,7 +72,7 @@ def test_held_card_box_chain_dormant_zero_conversion(
         _isolate_defect_buffer) -> None:
     """持卡箱链休眠锁(设计 §4 锁 7):持本卡(sim 直置)+ 种 1 箱 →
     开箱选定简易件 → **零转换**照常入栏(候选全简易不命中进阶谓词,
-    休眠正确路径)、零箱落位、零令牌;开箱腾席 = 观察域容器零写,sim
+    休眠正确路径)、零箱落位、零令牌;开箱腾席 = 观察域状态容器零写,sim
     侧开掉的箱槽不移除(断言用箱数不变量)。前提守卫:箱候选池现值全
     简易——若未来箱池混入进阶件,持本卡局开箱选中进阶件将自动入转换
     (原语顶段单咽喉,行为正确、本锁前提失效须随批改,勿盲改断言)。"""
@@ -94,7 +94,7 @@ def test_held_card_box_chain_dormant_zero_conversion(
         cw_sim_ports.declare_world(box_out.world_decl)
         assert b.screen_identity() == SCREEN_BOX, '箱画面呈现'
         cands = gs.box_card_names.value
-        assert cands is not None and len(cands) == 4, '候选写容器'
+        assert cands is not None and len(cands) == 4, '候选写状态容器'
         assert all(c in equips_by_category('简易') for c in cands), \
             f'箱候选须全简易(休眠前提): {cands!r}'
         b._handle_click_source(SCREEN_BOX, '装备卡-1')

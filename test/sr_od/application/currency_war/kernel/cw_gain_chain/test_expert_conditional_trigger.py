@@ -24,7 +24,7 @@ _ENV = '特邀专家:银狼'
 
 def _gs(*, active_env: str | None = _ENV,
         unlocked: tuple[str, ...] = ()) -> GameState:
-    """直构容器(active_env 经 logic 写 = 注册链同形;None = 不写未选择)。"""
+    """直构状态容器(active_env 经 logic 写 = 注册链同形;None = 不写未选择)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if active_env is not None:
         gs.write_logic(gs.active_env, active_env, produced_by='TestWriter',

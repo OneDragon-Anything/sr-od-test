@@ -3,7 +3,7 @@
 
 测试面依据 = 迭代设计 designs/T-313-fendou-xieyi.md §4 锁 2(REVIEW
 -T313 无需用户决定 6/6;直构形态先例 = 同目录 test_check_strategy_boss_battle_
-grants.py 的容器直置):
+grants.py 的状态容器直置):
 - 纯函数锁:无卡 0 / 持卡 50 / 多卡累加(持无回血腿的他卡不合量误加)
   / 表外卡 miss-safe(get_strategy 归一通道 miss = None 零贡献不炸);
 - 归一通道锁:本卡规范名无分隔符形变支,归一面 = get_strategy 入口

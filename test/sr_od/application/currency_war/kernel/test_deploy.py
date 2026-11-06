@@ -3,10 +3,10 @@
 被测机制(按节;设计出处见各节 docstring):
 - **部署围栏与占槽物品防线**:占位件(kind ∈ tome/bookcard/supply_box)
   恒 held、拒因 ``item_slot``,先于一切围栏/cap 判定被剔除(benchchar-
-  retirement P4 容器槽位 kind 口);
+  retirement P4 状态容器槽位 kind 口);
 - **板满门三个测试**(事故 match_g_20260918_023823,定论见
   .debug/temp/incidents/20260918-reconcile/rootcause-reopen.md 案一):
-  部署输入改容器现读 + 显式板满门,拒因 ``deploy_cap_full`` 帧级去重;
+  部署输入改状态容器现读 + 显式板满门,拒因 ``deploy_cap_full`` 帧级去重;
 - **落位策略三级排路由**:comp 站位覆盖 > 注册表派生 > back 兜底;
   后排槽位上限 = back_layout 现值(P2 遗留分歧消除);
 - **必需件语义**(判据必要条件支配论证;sim n1000 s91700 两失败局):

@@ -1,6 +1,6 @@
 """自由市场 sim 状态副本里的值链测试(镜像 src 主断言对象 = 获得链 gain_equipment
 顶段转换拦截经 sim 后端全链;拦截在 kernel 原语,sim 零新增接入调用——sim
-容器现值 = 状态副本里的值,live 零写观察覆盖为实机(live)和模拟器(sim)两边同真值的另一端口径)。
+状态容器现值 = 状态副本里的值,live 零写观察覆盖为实机(live)和模拟器(sim)两边同真值的另一端口径)。
 
 测试面依据 = 迭代设计 designs/T-143-ziyou-shichang.md §4 锁 7/锁 8 +
 REVIEW-T143 §4③ 裁决点 3 默认案(转换辖域 = 全域字面含开箱所得,机械
@@ -8,7 +8,7 @@ REVIEW-T143 §4③ 裁决点 3 默认案(转换辖域 = 全域字面含开箱所
 - 锁 7 选卡链:offer 注入自由市场 → pick → bench 含箱 ∧ equips 零新增
   (效果条目2 采样名被转换消费,净得 1 箱);
 - 锁 8 开箱环路:持卡 + 开箱选定简易件 → 被选件不入栏 + 转换箱落位 +1
-  (开箱腾席 = 观察域容器零写,sim 侧开掉的箱槽不移除;live 真值 = 净
+  (开箱腾席 = 观察域状态容器零写,sim 侧开掉的箱槽不移除;live 真值 = 净
   箱数守恒「开一箱转换回一箱」,装备零净得两侧同真)。
 
 直构形态先例 = 同目录 test_strategy_conditional_grant_sim_chain.py(_backend
@@ -106,7 +106,7 @@ def test_box_open_loop_intercepts_chosen_equip(
         _isolate_defect_buffer) -> None:
     """sim 开箱环路(锁 8,裁决点 3 默认案机械回归):持卡(sim 直置,
     T-102 sim 链先例形态)+ 种 1 箱 → 开箱选定简易件 → 被选件不入栏 +
-    转换箱落位恰 +1。开箱腾席 = 观察域容器零写(zero_writes 权威版本申报),
+    转换箱落位恰 +1。开箱腾席 = 观察域状态容器零写(zero_writes 权威版本申报),
     sim 侧开掉的箱槽不被移除——断言用 +1 非「箱数守恒」;live 真值 =
     净箱数守恒(开一箱转换回一箱),装备零净得两侧同真。"""
     b: SimBackend = _backend(7)
@@ -125,7 +125,7 @@ def test_box_open_loop_intercepts_chosen_equip(
         cw_sim_ports.declare_world(box_out.world_decl)
         assert b.screen_identity() == SCREEN_BOX, '箱画面呈现'
         cands = gs.box_card_names.value
-        assert cands is not None and len(cands) == 4, '候选写容器'
+        assert cands is not None and len(cands) == 4, '候选写状态容器'
         # 前提守卫:箱候选池现值全简易(裁决点 3 全域辖域的前提;若未来
         # 箱池混入非简易件,转换不命中属卡面字面正确行为,本锁前提失效
         # 须随批改,勿盲改断言)

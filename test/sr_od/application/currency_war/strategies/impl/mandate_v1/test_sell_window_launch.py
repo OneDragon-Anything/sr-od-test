@@ -25,11 +25,11 @@
 阻断三个测试(funding e2e/M4)参数化并一;投影正证+红证并一;
 资格合取与 fallback 发射独立保留。
 
-并段(**轮内新鲜度账容器宿主 + 商店访问账本死字段退役**,原
+并段(**轮内新鲜度账状态容器宿主 + 商店访问账本死字段退役**,原
 test_cw_round_fresh_buys_host 并入;同 visit 卖回防线第二载体,逐字段
-处置表 #18/#19):轮内新鲜度账宿主 = 容器 Field ``GameState.round_
+处置表 #18/#19):轮内新鲜度账宿主 = 状态容器 Field ``GameState.round_
 fresh_buys``(record_fresh_buy 写 → fresh_buys_of/fresh_buys_sell_face
-读同一容器,写读唯一入口函数 sim/live 同口;相位失配 = 跨轮整体作废、读取零销
+读同一状态容器,写读唯一入口函数 sim/live 同口;相位失配 = 跨轮整体作废、读取零销
 账;值形状 names = list);商店访问账本的四死基座字段(期望态残留,
 全为写端无读端)不再在场——对象面运行时检查,非源码扫描。(原卖出
 落地测试随商店域 SellBenchOp 退役移除:动作 op 重组批③,备战域卖出由
@@ -95,7 +95,7 @@ _STALL = '垫件P'
 
 
 def _bc(name: str, star: int = 1) -> BenchSlot:
-    """容器占席条目(直构面)。"""
+    """状态容器占席条目(直构面)。"""
     return BenchSlot(kind='unit', unit=Unit(char_id=name, star=star))
 
 
@@ -335,7 +335,7 @@ class TestW1SameVisitBan:
             'W1:press 登记活跃件被同轮筹资卖出 = 同 visit 卖回未闭死'
         assert isinstance(act, CwActionCloseShopParam)
         # 红证:无窗口登记的新会话,燃料件穿过物理谓词入卖出槽集
-        # (P4 容器形:直接调用面 = 容器占席条目)
+        # (P4 状态容器形:直接调用面 = 状态容器占席条目)
         bench = [_bc(_FUEL)]
         slots, key = crit_sell.funding_support_sell(
             1, 3, bench, ('目标件',), state=_bridge(**_state(1, [_bc(_FUEL)])))
@@ -348,7 +348,7 @@ class TestW1SameVisitBan:
         (循环防线装配为空)该件恰入候选。"""
         sess = _sess()
         sell_gate.register_launch(sess, _FUEL, cause='press', round_num=3)
-        bench = [_bc(_FUEL)]   # P4 容器形直构面
+        bench = [_bc(_FUEL)]   # P4 状态容器形直构面
         st = _state(30, [_bc(_FUEL)])
         window = sell_gate.sell_exclusions(sess, ('目标件',),
                                            channel='m4_fuel', current_round=3)
@@ -416,14 +416,14 @@ class TestProjectionFullFace:
 
 
 # ============================================================
-# 并段:轮内新鲜度账容器宿主 + 商店访问账本死字段退役(原
+# 并段:轮内新鲜度账状态容器宿主 + 商店访问账本死字段退役(原
 # test_cw_round_fresh_buys_host 并入;同 visit 卖回防线第二载体)
 # ============================================================
 
 
 def _feed_phase(session: StrategySession, plane: int,
                 round_num: int) -> GameState:
-    """容器节点播种(与 _cw_helpers 种子节点补写同式;kind 空串 =
+    """状态容器节点播种(与 _cw_helpers 种子节点补写同式;kind 空串 =
     帧未识别的忠实镜像,相位读口 plane_of/round_num_of 只读键维)。"""
     gs = game_state_of(session)
     gs.observe(gs.node, NodeKey(plane=plane, round_num=round_num, kind=''),
@@ -435,17 +435,17 @@ def _feed_phase(session: StrategySession, plane: int,
 
 
 def test_round_fresh_buys_host_switch_same_container() -> None:
-    """宿主切换同口:record 写入容器 Field,读端自同容器解析(相位内)。"""
+    """宿主切换同口:record 写入状态容器 Field,读端自同状态容器解析(相位内)。"""
     session = StrategySession()
     gs = _feed_phase(session, plane=2, round_num=3)
     record_fresh_buy(session, gs, '三月七')
-    # 写端落容器 Field(值形状:phase 元组对 + names list,非 set)
+    # 写端落状态容器 Field(值形状:phase 元组对 + names list,非 set)
     assert gs.round_fresh_buys.value == {'phase': (2, 3),
                                          'names': ['三月七']}
     # 同批发射逐名入集(防批量漏记语义保留)
     record_fresh_buy(session, gs, '丹恒')
     assert gs.round_fresh_buys.value['names'] == ['三月七', '丹恒']
-    # 读端 = 同容器(同口;换出守卫视角)
+    # 读端 = 同状态容器(同口;换出守卫视角)
     assert fresh_buys_of(session, gs) == frozenset({'三月七', '丹恒'})
 
 
@@ -465,7 +465,7 @@ def test_round_fresh_buys_phase_mismatch_invalidates_whole_record() -> None:
 
 
 def test_fresh_buys_sell_face_failclosed_and_phase_gate() -> None:
-    """L1 卖侧一次性标志位读端(容器宿主):节点未定帧 = fail-closed 排除当前记录
+    """L1 卖侧一次性标志位读端(状态容器宿主):节点未定帧 = fail-closed 排除当前记录
     全集(方向安全,上界单轮);节点已定帧相位失配 = 整体作废。"""
     session = StrategySession()
     gs = game_state_of(session)   # node 未定:相位键 = 缺省 (1, 1)

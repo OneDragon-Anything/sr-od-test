@@ -12,7 +12,7 @@ docs/develop/sr_od/application/currency_war/changes/
   ——恒按已发出簿记(reason='')。
 
 桩宿主直驱(零真实 IO);回执断言走真实 kernel 写路径
-(``note_action_receipt``),仅 ctx→容器供给口打桩(``game_state_from_ctx``,
+(``note_action_receipt``),仅 ctx→状态容器供给口打桩(``game_state_from_ctx``,
 kernel 口「无局测试桩静默 None」的正式供给点)。
 """
 from __future__ import annotations
@@ -116,7 +116,7 @@ def sim_installed():
 
 
 def _gs_with_supply(monkeypatch) -> GameState:
-    """空白容器 + 供给口打桩(动作回执走真实 kernel 写路径)。"""
+    """空白状态容器 + 供给口打桩(动作回执走真实 kernel 写路径)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     monkeypatch.setattr(gs_mod, 'game_state_from_ctx', lambda ctx: gs)
     return gs

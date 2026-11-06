@@ -73,11 +73,11 @@ def _frame(*, level: int, gold: int = 30, plane: int = 2,
            front_row: tuple = (), hp: int = 60, locked: bool = True,
            actives: tuple = (), deploy_cap: int | None = None,
            round_num: int = 2, node: str = '战斗') -> tuple:
-    """判据帧构造(单容器直构 + 锁定键/窗口谓词按 3.1 口径落位)。
+    """判据帧构造(单状态容器直构 + 锁定键/窗口谓词按 3.1 口径落位)。
 
     ``hist`` = node_hist_pos 直赋值(None = 不赋——P1 未置位形态经
-    (1, n) 表达);返回 (gs, session)——session = gs 同容器实例
-    (生产链 emit 的 session 形参即容器,state_of 动态挂载同宿主)。
+    (1, n) 表达);返回 (gs, session)——session = gs 同状态容器实例
+    (生产链 emit 的 session 形参即状态容器,state_of 动态挂载同宿主)。
     ``round_num``/``node`` = 节点轴覆盖(缺省战斗 r2;位面末 boss 帧等
     判据面经此构帧)。
     """

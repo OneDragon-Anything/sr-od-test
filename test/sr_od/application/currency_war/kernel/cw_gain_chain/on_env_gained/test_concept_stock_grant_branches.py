@@ -84,7 +84,7 @@ def test_langshou_concept_stock_faction_char_grant_branch(
     pool 阵营 spec = 规格域 ∩ 当时牌库,未解锁专家貊泽剔除——注册表派生
     不手抄)且 ∉ EXPERT_CHARS(种子落点选点 = 牌库时点过滤后池现算,专家
     不入池,过滤语义钉死);效果串 ``env_gift_random:<名>@1star``(星级 =
-    spec.star 先验);锚定容器 + 采样子链 rand=True → 写照常生效且不进
+    spec.star 先验);锚定状态容器 + 采样子链 rand=True → 写照常生效且不进
     失配网(随机态语义,首观察静默覆盖)。期望名从同 seed 现算(单一来源,
     不手抄)。"""
     from sr_od.application.currency_war.data.cw_chars import EXPERT_CHARS
@@ -138,7 +138,7 @@ def test_zhouzhibanshen_concept_stock_faction_char_grant_branch(
     rng 直构 → bench 追加 1 张 1★ 且名 ∈ grant_char_pool 现算集(本域
     6 名 is_expert 全空 = 全员非专家,牌库时点过滤恒等零收窄——注册表
     派生不手抄,无 T-56 型种子避让约束);效果串 ``env_gift_random:<名>
-    @1star``(星级 = spec.star 先验);锚定容器 + 采样子链 rand=True →
+    @1star``(星级 = spec.star 先验);锚定状态容器 + 采样子链 rand=True →
     写照常生效且不进失配网(随机态语义,首观察静默覆盖)。期望名从同
     seed 现算(单一来源,不手抄)。"""
     from sr_od.application.currency_war.kernel.cw_pool import grant_char_pool
@@ -193,7 +193,7 @@ def test_yezhibanshen_concept_stock_faction_char_grant_branch(
     rng 直构 → bench 追加 1 张 1★ 且名 ∈ grant_char_pool 现算集(本域
     7 名 is_expert 全空 = 全员非专家,牌库时点过滤恒等零收窄——注册表
     派生不手抄,无 T-56 型种子避让约束);效果串 ``env_gift_random:<名>
-    @1star``(星级 = spec.star 先验);锚定容器 + 采样子链 rand=True →
+    @1star``(星级 = spec.star 先验);锚定状态容器 + 采样子链 rand=True →
     写照常生效且不进失配网(随机态语义,首观察静默覆盖)。期望名从同
     seed 现算(单一来源,不手抄)。"""
     from sr_od.application.currency_war.kernel.cw_pool import grant_char_pool
@@ -252,7 +252,7 @@ def test_jipo_concept_stock_faction_char_grant_branch(
     CHARS(种子落点选点 = 牌库时点过滤后池现算,专家不入池,过滤语义
     钉死;族惯例 seed 20261027 落点已实现批现算验证落非专家成员);
     效果串 ``env_gift_random:<名>@1star``(星级 = spec.star 先验);锚定
-    容器 + 采样子链 rand=True → 写照常生效且不进失配网(随机态语义,
+    状态容器 + 采样子链 rand=True → 写照常生效且不进失配网(随机态语义,
     首观察静默覆盖)。期望名从同 seed 现算(单一来源,不手抄)。"""
     from sr_od.application.currency_war.data.cw_chars import EXPERT_CHARS
     from sr_od.application.currency_war.kernel.cw_pool import grant_char_pool
@@ -309,7 +309,7 @@ def test_qungong_concept_stock_faction_char_grant_branch(
     7 名 is_expert 全空 = 全员非专家,牌库时点过滤恒等零收窄——注册表
     派生不手抄,无 T-56 型种子避让约束;族惯例 seed 20261027 落点已实现
     批现算验证 ∈ 域,落点翡翠 = 域独占成员);效果串 ``env_gift_random:
-    <名>@1star``(星级 = spec.star 先验);锚定容器 + 采样子链 rand=True →
+    <名>@1star``(星级 = spec.star 先验);锚定状态容器 + 采样子链 rand=True →
     写照常生效且不进失配网(随机态语义,首观察静默覆盖)。期望名从同
     seed 现算(单一来源,不手抄)。"""
     from sr_od.application.currency_war.kernel.cw_pool import grant_char_pool
@@ -368,7 +368,7 @@ def test_jianyi_concept_stock_faction_char_grant_branch(
     CHARS(种子落点选点 = 牌库时点过滤后池现算,专家不入池,过滤语义
     钉死;族惯例 seed 20261027 落点已实现批现算验证落非专家成员);
     效果串 ``env_gift_random:<名>@1star``(星级 = spec.star 先验);锚定
-    容器 + 采样子链 rand=True → 写照常生效且不进失配网(随机态语义,
+    状态容器 + 采样子链 rand=True → 写照常生效且不进失配网(随机态语义,
     首观察静默覆盖)。期望名从同 seed 现算(单一来源,不手抄)。"""
     from sr_od.application.currency_war.data.cw_chars import EXPERT_CHARS
     from sr_od.application.currency_war.kernel.cw_pool import grant_char_pool
@@ -428,7 +428,7 @@ def test_zhanjidian_concept_stock_faction_char_grant_branch(
     钉死;族惯例 seed 20261027 落点已实现批现算验证落非专家成员);
     独立单位成员 Archer 照发在候选池内〔economy.md:94 族级定论点名
     战技点(Archer)〕;效果串 ``env_gift_random:<名>@1star``(星级 =
-    spec.star 先验);锚定容器 + 采样子链 rand=True → 写照常生效且不进
+    spec.star 先验);锚定状态容器 + 采样子链 rand=True → 写照常生效且不进
     失配网(随机态语义,首观察静默覆盖)。期望名从同 seed 现算(单一来源,
     不手抄)。"""
     from sr_od.application.currency_war.data.cw_chars import EXPERT_CHARS

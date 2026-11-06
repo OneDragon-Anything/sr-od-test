@@ -47,7 +47,7 @@ _THIS_FRAME = (SupplyOption(idx=0, char='三月七', equip='垃圾袋',
 def _salvage_gs(*, card: bool = True,
                 unchosen: tuple[SupplyOption, ...] | None = _UNCHOSEN
                 ) -> GameState:
-    """触发锁直构容器(持卡 + 上一阶段未选集快照;bench/equips 已观察)。"""
+    """触发锁直构状态容器(持卡 + 上一阶段未选集快照;bench/equips 已观察)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         BenchSlot,
         BenchView,
@@ -94,7 +94,7 @@ def test_first_success_frame_grants_from_prior_snapshot() -> None:
         f'发放物 = 快照列内容(非本帧 options): {bench}'
     assert gs.equips.value == ['折叠小刀'], '同列装备随发'
     assert gs.unchosen_supply.value is None, '发放后消费即清'
-    assert gs.supply.value is not None, '本帧 options 照常落容器(观察面)'
+    assert gs.supply.value is not None, '本帧 options 照常落状态容器(观察面)'
 
 
 def test_same_frame_repeat_zero_regrant() -> None:

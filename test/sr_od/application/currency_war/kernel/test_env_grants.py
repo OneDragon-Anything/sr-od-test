@@ -163,7 +163,7 @@ def test_condition_matrix_short_circuits(
 
 
 def test_done_none_treated_as_empty(monkeypatch: pytest.MonkeyPatch) -> None:
-    """done 域 None(从未写形态)→ 视为空防御照发(直构容器域未写,
+    """done 域 None(从未写形态)→ 视为空防御照发(直构状态容器域未写,
     守卫 membership 判定不因 None 崩/不误判已发)。"""
     gs = _make_gs(env=_ENV, equips=[])   # env_grants_done 未写 = None
     assert gs.env_grants_done.value is None
@@ -380,13 +380,13 @@ def _make_op(test_context, monkeypatch,
 
 
 def _seed_env_and_inventory(gs) -> None:
-    """深井局容器种子(观察写入口,与识别器同渠道):环境 + 库存一件。"""
+    """深井局状态容器种子(观察写入口,与识别器同渠道):环境 + 库存一件。"""
     gs.observe(gs.active_env, _ENV, sig=_LIVE_OBS_SIG)
     gs.observe(gs.equips, ['永动机'], sig=_LIVE_OBS_SIG)
 
 
 def _live_record_writes(gs, monkeypatch) -> list[tuple[str, str, ChannelSig]]:
-    """包装容器三写入口记录 (通道, 字段名, sig) 写序(次序断言面;
+    """包装状态容器三写入口记录 (通道, 字段名, sig) 写序(次序断言面;
     先例 = 本文件 _record_writes,扩 observe 通道)。"""
     writes: list[tuple[str, str, ChannelSig]] = []
 
@@ -524,7 +524,7 @@ def _r_make_gs(*, env: str | None = None,
                gold: int | None = None,
                equips: list[str] | None = None,
                done: tuple[tuple[str, str], ...] | None = None) -> GameState:
-    """刷新发放测试容器(观察面按参组装,None = 保持未写形态;登记域经
+    """刷新发放测试状态容器(观察面按参组装,None = 保持未写形态;登记域经
     logic 直写播种)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if env is not None:
@@ -606,7 +606,7 @@ def test_refresh_condition_matrix_short_circuits(
 
 
 def test_refresh_done_none_treated_as_empty(monkeypatch: pytest.MonkeyPatch) -> None:
-    """done 域 None(从未写形态)→ 视为空防御照发(直构容器域未写,
+    """done 域 None(从未写形态)→ 视为空防御照发(直构状态容器域未写,
     守卫 membership 判定不因 None 崩/不误判已发)。"""
     gs = _r_make_gs(env=_R_ENV, gold=100, equips=[])
     _count_refreshes(gs, 20)
@@ -734,7 +734,7 @@ def test_exactly_once_in_21_refresh_loop(
 def test_report_wiring_grants_on_threshold() -> None:
     """接入调用存在性:上报函数尾部触发检查在已登记环境达阈时发放落地
     (集成 1 条;矩阵断言归 kernel 级,不在此层重复)。窗口内 = 刷费
-    扣金分支(容器直读,T-21 分支 3:免费未观察保守按付费,基价 2)+ 发放
+    扣金分支(状态容器直读,T-21 分支 3:免费未观察保守按付费,基价 2)+ 发放
     三笔;level 不写 = 随机态采样分支跳写。"""
     gs = _r_make_gs(env=_R_ENV, gold=100, equips=['永动机'])
     _count_refreshes(gs, 20)
@@ -744,7 +744,7 @@ def test_report_wiring_grants_on_threshold() -> None:
 
     assert outcome.applied is True
     assert gs.gold.value == 128, \
-        '第 21 刷扣基价 2(容器直读)+ 发放分支金 +30 落地(100−2+30)'
+        '第 21 刷扣基价 2(状态容器直读)+ 发放分支金 +30 落地(100−2+30)'
     assert gs.equips.value == ['永动机', _R_EQUIP], '发放分支装备尾追落地'
     assert gs.env_grants_done.value == ((_R_ENV, REFRESH_THRESHOLD_KEY),), \
         '发放分支 done 封账落地'
@@ -757,7 +757,7 @@ _L_ENV = '长线利好'
 
 
 def _l_make_gs(*, gold: int | None = None) -> GameState:
-    """长线利好测试容器(金-only 卡:equips 恒保持未观察形态——
+    """长线利好测试状态容器(金-only 卡:equips 恒保持未观察形态——
     登记装备入账分支 None,发放路径不应有任何 equips 承载要求)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.observe(gs.active_env, _L_ENV, sig=_R_SIG_OBS)
@@ -862,7 +862,7 @@ def test_paid_grant_gold_unobserved_withhold_then_retry(
 def test_report_wiring_paid_grant_price_base_at_threshold() -> None:
     """接入调用存在性 + 30 次边界价基(T-21 锁 6/锁 11 前半):第 30 次付费
     刷新动作窗内,上报函数尾部触发检查发放落地;当窗刷费扣旧价 2
-    (付完才满 30,容器价基假设 desc 直读)+ 发放 +20 = 净 +18。"""
+    (付完才满 30,状态容器价基假设 desc 直读)+ 发放 +20 = 净 +18。"""
     gs = _l_make_gs(gold=100)
     gs.observe(gs.shop_refresh_cost, 2, sig=_R_SIG_OBS)
     _count_refreshes(gs, 29, free=False)

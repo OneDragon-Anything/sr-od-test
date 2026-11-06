@@ -25,7 +25,7 @@ test_strategy_boss_battle_grant_sim_chain.py):
   贝洛伯格/护盾双双跌回 1 人不激活)。布洛妮娅系选边型双羁绊角色直构
   引入选边分支,避开(独立计入口径由其余 6 名覆盖)。**直构双源同喂
   义务**:board_by_row 身份聚合只算 factions+flows 不含 independent
-  (cw_board_by_row._trait_tags 口径),独立羁绊计数只有 board 容器
+  (cw_board_by_row._trait_tags 口径),独立羁绊计数只有 board 状态容器
   (左面板直读口径)可承载——直构须 deployed 注入 + board 直写两源
   同值,单喂 deployed 则独立 6 名全漏计(激活 = 3 误负控)。
 - 驱动形态 = 出战动作触发结算(2026-10-29 流程模型);引擎驱动助手
@@ -73,7 +73,7 @@ _TRANSIT_SCREENS = (SCREEN_SETTLE, _PLANE_TRANSITION, '货币战争-投资策略
                     '货币战争-BOSS简报', '货币战争-盛会之星',
                     '货币战争-银狼升星', '货币战争-商店')
 
-#: 板面直构双源(board 容器 = 左面板口径含独立羁绊计数——board_by_row
+#: 板面直构双源(board 状态容器 = 左面板口径含独立羁绊计数——board_by_row
 #: 身份聚合只算 factions+flows 不含 independent,独立行只有左面板可读,
 #: 双源 max 融合下两源须同喂;deployed 注入 = 身份口径)。full = 9 激活
 #: ≥ 8;short(去杰帕德:贝洛伯格/护盾跌回 1 人)= 7 激活负控。
@@ -122,15 +122,15 @@ def _prep_backend(seed: int) -> SimBackend:
 
 
 def _hold_card(gs, *, card: str = _CARD) -> None:
-    """持卡直置(注册容器直写 = 持卡事实单一源;不经 pick 链)。"""
+    """持卡直置(注册状态容器直写 = 持卡事实单一源;不经 pick 链)。"""
     gs.write_logic(gs.active_strategies, [card],
                    produced_by='test-seed', evidence='t:card', sig=_SIG)
 
 
 def _inject_bond_board(gs, *, short: bool) -> None:
-    """羁绊板直构(双源同喂:deployed 行域注入 = 身份口径 + board 容器
+    """羁绊板直构(双源同喂:deployed 行域注入 = 身份口径 + board 状态容器
     直写 = 左面板口径——board_by_row 身份聚合只算 factions+flows 不含
-    independent,独立羁绊计数只有 board 容器可承载,双源 max 融合下
+    independent,独立羁绊计数只有 board 状态容器可承载,双源 max 融合下
     直构须两源同值,与实机「board = 左面板 OCR 真值」同构)。"""
     front = [Unit(char_id=n, star=1) for n, row in _BOND_BOARD_FULL
              if row == 'front']

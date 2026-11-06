@@ -9,7 +9,7 @@
 2. **执行端口接入调用**(迭代 2026-10-12-prep-shop-workflow-redesign 3.5,
    纯执行层零策略判据):商店域发射 SellBench/LevelUp 可执行,执行参数
    直达机械层(拖拽两端按商店画面档解析/买经验整批连点),发出即记账 +
-   容器上报对账一致,守卫链照常(名-槽不一致响亮暴露)。
+   状态容器上报对账一致,守卫链照常(名-槽不一致响亮暴露)。
 3. **关店机械口 payload 清场**(T-40 并入面;病理 run_20260918_063249
    停局链:上轮买后 payload 跨轮残留 → 下轮开店帧实读失配安灯停局):
    关店两出口(点击已发/幂等已关)同清 payload;重开重洗采新对照;当轮
@@ -135,7 +135,7 @@ class _Ctrl:
 
 def _shop_host(monkeypatch: pytest.MonkeyPatch, strategy) -> tuple:
     """两 node 形态测试共用离线宿主:入口读/决策帧/点位锚定/关店执行位
-    点击全桩化,容器在屏 payload 槽1 = 花火。返回 (op, match, gs,
+    点击全桩化,状态容器在屏 payload 槽1 = 花火。返回 (op, match, gs,
     读数计数, 决策帧 tag 表, 关店点击记录, 商店动作回执 op 名表)。"""
     from test.sr_od.application.currency_war._cw_helpers import cw4_gs
 
@@ -415,7 +415,7 @@ def _exec_port_host(monkeypatch: pytest.MonkeyPatch, strategy,
 
 def test_shop_sell_bench_executes_via_port(monkeypatch):
     """商店域发射 CwActionSellBenchParam:端口连通执行落地——拖拽两端
-    按商店画面档解析(screen_name 绑定),容器槽位置空,访问账计数,
+    按商店画面档解析(screen_name 绑定),状态容器槽位置空,访问账计数,
     非终结 round_wait 续循环。"""
     from test.sr_od.application.currency_war._cw_helpers import cw4_bc
 
@@ -439,7 +439,7 @@ def test_shop_sell_bench_executes_via_port(monkeypatch):
         '出售区坐标按商店画面档解析'
     assert op.ledger.total_sell == 1, '访问账卖出计数(发出即记账)'
     _slots = gs.bench.value.slots
-    assert _slots[0].kind == 'empty', '容器上报对账:卖出槽位置空'
+    assert _slots[0].kind == 'empty', '状态容器上报对账:卖出槽位置空'
     assert 'CwActionSellBenchParam' in receipt_ops, '商店动作回执簿已登记'
 
     assert op.act().is_success, '后续关店终结照常'
@@ -483,7 +483,7 @@ def _payload(names: list[str]) -> ShopPayload:
 
 
 class _CloseFakeCtx:
-    """动作 op 构造所需最小 ctx 面(cw_match = 容器 session 宿主)。"""
+    """动作 op 构造所需最小 ctx 面(cw_match = 状态容器 session 宿主)。"""
 
     def __init__(self, session: StrategySession) -> None:
         self.cw_match = SimpleNamespace(session=session)
@@ -504,7 +504,7 @@ def _close_op(session: StrategySession, click_found: bool,
 
 
 def _session_with_shop(names: list[str], gold: int | None = 30):
-    """带在屏 payload 的容器 session(payload/gold 经 logic 直写喂入)。"""
+    """带在屏 payload 的状态容器 session(payload/gold 经 logic 直写喂入)。"""
     session = StrategySession()
     gs = game_state_of(session)
     gs.write_logic(gs.shop, _payload(names), produced_by='test',
@@ -635,7 +635,7 @@ def _defense_host(monkeypatch: pytest.MonkeyPatch, *,
 def test_defense_path_wires_seed_and_telemetry_like_funnel(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """差①种子 + 差③遥测消除:防御构建 session.rng 按 strategy_seed
-    播种;局容器建立点以遥测 current_run_id 为 provider 触发 journal
+    播种;局状态容器建立点以遥测 current_run_id 为 provider 触发 journal
     装配;策略器/状态同源接入调用与漏斗同款。"""
     assembly_calls: list = []
     monkeypatch.setattr(gs_mod, 'ensure_journal_assembly',
@@ -694,7 +694,7 @@ def test_defense_path_resets_layout_unknown_state(
 def test_defense_path_rebuilds_fresh_per_invocation(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """防御语义保持(局外不复用):cw_match 缺席的独立调用先弃置残留
-    容器再新建(discard+establish 同款衔接),session 全量重建非复用——
+    状态容器再新建(discard+establish 同款衔接),session 全量重建非复用——
     与入口链 CwEntryStart 的残留弃置纪律一致。"""
     monkeypatch.setattr(gs_mod, 'ensure_journal_assembly', lambda _p: None)
     ctx = _defense_host(monkeypatch, strategy_seed=None)
@@ -798,7 +798,7 @@ def test_segment_head_all_five_slots_proceed_to_access(
     ctx = _anchor_host(monkeypatch, click_pts=[Point(50, 50)] * 5,
                        area_centers=centers)
     # 入口读链/决策帧/预算披露桩化(全桩沿本文件 _shop_host 同式;
-    # 真实容器由防御建核漏斗建立)。
+    # 真实状态容器由防御建核漏斗建立)。
     reads: list = []
 
     def _entry_receipt(*a, **k):
@@ -894,7 +894,7 @@ def test_refresh_fee_unobserved_field_falls_back_to_base(monkeypatch):
     """事故本形:刷价 Field 未观察(None)→ 记基价,不再 TypeError。"""
     monkeypatch.setattr('time.sleep', lambda _s: None)   # 点击后固定等待
     session = StrategySession()
-    state = game_state_of(session)   # 新容器:shop_refresh_cost 未观察
+    state = game_state_of(session)   # 新状态容器:shop_refresh_cost 未观察
     ledger = ShopVisitLedger()
 
     _env_ = _fee_env(state, ledger)
@@ -923,7 +923,7 @@ def test_refresh_fee_observed_value_is_used(monkeypatch):
 
 def test_refresh_fee_ledger_equals_gold_deduction(monkeypatch):
     """T-21 分支 3 锁 10 等值断言:上报已进的帧内,op 花销账累加值 ≡ 金账
-    扣减值——两侧同式同源(容器刷价 ``or`` 基价 + 同一 free_refresh_left
+    扣减值——两侧同式同源(状态容器刷价 ``or`` 基价 + 同一 free_refresh_left
     谓词),镜像漂移在本断言暴露(spend 3 ≡ 30−27)。"""
     monkeypatch.setattr('time.sleep', lambda _s: None)   # 点击后固定等待
     session = StrategySession()
@@ -937,15 +937,15 @@ def test_refresh_fee_ledger_equals_gold_deduction(monkeypatch):
     assert CwActionRefreshShopOp(_env_.op.ctx, CwActionRefreshShopParam(),
                                  env=_env_).run().is_success
 
-    assert ledger.spend_executed == 3, '花销账累加容器刷价'
-    assert state.gold.value == 27, '金账扣同值(上报函数容器直读)'
+    assert ledger.spend_executed == 3, '花销账累加状态容器刷价'
+    assert state.gold.value == 27, '金账扣同值(上报函数状态容器直读)'
     assert 30 - state.gold.value == ledger.spend_executed, '等值不变式'
 
 
 def test_refresh_free_frame_zero_both_sides(monkeypatch):
     """T-21 分支 3 锁 11 op 半边:免费帧(free_refresh_left > 0)花销账
     累加 0 且金账零扣——两侧同谓词恒等,无例外(修复免费帧花销虚记
-    既有缺陷:旧形态无条件累加容器价,免费刷实扣 0)。"""
+    既有缺陷:旧形态无条件累加状态容器价,免费刷实扣 0)。"""
     monkeypatch.setattr('time.sleep', lambda _s: None)   # 点击后固定等待
     session = StrategySession()
     state = game_state_of(session)

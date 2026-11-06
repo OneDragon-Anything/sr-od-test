@@ -58,7 +58,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 _OBS_SIG = ChannelSig(family='obs', actor='TestShopSpendSelfLimit', mode='read')
 _LOGIC_SIG = ChannelSig(family='logic_action', actor='TestShopSpendSelfLimit')
 
-# 真实判定链金位锚(空容器 active_strategies 缺省 → cap_resolved = 缺省息
+# 真实判定链金位锚(空状态容器 active_strategies 缺省 → cap_resolved = 缺省息
 # 帽档 = 息封顶金位/10 → g* = 10×cap;值源 = kernel 派生链,断言只校验金位
 # 形态对应的放行/拒拍/带内三域,不引常量进断言式):
 _GOLD_OVER = 60    # 溢出段;3 费买入花后在线上 → 政策内(放行域)
@@ -78,7 +78,7 @@ def _proposal() -> CwActionBuyCardParam:
 
 
 def _write_shop_payload(session, gold: int) -> None:
-    """容器在屏空牌面 + 金位观察(决策在屏前置与金读口径的满足面)。"""
+    """状态容器在屏空牌面 + 金位观察(决策在屏前置与金读口径的满足面)。"""
     gs = game_state_of(session)
     gs.write_logic(gs.shop, ShopPayload(cards=[], refresh_probs={}),
                    produced_by='test', sig=_LOGIC_SIG)
@@ -293,7 +293,7 @@ def test_restricted_session_normal_path_chain(monkeypatch, tmp_path):
 
     match = CurrencyWarMatch(strategy, session)
     # 会话状态载体归一:session.strategy_state = 构造接入调用后的同一状态对象
-    # (裸 session 桩的容器附着面不依赖;宿主显式归一,先例 = 未观察流测试
+    # (裸 session 桩的状态容器附着面不依赖;宿主显式归一,先例 = 未观察流测试
     # 宿主的 strategy_state 显式置位)。
     match.session.strategy_state = state_of(gs)
     state = state_of(game_state_of(session))

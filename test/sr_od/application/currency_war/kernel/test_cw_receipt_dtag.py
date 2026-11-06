@@ -1,6 +1,6 @@
 """动作回执 dtag 关联契约锁面(镜像 src = kernel/cw_game_state.py 的
 ``note_action_receipt`` 读侧;同 src 兄弟测试 = kernel/test_cw_game_state.py
-回放守恒主题 / kernel/test_game_state.py 容器机制主题,主题不同不混写)。
+回放守恒主题 / kernel/test_game_state.py 状态容器机制主题,主题不同不混写)。
 
 被测契约 = changes/2026-10-24-strategy-telemetry/details/capture-store.md §2
 (dtag 进回执 = kernel 决策上下文槽,单写单读 take 读后清;四调用点零改动)

@@ -8,9 +8,9 @@ test_equip_env_pick_sim_full_chain_blue_diamond〕)。
 effects-calc/designs/T-39-zhuanjia-yantaohui.md)§2.1/§2.4 + §4 锁 8:
 - 选卡后 bench = 4 开局手牌 + bookcard 槽 + supply_box 槽(卡文序,带名);
 - 开卡上报 applied + 槽腾空 + SCREEN_EXPERT 呈现(advance 纯转移;
-  呈现数据源 = 容器登记,open_bookcard 上报内 register);
+  呈现数据源 = 状态容器登记,open_bookcard 上报内 register);
 - 选卡上报消费 expert_invite 登记 + 纯转移回备战(注:sim 选卡上报 =
-  容器零写契约〔zero_writes.py〕,``chosen_expert`` 容器写 = live 画面 op
+  状态容器零写契约〔zero_writes.py〕,``chosen_expert`` 容器写 = live 画面 op
   落地复查点、由 kernel 侧既有锁面承担——本链断言消费与转移面);
 - 武装箱开箱链独立正常(箱画面候选 → 选定 → 所得经获得链入栏);
 - 同 seed 重放确定(环境道具分支零采样)。
@@ -99,7 +99,7 @@ def _run_expert_chain(seed: int) -> tuple[list, list[str]]:
         cw_sim_ports.declare_world(box_out.world_decl)
         assert b.screen_identity() == SCREEN_BOX, '箱画面呈现'
         cands = gs.box_card_names.value
-        assert cands is not None and len(cands) == 4, '候选写容器'
+        assert cands is not None and len(cands) == 4, '候选写状态容器'
         b._handle_click_source(SCREEN_BOX, '装备卡-3')
         pick_box = report_action_pick_box_card_param(
             gs, SimpleNamespace(), _SIG)

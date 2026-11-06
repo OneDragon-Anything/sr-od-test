@@ -1,6 +1,6 @@
 """独家代言 sim 状态副本里的值链测试(镜像 src 主断言对象 = 获得链 gain_equipment
 顶段转换拦截经 sim 后端开箱全链;拦截在 kernel 原语,sim 零新增接入调用——
-sim 容器现值 = 状态副本里的值,live 零写观察覆盖为实机(live)和模拟器(sim)两边同真值的另一端口径)。
+sim 状态容器现值 = 状态副本里的值,live 零写观察覆盖为实机(live)和模拟器(sim)两边同真值的另一端口径)。
 
 测试面依据 = 迭代设计 designs/T-372-dujia-daiyan.md §4 锁 5(开箱链
 机械回归:名单集转换辖域含开箱所得——候选前缀 ∋ 幸运星,持卡局开箱
@@ -61,7 +61,7 @@ def test_held_card_box_chain_converts_member_pick(
         _isolate_defect_buffer) -> None:
     """持卡箱链转换锁(设计 §4 锁 5):持本卡(sim 直置)+ 种 1 箱 →
     开箱选定名单成员幸运星 → **转换生效**(幸运星不入栏、以牙还牙甲
-    入栏)、零箱落位;开箱腾席 = 观察域容器零写,sim 侧开掉的箱槽不移除
+    入栏)、零箱落位;开箱腾席 = 观察域状态容器零写,sim 侧开掉的箱槽不移除
     (断言用箱数不变量)。前提守卫:开箱候选前缀 ∋ 幸运星——若未来
     候选池改版踢出名单成员,持本卡局开箱零转换属卡面字面正确行为,本锁
     前提失效须随批改,勿盲改断言。"""
@@ -85,7 +85,7 @@ def test_held_card_box_chain_converts_member_pick(
         cw_sim_ports.declare_world(box_out.world_decl)
         assert b.screen_identity() == SCREEN_BOX, '箱画面呈现'
         shown = gs.box_card_names.value
-        assert shown is not None and len(shown) == 4, '候选写容器'
+        assert shown is not None and len(shown) == 4, '候选写状态容器'
         idx = list(shown).index(_MEMBER)
         b._handle_click_source(SCREEN_BOX, f'装备卡-{idx + 1}')
         pick_box = report_action_pick_box_card_param(

@@ -44,7 +44,7 @@ _LSIG = ChannelSig(family='logic_action', actor='TestPlaneBossGrants',
 def _gs(*, cards: list[str] | None = None,
         bench: list[tuple[str, int]] | None = None,
         seqs: dict[int, tuple[str, ...]] | None = None) -> GameState:
-    """直构容器(cards=None = 未持卡;bench=None = 保持未观察,供宁缺勿造
+    """直构状态容器(cards=None = 未持卡;bench=None = 保持未观察,供宁缺勿造
     防御支;seqs=None = 场字段未注册,node_sequence_of 回退默认表)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if cards is not None:

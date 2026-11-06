@@ -10,7 +10,7 @@ cw_screen_prep.store_plane_table(写 ``gs.node_books``),读端必须同源。
 测试面(此前零覆盖):
 1. 表在场真路径:node_books 已登记(位面锚=1)→ 表就绪 True / 前窗帧
    轮窗(轮 1..首战槽+1)True,出窗 False;
-2. fail-closed 负路径:表缺(裸容器)/ 锚不符(旧表滞留 P2)/ state
+2. fail-closed 负路径:表缺(裸状态容器)/ 锚不符(旧表滞留 P2)/ state
    位面非 1 / 脏表(全零战斗词)→ False(前窗行为不发生);
 3. 写入点形状契约:store_plane_table 写入的形状(list[str] 槽序 + 位面
    锚落 ``gs.node_books``)= 谓词读的形状——写读异源即病灶本身,本测试
@@ -74,7 +74,7 @@ _P1_TABLE: list[str] = ['奖励', '补给', '战斗', '战斗', '战斗',
 
 
 def _gs(plane: int = 1, round_num: int = 1) -> GameState:
-    """容器 + 节点读口种子(位面/轮次即谓词的 plane/round 读口输入)。"""
+    """状态容器 + 节点读口种子(位面/轮次即谓词的 plane/round 读口输入)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.observe(gs.node, NodeKey(plane=plane, round_num=round_num, kind='prep'),
                evidence='t', sig=_SIG)
@@ -105,7 +105,7 @@ def test_table_ready_true_and_front_window_round_window():
 
 
 def test_fail_closed_when_table_or_anchor_or_plane_gate_fails():
-    """fail-closed 负路径:表缺(裸容器)/ 锚不符(旧表滞留 P2)/
+    """fail-closed 负路径:表缺(裸状态容器)/ 锚不符(旧表滞留 P2)/
     state 位面非 1 → 两谓词 False(前窗行为不发生,不静默武装)。"""
     gs_bare = _gs()   # 未写表:plane_node_table / 位面锚均 None
     assert predicates.front_window_table_ready(gs_bare) is False

@@ -1,6 +1,6 @@
 """cw_game_state 回放守恒测试(镜像 src = kernel/cw_game_state.py 的
 restore_state_snapshot._bench_view / full_state_snapshot 往返;同 src 兄弟
-测试 = kernel/test_game_state.py 容器机制正名主题文件〔已登记文件,主题不同
+测试 = kernel/test_game_state.py 状态容器机制正名主题文件〔已登记文件,主题不同
 不混写〕)。
 
 测试面依据 = 迭代 T-39 专家研讨会设计(.debug/progress/2026-09-23-invest-

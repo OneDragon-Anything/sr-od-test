@@ -54,7 +54,7 @@ _C_COMP = Comp(name='C组生长测', core_chars=[
 
 
 def _frame(gs, *, round_num: int = 2) -> MandateFrame:
-    """容器现读重建 MandateFrame(entry.emit 同款装配)。"""
+    """状态容器现读重建 MandateFrame(entry.emit 同款装配)。"""
     front, back = deployed_rows_of(gs)
     return MandateFrame(
         gold=30, level=5, bench=bench_entries_of(gs),

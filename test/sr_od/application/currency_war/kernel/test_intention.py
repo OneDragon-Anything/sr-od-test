@@ -51,7 +51,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicate
 
 def _seed_gs(*, deployed, gold: int = 100, level: int = 5, r: int = 5,
              board: dict | None = None) -> object:
-    """P1 备战场景种子(容器域直写;board 显式给,与 deployed 行一致;
+    """P1 备战场景种子(状态容器域直写;board 显式给,与 deployed 行一致;
     deployed = 行域 Units,槽号 1 基信息位)。"""
     return cw4_box(plane=1, round_num=r, gold=gold, level=level, hp=80,
                    shop_refresh_cost=2, node='reward',
@@ -197,7 +197,7 @@ def test_ju23_full_surface_gold_never_breaks_interest_line():
 
 
 def _gs_state(plane: int, round_num: int):
-    """容器单例构造(真值语义 = 节点 plane/round)。"""
+    """状态容器单例构造(真值语义 = 节点 plane/round)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         ChannelSig,
         GameState,

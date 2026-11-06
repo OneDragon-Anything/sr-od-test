@@ -136,7 +136,7 @@ def _bench_units(gs: GameState) -> list[tuple[str, int]]:
 def test_condition_matrix_short_circuits(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """未发放分支逐序零写(设计 §2.3 条件矩阵 1/2/4):env 空链/未登记/
-    计数未达标 → 返回空效果串且容器零写行。"""
+    计数未达标 → 返回空效果串且状态容器零写行。"""
     cases = [
         ('env 未激活(None 形态)', _make_gs(env=None, bench=[], ore_open_total=20)),
         ('env 空链形态', _make_gs(env='', bench=[], ore_open_total=20)),

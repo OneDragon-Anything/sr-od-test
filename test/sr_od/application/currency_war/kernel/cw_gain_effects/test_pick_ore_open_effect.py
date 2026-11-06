@@ -37,7 +37,7 @@ _CARD = '黄晶矿工'
 
 
 def _make_gs(*, level: int | None = 3) -> GameState:
-    """直构容器(持卡由 on_strategy_gained 前置写入;gold 腿不涉——本卡
+    """直构状态容器(持卡由 on_strategy_gained 前置写入;gold 腿不涉——本卡
     无经济数值,STRATEGY_ECONOMY 零行)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if level is not None:

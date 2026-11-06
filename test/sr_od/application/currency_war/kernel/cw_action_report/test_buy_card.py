@@ -261,7 +261,7 @@ def test_buy_simple_placement():
 def test_merge_buy_single_report_two_forms():
     """合成买唯一入口函数两形态直测(升星分支内聚 report_action_buy_card_param 后,
     原升星分支单写测试随聚合口退役;快照基点正确性 = 两形态 bench 期望
-    共辖——基点误取买后容器会重复落位/漏升,shop 视图缺失会漏满栏
+    共辖——基点误取买后状态容器会重复落位/漏升,shop 视图缺失会漏满栏
     合成):非满栏合成买(2 副本在席买第 3 张 → 落位即合成升 2★)与
     满栏合成买(k=2,3 副本合 1 升 2★ 在席副本槽9)。gold −单价×k 与
     payload −k 由同一唯一入口函数携带(原「分支零写」申报随两写合一消亡)。"""
@@ -313,7 +313,7 @@ def test_missing_receipt_selfcomputes_ideal_execution():
 
 
 def test_none_gold_domain_skip():
-    """None 域跳写:gold 未读(容器 None)时 gold 跳写,其余域照写。"""
+    """None 域跳写:gold 未读(状态容器 None)时 gold 跳写,其余域照写。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         shop_payload_content_cards,
     )

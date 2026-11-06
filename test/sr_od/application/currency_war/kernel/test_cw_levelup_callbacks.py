@@ -2,7 +2,7 @@
 
 设计唯一源 = 迭代 2026-09-23-invest-effects-calc T-432 设计稿 §5 锁面
 (任意源跨级触发/单触发/live 观察零回调/连跳/满帽/守卫/逐源覆盖)。驱动
-形态 = 裸容器直构 + 端口桩(install_sim_backend 桩对象 + rng 提供槽显式
+形态 = 裸状态容器直构 + 端口桩(install_sim_backend 桩对象 + rng 提供槽显式
 注入——调度器只问 ``sim_backend_installed``,真后端行为锁归 sim 链测试
 族,sim/cw_sim_backend/ 目录)。teardown 纪律:端口槽与 rng 提供槽随
 fixture 卸载(模块槽进程全局,残留跨测试泄漏)。
@@ -80,7 +80,7 @@ def sim_armed():
 
 def _seed_gs(level: int, xp_cur: int, *, strategies: list[str] | None = None,
              with_env: bool = False) -> GameState:
-    """裸容器种子(观察链同写入口;bench 9 空槽供 gift 入席断言)。
+    """裸状态容器种子(观察链同写入口;bench 9 空槽供 gift 入席断言)。
     ``strategies`` = 持卡观察种子;``with_env`` = 成功经验已登记(锚断言)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.observe(gs.level, int(level), evidence='t:seed', sig=_SIG_OBS)

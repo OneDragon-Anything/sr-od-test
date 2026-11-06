@@ -29,7 +29,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 
 
 def _gs(tier: int | None) -> GameState:
-    """直构容器种子(tier None = 未拿卡形态;Field frozen,写 = 换帧)。"""
+    """直构状态容器种子(tier None = 未拿卡形态;Field frozen,写 = 换帧)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if tier is not None:
         gs = replace(gs, yingyue_cost_tier=Field(value=tier, source='logic'))

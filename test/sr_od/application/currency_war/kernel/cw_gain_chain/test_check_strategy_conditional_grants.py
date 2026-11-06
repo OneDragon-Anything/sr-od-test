@@ -3,7 +3,7 @@ check_strategy_conditional_grants + kernel/cw_game_state.py 的
 _tick_strategy_conditional_grants 接入调用)。
 
 测试面依据 = 迭代设计 designs/T-102-guimo-xiaoying.md §4 锁 2/3/4/5/9:
-- 构造 = 容器直置 + advance_node_effective 驱动(序位前进唯一落账入口,
+- 构造 = 状态容器直置 + advance_node_effective 驱动(序位前进唯一落账入口,
   尾段自带 tick_effect_boundary;advanced 位闸下同序位重复 tick 检查腿
   跳过,达标触发必须真实推进——设计稿「直调 tick_effect_boundary」的
   可达形;禁经 gain_character 构造达标态,会对触发面盲区假绿);
@@ -47,7 +47,7 @@ def _slots(bench: list[tuple[str, int]]) -> list[BenchSlot]:
 def _gs_with_card(*, bench: list[tuple[str, int]],
                   equips: list[str] | None,
                   card: str | None = _CARD) -> GameState:
-    """持卡 + 容器直置池(equips=None = 未观察,供拒落分支;bench 直置
+    """持卡 + 状态容器直置池(equips=None = 未观察,供拒落分支;bench 直置
     即真值写,不走获得链——触发面 = tick 现值检查,获路无关)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.prep_anchored = True   # 置一次性标志位:达标发放 = 确定事件,锁确定面写通道
@@ -75,7 +75,7 @@ def _advance(gs: GameState, plane: int, round_num: int) -> None:
 def test_hold_card_pool_met_grants_and_latches() -> None:
     """触发主条(锁 2a):持卡 + 池 8 同名单位 → tick → equips 追加完美
     投影仪(发放) + 落一次性标志位(「首次」封账);发放走确定面(source=logic,
-    rand=False 置一次性标志位容器),evidence 留证 = strategy_conditional_grant:
+    rand=False 置一次性标志位状态容器),evidence 留证 = strategy_conditional_grant:
     <卡名>(gain_equipment #equip 后缀链,披露键 1)。"""
     gs = _gs_with_card(bench=[(_NAME, 1)] * 8, equips=[])
     _advance(gs, 1, 1)
@@ -170,7 +170,7 @@ def test_unobserved_equips_grant_refused_no_latch() -> None:
 
 
 def test_observed_recovery_self_heal_grants() -> None:
-    """拒落自愈(锁 5b):拒落窗后容器置为观察态 → 再 tick 补发放 + 落一次性标志位
+    """拒落自愈(锁 5b):拒落窗后状态容器置为观察态 → 再 tick 补发放 + 落一次性标志位
     (池现值维持达标时后续 tick 重试,「观察恢复后补真值」框架惯例)。"""
     gs = _gs_with_card(bench=[(_NAME, 1)] * 8, equips=None)
     _advance(gs, 1, 1)

@@ -114,7 +114,7 @@ def _payload_of(entries: list[tuple[str, int] | None]) -> ShopPayload:
 
 
 def _seed_gs_with_card() -> object:
-    """金位已读(30)+ 本卡入册的容器(免费帧隔离:显式 free=True 排除
+    """金位已读(30)+ 本卡入册的状态容器(免费帧隔离:显式 free=True 排除
     扣费腿/免费扣减腿干扰,金面只承载被测腿)。"""
     gs = cw4_gs(gold=30, node_fill=False, shop_screen='off')
     gs.effects.register_strategy(STRATEGY_EFFECTS['合并同类项'], (1, 2))
@@ -277,8 +277,8 @@ def _report_action(gs, action, executed=None):
 
 
 def test_refresh_paid_deducts_gold_and_samples_rand_payload():
-    """付费刷新:gold −容器刷价(费用单一源 = ``gs.shop_refresh_cost``
-    容器直读,2026-10-16 用户裁决,付费计数语义不变);payload = 随机
+    """付费刷新:gold −状态容器刷价(费用单一源 = ``gs.shop_refresh_cost``
+    状态容器直读,2026-10-16 用户裁决,付费计数语义不变);payload = 随机
     态采样(2026-09-21 Field 化 supersession:2026-09-18「终结跳写
     payload 不写」的 payload 半边收窄为 write_logic_rand 随机态——观察
     覆盖差异预期内,采样即猜测)。"""
@@ -286,7 +286,7 @@ def test_refresh_paid_deducts_gold_and_samples_rand_payload():
     gs.observe(gs.shop_refresh_cost, 2,
                sig=ChannelSig(family='obs', actor='cw_observation'))
     _report_action(gs, CwActionRefreshShopParam(cost=2))
-    assert gs.gold.value == 28, 'gold: 期望 30 −容器刷价 2'
+    assert gs.gold.value == 28, 'gold: 期望 30 −状态容器刷价 2'
     assert gs.shop.source == 'logic_rand', \
         'shop payload: 随机态分支采样写(write_logic_rand 专用通道)'
     assert gs.shop.evidence == 'refresh_random_sample', '随机态写端注记'
@@ -460,7 +460,7 @@ def _slot_signature(payload: ShopPayload) -> list:
 
 def test_report_random_leg_deterministic() -> None:
     """随机态分支 = kernel 采样器(sample_shop_deal,与 sim deal_shop 同源):
-    固定种子两次独立容器采样逐槽一致(确定性);payload 形态 = 定长 5 槽
+    固定种子两次独立状态容器采样逐槽一致(确定性);payload 形态 = 定长 5 槽
     content/1★/注册表名 + 基线概率条;写通道 = write_logic_rand 专用通道
     (source=logic_rand + evidence 注记)。"""
     signatures = []

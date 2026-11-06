@@ -44,7 +44,7 @@ _CARD = '偶像经济'
 
 
 def _make_gs_node_pos(node_pos: tuple[int, int] | None) -> GameState:
-    """直构容器(bench 9 空槽);``node_pos`` 非 None = 观察锚定生效序位
+    """直构状态容器(bench 9 空槽);``node_pos`` 非 None = 观察锚定生效序位
     (环境道延迟段同款直测注入)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.observe(gs.bench, BenchView(slots=[BenchSlot(kind='empty')] * 9,

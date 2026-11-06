@@ -41,7 +41,7 @@ _UNCHOSEN = (SupplyOption(idx=1, char='停云', equip='折叠小刀',
 
 def _hook_gs(*, card: bool, unchosen: tuple[SupplyOption, ...] | None = None,
              latched: bool = False) -> GameState:
-    """调用点直构容器(bench/equips 已观察 = 上报主分支可写;持卡/源/一次性标志位按参)。"""
+    """调用点直构状态容器(bench/equips 已观察 = 上报主分支可写;持卡/源/一次性标志位按参)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.observe(gs.bench,
                BenchView(slots=[BenchSlot(kind='empty')] * 9, capacity=9),

@@ -13,9 +13,9 @@ test_sim_rules 难度族与 economy 估值锁现役辖域,零新增〕):
   enemy_affixes 长度 -1、来源 logic_rand(rand=True 双保险,mid-run
   锚定窗也落随机态)、logic_rand_fields() 含 enemy_affixes(补观察谓词
   消费口)、效果串策略变体 strategy_affix_disable:<名> 在账;
-- 锁 2 空容器边界:零写 + 申报行(strategy_affix_disable_empty_container,
+- 锁 2 空状态容器边界:零写 + 申报行(strategy_affix_disable_empty_container,
   实机已失效而模型未删);
-- 锁 3 取尾选择锚:排序后取右端(容器尾元素),非首元素;rng 注入
+- 锁 3 取尾选择锚:排序后取右端(状态容器尾元素),非首元素;rng 注入
   不改变选择(确定性取尾,零流键消费——不与敌后破坏采样流共槽);
 - 锁 4 mid-run 守卫:节点窗在动 + 当期 hp 真值在场 → 词缀照删、hp
   零写(真值不踩;HP 回调级守卫锁归 kernel/test_cw_opening_hp.py);
@@ -76,7 +76,7 @@ def rows_sink() -> _RowSink:
 
 def _make_gs(affixes: list[str] | None, *,
              mid_run: bool = False) -> GameState:
-    """直构容器:词缀名单 logic 直写(首写 old=None,HP 回调种子档零触发
+    """直构状态容器:词缀名单 logic 直写(首写 old=None,HP 回调种子档零触发
     ——被测删除写的「写前值」由本构造落定);``mid_run`` = 节点窗已开
     (mid-run 守卫锁用)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
@@ -138,7 +138,7 @@ def test_affix_disable_tail_leg_random_state_write(monkeypatch) -> None:
 
 def test_affix_disable_empty_container_zero_write_with_decl(
         monkeypatch, rows_sink: _RowSink) -> None:
-    """空容器边界(锁 2):容器空(直构未写)时选退化 → 零容器写 +
+    """空状态容器边界(锁 2):状态容器空(直构未写)时选退化 → 零容器写 +
     申报行已登记(kind = strategy_affix_disable_empty_container,实机已
     失效而模型未删的偏差申报),零效果串。"""
     gs = _make_gs(None)
@@ -153,7 +153,7 @@ def test_affix_disable_empty_container_zero_write_with_decl(
 
 
 def test_affix_disable_tail_anchor_right_end_deterministic() -> None:
-    """取尾选择锚(锁 3):排序后取右端(容器尾元素),非首元素;
+    """取尾选择锚(锁 3):排序后取右端(状态容器尾元素),非首元素;
     不同注入 rng 同一选择且 rng 状态零消耗(确定性取尾,零流键消费
     ——均匀随机旧制不回归)。"""
     affixes = ['库藏生锈', '灼热轰炸', '第二位面强化']
@@ -165,7 +165,7 @@ def test_affix_disable_tail_anchor_right_end_deterministic() -> None:
         effects = on_strategy_gained(gs, _CARD, rand=False, sig=_LSIG,
                                      rng=rng0)
         assert effects == ('strategy_affix_disable:第二位面强化',), \
-            f'取尾 = 容器尾元素(seed={seed}): {effects}'
+            f'取尾 = 状态容器尾元素(seed={seed}): {effects}'
         assert gs.enemy_affixes.value == ['库藏生锈', '灼热轰炸'], \
             f'尾元素整条移除(seed={seed})'
         assert rng0.getstate() == state0, \

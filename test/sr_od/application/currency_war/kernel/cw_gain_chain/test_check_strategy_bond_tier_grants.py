@@ -3,8 +3,8 @@
 strategy_bond_tier_fired 一次性标志位域)。
 
 测试面依据 = 迭代设计 designs/T-271-mengjing-dawutai.md §4 锁 3/4/5
-(构造 = 容器直置直调检查腿;计数判据单一源 = cw_system_cards.
-_faction_count 双源 max——board 容器(左面板真值口径,含 L2 星徽装备
+(构造 = 状态容器直置直调检查腿;计数判据单一源 = cw_system_cards.
+_faction_count 双源 max——board 状态容器(左面板真值口径,含 L2 星徽装备
 贡献)× board_by_row 身份聚合(仅 factions+flows),直构按断言面向单侧
 或双侧喂源;禁经 gain_character 构造达标态,会对触发面盲区假绿):
 
@@ -12,8 +12,8 @@ _faction_count 双源 max——board 容器(左面板真值口径,含 L2 星徽�
   零一次性标志位 / 激活非独立数 < 档位零写;
 - 逐档首达一次性标志位:首达 3 发 1 件 + 一次性标志位;同板面再结算零重发;降档再回零重发;
   3∧7∧10 同拍跳档三笔升序;独立羁绊不计(救世主板面判别);gate 羁绊
-  计入(首达锁板面即判别形);L2 星徽贡献计入(board 容器侧承载);
-- 计数双源 max:身份侧 > 容器侧取大;双源双缺 → 0 零武装 fail-closed。
+  计入(首达锁板面即判别形);L2 星徽贡献计入(board 状态容器侧承载);
+- 计数双源 max:身份侧 > 状态容器侧取大;双源双缺 → 0 零武装 fail-closed。
 """
 from __future__ import annotations
 
@@ -219,7 +219,7 @@ def test_independent_factions_excluded() -> None:
 def test_l2_badge_contribution_counts_via_board_source() -> None:
     """L2 星徽贡献计入锁:盛会之星第 2 计数来自穿徽单位(L2 装备贡献,
     身份聚合口径不计——cw_board_by_row 只算 factions+flows),仅 board
-    容器(左面板真值)承载 → gate 经双源 max 融合开启;若检查腿单吃
+    状态容器(左面板真值)承载 → gate 经双源 max 融合开启;若检查腿单吃
     身份源则 gate 关闭误零发(红判据)。板面 = 花火 + 娜塔莎(佩戴
     星徽)→ 盛会之星 2;娜塔莎+藿藿 = 治疗 2;杰帕德+砂金 = 护盾 2。"""
     deployed = _deployed(('花火', None), ('娜塔莎', _EQUIP), ('藿藿', None),
@@ -235,8 +235,8 @@ def test_l2_badge_contribution_counts_via_board_source() -> None:
 
 
 def test_identity_source_superiority_max_fusion() -> None:
-    """计数双源 max 锁(身份侧 > 容器侧):board 容器滞留盛会之星 1
-    (单侧 miss 形态)而身份聚合 = 2 → max 取 2 gate 开;若单吃容器
+    """计数双源 max 锁(身份侧 > 状态容器侧):board 状态容器滞留盛会之星 1
+    (单侧 miss 形态)而身份聚合 = 2 → max 取 2 gate 开;若单吃状态容器
     源则 gate 关闭误零发(红判据)。治疗 2 = 娜塔莎+藿藿,护盾 2 =
     杰帕德+砂金(双源同值)。"""
     deployed = _deployed(('花火', None), ('知更鸟', None), ('娜塔莎', None),

@@ -36,7 +36,7 @@ def _advance(gs: GameState, plane: int, round_num: int) -> None:
 
 def _gs_with_card_at(consume_plane: int, consume_round: int,
                      remaining: int | None) -> GameState:
-    """拿卡时序容器:先消耗拿卡节点(该节点 tick 已过,效果账本去重位
+    """拿卡时序状态容器:先消耗拿卡节点(该节点 tick 已过,效果账本去重位
     钉在拿卡窗),再登记队列——复现「登记在节点窗内,递减自下一后继
     advance 起」。remaining=None = 不登记(空队列形态)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)

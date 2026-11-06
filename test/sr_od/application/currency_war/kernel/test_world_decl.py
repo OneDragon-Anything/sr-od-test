@@ -120,7 +120,7 @@ def test_refresh_invest_decl_trigger_derivation():
     env_refresh_left 非 None(环境屏已呈现,该字段唯一写端 = 环境屏呈现
     写点)= 环境屏整组;active_env 空 ∧ None(无环境局,env_present 缺省
     False 的合法配置)= 策略屏逐卡——旧单一 active_env 依据在该局误派
-    env 分支造成静默活锁,本分支即回归锁;slots 自 param 原样透传。容器
+    env 分支造成静默活锁,本分支即回归锁;slots 自 param 原样透传。状态容器
     零写(刷新真值归重入观察覆盖)。"""
     gs_open = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs_open.write_logic(gs_open.env_refresh_left, 1,
@@ -257,7 +257,7 @@ def test_node_advance_decl_next_screen_derivation_table():
 
 def test_node_advance_decl_none_on_gate_blocked():
     """applied=False → 声明 None(构造义务契约:拒绝/未发出 = None,
-    对齐现行「applied=False 零广播」):新容器未锚定,观察态门挡。"""
+    对齐现行「applied=False 零广播」):新状态容器未锚定,观察态门挡。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     out = report_node_advance(gs, trigger='settle_confirm')
     assert out.applied is False
@@ -272,7 +272,7 @@ def test_node_advance_decl_none_on_gate_blocked():
 def test_start_battle_decl_table_row3():
     """表 #3 对照测试:出战上报 applied 出口声明 = (结算屏,
     battle_resolve);两个 applied 出口(常规/免战跳过递减)同声明;
-    桩 gs = 新容器(出战上报零容器写,语义 = 结算屏观察覆盖接管)。"""
+    桩 gs = 新状态容器(出战上报零容器写,语义 = 结算屏观察覆盖接管)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     out = report_action_start_battle_param(gs, SimpleNamespace(), _SIG)
     assert out.applied
@@ -361,7 +361,7 @@ def test_start_battle_decl_skip_plane_first_synthetic():
 
 
 def _gs_with_encounter_payload() -> GameState:
-    """桩容器 + 遭遇 payload 双选项(选值组装的读源)。"""
+    """桩状态容器 + 遭遇 payload 双选项(选值组装的读源)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.observe(gs.encounter, SimpleNamespace(options=[
         EncounterOption(idx=0, difficulty=1, affixes=['超凡入圣'],
@@ -423,7 +423,7 @@ def test_zero_write_transition_family_decl_rows_5_9_10_13_17():
     逐位一致——open_box = 备战底屏 + 具名 trigger(
     S6:武装箱选择画面出现事实改登记承载,声明回归底层屏);
     pick_box_card/pick_megastar = 备战 + 具名 trigger;纯转移五选卡 =
-    备战 + ''。桩 gs = 新容器(容器零写,真值归观察)。"""
+    备战 + ''。桩 gs = 新状态容器(状态容器零写,真值归观察)。"""
     cases: tuple[tuple[str, object, WorldDecl], ...] = (
         ('open_box', CwActionOpenBoxParam(),
          WorldDecl(next_screen='货币战争-备战',
@@ -570,7 +570,7 @@ def test_open_bookcard_decl_row6_all_exits():
 def test_close_shop_decl_row18():
     """表 #18 对照测试:关店上报 applied 出口声明 = (备战, '')纯转移
     (离屏写端 = 本上报);离屏写照常落账(shop payload 离屏)。
-    裸容器生效序位缺位 → 推导回退备战档,与历史口径同值。"""
+    裸状态容器生效序位缺位 → 推导回退备战档,与历史口径同值。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     out = report_action_close_shop_param(gs, SimpleNamespace(), _SIG)
     assert out.applied

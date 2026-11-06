@@ -115,7 +115,7 @@ def _record_world_writes(gs, monkeypatch: pytest.MonkeyPatch) -> list[tuple]:
 
 
 def _hold_card(gs, *, card: str = _CARD) -> None:
-    """持卡直置(注册容器直写 = 持卡事实单一源;不经 pick 链)。"""
+    """持卡直置(注册状态容器直写 = 持卡事实单一源;不经 pick 链)。"""
     gs.write_logic(gs.active_strategies, [card],
                    produced_by='test-seed', evidence='t:card', sig=_SIG)
 
@@ -331,7 +331,7 @@ def test_direct_add_no_clip_boundary_with_disclosures(
         rows = _heal_rows(calls)
         assert len(rows) == 1, f'回血笔数漂移: {[c[:3] for c in rows]}'
         assert rows[0][4] == 105, f'直加越界回血值漂移: {rows[0][4]}'
-        assert gs.hp.value == 105, '容器终值应 105(不 clip)'
+        assert gs.hp.value == 105, '状态容器终值应 105(不 clip)'
         assert list(b.hp_trail[trail_len:]) == [95, 105], \
             '轨迹应恰结算笔+回血笔成对'
         assert b.disclosures.get(STRATEGY_BATTLE_HEAL_SCOPE_ASSUMPTION) \

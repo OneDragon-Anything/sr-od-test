@@ -3,7 +3,7 @@ check_strategy_kechuan_wear_grants)。
 
 测试面依据 = 迭代设计 designs/T-368-peipei-kechuan.md §9.2 效果条目②
 (v3.1,用户裁定 2026-11-05 真实建模;直构形态先例 = 同目录
-test_check_strategy_battle_grants.py 的容器直置):
+test_check_strategy_battle_grants.py 的状态容器直置):
 - 完胜触发:持卡 ∧ won ∧ hp_delta==0 ∧ 场上本卡佩佩(uid ∈ 离场队列)
   → Unit.equips 直写 append 1 件 ∈ 进阶池,效果串 kechuan_wear 前缀;
 - 完美通关未达成不穿(won=False / hp_delta!=0 两条件并列必要,win 金

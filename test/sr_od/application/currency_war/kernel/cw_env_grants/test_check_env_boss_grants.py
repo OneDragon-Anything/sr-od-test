@@ -282,7 +282,7 @@ def test_binding_pool_consistent_with_registry() -> None:
 
 
 def _gs_with_unlocked(names: tuple[str, ...]) -> GameState:
-    """解锁态容器(在 _make_gs 基础上唯一入口函数直写 unlocked_experts)。"""
+    """解锁态状态容器(在 _make_gs 基础上唯一入口函数直写 unlocked_experts)。"""
     gs = _make_gs(bench=[], done=_seed_done())
     gs.write_logic(gs.unlocked_experts, names, produced_by='test-seed',
                    evidence='test:unlock', sig=_SIG_SIM)
@@ -293,7 +293,7 @@ def test_boss_leg_deck_time_pool_unlock_expert_reaches_candidates(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """boss 分支2 牌库时点池(economy.md §8 用户裁定 2026-10-28):解锁
     姬子(列车同行域唯一专家)→ seed 9 掷中姬子并落席;同 seed 未解锁
-    容器掷星期日(姬子不在候选)——两态对照钉死「已解锁专家 ∈ 授予候选,
+    状态容器掷星期日(姬子不在候选)——两态对照钉死「已解锁专家 ∈ 授予候选,
     未解锁专家 ∉」。示范专家必须取目标域内专家:停云 ∈ 仙舟/能量不属
     本域,示范不可用(攻击轮 1 F2 防复发约束)。"""
     from sr_od.application.currency_war.kernel.cw_pool import grant_char_pool

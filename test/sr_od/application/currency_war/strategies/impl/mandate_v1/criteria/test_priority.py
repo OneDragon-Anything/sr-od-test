@@ -670,7 +670,7 @@ def test_member_rank_migration_equivalence() -> None:
         '锁定帧:字段直读 ≡ 旧推导'
     # 序数落键抽样:花火(core,need 3,持 1★)档 3 ①键 = (0, 0);银狼
     # (shared,need 缺省 1,持 1★)档 7 ①键 = (0, 1)。独立 session(状态
-    # 宿主 = 会话容器,与前段锁定写入隔离)。
+    # 宿主 = 会话状态容器,与前段锁定写入隔离)。
     session2 = cw4_session()
     gs2 = cw4_gs(session2, level=7,
                  bench=[cw4_bc('花火'), cw4_bc('银狼')])

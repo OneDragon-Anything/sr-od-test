@@ -86,7 +86,7 @@ def _seed_obs_sig() -> ChannelSig:
 
 def _gs(*, card: str | None = _CARD, level: int | None = 5,
         cur: int = 0) -> GameState:
-    """直构容器(card=None = 未持卡;'躺平' = 表外卡;level=None = 等级/
+    """直构状态容器(card=None = 未持卡;'躺平' = 表外卡;level=None = 等级/
     经验未观察)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if card is not None:

@@ -88,7 +88,7 @@ def _logic_sig(actor: str = 'TestSeqEnv') -> ChannelSig:
 # ================================================================ 推进原语判据面
 
 def _gs_with_double_pair() -> GameState:
-    """新容器 + 双手狸已登记(每进节点 +2 免费刷新,发放断言活载体)。"""
+    """新状态容器 + 双手狸已登记(每进节点 +2 免费刷新,发放断言活载体)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.effects.register_strategy(STRATEGY_EFFECTS['双手狸开键盘！'],
                                  acquired_key=(1, 5))
@@ -96,7 +96,7 @@ def _gs_with_double_pair() -> GameState:
 
 
 def test_gate_blocks_fresh_container() -> None:
-    """value 守卫(攻击 R1 回归测试):新容器 node_pos=(None, 'observation')
+    """value 守卫(攻击 R1 回归测试):新状态容器 node_pos=(None, 'observation')
     (Field 缺省 source 即 observation)——门必须按 value 在场判定,否则
     开局/恢复局首次终结确认误放行且 candidate 无定义。"""
     gs = _gs_with_double_pair()
@@ -287,8 +287,8 @@ def test_terminal_match_end_event_style() -> None:
 # ================================================================ 场景走查测试
 
 def _gs_with(test_context, monkeypatch, spec_name: str) -> GameState:
-    """session 旁表容器挂 ctx.cw_match(op 上报口供给面)+ 指定效果已登记
-    (发放断言活载体);返回容器与 gs_of_ctx 同源。"""
+    """session 旁表状态容器挂 ctx.cw_match(op 上报口供给面)+ 指定效果已登记
+    (发放断言活载体);返回状态容器与 gs_of_ctx 同源。"""
     session = cw4_session()
     monkeypatch.setattr(test_context, 'cw_match',
                         SimpleNamespace(session=session), raising=False)
@@ -377,7 +377,7 @@ def test_boss_segment_click_advance_and_cross_plane(
 def test_locked_resume_value_guard_self_heal(test_context, monkeypatch) -> None:
     """锁定臂门挡自愈(design §2.2/§2.3,landing §3.6 S9):锁定臂直出战
     无备战帧锚定(v=None)→ 首次结算确认被 **value 守卫**挡(攻击 R1:
-    新容器缺省 source 即 observation,门必须按 value 在场判);战后备战
+    新状态容器缺省 source 即 observation,门必须按 value 在场判);战后备战
     帧观察锚定以绝对读数首锚定补齐(恢复局重建语义,R=局中任意节点)——
     键表示无 skew,后续终结动作正常推进。"""
     gs = _gs_with(test_context, monkeypatch, '双手狸开键盘！')
@@ -574,7 +574,7 @@ def _modified() -> dict[int, tuple[str, ...]]:
 
 def _gs_with_field(
         value: dict[int, tuple[str, ...]] | None) -> GameState:
-    """带场字段的裸容器(写通道 = 生产写口 write_logic;None = 未注册态)。"""
+    """带场字段的裸状态容器(写通道 = 生产写口 write_logic;None = 未注册态)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if value is not None:
         gs.write_logic(gs.node_seq_by_plane, value,
@@ -647,7 +647,7 @@ def test_lock3_write_leg_non_whitelist_full_default_table() -> None:
 
 
 def test_lock3_none_field_consumers_fall_back_to_default() -> None:
-    """字段 None(未注册)→ 消费方回退默认表;裸容器字段缺省 None。"""
+    """字段 None(未注册)→ 消费方回退默认表;裸状态容器字段缺省 None。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     assert gs.node_seq_by_plane.value is None
     assert node_sequence_of(1, gs.node_seq_by_plane.value) \
@@ -656,7 +656,7 @@ def test_lock3_none_field_consumers_fall_back_to_default() -> None:
 
 
 def test_lock3_snapshot_restore_carries_field() -> None:
-    """快照恢复随容器现值携带(键 int 化 + 值 tuple 化重建)。"""
+    """快照恢复随状态容器现值携带(键 int 化 + 值 tuple 化重建)。"""
     gs = _gs_with_field(_modified())
     snap = gs.full_state_snapshot()
     gs2 = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
@@ -768,7 +768,7 @@ def test_lock6_recognizer_tool_state_shares_parsing(
 def test_lock6_recorder_and_funnel_wiring_passes_caps(
         monkeypatch) -> None:
     """cw_match_recorder 语料采集与 read_game_state 漏斗接入调用:
-    round_caps 透传场字段现值(实时态);局外无容器 = None 回退。"""
+    round_caps 透传场字段现值(实时态);局外无状态容器 = None 回退。"""
     from sr_od.application.currency_war.telemetry import cw_match_recorder
 
     captured: dict = {}
@@ -808,7 +808,7 @@ def test_lock7_registry_ownership_orphan_key_raises(monkeypatch) -> None:
 
 def _shop_gs_with_target(mod_target_pos: tuple[int, int],
                          mirror: NodeKey | None) -> GameState:
-    """修饰局商店帧容器:生效键 = 修饰制目标序位(hist/ord 同值),镜像按参。"""
+    """修饰局商店帧状态容器:生效键 = 修饰制目标序位(hist/ord 同值),镜像按参。"""
     gs = _gs_with_field(_modified())
     observe_node_anchor(gs, mod_target_pos, trigger_screen='货币战争-备战',
                         actor='TestSeqEnv')

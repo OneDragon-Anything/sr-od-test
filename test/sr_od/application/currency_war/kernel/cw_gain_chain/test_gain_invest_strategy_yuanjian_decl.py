@@ -52,13 +52,13 @@ def _isolate_defect_buffer():
 def test_yuanjian_grant_decl_one_row(rand: bool,
                                      _isolate_defect_buffer) -> None:
     """名单卡申报行(rand 两形参数化):远见获得 → STRATEGY_GRANT_DECL
-    恰一行(选择时点真值不可观察,申报留证);容器注册照常(行为
+    恰一行(选择时点真值不可观察,申报留证);状态容器注册照常(行为
     fail-closed——申报行外零容器写差异)。"""
     rows: list[dict] = []
     set_defect_sink(rows.append)
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     out = gain_invest_strategy(gs, None, '远见', rand=rand, sig=_LSIG)
-    assert out.placed, '容器注册照常(fail-closed 形态)'
+    assert out.placed, '状态容器注册照常(fail-closed 形态)'
     assert '远见' in (gs.active_strategies.value or []), '注册入列'
     kinds = [r['kind'] for r in rows]
     assert kinds.count(STRATEGY_GRANT_DECL) == 1, \
@@ -89,4 +89,4 @@ def test_non_member_zero_rows(_isolate_defect_buffer) -> None:
     assert kinds.count(STRATEGY_GRANT_DECL) == 0, \
         f'非名单卡闭集零申报行(含 granted 名获得): {kinds}'
     assert granted_like in (gs.active_strategies.value or []), \
-        'granted 名注册照常(申报行缺位非容器缺位)'
+        'granted 名注册照常(申报行缺位非状态容器缺位)'

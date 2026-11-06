@@ -116,7 +116,7 @@ def _drive_to_kind_prep(monkeypatch: pytest.MonkeyPatch, b: SimBackend,
 
 def _hold_card(gs) -> None:
     """持卡直置(不经 pick 链——设计稿 §1.2e:端到端锁复用断言形态不走
-    驱动链;注册容器直写 = 持卡事实单一源)。"""
+    驱动链;注册状态容器直写 = 持卡事实单一源)。"""
     gs.write_logic(gs.active_strategies, [_CARD],
                    produced_by='test-seed', evidence='t:card', sig=_SIG)
 

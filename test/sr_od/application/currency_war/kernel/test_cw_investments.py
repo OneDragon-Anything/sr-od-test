@@ -1502,7 +1502,7 @@ def test_bench_capacity_registration_surface() -> None:
     备战/板面域,BattlefieldEffect↔BATTLEFIELD);duration_nodes = 3(卡面
     「在接下来3个节点」);payload 双字段 = capacity_limit=3(容量桥声明契约)
     + expiry_simple_equips=3(到期发放腿件数);duties 只 track(容量消费端
-    读容器派生,无预知/无姿态);pending=True 必带保守支 notes(「3 件」随机性
+    读状态容器派生,无预知/无姿态);pending=True 必带保守支 notes(「3 件」随机性
     v0 未实采,家族判据「二义未实采不定死」);id 双匹配过校验(import 期已
     过——本测试存活即证,直调 = 复跑回归锚)。"""
     spec = STRATEGY_EFFECTS['节省工位']

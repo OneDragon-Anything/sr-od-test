@@ -6,14 +6,14 @@ screens.py 盛会之星段;report 函数级契约由 test_screen_report_ports �
 
 - **观察上报接入调用测试**(表驱动;命运卜者双域拆独立测试):观察 node 读链桩化 →
   驱动 observe →
-  report 经屏文件落容器(容器终值);盛会之星接入调用由 obs_arch_event_screens
+  report 经屏文件落状态容器(状态容器终值);盛会之星接入调用由 obs_arch_event_screens
   同文件测试承担(懒读保真,不在本表);
 - **入口门语义测试**(带门四屏):门 miss = round_fail 交回外循环重判,
   文案沿用现役,且不进读链(obs 不装载);
 - **chosen 写时机测试**(祈愿试炼代表):确认已发 → 标识不在 = 选卡落地
   → 此刻才写 chosen_wish + success 交回;标识在 = 未落地 → 不写、重走
   (chosen_* 动作事实边界留守重入裁决点);
-- **决策动作 node 测试**(银狼策划,无门单发型):决策从容器零参读
+- **决策动作 node 测试**(银狼策划,无门单发型):决策从状态容器零参读
   (决策调用形态不变)→ 组装 equip(分支类型载荷 classify_planner_branch)→
   点卡链派发 → 派发即 round_success 终结(零重入裁决轮;即时上报迭代
   。原装备三选一代表测试
@@ -70,7 +70,7 @@ def _mrl(x: float, y: float) -> SimpleNamespace:
 
 
 def _make_match(session: StrategySession, **strategy) -> SimpleNamespace:
-    """局内 match 桩(session 挂容器;策略入口按屏注入零参决策桩)。"""
+    """局内 match 桩(session 挂状态容器;策略入口按屏注入零参决策桩)。"""
     match = SimpleNamespace(session=session, strategy=SimpleNamespace(**strategy))
     match.gs = game_state_of(session)
     return match
@@ -107,7 +107,7 @@ def _setup_expert(op, monkeypatch) -> None:
 
 # ==================== 观察上报接入调用测试(表驱动)====================
 
-# 屏键 → (模块名, 类名, 装配钩子(op, monkeypatch), 期望容器字段, 期望终值)
+# 屏键 → (模块名, 类名, 装配钩子(op, monkeypatch), 期望状态容器字段, 期望终值)
 _OBS_ROWS = {
     'partner':
         ('cw_screen_partner', 'CwScreenPartner',
@@ -152,9 +152,9 @@ _OBS_ROWS = {
 def test_observe_reports_container_per_screen(test_context, monkeypatch,
                                               screen_key: str) -> None:
     """观察上报接入调用测试(表驱动四屏;命运卜者/星徽秘典双域测试拆独立 = 下两个测试):
-    观察 node 读链桩化 → observe success → report 经屏文件落容器
-    (容器终值逐位 = 现役写点转录值)+ obs 挂实例属性。红 = 接入调用断流 /
-    容器终值漂移 / obs 未装载。"""
+    观察 node 读链桩化 → observe success → report 经屏文件落状态容器
+    (状态容器终值逐位 = 现役写点转录值)+ obs 挂实例属性。红 = 接入调用断流 /
+    状态容器终值漂移 / obs 未装载。"""
     import importlib
 
     mod_name, cls_name, setup, field, expected = _OBS_ROWS[screen_key]
@@ -175,7 +175,7 @@ def test_observe_reports_container_per_screen(test_context, monkeypatch,
     assert rs.is_success, f'{screen_key}: 观察 success:{rs!r}'
     gs = game_state_of(session)
     assert getattr(gs, field).value == expected, (
-        f'{screen_key}: report 落容器(容器终值):'
+        f'{screen_key}: report 落状态容器(状态容器终值):'
         f'{getattr(gs, field).value!r}')
     assert op._obs is not None, f'{screen_key}: obs 挂实例属性'
 
@@ -246,7 +246,7 @@ def test_wish_observe_reports_dual_domain(test_context, monkeypatch) -> None:
         '坐标域与名字域同序等长')
     assert op._obs is not None, 'wish: obs 挂实例属性'
     assert op._obs.option_points == gs.wish_trial_opts_xy.value, (
-        'obs 坐标与容器同源')
+        'obs 坐标与状态容器同源')
 
 
 def test_bookcard_observe_reports_dual_domain(test_context, monkeypatch) -> None:
@@ -256,7 +256,7 @@ def test_bookcard_observe_reports_dual_domain(test_context, monkeypatch) -> None
     success → report 双写 star_tome_opts / star_tome_opts_xy(同门同序
     等长;坐标 = OCR x 中心 + x 近邻「星徽卡-N」建档中心 y,观察期一次
     解出)+ obs 挂实例属性。红 = 接入调用断流 / 坐标域未随观察上报 / 双域
-    终值漂移 / 标准化门失守(裸 OCR 名直写容器)。"""
+    终值漂移 / 标准化门失守(裸 OCR 名直写状态容器)。"""
     from one_dragon.base.geometry.point import Point
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_bookcard as mod,
@@ -291,7 +291,7 @@ def test_bookcard_observe_reports_dual_domain(test_context, monkeypatch) -> None
         '坐标域与名字域同序等长')
     assert op._obs is not None, 'bookcard: obs 挂实例属性'
     assert op._obs.option_points == gs.star_tome_opts_xy.value, (
-        'obs 坐标与容器同源')
+        'obs 坐标与状态容器同源')
 
 
 def test_bookcard_observe_gate_failures_zero_write(test_context,
@@ -383,7 +383,7 @@ def test_bookcard_lcs_ambiguity_rejection_and_unique_pass(test_context,
                             lambda s, sc, a, **k: _Area(True), raising=False)
         monkeypatch.setattr(op.ctx, 'ocr_service', _StubOcr(
             list_result=ocr_rows), raising=False)
-        # 解点读桩(area_center 回定值;唯一命中分支要过解点才落容器)。
+        # 解点读桩(area_center 回定值;唯一命中分支要过解点才落状态容器)。
         monkeypatch.setattr(
             mod, 'area_center',
             lambda ctx, name, screen_name: Point(700, 500))
@@ -402,7 +402,7 @@ def test_bookcard_lcs_ambiguity_rejection_and_unique_pass(test_context,
     assert gs.star_tome_opts.value is None, '歧义名字域零写'
     assert gs.star_tome_opts_xy.value is None, '歧义坐标域零写(同进退)'
     assert op._obs is None, '歧义不装载 obs'
-    # ② 明确唯一(分差足额)→ 通过,容器落标准注册名 + 坐标同门双写。
+    # ② 明确唯一(分差足额)→ 通过,状态容器落标准注册名 + 坐标同门双写。
     rs2, session2, op2 = _run([_row('昼之半祌星徽', 700)])
     assert rs2.is_success, f'唯一命中放行(拒判不过严):{rs2!r}'
     gs2 = game_state_of(session2)
@@ -517,7 +517,7 @@ def test_wish_chosen_written_at_reentry_adjudication_only(
         '派发 param = 策略产实例(直发零重建,reason 归因不丢)')
     assert (dispatches[0].env.target is None
             and dispatches[0].env.idx is None), (
-        'env 仅携 op(定位点 = 观察上报坐标,动作 op 自容器 '
+        'env 仅携 op(定位点 = 观察上报坐标,动作 op 自状态容器 '
         'wish_trial_opts_xy 取,零 env 坐标喂)')
     assert op._confirm_pending == (['累计刷新10次', ''], 0), (
         '重走后待裁决快照重置(本轮选择)')
@@ -625,7 +625,7 @@ def test_wish_act_dispatches_strategy_param_env_op_only(
         test_context, monkeypatch):
     """正路形态:真词表类 idx=1 → 恰一次派发且派发 param 即策略产实例
     (直发零重建,reason 归因不丢)、env 仅携 op(零 target 零 idx——
-    坐标随报条款,点击坐标 = 动作 op 自容器 wish_trial_opts_xy 读)、
+    坐标随报条款,点击坐标 = 动作 op 自状态容器 wish_trial_opts_xy 读)、
     rs = round_wait、_confirm_pending 置位快照 = 本轮选择。红 = 派发
     实例重建 / env 坐标喂回潮。"""
     from one_dragon.base.operation.operation_round_result import (
@@ -787,7 +787,7 @@ def test_fortune_act_dispatches_strategy_param_env_op_only(
         test_context, monkeypatch) -> None:
     """补充测试③(正路形态):真词表类 idx=1 → 恰一次派发且派发 param 即
     策略产实例(直发零重建,reason 归因不丢)、env 仅携 op(零 target
-    零 idx——坐标随报条款,点击坐标 = 动作 op 自容器读)、rs = round_wait、
+    零 idx——坐标随报条款,点击坐标 = 动作 op 自状态容器读)、rs = round_wait、
     _confirm_pending 置位。红 = 派发实例重建 / env 坐标喂回潮。"""
     from one_dragon.base.operation.operation_round_result import (
         OperationRoundResultEnum,

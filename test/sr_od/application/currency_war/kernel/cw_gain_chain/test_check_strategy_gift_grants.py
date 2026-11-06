@@ -12,8 +12,8 @@
   计数口径 = 上阵(bench 同名不计入判据,T-30 口径);
 - 锁 3 效果条目2(节点类型条件):持卡 + reward → 1★波提欧 + 封账;battle
   零发;无持卡 + reward 零发;已发 + reward 零双发;
-- 随机态通道:直构容器恒未锚定 → 角色确定发放(rand=False)走
-  write_logic_rand 通道(容器锚定态决定,与 discharge 族 rand=False
+- 随机态通道:直构状态容器恒未锚定 → 角色确定发放(rand=False)走
+  write_logic_rand 通道(状态容器锚定态决定,与 discharge 族 rand=False
   现役形态同形)。
 """
 from __future__ import annotations
@@ -55,7 +55,7 @@ def _gs(*, cards: list[str] | None = None,
         deployed: list[str] | None = None,
         bench: list[tuple[str, int]] | None = None,
         equips: list[str] | None = None) -> GameState:
-    """直构容器(cards=None = 未持卡;'躺平' = 表外卡;deployed/bench/
+    """直构状态容器(cards=None = 未持卡;'躺平' = 表外卡;deployed/bench/
     equips 传 None = 保持未观察,供宁缺勿造防御支;deployed = 上阵角色
     名集,bench = (角色, 星) 槽位)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)

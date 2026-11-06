@@ -4,7 +4,7 @@
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-191-chaofa-
 huobi.md §3 锁 7(REVIEW-T191 §四④ 同面):
 - 窗内登记:条目已登记 remaining_nodes=6(N_NODES 播种)+ counters[LOST]
-  = 登记帧金读数(播值腿)+ **gs.gold 容器零触碰**(播值 = 容器簿记
+  = 登记帧金读数(播值腿)+ **gs.gold 状态容器零触碰**(播值 = 状态容器簿记
   非金写,live 零写金断言——gold 值/来源/证据三面现值不变);
 - 金读数 None:计数缺省 + 缺陷留存证据(kind
   gain_chain_lost_counter_gold_unread,禁猜测写——锁 7 申报分支);
@@ -41,7 +41,7 @@ def _lsig() -> ChannelSig:
 
 def _make_gs(*, node: tuple[int, int] | None = (2, 3),
              gold: int | None = _GOLD_SEED) -> GameState:
-    """直构容器局(bench/equips 种子沿镜像先例;gold 按参观察种子,
+    """直构状态容器局(bench/equips 种子沿镜像先例;gold 按参观察种子,
     None = 不种走失读分支)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.observe(gs.bench,
@@ -59,7 +59,7 @@ def _make_gs(*, node: tuple[int, int] | None = (2, 3),
 
 def test_gain_chaofa_huobi_registers_lost_snapshot() -> None:
     """锁 7 主形态:窗内登记 → 条目已登记 remaining_nodes=6 ∧
-    counters[LOST] = 登记帧金读数 ∧ gold 容器零触碰(值/来源/证据三面
+    counters[LOST] = 登记帧金读数 ∧ gold 状态容器零触碰(值/来源/证据三面
     现值不变 = live 零写金断言)。"""
     gs = _make_gs()
     gain_invest_strategy(gs, object(), '超发货币', rand=False, sig=_lsig())

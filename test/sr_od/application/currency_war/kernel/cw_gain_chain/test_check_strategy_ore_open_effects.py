@@ -58,7 +58,7 @@ def _make_gs(*, held: bool = True,
              points: tuple[tuple[str, int, int, int], ...] = (),
              ore_rewards: dict[str, OreReward] | None = None,
              level: int | None = 3) -> GameState:
-    """直构容器(spheres/ore_rewards/level/持卡按参播种;先例 =
+    """直构状态容器(spheres/ore_rewards/level/持卡按参播种;先例 =
     test_strategy_reward_ore 直构形)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if held:

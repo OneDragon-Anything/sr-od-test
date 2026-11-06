@@ -18,7 +18,7 @@ T-165-jiazhi-touzi-jin.md(定稿)§4 锁 1/2/3 + REVIEW-T165 §2/④(七裁决
   ``value_invest_bind:*``,绑定即状态副本里的值);门控测试形态:直构 gs 无
   sim 装配 → 门控恒 False,绑定断言须装配占位后端后行使;
 - 锁 3 腿 1 live 形态:同 path 非装配 → 备战随机态写(logic_rand 通道)
-  、绑定域零写(live 掷骰是猜测,假绑定禁入容器——复制发放腿唯一判据)。
+  、绑定域零写(live 掷骰是猜测,假绑定禁入状态容器——复制发放腿唯一判据)。
 """
 from __future__ import annotations
 
@@ -210,7 +210,7 @@ def test_bound_char_grant_live_form_zero_binding_write(
         rows_sink) -> None:
     """锁 3 live 形态负锁(核心):未装配 sim(纯实机态)→ 备战照常
     随机态直写(T-89 族形猜测写:live 掷骰 = 未验证推算,下一备战帧
-    bench 整表观察纠偏)、绑定域零写——假绑定即使无消费面也禁入容器
+    bench 整表观察纠偏)、绑定域零写——假绑定即使无消费面也禁入状态容器
     (复制发放腿唯一判据,静默存续不可接受)。"""
     cw_sim_ports.uninstall_sim_backend()
     rng = random.Random(200401)
@@ -224,5 +224,5 @@ def test_bound_char_grant_live_form_zero_binding_write(
         'live 备战照常随机态直写(族形猜测保真度)'
     assert gs.bench.source == 'logic_rand', '随机态通道(logic_rand)'
     assert gs.strategy_char_grant_bindings.value in (None, {}), \
-        '绑定域零写(直构未种容器 None 形态同零写)'
+        '绑定域零写(直构未种状态容器 None 形态同零写)'
     assert rows_sink.kinds() == [], '零申报行(零写 = 无缺口)'

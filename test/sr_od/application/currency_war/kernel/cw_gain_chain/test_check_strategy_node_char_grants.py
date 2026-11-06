@@ -8,7 +8,7 @@ T-165-jiazhi-touzi-jin.md(定稿)§4 锁 4/5/7 + REVIEW-T165 §2/④
 (七裁决点全部默认案):
 
 - 锁 4 常规:绑定在场 + prev_kind 非 supply → 恰 1 名 1★ 同名
-  (rand=False 确定发放语义;直构容器恒未锚定,写通道断言按
+  (rand=False 确定发放语义;直构状态容器恒未锚定,写通道断言按
   write_logic_rand 现值形;显式置 prep_anchored=True 才断言 logic 通道);
   未持卡零写;持卡未绑定零写 + defect 证据行(状态机缺口 fail-closed);
 - 锁 5 补给后:prev_kind='supply' → 恰 3 名;同位面三形态(P1r5→P1r6 /
@@ -90,7 +90,7 @@ def _make_gs(*, bench: list[tuple[str, int]] | None = None,
              cards: list[str] | None = None,
              bindings: dict[str, str] | None = None,
              anchored: bool = False) -> GameState:
-    """直构容器(bench 槽位 (角色名, 星);cards = 持卡;bindings = 绑定域
+    """直构状态容器(bench 槽位 (角色名, 星);cards = 持卡;bindings = 绑定域
     现值;anchored = 显式置位锚定标志〔通道断言切换〕)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if bench is not None:
@@ -111,7 +111,7 @@ def _make_gs(*, bench: list[tuple[str, int]] | None = None,
 
 def test_regular_node_grants_single_copy(rows_sink) -> None:
     """锁 4 常规:绑定在场 + prev_kind 非 supply → 恰 1 名 1★ 同名
-    (确定发放;直构容器恒未锚定 → 写通道 = write_logic_rand 现值形,
+    (确定发放;直构状态容器恒未锚定 → 写通道 = write_logic_rand 现值形,
     与 discharge_due_item_grants rand=False 同形);返回值 = 合计 1。"""
     gs = _make_gs(bench=[], cards=[_CARD], bindings={_CARD: _BOUND})
     seq0 = gs.write_seq
@@ -122,7 +122,7 @@ def test_regular_node_grants_single_copy(rows_sink) -> None:
     assert [(u.char_id, u.star) for u in units] == [(_BOUND, 1)], \
         '恰 1 名 1★ 绑定同名'
     assert gs.bench.source == 'logic_rand', \
-        '直构容器未锚定 → 随机态通道(容器锚定态决定,rand=False 同形)'
+        '直构状态容器未锚定 → 随机态通道(状态容器锚定态决定,rand=False 同形)'
     assert (gs.bench.evidence or '').startswith(
         f'strategy_node_char:{_CARD}'), '发放写 evidence 前缀'
     assert gs.write_seq > seq0, '落位写发生'
@@ -130,12 +130,12 @@ def test_regular_node_grants_single_copy(rows_sink) -> None:
 
 
 def test_regular_node_grants_logic_channel_when_anchored(rows_sink) -> None:
-    """锁 4 通道切换面:显式置 prep_anchored=True 的容器上 → 确定发放走
+    """锁 4 通道切换面:显式置 prep_anchored=True 的状态容器上 → 确定发放走
     logic 通道(失配网原样生效)。"""
     gs = _make_gs(bench=[], cards=[_CARD], bindings={_CARD: _BOUND},
                   anchored=True)
     check_strategy_node_char_grants(gs, prev_kind='encounter', sig=_LSIG)
-    assert gs.bench.source == 'logic', '锚定容器确定发放 → 确定面'
+    assert gs.bench.source == 'logic', '锚定状态容器确定发放 → 确定面'
     assert [(u.char_id, u.star) for u in bench_units_of(gs)] == \
         [(_BOUND, 1)], '发放真值同形'
 

@@ -11,7 +11,7 @@
 - session=None = 登记分支跳过(登记分支 best-effort 语义),burst/补发
   双零——直发形态(T-46 策略大师 session=None)与 burst 桥同域,本批
   不扩(申报面);
-- node 缺席(直构容器局外形态)= burst 照发、补发保守零(「已开始」
+- node 缺席(直构状态容器局外形态)= burst 照发、补发保守零(「已开始」
   判据不可评估,禁猜)。
 """
 from __future__ import annotations

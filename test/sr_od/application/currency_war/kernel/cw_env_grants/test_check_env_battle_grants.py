@@ -127,7 +127,7 @@ _TRIO = ['刃', '卡芙卡', '银狼']
 def test_condition_matrix_short_circuits(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """未发放分支逐序零写(设计 §2.3 条件矩阵 1-3):env 空链/未登记/
-    已 done → 返回 None 且容器零写行。"""
+    已 done → 返回 None 且状态容器零写行。"""
     for label, gs in (
             ('env 空链', _make_gs(env=None, deployed=_TRIO, bench=[])),
             ('未登记', _make_gs(env='轮岗', deployed=_TRIO, bench=[])),

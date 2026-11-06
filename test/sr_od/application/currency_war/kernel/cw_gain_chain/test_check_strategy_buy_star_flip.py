@@ -8,7 +8,7 @@ mark_strategy_buy_star_flip_consumed + kernel/cw_action_report/buy_card.py
 4费角色将立刻升到2星。获得12金币。」;直构形态先例 = 同目录
 test_check_strategy_first_buy_xp_grants.py):
 - 谓词分支矩阵(锁 2):未持卡/表外卡 False;持卡 cost=4 star=1 True;
-  已置一次性标志位 False;star>=2 False;cost≠4 False;一次性标志位容器缺省 None 防御分支;
+  已置一次性标志位 False;star>=2 False;cost≠4 False;一次性标志位状态容器缺省 None 防御分支;
 - 置一次性标志位消耗轴(裁决点 4 消耗语义):已 2★ 购买照常消耗(消耗 = 未落一次性标志位 ∧
   费用匹配,无星级轴);费用不匹配/已置一次性标志位二次短路零写;
 - 买牌上报链翻转局 walk(锁 3):落位 Unit.star==2 + 一次性标志位置位 + payload
@@ -64,7 +64,7 @@ _FOUR_COST_ALT = '杰帕德'    # 另一只 4 费(一次性消耗锁)
 
 
 def _gs(*, card: str | None = _CARD, done=()) -> GameState:
-    """谓词/置一次性标志位直构容器(card=None = 未持卡;'躺平' = 表外卡)。"""
+    """谓词/置一次性标志位直构状态容器(card=None = 未持卡;'躺平' = 表外卡)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if card is not None:
         gs.write_logic(gs.active_strategies, [card],
@@ -108,13 +108,13 @@ def test_predicate_matrix() -> None:
 
 
 def test_predicate_none_latch_container_defense(monkeypatch) -> None:
-    """一次性标志位容器缺省 None 防御分支(锁 2):Field 缺省 None 是合法设计语义,
-    读取端带 or () 防御——None 容器不炸、按未落一次性标志位处理。"""
+    """一次性标志位状态容器缺省 None 防御分支(锁 2):Field 缺省 None 是合法设计语义,
+    读取端带 or () 防御——None 状态容器不炸、按未落一次性标志位处理。"""
     gs = _gs()
     monkeypatch.setattr(gs, 'strategy_conditional_done', Field())
     assert check_strategy_buy_star_flip(gs, name=_FOUR_COST, star=1,
                                         cost=4, sig=_SIG) is True, \
-        'None 容器防御读取,不炸不误置一次性标志位'
+        'None 状态容器防御读取,不炸不误置一次性标志位'
 
 
 # ============================================================ 置一次性标志位消耗轴(锁 2 + 裁决点 4)

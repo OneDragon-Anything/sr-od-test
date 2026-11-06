@@ -33,7 +33,7 @@ _ID = '253601'
 
 def test_faction_count_table_entry() -> None:
     """效果条目1 表条目锁:五元组逐值 = 卡面直读(判据阵营/人数/发放角色/星级/
-    携带装备),值形 = 扁平 tuple 非容器(登记面单一形态)。"""
+    携带装备),值形 = 扁平 tuple 非状态容器(登记面单一形态)。"""
     assert STRATEGY_FACTION_COUNT_GRANTS[_CARD] == \
         ('巡海游侠', 4, '黄泉', 2, '星间旅人星徽')
     assert isinstance(STRATEGY_FACTION_COUNT_GRANTS[_CARD], tuple)

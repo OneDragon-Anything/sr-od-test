@@ -6,7 +6,7 @@ kernel/test_env_grants.py,本文件按被测方法拆目录规范落位,先例 =
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
 T-26-liangzi-tongpin-qiyue.md(定稿)§2.2 + §4.4/§4.5:
 - **条件矩阵**:env 未激活(None/空链)/未登记/facts 无触发角色 → 零写
-  零效果串;bench 未观察 → 效果串照返、容器零写(链拒落语义,不炸);
+  零效果串;bench 未观察 → 效果串照返、状态容器零写(链拒落语义,不炸);
   席满 + 溢出位空 → 溢出落位;席满 + 溢出位占 → 零写 +
   DEFECT_OVERFLOW_TAKEN 留证;
 - **rng 实机(live)和模拟器(sim)两边**:注入槽确定性(装 provider 同动作序列两次重放结果一致)/
@@ -169,7 +169,7 @@ def test_grant_seeded_via_provider_pinned_name(
 def test_bench_unobserved_zero_container_write(
         monkeypatch: pytest.MonkeyPatch, seeded_provider) -> None:
     """bench 未观察(T-26 设计 §4.4):零写不炸,效果串照返——发放事实
-    与落位成败解耦(item_gift 通道同阶口径),容器落位语义归链
+    与落位成败解耦(item_gift 通道同阶口径),状态容器落位语义归链
     (拒落档零写)。"""
     gs = _make_gs(bench=None)
     assert gs.bench.value is None

@@ -88,8 +88,8 @@ def _counting_force_settle(monkeypatch: pytest.MonkeyPatch,
 
 
 def _skip_feed(b: SimBackend) -> WorldDecl:
-    """免战跳过上报 + 声明喂入(session = sim 容器本体直通——递减与
-    状态副本消费同容器;上报后一行喂入 = 动作 op 同形)。返回声明供幂等
+    """免战跳过上报 + 声明喂入(session = sim 状态容器本体直通——递减与
+    状态副本消费同状态容器;上报后一行喂入 = 动作 op 同形)。返回声明供幂等
     重放用例直喂(重放面 = sim 消费守卫,不经上报重复递减)。"""
     out = report_action_start_battle_param(
         b.gs, SimpleNamespace(), _SIG, session=b.gs, skip_substate=True)

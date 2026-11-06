@@ -58,7 +58,7 @@ _SIG_SEED = ChannelSig(family='logic_action', actor='test-seed',
 
 def _make_gs(*, node_pos: tuple[int, int] | None = (1, 3),
              queue: tuple = (), done: tuple = ()) -> GameState:
-    """直构容器:生效序位观察锚定(settle_confirm 分支内 = 战斗后继第一
+    """直构状态容器:生效序位观察锚定(settle_confirm 分支内 = 战斗后继第一
     节点);队列/done 经 logic 直写播种(测试自造输入)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     if node_pos is not None:

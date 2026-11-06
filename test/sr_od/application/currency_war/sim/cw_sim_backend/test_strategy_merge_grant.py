@@ -68,7 +68,7 @@ def _prep_backend(seed: int) -> SimBackend:
 
 
 def _hold_card(gs) -> None:
-    """持卡直置(注册容器直写 = 持卡事实;本卡不进 STRATEGY_EFFECTS,
+    """持卡直置(注册状态容器直写 = 持卡事实;本卡不进 STRATEGY_EFFECTS,
     零账本登记面——触发腿查 active_strategies ∩ STRATEGY_MERGE_GRANTS)。"""
     gs.write_logic(gs.active_strategies, [_CARD],
                    produced_by='test-seed', evidence='t:card',

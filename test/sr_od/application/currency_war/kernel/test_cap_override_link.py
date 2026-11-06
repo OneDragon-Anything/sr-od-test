@@ -52,7 +52,7 @@ _CAP_CARD_BY_VALUE: dict[int, str] = {
 
 
 def _sess_with(*names: str) -> StrategySession:
-    """session 桩:active_strategies 注入面(终态契约 §B:单一源 = 容器,
+    """session 桩:active_strategies 注入面(终态契约 §B:单一源 = 状态容器,
     持卡经 write_logic 直写 gs——两写点公共权威)。"""
     s = StrategySession()
     from sr_od.application.currency_war.kernel.cw_game_state import (
@@ -116,7 +116,7 @@ def test_budget_face_reserve_floor_linkage() -> None:
     from sr_od.application.currency_war.kernel.cw_economy import reserve_cap
 
     def _boxed_gs(gold: int):
-        """排程关闭态容器种子(bench 空、等级已到峰值):R* = 守息线分量
+        """排程关闭态状态容器种子(bench 空、等级已到峰值):R* = 守息线分量
         裸值(桥配方 = 帧缺省 + 空店离屏)。"""
         return _bridge(plane=1, round_num=5, gold=gold, level=9, hp=80,
                        shop_refresh_cost=2, node='battle')

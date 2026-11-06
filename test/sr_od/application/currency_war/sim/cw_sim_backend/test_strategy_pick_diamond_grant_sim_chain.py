@@ -13,7 +13,7 @@ _on_invest_picked 宝钻腿 + 呈现一次性标志位 _strategy_pick_diamond_la
 - 发放落地门负验(锁 3 负面):equips 未观察形态(equips_unobserved 同
   判据,T-141 到级腿 placed 门同构)→ 宝钻腿拒落 + 回调零发 → 三写零发
   (防 back_layout/diamond_count 伪 +1);sim 种子初始值 equips=[] 下门恒
-  开,本锁以容器替身构造拒落形态(门系形态级卫生面)。
+  开,本锁以状态容器替身构造拒落形态(门系形态级卫生面)。
 控制规模扩展(designs/T-324-kongzhi-guimo.md §4 锁 5,拿卡触发第二卡
 随批归一同支):拿卡 → 宝钻入栏 + 状态副本三写同构(无佩佩腿,单位数零变);
 发放落地门负验同构。驱动形态复用声明:引擎驱动助手 import 自同目录
@@ -176,7 +176,7 @@ def test_replay_advance_zero_double_coupling() -> None:
 
 
 def test_equips_unobserved_gate_blocks_coupling() -> None:
-    """发放落地门负验(锁 3 负面):equips 未观察形态(容器替身 value
+    """发放落地门负验(锁 3 负面):equips 未观察形态(状态容器替身 value
     None)→ 宝钻腿拒落(效果串 placed=False)+ 拿卡腿门拦回调 → 三写
     零发(三域值零变化、零 env_diamond 笔)。门拦形态 = 拒落档下回调会
     伪写 back_layout/diamond_count +1(equips_unobserved 同判据,
@@ -191,7 +191,7 @@ def test_equips_unobserved_gate_blocks_coupling() -> None:
         cap_before = gs.deploy_cap.value
         back_before = gs.back_layout.value
         units_before = len(bench_units_of(gs))
-        # 容器替身:equips 通道替换为未观察形态(门/拒落双读点同塌;
+        # 状态容器替身:equips 通道替换为未观察形态(门/拒落双读点同塌;
         # restore 于 mp.undo)。佩佩腿(gain_character)不读 equips,
         # 首链其余只登记不写状态的实现分支本卡无条目,替身不扰他腿。
         mp.setattr(gs, 'equips', SimpleNamespace(value=None))
@@ -252,7 +252,7 @@ def test_pick_kongzhi_grants_diamond_world_coupling() -> None:
 
 def test_equips_unobserved_gate_blocks_kongzhi_coupling() -> None:
     """控制规模发放落地门负验(T-324 锁 5 负面):equips 未观察形态
-    (容器替身 value None)→ 宝钻腿拒落 + 拿卡腿门拦回调 → 三写零发
+    (状态容器替身 value None)→ 宝钻腿拒落 + 拿卡腿门拦回调 → 三写零发
     (三域值零变化、零 env_diamond 笔;与这么大的钻石门语义同闸)。"""
     b = _backend(seed=54)
     mp = pytest.MonkeyPatch()

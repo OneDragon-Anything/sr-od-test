@@ -6,7 +6,7 @@
 扫描测试禁止,AGENTS.md §10.4;桩宿主零真实 IO):
 
 - **pick op 机械行为**(五屏确认链,桩宿主记录点击):确认钮查找
-  全族统一(用户裁定 2026-09-22)、选中点击坐标 = 容器单点源
+  全族统一(用户裁定 2026-09-22)、选中点击坐标 = 状态容器单点源
   (``*_opts_xy``/payload,缺/越界 = 守卫断言,禁 env.target 回退、
   禁坐标现算)、轮次结果经 env.round_result 旁路回传、自上报接入调用;
 - **专家邀请函**(画面 op 入口单一形态 + 决策出口守卫测试组:异常传播/
@@ -352,12 +352,12 @@ def test_megastar_pick_op_clicks_confirm_once(no_pick_sleep):
 
 
 def test_megastar_pick_op_select_clicks_container_xy(no_pick_sleep):
-    """巨星选中半容器取点(选择坐标观察上报收敛,规范 = screens/
+    """巨星选中半状态容器取点(选择坐标观察上报收敛,规范 = screens/
     op-layer.md §1.1「选择坐标观察上报」+ action_ops.md §1 增补 5):
-    need_select=True → 点候选(点击坐标 = 容器 ``megastar_opts[param.idx].xy``,
+    need_select=True → 点候选(点击坐标 = 状态容器 ``megastar_opts[param.idx].xy``,
     env 零机械下标零 target 传参)→ 确认钮(area 查找点击,全族统一)。
     红 = 选中半
-    回潮消费 env.target / 容器取点断流 / 点击序漂移。"""
+    回潮消费 env.target / 状态容器取点断流 / 点击序漂移。"""
     from sr_od.application.currency_war.kernel.cw_events import MegastarOption
     from sr_od.application.currency_war.kernel.cw_game_state import (
         ChannelSig,
@@ -381,7 +381,7 @@ def test_megastar_pick_op_select_clicks_container_xy(no_pick_sleep):
     env = OverlayPickExecEnv(op=op, need_select=True)
     assert CwActionPickMegastarOp(ctx, CwActionPickMegastarParam(idx=1),
                                   env=env).run().is_success
-    # 点击序 = 选中位(容器 megastar_opts[param.idx].xy);确认 = area 查找
+    # 点击序 = 选中位(状态容器 megastar_opts[param.idx].xy);确认 = area 查找
     # 点击(桩承接),零直接坐标点击。
     assert [(p.x, p.y) for p, _t in ctrl.clicks] == [(1061, 333)]
     assert len(ctrl.moves) == len(ctrl.clicks)
@@ -499,7 +499,7 @@ def test_invest_pick_op_clicks_target_confirms_and_self_reports(
 
 def test_fortune_pick_op_clicks_card_confirms_and_self_reports(
         no_pick_sleep, monkeypatch):
-    """命运卜者确认链(坐标随报收敛后):点卡坐标 = 按下标自容器
+    """命运卜者确认链(坐标随报收敛后):点卡坐标 = 按下标自状态容器
     ``fortune_opts_xy`` 读(缺/越界 = 守卫断言,二态见下一测试)→
     「按钮-确认选择」area 查找点击确认(全族统一);轮次结果旁路回传;
     自上报接入调用。env 停喂 idx/target(已收敛屏)。"""
@@ -513,7 +513,7 @@ def test_fortune_pick_op_clicks_card_confirms_and_self_reports(
                          screenshot=lambda: 'shot',
                          round_by_find_and_click_area=lambda shot, s, a, **kw:
                              confirm_calls.append((s, a, kw)) or rs)
-    seed_pts = [(510, 480), (900, 480), (1290, 480)]   # 容器坐标种子(3 槽定值)
+    seed_pts = [(510, 480), (900, 480), (1290, 480)]   # 状态容器坐标种子(3 槽定值)
     _gs = SimpleNamespace(fortune_opts_xy=SimpleNamespace(value=list(seed_pts)))
     monkeypatch.setattr(pick_mod, 'game_state_from_ctx', lambda ctx: _gs)
     reported: list = []
@@ -523,7 +523,7 @@ def test_fortune_pick_op_clicks_card_confirms_and_self_reports(
     env = OverlayPickExecEnv(op=op)
     assert CwActionPickFortuneOp(env.op.ctx, CwActionPickFortuneParam(idx=1),
                                  env=env).run().is_success
-    # 点击点 = 容器值(param.idx 对槽),零 env.target 依赖。
+    # 点击点 = 状态容器值(param.idx 对槽),零 env.target 依赖。
     assert [(p.x, p.y) for p, _t in ctrl.clicks] == [seed_pts[1]]
     assert confirm_calls == [('货币战争-命运卜者强化', '按钮-确认选择',
                               {'success_wait': 1.0})]
@@ -534,7 +534,7 @@ def test_fortune_pick_op_clicks_card_confirms_and_self_reports(
 def test_fortune_pick_op_container_guard_rejects_without_click(
         no_pick_sleep, monkeypatch):
     """命运卜者取点守卫二态测试(坐标随报条款;A 类伴随域无 None 元素,
-    守卫二态 = 缺域/越界):容器 fortune_opts_xy 缺席/空、param.idx 越界
+    守卫二态 = 缺域/越界):状态容器 fortune_opts_xy 缺席/空、param.idx 越界
     → AssertionError 且零点击零上报(禁坐标现算回退)。红 = 现算回退 /
     守卫缺位静默续跑。"""
     import sr_od.application.currency_war.operations.cw_op.cw_pick_fortune_action as pick_mod
@@ -542,8 +542,8 @@ def test_fortune_pick_op_container_guard_rejects_without_click(
     rs = SimpleNamespace(sentinel='rs')
     # (gs 桩 fortune_opts_xy.value,param.idx,消息片段)
     cases = [
-        (None, 0, '缺席/空'),   # 容器缺域(Field 恒未观察 None)
-        ([], 0, '缺席/空'),     # 容器空
+        (None, 0, '缺席/空'),   # 状态容器缺域(Field 恒未观察 None)
+        ([], 0, '缺席/空'),     # 状态容器空
         ([(510, 480), (900, 480), (1290, 480)], 3, '越界'),   # 槽数 = 3
     ]
     for xy_value, idx, fragment in cases:
@@ -571,7 +571,7 @@ def test_fortune_pick_op_container_guard_rejects_without_click(
 
 def test_wish_trial_pick_op_clicks_card_area_confirms_and_self_reports(
         no_pick_sleep, monkeypatch):
-    """祈愿试炼确认链(坐标随报收敛后):点卡坐标 = 按下标自容器
+    """祈愿试炼确认链(坐标随报收敛后):点卡坐标 = 按下标自状态容器
     ``wish_trial_opts_xy`` 读(缺/越界 = 守卫断言,二态见下一测试)→
     「按钮-确认选择」area 查找点击确认(全族统一);轮次结果旁路回传;
     自上报接入调用。env 停喂 idx/target(已收敛屏)。"""
@@ -590,7 +590,7 @@ def test_wish_trial_pick_op_clicks_card_area_confirms_and_self_reports(
         screenshot=lambda: 'shot',
         round_by_find_and_click_area=_confirm_stub,
         round_retry=lambda **kw: rs)
-    seed_pts = [(660, 340), (960, 340), (1260, 340)]   # 容器坐标种子(3 槽定值)
+    seed_pts = [(660, 340), (960, 340), (1260, 340)]   # 状态容器坐标种子(3 槽定值)
     _gs = SimpleNamespace(wish_trial_opts_xy=SimpleNamespace(value=list(seed_pts)))
     monkeypatch.setattr(pick_mod, 'game_state_from_ctx', lambda ctx: _gs)
     reported: list = []
@@ -600,7 +600,7 @@ def test_wish_trial_pick_op_clicks_card_area_confirms_and_self_reports(
     env = OverlayPickExecEnv(op=op)
     assert CwActionPickWishTrialOp(env.op.ctx, CwActionPickWishTrialParam(idx=0),
                                    env=env).run().is_success
-    # 点击点 = 容器值(param.idx 对槽),零 env.target 依赖。
+    # 点击点 = 状态容器值(param.idx 对槽),零 env.target 依赖。
     assert [(p.x, p.y) for p, _t in ctrl.clicks] == [seed_pts[0]]
     assert len(ctrl.moves) == len(ctrl.clicks) == 1
     assert confirm_calls == [('货币战争-祈愿试炼', '按钮-确认选择',
@@ -612,7 +612,7 @@ def test_wish_trial_pick_op_clicks_card_area_confirms_and_self_reports(
 def test_wish_trial_pick_op_container_guard_rejects_without_click(
         no_pick_sleep, monkeypatch):
     """祈愿试炼取点守卫二态测试(选择坐标观察上报条款;A 类伴随域无 None
-    元素,守卫二态 = 缺域/越界):容器 wish_trial_opts_xy 缺席/空、
+    元素,守卫二态 = 缺域/越界):状态容器 wish_trial_opts_xy 缺席/空、
     param.idx 越界 → AssertionError 且零点击零上报(禁坐标现算回退)。
     红 = 现算回退 / 守卫缺位静默续跑。"""
     import sr_od.application.currency_war.operations.cw_op.cw_pick_wish_trial_action as pick_mod
@@ -621,8 +621,8 @@ def test_wish_trial_pick_op_container_guard_rejects_without_click(
     # (gs 桩 wish_trial_opts_xy.value,param.idx,案例标签;守卫单一合并
     # 断言(box_pick 同款),案例只辨二态不辨消息片段)
     cases = [
-        (None, 0, '容器缺域'),   # Field 恒未观察 None
-        ([], 0, '容器空'),
+        (None, 0, '状态容器缺域'),   # Field 恒未观察 None
+        ([], 0, '状态容器空'),
         ([(660, 340), (960, 340), (1260, 340)], 3, '越界(槽数 = 3)'),
     ]
     for xy_value, idx, label in cases:
@@ -651,7 +651,7 @@ def test_wish_trial_pick_op_container_guard_rejects_without_click(
 def test_pick_expert_invite_takes_point_from_container(no_pick_sleep,
                                                        monkeypatch):
     """专家邀请函选卡取坐标测试(选择坐标观察上报收敛,op-layer.md §1.1):
-    点击点 = 容器 ``expert_invite`` payload 双源按 param.idx 取——idx=-1 =
+    点击点 = 状态容器 ``expert_invite`` payload 双源按 param.idx 取——idx=-1 =
     词表特形(现金为王)显式分支消费 ``cash_point``;idx ∈ 0..3 = 消费
     ``card_points[idx]``(坐标单一真相源 = 观察上报;禁回退 env.target、
     禁坐标现算)→ 点击 + 自上报照发(env idx-only 停喂 target);缺席
@@ -678,7 +678,7 @@ def test_pick_expert_invite_takes_point_from_container(no_pick_sleep,
         return op, env, ctrl, reported
 
     # ① idx=-1 → 恰消费 cash_point(词表特形显式分支);② idx=1 → 消费
-    # card_points[1]:点击坐标 = 容器值,自上报照发。
+    # card_points[1]:点击坐标 = 状态容器值,自上报照发。
     for idx, want_pt in ((-1, (500, 900)), (1, pts[1])):
         op, env, ctrl, reported = _make(SimpleNamespace(
             card_points=list(pts), cash_point=(500, 900)))
@@ -713,13 +713,13 @@ def test_pick_expert_invite_takes_point_from_container(no_pick_sleep,
 
 def test_pick_star_tome_takes_point_from_container(no_pick_sleep, monkeypatch):
     """星徽秘典选卡取坐标测试(选择坐标观察上报收敛,op-layer.md §1.1):
-    点击点 = 容器 ``star_tome_opts_xy[param.idx]``(坐标单一真相源 =
+    点击点 = 状态容器 ``star_tome_opts_xy[param.idx]``(坐标单一真相源 =
     观察上报;禁回退 env.target、禁坐标现算)→ safe_click + 自上报照发;
     坐标域缺席(gs 缺席)/下标越界 = 守卫断言 AssertionError 响亮暴露
     且零点击(防 bug 路栏非控制流,禁现算回退)。"""
     import sr_od.application.currency_war.operations.cw_op.cw_pick_star_tome_action as pick_mod
 
-    # ① 注入容器值 → 点击坐标 = 容器值 + 自上报照发(env idx-only 停喂
+    # ① 注入状态容器值 → 点击坐标 = 状态容器值 + 自上报照发(env idx-only 停喂
     # target;safe_click = mouse_move + click 防吞点击)。
     ctrl = _RecordingController()
     op = SimpleNamespace(ctx=SimpleNamespace(controller=ctrl))
@@ -761,7 +761,7 @@ def test_pick_star_tome_takes_point_from_container(no_pick_sleep, monkeypatch):
 
 def test_pick_box_card_takes_point_from_container(no_pick_sleep, monkeypatch):
     """武装箱选卡取坐标测试(选择坐标观察上报收敛,op-layer.md §1.1):
-    点击点 = 容器 ``box_card_names_xy[param.idx]``(坐标单一真相源 =
+    点击点 = 状态容器 ``box_card_names_xy[param.idx]``(坐标单一真相源 =
     观察上报;禁回退 env.target、禁坐标现算)→ 点击 + 自上报照发;
     坐标域缺席(gs 缺席)/下标越界 = 守卫断言 AssertionError 响亮暴露
     且零点击(防 bug 路栏非控制流,禁现算回退)。"""
@@ -769,7 +769,7 @@ def test_pick_box_card_takes_point_from_container(no_pick_sleep, monkeypatch):
         cw_pick_box_card_action,
     )
 
-    # ① 注入容器值 → 点击坐标 = 容器值 + 自上报照发(env idx-only 停喂)。
+    # ① 注入状态容器值 → 点击坐标 = 状态容器值 + 自上报照发(env idx-only 停喂)。
     ctrl = _RecordingController()
     op = SimpleNamespace(ctx=SimpleNamespace(controller=ctrl))
     env = OverlayPickExecEnv(op=op, idx=1)
@@ -906,8 +906,8 @@ def _expert_guard_harness(test_context, monkeypatch, strategy):
     monkeypatch.setattr(op, 'screenshot', lambda: object(), raising=False)
     monkeypatch.setattr(op, 'round_by_find_area',
                         lambda s, sc, a, **k: Area(True))
-    # 坐标域种子(观察链桩;观察上报经 report 落容器,决策段零坐标现算,
-    # 坐标消费 = 动作 op 容器取点测试)。
+    # 坐标域种子(观察链桩;观察上报经 report 落状态容器,决策段零坐标现算,
+    # 坐标消费 = 动作 op 状态容器取点测试)。
     _pts = {'卡-1': Point(300, 400), '卡-2': Point(700, 400),
             '卡-3': Point(1100, 400), '卡-4': Point(1500, 400),
             mod.CASH_AREA: Point(500, 900)}
@@ -1005,8 +1005,8 @@ def test_expert_invite_decision_direct_dispatch_two_states(test_context,
                                                            monkeypatch):
     """测试D(正路两态):真词表类 idx=-1 → 恰一次派发、派发 param 即策略产
     实例(is 比对,零重建构造点)、env.idx == -1 且 env 停喂 target
-    (idx-only)、容器坐标域 cash_point 在位(坐标源断言 = 容器值,机械
-    消费归容器取点测试)、round WAIT;idx=1 → env.idx == 1、容器
+    (idx-only)、状态容器坐标域 cash_point 在位(坐标源断言 = 状态容器值,机械
+    消费归状态容器取点测试)、round WAIT;idx=1 → env.idx == 1、状态容器
     card_points[1] 在位、_pick_pending 置位。红 = 重建构造点回潮 / env
     复喂 target / 观察双写断流。"""
     from test.harness.fixture_controller import fast_sleep
@@ -1090,7 +1090,7 @@ def test_expert_invite_report_dual_domain_write():
         on_screen=True, card_bonds=['仙舟', None, None, None],
         board={'仙舟': 3}, card_points=pts, cash_point=(500, 900)))
     payload = gs.expert_invite.value
-    assert payload is not None, 'report 落容器'
+    assert payload is not None, 'report 落状态容器'
     assert payload.card_bonds == ['仙舟', None, None, None]
     assert payload.board == {'仙舟': 3}
     assert payload.card_points == pts, '坐标域同门一并写'

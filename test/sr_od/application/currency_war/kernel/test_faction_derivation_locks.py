@@ -2,14 +2,14 @@
 + 线知识卡三字段测试(line_and_upgrade §1.2/§1.4/§1.5)
 + 开拓者形态归一上报测试(§3 不变量 5 哨兵)。
 
-faction/position_pref 不入容器形状,消费点经注册表按 char_id 派生,三类
+faction/position_pref 不入状态容器形状,消费点经注册表按 char_id 派生,三类
 消费口径(§2.1):
 - 类2 板面阵营计数/体系卡身份:注册表派生,未知名 = '?'(不计);
 - 类3 羁绊(按排聚合 board_by_row):行归属 + 注册表派生,开拓者形态归一
   随迁(前排=记忆/后排=欢愉,design §3 不变量 5 的计数侧承载体)。
 
 测试面:
-① board_by_row 容器行输入:排归属 = 行入参(前排/后排分桶),多羁绊角色
+① board_by_row 状态容器行输入:排归属 = 行入参(前排/后排分桶),多羁绊角色
    每系都计,total = 两行之和;
 ② 开拓者形态按排归一(防御性再归一):前排槽携带后台形态 id 时按前排
    形态取羁绊(欢愉不计),后排照旧;上报侧(swap/deploy_move)同源
@@ -159,7 +159,7 @@ def test_char_first_faction_derivation():
     assert char_first_faction('') == '?'
 
 
-# ===== 便捷入口:容器直读聚合 =====
+# ===== 便捷入口:状态容器直读聚合 =====
 
 def test_board_by_row_of_reads_container_rows():
     """board_by_row_of(gs) = deployed_rows_of 现读 + 聚合(便捷入口同口径)。"""
@@ -288,5 +288,5 @@ def test_move_unit_report_normalizes_trailblazer_form_to_target_row() -> None:
     front2, _ = deployed_rows_of(gs2)
     assert front2 and front2[0].char_id == '开拓者·记忆', \
         f'换到前排 → 记忆形态(占槽交换),实得 {front2[0].char_id!r}'
-    # 排归属 = 容器行域承载(前排行成员)
+    # 排归属 = 状态容器行域承载(前排行成员)
 

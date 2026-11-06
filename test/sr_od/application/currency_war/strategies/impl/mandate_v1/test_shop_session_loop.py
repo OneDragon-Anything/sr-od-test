@@ -322,7 +322,7 @@ class TestGoldLedgerProtocol:
         for _i in range(2):
             shop_sess.account_buy_companion_gold(gs, card)
         assert gs.gold.value == g0 + 3
-        assert st.gold_ledger == led0 + 3, '双写同步:账面与容器同额入金'
+        assert st.gold_ledger == led0 + 3, '双写同步:账面与状态容器同额入金'
 
 
 # ============================================================ 六序承继测试
@@ -1086,14 +1086,14 @@ def test_vacate_chain_reopen_keeps_shop_face_and_buys():
     act1 = strategy.decide_shop_action()
     assert type(act1).__name__ == 'CwActionSellBenchParam'
     gs = game_state_of(sess)
-    # 置换卖出的落地建模:bench 移除被卖槽(逻辑态直写,同容器转移
+    # 置换卖出的落地建模:bench 移除被卖槽(逻辑态直写,同状态容器转移
     # 函数通道);店面 payload 与 gold/缺员语境全不动。
     kept_idx = act1.bench_idx
     slots = list(gs.bench.value.slots)
     slots[kept_idx] = BenchSlot(kind='empty')
     gs.write_logic(gs.bench, BenchView(slots=slots, capacity=9),
                    produced_by='cw-36-test', sig=_FACE_LOGIC_SIG)
-    # 卖出上报(筹资/置换卖出分支的容器投影;回金入账面)
+    # 卖出上报(筹资/置换卖出分支的状态容器投影;回金入账面)
     gs.write_logic(gs.gold, gs.gold.value + (action_income(act1) or 0),
                    produced_by='cw-36-test', sig=_FACE_LOGIC_SIG)
     state_of(sess).gold_ledger = gs.gold.value

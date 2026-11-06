@@ -96,7 +96,7 @@ from sr_od.application.currency_war.sim.cw_sim_streams import stream_rng
 
 
 def _gs(node_kind: str = 'reward') -> GameState:
-    """节点事件面容器(节点观察写;is_piggy_node 判定用)。"""
+    """节点事件面状态容器(节点观察写;is_piggy_node 判定用)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.observe(gs.node, NodeKey(plane=1, round_num=7, kind=node_kind),
                sig=ChannelSig(family='obs', actor='TestSigWriter'))
@@ -380,7 +380,7 @@ def test_fixed_pool_excludes_experts_and_unlock_grants_copies() -> None:
 
 
 def _gs_with_unlocked(name: str):
-    """解锁状态注入容器(闭集闸炸错测试用)。"""
+    """解锁状态注入状态容器(闭集闸炸错测试用)。"""
     gs = _fresh_gs()
     from sr_od.application.currency_war.kernel.cw_game_state import ChannelSig
     gs.write_logic_rand(gs.unlocked_experts, (name,), produced_by='TestWriter',
@@ -419,7 +419,7 @@ def test_expert_wolf_conditional_env_deal_pool_lifecycle() -> None:
 
 
 def test_held_derived_from_bench_and_deployed_stars() -> None:
-    """held = Σ 3^(star−1)(容器 bench/deployed 派生;合成不销毁口径:
+    """held = Σ 3^(star−1)(状态容器 bench/deployed 派生;合成不销毁口径:
     2★ 计 3 张);剩余 = 固定 − held 不变量。"""
     gs = _fresh_gs()
     n1 = chars_by_cost(1)[0].name
@@ -496,7 +496,7 @@ def test_conservation_safe_across_tier_transform() -> None:
 # ============================================================ 商店发牌与刷价(M05)
 
 def test_deal_shop_level1_pure_cost1_payload() -> None:
-    """Lv1 概率表纯 1 费 → 5 槽全 1 费注册表名;概率条随载荷落容器
+    """Lv1 概率表纯 1 费 → 5 槽全 1 费注册表名;概率条随载荷落状态容器
     (§3.3.2 契约);槽号 1 基连号。(裸 gs = 表外环境恒 1★;2★ 直出
     注册表分支 = ENV_SHOP_TWO_STAR_DEAL_PROB,表外不触发。)"""
     gs = _fresh_gs()

@@ -64,7 +64,7 @@ _PIGGY_ENV = '经济过热'
 
 
 def _hold_card(gs) -> None:
-    """持卡直置(注册容器直写 = 持卡事实单一源;不经 pick 链,
+    """持卡直置(注册状态容器直写 = 持卡事实单一源;不经 pick 链,
     test_strategy_win_gold_sim_chain 同形)。"""
     gs.write_logic(gs.active_strategies, [_CARD],
                    produced_by='test-seed', evidence='t:card', sig=_SIG)

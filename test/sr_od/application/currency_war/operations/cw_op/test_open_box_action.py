@@ -1,10 +1,10 @@
-"""货币战争 OpenBox 动作 op 单帧测试(容器槽位直点形态)。
+"""货币战争 OpenBox 动作 op 单帧测试(状态容器槽位直点形态)。
 
 形态依据 = open-actions-mechanical-pure design §2.1/§2.5(机械链 =
 参数校验 → 槽号解析 → 建档坐标直查 → mouse_move+click → 自上报 →
 round_success;op 对画面零识别,识别读门随批拆除):slot = 画面物理槽
-1 基,None = op 内按 game state 容器现算首件槽(与决策层 mandate_v1
-entry 消耗品臂 / 上报层同型现算,双出口守卫断言 = gs 缺席 / 容器无该
+1 基,None = op 内按 game state 状态容器现算首件槽(与决策层 mandate_v1
+entry 消耗品臂 / 上报层同型现算,双出口守卫断言 = gs 缺席 / 状态容器无该
 kind 首槽);点击点 = 「武装箱开启位-{slot}」建档 area 中心(「点哪能开」
 实测定准进建档,原 +41px 代码魔法数随批退役进建档)。
 
@@ -12,7 +12,7 @@ kind 首槽);点击点 = 「武装箱开启位-{slot}」建档 area 中心(「�
 自上报(box_card 登记 + 声明喂入)+ success;slot 越界 AssertionError;
 None 现算双出口各一条 AssertionError;sim 形态 = 机械分支旁路静默成功
 + 后端状态副本推进(advance 收到 open_box 声明)。
-开箱上报 = 零写族(腾席事实归下一入口 heavy 实读),容器 bench 零写
+开箱上报 = 零写族(腾席事实归下一入口 heavy 实读),状态容器 bench 零写
 是非本测断言面(权威版本 = test_overlay 零写族覆盖)。
 """
 from __future__ import annotations
@@ -138,7 +138,7 @@ def test_explicit_slot_clicks_open_area_and_declares_world(
 
 def test_none_slot_resolves_first_box_and_rebuilds_param(
         test_context, monkeypatch):
-    """slot=None 现算(design §2.1-1/§2.5):gs 容器现算首个 supply_box 槽
+    """slot=None 现算(design §2.1-1/§2.5):gs 状态容器现算首个 supply_box 槽
     (下标+1)→ resolved slot 重建 param(入参对象不改写)→ 点击落现算
     槽建档坐标、round 摘要显示显式槽号。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
@@ -157,7 +157,7 @@ def test_none_slot_resolves_first_box_and_rebuilds_param(
     op = CwActionOpenBoxOp(test_context, param_in, env=env)
     rr = _run(test_context, op)
     assert rr.is_success and rr.status == '开箱槽5', \
-        '现算首件槽 = 容器下标+1,round 摘要显示'
+        '现算首件槽 = 状态容器下标+1,round 摘要显示'
     assert param_in.slot is None, '落地机制 = resolved slot 重建 param,不改写入参对象'
     assert _env_controller(env).clicks == [(175, 900)], '点击落现算槽建档坐标'
 
@@ -176,12 +176,12 @@ def test_slot_out_of_range_guard_loud_zero_click(test_context, monkeypatch):
 def test_none_slot_double_exit_guards_loud_zero_click(
         test_context, monkeypatch):
     """None 现算双出口守卫(design §2.5 各一条 AssertionError):gs 为
-    None / 容器无 supply_box 首件槽,均响亮暴露零点击(现算不出槽 =
+    None / 状态容器无 supply_box 首件槽,均响亮暴露零点击(现算不出槽 =
     决策数据缺席,不做兜底识别)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         game_state_of,
     )
-    # 出口 1:gs 为 None(无局/容器供给 None)
+    # 出口 1:gs 为 None(无局/状态容器供给 None)
     monkeypatch.setattr(test_context, 'cw_match', None, raising=False)
     env = _box_env(monkeypatch)
     op = CwActionOpenBoxOp(test_context, CwActionOpenBoxParam(slot=None),
@@ -191,7 +191,7 @@ def test_none_slot_double_exit_guards_loud_zero_click(
     assert 'game state' in str(ei.value), '出口 1 消息指向 gs 缺席'
     assert _env_controller(env).clicks == [], '零点击'
 
-    # 出口 2:容器无 supply_box 首件槽(bench 全空)
+    # 出口 2:状态容器无 supply_box 首件槽(bench 全空)
     session2 = StrategySession()
     gs2 = game_state_of(session2)
     monkeypatch.setattr(test_context, 'cw_match',
@@ -202,7 +202,7 @@ def test_none_slot_double_exit_guards_loud_zero_click(
                             env=env2)
     with pytest.raises(AssertionError) as ei2:
         CwActionOpenBoxOp.run(op2)
-    assert 'kind=supply_box' in str(ei2.value), '出口 2 消息指向容器无首件槽'
+    assert 'kind=supply_box' in str(ei2.value), '出口 2 消息指向状态容器无首件槽'
     assert _env_controller(env2).clicks == [], '零点击'
 
 

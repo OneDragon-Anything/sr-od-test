@@ -1,6 +1,6 @@
 """搜打撤 boss 通关价值金腿 kernel 面测试(镜像 src = cw_gain_chain.py
 board_bench_char_value_sum / check_strategy_boss_clear_gold;直构形态
-先例 = 同目录 test_check_strategy_boss_completion_grants.py 的容器直置,
+先例 = 同目录 test_check_strategy_boss_completion_grants.py 的状态容器直置,
 禁经战斗链假绿)。
 
 测试面依据 = 迭代设计 designs/T-332-souda-che.md §4 锁 2/锁 5:
@@ -112,7 +112,7 @@ def test_value_sum_domain_front_back_bench_excludes_placeholders() -> None:
     assert board_bench_char_value_sum(gs) == 6, \
         f'求和域漂移(前/后排+bench unit 计入,占位件不计): ' \
         f'{board_bench_char_value_sum(gs)}'
-    # 空场空席 = 0(容器未观察按空行/空席零计,纯读派生口径)。
+    # 空场空席 = 0(状态容器未观察按空行/空席零计,纯读派生口径)。
     assert board_bench_char_value_sum(_gs()) == 0, '空场空席应 0'
 
 

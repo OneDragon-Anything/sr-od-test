@@ -9,7 +9,7 @@
   点击重复上报被观察态门挡(零推进)+ M39 长按兜底(M39 迁入测试)→
   ``test_dead_click_gate_blocks_and_long_press_retry``;战败分支不进本 op
   (终局路径回归不变)→ ``test_defeat_branch_never_enters_settle_confirm``。
-  驱动 = 真帧 fixture + 真 OCR 识别链(FixtureController 剧本推进),容器
+  驱动 = 真帧 fixture + 真 OCR 识别链(FixtureController 剧本推进),状态容器
   = cw4_session 旁表 + observe_node_anchor 预锚定 observation 态。
 - **观测覆盖度守卫测试**(T-23;2026-09-15 局深检 §8-1 形态根治。病理:
   长战斗形态整窗零「结算观测」行实锤(run_20260915_054718 深检:488s
@@ -33,7 +33,7 @@
   结算覆盖写端写入 → 读口立即反映;旧锚字段不再影响读口;可信位语义
   (observation/carried 可信,prior/logic fail-closed)。
 
-纪律:零真实副作用;真帧 fixture 缺失 pytest.skip;纯容器/桩直驱部分
+纪律:零真实副作用;真帧 fixture 缺失 pytest.skip;纯状态容器/桩直驱部分
 零识别零点击零真实 IO。
 """
 from __future__ import annotations
@@ -132,7 +132,7 @@ def fixture_controller(
 
 def _anchored_session(test_context, monkeypatch,
                       pos: tuple[int, int] = (1, 1)):
-    """锚定容器态:session 旁表 + node_pos 预锚定 observation(新路径
+    """锚定状态容器态:session 旁表 + node_pos 预锚定 observation(新路径
     可测前提;共存期生产会被观察态门挡,测试直接构造锚定态)。"""
     session = cw4_session()
     monkeypatch.setattr(test_context, 'cw_match',

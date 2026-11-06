@@ -17,7 +17,7 @@ chain.py;触发-发放单拍制 = 结算拍直接发放,无节点窗交付拍):
 - 幂等回归 = 既有守卫(同节点战斗重放 _settled_key 整段跳过,零二次
   发放);
 - 死亡局不发放(调用点在死亡提前 return 之后,局终不见发放);
-- 板面直构双源同喂(board 容器 = 左面板口径 + deployed 行域注入 =
+- 板面直构双源同喂(board 状态容器 = 左面板口径 + deployed 行域注入 =
   身份口径,两源同值;构成式:花火+知更鸟 = 盛会之星 2 gate,娜塔莎+
   藿藿 = 治疗 2,杰帕德+砂金 = 护盾 2,娜塔莎+杰帕德 = 贝洛伯格 2 →
   激活非独立 4 ≥ 3 触 tier 3,追击 2 未达 tiers[0] 不计)。
@@ -57,7 +57,7 @@ _LATCH_KEY = f'{_CARD}#3'
 _BOARD_UNITS: tuple[str, ...] = (
     '花火', '知更鸟', '娜塔莎', '藿藿', '杰帕德', '砂金',
 )
-#: 板面容器直写值 = 行域身份聚合同值(双源同喂,左面板真值口径)。
+#: 板面状态容器直写值 = 行域身份聚合同值(双源同喂,左面板真值口径)。
 _BOARD_DICT: dict[str, int] = {
     '盛会之星': 2, '战技点': 1, '量子同频': 1, '追击': 2,
     '贝洛伯格': 2, '治疗': 2, '仙舟': 1, '能量': 1, '护盾': 2,
@@ -90,15 +90,15 @@ def _prep_backend(seed: int) -> SimBackend:
 
 
 def _hold_card(gs, *, card: str = _CARD) -> None:
-    """持卡直置(注册容器直写 = 持卡事实单一源;不经 pick 链)。"""
+    """持卡直置(注册状态容器直写 = 持卡事实单一源;不经 pick 链)。"""
     gs.write_logic(gs.active_strategies, [card],
                    produced_by='test-seed', evidence='t:card', sig=_SIG)
 
 
 def _inject_board(gs) -> None:
-    """羁绊板直构(双源同喂:deployed 行域注入 = 身份口径 + board 容器
+    """羁绊板直构(双源同喂:deployed 行域注入 = 身份口径 + board 状态容器
     直写 = 左面板口径,两源同值——与实机「board = 左面板真值、身份 =
-    行域聚合」同构;单喂 deployed 则 board 容器 miss,单喂 board 则身份
+    行域聚合」同构;单喂 deployed 则 board 状态容器 miss,单喂 board 则身份
     miss,双源 max 融合下直构须两源同值)。"""
     front = [Unit(char_id=n, star=1) for n in _BOARD_UNITS]
     gs.observe(gs.deployed,

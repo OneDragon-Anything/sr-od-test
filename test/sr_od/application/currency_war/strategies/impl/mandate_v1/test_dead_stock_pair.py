@@ -105,7 +105,7 @@ _FILLER = _FUELS[1]
 
 
 def _bench_char(char_id: str, star: int = 1, slot: int = 1) -> BenchSlot:
-    """构造最小 bench 占席条目(容器形状;仅 char_id/star 参与判据;
+    """构造最小 bench 占席条目(状态容器形状;仅 char_id/star 参与判据;
     slot = 备战栏 1-based 物理槽,判据不消费)。"""
     return BenchSlot(kind='unit', unit=Unit(char_id=char_id, star=star))
 
@@ -323,7 +323,7 @@ def _prep_frame(*, pair_ledger_round: int | None,
     gs.write_logic(gs.node, NodeKey(plane=1, round_num=_ROUND, kind='reward'),   # 3.6:奖励帧抑制会话内升级(翻转行为差隔离——本测试辖买面登记)
                    produced_by='cw-t253-test', sig=_LOGIC_SIG)
     gs.write_logic(gs.gold, gold, produced_by='cw-t253-test', sig=_LOGIC_SIG)
-    # P4 容器形种子:bench = 占席条目(BenchSlot,槽序),deployed = 行域 Unit
+    # P4 状态容器形种子:bench = 占席条目(BenchSlot,槽序),deployed = 行域 Unit
     slots = [BenchSlot(kind='unit',
                        unit=Unit(char_id=pair, star=1)),
              BenchSlot(kind='unit',
@@ -582,7 +582,7 @@ class TestCriterionUnits:
                        produced_by='cw-t253-test', sig=_LOGIC_SIG)
         bench = [BenchSlot(kind='unit', unit=Unit(char_id=_PAIR, star=1)),
                  BenchSlot(kind='unit', unit=Unit(char_id=_PAIR, star=1))]
-        # 凑息守卫读容器上阵域(非形参):front_row 必写,免空板止损守卫
+        # 凑息守卫读状态容器上阵域(非形参):front_row 必写,免空板止损守卫
         gs.write_logic(gs.deployed, _dvs([Unit(char_id='刃', star=1)], []),
                        produced_by='cw-t253-test', sig=_LOGIC_SIG)
         deployed = [Unit(char_id='刃', star=1)]

@@ -10,13 +10,13 @@ docs/develop/sr_od/application/currency_war/game_state/gain-chain.md
   套语义的执行测试);
 - **调用序**(§2.1 固定时序):落位 → 回调 → 升星 → 产物递归;回调补齐
   第三只后再合成;
-- **通道收尾双臂**(通道规则「未锚定 → 随机态」):直构未落一次性标志位容器
+- **通道收尾双臂**(通道规则「未锚定 → 随机态」):直构未落一次性标志位状态容器
   rand=False 链写被改道 write_logic_rand;置一次性标志位(测试专口直赋)后
   rand=False 恢复 write_logic;rand=True 恒 write_logic_rand;采样
   效果分支对子链的通道翻转只及子链;
 - **失败安全**(§2.7):溢出落位/归位/溢出位被占留证;bench/equips
   未观察(直构域)= 拒落档零写、零缺陷发射(两未观察 kind 已随开局
-  种子初始值与锚定标志批退役);种子容器(缓存单例支,接管局同构)正常
+  种子初始值与锚定标志批退役);种子状态容器(缓存单例支,接管局同构)正常
   落账;置一次性标志位后失配网原样生效(确定面被观察覆盖产失配行);
 - **欢愉契约条件分支 rider**(条件分支正式模型,测试面 = 银狼策划选择落地相
   上报的授予行为):通道语义(授予 rand=True 全通道 logic_rand,rand
@@ -306,7 +306,7 @@ def test_call_order_place_callback_merge_recurse(
 def test_rand_passthrough_and_channel_by_anchor(
         monkeypatch: pytest.MonkeyPatch) -> None:
     """通道收尾双臂 + rand 透传(通道规则「未锚定 → 随机态」):直构
-    未落一次性标志位容器 rand=False 链写被改道 write_logic_rand(未验证推算,首观察
+    未落一次性标志位状态容器 rand=False 链写被改道 write_logic_rand(未验证推算,首观察
     静默覆盖);置一次性标志位(测试专口直赋)后 rand=False 恢复 write_logic;
     rand=True 恒 write_logic_rand;采样效果分支对子链的通道翻转只及子链。"""
     # 臂 1:直构未落一次性标志位 + rand=False → 通道改道 logic_rand
@@ -329,7 +329,7 @@ def test_rand_passthrough_and_channel_by_anchor(
                    producer='T')
     assert gs3.bench.source == 'logic_rand'
 
-    # 采样效果分支翻转子链(机制测试,rand 透传纪律;置一次性标志位容器上外链与子链
+    # 采样效果分支翻转子链(机制测试,rand 透传纪律;置一次性标志位状态容器上外链与子链
     # 通道可分辨):确定入口走 write_logic,采样子链走 write_logic_rand,
     # 外链不被子链污染。
     def sampling_cb(gs: GameState, name: str, star: int, *, rand: bool,
@@ -368,7 +368,7 @@ def test_rand_passthrough_and_channel_by_anchor(
 
 def test_overflow_landing_writes_pair_fields() -> None:
     """席满 → 溢出落位(裁定⑥配套):overflow_warning/overflow_card 两字段
-    各一行落位;星级不入容器字段(字段只有身份串);bench 零写。"""
+    各一行落位;星级不入状态容器字段(字段只有身份串);bench 零写。"""
     gs = _make_gs(bench=[('希儿', 1), ('银狼', 1), ('翡翠', 1), ('砂金', 1),
                          ('符玄', 1), ('希儿', 2), ('银狼', 2), ('卡芙卡', 1),
                          ('黑天鹅', 1)])   # 9 槽满且无同名同星三连(不触发合成)
@@ -410,11 +410,11 @@ def test_overflow_slot_taken_zero_write(rows_sink: _RowSink) -> None:
     assert rows_sink.kinds() == [DEFECT_OVERFLOW_TAKEN]
 
 
-# ============================================================ 未观察退役 + 种子容器(§2.6-2/§2.7)
+# ============================================================ 未观察退役 + 种子状态容器(§2.6-2/§2.7)
 
 
 def test_unobserved_direct_zero_write_no_defect(rows_sink: _RowSink) -> None:
-    """bench/equips 未观察(直构容器,种子初始值下生产不可达):拒落档
+    """bench/equips 未观察(直构状态容器,种子初始值下生产不可达):拒落档
     零写 + detail 档保留,零缺陷行发射(两未观察 kind 已退役——退役
     断言走台账面:调链原语后台账无新增行,禁源码扫描)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
@@ -431,7 +431,7 @@ def test_unobserved_direct_zero_write_no_defect(rows_sink: _RowSink) -> None:
 
 def test_seeded_container_chain_lands_and_takeover_isomorphic(
         rows_sink: _RowSink) -> None:
-    """种子容器(经 game_state_of 缓存单例支,新局/接管局同构)链原语
+    """种子状态容器(经 game_state_of 缓存单例支,新局/接管局同构)链原语
     正常落账:bench 空初始值(种子)落位、equips 空栏追加入栏——未观察
     拒落档生产死化。"""
     gs = game_state_of(StrategySession())
@@ -483,7 +483,7 @@ def test_anchor_gates_mismatch_net() -> None:
 
 def test_env_gift_advisor_split_and_quiet(rows_sink: _RowSink) -> None:
     """ENV_GIFTS 分道(§2.3-1):advisor=True 不入席,写解锁状态
-    (gs.unlocked_experts,权威容器字段——专家顾问初始不参与普通商店
+    (gs.unlocked_experts,权威状态容器字段——专家顾问初始不参与普通商店
     招募,解锁后入池可刷,economy.md §1;原「只申报一行」随权威写道
     退役);advisor=False 入席递归(chars_immediate 1★);表外环境查无
     效果安静不写(裁定④)。session=None = 登记分支跳过、容器写照常
@@ -613,7 +613,7 @@ def test_overflow_item_merges_back_as_box_and_clears() -> None:
 def test_env_reroll_declaration_row_member_only(rows_sink: _RowSink) -> None:
     """追加随机环境申报行(§3,名单成员-only;首例 = 蓝海 id113):名单内
     环境 = 金收入分支照常 + 申报行恰一行(kind = ENV_REROLL_DECL,语义申报非
-    缺陷告警;live 不自掷 fail-closed,active_env 写值 = 选择事实,容器
+    缺陷告警;live 不自掷 fail-closed,active_env 写值 = 选择事实,状态容器
     写通道与普通环境一致);名单外环境(增发货币,经济表成员)零申报行
     ——申报只随 ENV_REROLL_NAMES 名单,不随经济表成员身份。"""
     gs = _make_gs(bench=[], equips=[])
@@ -740,7 +740,7 @@ def test_env_gift_random_leg_star2_merge_cost2_boundary(
 
 def test_env_gift_random_leg_anchored_rand_channel(
         rows_sink: _RowSink) -> None:
-    """随机支通道语义(T-10 设计 §4 测试 4):锚定容器 + 采样子链
+    """随机支通道语义(T-10 设计 §4 测试 4):锚定状态容器 + 采样子链
     rand=True → 写值照常生效且不进失配网(随机态语义,gain-chain.md
     §5:采样写走 write_logic_rand,首观察静默覆盖不响安灯);未锚定
     写生效已由 seeded_roll 测试校验(直构缺省未锚定)。"""
@@ -914,7 +914,7 @@ def test_env_star_grant_empty_pool_skip(rows_sink: _RowSink) -> None:
 
 
 def test_env_gift_scheduled_channel_enqueues(rows_sink: _RowSink) -> None:
-    """定时通道登记(gain_invest_env):items_scheduled 逐项入容器队列
+    """定时通道登记(gain_invest_env):items_scheduled 逐项入状态容器队列
     pending_item_grants(一次 write 回写整表;entry 形 =
     {env, plane, round_num, item}),效果串 ``item_scheduled:<名>@<节点键>``;
     登记不落席(零 supply_box 落位),active_env 容器写照常。"""
@@ -999,7 +999,7 @@ def test_bench_item_names_cover_scheduled_channel() -> None:
 
 
 def test_pending_item_grants_audit_row_declared() -> None:
-    """对账申报(容器字段完备性纪律):新容器字段必须在 PROJECTION_AUDIT
+    """对账申报(状态容器字段完备性纪律):新状态容器字段必须在 PROJECTION_AUDIT
     登记行,行状态 = process_only(队列 = 卡文推算知识,无观察读端)。"""
     from sr_od.application.currency_war.kernel.cw_projection_audit import (
         AUDIT_PROCESS_ONLY,
@@ -1615,7 +1615,7 @@ def test_reinforcement_chain_grants_distinct(
 def test_reinforcement_sampling_channel_rand_subchain(
         rows_sink: _RowSink, card: str,
         pairs: tuple[tuple[int, int], ...], seed: int) -> None:
-    """采样语义 rand=True(通道翻转只及子链,按卡参数化):锚定容器上
+    """采样语义 rand=True(通道翻转只及子链,按卡参数化):锚定状态容器上
     发放 → 入口注册走确定面,采样子链恒 write_logic_rand(rand 优先于
     锚定标志);覆盖观察差异落 logic_rand_outcome 行、零失配行(随机态不
     触发失配网,校准面 = outcome 行)。"""
@@ -1846,7 +1846,7 @@ def test_random_equip_leg_equips_unobserved_skip_decoupled() -> None:
 
 
 def test_random_equip_leg_rand_channel_subchain(rows_sink: _RowSink) -> None:
-    """采样语义 rand=True(通道翻转只及子链):锚定容器上发放 → 入口注册
+    """采样语义 rand=True(通道翻转只及子链):锚定状态容器上发放 → 入口注册
     走确定面,采样子链恒 write_logic_rand;覆盖观察差异落
     logic_rand_outcome 行、零失配行(随机态不触发失配网,校准面 =
     outcome 行)。"""
@@ -1921,7 +1921,7 @@ def _joy_seed_for(candidate: str) -> int:
 
 
 def _joy_seeded_gs(env_name: str = '欢愉契约') -> GameState:
-    """种子容器(缓存单例支每局全新创建即含开局初始值)+ 已登记环境直写
+    """种子状态容器(缓存单例支每局全新创建即含开局初始值)+ 已登记环境直写
     (观察链同写入口;'' = 保持种子初值空环境)。"""
     gs = game_state_of(StrategySession())
     if env_name:
@@ -1932,7 +1932,7 @@ def _joy_seeded_gs(env_name: str = '欢愉契约') -> GameState:
 def test_joy_rider_grant_channel_rand_anchor_and_coverage(
         rows_sink: _RowSink) -> None:
     """通道语义(授予体含采样 → rand=True 全通道 logic_rand,rand 形参
-    优先于锚定标志):种子容器未落一次性标志位臂授予落 bench source=logic_rand;置一次性标志位
+    优先于锚定标志):种子状态容器未落一次性标志位臂授予落 bench source=logic_rand;置一次性标志位
     (测试专口直赋)后同路径 source 仍 = logic_rand;未落一次性标志位臂观察覆盖落
     logic_rand_outcome 行、零 observe_vs_logic_mismatch(无失配网辖 =
     采样面本义,校准面 = outcome 行)。"""
@@ -2152,7 +2152,7 @@ def test_upgrade_transform_zero_or_unobserved(rows_sink: _RowSink) -> None:
     assert out.applied is False and out.reason == 'upgrade_source_missing'
     assert gs.write_seq == seq_before, '零枚不写'
     assert rows_sink.kinds() == ['planner_upgrade_source_missing']
-    # 未观察(三容器全 None)同态。
+    # 未观察(三状态容器全 None)同态。
     gs2 = _make_gs()
     out2 = report_action_pick_planner_param(gs2, None, branch_type='upgrade',
                                             norm_item='',
@@ -2321,8 +2321,8 @@ def test_invest_portal_landing_no_card_pollution(
     provisional 标记行,正式模型 = 银狼策划上报条件分支 rider,测试面 =
     本文件 rider 组);禁入 active_strategies(防 portal 卡污染持卡面)。"""
     gs = _make_gs(bench=[('希儿', 1)], equips=['幸运星'], gold=30)
-    # 按 idx 取名契约(op-layer.md §1.1 观察标准化门):env 上报自容器
-    # invest_env_opts 取标准名——播种容器承载(名字 = 原 norm_name 语义)。
+    # 按 idx 取名契约(op-layer.md §1.1 观察标准化门):env 上报自状态容器
+    # invest_env_opts 取标准名——播种状态容器承载(名字 = 原 norm_name 语义)。
     gs.write_logic(gs.invest_env_opts, ['彩虹时代', '欢愉契约'],
                    produced_by='test', sig=_lsig('CwScreenYinLang'))
     param = CwActionPickInvestEnvParam(idx=1, norm_name='欢愉契约')
@@ -2348,7 +2348,7 @@ def test_invest_portal_env_gifts_full_access(
     现契约类 chars_immediate 全部经链生效;表外环境安静不写)。
     公司契约 = 翡翠/砂金 逐个 1★ 入席递归。"""
     gs = _make_gs(bench=[], equips=[])
-    # 按 idx 取名契约(op-layer.md §1.1):上报自容器取标准名,播种承载。
+    # 按 idx 取名契约(op-layer.md §1.1):上报自状态容器取标准名,播种承载。
     gs.write_logic(gs.invest_env_opts, ['公司契约'],
                    produced_by='test', sig=_lsig('CwScreenYinLang'))
     out = report_action_pick_invest_env_param(
@@ -2367,7 +2367,7 @@ def test_invest_portal_env_gifts_summon_unit(rows_sink: _RowSink) -> None:
     """召唤单位环境(三星佩佩)经落地相可用:portal 确认整支走获得链,
     佩佩入席(公司契约全量接入测试同构;T-16 §4 锁 3)。"""
     gs = _make_gs(bench=[], equips=[])
-    # 按 idx 取名契约(op-layer.md §1.1):上报自容器取标准名,播种承载。
+    # 按 idx 取名契约(op-layer.md §1.1):上报自状态容器取标准名,播种承载。
     gs.write_logic(gs.invest_env_opts, ['三星佩佩'],
                    produced_by='test', sig=_lsig('CwScreenYinLang'))
     out = report_action_pick_invest_env_param(
@@ -2387,7 +2387,7 @@ def test_invest_portal_env_gifts_summon_unit_cuxing(
     """召唤单位环境(粗星佩佩)经落地相可用:portal 确认整支走获得链,
     佩佩入席(姊妹卡三星佩佩测试同构;T-17 §4 锁 3)。"""
     gs = _make_gs(bench=[], equips=[])
-    # 按 idx 取名契约(op-layer.md §1.1):上报自容器取标准名,播种承载。
+    # 按 idx 取名契约(op-layer.md §1.1):上报自状态容器取标准名,播种承载。
     gs.write_logic(gs.invest_env_opts, ['粗星佩佩'],
                    produced_by='test', sig=_lsig('CwScreenYinLang'))
     out = report_action_pick_invest_env_param(
@@ -2418,7 +2418,7 @@ def test_invest_unregistered_card_unchanged(
     assert gs.write_seq == seq_before + 1, '恰一行遥测(持卡面),零效果分支'
     # portal 表外环境 = 选择事实写 + 零效果。
     gs2 = _make_gs(bench=[('希儿', 1)], equips=['幸运星'])
-    # 按 idx 取名契约(op-layer.md §1.1):上报自容器取标准名,播种承载。
+    # 按 idx 取名契约(op-layer.md §1.1):上报自状态容器取标准名,播种承载。
     gs2.write_logic(gs2.invest_env_opts, ['随便一个未收录环境'],
                     produced_by='test', sig=_lsig('CwScreenYinLang'))
     seq2_before = gs2.write_seq
@@ -2723,7 +2723,7 @@ def test_env_gift_channel_selection_both_states(rows_sink: _RowSink) -> None:
 
 
 def test_env_gift_equip_leg_blue_diamond(rows_sink: _RowSink) -> None:
-    """发放分支(T-32 设计 §4 锁 2,on_env_gained 直构;容器前置同 T-31
+    """发放分支(T-32 设计 §4 锁 2,on_env_gained 直构;状态容器前置同 T-31
     先例 = 观察/逻辑写组装,equips/bench 非 None 才落):equips 尾追
     '蓝钻'、bench 落 1 个 supply_box 槽件;效果串两行按卡文序
     (``equip_gift:蓝钻`` 先、``item_gift:简易武装箱`` 后)。"""
