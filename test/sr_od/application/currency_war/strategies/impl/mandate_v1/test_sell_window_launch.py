@@ -90,7 +90,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.shop import (
 #: 非持有线外 1★ 燃料代表(注册表实名,cost=1;非保护集非核心 = 新身份
 #: 口径下的真线外件,穿过判据全部物理谓词,红证由各测试自带直调证明)。
 _FUEL = '阿格莱雅'
-#: 窗口段双视图代表名(垫保视图锚)。
+#: 窗口段双视图代表名(垫保视图基准)。
 _STALL = '垫件P'
 
 
