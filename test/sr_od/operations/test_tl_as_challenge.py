@@ -159,6 +159,7 @@ def test_arc_fill_only_badged_skips_cursor(
                         lambda cells, target, row_no: paged.append(target))
     with fast_sleep(op):
         op._arc_fill_round(None, [badged], 1)
+        op._arc_fill_round(None, [badged], 1)
     assert clicks == [], '点了带标记的卡(拆队行为)'
     assert op._char_idx == 3, '队首已带标记应跳过游标'
     assert paged == ['灵砂'], '跳过后应继续找下一目标'
@@ -199,6 +200,8 @@ def test_arc_prefix_break_missing_head(
     monkeypatch.setattr(op, '_page_down',
                         lambda cells, target, row_no: paged.append(target))
     with fast_sleep(op):
+        # 首见页先重扫一轮(多帧合并语义),第二帧仍无目标才翻页
+        op._arc_fill_round(None, [bo], 1)
         op._arc_fill_round(None, [bo], 1)
     assert clicks == [], '队首缺席时不得点后续目标'
     assert paged == ['海瑟音'], '应翻页找队首'
