@@ -123,73 +123,97 @@ def _mk_cell(x: int, y: int, guess: MemberGuess) -> AnchorCell:
 
 def test_arc_fill_skips_badged_cell(
         test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
-    """找卡命中含带标记的卡时不点它,点击落到无标记的弱命中上。"""
+    """批量点卡不点带标记的卡:列表卡点击是加/移开关,点已入队卡 = 拆队。"""
     op = TlAsTeamFillOp(test_context, _ARC_TEAM)
     op._need_top = False
+    op._char_idx = 2  # 行 1 目标 = [花火, 灵砂]
     badged = _mk_cell(300, 300, MemberGuess('花火', True, [('花火', 0.9)]))
     unbadged = _mk_cell(600, 300, MemberGuess(None, False, [('花火', 0.8)]))
     clicks: list[Point] = []
-    monkeypatch.setattr(op, '_team_tag_boxes', lambda image: [badged.rect.center])
-    monkeypatch.setattr(op.ctx.controller, 'click',
-                        lambda point, press_time=0.1: clicks.append(point))
-    with fast_sleep():
-        result = op._arc_fill_round(None, [badged, unbadged], '花火', 1)
-    assert result.result == OperationRoundResultEnum.WAIT
-    assert clicks == [unbadged.center], f'点了带标记的卡:{clicks}'
-    assert op._pending_rect == unbadged.rect, '复验对象应是实际点击的卡'
-
-
-def test_arc_fill_only_badged_no_click(
-        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
-    """可见命中全部带标记时不点击任何卡,转入翻页找下一页。"""
-    op = TlAsTeamFillOp(test_context, _ARC_TEAM)
-    op._need_top = False
-    badged = _mk_cell(300, 300, MemberGuess('花火', True, [('花火', 0.9)]))
-    clicks: list[Point] = []
-    paged = []
+    paged: list[str] = []
     monkeypatch.setattr(op, '_team_tag_boxes', lambda image: [badged.rect.center])
     monkeypatch.setattr(op.ctx.controller, 'click',
                         lambda point, press_time=0.1: clicks.append(point))
     monkeypatch.setattr(op, '_page_down',
                         lambda cells, target, row_no: paged.append(target))
-    with fast_sleep():
-        op._arc_fill_round(None, [badged], '花火', 1)
-    assert clicks == [], '点了带标记的卡(拆队行为)'
-    assert paged == ['花火'], '应转入翻页'
+    with fast_sleep(op):
+        result = op._arc_fill_round(None, [badged, unbadged], 1)
+    assert result.result == OperationRoundResultEnum.WAIT
+    assert clicks == [unbadged.center], f'点了带标记的卡:{clicks}'
+    assert op._char_idx == 3, '点完花火应推进到灵砂'
 
 
-def test_arc_verify_only_pending_card(
+def test_arc_fill_only_badged_skips_cursor(
         test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
-    """复验只认被点那张卡:标记落在被点卡 = 落位推进;标记在别处 = 不推进。"""
+    """队首目标只剩带标记命中 = 已入队(重复生效的点击),跳过游标不点。"""
     op = TlAsTeamFillOp(test_context, _ARC_TEAM)
     op._need_top = False
-    hit = _mk_cell(300, 300, MemberGuess('花火', True, [('花火', 0.9)]))
-    other = _mk_cell(600, 300, MemberGuess('风堇', True, [('风堇', 0.9)]))
-    op._pending_center = hit.center
-    op._pending_rect = hit.rect
-    op._click_rounds = 1
-
-    # 标记落在被点卡 → 推进游标
-    monkeypatch.setattr(op, '_team_tag_boxes',
-                        lambda image: [hit.rect.center])
-    with fast_sleep():
-        op._arc_fill_round(None, [hit], '花火', 1)
-    assert op._char_idx == 1, '标记在被点卡上应推进'
-    assert op._pending_rect is None, '推进后应清复验态'
-
-    # 标记不在被点卡上 → 不推进;名字仍认得该卡时偶数轮补点同一张卡
-    op2 = TlAsTeamFillOp(test_context, _ARC_TEAM)
-    op2._need_top = False
-    op2._pending_center = hit.center
-    op2._pending_rect = hit.rect
-    op2._click_rounds = 1
+    op._char_idx = 2
+    badged = _mk_cell(300, 300, MemberGuess('花火', True, [('花火', 0.9)]))
     clicks: list[Point] = []
-    monkeypatch.setattr(op2, '_team_tag_boxes',
-                        lambda image: [other.rect.center])
-    monkeypatch.setattr(op2.ctx.controller, 'click',
+    paged: list[str] = []
+    monkeypatch.setattr(op, '_team_tag_boxes', lambda image: [badged.rect.center])
+    monkeypatch.setattr(op.ctx.controller, 'click',
                         lambda point, press_time=0.1: clicks.append(point))
-    with fast_sleep():
-        result = op2._arc_fill_round(None, [hit, other], '花火', 1)
-    assert op2._char_idx == 0, '标记不在被点卡上不得推进'
+    monkeypatch.setattr(op, '_page_down',
+                        lambda cells, target, row_no: paged.append(target))
+    with fast_sleep(op):
+        op._arc_fill_round(None, [badged], 1)
+    assert clicks == [], '点了带标记的卡(拆队行为)'
+    assert op._char_idx == 3, '队首已带标记应跳过游标'
+    assert paged == ['灵砂'], '跳过后应继续找下一目标'
+
+
+def test_arc_batch_clicks_in_row_order(
+        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
+    """整页批量点卡必须按队伍顺序(列表卡点击落进选中行首个空槽,
+    跳名点击会错槽):页面出现顺序与队伍顺序无关。"""
+    op = TlAsTeamFillOp(test_context, _ARC_TEAM)
+    op._need_top = False
+    # 页面位置:波提欧在上、海瑟音在下(与队伍顺序相反)
+    bo = _mk_cell(300, 200, MemberGuess('波提欧', True, [('波提欧', 0.9)]))
+    hai = _mk_cell(300, 400, MemberGuess('海瑟音', True, [('海瑟音', 0.9)]))
+    clicks: list[Point] = []
+    monkeypatch.setattr(op, '_team_tag_boxes', lambda image: [])
+    monkeypatch.setattr(op.ctx.controller, 'click',
+                        lambda point, press_time=0.1: clicks.append(point))
+    with fast_sleep(op):
+        result = op._arc_fill_round(None, [bo, hai], 1)
     assert result.result == OperationRoundResultEnum.WAIT
-    assert clicks == [hit.center], f'补点应落回同一张卡:{clicks}'
+    assert clicks == [hai.center, bo.center], f'点击顺序错:{clicks}'
+    assert op._char_idx == 2, '应推进两个目标'
+    assert op._need_top, '点完应回顶继续'
+
+
+def test_arc_prefix_break_missing_head(
+        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
+    """队首目标不在本页时,后面的目标再可见也不点(保槽位顺序),转翻页。"""
+    op = TlAsTeamFillOp(test_context, _ARC_TEAM)
+    op._need_top = False
+    bo = _mk_cell(300, 200, MemberGuess('波提欧', True, [('波提欧', 0.9)]))
+    clicks: list[Point] = []
+    paged: list[str] = []
+    monkeypatch.setattr(op, '_team_tag_boxes', lambda image: [])
+    monkeypatch.setattr(op.ctx.controller, 'click',
+                        lambda point, press_time=0.1: clicks.append(point))
+    monkeypatch.setattr(op, '_page_down',
+                        lambda cells, target, row_no: paged.append(target))
+    with fast_sleep(op):
+        op._arc_fill_round(None, [bo], 1)
+    assert clicks == [], '队首缺席时不得点后续目标'
+    assert paged == ['海瑟音'], '应翻页找队首'
+
+
+def test_arc_return_to_top_fixed_drags(
+        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
+    """回顶 = 固定几次大幅快速上拖 + 停 1 秒,不验证到位(2026-11-06 定案)。"""
+    op = TlAsTeamFillOp(test_context, _ARC_TEAM)
+    op._need_top = True
+    drags: list[tuple[Point, Point]] = []
+    monkeypatch.setattr(op.ctx.controller, 'drag_to',
+                        lambda end, start, duration=0.2: drags.append((start, end)))
+    with fast_sleep(op):
+        result = op._return_to_top()
+    assert result.result == OperationRoundResultEnum.WAIT
+    assert len(drags) >= 3, f'回顶拖动次数不足:{len(drags)}'
+    assert op._need_top is False, '回顶后应清除回顶标记'
