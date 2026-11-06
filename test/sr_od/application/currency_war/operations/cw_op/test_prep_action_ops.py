@@ -850,7 +850,7 @@ def test_sellbench_emission_carries_channel_reason():
 
 
 def test_bridge_recheck_context_uses_slot_table_indices(monkeypatch):
-    """桥复检语境坐标测试(「bridge 复检语境容器下标化」行为半):
+    """桥复检语境坐标测试(「bridge 复检语境状态容器下标化」行为半):
     ``decide_prep_frame`` 供给截断复检的 bench 占用集必须 = **定长槽位表
     下标**(动作参数坐标系,bench_idx 同系,cw_vocab 坐标契约节单一源)
     ——前部有洞帧按紧缩序(bench_entries_of)枚举下标供给会错杀后部

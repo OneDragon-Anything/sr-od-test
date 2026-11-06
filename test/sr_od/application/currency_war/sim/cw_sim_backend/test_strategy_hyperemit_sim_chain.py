@@ -5,7 +5,7 @@ test_strategy_pick_gudinglicai.py〔拿卡落地拍效果条目族〕同形态)�
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-191-chaofa-
 huobi.md §3 锁 3/锁 4/锁 5/锁 6/锁 9(REVIEW-T191 §四④ 同面;锁 6 直构
-形态 = T-177 锁 6 先形「无补发方,容器即终态」):
+形态 = T-177 锁 6 先形「无补发方,状态容器即终态」):
 - 负债效果条目(锁 3):真拿卡路径落地 → 条目已登记(remaining_nodes=6 ∧
   counters[LOST]=G)∧ 金清零笔(−G = 写前金 − 0)∧ 呈现一次性标志位防重放(同声明
   复喂零动作零噪声);bypass 形态(登记缺位)= 零动作 + disclosures 留证
