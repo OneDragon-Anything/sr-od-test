@@ -3,7 +3,7 @@ cw_gain_chain.py on_strategy_gained 硬编码分支;按拆目录规范落位,
 同构先例 = 同目录 test_on_env_gained.py 敌后破坏删除分支段)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/REVIEW-T291.md
-§3(生效方案 = 复用敌后破坏已落三腿机制建模,选择规则均匀随机换为取尾;
+§3(生效方案 = 复用敌后破坏已落三条效果条目机制建模,选择规则均匀随机换为取尾;
 机制单一源 = designs/T-45-dihou-pohuai.md §2.5 族面条款;卡面官方原文:
 「使最右侧的敌人词缀失效，并使敌人难度-5。获得8金币。」——失效腿 =
 本文件锁面;难度腿/金腿 = STRATEGY_ECONOMY 注册行静态承载〔机制锁由

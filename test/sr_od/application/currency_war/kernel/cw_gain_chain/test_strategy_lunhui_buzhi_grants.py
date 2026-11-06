@@ -11,10 +11,10 @@ xuexi.py 位面开始通道 item 形姊妹)。
 本局游戏结束时，【白厄】携带着装备成为新的【轮回者】。若游戏结束时
 【白厄】不在队伍中，【轮回者】的装备变为初始状态。」)与在码登记裁定:
 
-- 腿1a:「获得【白厄】」具名直读行骑厂(表 +1 行,PICK 行由生成式注册
+- 效果条目1a:「获得【白厄】」具名直读行骑厂(表 +1 行,PICK 行由生成式注册
   段自动派生),确定发放 rand=False,星级 1 = roster 单位先验;
   效果串 ``char_grant:白厄(placed=…,merge=…,uid=…)`` = 工厂现值形;
-- 腿2:「进入第二/三位面时，再获得一次」= 位面 2/3 的位面开始窗
+- 效果条目2:「进入第二/三位面时，再获得一次」= 位面 2/3 的位面开始窗
   (2-1/3-1)各发放一次(用户裁定读法);中途拿卡不补发 = 用户裁定
   (取卡窗恒 r∈{2,3},与 r==1 位面开始窗零交叠,零补发腿);零 done 闩
   零 GameState 新域(静态谓词天然单调,窗幂等守卫承担单次);效果串
@@ -22,7 +22,7 @@ xuexi.py 位面开始通道 item 形姊妹)。
   前缀 ``plane_start_char_grant:p<位面>`` 分域;角色分支零发号(uid
   消费域 = 上场锁/离场队列,白厄两缺,同函数姊妹分支同窗无号);
 - 「一件【轮回者】装备」零建模 = cw_investments.STRATEGY_REINCARNATOR_
-  UNMODELED 披露键申报(四面零数据);腿3/腿4 局终域零建模同键覆盖;
+  UNMODELED 披露键申报(四面零数据);效果条目3/效果条目4 局终域零建模同键覆盖;
 - 构建校验 = 漂移哨三哨(孤儿键/id 双匹配/char 词表),治理口径:
   笔误类哨不落 import,两表一致性对账归表域测试(镜像一致性锁)。
 """
@@ -73,7 +73,7 @@ def _make_gs(*, bench: list[tuple[str, int]] | None = None) -> GameState:
 
 
 def test_pick_leg_grants_baie() -> None:
-    """腿1a 主锁:on_strategy_gained 直构(rand=False)→ 备战追加恰 1 只
+    """效果条目1a 主锁:on_strategy_gained 直构(rand=False)→ 备战追加恰 1 只
     1★ 白厄、效果串 = 工厂现值形 ``char_grant:白厄(placed=True,merge=0,
     uid=1)``(单发零升星;uid = PICK 具名角色发放族发号纪律,名单全部键
     非本卡特例);落位写 evidence = pick_invest_char_grant#place。"""
@@ -91,7 +91,7 @@ def test_pick_leg_grants_baie() -> None:
 
 
 def test_pick_leg_grants_baie_on_occupied_bench() -> None:
-    """腿1a 非空备战席回归:白厄 ≠ 既有单位同名同星,落位零合成级联
+    """效果条目1a 非空备战席回归:白厄 ≠ 既有单位同名同星,落位零合成级联
     (互异填席隔离升星判断面,链现役语义本表不特判)。"""
     gs = _make_gs(bench=[('希儿', 1)])
     gs.prep_anchored = True
@@ -117,7 +117,7 @@ def test_zero_effect_registration() -> None:
     pytest.param('chars_conditional', id='conditional-leg-empty'),
 ])
 def test_registration_legs_shape(leg_table: str) -> None:
-    """登记面腿形锁:STRATEGY_GRANTS 条目 = chars_immediate ('白厄',) 单腿,
+    """登记面腿形锁:STRATEGY_GRANTS 条目 = chars_immediate ('白厄',) 一条效果条目,
     条件集/道具集恒空(重复腿不入条件集,登记裁定在码;轮回者装备腿零
     建模不入 equips——equip 字段校验闸天然拒绝非注册装备名,登记面
     自洽非遗漏)。"""
@@ -126,7 +126,7 @@ def test_registration_legs_shape(leg_table: str) -> None:
     assert getattr(grant, leg_table) == expected, f'{leg_table} 恒空'
 
 
-# ============================================================ 腿2 表构建锁
+# ============================================================ 效果条目2 表构建锁
 
 
 def test_plane_start_char_table_registration() -> None:
@@ -146,7 +146,7 @@ def test_plane_start_char_table_mirror_consistency() -> None:
     """镜像一致性锁(锁 6,治理口径:char 与同卡 STRATEGY_GRANTS 角色集
     一致性不做 import 哨,降测试层,箱条目一致性测试同形):注册全集
     逐条 char ∈ 同卡 chars_immediate ∪ chars_conditional——「再获得一次」
-    = 对腿1 整组的重复,发放对象漂移(改角色/漏登记即时腿)在窗口行为
+    = 对效果条目1 整组的重复,发放对象漂移(改角色/漏登记即时腿)在窗口行为
     断言不可见,唯此锁暴露。"""
     for name, grant in STRATEGY_PLANE_START_CHAR_GRANTS.items():
         registered = (set(STRATEGY_GRANTS[name].chars_immediate)
@@ -191,7 +191,7 @@ def test_validator_char_unknown_raises(monkeypatch) -> None:
         cw_investments._validate_strategy_plane_start_char_grants()
 
 
-# ============================================================ 腿2 行为锁
+# ============================================================ 效果条目2 行为锁
 
 
 def test_plane_p2_p3_windows_grant() -> None:
@@ -236,9 +236,9 @@ def test_mid_run_pick_no_refire() -> None:
     """行为锁(锁 2 后半,(2,2) 拿卡局,中途拿卡不补发 = 用户裁定):
     拿卡发生在 P2r2 → P2 位面开始窗已过(持卡谓词在 (2,1) 为假 = 零
     发放,结构性无补发腿);拿卡后 P2r2 窗(r==2)零发放;P3 开始窗
-    (3,1)发 1 只。本锁只验腿2 切片(即时腿不经 on_strategy_gained,
+    (3,1)发 1 只。本锁只验效果条目2 切片(即时腿不经 on_strategy_gained,
     不在本锁执行);「终局共 2 只零合并」全貌由双窗行为锁(恰 2×1★
-    共存零合并)与腿1a 单发锁分证。"""
+    共存零合并)与效果条目1a 单发锁分证。"""
     gs = _make_gs(bench=[])
     # P2 位面开始窗:卡未持(取卡在 P2r2)→ 零发放
     seq = check_strategy_plane_start_grants(gs, node_pos=(2, 1), sig=_LSIG)
@@ -257,7 +257,7 @@ def test_mid_run_pick_no_refire() -> None:
 
 def test_merge_cascade_third_copy_star_up() -> None:
     """级联记账锁(锁 3):预置 2×1★ 白厄(均置备战栏,落点走「全备战栏
-    → 最左」支)→ 腿2 位面开始窗发放第 3 只 → 到席瞬间 3 合 1 合成
+    → 最左」支)→ 效果条目2 位面开始窗发放第 3 只 → 到席瞬间 3 合 1 合成
     2★(获得链现役级联,事实面 = 容器终态断言);落点 = 全备战栏最左
     (载体槽位 = 0)。"""
     gs = _make_gs(bench=[('白厄', 1), ('白厄', 1)])

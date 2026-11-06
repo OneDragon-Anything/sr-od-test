@@ -1,4 +1,4 @@
-"""武装支援(id 102501)组合双腿锁(镜像 src = kernel/cw_gain_effects.py 的
+"""武装支援(id 102501)组合两条效果条目锁(镜像 src = kernel/cw_gain_effects.py 的
 组合子 ``_compose_grant_legs`` + ``PICK_INVEST_EFFECTS`` 组合登记行;按被测
 方法拆目录规范落位——test_gain_chain.py 超线冻结禁追加,新增测试落新镜像,
 先例 = 同目录既有镜像文件)。
@@ -104,7 +104,7 @@ def test_wuzhuang_zhiyuan_compose_legs_chain_in_order(
     bench 恰 +2(名 ∈ 3 费载体派生集、均 1★;批内 2 只 < 3 零级联,
     级联仅与存量同名交互)、效果串恰 3 条且顺序 = [strategy_random_equip:
     <装备名>, strategy_gift_random:<角色名>@1star, strategy_gift_random:
-    <角色名>@1star](顺序锁 = 多腿编排与 rng 消费序,本卡新增机制面);
+    <角色名>@1star](顺序锁 = 多条效果条目编排与 rng 消费序,本卡新增机制面);
     正常路径零申报行。"""
     # 预采样(独立 rng 实例按消费序 3 抽):与实际注入的 rng 同种子同序,
     # 腿序改排 = 采样名互换,顺序断言必红(改序 = 掷序漂移)。

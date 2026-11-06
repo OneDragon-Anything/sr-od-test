@@ -1,4 +1,4 @@
-"""固定理财登记腿测试(gain_invest_strategy 分目录镜像;即时段 burst +
+"""固定理财只登记不写状态的实现分支测试(gain_invest_strategy 分目录镜像;即时段 burst +
 位面段中途拿卡补发,登记拍双桥)。
 
 测试面依据 = 迭代设计 designs/T-182-gudinglicai.md §2.6/§4(锁 7 burst

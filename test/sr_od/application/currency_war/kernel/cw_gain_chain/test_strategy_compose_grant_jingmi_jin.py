@@ -1,18 +1,18 @@
-"""精密拆装·金(id 231401)三腿组合登记行锁(镜像 src = kernel/
-cw_gain_effects.py PICK_INVEST_EFFECTS '精密拆装·金' 行:三腿组合
+"""精密拆装·金(id 231401)三条效果条目组合登记行锁(镜像 src = kernel/
+cw_gain_effects.py PICK_INVEST_EFFECTS '精密拆装·金' 行:三条效果条目组合
 ``_compose_grant_legs(_make_named_equip_grant_effect('精密拆装扳手', 1),
 _make_named_equip_grant_effect('冶金炉', 1),
 _make_random_equip_effect('简易', 2))``;按被测方法拆目录规范落位,
-先例 = 同目录 test_strategy_compose_grant_huishou.py 回收计划双腿)。
+先例 = 同目录 test_strategy_compose_grant_huishou.py 回收计划两条效果条目)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-246 对应稿
 §4 锁面(REVIEW-T246 免裁 8/8;卡面官方原文:「获得1个【精密拆装扳手】，
-1个【冶金炉】和2个随机简易武装」;腿1/腿2 具名确定写 rand=False;腿3
+1个【冶金炉】和2个随机简易武装」;效果条目1/效果条目2 具名确定写 rand=False;效果条目3
 随机简易×2 放回抽 T-167 判例恰 2 次掷,效果串恒 4 条按卡文语序):
 
-- 组合行单一源:三腿组合行在册(泛化表零本卡键负断言防回退撞键);
+- 组合行单一源:三条效果条目组合行在册(泛化表零本卡键负断言防回退撞键);
 - 行为链真值:确定入口 → equips 恰 +3(扳手/炉确定写在前、随机两名在后)、
-  效果串恰 4 条(2 具名+2 随机)、rng 仅腿 3 消费。
+  效果串恰 4 条(2 具名+2 随机)、rng 仅效果条目 3 消费。
 """
 from __future__ import annotations
 
@@ -53,7 +53,7 @@ def _make_gs(*, bench: list[tuple[str, int]] | None = None,
 
 
 def test_jingmi_jin_compose_row_single_source() -> None:
-    """组合行单一源:三腿组合行在册;泛化表零本卡键(防回退撞键)。"""
+    """组合行单一源:三条效果条目组合行在册;泛化表零本卡键(防回退撞键)。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
         _STRATEGY_RANDOM_EQUIP_GRANTS,
         PICK_INVEST_EFFECTS,
@@ -65,7 +65,7 @@ def test_jingmi_jin_compose_row_single_source() -> None:
 
 def test_jingmi_jin_chain_places_three_legs() -> None:
     """行为链真值:确定入口 → equips 恰 +3(扳手/炉在前+随机两名在后)、
-    效果串恰 4 条(2 具名+2 随机)、rng 仅腿 3 消费。"""
+    效果串恰 4 条(2 具名+2 随机)、rng 仅效果条目 3 消费。"""
     gs = _make_gs(bench=[], equips=[])
     gs.prep_anchored = True
     rng0 = random.Random(_SEED)

@@ -1,4 +1,4 @@
-"""黄金垃圾(id 231701)具名装备单腿直书登记行锁(镜像 src = kernel/
+"""黄金垃圾(id 231701)具名装备一条效果条目直书登记行锁(镜像 src = kernel/
 cw_gain_effects.py PICK_INVEST_EFFECTS '黄金垃圾' 行:
 ``_make_named_equip_grant_effect('金垃圾袋', 1)``;按被测方法拆目录规范
 落位——test_gain_chain.py 超线冻结禁追加,新锁落新镜像,先例 = 同目录
@@ -6,7 +6,7 @@ test_strategy_named_equip_grant_quanwuxing.py 全武行)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-249 对应稿
 §4 锁面(REVIEW-T249 免裁 5/5;卡面官方原文:「获得一个【金垃圾袋】，它
-提供大量属性和15金币。」——腿1 具名金垃圾袋确定发放;「大量属性和15金币」
+提供大量属性和15金币。」——效果条目1 具名金垃圾袋确定发放;「大量属性和15金币」
 = 装备携带形态战力面 + 金腿 STRATEGY_ECONOMY instant_gold=15 在册零改动):
 
 - 行为链真值:确定入口 → equips 恰 +1 金垃圾袋、步串恰 1 条

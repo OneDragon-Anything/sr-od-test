@@ -3,7 +3,7 @@ cw_gain_effects.py PICK_INVEST_EFFECTS '双人舞' 行:
 ``_compose_grant_legs(_make_char_grant_effect('千冶·刃'),
 _make_char_grant_effect('卡芙卡'))``;char×char 组合行首例,按被测方法
 拆目录规范落位,先例 = 同目录 test_strategy_compose_grant_jingmi_jin.py
-精密拆装·金三腿形)。
+精密拆装·金三条效果条目形)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-266 对应稿
 §4 锁面(REVIEW-T266 免裁 6/6;卡面官方原文:「上阵的星核猎手数量为2时，
@@ -11,7 +11,7 @@ _make_char_grant_effect('卡芙卡'))``;char×char 组合行首例,按被测方�
 【千冶·刃】和【卡芙卡】。」——条件段【猎星人】游戏侧自算 bot 零建模;
 腿序 = 卡文语序,效果串 2 条):
 
-- 组合行单一源:双腿组合行在册(泛化表零本卡键负断言防回退撞键);
+- 组合行单一源:两条效果条目组合行在册(泛化表零本卡键负断言防回退撞键);
 - 行为链真值:确定入口 → 恰两角色入栏(千冶·刃/卡芙卡卡文序)、效果串
   恰 2 条 char_grant、rng 零消费。
 """

@@ -50,7 +50,7 @@ _ITEM = '随便骰子'
 
 
 def _make_gs(*, equips: list[str] | None = None) -> GameState:
-    """观测面按参组装(None = 保持未观察,供拒落分支;本卡单句单腿只涉
+    """观测面按参组装(None = 保持未观察,供拒落分支;本卡单句一条效果条目只涉
     equips 域,bench 恒空场 + gold 未读 = 零干扰对照)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     slots = [BenchSlot(kind='unit', unit=Unit(char_id='希儿', star=1)),

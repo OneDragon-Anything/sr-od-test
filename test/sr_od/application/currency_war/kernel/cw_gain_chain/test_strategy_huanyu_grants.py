@@ -1,4 +1,4 @@
-"""欢愉星徽(id 203701)装备×角色双腿组合登记行锁(镜像 src = kernel/
+"""欢愉星徽(id 203701)装备×角色两条效果条目组合登记行锁(镜像 src = kernel/
 cw_gain_effects.py PICK_INVEST_EFFECTS '欢愉星徽' 行:双具名交叉组合
 ``_compose_grant_legs(_make_named_equip_grant_effect('欢愉星徽', 1),
 _make_char_grant_effect('绯英'))``;按被测方法拆目录规范落位——
@@ -7,10 +7,10 @@ test_strategy_wuqiang_grants.py 五百强)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-204 对应稿
 §4(REVIEW-T204 免裁 10/10;卡面官方原文:「获得1个【欢愉星徽】，和1个
-【绯英】。」;反转①徽腿 rand=False〔策略卡侧具名腿通道归属,fields.md
+【绯英】。」;反转①徽腿 rand=False〔策略卡侧具名效果条目通道归属,fields.md
 §3.2.15 族级分野注记〕;反转②组合登记行准展开卡形态):
 
-- 登记单一源:双腿组合行(欢愉星徽×1 先/绯英后,依卡文语序);泛化
+- 登记单一源:两条效果条目组合行(欢愉星徽×1 先/绯英后,依卡文语序);泛化
   随机表零条目(双具名非随机族);
 - 行为链真值(锁 2):确定入口 → equips 恰 +1 星徽、bench 恰 +1 绯英、
   效果串两条(named_equip_grant:/char_grant: 前缀分域)、零随机面。
@@ -54,7 +54,7 @@ def _make_gs(*, bench: list[tuple[str, int]] | None = None,
 
 
 def test_huanyu_registry_row_single_source() -> None:
-    """登记单一源:组合行在册(装备×角色双腿);泛化随机表零条目;
+    """登记单一源:组合行在册(装备×角色两条效果条目);泛化随机表零条目;
     id 对拍 plaza:203701。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
         _STRATEGY_RANDOM_EQUIP_GRANTS,

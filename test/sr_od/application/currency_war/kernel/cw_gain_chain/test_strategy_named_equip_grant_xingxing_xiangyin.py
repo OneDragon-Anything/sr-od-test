@@ -6,13 +6,13 @@ grant.py,本文件只锁本卡登记面 + 行为面,按被测方法拆目录规�
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-135-xingxing-
 xiangyin.md(定稿)§4 锁 4 + REVIEW-T135 §四 ④:
-- 腿 2 = 卡文句 2「立刻获得1个【员工投影仪】」:登记行直书
+- 效果条目 2 = 卡文句 2「立刻获得1个【员工投影仪】」:登记行直书
   ``_make_named_equip_grant_effect('员工投影仪', 1)``,具名确定发放
   ``gain_equipment(rand=False)`` 单件入栏,效果串恰一条含 placed;
 - 精密金面前置按物判(判据映射只挂拆装扳手):员工投影仪 gate 恒 None
   走纯发放循环,精密在场照常入栏零申报行(卡级前置分支零遗传);
 - 合成金腿(卡文句 1)= STRATEGY_EFFECTS ON_MERGE 条目 + 合成事件发放
-  腿另路(kernel),两腿异族不入本文件辖域(金腿行为面 = 姊妹镜像
+  腿另路(kernel),两条效果条目异族不入本文件辖域(金腿行为面 = 姊妹镜像
   test_check_strategy_star_merge_gold.py)。
 """
 from __future__ import annotations

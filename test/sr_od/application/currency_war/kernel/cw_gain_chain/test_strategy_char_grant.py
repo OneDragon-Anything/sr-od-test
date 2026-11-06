@@ -4,7 +4,7 @@
 ``PICK_INVEST_EFFECTS`` 推导;按被测方法拆目录规范落位——
 test_gain_chain.py 超线冻结禁追加,新增测试落新镜像,先例 = 同目录姊妹
 镜像文件;本文件辖名单值 (角色, 只数, 星级) 中只数 = 1 的单发成员,只数 > 1
-成员(狸职手续×3)世界腿真值归同目录 test_strategy_lizhi_shouxu_grants.py)。
+成员(狸职手续×3)把结果写进状态副本的实现分支真值归同目录 test_strategy_lizhi_shouxu_grants.py)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
 T-128-liu-peipei.md(定稿)§4 锁 2/3 + REVIEW-T128 七裁决点默认案:

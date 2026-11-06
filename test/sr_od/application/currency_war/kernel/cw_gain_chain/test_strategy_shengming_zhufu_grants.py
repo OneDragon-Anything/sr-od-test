@@ -1,12 +1,12 @@
 """生命之花祝福(id 230401)装备腿行为锁(镜像 src = kernel/
-cw_gain_effects.py PICK_INVEST_EFFECTS '生命之花祝福' 行:具名装备单腿
+cw_gain_effects.py PICK_INVEST_EFFECTS '生命之花祝福' 行:具名装备一条效果条目
 ``_make_named_equip_grant_effect('生命之花', 1)``;按被测方法拆目录规范
 落位——test_gain_chain.py 超线冻结禁追加,新锁落新镜像,先例 = 同目录
 test_strategy_heping_zhufu_grants.py 和平手枪祝福)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-234 对应稿
 §4 锁 3(REVIEW-T234 免裁 7/7;卡面官方原文「获得1个【生命之花】」;
-rand=False 策略卡侧具名腿通道归属;祝福面 = UNIT_BUFF 零响应登记):
+rand=False 策略卡侧具名效果条目通道归属;祝福面 = UNIT_BUFF 零响应登记):
 
 - 行为链真值:确定入口 → equips 恰 +1 生命之花、步串
   ``named_equip_grant:生命之花(placed=True)``、零随机面。

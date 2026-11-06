@@ -18,7 +18,7 @@ REVIEW-T167 §四② 落位按现树):
   GRANTS + sim 结算腿(登记面锁 = kernel/cw_investments/
   test_strategy_boss_battle_grants.py,行为链锁 = 同目录
   test_check_strategy_boss_battle_grants.py 与 sim/cw_sim_backend/
-  test_strategy_boss_battle_grant_sim_chain.py,两腿分域);
+  test_strategy_boss_battle_grant_sim_chain.py,两条效果条目分域);
 - rand 语义锁(采样腿 write_logic_rand 通道、不触发失配网)由
   test_gain_chain.test_random_equip_leg_rand_channel_subchain 辖——
   同一工厂路径的通道语义,本行与该锁同为 '简易' 类别实参,类别实参与
@@ -114,7 +114,7 @@ def test_instant_leg_chain_places_two(rows_sink: _RowSink) -> None:
     放回语义 = 两抽可重复同件,不断言互异)、效果串恰 2 条
     ``strategy_random_equip:<名>``(装备无星级,串不带 @ 后缀)、
     active_strategies 入表;正常路径零申报行。session=None 直构形态
-    (登记腿被闸跳过,登记形态断言由键集闭集锁承载)。"""
+    (只登记不写状态的实现分支被闸跳过,登记形态断言由键集闭集锁承载)。"""
     from sr_od.application.currency_war.kernel.cw_investments import (
         equips_by_category,
     )

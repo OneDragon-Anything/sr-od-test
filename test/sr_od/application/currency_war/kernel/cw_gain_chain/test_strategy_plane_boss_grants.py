@@ -70,7 +70,7 @@ def _units(gs: GameState) -> list[tuple[str, int]]:
 
 def test_p2_boss_window_grants_with_latch() -> None:
     """主锁:持卡 + P2-7 boss 窗(默认序列,场字段未注册回退)→ 备战
-    1★火花 + 封账恰一笔(星级未标 1★ 先验;穿戴/开拓者两腿零建模 =
+    1★火花 + 封账恰一笔(星级未标 1★ 先验;穿戴/开拓者两条效果条目零建模 =
     落席仅火花)。"""
     gs = _gs(cards=[_CARD], bench=[])
     got = check_strategy_plane_boss_grants(gs, node_pos=(2, 7), sig=_LSIG)

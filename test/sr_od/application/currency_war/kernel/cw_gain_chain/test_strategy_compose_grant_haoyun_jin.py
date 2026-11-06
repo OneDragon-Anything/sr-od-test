@@ -1,17 +1,17 @@
-"""好运令牌·金(id 231501)双腿组合登记行锁(镜像 src = kernel/
-cw_gain_effects.py PICK_INVEST_EFFECTS '好运令牌·金' 行:具名×随机双腿
+"""好运令牌·金(id 231501)两条效果条目组合登记行锁(镜像 src = kernel/
+cw_gain_effects.py PICK_INVEST_EFFECTS '好运令牌·金' 行:具名×随机两条效果条目
 ``_compose_grant_legs(_make_named_equip_grant_effect('好运令牌', 1),
 _make_random_equip_effect('简易', 1))``;按被测方法拆目录规范落位,
 先例 = 同目录 test_strategy_compose_grant_jingmi_jin.py 精密拆装·金)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-247 对应稿
 §4 锁面(REVIEW-T247 免裁 6/6;卡面官方原文:「获得1个【好运令牌】和1件
-随机简易装备」;腿1 具名确定写 rand=False;腿2 简易池 8 件均匀随机;
+随机简易装备」;效果条目1 具名确定写 rand=False;效果条目2 简易池 8 件均匀随机;
 效果串恒 2 条按卡文语序):
 
-- 组合行单一源:双腿组合行在册(泛化表零本卡键负断言防回退撞键);
+- 组合行单一源:两条效果条目组合行在册(泛化表零本卡键负断言防回退撞键);
 - 行为链真值:确定入口 → equips 恰 +2(令牌在前+随机一名在后)、
-  效果串恰 2 条、rng 仅腿 2 消费。
+  效果串恰 2 条、rng 仅效果条目 2 消费。
 """
 from __future__ import annotations
 
@@ -52,7 +52,7 @@ def _make_gs(*, bench: list[tuple[str, int]] | None = None,
 
 
 def test_haoyun_jin_compose_row_single_source() -> None:
-    """组合行单一源:双腿组合行在册;泛化表零本卡键(防回退撞键)。"""
+    """组合行单一源:两条效果条目组合行在册;泛化表零本卡键(防回退撞键)。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
         _STRATEGY_RANDOM_EQUIP_GRANTS,
         PICK_INVEST_EFFECTS,
@@ -64,7 +64,7 @@ def test_haoyun_jin_compose_row_single_source() -> None:
 
 def test_haoyun_jin_chain_places_two_legs() -> None:
     """行为链真值:确定入口 → equips 恰 +2(令牌在前+随机一名在后)、
-    效果串恰 2 条、rng 仅腿 2 消费。"""
+    效果串恰 2 条、rng 仅效果条目 2 消费。"""
     gs = _make_gs(bench=[], equips=[])
     gs.prep_anchored = True
     rng0 = random.Random(_SEED)

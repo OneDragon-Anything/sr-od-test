@@ -6,15 +6,15 @@ PICK 推导 + ``_STRATEGY_NODE_CHAR_GRANTS`` 具名固定子形姊妹专表;先�
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
 T-408-benguniang-jiushi-luocha.md(定稿 v1.1)§4 锁 1/2:
 
-- 腿1(即时 2★三月七):首句「获得2星【三月七】」即时直读行骑厂(表
+- 效果条目1(即时 2★三月七):首句「获得2星【三月七】」即时直读行骑厂(表
   +1 行,PICK 行由生成式注册段自动派生,禁字面量第二源),确定发放
   rand=False,星级 2 = desc 明写结构值直读非先验;效果串
   ``char_grant:三月七(placed=…,merge=…,uid=…)`` = 工厂现值形;2★ 直授
   不与 1★ 存量合并(合并判据 = 同名同星,星级不同不触发,链现役语义);
-- 腿2(每节点 1★三月七)行为真值 = 检查函数具名形分支,归同目录
+- 效果条目2(每节点 1★三月七)行为真值 = 检查函数具名形分支,归同目录
   test_check_strategy_node_char_grants.py 函数镜像文件(本文件只辖登记
-  行值对拍);两腿零 rng 确定发放;
-- 腿3(化身罗刹+战斗行为)零建模五证 = U01 sim 战斗纯随机面/BattleOutcome
+  行值对拍);两条效果条目零 rng 确定发放;
+- 效果条目3(化身罗刹+战斗行为)零建模五证 = U01 sim 战斗纯随机面/BattleOutcome
   无行为真值/收入统一公式无接口/变身非发放不入册(登记面注释在码)/
   live 游戏自算零义务——本文件零效果锁钉 STRATEGY_EFFECTS 恒空。
 """
@@ -95,7 +95,7 @@ def rows_sink() -> _RowSink:
 
 
 def test_registration_faces() -> None:
-    """登记面锁(锁 1):登记表 chars_immediate = ('三月七',) 单腿白得型
+    """登记面锁(锁 1):登记表 chars_immediate = ('三月七',) 一条效果条目白得型
     (advisor False 非顾问入商店)/工厂表行 ('三月七', 1, 2)(2★ = desc
     明写直读,家族首个非 1 星级行)/姊妹专表行 ('三月七', 1)(每节点名数
     = 卡面单数直读)/PICK 行在册(生成式注册段自工厂表派生,表为单一源,
@@ -111,7 +111,7 @@ def test_registration_faces() -> None:
 
 
 def test_pick_leg_grants_two_star_march(rows_sink: _RowSink) -> None:
-    """腿1 世界锁(锁 2):on_strategy_gained 直构(rand=False)→ 备战追加
+    """效果条目1 世界锁(锁 2):on_strategy_gained 直构(rand=False)→ 备战追加
     恰 1 只 2★ 三月七、效果串 = 工厂现值形 ``char_grant:三月七(placed=
     True,merge=0,uid=1)``(单发零升星);确定发放走确定面;正常路径零
     申报行。"""
@@ -131,7 +131,7 @@ def test_pick_leg_grants_two_star_march(rows_sink: _RowSink) -> None:
 
 
 def test_pick_leg_no_merge_with_one_star_copy(rows_sink: _RowSink) -> None:
-    """腿1 非空备战席回归(锁 2 后半):预置 1★ 三月七 → 2★ 直授零合并
+    """效果条目1 非空备战席回归(锁 2 后半):预置 1★ 三月七 → 2★ 直授零合并
     (合并判据 = 同名同星,星级不同不触发,链现役语义)——升星只走同名
     同星凑三通道,即时 2★ 与每节点 1★ 复制腿并存是设计语义非缺口。"""
     gs = _make_gs(bench=[('三月七', 1)])
@@ -146,7 +146,7 @@ def test_pick_leg_no_merge_with_one_star_copy(rows_sink: _RowSink) -> None:
 
 
 def test_zero_effect_registration() -> None:
-    """零效果锁(腿3 零建模面钉):STRATEGY_EFFECTS 恒空(卡面经济/战力
+    """零效果锁(效果条目3 零建模面钉):STRATEGY_EFFECTS 恒空(卡面经济/战力
     条目零登记,变身+战斗行为 = sim 域结构外,防未来误登记)+ 商店停机
     钩子名单不含本卡(零商店改写/计数采集面;名单访问形 = 类限定
     ClassVar)。"""

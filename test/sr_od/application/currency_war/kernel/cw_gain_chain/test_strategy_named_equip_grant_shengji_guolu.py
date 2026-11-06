@@ -98,7 +98,7 @@ def rows_sink() -> _RowSink:
 def test_shengji_guolu_grant_leg_places_two_furnaces(
         rows_sink: _RowSink) -> None:
     """选卡行为主锁(§4 锁 5 G 形态):gain_invest_strategy 全链(rand=False)
-    → 注册入表 + equips 恰 +2 冶金炉、写数恰 +3(注册 1 + 腿 2;②段账本
+    → 注册入表 + equips 恰 +2 冶金炉、写数恰 +3(注册 1 + 效果条目 2;②段账本
     登记 session=None 跳过)、来源 = 确定面 logic、效果串恰两条逐件一条
     各含 placed=True;零金写(本卡无金句);板面域(bench/deployed)零写;
     正常路径零申报行。前提守卫:冶金炉 ∉ 后果表(破前提时获得后果链追加

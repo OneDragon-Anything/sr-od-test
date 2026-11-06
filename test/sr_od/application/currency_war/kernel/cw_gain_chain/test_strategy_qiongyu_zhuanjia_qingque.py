@@ -1,7 +1,7 @@
 """琼玉专家:青雀(id 360301)顾问入商店族具名装备授予腿锁(镜像 src =
 kernel/cw_gain_effects.py 的 ``PICK_INVEST_EFFECTS`` 直书登记行
 「琼玉专家:青雀」;顾问解锁腿 = cw_investments.STRATEGY_GRANTS 同卡行
-advisor=True 登记面零改动复核,本文件锁效果体腿与双腿联立全序;按被测
+advisor=True 登记面零改动复核,本文件锁效果体腿与两条效果条目联立全序;按被测
 方法拆目录规范落位,同形模板 = 停云顾问 test_strategy_tingyun.py
 〔advisor+具名授予联立〕与升级锅炉 test_strategy_named_equip_grant_
 shengji_guolu.py〔同物冶金炉 ×2〕)。
@@ -12,7 +12,7 @@ T-415-qiongyu-zhuanjia-qingque.md(定稿)§4 锁面(卡面官方原文:
 商店。获得2个【冶金炉】。」——顾问腿/入商店腿已在册零动作,冶金炉腿 =
 本卡唯一机制件):
 
-- 腿2 = 登记行直书 ``_make_named_equip_grant_effect('冶金炉', 2)``,
+- 效果条目2 = 登记行直书 ``_make_named_equip_grant_effect('冶金炉', 2)``,
   具名确定发放 ``gain_equipment(rand=False)`` 循环 2 次逐件一条入栏;
 - 联立效果串全序:恰 3 条 = advisor_unlock 1 → named_equip_grant 2
   (获得链 advisor 腿先于效果体分派,顺序与卡文语序一致);
@@ -121,7 +121,7 @@ def test_qiongyu_qingque_chain_unlock_then_two_furnaces(
     固定种子)→ 注册入表 + 解锁写 + equips 恰 +2 冶金炉;效果串全序恰
     3 条 = advisor_unlock 1 → named_equip_grant 2(advisor 腿先于效果体
     分派,与卡文语序顾问先/冶金炉后一致);解锁 evidence 前缀断言;确定
-    发放走确定面;写数恰 4 = 注册 1 + 解锁 1 + 炉腿 2(②段账本登记
+    发放走确定面;写数恰 4 = 注册 1 + 解锁 1 + 炉效果条目 2(②段账本登记
     session=None 跳过);rng 零消费;板面域零写;零金写(本卡无金句);
     正常路径零申报行。"""
     gs = _make_gs(equips=[])
@@ -178,7 +178,7 @@ def test_qiongyu_qingque_precision_gate_not_inherited(
 
 def test_qiongyu_qingque_unobserved_reject_auditable(
         rows_sink: _RowSink) -> None:
-    """拒落负支:equips 未观察(None)直构 → 腿2 原语拒落零写 + 效果串仍
+    """拒落负支:equips 未观察(None)直构 → 效果条目2 原语拒落零写 + 效果串仍
     逐件登记(placed=False ×2,拒落可审计);顾问解锁腿不受扰照写(equips
     观察态与解锁域零耦合);零申报行(拒落档 = 原语既有语义静默档)。"""
     gs = _make_gs()
@@ -199,7 +199,7 @@ def test_qiongyu_qingque_unobserved_reject_auditable(
 def test_qiongyu_qingque_double_advisor_dedup(rows_sink: _RowSink) -> None:
     """双顾问去重锁(同锁跨卡/同卡两形态):同局先拿摸个鱼吧I(同 advisor
     解锁青雀)再拿本卡 → 解锁只增去重仍恰单份(去重命中零写早退,写数恰
-    3 = 注册 1 + 炉腿 2);本卡重复拿取 → 解锁幂等单份,效果分支照走零
+    3 = 注册 1 + 炉效果条目 2);本卡重复拿取 → 解锁幂等单份,效果分支照走零
     幂等闸(工厂幂等不设防申报:每次获得各发 count 件)。"""
     gs = _make_gs(equips=[])
     gs.prep_anchored = True

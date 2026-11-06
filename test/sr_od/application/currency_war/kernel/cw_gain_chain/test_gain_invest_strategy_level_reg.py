@@ -1,4 +1,4 @@
-"""成长基金登记腿可见性测试(镜像 src = kernel/cw_gain_chain.py 的
+"""成长基金只登记不写状态的实现分支可见性测试(镜像 src = kernel/cw_gain_chain.py 的
 gain_invest_strategy 登记分支 × kernel/cw_investments.py 的
 STRATEGY_EFFECTS 成长基金条目)。
 
@@ -51,7 +51,7 @@ def _make_gs() -> GameState:
 
 
 def test_registration_visibility_and_spec_shape() -> None:
-    """登记腿可见性(锁 5):session 在场拿卡 → 效果账本入册,条目规格
+    """只登记不写状态的实现分支可见性(锁 5):session 在场拿卡 → 效果账本入册,条目规格
     四元组逐位 + payload 同一实例(单一源,误复制实例即红)。"""
     gs = _make_gs()
     gain_invest_strategy(gs, object(), _CARD, rand=False, sig=_LSIG)

@@ -2,7 +2,7 @@
 cw_gain_effects.py PICK_INVEST_EFFECTS '量子力学' 行:
 ``_compose_grant_legs(_make_char_grant_effect('希儿'))``;希儿同物组合行
 第三例[钢铁美学/量子同频星徽后],先例 = 同目录
-test_strategy_compose_grant_gangtie.py 钢铁美学单腿形)。
+test_strategy_compose_grant_gangtie.py 钢铁美学一条效果条目形)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-277 对应稿
 §4 锁面(REVIEW-T277 免裁 7/7;卡面官方原文:「【量子同频】角色累计星数达

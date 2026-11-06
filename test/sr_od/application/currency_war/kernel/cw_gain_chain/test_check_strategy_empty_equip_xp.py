@@ -8,7 +8,7 @@ check_strategy_empty_equip_xp 纯判定 + sim/cw_sim_backend.py 节点窗挂点
 - 条件矩阵(锁 3):满装备→0;工具类/特殊类(垃圾袋,口径 A 锚定)+裸
   bench→表值;空+裸→表值;bench unit 带装备→0;名字不在册→0(防御);
   上阵带装备→表值(辖域判读 A 锚定);None 防御→0(fail-closed);
-- 腿1→腿2 交互(锁 3):选卡落地后物品栏恒非消耗品(简易池无工具/特殊类)
+- 效果条目1→效果条目2 交互(锁 3):选卡落地后物品栏恒非消耗品(简易池无工具/特殊类)
   → 拿卡当窗必判 0(结构性自洽);
 - 纯读零写:函数体零容器写(判定无 sig 形参,世界写端归 sim 挂点)。
 """
@@ -151,7 +151,7 @@ def test_no_card_and_off_table_zero() -> None:
 
 
 def test_leg1_interaction_pick_window_zero() -> None:
-    """腿1→腿2 交互(锁 3):选卡落地后物品栏 = 采样简易件(简易池全体
+    """效果条目1→效果条目2 交互(锁 3):选卡落地后物品栏 = 采样简易件(简易池全体
     非消耗品,注册表派生断言)→ 拿卡当窗必判 0(结构性自洽——拿卡即破
     空仓,发放起点 = 卖出/耗用该件之后的节点窗)。"""
     pool_cats = {EQUIPMENTS[n].category for n in equips_by_category('简易')}

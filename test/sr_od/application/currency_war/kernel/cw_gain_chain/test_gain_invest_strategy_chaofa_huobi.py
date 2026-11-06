@@ -1,4 +1,4 @@
-"""超发货币登记腿测试(gain_invest_strategy 分目录镜像;负债播值腿
+"""超发货币只登记不写状态的实现分支测试(gain_invest_strategy 分目录镜像;负债播值腿
 首例;镜像先例 = 同目录 test_gain_invest_strategy_gudinglicai_reg.py)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-191-chaofa-

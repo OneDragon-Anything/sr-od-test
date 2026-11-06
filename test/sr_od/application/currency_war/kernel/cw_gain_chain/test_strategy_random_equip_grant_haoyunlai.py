@@ -105,7 +105,7 @@ def test_instant_leg_chain_places_two_no_self_conversion(
     恰 2 抽 + 采样序;放回语义 = 两抽可重复同件,不断言互异)、效果串恰
     2 条 ``strategy_random_equip:<名>``、active_strategies 入表;掷得
     简易件不入本卡进阶谓词照常入栏(自我转换零,锁 4);正常路径零申报
-    行。session=None 直构形态(登记腿被闸跳过,登记形态断言由键集闭集
+    行。session=None 直构形态(只登记不写状态的实现分支被闸跳过,登记形态断言由键集闭集
     锁承载)。"""
     from sr_od.application.currency_war.kernel.cw_investments import (
         equips_by_category,

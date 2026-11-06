@@ -14,7 +14,7 @@ T-166-qiang-zaishou.md(定稿)§4 锁 1(骑 T-136 锁形,行身份锁):
   非选卡拍,归 cw_investments.STRATEGY_BOSS_BATTLE_GRANTS + sim 结算腿
   (登记面锁 = kernel/cw_investments/test_strategy_boss_battle_grants.py,
   行为链锁 = 同目录 test_check_strategy_boss_battle_grants.py 与 sim/
-  cw_sim_backend/test_strategy_boss_battle_grant_sim_chain.py,两腿分域);
+  cw_sim_backend/test_strategy_boss_battle_grant_sim_chain.py,两条效果条目分域);
 - rand 语义锁(采样腿 write_logic_rand 通道、不触发失配网)由
   test_gain_chain.test_random_equip_leg_rand_channel_subchain 辖——
   同一工厂路径的通道语义,本行与该锁同为 '简易' 类别实参,类别实参不
@@ -93,7 +93,7 @@ def test_instant_leg_chain_places_one(rows_sink: _RowSink) -> None:
     (rand=False)+ 固定 rng 注入 → equips 恰 +1、名 ∈ 简易池派生集且 =
     采样值(禁手抄清单)、效果串恰 1 条 ``strategy_random_equip:<名>``
     (装备无星级,串不带 @ 后缀)、active_strategies 入表;正常路径零
-    申报行。session=None 直构形态(登记腿被闸跳过,登记形态断言由键集
+    申报行。session=None 直构形态(只登记不写状态的实现分支被闸跳过,登记形态断言由键集
     闭集锁承载)。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
         roll_random_equip,

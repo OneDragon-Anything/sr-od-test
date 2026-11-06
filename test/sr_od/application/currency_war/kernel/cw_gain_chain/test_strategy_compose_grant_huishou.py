@@ -14,8 +14,8 @@ T-237-huishou-jihua.md(定稿,落地形态按 REVIEW-T237 §2.5 撞键缺陷
   覆盖静默丢即时腿,负断言锁死回退双面撞键形态);
 - 固定 rng 注入链发放真值:rng 消费序 = 仅第 1 抽装备(进阶池,入队腿
   零采样面)——腿序改排/入队腿预掷 = 采样漂移,被同序对拍捕获;效果串
-  恰 2 条且两腿形态字面分明(腿1 ``strategy_random_equip:<名>`` 无
-  placed 后缀 / 腿2 ``strategy_grant_scheduled:随机简易(类别池)@5``
+  恰 2 条且两条效果条目形态字面分明(效果条目1 ``strategy_random_equip:<名>`` 无
+  placed 后缀 / 效果条目2 ``strategy_grant_scheduled:随机简易(类别池)@5``
   池标记形,跨家族前缀分域可独立过滤);
 - 前提守卫:「效果串恒 2 条」前提 = 进阶池 ∩ ``EQUIP_ACQUIRE_
   CONSEQUENCES`` = ∅(设计 §1.3 级联普查,装备注册表扩员时守卫先红,
@@ -106,7 +106,7 @@ def rows_sink() -> _RowSink:
 
 def test_huishou_compose_legs_chain_in_order(rows_sink: _RowSink) -> None:
     """组合腿锁(设计 §4 锁 1):gain_invest_strategy 确定入口(rand=
-    False)+ 固定 rng 注入 → equips 恰 +1(腿1 名 = 采样值 ∈ 进阶池
+    False)+ 固定 rng 注入 → equips 恰 +1(效果条目1 名 = 采样值 ∈ 进阶池
     派生集禁手抄清单)、效果串恰 2 条且顺序 = 卡文语序(随机腿串在前/
     入队腿池标记形在后)、入队腿零采样(同序预采样对拍)、正常路径零
     申报行;泛化表零键负断言(撞键缺陷防线:组合卡误入泛化表 = 同名键
@@ -130,7 +130,7 @@ def test_huishou_compose_legs_chain_in_order(rows_sink: _RowSink) -> None:
                                rng=random.Random(_HUISHOU_SEED))
     assert out.placed
     assert gs.active_strategies.value == [_CARD], '注册入表'
-    # 腿1 = 随机进阶(名 = 采样值)、腿2 = 延时入队(池标记形,登记值
+    # 效果条目1 = 随机进阶(名 = 采样值)、效果条目2 = 延时入队(池标记形,登记值
     # @5 源自 STRATEGY_DELAYED_GRANTS 行)。
     assert gs.equips.value == [equip_pick], \
         'equips 恰 +1(即时随机腿)'
@@ -143,7 +143,7 @@ def test_huishou_compose_legs_chain_in_order(rows_sink: _RowSink) -> None:
     assert rows_sink.kinds() == [], '正常路径零申报行'
     # 撞键缺陷防线(设计稿 §2.3 形态修正的负向锁):泛化表零本卡键——
     # 误入表 = 泛化表 spread(字面量前段)被组合行覆盖丢即时腿,或表行
-    # 单腿体覆盖组合体,两形皆静默丢腿。
+    # 一条效果条目体覆盖组合体,两形皆静默丢腿。
     assert _CARD not in _STRATEGY_RANDOM_EQUIP_GRANTS, \
         '组合卡误入随机装备泛化表(同名键覆盖丢腿形态回退)'
 

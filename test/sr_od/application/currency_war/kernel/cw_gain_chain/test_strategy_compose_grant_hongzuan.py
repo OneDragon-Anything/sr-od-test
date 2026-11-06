@@ -9,7 +9,7 @@ cw_gain_effects.py PICK_INVEST_EFFECTS '红钻闪耀' 组合行(具名红钻×�
 进入3个节点后，获得【简易武装箱】」;红钻 ∉ 精密金面判据映射 gate 恒
 None,获得零级联 ∉ EQUIP_ACQUIRE_CONSEQUENCES):
 
-- 组合行单一源:双腿组合行在册(泛化表零本卡键负断言防回退撞键);
+- 组合行单一源:两条效果条目组合行在册(泛化表零本卡键负断言防回退撞键);
 - 延时表行直测:id 231201/delay_nodes=3/item 定名简易武装箱/item_category
   占位(定名道具形,非类别池形)。
 """
@@ -27,7 +27,7 @@ _CARD = '红钻闪耀'
 
 
 def test_hongzuan_compose_row_single_source() -> None:
-    """组合行单一源:双腿组合行在册(具名×入队组合);泛化表零本卡键
+    """组合行单一源:两条效果条目组合行在册(具名×入队组合);泛化表零本卡键
     (防回退撞键形态负断言);延时表行直测(id/nodes/定名道具)。"""
     assert _CARD in PICK_INVEST_EFFECTS, '组合行在册'
     assert _CARD not in _STRATEGY_RANDOM_EQUIP_GRANTS, \

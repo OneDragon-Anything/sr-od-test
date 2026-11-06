@@ -3,7 +3,7 @@
 族模式卡 = 全员晋升——工厂语义锁住同目录姊妹镜像 test_strategy_named_equip_
 grant.py,本文件只锁本卡登记面 + 行为面,按被测方法拆目录规范落位,先例 =
 同目录姊妹镜像文件 test_strategy_named_equip_grant_xiaofuzhi.py——同物
-员工投影仪 ×2 姊妹卡,本卡与其两腿同构,唯一差异 = 金腿数值 7/13)。
+员工投影仪 ×2 姊妹卡,本卡与其两条效果条目同构,唯一差异 = 金效果条数值 7/13)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
 T-169-xiaofuzhi-plus.md(定稿)§4 锁 2/4/5/6 + REVIEW-T169 §③ 裁决点 5
@@ -95,7 +95,7 @@ def rows_sink() -> _RowSink:
 def test_xiaofuzhi_plus_grant_leg_places_two_projectors(
         rows_sink: _RowSink) -> None:
     """登记面 + 腿行为主锁:gain_invest_strategy 全链(rand=False)→ 注册
-    入表 + equips 恰 +2 员工投影仪、写数恰 +3(注册 1 + 腿 2;②段账本
+    入表 + equips 恰 +2 员工投影仪、写数恰 +3(注册 1 + 效果条目 2;②段账本
     登记 session=None 跳过)、来源 = 确定面 logic、效果串恰两条逐件一条
     各含 placed=True;金腿异族不入效果体(gold 未读保持未读,零金写);
     板面域(bench/deployed)零写;正常路径零申报行。"""

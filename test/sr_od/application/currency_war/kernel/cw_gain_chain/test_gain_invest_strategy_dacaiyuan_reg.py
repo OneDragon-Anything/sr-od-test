@@ -1,13 +1,13 @@
-"""大裁员登记腿测试(gain_invest_strategy 分目录镜像;卖全场族登记型
+"""大裁员只登记不写状态的实现分支测试(gain_invest_strategy 分目录镜像;卖全场族登记型
 建模——BattlefieldEffect 载体携 burst 首例,单条目双桥同拍各司其职,
 先例 = 同目录 test_gain_invest_strategy_refresh_pair_burst.py)。
 
-锁 4(登记腿 burst 挂点锁,镜像固定理财/合并同类项 burst 锁形):
-session 在场选「大裁员」→ 获得链登记腿 register_strategy 入册 + burst 桥
+锁 4(只登记不写状态的实现分支 burst 挂点锁,镜像固定理财/合并同类项 burst 锁形):
+session 在场选「大裁员」→ 获得链只登记不写状态的实现分支 register_strategy 入册 + burst 桥
 把 ``payload.free_refresh_burst=6`` 一次性累加进免费刷新余额(None 基 =
 0 起算)+ 板面重写桥出售面同拍执行(预种 2★1 费退款恰 3——cost=1 无
 手续费,×2 两候选口径同值的确定性锚;缺口 G4 闭合前按基础公式记)。
-挂点 = 登记腿(②段)回归钉,防漂移到 ③段效果体。
+挂点 = 只登记不写状态的实现分支(②段)回归钉,防漂移到 ③段效果体。
 """
 from __future__ import annotations
 
@@ -58,7 +58,7 @@ def _make_gs() -> GameState:
 
 def test_gain_invest_strategy_dacaiyuan_burst_and_sell(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """锁 4:选卡登记腿一拍双桥——burst +6(常量源 =
+    """锁 4:选卡只登记不写状态的实现分支一拍双桥——burst +6(常量源 =
     STRATEGY_ECONOMY['大裁员'].free_refresh_burst 直读禁写死)+ 出售面
     清场退款(2★1 费锚恰 3)。写端 = write_logic 逻辑直写,burst 笔
     evidence effect_burst[@frame]、produced_by 带卡名。"""

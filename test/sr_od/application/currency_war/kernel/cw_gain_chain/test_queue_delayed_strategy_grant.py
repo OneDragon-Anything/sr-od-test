@@ -1,30 +1,30 @@
-"""策略延时发放入队原语与登记腿测试(镜像 src = kernel/cw_gain_chain.py
+"""策略延时发放入队原语与只登记不写状态的实现分支测试(镜像 src = kernel/cw_gain_chain.py
 的 queue_delayed_strategy_grant + kernel/cw_gain_effects.py 的
 _make_delayed_grant_effect 派生条目)。
 
-测试面依据 = 迭代设计 designs/T-106-rencai-jili.md §4 锁 2(登记腿
+测试面依据 = 迭代设计 designs/T-106-rencai-jili.md §4 锁 2(只登记不写状态的实现分支
 2+2 条)+ 锁 5(live 链登记;发放原语无 live 调用点由模块边界承担——
 kernel 不 import sim,不设静态扫描锁)+ T-107 展开卡批(designs/
-T-107-rencai-jili-plus.md §4 锁 2:人才激励+ 登记腿 @3 直断,原
+T-107-rencai-jili-plus.md §4 锁 2:人才激励+ 只登记不写状态的实现分支 @3 直断,原
 monkeypatch 形态测随真注册转直测):
 - 拿卡人才激励 → equips 尾部 +1 员工投影仪 ∧ 队列 (('人才激励', 4),)
   ∧ 双效果串(equip_grant:strategy_grant_scheduled);人才激励+ 同构
   @3(姊妹双卡逐名独立构造);
-- 许诺特权 = 延时-only 单腿登记腿(卡文纯延时单句):效果串单枚
+- 许诺特权 = 延时-only 一条效果条目只登记不写状态的实现分支(卡文纯延时单句):效果串单枚
   strategy_grant_scheduled,零即时腿(反向锁错发形态);
 - 先亏后盈 = count 循环入队(数量 2 首例):队列双条目 + 效果串两枚
   + kernel 侧零 hp 写(T-144 批扩面);
-- 好运令牌·银 = 延时-only 单腿展开卡(发放物与卡名异名首例):队列
+- 好运令牌·银 = 延时-only 一条效果条目展开卡(发放物与卡名异名首例):队列
   恰 (('好运令牌·银', 3),) ∧ 效果串单枚 strategy_grant_scheduled:
   好运令牌@3(物名载体直断)∧ 零即时腿;equips 未观察域效果串仍单枚
-  (两腿工厂同域会多枚 equip_grant placed=False 串,反证载体分流)+
-  两腿成员集负成员断言(T-146 批扩面);
-- 是钻石总会发光 = 延时-only 单腿展开卡 + 族内首个随机发放行(designs/
+  (两条效果条目工厂同域会多枚 equip_grant placed=False 串,反证载体分流)+
+  两条效果条目成员集负成员断言(T-146 批扩面);
+- 是钻石总会发光 = 延时-only 一条效果条目展开卡 + 族内首个随机发放行(designs/
   T-148-shizuanshi-zonghui-faguang.md §4 锁 2):队列恰 (('是钻石总会
   发光', 2),) ∧ 效果串单枚 choice-set 形 strategy_grant_scheduled:
   红钻|蓝钻@2(封闭集竖线连接直断)∧ 零即时腿 ∧ 登记 rng 零消耗
   (拿卡前后 rng 状态逐位相等,预掷被否的行为证据)∧ equips 未观察域
-  载体分流直断 + 两腿成员集负成员(T-148 批扩面);
+  载体分流直断 + 两条效果条目成员集负成员(T-148 批扩面);
 - equips 未观察 → 即时腿拒落零写 placed=False、入队腿照写;
 - 未登记策略卡(表外名 + 在册无腿卡)零写;
 - 回收计划 = 组合登记行入队腿(designs/T-237-huishou-jihua.md §4 锁 6:
@@ -62,7 +62,7 @@ def _gs(equips: list[str] | None) -> GameState:
 
 
 def test_pick_rencai_jili_instant_equip_and_queue() -> None:
-    """登记腿主条(handler 分派形态):拿卡人才激励 → equips 尾部 +1
+    """只登记不写状态的实现分支主条(handler 分派形态):拿卡人才激励 → equips 尾部 +1
     员工投影仪(write_logic 确定面,rand=False 具名发放)+ 队列恰
     (('人才激励', 4),)(元素 = (触发卡规范名, 登记节拍))+ 双效果串
     equip_grant(placed=True)/ strategy_grant_scheduled:员工投影仪@4。"""
@@ -82,7 +82,7 @@ def test_pick_rencai_jili_instant_equip_and_queue() -> None:
 def test_equips_unobserved_instant_rejected_queue_still_written() -> None:
     """equips 未观察(直构域):即时腿拒落零写(placed=False,入栏跳写
     gain_equipment 既有语义)、入队腿照写(登记 = 队列通道非装备通道,
-    两腿互不拖)。"""
+    两条效果条目互不拖)。"""
     gs = _gs(equips=None)
     effects = on_strategy_gained(gs, '人才激励', rand=False, sig=_lsig(),
                                  rng=random.Random(0))
@@ -127,12 +127,12 @@ def test_live_gain_chain_queues_grant_zero_world_grant_action() -> None:
 
 
 def test_pick_rencai_jili_plus_direct_registry_chain() -> None:
-    """人才激励+ 登记腿直断(原「注册表临时行 + 效果表同步派生」
+    """人才激励+ 只登记不写状态的实现分支直断(原「注册表临时行 + 效果表同步派生」
     monkeypatch 形态测,随该卡真注册落地转直测——handler 按注册表
     驱动,零新增机制件):拿卡人才激励+ → equips 尾部 +1 员工投影仪
     ∧ 队列恰 (('人才激励+', 3),) ∧ 双效果串 equip_grant(placed=
     True)/ strategy_grant_scheduled:员工投影仪@3。@3 字面直断防姊妹
-    卡键序错位(两卡唯一可见差异);逐名独立构造,姊妹卡登记腿主条
+    卡键序错位(两卡唯一可见差异);逐名独立构造,姊妹卡只登记不写状态的实现分支主条
     (test_pick_rencai_jili_instant_equip_and_queue)不受影响。"""
     gs = _gs(equips=[])
     effects = on_strategy_gained(gs, '人才激励+', rand=False,
@@ -149,9 +149,9 @@ def test_pick_xiankui_count_loop_double_entry() -> None:
     """先亏后盈 count 循环入队(数量 2 = 族内首例 >1,卡文「获得2个」):
     拿卡 → 队列恰 (('先亏后盈', 4), ('先亏后盈', 4))(count 循环两条
     同卡条目,逐条独立倒计时)∧ 效果串两枚 strategy_grant_scheduled:
-    简易武装箱@4 ∧ 零即时腿 ∧ kernel 侧零 hp 写(登记腿写行恰 2 笔全
+    简易武装箱@4 ∧ 零即时腿 ∧ kernel 侧零 hp 写(只登记不写状态的实现分支写行恰 2 笔全
     为队列通道——损血腿结构性不入登记效果体,防将来误把损血腿塞进
-    登记腿的回归锁;写流↔轨迹同构的 kernel 半边由本锁钉死)。"""
+    只登记不写状态的实现分支的回归锁;写流↔轨迹同构的 kernel 半边由本锁钉死)。"""
     gs = _gs(equips=[])
     seq_before = gs.write_seq
     effects = on_strategy_gained(gs, '先亏后盈', rand=False,
@@ -168,13 +168,13 @@ def test_pick_xiankui_count_loop_double_entry() -> None:
 
 
 def test_pick_xunuo_tequan_delayed_only_single_leg() -> None:
-    """许诺特权 延时-only 登记腿直断(卡文「在进入7个节点后，获得
+    """许诺特权 延时-only 只登记不写状态的实现分支直断(卡文「在进入7个节点后，获得
     1个【特权武装箱】。」纯延时单句,零即时腿):拿卡 → 队列恰
     (('许诺特权', 7),) ∧ 效果串单枚 strategy_grant_scheduled:
     特权武装箱@7 ∧ 零即时腿(equips 零写、无 equip_grant 字样;bench
-    域零涉)。反向锁死「延时-only 卡直用两腿工厂派生」的错发形态
+    域零涉)。反向锁死「延时-only 卡直用两条效果条目工厂派生」的错发形态
     (错发即时特权武装箱 = 行为级错误);@7 字面直断防族键序错位;
-    逐名独立构造,姊妹双卡两腿锁不受影响。"""
+    逐名独立构造,姊妹双卡两条效果条目锁不受影响。"""
     gs = _gs(equips=[])
     seq_before = gs.write_seq
     effects = on_strategy_gained(gs, '许诺特权', rand=False,
@@ -189,13 +189,13 @@ def test_pick_xunuo_tequan_delayed_only_single_leg() -> None:
 
 
 def test_pick_haoyun_lingpai_yin_delayed_only_single_leg() -> None:
-    """好运令牌·银 延时-only 登记腿直断(卡文「进入3个节点后，获得
+    """好运令牌·银 延时-only 只登记不写状态的实现分支直断(卡文「进入3个节点后，获得
     1个【好运令牌】。」纯延时单句,零即时腿):拿卡 → 队列恰
     (('好运令牌·银', 3),) ∧ 效果串单枚 strategy_grant_scheduled:
     好运令牌@3(物名载体直断,@3 字面防族键序错位)∧ 零即时腿
     (equips 零写、效果串无 equip_grant/box_grant 字样;bench 域零涉;
     发放物与卡名异名,效果串/队列各按物名/卡名各归其位)。
-    反向锁死「延时-only 卡直用两腿工厂派生」的错发形态(错发即时
+    反向锁死「延时-only 卡直用两条效果条目工厂派生」的错发形态(错发即时
     好运令牌 = 行为级错误);逐名独立构造,族内既有锁不受影响。"""
     gs = _gs(equips=[])
     seq_before = gs.write_seq
@@ -212,9 +212,9 @@ def test_pick_haoyun_lingpai_yin_delayed_only_single_leg() -> None:
 
 def test_pick_haoyun_lingpai_yin_unobserved_still_single_scheduled() -> None:
     """好运令牌·银 equips 未观察域载体分流直断(防伪锁,与主条逐名
-    独立构造):两腿工厂在同域会多发 equip_grant placed=False 串,延时-
+    独立构造):两条效果条目工厂在同域会多发 equip_grant placed=False 串,延时-
     only 载体效果串仍恰单枚 strategy_grant_scheduled(登记 = 队列
-    通道非装备通道)∧ equips 保持未观察零写 ∧ 两腿成员集负成员
+    通道非装备通道)∧ equips 保持未观察零写 ∧ 两条效果条目成员集负成员
     (登记分流声明面,误入集 = 分派语义漂移在行为锁不可见,成员断言
     直锁)。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
@@ -235,7 +235,7 @@ def test_pick_haoyun_lingpai_yin_unobserved_still_single_scheduled() -> None:
 
 
 def test_pick_shizuanshi_choice_set_schedule_zero_rng() -> None:
-    """是钻石总会发光 登记腿直断(卡文「2个节点后，获得【红钻】或
+    """是钻石总会发光 只登记不写状态的实现分支直断(卡文「2个节点后，获得【红钻】或
     【蓝钻】。」纯延时单句,零即时腿;族内首个随机发放行,掷骰时点 =
     到点发放时现掷):拿卡 → 队列恰 (('是钻石总会发光', 2),) ∧ 效果串
     单枚 choice-set 形 strategy_grant_scheduled:红钻|蓝钻@2(封闭集
@@ -262,9 +262,9 @@ def test_pick_shizuanshi_choice_set_schedule_zero_rng() -> None:
 
 def test_pick_shizuanshi_unobserved_still_choice_set_scheduled() -> None:
     """是钻石总会发光 equips 未观察域载体分流直断(防伪锁,与主条逐名
-    独立构造):两腿工厂在同域会多发 equip_grant placed=False 串,延时-
+    独立构造):两条效果条目工厂在同域会多发 equip_grant placed=False 串,延时-
     only 载体效果串仍恰单枚 strategy_grant_scheduled:红钻|蓝钻@2 ∧
-    equips 保持未观察零写 ∧ 两腿成员集负成员(误入集 = 分派语义漂移
+    equips 保持未观察零写 ∧ 两条效果条目成员集负成员(误入集 = 分派语义漂移
     在行为锁不可见,成员断言直锁)。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
         _STRATEGY_DELAYED_TWO_LEG_GRANTS,
@@ -284,7 +284,7 @@ def test_pick_shizuanshi_unobserved_still_choice_set_scheduled() -> None:
 
 
 def test_pick_huishou_combined_legs_schedule_category_pool() -> None:
-    """回收计划 组合登记行登记腿直断(卡文「获得1件进阶装备，并在5个
+    """回收计划 组合登记行只登记不写状态的实现分支直断(卡文「获得1件进阶装备，并在5个
     节点后获得1件随机简易装备。」,随机腿×延时入队腿双族交叉,PICK
     组合登记行,不入泛化表防同名键覆盖丢即时腿):拿卡 → 效果串恰
     2 条且腿序 = 卡文语序(即时随机腿 strategy_random_equip 在前/入队
@@ -320,9 +320,9 @@ def test_pick_huishou_combined_legs_schedule_category_pool() -> None:
 
 
 def test_pick_haoyun_lingpai_cai_two_leg_instant_and_queue() -> None:
-    """好运令牌·彩 双条目工厂登记腿直断(卡文「获得1个【好运令牌】。每累计
+    """好运令牌·彩 双条目工厂只登记不写状态的实现分支直断(卡文「获得1个【好运令牌】。每累计
     进入4个节点后，获得1个【好运令牌】。」带即时短句,人才激励同形):拿卡 →
-    equips 尾部 +1 好运令牌(腿1 rand=False 确定发放)+ 队列恰
+    equips 尾部 +1 好运令牌(效果条目1 rand=False 确定发放)+ 队列恰
     (('好运令牌·彩', 4),) + 效果串恒 2 枚 equip_grant:好运令牌(placed=
     True)/ strategy_grant_scheduled:好运令牌@4(登记值单源住
     STRATEGY_DELAYED_GRANTS 行,效果体零字面量;词面源 =

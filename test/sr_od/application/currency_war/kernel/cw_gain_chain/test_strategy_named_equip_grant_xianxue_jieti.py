@@ -6,7 +6,7 @@ grant.py,单件先例 = 赌神·银 test_strategy_named_equip_grant_dushen_yin.p
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
 T-395-xianxue-jieti.md(定稿)§7-② 锁 2/锁 3/锁 4 + REVIEW-T395 §7:
-- 腿1「获得【斩首行动】」= 登记行直书
+- 效果条目1「获得【斩首行动】」= 登记行直书
   ``_make_named_equip_grant_effect('斩首行动', 1)``,具名确定发放
   ``gain_equipment(rand=False)`` 单件入栏,效果串恰 1 条含 placed
   (evidence 断言用前缀匹配——原语内追加 ``#equip`` 后缀,精确匹配假红,
@@ -14,7 +14,7 @@ T-395-xianxue-jieti.md(定稿)§7-② 锁 2/锁 3/锁 4 + REVIEW-T395 §7:
 - 锁 4 变体精确名:「斩首行动」子串四变体(斩首行动/白昼·斩首行动/
   极·白昼·斩首行动/斩首行动·特权)唯一真发放物 = 基础名——发放名
   字面量精确断言,工厂参数漂移或变体误引在此红;
-- 腿2「每消灭一名精英/首领敌人伤害增幅永久提高8%」= 击杀触发族型③
+- 效果条目2「每消灭一名精英/首领敌人伤害增幅永久提高8%」= 击杀触发族型③
   零登记零建模(触发事件逐击杀两边皆盲,占位登记即判读失真),本文件
   零建模腿锁 = 负面由 PICK 键集闭集/五注册表现值锁承载(零 SE/零 GRANTS
   条目已在注册表现值锁面),不另立哨;
@@ -97,7 +97,7 @@ def rows_sink() -> _RowSink:
 
 def test_xianxue_jieti_grant_leg_places_equipment(
         rows_sink: _RowSink) -> None:
-    """腿1 放置行为主锁(§7-② 锁 2):gain_invest_strategy 全链(rand=False)
+    """效果条目1 放置行为主锁(§7-② 锁 2):gain_invest_strategy 全链(rand=False)
     → 注册入表 + equips 恰 +1 斩首行动、写数恰 2(注册 1 + 腿 1;②段账本
     登记 session=None 跳过)、来源 = 确定面 logic;零金写(本卡无金句);
     板面域(bench/deployed)零写;正常路径零申报行。前提守卫:斩首行动
@@ -124,7 +124,7 @@ def test_xianxue_jieti_grant_leg_places_equipment(
 
 
 def test_xianxue_jieti_effect_steps_shape(rows_sink: _RowSink) -> None:
-    """腿1 效果串形态锁(§7-② 锁 3):on_strategy_gained 效果串恰 1 条
+    """效果条目1 效果串形态锁(§7-② 锁 3):on_strategy_gained 效果串恰 1 条
     ``named_equip_grant:斩首行动(placed=True)``——逐件一条携带 placed
     (前缀 named_equip_grant 分域可审计,与 box_grant/equip_grant/
     strategy_random_equip 分列)。"""
@@ -138,7 +138,7 @@ def test_xianxue_jieti_effect_steps_shape(rows_sink: _RowSink) -> None:
 
 
 def test_xianxue_jieti_exact_variant_name(rows_sink: _RowSink) -> None:
-    """腿1 变体精确名锁(§7-② 锁 4):发放名 == '斩首行动' 精确串(整表
+    """效果条目1 变体精确名锁(§7-② 锁 4):发放名 == '斩首行动' 精确串(整表
     字面量相等断言,非 count 语义)——工厂参数漂移或子串四变体误引
     (白昼·斩首行动/极·白昼·斩首行动/斩首行动·特权)在此红。"""
     gs = _make_gs(equips=[])

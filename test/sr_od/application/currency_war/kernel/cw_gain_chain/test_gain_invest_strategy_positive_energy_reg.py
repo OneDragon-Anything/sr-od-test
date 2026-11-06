@@ -1,4 +1,4 @@
-"""正能量登记腿测试(镜像 src = kernel/cw_gain_chain.py 的
+"""正能量只登记不写状态的实现分支测试(镜像 src = kernel/cw_gain_chain.py 的
 gain_invest_strategy 登记分支 × kernel/cw_investments.py 的
 STRATEGY_EFFECTS 正能量条目;战力类零响应族第 6 条,族内首个恢复型)。
 
@@ -50,8 +50,8 @@ def test_registration_chain_and_four_bridges_noop() -> None:
     缺省 0 / 板面重写桥 board_rewrite 缺省 '' → None / 节点边界桥
     per_node 族缺省 0 / 容量直写桥 capacity_limit 缺省 0 → 早退),bot
     零响应(入场拍每名角色恢复自身能量上限 20% 游戏侧自算)。session=None
-    支登记跳过、注册照常。注:测试直调 session=None 跳过登记腿 = 测试
-    形态;生产对局动作 op 与 sim 驱动器均装配 session,登记腿真实执行。"""
+    支登记跳过、注册照常。注:测试直调 session=None 跳过只登记不写状态的实现分支 = 测试
+    形态;生产对局动作 op 与 sim 驱动器均装配 session,只登记不写状态的实现分支真实执行。"""
     gs = _make_gs()
     gain_invest_strategy(gs, object(), _CARD, rand=False, sig=_LSIG)
     assert gs.active_strategies.value == [_CARD], '注册入表'
@@ -59,7 +59,7 @@ def test_registration_chain_and_four_bridges_noop() -> None:
     assert [e.spec.name for e in entries] == [_CARD], '登记入册'
     assert entries[0].spec.category.value == 'unit_buff', '战力类零响应载体'
     # burst 桥负锁:UnitBuffRef 无 free_refresh_burst → 缺省 0 no-op 零 Field 行
-    # (登记腿内部已调,free_refresh_left 保持 None 即证;显式补调一次同证幂等)
+    # (只登记不写状态的实现分支内部已调,free_refresh_left 保持 None 即证;显式补调一次同证幂等)
     assert gs.free_refresh_left.value is None, 'burst 桥 no-op(零 Field 行)'
     seq_after_gain = gs.write_seq   # 入册本身占账本写;四桥零写以此为基
     spec = entries[0].spec

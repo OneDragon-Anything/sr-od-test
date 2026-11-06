@@ -1,4 +1,4 @@
-"""狸职手续(id 204001)具名角色发放腿 count 泛化世界腿锁(镜像 src =
+"""狸职手续(id 204001)具名角色发放腿 count 泛化把结果写进状态副本的实现分支锁(镜像 src =
 kernel/cw_gain_effects.py ``_STRATEGY_CHAR_GRANTS['狸职手续'] =
 ('狸职狸狸', 3)`` + ``_make_char_grant_effect`` count 循环;按被测方法拆
 目录规范落位——test_gain_chain.py 超线冻结禁追加,新锁落新镜像,先例 =
@@ -9,7 +9,7 @@ test_strategy_char_grant.py,本文件只辖只数 > 1 成员)。
 T-207-lizhi-shouxu.md(定稿)§4 锁 1/锁 4 + REVIEW-T207 九裁决点默认案:
 - 注册行直测:登记名 = 实机录名「狸职狸狸」归一(防回退卡面用名
   「狸狸」——该形态会被登记面角色名漂移哨炸,锁先行暴露意图),只数 3
-  不进登记表(估值档位与只数无关),世界腿只数单一源 = 工厂表行值;
+  不进登记表(估值档位与只数无关),把结果写进状态副本的实现分支只数单一源 = 工厂表行值;
 - 世界发放腿(count=3):on_strategy_gained 直构(rand=False)→ 狸职狸狸
   逐次三发,每发一条 ``char_grant:`` 串;同名凑三触发链现役合成级联 =
   链上如实记账(池终态 1×2★,merge 计数随串留证),席满溢出分支
@@ -92,7 +92,7 @@ def rows_sink() -> _RowSink:
 def test_lizhi_registry_row_name_canonicalization() -> None:
     """注册行直测(设计 §4 锁 1):登记发放对象 = 实机录名「狸职狸狸」,
     卡面用名「狸狸」非注册名(归一防回退——按卡面用名登记会被登记面角色
-    名漂移哨炸);只数 3 不进登记表,世界腿只数单一源 = 工厂表行值;
+    名漂移哨炸);只数 3 不进登记表,把结果写进状态副本的实现分支只数单一源 = 工厂表行值;
     注册 id 对拍 plaza:204001。"""
     from sr_od.application.currency_war.data.cw_chars import CHARACTER_ROSTER
     grant = STRATEGY_GRANTS[_CARD]

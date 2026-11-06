@@ -2,14 +2,14 @@
 cw_gain_effects.py PICK_INVEST_EFFECTS '借力打力' 行:
 ``_compose_grant_legs(_make_char_grant_effect('黑塔'),
 _make_char_grant_effect('缇宝'))``;先例 = 同目录
-test_strategy_compose_grant_shuangrenwu.py 双人舞双腿形)。
+test_strategy_compose_grant_shuangrenwu.py 双人舞两条效果条目形)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-274 对应稿
 §4 锁面(REVIEW-T274 免裁 6/6;卡面官方原文:「敌方目标被消灭后，【借力球】
 的伤害分摊比例永久提高0.15%。获得【黑塔】和【缇宝】。」——条件段借力球
 参数敌方侧召唤物域游戏侧自算 bot 零建模;腿序 = 卡文语序,效果串 2 条):
 
-- 组合行单一源:双腿组合行在册(泛化表零本卡键负断言防回退撞键);
+- 组合行单一源:两条效果条目组合行在册(泛化表零本卡键负断言防回退撞键);
 - 行为链真值:确定入口 → 恰两角色入栏(黑塔/缇宝卡文序)、效果串恰 2 条
   char_grant、rng 零消费。
 """
@@ -56,7 +56,7 @@ def _make_gs(*, bench: list[tuple[str, int]] | None = None,
 
 
 def test_jieli_compose_row_single_source() -> None:
-    """组合行单一源:双腿组合行在册;泛化表零本卡键(防回退撞键)。"""
+    """组合行单一源:两条效果条目组合行在册;泛化表零本卡键(防回退撞键)。"""
     assert _CARD in PICK_INVEST_EFFECTS, '组合行在册'
     assert _CARD not in _STRATEGY_RANDOM_EQUIP_GRANTS, \
         '泛化表零本卡键(撞键形态禁回退)'

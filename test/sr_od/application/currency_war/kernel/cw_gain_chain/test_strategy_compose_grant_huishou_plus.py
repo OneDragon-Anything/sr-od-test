@@ -8,7 +8,7 @@ test_strategy_compose_grant_huishou.py 回收计划)。
 §4 锁面修正版(REVIEW-T238 免裁 5/5;卡面官方原文:「获得1件进阶装备,
 并在4个节点后获得1件随机简易装备」;判读申报制随 T-237 在案口径):
 
-- 组合行单一源:双腿组合行在册(泛化表零本卡键负断言防回退撞键);
+- 组合行单一源:两条效果条目组合行在册(泛化表零本卡键负断言防回退撞键);
 - 延时表行直测:id 230702/delay_nodes=4/item_category 简易/item 占位。
 """
 from __future__ import annotations
@@ -25,7 +25,7 @@ _CARD = '回收计划+'
 
 
 def test_huishou_plus_compose_row_single_source() -> None:
-    """组合行单一源:双腿组合行在册(随机进阶×延时入队);泛化表零本卡键
+    """组合行单一源:两条效果条目组合行在册(随机进阶×延时入队);泛化表零本卡键
     (防回退撞键形态负断言);延时表行直测(id/nodes/类别池)。"""
     assert _CARD in PICK_INVEST_EFFECTS, '组合行在册'
     assert _CARD not in _STRATEGY_RANDOM_EQUIP_GRANTS, \

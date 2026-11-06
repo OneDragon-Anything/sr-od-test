@@ -1,4 +1,4 @@
-"""量子同频星徽(id 220901)装备×角色双腿组合登记行锁(镜像 src = kernel/
+"""量子同频星徽(id 220901)装备×角色两条效果条目组合登记行锁(镜像 src = kernel/
 cw_gain_effects.py PICK_INVEST_EFFECTS '量子同频星徽' 行:双具名交叉组合
 ``_compose_grant_legs(_make_named_equip_grant_effect('量子同频星徽', 1),
 _make_char_grant_effect('希儿'))``;按被测方法拆目录规范落位——
@@ -6,8 +6,8 @@ test_gain_chain.py 超线冻结禁追加,新锁落新镜像,先例 = 同目录
 test_strategy_chixu_grants.py 持续伤害星徽)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-228 对应稿
-§4(REVIEW-T228 免裁 6/6;卡面官方原文双具名直读;腿1 rand=False 策略
-卡侧具名腿通道归属;腿2 希儿 1★ 先验家族口径,与贝洛伯格星徽同人
+§4(REVIEW-T228 免裁 6/6;卡面官方原文双具名直读;效果条目1 rand=False 策略
+卡侧具名效果条目通道归属;效果条目2 希儿 1★ 先验家族口径,与贝洛伯格星徽同人
 = 星徽族重复人名现值零特判):
 
 - 登记单一源:组合行在册;泛化随机表零条目;

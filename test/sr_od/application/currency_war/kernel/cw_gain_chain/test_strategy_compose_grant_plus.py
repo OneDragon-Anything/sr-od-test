@@ -1,4 +1,4 @@
-"""武装支援+(id 102502)三腿分层组合锁(镜像 src = kernel/cw_gain_effects.py
+"""武装支援+(id 102502)三条效果条目分层组合锁(镜像 src = kernel/cw_gain_effects.py
 的 ``PICK_INVEST_EFFECTS['武装支援+']`` 组合登记行;按被测方法拆目录规范
 落位——test_gain_chain.py 超线冻结禁追加,新增测试落新镜像,先例 = 同目录
 姊妹卡镜像文件 test_strategy_compose_grant.py)。
@@ -20,7 +20,7 @@ T-117-wuzhuang-zhiyuan-plus.md(定稿)§4 锁 1 + REVIEW-T117 六裁决点默认
   = ∅(设计 §1.2d/§4 锁 1 前提注记)——装备注册表扩员(新简易件带获得
   后果)时守卫先红,提示语义变化,勿盲改主锁断言数;
 - 禁断言面(设计 §2.3/§4):批内 1 只 < 3 零级联为平凡形态,不立级联
-  形态断言(级联归单腿 T-89 锁辖域);金腿零新增锁、不立「sim 金不发放」
+  形态断言(级联归一条效果条目 T-89 锁辖域);金腿零新增锁、不立「sim 金不发放」
   行为锁(锁缺口 = 固化缺口为设计意图)。
 """
 from __future__ import annotations
@@ -110,7 +110,7 @@ def test_wuzhuang_zhiyuan_plus_compose_legs_chain_in_order(
     + 固定 rng 注入 → equips 恰 +1(名 ∈ 简易池派生集,禁手抄清单)、
     bench 恰 +1(名 ∈ 4 费采样池派生集、1★;批内 1 只 < 3 零级联平凡
     形态)、效果串恰 2 条且顺序 = [strategy_random_equip:<装备名>,
-    strategy_gift_random:<角色名>@1star](顺序锁 = 多腿编排与 rng 消费
+    strategy_gift_random:<角色名>@1star](顺序锁 = 多条效果条目编排与 rng 消费
     序,本卡新增机制面);正常路径零申报行。"""
     # 预采样(独立 rng 实例按消费序 2 抽):与实际注入的 rng 同种子同序,
     # 腿序改排 = 采样名互换,顺序断言必红(改序 = 掷序漂移)。

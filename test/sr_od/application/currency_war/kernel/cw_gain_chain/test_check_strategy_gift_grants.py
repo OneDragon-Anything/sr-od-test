@@ -1,16 +1,16 @@
-"""策略卡赠礼条件双腿发放检查腿测试(镜像 src = kernel/cw_gain_chain.py
+"""策略卡赠礼条件两条效果条目发放检查腿测试(镜像 src = kernel/cw_gain_chain.py
 的 ``check_strategy_gift_grants``;分方法拆目录规范落位,新函数落拆目录
 新文件,先例 = 同目录 check_strategy_* 族镜像文件)。
 
 测试面依据 = 迭代设计 designs/T-283-mi-zhi-lvren.md(定稿)§4 锁 2/锁 3
 + 七裁决点全部默认案(经族级授权自动收口,判定 = designs/REVIEW-T283.md):
 
-- 锁 2 腿1(羁绊人数条件):种 4 巡海游侠上阵 + 持卡 → 备战 2★黄泉
+- 锁 2 效果条目1(羁绊人数条件):种 4 巡海游侠上阵 + 持卡 → 备战 2★黄泉
   (placed)+ 装备栏星间旅人星徽 + 封账恰一笔;重复调用零双发(done
   短路);3 巡海零写不标 done;deployed 未观察零写不标 done;装备栏
   未观察零写不标 done(徽与角色同拍原子,拆拍引双发面);非持卡零写;
   计数口径 = 上阵(bench 同名不计入判据,T-30 口径);
-- 锁 3 腿2(节点类型条件):持卡 + reward → 1★波提欧 + 封账;battle
+- 锁 3 效果条目2(节点类型条件):持卡 + reward → 1★波提欧 + 封账;battle
   零发;无持卡 + reward 零发;已发 + reward 零双发;
 - 随机态通道:直构容器恒未锚定 → 角色确定发放(rand=False)走
   write_logic_rand 通道(容器锚定态决定,与 discharge 族 rand=False
@@ -194,7 +194,7 @@ def test_leg2_no_card_and_replay_guards() -> None:
 
 
 def test_leg2_legs_independent_latches() -> None:
-    """双腿闩独立:腿1 已发不封腿2(reward 窗两腿各闩各的,复合键各段
+    """两条效果条目闩独立:效果条目1 已发不封效果条目2(reward 窗两条效果条目各闩各的,复合键各段
     独立;反向同里)。"""
     gs = _gs(cards=[_CARD], deployed=list(_RAIDER_FOUR), bench=[],
              equips=[])

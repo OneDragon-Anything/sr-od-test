@@ -16,9 +16,9 @@ wanwu.md(定稿)§4 锁 3(REVIEW-T376 §5④ 编排者定形案甲:pending=True 
   docstring 契约——payload 无对应字段或缺省零;后继批若合法给
   equips_transform 接执行桥,须随批改哨)。
 
-腿1 发放链(「获得一个物质分解液」选卡落地入栏)由
+效果条目1 发放链(「获得一个物质分解液」选卡落地入栏)由
 test_gain_invest_strategy_fenjie_wanwu_pick.py 承载(两注册面分域);
-腿3 追伤/减伤数值面战力类零建模无链锁(零执行端,登记 notes 申报)。
+效果条目3 追伤/减伤数值面战力类零建模无链锁(零执行端,登记 notes 申报)。
 """
 from __future__ import annotations
 

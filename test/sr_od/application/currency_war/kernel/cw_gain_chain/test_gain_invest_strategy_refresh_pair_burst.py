@@ -1,7 +1,7 @@
-"""合并同类项登记腿 burst 发放测试(gain_invest_strategy 分目录镜像;
+"""合并同类项只登记不写状态的实现分支 burst 发放测试(gain_invest_strategy 分目录镜像;
 free_refresh_burst 登记期发放族)。
 
-锁 1:session 在场选「合并同类项」→ 获得链登记腿 register_strategy 入册 +
+锁 1:session 在场选「合并同类项」→ 获得链只登记不写状态的实现分支 register_strategy 入册 +
 burst 桥把 ``payload.free_refresh_burst=4`` 一次性累加进免费刷新余额
 (None 基 = 0 起算)。断言形 = 免费午餐/市场干预 burst 锁同款
 write_logic 调用面捕获(produced_by 带卡名、evidence effect_burst[@frame])。
@@ -46,7 +46,7 @@ def _make_gs() -> GameState:
 
 def test_gain_invest_strategy_refresh_pair_burst_grant(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """锁 1:选卡登记腿 → burst 桥 +free_refresh_burst 一次性发放(常量源 =
+    """锁 1:选卡只登记不写状态的实现分支 → burst 桥 +free_refresh_burst 一次性发放(常量源 =
     STRATEGY_ECONOMY['合并同类项'].free_refresh_burst 直读禁写死);写端 =
     write_logic 逻辑直写、evidence effect_burst[@frame]、produced_by 带卡名。
     锁面出处:「合并同类项」设计稿 §4 锁 1(卡面:「获得4次免费刷新」)。"""

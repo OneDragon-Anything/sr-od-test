@@ -64,7 +64,7 @@ def test_all_chars_pool_keys_registered() -> None:
 
 def test_all_chars_chain_places_pool_and_zero_rng() -> None:
     """行为链真值:确定入口 → 全池逐名入席(bench 写)、效果串恒 Σ池数
-    条、零随机面(rng 不消费);session=None 直构形态(登记腿被闸跳过,
+    条、零随机面(rng 不消费);session=None 直构形态(只登记不写状态的实现分支被闸跳过,
     登记形态断言由键集闭集锁承载)。"""
     from sr_od.application.currency_war.data.cw_chars import chars_by_cost
     from sr_od.application.currency_war.kernel.cw_gain_effects import (

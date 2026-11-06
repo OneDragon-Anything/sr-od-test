@@ -1,4 +1,4 @@
-"""护盾星徽(id 221001)装备×角色双腿组合登记行锁(镜像 src = kernel/
+"""护盾星徽(id 221001)装备×角色两条效果条目组合登记行锁(镜像 src = kernel/
 cw_gain_effects.py PICK_INVEST_EFFECTS '护盾星徽' 行:双具名交叉组合
 ``_compose_grant_legs(_make_named_equip_grant_effect('护盾星徽', 1),
 _make_char_grant_effect('砂金'))``;按被测方法拆目录规范落位——
@@ -6,8 +6,8 @@ test_gain_chain.py 超线冻结禁追加,新锁落新镜像,先例 = 同目录
 test_strategy_liangzi_grants.py 量子同频星徽)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-229 对应稿
-§4(REVIEW-T229 免裁 6/6;卡面官方原文双具名直读;腿1 rand=False 策略
-卡侧具名腿通道归属;腿2 砂金 1★ 先验家族口径;登记条目
+§4(REVIEW-T229 免裁 6/6;卡面官方原文双具名直读;效果条目1 rand=False 策略
+卡侧具名效果条目通道归属;效果条目2 砂金 1★ 先验家族口径;登记条目
 chars_immediate=('砂金',) 与本卡人腿同源零触碰):
 
 - 登记单一源:组合行在册;泛化随机表零条目;

@@ -1,4 +1,4 @@
-"""精密拆装·银(id 130801)双腿组合展开锁(镜像 src = kernel/cw_gain_effects.py
+"""精密拆装·银(id 130801)两条效果条目组合展开锁(镜像 src = kernel/cw_gain_effects.py
 的 ``PICK_INVEST_EFFECTS['精密拆装·银']`` 组合登记行;按被测方法拆目录规范
 落位——test_gain_chain.py 超线冻结禁追加,新增测试落新镜像,先例 = 同目录
 姊妹组合卡镜像文件 test_strategy_compose_grant_maicai_plus.py)。
@@ -9,17 +9,17 @@ T-145-jingmi-caizhuang-yin.md(定稿)§4 锁 2 + REVIEW-T145 六裁决点默认�
   _make_named_equip_grant_effect('精密拆装扳手', 1), _make_random_equip_effect(
   '简易', 1))``(腿序 = 卡文语序具名腿先/随机腿后;腿参数登记行单次出现,
   单一源;不入随机装备泛化表——同名键 dict 顺序覆盖丢腿);
-- 固定 rng 注入链发放真值:rng 消费序 = 仅第 2 抽装备(简易池,腿1 具名
+- 固定 rng 注入链发放真值:rng 消费序 = 仅第 2 抽装备(简易池,效果条目1 具名
   确定发放零采样面)——腿序改排(随机腿先)= 效果串序与 equips 追加序
-  漂移,被顺序断言捕获;效果串恰 2 条且两腿形态字面分明(腿1
-  ``named_equip_grant:<名>(placed=<bool>)`` 带 placed 形态 / 腿2
+  漂移,被顺序断言捕获;效果串恰 2 条且两条效果条目形态字面分明(效果条目1
+  ``named_equip_grant:<名>(placed=<bool>)`` 带 placed 形态 / 效果条目2
   ``strategy_random_equip:<名>`` 无 placed 后缀,跨家族前缀分域可独立
   过滤);
 - 前提守卫:「效果串恒 2 条」前提 = 简易池 ∩ ``EQUIP_ACQUIRE_
   CONSEQUENCES`` = ∅ 且精密拆装扳手 ∉ 后果表(设计 §1.3/§1.5 双零交集)
   ——装备注册表扩员(新件带获得后果)时守卫先红,提示语义变化,勿盲改
   主锁断言数;
-- 精密门表轻断言(设计 §4 锁 6 降级形态,沿赌神·银镜像先例):本卡腿1
+- 精密门表轻断言(设计 §4 锁 6 降级形态,沿赌神·银镜像先例):本卡效果条目1
   发放物 = 精密拆装扳手自身,∉ ``_NAMED_EQUIP_PRECISE_GATES``(门表只挂
   拆装扳手——金面规则只辖「再获得拆装扳手」)gate 恒 None = 零自我拦截,
   二次持有照常入栏;本镜像主锁空场路径覆盖首次获得,预置精密二次持有
@@ -69,7 +69,7 @@ _LSIG = ChannelSig(family='logic_action', actor='CwActionPickInvestOp',
 #: 固定种子(单抽形态无互异约束,任意种子;失配 = 换种子)。
 _JINGMI_YIN_SEED = 20261103
 
-#: 腿1 发放物 = 具名确定(卡文【精密拆装扳手】直读,效果串字面断言锚)。
+#: 效果条目1 发放物 = 具名确定(卡文【精密拆装扳手】直读,效果串字面断言锚)。
 _NAMED_LEG_ITEM = '精密拆装扳手'
 
 
@@ -114,9 +114,9 @@ def rows_sink() -> _RowSink:
 
 def test_jingmi_yin_compose_legs_chain_in_order(rows_sink: _RowSink) -> None:
     """组合腿锁(设计 §4 锁 2):gain_invest_strategy 确定入口(rand=False)
-    + 固定 rng 注入 → equips 恰 +2 且两腿各就各位(腿1 == 精密拆装扳手精确名、
-    腿2 名 = 采样值 ∈ 简易池派生集禁手抄清单)、效果串恰 2 条且顺序 = 卡文
-    语序(具名腿串在前)两腿形态字面分明、正常路径零申报行;表外卡零写
+    + 固定 rng 注入 → equips 恰 +2 且两条效果条目各就各位(效果条目1 == 精密拆装扳手精确名、
+    效果条目2 名 = 采样值 ∈ 简易池派生集禁手抄清单)、效果串恰 2 条且顺序 = 卡文
+    语序(具名腿串在前)两条效果条目形态字面分明、正常路径零申报行;表外卡零写
     (未收录卡安静不写,本卡注册不扰动分派面)。rng 恰 1 次语义由预采样
     同序对拍锁首。"""
     # 预采样(独立 rng 实例按消费序 1 抽):与实际注入的 rng 同种子同序。
@@ -141,12 +141,12 @@ def test_jingmi_yin_compose_legs_chain_in_order(rows_sink: _RowSink) -> None:
                                rng=random.Random(_JINGMI_YIN_SEED))
     assert out.placed
     assert gs.active_strategies.value == ['精密拆装·银'], '注册入表'
-    # 两腿各就各位:腿1 = 精密拆装扳手精确名(具名件名面防护:误名在此
-    # 暴露,非静默)、腿2 = 随机简易(名 = 采样值,追加序 = 卡文语序)。
+    # 两条效果条目各就各位:效果条目1 = 精密拆装扳手精确名(具名件名面防护:误名在此
+    # 暴露,非静默)、效果条目2 = 随机简易(名 = 采样值,追加序 = 卡文语序)。
     assert gs.equips.value == [_NAMED_LEG_ITEM, equip_pick], \
         'equips 恰 +2 且腿序 = 卡文语序(具名腿先/随机腿后)'
-    # 效果串两态分形:恰 2 条,两腿各持本族字面形态(腿1 带 placed=<bool> /
-    # 腿2 无 placed 后缀),跨家族前缀分域可独立过滤,禁并单串。
+    # 效果串两态分形:恰 2 条,两条效果条目各持本族字面形态(效果条目1 带 placed=<bool> /
+    # 效果条目2 无 placed 后缀),跨家族前缀分域可独立过滤,禁并单串。
     assert out.effects == (
         f'named_equip_grant:{_NAMED_LEG_ITEM}(placed=True)',
         f'strategy_random_equip:{equip_pick}',

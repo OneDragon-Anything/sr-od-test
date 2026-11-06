@@ -14,7 +14,7 @@ T-138-gongsi-junhuo-gengxin-yin.md(定稿)§4 锁 2/锁 3:
   契约——payload 无对应字段或缺省零;族扩展批若合法给 equips_reroll 接
   执行桥,须随批改哨)。
 
-双腿并存结构由本文件(STRATEGY_EFFECTS 在账)+ 发放腿链锁合取承载;
+两条效果条目并存结构由本文件(STRATEGY_EFFECTS 在账)+ 发放腿链锁合取承载;
 发放腿(「获得1件随机简易装备」)链面 = 同目录
 test_strategy_random_equip_grant_gongsi_junhuo_yin.py(两注册面分域,
 不经组合子)。

@@ -1,4 +1,4 @@
-"""飞光·映月(id 352701)拿卡拍三腿组合登记行锁(镜像 src = kernel/
+"""飞光·映月(id 352701)拿卡拍三条效果条目组合登记行锁(镜像 src = kernel/
 cw_gain_effects.py PICK_INVEST_EFFECTS '飞光·映月' 行:
 ``_compose_grant_legs(_make_yingyue_tier_init_leg(),
 _make_char_grant_effect('镜流'), _make_char_grant_effect('景元'))``;
@@ -8,11 +8,11 @@ test_strategy_compose_grant_shuangrenwu.py 双人舞形)。
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-410-feiguang-
 yingyue.md §4 锁 3(卡面官方原文:「获得【镜流】和特殊的1费【景元】，
 他们获得【师徒】羁绊。【镜流】2星时，【景元】变为3费。【镜流】3星时，
-【景元】变为你认识的5费【景元】。」——师徒羁绊非注册羁绊零建模;腿1
+【景元】变为你认识的5费【景元】。」——师徒羁绊非注册羁绊零建模;效果条目1
 费用档初始写 1 = 特殊景元起始档,前置于发放腿防发放级联覆盖,腿序理由
 见 _make_yingyue_tier_init_leg docstring):
 
-- 组合行单一源:三腿组合行在册(泛化表零本卡键负断言防回退撞键);
+- 组合行单一源:三条效果条目组合行在册(泛化表零本卡键负断言防回退撞键);
 - 行为链真值:确定入口 → tier=1 先写(拿卡拍)、恰两角色入栏(镜流/
   景元卡文序)、效果串 3 条(tier 串 + 双 char_grant)、rng 零消费。
 """
@@ -59,7 +59,7 @@ def _make_gs(*, bench: list[tuple[str, int]] | None = None,
 
 
 def test_yingyue_compose_row_single_source() -> None:
-    """组合行单一源:三腿组合行在册;泛化表零本卡键(防回退撞键)。"""
+    """组合行单一源:三条效果条目组合行在册;泛化表零本卡键(防回退撞键)。"""
     assert _CARD in PICK_INVEST_EFFECTS, '组合行在册'
     assert _CARD not in _STRATEGY_RANDOM_EQUIP_GRANTS, \
         '泛化表零本卡键(撞键形态禁回退)'

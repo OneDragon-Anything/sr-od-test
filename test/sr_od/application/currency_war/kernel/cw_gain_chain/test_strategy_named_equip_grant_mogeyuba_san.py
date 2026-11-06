@@ -1,5 +1,5 @@
 """摸个鱼吧III(id 360101)具名装备授予腿锁(镜像 src = kernel/cw_gain_effects.py
-的 ``PICK_INVEST_EFFECTS`` 直书登记行「摸个鱼吧III」;摸个鱼吧族收官卡双腿
+的 ``PICK_INVEST_EFFECTS`` 直书登记行「摸个鱼吧III」;摸个鱼吧族收官卡两条效果条目
 分治:送卡腿「获得18个【青雀】」登记面镜像 = cw_investments.STRATEGY_GRANTS
 同卡行(已在册,数量「18个」失真族判例单元素申报,估值档机器只读 chars
 集合零影响,非 advisor 零运行时消费道),令牌腿「2个【好运令牌】」= 本
@@ -9,7 +9,7 @@ test_strategy_named_equip_grant_xiaofuzhi.py,按被测方法拆目录规范落�
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-413-mogeyuba-san.md
 (定稿)§4 锁 1/锁 2/锁 3:
-- 腿2 = 登记行直书 ``_make_named_equip_grant_effect('好运令牌', 2)``,具名
+- 效果条目2 = 登记行直书 ``_make_named_equip_grant_effect('好运令牌', 2)``,具名
   确定发放 ``gain_equipment(rand=False)`` 循环 2 次逐件一条入栏,效果串恰
   两条各含 placed(evidence 断言用前缀匹配——原语内追加 ``#equip`` 后缀,
   精确匹配假红,同族口径);
@@ -98,7 +98,7 @@ def rows_sink() -> _RowSink:
 def test_mogeyuba_san_grant_leg_places_two_tokens(rows_sink: _RowSink) -> None:
     """登记面 + 腿行为主锁(锁 2):gain_invest_strategy 全链(rand=False)
     → 注册入表 + equips 恰 +2 好运令牌(发放名精确串,防卡名当物名笔误)、
-    写数恰 3(注册 1 + 腿 2;②段账本登记 session=None 跳过)、来源 = 确定
+    写数恰 3(注册 1 + 效果条目 2;②段账本登记 session=None 跳过)、来源 = 确定
     面 logic;gold 未读零金写(本卡无金句);板面域(bench/deployed)零写;
     非 advisor 零解锁写(送卡腿不解锁专家);正常路径零申报行。"""
     assert _CARD in PICK_INVEST_EFFECTS, '登记面在册'

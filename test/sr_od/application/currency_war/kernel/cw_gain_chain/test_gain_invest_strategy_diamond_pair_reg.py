@@ -1,4 +1,4 @@
-"""这么大的钻石(id 231101)佩佩×宝钻双腿组合登记腿锁(镜像 src =
+"""这么大的钻石(id 231101)佩佩×宝钻两条效果条目组合只登记不写状态的实现分支锁(镜像 src =
 kernel/cw_gain_effects.py 的 PICK_INVEST_EFFECTS 组合直书登记行 + 登记面
 cw_investments.STRATEGY_GRANTS 非直读人工转正行;按被测方法拆目录规范
 落位——test_gain_chain.py 超线冻结禁追加,新增测试落新镜像,先例 = 同目录
@@ -100,7 +100,7 @@ def rows_sink() -> _RowSink:
 
 
 def test_pair_legs_grant_peipei_then_diamond(rows_sink: _RowSink) -> None:
-    """组合腿主链(锁 2):腿序 = 卡文语序(佩佩腿先/宝钻腿后),两腿各
+    """组合腿主链(锁 2):腿序 = 卡文语序(佩佩腿先/宝钻腿后),两条效果条目各
     产一条效果串;备战恰 +1 只 1★ 佩佩、equips 恰 +1 件财富宝钻;
     确定发放零采样面;正常路径零申报行。"""
     gs = _make_gs(bench=[], equips=[])
@@ -123,7 +123,7 @@ def test_effect_text_has_no_gain_verb_and_grant_registered() -> None:
     """判读前提漂移哨(锁 5①)+ 转正行形态:卡面 effect 无「获得」子串
     (本卡人工转正行的立据——词表改版引入「获得」动词时反扫即命中,
     本哨先红触发判读重申报);转正行在册且发放对象 = 佩佩;组合登记行
-    在册(世界腿单一源)。"""
+    在册(把结果写进状态副本的实现分支单一源)。"""
     assert '获得' not in INVESTMENT_STRATEGIES[_CARD].effect, \
         '卡文出现「获得」:反扫判读前提漂移,转正依据重申报'
     grant = STRATEGY_GRANTS.get(_CARD)
@@ -136,7 +136,7 @@ def test_effect_text_has_no_gain_verb_and_grant_registered() -> None:
 def test_equips_unobserved_diamond_leg_rejected() -> None:
     """拒落形态(发放落地门下游):equips 未观察 → 宝钻腿拒落零写
     (效果串 placed=False 留证,容器维持 None),佩佩腿不涉装备域照常
-    落席——两腿独立,装备域缺失不拖累单位入队。"""
+    落席——两条效果条目独立,装备域缺失不拖累单位入队。"""
     gs = _make_gs(bench=[])
     gs.prep_anchored = True
     effects = on_strategy_gained(gs, _CARD, rand=False, sig=_LSIG,
@@ -149,7 +149,7 @@ def test_equips_unobserved_diamond_leg_rejected() -> None:
 
 
 def test_kernel_pick_zero_world_coupling_writes() -> None:
-    """live 零回调锁(锁 4):kernel 形态拿卡(效果体双腿正常入栏)→
+    """live 零回调锁(锁 4):kernel 形态拿卡(效果体两条效果条目正常入栏)→
     宝钻世界三域零写(值维持 None)——on_diamond_acquired 调用只活在
     sim 拿卡腿,live 三域归观察识别器(逻辑侧禁写,投影审计契约)。"""
     gs = _make_gs(bench=[], equips=[])

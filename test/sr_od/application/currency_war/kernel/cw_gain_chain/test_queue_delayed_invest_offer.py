@@ -1,14 +1,14 @@
-"""策略延时 offer 入队原语与登记腿测试(镜像 src = kernel/cw_gain_chain.py
+"""策略延时 offer 入队原语与只登记不写状态的实现分支测试(镜像 src = kernel/cw_gain_chain.py
 的 queue_delayed_invest_offer + kernel/cw_gain_effects.py 的
 _make_delayed_offer_effect 派生条目)。
 
-测试面依据 = 迭代设计 designs/T-98-huangjin-qihuo.md §4(锁 2 登记腿
+测试面依据 = 迭代设计 designs/T-98-huangjin-qihuo.md §4(锁 2 只登记不写状态的实现分支
 3+1 条 / 锁 6 live 链登记;live 无呈现动作由模块边界承担——kernel 不
 import sim,不设静态扫描锁)+ designs/T-198-baiyin-touzi.md §4(锁 3
-登记腿双腿形,用户裁定 2026-11-02 完整包复刻):
+只登记不写状态的实现分支两条效果条目形,用户裁定 2026-11-02 完整包复刻):
 - 拿卡黄金期货 → 队列 (('黄金期货', 5),) + 效果串
   strategy_offer_scheduled:金@5;
-- 拿卡白银投资(族首张双腿卡)→ 队列 (('白银投资', 0), ('白银投资', 3))
+- 拿卡白银投资(族首张含两条效果条目的卡)→ 队列 (('白银投资', 0), ('白银投资', 3))
   登记序 = 腿序 + 效果串两条 @0/@3;
 - 未登记策略卡(表外名 + 在册无腿卡)零写;
 - 递归形态(monkeypatch 临时加彩虹期货行)→ 链式再入队(锁「handler
@@ -44,7 +44,7 @@ def _gs() -> GameState:
 
 
 def test_pick_gold_futures_queues_delayed_offer() -> None:
-    """登记腿主条(handler 分派形态):拿卡黄金期货 → 队列恰
+    """只登记不写状态的实现分支主条(handler 分派形态):拿卡黄金期货 → 队列恰
     (('黄金期货', 5),)(元素 = (触发卡规范名, 登记节拍))+ 效果串
     strategy_offer_scheduled:金@5;确定面写(source = logic)。"""
     gs = _gs()
@@ -57,7 +57,7 @@ def test_pick_gold_futures_queues_delayed_offer() -> None:
 
 
 def test_pick_silver_invest_queues_two_legs_registration_order() -> None:
-    """登记腿双腿形(白银投资批锁 3):拿卡白银投资(族首张双腿卡)→
+    """只登记不写状态的实现分支两条效果条目形(白银投资批锁 3):拿卡白银投资(族首张含两条效果条目的卡)→
     队列恰 (('白银投资', 0), ('白银投资', 3))(登记序 = 表内腿序,
     确定性;一次 write 回写 = 单一登记写端)+ 效果串两条
     @0/@3(每腿一枚,同序)。「3个节点后再获得一个」= 完整包复刻

@@ -1,4 +1,4 @@
-"""幸运喷雾登记腿测试(镜像 src = kernel/cw_gain_chain.py 的
+"""幸运喷雾只登记不写状态的实现分支测试(镜像 src = kernel/cw_gain_chain.py 的
 gain_invest_strategy 登记分支 × kernel/cw_investments.py 的
 STRATEGY_EFFECTS 幸运喷雾条目;战力类零响应族泛用强度 buff 卡)。
 
@@ -52,8 +52,8 @@ def test_registration_chain_and_four_bridges_noop() -> None:
     零响应(全队幸运一击伤害 +25% 系战斗内独立乘区,游戏侧自算——机制
     正本 combat.md 幸运一击乘区节,非盲区形态,bot 零建模零观察)。
     session=None 支登记跳过、注册照常。注:测试直调 session=None 跳过
-    登记腿 = 测试形态;生产对局动作 op 与 sim 驱动器均装配 session,
-    登记腿真实执行(live/sim 同链 kernel 单一实现)。"""
+    只登记不写状态的实现分支 = 测试形态;生产对局动作 op 与 sim 驱动器均装配 session,
+    只登记不写状态的实现分支真实执行(live/sim 同链 kernel 单一实现)。"""
     gs = _make_gs()
     gain_invest_strategy(gs, object(), _CARD, rand=False, sig=_LSIG)
     assert gs.active_strategies.value == [_CARD], '注册入表'
@@ -61,7 +61,7 @@ def test_registration_chain_and_four_bridges_noop() -> None:
     assert [e.spec.name for e in entries] == [_CARD], '登记入册'
     assert entries[0].spec.category.value == 'unit_buff', '战力类零响应载体'
     # burst 桥负锁:UnitBuffRef 无 free_refresh_burst → 缺省 0 no-op 零 Field 行
-    # (登记腿内部已调,free_refresh_left 保持 None 即证;显式补调一次同证幂等)
+    # (只登记不写状态的实现分支内部已调,free_refresh_left 保持 None 即证;显式补调一次同证幂等)
     assert gs.free_refresh_left.value is None, 'burst 桥 no-op(零 Field 行)'
     seq_after_gain = gs.write_seq   # 入册本身占账本写;四桥零写以此为基
     spec = entries[0].spec

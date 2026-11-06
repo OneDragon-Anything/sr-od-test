@@ -1,4 +1,4 @@
-"""持续伤害星徽(id 220801)装备×角色双腿组合登记行锁(镜像 src = kernel/
+"""持续伤害星徽(id 220801)装备×角色两条效果条目组合登记行锁(镜像 src = kernel/
 cw_gain_effects.py PICK_INVEST_EFFECTS '持续伤害星徽' 行:双具名交叉组合
 ``_compose_grant_legs(_make_named_equip_grant_effect('持续伤害星徽', 1),
 _make_char_grant_effect('卡芙卡'))``;按被测方法拆目录规范落位——
@@ -6,8 +6,8 @@ test_gain_chain.py 超线冻结禁追加,新锁落新镜像,先例 = 同目录
 test_strategy_jianyi_grants.py 减益星徽)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-227 对应稿
-§4(REVIEW-T227 免裁 7/7;卡面官方原文双具名直读;腿1 rand=False 策略
-卡侧具名腿通道归属;腿2 卡芙卡 1★ 先验家族口径):
+§4(REVIEW-T227 免裁 7/7;卡面官方原文双具名直读;效果条目1 rand=False 策略
+卡侧具名效果条目通道归属;效果条目2 卡芙卡 1★ 先验家族口径):
 
 - 登记单一源:组合行在册;泛化随机表零条目;
 - 行为链真值:确定入口 → equips 恰 +1 徽、bench 恰 +1 卡芙卡、

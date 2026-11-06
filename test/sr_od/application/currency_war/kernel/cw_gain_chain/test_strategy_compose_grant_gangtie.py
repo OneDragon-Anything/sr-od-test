@@ -2,7 +2,7 @@
 cw_gain_effects.py PICK_INVEST_EFFECTS '钢铁美学' 行:
 ``_compose_grant_legs(_make_char_grant_effect('希儿'))``;单角色组合行,
 按被测方法拆目录规范落位,先例 = 同目录
-test_strategy_compose_grant_shuangrenwu.py 双人舞双腿形)。
+test_strategy_compose_grant_shuangrenwu.py 双人舞两条效果条目形)。
 
 测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-268 对应稿
 §4 锁面(REVIEW-T268 免裁 7/7;卡面官方原文:「【造物引擎】造成400%原

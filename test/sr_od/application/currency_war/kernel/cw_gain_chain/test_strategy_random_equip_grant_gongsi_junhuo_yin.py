@@ -17,7 +17,7 @@ T-138-gongsi-junhuo-gengxin-yin.md(定稿)§4 锁 4/锁 6:
 
 本卡变异腿(「每节点物品栏装备同品质变异」)不属本文件辖域:登记形态
 = 同目录 test_gain_invest_strategy_equips_reroll.py(两注册面分域,
-合取承载双腿并存结构)。
+合取承载两条效果条目并存结构)。
 """
 from __future__ import annotations
 
@@ -92,7 +92,7 @@ def test_simple_equip_leg_chain_places_one(rows_sink: _RowSink) -> None:
     (rand=False)+ 固定 rng 注入 → equips 恰 +1、名 ∈ 简易池派生集且 =
     采样值(禁手抄清单)、效果串恰 1 条 ``strategy_random_equip:<名>``
     (装备无星级,串不带 @ 后缀)、active_strategies 入表;正常路径零
-    申报行。session=None 直构形态(登记腿被闸跳过,登记形态断言由登记
+    申报行。session=None 直构形态(只登记不写状态的实现分支被闸跳过,登记形态断言由登记
     形态锁承载,两锁合取 = 双注册面并存结构)。"""
     from sr_od.application.currency_war.kernel.cw_gain_effects import (
         roll_random_equip,

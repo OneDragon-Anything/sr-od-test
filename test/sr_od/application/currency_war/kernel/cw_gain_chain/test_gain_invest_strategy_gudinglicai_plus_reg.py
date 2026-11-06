@@ -1,11 +1,11 @@
-"""固定理财+ 登记腿测试(gain_invest_strategy 分目录镜像;即时段 burst
+"""固定理财+ 只登记不写状态的实现分支测试(gain_invest_strategy 分目录镜像;即时段 burst
 解锁 + 位面段中途拿卡补发,登记拍双桥;先例 =
 test_gain_invest_strategy_gudinglicai_reg.py)。
 
 测试面依据 = 迭代设计 designs/T-183-gudinglicai-plus.md §4(锁 3 burst
 解锁回归)+ 用户裁定书 T-182 节同判(2026-11-01 拍定:中途拿卡时当前
 已开始的位面,其位面段奖励照常发放〔全额〕,两卡一次拍定):
-- burst 解锁回归锁(锁 3):本卡此前无 STRATEGY_EFFECTS 条目 = 登记腿闸
+- burst 解锁回归锁(锁 3):本卡此前无 STRATEGY_EFFECTS 条目 = 只登记不写状态的实现分支闸
   整体跳过,+3 恒不发(死建模);补条后窗内登记 burst +3 照发——死建模
   解锁的回归面(改前该断言必红);
 - 补发锁(同判 B):窗内登记(session 在场 ∧ node 在场)→ 补发桥再

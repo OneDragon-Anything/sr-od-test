@@ -93,7 +93,7 @@ def rows_sink() -> _RowSink:
 
 def test_named_equip_grant_leg_places_wrenches(rows_sink: _RowSink) -> None:
     """腿行为主锁(设计 §4 锁 1):gain_invest_strategy 全链(rand=False)
-    → equips 恰 +2 拆装扳手、逐件各一笔写(write_seq 恰 +3 = 注册 1 + 腿 2;
+    → equips 恰 +2 拆装扳手、逐件各一笔写(write_seq 恰 +3 = 注册 1 + 效果条目 2;
     ②段账本登记 session=None 跳过)、来源 = 确定面 logic、效果串逐件一条含
     placed=True;板面域(bench/deployed)零写 = 板面重写句不经本腿;
     正常路径零申报行。"""
