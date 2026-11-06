@@ -75,7 +75,7 @@ def test_jieli_chain_places_two_chars() -> None:
     assert len(effects) == 2, f'效果串恰 2 条: {effects}'
     assert effects == ('char_grant:黑塔(placed=True,merge=0,uid=1)',
                        'char_grant:缇宝(placed=True,merge=0,uid=2)'), \
-        f'双腿步串卡文序: {effects}'
+        f'两条效果条目步串卡文序: {effects}'
     names = [s.unit.char_id for s in gs.bench.value.slots
              if s.kind == 'unit' and s.unit]
     assert names == ['黑塔', '缇宝'], f'恰两角色入栏(卡文序): {names}'

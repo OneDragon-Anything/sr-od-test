@@ -63,7 +63,7 @@ def test_conversion_rows_single_source() -> None:
         '名单 = 占位选定进阶的配方组件(卡面直读;派生式现值同值)'
     assert all(EQUIPMENTS[n].category == '简易' for n in source_names), \
         '名单成员全 = 简易组件(卡面「简易装备」语义前提)'
-    assert target == '以牙还牙甲', '目标 = 腿1 占位选定件'
+    assert target == '以牙还牙甲', '目标 = 效果条目1 占位选定件'
     assert EQUIPMENTS[target].category == '进阶', '目标 = 进阶类(装备分支)'
     assert INVESTMENT_STRATEGIES['独家代言'].source == 'plaza:331401', \
         f'溯源 id 对拍失同步: {INVESTMENT_STRATEGIES["独家代言"].source}'

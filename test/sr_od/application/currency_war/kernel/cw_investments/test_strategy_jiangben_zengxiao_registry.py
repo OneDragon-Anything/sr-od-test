@@ -83,7 +83,7 @@ def test_jiangben_zengxiao_delivery_channel_registration_leg() -> None:
         PICK_INVEST_EFFECTS,
     )
     assert _CARD in STRATEGY_EFFECTS
-    assert _CARD not in PICK_INVEST_EFFECTS, '登记腿交付,③段零新增'
+    assert _CARD not in PICK_INVEST_EFFECTS, '只登记不写状态的实现分支交付,③段零新增'
 
 
 def test_jiangben_zengxiao_not_in_sim_deal_criterion() -> None:

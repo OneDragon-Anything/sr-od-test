@@ -76,7 +76,7 @@ def test_pick_rencai_jili_instant_equip_and_queue() -> None:
     assert gs.pending_strategy_grants.value == (('人才激励', 4),), \
         f'队列值: {gs.pending_strategy_grants.value}'
     assert gs.equips.source == 'logic' \
-        and gs.pending_strategy_grants.source == 'logic', '两腿走确定面'
+        and gs.pending_strategy_grants.source == 'logic', '两条效果条目走确定面'
 
 
 def test_equips_unobserved_instant_rejected_queue_still_written() -> None:
@@ -222,7 +222,7 @@ def test_pick_haoyun_lingpai_yin_unobserved_still_single_scheduled() -> None:
         PICK_INVEST_EFFECTS,
     )
     assert '好运令牌·银' not in _STRATEGY_DELAYED_TWO_LEG_GRANTS, \
-        '误入两腿成员集(入集 = 拿卡错发即时装备腿的分派面)'
+        '误入两条效果条目成员集(入集 = 拿卡错发即时装备效果条目的分派面)'
     assert '好运令牌·银' in PICK_INVEST_EFFECTS, '显式单行登记条缺位'
     gs = _gs(equips=None)
     effects = on_strategy_gained(gs, '好运令牌·银', rand=False,
@@ -257,7 +257,7 @@ def test_pick_shizuanshi_choice_set_schedule_zero_rng() -> None:
     assert gs.write_seq == seq_before + 1, \
         f'入队腿外出现额外写行(seq={gs.write_seq})'
     assert rng.getstate() == state_before, \
-        '登记腿消费 rng(预掷被否面被破坏)'
+        '只登记不写状态的实现分支消费 rng(预掷被否面被破坏)'
 
 
 def test_pick_shizuanshi_unobserved_still_choice_set_scheduled() -> None:
@@ -271,7 +271,7 @@ def test_pick_shizuanshi_unobserved_still_choice_set_scheduled() -> None:
         PICK_INVEST_EFFECTS,
     )
     assert '是钻石总会发光' not in _STRATEGY_DELAYED_TWO_LEG_GRANTS, \
-        '误入两腿成员集(入集 = 拿卡错发即时装备腿的分派面)'
+        '误入两条效果条目成员集(入集 = 拿卡错发即时装备效果条目的分派面)'
     assert '是钻石总会发光' in PICK_INVEST_EFFECTS, '显式单行登记条缺位'
     gs = _gs(equips=None)
     effects = on_strategy_gained(gs, '是钻石总会发光', rand=False,
@@ -338,4 +338,4 @@ def test_pick_haoyun_lingpai_cai_two_leg_instant_and_queue() -> None:
     assert gs.pending_strategy_grants.value == (('好运令牌·彩', 4),), \
         f'队列值: {gs.pending_strategy_grants.value}'
     assert gs.equips.source == 'logic' \
-        and gs.pending_strategy_grants.source == 'logic', '两腿走确定面'
+        and gs.pending_strategy_grants.source == 'logic', '两条效果条目走确定面'

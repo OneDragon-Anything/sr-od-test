@@ -58,7 +58,7 @@ def test_jingmi_jin_compose_row_single_source() -> None:
         _STRATEGY_RANDOM_EQUIP_GRANTS,
         PICK_INVEST_EFFECTS,
     )
-    assert _CARD in PICK_INVEST_EFFECTS, '三腿组合行在册'
+    assert _CARD in PICK_INVEST_EFFECTS, '三条效果条目组合行已登记'
     assert _CARD not in _STRATEGY_RANDOM_EQUIP_GRANTS, \
         '泛化表零本卡键(撞键形态禁回退)'
 
@@ -83,8 +83,8 @@ def test_jingmi_jin_chain_places_three_legs() -> None:
     effects = out.effects
     assert len(effects) == 4, f'效果串恒 4 条: {effects}'
     assert effects[0] == 'named_equip_grant:精密拆装扳手(placed=True)', \
-        f'腿1 具名: {effects[0]}'
+        f'效果条目1 具名: {effects[0]}'
     assert effects[1] == 'named_equip_grant:冶金炉(placed=True)', \
-        f'腿2 具名: {effects[1]}'
+        f'效果条目2 具名: {effects[1]}'
     assert all(effects[i].startswith('strategy_random_equip:')
-               for i in (2, 3)), f'腿3 随机两条: {effects[2:]}'
+               for i in (2, 3)), f'效果条目3 随机两条: {effects[2:]}'

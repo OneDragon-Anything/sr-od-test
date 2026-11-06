@@ -2126,7 +2126,7 @@ def test_cold_build_seeds_all_a_fields(monkeypatch) -> None:
     assert gs.strategy_char_grant_bindings.value == {}, \
         '绑定域冷建空底座'
     assert gs.strategy_gold_next_nodes_left.value == {}, \
-        '分期金剩余腿数容器冷建空底座'
+        '分期金剩余发放数容器,每局全新创建(空初始值)'
     assert gs.strategy_bond_tier_fired.value == (), \
         '羁绊档位闩冷建空底座'
     assert gs.strategy_hp_loss_accum.value == 0, '损血累积器冷建零底座'

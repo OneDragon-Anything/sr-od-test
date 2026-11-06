@@ -20,7 +20,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.strategy_economy 
 )
 
 _CARD = '赞美太阳'
-_ROW = ('装备计数经验腿已建世界通道 STRATEGY_EQUIP_COUNT_XP_GRANTS;'
+_ROW = ('装备计数经验发放已建状态副本写入通道 STRATEGY_EQUIP_COUNT_XP_GRANTS;'
         '估值零登记维持')
 
 

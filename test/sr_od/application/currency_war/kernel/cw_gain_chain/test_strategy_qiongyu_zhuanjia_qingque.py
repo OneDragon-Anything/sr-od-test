@@ -148,7 +148,7 @@ def test_qiongyu_qingque_chain_unlock_then_two_furnaces(
     assert gs.equips.evidence.startswith('pick_invest_named_equip'), \
         '腿写端 evidence 前缀(原语内追加 #equip 后缀,前缀匹配防假红)'
     assert gs.write_seq - seq_before == 4, \
-        '写数恰 4 = 注册 1 + 解锁 1 + 炉腿 2(账本登记 session=None 跳过)'
+        '写数恰 4 = 注册 1 + 解锁 1 + 炉效果条目 2(账本登记 session=None 跳过)'
     assert rng0.getstate() == rng_state0, '零随机面(rng 不消费)'
     assert gs.gold.value is None, '本卡无金句零金写'
     assert len(bench_units_of(gs)) == 1, 'bench 零变化(顾问入商店非送单位)'
@@ -191,7 +191,7 @@ def test_qiongyu_qingque_unobserved_reject_auditable(
         f'named_equip_grant:{_ITEM}(placed=False)',
     ), '效果串恒 3 条,炉腿逐件 placed=False 拒落可审计'
     assert gs.unlocked_experts.value == ('青雀',), '解锁腿照写(域零耦合)'
-    assert gs.equips.value is None, '腿2 拒落零写'
+    assert gs.equips.value is None, '效果条目2 拒落零写'
     assert gs.write_seq - seq_before == 1, '写数恰 1 = 解锁写(拒落零写)'
     assert rows_sink.kinds() == [], '拒落档零申报行(非 fail-closed 档)'
 
@@ -210,7 +210,7 @@ def test_qiongyu_qingque_double_advisor_dedup(rows_sink: _RowSink) -> None:
     assert gs.unlocked_experts.value == ('青雀',), \
         '跨卡双顾问解锁去重单份(只增去重零重复追加)'
     assert gs.write_seq - seq_mid == 3, \
-        '写数恰 3 = 注册 1 + 炉腿 2(解锁去重命中零写早退)'
+        '写数恰 3 = 注册 1 + 炉效果条目 2(解锁去重命中零写早退)'
     seq_late = gs.write_seq
     gain_invest_strategy(gs, None, _CARD, rand=False, sig=_LSIG)
     assert gs.unlocked_experts.value == ('青雀',), \

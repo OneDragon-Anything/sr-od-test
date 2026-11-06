@@ -116,7 +116,7 @@ def test_xianxue_jieti_grant_leg_places_equipment(
     assert gs.equips.evidence.startswith('pick_invest_named_equip'), \
         '腿写端 evidence 前缀(原语内追加 #equip 后缀,前缀匹配防假红)'
     assert gs.write_seq - seq_before == 2, \
-        '写数恰 2 = 注册 1 + 装备腿 1(②段账本登记 session=None 跳过)'
+        '写数恰 2 = 注册 1 + 装备效果条目 1(②段账本登记 session=None 跳过)'
     assert gs.gold.value is None, '本卡无金句零金写'
     assert len(bench_units_of(gs)) == 1, 'bench 零变化(装备非占席不入席)'
     assert gs.deployed.value is None, 'deployed 未观察保持未写'

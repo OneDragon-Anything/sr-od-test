@@ -87,7 +87,7 @@ def test_zanmei_grant_and_binding_stock_members() -> None:
     阵容域差集语义 ⊇ {昼之半神, 追击}(scope 全值随阵容知识批漂移,
     不锁全值只锁本卡两条效果条目来源必在域)。"""
     grant = STRATEGY_GRANTS[_CARD]
-    assert grant.chars_immediate == ('那刻夏',), '腿 3 授予 = 那刻夏单发'
+    assert grant.chars_immediate == ('那刻夏',), '效果条目 3 授予 = 那刻夏单发'
     assert grant.advisor is False, '卡面无「加入商店」句,advisor False'
     assert _STRATEGY_BINDINGS_EXPLICIT[_CARD] == (
         frozenset({'昼之半神'}), frozenset({'那刻夏'})), '绑定二元组精确相等'

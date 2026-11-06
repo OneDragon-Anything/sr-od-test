@@ -1226,7 +1226,7 @@ def test_gain_invest_strategy_team_hope_unit_buff_zero_response() -> None:
     assert gs.active_strategies.value == ['全队的希望'], '注册入表'
     entries = gs.effects.by_source(SOURCE_STRATEGY)
     assert [e.spec.name for e in entries] == ['全队的希望'], \
-        'register_strategy 入册(获得链登记腿既有链,零新代码)'
+        'register_strategy 入册(获得链只登记不写状态的实现分支既有链,零新代码)'
     assert entries[0].spec.category.value == 'unit_buff'
     # burst 桥负锁:UnitBuffRef 无 free_refresh_burst → 缺省 0 no-op 零 Field 行
     # (只登记不写状态的实现分支内部已调,free_refresh_left 保持 None 即证;显式补调一次同证幂等)

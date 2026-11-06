@@ -88,7 +88,7 @@ def test_pick_dacaiyuan_full_chain_sell_and_burst() -> None:
         assert int(gs.gold.value or 0) - gold_before == expected_refund, \
             '退款 = 板面全额公式值(单一源 cw_economy;×2 修饰缺口低估' \
             '申报,观察覆盖)'
-        assert gs.free_refresh_left.value == 6, '刷腿 +6(登记腿 burst 桥)'
+        assert gs.free_refresh_left.value == 6, '刷新发放 +6(只登记不写状态的实现分支 burst 桥)'
         assert _bench_units(gs) == [], 'bench 清空且零新增(素出售无发牌面)'
     finally:
         uninstall_backend()

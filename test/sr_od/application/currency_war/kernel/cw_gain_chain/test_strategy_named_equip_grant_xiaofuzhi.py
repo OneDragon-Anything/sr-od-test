@@ -106,7 +106,7 @@ def test_xiaofuzhi_grant_leg_places_two_projectors(
     assert gs.equips.evidence.startswith('pick_invest_named_equip'), \
         '腿写端 evidence 前缀(原语内追加 #equip 后缀,前缀匹配防假红)'
     assert gs.write_seq - seq_before == 3, \
-        '写数恰 3 = 注册 1 + 装备腿 2(②段账本登记 session=None 跳过)'
+        '写数恰 3 = 注册 1 + 装备效果条目 2(②段账本登记 session=None 跳过)'
     assert out.effects == (
         f'named_equip_grant:{_ITEM}(placed=True)',
         f'named_equip_grant:{_ITEM}(placed=True)',

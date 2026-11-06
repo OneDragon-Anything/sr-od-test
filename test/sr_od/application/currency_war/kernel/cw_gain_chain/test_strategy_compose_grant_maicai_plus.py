@@ -118,9 +118,9 @@ def test_maicai_plus_compose_legs_chain_in_order(rows_sink: _RowSink) -> None:
     # 「效果串恒 2 条」失效——守卫先红,勿盲改断言数。
     assert set(equips_by_category('星徽')) & \
         set(EQUIP_ACQUIRE_CONSEQUENCES) == set(), \
-        '星徽池 ∩ 后果表须为空(腿1 效果串恒 1 条前提)'
+        '星徽池 ∩ 后果表须为空(效果条目1 效果串恒 1 条前提)'
     assert _NAMED_LEG_ITEM not in EQUIP_ACQUIRE_CONSEQUENCES, \
-        '冶金炉 ∉ 后果表(腿2 效果串恒 1 条前提)'
+        '冶金炉 ∉ 后果表(效果条目2 效果串恒 1 条前提)'
     assert equip_pick in equips_by_category('星徽'), '预验证:装备采样 ∈ 星徽池'
 
     gs = _make_gs(bench=[], equips=[])
@@ -138,7 +138,7 @@ def test_maicai_plus_compose_legs_chain_in_order(rows_sink: _RowSink) -> None:
     assert out.effects == (
         f'strategy_random_equip:{equip_pick}',
         f'named_equip_grant:{_NAMED_LEG_ITEM}(placed=True)',
-    ), '效果串恰 2 条且两腿形态字面分明'
+    ), '效果串恰 2 条且两条效果条目形态字面分明'
     assert rows_sink.kinds() == [], '正常路径零申报行'
 
     # 表外卡零写:未收录卡查无效果安静不写(gain-chain §3 裁定④),

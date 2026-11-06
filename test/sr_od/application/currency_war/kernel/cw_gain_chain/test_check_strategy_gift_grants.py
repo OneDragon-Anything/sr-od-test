@@ -91,7 +91,7 @@ def test_leg1_grants_char_and_equip_with_latch() -> None:
              equips=[])
     out = check_strategy_gift_grants(gs, node_kind='battle', sig=_LSIG)
     assert out == (f'strategy_gift:{_CARD}#{STRATEGY_GIFT_LEG_FACTION_COUNT}',
-                   ), '返回 = 腿1 evidence 串'
+                   ), '返回 = 效果条目1 evidence 串'
     assert _units(gs) == [(_CHAR_L1, 2)], '备战恰 1 只 2★黄泉(placed)'
     assert gs.equips.value == [_EQUIP], '携带装备入栏(非穿戴)'
     assert gs.strategy_grants_done.value == (_LATCH_L1,), '封账恰一笔'
@@ -162,7 +162,7 @@ def test_leg2_reward_node_grants_with_latch() -> None:
     gs = _gs(cards=[_CARD], bench=[], equips=[])
     out = check_strategy_gift_grants(gs, node_kind='reward', sig=_LSIG)
     assert out == (f'strategy_gift:{_CARD}'
-                   f'#{STRATEGY_GIFT_LEG_NEXT_REWARD_NODE}',), '腿2 evidence'
+                   f'#{STRATEGY_GIFT_LEG_NEXT_REWARD_NODE}',), '效果条目2 evidence'
     assert _units(gs) == [(_CHAR_L2, 1)], '备战恰 1 名 1★波提欧'
     assert gs.strategy_grants_done.value == (_LATCH_L2,), '封账恰一笔'
 
@@ -199,11 +199,11 @@ def test_leg2_legs_independent_latches() -> None:
     gs = _gs(cards=[_CARD], deployed=list(_RAIDER_FOUR), bench=[],
              equips=[])
     check_strategy_gift_grants(gs, node_kind='battle', sig=_LSIG)
-    assert gs.strategy_grants_done.value == (_LATCH_L1,), '前置:仅腿1 闩'
+    assert gs.strategy_grants_done.value == (_LATCH_L1,), '前置:仅效果条目1 的一次性标志位'
     check_strategy_gift_grants(gs, node_kind='reward', sig=_LSIG)
     assert gs.strategy_grants_done.value == (_LATCH_L1, _LATCH_L2), \
-        '两腿复合键并存'
-    assert _units(gs) == [(_CHAR_L1, 2), (_CHAR_L2, 1)], '两腿发放物并存'
+        '两条效果条目复合键并存'
+    assert _units(gs) == [(_CHAR_L1, 2), (_CHAR_L2, 1)], '两条效果条目发放物并存'
 
 
 def test_leg2_bench_unobserved_no_latch_retry_selfheal() -> None:

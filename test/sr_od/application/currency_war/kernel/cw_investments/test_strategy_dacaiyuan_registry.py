@@ -99,7 +99,7 @@ def test_dacaiyuan_delivery_channel_registration_leg() -> None:
         PICK_INVEST_EFFECTS,
     )
     assert _CARD in STRATEGY_EFFECTS
-    assert _CARD not in PICK_INVEST_EFFECTS, '登记腿交付,③段零新增'
+    assert _CARD not in PICK_INVEST_EFFECTS, '只登记不写状态的实现分支交付,③段零新增'
 
 
 def test_dacaiyuan_pending_modeling_and_cash_failclosed() -> None:

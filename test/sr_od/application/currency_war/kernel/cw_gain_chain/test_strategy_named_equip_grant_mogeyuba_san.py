@@ -114,7 +114,7 @@ def test_mogeyuba_san_grant_leg_places_two_tokens(rows_sink: _RowSink) -> None:
     assert gs.equips.evidence.startswith('pick_invest_named_equip'), \
         '腿写端 evidence 前缀(原语内追加 #equip 后缀,前缀匹配防假红)'
     assert gs.write_seq - seq_before == 3, \
-        '写数恰 3 = 注册 1 + 装备腿 2(②段账本登记 session=None 跳过)'
+        '写数恰 3 = 注册 1 + 装备效果条目 2(②段账本登记 session=None 跳过)'
     assert gs.gold.value is None, '本卡无金句零金写'
     assert len(bench_units_of(gs)) == 1, 'bench 零变化(送卡腿零运行时消费)'
     assert gs.deployed.value is None, 'deployed 未观察保持未写(板面零建模)'
@@ -152,7 +152,7 @@ def test_mogeyuba_san_rng_zero_consumption(rows_sink: _RowSink) -> None:
         f'named_equip_grant:{_ITEM}(placed=True)',
     ], '直呼效果体仍恰 2 条'
     assert gs.equips.value == [_ITEM, _ITEM], '直呼效果体照常入栏 2 件'
-    assert gs.write_seq - seq_before == 2, '直呼效果体写数恰 2(腿 2 无注册)'
+    assert gs.write_seq - seq_before == 2, '直呼效果体写数恰 2(效果条目 2 无注册)'
     assert rows_sink.kinds() == [], '正常路径零申报行'
 
 
@@ -171,7 +171,7 @@ def test_mogeyuba_san_precise_gate_not_hit(rows_sink: _RowSink) -> None:
     assert gs.equips.value == ['精密拆装扳手', _ITEM, _ITEM], \
         '库尾追加 2 件,精密原值不动'
     assert gs.write_seq - seq_before == 2, \
-        '写数恰 2 = 腿 2(on_strategy_gained 无注册写,注册归 gain_invest_\
+        '写数恰 2 = 效果条目 2(on_strategy_gained 无注册写,注册归 gain_invest_\
 strategy ①段)'
     assert rows_sink.kinds() == [], '精密判据对本卡不命中,零申报行'
 

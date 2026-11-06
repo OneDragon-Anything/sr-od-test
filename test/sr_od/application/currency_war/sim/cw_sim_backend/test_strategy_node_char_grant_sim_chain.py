@@ -108,7 +108,7 @@ def test_node_window_grant_and_replay_guard(
     gs = b.gs
     name = _bound_name()
     mass0 = _copy_mass(gs, name)
-    assert mass0 == 3, '前置:获得腿 1 名 2★ = 3 份副本质量'
+    assert mass0 == 3, '前置:获得效果条目 1 名 2★ = 3 份副本质量'
     b._enter_node_window((1, 2))
     assert _copy_mass(gs, name) == mass0 + 1, '窗内 +1 名 1★(基础发放)'
     calls = _record_all_writes(gs, monkeypatch)

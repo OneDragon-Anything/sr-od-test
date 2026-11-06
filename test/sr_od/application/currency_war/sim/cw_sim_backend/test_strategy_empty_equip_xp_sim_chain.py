@@ -173,7 +173,7 @@ def test_non_empty_deck_zero_write(monkeypatch: pytest.MonkeyPatch) -> None:
     b = _setup(grant=True, clear_equips=False)
     try:
         gs = b.gs
-        assert gs.equips.value, '前置:腿1 采样件在栏'
+        assert gs.equips.value, '前置:效果条目1 采样件在栏'
         xp0 = gs.xp.value
         calls = _record_all_writes(gs, monkeypatch)
         b._enter_node_window((1, 2))

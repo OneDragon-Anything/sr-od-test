@@ -167,7 +167,7 @@ def test_xinghun_gain_chain_register_and_bridges_noop() -> None:
     assert gs.active_strategies.value == [_CARD], '注册入表'
     entries = gs.effects.by_source(SOURCE_STRATEGY)
     assert [e.spec.name for e in entries] == [_CARD], \
-        'register_strategy 入册(获得链登记腿既有链,零新代码)'
+        'register_strategy 入册(获得链只登记不写状态的实现分支既有链,零新代码)'
     assert entries[0].spec.id == _CID
     assert gs.free_refresh_left.value is None, \
         'burst/位面段补发桥 no-op(零 Field 行)'
@@ -379,7 +379,7 @@ def test_tiaoyin_registry_pins() -> None:
     assert STRATEGY_BINDINGS[_CARD_TY] == (frozenset(), frozenset({'加拉赫'})), \
         '绑定现值不动'
     grant = STRATEGY_GRANTS[_CARD_TY]
-    assert grant.advisor is True, '腿1 前提:advisor 型授予(解锁入商店链)'
+    assert grant.advisor is True, '效果条目1 前提:advisor 型授予(解锁入商店链)'
     assert grant.chars_immediate == ('加拉赫',), '授予对象 = 加拉赫'
 
 

@@ -57,7 +57,7 @@ def test_haoyun_jin_compose_row_single_source() -> None:
         _STRATEGY_RANDOM_EQUIP_GRANTS,
         PICK_INVEST_EFFECTS,
     )
-    assert _CARD in PICK_INVEST_EFFECTS, '双腿组合行在册'
+    assert _CARD in PICK_INVEST_EFFECTS, '两条效果条目组合行已登记'
     assert _CARD not in _STRATEGY_RANDOM_EQUIP_GRANTS, \
         '泛化表零本卡键(撞键形态禁回退)'
 
@@ -79,6 +79,6 @@ def test_haoyun_jin_chain_places_two_legs() -> None:
     effects = out.effects
     assert len(effects) == 2, f'效果串恒 2 条: {effects}'
     assert effects[0] == 'named_equip_grant:好运令牌(placed=True)', \
-        f'腿1 具名: {effects[0]}'
+        f'效果条目1 具名: {effects[0]}'
     assert effects[1].startswith('strategy_random_equip:'), \
-        f'腿2 随机: {effects[1]}'
+        f'效果条目2 随机: {effects[1]}'

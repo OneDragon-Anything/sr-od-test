@@ -73,7 +73,7 @@ def test_bridges_noop_zero_world_write() -> None:
     gs = _make_gs()
     gain_invest_strategy(gs, object(), _CARD, rand=False, sig=_LSIG)
     assert gs.free_refresh_left.value is None, 'burst 桥 no-op(零 Field 行)'
-    assert gs.gold.value is None, '登记腿误写金'
+    assert gs.gold.value is None, '只登记不写状态的实现分支误写金'
     seq_before = gs.write_seq
     spec = gs.effects.by_source(SOURCE_STRATEGY)[0].spec
     apply_effect_burst_grant(gs, spec)

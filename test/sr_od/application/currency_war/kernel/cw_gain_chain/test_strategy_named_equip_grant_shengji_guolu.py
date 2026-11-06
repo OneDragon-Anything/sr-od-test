@@ -117,7 +117,7 @@ def test_shengji_guolu_grant_leg_places_two_furnaces(
     assert gs.equips.evidence.startswith('pick_invest_named_equip'), \
         '腿写端 evidence 前缀(原语内追加 #equip 后缀,前缀匹配防假红)'
     assert gs.write_seq - seq_before == 3, \
-        '写数恰 3 = 注册 1 + 装备腿 2(②段账本登记 session=None 跳过)'
+        '写数恰 3 = 注册 1 + 装备效果条目 2(②段账本登记 session=None 跳过)'
     assert out.effects == (
         f'named_equip_grant:{_ITEM}(placed=True)',
         f'named_equip_grant:{_ITEM}(placed=True)',
@@ -141,7 +141,7 @@ def test_shengji_guolu_precision_gate_not_inherited(
     assert out.placed
     assert gs.equips.value == ['精密拆装扳手', _ITEM, _ITEM], \
         '精密在场不拦炉腿,库尾照常追加 2 件'
-    assert gs.write_seq - seq_before == 3, '写数恰 3(注册 1 + 炉腿 2)'
+    assert gs.write_seq - seq_before == 3, '写数恰 3(注册 1 + 炉效果条目 2)'
     assert out.effects == (
         f'named_equip_grant:{_ITEM}(placed=True)',
         f'named_equip_grant:{_ITEM}(placed=True)',

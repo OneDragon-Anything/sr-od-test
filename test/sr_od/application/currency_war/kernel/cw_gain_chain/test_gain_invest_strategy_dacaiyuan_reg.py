@@ -81,7 +81,7 @@ def test_gain_invest_strategy_dacaiyuan_burst_and_sell(
         == ['大裁员'], 'register_strategy 入册'
     burst = STRATEGY_ECONOMY['大裁员'].free_refresh_burst
     assert burst == 6 and gs.free_refresh_left.value == burst, \
-        'None 基 = 0 起算,一次 +6(登记腿 burst 挂点,防漂移到 ③段)'
+        'None 基 = 0 起算,一次 +6(只登记不写状态的实现分支 burst 插入位置,防漂移到 ③段)'
     assert gs.free_refresh_left.source == 'logic', 'write_logic 逻辑直写'
     assert (gs.free_refresh_left.evidence or '').startswith('effect_burst'), \
         'burst 桥 evidence(effect_burst[@frame])'

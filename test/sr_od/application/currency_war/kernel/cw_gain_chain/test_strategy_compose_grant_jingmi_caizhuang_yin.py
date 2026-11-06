@@ -126,9 +126,9 @@ def test_jingmi_yin_compose_legs_chain_in_order(rows_sink: _RowSink) -> None:
     # 「效果串恒 2 条」失效——守卫先红,勿盲改断言数。
     assert set(equips_by_category('简易')) & \
         set(EQUIP_ACQUIRE_CONSEQUENCES) == set(), \
-        '简易池 ∩ 后果表须为空(腿2 效果串恒 1 条前提)'
+        '简易池 ∩ 后果表须为空(效果条目2 效果串恒 1 条前提)'
     assert _NAMED_LEG_ITEM not in EQUIP_ACQUIRE_CONSEQUENCES, \
-        '精密拆装扳手 ∉ 后果表(腿1 效果串恒 1 条前提)'
+        '精密拆装扳手 ∉ 后果表(效果条目1 效果串恒 1 条前提)'
     # 精密门表轻断言(锁 6 降级形态):发放精密自身不在判据映射内,
     # gate 恒 None 走纯发放循环 = 零自我拦截的注册面结构前提。
     assert _NAMED_LEG_ITEM not in _NAMED_EQUIP_PRECISE_GATES, \
@@ -150,7 +150,7 @@ def test_jingmi_yin_compose_legs_chain_in_order(rows_sink: _RowSink) -> None:
     assert out.effects == (
         f'named_equip_grant:{_NAMED_LEG_ITEM}(placed=True)',
         f'strategy_random_equip:{equip_pick}',
-    ), '效果串恰 2 条且两腿形态字面分明'
+    ), '效果串恰 2 条且两条效果条目形态字面分明'
     assert rows_sink.kinds() == [], '正常路径零申报行'
 
     # 表外卡零写:未收录卡查无效果安静不写(gain-chain §3 裁定④),

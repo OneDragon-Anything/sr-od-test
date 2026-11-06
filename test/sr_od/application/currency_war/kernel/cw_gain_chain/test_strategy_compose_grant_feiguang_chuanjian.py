@@ -90,7 +90,7 @@ def test_feiguang_chuanjian_chain_places_two_chars() -> None:
     rng_state0 = rng0.getstate()
     effects = on_strategy_gained(gs, _CARD, rand=False, sig=_LSIG,
                                  rng=rng0)
-    assert len(effects) == 2, f'效果串 2 条(双腿): {effects}'
+    assert len(effects) == 2, f'效果串 2 条(两条效果条目): {effects}'
     assert effects == ('char_grant:彦卿(placed=True,merge=0,uid=1)',
                        'char_grant:景元(placed=True,merge=0,uid=2)'), \
         f'腿序 = 卡文语序彦卿→景元: {effects}'

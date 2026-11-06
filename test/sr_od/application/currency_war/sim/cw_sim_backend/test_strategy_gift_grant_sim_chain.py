@@ -124,13 +124,13 @@ def test_both_legs_fire_in_next_window(_prep_backend) -> None:
     assert gs.strategy_grants_done.value == (), '前置:开局空底座'
     b._enter_node_window((1, 2))
     units = _units(gs)
-    assert ('黄泉', 2) in units, f'腿1 备战 2★黄泉: {units}'
-    assert ('波提欧', 1) in units, f'腿2 备战 1★波提欧: {units}'
+    assert ('黄泉', 2) in units, f'效果条目1 备战 2★黄泉: {units}'
+    assert ('波提欧', 1) in units, f'效果条目2 备战 1★波提欧: {units}'
     assert '星间旅人星徽' in (gs.equips.value or []), '携带装备入栏'
     assert gs.strategy_grants_done.value == (
         f'{_CARD}#{STRATEGY_GIFT_LEG_FACTION_COUNT}',
         f'{_CARD}#{STRATEGY_GIFT_LEG_NEXT_REWARD_NODE}',
-    ), '双腿封账并存(腿1 先评、腿2 同窗 reward 命中)'
+    ), '两条效果条目封账并存(效果条目1 先评、效果条目2 同窗 reward 命中)'
 
 
 def test_window_replay_no_double_grant(_prep_backend,

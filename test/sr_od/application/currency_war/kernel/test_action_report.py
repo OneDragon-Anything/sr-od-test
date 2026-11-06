@@ -668,7 +668,7 @@ def test_equip_write_sides_report_form_rejects_unknown_target(
     (改名/删除即暴露,禁静默失联)。"""
     monkeypatch.setitem(EQUIP_WRITE_SIDES, '冶金炉',
                         'report:report_action_not_in_tool_use')
-    with pytest.raises(ValueError, match='tool_use 不在册'):
+    with pytest.raises(ValueError, match='tool_use 未登记'):
         _validate_equip_write_sides()
 
 

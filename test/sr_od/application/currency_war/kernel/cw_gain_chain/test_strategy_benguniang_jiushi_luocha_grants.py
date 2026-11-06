@@ -101,7 +101,7 @@ def test_registration_faces() -> None:
     = 卡面单数直读)/PICK 行在册(生成式注册段自工厂表派生,表为单一源,
     禁字面量第二源)。"""
     grant = STRATEGY_GRANTS[_CARD]
-    assert grant.chars_immediate == ('三月七',), '登记面 = 即时单腿名级'
+    assert grant.chars_immediate == ('三月七',), '登记面 = 即时一条效果条目名级'
     assert grant.advisor is False, '白得型直接送卡,非顾问入商店'
     assert _STRATEGY_CHAR_GRANTS[_CARD] == ('三月七', 1, 2), \
         '工厂表行值 = (三月七, 1, 2★ 直读)'

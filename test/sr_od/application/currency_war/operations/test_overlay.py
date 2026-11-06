@@ -811,7 +811,7 @@ class TestHostHandback:
             run_node,
         )
         rr = run_node(test_context, shell, lambda: CwScreenShop.act(shell))
-        assert rr.is_success and 'overlay 登记' in (rr.status or ''), \
+        assert rr.is_success and 'overlay 已登记' in (rr.status or ''), \
             'pending 非空 → round_success 交回(文案带登记事实)'
         assert gs.screen_changes.pending, '交回不清条目(消费归选卡上报)'
 
@@ -848,7 +848,7 @@ class TestHostHandback:
             run_node,
         )
         rr = run_node(test_context, shell, lambda: CwScreenPrep.act(shell))
-        assert rr.is_success and 'overlay 登记' in (rr.status or ''), \
+        assert rr.is_success and 'overlay 已登记' in (rr.status or ''), \
             '备战宿主 pending 非空 → 交回外循环分发'
 
 

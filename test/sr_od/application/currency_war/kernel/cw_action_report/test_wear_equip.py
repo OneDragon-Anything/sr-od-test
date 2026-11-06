@@ -169,7 +169,7 @@ def test_fusion_summon_registration_consolidated() -> None:
     assert len(PICK_INVEST_EFFECTS) == 167
     assert len(_STRATEGY_BOX_GRANTS) == 14
     assert '融合召唤' not in STRATEGY_EFFECTS, \
-        '腿1 零登记(TriggerKind 无穿戴事件成员,死条目主体更紧)'
+        '效果条目1 零登记(TriggerKind 无穿戴事件成员,死条目主体更紧)'
     assert '融合召唤' not in STRATEGY_BINDINGS, \
         '效果主语全装备,不绑(绑定判据:泛用装备 → 不绑)'
 

@@ -110,7 +110,7 @@ def test_dushen_yin_grant_leg_places_dice(rows_sink: _RowSink) -> None:
     assert gs.equips.evidence == 'pick_invest_named_equip#equip', \
         '腿写端 evidence(#equip 后缀一笔)'
     assert gs.write_seq - seq_before == 2, \
-        '写数恰 2 = 注册 1 + 装备腿 1(②段账本登记 session=None 跳过)'
+        '写数恰 2 = 注册 1 + 装备效果条目 1(②段账本登记 session=None 跳过)'
     assert out.effects == (f'named_equip_grant:{_ITEM}(placed=True)',), \
         '效果串恰一条含 placed'
     assert len(bench_units_of(gs)) == 1, 'bench 零变化'

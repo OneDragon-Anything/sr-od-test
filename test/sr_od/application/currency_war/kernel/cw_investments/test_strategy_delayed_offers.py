@@ -101,10 +101,10 @@ def test_value_shape_generalized_tuple_silver_two_legs() -> None:
                              offer_quality='银', refresh_count=3),
         StrategyDelayedOffer(id='203201', delay_nodes=3,
                              offer_quality='银', refresh_count=3)), \
-        f'白银投资两腿值: {legs!r}'
+        f'白银投资两条效果条目值: {legs!r}'
     base = INVESTMENT_STRATEGIES['白银投资']
     assert base.source == 'plaza:203201', f'溯源 id 对拍: {base.source}'
-    assert len({leg.id for leg in legs}) == 1, '两腿同 id'
+    assert len({leg.id for leg in legs}) == 1, '两条效果条目同 id'
 
 
 def test_validator_orphan_key_raises(monkeypatch) -> None:
@@ -133,7 +133,7 @@ def test_mogeyuba2_delay_row():
     """摸个鱼吧II 延时行锁:5 节点/棱彩品质/可刷新基形(201103 先例
     同款 refresh_count 缺省)。"""
     rows = STRATEGY_DELAYED_OFFERS['摸个鱼吧II']
-    assert len(rows) == 1, '单腿'
+    assert len(rows) == 1, '一条效果条目'
     row = rows[0]
     assert row.id == '260201', 'id 对拍'
     assert row.delay_nodes == 5, '深思熟虑 5 节点'

@@ -79,7 +79,7 @@ def test_mengjing_chain_places_huohi_only() -> None:
                                  rng=rng0)
     assert len(effects) == 1, f'效果串恰 1 条: {effects}'
     assert effects == ('char_grant:花火(placed=True,merge=0,uid=1)',), \
-        f'单腿步串: {effects}'
+        f'一条效果条目步串: {effects}'
     names = [s.unit.char_id for s in gs.bench.value.slots
              if s.kind == 'unit' and s.unit]
     assert names == ['花火'], f'恰一角色入栏: {names}'

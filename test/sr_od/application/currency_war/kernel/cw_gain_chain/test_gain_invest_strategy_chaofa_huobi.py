@@ -65,7 +65,7 @@ def test_gain_chaofa_huobi_registers_lost_snapshot() -> None:
     gain_invest_strategy(gs, object(), '超发货币', rand=False, sig=_lsig())
     assert gs.active_strategies.value == ['超发货币']
     entry = gs.effects.first(HYPEREMIT_SPEC_ID)
-    assert entry is not None, '条目在册(获得链登记腿自动登记)'
+    assert entry is not None, '条目已登记(获得链只登记不写状态的实现分支自动登记)'
     assert entry.remaining_nodes == 6, 'N_NODES 播种 = 持续入口数 6'
     assert entry.counters.get('lost') == _GOLD_SEED, \
         '负债播值 = 登记帧金读数(counters[LOST])'

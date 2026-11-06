@@ -108,7 +108,7 @@ def test_named_equip_grant_leg_places_wrenches(rows_sink: _RowSink) -> None:
     assert gs.equips.evidence == 'pick_invest_named_equip#equip', \
         '腿写端 evidence(逐件各 #equip 后缀一笔)'
     assert gs.write_seq - seq_before == 3, \
-        '写数恰 3 = 注册 1 + 装备腿 2(②段账本登记 session=None 跳过;' \
+        '写数恰 3 = 注册 1 + 装备效果条目 2(②段账本登记 session=None 跳过;' \
         '板面重写桥零写契约由 test_effect_inventory 存量锁承载)'
     assert out.effects == (
         'named_equip_grant:拆装扳手(placed=True)',

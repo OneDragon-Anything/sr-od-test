@@ -60,14 +60,14 @@ def test_take_all_two_leg_specs_registered() -> None:
         assert leg2.duration.value == leg2_dur, f'发放腿持续期({name})'
         assert leg2.category is EffectKind.BATTLEFIELD, \
             '类别 = 战场改变(发放类世界写入)'
-        assert leg2.payload.salvage_all_unchosen_supply is True, '腿2 载体字段'
+        assert leg2.payload.salvage_all_unchosen_supply is True, '效果条目2 载体字段'
         assert leg2.pending and leg2.notes, '二义条目 pending + 保守支必带'
 
         leg1 = STRATEGY_EFFECTS[f'{name}#supply_delta']
         assert (leg1.id, leg1.name) == (pid, name), \
             '申报键条目 spec.name 恒规范名(校验按 name 查)'
         assert leg1.trigger is TriggerKind.SUPPLY_PHASE
-        assert leg1.duration.value == 'while_held', '腿1 持续期 = 持有期全程'
+        assert leg1.duration.value == 'while_held', '效果条目1 持续期 = 持有期全程'
         assert leg1.payload.supply_option_delta == -2, '列数修饰 = -2(明写)'
         assert not leg1.pending, '声明面无未裁数值,不设 pending'
 
@@ -105,7 +105,7 @@ def test_take_all_declaration_key_never_enters_ledger() -> None:
         assert [e.spec.name for e in entries] == [name], \
             f'账本恰一条(canon 键单取): {[e.spec.name for e in entries]}'
         assert entries[0].spec.payload.salvage_all_unchosen_supply is True, \
-            '入册条目 = 发放腿(非申报键腿1)'
+            '入册条目 = 发放条目(非申报键效果条目1)'
         assert not any(
             int(getattr(e.spec.payload, 'supply_option_delta', 0) or 0) != 0
             for e in entries), '申报键条目(列数修饰腿)零入册'

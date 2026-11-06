@@ -105,7 +105,7 @@ def test_constants_tie_to_registry_single_source() -> None:
         STRATEGY_GRANTS,
     )
     grant = STRATEGY_GRANTS[FORGE_PRIVILEGE_CARD]
-    assert grant.advisor is True, '腿1 顾问型登记在册'
+    assert grant.advisor is True, '效果条目1 顾问型已登记'
     assert grant.chars_immediate == (FORGE_PRIVILEGE_CHAR,), \
         '辖域角色 = 登记面 chars_immediate 单成员'
     assert FORGE_PRIVILEGE_CHAR in STRATEGY_BINDINGS[FORGE_PRIVILEGE_CARD][1], \

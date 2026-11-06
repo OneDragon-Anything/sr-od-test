@@ -73,4 +73,4 @@ def test_pending_row_wording() -> None:
                       None)
     assert pending is not None, 'PENDING 表在册'
     row = pending.get('被动收入')
-    assert row is not None and '已建世界通道' in row, f'落地后文案: {row}'
+    assert row is not None and '已建状态副本写入通道' in row, f'落地后文案: {row}'

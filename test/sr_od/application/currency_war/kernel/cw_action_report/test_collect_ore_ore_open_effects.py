@@ -136,7 +136,7 @@ def test_window_order_count_env_then_strategy_leg(
     ore_idx = next(i for i, c in enumerate(calls)
                    if (c[1] or '').startswith('strategy_ore_open_grant#'))
     assert gold_idx < env_idx < ore_idx, \
-        f'窗序 = 矿奖励 → 契约腿 → 策略腿: {[c[1] for c in calls]}'
+        f'窗序 = 矿奖励 → 契约发放分支 → 只供策略算分的实现分支: {[c[1] for c in calls]}'
     pts = gs.spheres.value.points if gs.spheres.value else ()
     assert any(p[1] == 10 and p[2] == 10 for p in pts), \
         f'授予点(合成形专用带)在 spheres: {pts}'
@@ -176,7 +176,7 @@ def test_zero_open_early_return_no_trigger(
         gs, CwActionCollectOreParam(points=_XYS), sig=_SIG)
     assert not out.applied and out.reason == 'bench_full_no_open', \
         f'全跳批出参: {out.reason}'
-    assert not calls, f'全跳零容器写(策略腿含零写): {calls}'
+    assert not calls, f'全跳零容器写(只供策略算分的实现分支含零写): {calls}'
 
 
 def test_miss_seed_zero_strategy_leg_writes(
@@ -192,7 +192,7 @@ def test_miss_seed_zero_strategy_leg_writes(
         assert out.applied, f'开成: {out.reason}'
         assert not any((c[1] or '').startswith('strategy_ore_open_grant')
                        for c in calls), \
-            f'未掷中策略腿零写: {[c[1] for c in calls]}'
+            f'未掷中只供策略算分的实现分支零写: {[c[1] for c in calls]}'
         pts = gs.spheres.value.points if gs.spheres.value else ()
         assert not any(p[1] == 10 and p[2] == 10 for p in pts), \
             '零授予点'

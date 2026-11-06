@@ -137,7 +137,7 @@ def test_entry_gate_miss_fails_back(test_context, monkeypatch,
     miss(op, monkeypatch)
     rs = _run_node(test_context, op, op.observe)
     assert not rs.is_success, f'{screen_key}: 门 miss 应 fail 交回:{rs!r}'
-    assert '入口锚未命中(交回外循环重判)' in (rs.status or ''), (
+    assert '入口识别标志未命中(交回外循环重判)' in (rs.status or ''), (
         f'{screen_key}: 误分发 fail 文案沿用现役:{rs!r}')
     assert op._obs is None, f'{screen_key}: 门早退不装载 obs'
 
@@ -312,12 +312,12 @@ def test_anchor_free_advance_succeeds_immediately(test_context,
     monkeypatch.setattr(op, 'round_by_find_and_click_area',
                         lambda s, sc, a, **k: _Area(True), raising=False)
     rs = _run_node(test_context, op, op.act)
-    assert rs.is_success and '推进已发(免锚)' in (rs.status or ''), (
+    assert rs.is_success and '推进已发(免识别标志)' in (rs.status or ''), (
         f'免锚发出即 success:{rs!r}')
     # 已发重入(空锚无裁决信号)→ 同免锚出口,不误判完成/失败
     op._advanced_once = True
     rs2 = _run_node(test_context, op, op.act)
-    assert rs2.is_success and '推进已发(免锚)' in (rs2.status or ''), (
+    assert rs2.is_success and '推进已发(免识别标志)' in (rs2.status or ''), (
         f'免锚重入同出口(裁决不可达):{rs2!r}')
 
 

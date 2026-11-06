@@ -116,7 +116,7 @@ def test_huishou_compose_legs_chain_in_order(rows_sink: _RowSink) -> None:
     # 「效果串恒 2 条」失效——守卫先红,勿盲改断言数。
     assert set(equips_by_category('进阶')) & \
         set(EQUIP_ACQUIRE_CONSEQUENCES) == set(), \
-        '进阶池 ∩ 后果表须为空(腿1 效果串恒 1 条前提)'
+        '进阶池 ∩ 后果表须为空(效果条目1 效果串恒 1 条前提)'
     # 预采样(独立 rng 实例按消费序恰 1 抽):与实际注入的 rng 同种子
     # 同序——入队腿若预掷(消费第 2 抽)不影响首抽名,故另以效果串腿序
     # 与队列值共同钉死「入队腿零采样」(scheduled 串只含节拍不含采样值,
@@ -137,7 +137,7 @@ def test_huishou_compose_legs_chain_in_order(rows_sink: _RowSink) -> None:
     assert out.effects == (
         f'strategy_random_equip:{equip_pick}',
         'strategy_grant_scheduled:随机简易(类别池)@5',
-    ), '效果串恰 2 条且两腿形态字面分明'
+    ), '效果串恰 2 条且两条效果条目形态字面分明'
     assert gs.pending_strategy_grants.value == ((_CARD, 5),), \
         f'队列值: {gs.pending_strategy_grants.value}'
     assert rows_sink.kinds() == [], '正常路径零申报行'

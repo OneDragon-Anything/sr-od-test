@@ -95,7 +95,7 @@ def test_free_market_pick_chain_converts_leg2(
         boxes = [s for s in gs.bench.value.slots
                  if s is not None and s.kind == 'supply_box']
         assert len(boxes) == 1 and boxes[0].item == '简易武装箱', \
-            f'腿2 采样经转换净得 1 箱: {[(s.kind, s.item) for s in gs.bench.value.slots if s is not None and s.kind != "empty"]!r}'
+            f'效果条目2 采样经转换净得 1 箱: {[(s.kind, s.item) for s in gs.bench.value.slots if s is not None and s.kind != "empty"]!r}'
         assert gs.equips.value == equips_before, \
             f'被转换装备零入栏: {gs.equips.value!r}'
     finally:

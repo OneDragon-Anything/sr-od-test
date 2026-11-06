@@ -49,7 +49,7 @@ def test_registry_row_r1_default_economy() -> None:
     2026-11-04 反向改判,复活即裁判定向漂移。"""
     eff = STRATEGY_ECONOMY[_CARD]
     assert eff.instant_gold == 0 and eff.xp_instant == 0, \
-        f'注册行即时双腿复活(奖励载荷单一源在发放表): ' \
+        f'注册行即时两条效果条目复活(奖励载荷单一源在发放表): ' \
         f'instant_gold={eff.instant_gold}/xp_instant={eff.xp_instant}'
 
 

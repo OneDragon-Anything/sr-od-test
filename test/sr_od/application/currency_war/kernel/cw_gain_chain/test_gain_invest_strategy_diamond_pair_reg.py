@@ -110,7 +110,7 @@ def test_pair_legs_grant_peipei_then_diamond(rows_sink: _RowSink) -> None:
                                  rng=random.Random(0))
     assert effects == ('char_grant:佩佩(placed=True,merge=0,uid=1)',
                        f'named_equip_grant:{_EQUIP}(placed=True)'), \
-        f'双腿步串漂移: {effects!r}'
+        f'两条效果条目步串漂移: {effects!r}'
     units = bench_units_of(gs)
     assert len(units) == units_before + 1, '备战恰 +1 单位'
     assert (units[-1].char_id, units[-1].star) == ('佩佩', 1), \

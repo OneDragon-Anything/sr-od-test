@@ -78,7 +78,7 @@ def test_yingyue_chain_writes_tier_and_places_two_chars() -> None:
                                  rng=rng0)
     assert gs.yingyue_cost_tier.value == 1, \
         '拿卡拍费用档初始写 1(特殊景元起始档)'
-    assert len(effects) == 3, f'效果串 3 条(tier+双腿): {effects}'
+    assert len(effects) == 3, f'效果串 3 条(tier+两条效果条目): {effects}'
     assert effects == ('pick_invest_yingyue_tier',
                        'char_grant:镜流(placed=True,merge=0,uid=1)',
                        'char_grant:景元(placed=True,merge=0,uid=2)'), \

@@ -82,7 +82,7 @@ def test_gongsi_yanxuan_effect_spec_entry() -> None:
         'duties 对表姊妹落码形(裁决联动禁两态)'
     for token in ('位面段', '补发', '2026-11-01', '固定理财族同判', '独特'):
         assert token in (spec.notes or ''), f'notes 承载裁定语义缺 {token}'
-    assert (spec.notes or '').endswith('2★ 直出翻星腿与基线共享(人才下沉局)'), \
+    assert (spec.notes or '').endswith('2★ 直出翻星效果条目与基线共享(人才下沉局)'), \
         'notes 尾行特征串(条目锚)'
 
 
