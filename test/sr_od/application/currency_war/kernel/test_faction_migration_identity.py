@@ -4,11 +4,16 @@
 迁移前在旧代码上生成期望快照(fixtures/gen_faction_snapshots.py →
 faction_migration_snapshots.json),迁移后本文件重建同构板面逐位断言——
 除变化①②(副档投资分/轮廓计数,按新语义单列断言)外全部恒等。
+**基线换代登记**:快照已随 required-deployed-retirement 迭代整文件
+重立(2026-11-06:fp 点名件折条源 = 锚/core 统一表达式 + 部署 L1
+两层支配编码,board_line 的 fp/l1 面按新语义重立;受克 punished
+留档轴随换代消失,受克恒等断言退役)——当前 JSON 是
+required-deployed-retirement 后基线,换代前的恒等对照归 git 历史。
 
 板面构造与生成脚本同源(importlib 加载复用,禁第二份构造逻辑——
 构造漂移 = 恒等断言失效):每线 3 代表板面(零羁绊/半成型/成型)+
 2 全局混合板面 = 65;快照面 = 成型度/线距离逐档进度/部署 L1/L2/L3
-(65×21 全组合)+ 囤货采购集/受克判定/投资通道逐卡加分/阵容轮廓。
+(65×21 全组合)+ 囤货采购集/投资通道逐卡加分/阵容轮廓。
 
 测试纪律:贵计算一次跑完(module fixture 现算全部值,断言共用);
 JSON 里的 invest_old/all_factions_old 仅供人工对照,不作断言面
@@ -33,9 +38,6 @@ from sr_od.application.currency_war.kernel.cw_invest_channels import (
     env_line_bonus,
     strategy_line_bonus,
 )
-from sr_od.application.currency_war.kernel.cw_line_scales import (
-    COUNTER_PICK_PENALTY,
-)
 from sr_od.application.currency_war.kernel.cw_line_switch import (
     line_distance,
     tier_progress,
@@ -44,21 +46,8 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.deploy_search imp
     _line_form_tier_groups,
     selection_score,
 )
-from sr_od.application.currency_war.strategies.impl.mandate_v1.pick_common import (
-    AFFIX_COUNTERS_FACTIONS,
-    counter_pick_penalty,
-)
 
 _FIXTURES = Path(__file__).parent / 'fixtures'
-
-#: 迁移前快照 ``punished`` 字段的解读轴:活链路 2 条词缀克制的机制
-#: 属性名(= 快照生成时点旧克制表的有效行,git 历史可溯)。仅用于解读
-#: 随仓提交的历史期望数据,非生产数据源——生产侧克制登记已直写为
-#: 羁绊名轴(pick_common.AFFIX_COUNTERS_FACTIONS,3.2 克制表直写)。
-_LEGACY_COUNTER_MECHS: dict[str, frozenset[str]] = {
-    '净化身心': frozenset({'DoT', '减益'}),
-    '永久创伤': frozenset({'燃血'}),
-}
 
 
 def _load_gen_module():
@@ -137,14 +126,13 @@ def test_migration_identity_board_lines(snapshot: dict, fixtures: dict) -> None:
 
 
 def test_migration_identity_line_static(snapshot: dict) -> None:
-    """恒等静态面:囤货采购集(角色件/装备件)与受克判定输出逐线相等。
+    """恒等静态面:囤货采购集(角色件/装备件)逐线相等。
 
-    受克判定 = 选卡克制减分机器(counter_pick_penalty,3.2 起直写表判
-    锚点线档 0 键);期望值由迁移前快照 ``punished`` 字段(旧机器的受克
-    机制属性集)按解读轴推出——活链路 2 条词缀 × 21 线逐线比对,
-    新旧机器判定值恒等即直写迁移行为恒等。"""
-    assert set(_LEGACY_COUNTER_MECHS) == set(AFFIX_COUNTERS_FACTIONS), \
-        '活链路词缀集与新克制表键集漂移'
+    (受克判定恒等断言已随 required-deployed-retirement 快照基线换代
+    删除:其对照轴 = 迁移前快照 ``punished`` 留档字段(旧机器受克机制
+    属性集),整文件重生成后不复产出——3.2 直写表迁移的恒等验证使命
+    已完成,受克现行行为 = pick_common.AFFIX_COUNTERS_FACTIONS 直写
+    表 + 档 0 键交集,沿革考古走 git 历史。)"""
     from sr_od.application.currency_war.kernel import cw_intention
     for comp in COMP_LIBRARY:
         want = snapshot['line_static'][comp.name]
@@ -153,12 +141,6 @@ def test_migration_identity_line_static(snapshot: dict) -> None:
             f'{comp.name} 囤货角色件漂移'
         assert sorted(equips) == want['hoard_equips'], \
             f'{comp.name} 囤货装备件漂移'
-        legacy_punished = frozenset(want['punished'])
-        core = frozenset(comp.core_faction_reqs)
-        for affix, legacy_mechs in _LEGACY_COUNTER_MECHS.items():
-            hit = counter_pick_penalty(affix, core) == COUNTER_PICK_PENALTY
-            assert hit == (not legacy_punished.isdisjoint(legacy_mechs)), \
-                f'{comp.name} 受克判定输出漂移({affix})'
 
 
 def test_invest_bonus_subtier_semantics(snapshot: dict) -> None:

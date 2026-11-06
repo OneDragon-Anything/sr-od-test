@@ -119,22 +119,50 @@ def test_dp_fill_captures_multi_group_tier_mix() -> None:
         f'DP 联合分配捕获双组凑档(扰动件出局),实际 {sorted(out)}'
 
 
-def test_required_deployed_missing_zeroes_l1() -> None:
-    """required 逐名折条(希儿不在场 → 希儿量子线 L1 = 0):无希儿的
-    量子板不成型,过渡/散件板竞争胜出。"""
+def test_l1_two_layer_named_dominance() -> None:
+    """L1 两层支配编码(required-deployed-retirement design §2.2-1):
+    named 层(点名件在场率,锚/core 统一表达式)×10⁹ 严格支配档位层
+    ×10⁸——原 required 灭零的防形态「缺点名件板赢满点名件板」由层间
+    域差消除(跨线同池单 argmax 的灭零等价);缺点名件板不再恒 0,
+    层内档位完成度保留连续比较面。锁四件事:
+    1. 满点名件板(≥10⁹)恒压任何缺点名件板(<10⁹)——灭零等价;
+    2. 缺锚板不再灭零(档位层保留部分分,原灭零过严面解除);
+    3. 部分点名件过渡板压缺锚终局板(跨域新序:点名件完整度第一序);
+    4. 同缺点名件两板由档位层先决(同域板间序,旧序走 L2/L3)。"""
     comp = get_comp('希儿量子')
-    with_seele = [_u('希儿'), _u('花火'), _u('符玄'), _u('缇宝')]
-    out_with = ds.selection_score(
-        _panel(with_seele, locked=True, locked_comp=comp),
-        with_seele, comp, ('量子同频', '贝洛伯格'))
-    # required 折条:3 量子成员在场但无希儿 → L1 = 0。
-    l1_none = ds.selection_score(
-        _panel([_u('花火'), _u('符玄'), _u('缇宝')], locked=True,
-               locked_comp=comp),
-        [_u('花火'), _u('符玄'), _u('缇宝')], comp,
-        ('量子同频', '贝洛伯格'))[0]
-    assert l1_none == 0.0, '希儿不在场 → 该线 L1 = 0'
-    assert out_with[0] > 0.0
+
+    def l1_of(units: list) -> float:
+        return ds.selection_score(
+            _panel(units, locked=True, locked_comp=comp),
+            units, comp, ('量子同频', '贝洛伯格'))[0]
+
+    # 1. 满锚板(锚希儿在板)vs 缺锚板(量子 4 件无希儿):named_rate
+    #    1 vs 0 → 10⁹ 域差,档位高不救(原灭零防形态)。
+    with_anchor = [_u('希儿'), _u('花火'), _u('符玄')]
+    miss_4q = [_u('花火'), _u('符玄'), _u('缇宝'), _u('银狼')]
+    l1_full, l1_miss = l1_of(with_anchor), l1_of(miss_4q)
+    assert l1_full >= 1e9 > l1_miss, \
+        f'满点名件板({l1_full})恒压缺点名件板({l1_miss})'
+    # 2. 缺锚板保留档位层部分分(旧灭零恒 0;< 10⁸ = named 层空)
+    assert 0 < l1_miss < 1e8, \
+        f'缺锚板档位层部分分保留(0 < {l1_miss} < 10⁸)'
+    # 4. 同缺锚两板档位层先决(量子 4 件 > 量子 3 件)
+    miss_3q = [_u('花火'), _u('符玄'), _u('缇宝')]
+    l1_miss_3q = l1_of(miss_3q)
+    assert l1_miss > l1_miss_3q > 0, '同缺点名件 → 档位层先决'
+    # 3. 部分点名件过渡板(core 3/5 在板 → named 层 0.6×10⁹)压
+    #    缺锚终局板(≤ 10⁸)——跨域新序。
+    from sr_od.application.currency_war.kernel.cw_intention import (
+        transition_entry_of,
+    )
+    trans = transition_entry_of('仙舟3+列车2')
+    assert trans is not None
+    t_units = [_u(n) for n in trans.core_chars[:3]]
+    t_panel = _panel(t_units, locked=True, locked_comp=trans)
+    l1_trans = ds.selection_score(
+        t_panel, t_units, trans, ('仙舟', '列车同行'))[0]
+    assert l1_trans >= 5e8 > l1_miss, \
+        f'部分点名件过渡板({l1_trans})压缺锚终局板({l1_miss})'
 
 
 # (test_seele_binary_needs_two_amplifiers 已随 or-reqs-retirement 3.3

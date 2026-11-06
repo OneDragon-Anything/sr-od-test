@@ -55,8 +55,9 @@ def _lib(name: str) -> Comp:
 
 def test_library_structure_generated_combos() -> None:
     """生成器结构锁:库恒 10 条(五块两两组合序),档 0 = 两块
-    键 AND,core/required = 两块点名件保序去重(生成期显式填),need_star
-    两块合批,其余 Comp 字段缺省空。"""
+    键 AND,core = 两块点名件保序去重(点名件 = core 全员承载——
+    required_deployed 已退役),need_star 两块合批,其余 Comp 字段
+    缺省空。"""
     assert [e.name for e in TRANSITION_LIBRARY] == [
         '仙舟3+DOT2', '仙舟3+列车2', '仙舟3+希儿量2', '仙舟3+希儿贝2',
         'DOT2+列车2', 'DOT2+希儿量2', 'DOT2+希儿贝2',
@@ -71,8 +72,6 @@ def test_library_structure_generated_combos() -> None:
             f'{name}: 档 0 = 两块 (bond, tier) AND,且只填档 0'
         assert e.core_chars == list(dict.fromkeys((*a.named, *b.named))), \
             f'{name}: core = 两块点名件保序去重'
-        assert e.required_deployed == tuple(e.core_chars), \
-            f'{name}: required 生成期显式填 = core'
         assert e.need_star == {n: s for blk in (a, b) for n, s in blk.need_star}
     # 去重证据:希儿双修两块点名合并为一人
     assert by_name['希儿量2+希儿贝2'].core_chars == ['希儿']

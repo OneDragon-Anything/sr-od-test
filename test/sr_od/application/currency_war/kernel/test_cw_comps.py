@@ -19,6 +19,7 @@ from sr_od.application.currency_war.kernel.cw_comps import (
     COMP_LIBRARY,
     Comp,
     _validate_comp_equip_assign,
+    carry_anchor,
     derive_member_priority,
     form_progress,
     get_comp,
@@ -45,7 +46,7 @@ class _Slots:
 
 class _Panel:
     """轻量假想面板桩:board.value = 羁绊计数 dict + deployed 视图
-    (required_deployed 在板判定;缺省 deployed 视图 = 按 0 计保守向)。"""
+    (点名件在板判定;缺省 deployed 视图 = 按 0 计保守向)。"""
 
     def __init__(self, board: dict[str, int],
                  front: tuple[str, ...] = ()) -> None:
@@ -260,12 +261,14 @@ def test_seele_quantum_final_tiers() -> None:
     本体,本测试锁结构不被手改漂移):
     档 0 = 量子4+贝洛伯格4 纯 AND(终局完全体,双修即唯一主流终局形态)、
     档 1 = 战技点2/治疗2(实证 53/67 与 36/67,加分层不进成型判定)、
-    flex 收敛为盛会之星/列车同行、required = 希儿在场。"""
+    flex 收敛为盛会之星/列车同行、点名件 = 锚希儿(carry_anchor;
+    required_deployed 已退役,「希儿在场」合取支由锚体系承载——fp
+    折条/部署 named 层同式消费)。"""
     comp = get_comp('希儿量子')
     assert comp.faction_reqs == {
         0: {'量子同频': 4, '贝洛伯格': 4}, 1: {'战技点': 2, '治疗': 2}}
     assert comp.flex_factions == ['盛会之星', '列车同行']
-    assert comp.required_deployed == ('希儿',)
+    assert carry_anchor(comp) == '希儿'
 
 
 def test_seele_quantum_fp_curve() -> None:

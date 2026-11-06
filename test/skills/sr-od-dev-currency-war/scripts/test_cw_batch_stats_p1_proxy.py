@@ -113,30 +113,45 @@ class TestCompDoneP1Proxy:
     def test_game_metrics_prefers_round_end_snapshot_over_stale_mirror(self):
         """凑齐判定口径 = 行内 state 轮末快照现算优先,镜像回退(口径
         单一源 = 模块 docstring ②节;kernel 判据单一源 =
-        cw_launch_admission.readiness_form_ok_from_snapshot)。动机 =
+        cw_launch_admission.readiness_form_ok)。动机 =
         2026-09-15 批 4/300 低估实证:决策行 form_ok 是策略器镜像写端
         商店帧时点读数,轮内升级补位达标局恒 False——轮末快照现算
-        翻正;反向快照未物化压制镜像 True。锁两件事:
-        1. 轮末快照可算时覆盖镜像(④/② 同源走 _row_form_ok);
-        2. 快照缺输入的行回退镜像读数(旧行/档案行零漂移,既有矩阵
-           测试即回退分支)。"""
-        pair = ('仙舟', '列车同行')
-        snap = _materialized_snapshot(pair)
-        # 翻正分支:镜像 False(stale),轮末板面已物化 → 判真
-        row_ok = _row(p1_pair=pair, form_ok=False)
+        翻正;反向快照已物化但未达标压制镜像 True。载体 =
+        locked_comp 终局线帧(p1_pair 配方锁伪阵容路径已随配方决策层
+        退役恒走「判据不可判 → 回退镜像」,快照现算面只在锁定线帧
+        可达——skill 脚本 _readiness_from_snapshot docstring 已声明)。
+        锁三件事:
+        1. 轮末快照可算时覆盖镜像(②同源走 _row_form_ok)——满档 ∧
+           点名件(锚)在板 → 翻正;满档但点名件缺板 → 压制(点名件
+           统一表达式进完备契约,required-deployed-retirement 后语义);
+        2. p1_pair 帧(配方锁)现行恒回退镜像读数(伪阵容载体已退役);
+        3. 快照缺输入回退镜像。"""
+        line = '希儿量子'
+        snap = _materialized_snapshot(line)
+        # 翻正分支:镜像 False(stale),轮末板面已物化(满档+锚在板) → 判真
+        row_ok = _row(locked_comp=line, form_ok=False)
         row_ok['state_board_factions'] = snap['board_factions']
         row_ok['state_deployed'] = snap['deployed']
         m_ok = _gs.game_metrics(_game([row_ok]))
         assert m_ok['exit_form_ok'] is True
         assert m_ok['comp_done'] == 1
-        assert m_ok['comp_proxy'] is True
-        # 压制分支:镜像 True(stale),轮末板面未物化 → 判假
-        row_ng = _row(p1_pair=pair, form_ok=True)
-        row_ng['state_board_factions'] = {}
+        assert m_ok['comp_proxy'] is False
+        # 压制分支:镜像 True(stale),轮末板面物化但点名件缺板
+        # (满档 ∧ 锚不在板 → fp < 1.0)→ 判假
+        row_ng = _row(locked_comp=line, form_ok=True)
+        row_ng['state_board_factions'] = snap['board_factions']
         row_ng['state_deployed'] = []
         m_ng = _gs.game_metrics(_game([row_ng]))
         assert m_ng['exit_form_ok'] is False
         assert m_ng['comp_done'] == 0
+        # p1_pair 帧(配方锁):伪阵容载体已退役 → 判据不可判 →
+        # 回退镜像读数(现行语义锁,防「快照现算面复活」静默漂移)。
+        row_p1 = _row(p1_pair=('仙舟', '列车同行'), form_ok=True)
+        row_p1['state_board_factions'] = {'仙舟': 3, '列车同行': 2}
+        row_p1['state_deployed'] = []
+        m_p1 = _gs.game_metrics(_game([row_p1]))
+        assert m_p1['exit_form_ok'] is True
+        assert m_p1['comp_proxy'] is True
 
     def test_game_metrics_falls_back_to_mirror_without_snapshot(self):
         """回退分支显式锁:行缺轮末快照两键(旧批/档案形状)→ 判定 =
@@ -148,14 +163,19 @@ class TestCompDoneP1Proxy:
         assert m['comp_done'] == 1
 
 
-def _materialized_snapshot(pair: tuple) -> dict:
-    """按注册表档位现造「已物化」轮末快照(档位消费 kernel 单一源,
-    测试不手写 tier 值——registry 演进测试自动跟随)。"""
-    from sr_od.application.currency_war.kernel.cw_intention import (
-        pair_target_comp,
+def _materialized_snapshot(line: str) -> dict:
+    """按注册表档位现造「已物化」轮末快照(档位/点名件消费 kernel
+    单一源,测试不手写 tier 值——registry 演进测试自动跟随;点名件 =
+    锚/core 统一表达式,与 form_progress 同式——
+    required-deployed-retirement 后语义)。"""
+    from sr_od.application.currency_war.kernel.cw_comps import (
+        carry_anchor,
+        get_comp,
     )
-    comp = pair_target_comp(tuple(pair))
+    comp = get_comp(line)
+    assert comp is not None, f'终局线名未注册: {line}'
     board = {f: t for f, t in comp.core_faction_reqs.items() if t > 0}
-    deployed = [{'char_id': n}
-                for n in getattr(comp, 'required_deployed', None) or ()]
+    anchor = carry_anchor(comp)
+    named = (anchor,) if anchor else tuple(comp.core_chars)
+    deployed = [{'char_id': n} for n in named]
     return {'board_factions': board, 'deployed': deployed}

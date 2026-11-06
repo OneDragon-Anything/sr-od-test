@@ -49,9 +49,9 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate_state imp
 )
 
 _C_COMP = Comp(name='C组生长测', core_chars=[
-    '瓦尔特', '杰帕德', '停云', '希儿', '符玄'],
+    '瓦尔特', '杰帕德', '符玄'],
     faction_reqs={},
-    required_deployed=('瓦尔特', '杰帕德'))
+    plaza_carry='瓦尔特')
 
 
 def _frame(gs, *, round_num: int = 2) -> MandateFrame:
@@ -75,8 +75,10 @@ def _c_shape_session() -> tuple:
 
 def test_locked_empty_bond_line_core_shared_completion() -> None:
     """空羁绊线(反甲流形态,档 0 空 ∧ factions=[]):L1 由角色
-    完成度单独承载(core∪shared 口径,D2-3)——required 两件(瓦尔特/
-    杰帕德)与线成员符玄进目标态,非成员(停云/希儿)让位。"""
+    完成度单独承载(core∪shared 口径,D2-3;members 承载支不挂 named
+    层——分子已含锚)——members 手牌(锚瓦尔特/core 杰帕德/成员符玄)
+    满编即 3/3 唯一满分板,非成员(停云/希儿)让位(required_deployed
+    已退役,点名承载 = 锚 plaza_carry + core)。"""
     session, st = _c_shape_session()
     gs = cw4_gs(session, deploy_cap=3, level=3,
                 bench=[cw4_bc('瓦尔特'), cw4_bc('杰帕德')],
@@ -87,10 +89,10 @@ def test_locked_empty_bond_line_core_shared_completion() -> None:
     target = select_deployment(frame, assemble_prep_context(
         session, gs, frame))
     assert len(target) == 3, f'K 满编,实得 {sorted(target)}'
-    assert {'瓦尔特', '杰帕德'} <= set(target), \
-        f'required 两件进目标态(空羁绊线成员优先),实得 {sorted(target)}'
-    assert set(target) <= {'瓦尔特', '杰帕德', '停云', '希儿', '符玄'}, \
-        '目标态全部为线成员(core∪shared 口径)'
+    assert set(target) == {'瓦尔特', '杰帕德', '符玄'}, \
+        f'members 手牌(锚+core+成员)满编唯一满分,实得 {sorted(target)}'
+    assert '停云' not in target and '希儿' not in target, \
+        '非线成员让位(core∪shared 口径)'
     assert st.cw4_counters == counters_before, \
         f'纯函数零遥测(分键零写入),实得 {st.cw4_counters}'
 
