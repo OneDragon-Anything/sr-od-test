@@ -6,7 +6,7 @@
 - 选项归并读链 = T-9 过剩经费 design §2.2/§4.1/§4.2(设计权威版本 =
   .debug/progress/2026-09-23-invest-effects-calc/designs/
   T-9-guoshengjingfei.md);
-- 选卡上报(pick_supply 通道)= supply-pick design §2.0B/§3 验收锚 1
+- 选卡上报(pick_supply 通道)= supply-pick design §2.0B/§3 验收基准 1
   + T-60 批漏项补齐(零写迁移通道;按动作 key 幂等契约);
 - 节点推进接入调用 = 补给节点**零推进**接入调用判据面(2026-10-29 流程模型
   对齐:补给选完关模态回备战自动弹店,推进归出战动作 supply_finish,
@@ -530,7 +530,7 @@ def test_double_row_five_columns_groups_by_column() -> None:
 
 
 def test_missing_char_anchor_degrades_to_orphan_column() -> None:
-    """锚点失读降级:某列角色名缺席 → 该列装备簇自成孤儿列(char='',
+    """识别标志失读降级:某列角色名缺席 → 该列装备簇自成孤儿列(char='',
     不并入邻列);列序按 x 保持,其余列配对不受扰。"""
     # 第 3 列(花火,x=960)失读:其余四列识别标志显式传 xs
     chars = _chars(('镜流', '希儿', '停云', '杰帕德'),
@@ -546,8 +546,8 @@ def test_missing_char_anchor_degrades_to_orphan_column() -> None:
 
 
 def test_char_only_column_first_class_option() -> None:
-    """char-only 列(锚点在、装备簇缺)→ equip=''、extra_equips=() 的
-    一等选项成立(人才储备类变体天然承接);点击点 = 角色锚 x。"""
+    """char-only 列(识别标志在、装备簇缺)→ equip=''、extra_equips=() 的
+    一等选项成立(人才储备类变体天然承接);点击点 = 角色识别标志 x。"""
     chars = _chars(('镜流', '希儿', '花火'))
     equips = [(x, _EQUIP_Y, n) for x, n in
               zip(_COL_XS[1:3], ('折叠小刀', '量产型装甲'),
@@ -556,12 +556,12 @@ def test_char_only_column_first_class_option() -> None:
     assert len(out) == 3
     first = out[0][0]
     assert (first.char, first.equip, first.extra_equips) == ('镜流', '', ())
-    assert out[0][1] == _COL_XS[0], 'char-only 列点击点 = 锚 x'
+    assert out[0][1] == _COL_XS[0], 'char-only 列点击点 = 识别标志 x'
     assert out[1][0].equip == '折叠小刀' and out[2][0].equip == '量产型装甲'
 
 
 def test_zero_anchor_fallback_cluster_skeleton() -> None:
-    """零锚点兜底(角色名极端全失读)→ 装备 x 簇作骨架,各簇自成
+    """零识别标志兜底(角色名极端全失读)→ 装备 x 簇作骨架,各簇自成
     char='' 列,列序 = 簇 x 序。"""
     equips = _single_row(('折叠小刀', '量产型装甲', '光能电池'))
     out = _group_supply_columns([], equips)
@@ -593,7 +593,7 @@ def test_worst_case_geometry_pairs_to_own_anchor() -> None:
     """最差几何造料(5 字件名 × 2 字角色名,簇心-自身识别标志 ~112)不破
     配对:归入自身识别标志(112 ≤ 容差 150),距邻识别标志 240 > 150 不误归。"""
     chars = [(_COL_XS[0], '镜流'), (_COL_XS[1], '希儿')]
-    # 量产型装甲(5 字名)文本中心右移:距自身锚 112(单排帧实测最差列)
+    # 量产型装甲(5 字名)文本中心右移:距自身识别标志 112(单排帧实测最差列)
     equips = [(_COL_XS[0] + 112, _EQUIP_Y, '量产型装甲'),
               (_COL_XS[1] + 30, _EQUIP_Y, '折叠小刀')]
     out = _group_supply_columns(chars, equips)
@@ -977,7 +977,7 @@ def test_auto_popup_supply_pick_does_not_advance(
 
 def test_divert_form_supply_pick_does_not_advance(
         test_context, monkeypatch) -> None:
-    """divert 形态剧本:备战帧已锚(CwScreenPrep 写端形态,此处直接锚)
+    """divert 形态剧本:备战帧已锚定(CwScreenPrep 写端形态,此处直接锚定)
     → 补给屏(备战的 divert 分支)观察 node 等值 reanchor → 确认点击
     **零节点推进**(2026-10-29 流程模型对齐,同自动弹形态)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
