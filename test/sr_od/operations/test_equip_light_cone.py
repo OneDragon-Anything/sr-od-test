@@ -1,12 +1,13 @@
 """EquipLightConeOp(替换光锥)定位算法与节点流程测试。
 
 测试层级声明:SIFT 落格投票定位为纯函数直测(fixture = 实机替换界面截图,
-目标卡位置已知);节点流程为打桩流程测试(round_by_* / OCR 读名打桩)——
-替换交互链本体(点替换→选卡→点替换→自动回 TAB)由生产实机摸底覆盖,
-不在此重复。
+目标卡位置已知;定位算法住 grid_template_locate 公共模块,遗器 op 同源
+复用);节点流程为打桩流程测试(round_by_* / OCR 读名打桩)——替换交互链
+本体(点替换→选卡→点替换→自动回 TAB)由生产实机摸底覆盖,不在此重复。
 
-锁的内容(出处 src/sr_od/operations/equip_light_cone.py):
-- 模板加载:解包图标透明底合成白底;表外光锥名返回 None;
+锁的内容(出处 src/sr_od/operations/equip_light_cone.py +
+grid_template_locate.py):
+- 模板加载:解包图标透明底合成白底;缺失路径返回 None;
 - 落格投票定位:目标卡得票显著(实机 15:2),定位中心吸附列中心;
   目标不在当前屏(涂掉目标特征)返回 None;
 - 扫描循环:当前屏未命中 → 拖动重扫(有界);命中即点击并停;
@@ -25,10 +26,10 @@ import pytest
 from one_dragon.base.geometry.rectangle import Rect
 from one_dragon.utils import cv2_utils
 from sr_od.operations import equip_light_cone as equip_module
-from sr_od.operations.equip_light_cone import (
-    EquipLightConeOp,
-    _load_template_gray,
-    _locate_cone_cell,
+from sr_od.operations.equip_light_cone import EquipLightConeOp
+from sr_od.operations.grid_template_locate import (
+    load_template_gray,
+    locate_cell_by_votes,
 )
 from test.conftest import SrTestContext
 from test.harness.fixture_controller import (
@@ -39,6 +40,8 @@ from test.harness.fixture_controller import (
 
 _FIXTURE_DIR = Path(__file__).parent / 'equip_light_cone'
 _LIST_AREA: Rect = Rect(95, 130, 1420, 960)
+_TEMPLATE_REL: str = 'assets/game_data/light_cone_icons/lightcone_23024.webp'  # 行于流逝的岸
+_CONE_COL_CENTERS: list[float] = equip_module._cone_col_centers(_LIST_AREA)
 
 
 class _NoWindowEquipLightCone(EquipLightConeOp):
@@ -50,61 +53,64 @@ class _NoWindowEquipLightCone(EquipLightConeOp):
 
 
 def test_load_template_gray() -> None:
-    """模板加载:表内光锥出灰度图;表外名字 None(不抛异常,调用方判停)。"""
-    template = _load_template_gray('行于流逝的岸')
+    """模板加载:图标存在出灰度图;缺失路径 None(不抛异常,调用方判停)。"""
+    template = load_template_gray(_TEMPLATE_REL)
     assert template is not None
     assert template.ndim == 2  # 灰度单通道
 
-    assert _load_template_gray('不存在的光锥名字') is None
+    assert load_template_gray('assets/game_data/light_cone_icons/lightcone_99999.webp') is None
 
 
-def test_locate_cone_cell_on_fixtures() -> None:
+def test_locate_on_fixtures() -> None:
     """实机 fixture 定位:目标卡分别在第一行第一列/第二列,列中心吸附正确。"""
-    template = _load_template_gray('行于流逝的岸')
+    template = load_template_gray(_TEMPLATE_REL)
     assert template is not None
 
     screen_a = cv2_utils.read_image(str(_FIXTURE_DIR / 'replace_target_row0_col0.webp'))
-    cell = _locate_cone_cell(cv2.cvtColor(screen_a, cv2.COLOR_RGB2GRAY), template, _LIST_AREA)
+    cell = locate_cell_by_votes(cv2.cvtColor(screen_a, cv2.COLOR_RGB2GRAY), template,
+                                _LIST_AREA, _CONE_COL_CENTERS)
     assert cell is not None, 'fixture A 应定位到第一行第一列'
     assert abs(cell.x - 167) <= 10, f'列中心应吸附首列(~167),实际 {cell.x}'
     assert 195 <= cell.y <= 360, f'应落在第一行带,实际 {cell.y}'
 
     screen_b = cv2_utils.read_image(str(_FIXTURE_DIR / 'replace_target_row0_col1.webp'))
-    cell_b = _locate_cone_cell(cv2.cvtColor(screen_b, cv2.COLOR_RGB2GRAY), template, _LIST_AREA)
+    cell_b = locate_cell_by_votes(cv2.cvtColor(screen_b, cv2.COLOR_RGB2GRAY), template,
+                                  _LIST_AREA, _CONE_COL_CENTERS)
     assert cell_b is not None, 'fixture B 应定位到第一行第二列'
     assert abs(cell_b.x - 306) <= 10, f'列中心应吸附第二列(~306),实际 {cell_b.x}'
 
 
-def test_locate_cone_cell_rejects_when_target_absent() -> None:
+def test_locate_rejects_when_target_absent() -> None:
     """负例:目标卡特征被涂掉(移出当前屏的模拟)→ 返回 None 不误点。"""
-    template = _load_template_gray('行于流逝的岸')
+    template = load_template_gray(_TEMPLATE_REL)
     assert template is not None
 
     screen = cv2_utils.read_image(str(_FIXTURE_DIR / 'replace_target_row0_col0.webp'))
     gray = cv2.cvtColor(screen, cv2.COLOR_RGB2GRAY)
     # 涂白第一行前两列(定位结果所在格)与整行特征——模拟目标不在该屏
     gray[130:520, 95:720] = 255
-    assert _locate_cone_cell(gray, template, _LIST_AREA) is None
+    assert locate_cell_by_votes(gray, template, _LIST_AREA, _CONE_COL_CENTERS) is None
 
 
 def test_find_and_select_scans_then_clicks(
     test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """扫描循环:前两屏未命中 → 拖动 2 次后第三屏命中并点击;
-    始终未命中 → 拖满上限后显式失败。"""
+    扫描预算耗尽 → 立即失败不再拖动。"""
+    from one_dragon.base.geometry.point import Point
+
     op = _NoWindowEquipLightCone(test_context, cone_name='行于流逝的岸')
     state = {'scans': 0}
     drags: list = []
     clicks: list = []
 
-    def _fake_locate(screen_gray, template_gray, list_rect):
+    def _fake_locate(screen_gray, template_gray, list_rect, col_centers, **kwargs):
         state['scans'] += 1
         if state['scans'] >= 3:  # 前两屏未命中,第三屏(拖动后)命中
-            from one_dragon.base.geometry.point import Point
             return Point(306, 270)
         return None
 
-    monkeypatch.setattr(equip_module, '_locate_cone_cell', _fake_locate)
+    monkeypatch.setattr(equip_module, 'locate_cell_by_votes', _fake_locate)
     monkeypatch.setattr(test_context.controller, 'drag_to',
                         lambda end, start=None, duration=0.5: drags.append((start, end)))
     monkeypatch.setattr(test_context.controller, 'click',
@@ -177,8 +183,8 @@ def test_happy_flow_and_already_equipped(
     monkeypatch.setattr(EquipLightConeOp, 'round_by_find_area', _fake_find_area)
     monkeypatch.setattr(EquipLightConeOp, 'round_by_find_and_click_area', _fake_find_click)
     monkeypatch.setattr(EquipLightConeOp, '_read_name', _fake_read_name)
-    monkeypatch.setattr(equip_module, '_locate_cone_cell',
-                        lambda *args: Point(306, 270))
+    monkeypatch.setattr(equip_module, 'locate_cell_by_votes',
+                        lambda *args, **kwargs: Point(306, 270))
     monkeypatch.setattr(test_context.controller, 'click', lambda pos, **kwargs: None)
     monkeypatch.setattr(test_context.controller, 'screenshot',
                         lambda independent=False: (0.0, np.zeros((1080, 1920, 3), dtype=np.uint8)))
