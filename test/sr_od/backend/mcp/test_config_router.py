@@ -1,4 +1,4 @@
-"""config_router 通用配置路由单测(trailblaze_power 体力计划接入)。
+"""config_router 通用配置路由单测(trailblaze_power 体力计划 + echo_of_war 周本计划接入)。
 
 锁的内容：
 
@@ -14,9 +14,15 @@
     顺序执行，插入位置即执行顺位）；不可解析 mission_id / idx 越界抛
     ValueError（新增是显式动作，失败必须可知）；
   - delete：按下标删除成功、越界 False、非数字 ValueError。
+- echo_of_war（全量补齐型列表，与开拓力相反 —— 不支持增删、update 原位改次数）：
+  - 注册形态：supported_ops 无 add/delete、有 update；id_kind=mission_id；
+  - validate：数值边界同开拓力 + 分类加严（花萼等非周本关卡拒绝）；
+  - update：mission_id 定位原位替换（顺序不变、mission 关联沿用既有条目）、
+    列表外 mission_id 返回 False、item_dict 与定位 mission_id 不一致抛 ValueError；
+  - get_config 当前实例返回 ctx.echo_of_war_config 同一对象（写穿契约同款）。
 
 测试零真实副作用：save 经 monkeypatch 置为计数 no-op（仍断言落盘被触发），
-不写任何实例的 yml；add/delete 后还原 plan_list 内存态，测试幂等。
+不写任何实例的 yml；add/delete/update 后还原 plan_list 内存态，测试幂等。
 """
 
 import pytest
@@ -107,3 +113,74 @@ class TestTrailblazePowerRoute:
                 entry.delete(config, 'abc')
         finally:
             del config.plan_list[original_len:]  # 原地还原内存态，不触发共享对象赋值守卫
+
+
+def _echo_entry():
+    """取 echo_of_war 路由条目（未注册即失败，锁注册契约）。"""
+    entry = get_entry('echo_of_war')
+    assert entry is not None, 'echo_of_war 路由未注册'
+    return entry
+
+
+class TestEchoOfWarRoute:
+    """echo_of_war 路由 entry 行为（全量补齐型列表：update 原位改次数）。"""
+
+    def test_route_shape(self) -> None:
+        """注册形态：不支持增删条目、支持 update，id 按 mission_id 定位。"""
+        entry = _echo_entry()
+        assert 'add' not in entry.supported_ops and 'delete' not in entry.supported_ops
+        assert 'update' in entry.supported_ops and entry.update is not None
+        assert entry.add is None and entry.delete is None
+        assert entry.id_kind == 'mission_id'
+
+    def test_validate_rejects_non_war_mission(self, test_context: SrTestContext) -> None:
+        """分类加严校验：非周本关卡（取开拓力分类的关卡）拒绝；周本关卡通过。"""
+        entry = _echo_entry()
+        power_plan = test_context.power_config.plan_list
+        non_war_id = power_plan[0].mission_id if power_plan else '生存索引 拟造花萼（赤） 虚无之蕾 丹鼎司'
+        bad = entry.item_from_dict({'mission_id': non_war_id, 'plan_times': 1})
+        err = entry.validate_item(test_context, bad)
+        assert err is not None and '历战余响' in err, f'非周本关卡应被拒并指明原因,实际 {err}'
+
+        war_list = test_context.echo_of_war_config.plan_list
+        assert war_list, '历战余响计划列表应被全量补齐'
+        good = entry.item_from_dict({
+            'mission_id': war_list[0].mission_id,
+            'plan_times': 2,
+            'run_times': 1,
+        })
+        assert entry.validate_item(test_context, good) is None
+
+    def test_update_in_place(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """update：mission_id 原位替换（顺序不变、mission 关联沿用）、未定位返回 False、
+        mission_id 不一致抛 ValueError；save 触发；写穿契约同款。"""
+        entry = _echo_entry()
+        config = test_context.echo_of_war_config
+        assert entry.get_config(test_context, None, None) is config
+
+        save_calls: list[int] = []
+        monkeypatch.setattr(type(config), 'save', lambda self: save_calls.append(1))
+        original_len = len(config.plan_list)
+        original_first = config.plan_list[0]
+        try:
+            replacement = entry.item_from_dict({
+                'mission_id': original_first.mission_id,
+                'plan_times': 5,
+            })
+            assert entry.update(config, original_first.mission_id, replacement) is True
+            assert len(config.plan_list) == original_len  # 原位替换,长度不变
+            assert config.plan_list[0] is replacement
+            assert replacement.mission is original_first.mission  # mission 关联沿用既有条目
+            assert save_calls
+
+            # 未定位:定位 id 与 item_dict 一致但列表中不存在 → False(handler 报未找到)
+            bogus = entry.item_from_dict({'mission_id': '生存索引 历战余响 不存在', 'plan_times': 1})
+            assert entry.update(config, '生存索引 历战余响 不存在', bogus) is False
+
+            mismatched = entry.item_from_dict({'mission_id': '另一个', 'plan_times': 1})
+            with pytest.raises(ValueError):
+                entry.update(config, original_first.mission_id, mismatched)
+        finally:
+            config.plan_list[0] = original_first  # 原位还原首项内存态
