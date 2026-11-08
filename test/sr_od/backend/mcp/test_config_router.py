@@ -9,8 +9,10 @@
 - add/delete/get_config 全链（经 entry 调用 = 注册后的最终行为）：
   - get_config 当前实例返回 ctx.power_config 同一对象 —— MCP 写穿与一条龙
     开拓力 app 共用实例、「改完即生效无需重启」的关键契约；
-  - add：合法 mission_id 经 guide_data 关联 mission 对象并入列尾、save 被触发；
-    不可解析 mission_id 抛 ValueError（追加是显式动作，失败必须可知）；
+  - add：合法 mission_id 经 guide_data 关联 mission 对象、save 被触发；
+    idx=None 尾部追加，指定 idx 插到该位（原位项后移 —— 一条龙按 plan_list
+    顺序执行，插入位置即执行顺位）；不可解析 mission_id / idx 越界抛
+    ValueError（新增是显式动作，失败必须可知）；
   - delete：按下标删除成功、越界 False、非数字 ValueError。
 
 测试零真实副作用：save 经 monkeypatch 置为计数 no-op（仍断言落盘被触发），
@@ -78,18 +80,27 @@ class TestTrailblazePowerRoute:
             # add：mission_id 从指南数据现取（真实可解析，不随数据更新失效）
             category = test_context.guide_data.get_category_list_in_power_plan()[0].value
             mission = test_context.guide_data.get_mission_list_in_power_plan(category)[0].value
-            item = _item_from({'mission_id': mission.unique_id, 'plan_times': 1})
 
-            entry.add(config, item)
-            assert len(config.plan_list) == original_len + 1
-            assert config.plan_list[-1] is item
-            assert item.mission is not None, 'add 必须关联 mission（一条龙运行按它导航）'
+            item_a = _item_from({'mission_id': mission.unique_id, 'plan_times': 1})
+            entry.add(config, item_a)  # 默认尾部追加
+            assert config.plan_list[-1] is item_a
+            assert item_a.mission is not None, 'add 必须关联 mission（一条龙运行按它导航）'
             assert save_calls, 'add 后必须触发落盘'
+
+            # 指定 idx 插头:插入位置即执行顺位,尾部项被顶到其后(不依赖原列表内容,空列表亦成立)
+            head = _item_from({'mission_id': mission.unique_id, 'plan_times': 1})
+            entry.add(config, head, 0)
+            assert config.plan_list[0] is head
+            assert config.plan_list[1] is item_a
+            assert len(config.plan_list) == original_len + 2
 
             with pytest.raises(ValueError):
                 entry.add(config, _item_from({'mission_id': '生存索引 不存在', 'plan_times': 1}))
+            with pytest.raises(ValueError):
+                entry.add(config, _item_from({'mission_id': mission.unique_id, 'plan_times': 1}), 999)
 
-            assert entry.delete(config, str(original_len)) is True
+            assert entry.delete(config, 0) is True  # 删头部项
+            assert entry.delete(config, str(original_len)) is True  # 删尾部项,还原
             assert len(config.plan_list) == original_len
             assert entry.delete(config, '999') is False
             with pytest.raises(ValueError):
