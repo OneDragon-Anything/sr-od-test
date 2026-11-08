@@ -97,6 +97,9 @@ def test_lookup_with_ascension() -> None:
     assert stage_by_name['60级'] == {'永恒之花': 5, '永寿荣枝': 6, '信用点': 100000}
     assert stage_by_name['70级'] == {'永恒之花': 10, '永寿荣枝': 8, '信用点': 200000}
     assert asc['total']['永恒之花'] == 15
+    # 「总计」汇总行必须被排除(混入会使 total 双倍统计)
+    assert '总计' not in stage_by_name
+    assert asc['total']['稀薄以太'] == 1994
     # 链路终点：材料 → 具体副本实例（与指南关卡同名对齐）
     assert asc['missions_by_material']['永恒之花'] == [
         {'category': '拟造花萼（赤）', 'mission': '丰饶之蕾', 'region': '边缘通路'}]
