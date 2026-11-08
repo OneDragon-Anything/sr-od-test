@@ -80,3 +80,28 @@ def test_register_cone_tools_smoke() -> None:
     assert cone_tool.description.startswith('观察类')
     query_schema = cone_tool.inputSchema['properties']['query']
     assert '查询词' in query_schema['description']
+
+
+def test_lookup_with_ascension() -> None:
+    """with_ascension=true 打通「光锥→晋阶材料→所属副本」（常量快照定值锁）：
+
+    惊魂夜分段表（60+70 级突破段累计 永恒之花15/永寿荣枝14 = 2026-11-08
+    实机计数条锚）、材料→副本实例映射；默认 false 不附带（向后兼容）。
+    """
+    hit = lookup_light_cone('惊魂夜', with_ascension=True)
+    assert hit['status'] == 'success'
+    asc = hit['data']['ascension']
+    assert asc is not None
+    # 突破段锚：60级/70级 材料与实机计数条一致（生成器锚点同源）
+    stage_by_name = {s['name']: s['materials'] for s in asc['stages']}
+    assert stage_by_name['60级'] == {'永恒之花': 5, '永寿荣枝': 6, '信用点': 100000}
+    assert stage_by_name['70级'] == {'永恒之花': 10, '永寿荣枝': 8, '信用点': 200000}
+    assert asc['total']['永恒之花'] == 15
+    # 链路终点：材料 → 具体副本实例（与指南关卡同名对齐）
+    assert asc['missions_by_material']['永恒之花'] == [
+        {'category': '拟造花萼（赤）', 'mission': '丰饶之蕾', 'region': '边缘通路'}]
+
+    # 默认 false：不带 ascension 键（向后兼容）
+    plain = lookup_light_cone('惊魂夜')
+    assert plain['status'] == 'success'
+    assert 'ascension' not in plain['data']
