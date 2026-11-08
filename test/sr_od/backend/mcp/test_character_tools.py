@@ -5,6 +5,8 @@
 - 数字 id 命中（1217 → 藿藿，带 traces/eidolons 详情）；
 - 中文名精确（黄泉 → acheron）；模糊单命中；多命中 ambiguous；
 - 过滤组合与 list_all 全量（count 对齐）；list_all 缺过滤拒绝；
+- with_ascension=true 打通「角色→突破材料→所属副本」：分段表 + 满晋阶
+  总量 + 材料→副本反查；开拓者性别后缀归一化；默认 false 不附带；
 - 与账号状态的边界：本工具不读 mys（零网络），查的是静态定义；
 - 注册冒烟：FastMCP 含 character_lookup 只读工具、首句「观察类」、
   query 参数带 Field 描述。
@@ -64,6 +66,40 @@ def test_lookup_filter_and_list_all() -> None:
     assert 'traces' not in listed['data']['list'][0]  # 列表口径不带详情
 
     assert lookup_character('', list_all=True)['status'] == 'not_found'
+
+
+def test_lookup_with_ascension_link() -> None:
+    """with_ascension=true 打通「角色→突破材料→所属副本」（常量快照定值锁）：
+
+    藿藿分段表/满晋阶总量/材料→副本反查；开拓者带性别后缀的角色定义
+    中文名归一化匹配到对应命途表；默认 false 不附带（向后兼容）。
+    """
+    huohuo = lookup_character('藿藿', with_ascension=True)
+    assert huohuo['status'] == 'success'
+    asc = huohuo['data']['ascension']
+    assert asc is not None
+    # 分段口径与游戏内晋阶界面一致（20级晋阶在前）
+    assert asc['stages'][0]['name'] == '20级晋阶'
+    assert asc['stages'][0]['materials'] == {'永寿幼芽': 5, '信用点': 4000}
+    # 满晋阶总量 = 各段合并（天人遗垢 3+7+20+35，永寿幼芽 5+10）
+    assert asc['total']['天人遗垢'] == 65
+    assert asc['total']['永寿幼芽'] == 15
+    # 链路终点：材料 → 指南分类副本（键与指南 category_name 对齐）
+    assert '凝滞虚影' in asc['dungeon_by_material']['天人遗垢']
+    assert '拟造花萼（赤）' in asc['dungeon_by_material']['永寿幼芽']
+    # 副本外途径（合成机置换）与副本线并存
+    assert '天人遗垢' in asc['extra_sources_by_material']
+
+    # 开拓者：角色定义中文名带性别后缀（开拓者·毁灭·男），归一化后命中毁灭命途表
+    trailblazer = lookup_character('开拓者·毁灭·男', with_ascension=True)
+    assert trailblazer['status'] == 'success'
+    assert trailblazer['data']['ascension'] is not None
+    assert trailblazer['data']['ascension']['total']['掠夺的本能'] > 0
+
+    # 默认 false：不带 ascension 键（向后兼容）
+    plain = lookup_character('藿藿')
+    assert plain['status'] == 'success'
+    assert 'ascension' not in plain['data']
 
 
 def test_register_character_tools_smoke() -> None:
