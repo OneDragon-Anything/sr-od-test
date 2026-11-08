@@ -6,7 +6,8 @@
 - 中文名精确（黄泉 → acheron）；模糊单命中；多命中 ambiguous；
 - 过滤组合与 list_all 全量（count 对齐）；list_all 缺过滤拒绝；
 - with_ascension=true 打通「角色→突破材料→所属副本」：分段表 + 满晋阶
-  总量 + 材料→副本反查；开拓者性别后缀归一化；默认 false 不附带；
+  总量 + 材料→副本反查（分类级+实例级）；开拓者性别后缀归一化；默认
+  false 不附带；
 - 与账号状态的边界：本工具不读 mys（零网络），查的是静态定义；
 - 注册冒烟：FastMCP 含 character_lookup 只读工具、首句「观察类」、
   query 参数带 Field 描述。
@@ -87,6 +88,9 @@ def test_lookup_with_ascension_link() -> None:
     # 链路终点：材料 → 指南分类副本（键与指南 category_name 对齐）
     assert '凝滞虚影' in asc['dungeon_by_material']['天人遗垢']
     assert '拟造花萼（赤）' in asc['dungeon_by_material']['永寿幼芽']
+    # 实例级映射：材料 → 具体副本（与指南 mission_name/region_name 同名对齐，可直接规划刷本）
+    assert asc['missions_by_material']['天人遗垢'] == [
+        {'category': '凝滞虚影', 'mission': '天人之形', 'region': '丹鼎司'}]
     # 副本外途径（合成机置换）与副本线并存
     assert '天人遗垢' in asc['extra_sources_by_material']
 
