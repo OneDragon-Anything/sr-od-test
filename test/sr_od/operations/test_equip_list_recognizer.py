@@ -62,7 +62,7 @@ def test_relic_recognizer(test_context: SrTestContext) -> None:
 
 
 def test_cone_recognizer(test_context: SrTestContext) -> None:
-    """光锥列表:黄泉角标(放低阈值)与同屏其他角色角标各自正确反查。"""
+    """光锥列表:完整绑定(光锥名+命途+等级+占用者)逐格识别。"""
     img = cv2_utils.read_image(str(_CONE_FIXTURE))
     assert img is not None
     out = LightConeReplaceRecognizer().recognize(
@@ -70,7 +70,11 @@ def test_cone_recognizer(test_context: SrTestContext) -> None:
 
     assert out is not None
     assert out['total_cells'] == 36  # 9 列 × 4 行
-    owners = {tuple(item['cell']): item['owner'] for item in out['items']}
+    by_cell = {tuple(item['cell']): item for item in out['items']}
     # 卡1 矩形(行带中心 278,半宽 70/半高 78):列中心由列表区 9 等分推导
-    assert owners.get((98, 200, 237, 355)) == '黄泉', \
-        f'卡1 黄泉角标应识别为 acheron,实际 {owners}'
+    card1 = by_cell.get((98, 200, 237, 355))
+    assert card1 is not None, f'卡1 应入清单,实际 {by_cell}'
+    assert card1['cone'] == '行于流逝的岸'
+    assert card1['path_cn'] == '虚无'
+    assert card1['level'] == 80  # 光锥等级徽章「等级80」
+    assert card1['owner'] == '黄泉'
