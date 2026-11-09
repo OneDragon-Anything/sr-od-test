@@ -58,7 +58,7 @@ def test_grid_geometry() -> None:
 def test_locate_on_fixture() -> None:
     """实机 fixture 定位(全量清单):第一行两张死水头副本**每件各占一格**——
     同套装多副本全部识别,不丢件(选哪件由调用方基于清单决策)。"""
-    template = load_template_gray('assets/game_data/relic_icons/iconrelic_117_1.webp')
+    template = load_template_gray('assets/game_data/relic_icons/死水深潜的先驱_先驱的绝热围壳.webp')
     assert template is not None
 
     screen = cv2_utils.read_image(str(_FIXTURE_DIR / 'replace_head_row0.webp'))

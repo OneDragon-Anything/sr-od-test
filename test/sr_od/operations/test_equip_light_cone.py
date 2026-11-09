@@ -40,7 +40,7 @@ from test.harness.fixture_controller import (
 
 _FIXTURE_DIR = Path(__file__).parent / 'equip_light_cone'
 _LIST_AREA: Rect = Rect(95, 130, 1420, 960)
-_TEMPLATE_REL: str = 'assets/game_data/light_cone_icons/lightcone_23024.webp'  # 行于流逝的岸
+_TEMPLATE_REL: str = 'assets/game_data/light_cone_icons/行于流逝的岸.webp'  # 游戏内名称键
 _CONE_COL_CENTERS: list[float] = equip_module._cone_col_centers(_LIST_AREA)
 
 
@@ -58,7 +58,7 @@ def test_load_template_gray() -> None:
     assert template is not None
     assert template.ndim == 2  # 灰度单通道
 
-    assert load_template_gray('assets/game_data/light_cone_icons/lightcone_99999.webp') is None
+    assert load_template_gray('assets/game_data/light_cone_icons/不存在的光锥名.webp') is None
 
 
 def test_locate_on_fixtures() -> None:
