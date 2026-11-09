@@ -23,7 +23,7 @@ from one_dragon.utils import cv2_utils
 from sr_od.operations.equip_relic import EquipRelicOp, _relic_col_centers
 from sr_od.operations.grid_template_locate import (
     load_template_gray,
-    locate_cell_by_votes,
+    locate_cells_by_votes,
 )
 from test.conftest import SrTestContext
 
@@ -56,14 +56,18 @@ def test_grid_geometry() -> None:
 
 
 def test_locate_on_fixture() -> None:
-    """实机 fixture 定位:死水头部部件图命中第一行(两张同套装件同屏,
-    票分裂到两列但任一列均满足意图 —— 断言命中行带即可,不锁列)。"""
+    """实机 fixture 定位(全量清单):第一行两张死水头副本**每件各占一格**——
+    同套装多副本全部识别,不丢件(选哪件由调用方基于清单决策)。"""
     template = load_template_gray('assets/game_data/relic_icons/iconrelic_117_1.webp')
     assert template is not None
 
     screen = cv2_utils.read_image(str(_FIXTURE_DIR / 'replace_head_row0.webp'))
     gray = cv2.cvtColor(screen, cv2.COLOR_RGB2GRAY)
-    cell = locate_cell_by_votes(gray, template, _LIST_AREA, _relic_col_centers(_LIST_AREA))
-    assert cell is not None, 'fixture 应定位到死水头部件'
-    assert 195 <= cell.y <= 360, f'应落在第一行带,实际 {cell.y}'
-    assert any(abs(cell.x - c) <= 12 for c in [99, 209, 320, 430]), f'应吸附到某列中心,实际 {cell.x}'
+    cells = locate_cells_by_votes(gray, template, _LIST_AREA, _relic_col_centers(_LIST_AREA))
+    assert len(cells) >= 2, f'两张同套装副本应各自入清单,实际 {len(cells)} 格'
+    col_centers = _relic_col_centers(_LIST_AREA)
+    for cell, _votes in cells:
+        assert 195 <= cell.y <= 360, f'应落在第一行带,实际 {cell.y}'
+        assert any(abs(cell.x - c) <= 12 for c in col_centers), f'应吸附到某列中心,实际 {cell.x}'
+    # 两格吸附到不同列(对应两张不同的卡)
+    assert cells[0][0].x != cells[1][0].x, '两件副本应位于不同列'

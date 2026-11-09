@@ -29,7 +29,7 @@ from sr_od.operations import equip_light_cone as equip_module
 from sr_od.operations.equip_light_cone import EquipLightConeOp
 from sr_od.operations.grid_template_locate import (
     load_template_gray,
-    locate_cell_by_votes,
+    locate_cells_by_votes,
 )
 from test.conftest import SrTestContext
 from test.harness.fixture_controller import (
@@ -62,26 +62,28 @@ def test_load_template_gray() -> None:
 
 
 def test_locate_on_fixtures() -> None:
-    """实机 fixture 定位:目标卡分别在第一行第一列/第二列,列中心吸附正确。"""
+    """实机 fixture 定位(全量清单):目标卡分别在第一行第一列/第二列,列中心吸附正确。"""
     template = load_template_gray(_TEMPLATE_REL)
     assert template is not None
 
     screen_a = cv2_utils.read_image(str(_FIXTURE_DIR / 'replace_target_row0_col0.webp'))
-    cell = locate_cell_by_votes(cv2.cvtColor(screen_a, cv2.COLOR_RGB2GRAY), template,
-                                _LIST_AREA, _CONE_COL_CENTERS)
-    assert cell is not None, 'fixture A 应定位到第一行第一列'
-    assert abs(cell.x - 167) <= 10, f'列中心应吸附首列(~167),实际 {cell.x}'
-    assert 195 <= cell.y <= 360, f'应落在第一行带,实际 {cell.y}'
+    cells = locate_cells_by_votes(cv2.cvtColor(screen_a, cv2.COLOR_RGB2GRAY), template,
+                                  _LIST_AREA, _CONE_COL_CENTERS)
+    assert cells, 'fixture A 应定位到第一行第一列'
+    top_a = cells[0][0]
+    assert abs(top_a.x - 167) <= 10, f'最高票候选应吸附首列(~167),实际 {top_a.x}'
+    assert 195 <= top_a.y <= 360, f'应落在第一行带,实际 {top_a.y}'
 
     screen_b = cv2_utils.read_image(str(_FIXTURE_DIR / 'replace_target_row0_col1.webp'))
-    cell_b = locate_cell_by_votes(cv2.cvtColor(screen_b, cv2.COLOR_RGB2GRAY), template,
-                                  _LIST_AREA, _CONE_COL_CENTERS)
-    assert cell_b is not None, 'fixture B 应定位到第一行第二列'
-    assert abs(cell_b.x - 306) <= 10, f'列中心应吸附第二列(~306),实际 {cell_b.x}'
+    cells_b = locate_cells_by_votes(cv2.cvtColor(screen_b, cv2.COLOR_RGB2GRAY), template,
+                                    _LIST_AREA, _CONE_COL_CENTERS)
+    assert cells_b, 'fixture B 应定位到第一行第二列'
+    top_b = cells_b[0][0]
+    assert abs(top_b.x - 306) <= 10, f'最高票候选应吸附第二列(~306),实际 {top_b.x}'
 
 
 def test_locate_rejects_when_target_absent() -> None:
-    """负例:目标卡特征被涂掉(移出当前屏的模拟)→ 返回 None 不误点。"""
+    """负例:目标卡特征被涂掉(移出当前屏的模拟)→ 返回空清单不误点。"""
     template = load_template_gray(_TEMPLATE_REL)
     assert template is not None
 
@@ -89,7 +91,7 @@ def test_locate_rejects_when_target_absent() -> None:
     gray = cv2.cvtColor(screen, cv2.COLOR_RGB2GRAY)
     # 涂白第一行前两列(定位结果所在格)与整行特征——模拟目标不在该屏
     gray[130:520, 95:720] = 255
-    assert locate_cell_by_votes(gray, template, _LIST_AREA, _CONE_COL_CENTERS) is None
+    assert locate_cells_by_votes(gray, template, _LIST_AREA, _CONE_COL_CENTERS) == []
 
 
 def test_find_and_select_scans_then_clicks(
@@ -107,10 +109,10 @@ def test_find_and_select_scans_then_clicks(
     def _fake_locate(screen_gray, template_gray, list_rect, col_centers, **kwargs):
         state['scans'] += 1
         if state['scans'] >= 3:  # 前两屏未命中,第三屏(拖动后)命中
-            return Point(306, 270)
-        return None
+            return [(Point(306, 270), 10)]
+        return []
 
-    monkeypatch.setattr(equip_module, 'locate_cell_by_votes', _fake_locate)
+    monkeypatch.setattr(equip_module, 'locate_cells_by_votes', _fake_locate)
     monkeypatch.setattr(test_context.controller, 'drag_to',
                         lambda end, start=None, duration=0.5: drags.append((start, end)))
     monkeypatch.setattr(test_context.controller, 'click',
@@ -183,8 +185,8 @@ def test_happy_flow_and_already_equipped(
     monkeypatch.setattr(EquipLightConeOp, 'round_by_find_area', _fake_find_area)
     monkeypatch.setattr(EquipLightConeOp, 'round_by_find_and_click_area', _fake_find_click)
     monkeypatch.setattr(EquipLightConeOp, '_read_name', _fake_read_name)
-    monkeypatch.setattr(equip_module, 'locate_cell_by_votes',
-                        lambda *args, **kwargs: Point(306, 270))
+    monkeypatch.setattr(equip_module, 'locate_cells_by_votes',
+                        lambda *args, **kwargs: [(Point(306, 270), 10)])
     monkeypatch.setattr(test_context.controller, 'click', lambda pos, **kwargs: None)
     monkeypatch.setattr(test_context.controller, 'screenshot',
                         lambda independent=False: (0.0, np.zeros((1080, 1920, 3), dtype=np.uint8)))
