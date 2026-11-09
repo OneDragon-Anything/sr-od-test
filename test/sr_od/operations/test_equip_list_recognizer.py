@@ -83,3 +83,75 @@ def test_cone_recognizer(test_context: SrTestContext) -> None:
     assert card1['path_cn'] == '虚无'
     assert card1['level'] == 80
     assert card1['owner'] == '黄泉'
+
+
+#------------------- 定位层网格吸附过滤(轮廓补充误检防线) -------------------#
+
+_LIST_RECT = Rect(33, 195, 536, 960)
+
+
+def _relic_recognizer() -> RelicReplaceRecognizer:
+    return RelicReplaceRecognizer()
+
+
+def test_contour_offgrid_filter() -> None:
+    """轮廓补充卡的网格吸附过滤:同行有锚的真卡保留、离列且离行的间隙误检
+    丢弃、贴边且在列上的形态保留(裁切卡;实机 (416,197) 形假卡由 IoU 去重
+    这第一道防线兜住,网格吸附是第二道)。(实机三帧证据形态复刻)"""
+    rec = _relic_recognizer()
+    # 锚点卡:列1 行2 / 列2 行3 / 列2 行5(中心 y: 408 / 557 / 854)
+    anchors = [Rect(39, 328, 159, 488), Rect(162, 477, 282, 637), Rect(162, 774, 282, 934)]
+    contours = [
+        Rect(39, 497, 161, 607),    # 中心 (100,552):列1✓ 行3 带(557)✓ → 漏锚真卡,保留
+        Rect(416, 197, 536, 309),   # 中心 (476,253):列4(468)✓ 且贴上边 → 按裁切卡保留
+        Rect(500, 640, 620, 760),   # 中心 (560,700):离列4(468)92px → 丢弃
+        Rect(162, 640, 282, 760),   # 中心 (222,700):列2✓ 但离行3(557)/行5(854)均>70 → 丢弃
+    ]
+    kept = rec._filter_contour_offgrid(contours, anchors, _LIST_RECT)
+    assert Rect(39, 497, 161, 607) in kept, '同行有锚的漏锚真卡应保留'
+    assert Rect(416, 197, 536, 309) in kept, '贴边且在列上的形态按裁切卡保留'
+    assert Rect(500, 640, 620, 760) not in kept, '离列的误检应丢弃'
+    assert Rect(162, 640, 282, 760) not in kept, '在列但离锚行带的误检应丢弃'
+
+
+def test_contour_filter_no_anchor_keeps_all() -> None:
+    """无锚点(OCR 全空,如极端滚动位)时轮廓是唯一信息源:全部保留。"""
+    rec = _relic_recognizer()
+    contours = [Rect(416, 197, 536, 309), Rect(289, 345, 411, 458)]
+    assert rec._filter_contour_offgrid(contours, [], _LIST_RECT) == contours
+
+
+def test_masked_card_detection() -> None:
+    """重掷遮罩卡检测:卡矩形内出现「重」开头文本判 masked;卡外文本不误判。"""
+    rec = _relic_recognizer()
+    card = Rect(149, 180, 269, 340)
+
+    def _ocr(text: str, cx: float, cy: float) -> list:
+        return [SimpleNamespace(data=text, rect=Rect(cx - 20, cy - 8, cx + 20, cy + 8))]
+
+    assert rec._is_masked_card(_ocr('重掷中', 209, 250), card) is True
+    assert rec._is_masked_card(_ocr('重掷中', 600, 250), card) is False, '卡外文本不误判'
+    assert rec._is_masked_card(_ocr('+15', 209, 330), card) is False, '非重掷文本不误判'
+
+
+def test_pos_template_subset() -> None:
+    """部位先验模板子集:pos=1 全部为头部件、pos=6 全部为连结绳,且为全库子集。"""
+    from sr_od.mys.sr_codes import RELIC_POS_CN
+    from sr_od.operations.equip_list_recognizer import (
+        _relic_piece_templates,
+        _relic_piece_templates_for_pos,
+    )
+    full = _relic_piece_templates()
+    for pos in (1, 6):
+        subset = _relic_piece_templates_for_pos(pos)
+        assert set(subset) <= set(full)
+        assert subset, f'部位 {pos} 子集不应为空'
+        for name in subset:
+            piece = _lookup_piece(name)
+            assert piece.pos == pos, f'{name} 应属部位 {RELIC_POS_CN[pos]}'
+
+
+def _lookup_piece(name: str):
+    from sr_od.mys.sr_relic_sets import PIECE_TO_SET
+    set_def = PIECE_TO_SET[name]
+    return next(p for p in set_def.pieces if p.name == name)
