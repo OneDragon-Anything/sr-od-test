@@ -30,11 +30,12 @@ _FIXTURE_DIR = Path(__file__).parent / 'equip_relic'
 _CONE_FIXTURE = Path(__file__).parent / 'equip_light_cone' / 'replace_target_row0_col0.webp'
 
 
-def _fake_ctx(list_rect: Rect) -> SimpleNamespace:
-    """mock ctx:screen_loader.get_area 返回固定列表区 rect 的 area。"""
+def _fake_ctx(test_context: SrTestContext, list_rect: Rect) -> SimpleNamespace:
+    """mock ctx:screen_loader 返回固定列表区 rect;ocr_service 用真实例(等级 OCR)。"""
     return SimpleNamespace(
         screen_loader=SimpleNamespace(
-            get_area=lambda screen_name, area_name: SimpleNamespace(rect=list_rect)))
+            get_area=lambda screen_name, area_name: SimpleNamespace(rect=list_rect)),
+        ocr_service=test_context.ocr_service)
 
 
 def test_relic_recognizer(test_context: SrTestContext) -> None:
@@ -42,7 +43,7 @@ def test_relic_recognizer(test_context: SrTestContext) -> None:
     img = cv2_utils.read_image(str(_FIXTURE_DIR / 'replace_head_row0.webp'))
     assert img is not None
     out = RelicReplaceRecognizer().recognize(
-        _fake_ctx(Rect(33, 195, 536, 960)), img, None)
+        _fake_ctx(test_context, Rect(33, 195, 536, 960)), img, None)
 
     assert out is not None
     assert out['total_cells'] == 16  # 4 列 × 4 行
@@ -59,7 +60,7 @@ def test_cone_recognizer(test_context: SrTestContext) -> None:
     img = cv2_utils.read_image(str(_CONE_FIXTURE))
     assert img is not None
     out = LightConeReplaceRecognizer().recognize(
-        _fake_ctx(Rect(95, 130, 1420, 960)), img, None)
+        _fake_ctx(test_context, Rect(95, 130, 1420, 960)), img, None)
 
     assert out is not None
     assert out['total_cells'] == 36  # 9 列 × 4 行
