@@ -76,8 +76,8 @@ def test_cone_recognizer(test_context: SrTestContext) -> None:
     # 锚点定位:「等级N」文本(列表卡区域,排除右侧详情的 等级80/80)
     assert out['total_cards'] >= 4
     by_cell = {tuple(item['cell']): item for item in out['items']}
-    # 卡1(锚点「等级80」cx=166,cy=343 → 卡矩形 96,200-235,355)
-    card1 = by_cell.get((96, 200, 235, 355))
+    # 卡1(行列解耦:固定列中心167.5/行带cy=343 → 卡矩形 97,197-236,352)
+    card1 = by_cell.get((97, 197, 236, 352))
     assert card1 is not None, f'卡1 应入清单,实际 keys={list(by_cell)[:4]}'
     assert card1['cone'] == '行于流逝的岸'
     assert card1['path_cn'] == '虚无'
