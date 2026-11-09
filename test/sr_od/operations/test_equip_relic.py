@@ -50,9 +50,11 @@ def test_construction_guard(test_context: SrTestContext) -> None:
 
 
 def test_grid_geometry() -> None:
-    """4 列网格几何:列中心与实机卡位误差 ≤1px(99/209/320/430)。"""
+    """4 列网格几何:列中心与实机卡位误差 ≤2px(99/222/345/468;列距 123px
+    为亮度剖面实测列中心 99/224/346/469 的标定,旧 110px 标定累计偏 40px
+    曾致右侧列角标裁窗全部落空)。"""
     centers = _relic_col_centers(_LIST_AREA)
-    assert centers == pytest.approx([99, 209, 320, 430], abs=1)
+    assert centers == pytest.approx([99, 222, 345, 468], abs=2)
 
 
 def test_locate_on_fixture() -> None:
