@@ -48,10 +48,12 @@ def test_relic_recognizer(test_context: SrTestContext) -> None:
     assert out is not None
     assert out['total_cells'] == 16  # 4 列 × 4 行
     owners = {tuple(item['cell']): item['owner'] for item in out['items']}
-    assert owners.get((99, 260)) == 'acheron', f'卡1 黄泉角标应识别为 acheron,实际 {owners}'
+    # 卡1 矩形(行带中心 260,半宽 60/半高 80): (39,180)-(159,340)
+    assert owners.get((39, 180, 159, 340)) == 'acheron', \
+        f'卡1 黄泉角标应识别为 acheron,实际 {owners}'
     # 其他格的角标是别的角色:不得误配为黄泉
     for cell, owner in owners.items():
-        if cell != (99, 260):
+        if cell != (39, 180, 159, 340):
             assert owner != 'acheron', f'非黄泉角标误配: {cell} -> {owner}'
 
 
@@ -65,4 +67,6 @@ def test_cone_recognizer(test_context: SrTestContext) -> None:
     assert out is not None
     assert out['total_cells'] == 36  # 9 列 × 4 行
     owners = {tuple(item['cell']): item['owner'] for item in out['items']}
-    assert owners.get((168, 278)) == 'acheron', f'卡1 黄泉角标应识别为 acheron,实际 {owners}'
+    # 卡1 矩形(行带中心 278,半宽 70/半高 78):列中心由列表区 9 等分推导
+    assert owners.get((98, 200, 237, 355)) == 'acheron', \
+        f'卡1 黄泉角标应识别为 acheron,实际 {owners}'
