@@ -39,7 +39,7 @@ def _fake_ctx(test_context: SrTestContext, list_rect: Rect) -> SimpleNamespace:
 
 
 def test_relic_recognizer(test_context: SrTestContext) -> None:
-    """遗器列表:第一行的已装备件角标准确反查角色,未匹配格不列。"""
+    """遗器列表:已装备件识别完整绑定(件名+套装+部位+等级+占用者)。"""
     img = cv2_utils.read_image(str(_FIXTURE_DIR / 'replace_head_row0.webp'))
     assert img is not None
     out = RelicReplaceRecognizer().recognize(
@@ -47,14 +47,18 @@ def test_relic_recognizer(test_context: SrTestContext) -> None:
 
     assert out is not None
     assert out['total_cells'] == 16  # 4 列 × 4 行
-    owners = {tuple(item['cell']): item['owner'] for item in out['items']}
+    by_cell = {tuple(item['cell']): item for item in out['items']}
     # 卡1 矩形(行带中心 260,半宽 60/半高 80): (39,180)-(159,340)
-    assert owners.get((39, 180, 159, 340)) == 'acheron', \
-        f'卡1 黄泉角标应识别为 acheron,实际 {owners}'
+    card1 = by_cell.get((39, 180, 159, 340))
+    assert card1 is not None, f'卡1 应入清单,实际 {by_cell}'
+    assert card1['piece'] == '先驱的绝热围壳'
+    assert card1['set'] == '死水深潜的先驱'
+    assert card1['pos_cn'] == '头部'
+    assert card1['owner'] == 'acheron'
     # 其他格的角标是别的角色:不得误配为黄泉
-    for cell, owner in owners.items():
+    for cell, item in by_cell.items():
         if cell != (39, 180, 159, 340):
-            assert owner != 'acheron', f'非黄泉角标误配: {cell} -> {owner}'
+            assert item['owner'] != 'acheron', f'非黄泉角标误配: {cell} -> {item}'
 
 
 def test_cone_recognizer(test_context: SrTestContext) -> None:
