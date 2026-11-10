@@ -25,6 +25,7 @@ from one_dragon.utils import cv2_utils
 from sr_od.operations.equip_list_recognizer import (
     LightConeReplaceRecognizer,
     RelicReplaceRecognizer,
+    _superimpose_templates,
 )
 from test.conftest import SrTestContext
 
@@ -98,6 +99,14 @@ def test_cone_recognizer(test_context: SrTestContext) -> None:
     assert card1['path_cn'] == '虚无'
     assert card1['level'] == 80
     assert card1['owner'] == '黄泉'
+
+
+def test_superimpose_templates_exist() -> None:
+    """叠影模板资产在盘且为数字命名(I/V/II 三档已采样;III/IV 候采样补档)。"""
+    templates = _superimpose_templates()
+    assert 1 in templates, '叠影 1 档模板缺失'
+    assert 2 in templates, '叠影 2 档模板缺失'
+    assert 5 in templates, '叠影 5 档模板缺失'
 
 
 #------------------- 定位层网格吸附过滤(轮廓补充误检防线) -------------------#
