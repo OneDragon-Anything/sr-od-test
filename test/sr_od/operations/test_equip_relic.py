@@ -8,7 +8,9 @@
 锁的内容(出处 src/sr_od/operations/equip_relic.py):
 - 件名反查:PIECE_TO_SET 表外件名构造期显式失败;表内解析出套装与部位;
 - 4 列网格几何:列中心 = 列表区 x1 + 首列偏移 + 间距 × i(实测误差 ≤1px);
-- fixture 定位:死水头部部件图命中第一行(两张同套装件,任一列均满足意图)。
+- fixture 定位:死水头部部件图命中第一行(两张同套装件,任一列均满足意图);
+- 排序前置链(重进路径):开弹窗→关建议排序→选等级→确认逐节点执行;
+  快速路径(复用已在正确部位的列表)不重复执行排序前置。
 """
 
 from __future__ import annotations
@@ -30,6 +32,13 @@ from sr_od.operations.grid_template_locate import (
     locate_cells_by_votes,
 )
 from test.conftest import SrTestContext
+from test.harness.fixture_controller import (
+    FixtureController,
+    WatchdogOperationMixin,
+    enter_running_state,
+    fast_sleep,
+    reset_running_state,
+)
 
 _FIXTURE_DIR = Path(__file__).parent / 'equip_relic'
 _LIST_AREA: Rect = Rect(33, 195, 536, 960)
@@ -101,3 +110,131 @@ def test_filter_candidates_allow_take_over() -> None:
     # True 且全部被弹框取消过:候选为空(不无限重试同格)
     assert _filter_candidates(matched, allow_take_over=True,
                               rob_cells={(100, 200), (250, 200), (400, 200), (100, 380)}) == []
+
+
+#------------------- 排序前置链(fixture 剧本流程测试) -------------------#
+
+_TAB_FRAME = ('角色-遗器', 'default')
+_REPLACE_FRAME = ('遗器-替换', 'default')
+_DIALOG_ON_FRAME = ('遗器-排序规则', '建议排序开')
+_DIALOG_OFF_FRAME = ('遗器-排序规则', '建议排序关')
+_DIALOG_LVL_FRAME = ('遗器-排序规则', '等级已选中')
+
+
+class _WatchedEquipRelic(WatchdogOperationMixin, EquipRelicOp):
+    """带看门狗的流程测试 op(轮次超限自动停,防剧本错配死循环)。
+
+    piece_name 用「学者的银边视镜」对齐替换屏 fixture:该帧右侧详情读区即
+    此件(读区 OCR 幂等命中 → ALREADY_EQUIPPED 截断,不进扫描节点);
+    expected_character='黑塔' 对齐同帧命途名读区「智识/黑塔」(核对通过)。"""
+
+    watchdog_max_rounds: int = 60
+
+    def __init__(self, ctx: SrTestContext) -> None:
+        EquipRelicOp.__init__(self, ctx, piece_name='学者的银边视镜',
+                              expected_character='黑塔')
+        self.need_check_game_win = False  # execute 期才读,实例属性即可关掉
+
+
+@pytest.fixture()
+def fixture_controller(
+    test_context: SrTestContext,
+    monkeypatch: pytest.MonkeyPatch,
+) -> FixtureController:
+    ctrl = FixtureController(
+        ctx=test_context,
+        standard_width=test_context.project_config.screen_standard_width,
+        standard_height=test_context.project_config.screen_standard_height,
+    )
+    monkeypatch.setattr(test_context, 'controller', ctrl)
+    monkeypatch.setattr(ctrl, 'mouse_move', lambda pos: None, raising=False)
+    return ctrl
+
+
+def _run_execute(test_context: SrTestContext, op) -> object:
+    enter_running_state(test_context)
+    try:
+        with fast_sleep(op):
+            return op.execute()
+    finally:
+        reset_running_state(test_context, op)
+
+
+def _require_screens(test_context: SrTestContext, frames: list[tuple[str, str]]) -> None:
+    for frame in frames:
+        if not test_context.has_screen(*frame):
+            pytest.skip(f'存档截图缺失:screens/{frame[0]}/{frame[1]}.webp')
+
+
+def test_reenter_runs_sort_prepend_chain(
+    test_context: SrTestContext,
+    fixture_controller: FixtureController,
+) -> None:
+    """重进路径(着装页起点)全链:点遗器位进列表 → 排序前置链逐节点执行
+    (点排序按钮开弹窗 → 点开关关建议排序 → 点等级选基础排序 → 点确认)
+    → 当前装备核对幂等成功。
+
+    锁:重进后列表会被游戏重置回「建议排序」动态重排态,op 必须先转静态
+    再扫描——四步点击任一缺失,动态重排下扫描即落空(实机根因)。弹窗
+    「开关已关跳过」「等级已选中跳过」的防呆分支由帧3/帧4 的状态变化
+    自然覆盖(点击生效推进后,重入走跳过分支)。"""
+    frames = [_TAB_FRAME, _REPLACE_FRAME, _DIALOG_ON_FRAME,
+              _DIALOG_OFF_FRAME, _DIALOG_LVL_FRAME]
+    _require_screens(test_context, frames)
+    fixture_controller.set_phases([
+        {'frame': _TAB_FRAME, 'exit': ('on_click_in', '角色-遗器', '遗器位-头部')},
+        {'frame': _REPLACE_FRAME, 'exit': ('on_click_in', '遗器-替换', '按钮-遗器建议排序')},
+        {'frame': _DIALOG_ON_FRAME, 'exit': ('on_click_in', '遗器-排序规则', '开关-建议排序')},
+        {'frame': _DIALOG_OFF_FRAME, 'exit': ('on_click_in', '遗器-排序规则', '单选-等级')},
+        {'frame': _DIALOG_LVL_FRAME, 'exit': ('on_click_in', '遗器-排序规则', '按钮-确认')},
+        {'frame': _REPLACE_FRAME},
+    ])
+    op = _WatchedEquipRelic(test_context)
+    op._init_watchdog()
+    result = _run_execute(test_context, op)
+
+    assert result.success, (
+        f'重进全链未成功:status={result.status!r} '
+        f'phase_idx={fixture_controller.phase_idx} '
+        f'clicks={fixture_controller.recorded_clicks}')
+    assert result.status == 'ALREADY_EQUIPPED', \
+        f'应幂等成功截断(不进扫描):status={result.status!r}'
+    assert fixture_controller.phase_idx == 5, (
+        f'应推进到确认后的替换屏帧:phase_idx={fixture_controller.phase_idx}')
+    assert fixture_controller.click_hit_area('角色-遗器', '遗器位-头部'), \
+        f'着装页遗器位点击缺失:{fixture_controller.recorded_clicks}'
+    assert fixture_controller.click_hit_area('遗器-替换', '按钮-遗器建议排序'), \
+        '排序按钮点击缺失(弹窗未打开)'
+    assert fixture_controller.click_hit_area('遗器-排序规则', '开关-建议排序'), \
+        '开关点击缺失(建议排序未关)'
+    assert fixture_controller.click_hit_area('遗器-排序规则', '单选-等级'), \
+        '等级 radio 点击缺失(基础排序未选等级)'
+    assert fixture_controller.click_hit_area('遗器-排序规则', '按钮-确认'), \
+        '确认点击缺失(排序设置未提交)'
+
+
+def test_reuse_path_skips_sort_prepend(
+    test_context: SrTestContext,
+    fixture_controller: FixtureController,
+) -> None:
+    """快速路径(已在正确部位替换列表):滚顶复用列表,不执行排序前置。
+
+    锁:排序设置只在重进时被游戏重置,复用列表时排序已静态——重复执行
+    前置会白开弹窗+改用户手动设置过的排序。"""
+    _require_screens(test_context, [_REPLACE_FRAME])
+    fixture_controller.set_phases([{'frame': _REPLACE_FRAME}])
+    op = _WatchedEquipRelic(test_context)
+    op._init_watchdog()
+    result = _run_execute(test_context, op)
+
+    assert result.success and result.status == 'ALREADY_EQUIPPED', (
+        f'复用路径应幂等成功:status={result.status!r} '
+        f'clicks={fixture_controller.recorded_clicks}')
+    # phase_idx==0 即「排序按钮区零真实点击」的铁证:本剧本首帧 exit 区 =
+    # 排序按钮 pc_rect,任何落区内的真实点击都会推进 phase(harness 的
+    # drag_to 只记账不推进,滚顶拖拽 end 点恰落按钮 rect 属记账噪声,不算)
+    assert fixture_controller.phase_idx == 0, \
+        f'复用路径不应有帧推进(排序按钮区被真实点击):{fixture_controller.recorded_clicks}'
+    assert not fixture_controller.click_hit_area('遗器-排序规则', '开关-建议排序')
+    assert not fixture_controller.click_hit_area('遗器-排序规则', '单选-等级')
+    assert not fixture_controller.click_hit_area('遗器-排序规则', '按钮-确认')
