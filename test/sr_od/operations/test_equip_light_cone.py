@@ -200,7 +200,7 @@ def test_happy_flow_and_already_equipped(
     read_state = {'cone_tab_name': None}  # TAB 读区光锥名(None=不匹配目标)
 
     def _fake_click(pos, **kwargs):
-        y = pos.y if hasattr(pos, 'y') else pos.center.y  # 候选卡点击传 Rect,按钮点击传 Point
+        y = pos.y if hasattr(pos, 'y') else pos.center.y  # 兼容 Point / Rect 两种点击入参
         if y > 900:  # 底部「替换」按钮(打开/确认);候选卡点击 y≈274 不触发
             if scene['screen'] == 'replace':  # 确认替换 → 回 TAB 且装备生效
                 scene['screen'] = 'tab'
