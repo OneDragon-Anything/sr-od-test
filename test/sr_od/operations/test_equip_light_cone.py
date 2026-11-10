@@ -14,8 +14,10 @@ grid_template_locate.py):
 - 扫描循环:选件前逐轮滚回列表顶(每轮一次拖拽,轮间画面判定兜底);
   当前屏未命中 → 拖动重扫(有界);命中即点击并停;拖满上限仍未命中
   显式失败;
-- 画面判定:入口与转移确认用画面级判定,禁单区域命中当画面判定
-  (两屏标题「角色光锥 / 光锥替换」同位形近,单区域可互判误命中);
+- 不抢语义:目标件全被占用 → 不点击,预算耗尽显式失败(ALL_OWNED);
+  allow_take_over=True 时同数据命中点击;
+- 画面判定:入口用画面级判定限定替换列表画面;列表中途退出显式失败
+  (重新打开后再调),不盲识别盲拖动;
 - 全链:入口已装备幂等成功 / 替换完成状态与读区核对。
 """
 
@@ -57,8 +59,10 @@ def _target_item() -> dict:
 class _NoWindowEquipLightCone(EquipLightConeOp):
     """真实构造路径;测试无游戏窗口,跳过窗口前置链(同 test_farm_material)。"""
 
-    def __init__(self, ctx: SrTestContext, cone_name: str) -> None:
-        EquipLightConeOp.__init__(self, ctx, cone_name=cone_name)
+    def __init__(self, ctx: SrTestContext, cone_name: str,
+                 allow_take_over: bool = False) -> None:
+        EquipLightConeOp.__init__(self, ctx, cone_name=cone_name,
+                                  allow_take_over=allow_take_over)
         self.need_check_game_win = False  # execute 期才读,实例属性即可关掉
 
 
@@ -158,17 +162,23 @@ def test_find_and_select_scans_then_clicks(
     assert len(drags) == 0, '预算耗尽后不应再拖动'
 
 
-def test_find_and_select_reopens_on_screen_exit(
+def test_find_and_select_fails_when_list_exited(
     test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """画面退出自愈:扫描轮画面判定非替换界面 → REOPEN(重置扫描状态),
-    不再盲识别盲拖动。"""
+    """画面退出显式失败:扫描轮画面判定非替换界面 → round_fail(重新打开
+    后再调),不再盲识别盲拖动。"""
     op = _NoWindowEquipLightCone(test_context, cone_name='行于流逝的岸')
+    drags: list = []
+    clicks: list = []
 
     def _fake_check_screen(self, screen=None, screen_name_list=None, crop_first=False):
         return '角色-光锥'  # 列表中途被关,退回 TAB
 
     monkeypatch.setattr(EquipLightConeOp, 'check_and_update_current_screen', _fake_check_screen)
+    monkeypatch.setattr(test_context.controller, 'drag_to',
+                        lambda *args, **kwargs: drags.append(1))
+    monkeypatch.setattr(test_context.controller, 'click',
+                        lambda pos, **kwargs: clicks.append(pos))
 
     enter_running_state(op.ctx)
     try:
@@ -177,41 +187,104 @@ def test_find_and_select_reopens_on_screen_exit(
     finally:
         reset_running_state(op.ctx, op)
 
-    assert result.status == 'REOPEN'
-    assert op._scan_screens == 0, 'REOPEN 应重置扫描预算'
-    assert op._reset_drags_left == 4, 'REOPEN 应重置滚顶拖拽预算'
+    assert not result.is_success, '列表退出应显式失败'
+    assert '重新打开' in (result.status or ''), '失败信息应指向重新打开列表'
+    assert len(drags) == 0, '退出后不应再拖动'
+    assert len(clicks) == 0, '退出后不应再点击'
+
+
+def test_no_take_over_and_allow_take_over(
+    test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """不抢语义:目标件全被占用 → 不点击,预算耗尽后 ALL_OWNED 显式失败;
+    allow_take_over=True 时同数据命中并点击。"""
+    op = _NoWindowEquipLightCone(test_context, cone_name='行于流逝的岸')
+
+    monkeypatch.setattr(EquipLightConeOp, 'check_and_update_current_screen',
+                        lambda self, screen=None, screen_name_list=None,
+                        crop_first=False: '光锥-替换')
+
+    def _fake_recognize(self, ctx, image, screen_info):
+        # 两件同名副本均被占用
+        return {'items': [
+            {'cell': [236, 197, 375, 352], 'cone': '行于流逝的岸',
+             'rank': 1, 'level': 80, 'owner': '角色甲', 'path_cn': '同谐'},
+            {'cell': [375, 197, 514, 352], 'cone': '行于流逝的岸',
+             'rank': 1, 'level': 80, 'owner': '角色乙', 'path_cn': '同谐'},
+        ]}
+
+    monkeypatch.setattr(equip_module.LightConeReplaceRecognizer, 'recognize', _fake_recognize)
+    monkeypatch.setattr(test_context.controller, 'drag_to', lambda *args, **kwargs: None)
+    clicks: list = []
+    monkeypatch.setattr(test_context.controller, 'click',
+                        lambda pos, **kwargs: clicks.append(pos))
+    monkeypatch.setattr(test_context.controller, 'screenshot',
+                        lambda independent=False: (0.0, np.zeros((1080, 1920, 3), dtype=np.uint8)))
+
+    # 不抢(默认):滚顶 4 轮 + 12 屏滚动后 ALL_OWNED 失败,全程零点击
+    enter_running_state(op.ctx)
+    try:
+        with fast_sleep(op):
+            result = op.find_and_select()
+            rounds = 0
+            while not result.is_fail and rounds < 25:
+                result = op.find_and_select()
+                rounds += 1
+    finally:
+        reset_running_state(op.ctx, op)
+    assert result.is_fail, '全占用且不抢应显式失败'
+    assert '仅见已被装备' in (result.status or ''), '失败信息应说明仅见被占用件'
+    assert len(clicks) == 0, '不抢语义不应点击任何卡'
+
+    # 允许占用:同数据第一屏(滚顶后)即命中点击
+    op_take = _NoWindowEquipLightCone(test_context, cone_name='行于流逝的岸',
+                                      allow_take_over=True)
+    enter_running_state(op_take.ctx)
+    try:
+        with fast_sleep(op_take):
+            result = op_take.find_and_select()
+            rounds = 0
+            while len(clicks) == 0 and not result.is_fail and rounds < 10:
+                result = op_take.find_and_select()
+                rounds += 1
+    finally:
+        reset_running_state(op_take.ctx, op_take)
+    assert len(clicks) == 1, 'allow_take_over=True 应命中并点击占用件'
 
 
 def test_happy_flow_and_already_equipped(
     test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """全链:入口(已装备幂等 / 未装备走全链)→ 打开替换(画面判定确认转移)→
-    定位选卡 → 验证选中 → 确认替换(画面判定确认回 TAB)→ 结果核对
-    LIGHT_CONE_EQUIPPED。"""
+    """列表起点全链:入口(已装备幂等 / 未装备走全链)→ 定位选卡 → 验证选中
+    → 确认替换(画面判定确认回 TAB)→ 结果核对 LIGHT_CONE_EQUIPPED。
+    起点不在列表画面 → 显式失败提示先调 OpenLightConeReplaceOp。"""
     from one_dragon.base.screen.screen_utils import FindAreaResultEnum
 
     op = _NoWindowEquipLightCone(test_context, cone_name='行于流逝的岸')
 
-    scene = {'screen': 'tab'}  # 当前画面场景:tab(TAB 页) / replace(替换界面)
+    scene = {'screen': 'replace'}  # 当前画面场景:tab(TAB 页) / replace(替换界面)
 
     def _fake_check_screen(self, screen=None, screen_name_list=None, crop_first=False):
         return '光锥-替换' if scene['screen'] == 'replace' else '角色-光锥'
 
-    read_state = {'cone_tab_name': None}  # TAB 读区光锥名(None=不匹配目标)
+    read_state = {
+        'cone_cur_name': None,  # 替换列表左栏当前装备名(None=未装备目标)
+        'cone_tab_name': None,  # TAB 读区光锥名(None=不匹配目标)
+    }
 
     def _fake_click(pos, **kwargs):
         y = pos.y if hasattr(pos, 'y') else pos.center.y  # 兼容 Point / Rect 两种点击入参
-        if y > 900:  # 底部「替换」按钮(打开/确认);候选卡点击 y≈274 不触发
-            if scene['screen'] == 'replace':  # 确认替换 → 回 TAB 且装备生效
-                scene['screen'] = 'tab'
-                read_state['cone_tab_name'] = '行于流逝的岸'
-            else:  # 打开替换界面
-                scene['screen'] = 'replace'
+        if y > 900 and scene['screen'] == 'replace':  # 底部「替换」按钮:回 TAB 且装备生效
+            scene['screen'] = 'tab'
+            read_state['cone_tab_name'] = '行于流逝的岸'
+            read_state['cone_cur_name'] = '行于流逝的岸'
 
     def _fake_read_name(self, screen_name, area_name):
         if screen_name == '角色-光锥':
             return read_state['cone_tab_name']
-        return '行於流逝的岸'  # 替换界面选中名(OCR 形近变体)
+        if area_name == '读区-当前光锥名':
+            return read_state['cone_cur_name']
+        return '行於流逝的岸'  # 选中名读区(OCR 形近变体)
 
     monkeypatch.setattr(EquipLightConeOp, 'check_and_update_current_screen', _fake_check_screen)
     monkeypatch.setattr(equip_module.screen_utils, 'find_area',
@@ -224,8 +297,20 @@ def test_happy_flow_and_already_equipped(
     monkeypatch.setattr(test_context.controller, 'screenshot',
                         lambda independent=False: (0.0, np.zeros((1080, 1920, 3), dtype=np.uint8)))
 
-    # 入口:已装备 → 幂等成功
-    read_state['cone_tab_name'] = '行于流逝的岸'
+    # 入口不在列表画面 → 显式失败,信息指向 OpenLightConeReplaceOp
+    scene['screen'] = 'tab'
+    enter_running_state(op.ctx)
+    try:
+        with fast_sleep(op):
+            result = op.check_entry()
+    finally:
+        reset_running_state(op.ctx, op)
+    assert not result.is_success, 'TAB 页起点应显式失败'
+    assert 'OpenLightConeReplaceOp' in (result.status or '')
+
+    # 入口:当前角色已装备目标 → 幂等成功
+    scene['screen'] = 'replace'
+    read_state['cone_cur_name'] = '行于流逝的岸'
     enter_running_state(op.ctx)
     try:
         with fast_sleep(op):
@@ -235,7 +320,7 @@ def test_happy_flow_and_already_equipped(
     assert result.status == 'ALREADY_EQUIPPED'
 
     # 未装备 → 全链成功
-    read_state['cone_tab_name'] = None
+    read_state['cone_cur_name'] = None
     enter_running_state(op.ctx)
     try:
         with fast_sleep(op):
