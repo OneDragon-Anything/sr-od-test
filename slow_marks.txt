@@ -18,6 +18,9 @@ test_back_to_normal_world_plus.py::TestCwLobbyResidualBranch::test_residual_lobb
 # 2026-10-14 裁决整批摘除——与 smoke 冒烟逐 seed 整局完全重叠,语义由
 # smoke_batch 承接,活锁机制锁 = test_cw_prep_action_ops 桥复检语境坐标锁)
 test/sr_od/application/currency_war/sim/test_sim_first_run.py::test_first_match_runs_to_game_over_without_op_fail
+# 2026-11-10 占用者角标基准:整模板库 SIFT 特征构建(105 模板×2 尺度一次性缓存)
+# + 21 真角标全库比对;负例条 1.87s 免登记(缓存同会话共享)
+test_equip_owner_match.py::test_owner_true_badges
 test/sr_od/application/currency_war/sim/test_sim_first_run.py::test_first_match_deterministic_double_run_identical
 test/sr_od/application/currency_war/sim/test_sim_first_run.py::test_first_match_container_invariants
 # sim 冒烟批:默认 8 代表号(2026-10-24 压缩裁定:全量压到 ~3 分钟,
