@@ -6,8 +6,9 @@
 - 全链流程(fixture 剧本):部位筛选点击 → 漏斗开面板 → 套装选择开弹窗 →
   扫描滚动后 OCR 命中套装行点行文本中心 → 确认关弹窗 → 网格选卡件名核对
   成功(终点=背包-遗器选中件,不执行强化);
-- 无套装意图快速路径:部位筛选后底部强化/重掷按钮出现即选中证据,
-  不经筛选面板链;
+- 无套装意图快速路径:部位筛选后主动点击网格首件卡,经核对节点以底部
+  强化/重掷按钮出现为选中证据收尾,不经筛选面板链(零点击自增游标
+  违反「选中该部位列表首件」契约)。
 - 点卡与读名核对分轮:点卡轮只点击(CLICKED 过渡),核对轮新截图读详情
   ——点后同轮零间隔读名会在详情滞后帧上误判不符、多点下一格,下一轮
   命中目标名时选中高亮已是后点的卡(错位静默选错件)。
@@ -219,6 +220,42 @@ def test_no_set_path_skips_filter_chain(
         f'不应有帧推进(漏斗/面板链未走):phase_idx={fixture_controller.phase_idx}')
     assert not fixture_controller.click_hit_area('背包-遗器-筛选', '按钮-套装选择')
     assert not fixture_controller.click_hit_area('背包-遗器-筛选规则', '按钮-确认')
+
+
+def test_none_set_clicks_first_card(
+    test_context: SrTestContext,
+    fixture_controller: FixtureController,
+) -> None:
+    """无套装意图主动选卡锁:None 分支必须点击首件卡,经 CLICKED 过渡由
+    核对节点验按钮证据后选中收尾。
+
+    锁的故障形态:None 分支只自增游标从不点击(与「选中该部位列表首件」
+    契约不符)——零点击形态要么烧尽重试预算失败(无预选中件时),要么
+    复用历史预选中件假成功(选中的未必是首件)。断言网格首件中心恰被
+    点击 1 次:零点击旧形态在本剧本收不到任何卡点击。剧本:部位筛选后
+    停「列表默认」帧(按钮证据可见,核对节点据此收尾)。"""
+    _require_screens(test_context, [_BAG_FRAME])
+    fixture_controller.set_phases([
+        {'frame': _BAG_FRAME, 'exit': ('on_click_in', '背包-遗器', '部位筛选-头部')},
+        {'frame': _BAG_FRAME},
+    ])
+    op = _WatchedSelectBagRelic(test_context, set_name=None)
+    op._init_watchdog()
+    result = _run_execute(test_context, op)
+
+    assert result.success and result.status == 'SELECTED', (
+        f'None 分支应点首件后选中收尾:status={result.status!r} '
+        f'message={result.message!r}')
+    assert fixture_controller.phase_idx == 1, (
+        f'不应有帧推进(筛选面板链未走):phase_idx={fixture_controller.phase_idx}')
+    card0 = op._card_center(0)
+    first_card_clicks = [p for p in fixture_controller.recorded_clicks
+                         if p.x == int(card0.x) and p.y == int(card0.y)]
+    assert len(first_card_clicks) == 1, (
+        f'None 分支应主动点击首件卡(零点击自增的旧形态无卡点击):'
+        f'first_card_clicks={first_card_clicks} clicks={fixture_controller.recorded_clicks}')
+    assert fixture_controller.click_hit_area('背包-遗器', '部位筛选-头部'), \
+        '部位筛选点击缺失'
 
 
 def test_scroll_dead_fails_fast(
