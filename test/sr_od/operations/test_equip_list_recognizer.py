@@ -33,10 +33,25 @@ _CONE_FIXTURE = Path(__file__).parent / 'equip_light_cone' / 'replace_target_row
 
 
 def _fake_ctx(test_context: SrTestContext, list_rect: Rect) -> SimpleNamespace:
-    """mock ctx:screen_loader 返回固定列表区 rect;ocr_service 用真实例。"""
+    """mock ctx:screen_loader 按名返回列表区与部位筛选 tab 区 rect;ocr 用真实例。"""
+    areas = {
+        '区域-遗器列表': list_rect,
+        '区域-光锥列表': list_rect,
+        '部位TAB-头部': Rect(110, 122, 166, 164),
+        '部位TAB-手部': Rect(173, 122, 229, 164),
+        '部位TAB-躯干': Rect(236, 122, 292, 164),
+        '部位TAB-腿部': Rect(299, 122, 355, 164),
+        '部位TAB-位面球': Rect(362, 122, 418, 164),
+        '部位TAB-连结绳': Rect(425, 122, 481, 164),
+    }
+
+    def get_area(screen_name: str, area_name: str) -> SimpleNamespace:
+        if area_name not in areas:
+            raise KeyError(f'unexpected area: {area_name}')
+        return SimpleNamespace(rect=areas[area_name])
+
     return SimpleNamespace(
-        screen_loader=SimpleNamespace(
-            get_area=lambda screen_name, area_name: SimpleNamespace(rect=list_rect)),
+        screen_loader=SimpleNamespace(get_area=get_area),
         ocr_service=test_context.ocr_service)
 
 
@@ -88,6 +103,15 @@ def test_cone_recognizer(test_context: SrTestContext) -> None:
 #------------------- 定位层网格吸附过滤(轮廓补充误检防线) -------------------#
 
 _LIST_RECT = Rect(33, 195, 536, 960)
+
+
+def test_detect_pos_from_tabs(test_context: SrTestContext) -> None:
+    """部位筛选 tab 选中态判定(fixture = 头部筛选实机帧):选中 tab 底部白条
+    指示器(灰度>180 像素 ≥10)判出 pos=1,未选中格全 0。"""
+    img = cv2_utils.read_image(str(_FIXTURE_DIR / 'replace_head_row0.webp'))
+    assert img is not None
+    rec = RelicReplaceRecognizer()
+    assert rec._detect_pos_from_tabs(_fake_ctx(test_context, _LIST_RECT), img) == 1
 
 
 def _relic_recognizer() -> RelicReplaceRecognizer:
