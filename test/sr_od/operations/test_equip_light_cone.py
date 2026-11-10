@@ -135,7 +135,7 @@ def test_reset_to_top_fast_drags(
     assert len(drags) == equip_module._RESET_TOP_DRAGS, \
         f'应恰好拖拽 {equip_module._RESET_TOP_DRAGS} 次,实际 {len(drags)}'
     for start, end, duration in drags:
-        assert end.y < start.y, f'回卷拖拽应为手指上滑(end.y={end.y} < start.y={start.y})'
+        assert end.y > start.y, f'回卷拖拽应为手指下滑(end.y={end.y} > start.y={start.y})'
         assert duration == equip_module._TOP_DRAG_DURATION, '回卷应为短 duration 快速甩动'
 
 
