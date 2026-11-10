@@ -2,16 +2,20 @@
 
 测试层级声明:SIFT 落格投票定位为纯函数直测(fixture = 实机替换界面截图,
 目标卡位置已知;定位算法住 grid_template_locate 公共模块,遗器 op 同源
-复用);节点流程为打桩流程测试(round_by_* / OCR 读名打桩)——替换交互链
-本体(点替换→选卡→点替换→自动回 TAB)由生产实机摸底覆盖,不在此重复。
+复用);节点流程为打桩流程测试(画面判定 / 查找区域 / OCR 读名打桩)——
+替换交互链本体(点替换→选卡→点替换→自动回 TAB)由生产实机摸底覆盖,
+不在此重复。
 
 锁的内容(出处 src/sr_od/operations/equip_light_cone.py +
 grid_template_locate.py):
 - 模板加载:图标透明底合成白底;缺失路径返回 None;
 - 落格投票定位:目标卡得票显著(实机 15:2),定位中心吸附列中心;
   目标不在当前屏(涂掉目标特征)返回 None;
-- 扫描循环:当前屏未命中 → 拖动重扫(有界);命中即点击并停;
-  拖满上限仍未命中显式失败;
+- 扫描循环:选件前逐轮滚回列表顶(每轮一次拖拽,轮间画面判定兜底);
+  当前屏未命中 → 拖动重扫(有界);命中即点击并停;拖满上限仍未命中
+  显式失败;
+- 画面判定:入口与转移确认用画面级判定,禁单区域命中当画面判定
+  (两屏标题「角色光锥 / 光锥替换」同位形近,单区域可互判误命中);
 - 全链:入口已装备幂等成功 / 替换完成状态与读区核对。
 """
 
@@ -42,6 +46,12 @@ _FIXTURE_DIR = Path(__file__).parent / 'equip_light_cone'
 _LIST_AREA: Rect = Rect(95, 130, 1420, 960)
 _TEMPLATE_REL: str = 'assets/game_data/light_cone_icons/行于流逝的岸.webp'  # 游戏内名称键
 _CONE_COL_CENTERS: list[float] = equip_module._cone_col_centers(_LIST_AREA)
+
+
+def _target_item() -> dict:
+    """目标光锥的识别件结构(字段子集,够 op 过滤与点击即可,cell 中心 ≈ (305,274))。"""
+    return {'cell': [236, 197, 375, 352], 'cone': '行于流逝的岸',
+            'rank': 1, 'level': 80, 'owner': None, 'path_cn': '同谐'}
 
 
 class _NoWindowEquipLightCone(EquipLightConeOp):
@@ -97,22 +107,24 @@ def test_locate_rejects_when_target_absent() -> None:
 def test_find_and_select_scans_then_clicks(
     test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """扫描循环:前两屏未命中 → 拖动 2 次后第三屏命中并点击;
+    """扫描循环:滚顶 4 轮逐次拖拽 → 前两屏未命中滚动重扫 → 第三屏命中点击;
     扫描预算耗尽 → 立即失败不再拖动。"""
-    from one_dragon.base.geometry.point import Point
-
     op = _NoWindowEquipLightCone(test_context, cone_name='行于流逝的岸')
     state = {'scans': 0}
     drags: list = []
     clicks: list = []
 
-    def _fake_locate(screen_gray, template_gray, list_rect, col_centers, **kwargs):
-        state['scans'] += 1
-        if state['scans'] >= 3:  # 前两屏未命中,第三屏(拖动后)命中
-            return [(Point(306, 270), 10)]
-        return []
+    monkeypatch.setattr(EquipLightConeOp, 'check_and_update_current_screen',
+                        lambda self, screen=None, screen_name_list=None,
+                        crop_first=False: '光锥-替换')
 
-    monkeypatch.setattr(equip_module, 'locate_cells_by_votes', _fake_locate)
+    def _fake_recognize(self, ctx, image, screen_info):
+        state['scans'] += 1
+        if state['scans'] >= 3:  # 前两屏未命中,第三屏(滚动后)命中
+            return {'items': [_target_item()]}
+        return {'items': []}
+
+    monkeypatch.setattr(equip_module.LightConeReplaceRecognizer, 'recognize', _fake_recognize)
     monkeypatch.setattr(test_context.controller, 'drag_to',
                         lambda end, start=None, duration=0.5: drags.append((start, end)))
     monkeypatch.setattr(test_context.controller, 'click',
@@ -123,17 +135,18 @@ def test_find_and_select_scans_then_clicks(
     enter_running_state(op.ctx)
     try:
         with fast_sleep(op):
-            # 模拟框架节点重试:前两轮未命中(拖动),第三轮命中(点击)
-            for _ in range(3):
+            # 滚顶 4 轮(各 1 拖拽)+ 未命中 2 轮(各 1 滚动拖拽)+ 第 3 扫描轮命中点击
+            for _ in range(7):
                 op.find_and_select()
     finally:
         reset_running_state(op.ctx, op)
 
-    assert len(drags) == 2, f'命中前应拖动 2 次,实际 {len(drags)}'
+    assert len(drags) == 6, f'滚顶 4 次 + 未命中滚动 2 次,实际 {len(drags)}'
     assert len(clicks) == 1, '命中卡应点击一次'
 
     # 扫描预算:预算耗尽(_scan_screens 跨轮累积)→ 立即失败,不再拖动
     op._scan_screens = 12
+    op._reset_drags_left = 0
     drags.clear()
     enter_running_state(op.ctx)
     try:
@@ -145,49 +158,69 @@ def test_find_and_select_scans_then_clicks(
     assert len(drags) == 0, '预算耗尽后不应再拖动'
 
 
+def test_find_and_select_reopens_on_screen_exit(
+    test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """画面退出自愈:扫描轮画面判定非替换界面 → REOPEN(重置扫描状态),
+    不再盲识别盲拖动。"""
+    op = _NoWindowEquipLightCone(test_context, cone_name='行于流逝的岸')
+
+    def _fake_check_screen(self, screen=None, screen_name_list=None, crop_first=False):
+        return '角色-光锥'  # 列表中途被关,退回 TAB
+
+    monkeypatch.setattr(EquipLightConeOp, 'check_and_update_current_screen', _fake_check_screen)
+
+    enter_running_state(op.ctx)
+    try:
+        with fast_sleep(op):
+            result = op.find_and_select()
+    finally:
+        reset_running_state(op.ctx, op)
+
+    assert result.status == 'REOPEN'
+    assert op._scan_screens == 0, 'REOPEN 应重置扫描预算'
+    assert op._reset_drags_left == 4, 'REOPEN 应重置滚顶拖拽预算'
+
+
 def test_happy_flow_and_already_equipped(
     test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """全链:入口(已装备幂等 / 未装备走全链)→ 打开替换 → 定位选卡 →
-    验证选中 → 确认替换 → 结果核对 LIGHT_CONE_EQUIPPED。"""
-    from one_dragon.base.geometry.point import Point
+    """全链:入口(已装备幂等 / 未装备走全链)→ 打开替换(画面判定确认转移)→
+    定位选卡 → 验证选中 → 确认替换(画面判定确认回 TAB)→ 结果核对
+    LIGHT_CONE_EQUIPPED。"""
+    from one_dragon.base.screen.screen_utils import FindAreaResultEnum
 
     op = _NoWindowEquipLightCone(test_context, cone_name='行于流逝的岸')
 
     scene = {'screen': 'tab'}  # 当前画面场景:tab(TAB 页) / replace(替换界面)
 
-    def _fake_find_area(self, screen, s_name, a_name, *args, **kwargs):
-        if scene['screen'] == 'replace':
-            if (s_name, a_name) in {('光锥-替换', '标题-光锥替换'), ('光锥-替换', '文本-命途相符组头')}:
-                return self.round_success(status=a_name)
-            return self.round_wait(status=f'未找到 {a_name}')
-        # tab 场景:仅 TAB 标题命中
-        if (s_name, a_name) == ('角色-光锥', '标题-角色光锥'):
-            return self.round_success(status=a_name)
-        return self.round_wait(status=f'未找到 {a_name}')
-
-    def _fake_find_click(self, screen, s_name, a_name, *args, **kwargs):
-        if a_name == '按钮-替换':  # TAB 点替换 → 进替换界面;替换界面点替换 → 回 TAB 且装备生效
-            if scene['screen'] == 'replace':
-                scene['screen'] = 'tab'
-                read_state['cone_tab_name'] = '行于流逝的岸'  # 装备生效,TAB 读区更新
-            else:
-                scene['screen'] = 'replace'
-        return self.round_success(status=a_name)
+    def _fake_check_screen(self, screen=None, screen_name_list=None, crop_first=False):
+        return '光锥-替换' if scene['screen'] == 'replace' else '角色-光锥'
 
     read_state = {'cone_tab_name': None}  # TAB 读区光锥名(None=不匹配目标)
+
+    def _fake_click(pos, **kwargs):
+        y = pos.y if hasattr(pos, 'y') else pos.center.y  # 候选卡点击传 Rect,按钮点击传 Point
+        if y > 900:  # 底部「替换」按钮(打开/确认);候选卡点击 y≈274 不触发
+            if scene['screen'] == 'replace':  # 确认替换 → 回 TAB 且装备生效
+                scene['screen'] = 'tab'
+                read_state['cone_tab_name'] = '行于流逝的岸'
+            else:  # 打开替换界面
+                scene['screen'] = 'replace'
 
     def _fake_read_name(self, screen_name, area_name):
         if screen_name == '角色-光锥':
             return read_state['cone_tab_name']
         return '行於流逝的岸'  # 替换界面选中名(OCR 形近变体)
 
-    monkeypatch.setattr(EquipLightConeOp, 'round_by_find_area', _fake_find_area)
-    monkeypatch.setattr(EquipLightConeOp, 'round_by_find_and_click_area', _fake_find_click)
+    monkeypatch.setattr(EquipLightConeOp, 'check_and_update_current_screen', _fake_check_screen)
+    monkeypatch.setattr(equip_module.screen_utils, 'find_area',
+                        lambda *args, **kwargs: FindAreaResultEnum.TRUE)
     monkeypatch.setattr(EquipLightConeOp, '_read_name', _fake_read_name)
-    monkeypatch.setattr(equip_module, 'locate_cells_by_votes',
-                        lambda *args, **kwargs: [(Point(306, 270), 10)])
-    monkeypatch.setattr(test_context.controller, 'click', lambda pos, **kwargs: None)
+    monkeypatch.setattr(equip_module.LightConeReplaceRecognizer, 'recognize',
+                        lambda self, ctx, image, screen_info: {'items': [_target_item()]})
+    monkeypatch.setattr(test_context.controller, 'click', _fake_click)
+    monkeypatch.setattr(test_context.controller, 'drag_to', lambda *args, **kwargs: None)
     monkeypatch.setattr(test_context.controller, 'screenshot',
                         lambda independent=False: (0.0, np.zeros((1080, 1920, 3), dtype=np.uint8)))
 
