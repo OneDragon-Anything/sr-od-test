@@ -11,7 +11,9 @@ src/sr_od/operations/upgrade_light_cone.py 模块 docstring 与 upgrade_loop
 实现:
 - 「材料补全」确认弹窗:fill_generic 授权点「确认」继续;未授权防御性点
   「取消」判停——通用材料是稀缺消耗品,授权边界 = 确认/取消二选一;
-- auto_farm 快速刷取预算耗尽判停(防开拓力/券无限烧)。
+- auto_farm 快速刷取预算耗尽判停(防开拓力/券无限烧);
+- 满级态(晋阶界面「已提升至最高阶」)判停收尾,与缺料判停同状态
+  LIGHT_CONE_CAPPED 归档。
 """
 
 from __future__ import annotations
@@ -20,6 +22,7 @@ import pytest
 
 import sr_od.operations.upgrade_light_cone as lc_module
 from one_dragon.base.operation.operation_base import OperationResult
+from one_dragon.base.screen.screen_utils import FindAreaResultEnum
 from sr_od.operations.upgrade_light_cone import UpgradeLightConeOp
 from test.conftest import SrTestContext
 from test.harness.fixture_controller import (
@@ -83,6 +86,12 @@ def _install_script(
     monkeypatch.setattr(UpgradeLightConeOp, 'round_by_find_and_click_area',
                         _fake_find_and_click)
     monkeypatch.setattr(UpgradeLightConeOp, '_read_lc_level', _fake_level)
+    # 入口画面级判定打桩:恒为光锥 TAB;强化按钮可点(入口动作查询)
+    monkeypatch.setattr(UpgradeLightConeOp, 'check_and_update_current_screen',
+                        lambda self, screen=None, screen_name_list=None,
+                        crop_first=False: '角色-光锥')
+    monkeypatch.setattr(lc_module.screen_utils, 'find_area',
+                        lambda *args, **kwargs: FindAreaResultEnum.TRUE)
     return state
 
 
@@ -139,9 +148,12 @@ def _run_op(op: UpgradeLightConeOp) -> OperationResult:
         reset_running_state(op.ctx, op)
 
 
-_ENTRY_SCENES: list[set[tuple[str, str]]] = [
-    {(_LC_TAB, '标题-角色光锥'), (_LC_TAB, '按钮-强化')},
-]
+_ENTRY_SCENES: list[set[tuple[str, str]]] = []
+
+
+# 帧序占位:_ROUND_START 查询「先推进 round 再取帧」,循环轮 1 取 scenes[1]
+# (入口已改画面级判定打桩,不再走 round_by_find_area,scenes[0] 恒为死帧)。
+_DEAD_FRAME: set[tuple[str, str]] = set()
 
 
 class TestUpgradeLightConeBranches:
@@ -152,23 +164,25 @@ class TestUpgradeLightConeBranches:
         """fill_generic 授权:通用材料补全按钮 → 确认弹窗 → 点「确认」继续升满。
 
         弹窗分支只许点确认、绝不点取消(取消+判停是未授权防御路径);
-        材料补上后按钮转「快速升级」执行,升满回光锥 TAB(MAX_LEVEL)。"""
+        材料补上后按钮转「快速升级」执行,升满进满级态判停收尾
+        (LIGHT_CONE_CAPPED)。"""
         scenes = [
-            *_ENTRY_SCENES,
+            _DEAD_FRAME,
             {(_LC_ASC, '标题-光锥详情'), (_LC_ASC, '按钮-通用材料补全')},
             {(_LC_ASC, '标题-材料补全弹窗')},
             {(_LC_ASC, '标题-光锥详情'), (_LC_ASC, '按钮-快速升级')},
-            set(),
+            {(_LC_ASC, '标题-光锥详情'), (_LC_ASC, '文本-已提升至最高阶')},
+            {(_LC_TAB, '标题-角色光锥')},
         ]
-        state = _install_script(monkeypatch, test_context, scenes, level=79)
+        state = _install_script(monkeypatch, test_context, scenes, level=80)
         clicks = _record_controller_clicks(monkeypatch, test_context)
         op = _WatchedUpgradeLightCone(test_context, fill_generic=True)
         op._init_watchdog()  # type: ignore[attr-defined]
 
         result = _run_op(op)
 
-        assert result.success and result.status == 'MAX_LEVEL', (
-            f'确认补全后应继续升满,status={result.status}'
+        assert result.success and result.status == 'LIGHT_CONE_CAPPED', (
+            f'确认补全后应继续升满(满级态收尾),status={result.status}'
         )
         assert _has_click_in(clicks, test_context, _LC_ASC, '按钮-通用材料补全'), (
             '缺料轮应先点通用材料补全按钮唤出弹窗'
@@ -180,7 +194,7 @@ class TestUpgradeLightConeBranches:
             f'授权流不得触发取消路径,clicks={clicks}'
         )
         assert _has_click_in(clicks, test_context, _LC_ASC, '按钮-快速升级')
-        assert state['level_reads'] == 0, '授权确认升满路径不应触发判停读取'
+        assert state['level_reads'] == 1, '满级态收尾应恰好读取一次等级'
 
     def test_popup_cancelled_without_authorization_capped(
         self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
@@ -190,7 +204,7 @@ class TestUpgradeLightConeBranches:
         残留弹窗态下未授权 = 绝不点确认(确认即真实消耗稀缺通用材料);
         取消判停后经「关闭X」回光锥 TAB,LIGHT_CONE_CAPPED 结束。"""
         scenes = [
-            *_ENTRY_SCENES,
+            _DEAD_FRAME,
             {(_LC_ASC, '标题-材料补全弹窗')},
             set(),
             {(_LC_TAB, '标题-角色光锥')},
@@ -227,7 +241,7 @@ class TestUpgradeLightConeBranches:
         max_rounds = lc_module._LC_FARM_ROUNDS_MAX
         farm_scene = {(_LC_ASC, '标题-光锥详情'), (_LC_ASC, '按钮-开始刷取')}
         scenes = [
-            *_ENTRY_SCENES,
+            _DEAD_FRAME,
             *[farm_scene] * max_rounds,
             {(_LC_ASC, '标题-光锥详情')},
             set(),
