@@ -11,9 +11,10 @@ grid_template_locate.py):
 - 模板加载:图标透明底合成白底;缺失路径返回 None;
 - 落格投票定位:目标卡得票显著(实机 15:2),定位中心吸附列中心;
   目标不在当前屏(涂掉目标特征)返回 None;
-- 扫描循环:选件前逐轮滚回列表顶(每轮一次拖拽,轮间画面判定兜底);
-  当前屏未命中 → 拖动重扫(有界);命中即点击并停;拖满上限仍未命中
-  显式失败;
+- 滚顶循环:独立节点逐轮回卷,以组头行命中(只在顶部态可见)判顶提前退出;
+  预算耗尽仍未见组头显式失败;回卷拖拽方向 = 手指下滑(终点在下);
+- 扫描循环:当前屏未命中 → 拖动重扫(有界,方向 = 手指上滑);命中即点击
+  并停;拖满上限仍未命中显式失败;
 - 不抢语义:目标件全被占用 → 不点击,预算耗尽显式失败(ALL_OWNED);
   allow_take_over=True 时同数据命中点击;
 - 画面判定:入口用画面级判定限定替换列表画面;列表中途退出显式失败
@@ -108,11 +109,73 @@ def test_locate_rejects_when_target_absent() -> None:
     assert locate_cells_by_votes(gray, template, _LIST_AREA, _CONE_COL_CENTERS) == []
 
 
+def test_reset_to_top_scrolls_until_header(
+    test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """滚顶循环:组头行未命中 → 逐轮回卷拖拽(方向 = 手指下滑);组头命中
+    → AT_TOP 提前退出;预算耗尽仍未见组头 → 显式失败。"""
+    from one_dragon.base.screen.screen_utils import FindAreaResultEnum
+
+    op = _NoWindowEquipLightCone(test_context, cone_name='行于流逝的岸')
+    drags: list = []
+
+    monkeypatch.setattr(EquipLightConeOp, 'check_and_update_current_screen',
+                        lambda self, screen=None, screen_name_list=None,
+                        crop_first=False: '光锥-替换')
+
+    header_seen = {'visible': False}
+
+    def _fake_find_area(*args, **kwargs) -> FindAreaResultEnum:
+        return FindAreaResultEnum.TRUE if header_seen['visible'] else FindAreaResultEnum.FALSE
+
+    monkeypatch.setattr(equip_module.screen_utils, 'find_area', _fake_find_area)
+    monkeypatch.setattr(test_context.controller, 'drag_to',
+                        lambda end, start=None, duration=0.5: drags.append((start, end)))
+    monkeypatch.setattr(test_context.controller, 'screenshot',
+                        lambda independent=False: (0.0, np.zeros((1080, 1920, 3), dtype=np.uint8)))
+
+    enter_running_state(op.ctx)
+    try:
+        with fast_sleep(op):
+            # 前 2 轮组头未命中(各 1 次回卷拖拽),第 3 轮命中
+            op.reset_to_top()
+            op.reset_to_top()
+            header_seen['visible'] = True
+            result = op.reset_to_top()
+    finally:
+        reset_running_state(op.ctx, op)
+    assert result.status == 'AT_TOP', '组头命中应判定已在顶部'
+    assert len(drags) == 2, f'未命中 2 轮各回卷 1 次,实际 {len(drags)}'
+    for start, end in drags:
+        assert end.y > start.y, f'回卷拖拽应为手指下滑(end.y={end.y} > start.y={start.y})'
+
+    # 预算耗尽:组头始终未命中 → 回卷满预算后显式失败,不再拖动
+    op_capped = _NoWindowEquipLightCone(test_context, cone_name='行于流逝的岸')
+    drags_capped: list = []
+    monkeypatch.setattr(equip_module.screen_utils, 'find_area',
+                        lambda *args, **kwargs: FindAreaResultEnum.FALSE)
+    monkeypatch.setattr(test_context.controller, 'drag_to',
+                        lambda end, start=None, duration=0.5: drags_capped.append(1))
+    enter_running_state(op_capped.ctx)
+    try:
+        with fast_sleep(op_capped):
+            result = op_capped.reset_to_top()
+            rounds = 0
+            while not result.is_fail and rounds < 20:
+                result = op_capped.reset_to_top()
+                rounds += 1
+    finally:
+        reset_running_state(op_capped.ctx, op_capped)
+    assert result.is_fail, '滚顶预算耗尽应显式失败'
+    assert len(drags_capped) == equip_module._RESET_TOP_DRAGS, \
+        f'应恰好回卷满预算 {equip_module._RESET_TOP_DRAGS} 次,实际 {len(drags_capped)}'
+
+
 def test_find_and_select_scans_then_clicks(
     test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """扫描循环:滚顶 4 轮逐次拖拽 → 前两屏未命中滚动重扫 → 第三屏命中点击;
-    扫描预算耗尽 → 立即失败不再拖动。"""
+    """扫描循环:首屏未命中 → 滚动重扫 → 次屏命中点击;扫描预算耗尽 →
+    立即失败不再拖动。(滚顶已前移至 reset_to_top 节点,本节点纯扫描)"""
     op = _NoWindowEquipLightCone(test_context, cone_name='行于流逝的岸')
     state = {'scans': 0}
     drags: list = []
@@ -124,7 +187,7 @@ def test_find_and_select_scans_then_clicks(
 
     def _fake_recognize(self, ctx, image, screen_info):
         state['scans'] += 1
-        if state['scans'] >= 3:  # 前两屏未命中,第三屏(滚动后)命中
+        if state['scans'] >= 2:  # 首屏未命中,滚动后命中
             return {'items': [_target_item()]}
         return {'items': []}
 
@@ -139,18 +202,18 @@ def test_find_and_select_scans_then_clicks(
     enter_running_state(op.ctx)
     try:
         with fast_sleep(op):
-            # 滚顶 4 轮(各 1 拖拽)+ 未命中 2 轮(各 1 滚动拖拽)+ 第 3 扫描轮命中点击
-            for _ in range(7):
-                op.find_and_select()
+            op.find_and_select()  # 首屏未命中 → 滚动
+            op.find_and_select()  # 次屏命中 → 点击
     finally:
         reset_running_state(op.ctx, op)
 
-    assert len(drags) == 6, f'滚顶 4 次 + 未命中滚动 2 次,实际 {len(drags)}'
+    assert len(drags) == 1, f'首屏未命中滚动 1 次,实际 {len(drags)}'
     assert len(clicks) == 1, '命中卡应点击一次'
+    start, end = drags[0]
+    assert end.y < start.y, f'扫描滚动应为手指上滑向下翻页(end.y={end.y} < start.y={start.y})'
 
     # 扫描预算:预算耗尽(_scan_screens 跨轮累积)→ 立即失败,不再拖动
     op._scan_screens = 12
-    op._reset_drags_left = 0
     drags.clear()
     enter_running_state(op.ctx)
     try:
@@ -221,7 +284,7 @@ def test_no_take_over_and_allow_take_over(
     monkeypatch.setattr(test_context.controller, 'screenshot',
                         lambda independent=False: (0.0, np.zeros((1080, 1920, 3), dtype=np.uint8)))
 
-    # 不抢(默认):滚顶 4 轮 + 12 屏滚动后 ALL_OWNED 失败,全程零点击
+    # 不抢(默认):12 屏滚动后 ALL_OWNED 失败,全程零点击
     enter_running_state(op.ctx)
     try:
         with fast_sleep(op):
@@ -236,7 +299,7 @@ def test_no_take_over_and_allow_take_over(
     assert '仅见已被装备' in (result.status or ''), '失败信息应说明仅见被占用件'
     assert len(clicks) == 0, '不抢语义不应点击任何卡'
 
-    # 允许占用:同数据第一屏(滚顶后)即命中点击
+    # 允许占用:首屏即命中点击
     op_take = _NoWindowEquipLightCone(test_context, cone_name='行于流逝的岸',
                                       allow_take_over=True)
     enter_running_state(op_take.ctx)
