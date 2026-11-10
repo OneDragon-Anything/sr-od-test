@@ -105,10 +105,10 @@ def test_cone_recognizer(test_context: SrTestContext) -> None:
 
 
 def test_superimpose_templates_exist(test_context: SrTestContext) -> None:
-    """叠影模板资产在盘且走 TemplateLoader 规范(1/1_dark/2_dark/5 四档已采样;
-    III/IV 候采样补档)。"""
+    """叠影模板资产在盘且走 TemplateLoader 规范(单模板/档,底色差异由归一化
+    相关系数+滑动匹配吸收;III/IV 候采样补档)。"""
     templates = _superimpose_templates(test_context.template_loader)
-    for tid in ('1', '1_dark', '2_dark', '5'):
+    for tid in ('1', '2_dark', '5'):
         assert tid in templates, f'叠影模板 {tid} 缺失'
 
 
