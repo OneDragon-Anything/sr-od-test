@@ -7,7 +7,10 @@
   扫描滚动后 OCR 命中套装行点行文本中心 → 确认关弹窗 → 网格选卡件名核对
   成功(终点=背包-遗器选中件,不执行强化);
 - 无套装意图快速路径:部位筛选后底部强化/重掷按钮出现即选中证据,
-  不经筛选面板链。
+  不经筛选面板链;
+- 点卡与读名核对分轮:点卡轮只点击(CLICKED 过渡),核对轮新截图读详情
+  ——点后同轮零间隔读名会在详情滞后帧上误判不符、多点下一格,下一轮
+  命中目标名时选中高亮已是后点的卡(错位静默选错件)。
 
 fixture 出处:实机摸底帧(2026-11-11 背包-遗器筛选链,进展目录
 recon/bag-relic-screen.md),归档 screens/背包-遗器*/;弹窗滚动帧用
@@ -140,6 +143,56 @@ def test_full_chain_selects_filtered_piece(
     assert row_clicked, f'套装行文本中心点击缺失:{fixture_controller.recorded_clicks}'
     assert fixture_controller.click_hit_area('背包-遗器-筛选规则', '按钮-确认'), \
         '确认点击缺失(筛选未提交)'
+
+
+def test_card_click_and_verify_split_rounds(
+    test_context: SrTestContext,
+    fixture_controller: FixtureController,
+) -> None:
+    """点卡与读名核对分轮(详情滞后帧竞态锁):点卡后详情仍显示旧件名,
+    再一帧才显示新选中件名 —— 点卡轮只点击(CLICKED 过渡),核对轮重新
+    截图读到新帧目标件名,只点第 1 格卡即选中。
+
+    锁的故障形态:点后同轮零间隔读名 → 滞后帧读到旧件名 → 误判不符多点
+    下一格 → 下一轮命中目标名时选中高亮已是后点的卡(错位静默选错件,
+    下游强化消耗真实材料)。断言网格卡点击恰 1 次且落在第 1 格:零间隔读
+    的旧形态在本剧本会落 2 次(滞后帧误判多推进一格)。
+
+    剧本:筛选链复用全链前置,确认筛选后滞留「列表默认」帧(旧详情,
+    轮询 3 次后)切「套装筛选选中件」帧(新详情)。"""
+    frames = [_BAG_FRAME, _PANEL_FRAME, _RULE_LIST_FRAME,
+              _RULE_CHECKED_FRAME, _BAG_SELECTED_FRAME]
+    _require_screens(test_context, frames)
+    fixture_controller.set_phases([
+        {'frame': _BAG_FRAME, 'exit': ('on_click_in', '背包-遗器', '部位筛选-头部')},
+        {'frame': _BAG_FRAME, 'exit': ('on_click_in', '背包-遗器', '按钮-筛选漏斗')},
+        {'frame': _PANEL_FRAME, 'exit': ('on_click_in', '背包-遗器-筛选', '按钮-套装选择')},
+        {'frame': _RULE_LIST_FRAME, 'exit': ('on_polls', 1)},
+        {'frame': _RULE_CHECKED_FRAME, 'exit': ('on_click_in', _SET_ROW_RECT)},
+        {'frame': _RULE_CHECKED_FRAME,
+         'exit': ('on_click_in', '背包-遗器-筛选规则', '按钮-确认')},
+        # 点卡后详情滞后帧:仍显示点卡前的旧详情;滞留 3 次轮询(确认节点
+        # until 核查 1 次 + 点卡轮轮前截图 1 次 + 旧形态读名 1 次)后才切
+        # 新详情帧 —— 零间隔读的旧形态在此帧上读名,分轮新形态读不到它
+        {'frame': _BAG_FRAME, 'exit': ('on_polls', 3)},
+        {'frame': _BAG_SELECTED_FRAME},
+    ])
+    op = _WatchedSelectBagRelic(test_context)
+    op._init_watchdog()
+    result = _run_execute(test_context, op)
+
+    assert result.success and result.status == 'SELECTED', (
+        f'滞后帧场景应选中收尾:status={result.status!r} '
+        f'message={result.message!r} phase_idx={fixture_controller.phase_idx}')
+    assert fixture_controller.phase_idx == 7, (
+        f'核对应读到滞后后的新详情帧:phase_idx={fixture_controller.phase_idx}')
+    card_centers = [op._card_center(i) for i in range(2)]
+    card_clicks = [p for p in fixture_controller.recorded_clicks
+                   if any(p.x == int(c.x) and p.y == int(c.y) for c in card_centers)]
+    assert len(card_clicks) == 1 and card_clicks[0].x == int(card_centers[0].x) \
+        and card_clicks[0].y == int(card_centers[0].y), (
+        f'应只点第 1 格卡(滞后帧误判会多点下一格):'
+        f'card_clicks={card_clicks} clicks={fixture_controller.recorded_clicks}')
 
 
 def test_no_set_path_skips_filter_chain(
