@@ -21,6 +21,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from one_dragon.base.geometry.rectangle import Rect
+from one_dragon.base.screen.template_loader import TemplateLoader
 from one_dragon.utils import cv2_utils
 from sr_od.operations.equip_list_recognizer import (
     LightConeReplaceRecognizer,
@@ -34,7 +35,8 @@ _CONE_FIXTURE = Path(__file__).parent / 'equip_light_cone' / 'replace_target_row
 
 
 def _fake_ctx(test_context: SrTestContext, list_rect: Rect) -> SimpleNamespace:
-    """mock ctx:screen_loader 按名返回列表区与部位筛选 tab 区 rect;ocr 用真实例。"""
+    """mock ctx:screen_loader 按名返回列表区与部位筛选 tab 区 rect;ocr 用真实例;
+    template_loader 用真实例(叠影 rank 识别读分档模板)。"""
     areas = {
         '区域-遗器列表': list_rect,
         '区域-光锥列表': list_rect,
@@ -53,6 +55,7 @@ def _fake_ctx(test_context: SrTestContext, list_rect: Rect) -> SimpleNamespace:
 
     return SimpleNamespace(
         screen_loader=SimpleNamespace(get_area=get_area),
+        template_loader=TemplateLoader(),
         ocr_service=test_context.ocr_service)
 
 
@@ -101,12 +104,12 @@ def test_cone_recognizer(test_context: SrTestContext) -> None:
     assert card1['owner'] == '黄泉'
 
 
-def test_superimpose_templates_exist() -> None:
-    """叠影模板资产在盘且为数字命名(I/V/II 三档已采样;III/IV 候采样补档)。"""
-    templates = _superimpose_templates()
-    assert 1 in templates, '叠影 1 档模板缺失'
-    assert 2 in templates, '叠影 2 档模板缺失'
-    assert 5 in templates, '叠影 5 档模板缺失'
+def test_superimpose_templates_exist(test_context: SrTestContext) -> None:
+    """叠影模板资产在盘且走 TemplateLoader 规范(1/1_dark/2_dark/5 四档已采样;
+    III/IV 候采样补档)。"""
+    templates = _superimpose_templates(test_context.template_loader)
+    for tid in ('1', '1_dark', '2_dark', '5'):
+        assert tid in templates, f'叠影模板 {tid} 缺失'
 
 
 #------------------- 定位层网格吸附过滤(轮廓补充误检防线) -------------------#
