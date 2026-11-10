@@ -20,7 +20,11 @@ import pytest
 
 from one_dragon.base.geometry.rectangle import Rect
 from one_dragon.utils import cv2_utils
-from sr_od.operations.equip_relic import EquipRelicOp, _relic_col_centers
+from sr_od.operations.equip_relic import (
+    EquipRelicOp,
+    _filter_candidates,
+    _relic_col_centers,
+)
 from sr_od.operations.grid_template_locate import (
     load_template_gray,
     locate_cells_by_votes,
@@ -73,3 +77,27 @@ def test_locate_on_fixture() -> None:
         assert any(abs(cell.x - c) <= 12 for c in col_centers), f'应吸附到某列中心,实际 {cell.x}'
     # 两格吸附到不同列(对应两张不同的卡)
     assert cells[0][0].x != cells[1][0].x, '两件副本应位于不同列'
+
+
+def test_filter_candidates_allow_take_over() -> None:
+    """allow_take_over 候选语义(纯函数):False 只取无主件;True 被穿着件入选
+    且无主件稳定排前;两模式都排除弹框取消过的格(死循环防线)。"""
+    matched = [
+        {'cell': [100, 200, 200, 300], 'owner': '停云'},
+        {'cell': [250, 200, 350, 300], 'owner': None},
+        {'cell': [400, 200, 500, 300], 'owner': '星期日'},
+        {'cell': [100, 380, 200, 480], 'owner': None},
+    ]
+    rob = {(400, 200)}
+
+    # False(默认不抢):只留无主件,被穿着件与弹框格全部出局
+    kept = _filter_candidates(matched, allow_take_over=False, rob_cells=rob)
+    assert [it['cell'] for it in kept] == [[250, 200, 350, 300], [100, 380, 200, 480]]
+
+    # True(交换语义):被穿着件入选但无主件排前;弹框格仍出局
+    kept = _filter_candidates(matched, allow_take_over=True, rob_cells=rob)
+    assert [it['owner'] for it in kept] == [None, None, '停云']
+
+    # True 且全部被弹框取消过:候选为空(不无限重试同格)
+    assert _filter_candidates(matched, allow_take_over=True,
+                              rob_cells={(100, 200), (250, 200), (400, 200), (100, 380)}) == []
