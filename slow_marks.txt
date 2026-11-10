@@ -44,3 +44,11 @@ test/sr_od/application/currency_war/sim/test_sim_backend.py::test_screen_announc
 # 全量 ~2 分钟,五判据数字对照产出面)+ 间谍供奉全跑闭环变体(~12s)
 test/sr_od/application/currency_war/sim/test_sim_levelup_cycle.py::test_prereg_upgrade_cycle_batch
 test/sr_od/application/currency_war/sim/test_sim_levelup_cycle.py::test_prereg_spy_closure_full_match
+# 2026-11-11 T-16:裸文件名条目改全路径格式(对齐全路径惯例;conftest 按后缀
+# 匹配,语义不变)。同文件 test_owner_true_badges 仍是裸名旧条,存量不动。
+test/sr_od/operations/test_equip_owner_match.py::test_owner_no_badge_is_none
+# 2026-11-11 T-16 登记:重进链全量首跑实测 1.91s 贴线——主成本 = 5 帧 fixture
+# 全图 OCR(弹窗 area 匹配走框架统一默认 crop_first=False 全图缓存复用,改裁剪
+# 须动 op/harness,测试面内不可便宜化);温缓存单文件复跑 0.13s,登记防标准
+# 全量冷缓存首跑抖动过线。
+test/sr_od/operations/test_equip_relic.py::test_reenter_runs_sort_prepend_chain

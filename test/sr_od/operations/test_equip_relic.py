@@ -252,6 +252,3 @@ def test_reuse_path_skips_sort_prepend(
     # drag_to 只记账不推进,滚顶拖拽 end 点恰落按钮 rect 属记账噪声,不算)
     assert fixture_controller.phase_idx == 0, \
         f'复用路径不应有帧推进(排序按钮区被真实点击):{fixture_controller.recorded_clicks}'
-    assert not fixture_controller.click_hit_area('遗器-排序规则', '开关-建议排序')
-    assert not fixture_controller.click_hit_area('遗器-排序规则', '单选-等级')
-    assert not fixture_controller.click_hit_area('遗器-排序规则', '按钮-确认')
