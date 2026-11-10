@@ -168,6 +168,39 @@ def test_no_set_path_skips_filter_chain(
     assert not fixture_controller.click_hit_area('背包-遗器-筛选规则', '按钮-确认')
 
 
+def test_scroll_dead_fails_fast(
+    test_context: SrTestContext,
+    fixture_controller: FixtureController,
+) -> None:
+    """滚动失效防线:弹窗列表画面静止(拖拽后行文本签名不变)时,连续两次
+    空滚即显式失败「滚动失效」,不烧尽滚动预算静默空滚(T-20 实机缺陷锁:
+    首版参数空滚 8 屏才失败)。
+
+    剧本:筛选链推进到弹窗后画面恒定(终帧无 exit),扫描节点 OCR 恒读同
+    一批行 → 拖拽两轮后签名仍不变 → fail。断言拖拽仅 2 次(预算 8 未烧尽)。"""
+    frames = [_BAG_FRAME, _PANEL_FRAME, _RULE_LIST_FRAME]
+    _require_screens(test_context, frames)
+    fixture_controller.set_phases([
+        {'frame': _BAG_FRAME, 'exit': ('on_click_in', '背包-遗器', '部位筛选-头部')},
+        {'frame': _BAG_FRAME, 'exit': ('on_click_in', '背包-遗器', '按钮-筛选漏斗')},
+        {'frame': _PANEL_FRAME, 'exit': ('on_click_in', '背包-遗器-筛选', '按钮-套装选择')},
+        {'frame': _RULE_LIST_FRAME},
+    ])
+    op = _WatchedSelectBagRelic(test_context)
+    op._init_watchdog()
+    result = _run_execute(test_context, op)
+
+    assert not result.success, '滚动失效应显式失败'
+    assert '滚动失效' in (result.status or ''), \
+        f'失败信息应指明滚动失效:{result.status!r}'
+    assert fixture_controller.phase_idx == 3, (
+        f'应停在弹窗帧:phase_idx={fixture_controller.phase_idx}')
+    # 前置链 3 次点击 + 2 次空滚拖拽 = 5;旧无防线形态会烧满 8 屏拖拽(=11)
+    assert len(fixture_controller.recorded_clicks) <= 8, (
+        f'滚动失效应在烧尽预算前快速失败,实际动作数:'
+        f'{len(fixture_controller.recorded_clicks)}')
+
+
 def test_entry_screen_guard(
     test_context: SrTestContext,
     fixture_controller: FixtureController,
