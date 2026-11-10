@@ -62,6 +62,23 @@ def test_construction_guard(test_context: SrTestContext) -> None:
     assert op.pos == 1  # 头部
 
 
+def test_character_check_skipped_when_expected_none(
+    test_context: SrTestContext,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """expected_character=None(默认)= 跳过角色核对直接通过,连读区 OCR
+    也不触发(锁 docstring 契约「None = 跳过核对」;缺守卫时 None 参与子串
+    匹配会 TypeError,默认构造的 op 进入替换界面核对即崩)。"""
+    op = _NoWindowEquipRelic(test_context, piece_name='先驱的绝热围壳')
+    assert op.expected_character is None
+
+    def _boom(*args, **kwargs) -> None:
+        raise AssertionError('None 分支应整体跳过核对,不应触发 OCR 读区')
+
+    monkeypatch.setattr(test_context.ocr_service, 'get_ocr_result_list', _boom)
+    assert op._check_character_on_replace_screen() is None
+
+
 def test_grid_geometry() -> None:
     """4 列网格几何:列中心与实机卡位误差 ≤2px(99/222/345/468;列距 123px
     为亮度剖面实测列中心 99/224/346/469 的标定,旧 110px 标定累计偏 40px
