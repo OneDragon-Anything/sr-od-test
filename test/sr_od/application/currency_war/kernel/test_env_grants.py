@@ -1,5 +1,5 @@
 """环境条件发放测试(机制主题文件;kernel 条件矩阵 → live 接入调用 → 刷新
-次数发放全链;迭代 2026-10-10-env-conditional-grants + T-7 二手市场)。
+次数发放全链; + T-7 二手市场)。
 
 被测机制(按节):
 - **连败/连胜条件发放 kernel 矩阵**(详设 details/env-conditional-grant.md
@@ -10,12 +10,12 @@
   (fake 结算路径真走覆盖写端,防假绿)、猜错整表观察纠偏、streak
   None 结算跳过;
 - **刷新次数条件发放**(T-7 二手市场,设计 =
-  .debug/progress/2026-09-23-invest-effects-calc/designs/T-7-ershichang.md
+  已退役账本
   §2):登记表六查(含 T-21 跨锁失同步)、条件矩阵(含 gold/equips 缺读
   缓发禁半发放)、发放三笔相邻写、计数域全量口径(用户裁定①)、
   一次性(用户裁定②)、上报函数接入调用存在性;
 - **长线利好**(T-21 付费域触发器,设计 =
-  .debug/progress/2026-09-23-invest-effects-calc/designs/T-21-changxian-
+  已退役账本
   liaoli.md §4):付费域计数(「花费金币」限定词,防回退全量域)、
   金-only 两笔发放、一次性、缓发重试、上报接入调用与刷费价基边界
   (第 30 刷扣旧价同窗 +20,31 刷扣新价 1)。
@@ -71,7 +71,7 @@ _ENV = '深井角斗场'
 _EQUIP = '财富宝钻'
 
 _SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep')
-# 触发函数两写 sig 形态(live 形态,详设 §5:logic_hook 族 group
+# 触发函数两写 sig 形态(live 形态,设计稿(原件已退役):logic_hook 族 group
 # 'battle-wait:env-grant';sim 形态 = logic_sig('sim:env') 归 3.3)
 _SIG_HOOK = ChannelSig(family='logic_hook', actor='CwScreenBattleWait',
                        group_id='battle-wait:env-grant')
@@ -218,7 +218,7 @@ def test_grant_writes_rand_then_done_same_evidence_adjacent(
 
 def test_trigger_rejects_obs_sig() -> None:
     """sig 单形态契约:obs 族进触发函数即炸渠道族校验(write_logic_rand
-    渠道封闭集 = logic_action/logic_hook;禁 obs_sig,详设 §5)。"""
+    渠道封闭集 = logic_action/logic_hook;禁 obs_sig,设计稿(原件已退役))。"""
     gs = _make_gs(env=_ENV, equips=[])
     with pytest.raises(ValueError, match='渠道族'):
         check_env_streak_grants(gs, 5, _SIG_OBS)
@@ -344,7 +344,7 @@ def test_seed_and_restore_type_roundtrip_no_regrant(
 # (驱动 = 裸实例 + 全桩面走生产链路 _record_round_outcome,先例 =
 #  test_settle 的覆盖度守卫测试。)
 
-#: live 接入调用 sig 契约形态(design §2 契约:logic_hook 族,组号
+#: live 接入调用 sig 契约形态(设计稿(原件已退役) 契约:logic_hook 族,组号
 #: 'battle-wait:env-grant',actor = op 类名;发放两笔 logic 写同组)。
 _LIVE_SIG = ChannelSig(family='logic_hook', actor='CwScreenBattleWait',
                        group_id='battle-wait:env-grant')

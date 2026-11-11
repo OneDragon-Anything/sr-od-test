@@ -3,8 +3,8 @@
 按被测方法拆目录规范落位——test_gain_chain.py 超线冻结禁追加,新增测试落
 新镜像,先例 = 同目录姊妹镜像文件)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
-T-119-quanyuan-jinsheng.md(定稿)§4 锁 1/2/3 + REVIEW-T119 五裁决点默认案:
+测试面依据 = 设计稿(原件已退役)
+设计稿(原件已退役)§4 锁 1/2/3 + 已退役评审稿 五裁决点默认案:
 - 效果条目语义 = 卡文句 2「获得2个【拆装扳手】」:具名确定发放
   ``gain_equipment(rand=False)`` ×2(gain-chain.md §5:卡文无随机词;与
   env 侧即时装备支 rand=True 系两通道分野,权威版本 = fields.md §3.2.15

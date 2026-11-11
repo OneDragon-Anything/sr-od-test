@@ -1,8 +1,8 @@
 """策略卡羁绊档位条件发放注册表测试(镜像 src = kernel/cw_investments.py
 的 STRATEGY_BOND_TIER_GRANTS + StrategyBondTierGrant + 构建校验)。
 
-测试面依据 = 迭代设计 designs/T-271-mengjing-dawutai.md §4 锁 1/2
-(REVIEW-T271 §3.1 校验面 M12 治理归类:三漂移哨全落、档位升序哨删——
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 1/2
+(已退役评审稿(§ 号 = 原稿节序)§3.1 校验面 M12 治理归类:三漂移哨全落、档位升序哨删——
 「只能由写表人笔误触发的校验删」已登记治理口径,升序性属值形/阈值形纯笔误
 类,行值精确断言在本文件把关;直构形态先例 = 同目录
 test_strategy_bond_battle_grants.py):

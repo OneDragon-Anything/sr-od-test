@@ -3,8 +3,7 @@ kernel/cw_economy.py 该两函数;银狼LV.999 档家族第二成员 = 飞光·�
 策略赋予型景元,宿主文件 test_economy.py 超限冻结,按被测函数拆目录
 新文件落位,先例 = 同目录 test_strategy_interest_floor.py)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-410-feiguang-
-yingyue.md §4 锁 1/锁 2(默认案 A 全场同名同档):
+测试面依据 = 设计稿(原件已退役) 设计稿(原件已退役) §4 锁 1/锁 2(默认案 A 全场同名同档):
 - 锁 1 读口四值:档透传 None→5(未拿卡 = 注册表起始费)/1→1/3→3/5→5;
   与银狼分支并存零串档(两档字段角色互斥,银狼档行不影响景元路由);
 - 锁 2 档感知:bench_char_cost 对景元 gs 给定时经读口取当前档(tier=3

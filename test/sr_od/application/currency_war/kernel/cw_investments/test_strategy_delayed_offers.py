@@ -1,10 +1,10 @@
 """策略卡延时 offer 注册表测试(镜像 src = kernel/cw_investments.py 的
 StrategyDelayedOffer + STRATEGY_DELAYED_OFFERS + 构建校验)。
 
-测试面依据 = 迭代设计 designs/T-98-huangjin-qihuo.md §4(锁 1 经硬裁定
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4(锁 1 经硬裁定
 收缩:防登记笔误类校验「delay_nodes int/quality 越域」不落校验不落锁,
 2026-10-28 治理口径同源——只留漂移哨;白银投资批同裁扩 refresh_count
-值域哨不加)+ designs/T-198-baiyin-touzi.md §4(锁 2 值形泛化):
+值域哨不加)+ 设计稿(原件已退役;§ 号 = 原稿节序)§4(锁 2 值形泛化):
 - 登记单一源:行值 = 卡面效果原文直读(黄金期货 id 101101/5 节点/金;
   黄金期货+ id 101102/4 节点/金;彩虹期货 id 201101/5 节点/棱彩;
   彩虹期货+ id 201102/4 节点/棱彩;白银投资 id 203201 两条效果条目

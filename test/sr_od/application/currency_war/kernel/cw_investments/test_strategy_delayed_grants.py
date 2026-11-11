@@ -1,21 +1,21 @@
 """策略卡延时发放注册表测试(镜像 src = kernel/cw_investments.py 的
 StrategyDelayedGrant + STRATEGY_DELAYED_GRANTS + 构建校验)。
 
-测试面依据 = 迭代设计 designs/T-106-rencai-jili.md §4 锁 1(经治理收缩:
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 1(经治理收缩:
 防登记笔误类校验「delay_nodes 形/下界」不落校验不落锁——2026-10-28
 治理口径,T-98 锁 1 同款收缩先例;只留漂移哨)+ T-107 展开卡随批扩面
-(designs/T-107-rencai-jili-plus.md §4 锁 1 同型)+ 许诺特权随批扩面
-(designs/T-139-xunuo-tequan.md §4 锁 1 同型)+ 先亏后盈随批扩面
-(designs/T-144-xiankui-houying.md §4 锁 1:count 字段首例 + 伴随损血
+(设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 1 同型)+ 许诺特权随批扩面
+(设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 1 同型)+ 先亏后盈随批扩面
+(设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 1:count 字段首例 + 伴随损血
 效果条目 STRATEGY_ECONOMY 行)+ 好运令牌·银随批扩面(designs/
-T-146-haoyun-lingpai-yin.md §4 锁 1:卡名与发放物异名首例,物名断言
+设计稿(原件已退役) §4 锁 1:卡名与发放物异名首例,物名断言
 防卡名当物名笔误)+ 是钻石总会发光随批扩面(designs/
-T-148-shizuanshi-zonghui-faguang.md §4 锁 1/锁 4:随机 choice-set 行
+设计稿(原件已退役) §4 锁 1/锁 4:随机 choice-set 行
 首例,item='' 占位走 item_choices;item 与 item_choices 恰一 = 防登记
 笔误类按治理口径不入 import 校验,对账归表域恰一锁)+ 回收计划随批扩面
-(designs/T-237-huishou-jihua.md §4 锁 2:item_category 类别池行首例,
+(设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 2:item_category 类别池行首例,
 item='' 占位走类别池,值域词表由池派生承载)
-+ 好运令牌·彩随批扩面(designs/REVIEW-T374.md §4 锁 1:周期型 repeat
++ 好运令牌·彩随批扩面(设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 1:周期型 repeat
 字段首例,repeat=True 行禁 count>1/禁元组形 delay_nodes 对账锁
 随批——防登记笔误类按 2026-10-28 治理口径不入 import 校验):
 - 登记单一源:行值 = 卡面效果原文直读(人才激励 id 101601/4 节点、
@@ -254,7 +254,7 @@ def test_validator_item_category_pool_empty_raises(
 def test_repeat_rows_mutual_exclusion() -> None:
     """repeat 互斥对账锁(周期型首例治理口径:防登记笔误类不入 import
     校验,对账归表域测试——repeat 字段 docstring 同款口径;
-    REVIEW-T374.md §3.3 第⑤查落表域):repeat=True 行禁 count>1
+    已退役评审稿(§ 号 = 原稿节序)§3.3 第⑤查落表域):repeat=True 行禁 count>1
     (repeat 与数量多发叠加 = 到点每窗多发,卡面无此形)且 delay_nodes
     恒标量(禁元组形——元组 = 逐节拍一次性多发,与周期自续互斥;重排队
     标量 int 直读,该形被本锁前置拦在登记面)。注册全集逐行扫,

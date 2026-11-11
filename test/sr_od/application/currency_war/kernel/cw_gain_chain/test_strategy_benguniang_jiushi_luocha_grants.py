@@ -3,8 +3,8 @@
 PICK 推导 + ``_STRATEGY_NODE_CHAR_GRANTS`` 具名固定子形姊妹专表;先例 =
 同目录 test_strategy_lunhui_buzhi_grants.py 轮回不止同卡两表形态)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
-T-408-benguniang-jiushi-luocha.md(定稿 v1.1)§4 锁 1/2:
+测试面依据 = 设计稿(原件已退役)
+设计稿(原件已退役)(定稿 v1.1)§4 锁 1/2:
 
 - 效果条目1(即时 2★三月七):首句「获得2星【三月七】」即时直读行骑厂(表
   +1 行,PICK 行由生成式注册段自动派生,禁字面量第二源),确定发放

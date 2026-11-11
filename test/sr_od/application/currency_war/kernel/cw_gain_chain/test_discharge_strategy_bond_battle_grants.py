@@ -1,8 +1,8 @@
 """策略卡羁绊条件节点窗交付检查效果条目测试(镜像 src = kernel/cw_gain_chain.py
 的 discharge_strategy_bond_battle_grants;两拍制发放拍,含 rng)。
 
-测试面依据 = 迭代设计 designs/T-172-buyao-xiaokan-women-de-jiban.md §4
-锁 4/7/9 + REVIEW-T172(直构形态先例 = 同目录
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4
+锁 4/7/9 + 已退役评审稿(直构形态先例 = 同目录
 test_check_strategy_boss_battle_grants.py;采样断言 = 固定 rng 同种子
 重放,禁手抄池清单,T-116 家族口径):
 - 武装态门:armed 非 True(None = 未观察未武装 / False = 已消费)→ 0

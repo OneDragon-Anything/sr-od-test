@@ -5,8 +5,8 @@ kernel/cw_gain_effects.py ``_STRATEGY_CHAR_GRANTS['狸职手续'] =
 同目录 test_strategy_huanyu_grants.py;单发成员(只数 = 1)归同目录
 test_strategy_char_grant.py,本文件只辖只数 > 1 成员)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
-T-207-lizhi-shouxu.md(定稿)§4 锁 1/锁 4 + REVIEW-T207 九裁决点默认案:
+测试面依据 = 设计稿(原件已退役)
+设计稿(原件已退役)§4 锁 1/锁 4 + 已退役评审稿 九裁决点默认案:
 - 注册行直测:登记名 = 实机录名「狸职狸狸」归一(防回退卡面用名
   「狸狸」——该形态会被登记面角色名漂移哨炸,锁先行暴露意图),只数 3
   不进登记表(估值档位与只数无关),把结果写进状态副本的实现分支只数单一源 = 工厂表行值;

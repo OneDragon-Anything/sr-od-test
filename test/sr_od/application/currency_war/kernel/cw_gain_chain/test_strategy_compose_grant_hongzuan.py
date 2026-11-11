@@ -4,8 +4,8 @@ cw_gain_effects.py PICK_INVEST_EFFECTS '红钻闪耀' 组合行(具名红钻×�
 (id 231201/3 节点/定名简易武装箱);按被测方法拆目录规范落位,先例 =
 同目录 test_strategy_compose_grant_huishou_plus.py 回收计划+)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-244 对应稿
-§4 锁面修正形(REVIEW-T244 无需用户决定 7/7;卡面官方原文:「获得1个【红钻】。
+测试面依据 = 设计稿(原件已退役)T-244 对应稿
+§4 锁面修正形(已退役评审稿 无需用户决定 7/7;卡面官方原文:「获得1个【红钻】。
 进入3个节点后，获得【简易武装箱】」;红钻 ∉ 精密金面判据映射 gate 恒
 None,获得零级联 ∉ EQUIP_ACQUIRE_CONSEQUENCES):
 

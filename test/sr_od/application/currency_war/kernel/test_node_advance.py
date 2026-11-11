@@ -1,18 +1,18 @@
 """节点序位与推进测试面(推进/锚定原语 + 场景走查 + 环境修饰序位表)。
 
-节点序位 = (位面, 轮) 元组键(2026-10-12-abolish-node-ordinal §3.2)。
+节点序位 = (位面, 轮) 元组键(设计稿(原件已退役))。
 三节测试面:
 
 - **推进原语判据面**(``advance_node_effective`` /
   ``report_node_advance`` 观察态门 / ``observe_node_anchor`` 锚定处置,
-  landing §3.1 完成判据 + design §2.11 测试 2/3):门挡/首锚定/重复上报
+  正本已退役 完成判据 + 设计稿(原件已退役) 测试 2/3):门挡/首锚定/重复上报
   结构挡/恰一档/等值翻锚/倒退免疫/补推含尾段发放/跨位面/越域丢弃/
   终局事件式;
-- **场景走查测试**(landing §3.6 走查集:快弹窗全型/boss 段/恢复局
+- **场景走查测试**(正本已退役 走查集:快弹窗全型/boss 段/恢复局
   自愈/结算真值金采样/备战锚定接入调用;已有判据不重写,本节只收缺口);
 - **环境修饰序位表**(人身意外险 id 107 节点序列环境修饰,设计 §4
-  锁 1-11;设计权威版本 = .debug/progress/2026-09-23-invest-effects-calc/
-  designs/T-8-renshenyiwai-xian.md,钉住设计约定不断言实现细节):修饰规则
+  锁 1-11;设计权威版本 = 已退役账本
+  设计稿(原件已退役;判据 = 本文件锁面申报),钉住设计约定不断言实现细节):修饰规则
   纯函数/场字段生命周期/next_screen 推导/观察读链两位数/白名单归属/
   sim 状态副本里的值/键化消费面/acquired_key 同坐标系/结算读数与单调门。
 """
@@ -241,7 +241,7 @@ def test_repair_advance_ticks_ledger() -> None:
 
 
 def test_cross_plane_advance() -> None:
-    """跨位面推进(design §2.11 测试 2):P1 位面末 (1,9) 确认 → (2,1)
+    """跨位面推进(设计稿(原件已退役) 测试 2):P1 位面末 (1,9) 确认 → (2,1)
     (后继原语跨位面);跨位面字典序严格性 (1,10) < (2,1) 由锚定倒退
     免疫分支自然严格(修饰局形态同构,默认局锁本位)。"""
     gs = _gs_with_double_pair()
@@ -253,7 +253,7 @@ def test_cross_plane_advance() -> None:
 
 
 def test_out_of_domain_reading_dropped() -> None:
-    """越域读数丢弃(design §2.11 测试 4 位面在表守卫):位面 4 无序列表
+    """越域读数丢弃(设计稿(原件已退役) 测试 4 位面在表守卫):位面 4 无序列表
     (OCR 位面误读形态)→ 不写任何水位 + arbitrate 留证,返回
     out_of_domain_dropped(与 prep suppress 零写入/supply 响亮抛错语义
     等价的 kernel 侧显式处置;位面 3 行入表后表外防御 = ≥4)。"""
@@ -266,7 +266,7 @@ def test_out_of_domain_reading_dropped() -> None:
 
 
 def test_terminal_match_end_event_style() -> None:
-    """终局事件式(design §2.11 测试 3):位面 3 末 boss (3,7) 结算确认 →
+    """终局事件式(设计稿(原件已退役) 测试 3):位面 3 末 boss (3,7) 结算确认 →
     sequence_next = None → applied=True reason='match_end' + 声明
     next_screen='';零写入(node_pos/node_hist_pos 保持锚定态)零效果
     tick(已登记效果余期不递减)。applied 语义扩展 = 终结动作落地事实。"""
@@ -301,10 +301,10 @@ def _gs_with(test_context, monkeypatch, spec_name: str) -> GameState:
 def test_fast_popup_advance_precedes_pick_and_prep_reanchor(
         test_context, monkeypatch,
 ) -> None:
-    """快弹窗全型(landing §3.6 S2):结算确认**点击即上报**(去证据门,
+    """快弹窗全型(正本已退役 S2):结算确认**点击即上报**(去证据门,
     用户裁定 2026-09-21——点了就是上报,无弹窗识别标志探查)→ 推进先于弹窗
-    选卡由因果序结构性成立(design §2.3,不依赖弹窗推断);选卡登记零
-    推进(登记语义归拿卡上报侧,design §2.6);选卡后备战帧锚定等值
+    选卡由因果序结构性成立(设计稿(原件已退役),不依赖弹窗推断);选卡登记零
+    推进(登记语义归拿卡上报侧,设计稿(原件已退役));选卡后备战帧锚定等值
     reanchor 翻回观察态,下一终结动作解锁。"""
     from sr_od.application.currency_war.operations.cw_op.cw_op_settle_confirm import (
         CwOpSettleConfirm,
@@ -328,7 +328,7 @@ def test_fast_popup_advance_precedes_pick_and_prep_reanchor(
     # 选卡登记(拿卡上报侧):零节点推进
     gs.effects.register_strategy(STRATEGY_EFFECTS['加油站'], acquired_key=(1, 6))
     assert gs.node_pos.value == (1, 2) and gs.node_pos.source == 'logic', (
-        '选卡登记不推进节点(登记语义归拿卡侧,design §2.6)')
+        '选卡登记不推进节点(登记语义归拿卡侧,设计稿(原件已退役))')
 
     # 选卡后备战帧锚定:等值 reanchor 翻观察态 → 下一终结动作解锁
     assert observe_node_anchor(gs, (1, 2), trigger_screen='货币战争-备战',
@@ -340,7 +340,7 @@ def test_fast_popup_advance_precedes_pick_and_prep_reanchor(
 def test_boss_segment_click_advance_and_cross_plane(
         test_context, monkeypatch,
 ) -> None:
-    """boss 段帧序列测试(landing §3.6 S6/E12/E13;去证据门重述 2026-09-21):
+    """boss 段帧序列测试(正本已退役 S6/E12/E13;去证据门重述 2026-09-21):
 
     - E12 奖励关结算确认**点击即推进** → boss 节点 (1,9);
     - 简报类型直定目标恒正确:无证据门 ⇒ 上报先于下一节点任何画面渲染
@@ -375,7 +375,7 @@ def test_boss_segment_click_advance_and_cross_plane(
 
 
 def test_locked_resume_value_guard_self_heal(test_context, monkeypatch) -> None:
-    """锁定臂门挡自愈(design §2.2/§2.3,landing §3.6 S9):锁定臂直出战
+    """锁定臂门挡自愈(设计稿(原件已退役)§2.3,正本已退役 S9):锁定臂直出战
     无备战帧锚定(v=None)→ 首次结算确认被 **value 守卫**挡(攻击 R1:
     新状态容器缺省 source 即 observation,门必须按 value 在场判);战后备战
     帧观察锚定以绝对读数首锚定补齐(恢复局重建语义,R=局中任意节点)——
@@ -402,7 +402,7 @@ def test_locked_resume_value_guard_self_heal(test_context, monkeypatch) -> None:
 def test_settle_truth_gold_samples_conditional_grant(
         test_context, monkeypatch,
 ) -> None:
-    """结算真值金采样(design §2.7-3):条件族(本金充裕,50/10/3)的
+    """结算真值金采样(设计稿(原件已退役)):条件族(本金充裕,50/10/3)的
     每节点发放按 **结算真值金** 评估——结算链(apply_settlement_cover →
     settle_truth)先于「继续挑战」点击,推进时点采到的金 = 战后真值,
     比战前推算金(陈旧金)更准。时序测试:战前推算金低于阈值 → 首锚定
@@ -530,7 +530,7 @@ def test_deposit_return_conditional_grant_and_roll(
 
 
 def test_prep_heavy_receipt_anchors_node(test_context, monkeypatch) -> None:
-    """备战帧锚定接入调用测试(design §2.4 写端 1,攻击 F1 定论):CwScreenPrep
+    """备战帧锚定接入调用测试(设计稿(原件已退役) 写端 1,攻击 F1 定论):CwScreenPrep
     heavy 观察回执携带本帧 plane/round → ``observe_node_anchor``(唯一
     生产锚定缝,cw_screen_prep.py::_observe heavy 段)——首帧 first_anchor
     建账含尾段发放、后续读数 advance/reanchor 落账、回执缺位跳过(禁猜)。"""

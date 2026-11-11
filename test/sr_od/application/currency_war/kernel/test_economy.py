@@ -703,7 +703,7 @@ def test_budget_value_domain_and_legal_zero_frames(case_id: str) -> None:
 
 # (R3 · pair 物化/断供驱逐测试段已随配方决策层退役删除——
 #  pair_target_comp/update_p1_recipe/pair_drought 全族消亡,
-#  考古走 git 历史;comp-structure-unification 3.3。)
+#  考古走 git 历史;设计稿(原件已退役)。)
 
 
 def test_injection_consistency_single_registry_source() -> None:
@@ -887,7 +887,7 @@ def test_facade_plane_outside_key_set_returns_zero():
 
 
 # (test_hp_safe_nodes_left_capped_at_modeled_planes 已随保血阈值面删除
-#  退役——hp-purge 迭代 3.1 B-8;被测对象即被删函数。)
+#  退役——;被测对象即被删函数。)
 
 
 def test_total_remaining_nodes_matches_facade_in_modeled_planes():
@@ -932,7 +932,7 @@ def _run_shop_visit_offline_host(monkeypatch: pytest.MonkeyPatch,
     (跳过 gold 救援重读支);种子段读链桩 = 分型的「屏幕席真空」合法态
     (生产 SIFT 读链离线不可用,空账重建出口按合法态零写零台账);帧留证
     不落盘。返回 (warned, rr, ledger);rr=None = 正常收工(出参交接契约,
-    详设 §2.2)。驱动 = 真类实例 + 节点函数直驱(过渡薄壳已随 3.4 退役,
+    设计稿(原件已退役))。驱动 = 真类实例 + 节点函数直驱(过渡薄壳已随 3.4 退役,
     先例 = operations/cw_screen/test_shop_screen_op.py)。
     disclose_impl 替换店开帧披露写点(接入调用点为函数内 lazy import,每次
     调用取模块属性,monkeypatch 即生效)。"""

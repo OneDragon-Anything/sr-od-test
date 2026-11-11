@@ -3,7 +3,7 @@ board_bench_char_value_sum / check_strategy_boss_clear_gold;直构形态
 先例 = 同目录 test_check_strategy_boss_completion_grants.py 的状态容器直置,
 禁经战斗链假绿)。
 
-测试面依据 = 迭代设计 designs/T-332-souda-che.md §4 锁 2/锁 5:
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 2/锁 5:
 - 锁 2(价值口径对拍):economy.md §9 详情面板三点实测定案(2026-09-15,
   2 费线:1★花火 +2 / 2★不死途 +5 / 3★不死途 +17,禁从他稿平移数值)+
   1★1费豁免无手续费 +1——与 sell_refund 单一源对拍,「费用合计 Σcost」

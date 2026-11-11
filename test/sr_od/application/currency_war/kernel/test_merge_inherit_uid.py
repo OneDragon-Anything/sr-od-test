@@ -2,7 +2,7 @@
 _merge_inherit_uid + merge_step_once / kernel/cw_merge_simulate.py
 本地同款实现 + merge_simulate)。
 
-测试面依据 = 迭代设计 designs/T-368-peipei-kechuan.md §9.2 个体归属
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§9.2 个体归属
 承载(F1 修,轮 3 对抗立项):合成产物 uid = 素材中已发号 uid 的最小值
 (最老个体承继,确定性可复现);素材全未发号 → 产物未发号(None);
 锁域豁免 = 承继值命中未解锁上场锁记录 → 弃承继置 None(升星产物可

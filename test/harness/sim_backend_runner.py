@@ -1,4 +1,4 @@
-"""sim 运行器 harness(测试仓;sim 统一迭代 flow-seam 详设 §4)。
+"""sim 运行器 harness(测试仓;sim-design.md §6.5)。
 
 为「真流程跑在 sim 世界之上」的测试提供装配缝:真 ``screen_loader``(生成
 器查档案点位)+ controller 桩(全接口触碰即炸,双保险兜底)+ 最小假后端
@@ -33,7 +33,7 @@ from test.harness.fixture_controller import fast_sleep
 class SimControllerStub:
     """sim 运行器 controller 桩:任何属性/方法触碰即 AssertionError。
 
-    双保险兜底(flow-seam 详设 §2):漏改的直连 controller 路径撞桩即炸,
+    双保险兜底(sim-design.md §6.5):漏改的直连 controller 路径撞桩即炸,
     报「sim 模式触碰真实 IO」+ 触碰点调用栈(定位漏改点)。``__getattr__``
     只对缺失属性触发,桩自身零属性 → 任何接口名都炸;``hasattr`` 依赖
     AttributeError 静默,本桩刻意让 AssertionError 传播 = 触碰即响亮。
@@ -129,7 +129,7 @@ def sim_backend_fixture(
 
 # ============================================================ 全流程装配
 # (sim 统一 3.4 首局验收:真策略 mandate_v1 + 真 CwLoop 驱动 SimBackend
-#  从 reset 跑到局终。装配缝 = flow-seam 详设 §4 运行器。)
+#  从 reset 跑到局终。装配缝 = sim-design.md §6.5 运行器。)
 
 
 @dataclass
@@ -279,7 +279,7 @@ def run_sim_full_match(test_context: Any,
                        max_rounds: int = 1200) -> SimFullRun:
     """真流程 × sim 状态副本跑一整局(3.4 首局验收的运行原语)。
 
-    装配(flow-seam §4):真 screen_loader + controller 桩(就绪探针放行,
+    装配(sim-design.md §6.5):真 screen_loader + controller 桩(就绪探针放行,
     其余触碰即炸)+ SimBackend(端口槽 + 事件钩子 + 动作分支 rng 提供槽)
     + 真 mandate_v1 策略器(构造注入 SimpleNamespace(strategy_seed))
     + 状态容器单例绑定(后端状态容器 = 流程唯一状态副本)+ 真 CwLoop(看门狗轮数

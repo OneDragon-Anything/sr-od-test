@@ -2,8 +2,8 @@
 kernel/cw_gain_chain.py 的该被测函数,按拆目录规范落位;同模块兄弟
 测试 = test_on_env_gained.py / test_gain_character.py)。
 
-测试面依据 = 迭代 T-34 命运礼物设计(.debug/progress/2026-09-23-
-invest-effects-calc/designs/T-34-mingyun-liwu.md)§2.4 + §4 锁 4/5/9:
+测试面依据 = 迭代 T-34 命运礼物设计(已退役账本
+invest-effects-calc/设计稿(原件已退役;判据 = 本文件锁面申报))§2.4 + §4 锁 4/5/9:
 - **到点矩阵**:eff < unlock 零写零弹;eff = unlock 弹除;eff > unlock
   照常命中(「到了及以后都算」,错过不悬空);eff None 零写;命中集空
   零写;

@@ -1,7 +1,7 @@
 """策略延时 offer 队列快照存续测试(镜像 src = kernel/cw_game_state.py
 的 pending_strategy_offers 域 + restore_state_snapshot rebuild 登记)。
 
-测试面依据 = 迭代设计 designs/T-98-huangjin-qihuo.md §4 锁 7(rebuild
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 7(rebuild
 登记在位为前提——未登记域恢复面拿 list-of-lists = 静默类型漂移):
 ①带队列快照 → restore 往返逐位相等;②空队列快照往返 = ();③快照无
 该键(无快照接管局)→ 恢复域值 None = 未写形态。"""

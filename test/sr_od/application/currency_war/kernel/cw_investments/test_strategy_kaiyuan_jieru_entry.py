@@ -2,8 +2,8 @@
 STRATEGY_EFFECTS['开源节流'];登记型新锁落拆目录新文件,命名随
 test_strategy_*_entry 家族)。
 
-测试面依据 = 迭代设计 designs/T-295-kaiyuan-jieru.md §2.5/§4 锁 6 +
-REVIEW-T295 §3.3 裁决点 4(声明性条目加,兼顶满载体宿主):
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§2.5/§4 锁 6 +
+已退役评审稿(§ 号 = 原稿节序)§3.3 裁决点 4(声明性条目加,兼顶满载体宿主):
 - payload is STRATEGY_ECONOMY['开源节流'](同一实例单一源,本金充裕
   :969 同构);
 - id = '300101'(与数据行 plaza id 双匹配,漂移由 _validate_strategy_

@@ -1,8 +1,7 @@
 """幸运喷雾注册面测试(cw_investments 分目录镜像;战力类零响应族
 泛用强度 buff 卡,先例 = 同目录 test_strategy_dangtou_yibang_registry.py)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-160-xingyun-
-wupen.md(定稿)§4 锁 1/锁 3/锁 4。卡面官方原文:「我方小队的幸运一击
+测试面依据 = 设计稿(原件已退役) 设计稿(原件已退役)(定稿)§4 锁 1/锁 3/锁 4。卡面官方原文:「我方小队的幸运一击
 伤害提高25%。」
 
 - 登记面锁:条目五元组 = PLANE_START 占位形(desc 未写触发时点,持有

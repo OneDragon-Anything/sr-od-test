@@ -5,8 +5,8 @@ _make_char_grant_effect('椒丘'))``;按被测方法拆目录规范落位——
 test_gain_chain.py 超线冻结禁追加,新锁落新镜像,先例 = 同目录
 test_strategy_xianzhou_grants.py 仙舟星徽)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-214 对应稿
-§4(REVIEW-T214 无需用户决定 5/5;卡面官方原文双具名直读;效果条目1 rand=False 策略
+测试面依据 = 设计稿(原件已退役)T-214 对应稿
+§4(已退役评审稿 无需用户决定 5/5;卡面官方原文双具名直读;效果条目1 rand=False 策略
 卡侧具名效果条目通道归属;效果条目2 椒丘 1★ 先验家族口径):
 
 - 登记单一源:组合行已登记;泛化随机表零条目;

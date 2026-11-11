@@ -22,7 +22,7 @@
     (装配缝 = test/harness/sim_backend_runner.run_sim_full_match 同源)
     → decide_supply 被调、owned 内容载荷分支入账写行、chosen_supply 写行、
     零节点推进(选完回备战弹店,推进归出战;占位池 char 恒空 → 单位入账
-    分支结构性零写,design §2.2 申报)。
+    分支结构性零写,设计稿(原件已退役) 申报)。
 
 测试纪律:不连真游戏(fixture harness + fast_sleep 包 op 执行)、零真实
 副作用(journal 走内存 sink,telemetry run 态测试复位)、共享对象改属性
@@ -183,7 +183,7 @@ def _make_supply_live(test_context, monkeypatch, *, pick, opts,
     monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
     if seed_left is not None:
         # 残值形态构造:观察前状态容器已持上次访问读数(读缺跳写语义 = 本次
-        # 观察不覆盖,残值真实存在——design §2.2 对照闸残值分量)。
+        # 观察不覆盖,残值真实存在——设计稿(原件已退役) 对照闸残值分量)。
         match.gs.observe(match.gs.supply_refresh_left, seed_left,
                          sig=_SIG_OBS)
     op = CwScreenSupplyNode(test_context)
@@ -479,7 +479,7 @@ def test_supply_sim_two_state_pick_flow(test_context, monkeypatch) -> None:
     刷新建议不可能,决策确定性由 seed 承载)。动作 op 走真注册表派发:
     机械执行分支端口检查跳过,状态副本反应 = 上报声明链(内容载荷分支
     owned += 规范名)。占位池 char 恒空 → 单位入账分支结构性零写
-    (design §2.2 申报;bench 分支对占位池不可达,不在断言面)。journal
+    (设计稿(原件已退役) 申报;bench 分支对占位池不可达,不在断言面)。journal
     走内存 sink(零落盘),run 态测试复位。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         SupplyPayload,
@@ -549,7 +549,7 @@ def test_supply_sim_two_state_pick_flow(test_context, monkeypatch) -> None:
                 f'journal:owned 装备入账分支写行(equip={equip!r})')
             assert not any(r['field'] == 'node' for r in rows), (
                 'journal:零节点推进行(补给确认不再推节点)')
-            # 单位入账分支结构性零写(design §2.2 申报面):占位池 char 恒空 →
+            # 单位入账分支结构性零写(设计稿(原件已退役) 申报面):占位池 char 恒空 →
             # 上报走装备入账分支分支,备战席零改动。
             assert gs.bench.value == _bench_before, (
                 '单位入账分支零写(占位池 char 恒空)')

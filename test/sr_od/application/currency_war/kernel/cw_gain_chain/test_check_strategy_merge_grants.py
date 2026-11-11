@@ -3,9 +3,8 @@ check_strategy_merge_grants;分方法拆目录规范落位,文件镜像超限纪
 新函数落拆目录新文件,先例 = 同目录 test_check_strategy_star_merge_gold.py
 与 kernel/cw_env_grants/test_check_env_merge_grants.py)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-179-shali-
-taojin.md(定稿)§4 锁 1/3/4 + REVIEW-T179 §3.4(卡面官方原文:「合成
-2星2费角色时，获得1张【砂金】。」)+ designs/T-409-heita-jiyuan.md §5.1
+测试面依据 = 设计稿(原件已退役) 设计稿(原件已退役)(定稿)§4 锁 1/3/4 + 已退役评审稿(§ 号 = 原稿节序)§3.4(卡面官方原文:「合成
+2星2费角色时，获得1张【砂金】。」)+ 设计稿(原件已退役;§ 号 = 原稿节序)§5.1
 用户终裁(2026-11-06 具名判据行,卡面原文:「你获得3星【黑塔】时获得
 【大黑塔】」):
 

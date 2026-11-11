@@ -1,8 +1,7 @@
 """定期福利注册面测试(cw_investments 分目录镜像;登记锁先例 =
 同目录 test_strategy_cheer_squad_registry.py)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-162-dingqi-
-fuli.md §4 锁 1。卡面官方原文(cw_invest_data.py):「立刻获得4个金币,
+测试面依据 = 设计稿(原件已退役) 设计稿(原件已退役) §4 锁 1。卡面官方原文(cw_invest_data.py):「立刻获得4个金币,
 并且在每次进入新节点时，获得2金币。」
 
 - 注册面锁:STRATEGY_ECONOMY 条目双字段 = instant_gold=4 ∧

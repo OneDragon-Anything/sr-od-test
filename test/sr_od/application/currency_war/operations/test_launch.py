@@ -9,7 +9,7 @@
   - armed 绿帧 → CwActionStartBattleParam 终点意图;
   - armed ∧ 溢出段命中(首访) → 受限商店访问意图 CwActionOpenShopParam
     (普通开店形态;进出店 = 普通 OpenShop/0n 路径,访问内消费 = 策略侧
-    自限,详设 §2.10——受限标记字段已随仲裁段退役)
+    自限,设计稿(原件已退役)——受限标记字段已随仲裁段退役)
     + 段旗置位;段内已访 → CwActionStartBattleParam(旧「访问后照发」
     跨帧等价);
   - 非 armed → None + 段旗复位(非 armed 帧零变化);
@@ -116,7 +116,7 @@ def test_front_armed_green_emits_start_battle(monkeypatch) -> None:
 
 def test_front_zone_first_visit_emits_restricted_open_shop(monkeypatch) -> None:
     """armed ∧ 溢出段命中(首访)→ 受限访问意图(普通开店形态)+ 段旗
-    置位。受限标记字段随仲裁段退役(详设 §2.10):发射 =
+    置位。受限标记字段随仲裁段退役(设计稿(原件已退役)):发射 =
     普通 OpenShop 动作,访问内消费由策略侧自限接管(测试面 =
     test_shop_launch_spend_selflimit)。"""
     session = _mk_session(monkeypatch, decision=_GREEN, zone=True)

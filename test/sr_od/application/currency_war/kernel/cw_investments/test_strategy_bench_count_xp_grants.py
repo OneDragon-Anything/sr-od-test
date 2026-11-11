@@ -1,8 +1,8 @@
 """策略卡备战席计数经验登记表测试(镜像 src = kernel/cw_investments.py 的
 STRATEGY_BENCH_COUNT_XP_GRANTS + 构建校验)。
 
-测试面依据 = 迭代设计 designs/T-192-rencai-kongdong.md(定稿)§4 锁 1 +
-REVIEW-T192 §四④(卡面官方原文:「节点开始时，如果备战席角色小于等于
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 1 +
+已退役评审稿(§ 号 = 原稿节序)§四④(卡面官方原文:「节点开始时，如果备战席角色小于等于
 4名，则获得3经验。」;直构形态先例 = 同目录
 test_strategy_empty_equip_xp_grants.py):
 - 登记单一源:行值 = 卡面效果原文直读(人才空洞 id 202601:值 =

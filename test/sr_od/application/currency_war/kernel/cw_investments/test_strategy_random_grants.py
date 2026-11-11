@@ -2,7 +2,7 @@
 kernel/cw_investments.py 的 STRATEGY_RANDOM_GRANTS + 构建校验 + 披露键
 常量)。
 
-测试面依据 = 迭代设计 designs/T-331-yuanjian.md §2.2/§4.3/§6 + REVIEW
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§2.2/§4.3/§6 + REVIEW
 T331 §4.2-R2(granted 卡 overlay 缺口按 40/135 现值申报):
 - 登记单一源:行值 = 卡面效果原文直读(远见 id 303601,「获得一个随机
   黄金投资策略」→ 发放品质词「金」;全池唯一直接发放形状——期货/白银

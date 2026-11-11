@@ -1,8 +1,7 @@
 """cw_opening_hp 词缀域写尾 HP 先验跟随回调测试(镜像 src =
 kernel/cw_opening_hp.py 的该被测函数;按 src 镜像规范落位)。
 
-测试面依据 = T-45 敌后破坏设计(.debug/progress/2026-09-23-invest-effects-
-calc/designs/T-45-dihou-pohuai.md)§2.3 + §4 锁 5(对抗轮 2 N1/N2 修法甲
+测试面依据 = T-45 敌后破坏设计稿(原件已退役;§ 号 = 原稿节序)§2.3 + §4 锁 5(对抗轮 2 N1/N2 修法甲
 落定形态):
 - **HP 跟随 = 词缀域逻辑写尾回调**:enemy_affixes 逻辑写(logic/logic_rand
   两通道同经,调用点 = cw_game_state._write_logic_frame)落帧后 diff 新旧
@@ -17,7 +16,7 @@ calc/designs/T-45-dihou-pohuai.md)§2.3 + §4 锁 5(对抗轮 2 N1/N2 修法甲
   (先验非 logic 来源,不进失配三分流)。
 
 追加面 = 退化(策略卡)mid-run 跳写守卫(策略链词缀失效分支复用本
-回调;生效方案 = designs/REVIEW-T291.md §3,守卫 = 节点窗在动跳写):
+回调;生效方案 = 设计稿(原件已退役;§ 号 = 原稿节序)§3,守卫 = 节点窗在动跳写):
 mid-run(node 锚定)时当期 hp 真值在场 → 回调零 HP 写(真值不踩,
 开局先验通道 mid-run 停用);T-45 §4 锁 5 原「退化 mid-run logic 触发
 → 同走 prior」形态随守卫现值化(真值帧覆盖 prior 静默采新不变)。

@@ -723,7 +723,7 @@ class TestStep7NodeEndInterest:
                     if isinstance(e.action, CwActionSellBenchParam)]
 
     def test_protected_member_now_sellable_per_sequence(self):
-        """身份段退役后的节末凑息形态(统一让位优先级迭代 3.4:凑息 =
+        """身份段退役后的节末凑息形态(统一让位优先级:凑息 =
         部署重排后全局面序列取用,无身份排除;原「凑息保护档阻断观测键
         interest_round_protected_block」随身份保护判据退役——键停止
         生产):保护档成员(卡芙卡,1★ 退 2 ≥ 缺口 2)按统一序列取用 →

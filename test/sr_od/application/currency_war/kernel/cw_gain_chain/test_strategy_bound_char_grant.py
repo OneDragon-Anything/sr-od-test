@@ -4,8 +4,8 @@ kernel/cw_gain_effects.py 的 ``_STRATEGY_CHAR_GRANT_BINDINGS`` +
 家族披露键常量;按被测方法拆目录规范落位——test_gain_chain.py 超线冻结
 禁追加,新增测试落拆目录新文件,先例 = 同目录姊妹镜像文件)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
-T-165-jiazhi-touzi-jin.md(定稿)§4 锁 1/2/3 + REVIEW-T165 §2/④(七裁决
+测试面依据 = 设计稿(原件已退役)
+设计稿(原件已退役)§4 锁 1/2/3 + 已退役评审稿(§ 号 = 原稿节序)§2/④(七裁决
 点全部默认案):
 
 - 锁 1 注册效果条目:表值 = (1, 1, 2)(费用档, 名数, 到手星级);效果体条目

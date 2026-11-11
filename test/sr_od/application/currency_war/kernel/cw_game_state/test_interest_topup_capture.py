@@ -2,7 +2,7 @@
 capture_strategy_interest_topup + kernel/cw_game_state.py tick 闸接入调用;
 宿主文件 test_game_state.py 超限冻结,按被测函数拆目录新文件落位)。
 
-测试面依据 = 迭代设计 designs/T-295-kaiyuan-jieru.md §4 锁 3 + REVIEW-
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 3 + REVIEW-
 T295 §3.3 裁决点 2(tick 闸内捕获〔桥后滚位前〕+ 账本计数载体 + 置数
 禁累加):
 - 四态:持卡∧未花费 → 载体 = resolved 帽且滚位照常;已花费/不可评估

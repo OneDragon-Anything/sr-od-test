@@ -2,7 +2,7 @@
 镜像;宿主 test_effect_inventory.py 濒行数线,uses 语义新锁落本镜像
 目录,沿 T-62 批拆目录先例)。
 
-测试面依据 = 迭代设计 designs/T-188-jiangben-zengxiao.md §2.2-1/§4
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§2.2-1/§4
 (锁 2/锁 6 保守端)+ 八裁决点默认案。语义钉死:
 - 种子(锁 2):条目 duration_uses=6 → register_strategy 播种
   remaining_uses=6(uses 维度与 duration 类别独立,免战牌首例机制);

@@ -1,8 +1,8 @@
 """策略卡首领战后随机装备发放检查效果条目测试(镜像 src = kernel/cw_gain_chain.py
 的 check_strategy_boss_battle_grants)。
 
-测试面依据 = 迭代设计 designs/T-166-qiang-zaishou.md §4 锁 3/4/7 +
-REVIEW-T166(直构形态先例 = 同目录 test_check_strategy_hp_loss_grants.py
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 3/4/7 +
+已退役评审稿(直构形态先例 = 同目录 test_check_strategy_hp_loss_grants.py
 的状态容器直置;采样单一源纪律 = roll_random_equip 禁第二采样表达式):
 - 条件矩阵短路:node_kind 非 boss(battle/encounter/reward/supply)→ 空;
   未持卡/表外卡 → 空;
@@ -16,7 +16,7 @@ REVIEW-T166(直构形态先例 = 同目录 test_check_strategy_hp_loss_grants.py
   形态/发放件数一致;非结果等价——自掷路径采样值不可复现,断言只锁
   写面形态与名 ∈ 池,设计稿 §4 锁 7 收窄口径);
 - 跨卡双持独立各发(本卡特有锁,T-167 展开卡 designs/
-  T-167-qiang-zaishou-plus.md §4 锁 3):枪在手 + 枪在手+ 同局 boss
+  设计稿(原件已退役) §4 锁 3):枪在手 + 枪在手+ 同局 boss
   结算各发 1 件,两笔 evidence 各归卡名互不吞并——触发函数逐持卡独立
   查表发放,无跨卡判重闸。
 """

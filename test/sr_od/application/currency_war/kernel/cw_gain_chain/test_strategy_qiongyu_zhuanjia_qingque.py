@@ -6,8 +6,8 @@ advisor=True 登记面零改动复核,本文件锁效果体效果条目与两条
 〔advisor+具名授予联立〕与升级锅炉 test_strategy_named_equip_grant_
 shengji_guolu.py〔同物冶金炉 ×2〕)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
-T-415-qiongyu-zhuanjia-qingque.md(定稿)§4 锁面(卡面官方原文:
+测试面依据 = 设计稿(原件已退役)
+设计稿(原件已退役)§4 锁面(卡面官方原文:
 「获得装备着3个随机星徽的专家顾问【青雀】，并使其在本局游戏中加入
 商店。获得2个【冶金炉】。」——顾问效果条目/入商店效果条目已登记零动作,冶金炉效果条目 =
 本卡唯一机制件):

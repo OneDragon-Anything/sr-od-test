@@ -4,7 +4,7 @@ cw_gain_effects.py PICK_INVEST_EFFECTS '梦境大舞台' 行:
 按被测方法拆目录规范落位,先例 = 同目录
 test_strategy_compose_grant_gangtie.py 钢铁美学单角色形)。
 
-测试面依据 = 迭代设计 designs/T-271-mengjing-dawutai.md §4 锁 6
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 6
 (卡面句③「获得【花火】」即时角色效果条目骑厂交付;句② 条件装备效果条目走
 STRATEGY_BOND_TIER_GRANTS + 结算拍检查效果条目另表,两注册面分治——GRANTS
 条目 equips_immediate 维持 (),条件发放禁误补即时字段):

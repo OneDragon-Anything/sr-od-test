@@ -3,8 +3,8 @@ kernel/cw_env_grants.py 的该被测函数;同模块兄弟触发函数测试 =
 kernel/test_env_grants.py 与本目录按被测方法拆分文件,本文件按拆目录
 规范落位)。
 
-测试面依据 = 迭代 T-34 命运礼物设计(.debug/progress/2026-09-23-
-invest-effects-calc/designs/T-34-mingyun-liwu.md)§2.5 + §4 锁 8 +
+测试面依据 = 迭代 T-34 命运礼物设计(已退役账本
+invest-effects-calc/设计稿(原件已退役;判据 = 本文件锁面申报))§2.5 + §4 锁 8 +
 锁 6 跨调用点时序半边:
 - **判据**(用户裁定 2026-10-18 口径,check_env_deploy_lock_perfect 同
   判据已登记):环尾行 killed=True ∧ 尾行 hp_after 与前一行持平;killed
@@ -22,8 +22,8 @@ invest-effects-calc/designs/T-34-mingyun-liwu.md)§2.5 + §4 锁 8 +
 环行经生产单一写端 record_settlement_row 构造(与生产同口,先例 =
 同目录 test_check_env_deploy_lock_perfect.py)。
 
-追加面 = 偶像经济策略道段(迭代 2026-09-23-invest-effects-calc
-designs/REVIEW-T329.md §五④ 锁 4/5/9;写状态副本发放域键域扩展 = 环境 ∪ 策略,
+追加面 = 偶像经济策略道段(设计稿(原件已退役)
+设计稿(原件已退役;§ 号 = 原稿节序)§五④ 锁 4/5/9;写状态副本发放域键域扩展 = 环境 ∪ 策略,
 机制按键查表卡名无关,表 +1 条目自动覆盖):策略道完胜回退正例/混族并存
 零互扰/两道作用域隔离/跨调用点时序策略道并入。
 """
@@ -214,8 +214,7 @@ def test_settle_rollback_then_window_discharge_same_pos() -> None:
 
 
 # ============================================================ 策略道段
-# (写状态副本发放域键域扩展首例 = 偶像经济火花礼盒;迭代 2026-09-23-invest-
-# effects-calc designs/REVIEW-T329.md §五④ 锁 4/5/9。机制面按键查表
+# (写状态副本发放域键域扩展首例 = 偶像经济火花礼盒;设计稿(原件已退役))§五④ 锁 4/5/9。机制面按键查表
 # 卡名无关——表 +1 条目自动覆盖,本段锁策略道条目的作用域/混族/时序
 # 行为面。)
 
@@ -224,7 +223,7 @@ _IDOL = '偶像经济'
 
 def test_perfect_win_rewinds_strategy_scoped_entry(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """策略道完胜回退正例(REVIEW-T329 §五④ 锁 4):done 含
+    """策略道完胜回退正例(已退役评审稿(§ 号 = 原稿节序)§五④ 锁 4):done 含
     (偶像经济, delayed_open_accel) ∧ 完胜帧 → 火花礼盒条目解锁位回退
     一步 + 效果串。"""
     gs = _make_gs(queue=(('火花礼盒', (1, 5)),),
@@ -238,7 +237,7 @@ def test_perfect_win_rewinds_strategy_scoped_entry(
 
 def test_mixed_family_entries_independent(monkeypatch: pytest.MonkeyPatch
                                           ) -> None:
-    """混族并存 + 多次完胜累积(REVIEW-T329 §五④ 锁 5):惊喜盒@X +
+    """混族并存 + 多次完胜累积(已退役评审稿(§ 号 = 原稿节序)§五④ 锁 5):惊喜盒@X +
     火花礼盒@Y 两族条目独立回退零互扰(done 含两卡键,同帧各回退一步,
     效果串两行);第二次完胜逐帧累积各再回退一步。"""
     gs = _make_gs(queue=(('惊喜盒', (1, 5)), ('火花礼盒', (1, 7))),
@@ -259,7 +258,7 @@ def test_mixed_family_entries_independent(monkeypatch: pytest.MonkeyPatch
 
 def test_scope_isolation_between_strategy_and_env(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """作用域隔离(REVIEW-T329 §五④ 锁 4,字段名与 done 键查表卡名
+    """作用域隔离(已退役评审稿(§ 号 = 原稿节序)§五④ 锁 4,字段名与 done 键查表卡名
     无关——scope = 表条目 ∧ accel ∧ done 键件名集,T-34 锁 8 原式):
     done 不含 (命运礼物, accel) 时惊喜盒条目不动;done 不含 (偶像经济,
     accel) 时火花礼盒条目不动。"""
@@ -285,7 +284,7 @@ def test_scope_isolation_between_strategy_and_env(
 
 def test_strategy_entry_rollback_then_window_discharge(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """跨调用点时序策略道并入(REVIEW-T329 §五④ 锁 9):策略道条目回退后
+    """跨调用点时序策略道并入(已退役评审稿(§ 号 = 原稿节序)§五④ 锁 9):策略道条目回退后
     到点同窗正常弹除(存量命运礼物版同式的策略道回归域)。"""
     gs = _make_gs(node_pos=(1, 3),
                   queue=(('火花礼盒', (1, 4)),),

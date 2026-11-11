@@ -2,8 +2,8 @@
 kernel/cw_action_report/sell_bench.py;同 src 兄弟测试 =
 kernel/test_gain_chain.py 卖牌段〔已登记超限文件,只读复用不追加〕)。
 
-测试面依据 = 迭代 T-39 专家研讨会设计(.debug/progress/2026-09-23-invest-
-effects-calc/designs/T-39-zhuanjia-yantaohui.md)§2.4.3 + §4 锁 5:
+测试面依据 = 迭代 T-39 专家研讨会设计(已退役账本
+effects-calc/设计稿(原件已退役;判据 = 本文件锁面申报))§2.4.3 + §4 锁 5:
 溢出往返身份守恒——overflow_warning + overflow_card='专家邀请函' → 卖牌
 腾槽入位 = bookcard 带名槽件;='简易武装箱' → supply_box 带名(回归);
 角色名 → unit 分支(回归)。入位构造 = 词表守卫保留 + 查映射带名槽件

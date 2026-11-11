@@ -3,7 +3,7 @@
 kernel/cw_projection_audit.py 的同名审计行 + cw_effect_inventory 常量
 与登记面一致)。
 
-测试面依据 = 迭代设计 designs/T-418-duanye-zhuanjia-ren.md §2 裁决点
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§2 裁决点
 2-A(Field 缺省承载开局值,零置位写状态分支——无卡局不消费零行为差;
 「耗尽后可充能」次数契约与免战牌 remaining_uses「用尽即效果离场」
 分野,次数账权威版本不骑效果账本载体):

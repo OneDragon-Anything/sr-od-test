@@ -5,7 +5,7 @@ test_gas_station_pick_node_grant_matches_official_text(a 组)/
 test_per_node_family_without_now_clause_no_pick_grant(b 组),宿主超限
 禁追加故落本拆目录新文件)。
 
-测试面依据 = 迭代设计 designs/T-332-souda-che.md §2.1/§4 锁 1:
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§2.1/§4 锁 1:
 - 搜打撤 = (b) 组形(卡文句①无「现在/立刻」立即措辞,
   per_node_pick_node_grant.md §3.2):拿卡当节点不发放,首发放 =
   下一节点边界 +1;

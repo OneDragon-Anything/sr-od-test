@@ -433,7 +433,7 @@ def test_briefing_write_semantics():
 
 
 def test_plane_intel_write_gates():
-    """位面情报写门两件(接管域迭代 design §2.3):boss 已有真值不覆写
+    """位面情报写门两件(接管域迭代 设计稿(原件已退役)):boss 已有真值不覆写
     (简报源先落 = 真值已在,实采不冲真值)/ 词缀幂等门(仅状态容器空时写;
     空读数 = 无词缀不落写,空表覆写会把真值抹成「无数据」)。"""
     mod = _screen_module('plane_intel')

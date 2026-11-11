@@ -1,7 +1,7 @@
 """星变注册面测试(cw_investments 分目录镜像;战力类零响应族
 第 15 条,先例 = 同目录 test_strategy_xingji_yazhi_registry.py)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-180-xingbian.md
+测试面依据 = 设计稿(原件已退役) 设计稿(原件已退役;判据 = 本文件锁面申报)
 (定稿)§4 锁 1/锁 3/锁 4 + 用户裁定书 PENDING-DECISIONS.md T-180 节
 (2026-11-01 用户决定:变形持续性 = A 临时 + 随机目标选卡默认不选)。
 卡面官方原文:「战斗开始时，使一个随机1费角色变为3星。」

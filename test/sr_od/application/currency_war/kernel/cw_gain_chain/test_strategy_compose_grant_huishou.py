@@ -4,8 +4,8 @@ kernel/cw_gain_effects.py 的 ``PICK_INVEST_EFFECTS['回收计划']`` 组合
 新增测试落新镜像,先例 = 同目录姊妹组合卡镜像文件
 test_strategy_compose_grant_maicai_plus.py)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
-T-237-huishou-jihua.md(定稿,落地形态按 REVIEW-T237 §2.5 撞键缺陷
+测试面依据 = 设计稿(原件已退役)
+设计稿(原件已退役)(定稿,落地形态按 已退役评审稿(§ 号 = 原稿节序)§2.5 撞键缺陷
 修正)§4 锁 1 + 七裁决点默认案:
 - 组合登记 = ``PICK_INVEST_EFFECTS['回收计划'] = _compose_grant_legs(
   _make_random_equip_effect('进阶', 1), _make_delayed_only_grant_effect(

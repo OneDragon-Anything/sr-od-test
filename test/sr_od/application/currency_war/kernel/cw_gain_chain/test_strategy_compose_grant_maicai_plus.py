@@ -3,8 +3,8 @@
 落位——test_gain_chain.py 超线冻结禁追加,新增测试落新镜像,先例 = 同目录
 姊妹组合卡镜像文件 test_strategy_compose_grant(_plus).py)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
-T-137-maicai-piao-plus.md(定稿)§4 锁 2 + REVIEW-T137 七裁决点默认案:
+测试面依据 = 设计稿(原件已退役)
+设计稿(原件已退役)§4 锁 2 + 已退役评审稿 七裁决点默认案:
 - 组合登记 = ``PICK_INVEST_EFFECTS['买彩票+'] = _compose_grant_legs(
   _make_random_equip_effect('星徽', 1), _make_named_equip_grant_effect(
   '冶金炉', 1))``(条目序 = 卡文语序随机效果条目先/具名效果条目后;效果条目参数登记行单次

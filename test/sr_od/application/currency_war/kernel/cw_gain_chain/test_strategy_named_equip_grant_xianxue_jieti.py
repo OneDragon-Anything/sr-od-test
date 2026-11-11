@@ -4,8 +4,8 @@
 grant.py,单件先例 = 赌神·银 test_strategy_named_equip_grant_dushen_yin.py,
 按被测方法拆目录规范落位)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
-T-395-xianxue-jieti.md(定稿)§7-② 锁 2/锁 3/锁 4 + REVIEW-T395 §7:
+测试面依据 = 设计稿(原件已退役)
+设计稿(原件已退役)§7-② 锁 2/锁 3/锁 4 + 已退役评审稿(§ 号 = 原稿节序)§7:
 - 效果条目1「获得【斩首行动】」= 登记行直书
   ``_make_named_equip_grant_effect('斩首行动', 1)``,具名确定发放
   ``gain_equipment(rand=False)`` 单件入栏,效果串恰 1 条含 placed

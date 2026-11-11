@@ -1,8 +1,8 @@
 """策略卡损血档位触发发放检查效果条目测试(镜像 src = kernel/cw_gain_chain.py
 的 check_strategy_hp_loss_grants)。
 
-测试面依据 = 迭代设计 designs/T-142-baoxian.md §4 锁 2 +
-REVIEW-T142(直构形态先例 = 同目录 test_check_strategy_win_gold_grants.py
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 2 +
+已退役评审稿(直构形态先例 = 同目录 test_check_strategy_win_gold_grants.py
 的状态容器直置):
 - 桶边界矩阵:19 → 0 桶余 19 / 20 → 1 桶余 0 / 45 → 2 桶余 5(累积
   余数结转,「每损失20点」按全程累计读法,发放刻取模);

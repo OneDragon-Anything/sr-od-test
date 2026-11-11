@@ -3,8 +3,8 @@
 的 strategy_char_grant_bindings 审计行;按被测域拆目录规范落位,先例 =
 同目录 test_strategy_conditional_done_snapshot.py)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
-T-165-jiazhi-touzi-jin.md(定稿)§2.2 域四件套义务:
+测试面依据 = 设计稿(原件已退役)
+设计稿(原件已退役)§2.2 域四件套义务:
 
 - 快照存续:绑定 dict 进快照 → restore 往返逐位相等(str→str 双显式
   化不漂移——rebuild 登记在位为前提,未登记域恢复面 = 静默类型漂移);

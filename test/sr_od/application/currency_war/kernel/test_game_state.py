@@ -291,7 +291,7 @@ def test_observe_over_logic_mismatch_defect_row_and_sink_drain() -> None:
 
 def test_observe_mismatch_three_way_routing(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """失配三分流并一测试(,design §2.3):
+    """失配三分流并一测试(,设计稿(原件已退役)):
 
     - 真失配分支:缺陷行落盘后安灯钩子同步被调(行同构);sim 前缀两值
       (sim:engine 现役 / sim:synthesized 本迭代并列)→ 不落行不调钩子;
@@ -389,7 +389,7 @@ def test_observe_mismatch_three_way_routing(
                               observed_evidence='sim:synthesized@p1-r1')
     assert len(rows_order) == 1 \
         and rows_order[0]['kind'] == 'exempt_mismatch', \
-        '豁免先于 sim 抑制(design §2.3 处置序;sim 检查提前即翻转为静默)'
+        '豁免先于 sim 抑制(设计稿(原件已退役) 处置序;sim 检查提前即翻转为静默)'
     assert fired == []
 
     # —— 前缀不中反分支:恢复精确条目注册表,他写端 → 真失配照落 ——
@@ -484,7 +484,7 @@ def test_write_logic_rand_and_observe_random_outcome(
 def test_any_logic_rand_truth_table() -> None:
     """any_logic_rand 污染判定口真值表(logic-rand-sampling 迭代):
     空集 → False;含随机态域 → True;全非随机态 → False;未登记名
-    容错跳过不炸。消费面 = 动作上报入口跨动作污染判定(design §2.2 #3)。"""
+    容错跳过不炸。消费面 = 动作上报入口跨动作污染判定(设计稿(原件已退役) #3)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     gs.observe(gs.gold, 10, sig=_sig())
     gs.write_logic(gs.hp, 80, produced_by='TestSigWriter', sig=_lsig())
@@ -1224,7 +1224,7 @@ def test_on_buy_bumps_buy_key_by_k() -> None:
 # 字符串在场断言)本批不收录:分诊=修复需 import 在飞互斥面符号
 # (cw_screen_shop 的执行落地 bump、cw_loop 的节点 tick),且本体为
 # 源码扫描形态(AGENTS §10.4.4 禁)。调用点接通的行为测试待在飞批落地后按
-# 行为测试形态重写,台账见 .debug/progress//reports/
+# 行为测试形态重写,台账见 已退役账本
 # 分诊报告(易失)。
 
 
@@ -1944,7 +1944,7 @@ def test_full_state_snapshot_shape() -> None:
 
 
 def test_screen_context_writes_pair_only_no_advance() -> None:
-    """漏斗瘦身(design §2.4 攻击 B1):observe_screen_context 只写上下文对
+    """漏斗瘦身(设计稿(原件已退役) 攻击 B1):observe_screen_context 只写上下文对
     (prev/current)——推进域(node_pos/hist)零触碰,四推断分支已退役;节点
     推进唯一落账入口 = advance_node_effective(动作上报/观察锚定)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
@@ -1963,7 +1963,7 @@ def test_screen_context_writes_pair_only_no_advance() -> None:
 
 
 def test_boss_briefing_report_types_hist_node() -> None:
-    """BOSS 类型直定迁移(design §2.5 表):简报屏上报经 kernel report
+    """BOSS 类型直定迁移(设计稿(原件已退役)):简报屏上报经 kernel report
     直定 boss 类型,目标 = 现 hist;序号推进半部已退役(简报上报零
     node_pos 写);hist 未推进 = 零写禁猜。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
@@ -2037,10 +2037,10 @@ _A_SEEDED: tuple[str, ...] = (
     'enemy_affixes',
     'shop_refresh_cost', 'prev_node_spent',
     'strategy_refresh_left',
-    # 晶矿附着奖励与声明通道三域(迭代 2026-10-10-ore-reward-attach:
+    # 晶矿附着奖励与声明通道三域(:
     # 空初始值,幂等守卫 membership 与挂接入口合并写零 None 防御)
     'ore_rewards', 'ore_declared_pending', 'ore_declared_done',
-    # 环境条件发放已发标记(迭代 2026-10-10-env-conditional-grants:
+    # 环境条件发放已发标记(:
     # 空初始值,「本局首次」守卫初始真值 = 空集)
     'env_grants_done',
     # 环境发放上场锁 + 发号计数器(T-30 星核猎手契约:空/零初始值,
@@ -2073,7 +2073,7 @@ _A_SEEDED: tuple[str, ...] = (
     # 损血档位触发累积器(零初始值,触发函数累加取模零 None 防御;
     # 0 = 无累积语义中性,种 0 不伪装已触发)
     'strategy_hp_loss_accum',
-    # 惊喜盒板件 ⏳N 读数观察域(迭代 2026-10-19-giftbox-piece-obs:
+    # 惊喜盒板件 ⏳N 读数观察域(:
     # 空初始值,整条替换写零 None 防御)
     'giftbox_sight',
 )

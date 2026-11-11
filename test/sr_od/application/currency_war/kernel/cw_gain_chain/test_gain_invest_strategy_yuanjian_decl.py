@@ -3,7 +3,7 @@ kernel/cw_gain_chain.py 的 gain_invest_strategy 名单分支 + STRATEGY_
 GRANT_DECL 常量;按被测方法拆目录规范落位,先例 = 同目录
 test_gain_invest_strategy_pick_grant.py)。
 
-测试面依据 = 迭代设计 designs/T-331-yuanjian.md §4 锁 3 + §2.2(kernel
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 3 + §2.2(kernel
 申报行,裁决点 4 默认案 = 内联名单分支):
 - 名单卡两形各一行:rand=False/True 写通道两形同产申报行(申报与写通道
   无关——申报对象是「获得机制本身」的随机掷骰留证,非写通道语义);

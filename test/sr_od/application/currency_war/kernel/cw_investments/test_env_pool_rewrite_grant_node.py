@@ -4,8 +4,8 @@ extra_strategy_grant_node` 字段与 `_validate_env_pool_rewrite` 增量;按拆
 目录规范落位本目录,先例 = 同目录 test_env_bond_tier_grants.py;offer 通道
 现役闸锁 = kernel/test_cw_investments.py〔已登记超限文件,只读复用不追加〕)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
-T-46-celue-dashi.md(定稿)§4 锁 4(§2.2(b)/(c)/(d) 落地形态;
+测试面依据 = 设计稿(原件已退役)
+设计稿(原件已退役)§4 锁 4(§2.2(b)/(c)/(d) 落地形态;
 2026-10-28 校验治理后只留漂移哨——互斥闸/空条目闸/双调用点互斥随防登记
 笔误类删除,本文件相应锁随删):
 - 登记:策略大师 direct 调用点 (3,5)(「3-5节点」位-轮单点,T-23 裁决 1

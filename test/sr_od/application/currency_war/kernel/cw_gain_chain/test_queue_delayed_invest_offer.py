@@ -2,9 +2,9 @@
 的 queue_delayed_invest_offer + kernel/cw_gain_effects.py 的
 _make_delayed_offer_effect 派生条目)。
 
-测试面依据 = 迭代设计 designs/T-98-huangjin-qihuo.md §4(锁 2 只登记不写状态的实现分支
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4(锁 2 只登记不写状态的实现分支
 3+1 条 / 锁 6 live 链登记;live 无呈现动作由模块边界承担——kernel 不
-import sim,不设静态扫描锁)+ designs/T-198-baiyin-touzi.md §4(锁 3
+import sim,不设静态扫描锁)+ 设计稿(原件已退役;§ 号 = 原稿节序)§4(锁 3
 只登记不写状态的实现分支两条效果条目形,用户裁定 2026-11-02 完整包复刻):
 - 拿卡黄金期货 → 队列 (('黄金期货', 5),) + 效果串
   strategy_offer_scheduled:金@5;

@@ -4,8 +4,8 @@ cw_gain_effects.py PICK_INVEST_EFFECTS '黄金垃圾' 行:
 落位——test_gain_chain.py 超线冻结禁追加,新锁落新镜像,先例 = 同目录
 test_strategy_named_equip_grant_quanwuxing.py 全武行)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-249 对应稿
-§4 锁面(REVIEW-T249 无需用户决定 5/5;卡面官方原文:「获得一个【金垃圾袋】，它
+测试面依据 = 设计稿(原件已退役)T-249 对应稿
+§4 锁面(已退役评审稿 无需用户决定 5/5;卡面官方原文:「获得一个【金垃圾袋】，它
 提供大量属性和15金币。」——效果条目1 具名金垃圾袋确定发放;「大量属性和15金币」
 = 装备携带形态战力面 + 金币效果条目 STRATEGY_ECONOMY instant_gold=15 已登记零改动):
 

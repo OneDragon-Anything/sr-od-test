@@ -5,8 +5,7 @@ BattlefieldEffect.equips_transform 字段与 EQUIPS_TRANSFORM_ADVANCED_MATTER
 登记区新锁落本拆目录,先例 = 同目录 test_gain_invest_strategy_* 镜像文件;
 锁形承同域先例公司军火更新·银登记形态两锁)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-376-fenjie-
-wanwu.md(定稿)§4 锁 3(REVIEW-T376 §5④ 编排者定形案甲:pending=True +
+测试面依据 = 设计稿(原件已退役) 设计稿(原件已退役)(定稿)§4 锁 3(已退役评审稿(§ 号 = 原稿节序)§5④ 编排者定形案甲:pending=True +
 保守支 notes,断言联动 pending is True):
 - 变换效果条目登记形态(session 选入 → 账本条目四元组 + payload 词表值 +
   duties.track 置位 + pending 冻结;锁登记形态与词表值,防裸串漂移与

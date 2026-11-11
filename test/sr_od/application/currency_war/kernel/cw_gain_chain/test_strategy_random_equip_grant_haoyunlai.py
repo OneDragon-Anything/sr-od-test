@@ -6,7 +6,7 @@ test_gain_chain.py 超线冻结禁追加,新锁落新镜像,先例 = 同目录
 test_strategy_random_equip_grant_qiang_zaishou_plus.py count=2 模式卡
 枪在手+)。
 
-测试面依据 = 迭代设计 designs/T-248-haoyunlai.md §4 锁 4/锁 6:
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 4/锁 6:
 - 锁 6 链发放真值:固定 rng 注入链发放(选卡落地拍:equips 恰 +2、
   两名各自 ∈ 简易池派生集且逐位 = 同种子重放采样值——重放形既锁 rng
   恰 2 抽又锁采样序,放回语义 = 两次独立掷可重复同件,禁断言互异;

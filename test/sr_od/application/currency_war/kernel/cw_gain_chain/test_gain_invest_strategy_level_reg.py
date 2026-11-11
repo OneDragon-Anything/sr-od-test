@@ -2,7 +2,7 @@
 gain_invest_strategy 登记分支 × kernel/cw_investments.py 的
 STRATEGY_EFFECTS 成长基金条目)。
 
-测试面依据 = 迭代设计 designs/T-108-chengzhang-jijin.md §4 锁 5:
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 5:
 - gain_invest_strategy(session 在场)拿卡 → 效果账本含成长基金条目
   (trigger=CONDITIONAL / duration=WHILE_HELD / category=ECONOMY /
   payload 为 STRATEGY_ECONOMY 注册行同一实例 = 单一源);

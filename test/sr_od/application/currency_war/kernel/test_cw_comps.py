@@ -1,7 +1,7 @@
 """cw_comps 条目与机器的回归锁(镜像 src = kernel/cw_comps.py)。
 
 两主题:①gift_hit_tier 送卡档位机器(此前零直测,本锁 = 估值域「现值
-不变」防线;测试面依据 = T-28 设计稿(迭代 2026-09-23-invest-effects-calc)
+不变」防线;测试面依据 = 设计稿(原件已退役)(设计稿(原件已退役))
 §2.5 + §4.3:条件分支建模批对估值域零动作——持续伤害契约(即时集非空,
 走规则①即时优先)的档位由 COMP_LIBRARY 数据派生,不得随条件分支引擎
 落地漂移);②终局希儿量子条目改档结构锁与 fp 曲线(档 0 = 量4+贝4
@@ -55,7 +55,7 @@ class _Panel:
 
 
 def test_dot_contract_gift_tier_unchanged() -> None:
-    """持续伤害契约估值档位现值锁(T-28 设计稿 §2.5 估值域零动作):
+    """持续伤害契约估值档位现值锁(设计稿(原件已退役) §2.5 估值域零动作):
     即时集 {椒丘, 卡芙卡} 非空 → 规则①即时优先取成员最优档;卡芙卡在
     DOT 队等套为 core(COMP_LIBRARY 分档数据派生,档位语义单一源 =
     gift_hit_tier docstring),整卡档 = 'core'。条件分支建模(猜测写+证实)
@@ -233,7 +233,7 @@ def test_shared_chars_echo_validation() -> None:
 
 
 def test_member_priority_two_tier_derivation() -> None:
-    """成员优先级两档派生语义(统一让位优先级迭代 design §2.1.1):
+    """成员优先级两档派生语义(统一让位优先级迭代 设计稿(原件已退役)):
     ``member_rank_of`` = core 0/其余 1 现算——字段化形态已退役
     (20/20 恒派生值零手编,「精调登记」从未发生);本测试锁派生式
     全库等价 + 读口语义。

@@ -1,8 +1,8 @@
 """gain_invest_env 契约族回归测试(镜像 src = kernel/cw_gain_chain.py 的
 被测函数 ``gain_invest_env``;按被测方法拆目录规范落位)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
-T-26-liangzi-tongpin-qiyue.md(定稿)§4.7:量子同频契约经获得链整入口
+测试面依据 = 设计稿(原件已退役)
+设计稿(原件已退役)§4.7:量子同频契约经获得链整入口
 落地 → 无即时发放(效果无即时分支,「获得环境当刻不发任何东西」现状
 逐位不变;触发分支只在合并升星事件时序上,env-gain 时点零消费)。
 """

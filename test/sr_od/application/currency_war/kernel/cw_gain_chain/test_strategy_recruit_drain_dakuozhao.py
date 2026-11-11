@@ -3,8 +3,8 @@
 test_gain_chain.py 超线冻结禁追加,新增测试落新镜像,先例 = 同目录
 test_strategy_compose_grant_plus.py)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-197-dakuozhao.
-md §3 锁 4/锁 5/锁 6/锁 8 + REVIEW-T197 八裁决点默认案:
+测试面依据 = 设计稿(原件已退役)T-197-dakuozhao.
+md §3 锁 4/锁 5/锁 6/锁 8 + 已退役评审稿 八裁决点默认案:
 - 组合登记 = 随机角色效果条目(变量计数)×具名装备效果条目,_compose_grant_legs 组合,
   条目序 = 卡文语序随机先/具名后;
 - 变量计数(锁 6):效果串条数随注入持金按 dakuozhao_deduction_plan

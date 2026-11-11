@@ -3,8 +3,8 @@ kernel/cw_gain_chain.py 的 check_strategy_buy_star_flip /
 mark_strategy_buy_star_flip_consumed + kernel/cw_action_report/buy_card.py
 两处接入调用 + kernel/cw_pool.py 池账跟随)。
 
-测试面依据 = 迭代设计 designs/T-187-sifei-jinsheng.md(定稿)§2.2/§2.4/
-§2.5/§4 锁 2/3/4/5 + REVIEW-T187 §四.4(卡面官方原文:「你购买的下1个
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§2.2/§2.4/
+§2.5/§4 锁 2/3/4/5 + 已退役评审稿(§ 号 = 原稿节序)§四.4(卡面官方原文:「你购买的下1个
 4费角色将立刻升到2星。获得12金币。」;直构形态先例 = 同目录
 test_check_strategy_first_buy_xp_grants.py):
 - 谓词分支矩阵(锁 2):未持卡/表外卡 False;持卡 cost=4 star=1 True;

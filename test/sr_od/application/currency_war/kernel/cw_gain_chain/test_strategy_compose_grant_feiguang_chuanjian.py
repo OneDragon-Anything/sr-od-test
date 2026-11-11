@@ -4,8 +4,7 @@ cw_gain_effects.py PICK_INVEST_EFFECTS '飞光·传剑' 行:
 _make_char_grant_effect('景元'))``;char×char 组合行,按被测方法拆目录
 规范落位,先例 = 同目录 test_strategy_compose_grant_yingyue.py 姊妹形)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-411-feiguang-
-chuanjian.md §4 锁 1/2/3(卡面官方原文:「获得【彦卿】和【景元】，他们获得
+测试面依据 = 设计稿(原件已退役) 设计稿(原件已退役) §4 锁 1/2/3(卡面官方原文:「获得【彦卿】和【景元】，他们获得
 【师徒】羁绊。【彦卿】的【天河泻】获得强化，造成战斗中【仙舟】神君和
 【景元】累计伤害值15%的伤害。两人同时在场上时，每进入一个新节点该值
 提高4%。」——师徒羁绊非注册羁绊零建模;天河泻强化/共场叠层两条效果条目具名单位

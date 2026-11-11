@@ -237,7 +237,7 @@ def test_node_advance_decl_normalizes_both_triggers():
 
 
 def test_node_advance_decl_next_screen_derivation_table():
-    """表 #1/#2 next_screen 推导规则测试(详设 §2 推导规则逐分支):
+    """表 #1/#2 next_screen 推导规则测试(设计稿(原件已退役) 推导规则逐分支):
     桩 gs 锚定节点键 → 上报推进 → 新键按「无后继局终事件式 → 位面切换
     优先 → 节点窗呈现屏(弹窗型节点 = 节点模态/battle-reward = 商店档/
     1-1 = 备战档)」断言单值(权威源 = kernel 节点日程真值表

@@ -1,8 +1,8 @@
 """策略卡胜利结算条件金检查效果条目测试(镜像 src = kernel/cw_gain_chain.py 的
 check_strategy_win_gold_grants)。
 
-测试面依据 = 迭代设计 designs/T-130-zhaocai-gou.md §4 锁 2/锁 3 +
-REVIEW-T130(直构形态先例 = 同目录 test_check_strategy_battle_grants.py
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 2/锁 3 +
+已退役评审稿(直构形态先例 = 同目录 test_check_strategy_battle_grants.py
 的状态容器直置):
 - 条件矩阵主锁(锁 2):持卡+胜+无损+佩佩 2 → 2;败局 → 0;损血 → 0;
   **扑满败局形态(won=False, hp_delta=0)→ 0 双条件必要锁**——sim 扑满

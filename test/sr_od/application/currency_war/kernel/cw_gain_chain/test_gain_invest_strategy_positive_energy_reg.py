@@ -2,8 +2,7 @@
 gain_invest_strategy 登记分支 × kernel/cw_investments.py 的
 STRATEGY_EFFECTS 正能量条目;战力类零响应族第 6 条,族内首个恢复型)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-152-
-zhengnengliang.md(定稿)§4 锁 2。构造沿现役获得链测试先例
+测试面依据 = 设计稿(原件已退役) 设计稿(原件已退役)(定稿)§4 锁 2。构造沿现役获得链测试先例
 (cw_gain_chain/test_gain_invest_strategy_cheer_squad_reg.py 同款
 helpers 副本,债文件禁追加)。
 """

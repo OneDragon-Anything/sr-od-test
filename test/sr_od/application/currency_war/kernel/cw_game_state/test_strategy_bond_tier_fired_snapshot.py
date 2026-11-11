@@ -2,7 +2,7 @@
 Field/schema 独立键/种子/rebuild 登记 + kernel/cw_projection_audit.py 的
 strategy_bond_tier_fired 审计行)。
 
-测试面依据 = 迭代设计 designs/T-271-mengjing-dawutai.md §2.2 一次性标志位域 +
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§2.2 一次性标志位域 +
 fields.md 组判据(先例 = 同目录 test_strategy_conditional_done_snapshot.py
 同构形;梦境大舞台 id 252301 首例):
 - 快照存续:一次性标志位值进快照 → restore 往返逐位相等(tuple-of-str 不漂移为

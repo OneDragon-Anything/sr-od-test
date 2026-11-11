@@ -2,8 +2,8 @@
 kernel/cw_gain_chain.py 的 gain_invest_strategy 金币分支接入调用段;按被测方法拆
 目录规范落位,先例 = 同目录 test_gain_invest_env.py)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
-T-46-celue-dashi.md(定稿)§4 锁 3(§2.1(c) 落地形态):
+测试面依据 = 设计稿(原件已退役)
+设计稿(原件已退役)§4 锁 3(§2.1(c) 落地形态):
 - live 同口(report_action_pick_invest_strategy_param)两连笔——首笔 +2 金、
   次笔 +4 金(含本张口径的链级锁),active_strategies 注册不受触发影响;
 - 次序锁:注入 on_strategy_gained 抛异常 → 金已入账且异常上抛

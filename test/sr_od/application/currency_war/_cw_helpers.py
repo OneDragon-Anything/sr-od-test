@@ -2,14 +2,14 @@
 
 **种子载体(benchchar-retirement P5 起)**:帧→状态容器换形通道不存在——
 测试种子经本模块 builder **直写状态容器域**(与观察链同写入口
-``GameState.observe``,design §2.5 测试种子纪律):
+``GameState.observe``,设计稿(原件已退役) 测试种子纪律):
 
 - **状态容器域种子**(``cw4_gs``/``cw4_box``):gold/level/xp/hp/deploy_cap/
   node/bench/deployed 行/shop 等各轴参数化,直写 session 状态容器或一次性
   空白状态容器;**商店屏态域字段** ``shop_screen`` 承接原合成口
   shop_open/shop_empty_off_screen 三分支语义(字段语义在
   :func:`_seed_write` docstring 声明);
-- **名字表达纪律**(design §2.5):测试想要某阵营/前后排偏好 = 挑对应
+- **名字表达纪律**(设计稿(原件已退役)):测试想要某阵营/前后排偏好 = 挑对应
   注册表角色名;未知阵营 = 注册表外名字(如 'c0'/'杂1');占位件 =
   ``BenchSlot(kind=...)`` 直种。种子不提供绕过注册表派生的覆盖参数
   (无注入口);

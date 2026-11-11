@@ -2,8 +2,8 @@
 kernel/cw_action_report/collect_ore.py 尾部调用块;test_collect_ore.py
 语义面 = 合并升星/战技点契约既有锁零触碰,本文件按同目录新文件落位)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
-T-316-huangjing-kuanggong.md(定稿,REVIEW-T316 无需用户决定 7/7)§4 锁 4:
+测试面依据 = 设计稿(原件已退役)
+设计稿(原件已退役)(定稿,已退役评审稿 无需用户决定 7/7)§4 锁 4:
 - 窗序锁:计数入账后、契约效果条目后(env 触发分支写先于只供策略算分的实现分支写);
 - 席满跳过点不入色档列(「点开才触发」与计数分支同口径);
 - 批尾 spheres 单写含授予点(「一次写一 evidence」);

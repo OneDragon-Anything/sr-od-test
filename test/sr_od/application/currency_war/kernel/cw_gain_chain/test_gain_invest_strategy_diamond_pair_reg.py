@@ -4,7 +4,7 @@ cw_investments.STRATEGY_GRANTS 非直读人工转正行;按被测方法拆目录
 落位——test_gain_chain.py 超线冻结禁追加,新增测试落新镜像,先例 = 同目录
 姊妹镜像文件)。
 
-测试面依据 = 迭代设计 designs/T-243-zheme-da-de-zuanshi.md §4 锁 2/4/5①
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 2/4/5①
 + 用户裁定 2026-11-02 读法 B(佩佩真实入后台,裁定册
 PENDING-DECISIONS.md):
 - 组合效果条目主链(锁 2):直构 on_strategy_gained(rand=False)→ 条目序 =

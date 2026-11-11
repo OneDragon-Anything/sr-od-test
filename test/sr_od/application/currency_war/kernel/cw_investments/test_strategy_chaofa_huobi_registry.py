@@ -2,8 +2,7 @@
 同目录 test_strategy_gold_next_nodes_registry.py,闭集伴随先例 =
 test_strategy_refresh_pair_registry.py)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-191-chaofa-
-huobi.md §3 锁 1/锁 2(REVIEW-T191 §四④ 锁 1 落位修正:本卡注册锁落
+测试面依据 = 设计稿(原件已退役) 设计稿(原件已退役) §3 锁 1/锁 2(已退役评审稿(§ 号 = 原稿节序)§四④ 锁 1 落位修正:本卡注册锁落
 拆目录新文件——test_cw_investments.py 1355 行超 800 拆分线禁追加)。
 卡面官方原文(cw_invest_data.py):「失去你现在所有的金币，并在5个
 节点后，获得该金币数+70的总金币。」

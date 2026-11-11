@@ -1,8 +1,7 @@
 """长期主义注册面测试(cw_investments 分目录镜像;登记锁先例 =
 同目录 test_strategy_dingqi_fuli_registry.py)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-177-changqi-
-zhuyi.md §4 锁 1(REVIEW-T177 §4.3 同面)。卡面官方原文
+测试面依据 = 设计稿(原件已退役) 设计稿(原件已退役) §4 锁 1(已退役评审稿(§ 号 = 原稿节序)§4.3 同面)。卡面官方原文
 (cw_invest_data.py):「现在及接下来3次进入新节点时，每次获得7金币。」
 
 - 注册面锁:STRATEGY_ECONOMY['长期主义'] 条目以 frozen dataclass 值相等

@@ -2,7 +2,7 @@
 cw_investments.py 的 STRATEGY_KECHUAN_WEAR_GRANTS / STRATEGY_KECHUAN_
 LEAVE_GRANTS + 构建校验)。
 
-测试面依据 = 迭代设计 designs/T-368-peipei-kechuan.md §9.2(v3.1,
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§9.2(v3.1,
 2026-11-05 用户裁定 B 转正 + 穿戴/离场两效果条目真实建模;两表随本卡
 立项,后继同形卡 +1 行复用;值域校验按 2026-10-28 治理判据不设——手抄
 常量纯笔误类;孤儿键一哨全落,直构形态先例 =

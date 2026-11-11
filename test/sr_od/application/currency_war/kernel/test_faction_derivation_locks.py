@@ -1,4 +1,4 @@
-"""faction 三类注册表派生口径测试(benchchar-retirement design §2.1)
+"""faction 三类注册表派生口径测试(benchchar-retirement 设计稿(原件已退役))
 + 线知识卡三字段测试(line_and_upgrade §1.2/§1.4/§1.5)
 + 开拓者形态归一上报测试(§3 不变量 5 哨兵)。
 
@@ -6,7 +6,7 @@ faction/position_pref 不入状态容器形状,消费点经注册表按 char_id 
 消费口径(§2.1):
 - 类2 板面阵营计数/体系卡身份:注册表派生,未知名 = '?'(不计);
 - 类3 羁绊(按排聚合 board_by_row):行归属 + 注册表派生,开拓者形态归一
-  随迁(前排=记忆/后排=欢愉,design §3 不变量 5 的计数侧承载体)。
+  随迁(前排=记忆/后排=欢愉,设计稿(原件已退役) 不变量 5 的计数侧承载体)。
 
 测试面:
 ① board_by_row 状态容器行输入:排归属 = 行入参(前排/后排分桶),多羁绊角色
@@ -104,7 +104,7 @@ def test_board_by_row_rows_bucket_and_multibond_count():
 # ===== ② 开拓者形态按排归一(计数侧) =====
 
 def test_board_by_row_trailblazer_row_normalization():
-    """开拓者形态归一随迁(design §3 不变量 5 计数侧):前排槽携带后台
+    """开拓者形态归一随迁(设计稿(原件已退役) 不变量 5 计数侧):前排槽携带后台
     形态 id(欢愉)→ 按前排形态(记忆)取羁绊——列车同行计入、欢愉不计;
     后排槽携带后台形态照旧计欢愉。"""
     bb = board_by_row([_unit('开拓者·欢愉', 1)],   # 直构未归一态(防御域)
@@ -265,7 +265,7 @@ def _gs_with_bench_trailblazer(deployed_taken: bool):
 
 def test_move_unit_report_normalizes_trailblazer_form_to_target_row() -> None:
     """``move_unit`` 统一拖动上报有归一(benchchar-retirement P3 缺陷修复
-    申报面,design §3 不变量 5;旧 swap/deploy_move 两上报同源归一,随
+    申报面,设计稿(原件已退役) 不变量 5;旧 swap/deploy_move 两上报同源归一,随
     戊批并入 move_unit):开拓者拖上场 → 排变、形态(char_id)
     同步切目标排;占槽目标 = 交换形态下归一同源。"""
     # 空槽直落形态

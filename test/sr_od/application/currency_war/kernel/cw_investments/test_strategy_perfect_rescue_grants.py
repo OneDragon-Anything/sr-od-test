@@ -2,7 +2,7 @@
 STRATEGY_PERFECT_RESCUE_GRANTS + 构建校验;写状态副本的发放效果条目注册面镜像 =
 cw_gain_effects.PICK_INVEST_EFFECTS 组合登记行)。
 
-测试面依据 = 迭代设计 designs/T-412-doushi-zhejiade-cuo.md §2.2 件1 +
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§2.2 件1 +
 §4 锁 1/锁 2(治理口径 = 用户裁定 2026-10-28「写表人笔误类校验删、漂移哨
 留」:值形哨不加,孤儿键/徽名双源两漂移哨已登记;直构形态先例 = 同目录
 test_strategy_death_save_grants.py 死亡救援同形三件套):
@@ -49,7 +49,7 @@ def test_registry_row_single_source() -> None:
 def test_emblem_dual_source_emblem_family() -> None:
     """徽名双源对表(构建校验②现值通过 = import 过闸即证,显式对拍):
     徽名 ∈ EQUIPMENTS 且类别 = 星徽族(校验哨同判据;零配方非合成件事实
-    不校验,T-219 设计稿定论,登记面注释申报)。"""
+    不校验,设计稿(原件已退役)定论,登记面注释申报)。"""
     assert _EM in EQUIPMENTS, '徽名必须在装备注册表'
     assert EQUIPMENTS[_EM].category == '星徽', '徽名必须属星徽族'
 

@@ -1,7 +1,6 @@
 """CW 意向/方向层测试面(committed 权威判定 + 局23 型帧商店线哨兵)。
 
-(P1 体系对候选机器全谱/门控等价/配方锁联动三段已随 comp-structure-
-unification 3.3 配方决策层退役删除——被测符号 update_p1_recipe/
+(P1 体系对候选机器全谱/门控等价/配方锁联动三段已随  3.3 配方决策层退役删除——被测符号 update_p1_recipe/
 p1_pair_candidates_of/冻结域全族消亡,测试面继任者 =
 test_cw_transition_library.py〔过渡库条目机器〕;考古走 git 历史。)
 
@@ -45,7 +44,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicate
 )
 
 # ============================================================
-# 1. P1 体系对候选机器(配方链候选化;design §2.3)
+# 1. P1 体系对候选机器(配方链候选化;设计稿(原件已退役))
 # ============================================================
 
 
@@ -72,7 +71,7 @@ def _ignite_dot_board(train_n: int = 0) -> tuple[list, dict]:
 # (P1 体系对候选机器全谱段已随配方决策层退役删除——
 #  update_p1_recipe/p1_pair_candidates_of/冻结域全族消亡,测试面
 #  继任者 = test_cw_transition_library.py(过渡库条目机器);考古走
-#  git 历史;comp-structure-unification 3.3。)
+#  git 历史;设计稿(原件已退役)。)
 
 
 # ============================================================
@@ -122,7 +121,7 @@ def test_ju23_star2_stock_card_has_no_refund_backing_no_spend():
     stockpile(M6 升星目标带与一星兜底带)同以 refund_full_star_ok 为
     背书门:2★ 件不可发射(断言面 = 逐动作 reason 闭集,非单位测试
     复述;dominance_buy 通道已退役——富余买入并入 M6 一星兜底带,
-    comp-structure-unification 3.4)。出口形态沿革:商店收缩适配 → 3.6
+    设计稿(原件已退役))。出口形态沿革:商店收缩适配 → 3.6
     会话重排 → 升级转场
     (2026-10-17 迭代)→ 升级触发统一批(P1 零主动升级,触发辖域 =
     锁定后 ∧ plane2_started——溢余帧的转场出口消失,会话自然走到
@@ -244,8 +243,7 @@ def test_committed_authority_semantics(case: str):
     assert committed_authority(_gs_state(1, 8), sess) is True
 # (门控等价测试 test_p1_pair_gate_equivalence_with_gate_first 已随
 #  配方决策层退役删除——被测等价式(p1_pair ⟺ 门控首位)两端全为
-#  退役符号;comp-structure-unification 3.3。)
+#  退役符号;设计稿(原件已退役)。)
 # ============================================================
 # (配方锁联动段——_pair_lines 映射/restart_dead 排除/partial_dead
-#  保留/all_dead 回退四测——已随配方决策层退役删除;comp-structure
-#  -unification 3.3,考古走 git 历史。)
+#  保留/all_dead 回退四测——已随配方决策层退役删除;考古走 git 历史。)

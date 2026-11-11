@@ -1,6 +1,6 @@
 """羁绊优先级结构迁移(faction_reqs)的快照期望生成脚本。
 
-迭代 comp-structure-unification 3.1 的迁移恒等测试载体(details/
+迭代 设计稿(原件已退役) 的迁移恒等测试载体(details/
 faction-priority.md §7)。**真实生成流程**:随仓提交的期望 JSON
 (faction_migration_snapshots.json)由**旧代码(form_tiers/sub_tiers
 结构)+ 本脚本的历史版本**在迁移前产出(git 历史可溯);3.1 落地后

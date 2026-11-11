@@ -2,8 +2,7 @@
 gain_invest_strategy 登记分支 × kernel/cw_investments.py 的
 STRATEGY_EFFECTS 星级压制条目;战力类零响应族第 14 条)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-173-xingji-
-yazhi.md(定稿)§4 锁 2。构造沿现役获得链测试先例
+测试面依据 = 设计稿(原件已退役) 设计稿(原件已退役)(定稿)§4 锁 2。构造沿现役获得链测试先例
 (cw_gain_chain/test_gain_invest_strategy_level_reg.py 同款 helpers
 副本,债文件禁追加)。
 """

@@ -2,8 +2,8 @@
 分目录镜像;祝福族第 4 条,UNIT_BUFF 零响应登记载体;先例 = 同目录
 test_strategy_heping_zhufu_entry.py 和平手枪祝福)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-234 对应稿
-§4(REVIEW-T234 无需用户决定 7/7;卡面官方原文:「获得1个【生命之花】。我方小队
+测试面依据 = 设计稿(原件已退役)T-234 对应稿
+§4(已退役评审稿 无需用户决定 7/7;卡面官方原文:「获得1个【生命之花】。我方小队
 获得15%生命增幅和5%治疗强度。」——祝福面游戏侧自算,bot 零响应):
 
 - 条目锁:category UNIT_BUFF / payload UnitBuffRef 且 effect_text 与

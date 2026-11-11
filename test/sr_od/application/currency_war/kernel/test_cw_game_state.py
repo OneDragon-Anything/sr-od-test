@@ -3,8 +3,8 @@ restore_state_snapshot._bench_view / full_state_snapshot 往返;同 src 兄弟
 测试 = kernel/test_game_state.py 状态容器机制正名主题文件〔已登记文件,主题不同
 不混写〕)。
 
-测试面依据 = 迭代 T-39 专家研讨会设计(.debug/progress/2026-09-23-invest-
-effects-calc/designs/T-39-zhuanjia-yantaohui.md)§2.3 + §4 锁 11:
+测试面依据 = 迭代 T-39 专家研讨会设计(已退役账本
+effects-calc/设计稿(原件已退役;判据 = 本文件锁面申报))§2.3 + §4 锁 11:
 - 回放守恒:full_state_snapshot(asdict 全字段落盘)→ restore 往返,
   BenchSlot.item 逐槽保真(unit/empty 槽 None 同保真)——restore 侧只读
   kind/unit 会丢身份,回放判读面身份不可溯即红;

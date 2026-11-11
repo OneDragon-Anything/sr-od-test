@@ -2,7 +2,7 @@
 discharge_due_kechuan_leaves + _remove_kechuan_units + cw_game_state
 _tick_pending_kechuan_leaves)。
 
-测试面依据 = 迭代设计 designs/T-368-peipei-kechuan.md §9.2 效果条目③
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§9.2 效果条目③
 (v3.1,用户裁定 2026-11-05 真实建模;T-207 四缺口之「离场原语缺」本批
 立项收尾):
 - 后继 N 计数基准:队列 (uid, 5) tick×4 后 remaining=1 未到期,tick×5 后

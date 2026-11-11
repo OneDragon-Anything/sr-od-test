@@ -4,8 +4,8 @@
 注册;按被测方法拆目录规范落位——test_gain_chain.py 超线冻结禁追加,新锁
 落新镜像,先例 = 同目录既有镜像文件)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
-T-136-maicai-piao.md(定稿)§4 + REVIEW-T136 六裁决点默认案:
+测试面依据 = 设计稿(原件已退役)
+设计稿(原件已退役)§4 + 已退役评审稿 六裁决点默认案:
 - 泛化表 (category, count) 星徽行登记(打捞人才库+ 简易行同表泛化形,
   迁移回归重立留 test_gain_chain.py 原区);池 = ``equips_by_category``
   注册表派生单源,'星徽' 类别池 import 期独立闸搭环境侧便车;

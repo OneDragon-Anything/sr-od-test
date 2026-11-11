@@ -13,7 +13,7 @@ CwScreenWaitOneOne(收尾/过渡相位屏,原 obs_arch_closing_screens 并入)�
 位面情报采集 CwScreenPlaneIntel 已重构为 6 node 管线,其行为测试随迁
 test_plane_intel_pipeline.py,本文件不辖。
 
-**sim 分支不适用例外清单(随迁移批逐屏落测试 docstring,总纲 §2.2-3)**:
+**sim 分支不适用例外清单(随迁移批逐屏落测试 docstring,设计稿(原件已退役))**:
 
 - 投资环境/投资策略:sim 分支 = 不适用——有 sim 事实来源(``decide_invest``
   注入段,架构设计 §3.2)但 sim 端口适配器未建(归 sim 接入调用批),本批
@@ -1141,7 +1141,7 @@ def test_battle_wait_normal_exits(test_context, monkeypatch) -> None:
     _rec.called = False
     monkeypatch.setattr(op, '_record_round_outcome', _rec)
 
-    # ②段已改调结算确认动作 op(landing §3.2):桩化子 op 为点击记录器
+    # ②段已改调结算确认动作 op(正本已退役):桩化子 op 为点击记录器
     # (M39 长按/证据等待/上报的行为测试迁 test_settle)。
     import importlib
 
@@ -1174,7 +1174,7 @@ def test_battle_wait_fallback_exits(test_context, monkeypatch) -> None:
     生产路径逐轮 = 观察门双 miss → 决策循环分支链 miss → 计数。
     (原 [长按] M39 测试随结算点击/M39 迁入 CwOpSettleConfirm 改住
     test_settle,
-    landing §3.2。)"""
+    正本已退役。)"""
     # [未知 bail]
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_battle_wait as bwo,

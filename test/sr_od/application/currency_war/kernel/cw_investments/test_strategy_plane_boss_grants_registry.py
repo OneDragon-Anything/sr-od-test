@@ -2,7 +2,7 @@
 test_cw_investments.py 超行数线,登记面新锁落本镜像目录,先例 =
 同目录 test_strategy_gift_grant_tables.py)。
 
-测试面依据 = 迭代设计 designs/T-407-daoyong-shenfen.md(定稿)§4 锁 1
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 1
 + 裁决点全部默认案(对抗 2 轮收敛)。卡面官方原文(cw_invest_data.py
 352401 行逐字):「进入第二位面的首领节点时，获得一个穿着2个【动能激发剑】
 和【列车同行星徽】的【火花】和1个【开拓者】。」

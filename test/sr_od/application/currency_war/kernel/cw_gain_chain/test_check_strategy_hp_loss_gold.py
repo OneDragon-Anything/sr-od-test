@@ -1,8 +1,8 @@
 """策略卡选卡已损血衍生金检查效果条目测试(镜像 src = kernel/cw_gain_chain.py
 的 check_strategy_hp_loss_gold)。
 
-测试面依据 = 迭代设计 designs/T-325-xingji-heping-baoxian.md §4 锁 2
-(REVIEW-T325 无需用户决定 7/7;直构形态先例 = 同目录 test_check_strategy_boss_
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 2
+(已退役评审稿 无需用户决定 7/7;直构形态先例 = 同目录 test_check_strategy_boss_
 end_heal.py 的状态容器直置):
 - 纯函数锁:无卡 0 / 持卡 = max(0, opening−hp) / hp 未观察(None)→ 0
   (禁造假基座) / hp 已超开局血量(回血后)clamp 0 / 负基线入参

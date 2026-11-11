@@ -2,8 +2,8 @@
 kernel/cw_action_report/collect_ore.py;晶矿域存量测试 =
 kernel/test_ore.py 已超行限,本文件按镜像规范落新位)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
-T-26-liangzi-tongpin-qiyue.md(定稿)§2.4 条 3 + §4.6:晶矿角色入账分支的
+测试面依据 = 设计稿(原件已退役)
+设计稿(原件已退役)§2.4 条 3 + §4.6:晶矿角色入账分支的
 inline 级联采集升星事实,整批全部写毕后收尾发火(发火时序与买牌分支
 同构)——bench 终态 = 合并产物 + 发放角色并存。
 """
@@ -95,8 +95,8 @@ def test_collect_ore_char_reward_fires_grant(seeded_provider) -> None:
 
 
 # ============================================================ 晶矿开启计数分支 + 战技点契约触发分支
-# (T-29 战技点契约,设计 = 迭代 2026-09-23-invest-effects-calc designs/
-# T-29-zhanjidian-qiyue.md §2.4 + §4 锁 5/锁 7:计数先入账后检查、
+# (T-29 战技点契约,设计 = 设计稿(原件已退役) designs/
+# 设计稿(原件已退役) §2.4 + §4 锁 5/锁 7:计数先入账后检查、
 # 「点开才计数」、窗序 = 矿奖励 → 计数 → 触发分支。)
 
 _SP_ENV = '战技点契约'

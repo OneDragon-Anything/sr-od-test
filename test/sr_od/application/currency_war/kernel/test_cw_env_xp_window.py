@@ -1,7 +1,7 @@
 """环境 XP 窗口(成功经验 id 138)kernel 链测试:达成标记 + 节点窗口发放。
 
-设计权威版本 = .debug/progress/2026-09-23-invest-effects-calc/designs/
-T-38-chenggong-jingyan.md(§2 建模方案/§4 测试锁面;升到8级后进入
+设计权威版本 = 已退役账本
+设计稿(原件已退役)(§2 建模方案/§4 测试锁面;升到8级后进入
 接下来3个节点每节点+12XP)。本文件承 §4 锁 1-9 与锁 10 的 kernel 半;
 sim 状态副本里的值与同 seed 全链重放 = 同迭代
 sim/cw_sim_backend/test_env_xp_window_sim_chain.py。

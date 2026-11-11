@@ -4,8 +4,8 @@ cw_gain_effects.py PICK_INVEST_EFFECTS '幸运星祝福' 行:具名装备一条�
 落位——test_gain_chain.py 超线冻结禁追加,新锁落新镜像,直接模板 =
 test_strategy_named_equip_grant_wushang_tongguan.py 无伤通关)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-231 对应稿
-§4 锁 3(REVIEW-T231 无需用户决定 7/7;卡面官方原文「获得1个【幸运星】」;rand=False
+测试面依据 = 设计稿(原件已退役)T-231 对应稿
+§4 锁 3(已退役评审稿 无需用户决定 7/7;卡面官方原文「获得1个【幸运星】」;rand=False
 策略卡侧具名效果条目通道归属;祝福面 = UNIT_BUFF 零响应登记,不在行为链):
 
 - 行为链真值:确定入口 → equips 恰 +1 幸运星、步串

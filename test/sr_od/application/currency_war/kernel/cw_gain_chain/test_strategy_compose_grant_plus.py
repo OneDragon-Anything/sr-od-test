@@ -3,8 +3,8 @@
 落位——test_gain_chain.py 超线冻结禁追加,新增测试落新镜像,先例 = 同目录
 姊妹卡镜像文件 test_strategy_compose_grant.py)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
-T-117-wuzhuang-zhiyuan-plus.md(定稿)§4 锁 1 + REVIEW-T117 六裁决点默认案:
+测试面依据 = 设计稿(原件已退役)
+设计稿(原件已退役)§4 锁 1 + 已退役评审稿 六裁决点默认案:
 - 组合登记 = ``PICK_INVEST_EFFECTS['武装支援+'] = _compose_grant_legs(
   _make_random_equip_effect('简易', 1), _make_reinforcement_effect(((4, 1),)))``
   (条目序 = 卡文语序装备效果条目先/角色效果条目后;效果条目参数登记行单次出现,单一源;

@@ -1,8 +1,8 @@
 """策略卡备战席条件离场金登记表测试(镜像 src = kernel/cw_investments.py 的
 STRATEGY_BENCH_LEAVE_GOLD_GRANTS + 构建校验)。
 
-测试面依据 = 迭代设计 designs/T-292-yuzhe-ezuoju.md(定稿)§2.2 +
-REVIEW-T292 §四④(卡面官方原文:「进入新节点时，备战席的1星【花火】/
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§2.2 +
+已退役评审稿(§ 号 = 原稿节序)§四④(卡面官方原文:「进入新节点时，备战席的1星【花火】/
 【火花】会留下2/4金币并去别处找乐子。」;直构形态先例 = 同目录
 test_strategy_bench_count_xp_grants.py):
 - 登记单一源:行值 = 卡面效果原文直读(愚者恶作剧 id 260701:值 =

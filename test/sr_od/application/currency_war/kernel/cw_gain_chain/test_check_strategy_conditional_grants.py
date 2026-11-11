@@ -2,7 +2,7 @@
 check_strategy_conditional_grants + kernel/cw_game_state.py 的
 _tick_strategy_conditional_grants 接入调用)。
 
-测试面依据 = 迭代设计 designs/T-102-guimo-xiaoying.md §4 锁 2/3/4/5/9:
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 2/3/4/5/9:
 - 构造 = 状态容器直置 + advance_node_effective 驱动(序位前进唯一落账入口,
   尾段自带 tick_effect_boundary;advanced 位闸下同序位重复 tick 检查效果条目
   跳过,达标触发必须真实推进——设计稿「直调 tick_effect_boundary」的

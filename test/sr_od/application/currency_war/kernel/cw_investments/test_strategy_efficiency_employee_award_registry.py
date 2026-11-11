@@ -1,8 +1,7 @@
 """效率员工奖注册面测试(cw_investments 分目录镜像;战力类零响应族
 第 8 条,先例 = 同目录 test_strategy_perfect_start_registry.py)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-154-xiaolv-
-yuangong-jiang.md(定稿)§4 锁 1/锁 3/锁 4。卡面官方原文:「进入战斗时，
+测试面依据 = 设计稿(原件已退役) 设计稿(原件已退役)(定稿)§4 锁 1/锁 3/锁 4。卡面官方原文:「进入战斗时，
 速度最高的三名角色及其忆灵速度增幅提高10%。」
 
 - 登记面锁:条目五元组 = PLANE_START 占位形(无离散触发事件,对齐

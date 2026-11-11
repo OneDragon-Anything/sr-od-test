@@ -1,8 +1,8 @@
 """结算观测环数据面测试(镜像 src = kernel/cw_encounter_selection.py;
 T-33 英雄登场 _RingRow.hp_after 扩字段批)。
 
-测试面依据 = 迭代 T-33 英雄登场设计(.debug/progress/2026-09-23-
-invest-effects-calc/designs/T-33-yingxiong-dengchang.md)§2.4 数据面 +
+测试面依据 = 迭代 T-33 英雄登场设计(已退役账本
+invest-effects-calc/设计稿(原件已退役;判据 = 本文件锁面申报))§2.4 数据面 +
 §4 锁 8:
 - **hp_after 入行**:live 单一写端 record_settlement_row 现成持有
   RoundOutcome.hp_after(kernel/cw_performance.py),由丢弃改入行——

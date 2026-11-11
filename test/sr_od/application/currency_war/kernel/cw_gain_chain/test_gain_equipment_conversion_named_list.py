@@ -4,8 +4,8 @@ kernel/cw_gain_chain.py 的 ``_equip_gain_conversion_hit`` 名单集源形判定
 拆目录规范落位——test_gain_chain.py 已登记超限冻结禁追加,新锁落新镜像;
 先例 = 同目录 test_gain_equipment_conversion_equip_target.py〔好运来族〕)。
 
-测试面依据 = 迭代设计 designs/T-372-dujia-daiyan.md §4 +
-REVIEW-T372 §4④ 测试锁面(2026-11-05 判定窗现值):
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 +
+已退役评审稿(§ 号 = 原稿节序)§4④ 测试锁面(2026-11-05 判定窗现值):
 - 锁 1 镜像一致性:登记表 equips_immediate 与效果体发放名逐对相等
   (箱条目一致性锁族形;两处独立字面量漂移在备战断言不可见唯此锁可暴露)
   + 披露键辖卡元组断言;

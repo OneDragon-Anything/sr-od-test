@@ -1,8 +1,8 @@
 """expert_conditional_trigger 判据单元测试(镜像 src =
 kernel/cw_gain_chain.py 的该被测函数,按拆目录规范落位)。
 
-测试面依据 = T-42 设计(迭代 2026-09-23-invest-effects-calc,designs/
-T-42-teyao-zhuanjia-yinlang.md)§4 锁 1:三条件各缺一不触发(非银狼LV.999
+测试面依据 = T-42 设计(设计稿(原件已退役),designs/
+设计稿(原件已退役))§4 锁 1:三条件各缺一不触发(非银狼LV.999
 名 / active_env 非本卡 / 已解锁)/ 全命中解锁 + 效果布尔 / 幂等
 (已解锁后再次获得零写)/ active_env 空(未选择)不触发。
 """

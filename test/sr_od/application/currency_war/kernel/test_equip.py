@@ -413,7 +413,7 @@ def test_wear_synthesis_without_card_zero_grant():
 
 
 def test_wear_synthesis_converted_by_strategy_card():
-    """穿着即合成产物转换感知(designs/T-248-haoyunlai.md §2.2 A 案):
+    """穿着即合成产物转换感知(设计稿(原件已退役;§ 号 = 原稿节序)§2.2 A 案):
     持「合成与获得进阶装备时，改为获得一个【好运令牌】」卡局穿第二件可
     配对简易 → 合成产物预测经转换判定替换,worn 集产物 = 令牌(非进阶
     件)——预测与 live 游戏自算转换同形,对账不失真;判定单源 =

@@ -4,8 +4,8 @@ cw_gain_effects.py PICK_INVEST_EFFECTS '广聚天下英才' 行:全员同费档
 落位——test_gain_chain.py 超线冻结禁追加,新锁落新镜像,先例 = 同目录
 test_strategy_random_equip_grant_kongcang.py 空仓)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-203 对应稿
-§4(REVIEW-T203 无需用户决定 8/8;卡面官方原文:「获得所有2费角色各一个。」):
+测试面依据 = 设计稿(原件已退役)T-203 对应稿
+§4(已退役评审稿 无需用户决定 8/8;卡面官方原文:「获得所有2费角色各一个。」):
 
 - 行为链真值:确定入口 → equips/席按池逐名入席、效果串恒 Σ池数条
   (发放事实与落位成败解耦)、零随机面(rng 不消费);

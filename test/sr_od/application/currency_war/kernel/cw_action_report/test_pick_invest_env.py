@@ -1,7 +1,6 @@
-"""pick_invest_env 上报 rng 条件解析测试(迭代 2026-09-23-invest-effects-calc
-T-10 人才引进;镜像 src = kernel/cw_action_report/pick_invest_env.py)。
+"""pick_invest_env 上报 rng 条件解析测试(设计稿(原件已退役) T- 人才引进;镜像 src = kernel/cw_action_report/pick_invest_env.py)。
 
-测试面依据 = 该迭代 designs/T-10-rencai-yinjin.md §2.4/§4 测试 5:
+测试面依据 = 该迭代 设计稿(原件已退役;§ 号 = 原稿节序)§2.4/§4 测试 5:
 上报函数仅当**选中环境登记了随机支**(ENV_GIFTS[名].chars_random_immediate
 非空)才经 ``action_sampling_rng('pick_invest_env', rng)`` 解析采样 rng
 (显式传入 > 注入槽 > 自掷);无随机支环境透传 None 零解析。理由:注入槽
@@ -88,7 +87,7 @@ def test_no_random_leg_env_skips_rng_resolution(provider_calls: list[str]) -> No
 def test_delayed_item_env_skips_rng_resolution(
         provider_calls: list[str]) -> None:
     """条件解析负态·倒计时件(T-34 命运礼物设计 §4 锁 10 采样半边,
-    迭代 2026-09-23-invest-effects-calc):命运礼物 = 全链零采样(到手
+    设计稿(原件已退役)):命运礼物 = 全链零采样(到手
     确定件名、解锁位确定推算、开盒确定事件,不在 ENV_GIFTS 也不在
     ENV_DEPLOY_LOCK_GRANTS)→ provider 零调用(注入槽序号不推,后继
     动作采样流键零位移)。"""
@@ -129,7 +128,7 @@ def test_explicit_rng_beats_provider(provider_calls: list[str]) -> None:
 
 
 # ==================== 随机装备支解析(劳务派遣合同)====================
-# (设计 = 该迭代 designs/T-19-laowu-paiqian-hetong.md §3 pick_invest_env
+# (设计 = 该迭代 设计稿(原件已退役;§ 号 = 原稿节序)§3 pick_invest_env
 # 条件行改写 + §4.7 前置;条件 = chars_random_immediate 或
 # equips_random_immediate 任一非空)
 
@@ -558,7 +557,7 @@ def test_deterministic_equip_env_grants_without_rng_mingyun_shengbei(
 
 
 # ==================== 环境道具双件(专家研讨会)====================
-# (设计 = 迭代 2026-09-23-invest-effects-calc T-39 专家研讨会设计 §4 锁 7)
+# (设计 = 设计稿(原件已退役) T- 专家研讨会设计 §4 锁 7)
 
 
 def test_expert_seminar_pick_grants_two_item_slots_no_rng(
@@ -581,7 +580,7 @@ def test_expert_seminar_pick_grants_two_item_slots_no_rng(
 
 
 # ==================== 开局替换型赠卡(人才储备)====================
-# (设计 = 迭代 2026-09-23-invest-effects-calc T-43 设计 §4 锁 5)
+# (设计 = 设计稿(原件已退役) T- 设计 §4 锁 5)
 
 
 def test_opening_replace_env_pick_bench_three_not_seven(

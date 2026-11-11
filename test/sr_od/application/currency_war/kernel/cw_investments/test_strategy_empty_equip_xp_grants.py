@@ -1,7 +1,7 @@
 """策略卡空仓经验登记表测试(镜像 src = kernel/cw_investments.py 的
 STRATEGY_EMPTY_EQUIP_XP_GRANTS + 构建校验)。
 
-测试面依据 = 迭代设计 designs/T-189-kongcang.md(定稿)§4 锁 2 + REVIEW-T189
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 2 + 已退役评审稿
 §五④(卡面官方原文:「进入新节点时，如果物品栏和备战席没有任何装备(消耗品
 除外)，则获得2经验值。」;直构形态先例 = 同目录
 test_strategy_first_buy_xp_grants.py):

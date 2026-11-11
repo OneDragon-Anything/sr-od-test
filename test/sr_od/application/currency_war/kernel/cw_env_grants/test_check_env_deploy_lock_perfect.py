@@ -3,8 +3,8 @@ kernel/cw_env_grants.py 的该被测函数;同模块兄弟触发函数测试 =
 kernel/test_env_grants.py 与本目录按被测方法拆分文件,本文件按拆目录
 规范落位)。
 
-测试面依据 = 迭代 T-33 英雄登场设计(.debug/progress/2026-09-23-
-invest-effects-calc/designs/T-33-yingxiong-dengchang.md)§2.4 + §4 锁
+测试面依据 = 迭代 T-33 英雄登场设计(已退役账本
+invest-effects-calc/设计稿(原件已退役;判据 = 本文件锁面申报))§2.4 + §4 锁
 6/7/8(宁缺勿造半边):
 - **判据**(用户裁定 2026-10-18:结算胜利 ∧ 本节点未损失小队生命值):
   环尾行 killed=True(killed 单一语义 = 「挑战成功」胜利标志)∧ 尾行

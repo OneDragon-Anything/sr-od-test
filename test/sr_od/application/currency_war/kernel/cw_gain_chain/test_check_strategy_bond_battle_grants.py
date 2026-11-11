@@ -1,8 +1,8 @@
 """策略卡羁绊条件战后发放武装检查效果条目测试(镜像 src = kernel/cw_gain_chain.py
 的 check_strategy_bond_battle_grants;两拍制武装拍,零 rng)。
 
-测试面依据 = 迭代设计 designs/T-172-buyao-xiaokan-women-de-jiban.md §4
-锁 2/3/6/9 + REVIEW-T172(直构形态先例 = 同目录
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4
+锁 2/3/6/9 + 已退役评审稿(直构形态先例 = 同目录
 test_check_strategy_boss_battle_grants.py 状态容器直置;激活数评估单一源
 = board 状态容器计数与 board_by_row 身份聚合取 max 判激活,cw_system_cards.
 _faction_count 同款):

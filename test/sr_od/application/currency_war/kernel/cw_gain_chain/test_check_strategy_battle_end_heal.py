@@ -1,8 +1,8 @@
 """策略卡战斗结束回血检查效果条目测试(镜像 src = kernel/cw_gain_chain.py
 的 check_strategy_battle_end_heal)。
 
-测试面依据 = 迭代设计 designs/T-325-xingji-heping-baoxian.md §4 锁 3
-(REVIEW-T325 无需用户决定 7/7;直构形态先例 = 同目录 test_check_strategy_boss_
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 3
+(已退役评审稿 无需用户决定 7/7;直构形态先例 = 同目录 test_check_strategy_boss_
 end_heal.py 的状态容器直置):
 - 纯函数锁:无卡 0 / 持卡 10 / 双卡(奋斗协议 boss_end_heal_hp 同持)
   两函数各 Σ 各自字段独立不相串 / 表外卡 miss-safe(get_strategy 归一

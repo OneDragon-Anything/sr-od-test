@@ -3,7 +3,7 @@
 ——test_gain_chain.py 已登记超限冻结禁追加,新锁落新镜像,先例 = 同目录
 既有镜像文件)。
 
-测试面依据 = 迭代设计 designs/T-143-ziyou-shichang.md §4 + REVIEW-T143
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 + 已退役评审稿
 §4④:
 - 锁 2 转换主锁:持卡 + gain_equipment(简易件, rand=False)→ equips 零
   增 + 备战席 +1 简易武装箱 + detail 含 converted;箱席满走溢出落位既有
