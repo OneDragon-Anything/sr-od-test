@@ -18,7 +18,7 @@ from sr_od.backend.operation_registry import (
     _resolve_annotations,
     validate_args,
 )
-from sr_od.operations.equip_relic_enhance import EquipRelicEnhanceOp
+from sr_od.application.cultivation.relic.operations.equip_relic_enhance import EquipRelicEnhanceOp
 from test.conftest import SrTestContext
 
 

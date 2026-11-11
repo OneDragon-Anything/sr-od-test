@@ -16,8 +16,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from sr_od.operations import open_relic_replace as open_module
-from sr_od.operations.open_relic_replace import OpenRelicReplaceOp
+from sr_od.application.cultivation.relic.operations import open_relic_replace as open_module
+from sr_od.application.cultivation.relic.operations.open_relic_replace import OpenRelicReplaceOp
 from test.conftest import SrTestContext
 from test.harness.fixture_controller import (
     enter_running_state,

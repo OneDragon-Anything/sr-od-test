@@ -22,7 +22,7 @@ import pytest
 
 from one_dragon.base.geometry.rectangle import Rect
 from one_dragon.utils import cv2_utils
-from sr_od.operations.equip_relic import (
+from sr_od.application.cultivation.relic.operations.equip_relic import (
     EquipRelicOp,
     _filter_candidates,
     _relic_col_centers,

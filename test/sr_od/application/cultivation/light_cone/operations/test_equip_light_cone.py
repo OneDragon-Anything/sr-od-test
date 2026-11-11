@@ -32,8 +32,8 @@ import pytest
 
 from one_dragon.base.geometry.rectangle import Rect
 from one_dragon.utils import cv2_utils
-from sr_od.operations import equip_light_cone as equip_module
-from sr_od.operations.equip_light_cone import EquipLightConeOp
+from sr_od.application.cultivation.light_cone.operations import equip_light_cone as equip_module
+from sr_od.application.cultivation.light_cone.operations.equip_light_cone import EquipLightConeOp
 from sr_od.operations.grid_template_locate import (
     load_template_gray,
     locate_cells_by_votes,

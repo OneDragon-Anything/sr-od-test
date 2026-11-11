@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import pytest
 
-from sr_od.operations.select_bag_relic import SelectBagRelicOp
+from sr_od.application.cultivation.relic.operations.select_bag_relic import SelectBagRelicOp
 from test.conftest import SrTestContext
 from test.harness.fixture_controller import (
     FixtureController,

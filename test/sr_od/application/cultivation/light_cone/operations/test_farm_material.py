@@ -1,4 +1,4 @@
-"""FarmMaterialOp(缺料跳转刷取)扫描/匹配/委托测试。
+"""FarmLightConeMaterialOp(缺料跳转刷取)扫描/匹配/委托测试。
 
 测试层级声明:途径行匹配为纯函数直测;缺料扫描打桩 OCR 锁「拥有<所需」
 判定语义;节点流程为桩子 op 流程测试(UseTrailblazePower 打桩断言委托
@@ -21,8 +21,8 @@ import pytest
 
 from one_dragon.base.matcher.ocr.ocr_match_result import OcrMatchResult
 from one_dragon.base.operation.operation_base import OperationResult
-from sr_od.operations import farm_material as farm_material_module
-from sr_od.operations.farm_material import FarmMaterialOp
+from sr_od.application.cultivation.light_cone.operations import farm_material as farm_material_module
+from sr_od.application.cultivation.light_cone.operations.farm_material import FarmLightConeMaterialOp
 from test.conftest import SrTestContext
 from test.harness.fixture_controller import (
     enter_running_state,
@@ -34,11 +34,11 @@ _ASCEND: str = '光锥-等级提升'
 _CHALLENGE: str = '挑战副本'
 
 
-class _NoWindowFarmMaterial(FarmMaterialOp):
+class _NoWindowFarmMaterial(FarmLightConeMaterialOp):
     """真实构造路径;测试无游戏窗口,跳过窗口前置链(同 test_upgrade_character)。"""
 
     def __init__(self, ctx: SrTestContext, times: int, team_num: int = 0) -> None:
-        FarmMaterialOp.__init__(self, ctx, times, team_num=team_num)
+        FarmLightConeMaterialOp.__init__(self, ctx, times, team_num=team_num)
         self.need_check_game_win = False  # execute 期才读,实例属性即可关掉
 
 
@@ -52,18 +52,18 @@ def test_match_expected_row() -> None:
     missions = [{'category': '拟造花萼（赤）', 'mission': '丰饶之蕾', 'region': '边缘通路'}]
 
     # 命中:行文案含类别主干+区域,返回 (行, 条目) 对
-    hit = FarmMaterialOp._match_expected_row([_line('拟造花萼【边缘通路】')], missions)
+    hit = FarmLightConeMaterialOp._match_expected_row([_line('拟造花萼【边缘通路】')], missions)
     assert hit is not None
     assert hit[0].data == '拟造花萼【边缘通路】'
     assert hit[1]['mission'] == '丰饶之蕾'
 
     # 多行时按预期选中,不误点同类别其他区域
-    hit = FarmMaterialOp._match_expected_row(
+    hit = FarmLightConeMaterialOp._match_expected_row(
         [_line('拟造花萼【太卜司】', y=632), _line('拟造花萼【边缘通路】', y=700)], missions)
     assert hit is not None and hit[0].data == '拟造花萼【边缘通路】'
 
     # 永寿荣枝实机样本:第一行敌方掉落、第二行合成,均无副本途径 → None
-    assert FarmMaterialOp._match_expected_row(
+    assert FarmLightConeMaterialOp._match_expected_row(
         [_line('突破至均衡等级4后，丰饶孽物掉落', y=632),
          _line('「万能合成机」-材料合成', y=700)], missions) is None
 
@@ -94,7 +94,7 @@ def test_locate_row_scans_then_drags(test_context: SrTestContext,
             return _line('拟造花萼【边缘通路】', y=632), ms[0]
         return None
 
-    monkeypatch.setattr(FarmMaterialOp, '_match_expected_row', _fake_match)
+    monkeypatch.setattr(FarmLightConeMaterialOp, '_match_expected_row', _fake_match)
     monkeypatch.setattr(test_context.controller, 'drag_to',
                         lambda end, start=None, duration=0.5: drags.append((start, end)))
     monkeypatch.setattr(test_context.controller, 'click',
@@ -117,7 +117,7 @@ def test_locate_row_scans_then_drags(test_context: SrTestContext,
 
     # 有界:始终不命中 → 拖满上限后返回 None
     state['scans'] = 0
-    monkeypatch.setattr(FarmMaterialOp, '_match_expected_row', lambda self, lines, ms: None)
+    monkeypatch.setattr(FarmLightConeMaterialOp, '_match_expected_row', lambda self, lines, ms: None)
     enter_running_state(op.ctx)
     try:
         with fast_sleep(op):
@@ -133,7 +133,7 @@ def test_scan_lacking_cell(test_context: SrTestContext,
     op = _NoWindowFarmMaterial(test_context, times=1)
 
     def _install(lacking: dict[int, bool]) -> None:
-        monkeypatch.setattr(FarmMaterialOp, '_cell_lacking',
+        monkeypatch.setattr(FarmLightConeMaterialOp, '_cell_lacking',
                             lambda self, idx: lacking.get(idx, False))
 
     # 实机样本(惊魂夜 50 突破):格2 永恒之花计数红字
@@ -176,13 +176,13 @@ def test_delegates_to_use_trailblaze_power_with_skip_transport(
 
         return _Result()
 
-    monkeypatch.setattr(FarmMaterialOp, 'round_by_find_area', _fake_find_area)
-    monkeypatch.setattr(FarmMaterialOp, 'round_by_find_and_click_area', _fake_find_click)
-    monkeypatch.setattr(FarmMaterialOp, '_scan_lacking_cell', lambda self: 2)
-    monkeypatch.setattr(FarmMaterialOp, '_read_popup_material_name',
+    monkeypatch.setattr(FarmLightConeMaterialOp, 'round_by_find_area', _fake_find_area)
+    monkeypatch.setattr(FarmLightConeMaterialOp, 'round_by_find_and_click_area', _fake_find_click)
+    monkeypatch.setattr(FarmLightConeMaterialOp, '_scan_lacking_cell', lambda self: 2)
+    monkeypatch.setattr(FarmLightConeMaterialOp, '_read_popup_material_name',
                         lambda self: '永恒之花')
     monkeypatch.setattr(
-        FarmMaterialOp, '_locate_and_click_expected_row',
+        FarmLightConeMaterialOp, '_locate_and_click_expected_row',
         lambda self, ms: (_line('拟造花萼【边缘通路】'), ms[0]))
     monkeypatch.setattr(farm_material_module, 'UseTrailblazePower',
                         _stub_use_trailblaze_power)

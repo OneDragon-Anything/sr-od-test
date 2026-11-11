@@ -18,7 +18,7 @@ from __future__ import annotations
 import pytest
 
 from one_dragon.base.operation.operation_base import OperationResult
-from sr_od.operations.upgrade_character import UpgradeCharacterOp
+from sr_od.application.cultivation.character.operations.upgrade_character import UpgradeCharacterOp
 from test.conftest import SrTestContext
 from test.harness.fixture_controller import (
     WatchdogOperationMixin,

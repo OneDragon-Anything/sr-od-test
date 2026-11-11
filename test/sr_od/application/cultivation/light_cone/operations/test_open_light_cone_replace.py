@@ -15,8 +15,8 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from sr_od.operations import open_light_cone_replace as open_module
-from sr_od.operations.open_light_cone_replace import OpenLightConeReplaceOp
+from sr_od.application.cultivation.light_cone.operations import open_light_cone_replace as open_module
+from sr_od.application.cultivation.light_cone.operations.open_light_cone_replace import OpenLightConeReplaceOp
 from test.conftest import SrTestContext
 from test.harness.fixture_controller import (
     enter_running_state,

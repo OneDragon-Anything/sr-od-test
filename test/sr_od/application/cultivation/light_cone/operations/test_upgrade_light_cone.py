@@ -20,10 +20,10 @@ from __future__ import annotations
 
 import pytest
 
-import sr_od.operations.upgrade_light_cone as lc_module
+import sr_od.application.cultivation.light_cone.operations.upgrade_light_cone as lc_module
 from one_dragon.base.operation.operation_base import OperationResult
 from one_dragon.base.screen.screen_utils import FindAreaResultEnum
-from sr_od.operations.upgrade_light_cone import UpgradeLightConeOp
+from sr_od.application.cultivation.light_cone.operations.upgrade_light_cone import UpgradeLightConeOp
 from test.conftest import SrTestContext
 from test.harness.fixture_controller import (
     WatchdogOperationMixin,
