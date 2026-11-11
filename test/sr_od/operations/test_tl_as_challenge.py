@@ -1,6 +1,6 @@
 """TlApocalypticShadowChallengeOp 节点图守卫测试(不跑流程,锁流转约定)。
 
-锁设计约定(见 src/sr_od/operations/tl_as_challenge.py 节点图):
+锁设计约定(见 src/sr_od/application/treasures_lightward/operations/tl_as_challenge.py 节点图):
 - 主 op 为组合 op:编队选人(TlAsTeamFillOp)/ 终焉公理装配(TlAsAxiomEquipOp) /
   战斗推进(TlAsBattleOp)为可独立 run_operation 的子 op,主 op 节点组合它们;
 - 入口多态:进入编队屏的三种返回(成功/BANNER_UP/BATTLE_ONGOING)各有一条
@@ -24,8 +24,8 @@ from sr_od.application.treasures_lightward.obs.tl_team_obs import (
     AnchorCell,
     MemberGuess,
 )
-from sr_od.operations.tl_as_challenge import TlApocalypticShadowChallengeOp
-from sr_od.operations.tl_as_challenge import TlAsTeamFillOp
+from sr_od.application.treasures_lightward.operations.tl_as_challenge import TlApocalypticShadowChallengeOp
+from sr_od.application.treasures_lightward.operations.tl_as_challenge import TlAsTeamFillOp
 from test.conftest import SrTestContext
 from test.harness.fixture_controller import fast_sleep
 
@@ -90,7 +90,7 @@ def test_node_graph_start_to_battle(test_context: SrTestContext) -> None:
 
 def test_sub_ops_independent_start(test_context: SrTestContext) -> None:
     """三个子 op 可独立构造(start 节点在位):选人/装配/战斗推进。"""
-    from sr_od.operations.tl_as_challenge import (
+    from sr_od.application.treasures_lightward.operations.tl_as_challenge import (
         TlAsAxiomEquipOp,
         TlAsBattleOp,
         TlAsTeamFillOp,

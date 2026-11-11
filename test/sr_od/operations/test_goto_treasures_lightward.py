@@ -1,6 +1,6 @@
 """GotoTreasuresLightward 入口导航 op 流程测试(fixture 剧本,不连真游戏)。
 
-锁设计约定(见 src/sr_od/operations/goto_treasures_lightward.py 模块 docstring):
+锁设计约定(见 src/sr_od/application/treasures_lightward/operations/goto_treasures_lightward.py 模块 docstring):
 - 前置链共用:判定节点分流;大世界起走全链(大世界→指南→分类页→选关);
 - 已在分类页(含面板选中态与目标不符)→ 显式点目标分类后进入;
 - 已在选关(混沌回忆视图干净态)→ 零点击直成功;
@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import pytest
 
-from sr_od.operations.goto_treasures_lightward import GotoTreasuresLightward, TLMode
+from sr_od.application.treasures_lightward.operations.goto_treasures_lightward import GotoTreasuresLightward, TLMode
 from sr_od.operations.sr_operation import SrOperation
 from test.conftest import SrTestContext
 from test.harness.fixture_controller import (

@@ -1,6 +1,6 @@
 """TlRewardClaimOp 奖励领取流程测试(fixture 剧本,不连真游戏)。
 
-锁设计约定(见 src/sr_od/operations/tl_reward_claim.py 模块 docstring 与
+锁设计约定(见 src/sr_od/application/treasures_lightward/operations/tl_reward_claim.py 模块 docstring 与
 docs/game/screens/末日幻影-祭礼奖励.md 建档):
 - 全链:选关屏点礼物盒入口 → 永劫祭礼点「领取」→ 获得物品覆盖页点空白关闭
   → 永劫无可领 → 切终局祭礼(列表「难度」行锚验证)→ 终局无可领 → 关闭X 回选关;
@@ -17,7 +17,7 @@ from __future__ import annotations
 import pytest
 
 from sr_od.operations.sr_operation import SrOperation
-from sr_od.operations.tl_reward_claim import TlRewardClaimOp
+from sr_od.application.treasures_lightward.operations.tl_reward_claim import TlRewardClaimOp
 from test.conftest import SrTestContext
 from test.harness.fixture_controller import (
     FixtureController,
