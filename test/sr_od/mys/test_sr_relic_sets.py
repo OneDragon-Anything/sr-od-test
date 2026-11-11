@@ -22,7 +22,9 @@ from unittest.mock import MagicMock
 import pytest
 
 import sr_od.mys.sr_relic_sets as sr_relic_sets
+from sr_od.mys.sr_codes import RELIC_POS_CN
 from sr_od.mys.sr_relic_sets import (
+    RELIC_POS_EN,
     RELIC_SETS,
     build_set_effects,
     icon_webp_rel_path,
@@ -33,6 +35,12 @@ _MESSENGER_PIECES: list[str] = [
     '信使的全息目镜', '信使的百变义手', '信使的密信挎包', '信使的酷跑板鞋',
 ]
 _WAKKA_PIECES: list[str] = ['翁瓦克的诞生之岛', '翁瓦克的环岛海岸']
+
+#: 国际服未收录套装（id 留空串,宁缺勿错）；国际服同步后回填并收紧本名单。
+PENDING_INTL_SYNC: set[str] = {
+    '星如我见的领航员', '戏梦点星的伶人', '贪噬禁果的异端',
+    '坠星启航地', '寰宇生研院', '神的瞬息欢愉', '亚空异容所',
+}
 
 
 def test_relic_sets_snapshot_completeness() -> None:
@@ -59,6 +67,29 @@ def test_relic_sets_snapshot_completeness() -> None:
     piece_names = [p.name for s in RELIC_SETS for p in s.pieces]
     assert len(piece_names) == 196
     assert len(set(piece_names)) == 196
+
+
+def test_set_ids_contract() -> None:
+    """套装 id 契约：格式（小写仅字母数字）、非空 id 唯一（模板库注册表与
+    权威表连键的前提）、空 id 集合恰等于白名单（宁缺勿错——白名单外缺 id
+    说明回填漏做，白名单内出现 id 说明国际服已同步应转正并收紧名单）。"""
+    import re
+
+    non_empty = [s.id for s in RELIC_SETS if s.id]
+    assert all(re.fullmatch(r'[a-z0-9]+', i) for i in non_empty)
+    assert len(non_empty) == len(set(non_empty))
+
+    empty_names = {s.set_name for s in RELIC_SETS if not s.id}
+    assert empty_names == PENDING_INTL_SYNC
+
+
+def test_relic_pos_en_matches_cn_domain() -> None:
+    """部位英文映射：键域与 RELIC_POS_CN 同域（1-6 双向对齐），值为小写
+    字母数字（模板 template_id 部位段的格式前提）。"""
+    assert set(RELIC_POS_EN) == set(RELIC_POS_CN)
+    import re
+
+    assert all(re.fullmatch(r'[a-z0-9]+', v) for v in RELIC_POS_EN.values())
 
 
 def test_anchor_and_new_version_sets() -> None:
