@@ -3,12 +3,13 @@
 锁的内容（design.md changes/mys-relic-sets §1 数据层 / §3 测试策略；断言依据
 全部来自本文件固化的基准值，不读本机易失快照件）：
 
-- 快照完整性：RELIC_SETS 恰 62 套（隧洞 34 + 位面饰品 28）、效果齐备形态
-  （62 条带 '2'、34 条 cavern 带 '4'、ornament 无 '4'）、192 件名唯一、
+- 快照完整性：RELIC_SETS 恰 64 套（隧洞 34 + 位面饰品 30）、效果齐备形态
+  （64 条带 '2'、34 条 cavern 带 '4'、ornament 无 '4'）、196 件名唯一、
   pos 坐标系（隧洞 1-4 / 位面 5-6）；
 - 基准：官方全名套装（骇域漫游的信使 4 件件名 + 2/4 效果、生命的翁瓦克
   2 件 + 充能效率效果——社区简称≠官方全名，勿按简称入表）、3.6/3.7 新
-  套装在列（快照 verification 块新套装抽 2）；
+  套装在列（快照 verification 块新套装抽 2）、4.7 新位面套锚点
+  （神的瞬息欢愉/亚空异容所：件名+效果+desc，文本源=官方版本公告）；
 - 件名反查：resolve_set_name 基准命中；未知件名 None + warning（``sr_relic_sets:``
   前缀、文案含件名）不抛异常；
 - build_set_effects 三形态与排序：满装（4+2 双激活）/ 缺件（只 2 件档）/
@@ -35,15 +36,15 @@ _WAKKA_PIECES: list[str] = ['翁瓦克的诞生之岛', '翁瓦克的环岛海�
 
 
 def test_relic_sets_snapshot_completeness() -> None:
-    """快照完整性：恰 62 套（隧洞 34 + 位面饰品 28）；效果齐备形态
-    （62 条带非空 '2'、34 条 cavern 带非空 '4'、ornament 无 '4' 键）；
-    件名全集恰 192 且唯一（反查索引 PIECE_TO_SET 的正确性前提）；
+    """快照完整性：恰 64 套（隧洞 34 + 位面饰品 30）；效果齐备形态
+    （64 条带非空 '2'、34 条 cavern 带非空 '4'、ornament 无 '4' 键）；
+    件名全集恰 196 且唯一（反查索引 PIECE_TO_SET 的正确性前提）；
     pos 坐标系：隧洞 1-4、位面 5-6（与 sr_codes.RELIC_POS_CN 同源）。"""
     cavern_sets = [s for s in RELIC_SETS if s.kind == 'cavern']
     ornament_sets = [s for s in RELIC_SETS if s.kind == 'ornament']
-    assert len(RELIC_SETS) == 62
+    assert len(RELIC_SETS) == 64
     assert len(cavern_sets) == 34
-    assert len(ornament_sets) == 28
+    assert len(ornament_sets) == 30
 
     for relic_set in RELIC_SETS:
         assert relic_set.effects.get('2')
@@ -56,14 +57,15 @@ def test_relic_sets_snapshot_completeness() -> None:
         assert [p.pos for p in relic_set.pieces] == [5, 6]
 
     piece_names = [p.name for s in RELIC_SETS for p in s.pieces]
-    assert len(piece_names) == 192
-    assert len(set(piece_names)) == 192
+    assert len(piece_names) == 196
+    assert len(set(piece_names)) == 196
 
 
 def test_anchor_and_new_version_sets() -> None:
     """官方全名套装基准：骇域漫游的信使（4 件件名逐一定名 + 2/4 件效果）、
     生命的翁瓦克（2 件件名 + 充能效率效果）；3.6/3.7 新套装在列
-    （verification.new_sets_check 抽 2：伶人=3.7 隧洞、寰宇生研院=3.6 位面）。"""
+    （verification.new_sets_check 抽 2：伶人=3.7 隧洞、寰宇生研院=3.6 位面）；
+    4.7 新位面套（神的瞬息欢愉/亚空异容所）：件名+效果+obtain+desc 锚定。"""
     by_name = {s.set_name: s for s in RELIC_SETS}
 
     messenger = by_name['骇域漫游的信使']
@@ -79,6 +81,21 @@ def test_anchor_and_new_version_sets() -> None:
 
     assert by_name['戏梦点星的伶人'].kind == 'cavern'
     assert by_name['寰宇生研院'].kind == 'ornament'
+
+    # 4.7 新位面套锚点（文本源=官方版本公告；社区 wiki 曾把「深黯」误作「深黢」，
+    # 件名以公告原文为准）
+    aha = by_name['神的瞬息欢愉']
+    assert aha.kind == 'ornament'
+    assert [p.name for p in aha.pieces] == ['瞬息欢愉的永恒舞台', '瞬息欢愉的魔术道具']
+    assert aha.effects['2'] == \
+        '使装备者的速度提高6%。当装备者的欢愉度大于等于40%时，进入战斗时立刻使行动提前40%。'
+    assert aha.obtain == '戏剧中人·差分宇宙'
+    assert aha.pieces[0].desc.startswith('位面球中封装着瞬息欢愉之地的舞台')
+
+    sub = by_name['亚空异容所']
+    assert sub.kind == 'ornament'
+    assert [p.name for p in sub.pieces] == ['异容所的深黯裂隙', '异容所的负向胶卷']
+    assert '击破特攻提高18%' in sub.effects['2']
 
 
 def test_resolve_set_name_hit_and_miss_warning(
@@ -156,8 +173,8 @@ def test_set_names_unique_across_all_sets() -> None:
 
 
 def test_piece_desc_obtain_and_icon_path() -> None:
-    """单件 desc / 套装 obtain 齐备形态（192/62 全非空，纯展示文本透传）；
-    图标寻址公式基准（名称键，192 件归档的地址契约，文件存在性不在此锁）。"""
+    """单件 desc / 套装 obtain 齐备形态（196/64 全非空，纯展示文本透传）；
+    图标寻址公式基准（名称键，196 件归档的地址契约，文件存在性不在此锁）。"""
     pieces = [p for s in RELIC_SETS for p in s.pieces]
     assert all(p.desc for p in pieces)
     assert all(s.obtain for s in RELIC_SETS)
