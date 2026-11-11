@@ -1,10 +1,10 @@
-"""AigisVerifier 本地验证页服务单测（landing §3.3 判据逐条）。
+"""AigisVerifier 本地验证页服务单测（服务端回传契约逐条）。
 
 零真实外网：服务绑 127.0.0.1 随机端口（port=0），请求全部 requests 打本机
 回环；等待类断言用短超时护栏（≤1s）；open_browser 注入记录器断言不弹真实
 浏览器（默认 None 构造单独覆盖一条）。
 
-页面 JS 的双缺/取消/onSuccess 分支属浏览器侧行为（pytest 无 JS 引擎，归 3.5
+页面 JS 的双缺/取消/onSuccess 分支属浏览器侧行为（pytest 无 JS 引擎，归
 实机覆盖），本文件锁其服务端契约：cancelled / ticket 回传的分派、配对校验、
 跨站防线——即页面回传 payload 后服务端应表现的行为。
 """

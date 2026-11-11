@@ -1,6 +1,6 @@
 """HTTP 发送契约与 requests 实装单测。
 
-锁的设计约定（design.md §2.2 mys_http / landing §3.1 判据 2）：
+锁的设计约定（docs/develop/one_dragon/mys/README.md 模块表 mys_http 行）：
 - HttpSendResult.headers 保序保重复：同名字头两条不合并（Set-Cookie 双发逐条保留）；
 - header_get 大小写不敏感、取首个匹配；
 - RequestsHttpSend：redirect 禁用（302 原样返回不跟随）、Set-Cookie 全量

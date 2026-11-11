@@ -1,6 +1,6 @@
 """设备身份单测：device_id 持久化与损坏重生成、getFp 四判据、缓存与冷却降级。
 
-锁的设计约定（design.md §2.2 mys_device / landing §3.1 判据 4/5）：
+锁的设计约定（docs/develop/one_dragon/mys/README.md 模块表 mys_device 行）：
 - device_id 持久化往返（device.json 存在即用，正常路径严禁轮换）；
 - 文件损坏（解析失败/字段非法）重生成 + warning 留痕（唯一例外）；
 - getFp 四判据（HTTP 2xx + retcode==0 + data.code==200 + fp 正则）任一不过

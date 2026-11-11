@@ -1,4 +1,4 @@
-"""SrMysClient 单测（mys-account-mcp landing §3.4 / mys-roster-detail design §2-3/4 判据）。
+"""SrMysClient 单测（SrMysClient 设计契约判据；正本 = docs/develop/sr_od/backend/mys.md「sr_od/mys（崩铁特有封装）」节）。
 
 全部走 mock 管线（剧本式假 http_send / MagicMock client），零真实网络；
 落盘走 pytest tmp_path。锁的判据：
@@ -10,18 +10,18 @@
   fixture 故意用 int 以锁死 ``str()`` 强制转换）、role.json 缓存写入；
 - role.json 缓存命中：不发角色发现请求，server 取缓存值；
 - 冻结字段集映射：index 快照 fixture（test/fixtures/mys/，实测结构固化）映射出
-  ``SrCharacter`` v2（v1 八字段 + element_cn/base_type_cn，mys-roster-detail
-  design.md §2 契约 2）——字段集增删即本文件失败，icon 等大字段不透传，
+  ``SrCharacter`` v2（v1 八字段 + element_cn/base_type_cn 两中文字段）
+  ——字段集增删即本文件失败，icon 等大字段不透传，
   equip 缺失（null）映射 None；
 - 明细富映射（get_characters_detail，avatar/info 端点）：剧本按 URL 分流
   （index → v1 轻剧本不动；avatar/info → detail 剧本，detail 栈不注册 index
   路由——端点回归回 index 即响亮失败）；detail 请求 URL 含 avatar/info 与
   need_wiki=true（端点切换存在性锁）；CharacterDetail 及八个子结构冻结字段
-  集逐字对账（契约 3/4 + mys-relic-sets 契约 1/2，增删即失败）；词条/面板
+  集逐字对账（CharacterDetail 冻结字段集含套装效果组，增删即失败）；词条/面板
   name_cn 两路解析（fixture 动态词典 + 快照兜底 + 占位符/空名实测形态）；
   主词条部位校验哨兵 warning（畸形数据不中断映射）；空遗器/无光锥/缺件/
   星魂未解锁等形态透传。
-- 套装映射（mys-relic-sets design.md §2 契约 1/2）：逐件 set_name 件名反查
+- 套装映射（mys-data.md §2 映射契约）：逐件 set_name 件名反查
   （真实件名 → 套装官方全名；未知件名 → 「未知套装」+ resolve 层 warning
   恰一次，映射/build 层不重复告警）；角色级 set_effects 激活档形态（4 件套
   2/4 双档、2 件套单档、缺件不足 4 无 4 件档、全空 → 空列表、ornaments 空 →
@@ -73,8 +73,8 @@ INDEX_SNAPSHOT_PATH: Path = (
 )
 
 #: avatar/info 全量明细真实样本（2026-11-04 实测响应加工：抽 3 角色 + 词典
-#: 14 键，见 fixture _source 注记；结构依据 mys-roster-detail design.md §1
-#: 端点勘误 / §2 契约 3/4）
+#: 14 键，见 fixture _source 注记；端点勘误见 miyoushe-api-flow.md §8.2，
+#: 明细映射契约见 docs/develop/sr_od/backend/mys.md「sr_od/mys」节）
 DETAIL_SAMPLE_PATH: Path = (
     Path(__file__).resolve().parents[2] / 'fixtures' / 'mys' / 'hkrpg_avatar_info_detail_sample.json'
 )
@@ -194,8 +194,8 @@ def sr(client: MysClient, store: SessionStore) -> SrMysClient:
 def test_expired_short_circuit_raises_without_any_request(
     store: SessionStore, sr: SrMysClient, send: _ScriptedHttpSend
 ) -> None:
-    """is_expired() 为真 → 直接 MysSessionExpired，不发请求（design.md §2.3
-    判据 1：不发起注定失败的请求）。"""
+    """is_expired() 为真 → 直接 MysSessionExpired，不发请求（过期短路判据：
+    不发起注定失败的请求）。"""
     store.save_cookies({'stale': 'x'})  # 会话文件存在是标记过期的前提
     store.mark_expired()
 
@@ -305,8 +305,8 @@ def test_discovery_without_hsr_role_raises_and_keeps_no_cache(
 
 
 def test_frozen_field_set_mapping_from_index_snapshot(tmp_path: Path) -> None:
-    """index 快照 fixture → SrCharacter 冻结字段集（契约 §2.5-5 v1 八字段 +
-    mys-roster-detail 契约 2 两中文字段：字段增删即判据失败）；icon/
+    """index 快照 fixture → SrCharacter 冻结字段集（v1 八字段 +
+    element_cn/base_type_cn 两中文字段：字段增删即判据失败）；icon/
     figure_path/element_id/is_chosen 等实测在场字段不透传；equip null → None；
     中文字段经码表查表填充（wind→风 / bt=7→丰饶，ice→冰 / bt=1→毁灭）。"""
     snapshot = json.loads(INDEX_SNAPSHOT_PATH.read_bytes().decode('utf-8'))
@@ -352,7 +352,7 @@ def test_frozen_field_set_mapping_from_index_snapshot(tmp_path: Path) -> None:
 def test_session_file_survives_expired_short_circuit(
     tmp_path: Path, store: SessionStore, sr: SrMysClient
 ) -> None:
-    """过期短路不清任何落盘文件（design.md §2.6：会话失效不清数据）。"""
+    """过期短路不清任何落盘文件（会话失效只打标记不清数据契约）。"""
     store.save_session_full({'ltoken_v2': 'keep'})
     store.save_role({'role_id': '1', 'server': 'prod_gf_cn'})
     store.mark_expired()
@@ -366,7 +366,7 @@ def test_session_file_survives_expired_short_circuit(
     assert (tmp_path / ROLE_FILE_NAME).exists()
 
 
-# ---- 明细富映射（get_characters_detail，avatar/info 端点契约 3/4）----
+# ---- 明细富映射（get_characters_detail，avatar/info 端点富映射契约）----
 
 
 def _fixture_detail_data() -> dict:
@@ -402,7 +402,7 @@ def test_detail_expired_short_circuit_raises_without_any_request(
     store: SessionStore, sr: SrMysClient, send: _ScriptedHttpSend
 ) -> None:
     """detail 复用 v1 过期短路：is_expired() 直接 MysSessionExpired，零请求
-    （契约 5：detail 与 v1 会话语义完全一致）。"""
+    （detail 与 v1 会话语义完全一致契约）。"""
     store.save_cookies({'stale': 'x'})
     store.mark_expired()
 
@@ -412,9 +412,9 @@ def test_detail_expired_short_circuit_raises_without_any_request(
 
 
 def test_detail_frozen_field_sets_locked(tmp_path: Path) -> None:
-    """契约 3/4 + mys-relic-sets 契约 1/2 冻结字段集逐字对账：CharacterDetail
-    16 字段 + 八个子结构字段名集合（set_name/set_effects 为 mys-relic-sets
-    新增进契约面），任何增删即失败；SrRank 不设 pos_cn（星魂 pos 是星魂序号，
+    """冻结字段集逐字对账：CharacterDetail
+    16 字段 + 八个子结构字段名集合（set_name/set_effects 为套装映射组
+    契约面），任何增删即失败；SrRank 不设 pos_cn（星魂 pos 是星魂序号，
     与遗器部位码撞值域——结构性防混淆）；序列化面 = 冻结字段集（icon/desc/
     figure_path/point_id 等不透传字段不出现在载荷，set_effects 档条目键集
     同判）。"""
@@ -617,7 +617,7 @@ def test_detail_mapping_full_form(tmp_path: Path) -> None:
 
 
 def test_detail_property_name_cn_dynamic_dict_and_snapshot_paths(tmp_path: Path) -> None:
-    """词条/面板 name_cn 两路解析（design §3）：词典路——pt=57 在 fixture 词典
+    """词条/面板 name_cn 两路解析（三层查表契约）：词典路——pt=57 在 fixture 词典
     命中；pt=36 词典 name 带占位符经 property_name_relic 规避；快照路——词典
     子集未收录的 52/24 直落硬编码快照（快照全集 56 码与词典同域，键缺即归因
     依据）；空名形态（实测 pt=8 词典两字段全空 + 快照如实标注空）落
@@ -716,7 +716,7 @@ def test_detail_malformed_main_affix_warns_but_mapping_continues(
     assert 'pt=52' in affix_warnings[0]
 
 
-# ---- 套装映射（mys-relic-sets design.md §2 契约 1/2：set_name 反查 + set_effects 激活档）----
+# ---- 套装映射（mys-data.md §2 映射契约：set_name 反查 + set_effects 激活档）----
 
 
 def test_relic_set_name_resolved_and_set_effects_two_tier_activation(tmp_path: Path) -> None:
@@ -818,7 +818,7 @@ def test_set_effects_partial_cavern_without_ornaments(tmp_path: Path) -> None:
 def test_detail_request_hits_avatar_info_with_need_wiki(tmp_path: Path) -> None:
     """端点切换存在性锁（防回归回 index）：detail 数据请求 URL = RECORD 基座
     + avatar/info，query 带 need_wiki=true（property_info 等五词典来源开关，
-    design.md §1 端点勘误）与 role_id/server 定位参数（与 v1 同源，取自
+    端点勘误见 miyoushe-api-flow.md §8.2）与 role_id/server 定位参数（与 v1 同源，取自
     role.json 缓存）。"""
     sr, send = _detail_stack(tmp_path)
 

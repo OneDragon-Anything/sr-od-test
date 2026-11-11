@@ -1,6 +1,6 @@
 """SessionStore 全原语单测（落盘全部走 pytest tmp_path，零真实副作用）。
 
-锁的设计约定（design.md §2.2 mys_session / landing §3.1 判据 3/4）：
+锁的设计约定（docs/develop/one_dragon/mys/README.md「会话文件布局与语义」节）：
 - session.json 字段级 schema：``{schema_version, saved_at, expired(true|null),
   cookies}``；
 - save_cookies 滚动续存保留 expired 标记；save_session_full 整体覆盖且产物

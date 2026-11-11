@@ -1,7 +1,7 @@
-"""MysClient 正常路径与登出单测（landing §3.2 判据逐条；全部 mock http_send
+"""MysClient 正常路径与登出单测（契约判据逐条；全部 mock http_send
 剧本式，零真实网络，落盘走 pytest tmp_path）。
 
-锁的设计约定（design.md §2.2 mys_client / landing §3.2）：
+锁的设计约定（docs/develop/one_dragon/mys/README.md 模块表 mys_client 行）：
 - 构造三参必填无默认（缺任一 TypeError）；
 - 登录成功：Set-Cookie 登录响应层名单（10 项）入罐 + save_session_full 整体
   覆盖落盘（产物无 expired 键）+ role.json 清除；acw_tc 等滚动件为第二层
@@ -18,8 +18,8 @@
 - 密码与 cookie 不出现在任何落盘文件（session.json 为 cookie 唯一指定居所）
   与异常文本。
 
-验证分支（aigis 挑战解析）的实现归本阶段、其行为测试归 landing §3.3 的
-test_mys_client_aigis.py，本文件不重复覆盖。
+验证分支（aigis 挑战解析）的行为测试归 test_mys_client_aigis.py，本文件
+不重复覆盖。
 """
 
 import base64
@@ -287,9 +287,9 @@ def test_login_error_codes_raise_and_leave_files_untouched(
     send: _ScriptedHttpSend,
     retcode: int,
 ) -> None:
-    """登录失败码：MysApiError 且不落盘不清文件（重登失败时旧数据原样保留，
-    design.md §2.6）。-3102/-3202 首轮不可能出现（无票据可拒），出现按未知
-    码上抛（design.md §2.2 login 分诊）。"""
+    """登录失败码：MysApiError 且不落盘不清文件（重登失败时旧数据原样保留
+    契约）。-3102/-3202 首轮不可能出现（无票据可拒），出现按未知码上抛
+    （login 分诊契约）。"""
     store.save_cookies({'keep': '1'})
     store.save_role({'role_id': '9', 'server': 'prod_gf_cn'})
     device.get_headers()  # 预热设备头：device.json 先行落盘，快照含三文件全集
@@ -410,7 +410,7 @@ def test_request_risk_control_1034_is_bare_api_error(
     client: MysClient, send: _ScriptedHttpSend
 ) -> None:
     """1034 裸错误语义：按通用非 0 分支抛 MysApiError(1034)（不是
-    MysSessionExpired 子类）；验证链本迭代不实现（design.md §1）。"""
+    MysSessionExpired 子类）；1034 验证链为后续迭代事项。"""
     send.add_route(
         (
             GAME_RECORD_BASE_URL + 'hkrpg/api/index',
@@ -505,7 +505,7 @@ def test_credentials_never_leak_to_disk_or_exceptions(
     store: SessionStore, tmp_path: Path, client: MysClient, send: _ScriptedHttpSend
 ) -> None:
     """密码与 cookie 不出现在任何落盘文件与异常文本：session.json 是 cookie
-    唯一指定居所（design.md §2.6），其余落盘文件与全部异常文本零凭据。"""
+    唯一指定居所（凭据红线契约），其余落盘文件与全部异常文本零凭据。"""
     _login_success(client, send)
     # 业务请求失败剧本：服务端 message 为普通文案，异常不得携带请求头/cookie/密码
     send.add_route(

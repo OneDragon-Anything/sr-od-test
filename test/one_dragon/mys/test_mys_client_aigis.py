@@ -1,4 +1,4 @@
-"""aigis 验证单轮分支 + complete_verification 单测（landing §3.3 判据逐条）。
+"""aigis 验证单轮分支 + complete_verification 单测（单轮分诊与重发契约逐条）。
 
 剧本全部 mock http_send，零真实网络，落盘走 pytest tmp_path。覆盖：
 - login() 分诊双条件（retcode -3101、或 aigis 头非空且码值不同）与 message

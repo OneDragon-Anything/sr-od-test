@@ -1,6 +1,6 @@
 """relic_lookup 遗器查询工具单测。
 
-锁的内容（relic_tools 模块 docstring 匹配策略 + mys-relic-sets 常量基准）：
+锁的内容（relic_tools 模块 docstring 匹配策略 + sr_relic_sets 常量基准）：
 
 - 件名精确：翁瓦克的诞生之岛 → 生命的翁瓦克（matched_piece 回带）；
 - 套装名精确：官方全名命中，match=set_exact；
