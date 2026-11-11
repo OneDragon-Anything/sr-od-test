@@ -1,10 +1,10 @@
 """relic_eval_tools.evaluate 规则 1-10 全覆盖单测（fixture 场景制）。
 
-出处：docs/develop/sr_od/backend/changes/relic-substat-eval/design.md
-§2.2（出参 schema）/§2.3（计算规则 1-10）/§2.4（归一表与口径包表）；
-landing.md 3.1 判据八类场景（别名归一/口径包展开/穿错主词条/阈值达标与
-差线/浪费分布与最弱件/verdict 各分支/not_found/结构防御与重复名与空
-criteria error）。零副作用纯函数测试，零真实 IO。
+出处：评估工具设计契约（出参 schema、计算规则 1-10、归一表与口径包表；
+工具契约正本 = docs/develop/sr_od/backend/mys.md「MCP 工具」节）；场景
+覆盖八类（别名归一/口径包展开/穿错主词条/阈值达标与差线/浪费分布与
+最弱件/verdict 各分支/not_found/结构防御与重复名与空 criteria error）。
+零副作用纯函数测试，零真实 IO。
 
 fixture 字段形态对照真实名册映射产物：词条 name_cn/value/times 与
 ``SrPropertyEntry`` 一致（value 为字符串，百分比带 %、平坦值不带；

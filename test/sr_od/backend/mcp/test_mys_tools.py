@@ -1,8 +1,8 @@
-"""MysAccessController 状态机与三工具单测（landing §3.4 判据全清单）。
+"""MysAccessController 状态机与三工具单测（验收判据全清单）。
 
 控制器测试全部注入假实现（剧本式假 http_send / 假 verifier 工厂 / tmp_path
-会话目录），不弹真实浏览器、零真实网络、零真实落盘。序列剧本对照
-landing §3.4 完成判据逐条排布：
+会话目录），不弹真实浏览器、零真实网络、零真实落盘。序列剧本按
+验收完成判据逐条排布：
 
 - 状态机主链：login → verification_required（attempt=1）→ 票据 ok → idle +
   会话落盘（save_session_full 形态）+ get_characters 成功；
@@ -288,7 +288,7 @@ def test_verification_loop_capped_at_three_then_error_lingers(
     assert len(verifiers[0].started) == 3
     assert len(send.calls_for(LOGIN_URL)) == 4  # 首轮 login + 3 次带票据重发
 
-    # 留档错误在下次调用体现一次（design.md §2.4 验证循环第 2 步）
+    # 留档错误在下次调用体现一次（验证循环第 2 步）
     env_err = controller.get_characters()
     assert env_err['status'] == 'error'
     assert '3 次未通过' in env_err['message']
@@ -305,7 +305,7 @@ def test_ticket_delivery_error_resets_and_leaves_files_untouched(
     """验证循环异常路径：awaiting 期票据回传触发 complete_verification 抛
     MysApiError(-3208)（密码错误过多）→ 状态回 idle + verifier 关闭 + 错误
     留档在下次调用体现一次（-3208 与服务端文案透传）+ 不落盘不清文件
-    （design.md §2.4 验证循环处置：无「失败清罐」路径）。"""
+    （验证循环处置：无「失败清罐」路径）。"""
     # 预置会话（带过期标记——否则 login 走 already_logged_in 不进验证轮）
     # 与角色缓存：异常处置不得动它们
     controller.store.save_session_full({'ltoken_v2': 'keep-t4'})
@@ -397,7 +397,7 @@ def test_logout_while_awaiting_cancels_and_drops_late_ticket(
     verifiers: list[_FakeVerifier],
 ) -> None:
     """awaiting 期 logout：清会话 + idle + verifier 关闭；迟到票据被丢弃
-    （不静默重建会话，design.md §2.4 并发语义第 3 条）。"""
+    （不静默重建会话，并发语义第 3 条）。"""
     # 预置过期会话与角色缓存：过期态下 login 进入验证轮，登出须连旧文件一起清
     controller.store.save_session_full({'stale': 'v'})
     controller.store.mark_expired()
@@ -430,7 +430,7 @@ def test_ticket_session_id_mismatch_while_awaiting_discarded(
     verifiers: list[_FakeVerifier],
 ) -> None:
     """awaiting 期错配回传独立触发配对闸（verifier 层 409 之外的第二道闸，
-    design.md §2.4 迟到票据双重防护）：payload.session_id 与当前挑战不一致 →
+    迟到票据双重防护）：payload.session_id 与当前挑战不一致 →
     丢弃——状态保持 awaiting、不触发 complete_verification、attempt 不消耗
     （后续换题不受错配挤占）。"""
     send.add_route((LOGIN_URL, _need_verification_result('s-1')))
@@ -476,7 +476,7 @@ def test_logout_idempotent_without_session(controller: MysAccessController) -> N
 def test_expired_mark_sequence_preserves_files_until_success(
     controller: MysAccessController, session_dir: Path, send: _ScriptedHttpSend,
 ) -> None:
-    """过期标记序列（landing §3.4 判据）：session_expired → 只打标记
+    """过期标记序列：session_expired → 只打标记
     （session.json 保留 + role.json 保留）→ 标记后 login 不再
     already_logged_in → 登录失败（-3208）旧文件原样保留 → 登录成功整体
     覆盖、标记消失。过期清罐序列不存在。"""
@@ -517,7 +517,7 @@ def test_expired_mark_sequence_preserves_files_until_success(
 def test_assembly_wiring_same_store_and_injected_send(
     tmp_path: Path, verifiers: list[_FakeVerifier], verifier_factory: Callable[[], _FakeVerifier],
 ) -> None:
-    """装配断言（landing §3.4 判据）：控制器构造的 MysClient/DeviceIdentity
+    """装配断言：控制器构造的 MysClient/DeviceIdentity
     持有传入的 http_send 实例与同一 SessionStore 实例（同实例同锁）；缺任一
     构造参数 → TypeError（无默认路径）。"""
     fake_send = _ScriptedHttpSend()
@@ -607,7 +607,7 @@ def test_envelopes_never_contain_credentials(
     controller: MysAccessController, session_dir: Path, send: _ScriptedHttpSend,
     verifiers: list[_FakeVerifier],
 ) -> None:
-    """信封脱敏（landing §3.4 判据）：全部信封的序列化文本不含账号/密码/
+    """信封脱敏：全部信封的序列化文本不含账号/密码/
     cookie 值/票据内容。"""
     collected: list[dict] = []
 
@@ -642,7 +642,7 @@ def test_envelopes_never_contain_credentials(
 
 
 def test_tool_descriptions_and_registration() -> None:
-    """三工具注册 + mys_login description 含知情声明关键句（landing §3.4 判据：
+    """三工具注册 + mys_login description 含知情声明关键句（验收判据：
     经注册函数取 description 文本断言）。注册期不构建控制器（MagicMock backend
     零副作用）。"""
     mcp = FastMCP('t4-tools')
@@ -664,8 +664,8 @@ def test_app_server_mounts_mys_tools() -> None:
     assert {'mys_login', 'mys_logout', 'mys_get_characters'} <= set(mcp._tool_manager._tools.keys())
 
 
-# ---- mys_get_roster_detail（changes/mys-roster-detail design.md §2 契约 5：
-# 信封五态与 mys_get_characters 完全一致 + detail 序列化载荷形态 + 脱敏）----
+# ---- mys_get_roster_detail（信封五态与 mys_get_characters 完全一致 +
+# detail 序列化载荷形态 + 脱敏）----
 
 #: avatar/info 全量明细真实样本（2026-11-04 实测响应加工：抽 3 角色 + 词典
 #: 14 键，见 fixture _source 注记；甲全量形态 / 乙无光锥无遗器 / 丙缺件三形态）
@@ -673,9 +673,9 @@ DETAIL_SAMPLE_PATH: Path = (
     Path(__file__).resolve().parents[3] / 'fixtures' / 'mys' / 'hkrpg_avatar_info_detail_sample.json'
 )
 
-#: 新工具 description 的定死开头段（任务书原文 + mys-relic-sets 契约 3 增补
-#: 「含套装名与已激活套装效果」+ 练度用途词增补「账号练度全量明细：…」，
-#: 锁「描述文案定死」）
+#: 新工具 description 的定死开头段（含套装名与已激活套装效果增补 +
+#: 练度用途词「账号练度全量明细：…」，锁「描述文案定死」；工具契约正本 =
+#: docs/develop/sr_od/backend/mys.md「MCP 工具」节）
 ROSTER_DETAIL_DESC_OPENING: str = (
     '获取崩坏:星穹铁道全角色名册明细（每名角色的遗器六件套词条明细/位面饰品/'
     '星魂/行迹/属性面板，词条与面板属性均为中文名，含套装名与已激活套装效果）'
@@ -697,8 +697,8 @@ def _detail_sample_route() -> tuple[str, HttpSendResult]:
 def test_get_roster_detail_success_payload_shape(
     controller: MysAccessController, send: _ScriptedHttpSend,
 ) -> None:
-    """success：detail 序列化载荷形态断言（契约 3/4 + mys-relic-sets 契约 1/2
-    冻结字段集经 character_to_dict 逐层展开）——顶层十字段+六组明细、子结构
+    """success：detail 序列化载荷形态断言（CharacterDetail 冻结字段集
+    经 character_to_dict 逐层展开）——顶层十字段+六组明细、子结构
     字段名集合、中文字段随载荷、times 透传；乙无光锥无遗器形态照常出载荷。"""
     controller.store.save_role({'role_id': '1', 'server': 'prod_gf_cn'})
     send.add_route(_detail_sample_route())
@@ -815,7 +815,7 @@ def test_get_roster_detail_envelopes_never_contain_credentials(
     controller: MysAccessController, session_dir: Path, send: _ScriptedHttpSend,
     verifiers: list[_FakeVerifier],
 ) -> None:
-    """信封脱敏（沿用 landing §3.4 判据）：detail 序列化载荷与全部信封的
+    """信封脱敏：detail 序列化载荷与全部信封的
     序列化文本不含账号/密码/cookie 值/票据内容。"""
     collected: list[dict] = []
 

@@ -1,9 +1,9 @@
 """mys_evaluate_relic_substats 注册层单测（description 契约 + roster_data
 双路径信封语义）。
 
-出处：docs/develop/sr_od/backend/changes/relic-substat-eval/design.md §2.2
-（工具描述/Returns 段定死文案、roster_data 缺省自拉与非 success 透传）；
-landing.md 3.2 判据（注册成功、四态信封可达、双路径可达）。计算层行为由
+出处：评估工具注册层设计契约（工具描述/Returns 段定死文案、roster_data
+缺省自拉与非 success 透传；工具契约正本 = docs/develop/sr_od/backend/mys.md
+「MCP 工具」节）。覆盖判据（注册成功、四态信封可达、双路径可达）。计算层行为由
 ``test/sr_od/backend/mcp/test_relic_eval_tools.py`` 锁定，本文件只锁注册层。
 
 零副作用：控制器经 ``monkeypatch`` 注入桩（模块级 ``_controller`` 预设即被

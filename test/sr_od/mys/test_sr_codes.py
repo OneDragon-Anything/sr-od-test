@@ -1,6 +1,6 @@
 """sr_codes 码表快照与三层查表单测。
 
-锁的内容（design.md changes/mys-roster-detail §2 契约 1 / §3 码表单测策略；
+锁的内容（src 侧三层查表契约——响应词典优先/快照兜底/终兜底不抛异常；
 断言依据全部来自本文件固化的权威映射对照表，不读本机易失实测件）：
 
 - 四表封闭集：PROPERTY_INFO_SNAPSHOT 恰 56 码逐键锁定（权威快照，映射内容
@@ -13,7 +13,7 @@
 - validate_relic_main_affix 部位校验：命中 / 跨部位拒绝 / 未知部位拒绝；
 - 单参助手接入：各自查对应的表且 miss 兜底文案含入参。
 
-撞域纪律（文档性声明，design.md §2 契约 1）：RELIC_POS_CN 键域 1-6 与星魂
+撞域纪律（文档性声明，与 src 侧 RELIC_POS_CN 注释同源声明）：RELIC_POS_CN 键域 1-6 与星魂
 ranks[].pos（星魂序号）撞值域但语义无关——部位表只服务遗器/饰品 pos 字段，
 禁两处共用（src 侧 RELIC_POS_CN 注释同此声明）。
 """
