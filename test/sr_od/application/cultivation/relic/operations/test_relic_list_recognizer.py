@@ -20,6 +20,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 from one_dragon.base.geometry.rectangle import Rect
+from one_dragon.base.screen.template_loader import TemplateLoader
 from one_dragon.utils import cv2_utils
 from sr_od.application.cultivation.relic.relic_list_recognizer import (
     RelicReplaceRecognizer,
@@ -29,10 +30,12 @@ from sr_od.application.cultivation.relic.relic_list_recognizer import (
 from test.conftest import SrTestContext
 
 _FIXTURE_DIR = Path(__file__).parent / 'equip_relic'
+_CROP_REGRESSION = Path(__file__).parent / 'equip_relic' / 'crop_regression.webp'
 
 
 def _fake_ctx(test_context: SrTestContext, list_rect: Rect) -> SimpleNamespace:
-    """mock ctx:screen_loader 按名返回列表区与部位筛选 tab 区 rect;ocr 用真实例。"""
+    """mock ctx:screen_loader 按名返回列表区与部位筛选 tab 区 rect;ocr 用真实例;
+    template_loader 用真实例(卡面裁片库按 sub_dir 从盘加载)。"""
     areas = {
         '区域-遗器列表': list_rect,
         '部位TAB-头部': Rect(110, 122, 166, 164),
@@ -50,6 +53,7 @@ def _fake_ctx(test_context: SrTestContext, list_rect: Rect) -> SimpleNamespace:
 
     return SimpleNamespace(
         screen_loader=SimpleNamespace(get_area=get_area),
+        template_loader=TemplateLoader(),
         ocr_service=test_context.ocr_service)
 
 
@@ -147,6 +151,37 @@ def test_pos_template_subset() -> None:
         for name in subset:
             piece = _lookup_piece(name)
             assert piece.pos == pos, f'{name} 应属部位 {RELIC_POS_CN[pos]}'
+
+
+def test_weak_piece_crop_channel(test_context: SrTestContext) -> None:
+    """弱匹配件卡面裁片通道:黑牛仔帽图案(快枪手的野穗毡帽)的官方部件图与
+    卡面渲染特征同源性弱(单对匹配仅 5 聚簇),官方图兜底 argmax 恒被无关件
+    压过(诗人花冠/登程风帽)→目标件名永不出现→漏检。裁片同源模板(实机帧
+    图案区裁片,TemplateLoader relic_card_face 库)以合并统一 argmax 根治——
+    同源聚簇 21/27 vs 官方图最佳 10/13。
+
+    锁(出处 relic_list_recognizer 裁片通道注释):
+    - 两张黑帽卡判「快枪手的野穗毡帽」且 identity=crop(竞争胜出来源);
+    - 负样本卡不被裁片低簇噪声误检(官方图高分反压:莳萝花冠 25 簇 fallback)。
+    fixture = 识别器失败现场整屏帧(2.5MB webp,整屏识别 >2s,登记 slow_marks)。"""
+    img = cv2_utils.read_image(str(_CROP_REGRESSION))
+    assert img is not None
+    out = RelicReplaceRecognizer().recognize_for_pos(
+        _fake_ctx(test_context, Rect(33, 195, 536, 960)), img, 1)
+    assert out is not None
+    by_cell = {tuple(item['cell']): item for item in out['items']}
+    hat_a = by_cell.get((162, 328, 282, 488))
+    hat_b = by_cell.get((285, 328, 405, 488))
+    assert hat_a is not None and hat_b is not None, '两张黑帽卡应入清单'
+    assert hat_a['piece'] == '快枪手的野穗毡帽', f"黑帽A 应判野穗毡帽,实际 {hat_a['piece']}"
+    assert hat_a['identity'].startswith('crop'), f"黑帽A 应走裁片通道,实际 {hat_a['identity']}"
+    assert hat_b['piece'] == '快枪手的野穗毡帽', f"黑帽B 应判野穗毡帽,实际 {hat_b['piece']}"
+    assert hat_b['identity'].startswith('crop'), f"黑帽B 应走裁片通道,实际 {hat_b['identity']}"
+    # 负样本:白花头环卡(遐蝶角标)官方图 25 簇应反压裁片,不被低簇噪声误检
+    flower = by_cell.get((162, 626, 282, 786))
+    assert flower is not None
+    assert flower['piece'] == '诗人的莳萝花冠', f"白花头环被误检: {flower['piece']}"
+    assert flower['identity'].startswith('fallback'), f"白花头环不应走裁片通道: {flower['identity']}"
 
 
 def _lookup_piece(name: str):

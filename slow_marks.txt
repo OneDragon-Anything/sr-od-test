@@ -52,3 +52,4 @@ test/sr_od/operations/test_equip_owner_match.py::test_owner_no_badge_is_none
 # 须动 op/harness,测试面内不可便宜化);温缓存单文件复跑 0.13s,登记防标准
 # 全量冷缓存首跑抖动过线。
 test/sr_od/operations/test_equip_relic.py::test_reenter_runs_sort_prepend_chain
+test/sr_od/application/cultivation/relic/operations/test_relic_list_recognizer.py::test_weak_piece_crop_channel
