@@ -17,8 +17,15 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import cv2
 import pytest
+from test.conftest import SrTestContext
+from test.harness.fixture_controller import (
+    FixtureController,
+    WatchdogOperationMixin,
+    enter_running_state,
+    fast_sleep,
+    reset_running_state,
+)
 
 from one_dragon.base.geometry.rectangle import Rect
 from one_dragon.utils import cv2_utils
@@ -28,16 +35,7 @@ from sr_od.application.cultivation.relic.operations.equip_relic import (
     _relic_col_centers,
 )
 from sr_od.application.cultivation.relic.relic_list_recognizer import (
-    load_template_gray,
-    locate_cells_by_votes,
-)
-from test.conftest import SrTestContext
-from test.harness.fixture_controller import (
-    FixtureController,
-    WatchdogOperationMixin,
-    enter_running_state,
-    fast_sleep,
-    reset_running_state,
+    RelicReplaceRecognizer,
 )
 
 _FIXTURE_DIR = Path(__file__).parent / 'equip_relic'
@@ -87,22 +85,29 @@ def test_grid_geometry() -> None:
     assert centers == pytest.approx([99, 222, 345, 468], abs=2)
 
 
-def test_locate_on_fixture() -> None:
+def test_locate_on_fixture(test_context: SrTestContext) -> None:
     """实机 fixture 定位(全量清单):第一行两张死水头副本**每件各占一格**——
-    同套装多副本全部识别,不丢件(选哪件由调用方基于清单决策)。"""
-    template = load_template_gray('assets/game_data/relic_icons/死水深潜的先驱_先驱的绝热围壳.webp')
-    assert template is not None
+    同套装多副本全部识别,不丢件(选哪件由调用方基于清单决策)。
+    定位实现说明:走 TM 识别输出的 cell 清单(replace 界面卡上无件名文本,
+    副本格位由身份层整卡匹配给出)。"""
+    img = cv2_utils.read_image(str(_FIXTURE_DIR / 'replace_head_row0.webp'))
+    assert img is not None
+    from types import SimpleNamespace
+    areas = {'区域-遗器列表': _LIST_AREA}
+    for i, nm in enumerate(['头部', '手部', '躯干', '腿部', '位面球', '连结绳']):
+        areas[f'部位TAB-{nm}'] = Rect(110 + 63 * i, 122, 166 + 63 * i, 164)
 
-    screen = cv2_utils.read_image(str(_FIXTURE_DIR / 'replace_head_row0.webp'))
-    gray = cv2.cvtColor(screen, cv2.COLOR_RGB2GRAY)
-    cells = locate_cells_by_votes(gray, template, _LIST_AREA, _relic_col_centers(_LIST_AREA))
-    assert len(cells) >= 2, f'两张同套装副本应各自入清单,实际 {len(cells)} 格'
-    col_centers = _relic_col_centers(_LIST_AREA)
-    for cell, _votes in cells:
-        assert 195 <= cell.y <= 360, f'应落在第一行带,实际 {cell.y}'
-        assert any(abs(cell.x - c) <= 12 for c in col_centers), f'应吸附到某列中心,实际 {cell.x}'
-    # 两格吸附到不同列(对应两张不同的卡)
-    assert cells[0][0].x != cells[1][0].x, '两件副本应位于不同列'
+    def get_area(screen_name: str, area_name: str):
+        return SimpleNamespace(rect=areas[area_name])
+
+    mock = SimpleNamespace(screen_loader=SimpleNamespace(get_area=get_area),
+                           ocr_service=test_context.ocr_service)
+    out = RelicReplaceRecognizer().recognize_for_pos(mock, img, 1)
+    assert out is not None
+    dead_water = [it for it in out['items'] if it['piece'] == '先驱的绝热围壳']
+    assert len(dead_water) >= 2, f'两张同套装副本应各自入清单,实际 {len(dead_water)} 张'
+    cols = sorted({it['cell'][0] for it in dead_water})
+    assert len(cols) >= 2, f'两件副本应位于不同列,实际列 {cols}'
 
 
 def test_filter_candidates_allow_take_over() -> None:

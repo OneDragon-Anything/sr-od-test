@@ -7,11 +7,11 @@ mock screen_loader/ocr_service;不连真游戏)。拆分自 test_equip_list_reco
 
 - **等级文本锚点定位**:列表每卡底部的「+N」徽章文本 OCR 命中即卡位锚点,
   滚动天然免疫;锚点换算的卡矩形与实机标定值一致(遗器 120×160);
-- **遗器绑定识别**:件名(192 件部件图 SIFT)+ 套装 + 部位 + 强化等级(+15 OCR)
+- **遗器绑定识别**:件名(192 件部件图 masked TM)+ 套装 + 部位 + 强化等级(+15 OCR)
   + 占用者(角标头像匹配,黄泉 = 黄泉)。
 
 识别精度基线:角标匹配阈值与实测分数见本模块 ``match_owner`` docstring;
-SIFT 全库身份识别的票数下限 = ``identify_cells`` min_votes。
+TM 身份层的拒答门槛 = ``_TM_GATE``,实机真值卡彩色 NCC ≥ 0.93。
 """
 
 from __future__ import annotations
@@ -25,8 +25,8 @@ from one_dragon.base.geometry.rectangle import Rect
 from one_dragon.utils import cv2_utils
 from sr_od.application.cultivation.relic.relic_list_recognizer import (
     RelicReplaceRecognizer,
-    _relic_piece_templates,
-    _relic_piece_templates_for_pos,
+    _tm_templates_all,
+    _tm_templates_for_pos,
 )
 
 _FIXTURE_DIR = Path(__file__).parent / 'equip_relic'
@@ -98,33 +98,34 @@ def _relic_recognizer() -> RelicReplaceRecognizer:
 
 
 def test_contour_offgrid_filter() -> None:
-    """轮廓补充卡的网格吸附过滤:同行有锚的真卡保留、贴列表边缘的滚动裁切卡
-    丢弃(等级文本滚出、图案不全,识别无消费价值——用户裁定)、离列且离行的
-    间隙误检丢弃。(实机三帧证据形态复刻)"""
+    """轮廓补充卡的网格吸附过滤:同行有锚的完整真卡保留、可见高度不足的部分
+    卡丢弃(图案不全,识别无消费价值)、离列且离行的间隙误检丢弃。
+    (判据 = 可见高度,非贴边——网格行1 卡 y1 略超列表区上界属完整卡,
+    按贴边会整行误杀,4.7 版本实机脚部帧行1 三卡实证)"""
     rec = _relic_recognizer()
     # 锚点卡:列1 行2 / 列2 行3 / 列2 行5(中心 y: 408 / 557 / 854)
     anchors = [Rect(39, 328, 159, 488), Rect(162, 477, 282, 637), Rect(162, 774, 282, 934)]
     contours = [
-        Rect(39, 497, 161, 607),    # 中心 (100,552):列1✓ 行3 带(557)✓ → 漏锚真卡,保留
-        Rect(416, 197, 536, 309),   # 中心 (476,253):列4(468)✓ 且贴上边 → 裁切卡,丢弃
+        Rect(39, 497, 161, 657),    # 中心 (100,577):列1✓ 行2 带(408)✓ 高160 → 漏锚完整真卡,保留
+        Rect(416, 197, 536, 309),   # 中心 (476,253):列4(468)✓ 但高112<140 → 部分卡,丢弃
         Rect(500, 640, 620, 760),   # 中心 (560,700):离列4(468)92px → 丢弃
         Rect(162, 640, 282, 760),   # 中心 (222,700):列2✓ 但离行3(557)/行5(854)均>70 → 丢弃
     ]
     kept = rec._filter_contour_offgrid(contours, anchors, _LIST_RECT)
-    assert Rect(39, 497, 161, 607) in kept, '同行有锚的漏锚真卡应保留'
-    assert Rect(416, 197, 536, 309) not in kept, '贴边裁切卡信息不全,不识别'
+    assert Rect(39, 497, 161, 657) in kept, '同行有锚的漏锚完整真卡应保留'
+    assert Rect(416, 197, 536, 309) not in kept, '高度不足的部分卡信息不全,不识别'
     assert Rect(500, 640, 620, 760) not in kept, '离列的误检应丢弃'
     assert Rect(162, 640, 282, 760) not in kept, '在列但离锚行带的误检应丢弃'
 
 
 def test_contour_filter_no_anchor_keeps_all() -> None:
-    """无锚点(OCR 全空,如极端滚动位)时轮廓是唯一信息源:行检查豁免,但贴边
-    裁切卡与离列误检照常丢弃(裁切卡丢弃语义与有锚一致)。"""
+    """无锚点(OCR 全空,如极端滚动位)时轮廓是唯一信息源:行检查豁免,但高度
+    不足的部分卡与离列误检照常丢弃(丢弃语义与有锚一致)。"""
     rec = _relic_recognizer()
-    contours = [Rect(416, 197, 536, 309), Rect(289, 345, 411, 458)]
+    contours = [Rect(416, 197, 536, 309), Rect(289, 345, 411, 505)]
     kept = rec._filter_contour_offgrid(contours, [], _LIST_RECT)
-    assert Rect(289, 345, 411, 458) in kept, '无锚时在列的非贴边卡保留'
-    assert Rect(416, 197, 536, 309) not in kept, '无锚时贴边裁切卡照常丢弃'
+    assert Rect(289, 345, 411, 505) in kept, '无锚时在列的完整卡保留'
+    assert Rect(416, 197, 536, 309) not in kept, '无锚时高度不足的部分卡照常丢弃'
 
 
 def test_masked_card_detection() -> None:
@@ -141,16 +142,23 @@ def test_masked_card_detection() -> None:
 
 
 def test_pos_template_subset() -> None:
-    """部位先验模板子集:pos=1 全部为头部件、pos=6 全部为连结绳,且为全库子集。"""
+    """部位先验模板子集:pos=1 全部为头部件、pos=6 全部为连结绳(双档同名多条目),
+    且为全库子集。"""
     from sr_od.mys.sr_codes import RELIC_POS_CN
-    full = _relic_piece_templates()
+    full = _tm_templates_all()
     for pos in (1, 6):
-        subset = _relic_piece_templates_for_pos(pos)
-        assert set(subset) <= set(full)
-        assert subset, f'部位 {pos} 子集不应为空'
-        for name in subset:
+        subset_main, subset_sel = _tm_templates_for_pos(pos)
+        names = {name for name, _tpl, _mask in subset_main}
+        assert names <= set(full), '部位子集应为全库子集'
+        assert names, f'部位 {pos} 子集不应为空'
+        for name in names:
             piece = _lookup_piece(name)
             assert piece.pos == pos, f'{name} 应属部位 {RELIC_POS_CN[pos]}'
+        if pos == 6:
+            # 连结绳双档:同名多条目(列表常态 + 选中卡放大)
+            rope_entries = [e for e in subset_main + subset_sel if e[0] == '茨冈尼亚的轮回纽结']
+            assert len(rope_entries) >= 2, '连结绳应有多档模板'
+            assert subset_sel, 'pos6 应有选中档模板'
 
 
 def _lookup_piece(name: str):
