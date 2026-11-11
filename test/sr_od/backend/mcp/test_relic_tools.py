@@ -22,12 +22,31 @@ def test_lookup_by_piece_and_set_name() -> None:
     assert by_piece['data']['set_name'] == '生命的翁瓦克'
     assert by_piece['data']['matched_piece'] == '翁瓦克的诞生之岛'
     assert by_piece['data']['pieces'][0]['pos_cn'] == '位面球'
-    assert by_piece['data']['pieces'][0]['icon'] == \
-        'assets/game_data/relic_icons/生命的翁瓦克_翁瓦克的诞生之岛.webp'
+    # 有 id 套装 → icon = 规范库公式（套装id_部位英文）
+    icon = by_piece['data']['pieces'][0]['icon']
+    assert icon is not None and icon.startswith('assets/template/relic_icon/')
+    assert icon.endswith('_planarsphere/raw.webp')
 
     by_set = lookup_relic('生命的翁瓦克')
     assert by_set['status'] == 'success'
     assert by_set['data']['match'] == 'set_exact'
+
+
+def test_lookup_icon_empty_id_is_none() -> None:
+    """国际服待同步套装（空 id）→ icon None（模板不在规范库）。"""
+    out = lookup_relic('领航员的深空之镜')
+    assert out['status'] == 'success'
+    assert out['data']['set_name'] == '星如我见的领航员'
+    assert all(p['icon'] is None for p in out['data']['pieces'])
+
+
+def test_lookup_icon_id_keyed() -> None:
+    """有 id 套装的 icon = 规范库公式（套装id_部位英文，与磁盘模板库同构）。"""
+    out = lookup_relic('骇域漫游的信使')
+    assert out['status'] == 'success'
+    head = next(p for p in out['data']['pieces'] if p['pos'] == 1)
+    assert head['icon'].startswith('assets/template/relic_icon/')
+    assert head['icon'].endswith('_head/raw.webp')
 
 
 def test_lookup_fuzzy_single_and_ambiguous() -> None:

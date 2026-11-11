@@ -197,13 +197,13 @@ def test_grid_interpolate_missing_row() -> None:
     assert len(rects2) == 6, f'异常间距不应插行,实际 {len(rects2)} 张'
 
 
-def test_pos_template_subset() -> None:
+def test_pos_template_subset(test_context: SrTestContext) -> None:
     """部位先验模板子集:pos=1 全部为头部件、pos=6 全部为连结绳(双档同名多条目),
     且为全库子集。"""
     from sr_od.mys.sr_codes import RELIC_POS_CN
-    full = _tm_templates_all()
+    full = _tm_templates_all(test_context)
     for pos in (1, 6):
-        subset_main, subset_sel = _tm_templates_for_pos(pos)
+        subset_main, subset_sel = _tm_templates_for_pos(test_context, pos)
         names = {name for name, _tpl, _mask in subset_main}
         assert names <= set(full), '部位子集应为全库子集'
         assert names, f'部位 {pos} 子集不应为空'

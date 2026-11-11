@@ -1,7 +1,7 @@
 """sr_relic_sets 套装快照常量与套装效果助手单测。
 
-锁的内容（design.md changes/mys-relic-sets §1 数据层 / §3 测试策略；断言依据
-全部来自本文件固化的基准值，不读本机易失快照件）：
+锁的内容（套装快照常量数据层契约——快照完整性/件名反查/套装效果聚合；
+断言依据全部来自本文件固化的基准值，不读本机易失快照件）：
 
 - 快照完整性：RELIC_SETS 恰 64 套（隧洞 34 + 位面饰品 30）、效果齐备形态
   （64 条带 '2'、34 条 cavern 带 '4'、ornament 无 '4'）、196 件名唯一、
@@ -17,17 +17,18 @@
   resolve_set_name）；piece_count 降序、同级按 set_name。
 """
 
+from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
 
 import sr_od.mys.sr_relic_sets as sr_relic_sets
+from one_dragon.utils import os_utils
 from sr_od.mys.sr_codes import RELIC_POS_CN
 from sr_od.mys.sr_relic_sets import (
     RELIC_POS_EN,
     RELIC_SETS,
     build_set_effects,
-    icon_webp_rel_path,
     resolve_set_name,
 )
 
@@ -203,16 +204,21 @@ def test_set_names_unique_across_all_sets() -> None:
     assert len(names) == len(set(names))
 
 
-def test_piece_desc_obtain_and_icon_path() -> None:
+def test_piece_desc_obtain_and_template_anchor() -> None:
     """单件 desc / 套装 obtain 齐备形态（196/64 全非空，纯展示文本透传）；
-    图标寻址公式基准（名称键，196 件归档的地址契约，文件存在性不在此锁）。"""
+    识别模板规范库锚点：有 id 套装的模板在盘（template_id 公式 =
+    套装id_部位英文），空 id 套装（国际服待同步名单）不落库。"""
     pieces = [p for s in RELIC_SETS for p in s.pieces]
     assert all(p.desc for p in pieces)
     assert all(s.obtain for s in RELIC_SETS)
 
     messenger = next(s for s in RELIC_SETS if s.set_name == '骇域漫游的信使')
-    assert icon_webp_rel_path(messenger.set_name, '信使的全息目镜') == \
-        'assets/game_data/relic_icons/骇域漫游的信使_信使的全息目镜.webp'
-    wakka = next(s for s in RELIC_SETS if s.set_name == '生命的翁瓦克')
-    assert icon_webp_rel_path(wakka.set_name, '翁瓦克的诞生之岛') == \
-        'assets/game_data/relic_icons/生命的翁瓦克_翁瓦克的诞生之岛.webp'
+    for piece in messenger.pieces:
+        template_id = f'{messenger.id}_{RELIC_POS_EN[piece.pos]}'
+        path = os_utils.get_path_under_work_dir(
+            'assets', 'template', 'relic_icon', template_id, 'raw.webp')
+        assert Path(path).is_file(), f'规范库缺模板: {template_id}'
+
+    for set_name in PENDING_INTL_SYNC:
+        relic_set = next(s for s in RELIC_SETS if s.set_name == set_name)
+        assert relic_set.id == '', f'待国际服同步套装应空 id: {set_name}'
