@@ -101,30 +101,33 @@ def _relic_recognizer() -> RelicReplaceRecognizer:
 
 
 def test_contour_offgrid_filter() -> None:
-    """轮廓补充卡的网格吸附过滤:同行有锚的真卡保留、离列且离行的间隙误检
-    丢弃、贴边且在列上的形态保留(裁切卡;实机 (416,197) 形假卡由 IoU 去重
-    这第一道防线兜住,网格吸附是第二道)。(实机三帧证据形态复刻)"""
+    """轮廓补充卡的网格吸附过滤:同行有锚的真卡保留、贴列表边缘的滚动裁切卡
+    丢弃(等级文本滚出、图案不全,识别无消费价值——用户裁定)、离列且离行的
+    间隙误检丢弃。(实机三帧证据形态复刻)"""
     rec = _relic_recognizer()
     # 锚点卡:列1 行2 / 列2 行3 / 列2 行5(中心 y: 408 / 557 / 854)
     anchors = [Rect(39, 328, 159, 488), Rect(162, 477, 282, 637), Rect(162, 774, 282, 934)]
     contours = [
         Rect(39, 497, 161, 607),    # 中心 (100,552):列1✓ 行3 带(557)✓ → 漏锚真卡,保留
-        Rect(416, 197, 536, 309),   # 中心 (476,253):列4(468)✓ 且贴上边 → 按裁切卡保留
+        Rect(416, 197, 536, 309),   # 中心 (476,253):列4(468)✓ 且贴上边 → 裁切卡,丢弃
         Rect(500, 640, 620, 760),   # 中心 (560,700):离列4(468)92px → 丢弃
         Rect(162, 640, 282, 760),   # 中心 (222,700):列2✓ 但离行3(557)/行5(854)均>70 → 丢弃
     ]
     kept = rec._filter_contour_offgrid(contours, anchors, _LIST_RECT)
     assert Rect(39, 497, 161, 607) in kept, '同行有锚的漏锚真卡应保留'
-    assert Rect(416, 197, 536, 309) in kept, '贴边且在列上的形态按裁切卡保留'
+    assert Rect(416, 197, 536, 309) not in kept, '贴边裁切卡信息不全,不识别'
     assert Rect(500, 640, 620, 760) not in kept, '离列的误检应丢弃'
     assert Rect(162, 640, 282, 760) not in kept, '在列但离锚行带的误检应丢弃'
 
 
 def test_contour_filter_no_anchor_keeps_all() -> None:
-    """无锚点(OCR 全空,如极端滚动位)时轮廓是唯一信息源:全部保留。"""
+    """无锚点(OCR 全空,如极端滚动位)时轮廓是唯一信息源:行检查豁免,但贴边
+    裁切卡与离列误检照常丢弃(裁切卡丢弃语义与有锚一致)。"""
     rec = _relic_recognizer()
     contours = [Rect(416, 197, 536, 309), Rect(289, 345, 411, 458)]
-    assert rec._filter_contour_offgrid(contours, [], _LIST_RECT) == contours
+    kept = rec._filter_contour_offgrid(contours, [], _LIST_RECT)
+    assert Rect(289, 345, 411, 458) in kept, '无锚时在列的非贴边卡保留'
+    assert Rect(416, 197, 536, 309) not in kept, '无锚时贴边裁切卡照常丢弃'
 
 
 def test_masked_card_detection() -> None:
