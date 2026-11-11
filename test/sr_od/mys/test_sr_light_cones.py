@@ -9,14 +9,15 @@
   白名单（补齐后同步收紧白名单）；
 - 基准：银河铁道之夜（5 星 智识）/ 于夜色中（5 星）；
 - 查询助手：名查命中与 miss 返回 None；
-- 图标寻址公式基准（名称键）。
+- 图标模板规范库锚点件在盘（id 键,light_cone_icon/<id>/raw.webp）。
 """
 
+import os
 import re
 
+from one_dragon.utils import os_utils
 from sr_od.mys.sr_light_cones import (
     LIGHT_CONES,
-    icon_webp_rel_path,
     resolve_light_cone,
 )
 
@@ -44,7 +45,7 @@ def test_light_cone_id_contract() -> None:
 
 def test_anchor_cones_and_helpers() -> None:
     """基准与查询助手：名查命中；miss None 不抛异常；path_id ∈ 九命途 id 集；
-    图标路径公式基准（名称键）。"""
+    图标模板规范库锚点件在盘（id 键）。"""
     by_name = resolve_light_cone('银河铁道之夜')
     assert by_name is not None
     assert by_name.rarity == 5
@@ -59,4 +60,7 @@ def test_anchor_cones_and_helpers() -> None:
     valid_paths = {'destruction', 'preservation', 'hunt', 'abundance', 'nihility',
                    'erudition', 'harmony', 'remembrance', 'elation'}
     assert all(c.path_id in valid_paths for c in LIGHT_CONES)
-    assert icon_webp_rel_path('银河铁道之夜') == 'assets/game_data/light_cone_icons/银河铁道之夜.webp'
+    # 锚点件模板在盘(id 键规范库;空 id 白名单锥无模板,回填 id 后补录)
+    night_tpl = os_utils.get_path_under_work_dir(
+        'assets', 'template', 'light_cone_icon', night.id, 'raw.webp')
+    assert os.path.isfile(night_tpl), f'锚点模板缺失: {night_tpl}'

@@ -2,7 +2,7 @@
 
 锁的内容（light_cone_tools 模块 docstring 匹配策略）：
 
-- 名称精确命中（match=name_exact，data 含结构化字段与名称键图标路径）；
+- 名称精确命中（match=name_exact，data 含结构化字段与 id 键图标模板路径）；
 - 模糊单命中（子串 → fuzzy）与多命中（ambiguous + candidates）；
 - not_found（空串 / 无关词）；
 - 过滤组合：rarity/path_id 缩域、list_all 全量列表、list_all 缺过滤拒绝；
@@ -22,14 +22,14 @@ from sr_od.backend.mcp.light_cone_tools import (
 
 
 def test_lookup_by_name() -> None:
-    """名称精确命中：data 含结构化字段与名称键图标路径。"""
+    """名称精确命中：data 含结构化字段与 id 键图标模板路径。"""
     by_name = lookup_light_cone('银河铁道之夜')
     assert by_name['status'] == 'success'
     assert by_name['data']['name'] == '银河铁道之夜'
     assert by_name['data']['rarity'] == 5
     assert by_name['data']['path_cn'] == '智识'
     assert '流星群' in by_name['data']['skill']  # 特效全文随定义返回
-    assert by_name['data']['icon'] == 'assets/game_data/light_cone_icons/银河铁道之夜.webp'
+    assert by_name['data']['icon'] == 'assets/template/light_cone_icon/nightonthemilkyway/raw.webp'
     assert by_name['data']['match'] == 'name_exact'
 
 
