@@ -87,7 +87,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicate
 # - 场上填充件族(镜流/Saber/Archer/杰帕德)= 档 1 部署定型面,统一
 #   序列不进输出;备战位件与填充件**禁同名**(档 1 按角色名命中,
 #   同名备战件会被部署需要面一并保护)。
-# 板满前排中性填充族(阶段 5/6 起 = 注册表外杂名:零羁绊标签 + 非终局库
+# 板满前排中性填充族(统一部署搜索定型后 = 注册表外杂名:零羁绊标签 + 非终局库
 # ——统一部署搜索的枚举/评分对板件真实参与竞争,注册表填充名会被窗口
 # 谓词(终局库件窗口未开)或羁绊标签卷入换血,中性板 = 搜索定型保持现板
 # 的滞回载体)。名字表达纪律:注册表外名 = 「未知阵营/零羁绊」语义。
@@ -145,8 +145,8 @@ class TestSceneClosedSet:
 
     def test_retired_scene_rows_absent(self):
         """退役场景行零残留(3.2/3.4/阶段 3):shop_swap 随席满置换账被
-        统一获取让位评估整段替换退役(3.2,dismantle §2);c1_make_room
-        随 C1 支拆除(3.4,dismantle §2 场景死行);deploy_swap 冻结遗留
+        统一获取让位评估整段替换退役(11 号稿 §4.0);c1_make_room
+        随 C1 支拆除(卖出身份段退役批);deploy_swap 冻结遗留
         路径随旧价值函数退役(3.4——部署换人域判据本体 = kernel 直接
         消费,不经本评估器,生产零消费面);session_funding 随统一获取
         让位评估并入后退役(11 号稿 §4.0:
@@ -425,7 +425,7 @@ class TestInterestMemberExemption:
 
 
 class TestIdentitySegmentRetired:
-    """装配 A 身份段退役后的序列承载形态(dismantle §3 卖侧):
+    """装配 A 身份段退役后的序列承载形态(卖出身份段退役批卖侧):
     标签命中件/registry 核心/保护档件不再被身份排除,统一按档位结构
     排序——候选线成员/骨架件由成员档族档 2/3/4/5/7 天然殿后(十档
     口径 = 32 号稿 §3),非成员标签件按兜底档 10 概率先让

@@ -12,7 +12,7 @@
   W3(F1 锁线清空 → 凑息卖回漏口)/ W5(②(b) prio1 无星过滤,本批只
   承接登记侧断言,发射侧门槛归买面批)。
 
-批 3 辖域声明(方案 v3 §6.1):登记簿合一({名:(买因,轮)})、窗口段
+批 3 辖域声明(11 号稿 §4.1):登记簿合一({名:(买因,轮)})、窗口段
 活跃/过期、发射登记四出口 + 五键分键、类资格断言(W5 登记侧,含硬闸
 合取)、funding 兜底豁免、projection 全资格视图。「任意买因类 × 任意
 卖出通道」全矩阵测试随批 4 落地——本文件只落批 3 声明面的场景测试。
@@ -138,11 +138,11 @@ class TestLaunchRegistry:
 
     def test_launch_cause_closed_set(self):
         """闭集三个测试并一:
-        [枚举拒] LaunchCause 枚举外值拒收(方案 v3 §5.3 防复发
+        [枚举拒] LaunchCause 枚举外值拒收(11 号稿 §4.1 防复发
           双闸②;新买入臂必须先归入某因果类才合法;hold 类同为枚举外
           ——3.4 退役后登记被拒);
         [14 臂映射] 买入臂全映射 + 值域 ⊆ LaunchCause 闭集 +
-          ev_buy→press(方案 v3 §3.1;新买入臂未分类即登记 = 红,测试红
+          ev_buy→press(11 号稿 §4.0 通道重映射行;新买入臂未分类即登记 = 红,测试红
           时该登记的语义 = 把新臂补进映射表并过对抗审,非机械跟绿)。
           core_single_card_buy 族/protection_hoard 三行已随两买臂退役
           删除(统一让位优先级迭代 3.4);dominance_buy 行已随通道退役
@@ -199,7 +199,7 @@ class TestLaunchRegistry:
 
 class TestWindowLifecycle:
     """窗口段生命周期测试(P78-2b τ=同轮;P78-3 轮界过期,W3 修法;
-    四出口方案 v3 §3.1)——三场景表驱动并一,场景间独立会话互不复用。"""
+    四出口生命周期(11 号稿 §4.1)——三场景表驱动并一,场景间独立会话互不复用。"""
 
     def test_window_lifecycle_table(self):
         cases = (
@@ -249,7 +249,7 @@ class TestWindowLifecycle:
             '锁线帧清空登记 = F1 错误语义回流(P78-3)'
 
     def _case_four_exits_close_and_count(self):
-        """四出口生命周期(方案 v3 §3.1):①卖出销(shim 同出口)/
+        """四出口生命周期(11 号稿 §4.1):①卖出销(shim 同出口)/
         ②部署销(只销部署名,垫保账存)/②′合成销(V2-05;空账 no-op;
         未接通窗口滞留 ≤1 轮由轮界销兜底)/③换线闭合(P78 §2.1「线账
         闭合」:义务类登记名离基座 ⇒ 销账+close_on_switch;读点原宿主
@@ -384,7 +384,7 @@ class TestProjectionFullFace:
     """读端同源测试(P78-6/M7;3.4 修订:身份段退役后,全资格面 =
     循环防线三构件〔窗口段/L1 同轮禁卖/种子豁免〕,projection 再并 T3
     活跃集——投影漏 T3 则 liquid_refund 高估 → s_reserve 低估 →
-    预留被吃,方向链方案 v3 §2.8)。正证+红证并一。"""
+    预留被吃,方向链 defer 口径,11 号稿 §4.1/M7)。正证+红证并一。"""
 
     def test_projection_face_union_t3_and_red_proof(self):
         """正证:projection = 循环防线全资格面 ∪ T3 活跃集,interest =

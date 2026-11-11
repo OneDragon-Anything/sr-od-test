@@ -12,7 +12,7 @@
 - 逐局统计行(复跑加 ``-s`` 可收):seed/终局源/终点/结算轮/驱动步/
   节点写数/末金/末级/hp 低点/耗时——冒烟报告的产出面,不作断言
   (统计数值随策略正常调整变动,断言即过时);
-- 3.4 统计面扩展(统一保护集验证批授权,design §2.6 prereg 观察集
+- 统计面扩展(统一保护集验证批授权,预注册观察集
   取数口;同段落不作断言):过渡引擎读数 ``eng``/``p1eng``(点亮率
   /成型率/位面 1 形态分支的逐局输入,判定单一源 =
   ``cw_engine_facts.engines_count``)、位面 2 入口 ``p2``、位面 1 出口
@@ -59,7 +59,7 @@ from test.sr_od.application.currency_war.sim.conftest import BATCH_SEEDS
 
 def _transition_scan(journal_rows: list) -> dict:
     """扫 journal 投影行取过渡引擎/位面/买入读数(3.4 统计面扩展;
-    design §2.6 prereg 观察集逐局取数口,冒烟报告产出面非断言)。
+    预注册观察集逐局取数口,冒烟报告产出面非断言)。
 
     判定单一源 = ``cw_engine_facts.engines_count``(仙舟3/列车2/持续
     伤害2 + 希儿系=希儿在场∧放大器≥2);board 域写行的 ``after`` 即
@@ -150,7 +150,7 @@ def _xp_spend_of(item: dict) -> int:
 
 
 def _action_scan(journal_rows: list) -> dict:
-    """扫 journal 投影行取动作面读数(3.4 统计面扩展;design §2.6 prereg
+    """扫 journal 投影行取动作面读数(统计面扩展;预注册
     与 02 §8 命题 A 读数的逐局取数口,冒烟报告产出面非断言)。
 
     receipts 行为窗口累积快照(同形条目跨窗重复),新增量按「逐键计数

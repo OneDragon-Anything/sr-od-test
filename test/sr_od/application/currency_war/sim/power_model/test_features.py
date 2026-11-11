@@ -1,6 +1,6 @@
 """power_model 特征面对齐测试(src 镜像:sim/power_model/features.py)。
 
-锁的设计约定(design 2026-10-19-sim-power-model-v1 §2.2 + 权威版本
+锁的设计约定(sim-power-model.md 正本:
 sim-power-model §4.2):
 - 双侧同源:sim GameState 与实机 decisions 行同一板面输入 → 同一
   特征向量(对齐测试是设计验收对象,非实现细节);
@@ -119,7 +119,7 @@ class TestBothSideAlignment:
 
 
 class TestFeatureDefinitions:
-    """单特征定义位(design §2.2 表逐位的最小锁)。"""
+    """单特征定义位(sim-power-model §4.1 逐位的最小锁)。"""
 
     def test_empty_slots_counted_nowhere(self) -> None:
         """char_id 为空的条目不计入任何单位计数(上场数/rung/星深)。

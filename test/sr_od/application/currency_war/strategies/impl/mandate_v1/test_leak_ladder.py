@@ -8,7 +8,7 @@
       席满帧,M6 prep 块被触达(m6_bench_full 拒因暴露——摘旗前该帧
       被 stop_flag 短路、拒因结构性不可见)。
 (原 L7 ALL IN 类别过滤面已随域辖谓词删除退役——hp-purge
-      迭代 3.1 A-6,见文末退役注。)
+      hp-purge 批 A-6,见文末退役注。)
 
 测试构造声明:候选/帧构造基建(_km/_bc/_card/_off_name/_session_stub/
 _st)保留 = test_front_window_predicates 的候选构造单一源(跨文件
@@ -106,7 +106,7 @@ def _card(name: str, cost: int = 2, star: int = 1) -> ShopCard:
 
 def _off_name(exclude: tuple[str, ...] = (), *, min_cost: int = 1) -> str:
     """线外注册表角色名(候选构造;避开目标线成员,防邻近臂抢发射
-    ——C1 单卡核心/保护集囤货臂候选身份已随统一让位优先级迭代 3.4
+    ——C1 单卡核心/保护集囤货臂候选身份已随卖出身份段退役批
     退役,非线内即可,不再需要核心/保护身份规避)。"""
     bad = set(exclude) | set(_km())
     for n, ch in CHARACTERS.items():
@@ -174,10 +174,10 @@ class TestL3FlagRemoval:
 
 
 # (原 L7 ALL IN 类别过滤域谓词测试已随辖域谓词本体删除退役
-# ——hp-purge 迭代 3.1 A-6 挂空死码删除;P72 闸 ALL IN 支收窄测试
+# ——hp-purge 批 A-6 挂空死码删除;P72 闸 ALL IN 支收窄测试
 # test_l7_gate_rejects_non_support_xp 已随 levelup_budget_gate 量闸本体
-# 退役消亡(迭代 2026-10-12-prep-shop-workflow-redesign 批 3.4;
-# line_and_upgrade §2.3 P72(3a) 本体删除行:量闸整体不再存在,
+# 退役消亡(git 历史可溯;
+# 11 号稿 §2 拦截层 P72(3a) 本体删除行:量闸整体不再存在,
 # 「ALL IN 帧类别白名单拒 XP」的防线语义随之消亡——ALL IN 帧花光拦截
 # 现役载体 = 无,末位面末战保底金门出辖 = ALL IN 花光原语义;替代语义
 # 考古走 git 历史)。)

@@ -3,8 +3,8 @@
 判据权威版本(持久索引):
 - 统一装配与候选不进档 1 = docs/develop/sr_od/application/currency_war/
   strategy-docs/30_supply_screen.md §2.1(裁定五 2026-11-01:补给沿用
-  统一优先级;候选 = 假设性入场者按卡面十档定序〔完成品保护迭代
-  design §2.2,旧八档档号全表位移〕,凑星价值经档 3 承载〔旧八档
+  统一优先级;候选 = 假设性入场者按卡面十档定序〔32 号稿 §3 十档口径,
+  旧八档档号全表位移〕,凑星价值经档 3 承载〔旧八档
   档 2 升星主线位移〕);
 - 统一装配入口 = priority.assemble_candidate_eval(与商店获取让位
   [11_shop_decisions.md §4.0 步 4] 同一实现,域差异仅候选牌三件套);
@@ -59,7 +59,7 @@ def _clean_cost_fillers(count: int, cost: int, exclude: set[str]) -> list[str]:
     """互异同费干净名(注册表现查):费用恰 = cost、非万金油、非档 9
     羁绊——Lv1-3 帧 2 费+件概率 0 且 -cost < 0(候选零成本),兜底
     档 10 内键小于候选 = 池件更保,候选末位形态的可控构帧件
-    (十档口径 = 完成品保护迭代 design §2.2)。"""
+    (十档口径 = 32 号稿 §3)。"""
     out: list[str] = []
     for n, c in CHARACTERS.items():
         if len(out) >= count:
@@ -118,7 +118,7 @@ def test_same_name_candidate_ranks_by_card_face_not_tier1():
     """同名候选不再因部署同名命中档 1(裁定五特例退役;30 号篇 §2.1
     统一装配):分跨备战席/上阵行域的同名 3 张凑星帧(1 bench + 1 front
     + 候选 → 升星连锁合成 2★),候选按卡面档定序——飞霄(非成员/非
-    万金油/非羁绊)落兜底档 10〔旧八档档 8,十档口径 design §2.2〕,
+    万金油/非羁绊)落兜底档 10〔旧八档档 8,十档口径 = 32 号稿 §3〕,
     被希儿(量子同频羁绊,档 9〔旧档 7 位移〕)压过;胜出键首档 = 9
     直断「档 1 按名命中已不保护候选」(旧特例形态下飞霄键首档 = 1 必
     胜出)。旧「同名凑星候选优先」语义的现行承载 = 档 3 升星主线
@@ -131,12 +131,12 @@ def test_same_name_candidate_ranks_by_card_face_not_tier1():
     assert isinstance(out, SupplyDecision)
     assert out.idx == 1, '同名候选按卡面档定序:希儿(档 9)压飞霄(档 10)'
     assert '键首档=9' in out.reason, \
-        f'胜出键首档应 = 9(羁绊档,design §2.2 十档):{out.reason!r}'
+        f'胜出键首档应 = 9(羁绊档,32 号稿 §3 十档):{out.reason!r}'
 
 
 def test_tier3_carries_merge_star_value_for_member():
     """凑星价值经档 3 承载(30 号篇 §2.1:成员星目标推进件的候选按
-    卡面落档 3 升星主线〔旧八档档 2 位移,完成品保护迭代 design §2.2〕,
+    卡面落档 3 升星主线〔旧八档档 2 位移,32 号稿 §3 十档〕,
     档内 -total_star 聚合含置入候选):列车同行线内,候选
     花火(在场 1 张,置入后聚合 2)先于候选姬子·启行(未持有,置入后
     聚合 1)——聚合大者键小排先,凑星候选天然排高。在手件放上阵行
@@ -150,12 +150,12 @@ def test_tier3_carries_merge_star_value_for_member():
     assert isinstance(out, SupplyDecision)
     assert out.idx == 1, '档 3 聚合承载:在场 1 张的花火候选排先'
     assert '键首档=3' in out.reason, \
-        f'成员星目标推进件应落档 3(design §2.2 十档,旧档 2 位移):' \
+        f'成员星目标推进件应落档 3(32 号稿 §3 十档,旧档 2 位移):' \
         f'{out.reason!r}'
 
 
 def test_member_completed_unit_retained_over_high_prob_junk():
-    """成员 2★ 完成品保留序提前(design §2.5-8 行为申报回归锁;十档
+    """成员 2★ 完成品保留序提前(32 号稿 §4/§5 保留张 行为申报回归锁;十档
     口径 = §2.2 档 2 need≥2 达标保留张)——entry_signals 退役后行为
     演进登记:花火 2★(列车·反震 need 2 达标)被虚拟定型编入上场 →
     **档 1 名级保护**(不在补给评估池,比档 2 完成品保留更强的保护面;
@@ -221,7 +221,7 @@ def test_field_redeployed_out_units_enter_elimination_pool():
     ∪ 虚拟场上部署外件——field 撤下件入池,与商店同款):换阵帧
     (锁定双王圣杯,bench Saber 3★ 触发虚拟定型换人 → 前排 3 费杂件
     被撤下为部署外),撤下件(Lv5 概率 0.2 > 0)键大于零成本候选
-    (概率恒 0,候选键首档 = 兜底档 10,十档口径 design §2.2)→ 撤下件
+    (概率恒 0,候选键首档 = 兜底档 10,十档口径 = 32 号稿 §3)→ 撤下件
     垫末位、候选幸存照选。旧「只扫 bench」分叉
     形态下池 = bench 5 费件(概率 0 同档、-cost < 0)全小于候选 →
     候选末位被淘汰——本帧断言幸存即钉住 field 件入池。"""
@@ -239,7 +239,7 @@ def test_field_redeployed_out_units_enter_elimination_pool():
     assert isinstance(out, SupplyDecision)
     assert out.idx == 0, '撤下件垫末位 → 候选幸存照选(field 件入池)'
     assert '键首档=10' in out.reason, \
-        f'杂件候选按卡面落兜底档 10(design §2.2 十档,旧档 8 位移):' \
+        f'杂件候选按卡面落兜底档 10(32 号稿 §3 十档,旧档 8 位移):' \
         f'{out.reason!r}'
 
 

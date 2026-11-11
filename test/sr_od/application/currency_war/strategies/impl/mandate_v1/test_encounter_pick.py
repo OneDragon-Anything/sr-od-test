@@ -1,11 +1,11 @@
 """遭遇选档决策单帧测试(能力态直通形;判据语义 =
  §2.2-§2.5,
-;验收基准 = design §2.12 锚点 1-6
-+ 立场重拍回退态(design §2.2/§2.3)。
+;验收基准 = 31 号稿 §1/§2 判据
++ 立场重拍回退态(31 号稿 §1)。
 
 测试语义不写巧合:断言「这段判据应该怎么表现」(窗口普战口径、κ_S 三态、
 边缘 cap、经验档层、tiebreak 档序、刷新阀两臂、重拍回退、注入面),
-不断言具体卡面;reason 仅断言 design §2.2 明文的归因串与因词封闭枚举
+不断言具体卡面;reason 仅断言 31 号稿 §2 明文的归因串与因词封闭枚举
 (判读侧契约)。
 
 测试纪律:零真实副作用(纯函数 + 自造输入 + 提交进仓的注册表数据);
@@ -80,7 +80,7 @@ def _set_left(gs: GameState, left: int) -> None:
 
 def test_sufficient_frame_picks_highest_reachable_tier():
     """基准 1:窗口两场全胜 → κ_S 足量 → 难度最高可及档胜出(t ≤ 4
-    能力态直判);reason 照 design §2.2 归因串。"""
+    能力态直判);reason 照 31 号稿 §2 归因串。"""
     gs = _fresh_gs()
     _win_window(gs)
     out = encounter_pick.decide([_opt(0, 1), _opt(1, 3)], gs)
@@ -212,7 +212,7 @@ def test_same_tier_tiebreak_preference_order():
 # ==================== 基准 6:窗口普战口径 ====================
 
 def test_window_counts_last_two_normal_battles_only():
-    """基准 6:窗口 = 最近 2 个普通战斗行(普战口径,design §2.2 候选 A)
+    """基准 6:窗口 = 最近 2 个普通战斗行(普战口径,31 号稿 §2.1)
     ——奖励行/遭遇行不入窗:两者 killed 为删失/败局,若误入窗会压 κ 降档,
     本帧须仍判足量选其三(误入窗即红)。"""
     gs = _fresh_gs()
@@ -262,7 +262,7 @@ def test_window_insufficient_is_distinct_state_with_own_cause():
 # ==================== 基准 8:立场重拍回退态 ====================
 
 def test_stance_none_falls_back_to_lowest_tier_zero_refresh(monkeypatch):
-    """基准 8(重拍回退机制,design §2.2/§2.3):立场常量任一置 None →
+    """基准 8(重拍回退机制,31 号稿 §1):立场常量任一置 None →
     恒最低档零刷新(dark-fallback:stance-unconfirmed)——即使窗口足量、
     可及集非空、刷新次数在场也不评估。"""
     opts = [_opt(0, 3), _opt(1, 1)]
@@ -280,7 +280,7 @@ def test_stance_none_falls_back_to_lowest_tier_zero_refresh(monkeypatch):
 # ==================== 注入面(fill 双键)与 fill 分支激活 ====================
 
 def test_calibration_face_fill_dual_keys_and_fill_branch():
-    """注入面(design §2.3):合法键 = fill 双键;未知键抛错(kernel 侧
+    """注入面(合法键 = fill 双键;未知键抛错(kernel 侧
     D_ENC_VARIANT 键在本口即未知——两注入口互不可见);非 None 不覆盖
     (幂等);reset 清场。双槽注入后败局 fill 分支激活:fill < 阈值 →
     不足 → 阀,fill ≥ 阈值(边界 0.5 取等不降档)→ 边缘;reset 后回到
@@ -328,7 +328,7 @@ def test_calibration_face_fill_dual_keys_and_fill_branch():
 
 def test_empty_options_frame_returns_no_options():
     """空候选帧 idx=0 no-options(纯函数定义完备;现役观察层守卫下
-    不可达,design §2.2)。"""
+    不可达,31 号稿 §2)。"""
     out = encounter_pick.decide([], _fresh_gs())
     assert isinstance(out, EncounterPickDecision)
     assert out.idx == 0

@@ -413,7 +413,7 @@ class TestDeferFrameInterestRuns:
                       front_row=front, deploy_cap=deploy_cap)
 
     def _run_to_interest_sell(self, gs, s, *, max_frames: int = 8):
-        """逐帧推进到节末凑息卖出(阶段 5/6:第 6 步部署差分可能先行
+        """逐帧推进到节末凑息卖出(第 6 步部署差分可能先行
         发排修正拖动——单动作循环下逐帧消化,拖动经上报函数落地后
         下帧重扫;凑息 SellBench(interest_prep) 到达即返回)。"""
         from sr_od.application.currency_war.kernel.cw_action_report.move_unit import (
@@ -550,22 +550,22 @@ class TestP2BloodBand:
                 '血线拒因键已随凑息禁令位退役')
 
 
-# ===== 5. 资金门终态行为固化(2026-10-18-levelup-band-gate design §2.7
+# ===== 5. 资金门终态行为固化(11 号稿 §2/§2.1
 # ===== 单帧清单 ⑥-⑩ 的 emit 级/域内变体补面;①-⑤ 由本文件上方各类
 # ===== 承载,映射见交付报告)=====
 
 
 class TestFundLineEmissionPins:
-    """资金线门发射终态(design §2.7 ⑥⑦⑧⑨⑩)。
+    """资金线门发射终态(11 号稿 §2/§2.1 六场景)。
 
-    出处(持久索引)= 2026-10-18-levelup-band-gate design.md §2.7 单帧
+    出处(持久索引)= strategy-docs/11_shop_decisions.md §2/§2.1 单帧
     清单 / §2.2 资金门统一 / §5.2 边界申报;断言锁语义不锁数值巧合,
     花后金语义断言的线与批成本一律从单一源现算
     (:func:`saturation_line` / 动作装载的 cost×clicks)。
     """
 
     def test_buyout_cap_zero_gate_auto_passes_emit(self):
-        """design §2.7⑥ 买断制 → 门自动过(emit 级):持买断制
+        """⑥ 买断制 → 门自动过(11 号稿 §2.1 出辖,emit 级):持买断制
         (interest_cap_override=0 注册表派生)⇒ cap_resolved=0 ⇒ 下界
         saturation_line(0)=0 ⇒ 门恒过——现金 25(旧口径线 50 下花后
         5 必 defer 的帧)整批发射;下界随 resolved 链消解,无特判分支。
@@ -587,7 +587,7 @@ class TestFundLineEmissionPins:
             cap_resolved_of_session(s)), '发射帧花后金 ≥ 买断制下界(0)'
 
     def test_terminal_all_in_spends_through(self):
-        """design §2.7⑦ 位面末 ALL IN → 花光放行(§2.2 豁免):末位面
+        """⑦ 位面末 ALL IN → 花光放行(11 号稿 §2.1 豁免支):末位面
         末战(P3 r7 boss,r_remaining=1)金 30 < 线+批(旧口径必 defer
         的帧)仍发射——末战后金无任何消费场景,守线前提失效,ALL IN
         维持花光原语义(terminal_all_in 单一源豁免支)。"""
@@ -622,7 +622,7 @@ class TestFundLineEmissionPins:
             f'发射帧 levelup 键域闭集(全链通过,无 hp 支):{sorted(_lv_keys)}'
 
     def test_interest_saving_band_never_emits(self):
-        """design §2.7⑨ 攒息期行为锁(§5.2 申报:攒息期升级-刷新双滞
+        """⑨ 攒息期行为锁(11 号稿 §3 资金序申报:攒息期升级-刷新双滞
         为预期健康态):金 30-60 攒息期带驱动帧(现金 < 线+批)零发射
         ——整批推迟(凑金链整删后的唯一处置,零卖出)不得在该帧发射。
         金 30 支由 test_fund_line_defer_emit_level 承载,本测试扫中高段
@@ -658,7 +658,7 @@ class TestFundLineEmissionPins:
             'levelup_fund_line_defer') == 1, '推迟拒因已登记'
 
     def test_natural_upgrade_fund_gate_end_to_end(self):
-        """design §2.7⑩ 自然升级 × 资金门端到端:无未完成星级目标 →
+        """⑩ 自然升级 × 资金门端到端(11 号稿 §2 分派 3):无未完成星级目标 →
         natural 键触发,资金门对 natural 同参管辖——金足帧整批发射
         (花后 ≥ 线,触发键随发射装载),金不足帧推迟零动作(触发计数
         与资金 defer 计数同帧已登记,证两链同帧串接)。"""

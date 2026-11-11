@@ -1,5 +1,5 @@
-"""终局线选择(统一阵容评分)内核测试——迭代
-2026-11-03-unified-line-scoring 批 1;含选线决策族两翼
+"""终局线选择(统一阵容评分)内核测试(正本 = 12 号稿;
+含选线决策族两翼
 (过渡框架判定 + session 作用域载体)。
 
 出处 = strategy-docs/12_line_and_intention.md §1.1-§1.3(判据唯一源)+
@@ -11,14 +11,14 @@ design.md §2(数量级表)/§6(锁定语义):
   插件 > 0,不含热度);
 - §1.3 锁定 = P2 时点兜底唯一路径(硬规则/即时锁全退役——P1 即锁
   行为消失为设计语义,sim 场景①)+ 空候选兜底分支;
-- design §2 sim 不变量(正项上界 < |−100000|)与数值对照三场景。
+- 12 号稿 §1.1 sim 不变量(正项上界 < |−100000|)与数值对照三场景。
 
 分节组织(同文件三节):
 - 判据本体(本文件主节):数量级对照 / 候选快照 / P1 无锁 / 时点兜底 /
   万敌燃料底线 / 正项上界自算 / 端到端;
 - 配方伪阵容路由(decision_target):统一保护集迭代末阶段收尾后,
   过渡框架判据族(pick_framework / transition_score / _framework_counts)
-  已随 TRANSITION_PACK 策展符号退役(design §2.4:判据数据源 = 策展
+  已随 TRANSITION_PACK 策展符号退役(判据数据源 = 策展
   档位标签,符号删除后为死码),本节保留配方路由与配方形状判定;
 - session 作用域载体(节点边界重置 / 窗口谓词 / 方向状态骨架 /
   商店会话标记与机会清单 / 双域接入调用):锁定写入与判重载体面。
@@ -150,11 +150,11 @@ class TestCandidates:
                 held, ctx), _REG_INDEX[n])))
 
 
-# ===== 数量级对照(design §2 三场景:层间/层内数量级锁) =====
+# ===== 数量级对照(12 号稿 §1.1 三场景:层间/层内数量级锁) =====
 
 
 class TestMagnitudeScenarios:
-    """两对照场景(design §2「sim 数值对照场景」):①单 anchor vs 多非锚
+    """两对照场景(12 号稿 §1.1「sim 数值对照场景」):①单 anchor vs 多非锚
     core ②热度满 vs 单插件。
 
     场景①数值语义申报:anchor +8000 vs 非定义件 core +4000(减半)——多非定义件
@@ -162,13 +162,13 @@ class TestMagnitudeScenarios:
     等权(24000 vs 8000 = 3:1 支配)修复为 3:2,单 anchor 独压任一非定义件
     core、定义件+任一 core 与 3 core 相平(12000 = 12000)。「无希儿的量子线
     不是量子线」的攻略语义由证据档位(定义件不在手 = 该线证据起于 core 档)
-    承载,数值支配关系以本组断言为准(已申报 design §2 场景①的
+    承载,数值支配关系以本组断言为准(已申报 12 号稿 §1.1 场景①的
     「希儿胜」措辞与采纳常数的张力,处置归迭代方)。
     """
 
     def test_scenario_anchor_vs_multi_core(self):
         """①层内 carry 档:定义件 8000 > 单非定义件 core 4000;定义件+1 core =
-        3 非定义件 core(相平点,design §2 表注「锚+任一辅助即胜/相平」)。"""
+        3 非定义件 core(相平点,12 号稿 §1.1 表注「锚+任一辅助即胜/相平」)。"""
         seele = next(c for c in COMP_LIBRARY if c.name == '希儿量子')
         ctx = line_select.OpeningCtx()
         anchor_only = line_select.line_score_breakdown(
@@ -269,7 +269,7 @@ class TestEvidenceGate:
             == ('列车同行·反震', '命运圣杯红A', '双王圣杯')
 
 
-# ===== 万敌燃料底线(design §4;词缀分量;sim 场景③) =====
+# ===== 万敌燃料底线(12 号稿 §1.1 万敌无燃料底线;sim 场景③) =====
 
 
 class TestWandiFuelBottom:
@@ -297,7 +297,7 @@ class TestWandiFuelBottom:
 
 
 # ===== sim 场景⑤⑥ 批 2 形态(单帧锁定;批跑通道候补中无法定向注入
-# 开局持有面——design §6 场景⑤⑥的 sim 对照待批跑工具恢复后补,
+# 开局持有面——12 号稿 §1.1 场景⑤⑥的 sim 对照待批跑工具恢复后补,
 # 语义面以下列单帧断言承载)=====
 
 
@@ -315,7 +315,7 @@ class TestSimScenariosFiveSix:
     def test_concept_stock_core_vs_flex_contrast(self):
         """⑥概念股×核心线 vs ×flex 线对照:同概念股(击破)对核心线
         (巡海击破,击破 ∈ 档 0)全档 +300 vs flex 线(黄泉减益,
-        击破 ∈ flex)软档 +30——通道加分目标线分档(design §3.1)。"""
+        击破 ∈ flex)软档 +30——通道加分目标线分档(29 号稿 §2.2)。"""
         core = next(c for c in COMP_LIBRARY if c.name == '巡海击破')
         flex = next(c for c in COMP_LIBRARY if c.name == '黄泉减益')
         ctx = line_select.OpeningCtx(held_invest=frozenset({'击破概念股'}))
@@ -335,7 +335,7 @@ class TestTrainSplitBPromotion:
         return a, b
 
     def test_no_equip_diff_a_leads(self):
-        """无装备差 → A≥B 恒成立(design §5):同 core 同证据/同投资面
+        """无装备差 → A≥B 恒成立(12 号稿 §1.1 姬子 A/B):同 core 同证据/同投资面
         (列车系同键),heat A 165 > B 70 → A 恒上位;词缀面 A≥B 亦恒成立
         (A 吃受击触发族 +750,B 无吃行——任意词缀集 A 词缀分 ≥ B)。"""
         a, b = self._ab()
@@ -352,7 +352,7 @@ class TestTrainSplitBPromotion:
 
     def test_b_exclusive_equips_promote_b(self):
         """B 专属装备在手 → B 证据分高 → B 上位(B 唯一分化面 = 装备证据,
-        design §5「B 唯一分化面 = 装备证据」的线分承载:key_equips 无交集
+        12 号稿 §1.1「B 唯一分化面 = 装备证据」的线分承载:key_equips 无交集
         → 风暴潮+电锯+冷笑话 3 件(+1500)压过 heat 差 95 → B 总分反超;
         sim 监控 B 上位率趋零则拆分重审)。"""
         a, b = self._ab()
@@ -402,7 +402,7 @@ class TestHardLocksRetired:
         gs.node_hist_pos = (1, 2)
         refresh_line_if_needed(gs)
         st = state_of(gs)
-        assert st.target_comp is None, 'P1 即锁行为消失(design §6)'
+        assert st.target_comp is None, 'P1 即锁行为消失(12 号稿 §1.3)'
 
     def test_defining_strategy_p1_does_not_lock(self):
         """策略即时锁废:黑塔纪元(旧策略型硬锁触发)P1 帧不锁——
@@ -472,11 +472,11 @@ class TestFallbackAndEvaluate:
         assert got2 is None
 
 
-# ===== 正项上界自算(design §2 sim 不变量;批 1 锁常数) =====
+# ===== 正项上界自算(12 号稿 §1.1 sim 不变量;批 1 锁常数) =====
 
 
 def test_positive_terms_upper_bound_below_restart_magnitude():
-    """正项上界不变量(design §2/R4-1):任一线「全员持有 + 全投资持有
+    """正项上界不变量(12 号稿 §1.1):任一线「全员持有 + 全投资持有
     (83 环境∪335 策略,放宽上界假设——不变量只要求任何构局追不上
     重开级)+ 开局词缀正项 top4 + 装备证据(key_equips 全持,批 3 分量)
     + 满热度」的正项和 < |−100000|。
@@ -517,7 +517,7 @@ def test_positive_terms_upper_bound_below_restart_magnitude():
         if total > worst[1]:
             worst = (comp.name, total)
     assert worst[1] < abs(RESTART_PENALTY), (
-        f'正项上界越界:{worst}(design §2 不变量 < 100000)')
+        f'正项上界越界:{worst}(12 号稿 §1.1 不变量 < 100000)')
     assert worst == ('巡海击破', 35620), \
         f'批 3 上界回归基准(装备分量入算后): {worst}'
 
@@ -758,7 +758,7 @@ class TestP2PickBaselineSliding:
 
 class TestDefiningCardAbsence:
     def test_line_enters_via_evidence_without_defining_card(self):
-        """定义卡缺位线靠证据分入选(design §6 sim 场景④「定义卡缺位
+        """定义卡缺位线靠证据分入选(12 号稿 §1.1 sim 场景④「定义卡缺位
         线靠证据分入选」):不持黑塔纪元,仅持大黑塔+黑塔(定义件 8000 +
         core 4000)→ 证据门候选含大黑塔银河学者且居首——定义卡只是
         加分通道之一,缺位不挡线。"""
@@ -770,7 +770,7 @@ class TestDefiningCardAbsence:
 
 class TestSignatureAffixDimension:
     def test_affix_observation_triggers_recompute(self):
-        """签名多维性(词缀/boss 分量,design §6):同持有/同节点号,
+        """签名多维性(词缀/boss 分量,12 号稿 §1.1):同持有/同节点号,
         词缀观察写入(简报转正帧形态)→ 签名变化 → 重算——防候选消费
         静默旧值。"""
         sess = StrategySession()
@@ -925,7 +925,7 @@ class TestLineRefreshSkeleton:
     def test_level_dimension_change_triggers_recompute(self):
         """等级维独立触发重算(签名多维性):同持有/同节点号、仅等级变化
         → 签名变化 → 重算。等级入签名的动机 = 店内整级购买经验后概率表
-        变,消费旧等级 = 评估陈旧(line_and_upgrade §3 步骤 1)。"""
+        变,消费旧等级 = 评估陈旧(12 号稿 §2)。"""
         sess = StrategySession()
         gs = cw4_gs(sess, plane=1, round_num=2, node='prep', level=3)
         st = state_of(gs)

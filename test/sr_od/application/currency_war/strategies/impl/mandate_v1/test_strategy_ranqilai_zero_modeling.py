@@ -3,7 +3,7 @@ cw_investments.py 与绑定/估值面;按被测方法拆目录规范落位 manda
 镜像,同构对表基准 = test_strategy_yueguang_zero_modeling.py
 月光宝盒七锁)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-276 对应稿
+测试面依据 = 零建模裁定对应稿(git 历史可溯)
 §4 七锁(REVIEW-T276 无需用户决定 3/3;卡面官方原文:「【燃血角斗场】以80%上限
 开始战斗，且保留的充能提高20%。获得【万敌】和【千冶·刃】。」——效果条目 A/B
 实机(live)和模拟器(sim)两边盲零建模零登记;效果条目 C 授予/绑定/估值三面已登记零动作):

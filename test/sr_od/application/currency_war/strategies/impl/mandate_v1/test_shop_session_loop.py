@@ -1,5 +1,5 @@
-"""商店会话重排批 3.6 行为测试(判据唯一源 = shop_session.md §1-§5;
-迭代 2026-10-12-prep-shop-workflow-redesign)。
+"""商店会话重排批行为测试(判据唯一源 = 23 号稿 §1 与 11 号稿 §2/§3/§4.0;
+)。
 
 测试面(landing 3.6 完成判据):
 
@@ -331,11 +331,11 @@ class TestGoldLedgerProtocol:
 class TestOrderInheritance:
 
     def test_unlocked_cross_line_keep_not_in_obligation_face(self):
-        """万金油退出义务买入面(统一让位优先级迭代 3.4,总纲 §2.7 申报②;
+        """万金油退出义务买入面(32 号稿 §8 申报②;
         原「贯穿件恒囤层序 1 买入」测试随万金油项删除改判):空窗帧的
         万金油件(三月七)不走序 1 义务买(m2_* 买因不复现)——手里持有
         的未到两星前受万金油层档 8 保护(旧八档档 6,十档口径 =
-        完成品保护迭代 design §2.2)、无自动补货通道;若被其他结构臂
+        32 号稿 §3 十档)、无自动补货通道;若被其他结构臂
         (序 4 垫件补位等)买入,买因为非义务臂。"""
         live, sess, gs, st = _frame(
             gold=60, node_kind='reward', comp=None,
@@ -356,7 +356,7 @@ class TestOrderInheritance:
         from sr_od.application.currency_war.data.cw_factions import FACTIONS
         # 插件件选择约束:身份必须非线内(序 1 义务面不辖——本测试专辖
         # 序 2 额度门,不被前序臂掩蔽;核心/保护身份规避面已随统一让位
-        # 优先级迭代 3.4 退役)。档位约束:
+        # 优先级批退役)。档位约束:
         # tier_next > 阈档 3(等级 3 帧的 deploy_cap 采信下限),使
         # 「板面差一人进下一档」与「deployed == deploy_cap(额度 0)」
         # 可以同时成立。
@@ -498,7 +498,7 @@ class TestReopenTriggers:
         """金不足收工(阶段 3 分键后形态):金 < 价 ∧ 让位池无可行件
         (板上件 ∈ 部署定型档 1 不入池,X 自己 = 排序末位)→ 记录
         priority_insufficient_gold 机会清单(带三字段解拦载荷)+ 收工
-        关店(§4.2 清单闭环的写入端;roster-plane1-union design §2.2
+        关店(22 号稿 §1 第 5 步 清单闭环的写入端;
         第 4 项步 6 分键)。"""
         act = live.decide_shop_action()
         assert isinstance(act, CwActionCloseShopParam), act
@@ -609,7 +609,7 @@ class TestReopenTriggers:
 
 
 # ============================================================ 升级意图出口
-# (迭代 2026-10-17-levelup-shop-transition design §2.1 出口 + 凑金链
+# (11 号稿 §2 升级意图出口 + 凑金链
 # 整删收敛:商店会话不执行店内升级——命中 ∧ 可发射 → 关店转场不置
 # 标记;金不足(恒 defer)/未命中 → None 会话继续;资格门逐道拒因
 # 已登记。)
@@ -635,7 +635,7 @@ class TestUpgradeIntentExit:
                       shop_cards=[], hp=hp, actives=actives, xp=xp)
 
     def test_hit_emissible_transition_close_without_mark(self):
-        """命中 ∧ 可发射 → 关店转场且不置 handled 标记(design §2.1
+        """命中 ∧ 可发射 → 关店转场且不置 handled 标记(11 号稿 §2
         分支一):金充裕带滞后帧(等级 < 带下界,现金 − 批 ≥ 线)资格门
         全链通过 → 首动作 = 关店;标记未置(转场帧的后继 = 备战升级执行,
         商店未「事情办完」);转场计数已登记;零店内卖出/店内升级发射。"""
@@ -687,7 +687,7 @@ class TestUpgradeIntentExit:
         assert st.shop_handled is not None
 
     def test_gate_crisis_frame_no_hp_defer_negative_guard(self):
-        """「无 hp 支」负向守卫(hp-purge 迭代 3.1):命中 ∧ 濒死带
+        """「无 hp 支」负向守卫(hp-purge 批):命中 ∧ 濒死带
         (hp 10)帧零 hp 拒因键——危机带拦截门已删(门序 7→6),该帧
         defer 归资金线门(金 30 花后破线 ∧ 凑金不可达),拒因键域闭集
         断言(键域 = 触发 + 资金线 defer);会话照常收工置标记。"""
@@ -734,9 +734,9 @@ class TestUpgradeIntentExit:
 
 
 # ============================================================ 备战随机态重开位
-# (迭代 2026-10-17-levelup-shop-transition design §2.2 第 1 步/§2.4:
+# (22 号稿 §1 第 1 步/11 号稿 §3:
 # 信号宿主 = GameState 簿记槽 shop_randomized_pending(None = 无信号,
-# 非 None = 带来源代次戳,迭代 2026-09-23-invest-effects-calc T-434);
+# 非 None = 带来源代次戳(git 历史可溯);
 # 写端 = 升级值变更回调经 mark_shop_randomized_pending 盖戳,读端 +
 # 清位先行。)
 
@@ -768,8 +768,8 @@ class TestPrepRandomizedReopen:
 
     def test_node_boundary_sweeps_stale_generation_signal(self):
         """节点边界清扫(过期代次):信号戳 ≠ 当前生效序位 = 旧节点牌面
-        语义死亡,边界函数清位(design §2.4 清位两出口之二;代次判据 =
-        迭代 2026-09-23-invest-effects-calc T-434,真旧源清扫旧语义保持)。"""
+        语义死亡,边界函数清位(22 号稿 §3 清位两出口之二;代次判据 =
+        git 历史可溯,真旧源清扫旧语义保持)。"""
         _live, _sess, gs, _st = _frame(gold=60, node_kind='reward',
                                        shop_cards=[])
         gs.shop_randomized_pending = (1, 3)   # 上一节点内置位未消费的戳
@@ -908,7 +908,7 @@ class TestRefreshTerminationSession:
 
 # ============================================================
 # 商店期动作面形态帧测试(原 test_cw_shop_action_face_contraction 并入;
-# 3.6 重排后的店内动作边界,shop_session §1 能力面)
+# 重排后的店内动作边界,23 号稿 §3 能力面)
 # ============================================================
 
 _FACE_LOGIC_SIG = ChannelSig(family='logic_action', actor='cw-36-test',
@@ -919,7 +919,7 @@ _FACE_OBS_SIG = ChannelSig(family='obs', actor='cw-36-test',
 
 def _fuel_names(count: int, exclude: tuple[str, ...] = ()) -> list[str]:
     """非线内燃料名(注册表现算防漂移;核心/保护身份规避面已随统一让位
-    优先级迭代 3.4 退役,非线内即可)。"""
+    优先级批退役,非线内即可)。"""
     out = [n for n in CHARACTERS
            if n not in _LINE and n not in exclude]
     assert len(out) >= count, '非线内燃料名不足'
@@ -992,7 +992,7 @@ def _frame_m2_stockpile_vacate():
 
 
 # (_frame_core_unlocked_vacate 恒买腾位形态帧已随 C1 支退役删除——
-#  统一让位优先级迭代 3.4,C1 单卡核心囤积规则作废,dismantle §2。)
+#  统一让位优先级批,C1 单卡核心囤积规则作废,git 历史可溯。)
 
 
 def _frame_interest_sell():
@@ -1018,8 +1018,8 @@ def _frame_funding_support_sell():
 
 def _frame_funding_exhausted():
     """筹资穷尽形态:缺员在店 + 金不足 + bench 空仓(活期件全空)→
-    候选穷尽 → 记录金不足机会清单收工(shop_session §2.3;P78-5 兜底
-    豁免通道已随身份段退役删除——统一让位优先级迭代 3.4,本帧校验
+    候选穷尽 → 记录金不足机会清单收工(23 号稿 §1;P78-5 兜底
+    豁免通道已随身份段退役删除(11 号稿 §4.1),本帧校验
     穷尽边界)。"""
     return _frame_session(
         bench_units=[],
@@ -1036,8 +1036,8 @@ _FORM_FRAMES = {
 }
 
 #: 3.6 重排后的商店域动作面闭集(店内卖备战席启用;购买经验整批随
-#: 升级转场退役——2026-10-17 迭代 T-1,升级执行位迁备战画面,
-#: shop_session §1 店内动作边界)。
+#: 升级转场退役——升级执行位迁备战画面,
+#: 23 号稿 §3 店内动作边界)。
 _SHOP_ACTION_FACE = {'CwActionBuyCardParam', 'CwActionRefreshShopParam',
                      'CwActionCloseShopParam', 'CwActionSellBenchParam'}
 
@@ -1050,7 +1050,7 @@ _SELL_FIRST_FORMS = {'m4_missing_vacate', 'm2_stockpile_vacate',
 def test_shop_forms_stay_in_reordered_action_face(case: str):
     """动作面测试(六形态逐一;参数化纪律沿袭):各形态帧首动作 ∈
     闭集(买/刷/关/卖备战席)——席满置换/筹资为在产形态;店内购买
-    经验整批已随升级转场退役(2026-10-17 迭代 T-1,发射位迁备战);
+    经验整批已随升级转场退役(发射位迁备战);
     闭集外类型(部署/卖场上/购买经验等店内禁做面)发射即红。"""
     strategy, sess, config = _FORM_FRAMES[case]()
     action = strategy.decide_shop_action()
@@ -1116,7 +1116,7 @@ def test_funding_exhausted_records_opportunity():
     无可行件(bench 空仓,板上件 ∈ 部署定型档 1 不入池 → X 自己 =
     排序末位)→ 放弃买入,该牌进未消费机会清单(拦因 =
     priority_insufficient_gold,带三字段解拦载荷),收工关店(读数协议
-    §4.2 清单闭环;roster-plane1-union design §2.2 第 4 项步 6——旧
+    22 号稿 §1 第 5 步 清单闭环;roster 批后旧
     session_funding 键族停产,池穷尽不可足的 gold_short 分键由
     shop/test_acquire_yield 的池穷尽用例承载)。"""
     strategy, sess, config = _frame_funding_exhausted()

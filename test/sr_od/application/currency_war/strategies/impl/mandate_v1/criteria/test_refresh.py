@@ -1,7 +1,7 @@
-"""刷新链三组件单帧测试固化(迭代 ``2026-10-28-hp-purge-refresh-reform``;
+"""刷新链三组件单帧测试固化(判据正本 = 11 号稿 §3;
 design.md §2.0 第 2/3 条 + details/refresh-chain.md §5 清单)。
 
-清单对照(七条,docstring 引本迭代 design.md):
+清单对照(七条):
 
 - ① 带内 + 金够 + 席可腾 → 发射(付费,reason ``star_target``);
 - ② 已 2★ 追 3★ 目标帧 ρ = 其卡价(实费档;锁定支单一源
@@ -11,13 +11,13 @@ design.md §2.0 第 2/3 条 + details/refresh-chain.md §5 清单)。
 - ④ 席满 + 零燃料 + 不可合成 → **付费刷新发射**(统一让位优先级迭代
   3.4:预测门整拆——旧「目标可买三条效果条目」判据删除,拒因
   ``target_unbuyable`` 退役;「刷出后能否买到」不可预测,刷新时点
-  信息最少,design §2.10 单帧断言 1 = 2-4 开店帧应触发刷新);
+  信息最少,2-4 开店帧应触发刷新);
 - ⑤ 升级推迟帧刷新维持拒绝(资金序 = 升级优先于刷新,判据①支无
   解锁支);
-- ⑥ 免费次数已登记即刷(统一让位优先级迭代 3.2:design §2.2 无条件刷
+- ⑥ 免费次数已登记即刷(11 号稿 §3 无条件刷
   【拍】,外层负结果记忆闸照旧);
 - ⑦ 死码符号零残留——按本测试仓纪律(源码扫描测试禁写,退役符号
-  墓碑不设 pytest)以执行侧残留扫描承载,记录归迭代报告。
+  墓碑不设 pytest)以执行侧残留扫描承载,记录归 git 历史。
 
 帧构造 = 列车同行注册表线(need_star:姬子·启行 3/三月七 2/花火 2/
 瓦尔特 1;费档 3/1/2/5 注册表现查),合成效果条目/拒发射帧均上阵行非空
@@ -75,7 +75,7 @@ _LOGIC_SIG = ChannelSig(family='logic_action', actor='cw-refresh-chain',
 
 def _fillers(count: int, exclude: tuple[str, ...] = ()) -> list[str]:
     """非线燃料名(注册表现算防漂移;席位效果条目测试帧填充——身份保护/
-    C1 核心规避面已随统一让位优先级迭代 3.4 退役,非线内即可)。"""
+    C1 核心规避面已随卖出身份段退役,非线内即可)。"""
     out = [n for n in CHARACTERS
            if n not in _LINE and n not in exclude]
     assert len(out) >= count, '测试前提:填充名不足'
@@ -178,9 +178,9 @@ class TestRefreshChainSingleFrame:
 
     def test_4_full_bench_no_legs_emits(self):
         """④席满 + 零燃料 + 不可合成 → 付费刷新发射(统一让位优先级
-        迭代 3.4 预测门整拆:旧「目标可买三条效果条目」判据删除,拒因
+        预测门整拆(11 号稿 §3):旧「目标可买三条效果条目」判据删除,拒因
         ``target_unbuyable`` 退役——刷新时点预测不可算,买不买得到归
-        刷出后帧裁决;design §2.10 单帧断言 1)。"""
+        刷出后帧裁决)。"""
         level = 7
         _assert_band_premise(int(CHARACTERS[_TARGET].cost), level)
         fill = _fillers(6)
@@ -212,7 +212,7 @@ class TestRefreshChainSingleFrame:
             '升级推迟期刷新维持拒绝(资金序,无解锁支)'
 
     def test_6_free_refresh_unconditional_when_counted(self):
-        """⑥免费次数已登记即刷(统一让位优先级迭代 3.2;design §2.2 免费
+        """⑥免费次数已登记即刷(11 号稿 §3 免费
         刷新行为声明:分支内零判据门——行为申报 = 唯一变化「目标可买」
         门删除,目标不可买(备战位满)帧从「拦下不耗次数」变「照刷耗
         次数」,免费不耗金、次数每节点重置/概率补给,低价值接受)。"""
@@ -234,6 +234,6 @@ class TestRefreshChainSingleFrame:
         assert refreshes, f'免费次数已登记帧无条件刷: {acts!r}'
         assert refreshes[0].cost == 0 \
             and refreshes[0].reason == 'free_refresh', refreshes[0]
-        # 外层负结果记忆闸照旧(design §2.2:免费与付费同闸)——记忆
+        # 外层负结果记忆闸照旧(11 号稿 §3:免费与付费同闸)——记忆
         # 置位帧免费效果条目同跳,本帧零标记(免费分支不再置位)。
         assert st.refresh_blocked is None

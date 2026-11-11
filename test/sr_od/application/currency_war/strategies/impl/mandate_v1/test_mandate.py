@@ -1,5 +1,5 @@
-"""mandate 骨架帧装配测试(k_members 换源面;阶段 1 = roster-plane1-
-union design §2.6 换源不消亡;过渡支口径 = 32 号稿 §2)。
+"""mandate 骨架帧装配测试(k_members 换源面(roster 统一获取让位评估批,
+24 号稿 §1.4 换源不消亡;过渡支口径 = 32 号稿 §2)。
 
 被测 = ``strategies/impl/mandate_v1/mandate.py`` 的 ``snapshot_frame``
 与 ``cheapest_member_cost``:k_members 装配读口从
@@ -68,7 +68,7 @@ def test_snapshot_frame_k_members_final_lock_line_only() -> None:
 
 
 def test_cheapest_member_cost_reads_widened_roster() -> None:
-    """金需求侧保留面消费回归(design §2.6 D4-6:成员口径变宽):
+    """金需求侧保留面消费回归(24 号稿 §1.4 保留面消费行:成员口径变宽):
     cheapest_member_cost 按 frame.k_members 全名册注册表现查取最低
     费——位面 2 未终局锁定帧名册含过渡层贡献名单后,最低费随名册变宽
     (不高于空名册侧;硬约束①金需求侧不断粮)。"""

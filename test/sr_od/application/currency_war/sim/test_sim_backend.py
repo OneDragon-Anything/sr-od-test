@@ -19,7 +19,7 @@
 - 观察生成(sim 统一 3.3):金路径 13 档名注册表与清单零差零冗余,逐档
   生成器经 backend.observe 生产路径落状态容器;未注册屏 LookupError 具名
   响错(防静默失真);
-- 装配接缝(flow-seam §1/§2):端口槽缺省关 + 单装配纪律;sim 模式
+- 装配接缝(sim-design.md §6.2/§6.5):端口槽缺省关 + 单装配纪律;sim 模式
   CwOperation 三条分支(哨兵帧不触 controller/点击分支机械镜/find_area
   visible 应答);controller 桩触碰即炸;动作分支 rng 提供槽装卸复位;
 - 商店牌面(2026-10-17 用户裁定):牌面 = 节点级持久事实(发牌时定),
@@ -495,8 +495,8 @@ def test_contract_env_pick_sends_cards_to_bench() -> None:
 
 
 def test_random_env_gift_sim_seeded_roll_to_bench() -> None:
-    """随机环境赠卡 sim 全链(迭代 2026-09-23-invest-effects-calc T-10
-    设计 §4 测试 7):播种 invest_env_opts 选人才引进 → 选卡后 bench = 5 张
+    """随机环境赠卡 sim 全链(赠卡效果链申报,git 历史可溯;
+    赠卡链测试 7):播种 invest_env_opts 选人才引进 → 选卡后 bench = 5 张
     (4 张 M01 开局 + 1 张随机 4 费 1★ 赠卡);恰 1 张 4 费(开局手牌
     费用形状 (1,1,1,3)/(1,1,2,2) 无 4 费件,4 费 = 赠卡);同 seed 重放
     确定性(同名同星)——rng 经 install_backend 动作分支提供槽(流键
@@ -1456,7 +1456,7 @@ def test_reward_node_ore_substate_and_collect_via_report(
 
 
 # ============================================================ 3.3 声明矿 sim 接入调用测试
-# (迭代 2026-10-10-ore-reward-attach 3.3;详设 details/ore-sim-plane-start.md
+# (晶矿奖励附着批(ore-reward-attach);该批详设已删,git 历史可溯:
 #  §1-§5:节点窗起点分道入队 + 过期清理接入调用 / 位面开局矿呈现与面板矿
 #  同批合并 / spheres 写端统一过挂接入口 / rng 键装配 / 占位退役与披露。)
 
@@ -1501,7 +1501,7 @@ def _record_logic_writes(gs: GameState,
 
 def test_ore_env_plane1_declare_instead_of_direct_gold(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """增发货币 P1(详设 §1/§2):位面开局金不再直发(gold = 开局 +
+    """增发货币 P1(ore-reward-attach 批):位面开局金不再直发(gold = 开局 +
     轮首收入,直发形态 = 13)→ 声明入队在呈现时消费(pending → done)→
     位面开局声明矿与面板基准点矿**同批合并**一次 spheres 写(第 9 点
     (90,10) 面板序续接,坐标无撞键;声明 6 金归属由生成 rng 掷,采样金
@@ -1554,7 +1554,7 @@ def test_ore_env_plane1_declare_instead_of_direct_gold(
 
 
 def test_ore_env_generation_deterministic_same_seed() -> None:
-    """掷序确定性(详设 §4):同 seed 同调用序 → 声明矿附着逐位一致
+    """掷序确定性(ore-reward-attach 批):同 seed 同调用序 → 声明矿附着逐位一致
     (rng 键 'ore_reward_gen' 随 action_sampling_rng 首调自动生效,装配方
     零改动;键序确定性责任在调用序,先例 = 现动作分支键)。"""
     rewards = []
@@ -1571,7 +1571,7 @@ def test_ore_env_generation_deterministic_same_seed() -> None:
 
 def test_non_ore_env_keeps_direct_plane_gold_channel(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """直发金通道留置(详设 §1 关键取舍:ENV_ORE_GRANTS 命中即绕行,
+    """直发金通道留置(ore-reward-attach 批 关键取舍:ENV_ORE_GRANTS 命中即绕行,
     通道为非矿形态位面开局金预留):env ∉ 注册表 ∧ gold_per_plane_start
     非空 → 保留直发(现无此形态环境,以注册表清空构造分道前提)。"""
     import sr_od.application.currency_war.sim.cw_sim_backend as backend_mod
@@ -1592,7 +1592,7 @@ def test_non_ore_env_keeps_direct_plane_gold_channel(
 
 
 def test_battle_prep_empty_spheres_write_cleans_stale_identities() -> None:
-    """空读照写清理(详设 §3):普通 battle 备战呈现 spheres 空读照写
+    """空读照写清理(ore-reward-attach 批):普通 battle 备战呈现 spheres 空读照写
     count=0 亦过挂接入口——上节点残留矿身份(未点击面板)在此清理;同
     坐标面板重呈现 = 配对命中继承旧附着零重掷(跨面板别名,sim 侧经济
     中性,ore-reward-channel §4 披露角)。"""
@@ -1636,7 +1636,7 @@ def test_battle_prep_empty_spheres_write_cleans_stale_identities() -> None:
 
 def test_ore_env_plane2_declared_ore_and_expiry_cleanup(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """增发货币 P2(详设 §1/§2):位面过渡窗口起点声明入队(8 金档)+
+    """增发货币 P2(ore-reward-attach 批):位面过渡窗口起点声明入队(8 金档)+
     过期清理留痕(done p1 条目移除,evidence ``ore_declared_expired#p1``);
     P2 首节点为战斗节点 → 声明矿点单独呈现(面板序续接首点 (10,10),
     子态 PREP_SUB_ORE),点击入账 8(sim 辖域 P1+P2;12 由 3.1 单测覆盖,
@@ -2967,7 +2967,7 @@ def test_expert_screen_presentation_raises_loud_on_observe() -> None:
     """SCREEN_EXPERT「呈现即响错」语义测试(3.4 联调裁决③):open_bookcard
     声明(纯转移)驱动专家邀请函屏呈现;该屏非金路径 13 档(实机触发
     条件零档,数据缺口族),observe 必 LookupError 具名响错——防未来把
-    响错静默降级成注册屏/空产物(flow-seam §3 未注册屏响错测试的呈现态
+    响错静默降级成注册屏/空产物(sim-design.md §3 未注册屏响错测试的呈现态
     配对)。"""
     from sr_od.application.currency_war.sim.cw_sim_backend import (
         SCREEN_EXPERT,
@@ -3002,7 +3002,7 @@ def test_unpresented_overlay_anchor_not_visible_on_prep() -> None:
 
 
 # ============================================================ 3.3 环境条件发放 sim 接入调用测试
-# (迭代 2026-10-10-env-conditional-grants landing 3.3;详设
+# (环境条件发放批(env-conditional-grants);该批详设已删,git 历史可溯:
 #  details/env-conditional-grant.md §4/§5:结算分支触发检查接入调用于 streak
 #  observe 之后 / 触发函数两写 sig 写死单形态 = logic_sig('sim:env') /
 #  宝钻回调内构 obs 族 sig 三写 / 带钻补给零改动不采纳回调。)
@@ -3141,7 +3141,7 @@ def _grant_snapshot(gs: GameState) -> dict[str, object]:
 
 def test_env_grant_fires_at_fifth_streak_with_diamond_callback(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """数值对照(landing 3.3):深井角斗场 sim 局 5 连胜达成结算 →
+    """数值对照(环境条件发放批):深井角斗场 sim 局 5 连胜达成结算 →
     装备在库(库尾追加)+ done 标记 + diamond_count +1 + deploy_cap
     = level+1 + back_layout +1(基线 6 → 7,min9 未触);同时校验写行
     形态:触发两写 sig 单形态 = logic_action 族 'sim:env',回调三写 =
@@ -3274,7 +3274,7 @@ def test_dot_contract_opening_acquisition_confirms_at_eighth_battle(
 
 def test_supply_diamond_pick_keeps_zero_callback(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """supply 路径零行为变化(landing 3.3):深井角斗场已登记环境下带钻
+    """supply 路径零行为变化(环境条件发放批):深井角斗场已登记环境下带钻
     补给选定 → 仅 diamond_count +1(_on_supply_picked 既有行为,带钻以
     名单内件名入 chosen 列表承载——T-9 列表派生,sim 选项级钻标属呈现
     面不入名单),deploy_cap/back_layout 零写、零发放——钻类型未建模,
@@ -3554,7 +3554,7 @@ def test_non_piggy_reward_always_wins_no_hp_loss(
 # ============================================================ 观察生成器
 # (sim 统一 3.3:每生成器单测 = 构造状态副本态 → backend.observe(档名) 生成
 #  obs(生产路径 = 注册表分派,产物经同名 report_screen_* 落状态容器)→ 状态容器
-#  字段断言;设计依据 = sim- + flow-seam 接缝契约。)
+#  字段断言;设计依据 = sim-design.md 接缝契约。)
 
 def _open_to_first_window(b: SimBackend, *, env_present: bool = False) -> None:
     """开局序列推进到 P1r1(无环境)或投资环境屏(env_present=True)。"""
@@ -3683,7 +3683,7 @@ def test_gen_invest_env_candidates_from_container_slot() -> None:
 def test_gen_prep_ore_substate_control_signals() -> None:
     """备战生成器·晶矿子态:P1r1 = 奖励节点 → 备战档 ore 子态分派;
     控制信号(shop_open=False/event_overlay=None/substate 标注)随观察
-    产出(flow-seam §3);node_path_chain = None 诚实缺位 → report 零写。"""
+    产出(sim-design.md §3);node_path_chain = None 诚实缺位 → report 零写。"""
     b = _backend()
     try:
         _open_to_first_window(b)
@@ -4021,8 +4021,8 @@ def test_node_switch_new_deal_overrides_record() -> None:
 
 
 # ============================================================ 装配接缝
-# (sim 端口接口契约 + CwOperation 覆写面 + controller 桩,flow-seam
-#  §1/§2:端口槽缺省关(不装后端 = 纯实机,读屏改道 helper 走原读链);
+# (sim 端口接口契约 + CwOperation 覆写面 + controller 桩,sim-design.md
+#  §6.2/§6.5:端口槽缺省关(不装后端 = 纯实机,读屏改道 helper 走原读链);
 #  单装配纪律;sim 模式 CwOperation 三条分支;controller 桩直连真实 IO
 #  触碰即 AssertionError(双保险兜底)。)
 
@@ -4172,7 +4172,7 @@ def test_find_area_leg_visible_query(_sim_ctx):
 
 
 def test_identity_helper_filters_by_screen_list():
-    """画面身份读点改道 helper(sim 统一 3.4;flow-seam 附录 A.2
+    """画面身份读点改道 helper(sim-design.md §6.2 端口语义口;
     「sim 画面身份归 screen_identity」):装配后 = 状态机答口,且清单外
     返回 None(与实机 get_match_screen_name 清单过滤同形,备战双识别标志默认
     分支不受扰);缺省关 = 原识别链零行为变化。"""
@@ -4186,7 +4186,7 @@ def test_identity_helper_filters_by_screen_list():
 
 
 def test_mechanical_io_allowed_default_true_sim_false():
-    """机械 IO 分支检查口(直连旁路 port 检查的共用判定,flow-seam §2):
+    """机械 IO 分支检查口(直连旁路 port 检查的共用判定,sim-design.md §6.5):
     实机(未装配)= True 零行为变化;sim 装配后 = False(机械执行分支静默
     跳过,自上报照走)。"""
     assert cw_sim_ports.mechanical_io_allowed() is True
@@ -4228,8 +4228,8 @@ def test_action_rng_provider_seeded_on_install_reset_on_uninstall():
 
 
 def test_equip_env_pick_sim_full_chain() -> None:
-    """即时装备环境 sim 全链(迭代 2026-09-23-invest-effects-calc T-31
-    设计 §4 锁 6):播种选红钻贵族 → equips = ['红钻']、bench = 4 开局
+    """即时装备环境 sim 全链(即时装备效果链申报,git 历史可溯;
+    效果链测试锁 6):播种选红钻贵族 → equips = ['红钻']、bench = 4 开局
     手牌 + 1 箱(supply_box);开箱链现役承接新箱(箱画面候选 → 选定 →
     所得经获得链入栏,equips 2 件);同 seed 重放确定。装备入账分支零采样,
     重放确定性不经 rng 注入。"""

@@ -1,8 +1,8 @@
-"""升级-刷新-随机态闭环预注册判据批跑(迭代 2026-10-17-levelup-shop-
-transition T-5;landing §3.5 验收凭据,design §2.6 五判据)。
+"""升级-刷新-随机态闭环预注册判据批跑(
+预注册判据 = 11 号稿 §2/§3)。原迭代件已删,git 历史可溯。
 
-判据与断言对照(逐条数字面落批跑报告,报告路径 = 迭代目录 reports/
-T-5-r1.md,由本测试 ``-s`` 输出收割):
+判据与断言对照(逐条数字面落批跑报告,
+由本测试 ``-s`` 输出收割):
 
 - ①富余帧:商店转场帧(``levelup_transition_close`` = 资格门命中可发射
   的转场出口)发生的局,备战升级批必落地(``levelup_batch_emitted`` >
@@ -137,7 +137,7 @@ def test_prereg_upgrade_cycle_batch(
             # 入席写行 schema(T-440 连带修正,改判申报归 reports/T-440-r1):
             # sim 入席写 = gs.observe(bench, evidence='sim:engine:shop:spy_
             # steal')——evidence 落 Field,**不进 journal 'write' 行**(行
-            # schema 无 evidence 键,T-5 原断言读该键 = 恒不可满足,placed>0
+            # schema 无 evidence 键,原批断言读该键 = 恒不可满足,placed>0
             # 首次发生才显形)。落账承接锁 = bench 写行存在;机制量 = 上行
             # 守恒式;evidence 级精确锁归单帧域 test_sim_spy_levelup。
             assert any(r.get('row') == 'write'
@@ -178,8 +178,8 @@ def test_prereg_spy_closure_full_match(test_context: Any,
     T-432 把分支执行定案为结算时点(进窗拍)后本 seed 唯一升级恰逢席满
     全溢出(placed=0/ovf=3,实测),种子实例断言随已申报的轨迹位移失效
     ——判据改为与批跑同形的条件式(入席 > 0 局须有 spy_steal 观察写行),
-    不钉轨迹统计值。信号来源代次(迭代 2026-09-23-invest-effects-calc
-    T-434)恢复重开效果条目对节点时点源成立,守恒式 spy_deals == reopens 本
+    不钉轨迹统计值。信号来源代次(效果条目链,git 历史可溯
+)恢复重开效果条目对节点时点源成立,守恒式 spy_deals == reopens 本
     seed 实测 1 == 1。"""
     from sr_od.application.currency_war.sim import cw_sim_backend
 

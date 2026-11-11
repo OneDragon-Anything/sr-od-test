@@ -1,5 +1,5 @@
 """entry.emit 骨架帧装配测试(k_members 换源的空窗判定面;阶段 1 =
-roster-plane1-union design §2.6 换源不消亡)。
+24 号稿 §1.4 换源不消亡)。
 
 被测 = ``strategies/impl/mandate_v1/entry.py`` 的 ``emit`` 顶段 k_members
 装配:读口换源为统一线内名单(``sell_line_membership``,§2.1 口径)
@@ -61,7 +61,7 @@ def test_emit_fallback_runs_on_true_empty_roster() -> None:
 
 
 def test_prep_entry_clears_deploy_margin_slot() -> None:
-    """部署私有槽入口清(pick-margin-telemetry design §2.1 帧定界
+    """部署私有槽入口清(deploy_margin 产物透传键帧定界,strategy-telemetry §2
     双保险之一):prep 入口清空陈旧槽——上一帧写槽后 emit 段/truncate
     抛异常的残留(决策入口异常不调 payload 钩子)由本清兜底,非部署
     帧读到恒空。状态归一 = cw4_decide 先例(策略器状态 = 会话播种

@@ -3,10 +3,10 @@
 判据权威版本(持久索引):
 - 决策单帧测试 = docs/develop/sr_od/application/currency_war/strategy-docs/
   30_supply_screen.md(3.1 验收凭据①-⑨,判据语义 = §2.5);
-- 选项归并读链 = T-9 过剩经费 design §2.2/§4.1/§4.2(设计权威版本 =
-  .debug/progress/2026-09-23-invest-effects-calc/designs/
-  T-9-guoshengjingfei.md);
-- 选卡上报(pick_supply 通道)= supply-pick design §2.0B/§3 验收基准 1
+- 选项归并读链 = 过剩经费经费档判据(原设计稿易失,git 历史可溯,
+  判据语义同源 = 30 号稿 §2.1 虚拟评估与 32 号稿 §3 十档;
+  );
+- 选卡上报(pick_supply 通道)= 30 号稿 §4 输出契约/§2.1 验收基准 1
   + T-60 批漏项补齐(零写迁移通道;按动作 key 幂等契约);
 - 节点推进接入调用 = 补给节点**零推进**接入调用判据面(2026-10-29 流程模型
   对齐:补给选完关模态回备战自动弹店,推进归出战动作 supply_finish,
@@ -168,7 +168,7 @@ def test_endgame_char_card_beats_high_value_equip():
 
 
 def test_unlocked_frames_evaluate_chars_via_virtual_assessment():
-    """凭据③(3.2 重写):「是否终局角色」布尔门退役(总纲 §2.6 消费点
+    """凭据③(3.2 重写):「是否终局角色」布尔门退役(30 号稿 §1 裁定登记 2 消费点
     映射)——未锁定/降格帧角色候选同样过虚拟全局评估,幸存者(备战位
     有空位 = 无让路对象,不经淘汰判定)按第 2 级胜出;装备轴仅在角色级
     无幸存时承接。"""
@@ -286,7 +286,7 @@ def test_refresh_gate_all_three_empty_and_fail_closed():
 def test_full_bench_still_normal_pick():
     """凭据⑥(3.2 形态):席满帧选卡 = 虚拟全局评估照常判定,无溢出
     特殊分支——成员候选(档 3 升星主线,键小于同费垫牌;旧八档档 2
-    位移,十档口径 design §2.2)幸存照选(记账失真申报 =
+    位移,十档口径 = 32 号稿 §3)幸存照选(记账失真申报 =
     溢入单位不入 gs,凑星漏计归观察/记账批)。"""
     comp = _comp(['花火'])
     gs = _fresh_gs()
@@ -315,7 +315,7 @@ def test_full_bench_junk_char_eliminated_by_virtual_assessment():
     # 高费兜底档 10 件(2-5 费,Lv3 概率
     # 0 = 难再遇 = 序列靠后);候选 = 万敌(1费,概率满 = 最易再遇 =
     # 统一序列末位)→ 虚拟排序末位 = 万敌自己 → 淘汰 → 装备轴。
-    # (档号全部按十档口径,完成品保护迭代 design §2.2。)
+    # (档号全部按十档口径,32 号稿 §3。)
     gs = _fresh_gs()
     from test.sr_od.application.currency_war._cw_helpers import (
         cw4_comp as _comp_of,
@@ -333,8 +333,8 @@ def test_full_bench_junk_char_eliminated_by_virtual_assessment():
     )
     state_of(gs).line_candidates = ('列车同行·反震',)
     km = set(_members(_comp_of('列车同行·反震')))
-    # 干净名 = 非线内非万金油(身份保护规避面已随统一让位优先级迭代
-    # 3.4 退役,虚拟评估的淘汰语义由档位结构承载)。
+    # 干净名 = 非线内非万金油(身份保护规避面已随统一让位优先级批
+    # 退役,虚拟评估的淘汰语义由档位结构承载)。
     pool = [n for n, c in CHARACTERS.items()
             if n not in km and n not in CROSS_LINE_KEEP_NAMES
             and (c.cost or 0) >= 2]
@@ -358,7 +358,7 @@ def test_full_bench_junk_char_eliminated_by_virtual_assessment():
 # 旧凭据⑦用例(test_merge_star_tiebreak_spans_bench_and_rows)已删除:
 # 「同名凑星候选优先」域特例随裁定五(2026-11-01)退役,现行判据 =
 # 候选按卡面十档定序、凑星价值经档 3 承载(旧八档档 2 升星主线位移,
-# 完成品保护迭代 design §2.2)——翻转锁与档 3 承载用例
+# 32 号稿 §3 十档)——翻转锁与档 3 承载用例
 # 迁入 supply/test_decide.py(镜像拆分落位;30 号篇 §2.1 统一语义)。
 
 
@@ -367,7 +367,7 @@ def test_full_bench_junk_char_eliminated_by_virtual_assessment():
 
 def test_p1_recipe_lock_frame_refresh_then_generic_pick():
     """凭据⑧:P1 配方锁帧(locked_comp 恒 None)——无钻三级全空恒真 →
-    有次数建议刷;刷尽后按通用值定序落选卡(design §2.6 申报⑤)。"""
+    有次数建议刷;刷尽后按通用值定序落选卡(30 号稿 §2 边界形态行)。"""
     # left=1:无钻帧三级全空恒真 → 建议刷
     gs = _fresh_gs()
     _set_left(gs, 1)
@@ -483,7 +483,7 @@ def _single_row(names: tuple[str, ...],
 def test_single_row_five_columns_matches_legacy_per_equip_reading() -> None:
     """单排 5 列回归基准:角色识别标志定列与旧「每装备名 = 1 选项」读链逐值
     一致(idx/char/equip 序、点击点 = 装备文本中心 x + 卡身 y)——
-    默认布局零行为漂移(design §3 零改动声明)。"""
+    默认布局零行为漂移(30 号稿 §3 零改动申报)。"""
     chars = _chars(('镜流', '希儿', '花火', '停云', '杰帕德'))
     equips = _single_row(('折叠小刀', '量产型装甲', '光能电池',
                           '垃圾袋', '生命之花'),
@@ -604,7 +604,7 @@ def test_worst_case_geometry_pairs_to_own_anchor() -> None:
 
 
 def test_diamond_text_fallback_scans_all_column_names() -> None:
-    """带钻文本兜底遍历全列件名(design §2.2.8 迁移):extra_equips 命中
+    """带钻文本兜底遍历全列件名(30 号稿 §2 带钻检测集):extra_equips 命中
     三钻词表 → 该列 has_diamond=True;「虫洞掘进钻头」类带钻字非钻名
     不误判(精确匹配非子串)。"""
     chars = _chars(('镜流', '希儿', '花火'))
@@ -684,7 +684,7 @@ def rows_sink() -> _RowSink:
 
 def test_pick_supply_immediate_char_and_consequence(
         rows_sink: _RowSink) -> None:
-    """补给确认即时单相上报测试(supply-pick design §2.0B):一口写 owned
+    """补给确认即时单相上报测试(30 号稿 §4 输出契约):一口写 owned
     规范名 + 单位入账分支(char 入席 1★ + 合成级联)+ 装备后果分支(命中表 →
     送角色入账分支)——无发射/落地两相,无证据参数。"""
     gs = _make_gs(bench=[('银狼', 1), ('银狼', 1)], equips=[])

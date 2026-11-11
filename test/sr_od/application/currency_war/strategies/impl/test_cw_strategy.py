@@ -184,7 +184,7 @@ def test_closed_set_wrap_face() -> None:
 def test_driver_not_wrapped_inner_actions_recorded(
         capture_sink: list[dict]) -> None:
     """驱动器(list 返回)自身零记录;内层闭集入口逐动作产记录
-    (capture-store §2 驱动器语义:装 sink 即逐动作产记录)。"""
+    (strategy-telemetry.md §2 驱动器语义:装 sink 即逐动作产记录)。"""
     strat = _make(_DriverProbeStrategy)
     out = strat.decide_shop_screen()
     assert isinstance(out, list) and len(out) == 1

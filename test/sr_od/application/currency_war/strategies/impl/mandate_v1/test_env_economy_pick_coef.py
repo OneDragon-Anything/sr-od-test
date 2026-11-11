@@ -3,8 +3,8 @@ strategies/impl/mandate_v1/env_economy.py 的通道 4;按被测面拆文件落�
 先例 = 同目录 test_invest_strategy.py〔已登记超限文件,只读复用不追加〕
 ④现金分组)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
-T-46-celue-dashi.md(定稿)§4 锁 6:通道 4 公式平移锁——第 k 张金额
+测试面依据 = 策略大师通道系数锁(原易失设计稿已失,
+git 历史可溯):通道 4 公式平移锁——第 k 张金额
 coef×k(含本张口径,用户裁定 2026-10-26:首张 coef×1);期望现算自
 估算注册表单一源(ENV_ECONOMY_ESTIMATES),禁手抄。
 """

@@ -258,7 +258,7 @@ def _run_visit_unobserved_host(monkeypatch, tmp_path, counters, *,
     (真实门路径:未观察 → CwActionCloseShopParam;观察态用例传 Idle 关店策略)。
     关店执行位点击桩化(统一执行路径含 CloseShop 真点击;离线零画面)。
     返回 (访问结果元组, session):正常收工 → (None, ledger),round_fail →
-    (round_fail 结果, None)(出参交接契约,详设 §2.2)。驱动 = 真类实例 +
+    (round_fail 结果, None)(出参交接契约)。驱动 = 真类实例 +
     节点函数直驱(过渡薄壳已随 3.4 退役,先例 =
     test_cw_shop_screen_op)。
     """

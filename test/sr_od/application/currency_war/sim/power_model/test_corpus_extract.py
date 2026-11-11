@@ -1,12 +1,12 @@
 """power_model 语料抽取器测试(src 镜像:sim/power_model/corpus_extract.py)。
 
-锁的设计约定(landing 2026-10-19-sim-power-model-v1 §3.1 + 权威版本
+锁的设计约定(sim-power-model.md 正本:
 sim-power-model §5.1/§8-1):
 - 输入守卫 = 解析后路径精确相等断言 + sim 批根目录守卫;
 - run 级隔离(fake_/sim_ 前缀 + 显式名单)= 铁律 2 的 run 粒度防线;
 - canonical 口径(join 键/末帧快照/带标签优先去重与降级/战斗类判定
   以 outcomes 为准/killed 标签);
-- 删失口径 = hp_after ∈ {0,1}(design §2.4)。
+- 删失口径 = hp_after ∈ {0,1}(canonical 口径)。
 
 fixture = 本目录 fixtures/ 自造小样本(零真实副作用;禁读本机
 .debug 易失产物——sim 批根经 monkeypatch 换 tmp 桩)。
@@ -93,7 +93,7 @@ class TestRunQuarantine:
         assert run_quarantine_reason('run_20260907_214130') is None
 
 
-# ===== 删失判定(design §2.4 口径)=====
+# ===== 删失判定(canonical 口径)=====
 
 class TestCensoring:
     @pytest.mark.parametrize('hp_after,expected', [

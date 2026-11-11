@@ -155,7 +155,7 @@ def test_store_plane_table_shape_feeds_predicates():
 class TestUnlockedFrameUntouched:
     def test_f9_unlocked_frame_untouched(self):
         """万金油件(花火)不再经序 1 义务面自动买入(万金油退出义务
-        买入面【拍,总纲 §2.7 申报②】,统一让位优先级迭代 3.4——原乙臂
+        买入面【拍,32 号稿 §8 申报②】——原乙臂
         编入形态〔枢纽件经序 1 成员面照常发射〕随万金油项删除废止)、
         hub_option 买因零暴露。(原收窄旗断言与收窄哨兵键断言已随 P88
         退役删除,comp-structure-unification 3.4。)"""

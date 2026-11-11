@@ -1,5 +1,5 @@
-"""商业间谍升级回调 sim 闭环测试(2026-10-17-levelup-shop-transition
-T-3;landing §3.3 验收凭据)。
+"""商业间谍升级回调 sim 闭环测试(sim 先行形态申报 = sim-design.md §8.2;
+行为规格出处 git 历史可溯)。
 
 设计唯一源 = 迭代 design.md §2.3(回调四步:抽 5 张/偷最贵 3 张入席/
 剩余 2 张 = 商店新牌面/置随机态信号)+ §2.4(信号写端唯一 = 上报回调
@@ -117,7 +117,7 @@ def _feed_levelup(b: SimBackend, *, spy: bool):
 
 
 def test_spy_levelup_steal_persist_reopen_presents_two() -> None:
-    """持商业间谍升级闭环(design §2.3 四步 + §2.4):3 张真实入席
+    """持商业间谍升级闭环(四步链 + 随机态信号,11 号稿 §2/22 号稿 §1 第 1 步):3 张真实入席
     (可断言具体牌 = 新抽最贵序)→ 信号置位 → 备战重开触发 → 开店呈现
     剩余 2 张(非重新发牌:被偷槽位置空、剩余原位,与重放载荷对拍)。"""
     b = _to_prep()
@@ -167,7 +167,7 @@ def test_spy_levelup_steal_persist_reopen_presents_two() -> None:
 
 
 def test_no_spy_levelup_zero_shop_side_effect() -> None:
-    """无商业间谍对照(design §2.3 末条):升级零商店副作用——牌面
+    """无商业间谍对照(spy 声明末条):升级零商店副作用——牌面
     不变、信号不置、无状态副本分支声明(重开靠备战执行帧清标记通道)。"""
     b = _to_prep()
     try:
@@ -190,7 +190,7 @@ def test_no_spy_levelup_zero_shop_side_effect() -> None:
 
 
 def test_spy_steal_bench_full_overflow_disclosed() -> None:
-    """席满溢出(design §2.3 sim 先行形态):备战席 9 满帧偷取 3 张
+    """席满溢出(sim 先行形态,sim-design.md §8.2):备战席 9 满帧偷取 3 张
     全部不入席 + 计数披露(disclosures + cw4_counters 双面);牌面刷新
     与信号置位照常(步骤独立)。"""
     b = _to_prep()
