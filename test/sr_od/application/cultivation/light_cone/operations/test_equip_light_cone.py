@@ -1,7 +1,7 @@
 """EquipLightConeOp(替换光锥)定位算法与节点流程测试。
 
-测试层级声明:SIFT 落格投票定位为纯函数直测(fixture = 实机替换界面截图,
-目标卡位置已知;定位算法住本域 light_cone_list_recognizer 自含实现,
+测试层级声明:实机 fixture 直测 recognize 全量清单(fixture = 实机替换界面
+截图,目标卡位置已知;识别住本域 light_cone_list_recognizer 自含实现,
 遗器侧在 relic_list_recognizer 各持一份,两域零共用);节点流程为打桩
 流程测试(画面判定 / 查找区域 / OCR 读名打桩)——
 替换交互链本体(点替换→选卡→点替换→自动回 TAB)由生产实机摸底覆盖,
@@ -9,9 +9,8 @@
 
 锁的内容(出处 src/sr_od/application/cultivation/light_cone/operations/equip_light_cone.py +
 本域 light_cone_list_recognizer.py):
-- 模板加载:图标透明底合成白底;缺失路径返回 None;
-- 落格投票定位:目标卡得票显著(实机 15:2),定位中心吸附列中心;
-  目标不在当前屏(涂掉目标特征)返回 None;
+- 全量清单识别:实机 fixture 上目标件被 masked TM 判出且 cell 落位正确
+  (缺件 = 滚动扫屏兜底的前提,清单纯全才可能漏滚);
 - 滚顶:固定次数快速大范围拖拽(手指上滑、短 duration),不做识别判顶
   直接成功;
 - 扫描循环:当前屏未命中 → 拖动重扫(有界,方向 = 手指上滑);命中即点击
@@ -26,19 +25,10 @@
 from __future__ import annotations
 
 from pathlib import Path
+from types import SimpleNamespace
 
-import cv2
 import numpy as np
 import pytest
-
-from one_dragon.base.geometry.rectangle import Rect
-from one_dragon.utils import cv2_utils
-from sr_od.application.cultivation.light_cone.operations import equip_light_cone as equip_module
-from sr_od.application.cultivation.light_cone.operations.equip_light_cone import EquipLightConeOp
-from sr_od.application.cultivation.light_cone.light_cone_list_recognizer import (
-    load_template_gray,
-    locate_cells_by_votes,
-)
 from test.conftest import SrTestContext
 from test.harness.fixture_controller import (
     enter_running_state,
@@ -46,10 +36,49 @@ from test.harness.fixture_controller import (
     reset_running_state,
 )
 
+from one_dragon.base.geometry.rectangle import Rect
+from one_dragon.base.screen.template_loader import TemplateLoader
+from one_dragon.utils import cv2_utils
+from sr_od.application.cultivation.light_cone.light_cone_list_recognizer import (
+    LightConeReplaceRecognizer,
+)
+from sr_od.application.cultivation.light_cone.operations import (
+    equip_light_cone as equip_module,
+)
+from sr_od.application.cultivation.light_cone.operations.equip_light_cone import (
+    EquipLightConeOp,
+)
+
 _FIXTURE_DIR = Path(__file__).parent / 'equip_light_cone'
 _LIST_AREA: Rect = Rect(95, 130, 1420, 960)
-_TEMPLATE_REL: str = 'assets/game_data/light_cone_icons/行于流逝的岸.webp'  # 游戏内名称键
-_CONE_COL_CENTERS: list[float] = equip_module._cone_col_centers(_LIST_AREA)
+
+
+def _recognizer_ctx(test_context: SrTestContext) -> SimpleNamespace:
+    """recognize 直测的 mock ctx(列表区 + 真实例 OCR / 叠影模板库)。"""
+    return SimpleNamespace(
+        screen_loader=SimpleNamespace(
+            get_area=lambda screen_name, area_name: SimpleNamespace(rect=_LIST_AREA)),
+        template_loader=TemplateLoader(),
+        ocr_service=test_context.ocr_service)
+
+
+def test_locate_on_fixtures(test_context: SrTestContext) -> None:
+    """实机 fixture 全量识别:目标件 行于流逝的岸 分别在首行首列/次列,
+    masked TM 判出名且 cell 落位正确(列中心吸附固定列先验)。"""
+    for fname, want_cell in [('replace_target_row0_col0.webp', (97, 197, 236, 352)),
+                             ('replace_target_row0_col1.webp', (236, 197, 375, 352))]:
+        img = cv2_utils.read_image(str(_FIXTURE_DIR / fname))
+        assert img is not None
+        out = LightConeReplaceRecognizer().recognize(
+            _recognizer_ctx(test_context), img, None)
+        assert out is not None, fname
+        hits = [it for it in out['items'] if it['cone'] == '行于流逝的岸']
+        assert hits, (f'{fname} 应命中目标件,实际前 6 项: '
+                      f'{[(it["cone"], tuple(it["cell"])) for it in out["items"][:6]]}')
+        assert tuple(hits[0]['cell']) == want_cell, \
+            f'{fname} 目标 cell 应为 {want_cell},实际 {tuple(hits[0]["cell"])}'
+        assert hits[0]['path_cn'] == '虚无'
+        assert hits[0]['level'] == 80
 
 
 def _target_item() -> dict:
@@ -66,48 +95,6 @@ class _NoWindowEquipLightCone(EquipLightConeOp):
         EquipLightConeOp.__init__(self, ctx, cone_name=cone_name,
                                   allow_take_over=allow_take_over)
         self.need_check_game_win = False  # execute 期才读,实例属性即可关掉
-
-
-def test_load_template_gray() -> None:
-    """模板加载:图标存在出灰度图;缺失路径 None(不抛异常,调用方判停)。"""
-    template = load_template_gray(_TEMPLATE_REL)
-    assert template is not None
-    assert template.ndim == 2  # 灰度单通道
-
-    assert load_template_gray('assets/game_data/light_cone_icons/不存在的光锥名.webp') is None
-
-
-def test_locate_on_fixtures() -> None:
-    """实机 fixture 定位(全量清单):目标卡分别在第一行第一列/第二列,列中心吸附正确。"""
-    template = load_template_gray(_TEMPLATE_REL)
-    assert template is not None
-
-    screen_a = cv2_utils.read_image(str(_FIXTURE_DIR / 'replace_target_row0_col0.webp'))
-    cells = locate_cells_by_votes(cv2.cvtColor(screen_a, cv2.COLOR_RGB2GRAY), template,
-                                  _LIST_AREA, _CONE_COL_CENTERS)
-    assert cells, 'fixture A 应定位到第一行第一列'
-    top_a = cells[0][0]
-    assert abs(top_a.x - 167) <= 10, f'最高票候选应吸附首列(~167),实际 {top_a.x}'
-    assert 195 <= top_a.y <= 360, f'应落在第一行带,实际 {top_a.y}'
-
-    screen_b = cv2_utils.read_image(str(_FIXTURE_DIR / 'replace_target_row0_col1.webp'))
-    cells_b = locate_cells_by_votes(cv2.cvtColor(screen_b, cv2.COLOR_RGB2GRAY), template,
-                                    _LIST_AREA, _CONE_COL_CENTERS)
-    assert cells_b, 'fixture B 应定位到第一行第二列'
-    top_b = cells_b[0][0]
-    assert abs(top_b.x - 306) <= 10, f'最高票候选应吸附第二列(~306),实际 {top_b.x}'
-
-
-def test_locate_rejects_when_target_absent() -> None:
-    """负例:目标卡特征被涂掉(移出当前屏的模拟)→ 返回空清单不误点。"""
-    template = load_template_gray(_TEMPLATE_REL)
-    assert template is not None
-
-    screen = cv2_utils.read_image(str(_FIXTURE_DIR / 'replace_target_row0_col0.webp'))
-    gray = cv2.cvtColor(screen, cv2.COLOR_RGB2GRAY)
-    # 涂白第一行前两列(定位结果所在格)与整行特征——模拟目标不在该屏
-    gray[130:520, 95:720] = 255
-    assert locate_cells_by_votes(gray, template, _LIST_AREA, _CONE_COL_CENTERS) == []
 
 
 def test_reset_to_top_fast_drags(

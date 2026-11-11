@@ -53,4 +53,9 @@ test/sr_od/operations/test_equip_owner_match.py::test_owner_no_badge_is_none
 # 全量冷缓存首跑抖动过线。
 test/sr_od/operations/test_equip_relic.py::test_reenter_runs_sort_prepend_chain
 
+# 2026-11-11 光锥 TM 迁移登记:全量清单真帧识别(36 卡 × 170 模板双档 masked
+# TM,主成本在 TM 本体;OCR 走 conftest 磁盘 memo 温缓存),单帧 17s/双帧 37s
+test/sr_od/application/cultivation/light_cone/operations/test_light_cone_list_recognizer.py::test_cone_recognizer
+test/sr_od/application/cultivation/light_cone/operations/test_equip_light_cone.py::test_locate_on_fixtures
+
 test_enter_game.py::test_version_promo_right_top_fallback
