@@ -4,14 +4,13 @@ kernel 发放桥 grant_effect_node_xp 经 sim 后端节点推进全链;按流程
 超限拆分债文件,禁追加,只 import 复用不改;先例 = 同目录
 test_env_deploy_lock_sim_chain.py〕)。
 
-测试面依据 = 迭代 T-38 设计(.debug/progress/2026-09-23-invest-effects-
-calc/designs/T-38-chenggong-jingyan.md)§2.6 实机(live)和模拟器(sim)两边语义 + §4 锁 10(sim 半):
+测试面依据 = 迭代 设计稿(原件已退役)(原件已退役;§ 号 = 原稿节序)§2.6 实机(live)和模拟器(sim)两边语义 + §4 锁 10(sim 半):
 - **sim = 状态副本里的值**:节点边界发放经 kernel tick 段 write_logic 写
   gs.xp/gs.level → sim 状态副本等级随白送经验真实推进(8→9 跨级例证),
   零额外接入调用;
 - **达成检测时点**:种子 lv8 路径达成位已达标(检测体首拍 tick 即记,
   当拍零发放);非买经验源跨级(节点经验等)走升级连锁 = 结算时点记标记
-  (迭代 2026-09-23-invest-effects-calc T-432 定案),晚拍仅剩 live 观察
+  (设计稿(原件已退役) T- 定案),晚拍仅剩 live 观察
   路径的留白申报;
 - **同 seed 重放**:发放序列逐位一致(发放链零 rng 消费的结构判据);
 - **披露键族已登记**:ENV_XP_WINDOW_DISCLOSURES 整表并入 sim 披露集。

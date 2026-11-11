@@ -3,7 +3,7 @@
 两部分,判据唯一源 = prep_pipeline §1 + docs/develop/sr_od/application/
 currency_war/flow/README.md §2.2 备战接口行:
 
-- **契约形状**(``decide_prep_screen`` 终态契约 §2.2 单动作词表):返回
+- **契约形状**(``decide_prep_screen``  单动作词表):返回
   **恰一个 CwAction** = 本帧要执行的那个;本帧无动作帧 →
   ``CwActionObsParam(scope='outer_loop')``(本帧无动作可发,交回外循环
   重观察;原 HoldFrame 通道并入,用户裁定 2026-09-20,``None`` 退役);
@@ -106,7 +106,7 @@ def _prep_strategy(monkeypatch: pytest.MonkeyPatch,
     session = StrategySession()
     strategy = cw_bridge.MandateV1Strategy(
         game_state_of(session),
-        SimpleNamespace(strategy_seed=None))   # 终态契约:构造注入
+        SimpleNamespace(strategy_seed=None))   # 构造注入
     # (黑板帧装配已随 gs.prep_obs 退役删除——决策输入 = 状态容器直读,
     #  「观察帧缺失即抛错」防线随黑板消亡,编排前提由画面 op 保证。)
     monkeypatch.setattr(
@@ -137,7 +137,7 @@ def test_prep_contract_empty_emission_returns_hold_frame(
     """备战契约边界:本帧无动作 → 返回 ``CwActionObsParam(scope='outer_loop')``
     = 本帧无动作交回外循环。
 
-    出处 = docs/develop/sr_od/application/currency_war/flow/README.md §2.2 备战接口行(终态契约 §2.2:本帧无动作帧 = 交回外循环重观察,None 退役;原 HoldFrame 并入,用户裁定 2026-09-20)。
+    出处 = docs/develop/sr_od/application/currency_war/flow/README.md §2.2 备战接口行(本帧无动作帧 = 交回外循环重观察,None 退役;原 HoldFrame 并入,用户裁定 2026-09-20)。
     备战域
     「本帧无动作」是合法通道:返回必须是 obs 交回口径本身——返回
     ``None``(退役形状回潮)或空列表或抛错都不合格。
@@ -294,7 +294,7 @@ class TestStep0SelfRescue:
                back_row=())
         _set_overflow(sess)
         out = _emit(sess)
-        # 阶段 5/6:统一部署搜索的档 1 含锁定线核心(bench 姬子·启行),
+        # 统一部署搜索的档 1 含锁定线核心(bench 姬子·启行),
         # 统一序列末位 = 场上部署外低值件(姬子)——自救卖出形态随 victim
         # 落位分派(SellBench/SellDeployed),零停机出口语义不变。
         from sr_od.application.currency_war.kernel.cw_vocab import (
@@ -566,7 +566,7 @@ class TestStep5DeployWindow:
 
     def test_endgame_member_deploys_on_full_synergy(self):
         """档齐帧照上(行为方向与退役前一致):板面追击 3 档齐 = 候选线
-        L1 增量主载,飞霄上场(阶段 5/6 载体 = 统一拖动)。"""
+        L1 增量主载,飞霄上场(载体 = 统一拖动)。"""
         sess = self._window_frame(('知更鸟', '不死途', '貊泽'))
         out = _emit(sess)
         from sr_od.application.currency_war.kernel.cw_vocab import (
@@ -704,9 +704,9 @@ class TestStep7NodeEndInterest:
         out = _emit(sess)
         sells = [e.action for e in out
                  if isinstance(e.action, CwActionSellBenchParam)]
-        assert not sells, '凑息零卖出(阶段 5/6:统一部署搜索把线内核心' \
+        assert not sells, '凑息零卖出(统一部署搜索把线内核心' \
             '件收进档 1——比凑息豁免更强的保护,同一零卖出出口)'
-        # 阶段 5/6 行为申报:档 1 编入先于豁免剔除(池在豁免前已空,
+        # 行为申报:档 1 编入先于豁免剔除(池在豁免前已空,
         # 拒因 = no_candidates 非 exempt_depleted)——剔光观测键辖
         # 「豁免真翻转卖出→零动作」帧,由 criteria 单测
         # (test_sell_candidates 凑息豁免族)继续锁定。

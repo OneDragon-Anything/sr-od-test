@@ -1,7 +1,7 @@
 """sim 开店呈现 · 刷价改价写回测试面(cw_sim_backend._open_shop)。
 
 设计依据 = invest-effects-calc 迭代
-designs/T-21-changxian-liaoli.md §2.2/§4 锁 9(2026-10-16 用户裁定:
+设计稿(原件已退役;§ 号 = 原稿节序)§2.2/§4 锁 9(2026-10-16 用户裁定:
 「够次数之后,要将刷新费用变成 1,就是 sim 里观察的刷新费用也需要是 1」):
 开店呈现以 kernel 渲染状态副本里的值(:func:`cw_economy.world_shop_refresh_cost`)
 经**观察通道**写 ``gs.shop_refresh_cost``——对偶实机每次进店 live 漏斗

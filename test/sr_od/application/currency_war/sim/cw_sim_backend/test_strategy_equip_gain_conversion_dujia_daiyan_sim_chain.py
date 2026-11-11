@@ -2,9 +2,9 @@
 顶段转换拦截经 sim 后端开箱全链;拦截在 kernel 原语,sim 零新增接入调用——
 sim 状态容器现值 = 状态副本里的值,live 零写观察覆盖为实机(live)和模拟器(sim)两边同真值的另一端口径)。
 
-测试面依据 = 迭代设计 designs/T-372-dujia-daiyan.md §4 锁 5(开箱链
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 5(开箱链
 机械回归:名单集转换辖域含开箱所得——候选前缀 ∋ 幸运星,持卡局开箱
-选定幸运星即转换,防默认辖域被静默豁免)+ REVIEW-T372 §3.2.8(开箱链
+选定幸运星即转换,防默认辖域被静默豁免)+ 已退役评审稿(§ 号 = 原稿节序)§3.2.8(开箱链
 现址亲测)。直构形态先例 = 同目录
 test_strategy_equip_gain_conversion_sim_chain.py 锁 8〔自由市场版〕/
 test_strategy_equip_gain_conversion_haoyunlai_sim_chain.py〔休眠镜像面〕。

@@ -115,7 +115,7 @@ from sr_od.application.currency_war.prep_actions import (
 )
 from sr_od.operations.sr_operation import SrOperation
 
-# 终态契约动作类型的注册豁免集(终态契约 landing 测试规格:白名单成员
+# 动作类型的注册豁免集(测试规格:白名单成员
 # 要么有注册行、要么在豁免集——无 op 行例外申报):三刷新动作
 # (handler 自管点击链;attack4 M6 裁定 (a):同型豁免)。
 # (HoldFrame 曾在豁免集,随 2026-09-20 用户裁定并入
@@ -239,13 +239,13 @@ def test_open_shop_row_is_terminal_carrier_and_execute_loud_fails():
 # ============================================================ 4. 注册完备
 
 def test_registry_covers_unified_vocab_and_pick_types():
-    """注册完备测试(主判据;终态契约 §2.2 收敛单表):统一词表
+    """注册完备测试(主判据; 收敛单表):统一词表
     CW_ACTION_TYPES 单表逐类断言注册表**类级**解析可命中(不构造业务
     动作实例,不读源码)——未注册 = 测试红;退役 = 删类,元组中不存在即
     天然不可复活(R1)。kernel EVENT_PICK_TYPES = 纯函数返回载体,策略
     产出词表化后不再进注册表面(§2.2)。
 
-    终态契约扩展(landing):白名单新成员要么有注册行、要么在豁免集;
+    扩展(landing):白名单新成员要么有注册行、要么在豁免集;
     豁免成员反向断言确无注册行(防误注册,误挂 op = 确认链字段错位
     暗雷)。"""
     for cls in CW_ACTION_TYPES:
@@ -261,7 +261,7 @@ def test_registry_covers_unified_vocab_and_pick_types():
 
 
 def test_pick_rows_resolve_class_and_instance_consistently():
-    """pick 行并入面(终态契约 §2.2 换键名:策略器产出 = 词表子类型;
+    """pick 行并入面( 换键名:策略器产出 = 词表子类型;
     pick-op-unify 批起分批扩至全 12 类):类级解析与实例级工厂解析同
     op 类(行序 is-a 语义一致;实例级仅本测试构造,注册完备测试本体不
     构造)。"""

@@ -2,7 +2,7 @@
 encounter_options_for helper + encounter 呈现写点 + STRATEGY_ECONOMY
 『二极管』三条效果条目注册行)。
 
-测试面依据 = 迭代设计 designs/T-133-erjiguan.md §4 + REVIEW-T133 实现
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 + 已退役评审稿 实现
 要点摘要 §④ 三锁:
 - 锁 1 助手谓词:持卡收窄 = 全档首尾两元素(派生式断言,不硬编档数,
   防 U22 档数校准时锁双源)+ idx 重排 [0,1];未持有/空名单/非本卡/

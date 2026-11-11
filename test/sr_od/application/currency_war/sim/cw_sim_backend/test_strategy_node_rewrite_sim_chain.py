@@ -3,8 +3,8 @@
 的 sim 接入调用与状态副本里的值落地面;kernel 原语单元面 = kernel/cw_gain_chain/
 test_check_strategy_node_rewrite.py,本文件锁 sim 窗口接入调用)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
-T-318-jueyi-yule-xingqiu.md §4 附锁(REVIEW-T318 §五④,sim 全链锁形态 =
+测试面依据 = 设计稿(原件已退役) designs/
+设计稿(原件已退役;§ 号 = 原稿节序)§4 附锁(已退役评审稿(§ 号 = 原稿节序)§五④,sim 全链锁形态 =
 T-105/T-283 sim 锁先例):
 
 - 状态副本写锁:battle 位窗开 gold≥180 → node_seq_by_plane 整表改写 logic 写

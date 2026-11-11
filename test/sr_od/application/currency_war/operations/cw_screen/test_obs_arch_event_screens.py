@@ -120,7 +120,7 @@ def _make_encounter(test_context, monkeypatch, *, in_screen: bool,
 
     strategy = SimpleNamespace(decide_encounter=_decide)
     match = SimpleNamespace(strategy=strategy, session=session)
-    # 终态契约 §B:match 桩挂载状态容器(gs 持有引用直用)。
+    # match 桩挂载状态容器(gs 持有引用直用)。
     match.gs = game_state_of(session)
     monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
     op = em.CwScreenEncounter(test_context)
@@ -320,7 +320,7 @@ def _refresh_fixture(test_context, monkeypatch) -> tuple[list, list]:
 def test_encounter_refresh_terminal_click_once_and_success(
         test_context, monkeypatch) -> None:
     """刷新链终结测试(
-    设计稿(原件已退役)A):建议刷新 ∧ 剩余闸放行(状态容器 left=1 ∧ 识别标志在位)→
+    设计稿(原件已退役;判据 = 本文件锁面申报)A):建议刷新 ∧ 剩余闸放行(状态容器 left=1 ∧ 识别标志在位)→
     文本识别标志位圆钮**恰一次** + 固定等待 → round_success 终结交回;同访问
     零 ``screenshot()`` 重读、零 report 二次覆盖写(状态容器终值 = 刷前候选)、
     零重决策(恰一次决策)、零选卡派发。红 = 重读回潮 / 二次覆盖写回潮 /
@@ -400,7 +400,7 @@ def test_encounter_refresh_gate_rejects_zero_and_none(
 def test_encounter_refresh_gate_mismatch_round_fail_redispatch(
         test_context, monkeypatch) -> None:
     """刷新锚读缺防线测试(
-    migration 设计稿(原件已退役)):拒绝后重调仍返回刷新建议(刷新锚点读缺面)
+    migration 设计稿(原件已退役;判据 = 本文件锁面申报)):拒绝后重调仍返回刷新建议(刷新锚点读缺面)
     → round_fail 交回——失败计入外循环重派上限
     (``OP_FAIL_REDISPATCH_LIMIT`` 只计连续 fail,零点击 round_success
     交回不计数且清零计数窗,故改 fail 有界收敛;设计定论「零点击交回」
@@ -423,7 +423,7 @@ def test_encounter_refresh_gate_mismatch_round_fail_redispatch(
 
 def test_claim_encounter_reward_branches(
         test_context, monkeypatch) -> None:
-    """奖励兑现回调测试(迭代 …3.3 扩围 设计稿(原件已退役),R1 复攻定论后形态):
+    """奖励兑现回调测试(迭代 …3.3 扩围 设计稿(原件已退役;判据 = 本文件锁面申报),R1 复攻定论后形态):
     判遭遇 = 双证(node 镜像 token 'encounter' ∧ settlement_ring 尾行
     node_type='遭遇')——单分支不满足即拒(ring-mismatch 臂 = 镜像遭遇但
     ring 尾行普通战斗的陈旧镜像防线);达标 = progress_delta>0 单判。

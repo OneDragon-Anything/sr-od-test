@@ -3,7 +3,7 @@
 kernel/cw_gain_chain/test_check_strategy_battle_grants.py,本文件锁
 sim 结算效果条目接入调用与状态副本里的值落地面)。
 
-测试面依据 = 迭代设计 designs/T-105-yizhan-yangzhan.md §4 锁 1/2/3/4/5/8:
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 1/2/3/4/5/8:
 - 持卡局遭遇节点(P1 序列现值恰一 encounter 位)战斗结算后,备战席
   supply_box 恰 +1 + strategy_post_battle evidence 笔(sig 组
   'sim:strategy' 首落);非遭遇节点/未持卡零发放;败局存活也发(卡文无

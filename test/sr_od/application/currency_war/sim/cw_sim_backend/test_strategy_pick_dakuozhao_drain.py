@@ -2,8 +2,7 @@
 扣金币效果条目 + 呈现一次性标志位;先例 = 本目录 test_strategy_hyperemit_sim_chain.py
 〔超发货币负债效果条目,负金币效果条目最同构先例〕同形态)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/T-197-dakuozhao.
-md §3 锁 3 + 锁 6(sim 侧对拍) + REVIEW-T197 八裁决点默认案:
+测试面依据 = 设计稿(原件已退役) 设计稿(原件已退役) §3 锁 3 + 锁 6(sim 侧对拍) + 已退役评审稿 八裁决点默认案:
 - 扣金币效果条目(锁 3):真拿卡路径落地 → 持金 30 扣 28(gold=30→2)∧
   evidence 笔字面量钉死 strategy:recruit_drain:大扩招(sim 写统一
   前缀 + 写点 tag)∧ 扣金额与 dakuozhao_deduction_plan 对拍(锁 6

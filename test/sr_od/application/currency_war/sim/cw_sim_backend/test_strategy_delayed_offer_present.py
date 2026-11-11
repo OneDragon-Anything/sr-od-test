@@ -1,7 +1,7 @@
 """sim 策略延时 offer 呈现效果条目测试(镜像 src = sim/cw_sim_backend.py 的
 _present_due_extra_offer + _present_offer_or_node_screen 尾部调用点)。
 
-测试面依据 = 迭代设计 designs/T-98-huangjin-qihuo.md §4(锁 4 条件矩阵
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4(锁 4 条件矩阵
 + 锁 5 弹除原子性;同窗冲突/多期货两分支现交付域自然不可达,直构):
 - 未到点零呈现零写;到点呈现 = 候选全金池 + 空刷新授权 + 队列弹除 +
   序位计数 +1 + 呈现留证披露键;
@@ -10,7 +10,7 @@ _present_due_extra_offer + _present_offer_or_node_screen 尾部调用点)。
 - 多期货同窗恰 1 次、余者悬置顺延(window_cap 披露,同直构);
 - 呈现即消费:呈现后队列即空,重复进窗不二次呈现。
 
-白银投资批追加(designs/T-198-baiyin-touzi.md §4 锁 5,可刷系首例):
+白银投资批追加(设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 5,可刷系首例):
 - 窗首到期效果条目呈现带逐卡刷新授权 3(登记 refresh_count 单一源,授权
   写状态容器 = report 摄入,品质承诺槽向量簿记取登记品质);
 - 递减链(拿卡当拍不递减,3 次推进归零)kernel tick 直构 → 窗首呈现;

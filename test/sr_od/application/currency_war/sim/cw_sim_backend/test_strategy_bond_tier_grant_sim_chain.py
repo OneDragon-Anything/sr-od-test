@@ -3,7 +3,7 @@
 cw_gain_chain/test_check_strategy_bond_tier_grants.py,本文件锁 sim 接入调用
 与状态副本里的值落地面)。
 
-测试面依据 = 迭代设计 designs/T-271-mengjing-dawutai.md §4 锁 8
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 8
 (驱动与断言形态先例 = 同目录 test_strategy_bond_battle_grant_sim_
 chain.py;触发-发放单拍制 = 结算拍直接发放,无节点窗交付拍):
 

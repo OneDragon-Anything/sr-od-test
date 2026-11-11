@@ -2,7 +2,7 @@
 apply_strategy_pick_xp helper + _on_invest_picked 落地效果条目 + 呈现一次性标志位 +
 披露键 strategy_pick_instant_legs)。
 
-测试面依据 = 迭代设计 designs/T-87-jingyan-daozhang.md §2.1/§2.4/§4 七锁:
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§2.1/§2.4/§4 七锁:
 - 持卡发放真值(锁 1):offer 落地 advance 后 xp 恰 +10(门槛内形态),
   独立 evidence 笔 ``xp:strategy_pick:<卡名>``(与节点经验 ``xp:node``
   笔分账);

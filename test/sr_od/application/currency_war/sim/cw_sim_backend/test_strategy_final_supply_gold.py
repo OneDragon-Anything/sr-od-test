@@ -2,7 +2,7 @@
 strategy_final_supply_gold_of 聚合 helper + _begin_node_window 收尾
 「最后一个补给阶段」金币效果条目;同族先例 = 本目录 test_strategy_boss_gold.py)。
 
-测试面依据 = 迭代设计 designs/T-93-weikuan-jiaofu.md §2.3/§2.5/§4
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§2.3/§2.5/§4
 十一锁面(锁 1-8),例值按现表重派生(标记 = 展平全序列最末 supply 位,
 默认表现值 (3,3);P3 入表后域扩展自动跟随):
 - 标记发放真值(锁 1/7/8):(3,3) 窗金增量 = 轮首收入面(kernel 公式

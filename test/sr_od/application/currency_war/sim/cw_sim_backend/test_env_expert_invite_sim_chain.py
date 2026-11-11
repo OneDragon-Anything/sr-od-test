@@ -4,8 +4,8 @@ sim/test_sim_backend.py〔已登记超限拆分债文件,禁追加,只 import �
 先例 = 本目录 test_env_deploy_lock_sim_chain.py 与 T-32
 test_equip_env_pick_sim_full_chain_blue_diamond〕)。
 
-测试面依据 = 迭代 T-39 专家研讨会设计(.debug/progress/2026-09-23-invest-
-effects-calc/designs/T-39-zhuanjia-yantaohui.md)§2.1/§2.4 + §4 锁 8:
+测试面依据 = T-39 专家研讨会设计(已退役账本
+effects-calc/设计稿(原件已退役;判据 = 本文件锁面申报))§2.1/§2.4 + §4 锁 8:
 - 选卡后 bench = 4 开局手牌 + bookcard 槽 + supply_box 槽(卡文序,带名);
 - 开卡上报 applied + 槽腾空 + SCREEN_EXPERT 呈现(advance 纯转移;
   呈现数据源 = 状态容器登记,open_bookcard 上报内 register);

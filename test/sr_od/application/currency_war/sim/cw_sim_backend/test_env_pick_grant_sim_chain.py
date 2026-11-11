@@ -3,8 +3,8 @@
 助手 import 自 sim/test_sim_backend.py〔已登记超限拆分债文件,禁追加,只
 import 复用不改;先例 = 本目录 test_env_bond_tier_sim_chain.py〕)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
-T-46-celue-dashi.md(定稿)§4 锁 5(§2.2(e) 落地形态):
+测试面依据 = 设计稿(原件已退役) designs/
+设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 5(§2.2(e) 落地形态):
 - 定向策略大师推进至 P3r5 → 无选卡屏、active_strategies +1(随机新策略,
   排除已拥有)、发放行金额 = 2×直发后持有数(直发本身触发金币分支的耦合锁,
   金额对账 = 发放行值 − 同窗轮首收入行值,与收入数值解耦);

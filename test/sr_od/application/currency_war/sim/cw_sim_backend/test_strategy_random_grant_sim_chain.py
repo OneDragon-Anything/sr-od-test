@@ -4,7 +4,7 @@ src = sim/cw_sim_backend.py 的 ``_fire_strategy_random_grants`` 两调用点 +
 面 = cw_investments/test_strategy_random_grants.py + cw_gain_chain/
 test_gain_invest_strategy_yuanjian_decl.py,本文件锁 sim 接入调用与门语义)。
 
-测试面依据 = 迭代设计 designs/T-331-yuanjian.md §4 锁 2/4/5/6 + REVIEW
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 2/4/5/6 + REVIEW
 T331 §4.2-R1 修订(获得链调用后就地判,直发拍即掷)+ §六 ④ 锁面:
 - 授予锁(锁 2 正面):远见拾取落地 → active_strategies 含远见 +1 个
   金名(∈ 注册表金池)、excluded_invest 不含 granted 名、难度读数同帧

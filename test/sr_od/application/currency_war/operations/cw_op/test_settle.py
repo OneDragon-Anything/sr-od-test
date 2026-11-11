@@ -553,7 +553,7 @@ def test_settle_gold_reader_gate_takes_last(monkeypatch) -> None:
 
 def test_hp_direct_read_after_anchor_retirement():
     """hp 直读对照(正本已退役 判据:门简化为 gs.hp 直读,结算覆盖写端
-    在场场景)。终态契约 §A:标记退役后 decision_hp = gs.hp 直读——
+    在场场景)。标记退役后 decision_hp = gs.hp 直读——
     ①结算覆盖写端写入 → 读口立即反映(「结算即写」时序保持);
     ②标记字段不再影响读口(旧标记在场与否零差异 = 单一源成立);
     ③可信位语义不变(observation/carried 可信,prior/logic fail-closed)。"""

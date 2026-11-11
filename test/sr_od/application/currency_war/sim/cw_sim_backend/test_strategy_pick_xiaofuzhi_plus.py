@@ -5,8 +5,8 @@
 (族内逐卡具名函数形),harness 装配先例 = 同目录
 test_strategy_pick_gongsi_junhuo_yin.py)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
-T-169-xiaofuzhi-plus.md(定稿)§4 锁 7:播种 offer 含本卡 → 落地 equips
+测试面依据 = 设计稿(原件已退役) designs/
+设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 7:播种 offer 含本卡 → 落地 equips
 恰 +2 员工投影仪(状态副本里的值,具名确定发放零采样);同 seed 同流重放一致;
 金币效果条目 13 金 = instant_gold 已登记计分、发放写端 = 族级缺口(T-112,sim 金面
 锁不住,维持观察——金币效果条目零锁申报);bench/deployed 零变化(板面零建模 =

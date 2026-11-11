@@ -4,8 +4,7 @@
 grants.py 与 test_discharge_strategy_bond_battle_grants.py,本文件锁
 sim 双调用点接通与状态副本里的值落地面)。
 
-测试面依据 = 迭代设计 designs/T-172-buyao-xiaokan-women-de-jiban.md
-§4 锁 1/2/3/4/5/7 + REVIEW-T172(驱动与断言形态先例 = 同目录
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 1/2/3/4/5/7 + 已退役评审稿(驱动与断言形态先例 = 同目录
 test_strategy_boss_battle_grant_sim_chain.py):
 - 两拍全链:持卡局合格战斗(任意节点 kind)结算拍武装(armed True)→
   下一节点窗开交付 equips 恰 +5(逐件 ∈ 星徽池派生集,禁手抄清单)+

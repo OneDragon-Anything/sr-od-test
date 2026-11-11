@@ -3,8 +3,8 @@
 cw_gain_chain/test_check_strategy_battle_end_heal.py,本文件锁 sim 结算效果条目
 接入调用与状态副本里的值落地面)。
 
-测试面依据 = 迭代设计 designs/T-325-xingji-heping-baoxian.md §4 锁 5
-(REVIEW-T325 无需用户决定 7/7;驱动与断言形态先例 = 同目录
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 5
+(已退役评审稿 无需用户决定 7/7;驱动与断言形态先例 = 同目录
 test_strategy_boss_end_heal_sim_chain.py,直加不 clip 边界沿其锁 4 实现
 现值重推形):
 

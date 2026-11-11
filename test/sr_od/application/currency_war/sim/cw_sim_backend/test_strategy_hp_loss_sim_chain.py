@@ -3,8 +3,8 @@
 kernel/cw_gain_chain/test_check_strategy_hp_loss_grants.py,本文件锁
 sim 结算效果条目接入调用与状态副本里的值落地面)。
 
-测试面依据 = 迭代设计 designs/T-142-baoxian.md §4 锁 3/4/5 +
-REVIEW-T142(节点矩阵形态先例 = 同目录 test_strategy_win_gold_sim_
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 3/4/5 +
+已退役评审稿(节点矩阵形态先例 = 同目录 test_strategy_win_gold_sim_
 chain.py 的 T-130 锁 4):
 - ①战斗类败局(hp_delta<0)→ 金笔+装备笔存在,金值 = 同拍现值 +
   5×桶数(同窗既有收入笔教训,T-130 R2-2);②胜局 → 零笔零累积;

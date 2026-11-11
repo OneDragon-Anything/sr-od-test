@@ -3,9 +3,8 @@ _begin_node_window 策略发放类效果条目;kernel 原语单元面 =
 kernel/cw_gain_chain/test_discharge_due_strategy_grants.py,本文件锁
 sim 窗口接入调用与状态副本里的值落地面)。
 
-测试面依据 = 迭代设计 designs/T-106-rencai-jili.md §4 锁 4(sim 端到端
-形态)与锁 5 同源幂等申报 + T-107 展开卡批(designs/T-107-rencai-jili-plus.md
-§4 锁 3 参数化 +本卡变体):
+测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 4(sim 端到端
+形态)与锁 5 同源幂等申报 + T-107 展开卡批(设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 3 参数化 +本卡变体):
 - 到点(本 advance 递减到 0)同窗发放:装备栏 +1 员工投影仪 + 队列弹除
   + 到点留证披露键(值 = 触发卡@frame:发放物,姊妹双卡参数化:人才
   激励 / 人才激励+)+ 发放写行 sig 组 'sim:strategy_grant';
@@ -15,8 +14,7 @@ sim 窗口接入调用与状态副本里的值落地面)。
   现掷入栏一枚钻 ∧ 披露值 = 卡名@frame:选中物(选中物从发放效果串
   解析,与装备栏尾件一致;掷点归 M26 独立命名流,具体中哪枚禁值漂移
   断言只锁一致性);
-- 回收计划 = 随机类别池行 sim 端到端(designs/T-237-huishou-jihua.md
-  §4 锁 3,T-148 批扩形同构):到点窗现掷入栏一件 ∈ 简易池派生集
+- 回收计划 = 随机类别池行 sim 端到端(设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 3,T-148 批扩形同构):到点窗现掷入栏一件 ∈ 简易池派生集
   (禁手抄清单)∧ 披露值同形态。
 
 驱动形态 = _enter_node_window 直通点(锚定补推路径真形态:观察锚定 →
@@ -188,7 +186,7 @@ def test_due_category_pool_sim_chain_discloses_chosen(
 
 def test_due_repeat_row_sim_chain_requeues_in_window(
         _prep_backend) -> None:
-    """好运令牌·彩 sim 端到端(周期 repeat 行首例,REVIEW-T374.md §4 锁 4
+    """好运令牌·彩 sim 端到端(周期 repeat 行首例,已退役评审稿(§ 号 = 原稿节序)§4 锁 4
     sim 周期链):种子队列 remaining=1 → 进 (1,2) 窗 → 装备栏 +1 好运
     令牌 ∧ 队列非弹除而同参重排队 (('好运令牌·彩', 4),)(周期自续,
     下一倒计时从本窗起算)∧ 披露值 = 好运令牌·彩@1-2:好运令牌(卡名

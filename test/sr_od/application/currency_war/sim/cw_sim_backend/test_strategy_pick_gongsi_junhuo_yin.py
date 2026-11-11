@@ -4,8 +4,8 @@ cw_gain_effects.py 泛化随机装备表 '公司军火更新·银' 行经获得�
 新锁落本拆目录,harness 装配先例 = 同目录 test_strategy_pick_hp.py;
 链形先例 = test_sim_backend.py 买彩票星徽行 sim 全链锁)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
-T-138-gongsi-junhuo-gengxin-yin.md(定稿)§4 锁 7:播种 offer 含本卡 →
+测试面依据 = 设计稿(原件已退役) designs/
+设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 7:播种 offer 含本卡 →
 落地 equips +1(状态副本里的值,名 ∈ 简易池);同 seed 同流键重放一致;
 变异面 sim 零建模 = 变换族既定边界(sim 不反映每节点物品栏变异,
 公司人才流动同判在码),不设断言(负向申报,notes 面)。

@@ -635,12 +635,12 @@ def test_wear_equip_single_mechanical_drag_no_diff_verification(monkeypatch):
 
 def test_open_bookcard_executor_mechanical(monkeypatch):
     """书册卡机械半(状态容器槽位直点形态,
-    设计稿(原件已退役)§2.5 重推):槽号解析(None = gs 状态容器现算首件槽,双出口
+    设计稿(原件已退役;§ 号 = 原稿节序)§2.5 重推):槽号解析(None = gs 状态容器现算首件槽,双出口
     守卫)→ 备战栏-N 建档坐标单击 → 固定动画等待(等待家族单一源
     _OVERLAY_ANIM_WAIT_S;判效交下一帧观察)。识别读门随直点形态拆除
     ——旧「slot 对位不中/识别空 = 未发出」失败分支不复存在(状态容器陈旧
     「件不在」的治理归观察对账域);gs 装配 = 新守卫 slot=None 现算需要
-    (设计稿(原件已退役) 既有用例补装条)。"""
+    (设计稿(原件已退役;判据 = 本文件锁面申报) 既有用例补装条)。"""
     from test.sr_od.application.currency_war._cw_helpers import cw4_session
 
     from one_dragon.base.geometry.rectangle import Rect
@@ -679,7 +679,7 @@ def test_open_bookcard_executor_mechanical(monkeypatch):
     detail2, emitted2 = ex2._open_bookcard(CwActionOpenBookcardParam(slot=5))
     assert emitted2 and '槽5' in detail2
     assert [(p.x, p.y) for p in controller2.clicks] == [(175, 912)]
-    # None 现算双出口守卫(设计稿(原件已退役)):gs 缺席 / 状态容器无 bookcard 首槽
+    # None 现算双出口守卫(设计稿(原件已退役;判据 = 本文件锁面申报)):gs 缺席 / 状态容器无 bookcard 首槽
     # → 守卫断言响亮暴露零点击(参数面,非识别失败)。
     controller3 = _RecordingController()
     ex3 = _make_executor(controller3, [])   # cw_match=None → gs 缺席
@@ -741,7 +741,7 @@ def test_pick_box_decision_fail_closed():
     op = bp.CwScreenBoxPick.__new__(bp.CwScreenBoxPick)
     strategy = SimpleNamespace(
         decide_box_card=lambda: SimpleNamespace(idx=9))
-    # 终态契约 §2.7(零参 + 写槽):桩挂载 gs(决策输入 = 状态容器持有引用;
+    # (零参 + 写槽):桩挂载 gs(决策输入 = 状态容器持有引用;
     # handler 先写 gs.box_card_names 槽再零参调 decide)。
     _sess = SimpleNamespace()
     op.ctx = SimpleNamespace(cw_match=SimpleNamespace(

@@ -4,8 +4,8 @@ _begin_node_window 空仓 XP 效果条目 + kernel 纯判定 check_strategy_empt
 kernel/cw_gain_chain/test_check_strategy_empty_equip_xp.py,本文件锁
 sim 窗口接入调用与状态副本里的值落地面)。
 
-测试面依据 = 迭代 2026-09-23-invest-effects-calc designs/
-T-189-kongcang.md(定稿)§4 锁 4/5/6/7 + REVIEW-T189 §五④:
+测试面依据 = 设计稿(原件已退役) designs/
+设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 4/5/6/7 + 已退役评审稿(§ 号 = 原稿节序)§五④:
 - sim 状态副本锁(锁 4):持卡空仓局节点窗推进 → gs.xp/gs.level 按
   xp_apply_amount 结转(含跨级结转算例),evidence ``xp:empty_slot``
   独立笔 + sig 组 'sim:xp' 断言;非空仓零写;未持卡零写;
