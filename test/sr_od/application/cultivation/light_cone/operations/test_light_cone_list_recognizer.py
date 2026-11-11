@@ -138,8 +138,9 @@ def test_grid_interpolate_missing_row() -> None:
 
 def test_phantom_empty_slots_dropped(test_context: SrTestContext) -> None:
     """组末不满行的空格守卫(实机滚动帧):命途相符组末行 28 = 3 满行 + 1,
-    行4 列2-9 为纯星空空格——插值补位候选必须被证据门槛全数丢弃
-    (旧版无条件补位把空格当卡,TM 出 0.90-0.95 幻影条目实证)。"""
+    行4 列2-9 为纯星空空格——插值补位候选须过轮廓/等级文本证据,全数丢弃
+    (旧版无条件补位把空格当卡,TM 出 0.90-0.95 幻影条目实证;边缘像素数
+    阈值判据因星空闪烁动画逐帧漂移已废弃)。"""
     import sr_od.application.cultivation.light_cone.light_cone_list_recognizer as lclr
     img = cv2_utils.read_image(str(_FIXTURE_DIR / 'replace_scrolled_groups.webp'))
     assert img is not None
@@ -149,8 +150,9 @@ def test_phantom_empty_slots_dropped(test_context: SrTestContext) -> None:
     evid, interp = lclr.detect_card_anchors(ocr, list_rect, col_centers)
     assert len(evid) == 28, f'锚点位应 28 张(27 满行 + 智库),实际 {len(evid)}'
     gray = cv2.cvtColor(img, cv2.COLOR_RGB2GRAY)
+    contours = lclr.detect_card_rects_contours(gray, list_rect)
     kept = lclr.LightConeReplaceRecognizer._keep_evidenced_interps(
-        lclr.LightConeReplaceRecognizer(), list(evid), interp, gray)
+        lclr.LightConeReplaceRecognizer(), list(evid), interp, contours, ocr)
     # 行4 列2-9 的空格补位候选全数丢弃:存活补位不含该行带(y1∈[560,760])
     survivors = [r for r in kept if 560 <= r.y1 <= 760]
     assert not survivors, f'空格补位应全数丢弃,实际存活 {survivors}'
