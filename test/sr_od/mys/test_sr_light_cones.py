@@ -5,16 +5,23 @@
 
 - 快照完整性：LIGHT_CONES 恰 170 把、名称唯一、rarity ∈ {3,4,5}、
   skill 特效全文齐备；
+- id 契约：非空 id 为小写字母数字且唯一；空 id 仅限国际服词条未同步的
+  白名单（补齐后同步收紧白名单）；
 - 基准：银河铁道之夜（5 星 智识）/ 于夜色中（5 星）；
 - 查询助手：名查命中与 miss 返回 None；
 - 图标寻址公式基准（名称键）。
 """
+
+import re
 
 from sr_od.mys.sr_light_cones import (
     LIGHT_CONES,
     icon_webp_rel_path,
     resolve_light_cone,
 )
+
+#: 国际服词条未建页、暂无官方英文名的光锥（id 留空待同步）。
+PENDING_INTL_SYNC = {'放个短假', '向着地平线的终点'}
 
 
 def test_light_cones_snapshot_completeness() -> None:
@@ -26,6 +33,15 @@ def test_light_cones_snapshot_completeness() -> None:
     assert all(c.skill for c in LIGHT_CONES)  # 特效全文固化齐备（用户裁定进 py）
 
 
+def test_light_cone_id_contract() -> None:
+    """id 契约：非空 id 小写字母数字且唯一；空 id 仅限未同步白名单。"""
+    non_empty = [c.id for c in LIGHT_CONES if c.id]
+    assert len(non_empty) == len(set(non_empty))
+    assert all(re.fullmatch(r'[a-z0-9]+', cid) for cid in non_empty)
+    empty = {c.name for c in LIGHT_CONES if not c.id}
+    assert empty == PENDING_INTL_SYNC
+
+
 def test_anchor_cones_and_helpers() -> None:
     """基准与查询助手：名查命中；miss None 不抛异常；path_id ∈ 九命途 id 集；
     图标路径公式基准（名称键）。"""
@@ -35,7 +51,9 @@ def test_anchor_cones_and_helpers() -> None:
     assert by_name.path_id == 'erudition'
     assert '流星群' in by_name.skill  # 特效基准（skill 名 + 文本透传）
 
-    assert resolve_light_cone('于夜色中') is not None
+    night = resolve_light_cone('于夜色中')
+    assert night is not None
+    assert night.id == 'inthenight'  # id 基准（官方英文名归一化）
     assert resolve_light_cone('不存在的光锥') is None
 
     valid_paths = {'destruction', 'preservation', 'hunt', 'abundance', 'nihility',
