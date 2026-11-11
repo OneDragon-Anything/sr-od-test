@@ -205,7 +205,7 @@ def test_reenter_runs_sort_prepend_chain(
     _require_screens(test_context, frames)
     fixture_controller.set_phases([
         {'frame': _TAB_FRAME, 'exit': ('on_click_in', '角色-遗器', '遗器位-头部')},
-        {'frame': _REPLACE_FRAME, 'exit': ('on_click_in', '遗器-替换', '按钮-遗器建议排序')},
+        {'frame': _REPLACE_FRAME, 'exit': ('on_click_in', '遗器-替换', '按钮-排序设置')},
         {'frame': _DIALOG_ON_FRAME, 'exit': ('on_click_in', '遗器-排序规则', '开关-建议排序')},
         {'frame': _DIALOG_OFF_FRAME, 'exit': ('on_click_in', '遗器-排序规则', '单选-等级')},
         {'frame': _DIALOG_LVL_FRAME, 'exit': ('on_click_in', '遗器-排序规则', '按钮-确认')},
@@ -225,7 +225,7 @@ def test_reenter_runs_sort_prepend_chain(
         f'应推进到确认后的替换屏帧:phase_idx={fixture_controller.phase_idx}')
     assert fixture_controller.click_hit_area('角色-遗器', '遗器位-头部'), \
         f'着装页遗器位点击缺失:{fixture_controller.recorded_clicks}'
-    assert fixture_controller.click_hit_area('遗器-替换', '按钮-遗器建议排序'), \
+    assert fixture_controller.click_hit_area('遗器-替换', '按钮-排序设置'), \
         '排序按钮点击缺失(弹窗未打开)'
     assert fixture_controller.click_hit_area('遗器-排序规则', '开关-建议排序'), \
         '开关点击缺失(建议排序未关)'
