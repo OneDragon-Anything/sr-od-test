@@ -1,11 +1,11 @@
 """EquipRelicOp(替换遗器)定位与流程测试(与 test_equip_light_cone 同构)。
 
 测试层级声明:落格投票定位直测(fixture = 实机遗器替换界面截图,部位筛选
-已锁头部,死水深潜的先驱头部件在第一行);算法住 grid_template_locate 公共
-模块(光锥 op 已锁算法本体,此处锁遗器 4 列网格几何与部件图模板);节点
-流程为打桩流程测试(同光锥版,交互链本体生产实机摸底覆盖)。
+已锁头部,死水深潜的先驱头部件在第一行);算法住本域 relic_list_recognizer
+自含实现(光锥 op 在其域各持一份,两域零共用;此处锁遗器 4 列网格几何与
+部件图模板);节点流程为打桩流程测试(同光锥版,交互链本体生产实机摸底覆盖)。
 
-锁的内容(出处 src/sr_od/operations/equip_relic.py):
+锁的内容(出处 src/sr_od/application/cultivation/relic/operations/equip_relic.py):
 - 件名反查:PIECE_TO_SET 表外件名构造期显式失败;表内解析出套装与部位;
 - 4 列网格几何:列中心 = 列表区 x1 + 首列偏移 + 间距 × i(实测误差 ≤1px);
 - fixture 定位:死水头部部件图命中第一行(两张同套装件,任一列均满足意图);
@@ -27,7 +27,7 @@ from sr_od.application.cultivation.relic.operations.equip_relic import (
     _filter_candidates,
     _relic_col_centers,
 )
-from sr_od.operations.grid_template_locate import (
+from sr_od.application.cultivation.relic.relic_list_recognizer import (
     load_template_gray,
     locate_cells_by_votes,
 )

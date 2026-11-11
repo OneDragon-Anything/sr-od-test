@@ -1,13 +1,14 @@
 """EquipLightConeOp(替换光锥)定位算法与节点流程测试。
 
 测试层级声明:SIFT 落格投票定位为纯函数直测(fixture = 实机替换界面截图,
-目标卡位置已知;定位算法住 grid_template_locate 公共模块,遗器 op 同源
-复用);节点流程为打桩流程测试(画面判定 / 查找区域 / OCR 读名打桩)——
+目标卡位置已知;定位算法住本域 light_cone_list_recognizer 自含实现,
+遗器侧在 relic_list_recognizer 各持一份,两域零共用);节点流程为打桩
+流程测试(画面判定 / 查找区域 / OCR 读名打桩)——
 替换交互链本体(点替换→选卡→点替换→自动回 TAB)由生产实机摸底覆盖,
 不在此重复。
 
-锁的内容(出处 src/sr_od/operations/equip_light_cone.py +
-grid_template_locate.py):
+锁的内容(出处 src/sr_od/application/cultivation/light_cone/operations/equip_light_cone.py +
+本域 light_cone_list_recognizer.py):
 - 模板加载:图标透明底合成白底;缺失路径返回 None;
 - 落格投票定位:目标卡得票显著(实机 15:2),定位中心吸附列中心;
   目标不在当前屏(涂掉目标特征)返回 None;
@@ -34,7 +35,7 @@ from one_dragon.base.geometry.rectangle import Rect
 from one_dragon.utils import cv2_utils
 from sr_od.application.cultivation.light_cone.operations import equip_light_cone as equip_module
 from sr_od.application.cultivation.light_cone.operations.equip_light_cone import EquipLightConeOp
-from sr_od.operations.grid_template_locate import (
+from sr_od.application.cultivation.light_cone.light_cone_list_recognizer import (
     load_template_gray,
     locate_cells_by_votes,
 )
