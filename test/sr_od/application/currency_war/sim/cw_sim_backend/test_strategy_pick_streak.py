@@ -1,7 +1,7 @@
 """sim 策略选卡连胜置位效果条目测试(镜像 src = sim/cw_sim_backend.py 的
 apply_strategy_pick_streak helper + _on_invest_picked 落地效果条目 + 呈现一次性标志位)。
 
-测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 八锁中的
+测试面依据 = 原稿锁面(§ 号 = 原稿节序)§4 八锁中的
 sim 状态副本七锁(锁 7 注册表与双闭集断言落 kernel/test_cw_investments.py 与
 strategies/impl/mandate_v1/test_invest_strategy.py 现址):
 - 持卡置位真值(锁 1):预置 streak=1 落卡后恰 ==4,独立 evidence 笔

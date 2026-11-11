@@ -3,8 +3,8 @@ kernel/cw_env_grants.py 的该被测函数;同模块兄弟触发函数测试 =
 kernel/test_env_grants.py〔超限只读复用〕与本目录按被测方法拆分文件,
 本文件按拆目录规范落位)。
 
-测试面依据 = 设计稿(原件已退役)(设计稿(原件已退役),
-设计稿(原件已退役;判据 = 本文件锁面申报))§2.2/§2.3 + §4.1:
+测试面依据 = 原稿锁面(原稿锁面,
+本文件锁面申报)§2.2/§2.3 + §4.1:
 - **结算窗分支条件矩阵**(顺序短路):env 非本卡/已证实/幂等守卫(全视图
   含黑天鹅)→ 零写;否则猜测写(rand 通道,evidence ``env_dot_speculate``
   可辨);
@@ -114,7 +114,7 @@ def _bench_units(gs: GameState) -> list[tuple[str, int]]:
 
 def test_condition_matrix_short_circuits(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """零写分支逐序(设计稿(原件已退役) §2.3 条件矩阵):env 空链/非本卡环境/
+    """零写分支逐序(原稿锁面 §2.3 条件矩阵):env 空链/非本卡环境/
     已证实(done 封账)→ 返回 None 且状态容器零写行;env 门对进度分支同样生效
     (count_battle=True 零计数)。"""
     # ① env 未激活(None/空链)

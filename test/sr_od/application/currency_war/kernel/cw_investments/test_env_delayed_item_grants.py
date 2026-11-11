@@ -3,7 +3,7 @@ EnvDelayedItemGrant + ENV_DELAYED_ITEM_GRANTS + _validate_env_delayed_
 item_grants;按拆目录规范落位,存量命运礼物段 =
 kernel/test_cw_investments.py DELAYED 段〔超限只读复用〕)。
 
-测试面依据 = 设计稿(原件已退役) 设计稿(原件已退役;§ 号 = 原稿节序)§五④ 锁 1 + §四基线漂移裁定(M12 校验面治理铁律:防登记笔误校验不加,
+测试面依据 = 原稿锁面(§ 号 = 原稿节序)§五④ 锁 1 + §四基线漂移裁定(M12 校验面治理铁律:防登记笔误校验不加,
 漂移哨保留):
 - 键域扩展首例(策略道):偶像经济条目 = 卡面效果原文直读(id 303401,
   cw_invest_data.PLAZA_AUGMENTS 同 id 行;「倒计时10个节点」→ 10、
@@ -47,7 +47,7 @@ def test_idol_economy_registry_row_single_source() -> None:
 
 
 def test_dual_leg_split_tables_legal() -> None:
-    """两条效果条目分表正例锁(已退役评审稿(§ 号 = 原稿节序)§五④ 锁 1):偶像经济同入
+    """两条效果条目分表正例锁(原稿评审锁(§ 号 = 原稿节序)§五④ 锁 1):偶像经济同入
     STRATEGY_GRANTS(角色效果条目 = 具名送卡)+ 本表(礼盒效果条目 = 队列登记)
     → 合法不炸;若后继把环境域 ∩ENV_GIFTS=∅ 防呆盲扩成 ∩STRATEGY_
     GRANTS,本卡 import 即红。"""
@@ -84,7 +84,7 @@ def test_validator_env_orphan_key_still_raises(monkeypatch) -> None:
 
 
 def test_loot_float_item_wordlist_untouched() -> None:
-    """非占席词表反向锁(已退役评审稿(§ 号 = 原稿节序)§五④ 锁 1 负半边,存量命运礼物
+    """非占席词表反向锁(原稿评审锁(§ 号 = 原稿节序)§五④ 锁 1 负半边,存量命运礼物
     段「惊喜盒 ∉ BENCH_ITEM_NAMES」同式的策略道镜像):火花礼盒 =
     战利品区浮动件非占席,禁进占席道具派生词表;道具/角色域天然无交集。
     """

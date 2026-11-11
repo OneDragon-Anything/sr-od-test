@@ -4,7 +4,7 @@
 grant.py,本文件只锁本卡登记面 + 行为面,按被测方法拆目录规范落位,先例 =
 同目录姊妹镜像文件 test_strategy_named_equip_grant_wushang_tongguan.py)。
 
-测试面依据 = 设计稿(原件已退役) 设计稿(原件已退役)(定稿)§4 锁 4 + 已退役评审稿(§ 号 = 原稿节序)§四 ④:
+测试面依据 = 原稿锁面(定稿)§4 锁 4 + 原稿评审锁(§ 号 = 原稿节序)§四 ④:
 - 效果条目 2 = 卡文句 2「立刻获得1个【员工投影仪】」:登记行直书
   ``_make_named_equip_grant_effect('员工投影仪', 1)``,具名确定发放
   ``gain_equipment(rand=False)`` 单件入栏,效果串恰一条含 placed;

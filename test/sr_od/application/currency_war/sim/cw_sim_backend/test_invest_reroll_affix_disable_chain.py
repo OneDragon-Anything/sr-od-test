@@ -3,7 +3,7 @@
 助手 import 自 sim/test_sim_backend.py〔已登记超限拆分债文件,禁追加,只
 import 复用不改;先例 = 本目录 test_env_deploy_lock_sim_chain.py〕)。
 
-测试面依据 = T-45 敌后破坏设计稿(原件已退役;§ 号 = 原稿节序)§1 条 6 + §2.3 + §4 锁 7(限 sim 端,
+测试面依据 = T-45 敌后破坏原稿锁面(§ 号 = 原稿节序)§1 条 6 + §2.3 + §4 锁 7(限 sim 端,
 attack-v2 S1):sim 蓝海追加获得敌后破坏 → 状态副本掷骰二次入链
 (cw_sim_backend._on_invest_picked 原语复用)→ 删除分支自动触发一次——
 词缀名单长度 -1、来源 logic_rand;HP 词缀回调同步重算(write_prior,

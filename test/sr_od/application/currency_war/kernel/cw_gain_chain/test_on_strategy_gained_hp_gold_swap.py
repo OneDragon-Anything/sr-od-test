@@ -3,7 +3,7 @@ on_strategy_gained economy 交换分支 + cw_investments.SQUAD_HP_CAP;按
 被测方法拆目录规范落位,先例 = 同目录 test_gain_invest_strategy_pick_
 grant.py)。
 
-测试面依据 = 设计稿(原件已退役) 设计稿(原件已退役) §4 锁 1-4(已退役评审稿(§ 号 = 原稿节序)§五.④ 同面):
+测试面依据 = 原稿锁面 §4 锁 1-4(原稿评审锁(§ 号 = 原稿节序)§五.④ 同面):
 - 注册行锁(锁 1):STRATEGY_ECONOMY['不等价交换'].hp_gold_swap is True,
   防注册漂移;
 - 交换行为锁(锁 2):持卡获得 → hp == min(gold_old, SQUAD_HP_CAP) ∧

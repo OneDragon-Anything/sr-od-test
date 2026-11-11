@@ -3,7 +3,7 @@ on_strategy_gained 延迟道具支线;按拆目录规范落位,环境道同构�
 同目录 test_on_env_gained.py 延迟段,完胜回退半边 =
 kernel/cw_env_grants/test_check_env_item_open_perfect.py 策略道段)。
 
-测试面依据 = 设计稿(原件已退役) 设计稿(原件已退役;§ 号 = 原稿节序)§五④ 锁 2/6/7/8(写状态副本发放域键域扩展首例 = 策略道;卡面原文:
+测试面依据 = 原稿锁面(§ 号 = 原稿节序)§五④ 锁 2/6/7/8(写状态副本发放域键域扩展首例 = 策略道;卡面原文:
 「获得【火花】和一个【火花礼盒】，倒计时10个节点后礼盒打开,……战斗
 完胜时,额外减少1点倒计时。」):
 
@@ -74,7 +74,7 @@ def _record_writes(gs: GameState,
 
 
 def test_strategy_delayed_leg_enqueues_zero_seat_write(monkeypatch) -> None:
-    """到手分支入队(已退役评审稿(§ 号 = 原稿节序)§五④ 锁 2):选偶像经济 → 队列 =
+    """到手分支入队(原稿评审锁(§ 号 = 原稿节序)§五④ 锁 2):选偶像经济 → 队列 =
     (('火花礼盒', (2,4)),)((1,3) 步进 10)+ 效果串 item_open_scheduled:
     火花礼盒@2-4 + done 含 (偶像经济, delayed_open_accel);**零席位写**
     ——字段写操作恰两笔:队列(rand 通道,链收尾)+ done(logic 直写,登记
@@ -124,7 +124,7 @@ def test_strategy_delayed_leg_modified_schedule_and_terminal_hold() -> None:
 
 
 def test_strategy_delayed_leg_repeat_gain_two_entries_scope_once() -> None:
-    """重复获得(已退役评审稿(§ 号 = 原稿节序)§五④ 锁 6):结构性可达的重复获得 → 队列
+    """重复获得(原稿评审锁(§ 号 = 原稿节序)§五④ 锁 6):结构性可达的重复获得 → 队列
     两条独立条目(弹除/回退各自独立),done 加速键幂等只写一次。"""
     gs = _make_gs_node_pos((1, 3))
     on_strategy_gained(gs, _CARD, rand=False, sig=_LSIG)
@@ -136,7 +136,7 @@ def test_strategy_delayed_leg_repeat_gain_two_entries_scope_once() -> None:
 
 
 def test_char_grant_leg_stays_family_level_gap(monkeypatch) -> None:
-    """效果条目① 送卡缺口维持锁(已退役评审稿(§ 号 = 原稿节序)§五④ 锁 7,族级定论 = T-267
+    """效果条目① 送卡缺口维持锁(原稿评审锁(§ 号 = 原稿节序)§五④ 锁 7,族级定论 = T-267
     §1.7-4/T-272):选偶像经济前后 bench/overflow 逐位不变——火花
     不入席 = sim 状态副本写端缺口申报的行为面锁定,防实现批顺手建送卡效果体
     (本文件锁 2 的独立面:锁 2 锁「礼盒效果条目零席位写」,本锁锁「角色效果条目
@@ -169,7 +169,7 @@ def test_unregistered_strategy_quiet(monkeypatch) -> None:
 
 
 def test_snapshot_round_trip_with_strategy_entry() -> None:
-    """快照存续(已退役评审稿(§ 号 = 原稿节序)§五④ 锁 8 策略道半边):含策略道条目的
+    """快照存续(原稿评审锁(§ 号 = 原稿节序)§五④ 锁 8 策略道半边):含策略道条目的
     队列快照 restore 往返逐位相等(条目形状 (件名, NodePos) 件名无域限,
     两族条目同构同往返)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (

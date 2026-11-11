@@ -1,6 +1,6 @@
 """升级连锁值回调宿主锁(kernel 直驱;镜像 src cw_levelup_callbacks.py)。
 
-设计唯一源 = 设计稿(原件已退役) 设计稿(原件已退役) §5 锁面
+设计唯一源 = 原稿锁面 §5 锁面
 (任意源跨级触发/单触发/live 观察零回调/连跳/满帽/守卫/逐源覆盖)。驱动
 形态 = 裸状态容器直构 + 端口桩(install_sim_backend 桩对象 + rng 提供槽显式
 注入——调度器只问 ``sim_backend_installed``,真后端行为锁归 sim 链测试

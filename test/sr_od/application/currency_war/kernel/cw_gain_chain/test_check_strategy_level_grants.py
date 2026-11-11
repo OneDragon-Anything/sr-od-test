@@ -1,7 +1,7 @@
 """策略卡到级发放决策函数测试(镜像 src = kernel/cw_gain_chain.py 的
 check_strategy_level_grants 纯决策本体 + LEVEL_GRANT_PRODUCER 署名)。
 
-测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 3/4/9
+测试面依据 = 原稿锁面(§ 号 = 原稿节序)§4 锁 3/4/9
 (实现批修正:直构前置态判定依据 = kernel/cw_economy.py XP_TO_NEXT_LEVEL
 单一源,8 级直构可得):
 - 短路矩阵(锁 9):未持卡 / 表外卡(STRATEGY_ECONOMY 已登记但无到级字段)/

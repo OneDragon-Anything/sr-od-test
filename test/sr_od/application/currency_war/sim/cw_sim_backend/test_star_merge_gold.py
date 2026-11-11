@@ -3,7 +3,7 @@ buy_card.py 合并发火段调用点;kernel 发放函数单元面 + 获得链集
 kernel/cw_gain_chain/test_check_strategy_star_merge_gold.py,本文件锁
 buy 域调用点经真实上报函数的 sim 状态副本落地面)。
 
-测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 2 + 已退役评审稿(§ 号 = 原稿节序)§四 ④:
+测试面依据 = 原稿锁面(§ 号 = 原稿节序)§4 锁 2 + 原稿评审锁(§ 号 = 原稿节序)§四 ④:
 
 - 主锁:sim 局预种持卡 + 席面 2★×2 → 买入同名第 3 只(2★)→ gold +5
   (观察笔恰一笔,evidence = sim:engine:strategy_star_merge_gold:1,

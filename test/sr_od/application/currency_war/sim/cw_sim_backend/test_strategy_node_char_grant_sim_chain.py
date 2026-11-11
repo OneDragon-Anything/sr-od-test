@@ -4,8 +4,8 @@ sim 门控绑定写;kernel 原语单元面 =
 kernel/cw_gain_chain/test_check_strategy_node_char_grants.py,本文件锁
 sim 窗口接入调用与状态副本里的值落地面)。
 
-测试面依据 = 设计稿(原件已退役) designs/
-设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 2(sim 状态副本形)/锁 5(补给后)/
+测试面依据 = 原稿锁面 designs/
+原稿锁面(§ 号 = 原稿节序)§4 锁 2(sim 状态副本形)/锁 5(补给后)/
 锁 6(幂等):
 
 - 获得时点(sim 装配)= 采样即状态副本里的值:固定 rng → 备战 +1 名 2★ ∈

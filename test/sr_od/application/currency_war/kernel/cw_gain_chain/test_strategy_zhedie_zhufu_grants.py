@@ -4,8 +4,8 @@ cw_gain_effects.py PICK_INVEST_EFFECTS '折叠小刀祝福' 行:具名装备一�
 落位——test_gain_chain.py 超线冻结禁追加,新锁落新镜像,先例 = 同目录
 test_strategy_xingyun_zhufu_grants.py 幸运星祝福)。
 
-测试面依据 = 设计稿(原件已退役)T-232 对应稿
-§4 锁 3(已退役评审稿 无需用户决定 7/7;卡面官方原文「获得1个【折叠小刀】」;
+测试面依据 = 原稿锁面
+§4 锁 3(原稿评审锁 无需用户决定 7/7;卡面官方原文「获得1个【折叠小刀】」;
 rand=False 策略卡侧具名效果条目通道归属;祝福面 = UNIT_BUFF 零响应登记):
 
 - 行为链真值:确定入口 → equips 恰 +1 折叠小刀、步串

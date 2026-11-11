@@ -3,8 +3,8 @@
 cw_gain_chain/test_check_strategy_boss_end_heal.py,本文件锁 sim 结算效果条目
 接入调用与状态副本里的值落地面)。
 
-测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 3/4/5/6/7
-(已退役评审稿 无需用户决定 6/6;驱动与断言形态先例 = 同目录
+测试面依据 = 原稿锁面(§ 号 = 原稿节序)§4 锁 3/4/5/6/7
+(原稿评审锁 无需用户决定 6/6;驱动与断言形态先例 = 同目录
 test_strategy_boss_battle_grant_sim_chain.py,跨位面驱动先例 =
 test_p3_win_terminal._drive_step 的位面过渡分派支):
 

@@ -3,7 +3,7 @@ _on_node_advance / _on_node_advance_terminal 双点接入调用段;kernel 检查
 单元面 = kernel/cw_gain_chain/test_check_strategy_level_equip_grants.py,
 本文件锁 sim 接入调用、宝钻状态副本联动与休眠数值边界)。
 
-测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 3/7/8/9:
+测试面依据 = 原稿锁面(§ 号 = 原稿节序)§4 锁 3/7/8/9:
 - 推进点跨级发放主链(锁 2 sim 面):直构 level=8 + xp 贴阈,推经跨 9 →
   equips logic 写 + 一次性标志位写一笔(producer strategy_level_equip_grant,logic 族
   sim:strategy)+ 发放拍 = 经验入账后;一次性标志位后续推进零再写(锁 3);

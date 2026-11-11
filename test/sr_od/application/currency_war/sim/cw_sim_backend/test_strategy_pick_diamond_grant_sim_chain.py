@@ -3,7 +3,7 @@ _on_invest_picked 宝钻效果条目 + 呈现一次性标志位 _strategy_pick_d
 效果体单元面 = cw_gain_chain/test_gain_invest_strategy_diamond_pair_reg.py,
 本文件锁 sim 接入调用、状态副本三域联动与防重放)。
 
-测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 3/4
+测试面依据 = 原稿锁面(§ 号 = 原稿节序)§4 锁 3/4
 + 用户裁定 2026-11-02 读法 B(裁定册 PENDING-DECISIONS.md):
 - 拿卡状态副本联动主链(锁 3 正面):选卡落地 → 效果条目1 效果体宝钻入栏 → 拿卡效果条目
   调 on_diamond_acquired → diamond_count +1 / deploy_cap = level + 财富
@@ -14,7 +14,7 @@ _on_invest_picked 宝钻效果条目 + 呈现一次性标志位 _strategy_pick_d
   判据,T-141 到级效果条目 placed 门同构)→ 宝钻效果条目拒落 + 回调零发 → 三写零发
   (防 back_layout/diamond_count 伪 +1);sim 种子初始值 equips=[] 下门恒
   开,本锁以状态容器替身构造拒落形态(门系形态级卫生面)。
-控制规模扩展(设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 5,拿卡触发第二卡
+控制规模扩展(原稿锁面(§ 号 = 原稿节序)§4 锁 5,拿卡触发第二卡
 随批归一同支):拿卡 → 宝钻入栏 + 状态副本三写同构(无佩佩效果条目,单位数零变);
 发放落地门负验同构。驱动形态复用声明:引擎驱动助手 import 自同目录
 test_p3_win_terminal.py(已登记先例,禁追加只 import);_backend/_pick

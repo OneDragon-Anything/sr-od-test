@@ -3,7 +3,7 @@ kernel/cw_screen_report/plane_intel.py 的 report_screen_plane_intel_obs;
 按 src 镜像规范落位——存量平铺 test_screen_report_ports.py 保留现役分支
 回归,本文件只辖 T-45 新增分支)。
 
-测试面依据 = T-45 敌后破坏设计稿(原件已退役;§ 号 = 原稿节序)§2.2 接入调用 3 + §4 锁 3(attack-v2
+测试面依据 = T-45 敌后破坏原稿锁面(§ 号 = 原稿节序)§2.2 接入调用 3 + §4 锁 3(attack-v2
 S3/C3 扩):词缀写门三分支的**随机态支**——
 - 随机态状态容器 + 非空读数 → observe 覆盖转正、差异落 logic_rand_outcome、
   等值零台账(被覆盖对象是猜测不是真值,「空表覆写抹掉已有真值」的

@@ -2,7 +2,7 @@
 的 check_strategy_bond_tier_grants + kernel/cw_game_state.py 的
 strategy_bond_tier_fired 一次性标志位域)。
 
-测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 3/4/5
+测试面依据 = 原稿锁面(§ 号 = 原稿节序)§4 锁 3/4/5
 (构造 = 状态容器直置直调检查效果条目;计数判据单一源 = cw_system_cards.
 _faction_count 双源 max——board 状态容器(左面板真值口径,含 L2 星徽装备
 贡献)× board_by_row 身份聚合(仅 factions+flows),直构按断言面向单侧

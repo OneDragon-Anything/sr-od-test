@@ -4,8 +4,8 @@ check_strategy_bench_leave_gold 的 sim 调用点状态副本写;kernel 原语�
 kernel/cw_gain_chain/test_check_strategy_bench_leave_gold.py,本文件锁
 sim 窗口接入调用与状态副本里的值落地面)。
 
-测试面依据 = 设计稿(原件已退役) designs/
-设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 3 + 已退役评审稿(§ 号 = 原稿节序)§四④:
+测试面依据 = 原稿锁面 designs/
+原稿锁面(§ 号 = 原稿节序)§4 锁 3 + 原稿评审锁(§ 号 = 原稿节序)§四④:
 - sim 状态副本锁(锁 3):持卡 + 席内 1星花火/火花局节点窗推进 → 金 observe
   独立笔 = Σ计划金币(2+4=6)+ evidence 含逐单位明细 + sig 组
   'sim:strategy';匹配槽置空(卖备战席角色置 empty 同形);

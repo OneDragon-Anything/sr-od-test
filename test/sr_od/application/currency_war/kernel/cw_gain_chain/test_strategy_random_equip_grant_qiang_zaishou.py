@@ -5,8 +5,8 @@ cw_gain_effects.py 的泛化随机装备表 ``_STRATEGY_RANDOM_EQUIP_GRANTS``
 test_gain_chain.py 超线冻结禁追加,新锁落新镜像,先例 = 同目录
 test_strategy_random_equip_grant_gongsi_junhuo_yin.py 公司军火更新·银)。
 
-测试面依据 = 设计稿(原件已退役)
-设计稿(原件已退役)§4 锁 1(骑 T-136 锁形,行身份锁):
+测试面依据 = 原稿锁面
+原稿锁面§4 锁 1(骑 T-136 锁形,行身份锁):
 - 固定 rng 注入链发放真值(选卡落地拍:equips 恰 +1、名 ∈ 简易池派生集
   且 = 采样值、效果串恰 1 条 ``strategy_random_equip:<名>``——锁成员
   关系不锁池计数)/equips 未观察拒落跳写形态;

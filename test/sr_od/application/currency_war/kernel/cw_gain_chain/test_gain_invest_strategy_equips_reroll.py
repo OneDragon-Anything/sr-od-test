@@ -5,8 +5,8 @@ equips_reroll 字段与 EQUIPS_REROLL_SAME_QUALITY 词表;按被测方法拆目�
 同目录 test_gain_invest_strategy_* 镜像文件;锁形承同族先例公司人才流动
 102101 登记形态两锁)。
 
-测试面依据 = 设计稿(原件已退役)
-设计稿(原件已退役)§4 锁 2/锁 3:
+测试面依据 = 原稿锁面
+原稿锁面§4 锁 2/锁 3:
 - 变异效果条目登记形态(session 选入 → 账本条目四元组 + payload 词表值 +
   duties.track 置位;锁登记形态与词表值,防裸串漂移与载体误配);
 - 三桥 no-op 负断言哨(限定当前 spec 形态 = NODE_ENTER / WHILE_HELD /

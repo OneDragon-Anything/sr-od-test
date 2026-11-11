@@ -1,7 +1,7 @@
 """羁绊档位条件发放判据测试(T-41 特邀专家:加拉赫击破档分支;镜像 src =
 kernel/cw_faction_callbacks.py)。
 
-被测面 = 设计稿(原件已退役) §4.2 判据矩阵(经生产写路径 write_logic(deployed)
+被测面 = 原稿锁面 §4.2 判据矩阵(经生产写路径 write_logic(deployed)
 → 值回调级联驱动,防假绿;判定语义单一源 = ``check_env_bond_tier_
 grants``,发放原语 = ``cw_env_grants.grant_env_bond_tier``):
 - 无环境 / 环境非加拉赫 → 零写零 done;

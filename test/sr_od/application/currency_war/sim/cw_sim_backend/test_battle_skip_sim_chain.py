@@ -3,8 +3,8 @@ _skip_battle 消费效果条目 + advance 分派 battle_skip 分支 + visible �
 子态;声明构造面 = kernel/cw_action_report/start_battle.py,其对照锁落
 kernel/test_world_decl.py)。
 
-测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 2/3/4/5 +
-已退役评审稿(§ 号 = 原稿节序)§5 特别核查①(镜像现值 _on_node_advance 记账段——跳过拍 =
+测试面依据 = 原稿锁面(§ 号 = 原稿节序)§4 锁 2/3/4/5 +
+原稿评审锁(§ 号 = 原稿节序)§5 特别核查①(镜像现值 _on_node_advance 记账段——跳过拍 =
 跨级事件拍,到级金/装备二效果条目随批镜像):
 - 分派键集锁(锁 2)= kernel/test_world_decl.py 集内断言 + 集外
   ValueError 既有锁,本文件不重复;
@@ -16,7 +16,7 @@ kernel/test_world_decl.py)。
   又到 battle_resolve、后到 node_advance 三形全空转;
 - visible 子态锁(锁 5):reward 节点出辖域出战恒 True;battle 持卡
   余量>0 出战 False/跳过 True(备战/开商店两屏);用尽移除后出战恢复;
-- 跨级到级金/装备效果条目镜像锁(已退役评审稿 特别核查①增补):skip 跨级 →
+- 跨级到级金/装备效果条目镜像锁(原稿评审锁 特别核查①增补):skip 跨级 →
   成长基金金币效果条目双通道写 / 钻石商人装备效果条目直写 + 宝钻状态副本联动,发放拍 =
   经验入账后。
 
@@ -337,7 +337,7 @@ def test_visible_button_substitute_states(monkeypatch:
 
 def test_skip_cross_level_gold_grant_mirror(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """跳过拍跨级到级金币效果条目镜像锁(已退役评审稿 特别核查①):直构 level=8
+    """跳过拍跨级到级金币效果条目镜像锁(原稿评审锁 特别核查①):直构 level=8
     + xp 贴阈(8→9 门槛 72)持成长基金,skip 跨 9 → 金币效果条目双通道写
     (gold observe 独立笔 + done 一次性标志位 logic 笔),发放拍 = 被跳节点经验
     入账之后。"""

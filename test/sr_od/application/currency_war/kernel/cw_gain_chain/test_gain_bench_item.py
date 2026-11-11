@@ -3,8 +3,7 @@
 同 src 兄弟测试 = kernel/test_gain_chain.py〔已登记超限文件,只读复用不追加;
 三落位回归 = 其 test_gain_bench_item_three_landings〕)。
 
-测试面依据 = 迭代 T-39 专家研讨会设计(已退役账本
-effects-calc/设计稿(原件已退役;判据 = 本文件锁面申报))§2.4 + §4 锁 3/锁 5 占位
+测试面依据 = 原稿锁面 effects-calc/本文件锁面申报)§2.4 + §4 锁 3/锁 5 占位
 半边:
 - 落席 kind 直查:映射外道具名直调公开口 → KeyError 响亮(构造式 =
   ``BENCH_ITEM_KINDS[item]`` 直查非 .get,键缺 = 代码 bug,禁静默兜底);

@@ -2,7 +2,7 @@
 gain_invest_strategy 登记分支 × kernel/cw_investments.py 的
 STRATEGY_EFFECTS 星变条目;战力类零响应族第 15 条)。
 
-测试面依据 = 设计稿(原件已退役) 设计稿(原件已退役;判据 = 本文件锁面申报)
+测试面依据 = 原稿锁面 本文件锁面申报
 (定稿)§4 锁 2。构造沿现役获得链测试先例(cw_gain_chain/
 test_gain_invest_strategy_level_reg.py 同款 helpers 副本,债文件禁追加)。
 """

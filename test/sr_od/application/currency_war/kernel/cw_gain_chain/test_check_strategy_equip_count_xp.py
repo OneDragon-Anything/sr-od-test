@@ -2,7 +2,7 @@
 check_strategy_equip_count_xp 纯判定 + sim/cw_sim_backend.py 节点窗调用点
 唯一调用口;先例 = 同目录 test_check_strategy_empty_equip_xp.py)。
 
-测试面依据 = 设计稿(原件已退役) 设计稿(原件已退役)(定稿,REVIEW 无需用户决定 9/9)§4 锁 4(卡面官方原文:「每拥有一件
+测试面依据 = 原稿锁面(定稿,REVIEW 无需用户决定 9/9)§4 锁 4(卡面官方原文:「每拥有一件
 【白昼装备】以及其原型装备，在进入新节点时就获得1点经验。」):
 
 - 名集闭集锁:DAYLIGHT_EQUIP_XP_NAME_SET == 注册表 category 白昼全集

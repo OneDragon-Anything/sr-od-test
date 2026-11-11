@@ -4,7 +4,7 @@ on_strategy_gained 效果体分支消费 cw_gain_effects.PICK_INVEST_EFFECTS
 test_gain_chain.py 超线冻结禁追加,先例 = 同目录 test_strategy_* 链锁
 文件)。
 
-测试面依据 = 设计稿(原件已退役) 设计稿(原件已退役)(定稿)§4 锁 2/锁 4/锁 5(已退役评审稿(§ 号 = 原稿节序)§5④):
+测试面依据 = 原稿锁面(定稿)§4 锁 2/锁 4/锁 5(原稿评审锁(§ 号 = 原稿节序)§5④):
 - 锁 2 效果条目1 行为:效果串恰 1 条 named_equip_grant:物质分解液(placed=True)
   (零后果链承 EQUIP_ACQUIRE_CONSEQUENCES 三键零本卡)+ gs.equips 新增
   物质分解液恰 1 件(rand=False 确定发放,gain-chain.md §5 卡文无随机词);

@@ -1,7 +1,7 @@
 """策略卡首领节点完成固定集发放检查效果条目测试(镜像 src = kernel/
 cw_gain_chain.py 的 check_strategy_boss_completion_grants)。
 
-测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 3 + §2.2/
+测试面依据 = 原稿锁面(§ 号 = 原稿节序)§4 锁 3 + §2.2/
 §5-7(直构形态先例 = 同目录 test_check_strategy_boss_battle_grants.py
 的状态容器直置,禁经战斗链假绿):
 - 条件矩阵短路:node_kind 非 boss → 零写;未持卡/表外卡 → 零写零一次性标志位;

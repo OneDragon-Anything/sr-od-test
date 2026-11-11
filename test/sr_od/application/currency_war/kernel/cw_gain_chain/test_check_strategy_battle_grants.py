@@ -1,7 +1,7 @@
 """策略卡战后触发发放检查效果条目测试(镜像 src = kernel/cw_gain_chain.py 的
 check_strategy_battle_grants)。
 
-测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 6(条件矩阵
+测试面依据 = 原稿锁面(§ 号 = 原稿节序)§4 锁 6(条件矩阵
 短路序直构;直构形态先例 = 同目录 test_check_strategy_conditional_grants.py
 的状态容器直置):
 - node_kind 非 encounter → 空(节点类型条件短路);

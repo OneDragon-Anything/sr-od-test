@@ -1,5 +1,5 @@
 """cw_investments 随机赠卡家族载体测试(RandomCharSpec / random_char_pool /
-构建校验;设计稿(原件已退役) T- 人才引进起,随批续建)。
+构建校验;原稿锁面 T- 人才引进起,随批续建)。
 
 校验治理口径 = 用户裁定 2026-10-28:防登记笔误的值域/互斥类 import 校验
 全部移除且不再新增(判据 = 只能由写表人笔误触发 vs 能被游戏版本变更独立
@@ -487,7 +487,7 @@ def test_interest_contract_coexists_with_gifts_table() -> None:
 
 
 def test_dot_contract_not_in_any_conditional_grant_table() -> None:
-    """五表反向锁(设计稿(原件已退役) §4.2):持续伤害契约 ∈ ENV_GIFTS(
+    """五表反向锁(原稿锁面 §4.2):持续伤害契约 ∈ ENV_GIFTS(
     chars_immediate = 椒丘/卡芙卡 + chars_conditional 首元 = 黑天鹅,辖
     估值域档位)且**不入五张写状态副本发放条件登记表**——本卡建模形状 =
     猜测写+证实(计数源无状态副本里的值生产点),非条件检查型;误补登记 =
@@ -507,8 +507,8 @@ def test_dot_contract_not_in_any_conditional_grant_table() -> None:
 
 
 # ============================================================ 晶矿开启触发发放登记表
-# (T-29 战技点契约,设计 = 设计稿(原件已退役) designs/
-# 设计稿(原件已退役) §2.1 + §4 锁 1;注入 + 直调沿本文件校验测试
+# (T-29 战技点契约,设计 = 原稿锁面 designs/
+# 原稿锁面 §2.1 + §4 锁 1;注入 + 直调沿本文件校验测试
 # 惯用法——import 期调用,重触 = 直调校验函数。)
 
 _ORIG_ORE_OPEN = dict(cw_investments.ENV_ORE_OPEN_GRANTS)
@@ -551,8 +551,8 @@ def test_env_ore_open_grants_current_entry_and_coexistence() -> None:
 
 
 # ============================================================ 同战共现触发发放登记表
-# (T-30 星核猎手契约,设计 = 设计稿(原件已退役) designs/
-# 设计稿(原件已退役) §2.1 + §4 锁 1;注入 + 直调沿本文件校验测试
+# (T-30 星核猎手契约,设计 = 原稿锁面 designs/
+# 原稿锁面 §2.1 + §4 锁 1;注入 + 直调沿本文件校验测试
 # 惯用法。)
 
 _ORIG_BATTLE = dict(cw_investments.ENV_BATTLE_GRANTS)
@@ -1163,8 +1163,8 @@ def test_mingyun_shengbei_invite_registry_surface() -> None:
 
 
 # ============================================================ 环境「随机赠卡+上场锁」登记表
-# (T-33 英雄登场,设计 = 设计稿(原件已退役) designs/
-# 设计稿(原件已退役) §2.1 + §4 锁 1;注入 + 直调沿本文件校验测试
+# (T-33 英雄登场,设计 = 原稿锁面 designs/
+# 原稿锁面 §2.1 + §4 锁 1;注入 + 直调沿本文件校验测试
 # 惯用法。)
 
 _ORIG_DEPLOY_LOCK = dict(cw_investments.ENV_DEPLOY_LOCK_GRANTS)
@@ -1240,7 +1240,7 @@ def test_env_deploy_lock_grants_current_entry_and_coexistence() -> None:
 
 # ============================================================ 环境「战利品区
 # 倒计时件+节点倒计时开盒」登记表(T-34 命运礼物,设计 = 迭代
-# 2026-09-23-invest-effects-calc 设计稿(原件已退役;§ 号 = 原稿节序)§2.1 +
+# 2026-09-23-invest-effects-calc 原稿锁面(§ 号 = 原稿节序)§2.1 +
 # §4 锁 1/锁 10 词表半边;注入 + 直调沿 deploy_lock 校验测试惯用法。)
 
 _ORIG_DELAYED = dict(cw_investments.ENV_DELAYED_ITEM_GRANTS)

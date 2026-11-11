@@ -10,11 +10,11 @@
   CwActionCollectOreParam 状态容器逻辑态(载荷坐标精确摘除/陈旧提案零写/
   空读零目标);
 - **奖励附着生成与声明通道**(;
-  详设 details/ore-reward-channel.md §1-§5):生成函数声明金先占席、
+  详设 原稿锁面 §1-§5):生成函数声明金先占席、
   注册表构建校验、容差配对轨迹继承(≤12px 零重掷)、生成集与步序写行、
   入队电平与过期清理、种子与快照恢复类型不变;
 - **点矿随机态兑现**(logic-rand-sampling 3.2 → ore-reward-attach 3.2;
-  详设 details/ore-click-consume.md §1/§4):采样器支撑集、附着命中
+  详设 原稿锁面 §1/§4):采样器支撑集、附着命中
   零掷骰写序、角色分支 3合1 连锁、席满即止、缺项兜底、None 边界。
 
 (sim 接入调用测试 = 后端侧测试 test_sim_backend.py;观察收尾等值静默/
@@ -85,7 +85,7 @@ _SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep')
 _LOGIC_SIG = ChannelSig(family='logic_action', actor='CwScreenPrep')
 _COLLECT_SIG = ChannelSig(family='logic_action', actor='CwScreenPrep',
                           group_id='g1')
-# live 挂接写 sig 形态(设计稿(原件已退役):logic_hook 族,group_id 'prep:ore-channel')
+# live 挂接写 sig 形态(原稿锁面:logic_hook 族,group_id 'prep:ore-channel')
 _SIG_HOOK = ChannelSig(family='logic_hook', actor='CwScreenPrep',
                        group_id='prep:ore-channel')
 

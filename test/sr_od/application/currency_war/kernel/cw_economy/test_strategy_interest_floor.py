@@ -2,8 +2,8 @@
 strategy_interest_floor + round_start_income interest_floor 参;宿主文件
 test_economy.py 超限冻结,按被测函数拆目录新文件落位)。
 
-测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 1/锁 2 +
-已退役评审稿(§ 号 = 原稿节序)§3.3 裁决点默认案(1 顶满/6 层序 max(息, floor)+flat):
+测试面依据 = 原稿锁面(§ 号 = 原稿节序)§4 锁 1/锁 2 +
+原稿评审锁(§ 号 = 原稿节序)§3.3 裁决点默认案(1 顶满/6 层序 max(息, floor)+flat):
 - 锁 1 检查函数四态 + 并持:持卡∧未花费 → resolved 帽(聚合取宽,
   开源节流+利息上调 → 10/买断制+开源节流 → 9,对表
   test_cap_override_link.test_multi_hold_takes_widest 并持语义);

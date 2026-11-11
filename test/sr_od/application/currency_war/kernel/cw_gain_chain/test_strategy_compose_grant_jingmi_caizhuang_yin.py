@@ -3,8 +3,8 @@
 落位——test_gain_chain.py 超线冻结禁追加,新增测试落新镜像,先例 = 同目录
 姊妹组合卡镜像文件 test_strategy_compose_grant_maicai_plus.py)。
 
-测试面依据 = 设计稿(原件已退役)
-设计稿(原件已退役)§4 锁 2 + 已退役评审稿 六裁决点默认案:
+测试面依据 = 原稿锁面
+原稿锁面§4 锁 2 + 原稿评审锁 六裁决点默认案:
 - 组合登记 = ``PICK_INVEST_EFFECTS['精密拆装·银'] = _compose_grant_legs(
   _make_named_equip_grant_effect('精密拆装扳手', 1), _make_random_equip_effect(
   '简易', 1))``(条目序 = 卡文语序具名效果条目先/随机效果条目后;效果条目参数登记行单次出现,

@@ -655,7 +655,7 @@ def test_wish_act_dispatches_strategy_param_env_op_only(
 def test_planner_act_decides_leg_and_dispatch_terminal(
         test_context, monkeypatch) -> None:
     """决策动作 node 测试(银狼策划,即时上报
-    equip-immediate-report 设计稿(原件已退役)):零参决策 → 分支类型判定单源
+    equip-immediate-report 原稿锁面):零参决策 → 分支类型判定单源
     ``classify_planner_branch`` → env 携分支类型载荷 → 选卡确认链派发即
     ``round_success`` 终结(零重入裁决轮、零证据一次性标志位存证——效果分支在动作 op
     确认点击后即时上报)。

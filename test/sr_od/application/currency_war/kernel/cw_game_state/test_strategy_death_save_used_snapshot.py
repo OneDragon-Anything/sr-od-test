@@ -2,7 +2,7 @@
 Field/schema 独立键/种子 + kernel/cw_projection_audit.py 的
 strategy_death_save_used 审计行)。
 
-测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§2.2 配套义务 +
+测试面依据 = 原稿锁面(§ 号 = 原稿节序)§2.2 配套义务 +
 §4 锁 8(字段完备性;先例 = 同目录 test_strategy_conditional_done_
 snapshot.py):
 - 种子分诊 = B 类(None = 未判定系设计语义,开局不种——种 False 会把

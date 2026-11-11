@@ -5,7 +5,7 @@ kernel/cw_gain_chain/test_check_strategy_equip_count_xp.py,本文件锁
 sim 窗口接入调用与状态副本里的值落地面;先例 = 同目录
 test_strategy_bench_count_xp_sim_chain.py)。
 
-测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 + §2.1(卡面官方原文:「每拥有一件【白昼装备】以及
+测试面依据 = 原稿锁面(§ 号 = 原稿节序)§4 + §2.1(卡面官方原文:「每拥有一件【白昼装备】以及
 其原型装备，在进入新节点时就获得1点经验。」):
 
 - sim 状态副本锁:持卡 + 白昼系持有局节点窗推进 → gs.xp/gs.level 按

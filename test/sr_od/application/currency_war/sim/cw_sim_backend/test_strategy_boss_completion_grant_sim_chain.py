@@ -3,8 +3,8 @@ sim/cw_sim_backend.py 的 _resolve_battle 首领完成效果条目;kernel 触发
 单元面 = kernel/cw_gain_chain/test_check_strategy_boss_completion_
 grants.py,本文件锁 sim 结算效果条目接入调用与状态副本里的值落地面)。
 
-测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 4/5/6 +
-已退役评审稿(驱动与断言形态先例 = 同目录 test_strategy_boss_battle_
+测试面依据 = 原稿锁面(§ 号 = 原稿节序)§4 锁 4/5/6 +
+原稿评审锁(驱动与断言形态先例 = 同目录 test_strategy_boss_battle_
 grant_sim_chain.py):
 - 持卡局 P1 首领节点(P1 序列现值末位)战斗结算后 equips 恰 +8(简易池
   注册表序全集)+ ``strategy_boss_completion#<卡名>`` 前缀 evidence 笔

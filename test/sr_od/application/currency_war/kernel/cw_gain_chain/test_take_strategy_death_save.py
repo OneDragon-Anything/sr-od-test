@@ -1,7 +1,7 @@
 """策略卡死亡救援触发检查效果条目测试(镜像 src = kernel/cw_gain_chain.py 的
 take_strategy_death_save)。
 
-测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 2/6 + 用户裁定
+测试面依据 = 原稿锁面(§ 号 = 原稿节序)§4 锁 2/6 + 用户裁定
 2026-11-04(一次性 + M-B 独立叠加 + R1 奖励随救援发放;直构形态先例 =
 同目录 test_check_strategy_hp_loss_grants.py):
 - 五态矩阵:①未持卡零写;②持卡 ∧ 一次性标志位 ∈ {None, False}(未用,两值均

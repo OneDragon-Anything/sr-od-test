@@ -2,7 +2,7 @@
 gain_invest_strategy 登记分支 × kernel/cw_investments.py 的
 STRATEGY_EFFECTS 榜样的力量·银条目;战力类零响应族标记式单体选择卡)。
 
-测试面依据 = 设计稿(原件已退役) 设计稿(原件已退役)(定稿)§4 锁 2。构造沿现役获得链测试先例
+测试面依据 = 原稿锁面(定稿)§4 锁 2。构造沿现役获得链测试先例
 (cw_gain_chain/test_gain_invest_strategy_jiceng_gongxian_reg.py
 同款 helpers 副本,债文件禁追加)。
 """

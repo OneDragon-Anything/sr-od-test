@@ -3,8 +3,8 @@ _on_invest_picked 已损血衍生金落地效果条目 + 呈现一次性标志�
 单元面 = kernel/cw_gain_chain/test_check_strategy_hp_loss_gold.py,本文件
 锁 sim 选卡落地效果条目接入调用与状态副本里的值落地面)。
 
-测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 4
-(已退役评审稿 无需用户决定 7/7;驱动与断言形态先例 = 同目录
+测试面依据 = 原稿锁面(§ 号 = 原稿节序)§4 锁 4
+(原稿评审锁 无需用户决定 7/7;驱动与断言形态先例 = 同目录
 test_strategy_pick_hp.py):
 - 持卡发放真值:直构损血后选卡落地 → 金笔存在且 amount == max(0,
   opening−hp),独立 evidence 笔 ``strategy:hp_loss_gold``,sig = obs 族

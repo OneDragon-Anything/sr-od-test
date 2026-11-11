@@ -103,7 +103,7 @@ def rows_sink() -> _RowSink:
 
 
 def test_leg_classifier_equip_domain_first_and_longest_match() -> None:
-    """分支类型分类测试(设计稿(原件已退役)①):装备域优先——破解芯片卡文含「弱化」
+    """分支类型分类测试(原稿锁面①):装备域优先——破解芯片卡文含「弱化」
     仍判 equip(决策关键词碰撞治理);longest-match;相似归一;多命中
     = equip+未解析;关键词降级;unknown。"""
     # 破解芯片 = 名字 + 含「弱化」效果文 → 装备域识别标志先行(碰撞治理;
@@ -154,7 +154,7 @@ def test_decide_planner_weaken_tier_retired(rows_sink: _RowSink) -> None:
 
 def test_equip_leg_gain_with_consequence_chain(
         rows_sink: _RowSink) -> None:
-    """装备入账分支(设计稿(原件已退役)②/§2.2):入栏 + 获得后果链(分身墨镜送 1★银狼
+    """装备入账分支(原稿锁面②/§2.2):入栏 + 获得后果链(分身墨镜送 1★银狼
     进备战席,与 2× 既有 1★ 银狼合成升星——效果同商店购买)。"""
     gs = _make_gs(bench=[('银狼', 1), ('银狼', 1)], equips=['幸运星'])
     from sr_od.application.currency_war.kernel.cw_action_report.pick_planner import (
@@ -213,7 +213,7 @@ def test_unknown_leg_evidenced_zero_write(
 
 def test_planner_report_is_immediate_single_phase(
         rows_sink: _RowSink) -> None:
-    """单相即时上报测试(设计稿(原件已退役)):确认点击后一次上报即应用效果分支
+    """单相即时上报测试(原稿锁面):确认点击后一次上报即应用效果分支
     (2★ 源即消费)——无发射相零写窗、无落地证据一次性标志位(两相已退役)。"""
     from sr_od.application.currency_war.kernel.cw_action_report.pick_planner import (
         report_action_pick_planner_param,
@@ -273,7 +273,7 @@ def test_registry_norm_multi_hit_refuses() -> None:
 
 
 def test_hacker_mod_pool_v0_no_max() -> None:
-    """采样链 v0 池形状测试(设计稿(原件已退役)):硬编码名单 = 4 费装备排除 Max 件
+    """采样链 v0 池形状测试(原稿锁面):硬编码名单 = 4 费装备排除 Max 件
     的显式第二真相源——成员恒 5(专属 10 件的非 Max 件),零 Max 件,种子
     可复现(同种子同序列)。"""
     from sr_od.application.currency_war.data.cw_equipment_wear_rules_data import (

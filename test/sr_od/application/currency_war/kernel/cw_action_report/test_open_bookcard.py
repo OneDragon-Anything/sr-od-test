@@ -3,8 +3,7 @@ kernel/cw_action_report/open_bookcard.py;同 src 语义兄弟测试 =
 operations/test_overlay.py S6 登记/声明段与 test_world_decl.py 行 6 出口
 〔只读复用,本文件只锁 kind 正确性门〕)。
 
-测试面依据 = 迭代 T-39 专家研讨会设计(已退役账本
-effects-calc/设计稿(原件已退役;判据 = 本文件锁面申报))§1 事实面 + §4 锁 4
+测试面依据 = 原稿锁面 effects-calc/本文件锁面申报)§1 事实面 + §4 锁 4
 (kernel 半):bookcard 槽上报 applied=True + 槽腾空 + expert_invite 登记
 (登记 = 弹窗出现事实,呈现/分发归外循环);反例 = supply_box 身份槽 →
 applied=False bookcard_slot_missing 零写零登记(kind 正确性 = 开启链前置,

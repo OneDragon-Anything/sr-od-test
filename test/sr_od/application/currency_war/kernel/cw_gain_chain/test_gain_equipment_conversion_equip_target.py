@@ -4,8 +4,8 @@ equip_gain_conversion_target 公开预测面;按被测方法拆目录规范落�
 test_gain_chain.py 已登记超限冻结禁追加,新锁落新镜像;bench 分支先例 =
 同目录 test_gain_equipment_conversion.py 模式卡自由市场)。
 
-测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 1/2/3/5 +
-已退役评审稿(§ 号 = 原稿节序)§4③ 裁决点默认案(转换载体 A = 专表 + 装备目标分支解锁):
+测试面依据 = 原稿锁面(§ 号 = 原稿节序)§4 锁 1/2/3/5 +
+原稿评审锁(§ 号 = 原稿节序)§4③ 裁决点默认案(转换载体 A = 专表 + 装备目标分支解锁):
 - 锁 1 转换主锁:持卡 + gain_equipment(进阶件, rand=False)→ 进阶件
   不入栏、转换产物 '好运令牌' 入栏(名字替换落原插入路径)、detail 含
   converted 标记;on_equipment_gained 以令牌分派零后果(令牌 ∉

@@ -4,8 +4,8 @@ check_strategy_bench_count_xp 的 sim 调用点状态副本写;kernel 原语单�
 kernel/cw_gain_chain/test_check_strategy_bench_count_xp.py,本文件锁
 sim 窗口接入调用与状态副本里的值落地面)。
 
-测试面依据 = 设计稿(原件已退役) designs/
-设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 3/4/5 + 已退役评审稿(§ 号 = 原稿节序)§四④:
+测试面依据 = 原稿锁面 designs/
+原稿锁面(§ 号 = 原稿节序)§4 锁 3/4/5 + 原稿评审锁(§ 号 = 原稿节序)§四④:
 - sim 状态副本锁(锁 3):持卡 + 席内单位 ≤4 局节点窗推进 → gs.xp/gs.level
   按 xp_apply_amount 结转(含跨级结转算例),evidence ``xp:bench_count``
   独立笔 + sig 组 'sim:xp' 断言;席 >4 零写;未持卡零写;

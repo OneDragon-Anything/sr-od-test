@@ -7,7 +7,7 @@
 test_strategy_named_equip_grant.py,count=2 同物形先例 = 小复制
 test_strategy_named_equip_grant_xiaofuzhi.py,按被测方法拆目录规范落位)。
 
-测试面依据 = 设计稿(原件已退役) 设计稿(原件已退役;判据 = 本文件锁面申报)
+测试面依据 = 原稿锁面 本文件锁面申报
 (定稿)§4 锁 1/锁 2/锁 3:
 - 效果条目2 = 登记行直书 ``_make_named_equip_grant_effect('好运令牌', 2)``,具名
   确定发放 ``gain_equipment(rand=False)`` 循环 2 次逐件一条入栏,效果串恰

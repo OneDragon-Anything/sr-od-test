@@ -3,7 +3,7 @@ _on_node_advance / _on_node_advance_terminal 双点接入调用段;kernel 决策
 单元面 = kernel/cw_gain_chain/test_check_strategy_level_grants.py,本文件
 锁 sim 接入调用与状态副本里的值落地面)。
 
-测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 1/2/3/6/7/
+测试面依据 = 原稿锁面(§ 号 = 原稿节序)§4 锁 1/2/3/6/7/
 8/10(实现批修正:锁 8 文字面 = 现役 NODE_XP_BY_TYPE × PLANE_NODE_TABLES
 (含 P3)常量下完整 P1+P2+P3 持卡局全程零发放,经验写源 = 节点经验 ×
 选卡即时效果条目两源,上界 96 < 门槛 194 封顶 7 级):

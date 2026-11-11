@@ -3,7 +3,7 @@
 kernel/cw_gain_chain/test_check_strategy_boss_clear_gold.py,本文件锁
 sim 结算效果条目接入调用与状态副本里的值落地面)。
 
-测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 3/锁 4(驱动与
+测试面依据 = 原稿锁面(§ 号 = 原稿节序)§4 锁 3/锁 4(驱动与
 断言形态先例 = 同目录 test_strategy_boss_completion_grant_sim_chain.py
 / test_strategy_win_gold_sim_chain.py):
 - 首个 won boss(「通关下一个首领节点」)→ 金笔恰一笔(obs 族

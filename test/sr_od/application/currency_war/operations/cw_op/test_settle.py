@@ -2,7 +2,7 @@
 
 五部分(结算屏一个域的各承担面):
 
-- **确认动作 op 流程测试**(``CwOpSettleConfirm``;正本已退役 判据面,
+- **确认动作 op 流程测试**(``CwOpSettleConfirm``;原稿节序 判据面,
   去证据门形态 2026-09-21 用户裁定)。判据 ↔ 测试对照:
   结算帧 → op → 点击即上报(logic 态恰一档)→ 按钮离场交回宿主 →
   ``test_click_reports_once_and_returns``;死点击(结算屏恒在)→ 重复
@@ -552,7 +552,7 @@ def test_settle_gold_reader_gate_takes_last(monkeypatch) -> None:
 
 
 def test_hp_direct_read_after_anchor_retirement():
-    """hp 直读对照(正本已退役 判据:门简化为 gs.hp 直读,结算覆盖写端
+    """hp 直读对照(原稿节序 判据:门简化为 gs.hp 直读,结算覆盖写端
     在场场景)。标记退役后 decision_hp = gs.hp 直读——
     ①结算覆盖写端写入 → 读口立即反映(「结算即写」时序保持);
     ②标记字段不再影响读口(旧标记在场与否零差异 = 单一源成立);

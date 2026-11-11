@@ -1,6 +1,6 @@
 """货币战争 OpenTome 动作 op 单帧测试(状态容器槽位直点形态)。
 
-形态依据 = 设计稿(原件已退役)§2.5(机械链 =
+形态依据 = 原稿锁面§2.5(机械链 =
 参数校验 → 槽号解析 → 建档坐标直查 → mouse_move+click → 自上报 →
 round_success;op 对画面零识别,识别读门随批拆除):slot = 画面物理槽
 1 基,None = op 内按 game state 状态容器现算首件槽(与决策层 mandate_v1
@@ -9,7 +9,7 @@ entry 消耗品臂 / 上报层 open_tome 同型现算,双出口守卫断言 = gs
 点典籍槽一次即弹星徽四选一(原双击序列第二击有误触风险;实机核凭据 =
 待实机局 journal)。
 
-测试面(设计稿(原件已退役) 测试条):slot 显式/None 现算两态 → 建档坐标点击 +
+测试面(原稿锁面 测试条):slot 显式/None 现算两态 → 建档坐标点击 +
 自上报腾席 + star_tome 登记 + success;slot 越界 AssertionError;None
 现算双出口各一条 AssertionError;sim 形态 = 机械分支旁路静默成功 +
 自上报状态容器推进(典籍上报无转移声明,零 advance 喂入)。
@@ -115,7 +115,7 @@ def _run(test_context, op):
 
 def test_explicit_slot_single_clicks_bench_center_and_reports(
         test_context, monkeypatch):
-    """slot 显式(设计稿(原件已退役)):恰一次单击落备战栏-N 中心(单击化,无
+    """slot 显式(原稿锁面):恰一次单击落备战栏-N 中心(单击化,无
     第二击)→ 自上报腾席 + star_tome 登记 → success。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         game_state_of,
@@ -141,7 +141,7 @@ def test_explicit_slot_single_clicks_bench_center_and_reports(
 
 def test_none_slot_resolves_first_tome_and_rebuilds_param(
         test_context, monkeypatch):
-    """slot=None 现算(设计稿(原件已退役)§2.5):gs 状态容器现算首件槽(与决策层
+    """slot=None 现算(原稿锁面§2.5):gs 状态容器现算首件槽(与决策层
     同源同规则,下标+1)→ resolved slot 重建 param(入参对象不改写,
     journal/上报显示显式槽号)→ 点击落现算槽、上报按显式槽腾席。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
@@ -166,7 +166,7 @@ def test_none_slot_resolves_first_tome_and_rebuilds_param(
 
 
 def test_slot_out_of_range_guard_loud_zero_click(test_context, monkeypatch):
-    """slot 越界(设计稿(原件已退役) 校验落点契约):守卫断言响亮暴露零点击
+    """slot 越界(原稿锁面 校验落点契约):守卫断言响亮暴露零点击
     (参数违法由 op 自判,不产生任何机械 IO)。"""
     env = _tome_env(StrategySession(), monkeypatch)
     op = _make_op(test_context, env, CwActionOpenTomeParam(slot=10))
@@ -178,7 +178,7 @@ def test_slot_out_of_range_guard_loud_zero_click(test_context, monkeypatch):
 
 def test_none_slot_double_exit_guards_loud_zero_click(
         test_context, monkeypatch):
-    """None 现算双出口守卫(设计稿(原件已退役) 各一条 AssertionError):gs 为
+    """None 现算双出口守卫(原稿锁面 各一条 AssertionError):gs 为
     None / 状态容器无该 kind 首件槽,均响亮暴露零点击(与越界同款,零防御
     哲学:现算不出槽 = 决策数据缺席,不做兜底识别)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
@@ -208,7 +208,7 @@ def test_none_slot_double_exit_guards_loud_zero_click(
 
 
 def test_sim_form_bypasses_io_and_still_reports(test_context, monkeypatch):
-    """sim 形态(设计稿(原件已退役)):机械分支旁路静默成功(零点击零移动),
+    """sim 形态(原稿锁面):机械分支旁路静默成功(零点击零移动),
     自上报照走(腾席 + star_tome 登记);典籍上报无转移声明 → 后端零
     advance 喂入。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (

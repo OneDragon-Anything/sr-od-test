@@ -7,8 +7,8 @@ qiongyu_zhuanjia_qingque.py〔advisor+具名授予联立〕与武装突入
 test_strategy_wuzhuang.py〔多箱逐件〕、精密拆装·银 test_strategy_compose_
 grant_jingmi_caizhuang_yin.py〔扳手效果条目门表轻断言〕)。
 
-测试面依据 = 设计稿(原件已退役)
-设计稿(原件已退役)§4 锁面(卡面官方原文:
+测试面依据 = 原稿锁面
+原稿锁面§4 锁面(卡面官方原文:
 「获得专家顾问【停云】，并使其在本局游戏中加入商店。并获得4个【简易武装箱】、
 【精密拆装扳手】和10金币。」——四效果条目:顾问解锁效果条目 = 登记面 advisor=True 获得
 链自动;箱×4 = 登记面 items_immediate 四元素元组 + 镜像表同名行;扳手×1 =

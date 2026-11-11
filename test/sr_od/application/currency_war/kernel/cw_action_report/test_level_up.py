@@ -4,7 +4,7 @@ cw_investments/test_strategy_kongzhi_guimo_entry.py,解析/聚合锁 =
 kernel/test_economy.py,宝钻联动锁 = sim/cw_sim_backend/test_strategy_
 pick_diamond_grant_sim_chain.py,本文件只锁行为面)。
 
-测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 3:
+测试面依据 = 原稿锁面(§ 号 = 原稿节序)§4 锁 3:
 - 直构 gs(level=7 持控制规模)→ 满级门 applied=False reason='level_cap'
   零写 + 推进算子两件零推进(持卡状态副本等级轴 7 封顶);
 - 无卡对照同参推进成功(跨 7 级断言——帽缺省 = MAX_PLAYER_LEVEL,

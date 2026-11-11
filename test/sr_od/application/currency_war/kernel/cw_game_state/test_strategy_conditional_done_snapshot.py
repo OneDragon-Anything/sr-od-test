@@ -2,7 +2,7 @@
 Field/schema 独立键/种子/rebuild 登记 + kernel/cw_projection_audit.py 的
 strategy_conditional_done 审计行)。
 
-测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 6/7:
+测试面依据 = 原稿锁面(§ 号 = 原稿节序)§4 锁 6/7:
 - 快照存续:一次性标志位值进快照 → restore 往返逐位相等(tuple-of-str 不漂移为
   list——rebuild 登记在位为前提,未登记域恢复面 = 静默类型漂移);
 - 每局全新创建种子初始值 = ()(A 类,同 env_grants_done 种子族);

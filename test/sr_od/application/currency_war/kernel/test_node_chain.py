@@ -4,7 +4,7 @@
 语义权威版本 = game_state/chain-observation.md §2/§3/§6(载体与两链字段、
 过渡屏基线/离场快照、备战屏现行链写、零内建回落);节点行归位判据 =
 商店刷新终结判据迭代「备战入口 heavy 观察触发槽序表/台账写」;晶矿奖励
-通道挂接 = ore-reward-channel 设计稿(原件已退役)§5。
+通道挂接 = 原稿锁面§5。
 
 本文件按写端分三节,全部零读屏零真实 IO(模块级构造函数参数注入 /
 harness run_node):
@@ -226,7 +226,7 @@ def test_derived_node_type_regression_write_dropped_with_event():
     """类型直定倒退免疫测试(规则三同簇):目标序 < 镜像序 → 丢弃留证
     不写(镜像比派生目标鲜活,直定旧节点 = 把新节点回写旧键);镜像值
     保持,arbitrate obs_event 在案。走 BOSS 简报直定路径(类型直定迁移后
-    的专属屏直定写端,设计稿(原件已退役),目标 = hist)。"""
+    的专属屏直定写端,原稿锁面,目标 = hist)。"""
     session = SimpleNamespace()
     gs = game_state_of(session)
     gs.observe(gs.node, NodeKey(plane=1, round_num=3, kind='reward'),

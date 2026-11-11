@@ -1,6 +1,6 @@
 """cw_ore_channel 镜像测试:惊喜盒板件观察写入口(giftbox_sight)。
 
-锁面 = 迭代设计 已退役账本
+锁面 = 原稿锁面
 giftbox-piece-obs.md §4.2(上报语义矩阵)+ §4.3(零纠偏核心裁定锁)。
 晶矿侧(report_spheres_observed / check_ore_declared_level)锁面住
 test_ore.py(存量机制主题文件),本文件不重复。

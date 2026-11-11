@@ -1,6 +1,6 @@
 """统一节点改写注册表解析层 · 测试面(cw_node_schedule)。
 
-设计依据 = invest-effects-calc 迭代 设计稿(原件已退役;§ 号 = 原稿节序)§9(用户裁定 2026-10-15:统一机制设计 + 位面 3 真值入码);知识权威版本 =
+设计依据 = invest-effects-calc 原稿锁面(§ 号 = 原稿节序)§9(用户裁定 2026-10-15:统一机制设计 + 位面 3 真值入码);知识权威版本 =
 docs/game/currency_war/research/plane_schedule_observed.md「裁定记录
 (用户,2026-10-15)」。测试面地图:
 

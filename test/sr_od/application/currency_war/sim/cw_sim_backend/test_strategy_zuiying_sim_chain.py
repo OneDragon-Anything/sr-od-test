@@ -2,7 +2,7 @@
 _resolve_battle 败局 hp 效果条目与 streak 转移 keep_on_loss 形参;kernel 聚合
 helper 注册面 = kernel/cw_investments/test_strategy_zuiying_registry.py)。
 
-测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 1/锁 2/锁 5:
+测试面依据 = 原稿锁面(§ 号 = 原稿节序)§4 锁 1/锁 2/锁 5:
 - 锁 1 转移纯函数:keep_on_loss 形参辖域 = 战斗类与扑满帧两败局分支,
   仅带符号正值维持(读法 B:「原来的连胜数」字面辖域 = 连胜计数,零/
   连败无连胜数可维持;desc 未写负值分支 = 判读申报制);胜局/奖励/补给

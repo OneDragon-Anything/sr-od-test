@@ -90,7 +90,7 @@ def test_tiered_bench_read_wires_summon_hook(monkeypatch):
 
 
 # ============================================================ 惊喜盒板件观察
-# 锁面 = 迭代设计 已退役账本
+# 锁面 = 原稿锁面
 # giftbox-piece-obs.md §4.1(检测纯函数三 fixtures)。fixtures = 真实截图
 # 纪律:reward_giftbox_phantom(⏳12 唯一取证帧,真值 (12,) 人工确认)/
 # reward_spheres_8(晶矿球同区无盒)/ reward_panel_empty(空面板)。
@@ -145,7 +145,7 @@ def test_giftbox_badge_reading_confusion_repair() -> None:
 
 
 # ============================================================ 占席道具带名观察写端
-# (设计稿(原件已退役) T- 专家研讨会设计 §2.5/§2.7 +
+# (原稿锁面 T- 专家研讨会设计 §2.5/§2.7 +
 # §4 锁 9/10。fixture = 真实截图纪律:银灰箱在备战栏 3 号槽实拍帧〔源 =
 # .debug/currency_war/evidence/20260912_t15_t13_t18/ 拖卖留证帧,
 # webp 无损入库,真值人工确认:3 号槽 = 简易武装箱带开启钮,1/2 号槽 =

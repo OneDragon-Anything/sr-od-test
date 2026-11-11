@@ -1,6 +1,6 @@
 """羁绊优先级结构(faction_reqs)迁移恒等测试。
 
-迭代 设计稿(原件已退役)(details/faction-priority.md §7):
+原稿锁面(原稿锁面 §7):
 迁移前在旧代码上生成期望快照(fixtures/gen_faction_snapshots.py →
 faction_migration_snapshots.json),迁移后本文件重建同构板面逐位断言——
 除变化①②(副档投资分/轮廓计数,按新语义单列断言)外全部恒等。

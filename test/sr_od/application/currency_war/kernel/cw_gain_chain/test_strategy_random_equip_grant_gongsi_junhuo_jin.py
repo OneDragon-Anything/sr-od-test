@@ -5,8 +5,8 @@ cw_gain_effects.py 的泛化随机装备表 ``_STRATEGY_RANDOM_EQUIP_GRANTS``
 test_gain_chain.py 超线冻结禁追加,新锁落新镜像,先例 = 同目录
 test_strategy_random_equip_grant_gongsi_junhuo_yin.py 银卡(count=1))。
 
-测试面依据 = 设计稿(原件已退役)T-236 对应稿
-§4(已退役评审稿 无需用户决定 9/9;卡面官方原文:「获得2件随机简易装备」;count=2
+测试面依据 = 原稿锁面
+§4(原稿评审锁 无需用户决定 9/9;卡面官方原文:「获得2件随机简易装备」;count=2
 放回抽 = T-167 先例直引——同 rng 两次采样可重复同名;变异效果条目不属本文件
 辖域,登记形态 = 同目录 test_gain_invest_strategy_equips_reroll.py):
 

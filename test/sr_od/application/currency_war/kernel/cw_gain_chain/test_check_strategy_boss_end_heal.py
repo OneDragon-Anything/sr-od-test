@@ -1,7 +1,7 @@
 """策略卡首领战结束回血检查效果条目测试(镜像 src = kernel/cw_gain_chain.py
 的 check_strategy_boss_end_heal)。
 
-测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 2(REVIEW
+测试面依据 = 原稿锁面(§ 号 = 原稿节序)§4 锁 2(REVIEW
 -T313 无需用户决定 6/6;直构形态先例 = 同目录 test_check_strategy_boss_battle_
 grants.py 的状态容器直置):
 - 纯函数锁:无卡 0 / 持卡 50 / 多卡累加(持无回血效果条目的他卡不合量误加)

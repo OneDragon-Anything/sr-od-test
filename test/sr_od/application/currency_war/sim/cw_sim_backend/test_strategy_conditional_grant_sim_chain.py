@@ -2,7 +2,7 @@
 经 sim 节点推进;§2.4 申报 sim 零新增接入调用——tick 实机(live)和模拟器(sim)两边同链,sim 状态容器现值
 = 状态副本里的值)。
 
-测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 8:
+测试面依据 = 原稿锁面(§ 号 = 原稿节序)§4 锁 8:
 持卡 + 状态容器直置齐 8 同名 → 推进节点(kernel advance_node_effective 尾段
 tick,sim/live 同链零 sim 私有接入调用)→ sim equips 尾追完美投影仪 + 一次性标志位在
 (strategy_conditional_done)。

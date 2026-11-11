@@ -3,8 +3,8 @@ sim 后端全链;按流程级测试落位本目录,引擎驱动助手 import 自
 sim/test_sim_backend.py〔已登记超限拆分债文件,禁追加,只 import 复用不改;
 先例 = 本目录 test_resolve_battle.py〕)。
 
-测试面依据 = T-33 英雄登场设计(已退役账本
-invest-effects-calc/设计稿(原件已退役;判据 = 本文件锁面申报))§2.3/§2.5 +
+测试面依据 = 原稿锁面
+invest-effects-calc/本文件锁面申报)§2.3/§2.5 +
 §4 锁 2/8/12:
 - **开局面**:播种 invest_env_opts 选英雄登场 → bench = 5 张(M01 开局
   4 张 1★ + 1 张随机 2★5 费赠卡;开局费用形状无 5 费件,2★ = 赠卡),

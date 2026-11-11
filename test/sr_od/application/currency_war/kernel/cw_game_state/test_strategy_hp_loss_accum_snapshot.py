@@ -2,7 +2,7 @@
 Field/schema 独立键/种子/rebuild 登记 + kernel/cw_projection_audit.py 的
 strategy_hp_loss_accum 审计行)。
 
-测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 8 + §2.2(种子
+测试面依据 = 原稿锁面(§ 号 = 原稿节序)§4 锁 8 + §2.2(种子
 分诊 A 类:0 = 无累积语义中性,种 0 不伪装已触发):
 - 快照存续:累积值进快照 → restore 往返逐位相等(int 保型直通免
   rebuild 登记——_json_safe 对 int 无漂移,env_grant_uid_seq 同款);

@@ -755,7 +755,7 @@ def test_env_gift_random_leg_anchored_rand_channel(
 
 
 # ============================================================ 开局替换清席支
-# (replaces_opening_supply;设计稿(原件已退役) T- 人才储备)
+# (replaces_opening_supply;原稿锁面 T- 人才储备)
 
 
 class _FixedSeqRng:
@@ -2645,7 +2645,7 @@ def test_sell_swap_transfer_v2_contract(
 
 # ============================================================ 即时装备通道
 # (环境确定性具名装备发放:equips_immediate 装备入账分支 + items_immediate
-# 开箱分支;设计稿(原件已退役) T- 红钻贵族)
+# 开箱分支;原稿锁面 T- 红钻贵族)
 
 
 def test_env_gift_equip_leg_card_text_order(rows_sink: _RowSink) -> None:

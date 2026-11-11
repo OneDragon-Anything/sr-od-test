@@ -2,8 +2,8 @@
 check_strategy_node_rewrite 纯决策函数 + 改写词分派 + kernel/cw_game_state.py
 的 strategy_conditional_done 纯卡名一次性标志位读面)。
 
-测试面依据 = 设计稿(原件已退役)
-设计稿(原件已退役) §4 锁 2/3/4(已退役评审稿(§ 号 = 原稿节序)§五④):
+测试面依据 = 原稿锁面
+原稿锁面 §4 锁 2/3/4(原稿评审锁(§ 号 = 原稿节序)§五④):
 
 - 锁 2 真值表:持卡 ∧ 当前槽 kind=='battle' ∧ gold≥180 → 改写形(当前位
   与 boss 位保留,其余槽位 → reward);gold<180 → None;未持卡 → None;

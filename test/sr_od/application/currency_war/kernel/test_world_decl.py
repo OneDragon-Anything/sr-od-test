@@ -2,7 +2,7 @@
 表 #1-#18 逐动作声明对照)。
 
 钉住设计约定(动作后果声明化迭代总纲  契约 1/2/3/5 + 详设
-details/world-decl.md §1/§2/§3/§7;3.1 = 声明基建骨架,行为对照测试随
+原稿锁面 §1/§2/§3/§7;3.1 = 声明基建骨架,行为对照测试随
 3.2/3.3 按 §2 对照表增量填充):
 - WorldDecl 形状测试(冻结 dataclass;字段序 = next_screen 在前,位置
   构造契约);
@@ -237,7 +237,7 @@ def test_node_advance_decl_normalizes_both_triggers():
 
 
 def test_node_advance_decl_next_screen_derivation_table():
-    """表 #1/#2 next_screen 推导规则测试(设计稿(原件已退役) 推导规则逐分支):
+    """表 #1/#2 next_screen 推导规则测试(原稿锁面 推导规则逐分支):
     桩 gs 锚定节点键 → 上报推进 → 新键按「无后继局终事件式 → 位面切换
     优先 → 节点窗呈现屏(弹窗型节点 = 节点模态/battle-reward = 商店档/
     1-1 = 备战档)」断言单值(权威源 = kernel 节点日程真值表

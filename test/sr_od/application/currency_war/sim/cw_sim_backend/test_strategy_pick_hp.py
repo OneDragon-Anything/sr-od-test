@@ -2,7 +2,7 @@
 apply_strategy_pick_hp helper + _on_invest_picked 落地效果条目 + 呈现一次性标志位 +
 披露键 strategy_pick_instant_legs hp 族扩面)。
 
-测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§2.1/§4 三锁:
+测试面依据 = 原稿锁面(§ 号 = 原稿节序)§2.1/§4 三锁:
 - 持卡发放真值(锁 1):offer 落地 advance 后 hp 恰 +30,独立 evidence
   笔 ``hp:strategy_pick:健康充值``(与开局 ``opening``/战斗
   ``battle:hp`` 笔分账),hp_trail 同步恰追加(落卡前/后/下一战斗三读),
@@ -11,7 +11,7 @@ apply_strategy_pick_hp helper + _on_invest_picked 落地效果条目 + 呈现一
   一次性标志位锁同形,轨迹亦不再追加);
 - 无卡局零扰动(锁 3):opts 含本卡但不落卡(选另一张)→ 落地交集空 →
   零 ``hp:strategy_pick`` 笔、hp 零增量(名单推导负例,防误发)。
-T-144 先亏后盈随批扩面(设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 3/5/8
+T-144 先亏后盈随批扩面(原稿锁面(§ 号 = 原稿节序)§4 锁 3/5/8
 + 扩调用点漂移增量锁):负值支 delta 断言形 / 不 clip 下界直构与败局
 floor 分支 / 持保险局选卡损血扩调用点入累计器 / 双持独立笔互不聚合。
 

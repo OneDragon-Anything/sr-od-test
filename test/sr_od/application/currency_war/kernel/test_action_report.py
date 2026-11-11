@@ -290,7 +290,7 @@ def rows_sink() -> _RowSink:
 
 def test_furnace_equip_merged_single_rand_write(rows_sink: _RowSink) -> None:
     """炉·拖装备:单笔 write_logic_rand 合并写——消耗移除(工具 ∧ 目标件)
-    与采样替换同笔(write_seq 推进恰 1),禁拆两笔(设计稿(原件已退役))。"""
+    与采样替换同笔(write_seq 推进恰 1),禁拆两笔(原稿锁面)。"""
     gs = _make_gs(equips=['冶金炉', '轮滑鞋'])
     seq0 = gs.write_seq
     pool = [n for n in EQUIPMENTS
@@ -311,7 +311,7 @@ def test_furnace_char_branchs_equips_rand_and_row_logic(
         rows_sink: _RowSink) -> None:
     """炉·拖角色:①equips 单笔 rand 合并写(移除工具 ∧ 移除穿戴 ∧ 追加各
     采样替换);②目标角色行域 write_logic(穿戴清空);两条分支各落一行
-    (设计稿(原件已退役) rand/logic 分面)。"""
+    (原稿锁面 rand/logic 分面)。"""
     gs = _make_gs(front=[Unit(char_id='丙', star=1,
                               equips=['轮滑鞋', '幸运星'])],
                   equips=['冶金炉', '折叠小刀'])
@@ -429,7 +429,7 @@ def test_furnace_equip_branch_target_out_of_scope_fail_closed(
 def test_privilege_equip_merged_single_logic_write(
         rows_sink: _RowSink) -> None:
     """特权卡·库存分支:单笔 write_logic 合并写 = 移除工具 ∧ 目标件名 →
-    privilege_counterpart 替换同笔(设计稿(原件已退役);禁拆两笔)。"""
+    privilege_counterpart 替换同笔(原稿锁面;禁拆两笔)。"""
     gs = _make_gs(equips=['特权赋予卡', '反重力皮靴', '幸运星'])
     seq0 = gs.write_seq
     out = report_action_privilege_card_use_param(
@@ -463,7 +463,7 @@ def test_privilege_char_leg_fail_closed(rows_sink: _RowSink) -> None:
 
 def test_wrench_returns_worn_and_consumes_tool(rows_sink: _RowSink) -> None:
     """扳手:两笔 write_logic——①equips 合并(移除工具 ∧ 追加全部穿戴件);
-    ②行域穿戴清空(设计稿(原件已退役);归属迁移非获得)。"""
+    ②行域穿戴清空(原稿锁面;归属迁移非获得)。"""
     gs = _make_gs(front=[Unit(char_id='丙', star=1,
                               equips=['轮滑鞋', '幸运星'])],
                   equips=['拆装扳手'])
@@ -550,7 +550,7 @@ def test_perfect_projector_no_gate_walks_chain(monkeypatch,
 
 def test_lucky_token_zero_write_not_admitted(rows_sink: _RowSink) -> None:
     """好运令牌:零写 + 留证行(kind=tool_token_not_admitted 注记;发射位
-    永不准入,写端随 R9 判据批,设计稿(原件已退役))。"""
+    永不准入,写端随 R9 判据批,原稿锁面)。"""
     gs = _make_gs(front=[Unit(char_id='丙', star=1, equips=[])],
                   equips=['好运令牌'])
     seq0 = gs.write_seq
@@ -564,7 +564,7 @@ def test_lucky_token_zero_write_not_admitted(rows_sink: _RowSink) -> None:
 def test_target_unit_missing_zero_write_with_evidence(
         rows_sink: _RowSink) -> None:
     """目标单位缺失(行域未观察/漂移)= bug 面:char 模式各工具零写 +
-    留证行(kind=tool_target_unit_missing,设计稿(原件已退役);留证不停机)。"""
+    留证行(kind=tool_target_unit_missing,原稿锁面;留证不停机)。"""
     gs = _make_gs(front=[Unit(char_id='丙', star=1, equips=[])],
                   equips=['拆装扳手'])
     seq0 = gs.write_seq
@@ -592,7 +592,7 @@ def test_target_unit_missing_zero_write_with_evidence(
 
 def test_bridge_zero_write_branches_evidenced(rows_sink: _RowSink) -> None:
     """桥零写分支透传(库存未观察/无此件):统一落证行
-    (kind=tool_bridge_zero_write,detail 区分因,设计稿(原件已退役))。"""
+    (kind=tool_bridge_zero_write,detail 区分因,原稿锁面)。"""
     gs_unobserved = _make_gs()   # equips 未观察
     out = report_action_privilege_card_use_param(
         gs_unobserved, CwActionPrivilegeCardUseParam(
@@ -617,7 +617,7 @@ def test_bridge_zero_write_branches_evidenced(rows_sink: _RowSink) -> None:
 
 def test_mutate_faces_do_not_fire_gain_callbacks(monkeypatch,
                                                  rows_sink: _RowSink) -> None:
-    """变异面不走链测试(设计稿(原件已退役)):冶金炉/特权卡 = 原地替换数量不变,
+    """变异面不走链测试(原稿锁面):冶金炉/特权卡 = 原地替换数量不变,
     不触发获得回调(on_character_gained/on_equipment_gained 零调用);
     字段写操作照常发生(非零写)。"""
     char_calls: list = []
@@ -642,7 +642,7 @@ def test_mutate_faces_do_not_fire_gain_callbacks(monkeypatch,
 
 
 def test_equip_write_sides_report_form_final_values() -> None:
-    """EQUIP_WRITE_SIDES 新词表校验测试:工具七行逐行终值(设计稿(原件已退役))
+    """EQUIP_WRITE_SIDES 新词表校验测试:工具七行逐行终值(原稿锁面)
     + 校验器通过(report: 第五形目标须在 tool_use 已登记,import 即炸面
     的直调复验)。"""
     assert EQUIP_WRITE_SIDES['冶金炉'] == \
@@ -1036,7 +1036,7 @@ def test_on_step_sees_post_step_state() -> None:
 def test_on_step_dual_domain_level_fires_once() -> None:
     """载体在场上的一级合并(bench 素材 + deployed 载体同级变更):
     on_step 恰 1 次,两域列表在回调时均已落定——调用侧按受影响域
-    各落一行(设计稿(原件已退役) #1 写入契约)。"""
+    各落一行(原稿锁面 #1 写入契约)。"""
     bench = [_char(1, 1)]
     deployed = [Unit(char_id='阿格莱雅', star=1),
                 Unit(char_id='阿格莱雅', star=1)]

@@ -3,8 +3,8 @@ sim/cw_sim_backend.py 的 _resolve_battle 首领战后效果条目;kernel 触发
 单元面 = kernel/cw_gain_chain/test_check_strategy_boss_battle_grants.py,
 本文件锁 sim 结算效果条目接入调用与状态副本里的值落地面)。
 
-测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 2/3/4/5/6/9
-+ 已退役评审稿(驱动与断言形态先例 = 同目录 test_strategy_encounter_
+测试面依据 = 原稿锁面(§ 号 = 原稿节序)§4 锁 2/3/4/5/6/9
++ 原稿评审锁(驱动与断言形态先例 = 同目录 test_strategy_encounter_
 battle_grant_sim_chain.py / test_strategy_hp_loss_sim_chain.py):
 - 持卡局 boss 节点(P1 序列现值末位)战斗结算后 equips 恰 +1 +
   ``strategy_boss_battle#<卡名>`` 前缀 evidence 笔(sig 组
@@ -63,7 +63,7 @@ from sr_od.application.currency_war.sim.cw_sim_backend import (
 )
 
 _CARD = '枪在手'
-#: T-167 展开卡参数化扩名(设计稿(原件已退役;§ 号 = 原稿节序)§4 锁 2
+#: T-167 展开卡参数化扩名(原稿锁面(§ 号 = 原稿节序)§4 锁 2
 #: +1 名;战后效果条目与模式卡逐字同句,端到端行身份 = evidence 前缀分卡)。
 _CARD_PLUS = '枪在手+'
 _MOD_ENV = '人身意外险'

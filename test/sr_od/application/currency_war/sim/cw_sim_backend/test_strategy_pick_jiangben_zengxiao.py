@@ -3,7 +3,7 @@
 test_sim_sell_all_deal/test_strategy_pick_dacaiyuan 同形文件,只 import
 复用不改——先例 = test_strategy_pick_dacaiyuan.py 同构)。
 
-测试面依据 = 设计稿(原件已退役;§ 号 = 原稿节序)§2.2-2/§4
+测试面依据 = 原稿锁面(§ 号 = 原稿节序)§2.2-2/§4
 (锁 5 sim 全链主锁)+ 八裁决点默认案。sim 现状持卡局仅记名
 active_strategies(清场/退款/免购全无)= 预登记错扣面;注册后状态副本里的值
 恢复:选卡拍清场+基础公式退款,后续前 6 张买零扣金(免费闸)、uses 递减、

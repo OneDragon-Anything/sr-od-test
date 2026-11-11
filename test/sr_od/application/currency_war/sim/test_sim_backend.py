@@ -3003,7 +3003,7 @@ def test_unpresented_overlay_anchor_not_visible_on_prep() -> None:
 
 # ============================================================ 3.3 环境条件发放 sim 接入调用测试
 # (环境条件发放批(env-conditional-grants);该批详设已删,git 历史可溯:
-#  details/env-conditional-grant.md §4/§5:结算分支触发检查接入调用于 streak
+#  原稿锁面 §4/§5:结算分支触发检查接入调用于 streak
 #  observe 之后 / 触发函数两写 sig 写死单形态 = logic_sig('sim:env') /
 #  宝钻回调内构 obs 族 sig 三写 / 带钻补给零改动不采纳回调。)
 
