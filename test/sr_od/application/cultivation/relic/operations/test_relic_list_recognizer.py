@@ -141,6 +141,56 @@ def test_masked_card_detection() -> None:
     assert rec._is_masked_card(_ocr('+15', 209, 330), card) is False, '非重掷文本不误判'
 
 
+#------------------- 网格插值补卡(锚点漏采样的网格拓扑补全) -------------------#
+
+_ANCHOR_LIST_RECT = Rect(33, 175, 536, 965)
+
+
+def _anchor(text: str, col_cx: float, cy: float) -> SimpleNamespace:
+    return SimpleNamespace(data=text, rect=Rect(col_cx - 20, cy - 8, col_cx + 20, cy + 8))
+
+
+def test_grid_fill_missing_cols_in_band() -> None:
+    """行带内补列:同一行带锚点数 < 列数时,缺列按固定列先验补出(4.7 实机
+    脚部帧行1 单锚点确立行带、列1/3/4 漏锚实证)。"""
+    import sr_od.application.cultivation.relic.relic_list_recognizer as rlr
+    ocr = [
+        _anchor('+15', 99, 318),   # 行1 列1
+        _anchor('+0', 345, 318),   # 行1 列3(列2/列4 锚点漏采样)
+        _anchor('+15', 99, 466),   # 行2 列1
+        _anchor('+0', 222, 466),   # 行2 列2
+    ]
+    rects = rlr.detect_card_anchors(ocr, _ANCHOR_LIST_RECT, [99, 222, 345, 468])
+    # 行1 行带(y≈318)与行2 行带(y≈466)均应补齐全 4 列 → 8 张卡
+    assert len(rects) == 8, f'两行带 × 4 列应为 8 张卡,实际 {len(rects)}'
+    band1 = [r for r in rects if r.y2 <= 470]
+    cols1 = sorted(r.x1 for r in band1)
+    assert cols1 == [39, 162, 285, 408], f'行1 应补齐全 4 列,实际 x1={cols1}'
+
+
+def test_grid_interpolate_missing_row() -> None:
+    """行带间插行:相邻行带间距 = 2×标准行距(298)时,中间补出整行漏锚卡;
+    间距非标准行距整数倍时不乱插。"""
+    import sr_od.application.cultivation.relic.relic_list_recognizer as rlr
+    # 行带 318 → 616(间距 298 = 2×149),中间应插出 ≈467 行带
+    ocr = [
+        _anchor('+15', 99, 318), _anchor('+0', 222, 318),
+        _anchor('+15', 99, 616), _anchor('+0', 345, 616),
+    ]
+    rects = rlr.detect_card_anchors(ocr, _ANCHOR_LIST_RECT, [99, 222, 345, 468])
+    assert len(rects) == 12, f'3 行 × 4 列应为 12 张卡,实际 {len(rects)}'
+    mid_band = [r for r in rects if 380 < r.y2 < 560]
+    assert len(mid_band) == 4, f'插值行带应有 4 张卡,实际 {len(mid_band)}'
+
+    # 间距 250(非 149 整数倍,超容差)→ 不插,仅两行带 8 张
+    ocr2 = [
+        _anchor('+15', 99, 318), _anchor('+0', 222, 318),
+        _anchor('+15', 99, 568), _anchor('+0', 345, 568),
+    ]
+    rects2 = rlr.detect_card_anchors(ocr2, _ANCHOR_LIST_RECT, [99, 222, 345, 468])
+    assert len(rects2) == 8, f'异常间距不应插行,实际 {len(rects2)} 张'
+
+
 def test_pos_template_subset() -> None:
     """部位先验模板子集:pos=1 全部为头部件、pos=6 全部为连结绳(双档同名多条目),
     且为全库子集。"""
