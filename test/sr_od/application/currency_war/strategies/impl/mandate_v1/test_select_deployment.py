@@ -1,13 +1,12 @@
-"""mandate.select_deployment 单帧测试(阶段 5/6 统一部署搜索内核)。
+"""mandate.select_deployment 单帧测试(统一部署搜索内核)。
 
 被测 = ``strategies/impl/mandate_v1/mandate.py`` ``select_deployment``
-(统一部署搜索内核换接,设计单一源 = changes/2026-10-30-roster-
-plane1-union/details/unified-deploy-order.md §1/§2 + 接口契约②:
-target_board = 名 → (排, 星))与 ``entry._step5_deploy`` 的差分执行器
-消费接入调用:
+(统一部署搜索内核,设计单一源 = strategy-docs/24_deploy_segment.md
+§1.1 评分函数/§1.2 三段搜索;接口契约 = target_board = 名 → (排, 星))
+与 ``entry._step5_deploy`` 的差分执行器消费接入调用:
 
-- 目标态 = 搜索定型板面(名+排+星;窗口谓词辖新上场、场上件恒满足
-  §3.9);
+- 目标态 = 搜索定型板面(名+排+星;窗口谓词辖新上场、场上件恒满足,
+  正本 §1.2 段 0);
 - 同名升星对(场景走查「同名异星对」行):就位粒度含星 → diff 非空
   → 两步换星(低星直卖 + 高星上场,通道不停摆,D2-1);
 - 纯函数零遥测:目标态求取不写 counters(虚拟重算副本零写入红线);
@@ -184,11 +183,12 @@ def test_target_board_payload_shape() -> None:
         assert slot is None or slot >= 1, f'{name} 槽位值 {slot!r} 非法'
 
 
-# ==================== 次名分量遥测(pick-margin-telemetry design §2.1
+# ==================== 次名分量遥测(挑边差距遥测的
 # ====================  私有槽通道:出参透传 + _step5 写槽形态)====================
 
 def test_step5_writes_deploy_margin_slot_diff_forms() -> None:
-    """生产接入调用·写槽形态(design §2.1:写入点 = deploy_diff 计算后):
+    """生产接入调用·写槽形态(遥测正本 strategy-telemetry.md
+    ``deploy_margin`` 行:写入点 = deploy_diff 计算后):
     diff 非空帧 → top-2 键形三键;diff 空收敛帧 → {"diff_empty": True}
     形态(写入时点在真实出口,无第二实现)。"""
     session, st = _c_shape_session()
@@ -214,7 +214,7 @@ def test_step5_writes_deploy_margin_slot_diff_forms() -> None:
 
 
 def test_step5_no_margin_when_search_returns_empty(monkeypatch) -> None:
-    """搜索返 {} 不落键(design §2.2-3 边界值表):select_deployment
+    """搜索返 {} 不落键(遥测正本边界值表):select_deployment
     返回空 dict(容量矛盾防御路径行为)→ 收集出参为空 → 槽保持 None
     (不误落 null 形态)。"""
     session, st = _c_shape_session()

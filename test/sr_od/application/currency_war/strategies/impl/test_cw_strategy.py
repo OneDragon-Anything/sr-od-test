@@ -1,8 +1,8 @@
 """CwStrategy 捕获缝锁面(显式 14 入口闭集包裹 + in-flight 守卫 + 信封契约)。
 
 被测 = src/sr_od/application/currency_war/strategies/impl/cw_strategy.py;
-设计出处 = changes/2026-10-24-strategy-telemetry/details/capture-store.md
-§1(捕获缝)/§2(信封与槽)/§5(测试锁面)+ design.md §2(信封键闭集)。
+设计出处 = 策略遥测捕获缝设计(捕获缝 / 信封与槽 / 信封键闭集 /
+测试锁面);遥测正本 = strategy-docs/strategy-telemetry.md。
 测试零真实副作用:sink 注入用内存假闭包;落盘面由
 test_strategy_telemetry.py 以 tmp_path 根承接。
 """
@@ -263,7 +263,7 @@ def test_pure_unit_zero_file_side_effect(tmp_path) -> None:
 
 def test_legacy_signature_payload_override_degrades(
         capture_sink: list[dict]) -> None:
-    """钩子兼容形(pick-margin-telemetry design §2.1):wrapper 传
+    """钩子兼容形(词表动作字段通道):wrapper 传
     result 调钩子,第三方**旧签名覆写**(无 result 形参)收到多余实参
     TypeError → 走既有异常降级 {} 通道,决策返回值零毒化、不炸——
     基类缺省参兼容形把破坏面收窄到「载荷降级」而非「决策崩溃」。"""

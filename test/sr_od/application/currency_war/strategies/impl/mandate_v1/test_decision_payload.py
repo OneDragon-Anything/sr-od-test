@@ -3,8 +3,7 @@
 被测 = src/sr_od/application/currency_war/strategies/impl/mandate_v1/
 decision_payload.py(build_decision_payload)与 bridge.MandateV1Strategy.
 decision_payload 覆写;
-设计出处 = strategy-docs/strategy-telemetry.md(payload 键表权威版本)+
-changes/2026-10-24-strategy-telemetry/details/capture-store.md §3。
+设计出处 = strategy-docs/strategy-telemetry.md(payload 键表权威版本)。
 判据:payload 各键与 gs/state 现读直算一致;k_fallback 与
 ``cw_intention.k_empty_window_fallback`` 直调一致;锁定帧 candidates=[];
 过渡候选槽照录、member_rank 二元组与统一优先级装配同源(终局 (0, 线内
@@ -185,7 +184,7 @@ def test_payload_pure_read_no_state_mutation() -> None:
     assert state_of(gs).cw4_counters == counters_before
 
 
-# ==================== 产物透传键(pick-margin-telemetry design §2.2;
+# ==================== 产物透传键(挑边差距遥测的词表字段通道;
 # ====================  键闭集 7 = 现读 5 + 产物透传 2;window 键已随
 # ====================  entry_signals 整体退役)====================
 
@@ -203,7 +202,7 @@ def test_payload_seven_key_closed_set() -> None:
 
 
 def test_pick_margin_key_from_action_result() -> None:
-    """pick_margin = 词表动作字段透传(design §2.1):带 margin 的选卡
+    """pick_margin = 词表动作字段透传(遥测正本 pick_margin 行):带 margin 的选卡
     动作实例 → 键值原样;无该字段的动作 → None(非选卡帧不落值)。
     直调 build 传 result 与 bridge 覆写经钩子传入同源。"""
     from sr_od.application.currency_war.kernel.cw_vocab import (
@@ -229,7 +228,7 @@ def test_pick_margin_key_from_action_result() -> None:
 
 
 def test_deploy_margin_slot_read_once_and_clear() -> None:
-    """deploy_margin 私有槽帧定界(design §2.1 读后清):槽种值 →
+    """deploy_margin 私有槽帧定界(遥测正本读后清):槽种值 →
     钩子读到原值 + 读后即清(一次性消费,第二次读 = None);槽空帧
     键值 None。清槽挂 bridge 覆写,build 直调不清(模块零写纪律)。"""
     gs = cw4_gs(None, plane=1, round_num=2, node='prep')

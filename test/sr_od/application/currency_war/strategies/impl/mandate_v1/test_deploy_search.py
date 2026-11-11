@@ -1,6 +1,6 @@
 """统一部署搜索(评分制)单测(镜像 src = strategies/impl/mandate_v1/
-deploy_search.py;设计单一源 = changes/2026-10-30-roster-plane1-union/
-details/unified-deploy-order.md §1 评分函数/§2 三段搜索——场景走查表
+deploy_search.py;设计单一源 = strategy-docs/24_deploy_segment.md
+§1.1 评分函数/§1.2 三段搜索——场景走查表
 可纯面板构造的行 + 评分层结构基准)。
 
 名字表达纪律:测试想要某羁绊/偏好 = 挑注册表真实角色名。
@@ -97,7 +97,7 @@ def test_dual_key_line_keeps_leading_branch() -> None:
 
 
 def test_dp_fill_captures_multi_group_tier_mix() -> None:
-    """段 2 分组背包 DP 的跨组增益捕获(unified-deploy-order §2 段 2
+    """段 2 分组背包 DP 的跨组增益捕获(正本 §1.2 段 2
     设计基线;贪心近似的覆盖缺口反例):锁定命运圣杯线(线内件不在手 →
     空骨架),K=4,手牌 = 持续伤害 2(卡芙卡/黑天鹅,首标签持续伤害,
     档 1 需 2 人)+ 列车同行 2(三月七/姬子·启行,首标签列车同行,
@@ -120,7 +120,7 @@ def test_dp_fill_captures_multi_group_tier_mix() -> None:
 
 
 def test_l1_two_layer_named_dominance() -> None:
-    """L1 两层支配编码(required-deployed-retirement design §2.2-1):
+    """L1 两层支配编码(原 required_deployed 灭零特判的防形态,正本 §1.1):
     named 层(点名件在场率,定义件/core 统一表达式)×10⁹ 严格支配档位层
     ×10⁸——原 required 灭零的防形态「缺点名件板赢满点名件板」由层间
     域差消除(跨线同池单 argmax 的灭零等价);缺点名件板不再恒 0,
@@ -261,11 +261,11 @@ def test_bronya_side_pick_single_edge() -> None:
         f'选边后单边(贝 4 / 燃血 0),实际 {counts}'
 
 
-# ==================== 次名分量收集出参(pick-margin-telemetry
-# ====================  design §2.1/§2.2-3;纯观测,搜索行为零变)====================
+# ==================== 次名分量收集出参(挑边差距遥测的
+# ====================  私有槽通道;纯观测,搜索行为零变)====================
 
 def test_margin_out_layered_form_and_no_challenger() -> None:
-    """段 3 收集分层记法(design §2.2-3):键形 = {runner_up(挑战者
+    """段 3 收集分层记法(遥测正本 deploy_margin 键形):键形 = {runner_up(挑战者
     板签名 = 排序名列表), first_diff_layer(首异层 1-3), layer_gap};
     胜者 = 锁定线一档成型板(既有场景),挑战者(成员集与胜者不同的
     最高板)首异层 = 1(L1 层隔离的结构性质,gap > 0 不锁具体值);
@@ -294,7 +294,7 @@ def test_margin_out_layered_form_and_no_challenger() -> None:
 
 
 def test_margin_out_all_layers_tie_decided_by_tail_key() -> None:
-    """三层全同尾键决胜形态(design §2.2-3 边界值表):K=1 两张互无
+    """三层全同尾键决胜形态(遥测正本边界值表):K=1 两张互无
     羁绊的散件,两板 L1/L2/L3 全同 → first_diff_layer = 0, layer_gap
     = 0(pos/stable/rng 尾键决胜,与无挑战者 null 形态区分)。"""
     margin: dict = {}
@@ -316,11 +316,11 @@ def test_margin_out_not_written_when_search_returns_empty() -> None:
     margin: dict = {}
     out = ds.search_deploy_target(panel, margin_out=margin)
     assert out == {}, '前置:容量矛盾 → 搜索返空 dict'
-    assert margin == {}, '搜索返 {} 不落键(design §2.2-3 边界值表)'
+    assert margin == {}, '搜索返 {} 不落键(遥测正本边界值表)'
 
 
 def test_margin_out_default_none_no_collect_same_target() -> None:
-    """缺省不收集(虚拟定型调用点形态,design §2.1):不传 margin_out
+    """缺省不收集(虚拟定型调用点形态,遥测正本):不传 margin_out
     照常返回、与传入收集时同 target(收集面零行为变化;虚拟 4 调用
     点不传即零写入由缺省 None 的结构性质承载)。"""
     units = [_u('青雀'), _u('停云'), _u('藿藿'), _u('彦卿'), _u('艾丝妲')]

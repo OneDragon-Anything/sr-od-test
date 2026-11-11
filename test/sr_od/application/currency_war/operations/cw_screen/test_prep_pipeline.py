@@ -229,9 +229,9 @@ class TestStep0SelfRescue:
 
     def test_state1_deploy_free_and_window_exempt(self):
         """态 1(上阵安置,免费腾位):cap 有空位 ∧ 备战席有可上阵单位 →
-        拖上阵(载体 = 统一拖动,阶段 5/6 丁:
+        拖上阵(载体 = 统一拖动,部署统一批丁:
         态 1 专用执行路径切 CwActionMoveUnitParam,选人 = bench 扫描序
-        腾槽语义——unified-deploy-order §4 entry 备战工序部署面行 D3-4;
+        腾槽语义——部署段正本(24 号稿 §1.2/§1.4)entry 备战工序部署面;
         原告警帧豁免窗口辖域语义已随 entry_signals 退役消隐——无窗口
         约束后告警帧与常规帧同态)。"""
         sess = self._rescue_frame()
@@ -274,12 +274,12 @@ class TestStep0SelfRescue:
         assert len(sells) == 1
         assert sells[0].reason == 'self_rescue_sell'
         assert sells[0].bench_idx == 0, '价值最低散件让位,线内件置末层'
-        # 取用观测键(统一让位优先级迭代 3.5;键表 = telemetry/schema.py
-        # 键表节;键域 1..10 = 完成品保护迭代 design §2.5-7):c0/c1/c2 =
+        # 取用观测键(统一让位优先级迭代;键表 = telemetry/schema.py
+        # 键表节;键域 1..10 = 32 号稿 §3 观测键域):c0/c1/c2 =
         # 注册表外测试名(实费缺读按中费 3 保守估,非成员非羁绊)= 同键
         # 等价牌群 → 兜底档 10 档位分布落账 ∧ 随机尾键命中落账(取用件
         # 在等价群内由尾键定序,命中哨兵语义;兜底档号 8→10 位移 =
-        # design §2.2 十档判定表)。
+        # 32 号稿 §3 十档判定表)。
         ct = state_of(sess).cw4_counters
         assert ct.get('self_rescue_sell_tier_10') == 1
         assert ct.get('self_rescue_sell_rng_tail_hit') == 1
@@ -368,9 +368,9 @@ class TestStep1Consumable:
 
 
 class TestStep2Ore:
-    """晶矿测试(prep_pipeline §1 第 2 步:席未满点全部;席满 = 统一序列
-    末位让位一张,3.2 改造 = 垫件谓词过滤退役【拍,总纲 §2.7 无场景
-    专属池子/身份过滤退役】——部署重排定型后的全局面序列,末位即让位
+    """晶矿测试(prep 第 2 步:席未满点全部;席满 = 统一序列
+    末位让位一张,统一让位判定改造 = 垫件谓词过滤退役【拍,32 号稿 §8
+    无场景专属池子/身份过滤退役】——部署重排定型后的全局面序列,末位即让位
     对象;无任何可卖件 → 放弃晶矿保留;ore_defer 键族退役)。
 
     构帧纪律:统一序列前置 = 部署重排定型——场前排铺满 cap(空位帧
@@ -419,7 +419,7 @@ class TestStep2Ore:
         """席满点晶矿 → 统一序列末位让路卖一件腾位(身份段已随统一让位
         优先级迭代 3.4 退役——原「全池身份排除 → 放弃晶矿」形态废止:
         万金油铺席件按档 8/10 落序列(万金油层 = 档 8、到两星掉兜底
-        档 10,旧八档档 6/8 位移,design §2.2/§2.3-4 十档口径),序列
+        档 10,旧八档档 6/8 位移,32 号稿 §3/§5-4 十档口径),序列
         真空才放弃晶矿;单动作契约 =
         先卖,下帧席位空出后采晶)。让位支接受 bench/场上两支:本构局
         (bench 三月七可上场 + 场上未识别件)部署定型后让位末位 = 场上
@@ -461,7 +461,7 @@ class TestStep2Ore:
             and isinstance(out2[0].action, CwActionCollectOreParam)
 
     # (「垫件过滤优先于全局价值排序」差分测试已随垫件谓词退役删除
-    # (3.2,总纲 §2.7 身份过滤退役)——统一序列的取用语义断言由
+    # (身份过滤退役)——统一序列的取用语义断言由
     # strategies/impl/mandate_v1/criteria/test_sell_candidates.py
     # TestUnifiedSequence 承载。)
 
@@ -674,9 +674,8 @@ class TestStep7NodeEndInterest:
         一张,卖回量最小化)。bench = 风堇(2 费 1★ 退 2,48+2 = 50
         恰闭合不越线——越过息线即入溢余带,第 3 步升级臂会接手,本测试
         只校验凑息即止)。风堇 = 非四体系(昼之半神/燃血):凑息资格件
-        须穿过保护集身份段(统一保护集 changes/2026-10-15-unified-
-        protection-set design.md §2.3;原构架卡芙卡属持续伤害系保护档,
-        常规面禁卖,不再可作凑息样本)。"""
+        须穿过保护集身份段(统一保护集迭代裁定;原构架卡芙卡属持续
+        伤害系保护档,常规面禁卖,不再可作凑息样本)。"""
         sess = self._frame(48, [_bc('风堇')])   # 48 + 2(退) = 50 ≥ 50
         out1 = _emit(sess)
         sell = next(e.action for e in out1
@@ -691,8 +690,8 @@ class TestStep7NodeEndInterest:
 
     def test_exempt_depleted_frame_zero_action_with_counter(self):
         """凑息豁免剔光帧(第 8 步集成面):唯一可行件为线内未达标成员
-        → 零卖出动作 + 剔光观测键落**生产** counters(roster-plane1-
-        union design §2.2 第 5 项;观测键接入调用 = 第 8 步传 cw4_counters
+        → 零卖出动作 + 剔光观测键落**生产** counters(统一让位优先级
+        判定的凑息豁免契约,32 号稿 §9;观测键接入调用 = 第 8 步传 cw4_counters
         ——删该传参则行为不变而键永不落账,本测试锁生产写点)。金 2 →
         缺口 8:姬子·启行 2★(列车同行 need 3 未达标)退金 3×3−1 = 8
         恰跨档,布洛妮娅 1★ 退金 5 < 8 不可行——无豁免时本帧卖出在建
@@ -742,8 +741,7 @@ class TestStep7NodeEndInterest:
 # ============================================================
 # 部署自适应 6 场景(entry_signals 整体退役后的行为登记基准;审查设计——
 # 知识真空线〔万敌 1 条/白厄 3 条〕的退化面显式登记,退化明显再议的
-# 对照基线;sim A/B 挂批跑工具恢复,欠账登记 = .debug/progress/
-# unified-line-scoring-sim-debt.md)
+# 对照基线;sim A/B 挂批跑工具恢复,欠账登记 = 本地进度树账本)
 # ============================================================
 
 

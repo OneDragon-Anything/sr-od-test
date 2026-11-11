@@ -1,37 +1,36 @@
 """criteria/priority 单帧测试(角色统一让位优先级判据件)。
 
 被测 = ``strategies/impl/mandate_v1/criteria/priority.py``;十档判定
-规格(排序单位 = 单张牌 + 保留张谓词)= 本迭代设计定稿
-``docs/develop/sr_od/application/currency_war/changes/2026-11-01-
-completed-unit-protection/design.md`` §2.1(保留张定义与身份域)/
-§2.2(十档判定表)/§2.3(落档边界)/§2.5(行为变化申报);承继
-未变面(输入契约/档内键序数与随机流规则/取用形态)= 上一迭代
-priority-model §1/§3/§4/§5(总纲 = 同目录 design.md §2.1):
+规格(排序单位 = 单张牌 + 保留张谓词)权威版本 =
+``docs/develop/sr_od/application/currency_war/strategy-docs/
+32_unified_sell_priority.md``(下称「32 号稿」;§4 保留张定义与身份域 /
+§3 十档判定表 / §5 落档边界);承继未变面(输入契约/档内键序数与
+随机流规则/取用形态)= 32 号稿 §2/§6/§7/§8:
 
-- 十档判定表逐档断言(按序命中即出)+ 落档边界(design §2.3 全列:
+- 十档判定表逐档断言(按序命中即出)+ 落档边界(32 号稿 §5 全列:
   达标完成品档 2〔未锁/锁定两帧分帧〕/ need≤1 完成品档 4 / 凑两星
   中间态档 7 / 多余副本与等价群落兜底档 10〔自愈〕/ 2★ 直出候选恒
   非保留张);
 - 档内键表断言(成员档 2/3/4/5/7 ①序数;档 2/3/4 总星级数+单卡星级;
   档 6 星级;档 8/9 总星级数;档 10 概率分档 + 同值低费先卖 + 星级键);
   「后卖」属性在「key 大者先卖」方向下以负号承载;
-- 在手旗标(同优先级在手优先,总纲 §2.7)与随机尾键(种子同序,
-  priority-model §4);
+- 在手旗标(同优先级在手优先,32 号稿 §7)与随机尾键(种子同序,
+  32 号稿 §7);
 - sell_order 取用形态(升序 = 从最不该卖到最先让路,末位最先让路)+
   旋转门同型帧(达标 2★ 完成品在席满让位帧不做 victim);
 - PriorityContext 生产装配(锁定帧 need_star 表 = 锁定线知识卡全量
-  照录〔design §2.5-1 装配补全〕/ 未锁帧 = 实候选三线并集 + need_star
+  照录〔32 号稿 §2〕/ 未锁帧 = 实候选三线并集 + need_star
   跨线取最大 + 过渡候选成员随 transition_candidates 槽并入;P1 锁定局
   过渡支照收 = 名单景之一,32 号稿 §2 双层名单);
 - member_rank 二元组族(32 号稿 §2):双层名单/同档垫底(过渡 (1,r)
   键恒大于终局 (0,r),先让路)/缺省值 (1, CANDIDATE_TOP_N)/跨对
   最小位次/重叠归终元(装配序承载,零特判)/过渡完成品层内档 4;
-- 档内并列金币 tie-break(用户裁定三,上一迭代 design §2.2 第 1 项)
+- 档内并列金币 tie-break(用户裁定三,统一让位优先级判定的既有裁定)
   与 member_rank 装配切换回归(承继未变)。
 
 旧八档断言过期缘由(改写记录):统一序列排序单位从「角色名」改为
 「单张牌」,原档 2 升星主线拆出完成品保护档 2、原档 5 拆出档 4,
-原档 3/4/5/6/7/8 依次位移为 5/6/7/8/9/10(design §2.2 十档判定表)。
+原档 3/4/5/6/7/8 依次位移为 5/6/7/8/9/10(32 号稿 §3 十档判定表)。
 旧 rank 整数断言过期缘由:member_rank 键改 (层, 位次) 二元组
 (32 号稿 §2)——终局 (0, 线内序数)/过渡
 (1, 候选位次),字典序承载「同档占位、档内垫底」,键域/十档结构
@@ -138,7 +137,7 @@ def _ctx(*, candidates: frozenset[str] = frozenset(),
 
 
 def test_tier_assignment_in_order_and_boundaries() -> None:
-    """十档判定按序命中即出 + 落档边界(design §2.2 表逐档;§2.3-1/3/4)。
+    """十档判定按序命中即出 + 落档边界(32 号稿 §3 表逐档;§5-1/3/4)。
 
     一上下文覆盖档 1-10 各一个代表件;边界例:need≥2 未达标中间态
     多张全留档 3(§2.3-1)、万金油/羁绊两星掉兜底(§2.3-4 非成员支
@@ -176,14 +175,14 @@ def test_tier_assignment_in_order_and_boundaries() -> None:
     # 档 10:兜底(无任何名单/羁绊/费用档命中的中性件)。
     assert sort_key(HeldUnit(_BO, 1, 9, False), ctx)[0] == 10
     # —— 落档边界 ——
-    # need≥2 未达标名中间态多张全留档 3(design §2.3-1:合成需要,
+    # need≥2 未达标名中间态多张全留档 3(32 号稿 §5-1:合成需要,
     # 多余判定只在达标后生效;[1,1] 两张同落档 3)。
     ctx_mid = _ctx(candidates=frozenset({_SABER}),
                    cores=frozenset({_SABER}),
                    need_star={_SABER: 3}, copies={_SABER: [1, 1]})
     assert sort_key(HeldUnit(_SABER, 1, 0, False), ctx_mid)[0] == 3
     assert sort_key(HeldUnit(_SABER, 1, 1, False), ctx_mid)[0] == 3
-    # 万金油两星掉出档 8 → 兜底档 10(design §2.3-4 非成员支对照;
+    # 万金油两星掉出档 8 → 兜底档 10(32 号稿 §5-4 非成员支对照;
     # 档 9 羁绊身份同样限 <2 不中)。
     ctx_2star = _ctx(copies={_HUA: [2], _JIAO: [2], _MAR: [2]})
     assert sort_key(HeldUnit(_HUA, 2, 0, False), ctx_2star)[0] == 10
@@ -203,13 +202,13 @@ def test_tier_assignment_in_order_and_boundaries() -> None:
 
 
 def test_completed_kept_tier2_unlocked_and_locked_frames() -> None:
-    """达标 2★ 完成品进档 2,未锁定/锁定两帧一致(design §2.3-2/
+    """达标 2★ 完成品进档 2,未锁定/锁定两帧一致(32 号稿 §5-2/
     §2.5-1)。锁定帧断言吃装配补全:need_star 表 = 锁定线知识卡全量
     照录——旧装配自 unfinished_star_targets 只收未达标成员,已达标
     花火缺省 1 会使档 2 谓词 need≥2 永不命中、错落档 4。
 
     注册表事实:列车同行知识卡 need_star 花火 = 2(2★ 即达标);花火
-    同钉万金油 ∧ 盛会之星羁绊,成员完成品档按序先出(design §2.5-10
+    同钉万金油 ∧ 盛会之星羁绊,成员完成品档按序先出(32 号稿 §5-4
     叠加身份的实卡形态)。"""
     # 未锁定帧:候选线知识卡 need_star 直读,达标成员天然在表。
     s1 = cw4_session()
@@ -227,12 +226,12 @@ def test_completed_kept_tier2_unlocked_and_locked_frames() -> None:
     ctx_l = assemble_priority_context(s2, gs2, deployed_names=frozenset())
     assert ctx_l.line_view.locked
     assert ctx_l.need_star_by_member.get(_HUA) == 2, \
-        '锁定帧达标成员按知识卡照录(design §2.5-1 装配补全)'
+        '锁定帧达标成员按知识卡照录(32 号稿 §2 装配契约)'
     assert sort_key(HeldUnit(_HUA, 2, 0, False), ctx_l)[0] == 2
 
 
 def test_need2_completed_name_redundant_and_equivalence_group() -> None:
-    """need≥2 已达标名的按张分家(design §2.3-2/§2.1 等价群自愈):
+    """need≥2 已达标名的按张分家(32 号稿 §5-2/§4 等价群自愈):
     保留张(最高星唯一张)档 2;其余副本(低星 1★)自然落兜底档 10;
     两星等价群 [2,2] 同星多张全不属保留张、双双落兜底,卖一张后剩张
     恢复保留身份(档 2)。"""
@@ -255,7 +254,7 @@ def test_need2_completed_name_redundant_and_equivalence_group() -> None:
 
 
 def test_need1_two_star_completion_boundaries() -> None:
-    """need≤1 名底线两星口径(design §2.3-3/§2.1):凑两星中间态
+    """need≤1 名底线两星口径(32 号稿 §5-3/§4):凑两星中间态
     (max_star<2,含 1★×1 与 1★×2)全部副本留档 7;到两星后保留张
     档 4(2★ 本体与超额 3★ 均按实际最高星);名下多余副本(1★)落
     兜底档 10;两星等价群 [2,2] 双双落兜底、卖一张自愈恢复档 4。"""
@@ -283,7 +282,7 @@ def test_need1_two_star_completion_boundaries() -> None:
 
 
 def test_shop_candidate_two_star_never_kept_unit() -> None:
-    """候选牌恒非保留张(design §2.1 身份域/§2.3-5):获取让位评估的
+    """候选牌恒非保留张(32 号稿 §4 身份域/§5-5):获取让位评估的
     虚拟语境下,2★ 直出候选 X 不享受完成品保护——保留张谓词对
     ShopUnit 恒 False,X 落兜底档 10,「末位 = X → 放弃买入」对一切
     候选牌保持可达;对照:同板面的存量 2★ 在手件按虚拟快照现算保留
@@ -303,7 +302,7 @@ def test_shop_candidate_two_star_never_kept_unit() -> None:
 
 def test_huahuo_triple_identity_completed_protection() -> None:
     """万金油 ∧ 羁绊 ∧ 线内成员三身份叠加件(花火型)的 2★ 保留张按
-    成员身份落档 2/4(design §2.3-4/§2.5-10 行为申报回归锁):完成品
+    成员身份落档 2/4(32 号稿 §5-4/§4 行为申报回归锁):完成品
     保护档按序先于万金油(档 8)/羁绊(档 9);非成员对照支——2★ 掉
     兜底、1★ 万金油先截——保持原样。"""
     # 成员 need≥2 达标:2★ 保留张 → 档 2(压过万金油/羁绊身份)。
@@ -313,7 +312,7 @@ def test_huahuo_triple_identity_completed_protection() -> None:
     # 成员 need≤1 达标:2★ 保留张 → 档 4。
     ctx_t4 = _ctx(candidates=frozenset({_HUA}), copies={_HUA: [2]})
     assert sort_key(HeldUnit(_HUA, 2, 0, False), ctx_t4)[0] == 4
-    # 非成员对照(design §2.6:现 fixture 非成员支 2★→兜底仍保留):
+    # 非成员对照(32 号稿 §5-4:现 fixture 非成员支 2★→兜底仍保留):
     # 2★ 掉兜底档 10;1★ 万金油档 8 先于羁绊档 9 截走(不变)。
     ctx_non = _ctx(copies={_HUA: [2]})
     assert sort_key(HeldUnit(_HUA, 2, 0, False), ctx_non)[0] == 10
@@ -325,10 +324,10 @@ def test_huahuo_triple_identity_completed_protection() -> None:
 
 
 def test_turnstile_completed_two_star_not_victim() -> None:
-    """旋转门同型帧(迭代现象 d_20261101_125430 A-1 的回归锁;design
-    §2.7-1):席满获取让位帧,达标 2★ 完成品不再从统一序列末位做牺牲
+    """旋转门同型帧(迭代现象 d_20261101_125430 A-1 的回归锁;32 号稿
+    §4 身份域):席满获取让位帧,达标 2★ 完成品不再从统一序列末位做牺牲
     者——victim 退位给兜底杂件;候选牌侧保持「末位 = X → 放弃买入」
-    可达,decline 分支不因完成品保护翻转为必买(design §2.5-6)。"""
+    可达,decline 分支不因完成品保护翻转为必买(32 号稿 §4)。"""
     ctx = _ctx(candidates=frozenset({_SABER}), cores=frozenset({_SABER}),
                need_star={_SABER: 2},
                copies={_SABER: [2], _TING: [1]})
@@ -345,16 +344,16 @@ def test_turnstile_completed_two_star_not_victim() -> None:
         ShopUnit(_TING, 2, 1),          # 候选恒非保留张 → 兜底
     ]
     assert sell_order(pool_x, ctx)[-1] is pool_x[1], \
-        '末位 = 候选 X → decline 可达(行为不变,design §2.5-6)'
+        '末位 = 候选 X → decline 可达(行为不变,32 号稿 §4)'
 
 
 def test_tier_keys_and_sell_direction() -> None:
-    """档内键与「key 大者先卖」方向(design §2.2 档内键列;后卖属性
+    """档内键与「key 大者先卖」方向(32 号稿 §3 档内键列;后卖属性
     负号承载)。
 
     - 成员档 2/3/4 ①序数(core 先留)→ ②总星级数(多者后卖)→
       ③单卡星级(高者后卖;档 2/4 完成品跨名最高星可变,高星完成品
-      后卖——design §2.2 档 2/档 4 键注);
+      后卖——32 号稿 §3 键注);
     - 档 6 星级键高者后卖;档 8/9 总星级数键多副本者后卖;档 10
       概率高者先卖、概率同值并入同档按费用号稳定序低费先卖(Lv4 的
       4/5 费概率全 0 撞值对)、同费用星级高者后卖。"""
@@ -377,7 +376,7 @@ def test_tier_keys_and_sell_direction() -> None:
     assert k_1[2] == k_2[2] == -3, '总星级数键 = -(1+2)'
     assert k_1[3] == -1 and k_2[3] == -2 and k_2 < k_1, '2★ 后卖(键更小)'
     # 档 2 ③单卡星级判别力:不同名达标完成品总星级数并列时(3★ 独张
-    # vs 2★+1★ 冗余名),高星完成品后卖(design §2.2 档 2 键注:
+    # vs 2★+1★ 冗余名),高星完成品后卖(32 号稿 §3 键注:
     # -unit_star 有判别力)。
     ctx_t2 = _ctx(candidates=frozenset({_SABER, _WALT}),
                   cores=frozenset({_SABER, _WALT}),
@@ -455,7 +454,7 @@ def test_held_unit_effective_cost_for_variable_cost_card() -> None:
 
 
 def test_in_hand_flag_and_random_tail() -> None:
-    """在手旗标与随机尾键(priority-model §4)。
+    """在手旗标与随机尾键(32 号稿 §7)。
 
     - 在手旗标:同优先级手持牌键小(在手优先,同优先级不换手——
       席满时与手上同优先级的店牌不买);
@@ -484,7 +483,7 @@ def test_in_hand_flag_and_random_tail() -> None:
 
 
 def test_sell_order_shape() -> None:
-    """sell_order 取用形态(priority-model §5):升序 = 从最不该卖到
+    """sell_order 取用形态(32 号稿 §8):升序 = 从最不该卖到
     最先让路;部署定型内(档 1)永不先卖,末位 = 让位对象。"""
     ctx = _ctx(
         candidates=frozenset({_SABER}),
@@ -505,8 +504,8 @@ def test_sell_order_shape() -> None:
 
 
 def test_locked_frame_need_star_full_transcription() -> None:
-    """装配·锁定帧:need_star 表 = 锁定线知识卡字段全量照录(design
-    §2.5-1 装配补全),达标成员不缺省——旧装配自 unfinished_star_
+    """装配·锁定帧:need_star 表 = 锁定线知识卡字段全量照录(32 号稿
+    §2 装配契约),达标成员不缺省——旧装配自 unfinished_star_
     targets 只收未达标成员,Saber 3★ 达标后缺行会使命 need≥2 完成
     品保护谓词在锁定帧永不命中;unfinished_star_targets 本体与其余
     消费位(升级触发/停留目标)不动。
@@ -521,7 +520,7 @@ def test_locked_frame_need_star_full_transcription() -> None:
     ctx = assemble_priority_context(
         session, gs, deployed_names=frozenset({_TING}))
     assert ctx.line_view.locked and _SABER in ctx.line_view.members
-    # 表 = 知识卡 need_star 全量(design §2.5-1);判定位 = 已达标
+    # 表 = 知识卡 need_star 全量(32 号稿 §2);判定位 = 已达标
     # 成员(Saber 持 3★ = need 3)仍在表——旧装配缺此行。
     _comp = get_comp('双王圣杯')
     assert ctx.need_star_by_member == {n: int(v) for n, v
@@ -610,8 +609,8 @@ def test_member_rank_field_direct_read_cross_line_highest() -> None:
 
 
 def test_recipe_members_stay_low_priority() -> None:
-    """装配·过渡成员垫底保持(priority-model §3 配方支 → §2.4-3
-    过渡支):过渡候选成员不入终局字段直读面 → rank 恒 (1, 位次)——
+    """装配·过渡成员垫底保持(32 号稿 §2
+    过渡支判窗):过渡候选成员不入终局字段直读面 → rank 恒 (1, 位次)——
     过渡候选对成员若被物化伪阵容(pair_target_comp)字段直读即全员
     (0, 0) 高档,装配禁读物化单对字段。两态分断:
 
@@ -732,8 +731,8 @@ def test_p2_unlocked_frame_recipe_branch_stays_active() -> None:
 
 
 def test_tier_tie_refund_loss_tiebreak() -> None:
-    """档内并列金币 tie-break(用户裁定 2026-10-30 三;roster-
-    plane1-union design §2.2 第 1 项/金币核查表):现行档内键全并列
+    """档内并列金币 tie-break(用户裁定 2026-10-30 三;统一让位
+    优先级判定的退金损失键裁定,32 号稿 §6):现行档内键全并列
     → 退金损失最小者优先让路(键内取负,损失大 = 后卖)。
 
     档 5 商店牌同序数并列三组:①同名跨星 1★(全额退,损失 0)先让于

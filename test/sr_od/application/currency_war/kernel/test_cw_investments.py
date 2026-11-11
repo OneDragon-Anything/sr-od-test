@@ -160,22 +160,22 @@ def test_random_char_pool_derivation_properties() -> None:
         assert '输出' in CHARACTERS[name].char_type.split('、')
 
 
-# ==================== 阵容指向集(投资选卡阵容冲突护栏 §2.1)====================
-# 判据 = changes/2026-10-17-invest-direction-guard/design.md §2.1 三条分支派生
-# (faction/亲和/成员),期望值全部注册表现算(非快照),与设计 §4 测试
-# 清单期望逐条对齐。
+# ==================== 阵容指向集(投资选卡阵容冲突护栏判据源)====================
+# 判据 = 指向集三条分支派生(faction/亲和/成员;权威口径 = strategy-docs/
+# 28_invest_env_screen.md 阵容冲突护栏节,指向集单一源 = kernel
+# env_faction_scope/strategy_faction_scope),期望值全部注册表现算(非快照)。
 
 def test_strategy_scope_defining_card_heita_epoch() -> None:
     """黑塔纪元(绑 ∅ + {大黑塔, 黑塔}):角色入账分支①(大黑塔/黑塔 factions =
     银河学者)∪ 成员分支②(大黑塔 ∈ 大黑塔银河学者 core,该线 factions 全集
-    = 银河学者+群攻)→ 全集两阵营(§4 清单:角色入账分支 + 成员分支带入大黑塔
+    = 银河学者+群攻)→ 全集两阵营(指向集清单:角色入账分支 + 成员分支带入大黑塔
     银河学者线 factions 全集)。"""
     assert strategy_faction_scope('黑塔纪元') == frozenset({'银河学者', '群攻'})
 
 
 def test_strategy_scope_char_leg_qiongyu_qingque() -> None:
     """琼玉专家:青雀(绑 ∅ + {青雀})→ {仙舟}:青雀 factions = (仙舟,)
-    且不在任何线 core/shared(成员分支零命中)→ 精确单阵营(§4 清单)。"""
+    且不在任何线 core/shared(成员分支零命中)→ 精确单阵营(指向集清单)。"""
     assert strategy_faction_scope('琼玉专家:青雀') == frozenset({'仙舟'})
 
 
@@ -183,15 +183,16 @@ def test_env_scope_affinity_leg_grail_invite_and_contract() -> None:
     """命运圣杯邀请/契约(faction 分支命运圣杯;通道派生全档命中 {双王圣杯,
     命运圣杯红A}——命运圣杯 ∈ 两线档 0)→ 派生分支双王圣杯线
     factions 全集(命运圣杯+能量)→ {命运圣杯, 能量}(副阵营随线带入,
-    §2.1 例;§4 清单:邀请/契约同为派生分支口径;统一阵容评分迭代起
+    指向集定义例;指向集清单:邀请/契约同为派生分支口径;统一阵容评分迭代起
     替换旧亲和表,值不变)。"""
     assert env_faction_scope('命运圣杯邀请') == frozenset({'命运圣杯', '能量'})
     assert env_faction_scope('命运圣杯契约') == frozenset({'命运圣杯', '能量'})
 
 
 def test_env_scope_sampo_affinity_branch() -> None:
-    """特邀专家:桑博(专家类目,faction 空)→ 通用类线分 0(design §3.1:
-    专家 10 个全属通用类 41——所赠顾问角色经持有面走证据分,通道 0)→
+    """特邀专家:桑博(专家类目,faction 空)→ 通用类线分 0(12 号稿 §1.1
+    投资通道派生:专家类目经顾问通道计分,其余通用类线分 0——所赠顾问
+    角色经持有面走证据分,通道 0)→
     指向集空 = 通用卡(行为变更申报:旧亲和表 1.0 条目 {持续伤害,贝洛伯格}
     退役,持桑博环境不再给护栏贡献 DOT 指向;弱方向由所赠角色持有证据
     承载)。"""
@@ -200,12 +201,12 @@ def test_env_scope_sampo_affinity_branch() -> None:
 
 def test_env_scope_gallagher_faction_exception() -> None:
     """特邀专家:加拉赫 = faction 例外条(_ENV_FACTION_EXCEPTIONS → 击破)
-    且无亲和 → {击破}(§4 清单)。"""
+    且无亲和 → {击破}(指向集清单)。"""
     assert env_faction_scope('特邀专家:加拉赫') == frozenset({'击破'})
 
 
 def test_strategy_scope_membership_leg_equipfan_contains_pursuit() -> None:
-    """成员分支(§4 清单):装备党绑飞霄,飞霄 ∈ 追击飞霄线 core → 该线
+    """成员分支(指向集清单):装备党绑飞霄,飞霄 ∈ 追击飞霄线 core → 该线
     factions {追击} 入集;阵营分支狼狩照常在集。"""
     scope = strategy_faction_scope('装备党')
     assert '追击' in scope
@@ -213,14 +214,14 @@ def test_strategy_scope_membership_leg_equipfan_contains_pursuit() -> None:
 
 
 def test_strategy_scope_multi_faction_char_expansion() -> None:
-    """多阵营角色展开(§4 清单):列车同行星徽绑丹恒·饮月(factions =
+    """多阵营角色展开(指向集清单):列车同行星徽绑丹恒·饮月(factions =
     仙舟+列车同行)→ 两阵营全入集。"""
     assert {'仙舟', '列车同行'} <= strategy_faction_scope('列车同行星徽')
 
 
 def test_scope_unbound_and_unregistered_empty() -> None:
     """无绑定/未注册 → 空集(通用卡,护栏不辖):打捞人才库(注册表已登记、
-    STRATEGY_BINDINGS 无条目);未注册策略名;未注册环境名(§4 清单)。"""
+    STRATEGY_BINDINGS 无条目);未注册策略名;未注册环境名(指向集清单)。"""
     assert '打捞人才库' in INVESTMENT_STRATEGIES
     assert strategy_faction_scope('打捞人才库') == frozenset()
     assert strategy_faction_scope('不存在的策略名') == frozenset()
@@ -229,7 +230,7 @@ def test_scope_unbound_and_unregistered_empty() -> None:
 
 def test_strategy_scope_unregistered_char_skipped(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """绑定角色不在 CHARACTERS → 跳过不炸(§4 清单;角色入账分支①收窄宁放行,
+    """绑定角色不在 CHARACTERS → 跳过不炸(指向集清单;角色入账分支①收窄宁放行,
     注册表外名字不落任何线名单,成员分支同跳)。注入含未注册角色的绑定
     条目验证(表注入沿本文件 ENV_GIFTS 校验测试惯用法)。"""
     fake = dict(STRATEGY_BINDINGS)
@@ -241,7 +242,7 @@ def test_strategy_scope_unregistered_char_skipped(
 
 
 def test_scope_queries_normalize_ocr_variants() -> None:
-    """查询归一(§2.1 明文):全角冒号/分隔符 bullet 形变与规范名同值——
+    """查询归一(指向集定义明文):全角冒号/分隔符 bullet 形变与规范名同值——
     持有名 OCR 形变不归一 = 查表 miss → 基准弱化漏拦。"""
     assert strategy_faction_scope('琼玉专家：青雀') == frozenset({'仙舟'})
     assert strategy_faction_scope('飞光•映月') == \
@@ -252,13 +253,12 @@ def test_scope_queries_normalize_ocr_variants() -> None:
 
 # ==================== 随机装备支 + 首领节点发放白名单 ====================
 # (劳务派遣合同,效果原文「获得随机星徽,每次进入首领节点时,获得对应
-# 羁绊的随机角色」;设计 = 该迭代 designs/T-19-laowu-paiqian-hetong.md
-# §2.1-§2.3/§4.1,定稿。)
+# 羁绊的随机角色」;登记形态经专项迭代对抗评审定稿,行为锁 = 本节断言。)
 
 
 def test_equips_random_immediate_pool_empty_raises(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """随机装备支池空哨(T-19 设计 §2.2 条 1-2 现行形态,2026-10-28 治理
+    """随机装备支池空哨(登记契约现行形态,2026-10-28 治理
     后类别闭集并入池空单一哨;import 即炸语义,注入 + 直调沿本文件惯用法):
     类别名错字/版本改名都表现为过滤池空 → 构建期拒。"""
     bad = dict(ENV_GIFTS)

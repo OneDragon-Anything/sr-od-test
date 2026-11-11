@@ -1,9 +1,9 @@
 """report_action_move_unit_param 统一拖动推演矩阵测试(镜像 src =
-kernel/cw_action_report/move_unit.py;部署统一批 unified-deploy-order
-§4 动作词表行:源域 × 目标域 × 目标槽占用态全分支)。
+kernel/cw_action_report/move_unit.py;统一部署搜索的动作词表行:
+源域 × 目标域 × 目标槽占用态全分支)。
 
-锁定的期望表现 = 详设 changes/2026-10-30-roster-plane1-union/details/
-unified-deploy-order.md §4「动作词表」行与 §2 段 0(唯一性键/银狼
+锁定的期望表现 = 部署段正本 strategy-docs/24_deploy_segment.md
+(§1.3:上报推演矩阵单一源 = 本模块;§1.2 段 0:唯一性键/银狼
 落场后形态/未知件禁挤)。
 """
 from __future__ import annotations
@@ -164,7 +164,7 @@ def test_duplicate_on_board_refused() -> None:
 
 
 def test_unknown_field_unit_slot_refuses_bench_entry() -> None:
-    """禁挤未知件(详设 §2 段 0 D3-13):场上未知身份件占槽,bench 件
+    """禁挤未知件(正本 §1.2 段 0):场上未知身份件占槽,bench 件
     拖入该槽 = 移动未知件 → fail-closed 拒。"""
     gs = _gs([_unit('花火'), None], [Unit(char_id='', star=1),
                                 None, None, None])

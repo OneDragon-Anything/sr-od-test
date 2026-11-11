@@ -1,7 +1,6 @@
 """投资策略画面策略层单测(判据权威版本 = docs/develop/sr_od/application/
-currency_war/strategy-docs/29_invest_strategy_screen.md;规格出处 =
-
-下称 design §)。
+currency_war/strategy-docs/29_invest_strategy_screen.md;各节规格出处 =
+本文件内嵌的契约名)。
 
 判据映射:
 - ① 现金分(strategy_economy 通道公式:面值/分期金 R−1 截断/XP 双通道/
@@ -20,9 +19,9 @@ currency_war/strategy-docs/29_invest_strategy_screen.md;规格出处 =
   赠卡分/时代族零值/环境现金分/刷新三态与阈值/自拆台排除/构建校验
   /flow 消费侧接入调用)——与策略屏同族评分概念的 env 支,两屏生产模块
   平行,各自直测;
-- ⑫ 阵容冲突护栏·策略屏(护栏设计 §2.2/§2.3:基准锁定/持有切换/出域
+- ⑫ 阵容冲突护栏·策略屏(护栏设计:基准锁定/持有切换/出域
   排除/全出域回退/刷新交互/reason 文法);
-- ⑬ 阵容冲突护栏·环境屏(env 支,护栏设计 §2.4:出域槽并入 excluded
+- ⑬ 阵容冲突护栏·环境屏(env 支,护栏设计:出域槽并入 excluded
   槽位表通道——禁选通道先建议刷新/闸尽落选出域已排除/全出域回退/
   基准空帧与通用环境零变化)。
 
@@ -127,7 +126,7 @@ def _decide_pick(options: list[str], gs: GameState,
     return out
 
 
-# ==================== ① 现金分(design §2.3)====================
+# ==================== ① 现金分(现金分公式契约)====================
 
 #: 开局帧剩余节点数(node 缺失 → (1,1) 退化 + 场字段 None 回退默认表
 #: P1=9/P2=7/P3=7,视界封顶 modeled planes):R = 9 + 7 + 7 = 23
@@ -146,7 +145,7 @@ def test_cash_instant_gold_face_value():
 
 
 def test_cash_gold_next_nodes_r_minus_1_truncation():
-    """分期金 =「现在」分支 + count 分支按 R−1 截断(design §2.3;
+    """分期金 =「现在」分支 + count 分支按 R−1 截断(现金分公式契约;
     「接下来」不含当前节点)。开局帧 R=23:长期主义 = 7×(1+min(3,22))
     = 28(count 分支 3 封顶,R 变不越帽——勿读 instant_gold,长期主义该
     字段 = 0,误读即漏现在分支);表外位面帧(4,1)(位面 ∉ 序列表键集
@@ -159,7 +158,7 @@ def test_cash_gold_next_nodes_r_minus_1_truncation():
 def test_cash_per_node_interest_xp_channels():
     """per-node 流/固定息/XP 双通道(值 = 注册表【注】× R 查表):
     定期福利 = 4 + 2×23;狸财经狸息分支 = 2×23(活计分分支,取款/存款分支
-    待建模不关门——design 申报 7);伟大征服 xp_instant = 12;气氛组+ =
+    待建模不关门——现金分待建模处置申报);伟大征服 xp_instant = 12;气氛组+ =
     8(注册行形状一并锁,即时效果条目骑 apply_strategy_pick_xp 字段分派通道);
     买断制 = 15 + 4×23(xp_per_node 流);XP_GOLD_RATE = 1.0。
     (R 开局 16→23 = P3 行入真值表,2026-10-15 用户裁定联动。)"""
@@ -224,7 +223,7 @@ def test_cash_boss_channel_kind_not_geometry():
 
 
 def test_cash_missing_node_degrades_to_opening_frame():
-    """位置缺失帧退化 (1,1)(沿 env 屏先例;landing ① 分支断言):
+    """位置缺失帧退化 (1,1)(沿 env 屏先例;位置缺失分支断言):
     node 未写的裸帧与显式 (1,1) 帧逐位同值。"""
     bare = strategy_economy_value('长期主义', _fresh_gs())
     explicit = strategy_economy_value('长期主义', _gs_at(1, 1))
@@ -248,7 +247,7 @@ def test_cash_unregistered_name_failclosed():
     assert strategy_economy_value('不存在的卡名', _fresh_gs()) == (0.0, False)
 
 
-# ==================== ③ 赠卡分(design §2.5)====================
+# ==================== ③ 赠卡分(赠卡分契约)====================
 
 def test_grant_immediate_highest_tier():
     """即时集取最高档:借力打力(黑塔 core + 缇宝 core)→ core 50。"""
@@ -331,7 +330,7 @@ def test_grants_validation_char_drift_raises(monkeypatch):
 def test_grants_box_legs_items_only_pass_validation(monkeypatch):
     """开箱分支条目(占席道具直读)登记形状(chars 两通道空 + items_immediate
     非空 = 合法,登记面先例 = 三张棱彩箱分支卡 + 军火贸易/军火贸易+);箱条目
-    经消费口恒 off → 0 分(design 取舍 3,占席道具不进打分零改动)。"""
+    经消费口恒 off → 0 分(设计取舍:占席道具不进打分,零改动)。"""
     for name, item in (('战术义眼+', '简易武装箱'),
                        ('战术义眼++', '进阶武装箱'),
                        ('保守派', '进阶武装箱'),
@@ -371,7 +370,7 @@ def test_char_grant_cards_retired_from_scan_exclusions():
     assert '溜佩佩+' not in cw_investments._STRATEGY_GRANTS_SCAN_EXCLUSIONS
 
 
-# ==================== ④ 结构分区(design §2.7;统一阵容评分迭代重写)=====
+# ==================== ④ 结构分区(结构分区契约;统一阵容评分迭代重写)=====
 
 #: 自拆台合成选项名(「净化身心」词缀克制名单含 持续伤害/减益;未注册名
 #: 组件恒 0,减分是结构规则非定价)
@@ -406,7 +405,7 @@ def test_forbid_excluded_from_competition():
 
 def test_all_forbidden_frame_falls_back_to_all_argmax():
     """禁选致候选域全空 → 全体候选(含被禁)按组件总分 argmax 最不负分者
-    (landing ④;reason 前缀 all-excluded-fallback)。"""
+    (reason 前缀 all-excluded-fallback)。"""
     cfg = SimpleNamespace(
         strategy_priority=[],
         strategy_forbid=['决议:娱乐星球', '嘴硬', '二极管'])
@@ -418,13 +417,13 @@ def test_all_forbidden_frame_falls_back_to_all_argmax():
 
 def test_empty_frame_degrades_idx0():
     """空候选帧(观察层失约,op 层已拦、此态仅防御)退化 idx=0 不炸
-    (design §2.8)。"""
+    (空候选退化契约)。"""
     out = _decide_pick([], _fresh_gs())
     assert out.idx == 0 and out.reason.startswith('empty-frame')
 
 
 def test_counter_penalty_applies_against_top1_line_main_faction():
-    """克制减分(counters_dot 硬排除迁移,design §3.2;定义件线档 0 键
+    """克制减分(counters_dot 硬排除迁移,统一阵容评分裁定;定义件线档 0 键
     命中克制名单即触发,P1 更早更广):
     持卡芙卡 → 候选首名 = DOT队(定义件 8000)→ 档 0 键 持续伤害 ∈
     净化身心克制名单;净化身心试验 −750 落败,嘴硬 6 胜(纯加权,非排除)。"""
@@ -443,7 +442,7 @@ def test_counter_penalty_zero_when_anchor_missing():
 
 def test_counter_penalty_worse_than_cash_max():
     """克制档数量级:−750 压过现金满档——克制减分为线分数量级分量,
-    与方向分同标尺(design §2 克制档)。"""
+    与方向分同标尺(同为线分数量级档)。"""
     gs = _gs_hold_backline('卡芙卡')
     out = _decide_pick([_SELF_DEFEAT_OPT + '藏一手', '嘴硬', '二极管'], gs)
     assert out.idx != 0, '−750 须压过任何现金组件'
@@ -460,7 +459,7 @@ def test_blood_forced_l2_domain():
 
 
 def test_defining_partition_retired_direction_score_decides():
-    """定义型分区退役(design §3.2 defining 布尔退役):支配由方向分
+    """定义型分区退役(统一阵容评分裁定的 defining 布尔退役):支配由方向分
     数值实现——零证据帧(定义件缺失 → 方向分 0)定义卡按组件分竞争,黑塔
     纪元/罗刹 赠卡 50 同分,平分裁决键取先(行为变更申报:P1 零证据
     开局帧定义卡不再无条件支配);定义件点亮帧(持大黑塔+黑塔 → top1 =
@@ -477,7 +476,7 @@ def test_defining_partition_retired_direction_score_decides():
     assert lit.components[1] == 500.0, '方向分 = 定义卡通道加分'
 
 
-# ==================== ⑤ 平分裁决(design §2.8)====================
+# ==================== ⑤ 平分裁决(平分裁决契约)====================
 
 def test_tiebreak_quality_rank_over_slot_order():
     """平分裁决键 1:品质序(棱彩>金>银,游戏定义)压过槽序——三张零总分
@@ -501,7 +500,7 @@ def test_tiebreak_econ_flag_within_quality():
 
 def test_tiebreak_no_canonical_sorts_after_canonical():
     """无 canonical 候选(垃圾名)恒排任何 canonical 候选之后——并列
-    0 分帧垃圾名不凭槽序压真卡(design §2.8);垃圾名之间按槽序。"""
+    0 分帧垃圾名不凭槽序压真卡(平分裁决契约);垃圾名之间按槽序。"""
     out = _decide_pick(['垃圾名甲', '垃圾名乙', '晋升名额'], _fresh_gs())
     assert out.idx == 2
     two = _decide_pick(['垃圾名甲', '垃圾名乙'], _fresh_gs())
@@ -509,14 +508,14 @@ def test_tiebreak_no_canonical_sorts_after_canonical():
 
 
 def test_env_name_defense_skips_resolution_zero_bottom():
-    """env 名防御(design §2.8):env 注册名候选跳过解析、0 分垫底
+    """env 名防御(垃圾名垫底裁定):env 注册名候选跳过解析、0 分垫底
     (防注册表交叉演化下 LCS 误中)——列车同行概念股(LCS 会误中
     列车同行星徽拿赠卡+方向)实际 0 分,嘴硬 6 金胜出。"""
     out = _decide_pick(['列车同行概念股', '嘴硬', '二极管'], _fresh_gs())
     assert out.idx == 1 and out.total == 6.0
 
 
-# ==================== ⑥ 构建期校验(design §2.3/§2.6)====================
+# ==================== ⑥ 构建期校验(构建期校验契约)====================
 
 def test_field_classification_unclassified_raises(monkeypatch):
     """字段分类校验:未分类字段(从计分类摘除 instant_gold,藏一手
@@ -547,8 +546,8 @@ def test_field_classification_double_membership_raises(monkeypatch):
 
 def test_pending_modeling_registry_shape():
     """卡级待建模已登记正面形状:5 张辖域派生闭集卡必已登记(固定理财/+
-    孪生素数/狸财经狸/超发货币,landing ⑥)+ 注册表外经济语义代表例
-    (被动收入/招财狗/气氛组/气氛组+,design §2.3 处置口径——气氛组系
+    孪生素数/狸财经狸/超发货币)+ 注册表外经济语义代表例
+    (被动收入/招财狗/气氛组/气氛组+,现金分待建模处置口径——气氛组系
     条件效果条目零建模是有意登记非漏登记);孪生素数 = 全默认 economy
     已登记条目(③断言的真实对象)。"""
     from sr_od.application.currency_war.kernel.cw_investments import (
@@ -610,7 +609,7 @@ def test_stance_orphan_key_raises(monkeypatch):
         invest_strategy._validate_stance_registry()
 
 
-# ==================== ⑦ 刷新判据(design §2.9)====================
+# ==================== ⑦ 刷新判据(刷新判据契约)====================
 
 def test_refresh_frame_gate_passes_low_frame():
     """帧级门全过(恰3 ∧ 全精确 ∧ 无帧级顶级 ∧ 锁线帧不适用):
@@ -692,7 +691,7 @@ def test_refresh_f2_unique_l1_guard():
 
 
 def test_refresh_demoted_frame_uses_unlocked_scale():
-    """降格帧按未锁线口径:无 max_N 门(design §2.9-2),锁线参不生效
+    """降格帧按未锁线口径:无 max_N 门(降格帧口径),锁线参不生效
     ——同 max_N=1 帧在降格态(锁线已放弃)门通过。"""
     out = invest_strategy.decide(['列车同行星徽', '嘴硬', '二极管'],
                                  _fresh_gs(), '列车同行·反震', True,
@@ -709,7 +708,7 @@ def test_refresh_gate_requires_all_exact():
     assert isinstance(out, InvestStrategyDecision)
 
 
-# ==================== ⑨ decide_pick 纯选卡口(design §2.10)====================
+# ==================== ⑨ decide_pick 纯选卡口(纯选卡口契约)====================
 
 def test_decide_pick_never_suggests_on_refresh_frame():
     """纯选卡口永不建议刷:同一建议帧,decide 返刷新建议、decide_pick
@@ -741,7 +740,7 @@ def test_decide_pick_same_baseline_as_decide():
         (out_pick.idx, out_pick.reason, out_pick.total)
 
 
-# ==================== ⑩ 观测标记点(landing ⑩,申报 5)====================
+# ==================== ⑩ 观测标记点(LCS 兜底告警申报面)====================
 
 def test_lcs_fallback_hit_warns(caplog):
     """LCS 兜底命中即告警(观测标记点;形变名会拿错卡全组件分,须可见):
@@ -772,7 +771,7 @@ _ENV_SIG_OBS = ChannelSig(family='obs', actor='cw-invest-env-test',
 #: 零转向配置(禁测用户轴语义时使用;decide 不要求 config 具体类型)
 _ENV_EMPTY_CONFIG = SimpleNamespace(env_priority=[], env_forbid=[])
 
-#: 时代族 6 条(design 表零值裁定行)
+#: 时代族 6 条(零值裁定行)
 _ERA_ENVS = ('彩虹时代', '黄金时代', '白银时代', '头彩', '尾彩', '银·金·彩')
 
 
@@ -931,14 +930,14 @@ def test_env_refresh_threshold_is_full_registry_mean():
     assert 0.0 < invest_env.REFRESH_THRESHOLD < 100.0
 
 
-# ---- ⑥ 选卡克制减分(counters_dot 硬排除迁移,design §3.2/§7)----
+# ---- ⑥ 选卡克制减分(counters_dot 硬排除迁移,统一阵容评分裁定)----
 
 #: 全排除退化帧:三条概念股同被 env_forbid 子串命中(排除规则覆盖全体)。
 _ALL_EXCLUDED_OPTS = ('仙舟概念股', '减益概念股', '击破概念股')
 
 
 def test_env_counter_penalty_against_top1_line():
-    """环境屏克制减分(机制与策略屏同源,design §3.2):持卡芙卡 →
+    """环境屏克制减分(机制与策略屏同源,统一阵容评分裁定):持卡芙卡 →
     候选首名 = DOT队 → 净化身心试验 −750 落到次席(剩余次数置 0 关刷新
     建议,隔离次数闸;环境名不含词缀注册名族,生产帧该分量恒 0,
     合成名钉机制)。"""
@@ -1172,8 +1171,9 @@ def test_env_flow_strategy_frame_memo_three_states():
     assert isinstance(third, CwActionRefreshInvestCardsParam)
 
 
-# ==================== ⑫ 阵容冲突护栏(护栏设计 §2.2/§2.3)====================
-# 判据 = changes/2026-10-17-invest-direction-guard/design.md §2.2/§2.3。
+# ==================== ⑫ 阵容冲突护栏(护栏设计)====================
+# 判据 = strategy-docs/29_invest_strategy_screen.md §5(基准两态/出域
+# 排除/全出域回退)。
 # 指向集派生与查询归一在 kernel 单元(test_cw_investments.py 指向集节)
 # 锁定,本节锁选卡/刷新行为面,期望值全部注册表现算。§4 清单的「兼容卡」
 # 用命运圣杯星徽承载——命运圣杯契约是环境名非策略卡(PlazaPortal 1202),
@@ -1338,7 +1338,7 @@ def test_guard_demoted_frame_falls_back_to_holdings_basis():
 
 
 # ==================== ⑬ 阵容冲突护栏·环境屏(env 支)====================
-# 判据 = changes/2026-10-17-invest-direction-guard/design.md §2.2/§2.4。
+# 判据 = strategy-docs/28_invest_env_screen.md(阵容冲突护栏节)。
 # 出域槽并入 env 屏既有 excluded 槽位表通道(禁选/自拆台同路):闸过先
 # 建议刷新、闸尽落选出域已排除、全出域走既有 all-excluded 回退。期望值
 # 全部注册表现算,持有写入沿 ⑫ 节 _gs_holding helper(观察真值形态)。
@@ -1351,7 +1351,7 @@ def test_env_guard_conflict_env_suggests_refresh_via_forbidden_channel():
     {命运圣杯, 能量}),仙舟概念股({仙舟})与基准零交 = 出域槽 →
     走既有禁选通道先建议刷新。reason 断言钉死「禁选分支专属归因串」
     (阈值分支的归因串形态不同)——护栏触发与用户禁选同路同形,
-    零新出口形态(护栏设计 §2.4)。"""
+    零新出口形态(护栏设计:出域与禁选同路)。"""
     gs = _gs_holding(env='命运圣杯邀请')
     _env_set_refresh_left(gs, 1)
     out = invest_env.decide(['仙舟概念股', '命运圣杯契约', '黄金时代'],
@@ -1423,11 +1423,11 @@ def test_env_guard_universal_envs_normal_with_basis():
     assert (held.idx, held.reason) == (bare.idx, bare.reason)
 
 
-# ==================== ⑩ 次名分量遥测 margin(pick-margin-telemetry
-# ====================  design §2.2-1/§2.2-2;纯观测,决策面零消费)====================
+# ==================== ⑩ 次名分量遥测 margin(词表动作字段通道;
+# ====================  纯观测,决策面零消费)====================
 
 def test_env_margin_value_order_and_excluded_not_in_domain():
-    """env 值序与排除域(design §2.2-1):margin 键形 =
+    """env 值序与排除域(遥测正本 pick_margin 行):margin 键形 =
     {runner_up, runner_up_total, margin},次名 = 竞争域内除胜者外首个
     最高分(平分取先,与 argmax 同款语义);被禁槽不入竞争域——即使
     分高也不入次名。"""
@@ -1449,7 +1449,7 @@ def test_env_margin_value_order_and_excluded_not_in_domain():
 
 
 def test_env_margin_boundary_three_forms():
-    """env 边界值表三形态(design §2.2-1):竞争域仅 1 候选 → 三键
+    """env 边界值表三形态(遥测正本边界值表):竞争域仅 1 候选 → 三键
     null;全排除退化帧 → 按全体域取次名(reason tag 已携退化标记供
     判读);空候选帧 → 不落值 None。"""
     gs = _fresh_gs()
@@ -1475,7 +1475,7 @@ def test_env_margin_boundary_three_forms():
 
 
 def test_strategy_margin_value_and_domain():
-    """策略面值序与竞争域(design §2.2-2):次名 = 结构分区竞争域内
+    """策略面值序与竞争域(遥测正本 pick_margin 行):次名 = 结构分区竞争域内
     除胜者外按同一平分裁决键的最高者(决议:娱乐星球 50 金胜,嘴硬 6
     分次);被禁槽不入域(50 分的决议:娱乐星球被禁后不进 margin)。
     (面值基准原 = 藏一手 80,R1 用户裁定 2026-11-04 反向改判零分后换基准,
@@ -1495,7 +1495,7 @@ def test_strategy_margin_value_and_domain():
 
 
 def test_strategy_margin_single_domain_null_and_empty_frame():
-    """策略面边界(design §2.2-2 同款边界值表):竞争域仅 1 候选 →
+    """策略面边界(遥测正本同款边界值表):竞争域仅 1 候选 →
     三键 null;空候选帧不进评分帧(入口防御)→ margin None。"""
     gs = _fresh_gs()
     cfg = SimpleNamespace(strategy_priority=[], strategy_forbid=['二极管'])
@@ -1509,7 +1509,7 @@ def test_strategy_margin_single_domain_null_and_empty_frame():
 
 
 def test_flow_pick_actions_carry_margin():
-    """词表通道拷入(design §2.1):flow 选卡动作实例携带决策产物
+    """词表通道拷入(遥测正本):flow 选卡动作实例携带决策产物
     margin(经词表动作字段 margin 到达 payload 组装面,不入动作实例键);
     建议帧动作无该载荷(getattr → None,不误落)。值序恒等式:
     runner_up_total + margin == 胜者总分(reason 的 pick total)。"""

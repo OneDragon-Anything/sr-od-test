@@ -23,8 +23,8 @@ P2 血带节(原 P2 低血带授权域统一件):单一语义权威 = 生产符�
 (谓词 = statefn.predicates,分键写入端 = flow)。校验两类事:
 ①p2_blood_floor 域谓词真值表(信任门/阈值单一源 = HP_BAND_NEAR_DEATH,
 位面域互补——R-7 保留的纯观测面);②凑息拒因键域(血线拒因键退役;
-hp 判据面已随 hp-purge 迭代 3.1 删除——危机帧不再拦升级,升级发射
-门序 6 道、无 hp 支,语义基准 = changes/2026-10-28-hp-purge-refresh-reform/design.md)。
+hp 判据面已随血量清除改造删除——危机帧不再拦升级,升级发射
+门序 6 道、无 hp 支,语义基准 = 血量清除改造的升级行为裁定)。
 """
 from __future__ import annotations
 

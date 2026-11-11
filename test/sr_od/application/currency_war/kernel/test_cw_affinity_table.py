@@ -1,8 +1,8 @@
-"""词缀吃怕表 + boss 面测试(design §3.3/§3.4;2026-11-03-unified-line-scoring 批 2)。
+"""词缀吃怕表 + boss 面测试(统一阵容评分迭代批 2)。
 
-判据权威版本 = docs/develop/sr_od/application/currency_war/changes/
-2026-11-03-unified-line-scoring/design.md §3.3(词缀:12 已审线+兜底层)
-/§3.4(boss 面:4 线实证+D4 类级兜底+非 boss 强敌)。断言全部引设计
+判据权威版本 = docs/develop/sr_od/application/currency_war/strategy-docs/
+12_line_and_intention.md §1.1(词缀分:逐线吃怕表+兜底层 / 敌情克制分:
+boss 4 线实证+类级兜底+非 boss 强敌)。断言全部引设计
 语义,期望值 = cw_line_scales 常数符号直读;数据源出处 = final_comps
 各篇 counter 节(原话注释在表内,此处断言行值)。
 """
@@ -85,7 +85,7 @@ def test_train_ab_split_rows() -> None:
     """列车同行 A/B 拆行(批 3):A 吃忍无可忍/同步行动 +750 受击触发类
     燃料(final_jizi「吃忍无可忍/同步行动/怪物提速」;怪物提速俗称待
     采集不入)/怕四词缀(A 节直接记载+§6 脆弱点史料级补回);B 怕集同 A
-    保守复制(B 节无词条记载,design §5)+**无吃行**(词缀面 A≥B 恒成立,
+    保守复制(B 节无词条记载,12 号稿 §1.1 拆分行)+**无吃行**(词缀面 A≥B 恒成立,
     B 唯一分化面 = 装备证据)。"""
     for affix in ('忍无可忍', '同步行动'):
         assert affix_line_score('列车同行·反震', (affix,)) == AFFIX_STRONG_FUEL, affix
@@ -107,7 +107,7 @@ def test_wandi_row_annotated_unchanged() -> None:
 
 def test_baie_and_aya_no_affix_row() -> None:
     """反甲白厄/昼神阿雅词缀面无实证不建行:白厄忌燃血类/回血减行动值
-    均无注册名、受击触发类两推断打架标 0 待 sim(design §5);阿雅词缀面
+    均无注册名、受击触发类两推断打架标 0 待 sim(12 号稿 §1.1 拆分行);阿雅词缀面
     无记载(counter 仅 boss 面)。两线走兜底层(见泛化组测试)。"""
     assert '反甲白厄' not in AFFINITY_TABLE
     assert '昼神阿雅' not in AFFINITY_TABLE
@@ -127,7 +127,7 @@ def test_longtail_lines_no_affix_row() -> None:
         '列车同行·反震', '列车同行·直伤'}
 
 
-# ===== 兜底层(方向保守:只给怕不给吃;design §3.3)=====
+# ===== 兜底层(方向保守:只给怕不给吃;12 号稿 §1.1 词缀分)=====
 
 
 def test_generic_fear_conservative_direction() -> None:
@@ -169,7 +169,7 @@ def test_generic_fear_skips_contested_affixes() -> None:
 
 
 def test_registered_line_unregistered_affix_zero() -> None:
-    """已登记线(含强吃线)未登记词条记 0 不罚(design §3.3「已登记强吃线
+    """已登记线(含强吃线)未登记词条记 0 不罚(12 号稿 §1.1 词缀分「已登记强吃线
     的未登记词条记 0 不罚」):万敌×随从强化(带燃料在局无底线)、
     列车同行×榜样激励 均为 0——泛化层不作用于已登记线。"""
     assert affix_line_score('万敌单C', ('一鼓作气', '随从强化')) \
@@ -266,7 +266,7 @@ def test_strong_enemy_piggy_via_env_hold() -> None:
         '扑满非词缀行通道(词缀 OCR 读到「扑满」不触发——观察面 = 环境持有)'
 
 
-# ===== 重开级命中原语(配方锁联动消费;design §6)=====
+# ===== 重开级命中原语(配方锁联动消费;12 号稿 §1.1 重开级)=====
 
 
 def test_restart_hit_primitives() -> None:
@@ -299,11 +299,11 @@ def test_boss_table_keys_in_canonical_namespace() -> None:
     assert '祸源萨姆' not in BOSS_NICKNAMES
 
 
-# ===== 批 3 拆分衍生(装备证据分化面/燃料集不受影响;design §5)=====
+# ===== 批 3 拆分衍生(装备证据分化面/燃料集不受影响;12 号稿 §1.1 拆分行)=====
 
 
 def test_train_split_fuel_bottom_untouched() -> None:
-    """燃料集投影不受拆分影响(design §4:依赖线独例 = 万敌;列车系
+    """燃料集投影不受拆分影响(12 号稿 §1.1 万敌燃料底线:依赖线独例 = 万敌;列车系
     A/B 无底线登记,行正值投影只作用于万敌行)。"""
     from sr_od.application.currency_war.kernel.cw_affinity_table import (
         FUEL_BOTTOM_LINES,

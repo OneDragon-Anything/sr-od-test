@@ -1,8 +1,7 @@
 """kernel 决策上下文槽(dtag 关联标记)锁面。
 
 被测 = src/sr_od/application/currency_war/kernel/cw_decision_ctx.py;
-设计出处 = changes/2026-10-24-strategy-telemetry/details/capture-store.md §2
-(take 读后清语义 / reset 测试复位口)。
+设计出处 = 策略遥测捕获缝设计(take 读后清语义 / reset 测试复位口)。
 """
 
 from __future__ import annotations
@@ -43,5 +42,5 @@ def test_conftest_reset_dirty_leaver() -> None:
 
 def test_conftest_reset_leaves_no_residue() -> None:
     """成对后条:进场即断言槽空(上条 teardown 由 conftest autouse 复位
-    清场)——跨测试零 dtag 残留(landing §3.2 判据④)。"""
+    清场)——跨测试零 dtag 残留(落地判据④)。"""
     assert take_decision_tag() is None

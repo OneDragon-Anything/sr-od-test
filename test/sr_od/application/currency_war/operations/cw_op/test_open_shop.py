@@ -1,9 +1,8 @@
 """开商店动作原语直调体测试(实机 / sim 双通道发出语义)。
 
 规范出处 = docs/develop/sr_od/application/currency_war/flow/action_ops.md
-§1(动作 op = 机械执行 + 发出即记账,禁验证 / 重试 / 判断)+ 迭代设计
-docs/develop/sr_od/application/currency_war/changes/
-2026-10-16-open-shop-action-spec/design.md §2.1:
+§1(动作 op = 机械执行 + 发出即记账,禁验证 / 重试 / 判断)+ 开商店
+动作发出语义设计裁定(实机 / sim 双通道发出语义):
 
 - 实机:is_success = 发出事实;定位缺失 = 唯一受阻出口
   (回执 reason=定位缺失(按钮-商店) 申报未发出);

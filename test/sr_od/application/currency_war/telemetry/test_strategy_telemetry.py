@@ -1,7 +1,8 @@
 """策略遥测落盘 sink 锁面(run_id 补齐 / 局外零写 / 句柄缓存键含根)。
 
 被测 = src/sr_od/application/currency_war/telemetry/strategy_telemetry.py;
-设计出处 = changes/2026-10-24-strategy-telemetry/details/capture-store.md §4。
+设计出处 = 策略遥测捕获存储设计(run_id 补齐 / 局外零写 / 句柄缓存
+键含根的落盘契约);遥测正本 = strategy-docs/strategy-telemetry.md。
 测试零真实副作用:recorder 根重定向 tmp_path,teardown 收句柄复位槽。
 """
 

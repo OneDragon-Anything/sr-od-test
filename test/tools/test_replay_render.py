@@ -4,15 +4,12 @@
 无法按「src 路径同源镜像」落位,按工具名组织为本文件(规范变通记录于
 文件头,sr-od-test/README.md「测试文件组织」的镜像规则以 src 文件为基准)。
 
-被测行为锁 = 渲染设计约定,出处(持久索引):
-- docs/develop/sr_od/application/currency_war/changes/2026-10-16-journal-review-renderer/
-  details/pipeline.md(§1 行加载 / §2 节点分组 / §3 无 node 行归属链 /
-  §4 画面章切分 / §5 动作节切分与状态差分 / §7 CLI)
-- 同目录 details/render-spec.md(§1 骨架 / §2 局头 / §3 画面注册表 /
-  §4 动作节显示 / §5 特殊情况)
-- docs/develop/sr_od/application/currency_war/changes/2026-10-24-strategy-telemetry/
-  details/render-assembly.md(§1 发现加载 / §2 章级挂载表 / §3 两级 join
-  与报告块 / §4 局头;capture-store.md §2 dtag 语义与回执覆盖面)
+被测行为锁 = 渲染器自身设计约定(以 tools/cw/replay_to_md.py 实现为准):
+- 渲染管线:行加载 / 节点分组 / 无 node 行归属链 / 画面章切分 /
+  动作节切分与状态差分 / CLI
+- 显示规范:骨架 / 局头 / 画面注册表 / 动作节显示 / 特殊情况
+- 策略遥测装配:发现加载 / 章级挂载表 / 两级 join 与报告块 / 局头
+  (动作级回执 dtag 语义与回执覆盖面)
 
 fixture journal 全部自造、只写 pytest tmp_path,零真实副作用(不连真游戏、
 不读本机易失产物;真实 journal 只用于人工验收,不进测试断言)。
@@ -950,7 +947,7 @@ def test_entry_screen_map_closed_set_14_rows():
 
 
 def test_star_tome_registry_fix_and_box_unchanged():
-    """零差异例外清单(landing §3.4 配套修订):SCREEN_REGISTRY 补星徽秘典
+    """零差异例外清单(落地修订配套):SCREEN_REGISTRY 补星徽秘典
     弹窗广播行(→ 画面-书卡/star_tome_opts);CwScreenBookcard 键集修复
     (box_card_names → star_tome_opts 存量错行);武装箱两行
     (box_card_names)不动。广播行开「画面-书卡」章无缺口注记,0 观察显示

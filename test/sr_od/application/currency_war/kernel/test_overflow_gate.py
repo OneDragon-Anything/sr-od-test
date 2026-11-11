@@ -55,7 +55,7 @@ def _frame(**kw) -> MandateFrame:
     """最小骨架帧:round>1 免 M5;gold 充裕免凑息/买面;上阵 1 人免
     empty_board_sell_guard(场上无人禁卖守卫);单 1★ 备战件(万敌 =
     非四体系中性位,保护集身份段外的可入燃料候选;统一保护集
-    changes/2026-10-15-unified-protection-set design.md §2.3——原椒丘
+    迭代裁定——原椒丘
     已属保护集,常规卖出资格面排除,不再充当中性位)。
     P4 状态容器形:bench = 占席条目,deployed = 行域 Unit。"""
     base = {'gold': 200, 'level': 7,

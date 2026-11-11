@@ -2,11 +2,11 @@
 ``note_action_receipt`` 读侧;同 src 兄弟测试 = kernel/test_cw_game_state.py
 回放守恒主题 / kernel/test_game_state.py 状态容器机制主题,主题不同不混写)。
 
-被测契约 = changes/2026-10-24-strategy-telemetry/details/capture-store.md §2
+被测契约 = 策略遥测捕获缝设计的 dtag 关联面
 (dtag 进回执 = kernel 决策上下文槽,单写单读 take 读后清;四调用点零改动)
-+ landing §3.2 完成判据(同帧信封同值 / 受阻回执同带 / 重试链多回执各带
++ 落地判据(同帧信封同值 / 受阻回执同带 / 重试链多回执各带
 各值 / 跨测试残留归 conftest 复位面——后者锁在 test_cw_decision_ctx.py)。
-信封侧经 T-2 捕获缝(内存假 sink)装配;测试零真实副作用。
+信封侧经内存假 sink 捕获缝装配;测试零真实副作用。
 """
 
 from __future__ import annotations

@@ -1,22 +1,22 @@
-"""统一卖出候选评估器测试(三触发卖出判据件;统一让位优先级迭代 3.2 重写、
-3.4 旧判据拆除收敛)。
+"""统一卖出候选评估器测试(三触发卖出判据件;统一让位优先级判定
+重写收敛后的形态)。
 
-规格单一源 = changes/2026-10-29-unified-priority/details/acquisition-
-and-sell.md §3(三触发)+ priority-model §5(卖出取用形态):
+规格单一源 = strategy-docs/32_unified_sell_priority.md(§3 十档判定表 /
+§8 卖出取用形态):
 
 - **统一序列消费**:各场景排序单一源 = ``criteria/priority.sell_order``
   (部署重排定型后的全局面序列,末位起取用);无场景专属池子【拍】;
 - **身份过滤退役**(场景级:垫件谓词/仅一星过滤删除)+ **循环防线
   保留**(窗口段/L1 同轮禁卖/种子豁免经 sell_exclusions 装配——身份段
-  已随 3.4 整段退役,装配自动收缩;合成素材守卫;空板止损守卫);
+  已整段退役,装配自动收缩;合成素材守卫;空板止损守卫);
 - **溢出全资格豁免保留**;**跨档止盈**保留为节末凑息场景参数;
-  **凑息豁免**(roster-plane1-union design §2.2 第 5 项)同为节末
+  **凑息豁免**(32 号稿 §9 边界申报)同为节末
   凑息场景参数——候选池剔除线内未达标成员(为利息绝对不可卖,非
   排序后移;池空零动作 + 剔光帧观测键),被迫类场景不适用(动机
   二分);**线内身份集双层名单**(32 号稿 §2):
   过渡支 = transition_candidates 槽展开(与买面同源),
   豁免名单随 _member_names 装配改后自动覆盖过渡在建件;
-- 3.4 退役面:shop_swap 场景行(3.2 六步流程替换)、c1_make_room
+- 退役面:shop_swap 场景行(六步流程替换)、c1_make_room
   场景行(C1 支拆除)、deploy_swap 冻结遗留路径与旧价值函数
   (sell_gold_equivalent/MERGE_PROGRESS_X2)/羁绊排序谓词/场上无关
   角色谓词——对应测试随批删除,退役语义以负断言锁存。
@@ -77,7 +77,7 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.statefn.predicate
 )
 
 # 注册表事实基准(测试种子选名依据,别换名后不解注册表;档号 = 十档口径,
-# 完成品保护迭代 design §2.2):
+# 32 号稿 §3):
 # - 万敌(1费,夜之半神+燃血)/远坂凛(1费)= 兜底档 10 干净件(保护集外);
 # - 黄泉(3费,减益)= 档 9 羁绊成员(保护集外);星期日 = 万金油(档 8,
 #   常规面身份段排除件——仅自救面在池);停云 = 兜底档 10 干净件(自救面);
@@ -149,7 +149,7 @@ class TestSceneClosedSet:
         随 C1 支拆除(3.4,dismantle §2 场景死行);deploy_swap 冻结遗留
         路径随旧价值函数退役(3.4——部署换人域判据本体 = kernel 直接
         消费,不经本评估器,生产零消费面);session_funding 随统一获取
-        让位评估并入后退役(roster-plane1-union design §2.2 第 4 项:
+        让位评估并入后退役(11 号稿 §4.0:
         金不足与席满同一评估,禁再立筹资/凑金/腾位类场景)。"""
         for scene in ('shop_swap', 'c1_make_room', 'deploy_swap',
                       'session_funding', 'levelup_liquidate_prep'):
@@ -225,7 +225,7 @@ class TestUnifiedSequence:
     def test_guarded_scene_priority_order(self):
         """常规面序列 = 统一序列(身份段已随 3.4 退役,无排除面):
         entry_signals 退役后万敌/黄泉均上场进档 1(名级保护),让位池
-        主体 = 被换下垫件(兜底档 10 先让;十档口径 design §2.2)。"""
+        主体 = 被换下垫件(兜底档 10 先让;十档口径 = 32 号稿 §3)。"""
         sess, gs = _board_full_gs([cw4_bc('万敌'), cw4_bc('黄泉')], level=5)
         cands, why = evaluate_sell_candidates(gs, 'ore_make_room')
         assert why == ''
@@ -243,7 +243,7 @@ class TestTakeObservationPayload:
     ——载荷失真只伤观测不伤行为,但键值 = sort_key 输出须逐位同源。"""
 
     def test_tier_attached_distinct_keys_no_tail_hit(self):
-        """档位分量随键回填(十档口径 = 完成品保护迭代 design §2.2):
+        """档位分量随键回填(十档口径 = 32 号稿 §3):
         entry_signals 退役后候选线在建件(瓦尔特)上场进档 1,让位池 =
         干净兜底档 10 件(万敌,bench)+ 被换下垫件(杂板3,deployed)
         ——两名件费档/星级子键互异 → 全池键互异
@@ -271,7 +271,7 @@ class TestTakeObservationPayload:
         assert all(c.rng_tail_hit for c in cands)
 
 
-# ===== 跨档止盈(节末凑息场景参数;design §2.4 保留行)=====
+# ===== 跨档止盈(节末凑息场景参数;场景参数保留裁定)=====
 
 
 class TestInterestCrossTier:
@@ -296,7 +296,7 @@ class TestInterestCrossTier:
         assert why == REJECT_NO_CANDIDATES
 
     def test_two_star_piece_enters_pool_when_crossing(self):
-        """仅一星代理过滤退役【拍,总纲 §2.4】:2★ 件退金(变现价 ×3)
+        """仅一星代理过滤退役【拍】:2★ 件退金(变现价 ×3)
         跨档即入序列——星级让位代价由档位结构承载,不设资格过滤。"""
         sess, gs = _board_full_gs([cw4_bc('万敌', 2)], gold=9, level=5)
         cands, why = evaluate_sell_candidates(gs, 'node_end_interest')
@@ -304,14 +304,14 @@ class TestInterestCrossTier:
         assert _names(cands) == ['万敌'], '2★ 件退金跨档入池(无仅一星门)'
 
 
-# ===== 凑息豁免(阶段 4:roster-plane1-union design §2.2 第 5 项/§3 四用例)=====
+# ===== 凑息豁免(节末凑息场景参数;32 号稿 §9/凑息豁免四用例)=====
 
 
 class TestInterestMemberExemption:
-    """凑息卖出豁免(design §3「凑息豁免测试」行):线内未达标成员
-    (现行排序形态 = 档 3 升星主线/档 7 阵容强度,十档口径 design §2.2)
+    """凑息卖出豁免(凑息豁免测试契约):线内未达标成员
+    (现行排序形态 = 档 3 升星主线/档 7 阵容强度,十档口径 = 32 号稿 §3)
     为利息绝对不可卖——候选池剔除,非排序后移;达标线内件(≥ 目标星,
-    完成品保护档 2/4 殿后,design §2.5-1/2)与非线内件照常参与;被迫类
+    完成品保护档 2/4 殿后,32 号稿 §5-1/2)与非线内件照常参与;被迫类
     卖出(溢出/晶矿/获取让位)零豁免(动机二分:因席位/金币被迫按
     优先级让位的无豁免)。
 
@@ -391,7 +391,7 @@ class TestInterestMemberExemption:
     def test_cross_tier_empty_frame_not_counted_depleted(self):
         """剔光键边界:可行池本空的帧(跨档止盈已剔空)零动作与豁免
         无关——不落观测键(键只计豁免真正翻转卖出→零动作的帧,
-        design §2.2 第 3 项观测键登记点判读口径;entry_signals 退役后
+        32 号稿 §3 观测键域判读口径;entry_signals 退役后
         瓦尔特(线内在建件)上场进档 1,豁免域收窄)。"""
         sess, gs = self._candidate_gs(
             [cw4_bc('瓦尔特'), cw4_bc('布洛妮娅')], gold=9)
@@ -428,7 +428,7 @@ class TestIdentitySegmentRetired:
     """装配 A 身份段退役后的序列承载形态(dismantle §3 卖侧):
     标签命中件/registry 核心/保护档件不再被身份排除,统一按档位结构
     排序——候选线成员/骨架件由成员档族档 2/3/4/5/7 天然殿后(十档
-    口径 design §2.2),非成员标签件按兜底档 10 概率先让
+    口径 = 32 号稿 §3),非成员标签件按兜底档 10 概率先让
     (万敌单C 锁定帧,布洛妮娅 = 燃血标签件)。"""
 
     def _locked_gs(self, bench):
@@ -448,7 +448,7 @@ class TestIdentitySegmentRetired:
         """身份段退役申报:bench 标签命中件(布洛妮娅,燃血无已达成档)
         不被身份排除——entry_signals 退役后被部署编入上场进档 1(名级
         保护);零标签对照件(佩拉,非成员)在池按羁绊档 9 排序
-        (十档口径 design §2.2)。"""
+        (十档口径 = 32 号稿 §3)。"""
         gs = self._locked_gs(['布洛妮娅', '佩拉'])
         cands, why = evaluate_sell_candidates(gs, 'ore_make_room')
         assert why == ''
@@ -471,7 +471,7 @@ class TestIdentitySegmentRetired:
             '希儿/佩拉档 1 编入(entry_signals 退役后上场保护)'
 
 
-# ===== 线内身份集单一准入(阶段 1:roster-plane1-union design §2.1/§3)=====
+# ===== 线内身份集单一准入(双层名单;32 号稿 §2)=====
 
 
 class TestSellLineMembershipSingleAdmission:
@@ -524,8 +524,8 @@ class TestP1LockedSellPoolNarrowing:
     §2):过渡成员从「最先让路」收窄为「殿后保护」——
     修复前过渡成员不在锁定帧名单,落兜底档最先卖;修复后落凑两星
     过程保护档,同帧万金油垫件先让(档号 = 十档口径:兜底档 10〔旧
-    八档档 8〕/凑两星档 7〔旧档 5〕/万金油档 8〔旧档 6〕,design
-    §2.2)。"""
+    八档档 8〕/凑两星档 7〔旧档 5〕/万金油档 8〔旧档 6〕,32 号稿
+    §3)。"""
 
     def test_recipe_member_retired_in_final_lock_frame(self):
         """终局锁定帧(换轴):过渡层退役——过渡槽残留不消费,卡芙卡
@@ -571,7 +571,7 @@ class TestSceneTableParams:
         已随凑金链整删退役(用户裁定 2026-10-30:不存在升级卖牌凑金,
         保持最大压牌库,钱够了再升——金不足帧恒 defer 零卖出);
         session_funding 与 funding 通道已随统一获取让位评估并入后退役
-        (roster-plane1-union design §2.2 第 4 项:金不足与席满同一
+        (11 号稿 §4.0:金不足与席满同一
         评估,场景/通道/专属计数整链删除)。"""
         assert SCENE_SPECS['node_end_interest'].legacy_channel == 'interest'
         assert SCENE_SPECS['ore_make_room'].legacy_channel == 'm4_fuel'
@@ -599,8 +599,8 @@ class TestSceneTableParams:
                 assert spec.cross_tier_only is False, name
 
     def test_interest_scene_carries_member_exemption_param(self):
-        """凑息豁免 = 节末凑息独有场景参数(roster-plane1-union design
-        §2.2 第 5 项):仅利息动机场景声明池过滤;被迫类(溢出/晶矿)
+        """凑息豁免 = 节末凑息独有场景参数(32 号稿 §9 边界申报):
+        仅利息动机场景声明池过滤;被迫类(溢出/晶矿)
         恒 False——动机二分,豁免只挂「为利息」类。"""
         assert SCENE_SPECS['node_end_interest'].exempt_unmet_members is True
         for name, spec in SCENE_SPECS.items():
@@ -612,8 +612,8 @@ class TestSceneTableParams:
         ——新增常规面通道会撑破本清单(shop_swap 已随置换账替换退役
         〔3.2〕;c1_make_room/deploy_swap 已随身份段/旧价值函数退役
         删除〔3.4〕;levelup_liquidate_prep 已随凑金链整删退役;
-        session_funding 已随统一获取让位评估并入后退役〔roster-plane1-
-        union design §2.2 第 4 项〕)。"""
+        session_funding 已随统一获取让位评估并入后退役〔统一获取让位
+        评估契约〕)。"""
         regular = {s for s, spec in SCENE_SPECS.items()
                    if spec.face == FACE_REGULAR}
         assert regular == {'ore_make_room', 'node_end_interest'}

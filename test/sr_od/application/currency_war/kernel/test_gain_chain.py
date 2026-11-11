@@ -1,6 +1,6 @@
 """获得链(gain-chain)行为测试(链式规范 + 开局初始值通道规则)。
 
-测试面依据(语义权威版本,changes/ 过程件不引):获得链权威版本 =
+测试面依据(语义权威版本):获得链权威版本 =
 docs/develop/sr_od/application/currency_war/game_state/gain-chain.md
 (§2 原语契约/§2.5 单级合成/§6 失败安全);通道规则与种子初始值权威版本 =
 同目录 fields.md §2.6(未锚定 → 随机态、锚定后按形参、失配网生效)。测试面:
@@ -217,7 +217,7 @@ def _idents(seq: list) -> list:
 ])
 def test_merge_step_once_parity_with_merge_simulate(
         bench_spec: list[tuple[str, int]], dep_idx: int | None) -> None:
-    """单级×N 终态 == merge_simulate 同池同输入不动点终态(design §2.1-3
+    """单级×N 终态 == merge_simulate 同池同输入不动点终态(权威版本 §2.1-3
     对拍测试;merge_simulate 是语义权威,期望值即其输出)。"""
     bench: list[BenchSlot | None] = [
         BenchSlot(kind='unit', unit=Unit(char_id=c, star=s)) for c, s in bench_spec]
@@ -855,8 +855,7 @@ def test_env_gift_conditional_only_quiet_after_random_branch(
 
 # ============================================================ 随机装备通道
 # (环境随机装备发放:equips_random_immediate 类别池掷骰 + 绑定分支;首例
-# 劳务派遣合同分支1,设计 = 该迭代 designs/T-19-laowu-paiqian-hetong.md
-# §2.4)
+# 劳务派遣合同分支1,登记形态经专项迭代对抗评审定稿)
 
 
 def test_env_star_grant_seeded_roll_and_binding(rows_sink: _RowSink) -> None:
@@ -963,7 +962,7 @@ def test_discharge_due_item_grants_place_and_drain(rows_sink: _RowSink) -> None:
 
 
 def test_discharge_overflow_semantics_reused(rows_sink: _RowSink) -> None:
-    """落位语义复用(design §2.3 ②):席满 → 溢出落位两字段(身份 = 道具名,
+    """落位语义复用(权威版本 §2.3 ②):席满 → 溢出落位两字段(身份 = 道具名,
     角色入账分支同款);溢出位再被占 → 该项零写留证(DEFECT_OVERFLOW_TAKEN);
     队列回写只看命中非空,与落位成败解耦。"""
     gs = _make_gs(bench=[('希儿', 1)] * 9, equips=[])
@@ -991,7 +990,7 @@ def test_discharge_overflow_semantics_reused(rows_sink: _RowSink) -> None:
 def test_bench_item_names_cover_scheduled_channel() -> None:
     """占席道具词表派生面:BENCH_ITEM_NAMES 并入 items_scheduled 道具名
     (定时道具同为占席道具,溢出位身份 kind 判定同面——缺派生会把箱当
-    角色,假身份进合成素材组);策略箱分支登记同样自动派生覆盖(design
+    角色,假身份进合成素材组);策略箱分支登记同样自动派生覆盖(权威版本
     §2.1 断言:登记即入词表,进阶武装箱首例)。"""
     assert '特权武装箱' in BENCH_ITEM_NAMES, 'scheduled 派生覆盖'
     assert '简易武装箱' in BENCH_ITEM_NAMES, 'immediate 派生保持'
@@ -1061,7 +1060,7 @@ def test_gain_equipment_consequence_and_quiet() -> None:
 def test_gain_invest_strategy_invalid_payload_zero_write(
         rows_sink: _RowSink) -> None:
     """无效载荷拒绝(归一后空/'?' = 零写 + 缺陷留证;无效输入拒绝非防
-    重复保护,design §2.4-0)。"""
+    重复保护,权威版本 §2.4-0)。"""
     gs = _make_gs(bench=[], equips=[])
     seq_before = gs.write_seq
     for bad in ('', '?'):
@@ -1075,7 +1074,7 @@ def test_gain_invest_strategy_invalid_payload_zero_write(
 
 def test_gain_invest_strategy_register_dedup_and_hacker_chain(
         monkeypatch: pytest.MonkeyPatch, rows_sink: _RowSink) -> None:
-    """三段式主链(design §2.4):注册按名字去重追加(裁定⑩持卡列表
+    """三段式主链(权威版本 §2.4):注册按名字去重追加(裁定⑩持卡列表
     写入语义)→ 登记分支(session=None 跳过)→ on_strategy_gained 分派
     advisor 解锁分支(银狼入池,官方卡文 = 加入商店非送单位,原入席分支
     随权威解锁写道退役)+ 骇客效果体(改件经 gain_equipment rand=True
@@ -1111,7 +1110,7 @@ def test_gain_invest_strategy_register_dedup_and_hacker_chain(
 
 
 def test_gain_invest_strategy_session_ledger_branch() -> None:
-    """登记分支(design §2.4-2):session 在场 + STRATEGY_EFFECTS 命中 →
+    """登记分支(权威版本 §2.4-2):session 在场 + STRATEGY_EFFECTS 命中 →
     register_strategy 入册 + burst 桥累加免费刷新余额;session=None =
     登记分支跳过、注册照常;未收录卡登记分支零动作。(选卡 = 固定理财:
     STRATEGY_EFFECTS 已登记条目且 payload.free_refresh_burst=2,桥 docstring
@@ -1408,8 +1407,8 @@ def test_on_strategy_gained_unregistered_quiet() -> None:
 
 
 # ============================================================ 策略箱分支效果
-# (策略卡获得时点占席道具发放,进阶武装箱首例;迭代
-#  design §2.3)
+# (策略卡获得时点占席道具发放,进阶武装箱首例;登记契约
+#  权威版本 §2.3)
 
 
 @pytest.mark.parametrize(('card', 'item'), [
@@ -1865,7 +1864,7 @@ def test_random_equip_leg_rand_channel_subchain(rows_sink: _RowSink) -> None:
 
 def test_gain_bench_item_three_landings(
         monkeypatch: pytest.MonkeyPatch, rows_sink: _RowSink) -> None:
-    """公开原语落位三态 + 署名透传(design §2.2:与 on_env_gained 既有
+    """公开原语落位三态 + 署名透传(权威版本 §2.2:与 on_env_gained 既有
     道具通道语义逐项一致——备战空槽 → 席满溢出落位 → 溢出位被占零写
     留证;producer 形参自定义署名透传写端,环境通道现役调用点不传即
     链缺省署名,行为不变形)。"""

@@ -1,8 +1,8 @@
-"""投资通道派生测试(design §3.1/§3.2;2026-11-03-unified-line-scoring 批 1)。
+"""投资通道派生测试(统一阵容评分迭代批 1)。
 
-判据权威版本 = docs/develop/sr_od/application/currency_war/changes/
-2026-11-03-unified-line-scoring/design.md §3.1(环境四通道)/§3.2(策略
-五通道+实证覆盖升档)。断言全部引设计语义,期望值 = 常数表符号直读
+判据权威版本 = docs/develop/sr_od/application/currency_war/strategy-docs/
+12_line_and_intention.md §1.1(投资通道派生:环境通道/策略通道/实证
+覆盖升档)。断言全部引设计语义,期望值 = 常数表符号直读
 (cw_line_scales 单一源),注册表真实数据现算锚定。
 """
 from __future__ import annotations
@@ -36,7 +36,7 @@ def _comp(name: str):
     return comp
 
 
-# ===== 环境通道②③④(类目派生;design §3.1)=====
+# ===== 环境通道②③④(类目派生;12 号稿 §1.1 投资通道派生)=====
 
 
 def test_env_concept_stock_strong_channel_full_tier() -> None:
@@ -55,7 +55,7 @@ def test_env_invitation_mid_channel_and_contract_strong() -> None:
 
 
 def test_env_generic_categories_zero() -> None:
-    """通用类线分 0(design §3.1;批 2 起**专家类目例外** = 顾问入商店
+    """通用类线分 0(12 号稿 §1.1;批 2 起**专家类目例外** = 顾问入商店
     通道):经济/规则/时代三类目恒 0;专家类目 10 个中 7 个无定向 0
     (道具/通用增益/条件效果条目——见 test_env_advisor_channel)。"""
     from sr_od.application.currency_war.kernel.cw_investments import (
@@ -63,7 +63,7 @@ def test_env_generic_categories_zero() -> None:
     )
     generic = [n for n, e in INVESTMENT_ENVS.items()
                if e.category not in ('概念股', '邀请', '契约', '专家')]
-    assert len(generic) == 31, '经济/规则/时代类目计数基准(design §3.1 类目账:41=31+专家10)'
+    assert len(generic) == 31, '经济/规则/时代类目计数基准(通道类目账:41=31+专家10)'
     for name in generic:
         assert env_line_bonuses(name) == {}, name
     # 专家类目 0 分卡(顾问表外的道具/通用/条件效果条目)
@@ -80,7 +80,7 @@ def test_env_core_faction_hit_full_tier() -> None:
 
 
 def test_env_flex_downgrade_strong_to_soft_and_mid_to_zero() -> None:
-    """flex 降档(design §3.1:强→+30/中→0):黄泉减益的「击破」随
+    """flex 降档(12 号稿 §1.1 降档落点:强→+30/中→0):黄泉减益的「击破」随
     flex∩bonus 互斥清理(comp-data-row-cleanup)由 flex 列移入档 1
     承载——降档行为不变(bonus 与 flex 同分支同分值):
     击破概念股(强)降 +30;击破邀请(中)降 0。"""
@@ -95,7 +95,7 @@ def test_env_flex_downgrade_strong_to_soft_and_mid_to_zero() -> None:
 
 
 def test_evidence_upgrade_quantum_emblem_family() -> None:
-    """实证覆盖升档(design §2 表):量子星徽×3(邀请〔环境〕+星徽+套组
+    """实证覆盖升档(数量级表实证覆盖升档行):量子星徽×3(邀请〔环境〕+星徽+套组
     〔策略〕)→ 希儿量子 +750,覆盖通道③默认 +150。"""
     seele = _comp('希儿量子')
     assert env_line_bonus('量子同频邀请', seele) == EVIDENCE_UPGRADE_BONUS
@@ -115,7 +115,7 @@ def test_evidence_upgrade_luocha_to_train() -> None:
 
 
 def test_defining_cards_line_named_registration() -> None:
-    """定义卡 +500(design §2:黑塔纪元/专家邀请/飞光):点名登记不走羁绊
+    """定义卡 +500(数量级表定义卡档:黑塔纪元/专家邀请/飞光):点名登记不走羁绊
     命中(黑塔纪元效果原文无线定义文本,手编表承载)。"""
     assert strategy_line_bonus('黑塔纪元', _comp('大黑塔银河学者')) \
         == INVEST_DEFINING
@@ -210,7 +210,7 @@ def test_strategy_advisor_channel() -> None:
     assert set(ADVISOR_NAME_PENDING) == {'领航专家:姬子'}
 
 
-# ===== 吃怕表与万敌燃料底线(design §4;批 1 万敌行直入)=====
+# ===== 吃怕表与万敌燃料底线(12 号稿 §1.1 词缀分;批 1 万敌行直入)=====
 
 
 def test_wandi_row_scores() -> None:
