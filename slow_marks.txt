@@ -63,4 +63,9 @@ test/sr_od/application/cultivation/light_cone/operations/test_equip_light_cone.p
 # TM,全库 TemplateLoader 载入为主成本),实测 5.4s
 test/sr_od/application/cultivation/relic/operations/test_relic_list_recognizer.py::test_relic_recognizer
 
+# 2026-11-12 S2 词缀读取器登记:每条 = 两帧整帧 OCR + 4-5 次角标小图放大 OCR,
+# 单条实测 ~3.8s;断言共享单次 read_detail 结果,慢计算只算一次
+test/sr_od/application/cultivation/relic/test_relic_detail_reader.py::test_read_detail_percent_form
+test/sr_od/application/cultivation/relic/test_relic_detail_reader.py::test_read_detail_flat_form
+
 test_enter_game.py::test_version_promo_right_top_fallback
