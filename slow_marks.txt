@@ -68,4 +68,7 @@ test/sr_od/application/cultivation/relic/operations/test_relic_list_recognizer.p
 test/sr_od/application/cultivation/relic/test_relic_detail_reader.py::test_read_detail_percent_form
 test/sr_od/application/cultivation/relic/test_relic_detail_reader.py::test_read_detail_flat_form
 
+# 2026-11-12 S4 候选扫描登记:真 TM 部位库识别(19 卡,全库载入为主成本),实测 ~5s
+test/sr_od/application/cultivation/relic/operations/test_scan_relic_candidates.py::test_scan_produces_candidates_and_bottom
+
 test_enter_game.py::test_version_promo_right_top_fallback
