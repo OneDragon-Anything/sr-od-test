@@ -7,14 +7,23 @@
   ``ctx: SrContext``)时,只该参数回退字符串注解,其余参数(list/dict 泛型)仍求值
   成功、可被 run_operation 接受——整体求值(get_type_hints)一败俱败,会拒收合法参数。
 """
+import sys
+import types
 from typing import TYPE_CHECKING
 
+import pytest
+
 from one_dragon.base.operation.operation import Operation
+from sr_od.backend import operation_registry
 from sr_od.backend.operation_registry import (
     _annotation_json_serializable,
     _resolve_annotations,
+    describe_operation,
+    match_short_name,
+    resolve_unique_op,
     validate_args,
 )
+from sr_od.backend.schemas import OperationInfo, OperationListResult
 
 if TYPE_CHECKING:
     from sr_od.context.sr_context import SrContext
@@ -58,3 +67,101 @@ def test_validate_args_rejects_missing_required() -> None:
     err = validate_args(_OpWithForwardRef, {})
     assert err is not None
     assert 'team_names' in err
+
+
+# ===== 短名匹配(describe/run 支持「只传类名」,短名多命中分流)=====
+
+_REAL_UNIQUE = 'GetRidOfStuck'
+_REAL_FULL = 'sr_od.operations.move.get_rid_of_stuck.GetRidOfStuck'
+# 同名假类的两个承载模块(动态注册进 sys.modules,收尾必须移除——进程级全局)
+_FAKE_MODS = ('test_registry_fake_pkg.a', 'test_registry_fake_pkg.b')
+_AMBIGUOUS_NAME = 'FakeAmbiguousRegistryOp'
+
+
+def _install_ambiguous_scan(monkeypatch) -> list[str]:
+    """注册同名假类到两个假模块并 patch 扫描结果,返回两个假 op_id。
+
+    resolve_op_class 经 importlib 解析,假模块须注册进 sys.modules;
+    调用方必须在 finally 里移除(进程级全局,泄漏会污染其他测试)。
+    """
+    operations = []
+    for mod_name in _FAKE_MODS:
+        mod = types.ModuleType(mod_name)
+        cls = type(_AMBIGUOUS_NAME, (Operation,), {'__module__': mod_name})
+        setattr(mod, _AMBIGUOUS_NAME, cls)
+        sys.modules[mod_name] = mod
+        operations.append(OperationInfo(
+            op_id=f'{mod_name}.{_AMBIGUOUS_NAME}',
+            class_name=_AMBIGUOUS_NAME,
+            module=mod_name,
+        ))
+    fake = OperationListResult(operations=operations, failures=[])
+    monkeypatch.setattr(
+        operation_registry, 'scan_operations',
+        lambda _ctx, refresh=False: fake)
+    return [o.op_id for o in operations]
+
+
+def test_match_short_name_returns_none_for_op_id() -> None:
+    """含 ``.`` 是完整 op_id 形态 → None(调用方走实时解析路径)。"""
+    assert match_short_name(_REAL_FULL) is None
+
+
+def test_match_short_name_unique_hit() -> None:
+    """真实项目类名唯一 → 短名命中 1 条。"""
+    hits = match_short_name(_REAL_UNIQUE)
+    assert len(hits) == 1
+    assert hits[0].op_id == _REAL_FULL
+
+
+def test_match_short_name_no_hit_returns_empty() -> None:
+    """短名形态无命中 → 空列表(与 None 的「非短名形态」语义区分)。"""
+    assert match_short_name('NoSuchOpXyz') == []
+
+
+def test_resolve_unique_op_accepts_short_name() -> None:
+    """短名唯一命中 → 解析出真类。"""
+    from sr_od.operations.move.get_rid_of_stuck import GetRidOfStuck
+
+    assert resolve_unique_op(_REAL_UNIQUE) is GetRidOfStuck
+
+
+def test_resolve_unique_op_rejects_ambiguous(monkeypatch) -> None:
+    """短名多命中 → ValueError 列出全部候选 op_id(防误运行)。"""
+    fake_ids = _install_ambiguous_scan(monkeypatch)
+    try:
+        with pytest.raises(ValueError) as exc_info:
+            resolve_unique_op(_AMBIGUOUS_NAME)
+        for fake_id in fake_ids:
+            assert fake_id in str(exc_info.value)
+    finally:
+        for mod_name in _FAKE_MODS:
+            sys.modules.pop(mod_name, None)
+
+
+def test_resolve_unique_op_not_found_suggests_similar() -> None:
+    """短名未找到 → 报错附 difflib 相似类名建议。"""
+    with pytest.raises(ValueError) as exc_info:
+        resolve_unique_op('GetRidOfStuckkk')
+    assert '未找到' in str(exc_info.value)
+    assert _REAL_UNIQUE in str(exc_info.value)
+
+
+def test_describe_operation_short_name_returns_full_op_id() -> None:
+    """短名 describe → 返回单条 schema 且 op_id 回填完整形态。"""
+    info = describe_operation(None, _REAL_UNIQUE)
+    assert info['op_id'] == _REAL_FULL
+    assert info['class_name'] == _REAL_UNIQUE
+
+
+def test_describe_operation_ambiguous_returns_all_matches(monkeypatch) -> None:
+    """短名多命中 → {ambiguous, count, matches[]} 全部候选。"""
+    fake_ids = _install_ambiguous_scan(monkeypatch)
+    try:
+        info = describe_operation(None, _AMBIGUOUS_NAME)
+    finally:
+        for mod_name in _FAKE_MODS:
+            sys.modules.pop(mod_name, None)
+    assert info['ambiguous'] is True
+    assert info['count'] == 2
+    assert sorted(m['op_id'] for m in info['matches']) == sorted(fake_ids)

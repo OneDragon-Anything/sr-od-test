@@ -369,6 +369,16 @@ def test_describe_operation_error_on_bad_op() -> None:
     assert isinstance(info, dict) and 'error' in info
 
 
+def test_describe_operation_accepts_short_name() -> None:
+    """describe_operation 支持类名短名(唯一命中)→ 返回完整 op_id 的 schema。"""
+    from sr_od.backend.mcp.service_app import make_describe_operation
+
+    backend = MagicMock()
+    info = make_describe_operation(backend)('GetRidOfStuck')
+    assert info['op_id'] == _GET_RID_OF_STUCK
+    assert info['class_name'] == 'GetRidOfStuck'
+
+
 def test_run_operation_runs_via_slot() -> None:
     """合法 op_id + 空 args → run_slot._start 被调(op_factory 路径),started=True。"""
     from sr_od.backend.mcp.service_app import make_run_operation
@@ -453,3 +463,17 @@ def test_run_operation_bakes_args_into_factory() -> None:
     op = op_factory(MagicMock(name='SrContext'))
     assert isinstance(op, GetRidOfStuck)
     assert op.stuck_times == 3
+
+
+def test_run_operation_accepts_short_name() -> None:
+    """run_operation 支持类名短名(唯一命中)→ 正常启动,display_name 用完整 op_id。"""
+    from sr_od.backend.mcp.service_app import make_run_operation
+
+    backend = MagicMock()
+    backend.run_slot._start.return_value = (True, Future())
+    backend.query_status.return_value = RunStatusResult(
+        state='running', source='mcp', started_at='2026-07-02T00:00:00', duration_seconds=1.0)
+    res = asyncio.run(make_run_operation(backend)(
+        op_id='OpenAndEnterGame', args={}, block=False))
+    assert res['started'] is True
+    assert backend.run_slot._start.call_args.kwargs.get('display_name') == _OPEN_AND_ENTER

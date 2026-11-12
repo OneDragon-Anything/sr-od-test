@@ -286,6 +286,19 @@ def test_handle_game_operations_describe_missing_op_id() -> None:
     assert 'error' in json.loads(resp.body.decode('utf-8'))
 
 
+def test_handle_game_operations_describe_short_name() -> None:
+    """describe 支持类名短名(与 MCP 同契约):唯一命中返回完整 op_id schema。"""
+    from sr_od.backend.http.service_routes import handle_game_operations_describe
+
+    backend = MagicMock()
+    request = MagicMock()
+    request.query_params = {'op_id': 'TalkInteract'}
+    resp = asyncio.run(handle_game_operations_describe(backend, request))
+    data = json.loads(resp.body.decode('utf-8'))
+    assert data['class_name'] == 'TalkInteract'
+    assert data['op_id'] == _TALK_INTERACT
+
+
 def test_handle_game_run_operation_op_id_via_query_args_via_body() -> None:
     """POST /game/run/operation:op_id 走 query、args 走 body;成功启动(_start 被调)。"""
     from sr_od.backend.http.service_routes import handle_game_run_operation
@@ -316,6 +329,21 @@ def test_handle_game_run_operation_rejects_non_operation() -> None:
     data = json.loads(resp.body.decode('utf-8'))
     assert data['started'] is False and 'error' in data
     backend.run_slot._start.assert_not_called()
+
+
+def test_handle_game_run_operation_accepts_short_name() -> None:
+    """run 支持类名短名(唯一命中):_start 被调,display_name 用完整 op_id。"""
+    from sr_od.backend.http.service_routes import handle_game_run_operation
+
+    backend = MagicMock()
+    backend.run_slot._start.return_value = (True, Future())
+    backend.query_status.return_value = RunStatusResult(
+        state='running', source='http', started_at='2026-07-02T00:00:00', duration_seconds=1.0)
+    request = _request_with_body({'op_id': 'OpenAndEnterGame', 'block': 'false'}, {})
+    resp = asyncio.run(handle_game_run_operation(backend, request))
+    data = json.loads(resp.body.decode('utf-8'))
+    assert data['started'] is True
+    assert backend.run_slot._start.call_args.kwargs.get('display_name') == _OPEN_AND_ENTER
 
 
 def test_handle_game_run_operation_rejects_missing_param() -> None:
