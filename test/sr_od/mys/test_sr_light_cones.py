@@ -3,7 +3,7 @@
 锁的内容（sr_light_cones 模块 docstring 契约；基准值与官方 wiki 快照一致，
 不读本机易失快照件）：
 
-- 快照完整性：LIGHT_CONES 恰 170 把、名称唯一、rarity ∈ {3,4,5}、
+- 快照完整性：LIGHT_CONES 恰 171 把、名称唯一、rarity ∈ {3,4,5}、
   skill 特效全文齐备；
 - id 契约：非空 id 为小写字母数字且唯一；空 id 仅限国际服词条未同步的
   白名单（补齐后同步收紧白名单）；
@@ -22,14 +22,14 @@ from sr_od.mys.sr_light_cones import (
 )
 
 #: 国际服词条未建页、暂无官方英文名的光锥（id 留空待同步）。
-PENDING_INTL_SYNC = {'放个短假', '向着地平线的终点'}
+PENDING_INTL_SYNC = {'放个短假', '向着地平线的终点', '当第一声「阿哈」响起'}
 
 
 def test_light_cones_snapshot_completeness() -> None:
-    """快照完整性：恰 170 把；名称唯一；rarity ∈ {3,4,5}。"""
-    assert len(LIGHT_CONES) == 170
+    """快照完整性：恰 171 把；名称唯一；rarity ∈ {3,4,5}。"""
+    assert len(LIGHT_CONES) == 171
     names = [c.name for c in LIGHT_CONES]
-    assert len(set(names)) == 170
+    assert len(set(names)) == 171
     assert all(c.rarity in (3, 4, 5) for c in LIGHT_CONES)
     assert all(c.skill for c in LIGHT_CONES)  # 特效全文固化齐备（用户裁定进 py）
 
