@@ -17,6 +17,7 @@ from one_dragon.base.operation.operation import Operation
 from sr_od.backend import operation_registry
 from sr_od.backend.operation_registry import (
     _annotation_json_serializable,
+    _describe_single,
     _resolve_annotations,
     compact_operation_list,
     describe_operation,
@@ -153,6 +154,23 @@ def test_describe_operation_short_name_returns_full_op_id() -> None:
     info = describe_operation(None, _REAL_UNIQUE)
     assert info['op_id'] == _REAL_FULL
     assert info['class_name'] == _REAL_UNIQUE
+
+
+def test_describe_single_own_docstring() -> None:
+    """describe 透传本类 docstring(语义唯一来源);未写的类为 None,不继承基类。
+
+    ``cls.__doc__`` 沿 MRO 继承——若实现误用其取值,未写 docstring 的 op 会
+    统一显示基类描述,比不透传更误导。
+    """
+    info = _describe_single(_OpWithForwardRef)
+    assert info['docstring'] is not None
+    assert '前向引用' in info['docstring']
+
+    class _NoDocOp(Operation):
+        def __init__(self, ctx):
+            super().__init__(ctx, op_name='x')
+
+    assert _describe_single(_NoDocOp)['docstring'] is None
 
 
 def test_describe_operation_ambiguous_returns_all_matches(monkeypatch) -> None:
