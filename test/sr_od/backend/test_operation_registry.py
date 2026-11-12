@@ -18,6 +18,7 @@ from sr_od.backend import operation_registry
 from sr_od.backend.operation_registry import (
     _annotation_json_serializable,
     _resolve_annotations,
+    compact_operation_list,
     describe_operation,
     match_short_name,
     resolve_unique_op,
@@ -165,3 +166,30 @@ def test_describe_operation_ambiguous_returns_all_matches(monkeypatch) -> None:
     assert info['ambiguous'] is True
     assert info['count'] == 2
     assert sorted(m['op_id'] for m in info['matches']) == sorted(fake_ids)
+
+
+# ===== compact_operation_list(list 返回元素:无冲突短名 / 冲突完整 op_id)=====
+
+def test_compact_operation_list_short_names_and_conflict() -> None:
+    """无同名类 → 元素为类名短名;同名冲突类 → 保留完整 op_id。"""
+    result = OperationListResult(operations=[
+        OperationInfo(op_id='pkg.a.UniqueA', class_name='UniqueA', module='pkg.a'),
+        OperationInfo(op_id='pkg.b.Dup', class_name='Dup', module='pkg.b'),
+        OperationInfo(op_id='pkg.c.Dup', class_name='Dup', module='pkg.c'),
+    ], failures=[])
+    payload = compact_operation_list(result)
+    assert payload['operations'] == ['UniqueA', 'pkg.b.Dup', 'pkg.c.Dup']
+    assert payload['total'] == payload['count'] == 3
+
+
+def test_compact_operation_list_query_filters_by_op_id() -> None:
+    """query 按完整 op_id 匹配(模块路径词可用);命中冲突类返回完整 op_id。"""
+    result = OperationListResult(operations=[
+        OperationInfo(op_id='pkg.a.UniqueA', class_name='UniqueA', module='pkg.a'),
+        OperationInfo(op_id='pkg.b.Dup', class_name='Dup', module='pkg.b'),
+        OperationInfo(op_id='pkg.c.Dup', class_name='Dup', module='pkg.c'),
+    ], failures=[])
+    filtered = compact_operation_list(result, 'pkg.c')
+    assert filtered['operations'] == ['pkg.c.Dup']
+    assert filtered['total'] == 3
+    assert filtered['count'] == 1
