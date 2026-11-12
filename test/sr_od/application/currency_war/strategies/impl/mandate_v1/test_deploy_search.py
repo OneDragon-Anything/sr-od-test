@@ -1,0 +1,332 @@
+"""统一部署搜索(评分制)单测(镜像 src = strategies/impl/mandate_v1/
+deploy_search.py;设计单一源 = strategy-docs/24_deploy_segment.md
+§1.1 评分函数/§1.2 三段搜索——场景走查表
+可纯面板构造的行 + 评分层结构基准)。
+
+名字表达纪律:测试想要某羁绊/偏好 = 挑注册表真实角色名。
+"""
+from __future__ import annotations
+
+from sr_od.application.currency_war.kernel.cw_comps import get_comp
+from sr_od.application.currency_war.strategies.impl.mandate_v1 import (
+    deploy_search as ds,
+)
+
+
+def _u(name: str, star: int = 1, origin: str = 'bench',
+       row: str = '') -> ds.SearchUnit:
+    return ds.SearchUnit(key=name, char_id=name, star=star, origin=origin,
+                         row=row, uid=None)
+
+
+def _panel(units, *, locked=False, locked_comp=None, candidate_comps=(),
+           transition_comps=(), k=10, back=6,
+           current_board=None) -> ds.DeploySearchPanel:
+    return ds.DeploySearchPanel(
+        units=tuple(units), k_budget=k, front_capacity=4,
+        back_capacity=back, locked=locked, locked_comp=locked_comp,
+        candidate_comps=candidate_comps,
+        transition_comps=tuple(transition_comps),
+        current_board=dict(current_board or {}))
+
+
+def test_p1_early_scatter_board_fills_l3() -> None:
+    """P1 早期全散牌(K=4):空骨架合法 → L3 定序摆最强散件,尽量
+    填满(场景走查第 1 行)。"""
+    units = [_u('青雀'), _u('艾丝妲'), _u('娜塔莎'), _u('佩拉'),
+             _u('彦卿')]
+    out = ds.search_deploy_target(_panel(units, k=4))
+    assert len(out) == 4, '散牌期尽量填满 K'
+
+
+def test_p1_system_skeleton_beats_scatter() -> None:
+    """未终局锁定的过渡条目骨架成型 > 全散件板:仙舟3+DOT2 条目在场,
+    候选含条目骨架板(仙舟档 L1),L1 压倒 L3 散件——最优板至少 3 仙舟
+    (一档成型;第 4 席留 L3 竞争,断言不写死哪件)。"""
+    from sr_od.application.currency_war.kernel.cw_intention import (
+        transition_entry_of,
+    )
+    scatter = [_u('娜塔莎'), _u('佩拉'), _u('布洛妮娅')]
+    xianzhou = [_u('青雀'), _u('停云'), _u('藿藿'), _u('彦卿')]
+    out_xz = ds.search_deploy_target(
+        _panel([*xianzhou, *scatter], k=4,
+               transition_comps=(transition_entry_of('仙舟3+DOT2'),)))
+    assert len({'青雀', '停云', '藿藿', '彦卿'} & set(out_xz)) >= 3, \
+        f'体系件凑档(≥3 仙舟)优先于散件,实际 {sorted(out_xz)}'
+    # 对照:无体系件时散件板照常。
+    out_sc = ds.search_deploy_target(_panel(scatter, k=3))
+    assert len(out_sc) == 3
+
+
+# (test_lock_keep_phase_transition_x4_beats_buff 已随换轴删除:终局锁定窗
+#  过渡家族骨架枚举与 L3 过渡 ×4 保板相位系数均随「终局锁定即过渡层
+#  退役」删除——P1 锁定窗在现行终局锁定时点下不可达,保板相位行为
+#  消亡;comp-structure-unification 3.3。)
+
+
+def test_lock_first_tier_flip_displaces_transition() -> None:
+    """换防跳变(锁定线第一档成型 → L1 压倒 + 过渡回落 ×1,场景走查
+    第 2 行后半):列车 4 人在手,锁定线一档成型压倒过渡板。"""
+    comp = get_comp('列车同行·反震')
+    # 列车 4 人(锁定线档 0=4)vs 过渡仙舟 3 人 + 减益件;K=4。
+    units = [_u('姬子·启行'), _u('丹恒·饮月'), _u('三月七'), _u('星期日'),
+             _u('青雀'), _u('停云'), _u('藿藿')]
+    panel = _panel(units, locked=True, locked_comp=comp, k=4)
+    out = ds.search_deploy_target(panel)
+    assert {'姬子·启行', '丹恒·饮月', '三月七', '星期日'} <= set(out), \
+        '锁定线一档成型(L1 ≥ 10⁷)压倒过渡加分'
+
+
+def test_dual_key_line_keeps_leading_branch() -> None:
+    """档 0 双键线(纯 AND)一键先达仍圈先达支:手构 Comp 档 0 =
+    量子 2 + 贝 2,贝支先达(2 人)时先达支照常入选,不被另一键
+    半程挤出(OR 折法机器已随 or-reqs-retirement 3.3 退役,圈人
+    统一走条目档 0 键组)。"""
+    from sr_od.application.currency_war.kernel.cw_comps import Comp
+    comp = Comp(
+        name='手构双键条目',
+        core_chars=['希儿'],
+        faction_reqs={0: {'量子同频': 2, '贝洛伯格': 2}},
+        need_star={'希儿': 3},
+    )
+    units = [_u('希儿'), _u('佩拉'), _u('杰帕德'),   # 贝 2 人支
+             _u('青雀'), _u('停云')]                 # 量子件 + 无关件
+    panel = _panel(units, locked=True, locked_comp=comp, k=4)
+    out = ds.search_deploy_target(panel)
+    assert {'希儿', '佩拉', '杰帕德'} <= set(out), '先达支(贝 2)入选'
+
+
+def test_dp_fill_captures_multi_group_tier_mix() -> None:
+    """段 2 分组背包 DP 的跨组增益捕获(正本 §1.2 段 2
+    设计基线;贪心近似的覆盖缺口反例):锁定命运圣杯线(线内件不在手 →
+    空骨架),K=4,手牌 = 持续伤害 2(卡芙卡/黑天鹅,首标签持续伤害,
+    档 1 需 2 人)+ 列车同行 2(三月七/姬子·启行,首标签列车同行,
+    档 1 需 2 人)+ 零值扰动件(停云,首标签仙舟,档 1 需 3 人独件
+    不可达;名字序最早)。
+
+    贪心全局序按名字取前 4(三月七/停云/卡芙卡/姬子)→ 挤掉黑天鹅 →
+    持续伤害组不成档(L3 = 1 档);单组变体只保一组(各 1 档)。DP
+    联合分配取「持续伤害 2 + 列车 2」→ 双组成档(L3 = 2 档)——
+    段 3 全量终评按实测 L3 选 DP 板(锁定窗保板相位两组同为过渡
+    系 ×4,同 L1=0 同 L2 无 sub,跨组增量即决胜差)。"""
+    comp = get_comp('命运圣杯红A')
+    units = [_u('卡芙卡'), _u('黑天鹅'),      # 持续伤害组(档 1 = 2 人)
+             _u('三月七'), _u('姬子·启行'),  # 列车同行组(档 1 = 2 人)
+             _u('停云')]                     # 仙舟组独件(零值扰动)
+    panel = _panel(units, locked=True, locked_comp=comp, k=4)
+    out = ds.search_deploy_target(panel)
+    assert set(out) == {'卡芙卡', '黑天鹅', '三月七', '姬子·启行'}, \
+        f'DP 联合分配捕获双组凑档(扰动件出局),实际 {sorted(out)}'
+
+
+def test_l1_two_layer_named_dominance() -> None:
+    """L1 两层支配编码(原 required_deployed 灭零特判的防形态,正本 §1.1):
+    named 层(点名件在场率,定义件/core 统一表达式)×10⁹ 严格支配档位层
+    ×10⁸——原 required 灭零的防形态「缺点名件板赢满点名件板」由层间
+    域差消除(跨线同池单 argmax 的灭零等价);缺点名件板不再恒 0,
+    层内档位完成度保留连续比较面。锁四件事:
+    1. 满点名件板(≥10⁹)恒压任何缺点名件板(<10⁹)——灭零等价;
+    2. 缺定义件板不再灭零(档位层保留部分分,原灭零过严面解除);
+    3. 部分点名件过渡板压缺定义件终局板(跨域新序:点名件完整度第一序);
+    4. 同缺点名件两板由档位层先决(同域板间序,旧序走 L2/L3)。"""
+    comp = get_comp('希儿量子')
+
+    def l1_of(units: list) -> float:
+        return ds.selection_score(
+            _panel(units, locked=True, locked_comp=comp),
+            units, comp, ('量子同频', '贝洛伯格'))[0]
+
+    # 1. 满定义件板(定义件希儿在板)vs 缺定义件板(量子 4 件无希儿):named_rate
+    #    1 vs 0 → 10⁹ 域差,档位高不救(原灭零防形态)。
+    with_anchor = [_u('希儿'), _u('花火'), _u('符玄')]
+    miss_4q = [_u('花火'), _u('符玄'), _u('缇宝'), _u('银狼')]
+    l1_full, l1_miss = l1_of(with_anchor), l1_of(miss_4q)
+    assert l1_full >= 1e9 > l1_miss, \
+        f'满点名件板({l1_full})恒压缺点名件板({l1_miss})'
+    # 2. 缺定义件板保留档位层部分分(旧灭零恒 0;< 10⁸ = named 层空)
+    assert 0 < l1_miss < 1e8, \
+        f'缺定义件板档位层部分分保留(0 < {l1_miss} < 10⁸)'
+    # 4. 同缺定义件两板档位层先决(量子 4 件 > 量子 3 件)
+    miss_3q = [_u('花火'), _u('符玄'), _u('缇宝')]
+    l1_miss_3q = l1_of(miss_3q)
+    assert l1_miss > l1_miss_3q > 0, '同缺点名件 → 档位层先决'
+    # 3. 部分点名件过渡板(core 3/5 在板 → named 层 0.6×10⁹)压
+    #    缺定义件终局板(≤ 10⁸)——跨域新序。
+    from sr_od.application.currency_war.kernel.cw_intention import (
+        transition_entry_of,
+    )
+    trans = transition_entry_of('仙舟3+列车2')
+    assert trans is not None
+    t_units = [_u(n) for n in trans.core_chars[:3]]
+    t_panel = _panel(t_units, locked=True, locked_comp=trans)
+    l1_trans = ds.selection_score(
+        t_panel, t_units, trans, ('仙舟', '列车同行'))[0]
+    assert l1_trans >= 5e8 > l1_miss, \
+        f'部分点名件过渡板({l1_trans})压缺定义件终局板({l1_miss})'
+
+
+# (test_seele_binary_needs_two_amplifiers 已随 or-reqs-retirement 3.3
+#  删除:'希儿系' 伪键计分分支(L1 二元判定 + L3 成型加档)随 deploy_search
+#  希儿系机器退役——过渡部署圈人统一走条目档 0 键组(AND 语义,
+#  圈人行为由 test_dual_key_line_keeps_leading_branch 承载)。)
+
+
+def test_same_name_highest_star_wins() -> None:
+    """同键多副本取最高星(唯一性键不变量;枚举选定的最高星副本
+    进 target,§2 段 0)。"""
+    units = [_u('青雀', star=1, origin='board', row='front'),
+             _u('青雀', star=2, origin='bench'),
+             _u('停云'), _u('藿藿')]
+    out = ds.search_deploy_target(_panel(units, k=4))
+    assert out.get('青雀') == ('front', 2, None), '最高星副本承载目标'
+
+
+def test_silverwolf_lands_as_1star() -> None:
+    """银狼落场后形态(§1 D-6):3★ 上场即变下档 1★——枚举单位的
+    target 星 = 落场后形态(评分板面 ≡ 执行后板面,场景走查「银狼
+    3★ 上场」行)。"""
+    # build_deploy_panel 的落场后形态折算;纯面板验证 = 同名取最高星
+    # 的落场后语义由装配侧承载,此处锁 selection 层星维透传。
+    units = [_u('青雀'), _u('停云'), _u('藿藿', star=2)]
+    out = ds.search_deploy_target(_panel(units, k=4))
+    assert out.get('藿藿', ('', 0))[1] == 2, '选定星维透传(落场后形态)'
+
+
+def test_l2_bonus_keys_only() -> None:
+    """L2 键集 = 仅加分层(bonus_faction_reqs,D3-1):锁定线列车同行·反震
+    档 1 = 护盾(批 3 拆分各归其一,A=护盾2),加分层件凑档的 L2(10⁶)随凑档
+    上升;flex_factions 不进 L2(注册表「板面不罚但完成度不数」)。"""
+    comp = get_comp('列车同行·反震')
+    sub_on = [_u('姬子·启行'), _u('三月七'), _u('杰帕德')]   # 护盾 2 人(三月七+杰帕德,flows=护盾)
+    sub_off = [_u('姬子·启行'), _u('青雀'), _u('停云')]
+    panel = _panel([], locked=True, locked_comp=comp)
+    l2_on = ds.selection_score(panel, sub_on, comp, ('列车同行·反震',))[1]
+    l2_off = ds.selection_score(panel, sub_off, comp, ('列车同行·反震',))[1]
+    assert l2_on > 0.0 > l2_off or l2_on > l2_off, \
+        f'加分层凑档 L2({l2_on}) > 无加分层件({l2_off})'
+
+
+def test_empty_bond_line_core_shared_denominator() -> None:
+    """空羁绊线(反甲白厄档 0 空 ∧ factions=[]):L1 由角色
+    完成度单独承载,分母 = core∪shared 总数(D2-3)。"""
+    comp = get_comp('反甲白厄')
+    members = set(comp.core_chars) | set(comp.shared_chars or ())
+    two = [_u(n) for n in list(members)[:2]]
+    panel = _panel([], locked=True, locked_comp=comp)
+    l1 = ds.selection_score(panel, two, comp, ())[0]
+    expect = (2 / len(members)) * ds._L1_SCALE
+    assert abs(l1 - expect) < 1.0, f'{l1} ≈ {expect}(core∪shared 口径)'
+
+
+def test_rng_situation_seed_same_input_same_target() -> None:
+    """rng 局面哈希播种(§1 D3-7):同一状态容器状态 → 同一 target(跨帧
+    稳定,防并列板帧间翻转)。"""
+    units = [_u('青雀'), _u('停云'), _u('藿藿'), _u('艾丝妲')]
+    panel = _panel(units, k=3)
+    assert ds.search_deploy_target(panel) == ds.search_deploy_target(panel)
+
+
+def test_front_capacity_and_row_assign() -> None:
+    """排分配:前排保证(出战硬要求前排有角色)与排容量约束。"""
+    units = [_u('青雀'), _u('停云'), _u('藿藿'), _u('符玄'),
+             _u('彦卿'), _u('忘归人')]
+    out = ds.search_deploy_target(_panel(units, k=6))
+    rows = [r for _n, (r, _s, _slot) in out.items()]
+    assert 'front' in rows, '前排保证:至少一名前排'
+
+
+def test_stable_key_prefers_current_board() -> None:
+    """稳定键 = 与现板面一致数(结构化滞回,§1:站位分之后的同分
+    偏好;星维不进)。直接锚 _position_score 的计数语义 + 站位分
+    同分时现板一致数参与定序。"""
+    units = [_u('青雀'), _u('停云'), _u('藿藿'), _u('彦卿')]
+    board = {'青雀': 'front', '停云': 'front', '藿藿': 'back'}
+    pos, stable = ds._position_score(
+        units, {'青雀': 'front', '停云': 'front', '藿藿': 'back',
+                '彦卿': 'back'}, None, board)
+    assert stable == 3, '现板一致数(名+排粒度)'
+    pos2, stable2 = ds._position_score(
+        units, {'青雀': 'back', '停云': 'back', '藿藿': 'front',
+                '彦卿': 'front'}, None, board)
+    assert stable2 == 0, '不一致板 = 0'
+
+
+def test_bronya_side_pick_single_edge() -> None:
+    """选边双羁绊(布洛妮娅)计数单边化:peers 对象上下文经
+    unit_bond_tags 统一消费(单一源),板上标签不双边重复。"""
+    units = [_u('布洛妮娅'), _u('佩拉'), _u('杰帕德'), _u('桑博')]
+    counts = ds._tag_counts(units)
+    # 布洛妮娅选边(贝 3 基数 > 燃血 0 → 贝)后只出单侧标签。
+    assert counts.get('贝洛伯格', 0) == 4 and counts.get('燃血', 0) == 0, \
+        f'选边后单边(贝 4 / 燃血 0),实际 {counts}'
+
+
+# ==================== 次名分量收集出参(挑边差距遥测的
+# ====================  私有槽通道;纯观测,搜索行为零变)====================
+
+def test_margin_out_layered_form_and_no_challenger() -> None:
+    """段 3 收集分层记法(遥测正本 deploy_margin 键形):键形 = {runner_up(挑战者
+    板签名 = 排序名列表), first_diff_layer(首异层 1-3), layer_gap};
+    胜者 = 锁定线一档成型板(既有场景),挑战者(成员集与胜者不同的
+    最高板)首异层 = 1(L1 层隔离的结构性质,gap > 0 不锁具体值);
+    dedup 后仅一可行板 → 三键 null(与尾键决胜 0/0 区分)。"""
+    comp = get_comp('列车同行·反震')
+    units = [_u('姬子·启行'), _u('丹恒·饮月'), _u('三月七'), _u('星期日'),
+             _u('青雀'), _u('停云'), _u('藿藿')]
+    margin: dict = {}
+    out = ds.search_deploy_target(
+        _panel(units, locked=True, locked_comp=comp, k=4),
+        margin_out=margin)
+    assert out, '前置:搜索成功定型'
+    assert set(margin) == {'runner_up', 'first_diff_layer', 'layer_gap'}
+    assert margin['runner_up'] == sorted(margin['runner_up']), \
+        '板签名 = 排序名列表'
+    assert margin['runner_up'] != sorted(out), \
+        '挑战者成员集与胜者不同'
+    assert margin['first_diff_layer'] == 1, \
+        f'锁定线一档成型 vs 替补板首异层 = L1,实际 {margin}'
+    assert margin['layer_gap'] > 0
+    # 无挑战者:单单位面板(dedup 后仅一可行板)→ 三键 null 形态。
+    m_single: dict = {}
+    ds.search_deploy_target(_panel([_u('青雀')], k=4), margin_out=m_single)
+    assert m_single == {'runner_up': None, 'first_diff_layer': None,
+                        'layer_gap': None}
+
+
+def test_margin_out_all_layers_tie_decided_by_tail_key() -> None:
+    """三层全同尾键决胜形态(遥测正本边界值表):K=1 两张互无
+    羁绊的散件,两板 L1/L2/L3 全同 → first_diff_layer = 0, layer_gap
+    = 0(pos/stable/rng 尾键决胜,与无挑战者 null 形态区分)。"""
+    margin: dict = {}
+    out = ds.search_deploy_target(_panel([_u('佩拉'), _u('娜塔莎')], k=1),
+                                  margin_out=margin)
+    assert len(out) == 1, '前置:K=1 单件定型'
+    assert margin == {'runner_up': ['佩拉'], 'first_diff_layer': 0,
+                      'layer_gap': 0}, \
+        f'三层全同 → 首异层 0/层差 0,实际 {margin}'
+
+
+def test_margin_out_not_written_when_search_returns_empty() -> None:
+    """搜索返 {}(候选全不可排防御路径,§2 接口契约)→ 不落键:
+    margin_out 保持空(零容量面板 = 结构不可达形态)。"""
+    panel = ds.DeploySearchPanel(
+        units=(_u('青雀'), _u('艾丝妲')), k_budget=4, front_capacity=0,
+        back_capacity=0, locked=False, locked_comp=None,
+        candidate_comps=(), transition_comps=(), current_board={})
+    margin: dict = {}
+    out = ds.search_deploy_target(panel, margin_out=margin)
+    assert out == {}, '前置:容量矛盾 → 搜索返空 dict'
+    assert margin == {}, '搜索返 {} 不落键(遥测正本边界值表)'
+
+
+def test_margin_out_default_none_no_collect_same_target() -> None:
+    """缺省不收集(虚拟定型调用点形态,遥测正本):不传 margin_out
+    照常返回、与传入收集时同 target(收集面零行为变化;虚拟 4 调用
+    点不传即零写入由缺省 None 的结构性质承载)。"""
+    units = [_u('青雀'), _u('停云'), _u('藿藿'), _u('彦卿'), _u('艾丝妲')]
+    panel = _panel(units, k=4)
+    plain = ds.search_deploy_target(panel)
+    with_margin: dict = {}
+    collected = ds.search_deploy_target(panel, margin_out=with_margin)
+    assert plain == collected, '收集开关不改定型结果(纯观测)'
+    assert with_margin, '前置:该板面应有挑战者分量'

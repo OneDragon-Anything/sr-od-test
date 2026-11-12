@@ -1,0 +1,817 @@
+"""RandomCharSpec 阵营轴 + 概念股族登记测试(镜像 src =
+kernel/cw_investments.py;按拆目录规范落位本目录,同源载体兄弟测试 =
+kernel/test_cw_investments.py 随机赠卡家族段〔超限只读复用〕)。
+
+测试面依据 = gain-chain.md §3 随机支段(阵营轴采样域语义)+ fields.md
+§5.2 效果缺口与载体登记(披露键组)+ 语义描述「概念股族模式卡登记约定」:
+- **阵营域空防呆**(池空单一哨,2026-10-28 治理后形态:值域四查〔轴互斥/
+  费用域/星级域/类型标签〕随防登记笔误校验移除,池空哨兼顾错字与版本
+  漂移):误登角色名/笔误阵营名 → chars_by_faction 域空 → 校验炸;
+- **概念股条目形状锁**:登记 = 阵营轴 spec(faction='追击', star=1 先验)
+  + equips_random_immediate=('简易',);
+- **池派生阵营支**:random_char_pool 阵营轴 = chars_by_faction 注册表
+  现算比对(非快照,不手抄名单);
+- **cost 轴回归**:既有条目(人才引进/英雄登场)登记形状与校验不受
+  cost/star 可选化影响。
+
+族展开续写面 = 概念股族展开卡登记约定(燃血概念股 id 1002 族内第二实例/
+能量概念股 id 1003 第三实例/列车同行概念股 id 1004 第四实例/银河学者
+概念股 id 1005 第五实例/贝洛伯格概念股 id 1006 第六实例,均与追击登记
+行同构仅值异;权威版本 = fields.md §5.2 效果缺口与载体登记):登记形状锁
++ 域校验与池派生现算比对。列车同行批随行落地「开拓者双形态角色位合并
+约定」(牌库中开拓者占单一角色位,random_char_pool 尾部剔除键侧条目,
+采样即发放名 = 值侧形态恒欢愉;economy.md §8):合并机制锁 + 既有 cost
+轴/能量域锁的池期望值同步按合并后口径现算。银河学者域现值无开拓者
+条目、无独立单位成员,合并对本域零作用,池 = 原始域(双阵营成员真理
+医生照发,「姬子·启行」定论同案)。贝洛伯格域随本批「布洛妮娅双羁绊
+注册表修正」扩为 6 名(她 factions 双边登记 + 板面计数选边单边,规则
+单一源 = cw_chars.side_pick_bond;采样域传导零代码——economy.md §8)。
+"""
+from __future__ import annotations
+
+import pytest
+
+from sr_od.application.currency_war.data.cw_chars import (
+    CHARACTER_ROSTER,
+    chars_by_cost,
+    chars_by_faction,
+)
+from sr_od.application.currency_war.kernel import cw_investments
+from sr_od.application.currency_war.kernel.cw_investments import (
+    ENV_DEPLOY_LOCK_GRANTS,
+    ENV_ECONOMY,
+    ENV_GIFTS,
+    GiftGrant,
+    RandomCharSpec,
+    equips_by_category,
+    random_char_pool,
+)
+
+
+def test_faction_domain_empty_raises(monkeypatch: pytest.MonkeyPatch) -> None:
+    """阵营域空防呆(共享助手池非空查):误登角色名('飞霄' = 角色名非
+    阵营名)与笔误阵营名 → chars_by_faction 域空 → 校验炸(import 期
+    拦截——错名发放 = 采样分支永发不出的静默残缺,登记笔误前置可见)。"""
+    for bad_faction in ('飞霄', '追姬'):
+        bad = dict(ENV_GIFTS)
+        bad['追击概念股'] = GiftGrant(
+            chars_random_immediate=(RandomCharSpec(faction=bad_faction),),
+            equips_random_immediate=('简易',))
+        monkeypatch.setattr(cw_investments, 'ENV_GIFTS', bad)
+        with pytest.raises(ValueError, match='池空'):
+            cw_investments._validate_env_gifts()
+
+
+def test_zhuiji_concept_stock_entry_shape() -> None:
+    """追击概念股登记形状锁(概念股族模式卡登记约定,权威版本 = fields.md
+    §5.2 效果缺口与载体登记):∈ ENV_GIFTS 且 ∉ ENV_ECONOMY(import 期
+    互斥校验半边显式断言);阵营轴 spec = faction '追击'(desc【追击】
+    直读,流派名非角色名)+ star 1(先验,desc 未标星);随机装备 =
+    ('简易',)(desc「初始简易装备」类别明文,单数叙述默认 1 件)。"""
+    assert '追击概念股' in ENV_GIFTS
+    assert '追击概念股' not in ENV_ECONOMY
+    grant = ENV_GIFTS['追击概念股']
+    assert grant.chars_random_immediate == \
+        (RandomCharSpec(faction='追击', star=1),)
+    assert grant.equips_random_immediate == ('简易',)
+
+
+def test_random_char_pool_faction_axis_matches_registry() -> None:
+    """池派生阵营支(gain-chain.md §3 随机支段:阵营轴 = chars_by_faction
+    默认含流派匹配):random_char_pool 阵营 spec 现值 = chars_by_faction
+    ('追击') 名集现算双射(注册表派生,非快照不手抄);池名 ⊆ 注册表。"""
+    spec = ENV_GIFTS['追击概念股'].chars_random_immediate[0]
+    expected = {c.name for c in chars_by_faction('追击')}
+    assert set(random_char_pool(spec)) == expected, \
+        '阵营轴池 = chars_by_faction 全域(注册表现算双射)'
+    assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
+
+
+def test_simple_category_equip_pool_nonempty() -> None:
+    """简易装备类别池非空(gain-chain.md §3 随机装备支段:类别池 =
+    equips_by_category 注册表派生单源):登记类别 '简易' 现值池非空
+    (构建期类别闭集 + 池非空校验已闸,显式断言登记类别可采样)。"""
+    assert equips_by_category('简易'), '登记类别池非空(采样分支可达)'
+
+
+def test_cost_axis_existing_entries_regression() -> None:
+    """cost 轴既有条目回归(可选化零迁移:既有 5 个登记条目与
+    ENV_DEPLOY_LOCK_GRANTS 均关键字传参):人才引进(费用轴首例,4 费/
+    1★ 先验)与英雄登场(锁表,5 费/2★ 明写)登记形状不变、两表构建
+    校验对现值通过、cost 轴池 = 全档现算——star 默认值 1 使
+    RandomCharSpec(cost=4) 与显式 star=1 同值。"""
+    assert ENV_GIFTS['人才引进'].chars_random_immediate == \
+        (RandomCharSpec(cost=4, star=1),)
+    assert ENV_DEPLOY_LOCK_GRANTS['英雄登场'].spec == \
+        RandomCharSpec(cost=5, star=2)
+    cw_investments._validate_env_gifts()
+    cw_investments._validate_env_deploy_lock_grants()
+    assert set(random_char_pool(RandomCharSpec(cost=4))) == \
+        {c.name for c in chars_by_cost(4)} - {'开拓者·记忆'}, \
+        'cost 轴池 = 费用档全档剔除开拓者·记忆(可选化缺省星级行为不变,' \
+        '开拓者双形态按角色位合并)'
+
+
+def test_ranxue_concept_stock_entry_shape() -> None:
+    """燃血概念股登记形状锁(概念股族展开卡登记约定,权威版本 = fields.md
+    §5.2 效果缺口与载体登记):∈ ENV_GIFTS 且 ∉ ENV_ECONOMY(import 期
+    互斥校验半边显式断言);阵营轴 spec = faction '燃血'(desc【燃血】
+    直读,流派名非角色名,与卡名剥「概念股」后缀的 ENV_FACTION 派生值
+    双源同值)+ star 1(先验,desc 未标星);随机装备 = ('简易',)
+    (desc「初始简易装备」类别明文,单数叙述默认 1 件)。族内第二实例,
+    与追击登记行同构仅值异。"""
+    assert '燃血概念股' in ENV_GIFTS
+    assert '燃血概念股' not in ENV_ECONOMY
+    grant = ENV_GIFTS['燃血概念股']
+    assert grant.chars_random_immediate == \
+        (RandomCharSpec(faction='燃血', star=1),)
+    assert grant.equips_random_immediate == ('简易',)
+
+
+def test_ranxue_faction_pool_matches_registry_and_validates() -> None:
+    """燃血域登记校验 + 池派生(概念股族展开卡登记约定;gain-chain.md
+    §3 随机支段:阵营轴 = chars_by_faction 默认含流派匹配):燃血概念股
+    过 _validate_env_gifts 现行全套(含 _validate_random_char_spec 阵营轴
+    分支——池非空单一哨(值域四查已随 2026-10-28 治理移除),「燃血」流派域非空天然通过);
+    random_char_pool 阵营 spec 现值 = chars_by_faction('燃血') 名集现算
+    双射(注册表派生,非快照不手抄;池规模只记注释不做断言值——现值
+    8 名含双羁绊成员布洛妮娅〔flows 命中,注册表已双边登记〕,随版本
+    正常变动)。"""
+    cw_investments._validate_env_gifts()
+    spec = ENV_GIFTS['燃血概念股'].chars_random_immediate[0]
+    expected = {c.name for c in chars_by_faction('燃血')}
+    assert set(random_char_pool(spec)) == expected, \
+        '阵营轴池 = chars_by_faction 全域(注册表现算双射)'
+    assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
+
+
+def test_nengliang_concept_stock_entry_shape() -> None:
+    """能量概念股登记形状锁(概念股族展开卡登记约定,权威版本 = fields.md
+    §5.2 效果缺口与载体登记):∈ ENV_GIFTS 且 ∉ ENV_ECONOMY(import 期
+    互斥校验半边显式断言);阵营轴 spec = faction '能量'(desc【能量】
+    直读,流派名非角色名,与卡名剥「概念股」后缀的 ENV_FACTION 派生值
+    双源同值)+ star 1(先验,desc 未标星);随机装备 = ('简易',)
+    (desc「初始简易装备」类别明文,单数叙述默认 1 件)。族内第三实例,
+    与追击/燃血登记行同构仅值异。"""
+    assert '能量概念股' in ENV_GIFTS
+    assert '能量概念股' not in ENV_ECONOMY
+    grant = ENV_GIFTS['能量概念股']
+    assert grant.chars_random_immediate == \
+        (RandomCharSpec(faction='能量', star=1),)
+    assert grant.equips_random_immediate == ('简易',)
+
+
+def test_nengliang_faction_pool_matches_registry_and_validates() -> None:
+    """能量域登记校验 + 池派生(概念股族展开卡登记约定;gain-chain.md
+    §3 随机支段:阵营轴 = chars_by_faction 默认含流派匹配):能量概念股
+    过 _validate_env_gifts 现行全套(含 _validate_random_char_spec 阵营轴
+    分支——池非空单一哨(值域四查已随 2026-10-28 治理移除),「能量」流派域非空天然通过);
+    random_char_pool 阵营 spec 现值 = chars_by_faction('能量') 名集剔除
+    '开拓者·记忆' 现算比对(开拓者双形态按角色位合并约定,采样域即发放
+    域恒发欢愉;注册表派生非快照不手抄,池规模只记注释零断言值——现值
+    8 名,随版本正常变动)。"""
+    cw_investments._validate_env_gifts()
+    spec = ENV_GIFTS['能量概念股'].chars_random_immediate[0]
+    expected = {c.name for c in chars_by_faction('能量')} - {'开拓者·记忆'}
+    assert set(random_char_pool(spec)) == expected, \
+        '阵营轴池 = chars_by_faction 全域剔除开拓者·记忆(双形态合并现算)'
+    assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
+
+
+def test_lieche_concept_stock_entry_shape() -> None:
+    """列车同行概念股登记形状锁(概念股族展开卡登记约定,权威版本 = fields.md
+    §5.2 效果缺口与载体登记):∈ ENV_GIFTS 且 ∉ ENV_ECONOMY(import 期
+    互斥校验半边显式断言);阵营轴 spec = faction '列车同行'(desc
+    【列车同行】直读,阵容羁绊名非角色名,与卡名剥「概念股」后缀的
+    ENV_FACTION 派生值双源同值)+ star 1(先验,desc 未标星);随机装备
+    = ('简易',)(desc「初始简易装备」类别明文,单数叙述默认 1 件)。
+    族内第四实例,与追击/燃血/能量登记行同构仅值异。"""
+    assert '列车同行概念股' in ENV_GIFTS
+    assert '列车同行概念股' not in ENV_ECONOMY
+    grant = ENV_GIFTS['列车同行概念股']
+    assert grant.chars_random_immediate == \
+        (RandomCharSpec(faction='列车同行', star=1),)
+    assert grant.equips_random_immediate == ('简易',)
+
+
+def test_lieche_faction_pool_matches_registry_and_validates() -> None:
+    """列车同行域登记校验 + 池派生(概念股族展开卡登记约定 + 开拓者双
+    形态角色位合并约定;gain-chain.md §3 随机支段:阵营轴 = 规格过滤池):
+    列车同行概念股过 _validate_env_gifts 现行全套(含
+    _validate_random_char_spec 阵营轴分支——池非空单一哨(值域四查已随 2026-10-28 治理移除),
+    「列车同行」阵营域非空天然通过);random_char_pool 阵营 spec 现值 =
+    chars_by_faction('列车同行') 名集剔除'开拓者·记忆' 现算比对(合并
+    修正主锁:开拓者双形态按角色位合并,采样即发放名恒欢愉;注册表派生
+    非快照不手抄,池规模只记注释零断言值——现值 7 名,随版本正常变动);
+    显式断言'开拓者·欢愉' ∈ 池(发放恒欢愉形态)、'开拓者·记忆' ∉ 池
+    (键侧剔除)、'姬子·启行' ∈ 池(独立单位照发定论)。"""
+    cw_investments._validate_env_gifts()
+    spec = ENV_GIFTS['列车同行概念股'].chars_random_immediate[0]
+    expected = {c.name for c in chars_by_faction('列车同行')} \
+        - {'开拓者·记忆'}
+    assert set(random_char_pool(spec)) == expected, \
+        '阵营轴池 = chars_by_faction 全域剔除开拓者·记忆(双形态合并现算)'
+    assert '开拓者·欢愉' in random_char_pool(spec), \
+        '发放恒欢愉形态(采样即发放名)'
+    assert '开拓者·记忆' not in random_char_pool(spec), \
+        '键侧条目剔除(牌库单一角色位)'
+    assert '姬子·启行' in random_char_pool(spec), \
+        '独立单位在候选内照发(实机知识定论)'
+    assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
+
+
+def test_dual_form_merge_pool_construction() -> None:
+    """开拓者双形态按角色位合并机制锁(开拓者双形态角色位合并约定,
+    权威版本 = fields.md §5.2 效果缺口与载体登记 + economy.md §8:键侧条目
+    剔除在 type_tag 过滤之后,消费 = random_char_pool 尾部统一收尾):
+    4 费档池 = chars_by_cost(4) 剔除'开拓者·记忆'现算(人才引进采样
+    概率随合并向实机真值收敛);3 费档无开拓者条目 = chars_by_cost(3)
+    全档回归(合并对无双形态档零扰);能量域直构 spec 池 = chars_by_
+    faction('能量') 剔除'开拓者·记忆'现算(已落地能量概念股登记条目随
+    合并自动收敛)。池规模只记注释零断言值(现值 13/14/8,随版本变动)。"""
+    assert set(random_char_pool(RandomCharSpec(cost=4))) == \
+        {c.name for c in chars_by_cost(4)} - {'开拓者·记忆'}, \
+        '4 费档剔除开拓者·记忆(双形态合并)'
+    assert set(random_char_pool(RandomCharSpec(cost=3))) == \
+        {c.name for c in chars_by_cost(3)}, \
+        '3 费档无开拓者 = 全档回归(合并零扰)'
+    energy_expected = {c.name for c in chars_by_faction('能量')} \
+        - {'开拓者·记忆'}
+    assert set(random_char_pool(RandomCharSpec(faction='能量'))) == \
+        energy_expected, '能量域直构 spec 同收尾(剔除开拓者·记忆)'
+
+
+def test_yinhe_concept_stock_entry_shape() -> None:
+    """银河学者概念股登记形状锁(概念股族展开卡登记约定,权威版本 = fields.md
+    §5.2 效果缺口与载体登记):∈ ENV_GIFTS 且 ∉ ENV_ECONOMY(import 期
+    互斥校验半边显式断言);阵营轴 spec = faction '银河学者'(desc
+    【银河学者】直读,阵营羁绊名非角色名,与卡名剥「概念股」后缀的
+    ENV_FACTION 派生值双源同值)+ star 1(先验,desc 未标星);随机装备
+    = ('简易',)(desc「初始简易装备」类别明文,单数叙述默认 1 件,
+    装备身份零先验——economy.md「概念股送装备件」四卡线索名单不含银河
+    学者,均匀 v0 + 按卡固定假说随家族披露键待校准)。族内第五实例,
+    与追击/燃血/能量/列车同行登记行同构仅值异。"""
+    assert '银河学者概念股' in ENV_GIFTS
+    assert '银河学者概念股' not in ENV_ECONOMY
+    grant = ENV_GIFTS['银河学者概念股']
+    assert grant.chars_random_immediate == \
+        (RandomCharSpec(faction='银河学者', star=1),)
+    assert grant.equips_random_immediate == ('简易',)
+
+
+def test_yinhe_faction_pool_matches_registry_and_validates() -> None:
+    """银河学者域登记校验 + 池派生(概念股族展开卡登记约定;gain-chain.md
+    §3 随机支段:阵营轴 = 规格过滤池):银河学者概念股过 _validate_env_
+    gifts 现行全套(含 _validate_random_char_spec 阵营轴分支——池非空单一哨(值域四查已随 2026-10-28 治理移除),「银河学者」阵营域非空天然通过);random_char_pool
+    阵营 spec 现值 = chars_by_faction('银河学者') 名集现算比对(注册表
+    派生非快照不手抄,池规模只记注释零断言值——现值 5 名,随版本正常
+    变动);显式断言'真理医生' ∈ 池(双阵营成员「银河学者、星间旅人」
+    按 factions 轴在池照发,镜像列车同行批'姬子·启行'的定论断言式;
+    本域无开拓者条目,双形态合并对本域零作用,池 = 原始域)。"""
+    cw_investments._validate_env_gifts()
+    spec = ENV_GIFTS['银河学者概念股'].chars_random_immediate[0]
+    expected = {c.name for c in chars_by_faction('银河学者')}
+    assert set(random_char_pool(spec)) == expected, \
+        '阵营轴池 = chars_by_faction 全域(注册表现算双射,合并对本域零作用)'
+    assert '真理医生' in random_char_pool(spec), \
+        '双阵营成员在池照发(实机知识定论)'
+    assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
+
+
+def test_beluoboge_concept_stock_entry_shape() -> None:
+    """贝洛伯格概念股登记形状锁(概念股族展开卡登记约定,权威版本 = fields.md
+    §5.2 效果缺口与载体登记):∈ ENV_GIFTS 且 ∉ ENV_ECONOMY(import 期
+    互斥校验半边显式断言);阵营轴 spec = faction '贝洛伯格'(desc
+    【贝洛伯格】直读,阵营羁绊名非角色名,与卡名剥「概念股」后缀的
+    ENV_FACTION 派生值双源同值)+ star 1(先验,desc 未标星);随机装备
+    = ('简易',)(desc「初始简易装备」类别明文,单数叙述默认 1 件,
+    装备身份零先验——economy.md「概念股送装备件」四卡线索名单不含贝洛
+    伯格,均匀 v0 + 按卡固定假说随家族披露键待校准)。族内第六实例,
+    与追击/燃血/能量/列车同行/银河学者登记行同构仅值异。"""
+    assert '贝洛伯格概念股' in ENV_GIFTS
+    assert '贝洛伯格概念股' not in ENV_ECONOMY
+    grant = ENV_GIFTS['贝洛伯格概念股']
+    assert grant.chars_random_immediate == \
+        (RandomCharSpec(faction='贝洛伯格', star=1),)
+    assert grant.equips_random_immediate == ('简易',)
+
+
+def test_beluoboge_faction_pool_matches_registry_and_validates() -> None:
+    """贝洛伯格域登记校验 + 池派生(概念股族展开卡登记约定;gain-chain.md
+    §3 随机支段:阵营轴 = 规格过滤池):贝洛伯格概念股过 _validate_env_
+    gifts 现行全套(含 _validate_random_char_spec 阵营轴分支——池非空单一哨(值域四查已随 2026-10-28 治理移除),「贝洛伯格」阵营域非空天然通过);random_char_pool
+    阵营 spec 现值 = chars_by_faction('贝洛伯格') 名集现算比对(注册表
+    派生非快照不手抄,池规模只记注释零断言值——现值 6 名,随版本正常
+    变动);显式断言'布洛妮娅' ∈ 池(双羁绊注册表修正新增成员:她
+    factions='贝洛伯格' + flows='燃血' 双边登记,economy.md §8 用户
+    裁定 2026-10-28,采样域自动传导零代码;独立单位「大守护者」在候选
+    内照发,镜像列车同行批'姬子·启行'的定论断言式;本域无开拓者条目,
+    双形态合并对本域零作用,池 = 原始域)。"""
+    cw_investments._validate_env_gifts()
+    spec = ENV_GIFTS['贝洛伯格概念股'].chars_random_immediate[0]
+    expected = {c.name for c in chars_by_faction('贝洛伯格')}
+    assert set(random_char_pool(spec)) == expected, \
+        '阵营轴池 = chars_by_faction 全域(注册表现算双射)'
+    assert '布洛妮娅' in random_char_pool(spec), \
+        '双羁绊修正新增成员在池照发(独立单位照发定论)'
+    assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
+
+
+def test_xingjianlvren_concept_stock_entry_shape() -> None:
+    """星间旅人概念股登记形状锁(概念股族展开卡登记约定,权威版本 = fields.md
+    §5.2 效果缺口与载体登记):∈ ENV_GIFTS 且 ∉ ENV_ECONOMY(import 期
+    互斥校验半边显式断言);阵营轴 spec = faction '星间旅人'(desc
+    【星间旅人】直读,阵营羁绊名非角色名,与卡名剥「概念股」后缀的
+    ENV_FACTION 派生值双源同值)+ star 1(先验,desc 未标星);随机装备
+    = ('简易',)(desc「初始简易装备」类别明文,单数叙述默认 1 件,
+    装备身份零先验——economy.md「概念股送装备件」四卡线索名单不含星间
+    旅人,均匀 v0 + 按卡固定假说随家族披露键待校准)。族内第七实例,
+    与追击/燃血/能量/列车同行/银河学者/贝洛伯格登记行同构仅值异。"""
+    assert '星间旅人概念股' in ENV_GIFTS
+    assert '星间旅人概念股' not in ENV_ECONOMY
+    grant = ENV_GIFTS['星间旅人概念股']
+    assert grant.chars_random_immediate == \
+        (RandomCharSpec(faction='星间旅人', star=1),)
+    assert grant.equips_random_immediate == ('简易',)
+
+
+def test_xingjianlvren_faction_pool_matches_registry_and_validates() -> None:
+    """星间旅人域登记校验 + 池派生(概念股族展开卡登记约定;gain-chain.md
+    §3 随机支段:阵营轴 = 规格过滤池):星间旅人概念股过 _validate_env_
+    gifts 现行全套(含 _validate_random_char_spec 阵营轴分支——池非空单一哨(值域四查已随 2026-10-28 治理移除),「星间旅人」阵营域非空天然通过);random_char_pool
+    阵营 spec 现值 = chars_by_faction('星间旅人') 名集现算比对(注册表
+    派生非快照不手抄;口径 = 合并后角色位即 random_char_pool 值,本域
+    无开拓者条目故与域原集同值;池规模只记注释零断言值——现值 7 名,
+    随版本正常变动);显式断言'真理医生' ∈ 池(双阵营成员「银河学者、
+    星间旅人」按 factions 轴在池照发,镜像银河学者批同款定论断言式;
+    本域无开拓者条目,双形态合并对本域零作用,池 = 原始域)。"""
+    cw_investments._validate_env_gifts()
+    spec = ENV_GIFTS['星间旅人概念股'].chars_random_immediate[0]
+    expected = {c.name for c in chars_by_faction('星间旅人')}
+    assert set(random_char_pool(spec)) == expected, \
+        '阵营轴池 = chars_by_faction 全域(注册表现算双射)'
+    assert '真理医生' in random_char_pool(spec), \
+        '双阵营成员在池照发(实机知识定论)'
+    assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
+
+
+# 族展开第八实例(仙舟概念股 id 1008;概念股族展开卡登记约定,权威版本 =
+# fields.md §5.2 效果缺口与载体登记 + economy.md §8 专家候选口径:本域
+# 9 名中青雀/停云为专家,牌库时点过滤在 cw_pool.grant_char_pool 层——
+# 本文件的池锁锁静态基底面 random_char_pool,过滤语义锁 = cw_pool 镜像
+# test_grant_char_pool.py。)
+
+
+def test_xianzhou_concept_stock_entry_shape() -> None:
+    """仙舟概念股登记形状锁(概念股族展开卡登记约定,权威版本 = fields.md
+    §5.2 效果缺口与载体登记):∈ ENV_GIFTS 且 ∉ ENV_ECONOMY(import 期
+    互斥校验半边显式断言);阵营轴 spec = faction '仙舟'(desc【仙舟】
+    直读,阵营羁绊名非角色名,与卡名剥「概念股」后缀的 ENV_FACTION 派生
+    值双源同值)+ star 1(先验,desc 未标星);随机装备 = ('简易',)
+    (desc「初始简易装备」类别明文,单数叙述默认 1 件;economy.md「概念股
+    送装备件」四卡线索名单含仙舟→折叠小刀,先验随 fixed_hypothesis 家族
+    键已登记,登记行零新增申报)。族内第八实例,与追击/燃血/能量/列车同行/
+    银河学者/贝洛伯格/星间旅人登记行同构仅值异;odds 键 env_1008 随批
+    追加进家族常量。"""
+    assert '仙舟概念股' in ENV_GIFTS
+    assert '仙舟概念股' not in ENV_ECONOMY
+    grant = ENV_GIFTS['仙舟概念股']
+    assert grant.chars_random_immediate == \
+        (RandomCharSpec(faction='仙舟', star=1),)
+    assert grant.equips_random_immediate == ('简易',)
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        ENV_FACTION_REFRESH_ODDS_UNMODELED_KEYS,
+    )
+    assert 'env_1008_faction_refresh_odds_unmodeled' in \
+        ENV_FACTION_REFRESH_ODDS_UNMODELED_KEYS, \
+        'odds 失真键随批追加(家族常量收 env_1001..env_1008)'
+
+
+def test_xianzhou_faction_pool_matches_registry_and_validates() -> None:
+    """仙舟域登记校验 + 静态基底池(概念股族展开卡登记约定;gain-chain.md
+    §3 随机支段:静态基底 = 注册表派生,牌库时点过滤在 grant_char_pool
+    层):仙舟概念股过 _validate_env_gifts 现行全套(含 _validate_random_
+    char_spec 阵营轴分支——池非空单一哨(值域四查已随 2026-10-28 治理移除),「仙舟」阵营域非空天然
+    通过);random_char_pool 阵营 spec 现值 = chars_by_faction('仙舟')
+    名集现算比对(注册表派生非快照不手抄;本域无开拓者条目,双形态合并
+    对本域零作用;池规模只记注释零断言值——现值 9 名,随版本正常变动);
+    显式断言专家成员'青雀'/'停云' ∈ 静态基底池(基底 = 注册表全域,专家
+    剔除只发生在 grant_char_pool 牌库时点层——分层职责锁,防两层语义
+    混写);双阵营成员'丹恒·饮月'/'彦卿' ∈ 池照发(列车同行/狼狩域
+    共享成员,各卡采样域独立派生)。"""
+    cw_investments._validate_env_gifts()
+    spec = ENV_GIFTS['仙舟概念股'].chars_random_immediate[0]
+    expected = {c.name for c in chars_by_faction('仙舟')}
+    assert set(random_char_pool(spec)) == expected, \
+        '静态基底池 = chars_by_faction 全域(注册表现算双射)'
+    assert '青雀' in random_char_pool(spec) \
+        and '停云' in random_char_pool(spec), \
+        '专家在静态基底池(过滤归 grant_char_pool 层,分层职责)'
+    assert '丹恒·饮月' in random_char_pool(spec) \
+        and '彦卿' in random_char_pool(spec), \
+        '双阵营共享成员在池照发'
+    assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
+
+
+# 族展开第九实例(狼狩概念股 id 1009;概念股族展开卡登记约定,权威版本 =
+# fields.md §5.2 效果缺口与载体登记 + economy.md §8 专家候选口径:本域
+# 7 名中貊泽为专家,牌库时点过滤在 cw_pool.grant_char_pool 层——
+# 本文件的池锁锁静态基底面 random_char_pool,过滤语义锁 = cw_pool 镜像
+# test_grant_char_pool.py。)
+
+
+def test_langshou_concept_stock_entry_shape() -> None:
+    """狼狩概念股登记形状锁(概念股族展开卡登记约定,权威版本 = fields.md
+    §5.2 效果缺口与载体登记):∈ ENV_GIFTS 且 ∉ ENV_ECONOMY(import 期
+    互斥校验半边显式断言);阵营轴 spec = faction '狼狩'(desc【狼狩】
+    直读,阵营羁绊名非角色名,与卡名剥「概念股」后缀的 ENV_FACTION 派生
+    值双源同值)+ star 1(先验,desc 未标星);随机装备 = ('简易',)
+    (desc「初始简易装备」类别明文,单数叙述默认 1 件;economy.md 四卡
+    线索名单不含狼狩 = 装备身份零先验,均匀 v0 + 按卡固定假说随家族披露
+    键待校准,登记行零新增申报)。族内第九实例,与追击/燃血/能量/列车
+    同行/银河学者/贝洛伯格/星间旅人/仙舟登记行同构仅值异;odds 键
+    env_1009 随批追加进家族常量。"""
+    assert '狼狩概念股' in ENV_GIFTS
+    assert '狼狩概念股' not in ENV_ECONOMY
+    grant = ENV_GIFTS['狼狩概念股']
+    assert grant.chars_random_immediate == \
+        (RandomCharSpec(faction='狼狩', star=1),)
+    assert grant.equips_random_immediate == ('简易',)
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        ENV_FACTION_REFRESH_ODDS_UNMODELED_KEYS,
+    )
+    assert 'env_1009_faction_refresh_odds_unmodeled' in \
+        ENV_FACTION_REFRESH_ODDS_UNMODELED_KEYS, \
+        'odds 失真键随批追加(家族常量收 env_1001..env_1009)'
+
+
+def test_langshou_faction_pool_matches_registry_and_validates() -> None:
+    """狼狩域登记校验 + 静态基底池(概念股族展开卡登记约定;gain-chain.md
+    §3 随机支段:静态基底 = 注册表派生,牌库时点过滤在 grant_char_pool
+    层):狼狩概念股过 _validate_env_gifts 现行全套(含 _validate_random_
+    char_spec 阵营轴分支——池非空单一哨(值域四查已随 2026-10-28 治理移除),「狼狩」阵营域非空天然
+    通过);random_char_pool 阵营 spec 现值 = chars_by_faction('狼狩')
+    名集现算比对(注册表派生非快照不手抄;本域无开拓者条目,双形态合并
+    对本域零作用;池规模只记注释零断言值——现值 7 名,随版本正常变动);
+    显式断言专家成员'貊泽' ∈ 静态基底池(基底 = 注册表全域,专家剔除只
+    发生在 grant_char_pool 牌库时点层——分层职责锁,防两层语义混写,
+    沿仙舟锁同款形态);双阵营成员'彦卿' ∈ 池照发(仙舟/狼狩域共享
+    成员,各卡采样域独立派生)。"""
+    cw_investments._validate_env_gifts()
+    spec = ENV_GIFTS['狼狩概念股'].chars_random_immediate[0]
+    expected = {c.name for c in chars_by_faction('狼狩')}
+    assert set(random_char_pool(spec)) == expected, \
+        '静态基底池 = chars_by_faction 全域(注册表现算双射)'
+    assert '貊泽' in random_char_pool(spec), \
+        '专家在静态基底池(过滤归 grant_char_pool 层,分层职责)'
+    assert '彦卿' in random_char_pool(spec), \
+        '双阵营共享成员在池照发'
+    assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
+
+
+# 族展开第十实例(昼之半神概念股 id 1010;概念股族展开卡登记约定,权威版本 =
+# fields.md §5.2 效果缺口与载体登记 + economy.md §8 专家候选口径:本域
+# 6 名 is_expert 全空(与狼狩相反型 = 全员非专家),牌库时点过滤对本域
+# 恒等——本文件的池锁锁静态基底面 random_char_pool,过滤恒等语义锁 =
+# cw_pool 镜像 test_grant_char_pool.py。)
+
+
+def test_zhouzhibanshen_concept_stock_entry_shape() -> None:
+    """昼之半神概念股登记形状锁(概念股族展开卡登记约定,权威版本 = fields.md
+    §5.2 效果缺口与载体登记):∈ ENV_GIFTS 且 ∉ ENV_ECONOMY(import 期
+    互斥校验半边显式断言);阵营轴 spec = faction '昼之半神'(desc
+    【昼之半神】直读,阵营羁绊名非角色名,与卡名剥「概念股」后缀的
+    ENV_FACTION 派生值双源同值)+ star 1(先验,desc 未标星);随机装备
+    = ('简易',)(desc「初始简易装备」类别明文,单数叙述默认 1 件;
+    economy.md「概念股送装备件」四卡线索名单含昼神→轮滑鞋,先验随
+    fixed_hypothesis 家族键已登记,登记行零新增申报)。族内第十实例,与
+    追击/燃血/能量/列车同行/银河学者/贝洛伯格/星间旅人/仙舟/狼狩登记行
+    同构仅值异;odds 键 env_1010 随批追加进家族常量。"""
+    assert '昼之半神概念股' in ENV_GIFTS
+    assert '昼之半神概念股' not in ENV_ECONOMY
+    grant = ENV_GIFTS['昼之半神概念股']
+    assert grant.chars_random_immediate == \
+        (RandomCharSpec(faction='昼之半神', star=1),)
+    assert grant.equips_random_immediate == ('简易',)
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        ENV_FACTION_REFRESH_ODDS_UNMODELED_KEYS,
+    )
+    assert 'env_1010_faction_refresh_odds_unmodeled' in \
+        ENV_FACTION_REFRESH_ODDS_UNMODELED_KEYS, \
+        'odds 失真键随批追加(家族常量收 env_1001..env_1010)'
+
+
+def test_zhouzhibanshen_faction_pool_matches_registry_and_validates() -> None:
+    """昼之半神域登记校验 + 静态基底池(概念股族展开卡登记约定;gain-chain.md
+    §3 随机支段:静态基底 = 注册表派生,牌库时点过滤在 grant_char_pool
+    层):昼之半神概念股过 _validate_env_gifts 现行全套(含 _validate_random_
+    char_spec 阵营轴分支——池非空单一哨(值域四查已随 2026-10-28 治理移除),「昼之半神」阵营域非空
+    天然通过);random_char_pool 阵营 spec 现值 = chars_by_faction('昼之
+    半神') 名集现算比对(注册表派生非快照不手抄;本域无开拓者条目,双形态
+    合并对本域零作用;池规模只记注释零断言值——现值 6 名,随版本正常
+    变动;本域 6 名 is_expert 全空 = 非专家域,无仙舟/狼狩型专家分层
+    断言,过滤恒等由 cw_pool 镜像授予池锁承载);显式断言'昔涟' ∈ 静态
+    基底池(独立单位「挚爱之人」照发 + 双阵营成员「昼之半神、夜之半神」
+    双边已登记照发双事实基准,族级口径 economy.md:94,镜像仙舟锁'彦卿'
+    定论断言式)。"""
+    cw_investments._validate_env_gifts()
+    spec = ENV_GIFTS['昼之半神概念股'].chars_random_immediate[0]
+    expected = {c.name for c in chars_by_faction('昼之半神')}
+    assert set(random_char_pool(spec)) == expected, \
+        '静态基底池 = chars_by_faction 全域(注册表现算双射)'
+    assert '昔涟' in random_char_pool(spec), \
+        '独立单位照发 + 双阵营成员照发(族级口径定论)'
+    assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
+
+
+# 族展开第十一实例(夜之半神概念股 id 1011;概念股族展开卡登记约定,权威版本 =
+# fields.md §5.2 效果缺口与载体登记 + economy.md §8 专家候选口径:本域
+# 7 名 is_expert 全空(与昼之半神同型 = 全员非专家),牌库时点过滤对本域
+# 恒等——本文件的池锁锁静态基底面 random_char_pool,过滤恒等语义锁 =
+# cw_pool 镜像 test_grant_char_pool.py。)
+
+
+def test_yezhibanshen_concept_stock_entry_shape() -> None:
+    """夜之半神概念股登记形状锁(概念股族展开卡登记约定,权威版本 = fields.md
+    §5.2 效果缺口与载体登记):∈ ENV_GIFTS 且 ∉ ENV_ECONOMY(import 期
+    互斥校验半边显式断言);阵营轴 spec = faction '夜之半神'(desc
+    【夜之半神】直读,阵营羁绊名非角色名,与卡名剥「概念股」后缀的
+    ENV_FACTION 派生值双源同值)+ star 1(先验,desc 未标星);随机装备
+    = ('简易',)(desc「初始简易装备」类别明文,单数叙述默认 1 件;
+    economy.md「概念股送装备件」四卡线索名单不含夜之半神 = 装备身份零
+    先验,均匀 v0 + 按卡固定假说待校准随 fixed_hypothesis 家族键已登记,
+    登记行零新增申报)。族内第十一实例,与追击/燃血/能量/列车同行/银河
+    学者/贝洛伯格/星间旅人/仙舟/狼狩/昼之半神登记行同构仅值异;odds 键
+    env_1011 随批追加进家族常量。"""
+    assert '夜之半神概念股' in ENV_GIFTS
+    assert '夜之半神概念股' not in ENV_ECONOMY
+    grant = ENV_GIFTS['夜之半神概念股']
+    assert grant.chars_random_immediate == \
+        (RandomCharSpec(faction='夜之半神', star=1),)
+    assert grant.equips_random_immediate == ('简易',)
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        ENV_FACTION_REFRESH_ODDS_UNMODELED_KEYS,
+    )
+    assert 'env_1011_faction_refresh_odds_unmodeled' in \
+        ENV_FACTION_REFRESH_ODDS_UNMODELED_KEYS, \
+        'odds 失真键随批追加(家族常量收 env_1001..env_1011)'
+
+
+def test_yezhibanshen_faction_pool_matches_registry_and_validates() -> None:
+    """夜之半神域登记校验 + 静态基底池(概念股族展开卡登记约定;gain-chain.md
+    §3 随机支段:静态基底 = 注册表派生,牌库时点过滤在 grant_char_pool
+    层):夜之半神概念股过 _validate_env_gifts 现行全套(含 _validate_random_
+    char_spec 阵营轴分支——池非空单一哨(值域四查已随 2026-10-28 治理移除),「夜之半神」阵营域非空
+    天然通过);random_char_pool 阵营 spec 现值 = chars_by_faction('夜之
+    半神') 名集现算比对(注册表派生非快照不手抄;本域无开拓者条目,双形态
+    合并对本域零作用;池规模只记注释零断言值——现值 7 名,随版本正常
+    变动;本域 7 名 is_expert 全空 = 非专家域,无仙舟/狼狩型专家分层
+    断言,过滤恒等由 cw_pool 镜像授予池锁承载);显式断言'昔涟' ∈ 静态
+    基底池(独立单位「挚爱之人」照发 + 双阵营成员「昼之半神、夜之半神」
+    双边已登记照发双事实基准,族级口径 economy.md:94,镜像仙舟锁'彦卿'
+    定论断言式)。"""
+    cw_investments._validate_env_gifts()
+    spec = ENV_GIFTS['夜之半神概念股'].chars_random_immediate[0]
+    expected = {c.name for c in chars_by_faction('夜之半神')}
+    assert set(random_char_pool(spec)) == expected, \
+        '静态基底池 = chars_by_faction 全域(注册表现算双射)'
+    assert '昔涟' in random_char_pool(spec), \
+        '独立单位照发 + 双阵营成员照发(族级口径定论)'
+    assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
+
+
+# 族展开第十二实例(击破概念股 id 1012;概念股族展开卡登记约定,权威版本 =
+# fields.md §5.2 效果缺口与载体登记 + economy.md §8 专家候选口径:本域
+# 9 名中加拉赫/姬子为专家,牌库时点过滤在 cw_pool.grant_char_pool 层——
+# 本文件的池锁锁静态基底面 random_char_pool,过滤语义锁 = cw_pool 镜像
+# test_grant_char_pool.py;域 = flows 轴纯流派域,独立条目「姬子·启行」
+# flows 空 ∈ 列车同行域非本域,勿混淆。)
+
+
+def test_jipo_concept_stock_entry_shape() -> None:
+    """击破概念股登记形状锁(概念股族展开卡登记约定,权威版本 = fields.md
+    §5.2 效果缺口与载体登记):∈ ENV_GIFTS 且 ∉ ENV_ECONOMY(import 期
+    互斥校验半边显式断言);阵营轴 spec = faction '击破'(desc【击破】
+    直读,流派名非角色名,与卡名剥「概念股」后缀的 ENV_FACTION 派生值
+    双源同值)+ star 1(先验,desc 未标星);随机装备 = ('简易',)
+    (desc「初始简易装备」类别明文,单数叙述默认 1 件;economy.md 四卡
+    线索名单不含击破 = 装备身份零先验,均匀 v0 + 按卡固定假说随家族披露
+    键待校准,登记行零新增申报)。族内第十二实例,与追击/燃血/能量/列车
+    同行/银河学者/贝洛伯格/星间旅人/仙舟/狼狩/昼之半神/夜之半神登记行
+    同构仅值异;odds 键 env_1012 随批追加进家族常量。"""
+    assert '击破概念股' in ENV_GIFTS
+    assert '击破概念股' not in ENV_ECONOMY
+    grant = ENV_GIFTS['击破概念股']
+    assert grant.chars_random_immediate == \
+        (RandomCharSpec(faction='击破', star=1),)
+    assert grant.equips_random_immediate == ('简易',)
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        ENV_FACTION_REFRESH_ODDS_UNMODELED_KEYS,
+    )
+    assert 'env_1012_faction_refresh_odds_unmodeled' in \
+        ENV_FACTION_REFRESH_ODDS_UNMODELED_KEYS, \
+        'odds 失真键随批追加(家族常量收 env_1001..env_1012)'
+
+
+def test_jipo_faction_pool_matches_registry_and_validates() -> None:
+    """击破域登记校验 + 静态基底池(概念股族展开卡登记约定;gain-chain.md
+    §3 随机支段:静态基底 = 注册表派生,牌库时点过滤在 grant_char_pool
+    层):击破概念股过 _validate_env_gifts 现行全套(含 _validate_random_
+    char_spec 阵营轴分支——池非空单一哨(值域四查已随 2026-10-28 治理移除),「击破」流派域非空天然
+    通过);random_char_pool 阵营 spec 现值 = chars_by_faction('击破')
+    名集现算比对(注册表派生非快照不手抄;本域无开拓者条目,双形态合并
+    对本域零作用;池规模只记注释零断言值——现值 9 名,随版本正常变动;
+    域 = flows 轴纯流派域,9 名全部经 flows 轴命中,factions 轴零命中,
+    沿追击/燃血锁先例形态);显式断言专家成员'加拉赫'/'姬子' ∈ 静态
+    基底池(基底 = 注册表全域,专家剔除只发生在 grant_char_pool 牌库
+    时点层——分层职责锁,沿仙舟/狼狩锁同款形态);双羁绊成员'灵砂'
+    ∈ 池照发(flows='治疗、击破' 双边已登记,镜像银河学者锁'真理医生'
+    定论断言式)。"""
+    cw_investments._validate_env_gifts()
+    spec = ENV_GIFTS['击破概念股'].chars_random_immediate[0]
+    expected = {c.name for c in chars_by_faction('击破')}
+    assert set(random_char_pool(spec)) == expected, \
+        '静态基底池 = chars_by_faction 全域(注册表现算双射)'
+    assert '加拉赫' in random_char_pool(spec) \
+        and '姬子' in random_char_pool(spec), \
+        '专家在静态基底池(过滤归 grant_char_pool 层,分层职责)'
+    assert '灵砂' in random_char_pool(spec), \
+        '双羁绊成员在池照发(flows 双边已登记定论)'
+    assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
+
+
+# 族展开第十三实例(群攻概念股 id 1013;概念股族展开卡登记约定,权威版本 =
+# fields.md §5.2 效果缺口与载体登记:本域 7 名 is_expert 全空 = 非专家域,
+# 牌库时点过滤在 cw_pool.grant_char_pool 层——本文件的池锁锁静态基底面
+# random_char_pool,过滤语义锁 = cw_pool 镜像 test_grant_char_pool.py;
+# 域 = flows 轴纯流派域,缇宝 flows「群攻、量子同频」双羁绊(量子同频无
+# 概念股卡,零联动)、翡翠为公司契约具名发放对象(具名 vs 随机字段不相
+# 交),两事实零登记面影响,勿混淆。)
+
+
+def test_qungong_concept_stock_entry_shape() -> None:
+    """群攻概念股登记形状锁(概念股族展开卡登记约定,权威版本 = fields.md
+    §5.2 效果缺口与载体登记):∈ ENV_GIFTS 且 ∉ ENV_ECONOMY(import 期
+    互斥校验半边显式断言);阵营轴 spec = faction '群攻'(desc【群攻】
+    直读,流派羁绊名非角色名,与卡名剥「概念股」后缀的 ENV_FACTION 派生
+    值双源同值)+ star 1(先验,desc 未标星);随机装备 = ('简易',)
+    (desc「初始简易装备」类别明文,单数叙述默认 1 件;economy.md 四卡
+    线索名单不含群攻 = 装备身份零先验,均匀 v0 + 按卡固定假说随家族披露
+    键待校准,登记行零新增申报)。族内第十三实例,与追击/燃血/能量/列车
+    同行/银河学者/贝洛伯格/星间旅人/仙舟/狼狩/昼之半神/夜之半神/击破
+    登记行同构仅值异;odds 键 env_1013 随批追加进家族常量。"""
+    assert '群攻概念股' in ENV_GIFTS
+    assert '群攻概念股' not in ENV_ECONOMY
+    grant = ENV_GIFTS['群攻概念股']
+    assert grant.chars_random_immediate == \
+        (RandomCharSpec(faction='群攻', star=1),)
+    assert grant.equips_random_immediate == ('简易',)
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        ENV_FACTION_REFRESH_ODDS_UNMODELED_KEYS,
+    )
+    assert 'env_1013_faction_refresh_odds_unmodeled' in \
+        ENV_FACTION_REFRESH_ODDS_UNMODELED_KEYS, \
+        'odds 失真键随批追加(家族常量收 env_1001..env_1013)'
+
+
+def test_qungong_faction_pool_matches_registry_and_validates() -> None:
+    """群攻域登记校验 + 静态基底池(概念股族展开卡登记约定;gain-chain.md
+    §3 随机支段:静态基底 = 注册表派生,牌库时点过滤在 grant_char_pool
+    层):群攻概念股过 _validate_env_gifts 现行全套(含 _validate_random_
+    char_spec 流派轴分支——池非空单一哨(值域四查已随 2026-10-28 治理移除),「群攻」流派域非空天然
+    通过);random_char_pool 阵营 spec 现值 = chars_by_faction('群攻')
+    名集现算比对(注册表派生非快照不手抄;本域无开拓者条目,双形态合并
+    对本域零作用;池规模只记注释零断言值——现值 7 名,随版本正常变动;
+    本域 7 名 is_expert 全空 = 非专家域,无仙舟/狼狩型专家分层断言,过滤
+    恒等由 cw_pool 镜像授予池锁承载;7 名全部经 flows 轴命中、factions
+    轴零命中,沿追击/燃血纯流派域锁先例形态);显式断言'缇宝' ∈ 静态
+    基底池(flows='群攻、量子同频' 双羁绊成员照发——量子同频无概念股
+    卡,零联动,镜像仙舟锁'彦卿'定论断言式)。"""
+    cw_investments._validate_env_gifts()
+    spec = ENV_GIFTS['群攻概念股'].chars_random_immediate[0]
+    expected = {c.name for c in chars_by_faction('群攻')}
+    assert set(random_char_pool(spec)) == expected, \
+        '静态基底池 = chars_by_faction 全域(注册表现算双射)'
+    assert '缇宝' in random_char_pool(spec), \
+        '双羁绊成员在池照发(flows 双边已登记定论,量子同频零联动)'
+    assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
+
+
+# 族展开第十四实例(减益概念股 id 1014;概念股族展开卡登记约定,权威版本 =
+# fields.md §5.2 效果缺口与载体登记:本域 7 名中佩拉 is_expert=True =
+# 专家域,牌库时点过滤在 cw_pool.grant_char_pool 层开局恒排佩拉——
+# 本文件的池锁锁静态基底面 random_char_pool,过滤语义锁 = cw_pool 镜像
+# test_grant_char_pool.py;域 = flows 轴纯流派域,椒丘为「持续伤害契约」
+# 具名发放对象(具名 vs 随机字段不相交)、千冶·刃 flows「燃血、减益」
+# 双羁绊且 ≠ 专家「刃」,两事实零登记面影响,勿混淆。)
+
+
+def test_jianyi_concept_stock_entry_shape() -> None:
+    """减益概念股登记形状锁(概念股族展开卡登记约定,权威版本 = fields.md
+    §5.2 效果缺口与载体登记):∈ ENV_GIFTS 且 ∉ ENV_ECONOMY(import 期
+    互斥校验半边显式断言);阵营轴 spec = faction '减益'(desc【减益】
+    直读,流派羁绊名非角色名,与卡名剥「概念股」后缀的 ENV_FACTION 派生
+    值双源同值)+ star 1(先验,desc 未标星);随机装备 = ('简易',)
+    (desc「初始简易装备」类别明文,单数叙述默认 1 件;economy.md 四卡
+    线索名单不含减益 = 装备身份零先验,均匀 v0 + 按卡固定假说随家族披露
+    键待校准,登记行零新增申报)。族内第十四实例,与追击/燃血/能量/列车
+    同行/银河学者/贝洛伯格/星间旅人/仙舟/狼狩/昼之半神/夜之半神/击破/
+    群攻登记行同构仅值异;odds 键 env_1014 随批追加进家族常量。"""
+    assert '减益概念股' in ENV_GIFTS
+    assert '减益概念股' not in ENV_ECONOMY
+    grant = ENV_GIFTS['减益概念股']
+    assert grant.chars_random_immediate == \
+        (RandomCharSpec(faction='减益', star=1),)
+    assert grant.equips_random_immediate == ('简易',)
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        ENV_FACTION_REFRESH_ODDS_UNMODELED_KEYS,
+    )
+    assert 'env_1014_faction_refresh_odds_unmodeled' in \
+        ENV_FACTION_REFRESH_ODDS_UNMODELED_KEYS, \
+        'odds 失真键随批追加(家族常量收 env_1001..env_1014)'
+
+
+def test_jianyi_faction_pool_matches_registry_and_validates() -> None:
+    """减益域登记校验 + 静态基底池(概念股族展开卡登记约定;gain-chain.md
+    §3 随机支段:静态基底 = 注册表派生,牌库时点过滤在 grant_char_pool
+    层):减益概念股过 _validate_env_gifts 现行全套(含 _validate_random_
+    char_spec 流派轴分支——池非空单一哨(值域四查已随 2026-10-28 治理移除),「减益」流派域非空天然
+    通过);random_char_pool 阵营 spec 现值 = chars_by_faction('减益')
+    名集现算比对(注册表派生非快照不手抄;本域无开拓者条目,双形态合并
+    对本域零作用;池规模只记注释零断言值——现值 7 名,随版本正常变动;
+    本域为专家域(佩拉 1 名),静态基底含专家 = 仙舟/狼狩/击破型分层
+    职责断言,过滤归 cw_pool 层由镜像授予池锁承载;7 名全部经 flows 轴
+    命中、factions 轴零命中,沿追击/燃血/击破纯流派域锁先例形态);显式
+    断言'千冶·刃' ∈ 静态基底池(flows='燃血、减益' 双羁绊成员照发——
+    镜银河学者锁'真理医生'/群攻锁'缇宝'定论断言式)。"""
+    cw_investments._validate_env_gifts()
+    spec = ENV_GIFTS['减益概念股'].chars_random_immediate[0]
+    expected = {c.name for c in chars_by_faction('减益')}
+    assert set(random_char_pool(spec)) == expected, \
+        '静态基底池 = chars_by_faction 全域(注册表现算双射)'
+    assert '佩拉' in random_char_pool(spec), \
+        '专家在静态基底池(过滤归 grant_char_pool 层,分层职责)'
+    assert '千冶·刃' in random_char_pool(spec), \
+        '双羁绊成员在池照发(flows 双边已登记定论)'
+    assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
+
+
+# 族展开第十五实例(战技点概念股 id 1016,族收官;概念股族展开卡登记约定,
+# 权威版本 = fields.md §5.2 效果缺口与载体登记:本域 7 名中青雀 is_expert=True
+# = 专家域,牌库时点过滤在 cw_pool.grant_char_pool 层开局恒排青雀——
+# 本文件的池锁锁静态基底面 random_char_pool,过滤语义锁 = cw_pool 镜像
+# test_grant_char_pool.py;域 = flows 轴纯流派域,独立单位成员 Archer
+# (independent='魔术师')照发族级定论〔economy.md:94 点名战技点(Archer)〕;
+# 花火(2费,flows 战技点、量子同频)≠ 火花(4费,flows 战技点、欢愉)两名
+# 形近成员,量子同频/欢愉均无概念股卡,零登记面影响,勿混淆。)
+
+
+def test_zhanjidian_concept_stock_entry_shape() -> None:
+    """战技点概念股登记形状锁(概念股族展开卡登记约定,权威版本 = fields.md
+    §5.2 效果缺口与载体登记):∈ ENV_GIFTS 且 ∉ ENV_ECONOMY(import 期
+    互斥校验已随治理口径移除,本断言为该性质的测试侧唯一防线);阵营轴
+    spec = faction '战技点'(desc【战技点】直读,流派羁绊名非角色名,与
+    卡名剥「概念股」后缀的 ENV_FACTION 派生值双源同值)+ star 1(先验,
+    desc 未标星);随机装备 = ('简易',)(desc「初始简易装备」类别明文,
+    单数叙述默认 1 件;economy.md 四卡线索名单不含战技点 = 装备身份零
+    先验,均匀 v0 + 按卡固定假说随家族披露键待校准,登记行零新增申报)。
+    族内第十五实例(族收官),与追击/燃血/能量/列车同行/银河学者/贝洛
+    伯格/星间旅人/仙舟/狼狩/昼之半神/夜之半神/击破/群攻/减益登记行同构
+    仅值异;odds 键 env_1016 随批追加进家族常量(族收官 15/15 齐)。"""
+    assert '战技点概念股' in ENV_GIFTS
+    assert '战技点概念股' not in ENV_ECONOMY
+    grant = ENV_GIFTS['战技点概念股']
+    assert grant.chars_random_immediate == \
+        (RandomCharSpec(faction='战技点', star=1),)
+    assert grant.equips_random_immediate == ('简易',)
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        ENV_FACTION_REFRESH_ODDS_UNMODELED_KEYS,
+    )
+    assert 'env_1016_faction_refresh_odds_unmodeled' in \
+        ENV_FACTION_REFRESH_ODDS_UNMODELED_KEYS, \
+        'odds 失真键随批追加(家族常量族收官 env_1001..env_1014+env_1016)'
+
+
+def test_zhanjidian_faction_pool_matches_registry_and_validates() -> None:
+    """战技点域登记校验 + 静态基底池(概念股族展开卡登记约定;gain-chain.md
+    §3 随机支段:静态基底 = 注册表派生,牌库时点过滤在 grant_char_pool
+    层):战技点概念股过 _validate_env_gifts 现行全套(T-63 治理后漂移哨:
+    孤儿键/角色名漂移/规格池非空[经 _validate_random_char_spec 单一哨]/
+    随机装备类别池非空/装备名漂移/星徽类别池闸);random_char_pool 阵营
+    spec 现值 = chars_by_faction('战技点') 名集现算比对(注册表派生非快照
+    不手抄;本域无开拓者条目,双形态合并对本域零作用;池规模只记注释零
+    断言值——现值 7 名,随版本正常变动;本域为专家域(青雀 1 名),静态
+    基底含专家 = 仙舟/狼狩/减益型分层职责断言,过滤归 cw_pool 层由镜像
+    授予池锁承载;7 名全部经 flows 轴命中、factions 轴零命中,沿击破/减益
+    纯流派域锁先例形态);显式断言'Archer' ∈ 静态基底池(独立单位成员
+    照发,economy.md:94 族级定论点名战技点(Archer))。"""
+    cw_investments._validate_env_gifts()
+    spec = ENV_GIFTS['战技点概念股'].chars_random_immediate[0]
+    expected = {c.name for c in chars_by_faction('战技点')}
+    assert set(random_char_pool(spec)) == expected, \
+        '静态基底池 = chars_by_faction 全域(注册表现算双射)'
+    assert '青雀' in random_char_pool(spec), \
+        '专家在静态基底池(过滤归 grant_char_pool 层,分层职责)'
+    assert 'Archer' in random_char_pool(spec), \
+        '独立单位成员照发(economy.md:94 族级定论)'
+    assert set(random_char_pool(spec)) <= CHARACTER_ROSTER

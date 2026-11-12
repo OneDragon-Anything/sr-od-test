@@ -1,0 +1,12 @@
+{"run_id": "run_a", "ts": "2026-01-01T00:00:03", "plane": 1, "round_num": 3, "node_type": "普通战斗", "killed": true, "hp_after": 40, "hp_confidence": 1.0, "source": ""}
+{"run_id": "run_a", "ts": "2026-01-01T00:00:04", "plane": 1, "round_num": 3, "node_type": "普通战斗", "killed": false, "hp_after": 20, "hp_confidence": 1.0, "source": ""}
+{"run_id": "run_a", "ts": "2026-01-01T00:00:05", "plane": 1, "round_num": 5, "node_type": "遭遇", "killed": null, "hp_after": null, "hp_confidence": 0.0, "source": ""}
+{"run_id": "run_a", "ts": "2026-01-01T00:00:06", "plane": 1, "round_num": 5, "node_type": "遭遇", "killed": false, "hp_after": 25, "hp_confidence": 1.0, "source": "loss_page"}
+{"run_id": "run_a", "ts": "2026-01-01T00:00:08", "plane": 1, "round_num": 7, "node_type": "boss", "killed": true, "hp_after": 55, "hp_confidence": 1.0, "source": ""}
+{"run_id": "run_a", "ts": "2026-01-01T00:01:03", "plane": 2, "round_num": 1, "node_type": "battle", "killed": false, "hp_after": 0, "hp_confidence": 1.0, "source": ""}
+{"run_id": "run_b", "ts": "2026-01-02T00:00:03", "plane": 1, "round_num": 2, "node_type": "普通战斗", "killed": null, "hp_after": null, "hp_confidence": 0.0, "source": ""}
+{"run_id": "run_b", "ts": "2026-01-02T00:00:05", "plane": 1, "round_num": 4, "node_type": "奖励", "killed": true, "hp_after": 24, "hp_confidence": 1.0, "source": ""}
+{"run_id": "run_c", "ts": "2026-01-03T00:00:02", "plane": 1, "round_num": 1, "node_type": "普通战斗", "killed": true, "hp_after": 33, "hp_confidence": 1.0, "source": "recovered"}
+{"run_id": "run_c", "ts": "2026-01-03T00:00:03", "plane": 1, "round_num": 1, "node_type": "普通战斗", "killed": false, "hp_after": 30, "hp_confidence": 1.0, "source": ""}
+{"run_id": "run_d", "ts": "2026-01-05T00:00:01", "plane": 1, "round_num": 1, "node_type": "遭遇", "killed": true, "hp_after": 44, "hp_confidence": 1.0, "source": ""}
+{"run_id": "fake_x", "ts": "2026-01-04T00:00:02", "plane": 1, "round_num": 1, "node_type": "battle", "killed": true, "hp_after": 99, "hp_confidence": 1.0, "source": ""}

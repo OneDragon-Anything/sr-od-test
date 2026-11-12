@@ -1,0 +1,133 @@
+"""公司军火更新·银(id 130101)随机简易装备发放锁(镜像 src = kernel/
+cw_gain_effects.py 的泛化随机装备表 ``_STRATEGY_RANDOM_EQUIP_GRANTS``
+'公司军火更新·银' 行('简易', 1)+ 工厂 ``_make_random_equip_effect('简易', 1)``
+经 ``PICK_INVEST_EFFECTS`` 生成式注册;按被测方法拆目录规范落位——
+test_gain_chain.py 超线冻结禁追加,新锁落新镜像,先例 = 同目录
+test_strategy_random_equip_grant.py 买彩票星徽行)。
+
+测试面依据 = 原稿锁面
+原稿锁面§4 锁 4/锁 6:
+- 固定 rng 注入链发放真值(行身份锁:equips 恰 +1、名 ∈ 简易池派生集
+  且 = 采样值、效果串恰 1 条 ``strategy_random_equip:<名>``——锁成员
+  关系不锁池计数)/equips 未观察拒落跳写形态;
+- rand 语义锁(采样写走 write_logic_rand 通道、不触发失配网)由
+  test_gain_chain.test_random_equip_leg_rand_channel_subchain 辖——
+  同一工厂路径的通道语义,本行与该锁同为 '简易' 类别实参,类别实参不
+  改变通道选择,不重复立锁(星徽行先例同判)。
+
+本卡变异效果条目(「每节点物品栏装备同品质变异」)不属本文件辖域:登记形态
+= 同目录 test_gain_invest_strategy_equips_reroll.py(两注册面分域,
+合取承载两条效果条目并存结构)。
+"""
+from __future__ import annotations
+
+import random
+
+import pytest
+
+from sr_od.application.currency_war.kernel.cw_gain_chain import (
+    gain_invest_strategy,
+)
+from sr_od.application.currency_war.kernel.cw_game_state import (
+    GAME_STATE_SCHEMA_VERSION,
+    BenchSlot,
+    BenchView,
+    ChannelSig,
+    GameState,
+    Unit,
+    consume_defect_sink,
+    set_defect_sink,
+)
+
+_SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep')
+
+_LSIG = ChannelSig(family='logic_action', actor='CwActionPickInvestOp',
+                   mode='compute')
+
+#: 固定种子(采样名失配 = 换种子,禁手抄池清单)。
+_SIMPLE_SEED = 20261101
+
+
+def _make_gs(*, bench: list[tuple[str, int]] | None = None,
+             equips: list[str] | None = None) -> GameState:
+    """观测面按参组装(None = 保持未观察;镜像 test_gain_chain._make_gs
+    的 bench/equips 两支,本卡只涉这两域)。"""
+    gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
+    if bench is not None:
+        slots = [BenchSlot(kind='unit', unit=Unit(char_id=c, star=s))
+                 for c, s in bench]
+        slots += [BenchSlot(kind='empty')] * (9 - len(slots))
+        gs.observe(gs.bench, BenchView(slots=slots, capacity=9), sig=_SIG_OBS)
+    if equips is not None:
+        gs.observe(gs.equips, list(equips), sig=_SIG_OBS)
+    return gs
+
+
+class _RowSink:
+    """缺陷台账行收集(镜像 test_gain_chain 同名 fixture,装配 + 必达收尾)。"""
+
+    def __init__(self) -> None:
+        self.rows: list[dict] = []
+        set_defect_sink(self.rows.append)
+
+    def close(self) -> None:
+        set_defect_sink(None)
+        consume_defect_sink()
+
+    def kinds(self) -> list[str]:
+        return [r['kind'] for r in self.rows]
+
+
+@pytest.fixture
+def rows_sink() -> _RowSink:
+    s = _RowSink()
+    try:
+        yield s
+    finally:
+        s.close()
+
+
+def test_simple_equip_leg_chain_places_one(rows_sink: _RowSink) -> None:
+    """链发放真值(设计 §4 锁 4,行身份锁):gain_invest_strategy 确定入口
+    (rand=False)+ 固定 rng 注入 → equips 恰 +1、名 ∈ 简易池派生集且 =
+    采样值(禁手抄清单)、效果串恰 1 条 ``strategy_random_equip:<名>``
+    (装备无星级,串不带 @ 后缀)、active_strategies 入表;正常路径零
+    申报行。session=None 直构形态(只登记不写状态的实现分支被闸跳过,登记形态断言由登记
+    形态锁承载,两锁合取 = 双注册面并存结构)。"""
+    from sr_od.application.currency_war.kernel.cw_gain_effects import (
+        roll_random_equip,
+    )
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        equips_by_category,
+    )
+    pick = roll_random_equip(random.Random(_SIMPLE_SEED), '简易')
+    assert pick in equips_by_category('简易'), '预验证:采样名 ∈ 简易池'
+    gs = _make_gs(bench=[], equips=[])
+    gs.prep_anchored = True
+    out = gain_invest_strategy(gs, None, '公司军火更新·银', rand=False,
+                               sig=_LSIG, rng=random.Random(_SIMPLE_SEED))
+    assert out.placed
+    assert gs.active_strategies.value == ['公司军火更新·银'], '注册入表'
+    assert gs.equips.value == [pick], 'equips 恰 +1 且名 = 采样值'
+    assert out.effects == (f'strategy_random_equip:{pick}',), '效果串恰 1 条'
+    assert rows_sink.kinds() == [], '正常路径零申报行'
+
+
+def test_simple_equip_leg_equips_unobserved_skip_decoupled() -> None:
+    """equips 未观察形态锁(设计 §4 锁 6):拒落跳写(原语
+    detail='equips_unobserved' 现役语义,零写零缺陷)、效果串恒登记
+    ``strategy_random_equip:<名>(skipped)``(发放事实与落位成败解耦,
+    非静默丢失;骇客 mod_sampled 两形态同构)。变异效果条目零代码行为不涉本锁
+    (游戏侧自动面)。"""
+    from sr_od.application.currency_war.kernel.cw_gain_effects import (
+        roll_random_equip,
+    )
+    pick = roll_random_equip(random.Random(_SIMPLE_SEED), '简易')
+    gs = _make_gs(bench=[])   # equips 不种 = 域未观察
+    gs.prep_anchored = True
+    out = gain_invest_strategy(gs, None, '公司军火更新·银', rand=False,
+                               sig=_LSIG, rng=random.Random(_SIMPLE_SEED))
+    assert out.placed
+    assert gs.equips.value is None, '未观察域零写'
+    assert out.effects == (f'strategy_random_equip:{pick}(skipped)',), \
+        '效果串恒登记(skipped 形态)'
