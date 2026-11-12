@@ -9,6 +9,7 @@
 """
 import sys
 import types
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import pytest
@@ -20,6 +21,7 @@ from sr_od.backend.operation_registry import (
     _describe_single,
     _resolve_annotations,
     compact_operation_list,
+    coerce_params,
     describe_operation,
     match_short_name,
     resolve_unique_op,
@@ -41,6 +43,112 @@ class _OpWithForwardRef(Operation):
     def __init__(self, ctx: 'SrContext', team_names: list[str],
                  helper: 'SrContext' = None):
         super().__init__(ctx, op_name='fake')
+
+
+@dataclass
+class _ProbeItem:
+    """带 ``from_dict`` 的探针数据类(coercible 规整链路)。"""
+
+    name: str
+    num: int = 0
+
+    @classmethod
+    def from_dict(cls, d: dict) -> '_ProbeItem':
+        return cls(name=d.get('name', ''), num=int(d.get('num', 0)))
+
+
+class _PlainThing:
+    """普通自定义类(非 dataclass):可序列化与规整均不成立,应明确拒。"""
+
+
+class _CoerceProbeOp(Operation):
+    """容器/分支规整探针(校验与 coerce_params 行为锁,纯反射不实例化)。"""
+
+    def __init__(self, ctx: 'SrContext',
+                 item: _ProbeItem,
+                 opt_item: _ProbeItem | None = None,
+                 item_list: list[_ProbeItem] | None = None,
+                 item_map: dict[str, _ProbeItem] | None = None,
+                 pair: tuple[str, str] = ('a', 'b'),
+                 tag_set: set[str] | None = None,
+                 opt_plain: _PlainThing | None = None,
+                 plain_list: list[_PlainThing] | None = None):
+        super().__init__(ctx, op_name='coerce probe')
+
+
+# ===== 参数规整(单一源 _coerce_value:校验干跑与 coerce_params 同源)=====
+
+def test_tuple_set_annotations_accept_list_value() -> None:
+    """tuple/set 注解接受 JSON list 值(JSON 无此二型,校验放行 + 规整转换)。"""
+    args = {'item': {'name': 'a'}, 'pair': ['x', 'y'], 'tag_set': ['t1', 't2']}
+    assert validate_args(_CoerceProbeOp, args) is None
+    coerced = coerce_params(_CoerceProbeOp, args)
+    assert coerced['pair'] == ('x', 'y') and isinstance(coerced['pair'], tuple)
+    assert coerced['tag_set'] == {'t1', 't2'} and isinstance(coerced['tag_set'], set)
+
+
+def test_optional_dataclass_coerces_dict_and_keeps_none() -> None:
+    """Optional[dataclass]:dict 值规整为实例;None 值保留(分支级规整)。"""
+    assert validate_args(_CoerceProbeOp, {'item': {'name': 'a'}, 'opt_item': {'name': 'b'}}) is None
+    coerced = coerce_params(_CoerceProbeOp, {'item': {'name': 'a'}, 'opt_item': {'name': 'b'}})
+    assert isinstance(coerced['opt_item'], _ProbeItem) and coerced['opt_item'].name == 'b'
+
+    assert validate_args(_CoerceProbeOp, {'item': {'name': 'a'}, 'opt_item': None}) is None
+    coerced = coerce_params(_CoerceProbeOp, {'item': {'name': 'a'}, 'opt_item': None})
+    assert coerced['opt_item'] is None
+
+
+def test_bare_dataclass_rejects_none_with_expectation() -> None:
+    """裸 dataclass 必填参数传 None → 拒,错误带期望形态(可自纠)。"""
+    err = validate_args(_CoerceProbeOp, {'item': None})
+    assert err is not None and 'dict(_ProbeItem' in err
+
+
+def test_dataclass_list_and_map_coerce_elements() -> None:
+    """list[dataclass] / dict[str, dataclass]:元素级规整;混合元素拒。"""
+    args = {'item': {'name': 'a'}, 'item_list': [{'name': 'x'}, {'name': 'y', 'num': 2}]}
+    assert validate_args(_CoerceProbeOp, args) is None
+    coerced = coerce_params(_CoerceProbeOp, args)
+    assert [i.name for i in coerced['item_list']] == ['x', 'y']
+
+    map_args = {'item': {'name': 'a'}, 'item_map': {'k': {'name': 'v'}}}
+    assert validate_args(_CoerceProbeOp, map_args) is None
+    coerced = coerce_params(_CoerceProbeOp, map_args)
+    assert isinstance(coerced['item_map']['k'], _ProbeItem)
+
+    mixed = {'item': {'name': 'a'}, 'item_list': [{'name': 'x'}, 'not-a-dict']}
+    err = validate_args(_CoerceProbeOp, mixed)
+    assert err is not None and 'item_list' in err
+
+
+def test_optional_plain_class_rejected_as_unsupported() -> None:
+    """Optional[普通自定义类] 明确拒(非 None 分支混入判定的盲区已收紧)。"""
+    err = validate_args(_CoerceProbeOp, {'item': {'name': 'a'}, 'opt_plain': {'x': 1}})
+    assert err is not None and '不支持的数据类型' in err
+
+
+def test_plain_class_container_rejected_as_unsupported() -> None:
+    """list[普通自定义类] 明确拒(元素级判定,防 dict 元素借容器通道直达)。"""
+    err = validate_args(_CoerceProbeOp, {'item': {'name': 'a'}, 'plain_list': [{'x': 1}]})
+    assert err is not None and '不支持的数据类型' in err
+    assert err is not None and 'plain_list' in err
+
+
+def test_describe_flags_after_unified_coercing() -> None:
+    """describe 判定与规整能力面一致:Optional 洗白修正、容器/分支 coercible。"""
+    params = {p['name']: p for p in _describe_single(_CoerceProbeOp)['params']}
+    # Optional 洗白修正:非 None 分支是 dataclass → 不可直传但可规整
+    assert params['opt_item']['json_serializable'] is False
+    assert params['opt_item']['coercible'] is True
+    # 容器元素级 coercible
+    assert params['item_list']['coercible'] is True
+    assert params['item_map']['coercible'] is True
+    # tuple/set 走可序列化通道(校验接受 list),不标 coercible
+    assert params['pair']['json_serializable'] is True
+    assert params['pair']['coercible'] is False
+    # Optional[普通自定义类]:两旗皆 False(明确不可传)
+    assert params['opt_plain']['json_serializable'] is False
+    assert params['opt_plain']['coercible'] is False
 
 
 def test_forward_ref_only_falls_back_self_param() -> None:
