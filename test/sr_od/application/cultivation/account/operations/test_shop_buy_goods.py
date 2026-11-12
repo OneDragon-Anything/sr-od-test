@@ -222,3 +222,66 @@ def test_popup_reentry_sold_out_bar(
         '横条分支应点取消关闭弹窗'
     assert not fixture_controller.click_hit_area('商店-兑换弹窗', '按钮-确认'), \
         '售罄弹窗不得触碰确认按钮'
+
+
+_CONTRACT_FRAME = ('商店-协议商店', 'default')
+_GIFT_DIALOG_FRAME = ('商店-礼包弹窗', '黑塔冒险共享协议')
+_STELLAR_FRAME = ('商店-聚灵铸星', '角色兑换')
+
+
+def test_contract_gift_flow(
+    test_context: SrTestContext,
+    fixture_controller: FixtureController,
+) -> None:
+    """协议商店礼包链:单页跳过回顶 → 扫描点卡 → 礼包弹窗数量恒 1 → 确认 → 终验。"""
+    frames = [_CONTRACT_FRAME, _GIFT_DIALOG_FRAME, _CONTRACT_FRAME]
+    _require_screens(test_context, frames)
+    fixture_controller.set_phases([
+        {'frame': _CONTRACT_FRAME,
+         'exit': ('on_click_in', '商店-协议商店', '卡槽-网格基准')},
+        {'frame': _GIFT_DIALOG_FRAME,
+         'exit': ('on_click_in', '商店-礼包弹窗', '按钮-确认')},
+        {'frame': _CONTRACT_FRAME},
+    ])
+    op = _WatchedBuy(test_context, 'herta_contract_quest_sharing', count=1)
+    result = _run_execute(test_context, op)
+
+    assert result.success, (
+        f'礼包链未成功:status={result.status!r} '
+        f'phase_idx={fixture_controller.phase_idx} '
+        f'clicks={fixture_controller.recorded_clicks}')
+    data = result.data
+    assert data['bought'] == 1, f'礼包数量恒 1: {data}'
+    assert data['tab'] is None, f'协议商店无 tab: {data}'
+    assert fixture_controller.click_hit_area('商店-协议商店', '卡槽-网格基准'), \
+        '协议商品卡点击缺失'
+    assert fixture_controller.click_hit_area('商店-礼包弹窗', '按钮-确认'), \
+        '礼包确认按钮点击缺失'
+
+
+def test_stellar_navigation(
+    test_context: SrTestContext,
+    fixture_controller: FixtureController,
+) -> None:
+    """跨子商店导航:兑换商店页起点 → 点左侧菜单进聚灵铸星 → 扫描点卡。
+
+    红线对应:mock 无真实消耗,流程到「已点商品卡待弹窗验证」即止
+    (末帧不推进,confirm 前的导航/扫描/点卡链路已完整覆盖)。
+    """
+    frames = [('商店', '余烬兑换-首屏通票'), _STELLAR_FRAME]
+    _require_screens(test_context, frames)
+    fixture_controller.set_phases([
+        {'frame': frames[0],
+         'exit': ('on_click_in', '商店', '菜单-聚灵铸星')},
+        {'frame': _STELLAR_FRAME},
+    ])
+    op = _WatchedBuy(test_context, 'jiaoqiu', count=1)
+    result = _run_execute(test_context, op)
+
+    assert not result.success or result.status is not None  # 末帧停在点卡后重试,允许 retry 超限
+    assert fixture_controller.click_hit_area('商店', '菜单-聚灵铸星'), \
+        '左侧菜单导航点击缺失'
+    assert fixture_controller.click_hit_area('商店-聚灵铸星', '卡槽-网格基准'), \
+        f'聚灵铸星商品卡点击缺失:{fixture_controller.recorded_clicks}'
+    assert not fixture_controller.click_hit_area('商店-礼包弹窗', '按钮-确认'), \
+        '只读验证不得触碰任何确认按钮'
