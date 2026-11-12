@@ -241,15 +241,23 @@ def _request_with_body(query: dict, body: dict | None) -> MagicMock:
 
 
 def test_handle_game_operations_list() -> None:
-    """GET /game/operations 返回 operation 列表(含 OpenAndEnterGame)。"""
+    """GET /game/operations 返回紧凑 op_id 列表(与 MCP list_operations 同契约)。"""
     from sr_od.backend.http.service_routes import handle_game_operations
 
     backend = MagicMock()
     resp = asyncio.run(handle_game_operations(backend))
     assert resp.status_code == 200
     data = json.loads(resp.body.decode('utf-8'))
-    op_ids = [o['op_id'] for o in data['operations']]
-    assert _OPEN_AND_ENTER in op_ids
+    assert _OPEN_AND_ENTER in data['operations']
+    assert data['total'] == data['count'] == len(data['operations'])
+
+    # query 子串过滤与 MCP 同源(compact_operation_list),大小写不敏感
+    request = MagicMock()
+    request.query_params.get.return_value = 'openandenter'
+    resp = asyncio.run(handle_game_operations(backend, request))
+    data = json.loads(resp.body.decode('utf-8'))
+    assert data['operations'] == [_OPEN_AND_ENTER]
+    assert data['total'] > data['count']
 
 
 def test_handle_game_operations_describe() -> None:

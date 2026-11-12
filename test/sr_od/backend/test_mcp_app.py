@@ -302,13 +302,31 @@ def test_registers_operation_tools() -> None:
 
 
 def test_list_operations_contains_open_and_enter_game() -> None:
-    """list_operations 扫描结果应含 OpenAndEnterGame(operation 承载包)。"""
+    """list_operations 紧凑形态(仅 op_id 列表,不带参数 schema)应含 OpenAndEnterGame。"""
     from sr_od.backend.mcp.service_app import make_list_operations
 
     backend = MagicMock()
     result = make_list_operations(backend)()
-    op_ids = [o.op_id for o in result.operations]
-    assert _OPEN_AND_ENTER in op_ids
+    assert _OPEN_AND_ENTER in result['operations']
+    assert result['total'] == result['count'] == len(result['operations'])
+    # 每个 op_id 唯一:op_id 已含 module path + 类名,定位语义完整
+    assert len(set(result['operations'])) == len(result['operations'])
+
+
+def test_list_operations_query_filter() -> None:
+    """query 子串过滤 op_id(大小写不敏感);无命中返回空列表且 total 仍为全量数。"""
+    from sr_od.backend.mcp.service_app import make_list_operations
+
+    backend = MagicMock()
+    result = make_list_operations(backend)('openandenter')  # 小写过滤大写类名
+    assert result['count'] == 1
+    assert result['operations'] == [_OPEN_AND_ENTER]
+    assert result['total'] > result['count']
+
+    miss = make_list_operations(backend)('不存在的关键字xyz')
+    assert miss['count'] == 0
+    assert miss['operations'] == []
+    assert miss['total'] > 0
 
 
 def test_list_operations_error_fallback() -> None:
