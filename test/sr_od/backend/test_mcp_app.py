@@ -446,6 +446,20 @@ def test_run_operation_block_success() -> None:
     assert res['success'] is True and '成功' in res['result']
 
 
+def test_run_operation_block_returns_data() -> None:
+    """block=True + op 携带 data → 终态 dict 带 data 通道(读数类 op 契约)。"""
+    from sr_od.backend.mcp.service_app import make_run_operation
+
+    payload = {'pool_type': 'character', 'stellar_jade': 12183}
+    fut: Future = Future()
+    fut.set_result(OperationResult(success=True, status='WARP_STATUS', data=payload))
+    backend = MagicMock()
+    backend.run_slot._start.return_value = (True, fut)
+    res = asyncio.run(make_run_operation(backend)(op_id=_OPEN_AND_ENTER, args={}, block=True))
+    assert res['success'] is True
+    assert res['data'] == payload
+
+
 def test_run_operation_bakes_args_into_factory() -> None:
     """op_factory 闭包 bake 了 args:展开后等价 cls(ctx, stuck_times=...)。"""
     from unittest.mock import MagicMock
