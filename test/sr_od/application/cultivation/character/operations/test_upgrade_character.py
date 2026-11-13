@@ -60,10 +60,14 @@ def _install_script(
     ctx: SrTestContext,
     scenes: list[set[tuple[str, str]]],
     level: int,
+    farm_times: int = 1,
 ) -> dict:
-    """桩识别层并装记录器(场景语义同 test_upgrade_trace._install_script)。"""
+    """桩识别层并装记录器(场景语义同 test_upgrade_trace._install_script)。
+
+    farm_times = 确认框「刷取次数 N」OCR 读数桩(默认 1;券刷取的次数设置
+    分支以此现读)。"""
     state: dict = {'round': 0, 'level_reads': 0, 'find_events': [],
-                   'find_clicks': []}
+                   'find_clicks': [], 'farm_times_reads': 0}
 
     def _fake_find_area(self, screen, s_name, a_name, *args, **kwargs):
         state['find_events'].append((s_name, a_name))
@@ -84,10 +88,15 @@ def _install_script(
         state['level_reads'] += 1
         return level
 
+    def _fake_farm_times(self) -> int | None:
+        state['farm_times_reads'] += 1
+        return farm_times
+
     monkeypatch.setattr(UpgradeCharacterOp, 'round_by_find_area', _fake_find_area)
     monkeypatch.setattr(UpgradeCharacterOp, 'round_by_find_and_click_area',
                         _fake_find_and_click)
     monkeypatch.setattr(UpgradeCharacterOp, '_read_ascend_level', _fake_level)
+    monkeypatch.setattr(UpgradeCharacterOp, '_read_farm_times', _fake_farm_times)
     return state
 
 
