@@ -36,6 +36,7 @@ from test.harness.fixture_controller import (
 import sr_od.application.cultivation.light_cone.operations.upgrade_light_cone as lc_module
 from one_dragon.base.geometry.point import Point
 from one_dragon.base.operation.operation_base import OperationResult
+from one_dragon.base.operation.operation_round_result import OperationRoundResultEnum
 from one_dragon.base.screen.screen_utils import FindAreaResultEnum
 from sr_od.application.cultivation.light_cone.operations.upgrade_light_cone import (
     UpgradeLightConeOp,
@@ -375,7 +376,8 @@ class TestUpgradeLightConeBranches:
         不触发大世界入口链。"""
         scenes = [
             _DEAD_FRAME,
-            {(_LC_ASC, '标题-光锥详情'), (_LC_ASC, '按钮-快速刷取')},
+            {(_LC_ASC, '标题-光锥详情'), (_LC_ASC, '按钮-快速刷取'),
+             (_FAST_FARM_DIALOG, '标题-快速刷取弹窗')},
             {(_LC_ASC, '标题-光锥详情'), (_LC_ASC, '按钮-快速升级')},
             {(_LC_ASC, '标题-光锥详情'), (_LC_ASC, '文本-已提升至最高阶')},
             {(_LC_TAB, '标题-角色光锥')},
@@ -415,11 +417,13 @@ class TestUpgradeLightConeBranches:
         """确认框次数现读低于目标:点「+」补差值到目标(OCR 现读+补偿式设置)。"""
         scenes = [
             _DEAD_FRAME,
-            {(_LC_ASC, '标题-光锥详情'), (_LC_ASC, '按钮-快速刷取')},
+            {(_LC_ASC, '标题-光锥详情'), (_LC_ASC, '按钮-快速刷取'),
+             (_FAST_FARM_DIALOG, '标题-快速刷取弹窗')},
             {(_LC_ASC, '标题-光锥详情')},
         ]
         state = _install_script(monkeypatch, test_context, scenes, level=40)
         state['farm_times_read'] = 0  # 现读 0,目标 2 → 应点「+」2 次
+        state['round'] = 1  # 直呼节点:场景定位到确认框在场轮(重入守卫需命中弹窗标题)
         clicks = _record_controller_clicks(monkeypatch, test_context, state)
         op = _WatchedUpgradeLightCone(test_context, farm_dungeon=True,
                                       farm_times_per_round=2)
@@ -437,6 +441,53 @@ class TestUpgradeLightConeBranches:
                                        _FAST_FARM_DIALOG, '按钮-刷取次数加')
         assert plus_clicks == 2, f'应恰好点「+」2 次,实际 {plus_clicks}'
         assert op._farm_rounds == 1
+
+    def test_confirm_farm_wait_rerun_guard(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """券确认刷取的 WAIT 重入幂等守卫:带 until 的点击返回 WAIT 时引擎会
+        原样重跑本节点——重入轮必须按画面态分流,不得重跑次数设置与确认点击。
+
+        结果框在场 = 刷取已完成,直接 RESULT_OPEN 成功(零点击、计数不变);
+        两弹窗都不在 = 刷取进行中,WAIT 慢询等待(同样零副作用)。"""
+        # 用例1:结果框在场 → RESULT_OPEN 成功,无任何点击、不重复计数
+        state = _install_script(
+            monkeypatch, test_context,
+            [{(_FAST_FARM_RESULT, '按钮-关闭刷取结果')}], level=40)
+        clicks = _record_controller_clicks(monkeypatch, test_context, state)
+        op = _WatchedUpgradeLightCone(test_context, farm_dungeon=True)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        enter_running_state(op.ctx)
+        try:
+            with fast_sleep(op):
+                result = op.confirm_ticket_farm()
+        finally:
+            reset_running_state(op.ctx, op)
+        assert result.is_success and result.status == 'RESULT_OPEN', (
+            f'结果框在场应直接成功交返回分类,status={result.status}'
+        )
+        assert op._farm_rounds == 0, '重入守卫不得重复计数刷取轮次'
+        assert not _has_click_in(clicks, test_context,
+                                 _FAST_FARM_DIALOG, '按钮-刷取次数拉满'), (
+            '重入守卫不得重跑拉满点击'
+        )
+
+        # 用例2:两弹窗都不在(确认已发出、刷取进行中) → WAIT 慢询等待
+        state2 = _install_script(monkeypatch, test_context, [set()], level=40)
+        clicks2 = _record_controller_clicks(monkeypatch, test_context, state2)
+        op2 = _WatchedUpgradeLightCone(test_context, farm_dungeon=True)
+        op2._init_watchdog()  # type: ignore[attr-defined]
+        enter_running_state(op2.ctx)
+        try:
+            with fast_sleep(op2):
+                result2 = op2.confirm_ticket_farm()
+        finally:
+            reset_running_state(op2.ctx, op2)
+        assert result2.result == OperationRoundResultEnum.WAIT, (
+            f'刷取进行中应 WAIT 等待结果框,result={result2.result}'
+        )
+        assert op2._farm_rounds == 0, '刷取进行中重入不得重复计数'
+        assert not clicks2, f'刷取进行中重入不得有任何点击,clicks={clicks2}'
 
     def test_manual_fight_returns_to_world_and_reenters(
         self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
@@ -621,7 +672,7 @@ class TestUpgradeLightConeBranches:
             {(_LC_TAB, '标题-角色光锥')},
         ]
         state = _install_script(monkeypatch, test_context, scenes, level=70)
-        clicks = _record_controller_clicks(monkeypatch, test_context, state)
+        _record_controller_clicks(monkeypatch, test_context, state)
         op = _WatchedUpgradeLightCone(test_context)
         op._init_watchdog()  # type: ignore[attr-defined]
 

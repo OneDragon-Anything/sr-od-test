@@ -286,7 +286,7 @@ class TestUpgradeCharacterFarmRoute:
         预算与收敛由实机自反馈,本测试锁节点链与路由。"""
         scenes = [
             {(_DETAIL, '按钮-属性详情'), (_DETAIL, '按钮-升级')},   # 入口轮
-            {(_ASCEND, '标题-等级提升')},                          # 轮1:全灰 → NEED_FARM
+            {(_ASCEND, '标题-等级提升'), ('快速刷取弹窗', '标题-快速刷取弹窗')},  # 轮1:全灰 → NEED_FARM
             {(_ASCEND, '标题-等级提升'), (_ASCEND, '按钮-快速升级')},  # 轮2:材料齐
             {(_ASCEND, '标题-升级结果')},                          # 轮3:升级横幅
             {(_DETAIL, '按钮-属性详情')},                          # 轮4:详情判满
@@ -318,7 +318,7 @@ class TestUpgradeCharacterFarmRoute:
         OCR 复核后确认——锁定拉满语义的交互路径。"""
         scenes = [
             {(_DETAIL, '按钮-属性详情'), (_DETAIL, '按钮-升级')},   # 入口轮
-            {(_ASCEND, '标题-等级提升')},                          # 轮1:灰底 → 刷取链
+            {(_ASCEND, '标题-等级提升'), ('快速刷取弹窗', '标题-快速刷取弹窗')},  # 轮1:灰底 → 刷取链
             {(_ASCEND, '标题-等级提升'), (_ASCEND, '按钮-快速升级')},  # 轮2:材料齐
             {(_ASCEND, '标题-升级结果')},                          # 轮3:横幅
             {(_DETAIL, '按钮-属性详情')},                          # 轮4:判满
@@ -350,7 +350,7 @@ class TestUpgradeCharacterFarmRoute:
         scenes: list[set[tuple[str, str]]] = [
             {(_DETAIL, '按钮-属性详情'), (_DETAIL, '按钮-升级')},
         ]
-        scenes += [{(_ASCEND, '标题-等级提升')} for _ in range(11)]  # 轮1-11:持续缺料
+        scenes += [{(_ASCEND, '标题-等级提升'), ('快速刷取弹窗', '标题-快速刷取弹窗')} for _ in range(11)]  # 轮1-11:持续缺料
         scenes.append({(_DETAIL, '按钮-属性详情')})  # 末轮收尾
         _install_script(monkeypatch, test_context, scenes, level=40)
         # 预算耗尽语义锁:显式传 10 轮(生产默认已改 1 轮拉满,见 docstring)
