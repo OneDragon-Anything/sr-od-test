@@ -11,17 +11,27 @@ src/sr_od/application/cultivation/light_cone/operations/upgrade_light_cone.py
 模块 docstring 与各节点实现:
 - 「材料补全」确认弹窗:fill_generic 授权点「确认」继续;未授权防御性点
   「取消」判停——通用材料是稀缺消耗品,授权边界 = 确认/取消二选一;
+- 晋阶横幅/材料返还页(全屏浮层):点空白关闭,先于界面重开判定处理
+  (浮层盖住等级提升锚,后置会被过渡帧分支空转耗尽);
 - farm_dungeon 券路线全链:资源窗口→副本→确认框(次数现读+点「+」补偿)
   →结果框→按浮层栈回退到等级提升,重入升级循环;
 - 手动路线返回兼容:进入战斗卸载浮层栈,退出关卡后的副本「关闭X」直接回
   大世界——op 经 BACK_TO_WORLD 分支重走入口链(角色图标→重选角色→切TAB
-  →强化),角色名取入口核对时读名区 OCR;
+  →强化),角色名取入口核对时读名区 OCR;重走入口链落在光锥 TAB 时须
+  记名+读名一致才接管(防升错);
 - 参数校验:farm_times_per_round 仅正数或 -1(拉满),farm_rounds_max >= 1。
 """
 
 from __future__ import annotations
 
 import pytest
+from test.conftest import SrTestContext
+from test.harness.fixture_controller import (
+    WatchdogOperationMixin,
+    enter_running_state,
+    fast_sleep,
+    reset_running_state,
+)
 
 import sr_od.application.cultivation.light_cone.operations.upgrade_light_cone as lc_module
 from one_dragon.base.geometry.point import Point
@@ -29,13 +39,6 @@ from one_dragon.base.operation.operation_base import OperationResult
 from one_dragon.base.screen.screen_utils import FindAreaResultEnum
 from sr_od.application.cultivation.light_cone.operations.upgrade_light_cone import (
     UpgradeLightConeOp,
-)
-from test.conftest import SrTestContext
-from test.harness.fixture_controller import (
-    WatchdogOperationMixin,
-    enter_running_state,
-    fast_sleep,
-    reset_running_state,
 )
 
 _LC_TAB: str = '角色-光锥'
@@ -66,8 +69,8 @@ _TEST_RECTS: dict[tuple[str, str], tuple[int, int, int, int]] = {
     (_CHALLENGE, '按钮-开始编队挑战'): (1560, 955, 1740, 1005),
     (_CHALLENGE, '按钮-关闭刷取结果'): (570, 788, 930, 842),
     (_CHALLENGE, '按钮-刷取次数加'): (1318, 570, 1374, 608),
-    (_BATTLE, '按钮-退出关卡'): (663, 957, 765, 989),
-    (_WORLD, '右上图标-角色详情'): (1814, 14, 1879, 79),
+    (_BATTLE, '按钮-退出关卡'): (620, 945, 810, 1000),
+    (_WORLD, '右上图标-角色详情'): (1800, 0, 1900, 100),
 }
 
 
@@ -137,15 +140,32 @@ def _install_script(
         state['find_events'].append((s_name, a_name))
         if (s_name, a_name) == _ROUND_START:
             state['round'] += 1
+        # 查询侧画面态门卫(先于场景匹配——场景表是静态的,门卫管"画面在
+        # 哪个态"):退出关卡仅存在于结算画面;编队钮已点过 = 战斗已开始,
+        # 编队态查询 MISS 即画面已进结算态(点过退出关卡切 _CHALLENGE 后
+        # 该钮不可见,防止静态场景表让 back_after_farm 结算分支死循环)
+        if (s_name, a_name) == (_CHALLENGE, '队伍标题') \
+                and state.get('squad_clicked'):
+            state['screen_now'] = _BATTLE
+        if (s_name, a_name) == (_BATTLE, '按钮-退出关卡') \
+                and state.get('screen_now') != _BATTLE:
+            state['events'] = state.get('events', [])
+            state['events'].append((state['round'], a_name, 'MISS'))
+            return self.round_wait(status=f'未找到 {a_name}')
         scene = scenes[state['round']] if state['round'] < len(scenes) else None
         if scene is None:
             raise AssertionError(f'剧本耗尽:第 {state["round"]} 轮查询 {a_name}')
         if (s_name, a_name) in scene:
             state['events'] = state.get('events', [])
             state['events'].append((state['round'], a_name, 'HIT'))
-            # 手动战斗场景命中 = 下一次编队钮点击是真实的「进入战斗」推进点
-            if (s_name, a_name) == (_CHALLENGE, '按钮-开始编队挑战'):
+            # 手动战斗编队态正锚命中 = 下一次编队钮点击是真实的「进入战斗」
+            # 推进点(新 manual_fight 用 队伍标题/拟造花萼 双锚判编队态)
+            if (s_name, a_name) == (_CHALLENGE, '队伍标题'):
                 state['in_manual_fight'] = True
+            # 结算锚命中 = 手动战斗已到结算画面(back_after_farm 据此判),
+            # 画面态同步给点击门卫
+            if (s_name, a_name) == (_BATTLE, '按钮-退出关卡'):
+                state['screen_now'] = _BATTLE
             return self.round_success(status=a_name)
         state['events'] = state.get('events', [])
         state['events'].append((state['round'], a_name, 'MISS'))
@@ -174,7 +194,7 @@ def _install_script(
 
     def _fake_char_name(self) -> str | None:
         state['char_name_reads'].append(1)
-        return '测试角色'
+        return state.get('char_name_next', '测试角色')
 
     monkeypatch.setattr(UpgradeLightConeOp, 'round_by_find_area', _fake_find_area)
     monkeypatch.setattr(UpgradeLightConeOp, 'round_by_find_and_click_area',
@@ -201,8 +221,11 @@ def _record_controller_clicks(
     置位 in_manual_fight → 随后的编队钮点击 = 进入战斗,round+1 并清位。
     ⚠️ 标志门卫不可省:该钮 rect 与光锥-等级提升「快速升级/通用材料补全」
     执行钮坐标巧合重叠,无门卫则券链/补全链的执行钮点击会误触发推进。
-    点「退出关卡」(战斗画面)恒检测 = 结算回大世界(screen_now 切大世界)。
-    点大世界「右上图标-角色详情」= 打开角色详情。
+    点「退出关卡」(战斗画面)恒检测 = 结算回重建副本画面(不直接切大世界);
+    点副本「关闭副本」= 回大世界;点大世界「右上图标-角色详情」= 打开角色
+    详情。⚠️ 三处切换都带画面态门卫(仅当 screen_now 与区域所属画面一致才
+    推进):关副本/右上图标/关闭X 的 rect 在右上角几何重叠,无门卫会互相误
+    触发;结算锚命中时 _fake_find_area 已把 screen_now 同步为 _BATTLE。
     点确认框「+」= 确认框次数递增(补偿测试的现读桩随点击演进)。"""
     clicks: list[tuple[int, int]] = []
     real_click = ctx.controller.click
@@ -216,9 +239,15 @@ def _record_controller_clicks(
                     and _in_rect(x, y, _CHALLENGE, '按钮-开始编队挑战'):
                 state['round'] += 1
                 state['in_manual_fight'] = False
-            if _in_rect(x, y, _BATTLE, '按钮-退出关卡'):
+                state['squad_clicked'] = True
+            if state.get('screen_now') == _BATTLE \
+                    and _in_rect(x, y, _BATTLE, '按钮-退出关卡'):
+                state['screen_now'] = _CHALLENGE
+            if state.get('screen_now') == _CHALLENGE \
+                    and _in_rect(x, y, _CHALLENGE, '按钮-关闭副本'):
                 state['screen_now'] = _WORLD
-            if _in_rect(x, y, _WORLD, '右上图标-角色详情'):
+            if state.get('screen_now') == _WORLD \
+                    and _in_rect(x, y, _WORLD, '右上图标-角色详情'):
                 state['screen_now'] = _DETAIL
             if _in_rect(x, y, _CHALLENGE, '按钮-刷取次数加'):
                 state['farm_times_read'] = state.get('farm_times_read', 0) + 1
@@ -268,6 +297,7 @@ class TestUpgradeLightConeBranches:
             {(_LC_ASC, '标题-光锥详情'), (_LC_ASC, '按钮-通用材料补全')},
             {(_LC_ASC, '标题-材料补全弹窗')},
             {(_LC_ASC, '标题-光锥详情'), (_LC_ASC, '按钮-快速升级')},
+            {('光锥-等级提升-晋阶横幅', '标题-晋阶横幅')},
             {(_LC_ASC, '标题-光锥详情'), (_LC_ASC, '文本-已提升至最高阶')},
             {(_LC_TAB, '标题-角色光锥')},
         ]
@@ -416,11 +446,10 @@ class TestUpgradeLightConeBranches:
         scenes = [
             _DEAD_FRAME,
             {(_LC_ASC, '标题-光锥详情'), (_LC_ASC, '按钮-快速刷取'),
-             (_CHALLENGE, '按钮-开始编队挑战')},
-            set(),
+             (_CHALLENGE, '按钮-开始编队挑战'), (_CHALLENGE, '队伍标题')},
+            {(_BATTLE, '按钮-退出关卡')},
             {(_LC_ASC, '标题-光锥详情'), (_LC_ASC, '按钮-快速升级')},
             {(_LC_ASC, '标题-光锥详情'), (_LC_ASC, '文本-已提升至最高阶')},
-            {(_LC_TAB, '标题-角色光锥')},
             {(_LC_TAB, '标题-角色光锥')},
         ]
         state = _install_script(monkeypatch, test_context, scenes, level=79)
@@ -433,7 +462,9 @@ class TestUpgradeLightConeBranches:
         result = _run_op(op)
 
         assert result.success and result.status == 'LIGHT_CONE_CAPPED', (
-            f'手动刷取回大世界后应经入口链继续升满判停,status={result.status}'
+            f'手动刷取回大世界后应经入口链继续升满判停,status={result.status},'
+            f'round={state["round"]},in_fight={state.get("in_manual_fight")},'
+            f'trace={state.get("events")},clicks={clicks}'
         )
         assert _has_click_in(clicks, test_context, _CHALLENGE, '按钮-开始编队挑战'), (
             '手动路线应点编队开始挑战'
@@ -453,6 +484,66 @@ class TestUpgradeLightConeBranches:
         )
         assert not _has_click_in(clicks, test_context, _CHALLENGE, '按钮-确认快速刷取'), (
             '手动路线不得走券确认分支'
+        )
+
+    def test_reentry_tab_identity_gate(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """重走入口链落在光锥 TAB:有记名且读名一致才接管点强化(防升错)。
+
+        名字一致 → 点强化 → FARMED;读名不一致 / 无记名 → fail 且绝不点
+        强化——角色页记忆≠目标角色(实测记忆的是最近战斗编队首位)。"""
+        state = _install_script(monkeypatch, test_context, [set()], level=79)
+        clicks = _record_controller_clicks(monkeypatch, test_context, state)
+
+        # 用例1:记名 = 读名 → 接管点强化
+        op = _WatchedUpgradeLightCone(test_context, farm_dungeon=True,
+                                      use_fast_ticket=False)
+        op._char_name = '测试角色'
+        state['screen_now'] = _LC_TAB
+        enter_running_state(op.ctx)
+        try:
+            with fast_sleep(op):
+                result = op.reenter_from_world()
+        finally:
+            reset_running_state(op.ctx, op)
+        assert result.is_success and result.status == 'FARMED', (
+            f'记名与读名一致应接管点强化,status={result.status}'
+        )
+        assert _has_click_in(clicks, test_context, _LC_TAB, '按钮-强化')
+
+        # 用例2:读名不一致 → fail,不点强化
+        state['char_name_next'] = '别人'
+        state['screen_now'] = _LC_TAB
+        op2 = _WatchedUpgradeLightCone(test_context, farm_dungeon=True,
+                                       use_fast_ticket=False)
+        op2._char_name = '测试角色'
+        enter_running_state(op2.ctx)
+        try:
+            with fast_sleep(op2):
+                result2 = op2.reenter_from_world()
+        finally:
+            reset_running_state(op2.ctx, op2)
+        assert not result2.is_success, '读名不一致应判停防升错'
+        # clicks 是共享列表:用例1已有一条强化点击,此处以 find_clicks 增量判断
+        assert state['find_clicks'].count((_LC_TAB, '按钮-强化')) == 1, (
+            f'不一致时不得再点强化,find_clicks={state["find_clicks"]}'
+        )
+
+        # 用例3:无记名 → fail,不点强化
+        state['screen_now'] = _LC_TAB
+        op3 = _WatchedUpgradeLightCone(test_context, farm_dungeon=True,
+                                       use_fast_ticket=False)
+        op3._char_name = None
+        enter_running_state(op3.ctx)
+        try:
+            with fast_sleep(op3):
+                result3 = op3.reenter_from_world()
+        finally:
+            reset_running_state(op3.ctx, op3)
+        assert not result3.is_success, '无记名应判停防升错'
+        assert state['find_clicks'].count((_LC_TAB, '按钮-强化')) == 1, (
+            f'无记名时不得点强化,find_clicks={state["find_clicks"]}'
         )
 
     def test_param_validation(
