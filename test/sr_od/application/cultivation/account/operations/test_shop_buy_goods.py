@@ -38,8 +38,8 @@ _POPUP_SOLD_OUT = ('商店-兑换弹窗', '星轨专票-已售罄')
 
 _CARD_SLOT_RECT = [325, 215, 540, 500]
 """第 1 行第 1 列卡槽(网格基准,商品-星轨专票卡 area 同 rect)"""
-_REWARD_SAFE_RECT = [0, 900, 300, 1080]
-"""奖励弹窗安全点 (100,1000) 的落点矩形"""
+_SKIP_RECT = [1800, 35, 1920, 100]
+"""后购画面右上角跳过点落点矩形(展示跳过键/获得物品弹窗空白区共用)"""
 
 
 class _WatchedBuy(WatchdogOperationMixin, ExchangeShopBuyGoods):
@@ -98,6 +98,20 @@ def test_unknown_goods_raises(test_context: SrTestContext) -> None:
     """未注册商品标识符构造即抛 ValueError 并带可用值(调用方自纠)。"""
     with pytest.raises(ValueError, match='未注册的商品标识符'):
         ExchangeShopBuyGoods(test_context, 'nonexistent_goods')
+
+
+def test_light_cone_manifest_goods_resolves(test_context: SrTestContext) -> None:
+    """光锥呈现 tab 商品注册:默认 shop/tab 解析与 OCR 关键词落位正确。"""
+    op = ExchangeShopBuyGoods(test_context, 'mushyshroomysadventures')
+    assert op._shop == 'exchange'
+    assert op._tab == 'light_cone_manifest'
+    assert op._goods_cn == '菇菇嘎嘎历险记'
+
+
+def test_unknown_exchange_tab_raises(test_context: SrTestContext) -> None:
+    """exchange 商店非法 tab 构造即抛 ValueError,报错列出全部可用 tab。"""
+    with pytest.raises(ValueError, match='light_cone_manifest'):
+        ExchangeShopBuyGoods(test_context, 'special_pass', tab='light_cone_present')
     with pytest.raises(ValueError, match='count'):
         ExchangeShopBuyGoods(test_context, 'pass', count=0)
 
@@ -116,9 +130,9 @@ def test_buy_pass_max_flow(
         # 弹窗:拉满两轮同值判到顶(bought=1)→点确认推进奖励弹窗帧
         {'frame': _POPUP_PASS,
          'exit': ('on_click_in', '商店-兑换弹窗', '按钮-确认')},
-        # 奖励弹窗:安全点关闭推进终验帧
+        # 奖励弹窗:右上角跳过点关闭推进终验帧
         {'frame': _REWARD_FRAME,
-         'exit': ('on_click_in', _REWARD_SAFE_RECT)},
+         'exit': ('on_click_in', _SKIP_RECT)},
         {'frame': _FIRST_SCREEN_BOUGHT},
     ])
     op = _WatchedBuy(test_context, 'pass', count=None, scroll_search=False)
