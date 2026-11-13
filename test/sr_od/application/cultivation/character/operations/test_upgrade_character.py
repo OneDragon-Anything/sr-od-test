@@ -43,7 +43,8 @@ class _WatchedUpgradeCharacter(WatchdogOperationMixin, UpgradeCharacterOp):
     watchdog_max_rounds: int = 80  # 刷取链每轮循环耗 6 节点轮(循环+窗口+进入+刷取+确认+返回),预算 10 次需 60+
 
     def __init__(self, ctx: SrTestContext, fill_generic: bool = True,
-                 farm_dungeon: bool = True, use_fast_ticket: bool = True) -> None:
+                 farm_dungeon: bool = True, use_fast_ticket: bool = True,
+                 farm_times_per_round: int = 1) -> None:
         """真实构造路径;测试无游戏窗口,跳过窗口前置链。
 
         farm_dungeon 测试默认 True(与生产默认 False 相反):刷取链测试
@@ -51,7 +52,8 @@ class _WatchedUpgradeCharacter(WatchdogOperationMixin, UpgradeCharacterOp):
         锁定,避免默认值掩盖。"""
         UpgradeCharacterOp.__init__(self, ctx, fill_generic=fill_generic,
                                     farm_dungeon=farm_dungeon,
-                                    use_fast_ticket=use_fast_ticket)
+                                    use_fast_ticket=use_fast_ticket,
+                                    farm_times_per_round=farm_times_per_round)
         self.need_check_game_win = False  # execute 期才读,实例属性即可关掉
 
 
