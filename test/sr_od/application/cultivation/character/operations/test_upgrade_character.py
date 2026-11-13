@@ -40,13 +40,13 @@ _ROUND_START: tuple[str, str] = (_ASCEND, '标题-材料补全弹窗')
 class _WatchedUpgradeCharacter(WatchdogOperationMixin, UpgradeCharacterOp):
     """带看门狗的被测 op(剧本耗尽时收拢为有界失败,防测试自身死循环)。"""
 
-    watchdog_max_rounds: int = 40
+    watchdog_max_rounds: int = 80  # 刷取链每轮循环耗 6 节点轮(循环+窗口+进入+刷取+确认+返回),预算 10 次需 60+
 
     def __init__(self, ctx: SrTestContext, fill_generic: bool = True,
-                 auto_farm: bool = False) -> None:
+                 use_fast_ticket: bool = True) -> None:
         """真实构造路径;测试无游戏窗口,跳过窗口前置链。"""
         UpgradeCharacterOp.__init__(self, ctx, fill_generic=fill_generic,
-                                    auto_farm=auto_farm)
+                                    use_fast_ticket=use_fast_ticket)
         self.need_check_game_win = False  # execute 期才读,实例属性即可关掉
 
 
@@ -253,3 +253,65 @@ class TestUpgradeCharacterFillGeneric:
             '判停后应经返回箭头收尾'
         )
         assert state['level_reads'] == 1, '判停等级应恰好读取一次'
+
+
+class TestUpgradeCharacterFarmRoute:
+
+    def test_gray_lacking_triggers_ticket_farm_then_upgrade(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """右下全灰(材料不足)触发券刷取链(2026-11-13 新版交互):
+
+        灰底 → 打开「培养还需获取资源」窗口 → 点「进入」直达副本 → 副本
+        左下「快速刷取」(券) → 确认框确认(免战斗领奖) → 关副本回养成界面
+        → 材料齐 → 快速升级执行 → 横幅关 → 详情判满。每轮刷 1 次,
+        预算与收敛由实机自反馈,本测试锁节点链与路由。"""
+        scenes = [
+            {(_DETAIL, '按钮-属性详情'), (_DETAIL, '按钮-升级')},   # 入口轮
+            {(_ASCEND, '标题-等级提升')},                          # 轮1:全灰 → NEED_FARM
+            {(_ASCEND, '标题-等级提升'), (_ASCEND, '按钮-快速升级')},  # 轮2:材料齐
+            {(_ASCEND, '标题-升级结果')},                          # 轮3:升级横幅
+            {(_DETAIL, '按钮-属性详情')},                          # 轮4:详情判满
+        ]
+        state = _install_script(monkeypatch, test_context, scenes, level=0)
+        op = _WatchedUpgradeCharacter(test_context)  # use_fast_ticket 默认 True
+        op._init_watchdog()  # type: ignore[attr-defined]
+
+        result = _run_op(op)
+
+        assert result.success and result.status == 'MAX_LEVEL', (
+            f'券刷取链应走通到满级,status={result.status}'
+        )
+        assert state['find_clicks'] == [
+            (_DETAIL, '按钮-升级'),
+            (_ASCEND, '按钮-快速刷取'),
+            (_ASCEND, '按钮-进入副本'),
+            (_CHALLENGE := '挑战副本', '按钮-快速刷取副本'),
+            (_CHALLENGE, '按钮-确认快速刷取'),
+            (_ASCEND, '点击区-关闭横幅'),
+        ], f'刷取链 find+click 序列漂移:{state["find_clicks"]}'
+        assert op._farm_rounds == 1, f'应恰好刷取 1 次,实际 {op._farm_rounds}'
+        assert state['level_reads'] == 0, '满级路径不应读等级'
+
+    def test_farm_route_budget_exhausted_stops(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """刷取预算耗尽:灰底反复触发刷取,预算(10 次)耗尽判停 MATERIAL_CAPPED,
+        且 _farm_rounds 恰好等于预算。"""
+        # 场景 0=入口,1..N=每轮刷取循环(界面锚在+无白底按钮)反复 NEED_FARM,
+        # 预算耗尽轮=界面锚在+返回箭头可点,末轮=详情锚收尾
+        scenes: list[set[tuple[str, str]]] = [
+            {(_DETAIL, '按钮-属性详情'), (_DETAIL, '按钮-升级')},
+        ]
+        scenes += [{(_ASCEND, '标题-等级提升')} for _ in range(11)]  # 轮1-11:持续缺料
+        scenes.append({(_DETAIL, '按钮-属性详情')})  # 末轮收尾
+        _install_script(monkeypatch, test_context, scenes, level=40)
+        op = _WatchedUpgradeCharacter(test_context)
+        op._init_watchdog()  # type: ignore[attr-defined]
+
+        result = _run_op(op)
+
+        assert result.success and result.status == 'MATERIAL_CAPPED', (
+            f'刷取预算耗尽应判停收尾,status={result.status}'
+        )
+        assert op._farm_rounds == 10, f'刷取次数应恰为预算 10,实际 {op._farm_rounds}'
