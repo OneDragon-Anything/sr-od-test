@@ -43,9 +43,14 @@ class _WatchedUpgradeCharacter(WatchdogOperationMixin, UpgradeCharacterOp):
     watchdog_max_rounds: int = 80  # 刷取链每轮循环耗 6 节点轮(循环+窗口+进入+刷取+确认+返回),预算 10 次需 60+
 
     def __init__(self, ctx: SrTestContext, fill_generic: bool = True,
-                 use_fast_ticket: bool = True) -> None:
-        """真实构造路径;测试无游戏窗口,跳过窗口前置链。"""
+                 farm_dungeon: bool = True, use_fast_ticket: bool = True) -> None:
+        """真实构造路径;测试无游戏窗口,跳过窗口前置链。
+
+        farm_dungeon 测试默认 True(与生产默认 False 相反):刷取链测试
+        需要触发刷取路线;「不刷判停」语义由专门测试显式 farm_dungeon=False
+        锁定,避免默认值掩盖。"""
         UpgradeCharacterOp.__init__(self, ctx, fill_generic=fill_generic,
+                                    farm_dungeon=farm_dungeon,
                                     use_fast_ticket=use_fast_ticket)
         self.need_check_game_win = False  # execute 期才读,实例属性即可关掉
 
@@ -315,3 +320,28 @@ class TestUpgradeCharacterFarmRoute:
             f'刷取预算耗尽应判停收尾,status={result.status}'
         )
         assert op._farm_rounds == 10, f'刷取次数应恰为预算 10,实际 {op._farm_rounds}'
+
+    def test_farm_dungeon_false_stops_without_farming(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """farm_dungeon=False(生产默认):灰底缺料不进刷取链,直接判停——
+        「要不要刷副本」独立开关为零消耗默认路径的守卫。"""
+        scenes = [
+            {(_DETAIL, '按钮-属性详情'), (_DETAIL, '按钮-升级')},   # 入口轮
+            {(_ASCEND, '标题-等级提升')},                           # 轮1:灰底判停
+            {(_ASCEND, '标题-等级提升')},                           # 轮2:收尾途中
+            {(_DETAIL, '按钮-属性详情')},                           # 轮3:回到详情
+        ]
+        state = _install_script(monkeypatch, test_context, scenes, level=40)
+        op = _WatchedUpgradeCharacter(test_context, farm_dungeon=False)
+        op._init_watchdog()  # type: ignore[attr-defined]
+
+        result = _run_op(op)
+
+        assert result.success and result.status == 'MATERIAL_CAPPED', (
+            f'未授权刷副本应判停收尾,status={result.status}'
+        )
+        assert op._farm_rounds == 0, 'farm_dungeon=False 不应执行任何刷取'
+        assert not any(a == '挑战副本' for _, a in state['find_clicks']), (
+            '未授权刷副本不应触碰挑战副本画面'
+        )
