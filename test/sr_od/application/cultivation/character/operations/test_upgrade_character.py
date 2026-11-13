@@ -307,6 +307,35 @@ class TestUpgradeCharacterFarmRoute:
         assert op._farm_rounds == 1, f'应恰好刷取 1 次,实际 {op._farm_rounds}'
         assert state['level_reads'] == 0, '满级路径不应读等级'
 
+    def test_farm_times_max_uses_fill_button(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """farm_times_per_round=-1:确认框内点「^」拉满按钮(滑条上限),
+        OCR 复核后确认——锁定拉满语义的交互路径。"""
+        scenes = [
+            {(_DETAIL, '按钮-属性详情'), (_DETAIL, '按钮-升级')},   # 入口轮
+            {(_ASCEND, '标题-等级提升')},                          # 轮1:灰底 → 刷取链
+            {(_ASCEND, '标题-等级提升'), (_ASCEND, '按钮-快速升级')},  # 轮2:材料齐
+            {(_ASCEND, '标题-升级结果')},                          # 轮3:横幅
+            {(_DETAIL, '按钮-属性详情')},                          # 轮4:判满
+        ]
+        state = _install_script(monkeypatch, test_context, scenes, level=0)
+        clicks = _record_controller_clicks(monkeypatch, test_context)
+        op = _WatchedUpgradeCharacter(test_context, farm_times_per_round=-1)
+        op._init_watchdog()  # type: ignore[attr-defined]
+
+        result = _run_op(op)
+
+        assert result.success and result.status == 'MAX_LEVEL', (
+            f'拉满刷取链应走通,status={result.status}'
+        )
+        assert _has_click_in(
+            clicks, test_context, '挑战副本', '按钮-刷取次数拉满'), (
+            '拉满模式应点击「^」按钮而非「+」'
+        )
+        assert state['farm_times_reads'] >= 1, '拉满后应 OCR 复核次数'
+        assert op._farm_rounds == 1, f'应恰好刷取 1 轮,实际 {op._farm_rounds}'
+
     def test_farm_route_budget_exhausted_stops(
         self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
     ) -> None:
