@@ -607,6 +607,32 @@ class TestUpgradeLightConeBranches:
             (_LC_TAB, '按钮-强化'),
         ], f'应直接判停收尾不进刷取链(r2 场景已在光锥 TAB,无关闭X),find_clicks={state2["find_clicks"]}'
 
+    def test_insufficient_gray_text_stops(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """「材料不足」灰字态(全缺)显式判停收尾——该文本与「材料合成」
+        共享「材料」前缀,实机曾因默认相似度误命中走错分支(40 轮空转);
+        修复后灰字走 ⑨ 判停,不点任何执行钮。"""
+        scenes = [
+            _DEAD_FRAME,
+            {(_LC_ASC, '标题-光锥详情'), (_LC_ASC, '文本-材料不足')},
+            {(_LC_TAB, '标题-角色光锥')},
+        ]
+        state = _install_script(monkeypatch, test_context, scenes, level=70)
+        clicks = _record_controller_clicks(monkeypatch, test_context, state)
+        op = _WatchedUpgradeLightCone(test_context)
+        op._init_watchdog()  # type: ignore[attr-defined]
+
+        result = _run_op(op)
+
+        assert result.success and result.status == 'LIGHT_CONE_CAPPED', (
+            f'灰字全缺态应判停收尾,status={result.status}'
+        )
+        # 唯一点击 = 入口开界面的强化钮;无确认/取消/合成类执行点击
+        assert state['find_clicks'] == [(_LC_TAB, '按钮-强化')], (
+            f'灰字态应零执行点击直接判停,find_clicks={state["find_clicks"]}'
+        )
+
     def test_param_validation(
         self, test_context: SrTestContext,
     ) -> None:
