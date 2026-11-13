@@ -271,6 +271,55 @@ def test_no_take_over_and_allow_take_over(
     assert len(clicks) == 1, 'allow_take_over=True 应命中并点击占用件'
 
 
+def test_confirm_replace_unequipped_equip_button(
+    test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """无装备角色(装第一把)确认按钮是「装备」:「替换」缺席时点装备分支,
+    点击同样直接生效回 TAB(未装备态实机验证的剧本化)。"""
+    from one_dragon.base.screen.screen_utils import FindAreaResultEnum
+
+    op = _NoWindowEquipLightCone(test_context, cone_name='菇菇嘎嘎历险记')
+    scene = {'screen': 'replace'}
+    clicks: list = []
+
+    def _fake_check_screen(self, screen=None, screen_name_list=None, crop_first=False):
+        return '光锥-替换' if scene['screen'] == 'replace' else '角色-光锥'
+
+    def _fake_click(pos, **kwargs):
+        clicks.append(pos)
+        scene['screen'] = 'tab'  # 装备直接生效并回 TAB
+
+    def _fake_find_area(*args, **kwargs):
+        # 未装备态画面:只有「按钮-装备」可见(调用序 ctx, screen, screen_name, area_name)
+        return (FindAreaResultEnum.TRUE if args[-1] == '按钮-装备'
+                else FindAreaResultEnum.FALSE)
+
+    monkeypatch.setattr(EquipLightConeOp, 'check_and_update_current_screen', _fake_check_screen)
+    monkeypatch.setattr(equip_module.screen_utils, 'find_area', _fake_find_area)
+    monkeypatch.setattr(test_context.controller, 'click', _fake_click)
+    monkeypatch.setattr(test_context.controller, 'screenshot',
+                        lambda independent=False: (0.0, np.zeros((1080, 1920, 3), dtype=np.uint8)))
+
+    # 第一轮:替换/装备按钮互斥,「替换」缺席 → 点「装备」
+    enter_running_state(op.ctx)
+    try:
+        with fast_sleep(op):
+            result = op.confirm_replace()
+    finally:
+        reset_running_state(op.ctx, op)
+    assert len(clicks) == 1, '未装备态应点击一次「装备」确认按钮'
+    assert not result.is_fail
+
+    # 第二轮:画面已回 TAB → BACK_TO_TAB(替换完成判据)
+    enter_running_state(op.ctx)
+    try:
+        with fast_sleep(op):
+            result = op.confirm_replace()
+    finally:
+        reset_running_state(op.ctx, op)
+    assert result.status == 'BACK_TO_TAB'
+
+
 def test_happy_flow_and_already_equipped(
     test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
 ) -> None:

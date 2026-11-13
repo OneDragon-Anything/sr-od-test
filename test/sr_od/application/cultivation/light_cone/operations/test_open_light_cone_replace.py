@@ -33,6 +33,50 @@ class _NoWindowOpenLightConeReplace(OpenLightConeReplaceOp):
         self.need_check_game_win = False  # execute 期才读,实例属性即可关掉
 
 
+def test_open_from_tab_unequipped_equip_button(
+    test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """无装备角色(装第一把)TAB 入口按钮是「装备」:「替换」缺席时走装备
+    分支,点击同样进列表 → OPENED(未装备态实机验证的剧本化)。"""
+    from one_dragon.base.screen.screen_utils import FindAreaResultEnum
+
+    op = _NoWindowOpenLightConeReplace(test_context)
+    scene = {'screen': 'tab'}
+    clicks: list = []
+    drags: list = []
+
+    def _fake_check_screen(self, screen=None, screen_name_list=None, crop_first=False):
+        return '光锥-替换' if scene['screen'] == 'replace' else '角色-光锥'
+
+    def _fake_click(pos, **kwargs):
+        clicks.append(pos)
+        scene['screen'] = 'replace'
+
+    def _fake_find_area(*args, **kwargs):
+        # 未装备态画面:只有「按钮-装备」可见(调用序 ctx, screen, screen_name, area_name)
+        return (FindAreaResultEnum.TRUE if args[-1] == '按钮-装备'
+                else FindAreaResultEnum.FALSE)
+
+    monkeypatch.setattr(OpenLightConeReplaceOp, 'check_and_update_current_screen',
+                        _fake_check_screen)
+    monkeypatch.setattr(open_module.screen_utils, 'find_area', _fake_find_area)
+    monkeypatch.setattr(test_context.controller, 'click', _fake_click)
+    monkeypatch.setattr(test_context.controller, 'drag_to',
+                        lambda *args, **kwargs: drags.append(1))
+    monkeypatch.setattr(test_context.controller, 'screenshot',
+                        lambda independent=False: (0.0, np.zeros((1080, 1920, 3), dtype=np.uint8)))
+
+    enter_running_state(op.ctx)
+    try:
+        with fast_sleep(op):
+            result = op.execute()
+    finally:
+        reset_running_state(op.ctx, op)
+    assert result.success and result.status == 'OPENED'
+    assert len(clicks) == 1, '未装备态应点击一次「装备」按钮进列表'
+    assert len(drags) == 4, f'打开后应滚顶 4 次拖拽,实际 {len(drags)}'
+
+
 def test_open_from_tab_and_already_open(
     test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
 ) -> None:
