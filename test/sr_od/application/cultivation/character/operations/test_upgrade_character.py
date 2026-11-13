@@ -301,7 +301,7 @@ class TestUpgradeCharacterFarmRoute:
         assert state['find_clicks'] == [
             (_DETAIL, '按钮-升级'),
             (_ASCEND, '按钮-快速刷取'),
-            (_ASCEND, '按钮-进入副本'),
+            ('培养资源窗口', '按钮-进入副本'),
             (_CHALLENGE := '挑战副本', '按钮-快速刷取副本'),
             (_CHALLENGE, '按钮-确认快速刷取'),
             (_ASCEND, '点击区-关闭横幅'),
