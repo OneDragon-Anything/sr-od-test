@@ -305,7 +305,7 @@ class TestUpgradeCharacterFarmRoute:
             (_ASCEND, '按钮-快速刷取'),
             ('培养资源窗口', '按钮-进入副本'),
             (_CHALLENGE := '挑战副本', '按钮-快速刷取副本'),
-            (_CHALLENGE, '按钮-确认快速刷取'),
+            ('快速刷取弹窗', '按钮-确认快速刷取'),
             (_ASCEND, '点击区-关闭横幅'),
         ], f'刷取链 find+click 序列漂移:{state["find_clicks"]}'
         assert op._farm_rounds == 1, f'应恰好刷取 1 次,实际 {op._farm_rounds}'
@@ -334,7 +334,7 @@ class TestUpgradeCharacterFarmRoute:
             f'拉满刷取链应走通,status={result.status}'
         )
         assert _has_click_in(
-            clicks, test_context, '挑战副本', '按钮-刷取次数拉满'), (
+            clicks, test_context, '快速刷取弹窗', '按钮-刷取次数拉满'), (
             '拉满模式应点击「^」按钮而非「+」'
         )
         assert state['farm_times_reads'] >= 1, '拉满后应 OCR 复核次数'

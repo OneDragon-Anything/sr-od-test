@@ -44,6 +44,8 @@ from sr_od.application.cultivation.light_cone.operations.upgrade_light_cone impo
 _LC_TAB: str = '角色-光锥'
 _LC_ASC: str = '光锥-等级提升'
 _CHALLENGE: str = '挑战副本'
+_FAST_FARM_DIALOG: str = '快速刷取弹窗'
+_FAST_FARM_RESULT: str = '快速刷取结果弹窗'
 _WORLD: str = '大世界-普通'
 _DETAIL: str = '角色-详情'
 _BATTLE: str = '战斗画面'
@@ -65,11 +67,11 @@ _TEST_RECTS: dict[tuple[str, str], tuple[int, int, int, int]] = {
     ('培养资源窗口', '按钮-进入副本'): (1290, 390, 1460, 440),
     ('培养资源窗口', '按钮-关闭资源窗口'): (1435, 285, 1480, 335),
     (_CHALLENGE, '按钮-快速刷取副本'): (1000, 955, 1155, 1010),
-    (_CHALLENGE, '按钮-确认快速刷取'): (990, 740, 1348, 788),
+    (_FAST_FARM_DIALOG, '按钮-确认快速刷取'): (990, 740, 1348, 788),
     (_CHALLENGE, '按钮-关闭副本'): (1838, 38, 1888, 95),
     (_CHALLENGE, '按钮-开始编队挑战'): (1560, 955, 1740, 1005),
-    (_CHALLENGE, '按钮-关闭刷取结果'): (570, 788, 930, 842),
-    (_CHALLENGE, '按钮-刷取次数加'): (1318, 570, 1374, 608),
+    (_FAST_FARM_RESULT, '按钮-关闭刷取结果'): (570, 788, 930, 842),
+    (_FAST_FARM_DIALOG, '按钮-刷取次数加'): (1318, 570, 1374, 608),
     (_BATTLE, '按钮-退出关卡'): (620, 945, 810, 1000),
     (_WORLD, '右上图标-角色详情'): (1800, 0, 1900, 100),
 }
@@ -250,7 +252,7 @@ def _record_controller_clicks(
             if state.get('screen_now') == _WORLD \
                     and _in_rect(x, y, _WORLD, '右上图标-角色详情'):
                 state['screen_now'] = _DETAIL
-            if _in_rect(x, y, _CHALLENGE, '按钮-刷取次数加'):
+            if _in_rect(x, y, _FAST_FARM_DIALOG, '按钮-刷取次数加'):
                 state['farm_times_read'] = state.get('farm_times_read', 0) + 1
         return real_click(pos, press_time=press_time, pc_alt=pc_alt,
                           gamepad_key=gamepad_key)
@@ -395,11 +397,11 @@ class TestUpgradeLightConeBranches:
         assert _has_click_in(clicks, test_context, _LC_ASC, '按钮-快速刷取'), (
             '缺料轮应点快速刷取唤出资源窗口'
         )
-        assert _has_click_in(clicks, test_context, _CHALLENGE, '按钮-确认快速刷取'), (
+        assert _has_click_in(clicks, test_context, _FAST_FARM_DIALOG, '按钮-确认快速刷取'), (
             '确认框应点确认执行刷取'
         )
         assert _count_clicks_in(clicks, test_context,
-                                _CHALLENGE, '按钮-刷取次数加') == 0, (
+                                _FAST_FARM_DIALOG, '按钮-刷取次数加') == 0, (
             '现读次数已达目标(1>=1)不应有点「+」补偿'
         )
         assert op._farm_rounds == 1, '应恰好执行一轮券刷取'
@@ -432,7 +434,7 @@ class TestUpgradeLightConeBranches:
 
         assert result.is_success, f'补偿设置后应成功点确认,status={result.status}'
         plus_clicks = _count_clicks_in(clicks, test_context,
-                                       _CHALLENGE, '按钮-刷取次数加')
+                                       _FAST_FARM_DIALOG, '按钮-刷取次数加')
         assert plus_clicks == 2, f'应恰好点「+」2 次,实际 {plus_clicks}'
         assert op._farm_rounds == 1
 
@@ -483,7 +485,7 @@ class TestUpgradeLightConeBranches:
         assert any(k.get('cn_name') == '测试角色' for k in _FakeSubOp.executed), (
             f'重选角色应使用入口记下的名字,executed={_FakeSubOp.executed}'
         )
-        assert not _has_click_in(clicks, test_context, _CHALLENGE, '按钮-确认快速刷取'), (
+        assert not _has_click_in(clicks, test_context, _FAST_FARM_DIALOG, '按钮-确认快速刷取'), (
             '手动路线不得走券确认分支'
         )
 
