@@ -2829,7 +2829,7 @@ def test_game_over_presents_lobby_terminal_screen() -> None:
 
 # ============================================================ 画面广播
 # (迭代 sim-screen-announce §2.1:内部画面状态机 → 状态容器画面域广播,
-# 渲染复盘的画面章证据面。消费方 = tools/cw/replay_to_md.py 画面章
+# 渲染复盘的画面章证据面。消费方 = skills/sr-od-dev-currency-war/scripts/replay_to_md.py 画面章
 # 切分,切章锚 = field='current_screen' 写入行本体。)
 
 def test_screen_announce_broadcast_points_and_value_exemption() -> None:

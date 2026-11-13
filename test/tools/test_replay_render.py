@@ -1,10 +1,10 @@
-"""货币战争复盘渲染器(tools/cw/replay_to_md.py)fixture 单测。
+"""货币战争复盘渲染器(skill scripts/replay_to_md.py)fixture 单测。
 
 测试文件组织说明:tools/ 目录无 src 镜像先例(tools 不是 src-layout 包),
 无法按「src 路径同源镜像」落位,按工具名组织为本文件(规范变通记录于
 文件头,sr-od-test/README.md「测试文件组织」的镜像规则以 src 文件为基准)。
 
-被测行为锁 = 渲染器自身设计约定(以 tools/cw/replay_to_md.py 实现为准):
+被测行为锁 = 渲染器自身设计约定(以 skill scripts 内 replay_to_md.py 实现为准):
 - 渲染管线:行加载 / 节点分组 / 无 node 行归属链 / 画面章切分 /
   动作节切分与状态差分 / CLI
 - 显示规范:骨架 / 局头 / 画面注册表 / 动作节显示 / 特殊情况
@@ -23,8 +23,8 @@ import sys
 from pathlib import Path
 from typing import Any
 
-_TOOL_PATH = (Path(__file__).resolve().parents[3] / 'tools' / 'cw'
-              / 'replay_to_md.py')
+_TOOL_PATH = (Path(__file__).resolve().parents[3] / 'skills'
+              / 'sr-od-dev-currency-war' / 'scripts' / 'replay_to_md.py')
 _spec = importlib.util.spec_from_file_location('cw_replay_to_md', _TOOL_PATH)
 assert _spec is not None and _spec.loader is not None  # 模块加载失败即收集错
 mod = importlib.util.module_from_spec(_spec)
@@ -358,7 +358,7 @@ def test_retry_chain_merged_into_one_action():
 
 def test_transition_action_attributed_to_issuing_screen():
     """动作节章归属基准 = 回执 screen(动作发出画面;出处 =
-    tools/cw/replay_to_md.py 模块头「渲染结构」):开商店回执在切屏写入行
+    skills/sr-od-dev-currency-war/scripts/replay_to_md.py 模块头「渲染结构」):开商店回执在切屏写入行
     之后落窗(sim 实测形态:cs 先翻、回执后落),按发出画面回搜归备战章,
     不按位置落到变更后画面;后续动作(买牌)照常归商店章;开店自身零
     效果写入,买牌的效果写入因果归买牌节。"""
@@ -457,7 +457,7 @@ def test_legacy_applied_key_receipts_render_clean():
 
 
 def test_delta_causal_flush_and_cross_node_chain():
-    """状态差分因果归属(出处 = tools/cw/replay_to_md.py 模块头「渲染结构」
+    """状态差分因果归属(出处 = skills/sr-od-dev-currency-war/scripts/replay_to_md.py 模块头「渲染结构」
     章内差分规则):logic_action 写入行挂其后最近回执的动作节——动作的
     效果写入先于其回执落盘(journal 实测形态:写 v=N,回执窗更新 v=N+k),
     修「效果显影滞后一节」;前值 = 之前最近同 field 写入行 after(链跨行);
@@ -857,7 +857,7 @@ def test_obs_note_entry_keys_skipped_unique_fields_kept():
 
 def test_obs_writes_surface_in_screen_observations():
     """0 观察动态段 = 画面 op 观察到什么本章显什么(出处 =
-    tools/cw/replay_to_md.py 模块头「渲染结构」0 观察规则):非注册键的
+    skills/sr-od-dev-currency-war/scripts/replay_to_md.py 模块头「渲染结构」0 观察规则):非注册键的
     观察写入(实证形态 = 备战帧节点锚定 node_pos)进本章 0 观察,不再
     降级成游离章尾注记(旧形态:注记挂在最后一个动作节下,读起来像动作
     的产物);同值回读不重复,异值回读 → 章尾注记。"""
