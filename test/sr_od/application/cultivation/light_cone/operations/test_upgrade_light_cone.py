@@ -55,9 +55,10 @@ _TEST_RECTS: dict[tuple[str, str], tuple[int, int, int, int]] = {
     (_LC_TAB, '按钮-强化'): (1740, 962, 1910, 1022),
     (_LC_ASC, '按钮-快速刷取'): (1285, 965, 1450, 1015),
     (_LC_ASC, '按钮-通用材料补全'): (1527, 968, 1880, 1012),
+    (_LC_ASC, '按钮-材料合成'): (1527, 968, 1880, 1012),
     (_LC_ASC, '按钮-快速升级'): (1527, 968, 1880, 1012),
-    (_LC_ASC, '按钮-确认材料补全'): (990, 768, 1348, 820),
-    (_LC_ASC, '按钮-取消材料补全'): (570, 768, 930, 820),
+    (_LC_ASC, '按钮-确认材料补全'): (990, 668, 1348, 825),
+    (_LC_ASC, '按钮-取消材料补全'): (570, 668, 930, 825),
     (_LC_ASC, '按钮-关闭X'): (1826, 36, 1892, 92),
     (_CHALLENGE, '挑战按钮'): (1370, 958, 1858, 1014),
     ('培养资源窗口', '标题-培养资源窗口'): (490, 285, 740, 330),
@@ -546,10 +547,76 @@ class TestUpgradeLightConeBranches:
             f'无记名时不得点强化,find_clicks={state["find_clicks"]}'
         )
 
+    def test_material_craft_button_crafts_and_finishes(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """「材料合成」执行钮形态(不需通用材料的合成:原始材料满足或通用
+        不够):fill_generic 点它 → 同款「材料补全」确认框 → 确认 → 升满;
+        fill_generic=False 时该形态直接判停不走刷取(此形态快速刷取静默
+        无效,实机实证资源窗口打不开)。"""
+        # 用例1:fill_generic=True 走合成升满
+        scenes = [
+            _DEAD_FRAME,
+            {(_LC_ASC, '标题-光锥详情'), (_LC_ASC, '按钮-材料合成')},
+            {(_LC_ASC, '标题-材料补全弹窗')},
+            {(_LC_ASC, '标题-光锥详情'), (_LC_ASC, '按钮-快速升级')},
+            {(_LC_ASC, '标题-光锥详情'), (_LC_ASC, '文本-已提升至最高阶')},
+            {(_LC_TAB, '标题-角色光锥')},
+        ]
+        state = _install_script(monkeypatch, test_context, scenes, level=80)
+        clicks = _record_controller_clicks(monkeypatch, test_context, state)
+        op = _WatchedUpgradeLightCone(test_context, fill_generic=True)
+        op._init_watchdog()  # type: ignore[attr-defined]
+
+        result = _run_op(op)
+
+        assert result.success and result.status == 'LIGHT_CONE_CAPPED', (
+            f'材料合成路线应确认补全后升满,status={result.status},'
+            f'round={state["round"]},trace={state.get("events")}'
+        )
+        # 材料合成钮与快速升级/通用材料补全同 rect 同中心,场景表 r1 只有
+        # 材料合成命中 = 分支唯一,直点断言以确认弹窗点击佐证
+        assert _has_click_in(clicks, test_context, _LC_ASC, '按钮-确认材料补全'), (
+            f'弹窗应点确认执行合成,clicks={clicks}'
+        )
+        assert not _has_click_in(clicks, test_context, _LC_ASC, '按钮-取消材料补全')
+
+        # 用例2:fill_generic=False 直接判停,不点合成钮、不进刷取链
+        scenes2 = [
+            _DEAD_FRAME,
+            {(_LC_ASC, '标题-光锥详情'), (_LC_ASC, '按钮-材料合成')},
+            {(_LC_TAB, '标题-角色光锥')},
+        ]
+        state2 = _install_script(monkeypatch, test_context, scenes2, level=79)
+        clicks2 = _record_controller_clicks(monkeypatch, test_context, state2)
+        op2 = _WatchedUpgradeLightCone(test_context, fill_generic=False,
+                                       farm_dungeon=True)
+        op2._init_watchdog()  # type: ignore[attr-defined]
+
+        result2 = _run_op(op2)
+
+        assert result2.success and result2.status == 'LIGHT_CONE_CAPPED', (
+            f'材料合成形态未授权应判停收尾,status={result2.status}'
+        )
+        # 强化钮点击坐标与材料合成 rect 巧合重叠,反向断言以确认钮(独立
+        # rect)与 find_clicks 序列锁:直判停收尾,没点确认、没进刷取链
+        assert not _has_click_in(clicks2, test_context, _LC_ASC, '按钮-确认材料补全'), (
+            '未授权不得点确认执行合成'
+        )
+        assert state2['find_clicks'] == [
+            (_LC_TAB, '按钮-强化'),
+        ], f'应直接判停收尾不进刷取链(r2 场景已在光锥 TAB,无关闭X),find_clicks={state2["find_clicks"]}'
+
     def test_param_validation(
         self, test_context: SrTestContext,
     ) -> None:
-        """参数校验:farm_times_per_round 仅正数或 -1;farm_rounds_max >= 1。"""
+        """参数校验:farm_times_per_round 仅正数或 -1;farm_rounds_max >= 1。
+        默认策略锁:fill_generic 开、每轮拉满(-1)、预算 1 轮——通用材料
+        最优先 + 刷取一轮拉满(材料共享库存,多余留他用)。"""
+        op = UpgradeLightConeOp(test_context)
+        assert op.fill_generic is True
+        assert op.farm_times_per_round == -1
+        assert op.farm_rounds_max == 1
         with pytest.raises(ValueError, match='farm_times_per_round'):
             UpgradeLightConeOp(test_context, farm_times_per_round=0)
         with pytest.raises(ValueError, match='farm_times_per_round'):

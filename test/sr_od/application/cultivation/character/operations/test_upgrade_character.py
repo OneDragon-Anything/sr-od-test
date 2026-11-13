@@ -44,16 +44,18 @@ class _WatchedUpgradeCharacter(WatchdogOperationMixin, UpgradeCharacterOp):
 
     def __init__(self, ctx: SrTestContext, fill_generic: bool = True,
                  farm_dungeon: bool = True, use_fast_ticket: bool = True,
-                 farm_times_per_round: int = 1) -> None:
+                 farm_times_per_round: int = 1, farm_rounds_max: int = 10) -> None:
         """真实构造路径;测试无游戏窗口,跳过窗口前置链。
 
         farm_dungeon 测试默认 True(与生产默认 False 相反):刷取链测试
         需要触发刷取路线;「不刷判停」语义由专门测试显式 farm_dungeon=False
-        锁定,避免默认值掩盖。"""
+        锁定,避免默认值掩盖。farm_rounds_max 替身默认 10(预算耗尽语义
+        的既有测试依赖),生产默认 1 由生产构造直传。"""
         UpgradeCharacterOp.__init__(self, ctx, fill_generic=fill_generic,
                                     farm_dungeon=farm_dungeon,
                                     use_fast_ticket=use_fast_ticket,
-                                    farm_times_per_round=farm_times_per_round)
+                                    farm_times_per_round=farm_times_per_round,
+                                    farm_rounds_max=farm_rounds_max)
         self.need_check_game_win = False  # execute 期才读,实例属性即可关掉
 
 
@@ -351,7 +353,8 @@ class TestUpgradeCharacterFarmRoute:
         scenes += [{(_ASCEND, '标题-等级提升')} for _ in range(11)]  # 轮1-11:持续缺料
         scenes.append({(_DETAIL, '按钮-属性详情')})  # 末轮收尾
         _install_script(monkeypatch, test_context, scenes, level=40)
-        op = _WatchedUpgradeCharacter(test_context)
+        # 预算耗尽语义锁:显式传 10 轮(生产默认已改 1 轮拉满,见 docstring)
+        op = _WatchedUpgradeCharacter(test_context, farm_rounds_max=10)
         op._init_watchdog()  # type: ignore[attr-defined]
 
         result = _run_op(op)
