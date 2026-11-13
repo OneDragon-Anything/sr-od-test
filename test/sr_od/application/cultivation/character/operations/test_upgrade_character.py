@@ -140,7 +140,7 @@ class TestUpgradeCharacterEntryStates:
             {(_DETAIL, '按钮-属性详情'), (_DETAIL, '按钮-升级')},   # 入口轮
             {(_ASCEND, '标题-等级提升'), (_ASCEND, '按钮-快速升级')},  # 轮1:执行升级
             {(_ASCEND, '标题-升级结果')},                            # 轮2:升级横幅
-            set(),                                                  # 轮3:详情判满
+            {(_DETAIL, '按钮-属性详情')},                           # 轮3:详情页判满
         ]
         state = _install_script(monkeypatch, test_context, scenes, level=80)
         clicks = _record_controller_clicks(monkeypatch, test_context)
@@ -197,7 +197,7 @@ class TestUpgradeCharacterFillGeneric:
             {(_ASCEND, '标题-材料补全弹窗')},                       # 轮2:确认框
             {(_ASCEND, '标题-等级提升'), (_ASCEND, '按钮-快速升级')},  # 轮3:材料齐
             {(_ASCEND, '标题-晋阶结果')},                           # 轮4:晋阶横幅(双锚之一)
-            set(),                                                  # 轮5:详情判满
+            {(_DETAIL, '按钮-属性详情')},                           # 轮5:详情页判满
         ]
         state = _install_script(monkeypatch, test_context, scenes, level=0)
         clicks = _record_controller_clicks(monkeypatch, test_context)
