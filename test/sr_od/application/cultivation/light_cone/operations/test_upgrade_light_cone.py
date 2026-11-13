@@ -489,6 +489,26 @@ class TestUpgradeLightConeBranches:
         assert op2._farm_rounds == 0, '刷取进行中重入不得重复计数'
         assert not clicks2, f'刷取进行中重入不得有任何点击,clicks={clicks2}'
 
+        # 用例3:开拓力补充弹窗在场(确认被拦,结果框永不出现) → 显式判停,
+        # 不进 WAIT 空转(WAIT 循环无重试上限,必须由此分支终止)
+        state3 = _install_script(
+            monkeypatch, test_context,
+            [{('开拓力补充弹窗', '标题-开拓力补充弹窗')}], level=40)
+        clicks3 = _record_controller_clicks(monkeypatch, test_context, state3)
+        op3 = _WatchedUpgradeLightCone(test_context, farm_dungeon=True)
+        op3._init_watchdog()  # type: ignore[attr-defined]
+        enter_running_state(op3.ctx)
+        try:
+            with fast_sleep(op3):
+                result3 = op3.confirm_ticket_farm()
+        finally:
+            reset_running_state(op3.ctx, op3)
+        assert not result3.is_success and '开拓力不足' in str(result3.status), (
+            f'补充弹窗在场应显式判停,status={result3.status}'
+        )
+        assert op3._farm_rounds == 0, '判停路径不得重复计数'
+        assert not clicks3, f'判停路径不得有任何点击,clicks={clicks3}'
+
     def test_manual_fight_returns_to_world_and_reenters(
         self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
     ) -> None:
