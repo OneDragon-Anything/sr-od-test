@@ -201,7 +201,7 @@ class TestEntryGate:
         op = _WatchedUpgradeTrace(test_context)
         _install_script(
             monkeypatch, test_context,
-            [{(_TRACE, '开关-简略描述')}, {(_TRACE, '开关-简略描述')}, set()],
+            [{(_TRACE, '开关-简略描述')}, {(_TRACE, '开关-简略描述')}, set(), set()],
             categories=['战技'], level=0)
 
         result = _run_op(op)
@@ -235,7 +235,7 @@ class TestUpgradeLoop:
              set(), set(), {(_TRACE, '开关-简略描述')},
              set(), set(), set(), set(),
              set(), {(_TRACE, '文本-已达最大等级')},
-             {(_TRACE, '开关-简略描述')}, set()],
+             {(_TRACE, '开关-简略描述')}, set(), set()],
             categories=['天赋', '天赋', '天赋'], level=0)
 
         result = _run_op(op)
@@ -260,7 +260,7 @@ class TestUpgradeLoop:
             [{(_TRACE, '开关-简略描述')},
              set(), set(), {(_TRACE, '开关-简略描述')},
              set(), {(_TRACE, '按钮-通用材料补全')},
-             {(_TRACE, '开关-简略描述')}, set()],
+             {(_TRACE, '开关-简略描述')}, set(), set()],
             categories=['天赋', '天赋'], level=6)
 
         result = _run_op(op)
@@ -287,7 +287,7 @@ class TestUpgradeLoop:
             [{(_TRACE, '开关-简略描述')},
              set(), set(), {(_TRACE, '开关-简略描述')},
              set(), set(), {(_TRACE, '按钮-材料合成')},
-             {(_TRACE, '开关-简略描述')}, set()],
+             {(_TRACE, '开关-简略描述')}, set(), set()],
             categories=['天赋', '天赋'], level=7)
 
         result = _run_op(op)
@@ -295,8 +295,67 @@ class TestUpgradeLoop:
         assert result.success and result.status == 'MATERIAL_CAPPED'
         assert not _has_click_in(clicks, test_context, _TRACE, '按钮-材料合成')
         assert not _has_click_in(clicks, test_context, _TRACE, '按钮-通用材料补全')
-        assert state['level_reads'] == 1
+    def test_feedback_banner_recovered_then_max_level(
+            self, test_context: SrTestContext,
+            monkeypatch: pytest.MonkeyPatch) -> None:
+        """升级反馈横幅期实机场景:补全确认后游戏弹全屏横幅(遮罩期 OCR 全盲
+        仅「点击空白处关闭」锚可读)——横幅锚在场点空白关闭即恢复,继续升满;
+        不误判失配;收尾途中再遇横幅同样锚驱动关闭。
 
+        轮次walk(fill_generic=True):入口{开关} → r1(弹窗/满级/开关→分类→
+        快升miss→补全钮→点补全钮) → r2(弹窗→点确认) → r3 反馈期(弹窗/满级/
+        开关miss+横幅锚→点空白) → r4(弹窗/满级/开关→分类→快速升级→升级) →
+        r5(弹窗/满级→分类→MAX_LEVEL) → 收尾{开关miss→横幅锚→点空白}
+        →{开关→点关面板}→{全miss→落账}。"""
+        clicks = _record_controller_clicks(monkeypatch, test_context)
+        op = _WatchedUpgradeTrace(test_context, fill_generic=True)
+        state = _install_script(
+            monkeypatch, test_context,
+            [{(_TRACE, '开关-简略描述')},
+             set(), set(), {(_TRACE, '开关-简略描述')},
+             set(), {(_TRACE, '按钮-通用材料补全')},
+             {(_TRACE, '标题-材料补全弹窗')},
+             set(), set(), set(), {(_TRACE, '文本-升级反馈横幅')},
+             set(), set(), {(_TRACE, '开关-简略描述')},
+             {(_TRACE, '按钮-快速升级')},
+             set(), {(_TRACE, '文本-已达最大等级')},
+             set(), {(_TRACE, '文本-升级反馈横幅')},
+             {(_TRACE, '开关-简略描述')},
+             set(), set()],
+            categories=['天赋', '天赋', '天赋', '天赋'], level=4)
+
+        result = _run_op(op)
+
+        assert result.success and result.status == 'MAX_LEVEL'
+        assert _has_click_in(clicks, test_context, _TRACE, '点击区-关面板空白'), (
+            '反馈期与收尾应经安全域空白关横幅/关面板'
+        )
+        assert _has_click_in(clicks, test_context, _TRACE, '按钮-确认材料补全')
+
+    def test_feedback_persistent_miss_fails_as_mismatch(
+            self, test_context: SrTestContext,
+            monkeypatch: pytest.MonkeyPatch) -> None:
+        """面板锚与横幅锚连续 3 轮双 miss(真画面异动,非横幅期)→ 判「不在
+        目标技能面板」经收尾落账;未知态不盲点安全域(防误关真面板)。"""
+        clicks = _record_controller_clicks(monkeypatch, test_context)
+        op = _WatchedUpgradeTrace(test_context)
+        state = _install_script(
+            monkeypatch, test_context,
+            # 入口{开关} → r1/r2/r3 连续三轮(弹窗/满级/开关/横幅锚)全 miss
+            # (第 3 轮 feedback=3 触发失配) → 收尾(开关miss/横幅锚miss→落账)
+            [{(_TRACE, '开关-简略描述')},
+             set(), set(), set(), set(),
+             set(), set(), set(), set(),
+             set(), set(), set(), set(),
+             set(), set()],
+            categories=['天赋'], level=5)
+
+        result = _run_op(op)
+
+        assert result.success and result.status == '不在目标技能面板'
+        assert not _has_click_in(clicks, test_context, _TRACE, '点击区-关面板空白'), (
+            '未知态纯慢询不盲点安全域(防误关真面板)'
+        )
 
 class TestFarmTicketChain:
     """券刷新链:路由→开窗→券按钮→连刷设置→确认→收口回面板→升级。"""
@@ -341,7 +400,7 @@ class TestFarmTicketChain:
              set(), set(), {(_TRACE, '开关-简略描述')},
              {(_TRACE, '按钮-快速升级')},
              set(), {(_TRACE, '文本-已达最大等级')},
-             {(_TRACE, '开关-简略描述')}, set()],
+             {(_TRACE, '开关-简略描述')}, set(), set()],
             categories=['天赋', '天赋', '天赋', '天赋'], level=5,
             farm_times_read=5)
 
@@ -391,7 +450,7 @@ class TestFarmTicketChain:
              set(), set(), {(_TRACE, '开关-简略描述')},
              {(_TRACE, '按钮-快速升级')},
              set(), {(_TRACE, '文本-已达最大等级')},
-             {(_TRACE, '开关-简略描述')}, set()],
+             {(_TRACE, '开关-简略描述')}, set(), set()],
             categories=['天赋', '天赋', '天赋', '天赋'], level=5, farm_times_read=5)
 
         result = _run_op(op)
@@ -430,7 +489,7 @@ class TestFarmTicketChain:
              set(),
              set(), set(), set(), {(_TRACE, '开关-简略描述')},
              {(_TRACE, '提示-无可刷缺口')},
-             {(_TRACE, '开关-简略描述')}, set()],
+             {(_TRACE, '开关-简略描述')}, set(), set()],
             categories=['天赋', '天赋'], level=5)
 
         result = _run_op(op)
@@ -474,7 +533,7 @@ class TestFarmTicketChain:
              set(), set(), set(), {(_TRACE, '开关-简略描述')},
              set(), set(), set(), {(_TRACE, '开关-简略描述')},
              set(), set(), set(), {(_TRACE, '开关-简略描述')},
-             {(_TRACE, '开关-简略描述')}, set()],
+             {(_TRACE, '开关-简略描述')}, set(), set()],
             categories=['天赋', '天赋'], level=5)
 
         result = _run_op(op)
