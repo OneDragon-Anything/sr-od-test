@@ -1128,3 +1128,52 @@ class TestUpgradeLightConeBranches:
             UpgradeLightConeOp(test_context, farm_times_per_round=-2)
         with pytest.raises(ValueError, match='farm_rounds_max'):
             UpgradeLightConeOp(test_context, farm_rounds_max=0)
+
+
+class TestUpgradeLightConeEntryAscendStart:
+    """就地起跑(等级提升画面)记名契约:手动链返回后凭记名重选角色,
+    ASCEND 起跑漏读名会在战后防线处白烧一场开拓力(实机两次实证)。"""
+
+    def test_ascend_start_reads_name_and_takes_over(
+            self, test_context: SrTestContext,
+            monkeypatch: pytest.MonkeyPatch) -> None:
+        """等级提升画面就地起跑:读名成功 → 记名 + ALREADY_ASCEND 接管
+        (手动路线后续返回链可凭记名安全重选)。"""
+        op = _WatchedUpgradeLightCone(test_context, farm_dungeon=True,
+                                      use_fast_ticket=False)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        state = _install_script(monkeypatch, test_context, [set()], level=30)
+        state['screen_now'] = _LC_ASC
+        enter_running_state(op.ctx)
+        try:
+            with fast_sleep(op):
+                result = op.check_entry()
+        finally:
+            reset_running_state(op.ctx, op)
+        assert result.is_success and result.status == 'ALREADY_ASCEND', (
+            f'就地起跑应接管,status={result.status}'
+        )
+        assert op._char_name == '测试角色', f'应记名,char_name={op._char_name}'
+        assert state['char_name_reads'] == [1]
+
+    def test_ascend_start_manual_route_fails_fast_on_missing_name(
+            self, test_context: SrTestContext,
+            monkeypatch: pytest.MonkeyPatch) -> None:
+        """就地起跑 + 手动路线 + 读名失败 → 入口即快速失败(零消耗)——
+        漏读时打完一场才在返回链防线失败,白烧一场开拓力(实机两次实证);
+        拦截消息提示从光锥 TAB 重新发起。"""
+        op = _WatchedUpgradeLightCone(test_context, farm_dungeon=True,
+                                      use_fast_ticket=False)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        state = _install_script(monkeypatch, test_context, [set()], level=30)
+        state['screen_now'] = _LC_ASC
+        state['char_name_next'] = None
+        enter_running_state(op.ctx)
+        try:
+            with fast_sleep(op):
+                result = op.check_entry()
+        finally:
+            reset_running_state(op.ctx, op)
+        assert not result.is_success and '光锥 TAB' in (result.status or ''), (
+            f'手动路线读名失败应入口快速失败,status={result.status}'
+        )
