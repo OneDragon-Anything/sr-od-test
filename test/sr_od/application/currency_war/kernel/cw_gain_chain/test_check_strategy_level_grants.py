@@ -94,7 +94,7 @@ def test_prefers_silence_on_unobserved_then_recovers() -> None:
     gs.observe(gs.gold, 10, sig=_SIG_OBS)
     assert check_strategy_level_grants(gs) is None, 'level 缺误发放'
     gs.observe(gs.level, 9, sig=_SIG_OBS)
-    assert check_strategy_level_grants(gs) == (_CARD, 40), '值到位未自愈'
+    assert check_strategy_level_grants(gs) == (_CARD, 36), '值到位未自愈'
 
 
 def test_grant_shape_and_purity_zero_write() -> None:
@@ -106,7 +106,7 @@ def test_grant_shape_and_purity_zero_write() -> None:
     gs.observe(gs.gold, 33, sig=_SIG_OBS)
     before = gs.full_state_snapshot()
     grant = check_strategy_level_grants(gs)
-    assert grant == (_CARD, 40), f'返回形状漂移: {grant!r}'
+    assert grant == (_CARD, 36), f'返回形状漂移: {grant!r}'
     assert gs.full_state_snapshot() == before, '纯决策函数发生字段写操作'
 
 
@@ -118,7 +118,7 @@ def test_snapshot_roundtrip_latch_honored() -> None:
     _hold(gs, _CARD)
     gs.observe(gs.level, 9, sig=_SIG_OBS)
     gs.observe(gs.gold, 10, sig=_SIG_OBS)
-    assert check_strategy_level_grants(gs) == (_CARD, 40)
+    assert check_strategy_level_grants(gs) == (_CARD, 36)
     _latch(gs)
     restored = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     restore_state_snapshot(restored, gs.full_state_snapshot())

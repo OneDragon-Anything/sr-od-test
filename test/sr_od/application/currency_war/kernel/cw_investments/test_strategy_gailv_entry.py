@@ -3,7 +3,7 @@
 同目录 test_strategy_baocang_entry.py 爆仓形)。
 
 测试面依据 = 原稿锁面
-§4 锁面(原稿评审锁 无需用户决定 7/7;卡面官方原文:「刷新时有45%概率获得一次
+§4 锁面(原稿评审锁 无需用户决定 7/7;卡面官方原文(V4.7):「刷新时有50%概率获得一次
 免费刷新。」——付费域口径待实采 pending 如实标注;写状态副本面 = §6.3
 随机分支观察收尾):
 
@@ -38,7 +38,7 @@ def test_gailv_entry_registered() -> None:
 
 
 def test_gailv_economy_registry_unchanged() -> None:
-    """ECONOMY 注册行值不变锁(refresh_free_chance=0.45)。"""
-    assert STRATEGY_ECONOMY[_CARD].refresh_free_chance == 0.45, '值不变'
+    """ECONOMY 注册行值不变锁(refresh_free_chance=0.50)。"""
+    assert STRATEGY_ECONOMY[_CARD].refresh_free_chance == 0.50, '值不变(V4.7 45%→50%)'
     assert INVESTMENT_STRATEGIES[_CARD].effect == \
-        '刷新时有45%概率获得一次免费刷新。', '卡面单一源'
+        '刷新时有50%概率获得一次免费刷新。', '卡面单一源(V4.7 45%→50%)'

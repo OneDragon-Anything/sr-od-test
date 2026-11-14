@@ -18,10 +18,8 @@ import pytest
 
 from sr_od.application.currency_war.data.cw_chars import (
     CHARACTER_ROSTER,
-    get_char,
 )
 from sr_od.application.currency_war.kernel.cw_investments import (
-    INVESTMENT_STRATEGIES,
     STRATEGY_BENCH_LEAVE_GOLD_GRANTS,
     _validate_strategy_bench_leave_gold_grants,
 )
@@ -30,25 +28,18 @@ _CARD = '愚者恶作剧'
 _ROWS = (('花火', 1, 2), ('火花', 1, 4))
 
 
-def test_registry_row_single_source() -> None:
-    """登记单一源(锁 1):键集 = 族现役首例;行值 = 卡面直读((花火,1★,2金),
-    (火花,1★,4金));键 ∈ 策略注册表且 id 对拍(防改名/换 id 后静默错挂)。"""
-    assert set(STRATEGY_BENCH_LEAVE_GOLD_GRANTS) == {_CARD}, \
-        '注册面 = 族现役单卡(同族后继卡独立批,禁顺手代登记)'
-    assert STRATEGY_BENCH_LEAVE_GOLD_GRANTS[_CARD] == _ROWS, \
-        f'行值漂移: {STRATEGY_BENCH_LEAVE_GOLD_GRANTS!r}'
-    assert _CARD in INVESTMENT_STRATEGIES, '键必须在策略注册表'
-    assert INVESTMENT_STRATEGIES[_CARD].source == 'plaza:260701', \
-        '注册行 id 对拍(260701,改名/换 id 漂移哨现值通过)'
-    assert INVESTMENT_STRATEGIES[_CARD].name == _CARD, '名字键对拍'
+def test_registry_current_value_and_validation_passes() -> None:
+    """现表 = v4.7 换季退役态空表 + 直调校验器零异常(唯一条目愚者恶作剧
+    V4.7 退场随 A 组清理删登记;同族新卡登记时本断言即红灯强制复审,
+    沿 STRATEGY_BOND_TIER_GRANTS 测试同形)。"""
+    assert STRATEGY_BENCH_LEAVE_GOLD_GRANTS == {}
+    _validate_strategy_bench_leave_gold_grants()
 
 
 def test_row_values_desc_aligned() -> None:
-    """行值-卡面结构对拍(值形防线,星级恒 1/金币>0 笔误哨删后的起决定作用的锁):
-    星级恒 1(desc「1星」明写);角色名 ∈ CHARACTER_ROSTER。
-    (离场金与注册费用档平行的旧锁随 v4.7 费用重排失效——火花 V4.4 4 费
-    v4.7 1 费,金值 = 卡面常量非注册表派生,行值对拍由 _ROWS 值锁承担;
-    平行判读基准随 V4.4 名单失效,登记面不变。)"""
+    """行值-卡面结构对拍(值形防线):星级恒 1(desc「1星」明写);角色名
+    ∈ CHARACTER_ROSTER。(离场金与注册费用档平行的旧锁随 v4.7 费用重排
+    失效——行值对拍由 _ROWS 值锁承担;登记面恢复时随批生效。)"""
     for name, star, gold in _ROWS:
         assert star == 1, f'{name}: 星级恒 1(desc 明写)'
         assert name in CHARACTER_ROSTER, f'{name}: 角色名已登记'
@@ -65,8 +56,9 @@ def test_validator_orphan_key_raises(monkeypatch) -> None:
 
 def test_validator_unknown_char_raises(monkeypatch) -> None:
     """构建校验(角色名哨):角色名不在角色注册表(GUARD 词表)→ ValueError
-    (游戏角色词表改版即触发的漂移哨)。"""
-    monkeypatch.setitem(STRATEGY_BENCH_LEAVE_GOLD_GRANTS, _CARD,
+    (游戏角色词表改版即触发的漂移哨;注入键取策略注册表在册名——
+    v4.7 现表空,退场卡名作键会先撞孤儿哨)。"""
+    monkeypatch.setitem(STRATEGY_BENCH_LEAVE_GOLD_GRANTS, '躺平',
                         (('花火', 1, 2), ('不存在的角色', 1, 4)))
     with pytest.raises(ValueError, match='角色名不在角色注册表'):
         _validate_strategy_bench_leave_gold_grants()

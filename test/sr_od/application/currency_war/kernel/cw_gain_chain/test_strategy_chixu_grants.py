@@ -62,7 +62,7 @@ def test_chixu_registry_row_single_source() -> None:
     )
     assert _CARD in PICK_INVEST_EFFECTS, '组合行已登记'
     assert _CARD not in _STRATEGY_RANDOM_EQUIP_GRANTS, '双具名非随机族'
-    assert INVESTMENT_STRATEGIES[_CARD].source == 'plaza:220801', \
+    assert INVESTMENT_STRATEGIES[_CARD].source == 'plaza:221301', \
         '注册行 id 对拍'
 
 

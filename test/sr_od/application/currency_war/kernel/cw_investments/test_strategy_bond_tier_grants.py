@@ -58,7 +58,7 @@ def test_validator_gate_faction_drift_raises(monkeypatch) -> None:
     ValueError(档位判据派生源失联 = 条件效果条目静默失效,构建期响亮拦截;
     注入键取策略注册表在册名,孤儿哨不拦、精确命中 gate 哨)。"""
     monkeypatch.setitem(
-        STRATEGY_BOND_TIER_GRANTS, '梦境大舞台',
+        STRATEGY_BOND_TIER_GRANTS, '躺平',
         StrategyBondTierGrant(gate_faction='不存在的羁绊', tiers=(3, 7, 10),
                               item='以太钻头'))
     with pytest.raises(ValueError, match='gate 羁绊漂移'):
@@ -70,7 +70,7 @@ def test_validator_item_drift_raises(monkeypatch) -> None:
     ValueError(发放物身份失联,错名入栏 = 幻影装备;注入键同负控②取
     在册名)。"""
     monkeypatch.setitem(
-        STRATEGY_BOND_TIER_GRANTS, '梦境大舞台',
+        STRATEGY_BOND_TIER_GRANTS, '躺平',
         StrategyBondTierGrant(gate_faction='持续伤害', tiers=(3, 7, 10),
                               item='不存在的装备'))
     with pytest.raises(ValueError, match='装备名漂移'):

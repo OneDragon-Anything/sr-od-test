@@ -23,7 +23,8 @@ from sr_od.application.currency_war.data.cw_traits_data import (
 )
 from sr_od.application.currency_war.kernel import cw_investments
 
-_ENV = '特邀专家:加拉赫'
+_ENV = '人才引进'   # 注入键须 ∈ INVESTMENT_ENVS(孤儿检查先行——退役卡名
+                    # 特邀专家:加拉赫作键会先撞孤儿哨,漂移哨到不了位)
 _ROW = ('击破', '以太钻头')
 
 

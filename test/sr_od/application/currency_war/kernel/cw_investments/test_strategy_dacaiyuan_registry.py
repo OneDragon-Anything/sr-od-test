@@ -11,7 +11,7 @@
   duties.predict 单置(一次性 burst 无计数器面,不设 track);
 - 注册值锁(锁 2):STRATEGY_ECONOMY burst == 6(官方卡文;注册值
   原为 5 = 已裁漂移且无运行时消费点,订正随批)且 == 条目载荷值
-  (双源同值正验);负验 = monkeypatch 注入 burst≠6 注册行实例 →
+  (双源同值正验);负验 = monkeypatch 注入 burst≠9 注册行实例 →
   双源同值条件失配(frozen 载体禁字面 mutation,注入 + 直读房法;
   治理后形无 import 校验闸,双源对账归本锁——2026-10-28 治理裁定
   「防登记笔误类 import 校验禁新增」);
@@ -62,7 +62,7 @@ def test_dacaiyuan_effect_spec_entry() -> None:
     assert spec.category is EffectKind.BATTLEFIELD
     assert spec.payload.board_rewrite == BOARD_REWRITE_SELL_ALL, \
         '素出售语义(卡文无发牌句,发牌判据细分后不入 sim 发牌集)'
-    assert spec.payload.free_refresh_burst == 6, '官方卡文「获得6次免费刷新」'
+    assert spec.payload.free_refresh_burst == 9, '官方卡文「获得9次免费刷新」(V4.7 数值 6→9)'
     assert spec.duties.predict is True, \
         'predict=清场+6 刷改变商店决策上下文,买牌/读牌对账须预知'
     assert spec.duties.track is False, '一次性 burst 无剩余期,counter 不建'
@@ -74,22 +74,22 @@ def test_dacaiyuan_registry_burst_dual_source() -> None:
     已裁漂移,订正随批)且 == 条目载荷值(双源同值,注册行为估值面对账源)。"""
     reg = STRATEGY_ECONOMY[_CARD].free_refresh_burst
     payload = STRATEGY_EFFECTS[_CARD].payload.free_refresh_burst
-    assert reg == 6, '官方卡文 6(base 层 plaza:202101)'
+    assert reg == 9, '官方卡文 9(V4.7 数值 6→9,base 层 plaza:202101)'
     assert reg == payload, '双源同值(注册行 ↔ 载体条目)'
     assert STRATEGY_ECONOMY[_CARD].sell_price_mult == 2.0, '×2 卖价修饰已登记'
 
 
 def test_dacaiyuan_registry_burst_drift_breaks_lock(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """锁 2 负验:注入 burst≠6 注册行实例 → 双源同值条件失配(证明本锁
+    """锁 2 负验:注入 burst≠9 注册行实例 → 双源同值条件失配(证明本锁
     直读注册行实例、对漂移敏感;治理后形双源对账唯一防线即本锁)。"""
     monkeypatch.setitem(STRATEGY_ECONOMY, _CARD,
                         EconomyEffect(free_refresh_burst=5, sell_price_mult=2.0))
     reg = STRATEGY_ECONOMY[_CARD].free_refresh_burst
     payload = STRATEGY_EFFECTS[_CARD].payload.free_refresh_burst
-    assert not (reg == 6 and reg == payload), \
+    assert not (reg == 9 and reg == payload), \
         '漂移注入后锁 2 条件必失配(负验:锁对注册行实例敏感)'
-    assert payload == 6, '载荷值不受注入扰动(单一条目不可变)'
+    assert payload == 9, '载荷值不受注入扰动(单一条目不可变)'
 
 
 def test_dacaiyuan_delivery_channel_registration_leg() -> None:

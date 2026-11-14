@@ -52,39 +52,40 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     ('人才激励', '101601', 4, '员工投影仪', 1, (), '', False),
     ('人才激励+', '101602', 3, '员工投影仪', 1, (), '', False),
     ('许诺特权', '130201', 7, '特权武装箱', 1, (), '', False),
-    ('先亏后盈', '130701', 4, '简易武装箱', 2, (), '', False),
-    ('好运令牌·银', '130901', 3, '好运令牌', 1, (), '', False),
-    ('是钻石总会发光', '131101', 2, '', 1, ('红钻', '蓝钻'), '', False),
+    ('先亏后盈', '130701', 3, '简易武装箱', 2, (), '', False),
+    ('好运令牌·银', '130901', 6, '好运令牌', 1, (), '', False),
     ('回收计划', '230701', 5, '', 1, (), '简易', False),
-    ('快请专家·金', '260401', 4, '员工投影仪', 2, (), '', False),
+    ('回收计划+', '230702', 4, '', 1, (), '简易', False),
+    ('红钻闪耀', '231201', 3, '简易武装箱', 1, (), '', False),
+    ('蓝钻闪耀', '231301', 3, '简易武装箱', 1, (), '', False),
+    ('军备供应链', '330501', (1, 2, 3, 4, 5), '简易武装箱', 1, (), '', False),
     ('好运令牌·彩', '331601', 4, '好运令牌', 1, (), '', True),
 ])
 def test_rencai_jili_registry_row_single_source(
-        card: str, gid: str, delay: int, item: str, count: int,
-        choices: tuple, category: str, repeat: bool) -> None:
-    """登记单一源(姊妹双卡 + 许诺特权 + 先亏后盈 + 好运令牌·银 +
-    是钻石总会发光 + 回收计划参数化):行值 = 卡面
+        card: str, gid: str, delay: int | tuple[int, ...], item: str,
+        count: int, choices: tuple, category: str, repeat: bool) -> None:
+    """登记单一源(全表现役十一卡参数化):行值 = 卡面
     效果原文直读(「N个节点后」→ N 拍,「获得1个【X】」→ 发放物 X;
     人才激励系即时效果条目「获得1个【员工投影仪】」由 PICK_INVEST_EFFECTS
     工厂承载不入本表,许诺特权卡文纯延时单句零即时效果条目,只登记不写状态的实现分支 = 延时-
     only 一条效果条目载体;先亏后盈卡文延时效果条目「获得2个」→ count=2 族内首例
     >1,伴随损血效果条目不入本表走 STRATEGY_ECONOMY hp 通道;好运令牌·银
     卡文纯延时单句零即时效果条目同延时-only 载体,发放物与卡名异名——item
-    断言为物名「好运令牌」非卡名,防拿卡名当物名笔误;是钻石总会发光
-    卡文「获得【红钻】或【蓝钻】」→ item='' 占位(空串断言锁二元集行
-    不携确定件)+ item_choices 封闭集直读,掷骰时点 = 到点发放窗;回收
-    计划卡文「获得1件随机简易装备」→ 类别池形 item_category='简易'
-    直读(族内类别池行首例),item='' 占位,同卡即时效果条目「获得1件进阶
-    装备」由 PICK_INVEST_EFFECTS 组合登记行承载不入本表);
-    base 溯源 id 对拍(id ↔ plaza:<id>)。表键集闭族现役十三卡(未注册
-    展开卡安静不写,禁顺手代登记;军备供应链 = 延时发放族后继
-    delay_nodes 元组形首例,c140c3a14;好运令牌·彩 = 周期型 repeat
+    断言为物名「好运令牌」非卡名,防拿卡名当物名笔误;回收计划/回收计划+
+    卡文「获得1件随机简易装备」→ 类别池形 item_category='简易'
+    直读(族内类别池行),item='' 占位,同卡即时效果条目「获得1件进阶
+    装备」由 PICK_INVEST_EFFECTS 组合登记行承载不入本表;军备供应链
+    delay_nodes 元组形(逐拍一档);红钻闪耀/蓝钻闪耀 = 简易武装箱延时行;
+    v4.7 换季:完美进化/快请专家·金/是钻石总会发光三退场卡随 A 组清理
+    出族,先亏后盈 delay 4→3、好运令牌·银 delay 3→6 随 T-4 对照表);
+    base 溯源 id 对拍(id ↔ plaza:<id>)。表键集闭族现役十一卡(未注册
+    展开卡安静不写,禁顺手代登记;好运令牌·彩 = 周期型 repeat
     字段首例,repeat 列断言扩形随批)。"""
     assert set(STRATEGY_DELAYED_GRANTS) == {
         '人才激励', '人才激励+', '许诺特权', '先亏后盈', '好运令牌·银',
-        '是钻石总会发光', '回收计划', '回收计划+', '红钻闪耀', '蓝钻闪耀',
-        '快请专家·金', '军备供应链', '好运令牌·彩', '完美进化'}, \
-        '注册面 = 族现役十三卡(未注册展开卡安静不写,禁顺手代登记)'
+        '回收计划', '回收计划+', '红钻闪耀', '蓝钻闪耀',
+        '军备供应链', '好运令牌·彩'}, \
+        '注册面 = 族现役十一卡(未注册展开卡安静不写,禁顺手代登记)'
     row = STRATEGY_DELAYED_GRANTS[card]
     assert row == StrategyDelayedGrant(id=gid, delay_nodes=delay,
                                        item=item, count=count,
@@ -103,9 +104,9 @@ def test_grant_item_not_in_bench_wordlist() -> None:
     即被当占席道具——溢出效果条目假道具,该形态钉死);许诺特权发放物特权
     武装箱 = 占席词表已登记 ∧ 装备表无条目(占席分道判据前提);好运
     令牌·银发放物好运令牌 = 装备表已登记 ∧ 占席词表负成员(装备分道
-    判据前提,负成员申报 = 入 items 会错派占席身份,禁入占席通道);
-    是钻石总会发光 choice-set 两元素红钻/蓝钻 = 装备表已登记 ∧ 占席词表
-    负成员(采样行同走装备分道,钻石禁入占席通道)。"""
+    判据前提,负成员申报 = 入 items 会错派占席身份,禁入占席通道)。
+    (是钻石总会发光 choice-set 分道段随卡 v4.7 退场删除。)
+    """
     from sr_od.application.currency_war.data.cw_equipment_data import (
         EQUIPMENTS,
     )
@@ -123,28 +124,23 @@ def test_grant_item_not_in_bench_wordlist() -> None:
         '好运令牌不在装备表(装备分道判据前提被破坏)'
     assert haoyun.item not in BENCH_ITEM_NAMES, \
         '好运令牌误入占席词表(负成员申报被破坏,入 items 错派占席身份)'
-    shizuanshi = STRATEGY_DELAYED_GRANTS['是钻石总会发光']
-    assert all(c in EQUIPMENTS for c in shizuanshi.item_choices), \
-        '红钻/蓝钻不在装备表(采样行装备分道判据前提被破坏)'
-    assert all(c not in BENCH_ITEM_NAMES for c in shizuanshi.item_choices), \
-        '红钻/蓝钻误入占席词表(负成员申报被破坏,禁入占席通道)'
 
 
 def test_xiankui_hp_instant_negative_row() -> None:
-    """先亏后盈伴随损血效果条目注册行(STRATEGY_ECONOMY):hp_instant = −20
-    (卡面「损失20点小队生命值」数值 20 直读取负,非设计数);同字段
-    正负成员并存(健康充值 +30 / 本卡 −20)。两表行断言随本表域锁面
-    (损血效果条目与延时效果条目同卡分道,行值漂移在此显形);负值支写端行为面 =
-    sim 侧 test_strategy_pick_hp.py 锁面。"""
+    """先亏后盈伴随损血效果条目注册行(STRATEGY_ECONOMY):hp_instant = −10
+    (V4.7 卡面「损失10点小队生命值」数值 10 直读取负,旧值 −20 随 T-4
+    对照表换代);同字段正负成员并存(健康充值 +30 / 本卡 −10)。两表行
+    断言随本表域锁面(损血效果条目与延时效果条目同卡分道,行值漂移在此
+    显形);负值支写端行为面 = sim 侧 test_strategy_pick_hp.py 锁面。"""
     from sr_od.application.currency_war.data.cw_invest_data import (
         PLAZA_AUGMENTS,
     )
     assert '先亏后盈' in STRATEGY_ECONOMY, '损血效果条目注册行缺位'
-    assert STRATEGY_ECONOMY['先亏后盈'].hp_instant == -20, \
+    assert STRATEGY_ECONOMY['先亏后盈'].hp_instant == -10, \
         f'损血效果条目值漂移: {STRATEGY_ECONOMY["先亏后盈"].hp_instant}'
-    # 卡面数值对拍:注册值取负 = 卡面「损失20点」的 20 直读,防两源漂移。
+    # 卡面数值对拍:注册值取负 = 卡面「损失10点」的 10 直读,防两源漂移。
     base = next(a for a in PLAZA_AUGMENTS if a.id == '130701')
-    assert '损失20点小队生命值' in base.effect, f'卡面漂移: {base.effect!r}'
+    assert '损失10点小队生命值' in base.effect, f'卡面漂移: {base.effect!r}'
     assert STRATEGY_ECONOMY['先亏后盈'].hp_instant == -int(
         base.effect.split('损失')[1].split('点')[0]), '注册值与卡面失同步'
 
@@ -187,9 +183,9 @@ def test_validator_choice_element_unknown_raises(monkeypatch) -> None:
     双域皆非(装备表/占席词表均无)→ ValueError(版本改名/未知名,
     采样行发放类效果条目无从分道;镜像③形态)。"""
     monkeypatch.setitem(
-        cw_investments.STRATEGY_DELAYED_GRANTS, '是钻石总会发光',
-        StrategyDelayedGrant(id='131101', delay_nodes=2, item='',
-                             item_choices=('红钻', '不存在的发放物')))
+        cw_investments.STRATEGY_DELAYED_GRANTS, '好运令牌·银',
+        StrategyDelayedGrant(id='130901', delay_nodes=6, item='',
+                             item_choices=('好运令牌', '不存在的发放物')))
     with pytest.raises(ValueError, match='发放物元素漂移'):
         _validate_strategy_delayed_grants()
 

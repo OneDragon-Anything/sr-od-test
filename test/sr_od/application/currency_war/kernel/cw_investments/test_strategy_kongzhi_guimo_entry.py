@@ -8,7 +8,7 @@
 cw_gain_effects.PICK_INVEST_EFFECTS 具名装备登记行 / 40 金币效果条目 =
 instant_gold=40 已登记估值零漂):
 
-- 注册行直测(锁 2):level_cap_override == 7 ∧ instant_gold == 40
+- 注册行直测(锁 2):level_cap_override == 7 ∧ instant_gold == 32
   (等值扩写——金面零漂);
 - 双闭集伴随(锁 2):level_cap_override ∈ 引擎排除桶(_ENGINE_CHANNEL_
   EXCLUDED_FIELDS 进度轴结构改写族)∧ ∈ 策略侧 _NOT_SCORED_FIELDS
@@ -37,14 +37,14 @@ from sr_od.application.currency_war.strategies.impl.mandate_v1.strategy_economy 
 _CARD = '控制规模'
 
 #: 采样池现值基线(登记不扩池;版本重采改数随批复核卡数来源后更新)。
-_POOL_SIZE = 335
+_POOL_SIZE = 298
 
 
 def test_registry_row_value() -> None:
     """注册行直测(锁 2):帽效果条目 7 ∧ 金币效果条目 40 等值扩写(估值现金计分零漂)。"""
     eff = STRATEGY_ECONOMY[_CARD]
     assert eff.level_cap_override == 7
-    assert eff.instant_gold == 40
+    assert eff.instant_gold == 32
 
 
 def test_dual_closure_membership_and_engine_off() -> None:

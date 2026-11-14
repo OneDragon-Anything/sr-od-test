@@ -196,60 +196,6 @@ def test_deterministic_equip_env_grants_without_rng_blue(
     assert len(boxes) == 1, '开箱分支落席 1 个 supply_box 槽件'
 
 
-def test_deterministic_equip_env_grants_without_rng_lieche(
-        provider_calls: list[str]) -> None:
-    """确定性装备环境(T-63 设计 §4 锁 5):列车同行邀请(邀请族首例,
-    equips_immediate only)零随机支 → rng 谓词零解析(provider 不触);
-    选卡后 equips 尾追 '列车同行星徽'、bench 零落位(无开箱效果条目)——上报
-    → gain_invest_env → on_env_gained 实机和模拟器两边同链,live/sim 共用语义一条
-    测试覆盖。"""
-    gs = _make_gs(['列车同行邀请', '轮岗', '头彩'])
-    out = report_action_pick_invest_env_param(
-        gs, SimpleNamespace(idx=0), _SIG)
-    assert out.applied
-    assert provider_calls == [], '零随机支环境零解析'
-    assert list(gs.equips.value) == ['列车同行星徽'], '装备入账分支入栏'
-    boxes = [s for s in gs.bench.value.slots
-             if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '装备 only 环境零开箱效果条目'
-
-
-def test_deterministic_equip_env_grants_without_rng_yinhe(
-        provider_calls: list[str]) -> None:
-    """确定性装备环境(T-64 设计 §4 锁 5,治理后形态):银河学者邀请
-    (邀请族展开首卡,equips_immediate only)零随机支 → rng 谓词零解析
-    (provider 不触);选卡后 equips 尾追 '银河学者星徽'、bench 零落位
-    (无开箱效果条目)——上报 → gain_invest_env → on_env_gained 实机和模拟器两边同链,
-    live/sim 共用语义一条测试覆盖。"""
-    gs = _make_gs(['银河学者邀请', '轮岗', '头彩'])
-    out = report_action_pick_invest_env_param(
-        gs, SimpleNamespace(idx=0), _SIG)
-    assert out.applied
-    assert provider_calls == [], '零随机支环境零解析'
-    assert list(gs.equips.value) == ['银河学者星徽'], '装备入账分支入栏'
-    boxes = [s for s in gs.bench.value.slots
-             if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '装备 only 环境零开箱效果条目'
-
-
-def test_deterministic_equip_env_grants_without_rng_beluoboge(
-        provider_calls: list[str]) -> None:
-    """确定性装备环境(T-65 设计 §4 锁 5,治理后形态):贝洛伯格邀请
-    (邀请族展开卡,equips_immediate only)零随机支 → rng 谓词零解析
-    (provider 不触);选卡后 equips 尾追 '贝洛伯格星徽'、bench 零落位
-    (无开箱效果条目)——上报 → gain_invest_env → on_env_gained 实机和模拟器两边同链,
-    live/sim 共用语义一条测试覆盖。"""
-    gs = _make_gs(['贝洛伯格邀请', '轮岗', '头彩'])
-    out = report_action_pick_invest_env_param(
-        gs, SimpleNamespace(idx=0), _SIG)
-    assert out.applied
-    assert provider_calls == [], '零随机支环境零解析'
-    assert list(gs.equips.value) == ['贝洛伯格星徽'], '装备入账分支入栏'
-    boxes = [s for s in gs.bench.value.slots
-             if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '装备 only 环境零开箱效果条目'
-
-
 def test_deterministic_equip_env_grants_without_rng_xingjian_lvren(
         provider_calls: list[str]) -> None:
     """确定性装备环境(T-66 设计 §4 锁 5,治理后形态):星间旅人邀请
@@ -263,96 +209,6 @@ def test_deterministic_equip_env_grants_without_rng_xingjian_lvren(
     assert out.applied
     assert provider_calls == [], '零随机支环境零解析'
     assert list(gs.equips.value) == ['星间旅人星徽'], '装备入账分支入栏'
-    boxes = [s for s in gs.bench.value.slots
-             if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '装备 only 环境零开箱效果条目'
-
-
-def test_deterministic_equip_env_grants_without_rng_xianzhou(
-        provider_calls: list[str]) -> None:
-    """确定性装备环境(T-67 设计 §4 锁 5,治理后形态):仙舟邀请
-    (邀请族展开卡,equips_immediate only)零随机支 → rng 谓词零解析
-    (provider 不触);选卡后 equips 尾追 '仙舟星徽'、bench 零落位
-    (无开箱效果条目)——上报 → gain_invest_env → on_env_gained 实机和模拟器两边同链,
-    live/sim 共用语义一条测试覆盖。"""
-    gs = _make_gs(['仙舟邀请', '轮岗', '头彩'])
-    out = report_action_pick_invest_env_param(
-        gs, SimpleNamespace(idx=0), _SIG)
-    assert out.applied
-    assert provider_calls == [], '零随机支环境零解析'
-    assert list(gs.equips.value) == ['仙舟星徽'], '装备入账分支入栏'
-    boxes = [s for s in gs.bench.value.slots
-             if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '装备 only 环境零开箱效果条目'
-
-
-def test_deterministic_equip_env_grants_without_rng_langshou(
-        provider_calls: list[str]) -> None:
-    """确定性装备环境(T-68 设计 §4 锁 5,治理后形态):狼狩邀请
-    (邀请族展开卡,equips_immediate only)零随机支 → rng 谓词零解析
-    (provider 不触);选卡后 equips 尾追 '狼狩星徽'、bench 零落位
-    (无开箱效果条目)——上报 → gain_invest_env → on_env_gained 实机和模拟器两边同链,
-    live/sim 共用语义一条测试覆盖。"""
-    gs = _make_gs(['狼狩邀请', '轮岗', '头彩'])
-    out = report_action_pick_invest_env_param(
-        gs, SimpleNamespace(idx=0), _SIG)
-    assert out.applied
-    assert provider_calls == [], '零随机支环境零解析'
-    assert list(gs.equips.value) == ['狼狩星徽'], '装备入账分支入栏'
-    boxes = [s for s in gs.bench.value.slots
-             if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '装备 only 环境零开箱效果条目'
-
-
-def test_deterministic_equip_env_grants_without_rng_shenghui_zhixing(
-        provider_calls: list[str]) -> None:
-    """确定性装备环境(T-69 设计 §4 锁 5,治理后形态):盛会之星邀请
-    (邀请族展开卡,equips_immediate only)零随机支 → rng 谓词零解析
-    (provider 不触);选卡后 equips 尾追 '盛会之星星徽'、bench 零落位
-    (无开箱效果条目)——上报 → gain_invest_env → on_env_gained 实机和模拟器两边同链,
-    live/sim 共用语义一条测试覆盖。"""
-    gs = _make_gs(['盛会之星邀请', '轮岗', '头彩'])
-    out = report_action_pick_invest_env_param(
-        gs, SimpleNamespace(idx=0), _SIG)
-    assert out.applied
-    assert provider_calls == [], '零随机支环境零解析'
-    assert list(gs.equips.value) == ['盛会之星星徽'], '装备入账分支入栏'
-    boxes = [s for s in gs.bench.value.slots
-             if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '装备 only 环境零开箱效果条目'
-
-
-def test_deterministic_equip_env_grants_without_rng_zhouzhi_banshen(
-        provider_calls: list[str]) -> None:
-    """确定性装备环境(T-70 设计 §4 锁 5,治理后形态):昼之半神邀请
-    (邀请族展开卡,equips_immediate only)零随机支 → rng 谓词零解析
-    (provider 不触);选卡后 equips 尾追 '昼之半神星徽'、bench 零落位
-    (无开箱效果条目)——上报 → gain_invest_env → on_env_gained 实机和模拟器两边同链,
-    live/sim 共用语义一条测试覆盖。"""
-    gs = _make_gs(['昼之半神邀请', '轮岗', '头彩'])
-    out = report_action_pick_invest_env_param(
-        gs, SimpleNamespace(idx=0), _SIG)
-    assert out.applied
-    assert provider_calls == [], '零随机支环境零解析'
-    assert list(gs.equips.value) == ['昼之半神星徽'], '装备入账分支入栏'
-    boxes = [s for s in gs.bench.value.slots
-             if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '装备 only 环境零开箱效果条目'
-
-
-def test_deterministic_equip_env_grants_without_rng_yezhi_banshen(
-        provider_calls: list[str]) -> None:
-    """确定性装备环境(T-71 设计 §4 锁 5,治理后形态):夜之半神邀请
-    (邀请族展开卡,equips_immediate only)零随机支 → rng 谓词零解析
-    (provider 不触);选卡后 equips 尾追 '夜之半神星徽'、bench 零落位
-    (无开箱效果条目)——上报 → gain_invest_env → on_env_gained 实机和模拟器两边同链,
-    live/sim 共用语义一条测试覆盖。"""
-    gs = _make_gs(['夜之半神邀请', '轮岗', '头彩'])
-    out = report_action_pick_invest_env_param(
-        gs, SimpleNamespace(idx=0), _SIG)
-    assert out.applied
-    assert provider_calls == [], '零随机支环境零解析'
-    assert list(gs.equips.value) == ['夜之半神星徽'], '装备入账分支入栏'
     boxes = [s for s in gs.bench.value.slots
              if s is not None and s.kind == 'supply_box']
     assert boxes == [], '装备 only 环境零开箱效果条目'
@@ -430,42 +286,6 @@ def test_deterministic_equip_env_grants_without_rng_nengliang(
     assert boxes == [], '装备 only 环境零开箱效果条目'
 
 
-def test_deterministic_equip_env_grants_without_rng_ranxue(
-        provider_calls: list[str]) -> None:
-    """确定性装备环境(T-76 设计 §4 锁 5,治理后形态):燃血邀请
-    (邀请族展开卡,equips_immediate only)零随机支 → rng 谓词零解析
-    (provider 不触);选卡后 equips 尾追 '燃血星徽'、bench 零落位
-    (无开箱效果条目)——上报 → gain_invest_env → on_env_gained 实机和模拟器两边同链,
-    live/sim 共用语义一条测试覆盖。"""
-    gs = _make_gs(['燃血邀请', '轮岗', '头彩'])
-    out = report_action_pick_invest_env_param(
-        gs, SimpleNamespace(idx=0), _SIG)
-    assert out.applied
-    assert provider_calls == [], '零随机支环境零解析'
-    assert list(gs.equips.value) == ['燃血星徽'], '装备入账分支入栏'
-    boxes = [s for s in gs.bench.value.slots
-             if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '装备 only 环境零开箱效果条目'
-
-
-def test_deterministic_equip_env_grants_without_rng_jianyi(
-        provider_calls: list[str]) -> None:
-    """确定性装备环境(T-77 设计 §4 锁 5,治理后形态):减益邀请
-    (邀请族展开卡,equips_immediate only)零随机支 → rng 谓词零解析
-    (provider 不触);选卡后 equips 尾追 '减益星徽'、bench 零落位
-    (无开箱效果条目)——上报 → gain_invest_env → on_env_gained 实机和模拟器两边同链,
-    live/sim 共用语义一条测试覆盖。"""
-    gs = _make_gs(['减益邀请', '轮岗', '头彩'])
-    out = report_action_pick_invest_env_param(
-        gs, SimpleNamespace(idx=0), _SIG)
-    assert out.applied
-    assert provider_calls == [], '零随机支环境零解析'
-    assert list(gs.equips.value) == ['减益星徽'], '装备入账分支入栏'
-    boxes = [s for s in gs.bench.value.slots
-             if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '装备 only 环境零开箱效果条目'
-
-
 def test_deterministic_equip_env_grants_without_rng_chixu_shanghai(
         provider_calls: list[str]) -> None:
     """确定性装备环境(T-78 设计 §4 锁 5,治理后形态):持续伤害邀请
@@ -479,42 +299,6 @@ def test_deterministic_equip_env_grants_without_rng_chixu_shanghai(
     assert out.applied
     assert provider_calls == [], '零随机支环境零解析'
     assert list(gs.equips.value) == ['持续伤害星徽'], '装备入账分支入栏'
-    boxes = [s for s in gs.bench.value.slots
-             if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '装备 only 环境零开箱效果条目'
-
-
-def test_deterministic_equip_env_grants_without_rng_liangzi_tongpin(
-        provider_calls: list[str]) -> None:
-    """确定性装备环境(T-79 设计 §4 锁 5,治理后形态):量子同频邀请
-    (邀请族展开卡,equips_immediate only)零随机支 → rng 谓词零解析
-    (provider 不触);选卡后 equips 尾追 '量子同频星徽'、bench 零落位
-    (无开箱效果条目)——上报 → gain_invest_env → on_env_gained 实机和模拟器两边同链,
-    live/sim 共用语义一条测试覆盖。"""
-    gs = _make_gs(['量子同频邀请', '轮岗', '头彩'])
-    out = report_action_pick_invest_env_param(
-        gs, SimpleNamespace(idx=0), _SIG)
-    assert out.applied
-    assert provider_calls == [], '零随机支环境零解析'
-    assert list(gs.equips.value) == ['量子同频星徽'], '装备入账分支入栏'
-    boxes = [s for s in gs.bench.value.slots
-             if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '装备 only 环境零开箱效果条目'
-
-
-def test_deterministic_equip_env_grants_without_rng_zhanjidian_invite(
-        provider_calls: list[str]) -> None:
-    """确定性装备环境(T-80 设计 §4 锁 5,治理后形态):战技点邀请
-    (邀请族展开卡,equips_immediate only)零随机支 → rng 谓词零解析
-    (provider 不触);选卡后 equips 尾追 '战技点星徽'、bench 零落位
-    (无开箱效果条目)——上报 → gain_invest_env → on_env_gained 实机和模拟器两边同链,
-    live/sim 共用语义一条测试覆盖。"""
-    gs = _make_gs(['战技点邀请', '轮岗', '头彩'])
-    out = report_action_pick_invest_env_param(
-        gs, SimpleNamespace(idx=0), _SIG)
-    assert out.applied
-    assert provider_calls == [], '零随机支环境零解析'
-    assert list(gs.equips.value) == ['战技点星徽'], '装备入账分支入栏'
     boxes = [s for s in gs.bench.value.slots
              if s is not None and s.kind == 'supply_box']
     assert boxes == [], '装备 only 环境零开箱效果条目'
@@ -536,51 +320,6 @@ def test_deterministic_equip_env_grants_without_rng_huanyu_invite(
     boxes = [s for s in gs.bench.value.slots
              if s is not None and s.kind == 'supply_box']
     assert boxes == [], '装备 only 环境零开箱效果条目'
-
-
-def test_deterministic_equip_env_grants_without_rng_mingyun_shengbei(
-        provider_calls: list[str]) -> None:
-    """确定性装备环境(T-82 设计 §4 锁 5,治理后形态):命运圣杯邀请
-    (邀请族收官卡,equips_immediate only)零随机支 → rng 谓词零解析
-    (provider 不触);选卡后 equips 尾追 '命运圣杯星徽'、bench 零落位
-    (无开箱效果条目)——上报 → gain_invest_env → on_env_gained 实机和模拟器两边同链,
-    live/sim 共用语义一条测试覆盖。"""
-    gs = _make_gs(['命运圣杯邀请', '轮岗', '头彩'])
-    out = report_action_pick_invest_env_param(
-        gs, SimpleNamespace(idx=0), _SIG)
-    assert out.applied
-    assert provider_calls == [], '零随机支环境零解析'
-    assert list(gs.equips.value) == ['命运圣杯星徽'], '装备入账分支入栏'
-    boxes = [s for s in gs.bench.value.slots
-             if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '装备 only 环境零开箱效果条目'
-
-
-# ==================== 环境道具双件(专家研讨会)====================
-# (设计 = 原稿锁面 T- 专家研讨会设计 §4 锁 7)
-
-
-def test_expert_seminar_pick_grants_two_item_slots_no_rng(
-        provider_calls: list[str]) -> None:
-    """实机和模拟器两边同链(T-39 设计 §4 锁 7):report_action_pick_invest_env_param
-    ('专家研讨会') → gain_invest_env → on_env_gained 道具通道 → bench 落
-    两槽,kind 序 = ['bookcard', 'supply_box'] 且 item 逐槽 = 卡文名
-    (live/sim 共用语义一条覆盖);零随机支 → rng 谓词零解析(条件行锁,
-    默认环境局 rng 消耗序列逐位不变)。"""
-    gs = _make_gs(['专家研讨会', '轮岗', '头彩'])
-    out = report_action_pick_invest_env_param(
-        gs, SimpleNamespace(idx=0), _SIG)
-    assert out.applied
-    assert provider_calls == [], '零随机支环境零解析'
-    assert (gs.active_env.value or '') == '专家研讨会', '选择事实写值'
-    slots = [(s.kind, s.item) for s in gs.bench.value.slots
-             if s is not None and s.kind != 'empty']
-    assert slots == [('bookcard', '专家邀请函'),
-                     ('supply_box', '简易武装箱')], f'两槽卡文序: {slots}'
-
-
-# ==================== 开局替换型赠卡(人才储备)====================
-# (设计 = 原稿锁面 T- 设计 §4 锁 5)
 
 
 def test_opening_replace_env_pick_bench_three_not_seven(
