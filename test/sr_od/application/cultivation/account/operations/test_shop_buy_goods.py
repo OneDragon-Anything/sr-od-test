@@ -15,11 +15,6 @@
 from __future__ import annotations
 
 import pytest
-
-from sr_od.application.cultivation.account.operations.shop_buy_goods import (
-    ExchangeShopBuyGoods,
-    parse_monthly_left,
-)
 from test.conftest import SrTestContext
 from test.harness.fixture_controller import (
     FixtureController,
@@ -27,6 +22,11 @@ from test.harness.fixture_controller import (
     enter_running_state,
     fast_sleep,
     reset_running_state,
+)
+
+from sr_od.application.cultivation.account.operations.shop_buy_goods import (
+    ExchangeShopBuyGoods,
+    parse_monthly_left,
 )
 
 _FIRST_SCREEN = ('商店', '余烬兑换-首屏通票')
@@ -174,6 +174,9 @@ def test_count_over_monthly_fails(
     assert not result.success, '超月限应显式失败而非截断执行'
     assert '超本期限剩余' in (result.status or ''), \
         f'失败原因应指明月限超限:{result.status!r}'
+    assert result.data['fail_status'] == 'INSUFFICIENT_MATERIALS', \
+        f'超月限应带 INSUFFICIENT_MATERIALS 语义:{result.data}'
+    assert result.data['goods'] == 'pass', f'goods 应为英文标识符: {result.data}'
     assert not fixture_controller.click_hit_area('商店-兑换弹窗', '按钮-确认'), \
         '超限场景不得触碰确认按钮'
 
@@ -192,6 +195,8 @@ def test_first_screen_not_found_fails(
     assert not result.success, '首屏模式未命中应显式失败'
     assert '首屏未找到' in (result.status or ''), \
         f'失败原因应指明首屏未找到:{result.status!r}'
+    assert result.data['fail_status'] == 'NOT_FOUND', \
+        f'首屏未命中应带 NOT_FOUND 语义:{result.data}'
     assert not fixture_controller.click_hit_area('商店', '卡槽-网格基准'), \
         '未命中目标不得点击任何商品卡'
 
@@ -214,6 +219,8 @@ def test_scroll_then_sold_out_intercept(
     assert not result.success, '已售罄卡应拦截失败'
     assert '已售罄' in (result.status or ''), \
         f'失败原因应指明已售罄角标:{result.status!r}'
+    assert result.data['fail_status'] == 'SOLD_OUT', \
+        f'已售罄角标应带 SOLD_OUT 语义:{result.data}'
     assert not fixture_controller.click_hit_area('商店', '卡槽-网格基准'), \
         '不可购卡不得点击(防进弹窗误触确认)'
     assert not fixture_controller.click_hit_area('商店-兑换弹窗', '按钮-确认')
@@ -232,10 +239,29 @@ def test_popup_reentry_sold_out_bar(
     assert not result.success, '售罄横条应显式失败'
     assert '已售罄' in (result.status or ''), \
         f'失败原因应指明售罄横条:{result.status!r}'
+    assert result.data['fail_status'] == 'SOLD_OUT', \
+        f'售罄横条应带 SOLD_OUT 语义:{result.data}'
     assert fixture_controller.click_hit_area('商店-兑换弹窗', '按钮-取消'), \
         '横条分支应点取消关闭弹窗'
     assert not fixture_controller.click_hit_area('商店-兑换弹窗', '按钮-确认'), \
         '售罄弹窗不得触碰确认按钮'
+
+
+def test_popup_title_mismatch_unexpected_fail(
+    test_context: SrTestContext,
+    fixture_controller: FixtureController,
+) -> None:
+    """弹窗重入但商品名不符:无 fail_status = 非预期失败(编排按中止处理)。"""
+    _require_screens(test_context, [_POPUP_PASS])
+    fixture_controller.set_phases([{'frame': _POPUP_PASS}])
+    op = _WatchedBuy(test_context, 'special_pass', count=1, tab='embers')
+    result = _run_execute(test_context, op)
+
+    assert not result.success, '弹窗商品名与目标不符应失败'
+    assert 'fail_status' not in (result.data or {}), \
+        f'弹窗名不符属非预期失败,不得带 fail_status:{result.data}'
+    assert not fixture_controller.click_hit_area('商店-兑换弹窗', '按钮-确认'), \
+        '弹窗名不符不得触碰确认按钮'
 
 
 _CONTRACT_FRAME = ('商店-协议商店', 'default')
