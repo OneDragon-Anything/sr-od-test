@@ -676,15 +676,16 @@ class TestUpgradeCharacterFarmRoute:
         assert not clicks2, f'刷取进行中重入不得有任何点击,clicks={clicks2}'
 
         # 用例3:开拓力补充弹窗在场(确认被拦,结果框永不出现) → 置判停标志、
-        # 回滚确认前计数,以 POWER_BLOCKED 交返回分类原路清场
+        # 作废本轮次数记录(本轮未成交未记账,不动历史账),以 POWER_BLOCKED
+        # 交返回分类原路清场
         state3 = _install_script(
             monkeypatch, test_context,
             [{('开拓力补充弹窗', '标题-开拓力补充弹窗')}], level=40)
         clicks3 = _record_controller_clicks(monkeypatch, test_context, state3)
         op3 = _WatchedUpgradeCharacter(test_context, farm_dungeon=True)
         op3._init_watchdog()  # type: ignore[attr-defined]
-        op3._farm_draws = 5      # 预置确认前已记账
-        op3._farm_times_set = 2  # 本轮确认框设到的次数
+        op3._farm_draws = 3      # 前轮已成交的历史账
+        op3._farm_times_set = 3  # 本轮确认已设未成交
         result3 = _call_node(op3, 'confirm_ticket_farm')
         assert result3.is_success and result3.status == 'POWER_BLOCKED', (
             f'补充弹窗在场应以 POWER_BLOCKED 交返回分类清场,status={result3.status}'
@@ -694,8 +695,9 @@ class TestUpgradeCharacterFarmRoute:
         )
         assert op3._farm_rounds == 0, '判停路径不得重复计数'
         assert op3._farm_draws == 3, (
-            f'本轮未成交应回滚记账(5-2=3),实际 {op3._farm_draws}'
+            f'未成交不动历史账(3 保持 3,既不抹账也不出负数),实际 {op3._farm_draws}'
         )
+        assert op3._farm_times_set == 0, '本轮次数记录应作废归零'
         assert not clicks3, f'判停路径不得有任何点击,clicks={clicks3}'
 
     def test_confirm_count_on_effective_click(
@@ -703,7 +705,13 @@ class TestUpgradeCharacterFarmRoute:
     ) -> None:
         """券确认记账在确认点击生效后才发生:确认点击未生效的 WAIT 重入轮
         只重发确认(不重复设次数、不重复记账)——确认框在场重入若重复记账
-        会虚报消耗。"""
+        会虚报消耗,重跑次数设置会多点「+」。"""
+        set_calls = {'n': 0}
+        real_set = UpgradeCharacterOp._set_farm_times
+
+        def _counting_set(op_self, target):
+            set_calls['n'] += 1
+            return real_set(op_self, target)
 
         def _fake_click_with_miss(op_self, screen, s_name, a_name, *args, **kwargs):
             state['find_clicks'].append((s_name, a_name))
@@ -727,6 +735,7 @@ class TestUpgradeCharacterFarmRoute:
         op._init_watchdog()  # type: ignore[attr-defined]
         monkeypatch.setattr(UpgradeCharacterOp, 'round_by_find_and_click_area',
                             _fake_click_with_miss)
+        monkeypatch.setattr(UpgradeCharacterOp, '_set_farm_times', _counting_set)
         enter_running_state(op.ctx)
         try:
             with fast_sleep(op):
@@ -742,6 +751,59 @@ class TestUpgradeCharacterFarmRoute:
             f'重入轮不得重复记账,rounds={op._farm_rounds}'
         )
         assert op._farm_draws == 1, f'重入轮不得重复记账,draws={op._farm_draws}'
+        # 次数设置幂等:重入轮(_farm_times_set 非零)不得重跑 _set_farm_times
+        assert set_calls['n'] == 1, (
+            f'重入轮不得重复设次数,set 调用 {set_calls["n"]} 次'
+        )
+
+    def test_confirm_accounting_on_result_reentry(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """真时序记账回归:带 until 的 helper 一次调用只点击一次、until 验证
+        在下一次调用开头——重入轮结果框探测先于 helper 命中,记账必须挂在
+        RESULT_OPEN(结果框=领奖完成)而非仅 helper success,否则生产时序下
+        记账分支不可达(预算失效+统计恒 0)。桩按真实 helper 时序仿真:
+        确认点击恒返回 WAIT(until 未满足),重入轮由结果框守卫接管记账。"""
+
+        def _timing_faithful_click(op_self, screen, s_name, a_name, *args, **kwargs):
+            state['find_clicks'].append((s_name, a_name))
+            if (s_name, a_name) == (_FAST_FARM_DIALOG, '按钮-确认快速刷取'):
+                # 真实 helper 时序:点击发出,until(结果框)下轮开头才验证
+                return op_self.round_wait(status=a_name, wait=2)
+            test_context.controller.click(_rect_center(test_context, s_name, a_name))
+            return op_self.round_success(status=a_name)
+
+        scenes = [
+            {(_ASCEND, '标题-等级提升'), (_FAST_FARM_DIALOG, '标题-快速刷取弹窗')},
+            {(_ASCEND, '标题-等级提升'), (_FAST_FARM_DIALOG, '标题-快速刷取弹窗'),
+             (_FAST_FARM_RESULT, '按钮-关闭刷取结果')},  # 重入轮:结果框已出现
+        ]
+        state = _install_script(monkeypatch, test_context, scenes, level=40)
+        state['round'] = 0  # 直呼节点:确认框在场轮(结果框未出现)
+        _record_controller_clicks(monkeypatch, test_context, state)
+        op = _WatchedUpgradeCharacter(test_context, farm_dungeon=True,
+                                      farm_times_per_round=1)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        monkeypatch.setattr(UpgradeCharacterOp, 'round_by_find_and_click_area',
+                            _timing_faithful_click)
+        enter_running_state(op.ctx)
+        try:
+            with fast_sleep(op):
+                first = op.confirm_ticket_farm()
+                state['round'] = 1  # 直呼节点手工推进场景轮(结果框本轮出现)
+                second = op.confirm_ticket_farm()
+        finally:
+            reset_running_state(op.ctx, op)
+        assert first.result == OperationRoundResultEnum.WAIT, (
+            f'首调点击后 until 未满足应 WAIT,result={first.result}'
+        )
+        assert second.is_success and second.status == 'RESULT_OPEN', (
+            f'重入轮结果框在场应 RESULT_OPEN,status={second.status}'
+        )
+        assert op._farm_rounds == 1 and op._farm_draws == 1, (
+            f'结果框重入轮必须记账(否则预算失效+统计恒 0),'
+            f'rounds={op._farm_rounds},draws={op._farm_draws}'
+        )
 
     def test_capped_exit_reports_stop_status(
         self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
