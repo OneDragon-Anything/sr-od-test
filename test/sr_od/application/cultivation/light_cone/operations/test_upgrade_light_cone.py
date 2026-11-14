@@ -154,6 +154,7 @@ def _install_script(
         if (s_name, a_name) == (_CHALLENGE, '队伍标题') \
                 and state.get('squad_clicked'):
             state['screen_now'] = _BATTLE
+            state['squad_clicked'] = False  # 画态翻转只发生一次(编队已散)
         if (s_name, a_name) == (_BATTLE, '按钮-退出关卡') \
                 and state.get('screen_now') != _BATTLE:
             state['events'] = state.get('events', [])
@@ -655,6 +656,69 @@ class TestUpgradeLightConeBranches:
             f'连等超限应显式失败,status={results[3].status}'
         )
         assert '连续未打开' in str(results[3].status)
+
+    def test_farm_window_spin_bounded(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """快速刷取静默无反应(点击假成功但窗口不开)的有界自旋:helper 恒
+        WAIT 不计重试,原样透传会无限自旋——连等 4 轮超限转 FARM_WINDOW_FAIL
+        判停(现场留证由 save_screenshot 承担,测试内桩掉)。"""
+
+        def _fake_wait_click(op_self, screen, s_name, a_name, *args, **kwargs):
+            state['find_clicks'].append((s_name, a_name))
+            return op_self.round_wait(status=a_name, wait=1.5)
+
+        state = _install_script(monkeypatch, test_context, [set()], level=40)
+        _record_controller_clicks(monkeypatch, test_context, state)
+        op = _WatchedUpgradeLightCone(test_context, farm_dungeon=True)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        monkeypatch.setattr(UpgradeLightConeOp, 'round_by_find_and_click_area',
+                            _fake_wait_click)
+        monkeypatch.setattr(UpgradeLightConeOp, 'save_screenshot',
+                            lambda self, prefix='': '')
+        enter_running_state(op.ctx)
+        try:
+            with fast_sleep(op):
+                results = [op.open_farm_window() for _ in range(4)]
+        finally:
+            reset_running_state(op.ctx, op)
+        assert all(r.result == OperationRoundResultEnum.WAIT
+                   for r in results[:3]), (
+            f'前三轮应 WAIT,results={[(r.status, r.result) for r in results]}'
+        )
+        assert results[3].is_success and results[3].status == 'FARM_WINDOW_FAIL', (
+            f'连等超限应转 FARM_WINDOW_FAIL 判停,status={results[3].status}'
+        )
+        assert op._capped is True and op._stop_status == 'LIGHT_CONE_CAPPED', (
+            '连等超限判停应置光锥停因'
+        )
+
+    def test_back_after_farm_closes_team_screen(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """编队画面清场(手动路线开拓力被拦取消补充弹窗后/编队残留的落点):
+        队伍标题在场时点右上 X(与副本关闭钮同槽位)回副本画面再逐层回退
+        ——无此分支会落进「未识别画面」空转耗尽节点预算。"""
+        state = _install_script(
+            monkeypatch, test_context,
+            [{(_CHALLENGE, '队伍标题')}], level=40)
+        clicks = _record_controller_clicks(monkeypatch, test_context, state)
+        op = _WatchedUpgradeLightCone(test_context, farm_dungeon=True,
+                                      use_fast_ticket=False)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        enter_running_state(op.ctx)
+        try:
+            with fast_sleep(op):
+                result = op.back_after_farm()
+        finally:
+            reset_running_state(op.ctx, op)
+        assert not result.is_success \
+            and '编队画面已关' in str(result.status), (
+            f'编队画面应点 X 回副本画面重入分类,status={result.status}'
+        )
+        assert _has_click_in(clicks, test_context, _CHALLENGE, '按钮-关闭副本'), (
+            f'应点击右上 X(与关闭副本同槽位),clicks={clicks}'
+        )
 
     def test_manual_fight_returns_to_world_and_reenters(
         self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
