@@ -29,7 +29,14 @@ from sr_od.application.currency_war.kernel.cw_affix_effects import (
     AFFIX_EFFECT_SPECS,
 )
 from sr_od.application.currency_war.kernel.cw_effect_inventory import (
+    BOARD_REWRITE_SELL_ALL_DEAL,
     BOARD_REWRITE_UPGRADE_ALL,
+    BattlefieldEffect,
+    DutyFlags,
+    DurationKind,
+    EffectKind,
+    EffectSpec,
+    TriggerKind,
     STRATEGY_CAPACITY_EXPIRY_ASSUMPTION_KEYS,
     STRATEGY_ON_MERGE_LIVE_UNVERIFIED,
     STRATEGY_SALVAGE_ASSUMPTION_KEYS,
@@ -72,7 +79,14 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
 
 _SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep', mode='read')
 
-_SELL_ALL = STRATEGY_EFFECTS['人力重组']
+# 板面重写测试载荷直构(机制桥 fixture 解耦:原取注册表['人力重组'],该卡
+# V4.7 退场;桥行为只消费 payload,与注册表解耦后机制锁面不变)
+_SELL_ALL = EffectSpec(
+    id='102801', name='人力重组', trigger=TriggerKind.INSTANT,
+    duration=DurationKind.ONCE, category=EffectKind.BATTLEFIELD,
+    payload=BattlefieldEffect(board_rewrite=BOARD_REWRITE_SELL_ALL_DEAL),
+    duties=DutyFlags(predict=True),
+)
 
 
 def _seeded_gs() -> GameState:
@@ -223,7 +237,7 @@ def test_board_rewrite_clear_then_front_deploy_no_crash() -> None:
         back_slots=[_u('刃'), None, None, None, None, None]), sig=_SIG_OBS)
     gs.observe(gs.gold, 10, sig=_SIG_OBS)
 
-    report = apply_board_rewrite(gs, STRATEGY_EFFECTS['人力重组'])
+    report = apply_board_rewrite(gs, _SELL_ALL)
     assert report is not None and 'deployed' in report.cleared_fields
 
     view = gs.deployed.value
