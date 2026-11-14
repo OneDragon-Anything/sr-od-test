@@ -20,6 +20,15 @@ upgrade-ops-adaptation/details/trace-rework.md):
   两轮门控探测)/连点封顶漏检兜底;
 - 收尾关面板:一切出口必经,_final_status 携带终态,连等封顶。
 
+对齐批增量锁面(docs/develop/sr_od/application/cultivation/changes/
+upgrade-align-2/design.md):
+- 事务式记账:确认点击不动账,结果框在场才 settle 落账(判据位=已设未
+  记账;确认未生效重入轮跳过设次数只重发确认);
+- 开拓力守卫:「开拓力补充弹窗」链探测首位识别,点取消原路清场后
+  POWER_CAPPED 可恢复判停(确认钮=星琼红线,画面档无该 area);
+- 补料优先级(负责人裁定:通用材料补全 → 券刷 → 手动战斗):缺料可合成
+  形态授权补全时优先补全、不刷取。
+
 判据同步声明(landing 3.3):旧契约剧本(树态起点/open_panel 节点/点击区-节点-*/
 auto_farm 参数/「升满当前上限」独立出口)随面板态重构整体失配,本文件按新
 契约全量改写;level_reads 语义 = 判停读取一次(收尾读数为新增的
@@ -317,7 +326,7 @@ class TestUpgradeLoop:
         轮次walk:入口{开关} → r1{开关+合成钮}(判停) → 收尾{开关}→{无}。"""
         clicks = _record_controller_clicks(monkeypatch, test_context)
         op = _WatchedUpgradeTrace(test_context)
-        state = _install_script(
+        _install_script(
             monkeypatch, test_context,
             # 逐查询序:入口开关 → r1(弹窗/满级miss/开关→分类→快升miss→
             # 补全miss→合成钮→未授权判停) → 收尾(开关→关面板/开关miss→
@@ -347,7 +356,7 @@ class TestUpgradeLoop:
         /{开关miss→落账}。"""
         clicks = _record_controller_clicks(monkeypatch, test_context)
         op = _WatchedUpgradeTrace(test_context, fill_generic=True)
-        state = _install_script(
+        _install_script(
             monkeypatch, test_context,
             [{(_TRACE, '开关-简略描述')},
              set(), set(), {(_TRACE, '开关-简略描述')},
@@ -398,6 +407,53 @@ class TestUpgradeLoop:
             '遮罩期与收尾按负责人方案盲点安全域空白'
         )
 
+    def test_dual_auth_prefills_generic_over_farm(
+            self, test_context: SrTestContext,
+            monkeypatch: pytest.MonkeyPatch) -> None:
+        """补料优先级翻转锁(负责人裁定:通用材料补全 → 券刷 → 手动战斗,
+        见 docs/develop/sr_od/application/cultivation/changes/
+        upgrade-align-2/design.md §4):缺料可合成形态(「使用通用材料补全」
+        钮在场)双授权(fill_generic=True + farm_dungeon=True)时必须优先
+        补全——不转券刷路由、不点面板「快速刷取」、_farm_rounds 恒零;
+        该组合旧行为走券刷,是本项唯一行为变化点。
+
+        轮次walk(fill_generic=True):入口{开关} → r1(弹窗/满级/开关→分类→
+        快升miss→补全钮→点补全钮) → r2(弹窗→点确认) → r3 遮罩期(全miss→
+        盲点空白) → r4(弹窗/满级/开关→分类→快速升级→升级) → r5(弹窗miss/
+        满级→分类→MAX_LEVEL) → 收尾{开关→关面板}/{开关miss→落账}。"""
+        clicks = _record_controller_clicks(monkeypatch, test_context)
+        op = _WatchedUpgradeTrace(test_context, fill_generic=True,
+                                  farm_dungeon=True)
+        state = _install_script(
+            monkeypatch, test_context,
+            [{(_TRACE, '开关-简略描述')},
+             set(), set(), {(_TRACE, '开关-简略描述')},
+             set(), {(_TRACE, '按钮-通用材料补全')},
+             {(_TRACE, '标题-材料补全弹窗')},
+             set(), set(), set(),
+             set(), set(), {(_TRACE, '开关-简略描述')},
+             {(_TRACE, '按钮-快速升级')},
+             set(), {(_TRACE, '文本-已达最大等级')},
+             {(_TRACE, '开关-简略描述')}, set()],
+            categories=['天赋', '天赋', '天赋', '天赋'], level=4)
+
+        result = _run_op(op)
+
+        assert result.success and result.status == 'MAX_LEVEL', (
+            f'双授权应走补全链升满,status={result.status},'
+            f'find_events={state["find_events"]}'
+        )
+        assert _has_click_in(clicks, test_context, _TRACE, '按钮-通用材料补全'), (
+            '双授权 ⑤ 形态必须优先点通用材料补全'
+        )
+        assert _has_click_in(clicks, test_context, _TRACE, '按钮-确认材料补全'), (
+            '补全链应走通到确认弹窗'
+        )
+        assert not _has_click_in(clicks, test_context, _TRACE, '按钮-快速刷取'), (
+            '授权补全时不得转券刷(不点面板「快速刷取」开窗)'
+        )
+        assert op._farm_rounds == 0, '授权补全时零券刷轮'
+
 class TestFarmTicketChain:
     """券刷新链:路由→开窗→券按钮→连刷设置→确认→收口回面板→升级。"""
 
@@ -405,12 +461,15 @@ class TestFarmTicketChain:
             self, test_context: SrTestContext,
             monkeypatch: pytest.MonkeyPatch) -> None:
         """缺料+farm_dungeon 预算内 → 券刷链全走(开窗/券按钮/连刷设置/
-        确认/关结果框/关窗口)→ 回面板 → 继续升级至满级;_farm_rounds=1。
+        确认/关结果框/关窗口)→ 回面板 → 继续升级至满级;结果框轮 settle
+        恰一次(_farm_rounds=1)。
 
-        轮次walk(farm_times_per_round=-1 → 拉满钮+桩读数5):
-        入口{开关} → r1{开关+补全钮}(NEED_FARM) → 链r1{窗口+行锚}(点券钮)
-        → 链r2{弹窗+确认钮}(拉满+确认) → 链r3{弹窗}(连刷中) → 链r4{结果框}
-        → 链r5{窗口}(关窗) → 链r6{开关}(回面板) → r2{开关+快速升级}(升级)
+        轮次walk(farm_times_per_round=-1 → 拉满钮+桩读数5;链内每轮首格 =
+        守卫探测「开拓力补充弹窗」miss):
+        入口{开关} → r1{开关+补全钮}(NEED_FARM) → 链r1{开关+toast miss}
+        (点面板钮开窗) → 链r2{窗口+行锚}(点券钮) → 链r3{弹窗+确认钮}
+        (拉满+确认) → 链r4{弹窗}(连刷中) → 链r5{结果框}(settle+关) →
+        链r6{窗口}(关窗) → 链r7{开关}(回面板) → r2{开关+快速升级}(升级)
         → r3{满级锚}(MAX_LEVEL) → 收尾{开关}→{无}。"""
         clicks = _record_controller_clicks(monkeypatch, test_context)
         op = _WatchedUpgradeTrace(test_context, farm_dungeon=True,
@@ -418,27 +477,31 @@ class TestFarmTicketChain:
         state = _install_script(
             monkeypatch, test_context,
             # 逐查询序(farm_times_per_round=-1 → 拉满钮+桩读数5;find_and_click
-            # 各消耗一格):
+            # 各消耗一格;链内每轮首格 = 守卫探测 miss):
             # 入口开关 → r1(弹窗/满级/开关→分类→快速升级miss→补全钮→NEED_FARM)
-            # → 链(弹窗miss/结果框miss/窗口+行锚→点券钮) → 链(弹窗+确认钮→拉满+确认)
-            # → 链(弹窗+确认钮miss→连刷中) → 链(弹窗miss/结果框→关,controller 点击)
-            # → 链(弹窗/结果框miss/窗口→关窗) → 链(弹窗/结果框/窗口miss/开关→回面板)
-            # → r2(弹窗/满级/开关→分类→快速升级→升级) → r3(弹窗/满级→MAX_LEVEL)
+            # → 链(守卫/弹窗/结果框/窗口miss/开关→toast miss→点面板钮)
+            # → 链(守卫/弹窗/结果框miss/窗口+行锚→点券钮)
+            # → 链(守卫miss/弹窗+确认钮→拉满+确认)
+            # → 链(守卫miss/弹窗命中/确认钮miss→连刷中)
+            # → 链(守卫/弹窗miss/结果框→settle+关,controller 点击)
+            # → 链(守卫/弹窗/结果框miss/窗口→关窗)
+            # → 链(守卫/弹窗/结果框/窗口miss/开关→回面板)
+            # → r2(弹窗/满级/开关→分类→快速升级→升级) → r3(弹窗miss/满级→MAX_LEVEL)
             # → 收尾(开关→关面板/开关miss→落MAX_LEVEL)
             [{(_TRACE, '开关-简略描述')},
              set(), set(), {(_TRACE, '开关-简略描述')},
              set(), {(_TRACE, '按钮-通用材料补全')},
-             set(), set(), set(), {(_TRACE, '开关-简略描述')},
+             set(), set(), set(), set(), {(_TRACE, '开关-简略描述')},
              set(),
-             set(), set(), {(_RESOURCE_WINDOW := '培养资源窗口', '标题-培养资源窗口')},
+             set(), set(), set(), {(_RESOURCE_WINDOW := '培养资源窗口', '标题-培养资源窗口')},
              {(_RESOURCE_WINDOW, '行锚-本周可领取奖励次数')},
-             {(_FAST := '快速刷取弹窗', '标题-快速刷取弹窗')},
+             set(), {(_FAST := '快速刷取弹窗', '标题-快速刷取弹窗')},
              {(_FAST, '按钮-确认快速刷取')},
-             {(_FAST, '标题-快速刷取弹窗')}, set(),
-             set(), {(_RES := '快速刷取结果弹窗', '按钮-关闭刷取结果')},
-             set(), set(), {(_RESOURCE_WINDOW, '标题-培养资源窗口')},
+             set(), {(_FAST, '标题-快速刷取弹窗')}, set(),
+             set(), set(), {(_RES := '快速刷取结果弹窗', '按钮-关闭刷取结果')},
+             set(), set(), set(), {(_RESOURCE_WINDOW, '标题-培养资源窗口')},
              set(),
-             set(), set(), set(), {(_TRACE, '开关-简略描述')},
+             set(), set(), set(), set(), {(_TRACE, '开关-简略描述')},
              set(), set(), {(_TRACE, '开关-简略描述')},
              {(_TRACE, '按钮-快速升级')},
              set(), {(_TRACE, '文本-已达最大等级')},
@@ -451,8 +514,8 @@ class TestFarmTicketChain:
         assert result.success and result.status == 'MAX_LEVEL', (
             f'券刷链回面板后应继续升满,status={result.status}'
         )
-        assert op._farm_rounds == 1, '券刷确认一轮后 _farm_rounds=1'
-        assert op._farm_times_set == 0, '确认后记账值消费清零(实际值在确认轮日志)'
+        assert op._farm_rounds == 1, '结果框轮 settle 恰一次,_farm_rounds=1'
+        assert op._farm_times_set == 0, '结果框轮 settle 落账后判据位清零'
         assert _has_click_in(clicks, test_context, _RESOURCE_WINDOW,
                              '按钮-花萼行券按钮'), '资源窗口应点花萼行券按钮'
         assert not _has_click_in(clicks, test_context, _RESOURCE_WINDOW,
@@ -467,7 +530,9 @@ class TestFarmTicketChain:
         """P0 回归锁(面板钮开窗):券刷链入口窗未开时必须由链内点击面板
         「快速刷取」开窗——旧实现面板态只回交升级循环,无人点钮,NEED_FARM
         ↔ 回面板无限乒乓(双方 SUCCESS 重试计数永不累积)。全链走通到满级,
-        toast 探测仅链入口轮查询一次(窗口出现后门控复位不再探)。"""
+        toast 探测仅链入口轮查询一次(窗口出现后门控复位不再探)。
+
+        轮次walk 同 routes_through_chain(链内每轮首格 = 守卫探测 miss)。"""
         clicks = _record_controller_clicks(monkeypatch, test_context)
         op = _WatchedUpgradeTrace(test_context, farm_dungeon=True,
                                   farm_rounds_max=1)
@@ -478,20 +543,30 @@ class TestFarmTicketChain:
             [{(_TRACE, '开关-简略描述')},
              set(), set(), {(_TRACE, '开关-简略描述')},
              set(), {(_TRACE, '按钮-通用材料补全')},
-             set(), set(), set(), {(_TRACE, '开关-简略描述')},
+             # 链r1(守卫/弹窗/结果框/窗口miss/开关→toast miss→点面板钮):
+             set(), set(), set(), set(), {(_TRACE, '开关-简略描述')},
              set(),
-             set(), set(), {(_win, '标题-培养资源窗口')},
+             # 链r2(守卫/弹窗/结果框miss/窗口+行锚→点券钮):
+             set(), set(), set(), {(_win, '标题-培养资源窗口')},
              {(_win, '行锚-本周可领取奖励次数')},
-             {(_fast, '标题-快速刷取弹窗')},
+             # 链r3(守卫miss/弹窗+确认钮→拉满+确认):
+             set(), {(_fast, '标题-快速刷取弹窗')},
              {(_fast, '按钮-确认快速刷取')},
-             {(_fast, '标题-快速刷取弹窗')}, set(),
-             set(), {(_res, '按钮-关闭刷取结果')},
-             set(), set(), {(_win, '标题-培养资源窗口')},
+             # 链r4(守卫miss/弹窗命中/确认钮miss→连刷中):
+             set(), {(_fast, '标题-快速刷取弹窗')}, set(),
+             # 链r5(守卫/弹窗miss/结果框→关,controller 点击):
+             set(), set(), {(_res, '按钮-关闭刷取结果')},
+             # 链r6(守卫/弹窗/结果框miss/窗口→关窗):
+             set(), set(), set(), {(_win, '标题-培养资源窗口')},
              {(_win, '按钮-关闭资源窗口')},
-             set(), set(), set(), {(_TRACE, '开关-简略描述')},
+             # 链r7(守卫/弹窗/结果框/窗口miss/开关→回面板):
+             set(), set(), set(), set(), {(_TRACE, '开关-简略描述')},
+             # r2(弹窗/满级/开关→分类→快速升级→升级):
              set(), set(), {(_TRACE, '开关-简略描述')},
              {(_TRACE, '按钮-快速升级')},
+             # r3(弹窗miss/满级→MAX_LEVEL):
              set(), {(_TRACE, '文本-已达最大等级')},
+             # 收尾(开关→关面板/开关miss→落MAX_LEVEL):
              {(_TRACE, '开关-简略描述')}, set()],
             categories=['天赋', '天赋', '天赋', '天赋'], level=5, farm_times_read=5)
 
@@ -524,12 +599,17 @@ class TestFarmTicketChain:
                             lambda self, prefix='': '')
         state = _install_script(
             monkeypatch, test_context,
+            # 链内每轮首格 = 守卫探测「开拓力补充弹窗」miss。
+            # 入口开关 → r1(弹窗/满级miss/开关→分类→快升miss/补全钮→NEED_FARM)
+            # → 链r1(守卫/弹窗/结果框/窗口miss/开关→toast miss→点面板钮)
+            # → 链r2(守卫/弹窗/结果框/窗口miss/开关→toast 命中→判停)
+            # → 收尾(开关→关面板/开关miss→落MATERIAL_CAPPED)
             [{(_TRACE, '开关-简略描述')},
              set(), set(), {(_TRACE, '开关-简略描述')},
              set(), {(_TRACE, '按钮-通用材料补全')},
-             set(), set(), set(), {(_TRACE, '开关-简略描述')},
+             set(), set(), set(), set(), {(_TRACE, '开关-简略描述')},
              set(),
-             set(), set(), set(), {(_TRACE, '开关-简略描述')},
+             set(), set(), set(), set(), {(_TRACE, '开关-简略描述')},
              {(_TRACE, '提示-无可刷缺口')},
              {(_TRACE, '开关-简略描述')}, set()],
             categories=['天赋', '天赋'], level=5)
@@ -569,12 +649,16 @@ class TestFarmTicketChain:
                             lambda self, prefix='': '')
         state = _install_script(
             monkeypatch, test_context,
+            # 链内每轮首格 = 守卫探测「开拓力补充弹窗」miss。
+            # 入口开关 → r1(→NEED_FARM) → 链r1/r2/r3(守卫miss/弹窗/结果框/
+            # 窗口miss/开关命中→点面板钮;计数 2 起 toast 探测被门控抑制,
+            # 第 3 轮计数 4 触发封顶判停) → 收尾(开关→关面板/开关miss→落账)
             [{(_TRACE, '开关-简略描述')},
              set(), set(), {(_TRACE, '开关-简略描述')},
              set(), {(_TRACE, '按钮-通用材料补全')},
-             set(), set(), set(), {(_TRACE, '开关-简略描述')},
-             set(), set(), set(), {(_TRACE, '开关-简略描述')},
-             set(), set(), set(), {(_TRACE, '开关-简略描述')},
+             set(), set(), set(), set(), {(_TRACE, '开关-简略描述')},
+             set(), set(), set(), set(), {(_TRACE, '开关-简略描述')},
+             set(), set(), set(), set(), {(_TRACE, '开关-简略描述')},
              {(_TRACE, '开关-简略描述')}, set()],
             categories=['天赋', '天赋'], level=5)
 
@@ -593,3 +677,140 @@ class TestFarmTicketChain:
             f'计数 2 起应再点 2 次到封顶,实际 {len(panel_clicks)},clicks={clicks}'
         )
         assert op._end_level == 5
+
+    def test_confirm_miss_rerun_skips_set_and_settles_once(
+            self, test_context: SrTestContext,
+            monkeypatch: pytest.MonkeyPatch) -> None:
+        """事务式记账(设计 upgrade-align-2 §2,对齐 char/LC 口径):确认
+        点击未生效的重入轮凭判据位(非零=已设未记账)跳过设次数只重发
+        确认(拉满钮恰点 1 次不重复);连刷慢询轮零点击零记账;账只在结果
+       框轮 settle 恰一次(_farm_rounds=1 不因重发虚增)。
+
+        轮次walk:入口{开关} → r1(→NEED_FARM) → 链r1(点面板钮) → 链r2
+        (点券钮) → 链r3(拉满+确认#1) → 链r4(确认未生效,判据位非零→跳过
+        设次数重发确认#2) → 链r5(确认钮miss→慢询,零副作用) → 链r6(结果
+        框→settle+关) → 链r7(关窗) → 链r8(回面板) → r2(满级→MAX_LEVEL)
+        → 收尾。"""
+        clicks = _record_controller_clicks(monkeypatch, test_context)
+        op = _WatchedUpgradeTrace(test_context, farm_dungeon=True,
+                                  farm_rounds_max=1)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        _fast, _res, _win = '快速刷取弹窗', '快速刷取结果弹窗', '培养资源窗口'
+        state = _install_script(
+            monkeypatch, test_context,
+            [{(_TRACE, '开关-简略描述')},
+             set(), set(), {(_TRACE, '开关-简略描述')},
+             set(), {(_TRACE, '按钮-通用材料补全')},
+             # 链r1(守卫/弹窗/结果框/窗口miss/开关→toast miss→点面板钮):
+             set(), set(), set(), set(), {(_TRACE, '开关-简略描述')},
+             set(),
+             # 链r2(守卫/弹窗/结果框miss/窗口+行锚→点券钮):
+             set(), set(), set(), {(_win, '标题-培养资源窗口')},
+             {(_win, '行锚-本周可领取奖励次数')},
+             # 链r3(守卫miss/弹窗+确认钮→拉满+确认#1,判据位=5):
+             set(), {(_fast, '标题-快速刷取弹窗')},
+             {(_fast, '按钮-确认快速刷取')},
+             # 链r4(守卫miss/弹窗+确认钮→判据位非零跳过设次数,重发确认#2):
+             set(), {(_fast, '标题-快速刷取弹窗')},
+             {(_fast, '按钮-确认快速刷取')},
+             # 链r5(守卫miss/弹窗命中/确认钮miss→慢询,零副作用):
+             set(), {(_fast, '标题-快速刷取弹窗')}, set(),
+             # 链r6(守卫/弹窗miss/结果框→settle 恰一次+关,controller 点击):
+             set(), set(), {(_res, '按钮-关闭刷取结果')},
+             # 链r7(守卫/弹窗/结果框miss/窗口→关窗):
+             set(), set(), set(), {(_win, '标题-培养资源窗口')},
+             {(_win, '按钮-关闭资源窗口')},
+             # 链r8(守卫/弹窗/结果框/窗口miss/开关→回面板):
+             set(), set(), set(), set(), {(_TRACE, '开关-简略描述')},
+             # r2(弹窗miss/满级→分类→MAX_LEVEL):
+             set(), {(_TRACE, '文本-已达最大等级')},
+             # 收尾:
+             {(_TRACE, '开关-简略描述')}, set()],
+            categories=['天赋', '天赋', '天赋'], level=5, farm_times_read=5)
+
+        result = _run_op(op)
+
+        assert result.success and result.status == 'MAX_LEVEL', (
+            f'重发确认后应走通全链,status={result.status},'
+            f'find_events={state["find_events"]}'
+        )
+        assert op._farm_rounds == 1, (
+            '重发确认+慢询轮不得虚增账,结果框轮 settle 恰一次'
+        )
+        assert op._farm_times_set == 0, 'settle 后判据位清零'
+        max_clicks = [c for c in clicks
+                      if _has_click_in([c], test_context, _fast,
+                                       '按钮-刷取次数拉满')]
+        assert len(max_clicks) == 1, (
+            f'重发轮判据位非零必须跳过设次数(拉满钮恰点 1 次),clicks={clicks}'
+        )
+        confirm_clicks = [c for c in clicks
+                          if _has_click_in([c], test_context, _fast,
+                                           '按钮-确认快速刷取')]
+        assert len(confirm_clicks) == 2, (
+            f'首点+重发各确认一次,clicks={clicks}'
+        )
+
+    def test_power_replenish_guard_clears_to_power_capped(
+            self, test_context: SrTestContext,
+            monkeypatch: pytest.MonkeyPatch) -> None:
+        """开拓力守卫(设计 upgrade-align-2 §3):确认刷取被「开拓力补充
+        弹窗」拦截 → 链探测首位命中,点「取消」(星琼红线:确认钮无 area
+        永不触碰)、判据位归零(本轮未成交未记账,历史账零回滚)、置
+        POWER_CAPPED 可恢复判停 → 清场模式只关不发起(资源窗口关窗→面板
+        态读收尾等级转 CLOSE_PANEL,不回升级循环)→ 收尾落账终态透出。
+
+        轮次walk:入口{开关} → r1(→NEED_FARM) → 链r1(点面板钮) → 链r2
+        (点券钮) → 链r3(拉满+确认,判据位=5) → 链r4(守卫命中→点取消)
+        → 链r5(资源窗口→关窗) → 链r6(面板态→读等级→CLOSE_PANEL) →
+        收尾{开关→关面板}/{开关miss→落POWER_CAPPED}。"""
+        op = _WatchedUpgradeTrace(test_context, farm_dungeon=True,
+                                  farm_rounds_max=1)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        _power, _win = '开拓力补充弹窗', '培养资源窗口'
+        state = _install_script(
+            monkeypatch, test_context,
+            [{(_TRACE, '开关-简略描述')},
+             set(), set(), {(_TRACE, '开关-简略描述')},
+             set(), {(_TRACE, '按钮-通用材料补全')},
+             # 链r1(守卫/弹窗/结果框/窗口miss/开关→toast miss→点面板钮):
+             set(), set(), set(), set(), {(_TRACE, '开关-简略描述')},
+             set(),
+             # 链r2(守卫/弹窗/结果框miss/窗口+行锚→点券钮):
+             set(), set(), set(), {(_win, '标题-培养资源窗口')},
+             {(_win, '行锚-本周可领取奖励次数')},
+             # 链r3(守卫miss/弹窗+确认钮→拉满+确认,判据位=5):
+             set(), {(_FAST := '快速刷取弹窗', '标题-快速刷取弹窗')},
+             {(_FAST, '按钮-确认快速刷取')},
+             # 链r4(守卫命中→FINDCLICK 取消,判据位归零+置判停):
+             {(_power, '标题-开拓力补充弹窗')}, set(),
+             # 链r5(守卫/弹窗/结果框miss/窗口→清场关窗):
+             set(), set(), set(), {(_win, '标题-培养资源窗口')},
+             {(_win, '按钮-关闭资源窗口')},
+             # 链r6(守卫/弹窗/结果框/窗口miss/开关→清场面板态读等级→CLOSE_PANEL):
+             set(), set(), set(), set(), {(_TRACE, '开关-简略描述')},
+             # 收尾(开关命中→点关面板/开关miss→落POWER_CAPPED):
+             {(_TRACE, '开关-简略描述')}, set()],
+            categories=['天赋', '天赋'], level=5, farm_times_read=5)
+
+        result = _run_op(op)
+
+        assert result.success and result.status == 'POWER_CAPPED', (
+            f'守卫判停终态应为 POWER_CAPPED,status={result.status},'
+            f'find_events={state["find_events"]}'
+        )
+        assert op._capped is True
+        assert op._farm_rounds == 0, (
+            '拦截轮未成交未记账,_farm_rounds 零虚增零回滚'
+        )
+        assert op._farm_times_set == 0, (
+            '守卫仅清判据位作废本轮次数记录(确认轮设到的 5 归零)'
+        )
+        assert op._end_level == 5, '清场面板态应读收尾等级一次(桩值 5)'
+        assert state['level_reads'] == 1, '判停等级应恰好读取一次'
+        replenish_clicks = [e for e in state['find_clicks']
+                            if e[0] == _power]
+        assert replenish_clicks == [(_power, '按钮-取消')], (
+            f'补充弹窗画面只允许点「取消」(星琼红线:确认钮永不触碰),'
+            f'find_clicks={state["find_clicks"]}'
+        )
