@@ -858,6 +858,10 @@ def _deploy_lock_grant(**kw):
     return EnvDeployLockGrant(**base)
 
 
+#: 现役表快照(import 期取值;校验负例以「其余键保持现役」为前提)
+_ORIG_DEPLOY_LOCK = dict(cw_investments.ENV_DEPLOY_LOCK_GRANTS)
+
+
 def _bad_deploy_lock(**kw) -> dict:
     """英雄登场条目按参坏体(其余键保持现役)。"""
     bad = dict(_ORIG_DEPLOY_LOCK)

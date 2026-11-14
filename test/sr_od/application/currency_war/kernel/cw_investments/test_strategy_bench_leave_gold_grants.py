@@ -40,7 +40,7 @@ def test_row_values_desc_aligned() -> None:
     """行值-卡面结构对拍(值形防线):星级恒 1(desc「1星」明写);角色名
     ∈ CHARACTER_ROSTER。(离场金与注册费用档平行的旧锁随 v4.7 费用重排
     失效——行值对拍由 _ROWS 值锁承担;登记面恢复时随批生效。)"""
-    for name, star, gold in _ROWS:
+    for name, star, _gold in _ROWS:
         assert star == 1, f'{name}: 星级恒 1(desc 明写)'
         assert name in CHARACTER_ROSTER, f'{name}: 角色名已登记'
 

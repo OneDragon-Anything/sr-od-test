@@ -25,13 +25,7 @@ import random
 import pytest
 
 from sr_od.application.currency_war.kernel.cw_gain_chain import (
-    STRATEGY_GRANTS,
     on_strategy_gained,
-)
-from sr_od.application.currency_war.kernel.cw_gain_effects import (
-    _STRATEGY_CHAR_GRANTS,
-    _STRATEGY_NODE_CHAR_GRANTS,
-    PICK_INVEST_EFFECTS,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,

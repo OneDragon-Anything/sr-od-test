@@ -25,10 +25,6 @@ import random
 from sr_od.application.currency_war.kernel.cw_gain_chain import (
     on_strategy_gained,
 )
-from sr_od.application.currency_war.kernel.cw_gain_effects import (
-    _STRATEGY_RANDOM_EQUIP_GRANTS,
-    PICK_INVEST_EFFECTS,
-)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
     BenchSlot,
@@ -36,10 +32,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     GameState,
     Unit,
-)
-from sr_od.application.currency_war.kernel.cw_investments import (
-    STRATEGY_BINDINGS,
-    STRATEGY_GRANTS,
 )
 
 _SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep')

@@ -23,12 +23,7 @@ import pytest
 
 from sr_od.application.currency_war.kernel.cw_gain_chain import (
     DEFECT_OVERFLOW_TAKEN,
-    STRATEGY_GRANTS,
     on_strategy_gained,
-)
-from sr_od.application.currency_war.kernel.cw_gain_effects import (
-    _STRATEGY_CHAR_GRANTS,
-    PICK_INVEST_EFFECTS,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
@@ -43,7 +38,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 )
 from sr_od.application.currency_war.kernel.cw_investments import (
     BENCH_ITEM_NAMES,
-    INVESTMENT_STRATEGIES,
 )
 
 _SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep')

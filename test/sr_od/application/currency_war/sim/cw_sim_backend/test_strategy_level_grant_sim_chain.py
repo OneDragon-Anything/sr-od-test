@@ -8,7 +8,7 @@ _on_node_advance / _on_node_advance_terminal 双点接入调用段;kernel 决策
 (含 P3)常量下完整 P1+P2+P3 持卡局全程零发放,经验写源 = 节点经验 ×
 选卡即时效果条目两源,上界 96 < 门槛 194 封顶 7 级):
 - 跨级发放主链(锁 1,直构状态容器强制 level=8 + xp 贴近阈值〔XP_TO_NEXT_
-  LEVEL 单一源,8 级直构可得〕):推进跨 9 → 金 +40 恰一次,双通道形态
+  LEVEL 单一源,8 级直构可得〕):推进跨 9 → 金 +36 恰一次(V4.7 成长基金 40→36),双通道形态
   = 金 observe 独立笔(evidence sim:engine:strategy:level_gold:<卡名>,
   obs 族 sim:strategy)+ 一次性标志位 write_logic(producer strategy_level_grant,
   logic 族 sim:strategy);金零 logic 笔(金面禁直写);发放拍 = 经验
@@ -121,7 +121,7 @@ def test_cross_level_grant_main_chain_then_latch(
         monkeypatch: pytest.MonkeyPatch, _isolate_defect_buffer) -> None:
     """跨级发放主链 + 一次性封账(锁 1/2):直构 level=8 + xp=(71,72)
     (8→9 门槛 72,cw_economy XP_TO_NEXT_LEVEL 单一源)→ 推进跨 9 →
-    金 +40 恰一次(observe 独立笔,值 = 跨级前现值 + 40)、一次性标志位写一笔
+    金 +36 恰一次(V4.7 成长基金 40→36)(observe 独立笔,值 = 跨级前现值 + 36)、一次性标志位写一笔
     (producer strategy_level_grant)、发放拍 = xp:node 之后窗收入之前、
     金零 logic 笔;再推进一级(级仍 ≥9)→ 零再写零再一次性标志位。"""
     b = _prep_backend(23)
@@ -139,13 +139,13 @@ def test_cross_level_grant_main_chain_then_latch(
         legs = _grant_calls(calls)
         assert len(legs) == 2, f'发放笔数漂移: {[c[:3] for c in legs]}'
         gold_leg, done_leg = legs
-        # 金币效果条目:observe 独立笔(obs 族 sim:strategy),值 = 跨级前 +40
+        # 金币效果条目:observe 独立笔(obs 族 sim:strategy),值 = 跨级前 +36
         assert gold_leg[:2] == ('obs', 'gold'), f'金通道漂移: {gold_leg[:2]}'
         assert gold_leg[3].family == 'obs' \
             and gold_leg[3].group_id == 'sim:strategy', \
             f'金 sig 漂移: {gold_leg[3]}'
-        assert gold_leg[4] == gold_before + 40, \
-            f'金值漂移: {gold_leg[4]} != {gold_before}+40'
+        assert gold_leg[4] == gold_before + 36, \
+            f'金值漂移: {gold_leg[4]} != {gold_before}+36(V4.7 40→36)'
         # 一次性标志位写笔:write_logic(producer strategy_level_grant,logic 族
         # sim:strategy),值 = (卡名,)
         assert done_leg[:2] == ('logic', 'strategy_conditional_done'), \
@@ -204,8 +204,8 @@ def test_state_semantics_hold_at_level_grants(
         _node_advance_feed(gs, trigger='settle_confirm')
         legs = _grant_calls(calls)
         assert len(legs) == 2, f'拿卡已达标未发放: {[c[:3] for c in legs]}'
-        assert legs[0][4] == gold_before + 40, \
-            f'金值漂移: {legs[0][4]} != {gold_before}+40'
+        assert legs[0][4] == gold_before + 36, \
+            f'金值漂移: {legs[0][4]} != {gold_before}+36(V4.7 40→36)'
         assert legs[1][4] == (_CARD,), '一次性标志位值漂移'
     finally:
         uninstall_backend()
@@ -248,8 +248,8 @@ def test_terminal_cross_grants_before_game_over(
         b._on_node_advance_terminal()
         legs = _grant_calls(calls)
         assert len(legs) == 2, f'局终点未发放: {[c[:3] for c in legs]}'
-        assert legs[0][4] == gold_before + 40, \
-            f'局终金值漂移: {legs[0][4]} != {gold_before}+40'
+        assert legs[0][4] == gold_before + 36, \
+            f'局终金值漂移: {legs[0][4]} != {gold_before}+36(V4.7 40→36)'
         assert legs[1][4] == (_CARD,) \
             and legs[1][5] == 'strategy_level_grant', f'局终一次性标志位形态漂移: {legs[1]}'
         # 发放先于局终声明:handler 收尾后局终位与披露齐备

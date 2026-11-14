@@ -36,9 +36,6 @@ from test.sr_od.application.currency_war.sim.test_sim_backend import (
 from sr_od.application.currency_war.kernel.cw_action_report import (
     report_action_pick_invest_strategy_param,
 )
-from sr_od.application.currency_war.kernel.cw_investments import (
-    equips_by_category,
-)
 from sr_od.application.currency_war.kernel.cw_world_decl import WorldDecl
 from sr_od.application.currency_war.sim import cw_sim_ports
 from sr_od.application.currency_war.sim.cw_sim_backend import (
@@ -174,13 +171,13 @@ def test_unpicked_card_zero_grant() -> None:
 
 
 # ============================================================ T-144 扩面
-# 负值支(先亏后盈 −20)与扩调用点(损血档位触发族第二调用点)
+# 负值支(先亏后盈 −10(V4.7 −20→−10))与扩调用点(损血档位触发族第二调用点)
 
 
 def test_pick_hp_loss_delta_written_negative() -> None:
     """负值支 delta 断言形(锁 3 扩面):持卡局选卡先亏后盈 → hp 写行
-    after = 落地前值 − 20(禁 value 形——轨迹/写行承载值序列,断言
-    「值恰 −20」与 −5 直构局自相矛盾),独立 evidence 笔,hp_trail 同步
+    after = 落地前值 − 10(禁 value 形——轨迹/写行承载值序列,断言
+    「值恰 −10」与 −5 直构局自相矛盾),独立 evidence 笔,hp_trail 同步
     恰追加一行同值,开局笔与战斗笔不受扰。"""
     b = _backend(seed=44)
     try:
@@ -189,11 +186,11 @@ def test_pick_hp_loss_delta_written_negative() -> None:
         hp_before = int(gs.hp.value)
         trail_before = list(b.hp_trail)
         _pick(b, '先亏后盈', ['先亏后盈', '躺平', '淘金客'])
-        assert gs.hp.value == hp_before - 20, \
-            f'delta 恰 −20: {gs.hp.value} vs {hp_before}'
+        assert gs.hp.value == hp_before - 10, \
+            f'delta 恰 −10(V4.7 −20→−10): {gs.hp.value} vs {hp_before}'
         assert gs.hp.evidence == _HP_EV_PREFIX + '先亏后盈', \
             f'独立笔缺失或来源漂移: {gs.hp.evidence}'
-        assert list(b.hp_trail) == trail_before + [hp_before - 20], \
+        assert list(b.hp_trail) == trail_before + [hp_before - 10], \
             f'轨迹未同步恰追加: {list(b.hp_trail)} vs {trail_before}'
         # 下一战斗笔照常落账,选卡损血笔不被扰(写流↔轨迹同构保持)。
         _drive_until(b, lambda: len(b.hp_trail) > len(trail_before) + 1)
@@ -204,7 +201,7 @@ def test_pick_hp_loss_delta_written_negative() -> None:
 
 
 def test_negative_no_clip_floor_branch_next_lost_battle() -> None:
-    """不 clip 下界 + §1.4 机械推论(锁 5):直构 hp=15 → 选卡写 −5
+    """不 clip 下界 + §1.4 机械推论(锁 5):直构 hp=8 → 选卡写 −2(V4.7 −10)
     (负值直加不 clip,hp 出负 = 下界无消费端语义);下一败局结算按
     apply_hp_outcome ≤0 分支 → 首次保底剩 1(floor 位写真)。钉死
     「效果条目不 clip」默认案与「选卡写不经 floor 判定」边界。"""
@@ -213,10 +210,10 @@ def test_negative_no_clip_floor_branch_next_lost_battle() -> None:
     try:
         gs = b.gs
         _drive_to_offer(b)
-        gs.observe(gs.hp, 15, sig=_SIG_OBS)
+        gs.observe(gs.hp, 8, sig=_SIG_OBS)
         _pick(b, '先亏后盈', ['先亏后盈', '躺平', '淘金客'])
-        assert gs.hp.value == -5, f'负值直加不 clip: {gs.hp.value}'
-        assert -5 in b.hp_trail, f'轨迹含 −5: {list(b.hp_trail)}'
+        assert gs.hp.value == -2, f'负值直加不 clip: {gs.hp.value}'
+        assert -2 in b.hp_trail, f'轨迹含 −2: {list(b.hp_trail)}'
         _force_settle(mp, won=False)
         _drive_until(b, lambda: b.hp_trail[-1] == 1 or int(gs.hp.value) == 1)
         assert gs.hp.value == 1, \
@@ -231,10 +228,12 @@ def test_negative_no_clip_floor_branch_next_lost_battle() -> None:
 
 def test_pick_loss_feeds_insurance_accumulator_hook() -> None:
     """扩调用点行为锁(漂移增量):持保险局直构选卡先亏后盈 → 损血效果条目
-    写后同拍调 check_strategy_hp_loss_grants:−20 换算 +20 损失入累计
-    器(非「减负」)→ 档位当拍触发:金 +5(桶数 1)∧ 简易装备 +1 件
-    ∧ 累计器取模回 0。扩调用点缺位时此局静默漏计(披露键 ③ 申报形态),
-    本锁钉死第二调用点在码。"""
+    写后同拍调 check_strategy_hp_loss_grants:−10 换算 +10 损失入累计
+    器(非「减负」)。V4.7 先亏后盈损血 −20→−10(T-4 对照表)后,单次损血
+    未达保险 20hp 触发档 → 累计器 10 滞留(不取模)∧ 零发放——扩调用点
+    缺位时此局累计器零写(披露键 ③ 申报形态),累计器写行在码即证第二
+    调用点接线完好;档位触发语义 = kernel 单元面
+    test_check_strategy_hp_loss_grants 锁面。"""
     b = _backend(seed=46)
     try:
         gs = b.gs
@@ -246,16 +245,14 @@ def test_pick_loss_feeds_insurance_accumulator_hook() -> None:
         equips_before = list(gs.equips.value or [])
         trail_before = len(b.hp_trail)
         _pick(b, '先亏后盈', ['先亏后盈', '躺平', '淘金客'])
-        assert gs.hp.value == hp_before - 20, '前置:损血效果条目应写 −20'
+        assert gs.hp.value == hp_before - 10, '前置:损血效果条目应写 −10'
         assert len(b.hp_trail) == trail_before + 1, '前置:轨迹恰追加一笔'
-        assert gs.strategy_hp_loss_accum.value == 0, \
-            f'累计器应 +20 入账后取模回 0: {gs.strategy_hp_loss_accum.value}'
-        assert gs.gold.value == gold_before + 5, \
-            f'保险档位金应 +5(1 桶): {gs.gold.value} vs {gold_before}'
-        assert len(gs.equips.value or []) == len(equips_before) + 1, \
-            f'保险档位装备应 +1 件: {gs.equips.value}'
-        assert gs.equips.value[-1] in set(equips_by_category('简易')), \
-            f'装备名出简易池: {gs.equips.value[-1]!r}'
+        assert gs.strategy_hp_loss_accum.value == 10, \
+            f'累计器应 +10 入账(未达 20hp 档滞留): {gs.strategy_hp_loss_accum.value}'
+        assert gs.gold.value == gold_before, \
+            f'未达档零发放: {gs.gold.value} vs {gold_before}'
+        assert len(gs.equips.value or []) == len(equips_before), \
+            f'未达档装备零发放: {gs.equips.value}'
     finally:
         uninstall_backend()
 
@@ -263,8 +260,8 @@ def test_pick_loss_feeds_insurance_accumulator_hook() -> None:
 def test_dual_hold_independent_pens_not_aggregated() -> None:
     """双持独立笔(锁 8):健康充值 + 先亏后盈 同局双持(excluded_invest
     只防同卡,跨卡双持可达——前置持健康充值局再拿先亏后盈,opts 交集
-    命中两卡)→ +30 与 −20 各自独立 hp 写行按 opts 序落账([b+30,
-    b+10] 两行,互不聚合 = 禁聚合通道回归,聚合字段集不含 hp_instant);
+    命中两卡)→ +30 与 −10 各自独立 hp 写行按 opts 序落账([b+30,
+    b+20] 两行,互不聚合 = 禁聚合通道回归,聚合字段集不含 hp_instant);
     轨迹按写行粒度恰 +2(追加读现值语义 = 效果条目返回笔数,同拍多笔共用
     末值,逐值对拍归单笔锁)。"""
     b = _backend(seed=47)
@@ -286,11 +283,11 @@ def test_dual_hold_independent_pens_not_aggregated() -> None:
         mp.setattr(gs, 'observe', _rec)
         trail_before = len(b.hp_trail)
         _pick(b, '先亏后盈', ['健康充值', '先亏后盈', '躺平'])
-        assert gs.hp.value == hp_before + 10, \
-            f'双持净额 +30−20=+10: {gs.hp.value} vs {hp_before}'
+        assert gs.hp.value == hp_before + 20, \
+            f'双持净额 +30−10=+20(V4.7 −20→−10): {gs.hp.value} vs {hp_before}'
         assert hp_pens == [
             (_HP_EV_PREFIX + '健康充值', hp_before + 30),
-            (_HP_EV_PREFIX + '先亏后盈', hp_before + 10)], \
+            (_HP_EV_PREFIX + '先亏后盈', hp_before + 20)], \
             f'双持应两笔独立写行(禁聚合): {hp_pens}'
         assert len(b.hp_trail) == trail_before + 2, \
             f'轨迹按写行粒度恰 +2: {list(b.hp_trail)}'

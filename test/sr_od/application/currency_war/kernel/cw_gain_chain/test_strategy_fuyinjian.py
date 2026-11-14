@@ -31,9 +31,6 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 from sr_od.application.currency_war.kernel.cw_investments import (
     STRATEGY_ECONOMY,
 )
-from sr_od.application.currency_war.strategies.impl.mandate_v1.gift_value import (
-    grant_gift_value,
-)
 
 _SIG_OBS = ChannelSig(family='obs', actor='CwScreenPre')
 _SIG = ChannelSig(family='logic_action', actor='CwActionPickInvestOp',
