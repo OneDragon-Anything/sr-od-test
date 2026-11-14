@@ -15,7 +15,9 @@ upgrade-ops-adaptation/details/trace-rework.md):
 - 升级循环:补全确认弹窗双形态 / 满级+分类校验(失配 fail 交 agent)/
   按钮三态 / 券刷路由(预算内) / 全缺判停;
 - 券刷链:面板→资源窗口→券按钮(行锚+按钮双锚)→弹窗连刷设置→确认→
-  关结果框→关窗口→回面板,状态机以 _farm_times_set 分流;
+  关结果框→关窗口→回面板,状态机以 _farm_times_set 分流;链入口面板钮
+  开窗(P0:无人点钮=NEED_FARM↔回面板乒乓)/无可刷缺口 toast 正判(前
+  两轮门控探测)/连点封顶漏检兜底;
 - 收尾关面板:一切出口必经,_final_status 携带终态,连等封顶。
 
 判据同步声明(landing 3.3):旧契约剧本(树态起点/open_panel 节点/点击区-节点-*/
@@ -197,7 +199,7 @@ class TestEntryGate:
         fail(树态契约保持,不留面板态破口)。"""
         clicks = _record_controller_clicks(monkeypatch, test_context)
         op = _WatchedUpgradeTrace(test_context)
-        state = _install_script(
+        _install_script(
             monkeypatch, test_context,
             [{(_TRACE, '开关-简略描述')}, {(_TRACE, '开关-简略描述')}, set()],
             categories=['战技'], level=0)
@@ -357,3 +359,135 @@ class TestFarmTicketChain:
         assert _has_click_in(clicks, test_context, '快速刷取结果弹窗',
                              '按钮-关闭刷取结果'), '结果框应经 controller 点击关闭'
         assert ('培养资源窗口', '按钮-关闭资源窗口') in state['find_clicks']
+
+    def test_farm_chain_clicks_panel_button_and_farm_completes(
+            self, test_context: SrTestContext,
+            monkeypatch: pytest.MonkeyPatch) -> None:
+        """P0 回归锁(面板钮开窗):券刷链入口窗未开时必须由链内点击面板
+        「快速刷取」开窗——旧实现面板态只回交升级循环,无人点钮,NEED_FARM
+        ↔ 回面板无限乒乓(双方 SUCCESS 重试计数永不累积)。全链走通到满级,
+        toast 探测仅链入口轮查询一次(窗口出现后门控复位不再探)。"""
+        clicks = _record_controller_clicks(monkeypatch, test_context)
+        op = _WatchedUpgradeTrace(test_context, farm_dungeon=True,
+                                  farm_rounds_max=1)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        _fast, _res, _win = '快速刷取弹窗', '快速刷取结果弹窗', '培养资源窗口'
+        state = _install_script(
+            monkeypatch, test_context,
+            [{(_TRACE, '开关-简略描述')},
+             set(), set(), {(_TRACE, '开关-简略描述')},
+             set(), {(_TRACE, '按钮-通用材料补全')},
+             set(), set(), set(), {(_TRACE, '开关-简略描述')},
+             set(),
+             set(), set(), {(_win, '标题-培养资源窗口')},
+             {(_win, '行锚-本周可领取奖励次数')},
+             {(_fast, '标题-快速刷取弹窗')},
+             {(_fast, '按钮-确认快速刷取')},
+             {(_fast, '标题-快速刷取弹窗')}, set(),
+             set(), {(_res, '按钮-关闭刷取结果')},
+             set(), set(), {(_win, '标题-培养资源窗口')},
+             {(_win, '按钮-关闭资源窗口')},
+             set(), set(), set(), {(_TRACE, '开关-简略描述')},
+             set(), set(), {(_TRACE, '开关-简略描述')},
+             {(_TRACE, '按钮-快速升级')},
+             set(), {(_TRACE, '文本-已达最大等级')},
+             {(_TRACE, '开关-简略描述')}, set()],
+            categories=['天赋', '天赋', '天赋', '天赋'], level=5, farm_times_read=5)
+
+        result = _run_op(op)
+
+        assert result.success and result.status == 'MAX_LEVEL', (
+            f'链内点面板钮开窗后应走通全链,status={result.status}'
+        )
+        assert _has_click_in(clicks, test_context, _TRACE, '按钮-快速刷取'), (
+            '券刷链入口必须点击面板「快速刷取」开窗(P0:无人点钮=乒乓挂死)'
+        )
+        assert op._farm_rounds == 1
+        toast_queries = [e for e in state['find_events']
+                         if e == (_TRACE, '提示-无可刷缺口')]
+        assert len(toast_queries) == 1, (
+            f'toast 探测应仅链入口轮一次,find_events={state["find_events"]}'
+        )
+
+    def test_farm_chain_toast_stops_immediately(
+            self, test_context: SrTestContext,
+            monkeypatch: pytest.MonkeyPatch) -> None:
+        """无可刷缺口 toast 正判:链入口点击被拒 → 重入轮(计数 1,帧落
+        toast 窗口)探测命中 → MATERIAL_CAPPED 判停收口,面板钮恰点一次
+        (命中后不再连点);判停等级恰好读取一次。"""
+        clicks = _record_controller_clicks(monkeypatch, test_context)
+        op = _WatchedUpgradeTrace(test_context, farm_dungeon=True,
+                                  farm_rounds_max=1)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        monkeypatch.setattr(UpgradeTraceOp, 'save_screenshot',
+                            lambda self, prefix='': '')
+        state = _install_script(
+            monkeypatch, test_context,
+            [{(_TRACE, '开关-简略描述')},
+             set(), set(), {(_TRACE, '开关-简略描述')},
+             set(), {(_TRACE, '按钮-通用材料补全')},
+             set(), set(), set(), {(_TRACE, '开关-简略描述')},
+             set(),
+             set(), set(), set(), {(_TRACE, '开关-简略描述')},
+             {(_TRACE, '提示-无可刷缺口')},
+             {(_TRACE, '开关-简略描述')}, set()],
+            categories=['天赋', '天赋'], level=5)
+
+        result = _run_op(op)
+
+        assert result.success and result.status == 'MATERIAL_CAPPED', (
+            f'toast 命中应即判停收口,status={result.status},'
+            f'find_events={state["find_events"]},clicks={clicks}'
+        )
+        assert op._end_level == 5
+        panel_clicks = [c for c in clicks
+                        if _has_click_in([c], test_context, _TRACE,
+                                         '按钮-快速刷取')]
+        assert len(panel_clicks) == 1, (
+            f'命中 toast 后不得再连点,clicks={clicks}'
+        )
+        toast_queries = [e for e in state['find_events']
+                         if e == (_TRACE, '提示-无可刷缺口')]
+        assert len(toast_queries) == 2, (
+            f'漏检轮+重入轮各探一次,find_events={state["find_events"]}'
+        )
+
+    def test_farm_chain_toast_probe_gated_and_click_capped(
+            self, test_context: SrTestContext,
+            monkeypatch: pytest.MonkeyPatch) -> None:
+        """探测门(计数 ≥2 抑制)+连点封顶:计数置 2 起 toast 查询不发起
+        (慢开窗场景冗余点击被拒的 toast 不得误读);连点 4 次窗仍未开 =
+        漏检兜底封顶判停,不再无限连点。"""
+        clicks = _record_controller_clicks(monkeypatch, test_context)
+        op = _WatchedUpgradeTrace(test_context, farm_dungeon=True,
+                                  farm_rounds_max=1)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        op._panel_farm_click_rounds = 2
+        monkeypatch.setattr(UpgradeTraceOp, 'save_screenshot',
+                            lambda self, prefix='': '')
+        state = _install_script(
+            monkeypatch, test_context,
+            [{(_TRACE, '开关-简略描述')},
+             set(), set(), {(_TRACE, '开关-简略描述')},
+             set(), {(_TRACE, '按钮-通用材料补全')},
+             set(), set(), set(), {(_TRACE, '开关-简略描述')},
+             set(), set(), set(), {(_TRACE, '开关-简略描述')},
+             set(), set(), set(), {(_TRACE, '开关-简略描述')},
+             {(_TRACE, '开关-简略描述')}, set()],
+            categories=['天赋', '天赋'], level=5)
+
+        result = _run_op(op)
+
+        assert result.success and result.status == 'MATERIAL_CAPPED', (
+            f'连点封顶应判停收口,status={result.status}'
+        )
+        assert (_TRACE, '提示-无可刷缺口') not in state['find_events'], (
+            '计数 ≥2 后不得发起 toast 探测查询'
+        )
+        panel_clicks = [c for c in clicks
+                        if _has_click_in([c], test_context, _TRACE,
+                                         '按钮-快速刷取')]
+        assert len(panel_clicks) == 2, (
+            f'计数 2 起应再点 2 次到封顶,实际 {len(panel_clicks)},clicks={clicks}'
+        )
+        assert op._end_level == 5
