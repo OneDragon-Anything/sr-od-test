@@ -135,7 +135,7 @@ def test_ranxue_faction_pool_matches_registry_and_validates() -> None:
     分支——池非空单一哨(值域四查已随 2026-10-28 治理移除),「燃血」流派域非空天然通过);
     random_char_pool 阵营 spec 现值 = chars_by_faction('燃血') 名集现算
     双射(注册表派生,非快照不手抄;池规模只记注释不做断言值——现值
-    8 名含双羁绊成员布洛妮娅〔flows 命中,注册表已双边登记〕,随版本
+    8 名含双羁绊成员布洛妮娅〔schools 命中,注册表已双边登记〕,随版本
     正常变动)。"""
     cw_investments._validate_env_gifts()
     spec = ENV_GIFTS['燃血概念股'].chars_random_immediate[0]
@@ -303,7 +303,7 @@ def test_beluoboge_faction_pool_matches_registry_and_validates() -> None:
     阵营 spec 现值 = chars_by_faction('贝洛伯格') 名集现算比对(注册表
     派生非快照不手抄,池规模只记注释零断言值——现值 6 名,随版本正常
     变动);显式断言'布洛妮娅' ∈ 池(双羁绊注册表修正新增成员:她
-    factions='贝洛伯格' + flows='燃血' 双边登记,economy.md §8 用户
+    factions='贝洛伯格' + schools='燃血' 双边登记,economy.md §8 用户
     裁定 2026-10-28,采样域自动传导零代码;独立单位「大守护者」在候选
     内照发,镜像列车同行批'姬子·启行'的定论断言式;本域无开拓者条目,
     双形态合并对本域零作用,池 = 原始域)。"""
@@ -584,8 +584,8 @@ def test_yezhibanshen_faction_pool_matches_registry_and_validates() -> None:
 # fields.md §5.2 效果缺口与载体登记 + economy.md §8 专家候选口径:本域
 # 9 名中加拉赫/姬子为专家,牌库时点过滤在 cw_pool.grant_char_pool 层——
 # 本文件的池锁锁静态基底面 random_char_pool,过滤语义锁 = cw_pool 镜像
-# test_grant_char_pool.py;域 = flows 轴纯流派域,独立条目「姬子·启行」
-# flows 空 ∈ 列车同行域非本域,勿混淆。)
+# test_grant_char_pool.py;域 = schools 轴纯流派域,独立条目「姬子·启行」
+# schools 空 ∈ 列车同行域非本域,勿混淆。)
 
 
 def test_jipo_concept_stock_entry_shape() -> None:
@@ -621,11 +621,11 @@ def test_jipo_faction_pool_matches_registry_and_validates() -> None:
     通过);random_char_pool 阵营 spec 现值 = chars_by_faction('击破')
     名集现算比对(注册表派生非快照不手抄;本域无开拓者条目,双形态合并
     对本域零作用;池规模只记注释零断言值——现值 9 名,随版本正常变动;
-    域 = flows 轴纯流派域,9 名全部经 flows 轴命中,factions 轴零命中,
+    域 = schools 轴纯流派域,9 名全部经 schools 轴命中,factions 轴零命中,
     沿追击/燃血锁先例形态);显式断言专家成员'加拉赫'/'姬子' ∈ 静态
     基底池(基底 = 注册表全域,专家剔除只发生在 grant_char_pool 牌库
     时点层——分层职责锁,沿仙舟/狼狩锁同款形态);双羁绊成员'灵砂'
-    ∈ 池照发(flows='治疗、击破' 双边已登记,镜像银河学者锁'真理医生'
+    ∈ 池照发(schools='治疗、击破' 双边已登记,镜像银河学者锁'真理医生'
     定论断言式)。"""
     cw_investments._validate_env_gifts()
     spec = ENV_GIFTS['击破概念股'].chars_random_immediate[0]
@@ -636,7 +636,7 @@ def test_jipo_faction_pool_matches_registry_and_validates() -> None:
         and '姬子' in random_char_pool(spec), \
         '专家在静态基底池(过滤归 grant_char_pool 层,分层职责)'
     assert '灵砂' in random_char_pool(spec), \
-        '双羁绊成员在池照发(flows 双边已登记定论)'
+        '双羁绊成员在池照发(schools 双边已登记定论)'
     assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
 
 
@@ -644,7 +644,7 @@ def test_jipo_faction_pool_matches_registry_and_validates() -> None:
 # fields.md §5.2 效果缺口与载体登记:本域 7 名 is_expert 全空 = 非专家域,
 # 牌库时点过滤在 cw_pool.grant_char_pool 层——本文件的池锁锁静态基底面
 # random_char_pool,过滤语义锁 = cw_pool 镜像 test_grant_char_pool.py;
-# 域 = flows 轴纯流派域,缇宝 flows「群攻、量子同频」双羁绊(量子同频无
+# 域 = schools 轴纯流派域,缇宝 schools「群攻、量子同频」双羁绊(量子同频无
 # 概念股卡,零联动)、翡翠为公司契约具名发放对象(具名 vs 随机字段不相
 # 交),两事实零登记面影响,勿混淆。)
 
@@ -683,9 +683,9 @@ def test_qungong_faction_pool_matches_registry_and_validates() -> None:
     名集现算比对(注册表派生非快照不手抄;本域无开拓者条目,双形态合并
     对本域零作用;池规模只记注释零断言值——现值 7 名,随版本正常变动;
     本域 7 名 is_expert 全空 = 非专家域,无仙舟/狼狩型专家分层断言,过滤
-    恒等由 cw_pool 镜像授予池锁承载;7 名全部经 flows 轴命中、factions
+    恒等由 cw_pool 镜像授予池锁承载;7 名全部经 schools 轴命中、factions
     轴零命中,沿追击/燃血纯流派域锁先例形态);显式断言'缇宝' ∈ 静态
-    基底池(flows='群攻、量子同频' 双羁绊成员照发——量子同频无概念股
+    基底池(schools='群攻、量子同频' 双羁绊成员照发——量子同频无概念股
     卡,零联动,镜像仙舟锁'彦卿'定论断言式)。"""
     cw_investments._validate_env_gifts()
     spec = ENV_GIFTS['群攻概念股'].chars_random_immediate[0]
@@ -693,7 +693,7 @@ def test_qungong_faction_pool_matches_registry_and_validates() -> None:
     assert set(random_char_pool(spec)) == expected, \
         '静态基底池 = chars_by_faction 全域(注册表现算双射)'
     assert '缇宝' in random_char_pool(spec), \
-        '双羁绊成员在池照发(flows 双边已登记定论,量子同频零联动)'
+        '双羁绊成员在池照发(schools 双边已登记定论,量子同频零联动)'
     assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
 
 
@@ -701,8 +701,8 @@ def test_qungong_faction_pool_matches_registry_and_validates() -> None:
 # fields.md §5.2 效果缺口与载体登记:本域 7 名中佩拉 is_expert=True =
 # 专家域,牌库时点过滤在 cw_pool.grant_char_pool 层开局恒排佩拉——
 # 本文件的池锁锁静态基底面 random_char_pool,过滤语义锁 = cw_pool 镜像
-# test_grant_char_pool.py;域 = flows 轴纯流派域,椒丘为「持续伤害契约」
-# 具名发放对象(具名 vs 随机字段不相交)、千冶·刃 flows「燃血、减益」
+# test_grant_char_pool.py;域 = schools 轴纯流派域,椒丘为「持续伤害契约」
+# 具名发放对象(具名 vs 随机字段不相交)、千冶·刃 schools「燃血、减益」
 # 双羁绊且 ≠ 专家「刃」,两事实零登记面影响,勿混淆。)
 
 
@@ -740,9 +740,9 @@ def test_jianyi_faction_pool_matches_registry_and_validates() -> None:
     名集现算比对(注册表派生非快照不手抄;本域无开拓者条目,双形态合并
     对本域零作用;池规模只记注释零断言值——现值 7 名,随版本正常变动;
     本域为专家域(佩拉 1 名),静态基底含专家 = 仙舟/狼狩/击破型分层
-    职责断言,过滤归 cw_pool 层由镜像授予池锁承载;7 名全部经 flows 轴
+    职责断言,过滤归 cw_pool 层由镜像授予池锁承载;7 名全部经 schools 轴
     命中、factions 轴零命中,沿追击/燃血/击破纯流派域锁先例形态);显式
-    断言'千冶·刃' ∈ 静态基底池(flows='燃血、减益' 双羁绊成员照发——
+    断言'千冶·刃' ∈ 静态基底池(schools='燃血、减益' 双羁绊成员照发——
     镜银河学者锁'真理医生'/群攻锁'缇宝'定论断言式)。"""
     cw_investments._validate_env_gifts()
     spec = ENV_GIFTS['减益概念股'].chars_random_immediate[0]
@@ -752,7 +752,7 @@ def test_jianyi_faction_pool_matches_registry_and_validates() -> None:
     assert '佩拉' in random_char_pool(spec), \
         '专家在静态基底池(过滤归 grant_char_pool 层,分层职责)'
     assert '千冶·刃' in random_char_pool(spec), \
-        '双羁绊成员在池照发(flows 双边已登记定论)'
+        '双羁绊成员在池照发(schools 双边已登记定论)'
     assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
 
 
@@ -760,9 +760,9 @@ def test_jianyi_faction_pool_matches_registry_and_validates() -> None:
 # 权威版本 = fields.md §5.2 效果缺口与载体登记:本域 7 名中青雀 is_expert=True
 # = 专家域,牌库时点过滤在 cw_pool.grant_char_pool 层开局恒排青雀——
 # 本文件的池锁锁静态基底面 random_char_pool,过滤语义锁 = cw_pool 镜像
-# test_grant_char_pool.py;域 = flows 轴纯流派域,独立单位成员 Archer
+# test_grant_char_pool.py;域 = schools 轴纯流派域,独立单位成员 Archer
 # (independent='魔术师')照发族级定论〔economy.md:94 点名战技点(Archer)〕;
-# 花火(2费,flows 战技点、量子同频)≠ 火花(4费,flows 战技点、欢愉)两名
+# 花火(2费,schools 战技点、量子同频)≠ 火花(4费,schools 战技点、欢愉)两名
 # 形近成员,量子同频/欢愉均无概念股卡,零登记面影响,勿混淆。)
 
 
@@ -802,7 +802,7 @@ def test_zhanjidian_faction_pool_matches_registry_and_validates() -> None:
     不手抄;本域无开拓者条目,双形态合并对本域零作用;池规模只记注释零
     断言值——现值 7 名,随版本正常变动;本域为专家域(青雀 1 名),静态
     基底含专家 = 仙舟/狼狩/减益型分层职责断言,过滤归 cw_pool 层由镜像
-    授予池锁承载;7 名全部经 flows 轴命中、factions 轴零命中,沿击破/减益
+    授予池锁承载;7 名全部经 schools 轴命中、factions 轴零命中,沿击破/减益
     纯流派域锁先例形态);显式断言'Archer' ∈ 静态基底池(独立单位成员
     照发,economy.md:94 族级定论点名战技点(Archer))。"""
     cw_investments._validate_env_gifts()

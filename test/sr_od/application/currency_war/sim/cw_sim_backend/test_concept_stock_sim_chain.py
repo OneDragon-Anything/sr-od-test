@@ -20,8 +20,8 @@ rng,状态副本里的值)——bench 增战技点流派域 1★ 一张、equips
 同 seed 重放确定性。本域特有面:域 7 名中青雀为专家,牌库时点池过滤后
 候选 6 名(economy.md §8 用户裁定 2026-10-28,赠卡名显式 ∉ EXPERT_CHARS
 钉专家剔除生效);独立单位成员 Archer 照发在候选池内〔economy.md:94
-族级定论点名战技点(Archer)〕;花火(2费,flows 战技点、量子同频)≠
-火花(4费,flows 战技点、欢愉)两名形近成员,量子同频/欢愉均无概念股卡
+族级定论点名战技点(Archer)〕;花火(2费,schools 战技点、量子同频)≠
+火花(4费,schools 战技点、欢愉)两名形近成员,量子同频/欢愉均无概念股卡
 零联动;economy.md 四卡线索名单不含战技点 = 装备身份零先验。
 """
 from __future__ import annotations

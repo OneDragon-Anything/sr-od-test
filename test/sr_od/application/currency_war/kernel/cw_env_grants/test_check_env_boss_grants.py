@@ -266,7 +266,7 @@ def test_dual_path_done_short_circuit(
 
 def test_binding_pool_consistent_with_registry() -> None:
     """绑定解析链一致性(设计 §2.3 条 8 派生链锁):星徽名去「星徽」后缀
-    = 羁绊名,成员池经 chars_by_faction(默认参数含 flows)非空——
+    = 羁绊名,成员池经 chars_by_faction(默认参数含 schools)非空——
     '星徽' 类别池逐件走一遍(注册表现算,22 件全通过)。"""
     for star in cw_investments.equips_by_category('星徽'):
         faction = star[:-len('星徽')]

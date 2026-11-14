@@ -101,7 +101,7 @@ def _same_cost_fillers(count: int, cost: int) -> list[str]:
         if (c.cost or 0) != cost or n in CROSS_LINE_KEEP_NAMES:
             continue
         ch = CHARACTERS[n]
-        if (set(ch.factions) | set(ch.flows)) & TIER7_BOND_NAMES:
+        if (set(ch.factions) | set(ch.schools)) & TIER7_BOND_NAMES:
             continue
         out.append(n)
     assert len(out) >= count, f'测试前提:同费干净名不足({len(out)})'

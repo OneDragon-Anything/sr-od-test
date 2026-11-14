@@ -19,7 +19,7 @@ currency_war/flow/README.md §2.2 备战接口行:
   会话已处理形态);生效序位经 ``gs.node_pos`` 观察写端落值
   (``effective_node_pos`` 读口,未观察 None 不当真)。
 - 窗口辖域测试用追击飞霄线(synergy 3 = 板面追击 3 档;追击为流派
-  键,``board_by_row`` 聚合含 flows)——规避配方底线门辖列车件的
+  键,``board_by_row`` 聚合含 schools)——规避配方底线门辖列车件的
   干扰(围栏语义与窗口辖域分立,测试只校验窗口)。
 - 卖出场景帧 deployed 非空(空板守卫 = 评估器 as-built 纳入语义,
   deployed = 0 帧卖出哑火)且 deploy_vacancy = 0(防第 5 步部署先中,

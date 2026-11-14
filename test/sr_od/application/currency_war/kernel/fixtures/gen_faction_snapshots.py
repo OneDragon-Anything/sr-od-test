@@ -85,11 +85,11 @@ def _comp(name: str):
 
 
 def _self_bonds(name: str) -> set[str]:
-    """成员自报羁绊标签全集(factions∪flows;未注册名 = 空集)。"""
+    """成员自报羁绊标签全集(factions∪schools;未注册名 = 空集)。"""
     ch = CHARACTERS.get(name)
     if ch is None:
         return set()
-    return set(ch.factions) | set(ch.flows)
+    return set(ch.factions) | set(ch.schools)
 
 
 def _board_members(kind: str, comp) -> list[str]:

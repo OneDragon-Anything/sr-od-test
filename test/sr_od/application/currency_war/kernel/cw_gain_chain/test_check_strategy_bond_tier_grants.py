@@ -5,7 +5,7 @@ strategy_bond_tier_fired 一次性标志位域)。
 测试面依据 = 原稿锁面(§ 号 = 原稿节序)§4 锁 3/4/5
 (构造 = 状态容器直置直调检查效果条目;计数判据单一源 = cw_system_cards.
 _faction_count 双源 max——board 状态容器(左面板真值口径,含 L2 星徽装备
-贡献)× board_by_row 身份聚合(仅 factions+flows),直构按断言面向单侧
+贡献)× board_by_row 身份聚合(仅 factions+schools),直构按断言面向单侧
 或双侧喂源;禁经 gain_character 构造达标态,会对触发面盲区假绿):
 
 - 条件矩阵短路:无卡零写 / gate 不达(门槛羁绊计数 < tiers[0])零写
@@ -218,7 +218,7 @@ def test_independent_factions_excluded() -> None:
 
 def test_l2_badge_contribution_counts_via_board_source() -> None:
     """L2 星徽贡献计入锁:盛会之星第 2 计数来自穿徽单位(L2 装备贡献,
-    身份聚合口径不计——cw_board_by_row 只算 factions+flows),仅 board
+    身份聚合口径不计——cw_board_by_row 只算 factions+schools),仅 board
     状态容器(左面板真值)承载 → gate 经双源 max 融合开启;若检查效果条目单吃
     身份源则 gate 关闭误零发(红判据)。板面 = 花火 + 娜塔莎(佩戴
     星徽)→ 盛会之星 2;娜塔莎+藿藿 = 治疗 2;杰帕德+砂金 = 护盾 2。"""

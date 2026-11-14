@@ -4,11 +4,11 @@ unit_bond_tags peers 承载 + 全仓 8 处板面羁绊计数聚合器透传)。
 
 设计约定出处 = economy.md §8(布洛妮娅双羁绊知识登记,用户裁定
 2026-10-28)+ fields.md §5.2 披露键组(角色机制键 bronya_side_pick_tie_
-blood):注册表 factions/flows 双边都登记(采样域/成员反查双边命中),
+blood):注册表 factions/schools 双边都登记(采样域/成员反查双边命中),
 板面羁绊计数按图鉴逻辑选边单边计入——图鉴原文「布洛妮娅会基于小队中
 【贝洛伯格】和【燃血】角色的数量,加入人数更多的羁绊并获得相应技能」
 (characters/布洛妮娅.md);比较基数 = 其余在场角色的注册表出身
-(factions+flows,不含装备贡献);平局 = 燃血(可见条目形态默认;假设,
+(factions+schools,不含装备贡献);平局 = 燃血(可见条目形态默认;假设,
 披露键承载);独立羁绊「大守护者」不受选边影响恒 1 层。
 
 选边翻转语义:任何单位增删都可能翻转计入边 → 全量聚合器天然正确;
@@ -97,24 +97,24 @@ def _board_b() -> dict[str, int]:
 
 def test_bronya_registry_dual_bond_registration() -> None:
     """注册表双羁绊登记锁(用户裁定 2026-10-28,economy.md §8):布洛妮娅
-    factions=('贝洛伯格',)/flows=('燃血',)/independent='大守护者';
+    factions=('贝洛伯格',)/schools=('燃血',)/independent='大守护者';
     主阵营派生单一源 char_first_faction = '贝洛伯格'(修正前空阵营 '');
     chars_by_faction 双边命中——贝洛伯格域含她(本批修正新增,修正前
-    仅 flows 命中燃血域)、燃血域仍含她(flows 命中,采样域池集合同值,
+    仅 schools 命中燃血域)、燃血域仍含她(schools 命中,采样域池集合同值,
     去重保单次)。池规模只记注释零断言值(贝洛伯格域现值 6 名/燃血域
     现值 8 名,随版本正常变动)。"""
     from sr_od.application.currency_war.data.cw_chars import CHARACTERS
     bronya = CHARACTERS['布洛妮娅']
     assert bronya.factions == ('贝洛伯格',)
-    assert bronya.flows == ('燃血',)
+    assert bronya.schools == ('燃血',)
     assert bronya.independent == '大守护者'
     assert char_first_faction('布洛妮娅') == '贝洛伯格'
     bei_names = {c.name for c in chars_by_faction('贝洛伯格')}
     assert '布洛妮娅' in bei_names, '贝洛伯格域含布洛妮娅(注册表修正新增)'
     ran_names = {c.name for c in chars_by_faction('燃血')}
-    assert '布洛妮娅' in ran_names, '燃血域仍含布洛妮娅(flows 命中)'
+    assert '布洛妮娅' in ran_names, '燃血域仍含布洛妮娅(schools 命中)'
     # 采样域登记 = 注册表全域:SIDE_PICK_DUAL_BONDS 只登记选边型角色,
-    # 不扩采样域(域成员资格单一源 = factions/flows 轴)。
+    # 不扩采样域(域成员资格单一源 = factions/schools 轴)。
     assert SIDE_PICK_DUAL_BONDS['布洛妮娅'] == ('贝洛伯格', '燃血')
     assert BRONYA_SIDE_PICK_TIE_BLOOD == 'bronya_side_pick_tie_blood'
 
@@ -199,7 +199,7 @@ def test_board_from_deployed_side_pick() -> None:
 
 
 def test_board_by_row_side_pick() -> None:
-    """聚合器 3 `board_by_row`(按排聚合,标签 = factions+flows 无
+    """聚合器 3 `board_by_row`(按排聚合,标签 = factions+schools 无
     independent):选边不分排(peers = 全板其余角色,图鉴「小队中」=
     全队)——布洛妮娅前排、其余后排跨排构造,场景甲 total 贝洛伯格 3
     /场景乙 total 燃血 2。"""
@@ -213,7 +213,7 @@ def test_board_by_row_side_pick() -> None:
 
 
 def test_deployed_bond_counts_side_pick() -> None:
-    """聚合器 4 `deployed_bond_counts`(策略部署计数,factions+flows
+    """聚合器 4 `deployed_bond_counts`(策略部署计数,factions+schools
     直读型):cid 集合口径——场景甲/乙同构两断言(无 independent,
     直读型无大守护者)。"""
     assert deployed_bond_counts({'布洛妮娅', '娜塔莎', '桑博', '刃'}) == \
@@ -224,7 +224,7 @@ def test_deployed_bond_counts_side_pick() -> None:
 
 
 def test_board_factions_of_side_pick() -> None:
-    """聚合器 5 `board_factions_of`(sim 账本特征,factions+flows 直读型,
+    """聚合器 5 `board_factions_of`(sim 账本特征,factions+schools 直读型,
     公开别名同函数对象):deployed 列表口径——场景甲/乙同构两断言。"""
     assert board_factions_of(_units_a()) == \
         {'贝洛伯格': 3, '治疗': 1, '星间旅人': 1, '持续伤害': 1,

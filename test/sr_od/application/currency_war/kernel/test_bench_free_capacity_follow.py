@@ -50,7 +50,7 @@ def _pair_comp():
 def _filler_names(n: int) -> list[str]:
     """非持续伤害线的注册表角色名 n 个(占席件;测试前提自检)。"""
     names = [name for name, ch in sorted(CHARACTERS.items())
-             if ch.cost and '持续伤害' not in (ch.flows or ())
+             if ch.cost and '持续伤害' not in (ch.schools or ())
              and name != '希儿']
     assert len(names) >= n, '注册表非 DOT 名不足(测试前提失效)'
     return names[:n]

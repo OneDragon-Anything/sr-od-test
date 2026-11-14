@@ -197,7 +197,7 @@ def test_l2_bonus_keys_only() -> None:
     档 1 = 护盾(批 3 拆分各归其一,A=护盾2),加分层件凑档的 L2(10⁶)随凑档
     上升;flex_factions 不进 L2(注册表「板面不罚但完成度不数」)。"""
     comp = get_comp('列车同行·反震')
-    sub_on = [_u('姬子·启行'), _u('三月七'), _u('杰帕德')]   # 护盾 2 人(三月七+杰帕德,flows=护盾)
+    sub_on = [_u('姬子·启行'), _u('三月七'), _u('杰帕德')]   # 护盾 2 人(三月七+杰帕德,schools=护盾)
     sub_off = [_u('姬子·启行'), _u('青雀'), _u('停云')]
     panel = _panel([], locked=True, locked_comp=comp)
     l2_on = ds.selection_score(panel, sub_on, comp, ('列车同行·反震',))[1]
