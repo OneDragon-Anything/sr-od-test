@@ -992,6 +992,58 @@ class TestUpgradeCharacterFarmRoute:
             '连等超限判停应置材料停因'
         )
 
+    def test_farm_window_toast_stops_immediately(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """无可刷缺口正判:场景含 toast 锚 → open_farm_window 首轮即
+        FARM_WINDOW_FAIL 判停——find_clicks 空锁代码顺序(探测先于任何
+        点击,先点后探的实现会让桩记到点击而本测试红);置位与既有判停
+        路径一致,计数复位。"""
+        state = _install_script(
+            monkeypatch, test_context,
+            [{(_ASCEND, '提示-无可刷缺口')}], level=40)
+        _record_controller_clicks(monkeypatch, test_context, state)
+        op = _WatchedUpgradeCharacter(test_context, farm_dungeon=True)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        monkeypatch.setattr(UpgradeCharacterOp, 'save_screenshot',
+                            lambda self, prefix='': '')
+        result = _call_node(op, 'open_farm_window')
+        assert result.is_success and result.status == 'FARM_WINDOW_FAIL', (
+            f'toast 命中应即判停收口,status={result.status}'
+        )
+        assert op._capped is True and op._stop_status == 'MATERIAL_CAPPED', (
+            '正判应置判停标志与材料停因'
+        )
+        assert op._farm_window_wait_rounds == 0, '判停路径应复位连等计数'
+        assert state['find_clicks'] == [], (
+            f'命中 toast 不得再点击(正判先于点击),find_clicks={state["find_clicks"]}'
+        )
+
+    def test_farm_window_toast_probe_gated_after_first_round(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """探测门:连等计数 ≥2 后抑制 toast 探测——慢开窗场景冗余二次点击
+        被拒再弹的 toast 不得被误读为无可刷缺口(否则合法升级被提前误判
+        停,停因还错)。计数置 2 + toast 锚在场仍走 helper(窗口已开)。"""
+        state = _install_script(
+            monkeypatch, test_context,
+            [{(_ASCEND, '提示-无可刷缺口')}], level=40)
+        clicks = _record_controller_clicks(monkeypatch, test_context, state)
+        op = _WatchedUpgradeCharacter(test_context, farm_dungeon=True)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        op._farm_window_wait_rounds = 2
+        result = _call_node(op, 'open_farm_window')
+        assert result.is_success and result.status == '按钮-快速刷取', (
+            f'计数 ≥2 应抑制探测走 helper(窗口开),status={result.status}'
+        )
+        assert op._capped is False, '抑制轮不得误判停'
+        assert (_ASCEND, '提示-无可刷缺口') not in state['find_events'], (
+            '抑制轮不得发起 toast 探测查询'
+        )
+        assert _has_click_in(clicks, test_context, _ASCEND, '按钮-快速刷取'), (
+            '抑制轮应照常走 helper 点击路径'
+        )
+
     def test_farm_window_fail_routes_back_to_loop(
         self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
     ) -> None:
