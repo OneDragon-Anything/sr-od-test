@@ -506,6 +506,10 @@ class TestUpgradeLightConeBranches:
             f'结果框在场应直接成功交返回分类,status={result.status}'
         )
         assert op._farm_rounds == 0, '重入守卫不得重复计数刷取轮次'
+        assert op._farm_draws == 0 and op._farm_times_set == 0, (
+            f'判据位为 0 时结果框重入不得记账(空判据 settle),'
+            f'draws={op._farm_draws},times_set={op._farm_times_set}'
+        )
         assert not _has_click_in(clicks, test_context,
                                  _FAST_FARM_DIALOG, '按钮-刷取次数拉满'), (
             '重入守卫不得重跑拉满点击'
@@ -526,10 +530,15 @@ class TestUpgradeLightConeBranches:
             f'刷取进行中应 WAIT 等待结果框,result={result2.result}'
         )
         assert op2._farm_rounds == 0, '刷取进行中重入不得重复计数'
+        assert op2._farm_draws == 0 and op2._farm_times_set == 0, (
+            f'慢询轮零副作用(不动账本),draws={op2._farm_draws},'
+            f'times_set={op2._farm_times_set}'
+        )
         assert not clicks2, f'刷取进行中重入不得有任何点击,clicks={clicks2}'
 
-        # 用例3:开拓力补充弹窗在场(确认被拦,结果框永不出现) → 置判停标志
-        # 并以 POWER_BLOCKED 交返回分类原路清场(不再 round_fail 死在副本里)
+        # 用例3:开拓力补充弹窗在场(确认被拦,结果框永不出现) → 置判停标志、
+        # 作废本轮次数记录(本轮未成交未记账,不动历史账),以 POWER_BLOCKED
+        # 交返回分类原路清场
         state3 = _install_script(
             monkeypatch, test_context,
             [{('开拓力补充弹窗', '标题-开拓力补充弹窗')}], level=40)
@@ -549,7 +558,98 @@ class TestUpgradeLightConeBranches:
             '守卫应置判停标志与 POWER_CAPPED 停因'
         )
         assert op3._farm_rounds == 0, '判停路径不得重复计数'
+        assert op3._farm_draws == 0 and op3._farm_times_set == 0, (
+            f'拦截只清判据位(本轮未设次数,无账可动),draws={op3._farm_draws},'
+            f'times_set={op3._farm_times_set}'
+        )
         assert not clicks3, f'判停路径不得有任何点击,clicks={clicks3}'
+
+    def test_power_blocked_voids_round_wholely(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """开拓力拦截整体作废本轮(镜像角色晋阶线同款全量断言):预置历史账
+        draws=3 + 本轮已设次数 times_set=3 → 触发拦截 → 只清判据位,
+        draws==3、rounds==0 原样保留——「不虚增」判据抓不住负数腐蚀
+        (回滚式 draws -= times_set 会把历史账抹到 0/负数),必须全量断言。"""
+        state = _install_script(
+            monkeypatch, test_context,
+            [{('开拓力补充弹窗', '标题-开拓力补充弹窗')}], level=40)
+        _record_controller_clicks(monkeypatch, test_context, state)
+        op = _WatchedUpgradeLightCone(test_context, farm_dungeon=True)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        op._farm_draws = 3      # 前轮已成交的历史账
+        op._farm_times_set = 3  # 本轮确认已设未成交
+        enter_running_state(op.ctx)
+        try:
+            with fast_sleep(op):
+                result = op.confirm_ticket_farm()
+        finally:
+            reset_running_state(op.ctx, op)
+        assert result.is_success and result.status == 'POWER_BLOCKED', (
+            f'拦截应以 POWER_BLOCKED 交返回分类清场,status={result.status}'
+        )
+        assert op._farm_rounds == 0, '本轮未成交,轮次不得入账'
+        assert op._farm_draws == 3, (
+            f'未成交不动历史账(3 保持 3,既不抹账也不出负数),实际 {op._farm_draws}'
+        )
+        assert op._farm_times_set == 0, '本轮次数记录应作废归零'
+
+    def test_confirm_miss_rerun_skips_set_and_settles_once(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """首点确认未生效的重发轮幂等(镜像角色晋阶线同款):确认点击未生效
+        的 WAIT 重入轮只重发确认——幂等判据(_farm_times_set 非零)跳过次数
+        设置,重发成功记账恰好一次。重入轮若重跑设次数会多点「+」,若重复
+        入账会虚报消耗。"""
+        set_calls = {'n': 0}
+        real_set = UpgradeLightConeOp._set_farm_times
+
+        def _counting_set(op_self, target):
+            set_calls['n'] += 1
+            return real_set(op_self, target)
+
+        def _fake_click_with_miss(op_self, screen, s_name, a_name, *args, **kwargs):
+            state['find_clicks'].append((s_name, a_name))
+            if (s_name, a_name) == (_FAST_FARM_DIALOG, '按钮-确认快速刷取') \
+                    and len([c for c in state['find_clicks']
+                             if c == (_FAST_FARM_DIALOG, '按钮-确认快速刷取')]) == 1:
+                return op_self.round_wait(status=a_name, wait=2)  # 首点未生效
+            test_context.controller.click(_rect_center(s_name, a_name))
+            return op_self.round_success(status=a_name)
+
+        scenes = [
+            set(),
+            {(_FAST_FARM_DIALOG, '标题-快速刷取弹窗')},
+        ]
+        state = _install_script(monkeypatch, test_context, scenes, level=40)
+        state['round'] = 1  # 直呼节点:确认框在场轮
+        _record_controller_clicks(monkeypatch, test_context, state)
+        op = _WatchedUpgradeLightCone(test_context, farm_dungeon=True,
+                                      farm_times_per_round=1)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        monkeypatch.setattr(UpgradeLightConeOp, 'round_by_find_and_click_area',
+                            _fake_click_with_miss)
+        monkeypatch.setattr(UpgradeLightConeOp, '_set_farm_times', _counting_set)
+        enter_running_state(op.ctx)
+        try:
+            with fast_sleep(op):
+                first = op.confirm_ticket_farm()
+                second = op.confirm_ticket_farm()  # 模拟确认未生效的 WAIT 重入
+        finally:
+            reset_running_state(op.ctx, op)
+        assert first.result == OperationRoundResultEnum.WAIT, (
+            f'首点未生效应 WAIT,result={first.result}'
+        )
+        assert second.is_success, f'重发确认应生效,status={second.status}'
+        assert op._farm_rounds == 1, (
+            f'重入轮不得重复记账,rounds={op._farm_rounds}'
+        )
+        assert op._farm_draws == 1, f'重入轮不得重复记账,draws={op._farm_draws}'
+        assert op._farm_times_set == 0, '记账后判据位应清零'
+        # 次数设置幂等:重入轮(_farm_times_set 非零)不得重跑 _set_farm_times
+        assert set_calls['n'] == 1, (
+            f'重入轮不得重复设次数,set 调用 {set_calls["n"]} 次'
+        )
 
     def test_capped_exit_reports_stop_status(
         self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
@@ -1176,4 +1276,31 @@ class TestUpgradeLightConeEntryAscendStart:
             reset_running_state(op.ctx, op)
         assert not result.is_success and '光锥 TAB' in (result.status or ''), (
             f'手动路线读名失败应入口快速失败,status={result.status}'
+        )
+
+    def test_probe_ascend_exit_fails_fast_when_unnamed(
+            self, test_context: SrTestContext,
+            monkeypatch: pytest.MonkeyPatch) -> None:
+        """None 帧探针命中等级提升锚 + 手动路线 + 读名失败 → 入口 fail-fast
+        (零消耗)——逐锚接管的 ALREADY_ASCEND 出口与直入出口同过记名防线,
+        探针路径漏挂防线会让模态弹窗/过渡帧现场绕过拦截白烧开拓力。
+        (harness 的 screen_utils.find_area 恒 TRUE 桩直接命中探针循环首个
+        等级提升锚「标题-材料补全弹窗」。)"""
+        op = _WatchedUpgradeLightCone(test_context, farm_dungeon=True,
+                                      use_fast_ticket=False)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        state = _install_script(monkeypatch, test_context, [set()], level=30)
+        state['screen_now'] = None  # 模态盖住画面 id_mark,整帧识别失败走逐锚探针
+        state['char_name_next'] = None
+        enter_running_state(op.ctx)
+        try:
+            with fast_sleep(op):
+                result = op.check_entry()
+        finally:
+            reset_running_state(op.ctx, op)
+        assert not result.is_success and '光锥 TAB' in (result.status or ''), (
+            f'探针出口读名失败应在消耗前判停,status={result.status}'
+        )
+        assert state['char_name_reads'] == [1], (
+            f'探针出口读名应恰好一次,char_name_reads={state["char_name_reads"]}'
         )

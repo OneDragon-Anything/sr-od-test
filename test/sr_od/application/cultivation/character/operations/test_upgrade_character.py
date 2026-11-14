@@ -109,7 +109,7 @@ def _install_script(
     state: dict = {'round': 0, 'level_reads': 0, 'find_events': [],
                    'find_clicks': [], 'farm_times_read': farm_times,
                    'screen_now': _DETAIL, 'char_name_next': '测试角色',
-                   'in_manual_fight': False}
+                   'char_name_reads': [], 'in_manual_fight': False}
 
     def _fake_find_area(self, screen, s_name, a_name, *args, **kwargs):
         state['find_events'].append((s_name, a_name))
@@ -164,6 +164,7 @@ def _install_script(
         return state['farm_times_read']
 
     def _fake_char_name(self) -> str | None:
+        state['char_name_reads'].append(1)
         return state.get('char_name_next')
 
     monkeypatch.setattr(UpgradeCharacterOp, 'round_by_find_area', _fake_find_area)
@@ -417,6 +418,97 @@ class TestUpgradeCharacterEntryTakeover:
 
         assert not result.is_success and '读名' in str(result.status), (
             f'手动链读名失败应在消耗前判停,status={result.status}'
+        )
+
+
+class TestUpgradeCharacterEntryAscendStart:
+    """就地起跑(等级提升画面)记名契约:全部 ALREADY_ASCEND 出口(直入 +
+    None 帧探针)统一记名——手动链返回后凭记名重选角色(角色详情不记忆
+    上次角色),ASCEND 起跑漏读名会在战后防线处白烧一场开拓力。
+    出处:upgrade_character.py check_entry docstring 与
+    _guard_unnamed_manual_farm(与光锥线 TestUpgradeLightConeEntryAscendStart
+    同构镜像)。"""
+
+    def test_ascend_start_reads_name_and_takes_over(
+            self, test_context: SrTestContext,
+            monkeypatch: pytest.MonkeyPatch) -> None:
+        """等级提升画面就地起跑:读名成功 → 记名 + ALREADY_ASCEND 接管
+        (手动路线后续返回链可凭记名安全重选),读名恰好一次。"""
+        op = _WatchedUpgradeCharacter(test_context, farm_dungeon=True,
+                                      use_fast_ticket=False)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        state = _install_script(monkeypatch, test_context, [set()], level=30)
+        state['screen_now'] = _ASCEND
+        clicks = _record_controller_clicks(monkeypatch, test_context, state)
+        enter_running_state(op.ctx)
+        try:
+            with fast_sleep(op):
+                result = op.check_entry()
+        finally:
+            reset_running_state(op.ctx, op)
+        assert result.is_success and result.status == 'ALREADY_ASCEND', (
+            f'就地起跑应接管,status={result.status}'
+        )
+        assert op._char_name == '测试角色', f'应记名,char_name={op._char_name}'
+        assert state['char_name_reads'] == [1], (
+            f'读名应恰好一次,char_name_reads={state["char_name_reads"]}'
+        )
+        assert clicks == [], f'接管前不应有任何画面点击,clicks={clicks}'
+
+    def test_ascend_start_manual_route_fails_fast_on_missing_name(
+            self, test_context: SrTestContext,
+            monkeypatch: pytest.MonkeyPatch) -> None:
+        """就地起跑 + 手动路线 + 读名失败 → 入口即快速失败(零消耗)——
+        漏读时打完一场才在返回链防线失败,白烧一场开拓力;拦截消息提示
+        从目标角色详情 TAB 重新发起。"""
+        op = _WatchedUpgradeCharacter(test_context, farm_dungeon=True,
+                                      use_fast_ticket=False)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        state = _install_script(monkeypatch, test_context, [set()], level=30)
+        state['screen_now'] = _ASCEND
+        state['char_name_next'] = None
+        clicks = _record_controller_clicks(monkeypatch, test_context, state)
+        enter_running_state(op.ctx)
+        try:
+            with fast_sleep(op):
+                result = op.check_entry()
+        finally:
+            reset_running_state(op.ctx, op)
+        assert not result.is_success and '详情 TAB' in (result.status or ''), (
+            f'手动路线读名失败应入口快速失败,status={result.status}'
+        )
+        assert clicks == [], (
+            f'入口 fail-fast 即零消耗,不得有任何画面点击,clicks={clicks}'
+        )
+
+    def test_probe_ascend_exit_fails_fast_when_unnamed(
+            self, test_context: SrTestContext,
+            monkeypatch: pytest.MonkeyPatch) -> None:
+        """None 帧探针命中等级提升锚 + 手动路线 + 读名失败 → 入口 fail-fast
+        (零消耗)——逐锚接管的 ALREADY_ASCEND 出口与直入出口同过记名防线,
+        探针路径漏挂防线会让模态弹窗/过渡帧现场绕过拦截白烧开拓力。"""
+        op = _WatchedUpgradeCharacter(test_context, farm_dungeon=True,
+                                      use_fast_ticket=False)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        state = _install_script(
+            monkeypatch, test_context, [{(_ASCEND, '标题-等级提升')}], level=30)
+        state['screen_now'] = None  # 模态盖住画面 id_mark,整帧识别失败走逐锚探针
+        state['char_name_next'] = None
+        clicks = _record_controller_clicks(monkeypatch, test_context, state)
+        enter_running_state(op.ctx)
+        try:
+            with fast_sleep(op):
+                result = op.check_entry()
+        finally:
+            reset_running_state(op.ctx, op)
+        assert not result.is_success and '读名' in (result.status or ''), (
+            f'探针出口读名失败应在消耗前判停,status={result.status}'
+        )
+        assert state['char_name_reads'] == [1], (
+            f'探针出口读名应恰好一次,char_name_reads={state["char_name_reads"]}'
+        )
+        assert clicks == [], (
+            f'入口 fail-fast 即零消耗,不得有任何画面点击,clicks={clicks}'
         )
 
 
