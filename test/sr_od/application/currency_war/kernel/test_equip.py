@@ -9,14 +9,12 @@
 - **merge 装备继承**(语义源 = merge_mechanics):同名同星 3 合 1,
   素材装备按扫描序继承到载体(场上载体优先;载体自有在前),素材槽
   清空——重写状态容器形状时的不变量哨兵;
-- **银狼专属装备可穿性门**(2026-09-18 用户定论,10 件,白名单 =
-  银狼 + 银狼LV.999;机制权威版本 =
-  docs/game/currency_war/research/equipment_mechanics.md「银狼专属
-  装备」节;事故 = run_20260918_075416 分身墨镜Max 拖给丹恒·饮月
-  静默不生效 → 装备滞留 owned → 安灯停局):登记完整性 / 白名单
-  真值表 / 分配器消费位排除 / 回退帧 fail-closed / 注册表互检。
+- **穿戴规则门侧 v4.7 清空形态**(v4.7 换赛季重灌:银狼专属 10 件/
+  「骇客」类键/银狼白名单角色全部不在官方名单,门侧三常量清空,防误拖
+  保护随对象消失;存续防线 = 骰子空栏前置,design.md §2.3.1):清空
+  形态锁 / 判定面恒放行 / 分配器存续防线 / 回退帧计划面 / 注册表互检。
 - **特权映射双射锁**(特权赋予卡与融合召唤共用的确定性变换映射单一源
-  ``privilege_counterpart``):进阶全集逐名正向 / 特权全集逐名反向,
+  ``privilege_counterpart``):进阶装备全集逐名正向 / 特权装备全集逐名反向,
   36/36 全量闭合钉死——游戏装备注册表改版(单侧新增)触发 = 漂移哨。
 - **穿着即合成 × 特权档边转换域分界**:特权档产物(非进阶件)不经
   获得转换卡改写——转换卡辖「合成/获得进阶装备」事件,与融合召唤
@@ -32,6 +30,7 @@ from test.sr_od.application.currency_war._cw_helpers import (
 
 from sr_od.application.currency_war.data.cw_equipment_data import EQUIPMENTS
 from sr_od.application.currency_war.data.cw_equipment_wear_rules_data import (
+    CATEGORY_WEAR_GATES,
     ITEM_WEAR_GATES,
     YINLANG_WEAR_ALLOWLIST,
     check_equipment_wear_rule_coverage,
@@ -219,9 +218,11 @@ def test_deployed_carrier_inherits_bench_material_equips() -> None:
     assert bench[0] is None and bench[1] is None, 'bench 素材槽清空'
 
 
-# ============================================================ 银狼专属装备可穿性门
+# ============================================================ 穿戴规则门侧(v4.7 清空形态)
 
-#: 口述 10 件清单(2026-09-18 用户定论;测试基准 = 登记的完整性,防漏登/多登)。
+#: 口述 10 件清单(2026-09-18 用户定论的原银狼专属件;v4.7 换赛季重灌后
+#: 全部不在官方名单——留作门重建哨:任一件重现于注册表而门侧仍空 =
+#: 门重建工程欠账显形,design.md §2.3.1)。
 ORAL_EXCLUSIVE_TEN = frozenset({
     '分身墨镜', '分身墨镜Max',
     '数据拷贝仪', '数据拷贝仪Max', '数据拷贝仪Pro',
@@ -229,46 +230,38 @@ ORAL_EXCLUSIVE_TEN = frozenset({
     '破解芯片', '管理员手套ProMax', '欢愉卡带Max',
 })
 
-#: 白名单外代表角色;丹恒·饮月 = run_20260918_075416 事故角色。
+#: 白名单外代表角色。
 _OTHER_CHARS = ('丹恒·饮月', '希儿')
 
 
-def test_gate_table_matches_oral_list():
-    """登记完整性:件级门恰好 = 口述 10 件,每件白名单 = 银狼两角色单一源。"""
-    assert set(ITEM_WEAR_GATES) == ORAL_EXCLUSIVE_TEN
-    for gate in ITEM_WEAR_GATES.values():
-        assert gate == YINLANG_WEAR_ALLOWLIST
+def test_gate_tables_cleared_v47():
+    """v4.7 门侧清空形态锁(design.md §2.3.1):件级门/类别门/银狼白名单
+    三常量全空——被保护对象(银狼专属 10 件/「骇客」类/银狼两角色)全部
+    不在 v4.7 官方名单,防误拖保护随对象消失;口述 10 件与注册表零交集,
+    重现任一件而门仍空 = 门重建(实机取证)欠账哨。"""
+    assert ITEM_WEAR_GATES == {}
+    assert CATEGORY_WEAR_GATES == {}
+    assert not YINLANG_WEAR_ALLOWLIST
+    overlap = ORAL_EXCLUSIVE_TEN & set(EQUIPMENTS)
+    assert not overlap, \
+        f'专属件重现注册表但门侧为空,须先重建门: {sorted(overlap)}'
 
 
-def test_allowlist_two_chars_wearable():
-    """白名单两角色全部可穿(定论:「两个都行」,非仅银狼LV.999)。"""
-    for item in ORAL_EXCLUSIVE_TEN:
-        for char in ('银狼', '银狼LV.999'):
+def test_gates_empty_any_pair_wearable():
+    """门侧清空后判定面恒放行:在库件 × 任意角色全可穿;前置件(随便骰子)
+    worn=[] 时空栏前置恒过(design.md §2.3.1 v4.7 形态;门重建后由白名单
+    真值表测试接替)。载荷 = 新注册表在库件(垃圾袋 = 派生简易装备)。"""
+    for item in ('随便骰子', '垃圾袋', '掩体生成枪'):
+        for char in (*_OTHER_CHARS, '银狼', '银狼LV.999'):
             assert _wearable_gate_ok([], char, item) is True
 
 
-def test_non_allowlist_chars_rejected():
-    """白名单外角色全部被拒(游戏侧 = 拖拽静默不生效,分配前排除)。"""
-    for item in ORAL_EXCLUSIVE_TEN:
-        for char in _OTHER_CHARS:
-            assert _wearable_gate_ok([], char, item) is False
-
-
-def test_unregistered_items_unaffected():
-    """门只辖登记键:特殊类非专属件(垃圾袋)恒可穿;骇客类非专属件
-    (扑满病毒)走类别门定论白名单(银狼系放行/他人拒)。"""
-    assert _wearable_gate_ok([], '丹恒·饮月', '垃圾袋') is True
-    assert _wearable_gate_ok([], '银狼', '垃圾袋') is True
-    assert _wearable_gate_ok([], '银狼', '扑满病毒') is True
-    assert _wearable_gate_ok([], '银狼LV.999', '扑满病毒') is True
-    assert _wearable_gate_ok([], '希儿', '扑满病毒') is False
-
-
-def test_allocator_excludes_illegal_pair():
-    """事故路径测试:comp=None 兜底轮转也不把分身墨镜Max 发给丹恒·饮月
-    (run_075416:该对进过穿戴规划 → 拖拽静默不生效 → 安灯停局);同池
-    普通件(垃圾袋)照常分配,专属件留 owned。
-    载体 = 上阵视图 DeployedView(位置 = 子表下标派生)。"""
+def test_allocator_excludes_dice_with_worn():
+    """分配器存续防线锁:骰子空栏前置经 equip_allocation 生效——身上已有
+    件的角色不被发随便骰子(谓词二分配前排除,件留 pool),同池普通件
+    照常分配。v4.7 门侧清空后,分配必拒族只剩骰子前置(件级/类别门随
+    对象掉出结构性退役,design.md §2.3.1);载荷按新注册表现值
+    (垃圾袋 = 派生简易装备;旧载荷 分身墨镜Max/扑满病毒 已掉出注册表)。"""
     from sr_od.application.currency_war.kernel.cw_game_state import (
         Unit,
         deployed_view_sequential,
@@ -276,19 +269,20 @@ def test_allocator_excludes_illegal_pair():
     view = deployed_view_sequential(
         [Unit(char_id='丹恒·饮月', star=2, equips=[])], [])
     out = equip_allocation(None, view,
-                           ['分身墨镜Max', '垃圾袋'], occupied={})
-    assert ('丹恒·饮月', '分身墨镜Max') not in out
+                           ['随便骰子', '垃圾袋'],
+                           occupied={('front', 1): ['掩体生成枪']})
+    assert ('丹恒·饮月', '随便骰子') not in out
     assert ('丹恒·饮月', '垃圾袋') in out
 
 
-def test_front_only_fallback_excludes_gated_items():
-    """回退帧门测试(fail-closed):身份读失败帧(deployed 空 → front_only
-    回退分支)专属件在 owned → 回退计划不含专属件(件滞留 owned,不发
-    拖拽);同池无门件照常入计划(行为不变);空栏前置件(worn=[] 无
-    信息恒过)也入计划 = 回退帧只补 W3 有效辖域。"""
+def test_front_only_fallback_plans_in_registry_items():
+    """回退帧计划面(v4.7 重灌):在库件入计划(随便骰子 worn=[] 空栏前置
+    恒过);掉出注册表的件(扑满病毒)不入计划——拦截向由注册表成员过滤
+    承担(门拒向随门侧清空退役,design.md §2.3.1);计划步 = 回退帧形态
+    (无角色语境,front 行槽位)。"""
     session = cw4_session(cw4_comp())
     gs = game_state_of(session)
-    gs.observe(gs.equips, ['分身墨镜Max', '扑满病毒', '掩体生成枪', '随便骰子'],
+    gs.observe(gs.equips, ['扑满病毒', '掩体生成枪', '随便骰子'],
                sig=_SIG)
     gs.observe(gs.occupied_equips, {}, sig=_SIG)
     ret = _build_equip_wear_plan(session)
@@ -461,26 +455,28 @@ def test_wear_advanced_no_conversion_without_synthesis():
 
 
 def test_privilege_counterpart_bijection_registry_pinned():
-    """进阶↔特权 36/36 全量双射锁(6a 正向 + 6b 反向):进阶全集逐名
-    ``privilege_counterpart`` 已登记且 category='特权';特权全集逐名去
-    后缀已登记且 category='进阶';双表同基数 36。游戏装备注册表改版
-    (单侧新增进阶/特权件)会触发 = 漂移哨——处置 = 版本重采后双表
-    同步(映射为后缀拼接,双表天然同步,单侧漂移 = 注册表缺口需申报)。"""
+    """进阶装备↔特权装备 36/36 全量双射锁(6a 正向 + 6b 反向):进阶装备
+    全集逐名 ``privilege_counterpart`` 已登记且 category='特权装备';特权
+    装备全集逐名去后缀已登记且 category='进阶装备';双表同基数 36。v4.7
+    换赛季重灌按官方分类直落(design.md §2.2),双表基数/类别按新注册表
+    现值(36/36,配对完整性 = config 实证)。游戏装备注册表改版(单侧
+    新增进阶/特权件)会触发 = 漂移哨——处置 = 版本重采后双表同步
+    (映射为后缀拼接,双表天然同步,单侧漂移 = 注册表缺口需申报)。"""
     from sr_od.application.currency_war.kernel.cw_effect_inventory import (
         EQUIP_PRIVILEGE_SUFFIX,
         privilege_counterpart,
     )
-    advance = {n for n, e in EQUIPMENTS.items() if e.category == '进阶'}
-    privilege = {n for n, e in EQUIPMENTS.items() if e.category == '特权'}
+    advance = {n for n, e in EQUIPMENTS.items() if e.category == '进阶装备'}
+    privilege = {n for n, e in EQUIPMENTS.items() if e.category == '特权装备'}
     assert len(advance) == 36 and len(privilege) == 36, \
         f'双表基数 36/36(实得 {len(advance)}/{len(privilege)})'
     for n in sorted(advance):
         c = privilege_counterpart(n)
-        assert c in EQUIPMENTS and EQUIPMENTS[c].category == '特权', \
+        assert c in EQUIPMENTS and EQUIPMENTS[c].category == '特权装备', \
             f'正向断:{n!r} → {c!r} 未登记/类别漂移'
     for n in sorted(privilege):
         base = n.removesuffix(EQUIP_PRIVILEGE_SUFFIX)
-        assert base in EQUIPMENTS and EQUIPMENTS[base].category == '进阶', \
+        assert base in EQUIPMENTS and EQUIPMENTS[base].category == '进阶装备', \
             f'反向断:{n!r} ← {base!r} 未登记/类别漂移'
         assert privilege_counterpart(base) == n, '去后缀/拼接往返闭合'
 
