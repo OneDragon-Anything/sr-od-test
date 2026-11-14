@@ -491,8 +491,8 @@ class TestUpgradeLightConeBranches:
         assert op2._farm_rounds == 0, '刷取进行中重入不得重复计数'
         assert not clicks2, f'刷取进行中重入不得有任何点击,clicks={clicks2}'
 
-        # 用例3:开拓力补充弹窗在场(确认被拦,结果框永不出现) → 显式判停,
-        # 不进 WAIT 空转(WAIT 循环无重试上限,必须由此分支终止)
+        # 用例3:开拓力补充弹窗在场(确认被拦,结果框永不出现) → 置判停标志
+        # 并以 POWER_BLOCKED 交返回分类原路清场(不再 round_fail 死在副本里)
         state3 = _install_script(
             monkeypatch, test_context,
             [{('开拓力补充弹窗', '标题-开拓力补充弹窗')}], level=40)
@@ -505,11 +505,40 @@ class TestUpgradeLightConeBranches:
                 result3 = op3.confirm_ticket_farm()
         finally:
             reset_running_state(op3.ctx, op3)
-        assert not result3.is_success and '开拓力不足' in str(result3.status), (
-            f'补充弹窗在场应显式判停,status={result3.status}'
+        assert result3.is_success and result3.status == 'POWER_BLOCKED', (
+            f'补充弹窗在场应以 POWER_BLOCKED 交返回分类清场,status={result3.status}'
+        )
+        assert op3._capped is True and op3._stop_status == 'POWER_CAPPED', (
+            '守卫应置判停标志与 POWER_CAPPED 停因'
         )
         assert op3._farm_rounds == 0, '判停路径不得重复计数'
         assert not clicks3, f'判停路径不得有任何点击,clicks={clicks3}'
+
+    def test_capped_exit_reports_stop_status(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """判停收尾按 _stop_status 出状态:POWER_CAPPED 场景(开拓力不足守卫
+        置位)下 ③ 到光锥 TAB 即以 POWER_CAPPED 结束,与材料判停的
+        LIGHT_CONE_CAPPED 可区分;并补读判停时未知的等级。"""
+        state = _install_script(
+            monkeypatch, test_context,
+            [set(), {(_LC_TAB, '标题-角色光锥')}], level=70)
+        _record_controller_clicks(monkeypatch, test_context, state)
+        op = _WatchedUpgradeLightCone(test_context, farm_dungeon=True)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        op._capped = True
+        op._stop_status = 'POWER_CAPPED'
+        op._capped_level = None  # 券确认守卫判停时不在养成界面,等级未知
+        enter_running_state(op.ctx)
+        try:
+            with fast_sleep(op):
+                result = op.upgrade_loop()
+        finally:
+            reset_running_state(op.ctx, op)
+        assert result.is_success and result.status == 'POWER_CAPPED', (
+            f'POWER_CAPPED 停因应原样透出,status={result.status}'
+        )
+        assert op._capped_level == 70, f'收尾应补读判停等级,得到 {op._capped_level}'
 
     def test_back_after_farm_cancels_leftover_dialogs(
         self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,

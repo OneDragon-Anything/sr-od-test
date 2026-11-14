@@ -388,3 +388,31 @@ class TestUpgradeCharacterFarmRoute:
         assert not any(a == '挑战副本' for _, a in state['find_clicks']), (
             '未授权刷副本不应触碰挑战副本画面'
         )
+
+    def test_power_blocked_routes_walk_home(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """开拓力不足判停不再死在副本里:券确认/手动挑战两节点的守卫识别
+        「开拓力补充弹窗」即置判停标志,以 POWER_BLOCKED 交返回分类原路
+        清场(取消弹窗→关副本→回养成界面→POWER_CAPPED 收尾)。"""
+        for node_name in ('confirm_ticket_farm', 'manual_fight'):
+            state = _install_script(
+                monkeypatch, test_context,
+                [{('开拓力补充弹窗', '标题-开拓力补充弹窗')}], level=0)
+            _record_controller_clicks(monkeypatch, test_context)
+            op = _WatchedUpgradeCharacter(test_context, farm_dungeon=True)
+            op._init_watchdog()  # type: ignore[attr-defined]
+            enter_running_state(op.ctx)
+            try:
+                with fast_sleep(op):
+                    result = getattr(op, node_name)()
+            finally:
+                reset_running_state(op.ctx, op)
+            assert result.is_success and result.status == 'POWER_BLOCKED', (
+                f'{node_name} 补充弹窗在场应以 POWER_BLOCKED 清场,'
+                f'status={result.status}'
+            )
+            assert op._capped is True and op._stop_status == 'POWER_CAPPED', (
+                f'{node_name} 守卫应置判停标志与 POWER_CAPPED 停因'
+            )
+            assert op._farm_rounds == 0, f'{node_name} 判停路径不得重复计数'
