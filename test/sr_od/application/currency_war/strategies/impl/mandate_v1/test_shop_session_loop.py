@@ -102,7 +102,6 @@ _MEMBER = COMP_LIBRARY[0].core_chars[0]
 def _fuel(count: int, exclude: tuple[str, ...] = ()) -> list[str]:
     from sr_od.application.currency_war.data.cw_chars import (
     CHARACTER_ROSTER,
-    CHARACTERS,
 )
     out = [n for n in CHARACTER_ROSTER
            if n not in _LINE and n not in exclude]
@@ -306,10 +305,6 @@ class TestGoldLedgerProtocol:
         """伴生入金记账(§4.2 协议① 单卡型):返利族 5 费第三笔买入
         ⇒ +3 双写(账面 + gs.gold 期望态投影扩展)——漏账偏差侦测的
         账面侧。"""
-        from sr_od.application.currency_war.data.cw_chars import (
-    CHARACTER_ROSTER,
-    CHARACTERS,
-)
         five_cost = next(c.name for c in CHARACTERS if c.cost == 5)
         live, sess, gs, st = _frame(
             gold=60, node_kind='reward',
@@ -361,11 +356,9 @@ class TestOrderInheritance:
         """场况插件会话累计额度(§2.2 序 2):额度 = 会话开始帧
         deploy_cap − deployed 快照;额度尽即停(被拦插件不进机会清单
         ——上阵空位非节点内可解除资源)。"""
-        from sr_od.application.currency_war.data.cw_chars import (
-    CHARACTER_ROSTER,
-    CHARACTERS,
+        from sr_od.application.currency_war.data.cw_traits_data import (
+    trait_by_name,
 )
-        from sr_od.application.currency_war.data.cw_factions import FACTIONS
         # 插件件选择约束:身份必须非线内(序 1 义务面不辖——本测试专辖
         # 序 2 额度门,不被前序臂掩蔽;核心/保护身份规避面已随统一让位
         # 优先级批退役)。档位约束:
@@ -373,7 +366,7 @@ class TestOrderInheritance:
         # 「板面差一人进下一档」与「deployed == deploy_cap(额度 0)」
         # 可以同时成立。
         pick = None
-        for faction_tag, fac in FACTIONS.items():
+        for faction_tag, fac in trait_by_name.items():
             members = [ch.name for ch in CHARACTERS
                        if faction_tag in getattr(ch, 'factions', ())
                        and ch.cost

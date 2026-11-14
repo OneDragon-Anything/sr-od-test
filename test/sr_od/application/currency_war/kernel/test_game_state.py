@@ -1989,9 +1989,10 @@ def test_boss_briefing_report_types_hist_node() -> None:
 
 
 def test_board_next_tier_concrete_shape() -> None:
-    """坐标系纯函数:棋盘阵营升档 = 同阵营 ≥2 才有下一档(具体形直测;
-    节点序位键原语测试 = test_node_pos_primitive)。"""
-    assert board_next_tier_of({'仙舟': 2, '联盟': 1}) == {'仙舟': 3}
+    """坐标系纯函数:棋盘阵营升档 = 同羁绊 ≥2 才有下一档(具体形直测;
+    节点序位键原语测试 = test_node_pos_primitive)。键 = v4.7 现役注册名
+    (仙舟舰队 tiers 2/4/6/9),「联盟」 = 未注册名代表(不入输出)。"""
+    assert board_next_tier_of({'仙舟舰队': 2, '联盟': 1}) == {'仙舟舰队': 4}
     assert board_next_tier_of({}) == {}
 
 

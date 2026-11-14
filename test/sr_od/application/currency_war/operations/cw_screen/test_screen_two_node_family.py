@@ -77,10 +77,11 @@ def _make_match(session: StrategySession, **strategy) -> SimpleNamespace:
 
 
 def _setup_bookcard(op, monkeypatch) -> None:
-    """星徽秘典读链桩(全屏 OCR「X星徽」→ 阵营名 + x 中心)。"""
+    """星徽秘典读链桩(全屏 OCR「X星徽」→ 阵营名 + x 中心;键 = 现役
+    注册名「能量」,v4.7 换季后沿用)。"""
     monkeypatch.setattr(
         op.ctx, 'ocr_service',
-        _StubOcr(list_result=[SimpleNamespace(data='列车同行星徽', x=700,
+        _StubOcr(list_result=[SimpleNamespace(data='能量星徽', x=700,
                                               y=100, w=120, h=30)]),
         raising=False)
 
@@ -135,7 +136,7 @@ _OBS_ROWS = {
          'wish_trial_opts', ['objective甲', '', '']),
     'bookcard':
         ('cw_screen_bookcard', 'CwScreenBookcard',
-         _setup_bookcard, 'star_tome_opts', ['列车同行']),
+         _setup_bookcard, 'star_tome_opts', ['能量']),
     'expert_invite':
         ('cw_screen_expert_invite', 'CwScreenExpertInvite',
          _setup_expert, 'expert_invite',
@@ -252,7 +253,7 @@ def test_wish_observe_reports_dual_domain(test_context, monkeypatch) -> None:
 def test_bookcard_observe_reports_dual_domain(test_context, monkeypatch) -> None:
     """星徽秘典观察上报测试(双域,选择坐标观察上报条款):观察 node 读链
     桩化(OCR 桩 + 门桩放行 + area_center 读桩回定值,恒稳断言不读真实
-    建档)→ 标准化门(「列车同行星徽」→ FACTIONS 精确命中)→ observe
+    建档)→ 标准化门(「能量星徽」→ 注册表精确命中)→ observe
     success → report 双写 star_tome_opts / star_tome_opts_xy(同门同序
     等长;坐标 = OCR x 中心 + x 近邻「星徽卡-N」建档中心 y,观察期一次
     解出)+ obs 挂实例属性。红 = 接入调用断流 / 坐标域未随观察上报 / 双域
@@ -267,7 +268,7 @@ def test_bookcard_observe_reports_dual_domain(test_context, monkeypatch) -> None
     monkeypatch.setattr(op, 'round_by_find_area',
                         lambda s, sc, a, **k: _Area(True), raising=False)
     monkeypatch.setattr(op.ctx, 'ocr_service', _StubOcr(
-        list_result=[SimpleNamespace(data='列车同行星徽', x=700, y=100,
+        list_result=[SimpleNamespace(data='能量星徽', x=700, y=100,
                                      w=120, h=30)]), raising=False)
     # area 读桩回定值(恒稳;不读真实建档,桩序 = 星徽卡-1..4)。
     monkeypatch.setattr(
@@ -281,7 +282,7 @@ def test_bookcard_observe_reports_dual_domain(test_context, monkeypatch) -> None
     rs = _run_node(test_context, op, op.observe)
     assert rs.is_success, f'bookcard: 观察 success:{rs!r}'
     gs = game_state_of(session)
-    assert gs.star_tome_opts.value == ['列车同行'], (
+    assert gs.star_tome_opts.value == ['能量'], (
         f'bookcard: report 落名字域(标准化注册名):'
         f'{gs.star_tome_opts.value!r}')
     assert gs.star_tome_opts_xy.value == [(760, 500)], (
@@ -330,13 +331,13 @@ def test_bookcard_observe_gate_failures_zero_write(test_context,
         assert op._obs is None, '观察失败不装载 obs'
         return rs
 
-    # ① 任一候选转换失败 = 观察失败(仙舟可转换;乱名带「星徽」后缀过
+    # ① 任一候选转换失败 = 观察失败(能量可转换;乱名带「星徽」后缀过
     # 读链过滤、去后缀后两段皆不中)。
-    rs = _run([_row('仙舟星徽', 700), _row('乱码七八星徽', 1500)])
+    rs = _run([_row('能量星徽', 700), _row('乱码七八星徽', 1500)])
     assert not rs.is_success and '标准化失败' in (rs.status or ''), (
         f'转换失败 = 观察失败 round_fail:{rs!r}')
     # ② 多候选命中同一注册名(选项互斥屏)= 同判转换失败。
-    rs = _run([_row('仙舟星徽', 700), _row('仙舟星徽', 1500)])
+    rs = _run([_row('能量星徽', 700), _row('能量星徽', 1500)])
     assert not rs.is_success and '标准化失败' in (rs.status or ''), (
         f'多候选同名同判转换失败:{rs!r}')
     # ③ 「星徽卡-N」建档缺失(解点返 None)= 观察失败。
@@ -345,7 +346,7 @@ def test_bookcard_observe_gate_failures_zero_write(test_context,
     monkeypatch.setattr(op, 'round_by_find_area',
                         lambda s, sc, a, **k: _Area(True), raising=False)
     monkeypatch.setattr(op.ctx, 'ocr_service', _StubOcr(
-        list_result=[_row('仙舟星徽', 700)]), raising=False)
+        list_result=[_row('能量星徽', 700)]), raising=False)
     monkeypatch.setattr(mod, 'area_center',
                         lambda ctx, name, screen_name: None)
     session = StrategySession()
@@ -368,7 +369,10 @@ def test_bookcard_lcs_ambiguity_rejection_and_unique_pass(test_context,
     0.75,旧形态取注册表序首个 = 一半概率错配(点卡即选不可逆),现判
     round_fail 零写零上报;明确唯一(「昼之半祌」对昼之半神 3/4 = 0.75、
     对夜之半神 2/4 = 0.5,差 0.25)照常命中 = 拒判不过严回归基准。红 =
-    歧义静默取最高分回潮 / 拒判误杀唯一命中。"""
+    歧义静默取最高分回潮 / 拒判误杀唯一命中。
+    词表注入锁判据机制:LCS 遍历域 monkeypatch 为自造近形对(昼之/夜之
+    半神为 v4.4 键、已随 v4.7 换血退出注册表)——本测试锁分差拒判/唯一
+    放行的判据语义,fixture 与注册表现值解耦,键集换血不漂移。"""
     from sr_od.application.currency_war.operations.cw_screen import (
         cw_screen_bookcard as mod,
     )
@@ -383,6 +387,10 @@ def test_bookcard_lcs_ambiguity_rejection_and_unique_pass(test_context,
                             lambda s, sc, a, **k: _Area(True), raising=False)
         monkeypatch.setattr(op.ctx, 'ocr_service', _StubOcr(
             list_result=ocr_rows), raising=False)
+        # LCS 遍历域注入(自造近形对词表;精确命中段仍查真注册表,两个形变
+        # 名本就不精确命中,与原真表驱动等价)。
+        monkeypatch.setattr(mod, '_FACTION_NAMES',
+                            ['昼之半神', '夜之半神'], raising=False)
         # 解点读桩(area_center 回定值;唯一命中分支要过解点才落状态容器)。
         monkeypatch.setattr(
             mod, 'area_center',
