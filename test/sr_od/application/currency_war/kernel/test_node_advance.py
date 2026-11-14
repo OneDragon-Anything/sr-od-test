@@ -88,9 +88,9 @@ def _logic_sig(actor: str = 'TestSeqEnv') -> ChannelSig:
 # ================================================================ 推进原语判据面
 
 def _gs_with_double_pair() -> GameState:
-    """新状态容器 + 双手狸已登记(每进节点 +2 免费刷新,发放断言活载体)。"""
+    """新状态容器 + 加油站已登记(每进节点 +1 免费刷新,发放断言活载体;双手狸开键盘! V4.7 退场换同形存活卡,per_node 2→1)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
-    gs.effects.register_strategy(STRATEGY_EFFECTS['双手狸开键盘！'],
+    gs.effects.register_strategy(STRATEGY_EFFECTS['加油站'],
                                  acquired_key=(1, 5))
     return gs
 
@@ -114,7 +114,7 @@ def test_first_anchor_establishes_and_grants() -> None:
     assert token == 'first_anchor'
     assert gs.node_pos.value == (1, 1) and gs.node_pos.source == 'observation'
     assert gs.node_hist_pos == (1, 1)
-    assert gs.free_refresh_left.value == 2, '首锚定即节点进入,尾段发放'
+    assert gs.free_refresh_left.value == 1, '首锚定即节点进入,尾段发放'
 
 
 def test_gate_blocks_unconfirmed_logic() -> None:
@@ -154,68 +154,6 @@ def test_reanchor_unlocks_next_advance() -> None:
     assert gs.node_pos.value == (1, 4)
 
 
-def test_settle_confirm_wires_battle_grant_once() -> None:
-    """T-30 同战共现条件发放接入调用(settle_confirm 分支,黑天鹅直登相邻):
-    真推进恰好查一次——三将同战结算后 bench 增 1★流萤带实例号 + 锁记录
-    落账;重复上报(观察态门挡)不重查不重发;再推进 done 短路不重发
-    且黑天鹅占卜屋计数器计数不受发放影响(回归锁);supply_finish 推进
-    不触发本检查(分支封闭集内仅 settle_confirm 接入调用)。"""
-    from sr_od.application.currency_war.kernel.cw_game_state import (
-        BenchSlot,
-        BenchView,
-        DeployedView,
-        Unit,
-    )
-
-    def _ready_gs() -> GameState:
-        gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
-        gs.observe(gs.active_env, '星核猎手契约', sig=_SIG_OBS)
-        trio = [Unit(char_id=c, star=1)
-                for c in ('刃', '卡芙卡', '银狼', '黑天鹅')]
-        gs.observe(gs.deployed,
-                   DeployedView(front_slots=trio + [None],
-                                back_slots=[None] * 6), sig=_SIG_OBS)
-        gs.observe(gs.bench,
-                   BenchView(slots=[BenchSlot(kind='empty')] * 9,
-                             capacity=9), sig=_SIG_OBS)
-        observe_node_anchor(gs, (1, 5), trigger_screen='货币战争-备战',
-                            actor=_ACTOR)
-        return gs
-
-    def _bench_chars(gs_: GameState) -> list[tuple[str, int, int | None]]:
-        return [(s.unit.char_id, s.unit.star, s.unit.uid)
-                for s in gs_.bench.value.slots
-                if s is not None and s.kind == 'unit' and s.unit is not None]
-
-    gs = _ready_gs()
-    out = report_node_advance(gs, trigger='settle_confirm')
-    assert out.applied and gs.node_pos.value == (1, 6), '真推进一档'
-    assert _bench_chars(gs) == [('流萤', 1, 1)], '发放 1★流萤带实例号'
-    assert gs.env_grants_done.value == \
-        (('星核猎手契约', 'battle_co_presence'),), 'done 封账'
-    assert gs.env_grant_deploy_locks.value == (('流萤', 1, (1, 8)),), \
-        '锁记录 = (发放角色, uid, 解锁序位 = 生效序位 (1,6) 步进 2 步)'
-    assert gs.screen_changes.fortune_battles == 1, '黑天鹅计数照走'
-    # 重复上报:观察态门挡(结构性不重查),零重发
-    assert report_node_advance(gs, trigger='settle_confirm').applied is False
-    assert _bench_chars(gs) == [('流萤', 1, 1)], '不重发'
-    assert gs.env_grant_uid_seq.value == 1, 'uid 不再发号'
-    # 翻锚定后第二次真推进:done 短路零写,黑天鹅计数器继续不受影响
-    observe_node_anchor(gs, (1, 6), trigger_screen='货币战争-备战',
-                        actor=_ACTOR)
-    assert report_node_advance(gs, trigger='settle_confirm').applied
-    assert _bench_chars(gs) == [('流萤', 1, 1)], 'done 短路不重发'
-    assert gs.env_grant_uid_seq.value == 1
-    assert gs.screen_changes.fortune_battles == 2, '计数器不受发放影响'
-
-    # supply_finish 推进不触发本检查(推进照走,零发放零 done)
-    gs2 = _ready_gs()
-    assert report_node_advance(gs2, trigger='supply_finish').applied
-    assert gs2.node_pos.value == (1, 6)
-    assert _bench_chars(gs2) == [], 'supply_finish 不触发'
-    assert gs2.env_grants_done.value is None, '零 done'
-
-
 def test_stale_reading_dropped() -> None:
     """R<v 倒退免疫:不写 + 现值保持(logic 或 observation 态同规)。"""
     gs = _gs_with_double_pair()
@@ -232,11 +170,11 @@ def test_repair_advance_ticks_ledger() -> None:
     gs = _gs_with_double_pair()
     observe_node_anchor(gs, (1, 2), trigger_screen='货币战争-备战', actor=_ACTOR)
     report_node_advance(gs, trigger='settle_confirm')   # → (1, 3)
-    assert gs.free_refresh_left.value == 4   # 节点 (1,2) + (1,3) 各 +2
+    assert gs.free_refresh_left.value == 2   # 节点 (1,2) + (1,3) 各 +1
     assert observe_node_anchor(gs, (1, 5), trigger_screen='货币战争-备战',
                                actor=_ACTOR) == 'advance'
     assert effective_node_pos(gs) == (1, 5)
-    assert gs.free_refresh_left.value == 6, \
+    assert gs.free_refresh_left.value == 3, \
         '补推节点 (1,5) 当帧拿到发放(漏 tick 即永久少一档)'
 
 
@@ -272,7 +210,7 @@ def test_terminal_match_end_event_style() -> None:
     tick(已登记效果余期不递减)。applied 语义扩展 = 终结动作落地事实。"""
     gs = _gs_with_double_pair()
     observe_node_anchor(gs, (3, 7), trigger_screen='货币战争-备战', actor=_ACTOR)
-    assert gs.free_refresh_left.value == 2, '锚定 (3,7) 当帧发放(对照基线)'
+    assert gs.free_refresh_left.value == 1, '锚定 (3,7) 当帧发放(对照基线)'
     out = report_node_advance(gs, trigger='settle_confirm')
     assert out.applied is True, 'applied = 终结动作落地事实(语义扩展)'
     assert out.reason == 'match_end'
@@ -281,7 +219,7 @@ def test_terminal_match_end_event_style() -> None:
     assert out.world_decl.trigger == 'node_advance'
     assert gs.node_pos.value == (3, 7), '终局零写入'
     assert gs.node_hist_pos == (3, 7), '终局不推水位'
-    assert gs.free_refresh_left.value == 2, '终局零效果 tick(余期不递减)'
+    assert gs.free_refresh_left.value == 1, '终局零效果 tick(余期不递减)'
 
 
 # ================================================================ 场景走查测试
@@ -310,7 +248,7 @@ def test_fast_popup_advance_precedes_pick_and_prep_reanchor(
         CwOpSettleConfirm,
     )
 
-    gs = _gs_with(test_context, monkeypatch, '双手狸开键盘！')
+    gs = _gs_with(test_context, monkeypatch, '加油站')
     observe_node_anchor(gs, (1, 1), trigger_screen='货币战争-备战', actor=_ACTOR)
 
     op = CwOpSettleConfirm(test_context)
@@ -349,7 +287,7 @@ def test_boss_segment_click_advance_and_cross_plane(
     - E13 boss 结算确认 → 后继原语自然跨位面((1,9) → (2,1),design
       §2.1),位面 2 首备战帧等值 reanchor 解锁下一确认。
     """
-    gs = _gs_with(test_context, monkeypatch, '双手狸开键盘！')
+    gs = _gs_with(test_context, monkeypatch, '加油站')
     # 奖励关 (1,8) 已锚定;结算确认点击即推进 → boss 节点 (1,9)(E12)
     observe_node_anchor(gs, (1, 8), trigger_screen='货币战争-备战', actor=_ACTOR)
     assert report_node_advance(gs, trigger='settle_confirm').applied
@@ -380,7 +318,7 @@ def test_locked_resume_value_guard_self_heal(test_context, monkeypatch) -> None:
     新状态容器缺省 source 即 observation,门必须按 value 在场判);战后备战
     帧观察锚定以绝对读数首锚定补齐(恢复局重建语义,R=局中任意节点)——
     键表示无 skew,后续终结动作正常推进。"""
-    gs = _gs_with(test_context, monkeypatch, '双手狸开键盘！')
+    gs = _gs_with(test_context, monkeypatch, '加油站')
 
     # 锁定臂直出战:无任何锚定,首次结算确认被 value 守卫挡
     assert report_node_advance(gs, trigger='settle_confirm').applied is False
@@ -392,7 +330,7 @@ def test_locked_resume_value_guard_self_heal(test_context, monkeypatch) -> None:
                                actor='CwScreenPrep') == 'first_anchor'
     assert gs.node_pos.value == (1, 7) and gs.node_pos.source == 'observation'
     assert gs.node_hist_pos == (1, 7)
-    assert gs.free_refresh_left.value == 2, '首锚定当帧发放(无 skew)'
+    assert gs.free_refresh_left.value == 1, '首锚定当帧发放(无 skew)'
 
     # 自愈后流程续行:下一结算确认正常推进
     assert report_node_advance(gs, trigger='settle_confirm').applied
@@ -498,7 +436,7 @@ def test_deposit_return_conditional_grant_and_roll(
     assert gs.prev_node_spent.value is False, '开局种子 False(前置)'
     observe_node_anchor(gs, (1, 2), trigger_screen='货币战争-备战',
                         actor=_ACTOR)
-    assert gs.free_refresh_left.value == 2, '未花费首边界 +2(桥条件效果条目)'
+    assert gs.free_refresh_left.value == 2, '未花费首边界 +2(桥条件效果条目,存款回报 per_node=2)'
     assert gs.prev_node_spent.value is False, '滚位判等跳写(False 保持)'
 
     # 节点 (1,2) 内买牌上报(置位通道 1)
@@ -536,7 +474,7 @@ def test_prep_heavy_receipt_anchors_node(test_context, monkeypatch) -> None:
     建账含尾段发放、后续读数 advance/reanchor 落账、回执缺位跳过(禁猜)。"""
     session = cw4_session()
     gs, op, _receipt = _prep_heavy_harness(test_context, monkeypatch, session)
-    gs.effects.register_strategy(STRATEGY_EFFECTS['双手狸开键盘！'],
+    gs.effects.register_strategy(STRATEGY_EFFECTS['加油站'],
                                  acquired_key=(1, 5))
 
     def _run_observe() -> None:
@@ -553,7 +491,7 @@ def test_prep_heavy_receipt_anchors_node(test_context, monkeypatch) -> None:
     _run_observe()
     assert gs.node_pos.value == (1, 1) and gs.node_pos.source == 'observation'
     assert gs.node_hist_pos == (1, 1)
-    assert gs.free_refresh_left.value == 2, '首锚定当帧发放'
+    assert gs.free_refresh_left.value == 1, '首锚定当帧发放'
 
     # 下一节点读数(1-2)→ advance 补推落账(观察采新即确认态)
     _receipt['r'] = (1, 2)

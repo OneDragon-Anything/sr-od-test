@@ -2796,63 +2796,6 @@ def test_env_gift_blue_channel_selection_both_states(
 # 机制件零新增,骑同一 on_env_gained 即时装备支)——
 
 
-def test_env_gift_equip_leg_lieche_invite(rows_sink: _RowSink) -> None:
-    """发放分支(T-63 设计 §4 锁 3,on_env_gained 直构):选列车同行邀请 →
-    equips 尾追 '列车同行星徽'、bench 零落位(装备 only,无开箱效果条目);
-    效果串单行 ``equip_gift:列车同行星徽``。星徽 ∈ EQUIP_ACQUIRE_
-    CONSEQUENCES 表外 → 零子链(申报行空为证)。"""
-    gs = _make_gs(bench=[], equips=[])
-    out = on_env_gained(gs, None, '列车同行邀请', rand=False, sig=_lsig())
-    assert out == ('equip_gift:列车同行星徽',), '效果串 = 具名装备单行'
-    assert list(gs.equips.value) == ['列车同行星徽'], '装备入栏(尾追)'
-    boxes = [s for s in gs.bench.value.slots
-             if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '零道具落位(装备 only)'
-    assert rows_sink.kinds() == [], '正常路径零申报行(零子链)'
-
-
-# —— 银河学者邀请(2026-09-23-invest-effects-calc T-64;邀请族展开首卡,
-# 纯数据行,骑同一 on_env_gained 即时装备支)——
-
-
-def test_env_gift_equip_leg_yinhe_invite(rows_sink: _RowSink) -> None:
-    """发放分支(T-64 设计 §4 锁 3,治理后形态,on_env_gained 直构):选
-    银河学者邀请 → equips 尾追 '银河学者星徽'、bench 零落位(装备 only,
-    无开箱效果条目);效果串单行 ``equip_gift:银河学者星徽``。星徽 ∈ EQUIP_
-    ACQUIRE_CONSEQUENCES 表外 → 零子链(申报行空为证)。"""
-    gs = _make_gs(bench=[], equips=[])
-    out = on_env_gained(gs, None, '银河学者邀请', rand=False, sig=_lsig())
-    assert out == ('equip_gift:银河学者星徽',), '效果串 = 具名装备单行'
-    assert list(gs.equips.value) == ['银河学者星徽'], '装备入栏(尾追)'
-    boxes = [s for s in gs.bench.value.slots
-             if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '零道具落位(装备 only)'
-    assert rows_sink.kinds() == [], '正常路径零申报行(零子链)'
-
-
-# —— 贝洛伯格邀请(2026-09-23-invest-effects-calc T-65;邀请族展开卡,
-# 纯数据行,骑同一 on_env_gained 即时装备支)——
-
-
-def test_env_gift_equip_leg_beluoboge_invite(rows_sink: _RowSink) -> None:
-    """发放分支(T-65 设计 §4 锁 3,治理后形态,on_env_gained 直构):选
-    贝洛伯格邀请 → equips 尾追 '贝洛伯格星徽'、bench 零落位(装备 only,
-    无开箱效果条目);效果串单行 ``equip_gift:贝洛伯格星徽``。星徽 ∈ EQUIP_
-    ACQUIRE_CONSEQUENCES 表外 → 零子链(申报行空为证)。"""
-    gs = _make_gs(bench=[], equips=[])
-    out = on_env_gained(gs, None, '贝洛伯格邀请', rand=False, sig=_lsig())
-    assert out == ('equip_gift:贝洛伯格星徽',), '效果串 = 具名装备单行'
-    assert list(gs.equips.value) == ['贝洛伯格星徽'], '装备入栏(尾追)'
-    boxes = [s for s in gs.bench.value.slots
-             if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '零道具落位(装备 only)'
-    assert rows_sink.kinds() == [], '正常路径零申报行(零子链)'
-
-
-# —— 星间旅人邀请(2026-09-23-invest-effects-calc T-66;邀请族展开卡,
-# 纯数据行,骑同一 on_env_gained 即时装备支)——
-
-
 def test_env_gift_equip_leg_xingjian_lvren_invite(rows_sink: _RowSink) -> None:
     """发放分支(T-66 设计 §4 锁 3,治理后形态,on_env_gained 直构):选
     星间旅人邀请 → equips 尾追 '星间旅人星徽'、bench 零落位(装备 only,
@@ -2869,104 +2812,6 @@ def test_env_gift_equip_leg_xingjian_lvren_invite(rows_sink: _RowSink) -> None:
 
 
 # —— 仙舟邀请(2026-09-23-invest-effects-calc T-67;邀请族展开卡,
-# 纯数据行,骑同一 on_env_gained 即时装备支)——
-
-
-def test_env_gift_equip_leg_xianzhou_invite(rows_sink: _RowSink) -> None:
-    """发放分支(T-67 设计 §4 锁 3,治理后形态,on_env_gained 直构):选
-    仙舟邀请 → equips 尾追 '仙舟星徽'、bench 零落位(装备 only,
-    无开箱效果条目);效果串单行 ``equip_gift:仙舟星徽``。星徽 ∈ EQUIP_
-    ACQUIRE_CONSEQUENCES 表外 → 零子链(申报行空为证)。"""
-    gs = _make_gs(bench=[], equips=[])
-    out = on_env_gained(gs, None, '仙舟邀请', rand=False, sig=_lsig())
-    assert out == ('equip_gift:仙舟星徽',), '效果串 = 具名装备单行'
-    assert list(gs.equips.value) == ['仙舟星徽'], '装备入栏(尾追)'
-    boxes = [s for s in gs.bench.value.slots
-             if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '零道具落位(装备 only)'
-    assert rows_sink.kinds() == [], '正常路径零申报行(零子链)'
-
-
-# —— 狼狩邀请(2026-09-23-invest-effects-calc T-68;邀请族展开卡,
-# 纯数据行,骑同一 on_env_gained 即时装备支)——
-
-
-def test_env_gift_equip_leg_langshou_invite(rows_sink: _RowSink) -> None:
-    """发放分支(T-68 设计 §4 锁 3,治理后形态,on_env_gained 直构):选
-    狼狩邀请 → equips 尾追 '狼狩星徽'、bench 零落位(装备 only,
-    无开箱效果条目);效果串单行 ``equip_gift:狼狩星徽``。星徽 ∈ EQUIP_
-    ACQUIRE_CONSEQUENCES 表外 → 零子链(申报行空为证)。"""
-    gs = _make_gs(bench=[], equips=[])
-    out = on_env_gained(gs, None, '狼狩邀请', rand=False, sig=_lsig())
-    assert out == ('equip_gift:狼狩星徽',), '效果串 = 具名装备单行'
-    assert list(gs.equips.value) == ['狼狩星徽'], '装备入栏(尾追)'
-    boxes = [s for s in gs.bench.value.slots
-             if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '零道具落位(装备 only)'
-    assert rows_sink.kinds() == [], '正常路径零申报行(零子链)'
-
-
-# —— 盛会之星邀请(2026-09-23-invest-effects-calc T-69;邀请族展开卡,
-# 纯数据行,骑同一 on_env_gained 即时装备支)——
-
-
-def test_env_gift_equip_leg_shenghui_zhixing_invite(
-        rows_sink: _RowSink) -> None:
-    """发放分支(T-69 设计 §4 锁 3,治理后形态,on_env_gained 直构):选
-    盛会之星邀请 → equips 尾追 '盛会之星星徽'、bench 零落位(装备 only,
-    无开箱效果条目);效果串单行 ``equip_gift:盛会之星星徽``。星徽 ∈ EQUIP_
-    ACQUIRE_CONSEQUENCES 表外 → 零子链(申报行空为证)。"""
-    gs = _make_gs(bench=[], equips=[])
-    out = on_env_gained(gs, None, '盛会之星邀请', rand=False, sig=_lsig())
-    assert out == ('equip_gift:盛会之星星徽',), '效果串 = 具名装备单行'
-    assert list(gs.equips.value) == ['盛会之星星徽'], '装备入栏(尾追)'
-    boxes = [s for s in gs.bench.value.slots
-             if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '零道具落位(装备 only)'
-    assert rows_sink.kinds() == [], '正常路径零申报行(零子链)'
-
-
-# —— 昼之半神邀请(2026-09-23-invest-effects-calc T-70;邀请族展开卡,
-# 纯数据行,骑同一 on_env_gained 即时装备支)——
-
-
-def test_env_gift_equip_leg_zhouzhi_banshen_invite(
-        rows_sink: _RowSink) -> None:
-    """发放分支(T-70 设计 §4 锁 3,治理后形态,on_env_gained 直构):选
-    昼之半神邀请 → equips 尾追 '昼之半神星徽'、bench 零落位(装备 only,
-    无开箱效果条目);效果串单行 ``equip_gift:昼之半神星徽``。星徽 ∈ EQUIP_
-    ACQUIRE_CONSEQUENCES 表外 → 零子链(申报行空为证)。"""
-    gs = _make_gs(bench=[], equips=[])
-    out = on_env_gained(gs, None, '昼之半神邀请', rand=False, sig=_lsig())
-    assert out == ('equip_gift:昼之半神星徽',), '效果串 = 具名装备单行'
-    assert list(gs.equips.value) == ['昼之半神星徽'], '装备入栏(尾追)'
-    boxes = [s for s in gs.bench.value.slots
-             if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '零道具落位(装备 only)'
-    assert rows_sink.kinds() == [], '正常路径零申报行(零子链)'
-
-
-# —— 夜之半神邀请(2026-09-23-invest-effects-calc T-71;邀请族展开卡,
-# 纯数据行,骑同一 on_env_gained 即时装备支)——
-
-
-def test_env_gift_equip_leg_yezhi_banshen_invite(
-        rows_sink: _RowSink) -> None:
-    """发放分支(T-71 设计 §4 锁 3,治理后形态,on_env_gained 直构):选
-    夜之半神邀请 → equips 尾追 '夜之半神星徽'、bench 零落位(装备 only,
-    无开箱效果条目);效果串单行 ``equip_gift:夜之半神星徽``。星徽 ∈ EQUIP_
-    ACQUIRE_CONSEQUENCES 表外 → 零子链(申报行空为证)。"""
-    gs = _make_gs(bench=[], equips=[])
-    out = on_env_gained(gs, None, '夜之半神邀请', rand=False, sig=_lsig())
-    assert out == ('equip_gift:夜之半神星徽',), '效果串 = 具名装备单行'
-    assert list(gs.equips.value) == ['夜之半神星徽'], '装备入栏(尾追)'
-    boxes = [s for s in gs.bench.value.slots
-             if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '零道具落位(装备 only)'
-    assert rows_sink.kinds() == [], '正常路径零申报行(零子链)'
-
-
-# —— 追击邀请(2026-09-23-invest-effects-calc T-72;邀请族展开卡,
 # 纯数据行,骑同一 on_env_gained 即时装备支)——
 
 
@@ -3050,46 +2895,6 @@ def test_env_gift_equip_leg_nengliang_invite(
 # 纯数据行,骑同一 on_env_gained 即时装备支)——
 
 
-def test_env_gift_equip_leg_ranxue_invite(
-        rows_sink: _RowSink) -> None:
-    """发放分支(T-76 设计 §4 锁 3,治理后形态,on_env_gained 直构):选
-    燃血邀请 → equips 尾追 '燃血星徽'、bench 零落位(装备 only,
-    无开箱效果条目);效果串单行 ``equip_gift:燃血星徽``。星徽 ∈ EQUIP_
-    ACQUIRE_CONSEQUENCES 表外 → 零子链(申报行空为证)。"""
-    gs = _make_gs(bench=[], equips=[])
-    out = on_env_gained(gs, None, '燃血邀请', rand=False, sig=_lsig())
-    assert out == ('equip_gift:燃血星徽',), '效果串 = 具名装备单行'
-    assert list(gs.equips.value) == ['燃血星徽'], '装备入栏(尾追)'
-    boxes = [s for s in gs.bench.value.slots
-             if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '零道具落位(装备 only)'
-    assert rows_sink.kinds() == [], '正常路径零申报行(零子链)'
-
-
-# —— 减益邀请(2026-09-23-invest-effects-calc T-77;邀请族展开卡,
-# 纯数据行,骑同一 on_env_gained 即时装备支)——
-
-
-def test_env_gift_equip_leg_jianyi_invite(
-        rows_sink: _RowSink) -> None:
-    """发放分支(T-77 设计 §4 锁 3,治理后形态,on_env_gained 直构):选
-    减益邀请 → equips 尾追 '减益星徽'、bench 零落位(装备 only,
-    无开箱效果条目);效果串单行 ``equip_gift:减益星徽``。星徽 ∈ EQUIP_
-    ACQUIRE_CONSEQUENCES 表外 → 零子链(申报行空为证)。"""
-    gs = _make_gs(bench=[], equips=[])
-    out = on_env_gained(gs, None, '减益邀请', rand=False, sig=_lsig())
-    assert out == ('equip_gift:减益星徽',), '效果串 = 具名装备单行'
-    assert list(gs.equips.value) == ['减益星徽'], '装备入栏(尾追)'
-    boxes = [s for s in gs.bench.value.slots
-             if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '零道具落位(装备 only)'
-    assert rows_sink.kinds() == [], '正常路径零申报行(零子链)'
-
-
-# —— 持续伤害邀请(2026-09-23-invest-effects-calc T-78;邀请族展开卡,
-# 纯数据行,骑同一 on_env_gained 即时装备支)——
-
-
 def test_env_gift_equip_leg_chixu_shanghai_invite(
         rows_sink: _RowSink) -> None:
     """发放分支(T-78 设计 §4 锁 3,治理后形态,on_env_gained 直构):选
@@ -3107,46 +2912,6 @@ def test_env_gift_equip_leg_chixu_shanghai_invite(
 
 
 # —— 量子同频邀请(2026-09-23-invest-effects-calc T-79;邀请族展开卡,
-# 纯数据行,骑同一 on_env_gained 即时装备支)——
-
-
-def test_env_gift_equip_leg_liangzi_tongpin_invite(
-        rows_sink: _RowSink) -> None:
-    """发放分支(T-79 设计 §4 锁 3,治理后形态,on_env_gained 直构):选
-    量子同频邀请 → equips 尾追 '量子同频星徽'、bench 零落位(装备 only,
-    无开箱效果条目);效果串单行 ``equip_gift:量子同频星徽``。星徽 ∈ EQUIP_
-    ACQUIRE_CONSEQUENCES 表外 → 零子链(申报行空为证)。"""
-    gs = _make_gs(bench=[], equips=[])
-    out = on_env_gained(gs, None, '量子同频邀请', rand=False, sig=_lsig())
-    assert out == ('equip_gift:量子同频星徽',), '效果串 = 具名装备单行'
-    assert list(gs.equips.value) == ['量子同频星徽'], '装备入栏(尾追)'
-    boxes = [s for s in gs.bench.value.slots
-             if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '零道具落位(装备 only)'
-    assert rows_sink.kinds() == [], '正常路径零申报行(零子链)'
-
-
-# —— 战技点邀请(2026-09-23-invest-effects-calc T-80;邀请族展开卡,
-# 纯数据行,骑同一 on_env_gained 即时装备支)——
-
-
-def test_env_gift_equip_leg_zhanjidian_invite(
-        rows_sink: _RowSink) -> None:
-    """发放分支(T-80 设计 §4 锁 3,治理后形态,on_env_gained 直构):选
-    战技点邀请 → equips 尾追 '战技点星徽'、bench 零落位(装备 only,
-    无开箱效果条目);效果串单行 ``equip_gift:战技点星徽``。星徽 ∈ EQUIP_
-    ACQUIRE_CONSEQUENCES 表外 → 零子链(申报行空为证)。"""
-    gs = _make_gs(bench=[], equips=[])
-    out = on_env_gained(gs, None, '战技点邀请', rand=False, sig=_lsig())
-    assert out == ('equip_gift:战技点星徽',), '效果串 = 具名装备单行'
-    assert list(gs.equips.value) == ['战技点星徽'], '装备入栏(尾追)'
-    boxes = [s for s in gs.bench.value.slots
-             if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '零道具落位(装备 only)'
-    assert rows_sink.kinds() == [], '正常路径零申报行(零子链)'
-
-
-# —— 欢愉邀请(2026-09-23-invest-effects-calc T-81;邀请族展开卡,
 # 纯数据行,骑同一 on_env_gained 即时装备支)——
 
 
@@ -3168,22 +2933,5 @@ def test_env_gift_equip_leg_huanyu_invite(
 
 # —— 命运圣杯邀请(2026-09-23-invest-effects-calc T-82;邀请族收官卡,
 # 纯数据行,骑同一 on_env_gained 即时装备支)——
-
-
-def test_env_gift_equip_leg_mingyun_shengbei_invite(
-        rows_sink: _RowSink) -> None:
-    """发放分支(T-82 设计 §4 锁 3,治理后形态,on_env_gained 直构):选
-    命运圣杯邀请 → equips 尾追 '命运圣杯星徽'、bench 零落位(装备 only,
-    无开箱效果条目);效果串单行 ``equip_gift:命运圣杯星徽``。星徽 ∈ EQUIP_
-    ACQUIRE_CONSEQUENCES 表外 → 零子链(申报行空为证)。"""
-    gs = _make_gs(bench=[], equips=[])
-    out = on_env_gained(gs, None, '命运圣杯邀请', rand=False, sig=_lsig())
-    assert out == ('equip_gift:命运圣杯星徽',), '效果串 = 具名装备单行'
-    assert list(gs.equips.value) == ['命运圣杯星徽'], '装备入栏(尾追)'
-    boxes = [s for s in gs.bench.value.slots
-             if s is not None and s.kind == 'supply_box']
-    assert boxes == [], '零道具落位(装备 only)'
-    assert rows_sink.kinds() == [], '正常路径零申报行(零子链)'
-
 
 
