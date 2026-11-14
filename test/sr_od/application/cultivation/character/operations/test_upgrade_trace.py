@@ -18,15 +18,17 @@ round 结果)与面板读数辅助,驱动 op 跑完整 ``execute()`` 节点图,�
 from __future__ import annotations
 
 import pytest
-
-from one_dragon.base.operation.operation_base import OperationResult
-from sr_od.application.cultivation.character.operations.upgrade_trace import UpgradeTraceOp
 from test.conftest import SrTestContext
 from test.harness.fixture_controller import (
     WatchdogOperationMixin,
     enter_running_state,
     fast_sleep,
     reset_running_state,
+)
+
+from one_dragon.base.operation.operation_base import OperationResult
+from sr_od.application.cultivation.character.operations.upgrade_trace import (
+    UpgradeTraceOp,
 )
 
 _TRACE: str = '角色-行迹'

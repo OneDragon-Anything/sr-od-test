@@ -50,6 +50,7 @@ _FAST_FARM_RESULT: str = '快速刷取结果弹窗'
 _WORLD: str = '大世界-普通'
 _DETAIL: str = '角色-详情'
 _BATTLE: str = '战斗画面'
+_LC_PROMO_BANNER: str = '光锥-等级提升-晋阶横幅'
 
 # 测试内建档 rect 快照(来源 assets/game_data/screen_info 对应 yml 与实机
 # analyze 命中;screen_info 漂移时本表测试红 → 同步)。测试环境的
@@ -332,6 +333,34 @@ class TestUpgradeLightConeBranches:
         assert _has_click_in(clicks, test_context, _LC_ASC, '按钮-快速升级')
         assert state['level_reads'] == 2, (
             '入口起始等级与满级收尾各读一次'
+        )
+        assert op._ascend_banner_count == 1, (
+            '晋阶横幅沿计数应恰为 1(=实际完成晋阶次数)'
+        )
+
+    def test_promo_banner_count_edge_gated(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """晋阶横幅沿计数:关闭点击未生效的 WAIT 重入轮(横幅仍在场)不得
+        重复计数——横幅计数 = 实际完成晋阶次数,重计会虚高。"""
+        state = _install_script(
+            monkeypatch, test_context,
+            [_DEAD_FRAME,
+             {(_LC_PROMO_BANNER, '标题-晋阶横幅')},
+             {(_LC_PROMO_BANNER, '标题-晋阶横幅')}],
+            level=40)
+        _record_controller_clicks(monkeypatch, test_context, state)
+        op = _WatchedUpgradeLightCone(test_context, farm_dungeon=True)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        enter_running_state(op.ctx)
+        try:
+            with fast_sleep(op):
+                op.upgrade_loop()
+                op.upgrade_loop()  # 模拟关闭未生效的 WAIT 重入(横幅仍在场)
+        finally:
+            reset_running_state(op.ctx, op)
+        assert op._ascend_banner_count == 1, (
+            f'重入轮不得重复计数,实际 {op._ascend_banner_count}'
         )
 
     def test_popup_cancelled_without_authorization_capped(

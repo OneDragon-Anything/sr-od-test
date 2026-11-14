@@ -4,14 +4,22 @@
 ——「角色-等级提升」等面板态帧测试仓缺存档、识别类输入禁止合成),
 monkeypatch 识别层构造 round 结果,驱动完整 ``execute()`` 节点图。
 
-锁定的设计约定(出处 upgrade_character.py 模块 docstring 与 upgrade_loop
-实现,2026-11-13 阿哈等级1 全形态实机摸底后重构):
-- 入口按钮三态分流:详情页右下「升级」(未满级)/「晋阶」(到上限)/
-  无按钮(80 满)——未满级角色不得再被误判已满;
+锁定的设计约定(出处 upgrade_character.py 模块 docstring 与各节点实现,
+实机摸底:等级1角色全形态链路):
+- 入口画面级判定 + 右下按钮三态分流:详情页右下「升级」(未满级)/
+  「晋阶」(到上限)/无按钮(80 满)——未满级角色不得再被误判已满;
 - 通用材料补全链(fill_generic 默认 True):缺料按钮 → 确认框确认 →
-  材料齐后快速升级执行;
-- fill_generic=False 时缺料判停(MATERIAL_CAPPED),不碰确认框;
-- 升级/晋阶执行横幅两种标题(「等级提升」/「角色晋阶」)点空白关闭。
+  材料齐后快速升级执行;确认框在场但未授权 = 取消+判停,绝不点确认;
+- 刷取链(farm_dungeon):资源窗口 → 副本 → 券确认(次数现读+点「+」
+  补偿,-1 拉满)/手动挑战双锚 → 返回分类逐层清场回养成界面;
+- 刷取消耗记账以确认框实际设到的次数为准(_farm_draws),配置 -1 是
+  拉满指令非次数;手动路线不耗券;
+- 开拓力不足守卫:补充弹窗在场即 POWER_BLOCKED 交返回分类清场
+  (POWER_CAPPED 收尾),绝不死在副本里;
+- 手动路线返回兼容:退出关卡后副本关闭直接回大世界 → BACK_TO_WORLD
+  → 重走入口链(角色图标→重选角色→切详情TAB),凭入口记名防升错;
+- 快速刷取静默无反应(无可刷缺口)= FARM_WINDOW_FAIL 回循环判停,
+  不许无界自旋。
 """
 
 from __future__ import annotations
@@ -25,22 +33,33 @@ from test.harness.fixture_controller import (
     reset_running_state,
 )
 
+import sr_od.application.cultivation.character.operations.upgrade_character as char_module
+from one_dragon.base.geometry.point import Point
 from one_dragon.base.operation.operation_base import OperationResult
+from one_dragon.base.operation.operation_round_result import OperationRoundResultEnum
+from one_dragon.base.screen.screen_utils import FindAreaResultEnum
 from sr_od.application.cultivation.character.operations.upgrade_character import (
     UpgradeCharacterOp,
 )
 
 _DETAIL: str = '角色-详情'
 _ASCEND: str = '角色-等级提升'
+_CHALLENGE: str = '挑战副本'
+_FAST_FARM_DIALOG: str = '快速刷取弹窗'
+_FAST_FARM_RESULT: str = '快速刷取结果弹窗'
+_RESOURCE: str = '培养资源窗口'
+_WORLD: str = '大世界-普通'
+_BATTLE: str = '战斗画面'
 
-# 升级循环每轮分类的第一个识别查询 = 材料补全确认框锚(优先级①),桩以它计轮
+# 升级循环每轮分类的必查锚(优先级①,每轮无条件查询),桩以它计轮推进
+# 剧本;循环首轮另先查界面标题锚(起始等级),不作标记以免入口轮误推进
 _ROUND_START: tuple[str, str] = (_ASCEND, '标题-材料补全弹窗')
 
 
 class _WatchedUpgradeCharacter(WatchdogOperationMixin, UpgradeCharacterOp):
     """带看门狗的被测 op(剧本耗尽时收拢为有界失败,防测试自身死循环)。"""
 
-    watchdog_max_rounds: int = 80  # 刷取链每轮循环耗 6 节点轮(循环+窗口+进入+刷取+确认+返回),预算 10 次需 60+
+    watchdog_max_rounds: int = 80  # 手动刷取链含战斗/结算/大世界往返,预算需富余
 
     def __init__(self, ctx: SrTestContext, fill_generic: bool = True,
                  farm_dungeon: bool = True, use_fast_ticket: bool = True,
@@ -50,13 +69,27 @@ class _WatchedUpgradeCharacter(WatchdogOperationMixin, UpgradeCharacterOp):
         farm_dungeon 测试默认 True(与生产默认 False 相反):刷取链测试
         需要触发刷取路线;「不刷判停」语义由专门测试显式 farm_dungeon=False
         锁定,避免默认值掩盖。farm_rounds_max 替身默认 10(预算耗尽语义
-        的既有测试依赖),生产默认 1 由生产构造直传。"""
+        的既有测试依赖),生产默认 1 由生产构造直传。farm_times_per_round
+        替身默认 1(生产默认 -1 拉满)——次数设置类断言用例显式传参。"""
         UpgradeCharacterOp.__init__(self, ctx, fill_generic=fill_generic,
                                     farm_dungeon=farm_dungeon,
                                     use_fast_ticket=use_fast_ticket,
                                     farm_times_per_round=farm_times_per_round,
                                     farm_rounds_max=farm_rounds_max)
         self.need_check_game_win = False  # execute 期才读,实例属性即可关掉
+
+
+class _FakeSubOp:
+    """子 op 替身(记录构造参数,execute 恒成功)——重走入口链的重选/切页。"""
+
+    executed: list[dict] = []
+
+    def __init__(self, ctx: SrTestContext, **kwargs) -> None:
+        self.kwargs = kwargs
+
+    def execute(self) -> OperationResult:
+        _FakeSubOp.executed.append(dict(self.kwargs))
+        return OperationResult(success=True, status='FAKE_OK')
 
 
 def _install_script(
@@ -66,55 +99,150 @@ def _install_script(
     level: int,
     farm_times: int = 1,
 ) -> dict:
-    """桩识别层并装记录器(场景语义同 test_upgrade_trace._install_script)。
+    """桩识别层并装记录器。
 
-    farm_times = 确认框「刷取次数 N」OCR 读数桩(默认 1;券刷取的次数设置
-    分支以此现读)。"""
+    state 键:round(剧本轮,弹窗锚查询推进)/level_reads/farm_times_read
+    (确认框次数现读值,点「+」由点击记录器递增)/screen_now(可变画面名,
+    check_and_update 返回;None 模拟模态弹窗盖住 id_mark 的整帧识别失败)/
+    char_name_next(读名桩返回值)/in_manual_fight(编队态标志,编队钮点击
+    推进用)/find_events/find_clicks。"""
     state: dict = {'round': 0, 'level_reads': 0, 'find_events': [],
-                   'find_clicks': [], 'farm_times_reads': 0}
+                   'find_clicks': [], 'farm_times_read': farm_times,
+                   'screen_now': _DETAIL, 'char_name_next': '测试角色',
+                   'in_manual_fight': False}
 
     def _fake_find_area(self, screen, s_name, a_name, *args, **kwargs):
         state['find_events'].append((s_name, a_name))
         if (s_name, a_name) == _ROUND_START:
             state['round'] += 1
+        # 查询侧画面态门卫:退出关卡仅存在于结算画面;点击记录器把画面切走
+        # 后(退出关卡已点),同场景表的后续查询 MISS,防止静态场景表让返回
+        # 分类重复点退出关卡死循环
+        if (s_name, a_name) == (_BATTLE, '按钮-退出关卡') \
+                and state.get('screen_now') != _BATTLE:
+            return self.round_wait(status=f'未找到 {a_name}')
         scene = scenes[state['round']] if state['round'] < len(scenes) else None
         if scene is None:
-            raise AssertionError(f'升级循环剧本耗尽:第 {state["round"]} 轮查询 {a_name}')
+            raise AssertionError(f'剧本耗尽:第 {state["round"]} 轮查询 {a_name}')
         if (s_name, a_name) in scene:
+            # 编队态正锚命中 = 随后的编队钮点击是真实「进入战斗」推进点
+            if (s_name, a_name) == (_CHALLENGE, '队伍标题'):
+                state['in_manual_fight'] = True
             return self.round_success(status=a_name)
         return self.round_wait(status=f'未找到 {a_name}')
 
     def _fake_find_and_click(self, screen, s_name, a_name, *args, **kwargs):
         state['find_clicks'].append((s_name, a_name))
+        # 走 controller.click:让点击记录器与画面状态推进(退出关卡→副本、
+        # 关闭副本→大世界等)与真实链路一致
+        self.ctx.controller.click(_rect_center(ctx, s_name, a_name))
         return self.round_success(status=a_name)
+
+    def _fake_check_screen(self, screen=None, screen_name_list=None,
+                           crop_first=False):
+        now = state['screen_now']
+        # None(整帧识别失败)原样透传,走 op 的逐锚兜底分支
+        if screen_name_list is not None and now is not None \
+                and now not in screen_name_list:
+            return screen_name_list[0]
+        return now
+
+    def _fake_static_find(ctx_arg, screen, s_name, a_name, *args, **kwargs):
+        # 入口 None 兜底的逐锚探测(走 screen_utils.find_area):按场景表命中
+        scene = scenes[state['round']] if state['round'] < len(scenes) else None
+        if scene is not None and (s_name, a_name) in scene:
+            return FindAreaResultEnum.TRUE
+        return FindAreaResultEnum.FALSE
 
     def _fake_level(self) -> int | None:
         state['level_reads'] += 1
         return level
 
     def _fake_farm_times(self) -> int | None:
-        state['farm_times_reads'] += 1
-        return farm_times
+        return state['farm_times_read']
+
+    def _fake_char_name(self) -> str | None:
+        return state.get('char_name_next')
 
     monkeypatch.setattr(UpgradeCharacterOp, 'round_by_find_area', _fake_find_area)
     monkeypatch.setattr(UpgradeCharacterOp, 'round_by_find_and_click_area',
                         _fake_find_and_click)
+    monkeypatch.setattr(UpgradeCharacterOp, 'check_and_update_current_screen',
+                        _fake_check_screen)
     monkeypatch.setattr(UpgradeCharacterOp, '_read_ascend_level', _fake_level)
     monkeypatch.setattr(UpgradeCharacterOp, '_read_farm_times', _fake_farm_times)
+    monkeypatch.setattr(UpgradeCharacterOp, '_read_character_name', _fake_char_name)
+    monkeypatch.setattr(char_module, 'SelectCharacterOp', _FakeSubOp)
+    monkeypatch.setattr(char_module, 'SwitchCharacterTabOp', _FakeSubOp)
+    monkeypatch.setattr(char_module.screen_utils, 'find_area', _fake_static_find)
     return state
 
 
+def _rect_center(ctx: SrTestContext, s_name: str, a_name: str) -> Point:
+    """建档 rect 中心(点击桩用;区域未建档 = 测试写错,直接抛)。"""
+    rect = ctx.screen_loader.get_area(s_name, a_name).pc_rect
+    return Point((rect.x1 + rect.x2) / 2, (rect.y1 + rect.y2) / 2)
+
+
+def _in_rect(x: int, y: int, ctx: SrTestContext,
+             s_name: str, a_name: str) -> bool:
+    rect = ctx.screen_loader.get_area(s_name, a_name).pc_rect
+    return rect.x1 <= x <= rect.x2 and rect.y1 <= y <= rect.y2
+
+
 def _record_controller_clicks(
-    monkeypatch: pytest.MonkeyPatch, ctx: SrTestContext,
+    monkeypatch: pytest.MonkeyPatch, ctx: SrTestContext, state: dict,
+    advance_round_on_squad_click: bool = False,
+    advance_round_on_challenge_click: bool = False,
 ) -> list[tuple[int, int]]:
-    """包装 controller.click 记录点击坐标(op 直点全部经 controller)。"""
+    """包装 controller.click 记录点击坐标,并按画面态推进剧本/画面状态。
+
+    - 编队钮点击(in_manual_fight 置位时) = 进入战斗:round+1、画面切
+      战斗态、清标志(advance_round_on_squad_click,仅手动路线测试启用)。
+      ⚠️ 该钮 rect 与等级提升执行钮、挑战按钮坐标重叠,无标志门卫会误触发;
+    - 挑战按钮点击(画面态=挑战副本) = 副本→编队画面切换:round+1
+      (advance_round_on_challenge_click)。⚠️ 必须排在编队钮守卫之后:
+      编队钮 rect 落在挑战按钮 rect 之内,先判挑战钮会双重推进;
+    - 画面态切换链(if/elif 互斥):快速刷取(详情态)→资源窗口、进入副本
+      (资源窗口态)→副本、退出关卡(战斗态)→重建副本(round+1)、关闭副本
+      (副本态)→大世界(round+1)、右上角色图标(大世界态)→角色详情
+      (round+1)。⚠️ 关闭副本/右上图标/关闭类控件的 rect 在右上角几何
+      重叠,互斥链保证一次点击只归一个分支;
+    - 确认框「+」= 次数现读值 +1(补偿式设置的演进)。"""
     clicks: list[tuple[int, int]] = []
     real_click = ctx.controller.click
 
     def _recording_click(pos=None, press_time: float = 0, pc_alt: bool = False,
                          gamepad_key: str | None = None) -> bool:
         if pos is not None:
-            clicks.append((int(pos.x), int(pos.y)))
+            x, y = int(pos.x), int(pos.y)
+            clicks.append((x, y))
+            if advance_round_on_squad_click and state.get('in_manual_fight') \
+                    and _in_rect(x, y, ctx, _CHALLENGE, '按钮-开始编队挑战'):
+                state['round'] += 1
+                state['in_manual_fight'] = False
+                state['screen_now'] = _BATTLE
+            if advance_round_on_challenge_click \
+                    and state.get('screen_now') == _CHALLENGE \
+                    and _in_rect(x, y, ctx, _CHALLENGE, '挑战按钮'):
+                state['round'] += 1
+            # 画面态切换链(互斥)
+            now = state.get('screen_now')
+            if now == _DETAIL and _in_rect(x, y, ctx, _ASCEND, '按钮-快速刷取'):
+                state['screen_now'] = _RESOURCE
+            elif now == _RESOURCE and _in_rect(x, y, ctx, _RESOURCE, '按钮-进入副本'):
+                state['screen_now'] = _CHALLENGE
+            elif now == _BATTLE and _in_rect(x, y, ctx, _BATTLE, '按钮-退出关卡'):
+                state['screen_now'] = _CHALLENGE
+                state['round'] += 1
+            elif now == _CHALLENGE and _in_rect(x, y, ctx, _CHALLENGE, '按钮-关闭副本'):
+                state['screen_now'] = _WORLD
+                state['round'] += 1
+            elif now == _WORLD and _in_rect(x, y, ctx, _WORLD, '右上图标-角色详情'):
+                state['screen_now'] = _DETAIL
+                state['round'] += 1
+            if _in_rect(x, y, ctx, _FAST_FARM_DIALOG, '按钮-刷取次数加'):
+                state['farm_times_read'] = state.get('farm_times_read', 0) + 1
         return real_click(pos, press_time=press_time, pc_alt=pc_alt,
                           gamepad_key=gamepad_key)
 
@@ -127,11 +255,14 @@ def _has_click_in(
     screen_name: str, area_name: str,
 ) -> bool:
     """是否有点击落在建档区 pc_rect 内(坐标单一真相源 = screen_info)。"""
-    area = ctx.screen_loader.get_area(screen_name, area_name)
-    rect = area.pc_rect
-    return any(
-        rect.x1 <= x <= rect.x2 and rect.y1 <= y <= rect.y2 for x, y in clicks
-    )
+    return any(_in_rect(x, y, ctx, screen_name, area_name) for x, y in clicks)
+
+
+def _count_clicks_in(
+    clicks: list[tuple[int, int]], ctx: SrTestContext,
+    screen_name: str, area_name: str,
+) -> int:
+    return sum(1 for x, y in clicks if _in_rect(x, y, ctx, screen_name, area_name))
 
 
 def _run_op(op: UpgradeCharacterOp) -> OperationResult:
@@ -144,6 +275,16 @@ def _run_op(op: UpgradeCharacterOp) -> OperationResult:
         reset_running_state(op.ctx, op)
 
 
+def _call_node(op: UpgradeCharacterOp, node_name: str):
+    """运行态前置复位 + fast_sleep 直呼单节点(守卫/分支专项测试用)。"""
+    enter_running_state(op.ctx)
+    try:
+        with fast_sleep(op):
+            return getattr(op, node_name)()
+    finally:
+        reset_running_state(op.ctx, op)
+
+
 class TestUpgradeCharacterEntryStates:
 
     def test_unmaxed_level_entry_not_mistaken_as_max(
@@ -151,7 +292,7 @@ class TestUpgradeCharacterEntryStates:
     ) -> None:
         """入口「升级」按钮(未满级角色)分流:不得误判已满。
 
-        1.1 实机摸底:等级未到上限的角色右下按钮是「升级」而非「晋阶」,
+        实机摸底:等级未到上限的角色右下按钮是「升级」而非「晋阶」,
         旧版只认「晋阶」会把这类角色误判 ALREADY_MAX 直接退出——本测试
         锁定「升级」入口正常打开界面并走升级循环。"""
         scenes = [
@@ -161,7 +302,7 @@ class TestUpgradeCharacterEntryStates:
             {(_DETAIL, '按钮-属性详情')},                           # 轮3:详情页判满
         ]
         state = _install_script(monkeypatch, test_context, scenes, level=80)
-        clicks = _record_controller_clicks(monkeypatch, test_context)
+        clicks = _record_controller_clicks(monkeypatch, test_context, state)
         op = _WatchedUpgradeCharacter(test_context)
         op._init_watchdog()  # type: ignore[attr-defined]
 
@@ -183,6 +324,9 @@ class TestUpgradeCharacterEntryStates:
         assert state['level_reads'] == 1, (
             '起始等级读数(首入晋阶界面即读,此路径原不读等级)'
         )
+        assert op._banner_upgrade_count == 1, (
+            '升级横幅沿计数应恰为 1(=实际完成升级次数)'
+        )
 
     def test_already_max_entry_stays_zero_click(
         self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
@@ -191,8 +335,8 @@ class TestUpgradeCharacterEntryStates:
         scenes = [
             {(_DETAIL, '按钮-属性详情')},
         ]
-        _install_script(monkeypatch, test_context, scenes, level=0)
-        clicks = _record_controller_clicks(monkeypatch, test_context)
+        state = _install_script(monkeypatch, test_context, scenes, level=0)
+        clicks = _record_controller_clicks(monkeypatch, test_context, state)
         op = _WatchedUpgradeCharacter(test_context)
         op._init_watchdog()  # type: ignore[attr-defined]
 
@@ -202,6 +346,75 @@ class TestUpgradeCharacterEntryStates:
             f'无按钮起点应直接 MAX_LEVEL,status={result.status}'
         )
         assert clicks == [], f'已满级起点不应有任何画面点击:{clicks}'
+
+
+class TestUpgradeCharacterEntryTakeover:
+    """入口残留现场接管:画面级判定未命中(None)时逐锚探测分流。"""
+
+    def test_leftover_probes_route_by_anchor(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """None 兜底逐锚探测:残留弹窗(选次数/结果/开拓力补充)、战斗结算
+        退出钮、副本挑战锚各按 LEFTOVER 接管;等级提升标题按 ALREADY_ASCEND
+        直入升级循环——中断现场不再快速失败。"""
+        cases = [
+            ((_FAST_FARM_DIALOG, '标题-快速刷取弹窗'), 'LEFTOVER'),
+            ((_FAST_FARM_RESULT, '标题-快速刷取弹窗'), 'LEFTOVER'),
+            (('开拓力补充弹窗', '标题-开拓力补充弹窗'), 'LEFTOVER'),
+            ((_BATTLE, '按钮-退出关卡'), 'LEFTOVER'),
+            ((_CHALLENGE, '挑战按钮'), 'LEFTOVER'),
+            ((_ASCEND, '标题-等级提升'), 'ALREADY_ASCEND'),
+        ]
+        for anchor, expected in cases:
+            state = _install_script(
+                monkeypatch, test_context, [{anchor}], level=0)
+            state['screen_now'] = None  # 模态盖住画面 id_mark,整帧识别失败
+            _record_controller_clicks(monkeypatch, test_context, state)
+            op = _WatchedUpgradeCharacter(test_context, farm_dungeon=True)
+            op._init_watchdog()  # type: ignore[attr-defined]
+
+            result = _call_node(op, 'check_entry')
+
+            assert result.is_success and result.status == expected, (
+                f'{anchor} 残留应接管为 {expected},status={result.status}'
+            )
+
+    def test_entry_world_routes_reenter(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """入口落在大世界(手动链中断落点):BACK_TO_WORLD 交重走入口链。"""
+        state = _install_script(monkeypatch, test_context, [set()], level=0)
+        state['screen_now'] = _WORLD
+        _record_controller_clicks(monkeypatch, test_context, state)
+        op = _WatchedUpgradeCharacter(test_context, farm_dungeon=True,
+                                      use_fast_ticket=False)
+        op._init_watchdog()  # type: ignore[attr-defined]
+
+        result = _call_node(op, 'check_entry')
+
+        assert result.is_success and result.status == 'BACK_TO_WORLD', (
+            f'大世界落点应交重走入口链,status={result.status}'
+        )
+
+    def test_manual_route_fails_fast_without_name(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """手动链读名失败 = 消耗前判停:返回链需凭记名重选角色,读不到
+        就在开战前拦住(等打完一场再失败会白烧开拓力)。"""
+        state = _install_script(
+            monkeypatch, test_context,
+            [{(_DETAIL, '按钮-属性详情'), (_DETAIL, '按钮-升级')}], level=0)
+        state['char_name_next'] = None
+        _record_controller_clicks(monkeypatch, test_context, state)
+        op = _WatchedUpgradeCharacter(test_context, farm_dungeon=True,
+                                      use_fast_ticket=False)
+        op._init_watchdog()  # type: ignore[attr-defined]
+
+        result = _call_node(op, 'check_entry')
+
+        assert not result.is_success and '读名' in str(result.status), (
+            f'手动链读名失败应在消耗前判停,status={result.status}'
+        )
 
 
 class TestUpgradeCharacterFillGeneric:
@@ -220,7 +433,7 @@ class TestUpgradeCharacterFillGeneric:
             {(_DETAIL, '按钮-属性详情')},                           # 轮5:详情页判满
         ]
         state = _install_script(monkeypatch, test_context, scenes, level=0)
-        clicks = _record_controller_clicks(monkeypatch, test_context)
+        clicks = _record_controller_clicks(monkeypatch, test_context, state)
         op = _WatchedUpgradeCharacter(test_context)  # fill_generic 默认 True
         op._init_watchdog()  # type: ignore[attr-defined]
 
@@ -242,6 +455,9 @@ class TestUpgradeCharacterFillGeneric:
         assert state['find_events'].count(_ROUND_START) == 5, (
             '循环应恰好分类 5 轮,轮数漂移 = 循环结构变化'
         )
+        assert op._banner_promotion_count == 1, (
+            '晋阶横幅沿计数应恰为 1(=实际完成晋阶次数)'
+        )
 
     def test_fill_generic_false_stops_on_lacking(
         self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
@@ -254,7 +470,7 @@ class TestUpgradeCharacterFillGeneric:
             {(_DETAIL, '按钮-属性详情')},                           # 轮3:回到详情
         ]
         state = _install_script(monkeypatch, test_context, scenes, level=20)
-        clicks = _record_controller_clicks(monkeypatch, test_context)
+        _record_controller_clicks(monkeypatch, test_context, state)
         op = _WatchedUpgradeCharacter(test_context, fill_generic=False)
         op._init_watchdog()  # type: ignore[attr-defined]
 
@@ -263,14 +479,52 @@ class TestUpgradeCharacterFillGeneric:
         assert result.success and result.status == 'MATERIAL_CAPPED', (
             f'未授权通用材料应判停收尾,status={result.status}'
         )
-        assert not _has_click_in(clicks, test_context, _ASCEND, '按钮-通用材料补全'), (
+        # 负向断言走 find_clicks(精确):详情页入口按钮 rect 与养成界面
+        # 右下执行钮 rect 几何重叠,入口点击会落进执行钮矩形,rect 断言误报
+        assert (_ASCEND, '按钮-通用材料补全') not in state['find_clicks'], (
             'fill_generic=False 不应点击通用材料补全按钮'
         )
-        assert not _has_click_in(clicks, test_context, _ASCEND, '按钮-确认材料补全'), (
+        assert (_ASCEND, '按钮-确认材料补全') not in state['find_clicks'], (
             'fill_generic=False 不应确认材料补全弹窗'
         )
         assert state['find_clicks'][-1] == (_ASCEND, '按钮-返回箭头'), (
             '判停后应经返回箭头收尾'
+        )
+        assert state['level_reads'] == 2, (
+            '起始等级与判停等级各读一次'
+        )
+
+    def test_popup_cancelled_without_authorization_capped(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """确认框在场但 fill_generic 未授权:防御路径点「取消」+ 判停。
+
+        残留确认框态下未授权 = 绝不点确认(确认即真实消耗通用材料);
+        取消判停后经返回箭头收尾,MATERIAL_CAPPED 结束。"""
+        scenes = [
+            {(_DETAIL, '按钮-属性详情'), (_DETAIL, '按钮-晋阶')},   # 入口轮
+            {(_ASCEND, '标题-材料补全弹窗')},                       # 轮1:确认框在场
+            {(_ASCEND, '标题-等级提升')},                           # 轮2:收尾途中
+            {(_DETAIL, '按钮-属性详情')},                           # 轮3:回到详情
+        ]
+        state = _install_script(monkeypatch, test_context, scenes, level=70)
+        clicks = _record_controller_clicks(monkeypatch, test_context, state)
+        op = _WatchedUpgradeCharacter(test_context, fill_generic=False)
+        op._init_watchdog()  # type: ignore[attr-defined]
+
+        result = _run_op(op)
+
+        assert result.success and result.status == 'MATERIAL_CAPPED', (
+            f'未授权确认框应取消判停收尾,status={result.status}'
+        )
+        assert _has_click_in(clicks, test_context, _ASCEND, '按钮-取消材料补全'), (
+            '未授权防御路径应点取消'
+        )
+        assert not _has_click_in(clicks, test_context, _ASCEND, '按钮-确认材料补全'), (
+            f'未授权绝不允许点确认,clicks={clicks}'
+        )
+        assert state['find_clicks'][-1] == (_ASCEND, '按钮-返回箭头'), (
+            f'取消判停后应经返回箭头收尾,find_clicks={state["find_clicks"]}'
         )
         assert state['level_reads'] == 2, (
             '起始等级与判停等级各读一次'
@@ -282,20 +536,21 @@ class TestUpgradeCharacterFarmRoute:
     def test_gray_lacking_triggers_ticket_farm_then_upgrade(
         self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """右下全灰(材料不足)触发券刷取链(2026-11-13 新版交互):
+        """右下全灰(材料不足)触发券刷取链:
 
         灰底 → 打开「培养还需获取资源」窗口 → 点「进入」直达副本 → 副本
         左下「快速刷取」(券) → 确认框确认(免战斗领奖) → 关副本回养成界面
-        → 材料齐 → 快速升级执行 → 横幅关 → 详情判满。每轮刷 1 次,
-        预算与收敛由实机自反馈,本测试锁节点链与路由。"""
+        → 材料齐 → 快速升级执行 → 横幅关 → 详情判满。消耗按确认框实际
+        设到的次数记账。"""
         scenes = [
             {(_DETAIL, '按钮-属性详情'), (_DETAIL, '按钮-升级')},   # 入口轮
-            {(_ASCEND, '标题-等级提升'), ('快速刷取弹窗', '标题-快速刷取弹窗')},  # 轮1:全灰 → NEED_FARM
+            {(_ASCEND, '标题-等级提升'), (_FAST_FARM_DIALOG, '标题-快速刷取弹窗')},  # 轮1:全灰 → NEED_FARM
             {(_ASCEND, '标题-等级提升'), (_ASCEND, '按钮-快速升级')},  # 轮2:材料齐
             {(_ASCEND, '标题-升级结果')},                          # 轮3:升级横幅
             {(_DETAIL, '按钮-属性详情')},                          # 轮4:详情判满
         ]
         state = _install_script(monkeypatch, test_context, scenes, level=0)
+        _record_controller_clicks(monkeypatch, test_context, state)
         op = _WatchedUpgradeCharacter(test_context)  # use_fast_ticket 默认 True
         op._init_watchdog()  # type: ignore[attr-defined]
 
@@ -307,12 +562,16 @@ class TestUpgradeCharacterFarmRoute:
         assert state['find_clicks'] == [
             (_DETAIL, '按钮-升级'),
             (_ASCEND, '按钮-快速刷取'),
-            ('培养资源窗口', '按钮-进入副本'),
-            (_CHALLENGE := '挑战副本', '按钮-快速刷取副本'),
-            ('快速刷取弹窗', '按钮-确认快速刷取'),
+            (_RESOURCE, '按钮-进入副本'),
+            (_CHALLENGE, '按钮-快速刷取副本'),
+            (_FAST_FARM_DIALOG, '按钮-确认快速刷取'),
             (_ASCEND, '点击区-关闭横幅'),
         ], f'刷取链 find+click 序列漂移:{state["find_clicks"]}'
-        assert op._farm_rounds == 1, f'应恰好刷取 1 次,实际 {op._farm_rounds}'
+        assert op._farm_rounds == 1, f'应恰好刷取 1 轮,实际 {op._farm_rounds}'
+        assert op._farm_times_set == 1 and op._farm_draws == 1, (
+            f'消耗记账应按确认框实际读数,set={op._farm_times_set},'
+            f'draws={op._farm_draws}'
+        )
         assert state['level_reads'] == 1, (
             '起始等级读数(首入晋阶界面即读,此路径原不读等级)'
         )
@@ -321,16 +580,16 @@ class TestUpgradeCharacterFarmRoute:
         self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """farm_times_per_round=-1:确认框内点「^」拉满按钮(滑条上限),
-        OCR 复核后确认——锁定拉满语义的交互路径。"""
+        OCR 复核后确认——锁定拉满语义的交互路径与实数记账。"""
         scenes = [
             {(_DETAIL, '按钮-属性详情'), (_DETAIL, '按钮-升级')},   # 入口轮
-            {(_ASCEND, '标题-等级提升'), ('快速刷取弹窗', '标题-快速刷取弹窗')},  # 轮1:灰底 → 刷取链
+            {(_ASCEND, '标题-等级提升'), (_FAST_FARM_DIALOG, '标题-快速刷取弹窗')},  # 轮1:灰底 → 刷取链
             {(_ASCEND, '标题-等级提升'), (_ASCEND, '按钮-快速升级')},  # 轮2:材料齐
             {(_ASCEND, '标题-升级结果')},                          # 轮3:横幅
             {(_DETAIL, '按钮-属性详情')},                          # 轮4:判满
         ]
         state = _install_script(monkeypatch, test_context, scenes, level=0)
-        clicks = _record_controller_clicks(monkeypatch, test_context)
+        clicks = _record_controller_clicks(monkeypatch, test_context, state)
         op = _WatchedUpgradeCharacter(test_context, farm_times_per_round=-1)
         op._init_watchdog()  # type: ignore[attr-defined]
 
@@ -340,26 +599,165 @@ class TestUpgradeCharacterFarmRoute:
             f'拉满刷取链应走通,status={result.status}'
         )
         assert _has_click_in(
-            clicks, test_context, '快速刷取弹窗', '按钮-刷取次数拉满'), (
+            clicks, test_context, _FAST_FARM_DIALOG, '按钮-刷取次数拉满'), (
             '拉满模式应点击「^」按钮而非「+」'
         )
-        assert state['farm_times_reads'] >= 1, '拉满后应 OCR 复核次数'
+        assert state['farm_times_read'] >= 1, '拉满后应 OCR 复核次数'
         assert op._farm_rounds == 1, f'应恰好刷取 1 轮,实际 {op._farm_rounds}'
+        assert op._farm_times_set == 1 and op._farm_draws == 1, (
+            f'拉满消耗记账应按读数(而非配置 -1),set={op._farm_times_set},'
+            f'draws={op._farm_draws}'
+        )
+
+    def test_farm_times_plus_compensation(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """确认框次数现读低于目标:点「+」补差值到目标,恰好点差额次数
+        (OCR 现读 + 补偿式设置;点「+」后等滑条动画再复读)。"""
+        scenes = [
+            {(_DETAIL, '按钮-属性详情'), (_DETAIL, '按钮-升级')},
+            {(_ASCEND, '标题-等级提升'), (_FAST_FARM_DIALOG, '标题-快速刷取弹窗')},
+            {(_ASCEND, '标题-等级提升')},
+        ]
+        state = _install_script(monkeypatch, test_context, scenes, level=40)
+        state['farm_times_read'] = 0  # 现读 0,目标 2 → 应点「+」2 次
+        state['round'] = 1  # 直呼节点:场景定位到确认框在场轮(重入守卫需命中弹窗标题)
+        clicks = _record_controller_clicks(monkeypatch, test_context, state)
+        op = _WatchedUpgradeCharacter(test_context, farm_dungeon=True,
+                                      farm_times_per_round=2)
+        op._init_watchdog()  # type: ignore[attr-defined]
+
+        result = _call_node(op, 'confirm_ticket_farm')
+
+        assert result.is_success, f'补偿设置后应成功点确认,status={result.status}'
+        plus_clicks = _count_clicks_in(clicks, test_context,
+                                       _FAST_FARM_DIALOG, '按钮-刷取次数加')
+        assert plus_clicks == 2, f'应恰好点「+」2 次,实际 {plus_clicks}'
+        assert op._farm_times_set == 2 and op._farm_draws == 2, (
+            f'实数记账应为目标值,set={op._farm_times_set},draws={op._farm_draws}'
+        )
+        assert op._farm_rounds == 1
+
+    def test_confirm_farm_wait_rerun_guard(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """券确认刷取的 WAIT 重入幂等守卫:带 until 的点击返回 WAIT 时引擎会
+        原样重跑本节点——重入轮必须按画面态分流,不得重跑次数设置与确认点击。
+
+        结果框在场 = 刷取已完成(RESULT_OPEN,零点击);两弹窗都不在 = 刷取
+        进行中(WAIT 慢询,零副作用);补充弹窗在场 = 券被拦(POWER_BLOCKED,
+        回滚确认前计数)。"""
+        # 用例1:结果框在场 → RESULT_OPEN 成功,无任何点击、不重复计数
+        state = _install_script(
+            monkeypatch, test_context,
+            [{(_FAST_FARM_RESULT, '按钮-关闭刷取结果')}], level=40)
+        clicks = _record_controller_clicks(monkeypatch, test_context, state)
+        op = _WatchedUpgradeCharacter(test_context, farm_dungeon=True)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        result = _call_node(op, 'confirm_ticket_farm')
+        assert result.is_success and result.status == 'RESULT_OPEN', (
+            f'结果框在场应直接成功交返回分类,status={result.status}'
+        )
+        assert op._farm_rounds == 0, '重入守卫不得重复计数刷取轮次'
+        assert not _has_click_in(clicks, test_context,
+                                 _FAST_FARM_DIALOG, '按钮-刷取次数拉满'), (
+            '重入守卫不得重跑拉满点击'
+        )
+
+        # 用例2:两弹窗都不在(确认已发出、刷取进行中) → WAIT 慢询等待
+        state2 = _install_script(monkeypatch, test_context, [set()], level=40)
+        clicks2 = _record_controller_clicks(monkeypatch, test_context, state2)
+        op2 = _WatchedUpgradeCharacter(test_context, farm_dungeon=True)
+        op2._init_watchdog()  # type: ignore[attr-defined]
+        result2 = _call_node(op2, 'confirm_ticket_farm')
+        assert result2.result == OperationRoundResultEnum.WAIT, (
+            f'刷取进行中应 WAIT 等待结果框,result={result2.result}'
+        )
+        assert op2._farm_rounds == 0, '刷取进行中重入不得重复计数'
+        assert not clicks2, f'刷取进行中重入不得有任何点击,clicks={clicks2}'
+
+        # 用例3:开拓力补充弹窗在场(确认被拦,结果框永不出现) → 置判停标志、
+        # 回滚确认前计数,以 POWER_BLOCKED 交返回分类原路清场
+        state3 = _install_script(
+            monkeypatch, test_context,
+            [{('开拓力补充弹窗', '标题-开拓力补充弹窗')}], level=40)
+        clicks3 = _record_controller_clicks(monkeypatch, test_context, state3)
+        op3 = _WatchedUpgradeCharacter(test_context, farm_dungeon=True)
+        op3._init_watchdog()  # type: ignore[attr-defined]
+        op3._farm_draws = 5      # 预置确认前已记账
+        op3._farm_times_set = 2  # 本轮确认框设到的次数
+        result3 = _call_node(op3, 'confirm_ticket_farm')
+        assert result3.is_success and result3.status == 'POWER_BLOCKED', (
+            f'补充弹窗在场应以 POWER_BLOCKED 交返回分类清场,status={result3.status}'
+        )
+        assert op3._capped is True and op3._stop_status == 'POWER_CAPPED', (
+            '守卫应置判停标志与 POWER_CAPPED 停因'
+        )
+        assert op3._farm_rounds == 0, '判停路径不得重复计数'
+        assert op3._farm_draws == 3, (
+            f'本轮未成交应回滚记账(5-2=3),实际 {op3._farm_draws}'
+        )
+        assert not clicks3, f'判停路径不得有任何点击,clicks={clicks3}'
+
+    def test_capped_exit_reports_stop_status(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """判停收尾按 _stop_status 出状态:POWER_CAPPED 场景(开拓力不足守卫
+        置位)下 ③ 回到详情页即以 POWER_CAPPED 结束,与材料判停的
+        MATERIAL_CAPPED 可区分;并补读判停时未知的等级。"""
+        state = _install_script(
+            monkeypatch, test_context,
+            [set(), {(_DETAIL, '按钮-属性详情')}], level=70)
+        _record_controller_clicks(monkeypatch, test_context, state)
+        op = _WatchedUpgradeCharacter(test_context, farm_dungeon=True)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        op._capped = True
+        op._stop_status = 'POWER_CAPPED'
+        op._capped_level = None  # 券确认守卫判停时不在养成界面,等级未知
+        result = _call_node(op, 'upgrade_loop')
+        assert result.is_success and result.status == 'POWER_CAPPED', (
+            f'POWER_CAPPED 停因应原样透出,status={result.status}'
+        )
+        assert op._capped_level == 70, f'收尾应补读判停等级,得到 {op._capped_level}'
+
+    def test_banner_count_edge_gated(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """横幅沿计数:关闭点击未生效的 WAIT 重入轮(横幅仍在场)不得重复
+        计数——横幅计数 = 实际完成升级次数,重计会虚高。"""
+        state = _install_script(
+            monkeypatch, test_context,
+            [set(), {(_ASCEND, '标题-升级结果')}, {(_ASCEND, '标题-升级结果')}],
+            level=40)
+        _record_controller_clicks(monkeypatch, test_context, state)
+        op = _WatchedUpgradeCharacter(test_context, farm_dungeon=True)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        enter_running_state(op.ctx)
+        try:
+            with fast_sleep(op):
+                op.upgrade_loop()
+                op.upgrade_loop()  # 模拟关闭未生效的 WAIT 重入(横幅仍在场)
+        finally:
+            reset_running_state(op.ctx, op)
+        assert op._banner_upgrade_count == 1, (
+            f'重入轮不得重复计数,实际 {op._banner_upgrade_count}'
+        )
 
     def test_farm_route_budget_exhausted_stops(
         self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
     ) -> None:
         """刷取预算耗尽:灰底反复触发刷取,预算(10 次)耗尽判停 MATERIAL_CAPPED,
         且 _farm_rounds 恰好等于预算。"""
-        # 场景 0=入口,1..N=每轮刷取循环(界面锚在+无白底按钮)反复 NEED_FARM,
-        # 预算耗尽轮=界面锚在+返回箭头可点,末轮=详情锚收尾
+        # 场景 0=入口,1..10=每轮刷取循环,11=预算耗尽轮(返回箭头),12=详情收尾
         scenes: list[set[tuple[str, str]]] = [
             {(_DETAIL, '按钮-属性详情'), (_DETAIL, '按钮-升级')},
         ]
-        scenes += [{(_ASCEND, '标题-等级提升'), ('快速刷取弹窗', '标题-快速刷取弹窗')} for _ in range(11)]  # 轮1-11:持续缺料
-        scenes.append({(_DETAIL, '按钮-属性详情')})  # 末轮收尾
+        scenes += [{(_ASCEND, '标题-等级提升'), (_FAST_FARM_DIALOG, '标题-快速刷取弹窗')}
+                   for _ in range(10)]  # 轮1-10:持续缺料
+        scenes.append({(_ASCEND, '标题-等级提升')})  # 轮11:预算耗尽判停
+        scenes.append({(_DETAIL, '按钮-属性详情')})  # 轮12:详情收尾
         _install_script(monkeypatch, test_context, scenes, level=40)
-        # 预算耗尽语义锁:显式传 10 轮(生产默认已改 1 轮拉满,见 docstring)
+        # 预算耗尽语义锁:显式传 10 轮(生产默认 1 轮拉满,见 docstring)
         op = _WatchedUpgradeCharacter(test_context, farm_rounds_max=10)
         op._init_watchdog()  # type: ignore[attr-defined]
 
@@ -382,6 +780,7 @@ class TestUpgradeCharacterFarmRoute:
             {(_DETAIL, '按钮-属性详情')},                           # 轮3:回到详情
         ]
         state = _install_script(monkeypatch, test_context, scenes, level=40)
+        _record_controller_clicks(monkeypatch, test_context, state)
         op = _WatchedUpgradeCharacter(test_context, farm_dungeon=False)
         op._init_watchdog()  # type: ignore[attr-defined]
 
@@ -391,29 +790,86 @@ class TestUpgradeCharacterFarmRoute:
             f'未授权刷副本应判停收尾,status={result.status}'
         )
         assert op._farm_rounds == 0, 'farm_dungeon=False 不应执行任何刷取'
-        assert not any(a == '挑战副本' for _, a in state['find_clicks']), (
+        assert not any(a == _CHALLENGE for _, a in state['find_clicks']), (
             '未授权刷副本不应触碰挑战副本画面'
         )
 
-    def test_power_blocked_routes_walk_home(
+    def test_farm_window_fail_stops_instead_of_spinning(
         self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """开拓力不足判停不再死在副本里:券确认/手动挑战两节点的守卫识别
-        「开拓力补充弹窗」即置判停标志,以 POWER_BLOCKED 交返回分类原路
-        清场(取消弹窗→关副本→回养成界面→POWER_CAPPED 收尾)。"""
+        """快速刷取静默无反应(无可刷缺口,按钮白底可 OCR 但点击无效):
+        helper 重试预算耗尽(is_fail)转 FARM_WINDOW_FAIL 回升级循环判停
+        收尾——原样透传 WAIT 会无界自旋挂死一条龙。"""
+
+        def _fake_fail_click(op_self, screen, s_name, a_name, *args, **kwargs):
+            return op_self.round_fail(f'未找到 {a_name}')
+
+        state = _install_script(monkeypatch, test_context, [set()], level=40)
+        _record_controller_clicks(monkeypatch, test_context, state)
+        op = _WatchedUpgradeCharacter(test_context, farm_dungeon=True)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        monkeypatch.setattr(UpgradeCharacterOp, 'round_by_find_and_click_area',
+                            _fake_fail_click)
+
+        result = _call_node(op, 'open_farm_window')
+
+        assert result.is_success and result.status == 'FARM_WINDOW_FAIL', (
+            f'资源窗口打不开应以 FARM_WINDOW_FAIL 回循环判停,status={result.status}'
+        )
+        assert op._capped is True and op._stop_status == 'MATERIAL_CAPPED', (
+            'FARM_WINDOW_FAIL 应置判停标志与材料停因'
+        )
+
+    def test_farm_in_dungeon_dialog_open_spin_bounded(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """确认框连续未打开的 WAIT 自旋必须有界:helper 的 WAIT 返回无重试
+        上限,原样返回会无限自旋——连等 4 轮后显式失败(现场留证由
+        save_screenshot 承担,测试内桩掉)。"""
+
+        def _fake_wait_click(op_self, screen, s_name, a_name, *args, **kwargs):
+            state['find_clicks'].append((s_name, a_name))
+            return op_self.round_wait(status=a_name, wait=1.5)
+
+        state = _install_script(monkeypatch, test_context, [set()], level=40)
+        _record_controller_clicks(monkeypatch, test_context, state)
+        op = _WatchedUpgradeCharacter(test_context, farm_dungeon=True,
+                                      use_fast_ticket=True)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        monkeypatch.setattr(UpgradeCharacterOp, 'round_by_find_and_click_area',
+                            _fake_wait_click)
+        monkeypatch.setattr(UpgradeCharacterOp, 'save_screenshot',
+                            lambda self, prefix='': '')
+        enter_running_state(op.ctx)
+        try:
+            with fast_sleep(op):
+                results = [op.farm_in_dungeon() for _ in range(4)]
+        finally:
+            reset_running_state(op.ctx, op)
+        assert all(r.result == OperationRoundResultEnum.WAIT
+                   for r in results[:3]), (
+            f'前三轮应 WAIT 等待确认框,results={[(r.status, r.result) for r in results]}'
+        )
+        assert not results[3].is_success, (
+            f'连等超限应显式失败,status={results[3].status}'
+        )
+        assert '连续未打开' in str(results[3].status)
+
+    def test_power_blocked_guards_stop_before_consuming(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """开拓力不足守卫:券确认/手动挑战两节点识别「开拓力补充弹窗」即置
+        判停标志,以 POWER_BLOCKED 交返回分类原路清场(清场链与 POWER_CAPPED
+        收尾由 back_to_ascend 取消用例与判停收尾用例覆盖)——守卫路径本身
+        零点击、不重复计数。"""
         for node_name in ('confirm_ticket_farm', 'manual_fight'):
-            _install_script(
+            state = _install_script(
                 monkeypatch, test_context,
                 [{('开拓力补充弹窗', '标题-开拓力补充弹窗')}], level=0)
-            _record_controller_clicks(monkeypatch, test_context)
+            clicks = _record_controller_clicks(monkeypatch, test_context, state)
             op = _WatchedUpgradeCharacter(test_context, farm_dungeon=True)
             op._init_watchdog()  # type: ignore[attr-defined]
-            enter_running_state(op.ctx)
-            try:
-                with fast_sleep(op):
-                    result = getattr(op, node_name)()
-            finally:
-                reset_running_state(op.ctx, op)
+            result = _call_node(op, node_name)
             assert result.is_success and result.status == 'POWER_BLOCKED', (
                 f'{node_name} 补充弹窗在场应以 POWER_BLOCKED 清场,'
                 f'status={result.status}'
@@ -422,44 +878,21 @@ class TestUpgradeCharacterFarmRoute:
                 f'{node_name} 守卫应置判停标志与 POWER_CAPPED 停因'
             )
             assert op._farm_rounds == 0, f'{node_name} 判停路径不得重复计数'
+            assert not clicks, f'{node_name} 守卫路径不得有任何点击,clicks={clicks}'
 
-    def test_entry_leftover_routes_cleanup(
+    def test_back_to_ascend_cancels_leftover_popups(
         self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """入口残留现场接管:刷取链遗留弹窗/副本画面在场时入口以 LEFTOVER
-        交返回养成界面清场,不再快速失败。"""
-        _install_script(
-            monkeypatch, test_context,
-            [{('开拓力补充弹窗', '标题-开拓力补充弹窗')}], level=0)
-        _record_controller_clicks(monkeypatch, test_context)
-        op = _WatchedUpgradeCharacter(test_context, farm_dungeon=True)
-        op._init_watchdog()  # type: ignore[attr-defined]
-        enter_running_state(op.ctx)
-        try:
-            with fast_sleep(op):
-                result = op.check_entry()
-        finally:
-            reset_running_state(op.ctx, op)
-        assert result.is_success and result.status == 'LEFTOVER', (
-            f'残留现场应接管为 LEFTOVER,status={result.status}'
-        )
-
-    def test_back_to_ascend_cancels_leftover_popup(
-        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
-    ) -> None:
-        """返回养成界面清场:开拓力补充弹窗残留 → 点其取消重入分类。"""
+        """返回养成界面清场:开拓力补充弹窗/选次数确认框残留 → 各点其取消
+        重入分类(补充弹窗「确认」是星琼购开拓力,永不触碰)。"""
+        # 用例1:开拓力补充弹窗在 → 点其取消,重入分类
         state = _install_script(
             monkeypatch, test_context,
             [{('开拓力补充弹窗', '标题-开拓力补充弹窗')}], level=0)
-        _record_controller_clicks(monkeypatch, test_context)
+        _record_controller_clicks(monkeypatch, test_context, state)
         op = _WatchedUpgradeCharacter(test_context, farm_dungeon=True)
         op._init_watchdog()  # type: ignore[attr-defined]
-        enter_running_state(op.ctx)
-        try:
-            with fast_sleep(op):
-                result = op.back_to_ascend()
-        finally:
-            reset_running_state(op.ctx, op)
+        result = _call_node(op, 'back_to_ascend')
         assert not result.is_success \
             and '开拓力补充弹窗已关' in str(result.status), (
             f'补充弹窗残留应点取消重入分类,status={result.status}'
@@ -467,3 +900,192 @@ class TestUpgradeCharacterFarmRoute:
         assert ('开拓力补充弹窗', '按钮-取消') in state['find_clicks'], (
             f'应点击补充弹窗取消钮,find_clicks={state["find_clicks"]}'
         )
+
+        # 用例2:选次数确认框在 → 点其取消,重入分类
+        state2 = _install_script(
+            monkeypatch, test_context,
+            [{(_FAST_FARM_DIALOG, '标题-快速刷取弹窗')}], level=0)
+        _record_controller_clicks(monkeypatch, test_context, state2)
+        op2 = _WatchedUpgradeCharacter(test_context, farm_dungeon=True)
+        op2._init_watchdog()  # type: ignore[attr-defined]
+        result2 = _call_node(op2, 'back_to_ascend')
+        assert not result2.is_success \
+            and '选次数确认框已取消' in str(result2.status), (
+            f'确认框残留应点取消重入分类,status={result2.status}'
+        )
+        assert (_FAST_FARM_DIALOG, '按钮-取消') in state2['find_clicks'], (
+            f'应点击确认框取消钮,find_clicks={state2["find_clicks"]}'
+        )
+
+
+class TestUpgradeCharacterManualRoute:
+    """手动挑战路线:副本态前置、编队双锚、大世界返回与重走入口链。"""
+
+    def test_manual_full_chain_returns_via_world_and_reenters(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """手动路线全链:灰底 → 资源窗口 → 副本(凝滞虚影态) → 挑战 →
+        编队(双锚确认) → 战斗 → 结算退出 → 重建副本关闭 → 大世界 →
+        BACK_TO_WORLD → 重走入口链(角色图标→重选角色→切详情TAB) →
+        FARMED 重入升级循环升满判停。
+
+        此路径若误按券路线的栈回退处理,流程会在大世界卡死。"""
+        scenes = [
+            {(_DETAIL, '按钮-属性详情'), (_DETAIL, '按钮-升级')},     # 入口
+            {(_ASCEND, '标题-等级提升'), (_CHALLENGE, '标题-凝滞虚影')},  # 轮1:灰底;副本态=凝滞虚影
+            {(_CHALLENGE, '队伍标题')},                              # 轮2:编队态(点挑战后)
+            {(_BATTLE, '按钮-退出关卡')},                            # 轮3:战斗结算
+            {(_CHALLENGE, '挑战按钮')},                              # 轮4:重建副本画面
+            set(),                                                   # 轮5:大世界(返回分类判定)
+            set(),                                                   # 轮6:角色详情(重走入口链重选/切页)
+            {(_ASCEND, '标题-等级提升'), (_ASCEND, '按钮-快速升级')},  # 轮7:回界面材料齐 → 执行
+            {(_ASCEND, '标题-升级结果')},                            # 轮8:横幅
+            {(_DETAIL, '按钮-属性详情')},                            # 轮9:判满
+        ]
+        state = _install_script(monkeypatch, test_context, scenes, level=79)
+        _FakeSubOp.executed = []
+        clicks = _record_controller_clicks(
+            monkeypatch, test_context, state,
+            advance_round_on_squad_click=True,
+            advance_round_on_challenge_click=True)
+        op = _WatchedUpgradeCharacter(test_context, farm_dungeon=True,
+                                      use_fast_ticket=False)
+        op._init_watchdog()  # type: ignore[attr-defined]
+
+        result = _run_op(op)
+
+        assert result.success and result.status == 'MAX_LEVEL', (
+            f'手动刷取回大世界后应经入口链继续升满判停,status={result.status},'
+            f'round={state["round"]},trace={state.get("find_events")},clicks={clicks}'
+        )
+        assert _has_click_in(clicks, test_context, _CHALLENGE, '挑战按钮'), (
+            '副本态应点挑战按钮进编队'
+        )
+        assert _has_click_in(clicks, test_context, _CHALLENGE, '按钮-开始编队挑战'), (
+            '编队态应点开始编队挑战'
+        )
+        assert _has_click_in(clicks, test_context, _BATTLE, '按钮-退出关卡'), (
+            '战斗结算应点退出关卡'
+        )
+        assert _has_click_in(clicks, test_context, _CHALLENGE, '按钮-关闭副本'), (
+            '回大世界前应先关副本画面'
+        )
+        assert _has_click_in(clicks, test_context, _WORLD, '右上图标-角色详情'), (
+            '大世界应点右上角色详情图标重走入口链'
+        )
+        assert _FakeSubOp.executed, '入口链应调用重选/切页子 op'
+        assert any(k.get('cn_name') == '测试角色' for k in _FakeSubOp.executed), (
+            f'重选角色应使用入口记下的名字,executed={_FakeSubOp.executed}'
+        )
+        assert any(k.get('tab_name') == '详情' for k in _FakeSubOp.executed), (
+            f'入口链应切回「详情」页签,executed={_FakeSubOp.executed}'
+        )
+        assert not _has_click_in(clicks, test_context,
+                                 _FAST_FARM_DIALOG, '按钮-确认快速刷取'), (
+            '手动路线不得走券确认分支'
+        )
+        assert op._farm_rounds == 1 and op._manual_fights == 1, (
+            f'手动刷取应计 1 轮 1 场,rounds={op._farm_rounds},'
+            f'fights={op._manual_fights}'
+        )
+
+    def test_manual_fight_dual_anchor_blocks_dungeon_state(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """编队态双锚防线:挑战按钮 area 与编队「开始挑战」文本 LCS 互恰,
+        副本态(副本类型标题在场)下即使队伍锚误命中也不得点开始编队挑战
+        (连环误开战防线,光锥线同位实测事故)。"""
+        state = _install_script(
+            monkeypatch, test_context,
+            [{(_CHALLENGE, '队伍标题'), (_CHALLENGE, '标题-凝滞虚影')}], level=0)
+        clicks = _record_controller_clicks(monkeypatch, test_context, state)
+        op = _WatchedUpgradeCharacter(test_context, farm_dungeon=True,
+                                      use_fast_ticket=False)
+        op._init_watchdog()  # type: ignore[attr-defined]
+
+        result = _call_node(op, 'manual_fight')
+
+        assert result.is_success and result.status == 'BATTLE_DONE', (
+            f'副本态(标题在场)应交返回分类而非开战,status={result.status}'
+        )
+        assert not _has_click_in(clicks, test_context,
+                                 _CHALLENGE, '按钮-开始编队挑战'), (
+            f'副本态不得点开始编队挑战,clicks={clicks}'
+        )
+
+    def test_farm_in_dungeon_requires_dungeon_state(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """副本态前置:挑战按钮 area 在场但副本类型标题都不在(编队/战斗态
+        误入)时,不得点挑战按钮,直接交手动战斗节点分类。"""
+        state = _install_script(
+            monkeypatch, test_context,
+            [{(_CHALLENGE, '挑战按钮')}], level=0)
+        clicks = _record_controller_clicks(monkeypatch, test_context, state)
+        op = _WatchedUpgradeCharacter(test_context, farm_dungeon=True,
+                                      use_fast_ticket=False)
+        op._init_watchdog()  # type: ignore[attr-defined]
+
+        result = _call_node(op, 'farm_in_dungeon')
+
+        assert result.is_success and result.status == 'MANUAL_FIGHT', (
+            f'无副本类型标题应直接交手动分类,status={result.status}'
+        )
+        assert not _has_click_in(clicks, test_context, _CHALLENGE, '挑战按钮'), (
+            f'无副本态前置不得点挑战按钮,clicks={clicks}'
+        )
+
+    def test_reentry_identity_gate_requires_name(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """重走入口链防升错:落在角色详情时有入口记名才重选(凭记名,
+        不信页面显示——角色详情不记忆上次角色);无记名显式失败且不调用
+        重选子 op。"""
+        state = _install_script(monkeypatch, test_context, [set()], level=79)
+        _FakeSubOp.executed = []
+        _record_controller_clicks(monkeypatch, test_context, state)
+
+        # 用例1:有记名 → 重选 + 切页 → FARMED
+        op = _WatchedUpgradeCharacter(test_context, farm_dungeon=True,
+                                      use_fast_ticket=False)
+        op._char_name = '测试角色'
+        state['screen_now'] = _DETAIL
+        result = _call_node(op, 'reenter_from_world')
+        assert result.is_success and result.status == 'FARMED', (
+            f'有记名应重选角色接管,status={result.status}'
+        )
+        assert any(k.get('cn_name') == '测试角色' for k in _FakeSubOp.executed), (
+            f'应凭入口记名重选,executed={_FakeSubOp.executed}'
+        )
+
+        # 用例2:无记名 → fail,不调用重选子 op
+        _FakeSubOp.executed = []
+        op2 = _WatchedUpgradeCharacter(test_context, farm_dungeon=True,
+                                       use_fast_ticket=False)
+        op2._char_name = None
+        state['screen_now'] = _DETAIL
+        result2 = _call_node(op2, 'reenter_from_world')
+        assert not result2.is_success, '无记名应判停防升错'
+        assert not _FakeSubOp.executed, (
+            f'无记名不得调用重选子 op,executed={_FakeSubOp.executed}'
+        )
+
+
+class TestUpgradeCharacterParamValidation:
+
+    def test_param_validation(self, test_context: SrTestContext) -> None:
+        """参数校验:farm_times_per_round 仅正数或 -1;farm_rounds_max >= 1。
+        默认策略锁:fill_generic 开、每轮拉满(-1)、预算 1 轮、券路线——
+        通用材料最优先 + 刷取一轮拉满(材料共享库存,多余留他用)。"""
+        op = UpgradeCharacterOp(test_context)
+        assert op.fill_generic is True
+        assert op.farm_dungeon is False
+        assert op.use_fast_ticket is True
+        assert op.farm_times_per_round == -1
+        assert op.farm_rounds_max == 1
+        with pytest.raises(ValueError, match='farm_times_per_round'):
+            UpgradeCharacterOp(test_context, farm_times_per_round=0)
+        with pytest.raises(ValueError, match='farm_times_per_round'):
+            UpgradeCharacterOp(test_context, farm_times_per_round=-2)
+        with pytest.raises(ValueError, match='farm_rounds_max'):
+            UpgradeCharacterOp(test_context, farm_rounds_max=0)
