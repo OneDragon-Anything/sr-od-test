@@ -184,7 +184,7 @@ def test_none_guard_skips_whole_segment() -> None:
     """判据①:effective None → 整段跳过——已登记效果零发放(「未观察不当真
     进节点」守卫,禁虚耗余期/虚累余额;现码 cw_loop 禁令随迁)。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
-    gs.effects.register_strategy(STRATEGY_EFFECTS['双手狸开键盘！'],
+    gs.effects.register_strategy(STRATEGY_EFFECTS['加油站'],
                                  acquired_key=(1, 5))
     tick_effect_boundary(gs)
     assert gs.free_refresh_left.value is None, '未观察 = 不发放(零 Field 行)'
@@ -194,11 +194,11 @@ def test_none_guard_skips_whole_segment() -> None:
 def test_advances_and_grants() -> None:
     """判据②:生效序位推进 → 账本 advanced + 刷新剩余次数 Field 到账。"""
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
-    gs.effects.register_strategy(STRATEGY_EFFECTS['双手狸开键盘！'],
+    gs.effects.register_strategy(STRATEGY_EFFECTS['加油站'],
                                  acquired_key=(1, 5))
     gs.node_hist_pos = (1, 6)
     tick_effect_boundary(gs)
-    assert gs.free_refresh_left.value == 2, '每进节点 +2(双手狸活载体)'
+    assert gs.free_refresh_left.value == 1, '每进节点 +1(加油站活载体;双手狸 V4.7 退场换同形存活卡,per_node 2→1)'
 
 
 def test_segment_swallows_exceptions(monkeypatch) -> None:
@@ -263,7 +263,7 @@ def test_board_rewrite_clear_then_front_deploy_no_crash() -> None:
 # (T-26 量子同频契约:grant_bench_unit_cascade 采集发火 + spawn_equip_
 # bench_unit 拷贝臂反向锁;设计 = 该原稿锁面 §2.4 条 2/§4.6 同构分支/§4.8。)
 
-_POOL = ('符玄', '希儿')
+_POOL = ('符玄', '缇宝')   # V4.7 roster 内发放候选(希儿退 roster 随批换)
 
 
 def _merge_contract_gs(bench_entries: list[Unit]) -> GameState:
@@ -313,6 +313,17 @@ def test_spawn_equip_bench_unit_no_facts_no_grant(
     assert _bench_units(gs) == [('花火', 1), ('花火', 1), ('银狼', 1)], \
         '直写落位:无级联合并(花火仍 2 只)、无发放角色'
     assert gs.write_seq - seq_before == 1, '恰一行入席写,零发放分支'
+
+
+@pytest.fixture(autouse=True)
+def _inject_merge_grant(monkeypatch: pytest.MonkeyPatch) -> None:
+    """表空正锁解耦(T-5 r2 机制桥 fixture 解耦):量子同频契约 V4.7 退场,
+    ENV_MERGE_GRANTS 空表——直构同形条目注入(触发 花火/缇宝、候选 _POOL,
+    通道行为锁面不变;仅 merge 级联用例消费,其余用例零合成零交互;V4.7
+    重采后注入可删)。"""
+    from sr_od.application.currency_war.kernel import cw_env_grants as _eg
+    monkeypatch.setattr(_eg, 'ENV_MERGE_GRANTS',
+                        {'量子同频契约': (('花火', '缇宝'), _POOL)})
 
 
 @pytest.fixture
