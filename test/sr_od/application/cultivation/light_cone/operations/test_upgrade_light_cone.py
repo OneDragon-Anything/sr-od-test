@@ -73,6 +73,8 @@ _TEST_RECTS: dict[tuple[str, str], tuple[int, int, int, int]] = {
     (_CHALLENGE, '按钮-开始编队挑战'): (1560, 955, 1740, 1005),
     (_FAST_FARM_RESULT, '按钮-关闭刷取结果'): (570, 788, 930, 842),
     (_FAST_FARM_DIALOG, '按钮-刷取次数加'): (1318, 570, 1374, 608),
+    (_FAST_FARM_DIALOG, '按钮-取消'): (570, 740, 930, 792),
+    ('开拓力补充弹窗', '按钮-取消'): (590, 707, 905, 759),
     (_BATTLE, '按钮-退出关卡'): (620, 945, 810, 1000),
     (_WORLD, '右上图标-角色详情'): (1800, 0, 1900, 100),
 }
@@ -508,6 +510,54 @@ class TestUpgradeLightConeBranches:
         )
         assert op3._farm_rounds == 0, '判停路径不得重复计数'
         assert not clicks3, f'判停路径不得有任何点击,clicks={clicks3}'
+
+    def test_back_after_farm_cancels_leftover_dialogs(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """刷取返回分类的残留弹窗清场:开拓力不足判停/中断现场会遗留开拓力
+        补充弹窗与选次数确认框(盖住副本锚,整帧识别 None)——返回分类逐个
+        点其「取消」清场重入分类,接管现场不再空转过渡帧兜底。"""
+        # 用例1:开拓力补充弹窗在 → 点其取消,重入分类
+        state = _install_script(
+            monkeypatch, test_context,
+            [{('开拓力补充弹窗', '标题-开拓力补充弹窗')}], level=40)
+        _record_controller_clicks(monkeypatch, test_context, state)
+        op = _WatchedUpgradeLightCone(test_context, farm_dungeon=True)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        enter_running_state(op.ctx)
+        try:
+            with fast_sleep(op):
+                result = op.back_after_farm()
+        finally:
+            reset_running_state(op.ctx, op)
+        assert not result.is_success \
+            and '开拓力补充弹窗已关' in str(result.status), (
+            f'补充弹窗残留应点取消重入分类,status={result.status}'
+        )
+        assert ('开拓力补充弹窗', '按钮-取消') in state['find_clicks'], (
+            f'应点击补充弹窗取消钮,find_clicks={state["find_clicks"]}'
+        )
+
+        # 用例2:选次数确认框在 → 点其取消,重入分类
+        state2 = _install_script(
+            monkeypatch, test_context,
+            [{(_FAST_FARM_DIALOG, '标题-快速刷取弹窗')}], level=40)
+        _record_controller_clicks(monkeypatch, test_context, state2)
+        op2 = _WatchedUpgradeLightCone(test_context, farm_dungeon=True)
+        op2._init_watchdog()  # type: ignore[attr-defined]
+        enter_running_state(op2.ctx)
+        try:
+            with fast_sleep(op2):
+                result2 = op2.back_after_farm()
+        finally:
+            reset_running_state(op2.ctx, op2)
+        assert not result2.is_success \
+            and '选次数确认框已取消' in str(result2.status), (
+            f'确认框残留应点取消重入分类,status={result2.status}'
+        )
+        assert (_FAST_FARM_DIALOG, '按钮-取消') in state2['find_clicks'], (
+            f'应点击确认框取消钮,find_clicks={state2["find_clicks"]}'
+        )
 
     def test_manual_fight_returns_to_world_and_reenters(
         self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
