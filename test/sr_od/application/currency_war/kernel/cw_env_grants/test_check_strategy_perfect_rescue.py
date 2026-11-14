@@ -61,6 +61,17 @@ _SIG_SEED = ChannelSig(family='logic_action', actor='test-seed',
                        mode='compute')
 
 
+
+
+@pytest.fixture(autouse=True)
+def _inject_perfect_rescue(monkeypatch: pytest.MonkeyPatch) -> None:
+    """表空正锁解耦(T-5 r2 机制桥 fixture 解耦):都是这家伙的错! V4.7 退场,
+    STRATEGY_PERFECT_RESCUE_GRANTS 空表——直构同形条目注入(徽 = 命运圣杯
+    星徽纯载荷:通道内携带判据/回收笔均字符串直写不查装备注册表,配额 3;
+    通道行为锁面不变;V4.7 重采同族卡后注入可删)。"""
+    from sr_od.application.currency_war.kernel import cw_env_grants as _eg
+    monkeypatch.setattr(_eg, 'STRATEGY_PERFECT_RESCUE_GRANTS',
+                        {_CARD: (_EM, 3)})
 def _make_gs(*, held: bool = True, done: tuple = (),
              front: tuple = (), back: tuple = (),
              gold: int | None = 50) -> GameState:
