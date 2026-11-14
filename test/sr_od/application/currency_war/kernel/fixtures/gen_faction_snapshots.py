@@ -104,7 +104,7 @@ def _board_members(kind: str, comp) -> list[str]:
     for bond, tier in comp.core_faction_reqs.items():
         need = (tier + 1) // 2 if kind == 'half' else tier
         cnt = 0
-        for name in FACTIONS[bond].members(include_flows=True):
+        for name in FACTIONS[bond].members(include_schools=True):
             if name in out:
                 continue
             if bond not in _self_bonds(name):

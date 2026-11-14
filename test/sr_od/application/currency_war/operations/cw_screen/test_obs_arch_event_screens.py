@@ -920,7 +920,7 @@ def test_megastar_lcs_tie_resolves_domain_first(
                         0.0)
     rs = _run_node(test_context, op, op.observe)
     assert rs.is_success, f'边距桩 0 → 同分放行:{rs!r}'
-    domain_first = chars_by_faction('盛会之星', include_flows=False)[0].name
+    domain_first = chars_by_faction('盛会之星', include_schools=False)[0].name
     assert game_state_of(session).megastar_opts.value == [
         MegastarOption(idx=0, char_id=domain_first)], (
         f'平分取域序首(固定序确定性):'
