@@ -20,10 +20,8 @@ from test.conftest import SrTestContext
 from test.harness.fixture_controller import fast_sleep
 
 from one_dragon.base.operation.operation import Operation
-from sr_od.challenge_mission.use_trailblaze_power import (
-    WAIT_RESULT_TIMEOUT_SECONDS,
-    UseTrailblazePower,
-)
+from sr_od.application.trailblaze_power.use_trailblaze_power import UseTrailblazePower
+from sr_od.challenge_mission.battle_wait_windows import WAIT_RESULT_TIMEOUT_SECONDS
 from sr_od.interastral_peace_guide.guide_def import (
     GuideCategory,
     GuideMission,
@@ -88,7 +86,7 @@ class TestWaitBattleResultTimeout:
             self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
         """收尾节点看到挑战成功 → 补记完成次数 + 触发回调 + 点退出关卡。"""
         monkeypatch.setattr(
-            'sr_od.challenge_mission.use_trailblaze_power.battle_screen_state.'
+            'sr_od.application.trailblaze_power.use_trailblaze_power.battle_screen_state.'
             'get_tp_battle_screen_state',
             lambda ctx, screen, **kw: '挑战成功')
         calls: list[str] = []
@@ -113,7 +111,7 @@ class TestWaitBattleResultTimeout:
             self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
         """收尾节点看到战斗失败 → 不补记不回调,仍要点退出关卡清场。"""
         monkeypatch.setattr(
-            'sr_od.challenge_mission.use_trailblaze_power.battle_screen_state.'
+            'sr_od.application.trailblaze_power.use_trailblaze_power.battle_screen_state.'
             'get_tp_battle_screen_state',
             lambda ctx, screen, **kw: '战斗失败')
         op = self._make_op(test_context, on_battle_success=lambda t, p: pytest.fail('失败不应回调'))
@@ -132,7 +130,7 @@ class TestWaitBattleResultTimeout:
             self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
         """收尾节点看不到结算画面(战斗仍在自打)→ round_wait 继续观察,不做任何点击。"""
         monkeypatch.setattr(
-            'sr_od.challenge_mission.use_trailblaze_power.battle_screen_state.'
+            'sr_od.application.trailblaze_power.use_trailblaze_power.battle_screen_state.'
             'get_tp_battle_screen_state',
             lambda ctx, screen, **kw: '战斗')
         op = self._make_op(test_context)

@@ -37,7 +37,7 @@ from sr_od.application.echo_of_war.challenge_echo_of_war_core import (
     STATUS_TIMES_EXHAUSTED,
     ChallengeEchoOfWarCore,
 )
-from sr_od.challenge_mission.use_trailblaze_power import (
+from sr_od.challenge_mission.battle_wait_windows import (
     WAIT_RESULT_CLEANUP_TIMEOUT_SECONDS,
     WAIT_RESULT_TIMEOUT_SECONDS,
 )
