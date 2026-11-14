@@ -35,6 +35,7 @@ from sr_od.application.currency_war.kernel.cw_effect_inventory import (
 )
 from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
 from sr_od.application.currency_war.kernel.cw_investments import (
+    _ENV_FACTION_EXCEPTIONS,
     BENCH_ITEM_NAMES,
     ENV_ECONOMY,
     ENV_GIFTS,
@@ -169,27 +170,33 @@ def test_random_char_pool_derivation_properties() -> None:
 # env_faction_scope/strategy_faction_scope),期望值全部注册表现算(非快照)。
 
 def test_strategy_scope_defining_card_heita_epoch() -> None:
-    """黑塔纪元(绑 ∅ + {大黑塔, 黑塔}):角色入账分支①(大黑塔/黑塔 factions =
-    银河学者)∪ 成员分支②(大黑塔 ∈ 大黑塔银河学者 core,该线 factions 全集
-    = 银河学者+群攻)→ 全集两阵营(指向集清单:角色入账分支 + 成员分支带入大黑塔
-    银河学者线 factions 全集)。"""
-    assert strategy_faction_scope('黑塔纪元') == frozenset({'银河学者', '群攻'})
+    """击破星徽(绑 {击破} + {忘归人}):角色入账分支①(忘归人 factions
+    多阵营)+ 成员分支②(忘归人 ∈ 击破线 core,该线 factions 全集随线
+    带入)→ 全集多阵营(指向集清单;黑塔纪元 V4.7 退场换存活键,期望 =
+    注册表现派生真值)。"""
+    assert strategy_faction_scope('击破星徽') == frozenset(
+        {'仙舟', '击破', '巡海游侠', '星间旅人'})
 
 
 def test_strategy_scope_char_leg_qiongyu_qingque() -> None:
-    """琼玉专家:青雀(绑 ∅ + {青雀})→ {仙舟}:青雀 factions = (仙舟,)
-    且不在任何线 core/shared(成员分支零命中)→ 精确单阵营(指向集清单)。"""
-    assert strategy_faction_scope('琼玉专家:青雀') == frozenset({'仙舟'})
+    """仙舟舰队星徽(绑 {仙舟舰队} + {桂乃芬})→ {仙舟舰队}:桂乃芬
+    factions = (仙舟舰队,) 单阵营且不在任何线 core/shared(成员分支零命中)
+    → 精确单阵营(指向集清单;琼玉专家:青雀 V4.7 退场换存活键)。"""
+    assert strategy_faction_scope('仙舟舰队星徽') == frozenset({'仙舟舰队'})
 
 
-def test_env_scope_affinity_leg_grail_invite_and_contract() -> None:
-    """命运圣杯邀请/契约(faction 分支命运圣杯;通道派生全档命中 {双王圣杯,
-    命运圣杯红A}——命运圣杯 ∈ 两线档 0)→ 派生分支双王圣杯线
-    factions 全集(命运圣杯+能量)→ {命运圣杯, 能量}(副阵营随线带入,
-    指向集定义例;指向集清单:邀请/契约同为派生分支口径;统一阵容评分迭代起
-    替换旧亲和表,值不变)。"""
-    assert env_faction_scope('命运圣杯邀请') == frozenset({'命运圣杯', '能量'})
-    assert env_faction_scope('命运圣杯契约') == frozenset({'命运圣杯', '能量'})
+def test_env_scope_affinity_leg_grail_invite_and_contract(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """env faction 分支(v4.7 环境注册表 faction 域全空 = 通用卡空集,
+    分支机制经注入例外条续锁——命运圣杯邀请/契约 V4.7 退场换存活环境):
+    注入 faction 例外条 → {击破}(指向集清单,例外条机制与派生路径锁)。"""
+    fake = dict(_ENV_FACTION_EXCEPTIONS)
+    fake['劳务派遣合同'] = '击破'
+    monkeypatch.setattr(cw_investments, '_ENV_FACTION_EXCEPTIONS', fake)
+    # 直调构建期派生函数(例外表 = _derive_env_tables 输入,非运行时消费表):
+    _, fac = cw_investments._derive_env_tables()
+    assert fac['劳务派遣合同'] == '击破', '例外条入派生(机制锁)'
+
 
 
 def test_env_scope_sampo_affinity_branch() -> None:
@@ -202,24 +209,34 @@ def test_env_scope_sampo_affinity_branch() -> None:
     assert env_faction_scope('特邀专家:桑博') == frozenset()
 
 
-def test_env_scope_gallagher_faction_exception() -> None:
-    """特邀专家:加拉赫 = faction 例外条(_ENV_FACTION_EXCEPTIONS → 击破)
-    且无亲和 → {击破}(指向集清单)。"""
-    assert env_faction_scope('特邀专家:加拉赫') == frozenset({'击破'})
+def test_env_scope_gallagher_faction_exception(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """faction 例外条机制锁(_ENV_FACTION_EXCEPTIONS → 指定阵营;特邀专家:
+    加拉赫 V4.7 退场,现值例外表空,机制经注入续锁——表注入沿本文件
+    校验测试惯用法)。"""
+    assert _ENV_FACTION_EXCEPTIONS == {}, 'v4.7 现值例外表空(退场例外条随批清)'
+    fake = dict(_ENV_FACTION_EXCEPTIONS)
+    fake['劳务派遣合同'] = '击破'
+    monkeypatch.setattr(cw_investments, '_ENV_FACTION_EXCEPTIONS', fake)
+    # 直调构建期派生函数(例外表 = 派生输入,机制经派生结果续锁):
+    _, fac = cw_investments._derive_env_tables()
+    assert fac['劳务派遣合同'] == '击破', '例外条入派生(机制锁)'
 
 
 def test_strategy_scope_membership_leg_equipfan_contains_pursuit() -> None:
-    """成员分支(指向集清单):装备党绑飞霄,飞霄 ∈ 追击飞霄线 core → 该线
-    factions {追击} 入集;阵营分支狼狩照常在集。"""
-    scope = strategy_faction_scope('装备党')
-    assert '追击' in scope
-    assert '狼狩' in scope
+    """成员分支(指向集清单):击破星徽绑忘归人,忘归人 ∈ 击破线 core →
+    该线 factions 入集;阵营分支绑面 {击破} 照常在集(装备党 V4.7 退场
+    换存活键)。"""
+    scope = strategy_faction_scope('击破星徽')
+    assert '击破' in scope
+    assert '仙舟' in scope
 
 
 def test_strategy_scope_multi_faction_char_expansion() -> None:
-    """多阵营角色展开(指向集清单):列车同行星徽绑丹恒·饮月(factions =
-    仙舟+列车同行)→ 两阵营全入集。"""
-    assert {'仙舟', '列车同行'} <= strategy_faction_scope('列车同行星徽')
+    """多阵营角色展开(指向集清单):击破星徽绑忘归人(factions = 仙舟+
+    击破+巡海游侠+星间旅人 多阵营)→ 各阵营全入集(列车同行星徽 V4.7
+    退场换存活键)。"""
+    assert {'仙舟', '击破'} <= strategy_faction_scope('击破星徽')
 
 
 def test_scope_unbound_and_unregistered_empty() -> None:
@@ -244,14 +261,20 @@ def test_strategy_scope_unregistered_char_skipped(
         {'狼狩', '银河学者', '群攻'})
 
 
-def test_scope_queries_normalize_ocr_variants() -> None:
+def test_scope_queries_normalize_ocr_variants(
+        monkeypatch: pytest.MonkeyPatch) -> None:
     """查询归一(指向集定义明文):全角冒号/分隔符 bullet 形变与规范名同值——
-    持有名 OCR 形变不归一 = 查表 miss → 基准弱化漏拦。"""
-    assert strategy_faction_scope('琼玉专家：青雀') == frozenset({'仙舟'})
-    assert strategy_faction_scope('飞光•映月') == \
-        strategy_faction_scope('飞光·映月')
-    assert env_faction_scope('特邀专家：桑博') == \
-        env_faction_scope('特邀专家:桑博')
+    持有名 OCR 形变不归一 = 查表 miss → 基准弱化漏拦(琼玉专家:青雀/
+    特邀专家:桑博 V4.7 退场,形变对改注入键续锁)。"""
+    fake = dict(STRATEGY_BINDINGS)
+    fake['测试·卡'] = (frozenset(), frozenset())
+    monkeypatch.setattr(cw_investments, 'STRATEGY_BINDINGS', fake)
+    assert strategy_faction_scope('测试•卡') == \
+        strategy_faction_scope('测试·卡'), 'bullet 形变归一同值'
+    assert env_faction_scope('测试：环境') == \
+        env_faction_scope('测试:环境'), '全角冒号形变归一同值'
+    assert strategy_faction_scope('仙舟舰队星徽') == frozenset({'仙舟舰队'}), \
+        '规范名精确命中不受归一扰动(存活键对拍)'
 
 
 # ==================== 随机装备支 + 首领节点发放白名单 ====================
@@ -415,10 +438,10 @@ def test_env_merge_grants_registry_and_validation(
     """ENV_MERGE_GRANTS 构建校验(T-26 设计 §2.1,import 即炸语义,注入 +
     直调沿 ENV_BOSS_GRANTS 测试惯用法;2026-10-28 治理后只留漂移哨):
     孤儿键/触发角色集或发放池含 CHARACTERS 外名 → 炸;空元组值形随治理
-    删。现表直调通过。"""
-    assert cw_investments.ENV_MERGE_GRANTS == {
-        '量子同频契约': (('花火', '缇宝'), ('符玄', '希儿'))}, \
-        '首例登记(id 125 原文直读)'
+    删。v4.7 退役态 = 空表(首例量子同频契约 A 组清理出册,新条目登记时
+    本断言即红灯强制复审)。"""
+    assert cw_investments.ENV_MERGE_GRANTS == {}, \
+        'v4.7 退役态空表(首例登记随卡退场,考古走 git 历史)'
     cw_investments._validate_env_merge_grants()
 
     _orig = dict(cw_investments.ENV_MERGE_GRANTS)
@@ -429,27 +452,19 @@ def test_env_merge_grants_registry_and_validation(
     monkeypatch.setattr(cw_investments, 'ENV_MERGE_GRANTS', bad)
     with pytest.raises(ValueError, match='ENV_MERGE_GRANTS 孤儿键'):
         cw_investments._validate_env_merge_grants()
-    # 触发角色集漂移(角色注册表外名)
+    # 触发角色集漂移(角色注册表外名;注入键取 INVESTMENT_ENVS 在册名,
+    # 孤儿哨不拦、精确命中漂移哨)
     bad = dict(_orig)
-    bad['量子同频契约'] = (('花火', '不存在的角色X'), ('符玄',))
+    bad['火药味'] = (('花火', '不存在的角色X'), ('符玄',))
     monkeypatch.setattr(cw_investments, 'ENV_MERGE_GRANTS', bad)
     with pytest.raises(ValueError, match='触发角色集'):
         cw_investments._validate_env_merge_grants()
     # 发放池漂移(角色注册表外名)
     bad = dict(_orig)
-    bad['量子同频契约'] = (('花火',), ('符玄', '不存在的角色X'))
+    bad['火药味'] = (('花火',), ('符玄', '不存在的角色X'))
     monkeypatch.setattr(cw_investments, 'ENV_MERGE_GRANTS', bad)
     with pytest.raises(ValueError, match='发放池'):
         cw_investments._validate_env_merge_grants()
-
-
-def test_merge_contract_coexists_with_estimation_tables() -> None:
-    """表间并存合法(T-26 设计 §2.1 豁免声明显式半边):量子同频契约
-    ∈ ENV_GIFTS(chars_conditional 辖估值域档位)且 ∈ ENV_MERGE_GRANTS
-    (本表辖写状态副本发放触发)且 ∉ ENV_ECONOMY(零金流,经济域无条目)。"""
-    assert '量子同频契约' in ENV_GIFTS
-    assert '量子同频契约' in cw_investments.ENV_MERGE_GRANTS
-    assert '量子同频契约' not in ENV_ECONOMY
 
 
 def test_env_interest_grants_registry_and_validation(
@@ -457,9 +472,10 @@ def test_env_interest_grants_registry_and_validation(
     """ENV_INTEREST_GRANTS 构建校验(T-27 设计 §2.1/§4.1,import 即炸
     语义,注入 + 直调沿 ENV_MERGE_GRANTS 测试惯用法;2026-10-28 治理后
     只留漂移哨):孤儿键/角色名漂移(CHARACTER_ROSTER 外——版本改名
-    静默失联即红)/双源失同步随治理删。现表直调通过。"""
-    assert cw_investments.ENV_INTEREST_GRANTS == {'公司契约': (40, '托帕&账账')}, \
-        '首例登记(id 126 原文直读「累计获得40利息后,获得【托帕&账账】」)'
+    静默失联即红)/双源失同步随治理删。v4.7 退役态 = 空表(首例公司契约
+    A 组清理出册)。"""
+    assert cw_investments.ENV_INTEREST_GRANTS == {}, \
+        'v4.7 退役态空表(首例登记 id 126 随卡退场,考古走 git 历史)'
     cw_investments._validate_env_interest_grants()
 
     _orig = dict(cw_investments.ENV_INTEREST_GRANTS)
@@ -469,35 +485,19 @@ def test_env_interest_grants_registry_and_validation(
     monkeypatch.setattr(cw_investments, 'ENV_INTEREST_GRANTS', bad)
     with pytest.raises(ValueError, match='ENV_INTEREST_GRANTS 孤儿键'):
         cw_investments._validate_env_interest_grants()
-    # 角色名漂移(data 注册表外名)
+    # 角色名漂移(data 注册表外名;注入键取在册名)
     bad = dict(_orig)
-    bad['公司契约'] = (40, '不存在的角色X')
+    bad['火药味'] = (40, '不存在的角色X')
     monkeypatch.setattr(cw_investments, 'ENV_INTEREST_GRANTS', bad)
     with pytest.raises(ValueError, match='角色名漂移'):
         cw_investments._validate_env_interest_grants()
 
 
-def test_interest_contract_coexists_with_gifts_table() -> None:
-    """表间并存合法(T-27 设计 §2.1 豁免声明显式半边):公司契约
-    ∈ INVESTMENT_ENVS 且 ∈ ENV_GIFTS(chars_conditional 首元 = 托帕&账账,
-    辖估值域档位)且 ∈ ENV_INTEREST_GRANTS(本表辖写状态副本发放触发)且
-    ∉ ENV_ECONOMY(零金流,经济域无条目)。"""
-    assert '公司契约' in INVESTMENT_ENVS
-    assert '公司契约' in ENV_GIFTS
-    assert ENV_GIFTS['公司契约'].chars_conditional[0][0] == '托帕&账账'
-    assert '公司契约' in cw_investments.ENV_INTEREST_GRANTS
-    assert '公司契约' not in ENV_ECONOMY
-
-
 def test_dot_contract_not_in_any_conditional_grant_table() -> None:
-    """五表反向锁(原稿锁面 §4.2):持续伤害契约 ∈ ENV_GIFTS(
-    chars_immediate = 椒丘/卡芙卡 + chars_conditional 首元 = 黑天鹅,辖
-    估值域档位)且**不入五张写状态副本发放条件登记表**——本卡建模形状 =
-    猜测写+证实(计数源无状态副本里的值生产点),非条件检查型;误补登记 =
-    双引擎重复发放回归信号(数据断言非源码扫描)。"""
-    assert '持续伤害契约' in INVESTMENT_ENVS
-    assert ENV_GIFTS['持续伤害契约'].chars_immediate == ('椒丘', '卡芙卡')
-    assert ENV_GIFTS['持续伤害契约'].chars_conditional[0][0] == '黑天鹅'
+    """五表反向锁(原稿锁面 §4.2):持续伤害契约 V4.7 退场(v4.7 退役态
+    空表语义下反锁恒真),「若将来再登记不得入五张写状态副本发放条件表」
+    ——本卡建模形状 = 猜测写+证实(计数源无状态副本里的值生产点),非
+    条件检查型;误补登记 = 双引擎重复发放回归信号(数据断言非源码扫描)。"""
     for table_name, table in (
             ('ENV_STREAK_GRANTS', cw_investments.ENV_STREAK_GRANTS),
             ('ENV_REFRESH_GRANTS', cw_investments.ENV_REFRESH_GRANTS),
@@ -522,8 +522,8 @@ def test_env_ore_open_grants_validation_raises(
     """三查 import 即炸语义(T-29 设计 §2.1;2026-10-28 治理后只留漂移
     哨,值形随删):①孤儿键 ②具名角色 ∉ CHARACTER_ROSTER ③随机羁绊池
     现值空(羁绊名错字 → 采样分支永远发不出)。"""
-    def _bad(first=20, step=10, chars=('火花',), faction='战技点',
-             key='战技点契约') -> dict:
+    def _bad(first=20, step=10, chars=('火花',), faction='击破',
+             key='火药味') -> dict:
         bad = dict(_ORIG_ORE_OPEN)
         bad[key] = (first, step, chars, faction)
         return bad
@@ -544,12 +544,12 @@ def test_env_ore_open_grants_current_entry_and_coexistence() -> None:
     战技点,随羁绊消费点迁移批退役——退役声明见 src 表头注释;新条目
     登记时本断言即红灯强制复审)+ 表间并存合法(豁免声明显式半边,
     沿公司契约并存测试同构):键域面 = 环境底册仍在(投资域 v4.7 重采
-    前的中间态)、ENV_GIFTS 估值域并存条目不受影响。"""
+    前的中间态)、ENV_GIFTS 估值域并存条目改存活环境对拍。"""
     assert cw_investments.ENV_ORE_OPEN_GRANTS == {}
-    assert '战技点契约' in INVESTMENT_ENVS
-    assert '战技点契约' in ENV_GIFTS
-    assert '战技点契约' not in ENV_ECONOMY
-    assert '战技点契约' not in cw_investments.ENV_ORE_GRANTS
+    assert '火药味' in INVESTMENT_ENVS
+    assert '火药味' in ENV_GIFTS
+    assert '火药味' not in ENV_ECONOMY
+    assert '火药味' not in cw_investments.ENV_ORE_GRANTS
 
 
 # ============================================================ 同战共现触发发放登记表
@@ -573,9 +573,10 @@ def _battle_grant(**kw):
 
 
 def _bad(**kw) -> dict:
-    """星核猎手契约条目按参坏体(其余键保持现役)。"""
+    """坏体构造(注入键 = INVESTMENT_ENVS 在册名火药味,孤儿哨不拦精确
+    命中漂移哨;其余键保持现役)。"""
     bad = dict(_ORIG_BATTLE)
-    bad['星核猎手契约'] = _battle_grant(**kw)
+    bad['火药味'] = _battle_grant(**kw)
     return bad
 
 
@@ -600,20 +601,14 @@ def test_env_battle_grants_validation_raises(
 
 
 def test_env_battle_grants_current_entry_and_coexistence() -> None:
-    """现役条目(T-30 设计 §2.1,id 129 卡面直读)+ 表间并存合法
-    (豁免声明显式半边)+ 现表直调通过(构建校验在 import 期已炸过一遍,
-    直调 = 变体注入后的回归基准):星核猎手契约 = AND-of-ORs 三参与组 +
-    流萤 + 锁期 2;∈ INVESTMENT_ENVS 且 ∈ ENV_GIFTS(条件具名集首元 =
-    流萤,双源同值)且 ∉ ENV_ECONOMY(零金流)。"""
-    grant = cw_investments.ENV_BATTLE_GRANTS['星核猎手契约']
-    assert grant.presence_groups == (('刃', '千冶·刃'), ('卡芙卡',),
-                                     ('银狼LV.999', '银狼'))
-    assert grant.reward_char == '流萤'
-    assert grant.deploy_lock_nodes == 2
+    """v4.7 退役态 = 空表(首例星核猎手契约 A 组清理出册,新条目登记时
+    本断言即红灯强制复审)+ 现表直调通过(构建校验在 import 期已炸过
+    一遍,直调 = 变体注入后的回归基准);环境底册仍在(重采前中间态)。"""
+    assert cw_investments.ENV_BATTLE_GRANTS == {}, \
+        'v4.7 退役态空表(首例登记 id 129 随卡退场,考古走 git 历史)'
     cw_investments._validate_env_battle_grants()
-    assert '星核猎手契约' in INVESTMENT_ENVS
-    assert ENV_GIFTS['星核猎手契约'].chars_conditional[0][0] == '流萤'
-    assert '星核猎手契约' not in ENV_ECONOMY
+    # 底册并存断言随退场删除:星核猎手契约 ∉ v4.7 INVESTMENT_ENVS(S1
+    # 环境全退,底册 = 重采前中间态),重采登记时随批恢复并存锁。
 
 
 # ============================================================ 即时装备通道
