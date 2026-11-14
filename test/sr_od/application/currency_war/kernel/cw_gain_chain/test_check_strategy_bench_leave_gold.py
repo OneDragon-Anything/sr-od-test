@@ -15,6 +15,8 @@ test_check_strategy_bench_count_xp.py):
 """
 from __future__ import annotations
 
+import pytest
+
 from sr_od.application.currency_war.kernel.cw_gain_chain import (
     check_strategy_bench_leave_gold,
 )
@@ -33,6 +35,17 @@ _CARD = '愚者恶作剧'
 _SIG_OBS = ChannelSig(family='obs', actor='TestBenchLeave')
 _SIG_LOGIC = ChannelSig(family='logic_action', actor='test-seed',
                         mode='compute')
+
+
+@pytest.fixture(autouse=True)
+def _inject_bench_leave_gold(monkeypatch) -> None:
+    """表空正锁解耦(T-5 r2 机制桥 fixture 解耦):愚者恶作剧 V4.7 退场,
+    STRATEGY_BENCH_LEAVE_GOLD_GRANTS 空表——直构同形条目注入(行值 =
+    卡面直读 花火1★留2金/火花1★留4金,通道行为锁面不变;V4.7 重采同族
+    卡后按原语义恢复登记、注入可删)。"""
+    from sr_od.application.currency_war.kernel import cw_gain_chain as _gc
+    monkeypatch.setattr(_gc, 'STRATEGY_BENCH_LEAVE_GOLD_GRANTS',
+                        {_CARD: _ROWS})
 
 
 def _gs(*, card: str | None = _CARD,

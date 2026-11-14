@@ -66,6 +66,19 @@ _CHAR2 = '花火'   # 2 费(cw_chars 判据费用域内素材)
 _CHAR3 = '姬子'   # 3 费(费用负例素材)
 
 
+@pytest.fixture(autouse=True)
+def _inject_merge_grants(monkeypatch) -> None:
+    """表空正锁解耦(T-5 r2 机制桥 fixture 解耦):砂里淘金/黑塔纪元 V4.7
+    退场,STRATEGY_MERGE_GRANTS 空表——直构同形条目注入(判据四元组 =
+    (判据星级, 判据费用, 判据角色通配/具名, 发放角色),发放物砂金/大黑塔
+    ∈ V4.7 roster,通道行为锁面不变;V4.7 重采同族卡后注入可删)。"""
+    from sr_od.application.currency_war.kernel import cw_gain_chain as _gc
+    monkeypatch.setattr(_gc, 'STRATEGY_MERGE_GRANTS', {
+        _CARD: (2, 2, '', '砂金'),
+        _CARD_HT: (3, 1, '波提欧', '大黑塔'),
+    })
+
+
 class _SimPresenceStub:
     """装配占位后端(仅令 ``sim_backend_installed()`` 为真;本效果条目不触后端
     任何口,触即 AssertionError 响亮——被测门控只读装配槽非 None;
@@ -228,7 +241,7 @@ def test_named_row_direct_hit_grants_daheita(sim_installed) -> None:
     (星级 3 + 费用 1 + 具名黑塔三匹配)→ 恰一条效果串,bench 落 1 个
     1★大黑塔(发放 1★ 先验 rand=False 确定写)。"""
     gs = _gs(card=_CARD_HT)
-    effects = check_strategy_merge_grants(gs, (('黑塔', 3),), sig=_SIG)
+    effects = check_strategy_merge_grants(gs, (('波提欧', 3),), sig=_SIG)
     assert effects == (_EV_HT,), f'具名行效果串钉死: {effects}'
     assert _bench_units(gs).count(('大黑塔', 1)) == 1, '落 1 个 1★大黑塔'
 
@@ -244,21 +257,21 @@ def test_named_row_role_mismatch_zero_grant(sim_installed) -> None:
 
 
 def test_named_row_gain_chain_cascade_grants_once(sim_installed) -> None:
-    """获得链集成(具名行,逐级判据粒度):持黑塔纪元,席面 2★×2 +
+    """获得链集成(具名行,逐级判据粒度):持黑塔纪元(注入键,判据随批换波提欧),席面 2★×2 +
     1★×3 → gain 1 只 1★ → 链内级联 1→2→3 → facts 两级、发放恰一次
     (仅 3★ 级命中具名判据;2★ 级星级不符黑塔纪元、费用不符砂里淘金
     〔未持〕)。"""
     gs = cw4_gs(node_fill=False, shop_screen='off',
-                bench=[_bc('黑塔', 2), _bc('黑塔', 2),
-                       _bc('黑塔', 1), _bc('黑塔', 1), _bc('黑塔', 1)])
+                bench=[_bc('波提欧', 2), _bc('波提欧', 2),
+                       _bc('波提欧', 1), _bc('波提欧', 1), _bc('波提欧', 1)])
     gs.write_logic(gs.active_strategies, [_CARD_HT],
                    produced_by='test-seed', evidence='t:card', sig=_SIG)
-    out = gain_character(gs, '黑塔', 1, rand=False, sig=_SIG,
+    out = gain_character(gs, '波提欧', 1, rand=False, sig=_SIG,
                          evidence='t:chain', producer='TestChain')
     assert out.merge_levels == 2, \
         f'链内级联两级(3×1★→2★,再 3×2★→3★): {out}'
     units = _bench_units(gs)
-    assert ('黑塔', 3) in units, f'级联产物 3★黑塔 在席: {units}'
+    assert ('波提欧', 3) in units, f'级联产物 3★黑塔 在席: {units}'
     assert units.count(('大黑塔', 1)) == 1, \
         f'具名行发放恰 1 个 1★大黑塔(仅 3★ 级命中): {units}'
     assert gs.bench.evidence == _EV_HT_PLACE, \

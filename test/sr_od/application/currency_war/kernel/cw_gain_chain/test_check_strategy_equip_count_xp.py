@@ -46,6 +46,21 @@ _SIG_LOGIC = ChannelSig(family='logic_action', actor='test-seed',
                         mode='compute')
 
 
+@pytest.fixture(autouse=True)
+def _inject_equip_count_xp(monkeypatch) -> None:
+    """表空正锁解耦(T-5 r2 机制桥 fixture 解耦):赞美太阳 V4.7 退场,
+    STRATEGY_EQUIP_COUNT_XP_GRANTS 空表——直构同形条目注入(check 与负例同读 inv 源头绑定,每件 1 XP,
+    通道行为锁面不变;名集锁 = DAYLIGHT_EQUIP_XP_NAME_SET 独立域不受
+    注入影响;V4.7 重采同族卡后注入可删)。"""
+    import sr_od.application.currency_war.kernel.cw_investments as _inv
+    from sr_od.application.currency_war.kernel import cw_gain_chain as _gc
+    _patched = {_CARD: _XP_PER_EQUIP}
+    # 双 patch:check 读 gc 模块绑定(静态 import),校验负例与登记锁读 inv
+    # 源头——两视图同源注入,通道与锁面同帧
+    monkeypatch.setattr(_gc, 'STRATEGY_EQUIP_COUNT_XP_GRANTS', _patched)
+    monkeypatch.setattr(_inv, 'STRATEGY_EQUIP_COUNT_XP_GRANTS', _patched)
+
+
 def _gs(*, card: str | None = _CARD, equips: list[str] | None = None,
         bench: list[BenchSlot] | None = None,
         deployed: DeployedView | None = None) -> GameState:
@@ -76,28 +91,31 @@ def _unit(char_id: str = '那刻夏',
 
 def test_name_set_closed_derivation() -> None:
     """名集闭集锁(锁 4 前半):名集 == category 白昼全集 ∪ 三基件名
-    (依 EQUIPMENTS 现值重推导后比对,非硬编码 9 名字面);特权变体三件
-    不入(裁决点 4 默认案 A 锚定——翻 B 口径本锁先红);基件 = 进阶类已登记
-    (结构前提)。"""
+    (依 EQUIPMENTS 现值重推导后比对,非硬编码名字面;v4.7 装备域换季
+    白昼类不存在 → 名集 = 三基件,派生语义不变)。特权变体三件不入
+    (裁决点 4 默认案 A 锚定);基件 = 进阶装备类已登记(结构前提,
+    V4.7 官方类别词)。"""
     daylight = {n for n, e in EQUIPMENTS.items() if e.category == '白昼'}
     want = daylight | set(_BASE_NAMES)
     assert want == DAYLIGHT_EQUIP_XP_NAME_SET, \
         (f'名集漂移: 多 {sorted(DAYLIGHT_EQUIP_XP_NAME_SET - want)} / '
          f'缺 {sorted(want - DAYLIGHT_EQUIP_XP_NAME_SET)}')
-    assert len(DAYLIGHT_EQUIP_XP_NAME_SET) == 9, '恰 9 名(6 白昼 + 3 基件)'
+    assert len(DAYLIGHT_EQUIP_XP_NAME_SET) == 3, '恰 3 名(v4.7 白昼类空,基件全)'
     for n in _BASE_NAMES:
-        assert EQUIPMENTS[n].category == '进阶', f'{n} = 进阶基件'
+        assert EQUIPMENTS[n].category == '进阶装备', f'{n} = 进阶装备基件'
     assert not any(n.endswith('·特权')
                    for n in DAYLIGHT_EQUIP_XP_NAME_SET), '特权变体不入集'
 
 
 def test_table_row_single_source() -> None:
-    """登记单一源旁证:表 = 族现役首例单卡,值 = 卡面直读 1(每件每节点
-    XP);键 ∈ 策略注册表且 id 对拍(空仓族登记锁同法)。"""
-    assert set(STRATEGY_EQUIP_COUNT_XP_GRANTS) == {_CARD}, \
+    """登记单一源旁证:注入视图 = 族现役首例单卡,值 = 卡面直读 1(每件
+    每节点 XP)。读 inv 模块属性(fixture 注入的目标视图,check 消费同源;
+    退役空表经 fixture 注入后本锁对注入单一源对拍,恢复登记时随批生效)。"""
+    import sr_od.application.currency_war.kernel.cw_investments as _inv
+    assert set(_inv.STRATEGY_EQUIP_COUNT_XP_GRANTS) == {_CARD}, \
         '注册面 = 族现役首例(同族后继卡各自独立批,禁顺手代登记)'
-    assert STRATEGY_EQUIP_COUNT_XP_GRANTS[_CARD] == _XP_PER_EQUIP, \
-        f'行值漂移: {STRATEGY_EQUIP_COUNT_XP_GRANTS!r}'
+    assert _inv.STRATEGY_EQUIP_COUNT_XP_GRANTS[_CARD] == _XP_PER_EQUIP, \
+        f'行值漂移: {_inv.STRATEGY_EQUIP_COUNT_XP_GRANTS!r}'
 
 
 def test_no_card_and_zero_holding_zero() -> None:
@@ -121,16 +139,16 @@ def test_two_prototypes_grant() -> None:
 
 def test_four_source_mixed_total() -> None:
     """四源混合合计(锁 4 三态尾):前排穿 + 后排穿 + 备战席穿(记录内)+
-    库存,四源白昼系件数求和 × 表值;非白昼装备(财富/特权变体)不计
-    (特权变体不入名集 = 默认案锚定,计入即翻裁据未申报)。"""
-    front = [Unit(char_id='那刻夏', star=1, equips=['白昼·武器大师'])]
-    back = [Unit(char_id='那刻夏', star=1, equips=['光速螺旋桨']),
-            Unit(char_id='希儿', star=1, equips=['财富'])]
-    bench = [_unit(equips=['极·白昼·斩首行动'])]
-    gs = _gs(equips=['白昼·光速螺旋桨', '光速螺旋桨·特权', '财富'],
+    库存,四源白昼系件数求和 × 表值;非名集装备不计(v4.7 名集 = 三基件,
+    白昼·系派生名随装备域换季退注册表,构造随批改基件名)。"""
+    front = [Unit(char_id='那刻夏', star=1, equips=['光速螺旋桨'])]
+    back = [Unit(char_id='那刻夏', star=1, equips=['武器大师']),
+            Unit(char_id='那刻夏', star=1, equips=['财富'])]
+    bench = [_unit(equips=['斩首行动'])]
+    gs = _gs(equips=['光速螺旋桨', '财富'],
              bench=bench,
              deployed=DeployedView(front_slots=front, back_slots=back))
-    # 白昼系件:前排 1 + 后排 1 + 备战席 1 + 库存 1 = 4(特权变体/财富不计)
+    # 白昼系件:前排 1 + 后排 1 + 备战席 1 + 库存 1 = 4(财富非名集不计)
     assert check_strategy_equip_count_xp(gs) == 4
 
 
@@ -143,7 +161,7 @@ def test_none_defense_fail_closed() -> None:
         _gs(card=_CARD, equips=[])) == 0, '策略集未观察'
     gs = _gs(equips=None, deployed=DeployedView(
         front_slots=[Unit(char_id='那刻夏', star=1,
-                          equips=['白昼·武器大师'])], back_slots=[]))
+                          equips=['武器大师'])], back_slots=[]))
     assert check_strategy_equip_count_xp(gs) == 1, \
         'deployed 独源可见照计;库存/备战席未观察跳过不猜'
 

@@ -121,6 +121,27 @@ def _bench_units(gs: GameState) -> list[Unit]:
 _TRIO = ['刃', '卡芙卡', '银狼']
 
 
+@pytest.fixture(autouse=True)
+def _inject_battle_grant(monkeypatch: pytest.MonkeyPatch) -> None:
+    """表空正锁解耦(T-5 r2 机制桥 fixture 解耦):星核猎手契约 V4.7 退场,
+    ENV_BATTLE_GRANTS 空表——直构同形条目注入(通道按表条目驱动,行为
+    锁面不变;同表同构一次覆盖全部正锁)。组构造按本文件用例语义重建
+    (AND-of-ORs 三组:槽 A 刃/千冶·刃、槽 B 卡芙卡、槽 C 银狼/银狼LV.999,
+    参与者名单为 S1 卡面原值,V4.7 重采同族卡后按原语义恢复登记、注入
+    可删);K=2 与基线锁面一致,test_unlock_stepping_follows_lock_k 的
+    K=1 变体自带覆盖注入。零写分支用例(env 未登记用轮岗)不受注入影响。"""
+    from sr_od.application.currency_war.kernel import cw_env_grants as _eg
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        EnvBattleGrant,
+    )
+    monkeypatch.setattr(_eg, 'ENV_BATTLE_GRANTS', {
+        _ENV: EnvBattleGrant(
+            presence_groups=(('刃', '千冶·刃'), ('卡芙卡',),
+                             ('银狼', '银狼LV.999')),
+            reward_char=_REWARD, deploy_lock_nodes=2),
+    })
+
+
 # ============================================================ 条件矩阵
 
 
@@ -271,13 +292,12 @@ def test_unlock_stepping_follows_lock_k(
     同步)——注入 K=1 条目,unlock = 生效序位 + 1 步。"""
     from sr_od.application.currency_war.kernel import cw_env_grants as eg
     from sr_od.application.currency_war.kernel.cw_investments import (
-        ENV_BATTLE_GRANTS,
         EnvBattleGrant,
     )
-    orig = dict(ENV_BATTLE_GRANTS)
     monkeypatch.setattr(eg, 'ENV_BATTLE_GRANTS', {
         _ENV: EnvBattleGrant(
-            presence_groups=(tuple(orig[_ENV].presence_groups)),
+            presence_groups=(('刃', '千冶·刃'), ('卡芙卡',),
+                             ('银狼', '银狼LV.999')),
             reward_char=_REWARD, deploy_lock_nodes=1),
     })
     gs = _make_gs(deployed=_TRIO, bench=[], node_pos=(1, 7))

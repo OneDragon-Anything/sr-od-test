@@ -45,6 +45,17 @@ _SIG_SEED = ChannelSig(family='logic_action', actor='test-seed',
 _EVIDENCE = f'env_grant#{_ENV}#interest{_THRESHOLD}'
 
 
+@pytest.fixture(autouse=True)
+def _inject_interest_grant(monkeypatch: pytest.MonkeyPatch) -> None:
+    """表空正锁解耦(T-5 r2 机制桥 fixture 解耦):公司契约 V4.7 退场,
+    ENV_INTEREST_GRANTS 空表——直构同形条目注入(阈值 40 + 发放托帕&账账,
+    通道行为锁面不变;V4.7 重采同族卡后注入可删)。零写分支用例(表外环境
+    用轮岗)不受注入影响。"""
+    from sr_od.application.currency_war.kernel import cw_env_grants as _eg
+    monkeypatch.setattr(_eg, 'ENV_INTEREST_GRANTS',
+                        {_ENV: (_THRESHOLD, _CHAR)})
+
+
 def _make_gs(*, env: str | None = _ENV,
              bench: list[tuple[str, int]] | None = None,
              interest_earned: int = 0,

@@ -46,11 +46,27 @@ _LATCH_L2 = f'{_CARD}#{STRATEGY_GIFT_LEG_NEXT_REWARD_NODE}'
 
 #: 巡海游侠注册表全员四名(cw_chars 现值:乱破/不死途/黄泉/波提欧,
 #: 判据档位 4 = 全员上阵恰达标;注册表派生断言在卡面档位锁内)。
-_RAIDER_FOUR = ('乱破', '不死途', '黄泉', '波提欧')
+_RAIDER_FOUR = ('千冶·刃', '灵砂', '瓦尔特', '黄泉')   # V4.7 群攻族四名(乱破/波提欧已归击破档,巡海游侠标签不存在,注入判据羁绊随批换群攻)
 
 _SIG_OBS = ChannelSig(family='obs', actor='TestGiftGrants')
 _LSIG = ChannelSig(family='logic_action', actor='TestGiftGrants',
                    mode='compute')
+
+
+@pytest.fixture(autouse=True)
+def _inject_gift_grants(monkeypatch) -> None:
+    """表空正锁解耦(T-5 r2 机制桥 fixture 解耦):迷之旅人 V4.7 退场,
+    STRATEGY_FACTION_COUNT_GRANTS/STRATEGY_REWARD_NODE_GRANTS 双腿空表
+    ——直构同形条目注入(条目1 = (羁绊, 阈值, 角色, 星级, 携带徽)、条目2
+    = (角色, 星级),四名巡海游侠 ∈ V4.7 roster,通道行为锁面不变;V4.7
+    重采同族卡后注入可删)。"""
+    from sr_od.application.currency_war.kernel import cw_gain_chain as _gc
+    monkeypatch.setattr(_gc, 'STRATEGY_FACTION_COUNT_GRANTS', {
+        _CARD: ('群攻', 4, '黄泉', 2, _EQUIP),
+    })
+    monkeypatch.setattr(_gc, 'STRATEGY_REWARD_NODE_GRANTS', {
+        _CARD: ('波提欧', 1),
+    })
 
 
 def _gs(*, cards: list[str] | None = None,

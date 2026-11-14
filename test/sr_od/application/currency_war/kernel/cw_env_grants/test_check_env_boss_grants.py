@@ -38,8 +38,9 @@ from sr_od.application.currency_war.kernel.cw_node_schedule import (
 )
 
 _ENV = '劳务派遣合同'
-_BIND_STAR = '列车同行星徽'   # 绑定用星徽(羁绊名 = 去「星徽」后缀)
-_FACTION = '列车同行'
+_BIND_STAR = '击破星徽'   # 绑定用星徽(羁绊名 = 去「星徽」后缀;列车同行星徽
+# V4.7 退场换存活星徽,绑定羁绊池随之可采样——通道行为锁面不变)
+_FACTION = '击破'
 
 _SIG_HOOK = ChannelSig(family='logic_hook', actor='CwScreenBossBriefing',
                        group_id='boss-briefing:env-grant')

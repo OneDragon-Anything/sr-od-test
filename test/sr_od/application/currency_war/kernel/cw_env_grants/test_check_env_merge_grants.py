@@ -43,7 +43,17 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 )
 
 _ENV = '量子同频契约'
-_POOL = ('符玄', '希儿')
+_POOL = ('符玄', '缇宝')   # V4.7 roster 内发放候选(希儿退 roster 随批换)
+
+
+@pytest.fixture(autouse=True)
+def _inject_merge_grant(monkeypatch: pytest.MonkeyPatch) -> None:
+    """表空正锁解耦(T-5 r2 机制桥 fixture 解耦):量子同频契约 V4.7 退场,
+    ENV_MERGE_GRANTS 空表——直构同形条目注入(触发集 花火/缇宝、发放候选
+    符玄/缇宝,通道行为锁面不变;V4.7 重采同族卡后注入可删)。"""
+    from sr_od.application.currency_war.kernel import cw_env_grants as _eg
+    monkeypatch.setattr(_eg, 'ENV_MERGE_GRANTS',
+                        {_ENV: (('花火', '缇宝'), _POOL)})
 
 _SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep')
 _SIG = ChannelSig(family='logic_action', actor='EnvMergeGrantTest',
