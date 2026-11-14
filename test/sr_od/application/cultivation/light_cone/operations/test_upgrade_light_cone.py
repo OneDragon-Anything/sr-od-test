@@ -771,6 +771,109 @@ class TestUpgradeLightConeBranches:
             '手动路线不得走券确认分支'
         )
 
+    def test_unknown_dungeon_type_fails_bounded(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """未识别副本类型有界失败(引擎级):挑战按钮在但「拟造花萼」标题
+        持续读不到(未建档类型/OCR 持续失败)时,手动路线不得零消耗空转
+        ——不计场的 BATTLE_DONE 会反复回环「关副本→大世界→重走入口→
+        再开窗进本」形成无限循环;重试耗尽显式失败强制补档。"""
+        scenes = [
+            _DEAD_FRAME,  # 入口轮
+            {(_LC_ASC, '标题-光锥详情'), (_LC_ASC, '按钮-快速刷取'),
+             (_CHALLENGE, '挑战按钮')},  # r1:缺料 → 刷取链 → 未识别副本画面
+        ]
+        state = _install_script(monkeypatch, test_context, scenes, level=40)
+        clicks = _record_controller_clicks(monkeypatch, test_context, state)
+        op = _WatchedUpgradeLightCone(test_context, farm_dungeon=True,
+                                      use_fast_ticket=False)
+        op._init_watchdog()  # type: ignore[attr-defined]
+
+        result = _run_op(op)
+
+        assert not result.success and '未识别' in (result.status or ''), (
+            f'未识别副本类型应重试耗尽有界失败,status={result.status},'
+            f'trace={state.get("events")}'
+        )
+        assert _count_clicks_in(clicks, test_context,
+                                '培养资源窗口', '按钮-进入副本') == 1, (
+            '未识别类型不得回环再开窗进本(零消耗空转无限循环防线)'
+        )
+        # 挑战按钮 rect 与等级提升「快速刷取」执行钮几何重叠,坐标断言
+        # 会误伤合法点击,以 find_clicks(画面+区域对)断言
+        assert (_CHALLENGE, '挑战按钮') not in state['find_clicks'], (
+            f'未识别类型不得盲点挑战按钮,find_clicks={state["find_clicks"]}'
+        )
+
+    def test_manual_battle_wait_survives_long_fight(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """战斗期不烧重试预算(引擎级):手动路线整场战斗落返回分类的过渡
+        帧分支——旧实现以 round_retry 计数,30 次预算耗尽即战斗中途 FAIL
+        (战场残留游戏内继续自打,污染后续入口判定)。新语义 WAIT 慢询
+        不计数,超时兜底交节点 timeout_seconds。战斗时长以「退出关卡
+        探测次数」计轮,35 轮后结算画面出现(旧实现必挂)。"""
+        scenes = [
+            _DEAD_FRAME,  # 入口轮
+            {(_LC_ASC, '标题-光锥详情'), (_LC_ASC, '按钮-快速刷取'),
+             (_CHALLENGE, '队伍标题'), (_CHALLENGE, '按钮-开始编队挑战')},  # r1:缺料 → 编队态
+            set(),  # r2:战斗期(全锚 MISS,战斗时钟到期后切结算)
+            {(_LC_ASC, '标题-光锥详情'), (_LC_ASC, '按钮-快速升级')},  # r3:回界面材料齐
+            {(_LC_ASC, '标题-光锥详情'), (_LC_ASC, '文本-已提升至最高阶')},  # r4:满级态
+            {(_LC_TAB, '标题-角色光锥')},  # r5:收尾回 TAB
+        ]
+        state = _install_script(monkeypatch, test_context, scenes, level=79)
+        _FakeSubOp.executed = []
+        clicks = _record_controller_clicks(monkeypatch, test_context, state,
+                                           advance_round_on_squad_click=True)
+        # 战斗期画面级判定按真实语义返回 None(战斗画面不在预期集合内;
+        # 默认桩的「返回集合首位」会让返回分类误走关副本分支,不真实)
+        def _realistic_check(self, screen=None, screen_name_list=None,
+                             crop_first=False):
+            now = state['screen_now']
+            if now not in (_WORLD, _DETAIL, _LC_TAB, _CHALLENGE):
+                return None
+            if screen_name_list is not None and now not in screen_name_list:
+                return None
+            return now
+
+        monkeypatch.setattr(UpgradeLightConeOp, 'check_and_update_current_screen',
+                            _realistic_check)
+        # 战斗时钟:返回分类在战斗态每轮探测一次退出关卡,计满 35 轮后把
+        # 剧本切到结算轮(模拟整场战斗 > 旧重试预算容忍上限)
+        battle_clock = {'n': 0}
+        installed_find = UpgradeLightConeOp.round_by_find_area
+
+        def _battle_clock_find(self, screen, s_name, a_name, *args, **kwargs):
+            if (s_name, a_name) == (_BATTLE, '按钮-退出关卡') \
+                    and state.get('screen_now') == _BATTLE:
+                battle_clock['n'] += 1
+                if battle_clock['n'] >= 35:
+                    scenes[2] = {(_BATTLE, '按钮-退出关卡')}
+            return installed_find(self, screen, s_name, a_name, *args, **kwargs)
+
+        monkeypatch.setattr(UpgradeLightConeOp, 'round_by_find_area',
+                            _battle_clock_find)
+        op = _WatchedUpgradeLightCone(test_context, farm_dungeon=True,
+                                      use_fast_ticket=False)
+        op._init_watchdog()  # type: ignore[attr-defined]
+
+        result = _run_op(op)
+
+        assert result.success and result.status == 'LIGHT_CONE_CAPPED', (
+            f'长战斗(35 轮 > 旧 30 次重试预算)后应继续走完到判停收尾,'
+            f'status={result.status},battle_rounds={battle_clock["n"]},'
+            f'round={state["round"]},trace={state.get("events")},'
+            f'clicks={clicks}'
+        )
+        assert op._manual_fights == 1 and op._farm_rounds == 1, (
+            f'战斗期等待不得影响计场,fights={op._manual_fights},'
+            f'rounds={op._farm_rounds}'
+        )
+        assert _has_click_in(clicks, test_context, _BATTLE, '按钮-退出关卡'), (
+            '战斗结束应点退出关卡收口'
+        )
+
     def test_reentry_tab_identity_gate(
         self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
     ) -> None:

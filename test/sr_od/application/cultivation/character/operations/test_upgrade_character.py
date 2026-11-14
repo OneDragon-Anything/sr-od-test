@@ -1288,23 +1288,147 @@ class TestUpgradeCharacterManualRoute:
     def test_farm_in_dungeon_requires_dungeon_state(
         self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """副本态前置:挑战按钮 area 在场但副本类型标题都不在(编队/战斗态
-        误入)时,不得点挑战按钮,直接交手动战斗节点分类。"""
+        """副本态前置三分:挑战按钮 area 与编队「开始挑战」文本 LCS 互恰,
+        无副本类型标题时按画面态分流,任何形态都不得盲点挑战按钮——
+
+        - 编队态(队伍标题在):交手动战斗节点点开始挑战;
+        - 战斗/结算态(全锚不在):交手动战斗节点分类;
+        - 未识别副本类型(挑战按钮在但副本标题读不到):计重试等重判
+          (瞬时 OCR 失败可自愈;交手动分类会零消耗空转无限回环)。"""
+        # 用例1:编队态 → 交手动分类
         state = _install_script(
             monkeypatch, test_context,
+            [{(_CHALLENGE, '队伍标题')}], level=0)
+        clicks = _record_controller_clicks(monkeypatch, test_context, state)
+        op = _WatchedUpgradeCharacter(test_context, farm_dungeon=True,
+                                      use_fast_ticket=False)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        result = _call_node(op, 'farm_in_dungeon')
+        assert result.is_success and result.status == 'MANUAL_FIGHT', (
+            f'编队态应交手动分类点开始挑战,status={result.status}'
+        )
+        assert not _has_click_in(clicks, test_context, _CHALLENGE, '挑战按钮'), (
+            f'编队态不得点挑战按钮,clicks={clicks}'
+        )
+
+        # 用例2:战斗/结算态(全锚不在) → 交手动分类
+        _install_script(monkeypatch, test_context, [set()], level=0)
+        op2 = _WatchedUpgradeCharacter(test_context, farm_dungeon=True,
+                                       use_fast_ticket=False)
+        op2._init_watchdog()  # type: ignore[attr-defined]
+        result2 = _call_node(op2, 'farm_in_dungeon')
+        assert result2.is_success and result2.status == 'MANUAL_FIGHT', (
+            f'战斗/结算态应交手动分类,status={result2.status}'
+        )
+
+        # 用例3:未识别副本类型(挑战按钮在、副本标题读不到) → 重试等重判
+        state3 = _install_script(
+            monkeypatch, test_context,
             [{(_CHALLENGE, '挑战按钮')}], level=0)
+        clicks3 = _record_controller_clicks(monkeypatch, test_context, state3)
+        op3 = _WatchedUpgradeCharacter(test_context, farm_dungeon=True,
+                                       use_fast_ticket=False)
+        op3._init_watchdog()  # type: ignore[attr-defined]
+        result3 = _call_node(op3, 'farm_in_dungeon')
+        assert result3.result == OperationRoundResultEnum.RETRY, (
+            f'未识别副本类型应重试等重判(瞬时 OCR 失败自愈),'
+            f'result={result3.result},status={result3.status}'
+        )
+        assert not _has_click_in(clicks3, test_context, _CHALLENGE, '挑战按钮'), (
+            f'未识别类型不得盲点挑战按钮,clicks={clicks3}'
+        )
+
+    def test_unknown_dungeon_type_fails_bounded(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """未识别副本类型有界失败(引擎级):挑战按钮在但副本类型标题持续
+        读不到(未建档类型/OCR 持续失败)时,手动路线不得零消耗空转——
+        不计场的 BATTLE_DONE 会反复回环「关副本→大世界→重走入口→再开窗
+        进本」形成无限循环;重试耗尽显式失败强制补档。"""
+        scenes = [
+            {(_DETAIL, '按钮-属性详情'), (_DETAIL, '按钮-升级')},      # 入口轮
+            {(_ASCEND, '标题-等级提升'), (_CHALLENGE, '挑战按钮')},     # 轮1:灰底 → 刷取链 → 未识别副本画面
+        ]
+        state = _install_script(monkeypatch, test_context, scenes, level=40)
         clicks = _record_controller_clicks(monkeypatch, test_context, state)
         op = _WatchedUpgradeCharacter(test_context, farm_dungeon=True,
                                       use_fast_ticket=False)
         op._init_watchdog()  # type: ignore[attr-defined]
 
-        result = _call_node(op, 'farm_in_dungeon')
+        result = _run_op(op)
 
-        assert result.is_success and result.status == 'MANUAL_FIGHT', (
-            f'无副本类型标题应直接交手动分类,status={result.status}'
+        assert not result.success and '未识别' in (result.status or ''), (
+            f'未识别副本类型应重试耗尽有界失败,status={result.status}'
         )
-        assert not _has_click_in(clicks, test_context, _CHALLENGE, '挑战按钮'), (
-            f'无副本态前置不得点挑战按钮,clicks={clicks}'
+        assert _count_clicks_in(clicks, test_context,
+                                _RESOURCE, '按钮-进入副本') == 1, (
+            '未识别类型不得回环再开窗进本(零消耗空转无限循环防线)'
+        )
+        # 挑战按钮 rect 与等级提升「快速刷取」执行钮几何重叠,坐标断言
+        # 会误伤合法点击,以 find_clicks(画面+区域对)断言
+        assert (_CHALLENGE, '挑战按钮') not in state['find_clicks'], (
+            f'未识别类型不得盲点挑战按钮,find_clicks={state["find_clicks"]}'
+        )
+
+    def test_manual_battle_wait_survives_long_fight(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """战斗期不烧重试预算(引擎级):手动路线整场战斗落返回分类的过渡
+        帧分支——旧实现以 round_retry 计数,30 次预算约 90s 耗尽即战斗
+        中途 FAIL(战场残留游戏内继续自打,污染后续入口判定)。新语义
+        WAIT 慢询不计数,超时兜底交节点 timeout_seconds。战斗时长以
+        「挑战按钮探测次数」计轮,40 轮后结算画面出现(旧实现必挂)。"""
+        scenes = [
+            {(_DETAIL, '按钮-属性详情'), (_DETAIL, '按钮-升级')},      # 入口轮
+            {(_ASCEND, '标题-等级提升'), (_CHALLENGE, '标题-凝滞虚影')},  # 轮1:灰底;副本态=凝滞虚影
+            {(_CHALLENGE, '队伍标题')},                                # 轮2:编队态(点挑战后)
+            set(),                                                     # 轮3:战斗期(全锚 MISS,战斗时钟推进用)
+            {(_BATTLE, '按钮-退出关卡')},                              # 轮4:战斗结算(战斗时钟到期后切换)
+            {(_CHALLENGE, '挑战按钮')},                                # 轮5:重建副本画面
+            set(),                                                     # 轮6:大世界
+            set(),                                                     # 轮7:角色详情(重走入口链)
+            {(_ASCEND, '标题-等级提升'), (_ASCEND, '按钮-快速升级')},   # 轮8:回界面材料齐 → 执行
+            {(_ASCEND, '标题-升级结果')},                              # 轮9:横幅
+            {(_DETAIL, '按钮-属性详情')},                              # 轮10:判满
+        ]
+        state = _install_script(monkeypatch, test_context, scenes, level=79)
+        _FakeSubOp.executed = []
+        clicks = _record_controller_clicks(
+            monkeypatch, test_context, state,
+            advance_round_on_squad_click=True,
+            advance_round_on_challenge_click=True)
+        # 战斗时钟:返回分类在战斗态每轮探测一次挑战按钮,计满 40 轮后把
+        # 剧本切到结算轮(模拟整场战斗约 2 分钟 > 旧重试预算容忍上限)
+        battle_clock = {'n': 0}
+        installed_find = UpgradeCharacterOp.round_by_find_area
+
+        def _battle_clock_find(self, screen, s_name, a_name, *args, **kwargs):
+            if (s_name, a_name) == (_CHALLENGE, '挑战按钮') \
+                    and state.get('screen_now') == _BATTLE:
+                battle_clock['n'] += 1
+                if battle_clock['n'] >= 40:
+                    state['round'] = 4  # 切结算轮(退出关卡在 scene[4])
+            return installed_find(self, screen, s_name, a_name, *args, **kwargs)
+
+        monkeypatch.setattr(UpgradeCharacterOp, 'round_by_find_area',
+                            _battle_clock_find)
+        op = _WatchedUpgradeCharacter(test_context, farm_dungeon=True,
+                                      use_fast_ticket=False)
+        op._init_watchdog()  # type: ignore[attr-defined]
+
+        result = _run_op(op)
+
+        assert result.success and result.status == 'MAX_LEVEL', (
+            f'长战斗(40 轮 > 旧 30 次重试预算)后应继续走完到满级,'
+            f'status={result.status},battle_rounds={battle_clock["n"]},'
+            f'round={state["round"]}'
+        )
+        assert op._manual_fights == 1 and op._farm_rounds == 1, (
+            f'战斗期等待不得影响计场,fights={op._manual_fights},'
+            f'rounds={op._farm_rounds}'
+        )
+        assert _has_click_in(clicks, test_context, _BATTLE, '按钮-退出关卡'), (
+            '战斗结束应点退出关卡收口'
         )
 
     def test_reentry_identity_gate_requires_name(
