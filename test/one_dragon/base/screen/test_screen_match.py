@@ -9,8 +9,6 @@ from one_dragon.base.screen.screen_area import ScreenArea
 from one_dragon.base.screen.screen_info import ScreenInfo
 from one_dragon.base.screen.screen_match import (
     AreaMatchDetail,
-    AreaType,
-    UnmatchedReason,
     find_area_with_detail,
     find_screen_matches,
 )
@@ -36,8 +34,8 @@ def _plain_area() -> ScreenArea:
 
 
 @pytest.mark.parametrize('ocr_text,expect', [
-    ('战斗', {'confidence': 0.95, 'rect': (300, 800, 200, 80)}),   # OCR 文本命中区内
-    ('设置', None),                                                # 文本不匹配 → 未命中
+    ('战斗', {'rect': [300, 800, 500, 880], 'target': '战斗'}),   # OCR 文本命中区内(pc_rect=x1y1x2y2)
+    ('设置', None),                                             # 文本不匹配 → 未命中
 ], ids=['text-hit', 'text-miss'])
 def test_find_area_text_by_ocr_result(ocr_text: str, expect: dict | None) -> None:
     """文本区命中/未命中参数化:OCR 结果落在区内且文本匹配 → 命中详情透传;不匹配 → None。"""
@@ -48,19 +46,18 @@ def test_find_area_text_by_ocr_result(ocr_text: str, expect: dict | None) -> Non
     if expect is None:
         assert d is None
         return
-    assert d.area_type == AreaType.TEXT
-    assert d.text == ocr_text
-    assert d.confidence == expect['confidence']
-    assert (d.x, d.y, d.width, d.height) == expect['rect']
+    assert d.pc_rect == expect['rect']
+    assert d.matched_text == ocr_text
+    assert d.match_target == expect['target']
 
 
 @pytest.mark.parametrize('area_kind,expect', [
-    ('template_hit', (1710, 60, 50, 60, 0.92)),   # 绝对坐标 = mrl.max + area.rect 偏移
+    ('template_hit', {'rect': [1710, 60, 1760, 120], 'target': 'mail'}),   # 绝对实测框 = mrl.max + area.rect 偏移
     ('template_miss', None),                      # 模板未命中
     ('plain', None),                              # 纯定位区(无 text/template)不参与识别
 ], ids=['template-hit', 'template-miss', 'plain'])
-def test_find_area_template_and_plain(area_kind: str, expect: tuple | None) -> None:
-    """模板区命中/未命中、纯定位区参数化:模板命中返绝对坐标详情;未命中 / 纯定位返 None。"""
+def test_find_area_template_and_plain(area_kind: str, expect: dict | None) -> None:
+    """模板区命中/未命中、纯定位区参数化:模板命中返实测框详情;未命中 / 纯定位返 None。"""
     ctx = MagicMock()
     if area_kind.startswith('template'):
         area = _template_area()
@@ -74,10 +71,9 @@ def test_find_area_template_and_plain(area_kind: str, expect: tuple | None) -> N
     if expect is None:
         assert d is None
         return
-    assert d.area_type == AreaType.TEMPLATE
-    assert d.confidence == expect[4]
-    assert (d.x, d.y) == expect[:2]
-    assert (d.width, d.height) == expect[2:4]
+    assert d.pc_rect == expect['rect']
+    assert d.matched_text is None              # 模板命中无文本内容
+    assert d.match_target == expect['target']
 
 
 def test_find_area_default_crop_first_false() -> None:
@@ -126,8 +122,8 @@ def _patch_find(monkeypatch, hit_map: dict) -> None:
     """
     def fake_find(ctx, screen, area, crop_first=False):
         if area.area_name in hit_map and hit_map[area.area_name]:
-            return AreaMatchDetail(area_name=area.area_name, area_type=AreaType.TEXT,
-                                   x=0, y=0, width=10, height=10, text=area.text or '')
+            return AreaMatchDetail(area_name=area.area_name, pc_rect=[0, 0, 10, 10],
+                                   matched_text=area.text or '', match_target=area.text or '')
         return None
     monkeypatch.setattr(_sm, 'find_area_with_detail', fake_find)
 
@@ -221,84 +217,3 @@ def test_scope_inactive_traverses_all_screens(monkeypatch) -> None:
     # 三画面均进候选(全量遍历,无 scope 过滤)
     names = {m.screen_name for m in result}
     assert names == {'画面A', '画面B', '画面C'}
-
-
-# --- 未命中 area(unmatched_areas)测试 ---
-
-
-def test_precise_unmatched_areas_categorized(monkeypatch) -> None:
-    """精准命中 → unmatched_areas 按原因分类:纯定位区 NO_METHOD,未命中识别区 SUB_STATE。
-
-    画面含:id_mark(命中→精准)、纯定位区(永不命中)、未命中文本子态区、命中模板区。
-    unmatched 只含纯定位区 + 文本子态区;分类与字段(pc_rect / text)透传正确。
-    """
-    id_mark = _id_mark_text_area('标题', '菜单')                                  # id_mark,命中
-    plain = ScreenArea(area_name='点击区', pc_rect=Rect(10, 20, 110, 120))        # 纯定位,无 text/template
-    sub_text = ScreenArea(area_name='开关态', pc_rect=Rect(0, 0, 50, 50), text='已开启')   # 子态文本,未命中
-    hit_tmpl = ScreenArea(area_name='图标', pc_rect=Rect(1700, 40, 1760, 100),
-                          template_id='mail', template_sub_dir='menu')           # 模板,命中
-    screen = _screen_info('菜单', [id_mark, plain, sub_text, hit_tmpl])
-    ctx = MagicMock()
-    ctx.screen_loader = _make_loader([screen], current='菜单')
-    _patch_find(monkeypatch, {'标题': True, '图标': True})   # 仅 id_mark + 模板命中
-
-    result = find_screen_matches(ctx, MagicMock())
-
-    assert len(result) == 1 and result[0].is_precise is True
-    by_name = {u.area_name: u for u in result[0].unmatched_areas}
-    # 命中区(标题/图标)不出现在 unmatched
-    assert '标题' not in by_name and '图标' not in by_name
-    # 纯定位区 → NO_METHOD,pc_rect 透传
-    assert by_name['点击区'].reason == UnmatchedReason.NO_METHOD
-    assert by_name['点击区'].pc_rect == [10, 20, 110, 120]
-    assert by_name['点击区'].text == '' and by_name['点击区'].template_id == ''
-    # 子态文本区 → SUB_STATE,text 透传
-    assert by_name['开关态'].reason == UnmatchedReason.SUB_STATE
-    assert by_name['开关态'].text == '已开启'
-
-
-def test_precise_unmatched_template_sub_state(monkeypatch) -> None:
-    """精准命中 + 未命中模板子态区 → SUB_STATE,template_id 透传。"""
-    id_mark = _id_mark_text_area('标题', '菜单')
-    sub_tmpl = ScreenArea(area_name='面板展开态', pc_rect=Rect(1700, 40, 1760, 100),
-                          template_id='panel_open', template_sub_dir='menu')
-    screen = _screen_info('菜单', [id_mark, sub_tmpl])
-    ctx = MagicMock()
-    ctx.screen_loader = _make_loader([screen], current='菜单')
-    _patch_find(monkeypatch, {'标题': True})   # 模板子态区未命中
-
-    result = find_screen_matches(ctx, MagicMock())
-
-    by_name = {u.area_name: u for u in result[0].unmatched_areas}
-    assert by_name['面板展开态'].reason == UnmatchedReason.SUB_STATE
-    assert by_name['面板展开态'].template_id == 'panel_open'
-
-
-def test_precise_all_recognizable_hit_unmatched_empty(monkeypatch) -> None:
-    """精准命中且所有识别区都命中(无纯定位区)→ unmatched_areas 为空。"""
-    id_mark = _id_mark_text_area('标题', '菜单')
-    hit_text = ScreenArea(area_name='副标题', pc_rect=Rect(0, 0, 100, 50), text='子')
-    screen = _screen_info('菜单', [id_mark, hit_text])
-    ctx = MagicMock()
-    ctx.screen_loader = _make_loader([screen], current='菜单')
-    _patch_find(monkeypatch, {'标题': True, '副标题': True})
-
-    result = find_screen_matches(ctx, MagicMock())
-
-    assert result[0].is_precise is True
-    assert result[0].unmatched_areas == []
-
-
-def test_fuzzy_match_unmatched_areas_empty(monkeypatch) -> None:
-    """模糊候选(无 id_mark 全中)→ unmatched_areas 恒空(仅精准命中才计算)。"""
-    a1 = ScreenArea(area_name='a1', pc_rect=Rect(0, 0, 10, 10), text='a')   # 无 id_mark → 永不精准
-    plain = ScreenArea(area_name='点击区', pc_rect=Rect(10, 20, 110, 120))
-    screen = _screen_info('画面A', [a1, plain])
-    ctx = MagicMock()
-    ctx.screen_loader = _make_loader([screen])
-    _patch_find(monkeypatch, {'a1': True})   # a1 命中但无 id_mark → 模糊候选
-
-    result = find_screen_matches(ctx, MagicMock())
-
-    assert len(result) == 1 and result[0].is_precise is False
-    assert result[0].unmatched_areas == []

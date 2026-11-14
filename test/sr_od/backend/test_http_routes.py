@@ -70,28 +70,38 @@ async def test_handle_game_capture_returns_png_bytes() -> None:
 
 @pytest.mark.asyncio
 async def test_handle_game_analyze_returns_screens() -> None:
-    """HTTP /game/analyze 返回 JSON 含 screens 嵌套;area_type 经 asdict+json 序列化为 'text'。"""
+    """HTTP /game/analyze 返回纯识别数据 JSON:screens 嵌套 + area 四字段。"""
     from one_dragon.base.screen.screen_match import (
         AreaMatchDetail,
-        AreaType,
         ScreenMatch,
     )
 
     detail = AreaMatchDetail(
-        area_name='标题', area_type=AreaType.TEXT,
-        x=1, y=1, width=1, height=1, text='菜单', confidence=0.9,
+        area_name='标题', pc_rect=[1, 1, 2, 2], matched_text='菜单', match_target='菜单',
     )
     match = ScreenMatch(screen_name='菜单', is_precise=True, areas=[detail])
     backend = MagicMock()
-    backend.analyze.return_value = AnalyzeScreenResult(
-        success=True, ocr_texts=[], error=None, screens=[match])
+    backend.analyze.return_value = AnalyzeScreenResult(ocr_texts=[], screens=[match])
     resp = await handle_game_analyze(backend)  # _request 默认 None,处理器不读 request
     assert resp.status_code == 200
     body = json.loads(resp.body.decode('utf-8'))
-    assert body['success'] is True
+    assert 'success' not in body and 'error' not in body   # 纯识别数据,无成败字段
     assert body['screens'][0]['screen_name'] == '菜单'
-    # str Enum 经 asdict 保 Enum 对象、json.dumps 序列化为 'text';与 AreaType.TEXT('text') 相等
-    assert body['screens'][0]['areas'][0]['area_type'] == AreaType.TEXT
+    assert body['screens'][0]['areas'][0]['matched_text'] == '菜单'
+    assert body['screens'][0]['areas'][0]['match_target'] == '菜单'
+
+
+@pytest.mark.asyncio
+async def test_handle_game_analyze_error_returns_503() -> None:
+    """analyze 抛 AnalyzeScreenError → 503 + 错误 JSON(失败走错误响应,不占返回结构)。"""
+    from sr_od.backend.backend_context import AnalyzeScreenError
+
+    backend = MagicMock()
+    backend.analyze.side_effect = AnalyzeScreenError('游戏窗口未就绪')
+    resp = await handle_game_analyze(backend)
+    assert resp.status_code == 503
+    body = json.loads(resp.body.decode('utf-8'))
+    assert '游戏窗口未就绪' in body['error']
 
 
 @pytest.mark.asyncio
@@ -99,7 +109,7 @@ async def test_handle_game_analyze_save_image_param() -> None:
     """handle_game_analyze 从 query 读 save_image 并透传,响应含 screenshot_path。"""
     backend = MagicMock()
     backend.analyze.return_value = AnalyzeScreenResult(
-        success=True, ocr_texts=[], error=None, screenshot_path='/tmp/x.png')
+        ocr_texts=[], screenshot_path='/tmp/x.png')
     request = MagicMock()
     request.query_params = {'save_image': 'true'}
     resp = await handle_game_analyze(backend, request)
@@ -113,7 +123,7 @@ async def test_handle_game_analyze_save_image_param() -> None:
 async def test_handle_game_analyze_save_image_default_false() -> None:
     """无 request 时 save_image 默认 False(向后兼容旧调用)。"""
     backend = MagicMock()
-    backend.analyze.return_value = AnalyzeScreenResult(success=True, ocr_texts=[], error=None)
+    backend.analyze.return_value = AnalyzeScreenResult(ocr_texts=[])
     resp = await handle_game_analyze(backend)  # request 默认 None
     assert resp.status_code == 200
     backend.analyze.assert_called_once_with(None, False)

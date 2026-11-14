@@ -87,13 +87,14 @@ def test_check_game_window_tool_error_on_not_ready() -> None:
 
 
 def test_analyze_tool_returns_result() -> None:
-    """analyze_screen 应直接返回 backend.analyze() 的结果。"""
+    """analyze_screen 应直接返回 backend.analyze() 的结果(异常透传,不做兜底包装)。"""
     mcp, backend = _mcp_with_backend()
-    backend.analyze.return_value = AnalyzeScreenResult(success=True, ocr_texts=[], error=None)
+    expected = AnalyzeScreenResult(ocr_texts=[])
+    backend.analyze.return_value = expected
     tool = mcp._tool_manager._tools["analyze_screen"]
     fn = getattr(tool, "fn", None) or getattr(tool, "func", None)
     result = fn()
-    assert result.success is True
+    assert result is expected
 
 
 def test_tool_annotations_marked() -> None:
@@ -278,7 +279,7 @@ def test_analyze_screen_tool_passes_save_image() -> None:
     """analyze_screen tool 应把 save_image/include_ocr 透传给 backend.analyze,并回带 screenshot_path。"""
     mcp, backend = _mcp_with_backend()
     backend.analyze.return_value = AnalyzeScreenResult(
-        success=True, ocr_texts=[], error=None, screenshot_path='/tmp/x.png')
+        ocr_texts=[], screenshot_path='/tmp/x.png')
     tool = mcp._tool_manager._tools['analyze_screen']
     fn = getattr(tool, 'fn', None) or getattr(tool, 'func', None)
     result = fn(save_image=True)

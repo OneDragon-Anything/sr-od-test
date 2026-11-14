@@ -7,7 +7,11 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from sr_od.backend.backend_context import BackendNotReadyError, SrBackendContext
+from sr_od.backend.backend_context import (
+    AnalyzeScreenError,
+    BackendNotReadyError,
+    SrBackendContext,
+)
 
 
 def _backend(ready: bool = True, controller: MagicMock | None = None) -> SrBackendContext:
@@ -103,19 +107,17 @@ def test_analyze_maps_ocr_results() -> None:
     ctx.ocr_service.get_ocr_result_list.return_value = [r1, r2]
     backend = SrBackendContext(ctx)
     result = backend.analyze(include_ocr=True)
-    assert result.success is True
     assert [t.text for t in result.ocr_texts] == ["体力", "设定"]
-    assert result.ocr_texts[0].width == 3
+    assert result.ocr_texts[0].pc_rect == [1, 2, 4, 6]   # [x1,y1,x2,y2] = 引擎框(x=1,y=2,w=3,h=4)换算
 
 
-def test_analyze_returns_error_when_screenshot_none() -> None:
+def test_analyze_raises_when_screenshot_none() -> None:
     controller = MagicMock()
     controller.is_game_window_ready = True
     controller.get_screenshot.return_value = None
     backend = _backend(ready=True, controller=controller)
-    result = backend.analyze()
-    assert result.success is False
-    assert "截图失败" in (result.error or "")
+    with pytest.raises(AnalyzeScreenError, match='截图失败'):
+        backend.analyze()
 
 
 def test_analyze_returns_screens_and_writes_back_on_precise(monkeypatch) -> None:
@@ -135,7 +137,6 @@ def test_analyze_returns_screens_and_writes_back_on_precise(monkeypatch) -> None
     backend.ctx.ocr_service.get_ocr_result_list.return_value = []
 
     result = backend.analyze()
-    assert result.success is True
     assert len(result.screens) == 1
     assert result.screens[0].is_precise is True
     # 回写
@@ -157,13 +158,12 @@ def test_analyze_no_precise_does_not_write_back(monkeypatch) -> None:
     backend.ctx.ocr_service.get_ocr_result_list.return_value = []
 
     result = backend.analyze()
-    assert result.success is True
     assert result.screens[0].is_precise is False
     backend.ctx.screen_loader.update_current_screen_name.assert_not_called()
 
 
 def test_analyze_exception_no_writeback(monkeypatch) -> None:
-    """匹配中途异常 → success=False, screens=[], 不回写。"""
+    """匹配中途异常 → 抛 AnalyzeScreenError,不回写。"""
     import sr_od.backend.backend_context as bc
 
     controller = MagicMock()
@@ -175,10 +175,8 @@ def test_analyze_exception_no_writeback(monkeypatch) -> None:
         raise RuntimeError('ocr boom')
     monkeypatch.setattr(bc, 'find_screen_matches', boom)
 
-    result = backend.analyze()
-    assert result.success is False
-    assert result.screens == []
-    assert result.error is not None
+    with pytest.raises(AnalyzeScreenError, match='ocr boom'):
+        backend.analyze()
     backend.ctx.screen_loader.update_current_screen_name.assert_not_called()
 
 
@@ -236,7 +234,6 @@ def test_analyze_save_image_persists_and_returns_path(monkeypatch) -> None:
     ctx.ocr_service.get_ocr_result_list.return_value = []
     backend = SrBackendContext(ctx)
     result = backend.analyze(save_image=True)
-    assert result.success is True
     assert result.screenshot_path == '/tmp/fake_screenshot.png'
     assert len(saved_args) == 1
 
@@ -256,7 +253,6 @@ def test_analyze_save_image_false_does_not_persist(monkeypatch) -> None:
     ctx.ocr_service.get_ocr_result_list.return_value = []
     backend = SrBackendContext(ctx)
     result = backend.analyze()
-    assert result.success is True
     assert result.screenshot_path is None
     assert called == []
 
@@ -277,27 +273,25 @@ def test_analyze_offline_ignores_save_image(monkeypatch, tmp_path) -> None:
     ctx.ocr_service.get_ocr_result_list.return_value = []
     backend = SrBackendContext(ctx)
     result = backend.analyze(screenshot=str(img_path), save_image=True)
-    assert result.success is True
     assert result.screenshot_path is None
     assert called == []
 
 
 def test_analyze_save_image_capture_fails_no_path() -> None:
-    """实时捕获失败(get_screenshot None)→ success=False,screenshot_path=None。"""
+    """实时捕获失败(get_screenshot None)→ 抛 AnalyzeScreenError。"""
     controller = MagicMock()
     controller.is_game_window_ready = True
     controller.get_screenshot.return_value = None
     backend = _backend(ready=True, controller=controller)
-    result = backend.analyze(save_image=True)
-    assert result.success is False
-    assert result.screenshot_path is None
+    with pytest.raises(AnalyzeScreenError, match='截图失败'):
+        backend.analyze(save_image=True)
 
 
-def test_analyze_save_image_then_ocr_fail_returns_path(monkeypatch) -> None:
-    """存盘成功但后续 OCR 异常 → success=False, screenshot_path 仍回传(排障)。
+def test_analyze_save_image_then_ocr_fail_raises_with_path(monkeypatch) -> None:
+    """存盘成功但后续异常 → 抛 AnalyzeScreenError,已存路径带进消息(排障不丢)。
 
     include_ocr=True 才走散落 OCR 回传(include_ocr=False 时散落 OCR 不回传,
-    OCR 异常只可能来自画面匹配链路,同样兜底为 success=False)。
+    OCR 异常只可能来自画面匹配链路,同样兜成异常)。
     """
     import numpy as np
 
@@ -312,10 +306,8 @@ def test_analyze_save_image_then_ocr_fail_returns_path(monkeypatch) -> None:
     ctx.controller = controller
     ctx.ocr_service.get_ocr_result_list.side_effect = RuntimeError('ocr boom')
     backend = SrBackendContext(ctx)
-    result = backend.analyze(save_image=True, include_ocr=True)
-    assert result.success is False
-    assert result.screenshot_path == '/tmp/fake.png'
-    assert result.error is not None
+    with pytest.raises(AnalyzeScreenError, match=r'ocr boom.*fake\.png'):
+        backend.analyze(save_image=True, include_ocr=True)
 
 
 def test_analyze_include_ocr_default_off(monkeypatch) -> None:
@@ -334,7 +326,6 @@ def test_analyze_include_ocr_default_off(monkeypatch) -> None:
     ctx.ocr_service.get_ocr_result_list.return_value = []
     backend = SrBackendContext(ctx)
     result = backend.analyze()
-    assert result.success is True
     assert result.ocr_texts == []
 
 
@@ -369,13 +360,12 @@ def test_analyze_extras_filled_on_precise_with_recognizer(monkeypatch) -> None:
     monkeypatch.setattr(bc, 'get_recognizer', lambda ctx, name: fake_recognizer)
 
     result = backend.analyze()
-    assert result.success is True
     assert result.extras == {'gold': 50, 'phase': [1, 3]}
     fake_recognizer.recognize.assert_called_once()
 
 
 def test_analyze_extras_none_when_recognizer_raises(monkeypatch) -> None:
-    """recognizer 抛异常 → extras=None,但 analyze 仍 success=True(错误隔离,主结果不丢)。"""
+    """recognizer 抛异常 → extras=None,analyze 仍正常返回主结果(错误隔离)。"""
     import sr_od.backend.backend_context as bc
 
     backend = _precise_analyze_backend(monkeypatch, '货币战争-备战')
@@ -385,8 +375,7 @@ def test_analyze_extras_none_when_recognizer_raises(monkeypatch) -> None:
     monkeypatch.setattr(bc, 'get_recognizer', lambda ctx, name: fake_recognizer)
 
     result = backend.analyze()
-    assert result.success is True            # 主结果(OCR + 匹配)照常
-    assert result.screens[0].is_precise is True
+    assert result.screens[0].is_precise is True   # 主结果(OCR + 匹配)照常
     assert result.extras is None             # recognizer 异常被兜成 None
 
 
@@ -398,7 +387,6 @@ def test_analyze_extras_none_when_no_recognizer(monkeypatch) -> None:
     monkeypatch.setattr(bc, 'get_recognizer', lambda ctx, name: None)
 
     result = backend.analyze()
-    assert result.success is True
     assert result.extras is None
 
 
@@ -419,7 +407,6 @@ def test_analyze_extras_none_when_no_precise(monkeypatch) -> None:
     backend.ctx.ocr_service.get_ocr_result_list.return_value = []
 
     result = backend.analyze()
-    assert result.success is True
     assert result.extras is None
 
 
@@ -437,6 +424,5 @@ def test_analyze_extras_none_when_recognizer_returns_non_serializable(monkeypatc
     monkeypatch.setattr(bc, 'get_recognizer', lambda ctx, name: fake_recognizer)
 
     result = backend.analyze()
-    assert result.success is True
     assert result.extras is None             # json.dumps 抛 → 兜成 None
 
