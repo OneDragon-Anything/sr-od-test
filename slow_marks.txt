@@ -72,3 +72,7 @@ test/sr_od/application/cultivation/relic/test_relic_detail_reader.py::test_read_
 test/sr_od/application/cultivation/relic/operations/test_scan_relic_candidates.py::test_scan_produces_candidates_and_bottom
 
 test_enter_game.py::test_version_promo_right_top_fallback
+
+# 2026-11-14 周本挑战核心登记:三段战斗态直呼各带 round_success(wait=1) 的
+# 轮间节流累计,实测 2.00s 贴线;登记防标准全量抖动过线
+test/sr_od/application/echo_of_war/test_challenge_echo_of_war_core.py::TestWaitAndTimeoutNodes::test_wait_counts_success_and_fail
