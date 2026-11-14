@@ -644,7 +644,7 @@ class TestFarmTicketChain:
         op = _WatchedUpgradeTrace(test_context, farm_dungeon=True,
                                   farm_rounds_max=1)
         op._init_watchdog()  # type: ignore[attr-defined]
-        op._panel_farm_click_rounds = 2
+        op._farm_window_wait_rounds = 2
         monkeypatch.setattr(UpgradeTraceOp, 'save_screenshot',
                             lambda self, prefix='': '')
         state = _install_script(
