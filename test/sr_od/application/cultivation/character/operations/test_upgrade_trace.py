@@ -89,8 +89,6 @@ def _install_script(
             raise AssertionError(f'剧本耗尽:查询 ({s_name}, {a_name})')
         scene = queue.pop(0)
         hit = (s_name, a_name) in scene
-        print(f'[POP#{len(state["find_events"])} ({a_name}) '
-              f'-> {"HIT" if hit else "MISS"}]')
         return self.round_success(status=a_name) if hit \
             else self.round_wait(status=f'未找到 {a_name}')
 
@@ -229,14 +227,15 @@ class TestUpgradeLoop:
         op = _WatchedUpgradeTrace(test_context)
         state = _install_script(
             monkeypatch, test_context,
-            # 逐查询序(farm_dungeon=False:⑥ 券刷钮查询被 and 短路,不入剧本):
+            # 逐查询序(④b 删除后:快升 miss 直接落 ⑤⑤b⑦;r1 全 miss=过渡态
+            # 计 1 轮点空白,r2 满级锚命中→MAX_LEVEL):
             # 入口开关(分类①) → r1(弹窗/满级/开关→分类②/快速升级/补全/合成/
             # 可提升全miss→点空白) → r2(弹窗/满级→分类③→MAX_LEVEL) →
             # 收尾(开关→关面板/开关miss→落MAX_LEVEL)
             [{(_TRACE, '开关-简略描述')},
              set(), set(), {(_TRACE, '开关-简略描述')},
              set(), set(), set(), set(),
-             set(), set(), {(_TRACE, '文本-已达最大等级')},
+             set(), {(_TRACE, '文本-已达最大等级')},
              {(_TRACE, '开关-简略描述')}, set()],
             categories=['天赋', '天赋', '天赋'], level=0)
 
@@ -257,11 +256,11 @@ class TestUpgradeLoop:
         op = _WatchedUpgradeTrace(test_context)
         state = _install_script(
             monkeypatch, test_context,
-            # 逐查询序:入口开关 → r1(弹窗/满级miss/开关→分类→补全钮→判停)
-            # → 收尾(开关→关面板/开关miss→落MATERIAL_CAPPED)
+            # 逐查询序:入口开关 → r1(弹窗/满级miss/开关→分类→快升miss→
+            # 补全钮→未授权判停) → 收尾(开关→关面板/开关miss→落MATERIAL_CAPPED)
             [{(_TRACE, '开关-简略描述')},
              set(), set(), {(_TRACE, '开关-简略描述')},
-             set(), set(), {(_TRACE, '按钮-通用材料补全')},
+             set(), {(_TRACE, '按钮-通用材料补全')},
              {(_TRACE, '开关-简略描述')}, set()],
             categories=['天赋', '天赋'], level=6)
 
@@ -276,20 +275,27 @@ class TestUpgradeLoop:
     def test_insufficient_material_gray_stops_immediately(
             self, test_context: SrTestContext,
             monkeypatch: pytest.MonkeyPatch) -> None:
-        """材料不足灰态(按钮带禁用文本,升下一级缺口超出补全/合成覆盖)→
-        前置判停,不误入合成分支空点禁用钮(其四字文本与「材料合成」lcs
-        恰好 0.5 踩线,识别阈值已收紧,此处锁前置判停行为)。"""
+        """材料不足灰态(快速刷取入口消失,升下一级缺口超出刷取/补全/合成
+        覆盖)→ 前置判停。分流依据 = 快速刷取入口在场性(版式级差异)而非
+        按钮带文本——灰态禁用文本与白底态文本 lcs 0.75,文本锚连续两档
+        阈值踩线,不可靠(实机两次)。"""
         clicks = _record_controller_clicks(monkeypatch, test_context)
         op = _WatchedUpgradeTrace(test_context)
         state = _install_script(
             monkeypatch, test_context,
-            # 逐查询序:入口开关 → r1(弹窗/满级miss/开关→分类→快升miss→
-            # 材料不足→判停) → 收尾(开关→关面板/开关miss→落MATERIAL_CAPPED)
+            # 逐查询序:入口开关 → r1/r2/r3 各 7 查询(弹窗/满级miss/开关HIT
+            # [灰态面板仍在]/快升/补全/合成/可提升全miss,第3轮 buttonless=3
+            # 判停) → 收尾(开关→关面板/开关miss→落账)。farm_dungeon=False:
+            # ⑥ 快速刷取查询被 and 短路
             [{(_TRACE, '开关-简略描述')},
              set(), set(), {(_TRACE, '开关-简略描述')},
-             set(), {(_TRACE, '文本-材料不足')},
+             set(), set(), set(), set(),
+             set(), set(), {(_TRACE, '开关-简略描述')},
+             set(), set(), set(), set(),
+             set(), set(), {(_TRACE, '开关-简略描述')},
+             set(), set(), set(), set(),
              {(_TRACE, '开关-简略描述')}, set()],
-            categories=['天赋', '天赋'], level=3)
+            categories=['天赋', '天赋', '天赋', '天赋'], level=3)
 
         result = _run_op(op)
 
@@ -299,6 +305,7 @@ class TestUpgradeLoop:
             '灰态判停不得空点禁用的合成钮'
         )
         assert not _has_click_in(clicks, test_context, _TRACE, '按钮-通用材料补全')
+        assert not _has_click_in(clicks, test_context, _TRACE, '按钮-快速刷取')
         assert state['level_reads'] == 1
 
     def test_synthesis_form_stops_without_farm(
@@ -312,11 +319,12 @@ class TestUpgradeLoop:
         op = _WatchedUpgradeTrace(test_context)
         state = _install_script(
             monkeypatch, test_context,
-            # 逐查询序:入口开关 → r1(弹窗/满级miss/开关→分类→合成钮→判停)
-            # → 收尾(开关→关面板/开关miss→落MATERIAL_CAPPED)
+            # 逐查询序:入口开关 → r1(弹窗/满级miss/开关→分类→快升miss→
+            # 补全miss→合成钮→未授权判停) → 收尾(开关→关面板/开关miss→
+            # 落MATERIAL_CAPPED)
             [{(_TRACE, '开关-简略描述')},
              set(), set(), {(_TRACE, '开关-简略描述')},
-             set(), set(), set(), {(_TRACE, '按钮-材料合成')},
+             set(), set(), {(_TRACE, '按钮-材料合成')},
              {(_TRACE, '开关-简略描述')}, set()],
             categories=['天赋', '天赋'], level=7)
 
@@ -343,7 +351,7 @@ class TestUpgradeLoop:
             monkeypatch, test_context,
             [{(_TRACE, '开关-简略描述')},
              set(), set(), {(_TRACE, '开关-简略描述')},
-             set(), set(), {(_TRACE, '按钮-通用材料补全')},
+             set(), {(_TRACE, '按钮-通用材料补全')},
              {(_TRACE, '标题-材料补全弹窗')},
              set(), set(), set(),
              set(), set(), {(_TRACE, '开关-简略描述')},
@@ -419,14 +427,15 @@ class TestFarmTicketChain:
             # → 收尾(开关→关面板/开关miss→落MAX_LEVEL)
             [{(_TRACE, '开关-简略描述')},
              set(), set(), {(_TRACE, '开关-简略描述')},
-             set(), set(), {(_TRACE, '按钮-通用材料补全')},
-             set(), set(),
-             {(_RESOURCE_WINDOW := '培养资源窗口', '标题-培养资源窗口')},
+             set(), {(_TRACE, '按钮-通用材料补全')},
+             set(), set(), set(), {(_TRACE, '开关-简略描述')},
+             set(),
+             set(), set(), {(_RESOURCE_WINDOW := '培养资源窗口', '标题-培养资源窗口')},
              {(_RESOURCE_WINDOW, '行锚-本周可领取奖励次数')},
              {(_FAST := '快速刷取弹窗', '标题-快速刷取弹窗')},
              {(_FAST, '按钮-确认快速刷取')},
              {(_FAST, '标题-快速刷取弹窗')}, set(),
-             set(), {('快速刷取结果弹窗', '按钮-关闭刷取结果')},
+             set(), {(_RES := '快速刷取结果弹窗', '按钮-关闭刷取结果')},
              set(), set(), {(_RESOURCE_WINDOW, '标题-培养资源窗口')},
              set(),
              set(), set(), set(), {(_TRACE, '开关-简略描述')},
@@ -468,7 +477,7 @@ class TestFarmTicketChain:
             monkeypatch, test_context,
             [{(_TRACE, '开关-简略描述')},
              set(), set(), {(_TRACE, '开关-简略描述')},
-             set(), set(), {(_TRACE, '按钮-通用材料补全')},
+             set(), {(_TRACE, '按钮-通用材料补全')},
              set(), set(), set(), {(_TRACE, '开关-简略描述')},
              set(),
              set(), set(), {(_win, '标题-培养资源窗口')},
@@ -517,7 +526,7 @@ class TestFarmTicketChain:
             monkeypatch, test_context,
             [{(_TRACE, '开关-简略描述')},
              set(), set(), {(_TRACE, '开关-简略描述')},
-             set(), set(), {(_TRACE, '按钮-通用材料补全')},
+             set(), {(_TRACE, '按钮-通用材料补全')},
              set(), set(), set(), {(_TRACE, '开关-简略描述')},
              set(),
              set(), set(), set(), {(_TRACE, '开关-简略描述')},
@@ -562,7 +571,7 @@ class TestFarmTicketChain:
             monkeypatch, test_context,
             [{(_TRACE, '开关-简略描述')},
              set(), set(), {(_TRACE, '开关-简略描述')},
-             set(), set(), {(_TRACE, '按钮-通用材料补全')},
+             set(), {(_TRACE, '按钮-通用材料补全')},
              set(), set(), set(), {(_TRACE, '开关-简略描述')},
              set(), set(), set(), {(_TRACE, '开关-简略描述')},
              set(), set(), set(), {(_TRACE, '开关-简略描述')},
