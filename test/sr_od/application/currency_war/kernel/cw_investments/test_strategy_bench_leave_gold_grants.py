@@ -18,7 +18,7 @@ import pytest
 
 from sr_od.application.currency_war.data.cw_chars import (
     CHARACTER_ROSTER,
-    CHARACTERS,
+    get_char,
 )
 from sr_od.application.currency_war.kernel.cw_investments import (
     INVESTMENT_STRATEGIES,
@@ -45,14 +45,13 @@ def test_registry_row_single_source() -> None:
 
 def test_row_values_desc_aligned() -> None:
     """行值-卡面结构对拍(值形防线,星级恒 1/金币>0 笔误哨删后的起决定作用的锁):
-    星级恒 1(desc「1星」明写);角色名 ∈ CHARACTER_ROSTER;离场金与
-    注册费用档平行(花火 2 费留 2 金/火花 4 费留 4 金——desc 判读的结构
-    依据,费用档漂移即本锁红)。"""
+    星级恒 1(desc「1星」明写);角色名 ∈ CHARACTER_ROSTER。
+    (离场金与注册费用档平行的旧锁随 v4.7 费用重排失效——火花 V4.4 4 费
+    v4.7 1 费,金值 = 卡面常量非注册表派生,行值对拍由 _ROWS 值锁承担;
+    平行判读基准随 V4.4 名单失效,登记面不变。)"""
     for name, star, gold in _ROWS:
         assert star == 1, f'{name}: 星级恒 1(desc 明写)'
         assert name in CHARACTER_ROSTER, f'{name}: 角色名已登记'
-        assert gold == CHARACTERS[name].cost, \
-            f'{name}: 离场金({gold})须与费用档({CHARACTERS[name].cost})平行'
 
 
 def test_validator_orphan_key_raises(monkeypatch) -> None:
@@ -65,9 +64,9 @@ def test_validator_orphan_key_raises(monkeypatch) -> None:
 
 
 def test_validator_unknown_char_raises(monkeypatch) -> None:
-    """构建校验(角色名哨):角色名不在 CHARACTER_ROSTER → ValueError
+    """构建校验(角色名哨):角色名不在角色注册表(GUARD 词表)→ ValueError
     (游戏角色词表改版即触发的漂移哨)。"""
     monkeypatch.setitem(STRATEGY_BENCH_LEAVE_GOLD_GRANTS, _CARD,
                         (('花火', 1, 2), ('不存在的角色', 1, 4)))
-    with pytest.raises(ValueError, match='CHARACTER_ROSTER'):
+    with pytest.raises(ValueError, match='角色名不在角色注册表'):
         _validate_strategy_bench_leave_gold_grants()

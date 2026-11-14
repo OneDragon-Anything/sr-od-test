@@ -34,7 +34,7 @@ from test.sr_od.application.currency_war._cw_helpers import (
     cw4_members as _members,
 )
 
-from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+from sr_od.application.currency_war.data.cw_chars import CHARACTERS, get_char
 from sr_od.application.currency_war.kernel.cw_comps import (
     get_comp,
 )
@@ -77,7 +77,8 @@ def _clean_fillers(count: int, exclude: set[str], *, min_cost: int = 2
     ≥ min_cost(Lv3+ 帧概率 0 = 让位序靠后;registry 核心规避面已随
     统一让位优先级迭代 3.4 退役——C1 支删除)。"""
     out: list[str] = []
-    for n, c in CHARACTERS.items():
+    for c in CHARACTERS:
+        n = c.name
         if len(out) >= count:
             break
         if n in exclude or (c.cost or 0) < min_cost:
@@ -95,13 +96,13 @@ def _same_cost_fillers(count: int, cost: int) -> list[str]:
     跨档(万金油档 8/羁绊档 9 键小于兜底档 10,会让「末位 = 新牌」
     退化成跨档结论;十档口径 = 32 号稿 §3)。"""
     out: list[str] = []
-    for n, c in CHARACTERS.items():
+    for c in CHARACTERS:
+        n = c.name
         if len(out) >= count:
             break
         if (c.cost or 0) != cost or n in CROSS_LINE_KEEP_NAMES:
             continue
-        ch = CHARACTERS[n]
-        if (set(ch.factions) | set(ch.schools)) & TIER7_BOND_NAMES:
+        if (set(c.factions) | set(c.schools)) & TIER7_BOND_NAMES:
             continue
         out.append(n)
     assert len(out) >= count, f'测试前提:同费干净名不足({len(out)})'
@@ -162,7 +163,7 @@ def _x_junk_card(candidates: tuple) -> str:
         members |= set(_members(get_comp(cn)))
     assert _x not in members, \
         f'帧前提失守:{_x} 已入候选线成员(X 应落兜底档 10,入线则落成员档族 2/3/4/5/7)'
-    assert (CHARACTERS[_x].cost or 0) == 3, \
+    assert (get_char(_x).cost or 0) == 3, \
         f'帧前提失守:{_x} 注册表费用漂移(level 7 概率 0.40 前提失效)'
     return _x
 

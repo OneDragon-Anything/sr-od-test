@@ -654,8 +654,8 @@ def _gate_state(bench: list, deployed: list | None = None) -> dict:
 def _fuel_pair() -> tuple[str, str]:
     """两个线外注册表名(注册表现查,禁手抄)。"""
     km = set(line_members(get_comp(_COMP)))
-    pool = [n for n, c in CHARACTERS.items()
-            if n not in km and c.cost]
+    pool = [c.name for c in CHARACTERS
+            if c.name not in km and c.cost]
     assert len(pool) >= 2, '注册表缺少线外角色(测试前提失效)'
     return pool[0], pool[1]
 

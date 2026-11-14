@@ -34,7 +34,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+from sr_od.application.currency_war.data.cw_chars import get_char
 from sr_od.application.currency_war.data.cw_factions import FACTIONS
 from sr_od.application.currency_war.kernel import cw_intention, cw_invest_channels
 from sr_od.application.currency_war.kernel.cw_comps import (
@@ -86,7 +86,7 @@ def _comp(name: str):
 
 def _self_bonds(name: str) -> set[str]:
     """成员自报羁绊标签全集(factions∪schools;未注册名 = 空集)。"""
-    ch = CHARACTERS.get(name)
+    ch = get_char(name)
     if ch is None:
         return set()
     return set(ch.factions) | set(ch.schools)

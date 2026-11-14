@@ -109,10 +109,10 @@ def _off_name(exclude: tuple[str, ...] = (), *, min_cost: int = 1) -> str:
     ——C1 单卡核心/保护集囤货臂候选身份已随卖出身份段退役批
     退役,非线内即可,不再需要核心/保护身份规避)。"""
     bad = set(exclude) | set(_km())
-    for n, ch in CHARACTERS.items():
-        if n in bad or (ch.cost or 0) < min_cost:
+    for ch in CHARACTERS:
+        if ch.name in bad or (ch.cost or 0) < min_cost:
             continue
-        return n
+        return ch.name
     raise AssertionError('注册表缺少合适线外角色(测试前提失效)')
 
 

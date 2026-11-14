@@ -16,7 +16,7 @@ board_bench_char_value_sum / check_strategy_boss_clear_gold;直构形态
 """
 from __future__ import annotations
 
-from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+from sr_od.application.currency_war.data.cw_chars import get_char
 from sr_od.application.currency_war.kernel.cw_economy import sell_refund
 from sr_od.application.currency_war.kernel.cw_gain_chain import (
     board_bench_char_value_sum,
@@ -70,28 +70,32 @@ def _gs(*, card: str | None = _CARD,
 
 def test_value_sum_matches_sell_refund_measured_points() -> None:
     """锁 2(价值口径对拍):economy.md §9 三点实测逐点直测 + 与
-    sell_refund 单一源对拍;读法 B(费用合计)在 2★/3★ 与实测分叉。"""
-    assert CHARACTERS['花火'].cost == 2, '前置:花火应为 2 费'
-    assert CHARACTERS['不死途'].cost == 2, '前置:不死途应为 2 费'
+    sell_refund 单一源对拍;读法 B(费用合计)在 2★/3★ 与实测分叉。
+    (fixture = 费用等价件:v4.7 费用重排后不死途 5 费,换同 2 费云璃,
+    实测点数值只依赖费用档,锁面不变。)
+    """
+    assert get_char('花火').cost == 2, '前置:花火应为 2 费'
+    assert get_char('云璃').cost == 2, '前置:云璃应为 2 费'
     for char_id, star, expected in (('花火', 1, 2),
-                                    ('不死途', 2, 5),
-                                    ('不死途', 3, 17)):
+                                    ('云璃', 2, 5),
+                                    ('云璃', 3, 17)):
         gs = _gs(deployed=DeployedView(
             front_slots=[_unit(char_id, star), None, None, None],
             back_slots=[]))
         got = board_bench_char_value_sum(gs)
         assert got == expected, \
             f'{star}★{char_id}求和漂移: got={got} 实测定案={expected}'
-        assert got == sell_refund(star, CHARACTERS[char_id].cost), \
+        assert got == sell_refund(star, get_char(char_id).cost), \
             '求和应与 sell_refund 单一源对拍等值(禁第二份公式)'
 
 
 def test_value_sum_one_star_one_cost_full_refund() -> None:
     """锁 2 补面(1★1费豁免):无合成无手续费全额退 = 1(sell_refund
-    cost=1 exempt 分支,2026-08-13 live 实测口径)。"""
-    assert CHARACTERS['青雀'].cost == 1, '前置:青雀应为 1 费'
+    cost=1 exempt 分支,2026-08-13 live 实测口径;青雀 v4.7 掉出,
+    fixture 换同 1 费瓦尔特)。"""
+    assert get_char('瓦尔特').cost == 1, '前置:瓦尔特应为 1 费'
     gs = _gs(deployed=DeployedView(
-        front_slots=[_unit('青雀', 1), None, None, None], back_slots=[]))
+        front_slots=[_unit('瓦尔特', 1), None, None, None], back_slots=[]))
     assert board_bench_char_value_sum(gs) == 1 == sell_refund(1, 1), \
         '1★1费应全额退 1(无手续费)'
 

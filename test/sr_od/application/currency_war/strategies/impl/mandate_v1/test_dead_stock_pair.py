@@ -29,7 +29,7 @@
 import random
 from types import SimpleNamespace
 
-from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+from sr_od.application.currency_war.data.cw_chars import CHARACTER_ROSTER
 from sr_od.application.currency_war.kernel.cw_comps import (
     COMP_LIBRARY,
 )
@@ -97,7 +97,7 @@ _SURPLUS_GOLD = _G_STAR + 10
 # 迭代 3.4 退役):[0] = 素材对名,[1] = 垫件,[2] = 商店买卡名
 # (写端测试三名互异;阿格莱雅 = 病灶名:sim 实证同名 1★×2 对经 press 臂
 # R1 形成后被 G-S1 合成素材守卫永久锁卖锁席)。
-_FUELS = [n for n in sorted(CHARACTERS)
+_FUELS = [n for n in sorted(CHARACTER_ROSTER)
           if n not in _LINE]
 assert len(_FUELS) >= 3, '非线内燃料名不足'
 _PAIR = _FUELS[0]
@@ -112,7 +112,7 @@ def _bench_char(char_id: str, star: int = 1, slot: int = 1) -> BenchSlot:
 
 def _fuel_names(count: int) -> list[str]:
     """非线内燃料名(注册表现算防漂移;身份规避面已随 3.4 退役)。"""
-    out = [n for n in CHARACTERS
+    out = [n for n in CHARACTER_ROSTER
            if n not in _LINE]
     assert len(out) >= count, '非线内燃料名不足'
     return out[:count]

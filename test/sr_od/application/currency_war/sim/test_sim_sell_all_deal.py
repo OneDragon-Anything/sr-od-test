@@ -22,7 +22,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 from sr_od.application.currency_war.data.cw_chars import (
-    CHARACTERS,
+    get_char,
     chars_by_cost,
 )
 from sr_od.application.currency_war.kernel.cw_action_report import (
@@ -151,7 +151,7 @@ def test_sell_all_deal_full_chain_decl_dispatch() -> None:
             assert sum(1 for n, _ in units if n in cost1) == 2, '1费×2'
             for name, _star in units:
                 assert name in grant_bucket_names(
-                    gs, int(CHARACTERS[name].cost)), \
+                    gs, int(get_char(name).cost)), \
                     f'抽名 ∈ 授予出口现值桶:{name}'
             return units
         finally:
@@ -175,11 +175,13 @@ def test_sell_all_deal_draws_after_sell_not_before() -> None:
             _drive_to_strategy_offer(b)
             gs = b.gs
             # 被卖名 = 首个不在开局手牌的 3 费非专家名(开局手牌已占
-            # 副本会破坏「held 恰 = 固定副本数」的挤空前置)。
+            # 副本会破坏「held 恰 = 固定副本数」的挤空前置;is_hide 排除
+            # = 牌池口径——官方隐藏态不在授予桶,选名须与桶同域)。
             hand = {n for n, _ in _bench_units(gs)}
             sold = sorted(
                 c.name for c in chars_by_cost(3)
-                if not CHARACTERS[c.name].is_expert and c.name not in hand)[0]
+                if not c.is_expert and not c.is_hide
+                and c.name not in hand)[0]
             gs.observe(gs.deployed,
                        _dvs([Unit(char_id=sold, star=2)] * 3, []),
                        sig=_SIG_OBS)
@@ -198,7 +200,8 @@ def test_sell_all_deal_draws_after_sell_not_before() -> None:
         hand = {n for n, _ in _bench_units(probe.gs)}
         sold = sorted(
             c.name for c in chars_by_cost(3)
-            if not CHARACTERS[c.name].is_expert and c.name not in hand)[0]
+            if not c.is_expert and not c.is_hide
+            and c.name not in hand)[0]
         bucket3 = grant_bucket_names(probe.gs, 3)
         assert sold in bucket3, '出售后桶含被卖名(时序前提)'
     finally:

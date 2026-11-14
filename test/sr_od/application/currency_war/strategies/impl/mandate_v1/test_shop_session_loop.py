@@ -37,7 +37,10 @@ from types import SimpleNamespace
 
 import pytest
 
-from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+from sr_od.application.currency_war.data.cw_chars import (
+    CHARACTER_ROSTER,
+    CHARACTERS,
+)
 from sr_od.application.currency_war.kernel.cw_comps import (
     COMP_LIBRARY,
 )
@@ -97,8 +100,11 @@ _MEMBER = COMP_LIBRARY[0].core_chars[0]
 
 
 def _fuel(count: int, exclude: tuple[str, ...] = ()) -> list[str]:
-    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-    out = [n for n in CHARACTERS
+    from sr_od.application.currency_war.data.cw_chars import (
+    CHARACTER_ROSTER,
+    CHARACTERS,
+)
+    out = [n for n in CHARACTER_ROSTER
            if n not in _LINE and n not in exclude]
     return out[:count]
 
@@ -300,8 +306,11 @@ class TestGoldLedgerProtocol:
         """伴生入金记账(§4.2 协议① 单卡型):返利族 5 费第三笔买入
         ⇒ +3 双写(账面 + gs.gold 期望态投影扩展)——漏账偏差侦测的
         账面侧。"""
-        from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-        five_cost = next(n for n in CHARACTERS if CHARACTERS[n].cost == 5)
+        from sr_od.application.currency_war.data.cw_chars import (
+    CHARACTER_ROSTER,
+    CHARACTERS,
+)
+        five_cost = next(c.name for c in CHARACTERS if c.cost == 5)
         live, sess, gs, st = _frame(
             gold=60, node_kind='reward',
             bench=[(n, 1) for n in _fuel(3)],
@@ -352,7 +361,10 @@ class TestOrderInheritance:
         """场况插件会话累计额度(§2.2 序 2):额度 = 会话开始帧
         deploy_cap − deployed 快照;额度尽即停(被拦插件不进机会清单
         ——上阵空位非节点内可解除资源)。"""
-        from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+        from sr_od.application.currency_war.data.cw_chars import (
+    CHARACTER_ROSTER,
+    CHARACTERS,
+)
         from sr_od.application.currency_war.data.cw_factions import FACTIONS
         # 插件件选择约束:身份必须非线内(序 1 义务面不辖——本测试专辖
         # 序 2 额度门,不被前序臂掩蔽;核心/保护身份规避面已随统一让位
@@ -362,10 +374,10 @@ class TestOrderInheritance:
         # 可以同时成立。
         pick = None
         for faction_tag, fac in FACTIONS.items():
-            members = [n for n, ch in CHARACTERS.items()
+            members = [ch.name for ch in CHARACTERS
                        if faction_tag in getattr(ch, 'factions', ())
                        and ch.cost
-                       and n not in _LINE]
+                       and ch.name not in _LINE]
             if len(fac.tiers) and fac.tiers[0] == 3 \
                     and len(members) >= 3:
                 pick = (faction_tag, fac, members)
@@ -484,8 +496,8 @@ class TestThreeStageRefresh:
 
 
 def _skip_member(name: str) -> bool:
-    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-    ch = CHARACTERS.get(name)
+    from sr_od.application.currency_war.data.cw_chars import get_char
+    ch = get_char(name)
     return ch is None or not ch.cost
 
 
@@ -920,7 +932,7 @@ _FACE_OBS_SIG = ChannelSig(family='obs', actor='cw-36-test',
 def _fuel_names(count: int, exclude: tuple[str, ...] = ()) -> list[str]:
     """非线内燃料名(注册表现算防漂移;核心/保护身份规避面已随统一让位
     优先级批退役,非线内即可)。"""
-    out = [n for n in CHARACTERS
+    out = [n for n in CHARACTER_ROSTER
            if n not in _LINE and n not in exclude]
     assert len(out) >= count, '非线内燃料名不足'
     return out[:count]
@@ -974,7 +986,7 @@ def _frame_m4_missing_vacate():
     """M2 缺员遇席满:席满(9 燃料)+缺员(member 不在场)+店有缺员件
     → 置换账:卖首燃料(value(X) 线成员 > value(Y) 燃料,同口径直比
     成立)。"""
-    fuels = [n for n in CHARACTERS if n not in _LINE][:9]
+    fuels = [n for n in CHARACTER_ROSTER if n not in _LINE][:9]
     assert len(fuels) == 9
     return _frame_session(
         bench_units=fuels,

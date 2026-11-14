@@ -18,7 +18,11 @@ import pytest
 from sr_od.application.currency_war.data.cw_chars import (
     CHARACTER_ROSTER,
     CHARACTERS,
+    EXPERT_CHARS,
     chars_by_cost,
+)
+from sr_od.application.currency_war.data.cw_dropped_names import (
+    GUARD_CHARACTER_ROSTER,
 )
 from sr_od.application.currency_war.kernel import cw_investments
 from sr_od.application.currency_war.kernel.cw_effect_inventory import (
@@ -64,14 +68,14 @@ def test_zhanli_tisheng_registration_and_typed_pool() -> None:
     """战力提升登记不变量(T-36 设计 §4 锁 1/2):∈ ENV_GIFTS 且 ∉
     ENV_ECONOMY(import 期互斥校验半边显式断言);登记规格 = 卡面直读
     (1 费/2★/类型标签「输出」);规格过滤池 = 注册表现算双射——每名
-    1 费且 char_type 含「输出」标签(多标签计入,用户裁定 2026-10-21),
+    1 费且 category_tags 含「输出」标签(多标签计入,用户裁定 2026-10-21),
     池名 ⊆ 注册表。池规模 = 注释性快照(2026-10 时点 12 名),非断言值。"""
     assert '战力提升' in ENV_GIFTS
     assert '战力提升' not in ENV_ECONOMY
     spec = ENV_GIFTS['战力提升'].chars_random_immediate[0]
     assert spec == RandomCharSpec(cost=1, star=2, type_tag='输出')
     expected = {c.name for c in chars_by_cost(1)
-                if '输出' in c.char_type.split('、')}
+                if '输出' in c.category_tags}
     assert set(random_char_pool(spec)) == expected, \
         '规格过滤池 = 费用档 × 类型含标签 双射(注册表现算)'
     assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
@@ -142,22 +146,20 @@ def test_env_reroll_names_member_validation(
 
 def test_random_char_pool_derivation_properties() -> None:
     """池派生性质测试(T-10 设计 §4 测试 2,注册表现算对照):空 type_tag
-    = 费用档全员旁路,唯开拓者双形态按角色位合并收尾(池 = 4 费档剔除
-    '开拓者·记忆'——牌库中开拓者占单一角色位,采样即发放名恒欢愉,
-    economy.md §8);非空 type_tag = char_type 含标签过滤(子集 + 逐名含
-    标签);池名 ⊆ 注册表。池规模 = 注释性快照(2026-10 时点合并后
-    13 名),非断言值(注册表随版本扩充)。"""
+    = 费用档全员旁路(v4.7 注册表开拓者仅基名单条目,双形态合并
+    ``_DUAL_FORM_MERGE`` 数据驱动空转,池 = 4 费全档);
+    economy.md §8);非空 type_tag = category_tags 含标签过滤(子集 + 逐名含
+    标签);池名 ⊆ 注册表。池规模 = 注释性快照,非断言值(注册表随版本扩充)。"""
     pool_all = random_char_pool(RandomCharSpec(cost=4, star=1))
-    assert set(pool_all) == {c.name for c in chars_by_cost(4)} \
-        - {'开拓者·记忆'}, \
-        'type_tag 空 = 全档旁路(开拓者双形态按角色位合并剔除键侧)'
+    assert set(pool_all) == {c.name for c in chars_by_cost(4)}, \
+        'type_tag 空 = 全档旁路(v4.7 单条目开拓者,双形态合并空转)'
     assert set(pool_all) <= CHARACTER_ROSTER
     pool_tag = random_char_pool(RandomCharSpec(cost=4, star=1,
                                                type_tag='输出'))
     assert pool_tag, '过滤池非空(注册表现值)'
     assert set(pool_tag) <= set(pool_all), '过滤池 ⊆ 全档'
     for name in pool_tag:
-        assert '输出' in CHARACTERS[name].char_type.split('、')
+        assert '输出' in get_char(name).category_tags
 
 
 # ==================== 阵容指向集(投资选卡阵容冲突护栏判据源)====================
@@ -1299,9 +1301,13 @@ def test_expert_set_matches_advisor_grant_char_union() -> None:
     """专家名单 ↔ advisor 解锁卡发放角色并集对拍(economy.md §1:专家顾问
     初始不参与普通商店招募,经投资环境/投资策略等通道解锁后本局入池——
     不变量「每个专家都有解锁卡、每张 advisor 卡的目标都是专家」;2026-10-24
-    用户裁定按测试规范落对拍,替代 import 期对拍闸)。任一侧版本漂移即红:
-    新专家角色入册而无解锁卡 / advisor 条目引用非专家名或漏发已置位角色,
-    均不再静默。"""
+    用户裁定按测试规范落对拍,替代 import 期对拍闸)。
+
+    v4.7 中间态期望更新:换赛季收缩后注册表 is_expert 全 False
+    (EXPERT_CHARS 空集,专家机制空转),V4.4 advisor 登记条目按中间态
+    纪律保留(清偿归羁绊消费点迁移批,挂账板 v4.7 换赛季适配欠账族)
+    ——双射恢复随批,本态期望 = 名单空集 ∧ advisor 目标名全部为注册表
+    已登记或已确认掉出名(漂移哨守卫域)。"""
     grant_chars = {
         name
         for grant in (*ENV_GIFTS.values(), *STRATEGY_GRANTS.values())
@@ -1311,11 +1317,11 @@ def test_expert_set_matches_advisor_grant_char_union() -> None:
         # chars_conditional 元素形状 = (角色名, 条件描述) 二元组
         # (登记表禁第二形状),取 [0] 即发放角色名。
     }
-    experts = {n for n, ch in CHARACTERS.items() if ch.is_expert}
-    assert grant_chars == experts, \
-        (f'专家名单与 advisor 解锁卡并集失配:'
-         f'仅名单有={sorted(experts - grant_chars)},'
-         f'仅解锁卡有={sorted(grant_chars - experts)}')
+    experts = {c.name for c in CHARACTERS if c.is_expert}
+    assert experts == set(EXPERT_CHARS), '专家名单 = 注册表 is_expert 派生'
+    assert grant_chars <= GUARD_CHARACTER_ROSTER, \
+        (f'advisor 目标名越界(注册表/已确认掉出名之外):'
+         f'{sorted(grant_chars - GUARD_CHARACTER_ROSTER)}')
 
 
 # ==================== 策略效果规格 overlay(T-88 免费午餐起,随批续建)====================

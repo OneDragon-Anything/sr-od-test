@@ -21,9 +21,9 @@ from __future__ import annotations
 import pytest
 
 from sr_od.application.currency_war.kernel import cw_investments
+from sr_od.application.currency_war.data.cw_chars import CHARACTER_ROSTER
 from sr_od.application.currency_war.kernel.cw_investments import (
     BENCH_ITEM_NAMES,
-    CHARACTER_ROSTER,
     ENV_DELAYED_ITEM_GRANTS,
     INVESTMENT_ENVS,
     INVESTMENT_STRATEGIES,

@@ -61,15 +61,15 @@ def _clean_cost_fillers(count: int, cost: int, exclude: set[str]) -> list[str]:
     档 10 内键小于候选 = 池件更保,候选末位形态的可控构帧件
     (十档口径 = 32 号稿 §3)。"""
     out: list[str] = []
-    for n, c in CHARACTERS.items():
+    for c in CHARACTERS:
+        n = c.name
         if len(out) >= count:
             break
         if n in exclude or (c.cost or 0) != cost:
             continue
         if n in CROSS_LINE_KEEP_NAMES:
             continue
-        ch = CHARACTERS[n]
-        if (set(ch.factions) | set(ch.schools)) & TIER7_BOND_NAMES:
+        if (set(c.factions) | set(c.schools)) & TIER7_BOND_NAMES:
             continue
         out.append(n)
     assert len(out) >= count, f'测试前提:同费干净名不足({len(out)})'

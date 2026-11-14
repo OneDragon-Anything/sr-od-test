@@ -42,8 +42,8 @@ def cw4_unit3(name: str) -> Unit:
 
 def _four_cost_names() -> list[str]:
     """4 费非专家全名单(注册表派生,禁手抄——新角色入库自动跟随)。"""
-    return sorted(n for n, ch in CHARACTERS.items()
-                  if ch.cost == _COST and not ch.is_expert)
+    return sorted(c.name for c in CHARACTERS
+                  if c.cost == _COST and not c.is_expert)
 
 
 def _deal_forced(gs, *, unique: bool = True,

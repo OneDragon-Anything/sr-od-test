@@ -10,7 +10,7 @@ import dataclasses
 
 import pytest
 
-from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+from sr_od.application.currency_war.data.cw_chars import get_char
 from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
 from sr_od.application.currency_war.kernel.cw_node_schedule import (
     P1_NODE_SEQUENCE,
@@ -115,7 +115,7 @@ def test_opening_hand_u28_domain_over_seeds() -> None:
         chars = opening_bench_chars(stream_rng(seed, 'M01/opening_hand'))
         assert len(chars) == 4
         assert all(c.unit.star == 1 for c in chars)
-        costs = sorted(CHARACTERS[c.unit.char_id].cost for c in chars)
+        costs = sorted(get_char(c.unit.char_id).cost for c in chars)
         assert costs in ([1, 1, 1, 3], [1, 1, 2, 2]), \
             f'seed={seed} 形状 {costs} 出局(U28 双形状域外)'
         if costs == [1, 1, 1, 3]:

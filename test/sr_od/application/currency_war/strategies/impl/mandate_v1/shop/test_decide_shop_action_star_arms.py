@@ -53,7 +53,10 @@ from test.sr_od.application.currency_war._cw_helpers import (
     cw4_session as _session,
 )
 
-from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+from sr_od.application.currency_war.data.cw_chars import (
+    CHARACTER_ROSTER,
+    get_char,
+)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     Unit,
 )
@@ -82,7 +85,7 @@ _DEPLOY_ANCHOR = '白厄'   # 零阵营流派(板面标签空集定义件;注册
 def _fillers(count: int, exclude: tuple[str, ...] = ()) -> list[str]:
     """非线燃料名(注册表现算防漂移;填充席位/在售候选——核心/保护
     身份规避面已随统一让位优先级迭代 3.4 退役,非线内即可)。"""
-    out = [n for n in CHARACTERS
+    out = [n for n in CHARACTER_ROSTER
            if n not in _LINE and n not in exclude]
     assert len(out) >= count, '测试前提:填充名不足'
     return out[:count]
@@ -162,7 +165,7 @@ class TestW5StarArmsMatrix:
                                    deployed=[Unit(char_id=_DEPLOY_ANCHOR, star=2)],
                                    gold=100, level=7,
                                    cards=(_card(_TARGET,
-                                                cost=3 * int(CHARACTERS[_TARGET].cost),
+                                                cost=3 * int(get_char(_TARGET).cost),
                                                 star=2, x=0),))
         acts = _decide(s)
         buys = [a for a in acts if isinstance(a, CwActionBuyCardParam)]
@@ -225,7 +228,7 @@ class TestW5StarArmsMatrix:
                                    deployed=[Unit(char_id=_DEPLOY_ANCHOR, star=2)],
                                    gold=100, level=7,
                                    cards=(_card(_TARGET,
-                                                cost=3 * int(CHARACTERS[_TARGET].cost),
+                                                cost=3 * int(get_char(_TARGET).cost),
                                                 star=2, x=0),))
         acts = _decide(s)
         buys = [a for a in acts if isinstance(a, CwActionBuyCardParam)]
@@ -269,7 +272,7 @@ class TestW5StarArmsMatrix:
                                   deployed=[Unit(char_id=_DEPLOY_ANCHOR, star=2)],
                                   gold=100, level=7,
                                   cards=(_card('三月七',
-                                               cost=3 * int(CHARACTERS['三月七'].cost),
+                                               cost=3 * int(get_char('三月七').cost),
                                                star=2, x=0),))
         acts = _decide(s)
         assert not [a for a in acts if isinstance(a, CwActionBuyCardParam)], \

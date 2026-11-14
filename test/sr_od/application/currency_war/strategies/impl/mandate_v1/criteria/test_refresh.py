@@ -44,7 +44,10 @@ from test.sr_od.application.currency_war._cw_helpers import (
     cw4_session as _session,
 )
 
-from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+from sr_od.application.currency_war.data.cw_chars import (
+    CHARACTER_ROSTER,
+    get_char,
+)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     Unit,
@@ -76,7 +79,7 @@ _LOGIC_SIG = ChannelSig(family='logic_action', actor='cw-refresh-chain',
 def _fillers(count: int, exclude: tuple[str, ...] = ()) -> list[str]:
     """非线燃料名(注册表现算防漂移;席位效果条目测试帧填充——身份保护/
     C1 核心规避面已随卖出身份段退役,非线内即可)。"""
-    out = [n for n in CHARACTERS
+    out = [n for n in CHARACTER_ROSTER
            if n not in _LINE and n not in exclude]
     assert len(out) >= count, '测试前提:填充名不足'
     return out[:count]
@@ -117,7 +120,7 @@ class TestRefreshChainSingleFrame:
     def test_1_in_band_gold_enough_seat_free_emits(self):
         """①带内 + 金够 + 席可腾(空位效果条目)→ 付费刷新发射。"""
         level = 7
-        _assert_band_premise(int(CHARACTERS[_TARGET].cost), level)
+        _assert_band_premise(int(get_char(_TARGET).cost), level)
         bench = [_bc(_TARGET, star=2)] + _line_bench_base() \
             + [_bc(_fillers(2)[0], star=2)]
         deployed = [Unit(char_id='瓦尔特', star=1)]
@@ -143,7 +146,7 @@ class TestRefreshChainSingleFrame:
         assert target is not None and target[0] == _TARGET, \
             '测试前提:停留目标 = 姬子·启行'
         assert crit_refresh.r2_card_reserve(gs) \
-            == int(CHARACTERS[_TARGET].cost), 'ρ = 停留目标实费档'
+            == int(get_char(_TARGET).cost), 'ρ = 停留目标实费档'
         # 未锁窗口分支口径:stay_target 恒空 → ρ = 0。
         s2 = _session(None, plane_lengths=[9, 5, 7])
         gs2 = cw4_gs(s2, gold=50, level=7, plane=2, round_num=2,
@@ -158,7 +161,7 @@ class TestRefreshChainSingleFrame:
         与旧「恰 2 张全 1★」口径同判;扩展形态〔场上 2★ + 备战 1★×2〕
         随谓词全集重写生效,单帧见 shop 域买面改革测试)。"""
         level = 7
-        _assert_band_premise(int(CHARACTERS['花火'].cost), level)
+        _assert_band_premise(int(get_char('花火').cost), level)
         fill = _fillers(5)
         # 花火仅 1★×2(无 2★ 副本——need 2 未完成,停留目标 = 花火);
         # 姬子·启行 3★/三月七 2★/瓦尔特 2★ 达标。
@@ -182,7 +185,7 @@ class TestRefreshChainSingleFrame:
         ``target_unbuyable`` 退役——刷新时点预测不可算,买不买得到归
         刷出后帧裁决)。"""
         level = 7
-        _assert_band_premise(int(CHARACTERS[_TARGET].cost), level)
+        _assert_band_premise(int(get_char(_TARGET).cost), level)
         fill = _fillers(6)
         bench = [_bc(_TARGET, star=2), _bc('三月七', star=2),
                  _bc('花火', star=2), _bc('瓦尔特', star=2)] \
@@ -217,7 +220,7 @@ class TestRefreshChainSingleFrame:
         门删除,目标不可买(备战位满)帧从「拦下不耗次数」变「照刷耗
         次数」,免费不耗金、次数每节点重置/概率补给,低价值接受)。"""
         level = 7
-        _assert_band_premise(int(CHARACTERS[_TARGET].cost), level)
+        _assert_band_premise(int(get_char(_TARGET).cost), level)
         fill = _fillers(6)
         bench = [_bc(_TARGET, star=2), _bc('三月七', star=2),
                  _bc('花火', star=2), _bc('瓦尔特', star=2)] \

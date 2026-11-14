@@ -31,7 +31,8 @@ from test.sr_od.application.currency_war._cw_helpers import (
 )
 
 from sr_od.application.currency_war.data.cw_chars import (
-    CHARACTERS,
+    CHARACTER_ROSTER,
+    get_char,
     chars_by_cost,
 )
 from sr_od.application.currency_war.data.cw_shop_odds import (
@@ -359,7 +360,7 @@ def test_fixed_pool_excludes_experts_and_unlock_grants_copies() -> None:
     pool = fixed_pool()
     assert pool, '固定池非空'
     for name, copies in pool.items():
-        assert copies == POOL_COPIES_PER_CARD[CHARACTERS[name].cost], \
+        assert copies == POOL_COPIES_PER_CARD[get_char(name).cost], \
             f'{name} 副本数偏离 POOL_COPIES_PER_CARD'
     from sr_od.application.currency_war.data.cw_chars import EXPERT_CHARS
     assert not (set(pool) & EXPERT_CHARS), '基础池零专家'
@@ -508,7 +509,7 @@ def test_deal_shop_level1_pure_cost1_payload() -> None:
     for i, slot in enumerate(payload.cards):
         assert slot.kind == 'content' and slot.card is not None
         assert slot.card.cost == 1 and slot.card.star == 1
-        assert slot.card.name in CHARACTERS
+        assert slot.card.name in CHARACTER_ROSTER
         assert slot.card.slot == i + 1
     assert gs.shop.evidence is not None \
         and 'sim:engine:' in gs.shop.evidence
@@ -526,7 +527,7 @@ def test_deal_shop_level9_domain_and_registered_names() -> None:
         if slot.card is not None:
             assert slot.card.cost in legal_costs
             assert slot.card.star == 1, '表外直出恒 1★(U12 + 注册表分支不触发)'
-            assert slot.card.name in CHARACTERS
+            assert slot.card.name in CHARACTER_ROSTER
 
 
 def test_effective_deal_probs_rotation_toggle() -> None:

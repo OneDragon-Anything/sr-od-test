@@ -26,10 +26,10 @@ from __future__ import annotations
 import pytest
 
 from sr_od.application.currency_war.data.cw_chars import (
-    CHARACTERS,
+    CHARACTER_ROSTER,
+    get_char,
 )
 from sr_od.application.currency_war.kernel.cw_investments import (
-    CHARACTER_ROSTER,
     INVESTMENT_STRATEGIES,
     STRATEGY_GRANTS,
     STRATEGY_MERGE_GRANTS,
@@ -73,9 +73,9 @@ def test_reward_char_registered_and_cost_matches_criterion() -> None:
     assert STRATEGY_MERGE_GRANTS[_CARD_NAMED][2] == _JUDGE, \
         '具名行判据角色名对拍'
     assert _JUDGE in CHARACTER_ROSTER, '具名判据角色必须在角色注册表'
-    assert CHARACTERS[_REWARD].cost == STRATEGY_MERGE_GRANTS[_CARD][1], \
+    assert get_char(_REWARD).cost == STRATEGY_MERGE_GRANTS[_CARD][1], \
         '通配行判据费用 ≠ 发放角色注册费用(两表面漂移)'
-    assert CHARACTERS[_JUDGE].cost == STRATEGY_MERGE_GRANTS[_CARD_NAMED][1], \
+    assert get_char(_JUDGE).cost == STRATEGY_MERGE_GRANTS[_CARD_NAMED][1], \
         '具名行判据费用 ≠ 判据角色注册费用(游戏改费漂移产生永假判据)'
 
 
@@ -127,7 +127,7 @@ def test_validator_judge_cost_mismatch_raises(monkeypatch) -> None:
     """构建校验(具名行判据费用一致性哨):判据角色注册费用 ≠ 判据费用
     → ValueError(游戏改费漂移产生永假判据;黑塔现值 cost=1 与判据 1
     相符 = 现网通过,本负例直构失配值)。"""
-    assert CHARACTERS[_JUDGE].cost == 1, \
+    assert get_char(_JUDGE).cost == 1, \
         '前置:判据角色现值 cost=1(与判据费用相符,现网通过)'
     monkeypatch.setitem(STRATEGY_MERGE_GRANTS, _CARD_NAMED,
                         (3, 4, _JUDGE, _REWARD_NAMED))

@@ -17,7 +17,7 @@ from test.sr_od.application.currency_war._cw_helpers import (
     cw4_session,
 )
 
-from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+from sr_od.application.currency_war.data.cw_chars import get_char
 from sr_od.application.currency_war.kernel.cw_comps import get_comp
 from sr_od.application.currency_war.strategies.impl.mandate_v1.mandate import (
     cheapest_member_cost,
@@ -74,7 +74,7 @@ def test_cheapest_member_cost_reads_widened_roster() -> None:
     (不高于空名册侧;硬约束①金需求侧不断粮)。"""
     gs = _p2_unlocked_seed()
     frame = snapshot_frame(gs)
-    costs = [CHARACTERS[m].cost for m in frame.k_members
-             if CHARACTERS.get(m) is not None and CHARACTERS[m].cost]
+    costs = [get_char(m).cost for m in frame.k_members
+             if get_char(m) is not None and get_char(m).cost]
     assert costs, '前置:名册内注册成员非空'
     assert cheapest_member_cost(frame) == min(costs)

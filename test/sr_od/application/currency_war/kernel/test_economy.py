@@ -59,7 +59,7 @@ from test.sr_od.application.currency_war._cw_helpers import (
 )
 
 from one_dragon.base.geometry.point import Point
-from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+from sr_od.application.currency_war.data.cw_chars import get_char
 from sr_od.application.currency_war.data.cw_shop_odds import (
     DISTINCT_CARDS_PER_COST,
     POOL_COPIES_PER_CARD,
@@ -339,11 +339,11 @@ class TestR2InterestFloor:
         members = _members(comp)
         target = min(
             (m for m in members
-             if CHARACTERS[m].cost
+             if (ch := get_char(m)) is not None and ch.cost
              and 0.0 < expected_refreshes_for_card(
-                 6, CHARACTERS[m].cost, 2, 2) < float('inf')),
+                 6, ch.cost, 2, 2) < float('inf')),
             key=lambda m: expected_refreshes_for_card(
-                 6, CHARACTERS[m].cost, 2, 2))
+                 6, get_char(m).cost, 2, 2))
         others = [m for m in members if m != target]
         bench = [_bc(target), _bc(target)] \
             + [_bc(m, star=2) for i, m in enumerate(others)]
@@ -617,13 +617,13 @@ def _ba_sess_of(state: dict) -> StrategySession:
 def _ba_locked_4cost_sess() -> StrategySession:
     """锁定 4 费核意向的 session(预算核概率校准分量的锁定核解析帧):
     4 费峰值级 9(单一源 = cw_plane_table.peak_refresh_level)。"""
-    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+    from sr_od.application.currency_war.data.cw_chars import get_char
     from sr_od.application.currency_war.kernel.cw_comps import COMP_LIBRARY
     from sr_od.application.currency_war.kernel.cw_intention import intention_core
 
     comp = next(c for c in COMP_LIBRARY
-                if (CHARACTERS.get(intention_core(c)) is not None
-                    and CHARACTERS[intention_core(c)].cost == 4))
+                if (ch := get_char(intention_core(c))) is not None
+                and ch.cost == 4)
     sess = StrategySession()
     state_of(sess).v3_intention = IntentionState(
         phase='locked', locked_comp=comp.name)
@@ -799,9 +799,10 @@ def test_effective_cost_tier_and_registry_routing():
     assert effective_cost(gs, '银狼LV.999') == 4
     gs = replace(gs, lv999_cost_tier=Field(value=5, source='logic'))
     assert effective_cost(gs, '银狼LV.999') == 5
-    # 其余角色 = 注册表静态起始费(档字段不影响非 LV.999 路由)
-    assert effective_cost(gs, '希儿') == CHARACTERS['希儿'].cost
-    # 未注册名 → 0(无费用语义;与 bench_char_cost 未知→3 分野测试)
+    # 其余角色 = 注册表静态起始费(档字段不影响非 LV.999 路由;现役名现查)
+    assert effective_cost(gs, '白厄') == get_char('白厄').cost
+    # 未注册名 → 0(无费用语义;希儿 v4.7 掉出同此口径,与 bench_char_cost
+    # 未知→3 分野测试)
     assert effective_cost(gs, '不存在角色') == 0
 
 
