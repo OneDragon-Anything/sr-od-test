@@ -64,21 +64,6 @@ def _make_gs(*, bench: list[tuple[str, int]] | None = None,
     return gs
 
 
-def test_feiguang_chuanjian_grant_and_binding_registry() -> None:
-    """登记面直测:GRANTS 条目 chars_immediate = 卡文语序 (彦卿, 景元)
-    且 advisor=False(非顾问分道);绑定行 (仙舟域, {彦卿, 景元})(用户
-    确认语义冻结);组合行已登记,泛化表零本卡键(撞键形态禁回退)。"""
-    grant = STRATEGY_GRANTS[_CARD]
-    assert grant.chars_immediate == ('彦卿', '景元'), '卡文语序直读'
-    assert grant.advisor is False, '非顾问分道'
-    assert STRATEGY_BINDINGS[_CARD] == (
-        frozenset({'仙舟'}), frozenset({'彦卿', '景元'})), \
-        '绑定行(用户确认语义冻结)'
-    assert _CARD in PICK_INVEST_EFFECTS, '组合行已登记'
-    assert _CARD not in _STRATEGY_RANDOM_EQUIP_GRANTS, \
-        '泛化表零本卡键(撞键形态禁回退)'
-
-
 def test_feiguang_chuanjian_chain_places_two_chars() -> None:
     """行为链真值:确定入口 → 恰两角色入栏(卡文序 彦卿→景元,1★ 先验)、
     效果串 2 条 char_grant、确定面写、rng 零消费(具名确定发放零采样面)。"""

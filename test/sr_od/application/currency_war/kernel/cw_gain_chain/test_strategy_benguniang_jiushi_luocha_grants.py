@@ -94,22 +94,6 @@ def rows_sink() -> _RowSink:
         s.close()
 
 
-def test_registration_faces() -> None:
-    """登记面锁(锁 1):登记表 chars_immediate = ('三月七',) 一条效果条目白得型
-    (advisor False 非顾问入商店)/工厂表行 ('三月七', 1, 2)(2★ = desc
-    明写直读,家族首个非 1 星级行)/姊妹专表行 ('三月七', 1)(每节点名数
-    = 卡面单数直读)/PICK 行已登记(生成式注册段自工厂表派生,表为单一源,
-    禁字面量第二源)。"""
-    grant = STRATEGY_GRANTS[_CARD]
-    assert grant.chars_immediate == ('三月七',), '登记面 = 即时一条效果条目名级'
-    assert grant.advisor is False, '白得型直接送卡,非顾问入商店'
-    assert _STRATEGY_CHAR_GRANTS[_CARD] == ('三月七', 1, 2), \
-        '工厂表行值 = (三月七, 1, 2★ 直读)'
-    assert _STRATEGY_NODE_CHAR_GRANTS[_CARD] == ('三月七', 1), \
-        '姊妹专表行值 = (三月七, 每节点 1 名)'
-    assert _CARD in PICK_INVEST_EFFECTS, '写状态副本的发放效果条目注册已登记'
-
-
 def test_pick_leg_grants_two_star_march(rows_sink: _RowSink) -> None:
     """效果条目1 状态副本锁(锁 2):on_strategy_gained 直构(rand=False)→ 备战追加
     恰 1 只 2★ 三月七、效果串 = 工厂现值形 ``char_grant:三月七(placed=

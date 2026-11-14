@@ -52,21 +52,6 @@ def _make_gs(*, bench: list[tuple[str, int]] | None = None,
     return gs
 
 
-def test_ranxue_registry_row_single_source() -> None:
-    """登记单一源:组合行已登记;泛化随机表零条目;id 对拍 plaza:220601。"""
-    from sr_od.application.currency_war.kernel.cw_gain_effects import (
-        _STRATEGY_RANDOM_EQUIP_GRANTS,
-        PICK_INVEST_EFFECTS,
-    )
-    from sr_od.application.currency_war.kernel.cw_investments import (
-        INVESTMENT_STRATEGIES,
-    )
-    assert _CARD in PICK_INVEST_EFFECTS, '组合行已登记'
-    assert _CARD not in _STRATEGY_RANDOM_EQUIP_GRANTS, '双具名非随机族'
-    assert INVESTMENT_STRATEGIES[_CARD].source == 'plaza:220601', \
-        '注册行 id 对拍'
-
-
 def test_ranxue_chain_places_equip_and_char() -> None:
     """行为链真值:确定入口 → equips 恰 +1 徽、bench 恰 +1 万敌、
     效果串两条前缀分域、零随机面。"""

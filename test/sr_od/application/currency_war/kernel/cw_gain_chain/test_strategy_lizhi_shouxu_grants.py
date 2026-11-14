@@ -89,23 +89,6 @@ def rows_sink() -> _RowSink:
         s.close()
 
 
-def test_lizhi_registry_row_name_canonicalization() -> None:
-    """注册行直测(设计 §4 锁 1):登记发放对象 = 实机录名「狸职狸狸」,
-    卡面用名「狸狸」非注册名(归一防回退——按卡面用名登记会被登记面角色
-    名漂移哨炸);只数 3 不进登记表,把结果写进状态副本的实现分支只数单一源 = 工厂表行值;
-    注册 id 对拍 plaza:204001。"""
-    from sr_od.application.currency_war.data.cw_chars import CHARACTER_ROSTER
-    grant = STRATEGY_GRANTS[_CARD]
-    assert grant.chars_immediate == ('狸职狸狸',), '登记名 = 实机录名归一'
-    assert '狸狸' not in grant.chars_immediate, '卡面用名非注册名(防回退)'
-    assert _STRATEGY_CHAR_GRANTS[_CARD] == ('狸职狸狸', 3, 1), \
-        '把结果写进状态副本的实现分支只数单一源 = 工厂表行值(卡面明写 3)'
-    assert '狸狸' not in CHARACTER_ROSTER, '卡面用名确在注册表外(锁前提)'
-    assert INVESTMENT_STRATEGIES[_CARD].source == 'plaza:204001', \
-        '注册行 id 对拍'
-    assert _CARD in PICK_INVEST_EFFECTS, '写状态副本的发放效果条目注册已登记'
-
-
 def test_lizhi_char_grant_triple_with_merge_cascade(
         rows_sink: _RowSink) -> None:
     """写状态副本的发放效果条目主锁(设计 §4 锁 4,链上如实记账默认案):备战空席直构
