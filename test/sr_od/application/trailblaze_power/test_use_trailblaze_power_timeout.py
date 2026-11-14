@@ -12,14 +12,18 @@
 2. 「执行超时」fail 边存在且指向「战斗超时收尾」节点(收尾接入不被静默拆掉)。
 3. 收尾节点自身有有限超时(死锁兜底,防二次观察窗变成无限等待)。
 4. 行为:收尾节点见挑战成功 → 补记次数 + 回调 + 尝试退出关卡;见战斗失败 → 不补记
-   但尝试退出;仍在战斗 → round_wait 继续观察,不点击。
+   不回调,委托共享失败继续件回挑战画面(超时语境不重试);仍在战斗 → round_wait
+   继续观察,不点击。
 """
+
+from types import SimpleNamespace
 
 import pytest
 from test.conftest import SrTestContext
 from test.harness.fixture_controller import fast_sleep
 
 from one_dragon.base.operation.operation import Operation
+from sr_od.application.trailblaze_power import use_trailblaze_power as use_tp_module
 from sr_od.application.trailblaze_power.use_trailblaze_power import UseTrailblazePower
 from sr_od.challenge_mission.battle_wait_windows import WAIT_RESULT_TIMEOUT_SECONDS
 from sr_od.interastral_peace_guide.guide_def import (
@@ -107,24 +111,37 @@ class TestWaitBattleResultTimeout:
         assert clicked == ['退出关卡按钮']
         assert result is not None
 
-    def test_cleanup_on_fail_exits_without_counting(
+    def test_cleanup_on_fail_delegates_resume(
             self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
-        """收尾节点看到战斗失败 → 不补记不回调,仍要点退出关卡清场。"""
+        """收尾节点看到战斗失败 → 委托共享失败继续件(超时语境不重试),不补记不回调。
+
+        失败画面已切新形态(无退出关卡按钮可点)——点退出关卡按钮的旧收尾在
+        新形态上找不到目标,改为委托共享件回挑战画面后再走收尾导航。"""
         monkeypatch.setattr(
             'sr_od.application.trailblaze_power.use_trailblaze_power.battle_screen_state.'
             'get_tp_battle_screen_state',
             lambda ctx, screen, **kw: '战斗失败')
-        op = self._make_op(test_context, on_battle_success=lambda t, p: pytest.fail('失败不应回调'))
+
+        class _StubResume:
+            def __init__(self, ctx):
+                pass
+
+            def execute(self):
+                return SimpleNamespace(success=True, status='已回挑战画面', data=None)
+
+        monkeypatch.setattr(use_tp_module, 'ResumeFromBattleFail', _StubResume)
+        op = self._make_op(test_context,
+                           on_battle_success=lambda t, p: pytest.fail('失败不应回调'))
         monkeypatch.setattr(op, 'screenshot', lambda: None)
-        clicked: list[str] = []
         monkeypatch.setattr(
             op, 'round_by_find_and_click_area',
-            lambda screen, sn, area_name, **kw: clicked.append(area_name) or object())
+            lambda screen, sn, area_name, **kw: pytest.fail('判负不应点退出关卡'))
 
-        op._wait_battle_result_timeout()
+        result = op._wait_battle_result_timeout()
 
         assert op.finish_times == 0
-        assert clicked == ['退出关卡按钮']
+        assert result.is_success
+        assert result.status == '超时判负关副本'
 
     def test_cleanup_keeps_waiting_mid_battle(
             self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -76,3 +76,8 @@ test_enter_game.py::test_version_promo_right_top_fallback
 # 2026-11-14 周本挑战核心登记:三段战斗态直呼各带 round_success(wait=1) 的
 # 轮间节流累计,实测 2.00s 贴线;登记防标准全量抖动过线
 test/sr_od/application/echo_of_war/test_challenge_echo_of_war_core.py::TestWaitAndTimeoutNodes::test_wait_counts_success_and_fail
+
+# 2026-11-14 开拓力失败适配登记:文件内首条承担 SrTestContext 冷初始化
+# (setup 2.06s),登记防标准全量首跑抖动过线
+test/sr_od/application/trailblaze_power/test_use_trailblaze_power_fail_adaptation.py::TestFailDelegateDirectCall::test_fail_below_threshold_retries
+
