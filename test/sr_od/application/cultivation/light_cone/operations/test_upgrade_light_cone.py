@@ -588,6 +588,41 @@ class TestUpgradeLightConeBranches:
             f'应点击确认框取消钮,find_clicks={state2["find_clicks"]}'
         )
 
+    def test_farm_in_dungeon_dialog_open_spin_bounded(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """确认框连续未打开的 WAIT 自旋必须有界:helper 的 WAIT 返回无重试
+        上限,原样返回会无限自旋——连等 4 轮后显式失败(现场留证由
+        save_screenshot 承担,测试内桩掉)。"""
+
+        def _fake_wait_click(op_self, screen, s_name, a_name, *args, **kwargs):
+            state['find_clicks'].append((s_name, a_name))
+            return op_self.round_wait(status=a_name, wait=1.5)
+
+        state = _install_script(monkeypatch, test_context, [set()], level=40)
+        _record_controller_clicks(monkeypatch, test_context, state)
+        op = _WatchedUpgradeLightCone(test_context, farm_dungeon=True,
+                                      use_fast_ticket=True)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        monkeypatch.setattr(UpgradeLightConeOp, 'round_by_find_and_click_area',
+                            _fake_wait_click)
+        monkeypatch.setattr(UpgradeLightConeOp, 'save_screenshot',
+                            lambda self, prefix='': '')
+        enter_running_state(op.ctx)
+        try:
+            with fast_sleep(op):
+                results = [op.farm_in_dungeon() for _ in range(4)]
+        finally:
+            reset_running_state(op.ctx, op)
+        assert all(r.result == OperationRoundResultEnum.WAIT
+                   for r in results[:3]), (
+            f'前三轮应 WAIT 等待确认框,results={[(r.status, r.result) for r in results]}'
+        )
+        assert not results[3].is_success, (
+            f'连等超限应显式失败,status={results[3].status}'
+        )
+        assert '连续未打开' in str(results[3].status)
+
     def test_manual_fight_returns_to_world_and_reenters(
         self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
     ) -> None:
