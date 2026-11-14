@@ -34,8 +34,7 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-from sr_od.application.currency_war.data.cw_chars import get_char
-from sr_od.application.currency_war.data.cw_factions import FACTIONS
+from sr_od.application.currency_war.data.cw_chars import chars_by_faction, get_char
 from sr_od.application.currency_war.kernel import cw_intention, cw_invest_channels
 from sr_od.application.currency_war.kernel.cw_comps import (
     COMP_LIBRARY,
@@ -97,6 +96,9 @@ def _board_members(kind: str, comp) -> list[str]:
 
     每个档 0 键从注册表成员名单顺序取「自报该键」成员至 need 名
     (half = ⌈目标/2⌉,formed = 目标);零羁绊线(反甲白厄)退空板。
+    成员候选 = chars_by_faction 注册表自报派生(factions+schools 双轴);
+    键不在羁绊注册表(旧赛季名)时返回空候选——板面该键 0 命中,重跑
+    基线时如实反映当期注册表。
     """
     if kind == 'zero':
         return list(_ZERO_MEMBERS)
@@ -104,7 +106,7 @@ def _board_members(kind: str, comp) -> list[str]:
     for bond, tier in comp.core_faction_reqs.items():
         need = (tier + 1) // 2 if kind == 'half' else tier
         cnt = 0
-        for name in FACTIONS[bond].members(include_schools=True):
+        for name in (c.name for c in chars_by_faction(bond)):
             if name in out:
                 continue
             if bond not in _self_bonds(name):

@@ -127,7 +127,7 @@ def test_independent_counts_and_unknown_tag_ignored() -> None:
     """锁 6c(独立羁绊计入 + 未知名不计):6 独立 1 人各计 1 激活
     (tiers=(1,),与左面板显示同口径)——6 独立 + 治疗 2 = 8 武装成功
     即独立计入成立的直接证据(独立不计则最多 2 激活必不武装);
-    FACTIONS 外未知名(幻影羁绊 99 人)不计入激活数(未知 = 不可判,
+    羁绊注册表外未知名(幻影羁绊 99 人)不计入激活数(未知 = 不可判,
     禁猜)。"""
     gs = _gs()
     gs.observe(gs.board, {**_BOARD_ACT8, '幻影羁绊': 99}, sig=_SIG_OBS)
