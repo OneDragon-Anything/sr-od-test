@@ -330,7 +330,9 @@ class TestUpgradeLightConeBranches:
             f'授权流不得触发取消路径,clicks={clicks}'
         )
         assert _has_click_in(clicks, test_context, _LC_ASC, '按钮-快速升级')
-        assert state['level_reads'] == 1, '满级态收尾应恰好读取一次等级'
+        assert state['level_reads'] == 2, (
+            '入口起始等级与满级收尾各读一次'
+        )
 
     def test_popup_cancelled_without_authorization_capped(
         self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
@@ -365,7 +367,9 @@ class TestUpgradeLightConeBranches:
             (_LC_TAB, '按钮-强化'),
             (_LC_ASC, '按钮-关闭X'),
         ], f'find+click 序列(开晋阶/关X收尾)漂移:{state["find_clicks"]}'
-        assert state['level_reads'] == 1, '判停等级应恰好读取一次'
+        assert state['level_reads'] == 2, (
+            '入口起始等级与判停收尾各读一次'
+        )
 
     def test_ticket_farm_full_chain_returns_to_loop(
         self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
