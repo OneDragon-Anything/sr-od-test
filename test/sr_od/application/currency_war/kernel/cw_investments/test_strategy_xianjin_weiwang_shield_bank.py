@@ -1,18 +1,20 @@
-"""现金为王(id 250301)注册面+桥记账锁(cw_investments 分目录镜像;卖全场族
-素出售第三张 + 护盾记忆量伴生数值,先例 = 同目录 test_strategy_datong_entry.py
-条目锁 / kernel/test_effect_inventory.py 桥行为锁——宿主两文件均超行数线,
-登记面新锁落本镜像目录新文件)。
+"""现金为王(id 250301)卖全场通道桥记账锁(cw_investments 分目录镜像;
+kernel/test_effect_inventory.py 桥行为锁同源)。
 
-测试面依据 = 原稿锁面(§ 号 = 原稿节序)§3 锁面(原稿评审锁 无需用户决定 7/7;卡面官方原文 cw_invest_data.py:200 逐字:
+测试面依据 = 原稿锁面(§ 号 = 原稿节序)§3 锁面(卡面官方原文 cw_invest_data.py:200 逐字:
 「出售场上和备战席的所有角色，之后每场进入战斗时，为我方前台提供护盾，
 护盾量等同于该次出售角色所获得总金币数*1000。」):
 
-- 条目锁:五元组 + 素出售载体 + duties=predict 单置(track=False,裁决点 7)
-  + 桥侧常量键×id 对拍(防两处 '250301' 漂移);
 - 桥记账锁:counters['shield_bank'] = 出售退款合计×1000(系数以测试字面
   量 1000 独立对拍,不引生产常量防同源漂移;键集断言恰 {'shield_bank'},
   固化 track=False 下无 bump_key 噪声键);空场退款零 → 无该键;
 - fail-closed 锁:出售域未全读(partial_read)→ 退款零写入 ∧ 护盾零记账。
+
+(v4.7 换季机制桥解耦:现金为王 V4.7 退场,注册行条目锁随卡删除;
+记账/fail-closed 两锁测的是 apply_board_rewrite 卖全场通道行为
+(spec.id == CASH_KING_SPEC_ID 判别的记账桥 = 活代码),载荷直构同形
+EffectSpec 注入不查注册表——示范 = test_effect_inventory 板面重写
+解耦同款。注册表条目重采时直构值可删。)
 """
 from __future__ import annotations
 
@@ -22,11 +24,13 @@ from sr_od.application.currency_war.kernel.cw_economy import (
 )
 from sr_od.application.currency_war.kernel.cw_effect_inventory import (
     BOARD_REWRITE_SELL_ALL,
-    CASH_KING_SHIELD_PER_GOLD,
     CASH_KING_SPEC_ID,
+    BattlefieldEffect,
     CounterKey,
     DurationKind,
+    DutyFlags,
     EffectKind,
+    EffectSpec,
     TriggerKind,
     apply_board_rewrite,
 )
@@ -39,14 +43,18 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
     GameState,
     Unit,
 )
-from sr_od.application.currency_war.kernel.cw_investments import (
-    STRATEGY_EFFECTS,
-    _validate_strategy_effects,
-)
-
-_CARD = '现金为王'
 
 _SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep', mode='read')
+
+#: 现金为王载荷直构(机制桥 fixture 解耦:原取注册表['现金为王'],该卡
+#: V4.7 退场;记账桥按 spec.id == CASH_KING_SPEC_ID 判别,id/payload
+#: 同形保持,桥行为锁面不变)。
+_SELL_ALL_SPEC = EffectSpec(
+    id=CASH_KING_SPEC_ID, name='现金为王', trigger=TriggerKind.INSTANT,
+    duration=DurationKind.WHILE_HELD, category=EffectKind.BATTLEFIELD,
+    payload=BattlefieldEffect(board_rewrite=BOARD_REWRITE_SELL_ALL),
+    duties=DutyFlags(predict=True),
+)
 
 
 def _u(cid: str, star: int = 1) -> Unit:
@@ -66,30 +74,6 @@ def _read_board(gs: GameState, *, bench_read: bool) -> None:
             + [BenchSlot(kind='empty')] * 8, capacity=9), sig=_SIG_OBS)
 
 
-def test_xianjin_weiwang_effect_spec_entry() -> None:
-    """锁 1(条目锁):五元组 + 素出售载体 + duties=predict 单置 + 桥侧
-    常量键×id 对拍;构建校验复跑不炸(孤儿键/id 双匹配漂移哨在役)。"""
-    _validate_strategy_effects()
-    spec = STRATEGY_EFFECTS[_CARD]
-    assert spec.id == '250301', 'id 对拍(checklist :294 三方一致)'
-    assert spec.trigger is TriggerKind.INSTANT, '出售+记账选卡时点一次结清'
-    assert spec.duration is DurationKind.WHILE_HELD, \
-        '护盾在役语义,实例随局存活(裁决点 1)'
-    assert spec.category is EffectKind.BATTLEFIELD
-    assert spec.payload.board_rewrite == BOARD_REWRITE_SELL_ALL, \
-        '素出售语义(卡文无发牌句,不入 sim 发牌判据集)'
-    assert spec.duties is not None and spec.duties.predict is True, \
-        'predict=出售后板面空,部署/买牌对账须预知'
-    assert spec.duties.track is False, \
-        'track=False(裁决点 7):记账走桥内直写,免 bump_key 噪声键'
-    assert spec.pending is False
-    # 桥侧判别键×id 对拍(两处 '250301' 漂移哨,同 HYPEREMIT_SPEC_ID 键×id
-    # 测试直锁先例)
-    assert spec.id == CASH_KING_SPEC_ID
-    assert CASH_KING_SHIELD_PER_GOLD == 1000, \
-        '卡文明写换算系数(数值漂移即红)'
-
-
 def test_xianjin_weiwang_bridge_shield_bank_recorded() -> None:
     """锁 2(桥记账锁):register → apply_board_rewrite → 实例
     counters['shield_bank'] == sell_refund 合计×1000(系数按测试字面 1000
@@ -100,9 +84,9 @@ def test_xianjin_weiwang_bridge_shield_bank_recorded() -> None:
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     _read_board(gs, bench_read=True)
     gs.observe(gs.gold, 10, sig=_SIG_OBS)
-    entry = gs.effects.register_strategy(STRATEGY_EFFECTS[_CARD],
+    entry = gs.effects.register_strategy(_SELL_ALL_SPEC,
                                          acquired_key=(1, 1))
-    report = apply_board_rewrite(gs, STRATEGY_EFFECTS[_CARD])
+    report = apply_board_rewrite(gs, _SELL_ALL_SPEC)
     assert report is not None
     units = ([Unit(char_id='现金为王测试甲', star=1)]
              + [Unit(char_id='现金为王测试乙', star=2)])
@@ -121,9 +105,9 @@ def test_xianjin_weiwang_bridge_shield_bank_recorded() -> None:
         front_slots=[None] * 4, back_slots=[None] * 6), sig=_SIG_OBS)
     gs2.observe(gs2.bench, BenchView(
         slots=[BenchSlot(kind='empty')] * 9, capacity=9), sig=_SIG_OBS)
-    entry2 = gs2.effects.register_strategy(STRATEGY_EFFECTS[_CARD],
+    entry2 = gs2.effects.register_strategy(_SELL_ALL_SPEC,
                                            acquired_key=(1, 1))
-    report2 = apply_board_rewrite(gs2, STRATEGY_EFFECTS[_CARD])
+    report2 = apply_board_rewrite(gs2, _SELL_ALL_SPEC)
     assert report2 is not None and report2.refund_gold == 0
     assert CounterKey.SHIELD_BANK not in entry2.counters, \
         '空场零记账(fail-closed 同闸:退款零 → 护盾零)'
@@ -137,9 +121,9 @@ def test_xianjin_weiwang_fail_closed_partial_read() -> None:
     gs = GameState(schema_version=GAME_STATE_SCHEMA_VERSION)
     _read_board(gs, bench_read=False)
     gs.observe(gs.gold, 10, sig=_SIG_OBS)
-    entry = gs.effects.register_strategy(STRATEGY_EFFECTS[_CARD],
+    entry = gs.effects.register_strategy(_SELL_ALL_SPEC,
                                          acquired_key=(1, 1))
-    report = apply_board_rewrite(gs, STRATEGY_EFFECTS[_CARD])
+    report = apply_board_rewrite(gs, _SELL_ALL_SPEC)
     assert report is not None
     assert report.partial_read is True, 'bench 未读 → 输入不完整(§6.3)'
     assert report.refund_gold > 0, '已读面退款留证据(partial 证据形态)'

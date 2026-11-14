@@ -10,10 +10,12 @@ test_strategy_pick_gudinglicai.py 跨测试模块复用声明)。
 污染),本目录锁 3b 必红(红验在批内执行在案)。
 
 - 锁 3(全链主锁):decl 分派选大裁员 → 出售面(deployed/bench 清空
-  + 基础公式退款恰 3)+ 刷效果条目(free_refresh_left +6)一拍落地;
+  + 基础公式退款恰 3)+ 刷效果条目(free_refresh_left +9,V4.7 官方
+  数值 6→9 对照源 = invest_v4.7.json)一拍落地;
 - 锁 3b(发牌判据细分锁):大裁员 ∉ 发牌判据集 → bench 零新增单位
-  (零假发牌);人力重组路径零扰 = 存量锁 test_sim_sell_all_deal.py
-  原样绿。
+  (零假发牌);判据集断言 = 派生恒等式(禁硬编码名单)——v4.7 换季
+  后人力重组退场,发牌族注册卡面暂空(判据集 = 空集是合法派生态,
+  通道代码活,重采发牌卡后自动跟随)。
 """
 from __future__ import annotations
 
@@ -88,7 +90,7 @@ def test_pick_dacaiyuan_full_chain_sell_and_burst() -> None:
         assert int(gs.gold.value or 0) - gold_before == expected_refund, \
             '退款 = 板面全额公式值(单一源 cw_economy;×2 修饰缺口低估' \
             '申报,观察覆盖)'
-        assert gs.free_refresh_left.value == 6, '刷新发放 +6(只登记不写状态的实现分支 burst 桥)'
+        assert gs.free_refresh_left.value == 9, '刷新发放 +9(V4.7 官方值 6→9)'
         assert _bench_units(gs) == [], 'bench 清空且零新增(素出售无发牌面)'
     finally:
         uninstall_backend()
@@ -97,13 +99,24 @@ def test_pick_dacaiyuan_full_chain_sell_and_burst() -> None:
 # ==================================================== 锁 3b:发牌判据细分
 
 def test_pick_dacaiyuan_zero_deal_leg_criterion_split() -> None:
-    """发牌判据细分锁:大裁员不入发牌判据集(素出售语义值)→ sim 局
-    选大裁员 bench 零新增单位。撤销细分(判据回退素出售值过滤)则素
-    出售卡自动入集、发牌效果条目误发 5 只 2★,本锁必红。"""
+    """发牌判据细分锁:判据集 = 注册表派生恒等式(禁硬编码名单)∧ 大裁员
+    不入集(素出售语义值)→ sim 局选大裁员 bench 零新增单位。撤销细分
+    (判据回退素出售值过滤)则素出售卡自动入集、发牌效果条目误发
+    5 只 2★,本锁必红。"""
+    from sr_od.application.currency_war.kernel.cw_effect_inventory import (
+        BOARD_REWRITE_SELL_ALL_DEAL,
+    )
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        STRATEGY_EFFECTS,
+    )
+    derived = frozenset(
+        n for n, spec in STRATEGY_EFFECTS.items()
+        if str(getattr(getattr(spec, 'payload', None), 'board_rewrite', '')
+               or '') == BOARD_REWRITE_SELL_ALL_DEAL)
+    assert derived == cw_sim_backend.SELL_ALL_REWRITE_STRATEGIES, \
+        '判据集 = 注册表派生(禁硬编码名单)'
     assert '大裁员' not in cw_sim_backend.SELL_ALL_REWRITE_STRATEGIES, \
         '素出售卡不入发牌判据集(语义值细分)'
-    assert '人力重组' in cw_sim_backend.SELL_ALL_REWRITE_STRATEGIES, \
-        '具发牌效果条目卡在集(判据派生前提,存量路径零扰)'
     b = _backend(7)
     try:
         _drive_to_strategy_offer(b)

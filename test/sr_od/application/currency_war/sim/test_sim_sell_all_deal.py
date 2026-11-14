@@ -16,18 +16,36 @@ False 支链尾,decl 分派形态可达;直调上报函数不经分派层 = 存�
   零触发(分派层独占),bench 清空后无凭空补员;
 - 空桶防御:注册表漂移态(某费用档桶空)→ 该档零写 + 不炸链,余档
   照发(on_env_gained 随机支同款语义)。
+
+(v4.7 换季机制桥解耦:载荷卡人力重组 V4.7 退场,直构同形 EffectSpec
+经 monkeypatch 注入注册表与判据集——出售发牌是通用通道
+(apply_strategy_pick_sell_all_deal 判据分派非单卡特判,发牌序列 =
+模块常量 SELL_ALL_DEAL_TIERS),通道行为锁面不变。示范 =
+test_effect_inventory 板面重写解耦同款;V4.7 重采发牌卡后注入可删。)
 """
 from __future__ import annotations
 
 from types import SimpleNamespace
 
+import pytest
+
+import sr_od.application.currency_war.kernel.cw_investments as cw_investments
 from sr_od.application.currency_war.data.cw_chars import (
-    get_char,
     chars_by_cost,
+    get_char,
 )
 from sr_od.application.currency_war.kernel.cw_action_report import (
     report_action_pick_invest_strategy_param,
     report_action_start_battle_param,
+)
+from sr_od.application.currency_war.kernel.cw_effect_inventory import (
+    BOARD_REWRITE_SELL_ALL_DEAL,
+    BattlefieldEffect,
+    DurationKind,
+    DutyFlags,
+    EffectKind,
+    EffectSpec,
+    TriggerKind,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
@@ -57,6 +75,26 @@ _SIG_OBS = ChannelSig(family='obs', actor='TestSigWriter')
 _CFG = RunConfig(selected_difficulty='A8', enemy_difficulty=108)
 
 _OPTS = ['人力重组', '躺平', '淘金客']
+
+#: 人力重组载荷直构(机制桥 fixture 解耦:原卡 V4.7 退场;id 保持
+#: '102801' 同形,出售面走 kernel 登记分支 apply_board_rewrite 桥,
+#: 发牌面走 sim 分派判据集——两通道只消费 payload.board_rewrite)。
+_DEAL_SPEC = EffectSpec(
+    id='102801', name='人力重组', trigger=TriggerKind.INSTANT,
+    duration=DurationKind.ONCE, category=EffectKind.BATTLEFIELD,
+    payload=BattlefieldEffect(board_rewrite=BOARD_REWRITE_SELL_ALL_DEAL),
+    duties=DutyFlags(predict=True),
+)
+
+
+@pytest.fixture
+def _decouple_deal_card(monkeypatch):
+    """出售发牌通道解耦:直构 spec 注入注册表(登记分支出售面)+
+    判据集注入(sim 分派发牌面);monkeypatch 测试后自动还原。"""
+    monkeypatch.setitem(cw_investments.STRATEGY_EFFECTS, '人力重组',
+                        _DEAL_SPEC)
+    monkeypatch.setattr(cw_sim_backend, 'SELL_ALL_REWRITE_STRATEGIES',
+                        frozenset({'人力重组'}))
 
 
 def _backend(seed: int = 7) -> SimBackend:
@@ -117,7 +155,7 @@ def _pick_card(b: SimBackend, name: str) -> None:
 
 # ============================================================ 锁 1:全链主锁
 
-def test_sell_all_deal_full_chain_decl_dispatch() -> None:
+def test_sell_all_deal_full_chain_decl_dispatch(_decouple_deal_card) -> None:
     """decl 分派全链:选人力重组 → 出售面(场清空+退款)+ 发牌面(恰
     5 只全 2★,3费×1/2费×2/1费×2,抽名 ∈ 授予出口现值桶)一拍落地;
     同 seed 重放逐位一致(发牌 rng = 流键派生,sim 确定性契约)。"""
@@ -164,7 +202,7 @@ def test_sell_all_deal_full_chain_decl_dispatch() -> None:
 
 # ============================================================ 锁 2:先卖后抽时序
 
-def test_sell_all_deal_draws_after_sell_not_before() -> None:
+def test_sell_all_deal_draws_after_sell_not_before(_decouple_deal_card) -> None:
     """先卖后抽时序(行为面):预种场上同名 2★×3(held = 9 = 固定副本
     数,该名剩余 = 0)→ 选卡 → 发牌仍可发出该名。出售前该名不在桶
     (授予出口过滤剩余 = 0),出售后 held 归零回全集——种子强制首抽
@@ -215,7 +253,7 @@ def test_sell_all_deal_draws_after_sell_not_before() -> None:
 
 # ============================================================ 锁 3:重入防
 
-def test_sell_all_deal_no_repeat_on_second_pick() -> None:
+def test_sell_all_deal_no_repeat_on_second_pick(_decouple_deal_card) -> None:
     """同局第二次 pick(选另一张卡)零重复发放:呈现一次性标志位落地拍消费,
     无一次性标志位的再次分派零写(xp/streak 效果条目同款防重放口径)。"""
     b = _backend(7)
@@ -235,7 +273,7 @@ def test_sell_all_deal_no_repeat_on_second_pick() -> None:
 
 # ============================================================ 锁 4:直调形态零扰
 
-def test_sell_all_deal_absent_on_direct_report_form() -> None:
+def test_sell_all_deal_absent_on_direct_report_form(_decouple_deal_card) -> None:
     """直调上报形态(存量直调形,不喂声明 = 不经后端分派层):出售面照走
     (kernel 获得链,场清空)而发牌效果条目零触发——发牌唯一落点 = 分派层,
     直调路径 bench 清空后无凭空补员(存量直调形态行为零变化)。"""
@@ -263,7 +301,8 @@ def test_sell_all_deal_absent_on_direct_report_form() -> None:
 
 # ============================================================ 锁 5:空桶防御
 
-def test_sell_all_deal_empty_bucket_zero_write_no_crash(monkeypatch) -> None:
+def test_sell_all_deal_empty_bucket_zero_write_no_crash(
+        monkeypatch, _decouple_deal_card) -> None:
     """空桶防御(注册表漂移态):某费用档桶空 → 该档零写 + 不炸链,
     余档照发(on_env_gained 随机支同款语义)。漂移态以授予出口打桩
     模拟(出口现值恒非空,直构不可达)。"""

@@ -1,10 +1,13 @@
-"""效率员工奖只登记不写状态的实现分支测试(镜像 src = kernel/cw_gain_chain.py 的
+"""钻石恒永久只登记不写状态的实现分支测试(镜像 src = kernel/cw_gain_chain.py 的
 gain_invest_strategy 登记分支 × kernel/cw_investments.py 的
-STRATEGY_EFFECTS 效率员工奖条目;战力类零响应族第 8 条)。
+STRATEGY_EFFECTS 钻石恒永久条目;战力类零响应族)。
 
 测试面依据 = 原稿锁面(定稿)§4 锁 2。构造沿现役获得链测试先例
 (cw_gain_chain/test_gain_invest_strategy_perfect_start_reg.py 同款
 helpers 副本,债文件禁追加)。
+(v4.7 换季载荷置换:原锁效率员工奖 V4.7 退场,换同形存活卡
+钻石恒永久——UNIT_BUFF 零响应登记(duties 三位全 False + pending
+False + UnitBuffRef 载荷),四桥 no-op 锁面与载荷无关不变。)
 """
 from __future__ import annotations
 
@@ -29,7 +32,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 _SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep')
 _LSIG = ChannelSig(family='logic_action', actor='CwGainChain', mode='compute')
 
-_CARD = '效率员工奖'
+_CARD = '钻石恒永久'
 
 
 def _make_gs() -> GameState:
