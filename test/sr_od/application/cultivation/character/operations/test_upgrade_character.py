@@ -180,7 +180,9 @@ class TestUpgradeCharacterEntryStates:
             (_DETAIL, '按钮-升级'),
             (_ASCEND, '点击区-关闭横幅'),
         ], f'find+click 序列(开界面/关升级横幅)漂移:{state["find_clicks"]}'
-        assert state['level_reads'] == 0, '满级路径不应读等级'
+        assert state['level_reads'] == 1, (
+            '起始等级读数(首入晋阶界面即读,此路径原不读等级)'
+        )
 
     def test_already_max_entry_stays_zero_click(
         self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
@@ -270,7 +272,9 @@ class TestUpgradeCharacterFillGeneric:
         assert state['find_clicks'][-1] == (_ASCEND, '按钮-返回箭头'), (
             '判停后应经返回箭头收尾'
         )
-        assert state['level_reads'] == 1, '判停等级应恰好读取一次'
+        assert state['level_reads'] == 2, (
+            '起始等级与判停等级各读一次'
+        )
 
 
 class TestUpgradeCharacterFarmRoute:
@@ -309,7 +313,9 @@ class TestUpgradeCharacterFarmRoute:
             (_ASCEND, '点击区-关闭横幅'),
         ], f'刷取链 find+click 序列漂移:{state["find_clicks"]}'
         assert op._farm_rounds == 1, f'应恰好刷取 1 次,实际 {op._farm_rounds}'
-        assert state['level_reads'] == 0, '满级路径不应读等级'
+        assert state['level_reads'] == 1, (
+            '起始等级读数(首入晋阶界面即读,此路径原不读等级)'
+        )
 
     def test_farm_times_max_uses_fill_button(
         self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
@@ -396,7 +402,7 @@ class TestUpgradeCharacterFarmRoute:
         「开拓力补充弹窗」即置判停标志,以 POWER_BLOCKED 交返回分类原路
         清场(取消弹窗→关副本→回养成界面→POWER_CAPPED 收尾)。"""
         for node_name in ('confirm_ticket_farm', 'manual_fight'):
-            state = _install_script(
+            _install_script(
                 monkeypatch, test_context,
                 [{('开拓力补充弹窗', '标题-开拓力补充弹窗')}], level=0)
             _record_controller_clicks(monkeypatch, test_context)
@@ -416,3 +422,48 @@ class TestUpgradeCharacterFarmRoute:
                 f'{node_name} 守卫应置判停标志与 POWER_CAPPED 停因'
             )
             assert op._farm_rounds == 0, f'{node_name} 判停路径不得重复计数'
+
+    def test_entry_leftover_routes_cleanup(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """入口残留现场接管:刷取链遗留弹窗/副本画面在场时入口以 LEFTOVER
+        交返回养成界面清场,不再快速失败。"""
+        _install_script(
+            monkeypatch, test_context,
+            [{('开拓力补充弹窗', '标题-开拓力补充弹窗')}], level=0)
+        _record_controller_clicks(monkeypatch, test_context)
+        op = _WatchedUpgradeCharacter(test_context, farm_dungeon=True)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        enter_running_state(op.ctx)
+        try:
+            with fast_sleep(op):
+                result = op.check_entry()
+        finally:
+            reset_running_state(op.ctx, op)
+        assert result.is_success and result.status == 'LEFTOVER', (
+            f'残留现场应接管为 LEFTOVER,status={result.status}'
+        )
+
+    def test_back_to_ascend_cancels_leftover_popup(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """返回养成界面清场:开拓力补充弹窗残留 → 点其取消重入分类。"""
+        state = _install_script(
+            monkeypatch, test_context,
+            [{('开拓力补充弹窗', '标题-开拓力补充弹窗')}], level=0)
+        _record_controller_clicks(monkeypatch, test_context)
+        op = _WatchedUpgradeCharacter(test_context, farm_dungeon=True)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        enter_running_state(op.ctx)
+        try:
+            with fast_sleep(op):
+                result = op.back_to_ascend()
+        finally:
+            reset_running_state(op.ctx, op)
+        assert not result.is_success \
+            and '开拓力补充弹窗已关' in str(result.status), (
+            f'补充弹窗残留应点取消重入分类,status={result.status}'
+        )
+        assert ('开拓力补充弹窗', '按钮-取消') in state['find_clicks'], (
+            f'应点击补充弹窗取消钮,find_clicks={state["find_clicks"]}'
+        )
