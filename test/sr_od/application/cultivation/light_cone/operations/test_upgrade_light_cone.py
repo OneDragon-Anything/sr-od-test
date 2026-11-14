@@ -188,9 +188,12 @@ def _install_script(
 
     def _fake_check_screen(self, screen=None, screen_name_list=None,
                            crop_first=False):
+        # 按真实契约(get_match_screen_name):命中集合内画面返回画面名,
+        # 无匹配/整帧识别失败返回 None——桩不得返回集合首位等替身值,
+        # 失真桩会让测试走与真机不同的分支
         now = state['screen_now']
         if screen_name_list is not None and now not in screen_name_list:
-            return screen_name_list[0]
+            return None
         return now
 
     def _fake_level(self, screen_name: str | None = None) -> int | None:
@@ -826,19 +829,6 @@ class TestUpgradeLightConeBranches:
         _FakeSubOp.executed = []
         clicks = _record_controller_clicks(monkeypatch, test_context, state,
                                            advance_round_on_squad_click=True)
-        # 战斗期画面级判定按真实语义返回 None(战斗画面不在预期集合内;
-        # 默认桩的「返回集合首位」会让返回分类误走关副本分支,不真实)
-        def _realistic_check(self, screen=None, screen_name_list=None,
-                             crop_first=False):
-            now = state['screen_now']
-            if now not in (_WORLD, _DETAIL, _LC_TAB, _CHALLENGE):
-                return None
-            if screen_name_list is not None and now not in screen_name_list:
-                return None
-            return now
-
-        monkeypatch.setattr(UpgradeLightConeOp, 'check_and_update_current_screen',
-                            _realistic_check)
         # 战斗时钟:返回分类在战斗态每轮探测一次退出关卡,计满 35 轮后把
         # 剧本切到结算轮(模拟整场战斗 > 旧重试预算容忍上限)
         battle_clock = {'n': 0}

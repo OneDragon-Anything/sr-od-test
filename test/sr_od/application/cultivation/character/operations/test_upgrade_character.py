@@ -140,11 +140,13 @@ def _install_script(
 
     def _fake_check_screen(self, screen=None, screen_name_list=None,
                            crop_first=False):
+        # 按真实契约(get_match_screen_name):命中集合内画面返回画面名,
+        # 无匹配/整帧识别失败返回 None(op 据此走逐锚兜底分支)——桩不得
+        # 返回集合首位等替身值,失真桩会让测试走与真机不同的分支
         now = state['screen_now']
-        # None(整帧识别失败)原样透传,走 op 的逐锚兜底分支
         if screen_name_list is not None and now is not None \
                 and now not in screen_name_list:
-            return screen_name_list[0]
+            return None
         return now
 
     def _fake_static_find(ctx_arg, screen, s_name, a_name, *args, **kwargs):
