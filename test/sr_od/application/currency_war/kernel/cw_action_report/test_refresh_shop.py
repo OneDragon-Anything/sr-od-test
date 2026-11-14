@@ -27,7 +27,7 @@ from test.sr_od.application.currency_war._cw_helpers import (
 )
 from test.sr_od.application.currency_war._cw_helpers import cw4_gs
 
-from sr_od.application.currency_war.data.cw_chars import CHARACTERS
+from sr_od.application.currency_war.data.cw_chars import CHARACTER_ROSTER
 from sr_od.application.currency_war.data.cw_shop_odds import REFRESH_PROB
 from sr_od.application.currency_war.kernel import cw_shop_deal
 from sr_od.application.currency_war.kernel.cw_action_report import (
@@ -476,7 +476,7 @@ def test_report_random_leg_deterministic() -> None:
                                          if v > 0}, '基线概率条随载荷'
         for slot in payload.cards:
             if slot.card is not None:
-                assert slot.card.name in CHARACTERS
+                assert slot.card.name in CHARACTER_ROSTER
                 assert slot.card.star == 1, '表外直出恒 1★(U12 + 注册表分支不触发)'
         assert gs.shop.source == 'logic_rand', '随机态专用通道'
         assert gs.shop.evidence == 'refresh_random_sample'

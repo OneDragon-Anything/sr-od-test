@@ -220,13 +220,19 @@ def test_same_slot_idempotent_no_write() -> None:
 
 
 def test_trailblazer_form_by_target_row() -> None:
-    """开拓者按目标排定形态:bench 欢愉形态 → 前排 = 记忆形态。"""
+    """开拓者按目标排定形态:bench 欢愉形态 → 前排 = 记忆形态。
+
+    (v4.7 中间态:注册表单条目开拓者,形态表清空 → 归一返 None =
+    保持原身份〔cw_exec_state.trailblazer_row_identity 基名直通语义〕;
+    本测试原锁的旧双形态归一机器随羁绊消费点迁移批删除,挂账板既定。)"""
     from sr_od.application.currency_war.kernel.cw_exec_state import (
         trailblazer_row_identity,
     )
-    front_id, _ = trailblazer_row_identity('开拓者•欢愉', 'front')
+    ident = trailblazer_row_identity('开拓者•欢愉', 'front')
+    assert ident is None, \
+        '形态表清空态归一返 None(保持原身份);旧双形态归一随羁绊批删'
     gs = _gs([_unit('开拓者•欢愉'), None], [None] * 4)
     out = report_action_move_unit_param(
         gs, CwActionMoveUnitParam('bench', 0, 'front', 1), _SIG_ACT)
     assert out.applied is True
-    assert gs.deployed.value.front_slots[0].char_id == front_id
+    assert gs.deployed.value.front_slots[0].char_id == '开拓者•欢愉'

@@ -19,6 +19,7 @@ from sr_od.application.currency_war.data.cw_chars import (
     CHARACTER_ROSTER,
     CHARACTERS,
     EXPERT_CHARS,
+    get_char,
     chars_by_cost,
 )
 from sr_od.application.currency_war.data.cw_dropped_names import (

@@ -102,9 +102,15 @@ def test_bronya_registry_dual_bond_registration() -> None:
     chars_by_faction 双边命中——贝洛伯格域含她(本批修正新增,修正前
     仅 schools 命中燃血域)、燃血域仍含她(schools 命中,采样域池集合同值,
     去重保单次)。池规模只记注释零断言值(贝洛伯格域现值 6 名/燃血域
-    现值 8 名,随版本正常变动)。"""
-    from sr_od.application.currency_war.data.cw_chars import CHARACTERS
-    bronya = CHARACTERS['布洛妮娅']
+    现值 8 名,随版本正常变动)。
+
+    (v4.7 中间态:布洛妮娅已确认掉出注册表,本文件选边机制族红 =
+    挂账板既定死机制族「随羁绊消费点迁移批删除」;此处机械面仅把
+    dict 下标残留改 get_char 接口,红形态由 TypeError 转干净断言。)"""
+    from sr_od.application.currency_war.data.cw_chars import get_char
+    bronya = get_char('布洛妮娅')
+    assert bronya is not None, \
+        '布洛妮娅应在册(v4.7 确认掉出:挂账板死机制族,本文件随羁绊消费点迁移批删除)'
     assert bronya.factions == ('贝洛伯格',)
     assert bronya.schools == ('燃血',)
     assert bronya.independent == '大守护者'

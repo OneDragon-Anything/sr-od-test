@@ -125,11 +125,14 @@ def test_validator_judge_char_drift_raises(monkeypatch) -> None:
 
 def test_validator_judge_cost_mismatch_raises(monkeypatch) -> None:
     """构建校验(具名行判据费用一致性哨):判据角色注册费用 ≠ 判据费用
-    → ValueError(游戏改费漂移产生永假判据;黑塔现值 cost=1 与判据 1
-    相符 = 现网通过,本负例直构失配值)。"""
-    assert get_char(_JUDGE).cost == 1, \
-        '前置:判据角色现值 cost=1(与判据费用相符,现网通过)'
+    → ValueError(游戏改费漂移产生永假判据)。
+
+    (v4.7 中间态:原判据角色「黑塔」已确认掉出,注册费用无从对拍——
+    失配负例改用现役判据角色「符玄」直构〔注册 3 费,负例判 4〕,哨机器
+    锁面不变;迁移批清偿登记时按新判据对重钉。)"""
+    assert get_char('符玄').cost == 3, \
+        '前置:现役判据角色符玄注册 cost=3(与负例判据 4 失配)'
     monkeypatch.setitem(STRATEGY_MERGE_GRANTS, _CARD_NAMED,
-                        (3, 4, _JUDGE, _REWARD_NAMED))
+                        (3, 4, '符玄', _REWARD_NAMED))
     with pytest.raises(ValueError, match='判据费用失配'):
         _validate_strategy_merge_grants()

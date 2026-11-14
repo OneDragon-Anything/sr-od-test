@@ -33,8 +33,10 @@ from __future__ import annotations
 from test.sr_od.application.currency_war._cw_helpers import cw4_bview
 
 from sr_od.application.currency_war.data.cw_chars import (
-    CHARACTERS,
     char_first_faction,
+)
+from sr_od.application.currency_war.data.cw_dropped_names import (
+    GUARD_CHARACTER_ROSTER,
 )
 from sr_od.application.currency_war.kernel.cw_action_report import (
     report_action_move_unit_param,
@@ -152,9 +154,11 @@ def test_system_card_faction_count_identity_and_board_max():
 
 def test_char_first_faction_derivation():
     """主阵营派生:命中 → factions[0];注册但无阵营登记 = '';未注册/
-    空名 = '?'(与退役换形层派生式逐位同值)。"""
-    assert char_first_faction('三月七') == '列车同行'
-    assert char_first_faction('白厄') == ''
+    空名 = '?'(与退役换形层派生式逐位同值)。
+    (fixture 现役名:三月七 v4.7 主阵营 = 开拓银轨;无阵营登记件换
+    丹恒·腾荒——independent 独立羁绊无 factions,派生 '' 同形。)"""
+    assert char_first_faction('三月七') == '开拓银轨'
+    assert char_first_faction('丹恒·腾荒') == ''
     assert char_first_faction('无名氏') == '?'
     assert char_first_faction('') == '?'
 
@@ -186,11 +190,11 @@ def test_knowledge_card_schema_nonempty_all_lines():
 
 
 def test_knowledge_card_names_in_registries():
-    """② 名单/键全落注册表键空间:角色名 ⊆ CHARACTERS。建表是手编数据,
+    """② 名单/键全落注册表键空间:角色名 ⊆ GUARD_CHARACTER_ROSTER(中间态词表)。建表是手编数据,
     名字写错 = 星级目标静默失效。"""
     for comp in COMP_LIBRARY:
         for name in comp.need_star:
-            assert name in CHARACTERS, (comp.name, name)
+            assert name in GUARD_CHARACTER_ROSTER, (comp.name, name)
 
 
 def test_carry_anchor_is_core_head():
