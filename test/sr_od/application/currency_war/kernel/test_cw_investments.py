@@ -19,8 +19,8 @@ from sr_od.application.currency_war.data.cw_chars import (
     CHARACTER_ROSTER,
     CHARACTERS,
     EXPERT_CHARS,
-    get_char,
     chars_by_cost,
+    get_char,
 )
 from sr_od.application.currency_war.data.cw_dropped_names import (
     GUARD_CHARACTER_ROSTER,
@@ -540,13 +540,12 @@ def test_env_ore_open_grants_validation_raises(
 
 
 def test_env_ore_open_grants_current_entry_and_coexistence() -> None:
-    """现役条目(T-29 设计 §2.1,id 128 卡面直读)+ 表间并存合法
-    (豁免声明显式半边,沿公司契约并存测试同构):战技点契约 = (首阈值
-    20, 步长 10, 具名 = 火花, 随机羁绊 = 战技点);∈ INVESTMENT_ENVS 且
-    ∈ ENV_GIFTS(估值域档位并存)且 ∉ ENV_ECONOMY(零金流)且 ∉
-    ENV_ORE_GRANTS(彼表 = 发放晶矿,键域无交集)。"""
-    assert cw_investments.ENV_ORE_OPEN_GRANTS['战技点契约'] == \
-        (20, 10, ('火花',), '战技点')
+    """现表 = v4.7 退役态空表(条目「战技点契约」随机羁绊轴 = 消失档
+    战技点,随羁绊消费点迁移批退役——退役声明见 src 表头注释;新条目
+    登记时本断言即红灯强制复审)+ 表间并存合法(豁免声明显式半边,
+    沿公司契约并存测试同构):键域面 = 环境底册仍在(投资域 v4.7 重采
+    前的中间态)、ENV_GIFTS 估值域并存条目不受影响。"""
+    assert cw_investments.ENV_ORE_OPEN_GRANTS == {}
     assert '战技点契约' in INVESTMENT_ENVS
     assert '战技点契约' in ENV_GIFTS
     assert '战技点契约' not in ENV_ECONOMY

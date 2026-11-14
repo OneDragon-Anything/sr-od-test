@@ -7,8 +7,8 @@ cw_gain_chain/test_check_strategy_bond_tier_grants.py,本文件锁 sim 接入调
 (驱动与断言形态先例 = 同目录 test_strategy_bond_battle_grant_sim_
 chain.py;触发-发放单拍制 = 结算拍直接发放,无节点窗交付拍):
 
-- 结算拍发放:持卡 + 3 激活板(盛会之星 2 gate + 治疗 2 + 护盾 2 +
-  贝洛伯格 2)战斗结算 → equips 恰 +1 盛会之星星徽(``strategy_bond_
+- 结算拍发放:持卡 + 3 激活板(持续伤害 3 gate + 治疗 2 + 星间旅人 1)
+  战斗结算 → equips 恰 +1 以太钻头(``strategy_bond_
   tier:<卡名>@3`` 前缀 evidence 笔——**断言用前缀匹配禁精确匹配**,
   gain_equipment 原语内追加 #equip 后缀;sig 组 'sim:strategy';确定
   通道零随机)+ 一次性标志位 '<卡名>#3' 落域;
@@ -18,9 +18,14 @@ chain.py;触发-发放单拍制 = 结算拍直接发放,无节点窗交付拍):
   发放);
 - 死亡局不发放(调用点在死亡提前 return 之后,局终不见发放);
 - 板面直构双源同喂(board 状态容器 = 左面板口径 + deployed 行域注入 =
-  身份口径,两源同值;构成式:花火+知更鸟 = 盛会之星 2 gate,娜塔莎+
-  藿藿 = 治疗 2,杰帕德+砂金 = 护盾 2,娜塔莎+杰帕德 = 贝洛伯格 2 →
-  激活非独立 4 ≥ 3 触 tier 3,追击 2 未达 tiers[0] 不计)。
+  身份口径,两源同值;构成式:卡芙卡+娜塔莎+希露瓦 = 持续伤害 3 gate,
+  灵砂+白露 = 治疗 2,波提欧 = 星间旅人 1 → 激活常规组队羁绊 3 ≥ 3
+  触 tier 3,追击 2 未达 tiers[0] 不计)。
+
+v4.7 换赛季适配:登记条目已随羁绊消费点迁移批退役(gate 门槛羁绊
+盛会之星入消失档)——sim 接入链现役,锁面经 autouse fixture 注入同形
+条目(gate = 沿用档「持续伤害」)延续;板面直构换现役键。v4.7 新同族卡
+重采后注入值可删。
 """
 from __future__ import annotations
 
@@ -35,6 +40,7 @@ from test.sr_od.application.currency_war.sim.test_sim_backend import (
     _start_battle_feed,
 )
 
+from sr_od.application.currency_war.kernel import cw_gain_chain
 from sr_od.application.currency_war.kernel.cw_game_state import (
     DeployedView,
     Unit,
@@ -48,21 +54,32 @@ from sr_od.application.currency_war.sim.cw_sim_backend import (
     uninstall_backend,
 )
 
-_CARD = '梦境大舞台'
-_EQUIP = '盛会之星星徽'
+_CARD = '持续伤害契约'
+_EQUIP = '以太钻头'
 _EVIDENCE_PREFIX = f'strategy_bond_tier:{_CARD}@3'
 _LATCH_KEY = f'{_CARD}#3'
 
 #: 3+ 激活直构板(构成式见模块 docstring;6 单位全前排)。
 _BOARD_UNITS: tuple[str, ...] = (
-    '花火', '知更鸟', '娜塔莎', '藿藿', '杰帕德', '砂金',
+    '卡芙卡', '娜塔莎', '希露瓦', '灵砂', '白露', '波提欧',
 )
 #: 板面状态容器直写值 = 行域身份聚合同值(双源同喂,左面板真值口径)。
 _BOARD_DICT: dict[str, int] = {
-    '盛会之星': 2, '战技点': 1, '量子同频': 1, '追击': 2,
-    '贝洛伯格': 2, '治疗': 2, '仙舟': 1, '能量': 1, '护盾': 2,
-    '公司': 1,
+    '持续伤害': 3, '治疗': 2, '星间旅人': 1, '追击': 2, '能量': 1,
 }
+
+
+@pytest.fixture(autouse=True)
+def _grant_row(monkeypatch: pytest.MonkeyPatch) -> None:
+    """注入同形登记条目(src 现表 = 空表退役态;触发函数经模块级绑定
+    消费表,patch cw_gain_chain 绑定名生效)。"""
+    from sr_od.application.currency_war.kernel.cw_investments import (
+        StrategyBondTierGrant,
+    )
+    monkeypatch.setattr(
+        cw_gain_chain, 'STRATEGY_BOND_TIER_GRANTS',
+        {_CARD: StrategyBondTierGrant(
+            gate_faction='持续伤害', tiers=(3, 7, 10), item=_EQUIP)})
 
 
 @pytest.fixture

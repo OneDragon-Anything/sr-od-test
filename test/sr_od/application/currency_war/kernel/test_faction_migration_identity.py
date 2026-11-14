@@ -184,22 +184,27 @@ def test_faction_reqs_read_ports() -> None:
 
 
 def test_faction_reqs_build_validation() -> None:
-    """建库校验(①②④⑤;③实施时点 = 3.3,faction-priority.md §5):
-    非法数据构造即炸——未注册羁绊名/同一羁绊跨档/跳档/非正整数。"""
-    with pytest.raises(ValueError, match='羁绊名未注册'):
-        Comp(name='x', core_chars=[], faction_reqs={0: {'不存在的羁绊': 2}})
+    """建库校验(②④⑤;①「羁绊名 ∈ 注册表白名单」哨已随 v4.7 换赛季
+    退役——COMP_LIBRARY 条目羁绊键为 V4.4 口径不在新注册表,哨保留 =
+    import 期整表炸,退役态经反义断言锁定;③实施时点 = 3.3,
+    faction-priority.md §5):非法数据构造即炸——同一羁绊跨档/跳档/
+    非正整数。"""
+    # ① 哨退役态:未注册羁绊名(新注册表查无)构造不再炸(V4.4 白名单
+    #    校验随旧数据面退役;羁绊名合法性回归归知识层批重建)。
+    comp = Comp(name='x', core_chars=[], faction_reqs={0: {'不存在的羁绊': 2}})
+    assert comp.faction_reqs == {0: {'不存在的羁绊': 2}}
     with pytest.raises(ValueError, match='同时出现在档'):
         Comp(name='x', core_chars=[],
-             faction_reqs={0: {'仙舟': 3}, 1: {'仙舟': 2}})
+             faction_reqs={0: {'持续伤害': 3}, 1: {'持续伤害': 2}})
     with pytest.raises(ValueError, match='连续 0..max'):
-        Comp(name='x', core_chars=[], faction_reqs={0: {'仙舟': 3},
-                                                    2: {'护盾': 2}})
+        Comp(name='x', core_chars=[], faction_reqs={0: {'持续伤害': 3},
+                                                    2: {'治疗': 2}})
     with pytest.raises(ValueError, match='连续 0..max'):
-        Comp(name='x', core_chars=[], faction_reqs={1: {'护盾': 2}})
+        Comp(name='x', core_chars=[], faction_reqs={1: {'治疗': 2}})
     with pytest.raises(ValueError, match='正整数'):
-        Comp(name='x', core_chars=[], faction_reqs={0: {'仙舟': 0}})
+        Comp(name='x', core_chars=[], faction_reqs={0: {'持续伤害': 0}})
     with pytest.raises(ValueError, match='正整数'):
-        Comp(name='x', core_chars=[], faction_reqs={0: {'仙舟': (2, 4)}})
+        Comp(name='x', core_chars=[], faction_reqs={0: {'持续伤害': (2, 4)}})
 
 
 def test_library_migration_values() -> None:

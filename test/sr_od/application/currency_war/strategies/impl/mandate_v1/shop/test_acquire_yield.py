@@ -25,6 +25,7 @@ from __future__ import annotations
 
 from types import SimpleNamespace
 
+import pytest
 from test.sr_od.application.currency_war._cw_helpers import (
     cw4_bc,
     cw4_card,
@@ -441,6 +442,9 @@ class TestAcquireYieldUnified:
         assert rec.gold_snapshot == 1 and rec.gold_gap == 2
         assert rec.shelf_signature == (_FUX,)
 
+    @pytest.mark.skip(reason='v4.7 换赛季:构型依赖贝洛伯格凑档进虚拟定型'
+                      '(消失档羁绊)与掉册成员(佩拉/布洛妮娅),凑档机制已不存在'
+                      '——fixture 待策略批按 v4.7 新体系重采')
     def test_x_absorbed_into_virtual_target_still_declines_buy(self):
         """X 进虚拟定型仍判末位 = X 反例(获取让位 X 末位敏感性;
         评估契约步 6「末位 = X → 放弃」的任意组成可达性):

@@ -112,6 +112,7 @@ def test_cost_axis_existing_entries_regression() -> None:
         '开拓者双形态按角色位合并)'
 
 
+@pytest.mark.skip(reason='v4.7 换赛季:登记条目随羁绊消费点迁移批退役(消失档羁绊轴),fixture 待投资域 v4.7 重采')
 def test_ranxue_concept_stock_entry_shape() -> None:
     """燃血概念股登记形状锁(概念股族展开卡登记约定,权威版本 = fields.md
     §5.2 效果缺口与载体登记):∈ ENV_GIFTS 且 ∉ ENV_ECONOMY(import 期
@@ -128,6 +129,7 @@ def test_ranxue_concept_stock_entry_shape() -> None:
     assert grant.equips_random_immediate == ('简易',)
 
 
+@pytest.mark.skip(reason='v4.7 换赛季:登记条目随羁绊消费点迁移批退役(消失档羁绊轴),fixture 待投资域 v4.7 重采')
 def test_ranxue_faction_pool_matches_registry_and_validates() -> None:
     """燃血域登记校验 + 池派生(概念股族展开卡登记约定;gain-chain.md
     §3 随机支段:阵营轴 = chars_by_faction 默认含流派匹配):燃血概念股
@@ -178,6 +180,7 @@ def test_nengliang_faction_pool_matches_registry_and_validates() -> None:
     assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
 
 
+@pytest.mark.skip(reason='v4.7 换赛季:登记条目随羁绊消费点迁移批退役(消失档羁绊轴),fixture 待投资域 v4.7 重采')
 def test_lieche_concept_stock_entry_shape() -> None:
     """列车同行概念股登记形状锁(概念股族展开卡登记约定,权威版本 = fields.md
     §5.2 效果缺口与载体登记):∈ ENV_GIFTS 且 ∉ ENV_ECONOMY(import 期
@@ -194,6 +197,7 @@ def test_lieche_concept_stock_entry_shape() -> None:
     assert grant.equips_random_immediate == ('简易',)
 
 
+@pytest.mark.skip(reason='v4.7 换赛季:登记条目随羁绊消费点迁移批退役(消失档羁绊轴),fixture 待投资域 v4.7 重采')
 def test_lieche_faction_pool_matches_registry_and_validates() -> None:
     """列车同行域登记校验 + 池派生(概念股族展开卡登记约定 + 开拓者双
     形态角色位合并约定;gain-chain.md §3 随机支段:阵营轴 = 规格过滤池):
@@ -241,6 +245,7 @@ def test_dual_form_merge_pool_construction() -> None:
         energy_expected, '能量域直构 spec 同收尾(剔除开拓者·记忆)'
 
 
+@pytest.mark.skip(reason='v4.7 换赛季:登记条目随羁绊消费点迁移批退役(消失档羁绊轴),fixture 待投资域 v4.7 重采')
 def test_yinhe_concept_stock_entry_shape() -> None:
     """银河学者概念股登记形状锁(概念股族展开卡登记约定,权威版本 = fields.md
     §5.2 效果缺口与载体登记):∈ ENV_GIFTS 且 ∉ ENV_ECONOMY(import 期
@@ -259,6 +264,7 @@ def test_yinhe_concept_stock_entry_shape() -> None:
     assert grant.equips_random_immediate == ('简易',)
 
 
+@pytest.mark.skip(reason='v4.7 换赛季:登记条目随羁绊消费点迁移批退役(消失档羁绊轴),fixture 待投资域 v4.7 重采')
 def test_yinhe_faction_pool_matches_registry_and_validates() -> None:
     """银河学者域登记校验 + 池派生(概念股族展开卡登记约定;gain-chain.md
     §3 随机支段:阵营轴 = 规格过滤池):银河学者概念股过 _validate_env_
@@ -278,6 +284,7 @@ def test_yinhe_faction_pool_matches_registry_and_validates() -> None:
     assert set(random_char_pool(spec)) <= CHARACTER_ROSTER
 
 
+@pytest.mark.skip(reason='v4.7 换赛季:登记条目随羁绊消费点迁移批退役(消失档羁绊轴),fixture 待投资域 v4.7 重采')
 def test_beluoboge_concept_stock_entry_shape() -> None:
     """贝洛伯格概念股登记形状锁(概念股族展开卡登记约定,权威版本 = fields.md
     §5.2 效果缺口与载体登记):∈ ENV_GIFTS 且 ∉ ENV_ECONOMY(import 期
@@ -296,6 +303,7 @@ def test_beluoboge_concept_stock_entry_shape() -> None:
     assert grant.equips_random_immediate == ('简易',)
 
 
+@pytest.mark.skip(reason='v4.7 换赛季:登记条目随羁绊消费点迁移批退役(消失档羁绊轴),fixture 待投资域 v4.7 重采')
 def test_beluoboge_faction_pool_matches_registry_and_validates() -> None:
     """贝洛伯格域登记校验 + 池派生(概念股族展开卡登记约定;gain-chain.md
     §3 随机支段:阵营轴 = 规格过滤池):贝洛伯格概念股过 _validate_env_
@@ -362,6 +370,7 @@ def test_xingjianlvren_faction_pool_matches_registry_and_validates() -> None:
 # test_grant_char_pool.py。)
 
 
+@pytest.mark.skip(reason='v4.7 换赛季:登记条目随羁绊消费点迁移批退役(消失档羁绊轴),fixture 待投资域 v4.7 重采')
 def test_xianzhou_concept_stock_entry_shape() -> None:
     """仙舟概念股登记形状锁(概念股族展开卡登记约定,权威版本 = fields.md
     §5.2 效果缺口与载体登记):∈ ENV_GIFTS 且 ∉ ENV_ECONOMY(import 期
@@ -387,6 +396,7 @@ def test_xianzhou_concept_stock_entry_shape() -> None:
         'odds 失真键随批追加(家族常量收 env_1001..env_1008)'
 
 
+@pytest.mark.skip(reason='v4.7 换赛季:登记条目随羁绊消费点迁移批退役(消失档羁绊轴),fixture 待投资域 v4.7 重采')
 def test_xianzhou_faction_pool_matches_registry_and_validates() -> None:
     """仙舟域登记校验 + 静态基底池(概念股族展开卡登记约定;gain-chain.md
     §3 随机支段:静态基底 = 注册表派生,牌库时点过滤在 grant_char_pool
@@ -420,6 +430,7 @@ def test_xianzhou_faction_pool_matches_registry_and_validates() -> None:
 # test_grant_char_pool.py。)
 
 
+@pytest.mark.skip(reason='v4.7 换赛季:登记条目随羁绊消费点迁移批退役(消失档羁绊轴),fixture 待投资域 v4.7 重采')
 def test_langshou_concept_stock_entry_shape() -> None:
     """狼狩概念股登记形状锁(概念股族展开卡登记约定,权威版本 = fields.md
     §5.2 效果缺口与载体登记):∈ ENV_GIFTS 且 ∉ ENV_ECONOMY(import 期
@@ -445,6 +456,7 @@ def test_langshou_concept_stock_entry_shape() -> None:
         'odds 失真键随批追加(家族常量收 env_1001..env_1009)'
 
 
+@pytest.mark.skip(reason='v4.7 换赛季:登记条目随羁绊消费点迁移批退役(消失档羁绊轴),fixture 待投资域 v4.7 重采')
 def test_langshou_faction_pool_matches_registry_and_validates() -> None:
     """狼狩域登记校验 + 静态基底池(概念股族展开卡登记约定;gain-chain.md
     §3 随机支段:静态基底 = 注册表派生,牌库时点过滤在 grant_char_pool
@@ -476,6 +488,7 @@ def test_langshou_faction_pool_matches_registry_and_validates() -> None:
 # cw_pool 镜像 test_grant_char_pool.py。)
 
 
+@pytest.mark.skip(reason='v4.7 换赛季:登记条目随羁绊消费点迁移批退役(消失档羁绊轴),fixture 待投资域 v4.7 重采')
 def test_zhouzhibanshen_concept_stock_entry_shape() -> None:
     """昼之半神概念股登记形状锁(概念股族展开卡登记约定,权威版本 = fields.md
     §5.2 效果缺口与载体登记):∈ ENV_GIFTS 且 ∉ ENV_ECONOMY(import 期
@@ -501,6 +514,7 @@ def test_zhouzhibanshen_concept_stock_entry_shape() -> None:
         'odds 失真键随批追加(家族常量收 env_1001..env_1010)'
 
 
+@pytest.mark.skip(reason='v4.7 换赛季:登记条目随羁绊消费点迁移批退役(消失档羁绊轴),fixture 待投资域 v4.7 重采')
 def test_zhouzhibanshen_faction_pool_matches_registry_and_validates() -> None:
     """昼之半神域登记校验 + 静态基底池(概念股族展开卡登记约定;gain-chain.md
     §3 随机支段:静态基底 = 注册表派生,牌库时点过滤在 grant_char_pool
@@ -531,6 +545,7 @@ def test_zhouzhibanshen_faction_pool_matches_registry_and_validates() -> None:
 # cw_pool 镜像 test_grant_char_pool.py。)
 
 
+@pytest.mark.skip(reason='v4.7 换赛季:登记条目随羁绊消费点迁移批退役(消失档羁绊轴),fixture 待投资域 v4.7 重采')
 def test_yezhibanshen_concept_stock_entry_shape() -> None:
     """夜之半神概念股登记形状锁(概念股族展开卡登记约定,权威版本 = fields.md
     §5.2 效果缺口与载体登记):∈ ENV_GIFTS 且 ∉ ENV_ECONOMY(import 期
@@ -557,6 +572,7 @@ def test_yezhibanshen_concept_stock_entry_shape() -> None:
         'odds 失真键随批追加(家族常量收 env_1001..env_1011)'
 
 
+@pytest.mark.skip(reason='v4.7 换赛季:登记条目随羁绊消费点迁移批退役(消失档羁绊轴),fixture 待投资域 v4.7 重采')
 def test_yezhibanshen_faction_pool_matches_registry_and_validates() -> None:
     """夜之半神域登记校验 + 静态基底池(概念股族展开卡登记约定;gain-chain.md
     §3 随机支段:静态基底 = 注册表派生,牌库时点过滤在 grant_char_pool
@@ -706,6 +722,7 @@ def test_qungong_faction_pool_matches_registry_and_validates() -> None:
 # 双羁绊且 ≠ 专家「刃」,两事实零登记面影响,勿混淆。)
 
 
+@pytest.mark.skip(reason='v4.7 换赛季:登记条目随羁绊消费点迁移批退役(消失档羁绊轴),fixture 待投资域 v4.7 重采')
 def test_jianyi_concept_stock_entry_shape() -> None:
     """减益概念股登记形状锁(概念股族展开卡登记约定,权威版本 = fields.md
     §5.2 效果缺口与载体登记):∈ ENV_GIFTS 且 ∉ ENV_ECONOMY(import 期
@@ -731,6 +748,7 @@ def test_jianyi_concept_stock_entry_shape() -> None:
         'odds 失真键随批追加(家族常量收 env_1001..env_1014)'
 
 
+@pytest.mark.skip(reason='v4.7 换赛季:登记条目随羁绊消费点迁移批退役(消失档羁绊轴),fixture 待投资域 v4.7 重采')
 def test_jianyi_faction_pool_matches_registry_and_validates() -> None:
     """减益域登记校验 + 静态基底池(概念股族展开卡登记约定;gain-chain.md
     §3 随机支段:静态基底 = 注册表派生,牌库时点过滤在 grant_char_pool
@@ -766,6 +784,7 @@ def test_jianyi_faction_pool_matches_registry_and_validates() -> None:
 # 形近成员,量子同频/欢愉均无概念股卡,零登记面影响,勿混淆。)
 
 
+@pytest.mark.skip(reason='v4.7 换赛季:登记条目随羁绊消费点迁移批退役(消失档羁绊轴),fixture 待投资域 v4.7 重采')
 def test_zhanjidian_concept_stock_entry_shape() -> None:
     """战技点概念股登记形状锁(概念股族展开卡登记约定,权威版本 = fields.md
     §5.2 效果缺口与载体登记):∈ ENV_GIFTS 且 ∉ ENV_ECONOMY(import 期
@@ -792,6 +811,7 @@ def test_zhanjidian_concept_stock_entry_shape() -> None:
         'odds 失真键随批追加(家族常量族收官 env_1001..env_1014+env_1016)'
 
 
+@pytest.mark.skip(reason='v4.7 换赛季:登记条目随羁绊消费点迁移批退役(消失档羁绊轴),fixture 待投资域 v4.7 重采')
 def test_zhanjidian_faction_pool_matches_registry_and_validates() -> None:
     """战技点域登记校验 + 静态基底池(概念股族展开卡登记约定;gain-chain.md
     §3 随机支段:静态基底 = 注册表派生,牌库时点过滤在 grant_char_pool

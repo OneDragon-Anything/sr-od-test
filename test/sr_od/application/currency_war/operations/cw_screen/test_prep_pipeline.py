@@ -790,6 +790,7 @@ class TestDeployAdaptiveAfterEntryRetirement:
                            lock_pair=('持续伤害',))
         assert len(self._moves(sess)) >= 2, 'K 富余:双件 L3 填位'
 
+    @pytest.mark.skip(reason='v4.7 换赛季:构型依赖列车同行体系件判定(消失档羁绊)与掉册垫件(桑博/艾丝妲),V4.4 垫件分级机制已不存在——fixture 待策略批按 v4.7 新体系重采')
     def test_baie_k_tight_march7_only(self):
         """①b K 紧张(level 3 空位 1):体系侧三月七优先上位(列车体系
         件单位序),白厄留 bench——垫件分级 = L3 单位序自适应,无窗口

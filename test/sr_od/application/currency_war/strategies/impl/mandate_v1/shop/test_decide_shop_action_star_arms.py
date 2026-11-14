@@ -31,6 +31,7 @@ node='reward' → 升级检查①奖励帧抑制 defer,会话恒进入买面与�
 """
 from __future__ import annotations
 
+import pytest
 from test.sr_od.application.currency_war._cw_helpers import (
     cw4_bc as _bc,
 )
@@ -327,6 +328,9 @@ class TestW4StayWindowYield:
         assert refreshes and refreshes[0].cost > 0, \
             f'窗口帧刷新照发: {acts!r}'
 
+    @pytest.mark.skip(reason='v4.7 换赛季:构型依赖列车同行万金油件语义'
+                      '(三月七 v4.7 归开拓银轨,列车体系件机制消失)'
+                      '——fixture 待策略批按 v4.7 新体系重采')
     def test_out_of_window_m6_fires_as_before(self):
         """非窗口回归:无星级目标帧(全部达标)refresh_warranted 假 →
         M6 照常发射(让位否决不误伤富余段压牌库)。"""

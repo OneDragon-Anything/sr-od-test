@@ -9,10 +9,14 @@ _faction_count 同款):
 - 条件矩阵短路:未持卡/表外卡 → False 零写;
 - 激活数评估口径:双源 max 融合(board 与 deployed 双未观察 → 0
   fail-closed 零武装)、独立羁绊 1 人即激活(tiers=(1,) 与左面板同
-  口径)、FACTIONS 外未知名不计、阈值方向 ≥(达到即满足);
+  口径)、羁绊注册表外未知名不计、阈值方向 ≥(达到即满足);
 - 武装写形态:evidence ``strategy_bond_battle#arm:<卡名>``、armed
   置 True(write_logic 逻辑渠道);条件不满足零写零武装;
 - 零 rng:武装拍无采样面(采样归发放拍),固定输入重放零随机性。
+
+v4.7 换赛季适配:板面直构换现役键——独立 1 人档语义对象 = 新注册表
+trait_type=2 特殊羁绊(旧 category='independent' 7 族已入消失档,判据
+语义重定义见 cw_gain_chain;激活数评估按 trait_by_name 现值)。
 """
 from __future__ import annotations
 
@@ -32,14 +36,14 @@ _LSIG = ChannelSig(family='logic_action', actor='TestDriver', mode='compute')
 
 _CARD = '不要小看我们的羁绊'
 
-#: 6 个非选边型独立羁绊(tiers=(1,) 单人即激活;布洛妮娅系选边型双羁绊
-#: 角色直构引入选边分支,负控直构避开——独立计入口径已由其余 6 名覆盖)。
-_INDEPENDENT_TAGS = ('大守护者', '救世主', '头号玩家', '挚爱之人',
-                     '魔术师', '命运卜者')
-#: 8 激活板(6 独立 + 治疗 2 + 护盾 2,治疗/护盾 tiers[0] 均 = 2)。
+#: 6 个特殊羁绊(trait_type=2,tiers 首档 = 1 单人即激活;v4.7 名单,
+#: 判据排除面 = 「非常规组队羁绊」的现役语义对象)。
+_INDEPENDENT_TAGS = ('双龙吟', '盗火行者', '巡海游侠', '黑市主理人',
+                     '机心巧匠', '幻乐之主')
+#: 8 激活板(6 特殊 + 治疗 2 + 击破 2,治疗/击破 tiers[0] 均 = 2)。
 _BOARD_ACT8 = {**dict.fromkeys(_INDEPENDENT_TAGS, 1),
-               '治疗': 2, '护盾': 2}
-#: 7 激活负控板(同形少护盾行)。
+               '治疗': 2, '击破': 2}
+#: 7 激活负控板(同形少击破行)。
 _BOARD_ACT7 = {**dict.fromkeys(_INDEPENDENT_TAGS, 1), '治疗': 2}
 
 
@@ -96,11 +100,11 @@ def test_below_threshold_no_arm() -> None:
 def test_dual_source_max_fusion() -> None:
     """锁 6a(双源 max 融合):board 计数(治疗 1,不足)与 deployed
     身份聚合(治疗 2,达标)不一致时取 max 判激活——max(1, 2) = 2 达
-    标,合计 6 独立 + 治疗 + 护盾 = 8 武装(漏判激活比多判更伤,
+    标,合计 6 特殊 + 治疗 + 击破 = 8 武装(漏判激活比多判更伤,
     _faction_count 判激活侧同款)。"""
     gs = _gs()
     gs.observe(gs.board, {**dict.fromkeys(_INDEPENDENT_TAGS, 1),
-                          '治疗': 1, '护盾': 2}, sig=_SIG_OBS)
+                          '治疗': 1, '击破': 2}, sig=_SIG_OBS)
     gs.observe(gs.deployed, DeployedView(
         back_slots=[Unit(char_id='娜塔莎', star=1),
                     Unit(char_id='藿藿', star=1)]), sig=_SIG_OBS)
@@ -140,6 +144,6 @@ def test_threshold_direction_ge() -> None:
     assert check_strategy_bond_battle_grants(gs_ok, _LSIG) is True
     gs_lt = _gs()
     gs_lt.observe(gs_lt.board, {**dict.fromkeys(_INDEPENDENT_TAGS, 1),
-                                '治疗': 1, '护盾': 2}, sig=_SIG_OBS)
+                                '治疗': 1, '击破': 2}, sig=_SIG_OBS)
     assert check_strategy_bond_battle_grants(gs_lt, _LSIG) is False, \
         '治疗 1 人(< tiers[0])误计激活'

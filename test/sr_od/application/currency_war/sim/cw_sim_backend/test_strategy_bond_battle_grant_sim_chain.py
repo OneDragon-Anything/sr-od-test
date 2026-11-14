@@ -18,15 +18,15 @@ test_strategy_boss_battle_grant_sim_chain.py):
 - 幂等回归 = 既有守卫(同节点战斗重放 _settled_key 整段跳过;窗重放
   面 = armed 消费后非 True 结构性短路,重入零双发);
 - 板面直构形态注记(8 门槛需 ≥8 激活羁绊,构成式写明防后人误判不可
-  构造):独立羁绊 6 名各 1 人(tiers=(1,) 单人即激活)+ 治疗 2 人
-  (tiers=(2,))+ 护盾 2 人(同 2)+ 贝洛伯格借同持 2 人(娜塔莎/
-  杰帕德)×1 = 9 激活 ≥ 8;负控板去杰帕德 = 7 激活(治疗 2 + 独立 6,
-  贝洛伯格/护盾双双跌回 1 人不激活)。布洛妮娅系选边型双羁绊角色直构
-  引入选边分支,避开(独立计入口径由其余 6 名覆盖)。**直构双源同喂
-  义务**:board_by_row 身份聚合只算 factions+schools 不含 independent
-  (cw_board_by_row._trait_tags 口径),独立羁绊计数只有 board 状态容器
+  构造;v4.7 现役键):特殊羁绊(trait_type=2)6 名各 1 人(首档 = 1
+  单人即激活)+ 治疗 2 人(tiers=(2,))+ 击破 2 人(同 2)= 10 激活
+  ≥ 8;负控板 = 特殊 4 名 + 治疗 1 + 击破 1 = 6 激活(去 2 特殊行 +
+  治疗击破各跌回 1 人不激活)。**直构双源同喂
+  义务**:board_by_row 身份聚合只算 factions+schools 不含 type=2 特殊
+  羁绊(cw_board_by_row._trait_tags 口径,v4.7 六族无角色自报同构旧
+  independent),特殊羁绊计数只有 board 状态容器
   (左面板直读口径)可承载——直构须 deployed 注入 + board 直写两源
-  同值,单喂 deployed 则独立 6 名全漏计(激活 = 3 误负控)。
+  同值,单喂 deployed 则特殊 6 名全漏计(激活 = 4 误负控)。
 - 驱动形态 = 出战动作触发结算(2026-10-29 流程模型);引擎驱动助手
   import 自 sim/test_sim_backend.py(已登记超限拆分债文件,禁追加,只
   import 复用不改);helper 副本(状态副本写包装/类型备战驱动/定参结算)
@@ -72,28 +72,33 @@ _TRANSIT_SCREENS = (SCREEN_SETTLE, _PLANE_TRANSITION, '货币战争-投资策略
                     '货币战争-BOSS简报', '货币战争-盛会之星',
                     '货币战争-银狼升星', '货币战争-商店')
 
-#: 板面直构双源(board 状态容器 = 左面板口径含独立羁绊计数——board_by_row
-#: 身份聚合只算 factions+schools 不含 independent,独立行只有左面板可读,
-#: 双源 max 融合下两源须同喂;deployed 注入 = 身份口径)。full = 9 激活
-#: ≥ 8;short(去杰帕德:贝洛伯格/护盾跌回 1 人)= 7 激活负控。
+#: 板面直构双源(board 状态容器 = 左面板口径含特殊羁绊计数——board_by_row
+#: 身份聚合只算 factions+schools 不含 trait_type=2,特殊行只有左面板可读,
+#: 双源 max 融合下两源须同喂;deployed 注入 = 身份口径)。full = 12 激活
+#: ≥ 8;short = 6 激活负控(常规族成员直构叠加面按现役聚合值同喂,
+#: 融合激活 6 < 8)。
 _BOND_BOARD_FULL_DICT: dict[str, int] = {
-    '大守护者': 1, '救世主': 1, '头号玩家': 1, '挚爱之人': 1,
-    '魔术师': 1, '命运卜者': 1, '治疗': 2, '护盾': 2, '贝洛伯格': 2,
+    '双龙吟': 1, '盗火行者': 1, '巡海游侠': 1, '黑市主理人': 1,
+    '机心巧匠': 1, '幻乐之主': 1, '治疗': 2, '击破': 2,
 }
 _BOND_BOARD_SHORT_DICT: dict[str, int] = {
-    '大守护者': 1, '救世主': 1, '头号玩家': 1, '挚爱之人': 1,
-    '魔术师': 1, '命运卜者': 1, '治疗': 2, '贝洛伯格': 1, '护盾': 1,
+    '双龙吟': 1, '盗火行者': 1,
 }
-#: 8+ 激活直构板(构成式见模块 docstring;4 前排 + 6 后排)。
+#: 8+ 激活直构板(4 前排 + 6 后排;行域成员保持 V4.4 原集[sim 流程分叉
+#: 与成员集耦合,禁顺手换人]——治疗 = 娜塔莎/藿藿,星间旅人 = 娜塔莎/
+#: 砂金,击破面 = board dict 承载[原行域击破出身已掉册])。
 _BOND_BOARD_FULL: tuple[tuple[str, str], ...] = (
     ('姬子·启行', 'front'), ('娜塔莎', 'front'), ('砂金', 'front'),
     ('杰帕德', 'front'),
     ('白厄', 'back'), ('银狼LV.999', 'back'), ('昔涟', 'back'),
     ('Archer', 'back'), ('黑天鹅', 'back'), ('藿藿', 'back'),
 )
-#: 7 激活负控板(去杰帕德:贝洛伯格/护盾跌回 1 人)。
-_BOND_BOARD_SHORT: tuple[tuple[str, str], ...] = tuple(
-    u for u in _BOND_BOARD_FULL if u[0] != '杰帕德')
+#: 6 激活负控板形态收紧为 3 激活(4 人散籍直构:身份聚合仅少女乐队 1 族
+#: 激活 + board 特殊 2 行 = 3 < 8,结构性远离阈值;驱动步扰动余量充足)。
+_BOND_BOARD_SHORT: tuple[tuple[str, str], ...] = (
+    ('姬子·启行', 'front'), ('火花', 'front'), ('雪衣', 'front'),
+    ('不死途', 'front'),
+)
 
 
 @pytest.fixture

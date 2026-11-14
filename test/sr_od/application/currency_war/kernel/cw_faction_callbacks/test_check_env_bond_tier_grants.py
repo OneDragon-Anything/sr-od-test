@@ -4,22 +4,29 @@ kernel/cw_faction_callbacks.py)。
 被测面 = 原稿锁面 §4.2 判据矩阵(经生产写路径 write_logic(deployed)
 → 值回调级联驱动,防假绿;判定语义单一源 = ``check_env_bond_tier_
 grants``,发放原语 = ``cw_env_grants.grant_env_bond_tier``):
-- 无环境 / 环境非加拉赫 → 零写零 done;
+- 无环境 / 环境不在表 → 零写零 done;
 - 跨档发放恰 1 件 + done 恰如预期(两笔同 evidence 同 sig 相邻,
   equips 走 write_logic_rand / done 走 write_logic);
 - 单窗跨两档各 1 件(两对写,evidence 各带档位);
 - 每档一次性:降档再回零新增写(用户裁定「每个档位只发一次奖励」);
-- equips None 跳过后,不改任何 watched 集的板面写(卖非已登记阵营场上件)
+- equips None 跳过后,不改任何 watched 集的板面写(卖非已登记羁绊场上件)
   重试补发(sets-changed 门外的必查语义,判据调用点锁);
-- 阈值边界:计数 1(2/4/6/9 全不达)零写;
+- 阈值边界:计数 1(tiers 全不达)零写;
 - L2 装备贡献锁:非击破出身穿【击破星徽】→ 计数达标触发;
 - 递归安全:发放窗口内无 deployed 行域写(写序检查)。
+
+v4.7 换赛季适配:登记条目已随羁绊消费点迁移批退役(击破档位谱换代,
+src 现表 = 空表退役态)——判据链现役,锁面经 autouse fixture 注入同形
+条目(键 '特邀专家:加拉赫' × ('击破','以太钻头'))延续,阈值取现役
+击破 tiers(2/4/6/8);场上成员换现役击破出身(乱破/大丽花/忘归人/
+波提欧,v4.7 掉出角色不再入帧)。v4.7 新条目重采后 fixture 注入值可删。
 """
 from __future__ import annotations
 
 import pytest
 
 from sr_od.application.currency_war.kernel import cw_env_grants as grants_mod
+from sr_od.application.currency_war.kernel import cw_investments
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
     ChannelSig,
@@ -35,6 +42,14 @@ _TIER2_KEY = (_ENV, 'bond_tier_2')
 
 _SIG = ChannelSig(family='logic_action', actor='test', mode='compute')
 _SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep')
+
+
+@pytest.fixture(autouse=True)
+def _grant_row(monkeypatch: pytest.MonkeyPatch) -> None:
+    """注入同形登记条目(src 现表 = 空表退役态;判据链消费面 = 函数内
+    读 cw_investments.ENV_BOND_TIER_GRANTS,patch 模块属性生效)。"""
+    monkeypatch.setattr(cw_investments, 'ENV_BOND_TIER_GRANTS',
+                        {_ENV: (_BOND, _EQUIP)})
 
 
 def _gs(*, env: str | None = None,
@@ -107,7 +122,7 @@ def test_no_env_and_other_env_zero_writes(
 
 def test_threshold_boundary_then_cross_tier_grants_once(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """阈值边界:计数 1(2/4/6/9 全不达)零写;部署过 2 档 → 恰发 1 件
+    """阈值边界:计数 1(tiers 全不达)零写;部署过 2 档 → 恰发 1 件
     以太钻头(equips 尾追)+ done 恰 bond_tier_2;两笔同 evidence 同
     sig 相邻(rand 在前)。"""
     gs = _gs(env=_ENV, equips=['永动机'])
@@ -136,7 +151,7 @@ def test_single_window_two_tiers_two_pairs(
     calls = _record_writes(gs, monkeypatch)
     _write_dep(gs, [_u('乱破')])
     calls.clear()
-    _write_dep(gs, [_u('乱破'), _u('大丽花'), _u('阮·梅'), _u('波提欧')])
+    _write_dep(gs, [_u('乱破'), _u('大丽花'), _u('忘归人'), _u('波提欧')])
     ev2 = f'env_grant#{_ENV}#bond{_BOND}@tier2'
     ev4 = f'env_grant#{_ENV}#bond{_BOND}@tier4'
     assert _grant_rows(calls) == [
@@ -174,13 +189,13 @@ def test_equips_none_withhold_then_board_write_retry(
     的板面写(卖非已登记阵营场上件,击破计数不动)重试补发——sets-changed
     门辖不到的写,门外必查分支兜住(判据调用点锁,接回门内本测试即红)。"""
     gs = _gs(env=_ENV)   # equips 未写 = None
-    _write_dep(gs, [_u('乱破'), _u('大丽花'), _u('希儿')])
+    _write_dep(gs, [_u('乱破'), _u('大丽花'), _u('波提欧')])
     assert gs.equips.value is None, '缺读零写(宁缺勿造)'
     assert gs.env_grants_done.value is None, '缺读不标 done'
 
     gs.write_logic(gs.equips, ['永动机'], produced_by='test-seed', sig=_SIG)
     calls = _record_writes(gs, monkeypatch)
-    _write_dep(gs, [_u('乱破'), _u('大丽花')])   # 卖希儿:watched 集不变
+    _write_dep(gs, [_u('乱破'), _u('大丽花')])   # 卖波提欧:击破计数不变
     evidence = f'env_grant#{_ENV}#bond{_BOND}@tier2'
     assert _grant_rows(calls) == [
         ('equips', evidence, 'rand', grants_mod._GRANT_SIG),
@@ -196,11 +211,11 @@ def test_l2_badge_contribution_triggers_grant(
     计数 2 → 触发发放;无徽时零写(触发归装备贡献,非成员身份)。"""
     gs = _gs(env=_ENV, equips=[])
     calls = _record_writes(gs, monkeypatch)
-    _write_dep(gs, [_u('希儿'), _u('白厄')])
+    _write_dep(gs, [_u('缇宝'), _u('三月七')])
     assert _grant_rows(calls) == [], '无徽非出身零计零写'
 
-    _write_dep(gs, [_u('希儿', equips=['击破星徽']),
-                    _u('白厄', equips=['击破星徽'])])
+    _write_dep(gs, [_u('缇宝', equips=['击破星徽']),
+                    _u('三月七', equips=['击破星徽'])])
     assert _grant_rows(calls) != [], '穿击破星徽计数达标触发'
     assert gs.env_grants_done.value == (_TIER2_KEY,)
     assert gs.equips.value == [_EQUIP]

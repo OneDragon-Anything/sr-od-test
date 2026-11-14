@@ -72,6 +72,7 @@ def test_concept_stock_gift_tier_off() -> None:
     assert gift_hit_tier(ENV_GIFTS['追击概念股']) == 'off'
 
 
+@pytest.mark.skip(reason='v4.7 换赛季:登记条目随羁绊消费点迁移批退役(消失档羁绊轴),fixture 待投资域 v4.7 重采')
 def test_ranxue_concept_stock_gift_tier_off() -> None:
     """燃血概念股估值档恒 'off'(概念股族展开卡登记约定,权威版本 =
     fields.md §5.2 效果缺口与载体登记,追击首例同锁第二实例):随机规格
@@ -90,6 +91,7 @@ def test_nengliang_concept_stock_gift_tier_off() -> None:
     assert gift_hit_tier(ENV_GIFTS['能量概念股']) == 'off'
 
 
+@pytest.mark.skip(reason='v4.7 换赛季:登记条目随羁绊消费点迁移批退役(消失档羁绊轴),fixture 待投资域 v4.7 重采')
 def test_lieche_concept_stock_gift_tier_off() -> None:
     """列车同行概念股估值档恒 'off'(概念股族展开卡登记约定,权威版本 =
     fields.md §5.2 效果缺口与载体登记,追击首例同锁第四实例):随机规格
@@ -99,6 +101,7 @@ def test_lieche_concept_stock_gift_tier_off() -> None:
     assert gift_hit_tier(ENV_GIFTS['列车同行概念股']) == 'off'
 
 
+@pytest.mark.skip(reason='v4.7 换赛季:登记条目随羁绊消费点迁移批退役(消失档羁绊轴),fixture 待投资域 v4.7 重采')
 def test_yinhe_concept_stock_gift_tier_off() -> None:
     """银河学者概念股估值档恒 'off'(概念股族展开卡登记约定,权威版本 =
     fields.md §5.2 效果缺口与载体登记,追击首例同锁第五实例):随机规格
@@ -108,6 +111,7 @@ def test_yinhe_concept_stock_gift_tier_off() -> None:
     assert gift_hit_tier(ENV_GIFTS['银河学者概念股']) == 'off'
 
 
+@pytest.mark.skip(reason='v4.7 换赛季:登记条目随羁绊消费点迁移批退役(消失档羁绊轴),fixture 待投资域 v4.7 重采')
 def test_beluoboge_concept_stock_gift_tier_off() -> None:
     """贝洛伯格概念股估值档恒 'off'(概念股族展开卡登记约定,权威版本 =
     fields.md §5.2 效果缺口与载体登记,追击首例同锁第六实例):随机规格
@@ -128,6 +132,7 @@ def test_xingjianlvren_concept_stock_gift_tier_off() -> None:
     assert gift_hit_tier(ENV_GIFTS['星间旅人概念股']) == 'off'
 
 
+@pytest.mark.skip(reason='v4.7 换赛季:登记条目随羁绊消费点迁移批退役(消失档羁绊轴),fixture 待投资域 v4.7 重采')
 def test_xianzhou_concept_stock_gift_tier_off() -> None:
     """仙舟概念股估值档恒 'off'(概念股族展开卡登记约定,权威版本 =
     fields.md §5.2 效果缺口与载体登记,追击首例同锁第八实例):随机规格
@@ -138,6 +143,7 @@ def test_xianzhou_concept_stock_gift_tier_off() -> None:
     assert gift_hit_tier(ENV_GIFTS['仙舟概念股']) == 'off'
 
 
+@pytest.mark.skip(reason='v4.7 换赛季:登记条目随羁绊消费点迁移批退役(消失档羁绊轴),fixture 待投资域 v4.7 重采')
 def test_langshou_concept_stock_gift_tier_off() -> None:
     """狼狩概念股估值档恒 'off'(概念股族展开卡登记约定,权威版本 =
     fields.md §5.2 效果缺口与载体登记,追击首例同锁第九实例):随机规格
@@ -148,6 +154,7 @@ def test_langshou_concept_stock_gift_tier_off() -> None:
     assert gift_hit_tier(ENV_GIFTS['狼狩概念股']) == 'off'
 
 
+@pytest.mark.skip(reason='v4.7 换赛季:登记条目随羁绊消费点迁移批退役(消失档羁绊轴),fixture 待投资域 v4.7 重采')
 def test_zhouzhibanshen_concept_stock_gift_tier_off() -> None:
     """昼之半神概念股估值档恒 'off'(概念股族展开卡登记约定,权威版本 =
     fields.md §5.2 效果缺口与载体登记,追击首例同锁第十实例):随机规格
@@ -158,6 +165,7 @@ def test_zhouzhibanshen_concept_stock_gift_tier_off() -> None:
     assert gift_hit_tier(ENV_GIFTS['昼之半神概念股']) == 'off'
 
 
+@pytest.mark.skip(reason='v4.7 换赛季:登记条目随羁绊消费点迁移批退役(消失档羁绊轴),fixture 待投资域 v4.7 重采')
 def test_yezhibanshen_concept_stock_gift_tier_off() -> None:
     """夜之半神概念股估值档恒 'off'(概念股族展开卡登记约定,权威版本 =
     fields.md §5.2 效果缺口与载体登记,追击首例同锁第十一实例):随机规格
@@ -188,6 +196,7 @@ def test_qungong_concept_stock_gift_tier_off() -> None:
     assert gift_hit_tier(ENV_GIFTS['群攻概念股']) == 'off'
 
 
+@pytest.mark.skip(reason='v4.7 换赛季:登记条目随羁绊消费点迁移批退役(消失档羁绊轴),fixture 待投资域 v4.7 重采')
 def test_jianyi_concept_stock_gift_tier_off() -> None:
     """减益概念股估值档恒 'off'(概念股族展开卡登记约定,权威版本 =
     fields.md §5.2 效果缺口与载体登记,追击首例同锁第十四实例):随机规格
@@ -199,6 +208,7 @@ def test_jianyi_concept_stock_gift_tier_off() -> None:
     assert gift_hit_tier(ENV_GIFTS['减益概念股']) == 'off'
 
 
+@pytest.mark.skip(reason='v4.7 换赛季:登记条目随羁绊消费点迁移批退役(消失档羁绊轴),fixture 待投资域 v4.7 重采')
 def test_zhanjidian_concept_stock_gift_tier_off() -> None:
     """战技点概念股估值档恒 'off'(概念股族展开卡登记约定,权威版本 =
     fields.md §5.2 效果缺口与载体登记,追击首例同锁第十五实例):随机规格
