@@ -3,7 +3,7 @@
 出处 = cw_chars.py 模块 docstring(库形态/牌池口径/规范名原则/系统单位/
 派生集合各段)与 docs/game/currency_war/research/v47_tenghuang_binding.md
 (丹恒·腾荒 is_hide 依据)。锁 v4.7 赛季名单的结构语义:多档查询/名字归一/
-系统单位拆分/虚拟集合并集/牌池排除/专家空集/开拓者基名直通/掉出角色
+系统单位拆分/虚拟集合并集/牌池排除/专家空集/掉出角色
 不在册。规模断言(63/68/66/费段分布)为该赛季 roster 事实——版本更新
 重跑生成器重写官方段时,随同批更新这些期望值。
 """
@@ -25,8 +25,6 @@ from sr_od.application.currency_war.data.cw_chars import (
     assert_expert_names,
     chars_by_cost,
     get_char,
-    is_trailblazer,
-    trailblazer_form,
 )
 
 #: 官方 config 衍生角色名用的 bullet 点(U+2022 •);规范名一律间隔号
@@ -126,15 +124,3 @@ def test_expert_chars_empty_and_gate_rejects_all() -> None:
     assert all(not c.is_expert for c in CHARACTERS)
     with pytest.raises(ValueError):
         assert_expert_names(('花火',))
-
-
-def test_trailblazer_base_name_passthrough() -> None:
-    """开拓者基名直通锁(cw_chars.py 开拓者形态切换段):v4.7 名单开拓者
-    仅基名单条目 → 形态表清空,trailblazer_form 双排均原样返回基名;
-    非开拓者原样返回;is_trailblazer 恒 False(数据驱动空转,形态表恢复
-    时归一机制随之复活)。"""
-    assert trailblazer_form('开拓者', 'front') == '开拓者'
-    assert trailblazer_form('开拓者', 'back') == '开拓者'
-    assert trailblazer_form('花火', 'front') == '花火'
-    assert is_trailblazer('开拓者') is False
-    assert is_trailblazer('花火') is False

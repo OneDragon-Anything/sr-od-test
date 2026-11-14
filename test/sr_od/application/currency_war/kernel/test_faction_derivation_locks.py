@@ -1,23 +1,18 @@
 """faction 三类注册表派生口径测试(原稿锁面)
-+ 线知识卡三字段测试(line_and_upgrade §1.2/§1.4/§1.5)
-+ 开拓者形态归一上报测试(§3 不变量 5 哨兵)。
++ 线知识卡三字段测试(line_and_upgrade §1.2/§1.4/§1.5)。
 
 faction/position_pref 不入状态容器形状,消费点经注册表按 char_id 派生,三类
 消费口径(§2.1):
 - 类2 板面阵营计数/体系卡身份:注册表派生,未知名 = '?'(不计);
-- 类3 羁绊(按排聚合 board_by_row):行归属 + 注册表派生,开拓者形态归一
-  随迁(前排=记忆/后排=欢愉,原稿锁面 不变量 5 的计数侧承载体)。
+- 类3 羁绊(按排聚合 board_by_row):行归属 + 注册表派生。
 
 测试面:
 ① board_by_row 状态容器行输入:排归属 = 行入参(前排/后排分桶),多羁绊角色
    每系都计,total = 两行之和;
-② 开拓者形态按排归一(防御性再归一):前排槽携带后台形态 id 时按前排
-   形态取羁绊(欢愉不计),后排照旧;上报侧(swap/deploy_move)同源
-   归一核,换排即切换前台记忆/后台欢愉形态(char_id/faction 同步);
-③ 未知名/注册表无羁绊名 = 零标签(未知 '?' 不计);
-④ 类2 体系卡 _faction_count:身份计数(board_by_row)与 board OCR 兜底
+② 未知名/注册表无羁绊名 = 零标签(未知 '?' 不计);
+③ 类2 体系卡 _faction_count:身份计数(board_by_row)与 board OCR 兜底
    取 max;未知名不进身份计数;
-⑤ char_first_faction 派生式(主阵营单一源):命中 → factions[0],
+④ char_first_faction 派生式(主阵营单一源):命中 → factions[0],
    注册但无阵营 = '',未注册/空名 = '?'。
 
 知识卡节(统一阵容评分迭代重写,2026-11-03):①schema 全 21 线
@@ -30,16 +25,11 @@ cw_invest_channels 查询口承载)。
 """
 from __future__ import annotations
 
-from test.sr_od.application.currency_war._cw_helpers import cw4_bview
-
 from sr_od.application.currency_war.data.cw_chars import (
     char_first_faction,
 )
 from sr_od.application.currency_war.data.cw_dropped_names import (
     GUARD_CHARACTER_ROSTER,
-)
-from sr_od.application.currency_war.kernel.cw_action_report import (
-    report_action_move_unit_param,
 )
 from sr_od.application.currency_war.kernel.cw_board_by_row import (
     board_by_row,
@@ -54,18 +44,11 @@ from sr_od.application.currency_war.kernel.cw_comps import (
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
     GAME_STATE_SCHEMA_VERSION,
-    BenchSlot,
-    ChannelSig,
     GameState,
     Unit,
-    deployed_rows_of,
-    game_state_of,
 )
 from sr_od.application.currency_war.kernel.cw_game_state import (
     deployed_view_sequential as _dvs,
-)
-from sr_od.application.currency_war.kernel.cw_vocab import (
-    CwActionMoveUnitParam,
 )
 
 
@@ -103,21 +86,7 @@ def test_board_by_row_rows_bucket_and_multibond_count():
         and bb.count('列车同行', 'front') == 0
 
 
-# ===== ② 开拓者形态按排归一(计数侧) =====
-
-def test_board_by_row_trailblazer_row_normalization():
-    """开拓者形态归一随迁(原稿锁面 不变量 5 计数侧):前排槽携带后台
-    形态 id(欢愉)→ 按前排形态(记忆)取羁绊——列车同行计入、欢愉不计;
-    后排槽携带后台形态照旧计欢愉。"""
-    bb = board_by_row([_unit('开拓者·欢愉', 1)],   # 直构未归一态(防御域)
-                      [_unit('开拓者·欢愉', 1)])
-    assert bb.front == {'列车同行': 1, '能量': 1}, \
-        '前排按记忆形态取羁绊(欢愉不计)'
-    assert bb.back == {'列车同行': 1, '能量': 1, '欢愉': 1}, \
-        '后排按欢愉形态取羁绊'
-
-
-# ===== ③ 未知名/无羁绊名 = 零标签 =====
+# ===== ② 未知名/无羁绊名 = 零标签 =====
 
 def test_board_by_row_unknown_and_bondless_names_not_counted():
     """未注册名(='?' 口径)与注册表无阵营无流派名(白厄,独立羁绊不进
@@ -127,7 +96,7 @@ def test_board_by_row_unknown_and_bondless_names_not_counted():
     assert bb.front == {} and bb.back == {} and bb.total() == {}
 
 
-# ===== ④ 类2:体系卡 _faction_count(身份 × board OCR 取 max)=====
+# ===== ③ 类2:体系卡 _faction_count(身份 × board OCR 取 max)=====
 
 def test_system_card_faction_count_identity_and_board_max():
     """身份计数 = board_by_row 全板合计(注册表派生);board OCR 缺漏时
@@ -150,7 +119,7 @@ def test_system_card_faction_count_identity_and_board_max():
         'board OCR 兜判取 max(漏判激活比多判更伤)'
 
 
-# ===== ⑤ 主阵营派生式(§2.1 单一源)=====
+# ===== ④ 主阵营派生式(§2.1 单一源)=====
 
 def test_char_first_faction_derivation():
     """主阵营派生:命中 → factions[0];注册但无阵营登记 = '';未注册/
@@ -240,57 +209,4 @@ def test_lock_rule_machinery_retired_replaced_by_channels():
     assert strategy_line_bonus('飞光·映月', jing) \
         == strategy_line_bonus('飞光•映月', jing) == 500
     assert strategy_line_bonus('黑塔纪元', get_comp('大黑塔银河学者')) == 500
-
-
-# ============================================================ 开拓者形态归一(上报侧)
-# (换排形态归一归一口唯一:swap 上报与 deploy_move 上报均经同源归一核
-#  cw_exec_state.trailblazer_row_identity → trailblazer_row_unit,换排即
-#  切换前台记忆/后台欢愉形态;计数侧同构测试 = 本文件
-#  test_board_by_row_trailblazer_row_normalization。)
-
-_ST_SIG = ChannelSig(family='logic_action', actor='CwScreenPrep')
-_ST_SIG_OBS = ChannelSig(family='obs', actor='CwScreenPrep')
-
-
-def _gs_with_bench_trailblazer(deployed_taken: bool):
-    """bench 0 号槽 = 后台形态开拓者;deployed_taken=True 时
-    场上前排 1 号 = 普通角色『甲』(swap 场景需要在场交换对象)。"""
-    gs = game_state_of(None)
-    slots: list[BenchSlot | None] = [None] * 9
-    slots[0] = BenchSlot(kind='unit', unit=Unit(char_id='开拓者·欢愉',
-                                                star=4))
-    gs.observe(gs.bench, cw4_bview(slots),
-               evidence='t', sig=_ST_SIG_OBS)
-    gs.observe(gs.deployed, _dvs([Unit(char_id='甲', star=1, equips=[])]
-               if deployed_taken else [], []),
-               evidence='t', sig=_ST_SIG_OBS)
-    return gs
-
-
-def test_move_unit_report_normalizes_trailblazer_form_to_target_row() -> None:
-    """``move_unit`` 统一拖动上报有归一(benchchar-retirement P3 缺陷修复
-    申报面,原稿锁面 不变量 5;旧 swap/deploy_move 两上报同源归一,随
-    戊批并入 move_unit):开拓者拖上场 → 排变、形态(char_id)
-    同步切目标排;占槽目标 = 交换形态下归一同源。"""
-    # 空槽直落形态
-    gs = _gs_with_bench_trailblazer(deployed_taken=False)
-    out = report_action_move_unit_param(
-        gs, CwActionMoveUnitParam(src_domain='bench', src_slot=0,
-                                  dst_domain='front', dst_slot=1),
-        sig=_ST_SIG)
-    assert out.applied, f'部署应成功,实得 {out.reason!r}'
-    front, _ = deployed_rows_of(gs)
-    assert front and front[0].char_id == '开拓者·记忆', \
-        f'换到前排 → 记忆形态(空槽直落),实得 {front[0].char_id!r}'
-    # 占槽交换形态(交换对象回 bench 源槽,归一同源)
-    gs2 = _gs_with_bench_trailblazer(deployed_taken=True)
-    out2 = report_action_move_unit_param(
-        gs2, CwActionMoveUnitParam(src_domain='bench', src_slot=0,
-                                   dst_domain='front', dst_slot=1),
-        sig=_ST_SIG)
-    assert out2.applied, f'交换应成功,实得 {out2.reason!r}'
-    front2, _ = deployed_rows_of(gs2)
-    assert front2 and front2[0].char_id == '开拓者·记忆', \
-        f'换到前排 → 记忆形态(占槽交换),实得 {front2[0].char_id!r}'
-    # 排归属 = 状态容器行域承载(前排行成员)
 

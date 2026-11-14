@@ -152,11 +152,9 @@ def test_locked_bench_unit_to_field_refused() -> None:
 
 
 def test_duplicate_on_board_refused() -> None:
-    """唯一性键(上场者与场上现存无同名):开拓者双形态归一互斥。"""
-    from sr_od.application.currency_war.data.cw_chars import is_trailblazer
-    assert is_trailblazer('开拓者•欢愉') or is_trailblazer('开拓者•记忆')
-    gs = _gs([_unit('开拓者•欢愉'), None], [_unit('开拓者•记忆'),
-                                        None, None, None])
+    """唯一性键(上场者与场上现存无同名):同名 char_id 拒绝上场。"""
+    gs = _gs([_unit('三月七'), None], [_unit('三月七'),
+                                    None, None, None])
     out = report_action_move_unit_param(
         gs, CwActionMoveUnitParam('bench', 0, 'front', 2), _SIG_ACT)
     assert out.applied is False
@@ -217,22 +215,3 @@ def test_same_slot_idempotent_no_write() -> None:
         gs, CwActionMoveUnitParam('bench', 0, 'bench', 0), _SIG_ACT)
     assert out.applied is True
     assert (gs.bench.value, gs.deployed.value) == before
-
-
-def test_trailblazer_form_by_target_row() -> None:
-    """开拓者按目标排定形态:bench 欢愉形态 → 前排 = 记忆形态。
-
-    (v4.7 中间态:注册表单条目开拓者,形态表清空 → 归一返 None =
-    保持原身份〔cw_exec_state.trailblazer_row_identity 基名直通语义〕;
-    本测试原锁的旧双形态归一机器随羁绊消费点迁移批删除,挂账板既定。)"""
-    from sr_od.application.currency_war.kernel.cw_exec_state import (
-        trailblazer_row_identity,
-    )
-    ident = trailblazer_row_identity('开拓者•欢愉', 'front')
-    assert ident is None, \
-        '形态表清空态归一返 None(保持原身份);旧双形态归一随羁绊批删'
-    gs = _gs([_unit('开拓者•欢愉'), None], [None] * 4)
-    out = report_action_move_unit_param(
-        gs, CwActionMoveUnitParam('bench', 0, 'front', 1), _SIG_ACT)
-    assert out.applied is True
-    assert gs.deployed.value.front_slots[0].char_id == '开拓者•欢愉'

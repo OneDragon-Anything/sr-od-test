@@ -319,8 +319,8 @@ class TestPartnerTrigger:
                                     _u('姬子·启行'), _u('三月七')]))
         assert _pending_kinds(gs) == [], '资格未变(徽已持):静默'
 
-    def test_row_switch_non_trailblazer_silent(self):
-        """换排(非开拓者)不弹:资格集与排无关(仅开拓者形态按排)。"""
+    def test_row_switch_silent(self):
+        """换排不弹:资格集与排无关(标签函数无排面维度)。"""
         gs = _gs()
         _write_dep(gs, _view(front=[_u('三月七'), _u('姬子·启行')]))
         consume_screen_change(gs, 'partner')

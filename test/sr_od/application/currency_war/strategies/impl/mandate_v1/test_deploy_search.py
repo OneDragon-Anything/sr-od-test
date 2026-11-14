@@ -251,16 +251,6 @@ def test_stable_key_prefers_current_board() -> None:
     assert stable2 == 0, '不一致板 = 0'
 
 
-def test_bronya_side_pick_single_edge() -> None:
-    """选边双羁绊(布洛妮娅)计数单边化:peers 对象上下文经
-    unit_bond_tags 统一消费(单一源),板上标签不双边重复。"""
-    units = [_u('布洛妮娅'), _u('佩拉'), _u('杰帕德'), _u('桑博')]
-    counts = ds._tag_counts(units)
-    # 布洛妮娅选边(贝 3 基数 > 燃血 0 → 贝)后只出单侧标签。
-    assert counts.get('贝洛伯格', 0) == 4 and counts.get('燃血', 0) == 0, \
-        f'选边后单边(贝 4 / 燃血 0),实际 {counts}'
-
-
 # ==================== 次名分量收集出参(挑边差距遥测的
 # ====================  私有槽通道;纯观测,搜索行为零变)====================
 

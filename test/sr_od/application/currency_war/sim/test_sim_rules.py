@@ -49,9 +49,6 @@ from sr_od.application.currency_war.sim.cw_sim_enemy import (
     difficulty_of,
     resolve_plane_bosses,
 )
-from sr_od.application.currency_war.sim.cw_sim_special import (
-    trailblazer_form_of,
-)
 from sr_od.application.currency_war.sim.cw_sim_streams import stream_rng
 
 _OBS_SIG = ChannelSig(family='obs', actor='TestSigWriter')
@@ -227,13 +224,8 @@ def test_plane_boss_override_priority_and_pool_membership() -> None:
 
 
 # (planner 升星判据助手测试已随旧评估器退役删除:判据单一源 = 值回调
-#  [S3],每费用档簿记校验在本仓 operations/test_overlay.py。)
-
-def test_trailblazer_form_routing() -> None:
-    """开拓者双形态按排路由(front=记忆/back=欢愉);非开拓者原样。"""
-    assert trailblazer_form_of('开拓者', 'front') == '开拓者·记忆'
-    assert trailblazer_form_of('开拓者', 'back') == '开拓者·欢愉'
-    assert trailblazer_form_of('淘金客', 'front') == '淘金客'
+#  [S3],每费用档簿记校验在本仓 operations/test_overlay.py。
+#  开拓者形态路由测试已随开拓者双形态机制删除,考古走 git 历史。)
 
 
 # ============================================================ 轮首收入与连胜经济(M04/M15)
