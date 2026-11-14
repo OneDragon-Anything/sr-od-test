@@ -1,7 +1,7 @@
 """ChallengeEchoOfWarCore 周本挑战循环核心测试。
 
-锁设计约定(docs/develop/sr_od/application/echo_of_war/changes/weekly-challenge-core/
-details/weekly-core.md 节点卡与 status 出口表):
+锁设计约定(docs/develop/sr_od/application/echo_of_war/挑战机制概览.md §3
+「核心循环要点」;节点卡/status 出口表语义同源):
 
 - 节点声明:入口核对预算 5;发起链/弹窗防线预算 10;等待战斗结果/战斗超时收尾
   超时 = 家族常量(25 分钟口径);结算交互节点超时 3 分钟。

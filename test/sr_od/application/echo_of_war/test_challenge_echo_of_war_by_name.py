@@ -1,7 +1,7 @@
 """ChallengeEchoOfWarByName 周本按名挑战包装测试。
 
-锁设计约定(docs/develop/sr_od/application/echo_of_war/changes/weekly-challenge-core/
-details/trace-integration.md「周本按名挑战包装」节):
+锁设计约定(docs/develop/sr_od/application/echo_of_war/挑战机制概览.md §2
+「包装层契约」):
 
 - mission 解析:ID 精确匹配优先,中文名互相包含;多命中 ValueError 带候选列表,
   零命中 ValueError 带可选值清单。

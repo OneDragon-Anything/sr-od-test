@@ -1,7 +1,7 @@
 """ResumeFromBattleFail 共享失败继续件测试。
 
-锁设计约定(docs/develop/sr_od/application/echo_of_war/changes/weekly-challenge-core/
-details/fail-form-adaptation.md「方案:共享失败继续件」节):
+锁设计约定(docs/develop/sr_od/application/echo_of_war/挑战机制概览.md §4
+「共享失败继续件」):
 
 1. 节点声明:node_max_retry_times=5、timeout_seconds=180(点空白与旧结算锚均失效
    时的最终出口)。
