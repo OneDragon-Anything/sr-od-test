@@ -663,7 +663,8 @@ class TestUpgradeLightConeBranches:
     def test_farm_window_spin_bounded(
         self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """快速刷取静默无反应(点击假成功但窗口不开)的有界自旋:helper 恒
+        """快速刷取无可刷缺口 toast 漏检(点击假成功但窗口不开)的兜底
+        自旋:helper 恒
         WAIT 不计重试,原样透传会无限自旋——连等 4 轮超限转 FARM_WINDOW_FAIL
         判停(现场留证由 save_screenshot 承担,测试内桩掉)。"""
 
@@ -756,6 +757,45 @@ class TestUpgradeLightConeBranches:
         )
         assert _has_click_in(clicks, test_context, _LC_ASC, '按钮-快速刷取'), (
             '抑制轮应照常走 helper 点击路径'
+        )
+
+    def test_farm_window_toast_probe_active_on_reentry_round(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """探测门边界(重入轮放行):首轮 toast 漏检(场景无锚)→ helper WAIT
+        计数 1;重入轮(计数 1,帧=toast 可见窗)探测放行命中 → 判停——
+        锁 `<= 1` 上界(误写 `<= 0` 会让重入轮探测失效,正判全灭只剩兜底,
+        本测试红)。"""
+        scenes = [set(), {(_LC_ASC, '提示-无可刷缺口')}]
+        state = _install_script(monkeypatch, test_context, scenes, level=40)
+        _record_controller_clicks(monkeypatch, test_context, state)
+        op = _WatchedUpgradeLightCone(test_context, farm_dungeon=True)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        monkeypatch.setattr(UpgradeLightConeOp, 'save_screenshot',
+                            lambda self, prefix='': '')
+
+        def _fake_wait_click(op_self, screen, s_name, a_name, *args, **kwargs):
+            state['find_clicks'].append((s_name, a_name))
+            return op_self.round_wait(status=a_name, wait=1.5)
+
+        monkeypatch.setattr(UpgradeLightConeOp, 'round_by_find_and_click_area',
+                            _fake_wait_click)
+        enter_running_state(op.ctx)
+        try:
+            with fast_sleep(op):
+                first = op.open_farm_window()
+                state['round'] = 1  # 推进场景:重入轮 toast 在场
+                second = op.open_farm_window()
+        finally:
+            reset_running_state(op.ctx, op)
+        assert first.result == OperationRoundResultEnum.WAIT, (
+            f'首轮漏检应 WAIT 走 helper,result={first.result}'
+        )
+        assert second.is_success and second.status == 'FARM_WINDOW_FAIL', (
+            f'重入轮(计数 1)探测应放行命中判停,status={second.status}'
+        )
+        assert len(state['find_clicks']) == 1, (
+            f'重入轮命中后不得再点击,find_clicks={state["find_clicks"]}'
         )
 
     def test_back_after_farm_closes_team_screen(

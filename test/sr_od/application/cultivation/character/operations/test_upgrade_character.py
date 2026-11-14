@@ -18,8 +18,8 @@ monkeypatch 识别层构造 round 结果,驱动完整 ``execute()`` 节点图。
   (POWER_CAPPED 收尾),绝不死在副本里;
 - 手动路线返回兼容:退出关卡后副本关闭直接回大世界 → BACK_TO_WORLD
   → 重走入口链(角色图标→重选角色→切详情TAB),凭入口记名防升错;
-- 快速刷取静默无反应(无可刷缺口)= FARM_WINDOW_FAIL 回循环判停,
-  不许无界自旋。
+- 快速刷取无可刷缺口 toast 正判(前两轮门控探测,命中即判停)或漏检
+  兜底封顶 = FARM_WINDOW_FAIL 回循环判停,不许无界自旋。
 """
 
 from __future__ import annotations
@@ -932,8 +932,8 @@ class TestUpgradeCharacterFarmRoute:
     def test_farm_window_fail_stops_instead_of_spinning(
         self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """快速刷取静默无反应(无可刷缺口,按钮白底可 OCR 但点击无效):
-        helper 重试预算耗尽(is_fail)转 FARM_WINDOW_FAIL 回升级循环判停
+        """快速刷取无可刷缺口 toast 漏检兜底(按钮白底可 OCR 但点击无效,
+        not-found 的重试预算耗尽):转 FARM_WINDOW_FAIL 回升级循环判停
         收尾——原样透传 WAIT 会无界自旋挂死一条龙。"""
 
         def _fake_fail_click(op_self, screen, s_name, a_name, *args, **kwargs):
@@ -958,10 +958,10 @@ class TestUpgradeCharacterFarmRoute:
     def test_farm_window_spin_bounded(
         self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """快速刷取静默无反应(点击假成功但窗口不开)的有界自旋:按钮白底
-        常在可 OCR,helper 恒 WAIT 不计重试,原样透传会无限自旋挂死一条龙
-        ——连等 4 轮超限转 FARM_WINDOW_FAIL 判停(现场留证由 save_screenshot
-        承担,测试内桩掉)。"""
+        """快速刷取无可刷缺口 toast 漏检(点击假成功但窗口不开)的兜底
+        自旋:按钮白底常在可 OCR,helper 恒 WAIT 不计重试,原样透传会
+        无限自旋挂死一条龙——连等 4 轮超限转 FARM_WINDOW_FAIL 判停
+        (现场留证由 save_screenshot 承担,测试内桩掉)。"""
 
         def _fake_wait_click(op_self, screen, s_name, a_name, *args, **kwargs):
             state['find_clicks'].append((s_name, a_name))
@@ -1044,6 +1044,45 @@ class TestUpgradeCharacterFarmRoute:
             '抑制轮应照常走 helper 点击路径'
         )
 
+    def test_farm_window_toast_probe_active_on_reentry_round(
+        self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """探测门边界(重入轮放行):首轮 toast 漏检(场景无锚)→ helper WAIT
+        计数 1;重入轮(计数 1,帧=toast 可见窗)探测放行命中 → 判停——
+        锁 `<= 1` 上界(误写 `<= 0` 会让重入轮探测失效,正判全灭只剩兜底,
+        本测试红)。"""
+        scenes = [set(), {(_ASCEND, '提示-无可刷缺口')}]
+        state = _install_script(monkeypatch, test_context, scenes, level=40)
+        _record_controller_clicks(monkeypatch, test_context, state)
+        op = _WatchedUpgradeCharacter(test_context, farm_dungeon=True)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        monkeypatch.setattr(UpgradeCharacterOp, 'save_screenshot',
+                            lambda self, prefix='': '')
+
+        def _fake_wait_click(op_self, screen, s_name, a_name, *args, **kwargs):
+            state['find_clicks'].append((s_name, a_name))
+            return op_self.round_wait(status=a_name, wait=1.5)
+
+        monkeypatch.setattr(UpgradeCharacterOp, 'round_by_find_and_click_area',
+                            _fake_wait_click)
+        enter_running_state(op.ctx)
+        try:
+            with fast_sleep(op):
+                first = op.open_farm_window()
+                state['round'] = 1  # 推进场景:重入轮 toast 在场
+                second = op.open_farm_window()
+        finally:
+            reset_running_state(op.ctx, op)
+        assert first.result == OperationRoundResultEnum.WAIT, (
+            f'首轮漏检应 WAIT 走 helper,result={first.result}'
+        )
+        assert second.is_success and second.status == 'FARM_WINDOW_FAIL', (
+            f'重入轮(计数 1)探测应放行命中判停,status={second.status}'
+        )
+        assert len(state['find_clicks']) == 1, (
+            f'重入轮命中后不得再点击,find_clicks={state["find_clicks"]}'
+        )
+
     def test_farm_window_fail_routes_back_to_loop(
         self, test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
     ) -> None:
@@ -1054,7 +1093,7 @@ class TestUpgradeCharacterFarmRoute:
         直呼测试测不出边挂错,必须走完整 execute 验证路由。"""
 
         def _fake_fail_farm_click(op_self, screen, s_name, a_name, *args, **kwargs):
-            # 仅快速刷取钮点击失败(模拟静默无反应的重试耗尽),其余点击成功
+            # 仅快速刷取钮点击失败(模拟点击无效 not-found 的重试耗尽),其余点击成功
             if (s_name, a_name) == (_ASCEND, '按钮-快速刷取'):
                 return op_self.round_fail(f'未找到 {a_name}')
             test_context.controller.click(_rect_center(test_context, s_name, a_name))
