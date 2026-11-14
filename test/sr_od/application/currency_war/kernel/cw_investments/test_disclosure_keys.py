@@ -9,7 +9,6 @@ from sr_od.application.currency_war.kernel.cw_investments import (
     STRATEGY_DELAYED_RANDOM_CHOICE_ASSUMPTION_KEYS,
     STRATEGY_DESC_UNMODELED_KEYS,
     STRATEGY_HIRING_LETTER_UNMODELED_ASSUMPTION_KEYS,
-    STRATEGY_REINCARNATOR_UNMODELED,
 )
 
 
@@ -47,13 +46,6 @@ def test_desc_unmodeled_keys_registered() -> None:
     )
 
 
-def test_reincarnator_unmodeled_key_registered() -> None:
-    """披露键静态常量已登记断言(「轮回者」三条效果条目零建模申报,现单卡单成员):
-    覆盖域 = 效果条目1b 装备授予 + 效果条目3 局终变换 + 效果条目4 局终回退共享缺口——
-    「轮回者」四面零数据(装备注册表/占席词表/识别词面/测试仓全零),
-    sim 状态副本少一件未知装备资产 + 局终变换域空;实机取证落数据时升级
-    家族键,本断言随批扩员——申报面扩员即红一次,批内顺手更新即绿。"""
-    assert STRATEGY_REINCARNATOR_UNMODELED == (
-        'strategy_reincarnator_unmodeled',
-    )
+# 轮回者披露键(STRATEGY_REINCARNATOR_UNMODELED)已随轮回不止 V4.7 退场
+# 删除(T-5,键随卡退场;src 侧留重建判据注释,考古走 git 历史)。
 
