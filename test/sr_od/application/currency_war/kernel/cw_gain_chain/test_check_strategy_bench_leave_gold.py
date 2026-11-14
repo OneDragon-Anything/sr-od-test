@@ -45,7 +45,7 @@ def _inject_bench_leave_gold(monkeypatch) -> None:
     卡后按原语义恢复登记、注入可删)。"""
     from sr_od.application.currency_war.kernel import cw_gain_chain as _gc
     monkeypatch.setattr(_gc, 'STRATEGY_BENCH_LEAVE_GOLD_GRANTS',
-                        {_CARD: _ROWS})
+                        {_CARD: (('花火', 1, 2), ('火花', 1, 4))})
 
 
 def _gs(*, card: str | None = _CARD,
