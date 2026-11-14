@@ -440,6 +440,7 @@ class TestFarmTicketChain:
             f'find_events={state["find_events"]},clicks={clicks}'
         )
         assert op._end_level == 5
+        assert state['level_reads'] == 1, '判停等级应恰好读取一次'
         panel_clicks = [c for c in clicks
                         if _has_click_in([c], test_context, _TRACE,
                                          '按钮-快速刷取')]
