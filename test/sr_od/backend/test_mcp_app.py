@@ -319,6 +319,7 @@ def test_output_schema_matches_runtime_returns(tmp_path, monkeypatch) -> None:
         'key_tap': {'key': 'esc'},
         'drag': {'x1': 1, 'y1': 2, 'x2': 3, 'y2': 4},
         'goto_screen': {'target_screen_name': '邮件'},
+        'list_operations': {},
     }
     for name, kwargs in cases.items():
         tool = mcp._tool_manager._tools[name]
@@ -822,6 +823,54 @@ def test_describe_operation_accepts_short_name() -> None:
     assert isinstance(info, OperationDescOut)
     assert info.op_id == _GET_RID_OF_STUCK
     assert info.class_name == 'GetRidOfStuck'
+
+
+def test_describe_operation_ambiguous_strips_hint(monkeypatch) -> None:
+    """describe_operation 多命中分支:转 AmbiguousMatchesOut 且不携带 hint(用法引导不进返回体)。"""
+    from unittest.mock import MagicMock
+
+    from sr_od.backend import operation_registry
+    from sr_od.backend.mcp.service_app import make_describe_operation
+    from sr_od.backend.schemas import AmbiguousMatchesOut, OperationDescOut
+
+    backend = MagicMock()
+    payload = {
+        'ambiguous': True, 'count': 2, 'hint': '命中多个同名类,用完整 op_id 精确指定',
+        'matches': [
+            {'op_id': 'pkg.a.MoveDirectly', 'class_name': 'MoveDirectly', 'module': 'pkg.a',
+             'docstring': None, 'params': [], 'debuggable': True},
+            {'op_id': 'pkg.b.MoveDirectly', 'class_name': 'MoveDirectly', 'module': 'pkg.b',
+             'docstring': None, 'params': [], 'debuggable': True},
+        ],
+    }
+    monkeypatch.setattr(operation_registry, 'describe_operation', lambda ctx, op_id: payload)
+    res = make_describe_operation(backend)('MoveDirectly')
+    assert isinstance(res, AmbiguousMatchesOut)
+    assert res.count == 2
+    assert all(isinstance(m, OperationDescOut) for m in res.matches)
+    assert not hasattr(res, 'hint')
+
+
+def test_describe_operation_flow_wraps_flow_out(monkeypatch) -> None:
+    """describe_operation_flow 单命中分支:registry dict → FlowOut(12 字段对齐)。"""
+    from unittest.mock import MagicMock
+
+    from sr_od.backend import operation_flow
+    from sr_od.backend.mcp.service_app import make_describe_operation_flow
+    from sr_od.backend.schemas import FlowOut
+
+    payload = {
+        'op_id': 'pkg.x.SomeOp', 'class_name': 'SomeOp', 'module': 'pkg.x',
+        'start_node': '入口', 'node_count': 1, 'edge_count': 0,
+        'flow': '入口', 'mermaid': None, 'nodes': [], 'edges': [],
+        'diagnostics': [], 'notes': ['图例'],
+    }
+    monkeypatch.setattr(operation_flow, 'describe_operation_flow',
+                        lambda op_id, mermaid=False: payload)
+    res = make_describe_operation_flow(MagicMock())('pkg.x.SomeOp', mermaid=False)
+    assert isinstance(res, FlowOut)
+    assert res.start_node == '入口'
+    assert res.notes == ['图例']
 
 
 def test_run_operation_runs_via_slot() -> None:
