@@ -260,6 +260,7 @@ def test_output_schema_matches_runtime_returns(tmp_path, monkeypatch) -> None:
         ApplicationInfo,
         ApplicationListResult,
         AreaMutationResult,
+        GotoScreenResult,
         InputTextResult,
         ScreenCreateResult,
         WindowStatus,
@@ -283,6 +284,8 @@ def test_output_schema_matches_runtime_returns(tmp_path, monkeypatch) -> None:
     backend.delete_screen_area.return_value = AreaMutationResult(
         screen_name='邮件', area_name='标题', action='deleted', area_count=4)
     backend.create_screen.return_value = ScreenCreateResult(screen_id='mail', screen_name='邮件')
+    backend.goto_screen.return_value = GotoScreenResult(
+        arrived=True, current_screen='邮件', steps=[], reason=None)
     backend.click_game.return_value = True
     backend.key_tap.return_value = '已按下 esc'
     backend.drag.return_value = '已拖拽 (1,2)→(3,4)'
@@ -306,6 +309,7 @@ def test_output_schema_matches_runtime_returns(tmp_path, monkeypatch) -> None:
         'click_game': {'x': 1, 'y': 2},
         'key_tap': {'key': 'esc'},
         'drag': {'x1': 1, 'y1': 2, 'x2': 3, 'y2': 4},
+        'goto_screen': {'target_screen_name': '邮件'},
     }
     for name, kwargs in cases.items():
         tool = mcp._tool_manager._tools[name]
@@ -529,9 +533,10 @@ def test_input_text_stop_interrupted_raises_runtime_error() -> None:
 def test_goto_screen_converts_and_carries_scene() -> None:
     """goto_screen:到达/中断均转 GotoScreenOut(中断带现场为正常结果);目标不存在透传 ScreenInfoError。
 
-    停机守卫异常由 backend.goto_screen 内部转 arrived=False 中断结果
-    (BaseException 不穿透)——该 catch 在 backend 方法体内,mock 替身整个
-    backend 方法时不可达,不在本测试覆盖面。
+    停机守卫拦截是 backend.goto_screen 的真实可达路径(未豁免,停机后首次
+    导航点击即被拦),内部转 arrived=False 中断结果——转换逻辑由
+    test_backend_context 的停机直测覆盖;本文件 mock 替身整个 backend 方法,
+    测不到该内部分支(见下 stop_interrupted 段说明)。
     """
     from sr_od.backend.backend_context import ScreenInfoError
     from sr_od.backend.schemas import GotoScreenOut, GotoScreenResult

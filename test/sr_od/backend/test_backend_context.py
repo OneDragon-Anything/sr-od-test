@@ -449,3 +449,38 @@ def test_get_screen_detail_wraps_not_found_with_guidance() -> None:
     assert '主界面' in msg and '邮件' in msg  # 示例名单进文案
     assert 'list_screen_names' in msg  # 指路句进文案
     assert '未找到画面: 不存在的画面' in msg  # 原始错误保留
+
+
+def test_goto_screen_stop_interrupted_returns_scene(monkeypatch):
+    """停机守卫拦截(goto_screen 未豁免,真实可达主路径)转 arrived=False 中断结果,带现场。
+
+    goto_screen 连点可达 max_steps=30 次,不做 stop_guard_exemption——停机后
+    「零游戏输入」不变式优先。拦截转结构化结果而非异常:agent 拿
+    current_screen/steps 仍可排障(锁 stop_guard 幽灵输入事故同族的故障形态)。
+    """
+    from one_dragon.base.controller.stop_guard import StopRunInterrupted
+    from sr_od.backend.backend_context import SrBackendContext
+    from sr_od.backend.schemas import GotoScreenResult
+
+    ctx = MagicMock()
+    ctx.ready_for_application = True
+    ctx.controller.is_game_window_ready = True
+    ctx.controller.get_screenshot.return_value = MagicMock(name='image')
+    ctx.controller.click.side_effect = StopRunInterrupted('停机')
+    ctx.screen_loader.screen_info_list = [MagicMock(screen_name='邮件')]
+    ctx.screen_loader.get_screen_route.return_value.can_go = True
+    ctx.screen_loader.get_screen_route.return_value.node_list = [MagicMock(from_area='邮件按钮', to_screen='邮件')]
+    ctx.screen_loader.get_screen.return_value.pc_alt = False
+    ctx.screen_loader.get_area.return_value.pc_alt = False
+    backend = SrBackendContext(ctx)
+    monkeypatch.setattr('sr_od.backend.backend_context.screen_utils',
+                        MagicMock(get_match_screen_name=lambda c, i: '主界面'))
+    monkeypatch.setattr(backend, '_find_area_click_point',
+                        lambda image, screen_info, area: MagicMock(name='point'))
+
+    result = backend.goto_screen('邮件')
+    assert isinstance(result, GotoScreenResult)
+    assert result.arrived is False
+    assert '停机中断' in result.reason
+    assert result.current_screen == '主界面'  # 识别确认的所在画面(现场)
+    assert result.steps == []  # 首次点击即被拦,尚无完成步骤
