@@ -234,6 +234,8 @@ def test_handle_game_status():
 def test_handle_game_stop():
     resp = asyncio.run(routes_mod.handle_game_stop(_mock_backend(), _FakeRequest({})))
     assert resp.status_code == 200
+    body = json.loads(resp.body)
+    assert body == {'stopped': True, 'source': 'http'}  # RunStopResult asdict
 
 
 # ===== /game/operations / /game/operations/describe / /game/run/operation(自定义 op)=====

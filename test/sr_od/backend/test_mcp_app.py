@@ -473,6 +473,56 @@ def test_stop_run_delegates() -> None:
     backend.stop.assert_called_once()
 
 
+def test_run_one_dragon_and_standalone_accept_and_reject() -> None:
+    """run_one_dragon / run_standalone_app:受理转 RunStartOut,占用走 RunStartRefusedError。"""
+    from sr_od.backend.backend_context import RunStartRefusedError
+    from sr_od.backend.mcp.service_app import (
+        make_run_one_dragon,
+        make_run_standalone_app,
+    )
+
+    backend = _mock_backend()
+    backend.run_one_dragon.return_value = (True, Future())
+    backend.run_standalone_app.return_value = (True, Future())
+    res = asyncio.run(make_run_one_dragon(backend)(block=False))
+    assert isinstance(res, RunStartOut)
+    assert res.app == 'OpenAndEnterGame'
+    res = asyncio.run(make_run_standalone_app(backend)(app_id='x', block=False))
+    assert isinstance(res, RunStartOut)
+
+    backend = _mock_backend(start_ok=False)
+    backend.run_one_dragon.return_value = (False, None)
+    backend.run_standalone_app.return_value = (False, None)
+    with pytest.raises(RunStartRefusedError, match='已有运行'):
+        asyncio.run(make_run_one_dragon(backend)(block=False))
+    with pytest.raises(RunStartRefusedError, match='已有运行'):
+        asyncio.run(make_run_standalone_app(backend)(app_id='x', block=False))
+
+
+def test_run_refusal_error_includes_occupancy_reason() -> None:
+    """跨进程窗口占用原因进拒绝异常文案(与本进程占用路径同构,可归因)。"""
+    backend = MagicMock()
+    backend.run_slot.last_refusal_reason = '游戏窗口被他进程占用(pid=42)'
+    backend.query_status.return_value = RunStatusResult(state='running', source='http')
+    err = backend.run_refusal_error = (
+        lambda hint: SrBackendContext.run_refusal_error(backend, hint))
+    assert '被他进程占用' in str(err('提示'))
+
+
+def test_run_operation_block_returns_non_dict_data() -> None:
+    """data 数据通道为 Any(op 自定形态):float/list 等非 dict 值不得被校验拒绝。"""
+    from sr_od.backend.mcp.service_app import make_run_operation
+
+    fut: Future = Future()
+    fut.set_result(OperationResult(success=True, status='ok', data=3.5))
+    backend = MagicMock()
+    backend.run_slot._start.return_value = (True, fut)
+    res = asyncio.run(make_run_operation(backend)(op_id=_OPEN_AND_ENTER, args={}, block=True))
+    assert isinstance(res, RunFinishOut)
+    assert res.success is True
+    assert res.data == 3.5
+
+
 def test_record_screen_failures_raise(monkeypatch) -> None:
     """record_screen:失败走 RuntimeError 异常通道(stop 无录屏/无 ffmpeg)。
 
