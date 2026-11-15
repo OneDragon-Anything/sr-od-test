@@ -171,6 +171,47 @@ def test_list_screen_names_converts_to_output_model() -> None:
     assert result.screen_names == ['主界面', '邮件']
 
 
+def test_screen_crud_tools_convert_and_raise() -> None:
+    """建档 CRUD 三工具:成功转 Out 模型,校验失败透传 ScreenInfoError(不做兜底包装)。"""
+    from sr_od.backend.backend_context import ScreenInfoError
+    from sr_od.backend.schemas import (
+        AreaMutationOut,
+        AreaMutationResult,
+        ScreenCreateOut,
+        ScreenCreateResult,
+    )
+
+    mcp, backend = _mcp_with_backend()
+    backend.upsert_screen_area.return_value = AreaMutationResult(
+        screen_name='邮件', area_name='标题', action='inserted', area_count=5)
+    upsert_fn = getattr(mcp._tool_manager._tools['upsert_screen_area'],
+                        'fn', None) or mcp._tool_manager._tools['upsert_screen_area'].func
+    result = upsert_fn(screen_name='邮件', area_name='标题', pc_rect=[1, 1, 2, 2])
+    assert isinstance(result, AreaMutationOut)
+    assert result.action == 'inserted'
+    assert result.area_count == 5
+
+    backend.delete_screen_area.return_value = AreaMutationResult(
+        screen_name='邮件', area_name='标题', action='deleted', area_count=4)
+    delete_fn = getattr(mcp._tool_manager._tools['delete_screen_area'],
+                        'fn', None) or mcp._tool_manager._tools['delete_screen_area'].func
+    result = delete_fn(screen_name='邮件', area_name='标题')
+    assert isinstance(result, AreaMutationOut)
+    assert result.action == 'deleted'
+
+    backend.create_screen.return_value = ScreenCreateResult(screen_id='mail', screen_name='邮件')
+    create_fn = getattr(mcp._tool_manager._tools['create_screen'],
+                        'fn', None) or mcp._tool_manager._tools['create_screen'].func
+    result = create_fn(screen_id='mail', screen_name='邮件')
+    assert isinstance(result, ScreenCreateOut)
+    assert result.screen_id == 'mail'
+
+    backend.upsert_screen_area.side_effect = ScreenInfoError('pc_rect 非法: [9, 9, 2, 2]')
+    with pytest.raises(ScreenInfoError, match='pc_rect'):
+        upsert_fn(screen_name='邮件', area_name='标题', pc_rect=[9, 9, 2, 2])
+    backend.upsert_screen_area.side_effect = None
+
+
 def test_output_schema_matches_runtime_returns(tmp_path, monkeypatch) -> None:
     """带 outputSchema 的工具,运行时返回必须匹配其 schema。
 
@@ -184,7 +225,9 @@ def test_output_schema_matches_runtime_returns(tmp_path, monkeypatch) -> None:
     from sr_od.backend.schemas import (
         ApplicationInfo,
         ApplicationListResult,
+        AreaMutationResult,
         InputTextResult,
+        ScreenCreateResult,
         WindowStatus,
     )
 
@@ -201,6 +244,11 @@ def test_output_schema_matches_runtime_returns(tmp_path, monkeypatch) -> None:
     backend.list_screen_names.return_value = ['主界面', '邮件']
     backend.close_game.return_value = '已发送关闭游戏信号,可用 check_game_window 验证'
     backend.input_text.return_value = InputTextResult(method='clipboard', masked_text='***')
+    backend.upsert_screen_area.return_value = AreaMutationResult(
+        screen_name='邮件', area_name='标题', action='inserted', area_count=5)
+    backend.delete_screen_area.return_value = AreaMutationResult(
+        screen_name='邮件', area_name='标题', action='deleted', area_count=4)
+    backend.create_screen.return_value = ScreenCreateResult(screen_id='mail', screen_name='邮件')
     backend.capture.return_value = np.zeros((4, 4, 3), dtype=np.uint8)
     monkeypatch.setattr(
         'sr_od.backend.backend_context.os_utils.get_path_under_work_dir',
@@ -215,6 +263,9 @@ def test_output_schema_matches_runtime_returns(tmp_path, monkeypatch) -> None:
         'close_game': {},
         'capture_game_screen': {},
         'input_text': {'text': 'abc', 'use_clipboard': True},
+        'upsert_screen_area': {'screen_name': '邮件', 'area_name': '标题', 'pc_rect': [1, 1, 2, 2]},
+        'delete_screen_area': {'screen_name': '邮件', 'area_name': '标题'},
+        'create_screen': {'screen_id': 'mail', 'screen_name': '邮件'},
     }
     for name, kwargs in cases.items():
         tool = mcp._tool_manager._tools[name]
