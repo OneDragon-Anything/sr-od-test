@@ -19,7 +19,15 @@ from one_dragon.base.operation.operation_base import OperationResult
 from sr_od.backend.backend_context import BackendNotReadyError, SrBackendContext
 from sr_od.backend.mcp import app as app_mod
 from sr_od.backend.mcp.app import create_mcp_server
-from sr_od.backend.schemas import AnalyzeScreenResult, RunStatusOut, RunStatusResult
+from sr_od.backend.schemas import (
+    AnalyzeScreenResult,
+    RunFinishOut,
+    RunStartOut,
+    RunStatusOut,
+    RunStatusResult,
+    RunStopOut,
+    RunStopResult,
+)
 
 
 def _mcp_with_backend() -> tuple[object, MagicMock]:
@@ -47,10 +55,11 @@ def _mock_backend(start_ok: bool = True) -> MagicMock:
         started_at='2026-07-02T00:00:00',
         duration_seconds=1.0,
     )
-    b.stop.return_value = {'stopped': False, 'error': '当前无运行'}
-    # 并发拒绝响应由 backend 统一助手产出(start 类工具只透传):
+    b.stop.return_value = RunStopResult(stopped=False, source=None)
+    # 并发拒绝由 backend 统一助手产出(start 类工具只透传):
     # 绑真实现——方法只读 query_status / run_slot,二者均已被 mock。
     b.run_refusal_response = lambda hint: SrBackendContext.run_refusal_response(b, hint)
+    b.run_refusal_error = lambda hint: SrBackendContext.run_refusal_error(b, hint)
     return b
 
 
@@ -385,15 +394,19 @@ def test_open_game_nonblock_returns_started() -> None:
     backend = _mock_backend()
     tool = app_mod.make_open_game(backend)
     res = asyncio.run(tool(enter=True, block=False))
-    assert res['started'] is True
+    assert isinstance(res, RunStartOut)
+    assert res.app == 'OpenAndEnterGame'
     backend.start_run.assert_called_once()
 
 
 def test_open_game_concurrent_reject() -> None:
+    """单跑道占用 → RunStartRefusedError(异常通道,文案区分占用来源)。"""
+    from sr_od.backend.backend_context import RunStartRefusedError
+
     backend = _mock_backend(start_ok=False)
     tool = app_mod.make_open_game(backend)
-    res = asyncio.run(tool(enter=True, block=False))
-    assert res['started'] is False and 'source' in res
+    with pytest.raises(RunStartRefusedError, match='已有运行'):
+        asyncio.run(tool(enter=True, block=False))
 
 
 @pytest.mark.parametrize('enter, expect_msg', [
@@ -401,14 +414,16 @@ def test_open_game_concurrent_reject() -> None:
     (False, '成功打开游戏(未登录)'),
 ], ids=['enter', 'open-only'])
 def test_open_game_block_success(enter: bool, expect_msg: str) -> None:
-    """block=True + 成功 future → 按 enter 分支返回对应成功文案。"""
+    """block=True + 成功 future → RunFinishOut,按 enter 分支返回对应成功文案。"""
     backend = _mock_backend()
     fut: Future = Future()
     fut.set_result(OperationResult(success=True, status='成功'))
     backend.start_run.return_value = (True, fut)
     tool = app_mod.make_open_game(backend)
     res = asyncio.run(tool(enter=enter, block=True))
-    assert res == {'success': True, 'result': expect_msg}
+    assert isinstance(res, RunFinishOut)
+    assert res.success is True
+    assert res.status == expect_msg
 
 
 def test_open_game_block_failed() -> None:
@@ -418,7 +433,9 @@ def test_open_game_block_failed() -> None:
     backend.start_run.return_value = (True, fut)
     tool = app_mod.make_open_game(backend)
     res = asyncio.run(tool(enter=True, block=True))
-    assert res == {'success': False, 'result': '打开游戏失败: 打开游戏失败'}
+    assert isinstance(res, RunFinishOut)
+    assert res.success is False
+    assert res.status == '打开游戏失败: 打开游戏失败'
 
 
 def test_open_game_enter_flag_selects_op() -> None:
@@ -451,7 +468,8 @@ def test_get_run_status_delegates() -> None:
 def test_stop_run_delegates() -> None:
     backend = _mock_backend()
     res = app_mod.make_stop_run(backend)()
-    assert res['stopped'] is False
+    assert isinstance(res, RunStopOut)
+    assert res.stopped is False
     backend.stop.assert_called_once()
 
 
@@ -686,7 +704,7 @@ def test_describe_operation_accepts_short_name() -> None:
 
 
 def test_run_operation_runs_via_slot() -> None:
-    """合法 op_id + 空 args → run_slot._start 被调(op_factory 路径),started=True。"""
+    """合法 op_id + 空 args → run_slot._start 被调(op_factory 路径),RunStartOut 受理。"""
     from sr_od.backend.mcp.service_app import make_run_operation
 
     backend = MagicMock()
@@ -694,7 +712,7 @@ def test_run_operation_runs_via_slot() -> None:
     backend.query_status.return_value = RunStatusResult(
         state='running', source='mcp', started_at='2026-07-02T00:00:00', duration_seconds=1.0)
     res = asyncio.run(make_run_operation(backend)(op_id=_OPEN_AND_ENTER, args={}, block=False))
-    assert res['started'] is True
+    assert isinstance(res, RunStartOut)
     backend.run_slot._start.assert_called_once()
     call = backend.run_slot._start.call_args
     assert call.args[0] == 'mcp'                                   # source
@@ -704,44 +722,44 @@ def test_run_operation_runs_via_slot() -> None:
 
 
 def test_run_operation_rejects_non_operation() -> None:
-    """op_id 解析出非 Operation(resolve_op_class raise)→ {started: False, error},不调 _start。"""
+    """op_id 解析出非 Operation(resolve_op_class raise)→ 异常透传,不调 _start。"""
     from sr_od.backend.mcp.service_app import make_run_operation
 
     backend = MagicMock()
-    res = asyncio.run(make_run_operation(backend)(op_id=_CHARGE_PLAN_ITEM, block=False))
-    assert res['started'] is False and 'error' in res
+    with pytest.raises(ValueError):
+        asyncio.run(make_run_operation(backend)(op_id=_CHARGE_PLAN_ITEM, block=False))
     backend.run_slot._start.assert_not_called()
 
 
 def test_run_operation_rejects_missing_required() -> None:
-    """缺必填参数(validate_args 返错)→ {started: False, error},不调 _start。"""
+    """缺必填参数(validate_args 返错)→ ValueError 带参数名,不调 _start。"""
     from sr_od.backend.mcp.service_app import make_run_operation
 
     backend = MagicMock()
-    res = asyncio.run(make_run_operation(backend)(
-        op_id=_GET_RID_OF_STUCK, args={}, block=False))
-    assert res['started'] is False
-    assert 'stuck_times' in res['error']
+    with pytest.raises(ValueError, match='stuck_times'):
+        asyncio.run(make_run_operation(backend)(
+            op_id=_GET_RID_OF_STUCK, args={}, block=False))
     backend.run_slot._start.assert_not_called()
 
 
 def test_run_operation_concurrent_reject() -> None:
-    """单跑道已有运行 → run_slot._start 返 (False, None) → {started: False, source}。"""
+    """单跑道已有运行 → run_slot._start 返 (False, None) → RunStartRefusedError(异常通道)。"""
+    from sr_od.backend.backend_context import RunStartRefusedError
     from sr_od.backend.mcp.service_app import make_run_operation
 
     backend = MagicMock()
     backend.run_slot._start.return_value = (False, None)
     backend.query_status.return_value = RunStatusResult(state='running', source='http')
-    # 并发拒绝响应由 backend 统一助手产出,绑真实现(依赖均已被 mock)。
-    backend.run_refusal_response = lambda hint: SrBackendContext.run_refusal_response(backend, hint)
-    res = asyncio.run(make_run_operation(backend)(op_id=_OPEN_AND_ENTER, block=False))
-    assert res['started'] is False
-    assert res['error'] == '已有运行在进行中'
-    assert res['source'] == 'http'
+    # 拒绝异常由 backend 统一助手产出,绑真实现(依赖均已被 mock)。
+    backend.run_refusal_error = lambda hint: SrBackendContext.run_refusal_error(backend, hint)
+    with pytest.raises(RunStartRefusedError) as exc_info:
+        asyncio.run(make_run_operation(backend)(op_id=_OPEN_AND_ENTER, block=False))
+    assert '已有运行' in str(exc_info.value)
+    assert 'http' in str(exc_info.value)  # 来源进文案
 
 
 def test_run_operation_block_success() -> None:
-    """block=True + 成功结果 → 返回 {success: True, result} 终态 dict。"""
+    """block=True + 成功结果 → RunFinishOut 终态。"""
     from sr_od.backend.mcp.service_app import make_run_operation
 
     fut: Future = Future()
@@ -749,11 +767,12 @@ def test_run_operation_block_success() -> None:
     backend = MagicMock()
     backend.run_slot._start.return_value = (True, fut)
     res = asyncio.run(make_run_operation(backend)(op_id=_OPEN_AND_ENTER, args={}, block=True))
-    assert res['success'] is True and '成功' in res['result']
+    assert isinstance(res, RunFinishOut)
+    assert res.success is True and '成功' in res.status
 
 
 def test_run_operation_block_returns_data() -> None:
-    """block=True + op 携带 data → 终态 dict 带 data 通道(读数类 op 契约)。"""
+    """block=True + op 携带 data → RunFinishOut 带 data 通道(读数类 op 契约)。"""
     from sr_od.backend.mcp.service_app import make_run_operation
 
     payload = {'pool_type': 'character', 'stellar_jade': 12183}
@@ -762,8 +781,9 @@ def test_run_operation_block_returns_data() -> None:
     backend = MagicMock()
     backend.run_slot._start.return_value = (True, fut)
     res = asyncio.run(make_run_operation(backend)(op_id=_OPEN_AND_ENTER, args={}, block=True))
-    assert res['success'] is True
-    assert res['data'] == payload
+    assert isinstance(res, RunFinishOut)
+    assert res.success is True
+    assert res.data == payload
 
 
 def test_run_operation_bakes_args_into_factory() -> None:
@@ -795,5 +815,5 @@ def test_run_operation_accepts_short_name() -> None:
         state='running', source='mcp', started_at='2026-07-02T00:00:00', duration_seconds=1.0)
     res = asyncio.run(make_run_operation(backend)(
         op_id='OpenAndEnterGame', args={}, block=False))
-    assert res['started'] is True
+    assert isinstance(res, RunStartOut)
     assert backend.run_slot._start.call_args.kwargs.get('display_name') == _OPEN_AND_ENTER

@@ -329,9 +329,10 @@ def test_context_query_status_delegates(slot, mock_ctx):
 
 
 def test_context_stop_delegates(slot, mock_ctx):
-    """SrBackendContext.stop 单槽封装(无运行时返 {stopped:False, error})。"""
+    """SrBackendContext.stop 单槽封装(无运行时返 RunStopResult(stopped=False, source=None))。"""
     from sr_od.backend.backend_context import SrBackendContext
+    from sr_od.backend.schemas import RunStopResult
 
     backend = SrBackendContext(mock_ctx)
     backend.run_slot = slot
-    assert backend.stop() == {'stopped': False, 'error': '当前无运行'}
+    assert backend.stop() == RunStopResult(stopped=False, source=None)
