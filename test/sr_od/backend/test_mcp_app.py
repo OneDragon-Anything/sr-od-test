@@ -212,6 +212,32 @@ def test_screen_crud_tools_convert_and_raise() -> None:
     backend.upsert_screen_area.side_effect = None
 
 
+def test_get_screen_detail_renders_and_raises() -> None:
+    """get_screen_detail:成功数据渲染 markdown,失败透传 ScreenInfoError(不渲染错误文案)。"""
+    from sr_od.backend.backend_context import ScreenInfoError
+
+    mcp, backend = _mcp_with_backend()
+    backend.get_screen_detail.return_value = {
+        'screen_name': '邮件', 'screen_id': 'mail', 'pc_alt': False,
+        'area_count': 1,
+        'areas': [{'area_name': '标题', 'id_mark': True, 'pc_rect': [1, 1, 100, 30],
+                   'text': '邮件', 'lcs_percent': 0.5, 'template_id': '',
+                   'template_sub_dir': '', 'template_match_threshold': 0.7,
+                   'goto_list': []}],
+        'goto_neighbors': ['主界面'],
+    }
+    tool = mcp._tool_manager._tools['get_screen_detail']
+    fn = getattr(tool, 'fn', None) or getattr(tool, 'func', None)
+    out = fn(screen_name='邮件')
+    assert isinstance(out, str)
+    assert '画面档:邮件' in out
+    assert '查询失败' not in out
+
+    backend.get_screen_detail.side_effect = ScreenInfoError('画面名未找到: 邮箱')
+    with pytest.raises(ScreenInfoError, match='画面名未找到'):
+        fn(screen_name='邮箱')
+
+
 def test_output_schema_matches_runtime_returns(tmp_path, monkeypatch) -> None:
     """带 outputSchema 的工具,运行时返回必须匹配其 schema。
 
