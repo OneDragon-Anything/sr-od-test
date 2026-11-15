@@ -344,8 +344,8 @@ def test_input_tools_collect_stop_interrupted_as_structured_error() -> None:
     兜底只接 Exception,BaseException 穿透会变成 ASGI 层错误 + 连接断,客户端
     拿不到结构化错误。正常路径手动端点已在 backend 层豁免不应到达此处;本
     兜底是防御纵深(未来端点忘豁免时客户端仍拿到可读错误)。锁输入族工具:
-    click_game/key_tap/drag/input_text/goto_screen(仍返回失败 dict);
-    close_game 已改造为转普通异常走错误通道,单独断言见下。
+    click_game/key_tap/drag/goto_screen(仍返回失败 dict);input_text 与
+    close_game 已改造为转普通异常走错误通道,单独断言见各自用例。
     """
     from one_dragon.base.controller.stop_guard import StopRunInterrupted
 
@@ -354,7 +354,6 @@ def test_input_tools_collect_stop_interrupted_as_structured_error() -> None:
         ('click_game', lambda fn: fn(x=1, y=2)),
         ('key_tap', lambda fn: fn(key='esc')),
         ('drag', lambda fn: fn(x1=1, y1=2, x2=3, y2=4)),
-        ('input_text', lambda fn: fn(text='abc')),
         ('goto_screen', lambda fn: fn(target_screen_name='邮件')),
     ):
         backend_method = getattr(backend, name)
@@ -381,15 +380,33 @@ def test_close_game_stop_interrupted_raises_runtime_error() -> None:
         fn()
 
 
-def test_input_text_tool_delegates() -> None:
-    """input_text tool 直调 backend.input_text() 并原样返回。"""
+def test_input_text_stop_interrupted_raises_runtime_error() -> None:
+    """input_text 停机守卫异常转 RuntimeError 走错误通道(BaseException 不裸透传)。"""
+    import pytest
+
+    from one_dragon.base.controller.stop_guard import StopRunInterrupted
+
     mcp, backend = _mcp_with_backend()
-    backend.input_text.return_value = {'success': True, 'method': 'clipboard', 'masked_text': '***'}
+    backend.input_text.side_effect = StopRunInterrupted('停机')
+    tool = mcp._tool_manager._tools['input_text']
+    fn = getattr(tool, 'fn', None) or getattr(tool, 'func', None)
+    with pytest.raises(RuntimeError, match='停机中断'):
+        fn(text='abc')
+
+
+def test_input_text_tool_delegates() -> None:
+    """input_text tool 直调 backend.input_text() 并转 InputTextOut。"""
+    from sr_od.backend.schemas import InputTextOut, InputTextResult
+
+    mcp, backend = _mcp_with_backend()
+    backend.input_text.return_value = InputTextResult(method='clipboard', masked_text='***')
     tool = mcp._tool_manager._tools['input_text']
     fn = getattr(tool, 'fn', None) or getattr(tool, 'func', None)
     result = fn(text='abc', use_clipboard=True)
     backend.input_text.assert_called_once_with('abc', True)
-    assert result['method'] == 'clipboard'
+    assert isinstance(result, InputTextOut)
+    assert result.method == 'clipboard'
+    assert result.masked_text == '***'
 
 
 def test_analyze_screen_tool_passes_save_image() -> None:

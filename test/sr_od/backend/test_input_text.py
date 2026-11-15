@@ -26,8 +26,7 @@ def test_input_text_clipboard_by_override(mock_pc_clipboard, mock_ctx_game_ready
     mock_ctx_game_ready.controller.active_window.assert_called_once()
     mock_pc_clipboard.copy_and_paste.assert_called_once_with('13800001234')
     mock_ctx_game_ready.controller.input_str.assert_not_called()
-    assert result['success'] is True
-    assert result['method'] == 'clipboard'
+    assert result.method == 'clipboard'
 
 
 @patch('sr_od.backend.backend_context.PcClipboard')
@@ -37,7 +36,7 @@ def test_input_text_keyboard_by_override(mock_pc_clipboard, mock_ctx_game_ready)
     result = backend.input_text('abc', use_clipboard=False)
     mock_ctx_game_ready.controller.input_str.assert_called_once_with('abc')
     mock_pc_clipboard.copy_and_paste.assert_not_called()
-    assert result['method'] == 'keyboard'
+    assert result.method == 'keyboard'
 
 
 @patch('sr_od.backend.backend_context.PcClipboard')
@@ -63,8 +62,8 @@ def test_input_text_masks_sensitive_text(mock_pc_clipboard, mock_ctx_game_ready)
     """返回的 masked_text 应为脱敏文本(非明文)。"""
     backend = SrBackendContext(mock_ctx_game_ready)
     result = backend.input_text('13800001234', use_clipboard=True)
-    assert result['masked_text'] != '13800001234'
-    assert isinstance(result['masked_text'], str)
+    assert result.masked_text != '13800001234'
+    assert isinstance(result.masked_text, str)
 
 
 def test_input_text_window_not_ready_raises(mock_ctx_game_ready):
