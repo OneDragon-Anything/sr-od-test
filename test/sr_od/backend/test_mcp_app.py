@@ -743,15 +743,17 @@ def test_registers_operation_tools() -> None:
 
 
 def test_list_operations_contains_open_and_enter_game() -> None:
-    """list_operations 定位符形态应含 OpenAndEnterGame(无同名类 → 短名)。"""
+    """list_operations 转 OperationListOut,定位符形态应含 OpenAndEnterGame(无同名类 → 短名)。"""
     from sr_od.backend.mcp.service_app import make_list_operations
+    from sr_od.backend.schemas import OperationListOut
 
     backend = MagicMock()
     result = make_list_operations(backend)()
-    assert 'OpenAndEnterGame' in result['operations']
-    assert result['total'] == result['count'] == len(result['operations'])
+    assert isinstance(result, OperationListOut)
+    assert 'OpenAndEnterGame' in result.operations
+    assert result.total == len(result.operations)
     # 元素唯一:短名或完整 op_id 均可直接传 describe/run,不得重复
-    assert len(set(result['operations'])) == len(result['operations'])
+    assert len(set(result.operations)) == len(result.operations)
 
 
 def test_list_operations_query_filter() -> None:
@@ -760,18 +762,16 @@ def test_list_operations_query_filter() -> None:
 
     backend = MagicMock()
     result = make_list_operations(backend)('openandenter')  # 小写过滤大写类名
-    assert result['count'] == 1
-    assert result['operations'] == ['OpenAndEnterGame']
-    assert result['total'] > result['count']
+    assert result.operations == ['OpenAndEnterGame']
+    assert result.total > len(result.operations)
 
     miss = make_list_operations(backend)('不存在的关键字xyz')
-    assert miss['count'] == 0
-    assert miss['operations'] == []
-    assert miss['total'] > 0
+    assert miss.operations == []
+    assert miss.total > 0
 
 
-def test_list_operations_error_fallback() -> None:
-    """scan_operations 抛异常时 list_operations 返回 {error}(工具层兜底)。"""
+def test_list_operations_error_propagates() -> None:
+    """scan_operations 抛异常时 list_operations 异常透传(不做兜底包装)。"""
     from sr_od.backend import operation_registry
     from sr_od.backend.mcp.service_app import make_list_operations
 
@@ -783,41 +783,45 @@ def test_list_operations_error_fallback() -> None:
 
     operation_registry.scan_operations = _boom
     try:
-        res = make_list_operations(backend)()
+        with pytest.raises(RuntimeError, match='扫描失败'):
+            make_list_operations(backend)()
     finally:
         operation_registry.scan_operations = original
-    assert isinstance(res, dict) and 'error' in res
 
 
 def test_describe_operation_delegates() -> None:
-    """describe_operation 纯反射参数 schema(op_id 走参数,已剔除 self/ctx)。"""
+    """describe_operation 转 OperationDescOut(纯反射参数 schema,已剔除 self/ctx)。"""
     from sr_od.backend.mcp.service_app import make_describe_operation
+    from sr_od.backend.schemas import OperationDescOut
 
     backend = MagicMock()
     info = make_describe_operation(backend)(_GET_RID_OF_STUCK)
-    assert info['op_id'] == _GET_RID_OF_STUCK
-    assert info['class_name'] == 'GetRidOfStuck'
-    param_names = [p['name'] for p in info['params']]
+    assert isinstance(info, OperationDescOut)
+    assert info.op_id == _GET_RID_OF_STUCK
+    assert info.class_name == 'GetRidOfStuck'
+    param_names = [p.name for p in info.params]
     assert param_names == ['stuck_times']
 
 
 def test_describe_operation_error_on_bad_op() -> None:
-    """describe_operation 非 Operation → {error}(异常兜底)。"""
+    """describe_operation 非 Operation → ValueError 透传(不做兜底包装)。"""
     from sr_od.backend.mcp.service_app import make_describe_operation
 
     backend = MagicMock()
-    info = make_describe_operation(backend)(_CHARGE_PLAN_ITEM)
-    assert isinstance(info, dict) and 'error' in info
+    with pytest.raises(ValueError):
+        make_describe_operation(backend)(_CHARGE_PLAN_ITEM)
 
 
 def test_describe_operation_accepts_short_name() -> None:
     """describe_operation 支持类名短名(唯一命中)→ 返回完整 op_id 的 schema。"""
     from sr_od.backend.mcp.service_app import make_describe_operation
+    from sr_od.backend.schemas import OperationDescOut
 
     backend = MagicMock()
     info = make_describe_operation(backend)('GetRidOfStuck')
-    assert info['op_id'] == _GET_RID_OF_STUCK
-    assert info['class_name'] == 'GetRidOfStuck'
+    assert isinstance(info, OperationDescOut)
+    assert info.op_id == _GET_RID_OF_STUCK
+    assert info.class_name == 'GetRidOfStuck'
 
 
 def test_run_operation_runs_via_slot() -> None:
