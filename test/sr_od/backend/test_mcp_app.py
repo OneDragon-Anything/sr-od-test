@@ -275,6 +275,9 @@ def test_output_schema_matches_runtime_returns(tmp_path, monkeypatch) -> None:
     backend.delete_screen_area.return_value = AreaMutationResult(
         screen_name='邮件', area_name='标题', action='deleted', area_count=4)
     backend.create_screen.return_value = ScreenCreateResult(screen_id='mail', screen_name='邮件')
+    backend.click_game.return_value = True
+    backend.key_tap.return_value = '已按下 esc'
+    backend.drag.return_value = '已拖拽 (1,2)→(3,4)'
     backend.capture.return_value = np.zeros((4, 4, 3), dtype=np.uint8)
     monkeypatch.setattr(
         'sr_od.backend.backend_context.os_utils.get_path_under_work_dir',
@@ -292,6 +295,9 @@ def test_output_schema_matches_runtime_returns(tmp_path, monkeypatch) -> None:
         'upsert_screen_area': {'screen_name': '邮件', 'area_name': '标题', 'pc_rect': [1, 1, 2, 2]},
         'delete_screen_area': {'screen_name': '邮件', 'area_name': '标题'},
         'create_screen': {'screen_id': 'mail', 'screen_name': '邮件'},
+        'click_game': {'x': 1, 'y': 2},
+        'key_tap': {'key': 'esc'},
+        'drag': {'x1': 1, 'y1': 2, 'x2': 3, 'y2': 4},
     }
     for name, kwargs in cases.items():
         tool = mcp._tool_manager._tools[name]
@@ -437,28 +443,39 @@ def test_stop_run_delegates() -> None:
     backend.stop.assert_called_once()
 
 
-# ===== click_game / input_text 工具(内联注册,同 close_game) =====
+# ===== click_game / key_tap / drag 工具(内联注册,原子返回) =====
 
 def test_click_game_tool_delegates() -> None:
-    """click_game tool 直调 backend.click_game(),默认 press_time=0.1/pc_alt=False,并原样返回。"""
+    """click_game tool 直调 backend.click_game()(默认 press_time=0.1/pc_alt=False),返回纯 bool。"""
     mcp, backend = _mcp_with_backend()
-    backend.click_game.return_value = {'success': True, 'x': 960, 'y': 540, 'in_window': True, 'pc_alt': False}
+    backend.click_game.return_value = True
     tool = mcp._tool_manager._tools['click_game']
     fn = getattr(tool, 'fn', None) or getattr(tool, 'func', None)
     result = fn(x=960, y=540)
     backend.click_game.assert_called_once_with(960, 540, 0.1, False)
-    assert result['success'] is True
+    assert result is True
 
 
-def test_input_tools_collect_stop_interrupted_as_structured_error() -> None:
-    """停机守卫异常(BaseException)在工具层按名收尾为结构化错误,不外抛 BaseException。
+def test_key_tap_and_drag_delegates_return_ack() -> None:
+    """key_tap/drag tool 直调 backend 并透传确认文案 str。"""
+    mcp, backend = _mcp_with_backend()
+    backend.key_tap.return_value = '已按下 esc'
+    backend.drag.return_value = '已拖拽 (1,2)→(3,4)'
+    key_fn = getattr(mcp._tool_manager._tools['key_tap'], 'fn', None) or mcp._tool_manager._tools['key_tap'].func
+    drag_fn = getattr(mcp._tool_manager._tools['drag'], 'fn', None) or mcp._tool_manager._tools['drag'].func
+    assert key_fn(key='esc') == '已按下 esc'
+    backend.key_tap.assert_called_once_with('esc', 0.0)
+    assert drag_fn(x1=1, y1=2, x2=3, y2=4) == '已拖拽 (1,2)→(3,4)'
+    backend.drag.assert_called_once_with(1, 2, 3, 4, 1.0)
+
+
+def test_input_tools_stop_interrupted_raise_runtime_error() -> None:
+    """click_game/key_tap/drag 停机守卫异常转 RuntimeError 走错误通道(BaseException 不裸透传)。
 
     裁决背景(2026-09-02 第二轮审计冲突):ServerErrorMiddleware/FastMCP 泛型
-    兜底只接 Exception,BaseException 穿透会变成 ASGI 层错误 + 连接断,客户端
-    拿不到结构化错误。正常路径手动端点已在 backend 层豁免不应到达此处;本
-    兜底是防御纵深(未来端点忘豁免时客户端仍拿到可读错误)。锁输入族工具:
-    click_game/key_tap/drag(仍返回失败 dict);input_text/close_game/goto_screen
-    已改造(转 RuntimeError 或转正常结果),单独断言见各自用例。
+    兜底只接 Exception,BaseException 穿透会变成 ASGI 层错误 + 连接断。正常
+    路径手动端点已在 backend 层豁免不应到达此处;工具层按名转 RuntimeError
+    是防御纵深(与 close_game/input_text 同款)。
     """
     from one_dragon.base.controller.stop_guard import StopRunInterrupted
 
@@ -472,9 +489,8 @@ def test_input_tools_collect_stop_interrupted_as_structured_error() -> None:
         backend_method.side_effect = StopRunInterrupted('停机')
         tool = mcp._tool_manager._tools[name]
         fn = getattr(tool, 'fn', None) or getattr(tool, 'func', None)
-        result = invoke(fn)  # 不抛即过:按名收尾为结构化错误
-        assert result['success'] is False, f'{name} 应返回失败结构'
-        assert '停机中断' in result['error'], f'{name} 错误文案应指明停机中断,实得 {result["error"]}'
+        with pytest.raises(RuntimeError, match='停机中断'):
+            invoke(fn)
         backend_method.side_effect = None
 
 

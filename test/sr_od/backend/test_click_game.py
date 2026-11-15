@@ -27,15 +27,15 @@ def test_click_game_delegates_to_controller(mock_ctx_game_ready):
     assert (call.args[0].x, call.args[0].y) == (960, 540)
     assert call.kwargs['press_time'] == 0.5
     assert call.kwargs['pc_alt'] is False
-    assert result == {'success': True, 'x': 960, 'y': 540, 'in_window': True, 'pc_alt': False}
+    assert result is True
 
 
 def test_click_game_out_of_window_returns_false(mock_ctx_game_ready):
-    """controller.click 返 False(坐标不在窗口内)时 success/in_window=False。"""
+    """controller.click 返 False(坐标不在窗口内)时返回 False(正常结果,未点击)。"""
     mock_ctx_game_ready.controller.click.return_value = False
     backend = SrBackendContext(mock_ctx_game_ready)
     result = backend.click_game(9999, 9999)
-    assert result == {'success': False, 'x': 9999, 'y': 9999, 'in_window': False, 'pc_alt': False}
+    assert result is False
 
 
 def test_click_game_window_not_ready_raises(mock_ctx_game_ready):
@@ -110,9 +110,8 @@ def test_click_game_exempted_when_stop_latch_armed():
     t.join(timeout=5)
     assert not t.is_alive(), 'worker 线程不得因守卫异常卡死/死亡'
 
-    # ② 豁免内放行:结构化成功返回,点击落地
-    assert result_box['result'] == {'success': True, 'x': 960, 'y': 540,
-                                    'in_window': True, 'pc_alt': False}
+    # ② 豁免内放行:返回 True(点击已发出),点击落地
+    assert result_box['result'] is True
     assert controller.clicked == [(960, 540)]
 
     # ① 对照:同线程裸调(无豁免)确实被守卫拦——标志位是活的,豁免才是放行原因
