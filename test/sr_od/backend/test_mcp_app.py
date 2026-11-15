@@ -171,14 +171,15 @@ def test_list_screen_names_converts_to_output_model() -> None:
     assert result.screen_names == ['主界面', '邮件']
 
 
-def test_output_schema_matches_runtime_returns() -> None:
+def test_output_schema_matches_runtime_returns(tmp_path, monkeypatch) -> None:
     """带 outputSchema 的工具,运行时返回必须匹配其 schema。
 
     H1 教训:close_game 注解 `-> str` 但实际返回 dict,FastMCP 按 schema 校验
-    直接炸——函数层测试绕过序列化层漏网,故对四个带 schema 工具做
+    直接炸——函数层测试绕过序列化层漏网,故对带 schema 工具做
     「调用 fn → jsonschema 校验返回」的序列化层冒烟。
     """
     import jsonschema
+    import numpy as np
 
     from sr_od.backend.schemas import (
         ApplicationInfo,
@@ -196,18 +197,24 @@ def test_output_schema_matches_runtime_returns() -> None:
     backend.list_applications.return_value = ApplicationListResult(
         current_instance_idx=1, active_standalone_app_id=None,
         applications=[ApplicationInfo(app_id='x', app_name='X')])
+    backend.capture.return_value = np.zeros((4, 4, 3), dtype=np.uint8)
+    monkeypatch.setattr(
+        'sr_od.backend.backend_context.os_utils.get_path_under_work_dir',
+        lambda *parts: str(tmp_path),
+    )
     cases = {
         'analyze_screen': {'save_image': False},
         'check_game_window': {},
         'get_run_status': {},
         'list_applications': {},
+        'capture_game_screen': {},
     }
     for name, kwargs in cases.items():
         tool = mcp._tool_manager._tools[name]
         fn = getattr(tool, 'fn', None) or getattr(tool, 'func', None)
         out = fn(**kwargs)
         instance = out.model_dump() if hasattr(out, 'model_dump') else out
-        # union 返回(Out | dict)的 schema 为 wrapped 形态,运行时自动包 {'result': ...}
+        # 原子注解(-> str)与 union 返回的 schema 均为 wrapped 形态,运行时自动包 {'result': ...}
         if getattr(tool.fn_metadata, 'wrap_output', False):
             instance = {'result': instance}
         jsonschema.validate(instance=instance, schema=tool.output_schema)
@@ -258,6 +265,16 @@ def test_capture_game_screen_returns_path(tmp_path, monkeypatch) -> None:
     out = fn()
     assert isinstance(out, str)
     assert out.endswith(".png")
+
+
+def test_capture_game_screen_raises_on_not_ready() -> None:
+    """capture_game_screen 在 backend 未就绪时异常透传(失败走错误通道,不做兜底包装)。"""
+    mcp, backend = _mcp_with_backend()
+    backend.capture.side_effect = BackendNotReadyError("未就绪")
+    tool = mcp._tool_manager._tools["capture_game_screen"]
+    fn = getattr(tool, "fn", None) or getattr(tool, "func", None)
+    with pytest.raises(BackendNotReadyError, match="未就绪"):
+        fn()
 
 
 # ===== open_game 工厂委托(enter 选 op)+ get_run_status/stop_run =====
