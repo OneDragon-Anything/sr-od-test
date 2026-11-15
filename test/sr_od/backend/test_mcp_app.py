@@ -210,6 +210,14 @@ def test_screen_crud_tools_convert_and_raise() -> None:
     with pytest.raises(ScreenInfoError, match='pc_rect'):
         upsert_fn(screen_name='邮件', area_name='标题', pc_rect=[9, 9, 2, 2])
     backend.upsert_screen_area.side_effect = None
+    backend.delete_screen_area.side_effect = ScreenInfoError('未找到 area: 不存在')
+    with pytest.raises(ScreenInfoError, match='未找到 area'):
+        delete_fn(screen_name='邮件', area_name='不存在')
+    backend.delete_screen_area.side_effect = None
+    backend.create_screen.side_effect = ScreenInfoError('screen_id 已存在: mail')
+    with pytest.raises(ScreenInfoError, match='已存在'):
+        create_fn(screen_id='mail', screen_name='邮件')
+    backend.create_screen.side_effect = None
 
 
 def test_get_screen_detail_renders_and_raises() -> None:
