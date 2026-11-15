@@ -10,10 +10,6 @@ from sr_od.backend.schemas import (
     WindowStatus,
 )
 
-# (2026-09-03 攻击性排查:OcrText 字段透传/RunStatus 默认值/error 与
-#  screenshot_path 默认值四条删除——dataclass 透传断言(纪律 18);
-#  线格式由字段集登记门 + asdict 序列化锁管辖。)
-
 
 def test_window_status_optional_rect() -> None:
     """校验 WindowStatus 的窗口矩形字段可选，缺省为 None。"""

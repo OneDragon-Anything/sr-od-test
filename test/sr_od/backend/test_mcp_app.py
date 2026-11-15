@@ -108,6 +108,83 @@ def test_analyze_tool_converts_to_output_model() -> None:
     assert result.screens[0].areas[0].match_target == '菜单'
 
 
+def test_check_game_window_converts_to_output_model() -> None:
+    """check_game_window 成功分支转 WindowStatusOut(字段语义走 outputSchema)。"""
+    from sr_od.backend.schemas import WindowStatus, WindowStatusOut
+
+    mcp, backend = _mcp_with_backend()
+    backend.check_window.return_value = WindowStatus(
+        win_title='崩坏:星穹铁道', is_win_valid=True, is_win_active=True,
+        is_win_scale=False, x=0, y=0, width=1920, height=1080)
+    tool = mcp._tool_manager._tools['check_game_window']
+    fn = getattr(tool, 'fn', None) or getattr(tool, 'func', None)
+    result = fn()
+    assert isinstance(result, WindowStatusOut)
+    assert result.is_win_valid is True
+
+
+def test_list_applications_converts_to_output_model() -> None:
+    """list_applications 成功分支转 ApplicationListResultOut(嵌套 applications 同步转换)。"""
+    from sr_od.backend.schemas import (
+        ApplicationInfo,
+        ApplicationListResult,
+        ApplicationListResultOut,
+    )
+
+    mcp, backend = _mcp_with_backend()
+    backend.list_applications.return_value = ApplicationListResult(
+        current_instance_idx=1, active_standalone_app_id=None,
+        applications=[ApplicationInfo(app_id='x', app_name='X')])
+    tool = mcp._tool_manager._tools['list_applications']
+    fn = getattr(tool, 'fn', None) or getattr(tool, 'func', None)
+    result = fn()
+    assert isinstance(result, ApplicationListResultOut)
+    assert result.current_instance_idx == 1
+    assert result.applications[0].app_id == 'x'
+
+
+def test_output_schema_matches_runtime_returns() -> None:
+    """带 outputSchema 的工具,运行时返回必须匹配其 schema。
+
+    H1 教训:close_game 注解 `-> str` 但实际返回 dict,FastMCP 按 schema 校验
+    直接炸——函数层测试绕过序列化层漏网,故对四个带 schema 工具做
+    「调用 fn → jsonschema 校验返回」的序列化层冒烟。
+    """
+    import jsonschema
+
+    from sr_od.backend.schemas import (
+        ApplicationInfo,
+        ApplicationListResult,
+        WindowStatus,
+    )
+
+    mcp, backend = _mcp_with_backend()
+    backend.analyze.return_value = AnalyzeScreenResult(ocr_texts=[], screens=[])
+    backend.query_status.return_value = RunStatusResult(
+        state='running', source='mcp', app='OEG',
+        started_at='2026-07-02T00:00:00', duration_seconds=1.0)
+    backend.check_window.return_value = WindowStatus(
+        win_title='t', is_win_valid=True, is_win_active=True, is_win_scale=False)
+    backend.list_applications.return_value = ApplicationListResult(
+        current_instance_idx=1, active_standalone_app_id=None,
+        applications=[ApplicationInfo(app_id='x', app_name='X')])
+    cases = {
+        'analyze_screen': {'save_image': False},
+        'check_game_window': {},
+        'get_run_status': {},
+        'list_applications': {},
+    }
+    for name, kwargs in cases.items():
+        tool = mcp._tool_manager._tools[name]
+        fn = getattr(tool, 'fn', None) or getattr(tool, 'func', None)
+        out = fn(**kwargs)
+        instance = out.model_dump() if hasattr(out, 'model_dump') else out
+        # union 返回(Out | dict)的 schema 为 wrapped 形态,运行时自动包 {'result': ...}
+        if getattr(tool.fn_metadata, 'wrap_output', False):
+            instance = {'result': instance}
+        jsonschema.validate(instance=instance, schema=tool.output_schema)
+
+
 def test_tool_annotations_marked() -> None:
     """观察类 tool 标 read_only、破坏性 tool 标 destructive(P3 副作用机器可读标注)。"""
     mcp, _ = _mcp_with_backend()
