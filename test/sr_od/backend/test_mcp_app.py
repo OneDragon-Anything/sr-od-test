@@ -75,8 +75,6 @@ def test_registers_all_tools() -> None:
 
 def test_check_game_window_raises_on_not_ready() -> None:
     """check_game_window 在 backend 未就绪时异常透传(失败走错误通道,不做兜底包装)。"""
-    import pytest
-
     mcp, backend = _mcp_with_backend()
     backend.check_window.side_effect = BackendNotReadyError("未就绪")
     tool = mcp._tool_manager._tools["check_game_window"]
@@ -85,6 +83,22 @@ def test_check_game_window_raises_on_not_ready() -> None:
     assert fn is not None
     with pytest.raises(BackendNotReadyError, match="未就绪"):
         fn()
+
+
+def test_check_game_window_tool_error_via_call_tool() -> None:
+    """序列化层冒烟:backend 异常穿透到 FastMCP.call_tool 变 ToolError,原始文案保留。
+
+    H1 同构教训(函数层测试绕过序列化层漏网):本测试锁「工具层不吞异常,
+    文案到达 sdk 边界」。lowlevel 层再把 ToolError 包装为
+    CallToolResult(isError=True)(sdk 固定行为,源码确认:lowlevel/server.py
+    call_tool handler 的 except Exception 分支),连接不断。
+    """
+    from mcp.server.fastmcp.exceptions import ToolError
+
+    mcp, backend = _mcp_with_backend()
+    backend.check_window.side_effect = BackendNotReadyError('未就绪')
+    with pytest.raises(ToolError, match='未就绪'):
+        asyncio.run(mcp.call_tool('check_game_window', {}))
 
 
 def test_analyze_tool_converts_to_output_model() -> None:
@@ -218,8 +232,6 @@ def test_tool_annotations_marked() -> None:
 
 def test_close_game_raises_on_not_ready() -> None:
     """close_game 在 backend 未就绪时异常透传(失败走错误通道,不做兜底包装)。"""
-    import pytest
-
     mcp, backend = _mcp_with_backend()
     backend.close_game.side_effect = BackendNotReadyError("未就绪")
     tool = mcp._tool_manager._tools["close_game"]
@@ -368,8 +380,6 @@ def test_input_tools_collect_stop_interrupted_as_structured_error() -> None:
 
 def test_close_game_stop_interrupted_raises_runtime_error() -> None:
     """close_game 停机守卫异常转 RuntimeError 走错误通道(BaseException 不裸透传)。"""
-    import pytest
-
     from one_dragon.base.controller.stop_guard import StopRunInterrupted
 
     mcp, backend = _mcp_with_backend()
@@ -382,8 +392,6 @@ def test_close_game_stop_interrupted_raises_runtime_error() -> None:
 
 def test_input_text_stop_interrupted_raises_runtime_error() -> None:
     """input_text 停机守卫异常转 RuntimeError 走错误通道(BaseException 不裸透传)。"""
-    import pytest
-
     from one_dragon.base.controller.stop_guard import StopRunInterrupted
 
     mcp, backend = _mcp_with_backend()
