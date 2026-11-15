@@ -144,6 +144,19 @@ def test_list_applications_converts_to_output_model() -> None:
     assert result.applications[0].app_id == 'x'
 
 
+def test_list_screen_names_converts_to_output_model() -> None:
+    """list_screen_names 成功分支转 ScreenNamesOut(画面名语义走 outputSchema)。"""
+    from sr_od.backend.schemas import ScreenNamesOut
+
+    mcp, backend = _mcp_with_backend()
+    backend.list_screen_names.return_value = ['主界面', '邮件']
+    tool = mcp._tool_manager._tools['list_screen_names']
+    fn = getattr(tool, 'fn', None) or getattr(tool, 'func', None)
+    result = fn()
+    assert isinstance(result, ScreenNamesOut)
+    assert result.screen_names == ['主界面', '邮件']
+
+
 def test_output_schema_matches_runtime_returns() -> None:
     """带 outputSchema 的工具,运行时返回必须匹配其 schema。
 
