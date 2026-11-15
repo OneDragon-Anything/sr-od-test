@@ -457,8 +457,8 @@ def test_input_tools_collect_stop_interrupted_as_structured_error() -> None:
     兜底只接 Exception,BaseException 穿透会变成 ASGI 层错误 + 连接断,客户端
     拿不到结构化错误。正常路径手动端点已在 backend 层豁免不应到达此处;本
     兜底是防御纵深(未来端点忘豁免时客户端仍拿到可读错误)。锁输入族工具:
-    click_game/key_tap/drag/goto_screen(仍返回失败 dict);input_text 与
-    close_game 已改造为转普通异常走错误通道,单独断言见各自用例。
+    click_game/key_tap/drag(仍返回失败 dict);input_text/close_game/goto_screen
+    已改造(转 RuntimeError 或转正常结果),单独断言见各自用例。
     """
     from one_dragon.base.controller.stop_guard import StopRunInterrupted
 
@@ -467,7 +467,6 @@ def test_input_tools_collect_stop_interrupted_as_structured_error() -> None:
         ('click_game', lambda fn: fn(x=1, y=2)),
         ('key_tap', lambda fn: fn(key='esc')),
         ('drag', lambda fn: fn(x1=1, y1=2, x2=3, y2=4)),
-        ('goto_screen', lambda fn: fn(target_screen_name='邮件')),
     ):
         backend_method = getattr(backend, name)
         backend_method.side_effect = StopRunInterrupted('停机')
@@ -501,6 +500,40 @@ def test_input_text_stop_interrupted_raises_runtime_error() -> None:
     fn = getattr(tool, 'fn', None) or getattr(tool, 'func', None)
     with pytest.raises(RuntimeError, match='停机中断'):
         fn(text='abc')
+
+
+def test_goto_screen_converts_and_carries_scene() -> None:
+    """goto_screen:到达/中断均转 GotoScreenOut(中断带现场为正常结果);目标不存在透传 ScreenInfoError。
+
+    停机守卫异常由 backend.goto_screen 内部转 arrived=False 中断结果
+    (BaseException 不穿透)——该 catch 在 backend 方法体内,mock 替身整个
+    backend 方法时不可达,不在本测试覆盖面。
+    """
+    from sr_od.backend.backend_context import ScreenInfoError
+    from sr_od.backend.schemas import GotoScreenOut, GotoScreenResult
+
+    mcp, backend = _mcp_with_backend()
+    tool = mcp._tool_manager._tools['goto_screen']
+    fn = getattr(tool, 'fn', None) or getattr(tool, 'func', None)
+
+    backend.goto_screen.return_value = GotoScreenResult(
+        arrived=True, current_screen='邮件', steps=['主界面 --邮件按钮--> 邮件'], reason=None)
+    result = fn(target_screen_name='邮件')
+    assert isinstance(result, GotoScreenOut)
+    assert result.arrived is True
+    assert result.reason is None
+
+    backend.goto_screen.return_value = GotoScreenResult(
+        arrived=False, current_screen='主界面', steps=[], reason='截图失败')
+    result = fn(target_screen_name='邮件')
+    assert result.arrived is False
+    assert result.current_screen == '主界面'
+    assert '截图失败' in result.reason
+
+    backend.goto_screen.side_effect = ScreenInfoError('目标画面不存在: 邮箱(用 list_screen_names 查全量)')
+    with pytest.raises(ScreenInfoError, match='目标画面不存在'):
+        fn(target_screen_name='邮箱')
+    backend.goto_screen.side_effect = None
 
 
 def test_input_text_tool_delegates() -> None:
