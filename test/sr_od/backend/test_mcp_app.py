@@ -19,7 +19,7 @@ from one_dragon.base.operation.operation_base import OperationResult
 from sr_od.backend.backend_context import BackendNotReadyError, SrBackendContext
 from sr_od.backend.mcp import app as app_mod
 from sr_od.backend.mcp.app import create_mcp_server
-from sr_od.backend.schemas import AnalyzeScreenResult, RunStatusResult
+from sr_od.backend.schemas import AnalyzeScreenResult, RunStatusOut, RunStatusResult
 
 
 def _mcp_with_backend() -> tuple[object, MagicMock]:
@@ -221,7 +221,7 @@ def test_open_game_enter_flag_selects_op() -> None:
 def test_get_run_status_delegates() -> None:
     backend = _mock_backend()
     res = app_mod.make_get_run_status(backend)()
-    assert isinstance(res, RunStatusResult)
+    assert isinstance(res, RunStatusOut)   # tool 层转成 MCP 输出模型(字段语义走 outputSchema)
     backend.query_status.assert_called_once()
 
 
