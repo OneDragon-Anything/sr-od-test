@@ -426,3 +426,26 @@ def test_analyze_extras_none_when_recognizer_returns_non_serializable(monkeypatc
     result = backend.analyze()
     assert result.extras is None             # json.dumps 抛 → 兜成 None
 
+
+
+def test_get_screen_detail_wraps_not_found_with_guidance() -> None:
+    """画面名未找到统一包装:ScreenInfoError 文案含示例名单 + list_screen_names 指路。
+
+    backend 层包装文案拼装(示例名单 sorted[:10] / 指路句 / 原始错误)的哨兵:
+    MCP 层测试 mock 了 backend 方法,拼装逻辑在此直测。
+    """
+    from sr_od.backend.backend_context import ScreenInfoError
+
+    ctx = MagicMock()
+    ctx.ready_for_application = True
+    ctx.screen_loader.get_screen.side_effect = Exception('未找到画面: 不存在的画面')
+    ctx.screen_loader.screen_info_list = [MagicMock(screen_name='主界面'),
+                                          MagicMock(screen_name='邮件')]
+    backend = SrBackendContext(ctx)
+    with pytest.raises(ScreenInfoError) as exc_info:
+        backend.get_screen_detail('不存在的画面')
+    msg = str(exc_info.value)
+    assert '画面名未找到: 不存在的画面' in msg
+    assert '主界面' in msg and '邮件' in msg  # 示例名单进文案
+    assert 'list_screen_names' in msg  # 指路句进文案
+    assert '未找到画面: 不存在的画面' in msg  # 原始错误保留
