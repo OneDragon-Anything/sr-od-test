@@ -73,17 +73,18 @@ def test_registers_all_tools() -> None:
     } <= names
 
 
-def test_check_game_window_tool_error_on_not_ready() -> None:
-    """check_game_window 在 backend 未就绪时返回带 error 的 dict(工具层兜底)。"""
+def test_check_game_window_raises_on_not_ready() -> None:
+    """check_game_window 在 backend 未就绪时异常透传(失败走错误通道,不做兜底包装)。"""
+    import pytest
+
     mcp, backend = _mcp_with_backend()
     backend.check_window.side_effect = BackendNotReadyError("未就绪")
     tool = mcp._tool_manager._tools["check_game_window"]
     # FastMCP 工具实际可调用对象在 .fn / .func；按版本取能 call 的那个
     fn = getattr(tool, "fn", None) or getattr(tool, "func", None)
     assert fn is not None
-    out = fn()
-    assert isinstance(out, dict)
-    assert "未就绪" in out["error"]
+    with pytest.raises(BackendNotReadyError, match="未就绪"):
+        fn()
 
 
 def test_analyze_tool_converts_to_output_model() -> None:
