@@ -5,7 +5,7 @@
 - 注册冒烟：trailblaze_power entry 存在，id_kind=idx（计划项无自动生成标识，
   按列表下标删）、item_kind=dataclass、全 ops；describe 的 add_example 含必填字段
   （智能体可照抄生成 add 调用的入口保障）。
-- validate_item 数值边界：空 mission_id / plan_times<1 / run_times 越界拒绝，合法通过。
+- validate_item 数值边界：空 mission_id / 负数 plan_times / run_times 越界拒绝，合法通过；plan_times=0 = 该项不排产（合法）。
 - add/delete/get_config 全链（经 entry 调用 = 注册后的最终行为）：
   - get_config 当前实例返回 ctx.power_config 同一对象 —— MCP 写穿与一条龙
     开拓力 app 共用实例、「改完即生效无需重启」的关键契约；
@@ -61,7 +61,11 @@ class TestTrailblazePowerRoute:
         """数值边界拒绝/通过（validate 只做数值校验，不含 ctx 依赖）。"""
         entry = _entry()
         assert entry.validate_item(None, _item_from({'mission_id': '', 'plan_times': 1})) is not None
-        assert entry.validate_item(None, _item_from({'mission_id': 'x', 'plan_times': 0})) is not None
+        assert entry.validate_item(None, _item_from({'mission_id': 'x', 'plan_times': -1})) is not None
+        # plan_times=0 = 该项不排产（合法语义：周本急刷时其余项置 0 禁用）
+        assert entry.validate_item(
+            None, _item_from({'mission_id': 'x', 'plan_times': 0, 'run_times': 0})
+        ) is None
         assert entry.validate_item(
             None, _item_from({'mission_id': 'x', 'plan_times': 2, 'run_times': 3})
         ) is not None
