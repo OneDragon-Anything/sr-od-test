@@ -216,7 +216,7 @@ def test_close_game_tool_error_on_not_ready() -> None:
 
 
 def test_capture_game_screen_returns_path(tmp_path, monkeypatch) -> None:
-    """capture_game_screen 应保存截图并返回 {success, path}。"""
+    """capture_game_screen 应保存截图并返回纯路径 str(失败异常透传)。"""
     import numpy as np
 
     # 写盘目录重定向 tmp_path(纪律 2:测试禁写真实 .debug/)
@@ -230,8 +230,8 @@ def test_capture_game_screen_returns_path(tmp_path, monkeypatch) -> None:
     tool = mcp._tool_manager._tools["capture_game_screen"]
     fn = getattr(tool, "fn", None) or getattr(tool, "func", None)
     out = fn()
-    assert out['success'] is True
-    assert out['path'].endswith(".png")
+    assert isinstance(out, str)
+    assert out.endswith(".png")
 
 
 # ===== open_game 工厂委托(enter 选 op)+ get_run_status/stop_run =====
