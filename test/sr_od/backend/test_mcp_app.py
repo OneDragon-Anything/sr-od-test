@@ -473,15 +473,22 @@ def test_stop_run_delegates() -> None:
     backend.stop.assert_called_once()
 
 
-def test_record_screen_failures_raise() -> None:
-    """record_screen:失败走 RuntimeError 异常通道(stop 无录屏/未知 mode),不做兜底包装。"""
-    mcp, backend = _mcp_with_backend()
-    tool = mcp._tool_manager._tools['record_screen']
-    fn = getattr(tool, 'fn', None) or getattr(tool, 'func', None)
+def test_record_screen_failures_raise(monkeypatch) -> None:
+    """record_screen:失败走 RuntimeError 异常通道(stop 无录屏/无 ffmpeg)。
+
+    MCP 工具是纯透传(无转换逻辑),失败分支在 backend 方法体内——mock 替身
+    backend 方法不可达,故用真 backend 实例直测。
+    """
+    from unittest.mock import MagicMock
+
+    from sr_od.backend.backend_context import SrBackendContext
+
+    backend = SrBackendContext(MagicMock(name='SrContext'))
     with pytest.raises(RuntimeError, match='没有正在进行的录屏'):
-        fn(mode='stop')
-    with pytest.raises(RuntimeError, match='未知 mode'):
-        fn(mode='bad')
+        backend.record_screen(mode='stop')
+    monkeypatch.setattr('sr_od.backend.backend_context._resolve_ffmpeg_exe', lambda: None)
+    with pytest.raises(RuntimeError, match='imageio-ffmpeg'):
+        backend.record_screen(mode='fixed')
 
 
 # ===== config 工具(Out 模型 + ConfigError 异常通道) =====
