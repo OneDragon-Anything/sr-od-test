@@ -184,6 +184,7 @@ def test_output_schema_matches_runtime_returns(tmp_path, monkeypatch) -> None:
     from sr_od.backend.schemas import (
         ApplicationInfo,
         ApplicationListResult,
+        InputTextResult,
         WindowStatus,
     )
 
@@ -199,6 +200,7 @@ def test_output_schema_matches_runtime_returns(tmp_path, monkeypatch) -> None:
         applications=[ApplicationInfo(app_id='x', app_name='X')])
     backend.list_screen_names.return_value = ['主界面', '邮件']
     backend.close_game.return_value = '已发送关闭游戏信号,可用 check_game_window 验证'
+    backend.input_text.return_value = InputTextResult(method='clipboard', masked_text='***')
     backend.capture.return_value = np.zeros((4, 4, 3), dtype=np.uint8)
     monkeypatch.setattr(
         'sr_od.backend.backend_context.os_utils.get_path_under_work_dir',
@@ -212,6 +214,7 @@ def test_output_schema_matches_runtime_returns(tmp_path, monkeypatch) -> None:
         'list_screen_names': {},
         'close_game': {},
         'capture_game_screen': {},
+        'input_text': {'text': 'abc', 'use_clipboard': True},
     }
     for name, kwargs in cases.items():
         tool = mcp._tool_manager._tools[name]
