@@ -86,15 +86,26 @@ def test_check_game_window_tool_error_on_not_ready() -> None:
     assert "未就绪" in out["error"]
 
 
-def test_analyze_tool_returns_result() -> None:
-    """analyze_screen 应直接返回 backend.analyze() 的结果(异常透传,不做兜底包装)。"""
+def test_analyze_tool_converts_to_output_model() -> None:
+    """analyze_screen 应把 backend 结果转成 AnalyzeScreenOut(异常透传,不做兜底包装)。"""
+    from one_dragon.base.screen.screen_match import AreaMatchDetail, ScreenMatch
+    from sr_od.backend.schemas import AnalyzeScreenOut
+
     mcp, backend = _mcp_with_backend()
-    expected = AnalyzeScreenResult(ocr_texts=[])
-    backend.analyze.return_value = expected
+    backend.analyze.return_value = AnalyzeScreenResult(
+        ocr_texts=[], screenshot_path='/tmp/x.png',
+        screens=[ScreenMatch(screen_name='菜单', is_precise=True, areas=[
+            AreaMatchDetail(area_name='标题', pc_rect=[1, 1, 2, 2],
+                            matched_text='菜单', match_target='菜单'),
+        ])])
     tool = mcp._tool_manager._tools["analyze_screen"]
     fn = getattr(tool, "fn", None) or getattr(tool, "func", None)
     result = fn()
-    assert result is expected
+    assert isinstance(result, AnalyzeScreenOut)
+    assert result.screenshot_path == '/tmp/x.png'
+    # 嵌套转换:dataclass → Out 模型,字段逐值等价
+    assert result.screens[0].screen_name == '菜单'
+    assert result.screens[0].areas[0].match_target == '菜单'
 
 
 def test_tool_annotations_marked() -> None:
