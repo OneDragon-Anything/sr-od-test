@@ -523,11 +523,16 @@ def test_config_tools_convert_and_raise() -> None:
             app_id='trailblaze_power', list_field='plan_list', item_dict={}, idx=-1))
 
     ctx.power_config.data = {'plan_enable': True}
-    ctx.power_config._RO_FIELDS = set()
+    ctx.power_config._RO_FIELDS = {'loop'}  # 触发 set_config 只读拒绝路径
     read_res = asyncio.run(make_get_config(backend)(
         app_id='trailblaze_power', key='plan_enable', instance_idx=None))
     assert isinstance(read_res, ConfigReadOut)
     assert read_res.value is True
+
+    from sr_od.backend.mcp.config_app import make_set_config
+    with pytest.raises(ConfigError, match='只读字段'):
+        asyncio.run(make_set_config(backend)(
+            app_id='trailblaze_power', key='loop', value=True, instance_idx=None))
 
     schema_res = asyncio.run(make_describe_config(backend)(
         app_id='trailblaze_power', category=None, instance_idx=None))
