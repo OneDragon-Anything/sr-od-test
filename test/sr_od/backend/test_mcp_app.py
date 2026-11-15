@@ -30,8 +30,12 @@ from sr_od.backend.schemas import (
 )
 
 
-def _mcp_with_backend() -> tuple[object, MagicMock]:
+def _mcp_with_backend(mode: str = 'dev') -> tuple[object, MagicMock]:
     """构造一个 MCP 服务器与对应的伪造 backend。
+
+    Args:
+        mode: 运行模式,默认 ``dev``(全量工具面)——既有行为测试在全量面上跑,
+            模式分流的契约另由模式测试组锁定。
 
     Returns:
         ``(mcp, backend)`` 元组：mcp 为注册了全部 game 工具的 FastMCP 实例
@@ -40,7 +44,7 @@ def _mcp_with_backend() -> tuple[object, MagicMock]:
         backend 为 MagicMock，可在测试中配置其方法返回值或副作用。
     """
     backend = MagicMock()
-    mcp = create_mcp_server(backend)
+    mcp = create_mcp_server(backend, mode=mode)
     return mcp, backend
 
 
@@ -80,6 +84,61 @@ def test_registers_all_tools() -> None:
         "get_run_status",
         "stop_run",
     } <= names
+
+
+# ===== 运行模式(player/dev)契约 =====
+
+def test_mode_toolset_contract() -> None:
+    """核心契约:dev 工具集 - player 工具集 == DEV_ONLY_TOOLS 名单。
+
+    锁「名单=实际差集」双向不漂移:新维护工具忘登记 → 差集变大;误登记玩家
+    工具 → 差集变小。名单单一源在 sr_od.backend.mcp.modes。
+    """
+    from sr_od.backend.mcp.modes import DEV_ONLY_TOOLS
+
+    dev_mcp, _ = _mcp_with_backend(mode='dev')
+    player_mcp, _ = _mcp_with_backend(mode='player')
+    dev_names = set(dev_mcp._tool_manager._tools.keys())
+    player_names = set(player_mcp._tool_manager._tools.keys())
+    assert dev_names - player_names == set(DEV_ONLY_TOOLS)
+
+
+def test_player_mode_keeps_player_tools() -> None:
+    """玩家面保留关键工具(锁定归属裁定不回潮:op 运行/配置读写/画面只读/框架配置/mys)。"""
+    mcp, _ = _mcp_with_backend(mode='player')
+    names = set(mcp._tool_manager._tools.keys())
+    assert {
+        'run_operation', 'list_operations', 'describe_operation',
+        'set_config', 'add_config_item', 'delete_config_item', 'update_config_item',
+        'update_game_config',
+        'get_screen_detail', 'list_screen_names',
+        'mys_get_characters', 'character_lookup',
+    } <= names
+
+
+def test_player_mode_guides_user_only() -> None:
+    """玩家模式 guide 目录只回 user 项,dev 项按未知指南处理;开发模式全量。"""
+    def _guide_fn(mcp: object) -> object:
+        tool = mcp._tool_manager._tools['list_mcp_usage_guides']
+        return getattr(tool, 'fn', None) or getattr(tool, 'func', None)
+
+    player_mcp, _ = _mcp_with_backend(mode='player')
+    player_list = _guide_fn(player_mcp)()
+    assert player_list and all(item['mode'] == 'user' for item in player_list)
+
+    get_tool = player_mcp._tool_manager._tools['get_mcp_usage_guide']
+    get_fn = getattr(get_tool, 'fn', None) or getattr(get_tool, 'func', None)
+    assert '未知指南' in get_fn('sr_dev_validate_op')
+
+    dev_mcp, _ = _mcp_with_backend(mode='dev')
+    dev_list = _guide_fn(dev_mcp)()
+    assert any(item['mode'] == 'dev' for item in dev_list)
+
+
+def test_create_mcp_server_invalid_mode() -> None:
+    """非法 mode 抛 ValueError(fail-fast,不静默回退玩家)。"""
+    with pytest.raises(ValueError, match='未知 MCP 运行模式'):
+        create_mcp_server(MagicMock(), mode='staging')
 
 
 def test_check_game_window_raises_on_not_ready() -> None:
