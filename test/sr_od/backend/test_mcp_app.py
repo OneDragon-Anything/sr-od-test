@@ -473,6 +473,50 @@ def test_stop_run_delegates() -> None:
     backend.stop.assert_called_once()
 
 
+# ===== config 工具(Out 模型 + ConfigError 异常通道) =====
+
+def test_config_tools_convert_and_raise() -> None:
+    """config 工具:Out 模型 + ConfigError 异常通道(校验/引用失败不占成功结构)。"""
+    import asyncio
+    from unittest.mock import MagicMock
+
+    from sr_od.backend.mcp.config_app import (
+        ConfigError,
+        make_add_config_item,
+        make_describe_config,
+        make_get_config,
+        make_list_app_configs,
+    )
+    from sr_od.backend.schemas import ConfigListOut, ConfigReadOut, ConfigSchemaOut
+
+    backend = MagicMock()
+    ctx = MagicMock(name='SrContext')
+    backend.ctx = ctx
+
+    list_res = asyncio.run(make_list_app_configs(backend)(instance_idx=None))
+    assert isinstance(list_res, ConfigListOut)
+    assert any(c['app_id'] == 'standalone_app' for c in list_res.configs)
+
+    with pytest.raises(ConfigError, match='list_app_configs'):
+        asyncio.run(make_get_config(backend)(app_id='不存在的', key=None))
+
+    with pytest.raises(ConfigError, match='非负下标'):
+        asyncio.run(make_add_config_item(backend)(
+            app_id='trailblaze_power', list_field='plan_list', item_dict={}, idx=-1))
+
+    ctx.power_config.data = {'plan_enable': True}
+    ctx.power_config._RO_FIELDS = set()
+    read_res = asyncio.run(make_get_config(backend)(
+        app_id='trailblaze_power', key='plan_enable', instance_idx=None))
+    assert isinstance(read_res, ConfigReadOut)
+    assert read_res.value is True
+
+    schema_res = asyncio.run(make_describe_config(backend)(
+        app_id='trailblaze_power', category=None, instance_idx=None))
+    assert isinstance(schema_res, ConfigSchemaOut)
+    assert isinstance(schema_res.set_fields, list)
+
+
 # ===== click_game / key_tap / drag 工具(内联注册,原子返回) =====
 
 def test_click_game_tool_delegates() -> None:
