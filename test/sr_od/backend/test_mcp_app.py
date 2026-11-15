@@ -473,6 +473,17 @@ def test_stop_run_delegates() -> None:
     backend.stop.assert_called_once()
 
 
+def test_record_screen_failures_raise() -> None:
+    """record_screen:失败走 RuntimeError 异常通道(stop 无录屏/未知 mode),不做兜底包装。"""
+    mcp, backend = _mcp_with_backend()
+    tool = mcp._tool_manager._tools['record_screen']
+    fn = getattr(tool, 'fn', None) or getattr(tool, 'func', None)
+    with pytest.raises(RuntimeError, match='没有正在进行的录屏'):
+        fn(mode='stop')
+    with pytest.raises(RuntimeError, match='未知 mode'):
+        fn(mode='bad')
+
+
 # ===== config 工具(Out 模型 + ConfigError 异常通道) =====
 
 def test_config_tools_convert_and_raise() -> None:
