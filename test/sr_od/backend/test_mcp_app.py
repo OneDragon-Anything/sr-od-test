@@ -197,6 +197,7 @@ def test_output_schema_matches_runtime_returns(tmp_path, monkeypatch) -> None:
     backend.list_applications.return_value = ApplicationListResult(
         current_instance_idx=1, active_standalone_app_id=None,
         applications=[ApplicationInfo(app_id='x', app_name='X')])
+    backend.list_screen_names.return_value = ['主界面', '邮件']
     backend.capture.return_value = np.zeros((4, 4, 3), dtype=np.uint8)
     monkeypatch.setattr(
         'sr_od.backend.backend_context.os_utils.get_path_under_work_dir',
@@ -207,6 +208,7 @@ def test_output_schema_matches_runtime_returns(tmp_path, monkeypatch) -> None:
         'check_game_window': {},
         'get_run_status': {},
         'list_applications': {},
+        'list_screen_names': {},
         'capture_game_screen': {},
     }
     for name, kwargs in cases.items():
