@@ -13,7 +13,9 @@ assets/game_data/screen_info/character_traces.yml「角色-行迹」screen),
 upgrade-ops-adaptation/details/trace-rework.md):
 - 起跑闸:面板态双锚(简略描述开关 + 分类读区==target),两态细分;
 - 升级循环:补全确认弹窗双形态 / 满级+分类校验(失配 fail 交 agent)/
-  按钮三态 / 券刷路由(预算内) / 全缺判停;
+  按钮形态识别(白底快升/补全双形态/「材料不足」灰字第一轮正判;全空
+  异常态纯等待 3 轮收敛判停,面板在场不点空白) / 券刷路由(预算内) /
+  全缺判停;
 - 券刷链:面板→资源窗口→券按钮(行锚+按钮双锚)→弹窗连刷设置→确认→
   关结果框→关窗口→回面板,状态机以 _farm_times_set 分流;链入口面板钮
   开窗(P0:无人点钮=NEED_FARM↔回面板乒乓)/无可刷缺口 toast 正判(前
@@ -230,20 +232,20 @@ class TestUpgradeLoop:
             monkeypatch: pytest.MonkeyPatch) -> None:
         """满级锚+分类相符 → MAX_LEVEL 经收尾关面板;判停等级零读取。
 
-        轮次walk:入口{开关} → r1{开关}(全miss→点空白) → r2{满级锚}
+        轮次walk:入口{开关} → r1{开关}(全miss→纯等待) → r2{满级锚}
         → 收尾{开关}→{无}(面板关)。categories 弹序 = 入口/r1③/r2①。"""
         clicks = _record_controller_clicks(monkeypatch, test_context)
         op = _WatchedUpgradeTrace(test_context)
         state = _install_script(
             monkeypatch, test_context,
-            # 逐查询序(④b 删除后:快升 miss 直接落 ⑤⑤b⑦;r1 全 miss=过渡态
-            # 计 1 轮点空白,r2 满级锚命中→MAX_LEVEL):
-            # 入口开关(分类①) → r1(弹窗/满级/开关→分类②/快速升级/补全/合成/
-            # 可提升全miss→点空白) → r2(弹窗/满级→分类③→MAX_LEVEL) →
-            # 收尾(开关→关面板/开关miss→落MAX_LEVEL)
+            # 逐查询序(快升 miss 直接落 ⑤⑤b⑦;r1 全 miss=过渡态纯等待
+            # 不点空白,r2 满级锚命中→MAX_LEVEL):
+            # 入口开关(分类①) → r1(弹窗/满级/开关→分类②/快速升级/补全/
+            # 合成/可提升/材料不足全miss→等待) → r2(弹窗/满级→分类③→
+            # MAX_LEVEL) → 收尾(开关→关面板/开关miss→落MAX_LEVEL)
             [{(_TRACE, '开关-简略描述')},
              set(), set(), {(_TRACE, '开关-简略描述')},
-             set(), set(), set(), set(),
+             set(), set(), set(), set(), set(),
              set(), {(_TRACE, '文本-已达最大等级')},
              {(_TRACE, '开关-简略描述')}, set()],
             categories=['天赋', '天赋', '天赋'], level=0)
@@ -252,6 +254,10 @@ class TestUpgradeLoop:
 
         assert result.success and result.status == 'MAX_LEVEL'
         assert _has_click_in(clicks, test_context, _TRACE, '点击区-关面板空白')
+        assert not _has_click_in(clicks, test_context, _TRACE,
+                                 '点击区-面板外空白'), (
+            '面板锚在场时过渡等待不得点面板外空白(实机:该点位=关面板位)'
+        )
         assert state['level_reads'] == 0, '满级路径不应触发判停等级读取'
 
     def test_material_capped_without_authorization(
@@ -281,28 +287,63 @@ class TestUpgradeLoop:
         assert _has_click_in(clicks, test_context, _TRACE, '点击区-关面板空白')
         assert state['level_reads'] == 1, '判停等级应恰好读取一次'
 
-    def test_insufficient_material_gray_stops_immediately(
+    def test_insufficient_gray_text_stops_first_round(
             self, test_context: SrTestContext,
             monkeypatch: pytest.MonkeyPatch) -> None:
-        """材料不足灰态(快速刷取入口消失,升下一级缺口超出刷取/补全/合成
-        覆盖)→ 前置判停。分流依据 = 快速刷取入口在场性(版式级差异)而非
-        按钮带文本——灰态禁用文本与白底态文本 lcs 0.75,文本锚连续两档
-        阈值踩线,不可靠(实机两次)。"""
+        """「材料不足」灰字态(星神面板实机形态:升下级缺口不可补全/合成
+        覆盖,按钮位灰字且「可提升至」标记不在场、「快速刷取」仍在)→
+        第一轮正判判停。分流依据 = 按钮位灰字文本(与「材料合成」共享
+        「材料」前缀,匹配阈值 0.75 防互串);farm_dungeon=False 落此处
+        (授权时灰态先经 ⑥ 转券刷)。"""
         clicks = _record_controller_clicks(monkeypatch, test_context)
         op = _WatchedUpgradeTrace(test_context)
         state = _install_script(
             monkeypatch, test_context,
-            # 逐查询序:入口开关 → r1/r2/r3 各 7 查询(弹窗/满级miss/开关HIT
-            # [灰态面板仍在]/快升/补全/合成/可提升全miss,第3轮 buttonless=3
-            # 判停) → 收尾(开关→关面板/开关miss→落账)。farm_dungeon=False:
-            # ⑥ 快速刷取查询被 and 短路
+            # 逐查询序:入口开关 → r1(弹窗/满级/开关HIT[灰态面板仍在]→分类→
+            # 快升/补全/合成miss→可提升miss→材料不足HIT→判停) → 收尾
+            # (开关→关面板/开关miss→落账)
             [{(_TRACE, '开关-简略描述')},
              set(), set(), {(_TRACE, '开关-简略描述')},
-             set(), set(), set(), set(),
+             set(), set(), set(),
+             set(), {(_TRACE, '按钮-材料不足')},
+             {(_TRACE, '开关-简略描述')}, set()],
+            categories=['天赋', '天赋'], level=9)
+
+        result = _run_op(op)
+
+        assert result.success and result.status == 'MATERIAL_CAPPED'
+        assert op._end_level == 9
+        assert not _has_click_in(clicks, test_context, _TRACE, '按钮-材料合成'), (
+            '灰字判停不得空点禁用的合成钮'
+        )
+        assert not _has_click_in(clicks, test_context, _TRACE, '按钮-通用材料补全')
+        assert not _has_click_in(clicks, test_context, _TRACE, '按钮-快速刷取')
+        assert not _has_click_in(clicks, test_context, _TRACE,
+                                 '点击区-面板外空白'), (
+            '灰字第一轮正判,不得进入过渡等待/盲点(实机:盲点=关面板位)'
+        )
+        assert state['level_reads'] == 1
+
+    def test_blank_button_band_converges_after_three_rounds(
+            self, test_context: SrTestContext,
+            monkeypatch: pytest.MonkeyPatch) -> None:
+        """按钮带全空兜底(灰字/可提升标记均不在场的异常态):纯等待连续
+        3 轮收敛判停,全程零点击——旧行为点面板外空白会把面板点掉,判停
+        防线永不收敛(实机 2026-11 阿哈欢愉技实证)。"""
+        clicks = _record_controller_clicks(monkeypatch, test_context)
+        op = _WatchedUpgradeTrace(test_context)
+        state = _install_script(
+            monkeypatch, test_context,
+            # 逐查询序:入口开关 → r1/r2/r3 各 8 查询(弹窗/满级/开关HIT/
+            # 快升/补全/合成/可提升/材料不足全miss,第 3 轮 buttonless=3
+            # 判停) → 收尾(开关→关面板/开关miss→落账)
+            [{(_TRACE, '开关-简略描述')},
              set(), set(), {(_TRACE, '开关-简略描述')},
-             set(), set(), set(), set(),
+             set(), set(), set(), set(), set(),
              set(), set(), {(_TRACE, '开关-简略描述')},
-             set(), set(), set(), set(),
+             set(), set(), set(), set(), set(),
+             set(), set(), {(_TRACE, '开关-简略描述')},
+             set(), set(), set(), set(), set(),
              {(_TRACE, '开关-简略描述')}, set()],
             categories=['天赋', '天赋', '天赋', '天赋'], level=3)
 
@@ -310,11 +351,11 @@ class TestUpgradeLoop:
 
         assert result.success and result.status == 'MATERIAL_CAPPED'
         assert op._end_level == 3
-        assert not _has_click_in(clicks, test_context, _TRACE, '按钮-材料合成'), (
-            '灰态判停不得空点禁用的合成钮'
+        assert not _has_click_in(clicks, test_context, _TRACE,
+                                 '点击区-面板外空白'), (
+            '全空兜底等待期零盲点(面板在场点空白=关面板位);关面板走收尾'
         )
-        assert not _has_click_in(clicks, test_context, _TRACE, '按钮-通用材料补全')
-        assert not _has_click_in(clicks, test_context, _TRACE, '按钮-快速刷取')
+        assert _has_click_in(clicks, test_context, _TRACE, '点击区-关面板空白')
         assert state['level_reads'] == 1
 
     def test_synthesis_form_stops_without_farm(
