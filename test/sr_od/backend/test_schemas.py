@@ -31,6 +31,15 @@ def test_analyze_result_asdict_nested_serializable() -> None:
     assert d['screens'][0]['areas'][0]['match_target'] == '菜单'
 
 
+def test_analyze_result_pc_alt_defaults_false() -> None:
+    """pc_alt 字段默认 False:dataclass 与输出模型不传时均为 False(现有构造点兼容)。"""
+    from sr_od.backend.schemas import AnalyzeScreenOut
+
+    r = AnalyzeScreenResult(ocr_texts=[], screens=[])
+    assert r.pc_alt is False
+    assert AnalyzeScreenOut().pc_alt is False
+
+
 def test_run_status_result_fields() -> None:
     """校验 RunStatusResult 的字段集合。"""
     names = {f.name for f in fields(RunStatusResult)}

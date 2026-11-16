@@ -135,12 +135,60 @@ def test_analyze_returns_screens_and_writes_back_on_precise(monkeypatch) -> None
     monkeypatch.setattr(bc, 'find_screen_matches', lambda ctx, screen, top_n=5: [precise])
     # mock ocr_service 返空(ocr_texts 走全图 OCR)
     backend.ctx.ocr_service.get_ocr_result_list.return_value = []
+    # 建档:菜单画面锁光标(pc_alt=true)
+    backend.ctx.screen_loader.screen_info_map = {'菜单': MagicMock(pc_alt=True)}
 
     result = backend.analyze()
     assert len(result.screens) == 1
     assert result.screens[0].is_precise is True
+    assert result.pc_alt is True   # 精准命中建档锁光标画面 → True
     # 回写
     backend.ctx.screen_loader.update_current_screen_name.assert_called_once_with('菜单')
+
+
+def test_analyze_pc_alt_false_on_precise_unlocked_screen(monkeypatch) -> None:
+    """analyze 精准命中建档 pc_alt=false 的画面 → pc_alt=False(自由光标画面)。"""
+    import sr_od.backend.backend_context as bc
+    from one_dragon.base.screen.screen_match import ScreenMatch
+
+    controller = MagicMock()
+    controller.is_game_window_ready = True
+    controller.get_screenshot.return_value = MagicMock()
+    backend = _backend(ready=True, controller=controller)
+
+    precise = ScreenMatch(screen_name='邮件', is_precise=True, areas=[])
+    monkeypatch.setattr(bc, 'find_screen_matches', lambda ctx, screen, top_n=5: [precise])
+    backend.ctx.ocr_service.get_ocr_result_list.return_value = []
+    backend.ctx.screen_loader.screen_info_map = {'邮件': MagicMock(pc_alt=False)}
+
+    result = backend.analyze()
+    assert result.screens[0].is_precise is True
+    assert result.pc_alt is False
+
+
+def test_analyze_offline_pc_alt_follows_archive(monkeypatch, tmp_path) -> None:
+    """离线模式锁光标标记同规则:锁光标是画面建档属性,与实时/离线无关。
+
+    离线精准命中建档 pc_alt=true 的画面 → pc_alt=True。
+    """
+    import cv2
+    import numpy as np
+
+    import sr_od.backend.backend_context as bc
+    from one_dragon.base.screen.screen_match import ScreenMatch
+
+    img_path = tmp_path / 'shot.png'
+    cv2.imwrite(str(img_path), np.zeros((4, 4, 3), dtype=np.uint8))
+    ctx = MagicMock()
+    ctx.ready_for_application = True
+    ctx.screen_loader.screen_info_map = {'邮件': MagicMock(pc_alt=True)}
+    backend = SrBackendContext(ctx)
+
+    precise = ScreenMatch(screen_name='邮件', is_precise=True, areas=[])
+    monkeypatch.setattr(bc, 'find_screen_matches', lambda ctx, screen, top_n=5: [precise])
+
+    result = backend.analyze(screenshot=str(img_path))
+    assert result.pc_alt is True
 
 
 def test_analyze_no_precise_does_not_write_back(monkeypatch) -> None:
@@ -159,6 +207,7 @@ def test_analyze_no_precise_does_not_write_back(monkeypatch) -> None:
 
     result = backend.analyze()
     assert result.screens[0].is_precise is False
+    assert result.pc_alt is False   # 模糊候选未确认画面 → 恒 False
     backend.ctx.screen_loader.update_current_screen_name.assert_not_called()
 
 

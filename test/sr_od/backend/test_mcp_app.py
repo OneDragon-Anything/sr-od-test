@@ -176,7 +176,7 @@ def test_analyze_tool_converts_to_output_model() -> None:
 
     mcp, backend = _mcp_with_backend()
     backend.analyze.return_value = AnalyzeScreenResult(
-        ocr_texts=[], screenshot_path='/tmp/x.png',
+        ocr_texts=[], screenshot_path='/tmp/x.png', pc_alt=True,
         screens=[ScreenMatch(screen_name='菜单', is_precise=True, areas=[
             AreaMatchDetail(area_name='标题', pc_rect=[1, 1, 2, 2],
                             matched_text='菜单', match_target='菜单'),
@@ -189,6 +189,7 @@ def test_analyze_tool_converts_to_output_model() -> None:
     # 嵌套转换:dataclass → Out 模型,字段逐值等价
     assert result.screens[0].screen_name == '菜单'
     assert result.screens[0].areas[0].match_target == '菜单'
+    assert result.pc_alt is True   # pc_alt 随同构转换透传到 MCP 返回体
 
 
 def test_check_game_window_converts_to_output_model() -> None:
