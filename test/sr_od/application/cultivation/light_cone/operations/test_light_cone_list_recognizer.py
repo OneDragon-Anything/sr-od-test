@@ -28,7 +28,9 @@ from one_dragon.base.screen.template_loader import TemplateLoader
 from one_dragon.utils import cv2_utils
 from sr_od.application.cultivation.light_cone.light_cone_list_recognizer import (
     LightConeReplaceRecognizer,
-    _superimpose_templates,
+)
+from sr_od.application.cultivation.light_cone.light_cone_tpl_store import (
+    LightConeTplStore,
 )
 
 _FIXTURE_DIR = Path(__file__).parent / 'equip_light_cone'
@@ -36,7 +38,8 @@ _FIXTURE_DIR = Path(__file__).parent / 'equip_light_cone'
 
 def _fake_ctx(test_context: SrTestContext, list_rect: Rect) -> SimpleNamespace:
     """mock ctx:screen_loader 按名返回列表区 rect;ocr 用真实例;
-    template_loader 用真实例(叠影 rank 识别读分档模板)。"""
+    template_loader / tpl store 用真实例(叠影 rank 识别读分档模板)。
+    store 自建实例注入(不与共享 test_context 共享,契约类测试零共享)。"""
     areas = {
         '区域-光锥列表': list_rect,
     }
@@ -46,9 +49,11 @@ def _fake_ctx(test_context: SrTestContext, list_rect: Rect) -> SimpleNamespace:
             raise KeyError(f'unexpected area: {area_name}')
         return SimpleNamespace(rect=areas[area_name])
 
+    loader = TemplateLoader()
     return SimpleNamespace(
         screen_loader=SimpleNamespace(get_area=get_area),
-        template_loader=TemplateLoader(),
+        template_loader=loader,
+        light_cone_tpl_store=LightConeTplStore(loader),
         ocr_service=test_context.ocr_service)
 
 
@@ -75,10 +80,11 @@ def test_cone_recognizer(test_context: SrTestContext) -> None:
     assert by_cell[(236, 197, 375, 352)]['cone'] == '晚安与睡颜'
 
 
-def test_superimpose_templates_exist(test_context: SrTestContext) -> None:
+def test_superimpose_templates_exist() -> None:
     """叠影模板资产在盘且走 TemplateLoader 规范(单模板/档,底色差异由归一化
-    相关系数+滑动匹配吸收;III/IV 候采样补档)。"""
-    templates = _superimpose_templates(test_context.template_loader)
+    相关系数+滑动匹配吸收;III/IV 候采样补档)。自建 store 零 ctx、零模块级
+    全局依赖——单跑冷路径与全量口径天然一致,资产缺失时任何口径都红。"""
+    templates = LightConeTplStore(TemplateLoader()).superimpose_tpls
     for tid in ('1', '2', '5'):
         assert tid in templates, f'叠影模板 {tid} 缺失'
 

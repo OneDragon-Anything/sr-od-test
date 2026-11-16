@@ -18,10 +18,13 @@ test_relic_owner_match)。锁的内容(出处
 from pathlib import Path
 
 import numpy as np
+from test.conftest import SrTestContext
 
 from one_dragon.base.geometry.rectangle import Rect
 from one_dragon.utils import cv2_utils
-from sr_od.application.cultivation.light_cone.light_cone_list_recognizer import match_owner
+from sr_od.application.cultivation.light_cone.light_cone_list_recognizer import (
+    match_owner,
+)
 
 _FIXTURE_DIR = Path(__file__).parent / 'equip_light_cone'
 
@@ -70,23 +73,23 @@ def _cone_cases() -> tuple[list[tuple[str, Rect, str]], list[tuple[str, Rect]]]:
     return positives, negatives
 
 
-def test_owner_true_badges() -> None:
+def test_owner_true_badges(test_context: SrTestContext) -> None:
     """真角标:占用者中文名逐一正确(光锥 21 正例 0 漏 0 误)。"""
     cone_pos, _ = _cone_cases()
     failures: list[str] = []
     for name, rect, expect in cone_pos:
-        got, inliers = match_owner(_frame(name), rect)
+        got, inliers = match_owner(_frame(name), rect, ctx=test_context)
         if got != expect:
             failures.append(f'{name}{rect}: got={got}({inliers}) expect={expect}')
     assert not failures, '\n'.join(failures)
 
 
-def test_owner_no_badge_is_none() -> None:
+def test_owner_no_badge_is_none(test_context: SrTestContext) -> None:
     """无角标卡面:全部诚实 None(零误报,假占用者会击穿「不抢」语义)。"""
     _, cone_neg = _cone_cases()
     failures: list[str] = []
     for name, rect in cone_neg:
-        got, inliers = match_owner(_frame(name), rect)
+        got, inliers = match_owner(_frame(name), rect, ctx=test_context)
         if got is not None:
             failures.append(f'{name}{rect}: got={got}({inliers}), 应为 None')
     assert not failures, '\n'.join(failures)

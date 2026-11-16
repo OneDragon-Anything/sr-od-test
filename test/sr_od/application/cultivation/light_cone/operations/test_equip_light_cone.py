@@ -42,6 +42,9 @@ from one_dragon.utils import cv2_utils
 from sr_od.application.cultivation.light_cone.light_cone_list_recognizer import (
     LightConeReplaceRecognizer,
 )
+from sr_od.application.cultivation.light_cone.light_cone_tpl_store import (
+    LightConeTplStore,
+)
 from sr_od.application.cultivation.light_cone.operations import (
     equip_light_cone as equip_module,
 )
@@ -54,11 +57,14 @@ _LIST_AREA: Rect = Rect(95, 130, 1420, 960)
 
 
 def _recognizer_ctx(test_context: SrTestContext) -> SimpleNamespace:
-    """recognize 直测的 mock ctx(列表区 + 真实例 OCR / 叠影模板库)。"""
+    """recognize 直测的 mock ctx(列表区 + 真实例 OCR / 叠影模板库;
+    tpl store 自建实例注入,识别器模板视图读 ctx.light_cone_tpl_store)。"""
+    loader = TemplateLoader()
     return SimpleNamespace(
         screen_loader=SimpleNamespace(
             get_area=lambda screen_name, area_name: SimpleNamespace(rect=_LIST_AREA)),
-        template_loader=TemplateLoader(),
+        template_loader=loader,
+        light_cone_tpl_store=LightConeTplStore(loader),
         ocr_service=test_context.ocr_service)
 
 

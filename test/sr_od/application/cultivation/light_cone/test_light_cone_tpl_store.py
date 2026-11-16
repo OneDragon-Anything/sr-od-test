@@ -1,18 +1,22 @@
-"""light_cone_templates 光锥卡面库单测。
+"""light_cone_tpl_store 光锥卡面库单测。
 
 锁的内容（命名约定即注册表；读仓内真实模板资产）：
 - 卡面库与常量表一致：目录名集合 == 非空 id 光锥集合（空 id 光锥
   国际服未同步不入库，白名单随 test_sr_light_cones 同步收紧）；
 - 遍历条目自洽：template_id == 光锥 id，raw 可加载。
+
+自建 store 实例（零 ctx）——store 构造只注入 TemplateLoader，契约可独立验证。
 """
 
-from sr_od.config.light_cone_templates import iter_light_cone_templates
+from one_dragon.base.screen.template_loader import TemplateLoader
+from sr_od.application.cultivation.light_cone.light_cone_tpl_store import (
+    LightConeTplStore,
+)
 from sr_od.mys.sr_light_cones import LIGHT_CONES
 
 
-def test_iter_light_cone_templates_matches_constants(test_context, monkeypatch) -> None:
-    monkeypatch.setattr(test_context, 'light_cone_templates', None, raising=False)
-    entries = iter_light_cone_templates(test_context)
+def test_card_faces_matches_constants() -> None:
+    entries = LightConeTplStore(TemplateLoader()).card_faces
     expected = {c.id: c for c in LIGHT_CONES if c.id}
     assert {e.template_id for e in entries} == set(expected)
     for e in entries:
