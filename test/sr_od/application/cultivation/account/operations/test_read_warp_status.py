@@ -13,7 +13,7 @@ from sr_od.application.cultivation.account.operations.read_warp_status import (
     POOL_TYPE_CHARACTER,
     POOL_TYPE_COLLAB,
     POOL_TYPE_CONE,
-    POOL_TYPE_STANDARD,
+    POOL_TYPE_REGULAR,
     POOL_TYPE_UNKNOWN,
     parse_count,
     parse_pool_type,
@@ -28,7 +28,7 @@ def test_parse_pool_type_by_label_keyword() -> None:
     # 联动标签带活动前缀,Fate[UBW] 部分 OCR 可能残缺,按「联动跃迁」子串判
     assert parse_pool_type('Fate[UBW]联动跃迁') == POOL_TYPE_COLLAB
     assert parse_pool_type('联动跃迁') == POOL_TYPE_COLLAB
-    assert parse_pool_type('常驻跃迁') == POOL_TYPE_STANDARD
+    assert parse_pool_type('常驻跃迁') == POOL_TYPE_REGULAR
 
 
 def test_parse_pool_type_unknown_for_empty_or_foreign() -> None:
