@@ -2,7 +2,7 @@
 
 锁的内容（模块 docstring 契约；基准值来自 wiki 抓取固化）：
 
-- 快照完整性：97 角色（101 词条 - 3 前瞻占位 - 1 旧模板缺解析）、
+- 快照完整性：98 角色（101 词条 - 2 前瞻占位 - 1 rpg 空旧模板）、
   行迹/星魂键集一致（同源于同一批角色词条）；
 - 数据质量：每角色星魂恒 6 层、行迹节点带 tag/name；普攻战技终结技天赋
   类节点有满级数值（属性加成类无数值表，不强求）；
@@ -23,9 +23,9 @@ _BAILU = 1211
 
 
 def test_snapshot_integrity() -> None:
-    """快照完整性：97 角色；行迹与星魂键集一致（同一批角色词条同源解析）。"""
-    assert len(CHARACTER_TRACES) == 97
-    assert len(CHARACTER_EIDOLONS) == 97
+    """快照完整性：98 角色；行迹与星魂键集一致（同一批角色词条同源解析）。"""
+    assert len(CHARACTER_TRACES) == 98
+    assert len(CHARACTER_EIDOLONS) == 98
     assert set(CHARACTER_TRACES) == set(CHARACTER_EIDOLONS)
 
 
