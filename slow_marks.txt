@@ -17,30 +17,18 @@ test_back_to_normal_world_plus.py::TestCwLobbyResidualBranch::test_residual_lobb
 # (容器不变式四条尺 2026-10-14 归并一条,消费同一夹具产物;多种子完备性
 # 2026-10-14 裁决整批摘除——与 smoke 冒烟逐 seed 整局完全重叠,语义由
 # smoke_batch 承接,活锁机制锁 = test_cw_prep_action_ops 桥复检语境坐标锁)
-# 2026-11-10 占用者角标基准:整模板库 SIFT 特征构建(105 模板×2 尺度一次性缓存)
-# + 21 真角标全库比对;负例条 1.87s 免登记(缓存同会话共享)
-test_equip_owner_match.py::test_owner_true_badges
-# sim 冒烟批:默认 8 代表号(2026-10-24 压缩裁定:全量压到 ~3 分钟,
-# 整局批跑与预注册判据批共享 sim/conftest.py 夹具,20 连号全量普查改
-# 临时换 FULL_SWEEP_SEEDS;2026-10-13 land-38-fix 修复批曾扩回 20 seed,
-# 修复后 20/20 全跑通 ~2 分钟);逐 seed 一整局 sim(2026-11-07 修复后
-# 实测健康树 0.9-11.1s/seed;seed 20261018 存在生产侧词缀随机态封死
-# 等待环,整局 40 分钟级不收敛,看门狗轮限也罩不住,修复前整批不可
-# 全绿),复跑带 -s 收统计行
-test_sim_smoke_batch.py::test_smoke_match_completes[20261012]
-test_sim_smoke_batch.py::test_smoke_match_completes[20261014]
-test_sim_smoke_batch.py::test_smoke_match_completes[20261015]
-test_sim_smoke_batch.py::test_smoke_match_completes[20261018]
-test_sim_smoke_batch.py::test_smoke_match_completes[20261021]
-test_sim_smoke_batch.py::test_smoke_match_completes[20261024]
-test_sim_smoke_batch.py::test_smoke_match_completes[20261027]
-test_sim_smoke_batch.py::test_smoke_match_completes[20261031]
-# 2026-10-16 sim-screen-announce T-1:广播逐点断言测试跑满局+raw sink 双装,实测 2.12s
-# 升级-刷新-随机态闭环预注册判据批跑(冒烟 20 连号
-# 全量 ~2 分钟,五判据数字对照产出面)+ 间谍供奉全跑闭环变体(~12s)
-# 2026-11-11 T-16:裸文件名条目改全路径格式(对齐全路径惯例;conftest 按后缀
-# 匹配,语义不变)。同文件 test_owner_true_badges 仍是裸名旧条,存量不动。
-test/sr_od/operations/test_equip_owner_match.py::test_owner_no_badge_is_none
+# 2026-11-16 摘牌:test_sim_smoke_batch.py 8 代表号随文件删除移出(smoke 批
+# 退役,仓内仅余 __pycache__ 残迹);同批清掉两段孤儿登记注释(2026-10-16
+# sim-screen-announce T-1 与升级-刷新闭环批——所登记条目此前已移出,注释未随)。
+# 2026-11-16 占用者角标登记跟迁:原 test/sr_od/operations/test_equip_owner_match.py
+# 域重组拆为 relic/light_cone 两文件,后继四条按标准桶口径冷跑实测全过线
+# (true_badges 4.04s/2.65s,no_badge_is_none 4.58s/4.93s,单文件独立运行)。
+# 旧「负例条免登记」惯例(2026-11-10)作废:拆分后标准桶内无同库暖缓存来源,
+# 负例条独立承担整模板库 SIFT 构建(setup ~2.1s)+ 全库比对。
+test/sr_od/application/cultivation/relic/operations/test_relic_owner_match.py::test_owner_true_badges
+test/sr_od/application/cultivation/relic/operations/test_relic_owner_match.py::test_owner_no_badge_is_none
+test/sr_od/application/cultivation/light_cone/operations/test_light_cone_owner_match.py::test_owner_true_badges
+test/sr_od/application/cultivation/light_cone/operations/test_light_cone_owner_match.py::test_owner_no_badge_is_none
 # 2026-11-11 T-16 登记:重进链全量首跑实测 1.91s 贴线——主成本 = 5 帧 fixture
 # 全图 OCR(弹窗 area 匹配走框架统一默认 crop_first=False 全图缓存复用,改裁剪
 # 须动 op/harness,测试面内不可便宜化);温缓存单文件复跑 0.13s,登记防标准
@@ -75,3 +63,20 @@ test/sr_od/application/echo_of_war/test_challenge_echo_of_war_core.py::TestWaitA
 # (setup 2.06s),登记防标准全量首跑抖动过线
 test/sr_od/application/trailblaze_power/test_use_trailblaze_power_fail_adaptation.py::TestFailDelegateDirectCall::test_fail_below_threshold_retries
 
+# 2026-11-16 巡检回填:标准桶 --durations 巡检查得 12 条 >=2s 未登记——
+# enter_game 出口分支族 8 条实测 2.0-6.0s(与 2026-09-15 摘牌的账密两条
+# 不同名,非同批回潮)/ equip_relic 定位真帧 5.25s / aigis 验证器端口释放
+# 2.52s / 升级线胜利结算回归两条 2.00s 贴线(贴线登记先例 = 2026-11-14
+# 周本挑战核心条)。
+test/sr_od/operations/enter_game/test_enter_game/test_enter_game.py::test_battle_settle_page_exit_branch
+test/sr_od/operations/enter_game/test_enter_game/test_enter_game.py::test_normal_frames_not_caught_by_battle_exit_branches
+test/sr_od/operations/enter_game/test_enter_game/test_enter_game.py::test_battle_pause_panel_exit_branch
+test/sr_od/operations/enter_game/test_enter_game/test_enter_game.py::test_battle_exit_confirm_dialog_branch
+test/sr_od/operations/enter_game/test_enter_game/test_enter_game.py::test_fallback_skipped_before_login_clicked
+test/sr_od/operations/enter_game/test_enter_game/test_enter_game.py::test_fallback_skipped_on_login_page
+test/sr_od/operations/enter_game/test_enter_game/test_enter_game.py::test_battle_settle_page_without_exit_word_no_action
+test/sr_od/operations/enter_game/test_enter_game/test_enter_game.py::test_confirm_dialog_takes_priority_over_pause_panel
+test/sr_od/application/cultivation/relic/operations/test_equip_relic.py::test_locate_on_fixture
+test/one_dragon/mys/test_aigis_verifier.py::test_close_releases_port_and_instance_unusable
+test/sr_od/application/cultivation/light_cone/operations/test_upgrade_light_cone_fail_adaptation.py::TestFailBranchBehavior::test_victory_settle_branch_regression
+test/sr_od/application/cultivation/character/operations/test_upgrade_character_fail_adaptation.py::TestFailBranchBehavior::test_victory_settle_branch_regression
