@@ -52,6 +52,7 @@ def _mock_backend(start_ok: bool = True) -> MagicMock:
         duration_seconds=1.0,
     )
     b.stop.return_value = RunStopResult(stopped=True, source='http')
+    b.recognize_current_screen.return_value = '主界面'  # 运行态 status 查询默认附带画面识别
     # 并发拒绝响应由 backend 统一助手产出(start 类工具只透传):
     # 绑真实现——方法只读 query_status / run_slot,二者均已被 mock。
     b.run_refusal_response = lambda hint: SrBackendContext.run_refusal_response(b, hint)
@@ -227,8 +228,19 @@ def test_handle_game_enter_block_success():
 
 
 def test_handle_game_status():
-    resp = asyncio.run(routes_mod.handle_game_status(_mock_backend(), _FakeRequest({})))
+    backend = _mock_backend()
+    resp = asyncio.run(routes_mod.handle_game_status(backend, _FakeRequest({})))
     assert resp.status_code == 200
+    body = json.loads(resp.body)
+    assert body['current_screen'] == '主界面'   # running 态默认附带画面识别
+    backend.recognize_current_screen.assert_called_once()
+
+    backend = _mock_backend()
+    resp = asyncio.run(routes_mod.handle_game_status(
+        backend, _FakeRequest({'include_screen': 'false'})))
+    body = json.loads(resp.body)
+    assert body['current_screen'] is None      # 显式关闭则不识别
+    backend.recognize_current_screen.assert_not_called()
 
 
 def test_handle_game_stop():

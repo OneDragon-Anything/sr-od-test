@@ -24,6 +24,7 @@ def _make_op(result=None, raises=None, node_cn='进入游戏', op_name=''):
         op.op_name = op_name
         node = MagicMock()
         node.cn = node_cn
+        node.op = None  # 方法型节点不挂子 op;显式置 None 防 _query_status 下钻进 MagicMock 自动属性
         op._current_node = node
         op.node_retry_times = 2
         if raises is not None:
@@ -42,6 +43,7 @@ def _make_blocking_op(event, result):
         op.op_name = ''
         node = MagicMock()
         node.cn = '等待游戏打开'
+        node.op = None  # 同 _make_op:显式置 None 防下钻进自动属性
         op._current_node = node
         op.node_retry_times = 0
         def _execute():
@@ -246,6 +248,51 @@ def test_query_status_running(slot):
         assert r.current_node == '等待游戏打开'
         assert r.retry_count == 0
         assert r.started_at is not None and r.duration_seconds is not None
+    finally:
+        event.set()
+
+
+def test_query_status_running_drills_into_sub_op(slot):
+    """运行中沿节点挂载的子 op 下钻:current_op/current_node/retry_count 报最深层执行现场。
+
+    一条龙顶层 app 的节点只报「跑某应用」,查询方需要的是真正在执行的子 op;
+    单 op 运行(方法型节点)时 current_op 与 app 同为顶层类名。
+    """
+    event = threading.Event()
+
+    def factory(ctx):
+        op = MagicMock(name='App')
+        op.__class__ = type('OneDragonApp', (), {})
+        op.op_name = ''
+        top_node = MagicMock()
+        top_node.cn = '跑模拟宇宙'
+        sub_op = MagicMock(name='SubOp')
+        sub_op.__class__ = type('SimUniverse', (), {})
+        sub_op.node_retry_times = 1
+        sub_node = MagicMock()
+        sub_node.cn = '匹配对局'
+        sub_node.op = None  # 方法型节点不挂子 op;显式置 None 终止下钻
+        sub_op._current_node = sub_node
+        top_node.op = sub_op
+        op._current_node = top_node
+        op.node_retry_times = 0
+
+        def _execute():
+            event.wait(timeout=10)
+            return OperationResult(success=True)
+        op.execute.side_effect = _execute
+        return op
+
+    slot._start('mcp', op_factory=factory)
+    try:
+        deadline = time.time() + 5
+        while slot.current_op is None and time.time() < deadline:
+            time.sleep(0.01)
+        r = slot._query_status()
+        assert r.state == 'running'
+        assert r.current_op == 'SimUniverse'
+        assert r.current_node == '匹配对局'
+        assert r.retry_count == 1
     finally:
         event.set()
 

@@ -45,7 +45,8 @@ def test_run_status_result_fields() -> None:
     names = {f.name for f in fields(RunStatusResult)}
     assert names == {
         'state', 'source', 'app', 'started_at', 'duration_seconds',
-        'current_node', 'retry_count', 'last_status', 'failed_node',
+        'current_op', 'current_node', 'retry_count', 'current_screen',
+        'last_status', 'failed_node',
     }
 
 

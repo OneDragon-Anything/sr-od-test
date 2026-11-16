@@ -60,6 +60,7 @@ def _mock_backend(start_ok: bool = True) -> MagicMock:
         duration_seconds=1.0,
     )
     b.stop.return_value = RunStopResult(stopped=False, source=None)
+    b.recognize_current_screen.return_value = '主界面'  # 运行态 status 查询默认附带画面识别
     # 并发拒绝由 backend 统一助手产出(start 类工具只透传):
     # 绑真实现——方法只读 query_status / run_slot,二者均已被 mock。
     b.run_refusal_response = lambda hint: SrBackendContext.run_refusal_response(b, hint)
@@ -340,6 +341,7 @@ def test_output_schema_matches_runtime_returns(tmp_path, monkeypatch) -> None:
     backend.query_status.return_value = RunStatusResult(
         state='running', source='mcp', app='OEG',
         started_at='2026-07-02T00:00:00', duration_seconds=1.0)
+    backend.recognize_current_screen.return_value = '主界面'  # get_run_status 默认附带画面识别
     backend.check_window.return_value = WindowStatus(
         win_title='t', is_win_valid=True, is_win_active=True, is_win_scale=False)
     backend.list_applications.return_value = ApplicationListResult(
@@ -524,6 +526,19 @@ def test_get_run_status_delegates() -> None:
     res = app_mod.make_get_run_status(backend)()
     assert isinstance(res, RunStatusOut)   # tool 层转成 MCP 输出模型(字段语义走 outputSchema)
     backend.query_status.assert_called_once()
+    assert res.current_screen == '主界面'  # running 态默认附带画面识别
+    backend.recognize_current_screen.assert_called_once()
+
+    backend = _mock_backend()
+    res = app_mod.make_get_run_status(backend)(include_screen=False)
+    assert res.current_screen is None      # 显式关闭则不识别
+    backend.recognize_current_screen.assert_not_called()
+
+    backend = _mock_backend()
+    backend.query_status.return_value = RunStatusResult(state='success', source='mcp')
+    res = app_mod.make_get_run_status(backend)()
+    assert res.current_screen is None      # 终态不识别
+    backend.recognize_current_screen.assert_not_called()
 
 
 def test_stop_run_delegates() -> None:
