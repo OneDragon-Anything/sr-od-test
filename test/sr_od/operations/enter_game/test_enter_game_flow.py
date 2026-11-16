@@ -306,5 +306,107 @@ class TestEnterGameFlow:
         )
 
 
+def _build_phases_battle_exit_recovery() -> list[dict]:
+    """构造客户端重启恢复战斗退出链剧本(恢复收敛链)。
+
+    恢复中断战斗直接落在暂停面板 → 三分支主动退出:
+
+    1. 暂停面板:点「退出位」(位置锚定,文案随玩法变)→ 确认弹窗;
+    2. 确认弹窗:既有「确认」词 OCR 分支先接管(点击 = OCR 命中文字中心,
+       落在「按钮-确认」建档矩形内)→ 推进;
+    3. 节点结算页:结算页分支点「退出」词 → 玩法选关屏;
+    4. 选关屏:未知兜底(连续 3 轮全不命中)点右上角(与选关屏关闭X同位)→ 大世界;
+    5. 大世界:terminal(「角色图标」SUCCESS → wait_game 快速 success)。
+
+    第 3 站用节点结算形态(底部含「退出」,登录恢复退出链实测走此形态);
+    总结算形态(重新挑战/返回末日幻影,无「退出」词)的分支C 不动作边界
+    由 test_enter_game.py 单帧测试锁定。
+    """
+    return [
+        {
+            'frame': ('战斗-暂停面板', '末日幻影形态'),
+            'exit': ('on_click_in', '战斗-暂停面板', '按钮-结束战斗并结算'),
+        },
+        {
+            'frame': ('战斗-退出确认弹窗', '末日幻影形态'),
+            'exit': ('on_click_in', '战斗-退出确认弹窗', '按钮-确认'),
+        },
+        {
+            'frame': ('末日幻影-节点结算', '节点结算-退出按钮'),
+            'exit': ('on_click_in', '末日幻影-节点结算', '按钮-退出'),
+        },
+        {
+            'frame': ('末日幻影-选关', '默认'),
+            'exit': ('on_click_in', '菜单', '右上角返回'),
+        },
+        {
+            'frame': ('大世界', '普通'),
+            # terminal:不推进。
+        },
+    ]
+
+
+_BATTLE_EXIT_RECOVERY_FRAMES: list[tuple[str, str]] = [
+    ('战斗-暂停面板', '末日幻影形态'),
+    ('战斗-退出确认弹窗', '末日幻影形态'),
+    ('末日幻影-节点结算', '节点结算-退出按钮'),
+    ('末日幻影-选关', '默认'),
+    ('大世界', '普通'),
+]
+
+
+class TestEnterGameBattleExitRecovery:
+    """客户端重启恢复战斗退出链:暂停面板 → 确认弹窗 → 结算页 → 选关屏 → 大世界。
+
+    恢复态收敛链端到端锁:三类恢复画面被三分支逐一接住、每站点击落在对应
+    area、选关屏经未知兜底点右上角(与关闭X同位)收敛到大世界、全程成功。
+    分支内单帧路由细节由 test_enter_game.py 单帧测试锁定;本类锁链路推进。
+    """
+
+    def test_battle_exit_chain_converges_to_big_world(
+        self,
+        test_context: SrTestContext,
+        fixture_controller: FixtureController,
+    ) -> None:
+        for screen_name, state in _BATTLE_EXIT_RECOVERY_FRAMES:
+            if not test_context.has_screen(screen_name, state):
+                pytest.skip(f'存档截图缺失:screens/{screen_name}/{state}.webp')
+
+        fixture_controller.set_phases(_build_phases_battle_exit_recovery())
+
+        op = _WatchedEnterGame(test_context, switch=False)
+        # 恢复场景发生在登录后:登录页已通过(未知兜底闸①的前置)。
+        op._login_clicked = True
+        op._init_watchdog()  # type: ignore[attr-defined]
+
+        enter_running_state(test_context)
+        try:
+            with fast_sleep(op):
+                result = op.execute()
+        finally:
+            reset_running_state(test_context, op)
+
+        assert result.success, (
+            f'恢复退出链未收敛到大世界:status={result.status}'
+            f';phase_idx={fixture_controller.phase_idx}'
+            f';recorded_clicks={_fmt_clicks(fixture_controller.recorded_clicks)}'
+        )
+        assert fixture_controller.phase_idx == len(_BATTLE_EXIT_RECOVERY_FRAMES) - 1, (
+            f'剧本未推进到末 phase(大世界):phase_idx={fixture_controller.phase_idx}'
+        )
+        # 逐站点击落位:退出位 → 确认 → 结算退出 → 选关屏右上角关闭X(兜底)。
+        assert fixture_controller.click_hit_area(
+            '战斗-暂停面板', '按钮-结束战斗并结算'), '暂停面板站未点退出位'
+        assert fixture_controller.click_hit_area(
+            '战斗-退出确认弹窗', '按钮-确认'), '确认弹窗站未点确认'
+        assert fixture_controller.click_hit_area(
+            '末日幻影-节点结算', '按钮-退出'), '结算页站未点退出'
+        assert fixture_controller.click_hit_area(
+            '菜单', '右上角返回'), '选关屏站未点右上角关闭'
+
+
 def _fmt_clicks(clicks: list) -> str:
     return ', '.join(f'({p.x},{p.y})' for p in clicks) or '<empty>'
+
+
+
