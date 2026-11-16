@@ -69,6 +69,29 @@ _KNOWN_MISFILED: set[tuple[str, str]] = {
     ('委托', '委托领取弹窗'),
 }
 
+# 已知过时 fixture(游戏 UI 改版后元素消失,帧非当前版本典型态):strict xfail,
+# 实机补拍后转 XPASS 会响,提示重拍并移除本标记。
+# 末日幻影-编队两张旧帧截于「星启模式」上线前,缺 04-星启模式标签(新帧实测有)。
+_STALE_PENDING_RECAPTURE: set[tuple[str, str]] = {
+    ('末日幻影-编队', '默认'),
+    ('末日幻影-编队', '编队屏-有队伍'),
+}
+
+# 宿主画面 + 遮蔽态帧:弹窗/整页子态把宿主 id_mark 盖住或替换,宿主对这些帧
+# is_precise 不成立属画面事实;弹窗与子态 areas 按建模决定挂宿主 yml(如
+# 「标题-材料补全弹窗」被 4 个升级 op 作宿主 area 消费),帧留宿主目录。
+# 真屏判定由消费 op 的专属 area 锚负责,不经 screen 匹配竞争。碰撞检查保留。
+_HOST_COVERED_STATES: set[tuple[str, str]] = {
+    # 材料补全弹窗(白底弹窗压暗行迹页,标题-行迹不可读)
+    ('角色-行迹', '材料补全弹窗-一行材料'),
+    ('角色-行迹', '材料补全弹窗-两行材料'),
+    # 周本编队态 = 整页子态(左上角是「队伍7」,历战余响标题不在场;
+    # 编队 areas 挂宿主 yml,消费 op 以队伍标题/开始挑战锚判定)
+    ('挑战副本-历战余响', '编队态'),
+    # 次数耗尽确认弹窗(通用「提示」弹窗族,宿主标题被模糊蒙层盖住)
+    ('挑战副本-历战余响', '次数耗尽弹窗'),
+}
+
 # 已知合法双命中(fixture 帧上父屏 id_mark 全可见):小型侧边 overlay 不遮父屏
 # 任何 id_mark 元素,父屏(货币战争-备战)对这些帧 is_precise 属画面事实,不算撞车。
 # (真正的撞车 = 双方都该 is_precise 但语义互斥;这三帧是「父屏 + 小浮窗」叠加态,
@@ -105,6 +128,25 @@ _ALLOWED_DUAL_HIT: dict[tuple[str, str], set[str]] = {
     ('货币战争-未达上限警告', 'default'): {'战斗-退出确认弹窗'},
     ('跃迁-兑换确认', '专票不足'): {'战斗-退出确认弹窗'},
     ('跃迁-梦华兑换', '星琼不足'): {'战斗-退出确认弹窗'},
+    # 历战余响次数耗尽弹窗 = 同上通用「提示」弹窗族(提示标题+取消/确认同位同文),
+    # 宿主标题被模糊蒙层盖住(登记于 _HOST_COVERED_STATES,只跑碰撞半边)。
+    # 运行时消歧:该弹窗只被周本挑战 op 在历战余响流程内消费,按上下文点名确认。
+    ('挑战副本-历战余响', '次数耗尽弹窗'): {'战斗-退出确认弹窗'},
+    # 「筛选规则」弹窗在背包侧与遗器替换侧是同一游戏组件、像素级同构
+    # (标题同文同位,filter_relic_replace.py 注释已明示),两屏 id_mark 必然
+    # 双命中,属画面事实无法靠 id_mark 区分。运行时消歧:两屏各被自己的
+    # 消费 op 按流程上下文点名(背包分解链 / 遗器替换链),不经 screen 匹配竞争。
+    ('背包-遗器-筛选规则', '隧洞列表'): {'遗器-替换-筛选规则'},
+    ('背包-遗器-筛选规则', '已勾选'): {'遗器-替换-筛选规则'},
+    ('遗器-替换-筛选规则', '筛选规则弹窗'): {'背包-遗器-筛选规则'},
+    ('遗器-替换-筛选规则', '筛选规则弹窗已勾选'): {'背包-遗器-筛选规则'},
+    # 遗器替换页右侧筛选抽屉与背包遗器筛选抽屉同为同一抽屉组件:抽屉屏
+    # (遗器-替换-筛选/背包-遗器-筛选)的 id_mark 与宿主标题在抽屉帧上全部
+    # 同场,三屏同帧全命中属画面事实。运行时消歧:替换链消费 op 以宿主+
+    # 抽屉 area 组合锚定,背包链以「筛选方案」区域命中作锚(见上)。
+    ('遗器-替换', '筛选面板开'): {'背包-遗器-筛选', '遗器-替换-筛选'},
+    ('遗器-替换', '筛选面板已清'): {'背包-遗器-筛选', '遗器-替换-筛选'},
+    ('遗器-替换', '筛选面板带chip筛选后列表'): {'背包-遗器-筛选', '遗器-替换-筛选'},
 }
 
 
@@ -114,7 +156,10 @@ _ALLOWED_DUAL_HIT: dict[tuple[str, str], set[str]] = {
         pytest.param(s, st, marks=pytest.mark.xfail(
             reason='fixture 错档:实为无名勋礼面板屏(菜单识别标志不可见),待迁移+建模',
             strict=True,
-        )) if (s, st) in _KNOWN_MISFILED else (s, st)
+        )) if (s, st) in _KNOWN_MISFILED else pytest.param(s, st, marks=pytest.mark.xfail(
+            reason='fixture 过时:游戏 UI 改版后元素缺失,待实机补拍',
+            strict=True,
+        )) if (s, st) in _STALE_PENDING_RECAPTURE else (s, st)
         for s, st in _FIXTURES
     ],
     ids=[f'{s}/{st}' for s, st in _FIXTURES],
@@ -134,11 +179,14 @@ def test_id_mark(screen: str, state: str, test_context: SrTestContext) -> None:
 
     img = test_context.load_screen(screen, state)
 
-    # 1. 真阳性:自家 id_mark 在自家 fixture 全命中
-    assert screen_utils.is_target_screen(test_context, img, screen_info=target), (
-        f'{screen}/{state}:自家 id_mark 未全命中(真阳性失败 —— id_mark 过严 / '
-        'fixture 非该屏典型态?自行核实)'
-    )
+    # 1. 真阳性:自家 id_mark 在自家 fixture 全命中。
+    #    遮蔽态帧(宿主+弹窗/整页子态)跳过本半边:宿主 id_mark 不在场属画面
+    #    事实(见 _HOST_COVERED_STATES),碰撞半边照跑。
+    if (screen, state) not in _HOST_COVERED_STATES:
+        assert screen_utils.is_target_screen(test_context, img, screen_info=target), (
+            f'{screen}/{state}:自家 id_mark 未全命中(真阳性失败 —— id_mark 过严 / '
+            'fixture 非该屏典型态?自行核实)'
+        )
 
     # 2. 无碰撞:别家 id_mark 画面不该在这张 fixture 全命中。
     #    能区分靠各屏 id_mark 互不重叠:备战 id_mark 含「前台区域」(overlay 会盖住),

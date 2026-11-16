@@ -31,7 +31,7 @@ from sr_od.application.cultivation.account.operations.shop_buy_goods import (
 
 _FIRST_SCREEN = ('商店', '余烬兑换-首屏通票')
 _POPUP_PASS = ('商店-兑换弹窗', '星轨通票')
-_REWARD_FRAME = ('商店', '余烬兑换-奖励弹窗')
+_REWARD_FRAME = ('获得物品', '余烬兑换领取后')
 _FIRST_SCREEN_BOUGHT = ('商店', '余烬兑换-首屏通票-已购')
 _BOTTOM_FRAME = ('商店', '余烬兑换-底部')
 _POPUP_SOLD_OUT = ('商店-兑换弹窗', '星轨专票-已售罄')
