@@ -28,6 +28,7 @@ from test.harness.fixture_controller import (
 )
 
 from one_dragon.base.geometry.rectangle import Rect
+from one_dragon.base.screen.template_loader import TemplateLoader
 from one_dragon.utils import cv2_utils
 from sr_od.application.cultivation.relic.operations.equip_relic import (
     EquipRelicOp,
@@ -37,6 +38,7 @@ from sr_od.application.cultivation.relic.operations.equip_relic import (
 from sr_od.application.cultivation.relic.relic_list_recognizer import (
     RelicReplaceRecognizer,
 )
+from sr_od.application.cultivation.relic.relic_tpl_store import RelicTplStore
 
 _FIXTURE_DIR = Path(__file__).parent / 'equip_relic'
 _LIST_AREA: Rect = Rect(33, 195, 536, 960)
@@ -100,7 +102,10 @@ def test_locate_on_fixture(test_context: SrTestContext) -> None:
     def get_area(screen_name: str, area_name: str):
         return SimpleNamespace(rect=areas[area_name])
 
+    loader = TemplateLoader()
     mock = SimpleNamespace(screen_loader=SimpleNamespace(get_area=get_area),
+                           template_loader=loader,
+                           relic_tpl_store=RelicTplStore(loader),
                            ocr_service=test_context.ocr_service)
     out = RelicReplaceRecognizer().recognize_for_pos(mock, img, 1)
     assert out is not None

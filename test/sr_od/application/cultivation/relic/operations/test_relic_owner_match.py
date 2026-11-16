@@ -17,6 +17,7 @@ fixture = 2 帧遗器替换实机整屏(equip_relic/ 目录);真值 = 逐卡位�
 from pathlib import Path
 
 import numpy as np
+from test.conftest import SrTestContext
 
 from one_dragon.base.geometry.rectangle import Rect
 from one_dragon.utils import cv2_utils
@@ -86,23 +87,23 @@ def _relic_cases() -> tuple[list[tuple[str, Rect, str]], list[tuple[str, Rect]]]
     return positives, negatives
 
 
-def test_owner_true_badges() -> None:
+def test_owner_true_badges(test_context: SrTestContext) -> None:
     """真角标:占用者中文名逐一正确(遗器 11 正例 0 漏 0 误)。"""
     relic_pos, _ = _relic_cases()
     failures: list[str] = []
     for name, rect, expect in relic_pos:
-        got, inliers = match_owner(_frame(name), rect)
+        got, inliers = match_owner(_frame(name), rect, ctx=test_context)
         if got != expect:
             failures.append(f'{name}{rect}: got={got}({inliers}) expect={expect}')
     assert not failures, '\n'.join(failures)
 
 
-def test_owner_no_badge_is_none() -> None:
+def test_owner_no_badge_is_none(test_context: SrTestContext) -> None:
     """无角标卡面:全部诚实 None(零误报,假占用者会击穿「不抢」语义)。"""
     _, relic_neg = _relic_cases()
     failures: list[str] = []
     for name, rect in relic_neg:
-        got, inliers = match_owner(_frame(name), rect)
+        got, inliers = match_owner(_frame(name), rect, ctx=test_context)
         if got is not None:
             failures.append(f'{name}{rect}: got={got}({inliers}), 应为 None')
     assert not failures, '\n'.join(failures)

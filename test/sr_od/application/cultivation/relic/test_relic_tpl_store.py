@@ -1,22 +1,24 @@
-"""relic_templates 遗器模板库单测。
+"""relic_tpl_store 遗器模板库单测。
 
 锁的内容（命名约定即注册表；读仓内真实模板资产）：
 - 模板库与常量表一致：目录名集合 == 非空 id 套装 × 部位组合的全集
   （空 id 套装国际服未同步不入库，白名单随 test_sr_relic_sets 同步收紧）；
 - 遍历条目自洽：template_id == 套装 id + 部位英文段，raw 可加载。
+
+自建 store 实例（零 ctx）——store 构造只注入 TemplateLoader，契约可独立验证。
 """
 
-from sr_od.config.relic_templates import (
+from one_dragon.base.screen.template_loader import TemplateLoader
+from sr_od.application.cultivation.relic.relic_tpl_store import (
     RELIC_TEMPLATE_SUB_DIR,
-    iter_relic_templates,
+    RelicTplStore,
     relic_template_id,
 )
 from sr_od.mys.sr_relic_sets import RELIC_POS_EN, RELIC_SETS
 
 
-def test_iter_relic_templates_matches_constants(test_context, monkeypatch) -> None:
-    monkeypatch.setattr(test_context, 'relic_templates', None, raising=False)
-    entries = iter_relic_templates(test_context)
+def test_card_faces_matches_constants() -> None:
+    entries = RelicTplStore(TemplateLoader()).card_faces
     expected = {
         relic_template_id(relic_set, piece.pos): (relic_set, piece)
         for relic_set in RELIC_SETS if relic_set.id

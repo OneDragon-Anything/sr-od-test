@@ -22,18 +22,21 @@ from types import SimpleNamespace
 from test.conftest import SrTestContext
 
 from one_dragon.base.geometry.rectangle import Rect
+from one_dragon.base.screen.template_loader import TemplateLoader
 from one_dragon.utils import cv2_utils
 from sr_od.application.cultivation.relic.relic_list_recognizer import (
     RelicReplaceRecognizer,
     _tm_templates_all,
     _tm_templates_for_pos,
 )
+from sr_od.application.cultivation.relic.relic_tpl_store import RelicTplStore
 
 _FIXTURE_DIR = Path(__file__).parent / 'equip_relic'
 
 
 def _fake_ctx(test_context: SrTestContext, list_rect: Rect) -> SimpleNamespace:
-    """mock ctx:screen_loader 按名返回列表区与部位筛选 tab 区 rect;ocr 用真实例。"""
+    """mock ctx:screen_loader 按名返回列表区与部位筛选 tab 区 rect;ocr 用真实例;
+    tpl store 自建实例注入(识别器模板视图读 ctx.relic_tpl_store,契约类测试零共享)。"""
     areas = {
         '区域-遗器列表': list_rect,
         '部位TAB-头部': Rect(110, 122, 166, 164),
@@ -49,8 +52,11 @@ def _fake_ctx(test_context: SrTestContext, list_rect: Rect) -> SimpleNamespace:
             raise KeyError(f'unexpected area: {area_name}')
         return SimpleNamespace(rect=areas[area_name])
 
+    loader = TemplateLoader()
     return SimpleNamespace(
         screen_loader=SimpleNamespace(get_area=get_area),
+        template_loader=loader,
+        relic_tpl_store=RelicTplStore(loader),
         ocr_service=test_context.ocr_service)
 
 
