@@ -71,11 +71,7 @@ _KNOWN_MISFILED: set[tuple[str, str]] = {
 
 # 已知过时 fixture(游戏 UI 改版后元素消失,帧非当前版本典型态):strict xfail,
 # 实机补拍后转 XPASS 会响,提示重拍并移除本标记。
-# 末日幻影-编队两张旧帧截于「星启模式」上线前,缺 04-星启模式标签(新帧实测有)。
-_STALE_PENDING_RECAPTURE: set[tuple[str, str]] = {
-    ('末日幻影-编队', '默认'),
-    ('末日幻影-编队', '编队屏-有队伍'),
-}
+_STALE_PENDING_RECAPTURE: set[tuple[str, str]] = set()
 
 # 宿主画面 + 遮蔽态帧:弹窗/整页子态把宿主 id_mark 盖住或替换,宿主对这些帧
 # is_precise 不成立属画面事实;弹窗与子态 areas 按建模决定挂宿主 yml(如

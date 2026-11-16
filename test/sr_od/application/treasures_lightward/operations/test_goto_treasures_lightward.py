@@ -1,10 +1,10 @@
 """GotoTreasuresLightward 入口导航 op 流程测试(fixture 剧本,不连真游戏)。
 
 锁设计约定(见 src/sr_od/application/treasures_lightward/operations/goto_treasures_lightward.py 模块 docstring):
-- 前置链共用:判定节点分流;大世界起走全链(大世界→指南→分类页→选关);
+- 前置链共用:判定节点分流;大世界起走全链(大世界→手机菜单→指南→分类页→选关);
 - 已在分类页(含面板选中态与目标不符)→ 显式点目标分类后进入;
 - 已在选关(混沌回忆视图干净态)→ 零点击直成功;
-- 末日幻影尾部:目标画面未建档,点入口按钮后显式失败(锁登记成待办语义)。
+- 末日幻影全链:分类页选中→传送→开场介绍页(已更新+前往挑战双锚,点前往挑战)→选关成功。
 
 OFF_PATH 分支(委托 BackToNormalWorldPlus)内部分支依赖多画面 area,fixture
 剧本难覆盖,由实机 run_operation 验证(编队屏起跑即命中该分支),本文件不测。
@@ -26,11 +26,14 @@ from test.harness.fixture_controller import (
 )
 
 _WORLD_FRAME = ('大世界', '普通')
+_MENU_FRAME = ('菜单', '菜单-无邮件红点')
 _GUIDE_FRAME = ('星际和平指南', '每日实训')
 _CATEGORY_FH_FRAME = ('指南-逐光捡金', '分类页-忘却之庭总览')
 _CATEGORY_AA_FRAME = ('指南-逐光捡金', '分类页-异相仲裁选中')
 _CATEGORY_AS_FRAME = ('指南-逐光捡金', '分类页-末日幻影选中')
 _SELECT_FRAME = ('逐光捡金', '忘却之庭选关')
+_AS_INTRO_FRAME = ('末日幻影-开场', '新期介绍')
+_AS_SELECT_FRAME = ('末日幻影-选关', '默认')
 
 
 class _WatchedGoto(WatchdogOperationMixin, GotoTreasuresLightward):
@@ -79,11 +82,12 @@ def test_fh_from_world(
     test_context: SrTestContext,
     fixture_controller: FixtureController,
 ) -> None:
-    """大世界起走全链:指南→分类页(点目标分类)→传送→选关干净态收尾成功。"""
-    frames = [_WORLD_FRAME, _GUIDE_FRAME, _CATEGORY_FH_FRAME, _SELECT_FRAME]
+    """大世界起走全链:手机菜单→指南→分类页(点目标分类)→传送→选关干净态收尾成功。"""
+    frames = [_WORLD_FRAME, _MENU_FRAME, _GUIDE_FRAME, _CATEGORY_FH_FRAME, _SELECT_FRAME]
     _require_screens(test_context, frames)
     fixture_controller.set_phases([
-        {'frame': _WORLD_FRAME, 'exit': ('on_click_in', '大世界-普通', '按钮-指南')},
+        {'frame': _WORLD_FRAME, 'exit': ('on_click_in', '大世界-普通', '左上图标-菜单')},
+        {'frame': _MENU_FRAME, 'exit': ('on_click_in', '菜单', '入口-指南')},
         {'frame': _GUIDE_FRAME, 'exit': ('on_click_in', '星际和平指南', 'TAB-逐光捡金')},
         {'frame': _CATEGORY_FH_FRAME, 'exit': ('on_click_in', '指南-逐光捡金', '按钮-传送-卡片式')},
         {'frame': _SELECT_FRAME},
@@ -96,10 +100,12 @@ def test_fh_from_world(
         f'全链未成功:status={result.status!r} '
         f'phase_idx={fixture_controller.phase_idx} '
         f'clicks={fixture_controller.recorded_clicks}')
-    assert fixture_controller.phase_idx == 3, (
+    assert fixture_controller.phase_idx == 4, (
         f'应推进到选关帧:phase_idx={fixture_controller.phase_idx}')
-    assert fixture_controller.click_hit_area('大世界-普通', '按钮-指南'), \
-        f'指南按钮点击缺失:{fixture_controller.recorded_clicks}'
+    assert fixture_controller.click_hit_area('大世界-普通', '左上图标-菜单'), \
+        f'菜单图标点击缺失:{fixture_controller.recorded_clicks}'
+    assert fixture_controller.click_hit_area('菜单', '入口-指南'), \
+        '菜单指南入口点击缺失'
     assert fixture_controller.click_hit_area('星际和平指南', 'TAB-逐光捡金'), \
         'tab 点击缺失'
     assert fixture_controller.click_hit_area('指南-逐光捡金', '分类-忘却之庭'), \
@@ -153,17 +159,35 @@ def test_already_at_select_zero_click(
         f'已在目标态应零点击:{fixture_controller.recorded_clicks}')
 
 
-def test_as_unmodeled_fails_after_click(
+def test_as_from_category_success(
     test_context: SrTestContext,
     fixture_controller: FixtureController,
 ) -> None:
-    """末日幻影目标画面未建档:点入口按钮后显式失败(锁登记成待办语义,防静默半途)。"""
-    _require_screens(test_context, [_CATEGORY_AS_FRAME])
-    fixture_controller.set_phases([{'frame': _CATEGORY_AS_FRAME}])
+    """末日幻影全链(分类页起):选中→传送→开场介绍页双锚(已更新+前往挑战)→
+    点前往挑战→选关双锚(标题+难度)成功。
+
+    开场页双锚是防误点关键:开场页整屏无标题文本(纯美术字),选关页有前往
+    挑战按钮但无已更新标签——单前往挑战锚会把选关误判成开场页无限点空按钮。"""
+    frames = [_CATEGORY_AS_FRAME, _AS_INTRO_FRAME, _AS_SELECT_FRAME]
+    _require_screens(test_context, frames)
+    fixture_controller.set_phases([
+        {'frame': _CATEGORY_AS_FRAME, 'exit': ('on_click_in', '指南-逐光捡金', '按钮-传送-卡片式')},
+        {'frame': _AS_INTRO_FRAME, 'exit': ('on_click_in', '末日幻影-开场', '按钮-前往挑战')},
+        {'frame': _AS_SELECT_FRAME},
+    ])
     op = _WatchedGoto(test_context, TLMode.APOCALYPTIC_SHADOW)
     op._init_watchdog()
     result = _run_execute(test_context, op)
 
-    assert not result.success, '未建档目标应显式失败而非假装成功'
-    assert '末日幻影' in (result.status or ''), \
-        f'失败原因应指明末日幻影未建档:status={result.status!r}'
+    assert result.success, (
+        f'末日幻影全链未成功:status={result.status!r} '
+        f'phase_idx={fixture_controller.phase_idx} '
+        f'clicks={fixture_controller.recorded_clicks}')
+    assert fixture_controller.phase_idx == 2, (
+        f'应推进到选关帧:phase_idx={fixture_controller.phase_idx}')
+    assert fixture_controller.click_hit_area('指南-逐光捡金', '分类-末日幻影'), \
+        '目标分类点击缺失(显式选分类,不依赖默认态)'
+    assert fixture_controller.click_hit_area('指南-逐光捡金', '按钮-传送-卡片式'), \
+        '卡片式传送点击缺失'
+    assert fixture_controller.click_hit_area('末日幻影-开场', '按钮-前往挑战'), \
+        '开场页前往挑战点击缺失'
