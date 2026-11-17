@@ -74,27 +74,6 @@ def test_check_window_with_rect() -> None:
     assert (status.x, status.y, status.width, status.height) == (1, 2, 3, 4)
 
 
-def test_capture_returns_image() -> None:
-    controller = MagicMock()
-    controller.is_game_window_ready = True
-    fake_img = object()
-    controller.get_screenshot.return_value = fake_img
-    controller.fill_uid_black.return_value = fake_img
-    backend = _backend(ready=True, controller=controller)
-    # capture 经 fill_uid_black 打码后返回(对齐 controller.screenshot)
-    assert backend.capture() is fake_img
-    controller.get_screenshot.assert_called_once_with(independent=False)
-    controller.fill_uid_black.assert_called_once_with(fake_img)
-
-
-def test_capture_raises_when_window_not_ready() -> None:
-    controller = MagicMock()
-    controller.is_game_window_ready = False
-    backend = _backend(ready=True, controller=controller)
-    with pytest.raises(BackendNotReadyError):
-        backend.capture()
-
-
 def test_analyze_maps_ocr_results() -> None:
     r1 = MagicMock(data="体力", x=1, y=2, w=3, h=4)
     r2 = MagicMock(data="设定", x=5, y=6, w=7, h=8)

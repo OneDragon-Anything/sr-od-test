@@ -3,7 +3,7 @@
 测试使用 MagicMock 伪造 backend，避免依赖真实游戏窗口与 SrContext。
 
 包含两类用例（互补）：
-- ``_mcp_with_backend`` + 直接 await/调用 ``Tool.fn``：覆盖 check/capture/analyze
+- ``_mcp_with_backend`` + 直接 await/调用 ``Tool.fn``：覆盖 check/analyze
   + close_game 工具的注册与行为（来自 understand-game 主仓归一）。
 - ``_mock_backend`` + ``app_mod.make_*`` 工厂：覆盖 open_game/get_run_status
   /stop_run 的委托与 block/nonblock/失败分支（来自 backend/run-status-schema）。
@@ -39,7 +39,7 @@ def _mcp_with_backend(mode: str = 'dev') -> tuple[object, MagicMock]:
 
     Returns:
         ``(mcp, backend)`` 元组：mcp 为注册了全部 game 工具的 FastMCP 实例
-        （check/capture/analyze + close_game/click_game/input_text
+        （check/analyze + close_game/click_game/input_text
         + open_game/get_run_status/stop_run），
         backend 为 MagicMock，可在测试中配置其方法返回值或副作用。
     """
@@ -68,7 +68,7 @@ def _mock_backend(start_ok: bool = True) -> MagicMock:
     return b
 
 
-# ===== check/capture/analyze/close_game 工具注册与行为 =====
+# ===== check/analyze/close_game 工具注册与行为 =====
 
 def test_registers_all_tools() -> None:
     """create_mcp_server 应注册全部 game 工具(open_game 替换 open_and_enter_game + 新增 click/input)。"""
@@ -76,7 +76,6 @@ def test_registers_all_tools() -> None:
     names = set(mcp._tool_manager._tools.keys())
     assert {
         "check_game_window",
-        "capture_game_screen",
         "analyze_screen",
         "open_game",
         "close_game",
@@ -316,7 +315,7 @@ def test_get_screen_detail_renders_and_raises() -> None:
         fn(screen_name='邮箱')
 
 
-def test_output_schema_matches_runtime_returns(tmp_path, monkeypatch) -> None:
+def test_output_schema_matches_runtime_returns() -> None:
     """带 outputSchema 的工具,运行时返回必须匹配其 schema。
 
     H1 教训:close_game 注解 `-> str` 但实际返回 dict,FastMCP 按 schema 校验
@@ -324,7 +323,6 @@ def test_output_schema_matches_runtime_returns(tmp_path, monkeypatch) -> None:
     「调用 fn → jsonschema 校验返回」的序列化层冒烟。
     """
     import jsonschema
-    import numpy as np
 
     from sr_od.backend.schemas import (
         ApplicationInfo,
@@ -360,11 +358,6 @@ def test_output_schema_matches_runtime_returns(tmp_path, monkeypatch) -> None:
     backend.click_game.return_value = True
     backend.key_tap.return_value = '已按下 esc'
     backend.drag.return_value = '已拖拽 (1,2)→(3,4)'
-    backend.capture.return_value = np.zeros((4, 4, 3), dtype=np.uint8)
-    monkeypatch.setattr(
-        'sr_od.backend.backend_context.os_utils.get_path_under_work_dir',
-        lambda *parts: str(tmp_path),
-    )
     cases = {
         'analyze_screen': {'save_image': False},
         'check_game_window': {},
@@ -372,7 +365,6 @@ def test_output_schema_matches_runtime_returns(tmp_path, monkeypatch) -> None:
         'list_applications': {},
         'list_screen_names': {},
         'close_game': {},
-        'capture_game_screen': {},
         'input_text': {'text': 'abc', 'use_clipboard': True},
         'upsert_screen_area': {'screen_name': '邮件', 'area_name': '标题', 'pc_rect': [1, 1, 2, 2]},
         'delete_screen_area': {'screen_name': '邮件', 'area_name': '标题'},
@@ -418,35 +410,6 @@ def test_close_game_raises_on_not_ready() -> None:
     tool = mcp._tool_manager._tools["close_game"]
     fn = getattr(tool, "fn", None) or getattr(tool, "func", None)
     assert fn is not None
-    with pytest.raises(BackendNotReadyError, match="未就绪"):
-        fn()
-
-
-def test_capture_game_screen_returns_path(tmp_path, monkeypatch) -> None:
-    """capture_game_screen 应保存截图并返回纯路径 str(失败异常透传)。"""
-    import numpy as np
-
-    # 写盘目录重定向 tmp_path(纪律 2:测试禁写真实 .debug/)
-    monkeypatch.setattr(
-        'sr_od.backend.backend_context.os_utils.get_path_under_work_dir',
-        lambda *parts: str(tmp_path),
-    )
-
-    mcp, backend = _mcp_with_backend()
-    backend.capture.return_value = np.zeros((4, 4, 3), dtype=np.uint8)
-    tool = mcp._tool_manager._tools["capture_game_screen"]
-    fn = getattr(tool, "fn", None) or getattr(tool, "func", None)
-    out = fn()
-    assert isinstance(out, str)
-    assert out.endswith(".png")
-
-
-def test_capture_game_screen_raises_on_not_ready() -> None:
-    """capture_game_screen 在 backend 未就绪时异常透传(失败走错误通道,不做兜底包装)。"""
-    mcp, backend = _mcp_with_backend()
-    backend.capture.side_effect = BackendNotReadyError("未就绪")
-    tool = mcp._tool_manager._tools["capture_game_screen"]
-    fn = getattr(tool, "fn", None) or getattr(tool, "func", None)
     with pytest.raises(BackendNotReadyError, match="未就绪"):
         fn()
 

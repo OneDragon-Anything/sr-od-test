@@ -3,8 +3,7 @@
 包含两类互补用例：
 
 - **直接 await 处理器**（async 风格）：避开 MCP 协议层，backend 用 ``MagicMock`` 伪造，
-  避免依赖真实游戏窗口与 ``SrContext``。``capture`` 用例给真实 numpy 图（可编码），
-  以验证 PNG 字节回传链路；``route_dispatch_*`` 用例经 Starlette 路由层分发。
+  避免依赖真实游戏窗口与 ``SrContext``；``route_dispatch_*`` 用例经 Starlette 路由层分发。
 - **asyncio.run 处理器**（路由参数分发风格）：覆盖 ``/game/enter?block=``
   nonblock/并发拒绝/block 成功、``/game/status``、``/game/stop`` 等分支。
 """
@@ -22,7 +21,6 @@ from sr_od.backend.backend_context import BackendNotReadyError, SrBackendContext
 from sr_od.backend.http import routes as routes_mod
 from sr_od.backend.http.routes import (
     handle_game_analyze,
-    handle_game_capture,
 )
 from sr_od.backend.schemas import (
     AnalyzeScreenResult,
@@ -60,19 +58,6 @@ def _mock_backend(start_ok: bool = True) -> MagicMock:
 
 
 # ===== 直接 await 处理器（async 风格;仅保留路由层无对应端点覆盖的用例）=====
-
-@pytest.mark.asyncio
-async def test_handle_game_capture_returns_png_bytes() -> None:
-    """handle_game_capture 应直接回传 PNG 字节（media_type=image/png，不落盘）。"""
-    import numpy as np
-
-    backend = MagicMock()
-    backend.capture.return_value = np.zeros((1, 1, 3), dtype="uint8")  # 可编码的 1x1 RGB 图
-    resp = await handle_game_capture(backend)
-    assert resp.status_code == 200
-    assert resp.media_type == "image/png"
-    assert resp.body[:4] == b"\x89PNG"  # PNG magic
-
 
 @pytest.mark.asyncio
 async def test_handle_game_analyze_returns_screens() -> None:
