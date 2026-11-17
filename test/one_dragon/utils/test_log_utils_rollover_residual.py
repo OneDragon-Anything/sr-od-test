@@ -1,6 +1,6 @@
 """回归锁:SafeTimedRotatingFileHandler 轮转占用路径的两个残留缺陷(W360)。
 
-背景:.debug/sr_od_mcp/main_server.log 里 3149 条 WinError 32 轮转失败的
+背景:.log/stdout.log 里 3149 条 WinError 32 轮转失败的
 traceback,栈里没有 log_utils 帧、目标归档名恒为 ``.2026-08-25`` —— 证明
 肇事进程跑的是标准库 handler(失败时 ``rolloverAt`` 不推进 → 每条日志重试
 换名,重试窗口内换名偶发成功会把其他写入流甩进已改名归档,离线读出

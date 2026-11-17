@@ -6,7 +6,7 @@
 
 日志分流测试锁(2026-08-24 职责划分):MCP server 进程的框架 logger 必须指向
 专属文件 ``.log/mcp_server.log`` 且**不挂 console handler**——否则框架日志双写
-(``.log/log.txt`` 混 GUI/调度器进程身份 + stdout→main_server.log 全量副本),
+(``.log/log.txt`` 混 GUI/调度器进程身份 + stdout→stdout.log 全量副本),
 详见 ``server.py`` ``_configure_server_logging`` 的注释。
 """
 
@@ -54,7 +54,7 @@ def test_serve_uses_no_uvicorn_log_config() -> None:
 
     uvicorn 缺省 LOGGING_CONFIG 给自己的 logger 族挂 stderr StreamHandler,
     每次重启的启动块(Started server process/Uvicorn running)都写进被 daemon
-    重定向的 main_server.log → 该文件 mtime 每次重启一度变新,哨兵按
+    重定向的 stdout.log → 该文件 mtime 每次重启一度变新,哨兵按
     「两候选 mtime 最新」选活性信道时随之来回漂移。行为锁:``log_config=None``
     的 Config.configure_logging() 后 uvicorn logger 族不得出现任何自有
     handler(裸 logger 沿层级上传 root → mcp_server.log)。
@@ -87,7 +87,7 @@ def test_root_logger_single_channel_blocks_fastmcp_basicconfig() -> None:
     """root 单一信道锁:w944 哨兵双信道漂移根因是 FastMCP.__init__ 经
     mcp.server.fastmcp.utilities.logging.configure_logging → logging.basicConfig
     给 root 挂裸 stderr handler,使 getLogger(__name__) 型业务 logger 的行
-    (cw_screen_plane_intel 等)以裸格式进 main_server.log。本锁断言:
+    (cw_screen_plane_intel 等)以裸格式进 stdout.log。本锁断言:
     ①本函数先给 root 挂 mcp_server.log 文件 handler;②之后模拟 FastMCP 的
     configure_logging(真调 mcp SDK 函数)时 root handler 集不变
     (basicConfig no-op),不再出现 StreamHandler 漂移通道。"""
@@ -199,7 +199,7 @@ def test_configure_server_logging_routes_to_dedicated_file() -> None:
     """框架 logger 应被切到 ``mcp_server.log`` 专属文件且不再挂 console handler。
 
     锁两个不变量:①文件 handler 的目标文件名是 ``mcp_server.log``(进程身份即文件);
-    ②无 ``StreamHandler``(console 关闭,stdout/main_server.log 回归兜底职责)。
+    ②无 ``StreamHandler``(console 关闭,stdout/stdout.log 回归兜底职责)。
     """
     from sr_od.backend.entry.server import _configure_server_logging
 
@@ -219,7 +219,7 @@ def test_configure_server_logging_routes_to_dedicated_file() -> None:
         stream_handlers = [h for h in managed if isinstance(h, logging.StreamHandler)
                            and not isinstance(h, logging.FileHandler)]
         assert not stream_handlers, (
-            f'不应再有 console(StreamHandler),否则框架日志双写进 main_server.log,实得 {stream_handlers}'
+            f'不应再有 console(StreamHandler),否则框架日志双写进 stdout.log,实得 {stream_handlers}'
         )
     finally:
         # 还原为 pytest 进程的「不落盘」默认态(conftest 日志隔离):

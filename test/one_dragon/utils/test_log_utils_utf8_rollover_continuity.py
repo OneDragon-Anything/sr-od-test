@@ -1,7 +1,7 @@
 """回归锁:轮转占用下的日志连续性 + UTF-8 编码统一。
 
 背景(2026-08-30 起的「当天对局日志全损」事故面,诊断锚点 =
-.debug/sr_od_mcp/main_server.log 顶部 3165 条 ``--- Logging error ---``):
+.log/stdout.log 顶部 3165 条 ``--- Logging error ---``):
 标准库 ``TimedRotatingFileHandler`` 换名被外部句柄挡住时,``rolloverAt``
 不推进 → 整天每条日志重试换名、每条都失败,正文只以无时间戳的
 ``--- Logging error ---`` 碎片落 stderr,当天日志永久不可考。Safe 版
@@ -86,28 +86,28 @@ def test_rollover_under_occupied_handle_keeps_log_continuous_utf8(tmp_path) -> N
 def test_stdout_log_copytruncate_rotates_and_continues_utf8(tmp_path) -> None:
     """stdout 兜底日志(copytruncate helper)超阈值轮转:归档/续写/UTF-8 标记行。
 
-    对应 main_server.log 的轮转路径(daemon/GUI 每次 spawn 前调
+    对应 stdout.log 的轮转路径(daemon/GUI 每次 spawn 前调
     ``rotate_large_stdout_log``):多进程 append 共享句柄下不能 rename,
     helper 走复制归档+截断;轮转标记行自身必须 UTF-8 写入。
     """
     from one_dragon.utils.log_utils import rotate_large_stdout_log
 
-    target = tmp_path / 'main_server.log'
+    target = tmp_path / 'stdout.log'
     payload = '启动行\n' * 200
     target.write_bytes(payload.encode('utf-8') + b'\xe4\xb8\xad')  # 略超阈值的 UTF-8 字节
 
     assert rotate_large_stdout_log(target, max_bytes=64, backup_count=2) is True
     archives = sorted(p.name for p in tmp_path.iterdir() if p.name.endswith('.1'))
-    assert archives == ['main_server.log.1']
+    assert archives == ['stdout.log.1']
     archived_text = (tmp_path / archives[0]).read_text(encoding='utf-8')
     assert archived_text.startswith('启动行')
     current = target.read_bytes().decode('utf-8')
     assert '已轮转' in current, '截断后应留 UTF-8 轮转标记行'
     assert len(current) < len(archived_text), '当前文件应被截空(仅剩标记行)'
 
-    # 未超阈值:不动文件
+    # 未超阈值:不动文件(标记行 ~65 字节,阈值取 128 与标记行留足余量,不贴线)
     before = target.read_bytes()
-    assert rotate_large_stdout_log(target, max_bytes=64) is False
+    assert rotate_large_stdout_log(target, max_bytes=128) is False
     assert target.read_bytes() == before
 
 

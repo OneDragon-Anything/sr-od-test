@@ -1,8 +1,8 @@
 """回归锁:YOLO 子系统日志单一信道(哨兵「日志信道漂移」的写端修复)。
 
-背景:.log/mcp_server.log 与 .debug/sr_od_mcp/main_server.log 反复切换的
+背景:.log/mcp_server.log 与 .log/stdout.log 反复切换的
 双写源之一 —— 旧 ``one_dragon/yolo/log_utils.py`` 给 ``'OneDragon-YOLO'``
-挂裸 stderr StreamHandler:server 进程里 stderr 被重定向进 main_server.log,
+挂裸 stderr StreamHandler:server 进程里 stderr 被重定向进 stdout.log,
 而框架日志走 mcp_server.log,每次 YOLO 模型加载两文件 mtime 交替变新,
 哨兵按「mtime 最新」选活性信道时来回切换。
 
