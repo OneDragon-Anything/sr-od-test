@@ -1017,7 +1017,7 @@ def test_run_operation_block_success() -> None:
 
 
 def test_run_operation_block_returns_data() -> None:
-    """block=True + op 携带 data → RunFinishOut 带 data 通道(读数类 op 契约)。"""
+    """block=True + op 携带 data → RunFinishOut 透传 data 字段(内部传值通道透出)。"""
     from sr_od.backend.mcp.service_app import make_run_operation
 
     payload = {'pool_type': 'character', 'stellar_jade': 12183}
