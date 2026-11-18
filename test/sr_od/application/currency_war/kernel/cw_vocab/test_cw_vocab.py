@@ -225,3 +225,48 @@ def test_move_unit_action_key_rules() -> None:
     assert k6 != k8
     k_tag = action_key(CwActionMoveUnitParam(route_tag='x', **base))
     assert k_tag == k6
+
+
+# ===== 卖上阵(槽位键参数面迁移形态;from_dict 经共享 action_param_from_dict)=====
+
+from sr_od.application.currency_war.kernel.cw_vocab import (  # noqa: E402
+    CwActionSellDeployedParam,
+)
+
+
+def test_sell_deployed_from_dict_full_and_minimal() -> None:
+    """卖上阵 from_dict:全字段 dict 逐字段透传;最小 dict(必填 1 项)
+    落全缺省(back_slot_count 6/income None/reason/expect/route_tag 空);
+    未知键忽略。"""
+    full = CwActionSellDeployedParam.from_dict({
+        'deployed_idx': 10, 'back_slot_count': 8, 'income': 5,
+        'reason': 'deploy_star_swap', 'expect': '银狼',
+        'route_tag': 'yield_plan_sell'})
+    assert full.deployed_idx == 10
+    assert full.back_slot_count == 8
+    assert full.income == 5
+    assert full.reason == 'deploy_star_swap'
+    assert full.expect == '银狼'
+    assert full.route_tag == 'yield_plan_sell'
+
+    minimal = CwActionSellDeployedParam.from_dict({'deployed_idx': 3})
+    assert minimal.back_slot_count == 6
+    assert minimal.income is None
+    assert minimal.reason == '' and minimal.expect == ''
+    assert minimal.route_tag == ''
+
+    p = CwActionSellDeployedParam.from_dict({
+        'deployed_idx': 0, 'legacy_extra': 'x'})
+    assert p.back_slot_count == 6   # 未知键不影响缺省
+
+
+def test_sell_deployed_action_key_rules() -> None:
+    """卖上阵幂等键:back_slot_count 不同产不同键(同槽位不同布局档 =
+    不同拖拽落点,禁共享屏蔽粒度);route_tag 不入键(reason 入键 =
+    SellDeployed 现状非 action_key_exclude 字段,零变化不锁测)。"""
+    base = {'deployed_idx': 7}
+    k6 = action_key(CwActionSellDeployedParam(**base))
+    k8 = action_key(CwActionSellDeployedParam(back_slot_count=8, **base))
+    assert k6 != k8
+    k_tag = action_key(CwActionSellDeployedParam(route_tag='x', **base))
+    assert k_tag == k6
