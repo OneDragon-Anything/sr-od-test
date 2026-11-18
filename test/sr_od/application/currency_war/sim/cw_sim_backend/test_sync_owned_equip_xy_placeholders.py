@@ -14,12 +14,10 @@
 被测单一源 = ``cw_sim_backend.SimBackend._sync_owned_equip_xy_placeholders``。
 """
 
-from sr_od.application.currency_war.kernel.cw_action_report.wear_equip import (
-    _resolve_item_by_xy,
-)
 from sr_od.application.currency_war.kernel.cw_game_state import (
     ChannelSig,
     Field,
+    resolve_item_by_xy,
 )
 from sr_od.application.currency_war.sim.cw_sim_backend import SimBackend
 from sr_od.application.currency_war.sim.cw_sim_run_config import RunConfig
@@ -46,8 +44,8 @@ def test_none_first_write_appends_resolvable_placeholders() -> None:
     xy = backend.gs.owned_equip_xy.value
     assert xy == {'量产型装甲': [(-1001, -1000), (-1002, -1000)]}
     # 同名两件占位坐标互异且均可反查命中(唯一化前提 + 记账全链通)
-    assert _resolve_item_by_xy(backend.gs, -1001, -1000) == '量产型装甲'
-    assert _resolve_item_by_xy(backend.gs, -1002, -1000) == '量产型装甲'
+    assert resolve_item_by_xy(backend.gs, -1001, -1000) == '量产型装甲'
+    assert resolve_item_by_xy(backend.gs, -1002, -1000) == '量产型装甲'
 
 
 def test_equal_value_zero_write_idempotent() -> None:
@@ -71,3 +69,4 @@ def test_unobserved_equips_skipped(monkeypatch) -> None:
     monkeypatch.setattr(backend.gs, 'equips', Field())   # 未观察 None
     backend._sync_owned_equip_xy_placeholders()
     assert backend.gs.owned_equip_xy is before
+
