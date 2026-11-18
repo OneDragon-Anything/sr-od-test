@@ -11,8 +11,8 @@
   备战、识别标志穿透命中的事故防线);
 - armed 面发出序:部署原子序(策略层部署计划现算)依序发出、先于出战
   点击,出战点击收尾返回 (True, detail);
-- resume 面发出即写证据位:首调执行同步步部署原子序并置
-  ``op._cw_locked_sync_done``;二调跳过同步步(部署计划零再执行)、
+- resume 面发出即写证据位:首调执行同步步部署原子序并置 Match 宿主的
+  ``locked_sync_done``;二调跳过同步步(部署计划零再执行)、
   出战点击仍发。
 
 驱动形态:发出链函数直调(不经 op 节点循环),宿主 op 只承载识别原语;
@@ -248,13 +248,16 @@ def test_armed_deploys_then_battle_click(launch_env,
 
 def test_resume_sync_once_writes_evidence(launch_env,
                                           monkeypatch) -> None:
-    """resume 面发出即写证据位:首调执行同步步部署原子序并置
-    ``_cw_locked_sync_done``;二调跳过同步步(部署计划零再执行零拖拽)、
+    """resume 面发出即写证据位:首调执行同步步部署原子序并置 Match 宿主
+    ``locked_sync_done``;二调跳过同步步(部署计划零再执行零拖拽)、
     出战点击仍发。"""
     test_context, host, ctrl = launch_env
     _require_frame(test_context)
     _set_frame(ctrl, _PREP_FRAME)
-    match = types.SimpleNamespace(session=types.SimpleNamespace())
+    # 证据位宿主 = Match.locked_sync_done;初值 False = 生产前置(锁定确认
+    # 同帧配对写 False 后才进首战)。
+    match = types.SimpleNamespace(session=types.SimpleNamespace(),
+                                  locked_sync_done=False)
     monkeypatch.setattr(test_context, 'cw_match', match)
     moves = [
         CwActionMoveUnitParam(src_domain='bench', src_slot=0,
@@ -264,8 +267,8 @@ def test_resume_sync_once_writes_evidence(launch_env,
 
     ok1, detail1 = locked_resume_sync_and_battle(host, test_context)
     assert ok1, f'首调应发出成功,实际 detail={detail1!r}'
-    assert host._cw_locked_sync_done is True, \
-        '首调发出后应置证据位 _cw_locked_sync_done'
+    assert test_context.cw_match.locked_sync_done is True, \
+        '首调发出后应置证据位 locked_sync_done(Match 宿主)'
     assert plan_calls == [1], f'首调应执行一次部署计划,实际 {plan_calls}'
     assert len(ctrl.recorded_drags) == 1, \
         f'首调应发出同步步拖拽×1,实际 {ctrl.recorded_drags}'
