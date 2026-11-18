@@ -315,3 +315,41 @@ def test_sell_bench_action_key_rules() -> None:
     assert k2 != k5
     k_tag = action_key(CwActionSellBenchParam(route_tag='x', **base))
     assert k_tag == k2
+
+
+# ===== 开书册卡(slot 必填 None 废除形态;from_dict 经共享 action_param_from_dict)=====
+
+import pytest  # noqa: E402
+
+from sr_od.application.currency_war.kernel.cw_vocab import (  # noqa: E402
+    CwActionOpenBookcardParam,
+)
+
+
+def test_open_bookcard_from_dict_and_required_slot() -> None:
+    """开书册卡 from_dict:最小 dict ``{"slot": N}`` 逐字段透传
+    (route_tag 空缺省);未知键忽略;缺 slot 键 = TypeError(必填锁测
+    ——slot=None 语义废除的构造面出口);``{"slot": null}`` 可构造
+    (None 拦截归 op 守卫——构造面不做类型校验的家族口径)。"""
+    p = CwActionOpenBookcardParam.from_dict({'slot': 5})
+    assert p.slot == 5
+    assert p.route_tag == ''
+
+    p = CwActionOpenBookcardParam.from_dict({'slot': 1, 'legacy_extra': 'x'})
+    assert p.slot == 1   # 未知键忽略
+
+    with pytest.raises(TypeError):
+        CwActionOpenBookcardParam.from_dict({})   # 缺 slot 键 = 构造面缺参
+
+    p = CwActionOpenBookcardParam.from_dict({'slot': None})
+    assert p.slot is None   # 构造面放行,拦截归 op 守卫
+
+
+def test_open_bookcard_action_key_rules() -> None:
+    """开书册卡幂等键:slot 不同产不同键(行为参数);route_tag 不入键
+    (metadata 既有)。"""
+    k1 = action_key(CwActionOpenBookcardParam(slot=1))
+    k9 = action_key(CwActionOpenBookcardParam(slot=9))
+    assert k1 != k9
+    k_tag = action_key(CwActionOpenBookcardParam(slot=1, route_tag='x'))
+    assert k_tag == k1
