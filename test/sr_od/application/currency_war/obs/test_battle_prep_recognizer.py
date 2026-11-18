@@ -5,8 +5,9 @@
   且坐标落建档带内；商店未开张（开拓银轨<2）帧带内不命中
   （实测分数带：在场 1.0 / 缺席 0.241，阈值 0.7 居中分离）；
 - 余额解析：横幅「打开商店 ×N」锚正则提取（单行 / 两行渲染均可达）；锚缺失 → None；
-- 可买提示解析：「有商品可购买」锚命中 → True；未读到 → None
-  （False 不产出，口径见 src ``_parse_rail_shop_buyable`` docstring）。
+- 胶囊在场性解析：「有商品可购买」锚命中 → True；未读到 → None
+  （False 不产出；⚠️ 游戏语义未收敛,见 src ``_parse_rail_shop_buyable`` docstring ——
+  测试只锁识别行为,不锁游戏触发语义）。
 
 OCR 端到端（余额/可买的带内 OCR 拼装）依赖 ctx,单测覆盖不到 ——
 由实机 / 离线 analyze 验证兜底（src ``_read_rail_shop`` docstring 申报）。
@@ -121,7 +122,7 @@ def test_balance_no_anchor_or_number_returns_none(texts: list[str]) -> None:
 
 
 def test_buyable_present_and_absent() -> None:
-    """可买提示：读到锚 → True；未读到 → None（False 不产出，见 src 口径裁定）。"""
+    """胶囊在场性：读到锚 → True；未读到 → None（False 不产出，见 src 口径裁定）。"""
     assert _parse_rail_shop_buyable(['有商品可购买']) is True
     assert _parse_rail_shop_buyable(['打开商店', '×330']) is None
     assert _parse_rail_shop_buyable([]) is None
