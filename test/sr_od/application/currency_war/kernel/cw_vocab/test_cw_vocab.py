@@ -270,3 +270,48 @@ def test_sell_deployed_action_key_rules() -> None:
     assert k6 != k8
     k_tag = action_key(CwActionSellDeployedParam(route_tag='x', **base))
     assert k_tag == k6
+
+
+# ===== 卖备战席(槽位键参数面迁移形态;from_dict 经共享 action_param_from_dict)=====
+
+from sr_od.application.currency_war.kernel.cw_vocab import (  # noqa: E402
+    CwActionSellBenchParam,
+)
+
+
+def test_sell_bench_from_dict_full_and_minimal() -> None:
+    """卖备战席 from_dict:全字段 dict 逐字段透传(含 convert_reason/
+    route_tag);最小 dict(必填 1 项 bench_idx)落全缺省(income None/
+    expect/reason/convert_reason/route_tag 空);未知键忽略。"""
+    full = CwActionSellBenchParam.from_dict({
+        'bench_idx': 4, 'income': 3, 'reason': 'shop_swap',
+        'expect': '银狼', 'convert_reason': 'funding_hold_liquidated',
+        'route_tag': 'shop_swap'})
+    assert full.bench_idx == 4
+    assert full.income == 3
+    assert full.reason == 'shop_swap'
+    assert full.expect == '银狼'
+    assert full.convert_reason == 'funding_hold_liquidated'
+    assert full.route_tag == 'shop_swap'
+
+    minimal = CwActionSellBenchParam.from_dict({'bench_idx': 0})
+    assert minimal.income is None
+    assert minimal.expect == '' and minimal.reason == ''
+    assert minimal.convert_reason == '' and minimal.route_tag == ''
+
+    p = CwActionSellBenchParam.from_dict({
+        'bench_idx': 8, 'legacy_extra': 'x'})
+    assert p.bench_idx == 8   # 未知键不影响缺省
+    assert p.income is None
+
+
+def test_sell_bench_action_key_rules() -> None:
+    """卖备战席幂等键:bench_idx 不同产不同键;route_tag 不入键
+    (metadata 既有;reason 入键 = 现状实态,失配归词表域批量契约批,
+    零变化不锁测)。"""
+    base = {'bench_idx': 2}
+    k2 = action_key(CwActionSellBenchParam(**base))
+    k5 = action_key(CwActionSellBenchParam(bench_idx=5))
+    assert k2 != k5
+    k_tag = action_key(CwActionSellBenchParam(route_tag='x', **base))
+    assert k_tag == k2
