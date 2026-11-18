@@ -26,6 +26,7 @@ import pytest
 
 from one_dragon.base.geometry.rectangle import Rect
 from sr_od.application.currency_war.obs.recognizers.battle_prep_recognizer import (
+    _RAIL_CAPSULE_RECT,
     find_rail_shop_badge,
     _parse_rail_shop_balance,
     _parse_rail_shop_buyable,
@@ -85,6 +86,7 @@ pytestmark = pytest.mark.skipif(_rail_badge_tpl_missing(), reason='银轨商店�
     'rail_badge_prep_r4',        # 备战态：徽记在场
     'rail_badge_shop_open_r4',   # 商店面板开启态：徽记仍在场
     'rail_badge_consumed_r4',    # 消费后回备战：徽记仍在
+    'rail_badge_capsule_prep_r4',  # 备战态（胶囊在场局）：徽记在场
 ])
 def test_badge_present_in_shop_open_states(frame: str) -> None:
     """商店开张三态徽记带内命中：score ≥ 阈值且中心落建档带内（点它打开商店）。"""
@@ -126,3 +128,11 @@ def test_buyable_present_and_absent() -> None:
     assert _parse_rail_shop_buyable(['有商品可购买']) is True
     assert _parse_rail_shop_buyable(['打开商店', '×330']) is None
     assert _parse_rail_shop_buyable([]) is None
+
+
+def test_capsule_rect_covers_observed_y_band() -> None:
+    """胶囊搜索带覆盖两局实测 y 域（一局 y≈345-375 / 另一局 y≈445-470）——
+    胶囊 y 随局浮动,带收窄到任一实测域之外即漏检回归（旧带 438 起漏检
+    345-375 局的教训,标定与扩带论证见 src ``_RAIL_CAPSULE_RECT`` 注释）。"""
+    assert _RAIL_CAPSULE_RECT[1] <= 345, '胶囊带 y 下界须覆盖上布局实测 345'
+    assert _RAIL_CAPSULE_RECT[3] >= 470, '胶囊带 y 上界须覆盖下布局实测 470'
