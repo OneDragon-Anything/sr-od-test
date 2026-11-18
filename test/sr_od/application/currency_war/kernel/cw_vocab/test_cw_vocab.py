@@ -5,9 +5,8 @@
   字段/未知键忽略/缺字段落 dataclass 默认值;单一源 = cw_replay_reader
   .from_dict 同构,工具七类经共享 ``action_param_from_dict`` 委托)
   ——坐标是跨进程契约,直调方按它传参;
-- ``action_key`` 幂等粒度 = 行为参数含名称(不同名件 = 不同动作实例,
-  屏蔽计数按行为参数含名称更准),``route_tag`` 不入键(词表全族统一
-  契约,见 cw_vocab route_tag 字段契约块)。
+- ``action_key`` 幂等键含名称(不同名件 = 不同动作实例),``route_tag``
+  不入键(词表全族统一契约,见 cw_vocab route_tag 字段契约块)。
 
 被测单一源 = ``cw_vocab`` 各参数类 docstring(记账路径总契约首例 =
 CwActionWearEquipParam、第二适用者 = 工具七类;契约正文 = action-op.md
