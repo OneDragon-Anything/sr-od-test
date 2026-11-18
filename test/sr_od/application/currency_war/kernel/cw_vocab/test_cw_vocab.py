@@ -179,3 +179,49 @@ def test_tool_action_key_rules() -> None:
                                       slot=2, char_name='甲',
                                       route_tag='m7_5')
     assert action_key(char_tag) == action_key(char_a)
+
+
+# ===== 统一拖动(槽位键参数面迁移形态;from_dict 经共享 action_param_from_dict)=====
+
+from sr_od.application.currency_war.kernel.cw_vocab import (  # noqa: E402
+    CwActionMoveUnitParam,
+)
+
+
+def test_move_unit_from_dict_full_and_minimal() -> None:
+    """统一拖动 from_dict:全字段 dict 逐字段透传;最小 dict(必填 4 项)
+    落全缺省(back_slot_count 6/reason/expect/route_tag 空);未知键忽略。"""
+    full = CwActionMoveUnitParam.from_dict({
+        'src_domain': 'bench', 'src_slot': 2, 'dst_domain': 'back',
+        'dst_slot': 7, 'back_slot_count': 8, 'reason': 'deploy_diff_place',
+        'expect': '银狼', 'route_tag': 'yield_plan_deploy'})
+    assert full.src_domain == 'bench' and full.src_slot == 2
+    assert full.dst_domain == 'back' and full.dst_slot == 7
+    assert full.back_slot_count == 8
+    assert full.reason == 'deploy_diff_place'
+    assert full.expect == '银狼'
+    assert full.route_tag == 'yield_plan_deploy'
+
+    minimal = CwActionMoveUnitParam.from_dict({
+        'src_domain': 'front', 'src_slot': 1,
+        'dst_domain': 'bench', 'dst_slot': 0})
+    assert minimal.back_slot_count == 6
+    assert minimal.reason == '' and minimal.expect == ''
+    assert minimal.route_tag == ''
+
+    p = CwActionMoveUnitParam.from_dict({
+        'src_domain': 'bench', 'src_slot': 0, 'dst_domain': 'front',
+        'dst_slot': 1, 'legacy_extra': 'x'})
+    assert p.back_slot_count == 6   # 未知键不影响缺省
+
+
+def test_move_unit_action_key_rules() -> None:
+    """统一拖动幂等键:back_slot_count 不同产不同键(同槽位不同布局档 =
+    不同拖拽落点,禁共享屏蔽粒度);reason/expect 入键、route_tag 不入键。"""
+    base = {'src_domain': 'bench', 'src_slot': 1,
+            'dst_domain': 'back', 'dst_slot': 7}
+    k6 = action_key(CwActionMoveUnitParam(**base))
+    k8 = action_key(CwActionMoveUnitParam(back_slot_count=8, **base))
+    assert k6 != k8
+    k_tag = action_key(CwActionMoveUnitParam(route_tag='x', **base))
+    assert k_tag == k6
