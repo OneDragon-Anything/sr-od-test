@@ -12,8 +12,11 @@
 OCR 端到端（余额/可买的带内 OCR 拼装）依赖 ctx,单测覆盖不到 ——
 由实机 / 离线 analyze 验证兜底（src ``_read_rail_shop`` docstring 申报）。
 
-fixture（货币战争-备战/）：rail_badge_prep_r4、rail_badge_shop_open_r4、
-rail_badge_consumed_r4、rail_badge_absent_r2。缺帧/缺模板 → skip。
+fixture：rail_badge_prep_r4、rail_badge_consumed_r4、rail_badge_absent_r2 在
+货币战争-备战/；rail_badge_shop_open_r4 实属开拓商店面板开启态画面
+（建档「货币战争-备战-开拓商店」id_mark 双锚实测 is_precise），归档在
+货币战争-备战-开拓商店/（test_id_mark 真阳性口径的画面身份归档）。
+缺帧/缺模板 → skip。
 """
 from __future__ import annotations
 
@@ -47,22 +50,27 @@ def _screens_dir() -> Path:
     raise RuntimeError('未找到 screens/ 归档库')
 
 
+#: 帧查找目录序：备战本体 + 开拓商店面板态（帧按画面身份归档,本测试按名字跨目录取）
+_FRAME_DIRS: tuple[str, ...] = ('货币战争-备战', '货币战争-备战-开拓商店')
+
+
 @cache
 def _load_frame(name: str) -> np.ndarray | None:
     """读 fixture 帧（RGB 口径，框架截图同口径）；缺失 → None。"""
     d = _screens_dir()
-    for suffix in ('.webp', '.png'):
-        f = d / '货币战争-备战' / f'{name}{suffix}'
-        if f.is_file():
-            img = cv2.imdecode(np.fromfile(str(f), dtype=np.uint8), cv2.IMREAD_COLOR)
-            return None if img is None else cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    for dir_name in _FRAME_DIRS:
+        for suffix in ('.webp', '.png'):
+            f = d / dir_name / f'{name}{suffix}'
+            if f.is_file():
+                img = cv2.imdecode(np.fromfile(str(f), dtype=np.uint8), cv2.IMREAD_COLOR)
+                return None if img is None else cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     return None
 
 
 def _require_frame(name: str) -> np.ndarray:
     img = _load_frame(name)
     if img is None:
-        pytest.skip(f'存档截图缺失：screens/货币战争-备战/{name}.webp|png')
+        pytest.skip(f'存档截图缺失：screens/货币战争-备战[|开拓商店]/{name}.webp|png')
     return img
 
 
