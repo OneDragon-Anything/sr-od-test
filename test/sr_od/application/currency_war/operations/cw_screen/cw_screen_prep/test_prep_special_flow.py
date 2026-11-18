@@ -275,8 +275,7 @@ def _stub_heavy_recognition(monkeypatch: pytest.MonkeyPatch) -> None:
     落值「简易装备」→ 恒空池,采样到 equip 掉落即 IndexError 炸备战环;
     测试不改生产代码,常量补意图值让 report_spheres_observed 真实链
     可完成)。"""
-    from sr_od.application.currency_war.kernel import cw_observe
-    from sr_od.application.currency_war.kernel import cw_ore_reward
+    from sr_od.application.currency_war.kernel import cw_observe, cw_ore_reward
     from sr_od.application.currency_war.obs import cw_observe_full
     monkeypatch.setattr(cw_observe_full, 'observe_full',
                         lambda *a, **k: {})
