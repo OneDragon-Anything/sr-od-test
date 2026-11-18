@@ -42,8 +42,6 @@ from sr_od.application.currency_war.prep_actions import (
 
 #: 备战帧存档(备战两识别标志命中;发出链正常推进形态)。
 _PREP_FRAME: tuple[str, str] = ('货币战争-备战', 'deployed_2star')
-#: 非备战帧存档(屏态复验 stale 形态;遭遇面板盖住槽区,两识别标志 miss)。
-_STALE_FRAME: tuple[str, str] = ('货币战争-遭遇节点', 'default')
 
 
 class _LaunchHostOp(CwOperation):
@@ -119,9 +117,9 @@ def launch_env(test_context: SrTestContext,
 
 def _require_frame(test_context: SrTestContext) -> None:
     """存档缺失 skip(采到后自动恢复),不 error。"""
-    for screen_name, state in (_PREP_FRAME, _STALE_FRAME):
-        if not test_context.has_screen(screen_name, state):
-            pytest.skip(f'存档截图缺失:screens/{screen_name}/{state}.webp')
+    screen_name, state = _PREP_FRAME
+    if not test_context.has_screen(screen_name, state):
+        pytest.skip(f'存档截图缺失:screens/{screen_name}/{state}.webp')
 
 
 def _set_frame(ctrl: _LaunchTestController,
@@ -167,50 +165,6 @@ def _expected_center(ctx: SrTestContext, area_name: str
         f'真建档缺 area: 货币战争-备战/{area_name}'
     rect = area.pc_rect
     return ((rect.x1 + rect.x2) // 2, (rect.y1 + rect.y2) // 2)
-
-
-def test_screen_recheck_stale_gives_up(launch_env,
-                                       monkeypatch) -> None:
-    """屏态复验 stale 放弃:fresh 帧备战标志 miss → (False,
-    'readiness_stale_screen') 零发出,分键计数落 readiness_stale_screen。"""
-    test_context, host, ctrl = launch_env
-    _require_frame(test_context)
-    _set_frame(ctrl, _STALE_FRAME)
-    counters = _attach_counters_ctx(test_context, monkeypatch)
-
-    ok, detail = launch_battle_unified(host, test_context, face='armed')
-
-    assert (ok, detail) == (False, 'readiness_stale_screen'), \
-        f'stale 帧应放弃发射,实际 ({ok}, {detail!r})'
-    assert ctrl.recorded_drags == [], 'stale 放弃不应有拖拽'
-    assert ctrl.recorded_clicks == [], 'stale 放弃不应有点击'
-    assert counters.get('readiness_stale_screen') == 1, \
-        f'stale 分键应计 1,实际 {counters!r}'
-
-
-def test_overlay_gate_holds_launch(launch_env,
-                                   monkeypatch) -> None:
-    """浮层闸门 hold:备战标志穿透命中但身份分发名单命中非备战屏 →
-    (False, 'readiness_overlay_hold:<屏名>') 零发出 + 分键计数。
-    (身份读点 = prep_actions 模块级 get_match_screen_name 绑定,打桩
-    模拟「浮层在场」读数;屏态复验仍走真帧识别。)
-    """
-    test_context, host, ctrl = launch_env
-    _require_frame(test_context)
-    _set_frame(ctrl, _PREP_FRAME)
-    counters = _attach_counters_ctx(test_context, monkeypatch)
-    import sr_od.application.currency_war.prep_actions as pa
-    monkeypatch.setattr(pa, 'get_match_screen_name',
-                        lambda *a, **k: '货币战争-投资策略')
-
-    ok, detail = launch_battle_unified(host, test_context, face='armed')
-
-    assert (ok, detail) == (False, 'readiness_overlay_hold:货币战争-投资策略'), \
-        f'浮层在场应 hold,实际 ({ok}, {detail!r})'
-    assert ctrl.recorded_drags == [], '浮层 hold 不应有拖拽'
-    assert ctrl.recorded_clicks == [], '浮层 hold 不应有点击'
-    assert counters.get('readiness_overlay_hold') == 1, \
-        f'hold 分键应计 1,实际 {counters!r}'
 
 
 def test_armed_deploys_then_battle_click(launch_env,

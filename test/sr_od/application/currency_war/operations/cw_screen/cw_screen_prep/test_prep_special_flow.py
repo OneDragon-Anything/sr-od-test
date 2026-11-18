@@ -473,10 +473,12 @@ def test_locked_redispatch_hits_check0_zero_pre_segment(
         prep_env: tuple[SrTestContext, _PrepTestController],
         monkeypatch: pytest.MonkeyPatch) -> None:
     """剧本 6 锁定重派发帧:段3b retry 耗尽 → 访问 fail → 重派发新访问
-    经第 0 查直达段3b,断言零前置段接触(heavy 观察未在锁定帧执行)。"""
+    经第 0 查直达段3b,断言零前置段接触(heavy 观察未在锁定帧执行)。
+    出战失败注入 = 错屏帧(遭遇节点)出战按钮 find 落空(执行前屏态复验
+    防线已退役,错屏误发出面由本剧本锁 retry 网承接形态)。"""
     test_context, ctrl = prep_env
     _require_frame(test_context)
-    ctrl.set_phases([{'frame': _STALE_FRAME}])   # 无 exit:出战屏态复验恒 stale
+    ctrl.set_phases([{'frame': _STALE_FRAME}])   # 无 exit:错屏帧出战恒未执行
     match = _attach_match(test_context, monkeypatch,
                           resume_probe_pending=False,   # 候选已清(重派发形态)
                           locked_resume=True,           # 锁定确认态
@@ -491,8 +493,9 @@ def test_locked_redispatch_hits_check0_zero_pre_segment(
     op1 = CwScreenPrep(test_context)
     op2: CwScreenPrep | None = None
     try:
-        # —— 第一次访问:段3b retry 耗尽 → 访问 fail(stale 帧 → 出战未执行
-        # → round_retry;框架节点预算 3 耗尽 = 首跑 + 3 retry = 4 次)
+        # —— 第一次访问:段3b retry 耗尽 → 访问 fail(错屏帧出战点击落空
+        # → 出战未执行 → round_retry;框架节点预算 3 耗尽 = 首跑 + 3 retry
+        # = 4 次)
         with fast_sleep(op1):
             result1 = op1.execute()
         assert not result1.success, \
@@ -501,8 +504,9 @@ def test_locked_redispatch_hits_check0_zero_pre_segment(
             (f'段3b 应按框架预算执行 1 首跑 + 3 retry,实际 {len(calls)} 次;'
              f'status={result1.status!r}')
         assert match.locked_resume is True, 'retry 保锁:锁定态不得解除'
-        assert plan_calls == [], \
-            f'stale 帧(屏态复验失败)不应执行部署计划,实际 {plan_calls}'
+        assert len(plan_calls) == 1, \
+            (f'防线退役后部署原子序照常装配,且 resume 面标志覆盖仅首次'
+             f'(重试不再装配,空计划零拖拽),实际 {plan_calls}')
 
         # —— 重派发(主循环 fail 后重派新访问 = 新 op 实例):经第 0 查
         # 直达段3b;零前置段接触 = heavy 观察未执行(frame_class_prep 未标、
@@ -512,7 +516,7 @@ def test_locked_redispatch_hits_check0_zero_pre_segment(
         with fast_sleep(op2):
             result2 = op2.execute()
         assert not result2.success, \
-            f'重派发访问同样 stale → 应再 fail,实际 {result2.status!r}'
+            f'重派发访问同样错屏未执行 → 应再 fail,实际 {result2.status!r}'
         assert len(calls) == 4, \
             f'重派发访问应直达段3b 并再耗尽预算,实际 {len(calls)} 次'
         assert all(s['locked_resume'] is True for s in snapshots), \
@@ -523,8 +527,8 @@ def test_locked_redispatch_hits_check0_zero_pre_segment(
             reset_running_state(test_context, op2)
 
     # —— 零前置段接触(两访问合计):
-    # ① 无探针/收店/返回补给类点击(唯一合法触达面 = 出战发出链,而 stale
-    #    帧连出战点击都没有 → 全程零点击);
+    # ① 无探针/收店/返回补给类点击(唯一合法触达面 = 出战发出链,错屏帧
+    #    出战按钮 find 落空不产生点击 → 全程零点击);
     assert ctrl.recorded_clicks == [], \
         f'锁定帧零前置段接触:不应有任何点击,实际 {ctrl.recorded_clicks}'
     # ② heavy 观察未执行:帧代次未标 full(常规路径在入口 heavy 后无条件
