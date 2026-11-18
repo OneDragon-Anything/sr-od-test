@@ -79,8 +79,10 @@ def _expected_center(ctx, area_name: str,
 @pytest.fixture
 def sell_ctx(test_context, monkeypatch):
     """共享 ctx 的卖备战席测试夹具:controller 换装记录型 stub(monkeypatch
-    自动还原,防污染 session 级共享 ctx)。"""
+    自动还原,防污染 session 级共享 ctx);默认剧本 = 干净备战帧——浮层守卫
+    在 last_screenshot 缺席时走 op.screenshot(),无剧本帧会 IndexError。"""
     controller = _SellTestController(test_context)
+    controller.set_phases([{'frame': ('货币战争-备战', 'deployed_2star')}])
     monkeypatch.setattr(test_context, 'controller', controller)
     return test_context
 

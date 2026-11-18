@@ -70,8 +70,10 @@ def _expected_center(ctx, area_name: str) -> tuple[int, int]:
 @pytest.fixture
 def move_ctx(test_context, monkeypatch):
     """共享 ctx 的统一拖动测试夹具:controller 换装记录型 stub(monkeypatch
-    自动还原,防污染 session 级共享 ctx)。"""
+    自动还原,防污染 session 级共享 ctx);默认剧本 = 干净备战帧——浮层守卫
+    在 last_screenshot 缺席时走 op.screenshot(),无剧本帧会 IndexError。"""
     controller = _MoveTestController(test_context)
+    controller.set_phases([{'frame': (_PREP_SCREEN, 'deployed_2star')}])
     monkeypatch.setattr(test_context, 'controller', controller)
     return test_context
 
@@ -225,3 +227,24 @@ def test_sim_shape_mechanical_silent_report_walks(move_ctx, monkeypatch
     assert controller.recorded_mouse_moves == []
     assert gs.deployed.value.front_slots[0] is not None
     assert gs.bench.value.slots[0].kind == 'empty'
+
+
+def test_overlay_blocked_round_fail_receipt(move_ctx) -> None:
+    """浮层守卫安装点:合成确认浮层在场帧 → round_fail(未执行:浮层在场
+    前缀),零拖拽零上报;受阻码命中登记行(记账 op 失败通道)。"""
+    from sr_od.application.currency_war.prep_actions import (
+        _prep_receipt_block_code,
+    )
+    param = CwActionMoveUnitParam(src_domain='bench', src_slot=0,
+                                  dst_domain='front', dst_slot=1)
+    op, controller = _make_op(move_ctx, param)
+    op.last_screenshot = move_ctx.load_screen(
+        '货币战争-备战-合成确认', '合成确认浮层')
+    with fast_sleep(op):
+        result = op.run()
+    assert not result.is_success
+    assert (result.status or '').startswith('未执行:浮层在场')
+    assert '合成确认浮层' in (result.status or '')
+    assert _prep_receipt_block_code(result.status) == \
+        '未执行:浮层在场(合成确认/角色详情)'
+    assert controller.recorded_drags == []
