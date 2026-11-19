@@ -96,6 +96,13 @@ def stuck_op(
         'get_in_match_screen_name',
         lambda *args, **kwargs: None,
     )
+    # CW 挂起入口两屏屏级点名:真实实现走真 OCR 画面匹配,恒 None=判定不
+    # 命中,保既有「必落兜底」构造语义不变(命中路径由挂起分支测试单独锁)。
+    monkeypatch.setattr(
+        btnw_module,
+        'get_match_screen_name',
+        lambda *args, **kwargs: None,
+    )
     # 对话态守卫走真实 ctx.ocr(session 级真模型,对空白 mock 帧推理既慢又不定)
     # → 恒「无对话」:守卫返回 None,每轮照旧落兜底(本测试的构造语义不变)。
     monkeypatch.setattr(
@@ -231,6 +238,13 @@ class TestNamelessHonorBranches:
             'is_express_supply',
             lambda *args, **kw: False,
         )
+        # CW 挂起入口两屏屏级点名恒 None(真实实现走真 OCR 画面匹配,
+        # 对 mock 帧既慢又不定;命中路径由挂起分支测试单独锁)。
+        monkeypatch.setattr(
+            btnw_module,
+            'get_match_screen_name',
+            lambda *args, **kw: None,
+        )
         # 守卫被触达即回归(守卫位于所有具名分支之后;触达 = 分发串扰/分支缺失)
         monkeypatch.setattr(
             BackToNormalWorldPlus, 'check_npc_dialog',
@@ -354,6 +368,13 @@ class TestBranchRoutingMock:
             'get_in_match_screen_name',
             lambda *args, **kw: None,
         )
+        # CW 挂起入口两屏屏级点名恒 None(真实实现走真 OCR 画面匹配,
+        # 对 mock 帧既慢又不定;命中路径由挂起分支测试单独锁)。
+        monkeypatch.setattr(
+            btnw_module,
+            'get_match_screen_name',
+            lambda *args, **kw: None,
+        )
         monkeypatch.setattr(BackToNormalWorldPlus, 'check_npc_dialog', lambda self, s: None)
 
         op = _WatchedBackToNormal(test_context)
@@ -442,6 +463,13 @@ def _run_real_frame_check_screen(
         monkeypatch.setattr(
             btnw_module.cw_screen_state,
             'get_in_match_screen_name',
+            lambda *args, **kw: None,
+        )
+        # CW 挂起入口两屏屏级点名恒 None(真帧测试锁各自分支路由,挂起
+        # 分支的画面匹配层由 test_id_mark 与 cw 侧测试单独锁定)。
+        monkeypatch.setattr(
+            btnw_module,
+            'get_match_screen_name',
             lambda *args, **kw: None,
         )
         if in_match_screen_name is not None:
@@ -758,6 +786,13 @@ class TestCwInMatchDelegationBranch:
             'get_in_match_screen_name',
             lambda *args, **kw: '货币战争-备战',
         )
+        # CW 挂起入口两屏屏级点名恒 None(与被测对局中委托分支互斥;
+        # 命中路径由挂起分支测试单独锁)。
+        monkeypatch.setattr(
+            btnw_module,
+            'get_match_screen_name',
+            lambda *args, **kw: None,
+        )
         fake = _RecordingFakeCwExit
         fake.constructed = 0
         fake.executed = 0
@@ -793,6 +828,102 @@ class TestCwInMatchDelegationBranch:
         assert not result.success, f'画面不变时应有界 FAIL,status={result.status}'
         assert 20 <= rounds <= 25, f'轮次异常({rounds}),应耗满 20 次 retry 才 FAIL'
         # 每轮 round_wait / round_retry 都带 wait=1(防无间隔风暴)。
+        assert len(sleeps) >= rounds, (
+            f'带 wait 的轮次({len(sleeps)}) < 总轮次({rounds})'
+        )
+
+
+class TestCwPendingEntryDelegationBranch:
+    """CW 挂起对局入口两屏 → 委托 CwEntryExit 分支锁。
+
+    背景:上一 app 中途死在挂起对局入口画面(模式选择-进行中/结束结算确认
+    弹窗)时,本 op 既有分支全不认识 → 烧兜底预算。两屏在 cw_screen_state
+    大厅态白名单内(非对局中画面),对局中委托分支的判定对它们不可见,须
+    屏级显式点名(与退出链路由、CW 入口链挂起分支同一防线);命中即委托
+    退出 op(挂起局一律放弃结算,语义见 CwEntryExit docstring)。
+    """
+
+    def test_pending_screen_delegates_to_cw_exit(
+        self,
+        test_context: SrTestContext,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """挂起入口画面帧:每轮委托假类;零兜底点击;有界 FAIL(画面不变路径)。"""
+        counters: dict[str, int] = {'fallback_click': 0}
+
+        def _fake_find_area(self, screen, screen_name, area_name, *args, **kwargs):
+            return self.round_wait(status=f'未找到 {area_name}')
+
+        def _fake_click_area(self, screen_name, area_name, *args, **kwargs):
+            counters['fallback_click'] += 1
+            return self.round_success(status=area_name)
+
+        monkeypatch.setattr(BackToNormalWorldPlus, 'round_by_find_area', _fake_find_area)
+        monkeypatch.setattr(
+            BackToNormalWorldPlus, 'round_by_find_and_click_area', _fake_find_area
+        )
+        monkeypatch.setattr(BackToNormalWorldPlus, 'round_by_click_area', _fake_click_area)
+        monkeypatch.setattr(
+            btnw_module.sim_uni_screen_state,
+            'get_sim_uni_screen_state',
+            lambda *args, **kw: None,
+        )
+        monkeypatch.setattr(
+            btnw_module.common_screen_state,
+            'is_express_supply',
+            lambda *args, **kw: False,
+        )
+        # 对局中委托分支判定恒 None(与挂起分支互斥:白名单屏对它不可见)。
+        monkeypatch.setattr(
+            btnw_module.cw_screen_state,
+            'get_in_match_screen_name',
+            lambda *args, **kw: None,
+        )
+        # 挂起入口两屏屏级点名:恒命中「模式选择-进行中」(判定单一源 =
+        # get_match_screen_name,画面匹配层由 test_id_mark 单独锁定)。
+        monkeypatch.setattr(
+            btnw_module,
+            'get_match_screen_name',
+            lambda ctx, screen, screen_name_list=None: (
+                btnw_module.MODE_ONGOING_SCREEN
+                if screen_name_list and btnw_module.MODE_ONGOING_SCREEN in screen_name_list
+                else None
+            ),
+        )
+        fake = _RecordingFakeCwExit
+        fake.constructed = 0
+        fake.executed = 0
+        fake.fail_after = 1  # 首轮成功(WAIT 路径),之后失败(RETRY 有界路径)
+        monkeypatch.setattr(btnw_module, 'CwEntryExit', fake)
+        # 守卫被触达即回归(挂起画面应被专属分支接管,不落对话守卫/兜底)。
+        monkeypatch.setattr(
+            BackToNormalWorldPlus, 'check_npc_dialog',
+            lambda self, screen: (_ for _ in ()).throw(
+                AssertionError('挂起入口画面应被 cw 挂起分支接管,不应进入对话态守卫')),
+        )
+
+        op = _WatchedBackToNormal(test_context)
+        op._init_watchdog()  # type: ignore[attr-defined]
+        sleeps = _patch_round_sleep(monkeypatch)
+
+        enter_running_state(test_context)
+        try:
+            result = op.execute()
+        finally:
+            reset_running_state(test_context, op)
+
+        # 委托发生:每轮都构造并执行了退出对局假类(成功 1 轮 + 失败重试轮)。
+        rounds: int = op._watchdog_round_count  # type: ignore[attr-defined]
+        assert fake.constructed == rounds and fake.executed == rounds, (
+            f'委托数(构造 {fake.constructed}/执行 {fake.executed})应==轮次({rounds})'
+        )
+        # 兜底零点击:右上角返回控件在 CW 画面不存在,一次都不许点。
+        assert counters['fallback_click'] == 0, (
+            f'兜底被触达 {counters["fallback_click"]} 次,应恒 0'
+        )
+        # 有界结束:耗尽 20 次 retry 后 FAIL,而非 WAIT 永动。
+        assert not result.success, f'画面不变时应有界 FAIL,status={result.status}'
+        assert 20 <= rounds <= 25, f'轮次异常({rounds}),应耗满 20 次 retry 才 FAIL'
         assert len(sleeps) >= rounds, (
             f'带 wait 的轮次({len(sleeps)}) < 总轮次({rounds})'
         )
