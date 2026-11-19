@@ -27,6 +27,12 @@ fixture_controller(set_phases 帧序列 + click-hit 推进),``fast_sleep``
 形态的构造 = 商店点击不推进帧序列(游戏侧按钮零响应的同构:点击发出、
 画面不变);返回按钮帧的帧资产 = 夹具内 PIL 渲染文本构造(存档无此
 形态帧,零落盘零真实副作用)。
+
+失活场景回归段(2026-11-19-resume-rebuild design §2.4 失活消解,三用例):
+跨 run 重入锁定帧 / 停点后再跑 / app fail 残留容器——共同前置 = loop
+重建容器(opened_via=takeover、probed 归零;重建判据本体 = loop 层
+TestHandleInitRebuild 已测,本段不重复),prep 层锁「重建容器进 prep
+探针必跑」(旧机制病灶 = 容器续用探针失活 → 常规链商店点击落空空转)。
 """
 
 from __future__ import annotations
@@ -65,7 +71,7 @@ from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
     CwScreenPrep,
 )
 
-#: 备战帧存档(P1-r9:恢复候选判据 round>1 的读数形态)。
+#: 备战帧存档(P1-r9:轮次读数形态,探针锁定确认写 locked_round=9)。
 _PREP_FRAME: tuple[str, str] = ('货币战争-备战', 'deployed_p1r9')
 #: 非备战帧存档(出战屏态复验 stale 形态;遭遇面板盖住槽区,两识别标志 miss)。
 _STALE_FRAME: tuple[str, str] = ('货币战争-遭遇节点', 'default')
@@ -389,8 +395,8 @@ def _expected_center(ctx: SrTestContext, area_name: str
 def test_probe_locked_pair_write_then_sync_battle(
         prep_env: tuple[SrTestContext, _PrepTestController],
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """剧本 4 探针锁定:候选帧点商店 → 收起不出现 → 失效写 + 配对写 +
-    候选撤回 → 同步步 → 出战发出 → 交回。"""
+    """剧本 4 探针锁定:接管帧(未探)点商店 → 收起不出现 → 失效写 +
+    配对写 → 同步步 → 出战发出 → 交回。"""
     test_context, ctrl = prep_env
     _require_frame(test_context)
     reset_phase_round_cache()   # 清位面轮次模块缓存(单调守卫跨测防串染)
@@ -427,7 +433,8 @@ def test_probe_locked_pair_write_then_sync_battle(
         ('锁定形态不得有收店点击(区域命中应恰探针 1 次),'
          f'实际 {ctrl.recorded_clicks}')
 
-    # —— 接管失效写(候选过判即写):tracked_account_observed 写 False,
+    # —— 接管失效写(探针分支进入即写,先于探针点击):
+    # tracked_account_observed 写 False,
     # source=logic、evidence=takeover_invalidation(备战帧确认点 =
     # CwScreenPrep,与战斗帧确认点两确认点分流)
     gs = game_state_of(match.session)
@@ -543,7 +550,7 @@ def test_locked_redispatch_hits_check0_zero_pre_segment(
     assert gs.bench.source == 'logic_rand', \
         (f'零前置段接触:bench 未被观察写,实际 source='
          f'{gs.bench.source!r}')
-    # ④ 接管失效写不在重派发帧发生(b 查被跳过,失效写只挂候选过判)
+    # ④ 接管失效写不在重派发帧发生(b 查被跳过,失效写只挂探针分支进入)
     assert gs.tracked_account_observed.value is None, \
         ('重派发帧无候选过判,不应发生接管失效写,'
          f'实际 {gs.tracked_account_observed.value!r}')
@@ -612,7 +619,7 @@ def test_regular_frame_runs_full_front_segments_in_order(
         f'常规帧零处置点击,实际 {ctrl.recorded_clicks}'
     # 接管失效写零发生:最终写 = 前置段对账锚定写(观察态退出点,
     # evidence=observation_anchor);失效写若在锚定前发生,载体 =
-    # _inv_records 零调用(候选过判是唯一调用面)。
+    # _inv_records 零调用(探针分支进入是唯一调用面)。
     assert _inv_records == [], \
         f'常规帧无候选过判,不应发生接管失效写,实际 {_inv_records!r}'
     assert gs.tracked_account_observed.evidence == 'observation_anchor', \
@@ -795,7 +802,7 @@ def test_probe_not_locked_collapses_then_runs_regular_path(
     assert _click_count_in_area(ctrl, '货币战争-备战-开商店', '按钮-收起') == 2, \
         ('非锁定应有收店点击(区域命中 = 探针 1 + 收店 1),'
          f'实际 {ctrl.recorded_clicks}')
-    # —— 接管失效写已发生(候选过判即写,先于探针点击;备战帧确认点 =
+    # —— 接管失效写已发生(探针分支进入即写,先于探针点击;备战帧确认点 =
     #    CwScreenPrep,与战斗帧确认点两确认点分流)。写入时点快照:
     #    None → False / evidence=takeover_invalidation;后续 heavy 对账
     #    锚定写(True)会覆盖终态,终态载体见下方锚定断言。
@@ -954,3 +961,169 @@ def test_supply_confirmed_takes_regular_path(
         ('常规路径访问入口应置位段序号 +1,实际 '
          f'{strategy_state_of(match.session).cw4_segment_serial!r}')
     assert calls == [], f'已确认帧不应进入段3b,实际段3b 调用 {len(calls)} 次'
+
+
+# ===== 失活场景回归(2026-11-19-resume-rebuild design §2.4 失活消解;
+# 挂账板 §二.7⑥ 两场景 + 第三形态。共同前置 = loop 重建容器:上次运行的
+# 流程态字段随旧容器丢弃,重建容器 opened_via='takeover' ∧ probed=False
+# (establish 漏斗产物;重建判据本体 = loop 层 TestHandleInitRebuild 已测,
+# 本段在 prep 层锁「重建容器进 prep 探针必跑」)=====
+
+def test_rebuild_rerun_locked_frame_reprobes_and_completes(
+        prep_env: tuple[SrTestContext, _PrepTestController],
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """失活场景 a(跨 run 重入锁定帧):上次运行探针确认锁定后未走完即停
+    → 重跑(loop 重建容器,probed 归零)→ 探针照跑 → 锁定重确认三字段
+    同帧配对写 → 同步步+出战走完上次未走完的恢复链(锁解除交回)。
+    旧机制病灶 = 容器续用时字段 per-run 重置、探针门失活 → 常规链发商店
+    动作点击落空空转至哨兵。"""
+    test_context, ctrl = prep_env
+    _require_frame(test_context)
+    reset_phase_round_cache()   # 清位面轮次模块缓存(单调守卫跨测防串染)
+    ctrl.set_phases([{'frame': _PREP_FRAME}])   # 无 exit:锁定形态,点击不推进
+    # 重建容器前置(created_run_id = 漏斗产物非 None,prep 层不读,仅标注
+    # 重建形态;上次运行已确认的 locked_resume/probed 随旧容器丢弃)。
+    match = _attach_match(test_context, monkeypatch,
+                          opened_via='takeover', probed=False,
+                          created_run_id='run-rebuilt',
+                          locked_resume=False, locked_sync_done=True)
+    moves = [CwActionMoveUnitParam(src_domain='bench', src_slot=0,
+                                   dst_domain='front', dst_slot=1)]
+    plan_calls = _patch_deploy_plan(monkeypatch, moves)
+    calls: list[int] = []
+    snapshots: list[dict] = []
+    _spy_sync_battle(monkeypatch, calls, snapshots)
+
+    op = CwScreenPrep(test_context)
+    enter_running_state(test_context)
+    try:
+        with fast_sleep(op):
+            result = op.execute()
+    finally:
+        reset_running_state(test_context, op)
+
+    # —— 探针照跑:商店按钮试探点击发出(旧病灶 = 探针失活不发)
+    assert result.success, f'重建容器锁定重确认应走完交回,实际 {result.status!r}'
+    assert ctrl.click_hit_area('货币战争-备战', '按钮-商店'), \
+        f'重建容器进 prep 探针必跑,实际点击 {ctrl.recorded_clicks}'
+    # —— 锁定重确认:三字段同帧配对写(段3b 进入时点快照 = 段2 写后)+
+    # 轮次重读遥测 + 探针去重重置位
+    assert snapshots == [{
+        'locked_resume': True,
+        'locked_sync_done': False,
+        'probed': True,
+    }], f'重建容器探针后应重确认三字段同帧配对写,实际 {snapshots!r}'
+    assert match.locked_round == 9, \
+        f'锁定重确认应重读轮次遥测(1-9 帧),实际 {match.locked_round!r}'
+    assert match.probed is True, '重探针后应再置去重标志'
+    # —— 走完上次未走完的链:同步步恰一次 + 出战发出 + 锁解除
+    assert plan_calls == [1], f'同步步应恰执行一次部署计划,实际 {plan_calls}'
+    assert len(ctrl.recorded_drags) == 1, \
+        f'同步步应发出部署原子 ×1,实际 {ctrl.recorded_drags}'
+    assert match.locked_sync_done is True, '同步步发出后应置证据位'
+    assert ctrl.click_hit_area('货币战争-备战', '按钮-出战'), \
+        f'出战应发出,实际点击 {ctrl.recorded_clicks}'
+    assert match.locked_resume is False, '走完恢复链应锁解除'
+
+
+def test_stop_point_rerun_rebuilt_container_probes_then_regular(
+        prep_env: tuple[SrTestContext, _PrepTestController],
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """失活场景 b(停点后再跑探针照跑):停点停备战屏 → 再跑 → loop 重建
+    (本体 loop 层已测)→ prep 层验证重建容器进 prep 探针必跑:探针点击
+    发出、去重置位、锁定配对字段零写;非锁定(缺口接管)收店后前置段
+    全量 + 策略器路径续行。"""
+    test_context, ctrl = prep_env
+    _require_frame(test_context, _PREP_FRAME, _SHOP_OPEN_FRAME)
+    reset_phase_round_cache()
+    # 探针两形态帧序列:备战(点商店推进)→ 开商店(收起出现;点收起推进)
+    # → 备战(收店后常规路径全量)。
+    ctrl.set_phases([
+        {'frame': _PREP_FRAME,
+         'exit': ('on_click_in', '货币战争-备战', '按钮-商店')},
+        {'frame': _SHOP_OPEN_FRAME,
+         'exit': ('on_click_in', '货币战争-备战-开商店', '按钮-收起')},
+        {'frame': _PREP_FRAME},
+    ])
+    strategy = _StrategyStub()
+    match = _attach_match(test_context, monkeypatch, strategy=strategy,
+                          opened_via='takeover', probed=False,
+                          created_run_id='run-rebuilt',
+                          locked_resume=False, locked_sync_done=True)
+    gs = game_state_of(match.session)
+    _seed_regular_gs(gs)
+    order: list[str] = []
+    _spy_front_segments(monkeypatch, order)
+    _stub_heavy_recognition(monkeypatch)
+
+    op = CwScreenPrep(test_context)
+    enter_running_state(test_context)
+    try:
+        with fast_sleep(op):
+            result = op.execute()
+    finally:
+        reset_running_state(test_context, op)
+
+    # —— 探针必跑(旧病灶 = 停点重跑容器续用探针永不触发)
+    assert result.success, f'重建容器非锁定应续行常规交回,实际 {result.status!r}'
+    assert ctrl.click_hit_area('货币战争-备战', '按钮-商店'), \
+        f'重建容器进 prep 探针必跑,实际点击 {ctrl.recorded_clicks}'
+    # —— 探针去重置位;锁定配对字段零写(非锁定不进锁定裁决)
+    assert match.probed is True, '探针执行后应置去重标志'
+    assert match.locked_resume is False and match.locked_sync_done is True \
+        and match.locked_round == 0, \
+        (f'非锁定不得写锁定配对字段,实际 locked={match.locked_resume!r} '
+         f'sync={match.locked_sync_done!r} round={match.locked_round!r}')
+    # —— 缺口接管续行:收店后前置段全量 + 策略器路径
+    assert order == _FRONT_SEGMENT_ORDER, \
+        f'收店后应按现行序跑齐前置段,实际 {order!r}'
+    assert gs.frame_class_prep == 'full', \
+        (f'前置段哨兵:帧代次应标 full,实际 {gs.frame_class_prep!r}')
+    assert strategy.calls == 1, \
+        f'策略器 decide_prep_screen 应恰调用一次,实际 {strategy.calls}'
+
+
+def test_app_fail_residual_rebuild_reprobes_and_repairs(
+        prep_env: tuple[SrTestContext, _PrepTestController],
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """第三形态(app fail 残留容器):app 失败收尾不清容器,残留容器曾探过
+    (前运行 probed=True)→ 重跑经 loop 判旧 run 弃旧重建(takeover、
+    probed 归零)→ prep 探针照跑,锁定形态三字段同帧配对写。旧机制病灶 =
+    残留容器续用(已探标志残存)→ 探针失活同型。"""
+    test_context, ctrl = prep_env
+    _require_frame(test_context)
+    reset_phase_round_cache()
+    ctrl.set_phases([{'frame': _PREP_FRAME}])   # 无 exit:锁定形态,点击不推进
+    # 重建容器前置(残留容器的 probed=True 随旧容器丢弃,不跨容器存活)。
+    match = _attach_match(test_context, monkeypatch,
+                          opened_via='takeover', probed=False,
+                          created_run_id='run-rebuilt',
+                          locked_resume=False, locked_sync_done=True)
+    plan_calls = _patch_deploy_plan(monkeypatch, [])
+    calls: list[int] = []
+    snapshots: list[dict] = []
+    _spy_sync_battle(monkeypatch, calls, snapshots)
+
+    op = CwScreenPrep(test_context)
+    enter_running_state(test_context)
+    try:
+        with fast_sleep(op):
+            result = op.execute()
+    finally:
+        reset_running_state(test_context, op)
+
+    # —— 探针照跑(残留容器重建后探针必跑,已探标志不跨容器存活)
+    assert result.success, f'残留重建容器锁定重确认应走完交回,实际 {result.status!r}'
+    assert ctrl.click_hit_area('货币战争-备战', '按钮-商店'), \
+        f'残留容器重建后探针必跑,实际点击 {ctrl.recorded_clicks}'
+    # —— 锁定重确认配对写 + 去重重置位 + 出战发出核配对置位
+    assert snapshots == [{
+        'locked_resume': True,
+        'locked_sync_done': False,
+        'probed': True,
+    }], f'残留重建容器探针后应重确认三字段同帧配对写,实际 {snapshots!r}'
+    assert match.locked_round == 9, \
+        f'锁定重确认应重读轮次遥测(1-9 帧),实际 {match.locked_round!r}'
+    assert match.probed is True, '重探针后应再置去重标志'
+    assert match.locked_sync_done is True, '出战发出核发出后应置证据位'
+    assert plan_calls == [1], f'同步步应恰执行一次部署计划,实际 {plan_calls}'
