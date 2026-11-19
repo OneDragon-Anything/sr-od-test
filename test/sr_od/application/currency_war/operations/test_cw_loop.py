@@ -36,6 +36,7 @@ from one_dragon.base.operation.operation_base import OperationResult
 from one_dragon.base.operation.operation_round_result import (
     OperationRoundResultEnum,
 )
+from sr_od.application.currency_war.currency_war_config import CurrencyWarConfig
 from sr_od.application.currency_war.operations import cw_loop as cw_loop_module
 from sr_od.application.currency_war.operations.cw_entry import cw_entry_exit
 from sr_od.application.currency_war.operations.cw_entry.cw_entry_exit import (
@@ -458,3 +459,252 @@ def test_exit_status_texts_stable(
         f'max_rounds 达标应停备战屏 success,实际 {res.result}')
     assert '停备战' in (res.status or ''), (
         f'停备战出口文本应含「停备战」锚(app「其余」分支判定输入): {res.status}')
+
+
+# ===== 每次运行重建判据 + 战斗帧恢复检测门(design §2.4/§2.6 迁移面)=====
+
+def _establish_ctx_container(test_context: SrTestContext,
+                             opened_via: str):
+    """生产漏斗真跑:入口链/兜底同款 establish(断言走新建分支并返回容器)。"""
+    from sr_od.application.currency_war.strategies.impl.cw_strategy_manager import (
+        establish_new_match,
+    )
+    established = establish_new_match(
+        test_context, CurrencyWarConfig(test_context.current_instance_idx),
+        opened_via)
+    assert established, 'ctx.cw_match=None 前提下 establish 应走新建分支'
+    return test_context.cw_match
+
+
+class TestHandleInitRebuild:
+    """每次运行重建判据保留-重建矩阵(design §2.4 六场景;镜像锚 =
+    cw_loop.py::CwLoop.handle_init,判据单一源 = 2026-11-19-resume-rebuild
+    design §2.4)。演法 = 生产初始化序直驱:漏斗建容器(或裸构造)→ 真实
+    ``CwLoop`` 构造(__init__ ensure 铸/认领 = handle_init 的「当前 run」
+    基准)→ 直调 handle_init,断言容器保留/重建与 SettlementState 注入
+    (is_new_match 值注入语义,等价映射 = 旧 True [兜底新建] ≙ takeover)。
+    遥测 run 态簇 = 模块级单例,夹具前后 ``reset_run_state`` 复位。"""
+
+    @staticmethod
+    def _make_loop(test_context: SrTestContext,
+                   monkeypatch: pytest.MonkeyPatch) -> CwLoop:
+        """真实 CwLoop 构造(controller 桩供窗口就绪探针;零识别零落盘——
+        构造后只直调 handle_init,不进 loop 节点)。"""
+        ctrl = FixtureController(
+            ctx=test_context,
+            standard_width=test_context.project_config.screen_standard_width,
+            standard_height=test_context.project_config.screen_standard_height,
+        )
+        monkeypatch.setattr(test_context, 'controller', ctrl)
+        monkeypatch.setattr(
+            'sr_od.application.currency_war.operations.cw_loop.'
+            'save_decision_frame', lambda *a, **k: None)
+        return CwLoop(test_context)
+
+    @pytest.fixture
+    def cw_run_env(self, test_context: SrTestContext,
+                   monkeypatch: pytest.MonkeyPatch) -> SrTestContext:
+        """遥测 run 态簇复位夹具(模块级单例跨测防串染)+ ctx 挂拆还原。"""
+        from sr_od.application.currency_war.telemetry import state as cw_state
+        cw_state.reset_run_state()
+        monkeypatch.setattr(test_context, 'cw_match', None, raising=False)
+        monkeypatch.setattr(test_context, 'cw_selected_difficulty', None,
+                            raising=False)
+        yield test_context
+        cw_state.reset_run_state()
+
+    def test_fresh_entry_chain_container_kept(
+            self, cw_run_env: SrTestContext,
+            monkeypatch: pytest.MonkeyPatch) -> None:
+        """场景 1 正常开局:入口链建(created_run_id == 当前 run)→ 保留
+        同一容器;SettlementState 注入 False(new_game ≙ 旧 False)。"""
+        from sr_od.application.currency_war.telemetry import state as cw_state
+        container = _establish_ctx_container(cw_run_env, 'new_game')
+        loop = self._make_loop(cw_run_env, monkeypatch)
+        loop.handle_init()
+
+        assert cw_run_env.cw_match is container, \
+            '本 run 内建立的容器应保留(判据三连不成立:created_run_id==当前 run)'
+        assert container.created_run_id == cw_state.current_run_id()
+        assert loop._settle.is_new_match is False, \
+            'new_game 容器的 SettlementState 注入应为 False'
+
+    def test_fallback_builds_takeover_container(
+            self, cw_run_env: SrTestContext,
+            monkeypatch: pytest.MonkeyPatch) -> None:
+        """场景 5 继续进度:容器缺席 → 兜底建 takeover;SettlementState
+        注入 True(takeover ≙ 旧 True)。"""
+        loop = self._make_loop(cw_run_env, monkeypatch)
+        loop.handle_init()
+
+        container = cw_run_env.cw_match
+        assert container is not None, '容器缺席应走兜底建'
+        assert container.opened_via == 'takeover', \
+            (f'兜底建(未经新局链专属画面)应写 takeover,'
+             f'实际 {container.opened_via!r}')
+        from sr_od.application.currency_war.telemetry import state as cw_state
+        assert container.created_run_id == cw_state.current_run_id(), \
+            '兜底建容器应经漏斗记 created_run_id(重建判据载体)'
+        assert loop._settle.is_new_match is True, \
+            'takeover 容器的 SettlementState 注入应为 True'
+
+    def test_stale_container_rebuilt_as_takeover(
+            self, cw_run_env: SrTestContext,
+            monkeypatch: pytest.MonkeyPatch) -> None:
+        """场景 3/4 重跑直撞/停点重跑(同型):上 run 残留容器 → 弃旧重建
+        takeover(discard 显式前置,establish 幂等直过不弃旧)。假钟前进
+        = 模拟真实跨秒时序(run_id 秒级时间戳;生产里上一 run 收尾与下一
+        run 铸造隔至少一次 app 运行、框架等待下限 >1s,必跨秒——测试
+        压缩时序需显式造出跨秒前提,否则判据输入退化为同值字符串)。"""
+        from sr_od.application.currency_war.telemetry import state as cw_state
+
+        class _AdvancingDatetime:
+            """``datetime.now`` 替身:每次调用前进 2 秒(真实时序压缩)。"""
+
+            @staticmethod
+            def now():
+                _AdvancingDatetime._tick += 2
+                from datetime import datetime as _real
+                return _real(2026, 11, 19, 12, 0, _AdvancingDatetime._tick)
+
+        _AdvancingDatetime._tick = 0
+        monkeypatch.setattr(cw_state, 'datetime', _AdvancingDatetime)
+
+        stale = _establish_ctx_container(cw_run_env, 'new_game')
+        cw_state.close_run()   # 模拟上一运行收尾(_RUN_CLOSED 置位)
+        # 容器残留(假局提前 return/入口链 fail 形态:收尾不清容器)
+        assert cw_run_env.cw_match is stale
+
+        loop = self._make_loop(cw_run_env, monkeypatch)   # __init__ ensure 铸新段
+        loop.handle_init()
+
+        container = cw_run_env.cw_match
+        assert container is not stale, '跨 run 残留容器应弃旧重建'
+        assert container.opened_via == 'takeover', \
+            (f'重建容器应写 takeover(对局面无知,走接管面),'
+             f'实际 {container.opened_via!r}')
+        assert container.created_run_id == cw_state.current_run_id(), \
+            '重建容器应记当前 run(下一次 handle_init 判保留的基准)'
+        assert loop._settle.is_new_match is True, \
+            '重建容器(takeover)的 SettlementState 注入应为 True'
+
+    def test_two_games_in_process_each_gets_new_run(
+            self, cw_run_env: SrTestContext,
+            monkeypatch: pytest.MonkeyPatch) -> None:
+        """场景 2 同进程连续两局:局终清容器 → 入口链新建 → 新容器经漏斗
+        记当前 run(close_run 后重铸,「新段」由 ensure token 比对承载,
+        run_id 秒级时间戳同秒合法同值不锁字符串),handle_init 判保留。"""
+        from sr_od.application.currency_war.telemetry import state as cw_state
+        _establish_ctx_container(cw_run_env, 'new_game')
+        cw_state.close_run()
+        monkeypatch.setattr(cw_run_env, 'cw_match', None)   # 局终清(3c 大厅收尾)
+
+        second = _establish_ctx_container(cw_run_env, 'new_game')
+        assert second.created_run_id == cw_state.current_run_id()
+        loop = self._make_loop(cw_run_env, monkeypatch)
+        loop.handle_init()
+
+        assert cw_run_env.cw_match is second, '本 run 新建容器应保留'
+
+    def test_sim_direct_construct_container_kept(
+            self, cw_run_env: SrTestContext,
+            monkeypatch: pytest.MonkeyPatch) -> None:
+        """场景 6 sim 直构:裸构造容器(created_run_id=None)→ None 短路
+        保留,不得被重建判据误弃(design §2.7 sim 零改动契约)。"""
+        from sr_od.application.currency_war.kernel.cw_strategy_session import (
+            StrategySession,
+        )
+        from sr_od.application.currency_war.strategies.impl.cw_strategy import (
+            CurrencyWarMatch,
+        )
+        bare = CurrencyWarMatch(object(), StrategySession(), None)
+        monkeypatch.setattr(cw_run_env, 'cw_match', bare, raising=False)
+
+        loop = self._make_loop(cw_run_env, monkeypatch)
+        loop.handle_init()
+
+        assert cw_run_env.cw_match is bare, \
+            'created_run_id=None(外部装配)应短路保留,不得弃旧重建'
+        assert loop._settle.is_new_match is False, \
+            '裸构造容器(opened_via 缺省 new_game)的注入应为 False'
+
+
+class TestBattleFrameRecoveryGate:
+    """战斗帧恢复检测门迁移等价(design §2.6:旧 is_new_match=True ≙
+    opened_via=='takeover',方向禁反)。演法 = ``CwLoop.__new__`` 壳直驱
+    ``loop()`` 单轮(先例 = 停点出口测试):首读桩给 round>1(上局残局
+    读数形态),断言接管容器触发失效写、new_game 容器门关零写。"""
+
+    @staticmethod
+    def _drive_one_iter(test_context: SrTestContext,
+                        monkeypatch: pytest.MonkeyPatch,
+                        opened_via: str) -> None:
+        """壳直驱一轮:识别面全桩为未命中(身份解析桩 None + prep_anchors_hit
+        桩 False——本用例目标 = iter1 恢复检测门,非认领判定本体),首读桩
+        给中局读数(round>1 = 上局残局读数形态)。"""
+        from types import SimpleNamespace
+        ctrl = FixtureController(
+            ctx=test_context,
+            standard_width=test_context.project_config.screen_standard_width,
+            standard_height=test_context.project_config.screen_standard_height,
+        )
+        monkeypatch.setattr(test_context, 'controller', ctrl)
+        ctrl.set_phases([{'frame': _PREP_FRAME}])
+        match = SimpleNamespace(opened_via=opened_via, gs=None,
+                                session=SimpleNamespace())
+        monkeypatch.setattr(test_context, 'cw_match', match, raising=False)
+        monkeypatch.setattr(
+            'sr_od.application.currency_war.operations.cw_loop.'
+            'save_decision_frame', lambda *a, **k: None)
+        monkeypatch.setattr(CwLoop, '_resolve_frame_identity',
+                            lambda self, screen: (None, []))
+        monkeypatch.setattr(cw_loop_module, 'read_game_state',
+                            lambda *a, **k: SimpleNamespace(round_num=9,
+                                                            plane=1))
+        monkeypatch.setattr(cw_loop_module, 'prep_anchors_hit',
+                            lambda op, screen: False)
+        shell = CwLoop.__new__(CwLoop)
+        shell.ctx = test_context
+        shell.last_screenshot = ctrl.current_frame
+        shell._iter = 0   # loop() 顶部 +1 → 本轮 iter=1(恢复检测门的时点)
+        shell._stop_at_prep = False
+        shell._battle_wait_active = False
+        shell._cleanup_delegate = False
+        enter_running_state(test_context)
+        try:
+            shell.loop()
+        finally:
+            reset_running_state(test_context, shell)
+
+    def test_takeover_container_gate_opens_invalidation_write(
+            self, test_context: SrTestContext,
+            monkeypatch: pytest.MonkeyPatch) -> None:
+        """接管容器(iter1 ∧ takeover ∧ 中局读数)→ 门开:tracked 观察态
+        失效写(logic / takeover_invalidation,写点 = CwLoop 战斗帧确认点)。"""
+        from sr_od.application.currency_war.kernel.cw_game_state import (
+            game_state_of,
+        )
+        self._drive_one_iter(test_context, monkeypatch, 'takeover')
+        gs = game_state_of(test_context.cw_match.session)
+        _tracked = gs.tracked_account_observed
+        assert _tracked.value is False, \
+            (f'接管容器门开应失效写 False,实际 {_tracked.value!r}')
+        assert _tracked.source == 'logic', \
+            f'失效写应走 logic 通道,实际 {_tracked.source!r}'
+        assert _tracked.evidence == 'takeover_invalidation', \
+            f'失效写 evidence 应为 takeover_invalidation,实际 {_tracked.evidence!r}'
+
+    def test_new_game_container_gate_stays_closed(
+            self, test_context: SrTestContext,
+            monkeypatch: pytest.MonkeyPatch) -> None:
+        """new_game 容器(iter1)→ 门关:零失效写(旧 is_new_match=False
+        的等价形态;中局读数不触发——新局容器对「残局读数」的旧语义 =
+        恒不进检测)。"""
+        from sr_od.application.currency_war.kernel.cw_game_state import (
+            game_state_of,
+        )
+        self._drive_one_iter(test_context, monkeypatch, 'new_game')
+        gs = game_state_of(test_context.cw_match.session)
+        assert gs.tracked_account_observed.value is None, \
+            (f'new_game 容器门关零写,'
+             f'实际 {gs.tracked_account_observed.value!r}')

@@ -9,10 +9,10 @@
   → 计数器分键 ``back_to_strategy_symptom`` 累加 → 交回;附两防线:
   strategy_state 缺席 None 守卫不炸 / 共享子串『请选择投资策略』
   (lcs 6/8=0.75 < 0.9)不触发 a 查;
-- 剧本 3 = 探针非锁定:候选帧点商店 → 收起出现 → 失效写已发生 →
-  候选撤回 → 收店 → 按序跑齐前置段 → 策略器路径;
-- 剧本 4 = 探针锁定:候选帧点商店 → 收起不出现(锁定形态)→ 接管失效写 +
-  配对写(locked_resume=True ∧ locked_sync_done=False)+ 候选撤回 →
+- 剧本 3 = 探针非锁定:接管帧(未探)点商店 → 收起出现 → 失效写已发生 →
+  探针去重置位 → 收店 → 按序跑齐前置段 → 策略器路径;
+- 剧本 4 = 探针锁定:接管帧(未探)点商店 → 收起不出现(锁定形态)→ 接管失效写 +
+  配对写(locked_resume=True ∧ locked_sync_done=False)+ 探针去重置位 →
   同步步(部署原子序)→ 出战发出 → 交回;
 - 剧本 5 = 补给未确认:c 查识别 → 跳前置段 → 点「按钮-返回补给阶段」
   → 交回;补给已确认(chosen_supply 在场)→ 走常规路径(零分流点击);
@@ -162,7 +162,7 @@ def _attach_match(test_context: SrTestContext,
                   counters: dict | None = None,
                   **fields) -> types.SimpleNamespace:
     """挂流程态 Match 桩(monkeypatch 还原;session 每测新建 = GameState
-    弱引用表新支,无跨测串染)。字段缺省 = 恢复候选帧前置(新局待探针)。
+    弱引用表新支,无跨测串染)。字段缺省 = 接管待探针帧前置(takeover 未探)。
     ``strategy`` = 缺席门所需非 None(桩场景无策略器消费);传 None 显式
     制造缺席门命中(剧本 2 lcs 防线支),传策略器替身 = 常规路径剧本。
     ``counters`` 传入时挂策略状态替身(cw4_counters 读面 +
@@ -171,8 +171,8 @@ def _attach_match(test_context: SrTestContext,
     match = types.SimpleNamespace(
         session=types.SimpleNamespace(),
         strategy=object() if strategy is _DEFAULT_STRATEGY else strategy,
-        is_new_match=fields.pop('is_new_match', True),
-        resume_probe_pending=fields.pop('resume_probe_pending', True),
+        opened_via=fields.pop('opened_via', 'takeover'),
+        probed=fields.pop('probed', False),
         locked_resume=fields.pop('locked_resume', False),
         locked_round=fields.pop('locked_round', 0),
         locked_sync_done=fields.pop('locked_sync_done', True),
@@ -319,7 +319,7 @@ def _spy_sync_battle(monkeypatch: pytest.MonkeyPatch,
         snapshots.append({
             'locked_resume': ctx.cw_match.locked_resume,
             'locked_sync_done': ctx.cw_match.locked_sync_done,
-            'resume_probe_pending': ctx.cw_match.resume_probe_pending,
+            'probed': ctx.cw_match.probed,
         })
         return real(op, ctx)
 
@@ -396,7 +396,7 @@ def test_probe_locked_pair_write_then_sync_battle(
     reset_phase_round_cache()   # 清位面轮次模块缓存(单调守卫跨测防串染)
     ctrl.set_phases([{'frame': _PREP_FRAME}])   # 无 exit:锁定形态,点击不推进
     match = _attach_match(test_context, monkeypatch,
-                          is_new_match=True, resume_probe_pending=True,
+                          opened_via='takeover', probed=False,
                           locked_resume=False, locked_sync_done=True)
     moves = [CwActionMoveUnitParam(src_domain='bench', src_slot=0,
                                    dst_domain='front', dst_slot=1)]
@@ -438,16 +438,17 @@ def test_probe_locked_pair_write_then_sync_battle(
     assert _inv.evidence == 'takeover_invalidation', \
         f'失效写 evidence 应为 takeover_invalidation,实际 {_inv.evidence!r}'
 
-    # —— 配对写 + 候选撤回(段3b 进入时点快照 = 段2 写后、同步步前):
+    # —— 配对写 + 探针去重(段3b 进入时点快照 = 段2 写后、同步步前):
     # locked_resume=True ∧ locked_sync_done=False 同帧配对;
-    # resume_probe_pending 无条件撤回。
+    # probed 探后一次写(防同容器重探针)。
     assert snapshots == [{
         'locked_resume': True,
         'locked_sync_done': False,
-        'resume_probe_pending': False,
-    }], f'段3b 进入时配对写/候选撤回不符,实际 {snapshots!r}'
+        'probed': True,
+    }], f'段3b 进入时配对写/探针去重不符,实际 {snapshots!r}'
     assert match.locked_round == 9, \
         f'锁定确认应写轮次读数(1-9 帧),实际 {match.locked_round!r}'
+    assert match.probed is True, '探针执行后应置去重标志'
 
     # —— 同步步:部署计划恰一次、原子序发出(拖拽 ×1),发出即写证据位
     assert plan_calls == [1], f'同步步应恰执行一次部署计划,实际 {plan_calls}'
@@ -480,7 +481,8 @@ def test_locked_redispatch_hits_check0_zero_pre_segment(
     _require_frame(test_context)
     ctrl.set_phases([{'frame': _STALE_FRAME}])   # 无 exit:错屏帧出战恒未执行
     match = _attach_match(test_context, monkeypatch,
-                          resume_probe_pending=False,   # 候选已清(重派发形态)
+                          opened_via='takeover',
+                          probed=True,                # 探后去重(重派发形态)
                           locked_resume=True,           # 锁定确认态
                           locked_sync_done=False)       # 同步步待执行
     plan_calls = _patch_deploy_plan(monkeypatch, [])
@@ -561,7 +563,7 @@ def test_regular_frame_runs_full_front_segments_in_order(
     strategy = _StrategyStub()
     match = _attach_match(test_context, monkeypatch, strategy=strategy,
                           counters=counters,
-                          is_new_match=False, resume_probe_pending=False,
+                          opened_via='new_game',
                           locked_resume=False, locked_sync_done=True)
     gs = game_state_of(match.session)
     _seed_regular_gs(gs)
@@ -617,9 +619,9 @@ def test_regular_frame_runs_full_front_segments_in_order(
         (f'常规路径最终写应为对账锚定写,'
          f'实际 {gs.tracked_account_observed.evidence!r}')
     # —— 四查输入未被改写(b 查按否跳过、锁定态保持)
-    assert match.resume_probe_pending is False and match.locked_resume is False, \
+    assert match.probed is False and match.locked_resume is False, \
         (f'常规帧不应改写流程态字段,实际 probe='
-         f'{match.resume_probe_pending!r} locked={match.locked_resume!r}')
+         f'{match.probed!r} locked={match.locked_resume!r}')
 
 
 def test_back_button_frame_clicks_return_then_hands_back(
@@ -634,7 +636,7 @@ def test_back_button_frame_clicks_return_then_hands_back(
     ctrl.set_phases([{'frame': frame}])
     counters: dict = {}
     match = _attach_match(test_context, monkeypatch, counters=counters,
-                          is_new_match=False, resume_probe_pending=False,
+                          opened_via='new_game',
                           locked_resume=False, locked_sync_done=True)
     gs = game_state_of(match.session)
     order: list[str] = []
@@ -670,8 +672,8 @@ def test_back_button_frame_clicks_return_then_hands_back(
         f'返回按钮症状计数应累加 1,实际 {counters!r}'
     # —— 零段3b、流程态字段未被改写
     assert calls == [], f'返回按钮帧不应进入段3b,实际段3b 调用 {len(calls)} 次'
-    assert match.resume_probe_pending is False and match.locked_resume is False, \
-        '返回按钮帧不应改写锁定/候选流程态字段'
+    assert match.probed is False and match.locked_resume is False, \
+        '返回按钮帧不应改写锁定/探针流程态字段'
 
 
 def test_back_button_frame_none_state_guard_skips_counter(
@@ -684,7 +686,7 @@ def test_back_button_frame_none_state_guard_skips_counter(
     frame, bbox = _render_text_frame('返回投资策略选择')
     ctrl.set_phases([{'frame': frame}])
     match = _attach_match(test_context, monkeypatch,   # session 无 strategy_state
-                          is_new_match=False, resume_probe_pending=False)
+                          opened_via='new_game')
     order: list[str] = []
     _spy_front_segments(monkeypatch, order)
 
@@ -718,7 +720,7 @@ def test_back_button_lcs_guard_ignores_select_screen_text(
     frame, bbox = _render_text_frame('请选择投资策略')
     ctrl.set_phases([{'frame': frame}])
     _attach_match(test_context, monkeypatch, strategy=None,
-                  is_new_match=False, resume_probe_pending=False)
+                  opened_via='new_game')
     order: list[str] = []
     _spy_front_segments(monkeypatch, order)
 
@@ -744,8 +746,8 @@ def test_back_button_lcs_guard_ignores_select_screen_text(
 def test_probe_not_locked_collapses_then_runs_regular_path(
         prep_env: tuple[SrTestContext, _PrepTestController],
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """剧本 3 探针非锁定:候选帧点商店 → 收起出现 → 失效写已发生 →
-    候选撤回 → 收店 → 按序跑齐前置段 → 策略器路径。"""
+    """剧本 3 探针非锁定:接管帧(未探)点商店 → 收起出现 → 失效写已发生 →
+    探针去重置位 → 收店 → 按序跑齐前置段 → 策略器路径。"""
     test_context, ctrl = prep_env
     _require_frame(test_context, _PREP_FRAME, _SHOP_OPEN_FRAME)
     reset_phase_round_cache()
@@ -762,7 +764,7 @@ def test_probe_not_locked_collapses_then_runs_regular_path(
     strategy = _StrategyStub()
     match = _attach_match(test_context, monkeypatch, strategy=strategy,
                           counters=counters,
-                          is_new_match=True, resume_probe_pending=True,
+                          opened_via='takeover', probed=False,
                           locked_resume=False, locked_sync_done=True)
     gs = game_state_of(match.session)
     _seed_regular_gs(gs)
@@ -800,8 +802,8 @@ def test_probe_not_locked_collapses_then_runs_regular_path(
     assert _inv_records == [(None, False, 'takeover_invalidation')], \
         (f'候选过判应发生接管失效写(None→False/takeover_invalidation),'
          f'实际 {_inv_records!r}')
-    # —— 候选撤回(无条件,防同 run 重探针)+ 锁定配对写零发生
-    assert match.resume_probe_pending is False, '候选应无条件撤回'
+    # —— 探针去重一次写(防同容器重探针)+ 锁定配对写零发生
+    assert match.probed is True, '探针执行后应置去重标志'
     assert match.locked_resume is False and match.locked_sync_done is True \
         and match.locked_round == 0, \
         (f'非锁定不得写锁定配对字段,实际 locked={match.locked_resume!r} '
@@ -819,6 +821,46 @@ def test_probe_not_locked_collapses_then_runs_regular_path(
          f'{strategy_state_of(match.session).cw4_segment_serial!r}')
 
 
+def test_probe_gate_dedup_flag_skips_reprobe(
+        prep_env: tuple[SrTestContext, _PrepTestController],
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """探针门去重(「必探一次」的另一半):takeover 容器 probed=True 后
+    不重进 b 查——零探针点击,前置段全量照旧(触发门 =
+    opened_via=='takeover' ∧ not probed,判据 = 2026-11-19-resume-rebuild
+    design §2.3;new_game 永不探一侧由剧本 1 常规帧零点击锁定)。"""
+    test_context, ctrl = prep_env
+    _require_frame(test_context)
+    reset_phase_round_cache()
+    ctrl.set_phases([{'frame': _PREP_FRAME}])
+    strategy = _StrategyStub()
+    match = _attach_match(test_context, monkeypatch, strategy=strategy,
+                          opened_via='takeover', probed=True)
+    gs = game_state_of(match.session)
+    _seed_regular_gs(gs)
+    order: list[str] = []
+    _spy_front_segments(monkeypatch, order)
+    _stub_heavy_recognition(monkeypatch)
+
+    op = CwScreenPrep(test_context)
+    enter_running_state(test_context)
+    try:
+        with fast_sleep(op):
+            result = op.execute()
+    finally:
+        reset_running_state(test_context, op)
+
+    assert result.success, f'去重后应走常规路径 success,实际 {result.status!r}'
+    assert _click_count_in_area(ctrl, '货币战争-备战', '按钮-商店') == 0, \
+        (f'probed=True 不得重探针,实际 {ctrl.recorded_clicks}')
+    assert order == _FRONT_SEGMENT_ORDER, \
+        f'去重后应按现行序跑齐前置段,实际 {order!r}'
+    assert strategy.calls == 1, \
+        f'策略器 decide_prep_screen 应恰调用一次,实际 {strategy.calls}'
+    assert match.probed is True and match.locked_resume is False, \
+        (f'去重路径不改写流程态字段,实际 probe={match.probed!r} '
+         f'locked={match.locked_resume!r}')
+
+
 def test_supply_unconfirmed_diverts_to_supply_screen(
         prep_env: tuple[SrTestContext, _PrepTestController],
         monkeypatch: pytest.MonkeyPatch) -> None:
@@ -828,7 +870,7 @@ def test_supply_unconfirmed_diverts_to_supply_screen(
     _require_frame(test_context, _SUPPLY_FRAME)
     ctrl.set_phases([{'frame': _SUPPLY_FRAME}])
     match = _attach_match(test_context, monkeypatch,
-                          is_new_match=False, resume_probe_pending=False,
+                          opened_via='new_game',
                           locked_resume=False, locked_sync_done=True)
     gs = game_state_of(match.session)
     assert gs.chosen_supply.value is None   # 未确认前置 = 状态容器缺省
@@ -875,7 +917,7 @@ def test_supply_confirmed_takes_regular_path(
     strategy = _StrategyStub()
     match = _attach_match(test_context, monkeypatch, strategy=strategy,
                           counters=counters,
-                          is_new_match=False, resume_probe_pending=False,
+                          opened_via='new_game',
                           locked_resume=False, locked_sync_done=True)
     gs = game_state_of(match.session)
     _seed_regular_gs(gs)
