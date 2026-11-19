@@ -6,7 +6,10 @@
 - 大厅完成(``STATUS_LOBBY_DONE``)→ CwEntryExit 被调 + ``ctx.cw_match`` 置
   None(兜底清理点);
 - 异常交接(``STATUS_HANDOFF_PREFIX`` 前缀)→ exit 被调 + 置 None;
-- max_rounds 停备战 → exit 零调用(app 直接成功收尾,留局采样);
+- max_rounds 停备战(is_debug=True 分支产出)→ exit 零调用(app 直接成功
+  收尾,留局采样);
+- max_rounds 停点非 debug 分支(交接前缀文本交出)→ exit 被调 + 置 None
+  (弃局回大厅,重开由下一次 app 运行承载);
 - 假局守卫开局失败-中断 → exit 零调用(已在大厅且对局状态已清);
 - loop fail → 不入交接节点(success 边才入)→ exit 零调用 + app 失败收尾;
 - 积分奖励弹窗压大厅 → 守卫两段动作(一键领取→关闭)清弹窗 → exit 被调
@@ -17,6 +20,8 @@
 桩为 True 短路入口 op,loop 出口文本由假件注入(异常交接出口文本的 loop 本体
 改写不在本批范围,见 STATUS_HANDOFF_PREFIX 注释)。
 """
+
+from types import SimpleNamespace
 
 import pytest
 from test.conftest import SrTestContext
@@ -219,7 +224,16 @@ class TestExitCleanupHandoff:
         test_context: SrTestContext,
         monkeypatch: pytest.MonkeyPatch,
     ) -> None:
-        """max_rounds 停备战形态:留局采样,exit 零调用,app 直接成功收尾。"""
+        """max_rounds 停备战形态(is_debug=True 分支):留局采样,exit 零调用,
+        app 直接成功收尾。
+
+        「停备战」出口文本只在 loop 停点段 debug 分支产出(停点分模式),
+        is_debug 前提显式锁定——禁依赖 conftest 缺省值(session ctx 共享,
+        缺省随 fixture 变,断言会随机红)。假 loop 不读 env_config,此桩 =
+        用例前提申报;停点段两分支的产出端锁定在 test_cw_loop 停点出口测试。
+        """
+        monkeypatch.setattr(test_context, 'env_config',
+                            SimpleNamespace(is_debug=True))
         result, exit_cls = _run_app(
             test_context, monkeypatch,
             loop_result=OperationResult(
@@ -233,6 +247,35 @@ class TestExitCleanupHandoff:
         assert exit_cls.constructed == 0 and exit_cls.executed == 0, (
             f'exit 零调用,实际 {exit_cls.constructed}/{exit_cls.executed}'
         )
+
+    def test_max_rounds_non_debug_handoff_calls_exit(
+        self,
+        test_context: SrTestContext,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """max_rounds 停点非 debug 分支:交接前缀文本交出 → exit 被调,
+        cw_match 置 None(弃局回大厅,重开由下一次 app 运行承载)。
+
+        注入文本与 loop 停点段非 debug 出口同形
+        (``STATUS_HANDOFF_PREFIX + '停点重开:max_rounds=N'``),三形态判定
+        按前缀命中异常交接形态。is_debug=False 前提显式锁定,禁依赖
+        conftest 缺省值。
+        """
+        monkeypatch.setattr(test_context, 'env_config',
+                            SimpleNamespace(is_debug=False))
+        result, exit_cls = _run_app(
+            test_context, monkeypatch,
+            loop_result=OperationResult(
+                success=True,
+                status=f'{STATUS_HANDOFF_PREFIX}停点重开:max_rounds=2'),
+        )
+
+        assert result.success, f'app 应成功收尾,status={result.status}'
+        assert exit_cls.constructed == 1 and exit_cls.executed == 1, (
+            f'交接形态 exit 应被构造并执行恰一次:'
+            f'{exit_cls.constructed}/{exit_cls.executed}'
+        )
+        assert test_context.cw_match is None, '交接成功后 cw_match 应置 None'
 
     def test_fake_match_guard_skips_exit(
         self,

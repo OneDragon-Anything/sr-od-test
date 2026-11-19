@@ -22,6 +22,8 @@ act 节点「空候选 OCR 读缺」fail,与现役申报的 fail 点一致;链�
 环境帧上「备战阶段」识别标志恒 miss → 假时钟跨过超时线 fail。
 """
 
+from types import SimpleNamespace
+
 import pytest
 from test.conftest import SrTestContext
 from test.harness.fixture_controller import (
@@ -406,15 +408,23 @@ def test_delegate_loop_constructs_cleanup_delegate(
         f'委托交还 success 应走重入路由出口,实际 {res.result}')
 
 
+@pytest.mark.parametrize('is_debug', [True, False],
+                         ids=['debug_halt_prep', 'non_debug_handoff'])
 def test_exit_status_texts_stable(
         test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
-        tmp_path) -> None:
-    """交接判定载体出口文本稳定性锚(防漂移破坏 app 交接判定,与 T-1
-    常量面联动):大厅出口常量字面锚(判定 = 全等匹配);max_rounds 无
-    常量,触发真实停点出口断言含「停备战」锚(落 app「其余」分支,文本
-    漂移行为安全,本锚防形态误漏进交接)。max_rounds 停点走真实
-    ``loop()`` 备战分支,识别面全桩(身份解析桩为未命中、备战认领桩为
-    命中),零真实识别零落盘。"""
+        tmp_path, is_debug: bool) -> None:
+    """交接判定载体出口文本稳定性锚(防漂移破坏 app 交接判定,与 cw_loop
+    出口常量面联动):大厅出口常量字面锚(判定 = 全等匹配);max_rounds 无
+    常量,停点分模式(is_debug 读取点 = loop 停点段)触发真实停点出口,
+    断言两分支——True 出口含「停备战」锚且不带交接前缀(落 app「其余」
+    分支留局采样,本锚防形态误漏进交接);False 出口带 ``STATUS_HANDOFF_
+    PREFIX`` 前缀且标「停点重开」语义(落 app 异常交接分支,弃局回大厅)。
+    两分支 is_debug 各自显式锁定(替换 env_config 为单字段桩,monkeypatch
+    自动还原,零配置落盘)——禁依赖 conftest 缺省值。max_rounds 停点走
+    真实 ``loop()`` 备战分支,识别面全桩(身份解析桩为未命中、备战认领桩
+    为命中),零真实识别零落盘。"""
+    monkeypatch.setattr(test_context, 'env_config',
+                        SimpleNamespace(is_debug=is_debug))
     assert STATUS_LOBBY_DONE == '对局结束,回大厅', (
         f'大厅出口常量漂移(app 交接判定载体,两端同源): {STATUS_LOBBY_DONE}')
 
@@ -456,9 +466,17 @@ def test_exit_status_texts_stable(
         reset_running_state(test_context, shell)
 
     assert res.result == OperationRoundResultEnum.SUCCESS, (
-        f'max_rounds 达标应停备战屏 success,实际 {res.result}')
-    assert '停备战' in (res.status or ''), (
-        f'停备战出口文本应含「停备战」锚(app「其余」分支判定输入): {res.status}')
+        f'max_rounds 达标停点应 success,实际 {res.result}')
+    if is_debug:
+        assert '停备战' in (res.status or ''), (
+            f'debug 停点出口文本应含「停备战」锚(app「其余」分支判定输入): {res.status}')
+        assert not (res.status or '').startswith(STATUS_HANDOFF_PREFIX), (
+            f'debug 停点不得落交接形态(留局采样语义): {res.status}')
+    else:
+        assert (res.status or '').startswith(STATUS_HANDOFF_PREFIX), (
+            f'非 debug 停点出口应带交接前缀(app 异常交接形态判定输入): {res.status}')
+        assert '停点重开' in (res.status or ''), (
+            f'非 debug 停点出口应标停点重开语义: {res.status}')
 
 
 # ===== 每次运行重建判据 + 战斗帧恢复检测门(design §2.4/§2.6 迁移面)=====
