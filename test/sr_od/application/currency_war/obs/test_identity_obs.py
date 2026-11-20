@@ -11,6 +11,11 @@
 
 fixture(货币战争-备战/):reward_spheres_{8,15}、reward_giftbox_phantom、
 reward_panel_empty、reward_panel_invite_overlay。缺帧/缺模板 → skip。
+
+**身份识别回归段**(开拓者个性化卡「Momojie」入席读数,文件镜像
+src cw_identity_obs.resolve_char_name):fixture 在 货币战争-备战-开拓商店/
+(bench6_momojie_r13 / bench6_empty_r13,入席帧与购买前对照帧),
+bench-6 裁片走生产同款 SIFT+resolve 链。
 """
 from __future__ import annotations
 
@@ -68,9 +73,11 @@ def _ore_tpl_missing() -> bool:
     return not base.is_dir() or not any(base.glob('*.webp'))
 
 
-pytestmark = pytest.mark.skipif(_ore_tpl_missing(), reason='晶矿模板未归档')
+#: 晶矿模板缺席 skip(测试级装饰:身份回归段不依赖晶矿模板,不用模块级 pytestmark)
+_ore_tpl_skip = pytest.mark.skipif(_ore_tpl_missing(), reason='晶矿模板未归档')
 
 
+@_ore_tpl_skip
 def test_gold_blue_gray_all_detected() -> None:
     """三色全档位检出:spheres_8 = 1 金 + 5 蓝 + 2 灰(金球是高价值优先级依据)。"""
     out = _run_find('reward_spheres_8')
@@ -80,6 +87,7 @@ def test_gold_blue_gray_all_detected() -> None:
     assert by_color == {'gold': 1, 'blue': 5, 'gray': 2}
 
 
+@_ore_tpl_skip
 def test_high_hit_zero_false_positive_on_15_spheres() -> None:
     """存证帧 15 球 GT:≥14 命中(盲区披露 1 颗)且零假阳性(输出全部落 GT 容差内)。"""
     gt = [
@@ -101,6 +109,7 @@ def test_high_hit_zero_false_positive_on_15_spheres() -> None:
     assert hits >= 14, f'命中不足(已知盲区球 1 颗之外不得再漏): {hits}/15'
 
 
+@_ore_tpl_skip
 @pytest.mark.parametrize('frame', [
     'reward_giftbox_phantom',   # 礼盒幻检历史事故帧(旧管线 Hough 检出 2 圆)
     'reward_panel_empty',       # 空面板(点阵/按钮背景)
@@ -110,6 +119,82 @@ def test_no_phantom_on_non_ore_frames(frame: str) -> None:
     assert _run_find(frame) == []
 
 
+@_ore_tpl_skip
 def test_invite_overlay_zero_detection() -> None:
     """奖励面板被邀请函 overlay 覆盖 → 0 检出(遮挡态不输出读数)。"""
     assert _run_find('reward_panel_invite_overlay') == []
+
+
+# ===== 身份识别回归(开拓者个性化卡「Momojie」入席读数;文件镜像
+# src cw_identity_obs.resolve_char_name) =====
+
+#: 画面档「备战栏-6」pc_rect(建档单一源;晶矿回归同款硬编码先例)
+_BENCH_SLOT6_RECT = Rect(1004, 847, 1118, 978)
+
+
+def _char_tpl_missing() -> bool:
+    from one_dragon.utils.file_utils import get_project_root
+    base = get_project_root() / 'assets' / 'template' / 'currency_war' / 'character_avatar'
+    return not base.is_dir() or not any(base.glob('*/raw.png'))
+
+
+_char_tpl_skip = pytest.mark.skipif(_char_tpl_missing(), reason='角色立绘模板库未归档')
+
+
+@cache
+def _char_templates() -> dict:
+    """全库 SIFT 模板(慢计算 ~2s,进程级只算一次,供身份段全部断言共用)。"""
+    from one_dragon.utils.file_utils import get_project_root
+    from sr_od.application.currency_war.obs.currency_war_char_id import (
+        load_avatar_templates,
+    )
+    base = get_project_root() / 'assets' / 'template' / 'currency_war' / 'character_avatar'
+    return load_avatar_templates(base)
+
+
+@cache
+def _load_shop_panel_frame(name: str) -> np.ndarray | None:
+    """读开拓商店面板态 fixture 帧(RGB 口径);缺失 → None。"""
+    f = _screens_dir() / '货币战争-备战-开拓商店' / f'{name}.webp'
+    if not f.is_file():
+        return None
+    img = cv2.imdecode(np.fromfile(str(f), dtype=np.uint8), cv2.IMREAD_COLOR)
+    return None if img is None else cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+
+def _bench_slot6_identity(name: str) -> str | None:
+    """bench-6 裁片走生产同款识别链(SIFT → resolve),单帧只算一次。"""
+    frame = _load_shop_panel_frame(name)
+    if frame is None:
+        pytest.skip(f'存档截图缺失:screens/货币战争-备战-开拓商店/{name}.webp')
+    from sr_od.application.currency_war.obs.currency_war_char_id import (
+        identify_character,
+    )
+    from sr_od.application.currency_war.obs.cw_identity_obs import resolve_char_name
+    crop = frame[_BENCH_SLOT6_RECT.y1:_BENCH_SLOT6_RECT.y2,
+                 _BENCH_SLOT6_RECT.x1:_BENCH_SLOT6_RECT.x2]
+    avatar_id, _inliers = identify_character(crop, _char_templates())
+    return resolve_char_name(avatar_id) if avatar_id else None
+
+
+def test_trailblazer_form_names_normalize() -> None:
+    """换季改名归一(锁 resolve 层修复,纯函数零 fixture):旧季开拓者命途
+    形态模板名 → 现役规范名 开拓者;在册名与系统单位名不受影响。"""
+    from sr_od.application.currency_war.obs.cw_identity_obs import resolve_char_name
+    assert resolve_char_name('开拓者·欢愉') == '开拓者'
+    assert resolve_char_name('开拓者·记忆') == '开拓者'
+    assert resolve_char_name('开拓者') == '开拓者'
+    assert resolve_char_name('佩佩') == '佩佩'
+
+
+@_char_tpl_skip
+def test_momojie_bench_slot_resolves_to_trailblazer() -> None:
+    """个性化开拓者卡(卡面显示玩家昵称,立绘=开拓者命途形态 art)购入入席
+    备战栏-6 → 身份读 开拓者(修复前:resolve None → 槽位静默丢弃读 empty)。"""
+    assert _bench_slot6_identity('bench6_momojie_r13') == '开拓者'
+
+
+@_char_tpl_skip
+def test_bench_slot6_empty_before_purchase() -> None:
+    """购买前对照帧同槽零命中(真空槽不因归一产生假阳)。"""
+    assert _bench_slot6_identity('bench6_empty_r13') is None
