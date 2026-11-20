@@ -1,8 +1,8 @@
-"""备战特殊流程段剧本集(CwScreenPrep 段1 四查 + 段3 三处置;六剧本全集,
-迭代 2026-11-18-prep-special-flow design §2.8。剧本 4/6 首批(T-2),
-剧本 1/2/3/5 补齐(T-3)):
+"""备战特殊流程段剧本集(CwScreenPrep 段1 五查 + 选择主角处置 node + 段3
+三处置;剧本 4/6 首批(T-2),剧本 1/2/3/5 补齐(T-3),剧本 7 = 选择主角
+变体态(design 2026-11-20-cw-p0-chain §2.3-D)):
 
-- 剧本 1 = 常规帧:四查全否 → 前置段全量照旧(清场 → 收店探针 → heavy
+- 剧本 1 = 常规帧:五查全否 → 前置段全量照旧(清场 → 收店探针 → heavy
   → 补采委派 → 审计,生产现行序取锚)→ serial 置位 → 策略器路径;
   零特殊流程处置调用(现行为零变化);
 - 剧本 2 = 返回按钮帧:a 查 OCR 识别 → 跳前置段 → 段3a 点击(lcs 0.9)
@@ -19,6 +19,11 @@
 - 剧本 6 = 锁定重派发帧:段3b retry 耗尽 → 访问 fail → 重派发新访问经
   第 0 查直达段3b,断言零前置段接触(防 heavy 观察在锁定帧执行——
   板面真值入状态容器会让同步步部署计划从空漂移为真,阻断面护栏)。
+- 剧本 7 = 选择主角变体态(五查族第五员,插第 0 查后 a 查前;经状态词
+  条件边直达独立处置 node,不落段3):变体帧识别 → 点「按钮-选择主角」
+  → until 光环屏标题出现 → success 交回主循环(下帧派光环 op);负面 =
+  点击后锚恒不出现 → 连等封顶(SELECT_HERO_CLICK_MAX)耗尽 round_fail
+  交外环(点不动锚不动 = 报废机理残留信号,不连等无界)。
 
 断言全部行为级(点击落点 / 写字段值 / 调用序 / 零前置段接触);harness =
 fixture_controller(set_phases 帧序列 + click-hit 推进),``fast_sleep``
@@ -198,7 +203,7 @@ def _attach_match(test_context: SrTestContext,
 #: 系统字体(PIL 渲染构造帧用;Windows 10+ 自带,缺失 = skip 同存档缺失语义)。
 _FONT_PATH: str = 'C:/Windows/Fonts/msyh.ttc'
 
-#: 前置段现行序(断言锚 = 生产 observe node 现行编排:四查全否 → 缺席门 →
+#: 前置段现行序(断言锚 = 生产 observe node 现行编排:五查全否 → 缺席门 →
 #: 清场 → 收店探针 → heavy 观察 → 补采委派 → 审计族)。
 _FRONT_SEGMENT_ORDER: list[str] = ['清场', '收店探针', 'heavy', '补采委派', '审计']
 
@@ -561,7 +566,7 @@ def test_locked_redispatch_hits_check0_zero_pre_segment(
 def test_regular_frame_runs_full_front_segments_in_order(
         prep_env: tuple[SrTestContext, _PrepTestController],
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """剧本 1 常规帧零变化:四查全否 → 前置段全量照旧(现行序)→
+    """剧本 1 常规帧零变化:五查全否 → 前置段全量照旧(现行序)→
     serial 置位 → 策略器路径进入;零特殊流程处置调用。"""
     test_context, ctrl = prep_env
     _require_frame(test_context)
@@ -1127,3 +1132,120 @@ def test_app_fail_residual_rebuild_reprobes_and_repairs(
     assert match.probed is True, '重探针后应再置去重标志'
     assert match.locked_sync_done is True, '出战发出核发出后应置证据位'
     assert plan_calls == [1], f'同步步应恰执行一次部署计划,实际 {plan_calls}'
+
+
+# ===== 剧本 7:选择主角变体态(五查族第五员 + 独立处置 node;design
+# 2026-11-20-cw-p0-chain §2.3-D)=====
+
+#: 变体钮判定 rect(真建档 currency_war_battle_prep_select_hero
+#: 「按钮-选择主角」;渲染文本须落在 rect 内供 OCR 命中)。
+_SELECT_HERO_BTN_RECT: tuple[int, int, int, int] = (1750, 726, 1900, 774)
+#: 光环屏标题锚 rect(真建档 cw_aura_select「标识-主角光环标题」)。
+_AURA_TITLE_RECT: tuple[int, int, int, int] = (655, 60, 1275, 115)
+
+
+def _render_text_in_rect(text: str,
+                         rect: tuple[int, int, int, int]) -> MatLike:
+    """夹具内构造帧:文本渲染于指定建档 rect 内(深色底浅色字,PIL 渲染
+    零落盘零真实副作用;存档无选择主角变体帧与光环帧)。"""
+    from PIL import Image, ImageDraw, ImageFont
+    _require_font()
+    x1, y1, _x2, _y2 = rect
+    img = Image.new('RGB', (1920, 1080), (24, 26, 30))
+    draw = ImageDraw.Draw(img)
+    font = ImageFont.truetype(_FONT_PATH, 26)
+    draw.text((x1 + 14, y1 + 10), text, font=font, fill=(235, 235, 235))
+    return np.asarray(img)
+
+
+def test_select_hero_variant_frame_directs_to_dedicated_handler(
+        prep_env: tuple[SrTestContext, _PrepTestController],
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """剧本 7 正面:变体帧第五查识别 → 跳全部前置段 → 状态词条件边直达
+    选择主角处置 node → 点「按钮-选择主角」→ until 光环屏标题出现 →
+    success 交回主循环(零段3、零策略器;下帧身份分发派光环 op)。"""
+    test_context, ctrl = prep_env
+    variant_frame = _render_text_in_rect('选择主角', _SELECT_HERO_BTN_RECT)
+    aura_frame = _render_text_in_rect('选择一个角色获得主角光环',
+                                      _AURA_TITLE_RECT)
+    ctrl.set_phases([
+        {'frame': variant_frame,
+         'exit': ('on_click_in', '货币战争-备战-选择主角', '按钮-选择主角')},
+        {'frame': aura_frame},
+    ])
+    strategy = _StrategyStub()
+    match = _attach_match(test_context, monkeypatch, strategy=strategy,
+                          opened_via='new_game',
+                          locked_resume=False, locked_sync_done=True)
+    gs = game_state_of(match.session)
+    order: list[str] = []
+    _spy_front_segments(monkeypatch, order)
+    calls: list[int] = []
+    snapshots: list[dict] = []
+    _spy_sync_battle(monkeypatch, calls, snapshots)
+
+    op = CwScreenPrep(test_context)
+    enter_running_state(test_context)
+    try:
+        with fast_sleep(op):
+            result = op.execute()
+    finally:
+        reset_running_state(test_context, op)
+
+    # —— 处置 success 交回,终态带专属状态词(交回主循环分发语义)
+    assert result.success, f'变体帧处置应 success 交回,实际 {result.status!r}'
+    assert '主角光环' in (result.status or ''), \
+        (f'处置 node 终态应带专属状态词,实际 {result.status!r}')
+    assert op._prep_substate == 'select_hero', \
+        (f'变体态载体应置 select_hero(剧本断言面),'
+         f'实际 {op._prep_substate!r}')
+    # —— 处置点击:落点 = 按钮-选择主角,且恰一次(锚首验即中,零重复点击)
+    assert ctrl.click_hit_area('货币战争-备战-选择主角', '按钮-选择主角'), \
+        (f'处置应点击按钮-选择主角,实际点击 {ctrl.recorded_clicks}')
+    assert len(ctrl.recorded_clicks) == 1, \
+        (f'锚首验即中 → 唯一点击 = 处置点击,实际 {ctrl.recorded_clicks}')
+    # —— 跳全部前置段(帧代次哨兵 + 零前置段方法调用)
+    assert order == [], f'变体帧应跳全部前置段,实际 {order!r}'
+    assert gs.frame_class_prep == 'none', \
+        (f'跳前置段:帧代次应保持 none,实际 {gs.frame_class_prep!r}')
+    # —— 不落段3b、不进决策动作 node(状态词边直达独立 node 的结构锁)
+    assert calls == [], f'变体态不落段3b,实际段3b 调用 {len(calls)} 次'
+    assert strategy.calls == 0, \
+        (f'变体态处置不经决策动作 node,实际策略器调用 {strategy.calls} 次')
+
+
+def test_select_hero_anchor_never_appears_fails_bounded(
+        prep_env: tuple[SrTestContext, _PrepTestController],
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """剧本 7 负面(连等封顶):点击恒成功但光环屏标题恒不出现 →
+    SELECT_HERO_CLICK_MAX 轮封顶耗尽 round_fail 交外环(报废机理残留
+    信号如实上抛,不连等无界;外环重派后观察 node 重判变体钮仍在场即
+    再处置,整体有界)。"""
+    test_context, ctrl = prep_env
+    variant_frame = _render_text_in_rect('选择主角', _SELECT_HERO_BTN_RECT)
+    ctrl.set_phases([{'frame': variant_frame}])   # 无 exit:锚恒不出现
+    match = _attach_match(test_context, monkeypatch,
+                          opened_via='new_game',
+                          locked_resume=False, locked_sync_done=True)
+    gs = game_state_of(match.session)
+    order: list[str] = []
+    _spy_front_segments(monkeypatch, order)
+
+    op = CwScreenPrep(test_context)
+    enter_running_state(test_context)
+    try:
+        with fast_sleep(op):
+            result = op.execute()
+    finally:
+        reset_running_state(test_context, op)
+
+    assert not result.success, \
+        (f'锚恒不出现应连等封顶 fail,实际 {result.status!r}')
+    assert '连等超限' in (result.status or ''), \
+        (f'fail 状态词应标连等超限,实际 {result.status!r}')
+    assert len(ctrl.recorded_clicks) == cw_screen_prep.SELECT_HERO_CLICK_MAX, \
+        (f'封顶内每轮恰一次点击(含首发),'
+         f'实际 {len(ctrl.recorded_clicks)} 次 {ctrl.recorded_clicks}')
+    assert order == [], f'连等 fail 帧同样跳全部前置段,实际 {order!r}'
+    assert gs.frame_class_prep == 'none', \
+        (f'跳前置段:帧代次应保持 none,实际 {gs.frame_class_prep!r}')

@@ -726,3 +726,76 @@ class TestBattleFrameRecoveryGate:
         assert gs.tracked_account_observed.value is None, \
             (f'new_game 容器门关零写,'
              f'实际 {gs.tracked_account_observed.value!r}')
+
+
+# ===== 分发画面预检(_dispatch_anchor_precheck;防建档/merged 漂移)=====
+
+class TestDispatchAnchorPrecheck:
+    """iter1 分发画面预检测试(design 2026-11-20-cw-p0-chain tasks 2.1):
+    清单内画面缺档/缺 id_mark → log.error 逐条点名(不中止运行);真档
+    全量在册 → 零点名。两向各锁一条——真档用例红 = 新登记画面档缺失或
+    丢了 id_mark(新增画面「三处缺一不可」的建档腿);点名用例红 = 预检
+    失声(漂移发生时判读面拿不到信号)。"""
+
+    def test_current_assets_zero_problems(
+            self, test_context: SrTestContext,
+            monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
+        """真档全量在册:预检零 error 点名(含 cw-p0chain 五新画面)。"""
+        import logging
+        ctrl = FixtureController(
+            ctx=test_context,
+            standard_width=test_context.project_config.screen_standard_width,
+            standard_height=test_context.project_config.screen_standard_height,
+        )
+        monkeypatch.setattr(test_context, 'controller', ctrl)
+        monkeypatch.setattr(
+            'sr_od.application.currency_war.operations.cw_loop.'
+            'save_decision_frame', lambda *a, **k: None)
+        loop = CwLoop(test_context)
+        _one_dragon_logger = logging.getLogger('OneDragon')
+        monkeypatch.setattr(_one_dragon_logger, 'propagate', True)
+        with caplog.at_level(logging.ERROR, logger='OneDragon'):
+            loop._dispatch_anchor_precheck()
+        problems = [r for r in caplog.records
+                    if r.levelno >= logging.ERROR
+                    and '分发画面预检' in r.getMessage()]
+        assert problems == [], \
+            (f'分发清单画面应全部在册且有 id_mark,实际点名 '
+             f'{[r.getMessage() for r in problems]}')
+
+    def test_missing_id_mark_named_in_error(
+            self, test_context: SrTestContext,
+            monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture) -> None:
+        """无 id_mark 形态:预检按画面名逐条点名(判读面信号 = 点名行)。
+
+        注:画面档不存在形态的点名分支现役不可达(screen_loader.get_screen
+        对缺档抛异常 → 被预检 except 吞成 debug,缺陷另行申报),本用例锁
+        可达的 id_mark 半边。"""
+        import logging
+        ctrl = FixtureController(
+            ctx=test_context,
+            standard_width=test_context.project_config.screen_standard_width,
+            standard_height=test_context.project_config.screen_standard_height,
+        )
+        monkeypatch.setattr(test_context, 'controller', ctrl)
+        monkeypatch.setattr(
+            'sr_od.application.currency_war.operations.cw_loop.'
+            'save_decision_frame', lambda *a, **k: None)
+        _no_mark_screen = SimpleNamespace(area_list=[
+            SimpleNamespace(id_mark=False),
+        ])
+        monkeypatch.setattr(CwLoop, 'CW_DISPATCH_SCREENS',
+                            ('货币战争-预检测试无识别标志',))
+        monkeypatch.setattr(test_context.screen_loader, 'get_screen',
+                            lambda name, copy=False: _no_mark_screen)
+        loop = CwLoop(test_context)
+        _one_dragon_logger = logging.getLogger('OneDragon')
+        monkeypatch.setattr(_one_dragon_logger, 'propagate', True)
+        with caplog.at_level(logging.ERROR, logger='OneDragon'):
+            loop._dispatch_anchor_precheck()
+        problem_lines = [r.getMessage() for r in caplog.records
+                         if r.levelno >= logging.ERROR
+                         and '分发画面预检' in r.getMessage()]
+        assert any('货币战争-预检测试无识别标志: 无 id_mark 识别标志' in m
+                   for m in problem_lines), \
+            (f'无识别标志画面应被逐条点名,实际 {problem_lines}')
