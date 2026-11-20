@@ -90,10 +90,11 @@ class _NoSleepTime:
 
 
 #: 发出链机械段会裸睡的模块(统一拖动拖后等待 / 出战弹窗渲染等待 /
-#: 统一拖拽原语 settle / 失焦守卫激活等待)。
+#: 统一拖拽原语 settle / 失焦守卫激活等待 / 席满守卫卖出动画等待)。
 _NOSLEEP_MODULES: tuple[str, ...] = (
     'sr_od.application.currency_war.operations.cw_op.cw_move_unit_action',
     'sr_od.application.currency_war.operations.cw_op.cw_start_battle_action',
+    'sr_od.application.currency_war.operations.cw_op.cw_prep_sell_bench_action',
     'sr_od.application.currency_war.operations.actions.drag_cw_char',
     'sr_od.application.currency_war.prep_actions',
 )
@@ -290,3 +291,124 @@ def test_overlay_block_status_receipt_mapping() -> None:
         assert _prep_receipt_block_code(status) == \
             '未执行:浮层在场(合成确认/角色详情)', \
             f'{label} 的受阻码应命中登记行,实际 {_prep_receipt_block_code(status)}'
+
+
+# ============================================================ 出战前置席满守卫(执行前输入契约守卫)
+#
+# 锁设计约定(守卫 = prep_actions.guard_bench_overflow_for_battle,
+# 安装点 = launch_prepared_battle 部署原子序后、出战单击前):
+# - 席满态(「备战席已满」告警横幅在场,实机实证:此态出战被游戏静默
+#   忽略)→ 先卖一个备战席角色腾位(选槽 = 槽位表第一 unit 槽确定性
+#   规则,零策略语义)→ 复查告警消失 → 放行出战(先卖后战时序);
+# - 告警不在场 → 零行为变化(现役发出序断言由上方 armed 面测试承载,
+#   干净帧上守卫零新增动作);
+# - 告警在场但无角色可卖 → 出战未发出 (False, detail),交回外循环;
+# - 卖出后复查告警仍在场(机械落空形态)→ 出战未发出 (False, detail)。
+
+#: 席满帧存档(「备战席已满」告警横幅在场;告警 area OCR 命中实证帧)。
+_OVERFLOW_FRAME: tuple[str, str] = ('货币战争-备战', 'rail_badge_prep_r4')
+
+
+def _require_overflow_frame(test_context: SrTestContext) -> None:
+    """席满帧存档缺失 skip(采到后自动恢复),不 error。"""
+    if not test_context.has_screen(*_OVERFLOW_FRAME):
+        pytest.skip(f'存档截图缺失:screens/{_OVERFLOW_FRAME[0]}/'
+                    f'{_OVERFLOW_FRAME[1]}.webp')
+
+
+def _seed_overflow_gs(test_context: SrTestContext,
+                      monkeypatch: pytest.MonkeyPatch,
+                      *, bench_units: bool) -> None:
+    """挂假局并种 game state(告警在场的状态容器镜像):
+    bench 9 槽(bench_units=True 全 unit / False 全 empty)+
+    overflow_warning=True + overflow_card + gold(卖出回金消费面)。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import (
+        BenchSlot,
+        BenchView,
+        ChannelSig,
+        Unit,
+        game_state_of,
+    )
+    match = types.SimpleNamespace(session=types.SimpleNamespace())
+    monkeypatch.setattr(test_context, 'cw_match', match)
+    gs = game_state_of(match.session)
+    sig = ChannelSig(family='obs', actor='test')
+    slot = (BenchSlot(kind='unit', unit=Unit(char_id='银狼', star=2,
+                                             equips=[]))
+            if bench_units else BenchSlot(kind='empty'))
+    gs.observe(gs.bench, BenchView(slots=[slot] * 9, capacity=9), sig=sig)
+    if bench_units:
+        gs.observe(gs.overflow_warning, True, sig=sig)
+        gs.observe(gs.overflow_card, '刃心', sig=sig)
+        gs.observe(gs.gold, 100, sig=sig)
+
+
+def test_overflow_guard_sells_then_battle(launch_env,
+                                          monkeypatch) -> None:
+    """席满态出战 → 先卖后战:告警在场 → 守卫卖备战栏-1 腾位(拖拽双端
+    = 裸中心 → 出售区单一源)→ 复查告警消失(干净帧)→ 出战点击命中
+    「按钮-出战」;机械时序 = 卖出 settle 在前(mouse_move 序)。"""
+    test_context, host, ctrl = launch_env
+    _require_overflow_frame(test_context)
+    _seed_overflow_gs(test_context, monkeypatch, bench_units=True)
+    _patch_deploy_plan(monkeypatch, [])
+    # 截图序:守卫第一查(席满帧)→ 卖出 op 浮层守卫帧(仍席满帧,on_polls
+    # 2 触发推进)→ 守卫复查(干净帧,告警消失)→ 出战按钮定位(干净帧)。
+    ctrl.set_phases([{'frame': _OVERFLOW_FRAME, 'exit': ('on_polls', 2)},
+                     {'frame': _PREP_FRAME}])
+
+    ok, detail = launch_battle_unified(host, test_context, face='armed')
+
+    assert ok, f'席满腾位后应发出出战,实际 detail={detail!r}'
+    exp_b1 = _expected_center(test_context, '备战栏-1')
+    exp_sell = _expected_center(test_context, '区域-出售区')
+    exp_btn = _expected_center(test_context, '按钮-出战')
+    assert ctrl.recorded_drags == [(exp_b1, exp_sell)], \
+        (f'席满守卫应先卖备战栏-1(拖至出售区),'
+         f'实际 {ctrl.recorded_drags}')
+    assert ctrl.recorded_mouse_moves == [exp_b1, exp_btn], \
+        (f'机械时序应为 卖出settle(mouse_move 备战栏-1) → 出战按钮,'
+         f'实际 {ctrl.recorded_mouse_moves}')
+    assert ctrl.click_hit_area('货币战争-备战', '按钮-出战'), \
+        f'腾位后应发出出战点击,实际 {ctrl.recorded_clicks}'
+
+
+def test_overflow_guard_fail_no_unit(launch_env,
+                                     monkeypatch) -> None:
+    """告警在场但无角色可卖(bench 全 empty)→ 出战未发出:
+    (False, detail),零卖出拖拽、零出战点击。"""
+    test_context, host, ctrl = launch_env
+    _require_overflow_frame(test_context)
+    _seed_overflow_gs(test_context, monkeypatch, bench_units=False)
+    _patch_deploy_plan(monkeypatch, [])
+    ctrl.set_phases([{'frame': _OVERFLOW_FRAME}])
+
+    ok, detail = launch_battle_unified(host, test_context, face='armed')
+
+    assert not ok, f'无角色可卖应判失败,实际 detail={detail!r}'
+    assert '无角色可卖' in detail, f'失败 detail 应带原因,实际 {detail!r}'
+    assert ctrl.recorded_drags == [], \
+        f'不应发生卖出拖拽,实际 {ctrl.recorded_drags}'
+    assert not ctrl.click_hit_area('货币战争-备战', '按钮-出战'), \
+        f'出战不应发出,实际 {ctrl.recorded_clicks}'
+
+
+def test_overflow_guard_fail_still_full_after_sell(launch_env,
+                                                   monkeypatch) -> None:
+    """卖出后告警仍在场(单帧剧本 = 复查仍席满,机械落空形态)→
+    出战未发出:(False, detail),有卖出拖拽、零出战点击。"""
+    test_context, host, ctrl = launch_env
+    _require_overflow_frame(test_context)
+    _seed_overflow_gs(test_context, monkeypatch, bench_units=True)
+    _patch_deploy_plan(monkeypatch, [])
+    ctrl.set_phases([{'frame': _OVERFLOW_FRAME}])
+
+    ok, detail = launch_battle_unified(host, test_context, face='armed')
+
+    assert not ok, f'卖出后仍席满应判失败,实际 detail={detail!r}'
+    assert '卖出后告警仍在场' in detail, \
+        f'失败 detail 应带原因,实际 {detail!r}'
+    assert ctrl.recorded_drags, \
+        f'应发生卖出拖拽(守卫先卖),实际 {ctrl.recorded_drags}'
+    assert not ctrl.click_hit_area('货币战争-备战', '按钮-出战'), \
+        f'腾位失败不应发出出战点击,实际 {ctrl.recorded_clicks}'
