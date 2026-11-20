@@ -261,21 +261,21 @@ def test_battle_exit_confirm_dialog_branch(
     弹窗盖面板(模态):同时断言不点退出位——弹窗先于面板判定,面板分支不得
     对被弹窗遮住的退出位重复点击。
     """
-    if not test_context.has_screen('战斗-退出确认弹窗', '末日幻影形态'):
-        pytest.skip('存档截图缺失:screens/战斗-退出确认弹窗/末日幻影形态.webp')
+    if not test_context.has_screen('逐光捡金-战斗退出确认弹窗', '末日幻影形态'):
+        pytest.skip('存档截图缺失:screens/逐光捡金-战斗退出确认弹窗/末日幻影形态.webp')
 
     ctrl = _make_fixture_controller(test_context, monkeypatch)
     alts = _spy_pc_alt(ctrl, monkeypatch)
     monkeypatch.setattr(EnterGame, 'check_screen_to_interact', lambda self, screen: None)
 
     op = EnterGame(test_context)
-    op.last_screenshot = test_context.load_screen('战斗-退出确认弹窗', '末日幻影形态')
+    op.last_screenshot = test_context.load_screen('逐光捡金-战斗退出确认弹窗', '末日幻影形态')
     result = op.check_screen()
 
     assert not result.is_success, '命中分支应 round_retry 逐帧重识别'
     assert result.status == '战斗退出确认弹窗', f'分支状态漂移:{result.status}'
     _assert_single_click_at_area_center(
-        test_context, ctrl, alts, '战斗-退出确认弹窗', '按钮-确认',
+        test_context, ctrl, alts, '逐光捡金-战斗退出确认弹窗', '按钮-确认',
     )
     # 弹窗盖面板:退出位零点击(点它会被模态挡住,形成死循环)
     assert not ctrl.click_hit_area('战斗-暂停面板', '按钮-结束战斗并结算'), (
@@ -358,8 +358,8 @@ def test_confirm_dialog_takes_priority_over_pause_panel(
     alts = _spy_pc_alt(ctrl, monkeypatch)
 
     hit_set = {
-        ('战斗-退出确认弹窗', '标识-提示'),
-        ('战斗-退出确认弹窗', '按钮-确认'),
+        ('逐光捡金-战斗退出确认弹窗', '正文-是否结束本场战斗'),
+        ('逐光捡金-战斗退出确认弹窗', '按钮-确认'),
         ('战斗-暂停面板', '标识-战斗暂停'),
     }
 
@@ -383,7 +383,7 @@ def test_confirm_dialog_takes_priority_over_pause_panel(
     assert not result.is_success, '命中分支应 round_retry 逐帧重识别'
     assert result.status == '战斗退出确认弹窗', f'应路由到确认弹窗分支:{result.status}'
     _assert_single_click_at_area_center(
-        test_context, ctrl, alts, '战斗-退出确认弹窗', '按钮-确认',
+        test_context, ctrl, alts, '逐光捡金-战斗退出确认弹窗', '按钮-确认',
     )
 
 

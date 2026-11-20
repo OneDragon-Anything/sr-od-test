@@ -328,8 +328,8 @@ def _build_phases_battle_exit_recovery() -> list[dict]:
             'exit': ('on_click_in', '战斗-暂停面板', '按钮-结束战斗并结算'),
         },
         {
-            'frame': ('战斗-退出确认弹窗', '末日幻影形态'),
-            'exit': ('on_click_in', '战斗-退出确认弹窗', '按钮-确认'),
+            'frame': ('逐光捡金-战斗退出确认弹窗', '末日幻影形态'),
+            'exit': ('on_click_in', '逐光捡金-战斗退出确认弹窗', '按钮-确认'),
         },
         {
             'frame': ('末日幻影-节点结算', '节点结算-退出按钮'),
@@ -348,7 +348,7 @@ def _build_phases_battle_exit_recovery() -> list[dict]:
 
 _BATTLE_EXIT_RECOVERY_FRAMES: list[tuple[str, str]] = [
     ('战斗-暂停面板', '末日幻影形态'),
-    ('战斗-退出确认弹窗', '末日幻影形态'),
+    ('逐光捡金-战斗退出确认弹窗', '末日幻影形态'),
     ('末日幻影-节点结算', '节点结算-退出按钮'),
     ('末日幻影-选关', '默认'),
     ('大世界', '普通'),
@@ -398,7 +398,7 @@ class TestEnterGameBattleExitRecovery:
         assert fixture_controller.click_hit_area(
             '战斗-暂停面板', '按钮-结束战斗并结算'), '暂停面板站未点退出位'
         assert fixture_controller.click_hit_area(
-            '战斗-退出确认弹窗', '按钮-确认'), '确认弹窗站未点确认'
+            '逐光捡金-战斗退出确认弹窗', '按钮-确认'), '确认弹窗站未点确认'
         assert fixture_controller.click_hit_area(
             '末日幻影-节点结算', '按钮-退出'), '结算页站未点退出'
         assert fixture_controller.click_hit_area(
