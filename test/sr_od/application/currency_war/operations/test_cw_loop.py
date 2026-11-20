@@ -799,3 +799,125 @@ class TestDispatchAnchorPrecheck:
         assert any('货币战争-预检测试无识别标志: 无 id_mark 识别标志' in m
                    for m in problem_lines), \
             (f'无识别标志画面应被逐条点名,实际 {problem_lines}')
+
+
+class TestDispatchNewScreens:
+    """cw-p0chain 分发分支接线测试(tasks 3.5;design §2.3-A/§2.5):
+    四新画面分支的 journal 名 / frame_tag / 派发 op 类三元组断言 +
+    主角锁定扩员分支的带参对断言(CwScreenPrepLockedReturn 参数化接口)。
+
+    演法:派发 op ``execute`` 打桩(记录实例类名与带参字段,直调
+    ``_dispatch_identity_screen`` 断言接线对——op 内部链路归各 op 剧本
+    测试,本类只锁「屏名 → 处理器 + journal + tag」的接线面);
+    ``_log_cw_op``/``save_decision_frame`` 换记录型桩。"""
+
+    #: 四新画面 → (journal 名, frame_tag, op 类名) 接线对(与生产分支
+    #: 逐字同源,生产侧改接线本表同步改——失配即红)。
+    _EXPECT: list[tuple[str, str, str, str]] = [
+        ('货币战争-幕后茶歇', '幕后茶歇', 'flow_tea_break', 'CwScreenTeaBreak'),
+        ('货币战争-茶歇奖励', '茶歇奖励', 'flow_tea_break_reward',
+         'CwScreenTeaBreakReward'),
+        ('货币战争-奇遇对话', '奇遇对话', 'flow_adventure_dialog',
+         'CwScreenAdventureDialog'),
+        ('货币战争-主角光环选择', '主角光环', 'flow_aura_select',
+         'CwScreenAuraSelect'),
+    ]
+
+    def _make(self, test_context: SrTestContext,
+              monkeypatch: pytest.MonkeyPatch,
+              dispatched: list, journals: list, tags: list):
+        ctrl = FixtureController(
+            ctx=test_context,
+            standard_width=test_context.project_config.screen_standard_width,
+            standard_height=test_context.project_config.screen_standard_height,
+        )
+        monkeypatch.setattr(test_context, 'controller', ctrl)
+        ctrl.set_phases([{'frame': _PREP_FRAME}])
+
+        def _rec_frame(loop, tag, shot) -> None:
+            tags.append(tag)
+
+        monkeypatch.setattr(
+            'sr_od.application.currency_war.operations.cw_loop.'
+            'save_decision_frame', _rec_frame)
+
+        def _rec_log(op_name, pos, dur, outcome, reason='') -> None:
+            journals.append((op_name, outcome))
+
+        monkeypatch.setattr(cw_loop_module, '_log_cw_op', _rec_log)
+
+        from sr_od.application.currency_war.operations.cw_screen.cw_screen_adventure_dialog import (
+            CwScreenAdventureDialog,
+        )
+        from sr_od.application.currency_war.operations.cw_screen.cw_screen_aura_select import (
+            CwScreenAuraSelect,
+        )
+        from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep_locked_return import (
+            CwScreenPrepLockedReturn,
+        )
+        from sr_od.application.currency_war.operations.cw_screen.cw_screen_tea_break import (
+            CwScreenTeaBreak,
+        )
+        from sr_od.application.currency_war.operations.cw_screen.cw_screen_tea_break_reward import (
+            CwScreenTeaBreakReward,
+        )
+
+        for cls in (CwScreenTeaBreak, CwScreenTeaBreakReward,
+                    CwScreenAdventureDialog, CwScreenAuraSelect,
+                    CwScreenPrepLockedReturn):
+            def _fake_exec(self_op, _cls=cls):
+                dispatched.append((
+                    type(self_op).__name__,
+                    getattr(self_op, '_screen_name', None),
+                    getattr(self_op, '_entry_area', None)))
+                return SimpleNamespace(success=True, status='stub')
+
+            monkeypatch.setattr(cls, 'execute', _fake_exec)
+
+        shell = CwLoop.__new__(CwLoop)
+        shell.ctx = test_context
+        shell.last_screenshot = None
+        return shell, ctrl
+
+    def test_four_new_branches_dispatch_contract(
+            self, test_context: SrTestContext,
+            monkeypatch: pytest.MonkeyPatch) -> None:
+        """四新画面分支接线对:屏名 → op 类 + journal 名 + frame_tag
+        逐项与生产接线一致。"""
+        dispatched: list = []
+        journals: list = []
+        tags: list = []
+        shell, ctrl = self._make(test_context, monkeypatch,
+                                 dispatched, journals, tags)
+        for screen_name, _journal, _tag, _cls in self._EXPECT:
+            shell._dispatch_identity_screen(screen_name, ctrl.current_frame)
+
+        assert [d[0] for d in dispatched] == [e[3] for e in self._EXPECT], \
+            (f'派发 op 类应与接线对一致,实际 {dispatched!r}')
+        assert [j[0] for j in journals] == [e[1] for e in self._EXPECT], \
+            (f'journal 名应与接线对一致,实际 {journals!r}')
+        assert all(j[1] == 'ok' for j in journals), \
+            f'桩 execute 成功应映射 ok,实际 {journals!r}'
+        assert tags == [e[2] for e in self._EXPECT], \
+            (f'frame_tag 应与接线对一致,实际 {tags!r}')
+
+    def test_protagonist_lock_expands_lock_branch_with_param_pair(
+            self, test_context: SrTestContext,
+            monkeypatch: pytest.MonkeyPatch) -> None:
+        """主角锁定扩员:走既有锁定分支(三元组第三员),派发
+        CwScreenPrepLockedReturn 带参对 = (画面档, 按钮-返回主角选择)
+        ——参数化接口消费,零新 op(design §2.3-A)。"""
+        dispatched: list = []
+        journals: list = []
+        tags: list = []
+        shell, ctrl = self._make(test_context, monkeypatch,
+                                 dispatched, journals, tags)
+        shell._dispatch_identity_screen('货币战争-备战-主角锁定',
+                                        ctrl.current_frame)
+
+        assert dispatched == [('CwScreenPrepLockedReturn',
+                               '货币战争-备战-主角锁定',
+                               '按钮-返回主角选择')], \
+            (f'主角锁定应派发带参对锁定 op,实际 {dispatched!r}')
+        assert journals == [('备战暗色锁定', 'ok')], \
+            (f'锁定分支 journal 名应维持现役共用名,实际 {journals!r}')
