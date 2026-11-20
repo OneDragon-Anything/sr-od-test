@@ -9,6 +9,8 @@ tasks 3.1,design §2.1):
   → 兜底边回观察重判 → 分支态接管 → 全链 success;
 - 剧本 3 = 选中未生效脉冲:确认钮持续不在场 → 脉冲重入(重点同卡幂等)
   → CONFIRM_REJECT_MAX 耗尽 round_fail 交外环;
+- 剧本 4 = 确认连等封顶:确认钮持续在场 ∧ 奖励页锚恒不出现(until
+  round_wait 无界面)→ 连等计数 CONFIRM_WAIT_MAX 耗尽 round_fail 交外环;
 - 纯函数 = pick_option_idx 固定规则(R1 回血优先 / R2 负面 HP 词面排除
   含「−N HP」「-N HP」实录形态 / R2b 返回类排除 / R3 取首 / 全排除
   None)。
@@ -176,6 +178,32 @@ def test_confirm_pulse_retry_exhausts_to_fail(
     max_clicks = 1 + CwScreenTeaBreak.CONFIRM_REJECT_MAX
     assert len(ctrl.recorded_clicks) <= max_clicks, \
         (f'选卡点击应有界(≤{max_clicks} 次),'
+         f'实际 {len(ctrl.recorded_clicks)} 次')
+
+
+def test_confirm_wait_until_unsatisfied_capped_to_fail(
+        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
+    """剧本 4 确认连等封顶:确认钮持续在场 ∧ 奖励页锚恒不出现——until
+    点击恒成功锚恒不出现 = 框架 round_wait 无界(operation.py
+    round_by_find_and_click_area「等待的失败出口」申报),节点自设连等
+    封顶 CONFIRM_WAIT_MAX 耗尽 round_fail 交外环(有界,禁死循环)。"""
+    _require_frames(test_context)
+    _attach_gs(test_context, monkeypatch)
+    ctrl = CwFixtureController(test_context)
+    monkeypatch.setattr(test_context, 'controller', ctrl)
+    ctrl.set_phases([{'frame': _F_CONFIRM}])   # 无 exit:确认钮恒在场,奖励页锚恒不出现
+    op = CwScreenTeaBreak(test_context)
+    result = _run_op(test_context, op)
+
+    assert not result.success, \
+        f'奖励页锚恒不出现应连等封顶 fail 交外环,实际 {result.status!r}'
+    # 走的是确认连等路径(确认钮被点击),非选中未生效脉冲路径
+    assert ctrl.click_hit_area(_TEA, '按钮-确认'), \
+        f'应有点确认动作(连等路径),实际点击 {ctrl.recorded_clicks}'
+    # 连等有界:每轮 = 点卡 1 + 点确认 1,总轮 ≤ 1 + CONFIRM_WAIT_MAX
+    max_rounds = 1 + CwScreenTeaBreak.CONFIRM_WAIT_MAX
+    assert len(ctrl.recorded_clicks) <= max_rounds * 2, \
+        (f'确认连等应有界(≤{max_rounds} 轮×2 次),'
          f'实际 {len(ctrl.recorded_clicks)} 次')
 
 
