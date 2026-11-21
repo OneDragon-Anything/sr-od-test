@@ -100,6 +100,20 @@ def test_scan_discovers_invest_strategy_recognizer(mock_ctx: MagicMock) -> None:
     assert type(recognizer).__name__ == 'InvestStrategyRecognizer'
 
 
+def test_scan_discovers_train_shop_panel_recognizer(mock_ctx: MagicMock) -> None:
+    """扫描应发现开拓商店面板 recognizer(screen_name='货币战争-备战-开拓商店')。
+
+    该画面此前无识别器 → extras 恒 null(挂账 ㊱ 登记的识别缺口);
+    本条锁 extras 接线不回退。"""
+    result = scan_recognizers(mock_ctx, refresh=True)
+    recognizer = result.registry.get('货币战争-备战-开拓商店')
+    assert recognizer is not None
+    assert type(recognizer).__name__ == 'TrainShopPanelRecognizer'
+    # extras_doc 与输出键集同步(extras 契约面)
+    assert set(recognizer.extras_doc) == {
+        'balance', 'mode', 'shop_cards', 'showcase_card', 'pam_progress'}
+
+
 def test_scan_excludes_base_class(mock_ctx: MagicMock) -> None:
     """基类 ScreenRecognizer 不进注册表。"""
     result = scan_recognizers(mock_ctx, refresh=True)

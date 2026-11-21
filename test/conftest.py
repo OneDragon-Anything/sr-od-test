@@ -305,6 +305,19 @@ def _install_ocr_content_memo(ocr_service, cache_dir: Path | None) -> None:
         khash = hashlib.sha256(repr(key).encode()).hexdigest()[:40]
         return cache_dir / f'{khash}.pkl'
 
+    def _copy_ocr_results(results: list) -> list:
+        """OcrMatchResult 元素级副本(命中与存取都过本函数)。
+
+        背景:生产消费方会**原地改写**识别结果元素(OcrService crop_first 路径
+        的 ``add_offset`` 把裁片局部坐标改写为全图绝对坐标)——memo 若只浅拷贝
+        list、共享元素,第二个「同内容裁片、不同帧」的查询(不同截图上同一
+        UI 元素,像素级相同)会命中同一批元素、被二次偏移,坐标翻倍后过不了
+        调用方的区域过滤,表现为确定性空读(开拓商店读数帧测试实锤)。
+        副本隔离后,canonical 永不被消费方触碰,语义与无 memo 一致。"""
+        return [type(r)(c=r.confidence, x=r.x, y=r.y, w=r.w, h=r.h,
+                        template_scale=r.template_scale, data=r.data)
+                for r in results]
+
     def _memo_get_ocr_result_list(
         image: MatLike,
         color_range: list[list[int]] | None = None,
@@ -352,7 +365,7 @@ def _install_ocr_content_memo(ocr_service, cache_dir: Path | None) -> None:
                     except Exception:
                         pass  # 写失败只影响下次 warm 命中,不影响正确性
             memo[key] = hit
-        return list(memo[key])
+        return _copy_ocr_results(memo[key])
 
     ocr_service.get_ocr_result_list = _memo_get_ocr_result_list  # type: ignore[method-assign]
 
@@ -424,7 +437,7 @@ def _install_ocr_content_memo(ocr_service, cache_dir: Path | None) -> None:
             ocr_memo[key] = _matcher_memo_lookup(
                 key, lambda: orig_ocr(image, threshold,
                                       merge_line_distance))
-        return list(ocr_memo[key])
+        return _copy_ocr_results(ocr_memo[key])
 
     matcher.ocr = _memo_ocr  # type: ignore[method-assign]
 

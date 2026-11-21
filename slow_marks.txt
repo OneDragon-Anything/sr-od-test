@@ -85,3 +85,9 @@ test/sr_od/application/cultivation/character/operations/test_upgrade_character_f
 # + rect 两级放大 OCR,冷跑实测 ~2.7s;温缓存(memo)0.09s,登记防标准
 # 全量冷缓存首跑抖动过线
 test/sr_od/application/currency_war/obs/test_cw_shop_refresh_obs.py::test_refresh_button_three_states_real_frames
+
+# 2026-11-22 开拓商店读数批登记:文件首条承担 SrTestContext 冷初始化(setup
+# 2.4s,先例 = 2026-11-14 开拓力失败适配条);槽带真帧条 = 3 帧 panel+balance+pam
+# 全读链(OCR+SIFT 立绘库),冷跑实测 3.4s,登记防标准全量抖动过线
+test/sr_od/application/currency_war/obs/test_cw_trainshop_obs.py::test_normalize_attr_name
+test/sr_od/application/currency_war/obs/test_cw_trainshop_obs.py::test_slots_frames_truth
