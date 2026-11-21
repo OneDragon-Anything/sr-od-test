@@ -3,8 +3,13 @@
 锁设计约定(契约单一源 = ``cw_loop.py::CwLoop._dispatch_screen_op`` docstring
 防线出口契约段 + skill ``references/flow/guards.md`` §1):
 
-- ``op_fail_redispatch_tick`` 三态:ok 归零 / 同键累加 / 异键归一(防线
-  计数根语义,链形归组修复依赖这三态);
+- ``op_fail_redispatch_tick`` 四态:推进型 ok 归零 / 清理型 ok 保窗 /
+  同键累加 / 异键归一(防线计数根语义,链形归组修复依赖这四态);
+- 清理型成功不清零计数窗(活锁根治):fail ↔ 清理型 ok 交替形态的计数
+  能累到 ``OP_FAIL_REDISPATCH_LIMIT`` 响亮出口(实证活锁形态 = 备战环
+  情报采集 fail 与位面详情关闭 ok 交替,旧「任一 ok 即归零」下永无出口);
+- 推进型成功清零照旧(主路径不回归):真失败 → 重派 → 成功 → 继续的
+  正向面原样;
 - 链形分支(投资环境链)粘滞 fail(app 主路径默认):两 dispatch 同
   ``chain_key`` 归组,每直调烧 2 次 fail 事件(链首+链尾),第 3 直调链首
   达限 → 防线交接 ``round_success``(status 以 ``STATUS_HANDOFF_PREFIX``
@@ -67,6 +72,38 @@ _PREP_FRAME: tuple[str, str] = ('货币战争-备战', 'deployed_2star')
 
 #: 链形分支的链级计数键(与生产接线同值,单一源 = cw_loop.py 投资环境分支)。
 _CHAIN_KEY = '投资环境链'
+
+
+class _StubOp:
+    """dispatch 包装直驱假件:``execute`` 返回带 success/status 的轻结果
+    (非 OperationRoundResult 型 → ok 判定走 OperationResult.success 面,
+    与生产画面 op 收敛形态同构)。"""
+
+    def __init__(self, ok: bool, status: str = 'stub') -> None:
+        self._ok = ok
+        self._status = status
+
+    def execute(self):
+        return SimpleNamespace(success=self._ok, status=self._status)
+
+
+def _make_dispatch_shell(test_context: SrTestContext,
+                         monkeypatch: pytest.MonkeyPatch, tmp_path,
+                         cleanup_delegate: bool = False) -> CwLoop:
+    """防线直驱最小壳(先例 = ``_make_shell`` 的 ``__new__`` 形;假件 op
+    不走识别链,免 OCR 桩):留证桩 + 项目根重定向零落盘,
+    ``last_screenshot=None`` 使防线 ``op_fail_cap`` 截图走框架 None 早退。"""
+    monkeypatch.setattr(
+        'sr_od.application.currency_war.operations.cw_loop.'
+        'save_decision_frame', lambda *a, **k: None)
+    monkeypatch.setattr(
+        'sr_od.application.currency_war.operations.decision_frame_hooks.'
+        'get_project_root', lambda: tmp_path)
+    shell = CwLoop.__new__(CwLoop)
+    shell.ctx = test_context
+    shell.last_screenshot = None
+    shell._cleanup_delegate = cleanup_delegate
+    return shell
 
 
 def _require_screens(test_context: SrTestContext) -> None:
@@ -183,14 +220,154 @@ def _install_fake_monotonic(monkeypatch: pytest.MonkeyPatch,
         'cw_screen_wait_one_one._monotonic', _fake)
 
 
-def test_op_fail_redispatch_tick_three_states() -> None:
-    """防线计数纯函数三态基线:ok 归零 / 同键累加 / 异键归一。"""
-    # 任一 op ok = 画面证实推进 → 整窗归零(键清 None)
+def test_op_fail_redispatch_tick_four_states() -> None:
+    """防线计数纯函数四态基线:推进型 ok 归零 / 清理型 ok 保窗 /
+    同键 fail 累加 / 异键 fail 归一。"""
+    # 推进型 ok(缺省 ok_clears=True)= 画面证实推进 → 整窗归零(键清 None)
     assert op_fail_redispatch_tick('任意键', 3, 'X', True) == (None, 0)
+    # 清理型 ok(ok_clears=False)= 画面恢复不解除粘滞根因 → 窗口原样保留
+    assert op_fail_redispatch_tick('X', 2, 'Y', True, ok_clears=False) == ('X', 2)
     # 同键 fail 累加
     assert op_fail_redispatch_tick('X', 2, 'X', False) == ('X', 3)
     # 异键 fail = 粘滞对象已换,新情节从 1 起算
     assert op_fail_redispatch_tick('X', 4, 'Y', False) == ('Y', 1)
+
+
+def test_cleanup_ok_bounded_livelock(
+        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+        tmp_path) -> None:
+    """活锁根治(实证形态回放):fail(备战)↔ok(位面详情,清理型)交替,
+    旧「任一 ok 即归零」下计数恒 ≤1 永不到限(同一阻断反复重派无出口);
+    修后清理型 ok 保留窗口,计数跨交替累加,第 5 次 fail 达
+    ``OP_FAIL_REDISPATCH_LIMIT`` 响亮出口(app 主路径 = 交接前缀 success,
+    后缀 = 计数键),交替循环终止。"""
+    shell = _make_dispatch_shell(test_context, monkeypatch, tmp_path)
+    enter_running_state(test_context)
+    streak_track: list[int] = []
+    res_limit = None
+    try:
+        with fast_sleep(shell):
+            for _round in range(CwLoop.OP_FAIL_REDISPATCH_LIMIT):
+                res_fail = shell._dispatch_screen_op(
+                    _StubOp(False, status='情报采集失败'),
+                    journal_name='备战', frame_tag=None, wait=0)
+                streak_track.append(shell._op_fail_streak_n)
+                if res_fail.result != OperationRoundResultEnum.WAIT:
+                    res_limit = res_fail
+                    break   # 防线出口:交替循环终止(不再无限)
+                # 清理型 ok(位面详情关闭):窗口应原样保留
+                shell._dispatch_screen_op(
+                    _StubOp(True, status='弹窗已关'),
+                    journal_name='位面详情', frame_tag=None, wait=0)
+                streak_track.append(shell._op_fail_streak_n)
+    finally:
+        reset_running_state(test_context, shell)
+
+    assert streak_track == [1, 1, 2, 2, 3, 3, 4, 4, 5], (
+        f'fail 后计数跨清理型 ok 单调累加(清理 ok 不清零),实际 {streak_track}')
+    assert res_limit is not None, (
+        '交替形态应在前 5 次 fail 内达限,不得无限继续')
+    assert res_limit.result == OperationRoundResultEnum.SUCCESS, (
+        f'app 主路径达限出口 = 交接 success,实际 {res_limit.result}')
+    assert res_limit.status == f'{STATUS_HANDOFF_PREFIX}备战', (
+        f'交接后缀 = 触发计数键(单发分支 = journal 名): {res_limit.status}')
+
+
+def test_advancing_ok_resets_streak(
+        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+        tmp_path) -> None:
+    """主路径不回归:fail(备战)→ ok(战斗等待,推进型)→ 整窗归零照旧
+    (真失败→重派→成功→继续的正向面);其后同键 fail 从 1 重数,新情节
+    不带病累加。"""
+    shell = _make_dispatch_shell(test_context, monkeypatch, tmp_path)
+    enter_running_state(test_context)
+    try:
+        with fast_sleep(shell):
+            shell._dispatch_screen_op(
+                _StubOp(False, status='首轮失败'),
+                journal_name='备战', frame_tag=None, wait=0)
+            n_fail1, key_fail1 = (shell._op_fail_streak_n,
+                                  shell._op_fail_streak_key)
+            shell._dispatch_screen_op(
+                _StubOp(True, status='重派成功'),
+                journal_name='战斗等待', frame_tag=None, wait=0)
+            n_ok, key_ok = (shell._op_fail_streak_n,
+                            shell._op_fail_streak_key)
+            shell._dispatch_screen_op(
+                _StubOp(False, status='新情节失败'),
+                journal_name='备战', frame_tag=None, wait=0)
+            n_fail2, key_fail2 = (shell._op_fail_streak_n,
+                                  shell._op_fail_streak_key)
+    finally:
+        reset_running_state(test_context, shell)
+
+    assert (n_fail1, key_fail1) == (1, '备战'), \
+        f'首轮 fail 计 1: {(n_fail1, key_fail1)}'
+    assert (n_ok, key_ok) == (0, None), \
+        f'推进型 ok 归零照旧: {(n_ok, key_ok)}'
+    assert (n_fail2, key_fail2) == (1, '备战'), \
+        f'归零后新情节从 1 重数(不带病累加): {(n_fail2, key_fail2)}'
+
+
+def test_mixed_partial_advance_sequence(
+        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+        tmp_path) -> None:
+    """边界混合序列:①清理型自己 fail 也计数(异键归一照旧);
+    ②清理 ok 后窗口键保持原粘滞对象(同键 fail 继续累加);
+    ③推进型穿插(武装箱选择,选卡=资源变化)即真推进,清零生效,
+    其后新情节从 1 重数。"""
+    shell = _make_dispatch_shell(test_context, monkeypatch, tmp_path)
+    enter_running_state(test_context)
+    track: list[tuple[int, str | None]] = []
+    try:
+        with fast_sleep(shell):
+            # ①清理型 fail:计数照常起窗
+            shell._dispatch_screen_op(
+                _StubOp(False), journal_name='位面详情',
+                frame_tag=None, wait=0)
+            track.append((shell._op_fail_streak_n,
+                          shell._op_fail_streak_key))
+            # 异键 fail 归一照旧:粘滞对象换为备战
+            shell._dispatch_screen_op(
+                _StubOp(False), journal_name='备战',
+                frame_tag=None, wait=0)
+            track.append((shell._op_fail_streak_n,
+                          shell._op_fail_streak_key))
+            # ②清理型 ok:窗口键/计数原样保留
+            shell._dispatch_screen_op(
+                _StubOp(True), journal_name='位面详情',
+                frame_tag=None, wait=0)
+            track.append((shell._op_fail_streak_n,
+                          shell._op_fail_streak_key))
+            # 同键 fail 在保留窗口上继续累加
+            shell._dispatch_screen_op(
+                _StubOp(False), journal_name='备战',
+                frame_tag=None, wait=0)
+            track.append((shell._op_fail_streak_n,
+                          shell._op_fail_streak_key))
+            # ③推进型穿插(选卡成功 = 资源变化)→ 清零生效
+            shell._dispatch_screen_op(
+                _StubOp(True), journal_name='武装箱选择',
+                frame_tag=None, wait=0)
+            track.append((shell._op_fail_streak_n,
+                          shell._op_fail_streak_key))
+            # 清零后新情节从 1 重数
+            shell._dispatch_screen_op(
+                _StubOp(False), journal_name='备战',
+                frame_tag=None, wait=0)
+            track.append((shell._op_fail_streak_n,
+                          shell._op_fail_streak_key))
+    finally:
+        reset_running_state(test_context, shell)
+
+    assert track == [
+        (1, '位面详情'),   # 清理型 fail 起窗
+        (1, '备战'),       # 异键 fail 归一
+        (1, '备战'),       # 清理 ok 保窗(键/计数不动)
+        (2, '备战'),       # 同键 fail 在保留窗口上累加
+        (0, None),         # 推进型穿插清零
+        (1, '备战'),       # 新情节重数
+    ], f'混合序列各步窗口态: {track}'
 
 
 def test_chain_sticky_fail_reaches_redispatch_limit(
