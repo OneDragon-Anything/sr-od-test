@@ -1,16 +1,15 @@
-"""位面情报采集 op 联动判据测试(CwScreenPlaneIntel 选中态模板信号):
+"""位面情报采集 op 查看位面判据测试(CwScreenPlaneIntel 双环信号):
 
-- 语料帧信号:判据在归档语料帧上稳定——位面1选中帧(钻石切面纹理 /
-  棋盘格纹理事故帧)判 1,卡区被浮层模糊盖住的帧判 None。前判据
-  「详情条节点编号 OCR」在全局 det_limit_side_len=1920 下漏读事故帧
-  编号(零检测框)致联动判定永假、点位面卡重试空转;模板信号不依赖
-  OCR 检测参数,帧类免疫;
+- 语料帧信号:查看位面判据 = 查看态白环命中位优先 + 当前位面金环兜底。
+  金环是当前位面恒亮标记而非选中信号,只按金环判会把「查看位面2/3」
+  误判成「仍在位面1」——白环帧判 2 锁白环优先级,金环帧判 1 锁白环
+  不误命中金环卡,浮层负样本帧判 None;
 - sim 改道口:呈现面在场 → 直出 selected_plane,零模板匹配(语义不变);
 - 联动核:点卡后复查同一判据,命中即放行(零重试)。
 
-帧资产 = 测试仓 ``screens/货币战争-位面详情/``(钻石切面纹理 =
-位面详情全屏;棋盘格纹理 = 位面1选中-棋盘格纹理,原 OCR 判据漏读
-的现场帧;负样本 = 敌人信息浮层)。
+帧资产 = 测试仓 ``screens/货币战争-位面详情/``(金环态 = 位面详情全屏 /
+位面1选中-棋盘格纹理 / 位面1查看态-开场;白环态 = 位面2查看态-白环;
+负样本 = 敌人信息浮层)。
 """
 
 from __future__ import annotations
@@ -24,10 +23,12 @@ from sr_od.application.currency_war.operations.cw_screen.cw_screen_plane_intel i
 
 _PD: str = '货币战争-位面详情'
 
-# (存档 state 名, 期望选中位面号 | None=三卡位全 miss)
+# (存档 state 名, 期望查看位面号 | None=两族模板全 miss)
 _CORPUS_FRAMES: tuple[tuple[str, int | None], ...] = (
     ('位面详情全屏', 1),
     ('位面1选中-棋盘格纹理', 1),
+    ('位面1查看态-开场', 1),
+    ('位面2查看态-白环', 2),
     ('敌人信息浮层', None),
 )
 
@@ -46,7 +47,7 @@ def test_selected_plane_signal_on_corpus_frames(
     for state, expected in _CORPUS_FRAMES:
         frame = test_context.load_screen(_PD, state)
         assert op._selected_plane_no(frame) == expected, \
-            f'帧 {state} 期望选中位面判读={expected}'
+            f'帧 {state} 期望查看位面判读={expected}'
 
 
 def test_selected_plane_sim_port_passthrough(
