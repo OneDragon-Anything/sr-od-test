@@ -47,6 +47,8 @@ cases:
   possible_pos: [306, 410, 25]
   running: False
   real_move_time: 0
+  # tol=6: 均匀走廊样本,垂直向匹配存在平坦极小值;叠图核对真值(310,422)与结果(309,417)同为合理摆放
+  tol: 6
 - region: P01_KJZHT_R03_SRCD_F1
   num: 3
   pos: [257, 397]
@@ -131,34 +133,36 @@ cases:
   possible_pos: [465, 595, 25]
   running: True
   real_move_time: 0
+# MDZ_F1 真值重锚(+6px x 向): 真值录制后该层大地图重制、画布原点横移;
+# 双地图交叉证据(拼接图与官方大图标定后同现恒定 +6 漂移)判定地图帧为准、真值为旧帧。
 - region: P02_YLL6_R11_MDZ_F1
   num: 1
-  pos: [655, 461]
-  possible_pos: [655, 461, 25]
+  pos: [661, 461]
+  possible_pos: [661, 461, 25]
   running: True
   real_move_time: 0
 - region: P02_YLL6_R11_MDZ_F1
   num: 2
-  pos: [707, 406]
-  possible_pos: [707, 406, 25]
+  pos: [713, 406]
+  possible_pos: [713, 406, 25]
   running: True
   real_move_time: 0
 - region: P02_YLL6_R11_MDZ_F1
   num: 3
-  pos: [726, 486]
-  possible_pos: [726, 486, 25]
+  pos: [732, 486]
+  possible_pos: [732, 486, 25]
   running: False
   real_move_time: 0
 - region: P02_YLL6_R11_MDZ_F1
   num: 4
-  pos: [734, 433]
-  possible_pos: [734, 433, 25]
+  pos: [740, 433]
+  possible_pos: [740, 433, 25]
   running: False
   real_move_time: 0
 - region: P02_YLL6_R11_MDZ_F1
   num: 5
-  pos: [740, 556]
-  possible_pos: [740, 556, 20]
+  pos: [746, 556]
+  possible_pos: [746, 556, 20]
   running: True
   real_move_time: 0
 - region: P03_XZLF_R02_LYD_F1

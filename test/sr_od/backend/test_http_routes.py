@@ -1,0 +1,405 @@
+"""HTTP ``/game/*`` 适配器的单元测试。
+
+包含两类互补用例：
+
+- **直接 await 处理器**（async 风格）：避开 MCP 协议层，backend 用 ``MagicMock`` 伪造，
+  避免依赖真实游戏窗口与 ``SrContext``；``route_dispatch_*`` 用例经 Starlette 路由层分发。
+- **asyncio.run 处理器**（路由参数分发风格）：覆盖 ``/game/enter?block=``
+  nonblock/并发拒绝/block 成功、``/game/status``、``/game/stop`` 等分支。
+"""
+
+import asyncio
+import json
+from concurrent.futures import Future
+from dataclasses import dataclass
+from unittest.mock import MagicMock
+
+import pytest
+
+from one_dragon.base.operation.operation_base import OperationResult
+from sr_od.backend.backend_context import BackendNotReadyError, SrBackendContext
+from sr_od.backend.http import routes as routes_mod
+from sr_od.backend.http.routes import (
+    handle_game_analyze,
+)
+from sr_od.backend.schemas import (
+    AnalyzeScreenResult,
+    RunStatusResult,
+    RunStopResult,
+    WindowStatus,
+)
+
+
+@dataclass
+class _FakeRequest:
+    query_params: dict
+
+    async def json(self) -> dict:
+        return {}
+
+
+def _mock_backend(start_ok: bool = True) -> MagicMock:
+    """构造 mock SrBackendContext:start_run 返回 (start_ok, Future)。"""
+    b = MagicMock(name='SrBackendContext')
+    b.start_run.return_value = (start_ok, Future())
+    b.query_status.return_value = RunStatusResult(
+        state='running',
+        source='http',
+        app='OpenAndEnterGame',
+        started_at='2026-07-02T00:00:00',
+        duration_seconds=1.0,
+    )
+    b.stop.return_value = RunStopResult(stopped=True, source='http')
+    b.recognize_current_screen.return_value = '主界面'  # 运行态 status 查询默认附带画面识别
+    # 并发拒绝响应由 backend 统一助手产出(start 类工具只透传):
+    # 绑真实现——方法只读 query_status / run_slot,二者均已被 mock。
+    b.run_refusal_response = lambda hint: SrBackendContext.run_refusal_response(b, hint)
+    return b
+
+
+# ===== 直接 await 处理器（async 风格;仅保留路由层无对应端点覆盖的用例）=====
+
+@pytest.mark.asyncio
+async def test_handle_game_analyze_returns_screens() -> None:
+    """HTTP /game/analyze 返回纯识别数据 JSON:screens 嵌套 + area 四字段。"""
+    from one_dragon.base.screen.screen_match import (
+        AreaMatchDetail,
+        ScreenMatch,
+    )
+
+    detail = AreaMatchDetail(
+        area_name='标题', pc_rect=[1, 1, 2, 2], matched_text='菜单', match_target='菜单',
+    )
+    match = ScreenMatch(screen_name='菜单', is_precise=True, areas=[detail])
+    backend = MagicMock()
+    backend.analyze.return_value = AnalyzeScreenResult(ocr_texts=[], screens=[match])
+    resp = await handle_game_analyze(backend)  # _request 默认 None,处理器不读 request
+    assert resp.status_code == 200
+    body = json.loads(resp.body.decode('utf-8'))
+    assert 'success' not in body and 'error' not in body   # 纯识别数据,无成败字段
+    assert body['screens'][0]['screen_name'] == '菜单'
+    assert body['screens'][0]['areas'][0]['matched_text'] == '菜单'
+    assert body['screens'][0]['areas'][0]['match_target'] == '菜单'
+
+
+@pytest.mark.asyncio
+async def test_handle_game_analyze_error_returns_503() -> None:
+    """analyze 抛 AnalyzeScreenError → 503 + 错误 JSON(失败走错误响应,不占返回结构)。"""
+    from sr_od.backend.backend_context import AnalyzeScreenError
+
+    backend = MagicMock()
+    backend.analyze.side_effect = AnalyzeScreenError('游戏窗口未就绪')
+    resp = await handle_game_analyze(backend)
+    assert resp.status_code == 503
+    body = json.loads(resp.body.decode('utf-8'))
+    assert '游戏窗口未就绪' in body['error']
+
+
+@pytest.mark.asyncio
+async def test_handle_game_analyze_save_image_param() -> None:
+    """handle_game_analyze 从 query 读 save_image 并透传,响应含 screenshot_path。"""
+    backend = MagicMock()
+    backend.analyze.return_value = AnalyzeScreenResult(
+        ocr_texts=[], screenshot_path='/tmp/x.png')
+    request = MagicMock()
+    request.query_params = {'save_image': 'true'}
+    resp = await handle_game_analyze(backend, request)
+    assert resp.status_code == 200
+    data = json.loads(resp.body.decode('utf-8'))
+    assert data['screenshot_path'] == '/tmp/x.png'
+    backend.analyze.assert_called_once_with(None, True)
+
+
+@pytest.mark.asyncio
+async def test_handle_game_analyze_save_image_default_false() -> None:
+    """无 request 时 save_image 默认 False(向后兼容旧调用)。"""
+    backend = MagicMock()
+    backend.analyze.return_value = AnalyzeScreenResult(ocr_texts=[])
+    resp = await handle_game_analyze(backend)  # request 默认 None
+    assert resp.status_code == 200
+    backend.analyze.assert_called_once_with(None, False)
+
+
+def test_register_http_routes_adds_custom_routes() -> None:
+    """register_http_routes 应在 FastMCP 上挂载 /game/* 路由。"""
+    from mcp.server.fastmcp import FastMCP
+
+    from sr_od.backend.http.routes import register_http_routes
+
+    mcp = FastMCP("test")
+    register_http_routes(mcp, MagicMock())
+    # custom_route 挂在 Starlette 层；用 streamable_http_app 的 routes 校验
+    app = mcp.streamable_http_app()
+    paths = {getattr(r, "path", None) for r in app.routes}
+    assert any(p and "game" in p for p in paths)
+
+
+def test_route_dispatch_game_close_ok() -> None:
+    """经路由层分发 POST /game/close,应返回 200 + result 文本。"""
+    from mcp.server.fastmcp import FastMCP
+    from starlette.testclient import TestClient
+
+    from sr_od.backend.http.routes import register_http_routes
+
+    mcp = FastMCP("test")
+    backend = MagicMock()
+    backend.close_game.return_value = "已发送关闭游戏信号,可用 check_game_window 验证"
+    register_http_routes(mcp, backend)
+    client = TestClient(mcp.streamable_http_app())
+    resp = client.post("/game/close")
+    assert resp.status_code == 200
+    assert resp.json()["result"] == "已发送关闭游戏信号,可用 check_game_window 验证"
+
+
+def test_route_dispatch_window_ok() -> None:
+    """经 Starlette 路由层分发 GET /game/window，应返回 200 + 窗口状态 JSON。
+
+    回归 ``register_http_routes`` 中同步 lambda 返回 coroutine 的 bug：
+    处理器未走真实路由分发，上面几个直调 ``handle_*`` 的用例无法覆盖。
+    """
+    from mcp.server.fastmcp import FastMCP
+    from starlette.testclient import TestClient
+
+    from sr_od.backend.http.routes import register_http_routes
+
+    mcp = FastMCP("test")
+    backend = MagicMock()
+    backend.check_window.return_value = WindowStatus(
+        win_title="星穹铁道", is_win_valid=True, is_win_active=False, is_win_scale=True
+    )
+    register_http_routes(mcp, backend)
+    client = TestClient(mcp.streamable_http_app())
+    resp = client.get("/game/window")
+    assert resp.status_code == 200
+    assert resp.json()["win_title"] == "星穹铁道"
+
+
+def test_route_dispatch_window_not_ready() -> None:
+    """经路由层分发，backend 未就绪时应返回 503（而非 500）。"""
+    from mcp.server.fastmcp import FastMCP
+    from starlette.testclient import TestClient
+
+    from sr_od.backend.http.routes import register_http_routes
+
+    mcp = FastMCP("test")
+    backend = MagicMock()
+    backend.check_window.side_effect = BackendNotReadyError("未就绪")
+    register_http_routes(mcp, backend)
+    client = TestClient(mcp.streamable_http_app())
+    resp = client.get("/game/window")
+    assert resp.status_code == 503
+
+
+# ===== asyncio.run 处理器（block/nonblock/status/stop 分支）=====
+
+def test_handle_game_enter_nonblock():
+    resp = asyncio.run(routes_mod.handle_game_enter(_mock_backend(), _FakeRequest({'block': 'false'})))
+    assert resp.status_code == 200
+
+
+def test_handle_game_enter_concurrent_reject():
+    resp = asyncio.run(routes_mod.handle_game_enter(_mock_backend(start_ok=False), _FakeRequest({})))
+    assert resp.status_code == 200
+    assert json.loads(resp.body)['started'] is False
+
+
+def test_handle_game_enter_block_success():
+    backend = _mock_backend()
+    fut: Future = Future()
+    fut.set_result(OperationResult(success=True))
+    backend.start_run.return_value = (True, fut)
+    resp = asyncio.run(routes_mod.handle_game_enter(backend, _FakeRequest({})))  # block 默认 true
+    assert json.loads(resp.body)['result'] == '成功打开并进入星穹铁道游戏'
+
+
+def test_handle_game_status():
+    backend = _mock_backend()
+    resp = asyncio.run(routes_mod.handle_game_status(backend, _FakeRequest({})))
+    assert resp.status_code == 200
+    body = json.loads(resp.body)
+    assert body['current_screen'] == '主界面'   # running 态默认附带画面识别
+    backend.recognize_current_screen.assert_called_once()
+
+    backend = _mock_backend()
+    resp = asyncio.run(routes_mod.handle_game_status(
+        backend, _FakeRequest({'include_screen': 'false'})))
+    body = json.loads(resp.body)
+    assert body['current_screen'] is None      # 显式关闭则不识别
+    backend.recognize_current_screen.assert_not_called()
+
+
+def test_handle_game_stop():
+    resp = asyncio.run(routes_mod.handle_game_stop(_mock_backend(), _FakeRequest({})))
+    assert resp.status_code == 200
+    body = json.loads(resp.body)
+    assert body == {'stopped': True, 'source': 'http'}  # RunStopResult asdict
+
+
+# ===== /game/operations / /game/operations/describe / /game/run/operation(自定义 op)=====
+
+_OPEN_AND_ENTER = 'sr_od.operations.enter_game.open_and_enter_game.OpenAndEnterGame'
+_TALK_INTERACT = 'sr_od.operations.interact.talk_interact.TalkInteract'
+_STORE_ITEM = 'sr_od.operations.store.store_const.StoreItem'
+
+
+def _request_with_body(query: dict, body: dict | None) -> MagicMock:
+    """构造带 query_params 与 async json() body 的 fake request。"""
+    request = MagicMock()
+    request.query_params = query
+
+    async def _json() -> dict:
+        return body if body is not None else {}
+
+    request.json = _json
+    return request
+
+
+def test_handle_game_operations_list() -> None:
+    """GET /game/operations 返回定位符列表(与 MCP list_operations 同契约)。"""
+    from sr_od.backend.http.service_routes import handle_game_operations
+
+    backend = MagicMock()
+    resp = asyncio.run(handle_game_operations(backend))
+    assert resp.status_code == 200
+    data = json.loads(resp.body.decode('utf-8'))
+    assert 'OpenAndEnterGame' in data['operations']   # 无同名类 → 短名
+    assert data['total'] == data['count'] == len(data['operations'])
+
+    # query 按完整 op_id 子串过滤,返回元素转短名(与 MCP 同源 compact_operation_list)
+    request = MagicMock()
+    request.query_params.get.return_value = 'openandenter'
+    resp = asyncio.run(handle_game_operations(backend, request))
+    data = json.loads(resp.body.decode('utf-8'))
+    assert data['operations'] == ['OpenAndEnterGame']
+    assert data['total'] > data['count']
+
+
+def test_handle_game_operations_describe() -> None:
+    """GET /game/operations/describe?op_id= 返回参数 schema(op_id 走 query)。"""
+    from sr_od.backend.http.service_routes import handle_game_operations_describe
+
+    backend = MagicMock()
+    request = MagicMock()
+    request.query_params = {'op_id': _TALK_INTERACT}
+    resp = asyncio.run(handle_game_operations_describe(backend, request))
+    assert resp.status_code == 200
+    data = json.loads(resp.body.decode('utf-8'))
+    assert data['class_name'] == 'TalkInteract'
+    assert [p['name'] for p in data['params']] == ['option', 'lcs_percent', 'conversation_seconds']
+
+
+def test_handle_game_operations_describe_missing_op_id() -> None:
+    """无 op_id query → 200 + {error}。"""
+    from sr_od.backend.http.service_routes import handle_game_operations_describe
+
+    backend = MagicMock()
+    request = MagicMock()
+    request.query_params = {}
+    resp = asyncio.run(handle_game_operations_describe(backend, request))
+    assert resp.status_code == 200
+    assert 'error' in json.loads(resp.body.decode('utf-8'))
+
+
+def test_handle_game_operations_describe_short_name() -> None:
+    """describe 支持类名短名(与 MCP 同契约):唯一命中返回完整 op_id schema。"""
+    from sr_od.backend.http.service_routes import handle_game_operations_describe
+
+    backend = MagicMock()
+    request = MagicMock()
+    request.query_params = {'op_id': 'TalkInteract'}
+    resp = asyncio.run(handle_game_operations_describe(backend, request))
+    data = json.loads(resp.body.decode('utf-8'))
+    assert data['class_name'] == 'TalkInteract'
+    assert data['op_id'] == _TALK_INTERACT
+
+
+def test_handle_game_run_operation_op_id_via_query_args_via_body() -> None:
+    """POST /game/run/operation:op_id 走 query、args 走 body;成功启动(_start 被调)。"""
+    from sr_od.backend.http.service_routes import handle_game_run_operation
+
+    backend = MagicMock()
+    backend.run_slot._start.return_value = (True, Future())
+    backend.query_status.return_value = RunStatusResult(
+        state='running', source='http', started_at='2026-07-02T00:00:00', duration_seconds=1.0)
+    request = _request_with_body({'op_id': _OPEN_AND_ENTER, 'block': 'false'}, {'some': 'arg'})
+    resp = asyncio.run(handle_game_run_operation(backend, request))
+    assert resp.status_code == 200
+    data = json.loads(resp.body.decode('utf-8'))
+    assert data['started'] is True
+    backend.run_slot._start.assert_called_once()
+    call = backend.run_slot._start.call_args
+    assert call.args[0] == 'http'
+    assert call.kwargs.get('display_name') == _OPEN_AND_ENTER
+
+
+def test_handle_game_run_operation_rejects_non_operation() -> None:
+    """op_id 非 Operation → 200 + {started: False, error}。"""
+    from sr_od.backend.http.service_routes import handle_game_run_operation
+
+    backend = MagicMock()
+    request = _request_with_body({'op_id': _STORE_ITEM}, {})
+    resp = asyncio.run(handle_game_run_operation(backend, request))
+    assert resp.status_code == 200
+    data = json.loads(resp.body.decode('utf-8'))
+    assert data['started'] is False and 'error' in data
+    backend.run_slot._start.assert_not_called()
+
+
+def test_handle_game_run_operation_accepts_short_name() -> None:
+    """run 支持类名短名(唯一命中):_start 被调,display_name 用完整 op_id。"""
+    from sr_od.backend.http.service_routes import handle_game_run_operation
+
+    backend = MagicMock()
+    backend.run_slot._start.return_value = (True, Future())
+    backend.query_status.return_value = RunStatusResult(
+        state='running', source='http', started_at='2026-07-02T00:00:00', duration_seconds=1.0)
+    request = _request_with_body({'op_id': 'OpenAndEnterGame', 'block': 'false'}, {})
+    resp = asyncio.run(handle_game_run_operation(backend, request))
+    data = json.loads(resp.body.decode('utf-8'))
+    assert data['started'] is True
+    assert backend.run_slot._start.call_args.kwargs.get('display_name') == _OPEN_AND_ENTER
+
+
+def test_handle_game_run_operation_rejects_missing_param() -> None:
+    """缺必填参数(TalkInteract.option)→ 200 + {started: False, error}。"""
+    from sr_od.backend.http.service_routes import handle_game_run_operation
+
+    backend = MagicMock()
+    request = _request_with_body({'op_id': _TALK_INTERACT}, {})
+    resp = asyncio.run(handle_game_run_operation(backend, request))
+    assert resp.status_code == 200
+    data = json.loads(resp.body.decode('utf-8'))
+    assert data['started'] is False
+    assert 'option' in data['error']
+
+
+def test_handle_game_run_operation_concurrent_reject() -> None:
+    """单跑道已有运行 → 200 + {started: False, source}。"""
+    from sr_od.backend.http.service_routes import handle_game_run_operation
+
+    backend = MagicMock()
+    backend.run_slot._start.return_value = (False, None)
+    backend.query_status.return_value = RunStatusResult(state='running', source='mcp')
+    # 并发拒绝响应由 backend 统一助手产出,绑真实现(依赖均已被 mock)。
+    backend.run_refusal_response = lambda hint: SrBackendContext.run_refusal_response(backend, hint)
+    request = _request_with_body({'op_id': _OPEN_AND_ENTER}, {})
+    resp = asyncio.run(handle_game_run_operation(backend, request))
+    data = json.loads(resp.body.decode('utf-8'))
+    assert data['started'] is False
+    assert data['error'] == '已有运行在进行中'
+    assert data['source'] == 'mcp'
+
+
+def test_register_service_routes_adds_operation_routes() -> None:
+    """register_http_routes 应挂载 /game/operations 系列端点。"""
+    from mcp.server.fastmcp import FastMCP
+
+    from sr_od.backend.http.routes import register_http_routes
+
+    mcp = FastMCP('test')
+    register_http_routes(mcp, MagicMock())
+    app = mcp.streamable_http_app()
+    paths = {getattr(r, 'path', None) for r in app.routes}
+    assert '/game/operations' in paths
+    assert '/game/operations/describe' in paths
+    assert '/game/run/operation' in paths

@@ -11,16 +11,18 @@ cases:
   running: True
 - region: P02_YLL6_R10_DKQ
   num: 1
-  pos: [508, 747]
-  possible_pos: [516, 742, 38]
+  # 真值重锚(+6,+9): 真值录制后该层大地图重制、画布原点平移(与 MDZ_F1 的 +6 x 向同源)
+  pos: [514, 756]
+  possible_pos: [522, 751, 38]
   running: True
 - region: P02_YLL6_R11_MDZ_F1
   num: 1
-  pos: [592, 587]
-  possible_pos: [544, 594, 72]
+  # 真值重锚(+6px x 向): 与 world_patrol 变体同源的大地图重制帧偏移
+  pos: [598, 587]
+  possible_pos: [550, 594, 72]
   running: False
 - region: P02_YLL6_R11_MDZ_F1
   num: 2
-  pos: [469, 517]
-  possible_pos: [487, 530, 30]
+  pos: [475, 517]
+  possible_pos: [493, 530, 30]
   running: True
