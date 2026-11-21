@@ -1,15 +1,19 @@
-"""银轨商店入口识别（``find_rail_shop_badge`` 带内模板匹配 + 余额/可买解析）fixture 回归。
+"""银轨商店入口识别（``find_rail_shop_train`` 带内模板匹配 + ``parse_rail_shop_banner``
+横幅解析 + 可买解析）fixture 回归。
 
 锁的设计约定（标定依据见 src battle_prep_recognizer.py rail_shop 常量块注释）：
-- 在场判定：开拓银轨商店开张三态（备战 / 商店面板开启 / 消费回备战）徽记带内命中
-  且坐标落建档带内；商店未开张（开拓银轨<2）帧带内不命中
-  （实测分数带：在场 1.0 / 缺席 0.241，阈值 0.7 居中分离）；
-- 余额解析：横幅「打开商店 ×N」锚正则提取（单行 / 两行渲染均可达）；锚缺失 → None；
+- 在场判定：横幅左段**列车图案**带内 TM 命中（开拓银轨商店开张的备战态帧），
+  命中中心落建档带内且跨帧稳定（同布局存档帧中心恒 (416,297)——位置稳定性回归）；
+  商店未开张（开拓银轨<2）帧带内不命中（实测最高分 0.167 << 阈值 0.7）；
+- 开拓商店面板开启态帧**不命中**：面板盖住横幅、仅左缘窄条露出——锁这个物理事实
+  防模板误配（该画面不产 extras，识别面无消费；收店走徽记锚，见 cw_toggle_shop_panel）；
+- 横幅解析：锚「打开商店」文本条目 → (余额, 开店点击点)；单行 / 两行渲染均可达；
+  锚缺失 → 三元组全 None；锚在场数字缺失 → 余额 None 但点击点独立产出；
 - 胶囊在场性解析：「有商品可购买」锚命中 → True；未读到 → None
   （False 不产出；⚠️ 游戏语义未收敛,见 src ``_parse_rail_shop_buyable`` docstring ——
   测试只锁识别行为,不锁游戏触发语义）。
 
-OCR 端到端（余额/可买的带内 OCR 拼装）依赖 ctx,单测覆盖不到 ——
+带内 OCR 拼装端到端依赖 ctx,单测覆盖不到 ——
 由实机 / 离线 analyze 验证兜底（src ``_read_rail_shop`` docstring 申报）。
 
 fixture：rail_badge_prep_r4、rail_badge_consumed_r4、rail_badge_absent_r2 在
@@ -28,15 +32,16 @@ import numpy as np
 import pytest
 
 from one_dragon.base.geometry.rectangle import Rect
+from one_dragon.base.matcher.ocr.ocr_match_result import OcrMatchResult
 from sr_od.application.currency_war.obs.recognizers.battle_prep_recognizer import (
     _RAIL_CAPSULE_RECT,
-    find_rail_shop_badge,
-    _parse_rail_shop_balance,
     _parse_rail_shop_buyable,
+    find_rail_shop_train,
+    parse_rail_shop_banner,
 )
 
-#: 徽记搜索带 = 画面档「标识-银轨商店徽记」pc_rect（建档单一源；晶矿回归同款硬编码先例）
-_RAIL_BADGE_RECT = Rect(230, 220, 310, 580)
+#: 列车图案搜索带 = 画面档「标识-银轨商店列车图案」pc_rect（建档单一源；晶矿回归同款硬编码先例）
+_RAIL_TRAIN_RECT = Rect(325, 250, 500, 480)
 
 
 def _screens_dir() -> Path:
@@ -77,58 +82,96 @@ def _require_frame(name: str) -> np.ndarray:
 @cache
 def _run_find(name: str) -> tuple[float, int, int] | None:
     """单帧只跑一次识别，结果供该帧全部断言共用。"""
-    return find_rail_shop_badge(_require_frame(name), _RAIL_BADGE_RECT)
+    return find_rail_shop_train(_require_frame(name), _RAIL_TRAIN_RECT)
 
 
-def _rail_badge_tpl_missing() -> bool:
+def _rail_tpl_missing() -> bool:
     from one_dragon.utils.file_utils import get_project_root
     p = (get_project_root() / 'assets' / 'template' / 'currency_war'
-         / 'cw_rail_shop_badge' / 'raw.webp')
+         / 'cw_rail_shop_train' / 'raw.webp')
     return not p.is_file()
 
 
-pytestmark = pytest.mark.skipif(_rail_badge_tpl_missing(), reason='银轨商店徽记模板未归档')
+pytestmark = pytest.mark.skipif(_rail_tpl_missing(), reason='银轨商店列车图案模板未归档')
 
 
 @pytest.mark.parametrize('frame', [
-    'rail_badge_prep_r4',        # 备战态：徽记在场
-    'rail_badge_shop_open_r4',   # 商店面板开启态：徽记仍在场
-    'rail_badge_consumed_r4',    # 消费后回备战：徽记仍在
-    'rail_badge_capsule_prep_r4',  # 备战态（胶囊在场局）：徽记在场
+    'rail_badge_prep_r4',        # 备战态：横幅在场
+    'rail_badge_consumed_r4',    # 消费后回备战：横幅在场
+    'rail_badge_capsule_prep_r4',  # 备战态（胶囊在场局）：横幅在场
 ])
-def test_badge_present_in_shop_open_states(frame: str) -> None:
-    """商店开张三态徽记带内命中：score ≥ 阈值且中心落建档带内（点它打开商店）。"""
+def test_train_present_in_prep_states(frame: str) -> None:
+    """备战态帧列车图案带内命中：score ≥ 阈值、中心恒 (416,297) 且落建档带内。
+
+    中心等值锁 = 同布局存档帧的位置稳定性回归（识别锚漂移即红）。"""
     out = _run_find(frame)
-    assert out is not None, f'{frame} 徽记应命中（商店开张三态都在场）'
+    assert out is not None, f'{frame} 列车图案应命中（备战态横幅在场）'
     score, cx, cy = out
     assert score >= 0.7
-    assert 230 <= cx <= 310, f'cx={cx} 超出建档带 x [230,310]'
-    assert 220 <= cy <= 580, f'cy={cy} 超出建档带 y [220,580]'
+    assert (cx, cy) == (416, 297), f'中心漂移: ({cx},{cy}) != (416,297)'
+    assert 325 <= cx <= 500, f'cx={cx} 超出建档带 x [325,500]'
+    assert 250 <= cy <= 480, f'cy={cy} 超出建档带 y [250,480]'
 
 
-def test_badge_absent_when_shop_closed() -> None:
-    """商店未开张（开拓银轨<2）帧带内不命中（实测缺席帧带内最高分 0.241 << 阈值 0.7）。"""
+def test_train_miss_when_shop_closed() -> None:
+    """商店未开张（开拓银轨<2）帧带内不命中（实测缺席帧带内最高分 0.167 << 阈值 0.7）。"""
     assert _run_find('rail_badge_absent_r2') is None
 
 
-def test_balance_parse_single_line_anchor() -> None:
-    """单行渲染「打开商店 ×N」：锚条目自带数字直接取。"""
-    assert _parse_rail_shop_balance(['打开商店 ×330']) == 330
+def test_train_miss_on_pioneer_panel_open() -> None:
+    """开拓商店面板开启态帧不命中：面板盖住横幅、仅左缘窄条露出（实测最高分
+    0.518 < 0.7）——锁「开启态横幅被盖」的物理事实防模板误配;该画面不产 extras,
+    收店点击走徽记锚（cw_toggle_shop_panel）,本 miss 无生产消费面。"""
+    assert _run_find('rail_badge_shop_open_r4') is None
 
 
-def test_balance_parse_two_line_anchor() -> None:
-    """两行渲染（「打开商店」/「×N」分行）：取锚后第一条数字。"""
-    assert _parse_rail_shop_balance(['打开商店', '×330']) == 330
+def _ocr_item(x: int, y: int, w: int, h: int, data: str) -> OcrMatchResult:
+    """构造带绝对坐标与文本的 OCR 结果（框架 OcrMatchResult 同构）。"""
+    return OcrMatchResult(c=0.9, x=x, y=y, w=w, h=h, data=data)
 
 
-@pytest.mark.parametrize('texts', [
-    ['打开商店'],            # 锚在场但无数字（OCR 丢数字行）→ None 不伪造
-    ['羁绊面板行'],           # 无锚（带外面板文本）→ None
-    [],                      # 空读 → None
-])
-def test_balance_no_anchor_or_number_returns_none(texts: list[str]) -> None:
-    """锚缺失 / 数字缺失 → None（正确降级，不伪造余额）。"""
-    assert _parse_rail_shop_balance(texts) is None
+def test_banner_parse_single_line_anchor() -> None:
+    """单行渲染「打开商店 ×N」：锚条目自带数字直接取,点击点 = 锚 bbox 中心。"""
+    balance, cx, cy = parse_rail_shop_banner(
+        [_ocr_item(505, 274, 90, 21, '打开商店 ×330')])
+    assert balance == 330
+    assert (cx, cy) == (550, 284)
+
+
+def test_banner_parse_two_line_anchor() -> None:
+    """两行渲染（「打开商店」/「×N」分行）：余额取锚后第一条数字,点击点 = 锚中心。"""
+    balance, cx, cy = parse_rail_shop_banner([
+        _ocr_item(505, 274, 90, 21, '打开商店'),
+        _ocr_item(560, 300, 33, 20, '×330'),
+    ])
+    assert balance == 330
+    assert (cx, cy) == (550, 284)
+
+
+def test_banner_parse_anchor_without_number_keeps_click_point() -> None:
+    """锚在场但无数字（OCR 丢数字行）：余额 None 不伪造,开店点击点独立产出。"""
+    balance, cx, cy = parse_rail_shop_banner(
+        [_ocr_item(505, 274, 90, 21, '打开商店')])
+    assert balance is None
+    assert (cx, cy) == (550, 284)
+
+
+def test_banner_parse_no_anchor_returns_all_none() -> None:
+    """无锚（横幅不在场/被面板盖住）→ (None, None, None) 正确降级。"""
+    assert parse_rail_shop_banner([]) == (None, None, None)
+    assert parse_rail_shop_banner(
+        [_ocr_item(109, 437, 180, 27, '羁绊面板行')]) == (None, None, None)
+
+
+def test_banner_parse_noise_before_anchor() -> None:
+    """锚前有带内噪声条目不干扰:仍锚「打开商店」条目取值。"""
+    balance, cx, cy = parse_rail_shop_banner([
+        _ocr_item(109, 437, 180, 27, '2/4/6/8/10'),
+        _ocr_item(505, 274, 90, 21, '打开商店'),
+        _ocr_item(560, 300, 33, 20, '×20'),
+    ])
+    assert balance == 20
+    assert (cx, cy) == (550, 284)
 
 
 def test_buyable_present_and_absent() -> None:
