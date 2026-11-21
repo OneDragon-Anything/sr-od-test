@@ -87,8 +87,8 @@ def _run_find(name: str) -> tuple[float, int, int] | None:
 
 def _rail_tpl_missing() -> bool:
     from one_dragon.utils.file_utils import get_project_root
-    p = (get_project_root() / 'assets' / 'template' / 'currency_war'
-         / 'cw_rail_shop_train' / 'raw.webp')
+    p = (get_project_root() / 'assets' / 'template'
+         / 'cw_rail_shop_train' / 'cw_rail_shop_train' / 'raw.webp')
     return not p.is_file()
 
 

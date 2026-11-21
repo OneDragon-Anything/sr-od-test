@@ -77,8 +77,8 @@ def _run_find(name: str) -> tuple[float, int, int] | None:
 
 def _aura_tpl_missing() -> bool:
     from one_dragon.utils.file_utils import get_project_root
-    p = (get_project_root() / 'assets' / 'template' / 'currency_war'
-         / 'cw_aura_marker' / 'raw.webp')
+    p = (get_project_root() / 'assets' / 'template'
+         / 'cw_aura_marker' / 'cw_aura_marker' / 'raw.webp')
     return not p.is_file()
 
 
