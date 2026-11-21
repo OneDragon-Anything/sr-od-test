@@ -1,0 +1,146 @@
+"""read_shop_cards 试用形态分流测试(灰带闭环)。
+
+锁的设计约定(试用形态识别批,证据 = 第六跑停机存证帧):
+- 亮度灰带(50-60)且牌面右上角红「试用」标签命中 → 放行既有 SIFT 链,
+  ShopCard.trial=True(试用卡灰暗化渲染致亮度落带;身份识别不受影响,
+  实测内点 49 远超阈值 10——降阈值与逐卡暗模板都不需要);
+- 灰带无标签 → 维持 unknown 不猜(防线不放松,放行仅限标签确证的
+  试用形态);
+- extras 序列化(_shop_slots_to_json)透传 trial 键(MCP agent 消费面)。
+
+fixture = sr-od-test/screens/货币战争-备战-开商店/试用景元灰带帧.webp
+(第六跑停机现场:槽5 试用景元,亮度 52.4,缺陷台账同值)+ 同目录
+「标签抹除合成」帧(标签区替换为其自身均值色平面:全槽亮度不变保持
+灰带、标签 TM 确定 miss、SIFT 本可识别——构造「灰带无标签」目标形态)。
+
+识别层依赖经 monkeypatch 打桩(area rect 查表 / 模板真加载 / 遥测
+record_defect 缺省 no-op 零副作用);收起识别标志门经假全帧 OCR token
+直过(同源判定路径,二值化重判分支不触发)。
+"""
+
+import types
+
+import cv2
+import numpy as np
+import pytest
+
+from sr_od.application.currency_war.obs import cw_observation as obs
+from sr_od.application.currency_war.obs.recognizers.shop_open_recognizer import (
+    _shop_slots_to_json,
+)
+
+#: screen_info「货币战争-备战-开商店」商店牌区 rect(建档坐标,fixture 全帧同坐标系)
+_RECTS = {
+    '商店牌-1': (377, 70, 605, 260), '商店牌-2': (646, 70, 874, 260),
+    '商店牌-3': (914, 70, 1142, 260), '商店牌-4': (1183, 70, 1411, 260),
+    '商店牌-5': (1452, 70, 1680, 260),
+    '商店牌-1-费用': (536, 284, 605, 322), '商店牌-2-费用': (805, 284, 873, 322),
+    '商店牌-3-费用': (1074, 284, 1142, 322), '商店牌-4-费用': (1343, 284, 1411, 322),
+    '商店牌-5-费用': (1611, 284, 1680, 322),
+}
+
+#: 收起识别标志假全帧 OCR token(bbox 中心落在「按钮-收起」rect 内)
+_FAKE_FULL_OCR = [types.SimpleNamespace(
+    data='收起', x=1598, y=967, w=47, h=27)]
+
+_FIXTURE_DIR = ('screens', '货币战争-备战-开商店')
+
+
+@pytest.fixture(scope='module')
+def trial_frame(request) -> np.ndarray:
+    """存证帧全帧(RGB;读盘一次供本模块共用)。"""
+    from one_dragon.utils.file_utils import get_project_root
+    p = get_project_root() / 'sr-od-test' / _FIXTURE_DIR[0] / _FIXTURE_DIR[1] \
+        / '试用景元灰带帧.webp'
+    img = cv2.imdecode(np.fromfile(str(p), np.uint8), cv2.IMREAD_COLOR)
+    assert img is not None, f'fixture 缺失: {p}'
+    return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+
+@pytest.fixture(scope='module')
+def synth_no_badge_frame(request) -> np.ndarray:
+    """标签抹除合成帧全帧(RGB;读盘一次供本模块共用)。"""
+    from one_dragon.utils.file_utils import get_project_root
+    p = get_project_root() / 'sr-od-test' / _FIXTURE_DIR[0] / _FIXTURE_DIR[1] \
+        / '试用景元灰带帧-标签抹除合成.webp'
+    img = cv2.imdecode(np.fromfile(str(p), np.uint8), cv2.IMREAD_COLOR)
+    assert img is not None, f'fixture 缺失: {p}'
+    return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+
+@pytest.fixture(scope='module')
+def portrait_templates(request) -> dict:
+    """角色立绘模板(贵加载,本模块只算一次)。"""
+    from one_dragon.utils.file_utils import get_project_root
+    from sr_od.application.currency_war.obs.currency_war_char_id import (
+        load_avatar_templates,
+    )
+    return load_avatar_templates(
+        get_project_root() / 'assets' / 'template' / 'currency_war'
+        / 'character_avatar')
+
+
+def _stub_read_chain(monkeypatch, templates: dict) -> None:
+    """读链依赖打桩:area rect 查表 / 模板注入 / 局外 game state None。"""
+    monkeypatch.setattr(obs, '_area_rect',
+                        lambda ctx, name, screen=None: types.SimpleNamespace(
+                            x1=_RECTS[name][0], y1=_RECTS[name][1],
+                            x2=_RECTS[name][2], y2=_RECTS[name][3])
+                        if name in _RECTS else None)
+    monkeypatch.setattr(obs, 'ensure_portrait_templates',
+                        lambda ctx: templates)
+    monkeypatch.setattr(obs, 'game_state_from_ctx', lambda ctx: None)
+
+
+def _fake_ctx(frame: np.ndarray) -> types.SimpleNamespace:
+    """最小 ctx:收起识别标志画面档 + 截屏恒返当前帧(稳定门重读同帧)。"""
+    collapse = types.SimpleNamespace(
+        area_name='按钮-收起', text='收起',
+        rect=types.SimpleNamespace(x1=1599, y1=967, x2=1646, y2=994))
+    si = types.SimpleNamespace(area_list=[collapse])
+    return types.SimpleNamespace(
+        screen_loader=types.SimpleNamespace(get_screen=lambda name: si),
+        controller=types.SimpleNamespace(
+            screenshot=lambda: (0.0, frame)))
+
+
+def test_trial_card_grayband_recognized_with_badge(
+        monkeypatch, trial_frame, portrait_templates) -> None:
+    """灰带 + 试用标签 → content(name=景元, trial=True);空槽维持 empty。"""
+    _stub_read_chain(monkeypatch, portrait_templates)
+    slots = obs.read_shop_cards(_fake_ctx(trial_frame), trial_frame,
+                                full_ocr=_FAKE_FULL_OCR)
+    assert slots is not None
+    kinds = [s.kind for s in slots]
+    assert kinds == ['empty', 'empty', 'empty', 'empty', 'content']
+    card = slots[4].card
+    assert card is not None
+    assert card.name == '景元'
+    assert card.trial is True
+    assert card.slot == 5
+
+
+def test_grayband_without_badge_stays_unknown(
+        monkeypatch, synth_no_badge_frame, portrait_templates) -> None:
+    """灰带无标签 → unknown(防线不放松;标签是放行唯一依据)。"""
+    _stub_read_chain(monkeypatch, portrait_templates)
+    slots = obs.read_shop_cards(_fake_ctx(synth_no_badge_frame),
+                                synth_no_badge_frame,
+                                full_ocr=_FAKE_FULL_OCR)
+    assert slots is not None
+    assert slots[4].kind == 'unknown'
+    assert slots[4].card is None
+
+
+def test_shop_slots_to_json_carries_trial(monkeypatch) -> None:
+    """extras 序列化透传 trial 键(MCP agent 消费面)。"""
+    card = obs.ShopCard(x=1566, slot=5, faction='云上五骁', name='景元',
+                        cost=1, star=1, cost_source='roster_fallback',
+                        trial=True)
+    out = _shop_slots_to_json([types.SimpleNamespace(
+        kind='content', card=card)])
+    assert out[0]['card']['trial'] is True
+    no_trial = _shop_slots_to_json([types.SimpleNamespace(
+        kind='content',
+        card=obs.ShopCard(x=100, slot=1, faction='仙舟舰队', name='桂乃芬'))])
+    assert no_trial[0]['card']['trial'] is False
