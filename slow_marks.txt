@@ -80,3 +80,8 @@ test/sr_od/application/cultivation/relic/operations/test_equip_relic.py::test_lo
 test/one_dragon/mys/test_aigis_verifier.py::test_close_releases_port_and_instance_unusable
 test/sr_od/application/cultivation/light_cone/operations/test_upgrade_light_cone_fail_adaptation.py::TestFailBranchBehavior::test_victory_settle_branch_regression
 test/sr_od/application/cultivation/character/operations/test_upgrade_character_fail_adaptation.py::TestFailBranchBehavior::test_victory_settle_branch_regression
+
+# 2026-11-21 商店刷新钮三态真帧登记:三帧读链各带全帧 OCR(识别标志判定)
+# + rect 两级放大 OCR,冷跑实测 ~2.7s;温缓存(memo)0.09s,登记防标准
+# 全量冷缓存首跑抖动过线
+test/sr_od/application/currency_war/obs/test_cw_shop_refresh_obs.py::test_refresh_button_three_states_real_frames

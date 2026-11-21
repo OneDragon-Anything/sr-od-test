@@ -1,17 +1,23 @@
-"""read_shop_cards 试用形态分流测试(灰带闭环)。
+"""read_shop_cards 试用形态分流测试(灰带闭环 + 正常亮度试用形态)。
 
-锁的设计约定(试用形态识别批,证据 = 第六跑停机存证帧):
-- 亮度灰带(50-60)且牌面右上角红「试用」标签命中 → 放行既有 SIFT 链,
-  ShopCard.trial=True(试用卡灰暗化渲染致亮度落带;身份识别不受影响,
-  实测内点 49 远超阈值 10——降阈值与逐卡暗模板都不需要);
-- 灰带无标签 → 维持 unknown 不猜(防线不放松,放行仅限标签确证的
+锁的设计约定(试用形态识别批,证据 fixture 见 sr-od-test/screens/
+货币战争-备战-开商店/ 目录):
+- 「试用」标签检查对内容亮度域(≥50)无条件执行——同一试用形态有灰暗化
+  (亮度落 50-60 灰带)与正常亮度(≥60)两种渲染,标签是唯一跨形态判别:
+  灰带 + 标签命中 → trial=True 放行既有 SIFT 链(试用景元灰带帧);
+  正常亮度 + 标签命中 → trial=True(正常亮度试用四连帧,四卡同帧);
+  灰带无标签 → 维持 unknown 不猜(防线不放松,放行仅限标签确证的
   试用形态);
+- TM 阈值下界样本:preview_star 帧槽5 标签 TM=0.750(跨卡渲染方差最低
+  实测点,阈值 0.68 上方)仍须命中——标签底为半透明,透出卡面背景致
+  底色随卡浮动,阈值依据见 cw_observation 形态裁决注释;
 - extras 序列化(_shop_slots_to_json)透传 trial 键(MCP agent 消费面)。
 
-fixture = sr-od-test/screens/货币战争-备战-开商店/试用景元灰带帧.webp
-(第六跑停机现场:槽5 试用景元,亮度 52.4,缺陷台账同值)+ 同目录
-「标签抹除合成」帧(标签区替换为其自身均值色平面:全槽亮度不变保持
-灰带、标签 TM 确定 miss、SIFT 本可识别——构造「灰带无标签」目标形态)。
+fixture = 同目录「试用景元灰带帧.webp」(第六跑停机现场:槽5 试用景元,
+亮度 52.4)+「标签抹除合成」帧(标签区替换为其自身均值色平面:全槽亮度
+不变保持灰带、标签 TM 确定 miss、SIFT 本可识别——构造「灰带无标签」
+目标形态)+「正常亮度试用四连帧.webp」(槽1 正卡飞霄 + 槽2-5 试用乱破/
+托帕&账账/赛飞儿/忘归人,亮度 87-112)。
 
 识别层依赖经 monkeypatch 打桩(area rect 查表 / 模板真加载 / 遥测
 record_defect 缺省 no-op 零副作用);收起识别标志门经假全帧 OCR token
@@ -63,6 +69,17 @@ def synth_no_badge_frame(request) -> np.ndarray:
     from one_dragon.utils.file_utils import get_project_root
     p = get_project_root() / 'sr-od-test' / _FIXTURE_DIR[0] / _FIXTURE_DIR[1] \
         / '试用景元灰带帧-标签抹除合成.webp'
+    img = cv2.imdecode(np.fromfile(str(p), np.uint8), cv2.IMREAD_COLOR)
+    assert img is not None, f'fixture 缺失: {p}'
+    return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+
+@pytest.fixture(scope='module')
+def bright_trial_frame(request) -> np.ndarray:
+    """正常亮度试用四连帧全帧(RGB;读盘一次供本模块共用)。"""
+    from one_dragon.utils.file_utils import get_project_root
+    p = get_project_root() / 'sr-od-test' / _FIXTURE_DIR[0] / _FIXTURE_DIR[1] \
+        / '正常亮度试用四连帧.webp'
     img = cv2.imdecode(np.fromfile(str(p), np.uint8), cv2.IMREAD_COLOR)
     assert img is not None, f'fixture 缺失: {p}'
     return cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
@@ -130,6 +147,47 @@ def test_grayband_without_badge_stays_unknown(
     assert slots is not None
     assert slots[4].kind == 'unknown'
     assert slots[4].card is None
+
+
+def test_brightness_trial_cards_flagged_by_badge(
+        monkeypatch, bright_trial_frame, portrait_templates) -> None:
+    """正常亮度(≥60)试用形态 ×4 → trial=True,正卡 trial=False。
+
+    锁「标签检查对内容亮度域无条件执行」:四张试用卡亮度 87-112 不落
+    灰带,标签命中必须照标 trial(旧逻辑亮度门把标签检查锁在灰带分支内,
+    正常亮度试用卡恒 trial=false——缺陷现场回归)。
+    费用徽章读取打桩(本帧槽4 字形模板分类不出,慢路 OCR 需真引擎;
+    费用链非本测试锁点,真值由真帧探查与 analyze 端到端辖)。"""
+    _stub_read_chain(monkeypatch, portrait_templates)
+    monkeypatch.setattr(obs, 'read_shop_card_cost',
+                        lambda ctx, screen, slot: None)
+    slots = obs.read_shop_cards(_fake_ctx(bright_trial_frame),
+                                bright_trial_frame,
+                                full_ocr=_FAKE_FULL_OCR)
+    assert slots is not None
+    kinds = [s.kind for s in slots]
+    assert kinds == ['content'] * 5
+    trials = [s.card.trial for s in slots]
+    assert trials == [False, True, True, True, True]
+    names = [s.card.name for s in slots]
+    assert names == ['飞霄', '乱破', '托帕&账账', '赛飞儿', '忘归人']
+
+
+def test_trial_badge_lowest_variance_sample_still_hits(
+        bright_trial_frame) -> None:
+    """TM 阈值下界样本(preview_star 帧槽5 标签 TM≈0.750)仍命中。
+
+    纯 CV 快路径,不跑 SIFT:跨卡标签渲染方差最低实测点在阈值 0.68
+    上方,防未来阈值回调把边界样本切掉(阈值依据 =
+    cw_observation 形态裁决注释)。"""
+    from one_dragon.utils.file_utils import get_project_root
+    p = get_project_root() / 'sr-od-test' / _FIXTURE_DIR[0] / _FIXTURE_DIR[1] \
+        / 'shop_open_preview_star.webp'
+    img = cv2.imdecode(np.fromfile(str(p), np.uint8), cv2.IMREAD_COLOR)
+    assert img is not None, f'fixture 缺失: {p}'
+    rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+    x1, y1, x2, y2 = _RECTS['商店牌-5']
+    assert obs._trial_badge_hit_in_crop(rgb[y1:y2, x1:x2]) is True
 
 
 def test_shop_slots_to_json_carries_trial(monkeypatch) -> None:
