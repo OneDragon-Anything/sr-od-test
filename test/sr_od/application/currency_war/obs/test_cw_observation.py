@@ -93,8 +93,7 @@ def portrait_templates(request) -> dict:
         load_avatar_templates,
     )
     return load_avatar_templates(
-        get_project_root() / 'assets' / 'template' / 'currency_war'
-        / 'character_avatar')
+        get_project_root() / 'assets' / 'template' / 'cw_character_avatar')
 
 
 def _stub_read_chain(monkeypatch, templates: dict) -> None:

@@ -69,7 +69,7 @@ def _run_find(name: str) -> list[tuple[str, object, int]]:
 
 def _ore_tpl_missing() -> bool:
     from one_dragon.utils.file_utils import get_project_root
-    base = get_project_root() / 'assets' / 'template' / 'currency_war' / 'reward_ore'
+    base = get_project_root() / 'assets' / 'template' / 'cw_reward_ore'
     return not base.is_dir() or not any(base.glob('*.webp'))
 
 
@@ -134,7 +134,7 @@ _BENCH_SLOT6_RECT = Rect(1004, 847, 1118, 978)
 
 def _char_tpl_missing() -> bool:
     from one_dragon.utils.file_utils import get_project_root
-    base = get_project_root() / 'assets' / 'template' / 'currency_war' / 'character_avatar'
+    base = get_project_root() / 'assets' / 'template' / 'cw_character_avatar'
     return not base.is_dir() or not any(base.glob('*/raw.png'))
 
 
@@ -148,7 +148,7 @@ def _char_templates() -> dict:
     from sr_od.application.currency_war.obs.currency_war_char_id import (
         load_avatar_templates,
     )
-    base = get_project_root() / 'assets' / 'template' / 'currency_war' / 'character_avatar'
+    base = get_project_root() / 'assets' / 'template' / 'cw_character_avatar'
     return load_avatar_templates(base)
 
 
