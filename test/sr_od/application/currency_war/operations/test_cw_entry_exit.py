@@ -126,6 +126,47 @@ class TestPendingGiveupChain:
         assert '货币战争-模式选择-结束结算确认' not in CwEntryExit.ROUTE_BY_SCREEN
 
 
+class TestRouteDefaultDelegateOnly:
+    """route ⑤ 纯委托契约:敌人信息浮层零特判,与全部表外画面同一去处。
+
+    退出链内联特判已清偿(跨迭代挂账「敌人信息浮层建画面 op」条):浮层
+    处理职责移入独立画面 op CwScreenEnemyInfo,经委托的 CwLoop 阶段一
+    身份分发派发——本测试锁两端接线:分发清单登记(loop 侧承接的前提)+
+    route ⑤ 对该屏与任意已建档对局中画面同样只发委托状态(零特判)。
+    """
+
+    def test_enemy_info_routes_to_delegate(
+        self,
+        test_context: SrTestContext,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from sr_od.application.currency_war.kernel.cw_dispatch_tables import (
+            CW_DISPATCH_SCREENS,
+        )
+
+        assert '货币战争-敌人信息浮层' in CW_DISPATCH_SCREENS, (
+            '敌人信息浮层未登记分发清单:退出链委托后 loop 无承接分支')
+
+        def _fake_in_match(ctx, screen):
+            return '货币战争-敌人信息浮层'
+
+        def _fake_match(ctx, screen, screen_name_list=None):
+            return None
+
+        monkeypatch.setattr(
+            cw_entry_exit_module, 'get_in_match_screen_name', _fake_in_match)
+        monkeypatch.setattr(
+            cw_entry_exit_module, 'get_match_screen_name', _fake_match)
+        op = _WatchedCwEntryExit(test_context)
+        op.last_screenshot = np.zeros((1080, 1920, 3), dtype=np.uint8)
+
+        result = op.route()
+
+        assert result.is_success, f'route 应 success 携委托状态,status={result.status}'
+        assert result.status == cw_entry_exit_module.ST_DELEGATE, (
+            f'敌人信息浮层应走默认委托(零特判),实际 status={result.status}')
+
+
 class TestBattleXDeadClickSentinel:
     """battle_x 静态页哨:连续同帧提前失败 / 动画帧永不触发 / 损坏帧清零。"""
 
