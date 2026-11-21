@@ -92,6 +92,12 @@ def test_three_step_chain_reports_then_grabs_idx0_and_verifies(
     assert len(preview) == (CwScreenAuraSelect.FRONT_SLOTS
                             + CwScreenAuraSelect.BACK_SLOTS), \
         f'预览产点应 10 槽行主序,实际 {preview!r}'
+    # —— 选择落地记账:判效双锚过后按末次抓点槽写 aura_slot(首发
+    #    idx 0 = 前排槽 1;与备战帧光标观察同字段同语义)
+    assert gs.aura_slot.value == 1, \
+        f'判效过后 aura_slot 应按首发抓点落前排槽 1,实际 {gs.aura_slot.value!r}'
+    assert gs.aura_slot.source == 'logic', \
+        f'选择记账应为逻辑态,实际 {gs.aura_slot.source!r}'
     # —— 拖拽源 = preview_xy[0] 零参读(v1 固定前排第一)
     assert len(ctrl.recorded_drags) >= 1, \
         f'三步链应含拖拽,实际 {ctrl.recorded_drags}'
@@ -120,6 +126,9 @@ def test_verify_miss_retries_grab_points_then_fails(
     assert not result.success, \
         f'判效恒 miss 应 fail 交外环,实际 {result.status!r}'
     gs = game_state_of(test_context.cw_match.session)
+    # 判效未过 = 选择未落地 → aura_slot 零写(记账闸在判效成功分支)
+    assert gs.aura_slot.value is None, \
+        f'判效恒 miss fail 路径不应写 aura_slot,实际 {gs.aura_slot.value!r}'
     preview = list(gs.aura_select_preview_xy.value or [])
     # 每次尝试的首次拖拽起点序列(每次三步链 2 次拖拽,取偶数位)
     grabs = [d[0] for d in ctrl.recorded_drags[::2]]
