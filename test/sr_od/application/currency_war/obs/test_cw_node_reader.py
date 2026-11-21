@@ -1,21 +1,21 @@
 """boss 大图标 SIFT 模板库 fixture 回归(文件镜像 src cw_node_reader.py)。
 
 锁的设计约定:
-- **库覆盖 = 实机帧命中**:boss_avatar 库(图鉴 20 公司 + 实机补采公司)
-  加载后,对含该公司大图标的实机帧按生产同款 area rect
-  (screen_info「区域-boss大图标」,坐标单一源)裁片跑
+- **库覆盖 = 实机帧命中**:cw_boss_avatar 统一模板库(21 公司目录制,
+  raw.png = 原尺度模板 alpha 合成实机底色)加载后,对含该公司大图标的实机帧
+  按生产同款 area rect(screen_info「区域-boss大图标」,坐标单一源)裁片跑
   ``match_boss_sift`` → 命中该公司且好匹配达断层门
   (``BOSS_SIFT_MIN_GOOD``/``BOSS_SIFT_RATIO``)。回归背景:图鉴 20 公司
   集外的新赛季公司(深渊育种科技)曾整库未命中致位面情报采集响亮失败;
 - **模板 × 双识别域兼容**:同一公司模板须在两个生产裁片域同时过断层门——
   大图标域(~105px)与节点条域(``classify_node_row`` boss 圆 ~56px patch,
-  备战条/位面条共用)。回归背景:不死者联盟模板初版为图鉴 60px 小图,
-  在大图标域被同尺度实机大模板抢分(好匹配 7 vs 5,断层门不过)致
-  位面情报采集响亮失败;换实机大裁片原尺度落位时节点条域又失配,
-  实测 0.9 缩放两域同时过(裁片构建依据,见模板批 commit);
-- **非 boss 图标位不误命中**:语料帧详情条图标位为宝箱(非 boss 节点)
-  时,新模板不得成为命中结果(生产链此路径另有「首领」标签门前置,
-  本条为库侧负样本保险);
+  备战条/位面条共用;位面详情彩色渲染态。备战屏锁灰态小图两代库都过不了门,
+  生产行为 = 保守拒判 ``NodeSlot.boss=None``,由重试/响亮失败防线兜底)。
+  回归背景:不死者联盟旧模板为图鉴 60px 小图,在大图标域被同尺度实机大模板
+  抢分(好匹配 7 vs 5,断层门不过)致位面情报采集响亮失败;
+- **非 boss 图标位不误命中**:语料帧详情条图标位为补给/战斗图标(非 boss
+  节点)时,模板不得成为命中结果——零误报是统一模板批的实验验收口径
+  (补给族出现过第一名 10:10 平分,靠断层门 tie 拦截拦下);
 - **新模板不抢他司命中**:已识别公司的实机帧(深渊育种科技)与库外
   变体帧(纹章风头像)上,后补模板不得成为命中结果——抢分会破坏
   他司断层门(同尺度模板互相抬次名分,即本批回归的成因形态)。
@@ -24,7 +24,9 @@ fixture(货币战争-位面详情/):位面1选中-深渊育种科技(实机决�
 帧内 boss = 深渊育种科技·堕神之血·亚婆离)、位面1选中-棋盘格纹理
 (图标位 = 宝箱)、位面2选中-不死者联盟(实机决策帧归档,帧内 boss =
 不死者联盟·极乐颠倒·邪愿莲华主)、位面详情-纹章风头像-run30(库外变体
-渲染,无库命中)。缺帧/缺模板目录 → skip。
+渲染,无库命中);语料帧 6 张(实机决策帧归档,私有大语料的持久化子集:
+正 = 深渊育种科技/不死者联盟大图标各 1,负 = 补给图标 ×3 + 战斗图标 ×1
+的 boss 图标位占位帧)。缺帧/缺模板目录 → skip。
 """
 from __future__ import annotations
 
@@ -34,13 +36,13 @@ from pathlib import Path
 import cv2
 import numpy as np
 import pytest
+from test.conftest import SrTestContext
 
 from one_dragon.utils.file_utils import get_project_root
 from sr_od.application.currency_war.obs.cw_node_reader import (
     BOSS_SIFT_MIN_GOOD,
     match_boss_sift,
 )
-from test.conftest import SrTestContext
 
 _PD = '货币战争-位面详情'
 #: 新公司名(模板 stem = SIFT 命中返回名 = cw_enemy_data.BOSS_MECHANICS 规范名)
@@ -83,7 +85,7 @@ def _require_frame(state: str) -> np.ndarray:
 def _boss_templates() -> dict:
     """生产同款模板库加载;目录缺失/为空 → skip(库面归数据批管)。"""
     from sr_od.application.currency_war.obs.cw_node_reader import load_boss_templates
-    base = get_project_root() / 'assets' / 'template' / 'currency_war' / 'boss_avatar'
+    base = get_project_root() / 'assets' / 'template' / 'cw_boss_avatar'
     if not base.is_dir():
         pytest.skip(f'模板库目录缺失:{base}')
     tpls = load_boss_templates(base)
@@ -94,7 +96,6 @@ def _boss_templates() -> dict:
 
 def _detail_icon_rect(ctx: SrTestContext):
     """大图标裁片 rect(screen_info 单一源;area 缺失 → skip)。"""
-    from one_dragon.base.geometry.rectangle import Rect
     from sr_od.application.currency_war.kernel.cw_obs_core import _area_rect
     r = _area_rect(ctx, '区域-boss大图标', _PD)
     if r is None:
@@ -182,3 +183,59 @@ def test_new_template_not_hijacking_other_company_icons(
         hit = match_boss_sift(gray, _boss_templates())
         assert hit is None or hit[0] != _P2_COMPANY, \
             f'{state} 不应命中{_P2_COMPANY},实际 {hit}'
+
+
+def test_boss_library_matches_boss_registry() -> None:
+    """库面目录制契约 × 敌情注册表一致性(21 公司全量可加载)。
+
+    锁:①库公司目录集合 = ``cw_enemy_data.BOSS_MECHANICS`` 规范名集合——
+    SIFT 命中名直接作 boss 读数与机制 tag 查表键,名字集合不一致 = 命中结果
+    进不了注册表;②库经生产 ``load_boss_templates`` 装载后 21 家齐全且全部
+    过特征门槛(特征 <4 的公司会被装载器静默丢弃,此处显式暴露);③每公司
+    目录三件套齐全(raw = 识别消费 / mask = 透明通道掩码备后续忽略透明通道
+    匹配 / src = 原始透明底素材存档)。
+    """
+    from sr_od.application.currency_war.data.cw_enemy_data import BOSS_MECHANICS
+    base = get_project_root() / 'assets' / 'template' / 'cw_boss_avatar'
+    tpls = _boss_templates()
+    assert set(tpls) == set(BOSS_MECHANICS), \
+        f'库公司集应与 BOSS_MECHANICS 规范名集一致;缺 {set(BOSS_MECHANICS) - set(tpls)},多 {set(tpls) - set(BOSS_MECHANICS)}'
+    for company in BOSS_MECHANICS:
+        for fname in ('raw.png', 'mask.png', 'src.png'):
+            assert (base / company / fname).is_file(), \
+                f'{company} 目录缺三件套文件:{fname}'
+
+
+@pytest.mark.parametrize('state, company', [
+    ('位面boss图标-深渊育种科技-语料帧', '深渊育种科技'),
+    ('位面boss图标-不死者联盟-语料帧', '不死者联盟'),
+])
+def test_corpus_positive_frames_hit(test_context: SrTestContext,
+                                    state: str, company: str) -> None:
+    """语料正样本帧(大语料持久化子集)→ 命中真值公司且过断层门。"""
+    frame = _require_frame(state)
+    r = _detail_icon_rect(test_context)
+    patch = frame[r.y1:r.y2, r.x1:r.x2]
+    gray = cv2.cvtColor(patch, cv2.COLOR_RGB2GRAY)
+    hit = match_boss_sift(gray, _boss_templates())
+    assert hit is not None, f'语料帧 {state} 应命中{company}(库覆盖)'
+    name, good = hit
+    assert name == company, f'语料帧 {state} 命中名应为{company},实际 {name}'
+    assert good >= BOSS_SIFT_MIN_GOOD, f'好匹配 {good} 应达断层门 {BOSS_SIFT_MIN_GOOD}'
+
+
+@pytest.mark.parametrize('state', [
+    '位面boss图标位-补给图标-语料帧A',
+    '位面boss图标位-补给图标-语料帧B',
+    '位面boss图标位-补给图标-语料帧C',
+    '位面boss图标位-战斗图标-语料帧',
+])
+def test_corpus_negative_frames_rejected(test_context: SrTestContext,
+                                         state: str) -> None:
+    """语料负样本帧(boss 图标位为补给/战斗图标)→ 拒判 None(零误报口径)。"""
+    frame = _require_frame(state)
+    r = _detail_icon_rect(test_context)
+    patch = frame[r.y1:r.y2, r.x1:r.x2]
+    gray = cv2.cvtColor(patch, cv2.COLOR_RGB2GRAY)
+    hit = match_boss_sift(gray, _boss_templates())
+    assert hit is None, f'非 boss 图标位帧 {state} 应拒判,实际 {hit}'
