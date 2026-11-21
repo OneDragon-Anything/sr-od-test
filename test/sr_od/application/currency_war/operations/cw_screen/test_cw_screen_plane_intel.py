@@ -8,8 +8,9 @@
 - 联动核:点卡后复查同一判据,命中即放行(零重试)。
 
 帧资产 = 测试仓 ``screens/货币战争-位面详情/``(金环态 = 位面详情全屏 /
-位面1选中-棋盘格纹理 / 位面1查看态-开场;白环态 = 位面2查看态-白环;
-负样本 = 敌人信息浮层)。
+位面1选中-棋盘格纹理 / 位面1查看态-开场;白环态 = 位面2查看态-白环);
+负样本 = 敌人信息浮层(帧实属敌人信息浮层屏,浮层独立建屏后语料随迁其
+目录 ``screens/货币战争-敌人信息浮层/``,按帧实属屏加载)。
 """
 
 from __future__ import annotations
@@ -22,21 +23,22 @@ from sr_od.application.currency_war.operations.cw_screen.cw_screen_plane_intel i
 )
 
 _PD: str = '货币战争-位面详情'
+_EI: str = '货币战争-敌人信息浮层'
 
-# (存档 state 名, 期望查看位面号 | None=两族模板全 miss)
-_CORPUS_FRAMES: tuple[tuple[str, int | None], ...] = (
-    ('位面详情全屏', 1),
-    ('位面1选中-棋盘格纹理', 1),
-    ('位面1查看态-开场', 1),
-    ('位面2查看态-白环', 2),
-    ('敌人信息浮层', None),
+# (存档屏, 存档 state 名, 期望查看位面号 | None=两族模板全 miss)
+_CORPUS_FRAMES: tuple[tuple[str, str, int | None], ...] = (
+    (_PD, '位面详情全屏', 1),
+    (_PD, '位面1选中-棋盘格纹理', 1),
+    (_PD, '位面1查看态-开场', 1),
+    (_PD, '位面2查看态-白环', 2),
+    (_EI, '敌人信息浮层', None),
 )
 
 
 def _require_frames(test_context: SrTestContext) -> None:
-    for state, _ in _CORPUS_FRAMES:
-        if not test_context.has_screen(_PD, state):
-            pytest.skip(f'存档截图缺失:screens/{_PD}/{state}.webp')
+    for screen, state, _ in _CORPUS_FRAMES:
+        if not test_context.has_screen(screen, state):
+            pytest.skip(f'存档截图缺失:screens/{screen}/{state}.webp')
 
 
 def test_selected_plane_signal_on_corpus_frames(
@@ -44,10 +46,10 @@ def test_selected_plane_signal_on_corpus_frames(
     """判据信号在全部语料帧上稳定(模板信号不依赖 OCR 检测参数)。"""
     _require_frames(test_context)
     op = CwScreenPlaneIntel(test_context)
-    for state, expected in _CORPUS_FRAMES:
-        frame = test_context.load_screen(_PD, state)
+    for screen, state, expected in _CORPUS_FRAMES:
+        frame = test_context.load_screen(screen, state)
         assert op._selected_plane_no(frame) == expected, \
-            f'帧 {state} 期望查看位面判读={expected}'
+            f'帧 {screen}/{state} 期望查看位面判读={expected}'
 
 
 def test_selected_plane_sim_port_passthrough(
