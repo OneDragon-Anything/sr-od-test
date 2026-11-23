@@ -34,8 +34,8 @@ _TAB_FRAME = ('角色-遗器', 'default')
 _REPLACE_FRAME = ('遗器-替换', 'default')
 _FILTER_PANEL_FRAME = ('遗器-替换', '筛选面板开')
 _FILTER_CHIP_FRAME = ('遗器-替换', '筛选面板带chip筛选后列表')
-_DIALOG_FRAME = ('遗器-替换-筛选规则', '筛选规则弹窗')
-_DIALOG_CHECKED_FRAME = ('遗器-替换-筛选规则', '筛选规则弹窗已勾选')
+_DIALOG_FRAME = ('遗器筛选弹窗', '替换侧-默认')
+_DIALOG_CHECKED_FRAME = ('遗器筛选弹窗', '替换侧-已勾选')
 _SORT_ON_FRAME = ('遗器-排序规则', '建议排序开')
 _SORT_OFF_FRAME = ('遗器-排序规则', '建议排序关')
 _SORT_LEVEL_FRAME = ('遗器-排序规则', '等级已选中')
@@ -109,9 +109,9 @@ def test_set_name_chain_applies_filter(
         {'frame': _TAB_FRAME, 'exit': ('on_click_in', '角色-遗器', '遗器位-头部')},
         {'frame': _REPLACE_FRAME, 'exit': ('on_click_in', '遗器-替换', '按钮-筛选漏斗')},
         {'frame': _FILTER_PANEL_FRAME, 'exit': ('on_click_in', '遗器-替换-筛选', '按钮-套装选择')},
-        {'frame': _DIALOG_FRAME, 'exit': ('on_click_in', '遗器-替换-筛选规则', '按钮-全部清除')},
-        {'frame': _DIALOG_FRAME, 'exit': ('on_click_in', '遗器-替换-筛选规则', '区域-套装列表')},
-        {'frame': _DIALOG_CHECKED_FRAME, 'exit': ('on_click_in', '遗器-替换-筛选规则', '按钮-确认')},
+        {'frame': _DIALOG_FRAME, 'exit': ('on_click_in', '遗器筛选弹窗', '按钮-全部清除')},
+        {'frame': _DIALOG_FRAME, 'exit': ('on_click_in', '遗器筛选弹窗', '区域-套装列表')},
+        {'frame': _DIALOG_CHECKED_FRAME, 'exit': ('on_click_in', '遗器筛选弹窗', '按钮-确认')},
         {'frame': _FILTER_CHIP_FRAME, 'exit': ('on_click_in', '遗器-替换', '按钮-筛选漏斗')},
         {'frame': _REPLACE_FRAME},
     ])
@@ -130,13 +130,13 @@ def test_set_name_chain_applies_filter(
         f'漏斗点击缺失(开/关面板):{fixture_controller.recorded_clicks}'
     assert fixture_controller.click_hit_area('遗器-替换-筛选', '按钮-套装选择'), \
         '套装选择条点击缺失(弹窗未打开)'
-    assert fixture_controller.click_hit_area('遗器-替换-筛选规则', 'TAB-隧洞遗器'), \
+    assert fixture_controller.click_hit_area('遗器筛选弹窗', 'TAB-隧洞遗器'), \
         '隧洞TAB点击缺失(cavern 套装应在隧洞 TAB 勾选)'
-    assert fixture_controller.click_hit_area('遗器-替换-筛选规则', '按钮-全部清除'), \
+    assert fixture_controller.click_hit_area('遗器筛选弹窗', '按钮-全部清除'), \
         '全部清除点击缺失(重复运行不反选的幂等前置)'
-    assert fixture_controller.click_hit_area('遗器-替换-筛选规则', '区域-套装列表'), \
+    assert fixture_controller.click_hit_area('遗器筛选弹窗', '区域-套装列表'), \
         '套装行点击缺失(筛选未勾选)'
-    assert fixture_controller.click_hit_area('遗器-替换-筛选规则', '按钮-确认'), \
+    assert fixture_controller.click_hit_area('遗器筛选弹窗', '按钮-确认'), \
         '确认点击缺失(筛选未应用)'
 
 
@@ -249,9 +249,9 @@ def test_repeat_same_set_name_does_not_toggle_off(
         {'frame': _TAB_FRAME, 'exit': ('on_click_in', '角色-遗器', '遗器位-头部')},
         {'frame': _REPLACE_FRAME, 'exit': ('on_click_in', '遗器-替换', '按钮-筛选漏斗')},
         {'frame': _FILTER_PANEL_FRAME, 'exit': ('on_click_in', '遗器-替换-筛选', '按钮-套装选择')},
-        {'frame': _DIALOG_FRAME, 'exit': ('on_click_in', '遗器-替换-筛选规则', '按钮-全部清除')},
-        {'frame': _DIALOG_FRAME, 'exit': ('on_click_in', '遗器-替换-筛选规则', '区域-套装列表')},
-        {'frame': _DIALOG_CHECKED_FRAME, 'exit': ('on_click_in', '遗器-替换-筛选规则', '按钮-确认')},
+        {'frame': _DIALOG_FRAME, 'exit': ('on_click_in', '遗器筛选弹窗', '按钮-全部清除')},
+        {'frame': _DIALOG_FRAME, 'exit': ('on_click_in', '遗器筛选弹窗', '区域-套装列表')},
+        {'frame': _DIALOG_CHECKED_FRAME, 'exit': ('on_click_in', '遗器筛选弹窗', '按钮-确认')},
         {'frame': _FILTER_CHIP_FRAME, 'exit': ('on_click_in', '遗器-替换', '按钮-筛选漏斗')},
         {'frame': _REPLACE_FRAME},
     ]
@@ -269,5 +269,5 @@ def test_repeat_same_set_name_does_not_toggle_off(
     assert statuses == ['FILTER_SET', 'FILTER_SET'], f'两遍应收尾一致:{statuses}'
     assert click_sequences[0] == click_sequences[1], (
         '两遍点击序列应一致(第二遍同为全部清除→点行,不反选)')
-    assert fixture_controller.click_hit_area('遗器-替换-筛选规则', '按钮-全部清除'), \
+    assert fixture_controller.click_hit_area('遗器筛选弹窗', '按钮-全部清除'), \
         '第二遍的全部清除点击缺失(反选防线)'

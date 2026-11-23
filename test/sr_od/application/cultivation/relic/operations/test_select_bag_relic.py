@@ -14,8 +14,9 @@
   命中目标名时选中高亮已是后点的卡(错位静默选错件)。
 
 fixture 出处:实机摸底帧(2026-11-11 背包-遗器筛选链,进展目录
-recon/bag-relic-screen.md),归档 screens/背包-遗器*/;弹窗滚动帧用
-「已勾选」帧承载扫描命中(静态帧语义:点击坐标与 OCR 行定位的真实性)。
+recon/bag-relic-screen.md),归档 screens/遗器筛选弹窗/(背包侧-* 两帧;
+弹窗与遗器替换侧同组件,已合并单档建档);弹窗滚动帧用
+「背包侧-已勾选」帧承载扫描命中(静态帧语义:点击坐标与 OCR 行定位的真实性)。
 """
 
 from __future__ import annotations
@@ -35,8 +36,8 @@ from test.harness.fixture_controller import (
 _BAG_FRAME = ('背包-遗器', '列表默认')
 _BAG_SELECTED_FRAME = ('背包-遗器', '套装筛选选中件')
 _PANEL_FRAME = ('背包-遗器-筛选', '面板打开')
-_RULE_LIST_FRAME = ('背包-遗器-筛选规则', '隧洞列表')
-_RULE_CHECKED_FRAME = ('背包-遗器-筛选规则', '已勾选')
+_RULE_LIST_FRAME = ('遗器筛选弹窗', '背包侧-隧洞列表')
+_RULE_CHECKED_FRAME = ('遗器筛选弹窗', '背包侧-已勾选')
 
 # 「已勾选」帧上「晨昏交界的翔鹰」行文本 OCR 中心 (628,480),外扩容错
 _SET_ROW_RECT = [527, 455, 735, 505]
@@ -117,7 +118,7 @@ def test_full_chain_selects_filtered_piece(
         {'frame': _RULE_LIST_FRAME, 'exit': ('on_polls', 1)},
         {'frame': _RULE_CHECKED_FRAME, 'exit': ('on_click_in', _SET_ROW_RECT)},
         {'frame': _RULE_CHECKED_FRAME,
-         'exit': ('on_click_in', '背包-遗器-筛选规则', '按钮-确认')},
+         'exit': ('on_click_in', '遗器筛选弹窗', '按钮-确认')},
         {'frame': _BAG_SELECTED_FRAME},
     ])
     op = _WatchedSelectBagRelic(test_context)
@@ -142,7 +143,7 @@ def test_full_chain_selects_filtered_piece(
         and _SET_ROW_RECT[1] <= p.y <= _SET_ROW_RECT[3]
         for p in fixture_controller.recorded_clicks)
     assert row_clicked, f'套装行文本中心点击缺失:{fixture_controller.recorded_clicks}'
-    assert fixture_controller.click_hit_area('背包-遗器-筛选规则', '按钮-确认'), \
+    assert fixture_controller.click_hit_area('遗器筛选弹窗', '按钮-确认'), \
         '确认点击缺失(筛选未提交)'
 
 
@@ -171,7 +172,7 @@ def test_card_click_and_verify_split_rounds(
         {'frame': _RULE_LIST_FRAME, 'exit': ('on_polls', 1)},
         {'frame': _RULE_CHECKED_FRAME, 'exit': ('on_click_in', _SET_ROW_RECT)},
         {'frame': _RULE_CHECKED_FRAME,
-         'exit': ('on_click_in', '背包-遗器-筛选规则', '按钮-确认')},
+         'exit': ('on_click_in', '遗器筛选弹窗', '按钮-确认')},
         # 点卡后详情滞后帧:仍显示点卡前的旧详情;滞留 3 次轮询(确认节点
         # until 核查 1 次 + 点卡轮轮前截图 1 次 + 旧形态读名 1 次)后才切
         # 新详情帧 —— 零间隔读的旧形态在此帧上读名,分轮新形态读不到它
@@ -219,7 +220,7 @@ def test_no_set_path_skips_filter_chain(
     assert fixture_controller.phase_idx == 1, (
         f'不应有帧推进(漏斗/面板链未走):phase_idx={fixture_controller.phase_idx}')
     assert not fixture_controller.click_hit_area('背包-遗器-筛选', '按钮-套装选择')
-    assert not fixture_controller.click_hit_area('背包-遗器-筛选规则', '按钮-确认')
+    assert not fixture_controller.click_hit_area('遗器筛选弹窗', '按钮-确认')
 
 
 def test_none_set_clicks_first_card(
