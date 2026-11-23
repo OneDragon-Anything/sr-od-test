@@ -11,11 +11,11 @@
   同源锁测,期望值从同源 yml 现算非手抄——派生域与 tome/bookcard 不同:
   点击目标是「武装箱开启位-N」开启按钮区,非「备战栏-N」槽位本体);
   mouse_move 先于 click(防吞点击口径顺序锁测);
-- 零写锁测(替代 tome/bookcard 的腾位写断言):正常帧 round_success 且
-  gs bench 槽位表零变化(零写族反向锁)+ box_card 登记在场(overlay
-  登记锁测)+ round data 携 WorldDecl(next_screen = 底层屏推导值、
-  trigger='open_box'——有声明形态锁测)+ detail 无拒单段(零写族恒
-  applied=True);
+- 零写锁测(占席件「开件零写 + 选卡清槽」两拍契约的开件拍,与 tome 同构):
+  正常帧 round_success 且 gs bench 槽位表零变化(箱留席)+ box_card 登记在场
+  且携被点开槽(overlay 登记锁测)+ round data 携 WorldDecl(next_screen =
+  底层屏推导值、trigger='open_box'、slots=(slot,)——有声明携槽形态锁测)
+  + detail 无拒单段(零写族恒 applied=True);
 - gs 缺席帧(无局种子)机械已发零上报零异常(data=None,无处记账跳过);
 - sim 形态(port 关闭)机械零调用,自上报照走(登记与声明照写);
   env=None 全链跑通。
@@ -149,9 +149,9 @@ def test_click_uses_armory_button_center_and_order(open_box_ctx,
     """实机形态(env=None 全链):mouse_move 先于 click 且两点 = 武装箱
     开启位-N 建档直查同名 area 中心(裸中心同源锁测;期望值派生源 = 武装
     箱开启位 area,非备战栏-N——本件与 tome/bookcard 同源锁测的派生域
-    差异锚);零写锁测四合一:bench 槽位表零变化 + box_card 登记在场 +
-    round data 携 WorldDecl(trigger='open_box',next_screen = 底层屏推导
-    值)+ detail 无拒单段。"""
+    差异锚);零写锁测四合一:bench 槽位表零变化(箱留席)+ box_card 登记在场
+    且携被点开槽 + round data 携 WorldDecl(trigger='open_box',next_screen =
+    底层屏推导值,slots=(slot,))+ detail 无拒单段。"""
     gs = _attach_match_gs(
         open_box_ctx, monkeypatch,
         [BenchSlot()] * 4 + [BenchSlot(kind='supply_box')] + [BenchSlot()] * 4)
@@ -162,19 +162,20 @@ def test_click_uses_armory_button_center_and_order(open_box_ctx,
     assert controller.recorded_events == [('mouse_move', expected),
                                           ('click', expected)]
     assert result.is_success
-    # 零写锁测:supply_box 槽零变化(零写族反向锁——腾位归下一入口
-    # heavy 实读,不在动作时点写 bench 槽位表)
+    # 零写锁测:supply_box 槽零变化(开件拍零写,箱留席——离席归 pick_box_card
+    # 上报清槽,不在开件时点写 bench 槽位表)
     assert gs.bench.value.slots[4].kind == 'supply_box'
-    # overlay 登记锁测:武装箱四选一选卡画面在场(开件直登族)
-    assert [p.kind for p in gs.screen_changes.pending] == ['box_card']
+    # overlay 登记锁测:武装箱四选一选卡画面在场(开件直登族)携被点开槽
+    assert [(p.kind, p.slot) for p in gs.screen_changes.pending] == [('box_card', 5)]
     # detail 无拒单段锁测(零写族恒 applied=True,无拒单出口)
     assert '记账拒单' not in (result.status or '')
     assert '发出即上报' in (result.status or '')
     # 有声明形态锁测:round data 携 WorldDecl(无局种子 → 节点屏回退
-    # 备战档 = 底层屏;trigger 挂 backend 开箱采样分派)
+    # 备战档 = 底层屏;trigger 挂 backend 开箱采样分派;slots 携被点开槽)
     assert isinstance(result.data, WorldDecl)
     assert result.data.next_screen == _PREP_SCREEN
     assert result.data.trigger == 'open_box'
+    assert result.data.slots == (5,)
 
 
 def test_gs_absent_frame_mechanical_fires_silently(open_box_ctx) -> None:
@@ -205,6 +206,7 @@ def test_sim_shape_mechanical_silent_report_walks(open_box_ctx,
     assert controller.recorded_clicks == []
     assert controller.recorded_events == []
     assert gs.bench.value.slots[0].kind == 'supply_box'   # 零写族照零
-    assert [p.kind for p in gs.screen_changes.pending] == ['box_card']
+    assert [(p.kind, p.slot) for p in gs.screen_changes.pending] == [('box_card', 1)]
     assert isinstance(result.data, WorldDecl)
     assert result.data.trigger == 'open_box'
+    assert result.data.slots == (1,)

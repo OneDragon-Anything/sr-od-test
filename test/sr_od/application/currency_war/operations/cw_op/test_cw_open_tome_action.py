@@ -1,22 +1,22 @@
 """CwActionOpenTomeOp 参数面迁移执行体测试(harness 剧本 + 真建档派生)。
 
-锁的设计约定(开秘密典籍参数面迁移形态;被测单一源 = cw_open_tome_action):
+锁的设计约定(开秘密典籍 = 占席件「开件零写 + 选卡清槽」两拍契约的开件拍;
+被测单一源 = cw_open_tome_action):
 - slot 必填守卫(审计 bug 修复锁):slot=None → AssertionError(文案含
-  「必填」、kind='tome' 直调指引与废除申报)且零点击——迁移前该形态走
-  op 内 gs 现算分支(机械路径消费 game state + 双出口 AssertionError),
-  迁移后响亮拒绝;
+  「必填」、kind='tome' 直调指引与废除申报)且零点击;
 - 越界守卫:slot=0 / 负值 / 越界(≥10)→ AssertionError 零点击(负下标
   回环防锁,下界显式闭合);
 - 机械面全自持:点击 = 备战栏-N 建档直查同名 area 中心(裸中心同源锁测,
   期望值从同源 yml 现算非手抄);mouse_move 先于 click(防吞点击口径
   顺序锁测);
-- 自上报:正常帧腾位记账(tome → empty)+ star_tome 登记在场;拒单帧
-  round detail 带「记账拒单:tome_slot_missing(点击已发生,账未落)」
-  段零写;gs 缺席帧机械已发零上报零异常;
-- round data 无声明锁测:round 结果 data 为 None——本动作非转移动作,
-  上报零 WorldDecl 构造(与 OpenBookcard 的 data=WorldDecl 相反向锁,
-  迁移禁补声明);
-- sim 形态(port 关闭)机械零调用,自上报照走;env=None 全链跑通。
+- 自上报零写锁测:正常帧 bench 槽位表零变化(典籍留席)+ star_tome 登记在场
+  且携被点开槽(PendingScreen.slot = 物理槽 1 基)+ round data 携
+  WorldDecl(trigger='open_tome', slots=(slot,))且同一声明经
+  ``cw_sim_ports.declare_world`` 喂入恰一次 + detail 无拒单段(零写族恒
+  applied=True,无拒单出口);
+- gs 缺席帧机械已发零上报零异常(data=None,无处记账跳过);
+- sim 形态(port 关闭)机械零调用,自上报照走(登记与声明照写);env=None
+  全链跑通。
 """
 
 import types
@@ -33,6 +33,7 @@ from sr_od.application.currency_war.kernel.cw_game_state import (
 from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionOpenTomeParam,
 )
+from sr_od.application.currency_war.kernel.cw_world_decl import WorldDecl
 from sr_od.application.currency_war.operations.cw_op.cw_open_tome_action import (
     CwActionOpenTomeOp,
 )
@@ -85,7 +86,7 @@ def tome_ctx(test_context, monkeypatch):
 
 
 def _make_op(tome_ctx, param: CwActionOpenTomeParam,
-             ) -> tuple[CwActionOpenTomeOp, _TomeTestController]:
+              ) -> tuple[CwActionOpenTomeOp, _TomeTestController]:
     """构造 op(env 缺省 None = 缺省备战档形态,全链跑通锁测形态)。"""
     controller = tome_ctx.controller
     assert isinstance(controller, _TomeTestController)
@@ -93,7 +94,7 @@ def _make_op(tome_ctx, param: CwActionOpenTomeParam,
 
 
 def _attach_match_gs(tome_ctx, monkeypatch,
-                     bench_slots: list | None = None):
+                      bench_slots: list | None = None):
     """挂假局(懒建 gs)并种子 bench 视图,供自上报走通(与观察链同写入口
     gs.observe;cw_match 经 monkeypatch 还原。session 用 SimpleNamespace =
     可弱引用可挂属性,game_state_of 惰建单例跨调用稳定)。"""
@@ -101,16 +102,15 @@ def _attach_match_gs(tome_ctx, monkeypatch,
     monkeypatch.setattr(tome_ctx, 'cw_match', match)
     gs = game_state_of(match.session)
     gs.observe(gs.bench,
-               BenchView(slots=bench_slots if bench_slots is not None
-                         else [BenchSlot()] * 9),
-               sig=_OBS)
+                BenchView(slots=bench_slots if bench_slots is not None
+                          else [BenchSlot()] * 9),
+                sig=_OBS)
     return gs
 
 
 def test_none_slot_guard_rejects(tome_ctx) -> None:
     """slot 必填守卫(审计 bug 修复锁):slot=None → AssertionError(文案
-    含「必填」、kind=tome 直调指引与废除申报)且零点击——迁移前该形态走
-    op 内 gs 现算分支,迁移后响亮拒绝(报错点前移至参数面)。"""
+    含「必填」、kind=tome 直调指引与废除申报)且零点击。"""
     op, controller = _make_op(tome_ctx, CwActionOpenTomeParam(slot=None))
     with pytest.raises(AssertionError) as exc_info, fast_sleep(op):
         op.run()
@@ -141,9 +141,12 @@ def test_guard_assertions(tome_ctx) -> None:
 
 def test_click_uses_archive_center_and_order(tome_ctx, monkeypatch) -> None:
     """实机形态(env=None 全链):mouse_move 先于 click 且两点 = 备战栏-N
-    建档直查同名 area 中心(裸中心同源锁测);正常帧 detail 无拒单段 +
-    腾位记账(tome → empty)+ star_tome 登记在场 + round data 无声明
-    (非转移动作零声明形态回归锚)。"""
+    建档直查同名 area 中心(裸中心同源锁测);自上报零写锁测:bench 槽位表
+    零变化(典籍留席)+ star_tome 登记携被点开槽 + round data 携
+    WorldDecl(trigger='open_tome', slots=(slot,))且同一声明喂入恰一次 +
+    detail 无拒单段。"""
+    fed: list[WorldDecl] = []
+    monkeypatch.setattr(cw_sim_ports, 'declare_world', fed.append)
     gs = _attach_match_gs(
         tome_ctx, monkeypatch,
         [BenchSlot()] * 2 + [BenchSlot(kind='tome')] + [BenchSlot()] * 6)
@@ -152,34 +155,21 @@ def test_click_uses_archive_center_and_order(tome_ctx, monkeypatch) -> None:
         result = op.run()
     expected = _expected_center(tome_ctx, '备战栏-3')
     assert controller.recorded_events == [('mouse_move', expected),
-                                          ('click', expected)]
+                                           ('click', expected)]
     assert result.is_success
     assert '记账拒单' not in (result.status or '')
-    assert '发出即记账,落地归观察对账' in (result.status or '')
-    # 腾位记账锁测:tome → empty(槽位表直址写,不移位)
-    assert gs.bench.value.slots[2].kind == 'empty'
-    # overlay 登记锁测:星徽四选一在场(开件直登族,kind='star_tome')
-    assert [p.kind for p in gs.screen_changes.pending] == ['star_tome']
-    # round data 无声明锁测:非转移动作零 WorldDecl(与 OpenBookcard
-    # data=WorldDecl 相反向锁,迁移禁补声明)
-    assert result.data is None
-
-
-def test_round_detail_carries_reject_code(tome_ctx, monkeypatch) -> None:
-    """拒单帧 round detail:目标槽 kind='empty'(决策陈旧帧模拟)→
-    success + tome_slot_missing 拒单码段(机械成功语义不变,点击已发;
-    禁补点口径);拒单零写零登记。"""
-    param = CwActionOpenTomeParam(slot=3)
-    gs = _attach_match_gs(tome_ctx, monkeypatch)   # bench 全空槽
-    op, controller = _make_op(tome_ctx, param)
-    with fast_sleep(op):
-        result = op.run()
-    assert result.is_success
-    assert '记账拒单:tome_slot_missing(点击已发生,账未落)' \
-        in (result.status or '')
-    assert len(controller.recorded_clicks) == 1   # 点击已发生口径
-    assert gs.bench.value.slots[2].kind == 'empty'   # 拒单零写
-    assert gs.screen_changes.pending == []   # 拒单帧零登记(登记与落地同点)
+    assert '发出即上报' in (result.status or '')
+    # 零写锁测:典籍留席(弹窗期占席件仍占席,离席归选卡上报清槽)
+    assert gs.bench.value.slots[2].kind == 'tome'
+    # overlay 登记锁测:星徽四选一在场(开件直登族,kind='star_tome')携被点开槽
+    assert [(p.kind, p.slot) for p in gs.screen_changes.pending] == [('star_tome', 3)]
+    # 声明锁测:round data 携 WorldDecl 携槽(无局种子 → 节点屏回退备战档)
+    assert isinstance(result.data, WorldDecl)
+    assert result.data.next_screen == _PREP_SCREEN
+    assert result.data.trigger == 'open_tome'
+    assert result.data.slots == (3,)
+    # 喂入锁测:同一声明经 declare_world 喂入恰一次
+    assert len(fed) == 1 and fed[0] is result.data
 
 
 def test_gs_absent_frame_mechanical_fires_silently(tome_ctx) -> None:
@@ -197,9 +187,10 @@ def test_gs_absent_frame_mechanical_fires_silently(tome_ctx) -> None:
 def test_sim_shape_mechanical_silent_report_walks(tome_ctx, monkeypatch) -> None:
     """sim 形态:port 关闭 → 机械零调用(mouse_move/click 零执行,点击 +
     动画等待同 gate 静默跳过——sim 局零白睡形态),自上报照走(两执行面
-    同源,star_tome 登记照写)。"""
+    同源:零写留席 + star_tome 登记携槽 + 声明携槽)。"""
     monkeypatch.setattr(cw_sim_ports, 'mechanical_io_allowed',
                         lambda: False)
+    monkeypatch.setattr(cw_sim_ports, 'declare_world', lambda _d: None)
     gs = _attach_match_gs(
         tome_ctx, monkeypatch,
         [BenchSlot(kind='tome')] + [BenchSlot()] * 8)
@@ -210,5 +201,8 @@ def test_sim_shape_mechanical_silent_report_walks(tome_ctx, monkeypatch) -> None
     assert controller.recorded_mouse_moves == []
     assert controller.recorded_clicks == []
     assert controller.recorded_events == []
-    assert gs.bench.value.slots[0].kind == 'empty'   # 自上报照走
-    assert [p.kind for p in gs.screen_changes.pending] == ['star_tome']
+    assert gs.bench.value.slots[0].kind == 'tome'   # 零写留席
+    assert [(p.kind, p.slot) for p in gs.screen_changes.pending] == [('star_tome', 1)]
+    assert isinstance(result.data, WorldDecl)
+    assert result.data.trigger == 'open_tome'
+    assert result.data.slots == (1,)
