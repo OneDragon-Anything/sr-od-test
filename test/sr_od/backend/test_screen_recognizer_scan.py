@@ -111,7 +111,8 @@ def test_scan_discovers_train_shop_panel_recognizer(mock_ctx: MagicMock) -> None
     assert type(recognizer).__name__ == 'TrainShopPanelRecognizer'
     # extras_doc 与输出键集同步(extras 契约面)
     assert set(recognizer.extras_doc) == {
-        'balance', 'mode', 'shop_cards', 'showcase_card', 'pam_progress'}
+        'balance', 'mode', 'shop_cards', 'refresh_slot', 'showcase_card',
+        'pam_progress'}
 
 
 def test_scan_excludes_base_class(mock_ctx: MagicMock) -> None:

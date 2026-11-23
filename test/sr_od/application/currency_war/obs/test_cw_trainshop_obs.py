@@ -1,20 +1,21 @@
 """开拓商店(银轨商店)面板读数层测试(纯函数解析 + 归档帧真读真值)。
 
 锁的设计约定(obs/cw_trainshop_obs.py,读法标定证据帧 =
-sr-od-test/screens/货币战争-备战-开拓商店/panel_*_r13):
+sr-od-test/screens/货币战争-备战-开拓商店/panel_*_r13、panel_slots_{d,e}_r15):
 
 - 纯函数:名行「名字+行尾标价」拆分 / 属性卡档位后缀「|」→「Ⅰ」读音修复 /
-  帕姆「N/500」解析(分母非 500 拒信)/「全部刷新」锚 lcs 判定;
-- 槽带帧真值:mode=slots,定长 4 槽(槽 1 刷新钮 kind=refresh 标价 1 +
-  槽 2-4 商品),角色卡 SIFT 身份(faction=注册表首阵营,Momojie 显示名读
-  规范名「开拓者」= 换季改名归一表),属性卡 OCR 名(item_type=other),
-  余额 / 帕姆进度实读;
+  帕姆「N/500」解析(分母非 500 拒信)/「全部刷新」锚 lcs 判定 / 刷新钮名行
+  数字条目标价提取(「1力/次」混合形态);
+- 槽带帧真值:mode=slots,定长 4 槽(刷新钮轮转占位——r13 帧槽 1 刷新钮
+  kind=refresh 标价 1;r15 两帧四槽全商品、refresh_slot=None),角色卡 SIFT
+  身份(faction=注册表首阵营,Momojie 显示名读规范名「开拓者」= 换季改名归一表),
+  属性卡 OCR 名(item_type=other),余额 / 帕姆进度实读;
 - 展示卡帧真值(首开空池软锁 013105 与恢复态死锁 122630 画面同构):
   mode=showcase、四槽键 None、展示卡 {name 星穹列车,跃迁! cost 0} +
   解锁点击点 (1045,281)、帕姆块缺席 → None。
 
 真帧测试走 test_context 真实 OCR + SIFT 立绘库(conftest 磁盘 memo 温缓存);
-两组各一条测试,帧读数在测试内逐帧执行、断言共享(慢计算只算一次)。
+逐帧执行、断言共享(慢计算只算一次)。
 """
 
 from __future__ import annotations
@@ -22,6 +23,7 @@ from __future__ import annotations
 from test.conftest import SrTestContext
 
 from sr_od.application.currency_war.obs.cw_trainshop_obs import (
+    _refresh_cost_from_entries,
     is_refresh_anchor,
     normalize_attr_name,
     parse_pam_text,
@@ -55,6 +57,14 @@ def test_split_name_cost() -> None:
     assert split_name_cost([('后台强度|', 1248), ('15', 1360)]) == ('后台强度Ⅰ', 15)
     assert split_name_cost([('全部刷新', 496)]) == ('全部刷新', None)
     assert split_name_cost([]) == ('', None)
+
+
+def test_refresh_cost_from_entries() -> None:
+    """刷新钮名行标价提取:纯数字条目与「1力/次」混合条目同判;纯文字跳过。"""
+    assert _refresh_cost_from_entries([('全部刷新', 496), ('1', 610)]) == 1
+    assert _refresh_cost_from_entries([('全部刷新', 496), ('1力/次', 610)]) == 1
+    assert _refresh_cost_from_entries([('全部刷新', 496)]) is None
+    assert _refresh_cost_from_entries([]) is None
 
 
 def test_parse_pam_text_guards() -> None:
@@ -114,6 +124,7 @@ def test_slots_frames_truth(test_context: SrTestContext) -> None:
         pam = read_pam_progress(test_context, frame)
         assert panel['mode'] == 'slots', frame_name
         assert panel['showcase_card'] is None, frame_name
+        assert panel['refresh_slot'] == 1, frame_name
         assert balance == want['balance'], frame_name
         assert pam == want['pam'], frame_name
         cards = panel['shop_cards']
@@ -133,6 +144,49 @@ def test_slots_frames_truth(test_context: SrTestContext) -> None:
         assert cards[1]['card']['item_type'] == 'char'
         assert cards[2]['card']['item_type'] == (
             'char' if cards[2]['card']['name'] == '三月七' else 'other')
+
+
+def test_full4_slots_frames_truth(test_context: SrTestContext) -> None:
+    """四槽全商品帧真值(r15 两帧,第二十四局 1-6 实拍):刷新钮不在场形态。
+
+    mode=slots + refresh_slot=None + 四槽全 content(槽 1 = 角色卡「星期日」,
+    槽 2 = 开拓者变体,槽 3/4 = 属性卡)+ 余额/帕姆实读(25→10 / 15→30,
+    首购前台强度Ⅰ一笔的对账实录)。锁「槽 1 = 刷新钮」旧锚作废后的槽带
+    判定与四商品读卡。
+    """
+    expected = {
+        'panel_slots_d_r15': {
+            'balance': 25, 'pam': (15, 500),
+            'slots': [('星期日', 35), ('开拓者', 50),
+                      ('速度增幅Ⅰ', 15), ('前台强度Ⅰ', 15)],
+        },
+        'panel_slots_e_r15': {
+            'balance': 10, 'pam': (30, 500),
+            'slots': [('星期日', 35), ('开拓者', 50),
+                      ('速度增幅Ⅰ', 15), ('幸运一击率Ⅰ', 15)],
+        },
+    }
+    for frame_name, want in expected.items():
+        frame = test_context.load_screen(_SCREEN, frame_name)
+        panel = read_trainshop_panel(test_context, frame)
+        assert panel['mode'] == 'slots', frame_name
+        assert panel['showcase_card'] is None, frame_name
+        assert panel['refresh_slot'] is None, frame_name
+        assert read_trainshop_balance(test_context, frame) == want['balance'], \
+            frame_name
+        assert read_pam_progress(test_context, frame) == want['pam'], frame_name
+        cards = panel['shop_cards']
+        assert cards is not None and len(cards) == 4, frame_name
+        for i, (name, cost) in enumerate(want['slots']):
+            entry = cards[i]
+            assert entry['kind'] == 'content', (frame_name, i)
+            card = entry['card']
+            assert card is not None, (frame_name, i)
+            assert (card['name'], card['cost']) == (name, cost), \
+                (frame_name, i)
+            assert card['slot'] == i + 1, (frame_name, i)
+        # 槽 2 开拓者变体 = SIFT 角色卡身份(与 r13 同源口径)
+        assert cards[1]['card']['item_type'] == 'char', frame_name
 
 
 def test_showcase_frames_truth(test_context: SrTestContext) -> None:
