@@ -185,6 +185,7 @@ def test_trailblazer_form_names_normalize() -> None:
     assert resolve_char_name('开拓者·记忆') == '开拓者'
     assert resolve_char_name('开拓者') == '开拓者'
     assert resolve_char_name('佩佩') == '佩佩'
+    assert resolve_char_name('杨叔') == '杨叔'
 
 
 @_char_tpl_skip
@@ -198,3 +199,72 @@ def test_momojie_bench_slot_resolves_to_trailblazer() -> None:
 def test_bench_slot6_empty_before_purchase() -> None:
     """购买前对照帧同槽零命中(真空槽不因归一产生假阳)。"""
     assert _bench_slot6_identity('bench6_empty_r13') is None
+
+
+# ===== 后排部署排身份回归(三件批:奇遇伙伴杨叔模板补齐 + 银狼LV.999 /
+# 姬子·启行 plaza 主档部署排读数;链 = identify_slots 部署排语义) =====
+
+#: screen_info 后排7槽档 rect(居中重排族,布局单一源;与本批两帧实拍布局同档)
+_BACK7_SLOTS = [(i, Rect(463 + 142 * (i - 1), 600, 605 + 142 * (i - 1), 739))
+                for i in range(1, 8)]
+#: screen_info 后排基线档 2 号格 rect(deployed_p1r9 为 6 格基线布局)
+_BACK_BASE_SLOT2_RECT = Rect(679, 600, 814, 739)
+
+
+def _back_row_hits(name: str, slots: list, screen: str = '货币战争-备战') -> dict[int, str]:
+    """部署排生产链识别(live_only + center_gate,同 read_deployed_rows 语义)。"""
+    from sr_od.application.currency_war.obs.cw_identity_obs import identify_slots
+    frame = _require_screen_frame(screen, name)
+    hits = identify_slots(frame, _char_templates(), slots, 'back',
+                          min_inliers=15, live_only=True, center_gate=True)
+    return {s: u.char_id for s, u in hits}
+
+
+@cache
+def _load_screen_frame(screen: str, name: str) -> np.ndarray | None:
+    """读指定画面目录下的 fixture 帧(RGB 口径);缺失 → None。"""
+    f = _screens_dir() / screen / f'{name}.webp'
+    if not f.is_file():
+        return None
+    img = cv2.imdecode(np.fromfile(str(f), dtype=np.uint8), cv2.IMREAD_COLOR)
+    return None if img is None else cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+
+
+def _require_screen_frame(screen: str, name: str) -> np.ndarray:
+    img = _load_screen_frame(screen, name)
+    if img is None:
+        pytest.skip(f'存档截图缺失:screens/{screen}/{name}.webp')
+    return img
+
+
+@_char_tpl_skip
+def test_yangshu_partner_back_slot6_reads() -> None:
+    """奇遇伙伴杨叔(7槽-6)部署排读出(补模板前该槽零假设失读,身份靠人工);
+    同帧三月七照常命中,其余扩展档空槽零假阳。"""
+    by_slot = _back_row_hits('后排7槽-奇遇伙伴杨叔局', _BACK7_SLOTS)
+    assert by_slot.get(6) == '杨叔'
+    assert by_slot.get(1) == '三月七'
+    assert set(by_slot) == {1, 6}
+
+
+@_char_tpl_skip
+def test_yinlang_bench_and_overlay_board_reads() -> None:
+    """银狼LV.999 双域:杨叔局帧 bench-7 读出(备战语义);骇入选择帧
+    7槽-2 部署排读出(浮层压暗真板面,模板缺口误判的原始帧,锁不回退;
+    帧归 货币战争-银狼升星 档——浮层即该画面档,同 fixture 骇入二选一)。"""
+    from sr_od.application.currency_war.obs.cw_identity_obs import identify_slots
+    frame = _require_frame('后排7槽-奇遇伙伴杨叔局')
+    bench7 = Rect(1132, 846, 1244, 977)
+    hits = identify_slots(frame, _char_templates(), [(7, bench7)], '',
+                          min_inliers=10)
+    assert [u.char_id for _s, u in hits] == ['银狼LV.999']
+    by_slot = _back_row_hits('骇入二选一-r24', _BACK7_SLOTS, screen='货币战争-银狼升星')
+    assert by_slot.get(2) == '银狼LV.999'
+
+
+@_char_tpl_skip
+def test_jizi_board_read_on_p1r9_fixture() -> None:
+    """姬子·启行 部署排读出(既有 fixture deployed_p1r9,后排基线 2 号格;
+    shop/bench 域另有带名裁片与 g25 帧实证,本条锁部署排链不回退)。"""
+    by_slot = _back_row_hits('deployed_p1r9', [(2, _BACK_BASE_SLOT2_RECT)])
+    assert by_slot.get(2) == '姬子·启行'
