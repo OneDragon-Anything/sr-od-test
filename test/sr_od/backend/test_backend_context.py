@@ -10,6 +10,7 @@ import pytest
 from sr_od.backend.backend_context import (
     AnalyzeScreenError,
     BackendNotReadyError,
+    ScreenWriteBusyError,
     SrBackendContext,
 )
 
@@ -512,3 +513,105 @@ def test_goto_screen_stop_interrupted_returns_scene(monkeypatch):
     assert '停机中断' in result.reason
     assert result.current_screen == '主界面'  # 识别确认的所在画面(现场)
     assert result.steps == []  # 首次点击即被拦,尚无完成步骤
+
+
+# ---------- 画面档案写档互斥(fail-fast,防 merged 缓存并发重写互相覆盖)----------
+
+def _screen_write_backend() -> tuple[SrBackendContext, MagicMock, MagicMock]:
+    """构造写档互斥测试用 backend:mock ctx + 可配置的 screen_info。
+
+    screen_info.area_list 为真实 list(len() 可用),upsert_area 默认返 'inserted'。
+    """
+    ctx = MagicMock()
+    ctx.ready_for_application = True
+    ctx.screen_loader.screen_info_list = []
+    backend = SrBackendContext(ctx)
+    screen_info = MagicMock()
+    screen_info.area_list = [MagicMock()]
+    screen_info.upsert_area.return_value = 'inserted'
+    ctx.screen_loader.get_screen.return_value = screen_info
+    return backend, ctx, screen_info
+
+
+def test_screen_write_mutex_concurrent_fail_fast() -> None:
+    """并发写档 fail-fast:一路写档进行中时,其余写档请求立即失败并提示等待重试。
+
+    用户裁定(2026-11-24):写档互斥语义=快速失败非排队。进行中的
+    upsert_screen_area(卡在 save_screen 模拟 merged 重写耗时)须拦住并发到达的
+    upsert / delete_screen_area / create_screen(三工具全覆盖),拒绝即返回、
+    不等待持锁方完成;文案含「正在被修改」「等待重试」。锁释放后(正常完成)
+    后续写档恢复正常。
+    """
+    import threading
+
+    backend, ctx, screen_info = _screen_write_backend()
+    entered_save = threading.Event()
+    release_save = threading.Event()
+
+    def slow_save(_screen_info):
+        entered_save.set()          # 持锁方已进锁内、卡在 merged 重写处
+        release_save.wait(timeout=5)
+    ctx.screen_loader.save_screen.side_effect = slow_save
+
+    winner_results: list = []
+
+    def winner() -> None:
+        winner_results.append(
+            backend.upsert_screen_area('邮件', '标题', [1, 1, 2, 2]))
+
+    t_winner = threading.Thread(target=winner)
+    t_winner.start()
+    assert entered_save.wait(timeout=5), '持锁方未进入 save_screen'
+
+    # —— 并发 upsert(另线程):立即失败,不排队等持锁方 ——
+    busy_errors: list[Exception] = []
+
+    def concurrent_upsert() -> None:
+        try:
+            backend.upsert_screen_area('邮件', '标题', [3, 3, 4, 4])
+            busy_errors.append(AssertionError('并发写档不应成功'))
+        except Exception as e:  # noqa: BLE001 线程内捕获转断言
+            busy_errors.append(e)
+
+    t_loser = threading.Thread(target=concurrent_upsert)
+    t_loser.start()
+    t_loser.join(timeout=5)
+    assert not t_loser.is_alive(), '并发写档被排队阻塞(应为快速失败)'
+    assert len(busy_errors) == 1
+    assert isinstance(busy_errors[0], ScreenWriteBusyError)
+    assert '正在被修改' in str(busy_errors[0])
+    assert '等待重试' in str(busy_errors[0])
+
+    # —— 并发 delete / create(主线程):同受互斥拦下(跨工具互斥面) ——
+    with pytest.raises(ScreenWriteBusyError, match='正在被修改'):
+        backend.delete_screen_area('邮件', '标题')
+    with pytest.raises(ScreenWriteBusyError, match='正在被修改'):
+        backend.create_screen('mail', '邮件')
+
+    # —— 持锁方正常完成后锁已释放:后续写档恢复正常 ——
+    release_save.set()
+    t_winner.join(timeout=5)
+    assert not t_winner.is_alive(), '持锁方未完成'
+    assert len(winner_results) == 1
+    assert winner_results[0].action == 'inserted'
+
+    ctx.screen_loader.save_screen.side_effect = None
+    result = backend.upsert_screen_area('邮件', '标题', [1, 1, 2, 2])
+    assert result.action == 'inserted'
+
+
+def test_screen_write_mutex_released_on_error() -> None:
+    """持锁方写档中途抛异常 → 锁必释放(finally 兜底),后续写档不误报 busy。
+
+    防死锁不变式:校验 / IO / 内存操作任何环节异常都不留死锁。
+    """
+    backend, _ctx, screen_info = _screen_write_backend()
+    screen_info.upsert_area.side_effect = RuntimeError('写档中途爆炸')
+
+    with pytest.raises(RuntimeError, match='写档中途爆炸'):
+        backend.upsert_screen_area('邮件', '标题', [1, 1, 2, 2])
+
+    # 异常后锁已释放:下次写档正常走完,不被误判 busy
+    screen_info.upsert_area.side_effect = None
+    result = backend.upsert_screen_area('邮件', '标题', [1, 1, 2, 2])
+    assert result.action == 'inserted'
