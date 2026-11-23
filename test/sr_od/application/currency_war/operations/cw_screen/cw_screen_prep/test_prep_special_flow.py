@@ -3,8 +3,8 @@
 变体态(design 2026-11-20-cw-p0-chain §2.3-D)):
 
 - 剧本 1 = 常规帧:五查全否 → 前置段全量照旧(清场 → 收店探针 → heavy
-  → 补采委派 → 审计,生产现行序取锚)→ serial 置位 → 策略器路径;
-  零特殊流程处置调用(现行为零变化);
+  → 补采委派,生产现行序取锚;审计段已随缺陷台账废弃拆除)→ serial 置位
+  → 策略器路径;零特殊流程处置调用(现行为零变化);
 - 剧本 2 = 返回按钮帧:a 查 OCR 识别 → 跳前置段 → 段3a 点击(lcs 0.9)
   → 计数器分键 ``back_to_strategy_symptom`` 累加 → 交回;附两防线:
   strategy_state 缺席 None 守卫不炸 / 共享子串『请选择投资策略』
@@ -204,8 +204,8 @@ def _attach_match(test_context: SrTestContext,
 _FONT_PATH: str = 'C:/Windows/Fonts/msyh.ttc'
 
 #: 前置段现行序(断言锚 = 生产 observe node 现行编排:五查全否 → 缺席门 →
-#: 清场 → 收店探针 → heavy 观察 → 补采委派 → 审计族)。
-_FRONT_SEGMENT_ORDER: list[str] = ['清场', '收店探针', 'heavy', '补采委派', '审计']
+#: 清场 → 收店探针 → heavy 观察 → 补采委派)。
+_FRONT_SEGMENT_ORDER: list[str] = ['清场', '收店探针', 'heavy', '补采委派']
 
 #: 夹具种子/断言共用的渠道签名(测试侧观察写只求通道合法,actor 沿备战写端)。
 _TEST_OBS_SIG: ChannelSig = ChannelSig(family='obs', actor='CwScreenPrep',
@@ -243,7 +243,6 @@ def _spy_front_segments(monkeypatch: pytest.MonkeyPatch,
     real_collapse = CwScreenPrep._try_collapse_open_shop
     real_observe = CwScreenPrep._observe
     real_delegate = CwScreenPrep._delegate_plane_intel_if_needed
-    real_audit = CwScreenPrep._v2_post_frame_accounting
 
     def _clear(self) -> None:
         order.append('清场')
@@ -261,15 +260,10 @@ def _spy_front_segments(monkeypatch: pytest.MonkeyPatch,
         order.append('补采委派')
         return real_delegate(self, session)
 
-    def _audit(self, obs, session) -> None:
-        order.append('审计')
-        return real_audit(self, obs, session)
-
     monkeypatch.setattr(CwScreenPrep, '_clear_entry_overlays', _clear)
     monkeypatch.setattr(CwScreenPrep, '_try_collapse_open_shop', _collapse)
     monkeypatch.setattr(CwScreenPrep, '_observe', _observe)
     monkeypatch.setattr(CwScreenPrep, '_delegate_plane_intel_if_needed', _delegate)
-    monkeypatch.setattr(CwScreenPrep, '_v2_post_frame_accounting', _audit)
 
 
 def _stub_heavy_recognition(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -598,7 +592,7 @@ def test_regular_frame_runs_full_front_segments_in_order(
 
     # —— 常规访问 success(策略器发 Obs:outer_loop 交回)
     assert result.success, f'常规帧应访问 success,实际 {result.status!r}'
-    # —— 前置段按生产现行序全量执行(清场 → 收店探针 → heavy → 补采 → 审计)
+    # —— 前置段按生产现行序全量执行(清场 → 收店探针 → heavy → 补采)
     assert order == _FRONT_SEGMENT_ORDER, \
         f'前置段应按现行序全量执行,实际 {order!r}'
     assert gs.frame_class_prep == 'full', \
