@@ -98,6 +98,11 @@ def test_three_step_chain_reports_then_grabs_idx0_and_verifies(
         f'判效过后 aura_slot 应按首发抓点落前排槽 1,实际 {gs.aura_slot.value!r}'
     assert gs.aura_slot.source == 'logic', \
         f'选择记账应为逻辑态,实际 {gs.aura_slot.source!r}'
+    # —— 选中光环名同拍记账(chosen_aura):名字按序号取自 aura_select_opts
+    #    单一源(v1 固定 left = idx 0);消费点 = 上阵规模占用派生
+    assert gs.chosen_aura.value == '富翁的梦泡', \
+        f'选中光环应记左卡标准名,实际 {gs.chosen_aura.value!r}'
+    assert gs.chosen_aura.source == 'logic'
     # —— 拖拽源 = preview_xy[0] 零参读(v1 固定前排第一)
     assert len(ctrl.recorded_drags) >= 1, \
         f'三步链应含拖拽,实际 {ctrl.recorded_drags}'
@@ -129,6 +134,8 @@ def test_verify_miss_retries_grab_points_then_fails(
     # 判效未过 = 选择未落地 → aura_slot 零写(记账闸在判效成功分支)
     assert gs.aura_slot.value is None, \
         f'判效恒 miss fail 路径不应写 aura_slot,实际 {gs.aura_slot.value!r}'
+    assert gs.chosen_aura.value is None, \
+        f'判效恒 miss fail 路径不应写 chosen_aura,实际 {gs.chosen_aura.value!r}'
     preview = list(gs.aura_select_preview_xy.value or [])
     # 每次尝试的首次拖拽起点序列(每次三步链 2 次拖拽,取偶数位)
     grabs = [d[0] for d in ctrl.recorded_drags[::2]]

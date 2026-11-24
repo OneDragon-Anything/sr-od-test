@@ -412,3 +412,75 @@ def test_overflow_guard_fail_still_full_after_sell(launch_env,
         f'应发生卖出拖拽(守卫先卖),实际 {ctrl.recorded_drags}'
     assert not ctrl.click_hit_area('货币战争-备战', '按钮-出战'), \
         f'腾位失败不应发出出战点击,实际 {ctrl.recorded_clicks}'
+
+
+# ============================================================ 出战前团队规模超限守卫(执行前输入契约守卫)
+#
+# 锁设计约定(守卫 = prep_actions.guard_team_size_over_cap_for_battle,
+# 安装点 = launch_prepared_battle 席满守卫后、出战单击前,两 face 共同生效):
+# - 超限态(「X/Y」双帧确认 X > Y;实机实证:局 43 选主角光环「高傲巨人」后
+#   红色 6/5,出战被游戏静默拒绝、按钮仍亮)→ 出战未发出 (False, detail 带
+#   受阻码),零出战点击,回执域落一条受阻行(reason = 受阻码,extra 带规模
+#   占用 / 上限)——修前此态照点出战,点完即写逻辑态「已出战」假前进;
+# - 干净帧 → 零行为变化(现役发出序断言由上方 armed 面测试承载:deployed_2star
+#   帧 4/4 放行);
+# - sim 门(机械 IO 不可达)→ 守卫不读屏直接放行(sim 画面无「X/Y」计数,
+#   读即假拦)。
+
+#: 超限态帧存档(局 43 保留帧:红色 6/5,无「备战席已满」横幅)。
+_OVER_CAP_FRAME: tuple[str, str] = ('货币战争-备战', '超限6比5-选光环后')
+
+
+def _require_over_cap_frame(test_context: SrTestContext) -> None:
+    """超限帧存档缺失 skip(采到后自动恢复),不 error。"""
+    if not test_context.has_screen(*_OVER_CAP_FRAME):
+        pytest.skip(f'存档截图缺失:screens/{_OVER_CAP_FRAME[0]}/'
+                    f'{_OVER_CAP_FRAME[1]}.webp')
+
+
+def test_over_cap_guard_blocks_battle_click(launch_env,
+                                            monkeypatch) -> None:
+    """超限态出战 → 零点击 + (False, 受阻码) + 回执受阻行。"""
+    from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
+    test_context, host, ctrl = launch_env
+    _require_over_cap_frame(test_context)
+    match = types.SimpleNamespace(session=types.SimpleNamespace())
+    monkeypatch.setattr(test_context, 'cw_match', match)
+    _patch_deploy_plan(monkeypatch, [])
+    ctrl.set_phases([{'frame': _OVER_CAP_FRAME}])   # 守卫现读与确认门重读同一帧
+
+    ok, detail = launch_battle_unified(host, test_context, face='armed')
+
+    assert not ok, f'超限态不应发出出战,实际 detail={detail!r}'
+    assert detail.startswith('未执行:团队规模超限'), \
+        f'失败 detail 应带受阻码,实际 {detail!r}'
+    assert ctrl.recorded_clicks == [], \
+        f'超限态应零点击(席满守卫不触发 + 出战单击未发),实际 {ctrl.recorded_clicks}'
+    receipts = list(game_state_of(match.session).receipts.value or [])
+    assert len(receipts) == 1, f'应恰落一条出战受阻回执行,实际 {receipts}'
+    row = receipts[0]
+    assert row['op'] == 'CwActionStartBattleParam'
+    assert row['reason'] == '未执行:团队规模超限(规模占用>上限)', \
+        f'受阻码应命中登记行,实际 {row["reason"]!r}'
+    assert (row['blocked'], row['team_size_used'], row['deploy_cap']) == \
+        ('team_size_over_cap', 6, 5), f'披露行应带规模占用 / 上限,实际 {row}'
+
+
+def test_over_cap_guard_skips_in_sim(launch_env, monkeypatch) -> None:
+    """sim 门:机械 IO 不可达 → 守卫不读屏直接放行。"""
+    from sr_od.application.currency_war.obs import cw_observation
+    from sr_od.application.currency_war.prep_actions import (
+        PrepActionExecutor,
+        guard_team_size_over_cap_for_battle,
+    )
+    from sr_od.application.currency_war.sim import cw_sim_ports
+    test_context, host, _ctrl = launch_env
+    monkeypatch.setattr(cw_sim_ports, 'mechanical_io_allowed', lambda: False)
+
+    def _must_not_read(*_a, **_k):
+        raise AssertionError('sim 门内不应读「X/Y」计数')
+
+    monkeypatch.setattr(cw_observation, 'read_paddle_pair_confirmed',
+                        _must_not_read)
+    assert guard_team_size_over_cap_for_battle(
+        host, test_context, PrepActionExecutor(host, test_context)) == (True, '')

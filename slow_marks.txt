@@ -96,3 +96,8 @@ test/sr_od/application/currency_war/obs/test_cw_trainshop_obs.py::test_slots_fra
 # 装备库,扫描注册后端到端),冷跑实测 5.5s,登记防标准全量抖动过线;同文件
 # 委托打桩三条均 <0.01s 不登记
 test/sr_od/application/currency_war/obs/test_prep_variant_recognizers.py::test_tea_notice_frame_full_extras
+# 2026-11-25 登记:团队规模超限态观察写端锁——read_game_state 整帧全量读(金/血/等级/
+# 经验/节点/难度/连胜/羁绊面板 + paddle 两级 OCR 走 ocr_service 路径,无测试内容缓存),
+# 已减样本到 1 帧 + 不落证据截图仍 ~2s;锁的是生产写端真实生成路径(状态容器
+# team_size_used/deploy_cap 落值),不 mock 生成端,入慢桶。
+test/sr_od/application/currency_war/obs/cw_observation/test_read_deploy_paddle.py::test_read_game_state_writes_team_size_used
