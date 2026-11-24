@@ -7,8 +7,10 @@
 # 自己的 time 引用(账密节点 5 处裸睡 4.5s 此前桩够不着),两条降至 <0.2s。
 # 2026-09-15 摘牌:test_cal_pos_for_world_patrol.py::test_cal_pos 随测试文件删除移出
 # (cal_pos 真帧测试退役:依赖运行时下载的 YOLO 模型,环境不自足)。
-test/sr_od/operations/back_to_normal_world_plus/test_check_screen.py::TestBattleFailScreenBranch::test_battle_fail_clicks_blank
-test/sr_od/operations/back_to_normal_world_plus/test_check_screen.py::TestCwLobbyResidualBranch::test_residual_lobby_closes
+# 2026-11-25 随迁:back_to_normal_world_plus 测试按被测方法拆目录(单文件 >800 行),
+# 两条真帧锁落 test_check_screen_real_frame.py;登记名不变,只改路径。
+test/sr_od/operations/back_to_normal_world_plus/test_check_screen_real_frame.py::TestBattleFailScreenBranch::test_battle_fail_clicks_blank
+test/sr_od/operations/back_to_normal_world_plus/test_check_screen_real_frame.py::TestCwLobbyResidualBranch::test_residual_lobby_closes
 # 2026-10-15 摘牌:cw 分发语料 true 向(登记名早已失效=函数更名后未同步,
 # mark 实际未生效);现名 call 实测 0.25s(conftest OCR 磁盘缓存层),现役
 # 位置 = operations/test_loop.py::test_dispatch_corpus_identity_true_direction
