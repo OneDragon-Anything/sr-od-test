@@ -928,3 +928,268 @@ class TestCwPendingEntryDelegationBranch:
             f'带 wait 的轮次({len(sleeps)}) < 总轮次({rounds})'
         )
 
+
+# --------------------------------------------------------------------------- #
+# 货币战争图鉴族返回链
+# --------------------------------------------------------------------------- #
+
+#: 图鉴族返回链参数表:起点屏 → (归档帧子态, 自起点逐级点「按钮-返回」经过的屏序)。
+#: 屏序 = 画面档各图鉴档「按钮-返回」area 的 goto_list 返回边(子页 → 数据银行),
+#: 数据银行 → 大厅由「货币战争-大厅」分支点关闭 X 接管;去向依据 = 玩家 skill
+#: 画面卡「按钮-返回」行(skills/sr-od-currency-war/references/screens/
+#: 货币战争-数据银行.md 及同族各卡)。
+CODEX_CHAINS: dict[str, tuple[str, list[str]]] = {
+    '货币战争-竞争对手图鉴详情': (
+        '技能-火线动力机甲',
+        ['货币战争-竞争对手图鉴详情', '货币战争-竞争对手图鉴列表', '货币战争-数据银行'],
+    ),
+    '货币战争-竞争对手图鉴列表': (
+        '列表', ['货币战争-竞争对手图鉴列表', '货币战争-数据银行'],
+    ),
+    '货币战争-装备图鉴': ('default', ['货币战争-装备图鉴', '货币战争-数据银行']),
+    '货币战争-主角光环图鉴': ('蚁群效应选中', ['货币战争-主角光环图鉴', '货币战争-数据银行']),
+    '货币战争-数据银行': ('主页', ['货币战争-数据银行']),
+}
+_CODEX_START_IDS: list[str] = ['rival-detail', 'rival-list', 'equip', 'aura', 'data-bank']
+
+
+def _expected_hops(chain: list[str]) -> list[tuple[str, str, str]]:
+    """返回链的跳转三元组 (出发屏, 点的 area, 到达屏);末跳落大厅。"""
+    return [
+        (src, '按钮-返回', dst)
+        for src, dst in zip(chain, chain[1:] + ['货币战争-大厅'], strict=True)
+    ]
+
+
+def _codex_chain_harness(
+    test_context: SrTestContext,
+    monkeypatch: pytest.MonkeyPatch,
+) -> tuple[_WatchedBackToNormal, dict[str, list], dict[str, object]]:
+    """真帧链驱动装置:识别照真跑,只加记录;返回 (op, 记录表, 当前帧槽)。
+
+    - ``btnw_module.get_match_screen_name`` **不桩**——图鉴族分支靠它按屏名清单
+      精确识别当前页,是本链的被测判定;
+    - 对局中判定 / 模拟宇宙状态 / 列车补给恒无(链不经过这些画面,真匹配只会
+      让每帧多跑全量无关 id_mark);
+    - 对话守卫被触达即断言失败:链上每帧都有专属分支(图鉴页 → 图鉴族分支、
+      大厅 → 大厅分支、大世界 → 角色图标分支),落守卫 = 路由漂移;
+    - 记录表键:finds(识别命中)/ find_clicks / bare_clicks / ctrl_clicks(pos, pc_alt)。
+    """
+    rec: dict[str, list] = {'finds': [], 'find_clicks': [], 'bare_clicks': [], 'ctrl_clicks': []}
+    real_find = BackToNormalWorldPlus.round_by_find_area
+    real_find_click = BackToNormalWorldPlus.round_by_find_and_click_area
+    real_click = BackToNormalWorldPlus.round_by_click_area
+
+    def _spy_find(self, screen, s_name: str, a_name: str, *a, **k):
+        r = real_find(self, screen, s_name, a_name, *a, **k)
+        if r.is_success:
+            rec['finds'].append((s_name, a_name))
+        return r
+
+    def _spy_find_click(self, screen, s_name: str, a_name: str, *a, **k):
+        r = real_find_click(self, screen, s_name, a_name, *a, **k)
+        if r.is_success:
+            rec['find_clicks'].append((s_name, a_name))
+        return r
+
+    def _spy_click(self, s_name: str, a_name: str, *a, **k):
+        r = real_click(self, s_name, a_name, *a, **k)
+        rec['bare_clicks'].append((s_name, a_name))
+        return r
+
+    monkeypatch.setattr(BackToNormalWorldPlus, 'round_by_find_area', _spy_find)
+    monkeypatch.setattr(BackToNormalWorldPlus, 'round_by_find_and_click_area', _spy_find_click)
+    monkeypatch.setattr(BackToNormalWorldPlus, 'round_by_click_area', _spy_click)
+    monkeypatch.setattr(
+        btnw_module.sim_uni_screen_state, 'get_sim_uni_screen_state',
+        lambda *args, **kw: None,
+    )
+    monkeypatch.setattr(
+        btnw_module.common_screen_state, 'is_express_supply', lambda *args, **kw: False,
+    )
+    monkeypatch.setattr(
+        btnw_module.cw_screen_state, 'get_in_match_screen_name', lambda *args, **kw: None,
+    )
+    monkeypatch.setattr(
+        BackToNormalWorldPlus, 'check_npc_dialog',
+        lambda self, screen: (_ for _ in ()).throw(
+            AssertionError('返回链各帧都有专属分支,不应进入对话态守卫')),
+    )
+
+    op = _WatchedBackToNormal(test_context)
+    slot: dict[str, object] = {'img': None}
+    monkeypatch.setattr(op, 'screenshot', lambda: slot['img'])
+
+    real_ctrl_click = op.ctx.controller.click
+
+    def _spy_ctrl_click(pos=None, press_time=0, pc_alt=False, gamepad_key=None):
+        r = real_ctrl_click(pos, press_time=press_time, pc_alt=pc_alt,
+                            gamepad_key=gamepad_key)
+        rec['ctrl_clicks'].append((pos, bool(pc_alt)))
+        return r
+
+    monkeypatch.setattr(op.ctx.controller, 'click', _spy_ctrl_click, raising=False)
+    return op, rec, slot
+
+
+def _drive_round(
+    op: _WatchedBackToNormal,
+    rec: dict[str, list],
+    slot: dict[str, object],
+    test_context: SrTestContext,
+    screen: str,
+    state: str,
+) -> tuple[OperationRoundResult, dict[str, int]]:
+    """注入一张归档真帧,直调一轮 check_screen;返回 (结果, 本轮前各记录长度)。"""
+    slot['img'] = test_context.load_screen(screen, state)
+    op.last_screenshot = slot['img']
+    before = {k: len(v) for k, v in rec.items()}
+    result = op.check_screen()
+    return result, before
+
+
+def _assert_single_center_click(
+    rec: dict[str, list],
+    before: dict[str, int],
+    test_context: SrTestContext,
+    screen: str,
+    area_name: str,
+) -> None:
+    """本轮恰一次直点且落点 = 该 area 中心 + pc_alt=True,零 find+click / 裸点击。"""
+    area = test_context.screen_loader.get_area(screen, area_name)
+    assert area is not None, f'{screen}/{area_name} area 未建档'
+    assert rec['find_clicks'][before['find_clicks']:] == [], f'不应走 find_and_click:{rec["find_clicks"]}'
+    assert rec['bare_clicks'][before['bare_clicks']:] == [], f'不应有裸点击:{rec["bare_clicks"]}'
+    clicks = rec['ctrl_clicks'][before['ctrl_clicks']:]
+    assert len(clicks) == 1, f'应恰一次直点:{clicks}'
+    pos, alt = clicks[0]
+    assert (int(pos.x), int(pos.y)) == (int(area.center.x), int(area.center.y)) and alt, (
+        f'直点应为 {screen}/{area_name} 中心 + pc_alt=True:{clicks}'
+    )
+
+
+class TestCwCodexBranch:
+    """货币战争图鉴族 → 点右上返回箭头逐级退回分支锁。
+
+    期望表现(cw_screen_state.CODEX_STATE_SCREENS 注释 + 各图鉴档「按钮-返回」
+    goto 边):停在任一图鉴页时,check_screen 按屏名清单认出该页,验返回箭头模板
+    可见后直点其 area 中心(pc_alt=True)并 round_retry;逐帧重识别下每轮退一级
+    (子页 → 数据银行 → 大厅 → 大世界),终点「角色图标」分支 SUCCESS。
+    无此分支时图鉴页落兜底(点「菜单-右上角返回」),返回链未建模。
+    """
+
+    @pytest.mark.parametrize('start', list(CODEX_CHAINS), ids=_CODEX_START_IDS)
+    def test_route_to_lobby(self, start: str, test_context: SrTestContext) -> None:
+        """画面路由图:任一图鉴页经「按钮-返回」逐级可达大厅,跳转序列 = 返回链。"""
+        route = test_context.screen_loader.get_screen_route(start, '货币战争-大厅')
+        assert route is not None and route.can_go, f'{start} 无到达大厅的路由(返回边缺)'
+        hops = [(n.from_screen, n.from_area, n.to_screen) for n in route.node_list]
+        assert hops == _expected_hops(CODEX_CHAINS[start][1]), f'{start} 路由跳漂移:{hops}'
+
+    @pytest.mark.parametrize('start', list(CODEX_CHAINS), ids=_CODEX_START_IDS)
+    def test_back_chain_reaches_world(
+        self,
+        start: str,
+        test_context: SrTestContext,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """真帧逐级:每页认出该屏 + 返回箭头模板命中 + 直点其中心 → 大厅 → 大世界。"""
+        _, chain = CODEX_CHAINS[start]
+        op, rec, slot = _codex_chain_harness(test_context, monkeypatch)
+
+        enter_running_state(test_context)
+        try:
+            with fast_sleep(op):
+                for screen in chain:
+                    result, before = _drive_round(
+                        op, rec, slot, test_context, screen, CODEX_CHAINS[screen][0],
+                    )
+                    assert not result.is_success and result.status == screen, (
+                        f'{screen} 帧应命中图鉴族分支并 round_retry,status={result.status}'
+                    )
+                    # 识别事实(真模板):返回箭头可见才点;前序分支零命中。
+                    assert rec['finds'][before['finds']:] == [(screen, '按钮-返回')], (
+                        f'{screen} 帧识别命中应仅返回箭头:{rec["finds"]}'
+                    )
+                    _assert_single_center_click(rec, before, test_context, screen, '按钮-返回')
+
+                result, before = _drive_round(op, rec, slot, test_context, '货币战争-大厅', 'lobby')
+                assert not result.is_success and result.status == '货币战争-大厅', (
+                    f'数据银行返回后应由大厅分支接管,status={result.status}'
+                )
+                _assert_single_center_click(rec, before, test_context, '货币战争-大厅', '按钮-关闭')
+
+                result, before = _drive_round(op, rec, slot, test_context, '大世界', '普通')
+                assert result.is_success, f'链终点应落大世界 SUCCESS,status={result.status}'
+                assert len(rec['ctrl_clicks']) == before['ctrl_clicks'], '大世界帧不应再点击'
+        finally:
+            reset_running_state(test_context, op)
+
+    def test_back_arrow_hidden_no_blind_click(
+        self,
+        test_context: SrTestContext,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """清单命中数据银行但返回箭头模板未命中(被浮层盖住):不接管、不盲点,落兜底。"""
+        ctrl_clicks: list[tuple[Point | None, bool]] = []
+
+        def _fake_find_area(self, screen, s_name, a_name, *a, **kw):
+            return self.round_wait(status=f'未找到 {a_name}')
+
+        monkeypatch.setattr(BackToNormalWorldPlus, 'round_by_find_area', _fake_find_area)
+        monkeypatch.setattr(
+            BackToNormalWorldPlus, 'round_by_find_and_click_area', _fake_find_area,
+        )
+        monkeypatch.setattr(
+            BackToNormalWorldPlus, 'round_by_click_area', _fake_find_area,
+        )
+        monkeypatch.setattr(
+            btnw_module.sim_uni_screen_state, 'get_sim_uni_screen_state',
+            lambda *args, **kw: None,
+        )
+        monkeypatch.setattr(
+            btnw_module.common_screen_state, 'is_express_supply', lambda *args, **kw: False,
+        )
+        monkeypatch.setattr(
+            btnw_module.cw_screen_state, 'get_in_match_screen_name', lambda *args, **kw: None,
+        )
+        # 屏名清单匹配桩:只对含数据银行的清单命中(图鉴族分支送审的清单),其余 None。
+        monkeypatch.setattr(
+            btnw_module, 'get_match_screen_name',
+            lambda ctx, screen, screen_name_list=None: (
+                '货币战争-数据银行'
+                if screen_name_list and '货币战争-数据银行' in screen_name_list
+                else None
+            ),
+        )
+        monkeypatch.setattr(BackToNormalWorldPlus, 'check_npc_dialog', lambda self, s: None)
+
+        op = _WatchedBackToNormal(test_context)
+        op.last_screenshot = np.zeros((1080, 1920, 3), dtype=np.uint8)
+
+        def _record_click(pos=None, press_time=0, pc_alt=False, gamepad_key=None):
+            ctrl_clicks.append((pos, bool(pc_alt)))
+            return True
+
+        monkeypatch.setattr(op.ctx.controller, 'click', _record_click, raising=False)
+
+        enter_running_state(test_context)
+        try:
+            with fast_sleep(op):
+                result = op.check_screen()
+        finally:
+            reset_running_state(test_context, op)
+
+        assert not result.is_success and result.status == '右上角返回', (
+            f'箭头不可见应落兜底,status={result.status}'
+        )
+        fallback = test_context.screen_loader.get_area('菜单', '右上角返回')
+        back = test_context.screen_loader.get_area('货币战争-数据银行', '按钮-返回')
+        assert fallback is not None and back is not None
+        assert len(ctrl_clicks) == 1, f'应只有兜底一次直点:{ctrl_clicks}'
+        pos, alt = ctrl_clicks[0]
+        assert (int(pos.x), int(pos.y)) == (int(fallback.center.x), int(fallback.center.y)), (
+            f'直点应是兜底位,不是返回箭头位 {back.center}:{ctrl_clicks}'
+        )
+        assert alt is True
+
