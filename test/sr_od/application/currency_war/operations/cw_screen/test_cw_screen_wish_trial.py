@@ -25,6 +25,9 @@ import pytest
 from test.conftest import SrTestContext
 from test.harness.fixture_controller import fast_sleep
 
+from one_dragon.base.operation.operation_round_result import (
+    OperationRoundResultEnum,
+)
 from sr_od.application.currency_war.kernel.cw_screen_report.wish_trial import (
     CwScreenWishTrialObs,
 )
@@ -115,7 +118,7 @@ def test_empty_bucket_text_still_dispatches(
         test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
     """边界:OCR 空桶(候选文本空串)≠ 候选空——候选 ``['', '获得20金币', '']``
     合法 pick idx=1 → 守卫① 放行、恰派发一次(param = 策略产值原对象)、
-    返回 round_wait 循环推进。"""
+    返回 round_wait(非终结出口:本 node 循环推进,落地由下一轮复查判)。"""
     pick = CwActionPickWishTrialParam(idx=1)
     op, dispatched, strategy_calls = _attach(
         test_context, monkeypatch, ['', _OPT_B, ''], pick)
@@ -123,7 +126,8 @@ def test_empty_bucket_text_still_dispatches(
     with fast_sleep():
         result = op.act()
 
-    assert not result.is_fail, f'空桶候选合法 pick 不应 fail,实际 {result.status!r}'
+    assert result.result is OperationRoundResultEnum.WAIT, \
+        f'合法 pick 派发后应 round_wait 循环推进,实际 {result.result!r}'
     assert strategy_calls == [1], '合法候选应恰调策略器一次'
     assert len(dispatched) == 1, f'应恰派发一次,实际 {dispatched}'
     param, env = dispatched[0]
