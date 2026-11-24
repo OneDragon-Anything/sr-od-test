@@ -91,3 +91,8 @@ test/sr_od/application/currency_war/obs/test_cw_shop_refresh_obs.py::test_refres
 # 全读链(OCR+SIFT 立绘库),冷跑实测 3.4s,登记防标准全量抖动过线
 test/sr_od/application/currency_war/obs/test_cw_trainshop_obs.py::test_normalize_attr_name
 test/sr_od/application/currency_war/obs/test_cw_trainshop_obs.py::test_slots_frames_truth
+
+# 2026-11-24 备战变体识别器登记:茶歇预告归档帧走备战全量读链(OCR+SIFT 立绘/
+# 装备库,扫描注册后端到端),冷跑实测 5.5s,登记防标准全量抖动过线;同文件
+# 委托打桩三条均 <0.01s 不登记
+test/sr_od/application/currency_war/obs/test_prep_variant_recognizers.py::test_tea_notice_frame_full_extras

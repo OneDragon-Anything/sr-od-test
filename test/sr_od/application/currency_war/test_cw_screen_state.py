@@ -10,6 +10,7 @@ from types import SimpleNamespace
 
 from sr_od.application.currency_war.cw_screen_state import (
     LOBBY_STATE_SCREENS,
+    PREP_DIRECT_EXIT_SCREENS,
     in_match_screen_names,
 )
 
@@ -48,6 +49,17 @@ class TestInMatchScreenNames:
         「已在对局中」跳过入口导航。
         """
         assert '货币战争-主角光环图鉴' in LOBBY_STATE_SCREENS
+
+    def test_prep_variants_direct_exit(self) -> None:
+        """出战钮形态变体的备战屏(免战 / 茶歇预告)必须在 A 类名单内。
+
+        变体画面的「出战」识别标志被「跳过」/「幕后茶歇」替换;建档后不入名单 →
+        退出路由不把它当可点门形图标退出的备战态(落默认委托),委托的对局循环
+        停机位共用本常量、同样不按它交还——退局链认不出这个可退出态。入表依据
+        (归档帧门形图标同位同一)见常量注释。
+        """
+        assert {'货币战争-备战', '货币战争-备战-免战',
+                '货币战争-备战-茶歇预告'} <= PREP_DIRECT_EXIT_SCREENS
 
     def test_prefixed_unlisted_screen_auto_included(self) -> None:
         """带前缀且不在白名单的建档屏自动进判定集(新画面零登记生效)。"""
