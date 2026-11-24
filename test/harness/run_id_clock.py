@@ -25,15 +25,20 @@ def advancing_run_clock(monkeypatch: pytest.MonkeyPatch) -> None:
     from sr_od.application.currency_war.telemetry import state as cw_state
 
     class _AdvancingDatetime:
-        """``datetime.now`` 替身:每次调用前进 2 秒(真实时序压缩)。"""
+        """``datetime.now`` 替身:每次调用前进 2 秒(真实时序压缩)。
 
-        _tick: int = 0
+        秒数进位到分:时钟单调递增、任意次调用不重号也不越界(纯秒字段
+        +2 会在第 30 次调用越出 0–59 抛 ValueError,批量场景不可用)。
+        """
+
+        _elapsed: int = 0
 
         @staticmethod
         def now():
-            _AdvancingDatetime._tick += 2
+            _AdvancingDatetime._elapsed += 2
             from datetime import datetime as _real
-            return _real(2026, 11, 25, 12, 0, _AdvancingDatetime._tick)
+            return _real(2026, 11, 25, 12, _AdvancingDatetime._elapsed // 60,
+                         _AdvancingDatetime._elapsed % 60)
 
-    _AdvancingDatetime._tick = 0
+    _AdvancingDatetime._elapsed = 0
     monkeypatch.setattr(cw_state, 'datetime', _AdvancingDatetime)
