@@ -1,6 +1,11 @@
-"""CurrencyWarApp 退出收尾交接节点测试(打桩,不跑游戏)。
+"""CurrencyWarApp 测试(打桩 + 归档真帧,不跑游戏)。
 
-覆盖 loop→exit 交接的三形态判定与两段式(载体 =
+两块覆盖:
+- ``_in_match`` 入口判定(``TestInMatch``):画面匹配 → 白名单短路 → 关键词兜底
+  三层判定序;锁「对局前建档页被关键词层误判为对局中」故障形态;
+- 退出收尾交接节点(``TestExitCleanupHandoff``):loop→exit 交接的三形态判定与两段式。
+
+交接节点覆盖(载体 =
 ``_previous_round_result.status``,框架在节点转移时写入):
 
 - 大厅完成(``STATUS_LOBBY_DONE``)→ CwEntryExit 被调 + ``ctx.cw_match`` 置
@@ -23,6 +28,7 @@
 
 from types import SimpleNamespace
 
+import numpy as np
 import pytest
 from test.conftest import SrTestContext
 from test.harness.fixture_controller import (
@@ -33,7 +39,9 @@ from test.harness.fixture_controller import (
 )
 
 from one_dragon.base.operation.operation_base import OperationResult
+from one_dragon.base.screen import screen_utils
 from sr_od.application.currency_war import currency_war_app as cw_app_module
+from sr_od.application.currency_war.cw_screen_state import LOBBY_STATE_SCREENS
 from sr_od.application.currency_war.currency_war_app import CurrencyWarApp
 from sr_od.application.currency_war.kernel import cw_code_hash_gate
 from sr_od.application.currency_war.kernel.cw_code_hash_gate import GateResult
@@ -369,3 +377,85 @@ class TestExitCleanupHandoff:
             f'弹窗清完后 exit 应被调恰一次:{exit_cls.constructed}/{exit_cls.executed}'
         )
         assert test_context.cw_match is None, '交接成功后 cw_match 应置 None'
+
+
+class TestInMatch:
+    """``_in_match`` 三层判定序锁:画面匹配 → 白名单短路 → 关键词兜底。
+
+    锁的故障形态(待跟进事项「_in_match 第②层关键词兜底绕过对局前画面白名单」):
+    对局前建档页(数据银行)带「投资策略图鉴 / 投资环境图鉴」字样,第①层画面匹配
+    对白名单屏不可见(名单 = 前缀 − 白名单),直接落第②层关键词 → 误判「已在对局中」
+    → 单跑 CW app 跳过 start 交 loop,对局循环跑在图鉴页上。设计约定:精确建档命中
+    (任一方向)优先于关键词启发式——白名单屏精确命中即短路 False,不进关键词层。
+    """
+
+    def test_data_bank_frame_not_in_match(
+        self,
+        test_context: SrTestContext,
+    ) -> None:
+        """数据银行归档帧(带「投资策略图鉴 / 投资环境图鉴」字样)→ False(全真识别)。"""
+        if not test_context.has_screen('货币战争-数据银行', '主页'):
+            pytest.skip('存档截图缺失:screens/货币战争-数据银行/主页.webp')
+        frame = test_context.load_screen('货币战争-数据银行', '主页')
+
+        app = _StubCurrencyWarApp(test_context)
+        assert not app._in_match(frame), (
+            '数据银行页是对局前建档屏(白名单成员),不应被判为对局中'
+        )
+
+    def test_whitelist_hit_short_circuits_before_keywords(
+        self,
+        test_context: SrTestContext,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """白名单任一屏精确命中 → False,且关键词层零调用(遍历白名单全集)。"""
+        ocr_calls: list[str] = []
+
+        def _matcher(hit: str):
+            """画面匹配桩:查询名单含 hit 时答 hit(该屏被精确识别),其余 None。"""
+            def _match(ctx, screen, screen_name_list=None, **kwargs):
+                return hit if hit in (screen_name_list or []) else None
+            return _match
+
+        monkeypatch.setattr(CurrencyWarApp, '_at_lobby', lambda self, screen: False)
+        monkeypatch.setattr(
+            CurrencyWarApp, 'round_by_ocr',
+            lambda self, screen, kw, **kwargs: ocr_calls.append(kw) or self.round_success(kw),
+        )
+        app = _StubCurrencyWarApp(test_context)
+        blank = np.zeros((8, 8, 3), dtype=np.uint8)
+        for hit in sorted(LOBBY_STATE_SCREENS):
+            monkeypatch.setattr(screen_utils, 'get_match_screen_name', _matcher(hit))
+            assert not app._in_match(blank), f'白名单屏 {hit} 精确命中时应短路 False'
+        assert ocr_calls == [], f'白名单命中后不应触达关键词层,实际调用 {ocr_calls}'
+
+    def test_keyword_layer_reached_when_no_precise_match(
+        self,
+        test_context: SrTestContext,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """两层画面匹配均未命中(半开 / 过渡帧)→ 仍落关键词层,关键词命中 → True。"""
+        ocr_calls: list[str] = []
+        monkeypatch.setattr(CurrencyWarApp, '_at_lobby', lambda self, screen: False)
+        monkeypatch.setattr(screen_utils, 'get_match_screen_name',
+                            lambda *args, **kwargs: None)
+        monkeypatch.setattr(
+            CurrencyWarApp, 'round_by_ocr',
+            lambda self, screen, kw, **kwargs: ocr_calls.append(kw) or self.round_success(kw),
+        )
+        app = _StubCurrencyWarApp(test_context)
+
+        assert app._in_match(np.zeros((8, 8, 3), dtype=np.uint8))
+        assert ocr_calls, '两层画面匹配均未命中时应触达关键词层'
+
+    def test_in_match_frame_still_in_match(
+        self,
+        test_context: SrTestContext,
+    ) -> None:
+        """对局中帧(备战)不受白名单短路影响 → True(全真识别)。"""
+        if not test_context.has_screen('货币战争-备战', 'rail_badge_capsule_prep_r4'):
+            pytest.skip('存档截图缺失:screens/货币战争-备战/rail_badge_capsule_prep_r4.webp')
+        frame = test_context.load_screen('货币战争-备战', 'rail_badge_capsule_prep_r4')
+
+        app = _StubCurrencyWarApp(test_context)
+        assert app._in_match(frame), '备战帧是对局中画面,应判为对局中'
