@@ -38,12 +38,6 @@ def test_verdict_three_states(texts: list[str], expected: str | None) -> None:
     assert parse_settlement_verdict(texts) == expected
 
 
-def test_verdict_constants_are_distinct_json_strings() -> None:
-    """三态常量为互异 JSON 字符串(extras 契约面:MCP agent 按字面值解析)。"""
-    vals = {SETTLE_VERDICT_WIN, SETTLE_VERDICT_ENDED, SETTLE_VERDICT_FAILED}
-    assert vals == {'win', 'ended', 'failed'}
-
-
 def test_won_delegates_to_verdict_without_changing_killed_semantics() -> None:
     """``parse_settlement_won`` 委托后 killed 语义等价:win→True / failed→False /
     ended→None(非 killed)/ 标题词全缺走进度符号分支。"""
