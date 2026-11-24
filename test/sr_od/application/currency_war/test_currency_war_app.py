@@ -41,8 +41,8 @@ from test.harness.fixture_controller import (
 from one_dragon.base.operation.operation_base import OperationResult
 from one_dragon.base.screen import screen_utils
 from sr_od.application.currency_war import currency_war_app as cw_app_module
-from sr_od.application.currency_war.cw_screen_state import LOBBY_STATE_SCREENS
 from sr_od.application.currency_war.currency_war_app import CurrencyWarApp
+from sr_od.application.currency_war.cw_screen_state import LOBBY_STATE_SCREENS
 from sr_od.application.currency_war.kernel import cw_code_hash_gate
 from sr_od.application.currency_war.kernel.cw_code_hash_gate import GateResult
 from sr_od.application.currency_war.operations.cw_loop import (
