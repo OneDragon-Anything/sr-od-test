@@ -37,6 +37,7 @@ from test.harness.fixture_controller import (
     fast_sleep,
     reset_running_state,
 )
+from test.harness.run_id_clock import advancing_run_clock
 
 from one_dragon.base.matcher.ocr.ocr_match_result import OcrMatchResult
 from one_dragon.base.operation.operation_base import OperationResult
@@ -726,9 +727,18 @@ class TestHandleInitRebuild:
 
     def test_fallback_builds_takeover_container(
             self, cw_run_env: SrTestContext,
-            monkeypatch: pytest.MonkeyPatch) -> None:
+            monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
         """场景 5 继续进度:容器缺席 → 兜底建 takeover;SettlementState
-        注入 True(takeover ≙ 旧 True)。"""
+        注入 True(takeover ≙ 旧 True)。跨秒前提下容器全部行挂漏斗正铸
+        的 run(= created_run_id),``__init__`` 预铸段恒空——接管路径
+        的 run 归属不靠同秒碰撞(规范 = skill sr-od-dev-currency-war
+        references/journal.md §10)。"""
+        from sr_od.application.currency_war.kernel import cw_state_journal
+        from sr_od.application.currency_war.telemetry import state as cw_state
+        from sr_od.application.currency_war.telemetry.journal_query import (
+            read_journal_stats,
+        )
+        advancing_run_clock(monkeypatch)
         loop = self._make_loop(cw_run_env, monkeypatch)
         loop.handle_init()
 
@@ -737,11 +747,18 @@ class TestHandleInitRebuild:
         assert container.opened_via == 'takeover', \
             (f'兜底建(未经新局链专属画面)应写 takeover,'
              f'实际 {container.opened_via!r}')
-        from sr_od.application.currency_war.telemetry import state as cw_state
         assert container.created_run_id == cw_state.current_run_id(), \
             '兜底建容器应经漏斗记 created_run_id(重建判据载体)'
         assert loop._settle.is_new_match is True, \
             'takeover 容器的 SettlementState 注入应为 True'
+        cw_state_journal.flush_pending()
+        rows, _stats = read_journal_stats(tmp_path)
+        run_ids = {r.get('run_id') for r in rows}
+        assert rows and run_ids == {container.created_run_id}, (
+            f'接管容器的种子行应挂漏斗正铸的 run,实际 run 集'
+            f' {sorted(map(str, run_ids))} vs created_run_id={container.created_run_id!r}')
+        assert [r['v'] for r in rows] == list(range(1, len(rows) + 1)), \
+            '同号内版本号应自 1 连续不重复'
 
     def test_stale_container_rebuilt_as_takeover(
             self, cw_run_env: SrTestContext,
@@ -753,17 +770,7 @@ class TestHandleInitRebuild:
         压缩时序需显式造出跨秒前提,否则判据输入退化为同值字符串)。"""
         from sr_od.application.currency_war.telemetry import state as cw_state
 
-        class _AdvancingDatetime:
-            """``datetime.now`` 替身:每次调用前进 2 秒(真实时序压缩)。"""
-
-            @staticmethod
-            def now():
-                _AdvancingDatetime._tick += 2
-                from datetime import datetime as _real
-                return _real(2026, 11, 19, 12, 0, _AdvancingDatetime._tick)
-
-        _AdvancingDatetime._tick = 0
-        monkeypatch.setattr(cw_state, 'datetime', _AdvancingDatetime)
+        advancing_run_clock(monkeypatch)
 
         stale = _establish_ctx_container(cw_run_env, 'new_game')
         cw_state.close_run()   # 模拟上一运行收尾(_RUN_CLOSED 置位)
