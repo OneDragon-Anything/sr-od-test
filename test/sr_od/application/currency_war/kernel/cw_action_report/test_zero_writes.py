@@ -112,7 +112,8 @@ def andon_rows(monkeypatch: pytest.MonkeyPatch) -> list[dict]:
 def test_tome_transient_window_zero_andon_chain(andon_rows: list[dict]) -> None:
     """瞬态窗主剧本(典籍为备战栏唯一非空槽 = 全空形态走通的阻断形态):
     开件零写 → 弹窗期重观察零失配 → 选卡清槽 → 全空实读零缺陷零 andon
-    (局 27 停机链在新语义下不成立的复现锁)。"""
+    (「弹窗识别 miss 使备战环踩中瞬态窗 → 实读 tome 对 logic empty 真失配
+    andon」这条停机链在新语义下不成立的复现锁)。"""
     gs = _gs()
     before = BenchView(slots=[BenchSlot(kind='empty')] * 2
                        + [BenchSlot(kind='tome')]
