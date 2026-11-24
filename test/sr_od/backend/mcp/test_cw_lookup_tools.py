@@ -3,7 +3,8 @@
 锁的内容(模块 docstring 匹配策略 + 字段合并语义):
 
 - 角色域:精确命中(瓦尔特=开拓银轨成员)、同名多档合并(星神★阿哈 costs=[4,5,7]
-  单条)、系统赠送单位(costs=[0]+来源说明)、模糊多命中 ambiguous、not_found;
+  单条)、系统赠送单位(costs=[0]+来源说明)、模糊多命中 ambiguous、not_found、
+  技能原文(双技能一 front 一 back、各星级只给一份;系统单位空;list_all 同带);
 - 羁绊域:精确(欢愉逐档效果)、计数方式特例(千星商会 STAR3)、阵营过滤 list_all;
 - 装备域:精确(配方拼接)、星徽类效果文本、分类过滤 list_all、多命中 ambiguous;
 - 参数校验:list_all 缺过滤拒绝(带下一步提示文案);
@@ -46,15 +47,28 @@ def test_char_exact_and_multi_cost_merge() -> None:
 
 
 def test_char_system_unit_and_hidden() -> None:
-    """系统赠送单位 costs=[0] 带来源说明;隐藏单位(丹恒·腾荒)带 is_hide 标记。"""
+    """系统赠送单位 costs=[0] 带来源说明、skills 空;隐藏单位(丹恒·腾荒)带 is_hide 标记且技能块照给。"""
     peipei = lookup_cw_char('佩佩')
     assert peipei.status == 'success'
     assert peipei.matches[0].costs == [0]
     assert peipei.matches[0].system_note != ''
+    assert peipei.matches[0].skills == []
 
     tenghuang = lookup_cw_char('丹恒·腾荒')
     assert tenghuang.status == 'success'
     assert tenghuang.matches[0].is_hide is True
+    assert tenghuang.matches[0].skills
+
+
+def test_char_skills_with_sides_on_every_path() -> None:
+    """技能原文随 skills 返回:双技能角色两条同名技能分属 front/back、原文非空;
+    list_all 条目同样带(形状单一,无开关)。出处 = CwSkillInfo 字段注释。"""
+    walter = lookup_cw_char('瓦尔特').matches[0]
+    assert {s.front_back for s in walter.skills} == {'front', 'back'}
+    assert len({s.name for s in walter.skills}) == 1  # 前后台两技能常同名,靠 front_back 区分
+    assert all(s.desc and s.category_tags for s in walter.skills)
+
+    assert all(m.skills for m in lookup_cw_char(cost=4, list_all=True).matches)
 
 
 def test_char_fuzzy_ambiguous_and_not_found() -> None:
@@ -147,8 +161,6 @@ def test_register_smoke_and_output_schema() -> None:
     """三工具注册 + readOnlyHint + docstring 首句;outputSchema 校验运行时返回(序列化层冒烟)。"""
     tools = _registered_tools()
     assert set(tools) == {'cw_char_lookup', 'cw_trait_lookup', 'cw_equip_lookup'}
-
-    import asyncio
 
     samples: dict[str, BaseModel] = {
         'cw_char_lookup': lookup_cw_char('瓦尔特'),
