@@ -10,9 +10,10 @@
 - 真实帧:局 43 三张保留帧(选光环后 / 卖出两次后 / 停留 2 小时后;红色「6/5」
   四源互证)离线读出 X=6 / Y=5;既有夹具读数不变(茶歇预告帧 4/5、
   deployed_2star 帧 4/4、shop_closed 帧 3/4、rail_badge_prep_r4 帧 6/7);
-- 超限读数双帧确认门(与 cap 防抖同一条「跨帧一致才采信」纪律:超限是持续态、
-  误读是瞬态):重读仍超限 → 采信重读值 + 留证;重读不超限 → 采重读值(首读按
-  误读);重读不可得 → X 置 None(不按超限采信,cap 保留);
+- 超限读数双帧确认门(与 cap 防抖同一条「域外读数跨帧**同值**才采信」纪律:超限是
+  持续态、误读是瞬态):重读与首读同值且仍超限 → 采信 + 留证;重读超限但不同值
+  (两次不同的瞬态误读)→ X 置 None 不按超限采信;重读不超限 → 采重读值(首读按
+  误读);重读不可得 → X 置 None(cap 保留);
 - 观察写端(``read_game_state`` 全量路径,生产 heavy 观察走的路):超限帧落
   状态容器 ``team_size_used``=6 / ``deploy_cap``=5。
 """
@@ -113,13 +114,25 @@ def _gate_env(monkeypatch: pytest.MonkeyPatch, second_read,
 
 def test_confirm_over_cap_double_frame_confirmed(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """重读仍超限 → 采信重读值,留「超限」证据(不是拒信)。"""
+    """重读与首读同值且仍超限 → 采信重读值,留「超限」证据(不是拒信)。"""
     ctx, calls = _gate_env(monkeypatch, (6, 5))
     assert _confirm_over_cap(ctx, object(), 6, 5) == (6, 5)
     assert len(calls) == 1, f'确认超限应留一条证据,实际 {calls}'
     (field, _old, _new, _screen), kwargs = calls[0]
     assert field == 'team_size_over_cap'
     assert '超限' in kwargs['verdict']
+
+
+@pytest.mark.parametrize('second', [(7, 6), (5, 4), (6, 4), (7, 5)])
+def test_confirm_over_cap_second_read_over_but_differs(
+        monkeypatch: pytest.MonkeyPatch, second: tuple[int, int]) -> None:
+    """重读超限但与首读不同值(两次不同的瞬态误读)→ 不按超限采信:X 置 None、
+    cap 保留——否则守卫会把误读当超限拦下一次合法出战。"""
+    ctx, calls = _gate_env(monkeypatch, second)
+    assert _confirm_over_cap(ctx, object(), 6, 5) == (None, 5)
+    assert len(calls) == 1
+    (_field, _old, _new, _screen), kwargs = calls[0]
+    assert '未确认' in kwargs['verdict'] and '超限-双帧一致' not in kwargs['verdict']
 
 
 def test_confirm_over_cap_second_read_not_over(
@@ -154,13 +167,14 @@ def test_confirm_over_cap_in_domain_passthrough(
 
 
 @pytest.mark.parametrize(('reads', 'expected', 'evidence_n'), [
-    ([(6, 5), (6, 5)], (6, 5), 1),   # 首读超限 → 重读确认 → 采信
+    ([(6, 5), (6, 5)], (6, 5), 1),   # 首读超限 → 重读同值确认 → 采信
+    ([(6, 5), (7, 6)], (None, 5), 1),  # 首读超限 → 重读超限但不同值 → 不采信
     ([(5, 5)], (5, 5), 0),           # 首读不超限 → 不重读
 ])
 def test_read_paddle_pair_confirmed_wiring(monkeypatch: pytest.MonkeyPatch,
                                            reads, expected, evidence_n) -> None:
     """公开口(观察写端 / 出战守卫消费):单读 + 确认门串联——超限读数经
-    重读确认才出门,不超限单读直出。"""
+    重读同值确认才出门,不超限单读直出。"""
     calls: list[tuple] = []
     seq = iter(reads)
     monkeypatch.setattr(mod, '_read_deploy_paddle', lambda *a, **k: next(seq))

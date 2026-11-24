@@ -441,9 +441,13 @@ def _require_over_cap_frame(test_context: SrTestContext) -> None:
 def test_over_cap_guard_blocks_battle_click(launch_env,
                                             monkeypatch) -> None:
     """超限态出战 → 零点击 + (False, 受阻码) + 回执受阻行。"""
+    from sr_od.application.currency_war.kernel import cw_observe
     from sr_od.application.currency_war.kernel.cw_game_state import game_state_of
     test_context, host, ctrl = launch_env
     _require_over_cap_frame(test_context)
+    # 确认门留证会经 cw_shot_unique 往项目 .debug/ 落真实截图(conftest 的落盘
+    # 重定向只盖 save_debug_image,拦不到这条路)→ 同仓先例 no-op 桩,测试零副作用。
+    monkeypatch.setattr(cw_observe, 'cw_shot_unique', lambda image, label: None)
     match = types.SimpleNamespace(session=types.SimpleNamespace())
     monkeypatch.setattr(test_context, 'cw_match', match)
     _patch_deploy_plan(monkeypatch, [])
