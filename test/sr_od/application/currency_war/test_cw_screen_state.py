@@ -40,6 +40,15 @@ class TestInMatchScreenNames:
         ])
         assert names == ['货币战争-备战'], f'挂起入口两屏漏排除:{names}'
 
+    def test_aura_codex_excluded(self) -> None:
+        """主角光环图鉴(对局前图鉴查询页)必须在白名单内。
+
+        建档屏 currency_war_aura_codex 带前缀,与数据银行/装备图鉴同族;
+        漏排除会被前缀自动收进对局中判定集,入口链路过该页即误判
+        「已在对局中」跳过入口导航。
+        """
+        assert '货币战争-主角光环图鉴' in LOBBY_STATE_SCREENS
+
     def test_prefixed_unlisted_screen_auto_included(self) -> None:
         """带前缀且不在白名单的建档屏自动进判定集(新画面零登记生效)。"""
         names = in_match_screen_names([_si('货币战争-某新画面')])
