@@ -1,4 +1,5 @@
-"""prep_anchors_hit 备战两识别标志判定测试(第二识别标志三形态)。
+"""备战帧判定测试:prep_anchors_hit 备战两识别标志判定(第二识别标志三形态)
++ is_prep_like_frame 停机钩子门的合成确认浮层段。
 
 锁的设计约定(kernel/cw_obs_core.py::prep_anchors_hit,判定单一源):
 - 门序 = 第一识别标志「备战标识-购买经验」先判,不命中恒 False(防
@@ -18,7 +19,11 @@ import pytest
 from test.conftest import SrTestContext
 from test.harness.fixture_controller import FixtureController
 
-from sr_od.application.currency_war.kernel.cw_obs_core import prep_anchors_hit
+from sr_od.application.currency_war.kernel.cw_obs_core import (
+    is_prep_like_frame,
+    prep_anchors_hit,
+)
+from sr_od.application.currency_war.obs import cw_synthesis_overlay_obs as overlay_mod
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
     CwScreenPrep,
 )
@@ -98,3 +103,56 @@ def test_real_prep_frame_claims_via_battle_form(
     op = CwScreenPrep(test_context)
     assert prep_anchors_hit(op, ctrl.current_frame) is True, \
         '真备战帧(出战形态)应经真实识别链认领'
+
+
+# ===== is_prep_like_frame 停机钩子门:合成确认浮层段 =====
+
+#: 实机浮层帧(浮层的最高档):✓ 按钮的位置高出旧画面档固定搜索框的上沿,两段式判定
+#: 得到的屏名是「货币战争-备战」——本用例判否只能来自浮层这一段。
+_OVERLAY_FRAME: tuple[str, str] = ('货币战争-备战', 'rail_badge_absent_r2')
+#: 商店面板展开帧(两段式判定的屏名 = 「货币战争-备战-开商店」)。
+_SHOP_OPEN_FRAME: tuple[str, str] = ('货币战争-备战-开商店', 'shop_open')
+
+
+def test_overlay_frame_is_not_prep_like(
+        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
+    """浮层帧判非备战帧:屏名认成备战、合成确认浮层在场 → False。
+
+    浮层在场的帧装备栏读数已知失真,采集与停机钩子不该在这一帧上跑。同一帧再判
+    一次(一帧内多个钩子各调一次)结果相同,识别只算一次——按帧缓存。"""
+    if not test_context.has_screen(*_OVERLAY_FRAME):
+        pytest.skip(f'存档截图缺失:screens/{_OVERLAY_FRAME[0]}/{_OVERLAY_FRAME[1]}.webp')
+    frame = test_context.load_screen(*_OVERLAY_FRAME)
+    real_read = overlay_mod.read_synthesis_overlay_of
+    reads: list[int] = []
+
+    def _counting_read(ctx, screen):
+        reads.append(1)
+        return real_read(ctx, screen)
+
+    monkeypatch.setattr(overlay_mod, 'read_synthesis_overlay_of', _counting_read)
+
+    assert is_prep_like_frame(test_context, frame) is False, \
+        '合成确认浮层在场的帧应判非备战帧'
+    assert is_prep_like_frame(test_context, frame) is False, \
+        '同一帧再判一次结果应相同'
+    assert len(reads) == 1, f'同一帧的浮层识别应只算一次,实际算了 {len(reads)} 次'
+
+
+def test_shop_open_frame_skips_overlay_check_and_stays_prep_like(
+        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
+    """屏名是开商店的帧不识别浮层、仍判备战帧。
+
+    商店开着的画面不读右侧装备(用户口径):识别函数换成触碰即炸的桩,被调用就红;
+    判定结果仍是备战帧——钩子在这种帧上照常可跑。"""
+    if not test_context.has_screen(*_SHOP_OPEN_FRAME):
+        pytest.skip(f'存档截图缺失:screens/{_SHOP_OPEN_FRAME[0]}/{_SHOP_OPEN_FRAME[1]}.webp')
+    frame = test_context.load_screen(*_SHOP_OPEN_FRAME)
+
+    def _must_not_read(ctx, screen):
+        raise AssertionError('商店开着的帧不应识别合成确认浮层(不读右侧装备)')
+
+    monkeypatch.setattr(overlay_mod, 'read_synthesis_overlay_of', _must_not_read)
+
+    assert is_prep_like_frame(test_context, frame) is True, \
+        '开商店帧不识别浮层,应照现有两段式判定为备战帧'
