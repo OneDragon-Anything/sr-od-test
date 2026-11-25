@@ -91,3 +91,35 @@ def test_read_gold_settled_reload_unavailable(monkeypatch: pytest.MonkeyPatch, s
     ctx, calls, got, sleeps = _gold_gate_env(monkeypatch, shot, [73])
     assert read_gold_settled(ctx, _FRAME1) == 73
     assert got == [_FRAME1] and calls == []
+
+
+def test_read_gold_settled_offline_frame_single_read(monkeypatch: pytest.MonkeyPatch) -> None:
+    """离线帧:有控制器也不睡不截屏,返回首读值,零证据(历史图没有「稍后再读」)。"""
+    from sr_od.context.frame_source import offline_frame
+
+    shots: list = []
+
+    def spy_screenshot():
+        shots.append(1)
+        return (0.0, _FRAME2)
+
+    ctx, calls, got, sleeps = _gold_gate_env(monkeypatch, (0.0, _FRAME2), [73])
+    ctx.controller.screenshot = spy_screenshot
+    with offline_frame():
+        assert read_gold_settled(ctx, _FRAME1) == 73
+    assert got == [_FRAME1] and sleeps == [] and calls == []
+    assert shots == [], '离线帧不得调截图口回抓实时窗口'
+
+
+def test_reread_frame_offline_returns_none_without_screenshot(monkeypatch: pytest.MonkeyPatch) -> None:
+    """``_reread_frame`` 离线帧:截图口零调用,返 None(全部重读门的单一取帧口兜底)。"""
+    from sr_od.application.currency_war.obs.cw_observation import _reread_frame
+    from sr_od.context.frame_source import offline_frame
+
+    shots: list = []
+    ctrl = types.SimpleNamespace(screenshot=lambda: shots.append(1) or (0.0, _FRAME2))
+    ctx = types.SimpleNamespace(controller=ctrl)
+    with offline_frame():
+        assert _reread_frame(ctx) is None
+    assert shots == []
+    assert _reread_frame(ctx) is _FRAME2, '实时帧照常取帧'

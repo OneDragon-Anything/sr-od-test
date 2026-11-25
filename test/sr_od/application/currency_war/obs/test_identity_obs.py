@@ -21,12 +21,15 @@ from __future__ import annotations
 
 from functools import cache
 from pathlib import Path
+import logging
+import types
 
 import cv2
 import numpy as np
 import pytest
 
 from one_dragon.base.geometry.rectangle import Rect
+from sr_od.application.currency_war.obs import cw_identity_obs as identity_mod
 from sr_od.application.currency_war.obs.cw_identity_obs import find_ore_sights
 
 _ORE_PANEL_RECT = Rect(1257, 140, 1662, 492)
@@ -268,3 +271,87 @@ def test_jizi_board_read_on_p1r9_fixture() -> None:
     shop/bench 域另有带名裁片与 g25 帧实证,本条锁部署排链不回退)。"""
     by_slot = _back_row_hits('deployed_p1r9', [(2, _BACK_BASE_SLOT2_RECT)])
     assert by_slot.get(2) == '姬子·启行'
+
+
+# ===== 停机钩子离线帧判定(``_summon_unknown_hook``)=====
+
+class _ListHandler(logging.Handler):
+    """框架日志行采集器(框架 logger propagate=False,caplog 根处理器收不到)。"""
+
+    def __init__(self) -> None:
+        super().__init__(level=logging.INFO)
+        self.records: list[logging.LogRecord] = []
+
+    def emit(self, record: logging.LogRecord) -> None:
+        self.records.append(record)
+
+
+def _hook_env(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> tuple:
+    """停机钩子夹具:帧内容判定全部打桩为「有占用未识别槽」(面板守卫不命中、slot1
+    占用、帧态备战、金币 overlay 关),留证目录指 tmp_path,停机调用记录在列表。
+    返回 (ctx, 停机调用列表, 留证目录, 面板守卫 OCR 调用列表)。"""
+    import sr_od.application.currency_war.kernel.cw_observe as observe_mod
+    import sr_od.application.currency_war.kernel.cw_obs_core as core_mod
+    import sr_od.application.currency_war.obs.currency_war_cv as cv_mod
+
+    shot_dir = tmp_path / 'shots'
+    stops: list = []
+    panel_ocr: list = []
+
+    monkeypatch.setattr(observe_mod, '_SHOT_DIR', shot_dir)
+    # 面板守卫:_area_rect 是本模块顶部导入的名字,_ocr 是钩子函数体内局部导入的
+    # 名字——两处各在各的命名空间打桩。
+    monkeypatch.setattr(identity_mod, '_area_rect',
+                        lambda ctx, name, screen=None: Rect(0, 0, 10, 10))
+    monkeypatch.setattr(core_mod, '_ocr',
+                        lambda ctx, screen, rect: panel_ocr.append(rect) or [])
+    monkeypatch.setattr(core_mod, 'is_prep_like_frame', lambda ctx, screen: True)
+    monkeypatch.setattr(core_mod, 'gold_info_overlay_open', lambda ctx, screen: False)
+    monkeypatch.setattr(identity_mod, '_ctx_slots',
+                        lambda ctx, prefix, count: [(1, Rect(0, 0, 10, 10))])
+    monkeypatch.setattr(identity_mod, 'bench_item_slots',
+                        lambda ctx, screen, fuzzy: set())
+    monkeypatch.setattr(cv_mod, 'slot_occupied', lambda screen, x, y: True)
+
+    ctx = types.SimpleNamespace(
+        run_context=types.SimpleNamespace(
+            stop_running=lambda **kw: stops.append(kw)),
+    )
+    return ctx, stops, shot_dir, panel_ocr
+
+
+def test_summon_hook_offline_frame_skips_stop_and_evidence(
+        monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """离线帧:钩子只记跳过日志——不停机、不留证(tmp 目录零文件)、不做面板守卫 OCR。"""
+    from sr_od.context.frame_source import offline_frame
+
+    ctx, stops, shot_dir, panel_ocr = _hook_env(monkeypatch, tmp_path)
+    frame = np.zeros((8, 8, 3), dtype=np.uint8)
+    handler = _ListHandler()
+    log = identity_mod.log
+    log.addHandler(handler)
+    level_before = log.level
+    log.setLevel(logging.INFO)
+    try:
+        with offline_frame():
+            identity_mod._summon_unknown_hook(ctx, frame, hits=[])
+    finally:
+        log.removeHandler(handler)
+        log.setLevel(level_before)
+
+    assert stops == []
+    assert not shot_dir.exists() or not any(shot_dir.iterdir())
+    assert panel_ocr == []
+    assert any('[cw-hook][summon] 离线帧' in r.getMessage() for r in handler.records)
+
+
+def test_summon_hook_live_frame_stops_with_evidence(
+        monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    """实时帧:钩子照常停机(reason=hook:summon_unknown, save_screenshot=True)并在
+    tmp 留证目录落一张图。"""
+    ctx, stops, shot_dir, _panel_ocr = _hook_env(monkeypatch, tmp_path)
+    frame = np.zeros((8, 8, 3), dtype=np.uint8)
+    identity_mod._summon_unknown_hook(ctx, frame, hits=[])
+    assert stops == [{'reason': 'hook:summon_unknown', 'save_screenshot': True}]
+    files = list(shot_dir.iterdir()) if shot_dir.exists() else []
+    assert len(files) == 1 and files[0].name.startswith('summon_unknown__')

@@ -201,3 +201,63 @@ def test_shop_slots_to_json_carries_trial(monkeypatch) -> None:
         kind='content',
         card=obs.ShopCard(x=100, slot=1, faction='仙舟舰队', name='桂乃芬'))])
     assert no_trial[0]['card']['trial'] is False
+
+
+# ===== 离线帧:两处补采不回抓实时窗口(契约 = read_shop_cards docstring「离线口径」段)=====
+
+def _spy_ctx(frame: np.ndarray, shots: list, screenshot=None) -> types.SimpleNamespace:
+    """``_fake_ctx`` 的截图口计数版:每次调截图口记一笔(screenshot 可换成抛异常)。"""
+    ctx = _fake_ctx(frame)
+    if screenshot is not None:
+        ctx.controller.screenshot = screenshot
+    else:
+        ctx.controller.screenshot = lambda: shots.append(1) or (0.0, frame)
+    return ctx
+
+
+def test_shop_cards_offline_collapse_miss_no_reread(
+        monkeypatch, trial_frame, portrait_templates) -> None:
+    """离线帧 + 收起标志首判不中(走二值化裁剪门,无全帧 OCR)→ 截图口零调用、
+    不睡,返回 None(无法重判,与截屏失败同形)。"""
+    from one_dragon.base.screen import screen_utils
+    from sr_od.context.frame_source import offline_frame
+
+    _stub_read_chain(monkeypatch, portrait_templates)
+    monkeypatch.setattr(screen_utils, 'find_area_in_screen',
+                        lambda ctx, screen, area: types.SimpleNamespace(value=0))
+    sleeps: list = []
+    monkeypatch.setattr(obs.time, 'sleep', lambda s: sleeps.append(s))
+    shots: list = []
+    with offline_frame():
+        slots = obs.read_shop_cards(_spy_ctx(trial_frame, shots), trial_frame)
+    assert slots is None
+    assert shots == [] and sleeps == []
+
+
+def test_shop_cards_offline_unknown_keeps_first_read(
+        monkeypatch, synth_no_badge_frame, portrait_templates) -> None:
+    """离线帧 + 牌面含 unknown(终判稳定门触发)→ 截图口零调用、不睡,返回首读牌面。"""
+    from sr_od.context.frame_source import offline_frame
+
+    _stub_read_chain(monkeypatch, portrait_templates)
+    sleeps: list = []
+    monkeypatch.setattr(obs.time, 'sleep', lambda s: sleeps.append(s))
+    shots: list = []
+    with offline_frame():
+        slots = obs.read_shop_cards(_spy_ctx(synth_no_badge_frame, shots),
+                                    synth_no_badge_frame, full_ocr=_FAKE_FULL_OCR)
+    assert slots is not None and slots[4].kind == 'unknown'
+    assert shots == [] and sleeps == []
+
+
+def test_shop_cards_live_screenshot_raises_keeps_first_read(
+        monkeypatch, synth_no_badge_frame, portrait_templates) -> None:
+    """实时帧 + 终判稳定门截图口抛异常 → 不上抛,走「第二帧不可得」保首读。"""
+    def boom():
+        raise RuntimeError('截图链异常')
+
+    _stub_read_chain(monkeypatch, portrait_templates)
+    monkeypatch.setattr(obs.time, 'sleep', lambda s: None)
+    slots = obs.read_shop_cards(_spy_ctx(synth_no_badge_frame, [], screenshot=boom),
+                                synth_no_badge_frame, full_ocr=_FAKE_FULL_OCR)
+    assert slots is not None and slots[4].kind == 'unknown'

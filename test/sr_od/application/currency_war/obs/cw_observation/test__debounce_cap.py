@@ -99,3 +99,18 @@ def test_debounce_cap_in_domain_passthrough(monkeypatch: pytest.MonkeyPatch) -> 
     assert _debounce_cap(ctx, object(), 10, 8) == 10    # 域上界
     assert _debounce_cap(ctx, object(), None, 8) is None
     assert calls == [] and got == []
+
+
+def test_debounce_cap_out_of_domain_offline_frame_rejects(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """域外首读 + 离线帧 → 截图口零调用、拒信 None + 留「拒信」证据(与实时窗口
+    截图失败同形:重读不可得 → 不采信域外首读)。"""
+    from sr_od.context.frame_source import offline_frame
+
+    shots: list = []
+    ctx, calls, got = _cap_gate_env(monkeypatch, (0.0, _FRAME2), 9)
+    ctx.controller.screenshot = lambda: shots.append(1) or (0.0, _FRAME2)
+    with offline_frame():
+        assert _debounce_cap(ctx, object(), 12, 8) is None
+    assert shots == [] and got == []
+    assert len(calls) == 1 and '拒信' in calls[0][1]['verdict']

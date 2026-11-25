@@ -456,6 +456,44 @@ def test_analyze_extras_none_when_recognizer_returns_non_serializable(monkeypatc
     assert result.extras is None             # json.dumps 抛 → 兜成 None
 
 
+def _frame_source_probe_backend(monkeypatch, tmp_path):
+    """构造精准命中且有识别器的 backend;识别器返回它读到的帧来源。返回
+    (backend, tmp 图片路径供读图分支用)。"""
+    import cv2
+    import numpy as np
+
+    import sr_od.backend.backend_context as bc
+    from sr_od.context.frame_source import frame_is_live
+
+    def probe_recognize(ctx, image, screen_info):
+        return {'live': frame_is_live()}
+
+    fake_recognizer = MagicMock()
+    fake_recognizer.recognize.side_effect = probe_recognize
+    monkeypatch.setattr(bc, 'get_recognizer', lambda ctx, name: fake_recognizer)
+    backend = _precise_analyze_backend(monkeypatch, '货币战争-备战')
+    img_path = tmp_path / 'shot.png'
+    cv2.imwrite(str(img_path), np.zeros((4, 4, 3), dtype=np.uint8))
+    return backend, img_path
+
+
+def test_analyze_offline_branch_marks_frame_offline(monkeypatch, tmp_path) -> None:
+    """读图分支:识别器读到 frame_is_live()==False(下游停机/补采/留证/写账据此早退)。"""
+    backend, img_path = _frame_source_probe_backend(monkeypatch, tmp_path)
+    result = backend.analyze(screenshot=str(img_path))
+    assert result.extras == {'live': False}
+
+
+def test_analyze_live_branch_keeps_frame_live(monkeypatch, tmp_path) -> None:
+    """实时分支:识别器读到 frame_is_live()==True(在线行为不变);调用结束后信号已复位。"""
+    from sr_od.context.frame_source import frame_is_live
+
+    backend, _img_path = _frame_source_probe_backend(monkeypatch, tmp_path)
+    result = backend.analyze()
+    assert result.extras == {'live': True}
+    assert frame_is_live() is True
+
+
 
 def test_get_screen_detail_wraps_not_found_with_guidance() -> None:
     """画面名未找到统一包装:ScreenInfoError 文案含示例名单 + list_screen_names 指路。
