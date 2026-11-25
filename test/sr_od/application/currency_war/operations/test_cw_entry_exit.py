@@ -1,6 +1,6 @@
-"""CwEntryExit 退局调度器测试(挂起对局处置链 + battle_x 静态页哨)。
+"""CwEntryExit 退局调度器测试(挂起对局处置链 + battle_x 静态页哨 + 认画面回头路)。
 
-两块被测行为:
+三块被测行为:
 
 1. 挂起对局处置链:白名单两屏(模式选择-进行中/结束结算确认弹窗)经 route
    ④b 显式点名接入,处置链下半段(挑战失败→详情→战报→大厅)复用既有节点。
@@ -13,6 +13,10 @@
    不变即提前 round_fail,把此类失效从 3 分钟压到 ~12s(基线帧 1 拍 +
    计数 3 拍,每拍 until 等待 ~3s)。直调节点函数 = 一次节点重入
    (until 不命中时框架重入整个节点函数,直调等价)。
+
+3. battle_x 认画面回头路:误入点 X 节点后,每轮点击前先认「路由有去处的画面」
+   (对局中画面名单 + 大厅),认出且非战斗自家画面就不点、回路由重识别;连续
+   2 次认出同一画面判失败(路由↔点 X 互踢硬边界)。
 """
 
 import numpy as np
@@ -27,7 +31,9 @@ from test.harness.fixture_controller import (
 
 import sr_od.application.currency_war.operations.cw_entry.cw_entry_exit as cw_entry_exit_module
 from sr_od.application.currency_war.operations.cw_entry.cw_entry_exit import (
+    BATTLE_STREAK_ENTER,
     BATTLE_X_DEAD_CLICK_LIMIT,
+    ST_SCREEN_RECOGNIZED,
     CwEntryExit,
 )
 from sr_od.operations.sr_operation import SrOperation
@@ -47,6 +53,24 @@ _EXPECTED_CLICKS: list[tuple[str, str]] = list(_CHAIN_TRANSITIONS.keys())
 #: 对局中名单屏(走 get_in_match_screen_name 识别的画面)
 _IN_MATCH_SCREENS: frozenset[str] = frozenset({
     '货币战争-挑战失败', '货币战争-结算-对局详情', '货币战争-结算-战报',
+})
+
+#: 误入回头路剧本的转移表 = 备战退局两步 + 结算尾段(不并入 _CHAIN_TRANSITIONS:
+#: 它的键是既有全链测试的期望点击序列)。
+_PREP_EXIT_TRANSITIONS: dict[tuple[str, str], str] = {
+    ('货币战争-备战', '按钮-退出对局'): '货币战争-中断挑战弹窗',
+    ('货币战争-中断挑战弹窗', '按钮-放弃并结算'): '货币战争-挑战失败',
+}
+_PREP_EXIT_TRANSITIONS.update({
+    k: v for k, v in _CHAIN_TRANSITIONS.items()
+    if k[0] != '货币战争-模式选择-进行中'
+    and k[0] != '货币战争-模式选择-结束结算确认'
+})
+
+#: 误入回头路剧本里对局中名单识别能认出的画面(备战与中断挑战弹窗不在
+#: _IN_MATCH_SCREENS 内,本剧本自建集)。
+_RECOGNIZABLE_IN_MATCH: frozenset[str] = _IN_MATCH_SCREENS | frozenset({
+    '货币战争-备战', '货币战争-中断挑战弹窗',
 })
 
 
@@ -268,3 +292,193 @@ class TestBattleXDeadClickSentinel:
                 break
         assert post_fail_rounds == BATTLE_X_DEAD_CLICK_LIMIT, (
             f'损坏帧后计数应清零重计(实际第 {post_fail_rounds} 拍即 fail)')
+
+
+class _RecordingCwEntryExit(_WatchedCwEntryExit):
+    """按轮记录当前节点名(相邻重入去重),供断言节点顺序。"""
+
+    def __init__(self, ctx, node_trace: list[str]) -> None:
+        _WatchedCwEntryExit.__init__(self, ctx)
+        self._node_trace = node_trace
+
+    def _execute_one_round(self):  # type: ignore[override]
+        name = self._current_node.cn
+        if not self._node_trace or self._node_trace[-1] != name:
+            self._node_trace.append(name)
+        return _WatchedCwEntryExit._execute_one_round(self)
+
+
+class TestBattleXRecognizeScreen:
+    """battle_x 认画面回头路:误入后认出备战回路由 / 战斗自家画面不回头 / 互踢硬边界。"""
+
+    @staticmethod
+    def _make_op(test_context: SrTestContext) -> CwEntryExit:
+        op = _WatchedCwEntryExit(test_context)
+        op.last_screenshot = np.zeros((1080, 1920, 3), dtype=np.uint8)
+        return op
+
+    @pytest.mark.parametrize('entry', ['已是备战', '点X后到备战'])
+    def test_recognized_prep_returns_to_route(
+        self,
+        test_context: SrTestContext,
+        monkeypatch: pytest.MonkeyPatch,
+        entry: str,
+    ) -> None:
+        """路由连续认不出判「战斗中」误入点 X 节点后,认出备战回路由走完退局链。
+
+        entry=已是备战:第 1 轮就认出,点 X 0 次;entry=点X后到备战:初值画面
+        认不出,点 1 次 X 把画面切到备战,第 2 轮认出。对局中名单识别桩前
+        BATTLE_STREAK_ENTER + 1 次(全部来自路由)一律认不出,之后按状态机应答。
+        """
+        unrecognized_screen = '货币战争-认不出的过渡画面'
+        state = {
+            'screen': '货币战争-备战' if entry == '已是备战' else unrecognized_screen,
+        }
+        calls = {'in_match': 0, 'in_match_at_prep_exit': None}
+        clicks: list[tuple[str, str]] = []
+        node_trace: list[str] = []
+
+        def _fake_in_match(ctx, screen):
+            calls['in_match'] += 1
+            if calls['in_match'] <= BATTLE_STREAK_ENTER + 1:
+                return None
+            s = state['screen']
+            return s if s in _RECOGNIZABLE_IN_MATCH else None
+
+        def _fake_match(ctx, screen, screen_name_list=None):
+            s = state['screen']
+            names = screen_name_list or []
+            return s if s in names else None
+
+        def _fake_find_and_click(self, screen, s_name, a_name, *args, **kwargs):
+            key = (s_name, a_name)
+            if key == ('货币战争-备战', '按钮-退出对局') \
+                    and calls['in_match_at_prep_exit'] is None:
+                calls['in_match_at_prep_exit'] = calls['in_match']
+            if state['screen'] == unrecognized_screen \
+                    and key == ('货币战争-战斗', '按钮-右上X'):
+                clicks.append(key)
+                state['screen'] = '货币战争-备战'
+                return self.round_wait(status=f'{a_name}(until 未命中)')
+            if state['screen'] == s_name and key in _PREP_EXIT_TRANSITIONS:
+                clicks.append(key)
+                state['screen'] = _PREP_EXIT_TRANSITIONS[key]
+                return self.round_success(status=a_name)
+            return self.round_wait(status=f'未找到 {a_name}')
+
+        monkeypatch.setattr(
+            cw_entry_exit_module, 'get_in_match_screen_name', _fake_in_match)
+        monkeypatch.setattr(
+            cw_entry_exit_module, 'get_match_screen_name', _fake_match)
+        monkeypatch.setattr(
+            CwEntryExit, 'round_by_find_and_click_area', _fake_find_and_click)
+
+        op = _RecordingCwEntryExit(test_context, node_trace)
+        op._init_watchdog()  # type: ignore[attr-defined]
+
+        enter_running_state(test_context)
+        try:
+            with fast_sleep():
+                result = op.execute()
+        finally:
+            reset_running_state(test_context, op)
+
+        x_key = ('货币战争-战斗', '按钮-右上X')
+        expected_x = 0 if entry == '已是备战' else 1
+        tail = [
+            ('货币战争-备战', '按钮-退出对局'),
+            ('货币战争-中断挑战弹窗', '按钮-放弃并结算'),
+            ('货币战争-挑战失败', '按钮-下一步'),
+            ('货币战争-结算-对局详情', '按钮-下一页'),
+            ('货币战争-结算-战报', '按钮-返回货币战争'),
+        ]
+        assert result.success, f'应 success(终点=大厅确认),status={result.status}'
+        assert result.status == CwEntryExit.STATUS_AT_LOBBY
+        assert clicks.count(x_key) == expected_x, f'右上X 点击次数漂移:{clicks}'
+        assert [c for c in clicks if c != x_key] == tail, f'点击序列漂移:{clicks}'
+        # 首次点退出对局之前的识别桩调用数 = 路由 5 + 点 X 节点(1 或 2)+ 路由 1
+        expected_calls = BATTLE_STREAK_ENTER + (3 if entry == '已是备战' else 4)
+        assert calls['in_match_at_prep_exit'] == expected_calls, (
+            f'点 X 节点跑的轮数不对:首次点退出对局前识别桩调用 '
+            f'{calls["in_match_at_prep_exit"]} 次,期望 {expected_calls} 次')
+        i = node_trace.index('战斗中点右上X')
+        assert node_trace[i - 1:i + 3] == [
+            '画面路由', '战斗中点右上X', '画面路由', '备战退局发起'], (
+            f'节点顺序漂移:{node_trace}')
+
+    @pytest.mark.parametrize('own_screen', ['货币战争-战斗', '货币战争-战斗暂停'])
+    def test_own_screens_never_return(
+        self,
+        test_context: SrTestContext,
+        monkeypatch: pytest.MonkeyPatch,
+        own_screen: str,
+    ) -> None:
+        """战斗自家画面连续认出 3 轮:每轮照点 X、不回头、不因重复认出判失败。"""
+        clicks: list[tuple[str, str]] = []
+
+        def _fake_find_and_click(self, screen, s_name, a_name, *args, **kwargs):
+            clicks.append((s_name, a_name))
+            return self.round_success(status=a_name)
+
+        monkeypatch.setattr(
+            cw_entry_exit_module, 'get_in_match_screen_name',
+            lambda ctx, screen: own_screen)
+        monkeypatch.setattr(
+            cw_entry_exit_module, 'get_match_screen_name',
+            lambda ctx, screen, screen_name_list=None: None)
+        monkeypatch.setattr(
+            CwEntryExit, 'round_by_find_and_click_area', _fake_find_and_click)
+        op = self._make_op(test_context)
+
+        for _ in range(3):
+            r = op.battle_x()
+            assert ('货币战争-战斗', '按钮-右上X') in clicks
+            assert r.status != ST_SCREEN_RECOGNIZED, f'战斗自家画面不应回头:{r.status}'
+            assert r.is_success, f'不应因重复认出判失败:{r.status}'
+
+    @pytest.mark.parametrize(
+        'sequence',
+        [
+            ['货币战争-结算-战报', None, '货币战争-结算-战报'],
+            ['货币战争-结算-战报', '货币战争-结算-战报'],
+        ],
+        ids=['中间认不出则计数清零', '连续同名即失败'],
+    )
+    def test_repeat_recognized_limit(
+        self,
+        test_context: SrTestContext,
+        monkeypatch: pytest.MonkeyPatch,
+        sequence: list,
+    ) -> None:
+        """连续 2 次认出同一画面判失败;中间出现认不出的一轮则计数清零。"""
+        answers = iter(sequence)
+        clicks: list[tuple[str, str]] = []
+
+        def _fake_find_and_click(self, screen, s_name, a_name, *args, **kwargs):
+            clicks.append((s_name, a_name))
+            return self.round_wait(status=f'{a_name}(until 未命中)')
+
+        monkeypatch.setattr(
+            cw_entry_exit_module, 'get_in_match_screen_name',
+            lambda ctx, screen: next(answers, None))
+        monkeypatch.setattr(
+            cw_entry_exit_module, 'get_match_screen_name',
+            lambda ctx, screen, screen_name_list=None: None)
+        monkeypatch.setattr(
+            CwEntryExit, 'round_by_find_and_click_area', _fake_find_and_click)
+        op = self._make_op(test_context)
+
+        results = [op.battle_x() for _ in sequence]
+
+        if sequence[1] is None:
+            r1, _, r3 = results
+            assert r1.is_success and r1.status == ST_SCREEN_RECOGNIZED
+            assert len(clicks) == 1, f'认出的轮不点击、认不出的轮点一次:{clicks}'
+            assert r3.is_success and r3.status == ST_SCREEN_RECOGNIZED, (
+                f'中间认不出后计数应清零,再次认出仍成功:{r3.status}')
+        else:
+            r1, r2 = results
+            assert r1.is_success and r1.status == ST_SCREEN_RECOGNIZED
+            assert clicks == [], f'认出的轮不点击:{clicks}'
+            assert not r2.is_success and '认出同一画面' in (r2.status or ''), (
+                f'连续同名认出应判失败:{r2.status}')
