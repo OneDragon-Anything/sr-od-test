@@ -60,9 +60,13 @@ class _WatchedCwEntryExit(WatchdogOperationMixin, CwEntryExit):
             self, ctx, op_name='退出货币战争对局', need_check_game_win=False,
         )
         # 直构绕过 CwEntryExit.__init__(need_check_game_win 不透传),
-        # 哨状态属性按生产构造形态手动补齐。
+        # 节点状态属性按生产构造形态手动补齐(route 的未识别计数、battle_x 的
+        # 哨状态与重复认出计数)。
+        self._miss_streak = 0
         self._battle_x_prev_frame = None
         self._battle_x_static_rounds = 0
+        self._battle_x_recognized_name = None
+        self._battle_x_recognized_times = 0
 
 
 class TestPendingGiveupChain:
@@ -178,6 +182,13 @@ class TestBattleXDeadClickSentinel:
         def _fake_find_and_click(self, screen, s_name, a_name, *args, **kwargs):
             return self.round_wait(status=f'{s_name}-{a_name}(until 未命中)')
 
+        # 画面识别桩恒认不出:本类只测哨,不走真的建档识别。
+        monkeypatch.setattr(
+            cw_entry_exit_module, 'get_in_match_screen_name',
+            lambda ctx, screen: None)
+        monkeypatch.setattr(
+            cw_entry_exit_module, 'get_match_screen_name',
+            lambda ctx, screen, screen_name_list=None: None)
         monkeypatch.setattr(
             CwEntryExit, 'round_by_find_and_click_area', _fake_find_and_click)
         op = _WatchedCwEntryExit(test_context)
