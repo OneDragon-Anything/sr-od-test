@@ -8,6 +8,8 @@
 """
 from types import SimpleNamespace
 
+import pytest
+
 from sr_od.application.currency_war.cw_screen_state import (
     LOBBY_STATE_SCREENS,
     PREP_DIRECT_EXIT_SCREENS,
@@ -65,3 +67,28 @@ class TestInMatchScreenNames:
         """带前缀且不在白名单的建档屏自动进判定集(新画面零登记生效)。"""
         names = in_match_screen_names([_si('货币战争-某新画面')])
         assert names == ['货币战争-某新画面']
+
+
+class TestIsExitSafePrepFrame:
+    """可安全交还退出调度的备战态:屏名在 A 类名单里,且合成确认浮层不在场。
+
+    浮层在场的备战帧备战的识别标志照样全中,只看屏名会把它当成可交还态去点门形
+    图标——那一下会被浮层吞掉。这里用真样本帧走真识别。
+    """
+
+    @pytest.mark.parametrize(
+        ('frame', 'expected'),
+        [
+            (('货币战争-备战', 'deployed_2star'), True),
+            (('货币战争-备战-免战', '跳过态'), True),
+            (('货币战争-备战', 'rail_badge_absent_r2'), False),
+            (('货币战争-备战-开商店', 'shop_open'), False),
+        ],
+        ids=['干净备战', '免战变体', '合成确认浮层在场', '商店面板展开'],
+    )
+    def test_judgement_follows_screen_and_overlay(self, test_context, frame,
+                                                  expected: bool) -> None:
+        from sr_od.application.currency_war.cw_screen_state import (
+            is_exit_safe_prep_frame,
+        )
+        assert is_exit_safe_prep_frame(test_context, test_context.load_screen(*frame)) is expected
