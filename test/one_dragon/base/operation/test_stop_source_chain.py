@@ -1,0 +1,56 @@
+"""stop 原因贯通链单测(「人工结束」误标根治)。
+
+锁定三点:
+① stop_running(reason='x') 后 last_run_result.stop_source == 'x';
+② 幂等二次调用不覆盖首 reason(返回首结果);
+③ operation 停止出口文案带来源(「已停止[来源]」)。
+"""
+from unittest.mock import MagicMock
+
+import pytest
+
+from one_dragon.base.operation.application.application_run_context import (
+    ApplicationRunContext,
+)
+from one_dragon.base.operation.operation import Operation
+
+
+def _make_run_context() -> ApplicationRunContext:
+    """构造真实 ApplicationRunContext(ctx 为 mock;stop 路径不触控制器)。"""
+    return ApplicationRunContext(MagicMock(name='OneDragonContext'))
+
+
+# (2026-09-03 攻击性排查:原 test_stop_running_records_reason 删除——
+#  是下方幂等测试的严格子集(幂等测额外断言 first-keep+结果同一性),
+#  纪律 7 同文件择一留超集。)
+
+
+def test_stop_running_idempotent_keeps_first_reason():
+    """② 已停止时二次 stop_running 返回首结果,不覆盖首 reason。"""
+    rc = _make_run_context()
+    first = rc.stop_running(reason='hook:summon_unknown')
+    second = rc.stop_running(reason='mcp:stop_run')
+    assert second is first
+    assert rc.last_run_result.stop_source == 'hook:summon_unknown'
+
+
+@pytest.mark.parametrize('reason,expect_tail', [
+    ('hook:shop_unknown_card', '[hook:shop_unknown_card]'),   # 有源:文案带来源
+    (None, '[unknown]'),                                      # 无源:回退 'unknown'(不再是「人工结束」)
+], ids=['with-source', 'without-source'])
+def test_operation_stop_exit_message_contains_source(reason: str | None, expect_tail: str):
+    """③ operation 停止出口文案参数化:有源 = 「已停止[来源]」;无源回退 [unknown]。"""
+    rc = _make_run_context()
+    if reason is None:
+        rc.stop_running()
+    else:
+        rc.stop_running(reason=reason)
+    ctx = MagicMock(name='OneDragonContext')
+    ctx.run_context = rc
+    op = Operation(ctx)
+    # 跳过节点网络/事件初始化(本测试只验证停止出口分支)
+    op._init_before_execute = lambda: None  # type: ignore[method-assign]
+    result = op.execute()
+    assert not result.success
+    assert result.status.startswith('已停止')
+    assert result.status.endswith(expect_tail)

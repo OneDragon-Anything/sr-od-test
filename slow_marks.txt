@@ -1,0 +1,105 @@
+# 慢桶名单:实测整条用例(call+setup)>=2s 的 nodeid 后缀,conftest 按后缀匹配注入 slow marker
+# 维护:uv run pytest sr-od-test/ -q --durations=300 --durations-min=1.0 巡检回填(准入:>=2s;口径=标准桶)
+# 2026-09-14 瘦身批:直调节点补 fast_sleep/退避打桩后大批摘牌;真帧测试收敛为
+# 两处代表(战斗失败=OCR 文本动作区、CW 大厅=模板动作区+pc_alt 直点),其余
+# 分支路由转 mock 分发锁(画面识别层由 test_id_mark 集中锁定)。
+# 2026-09-15 enter_game 摘牌:fast_sleep 支持 fast_sleep(op) 连带桩掉 op 模块
+# 自己的 time 引用(账密节点 5 处裸睡 4.5s 此前桩够不着),两条降至 <0.2s。
+# 2026-09-15 摘牌:test_cal_pos_for_world_patrol.py::test_cal_pos 随测试文件删除移出
+# (cal_pos 真帧测试退役:依赖运行时下载的 YOLO 模型,环境不自足)。
+# 2026-11-25 随迁:back_to_normal_world_plus 测试按被测方法拆目录(单文件 >800 行),
+# 两条真帧锁落 test_check_screen_real_frame.py;登记名不变,只改路径。
+test/sr_od/operations/back_to_normal_world_plus/test_check_screen_real_frame.py::TestBattleFailScreenBranch::test_battle_fail_clicks_blank
+test/sr_od/operations/back_to_normal_world_plus/test_check_screen_real_frame.py::TestCwLobbyResidualBranch::test_residual_lobby_closes
+# 2026-10-15 摘牌:cw 分发语料 true 向(登记名早已失效=函数更名后未同步,
+# mark 实际未生效);现名 call 实测 0.25s(conftest OCR 磁盘缓存层),现役
+# 位置 = operations/test_loop.py::test_dispatch_corpus_identity_true_direction
+# sim 统一 3.4 首局验收:模块夹具跑两整局 sim(2026-11-07 实测 ~7s,
+# 运行原语装配缝对留证/停机钩子源上桩后),三条验收测试共享
+# (容器不变式四条尺 2026-10-14 归并一条,消费同一夹具产物;多种子完备性
+# 2026-10-14 裁决整批摘除——与 smoke 冒烟逐 seed 整局完全重叠,语义由
+# smoke_batch 承接,活锁机制锁 = test_cw_prep_action_ops 桥复检语境坐标锁)
+# 2026-11-16 摘牌:test_sim_smoke_batch.py 8 代表号随文件删除移出(smoke 批
+# 退役,仓内仅余 __pycache__ 残迹);同批清掉两段孤儿登记注释(2026-10-16
+# sim-screen-announce T-1 与升级-刷新闭环批——所登记条目此前已移出,注释未随)。
+# 2026-11-16 占用者角标登记跟迁:原 test/sr_od/operations/test_equip_owner_match.py
+# 域重组拆为 relic/light_cone 两文件,后继四条按标准桶口径冷跑实测全过线
+# (true_badges 4.04s/2.65s,no_badge_is_none 4.58s/4.93s,单文件独立运行)。
+# 旧「负例条免登记」惯例(2026-11-10)作废:拆分后标准桶内无同库暖缓存来源,
+# 负例条独立承担整模板库 SIFT 构建(setup ~2.1s)+ 全库比对。
+test/sr_od/application/cultivation/relic/operations/test_relic_owner_match.py::test_owner_true_badges
+test/sr_od/application/cultivation/relic/operations/test_relic_owner_match.py::test_owner_no_badge_is_none
+test/sr_od/application/cultivation/light_cone/operations/test_light_cone_owner_match.py::test_owner_true_badges
+test/sr_od/application/cultivation/light_cone/operations/test_light_cone_owner_match.py::test_owner_no_badge_is_none
+# 2026-11-11 T-16 登记:重进链全量首跑实测 1.91s 贴线——主成本 = 5 帧 fixture
+# 全图 OCR(弹窗 area 匹配走框架统一默认 crop_first=False 全图缓存复用,改裁剪
+# 须动 op/harness,测试面内不可便宜化);温缓存单文件复跑 0.13s,登记防标准
+# 全量冷缓存首跑抖动过线。2026-11-12 域重组随迁:旧 operations/ 路径已死,
+# 改全路径 = cultivation/relic/operations/。
+test/sr_od/application/cultivation/relic/operations/test_equip_relic.py::test_reenter_runs_sort_prepend_chain
+
+# 2026-11-11 光锥 TM 迁移登记:全量清单真帧识别(36 卡 × 170 模板双档 masked
+# TM,主成本在 TM 本体;OCR 走 conftest 磁盘 memo 温缓存),单帧 17s/双帧 37s
+test/sr_od/application/cultivation/light_cone/operations/test_light_cone_list_recognizer.py::test_cone_recognizer
+test/sr_od/application/cultivation/light_cone/operations/test_equip_light_cone.py::test_locate_on_fixtures
+
+# 2026-11-12 遗器模板规范库迁移登记:真帧全库识别(20 卡 × 176 模板双档 masked
+# TM,全库 TemplateLoader 载入为主成本),实测 5.4s
+test/sr_od/application/cultivation/relic/operations/test_relic_list_recognizer.py::test_relic_recognizer
+
+# 2026-11-12 S2 词缀读取器登记:每条 = 两帧整帧 OCR + 4-5 次角标小图放大 OCR,
+# 单条实测 ~3.8s;断言共享单次 read_detail 结果,慢计算只算一次
+test/sr_od/application/cultivation/relic/test_relic_detail_reader.py::test_read_detail_percent_form
+test/sr_od/application/cultivation/relic/test_relic_detail_reader.py::test_read_detail_flat_form
+
+# 2026-11-12 S4 候选扫描登记:真 TM 部位库识别(19 卡,全库载入为主成本),实测 ~5s
+test/sr_od/application/cultivation/relic/operations/test_scan_relic_candidates.py::test_scan_produces_candidates_and_bottom
+
+test_enter_game.py::test_version_promo_right_top_fallback
+
+# 2026-11-14 周本挑战核心登记:三段战斗态直呼各带 round_success(wait=1) 的
+# 轮间节流累计,实测 2.00s 贴线;登记防标准全量抖动过线
+test/sr_od/application/echo_of_war/test_challenge_echo_of_war_core.py::TestWaitAndTimeoutNodes::test_wait_counts_success_and_fail
+
+# 2026-11-14 开拓力失败适配登记:文件内首条承担 SrTestContext 冷初始化
+# (setup 2.06s),登记防标准全量首跑抖动过线
+test/sr_od/application/trailblaze_power/test_use_trailblaze_power_fail_adaptation.py::TestFailDelegateDirectCall::test_fail_below_threshold_retries
+
+# 2026-11-16 巡检回填:标准桶 --durations 巡检查得 12 条 >=2s 未登记——
+# enter_game 出口分支族 8 条实测 2.0-6.0s(与 2026-09-15 摘牌的账密两条
+# 不同名,非同批回潮)/ equip_relic 定位真帧 5.25s / aigis 验证器端口释放
+# 2.52s / 升级线胜利结算回归两条 2.00s 贴线(贴线登记先例 = 2026-11-14
+# 周本挑战核心条)。
+test/sr_od/operations/enter_game/test_enter_game/test_enter_game.py::test_battle_settle_page_exit_branch
+test/sr_od/operations/enter_game/test_enter_game/test_enter_game.py::test_normal_frames_not_caught_by_battle_exit_branches
+test/sr_od/operations/enter_game/test_enter_game/test_enter_game.py::test_battle_pause_panel_exit_branch
+test/sr_od/operations/enter_game/test_enter_game/test_enter_game.py::test_battle_exit_confirm_dialog_branch
+test/sr_od/operations/enter_game/test_enter_game/test_enter_game.py::test_fallback_skipped_before_login_clicked
+test/sr_od/operations/enter_game/test_enter_game/test_enter_game.py::test_fallback_skipped_on_login_page
+test/sr_od/operations/enter_game/test_enter_game/test_enter_game.py::test_battle_settle_page_without_exit_word_no_action
+test/sr_od/operations/enter_game/test_enter_game/test_enter_game.py::test_confirm_dialog_takes_priority_over_pause_panel
+test/sr_od/application/cultivation/relic/operations/test_equip_relic.py::test_locate_on_fixture
+test/one_dragon/mys/test_aigis_verifier.py::test_close_releases_port_and_instance_unusable
+test/sr_od/application/cultivation/light_cone/operations/test_upgrade_light_cone_fail_adaptation.py::TestFailBranchBehavior::test_victory_settle_branch_regression
+test/sr_od/application/cultivation/character/operations/test_upgrade_character_fail_adaptation.py::TestFailBranchBehavior::test_victory_settle_branch_regression
+
+# 2026-11-21 商店刷新钮三态真帧登记:三帧读链各带全帧 OCR(识别标志判定)
+# + rect 两级放大 OCR,冷跑实测 ~2.7s;温缓存(memo)0.09s,登记防标准
+# 全量冷缓存首跑抖动过线
+test/sr_od/application/currency_war/obs/test_cw_shop_refresh_obs.py::test_refresh_button_three_states_real_frames
+
+# 2026-11-22 开拓商店读数批登记:文件首条承担 SrTestContext 冷初始化(setup
+# 2.4s,先例 = 2026-11-14 开拓力失败适配条);槽带真帧条 = 3 帧 panel+balance+pam
+# 全读链(OCR+SIFT 立绘库),冷跑实测 3.4s,登记防标准全量抖动过线
+test/sr_od/application/currency_war/obs/test_cw_trainshop_obs.py::test_normalize_attr_name
+test/sr_od/application/currency_war/obs/test_cw_trainshop_obs.py::test_slots_frames_truth
+
+# 2026-11-24 备战变体识别器登记:茶歇预告归档帧走备战全量读链(OCR+SIFT 立绘/
+# 装备库,扫描注册后端到端),冷跑实测 5.5s,登记防标准全量抖动过线;同文件
+# 委托打桩三条均 <0.01s 不登记
+test/sr_od/application/currency_war/obs/test_prep_variant_recognizers.py::test_tea_notice_frame_full_extras
+# 2026-11-25 登记:团队规模超限态观察写端锁——read_game_state 整帧全量读(金/血/等级/
+# 经验/节点/难度/连胜/羁绊面板 + paddle 两级 OCR 走 ocr_service 路径,无测试内容缓存),
+# 已减样本到 1 帧 + 不落证据截图仍 ~2s;锁的是生产写端真实生成路径(状态容器
+# team_size_used/deploy_cap 落值),不 mock 生成端,入慢桶。
+test/sr_od/application/currency_war/obs/cw_observation/test_read_deploy_paddle.py::test_read_game_state_writes_team_size_used
