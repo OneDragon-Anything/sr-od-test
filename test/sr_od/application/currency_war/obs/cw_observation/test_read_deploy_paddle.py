@@ -17,6 +17,8 @@
 - 观察写端(``read_game_state`` 全量路径,生产 heavy 观察走的路):超限帧落
   状态容器 ``team_size_used``=6 / ``deploy_cap``=5;
 - 证据行时机:``_read_deploy_paddle`` 的拒信证据只在两级解析都失败、且至少一级走到约束出口后发 1 条(带两级 OCR 文本);无字形 / 无数字的帧零证据;level 先验放宽成功的披露行照发;解析函数本身不发证据。
+- 解析核心(``_resolve_paddle_digits``,纯逻辑):四种对齐式(直接 / 去首 / 去斜杠位 / 去首 + 去斜杠位)与
+  同形收口(恰两个数字字形同形时歧义候选只留 X = Y);满板「6/6」帧(一级读成 '1616')离线读出 6/6。
 """
 from __future__ import annotations
 
@@ -219,7 +221,10 @@ def _paddle_env(monkeypatch: pytest.MonkeyPatch, texts: list[str],
                 glyphs: list | None = _FULL_BOARD_GLYPHS,
                 ) -> tuple[types.SimpleNamespace, list[tuple], object]:
     """``_read_deploy_paddle`` 桩环境:区域恒为 16×16、字形固定、OCR 按调用顺序给
-    ``texts``(耗尽即抛,锁「一级成功不再调二级」);返回 (假 ctx, obs_conflict 捕获列表, 整帧)。"""
+    ``texts``(耗尽即抛,锁「一级成功不再调二级」);返回 (假 ctx, obs_conflict 捕获列表, 整帧)。
+
+    ``_FULL_BOARD_GLYPHS`` 桩的两块数字字形恰是同形——用例文本要歧义且**不**被同形收口时,
+    选的桩文本须不产生 x == y 候选。"""
     calls: list[tuple] = []
     seq = iter(texts)
 
@@ -247,21 +252,22 @@ def _one_conflict(calls: list[tuple]) -> tuple[dict, str, str]:
 
 
 def test_read_paddle_full_board_no_reject_evidence(monkeypatch: pytest.MonkeyPatch) -> None:
-    """一级原生 OCR 读歪 '1616'(满编 6/6 实机形态)、二级读对 '16/6' → 读数 (6, 6),
-    零证据行(一级失败是预期内的,不留拒信)。"""
-    ctx, calls, screen = _paddle_env(monkeypatch, ['1616', '16/6'])
+    """满编 6/6 一级原生 OCR 读歪 '1616' → 去首 + 去斜杠位一式即读出 (6, 6),零证据行;
+    桩文本只给一级,顺带锁「一级成功不再调二级」。"""
+    ctx, calls, screen = _paddle_env(monkeypatch, ['1616'])
     assert mod._read_deploy_paddle(ctx, screen, level=6) == (6, 6)
     assert calls == []
 
 
 def test_read_paddle_both_levels_fail_one_reject_with_both_texts(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """两级都走到约束出口且都落空 → 恰好 1 条拒信,带两级文本;清单都空取最后一级。"""
-    ctx, calls, screen = _paddle_env(monkeypatch, ['1414', '1414'])
+    """两级都走到约束出口且都落空 → 恰好 1 条拒信,带两级文本;清单都空取最后一级。
+    桩文本 '1210':去首 + 去斜杠位得 y=0 恒不过约束,原三式长度不符 → 两级清单都空。"""
+    ctx, calls, screen = _paddle_env(monkeypatch, ['1210', '1210'])
     assert mod._read_deploy_paddle(ctx, screen, level=6) == (None, None)
     new, verdict, source = _one_conflict(calls)
     assert set(new) == {'text_l1', 'text_l2', 'candidates', 'candidates_from'}
-    assert new['text_l1'] == new['text_l2'] == '1414'
+    assert new['text_l1'] == new['text_l2'] == '1210'
     assert new['candidates'] == [] and new['candidates_from'] == 'l2'
     assert verdict.startswith('拒-') and source == 'paddle_positional'
     assert calls[0][0][3] is screen
@@ -269,11 +275,14 @@ def test_read_paddle_both_levels_fail_one_reject_with_both_texts(
 
 def test_read_paddle_l2_no_digits_takes_l1_candidates(
         monkeypatch: pytest.MonkeyPatch) -> None:
-    """一级有数字落空、二级读空 → 恰好 1 条拒信,清单取自一级(二级提前返回)。"""
-    ctx, calls, screen = _paddle_env(monkeypatch, ['1616', ''])
+    """一级有数字落空、二级读空 → 恰好 1 条拒信,清单取自一级(二级提前返回)。
+    桩文本 '516':去首 (1,6) 与去斜杠位 (5,6) 都过约束 → 歧义;两候选都不是 x == y,
+    同形收口不介入(桩字形恰同形,正好锁「无 x==y 候选时不收口」)。"""
+    ctx, calls, screen = _paddle_env(monkeypatch, ['516', ''])
     assert mod._read_deploy_paddle(ctx, screen, level=6) == (None, None)
     new, verdict, _ = _one_conflict(calls)
-    assert new['text_l1'] == '1616' and new['text_l2'] == ''
+    assert new['text_l1'] == '516' and new['text_l2'] == ''
+    assert new['candidates'] == [(1, 6, False), (5, 6, False)]
     assert new['candidates_from'] == 'l1' and verdict.startswith('拒-')
 
 
@@ -286,7 +295,7 @@ def test_read_paddle_no_digits_zero_evidence(monkeypatch: pytest.MonkeyPatch) ->
 
 @pytest.mark.parametrize(('texts', 'text_l1'), [
     (['16/5'], '16/5'),            # 一级靠 level 放宽读对,二级不应被调用
-    (['1414', '16/5'], '1414'),    # 一级落空、二级靠 level 放宽读对 → 只有披露行,无拒信
+    (['1210', '16/5'], '1210'),    # 一级清单为空(同「两级都落空」用例)、二级靠 level 放宽读对 → 只有披露行,无拒信
 ])
 def test_read_paddle_level_relaxed_emits_disclosure(
         monkeypatch: pytest.MonkeyPatch, texts: list[str], text_l1: str) -> None:
@@ -312,4 +321,70 @@ def test_read_paddle_digits_without_glyph_zero_evidence(
     """文本带数字但没有合格字形(区域被遮挡) → 两级都提前返回,零证据。"""
     ctx, calls, screen = _paddle_env(monkeypatch, ['1614', '1614'], glyphs=[])
     assert mod._read_deploy_paddle(ctx, screen, level=6) == (None, None)
+    assert calls == []
+
+
+#: 「6/6」帧实测的两个数字字形 (宽, 面积)——同一数字,同形。
+_SAME_SHAPE = [(37, 770), (38, 773)]
+#: 「5/6」帧实测的两个数字字形——宽差 3 在线内、面积差 5.3% 在线外,不判同形。
+_DIFF_SHAPE = [(35, 814), (38, 771)]
+
+
+@pytest.mark.parametrize(('text', 'glyph_n', 'slash_idx', 'level', 'has_slash', 'shapes',
+                          'expected', 'cands'), [
+    # 满板 X/X:一级文本「图标前缀 + X + 斜杠读成数字 + Y」四位 → 去首 + 去斜杠位,唯一候选
+    ('1616', 2, 1, 6, False, _SAME_SHAPE, (6, 6), [(6, 6, False)]),
+    ('1919', 2, 1, None, False, _SAME_SHAPE, (9, 9), [(9, 9, False)]),
+    # 满板 X/X:二级文本「图标→1 + X + Y」三位 → 去首 / 去斜杠位两候选,同形收口只留 x == y
+    ('616', 2, 1, 6, False, _SAME_SHAPE, (6, 6), [(1, 6, False), (6, 6, False)]),
+    ('717', 2, 1, None, False, _SAME_SHAPE, (7, 7), [(1, 7, False), (7, 7, False)]),
+    # 字形不同形(宽差 4)→ 不收口,歧义照旧读不出
+    ('717', 2, 1, None, False, [(37, 770), (41, 773)], (None, None),
+     [(1, 7, False), (7, 7, False)]),
+    # 不同数字面积差 5.3% > 5% → 不判同形,不收口
+    ('516', 2, 1, None, False, _DIFF_SHAPE, (None, None),
+     [(1, 6, False), (5, 6, False)]),
+    # 未传字形 → 不收口
+    ('516', 2, 1, None, False, None, (None, None), [(1, 6, False), (5, 6, False)]),
+    # 文本带 '/' 时新式不触发;「10/3」去首照旧读出
+    ('103', 2, 1, None, True, _SAME_SHAPE, (0, 3), [(0, 3, False)]),
+    # 文本无 '/'、三位:原三式结果不变(新式要恰多两位)
+    ('103', 2, 1, None, False, None, (None, None), [(0, 3, False), (1, 3, False)]),
+    # 有直接候选时同形收口不介入
+    ('66', 2, 1, 6, True, _SAME_SHAPE, (6, 6), [(6, 6, True)]),
+    # 两位数 X、斜杠读对:直接对齐
+    ('103', 3, 2, 3, True, None, (10, 3), [(10, 3, True)]),
+    # 两位数 X、斜杠读成数字:字形数 3 不享新式与收口,候选与原三式相同(去首 '013'→(1,3);
+    # 去斜杠位 = 去掉 X 两位之后那一位 '103'→(10,3)),歧义照旧读不出
+    ('1013', 3, 2, 3, False, None, (None, None), [(1, 3, False), (10, 3, False)]),
+    ('1013', 3, 2, None, False, None, (None, None), [(1, 3, False), (10, 3, False)]),
+    # 「1/6」:二级文本只多一位 → 新式不触发;一级文本多两位(前缀 + 斜杠→1)→ 新式读对
+    ('116', 2, 1, None, False, None, (1, 6), [(1, 6, False)]),
+    ('1116', 2, 1, None, False, None, (1, 6), [(1, 6, False)]),
+    # 幻影前缀落在 Y 上(画面 5/6):首位是真数字,新式不触发,与原三式相同
+    ('5116', 2, 1, None, False, None, (None, None), []),
+])
+def test_resolve_paddle_digits_alignments(text: str, glyph_n: int, slash_idx: int | None,
+                                          level: int | None, has_slash: bool,
+                                          shapes, expected, cands) -> None:
+    """``_resolve_paddle_digits`` 四种对齐式 + 同形收口(纯逻辑;契约正文 = 该函数 docstring)。"""
+    assert mod._resolve_paddle_digits(text, glyph_n, slash_idx, level,
+                                      text_has_slash=has_slash,
+                                      digit_glyph_shapes=shapes) == (expected[0], expected[1], cands)
+
+
+def test_full_board_frame_slash_read_as_digit(test_context: SrTestContext,
+                                              monkeypatch: pytest.MonkeyPatch) -> None:
+    """样本帧「计数6比6-斜杠读成616」(选完主角光环回备战,满板 6/6):一级 OCR 读成 '1616'、
+    二级读成 '616',修前两级都解析不出 → 读数持续 None;修后 X=6 / Y=6,零证据行。
+    缺帧 skip。"""
+    state = '计数6比6-斜杠读成616'
+    if not test_context.has_screen('货币战争-备战', state):
+        pytest.skip(f'存档截图缺失:screens/货币战争-备战/{state}.webp')
+    calls: list[tuple] = []
+    monkeypatch.setattr(mod, 'obs_conflict', lambda *a, **k: calls.append((a, k)))
+    img = test_context.load_screen('货币战争-备战', state)
+    assert read_deployed_count(test_context, img) == 6
+    assert read_deploy_cap(test_context, img) == 6
+    assert read_deploy_cap(test_context, img, level=6) == 6
     assert calls == []

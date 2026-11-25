@@ -187,3 +187,44 @@ def test_capsule_rect_covers_observed_y_band() -> None:
     345-375 局的教训,标定与扩带论证见 src ``_RAIL_CAPSULE_RECT`` 注释）。"""
     assert _RAIL_CAPSULE_RECT[1] <= 345, '胶囊带 y 下界须覆盖上布局实测 345'
     assert _RAIL_CAPSULE_RECT[3] >= 470, '胶囊带 y 上界须覆盖下布局实测 470'
+
+
+# ===== 阶段读数(工具面):与流程侧同口径,不做数字回退 =====
+
+def _phase_env(monkeypatch: pytest.MonkeyPatch, tokens: list[tuple[str, int, int]]) -> None:
+    """``_read_phase_round_pure`` 桩环境:识别器模块内的 ``_ocr`` / ``_area_rect`` 打桩,
+    不跑识别。"""
+    import types
+
+    import sr_od.application.currency_war.obs.recognizers.battle_prep_recognizer as bpr
+    monkeypatch.setattr(bpr, '_ocr', lambda *_a, **_k: [
+        types.SimpleNamespace(data=d, w=w, h=h) for d, w, h in tokens])
+    monkeypatch.setattr(bpr, '_area_rect', lambda *_a, **_k: None)
+
+
+@pytest.mark.parametrize(('tokens', 'expected'), [
+    # 开商店态入场首帧:短横线漏检,两个数字记号——修前数字回退产出值域内假值 (2,2)
+    ([('备战阶段', 81, 25), ('2', 17, 22), ('6', 17, 21)], None),
+    ([('备战阶段', 81, 25), ('2-6', 53, 34)], (2, 6)),
+    ([('备战阶段', 81, 25), ('1-3', 56, 34), ('0', 9, 6)], (1, 3)),
+])
+def test_read_phase_round_pure(monkeypatch: pytest.MonkeyPatch, tokens, expected) -> None:
+    """``_read_phase_round_pure``:读数只认完整「X-Y」,杂散小记号不进拼接,读不到返 None
+    (契约 = 该函数 docstring)。"""
+    from sr_od.application.currency_war.obs.recognizers import battle_prep_recognizer as bpr
+    _phase_env(monkeypatch, tokens)
+    assert bpr._read_phase_round_pure(object(), None) == expected
+
+
+@pytest.mark.parametrize(('screen', 'state', 'expected'), [
+    ('货币战争-备战', '阶段杂散小记号-1-1', (1, 1)),          # 修前读成 1-10 → 值域外 → None
+    ('货币战争-备战-开商店', '2-6入场首帧', None),            # 修前数字回退 → 假值 (2, 2)
+])
+def test_phase_sample_frames(test_context: SrTestContext, screen: str, state: str,
+                             expected) -> None:
+    """两张阶段样本帧整帧读数(契约 = ``_read_phase_round_pure`` docstring)。缺帧 skip。"""
+    from sr_od.application.currency_war.obs.recognizers import battle_prep_recognizer as bpr
+    if not test_context.has_screen(screen, state):
+        pytest.skip(f'存档截图缺失:screens/{screen}/{state}.webp')
+    assert bpr._read_phase_round_pure(test_context, test_context.load_screen(screen, state)) \
+        == expected

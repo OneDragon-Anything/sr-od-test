@@ -261,3 +261,40 @@ def test_shop_cards_live_screenshot_raises_keeps_first_read(
     slots = obs.read_shop_cards(_spy_ctx(synth_no_badge_frame, [], screenshot=boom),
                                 synth_no_badge_frame, full_ocr=_FAKE_FULL_OCR)
     assert slots is not None and slots[4].kind == 'unknown'
+
+
+# ===== 阶段读数:记号进拼接前剔小记号;读不到不伪造 =====
+
+def _tok(data: str, w: int, h: int) -> types.SimpleNamespace:
+    """带 ``data/w/h`` 的 OCR 记号桩(``phase_blob_from_tokens`` 只读这三项)。"""
+    return types.SimpleNamespace(data=data, w=w, h=h)
+
+
+@pytest.mark.parametrize(('tokens', 'expected'), [
+    # 杂散小记号 9×6 读成「0」,不过滤会拼出值域外假值「1-10」
+    ([('备战阶段', 81, 25), ('1-1', 56, 34), ('0', 9, 6)], '备战阶段1-1'),
+    ([('备战阶段', 81, 25), ('√', 11, 10), ('2-6', 53, 34)], '备战阶段2-6'),
+    ([('2', 17, 22), ('6', 17, 21)], '26'),
+    ([('1-', 12, 6), ('1', 56, 34)], '1'),
+])
+def test_phase_blob_from_tokens(tokens, expected: str) -> None:
+    """宽或高小于阈值的记号不进拼接,其余按原顺序保留(契约 = ``phase_blob_from_tokens``
+    docstring;阈值的实测依据见 ``_PHASE_TOKEN_MIN_SIDE`` 注释)。"""
+    assert obs.phase_blob_from_tokens([_tok(*t) for t in tokens]) == expected
+
+
+def test_read_phase_round_drops_stray_small_token(monkeypatch) -> None:
+    """流程侧读数:读区混入杂散小记号(「备战阶段」「1-1」「0」)→ (1, 1),不发值域外拒信。
+    不过滤时拼成「备战阶段1-10」→ 值域外 → 拒信 + 退回 (1,1) 兜底,返回值相同但留下
+    拒信并丢掉一次真读数。"""
+    obs.reset_phase_round_cache()
+    monkeypatch.setattr(obs, '_ocr', lambda *_a, **_k: [
+        _tok('备战阶段', 81, 25), _tok('1-1', 56, 34), _tok('0', 9, 6)])
+    monkeypatch.setattr(obs, '_area_rect', lambda *_a, **_k: None)
+    calls: list[tuple] = []
+    monkeypatch.setattr(obs, 'obs_conflict', lambda *a, **k: calls.append((a, k)))
+    try:
+        assert obs.read_phase_round(object(), None) == (1, 1)
+        assert calls == []
+    finally:
+        obs.reset_phase_round_cache()
