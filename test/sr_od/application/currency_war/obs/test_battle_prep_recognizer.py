@@ -228,3 +228,65 @@ def test_phase_sample_frames(test_context: SrTestContext, screen: str, state: st
         pytest.skip(f'存档截图缺失:screens/{screen}/{state}.webp')
     assert bpr._read_phase_round_pure(test_context, test_context.load_screen(screen, state)) \
         == expected
+
+
+# ===== ``read_prep_extras`` 的按键口径(识别链全打桩,只锁接线) =====
+
+def _skeleton_env(monkeypatch: pytest.MonkeyPatch) -> list[int]:
+    """``read_prep_extras`` 骨架环境:识别链上的读数全部打桩成「读不到」,
+    只留 ``read_equips`` 为计数桩;返回它的调用记录(每次调用追加 1)。
+
+    模板库桩成**已加载**(``ensure_equip_sift_templates`` 返回非 None),否则
+    ``full_read=True`` 时也走不到 ``read_equips``,「商店收起时照读」那半边测不到。
+    """
+    import sr_od.application.currency_war.obs.cw_back_layout as back_layout
+    import sr_od.application.currency_war.obs.recognizers.battle_prep_recognizer as bpr
+
+    read_equips_calls: list[int] = []
+    stubs: dict[str, object] = {
+        '_ocr': lambda *_a, **_k: [],
+        '_area_rect': lambda *_a, **_k: None,
+        '_read_phase_round_pure': lambda *_a, **_k: None,
+        'read_level': lambda *_a, **_k: 1,
+        'read_gold': lambda *_a, **_k: 0,
+        'read_board': lambda *_a, **_k: {},
+        'read_streak': lambda *_a, **_k: None,
+        'read_level_up_cost': lambda *_a, **_k: None,
+        'read_hp_opt': lambda *_a, **_k: None,
+        'read_deployed_count': lambda *_a, **_k: None,
+        'read_deploy_cap': lambda *_a, **_k: None,
+        'read_armory_boxes': lambda *_a, **_k: [],
+        'read_front_aura_slot': lambda *_a, **_k: None,
+        'read_ore_sights': lambda *_a, **_k: [],
+        'read_bench_view': lambda *_a, **_k: None,
+        'read_deployed_rows': lambda *_a, **_k: ([], []),
+        'read_row_equipped': lambda *_a, **_k: {},
+        '_read_rail_shop': lambda *_a, **_k: None,
+        'ensure_portrait_templates': lambda *_a, **_k: {},
+        'ensure_equip_tm_templates': lambda *_a, **_k: {},
+        'ensure_equip_sift_templates': lambda *_a, **_k: {},
+        'read_equips': lambda *_a, **_k: read_equips_calls.append(1) or [],
+    }
+    for name, stub in stubs.items():
+        monkeypatch.setattr(bpr, name, stub)
+    monkeypatch.setattr(back_layout, 'select_back_layout', lambda *_a, **_k: (None, ''))
+    return read_equips_calls
+
+
+def test_shop_open_skips_reading_owned_equips(monkeypatch: pytest.MonkeyPatch) -> None:
+    """商店开着时不读右侧装备栏(用户裁定:商店开的画面不识别右侧装备)。
+
+    同一张帧调两次 ``read_prep_extras``:``full_read=False``(开商店识别器传入)时
+    ``read_equips`` 未被调用、返回里没有 ``owned_equips`` 键;``full_read=True`` 时
+    被调用、键在——后一半防止跳过的范围扩大到商店收起的时候。
+    """
+    import sr_od.application.currency_war.obs.recognizers.battle_prep_recognizer as bpr
+
+    calls = _skeleton_env(monkeypatch)
+    frame = np.zeros((1080, 1920, 3), np.uint8)
+
+    shop_open = bpr.read_prep_extras(object(), frame, full_read=False)
+    assert calls == [] and 'owned_equips' not in shop_open
+
+    shop_closed = bpr.read_prep_extras(object(), frame, full_read=True)
+    assert calls == [1] and 'owned_equips' in shop_closed
