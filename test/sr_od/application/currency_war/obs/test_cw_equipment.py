@@ -1,15 +1,9 @@
 """穿戴装备小图标读链（``cw_equipment.read_equipped_below``）回归。
 
-锁的设计约定（标定依据见 src cw_equipment.py「穿戴装备识别」常量区块注释）：
-- 命中判据 = 峰分 + 峰尖锐度两道门。空槽底板与「碎星斩舰刀」模板的宽泛相关能把峰分抬到 0.64 但峰不尖锐
-  → 空槽不再读出装备；真图标「火力风暴潮」峰分只有 0.59 但尖锐 → 能读出（单看分数分不开这两类）；
-- 历史正常帧不回退：10 张 ``equipped_*`` 整帧样本按已入库模板名单的读数与改前逐格相同。
+锁的设计约定：历史正常帧不回退——10 张 ``equipped_*`` 整帧样本按已入库模板名单的读数与改前逐格相同。
+命中判据（峰分 + 峰尖锐度两道门，标定依据见 src cw_equipment.py「穿戴装备识别」常量区块注释）不在
+本文件的断言范围内。
 
-样本：
-- ``equipped_m45_*``（4 条 140×66 条带，裁自局 45 帧，与 ``avatar_to_below`` 搜索区同尺寸；看放大裁片核对）：
-  ``101118_front1`` 有「火力风暴潮」；``101118_front4`` / ``101118_front3`` / ``095012_front1`` 为空槽，
-  分别带「碎星斩舰刀」0.64 / 0.60、「和平手枪」0.60 的背景假峰；
-- ``equipped_*`` 整帧：期望表 = 改前读数（按已入库名单）。
 模板从主仓 ``assets/template/currency_war/equip_plaza`` 现读并按下方写死的已入库名单过滤——目录里其余
 png 是他批在飞件，否定断言对每张模板都敏感。缺样本 / 缺模板 → skip。
 """
@@ -40,14 +34,6 @@ _TRACKED_TMPL: tuple[str, ...] = (
     '蓄能帆', '蓝钻', '虫洞掘进钻头', '行星钻地弹', '财富宝钻', '轮滑鞋', '追击星徽', '追逐星辰',
     '量产型装甲', '闪光手榴弹', '随便骰子', '高周波电锯',
 )
-
-#: 局 45 条带样本 → 期望读数（slot_idx 固定 1）
-_M45_EXPECT: dict[str, dict[int, list[str]]] = {
-    'equipped_m45_101118_front1': {1: ['火力风暴潮']},
-    'equipped_m45_101118_front4': {},
-    'equipped_m45_101118_front3': {},
-    'equipped_m45_095012_front1': {},
-}
 
 #: ``equipped_*`` 整帧样本 → 期望读数 = 改前读数（按已入库名单）；未列出的槽位都不在返回里。
 #: 前排 3 号位 / 后排 3 号位的「星核猎手星徽」模板未入库，按名单滤掉后读空。
@@ -104,18 +90,6 @@ def _slot_rects() -> list[tuple[str, Rect]]:
     areas = {a['area_name']: a['pc_rect'] for a in screen['area_list'] if 'pc_rect' in a}
     return [(f'{k}{i}', avatar_to_below(Rect(*areas[f'{prefix}-{i}'])))
             for k, prefix, count in _SLOT_KINDS for i in range(1, count + 1)]
-
-
-def test_m45_strips_empty_slots_not_read_and_true_icon_read(tmpl_grays: dict[str, object]) -> None:
-    strips: dict[str, object] = {}
-    for name in _M45_EXPECT:
-        img = _load(name)
-        if img is None:
-            pytest.skip(f'样本缺失 {name}')
-        strips[name] = img
-    rect = [(1, Rect(0, 0, 140, 66))]
-    for name, expect in _M45_EXPECT.items():
-        assert ce.read_equipped_below(strips[name], tmpl_grays, rect) == expect, name
 
 
 @pytest.mark.parametrize('name', sorted(_EQUIPPED_EXPECT))

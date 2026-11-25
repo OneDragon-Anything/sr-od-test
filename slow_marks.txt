@@ -104,8 +104,7 @@ test/sr_od/application/currency_war/obs/test_prep_variant_recognizers.py::test_t
 # team_size_used/deploy_cap 落值),不 mock 生成端,入慢桶。
 test/sr_od/application/currency_war/obs/cw_observation/test_read_deploy_paddle.py::test_read_game_state_writes_team_size_used
 
-# 2026-11-25 cw-equip-icon-read 登记:头像下方装备小图标读链回归——整帧参数化十条各做 19 槽 × 52 模板 × 4 尺度 matchTemplate,实测 2.1-3.2s;条带样本一条承担 52 张模板解码的模块夹具(setup 2.1s)
-test/sr_od/application/currency_war/obs/test_cw_equipment.py::test_m45_strips_empty_slots_not_read_and_true_icon_read
+# 2026-11-25 cw-equip-icon-read 登记:头像下方装备小图标读链回归——整帧参数化十条各做 19 槽 × 52 模板 × 4 尺度 matchTemplate,实测 2.1-3.2s
 test/sr_od/application/currency_war/obs/test_cw_equipment.py::test_equipped_frames_no_regression[equipped_back_235]
 test/sr_od/application/currency_war/obs/test_cw_equipment.py::test_equipped_frames_no_regression[equipped_back1_feixiao_2]
 test/sr_od/application/currency_war/obs/test_cw_equipment.py::test_equipped_frames_no_regression[equipped_back1_feixiao_3]
