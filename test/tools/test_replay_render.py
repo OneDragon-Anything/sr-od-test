@@ -925,11 +925,13 @@ def build_t(rows: list[dict[str, Any]], recs: list[dict[str, Any]],
     return report, mod.render_markdown(report)
 
 
-def test_entry_screen_map_closed_set_14_rows():
-    """章级挂载表 = render-assembly §2 的 14 行闭集直译(entry → 渲染章键,
-    禁漂移;prep/shop/supply 动作级 join、其余 11 选择族章级挂载)。"""
+def test_entry_screen_map_closed_set_15_rows():
+    """章级挂载表 = render-assembly §2 的 15 行闭集直译(entry → 渲染章键,
+    禁漂移;prep/shop/supply/合成确认浮层处置动作级 join、其余 11 选择族
+    章级挂载)。合成确认浮层是备战画面的子态,处置入口记在备战章下。"""
     assert mod.ENTRY_SCREEN_MAP == {
         'decide_prep_screen': '画面-备战',
+        'decide_synthesis_overlay': '画面-备战',
         'decide_shop_action': '画面-商店',
         'decide_invest_env': '画面-投资环境',
         'decide_invest_strategy': '画面-投资策略',
