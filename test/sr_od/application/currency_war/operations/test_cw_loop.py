@@ -657,6 +657,73 @@ def test_exit_status_texts_stable(
             f'非 debug 停点出口应标停点重开语义: {res.status}')
 
 
+@pytest.mark.parametrize(
+    ('frame', 'hands_over'),
+    [
+        (_PREP_FRAME, True),
+        (('货币战争-备战', 'rail_badge_absent_r2'), False),
+    ],
+    ids=['干净备战帧→交还', '合成确认浮层在场→不交还'],
+)
+def test_stop_at_prep_needs_overlay_absent(
+        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+        tmp_path, frame: tuple[str, str], hands_over: bool) -> None:
+    """退出调度停机位在合成确认浮层帧上判否、交下方分发处置,处置完的下一帧才交还。
+
+    浮层在场时备战画面的识别标志照样全中、屏名仍是 A 类,所以停机位不能只看屏名
+    ——它与退局路由③同用 ``cw_screen_state.is_exit_safe_prep_frame``(多一条「浮层
+    不在场」)。演法 = 停点出口测试同款壳直驱真实 ``loop()``:识别面全桩,停机位
+    那一句判定走真识别。
+    - 干净备战帧:停机位成立,立即以交还状态返回,不进分发段;
+    - 浮层帧:停机位不成立,循环越过它往下走——这里用 max_rounds 停点截住,证明它
+      越过了停机位。实际运行中由分发段派备战画面 op 处置浮层,下一帧回到干净备战
+      再交还(退局路由与备战画面 op 两侧各有自己的用例)。"""
+    monkeypatch.setattr(test_context, 'env_config',
+                        SimpleNamespace(is_debug=True))
+    ctrl = FixtureController(
+        ctx=test_context,
+        standard_width=test_context.project_config.screen_standard_width,
+        standard_height=test_context.project_config.screen_standard_height,
+    )
+    monkeypatch.setattr(test_context, 'controller', ctrl)
+    ctrl.set_phases([{'frame': frame}])
+    monkeypatch.setattr(
+        'sr_od.application.currency_war.operations.cw_loop.'
+        'save_decision_frame', lambda *a, **k: None)
+    monkeypatch.setattr(
+        'sr_od.application.currency_war.operations.decision_frame_hooks.'
+        'get_project_root', lambda: tmp_path)
+    monkeypatch.setattr(CwLoop, '_resolve_frame_identity',
+                        lambda self, screen: (None, []))
+    monkeypatch.setattr(cw_loop_module, 'prep_anchors_hit',
+                        lambda op, screen: True)
+    shell = CwLoop.__new__(CwLoop)
+    shell.ctx = test_context
+    shell.last_screenshot = ctrl.current_frame
+    shell._cleanup_delegate = False
+    shell._iter = 2   # 跳过 iter1 预检与首读;非 10 倍数跳过焦点防线
+    shell._stop_at_prep = True
+    shell._max_rounds = 1
+    shell._settle = SettlementState(rounds_done=1)
+    enter_running_state(test_context)
+    try:
+        with fast_sleep(shell):
+            res = shell.loop()
+    finally:
+        reset_running_state(test_context, shell)
+
+    assert res.result == OperationRoundResultEnum.SUCCESS, (
+        f'两种帧都应以 success 返回,实际 {res.result} / {res.status}')
+    if hands_over:
+        assert '可交还退出调度' in (res.status or ''), (
+            f'干净备战帧停机位应成立并交还,实际 status={res.status}')
+    else:
+        assert '可交还退出调度' not in (res.status or ''), (
+            f'浮层帧停机位不应成立(交下方分发处置),实际 status={res.status}')
+        assert '停备战' in (res.status or ''), (
+            f'浮层帧应越过停机位走到 max_rounds 停点,实际 status={res.status}')
+
+
 # ===== 每次运行重建判据 + 战斗帧恢复检测门(design §2.4/§2.6 迁移面)=====
 
 def _establish_ctx_container(test_context: SrTestContext,

@@ -17,6 +17,9 @@
 3. battle_x 认画面回头路:误入点 X 节点后,每轮点击前先认「路由有去处的画面」
    (对局中画面名单 + 大厅),认出且非战斗自家画面就不点、回路由重识别;连续
    2 次认出同一画面判失败(路由↔点 X 互踢硬边界)。
+
+4. 合成确认浮层在场的备战帧不走「备战退局发起」:浮层是全局模态,点门形图标会被
+   它吞掉——路由③要求浮层不在场,这种帧落⑤委托(用真样本帧走真识别)。
 """
 
 import numpy as np
@@ -30,6 +33,9 @@ from test.harness.fixture_controller import (
 )
 
 import sr_od.application.currency_war.operations.cw_entry.cw_entry_exit as cw_entry_exit_module
+from sr_od.application.currency_war.cw_screen_state import (
+    PREP_DIRECT_EXIT_SCREENS,
+)
 from sr_od.application.currency_war.operations.cw_entry.cw_entry_exit import (
     BATTLE_STREAK_ENTER,
     BATTLE_X_DEAD_CLICK_LIMIT,
@@ -370,6 +376,13 @@ class TestBattleXRecognizeScreen:
             cw_entry_exit_module, 'get_in_match_screen_name', _fake_in_match)
         monkeypatch.setattr(
             cw_entry_exit_module, 'get_match_screen_name', _fake_match)
+        # 路由③的「可安全交还」判定在本用例按屏名应答:本用例演的是认出备战之后的
+        # 节点链,画面是状态机假件;「浮层在场就不走退局发起」那一条由
+        # TestSynthesisOverlayFrameNotDirectExit 用真样本帧走真识别来锁。
+        monkeypatch.setattr(
+            cw_entry_exit_module, 'is_exit_safe_prep_frame',
+            lambda ctx, screen, screen_name=None: (
+                screen_name in PREP_DIRECT_EXIT_SCREENS))
         monkeypatch.setattr(
             CwEntryExit, 'round_by_find_and_click_area', _fake_find_and_click)
 
@@ -482,3 +495,33 @@ class TestBattleXRecognizeScreen:
             assert clicks == [], f'认出的轮不点击:{clicks}'
             assert not r2.is_success and '认出同一画面' in (r2.status or ''), (
                 f'连续同名认出应判失败:{r2.status}')
+
+
+class TestSynthesisOverlayFrameNotDirectExit:
+    """合成确认浮层在场的备战帧不走「备战退局发起」。
+
+    浮层在场时备战画面的识别标志照样全中、屏名仍在 A 类名单里,只看屏名会把它当成
+    可交还态去点门形图标——那一下会被浮层吞掉,退局必败。路由③因此多一个条件
+    「浮层不在场」:不满足的帧落⑤默认委托,由对局循环派备战画面 op 先处置浮层。
+    用真样本帧走真识别(画面识别与浮层识别都是真的)。
+    """
+
+    @pytest.mark.parametrize(
+        ('frame', 'expected_status'),
+        [
+            (('货币战争-备战', 'deployed_2star'), cw_entry_exit_module.ST_PREP),
+            (('货币战争-备战', 'rail_badge_absent_r2'),
+             cw_entry_exit_module.ST_DELEGATE),
+        ],
+        ids=['干净备战帧→备战退局发起', '合成确认浮层在场→委托对局循环'],
+    )
+    def test_route_needs_overlay_absent(self, test_context: SrTestContext,
+                                        frame: tuple[str, str],
+                                        expected_status: str) -> None:
+        op = _WatchedCwEntryExit(test_context)
+        op.last_screenshot = test_context.load_screen(*frame)
+
+        result = op.route()
+
+        assert result.is_success, f'route 应 success,status={result.status}'
+        assert result.status == expected_status
