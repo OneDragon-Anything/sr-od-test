@@ -374,15 +374,18 @@ def test_resolve_paddle_digits_alignments(text: str, glyph_n: int, slash_idx: in
 
 
 def test_full_board_frame_slash_read_as_digit(test_context: SrTestContext,
-                                              monkeypatch: pytest.MonkeyPatch) -> None:
+                                              monkeypatch: pytest.MonkeyPatch,
+                                              tmp_path) -> None:
     """样本帧「计数6比6-斜杠读成616」(选完主角光环回备战,满板 6/6):一级 OCR 读成 '1616'、
     二级读成 '616',修前两级都解析不出 → 读数持续 None;修后 X=6 / Y=6,零证据行。
     缺帧 skip。"""
+    from sr_od.application.currency_war.kernel import cw_observe
     state = '计数6比6-斜杠读成616'
     if not test_context.has_screen('货币战争-备战', state):
         pytest.skip(f'存档截图缺失:screens/货币战争-备战/{state}.webp')
     calls: list[tuple] = []
     monkeypatch.setattr(mod, 'obs_conflict', lambda *a, **k: calls.append((a, k)))
+    monkeypatch.setattr(cw_observe, '_SHOT_DIR', tmp_path)   # 读数回退变红时留证只进 tmp_path
     img = test_context.load_screen('货币战争-备战', state)
     assert read_deployed_count(test_context, img) == 6
     assert read_deploy_cap(test_context, img) == 6
