@@ -15,13 +15,15 @@
   (两次不同的瞬态误读)→ X 置 None 不按超限采信;重读不超限 → 采重读值(首读按
   误读);重读不可得 → X 置 None(cap 保留);
 - 观察写端(``read_game_state`` 全量路径,生产 heavy 观察走的路):超限帧落
-  状态容器 ``team_size_used``=6 / ``deploy_cap``=5。
+  状态容器 ``team_size_used``=6 / ``deploy_cap``=5;
+- 证据行时机:``_read_deploy_paddle`` 的拒信证据只在两级解析都失败、且至少一级走到约束出口后发 1 条(带两级 OCR 文本);无字形 / 无数字的帧零证据;level 先验放宽成功的披露行照发;解析函数本身不发证据。
 """
 from __future__ import annotations
 
 import types
 from typing import TYPE_CHECKING
 
+import numpy
 import pytest
 
 import sr_od.application.currency_war.obs.cw_observation as mod
@@ -205,3 +207,109 @@ def test_read_game_state_writes_team_size_used(
     mod.read_game_state(test_context, img, screen_name='货币战争-备战')
     assert (gs.team_size_used.value, gs.deploy_cap.value) == (6, 5), \
         '超限帧应落 (规模占用 6, cap 5)'
+
+
+#: 满编帧的字形实测值:两块数字 + 下标 1 处一块细长字形(斜杠),`_paddle_glyph_strip` 的桩。
+_FULL_BOARD_GLYPHS = [(89, 37, 45, 772), (137, 27, 46, 346), (173, 38, 45, 773)]
+#: 四块数字字形(无细长字形 → 斜杠下标为空 → 走枚举切分)。
+_FOUR_DIGIT_GLYPHS = [(89, 37, 45, 772), (130, 37, 45, 771), (173, 38, 45, 773), (215, 38, 45, 774)]
+
+
+def _paddle_env(monkeypatch: pytest.MonkeyPatch, texts: list[str],
+                glyphs: list | None = _FULL_BOARD_GLYPHS,
+                ) -> tuple[types.SimpleNamespace, list[tuple], object]:
+    """``_read_deploy_paddle`` 桩环境:区域恒为 16×16、字形固定、OCR 按调用顺序给
+    ``texts``(耗尽即抛,锁「一级成功不再调二级」);返回 (假 ctx, obs_conflict 捕获列表, 整帧)。"""
+    calls: list[tuple] = []
+    seq = iter(texts)
+
+    def next_ocr(**kwargs):
+        try:
+            return [types.SimpleNamespace(data=next(seq))]
+        except StopIteration:
+            raise AssertionError('不应再调 OCR') from None
+
+    monkeypatch.setattr(mod, '_area_rect', lambda *_a, **_k: types.SimpleNamespace(
+        x1=0, y1=0, x2=16, y2=16))
+    monkeypatch.setattr(mod, '_paddle_glyph_strip', lambda _crop: glyphs)
+    monkeypatch.setattr(mod, 'obs_conflict',
+                        lambda *a, **k: calls.append((a, k)))
+    ctx = types.SimpleNamespace(ocr_service=types.SimpleNamespace(get_ocr_result_list=next_ocr))
+    return ctx, calls, numpy.zeros((16, 16, 3), dtype=numpy.uint8)
+
+
+def _one_conflict(calls: list[tuple]) -> tuple[dict, str, str]:
+    """断言恰好 1 条证据行,返回 (载荷 new, verdict, field)。"""
+    assert len(calls) == 1, f'应恰好 1 条证据行,实际 {len(calls)}'
+    (field, _old, new, _screen), kwargs = calls[0]
+    assert field == 'deploy_paddle'
+    return new, kwargs['verdict'], kwargs['source']
+
+
+def test_read_paddle_full_board_no_reject_evidence(monkeypatch: pytest.MonkeyPatch) -> None:
+    """一级原生 OCR 读歪 '1616'(满编 6/6 实机形态)、二级读对 '16/6' → 读数 (6, 6),
+    零证据行(一级失败是预期内的,不留拒信)。"""
+    ctx, calls, screen = _paddle_env(monkeypatch, ['1616', '16/6'])
+    assert mod._read_deploy_paddle(ctx, screen, level=6) == (6, 6)
+    assert calls == []
+
+
+def test_read_paddle_both_levels_fail_one_reject_with_both_texts(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """两级都走到约束出口且都落空 → 恰好 1 条拒信,带两级文本;清单都空取最后一级。"""
+    ctx, calls, screen = _paddle_env(monkeypatch, ['1414', '1414'])
+    assert mod._read_deploy_paddle(ctx, screen, level=6) == (None, None)
+    new, verdict, source = _one_conflict(calls)
+    assert set(new) == {'text_l1', 'text_l2', 'candidates', 'candidates_from'}
+    assert new['text_l1'] == new['text_l2'] == '1414'
+    assert new['candidates'] == [] and new['candidates_from'] == 'l2'
+    assert verdict.startswith('拒-') and source == 'paddle_positional'
+    assert calls[0][0][3] is screen
+
+
+def test_read_paddle_l2_no_digits_takes_l1_candidates(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """一级有数字落空、二级读空 → 恰好 1 条拒信,清单取自一级(二级提前返回)。"""
+    ctx, calls, screen = _paddle_env(monkeypatch, ['1616', ''])
+    assert mod._read_deploy_paddle(ctx, screen, level=6) == (None, None)
+    new, verdict, _ = _one_conflict(calls)
+    assert new['text_l1'] == '1616' and new['text_l2'] == ''
+    assert new['candidates_from'] == 'l1' and verdict.startswith('拒-')
+
+
+def test_read_paddle_no_digits_zero_evidence(monkeypatch: pytest.MonkeyPatch) -> None:
+    """两级文本都无数字 → 零证据。"""
+    ctx, calls, screen = _paddle_env(monkeypatch, ['abc', 'abc'])
+    assert mod._read_deploy_paddle(ctx, screen, level=6) == (None, None)
+    assert calls == []
+
+
+@pytest.mark.parametrize(('texts', 'text_l1'), [
+    (['16/5'], '16/5'),            # 一级靠 level 放宽读对,二级不应被调用
+    (['1414', '16/5'], '1414'),    # 一级落空、二级靠 level 放宽读对 → 只有披露行,无拒信
+])
+def test_read_paddle_level_relaxed_emits_disclosure(
+        monkeypatch: pytest.MonkeyPatch, texts: list[str], text_l1: str) -> None:
+    ctx, calls, screen = _paddle_env(monkeypatch, texts)
+    assert mod._read_deploy_paddle(ctx, screen, level=6) == (6, 5)
+    new, verdict, _ = _one_conflict(calls)
+    assert verdict.startswith('采-y<level')
+    assert new['text_l1'] == text_l1 and new['text'] == '16/5'
+
+
+def test_read_paddle_ambiguous_l1_keeps_l1_candidates(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """一级歧义出两个候选、二级读空 → 1 条拒信,带一级的两对候选。"""
+    ctx, calls, screen = _paddle_env(monkeypatch, ['1013', ''], glyphs=_FOUR_DIGIT_GLYPHS)
+    assert mod._read_deploy_paddle(ctx, screen, level=6) == (None, None)
+    new, verdict, _ = _one_conflict(calls)
+    assert new['candidates'] == [(1, 13, False), (10, 13, False)]
+    assert new['candidates_from'] == 'l1' and verdict.startswith('拒-')
+
+
+def test_read_paddle_digits_without_glyph_zero_evidence(
+        monkeypatch: pytest.MonkeyPatch) -> None:
+    """文本带数字但没有合格字形(区域被遮挡) → 两级都提前返回,零证据。"""
+    ctx, calls, screen = _paddle_env(monkeypatch, ['1614', '1614'], glyphs=[])
+    assert mod._read_deploy_paddle(ctx, screen, level=6) == (None, None)
+    assert calls == []
