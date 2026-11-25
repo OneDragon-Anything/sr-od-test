@@ -54,6 +54,12 @@ from sr_od.application.currency_war.kernel.cw_vocab import (
     CwActionSynthesisConfirmParam,
 )
 from sr_od.application.currency_war.obs import cw_synthesis_overlay_obs as overlay_mod
+from sr_od.application.currency_war.operations.cw_op.cw_synthesis_cancel_action import (
+    CwActionSynthesisCancelOp,
+)
+from sr_od.application.currency_war.operations.cw_op.cw_synthesis_confirm_action import (
+    CwActionSynthesisConfirmOp,
+)
 from sr_od.application.currency_war.operations.cw_screen import cw_screen_prep
 from sr_od.application.currency_war.operations.cw_screen.cw_screen_prep import (
     CwScreenPrep,
@@ -180,11 +186,25 @@ def _running(test_context: SrTestContext) -> Iterator[list[CwScreenPrep]]:
             reset_running_state(test_context, op)
 
 
-def _visit(test_context: SrTestContext, ops: list[CwScreenPrep]
+def _visit(test_context: SrTestContext, ops: list[CwScreenPrep],
+           waits_out: list[float | None] | None = None,
            ) -> tuple[CwScreenPrep, OperationResult]:
-    """跑一次备战画面 op 访问(每次派发新建 op 实例,同生产形态)。"""
+    """跑一次备战画面 op 访问(每次派发新建 op 实例,同生产形态)。
+
+    ``waits_out`` 传入一个列表时,把宿主 op 每一轮传给框架的等待时长抄进去(按轮序)。
+    不用 fast_sleep 的「跳过的等待时长」来断言等待:框架的等待按 0.5 秒切片睡,测试里
+    墙钟不走、睡一片就返回,记下来的恒为 min(等待, 0.5),分不出 1.0 秒和 0.5 秒。"""
     op = CwScreenPrep(test_context)
     ops.append(op)
+    if waits_out is not None:
+        real_after_round_wait = op._after_round_wait
+
+        def _spy_after_round_wait(wait: float | None = None,
+                                  wait_round_time: float | None = None) -> None:
+            waits_out.append(wait)
+            real_after_round_wait(wait=wait, wait_round_time=wait_round_time)
+
+        op._after_round_wait = _spy_after_round_wait  # type: ignore[method-assign]
     with fast_sleep(op):
         result = op.execute()
     return op, result
@@ -310,7 +330,8 @@ def _clicks_in_box(ctrl: CwFixtureController,
 def _assert_overlay_branch(op: CwScreenPrep, result: OperationResult,
                            ctrl: _FrameController, match: types.SimpleNamespace,
                            button_box: tuple[int, int, int, int],
-                           order: list[str], node_seq_calls: list[int]) -> None:
+                           order: list[str], node_seq_calls: list[int],
+                           waits: list[float | None]) -> None:
     """浮层分支走通的公共断言(各浮层帧剧本共用)。"""
     strategy = match.strategy
     assert result.success, f'浮层帧应经终结口成功交回,实际 {result.status!r}'
@@ -326,6 +347,20 @@ def _assert_overlay_branch(op: CwScreenPrep, result: OperationResult,
     assert node_seq_calls == [], '浮层帧上子态五查不执行(c 查的节点条读被调用即走到了五查)'
     assert strategy_state_of(match.session).cw4_segment_serial == 0, \
         '浮层处置不是备战期动作,段序号不应置位'
+    # 终结口等待 = 本次动作 op 自己的 terminal_wait(确认与取消的时长不同,各取各的);
+    # 终结口那一轮是访问的最后一轮
+    is_confirm = strategy.kind == 'confirm'
+    action_op_cls = (CwActionSynthesisConfirmOp if is_confirm
+                     else CwActionSynthesisCancelOp)
+    assert waits and waits[-1] == action_op_cls.terminal_wait, (
+        f'终结口那一轮传给框架的等待应取 {action_op_cls.__name__}.terminal_wait'
+        f'(={action_op_cls.terminal_wait}),实际各轮等待 {waits}')
+    # 回执恰一条:经执行器分派时执行器写、动作 op 里不写——两半合成一条
+    param_cls_name = ('CwActionSynthesisConfirmParam' if is_confirm
+                      else 'CwActionSynthesisCancelParam')
+    receipts = list(game_state_of(match.session).receipts.value or [])
+    assert [(r.get('op'), r.get('reason')) for r in receipts] == [(param_cls_name, '')], \
+        f'一次访问的回执应恰一条且 op 为动作参数类名,实际 {receipts!r}'
 
 
 @pytest.mark.parametrize(('kind', 'button_box'),
@@ -346,10 +381,12 @@ def test_overlay_frame_is_handled_before_any_prep_step(
     _seed_regular_gs(gs)
     order, node_seq_calls, lock_battle_calls = _spy_later_steps(monkeypatch)
 
+    waits: list[float | None] = []
     with _running(test_context) as ops:
-        op, result = _visit(test_context, ops)
+        op, result = _visit(test_context, ops, waits)
 
-    _assert_overlay_branch(op, result, ctrl, match, button_box, order, node_seq_calls)
+    _assert_overlay_branch(op, result, ctrl, match, button_box, order, node_seq_calls,
+                           waits)
     assert lock_battle_calls == []
     # 信息上传:字段里是读数结构,✓ 中心落在实机帧的 ✓ 按钮上(动作坐标取自它)
     assert isinstance(gs.synthesis_overlay.value, dict), \
@@ -374,10 +411,12 @@ def test_select_hero_variant_with_overlay_skips_select_hero_handler(
         test_context, test_context.load_screen(*frame),
         screen_name='货币战争-备战-选择主角'), '样本应是带「选择主角」按钮的变体帧'
 
+    waits: list[float | None] = []
     with _running(test_context) as ops:
-        op, result = _visit(test_context, ops)
+        op, result = _visit(test_context, ops, waits)
 
-    _assert_overlay_branch(op, result, ctrl, match, _MID_OK_BOX, order, node_seq_calls)
+    _assert_overlay_branch(op, result, ctrl, match, _MID_OK_BOX, order, node_seq_calls,
+                           waits)
     assert op._prep_substate is None and op._select_hero_retries == 0, \
         (f'浮层帧不应进入选择主角处置 node,'
          f'实际 子态载体 {op._prep_substate!r} / 处置计数 {op._select_hero_retries}')
@@ -395,10 +434,12 @@ def test_takeover_unprobed_overlay_frame_skips_probe(
     _seed_regular_gs(game_state_of(match.session))
     order, node_seq_calls, _ = _spy_later_steps(monkeypatch)
 
+    waits: list[float | None] = []
     with _running(test_context) as ops:
-        op, result = _visit(test_context, ops)
+        op, result = _visit(test_context, ops, waits)
 
-    _assert_overlay_branch(op, result, ctrl, match, _TOP_OK_BOX, order, node_seq_calls)
+    _assert_overlay_branch(op, result, ctrl, match, _TOP_OK_BOX, order, node_seq_calls,
+                           waits)
     assert match.probed is False and match.locked_resume is False, \
         (f'浮层帧上探针不应发,流程态字段不得改写,'
          f'实际 probed={match.probed!r} locked={match.locked_resume!r}')
@@ -418,10 +459,12 @@ def test_locked_match_overlay_frame_keeps_lock(
     _seed_regular_gs(game_state_of(match.session))
     order, node_seq_calls, lock_battle_calls = _spy_later_steps(monkeypatch)
 
+    waits: list[float | None] = []
     with _running(test_context) as ops:
-        op, result = _visit(test_context, ops)
+        op, result = _visit(test_context, ops, waits)
 
-    _assert_overlay_branch(op, result, ctrl, match, _TOP_OK_BOX, order, node_seq_calls)
+    _assert_overlay_branch(op, result, ctrl, match, _TOP_OK_BOX, order, node_seq_calls,
+                           waits)
     assert lock_battle_calls == [], '浮层帧上锁定出战处置不应执行'
     assert match.locked_resume is True and match.locked_sync_done is False, \
         (f'浮层处置不动锁定字段,'

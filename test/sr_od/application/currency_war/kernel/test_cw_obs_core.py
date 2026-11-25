@@ -14,11 +14,13 @@
 from __future__ import annotations
 
 import types
+from collections import OrderedDict
 
 import pytest
 from test.conftest import SrTestContext
 from test.harness.fixture_controller import FixtureController
 
+from sr_od.application.currency_war.kernel import cw_obs_core
 from sr_od.application.currency_war.kernel.cw_obs_core import (
     is_prep_like_frame,
     prep_anchors_hit,
@@ -123,6 +125,10 @@ def test_overlay_frame_is_not_prep_like(
     if not test_context.has_screen(*_OVERLAY_FRAME):
         pytest.skip(f'存档截图缺失:screens/{_OVERLAY_FRAME[0]}/{_OVERLAY_FRAME[1]}.webp')
     frame = test_context.load_screen(*_OVERLAY_FRAME)
+    # 「识别只算一次」要数识别次数,前提是这一帧此前没被别的用例放进过按帧缓存
+    # (缓存是模块级的)。换成本用例自己的空缓存:用例之间互不依赖,也不把这一帧
+    # 留给后面的用例。
+    monkeypatch.setattr(cw_obs_core, '_SYNTHESIS_OVERLAY_CACHE', OrderedDict())
     real_read = overlay_mod.read_synthesis_overlay_of
     reads: list[int] = []
 
