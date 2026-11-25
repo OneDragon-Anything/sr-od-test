@@ -26,6 +26,7 @@ from __future__ import annotations
 
 from functools import cache
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import cv2
 import numpy as np
@@ -39,6 +40,9 @@ from sr_od.application.currency_war.obs.recognizers.battle_prep_recognizer impor
     find_rail_shop_train,
     parse_rail_shop_banner,
 )
+
+if TYPE_CHECKING:
+    from test.conftest import SrTestContext
 
 #: 列车图案搜索带 = 画面档「标识-银轨商店列车图案」pc_rect（建档单一源；晶矿回归同款硬编码先例）
 _RAIL_TRAIN_RECT = Rect(325, 250, 500, 480)
@@ -233,11 +237,13 @@ def test_phase_sample_frames(test_context: SrTestContext, screen: str, state: st
 # ===== ``read_prep_extras`` 的按键口径(识别链全打桩,只锁接线) =====
 
 def _skeleton_env(monkeypatch: pytest.MonkeyPatch) -> list[int]:
-    """``read_prep_extras`` 骨架环境:识别链上的读数全部打桩成「读不到」,
+    """``read_prep_extras`` 骨架环境:除合成确认浮层识别外,读数全部打桩成「读不到」,
     只留 ``read_equips`` 为计数桩;返回它的调用记录(每次调用追加 1)。
 
     模板库桩成**已加载**(``ensure_equip_sift_templates`` 返回非 None),否则
     ``full_read=True`` 时也走不到 ``read_equips``,「商店收起时照读」那半边测不到。
+    合成确认浮层识别(``read_synthesis_overlay``,纯函数)留真:它只读帧与模板,
+    画面档矩形经 ``_area_rect`` 真读,所以 ctx 要传真实的测试上下文。
     """
     import sr_od.application.currency_war.obs.cw_back_layout as back_layout
     import sr_od.application.currency_war.obs.recognizers.battle_prep_recognizer as bpr
@@ -245,7 +251,6 @@ def _skeleton_env(monkeypatch: pytest.MonkeyPatch) -> list[int]:
     read_equips_calls: list[int] = []
     stubs: dict[str, object] = {
         '_ocr': lambda *_a, **_k: [],
-        '_area_rect': lambda *_a, **_k: None,
         '_read_phase_round_pure': lambda *_a, **_k: None,
         'read_level': lambda *_a, **_k: 1,
         'read_gold': lambda *_a, **_k: 0,
@@ -273,7 +278,12 @@ def _skeleton_env(monkeypatch: pytest.MonkeyPatch) -> list[int]:
     return read_equips_calls
 
 
-def test_shop_open_skips_reading_owned_equips(monkeypatch: pytest.MonkeyPatch) -> None:
+#: 合成确认浮层读数的键集(与 game state ``synthesis_overlay`` 字段的结构一致)
+_OVERLAY_KEYS: set[str] = {'ok_xy', 'cancel_xy', 'panel_rect', 'inputs', 'product'}
+
+
+def test_shop_open_skips_reading_owned_equips(
+        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
     """商店开着时不读右侧装备栏(用户裁定:商店开的画面不识别右侧装备)。
 
     同一张帧调两次 ``read_prep_extras``:``full_read=False``(开商店识别器传入)时
@@ -283,10 +293,72 @@ def test_shop_open_skips_reading_owned_equips(monkeypatch: pytest.MonkeyPatch) -
     import sr_od.application.currency_war.obs.recognizers.battle_prep_recognizer as bpr
 
     calls = _skeleton_env(monkeypatch)
-    frame = np.zeros((1080, 1920, 3), np.uint8)
+    frame = test_context.load_screen('货币战争-备战', 'deployed_2star')
 
-    shop_open = bpr.read_prep_extras(object(), frame, full_read=False)
+    shop_open = bpr.read_prep_extras(test_context, frame, full_read=False)
     assert calls == [] and 'owned_equips' not in shop_open
 
-    shop_closed = bpr.read_prep_extras(object(), frame, full_read=True)
+    shop_closed = bpr.read_prep_extras(test_context, frame, full_read=True)
     assert calls == [1] and 'owned_equips' in shop_closed
+
+
+@pytest.mark.parametrize(('screen_dir', 'state', 'is_present'), [
+    ('货币战争-备战-合成确认', '合成确认浮层', True),
+    ('货币战争-备战', 'deployed_2star', False),
+], ids=['浮层帧', '干净帧'])
+def test_extras_synthesis_overlay_matches_frame(
+        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+        screen_dir: str, state: str, is_present: bool) -> None:
+    """备战读数里的合成确认浮层键(识别留真):浮层帧 = 读数结构(两件原料 + 产物预览
+    + 两个按钮的点击坐标),干净帧 = None(= 无浮层);字段说明里有这个键。"""
+    import sr_od.application.currency_war.obs.recognizers.battle_prep_recognizer as bpr
+
+    _skeleton_env(monkeypatch)
+    data = bpr.read_prep_extras(
+        test_context, test_context.load_screen(screen_dir, state), full_read=True)
+
+    assert 'synthesis_overlay' in bpr.PREP_EXTRAS_DOC
+    reading = data['synthesis_overlay']
+    if not is_present:
+        assert reading is None
+        return
+    assert set(reading) == _OVERLAY_KEYS
+    assert len(reading['inputs']) == 2 and set(reading['product']) == {'name', 'conf', 'cx', 'cy'}
+
+
+def test_shop_open_extras_omit_synthesis_overlay_without_reading(
+        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch) -> None:
+    """商店开着时不识别合成确认浮层:键整项省略(不是 null),识别函数未被调用。"""
+    import sr_od.application.currency_war.obs.recognizers.battle_prep_recognizer as bpr
+
+    _skeleton_env(monkeypatch)
+    calls: list[int] = []
+    monkeypatch.setattr(bpr, 'read_synthesis_overlay', lambda *_a, **_k: calls.append(1))
+
+    data = bpr.read_prep_extras(
+        test_context, test_context.load_screen('货币战争-备战-合成确认', '合成确认浮层'),
+        full_read=False)
+    assert calls == [] and 'synthesis_overlay' not in data
+
+
+@pytest.mark.parametrize('state', ['unpaired', 'ambiguous'], ids=['配不成对', '有歧义'])
+def test_unreadable_overlay_omits_key_and_warns(
+        test_context: SrTestContext, monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture, state: str) -> None:
+    """按钮候选配不成对 / 有歧义:读不出可靠的浮层框,键省略(不给 null——那等于
+    告诉调用方「无浮层」),并记一条带候选明细的警告。"""
+    import logging
+
+    import sr_od.application.currency_war.obs.cw_synthesis_overlay_obs as overlay_mod
+    import sr_od.application.currency_war.obs.recognizers.battle_prep_recognizer as bpr
+
+    _skeleton_env(monkeypatch)
+    monkeypatch.setattr(bpr, 'read_synthesis_overlay', lambda *_a, **_k: overlay_mod.SynthesisOverlayResult(
+        state=state, reading=None, ok_candidates=(), cancel_candidates=(), pairs=()))
+
+    with caplog.at_level(logging.WARNING, logger='OneDragon'):
+        data = bpr.read_prep_extras(
+            test_context, test_context.load_screen('货币战争-备战', 'deployed_2star'), full_read=True)
+    assert 'synthesis_overlay' not in data
+    assert len([r for r in caplog.records
+                if r.levelno >= logging.WARNING and '合成确认浮层读不准' in r.getMessage()]) == 1
