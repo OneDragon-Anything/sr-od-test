@@ -5,8 +5,9 @@
 - **单一源回归**:原语消费的 ``read_owned_equips_dual_key`` 与
   observe_full heavy 产物同帧逐键一致(双键派生禁第二份,出现序口径
   单一源——识别层打桩,被测对象 = 派生与组装一致性,非识别本体);
-- 浮层门:合成确认浮层在场帧 → 拒写 round_fail(浮层期 owned_equips 把
-  预览框误读为已入库的毒化防线),状态带「未执行:浮层在场」前缀;
+- 读数可信性判定(走真识别,不桩):合成确认浮层在场帧、角色详情面板帧、商店面板
+  展开帧 → 拒写 round_fail(浮层期 owned_equips 把预览框误读为已入库的毒化防线;
+  面板盖装备栏、商店开着时不识别右侧装备),状态带「未执行:读数不可信」与原因;
 - 无局(session 缺)→ 不写、data 照返回(调用方取坐标可拖,记账将恒拒单
   的 docstring 契约);
 - 有局 → gs.observe 双键整表覆盖(equips + owned_equip_xy,obs 通道);
@@ -37,6 +38,8 @@ from sr_od.application.currency_war.operations.tools.cw_equip_inventory_refresh 
 
 _PREP_FRAME: tuple[str, str] = ('货币战争-备战', 'deployed_2star')
 _OVERLAY_FRAME: tuple[str, str] = ('货币战争-备战-合成确认', '合成确认浮层')
+_CHAR_DETAIL_FRAME: tuple[str, str] = ('货币战争-备战-角色详情', '信息tab')
+_SHOP_OPEN_FRAME: tuple[str, str] = ('货币战争-备战-开商店', 'shop_open')
 _OBS = ChannelSig(family='obs', actor='test')
 
 #: 共享读打桩产物(同名多条出现序 + 异名条目,派生口径断言样本)。
@@ -110,12 +113,27 @@ def test_dual_key_single_source_consistency(monkeypatch) -> None:
     assert xy == _STUB_XY == out['owned_equip_xy']
 
 
-def test_overlay_frame_refuses_write(test_context, monkeypatch) -> None:
-    """浮层门:合成确认浮层在场帧 → 拒写 round_fail(未执行:浮层在场前缀)。"""
-    result, _ = _run_op(test_context, monkeypatch, _OVERLAY_FRAME)
+@pytest.mark.parametrize(
+    ('frame', 'reason'),
+    [
+        (_OVERLAY_FRAME, '合成确认浮层在场'),
+        (_CHAR_DETAIL_FRAME, '角色详情面板在场'),
+        (_SHOP_OPEN_FRAME, '商店面板展开'),
+    ],
+    ids=['合成确认浮层在场', '角色详情面板在场', '商店面板展开'],
+)
+def test_untrusted_frame_refuses_write(test_context, monkeypatch,
+                                       frame: tuple[str, str],
+                                       reason: str) -> None:
+    """读数不可信的三种帧 → 拒写 round_fail:状态带「未执行:读数不可信」与原因;
+    共享读函数根本不被调(读数不可信就不读装备栏)。"""
+    monkeypatch.setattr(cw_equip_inventory_refresh,
+                        'read_owned_equips_dual_key',
+                        lambda ctx, f: pytest.fail(f'不可信帧不应读装备栏:{reason}'))
+    result, _ = _run_op(test_context, monkeypatch, frame)
     assert not result.is_success
-    assert '未执行:浮层在场' in (result.status or '')
-    assert '合成确认浮层' in (result.status or '')
+    assert '未执行:读数不可信' in (result.status or '')
+    assert reason in (result.status or '')
 
 
 def test_no_session_readonly_returns_data(test_context, monkeypatch) -> None:

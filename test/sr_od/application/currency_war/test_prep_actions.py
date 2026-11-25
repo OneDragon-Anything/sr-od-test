@@ -34,10 +34,8 @@ from sr_od.application.currency_war.operations.cw_operation_base import (
     CwOperation,
 )
 from sr_od.application.currency_war.prep_actions import (
-    drag_overlay_block_status,
     launch_battle_unified,
     locked_resume_sync_and_battle,
-    prep_drag_overlay_gate,
 )
 
 #: 备战帧存档(备战两识别标志命中;发出链正常推进形态)。
@@ -241,58 +239,6 @@ def test_resume_sync_once_writes_evidence(launch_env,
         '二调出战点击仍应发出'
 
 
-# ============================================================ drag 浮层守卫 helper(执行前输入契约拒绝)
-
-#: 合成确认浮层帧存档(✓/✕ 双锚在场)。
-_OVERLAY_FRAME: tuple[str, str] = ('货币战争-备战-合成确认', '合成确认浮层')
-#: 角色详情面板帧存档(装备推荐/合成公式锚在场)。
-_CHAR_DETAIL_FRAME: tuple[str, str] = ('货币战争-备战-角色详情', '信息tab')
-
-
-def _require_gate_frames(test_context: SrTestContext) -> None:
-    """守卫语料帧缺失 skip(采到后自动恢复),不 error。"""
-    for screen_name, state in (_OVERLAY_FRAME, _CHAR_DETAIL_FRAME, _PREP_FRAME):
-        if not test_context.has_screen(screen_name, state):
-            pytest.skip(f'存档截图缺失:screens/{screen_name}/{state}.webp')
-
-
-def test_overlay_gate_hits_synthesis_overlay(test_context) -> None:
-    """合成确认浮层帧 → 守卫返回在场标识(单锚命中即拦,宁误拦口径)。"""
-    _require_gate_frames(test_context)
-    host = _LaunchHostOp(test_context)
-    host.last_screenshot = test_context.load_screen(*_OVERLAY_FRAME)
-    assert prep_drag_overlay_gate(host) == '合成确认浮层'
-
-
-def test_overlay_gate_hits_char_detail(test_context) -> None:
-    """角色详情面板帧 → 守卫返回在场标识(H3 退化链面板阻断面)。"""
-    _require_gate_frames(test_context)
-    host = _LaunchHostOp(test_context)
-    host.last_screenshot = test_context.load_screen(*_CHAR_DETAIL_FRAME)
-    assert prep_drag_overlay_gate(host) == '角色详情面板'
-
-
-def test_overlay_gate_clean_on_prep_baseline(test_context) -> None:
-    """干净备战帧 → None 放行(零误拦)。"""
-    _require_gate_frames(test_context)
-    host = _LaunchHostOp(test_context)
-    host.last_screenshot = test_context.load_screen(*_PREP_FRAME)
-    assert prep_drag_overlay_gate(host) is None
-
-
-def test_overlay_block_status_receipt_mapping() -> None:
-    """round_fail status → 受阻码闭集映射命中登记行(非原文兜底)。"""
-    from sr_od.application.currency_war.prep_actions import (
-        _prep_receipt_block_code,
-    )
-    for label in ('合成确认浮层', '角色详情面板'):
-        status = drag_overlay_block_status(label)
-        assert status.startswith('未执行:浮层在场')
-        assert _prep_receipt_block_code(status) == \
-            '未执行:浮层在场(合成确认/角色详情)', \
-            f'{label} 的受阻码应命中登记行,实际 {_prep_receipt_block_code(status)}'
-
-
 # ============================================================ 出战前置席满守卫(执行前输入契约守卫)
 #
 # 锁设计约定(守卫 = prep_actions.guard_bench_overflow_for_battle,
@@ -352,9 +298,9 @@ def test_overflow_guard_sells_then_battle(launch_env,
     _require_overflow_frame(test_context)
     _seed_overflow_gs(test_context, monkeypatch, bench_units=True)
     _patch_deploy_plan(monkeypatch, [])
-    # 截图序:守卫第一查(席满帧)→ 卖出 op 浮层守卫帧(仍席满帧,on_polls
-    # 2 触发推进)→ 守卫复查(干净帧,告警消失)→ 出战按钮定位(干净帧)。
-    ctrl.set_phases([{'frame': _OVERFLOW_FRAME, 'exit': ('on_polls', 2)},
+    # 截图序:守卫第一查(席满帧)→ 守卫复查(干净帧,告警消失)→ 出战按钮定位
+    # (干净帧)。卖出 op 自己不截图(动作 op 不读屏)。
+    ctrl.set_phases([{'frame': _OVERFLOW_FRAME, 'exit': ('on_polls', 1)},
                      {'frame': _PREP_FRAME}])
 
     ok, detail = launch_battle_unified(host, test_context, face='armed')

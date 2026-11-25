@@ -72,8 +72,8 @@ def _pt_tuple(point) -> tuple[int, int]:
 @pytest.fixture
 def drag_ctx(test_context, monkeypatch):
     """共享 ctx 的拖拽测试夹具:controller 换装记录型 stub(monkeypatch
-    自动还原,防污染 session 级共享 ctx);默认剧本 = 干净备战帧——浮层守卫
-    在 last_screenshot 缺席时走 op.screenshot(),无剧本帧会 IndexError。"""
+    自动还原,防污染 session 级共享 ctx);默认剧本 = 干净备战帧(个别
+    用例要读屏时用;drag 本身不读屏)。"""
     controller = _DragTestController(test_context)
     controller.set_phases([{'frame': (_PREP_SCREEN, 'deployed_2star')}])
     monkeypatch.setattr(test_context, 'controller', controller)
@@ -244,27 +244,3 @@ def test_production_primitive_docstring_contract() -> None:
     import inspect
     sig = inspect.signature(DragCwChar.drag_char)
     assert list(sig.parameters) == ['op', 'src', 'dst']
-
-
-# ---------------------------------------------------------------- 浮层守卫安装点
-
-def test_overlay_blocked_round_fail(drag_ctx) -> None:
-    """安装点行为:合成确认浮层在场帧 → drag round_fail(未执行:浮层在场
-    前缀 + 家族指引),零拖拽(执行前输入契约拒绝);受阻码命中登记行。"""
-    from sr_od.application.currency_war.prep_actions import (
-        _prep_receipt_block_code,
-        drag_overlay_block_status,
-    )
-    op = DragCwChar(drag_ctx, from_row='bench', from_idx=1,
-                    to_row='front', to_idx=1)
-    op.last_screenshot = drag_ctx.load_screen(
-        '货币战争-备战-合成确认', '合成确认浮层')
-    with fast_sleep(op):
-        result = op.drag()
-    assert not result.is_success
-    assert (result.status or '').startswith(DragCwChar.STATUS_OVERLAY_BLOCKED)
-    assert '合成确认浮层' in (result.status or '')
-    assert _prep_receipt_block_code(result.status) == \
-        '未执行:浮层在场(合成确认/角色详情)'
-    assert drag_overlay_block_status('合成确认浮层') == result.status
-    assert drag_ctx.controller.recorded_drags == []

@@ -1,15 +1,9 @@
-"""CwSellBenchBySlot 浮层守卫安装点测试(harness 剧本 + 真建档派生)。
+"""CwSellBenchBySlot 执行体测试(harness 剧本 + 真建档派生)。
 
-锁的设计约定(被测单一源 = cw_sell_bench_by_slot):
-- 浮层守卫安装口径与现役安装点同构(DragCwChar.drag 等):合成确认浮层
-  在场帧 → drag_sell round_fail(未执行:浮层在场前缀 + 家族指引),
-  拖拽零发出(执行前输入契约拒绝);受阻码命中登记行
-  (_PREP_RECEIPT_BLOCK_CODES);
-- 干净备战帧 → 拖拽照常发出(起点 = 备战栏-N area rect 裸中心,终点 =
-  出售区单一源区域-出售区中心,期望值从同源 screen_info 现算);
-- 守卫置于 mechanical_io_allowed() 门内 = sim 零触及:sim 装配下浮层在
-  场也不拦(守卫不跑),机械段静默(drag_char_guarded sim 分支),节点
-  照常 round_success。
+锁的设计约定(被测单一源 = cw_sell_bench_by_slot):机械拖拽的起终点——
+起点 = 备战栏-N area rect 裸中心,终点 = 出售区单一源区域-出售区中心,
+期望值从同源 screen_info 现算。本 op 不读屏(动作 op 零读屏),只负责把拖拽
+发出去。
 """
 
 import pytest
@@ -18,7 +12,6 @@ from test.harness.fixture_controller import FixtureController, fast_sleep
 from sr_od.application.currency_war.operations.actions.cw_sell_bench_by_slot import (
     CwSellBenchBySlot,
 )
-from sr_od.application.currency_war.sim import cw_sim_ports
 
 _PREP_SCREEN = '货币战争-备战'
 
@@ -55,41 +48,16 @@ def _expected_center(ctx, screen_name: str, area_name: str) -> tuple[int, int]:
 @pytest.fixture
 def sell_ctx(test_context, monkeypatch):
     """共享 ctx 的卖槽测试夹具:controller 换装记录型 stub(monkeypatch
-    自动还原,防污染 session 级共享 ctx);默认剧本 = 干净备战帧——守卫
-    放行路径在 last_screenshot 缺席时走 op.screenshot(),无剧本帧会
-    IndexError。"""
+    自动还原,防污染 session 级共享 ctx)。"""
     controller = _SellBySlotTestController(test_context)
-    controller.set_phases([{'frame': (_PREP_SCREEN, 'deployed_2star')}])
     monkeypatch.setattr(test_context, 'controller', controller)
     return test_context
 
 
-def test_overlay_blocked_round_fail(sell_ctx) -> None:
-    """安装点行为:合成确认浮层在场帧 → drag_sell round_fail(未执行:
-    浮层在场前缀 + 家族指引),零拖拽(执行前输入契约拒绝);受阻码命中
-    登记行(非原文兜底)。"""
-    from sr_od.application.currency_war.prep_actions import (
-        _prep_receipt_block_code,
-        drag_overlay_block_status,
-    )
-    op = CwSellBenchBySlot(sell_ctx, slot=1)
-    op.last_screenshot = sell_ctx.load_screen(
-        '货币战争-备战-合成确认', '合成确认浮层')
-    with fast_sleep(op):
-        result = op.drag_sell()
-    assert not result.is_success
-    assert (result.status or '').startswith('未执行:浮层在场')
-    assert '合成确认浮层' in (result.status or '')
-    assert _prep_receipt_block_code(result.status) == \
-        '未执行:浮层在场(合成确认/角色详情)'
-    assert drag_overlay_block_status('合成确认浮层') == result.status
-    assert sell_ctx.controller.recorded_drags == []
-    assert sell_ctx.controller.recorded_mouse_moves == []
-
-
 def test_clean_frame_drag_passes(sell_ctx) -> None:
-    """干净备战帧 → 守卫放行,拖拽照常发出:起点 = 备战栏-slot area 裸
-    中心,终点 = 出售区单一源(期望双端从真建档现算);节点 round_success。"""
+    """拖拽照常发出:起点 = 备战栏-slot area 裸中心,终点 = 出售区单一源
+    (期望双端从真建档现算);节点 round_success。夹具不设任何帧——op 全程
+    不读屏,读屏即 IndexError,测试通过本身说明零读屏。"""
     op = CwSellBenchBySlot(sell_ctx, slot=1)
     with fast_sleep(op):
         result = op.drag_sell()
@@ -98,21 +66,3 @@ def test_clean_frame_drag_passes(sell_ctx) -> None:
     expected_end = _expected_center(sell_ctx, _PREP_SCREEN, '区域-出售区')
     assert sell_ctx.controller.recorded_drags == [
         (expected_start, expected_end)]
-
-
-def test_sim_gate_overlay_untouched(sell_ctx, monkeypatch) -> None:
-    """sim 装配 + 浮层帧在场:守卫在 mechanical_io_allowed() 门内零触及
-    (不拦不截帧),机械段静默(drag_char_guarded sim 分支),节点照常
-    round_success 且零拖拽——守卫若被移出 sim 门,浮层帧在场会 round_fail,
-    本测试转红(锁安装口径)。两 port 一起桩:守卫机械门读
-    mechanical_io_allowed(直读装配槽),宿主读 sim_backend_installed。"""
-    monkeypatch.setattr(cw_sim_ports, 'mechanical_io_allowed', lambda: False)
-    monkeypatch.setattr(cw_sim_ports, 'sim_backend_installed', lambda: True)
-    op = CwSellBenchBySlot(sell_ctx, slot=1)
-    op.last_screenshot = sell_ctx.load_screen(
-        '货币战争-备战-合成确认', '合成确认浮层')
-    with fast_sleep(op):
-        result = op.drag_sell()
-    assert result.is_success
-    assert sell_ctx.controller.recorded_drags == []
-    assert sell_ctx.controller.recorded_mouse_moves == []
