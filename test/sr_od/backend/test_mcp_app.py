@@ -248,6 +248,8 @@ def test_screen_crud_tools_convert_and_raise() -> None:
         AreaMutationResult,
         ScreenCreateOut,
         ScreenCreateResult,
+        ScreenDeleteOut,
+        ScreenDeleteResult,
     )
 
     mcp, backend = _mcp_with_backend()
@@ -275,6 +277,14 @@ def test_screen_crud_tools_convert_and_raise() -> None:
     assert isinstance(result, ScreenCreateOut)
     assert result.screen_id == 'mail'
 
+    backend.delete_screen.return_value = ScreenDeleteResult(
+        screen_id='mail', screen_name='邮件', removed_area_count=3)
+    delete_screen_fn = getattr(mcp._tool_manager._tools['delete_screen'],
+                               'fn', None) or mcp._tool_manager._tools['delete_screen'].func
+    result = delete_screen_fn(screen_name='邮件')
+    assert isinstance(result, ScreenDeleteOut)
+    assert result.removed_area_count == 3
+
     backend.upsert_screen_area.side_effect = ScreenInfoError('pc_rect 非法: [9, 9, 2, 2]')
     with pytest.raises(ScreenInfoError, match='pc_rect'):
         upsert_fn(screen_name='邮件', area_name='标题', pc_rect=[9, 9, 2, 2])
@@ -287,6 +297,10 @@ def test_screen_crud_tools_convert_and_raise() -> None:
     with pytest.raises(ScreenInfoError, match='已存在'):
         create_fn(screen_id='mail', screen_name='邮件')
     backend.create_screen.side_effect = None
+    backend.delete_screen.side_effect = ScreenInfoError('画面仍被跳转边引用,未删除')
+    with pytest.raises(ScreenInfoError, match='仍被跳转边引用'):
+        delete_screen_fn(screen_name='邮件')
+    backend.delete_screen.side_effect = None
 
 
 def test_get_screen_detail_renders_and_raises() -> None:
@@ -331,6 +345,7 @@ def test_output_schema_matches_runtime_returns() -> None:
         GotoScreenResult,
         InputTextResult,
         ScreenCreateResult,
+        ScreenDeleteResult,
         WindowStatus,
     )
 
@@ -353,6 +368,8 @@ def test_output_schema_matches_runtime_returns() -> None:
     backend.delete_screen_area.return_value = AreaMutationResult(
         screen_name='邮件', area_name='标题', action='deleted', area_count=4)
     backend.create_screen.return_value = ScreenCreateResult(screen_id='mail', screen_name='邮件')
+    backend.delete_screen.return_value = ScreenDeleteResult(
+        screen_id='mail', screen_name='邮件', removed_area_count=3)
     backend.goto_screen.return_value = GotoScreenResult(
         arrived=True, current_screen='邮件', steps=[], reason=None)
     backend.click_game.return_value = True
@@ -369,6 +386,7 @@ def test_output_schema_matches_runtime_returns() -> None:
         'upsert_screen_area': {'screen_name': '邮件', 'area_name': '标题', 'pc_rect': [1, 1, 2, 2]},
         'delete_screen_area': {'screen_name': '邮件', 'area_name': '标题'},
         'create_screen': {'screen_id': 'mail', 'screen_name': '邮件'},
+        'delete_screen': {'screen_name': '邮件'},
         'click_game': {'x': 1, 'y': 2},
         'key_tap': {'key': 'esc'},
         'drag': {'x1': 1, 'y1': 2, 'x2': 3, 'y2': 4},
@@ -398,6 +416,7 @@ def test_tool_annotations_marked() -> None:
     # 破坏性(不可逆)
     assert tools["close_game"].annotations.destructiveHint is True
     assert tools["delete_screen_area"].annotations.destructiveHint is True
+    assert tools["delete_screen"].annotations.destructiveHint is True
     # 操作类(非破坏)不标 read_only
     click_ann = tools["click_game"].annotations
     assert click_ann is None or click_ann.readOnlyHint is None

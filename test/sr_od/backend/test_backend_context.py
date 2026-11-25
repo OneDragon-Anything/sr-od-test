@@ -10,6 +10,7 @@ import pytest
 from sr_od.backend.backend_context import (
     AnalyzeScreenError,
     BackendNotReadyError,
+    ScreenInfoError,
     ScreenWriteBusyError,
     SrBackendContext,
 )
@@ -576,7 +577,7 @@ def test_screen_write_mutex_concurrent_fail_fast() -> None:
 
     用户裁定(2026-11-24):写档互斥语义=快速失败非排队。进行中的
     upsert_screen_area(卡在 save_screen 模拟 merged 重写耗时)须拦住并发到达的
-    upsert / delete_screen_area / create_screen(三工具全覆盖),拒绝即返回、
+    upsert / delete_screen_area / create_screen / delete_screen(四工具全覆盖),拒绝即返回、
     不等待持锁方完成;文案含「正在被修改」「等待重试」。锁释放后(正常完成)
     后续写档恢复正常。
     """
@@ -624,6 +625,8 @@ def test_screen_write_mutex_concurrent_fail_fast() -> None:
     with pytest.raises(ScreenWriteBusyError, match='正在被修改'):
         backend.delete_screen_area('邮件', '标题')
     with pytest.raises(ScreenWriteBusyError, match='正在被修改'):
+        backend.delete_screen('邮件')
+    with pytest.raises(ScreenWriteBusyError, match='正在被修改'):
         backend.create_screen('mail', '邮件')
 
     # —— 持锁方正常完成后锁已释放:后续写档恢复正常 ——
@@ -636,6 +639,50 @@ def test_screen_write_mutex_concurrent_fail_fast() -> None:
     ctx.screen_loader.save_screen.side_effect = None
     result = backend.upsert_screen_area('邮件', '标题', [1, 1, 2, 2])
     assert result.action == 'inserted'
+
+
+def test_delete_screen_removes_and_reports() -> None:
+    """delete_screen 成功:调加载器删画面,回执带画面 ID 与一并删除的 area 数。"""
+    backend, ctx, screen_info = _screen_write_backend()
+    screen_info.screen_id = 'mail'
+    screen_info.screen_name = '邮件'
+    screen_info.area_list = [MagicMock(), MagicMock(), MagicMock()]
+    ctx.screen_loader.screen_info_list = [screen_info]
+
+    result = backend.delete_screen('邮件')
+
+    assert (result.screen_id, result.screen_name, result.removed_area_count) == ('mail', '邮件', 3)
+    ctx.screen_loader.delete_screen.assert_called_once_with('mail')
+
+
+def test_delete_screen_rejects_when_referenced_by_goto() -> None:
+    """画面仍被别的画面的跳转边指向 → 拒绝删除并列出引用方(画面名.区域名),未动加载器。"""
+    backend, ctx, target = _screen_write_backend()
+    target.screen_id = 'currency_war_prep_synthesis_confirm'
+    target.screen_name = '货币战争-备战-合成确认'
+    other = MagicMock()
+    other.screen_name = '货币战争-备战'
+    other.area_list = [
+        MagicMock(area_name='按钮-合成', goto_list=['货币战争-备战-合成确认']),
+        MagicMock(area_name='按钮-其他', goto_list=[]),
+    ]
+    ctx.screen_loader.screen_info_list = [target, other]
+
+    with pytest.raises(ScreenInfoError, match=r'货币战争-备战\.按钮-合成'):
+        backend.delete_screen('货币战争-备战-合成确认')
+
+    ctx.screen_loader.delete_screen.assert_not_called()
+
+
+def test_delete_screen_raises_when_not_found() -> None:
+    """画面名未找到 → 转成 ScreenInfoError,未动加载器。"""
+    backend, ctx, _screen_info = _screen_write_backend()
+    ctx.screen_loader.get_screen.side_effect = Exception('未找到')
+
+    with pytest.raises(ScreenInfoError, match='画面名未找到'):
+        backend.delete_screen('不存在的画面')
+
+    ctx.screen_loader.delete_screen.assert_not_called()
 
 
 def test_screen_write_mutex_released_on_error() -> None:
